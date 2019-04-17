@@ -180,14 +180,15 @@ lemma Collect_in_range_atLeastLessThan[simp]:
 
 definition "range_map_of \<equiv> lookup_map_of in_range"
 
-lemma range_map_of_result:
-  "range_map_of kvs k = Some ((start, end), v) \<Longrightarrow>
-     start \<le> k \<and> k < end"
-  by (auto simp: range_map_of_def dest: lookup_map_of_Some)
-
+lemmas range_map_of_Some' =
+  lookup_map_of_Some[where eq=in_range, folded range_map_of_def]
 lemmas range_map_of_Some =
-    RangeMap.lookup_map_of_Some[where eq=in_range, folded range_map_of_def]
+  range_map_of_Some'[where k'="(start', end')" for start' end', simplified in_range.simps]
 
+lemma range_map_of_SomeD:
+  "range_map_of kvs k = Some ((start, end), v) \<Longrightarrow>
+   ((start, end), v) \<in> set kvs \<and> start \<le> k \<and> k < end"
+  by (fastforce simp: in_range.simps dest: range_map_of_Some')
 
 subsection \<open>Disjoint and monotonic key ranges\<close>
 
@@ -490,6 +491,10 @@ lemma dom_range_map_of:
      Union (set (map (Collect o in_range o fst) xs))"
   by (induct xs; fastforce simp: range_map_of_def in_range.simps)
 
+lemma Collect_in_range_rewrite:
+  "Collect o in_range o fst = (\<lambda>((start, end), v). {start ..< end})"
+  by (fastforce simp: in_range.simps)
+
 lemma ran_add_if:
   "\<lbrakk> \<forall>x. P x \<longrightarrow> z x = None \<rbrakk>
    \<Longrightarrow> ran (\<lambda>x. if P x then y x else z x) = ran (y |` Collect P) \<union> ran z"
@@ -603,17 +608,19 @@ lemma lookup_map_of_single:
   by (induct binds;
       fastforce simp: lookup_map_disjoint_keys_def disjnt_def)
 
-lemma range_map_of_single:
+lemma range_map_of_single':
   "\<lbrakk> disjoint_key_ranges binds;
      ((start, end), v) \<in> set binds; in_range (start, end) k \<rbrakk>
    \<Longrightarrow> range_map_of binds k = Some ((start, end), v)"
   unfolding range_map_of_def disjoint_key_ranges_def
   by (fastforce intro: lookup_map_of_single)
 
+lemmas range_map_of_single = range_map_of_single'[unfolded in_range.simps, OF _ _ conjI]
+
 lemma range_map_of_lookups__gen_all':
   "\<lbrakk> m = range_map_of binds; disjoint_key_ranges binds \<rbrakk> \<Longrightarrow>
-   list_all (\<lambda>((start, end), v). \<forall>k. in_range (start, end) k \<longrightarrow> m k = Some ((start, end), v)) binds"
-  by (fastforce simp: list_all_iff intro: range_map_of_single)
+   list_all (\<lambda>((start, end), v). \<forall>k. in_range (start, end) k = (m k = Some ((start, end), v))) binds"
+  by (fastforce simp: list_all_iff intro: range_map_of_single' dest: range_map_of_Some')
 
 lemmas range_map_of_lookups__gen_all =
   range_map_of_lookups__gen_all'
@@ -736,9 +743,16 @@ fun is_conv_to terms (src, conv) =
       exists (fn term => Thm.term_of (Thm.rhs_of conv) aconv term) terms;
 
 (* Checking generated lookup rules *)
-fun check_generated_thm desc check thm =
-      if check thm then () else
-        raise THM ("RangeMap internal error: wrong format for " ^ desc, 0, [thm]);
+fun check_generated_thms desc templates thms =
+      if length thms <> length templates then
+        raise THM ("RangeMap internal error: generated " ^ string_of_int (length thms) ^
+                   " thms for " ^ desc ^ ", but expected " ^ string_of_int (length templates),
+                   0, thms)
+      else case filter (fn (thm, template) => not (Thm.prop_of thm aconv template))
+                       (thms ~~ templates) of
+               [] => ()
+             | bads => raise THM ("RangeMap internal error: wrong format for " ^ desc,
+                                  0, map fst bads);
 
 (* Common FP_Eval configuration. We use hold_quote everywhere to avoid
    descending into user input terms *)
@@ -768,7 +782,7 @@ fun compare_keys ctxt kT solver elems =
               map (fn ((ks, ke), _) => less_eqT $$ ks $$ ke) elems
             @ map (fn (((_, ke), _), ((ks', _), _)) => less_eqT $$ ke $$ ks') elem_pairs;
 
-      val monotonic_results = Par_List.map solver monotonic_cmps;
+      val monotonic_results = map solver monotonic_cmps;
       val _ = case filter (not o is_conv_to [@{term True}])
                           (monotonic_cmps ~~ monotonic_results) of
                   [] => ()
@@ -780,7 +794,7 @@ fun compare_keys ctxt kT solver elems =
       val adj_eq_cmps =
             map (fn (((_, ke), _), ((ks', _), _)) => eqT $$ ke $$ ks') elem_pairs;
 
-      val adj_eq_results = Par_List.map solver adj_eq_cmps;
+      val adj_eq_results = map solver adj_eq_cmps;
       val _ = case filter (not o is_conv_to [@{term True}, @{term False}])
                           (adj_eq_cmps ~~ adj_eq_results) of
                   [] => ()
@@ -792,7 +806,7 @@ fun compare_keys ctxt kT solver elems =
       val nonempty_cmps =
               map (fn ((ks, ke), _) => lessT $$ ks $$ ke) elems;
 
-      val nonempty_results = Par_List.map solver nonempty_cmps;
+      val nonempty_results = map solver nonempty_cmps;
       val _ = case filter (not o is_conv_to [@{term True}, @{term False}])
                           (nonempty_cmps ~~ nonempty_results) of
                   [] => ()
@@ -842,14 +856,17 @@ fun gen__range_lookups ctxt tree_list_lookup_eq_thm list_def list_monotonic_thm 
   |> Conv.fconv_rule (fp_eval_conv' ctxt
                         (@{thms RangeMap.list_all_dest prod.case} @ [list_def]) [])
   |> HOLogic.conj_elims ctxt
-  |> map (fn t => @{thm mp} FO_OF
-                    [beta_conversion_thm Conv.arg_conv (* beta reduce result of spec thm *)
-                      (@{thm RangeMap.spec_FO} FO_OF [t])])
-  |> map (Conv.fconv_rule (fp_eval_conv' ctxt @{thms RangeMap.in_range.simps} []))
-  (* check results *)
-  |> tap (app (check_generated_thm "range lookup thm" (fn thm => case Thm.prop_of thm of
-              @{term_pat "_ \<le> _ \<and> _ < _ \<Longrightarrow> RangeMap.lookup_range_tree _ _ = Some _"} => true
-            | _ => false)));
+  |> map (fn t => (@{thm RangeMap.spec_FO} FO_OF [t])
+                  |> beta_conversion_thm Conv.arg_conv (* beta reduce result of spec thm *))
+  |> map (Conv.fconv_rule (fp_eval_conv' ctxt @{thms RangeMap.in_range.simps} []));
+
+fun expected__range_lookups tree_const elems =
+  elems
+  |> map (fn ((ks, ke), v) =>
+            @{mk_term "Trueprop ((?s \<le> ?x \<and> ?x < ?e)
+                                 = (RangeMap.lookup_range_tree ?tree ?x = Some ((?s, ?e), ?v)))"
+                       (tree, s, e, v)}
+              (tree_const, Thm.term_of ks, Thm.term_of ke, Thm.term_of v));
 
 fun gen__start_lookups ctxt
       tree_list_lookup_eq_thm list_def list_monotonic_thm key_range_nonempty_thms =
@@ -859,11 +876,16 @@ fun gen__start_lookups ctxt
                         (@{thms RangeMap.list_all_dest prod.case simp_thms}
                          @ [list_def] @ key_range_nonempty_thms)
                         [])
-  |> HOLogic.conj_elims ctxt
-  (* check results *)
-  |> tap (app (check_generated_thm "start lookup thm" (fn thm => case Thm.prop_of thm of
-              @{term_pat "Trueprop (RangeMap.lookup_range_tree _ _ = Some _)"} => true
-            | _ => false)));
+  |> HOLogic.conj_elims ctxt;
+
+fun expected__start_lookups tree_const elems key_range_nonempty_thms =
+  elems ~~ key_range_nonempty_thms
+  |> filter (fn (_, cmp) => Thm.term_of (Thm.rhs_of cmp) = @{term True})
+  |> map fst
+  |> map (fn ((ks, ke), v) =>
+            @{mk_term "Trueprop (RangeMap.lookup_range_tree ?tree ?s = Some ((?s, ?e), ?v))"
+                       (tree, s, e, v)}
+              (tree_const, Thm.term_of ks, Thm.term_of ke, Thm.term_of v));
 
 fun gen__domain_thm ctxt tree_const tree_list_lookup_eq_thm =
   @{mk_term "dom (RangeMap.lookup_range_tree ?tree)" (tree)} tree_const
@@ -947,28 +969,29 @@ fun name_opts_default (base_name: string): name_opts =
 
 (* Top level *)
 fun define_map
-            (name_opts: name_opts)
-            (mappings: ((cterm * cterm) * cterm) list)
-            (kT: typ)
-            (vT: typ)
-            (key_cmp_solver: conv)
-            ctxt =
+      (name_opts: name_opts)
+      (elems: ((cterm * cterm) * cterm) list)
+      (kT: typ)
+      (vT: typ)
+      (key_cmp_solver: conv)
+      ctxt =
   let
     fun msg x = "RangeMap: " ^ Binding.print (#tree_const name_opts) ^ ": " ^ x;
     val tracing_msg = tracing o msg;
 
     (* check input types *)
-    val _ = app (fn ((ks, ke), v) =>
-              if Thm.typ_of_cterm ks <> kT
-              then raise TYPE (msg "key has wrong type", [kT], [Thm.term_of ks])
-              else if Thm.typ_of_cterm ke <> kT
-              then raise TYPE (msg "key has wrong type", [kT], [Thm.term_of ke])
-              else if Thm.typ_of_cterm v <> vT
-              then raise TYPE (msg "value has wrong type", [vT], [Thm.term_of v])
-              else ());
+    val _ = elems
+            |> app (fn ((ks, ke), v) =>
+                  if Thm.typ_of_cterm ks <> kT
+                  then raise TYPE (msg "key has wrong type", [kT], [Thm.term_of ks])
+                  else if Thm.typ_of_cterm ke <> kT
+                  then raise TYPE (msg "key has wrong type", [kT], [Thm.term_of ke])
+                  else if Thm.typ_of_cterm v <> vT
+                  then raise TYPE (msg "value has wrong type", [vT], [Thm.term_of v])
+                  else ());
 
     (* quote all input keys and values *)
-    val quoted_mappings = quote_elems ctxt kT vT mappings;
+    val quoted_elems = quote_elems ctxt kT vT elems;
     (* unquote when computing key comparisons *)
     val quoted_key_cmp_solver = unquote_conv ctxt then_conv key_cmp_solver;
 
@@ -980,13 +1003,13 @@ fun define_map
 
     val _ = tracing_msg "evaluating key comparisons";
     val start = Timing.start ();
-    val (key_mono_thms, key_adj_eq_thms, key_nonempty_thms) =
-           compare_keys ctxt kT quoted_key_cmp_solver quoted_mappings;
+    val (key_mono_thms, key_adj_eq_thms, key_range_nonempty_thms) =
+           compare_keys ctxt kT quoted_key_cmp_solver quoted_elems;
     val _ = tracing_msg ("done: " ^ Timing.message (Timing.result start));
 
     val _ = tracing_msg "defining tree";
     val start = Timing.start ();
-    val quoted_tree = build_range_tree ctxt kT vT quoted_mappings;
+    val quoted_tree = build_range_tree ctxt kT vT quoted_elems;
     val unquote_tree_eqn = unquote_conv ctxt quoted_tree;
     val unquoted_tree = Thm.rhs_of unquote_tree_eqn;
     val ((tree_const, (_, tree_def)), ctxt) =
@@ -998,7 +1021,7 @@ fun define_map
 
     val _ = tracing_msg "defining lookup list";
     val start = Timing.start ();
-    val quoted_list = build_lookup_list ctxt kT vT quoted_mappings;
+    val quoted_list = build_lookup_list ctxt kT vT quoted_elems;
     val unquote_list_eqn = unquote_conv ctxt quoted_list;
     val unquoted_list = Thm.rhs_of unquote_list_eqn;
     val ((list_const, (_, list_def)), ctxt) =
@@ -1035,22 +1058,17 @@ fun define_map
 
     val _ = tracing_msg "generating lookup rules";
     val start = Timing.start ();
-    fun check_lookup_length thms =
-          if length thms = length mappings then () else
-              raise THM (msg ("wrong number of lookup thms: "
-                              ^ string_of_int (length thms)
-                              ^ " instead of " ^ string_of_int (length mappings)), 0,
-                         thms);
-
     val tree_range_lookups =
-          if null mappings then [] else
-          gen__range_lookups ctxt tree_list_lookup_eq_thm quoted_list_def list_monotonic_thm;
-    val _ = check_lookup_length tree_range_lookups;
+          if null elems then [] else
+          gen__range_lookups ctxt tree_list_lookup_eq_thm quoted_list_def list_monotonic_thm
+          |> tap (check_generated_thms "range lookup rule"
+                    (expected__range_lookups tree_const quoted_elems));
     val tree_start_lookups =
-          if null mappings then [] else
+          if null elems then [] else
           gen__start_lookups ctxt
-              tree_list_lookup_eq_thm quoted_list_def list_monotonic_thm key_nonempty_thms;
-    val _ = check_lookup_length tree_start_lookups;
+              tree_list_lookup_eq_thm quoted_list_def list_monotonic_thm key_range_nonempty_thms
+          |> tap (check_generated_thms "start lookup rule"
+                    (expected__start_lookups tree_const quoted_elems key_range_nonempty_thms));
     val ctxt = notes ctxt
           [(#range_lookup_thms name_opts, tree_range_lookups),
            (#start_lookup_thms name_opts, tree_start_lookups)];
@@ -1061,11 +1079,14 @@ fun define_map
     val compact_domain_thm =
           gen__compact_domain_thm ctxt
               domain_thm quoted_list_def list_monotonic_thm key_adj_eq_thms;
+    val domain_thm' = (* remove internal "in_range" *)
+          domain_thm
+          |> Conv.fconv_rule (fp_eval_conv' ctxt @{thms RangeMap.Collect_in_range_rewrite} []);
     val range_thm =
           gen__range_thm ctxt tree_const
-              tree_list_lookup_eq_thm quoted_list_def list_monotonic_thm key_nonempty_thms;
+              tree_list_lookup_eq_thm quoted_list_def list_monotonic_thm key_range_nonempty_thms;
     val ctxt = notes ctxt
-          [(#domain_thm name_opts, [domain_thm]),
+          [(#domain_thm name_opts, [domain_thm']),
            (#compact_domain_thm name_opts, [compact_domain_thm]),
            (#range_thm name_opts, [range_thm])];
     val _ = tracing_msg ("done: " ^ Timing.message (Timing.result start));
@@ -1073,96 +1094,5 @@ fun define_map
 
 end;
 \<close>
-
-function (sequential) my_eval_upto :: "bool \<Rightarrow> int \<Rightarrow> int \<Rightarrow> int list" where
-    "my_eval_upto True i j = i # my_eval_upto (i + 1 \<le> j) (i + 1) j"
-  | "my_eval_upto False i j = []"
-  by pat_completeness auto
-termination
-  by (relation "measure(\<lambda>(t,i::int,j). (if t then 1 else 0) + nat(j - i + 1))") auto
-
-lemma my_eval_upto:
-  "upto i j = (if i \<le> j then my_eval_upto True i j else [])"
-  apply (induct "nat (j + 1 - i)" arbitrary: i j)
-   apply simp
-  apply (subst upto.simps)
-  apply fastforce
-  done
-
-definition test_lookups :: "((word32 \<times> word32) \<times> int) list"
-  where "test_lookups = map (\<lambda>n. ((of_int (n*n), of_int (n*n+2*n+1)), n)) ([1..(500::int)] @ [1000..1500])"
-
-schematic_goal test_lookups_def':
-  "test_lookups = ?x"
-  apply (tactic \<open>let
-        val eqns = @{thms test_lookups_def
-                          simp_thms arith_simps rel_simps if_False if_True
-                          upto_code upto_aux_rec arith_special
-                          list.map append.simps
-                          of_int_1 of_int_numeral
-                          one_add_one one_plus_numeral numeral_plus_one mult_1 mult_1_right};
-        val eval = rpair (Bound 0)
-                   #> FP_Eval.eval @{context} (FP_Eval.make_rules eqns @{thms if_weak_cong})
-                   #> tap (fn (_, r) => tracing ("fp_eval counters: " ^
-                            ML_Syntax.print_list (ML_Syntax.print_pair I string_of_int) r))
-                   #> fst #> fst;
-        in fn st => (if Thm.prems_of st = [] then st else
-                     Conv.gconv_rule eval 1 st)
-                    |> Seq.succeed
-        end\<close>)
-  apply (rule refl)
-  done
-
-(* this speeds up bintrunc calculation, but isn't generic *)
-schematic_goal word_length_suc:
-  "LENGTH(machine_word_len) = ?x"
-  apply_trace (clarsimp simp: numeral_nat)
-  by (rule refl)
-
-(* missing from HOL-Word... *)
-lemma bintrunc_1_1:
-  "bintrunc 1 1 = 1"
-  by auto
-
-(* simpset for comparisons between word literals *)
-lemmas word_rel_simps_small =
-  order_refl (* shortcut *)
-  rel_simps simp_thms
-  word_less_alt word_le_def word_uint_eq_iff uint_eq_0 uint_1
-  (* need bintrunc to reducec numerals mod word size *)
-  uint_bintrunc bintrunc_numeral_simps bintrunc_1_1
-  numeral_One BIT_bin_simps BIT_special_simps
-  (* evaluate word size for bintrunc -- yuck *)
-  len_num0 len_num1 len_bit0 len_bit1
-  arith_simps mult_1_right pred_numeral_simps numeral_plus_one
-
-local_setup \<open>
-RangeMap.define_map
-  (RangeMap.name_opts_default "empty_test")
-  []
-  @{typ word32} @{typ int}
-  (FP_Eval.eval_conv @{context} (FP_Eval.make_rules @{thms word_rel_simps_small} []))
-\<close>
-print_theorems
-
-ML {*
-val tree_lookups =
-  @{thm test_lookups_def'}
-  |> Thm.prop_of
-  |> HOLogic.dest_Trueprop |> HOLogic.dest_eq |> snd
-  |> HOLogic.dest_list
-  |> map (apfst HOLogic.dest_prod o HOLogic.dest_prod)
-  |> map (fn ((ks, ke), v) =>
-      (apply2 (Thm.cterm_of @{context}) (ks, ke), Thm.cterm_of @{context} v))
-*}
-
-local_setup \<open>
-RangeMap.define_map
-  (RangeMap.name_opts_default "test")
-  tree_lookups
-  @{typ word32} @{typ int}
-  (FP_Eval.eval_conv @{context} (FP_Eval.make_rules @{thms word_rel_simps_small} []))
-\<close>
-print_theorems
 
 end

@@ -150,6 +150,7 @@ session LibTest (lib) = Refine +
     ShowTypes_Test
     Time_Methods_Cmd_Test
     FastMap_Test
+    RangeMap_Test
     FP_Eval_Tests
     Trace_Schematic_Insts_Test
     Local_Method_Tests
