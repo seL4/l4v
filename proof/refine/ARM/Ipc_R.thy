@@ -2268,17 +2268,6 @@ crunch valid_queues[wp]: handleFaultReply "Invariants_H.valid_queues"
 crunch valid_queues'[wp]: handleFaultReply "valid_queues'"
 crunch tcb_in_cur_domain'[wp]: handleFaultReply "tcb_in_cur_domain' t"
 
-lemma as_user_valid_etcbs[wp]:
-  "\<lbrace>valid_etcbs\<rbrace> as_user tptr f \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
-  apply (simp add: as_user_def set_object_def get_object_def)
-  apply (wp | wpc)+
-  apply clarsimp
-  apply (fastforce simp: valid_sched_def valid_etcbs_def valid_queues_def
-                         valid_sched_action_def is_activatable_def
-                         weak_valid_sched_action_def
-                         st_tcb_at_kh_if_split st_tcb_def2)
-  done
-
 crunch sch_act_wf[wp]: unbindNotification "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
 (wp: sbn_sch_act')
 

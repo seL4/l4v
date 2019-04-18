@@ -2329,11 +2329,6 @@ crunch valid_queues[wp]: handleFaultReply "Invariants_H.valid_queues"
 crunch valid_queues'[wp]: handleFaultReply "valid_queues'"
 crunch tcb_in_cur_domain'[wp]: handleFaultReply "tcb_in_cur_domain' t"
 
-(* FIXME: remove? *)
-lemma as_user_valid_etcbs[wp]:
-  "\<lbrace>valid_etcbs\<rbrace> as_user tptr f \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
-  by (simp add: as_user_valid_etcbs)
-
 crunch sch_act_wf[wp]: unbindNotification "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
 (wp: sbn_sch_act')
 
