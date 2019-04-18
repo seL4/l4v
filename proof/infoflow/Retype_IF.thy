@@ -247,11 +247,6 @@ lemma create_cap_globals_equiv:
             set_cdt_valid_global_objs dxo_wp_weak set_original_wp | simp)+
   done
 
-(* could remove the precondition here and replace with \<top> if we wanted the trouble *)
-lemma equiv_valid_inv_pre_weaken:
-  "\<lbrakk> \<And>s. P' s \<Longrightarrow> P s; equiv_valid_inv I A P f \<rbrakk> \<Longrightarrow> equiv_valid_inv I A P' f"
-  oops
-
 lemma set_pd_reads_respects:
   "reads_respects aag l (K (is_subject aag a)) (set_pd a b)"
   unfolding set_pd_def
