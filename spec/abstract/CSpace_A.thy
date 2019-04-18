@@ -26,6 +26,7 @@ begin
 context begin interpretation Arch .
 
 requalify_consts
+  aobjs_of
   arch_update_cap_data
   arch_derive_cap
   arch_finalise_cap
