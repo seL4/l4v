@@ -152,6 +152,7 @@ session LibTest (lib) = Refine +
     Local_Method_Tests
     Qualify_Test
     Locale_Abbrev_Test
+    "ml-helpers/TacticTutorial"
     "ml-helpers/TacticAntiquotation_Test"
   (* use virtual memory function as an example, only makes sense on ARM: *)
   theories [condition = "L4V_ARCH_IS_ARM"]
