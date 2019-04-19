@@ -522,19 +522,6 @@ crunches store_pte
   for valid_idle[wp]: valid_idle
   and global_refs[wp]: "\<lambda>s. P (global_refs s)"
 
-lemma update_self_reachable:
-  "\<lbrakk>vs_lookup_table level asid vref s = Some (level, p);
-    valid_asid_table s; valid_vspace_objs s\<rbrakk>
-   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := (kheap s) (p \<mapsto> v)\<rparr>) = Some (level, p)"
-  sorry (* FIXME RISCV: waiting for ArchAcc *)
-
-
-lemma update_self_reachable_target:
-  "\<lbrakk>vs_lookup_target level asid vref s = Some (level, p);
-    valid_asid_table s; valid_vspace_objs s\<rbrakk>
-   \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := (kheap s) (p \<mapsto> v)\<rparr>) = Some (level, p)"
-  sorry (* FIXME RISCV: waiting for ArchAcc *)
-
 (* FIXME: move *)
 lemma vs_cap_ref_table_cap_ref_None:
   "vs_cap_ref x = None \<Longrightarrow> table_cap_ref x = None"
