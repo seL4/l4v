@@ -17,19 +17,61 @@ assistant [Isabelle/HOL][2]. For an introduction to Isabelle, see its
   [2]: http://isabelle.in.tum.de                     "Isabelle Website"
   [3]: http://isabelle.in.tum.de/documentation.html  "Isabelle Documentation"
 
-Repository Setup
-----------------
+<a name="setup"></a>
+Setup
+-----
 
 This repository is meant to be used as part of a Google [repo][5] setup.
-Instead of cloning it directly, please go to the following repository
-and follow the instructions there:
-
-   https://github.com/seL4/verification-manifest
-
-For setting up the theorem prover and other dependencies, please see the
-section [Dependencies](#dependencies) below.
+Instead of cloning it directly, follow the instructions at the [manifest git
+repo](https://github.com/seL4/verification-manifest).
 
   [5]: http://source.android.com/source/downloading.html#installing-repo     "google repo installation"
+
+### Software dependencies
+
+On **Ubuntu 18.04**, to run all the tests against the **ARMv7-A** architecture
+you will need to install the following packages:
+```bash
+sudo apt-get install \
+    haskell-stack python python-pip python-dev \
+    mlton-compiler gcc-arm-none-eabi \
+    build-essential libxml2-utils ccache ncurses-dev librsvg2-bin \
+    device-tree-compiler cmake ninja-build curl zlib1g-dev \
+    texlive-fonts-recommended texlive-latex-extra \
+    texlive-metapost texlive-bibtex-extra
+```
+```bash
+sudo pip install --upgrade pip
+sudo pip install sel4-deps
+```
+
+On **Debian Stretch**, install the above packages as well as:
+```bash
+sudo apt-get install \
+    rsync
+```
+
+### Haskell Stack
+L4V requires [haskell-stack](https://docs.haskellstack.org/en/stable/README).
+Make sure you've adjusted your `PATH` to include `$HOME/.local/bin`, and that
+you're running an up-to-date version:
+```bash
+stack upgrade --binary-only
+which stack # should be $HOME/.local/bin/stack
+```
+
+### MacOS
+Other than the cross-compiler `gcc` toolchain, setup on MacOS should be similar
+to that on Ubuntu. To set up a cross-compiler, try the following:
+* Install `XCode` from the AppStore and its command line tools. If you are
+  running MacPorts, you have these already. Otherwise, after you have XCode
+  installed, run `gcc --version` in a terminal window. If it reports a version,
+  you're set. Otherwise it should pop up a window and prompt for installation
+  of the command line tools.
+* Install the seL4 Python dependencies, for instance using `sudo easy_install
+  sel4-deps`.  `easy_install` is part of Python's [`setuptools`][9].
+* Install the [`misc/scripts/cpp`](misc/scripts/cpp) wrapper for clang, by
+  putting it in `~/bin`, or somewhere else in your `PATH`.
 
 Contributing
 ------------
@@ -108,10 +150,8 @@ The repository is organised as follows.
   [6]: http://www.nicta.com.au/pub?id=7847           "An Isabelle Proof Method Language"
 
 
-Dependencies
+Hardware requirements
 ------------
-
-### Hardware
 
 Almost all proofs in this repository should work within 4GB of RAM. Proofs
 involving the C refinement, will usually need the 64bit mode of polyml and
@@ -120,86 +160,32 @@ about 16GB of RAM.
 The proofs distribute reasonably well over multiple cores, up to about 8
 cores are useful.
 
-### Software
-
-The proofs in this repository use `Isabelle2018`. A copy of Isabelle
-is included in the repository setup.
-
-The dependencies for installing Isabelle in this repository are
-
- * Perl 5.x with `libwww-perl`
- * Python 2.x
- * LaTeX, for instance on Ubuntu 14.04
-   `sudo apt-get install texlive-fonts-recommended texlive-latex-extra texlive-metapost texlive-bibtex-extra`
- * 32-bit C/C++ standard libraries on 64-bit platforms (optional)
-
-For running the standalone version of the C Parser you will additionally need
-
- * [MLton][7] ML compiler (package `mlton-compiler` on Ubuntu)
-
-For building the Haskell kernel model, the Haskell build tool [stack][] is
-required. The Haskell kernel `Makefile` will use `stack` to obtain appropriate
-versions of `ghc` and `cabal-install`. Note that this repository does not
-contain the QEmu interface for actually running the model.
-
-For running the C proofs, you need a working C preprocessor setup for the seL4
-repository.
-
-*On Linux*: the best way to make sure you have everything is to install the
-full build environment for seL4:
-
-  * seL4 [development tool chain][8] on Debian and Ubuntu
-  * `make` version 3.81 or higher
-
-You can get away with avoiding a full cross compiler setup form the above,
-but you will need at least these:
-
-    sudo apt-get install python-pip python-dev libxml2-utils
-    sudo pip install sel4-deps
-
-*On MacOS*: here it is harder to get a full cross-compiler setup going. For
-normal proof development, a full setup is not necessary, though. You mostly
-need a gcc-compatible C pre-processor and python. Try the following steps:
-
-  * install `XCode` from the AppStore and its command line tools. If you are
-    running MacPorts, you have these already. Otherwise, after you have
-    XCode installed, run `gcc --version` in a terminal window. If it reports a
-    version, you're set. Otherwise it should pop up a window and prompt for
-    installation of the command line tools.
-  * install the seL4 Python dependencies, for instance using
-    `sudo easy_install sel4-deps`.
-    `easy_install` is part of Python's [`setuptools`][9].
-  * install the [`misc/scripts/cpp`](misc/scripts/cpp) wrapper for clang,
-    by putting it in `~/bin`, or somewhere else in your `PATH`.
-
-
-[7]: http://mlton.org                               "MLton ML compiler"
-[8]: http://sel4.systems/Info/GettingStarted/DebianToolChain.pml  "seL4 tool chain setup"
-[9]: https://pypi.python.org/pypi/setuptools        "python package installer"
-[stack]: https://haskellstack.org/
-
 
 Isabelle Setup
 --------------
 
-After the repository is set up in Google repo, you should have following
-directory structure, where `l4v` is the repository you are currently looking
-at:
+After the repository is set up using `repo` (as per the [setup section](#setup) above), you
+should have following directory structure, where `l4v` is the repository you
+are currently looking at:
 
-    verification/
-        isabelle/
-        l4v/
-        seL4/
+```bash
+verification/
+    isabelle/
+    l4v/
+    seL4/
+```
 
 To set up Isabelle for use in `l4v/`, assuming you have no previous
 installation of Isabelle, run the following commands in the directory
 `verification/l4v/`:
 
-    mkdir -p ~/.isabelle/etc
-    cp -i misc/etc/settings ~/.isabelle/etc/settings
-    ./isabelle/bin/isabelle components -a
-    ./isabelle/bin/isabelle jedit -bf
-    ./isabelle/bin/isabelle build -bv HOL-Word
+```bash
+mkdir -p ~/.isabelle/etc
+cp -i misc/etc/settings ~/.isabelle/etc/settings
+./isabelle/bin/isabelle components -a
+./isabelle/bin/isabelle jedit -bf
+./isabelle/bin/isabelle build -bv HOL-Word
+```
 
 These commands perform the following steps:
 
