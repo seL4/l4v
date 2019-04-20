@@ -81,6 +81,8 @@ lemmas aa_type_simps[simp] = aa_type_def[split_simps arch_kernel_obj.split]
 lemmas a_type_def = a_type_def[simplified aa_type_def]
 lemmas a_type_simps[simp] = a_type_def[split_simps kernel_object.split arch_kernel_obj.split]
 
+section "Virtual Memory Regions"
+
 (* Number of significant bits for canonical addresses *)
 type_synonym canonical_len = 39
 
@@ -93,41 +95,6 @@ definition canonical_address_of :: "canonical_len word \<Rightarrow> obj_ref" wh
 
 definition canonical_address :: "obj_ref \<Rightarrow> bool" where
   "canonical_address x \<equiv> canonical_address_of (ucast x) = x"
-
-text \<open>An ASID is well-formed if it is within @{term "mask asid_bits"}.\<close>
-definition asid_wf :: "asid \<Rightarrow> bool" where
-  "asid_wf a \<equiv> a \<le> 2 ^ asid_bits - 1"
-
-(* Note: no alignment check as in other architectures, because we would need to know the PT level. *)
-(* FIXME RISCV: should simplify to vref \<le> canonical_user; also could demand is_aligned pt_bits (real alignment might be higher) *)
-definition wellformed_mapdata :: "asid \<times> vspace_ref \<Rightarrow> bool" where
-  "wellformed_mapdata \<equiv> \<lambda>(asid, vref).
-     0 < asid \<and> asid_wf asid \<and> vref < pptr_base \<and> canonical_address vref"
-
-definition level_of_sz :: "vmpage_size \<Rightarrow> vm_level" where
-  "level_of_sz sz \<equiv> case sz of RISCVSmallPage \<Rightarrow> 0 | RISCVLargePage \<Rightarrow> 1 | RISCVHugePage \<Rightarrow> 2"
-
-definition vm_level_aligned :: "obj_ref \<Rightarrow> vm_level \<Rightarrow> bool" where
-  "vm_level_aligned ref level \<equiv> is_aligned ref (pt_bits_left level)"
-
-definition vmsz_aligned :: "obj_ref \<Rightarrow> vmpage_size \<Rightarrow> bool" where
-  "vmsz_aligned ref sz \<equiv> is_aligned ref (pageBitsForSize sz)"
-
-definition wellformed_acap :: "arch_cap \<Rightarrow> bool" where
-  "wellformed_acap ac \<equiv>
-   case ac of
-     ASIDPoolCap r as \<Rightarrow> is_aligned as asid_low_bits \<and> asid_wf as
-   | FrameCap r rghts sz dev  mapdata \<Rightarrow>
-       rghts \<in> valid_vm_rights \<and>
-       case_option True wellformed_mapdata mapdata \<and>
-       case_option True (swp vmsz_aligned sz \<circ> snd) mapdata
-   | PageTableCap r (Some mapdata) \<Rightarrow> wellformed_mapdata mapdata
-   | _ \<Rightarrow> True"
-
-lemmas wellformed_acap_simps[simp] = wellformed_acap_def[split_simps arch_cap.split]
-
-
-section "Virtual Memory Regions"
 
 (* All virtual kernel addresses, including those potentially not mapped. *)
 definition kernel_mappings :: "vspace_ref set" where
@@ -209,6 +176,41 @@ locale_abbrev user_window :: "'z::state_ext state \<Rightarrow> obj_ref set" whe
   "user_window s \<equiv> user_window_2 (riscv_kernel_vspace (arch_state s))"
 
 lemmas user_window_def = user_window_2_def
+
+
+section "Wellformed Addresses and ASIDs"
+
+text \<open>An ASID is well-formed if it is within @{term "mask asid_bits"}.\<close>
+definition asid_wf :: "asid \<Rightarrow> bool" where
+  "asid_wf a \<equiv> a \<le> 2 ^ asid_bits - 1"
+
+(* Note: no alignment check as in other architectures, because we would need to know the PT level. *)
+(* FIXME RISCV: should simplify to vref \<le> canonical_user; also could demand is_aligned pt_bits (real alignment might be higher) *)
+definition wellformed_mapdata :: "asid \<times> vspace_ref \<Rightarrow> bool" where
+  "wellformed_mapdata \<equiv> \<lambda>(asid, vref). 0 < asid \<and> asid_wf asid \<and> vref \<in> user_region"
+
+definition level_of_sz :: "vmpage_size \<Rightarrow> vm_level" where
+  "level_of_sz sz \<equiv> case sz of RISCVSmallPage \<Rightarrow> 0 | RISCVLargePage \<Rightarrow> 1 | RISCVHugePage \<Rightarrow> 2"
+
+definition vm_level_aligned :: "obj_ref \<Rightarrow> vm_level \<Rightarrow> bool" where
+  "vm_level_aligned ref level \<equiv> is_aligned ref (pt_bits_left level)"
+
+definition vmsz_aligned :: "obj_ref \<Rightarrow> vmpage_size \<Rightarrow> bool" where
+  "vmsz_aligned ref sz \<equiv> is_aligned ref (pageBitsForSize sz)"
+
+definition wellformed_acap :: "arch_cap \<Rightarrow> bool" where
+  "wellformed_acap ac \<equiv>
+   case ac of
+     ASIDPoolCap r as \<Rightarrow> is_aligned as asid_low_bits \<and> asid_wf as
+   | FrameCap r rghts sz dev  mapdata \<Rightarrow>
+       rghts \<in> valid_vm_rights \<and>
+       case_option True wellformed_mapdata mapdata \<and>
+       case_option True (swp vmsz_aligned sz \<circ> snd) mapdata
+   | PageTableCap r (Some mapdata) \<Rightarrow> wellformed_mapdata mapdata
+   | _ \<Rightarrow> True"
+
+lemmas wellformed_acap_simps[simp] = wellformed_acap_def[split_simps arch_cap.split]
+
 
 section "Virtual Memory"
 
