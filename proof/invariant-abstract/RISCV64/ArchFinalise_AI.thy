@@ -192,18 +192,17 @@ global_naming Arch
 
 lemma (* replaceable_cdt_update *)[simp,Finalise_AI_asms]:
   "replaceable (cdt_update f s) = replaceable s"
-  sorry (* FIXME RISCV
-  by (fastforce simp: replaceable_def tcb_cap_valid_def) *)
+  by (fastforce simp: replaceable_def tcb_cap_valid_def
+                      reachable_frame_cap_def reachable_target_def)
 
 lemma (* replaceable_revokable_update *)[simp,Finalise_AI_asms]:
   "replaceable (is_original_cap_update f s) = replaceable s"
-  sorry (* FIXME RISCV
-  by (fastforce simp: replaceable_def is_final_cap'_def2 tcb_cap_valid_def) *)
+  by (fastforce simp: replaceable_def is_final_cap'_def2 tcb_cap_valid_def
+                      reachable_frame_cap_def reachable_target_def)
 
 lemma (* replaceable_more_update *) [simp,Finalise_AI_asms]:
   "replaceable (trans_state f s) sl cap cap' = replaceable s sl cap cap'"
-  sorry (* FIXME RISCV
-  by (simp add: replaceable_def) *)
+  by (simp add: replaceable_def reachable_frame_cap_def reachable_target_def)
 
 lemmas [Finalise_AI_asms] = obj_refs_obj_ref_of (* used under name obj_ref_ofI *)
 
@@ -701,8 +700,8 @@ lemma arch_finalise_cap_invs' [wp,Finalise_AI_asms]:
   apply (rule hoare_pre)
    apply (wp unmap_page_invs | wpc)+
   apply (clarsimp simp: valid_cap_def cap_aligned_def)
-  apply (auto simp: mask_def vmsz_aligned_def)
-  sorry (* FIXME RISCV *)
+  apply (auto simp: mask_def vmsz_aligned_def asid_wf_def wellformed_mapdata_def)
+  done
 
 lemma as_user_unlive[wp]:
   "\<lbrace>obj_at (Not \<circ> live) vr\<rbrace> as_user t f \<lbrace>\<lambda>_. obj_at (Not \<circ> live) vr\<rbrace>"
@@ -710,20 +709,6 @@ lemma as_user_unlive[wp]:
   apply (wpsimp wp: set_object_wp)
   by (clarsimp simp: obj_at_def live_def hyp_live_def arch_tcb_context_set_def dest!: get_tcb_SomeD)
 
-(* FIXME RISCV: how can this by in Finalise_AI_asms and talk about AVCPU?
-lemma obj_at_not_live_valid_arch_cap_strg [Finalise_AI_asms]:
-  "(s \<turnstile> ArchObjectCap cap \<and> aobj_ref cap = Some r \<and> \<not> typ_at (AArch AVCPU) r s)
-        \<longrightarrow> obj_at (\<lambda>ko. \<not> live ko) r s"
-  by (clarsimp simp: live_def valid_cap_def obj_at_def a_type_arch_live valid_cap_simps
-                     hyp_live_def arch_live_def
-              split: arch_cap.split_asm if_splits)
-
-lemma obj_at_not_live_valid_arch_cap_strg' [Finalise_AI_asms]:
-  "(s \<turnstile> ArchObjectCap cap \<and> aobj_ref cap = Some r \<and> cap \<noteq> VCPUCap r)
-        \<longrightarrow> obj_at (\<lambda>ko. \<not> live ko) r s"
-  by (clarsimp simp: live_def valid_cap_def obj_at_def
-                     hyp_live_def arch_live_def
-              split: arch_cap.split_asm if_splits) *)
 
 lemma arch_finalise_cap_replaceable1:
   notes strg = tcb_cap_valid_imp_NullCap
@@ -854,7 +839,7 @@ lemma arch_finalise_cap_replaceable:
           pspace_aligned s \<and> valid_vspace_objs s \<and> valid_objs s \<and>
           valid_asid_table s\<rbrace>
      arch_finalise_cap cap x
-   \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) (cap.ArchObjectCap cap)\<rbrace>"
+   \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) (ArchObjectCap cap)\<rbrace>"
   by (rule arch_finalise_cap_replaceable1)
 
 lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
@@ -1094,33 +1079,6 @@ lemma is_arch_update_reset_page:
   apply (simp add: is_arch_update_def is_arch_cap_def cap_master_cap_def)
   done
 
-lemma replaceable_reset_pt:
-  "\<lbrakk>cap = PageTableCap p m \<and>
-   cte_wp_at ((=) (ArchObjectCap cap)) slot s \<and>
-   (\<forall>asid vref. vs_cap_ref (ArchObjectCap cap) = Some (asid, vref) \<longrightarrow>
-     (\<forall>level. vs_lookup_target level asid vref s \<noteq> Some (level, p))) \<and>
-   is_final_cap' (ArchObjectCap cap) s \<and>
-   obj_at (empty_table {}) p s\<rbrakk> \<Longrightarrow>
-   replaceable s slot (ArchObjectCap (PageTableCap p None))
-                      (ArchObjectCap cap)"
-  apply (elim conjE)
-  apply (cases m, simp_all add: replaceable_def gen_obj_refs_def cap_range_def
-                                is_cap_simps (* tcb_cap_valid_pagetable *))
-  sorry (* FIXME RISCV
-  apply (rule conjI)
-   apply (frule is_final_cap_pt_asid_eq) defer
-   apply clarsimp
-   apply (drule cte_wp_at_obj_refs_singleton_page_table)
-   apply (erule exE)
-   apply (drule_tac x="asid" in is_final_cap_pt_asid_eq)
-   apply (drule final_cap_pt_slot_eq)
-     apply simp_all
-  apply (rule_tac
-    cap="(cap.ArchObjectCap cap)"
-    in  no_cap_to_obj_with_diff_ref_finalI)
-  apply simp_all
-  done *)
-
 crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
    (wp: crunch_wps simp: crunch_simps)
 
@@ -1205,10 +1163,10 @@ lemma do_machine_op_reachable_pg_cap[wp]:
   "\<lbrace>\<lambda>s. P (reachable_frame_cap cap s)\<rbrace>
    do_machine_op mo
    \<lbrace>\<lambda>rv s. P (reachable_frame_cap cap s)\<rbrace>"
-  apply (simp add:reachable_frame_cap_def)
-  sorry (* FIXME RISCV
-  apply wp
-  done *)
+  apply (simp add:reachable_frame_cap_def reachable_target_def)
+  apply (wp_pre, wps dmo.vs_lookup_pages, wpsimp)
+  apply simp
+  done
 
 lemma replaceable_or_arch_update_pg:
   " (case (vs_cap_ref (ArchObjectCap (FrameCap word fun vm_pgsz dev y))) of None \<Rightarrow> True | Some (asid,vref) \<Rightarrow>
@@ -1316,15 +1274,30 @@ lemma (* replace_cap_invs_arch_update *)[Finalise_AI_asms]:
   apply simp
   done
 
+lemma dmo_pred_tcb_at[wp]:
+  "do_machine_op mop \<lbrace>\<lambda>s. P (pred_tcb_at f Q t s)\<rbrace>"
+  apply (simp add: do_machine_op_def split_def)
+  apply (wp select_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  done
+
 lemma dmo_tcb_cap_valid_ARCH [Finalise_AI_asms]:
-  "\<lbrace>\<lambda>s. P (tcb_cap_valid cap ptr s)\<rbrace> do_machine_op mop \<lbrace>\<lambda>_ s. P (tcb_cap_valid cap ptr s)\<rbrace>"
+  "do_machine_op mop \<lbrace>\<lambda>s. P (tcb_cap_valid cap ptr s)\<rbrace>"
   apply (simp add: tcb_cap_valid_def no_cap_to_obj_with_diff_ref_def)
-  sorry (* FIXME RISCV
-  apply (rule hoare_pre)
-  apply wps
-  apply wp
+  apply (wp_pre, wps, rule hoare_vcg_prop)
   apply simp
-  done *)
+  done
+
+lemma dmo_vs_lookup_target[wp]:
+  "do_machine_op mop \<lbrace>\<lambda>s. P (vs_lookup_target level asid vref s)\<rbrace>"
+  by (rule dmo.vs_lookup_pages)
+
+lemma dmo_reachable_target[wp]:
+  "do_machine_op mop \<lbrace>\<lambda>s. P (reachable_target ref p s)\<rbrace>"
+  apply (simp add: reachable_target_def split_def)
+  apply (wp_pre, wps, wp)
+  apply simp
+  done
 
 lemma (* dmo_replaceable_or_arch_update *) [Finalise_AI_asms,wp]:
   "\<lbrace>\<lambda>s. replaceable_or_arch_update s slot cap cap'\<rbrace>
@@ -1332,12 +1305,10 @@ lemma (* dmo_replaceable_or_arch_update *) [Finalise_AI_asms,wp]:
   \<lbrace>\<lambda>r s. replaceable_or_arch_update s slot cap cap'\<rbrace>"
   unfolding replaceable_or_arch_update_def replaceable_def no_cap_to_obj_with_diff_ref_def
             replaceable_final_arch_cap_def replaceable_non_final_arch_cap_def
-  apply (rule hoare_pre)
-  apply (wps dmo_tcb_cap_valid_ARCH do_machine_op_reachable_pg_cap)
-  sorry (* FIXME RISCV
-  apply (rule hoare_vcg_prop)
-  apply auto
-  done *)
+  apply (wp_pre, wps dmo_tcb_cap_valid_ARCH do_machine_op_reachable_pg_cap)
+   apply (rule hoare_vcg_prop)
+  apply simp
+  done
 
 end
 
