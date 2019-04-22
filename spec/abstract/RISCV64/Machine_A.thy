@@ -38,7 +38,7 @@ type_synonym asid_high_len   = 7
 type_synonym asid_high_index = "asid_high_len word"
 
 type_synonym asid_len        = 16
-type_synonym asid_rep_len    = machine_word_len
+type_synonym asid_rep_len    = asid_len
 type_synonym asid            = "asid_rep_len word"
 
 text \<open>

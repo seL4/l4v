@@ -95,7 +95,7 @@ definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
        ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow> doE
            pt' \<leftarrow> find_vspace_for_asid asid;
            whenE (pt \<noteq> pt') $ throwError InvalidRoot;
-           liftE $ do_machine_op $ setVSpaceRoot pt asid
+           liftE $ do_machine_op $ setVSpaceRoot pt (ucast asid)
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     (\<lambda>_. do
@@ -129,7 +129,7 @@ definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::st
      | Some pool_ptr \<Rightarrow> do
          pool \<leftarrow> get_asid_pool pool_ptr;
          when (pool (asid_low_bits_of asid) = Some pt) $ do
-           do_machine_op $ hwASIDFlush asid;
+           do_machine_op $ hwASIDFlush (ucast asid);
            pool' \<leftarrow> return $ pool (asid_low_bits_of asid := None);
            set_asid_pool pool_ptr pool';
            tcb \<leftarrow> gets cur_thread;
