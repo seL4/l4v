@@ -1596,6 +1596,13 @@ lemma perform_page_invs [wp]:
   done
   *)
 
+lemma asid_high_low:
+  "\<lbrakk> asid_high_bits_of asid = asid_high_bits_of asid';
+     asid_low_bits_of asid = asid_low_bits_of asid' \<rbrakk> \<Longrightarrow>
+   asid = asid'"
+  unfolding asid_high_bits_of_def asid_low_bits_of_def asid_high_bits_def asid_low_bits_def
+  by word_bitwise simp
+
 end
 
 locale asid_pool_map = Arch +
@@ -1606,6 +1613,7 @@ locale asid_pool_map = Arch +
   assumes pt:  "pts_of s ptp = Some pt"
   assumes empty: "kernel_mappings_only pt s"
   assumes lookup: "pool_for_asid asid s = Some ap"
+  assumes valid_vspace_objs: "valid_vspace_objs s"
   assumes valid_asids: "valid_asid_table s"
   assumes aligned: "is_aligned ptp pt_bits"
 begin
@@ -1639,9 +1647,7 @@ lemma empty_for_user:
 lemma vs_lookup_table:
   "vref \<in> user_region \<Longrightarrow>
    vs_lookup_table level asid' vref s' =
-     (if asid_high_bits_of asid' = asid_high_bits_of asid \<and>
-         asid_low_bits_of asid' = asid_low_bits_of asid \<and>
-         level \<le> max_pt_level
+     (if asid' = asid \<and> level \<le> max_pt_level
       then Some (max_pt_level, ptp)
       else vs_lookup_table level asid' vref s)"
   apply clarsimp
@@ -1671,6 +1677,7 @@ lemma vs_lookup_table:
    using valid_asids
    apply (clarsimp simp: valid_asid_table_def)
    apply (drule (2) inj_on_domD[rotated])
+   apply (drule (1) asid_high_low)
    apply clarsimp
   apply (clarsimp simp: vspace_for_pool_def split: if_split_asm)
   done
@@ -1678,9 +1685,7 @@ lemma vs_lookup_table:
 lemma vs_lookup_slot:
   "vref \<in> user_region \<Longrightarrow>
    vs_lookup_slot level asid' vref s' =
-     (if asid_high_bits_of asid' = asid_high_bits_of asid \<and>
-         asid_low_bits_of asid' = asid_low_bits_of asid \<and>
-         level \<le> max_pt_level
+     (if asid' = asid \<and> level \<le> max_pt_level
       then Some (max_pt_level, pt_slot_offset max_pt_level ptp vref)
       else vs_lookup_slot level asid' vref s)"
   apply (simp add: vs_lookup_slot_def)
@@ -1689,16 +1694,79 @@ lemma vs_lookup_slot:
   apply (rule obind_eqI; clarsimp simp: vs_lookup_table)
   done
 
-(* FIXME RISCV: see above, statement might need tweak *)
+lemma pte_refs_of_None:
+  "vref \<in> user_region \<Longrightarrow> pte_refs_of s (pt_slot_offset max_pt_level ptp vref) = None"
+  using aligned pt
+  by (clarsimp simp: ptes_of_def obind_def opt_map_def empty_for_user split: option.splits)
+
+lemma vs_lookup_table_None:
+  "level \<le> max_pt_level \<Longrightarrow> vs_lookup_table level asid vref s = None"
+  using lookup new ap
+  by (clarsimp simp: vs_lookup_table_def obind_def pool_for_asid_def vspace_for_pool_def
+               split: option.splits)
+
+lemma vs_lookup_slot_None:
+  "level \<le> max_pt_level \<Longrightarrow> vs_lookup_slot level asid vref s = None"
+  by (clarsimp simp: vs_lookup_slot_def obind_def vs_lookup_table_None)
+
 lemma vs_lookup_target:
   "vref \<in> user_region \<Longrightarrow>
    vs_lookup_target level asid' vref s' =
-     (if asid_high_bits_of asid' = asid_high_bits_of asid \<and>
-         asid_low_bits_of asid' = asid_low_bits_of asid \<and>
-         level \<le> asid_pool_level
+     (if asid' = asid \<and> level = asid_pool_level
       then Some (level, ptp)
       else vs_lookup_target level asid' vref s)"
-  sorry
+  apply clarsimp
+  apply (rule conjI; clarsimp)
+   apply (clarsimp simp: vs_lookup_target_def in_omonad vs_lookup_slot)
+   apply (clarsimp simp: vs_lookup_slot_def vs_lookup_table_def in_omonad)
+   using lookup
+   apply (simp add: pool_for_asid_def vspace_for_pool_def in_omonad)
+  apply (cases "asid' = asid")
+   apply clarsimp
+   apply (clarsimp simp: vs_lookup_target_def)
+   apply (clarsimp simp: obind_def vs_lookup_slot_None vs_lookup_slot pte_refs_of_None)
+  apply clarsimp
+  apply (simp add: vs_lookup_target_def obind_def)
+  apply (clarsimp simp: vs_lookup_slot)
+  apply (cases "vs_lookup_slot level asid' vref s"; clarsimp)
+  apply (rule conjI; clarsimp)
+   prefer 2
+   apply (simp split: option.splits)
+  apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
+  apply (clarsimp simp: vs_lookup_table_def in_omonad split: if_split_asm)
+  apply (erule disjE; clarsimp)
+   apply (drule pt_walk_max_level, simp)
+  apply (rename_tac ap')
+  apply (subgoal_tac "ap' \<noteq> ap \<or> asid_low_bits_of asid' \<noteq> asid_low_bits_of asid")
+   using ap
+   apply (simp add: vspace_for_pool_def obind_def split: option.splits)
+  using lookup valid_asids
+  apply (clarsimp simp: valid_asid_table_def pool_for_asid_def)
+  apply (drule (2) inj_on_domD[rotated])
+  apply (drule (1) asid_high_low)
+  apply clarsimp
+  done
+
+lemma valid_pool:
+  "valid_vspace_obj asid_pool_level (ASIDPool pool) s"
+proof -
+  from lookup
+  have "vs_lookup_table asid_pool_level asid 0 s = Some (asid_pool_level, ap)"
+    by (clarsimp simp: vs_lookup_table_def in_omonad)
+  with valid_vspace_objs ap
+  show ?thesis by (fastforce dest: valid_vspace_objsD simp: in_omonad)
+qed
+
+lemma valid_pte:
+  "valid_pte level pte s \<Longrightarrow> valid_pte level pte s'"
+  using ap
+  apply (cases pte; simp add: pt_at_eq)
+  apply (clarsimp simp: data_at_def obj_at_def s'_def in_omonad)
+  done
+
+lemma valid_vspace_obj:
+  "valid_vspace_obj level ao s \<Longrightarrow> valid_vspace_obj level ao s'"
+  by (cases ao; simp add: pt_at_eq valid_pte)
 
 end
 
@@ -1706,136 +1774,121 @@ context Arch begin global_naming RISCV64
 
 lemma set_asid_pool_arch_objs_map:
   "\<lbrace>valid_vspace_objs and valid_arch_state and valid_global_objs and
-    valid_kernel_mappings and
+    valid_kernel_mappings and pspace_aligned and
     (\<lambda>s. asid_pools_of s ap = Some pool) and
     K (pool (asid_low_bits_of asid) = None) and
     (\<lambda>s. pool_for_asid asid s = Some ap) and
-    (\<lambda>s. obj_at (empty_table (set (second_level_tables (arch_state s)))) pt s) \<rbrace>
-  set_asid_pool ap (pool(asid_low_bits_of asid \<mapsto> pt))
+    (\<lambda>s. \<exists>pt. pts_of s pt_ptr = Some pt \<and> kernel_mappings_only pt s) \<rbrace>
+  set_asid_pool ap (pool(asid_low_bits_of asid \<mapsto> pt_ptr))
   \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
-  sorry  (* FIXME RISCV: lemma statement --
-            need to capture kernel mappings, which should be present at this stage
-  apply (simp add: set_asid_pool_def set_object_def)
-  apply (wp get_object_wp)
-  apply (clarsimp simp del: fun_upd_apply
-                  split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (frule (2) valid_vspace_objsD)
-  apply (clarsimp simp: valid_vspace_objs_def simp del: valid_vspace_obj.simps)
-  apply (case_tac "p = ap")
-   apply (clarsimp simp: obj_at_def
-               simp del: fun_upd_apply valid_vspace_obj.simps)
-   apply (clarsimp simp: ran_def)
-   apply (case_tac "a = asid")
-    apply clarsimp
-    apply (rule typ_at_same_type)
-      apply (simp add: obj_at_def a_type_simps)
-     prefer 2
-     apply assumption
-    apply (simp add: a_type_def)
-   apply clarsimp
-   apply (erule allE, erule impE, rule exI, assumption)+
-   apply (erule typ_at_same_type)
-    prefer 2
-    apply assumption
-   apply (simp add: a_type_def)
-  apply (clarsimp simp: obj_at_def a_type_simps)
-  apply (frule (3) asid_pool_map.intro)
-  apply (subst (asm) asid_pool_map.vs_lookup, assumption)
-  apply clarsimp
-  apply (erule disjE)
-   apply (erule_tac x=p in allE, simp)
-   apply (erule impE, blast)
-   apply (erule valid_vspace_obj_same_type)
-    apply (simp add: obj_at_def a_type_def)
-   apply (simp add: a_type_def)
-  apply (clarsimp simp: asid_pool_map.new_lookups_rtrancl)
-  apply (erule disjE)
-   apply clarsimp
-   apply (erule_tac x=p in allE, simp)
-   apply (erule impE, blast)
-   apply (erule valid_vspace_obj_same_type)
-    apply (simp add: obj_at_def a_type_def)
-   apply (simp add: a_type_def)
-  apply (clarsimp simp: asid_pool_map.new_lookups_def empty_table_def)
-  done  *)
+  unfolding set_asid_pool_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: set_object_wp)
+  apply (frule (5) asid_pool_map.intro)
+    apply (clarsimp simp: valid_arch_state_def)
+   apply (erule pspace_aligned_pts_ofD, simp)
+  apply (subst valid_vspace_objs_def)
+  apply (clarsimp simp: asid_pool_map.vs_lookup_table split: if_split_asm)
+   apply (clarsimp simp: in_omonad fun_upd_apply kernel_mappings_only_def split: if_split_asm)
+  apply (clarsimp simp: in_omonad fun_upd_apply split: if_split_asm)
+   prefer 2
+   apply (frule (2) valid_vspace_objsD)
+    apply (simp add: in_omonad)
+   apply (simp add: asid_pool_map.valid_vspace_obj)
+  apply (clarsimp simp: obj_at_def fun_upd_apply)
+  apply (rule conjI; clarsimp)
+  apply (frule asid_pool_map.valid_pool)
+  apply (fastforce simp: obj_at_def)
+  done
+
+lemma caps_of_state_fun_upd:
+  "obj_at (same_caps val) p s \<Longrightarrow>
+   (caps_of_state (s\<lparr>kheap := (kheap s) (p \<mapsto> val)\<rparr>)) = caps_of_state s"
+  apply (drule caps_of_state_after_update)
+  apply (simp add: fun_upd_def)
+  done
 
 lemma set_asid_pool_valid_arch_caps_map:
   "\<lbrace>valid_arch_caps and valid_arch_state and valid_global_objs and valid_objs
-    and valid_vspace_objs and
+    and valid_vspace_objs and pspace_aligned and
     (\<lambda>s. asid_pools_of s ap = Some pool \<and> pool_for_asid asid s = Some ap \<and>
-         (\<exists>ptr cap. caps_of_state s ptr = Some cap \<and> obj_refs cap = {pt} \<and>
+         (\<exists>ptr cap. caps_of_state s ptr = Some cap \<and> obj_refs cap = {pt_ptr} \<and>
                     vs_cap_ref cap = Some (asid, 0)))
-    and pt_at pt
-    and (\<lambda>s. obj_at (empty_table (set (second_level_tables (arch_state s)))) pt s)
-    and K (pool (asid_low_bits_of asid) = None)\<rbrace>
-  set_asid_pool ap (pool(asid_low_bits_of asid \<mapsto> pt))
+    and (\<lambda>s. \<exists>pt. pts_of s pt_ptr = Some pt \<and> kernel_mappings_only pt s)
+    and K (pool (asid_low_bits_of asid) = None \<and> 0 < asid)\<rbrace>
+  set_asid_pool ap (pool(asid_low_bits_of asid \<mapsto> pt_ptr))
   \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
-  sorry
-  (* FIXME RISCV: lemma statement --
-            need to capture kernel mappings, which should be present at this stage
-  apply (simp add: set_asid_pool_def set_object_def)
-  apply (wp get_object_wp)
-  apply clarsimp
-  apply (frule obj_at_not_pt_not_in_global_pts[where p=pd], clarsimp+)
-  apply (simp add: a_type_def)
-  apply (frule obj_at_not_pt_not_in_global_pts[where p=ap], clarsimp+)
-  apply (clarsimp simp: obj_at_def valid_arch_caps_def
-                        caps_of_state_after_update)
-  apply (clarsimp simp: a_type_def
-                 split: Structures_A.kernel_object.split_asm if_split_asm
-                        arch_kernel_obj.split_asm)
-  apply (frule(3) asid_pool_map.intro)
-  apply (simp add: fun_upd_def[symmetric])
-  apply (rule conjI)
-   apply (simp add: valid_vs_lookup_def
-                    caps_of_state_after_update[folded fun_upd_def]
-                    obj_at_def)
-   apply (subst asid_pool_map.vs_lookup_pages2, assumption)
-   apply simp
-   apply (clarsimp simp: asid_pool_map.new_lookups_def)
-   apply (frule(2) vs_lookup_vs_lookup_pagesI, simp add: valid_arch_state_def)
-   apply (simp add: second_level_tables_def)
-   apply (drule(2) ref_is_unique)
-        apply (simp add: valid_vs_lookup_def)
-       apply clarsimp+
-     apply (simp add: valid_arch_state_def)
-    apply (rule valid_objs_caps, simp)
-   apply fastforce
-  apply (simp add: valid_table_caps_def
-                   caps_of_state_after_update[folded fun_upd_def] obj_at_def
-              del: imp_disjL)
-  apply (clarsimp simp del: imp_disjL)
-  apply (drule(1) caps_of_state_valid_cap)+
-  apply (auto simp add: valid_cap_def is_pt_cap_def is_pd_cap_def obj_at_def
-                        a_type_def)[1]
-  done *)
+  unfolding set_asid_pool_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: set_object_wp)
+  apply (frule (5) asid_pool_map.intro)
+    apply (clarsimp simp: valid_arch_state_def)
+   apply (erule pspace_aligned_pts_ofD, simp)
+  apply (clarsimp simp: valid_arch_caps_def)
+  apply (simp add: caps_of_state_fun_upd obj_at_def)
+  apply (subgoal_tac "pts_of s ap = None")
+   prefer 2
+   apply (clarsimp simp: opt_map_def)
+  apply simp
+  apply (clarsimp simp: valid_vs_lookup_def caps_of_state_fun_upd obj_at_def)
+  apply (clarsimp simp: asid_pool_map.vs_lookup_target split: if_split_asm)
+  by (fastforce simp: vref_for_level_asid_pool user_region_def)
+
+lemma kernel_mappings_only_has:
+  "kernel_mappings_only pt s \<Longrightarrow> has_kernel_mappings pt s"
+  by (simp add: kernel_mappings_only_def)
+
+lemma toplevel_pt_has_kernel_mappings:
+  assumes ap: "pool_for_asid asid s = Some ap"
+  assumes pool: "asid_pools_of s ap = Some pool"
+  assumes p: "p \<in> ran pool"
+  assumes pt: "pts_of s p = Some pt"
+  assumes km: "equal_kernel_mappings s"
+  assumes vsl: "valid_vs_lookup s"
+  shows "has_kernel_mappings pt s"
+proof -
+  from ap
+  have "vs_lookup_table asid_pool_level asid 0 s = Some (asid_pool_level, ap)"
+    by (simp add: vs_lookup_table_def in_omonad)
+  with pool p
+  obtain asid' where
+    vs_target: "vs_lookup_target asid_pool_level asid' 0 s = Some (asid_pool_level, p)"
+    by (auto dest: vs_lookup_table_ap_step)
+  with vsl
+  have "asid' \<noteq> 0" by (fastforce simp add: valid_vs_lookup_def)
+  with vs_target
+  have "vspace_for_asid asid' s = Some p"
+    by (clarsimp simp: vspace_for_pool_def in_omonad vs_lookup_target_def vs_lookup_slot_def
+                       vs_lookup_table_def vspace_for_asid_def word_neq_0_conv)
+  with km pt
+  show ?thesis by (simp add: equal_kernel_mappings_def)
+qed
 
 lemma set_asid_pool_invs_map:
   "\<lbrace>invs and
     (\<lambda>s. asid_pools_of s ap = Some pool \<and> pool_for_asid asid s = Some ap \<and>
-         (\<exists>ptr cap. caps_of_state s ptr = Some cap \<and> obj_refs cap = {pt} \<and>
+         (\<exists>ptr cap. caps_of_state s ptr = Some cap \<and> obj_refs cap = {pt_ptr} \<and>
                     vs_cap_ref cap = Some (asid, 0)))
-    and pt_at pt
-    and (\<lambda>s. obj_at (empty_table (set (second_level_tables (arch_state s)))) pt s)
-    and K (pool (asid_low_bits_of asid) = None)\<rbrace>
-  set_asid_pool ap (pool(asid_low_bits_of asid \<mapsto> pt))
+    and (\<lambda>s. \<exists>pt. pts_of s pt_ptr = Some pt \<and> kernel_mappings_only pt s)
+    and K (pool (asid_low_bits_of asid) = None \<and> 0 < asid)\<rbrace>
+  set_asid_pool ap (pool(asid_low_bits_of asid \<mapsto> pt_ptr))
   \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_asid_map_def)
-  apply (wp valid_irq_node_typ set_asid_pool_typ_at set_asid_pool_arch_objs_map valid_irq_handlers_lift
-                            set_asid_pool_valid_arch_caps_map)
-  apply clarsimp
-  apply auto
-  sorry (* FIXME RISCV *)
+  apply (wpsimp wp: valid_irq_node_typ set_asid_pool_typ_at set_asid_pool_arch_objs_map
+                    valid_irq_handlers_lift set_asid_pool_valid_arch_caps_map)
+  apply (erule disjE, clarsimp simp: kernel_mappings_only_has)
+  apply (erule (4) toplevel_pt_has_kernel_mappings)
+  apply (simp add: valid_arch_caps_def)
+  done
 
 lemma perform_asid_pool_invs [wp]:
   "\<lbrace>invs and valid_apinv api\<rbrace> perform_asid_pool_invocation api \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (clarsimp simp: perform_asid_pool_invocation_def split: asid_pool_invocation.splits)
-  sorry (* FIXME RISCV
+  apply (clarsimp simp: perform_asid_pool_invocation_def store_asid_pool_entry_def split: asid_pool_invocation.splits)
   apply (wp arch_update_cap_invs_map set_asid_pool_invs_map
             get_cap_wp set_cap_typ_at
-            empty_table_lift[unfolded pred_conj_def, OF _ set_cap_obj_at_other]
             set_cap_obj_at_other
                |wpc|simp|wp_once hoare_vcg_ex_lift)+
+  sorry (*
   apply (clarsimp simp: valid_apinv_def cte_wp_at_caps_of_state is_arch_update_def is_cap_simps cap_master_cap_simps)
   apply (frule caps_of_state_cteD)
   apply (drule cte_wp_valid_cap, fastforce)
