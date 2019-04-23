@@ -21,7 +21,7 @@ definition
          slot \<noteq> parent \<and>
          cte_wp_at (\<lambda>cap. \<exists>idx. cap = UntypedCap False frame pageBits idx) parent s \<and>
          descendants_of parent (cdt s) = {} \<and>
-         is_aligned base asid_low_bits \<and> asid_wf base \<and>
+         is_aligned base asid_low_bits \<and>
          riscv_asid_table (arch_state s) (asid_high_bits_of base) = None"
 
 lemma safe_parent_strg:
@@ -1124,23 +1124,6 @@ lemma decode_page_table_invocation_wf[wp]:
   apply (clarsimp simp: mask_def bit_simps; word_bitwise)
   done *)
 
-lemma asid_wf_low_add:
-  fixes b :: asid_low_index
-  shows "asid_wf a \<Longrightarrow> is_aligned a asid_low_bits \<Longrightarrow> asid_wf (ucast b + a)"
-  apply (clarsimp simp: asid_wf_def field_simps)
-  apply (erule is_aligned_add_less_t2n)
-    apply (simp add: asid_low_bits_def)
-    apply (rule ucast_less[where 'b=asid_low_len, simplified], simp)
-   by (auto simp: asid_bits_defs)
-
-lemma asid_wf_high:
-  fixes a :: asid_high_index
-  shows "asid_wf (ucast a << asid_low_bits)"
-  apply (clarsimp simp: asid_wf_def)
-  apply (rule shiftl_less_t2n)
-    apply (rule order_less_le_trans, rule ucast_less, simp)
-   by (auto simp: asid_bits_defs)
-
 lemma cte_wp_at_eq_simp:
   "cte_wp_at ((=) cap) = cte_wp_at (\<lambda>c. c = cap)"
   apply (rule arg_cong [where f=cte_wp_at])
@@ -1188,7 +1171,7 @@ lemma arch_decode_inv_wf[wp]:
            apply (frule_tac cap=c' in caps_of_state_valid, assumption)
            apply (drule (1) diminished_is_update)
            apply (clarsimp simp: is_pml4_cap_def cap_rights_update_def acap_rights_update_def)
-         apply (clarsimp simp: word_neq_0_conv asid_high_bits_of_def asid_wf_low_add)
+         apply (clarsimp simp: word_neq_0_conv asid_high_bits_of_def)
          apply (drule vs_lookup_atI, erule_tac s="word2 >> asid_low_bits" in rsubst)
          apply (simp add: asid_bits_defs aligned_shift[OF ucast_less[where 'b=9], simplified])
         (* ASIDControlCap \<rightarrow> RISCVASIDControlMakePool *)
@@ -1205,7 +1188,7 @@ lemma arch_decode_inv_wf[wp]:
                          in hoare_post_imp_R)
                   apply (simp add: lookup_target_slot_def)
                   apply wp
-                 apply (clarsimp simp: cte_wp_at_def asid_wf_high)
+                 apply (clarsimp simp: cte_wp_at_def)
                 apply (wp ensure_no_children_sp select_ext_weak_wp select_wp whenE_throwError_wp | wpc | simp)+
          apply clarsimp
          apply (rule conjI, fastforce)

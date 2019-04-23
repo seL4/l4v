@@ -85,7 +85,7 @@ lemma equal_kernel_mappings_asid_table_unmap:
   done
 
 lemma invs_riscv_asid_table_unmap:
-  "invs s \<and> is_aligned base asid_low_bits \<and> base \<le> mask asid_bits
+  "invs s \<and> is_aligned base asid_low_bits
        \<and> tab = riscv_asid_table (arch_state s)
      \<longrightarrow> invs (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := tab(asid_high_bits_of base := None)\<rparr>\<rparr>)"
   apply (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)
@@ -97,9 +97,7 @@ lemma invs_riscv_asid_table_unmap:
   done
 
 lemma delete_asid_pool_invs[wp]:
-  "\<lbrace>invs and K (base \<le> mask asid_bits)\<rbrace>
-     delete_asid_pool base pptr
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "delete_asid_pool base pptr \<lbrace>invs\<rbrace>"
   unfolding delete_asid_pool_def
   supply fun_upd_apply[simp del]
   apply wpsimp
@@ -132,9 +130,7 @@ lemma clearExMonitor_invs[wp]:
                    machine_rest_lift_def in_monad select_f_def)
 
 lemma delete_asid_invs[wp]:
-  "\<lbrace>invs and K (asid \<le> mask asid_bits)\<rbrace>
-     delete_asid asid pd
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "delete_asid asid pd \<lbrace>invs\<rbrace>"
   apply (simp add: delete_asid_def cong: option.case_cong)
   apply (wpsimp wp: set_asid_pool_invs_unmap)
   apply blast
@@ -700,7 +696,7 @@ lemma arch_finalise_cap_invs' [wp,Finalise_AI_asms]:
   apply (rule hoare_pre)
    apply (wp unmap_page_invs | wpc)+
   apply (clarsimp simp: valid_cap_def cap_aligned_def)
-  apply (auto simp: mask_def vmsz_aligned_def asid_wf_def wellformed_mapdata_def)
+  apply (auto simp: mask_def vmsz_aligned_def wellformed_mapdata_def)
   done
 
 lemma as_user_unlive[wp]:

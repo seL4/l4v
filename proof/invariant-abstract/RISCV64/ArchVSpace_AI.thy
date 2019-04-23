@@ -65,41 +65,6 @@ crunch pspace_in_kernel_window[wp]: perform_page_invocation "pspace_in_kernel_wi
 lemma asid_word_bits [simp]: "asid_bits < word_bits"
   by (simp add: asid_bits_def word_bits_def)
 
-lemma asid_low_high_bits:
-  "\<lbrakk> x && mask asid_low_bits = y && mask asid_low_bits;
-    ucast (asid_high_bits_of x) = (ucast (asid_high_bits_of y)::machine_word);
-    x \<le> 2 ^ asid_bits - 1; y \<le> 2 ^ asid_bits - 1 \<rbrakk>
-  \<Longrightarrow> x = y"
-  apply (rule word_eqI)
-  apply (simp add: upper_bits_unset_is_l2p_64[symmetric] bang_eq nth_ucast word_size)
-  apply (clarsimp simp: asid_high_bits_of_def nth_ucast nth_shiftr)
-  apply (simp add: asid_high_bits_def asid_bits_def asid_low_bits_def word_bits_def)
-  subgoal premises prems[rule_format] for n
-  apply (cases "n < asid_low_bits")
-   using prems(1)
-   apply (fastforce simp: asid_low_bits_def)
-  apply (cases "n < asid_bits")
-   using prems(2)[where n="n - asid_low_bits"]
-   apply (fastforce simp: asid_bits_def asid_low_bits_def)
-  using prems(3-)
-  by (simp add: linorder_not_less asid_bits_def asid_low_bits_def)
-  done
-
-lemma asid_low_high_bits':
-  "\<lbrakk> ucast x = (ucast y :: asid_low_index);
-    asid_high_bits_of x = asid_high_bits_of y;
-    x \<le> 2 ^ asid_bits - 1; y \<le> 2 ^ asid_bits - 1 \<rbrakk>
-  \<Longrightarrow> x = y"
-  apply (rule asid_low_high_bits)
-     apply (rule word_eqI)
-     apply (subst (asm) bang_eq)
-     apply (simp add: nth_ucast asid_low_bits_def word_size)
-    apply (rule word_eqI)
-    apply (subst (asm) bang_eq)+
-    apply (simp add: nth_ucast asid_low_bits_def)
-   apply assumption+
-  done
-
 lemma vspace_at_asid_vs_lookup:
   "vspace_at_asid asid pt s \<Longrightarrow>
    vs_lookup_table max_pt_level asid 0 s = Some (max_pt_level, pt)"
@@ -194,53 +159,13 @@ lemma valid_vs_lookup_unmap_strg:
   apply (blast dest: vs_lookup_target_clear_asid_table)
   done
 
-
-lemma ex_asid_high_bits_plus:
-  "asid \<le> mask asid_bits \<Longrightarrow> \<exists>x \<le> 2^asid_low_bits - 1. asid = (ucast (asid_high_bits_of asid) << asid_low_bits) + x"
-  apply (rule_tac x="asid && mask asid_low_bits" in exI)
-  apply (rule conjI)
-   apply (simp add: mask_def)
-   apply (rule word_and_le1)
-  apply (subst (asm) mask_def)
-  apply (simp add: upper_bits_unset_is_l2p_64[symmetric])
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: word_size nth_ucast nth_shiftl)
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr asid_high_bits_of_def
-                        asid_low_bits_def word_bits_def asid_bits_def)
-  apply (rule iffI)
-   prefer 2
-   apply fastforce
-  apply (clarsimp simp: linorder_not_less)
-  apply (rule conjI)
-   prefer 2
-   apply arith
-  apply (subgoal_tac "n < 16", simp)
-  apply (clarsimp simp add: linorder_not_le [symmetric])
-  done
-
-
 lemma asid_high_bits_shl:
-  "\<lbrakk> is_aligned base asid_low_bits; base \<le> mask asid_bits \<rbrakk> \<Longrightarrow> ucast (asid_high_bits_of base) << asid_low_bits = base"
-  apply (simp add: mask_def upper_bits_unset_is_l2p_64 [symmetric])
-  apply (rule word_eqI[rule_format])
-  apply (simp add: is_aligned_nth nth_ucast nth_shiftl nth_shiftr asid_low_bits_def
-                   asid_high_bits_of_def word_size asid_bits_def word_bits_def)
-  apply (rule iffI, clarsimp)
-  apply (rule context_conjI)
-   apply (clarsimp simp add: linorder_not_less [symmetric])
-  apply simp
-  apply (rule conjI)
-   prefer 2
-   apply simp
-  apply (subgoal_tac "n < 16", simp)
-  apply (clarsimp simp add: linorder_not_le [symmetric])
-  done
-
+  "is_aligned base asid_low_bits \<Longrightarrow> ucast (asid_high_bits_of base) << asid_low_bits = base"
+  unfolding asid_high_bits_of_def asid_low_bits_def is_aligned_mask
+  by word_bitwise (simp add: word_size)
 
 lemma valid_asid_map_unmap:
-  "valid_asid_map s \<and> is_aligned base asid_low_bits \<and> base \<le> mask asid_bits \<longrightarrow>
+  "valid_asid_map s \<and> is_aligned base asid_low_bits \<longrightarrow>
    valid_asid_map(s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (riscv_asid_table (arch_state s))(asid_high_bits_of base := None)\<rparr>\<rparr>)"
   by (clarsimp simp: valid_asid_map_def)
 
@@ -366,7 +291,7 @@ definition
     Assign asid p slot \<Rightarrow>
       (\<lambda>s. \<exists>pool. asid_pools_of s p = Some pool \<and> pool (ucast asid) = None)
       and cte_wp_at (\<lambda>cap. is_pt_cap cap \<and> cap_asid cap = None) slot
-      and K (0 < asid \<and> asid \<le> mask asid_bits)
+      and K (0 < asid)
       and (\<lambda>s. pool_for_asid asid s = Some p)"
 
 crunch device_state_inv[wp]: ackInterrupt "\<lambda>ms. P (device_state ms)"
@@ -850,13 +775,13 @@ lemma reachable_page_table_not_global:
   done
 
 lemma unmap_page_table_invs[wp]:
-  "\<lbrace>invs and K (asid \<le> mask asid_bits \<and> vaddr \<in> user_region)\<rbrace>
+  "\<lbrace>invs and K (vaddr \<in> user_region)\<rbrace>
      unmap_page_table asid vaddr pt
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: unmap_page_table_def)
   apply (rule hoare_pre)
    apply (wp dmo_invs | wpc | simp)+
-     apply (rule_tac Q="\<lambda>_. invs and K (asid \<le> mask asid_bits)" in hoare_post_imp)
+     apply (rule_tac Q="\<lambda>_. invs" in hoare_post_imp)
       apply safe
        apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p =
                                   underlying_memory m p" in use_valid)
@@ -874,7 +799,7 @@ lemma unmap_page_table_invs[wp]:
    apply (frule (1) cap_to_pt_is_pt_cap; clarsimp?)
     apply (fastforce intro: valid_objs_caps)
    apply (fastforce simp: is_cap_simps)
-  apply (rule conjI; clarsimp)
+  apply (rule conjI; clarsimp?)
    apply (drule (3) vs_lookup_table_vspace)
    apply (simp add: table_index_max_level_slots)
   apply (drule (1) vs_lookup_table_target)

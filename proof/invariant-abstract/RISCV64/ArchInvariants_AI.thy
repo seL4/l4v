@@ -180,14 +180,10 @@ lemmas user_window_def = user_window_2_def
 
 section "Wellformed Addresses and ASIDs"
 
-text \<open>An ASID is well-formed if it is within @{term "mask asid_bits"}.\<close>
-definition asid_wf :: "asid \<Rightarrow> bool" where
-  "asid_wf a \<equiv> a \<le> 2 ^ asid_bits - 1"
-
 (* Note: no alignment check as in other architectures, because we would need to know the PT level. *)
 (* FIXME RISCV: should simplify to vref \<le> canonical_user; also could demand is_aligned pt_bits (real alignment might be higher) *)
 definition wellformed_mapdata :: "asid \<times> vspace_ref \<Rightarrow> bool" where
-  "wellformed_mapdata \<equiv> \<lambda>(asid, vref). 0 < asid \<and> asid_wf asid \<and> vref \<in> user_region"
+  "wellformed_mapdata \<equiv> \<lambda>(asid, vref). 0 < asid \<and> vref \<in> user_region"
 
 definition level_of_sz :: "vmpage_size \<Rightarrow> vm_level" where
   "level_of_sz sz \<equiv> case sz of RISCVSmallPage \<Rightarrow> 0 | RISCVLargePage \<Rightarrow> 1 | RISCVHugePage \<Rightarrow> 2"
@@ -201,7 +197,7 @@ definition vmsz_aligned :: "obj_ref \<Rightarrow> vmpage_size \<Rightarrow> bool
 definition wellformed_acap :: "arch_cap \<Rightarrow> bool" where
   "wellformed_acap ac \<equiv>
    case ac of
-     ASIDPoolCap r as \<Rightarrow> is_aligned as asid_low_bits \<and> asid_wf as
+     ASIDPoolCap r as \<Rightarrow> is_aligned as asid_low_bits
    | FrameCap r rghts sz dev  mapdata \<Rightarrow>
        rghts \<in> valid_vm_rights \<and>
        case_option True wellformed_mapdata mapdata \<and>
@@ -920,14 +916,6 @@ lemma wellformed_arch_pspace:
 lemma pageBitsForSize_pt_bits_left:
   "pageBitsForSize sz = pt_bits_left (level_of_sz sz)"
   by (cases sz; simp add: level_of_sz_def pt_bits_left_def pageBitsForSize_def)
-
-lemma asid_wf_def2:
-  "asid_wf asid \<equiv> asid \<le> mask asid_bits"
-  by (simp add: asid_wf_def mask_def)
-
-lemma asid_wf_def3:
-  "asid_wf asid \<equiv> asid && mask asid_bits = asid"
-  by (simp add: asid_wf_def2 and_mask_eq_iff_le_mask)
 
 lemma asid_low_bits_of_mask_eq:
   "ucast (asid_low_bits_of asid) = asid && mask asid_low_bits"
