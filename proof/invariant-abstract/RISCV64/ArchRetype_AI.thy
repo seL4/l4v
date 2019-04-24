@@ -1023,10 +1023,8 @@ lemma retype_region_plain_invs:
       and region_in_kernel_window {ptr .. (ptr &&~~ mask sz) + 2 ^ sz - 1}
       and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
       and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
-      and K (range_cover ptr sz (obj_bits_api ty us) n)
-      and K (ty \<noteq> ArchObject PageDirectoryObj)\<rbrace>
+      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (rule hoare_gen_asm)
   apply (rule hoare_strengthen_post[OF retype_region_post_retype_invs])
   apply (simp add: post_retype_invs_def)
   done

@@ -22,7 +22,7 @@ definition
          cte_wp_at (\<lambda>cap. \<exists>idx. cap = UntypedCap False frame pageBits idx) parent s \<and>
          descendants_of parent (cdt s) = {} \<and>
          is_aligned base asid_low_bits \<and>
-         riscv_asid_table (arch_state s) (asid_high_bits_of base) = None"
+         asid_table s (asid_high_bits_of base) = None"
 
 lemma safe_parent_strg:
   "cte_wp_at (\<lambda>cap. cap = UntypedCap False frame pageBits idx) p s \<and>
@@ -71,7 +71,7 @@ lemma check_vp_inv: "\<lbrace>P\<rbrace> check_vp_alignment sz w \<lbrace>\<lamb
 
 
 lemma p2_low_bits_max:
-  "(2 ^ asid_low_bits - 1) = (max_word :: 9 word)"
+  "(2 ^ asid_low_bits - 1) = (max_word :: asid_low_index)"
   by (simp add: asid_low_bits_def max_word_def)
 
 
@@ -356,19 +356,18 @@ end
 context Arch begin global_naming RISCV64
 
 lemma valid_arch_state_strg:
-  "valid_arch_state s \<and> ap \<notin> ran (riscv_asid_table (arch_state s)) \<and> asid_pool_at ap s \<longrightarrow>
+  "valid_arch_state s \<and> ap \<notin> ran (asid_table s) \<and> asid_pool_at ap s \<longrightarrow>
    valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   apply (clarsimp simp: valid_arch_state_def)
   apply (clarsimp simp: valid_asid_table_def ran_def)
-  sorry (* FIXME RISCV
-  apply (fastforce intro!: inj_on_fun_updI)
-  done *)
+  apply (fastforce intro!: inj_on_fun_updI simp: asid_pools_at_eq)
+  done
 
 
 lemma valid_vs_lookup_at_upd_strg:
   "valid_vs_lookup s \<and>
    ko_at (ArchObj (ASIDPool Map.empty)) ap s \<and>
-   riscv_asid_table (arch_state s) asid = None \<and>
+   asid_table s asid = None \<and>
    (\<exists>ptr cap. caps_of_state s ptr = Some cap \<and> obj_refs cap = {ap} \<and>
               vs_cap_ref cap = Some (ucast asid, 0))
    \<longrightarrow>
@@ -472,7 +471,7 @@ lemma set_cap_reachable_pg_cap:
 lemma cap_insert_simple_arch_caps_ap:
   "\<lbrace>valid_arch_caps and (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src cap) src s)
      and no_cap_to_obj_with_diff_ref cap {dest}
-     and (\<lambda>s. riscv_asid_table (arch_state s) (asid_high_bits_of asid) = None)
+     and (\<lambda>s. asid_table s (asid_high_bits_of asid) = None)
      and ko_at (ArchObj (ASIDPool Map.empty)) ap
      and K (cap = ArchObjectCap (ASIDPoolCap ap asid)) \<rbrace>
      cap_insert cap src dest
@@ -510,14 +509,14 @@ lemma cap_insert_simple_arch_caps_ap:
 lemma valid_asid_map_asid_upd_strg:
   "valid_asid_map s \<and>
    ko_at (ArchObj (ASIDPool Map.empty)) ap s \<and>
-   riscv_asid_table (arch_state s) asid = None \<longrightarrow>
+   asid_table s asid = None \<longrightarrow>
    valid_asid_map (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   by (simp add: valid_asid_map_def)
 
 lemma valid_vspace_objs_asid_upd_strg:
   "valid_vspace_objs s \<and>
    ko_at (ArchObj (ASIDPool Map.empty)) ap s \<and>
-   riscv_asid_table (arch_state s) asid = None \<longrightarrow>
+   asid_table s asid = None \<longrightarrow>
    valid_vspace_objs (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   apply clarsimp
   apply (subgoal_tac "asid_update ap asid s")
@@ -530,7 +529,7 @@ lemma valid_vspace_objs_asid_upd_strg:
 lemma valid_global_objs_asid_upd_strg:
   "valid_global_objs s \<and>
    ko_at (ArchObj (arch_kernel_obj.ASIDPool Map.empty)) ap s \<and>
-   riscv_asid_table (arch_state s) asid = None \<longrightarrow>
+   asid_table s asid = None \<longrightarrow>
    valid_global_objs (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   by (clarsimp simp: valid_global_objs_def)
 
@@ -555,7 +554,7 @@ lemma cap_insert_ap_invs:
    (\<lambda>s. \<forall>irq \<in> cap_irqs cap. irq_issued irq s) and
    ko_at (ArchObj (ASIDPool Map.empty)) ap and
    (\<lambda>s. ap \<notin> ran (riscv_asid_table (arch_state s)) \<and>
-        riscv_asid_table (arch_state s) (asid_high_bits_of asid) = None)\<rbrace>
+        asid_table s (asid_high_bits_of asid) = None)\<rbrace>
   cap_insert cap src dest
   \<lbrace>\<lambda>rv s. invs (s\<lparr>arch_state := arch_state s
                        \<lparr>riscv_asid_table := (riscv_asid_table \<circ> arch_state) s(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
@@ -701,8 +700,7 @@ lemma aci_invs':
          K (cap = ArchObjectCap (ASIDPoolCap ap asid)) and
          (\<lambda>s. \<forall>irq\<in>cap_irqs cap. irq_issued irq s) and
          ko_at (ArchObj (ASIDPool Map.empty)) ap and
-         (\<lambda>s. ap \<notin> ran (riscv_asid_table (arch_state s)) \<and>
-         riscv_asid_table (arch_state s) (asid_high_bits_of asid) = None))\<rbrace>
+         (\<lambda>s. ap \<notin> ran (asid_table s) \<and> asid_table s (asid_high_bits_of asid) = None))\<rbrace>
          cap_insert cap src dest
         \<lbrace>\<lambda>rv s.
            invs
@@ -779,16 +777,14 @@ lemma aci_invs':
    apply (clarsimp simp:valid_cap_simps cap_aligned_def page_bits_def not_le)
   apply (simp add:empty_descendants_range_in)
   apply (frule valid_cap_aligned)
-  apply (clarsimp simp: cap_aligned_def is_aligned_neg_mask_eq)
+  apply (clarsimp simp: cap_aligned_def)
   apply (subst caps_no_overlap_detype[OF descendants_range_caps_no_overlapI],
-    assumption, simp add: is_aligned_neg_mask_eq,
+    assumption, simp,
     simp add: empty_descendants_range_in)
   apply (frule pspace_no_overlap_detype, clarify+)
   apply (frule intvl_range_conv[where bits = pageBits])
    apply (simp add:pageBits_def word_bits_def)
-  sorry (* FIXME RISCV
-  apply (simp add:is_aligned_neg_mask_eq)
-  apply (clarsimp simp:is_aligned_neg_mask_eq page_bits_def)
+  apply (clarsimp simp: page_bits_def)
   apply (frule(1) ex_cte_cap_protects)
       apply (simp add:empty_descendants_range_in)
      apply fastforce
@@ -806,8 +802,8 @@ lemma aci_invs':
    apply clarsimp
    apply (drule invs_arch_state)+
    apply (clarsimp simp: valid_arch_state_def valid_asid_table_def)
-   apply (drule (1) bspec)+
-   apply clarsimp
+   apply (drule (1) subsetD)+
+   apply (clarsimp simp: in_opt_map_eq)
    apply (erule notE, erule is_aligned_no_overflow)
 
   apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def)
@@ -818,7 +814,7 @@ lemma aci_invs':
     apply (simp add: is_aligned_no_overflow)
    apply simp
   apply clarsimp
-  done *)
+  done
 
 qed
 
@@ -834,47 +830,62 @@ lemma invoke_arch_invs[wp]:
   apply (wp|simp)+
   done
 
-lemma sts_vspace_at_asid [wp]:
+lemma sts_aobjs_of[wp]:
+  "set_thread_state t st \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  unfolding set_thread_state_def
+  apply (wpsimp wp: set_object_wp)
+  apply (erule rsubst[where P=P])
+  apply (auto dest!: get_tcb_SomeD simp: opt_map_def split: option.splits)
+  done
+
+crunches set_thread_state
+  for pool_for_asid[wp]: "\<lambda>s. P (pool_for_asid asid s)"
+  (wp: assert_inv)
+
+lemma sts_vspace_for_asid[wp]:
+  "set_thread_state t st \<lbrace>\<lambda>s. P (vspace_for_asid asid s)\<rbrace>"
+  apply (simp add: vspace_for_asid_def obind_def split: option.splits)
+  apply (rule conjI; wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
+  done
+
+lemma sts_vspace_at_asid[wp]:
   "set_thread_state t st \<lbrace>vspace_at_asid asid pd\<rbrace>"
-  apply (simp add: vspace_at_asid_def)
-  sorry (* FIXME RISCV
-  apply wpsimp
-  done *)
+  unfolding vspace_at_asid_def by wpsimp
 
 lemma sts_valid_slots_inv[wp]:
-  "\<lbrace>valid_slots m\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_slots m\<rbrace>"
-  sorry (* FIXME RISCV
-  by (cases m; case_tac a; clarsimp simp: valid_slots_def; wp hoare_vcg_ball_lift sts_typ_ats)
-  *)
+  "set_thread_state t st \<lbrace>valid_slots m\<rbrace>"
+  unfolding valid_slots_def
+  apply (cases m)
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' sts_typ_ats)
+  apply fastforce
+  done
 
+lemma sts_same_ref[wp]:
+  "set_thread_state t st \<lbrace>\<lambda>s. P (same_ref ref cap s)\<rbrace>"
+  unfolding same_ref_def by (cases ref) wpsimp
 
 lemma sts_valid_page_inv[wp]:
-"\<lbrace>valid_page_inv page_invocation\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_page_inv page_invocation\<rbrace>"
-  sorry (* FIXME RISCV
-  by (cases page_invocation,
-       (wp hoare_vcg_const_Ball_lift hoare_vcg_ex_lift hoare_vcg_imp_lift sts_typ_ats
-        | clarsimp simp: valid_page_inv_def
-        | wps)+) *)
-
+  "set_thread_state t st \<lbrace>valid_page_inv page_invocation\<rbrace>"
+  unfolding valid_page_inv_def
+  apply (cases page_invocation; wpsimp wp: sts_typ_ats hoare_vcg_ex_lift)
+   apply (wps, wp)
+  apply simp
+  done
 
 crunch global_refs_inv[wp]: set_thread_state "\<lambda>s. P (global_refs s)"
 
-lemma sts_empty_table[wp]:
-  "\<lbrace>\<lambda>s. obj_at (empty_table (set (second_level_tables (arch_state s)))) p s\<rbrace>
-    set_thread_state t st
-   \<lbrace>\<lambda>rv s. obj_at (empty_table (set (second_level_tables (arch_state s)))) p s\<rbrace>"
-  sorry (* FIXME RISCV
-  by (rule hoare_lift_Pf[OF sts.aobj_at[OF empty_table.arch_only] sts.arch_state]) *)
+lemma sts_vs_lookup_slot[wp]:
+  "set_thread_state t st \<lbrace>\<lambda>s. P (vs_lookup_slot level asid vref s)\<rbrace>"
+  by (simp add: vs_lookup_slot_def obind_def split: option.splits) wpsimp
 
 lemma sts_valid_vspace_table_inv[wp]:
-  "\<And>i. \<lbrace>valid_pti i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_pti i\<rbrace>"
-  sorry (* FIXME RISCV
-  by (case_tac i; simp add: valid_pti_def;
-      wp sts_typ_ats hoare_vcg_ex_lift; clarsimp) *)
-
+  "set_thread_state t st \<lbrace>valid_pti i\<rbrace>"
+  unfolding valid_pti_def
+  by (cases i; wpsimp wp: sts_typ_ats hoare_vcg_ex_lift
+                      simp: invalid_pte_at_def aobjs_of_ako_at_Some[symmetric])
 
 lemma sts_valid_arch_inv:
-  "\<lbrace>valid_arch_inv ai\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_arch_inv ai\<rbrace>"
+  "set_thread_state t st \<lbrace>valid_arch_inv ai\<rbrace>"
   apply (cases ai; simp add: valid_arch_inv_def; wp?)
    apply (rename_tac asid_control_invocation)
    apply (case_tac asid_control_invocation)
@@ -882,14 +893,10 @@ lemma sts_valid_arch_inv:
    apply (rule hoare_pre, wp hoare_vcg_ex_lift cap_table_at_typ_at)
    apply clarsimp
   apply (clarsimp simp: valid_apinv_def split: asid_pool_invocation.splits)
-  sorry (* FIXME RISCV
   apply (rule hoare_pre)
    apply (wp hoare_vcg_ex_lift set_thread_state_ko)
   apply (clarsimp simp: is_tcb_def)
-  apply (rename_tac ioc, case_tac ioc)
-  apply (clarsimp simp: valid_iocontrol_inv_def)
-  apply (wpsimp simp: safe_ioport_insert_def)
-  done *)
+  done
 
 
 crunch_ignore (add: select_ext find_vspace_for_asid)
@@ -960,7 +967,6 @@ lemma find_vspace_for_asid_ref_offset_voodoo:
 *)
 
 
-declare asid_high_bits_of_shift [simp]
 declare mask_shift [simp]
 declare word_less_sub_le [simp del]
 declare ptrFormPAddr_addFromPPtr [simp]
