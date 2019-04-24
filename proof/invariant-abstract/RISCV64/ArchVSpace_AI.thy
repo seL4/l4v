@@ -16,6 +16,102 @@ theory ArchVSpace_AI
 imports "../VSpacePre_AI"
 begin
 
+
+(* FIXME: move to Word and replace nth_ucast, possibly breaks things.. *)
+lemma nth_ucast':
+  "(ucast (w::'a::len0 word)::'b::len0 word) !! n =
+   (w !! n \<and> n < min (len_of TYPE('a)) (len_of TYPE('b)))"
+  by (simp add: ucast_def test_bit_bin word_ubin.eq_norm nth_bintr word_size)
+     (fast elim!: bin_nth_uint_imp)
+
+(* FIXME: move to Word *)
+lemma ucast_leq_mask:
+  "LENGTH('a) \<le> n \<Longrightarrow> ucast (x::'a::len0 word) \<le> mask n"
+  by (clarsimp simp: le_mask_high_bits word_size nth_ucast')
+
+(* FIXME: move to Word, replace word_upto_Cons_eq *)
+lemma word_upto_Cons:
+  "x < y \<Longrightarrow> [x::'a::len word .e. y] = x # [x + 1 .e. y]"
+  apply (subst upto_enum_red)
+  apply (subst upt_conv_Cons, unat_arith)
+  apply (simp only: list.map list.inject upto_enum_red to_from_enum simp_thms)
+  apply (rule map_cong[OF _ refl])
+  apply (rule arg_cong2[where f = "\<lambda>x y. [x ..< y]"], unat_arith)
+  apply (rule refl)
+  done
+
+(* FIXME: move to Word *)
+lemma word_upto_Nil:
+  "y < x \<Longrightarrow> [x .e. y ::'a::len word] = []"
+  by (simp add: upto_enum_red not_le word_less_nat_alt)
+
+(* FIXME: move to Word *)
+lemma word_enum_decomp_elem:
+  assumes "[x .e. (y ::'a::len word)] = as @ a # bs"
+  shows "x \<le> a \<and> a \<le> y"
+proof -
+  have "set as \<subseteq> set [x .e. y] \<and> a \<in> set [x .e. y]"
+    using assms by (auto dest: arg_cong[where f=set])
+  then show ?thesis by auto
+qed
+
+(* FIXME: move to Word *)
+lemma max_word_not_less[simp]:
+   "\<not> max_word < x"
+  by (simp add: not_less)
+
+(* FIXME: move to Word *)
+lemma word_enum_prefix:
+  "[x .e. (y ::'a::len word)] = as @ a # bs \<Longrightarrow> as = (if x < a then [x .e. a - 1] else [])"
+  apply (induct as arbitrary: x; clarsimp)
+   apply (case_tac "x < y")
+    prefer 2
+    apply (case_tac "x = y", simp)
+    apply (simp add: not_less)
+    apply (drule (1) dual_order.not_eq_order_implies_strict)
+    apply (simp add: word_upto_Nil)
+   apply (simp add: word_upto_Cons)
+  apply (case_tac "x < y")
+   prefer 2
+   apply (case_tac "x = y", simp)
+   apply (simp add: not_less)
+   apply (drule (1) dual_order.not_eq_order_implies_strict)
+   apply (simp add: word_upto_Nil)
+  apply (clarsimp simp: word_upto_Cons)
+  apply (frule word_enum_decomp_elem)
+  apply clarsimp
+  apply (rule conjI)
+   prefer 2
+   apply (subst word_Suc_le[symmetric]; clarsimp)
+  apply (drule meta_spec)
+  apply (drule (1) meta_mp)
+  apply clarsimp
+  apply (rule conjI; clarsimp)
+  apply (subst (2) word_upto_Cons)
+   apply unat_arith
+  apply simp
+  done
+
+(* FIXME: move to Word *)
+lemma word_enum_decomp_set:
+  "[x .e. (y ::'a::len word)] = as @ a # bs \<Longrightarrow> a \<notin> set as"
+  apply (subst word_enum_prefix, assumption)
+  apply (cases "x < a"; clarsimp)
+  apply unat_arith
+  done
+
+(* FIXME: move to Word *)
+lemma word_enum_decomp:
+  assumes "[x .e. (y ::'a::len word)] = as @ a # bs"
+  shows "x \<le> a \<and> a \<le> y \<and> a \<notin> set as \<and> (\<forall>z \<in> set as. x \<le> z \<and> z \<le> y)"
+proof -
+  from assms
+  have "set as \<subseteq> set [x .e. y] \<and> a \<in> set [x .e. y]"
+    by (auto dest: arg_cong[where f=set])
+  with word_enum_decomp_set[OF assms]
+  show ?thesis by auto
+qed
+
 (* FIXME RISCV: move to lib *)
 lemma throw_opt_wp[wp]:
   "\<lbrace>if v = None then E ex else Q (the v)\<rbrace> throw_opt ex v \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
@@ -27,6 +123,10 @@ lemma arch_cap_fun_lift_Some[simp]:
   by (cases cap; simp)
 
 context Arch begin global_naming RISCV64
+
+(* FIXME RISCV: move to ArchInvariants *)
+locale_abbrev global_pt :: "'z state \<Rightarrow> obj_ref" where
+  "global_pt s \<equiv> riscv_global_pt (arch_state s)"
 
 (* FIXME RISCV: move up? *)
 (* this is what copy_global_mappings needs to establish from an empty_pt *)
@@ -474,8 +574,7 @@ lemma mdb_cte_at_store_pte[wp]:
   done
 
 crunches store_pte
-  for valid_idle[wp]: valid_idle
-  and global_refs[wp]: "\<lambda>s. P (global_refs s)"
+  for global_refs[wp]: "\<lambda>s. P (global_refs s)"
 
 (* FIXME: move *)
 lemma vs_cap_ref_table_cap_ref_None:
@@ -1806,46 +1905,297 @@ lemma set_asid_pool_invs_map:
   apply (simp add: valid_arch_caps_def)
   done
 
+lemma ako_asid_pools_of:
+  "ako_at (ASIDPool pool) ap s = (asid_pools_of s ap = Some pool)"
+  by (clarsimp simp: obj_at_def in_omonad)
+
+lemma copy_global_mappings_asid_pools[wp]:
+  "copy_global_mappings pt_ptr \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  unfolding copy_global_mappings_def by (wpsimp wp: mapM_x_wp')
+
+lemma copy_global_mappings_pool_for_asid[wp]:
+  "copy_global_mappings pt_ptr \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
+  unfolding copy_global_mappings_def by (wpsimp wp: mapM_x_wp' simp: pool_for_asid_def)
+
+lemma copy_global_mappings_caps_of_state[wp]:
+  "copy_global_mappings pt_ptr \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
+  unfolding copy_global_mappings_def by (wpsimp wp: mapM_x_wp')
+
+lemma store_pte_vs_lookup_target_unreachable:
+  "\<lbrace>\<lambda>s. (\<forall>level. \<not> \<exists>\<rhd> (level, table_base p) s) \<and>
+        vref \<in> user_region \<and>
+        vs_lookup_target bot_level asid vref s \<noteq> Some (level, p') \<and>
+        pspace_aligned s \<and> valid_vspace_objs s \<and> valid_asid_table s \<rbrace>
+   store_pte p pte
+   \<lbrace>\<lambda>rv s. vs_lookup_target bot_level asid vref s \<noteq> Some (level, p')\<rbrace>"
+  unfolding store_pte_def set_pt_def
+  apply (wpsimp wp: set_object_wp)
+  apply (subst (asm) vs_lookup_target_unreachable_upd_idem; clarsimp)
+  done
+
+lemma store_pte_vs_lookup_table_unreachable:
+  "\<lbrace>\<lambda>s. (\<forall>level. \<not> \<exists>\<rhd> (level, table_base p) s) \<and>
+        vref \<in> user_region \<and>
+        vs_lookup_table bot_level asid vref s \<noteq> Some (level, p') \<and>
+        pspace_aligned s \<and> valid_vspace_objs s \<and> valid_asid_table s \<rbrace>
+   store_pte p pte
+   \<lbrace>\<lambda>rv s. vs_lookup_table bot_level asid vref s \<noteq> Some (level, p')\<rbrace>"
+  unfolding store_pte_def set_pt_def
+  apply (wpsimp wp: set_object_wp)
+  apply (subst (asm) vs_lookup_table_unreachable_upd_idem'; clarsimp)
+  done
+
+lemma store_pte_valid_arch_state_unreachable:
+  "\<lbrace>valid_arch_state and valid_global_vspace_mappings and (\<lambda>s. table_base p \<notin> global_refs s) \<rbrace>
+   store_pte p pte
+   \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  unfolding valid_arch_state_def by (wpsimp wp: store_pte_valid_global_tables)
+
+lemma store_pte_valid_vs_lookup_unreachable:
+  "\<lbrace> valid_vs_lookup and pspace_aligned and valid_vspace_objs and valid_asid_table and
+     (\<lambda>s. \<forall>level. \<not> \<exists>\<rhd> (level, table_base p) s) and
+     (\<lambda>s. \<forall>slot asidopt. caps_of_state s slot = Some (ArchObjectCap (PageTableCap (table_base p) asidopt))
+                          \<longrightarrow> asidopt \<noteq> None) \<rbrace>
+   store_pte p pte
+   \<lbrace> \<lambda>_. valid_vs_lookup \<rbrace>"
+  unfolding valid_vs_lookup_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' store_pte_vs_lookup_target_unreachable)
+  apply (erule disjE; clarsimp)
+  done
+
+lemma store_pte_valid_arch_caps_unreachable:
+  "\<lbrace> invs and
+     (\<lambda>s. \<forall>level. \<not> \<exists>\<rhd> (level, table_base p) s) and
+     (\<lambda>s. \<forall>slot asidopt. caps_of_state s slot = Some (ArchObjectCap (PageTableCap (table_base p) asidopt))
+                          \<longrightarrow> asidopt \<noteq> None) and
+     (\<lambda>s. table_base p \<notin> global_refs s) \<rbrace>
+   store_pte p pte
+   \<lbrace> \<lambda>_. valid_arch_caps \<rbrace>"
+  unfolding valid_arch_caps_def
+  apply (wpsimp wp: store_pte_valid_vs_lookup_unreachable store_pte_valid_table_caps)
+  by (fastforce simp: invs_def valid_state_def valid_arch_caps_def intro: valid_objs_caps)
+
+lemma store_pte_invs_unreachable:
+  "\<lbrace>invs and
+    (\<lambda>s. \<forall>level. \<not> \<exists>\<rhd> (level, table_base p) s) and
+    K (wellformed_pte pte) and
+    (\<lambda>s. \<forall>slot asidopt. caps_of_state s slot = Some (ArchObjectCap (PageTableCap (table_base p) asidopt))
+                         \<longrightarrow> asidopt \<noteq> None) and
+    (\<lambda>s. table_base p \<notin> global_refs s) \<rbrace>
+  store_pte p pte \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding invs_def valid_state_def valid_pspace_def
+  apply (wpsimp wp: store_pte_valid_arch_state_unreachable store_pte_valid_arch_caps_unreachable
+                    store_pte_equal_kernel_mappings_no_kernel_slots
+                    store_pte_valid_global_vspace_mappings)
+  apply (simp cong: conj_cong)
+  apply (rule conjI, clarsimp simp: invs_def valid_state_def valid_pspace_def)
+  apply (rule conjI, fastforce dest!: vspace_for_asid_vs_lookup)
+  apply (fastforce simp: valid_arch_state_def dest: riscv_global_pt_in_global_refs)
+  done
+
+lemma invs_valid_global_vspace_mappings[elim!]:
+  "invs s \<Longrightarrow> valid_global_vspace_mappings s"
+  by (clarsimp simp: invs_def valid_state_def)
+
+lemma table_base_plus:
+  "\<lbrakk> is_aligned pt_ptr pt_bits; i \<le> mask ptTranslationBits \<rbrakk> \<Longrightarrow>
+   table_base (pt_ptr + (i << pte_bits)) = pt_ptr"
+  unfolding is_aligned_mask bit_simps
+  by (subst word_plus_and_or_coroll; word_bitwise; simp add: word_size)
+
+lemma table_base_plus_ucast:
+  "is_aligned pt_ptr pt_bits \<Longrightarrow>
+   table_base (pt_ptr + (ucast (i::pt_index) << pte_bits)) = pt_ptr"
+  by (fastforce intro!: table_base_plus ucast_leq_mask simp: bit_simps)
+
+lemma table_index_plus:
+  "\<lbrakk> is_aligned pt_ptr pt_bits; i \<le> mask ptTranslationBits \<rbrakk> \<Longrightarrow>
+   table_index (pt_ptr + (i << pte_bits)) = ucast i"
+  unfolding is_aligned_mask bit_simps
+  by (subst word_plus_and_or_coroll; word_bitwise; simp add: word_size)
+
+lemma table_index_plus_ucast:
+  "is_aligned pt_ptr pt_bits \<Longrightarrow>
+   table_index (pt_ptr + (ucast (i::pt_index) << pte_bits)) = i"
+  apply (drule table_index_plus[where i="ucast i"])
+   apply (rule ucast_leq_mask, simp add: bit_simps)
+  apply (simp add: is_down_def target_size_def source_size_def word_size ucast_down_ucast_id)
+  done
+
+lemma is_aligned_pte_offset:
+  "is_aligned pt_ptr pt_bits \<Longrightarrow>
+   is_aligned (pt_ptr + (i << pte_bits)) pte_bits"
+  apply (rule is_aligned_add)
+   apply (erule is_aligned_weaken, simp add: bit_simps)
+  apply (simp add: is_aligned_shiftl)
+  done
+
+lemma ptes_of_from_pt:
+  "\<lbrakk> pts pt_ptr = Some pt; is_aligned pt_ptr pt_bits; i \<le> mask ptTranslationBits \<rbrakk> \<Longrightarrow>
+   pte_of (pt_ptr + (i << pte_bits)) pts = Some (pt (ucast i))"
+  by (clarsimp simp: ptes_of_def in_omonad table_base_plus table_index_plus is_aligned_pte_offset)
+
+lemma ptes_of_from_pt_ucast:
+  "\<lbrakk> pts_of s pt_ptr = Some pt; is_aligned pt_ptr pt_bits \<rbrakk> \<Longrightarrow>
+   ptes_of s (pt_ptr + (ucast (i::pt_index) << pte_bits)) = Some (pt i)"
+  apply (drule (1) ptes_of_from_pt[where i="ucast i"])
+   apply (rule ucast_leq_mask, simp add: bit_simps)
+  apply (simp add: is_down_def target_size_def source_size_def word_size ucast_down_ucast_id)
+  done
+
+lemma copy_global_mappings_copies[wp]:
+  "\<lbrace>invs and (\<lambda>s. pts_of s pt_ptr = Some empty_pt \<and> pt_ptr \<notin> global_refs s)\<rbrace>
+   copy_global_mappings pt_ptr
+   \<lbrace>\<lambda>_ s. \<exists>pt. pts_of s pt_ptr = Some pt \<and> kernel_mappings_only pt s\<rbrace>"
+  unfolding copy_global_mappings_def
+  apply wp
+      apply (rule hoare_strengthen_post)
+       apply (rule_tac I="\<lambda>s. (\<exists>pt. pts_of s pt_ptr = Some pt \<and>
+                                    (\<forall>idx. idx \<notin> kernel_mapping_slots \<longrightarrow> pt idx = InvalidPTE)) \<and>
+                              pt_at (riscv_global_pt (arch_state s)) s \<and>
+                              pt_ptr \<noteq> riscv_global_pt (arch_state s) \<and>
+                              is_aligned pt_ptr pt_bits \<and>
+                              is_aligned global_pt pt_bits \<and>
+                              global_pt = riscv_global_pt (arch_state s) \<and>
+                              base = pt_index max_pt_level pptr_base \<and>
+                              pt_size = 1 << ptTranslationBits" and
+                       V="\<lambda>xs s. \<forall>i \<in> set xs. ptes_of s (pt_ptr + (i << pte_bits)) =
+                                              ptes_of s (global_pt + (i << pte_bits))"
+                       in mapM_x_inv_wp3)
+        apply (wp store_pte_typ_ats|wps)+
+       apply (clarsimp simp del: fun_upd_apply)
+       apply (fold mask_2pm1)[1]
+       apply (drule word_enum_decomp)
+       apply (clarsimp simp: table_base_plus table_index_plus in_omonad)
+       apply (subgoal_tac "ucast a \<in> kernel_mapping_slots")
+        prefer 2
+        apply (clarsimp simp: kernel_mapping_slots_def pt_index_def)
+        apply (drule ucast_mono_le[where x="a && b" and 'b=pt_index_len for a b])
+         apply (simp add: bit_simps mask_def)
+         apply unat_arith
+        apply (simp add: ucast_mask_drop bit_simps)
+       apply (clarsimp simp: pt_at_eq ptes_of_from_pt)
+       apply (drule (1) bspec)
+       apply (clarsimp simp: ptes_of_from_pt in_omonad)
+      apply (clarsimp simp: kernel_mappings_only_def)
+      apply (clarsimp simp: has_kernel_mappings_def)
+      apply (thin_tac "\<forall>idx. idx \<notin> kernel_mapping_slots \<longrightarrow> P idx" for P)
+      apply (erule_tac x="ucast i" in allE)
+      apply (erule impE)
+       apply (simp add: kernel_mapping_slots_def pt_index_def)
+       apply word_bitwise
+       subgoal
+         by (clarsimp simp: word_size bit_simps word_bits_def canonical_bit_def pt_bits_left_def
+                            level_defs rev_bl_order_simps)
+      apply (clarsimp simp: ptes_of_from_pt_ucast)
+     apply wp+
+   apply (fastforce elim!: pts_of_Some_alignedD
+                    intro: invs_valid_global_arch_objs valid_global_arch_objs_pt_at
+                           riscv_global_pt_in_global_refs valid_global_vspace_mappings_aligned)
+  done
+
+(* FIXME RISCV: move *)
+lemma ptes_of_wellformed_pte:
+  "\<lbrakk> ptes_of s p = Some pte; valid_objs s \<rbrakk> \<Longrightarrow> wellformed_pte pte"
+  apply (clarsimp simp: ptes_of_def in_omonad)
+  apply (erule (1) valid_objsE)
+  apply (clarsimp simp: valid_obj_def)
+  done
+
+lemma copy_global_mappings_invs:
+  "\<lbrace> invs and K (is_aligned pt_ptr pt_bits) and
+     (\<lambda>s. \<forall>level. \<not> \<exists>\<rhd> (level, pt_ptr) s) and
+     (\<lambda>s. \<forall>slot asidopt. caps_of_state s slot = Some (ArchObjectCap (PageTableCap pt_ptr asidopt))
+                           \<longrightarrow> asidopt \<noteq> None) and
+     (\<lambda>s. pt_ptr \<notin> global_refs s)\<rbrace>
+   copy_global_mappings pt_ptr
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding copy_global_mappings_def
+  apply wp
+      apply (rule hoare_strengthen_post)
+       apply (rule_tac P="invs and K (is_aligned pt_ptr pt_bits) and
+                          (\<lambda>s. \<forall>level. \<not> \<exists>\<rhd> (level, pt_ptr) s) and
+                          (\<lambda>s. \<forall>slot asidopt. caps_of_state s slot =
+                                                Some (ArchObjectCap (PageTableCap pt_ptr asidopt))
+                                                  \<longrightarrow> asidopt \<noteq> None) and
+                          (\<lambda>s. pt_ptr \<notin> global_refs s \<and>
+                               base = pt_index max_pt_level pptr_base \<and>
+                               pt_size = 1 << ptTranslationBits)" in mapM_x_wp')
+       apply (wpsimp wp: store_pte_invs_unreachable hoare_vcg_all_lift hoare_vcg_imp_lift'
+                         store_pte_vs_lookup_table_unreachable)
+       apply (fold mask_2pm1)[1]
+       apply (clarsimp simp: table_base_plus table_index_plus)
+       apply (rule conjI, erule ptes_of_wellformed_pte, clarsimp)
+       apply clarsimp
+       apply (frule invs_valid_asid_table)
+       apply simp
+       apply (erule impE, fastforce)+
+       apply fastforce
+      apply fastforce
+     apply wp+
+  apply clarsimp
+  done
+
+lemma cap_asid_pt_None[simp]:
+  "(cap_asid (ArchObjectCap (PageTableCap p m)) = None) = (m = None)"
+  by (simp add: cap_asid_def split: option.splits)
+
+(* FIXME RISCV: move *)
+lemma vs_lookup_table_valid_cap:
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); vref \<in> user_region;
+     valid_vs_lookup s; valid_asid_pool_caps s \<rbrakk> \<Longrightarrow>
+   (\<exists>p' cap. caps_of_state s p' = Some cap \<and> obj_refs cap = {p} \<and>
+             vs_cap_ref cap = Some (asid_for_level asid level,
+                                    vref_for_level vref (if level=asid_pool_level
+                                                         then asid_pool_level else level + 1)))"
+  apply (cases "level \<le> max_pt_level")
+   apply (drule (1) vs_lookup_table_target)
+   apply (drule valid_vs_lookupD, erule vref_for_level_user_region, assumption)
+   apply (fastforce simp: asid_for_level_def)
+  apply (simp add: not_le)
+  apply (clarsimp simp: vs_lookup_table_def pool_for_asid_def valid_asid_pool_caps_def)
+  apply (erule allE)+
+  apply (erule (1) impE)
+  apply clarsimp
+  apply (rule exI)+
+  apply (rule conjI, assumption)
+  apply (simp add: asid_for_level_def vref_for_level_asid_pool user_region_def)
+  apply (simp add: asid_high_bits_of_def)
+  apply word_bitwise
+  apply (simp add: asid_low_bits_def word_size)
+  done
+
+(* FIXME RISCV: move *)
+lemma invs_valid_asid_pool_caps[elim!]:
+  "invs s \<Longrightarrow> valid_asid_pool_caps s"
+  by (simp add: invs_def valid_state_def valid_arch_caps_def)
+
 lemma perform_asid_pool_invs [wp]:
   "\<lbrace>invs and valid_apinv api\<rbrace> perform_asid_pool_invocation api \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (clarsimp simp: perform_asid_pool_invocation_def store_asid_pool_entry_def split: asid_pool_invocation.splits)
-  apply (wp arch_update_cap_invs_map set_asid_pool_invs_map
-            get_cap_wp set_cap_typ_at
-            set_cap_obj_at_other
-               |wpc|simp|wp_once hoare_vcg_ex_lift)+
-  sorry (*
-  apply (clarsimp simp: valid_apinv_def cte_wp_at_caps_of_state is_arch_update_def is_cap_simps cap_master_cap_simps)
-  apply (frule caps_of_state_cteD)
-  apply (drule cte_wp_valid_cap, fastforce)
-  apply (simp add: valid_cap_def cap_aligned_def)
-  apply (clarsimp simp: cap_asid_def split: option.splits)
-  apply (rule conjI)
-   apply (clarsimp simp: vs_cap_ref_def)
-  apply (rule conjI)
-   apply (erule vs_lookup_atE)
-   apply clarsimp
-   apply (drule caps_of_state_cteD)
-   apply (clarsimp simp: cte_wp_at_cases obj_at_def)
-  apply (rule conjI)
-   apply (rule exI)
-   apply (rule conjI, assumption)
-   apply (rule conjI)
-    apply (rule_tac x=a in exI)
-    apply (rule_tac x=b in exI)
-    apply (clarsimp simp: vs_cap_ref_def mask_asid_low_bits_ucast_ucast)
-   apply (clarsimp simp: asid_low_bits_def[symmetric] ucast_ucast_mask
-                         word_neq_0_conv[symmetric])
-   apply (erule notE, rule asid_low_high_bits, simp_all)[1]
-   apply (simp add: asid_high_bits_of_def)
-  apply (rule conjI)
-   apply (erule(1) valid_table_caps_pdD [OF _ invs_pd_caps])
-  apply (rule conjI)
-   apply clarsimp
-   apply (drule caps_of_state_cteD)
-   apply (clarsimp simp: obj_at_def cte_wp_at_cases a_type_def)
-   apply (clarsimp split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (clarsimp simp: obj_at_def)
-  done *)
+  apply (clarsimp simp: perform_asid_pool_invocation_def store_asid_pool_entry_def
+                  split: asid_pool_invocation.splits)
+  apply (wpsimp wp: set_asid_pool_invs_map hoare_vcg_all_lift hoare_vcg_imp_lift'
+                    copy_global_mappings_invs arch_update_cap_invs_map get_cap_wp set_cap_typ_at
+                simp: ako_asid_pools_of
+         | wp_once hoare_vcg_ex_lift)+
+  apply (clarsimp simp: cte_wp_at_caps_of_state valid_apinv_def cong: conj_cong)
+  apply (rename_tac asid pool_ptr slot_ptr slot_idx s pool cap)
+  apply (clarsimp simp: is_cap_simps update_map_data_def is_arch_update_def is_arch_cap_def
+                        cap_master_cap_simps asid_low_bits_of_def)
+  apply (frule caps_of_state_valid, clarsimp)
+  apply (clarsimp simp: valid_cap_def cap_aligned_def wellformed_mapdata_def bit_simps)
+  apply (frule valid_table_caps_pdD, fastforce)
+  apply (frule valid_global_refsD2, fastforce)
+  apply (clarsimp simp: cap_range_def)
+  apply (rule conjI, clarsimp)
+   apply (drule (1) vs_lookup_table_valid_cap; clarsimp)
+   apply (frule (1) cap_to_pt_is_pt_cap, simp, fastforce intro: valid_objs_caps)
+   apply (drule (1) unique_table_refsD[rotated]; clarsimp)
+   apply (clarsimp simp: is_cap_simps)
+  apply (rule conjI, clarsimp)
+   apply (drule (1) unique_table_capsD[rotated]; clarsimp)
+  apply fastforce
+  done
 
 lemma invs_aligned_pdD:
   "\<lbrakk> pspace_aligned s; valid_arch_state s \<rbrakk> \<Longrightarrow> is_aligned (riscv_global_pt (arch_state s)) pt_bits"
