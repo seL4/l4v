@@ -851,7 +851,7 @@ lemma valid_objs_caps:
   apply (erule (1) caps_of_state_valid_cap)
   done
 
-lemma set_pt_table_caps[wp]:
+lemma set_pt_table_caps:
   "\<lbrace>valid_table_caps and (\<lambda>s. valid_caps (caps_of_state s) s) and
     (\<lambda>s. ((\<exists>slot. caps_of_state s slot = Some (ArchObjectCap (PageTableCap p None))) \<longrightarrow>
                   pt = empty_pt) \<or>
@@ -870,6 +870,27 @@ lemma set_pt_table_caps[wp]:
   apply clarsimp
   apply (erule_tac x=ref in allE, erule_tac x=slot in allE, fastforce)
   done
+
+(* FIXME RISCV this is a much cleaner phrasing, should supersede the one above *)
+lemma set_pt_table_caps'[wp]:
+  "\<lbrace>valid_table_caps and (\<lambda>s. valid_caps (caps_of_state s) s) and
+    (\<lambda>s. (\<forall>slot asidopt. caps_of_state s slot = Some (ArchObjectCap (PageTableCap p asidopt))
+                         \<longrightarrow> asidopt = None \<longrightarrow> pt = empty_pt)) \<rbrace>
+   set_pt p pt
+   \<lbrace>\<lambda>rv. valid_table_caps\<rbrace>"
+  apply (wp set_pt_table_caps)
+  apply fastforce
+  done
+
+lemma store_pte_valid_table_caps:
+  "\<lbrace> valid_table_caps and (\<lambda>s. valid_caps (caps_of_state s) s) and
+     (\<lambda>s. (\<forall>slot asidopt. caps_of_state s slot = Some (ArchObjectCap (PageTableCap (table_base p) asidopt))
+                          \<longrightarrow> asidopt = None \<longrightarrow> pte = InvalidPTE)) \<rbrace>
+   store_pte p pte
+   \<lbrace>\<lambda>rv. valid_table_caps\<rbrace>"
+  unfolding store_pte_def
+  by wpsimp
+     (fastforce simp: valid_table_caps_def pts_of_ko_at obj_at_def)
 
 lemma set_object_caps_of_state:
   "\<lbrace>(\<lambda>s. \<not>tcb_at p s \<and> \<not>(\<exists>n. cap_table_at n p s)) and
@@ -979,10 +1000,8 @@ lemma set_pt_asid_pool_caps[wp]:
 lemma set_pt_arch_caps [wp]:
   "\<lbrace>valid_arch_caps and valid_arch_state and valid_vspace_objs and
     (\<lambda>s. valid_caps (caps_of_state s) s \<and>
-         ((\<exists>slot. caps_of_state s slot = Some (ArchObjectCap (PageTableCap p None))) \<longrightarrow>
-          pt = empty_pt \<or>
-         (\<forall>slot. \<exists>asid. caps_of_state s slot =
-           Some (ArchObjectCap (PageTableCap p (Some asid))))) \<and>
+         (\<forall>slot asidopt. caps_of_state s slot = Some (ArchObjectCap (PageTableCap p asidopt))
+                         \<longrightarrow> asidopt = None \<longrightarrow> pt = empty_pt) \<and>
          (\<forall>level. (\<exists>\<rhd> (level,p)) s \<longrightarrow> (\<forall>x. valid_pte level (pt x) s)) \<and>
          (\<forall>level' asid vref. vs_lookup_target level' asid vref s = Some (level', p) \<longrightarrow>
             (\<forall>x p. pte_ref (pt x) = Some p \<longrightarrow>
@@ -1950,8 +1969,9 @@ lemma store_pte_equal_kernel_mappings:
   apply (fastforce simp: obj_at_def)
   done
 
-(* FIXME RISCV currently unused, alternate form when we know we don't update a kernel mapping slot
-   in a root pt *)
+(* We only affect kernel mapping slots of not-yet-mapped page tables, in particular when copying
+   global mappings for a root page table. For preserving validity of mapped tables, we use this
+   form. *)
 lemma store_pte_equal_kernel_mappings_no_kernel_slots:
   "\<lbrace>\<lambda>s. equal_kernel_mappings s
         \<and> ((\<exists>asid. vspace_for_asid asid s = Some (table_base p))
@@ -1986,8 +2006,8 @@ lemma store_pte_state_hyp_refs_of[wp]:
 lemma set_pt_invs:
   "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pte (pt i)) and
     (\<lambda>s. (\<exists>level. (\<exists>\<rhd> (level,p)) s \<longrightarrow> valid_vspace_obj level (PageTable pt) s) \<and>
-         (\<exists>slot asid. caps_of_state s slot = Some (ArchObjectCap (PageTableCap p asid)) \<and>
-                      pt = empty_pt \<or> asid \<noteq> None) \<and>
+         (\<forall>slot asidopt. caps_of_state s slot = Some (ArchObjectCap (PageTableCap p asidopt))
+                         \<longrightarrow> asidopt = None \<longrightarrow> pt = empty_pt) \<and>
          (\<forall>level' asid vref. vs_lookup_target level' asid vref s = Some (level', p) \<longrightarrow>
             (\<forall>x p. pte_ref (pt x) = Some p \<longrightarrow>
                     (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
@@ -2060,11 +2080,62 @@ crunches store_pte
   (wp: set_pt_zombies set_pt_ifunsafe set_pt_reply_caps set_pt_reply_masters
        set_pt_valid_global valid_irq_node_typ valid_irq_handlers_lift set_pt_cur)
 
+lemma store_pte_valid_global_tables:
+  "\<lbrace> valid_global_tables and valid_global_arch_objs and valid_global_vspace_mappings
+     and (\<lambda>s. table_base p \<notin> global_refs s) \<rbrace>
+   store_pte p pte
+   \<lbrace>\<lambda>_. valid_global_tables \<rbrace>"
+  unfolding store_pte_def set_pt_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: set_object_wp)
+  apply (simp (no_asm) add: valid_global_tables_def Let_def)
+  apply (rule conjI)
+   apply clarsimp
+   apply (subst (asm) pt_walk_pt_upd_idem)
+     apply (fastforce simp: global_refs_def dest: valid_global_tablesD[simplified riscv_global_pt_def])
+    apply (fastforce dest: valid_global_vspace_mappings_aligned[simplified riscv_global_pt_def])
+   apply (fastforce simp: valid_global_tables_def Let_def)
+  apply (clarsimp simp: valid_global_tables_def Let_def fun_upd_apply split: if_splits)
+  apply (fastforce dest: riscv_global_pt_in_global_refs simp: riscv_global_pt_def global_refs_def)
+  done
+
+lemma store_pte_valid_global_arch_objs[wp]:
+  "store_pte p pte \<lbrace> valid_global_arch_objs \<rbrace>"
+  unfolding store_pte_def set_pt_def
+  by (wpsimp wp: set_object_wp)
+     (clarsimp simp: valid_global_arch_objs_def obj_at_def)
+
+lemma store_pte_unique_table_refs[wp]:
+  "store_pte p pte \<lbrace> unique_table_refs \<rbrace>"
+  unfolding store_pte_def set_pt_def
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp simp: unique_table_refs_def)
+  apply (subst (asm) caps_of_state_after_update[folded fun_upd_def], simp add: obj_at_def)+
+  apply blast
+  done
+
+lemma store_pte_unique_table_caps[wp]:
+  "store_pte p pte \<lbrace> unique_table_caps \<rbrace>"
+  unfolding store_pte_def set_pt_def
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp simp: unique_table_caps_def)
+  apply (subst (asm) caps_of_state_after_update[folded fun_upd_def], fastforce simp: obj_at_def)+
+  apply blast
+  done
+
+lemma store_pte_valid_asid_pool_caps[wp]:
+  "store_pte p pte \<lbrace> valid_asid_pool_caps \<rbrace>"
+  unfolding store_pte_def set_pt_def
+  apply (wpsimp wp: set_object_wp)
+  apply (subst caps_of_state_after_update[folded fun_upd_def], fastforce simp: obj_at_def)+
+  apply assumption
+  done
+
 lemma store_pte_invs:
   "\<lbrace>invs and (\<lambda>s. (\<forall>level. \<exists>\<rhd>(level, table_base p) s \<longrightarrow> valid_pte level pte s)) and (* potential off-by-one in level *)
     K (wellformed_pte pte) and
-    (\<lambda>s. \<exists>slot ref. caps_of_state s slot = Some (ArchObjectCap (PageTableCap (table_base p) ref)) \<and>
-                     (pte = InvalidPTE \<or> ref \<noteq> None)) and
+    (\<lambda>s. (\<forall>slot asidopt. caps_of_state s slot = Some (ArchObjectCap (PageTableCap (table_base p) asidopt))
+                         \<longrightarrow> asidopt = None \<longrightarrow> pte = InvalidPTE)) and
     (\<lambda>s. \<forall>level asid vref. vs_lookup_target level asid vref s = Some (level, p) \<longrightarrow>
             (\<forall>q. pte_ref pte = Some q \<longrightarrow>
                     (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
