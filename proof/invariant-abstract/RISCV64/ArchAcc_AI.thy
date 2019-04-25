@@ -1318,6 +1318,14 @@ lemma set_pt_valid_global_vspace_mappings:
   apply fastforce
   done
 
+lemma store_pte_valid_global_vspace_mappings:
+  "\<lbrace>\<lambda>s. valid_global_vspace_mappings s \<and> valid_global_tables s \<and> table_base p \<notin> global_refs s
+        \<and> pspace_aligned s \<and> valid_global_arch_objs s \<and> valid_uses s \<rbrace>
+   store_pte p pte
+   \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
+  unfolding store_pte_def
+  by (wpsimp wp: set_pt_valid_global_vspace_mappings)
+
 lemma set_pt_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_pt p pt \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   apply (simp add: set_pt_def)
@@ -1922,6 +1930,42 @@ lemma set_pt_equal_kernel_mappings:
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' vspace_for_asid_lift set_pt_pts_of
                  set_pt_has_kernel_mappings)
 
+lemma has_kernel_mappings_index_upd_idem:
+  "\<lbrakk> has_kernel_mappings pt s; idx \<notin> kernel_mapping_slots \<rbrakk>
+   \<Longrightarrow> has_kernel_mappings (pt(idx := pte)) s"
+  unfolding has_kernel_mappings_def
+  by auto
+
+lemma store_pte_equal_kernel_mappings:
+  "\<lbrace>\<lambda>s. equal_kernel_mappings s
+        \<and> ((\<exists>asid. vspace_for_asid asid s = Some (table_base p))
+                      \<longrightarrow> (\<exists>pt. ako_at (PageTable pt) (table_base p) s
+                               \<and> has_kernel_mappings (pt(table_index p := pte)) s))
+        \<and> table_base p \<noteq> riscv_global_pt (arch_state s) \<rbrace>
+   store_pte p pte
+   \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
+  unfolding store_pte_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: set_pt_equal_kernel_mappings)
+  apply (fastforce simp: obj_at_def)
+  done
+
+(* FIXME RISCV currently unused, alternate form when we know we don't update a kernel mapping slot
+   in a root pt *)
+lemma store_pte_equal_kernel_mappings_no_kernel_slots:
+  "\<lbrace>\<lambda>s. equal_kernel_mappings s
+        \<and> ((\<exists>asid. vspace_for_asid asid s = Some (table_base p))
+                   \<longrightarrow> table_index p \<notin> kernel_mapping_slots)
+        \<and> table_base p \<noteq> riscv_global_pt (arch_state s) \<rbrace>
+   store_pte p pte
+   \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
+  unfolding store_pte_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: set_pt_equal_kernel_mappings)
+  apply (fastforce simp: obj_at_def equal_kernel_mappings_def pts_of_ko_at
+                   intro: has_kernel_mappings_index_upd_idem)
+  done
+
 lemma store_pte_state_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace> store_pte ptr val \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (simp add: store_pte_def set_pt_def)
@@ -1930,7 +1974,7 @@ lemma store_pte_state_refs_of[wp]:
   apply (clarsimp simp: state_refs_of_def obj_at_def)
   done
 
-lemma store_pde_state_hyp_refs_of:
+lemma store_pte_state_hyp_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> store_pte ptr val \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: store_pte_def set_pt_def)
   apply (wp get_object_wp set_object_wp)
@@ -1974,6 +2018,47 @@ lemma set_pt_invs:
   apply (drule_tac x=a in spec, drule_tac x=b in spec)
   apply (clarsimp simp: is_pt_cap_def cap_asid_def)
   done *)
+
+lemma asid_pools_of_pt_None_upd_idem:
+  "pt_at p s \<Longrightarrow> (asid_pools_of s)(p := None) = (asid_pools_of s)"
+  by (rule ext)
+     (clarsimp simp: opt_map_def obj_at_def )
+
+lemma store_pte_valid_asid_table[wp]:
+  "\<lbrace> valid_asid_table \<rbrace>
+   store_pte p pte
+   \<lbrace>\<lambda>_. valid_asid_table \<rbrace>"
+  supply fun_upd_apply[simp del]
+  unfolding store_pte_def set_pt_def
+  apply (wpsimp wp: set_object_wp hoare_vcg_imp_lift' hoare_vcg_all_lift)
+  apply (subst asid_pools_of_pt_None_upd_idem, auto simp: obj_at_def)
+  done
+
+crunches store_pte
+  for iflive[wp]: if_live_then_nonz_cap
+  and zombies_final[wp]: zombies_final
+  and valid_mdb[wp]: valid_mdb
+  and valid_ioc[wp]: valid_ioc
+  and valid_idle[wp]: valid_idle
+  and only_idle[wp]: only_idle
+  and if_unsafe_then_cap[wp]: if_unsafe_then_cap
+  and valid_reply_caps[wp]: valid_reply_caps
+  and valid_reply_masters[wp]: valid_reply_masters
+  and valid_global_refs[wp]: valid_global_refs
+  and valid_irq_node[wp]: valid_irq_node
+  and valid_irq_handlers[wp]: valid_irq_handlers
+  and valid_irq_states[wp]: valid_irq_states
+  and valid_machine_state[wp]: valid_machine_state
+  and valid_global_objs[wp]: valid_global_objs
+  and valid_kernel_mappings[wp]: valid_kernel_mappings
+  and valid_asid_map[wp]: valid_asid_map
+  and pspace_in_kernel_window[wp]: pspace_in_kernel_window
+  and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
+  and pspace_respects_device_region[wp]: pspace_respects_device_region
+  and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
+  and cur_tcb[wp]: cur_tcb
+  (wp: set_pt_zombies set_pt_ifunsafe set_pt_reply_caps set_pt_reply_masters
+       set_pt_valid_global valid_irq_node_typ valid_irq_handlers_lift set_pt_cur)
 
 lemma store_pte_invs:
   "\<lbrace>invs and (\<lambda>s. (\<forall>level. \<exists>\<rhd>(level, table_base p) s \<longrightarrow> valid_pte level pte s)) and (* potential off-by-one in level *)
