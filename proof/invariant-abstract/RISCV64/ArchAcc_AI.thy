@@ -906,6 +906,12 @@ lemma set_object_caps_of_state:
   apply (auto simp: cte_wp_at_cases)
   done
 
+lemma set_pt_aobjs_of:
+  "\<lbrace>\<lambda>s. aobjs_of s p \<noteq> None \<longrightarrow> P (aobjs_of s(p \<mapsto> PageTable pt)) \<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. P (aobjs_of s)\<rbrace>"
+  unfolding set_pt_def
+  supply fun_upd_apply[simp del]
+  by (wpsimp wp: set_object_wp)
+     (simp add: obj_at_def opt_map_def)
 
 lemma set_pt_valid_vspace_objs[wp]:
   "\<lbrace>\<lambda>s. valid_vspace_objs s \<and>
@@ -2130,6 +2136,65 @@ lemma store_pte_valid_asid_pool_caps[wp]:
   apply (subst caps_of_state_after_update[folded fun_upd_def], fastforce simp: obj_at_def)+
   apply assumption
   done
+
+lemma vs_lookup_table_unreachable_upd_idem:
+  "\<lbrakk> \<forall>level. vs_lookup_table level asid vref s \<noteq> Some (level, obj_ref);
+     vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
+   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+      = vs_lookup_table level asid vref s"
+  apply (subst vs_lookup_table_upd_idem; fastforce)
+  done
+
+(* FIXME RISCV: simplified form of this may be preferable *)
+lemma vs_lookup_table_unreachable_upd_idem':
+  "\<lbrakk> \<not>(\<exists>level. \<exists>\<rhd> (level, obj_ref) s);
+     vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
+   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+      = vs_lookup_table level asid vref s"
+  by (rule vs_lookup_table_unreachable_upd_idem; fastforce)
+
+lemma vs_lookup_target_unreachable_upd_idem:
+  "\<lbrakk> \<forall>level. vs_lookup_table level asid vref s \<noteq> Some (level, obj_ref);
+     vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
+   \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+      = vs_lookup_target level asid vref s"
+  supply fun_upd_apply[simp del]
+  apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def obind_assoc)
+  apply (rule obind_eqI_full)
+   apply (subst vs_lookup_table_upd_idem; fastforce)
+  apply (clarsimp split del: if_split)
+  apply (rename_tac level' p)
+  apply (rule obind_eqI, fastforce)
+  apply (clarsimp split del: if_split)
+  apply (rule obind_eqI[rotated], fastforce)
+  apply (clarsimp split: if_splits)
+   (* level' = asid_pool_level *)
+   apply (rename_tac pool_ptr)
+   apply (drule vs_lookup_level, drule vs_lookup_level)
+   apply (clarsimp simp: pool_for_asid_vs_lookup vspace_for_pool_def in_omonad)
+   apply (rule obind_eqI[rotated], fastforce)
+   apply (case_tac "pool_ptr = obj_ref"; clarsimp)
+    apply (erule_tac x=asid_pool_level in allE)
+    apply (fastforce simp: pool_for_asid_vs_lookup)
+   apply (fastforce simp: fun_upd_def opt_map_def split: option.splits)
+  (* level' \<le> max_pt_level *)
+  apply (rule conjI, clarsimp)
+  apply (rename_tac pt_ptr level')
+   apply (case_tac "pt_ptr = obj_ref")
+    apply (fastforce dest: vs_lookup_level)
+   apply (rule pte_refs_of_eqI, rule ptes_of_eqI)
+   apply (prop_tac "is_aligned pt_ptr pt_bits")
+    apply (erule vs_lookup_table_is_aligned; fastforce)
+   apply (clarsimp simp: fun_upd_def opt_map_def split: option.splits)
+  done
+
+(* FIXME RISCV: simplified form of this may be preferable *)
+lemma vs_lookup_target_unreachable_upd_idem':
+  "\<lbrakk> \<not>(\<exists>level. \<exists>\<rhd> (level, obj_ref) s);
+     vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
+   \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+      = vs_lookup_target level asid vref s"
+   by (rule vs_lookup_target_unreachable_upd_idem; fastforce)
 
 lemma store_pte_invs:
   "\<lbrace>invs and (\<lambda>s. (\<forall>level. \<exists>\<rhd>(level, table_base p) s \<longrightarrow> valid_pte level pte s)) and (* potential off-by-one in level *)

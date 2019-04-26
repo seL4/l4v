@@ -1566,6 +1566,14 @@ lemma ptes_of_pts_of:
   "ptes_of s pte_ptr = Some pte \<Longrightarrow> pts_of s (pte_ptr && ~~mask pt_bits) \<noteq> None"
   by (auto simp: ptes_of_def in_omonad)
 
+lemma ptes_of_eqI:
+  "pts (table_base p) = pts' (table_base p) \<Longrightarrow> pte_of p pts = pte_of p pts'"
+  by (rule obind_eqI | clarsimp simp: pte_of_def)+
+
+lemma pte_refs_of_eqI:
+  "ptes p = ptes' p \<Longrightarrow> (ptes |> pte_ref) p =  (ptes' |> pte_ref) p"
+  by (clarsimp simp: opt_map_def)
+
 lemma pt_index_mask_pt_bits[simp]:
   "(pt_index level vref << pte_bits) && mask pt_bits = pt_index level vref << pte_bits"
   by (simp add: pt_index_def pt_bits_def table_size_def shiftl_over_and_dist mask_shiftl_decompose
