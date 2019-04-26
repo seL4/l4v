@@ -2195,6 +2195,35 @@ lemma vs_lookup_target_unreachable_upd_idem':
       = vs_lookup_target level asid vref s"
    by (rule vs_lookup_target_unreachable_upd_idem; fastforce)
 
+lemma store_pte_PagePTE_valid_vspace_objs:
+  "\<lbrace> valid_vspace_objs and pspace_aligned and valid_asid_table
+     and K (pte = PagePTE ppn attr rights)
+     and (\<lambda>s. \<forall>level. \<exists>\<rhd> (level, table_base p) s \<longrightarrow> valid_pte level pte s)\<rbrace>
+   store_pte p pte
+   \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
+  unfolding valid_vspace_objs_def
+  supply valid_pte.simps[simp del]
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' valid_vspace_obj_lift
+                    store_pte_non_PageTablePTE_vs_lookup)
+  apply (rule conjI; clarsimp)
+   apply (rename_tac level' slot pte' ao pt)
+   apply (drule (1) level_of_slotI)
+   apply (case_tac "slot = table_base p"; clarsimp simp del: valid_vspace_obj.simps)
+   apply (drule vs_lookup_level)
+   apply (clarsimp)
+   apply (prop_tac "valid_vspace_obj level' (PageTable pt) s")
+    apply fastforce
+   apply fastforce
+  apply (rename_tac level' slot pte' ao pt)
+  apply (clarsimp simp: vs_lookup_slot_def)
+  apply (case_tac "slot = table_base p"; clarsimp simp del: valid_vspace_obj.simps)
+  apply (drule vs_lookup_level)
+  apply (clarsimp)
+  apply (prop_tac "valid_vspace_obj level' (PageTable pt) s")
+   apply fastforce
+  apply fastforce
+  done
+
 lemma store_pte_invs:
   "\<lbrace>invs and (\<lambda>s. (\<forall>level. \<exists>\<rhd>(level, table_base p) s \<longrightarrow> valid_pte level pte s)) and (* potential off-by-one in level *)
     K (wellformed_pte pte) and

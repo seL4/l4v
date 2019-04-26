@@ -371,11 +371,12 @@ lemma vs_lookup_slot_no_asid:
   unfolding vs_lookup_slot_def vs_lookup_table_def
   by (fastforce dest: pool_for_asid_no_pte simp: in_omonad)
 
-(* Invalidating an entry at p will cause lookups to stop at higher levels than requested.
+(* Removing a page table pte entry at p will cause lookups to stop at higher levels than requested.
    If performing a shallower lookup than the one requested results in p, then any deeper lookup
    in the updated state will return a higher level result along the original path. *)
-lemma vs_lookup_InvalidPTE:
-  "\<lbrakk> ptes_of s p \<noteq> None; ptes_of s' = ptes_of s (p \<mapsto> InvalidPTE);
+lemma vs_lookup_non_PageTablePTE:
+  "\<lbrakk> ptes_of s p \<noteq> None; ptes_of s' = ptes_of s (p \<mapsto> pte);
+     \<not> is_PageTablePTE pte;
      asid_pools_of s' = asid_pools_of s;
      asid_table s' = asid_table s;
      valid_asid_table s; pspace_aligned s \<rbrakk> \<Longrightarrow>
@@ -417,7 +418,7 @@ lemma vs_lookup_InvalidPTE:
   apply (subst pt_walk.simps)
   apply (subst (2) pt_walk.simps)
   apply (simp add: less_imp_le cong: if_cong)
-  apply (subgoal_tac "(ptes_of s(p \<mapsto> InvalidPTE)) (pt_slot_offset (x + 1) b vref)
+  apply (subgoal_tac "(ptes_of s(p \<mapsto> pte)) (pt_slot_offset (x + 1) b vref)
                       = ptes_of s (pt_slot_offset (x + 1) b vref)")
    apply (simp add: obind_def split: option.splits)
   apply clarsimp
@@ -437,17 +438,18 @@ crunches store_pte
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imps)
 
-lemma store_pte_InvalidPTE_vs_lookup[wp]:
+lemma store_pte_non_PageTablePTE_vs_lookup:
   "\<lbrace>\<lambda>s. (ptes_of s p \<noteq> None \<longrightarrow>
          P (if \<exists>level'. vs_lookup_slot level' asid vref s = Some (level', p) \<and> level < level'
             then vs_lookup_table (level_of_slot asid vref p s) asid vref s
-            else vs_lookup_table level asid vref s)) \<and> pspace_aligned s \<and> valid_asid_table s \<rbrace>
-   store_pte p InvalidPTE
+            else vs_lookup_table level asid vref s)) \<and> pspace_aligned s \<and> valid_asid_table s
+        \<and> \<not> is_PageTablePTE pte \<rbrace>
+   store_pte p pte
    \<lbrace>\<lambda>_ s. P (vs_lookup_table level asid vref s)\<rbrace>"
   unfolding store_pte_def set_pt_def
   apply (wpsimp wp: set_object_wp simp: in_opt_map_eq ptes_of_Some)
   apply (erule rsubst[where P=P])
-  apply (subst (3) vs_lookup_InvalidPTE)
+  apply (subst (3) vs_lookup_non_PageTablePTE)
       apply (fastforce simp: in_omonad pte_of_def)
      apply (fastforce simp: pte_of_def obind_def opt_map_def split: option.splits dest!: pte_ptr_eq)
     apply (fastforce simp: opt_map_def)+
@@ -474,15 +476,15 @@ lemma store_pte_InvalidPTE_valid_vspace_objs[wp]:
    store_pte p InvalidPTE
    \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   unfolding valid_vspace_objs_def
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' valid_vspace_obj_lift)
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' valid_vspace_obj_lift
+                    store_pte_non_PageTablePTE_vs_lookup)
   apply (rule conjI; clarsimp)
-   apply (rename_tac bot_level vref asid level' level slot pte ao pt pt')
+   apply (rename_tac level slot pte ao pt)
    apply (drule (1) level_of_slotI)
    apply (case_tac "slot = table_base p"; clarsimp simp del: valid_vspace_obj.simps)
    apply (fastforce intro!: valid_vspace_obj_PT_invalidate)
   apply (rename_tac s bot_level vref asid level slot pte ao pt)
   apply (clarsimp simp: vs_lookup_slot_def)
-  apply (rename_tac s bot_level vref asid level slot pte ao pt pt')
   apply (case_tac "slot = table_base p"; clarsimp simp del: valid_vspace_obj.simps)
   apply (fastforce intro!: valid_vspace_obj_PT_invalidate)
   done

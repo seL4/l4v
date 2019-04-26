@@ -1831,6 +1831,10 @@ lemma pts_of_ko_at:
   "(pts_of s p = Some pt) = ako_at (PageTable pt) p s"
   by (simp add: obj_at_def in_opt_map_eq)
 
+lemma asid_pools_of_ko_at:
+  "(asid_pools_of s p = Some ap) = ako_at (ASIDPool ap) p s"
+  by (simp add: obj_at_def in_opt_map_eq)
+
 lemma a_type_ArchObj[simp]:
   "a_type (ArchObj ao) = AArch (aa_type ao)"
   by (simp add: a_type_aa_type)

@@ -956,7 +956,7 @@ lemma unmap_page_table_unmapped:
      unmap_page_table asid vaddr pt
    \<lbrace>\<lambda>rv s. vs_lookup_table level asid vaddr s \<noteq> Some (level, pt) \<rbrace>"
   unfolding unmap_page_table_def
-  apply wpsimp
+  apply (wpsimp wp: store_pte_non_PageTablePTE_vs_lookup)
   apply (rule conjI; clarsimp)
    apply (clarsimp simp: vs_lookup_table_def in_omonad split: if_split_asm)
    apply (simp add: obind_def vspace_for_asid_def less_le split: option.splits if_split_asm)
