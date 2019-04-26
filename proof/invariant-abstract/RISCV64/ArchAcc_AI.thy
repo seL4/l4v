@@ -31,10 +31,9 @@ context Arch begin global_naming RISCV64
 (* FIXME RISCV: move up *)
 (* Is there a lookup that leads to a page table at (level, p)? *)
 locale_abbrev ex_vs_lookup_table ::
-  "vm_level \<times> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" ("\<exists>\<rhd>") where
-  "ex_vs_lookup_table \<equiv>
-     \<lambda>(level,p) s. \<exists>asid vref.
-       vs_lookup_table level asid vref s = Some (level, p) \<and> vref \<in> user_region"
+  "vm_level \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" ("\<exists>\<rhd> '(_, _')" [0,0] 1000) where
+  "ex_vs_lookup_table level p s \<equiv>
+     \<exists>asid vref. vs_lookup_table level asid vref s = Some (level, p) \<and> vref \<in> user_region"
 
 bundle unfold_objects =
   obj_at_def[simp]
