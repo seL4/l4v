@@ -16,6 +16,12 @@ theory ArchAcc_AI
 imports "../SubMonad_AI" "Lib.Crunch_Instances_NonDet"
 begin
 
+(* FIXME: move to Lib *)
+lemma graph_of_SomeD:
+  "\<lbrakk> graph_of f \<subseteq> graph_of g; f x = Some y \<rbrakk> \<Longrightarrow> g x = Some y"
+  unfolding graph_of_def
+  by auto
+
 context non_vspace_op
 begin
 
@@ -1117,6 +1123,24 @@ lemma pt_walk_upd_idem:
   by (rule pt_walk_eqI; simp split del: if_split)
      (clarsimp simp: opt_map_def split: option.splits)
 
+lemma pt_walk_pt_None_updD:
+  "\<lbrakk> pt_walk top_level level pt_ptr vref (\<lambda>pa. pte_of pa ((pts_of s)(p := None))) =
+        Some (level, table_ptr) \<rbrakk>
+       \<Longrightarrow> pt_walk top_level level pt_ptr vref (ptes_of s) = Some (level, table_ptr)"
+  apply (induct top_level arbitrary: pt_ptr, clarsimp)
+  apply (subst pt_walk.simps)
+  apply (subst (asm) (3) pt_walk.simps)
+  apply (clarsimp simp: in_omonad split: if_splits)
+  apply (erule disjE; clarsimp?)
+  apply (drule meta_spec)
+  apply (fastforce simp: pte_of_def in_omonad split: if_splits)
+  done
+
+lemma ptes_of_pt_None_updD:
+  "\<lbrakk> pte_of p' ((pts_of s)(p := None)) = Some pte \<rbrakk>
+   \<Longrightarrow> ptes_of s p' = Some pte"
+  by (clarsimp simp: opt_map_def pte_of_def in_omonad split: option.splits if_splits)
+
 lemma vs_lookup_table_eqI:
   fixes s :: "'z::state_ext state"
   fixes s' :: "'z::state_ext state"
@@ -1649,31 +1673,95 @@ lemma set_asid_pool_table_caps[wp]:
   apply (rule hoare_lift_Pf2 [where f=caps_of_state];wp?)
   done
 
-(* FIXME: Move to ArchInvariants_A *)
-lemma vs_lookup_target_stateI:
-  assumes 1: "vs_lookup_target bot_level asid vref s = Some (level, p)"
-  assumes pts: "\<And>p pt. pts_of s p = Some pt \<Longrightarrow> \<exists>pt'. pts_of s' p = Some pt' \<and> graph_of (pte_ref o pt) \<subseteq> graph_of (pte_ref o pt')"
-  assumes pools: "\<And>p ap. asid_pools_of s p = Some ap \<Longrightarrow> \<exists>ap'. asid_pools_of s' p = Some ap' \<and> graph_of ap \<subseteq> graph_of ap'"
-  assumes table: "graph_of (asid_table s) \<subseteq> graph_of (asid_table s')"
-  shows "vs_lookup_target bot_level asid vref s' = Some (level, p)"
-  sorry (* FIXME RISCV *)
-(*
-  using 1 vs_lookup_pages_sub [OF ko table] by blast
-*)
+lemma vs_lookup_target_asid_pool_levelI:
+  "\<lbrakk> pool_for_asid asid s = Some pool; ako_at (ASIDPool ap) pool s;
+     ap (asid_low_bits_of asid) = Some pt_ptr \<rbrakk>
+   \<Longrightarrow> vs_lookup_target asid_pool_level asid vref s = Some (asid_pool_level, pt_ptr)"
+  apply (clarsimp simp: vs_lookup_target_def in_omonad)
+  apply (clarsimp simp: pool_for_asid_vs_lookup vspace_for_pool_def vs_lookup_slot_def in_omonad)
+  apply (rule_tac x=pool in exI)
+  apply (fastforce simp: obj_at_def)
+  done
+
+lemma vs_lookup_target_pt_levelI:
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, pt_ptr);
+     pte_refs_of s (pt_slot_offset level pt_ptr vref) = Some target;
+     level \<le> max_pt_level \<rbrakk>
+   \<Longrightarrow> vs_lookup_target level asid vref s = Some (level, target)"
+  by (clarsimp simp: vs_lookup_target_def in_omonad vs_lookup_slot_def asid_pool_level_neq[THEN iffD2])
+
+lemma vs_lookup_target_asid_pool_level_upd_helper:
+  "\<lbrakk> graph_of ap \<subseteq> graph_of ap'; kheap s p = Some (ArchObj (ASIDPool ap')); vref \<in> user_region;
+     vspace_for_pool pool_ptr asid (asid_pools_of s(p \<mapsto> ap)) = Some pt_ptr;
+     pool_for_asid asid (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool ap))\<rparr>) = Some pool_ptr\<rbrakk>
+   \<Longrightarrow> vs_lookup_target asid_pool_level asid vref s = Some (asid_pool_level, pt_ptr)"
+  apply (clarsimp simp: pool_for_asid_vs_lookup vspace_for_pool_def in_omonad)
+  apply (clarsimp split: if_splits)
+   apply (rule vs_lookup_target_asid_pool_levelI)
+   apply (fastforce simp: pool_for_asid_def obj_at_def dest: graph_of_SomeD)+
+  apply (rule vs_lookup_target_asid_pool_levelI
+         ; fastforce simp: pool_for_asid_def obj_at_def vs_lookup_target_def in_omonad)
+  done
+
+lemma vs_lookup_target_None_upd_helper:
+  "\<lbrakk> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool ap))\<rparr>) =
+        Some (level, table_ptr);
+     ((\<lambda>pa. pte_of pa ((pts_of s)(p := None))) |> pte_ref) (pt_slot_offset level table_ptr vref)
+       = Some target;
+     kheap s p = Some (ArchObj (ASIDPool ap')); graph_of ap \<subseteq> graph_of ap';
+     level \<le> max_pt_level \<rbrakk>
+   \<Longrightarrow> vs_lookup_target level asid vref s = Some (level, target)"
+  apply (subst (asm) vs_lookup_split_max_pt_level_Some, assumption)
+  apply (clarsimp dest!: vs_lookup_max_pt_levelD)
+  apply (clarsimp simp: vs_lookup_target_def in_omonad vs_lookup_slot_def)
+  apply (clarsimp simp: asid_pool_level_neq[THEN iffD2])
+  apply (rule_tac x="pt_slot_offset level table_ptr vref" in exI)
+  apply (rule conjI[rotated], fastforce dest: ptes_of_pt_None_updD)
+  apply (rule_tac x=level in exI)
+  apply (clarsimp simp: asid_pool_level_neq[THEN iffD2])
+  apply (subst vs_lookup_split_max_pt_level_Some, assumption)
+  apply (rule_tac x=table_ptr in exI)
+  apply simp
+  apply (rule_tac x=pt in exI)
+  apply (rule conjI)
+   apply (rule_tac pool_ptr=pool_ptr in vs_lookup_max_pt_levelI)
+    apply (fastforce simp: pool_for_asid_def)
+   apply (fastforce simp: asid_pools_of_ko_at obj_at_def  vspace_for_pool_def in_omonad
+                    dest!: graph_of_SomeD pt_walk_pt_None_updD
+                    split: if_splits)+
+  done
 
 lemma set_asid_pool_vs_lookup_unmap':
-  "\<lbrace>valid_vs_lookup and
-    obj_at (\<lambda>ko. \<exists>ap'. ko = ArchObj (ASIDPool ap') \<and> graph_of ap \<subseteq> graph_of ap') p\<rbrace>
-  set_asid_pool p ap \<lbrace>\<lambda>_. valid_vs_lookup\<rbrace>"
+  "\<lbrace> valid_vs_lookup and
+     obj_at (\<lambda>ko. \<exists>ap'. ko = ArchObj (ASIDPool ap') \<and> graph_of ap \<subseteq> graph_of ap') p \<rbrace>
+   set_asid_pool p ap
+   \<lbrace>\<lambda>_. valid_vs_lookup\<rbrace>"
+  supply fun_upd_apply[simp del]
   apply (simp add: valid_vs_lookup_def pred_conj_def)
   apply (rule hoare_lift_Pf2 [where f=caps_of_state];wp?)
   apply (simp add: set_asid_pool_def)
   apply (wp get_object_wp set_object_wp)
   apply (clarsimp simp: obj_at_def)
-  apply (erule allE)+
-  apply (erule impE)
-   apply (erule vs_lookup_target_stateI; clarsimp simp: in_opt_map_eq split: if_split_asm)
-  apply fastforce
+  apply (rename_tac target)
+  (* unfold vs_lookup_target on updated state and clean up *)
+  apply (subst (asm) (2) vs_lookup_target_def)
+  apply (clarsimp simp: in_omonad)
+  apply (rename_tac slot_ptr)
+  apply (clarsimp simp: vs_lookup_slot_def)
+  apply (rename_tac level' table_ptr)
+  apply (drule_tac bot_level=bot_level in vs_lookup_level)
+  apply (prop_tac "level' = level", fastforce split: if_splits)
+  apply clarsimp
+
+  apply (case_tac "level = asid_pool_level")
+   apply (clarsimp simp: pool_for_asid_vs_lookup)
+   apply (rename_tac root pool_ptr)
+   apply (subgoal_tac "vs_lookup_target asid_pool_level asid vref s = Some (asid_pool_level, root)"
+          , fastforce)
+   apply (erule vs_lookup_target_asid_pool_level_upd_helper; assumption)
+  apply clarsimp
+  apply (subgoal_tac "vs_lookup_target level asid vref s = Some (level, target)", fastforce)
+  apply (erule vs_lookup_target_None_upd_helper; simp)
   done
 
 lemma set_asid_pool_vs_lookup_unmap:
@@ -2242,8 +2330,8 @@ lemma store_pte_invs:
   apply clarsimp
   apply (intro conjI)
      apply (drule invs_valid_objs)
-     apply (fastforce simp: valid_objs_def dom_def obj_at_def valid_obj_def arch_valid_obj_def)
   sorry (* FIXME RISCV
+     apply (fastforce simp: valid_objs_def dom_def obj_at_def valid_obj_def arch_valid_obj_def)
     apply clarsimp
     apply (drule (1) valid_vspace_objsD, fastforce)
     apply simp

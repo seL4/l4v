@@ -1762,6 +1762,12 @@ lemma vs_lookup_max_pt_levelD:
                   vspace_for_pool pool_ptr asid (asid_pools_of s) = Some root_pt"
   by (clarsimp simp: vs_lookup_table_def)
 
+lemma vs_lookup_max_pt_levelI:
+  "\<lbrakk> pool_for_asid asid s = Some pool_ptr;
+     vspace_for_pool pool_ptr asid (asid_pools_of s) = Some root_pt \<rbrakk>
+   \<Longrightarrow> vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, root_pt)"
+  by (clarsimp simp: vs_lookup_table_def in_omonad)
+
 lemma vs_lookup_max_pt_valid:
   "\<lbrakk> vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, root_pt);
      vref \<in> user_region;
