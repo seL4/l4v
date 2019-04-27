@@ -16,12 +16,6 @@ theory ArchAcc_AI
 imports "../SubMonad_AI" "Lib.Crunch_Instances_NonDet"
 begin
 
-(* FIXME: move to Lib *)
-lemma graph_of_SomeD:
-  "\<lbrakk> graph_of f \<subseteq> graph_of g; f x = Some y \<rbrakk> \<Longrightarrow> g x = Some y"
-  unfolding graph_of_def
-  by auto
-
 context non_vspace_op
 begin
 
@@ -1516,15 +1510,6 @@ lemma valid_asid_table_ran:
   unfolding invs_def valid_state_def valid_arch_state_def valid_asid_table_def
   by (fastforce simp: opt_map_def obj_at_def split: option.splits)
 
-lemma vs_lookup_pages_pt_eq:
-  "\<lbrakk>valid_vspace_objs s;
-    \<forall>p\<in>ran (asid_table s). asid_pool_at p s;
-    pt_at p s\<rbrakk>
-   \<Longrightarrow> (vs_lookup_target level asid vref s = Some (level, p))
-       = (vs_lookup_table level asid vref s = Some (level, p))"
-  sorry (* FIXME RISCV: something along these lines, possibly level+1 on one side;
-                        check if needed before proving it *)
-
 lemmas invs_ran_asid_table = invs_valid_asid_table[THEN valid_asid_table_ran]
 
 
@@ -1650,6 +1635,65 @@ lemma set_asid_pool_valid_global [wp]:
 
 crunch interrupt_states[wp]: set_asid_pool "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
+
+lemma vs_lookup_table_unreachable_upd_idem:
+  "\<lbrakk> \<forall>level. vs_lookup_table level asid vref s \<noteq> Some (level, obj_ref);
+     vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
+   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+      = vs_lookup_table level asid vref s"
+  apply (subst vs_lookup_table_upd_idem; fastforce)
+  done
+
+(* FIXME RISCV: simplified form of this may be preferable *)
+lemma vs_lookup_table_unreachable_upd_idem':
+  "\<lbrakk> \<not>(\<exists>level. \<exists>\<rhd> (level, obj_ref) s);
+     vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
+   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+      = vs_lookup_table level asid vref s"
+  by (rule vs_lookup_table_unreachable_upd_idem; fastforce)
+
+lemma vs_lookup_target_unreachable_upd_idem:
+  "\<lbrakk> \<forall>level. vs_lookup_table level asid vref s \<noteq> Some (level, obj_ref);
+     vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
+   \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+      = vs_lookup_target level asid vref s"
+  supply fun_upd_apply[simp del]
+  apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def obind_assoc)
+  apply (rule obind_eqI_full)
+   apply (subst vs_lookup_table_upd_idem; fastforce)
+  apply (clarsimp split del: if_split)
+  apply (rename_tac level' p)
+  apply (rule obind_eqI, fastforce)
+  apply (clarsimp split del: if_split)
+  apply (rule obind_eqI[rotated], fastforce)
+  apply (clarsimp split: if_splits)
+   (* level' = asid_pool_level *)
+   apply (rename_tac pool_ptr)
+   apply (drule vs_lookup_level, drule vs_lookup_level)
+   apply (clarsimp simp: pool_for_asid_vs_lookup vspace_for_pool_def in_omonad)
+   apply (rule obind_eqI[rotated], fastforce)
+   apply (case_tac "pool_ptr = obj_ref"; clarsimp)
+    apply (erule_tac x=asid_pool_level in allE)
+    apply (fastforce simp: pool_for_asid_vs_lookup)
+   apply (fastforce simp: fun_upd_def opt_map_def split: option.splits)
+  (* level' \<le> max_pt_level *)
+  apply (rule conjI, clarsimp)
+  apply (rename_tac pt_ptr level')
+   apply (case_tac "pt_ptr = obj_ref")
+    apply (fastforce dest: vs_lookup_level)
+   apply (rule pte_refs_of_eqI, rule ptes_of_eqI)
+   apply (prop_tac "is_aligned pt_ptr pt_bits")
+    apply (erule vs_lookup_table_is_aligned; fastforce)
+   apply (clarsimp simp: fun_upd_def opt_map_def split: option.splits)
+  done
+
+(* FIXME RISCV: simplified form of this may be preferable *)
+lemma vs_lookup_target_unreachable_upd_idem':
+  "\<lbrakk> \<not>(\<exists>level. \<exists>\<rhd> (level, obj_ref) s);
+     vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
+   \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+      = vs_lookup_target level asid vref s"
+   by (rule vs_lookup_target_unreachable_upd_idem; fastforce)
 
 lemma set_asid_pool_vspace_objs_unmap':
   "\<lbrace>valid_vspace_objs and
@@ -2223,65 +2267,6 @@ lemma store_pte_valid_asid_pool_caps[wp]:
   apply (subst caps_of_state_after_update[folded fun_upd_def], fastforce simp: obj_at_def)+
   apply assumption
   done
-
-lemma vs_lookup_table_unreachable_upd_idem:
-  "\<lbrakk> \<forall>level. vs_lookup_table level asid vref s \<noteq> Some (level, obj_ref);
-     vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
-   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
-      = vs_lookup_table level asid vref s"
-  apply (subst vs_lookup_table_upd_idem; fastforce)
-  done
-
-(* FIXME RISCV: simplified form of this may be preferable *)
-lemma vs_lookup_table_unreachable_upd_idem':
-  "\<lbrakk> \<not>(\<exists>level. \<exists>\<rhd> (level, obj_ref) s);
-     vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
-   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
-      = vs_lookup_table level asid vref s"
-  by (rule vs_lookup_table_unreachable_upd_idem; fastforce)
-
-lemma vs_lookup_target_unreachable_upd_idem:
-  "\<lbrakk> \<forall>level. vs_lookup_table level asid vref s \<noteq> Some (level, obj_ref);
-     vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
-   \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
-      = vs_lookup_target level asid vref s"
-  supply fun_upd_apply[simp del]
-  apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def obind_assoc)
-  apply (rule obind_eqI_full)
-   apply (subst vs_lookup_table_upd_idem; fastforce)
-  apply (clarsimp split del: if_split)
-  apply (rename_tac level' p)
-  apply (rule obind_eqI, fastforce)
-  apply (clarsimp split del: if_split)
-  apply (rule obind_eqI[rotated], fastforce)
-  apply (clarsimp split: if_splits)
-   (* level' = asid_pool_level *)
-   apply (rename_tac pool_ptr)
-   apply (drule vs_lookup_level, drule vs_lookup_level)
-   apply (clarsimp simp: pool_for_asid_vs_lookup vspace_for_pool_def in_omonad)
-   apply (rule obind_eqI[rotated], fastforce)
-   apply (case_tac "pool_ptr = obj_ref"; clarsimp)
-    apply (erule_tac x=asid_pool_level in allE)
-    apply (fastforce simp: pool_for_asid_vs_lookup)
-   apply (fastforce simp: fun_upd_def opt_map_def split: option.splits)
-  (* level' \<le> max_pt_level *)
-  apply (rule conjI, clarsimp)
-  apply (rename_tac pt_ptr level')
-   apply (case_tac "pt_ptr = obj_ref")
-    apply (fastforce dest: vs_lookup_level)
-   apply (rule pte_refs_of_eqI, rule ptes_of_eqI)
-   apply (prop_tac "is_aligned pt_ptr pt_bits")
-    apply (erule vs_lookup_table_is_aligned; fastforce)
-   apply (clarsimp simp: fun_upd_def opt_map_def split: option.splits)
-  done
-
-(* FIXME RISCV: simplified form of this may be preferable *)
-lemma vs_lookup_target_unreachable_upd_idem':
-  "\<lbrakk> \<not>(\<exists>level. \<exists>\<rhd> (level, obj_ref) s);
-     vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
-   \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
-      = vs_lookup_target level asid vref s"
-   by (rule vs_lookup_target_unreachable_upd_idem; fastforce)
 
 lemma store_pte_PagePTE_valid_vspace_objs:
   "\<lbrace> valid_vspace_objs and pspace_aligned and valid_asid_table
