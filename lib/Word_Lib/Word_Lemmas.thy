@@ -165,6 +165,9 @@ lemma ucast_ucast_eq:
     x = ucast y"
   by (fastforce intro: word_eqI simp: bang_eq nth_ucast word_size)
 
+lemma ucast_0_I:
+  "x = 0 \<Longrightarrow> ucast x = 0"
+  by simp
 
 text \<open>right-padding a word to a certain length\<close>
 
@@ -736,6 +739,12 @@ lemma shiftl_shiftr_id:
   apply (subst unat_power_lower[OF nv])
   apply simp
   done
+
+lemma ucast_shiftl_eq_0:
+  fixes w :: "'a :: len word"
+  shows "\<lbrakk> n \<ge> LENGTH('b) \<rbrakk> \<Longrightarrow> ucast (w << n) = (0 :: 'b :: len word)"
+  by (case_tac "size w \<le> n", clarsimp simp: shiftl_zero_size)
+     (clarsimp simp: not_le ucast_bl bl_shiftl bang_eq test_bit_of_bl rev_nth nth_append)
 
 lemma word_mult_less_iff:
   fixes i :: "'a :: len word"
