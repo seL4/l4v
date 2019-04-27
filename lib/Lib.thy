@@ -764,6 +764,11 @@ lemma graph_of_empty :
 lemma graph_of_in_ranD: "\<forall>y \<in> ran f. P y \<Longrightarrow> (x,y) \<in> graph_of f \<Longrightarrow> P y"
   by (auto simp: graph_of_def ran_def)
 
+lemma graph_of_SomeD:
+  "\<lbrakk> graph_of f \<subseteq> graph_of g; f x = Some y \<rbrakk> \<Longrightarrow> g x = Some y"
+  unfolding graph_of_def
+  by auto
+
 lemma in_set_zip_refl :
   "(x,y) \<in> set (zip xs xs) = (y = x \<and> x \<in> set xs)"
   by (induct xs) auto
