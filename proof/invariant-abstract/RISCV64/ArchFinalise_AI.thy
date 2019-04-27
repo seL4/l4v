@@ -130,7 +130,7 @@ lemma clearExMonitor_invs[wp]:
                    machine_rest_lift_def in_monad select_f_def)
 
 lemma delete_asid_invs[wp]:
-  "delete_asid asid pd \<lbrace>invs\<rbrace>"
+  "\<lbrace> invs and valid_asid_table and pspace_aligned \<rbrace>delete_asid asid pd \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: delete_asid_def cong: option.case_cong)
   apply (wpsimp wp: set_asid_pool_invs_unmap)
   apply blast

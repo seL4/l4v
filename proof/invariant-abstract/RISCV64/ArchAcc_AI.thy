@@ -76,6 +76,18 @@ lemma valid_vs_lookupD:
   unfolding valid_vs_lookup_def
   by auto
 
+lemma vspace_for_asid_from_lookup_target:
+  "\<lbrakk> vs_lookup_target asid_pool_level asid vref s = Some (asid_pool_level, pt_ptr);
+     vref \<in> user_region; valid_vs_lookup s \<rbrakk>
+   \<Longrightarrow> vspace_for_asid asid s = Some pt_ptr"
+  apply (frule valid_vs_lookupD; clarsimp?)
+  apply (clarsimp simp: vs_lookup_target_def in_omonad word_neq_0_conv
+                        vs_lookup_slot_def pool_for_asid_vs_lookup asid_pool_level_eq[symmetric]
+                        vspace_for_asid_def
+                  split: if_splits)
+  apply (fastforce simp: pool_for_asid_vs_lookup)
+  done
+
 lemma unique_table_refsD:
   "\<lbrakk> caps_of_state s p = Some cap; caps_of_state s p' = Some cap';
      unique_table_refs s; obj_refs cap' = obj_refs cap \<rbrakk>
@@ -1698,13 +1710,15 @@ lemma vs_lookup_target_unreachable_upd_idem':
 lemma set_asid_pool_vspace_objs_unmap':
   "\<lbrace>valid_vspace_objs and
     (\<lambda>s. (\<exists>\<rhd> (asid_pool_level, p) s \<longrightarrow> valid_vspace_obj asid_pool_level (ASIDPool ap) s)) and
-    obj_at (\<lambda>ko. \<exists>ap'. ko = ArchObj (ASIDPool ap') \<and> graph_of ap \<subseteq> graph_of ap') p\<rbrace>
+    obj_at (\<lambda>ko. \<exists>ap'. ko = ArchObj (ASIDPool ap') \<and> graph_of ap \<subseteq> graph_of ap') p and
+    valid_asid_table and pspace_aligned \<rbrace>
   set_asid_pool p ap \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   unfolding valid_vspace_objs_def
   sorry (* FIXME RISCV *)
 
 lemma set_asid_pool_vspace_objs_unmap:
-  "\<lbrace>valid_vspace_objs and ko_at (ArchObj (ASIDPool ap)) p\<rbrace>
+  "\<lbrace>valid_vspace_objs and ko_at (ArchObj (ASIDPool ap)) p and
+    valid_asid_table and pspace_aligned\<rbrace>
   set_asid_pool p (ap |` S)  \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   apply (wp set_asid_pool_vspace_objs_unmap')
   apply (clarsimp simp: obj_at_def graph_of_restrict_map)
@@ -1828,7 +1842,8 @@ crunch v_ker_map[wp]: set_asid_pool "valid_kernel_mappings"
   (ignore: set_object wp: set_object_v_ker_map crunch_wps)
 
 lemma set_asid_pool_vspace_objs_unmap_single:
-  "\<lbrace>valid_vspace_objs and ko_at (ArchObj (ASIDPool ap)) p\<rbrace>
+  "\<lbrace>valid_vspace_objs and ko_at (ArchObj (ASIDPool ap)) p and
+    valid_asid_table and pspace_aligned\<rbrace>
        set_asid_pool p (ap(x := None)) \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   using set_asid_pool_vspace_objs_unmap[where S="- {x}"]
   by (simp add: restrict_map_def fun_upd_def if_flip)
@@ -1964,16 +1979,32 @@ lemma set_asid_pool_valid_asid_pool_caps[wp]:
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
 
 lemma set_asid_pool_invs_restrict:
-  "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and (\<lambda>s. \<exists>a. asid_table s a = Some p) \<rbrace>
-       set_asid_pool p (ap |` S) \<lbrace>\<lambda>_. invs\<rbrace>"
+  "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and (\<lambda>s. \<exists>a. asid_table s a = Some p) and
+    valid_asid_table and pspace_aligned\<rbrace>
+   set_asid_pool p (ap |` S)
+   \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def
                    valid_arch_caps_def valid_asid_map_def)
   apply (wp valid_irq_node_typ set_asid_pool_typ_at
             set_asid_pool_vspace_objs_unmap  valid_irq_handlers_lift
             set_asid_pool_vs_lookup_unmap)
   apply (clarsimp simp: equal_kernel_mappings_def)
-  sorry
-
+  apply (rename_tac s pt_ptr hi_bits pt)
+  apply (clarsimp dest!: ran_restrictD)
+  apply (rename_tac lo_bits)
+  (* we can build an asid that resolves to pt_ptr, vref is irrelevant for asid_pool_level *)
+  apply (prop_tac "vs_lookup_target asid_pool_level
+                      ((ucast hi_bits << asid_low_bits) || ucast lo_bits)
+                      0 s = Some (asid_pool_level, pt_ptr)")
+   apply (clarsimp simp: vs_lookup_target_def in_omonad)
+   apply (rule_tac x=p in exI)
+   apply (clarsimp simp: vspace_for_pool_def vs_lookup_slot_def in_omonad obj_at_def
+                         pool_for_asid_vs_lookup pool_for_asid_def
+                         constructed_asid_high_bits_of constructed_asid_low_bits_of)
+   apply (rule_tac x=asid_pool_level in exI)
+   apply clarsimp
+  apply (drule vspace_for_asid_from_lookup_target; simp)
+  done
 
 lemmas set_asid_pool_cte_wp_at1[wp]
     = hoare_cte_wp_caps_of_state_lift [OF set_asid_pool_caps_of_state]
@@ -1989,7 +2020,8 @@ lemma mdb_cte_at_set_asid_pool[wp]:
 done
 
 lemma set_asid_pool_invs_unmap:
-  "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and (\<lambda>s. \<exists>a. asid_table s a = Some p) \<rbrace>
+  "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and (\<lambda>s. \<exists>a. asid_table s a = Some p) and
+    valid_asid_table and pspace_aligned\<rbrace>
        set_asid_pool p (ap(x := None)) \<lbrace>\<lambda>_. invs\<rbrace>"
   using set_asid_pool_invs_restrict[where S="- {x}"]
   by (simp add: restrict_map_def fun_upd_def if_flip)
