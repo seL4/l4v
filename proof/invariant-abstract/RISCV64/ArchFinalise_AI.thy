@@ -705,16 +705,36 @@ lemma as_user_unlive[wp]:
   apply (wpsimp wp: set_object_wp)
   by (clarsimp simp: obj_at_def live_def hyp_live_def arch_tcb_context_set_def dest!: get_tcb_SomeD)
 
+lemma obj_at_not_live_valid_arch_cap_strg [Finalise_AI_asms]:
+  "(s \<turnstile> ArchObjectCap cap \<and> aobj_ref cap = Some r)
+        \<longrightarrow> obj_at (\<lambda>ko. \<not> live ko) r s"
+  by (clarsimp simp: valid_cap_def obj_at_def valid_arch_cap_ref_def
+                     a_type_arch_live live_def hyp_live_def
+              split: arch_cap.split_asm if_splits)
+
+lemma delete_asid_pool_not_reachable[wp]:
+  "\<lbrace> \<lambda>s. pool_for_asid asid s = Some ptr \<rbrace>
+   delete_asid_pool asid ptr
+   \<lbrace>\<lambda>rv s. \<not> reachable_target (asid, 0) ptr s\<rbrace>"
+  apply (simp add: reachable_target_def)
+  apply (rule hoare_strengthen_post)
+   apply (rule delete_asid_pool_unmapped)
+  apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def vs_lookup_table_def split: if_split_asm)
+  done
+
+lemmas reachable_frame_cap_simps =
+  reachable_frame_cap_def[unfolded is_frame_cap_def arch_cap_fun_lift_def, split_simps cap.split]
 
 lemma arch_finalise_cap_replaceable1:
   notes strg = tcb_cap_valid_imp_NullCap
-               (* FIXME RISCV: obj_at_not_live_valid_arch_cap_strg[where cap=cap] *)
+               obj_at_not_live_valid_arch_cap_strg[where cap=cap]
   notes simps = replaceable_def and_not_not_or_imp
                 (* FIXME RISCV:
                 vs_lookup_pages_eq_at[THEN fun_cong, symmetric]
                 vs_lookup_pages_eq_ap[THEN fun_cong, symmetric] *)
                 is_cap_simps vs_cap_ref_def
                 no_cap_to_obj_with_diff_ref_Null o_def
+                reachable_frame_cap_simps
   notes wps = hoare_drop_imp[where R="%_. is_final_cap' cap" for cap]
               unmap_page_table_unmapped2 valid_cap_typ
   shows
@@ -724,6 +744,7 @@ lemma arch_finalise_cap_replaceable1:
      arch_finalise_cap cap x
      \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) (ArchObjectCap cap)\<rbrace>"
   apply (simp add: arch_finalise_cap_def)
+  apply (wpsimp simp: simps wp: wps | strengthen strg)+
   sorry
   (* FIXME RISCV
   apply (rule hoare_pre)
