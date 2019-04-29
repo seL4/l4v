@@ -219,9 +219,10 @@ where
   od"
 
 definition
-  refill_split_check :: "obj_ref \<Rightarrow> time \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  refill_split_check :: "time \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "refill_split_check sc_ptr usage = do
+  "refill_split_check usage = do
+    sc_ptr \<leftarrow> gets cur_sc;
     ct \<leftarrow> gets cur_time;
     sc \<leftarrow> get_sched_context sc_ptr;
     refills \<leftarrow> return (sc_refills sc);
@@ -270,9 +271,10 @@ where
 
 
 definition
-  refill_budget_check :: "obj_ref \<Rightarrow> ticks \<Rightarrow> ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  refill_budget_check :: "ticks \<Rightarrow> ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "refill_budget_check sc_ptr usage capacity = do
+  "refill_budget_check usage capacity = do
+    sc_ptr \<leftarrow> gets cur_sc;
     sc \<leftarrow> get_sched_context sc_ptr;
     full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc); (* = refill_full sc_ptr *)
     assert (capacity < MIN_BUDGET \<or> full);
@@ -300,7 +302,7 @@ where
     cur_time \<leftarrow> gets cur_time;  (* refill_ready sc_ptr *)
     ready \<leftarrow> return $ (r_time (hd refills'')) \<le> cur_time + kernelWCET_ticks;
 
-    when (capacity > 0 \<and> ready) $ refill_split_check sc_ptr usage';
+    when (capacity > 0 \<and> ready) $ refill_split_check usage';
     full \<leftarrow> refill_full sc_ptr;
     update_sched_context sc_ptr (sc_refills_update (\<lambda>rs. min_budget_merge full rs))
   od"
@@ -514,7 +516,7 @@ where
         let new_hd = ((refill_hd sc) \<lparr> r_time := r_time (refill_hd sc) - consumed \<rparr>);
             new_tl = ((refill_tl sc) \<lparr> r_time := r_time (refill_tl sc) + consumed \<rparr>) in
         set_refills csc (new_hd # [new_tl])
-      else refill_split_check csc consumed;
+      else refill_split_check consumed;
       sc2 \<leftarrow> get_sched_context csc;
       curtime2 \<leftarrow> gets cur_time;
       sufficient2 \<leftarrow> return $ sufficient_refills consumed (sc_refills sc2); (* refill_sufficient sc_ptr 0 *)

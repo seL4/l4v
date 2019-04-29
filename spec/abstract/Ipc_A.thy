@@ -691,7 +691,7 @@ where
         set_refills csc_ptr
           (rfhd \<lparr> r_amount := r_amount rfhd + r_amount rftl \<rparr> # rf_body @ [rftl \<lparr> r_amount := 0 \<rparr>])
     od
-    else refill_budget_check csc_ptr consumed capacity;
+    else refill_budget_check consumed capacity;
     update_sched_context csc_ptr (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);
     modify $ consumed_time_update (K 0);
     ct \<leftarrow> gets cur_thread;
