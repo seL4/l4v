@@ -905,42 +905,48 @@ where
   "sc_at_period P  = obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_period sc))"
 
 lemma refill_split_check_valid_refills[wp]: (* applicable only when sc is not round_robin *)
-  "\<lbrace>valid_refills scptr budget and sc_at_period (\<lambda>p. p \<noteq> 0) p\<rbrace>
-      refill_split_check p consumed \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
-  supply if_weak_cong[cong del]
+  "\<lbrace>valid_refills scptr budget and (\<lambda>s. sc_at_period (\<lambda>p. p \<noteq> 0) (cur_sc s) s)\<rbrace>
+   refill_split_check consumed
+   \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
+  supply if_weak_cong[cong del] schedule_used.simps[simp del]
   apply (unfold refill_split_check_def)
   apply (simp add: Let_def set_refills_def set_sched_context_def sc_at_period_def obj_at_def
-      del: schedule_used.simps split del: if_split)
-  apply (rule hoare_seq_ext[OF _ gets_wp])
+              split del: if_split)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rename_tac ctime)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (clarsimp split del: if_split simp del: schedule_used.simps)
-  apply (case_tac "length (sc_refills x) = sc_refill_max x \<or>
-             r_amount (refill_hd x) - consumed < MIN_BUDGET")
-   apply (case_tac "length (sc_refills x) = Suc 0")
+  apply (clarsimp split del: if_split)
+  apply (rename_tac sc)
+  apply (case_tac "length (sc_refills sc) = sc_refill_max sc \<or>
+             r_amount (refill_hd sc) - consumed < MIN_BUDGET")
+   apply (case_tac "length (sc_refills sc) = Suc 0")
     apply (clarsimp split del: if_split)
     apply (wpsimp wp: get_refills_wp set_object_wp get_object_wp get_sched_context_wp
-      hoare_vcg_if_lift2 hoare_drop_imp
-      simp: update_sched_context_def simp_del: schedule_used.simps  split_del: if_split)
+                      hoare_vcg_if_lift2 hoare_drop_imp
+                simp: update_sched_context_def split_del: if_split)
     apply (case_tac "sc_refills x"; clarsimp simp: valid_refills_def obj_at_def refills_sum_def)
 
-   apply (clarsimp split del: if_split simp del: schedule_used.simps)
+   apply clarsimp
    apply (wpsimp wp: get_refills_wp set_object_wp get_object_wp get_sched_context_wp
-      hoare_vcg_if_lift2 hoare_drop_imp
-      simp: update_sched_context_def simp_del: schedule_used.simps  split_del: if_split)
-   apply (case_tac "p=scptr")
+                     hoare_vcg_if_lift2 hoare_drop_imp
+               simp: update_sched_context_def split_del: if_split)
+   apply (case_tac "cur_sc s =scptr")
     apply (clarsimp simp: valid_refills_def obj_at_def schedule_used_length MIN_REFILLS_def
-      simp del: schedule_used.simps split del: if_split)
-    apply (case_tac "sc_refills x", simp)
+                    split del: if_split)
+    apply (rename_tac sc n)
+    apply (case_tac "sc_refills sc", simp)
     apply (case_tac "list"; clarsimp simp: valid_refills_def obj_at_def refills_sum_def)
    apply (clarsimp simp: valid_refills_def obj_at_def)
-  apply (clarsimp split del: if_split simp del: schedule_used.simps)
+  apply (clarsimp split del: if_split)
   apply (wpsimp wp: get_refills_wp set_object_wp get_object_wp get_sched_context_wp
-      hoare_vcg_if_lift2 hoare_drop_imp
-      simp: update_sched_context_def simp_del: schedule_used.simps  split_del: if_split)
-  apply (case_tac "p=scptr")
+                    hoare_vcg_if_lift2 hoare_drop_imp
+              simp: update_sched_context_def split_del: if_split)
+  apply (case_tac "cur_sc s=scptr")
    apply (clarsimp simp: valid_refills_def obj_at_def schedule_used_length MIN_REFILLS_def
-      simp del: schedule_used.simps split del: if_split)
-   apply (case_tac "sc_refills x", simp)
+                   split del: if_split)
+   apply (rename_tac sc n)
+   apply (case_tac "sc_refills sc", simp)
    apply (case_tac "list"; clarsimp simp: valid_refills_def obj_at_def refills_sum_def)
   apply (clarsimp simp: valid_refills_def obj_at_def)
   done
@@ -1024,23 +1030,21 @@ lemma update_min_budget_merge_valid_refills:
 
 
 lemma helper0:
-  "\<lbrace>valid_refills scptr budget
-     and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s) \<and> 0 < sc_period sc) \<rbrace>
-      set_refills p
-              (if 0 < fst (refills_budget_check (sc_period sc) usage (sc_refills sc))
-               then let r1 = hd (snd (refills_budget_check (sc_period sc) usage
-                                       (sc_refills sc)));
-                        r1' = r1\<lparr>r_time := r_time r1 + usage\<rparr>;
-                        rs = tl (snd (refills_budget_check (sc_period sc) usage
-                                       (sc_refills sc)))
-                    in if rs \<noteq> [] \<and> can_merge_refill r1' (hd rs)
-                       then merge_refill r1' (hd rs) # tl rs else r1' # rs
-               else snd (refills_budget_check (sc_period sc) usage (sc_refills sc)))
-                     \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
+  "\<lbrace>\<lambda>s. valid_refills scptr budget s \<and> cur_sc s = sc_ptr \<and>
+        (\<exists>n. ko_at (SchedContext sc n) sc_ptr s) \<and> 0 < sc_period sc \<rbrace>
+   set_refills sc_ptr
+     (if 0 < fst (refills_budget_check (sc_period sc) usage (sc_refills sc))
+      then let r1 = hd (snd (refills_budget_check (sc_period sc) usage (sc_refills sc)));
+               r1' = r1\<lparr>r_time := r_time r1 + usage\<rparr>;
+               rs = tl (snd (refills_budget_check (sc_period sc) usage (sc_refills sc)))
+           in if rs \<noteq> [] \<and> can_merge_refill r1' (hd rs)
+              then merge_refill r1' (hd rs) # tl rs else r1' # rs
+      else snd (refills_budget_check (sc_period sc) usage (sc_refills sc)))
+   \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
   apply (wpsimp simp: set_refills_def update_sched_context_def set_object_def
-      wp: get_object_wp split_del: if_split)
+                  wp: get_object_wp split_del: if_split)
   apply (clarsimp simp: obj_at_def valid_refills_def word_gt_0 split del: if_split)
-  apply (case_tac "scptr=p"; simp split del: if_split)
+  apply (case_tac "scptr=cur_sc s"; simp split del: if_split)
   apply (frule_tac period="(sc_period sca)" and usage=usage in refills_budget_check_length)
   apply (frule_tac period="(sc_period sca)" and usage=usage in refills_budget_check_length_max)
   apply (clarsimp simp: split del: if_split)
@@ -1067,22 +1071,39 @@ lemma set_refills_sc_at_period[wp]:
              wp: get_object_wp)
   by (clarsimp simp: sc_at_period_def obj_at_def)
 
+crunch sc_at_period'[wp]: refill_full "\<lambda>s. sc_at_period P (cur_sc s) s"
+
+lemma set_refills_sc_at_period'[wp]:
+  "\<lbrace>\<lambda>s. sc_at_period P (cur_sc s) s\<rbrace> set_refills sc_ptr refills \<lbrace>\<lambda>_ s. sc_at_period P (cur_sc s) s\<rbrace>"
+  apply (wpsimp simp: set_refills_def update_sched_context_def set_object_def
+             wp: get_object_wp)
+  by (clarsimp simp: sc_at_period_def obj_at_def)
+
 lemma refill_split_check_sc_at_period[wp]:
-  "\<lbrace>sc_at_period P p\<rbrace> refill_split_check sc_ptr usage \<lbrace>\<lambda>_. sc_at_period P p\<rbrace>"
+  "\<lbrace>sc_at_period P p\<rbrace> refill_split_check usage \<lbrace>\<lambda>_. sc_at_period P p\<rbrace>"
+  apply (clarsimp simp: refill_split_check_def)
+  apply (wpsimp simp: Let_def split_del: if_split wp: get_sched_context_wp)
+  done
+
+lemma refill_split_check_sc_at_period'[wp]:
+  "\<lbrace>\<lambda>s. sc_at_period P (cur_sc s) s\<rbrace> refill_split_check usage \<lbrace>\<lambda>_ s. sc_at_period P (cur_sc s) s\<rbrace>"
   apply (clarsimp simp: refill_split_check_def)
   apply (wpsimp simp: Let_def split_del: if_split wp: get_sched_context_wp)
   done
 
 lemma refill_budget_check_valid_refills[wp]:
-   "\<lbrace>valid_refills scptr budget and sc_at_period (\<lambda>p. p \<noteq> 0) p\<rbrace>
-      refill_budget_check p usage capacity \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
+   "\<lbrace>valid_refills scptr budget and (\<lambda>s. sc_at_period (\<lambda>p. p \<noteq> 0) (cur_sc s) s)\<rbrace>
+    refill_budget_check usage capacity
+    \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
   supply if_weak_cong[cong del]
   apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (rule hoare_seq_ext[OF _ assert_sp])
   apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (case_tac "capacity = 0"; simp add: split_def split del: if_split)
-   apply (wpsimp wp: update_min_budget_merge_valid_refills helper0 split_del: if_split)
+  apply (clarsimp split del: if_split simp: split_def)
+  apply (case_tac "capacity = 0"; clarsimp split del: if_split)
+   apply (wpsimp wp: update_min_budget_merge_valid_refills helper0 weak_if_wp)
   apply (wpsimp wp: update_min_budget_merge_valid_refills)
    apply (wpsimp simp: set_refills_def update_sched_context_def set_object_def wp: get_object_wp)
   apply (fastforce simp: valid_refills_def obj_at_def sc_at_period_def)
@@ -1595,13 +1616,14 @@ lemma refill_update_invs:
   by (wpsimp simp: refill_update_def)
 
 lemma refill_budget_check_invs:
-  "\<lbrace>\<lambda>s. invs s\<rbrace> refill_budget_check sc_ptr usage capacity \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>\<lambda>s. invs s\<rbrace> refill_budget_check usage capacity \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (wpsimp simp: refill_budget_check_def refill_full_def refill_size_def split_def
-           split_del: if_split
                   wp: get_sched_context_wp static_imp_wp hoare_drop_imp
                       hoare_vcg_all_lift hoare_vcg_if_lift2
-                      update_sched_context_sc_refills_update_invs)
+                      update_sched_context_sc_refills_update_invs
+           split_del: if_split)
   apply (frule (1) invs_valid_refills)
   apply (clarsimp simp: min_budget_merge_length[THEN conjunct1, simplified])
   apply (intro conjI impI)
@@ -1611,21 +1633,21 @@ lemma refill_budget_check_invs:
 crunch ct_active[wp]: refill_full ct_active
 
 lemma refill_split_check_ex_nonz_cap_to_ct[wp]:
-  "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> refill_split_check sc_ptr usage
+  "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> refill_split_check usage
    \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
   supply if_weak_cong[cong del]
   by (wpsimp simp: refill_split_check_def set_refills_def Let_def
                wp: get_sched_context_wp get_refills_wp hoare_drop_imp)
 
 lemma refill_budget_check_ex_nonz_cap_to_ct[wp]:
-  "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> refill_budget_check sc_ptr usage capacity
+  "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> refill_budget_check usage capacity
    \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
   by (wpsimp simp: refill_budget_check_def set_refills_def is_round_robin_def refill_full_def
                wp: get_sched_context_wp get_refills_wp hoare_drop_imp hoare_vcg_if_lift2
         split_del: if_split)
 
 lemma refill_budget_check_active[wp]:
-  "\<lbrace>ct_active\<rbrace> refill_budget_check csc_ptr consumed capacity \<lbrace> \<lambda>_ . ct_active\<rbrace>"
+  "\<lbrace>ct_active\<rbrace> refill_budget_check consumed capacity \<lbrace> \<lambda>_ . ct_active\<rbrace>"
   by (wpsimp simp: refill_budget_check_def set_refills_def
                wp: hoare_drop_imp get_sched_context_wp split_del: if_split)
 
@@ -1644,7 +1666,7 @@ lemma refill_full_bound_sc:
 
 lemma refill_split_check_bound_sc:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
-   refill_split_check sc_ptr usage
+   refill_split_check usage
    \<lbrace>\<lambda>rv s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
   supply if_weak_cong[cong del]
   by (wpsimp simp: refill_split_check_def set_refills_def Let_def get_sched_context_def
@@ -1659,7 +1681,7 @@ lemma set_refills_bound_sc:
 
 lemma refill_budget_check_bound_sc:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
-   refill_budget_check sc_ptr usage capacity
+   refill_budget_check usage capacity
    \<lbrace>\<lambda>rv s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
   supply if_split[split del]
   by (wpsimp simp: refill_budget_check_def

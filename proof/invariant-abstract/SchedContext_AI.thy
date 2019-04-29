@@ -132,7 +132,7 @@ lemma refill_unblock_check_valid_objs[wp]:
   done
 
 lemma refill_split_check_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> refill_split_check sc_ptr usage \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  "\<lbrace>valid_objs\<rbrace> refill_split_check usage \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (wpsimp wp: get_sched_context_wp get_refills_sp set_refills_valid_objs
       hoare_vcg_conj_lift hoare_drop_imp hoare_vcg_if_lift2 get_refills_wp
       simp: pred_conj_def refill_split_check_def obj_at_def is_sc_obj_def Let_def
@@ -434,34 +434,34 @@ crunches refill_split_check
   (simp: Let_def wp: hoare_drop_imps)
 
 lemma refill_split_check_zombies[wp]:
-  "\<lbrace>zombies_final\<rbrace> refill_split_check p u \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
+  "\<lbrace>zombies_final\<rbrace> refill_split_check u \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   by (wpsimp simp: refill_split_check_def Let_def split_del: if_split wp: hoare_drop_imp)
 
 lemma refill_split_check_ex_cap[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> refill_split_check p u \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
+  "\<lbrace>ex_nonz_cap_to p\<rbrace> refill_split_check u \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)
 
 lemma refill_split_check_mdb [wp]:
-  "\<lbrace>valid_mdb\<rbrace> refill_split_check p u  \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
+  "\<lbrace>valid_mdb\<rbrace> refill_split_check u  \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
   by (wpsimp wp: valid_mdb_lift)
 
 lemma refill_split_check_hyp_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> refill_split_check p u \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> refill_split_check u \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   by (wpsimp simp: refill_split_check_def Let_def split_del: if_split wp: hoare_drop_imp)
 
 lemma refill_split_check_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace> refill_split_check p u \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace> refill_split_check u \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   by (wpsimp simp: refill_split_check_def Let_def split_del: if_split wp: hoare_drop_imp)
 
-lemma refill_split_check_invs[wp]: "\<lbrace>invs\<rbrace> refill_split_check p u \<lbrace>\<lambda>rv. invs\<rbrace>"
+lemma refill_split_check_invs[wp]:
+  "\<lbrace>invs\<rbrace> refill_split_check u \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: refill_split_check_def Let_def split_del: if_split
-             wp: hoare_drop_imp get_sched_context_wp get_refills_wp)
+                  wp: hoare_drop_imp get_sched_context_wp get_refills_wp)
   apply simp
   done
 
-declare refs_of_defs[simp del]
 lemma refill_split_check_valid_sc[wp]:
-   "\<lbrace>valid_sched_context sc\<rbrace> refill_split_check p u \<lbrace>\<lambda>rv. valid_sched_context sc\<rbrace>"
+   "\<lbrace>valid_sched_context sc\<rbrace> refill_split_check u \<lbrace>\<lambda>rv. valid_sched_context sc\<rbrace>"
  by (wpsimp simp: refill_split_check_def Let_def split_del: if_split
             wp: hoare_drop_imp)
 
@@ -622,7 +622,7 @@ lemma valid_sched_context_domain_time_update[simp]:
   by (simp add: valid_sched_context_def valid_bound_obj_def split: option.splits)
 
 lemma refill_split_check_valid_replies[wp]:
-  "refill_split_check sc_ptr usage \<lbrace> valid_replies_pred P \<rbrace>"
+  "refill_split_check usage \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp simp: refill_split_check_def Let_def split_del: if_split)
 
 lemma commit_time_valid_replies[wp]:
@@ -730,7 +730,7 @@ lemma set_refills_bound_sc_tcb_at [wp]:
 
 lemma refill_split_check_bound_sc_tcb_at [wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>
-   refill_split_check sc_ptr usage
+   refill_split_check usage
    \<lbrace>\<lambda>_ s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>"
   apply (wpsimp simp: refill_split_check_def Let_def)
         apply (intro conjI | wpsimp)+
@@ -770,11 +770,11 @@ lemma sc_consumed_update_valid_state [wp]:
                wp: update_sched_context_valid_objs_same valid_irq_node_typ)
 
 lemma refill_split_check_valid_idle:
-  "\<lbrace>valid_idle\<rbrace> refill_split_check sc_ptr usage \<lbrace>\<lambda>_. valid_idle\<rbrace>"
+  "\<lbrace>valid_idle\<rbrace> refill_split_check usage \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   by (wpsimp simp: refill_split_check_def Let_def | intro conjI)+
 
 lemma refill_split_check_valid_state [wp]:
-  "\<lbrace>valid_state\<rbrace> refill_split_check sc_ptr usage \<lbrace>\<lambda>_. valid_state\<rbrace>"
+  "\<lbrace>valid_state\<rbrace> refill_split_check usage \<lbrace>\<lambda>_. valid_state\<rbrace>"
   by (wpsimp simp: valid_state_def valid_pspace_def
                wp: valid_irq_node_typ valid_ioports_lift refill_split_check_valid_idle)
 
@@ -835,7 +835,7 @@ lemma set_refills_ct_in_state[wp]:
   by (wpsimp simp: set_refills_def wp: get_sched_context_wp)
 
 lemma refill_split_check_ct_in_state[wp]:
-  "\<lbrace> ct_in_state t \<rbrace> refill_split_check csc consumed \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
+  "\<lbrace> ct_in_state t \<rbrace> refill_split_check consumed \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
   by (wpsimp simp: refill_split_check_def Let_def split_del: if_split
              wp: get_sched_context_wp get_refills_wp)
 
@@ -1239,7 +1239,8 @@ lemma sched_context_bind_tcb_invs[wp]:
   "\<lbrace>invs
     and bound_sc_tcb_at ((=) None) tcb and ex_nonz_cap_to tcb
     and sc_tcb_sc_at ((=) None) sc and ex_nonz_cap_to sc\<rbrace>
-      sched_context_bind_tcb sc tcb \<lbrace>\<lambda>rv. invs\<rbrace>"
+   sched_context_bind_tcb sc tcb
+   \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: sched_context_bind_tcb_def invs_def valid_state_def valid_pspace_def
                       set_sc_obj_ref_def
                   wp: valid_irq_node_typ obj_set_prop_at get_sched_context_wp ssc_refs_of_Some
@@ -1258,8 +1259,7 @@ lemma sched_context_bind_tcb_invs[wp]:
     apply (clarsimp simp: state_refs_of_def refs_of_tcb_def get_refs_def2 image_iff
                           tcb_st_refs_of_def sc_tcb_sc_at_def obj_at_def
                    dest!: symreftype_inverse' split: if_splits)
-     apply (clarsimp split: thread_state.split_asm if_split_asm)
-    apply (clarsimp simp: refs_of_sc_def get_refs_def2 image_iff)
+    apply (clarsimp split: thread_state.split_asm if_split_asm)
    apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 

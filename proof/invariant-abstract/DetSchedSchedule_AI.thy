@@ -3386,7 +3386,7 @@ lemma hd_last_length_2: "length ls = 2 \<Longrightarrow> [hd ls, last ls] = ls"
   by (case_tac list; clarsimp)
 
 lemma refill_split_check_active_sc_tcb_at[wp]:
-  "\<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace> refill_split_check sc_ptr usage \<lbrace>\<lambda>_ s. P (active_sc_tcb_at t s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace> refill_split_check usage \<lbrace>\<lambda>_ s. P (active_sc_tcb_at t s)\<rbrace>"
   apply (clarsimp simp: refill_split_check_def)
   by (wpsimp wp: active_sc_tcb_at_update_sched_context_no_change
       simp: Let_def set_refills_def split_del: if_split)
@@ -12847,9 +12847,9 @@ crunches commit_domain_time, refill_split_check
 
 lemma refill_split_check_valid_ready_qs_not_queued:
   "\<lbrace>valid_ready_qs and
-    (\<lambda>s. \<forall>tcb_ptr. bound_sc_tcb_at (\<lambda>x. x = Some sc_ptr) tcb_ptr s \<longrightarrow>
+    (\<lambda>s. \<forall>tcb_ptr. bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) tcb_ptr s \<longrightarrow>
                    not_queued tcb_ptr s)\<rbrace>
-   refill_split_check sc_ptr usage
+   refill_split_check usage
    \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
   unfolding refill_split_check_def
   supply if_split [split del]
@@ -13081,28 +13081,18 @@ lemma update_sched_context_valid_ready_qs':
 
 lemma refill_budget_check_st_tcb_at[wp]:
   "\<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>
-   refill_budget_check csc_ptr consumed capacity
+   refill_budget_check consumed capacity
    \<lbrace>\<lambda>_ s. Q (st_tcb_at P t s)\<rbrace>"
   unfolding refill_budget_check_def
   by (wpsimp simp: refill_full_def)
 
 lemma refill_budget_check_valid_release_q:
   "\<lbrace>valid_release_q\<rbrace>
-   refill_budget_check csc_ptr consumed capacity
+   refill_budget_check consumed capacity
    \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
   unfolding refill_budget_check_def
   by (wpsimp simp: refill_full_def
                wp: update_sched_context_valid_release_q' set_refills_valid_release_q)
-
-lemma refill_split_check_valid_ready_qs:
-  "\<lbrace>valid_ready_qs and (\<lambda>s. \<forall>t. bound_sc_tcb_at (\<lambda>x. x = (Some sc_ptr)) t s \<longrightarrow> not_queued t s)\<rbrace>
-   refill_split_check sc_ptr x1
-   \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
-  supply if_split [split del]
-  unfolding refill_split_check_def
-  apply (wpsimp wp: set_refills_valid_ready_qs simp: Let_def)
-  apply (clarsimp simp: obj_at_def not_queued_def in_ready_q_def split: if_splits)
-  done
 
 lemma set_refills_in_ep_q[wp]:
   "set_refills sc_ptr x1 \<lbrace>\<lambda>s. P (in_ep_q t s)\<rbrace>"
@@ -13114,15 +13104,15 @@ lemma set_refills_in_ep_q[wp]:
   done
 
 lemma refill_split_check_in_ep_q[wp]:
-  "refill_split_check sc_ptr x1 \<lbrace>\<lambda>s. P (in_ep_q t s)\<rbrace>"
+  "refill_split_check x1 \<lbrace>\<lambda>s. P (in_ep_q t s)\<rbrace>"
   supply if_split [split del]
   unfolding refill_split_check_def
   apply (wpsimp simp: Let_def )
   done
 
 lemma refill_split_check_valid_ep_q:
-  "\<lbrace>valid_ep_q and (\<lambda>s. \<forall>t. bound_sc_tcb_at (\<lambda>x. x = (Some sc_ptr)) t s \<longrightarrow> \<not> in_ep_q t s)\<rbrace>
-   refill_split_check sc_ptr x1
+  "\<lbrace>valid_ep_q and (\<lambda>s. \<forall>t. bound_sc_tcb_at (\<lambda>x. x = (Some (cur_sc s))) t s \<longrightarrow> \<not> in_ep_q t s)\<rbrace>
+   refill_split_check x1
    \<lbrace>\<lambda>_. valid_ep_q\<rbrace>"
   supply if_split [split del]
   unfolding refill_split_check_def
@@ -13174,41 +13164,43 @@ lemma update_sched_context_valid_ep_q:
   done
 
 lemma refill_budget_check_valid_ready_qs:
-  "\<lbrace>valid_ready_qs and (\<lambda>s. \<forall>t. bound_sc_tcb_at (\<lambda>x. x = (Some sc_ptr)) t s \<longrightarrow> not_queued t s)\<rbrace>
-   refill_budget_check sc_ptr consumed capacity
+  "\<lbrace>valid_ready_qs and (\<lambda>s. \<forall>t. bound_sc_tcb_at (\<lambda>x. x = (Some (cur_sc s))) t s \<longrightarrow> not_queued t s)\<rbrace>
+   refill_budget_check consumed capacity
    \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
   supply if_split [split del]
   unfolding refill_budget_check_def
-  apply (wpsimp wp: refill_split_check_valid_ready_qs hoare_vcg_all_lift
+  apply (wpsimp wp: refill_split_check_valid_ready_qs_not_queued hoare_vcg_all_lift
                     hoare_vcg_imp_lift' set_refills_valid_ready_qs
-                    update_sched_context_valid_ready_qs
-              simp: refill_full_def)
+                    update_sched_context_valid_ready_qs weak_if_wp
+              simp: refill_full_def
+         | wps)+
   apply (clarsimp simp: Let_def obj_at_def can_merge_refill_def not_queued_def in_ready_q_def
                  split: if_splits)
   done
 
 lemma refill_budget_check_valid_ep_q:
-  "\<lbrace>valid_ep_q and (\<lambda>s. \<forall>t. bound_sc_tcb_at (\<lambda>x. x = (Some sc_ptr)) t s \<longrightarrow> \<not> in_ep_q t s)\<rbrace>
-   refill_budget_check sc_ptr consumed capacity
+  "\<lbrace>valid_ep_q and (\<lambda>s. \<forall>t. bound_sc_tcb_at (\<lambda>x. x = (Some (cur_sc s))) t s \<longrightarrow> \<not> in_ep_q t s)\<rbrace>
+   refill_budget_check consumed capacity
    \<lbrace>\<lambda>_. valid_ep_q\<rbrace>"
   supply if_split [split del]
   unfolding refill_budget_check_def
   apply (wpsimp wp: refill_split_check_valid_ep_q hoare_vcg_all_lift
                     hoare_vcg_imp_lift' set_refills_valid_ep_q
-                    update_sched_context_valid_ep_q
-              simp: refill_full_def)
+                    update_sched_context_valid_ep_q weak_if_wp
+              simp: refill_full_def
+         | wps)+
   done
 
 lemma refill_budget_check_weak_valid_sched_action:
   "\<lbrace>weak_valid_sched_action\<rbrace>
-   refill_budget_check sc_ptr consumed capacity
+   refill_budget_check consumed capacity
    \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
   unfolding refill_budget_check_def
   by (wpsimp wp: update_sched_context_weak_valid_sched_action' simp: refill_full_def)
 
 lemma refill_budget_check_valid_blocked:
   "\<lbrace>valid_blocked\<rbrace>
-   refill_budget_check sc_ptr consumed capacity
+   refill_budget_check consumed capacity
    \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   unfolding refill_budget_check_def
   by (wpsimp wp: update_sched_context_valid_blocked'
@@ -13216,35 +13208,35 @@ lemma refill_budget_check_valid_blocked:
 
 lemma refill_budget_check_valid_idle_etcb:
   "\<lbrace>valid_idle_etcb\<rbrace>
-   refill_budget_check sc_ptr consumed capacity
+   refill_budget_check consumed capacity
    \<lbrace>\<lambda>_. valid_idle_etcb\<rbrace>"
   unfolding refill_budget_check_def
   by (wpsimp simp: refill_full_def)
 
 lemma refill_budget_check_ct_not_in_q:
   "\<lbrace>ct_not_in_q\<rbrace>
-   refill_budget_check sc_ptr consumed capacity
+   refill_budget_check consumed capacity
    \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
   unfolding refill_budget_check_def
   by (wpsimp simp: refill_full_def)
 
 lemma refill_budget_check_ct_in_cur_domain:
   "\<lbrace>ct_in_cur_domain\<rbrace>
-   refill_budget_check sc_ptr consumed capacity
+   refill_budget_check consumed capacity
    \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>"
   unfolding refill_budget_check_def
   by (wpsimp simp: refill_full_def)
 
 lemma refill_budget_check_valid_sched_action:
   "\<lbrace>valid_sched_action\<rbrace>
-   refill_budget_check sc_ptr consumed capacity
+   refill_budget_check consumed capacity
    \<lbrace>\<lambda>_. valid_sched_action::det_state \<Rightarrow> _\<rbrace>"
   unfolding refill_budget_check_def
   by (wpsimp wp: update_sched_context_valid_sched_action' simp: refill_full_def)
 
 lemma refill_budget_check_valid_sched:
-  "\<lbrace>valid_sched and (\<lambda>s. \<forall>t. bound_sc_tcb_at (\<lambda>x. x = (Some sc_ptr)) t s \<longrightarrow> not_queued t s)\<rbrace>
-   refill_budget_check sc_ptr consumed capacity
+  "\<lbrace>valid_sched and (\<lambda>s. \<forall>t. bound_sc_tcb_at (\<lambda>x. x = (Some (cur_sc s))) t s \<longrightarrow> not_queued t s)\<rbrace>
+   refill_budget_check consumed capacity
    \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   unfolding valid_sched_def
   apply (wpsimp wp: refill_budget_check_valid_ready_qs refill_budget_check_valid_release_q
@@ -13272,13 +13264,13 @@ crunches refill_budget_check
   (wp: crunch_wps simp: crunch_simps)
 
 lemma refill_budget_check_cur_sc_tcb[wp]:
-  "refill_budget_check sc_ptr usage capacity \<lbrace>cur_sc_tcb\<rbrace>"
+  "refill_budget_check usage capacity \<lbrace>cur_sc_tcb\<rbrace>"
   unfolding refill_budget_check_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_drop_imps
            simp: refill_full_def refill_split_check_def Let_def)
 
 lemma refill_budget_check_active_sc_tcb_at[wp]:
-  "refill_budget_check sc_ptr usage capacity \<lbrace>active_sc_tcb_at t\<rbrace>"
+  "refill_budget_check usage capacity \<lbrace>active_sc_tcb_at t\<rbrace>"
   unfolding refill_budget_check_def
   by (wpsimp wp: active_sc_tcb_at_update_sched_context_no_change
            simp: refill_full_def)
