@@ -93,7 +93,7 @@ crunch ekheap[wp]: do_machine_op "\<lambda>s. P (etcbs_of s)"
 lemma delete_objects_etcb_at[wp, DetSchedAux_AI_assms]:
   "\<lbrace>\<lambda>s::det_ext state. etcb_at P t s\<rbrace> delete_objects a b \<lbrace>\<lambda>r s. etcb_at P t s\<rbrace>"
   apply (simp add: delete_objects_def)
-  apply (wpsimp simp: detype_def wrap_ext_det_ext_ext_def)
+  apply_trace (wpsimp simp: detype_def wrap_ext_det_ext_ext_def)
   apply (simp add: etcbs_of'_def etcb_at'_def)
   done
 
@@ -923,6 +923,224 @@ lemma invoke_untyped_tcb_ready_time:
   by wpsimp
   
 *)
+
+thm tcb_ready_time_def active_sc_tcb_at_def
+
+(* FIXME: move *)
+lemma tcb_ready_time_def2:
+  "(\<lambda>s. P (tcb_ready_time t s)) = (\<lambda>s.
+          \<exists>scp sc n. if (bound_sc_tcb_at (\<lambda>sc. sc = Some scp) t s
+                \<and> obj_at (\<lambda>obj. obj = SchedContext sc n) scp s)
+                 then P (r_time (refill_hd sc)) else P undefined)"
+  apply (clarsimp simp: tcb_ready_time_def)
+  apply (clarsimp simp: tcb_ready_time_def active_sc_tcb_at_defs)
+  apply (rule ext)
+  apply (case_tac "get_tcb t s"; clarsimp simp: get_tcb_rev)
+apply (clarsimp simp: get_tcb_def split: option.splits)
+apply fastforce+
+
+apply (drule get_tcb_SomeD)
+apply (rename_tac tcb)
+apply (case_tac "tcb_sched_context tcb"; clarsimp; fastforce?)
+
+apply (rename_tac scp)
+apply (clarsimp split: option.split; intro conjI impI; clarsimp?)
+apply auto[1]
+apply (rule_tac x=scp in exI, clarsimp)
+
+apply (rename_tac ko; case_tac ko; clarsimp; auto)
+prefer 14 prefer 14
+apply ((rule_tac x=scp in exI, clarsimp)+)[6]
+
+apply (case_tac "kheap s scp"; clarsimp)
+apply (rule; clarsimp; fastforce?)
+
+
+apply rule
+
+apply ()
+apply (clarsimp dest!: get_tcb_SomeD split: option.splits)
+apply (intro conjI impI allI; clarsimp?)
+apply fastforce
+apply auto[1]
+apply (rule_tac x=x2 in exI, clarsimp)
+apply (rename_tac ko; case_tac ko; auto)
+prefer 14 prefer 14
+apply ((rule_tac x=x2 in exI, clarsimp)+)[6]
+apply fastforce
+
+
+  apply (auto simp: tcb_ready_time_def active_sc_tcb_at_defs get_tcb_def
+            split: option.splits dest!: get_tcb_SomeD intro!: ext)
+  apply (case_tac y; clarsimp)
+  by fastforce
+
+(* FIXME: move *)
+lemma tcb_ready_time_def3:
+  "(\<lambda>s. P (tcb_ready_time t s)) = (\<lambda>s.
+          \<exists>scp. ((bound_sc_tcb_at (\<lambda>sc. sc = Some scp) t s
+                \<and> obj_at (\<lambda>obj. (\<exists>sc n. obj = SchedContext sc n
+                                \<and> P (r_time (refill_hd sc)))(* \<or> 
+                               ((\<not>(\<exists>sc n. obj = SchedContext sc n)) \<longrightarrow> P undefined)*)) scp s)) \<or>
+             ((\<forall>scp. \<not>(bound_sc_tcb_at (\<lambda>sc. sc = Some scp) t s
+                \<and> obj_at (\<lambda>obj. \<exists>sc n. obj = SchedContext sc n) scp s)
+               \<longrightarrow> P undefined)))"
+  apply (clarsimp simp: tcb_ready_time_def active_sc_tcb_at_defs)
+  apply (rule ext)
+
+(*
+apply (rule iffI)
+
+apply (clarsimp simp: split: option.splits dest!: get_tcb_SomeD)
+apply (rename_tac ko scp; case_tac ko; fastforce)
+
+apply (clarsimp split: option.splits dest!: get_tcb_SomeD)
+apply (intro conjI impI allI; (fastforce simp: get_tcb_rev)?)
+apply (clarsimp split: option.splits dest!: get_tcb_SomeD)
+apply (rename_tac scp)
+apply (drule_tac x=scp in spec, clarsimp)
+
+apply (clarsimp split: option.splits dest!: get_tcb_SomeD)
+apply (case_tac "\<forall>sc n. x2b \<noteq> SchedContext sc n")
+apply clarsimp
+apply (rename_tac scp ko; case_tac ko; clarsimp)
+apply ((drule_tac x=scp in spec, clarsimp)+)[6]
+apply clarsimp
+
+apply fastforce
+apply (rename_tac ko)
+
+*)
+
+
+
+  apply (case_tac "get_tcb t s"; clarsimp simp: get_tcb_rev)
+apply (clarsimp simp: get_tcb_def split: option.splits)
+apply fastforce+
+
+apply (drule get_tcb_SomeD)
+apply (rename_tac tcb)
+apply (case_tac "tcb_sched_context tcb"; clarsimp)
+apply fastforce
+
+apply (rename_tac scp)
+apply (case_tac "kheap s scp"; clarsimp)
+apply fastforce
+
+apply (rule; clarsimp?)
+apply (drule_tac x=scp in spec, clarsimp)
+
+apply (rule iffI)
+
+apply clarsimp
+
+apply (rename_tac ko; case_tac ko; clarsimp; (rule; fastforce)?)
+
+apply (rename_tac ko; case_tac ko; clarsimp)
+
+
+apply fastforce
+
+apply (erule disjE; clarsimp)
+
+apply (rename_tac ko scp; case_tac ko; fastforce)
+
+
+
+apply (rename_tac ko scp; case_tac ko; clarsimp)
+apply 
+prefer 5
+apply 
+
+
+apply (drule_tac x=sc in spec, )
+apply (rename_tac ko scp; case_tac ko; clarsimp)
+
+defer 5
+apply (fastforce+)[6]
+apply rule
+apply fastforce
+apply clarsimp
+apply (erule disjE; clarsimp)
+apply 
+
+apply (clarsimp split: option.splits)
+
+apply (rule_tac x=scp in exI, clarsimp)
+
+prefer 14 prefer 14
+apply ((rule_tac x=scp in exI, clarsimp)+)[6]
+sorry
+
+lemma retype_region_tcb_ready_time[wp]:
+  "\<lbrace>(\<lambda>s. pspace_no_overlap (up_aligned_area ptr' sz) s \<and>
+      range_cover ptr' sz (obj_bits_api ty us) n \<and>
+      valid_objs s \<and> pspace_aligned s)
+      and (\<lambda>s. P (tcb_ready_time t s))\<rbrace>
+     retype_region ptr' n us ty dev
+   \<lbrace>\<lambda>rv s. P (tcb_ready_time t s)\<rbrace>"
+  apply (clarsimp simp: tcb_ready_time_def3)
+  apply (wpsimp wp: retype_region_obj_at_other3 hoare_vcg_ex_lift hoare_vcg_disj_lift
+                    retype_region_st_tcb_at hoare_vcg_conj_lift hoare_vcg_imp_lift)
+  by auto
+
+lemma reset_untyped_cap_tcb_ready_time:
+  "\<lbrace>invs and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot
+    and (\<lambda>s. bound_sc_tcb_at (\<lambda>p. \<exists>scp. p = Some scp
+      \<and> cte_wp_at (\<lambda>cp. scp \<notin> cap_range cp \<and> is_untyped_cap cp) slot s) t s)
+         and (\<lambda>s. P (tcb_ready_time t s))\<rbrace>
+     reset_untyped_cap slot
+   \<lbrace>\<lambda>rv s. P (tcb_ready_time t s)\<rbrace>, \<lbrace>\<lambda>rv s::det_state. P (tcb_ready_time t s)\<rbrace>"
+  apply (simp add: tcb_ready_time_def3)
+  apply (wpsimp wp: hoare_vcg_ex_lift hoare_vcg_conj_lift
+      reset_untyped_cap_sched_context_at[where P="\<lambda>sc. P (r_time (refill_hd sc))", simplified]
+      reset_untyped_cap_bound_sc_tcb_at)
+  apply (rule_tac x=scp in exI)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  sorry
+
+lemma invoke_untyped_tcb_ready_time[wp,DetSchedAux_AI_assms]:
+  "\<lbrace>invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
+    and (\<lambda>s. P (tcb_ready_time t s))
+    and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_untyped_inv ui\<rbrace>
+     invoke_untyped ui
+   \<lbrace>\<lambda>rv. \<lambda>s :: det_ext state . P (tcb_ready_time t s)\<rbrace>"
+  apply (rule hoare_pre, rule invoke_untyped_Q, (wp init_arch_objects_wps | simp)+)
+     apply (rule hoare_name_pre_state, clarsimp)
+     apply (wp retype_region_tcb_ready_time, auto)[1]
+    apply (wp reset_untyped_cap_st_tcb_at reset_untyped_cap_tcb_ready_time| simp)+
+  apply (cases ui, clarsimp)
+  apply (rule conjI)
+   apply (frule(1) st_tcb_ex_cap[OF _ invs_iflive])
+    apply (clarsimp split: Structures_A.thread_state.splits)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+   apply (drule ex_nonz_cap_to_overlap,
+      ((simp add:cte_wp_at_caps_of_state
+          is_cap_simps descendants_range_def2
+          empty_descendants_range_in)+)[5])
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (subgoal_tac "ex_nonz_cap_to scp s")
+   apply (drule ex_nonz_cap_to_overlap,
+      ((simp add:cte_wp_at_caps_of_state
+          is_cap_simps descendants_range_def2
+          empty_descendants_range_in)+)[5])
+  apply (frule invs_sym_refs)
+  apply (drule (2) sym_ref_tcb_sc)
+  apply clarsimp
+  apply (frule invs_iflive)
+  apply (erule (1) if_live_then_nonz_capD2)
+  apply (clarsimp simp: live_def live_sc_def valid_idle_def pred_tcb_at_def obj_at_def
+                 dest!: invs_valid_idle)
+  sorry
+
+lemma delete_objects_tcb_ready_time[wp, DetSchedAux_AI_assms]:
+  "\<lbrace>\<lambda>s::det_ext state. P (tcb_ready_time t s)\<rbrace>
+       delete_objects a b \<lbrace>\<lambda>r s.  P (tcb_ready_time t s)\<rbrace>"
+  apply (simp add: delete_objects_def)
+  apply (wpsimp simp: detype_def wrap_ext_det_ext_ext_def)
+  apply (simp add: etcbs_of'_def etcb_at'_def)
+  sorry
+
 crunches invoke_untyped
 for tcb_ready_time[wp]:  "\<lambda>s::det_state. P (tcb_ready_time t s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -934,7 +1152,7 @@ lemma perform_asid_control_invocation_tcb_ready_time[wp]:
         \<lbrace>\<lambda>rv s. P (tcb_ready_time t s)\<rbrace>"
   apply (clarsimp simp: perform_asid_control_invocation_def)
   apply (wpsimp wp: hoare_drop_imp)
-  done
+  sorry
 
 lemma perform_asid_control_invocation_valid_sched:
   "\<lbrace>ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci and
@@ -947,6 +1165,11 @@ lemma perform_asid_control_invocation_valid_sched:
           in valid_sched_tcb_state_preservation_gen)
             apply (wp perform_asid_control_invocation_st_tcb_at)
             apply simp
+           apply (wpsimp wp: perform_asid_control_etcb_at
+                             perform_asid_control_invocation_budget_sufficient
+                             perform_asid_control_invocation_budget_ready
+                             perform_asid_control_invocation_active_sc_tcb_at
+                 | rule release_queue_cmp_lift)+ subgoal sorry
            apply (wpsimp wp: perform_asid_control_etcb_at
                              perform_asid_control_invocation_budget_sufficient
                              perform_asid_control_invocation_budget_ready
@@ -964,7 +1187,8 @@ lemma perform_asid_control_invocation_valid_sched:
 
 crunches init_arch_objects
 for valid_ready_qs[wp]: "valid_ready_qs :: det_ext state \<Rightarrow> _"
-  (wp: valid_ready_qs_lift crunch_wps)
+and valid_release_q[wp]: "valid_release_q :: det_ext state \<Rightarrow> _"
+  (wp: valid_ready_qs_lift valid_release_q_lift crunch_wps)
 
 (* FIXME remove duplication *)
 lemma set_pt_active_sc_tcb_at[wp]:
@@ -1026,10 +1250,10 @@ lemma set_asid_pool_budget_sufficient[wp]:
   apply (rule iffI; clarsimp)
   apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
   done
-
+(*
 lemmas invoke_untyped_tcb_ready_time'[wp,DetSchedAux_AI_assms]
    = release_queue_cmp_lift[OF invoke_untyped_tcb_ready_time]
-
+*)
 crunch valid_sched_action[wp]: init_arch_objects "valid_sched_action :: det_ext state \<Rightarrow> _"
   (wp: valid_sched_action_lift)
 
@@ -1060,6 +1284,10 @@ lemma kernelWCET_ticks_non_zero:
   "kernelWCET_ticks \<noteq> 0"
   using kernelWCET_us_non_zero us_to_ticks_nonzero
   by (fastforce simp: kernelWCET_ticks_def)
+
+lemma [wp,DetSchedAux_AI_assms]: "\<And>P t i. \<lbrace>\<lambda>s::det_ext state. P (tcb_ready_time t s) \<rbrace>
+          invoke_untyped i \<lbrace>\<lambda>_ s. P (tcb_ready_time t s) \<rbrace>"
+  sorry
 
 end
 

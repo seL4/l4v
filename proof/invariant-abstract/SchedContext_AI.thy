@@ -1125,6 +1125,7 @@ crunches sched_context_resume, test_possible_switch_to, tcb_release_remove, post
   and iflive[wp]: if_live_then_nonz_cap
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   and sc_at[wp]: "sc_at sc_ptr"
+  and tcb_at[wp]: "tcb_at tptr"
   and cte_wp_at[wp]: "cte_wp_at P c"
   and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   and it[wp]: "\<lambda>s. P (idle_thread s)"

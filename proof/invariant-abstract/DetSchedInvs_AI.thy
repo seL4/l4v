@@ -708,6 +708,10 @@ abbreviation valid_ep_q :: "'z::state_ext state \<Rightarrow> bool" where
 
 lemmas valid_ep_q_def = valid_ep_q_2_def[simplified schedulable_ep_thread_2_def]
 
+(* FIXME: improve this abstraction using ep_at_pred *) (* move *)
+definition in_ep_q where
+  "in_ep_q t s \<equiv> \<exists>ptr ep. ko_at (Endpoint ep) ptr s \<and> t \<in> set (ep_queue ep)"
+
 (*** valid_ntfn_q ***)
 
 abbreviation has_budget_kh where
@@ -1031,6 +1035,64 @@ lemma valid_blocked_except_set_not_runnable:
    apply (case_tac "ta=t")
    apply (drule_tac x=ta in spec; simp)+
    done
+
+(* sched_context and other thread properties *)
+abbreviation
+  sc_with_tcb_prop
+where
+  "sc_with_tcb_prop scp P s \<equiv>
+        \<forall>tp. bound_sc_tcb_at ((=) (Some scp)) tp s \<longrightarrow> P tp s"
+
+abbreviation
+  sc_not_in_release_q
+where
+  "sc_not_in_release_q scp s \<equiv> sc_with_tcb_prop scp not_in_release_q s"
+
+abbreviation
+  sc_not_in_release_q'
+where
+  "sc_not_in_release_q' scp P s \<equiv> sc_with_tcb_prop scp (\<lambda>t s. not_in_release_q t s \<longrightarrow> P t s)"
+
+abbreviation
+  release_q_not_linked
+where
+  "release_q_not_linked scp s \<equiv>
+        \<forall>t\<in>set (release_queue s). bound_sc_tcb_at (\<lambda>p. p \<noteq> (Some scp)) t s"
+
+lemma sc_not_in_release_q_imp_not_linked:
+  "\<lbrakk>valid_release_q s; sc_not_in_release_q scp s\<rbrakk> \<Longrightarrow> release_q_not_linked scp s"
+  by (fastforce simp: active_sc_tcb_at_defs not_in_release_q_def valid_release_q_def)
+
+abbreviation
+  sc_not_in_ready_q
+where
+  "sc_not_in_ready_q scp s \<equiv> sc_with_tcb_prop scp not_queued s"
+
+abbreviation
+  sc_not_in_ready_q'
+where
+  "sc_not_in_ready_q' scp P s \<equiv> sc_with_tcb_prop scp (\<lambda>t s. not_queued t s \<longrightarrow> P t s)"
+
+abbreviation
+  sc_scheduler_act_not
+where
+  "sc_scheduler_act_not scp s \<equiv> sc_with_tcb_prop scp scheduler_act_not s"
+
+abbreviation
+  sc_scheduler_act_not'
+where
+  "sc_scheduler_act_not' scp P s \<equiv> sc_with_tcb_prop scp (\<lambda>t s. scheduler_act_not t s \<longrightarrow> P t s)"
+
+abbreviation
+  sc_not_in_ep_q
+where
+  "sc_not_in_ep_q scp s \<equiv> sc_with_tcb_prop scp (\<lambda>tp s. \<not> in_ep_q tp s) s"
+
+abbreviation
+  sc_not_in_ep_q'
+where
+  "sc_not_in_ep_q' scp P s \<equiv> sc_with_tcb_prop scp (\<lambda>t s. \<not> in_ep_q t s \<longrightarrow> P t s)"
+
 
 (*********)
 (* FIXME move maybe *)
