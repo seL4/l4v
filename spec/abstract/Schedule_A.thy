@@ -330,12 +330,12 @@ where
       assert (sc_yf_opt = None)
     od;
     flag \<leftarrow> return True;
-    refill_unblock_check sc_ptr;
     sc_tcb_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
     tcb_ptr \<leftarrow> assert_opt sc_tcb_opt;
     in_release_q <- gets $ in_release_queue tcb_ptr;
     schedulable <- is_schedulable tcb_ptr in_release_q;
     when (schedulable) $ do
+      refill_unblock_check sc_ptr;
       sc \<leftarrow> get_sched_context sc_ptr;
       cur_time \<leftarrow> gets cur_time;
       ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; \<comment> \<open> refill_ready sc_ptr \<close>
