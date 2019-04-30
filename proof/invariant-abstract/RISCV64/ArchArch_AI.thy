@@ -377,6 +377,20 @@ lemma valid_asid_map':
   "valid_asid_map s \<Longrightarrow> valid_asid_map s'"
   by (clarsimp simp: valid_asid_map_def)
 
+lemma vspace_for_asid[simp]:
+  "vspace_for_asid asid s' = vspace_for_asid asid s"
+  using ko empty
+  by (clarsimp simp: vspace_for_asid_def obind_def pool_for_asid_def s'_def vspace_for_pool_def
+               split: option.splits)
+
+lemma global_pt[simp]:
+  "global_pt s' = global_pt s"
+  by (simp add: s'_def)
+
+lemma equal_kernel_mappings:
+  "equal_kernel_mappings s' = equal_kernel_mappings s"
+  by (simp add: equal_kernel_mappings_def has_kernel_mappings_def)
+
 end
 
 
@@ -398,13 +412,22 @@ lemma valid_vs_lookup_at_upd_strg:
    \<longrightarrow>
    valid_vs_lookup (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   apply clarsimp
-  apply (subgoal_tac "asid_update ap asid s")
-   prefer 2
-   apply unfold_locales[1]
-    apply assumption+
+  apply (prop_tac "asid_update ap asid s", (unfold_locales; assumption))
   apply (simp add: asid_update.valid_vs_lookup)
   done
 
+lemma valid_asid_pool_caps_upd_strg:
+  "valid_asid_pool_caps s \<and>
+   asid_pools_of s ap = Some Map.empty \<and>
+   asid_table s asid = None \<and>
+   (\<exists>ptr cap. caps_of_state s ptr = Some cap
+     \<and> obj_refs cap = {ap} \<and> vs_cap_ref cap = Some (ucast asid << asid_low_bits, 0))
+   \<longrightarrow>
+   valid_asid_pool_caps_2 (caps_of_state s) (asid_table s(asid \<mapsto> ap))"
+  apply clarsimp
+  apply (prop_tac "asid_update ap asid s", (unfold_locales; assumption))
+  apply (fastforce dest: asid_update.valid_asid_pool_caps')
+  done
 
 lemma retype_region_ap[wp]:
   "\<lbrace>\<top>\<rbrace>
@@ -471,29 +494,17 @@ lemma valid_table_caps_asid_upd [iff]:
    valid_table_caps s"
   by (simp add: valid_table_caps_def second_level_tables_def)
 
-
-(* FIXME RISCV: probably translate
-lemma vs_asid_ref_upd:
-  "([VSRef (ucast (asid_high_bits_of asid')) None] \<rhd> ap')
-    (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)
-  = (if asid_high_bits_of asid' = asid_high_bits_of asid
-    then ap' = ap
-    else ([VSRef (ucast (asid_high_bits_of asid')) None] \<rhd> ap') s)"
-  by (fastforce intro: vs_lookup_atI elim: vs_lookup_atE)
-*)
-
-
-(* FIXME RISCV: probably translate
-lemma vs_asid_ref_eq:
-  "([VSRef (ucast asid) None] \<rhd> ap) s
-  = (riscv_asid_table (arch_state s) asid = Some ap)"
-  by (fastforce elim: vs_lookup_atE intro: vs_lookup_atI)
-*)
-
 lemma set_cap_reachable_pg_cap:
-  "\<lbrace>\<lambda>s. P (reachable_frame_cap cap s)\<rbrace> set_cap x y \<lbrace>\<lambda>_ s. P (reachable_frame_cap cap s)\<rbrace>"
+  "set_cap cap' slot \<lbrace>\<lambda>s. P (reachable_frame_cap cap s)\<rbrace>"
   unfolding reachable_frame_cap_def reachable_target_def vs_lookup_target_def
   apply (clarsimp simp: in_omonad vs_lookup_slot_def vs_lookup_table_def)
+  apply (wp_pre, wps, wp)
+  apply simp
+  done
+
+lemma set_cap_reachable_target[wp]:
+  "set_cap cap slot \<lbrace>\<lambda>s. P (reachable_target ref p s)\<rbrace>"
+  apply (clarsimp simp: reachable_target_def split_def)
   apply (wp_pre, wps, wp)
   apply simp
   done
@@ -501,31 +512,30 @@ lemma set_cap_reachable_pg_cap:
 lemma cap_insert_simple_arch_caps_ap:
   "\<lbrace>valid_arch_caps and (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src cap) src s)
      and no_cap_to_obj_with_diff_ref cap {dest}
-     and (\<lambda>s. asid_table s (asid_high_bits_of asid) = None)
-     and ko_at (ArchObj (ASIDPool Map.empty)) ap
-     and K (cap = ArchObjectCap (ASIDPoolCap ap asid)) \<rbrace>
+     and (\<lambda>s. asid_table s (asid_high_bits_of asid) = None \<and> asid_pools_of s ap = Some Map.empty)
+     and K (cap = ArchObjectCap (ASIDPoolCap ap asid) \<and> is_aligned asid asid_low_bits) \<rbrace>
      cap_insert cap src dest
    \<lbrace>\<lambda>rv s. valid_arch_caps (s\<lparr>arch_state := arch_state s
                        \<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: cap_insert_def update_cdt_def set_cdt_def valid_arch_caps_def
                    set_untyped_cap_as_full_def bind_assoc)
-  apply (strengthen valid_vs_lookup_at_upd_strg)
+  apply (strengthen valid_vs_lookup_at_upd_strg valid_asid_pool_caps_upd_strg)
   apply (wp get_cap_wp set_cap_valid_vs_lookup set_cap_arch_obj
             set_cap_valid_table_caps hoare_vcg_all_lift
           | simp split del: if_split)+
-  sorry (* FIXME RISCV
+       apply (simp add: F)
        apply (rule_tac P = "cte_wp_at ((=) src_cap) src" in set_cap_orth)
-       apply (wp hoare_vcg_imp_lift hoare_vcg_ball_lift set_free_index_final_cap
+       apply (wp hoare_vcg_imp_lift hoare_vcg_ball_lift set_free_index_final_cap hoare_vcg_all_lift
                  hoare_vcg_disj_lift set_cap_reachable_pg_cap set_cap.vs_lookup_pages
               | clarsimp)+
-      apply_trace (wp set_cap_arch_obj set_cap_valid_table_caps hoare_vcg_ball_lift
+      apply (wp set_cap_arch_obj set_cap_valid_table_caps hoare_vcg_ball_lift
                 get_cap_wp static_imp_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
   apply (rule conjI)
    apply (clarsimp simp: vs_cap_ref_def)
    apply (rule_tac x="fst dest" in exI)
    apply (rule_tac x="snd dest" in exI)
-   apply simp
+   apply (simp add: asid_high_bits_shl)
   apply (rule conjI)
    apply (simp add: unique_table_caps_def is_cap_simps)
   apply (subst unique_table_refs_def)
@@ -534,25 +544,22 @@ lemma cap_insert_simple_arch_caps_ap:
     apply (simp add: no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state)
    apply (simp add: no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state)
   apply (erule (3) unique_table_refsD)
-  done *)
+  done
 
 lemma valid_asid_map_asid_upd_strg:
   "valid_asid_map s \<and>
-   ko_at (ArchObj (ASIDPool Map.empty)) ap s \<and>
+   asid_pools_of s ap = Some Map.empty \<and>
    asid_table s asid = None \<longrightarrow>
-   valid_asid_map (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+   valid_asid_map (asid_table_update asid ap s)"
   by (simp add: valid_asid_map_def)
 
 lemma valid_vspace_objs_asid_upd_strg:
   "valid_vspace_objs s \<and>
    asid_pools_of s ap = Some Map.empty \<and>
    asid_table s asid = None \<longrightarrow>
-   valid_vspace_objs (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+   valid_vspace_objs (asid_table_update asid ap s)"
   apply clarsimp
-  apply (subgoal_tac "asid_update ap asid s")
-   prefer 2
-   apply unfold_locales[1]
-    apply assumption+
+  apply (prop_tac "asid_update ap asid s", (unfold_locales; assumption))
   apply (erule (1) asid_update.vspace_objs')
   done
 
@@ -560,8 +567,18 @@ lemma valid_global_objs_asid_upd_strg:
   "valid_global_objs s \<and>
    asid_pools_of s ap = Some Map.empty \<and>
    asid_table s asid = None \<longrightarrow>
-   valid_global_objs (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+   valid_global_objs (asid_table_update asid ap s)"
   by (clarsimp simp: valid_global_objs_def)
+
+lemma equal_kernel_mappings_asid_upd_strg:
+  "equal_kernel_mappings s \<and>
+   asid_pools_of s ap = Some Map.empty \<and>
+   asid_table s asid = None \<longrightarrow>
+   equal_kernel_mappings (asid_table_update asid ap s)"
+  apply clarsimp
+  apply (prop_tac "asid_update ap asid s", (unfold_locales; assumption))
+  apply (simp add: asid_update.equal_kernel_mappings)
+  done
 
 lemma safe_parent_cap_is_device:
   "safe_parent_for m p cap pcap \<Longrightarrow> cap_is_device cap = cap_is_device pcap"
@@ -573,6 +590,10 @@ lemma cap_insert_ioports_ap:
      cap_insert cap src dest
    \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
   by wpsimp
+
+crunches cap_insert
+  for aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
+  (wp: crunch_wps)
 
 lemma cap_insert_ap_invs:
   "\<lbrace>invs and valid_cap cap and tcb_cap_valid cap dest and
@@ -590,28 +611,28 @@ lemma cap_insert_ap_invs:
                        \<lparr>riscv_asid_table := (riscv_asid_table \<circ> arch_state) s(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (strengthen valid_arch_state_strg valid_vspace_objs_asid_upd_strg
-                    valid_asid_map_asid_upd_strg )
+                    equal_kernel_mappings_asid_upd_strg valid_asid_map_asid_upd_strg
+                    valid_global_objs_asid_upd_strg)
   apply (simp cong: conj_cong)
   apply (rule hoare_pre)
    apply (wp cap_insert_simple_mdb cap_insert_iflive
              cap_insert_zombies cap_insert_ifunsafe cap_insert_ioports_ap
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_ap)
-  sorry (* FIXME RISCV
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state is_cap_simps)
   apply (frule safe_parent_cap_is_device)
   apply (drule safe_parent_cap_range)
-  apply simp
+  apply (simp add: is_simple_cap_arch_def)
   apply (rule conjI)
    prefer 2
-   apply (clarsimp simp: obj_at_def a_type_def)
+   apply (clarsimp simp: obj_at_def a_type_def in_omonad)
+   apply (clarsimp simp: valid_cap_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (drule_tac p="(a,b)" in caps_of_state_valid_cap, fastforce)
   apply (auto simp: obj_at_def is_tcb_def is_cap_table_def
                     valid_cap_def [where c="cap.Zombie a b x" for a b x]
               dest: obj_ref_is_tcb obj_ref_is_cap_table split: option.splits)
-  done *)
-
+  done
 
 lemma max_index_upd_no_cap_to:
   "\<lbrace>\<lambda>s. no_cap_to_obj_with_diff_ref cap {slot} s \<and>
