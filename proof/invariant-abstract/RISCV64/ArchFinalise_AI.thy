@@ -1369,30 +1369,6 @@ lemma set_asid_pool_obj_at_ptr:
   apply (clarsimp simp: obj_at_def)
   done
 
-lemma valid_arch_state_table_strg:
-  "valid_arch_state s \<and> asid_pool_at p s \<and>
-   Some p \<notin> asid_table s ` (dom (asid_table s) - {x}) \<longrightarrow>
-   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>)"
-  apply (clarsimp simp: valid_arch_state_def valid_asid_table_def ran_def split: option.split)
-  sorry (* FIXME RISCV
-  apply (rule conjI; clarsimp)
-   apply (rule conjI, fastforce)
-   apply (erule inj_on_fun_upd_strongerI)
-   apply simp
-  apply (rule conjI, fastforce)
-  apply (erule inj_on_fun_upd_strongerI)
-  apply simp
-  done *)
-
-lemma valid_table_caps_table [simp]:
-  "valid_table_caps (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := table'\<rparr>\<rparr>) = valid_table_caps s"
-  by (simp add: valid_table_caps_def)
-
-lemma valid_kernel_mappings [iff]:
-  "valid_kernel_mappings (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := table'\<rparr>\<rparr>) = valid_kernel_mappings s"
-  by (simp add: valid_kernel_mappings_def)
-
-
 locale_abbrev
   "empty_asid_table_update i p s \<equiv>
      s\<lparr>kheap := kheap s (p \<mapsto> ArchObj (ASIDPool Map.empty)),
@@ -1402,17 +1378,47 @@ locale_abbrev
   "asid_table_update i p s \<equiv>
      s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(i \<mapsto> p)\<rparr>\<rparr>"
 
+lemma valid_arch_state_table_strg:
+  "valid_arch_state s \<and> asid_pool_at p s \<and>
+   Some p \<notin> asid_table s ` (dom (asid_table s) - {x}) \<longrightarrow>
+   valid_arch_state (asid_table_update x p s)"
+  apply (clarsimp simp: valid_arch_state_def valid_asid_table_def ran_def asid_pools_at_eq
+                  split: option.split)
+  by (fastforce elim: inj_on_fun_upd_strongerI)
+
+lemma valid_table_caps_table [simp]:
+  "valid_table_caps (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := table'\<rparr>\<rparr>) = valid_table_caps s"
+  by (simp add: valid_table_caps_def)
+
+lemma valid_kernel_mappings [iff]:
+  "valid_kernel_mappings (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := table'\<rparr>\<rparr>) = valid_kernel_mappings s"
+  by (simp add: valid_kernel_mappings_def)
+
 lemma vs_lookup_table_empty_pool:
-  "vs_lookup_table bot_level asid vref (empty_asid_table_update x q s) = Some (level, p)
+  "\<lbrakk> vs_lookup_table bot_level asid vref (empty_asid_table_update x q s) = Some (level, p);
+     pts_of s q = None \<rbrakk>
    \<Longrightarrow> vs_lookup_table bot_level asid vref s = Some (level, p) \<or>
        asid_high_bits_of asid = x \<and> level = asid_pool_level \<and> q = p"
-  sorry (* FIXME RISCV *)
+  by (cases "bot_level = asid_pool_level";
+        clarsimp simp: vs_lookup_table_def in_omonad pool_for_asid_def vspace_for_pool_def
+                 split: if_split_asm)
+
+lemma vs_lookup_slot_empty_pool:
+  "\<lbrakk> vs_lookup_slot bot_level asid vref (empty_asid_table_update x q s) = Some (level, p);
+     pts_of s q = None \<rbrakk>
+   \<Longrightarrow> vs_lookup_slot bot_level asid vref s = Some (level, p) \<or>
+       asid_high_bits_of asid = x \<and> level = asid_pool_level \<and> q = p"
+  by (fastforce simp: vs_lookup_slot_def in_omonad
+                dest!: vs_lookup_table_empty_pool
+                split: if_split_asm)
 
 lemma vs_lookup_target_empty_pool:
-  "vs_lookup_target bot_level asid vref (empty_asid_table_update x q s) = Some (level, p)
-   \<Longrightarrow> vs_lookup_target bot_level asid vref s = Some (level, p) \<or>
-       asid_high_bits_of asid = x \<and> level = asid_pool_level \<and> q = p"
-  sorry (* FIXME RISCV *)
+  "\<lbrakk> vs_lookup_target bot_level asid vref (empty_asid_table_update x q s) = Some (level, p);
+     pts_of s q = None \<rbrakk>
+   \<Longrightarrow> vs_lookup_target bot_level asid vref s = Some (level, p)"
+  by (fastforce simp: vs_lookup_target_def vspace_for_pool_def in_omonad
+                dest!: vs_lookup_slot_empty_pool
+                split: if_split_asm)
 
 lemma set_asid_pool_empty_table_objs:
   "\<lbrace>valid_vspace_objs and asid_pool_at p\<rbrace>
@@ -1421,8 +1427,9 @@ lemma set_asid_pool_empty_table_objs:
   unfolding set_asid_pool_def
   apply (wp get_object_wp set_object_wp)
   apply (clarsimp simp: obj_at_def valid_vspace_objs_def simp del: fun_upd_apply)
-  apply (rule valid_vspace_obj_same_type[rotated], assumption)
-   apply (auto dest: vs_lookup_table_empty_pool simp: in_omonad split: if_split_asm)
+  apply (rule valid_vspace_obj_same_type[rotated], assumption, simp)
+  apply (prop_tac "pts_of s p = None", simp add: opt_map_def split: option.splits)
+  apply (auto dest: vs_lookup_table_empty_pool simp: in_omonad split: if_split_asm)
   done
 
 lemma set_asid_pool_empty_table_lookup:
@@ -1434,17 +1441,10 @@ lemma set_asid_pool_empty_table_lookup:
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def valid_vs_lookup_def
                   simp del: fun_upd_apply)
-  apply (drule vs_lookup_target_empty_pool)
-  apply (erule disjE)
-   apply (fastforce simp: caps_of_state_after_update[folded fun_upd_apply]
-                         obj_at_def)
-  sorry (* FIXME RISCV
-  apply clarsimp
-  apply (rule_tac x=a in exI)
-  apply (rule_tac x=b in exI)
-  apply (simp add: caps_of_state_after_update [folded fun_upd_apply] obj_at_def)
-  apply (simp add: vs_cap_ref_def)
-  done *)
+  apply (prop_tac "pts_of s p = None", simp add: opt_map_def split: option.splits)
+  apply (drule (1) vs_lookup_target_empty_pool)
+  apply (fastforce simp: caps_of_state_after_update[folded fun_upd_apply] obj_at_def)
+  done
 
 lemma set_asid_pool_empty_valid_asid_map:
   "\<lbrace>\<top>\<rbrace>
@@ -1489,6 +1489,8 @@ lemma delete_asid_pool_unmapped2:
         pool_for_asid base' s = None\<rbrace>
    delete_asid_pool base ptr
    \<lbrace>\<lambda>_ s. pool_for_asid base' s = None \<rbrace>"
+  unfolding delete_asid_pool_def
+  apply (wpsimp simp: pool_for_asid_def)
   sorry (* FIXME RISCV
   (is "valid ?P ?f (\<lambda>rv. ?Q)")
   apply (cases "base = base' \<and> ptr = ptr'")
