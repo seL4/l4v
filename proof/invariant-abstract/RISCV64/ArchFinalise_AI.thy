@@ -33,23 +33,6 @@ lemma valid_global_refs_asid_table_udapte [iff]:
   valid_global_refs s"
   by (simp add: valid_global_refs_def global_refs_def)
 
-(* FIXME RISCV: look at vs_lookup_pages_pt_eq to see if can derive one from other,
-                also fix deceptive name *)
-lemma vs_lookup_pages_eq:
-  "\<lbrakk>valid_vspace_objs s; valid_asid_table s;
-    valid_cap cap s; table_cap_ref cap = Some (asid, vref); obj_refs cap = {oref}\<rbrakk>
-   \<Longrightarrow> (vs_lookup_target level asid vref s = Some (level, oref)) =
-       (vs_lookup_table level asid vref s = Some (level, oref))"
-  sorry (* FIXME RISCV
-  apply (clarsimp simp: table_cap_ref_def arch_cap_fun_lift_def
-                        vs_lookup_pages_eq_at[symmetric, THEN fun_cong]
-                        vs_lookup_pages_eq_ap[symmetric, THEN fun_cong]
-                 split: cap.splits arch_cap.splits option.splits)
-  apply (rule iffI[rotated, OF vs_lookup_pages_vs_lookupI], assumption)
-  apply (simp add: valid_cap_def)
-  apply (erule vs_lookup_vs_lookup_pagesI', clarsimp+)
-  done *)
-
 lemma nat_to_cref_unat_of_bl':
   "\<lbrakk> length xs < 64; n = length xs \<rbrakk> \<Longrightarrow>
    nat_to_cref n (unat (of_bl xs :: machine_word)) = xs"
@@ -510,9 +493,7 @@ lemma arch_thread_set_only_idle[wp]:
                  arch_thread_set_pred_tcb_at)
 
 lemma arch_thread_set_valid_idle[wp]:
-  "\<lbrace>valid_idle and (\<lambda> s. t \<noteq> idle_thread s \<or> (\<forall>atcb. tcb_vcpu atcb = None \<longrightarrow> tcb_vcpu (f atcb) = None))\<rbrace>
-    arch_thread_set f t
-   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  "arch_thread_set f t \<lbrace>valid_idle\<rbrace>"
   by (wpsimp simp: arch_thread_set_def set_object_def get_object_def valid_idle_def
                    valid_arch_idle_def get_tcb_def pred_tcb_at_def obj_at_def pred_neg_def)
 
@@ -542,17 +523,6 @@ lemma arch_thread_set_zombies_final[wp]: "\<lbrace>zombies_final\<rbrace> arch_t
   apply assumption
   apply simp
   apply (subst get_tcb_rev, assumption, simp)+
-  apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
-  done
-
-lemma arch_thread_set_if_live_then_nonz_cap_Some[wp]:
-  "\<lbrace> (ex_nonz_cap_to t or obj_at live t) and if_live_then_nonz_cap\<rbrace>
-      arch_thread_set (tcb_vcpu_update (\<lambda>_. Some vcp)) t \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  apply (simp add: arch_thread_set_def)
-  apply (wp set_object_iflive)
-  apply (clarsimp simp: ex_nonz_cap_to_def if_live_then_nonz_cap_def
-                  dest!: get_tcb_SomeD)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
   apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
   done
 
@@ -586,27 +556,6 @@ lemma arch_thread_set_valid_objs_context[wp]:
   apply (clarsimp simp:valid_obj_def valid_tcb_def tcb_cap_cases_def)
   done
 
-lemma arch_thread_set_valid_objs_vcpu_None[wp]:
-  "arch_thread_set (tcb_vcpu_update Map.empty) v \<lbrace>valid_objs\<rbrace>"
-  apply (simp add: arch_thread_set_def)
-  apply (wp set_object_valid_objs)
-  apply (clarsimp simp: Ball_def obj_at_def valid_objs_def dest!: get_tcb_SomeD)
-  apply (erule_tac x=v in allE)
-  apply (clarsimp simp: dom_def)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
-  apply (clarsimp simp:valid_obj_def valid_tcb_def tcb_cap_cases_def valid_arch_tcb_def)
-  done
-
-lemma arch_thread_set_valid_objs_vcpu_Some[wp]:
-  "\<lbrace>valid_objs and vcpu_at vcpu\<rbrace> arch_thread_set (tcb_vcpu_update (\<lambda>_. Some vcpu)) v \<lbrace>\<lambda>_. valid_objs\<rbrace>"
-  apply (simp add: arch_thread_set_def)
-  apply (wpsimp wp: set_object_valid_objs)
-  apply (clarsimp simp: Ball_def obj_at_def valid_objs_def dest!: get_tcb_SomeD)
-  apply (erule_tac x=v in allE)
-  apply (clarsimp simp: dom_def)
-  apply (clarsimp simp:valid_obj_def valid_tcb_def tcb_cap_cases_def valid_arch_tcb_def obj_at_def)
-  done
-
 lemma sym_refs_update_some_tcb:
   "\<lbrakk>kheap s v = Some (TCB tcb) ; refs_of (TCB tcb) = refs_of (TCB (f tcb))\<rbrakk>
   \<Longrightarrow> sym_refs (state_refs_of (s\<lparr>kheap := kheap s (v \<mapsto> TCB (f tcb))\<rparr>)) = sym_refs (state_refs_of s)"
@@ -628,26 +577,11 @@ lemma arch_thread_sym_refs[wp]:
   apply assumption
   done
 
-lemma arch_thread_get_tcb:
-  "\<lbrace> \<top> \<rbrace> arch_thread_get tcb_vcpu p \<lbrace>\<lambda>rv s. \<exists>t. obj_at (\<lambda>tcb. tcb = (TCB t) \<and> rv = tcb_vcpu (tcb_arch t)) p s\<rbrace>"
-  apply (simp add: arch_thread_get_def)
-  apply wp
-  apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
-  apply simp
-  done
-
 lemma as_user_unlive_hyp[wp]:
   "\<lbrace>obj_at (Not \<circ> hyp_live) vr\<rbrace> as_user t f \<lbrace>\<lambda>_. obj_at (Not \<circ> hyp_live) vr\<rbrace>"
   unfolding as_user_def
   apply (wpsimp wp: set_object_wp)
   by (clarsimp simp: obj_at_def hyp_live_def arch_tcb_context_set_def)
-
-lemma arch_thread_set_unlive0[wp]:
-  "\<lbrace>obj_at (Not \<circ> live0) vr\<rbrace> arch_thread_set (tcb_vcpu_update Map.empty) t \<lbrace>\<lambda>_. obj_at (Not \<circ> live0) vr\<rbrace>"
-  apply (wpsimp simp: arch_thread_set_def wp: set_object_wp)
-  apply (clarsimp simp: obj_at_def get_tcb_def split: kernel_object.splits)
-  done
 
 lemma as_user_unlive0[wp]:
   "\<lbrace>obj_at (Not \<circ> live0) vr\<rbrace> as_user t f \<lbrace>\<lambda>_. obj_at (Not \<circ> live0) vr\<rbrace>"
