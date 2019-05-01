@@ -1014,32 +1014,6 @@ lemma unmap_page_table_empty: (* FIXME RISCV: check usage *)
   apply (wp store_pte_unmap_empty | simp | wpc)+
   done
 
-lemma mapM_x_store_pte_valid_vspace_objs: (* FIXME RISCV: check usage *)
-  "\<lbrace>invs and (\<lambda>s. \<exists>p' cap. caps_of_state s p' = Some cap \<and> is_pt_cap cap \<and>
-    (\<forall>x \<in> set pteptrs. x && ~~ mask pt_bits \<in> obj_refs cap)) \<rbrace>
-    mapM_x (\<lambda>p. store_pte p InvalidPTE) pteptrs
-   \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
-  apply (rule hoare_strengthen_post, rule mapM_x_wp')
-   apply wp
-  sorry (* FIXME RISCV: uncler if this lemma is needed
-   apply (fastforce simp: is_pt_cap_def)+
-  done *)
-
-(* FIXME RISCV: needed?
-lemma mapM_x_swp_store_empty_table_set:
-  "\<lbrace>pt_at p
-    and pspace_aligned
-    and K ((UNIV :: (9 word) set) \<subseteq> (\<lambda>sl. ucast ((sl && mask pt_bits) >> 3)) ` set slots
-                       \<and> (\<forall>x\<in>set slots. x && ~~ mask pt_bits = p))\<rbrace>
-    mapM_x (swp store_pte InvalidPTE) slots
-   \<lbrace>\<lambda>rv s. obj_at (empty_table (S s)) p s\<rbrace>"
-  apply (rule hoare_strengthen_post)
-   apply (rule mapM_x_swp_store_empty_table)
-  apply (clarsimp simp: obj_at_def empty_table_def)
-  apply (clarsimp split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits option.splits)
-  apply (clarsimp simp add: valid_pde_mappings_def pde_ref_def)
-  done *)
-
 definition
   replaceable_or_arch_update
 where
@@ -1141,33 +1115,6 @@ lemma invs_valid_arch_capsI:
 
 context Arch begin global_naming RISCV64 (*FIXME: arch_split*)
 
-lemma arch_finalise_case_no_lookup:
-  "\<lbrace>pspace_aligned and valid_vspace_objs and valid_objs and
-    valid_cap (ArchObjectCap acap) and valid_asid_table
-    and K (aobj_ref acap = Some w \<and> is_final)\<rbrace>
-  arch_finalise_cap acap is_final
-  \<lbrace>\<lambda>rv s. \<forall>asid vref. vs_cap_ref (ArchObjectCap acap) = Some (asid,vref) \<longrightarrow>
-            (\<forall>level. vs_lookup_target level asid vref s \<noteq> Some (level, w)) \<rbrace>"
-  sorry (* FIXME RISCV
-  apply (rule hoare_gen_asm)
-  apply (rule hoare_pre)
-   apply (simp add: arch_finalise_cap_def)
-   apply (wpc | wp delete_asid_pool_unmapped hoare_vcg_imp_lift
-                   unmap_page_table_unmapped2
-              | simp add: vs_cap_ref_simps
-                          vs_lookup_pages_eq_at[THEN fun_cong, symmetric]
-                          vs_lookup_pages_eq_ap[THEN fun_cong, symmetric])+
-     apply (wp hoare_vcg_all_lift unmap_page_unmapped static_imp_wp)
-    apply (wpc|wp unmap_page_table_unmapped3 delete_asid_unmapped
-      |simp add:vs_cap_ref_def
-      vs_lookup_pages_eq_at[THEN fun_cong,symmetric]
-      vs_lookup_pages_eq_ap[THEN fun_cong,symmetric])+
-   apply (auto simp: valid_cap_simps valid_arch_state_def data_at_def vspace_bits_defs
-              split: vmpage_size.split)
-   apply ((case_tac x; simp)+)[4]
-   (* apply (auto simp add: tcb_at_typ obj_at_def is_cap_table_def)+ *)
-   done *)
-
 lemma arch_finalise_pt_empty:
   "\<lbrace>(\<lambda>s. obj_at (empty_table {}) ptr s) and valid_cap (ArchObjectCap acap) and
     K (is_pt_cap (ArchObjectCap acap) \<and> aobj_ref acap = Some ptr)\<rbrace>
@@ -1193,13 +1140,6 @@ lemma replaceable_or_arch_update_pg:
   unfolding replaceable_or_arch_update_def
   apply (auto simp: is_cap_simps is_arch_update_def cap_master_cap_simps)
   done
-
-lemma mapM_x_swp_store_invalid_pte_invs:
-  "\<lbrace>invs and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c. table_base ` set slots \<subseteq> obj_refs c \<and> is_pt_cap c) slot s)\<rbrace>
-  mapM_x (\<lambda>x. store_pte x InvalidPTE) slots \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp mapM_x_swp_store_pte_invs_unmap[unfolded swp_def,where pte=InvalidPTE, simplified])
-  apply clarsimp
-  sorry (* FIXME RISCV *)
 
 
 global_naming Arch
@@ -1370,21 +1310,8 @@ lemma set_asid_pool_obj_at_ptr:
   done
 
 locale_abbrev
-  "empty_asid_table_update i p s \<equiv>
-     s\<lparr>kheap := kheap s (p \<mapsto> ArchObj (ASIDPool Map.empty)),
-       arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(i \<mapsto> p)\<rparr>\<rparr>"
-
-locale_abbrev
-  "asid_table_update i p s \<equiv>
-     s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(i \<mapsto> p)\<rparr>\<rparr>"
-
-lemma valid_arch_state_table_strg:
-  "valid_arch_state s \<and> asid_pool_at p s \<and>
-   Some p \<notin> asid_table s ` (dom (asid_table s) - {x}) \<longrightarrow>
-   valid_arch_state (asid_table_update x p s)"
-  apply (clarsimp simp: valid_arch_state_def valid_asid_table_def ran_def asid_pools_at_eq
-                  split: option.split)
-  by (fastforce elim: inj_on_fun_upd_strongerI)
+  "asid_table_update asid ap s \<equiv>
+     s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>"
 
 lemma valid_table_caps_table [simp]:
   "valid_table_caps (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := table'\<rparr>\<rparr>) = valid_table_caps s"
@@ -1393,121 +1320,6 @@ lemma valid_table_caps_table [simp]:
 lemma valid_kernel_mappings [iff]:
   "valid_kernel_mappings (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := table'\<rparr>\<rparr>) = valid_kernel_mappings s"
   by (simp add: valid_kernel_mappings_def)
-
-lemma vs_lookup_table_empty_pool:
-  "\<lbrakk> vs_lookup_table bot_level asid vref (empty_asid_table_update x q s) = Some (level, p);
-     pts_of s q = None \<rbrakk>
-   \<Longrightarrow> vs_lookup_table bot_level asid vref s = Some (level, p) \<or>
-       asid_high_bits_of asid = x \<and> level = asid_pool_level \<and> q = p"
-  by (cases "bot_level = asid_pool_level";
-        clarsimp simp: vs_lookup_table_def in_omonad pool_for_asid_def vspace_for_pool_def
-                 split: if_split_asm)
-
-lemma vs_lookup_slot_empty_pool:
-  "\<lbrakk> vs_lookup_slot bot_level asid vref (empty_asid_table_update x q s) = Some (level, p);
-     pts_of s q = None \<rbrakk>
-   \<Longrightarrow> vs_lookup_slot bot_level asid vref s = Some (level, p) \<or>
-       asid_high_bits_of asid = x \<and> level = asid_pool_level \<and> q = p"
-  by (fastforce simp: vs_lookup_slot_def in_omonad
-                dest!: vs_lookup_table_empty_pool
-                split: if_split_asm)
-
-lemma vs_lookup_target_empty_pool:
-  "\<lbrakk> vs_lookup_target bot_level asid vref (empty_asid_table_update x q s) = Some (level, p);
-     pts_of s q = None \<rbrakk>
-   \<Longrightarrow> vs_lookup_target bot_level asid vref s = Some (level, p)"
-  by (fastforce simp: vs_lookup_target_def vspace_for_pool_def in_omonad
-                dest!: vs_lookup_slot_empty_pool
-                split: if_split_asm)
-
-lemma set_asid_pool_empty_table_objs:
-  "\<lbrace>valid_vspace_objs and asid_pool_at p\<rbrace>
-   set_asid_pool p Map.empty
-   \<lbrace>\<lambda>rv s. valid_vspace_objs (asid_table_update w p s) \<rbrace>"
-  unfolding set_asid_pool_def
-  apply (wp get_object_wp set_object_wp)
-  apply (clarsimp simp: obj_at_def valid_vspace_objs_def simp del: fun_upd_apply)
-  apply (rule valid_vspace_obj_same_type[rotated], assumption, simp)
-  apply (prop_tac "pts_of s p = None", simp add: opt_map_def split: option.splits)
-  apply (auto dest: vs_lookup_table_empty_pool simp: in_omonad split: if_split_asm)
-  done
-
-lemma set_asid_pool_empty_table_lookup:
-  "\<lbrace>valid_vs_lookup and asid_pool_at p and
-    (\<lambda>s. \<exists>p'. caps_of_state s p' = Some (ArchObjectCap (ASIDPoolCap p base)))\<rbrace>
-   set_asid_pool p Map.empty
-   \<lbrace>\<lambda>rv s. valid_vs_lookup (asid_table_update (asid_high_bits_of base) p s)\<rbrace>"
-  apply (simp add: set_asid_pool_def set_object_def)
-  apply (wp get_object_wp)
-  apply (clarsimp simp: obj_at_def valid_vs_lookup_def
-                  simp del: fun_upd_apply)
-  apply (prop_tac "pts_of s p = None", simp add: opt_map_def split: option.splits)
-  apply (drule (1) vs_lookup_target_empty_pool)
-  apply (fastforce simp: caps_of_state_after_update[folded fun_upd_apply] obj_at_def)
-  done
-
-lemma set_asid_pool_empty_valid_asid_map:
-  "\<lbrace>\<top>\<rbrace>
-   set_asid_pool p Map.empty
-   \<lbrace>\<lambda>_ s. valid_asid_map (asid_table_update (asid_high_bits_of asid) p s)\<rbrace>"
-  by (wpsimp simp: valid_asid_map_def)
-
-lemma set_asid_pool_invs_table:
-  "\<lbrace>\<lambda>s. invs s \<and> asid_pool_at p s \<and>
-        (\<exists>p'. caps_of_state s p' = Some (ArchObjectCap (ASIDPoolCap p base))) \<and>
-        pool_for_asid base s = None\<rbrace>
-   set_asid_pool p Map.empty
-   \<lbrace>\<lambda>_ s. invs (asid_table_update (asid_high_bits_of base) p s)\<rbrace>"
-  apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def)
-  sorry (* FIXME RISCV
-  apply (rule hoare_pre)
-   apply (wp valid_irq_node_typ set_asid_pool_typ_at
-             set_asid_pool_empty_table_objs
-             valid_irq_handlers_lift set_asid_pool_empty_table_lookup
-             set_asid_pool_empty_valid_asid_map
-          | simp add: valid_global_objs_def valid_global_vspace_mappings_def
-          | strengthen valid_arch_state_table_strg)+
-  apply (clarsimp simp: conj_comms)
-  apply (rule context_conjI)
-   apply clarsimp
-   apply (frule valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI], clarsimp)
-   apply clarsimp
-   apply (drule obj_ref_elemD)
-   apply (frule(2) unique_table_refsD,
-          unfold obj_refs.simps aobj_ref.simps option.simps,
-          assumption)
-   apply (clarsimp simp:vs_cap_ref_def table_cap_ref_def
-     split:cap.split_asm arch_cap.split_asm if_splits)
-  apply clarsimp
-  apply (drule vs_asid_refsI)
-  apply (drule vs_lookupI, rule rtrancl_refl)
-  apply simp
-  done *)
-
-lemma delete_asid_pool_unmapped2:
-  "\<lbrace>\<lambda>s. asid_high_bits_of base' = asid_high_bits_of base \<and> ptr' = ptr \<or>
-        pool_for_asid base' s = None\<rbrace>
-   delete_asid_pool base ptr
-   \<lbrace>\<lambda>_ s. pool_for_asid base' s = None \<rbrace>"
-  unfolding delete_asid_pool_def
-  apply (wpsimp simp: pool_for_asid_def)
-  sorry (* FIXME RISCV
-  (is "valid ?P ?f (\<lambda>rv. ?Q)")
-  apply (cases "base = base' \<and> ptr = ptr'")
-   apply simp
-   apply (wp delete_asid_pool_unmapped)
-  apply (simp add: delete_asid_pool_def)
-  apply wp
-     apply (rule_tac Q="\<lambda>rv s. ?Q s \<and> asid_table = arm_asid_table (arch_state s)"
-                in hoare_post_imp)
-      apply (clarsimp simp: fun_upd_def[symmetric])
-      apply (drule vs_lookup_clear_asid_table[rule_format])
-      apply simp
-     apply (wp mapM_wp')+
-     apply clarsimp
-    apply wp+
-  apply fastforce
-  done *)
 
 crunches unmap_page_table, store_pte, delete_asid_pool, copy_global_mappings
   for valid_cap[wp]: "valid_cap c"
