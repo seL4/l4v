@@ -42,6 +42,40 @@ abbreviation
   NULL :: "'a ptr" where
   "NULL \<equiv> Ptr 0"
 
+ML \<open>
+structure Ptr_Syntax =
+struct
+
+  val show_ptr_types = Attrib.setup_config_bool @{binding show_ptr_types} (K true)
+
+  fun ptr_tr' cnst ctxt typ ts = if Config.get ctxt show_ptr_types then
+      case Term.strip_type typ of
+        ([@{typ addr}], Type (@{type_name "ptr"}, [T])) =>
+          list_comb
+            (Syntax.const cnst $ Syntax_Phases.term_of_typ ctxt T
+            , ts)
+        | _ => raise Match
+  else raise Match
+
+  fun ptr_coerce_tr' cnst ctxt typ ts = if Config.get ctxt show_ptr_types then
+      case Term.strip_type typ of
+        ([Type (@{type_name ptr}, [S])], Type (@{type_name "ptr"}, [T])) =>
+          list_comb
+            (Syntax.const cnst $ Syntax_Phases.term_of_typ ctxt S
+                               $ Syntax_Phases.term_of_typ ctxt T
+            , ts)
+        | _ => raise Match
+  else raise Match
+end
+\<close>
+
+syntax
+  "_Ptr" :: "type \<Rightarrow> logic" ("(1PTR/(1'(_')))")
+translations
+  "PTR('a)" => "CONST Ptr :: (addr \<Rightarrow> 'a ptr)"
+typed_print_translation
+  \<open> [(@{const_syntax Ptr}, Ptr_Syntax.ptr_tr' @{syntax_const "_Ptr"})] \<close>
+
 primrec
   ptr_val :: "'a ptr \<Rightarrow> addr"
 where
@@ -50,6 +84,13 @@ where
 primrec
   ptr_coerce :: "'a ptr \<Rightarrow> 'b ptr" where
   "ptr_coerce (Ptr a) = Ptr a"
+
+syntax
+  "_Ptr_coerce" :: "type \<Rightarrow> type \<Rightarrow> logic" ("(1PTR'_COERCE/(1'(_ \<rightarrow> _')))")
+translations
+  "PTR_COERCE('a \<rightarrow> 'b)" => "CONST ptr_coerce :: ('a ptr \<Rightarrow> 'b ptr)"
+typed_print_translation
+  \<open> [(@{const_syntax ptr_coerce}, Ptr_Syntax.ptr_coerce_tr' @{syntax_const "_Ptr_coerce"})] \<close>
 
 definition
   (* no ctype/memtype-class constraints on these so as to allow comparison of
