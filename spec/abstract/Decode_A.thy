@@ -326,8 +326,12 @@ definition
   decode_update_sc :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
   "decode_update_sc cap slot sc_cap \<equiv>
-    if sc_cap = NullCap then
+    if sc_cap = NullCap then doE
+      tcb_ptr \<leftarrow> returnOk $ obj_ref_of cap;
+      ct_ptr \<leftarrow> liftE $ gets cur_thread;
+      whenE (tcb_ptr = ct_ptr) $ throwError IllegalOperation;
       returnOk $ ThreadControl (obj_ref_of cap) slot None None None None None None None (Some None)
+  odE
     else doE
       tcb_ptr \<leftarrow> returnOk $ obj_ref_of cap;
       unlessE (is_sched_context_cap sc_cap) $ throwError (InvalidCapability 0);
@@ -515,7 +519,9 @@ where
       case cap of
         ThreadCap tcb_ptr \<Rightarrow> doE
           sc_tcb_opt \<leftarrow> liftE $ get_sc_obj_ref sc_tcb sc_ptr;
-          whenE (sc_tcb_opt \<noteq> Some tcb_ptr) $ throwError IllegalOperation
+          whenE (sc_tcb_opt \<noteq> Some tcb_ptr) $ throwError IllegalOperation;
+          ct_ptr \<leftarrow> liftE $ gets cur_thread;
+          whenE (tcb_ptr = ct_ptr) $ throwError IllegalOperation
         odE
       | NotificationCap ntfn_ptr _ _ \<Rightarrow> doE
           sc_ntfn_opt \<leftarrow> liftE $ get_sc_obj_ref sc_ntfn sc_ptr;
@@ -524,7 +530,12 @@ where
       | _ \<Rightarrow> throwError (InvalidCapability 1);
       returnOk $ InvokeSchedContextUnbindObject sc_ptr cap
     odE
-  | SchedContextUnbind \<Rightarrow> returnOk $ InvokeSchedContextUnbind sc_ptr
+  | SchedContextUnbind \<Rightarrow> doE
+      cap \<leftarrow> returnOk $ hd excaps;
+      tcb_ptr \<leftarrow> returnOk $ obj_ref_of cap;
+      ct_ptr \<leftarrow> liftE $ gets cur_thread;
+      whenE (tcb_ptr = ct_ptr) $ throwError IllegalOperation;
+      returnOk $ InvokeSchedContextUnbind sc_ptr cap odE
   | SchedContextYieldTo \<Rightarrow> doE
       sc \<leftarrow> liftE $ get_sched_context sc_ptr;
       case (sc_tcb sc) of

@@ -697,6 +697,8 @@ where
     ct \<leftarrow> gets cur_thread;
     st \<leftarrow> get_thread_state ct;
     when (runnable st) $ do
+      sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context ct;
+      assert (sc_opt = (Some csc_ptr));
       end_timeslice canTimeout;
       reschedule_required;
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>)
