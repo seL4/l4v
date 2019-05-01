@@ -200,6 +200,14 @@ lemma (* replaceable_more_update *) [simp,Finalise_AI_asms]:
   "replaceable (trans_state f s) sl cap cap' = replaceable s sl cap cap'"
   by (simp add: replaceable_def reachable_frame_cap_def reachable_target_def)
 
+lemma reachable_target_trans_state[simp]:
+  "reachable_target ref p (trans_state f s) = reachable_target ref p s"
+  by (clarsimp simp: reachable_target_def split_def)
+
+lemma reachable_frame_cap_trans_state[simp]:
+  "reachable_frame_cap cap (trans_state f s) = reachable_frame_cap cap s"
+  by (simp add: reachable_frame_cap_def)
+
 lemmas [Finalise_AI_asms] = obj_refs_obj_ref_of (* used under name obj_ref_ofI *)
 
 lemma (* empty_slot_invs *) [Finalise_AI_asms]:
@@ -208,7 +216,6 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
         (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre info ((caps_of_state s) (sl \<mapsto> NullCap)))\<rbrace>
      empty_slot sl info
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  sorry (* FIXME RISCV
   apply (simp add: empty_slot_def set_cdt_def bind_assoc cong: if_cong)
   apply (wp post_cap_deletion_invs)
         apply (simp add: invs_def valid_state_def valid_mdb_def2)
@@ -217,7 +224,9 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
                   set_cap_idle valid_irq_node_typ set_cap_typ_at
                   set_cap_irq_handlers set_cap_valid_arch_caps
                   set_cap_cap_refs_respects_device_region_NullCap
-                  | simp add: trans_state_update[symmetric] del: trans_state_update fun_upd_apply split del: if_split )+
+               | simp add: trans_state_update[symmetric]
+                      del: trans_state_update fun_upd_apply
+                      split del: if_split)+
   apply (clarsimp simp: is_final_cap'_def2 simp del: fun_upd_apply)
   apply (clarsimp simp: conj_comms invs_def valid_state_def valid_mdb_def2)
   apply (subgoal_tac "mdb_empty_abs s")
@@ -232,6 +241,8 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
                    no_cap_to_obj_with_diff_ref_Null)
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_cte_at)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_arch_mdb_def)
   apply (rule conjI)
    apply (clarsimp simp: irq_revocable_def)
   apply (rule conjI)
@@ -272,12 +283,12 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
     apply (simp add: cdt_parent_of_def)
    apply fastforce
   apply (clarsimp simp: cte_wp_at_caps_of_state replaceable_def
-                        vs_cap_ref_simps table_cap_ref_simps
+                        reachable_frame_cap_def reachable_target_def
                    del: allI)
   apply (case_tac "is_final_cap' cap s")
    apply auto[1]
   apply (simp add: is_final_cap'_def2 cte_wp_at_caps_of_state)
-  done *)
+  by fastforce
 
 lemma dom_tcb_cap_cases_lt_ARCH [Finalise_AI_asms]:
   "dom tcb_cap_cases = {xs. length xs = 3 \<and> unat (of_bl xs :: machine_word) < 5}"
