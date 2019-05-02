@@ -569,7 +569,7 @@ crunch domain_time_inv[wp]:
 lemma charge_budget_domain_time_consumed_time:
    "\<lbrace>\<lambda>s::det_state. P (domain_time s) 0 \<rbrace> charge_budget capacity consumed canTimeout
             \<lbrace>\<lambda>_ s. P (domain_time s) (consumed_time s)\<rbrace> "
-  by (wpsimp simp: charge_budget_def Let_def)
+  by (wpsimp simp: charge_budget_def Let_def wp: assert_inv)
 
 lemma check_budget_domain_time_left[wp]:
   "\<lbrace> valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace> check_budget

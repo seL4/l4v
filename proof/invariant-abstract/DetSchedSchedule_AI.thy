@@ -13329,7 +13329,7 @@ lemma charge_budget_valid_sched:
    \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
   apply (clarsimp simp: charge_budget_def)
-  apply (wpsimp wp: reschedule_required_valid_sched
+  apply (wpsimp wp: reschedule_required_valid_sched assert_inv
                     end_timeslice_valid_sched_subset)
          apply (wpsimp wp: gts_wp)+
       apply (rule_tac Q="\<lambda>ya s.

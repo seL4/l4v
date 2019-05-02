@@ -641,12 +641,22 @@ lemma option_None_True: "case_option (\<lambda>_. True) f x = (\<lambda>s. \<for
 lemma option_None_True_const: "case_option True f x = (\<forall>y. x = Some y \<longrightarrow> f y)"
   by (cases x; simp)
 
+(* FIXME: move *)
+lemma hoare_case_option_lift:
+  "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (E rv = None \<longrightarrow> P rv s) \<and> (\<forall>x2. E rv = Some x2 \<longrightarrow> Q rv x2 s) \<rbrace> \<Longrightarrow>
+   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv. case_option (P rv) (\<lambda>rv'. Q rv rv') (E rv)\<rbrace>"
+  by (fastforce simp: valid_def split: option.splits)
+
 lemma sts_tcb_inv_wf [wp]:
   "\<lbrace>tcb_inv_wf i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. tcb_inv_wf i\<rbrace>"
   apply (case_tac i)
-  by (wpsimp wp: set_thread_state_bound_sc_tcb_at
+  apply (wpsimp wp: set_thread_state_bound_sc_tcb_at
                  set_thread_state_valid_cap hoare_vcg_all_lift hoare_vcg_const_imp_lift
-             simp: option_None_True option_None_True_const | wp sts_obj_at_impossible)+
+             simp: option_None_True option_None_True_const
+         | wp sts_obj_at_impossible
+         | wp hoare_case_option_lift
+         | clarsimp split: option.splits)+
+  done
 
 lemma sts_valid_sched_context_inv[wp]:
   "\<lbrace>valid_sched_context_inv i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_sched_context_inv i\<rbrace>"

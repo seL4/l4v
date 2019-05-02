@@ -4149,7 +4149,7 @@ lemma end_timeslice_valid_list[wp]:
 
 lemma charge_budget_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> charge_budget  capacity consumed canTimeout \<lbrace>\<lambda>_.valid_list\<rbrace>"
-   by (wpsimp simp: charge_budget_def Let_def set_refills_def)
+   by (wpsimp simp: charge_budget_def Let_def set_refills_def wp: assert_inv)
 
 lemma check_budget_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> check_budget \<lbrace>\<lambda>_.valid_list\<rbrace>"

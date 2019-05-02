@@ -508,7 +508,7 @@ where
                         and (case_option \<top> (case_option \<top> ((cte_at And ex_cte_cap_to) o snd) o snd) buf)
                         and (\<lambda>s. {croot, vroot, option_map undefined buf} \<noteq> {None}
                                     \<longrightarrow> cte_at sl s \<and> ex_cte_cap_to sl s)
-                        and (case_option \<top> (case_option \<top> (\<lambda>sc. bound_sc_tcb_at ((=) None) t and ex_nonz_cap_to sc
+                        and (case_option \<top> (case_option (\<lambda>s. t \<noteq> cur_thread s) (\<lambda>sc. bound_sc_tcb_at ((=) None) t and ex_nonz_cap_to sc
                                                              and sc_tcb_sc_at ((=) None) sc)) sc)
                         and ex_nonz_cap_to t)"
 | "tcb_inv_wf' (tcb_invocation.ReadRegisters src susp n arch)
@@ -533,7 +533,7 @@ fun
   tcb_inv_wf  :: "tcb_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "tcb_inv_wf (tcb_invocation.ThreadControl t sl fh th mcp pr croot vroot buf sc)
-             = (tcb_inv_wf' (tcb_invocation.ThreadControl t sl fh th mcp pr croot vroot buf sc) 
+             = (tcb_inv_wf' (tcb_invocation.ThreadControl t sl fh th mcp pr croot vroot buf sc)
                         \<comment> \<open>NOTE: The auth TCB does not really belong in the tcb_invocation
                         type, and is only included so that we can assert here that the
                         priority we are setting is bounded by the MCP of some auth TCB.

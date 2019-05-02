@@ -612,17 +612,16 @@ where
   | "valid_sched_context_inv (InvokeSchedContextUnbindObject scptr cap)
      = (ex_nonz_cap_to scptr and valid_cap cap and
           (case cap of ThreadCap t \<Rightarrow>
-                   ex_nonz_cap_to t and sc_tcb_sc_at (\<lambda>tcb. tcb = (Some t)) scptr
+                   ex_nonz_cap_to t and sc_tcb_sc_at (\<lambda>tcb. tcb = (Some t)) scptr and (\<lambda>s. t \<noteq> cur_thread s)
              | NotificationCap n _ _ \<Rightarrow>
                    ex_nonz_cap_to n and sc_ntfn_sc_at (\<lambda>ntfn. ntfn = (Some n)) scptr
              | _ \<Rightarrow> \<lambda>_. False))"
-  | "valid_sched_context_inv (InvokeSchedContextUnbind scptr)
-     = (sc_at scptr and ex_nonz_cap_to scptr)"
+  | "valid_sched_context_inv (InvokeSchedContextUnbind scptr cap)
+     = (sc_at scptr and ex_nonz_cap_to scptr and (\<lambda>s. obj_ref_of cap \<noteq> cur_thread s))"
   | "valid_sched_context_inv (InvokeSchedContextYieldTo scptr args)
      = (\<lambda>s. ex_nonz_cap_to scptr s
             \<and> bound_yt_tcb_at ((=) None) (cur_thread s) s
             \<and> sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scptr s)"
-
 
 definition
   valid_refills_number :: "nat \<Rightarrow> nat \<Rightarrow> bool"
@@ -1281,7 +1280,7 @@ lemma charge_budget_valid_refills[wp]:
   "\<lbrace>valid_refills scptr budget :: 'state_ext state \<Rightarrow> bool\<rbrace>
      charge_budget capacity consumed canTimeout \<lbrace>\<lambda>_ s. valid_refills scptr budget s\<rbrace>"
   apply (clarsimp simp: charge_budget_def is_round_robin_def)
-  apply (wpsimp wp: get_object_wp update_sched_context_valid_refills_sc_consumed_update
+  apply (wpsimp wp: get_object_wp update_sched_context_valid_refills_sc_consumed_update assert_inv
       simp: Let_def is_round_robin_def refill_full_def)
        apply (wpsimp simp: set_refills_def update_sched_context_def set_object_def wp: get_object_wp)
       apply clarsimp
@@ -1630,22 +1629,6 @@ lemma refill_budget_check_active[wp]:
   by (wpsimp simp: refill_budget_check_def set_refills_def
                wp: hoare_drop_imp get_sched_context_wp split_del: if_split)
 
-lemma charge_budget_invs_helper:
-  "\<lbrace>\<lambda>s. invs s\<rbrace> do
-     ct <- gets cur_thread;
-     st <- get_thread_state ct;
-     when (runnable st) (do y <- end_timeslice canTimeout;
-                            y <- reschedule_required;
-                            modify (reprogram_timer_update (\<lambda>_. True))
-                         od)
-   od \<lbrace> \<lambda>_. invs \<rbrace>"
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (wpsimp wp: end_timeslice_invs)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def ct_in_state_def)
-  apply (case_tac "tcb_state tcb"; clarsimp)
-  done
-
 lemma update_sched_context_bound_sc:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
    update_sched_context scp f
@@ -1687,11 +1670,18 @@ lemma charge_budget_invs:
   "\<lbrace>invs\<rbrace>
    charge_budget capacity consumed canTimeout
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp simp: charge_budget_def Let_def set_refills_def is_round_robin_def
-                   get_sched_context_def get_object_def
-               wp: charge_budget_invs_helper sc_consumed_add_invs
-                   update_sched_context_sc_refills_update_invs update_sched_context_bound_sc
-                   refill_budget_check_invs refill_budget_check_bound_sc)
+  supply if_split [split del]
+  unfolding charge_budget_def is_round_robin_def
+  apply clarsimp
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (wpsimp wp: end_timeslice_invs assert_inv hoare_vcg_if_lift2 gts_wp)
+    apply (rule_tac Q="\<lambda>_. invs" in hoare_strengthen_post[rotated])
+     apply (clarsimp simp: ct_in_state_def runnable_eq pred_tcb_at_def obj_at_def)
+    apply (wpsimp wp: end_timeslice_invs assert_inv hoare_vcg_if_lift2 gts_wp
+                      hoare_vcg_all_lift  sc_consumed_add_invs refill_budget_check_invs
+                simp: Let_def)+
+  done
 
 lemma check_budget_invs[wp]:
   "\<lbrace>\<lambda>s. invs s\<rbrace> check_budget \<lbrace>\<lambda>rv. invs \<rbrace>"
@@ -1769,7 +1759,7 @@ lemma sts_valid_sched_context_inv:
       apply wpsimp
      apply (rename_tac cap, case_tac cap; simp; m)
     apply (rename_tac cap, case_tac cap; simp; m)
-   apply wpsimp
+   apply (rename_tac cap, case_tac cap; simp; m)
   apply m
   done
 
@@ -1865,6 +1855,5 @@ lemma decode_sched_control_inv_wf:
                         us_to_ticks_mono[simplified mono_def] MIN_BUDGET_def
                         MIN_BUDGET_US_def ARM.kernelWCET_ticks_def)
   done
-
 
 end
