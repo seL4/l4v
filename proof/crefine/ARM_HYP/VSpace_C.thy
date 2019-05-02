@@ -2335,9 +2335,6 @@ lemma setVMRoot_ccorres:
   apply (clarsimp simp: ctcb_relation_def carch_tcb_relation_def)
   done
 
-(* FIXME: remove *)
-lemmas invs'_invs_no_cicd = invs_invs_no_cicd'
-
 lemma setVMRootForFlush_ccorres:
   "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_'
        (invs' and (\<lambda>s. asid \<le> mask asid_bits))

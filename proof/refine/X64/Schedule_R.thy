@@ -3019,7 +3019,7 @@ lemma schedule_invs':
            | wp hoare_disjI2[where Q="\<lambda>_ s. tcb_in_cur_domain' (ksCurThread s) s"]
            | wp hoare_drop_imp[where f="isHighestPrio d p" for d p]
            | simp only: obj_at'_activatable_st_tcb_at'[simplified comp_def]
-           | strengthen invs_invs_no_cicd'
+           | strengthen invs'_invs_no_cicd
            | wp hoare_vcg_imp_lift)+
   apply (frule invs_sch_act_wf')
   apply (auto simp: invs_sch_act_wf' obj_at'_activatable_st_tcb_at'
@@ -3095,7 +3095,7 @@ lemma scheduleChooseNewThread_ct_activatable'[wp]:
                 wp: ssa_invs' nextDomain_invs_no_cicd'
                     chooseThread_activatable_2[simplified ct_in_state'_def]
          | (rule hoare_lift_Pf[where f=ksCurThread], solves wp)
-         | strengthen invs_invs_no_cicd')+
+         | strengthen invs'_invs_no_cicd)+
 
 lemma schedule_ct_activatable'[wp]:
   "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
@@ -3111,7 +3111,7 @@ lemma schedule_ct_activatable'[wp]:
     apply (wpsimp wp: ssa_invs' setSchedulerAction_direct ssa_ct
            | wp hoare_drop_imp[where f="isHighestPrio d p" for d p]
            | simp only: obj_at'_activatable_st_tcb_at'[simplified comp_def]
-           | strengthen invs_invs_no_cicd'
+           | strengthen invs'_invs_no_cicd
            | wp hoare_vcg_imp_lift)+
   apply (fastforce dest: invs_sch_act_wf' elim: pred_tcb'_weakenE
                    simp: sch_act_wf obj_at'_activatable_st_tcb_at')

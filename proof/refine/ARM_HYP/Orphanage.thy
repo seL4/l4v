@@ -1011,7 +1011,7 @@ lemma scheduleChooseNewThread_no_orphans:
                hoare_lift_Pf2 [OF st_tcb_at'_is_active_tcb_ptr_lift[OF nextDomain_st_tcb_at']
                                   nextDomain_ct']
                hoare_vcg_all_lift getDomainTime_wp)[2]
-   apply (wpsimp simp: if_apply_def2 invs_invs_no_cicd' all_queued_tcb_ptrs_def
+   apply (wpsimp simp: if_apply_def2 invs'_invs_no_cicd all_queued_tcb_ptrs_def
                        is_active_tcb_ptr_runnable')+
   done
 

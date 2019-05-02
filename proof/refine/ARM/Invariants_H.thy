@@ -3542,7 +3542,7 @@ lemma invs_valid_global'[elim!]:
   "invs' s \<Longrightarrow> valid_global_refs' s"
   by (fastforce simp: invs'_def valid_state'_def)
 
-lemma invs_invs_no_cicd':
+lemma invs'_invs_no_cicd:
   "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
   by (simp add: invs'_to_invs_no_cicd'_def)
 

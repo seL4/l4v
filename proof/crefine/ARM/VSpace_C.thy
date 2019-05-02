@@ -1518,12 +1518,6 @@ lemma setVMRoot_ccorres:
                         to_bool_def
                  elim!: ccap_relationE split: if_split_asm)
 
-
-(* FIXME: move *)
-lemma invs'_invs_no_cicd:
-  "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
-by (clarsimp simp add: invs'_def all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def newKernelState_def)
-
 lemma setVMRootForFlush_ccorres:
   "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_'
        (invs' and (\<lambda>s. asid \<le> mask asid_bits))
