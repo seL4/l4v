@@ -279,6 +279,15 @@ lemma array_index_update_If:
         = (if i = j then x else Arrays.index (arr :: ('a['b])) i)"
   by simp
 
+\<comment> \<open>Of the assumptions, only pos is needed to prove the conclusion.
+    The guard assumptions are there to ensure that when used as a simp rule,
+    the RHS array pointer gets an appropriate type.\<close>
+lemma ptr_safe_ptr_add_array_ptr_index:
+  assumes guard: "ptr_safe (Ptr p::('a['b]) ptr) htd" "i <s of_nat CARD('b)"
+  assumes pos: "0 <=s i"
+  shows "(Ptr p::'a::c_type ptr) +\<^sub>p sint i = array_ptr_index (Ptr p::('a['b::finite]) ptr) False (unat i)"
+  using pos by (simp add: array_ptr_index_def int_unat sint_eq_uint word_sle_msb_le)
+
 ML {*
 fun preserve_skel_conv consts arg_conv ct = let
     val (hd, xs) = strip_comb (Thm.term_of ct)
@@ -505,6 +514,7 @@ fun normalise_mem_accs reason ctxt = DETERM o let
                        heap_access_Array_element'
                        o_def fupdate_def
                        pointer_inverse_safe_sign
+                       ptr_safe_ptr_add_array_ptr_index
             } @ get_field_h_val_rewrites ctxt
         @ #1 gr @ #2 gr
     val h_val = get_disjoint_h_val_globals_swap ctxt
