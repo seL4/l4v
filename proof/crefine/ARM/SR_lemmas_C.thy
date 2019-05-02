@@ -2037,9 +2037,7 @@ lemma cap_get_tag_isCap_ArchObject2:
       simp add: isArchCap_tag_def2 cap_tag_defs)+
 
 lemma rf_sr_armKSGlobalPD:
-  "(s, s') \<in> rf_sr
-   \<Longrightarrow> armKSGlobalPD (ksArchState s)
-         = symbol_table ''armKSGlobalPD''"
+  "(s, s') \<in> rf_sr \<Longrightarrow> armKSGlobalPD (ksArchState s) = ptr_val armKSGlobalPD_Ptr"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
 
 lemma ghost_assertion_size_logic':

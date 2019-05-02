@@ -1019,8 +1019,8 @@ lemma ccorres_pre_gets_armKSGlobalPD_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
                   (\<lambda>s. (\<forall>rv. armKSGlobalPD (ksArchState s) = rv  \<longrightarrow> P rv s))
-                  (P' (ptr_val ((Ptr ::(32 word \<Rightarrow> (pde_C[4096]) ptr)) (symbol_table ''armKSGlobalPD''))))
-                          hs (gets (armKSGlobalPD \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+                  (P' (ptr_val armKSGlobalPD_Ptr))
+                  hs (gets (armKSGlobalPD \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_symb_exec_l)
        defer
@@ -1388,9 +1388,7 @@ lemma armv_contextSwitch_ccorres:
 (* FIXME: move *)
 lemma ccorres_h_t_valid_armKSGlobalPD:
   "ccorres r xf P P' hs f (f' ;; g') \<Longrightarrow>
-   ccorres r xf P P' hs f
-    (Guard C_Guard {s'. s' \<Turnstile>\<^sub>c (Ptr::(32 word \<Rightarrow> (pde_C[4096]) ptr)) (symbol_table ''armKSGlobalPD'')} f';;
-    g')"
+   ccorres r xf P P' hs f (Guard C_Guard {s'. s' \<Turnstile>\<^sub>c armKSGlobalPD_Ptr} f';; g')"
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_move_c_guards[where P = \<top>])
     apply clarsimp

@@ -1794,14 +1794,13 @@ proof -
 
   moreover
   {
-    assume "s' \<Turnstile>\<^sub>c pml4_Ptr (symbol_table ''x64KSSKIMPML4'')"
+    assume "s' \<Turnstile>\<^sub>c x64KSSKIMPML4_Ptr"
     moreover
-    from sr ptr_refs have "ptr_span (pd_Ptr (symbol_table ''x64KSSKIMPML4''))
+    from sr ptr_refs have "ptr_span x64KSSKIMPML4_Ptr
       \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
       by (fastforce simp: rf_sr_def cstate_relation_def Let_def)
     ultimately
-    have "hrs_htd (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s')))
-      \<Turnstile>\<^sub>t pml4_Ptr (symbol_table ''x64KSSKIMPML4'')"
+    have "hrs_htd (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s'))) \<Turnstile>\<^sub>t x64KSSKIMPML4_Ptr"
       using al wb
       apply (cases "t_hrs_' (globals s')")
       apply (simp add: hrs_htd_update_def hrs_htd_def h_t_valid_typ_region_bytes upto_intvl_eq)

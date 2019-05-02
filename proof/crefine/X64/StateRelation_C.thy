@@ -92,11 +92,20 @@ locale kernel = kernel_all_substitute + state_rel
 context state_rel
 begin
 
+abbreviation x64KSSKIMPML4_Ptr :: "(pml4e_C[512]) ptr" where
+  "x64KSSKIMPML4_Ptr \<equiv> pml4_Ptr (symbol_table ''x64KSSKIMPML4'')"
+
+abbreviation x64KSSKIMPDPT_Ptr :: "(pdpte_C[512]) ptr" where
+  "x64KSSKIMPDPT_Ptr \<equiv> pdpt_Ptr (symbol_table ''x64KSSKIMPDPT'')"
+
+abbreviation x64KSSKIMPD_Ptr :: "(pde_C[512]) ptr" where
+  "x64KSSKIMPD_Ptr \<equiv> pd_Ptr (symbol_table ''x64KSSKIMPD'')"
+
 (* relates fixed adresses *)
 definition
-  "carch_globals s \<equiv> (x64KSSKIMPML4 s = symbol_table ''x64KSSKIMPML4'')
-                   \<and> (x64KSSKIMPDPTs s = [symbol_table ''x64KSSKIMPDPT''])
-                   \<and> (x64KSSKIMPDs s = [symbol_table ''x64KSSKIMPD''])
+  "carch_globals s \<equiv> (x64KSSKIMPML4 s = ptr_val x64KSSKIMPML4_Ptr)
+                   \<and> (x64KSSKIMPDPTs s = [ptr_val x64KSSKIMPDPT_Ptr])
+                   \<and> (x64KSSKIMPDs s = [ptr_val x64KSSKIMPD_Ptr])
                    \<and> (x64KSSKIMPTs s = [])"
 
 (* FIXME x64: DON'T DELETE!
@@ -929,8 +938,8 @@ where
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
          (ptr_coerce (intStateIRQNode_' cstate) :: (cte_C[256]) ptr) \<and>
        {ptr_val (intStateIRQNode_' cstate) ..+ 2 ^ (8 + cte_level_bits)} \<subseteq> kernel_data_refs \<and>
-       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard (pml4_Ptr (symbol_table ''x64KSSKIMPML4'')) \<and>
-       ptr_span (pml4_Ptr (symbol_table ''x64KSSKIMPML4'')) \<subseteq> kernel_data_refs \<and>
+       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard x64KSSKIMPML4_Ptr \<and>
+       ptr_span x64KSSKIMPML4_Ptr \<subseteq> kernel_data_refs \<and>
        htd_safe domain (hrs_htd (t_hrs_' cstate)) \<and>
        kernel_data_refs = (- domain) \<and>
        globals_list_distinct (- kernel_data_refs) symbol_table globals_list \<and>

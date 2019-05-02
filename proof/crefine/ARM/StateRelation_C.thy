@@ -113,11 +113,17 @@ locale kernel = kernel_all_substitute + state_rel
 context state_rel
 begin
 
+abbreviation armKSGlobalPD_Ptr :: "(pde_C[4096]) ptr" where
+  "armKSGlobalPD_Ptr \<equiv> pd_Ptr (symbol_table ''armKSGlobalPD'')"
+
+abbreviation armKSGlobalPT_Ptr :: "(pte_C[256]) ptr" where
+  "armKSGlobalPT_Ptr \<equiv> pt_Ptr (symbol_table ''armKSGlobalPT'')"
+
 (* relates fixed adresses *)
 definition
   "carch_globals s \<equiv>
-  (armKSGlobalPD s = symbol_table ''armKSGlobalPD'') \<and>
-  (armKSGlobalPTs s  = [symbol_table ''armKSGlobalPT''])"
+  (armKSGlobalPD s = ptr_val armKSGlobalPD_Ptr) \<and>
+  (armKSGlobalPTs s  = [ptr_val armKSGlobalPT_Ptr])"
 
 definition
   carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
@@ -722,9 +728,8 @@ where
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
          (ptr_coerce (intStateIRQNode_' cstate) :: (cte_C[256]) ptr) \<and>
        {ptr_val (intStateIRQNode_' cstate) ..+ 2 ^ (8 + cte_level_bits)} \<subseteq> kernel_data_refs \<and>
-       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
-         (pd_Ptr (symbol_table ''armKSGlobalPD'')) \<and>
-       ptr_span (pd_Ptr (symbol_table ''armKSGlobalPD'')) \<subseteq> kernel_data_refs \<and>
+       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard armKSGlobalPD_Ptr \<and>
+       ptr_span armKSGlobalPD_Ptr \<subseteq> kernel_data_refs \<and>
        htd_safe domain (hrs_htd (t_hrs_' cstate)) \<and>
        kernel_data_refs = (- domain) \<and>
        globals_list_distinct (- kernel_data_refs) symbol_table globals_list \<and>

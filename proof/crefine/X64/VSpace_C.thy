@@ -1017,8 +1017,8 @@ lemma ccorres_pre_gets_x64KSSKIMPML4_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
                   (\<lambda>s. (\<forall>rv. x64KSSKIMPML4 (ksArchState s) = rv  \<longrightarrow> P rv s))
-                  (P' (ptr_val (pml4_Ptr (symbol_table ''x64KSSKIMPML4''))))
-                          hs (gets (x64KSSKIMPML4 \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+                  (P' (ptr_val x64KSSKIMPML4_Ptr))
+                  hs (gets (x64KSSKIMPML4 \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_symb_exec_l)
        defer
@@ -1069,8 +1069,7 @@ context kernel_m begin
 (* FIXME: move *)
 lemma ccorres_h_t_valid_x64KSSKIMPML4:
   "ccorres r xf P P' hs f (f' ;; g') \<Longrightarrow>
-   ccorres r xf P P' hs f
-    (Guard C_Guard {s'. s' \<Turnstile>\<^sub>c pml4_Ptr (symbol_table ''x64KSSKIMPML4'')} f';; g')"
+   ccorres r xf P P' hs f (Guard C_Guard {s'. s' \<Turnstile>\<^sub>c x64KSSKIMPML4_Ptr} f';; g')"
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_move_c_guards[where P = \<top>])
     apply clarsimp

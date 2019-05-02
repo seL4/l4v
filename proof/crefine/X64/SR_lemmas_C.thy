@@ -2261,7 +2261,7 @@ lemma cap_lift_Some_CapD:
   by (auto simp: cap_lifts cap_lift_defs)
 
 lemma rf_sr_x64KSSKIMPML4:
-  "(s, s') \<in> rf_sr \<Longrightarrow> x64KSSKIMPML4 (ksArchState s) = symbol_table ''x64KSSKIMPML4''"
+  "(s, s') \<in> rf_sr \<Longrightarrow> x64KSSKIMPML4 (ksArchState s) = ptr_val x64KSSKIMPML4_Ptr"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
 
 lemma ghost_assertion_size_logic':

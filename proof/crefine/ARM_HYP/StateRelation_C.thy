@@ -109,10 +109,13 @@ locale kernel = kernel_all_substitute + state_rel
 context state_rel
 begin
 
+abbreviation armUSGlobalPD_Ptr :: "(pde_C[2048]) ptr" where
+  "armUSGlobalPD_Ptr \<equiv> pd_Ptr (symbol_table ''armUSGlobalPD'')"
+
 (* relates fixed adresses *)
 definition
   "carch_globals s \<equiv>
-    (armUSGlobalPD s = symbol_table ''armUSGlobalPD'')"
+    armUSGlobalPD s = ptr_val armUSGlobalPD_Ptr"
 
 (* FIXME ARMHYP is this the right place? MOVE? *)
 definition
@@ -749,9 +752,8 @@ where
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
          (ptr_coerce (intStateIRQNode_' cstate) :: (cte_C[256]) ptr) \<and>
        {ptr_val (intStateIRQNode_' cstate) ..+ 2 ^ (8 + cte_level_bits)} \<subseteq> kernel_data_refs \<and>
-       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
-         (pd_Ptr (symbol_table ''armUSGlobalPD'')) \<and>
-       ptr_span (pd_Ptr (symbol_table ''armUSGlobalPD'')) \<subseteq> kernel_data_refs \<and>
+       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard armUSGlobalPD_Ptr \<and>
+       ptr_span armUSGlobalPD_Ptr \<subseteq> kernel_data_refs \<and>
        htd_safe domain (hrs_htd (t_hrs_' cstate)) \<and>
        kernel_data_refs = (- domain) \<and>
        globals_list_distinct (- kernel_data_refs) symbol_table globals_list \<and>

@@ -2182,8 +2182,7 @@ lemma cap_get_tag_isCap_ArchObject2:
 
 lemma rf_sr_armUSGlobalPD:
   "(s, s') \<in> rf_sr
-   \<Longrightarrow> armUSGlobalPD (ksArchState s)
-         = symbol_table ''armUSGlobalPD''"
+   \<Longrightarrow> armUSGlobalPD (ksArchState s) = ptr_val armUSGlobalPD_Ptr"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
 
 lemma ghost_assertion_size_logic':
