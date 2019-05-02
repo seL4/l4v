@@ -3445,7 +3445,7 @@ lemma createObjects_distinct:
     apply (drule unat_of_nat_minus_1[OF range_cover.range_cover_n_less(1)])
      apply simp
     apply arith
-   apply (simp add:word_bits_def objBitsKO_bounded_low)
+   apply (simp add:word_bits_def objBitsKO_gt_0)
   apply (subst (asm) shiftl_shiftr_id)
     apply (simp add:range_cover_def)
    apply (rule of_nat_power[OF range_cover.range_cover_le_n_less(2)])
@@ -3453,7 +3453,7 @@ lemma createObjects_distinct:
     apply (drule unat_of_nat_minus_1[OF range_cover.range_cover_n_less(1)])
      apply simp
     apply arith
-   apply (simp add:word_bits_def objBitsKO_bounded_low)
+   apply (simp add:word_bits_def objBitsKO_gt_0)
   apply (simp add:of_nat_inj32)
   done
 

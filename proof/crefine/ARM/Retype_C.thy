@@ -3172,11 +3172,6 @@ proof -
     done
 qed
 
-lemma objBitsKO_gt_0:
-  "0 < objBitsKO ko"
-  by (simp add: objBits_simps' archObjSize_def pageBits_def pdeBits_def pteBits_def
-           split: kernel_object.splits arch_kernel_object.splits)
-
 lemma ps_clear_subset:
   assumes pd: "ps_clear x (objBitsKO ko) (s' \<lparr>ksPSpace := (\<lambda>x. if x \<in> as then Some (f x) else ksPSpace s' x) \<rparr>)"
   and    sub: "as' \<subseteq> as"
@@ -3184,7 +3179,7 @@ lemma ps_clear_subset:
   shows  "ps_clear x (objBitsKO ko) (s' \<lparr>ksPSpace := (\<lambda>x. if x \<in> as' then Some (f x) else ksPSpace s' x) \<rparr>)"
   using al pd sub
   apply -
-  apply (simp add: ps_clear_def3 [OF al  objBitsKO_gt_0] dom_if_Some)
+  apply (simp add: ps_clear_def3 [OF al objBitsKO_gt_0] dom_if_Some)
   apply (erule disjoint_subset2 [rotated])
   apply fastforce
   done

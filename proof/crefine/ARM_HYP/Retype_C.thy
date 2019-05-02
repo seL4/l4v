@@ -3714,11 +3714,6 @@ lemma cnc_foldl_foldr:
                 new_cap_addrs_def objBits_simps ko_def power_minus_is_div
           cong: foldr_cong)
 
-lemma objBitsKO_gt_0:
-  "0 < objBitsKO ko"
-  by (simp add: objBits_simps' archObjSize_def machine_bits_defs
-         split: kernel_object.splits arch_kernel_object.splits)
-
 lemma objBitsKO_gt_1:
   "(1 :: word32) < 2 ^ objBitsKO ko"
   by (simp add: objBits_simps' archObjSize_def machine_bits_defs
@@ -3731,7 +3726,7 @@ lemma ps_clear_subset:
   shows  "ps_clear x (objBitsKO ko) (s' \<lparr>ksPSpace := (\<lambda>x. if x \<in> as' then Some (f x) else ksPSpace s' x) \<rparr>)"
   using al pd sub
   apply -
-  apply (simp add: ps_clear_def3 [OF al  objBitsKO_gt_0] dom_if_Some)
+  apply (simp add: ps_clear_def3 [OF al objBitsKO_gt_0] dom_if_Some)
   apply (erule disjoint_subset2 [rotated])
   apply fastforce
   done

@@ -1606,7 +1606,7 @@ lemma new_cap_addrs_fold':
  by (clarsimp simp:new_cap_addrs_def ptr_add_def upto_enum_red'
            shiftl_t2n power_add field_simps)
 
-lemma objBitsKO_bounded_low: "0 < objBitsKO ko"
+lemma objBitsKO_gt_0: "0 < objBitsKO ko"
   apply (case_tac ko)
         apply (simp_all add:objBits_simps' pageBits_def)
   apply (rename_tac arch_kernel_object)
@@ -2035,7 +2035,7 @@ proof -
        apply (subst mult.commute)
        apply (rule word_power_nonzero_32)
          apply (rule of_nat_less_pow_32[OF n_estimate])
-         apply (simp add:word_bits_def objBitsKO_bounded_low ko)
+         apply (simp add:word_bits_def objBitsKO_gt_0 ko)
         apply (simp add:range_cover_def obj_bits_api ko word_bits_def)
        apply (cut_tac not_zero',clarsimp simp:ko)
       apply(clarsimp simp:field_simps ko)
