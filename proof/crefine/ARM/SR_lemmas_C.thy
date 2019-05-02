@@ -2028,8 +2028,6 @@ lemma cap_get_tag_isCap_ArchObject2:
            = (isArchObjectCap cap \<and> isASIDPoolCap (capCap cap))"
   and   "(cap_get_tag cap' = scast cap_page_table_cap)
            = (isArchObjectCap cap \<and> isPageTableCap (capCap cap))"
-  and   "(cap_get_tag cap' = scast cap_page_directory_cap)
-           = (isArchObjectCap cap \<and> isPageDirectoryCap (capCap cap))"
   and   "(cap_get_tag cap' = scast cap_small_frame_cap)
            = (isArchObjectCap cap \<and> isPageCap (capCap cap) \<and> capVPSize (capCap cap) = ARMSmallPage)"
   and   "(cap_get_tag cap' = scast cap_frame_cap)
