@@ -1143,6 +1143,78 @@ lemma decode_page_invocation_wf[wp]:
              wpsimp simp: valid_arch_inv_def valid_page_inv_def)
   done *)
 
+(* FIXME RISCV: move to ArchInvariants *)
+lemma pte_at_eq:
+  "pte_at p s = (ptes_of s p \<noteq> None)"
+  by (auto simp: obj_at_def pte_at_def in_omonad pte_of_def)
+
+(* FIXME RISCV: move to ArchInvariants *)
+lemma user_vtop_canonical_user:
+  "vref < user_vtop \<Longrightarrow> vref \<le> canonical_user"
+  using user_vtop_canonical_user by simp
+
+lemma diminished_pt_cap[simp]:
+  "diminished (ArchObjectCap (PageTableCap p m)) cap = (cap = ArchObjectCap (PageTableCap p m))"
+  apply (cases cap; simp add: diminished_def mask_cap_def cap_rights_update_def)
+  apply (rename_tac acap, case_tac acap; simp add: acap_rights_update_def)
+  apply auto
+  done
+
+lemma ptrFromPAddr_addr_from_ppn:
+  "is_aligned pt_ptr table_size \<Longrightarrow>
+   ptrFromPAddr (addr_from_ppn (ucast (addrFromPPtr pt_ptr >> pageBits))) = pt_ptr"
+  apply (simp add: addr_from_ppn_def ucast_ucast_mask bit_simps)
+  apply (frule is_aligned_addrFromPPtr[simplified bit_simps])
+  apply (simp add: aligned_shiftr_mask_shiftl mask_len_id[where 'a=machine_word_len, simplified])
+  done
+
+(* FIXME RISCV: move to ArchInvariants *)
+lemma pt_bits_left_0[simp]:
+  "(pt_bits_left level = pageBits) = (level = 0)"
+  by (auto simp: pt_bits_left_def bit_simps)
+
+(* FIXME RISCV: move to ArchInvariants *)
+lemma pt_lookup_slot_vs_lookup_slotI:
+  "\<lbrakk> vspace_for_asid asid s = Some pt_ptr;
+     pt_lookup_slot pt_ptr vref (ptes_of s) = Some (level, slot) \<rbrakk>
+   \<Longrightarrow> vs_lookup_slot level asid vref s = Some (level, slot) \<and> level \<le> max_pt_level"
+  unfolding pt_lookup_slot_def pt_lookup_slot_from_level_def vs_lookup_slot_def
+  apply (clarsimp simp: in_omonad)
+  apply (drule (1) pt_lookup_vs_lookupI, simp)
+  apply (drule vs_lookup_level)
+  apply (fastforce dest: pt_walk_max_level)
+  done
+
+(* FIXME RISCV: move to ArchInvariants *)
+lemma minus_one_max_pt_level[simp]:
+  "(level - 1 = max_pt_level) = (level = asid_pool_level)"
+  by (simp add: level_defs bit0.minus_1_eq)
+
+lemma decode_pt_inv_map_wf[wp]:
+  "arch_cap = PageTableCap pt_ptr pt_map_data \<Longrightarrow>
+   \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
+    cte_wp_at (diminished (ArchObjectCap arch_cap)) slot and
+    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s)\<rbrace>
+    decode_pt_inv_map label args slot arch_cap excaps
+   \<lbrace>valid_arch_inv\<rbrace>,-"
+  unfolding decode_pt_inv_map_def Let_def
+  apply wpsimp
+  apply (clarsimp simp: valid_arch_inv_def valid_pti_def pte_at_eq invalid_pte_at_def
+                        wellformed_pte_def valid_cap_def cte_wp_at_caps_of_state)
+  apply (rename_tac level p)
+  apply (prop_tac "args!0 \<in> user_region")
+   apply (simp add: wellformed_mapdata_def user_region_def user_vtop_canonical_user)
+  apply (rule conjI, clarsimp simp: valid_arch_cap_def wellformed_mapdata_def vspace_for_asid_def)
+  apply (rule conjI, clarsimp simp: is_arch_update_def is_cap_simps cap_master_cap_simps)
+  apply (simp add: ptrFromPAddr_addr_from_ppn cap_aligned_def)
+  apply (drule (1) pt_lookup_slot_vs_lookup_slotI)
+  apply (rule_tac x=level in exI, simp add: vm_level_not_less_zero)
+  apply (clarsimp simp: obj_at_def)
+  apply (rule conjI, clarsimp)
+  apply (drule valid_table_caps_pdD, clarsimp)
+  apply (clarsimp simp: in_omonad)
+  done
+
 lemma decode_page_table_invocation_wf[wp]:
   "arch_cap = PageTableCap pt_ptr pt_map_data \<Longrightarrow>
    \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
@@ -1150,41 +1222,76 @@ lemma decode_page_table_invocation_wf[wp]:
     (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s)\<rbrace>
     decode_page_table_invocation label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
-  sorry (* FIXME RISCV
-  apply (simp add: arch_decode_invocation_def decode_page_table_invocation_def
-                   Let_def split_def is_final_cap_def
-             cong: if_cong split del: if_split)
-  apply ((wp whenE_throwError_wp lookup_pd_slot_wp find_vspace_for_asid_lookup_vspace_wp
-             get_pde_wp
-           | wpc
-           | simp add: valid_arch_inv_def valid_pti_def unlessE_whenE vs_cap_ref_def
-                 split del: if_split)+)[1]
-  apply (rule conjI; clarsimp simp: is_arch_diminished_def is_cap_simps
-                                elim!: cte_wp_at_weakenE)
-  apply (rule conjI; clarsimp)
-  apply (drule_tac x=ref in spec; erule impE; clarsimp)
-   apply (fastforce elim!: is_aligned_pml4)
-  apply (frule valid_arch_cap_typ_at; clarsimp)
-  apply (strengthen not_in_global_refs_vs_lookup, rule conjI, fastforce)
-  apply (clarsimp simp: neq_Nil_conv)
-  apply (thin_tac "Ball S P" for S P)
-  apply (clarsimp simp: cte_wp_at_caps_of_state diminished_table_cap_simps valid_vm_rights_def
-                           is_arch_update_def cap_master_cap_def is_cap_simps)
-  apply (rule conjI)
-   apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce,
-          clarsimp simp: valid_cap_simps cap_aligned_def order_le_less_trans[OF word_and_le2])
-  apply (frule empty_table_pt_capI; clarsimp)
-  apply (clarsimp simp: vspace_at_asid_def; drule (2) vs_lookup_invs_ref_is_unique; clarsimp)
-  apply (clarsimp simp: get_pd_index_def get_pdpt_index_def get_pml4_index_def)
-  apply (rule conjI[rotated], simp add: bit_simps mask_def, word_bitwise)
-  apply (erule rsubst[where P="\<lambda>r. (r \<rhd> p) s" for p s])
-  apply (clarsimp simp: mask_def bit_simps; word_bitwise)
-  done *)
+  unfolding decode_page_table_invocation_def is_final_cap_def
+  by (wpsimp simp: valid_arch_inv_def valid_pti_def valid_arch_cap_def valid_cap_def
+                   cte_wp_at_caps_of_state is_arch_diminished_def is_cap_simps)
 
 lemma cte_wp_at_eq_simp:
   "cte_wp_at ((=) cap) = cte_wp_at (\<lambda>c. c = cap)"
-  apply (rule arg_cong [where f=cte_wp_at])
-  apply force
+  by (force intro: arg_cong [where f=cte_wp_at])
+
+lemma asid_low_hi_cast:
+  "is_aligned asid_hi asid_low_bits \<Longrightarrow>
+   ucast (ucast asid_low + (asid_hi::asid)) = (asid_low :: asid_low_index)"
+  apply (simp add: is_aligned_nth asid_low_bits_def)
+  apply (subst word_plus_and_or_coroll; (word_bitwise, simp))
+  done
+
+lemma decode_asid_pool_invocation_wf[wp]:
+  "arch_cap = ASIDPoolCap ap asid \<Longrightarrow>
+   \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
+    cte_wp_at (diminished (ArchObjectCap arch_cap)) slot and
+    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s) and
+    (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> (fst x))\<rbrace>
+   decode_asid_pool_invocation label args slot arch_cap excaps
+   \<lbrace>valid_arch_inv\<rbrace>, -"
+  unfolding decode_asid_pool_invocation_def Let_def
+  apply wpsimp
+  apply (rule ccontr, erule notE[where P="valid_arch_inv i s" for i s])
+  apply (clarsimp simp: valid_arch_inv_def valid_apinv_def pool_for_asid_def word_neq_0_conv
+                        cte_wp_at_caps_of_state neq_Nil_conv obj_at_def in_omonad valid_cap_def
+                        asid_low_hi_cast asid_high_bits_of_add_ucast)
+  done
+
+lemma decode_asid_control_invocation_wf[wp]:
+  "arch_cap = ASIDControlCap \<Longrightarrow>
+   \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
+    cte_wp_at (diminished (ArchObjectCap arch_cap)) slot and
+    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s) and
+    (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> (fst x))\<rbrace>
+   decode_asid_control_invocation label args slot ASIDControlCap excaps
+   \<lbrace>valid_arch_inv\<rbrace>, -"
+  unfolding decode_asid_control_invocation_def valid_arch_inv_def
+  apply (simp add: Let_def split_def cong: if_cong split del: if_split)
+  apply ((wp whenE_throwError_wp check_vp_wpR ensure_empty_stronger
+         | wpc | simp add: valid_arch_inv_def valid_aci_def is_aligned_shiftl_self)+)[1]
+          apply (rule_tac Q'= "\<lambda>rv. real_cte_at rv
+                                     and ex_cte_cap_wp_to is_cnode_cap rv
+                                     and (\<lambda>s. descendants_of (snd (excaps!0)) (cdt s) = {})
+                                     and cte_wp_at (\<lambda>c. \<exists>idx. c = UntypedCap False frame pageBits idx) (snd (excaps!0))
+                                     and (\<lambda>s. riscv_asid_table (arch_state s) free = None)"
+                  in hoare_post_imp_R)
+           apply (simp add: lookup_target_slot_def)
+           apply wp
+          apply (clarsimp simp: cte_wp_at_def)
+         apply (wpsimp wp: ensure_no_children_sp select_ext_weak_wp select_wp whenE_throwError_wp)+
+  apply (rule conjI, fastforce)
+  apply (cases excaps, simp)
+  apply (case_tac list, simp)
+  apply clarsimp
+  apply (rule conjI)
+   apply clarsimp
+   apply (simp add: ex_cte_cap_wp_to_def)
+   apply (rule_tac x=ac in exI)
+   apply (rule_tac x=ba in exI)
+   apply (clarsimp simp add: cte_wp_at_caps_of_state)
+   apply (drule (1) caps_of_state_valid[rotated])+
+   apply (drule (1) diminished_is_update)+
+   apply (clarsimp simp: is_cap_simps cap_rights_update_def)
+  apply (clarsimp simp add: cte_wp_at_caps_of_state)
+  apply (drule (1) caps_of_state_valid[rotated])+
+  apply (drule (1) diminished_is_update)+
+  apply (clarsimp simp: cap_rights_update_def)
   done
 
 lemma arch_decode_inv_wf[wp]:
@@ -1194,84 +1301,7 @@ lemma arch_decode_inv_wf[wp]:
     (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> (fst x))\<rbrace>
      arch_decode_invocation label args x_slot slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
-  sorry (* FIXME RISCV
-  apply (cases arch_cap)
-         (* ASIDPoolCap \<rightarrow> RISCVASIDPoolAssign *)
-          apply (rename_tac word1 word2)
-          apply (simp add: arch_decode_invocation_def Let_def split_def
-                     cong: if_cong split del: if_split)
-          apply (rule hoare_pre)
-           apply ((wp whenE_throwError_wp check_vp_wpR ensure_empty_stronger select_wp select_ext_weak_wp
-                  | wpc | simp add: valid_arch_inv_def valid_apinv_def)+)[1]
-          apply (simp add: valid_arch_inv_def valid_apinv_def)
-          apply (intro allI impI ballI)
-          apply (elim conjE exE)
-          apply simp
-          apply (clarsimp simp: dom_def neq_Nil_conv)
-          apply (thin_tac "Ball S P" for S P)+
-          apply (clarsimp simp: valid_cap_def)
-          apply (rule conjI)
-           apply (clarsimp simp: obj_at_def)
-          apply (subgoal_tac "asid_low_bits_of (ucast xa + word2) = xa")
-            apply simp
-           apply (simp add: is_aligned_nth)
-           apply (subst word_plus_and_or_coroll)
-            apply (rule word_eqI)
-            apply (clarsimp simp: word_size word_bits_def nth_ucast)
-            apply (drule test_bit_size)
-            apply (simp add: word_size asid_low_bits_def)
-           apply (rule word_eqI)
-          apply (clarsimp simp: asid_bits_of_defs asid_bits_defs word_size word_bits_def nth_ucast)
-          apply (rule conjI)
-           apply (clarsimp simp add: cte_wp_at_caps_of_state)
-           apply (rename_tac c c')
-           apply (frule_tac cap=c' in caps_of_state_valid, assumption)
-           apply (drule (1) diminished_is_update)
-           apply (clarsimp simp: is_pml4_cap_def cap_rights_update_def acap_rights_update_def)
-         apply (clarsimp simp: word_neq_0_conv asid_high_bits_of_def)
-         apply (drule vs_lookup_atI, erule_tac s="word2 >> asid_low_bits" in rsubst)
-         apply (simp add: asid_bits_defs aligned_shift[OF ucast_less[where 'b=9], simplified])
-        (* ASIDControlCap \<rightarrow> RISCVASIDControlMakePool *)
-         apply (simp add: arch_decode_invocation_def Let_def split_def
-                   cong: if_cong split del: if_split)
-         apply (rule hoare_pre)
-          apply ((wp whenE_throwError_wp check_vp_wpR ensure_empty_stronger
-                 | wpc | simp add: valid_arch_inv_def valid_aci_def is_aligned_shiftl_self)+)[1]
-                 apply (rule_tac Q'= "\<lambda>rv. real_cte_at rv
-                                            and ex_cte_cap_wp_to is_cnode_cap rv
-                                            and (\<lambda>s. descendants_of (snd (excaps!0)) (cdt s) = {})
-                                            and cte_wp_at (\<lambda>c. \<exists>idx. c = UntypedCap False frame pageBits idx) (snd (excaps!0))
-                                            and (\<lambda>s. riscv_asid_table (arch_state s) free = None)"
-                         in hoare_post_imp_R)
-                  apply (simp add: lookup_target_slot_def)
-                  apply wp
-                 apply (clarsimp simp: cte_wp_at_def)
-                apply (wp ensure_no_children_sp select_ext_weak_wp select_wp whenE_throwError_wp | wpc | simp)+
-         apply clarsimp
-         apply (rule conjI, fastforce)
-         apply (cases excaps, simp)
-         apply (case_tac list, simp)
-         apply clarsimp
-         apply (rule conjI)
-          apply clarsimp
-          apply (simp add: ex_cte_cap_wp_to_def)
-          apply (rule_tac x=ac in exI)
-          apply (rule_tac x=ba in exI)
-          apply (clarsimp simp add: cte_wp_at_caps_of_state)
-          apply (drule (1) caps_of_state_valid[rotated])+
-          apply (drule (1) diminished_is_update)+
-          apply (clarsimp simp: is_cap_simps cap_rights_update_def)
-         apply (clarsimp simp add: cte_wp_at_caps_of_state)
-         apply (drule (1) caps_of_state_valid[rotated])+
-         apply (drule (1) diminished_is_update)+
-         apply (clarsimp simp: cap_rights_update_def)
-      (* PageCap *)
-      apply (simp add: arch_decode_invocation_def)
-      apply (wp, simp, simp)
-     (* PageTableCap *)
-     apply (simp add: arch_decode_invocation_def)
-     apply (wp, simp, simp)
-  done *)
+  unfolding arch_decode_invocation_def by wpsimp fastforce
 
 declare word_less_sub_le [simp]
 

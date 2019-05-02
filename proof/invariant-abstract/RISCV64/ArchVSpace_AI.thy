@@ -329,6 +329,7 @@ definition
                 \<and> valid_pte level pte s
                 \<and> pte_ref pte = Some p' \<and> obj_refs (ArchObjectCap acap) = {p'}
                 \<and> (\<exists>ao. ko_at (ArchObj ao) p' s \<and> valid_vspace_obj (level-1) ao s)
+                \<and> pts_of s p' = Some empty_pt
                 \<and> vref \<in> user_region) and
        K (is_PageTableCap acap \<and> cap_asid_arch acap \<noteq> None)
    | PageTableUnmap acap cslot \<Rightarrow>
