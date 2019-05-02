@@ -1774,6 +1774,11 @@ lemma pt_slot_offset_vref_for_level_eq:
   "level < level' \<Longrightarrow> pt_slot_offset level pt_ptr (vref_for_level vref level') = pt_ptr"
   by (simp add: vref_for_level_def pt_slot_offset_vref)
 
+lemma vspace_for_pool_None_upd_idem:
+  "vspace_for_pool pool_ptr asid ((asid_pools_of s)(p := None)) = Some table_ptr
+   \<Longrightarrow> vspace_for_pool pool_ptr asid (asid_pools_of s) = Some table_ptr"
+  by (clarsimp simp: vspace_for_pool_def obind_def split: option.splits if_splits)
+
 lemma vs_lookup_max_pt_levelD:
   "vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, root_pt)
    \<Longrightarrow> \<exists>pool_ptr. pool_for_asid asid s = Some pool_ptr \<and>
@@ -1784,6 +1789,11 @@ lemma vs_lookup_max_pt_levelI:
   "\<lbrakk> pool_for_asid asid s = Some pool_ptr;
      vspace_for_pool pool_ptr asid (asid_pools_of s) = Some root_pt \<rbrakk>
    \<Longrightarrow> vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, root_pt)"
+  by (clarsimp simp: vs_lookup_table_def in_omonad)
+
+lemma vs_lookup_table_max_pt_level_SomeD:
+  "\<lbrakk> vs_lookup_table max_pt_level asid vref s = Some (level, p) \<rbrakk>
+   \<Longrightarrow> \<exists>pool. pool_for_asid asid s = Some pool \<and> vspace_for_pool pool asid (asid_pools_of s) = Some p"
   by (clarsimp simp: vs_lookup_table_def in_omonad)
 
 lemma vs_lookup_max_pt_valid:
@@ -1799,6 +1809,11 @@ lemma vs_lookup_max_pt_valid:
 lemma aligned_vref_for_level_eq:
   "is_aligned vref (pt_bits_left level) = (vref_for_level vref level = vref)"
   unfolding vref_for_level_def using is_aligned_neg_mask_eq' by blast
+
+lemma is_aligned_table_base_pte_bits[simp]:
+  "is_aligned (table_base p) pte_bits"
+  unfolding pte_bits_def
+  by (simp add: bit_simps is_aligned_neg_mask)
 
 lemma pt_slot_offset_offset:
   "is_aligned pt pt_bits \<Longrightarrow>
@@ -1970,6 +1985,19 @@ lemma vs_lookup_split:
   apply (subst vs_lookup_split_max_pt_level, simp)
   apply (rule opt_bind_cong, rule refl)
   apply clarsimp
+  done
+
+lemma vs_lookup_table_split_last_Some:
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); level < max_pt_level \<rbrakk>
+   \<Longrightarrow> \<exists>p' pte. vs_lookup_table (level+1) asid vref s = Some (level+1, p')
+            \<and> ptes_of s (pt_slot_offset (level + 1) p' vref) = Some pte \<and> p = pptr_from_pte pte
+            \<and> is_PageTablePTE pte"
+  apply (clarsimp simp: vs_lookup_table_def in_omonad asid_pool_level_eq
+                         vm_level_less_max_pt_level)
+  apply (subst (asm) pt_walk_split_Some[where level'="level+1"])
+    apply (clarsimp simp add: less_imp_le bit0.plus_one_leq)+
+  apply (subst (asm) (2) pt_walk.simps)
+  apply (clarsimp simp: in_omonad split: if_splits)
   done
 
 lemma vs_lookup_split_max_pt_level_Some:

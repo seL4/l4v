@@ -67,6 +67,18 @@ lemma vs_lookup_table_target:
   apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def split: if_split_asm)
   done
 
+lemma vs_lookup_table_targetD:
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); level \<le> max_pt_level \<rbrakk>
+   \<Longrightarrow> \<exists>p'. vs_lookup_target (level+1) asid vref s = Some (level+1, p')"
+  apply (case_tac "level < max_pt_level")
+   apply (clarsimp dest!: vs_lookup_table_split_last_Some)
+   apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def in_omonad pte_ref_def)
+   apply (fastforce dest: vm_level_less_plus_1_mono split: pte.splits)
+  apply (clarsimp simp: max_pt_level_plus_one vs_lookup_target_def vs_lookup_slot_def in_omonad
+                         pte_ref_def pool_for_asid_vs_lookup)
+  apply (fastforce dest!: vs_lookup_table_max_pt_level_SomeD)
+  done
+
 lemma valid_vs_lookupD:
   "\<lbrakk> vs_lookup_target bot_level asid vref s = Some (level, p) ;
      vref \<in> user_region; valid_vs_lookup s \<rbrakk>
@@ -75,6 +87,12 @@ lemma valid_vs_lookupD:
                     \<and> vs_cap_ref cap = Some (asid, vref_for_level vref level))"
   unfolding valid_vs_lookup_def
   by auto
+
+lemma vs_lookup_table_asid_not_0:
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); level \<le> max_pt_level;
+     vref \<in> user_region; valid_vs_lookup s \<rbrakk>
+   \<Longrightarrow> asid \<noteq> 0"
+  by (fastforce dest!: vs_lookup_table_targetD valid_vs_lookupD)
 
 lemma vspace_for_asid_from_lookup_target:
   "\<lbrakk> vs_lookup_target asid_pool_level asid vref s = Some (asid_pool_level, pt_ptr);
