@@ -1607,7 +1607,7 @@ lemma cteDeleteOne_ccorres:
 
 lemma getIRQSlot_ccorres_stuff:
   "\<lbrakk> (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow>
-   CTypesDefs.ptr_add (intStateIRQNode_' (globals s')) (uint (irq :: 8 word))
+   CTypesDefs.ptr_add intStateIRQNode_Ptr (uint (irq :: 8 word))
      = Ptr (irq_node' s + 2 ^ cte_level_bits * ucast irq)"
   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def
                             cinterrupt_relation_def)
@@ -1625,6 +1625,7 @@ lemma deletingIRQHandler_ccorres:
    apply (rule_tac r'="\<lambda>rv rv'. rv' = Ptr rv"
                 and xf'="slot_'" in ccorres_split_nothrow)
        apply (simp add: sint_ucast_eq_uint is_down)
+       apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
        apply (rule ccorres_move_array_assertion_irq)
        apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
 
@@ -1632,8 +1633,8 @@ lemma deletingIRQHandler_ccorres:
        apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
                              locateSlot_conv)
        apply (simp add: bind_def simpler_gets_def return_def
-          ucast_nat_def uint_up_ucast is_up)
-       apply (erule getIRQSlot_ccorres_stuff)
+                        ucast_nat_def uint_up_ucast is_up)
+       apply (erule getIRQSlot_ccorres_stuff[simplified])
       apply ceqv
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_symb_exec_l)
@@ -1651,7 +1652,7 @@ lemma deletingIRQHandler_ccorres:
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
                         irq_opt_relation_def Kernel_C.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp:uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
+  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
   done
 
 (* 6 = wordRadix,

@@ -1524,8 +1524,7 @@ proof (intro impI allI)
   note irq = h_t_valid_eq_array_valid[where 'a=cte_C]
     h_t_array_valid_ptr_retyps_gen[where p="Ptr ptr", simplified, OF szo empty]
 
-  with rf have irq: "h_t_valid (hrs_htd ?ks') c_guard
-      (ptr_coerce (intStateIRQNode_' (globals x)) :: (cte_C[256]) ptr)"
+  with rf have irq: "h_t_valid (hrs_htd ?ks') c_guard intStateIRQNode_array_Ptr"
     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
     apply (simp add: hrs_htd_update h_t_valid_eq_array_valid)
     apply (simp add: h_t_array_valid_ptr_retyps_gen[OF szo] empty)
@@ -3104,7 +3103,7 @@ proof -
 
   note ht_rest = clift_eq_h_t_valid_eq[OF cl_rest, simplified]
 
-  note irq = h_t_valid_eq_array_valid[where 'a=cte_C and p="ptr_coerce x" for x]
+  note irq = h_t_valid_eq_array_valid[where p=intStateIRQNode_array_Ptr]
     h_t_array_valid_ptr_retyps_gen[where n=1, simplified, OF refl empty_smaller(1)]
     h_t_array_valid_ptr_retyps_gen[where p="Ptr x" for x, simplified, OF refl empty_smaller(2)]
 
@@ -5830,10 +5829,8 @@ lemma ccorres_typ_region_bytes_dummy:
       apply (simp add: invs_pspace_aligned')+
   apply (frule typ_bytes_cpspace_relation_clift_gptr[where ptr'="armKSGlobalPD_Ptr"])
         apply (simp add: invs_pspace_aligned')+
-  apply (frule typ_bytes_cpspace_relation_clift_gptr[where
-            ptr'="ptr_coerce x :: (cte_C[256]) ptr" for x])
+  apply (frule typ_bytes_cpspace_relation_clift_gptr[where ptr'="intStateIRQNode_array_Ptr"])
         apply (simp add: invs_pspace_aligned')+
-    apply (simp add: cte_level_bits_def cte_C_size, simp+)
   apply (simp add: carch_state_relation_def cmachine_state_relation_def)
   apply (simp add: cpspace_relation_def htd_safe_typ_region_bytes)
   apply (simp add: h_t_valid_clift_Some_iff)

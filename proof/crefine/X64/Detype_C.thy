@@ -2010,7 +2010,7 @@ proof -
 
    moreover from sr have
      "h_t_valid (typ_region_bytes ptr bits (hrs_htd (t_hrs_' (globals s'))))
-       c_guard (ptr_coerce (intStateIRQNode_' (globals s')) :: (cte_C[256]) ptr)"
+       c_guard intStateIRQNode_array_Ptr"
     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
     apply (simp add: h_t_valid_typ_region_bytes)
     apply (simp add: upto_intvl_eq al)

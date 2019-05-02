@@ -812,7 +812,7 @@ fun
 
 (* FIXME x64: 126? was 192 before, investigate naming *)
 definition
-  cinterrupt_relation :: "interrupt_state \<Rightarrow> cte_C ptr \<Rightarrow> (machine_word[126]) \<Rightarrow> bool"
+  cinterrupt_relation :: "interrupt_state \<Rightarrow> 'a ptr \<Rightarrow> (machine_word[126]) \<Rightarrow> bool"
 where
   "cinterrupt_relation airqs cnode cirqs \<equiv>
      cnode = Ptr (intStateIRQNode airqs) \<and>
@@ -910,7 +910,19 @@ where
     = (\<forall>(start, end) \<in> rs. region_actually_is_bytes' start (unat ((end + 1) - start)) (hrs_htd hrs)
         \<and> heap_list_is_zero (hrs_mem hrs) start (unat ((end + 1) - start)))"
 
-definition (in state_rel)
+context state_rel begin
+
+\<comment> \<open>The IRQ node is a global array of CTEs.\<close>
+abbreviation intStateIRQNode_array_Ptr :: "(cte_C[256]) ptr" where
+  "intStateIRQNode_array_Ptr \<equiv> Ptr (symbol_table ''intStateIRQNode'')"
+
+\<comment> \<open>But for compatibility with older proofs (written when the IRQ Node was a global pointer
+    initialised during boot), it is sometimes convenient to treat the IRQ node pointer as
+    a pointer to a CTE.\<close>
+abbreviation intStateIRQNode_Ptr :: "cte_C ptr" where
+  "intStateIRQNode_Ptr \<equiv> Ptr (symbol_table ''intStateIRQNode'')"
+
+definition
   cstate_relation :: "KernelStateData_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
   cstate_relation_def:
@@ -925,7 +937,7 @@ where
        cbitmap_L2_relation (ksReadyQueuesL2Bitmap_' cstate) (ksReadyQueuesL2Bitmap astate) \<and>
        ksCurThread_' cstate = (tcb_ptr_to_ctcb_ptr (ksCurThread astate)) \<and>
        ksIdleThread_' cstate = (tcb_ptr_to_ctcb_ptr (ksIdleThread astate)) \<and>
-       cinterrupt_relation (ksInterruptState astate) (intStateIRQNode_' cstate) (intStateIRQTable_' cstate) \<and>
+       cinterrupt_relation (ksInterruptState astate) intStateIRQNode_array_Ptr (intStateIRQTable_' cstate) \<and>
        cscheduler_action_relation (ksSchedulerAction astate)
                                  (ksSchedulerAction_' cstate) \<and>
        carch_state_relation (ksArchState astate) cstate \<and>
@@ -935,9 +947,8 @@ where
        apsnd fst (ghost'state_' cstate) = (gsUserPages astate, gsCNodes astate) \<and>
        ghost_size_rel (ghost'state_' cstate) (gsMaxObjectSize astate) \<and>
        ksWorkUnitsCompleted_' cstate = ksWorkUnitsCompleted astate \<and>
-       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
-         (ptr_coerce (intStateIRQNode_' cstate) :: (cte_C[256]) ptr) \<and>
-       {ptr_val (intStateIRQNode_' cstate) ..+ 2 ^ (8 + cte_level_bits)} \<subseteq> kernel_data_refs \<and>
+       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard intStateIRQNode_array_Ptr \<and>
+       ptr_span intStateIRQNode_array_Ptr \<subseteq> kernel_data_refs \<and>
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard x64KSSKIMPML4_Ptr \<and>
        ptr_span x64KSSKIMPML4_Ptr \<subseteq> kernel_data_refs \<and>
        htd_safe domain (hrs_htd (t_hrs_' cstate)) \<and>
@@ -948,6 +959,8 @@ where
        ksDomScheduleIdx_' cstate = of_nat (ksDomScheduleIdx astate) \<and>
        ksCurDomain_' cstate = ucast (ksCurDomain astate) \<and>
        ksDomainTime_' cstate = ksDomainTime astate"
+
+end
 
 definition
   ccap_relation :: "capability \<Rightarrow> cap_C \<Rightarrow> bool"

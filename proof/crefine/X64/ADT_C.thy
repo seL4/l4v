@@ -1567,7 +1567,7 @@ where
     ksIdleThread = ctcb_ptr_to_tcb_ptr (ksIdleThread_' s),
     ksSchedulerAction = cscheduler_action_to_H (ksSchedulerAction_' s),
     ksInterruptState =
-      cint_state_to_H (intStateIRQNode_' s) (intStateIRQTable_' s),
+      cint_state_to_H intStateIRQNode_array_Ptr (intStateIRQTable_' s),
     ksWorkUnitsCompleted = ksWorkUnitsCompleted_' s,
     ksArchState = carch_state_to_H s,
     ksMachineState = cstate_to_machine_H s\<rparr>"

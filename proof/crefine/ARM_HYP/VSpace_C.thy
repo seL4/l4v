@@ -2313,8 +2313,7 @@ lemma setVMRoot_ccorres:
    apply (rule_tac x=ta in exI, auto split: option.splits)[1]
    apply (frule (2) sym_refs_tcb_vcpu', clarsimp)
    apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def projectKOs)
-  apply (clarsimp simp: ptr_val_tcb_ptr_mask'
-                        size_of_def cte_level_bits_def
+  apply (clarsimp simp: size_of_def cte_level_bits_def
                         tcbVTableSlot_def tcb_cnode_index_defs
                         ccap_rights_relation_def cap_rights_to_H_def
                         to_bool_def true_def allRights_def

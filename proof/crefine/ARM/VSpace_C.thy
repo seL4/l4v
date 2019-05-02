@@ -1501,8 +1501,7 @@ lemma setVMRoot_ccorres:
    apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
    apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
    apply (auto simp: isCap_simps valid_cap'_def mask_def)[1]
-  apply (clarsimp simp: ptr_val_tcb_ptr_mask'
-                        size_of_def cte_level_bits_def
+  apply (clarsimp simp: size_of_def cte_level_bits_def
                         tcbVTableSlot_def tcb_cnode_index_defs
                         ccap_rights_relation_def cap_rights_to_H_def
                         to_bool_def true_def allRights_def

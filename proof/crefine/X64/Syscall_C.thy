@@ -1577,7 +1577,7 @@ lemma ccorres_ntfn_cases:
 lemma getIRQSlot_ccorres2:
   "ccorres ((=) \<circ> Ptr) slot_'
           \<top> UNIV hs
-      (getIRQSlot irq) (\<acute>slot :== CTypesDefs.ptr_add \<acute>intStateIRQNode (uint (ucast irq :: machine_word)))"
+      (getIRQSlot irq) (\<acute>slot :== CTypesDefs.ptr_add intStateIRQNode_Ptr (uint (ucast irq :: machine_word)))"
   apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
@@ -1592,16 +1592,14 @@ lemma getIRQSlot_ccorres3:
   "(\<And>rv. ccorresG rf_sr \<Gamma> r xf (P rv) (P' rv) hs (f rv) c) \<Longrightarrow>
    ccorresG rf_sr \<Gamma> r xf
      (\<lambda>s. P (intStateIRQNode (ksInterruptState s) + 2 ^ cte_level_bits * of_nat (unat irq)) s)
-     {s. s \<in> P' (ptr_val (CTypesDefs.ptr_add (intStateIRQNode_' (globals s)) (uint (ucast irq :: machine_word))))} hs
+     {s. s \<in> P' (ptr_val (CTypesDefs.ptr_add intStateIRQNode_Ptr (uint (ucast irq :: machine_word))))} hs
      (getIRQSlot irq >>= f) c"
   apply (simp add: getIRQSlot_def locateSlot_conv liftM_def getInterruptState_def)
-  apply (rule ccorres_symb_exec_l'[OF _ _ gets_sp])
-    apply (rule ccorres_guard_imp2, assumption)
-    apply (clarsimp simp: getIRQSlot_ccorres_stuff
-                          objBits_simps cte_level_bits_def
-                          ucast_nat_def uint_ucast uint_up_ucast is_up)
-   apply wp+
-  done
+  apply (intro ccorres_symb_exec_l'[OF _ _gets_sp] empty_fail_gets gets_inv)
+  apply (rule ccorres_guard_imp2, assumption)
+  by (clarsimp simp: cte_C_size cte_level_bits_def ucast_nat_def
+                     rf_sr_def cstate_relation_def Let_def cinterrupt_relation_def
+              elim!: rsubst[of "\<lambda>t. _ \<in> P' t"])
 
 lemma scast_maxIRQ_less_eq:
   fixes b :: irq
@@ -1718,6 +1716,9 @@ lemma handleInterrupt_ccorres:
      apply (rule getIRQSlot_ccorres3)
      apply (rule ccorres_getSlotCap_cte_at)
      apply (rule_tac P="cte_at' rv" in ccorres_cross_over_guard)
+     apply (rule ccorres_Guard_Seq)
+     apply (rule ccorres_Guard_Seq)
+     apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
      apply (rule ptr_add_assertion_irq_guard[unfolded dc_def])
      apply (rule ccorres_move_array_assertion_irq ccorres_move_c_guard_cte)+
      apply ctac
@@ -1792,22 +1793,20 @@ lemma handleInterrupt_ccorres:
   apply (clarsimp simp: Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def
         cte_wp_at_ctes_of ucast_ucast_b is_up)
   apply (intro conjI impI)
-       apply clarsimp
-       apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
-       apply (clarsimp simp: typ_heap_simps')
-       apply (simp add: cap_get_tag_isCap)
-       apply (clarsimp simp: isCap_simps)
-       apply (frule cap_get_tag_isCap_unfolded_H_cap)
-       apply (frule cap_get_tag_to_H, assumption)
-       apply (clarsimp simp: to_bool_def)
-      apply (cut_tac un_ui_le[where b = 191 and a = irq,
-             simplified word_size])
-      apply (simp add: ucast_eq_0 is_up_def source_size_def
-                       target_size_def word_size unat_gt_0
-            | subst array_assertion_abs_irq[rule_format, OF conjI])+
-     apply (erule exE conjE)+
-     apply (erule(1) rf_sr_cte_at_valid[OF ctes_of_cte_at])
-    apply (clarsimp simp:nat_le_iff)
+     apply clarsimp
+     apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
+     apply (clarsimp simp: typ_heap_simps')
+     apply (simp add: cap_get_tag_isCap)
+     apply (clarsimp simp: isCap_simps)
+     apply (frule cap_get_tag_isCap_unfolded_H_cap)
+     apply (frule cap_get_tag_to_H, assumption)
+     apply (clarsimp simp: to_bool_def)
+    apply (cut_tac un_ui_le[where b = 191 and a = irq,
+           simplified word_size])
+    apply (simp add: ucast_eq_0 is_up_def source_size_def
+                     target_size_def word_size unat_gt_0
+          | subst array_assertion_abs_irq[rule_format, OF conjI])+
+   apply (clarsimp simp:nat_le_iff)
    apply (clarsimp simp: IRQReserved_def)+
   done
 end

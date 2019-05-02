@@ -1606,7 +1606,7 @@ lemma ccorres_ntfn_cases:
 lemma getIRQSlot_ccorres2:
   "ccorres ((=) \<circ> Ptr) slot_'
           \<top> UNIV hs
-      (getIRQSlot irq) (\<acute>slot :== CTypesDefs.ptr_add \<acute>intStateIRQNode (uint (ucast irq :: word32)))"
+      (getIRQSlot irq) (\<acute>slot :== CTypesDefs.ptr_add intStateIRQNode_Ptr (uint (ucast irq :: word32)))"
   apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
@@ -1621,17 +1621,14 @@ lemma getIRQSlot_ccorres3:
   "(\<And>rv. ccorresG rf_sr \<Gamma> r xf (P rv) (P' rv) hs (f rv) c) \<Longrightarrow>
    ccorresG rf_sr \<Gamma> r xf
      (\<lambda>s. P (intStateIRQNode (ksInterruptState s) + 2 ^ cte_level_bits * of_nat (unat irq)) s)
-     {s. s \<in> P' (ptr_val (CTypesDefs.ptr_add (intStateIRQNode_' (globals s)) (uint (ucast irq :: word32))))} hs
+     {s. s \<in> P' (ptr_val (CTypesDefs.ptr_add intStateIRQNode_Ptr (uint (ucast irq :: word32))))} hs
      (getIRQSlot irq >>= f) c"
   apply (simp add: getIRQSlot_def locateSlot_conv liftM_def getInterruptState_def)
-  apply (rule ccorres_symb_exec_l'[OF _ _ gets_sp])
-    apply (rule ccorres_guard_imp2, assumption)
-    apply (clarsimp simp: getIRQSlot_ccorres_stuff
-                          objBits_simps cte_level_bits_def
-                          ucast_nat_def uint_ucast uint_up_ucast is_up)
-   apply wp+
-  done
-
+  apply (intro ccorres_symb_exec_l'[OF _ _gets_sp] empty_fail_gets gets_inv)
+  apply (rule ccorres_guard_imp2, assumption)
+  by (clarsimp simp: cte_C_size cte_level_bits_def ucast_nat_def
+                     rf_sr_def cstate_relation_def Let_def cinterrupt_relation_def
+              elim!: rsubst[of "\<lambda>t. _ \<in> P' t"])
 
 lemma scast_maxIRQ_is_less:
   fixes uc :: "irq \<Rightarrow> 16 word"
@@ -2189,18 +2186,16 @@ lemma handleInterrupt_ccorres:
   apply (clarsimp simp: IRQTimer_def IRQSignal_def maxIRQ_def
                         cte_wp_at_ctes_of ucast_ucast_b is_up)
   apply (intro conjI impI)
-       apply clarsimp
-       apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
-       apply (clarsimp simp: typ_heap_simps')
-       apply (simp add: cap_get_tag_isCap)
-       apply (clarsimp simp: isCap_simps)
-       apply (frule cap_get_tag_isCap_unfolded_H_cap)
-       apply (frule cap_get_tag_to_H, assumption)
-       apply (clarsimp simp: to_bool_def)
-      apply (fastforce simp: unat_gt_0 intro!: array_assertion_abs_irq[rule_format])
-     apply (erule exE conjE)+
-     apply (erule(1) rf_sr_cte_at_valid[OF ctes_of_cte_at])
-    apply (fastforce simp: unat_gt_0 intro!: array_assertion_abs_irq[rule_format])
+      apply clarsimp
+      apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
+      apply (clarsimp simp: typ_heap_simps')
+      apply (simp add: cap_get_tag_isCap)
+      apply (clarsimp simp: isCap_simps)
+      apply (frule cap_get_tag_isCap_unfolded_H_cap)
+      apply (frule cap_get_tag_to_H, assumption)
+      apply (clarsimp simp: to_bool_def)
+     apply (fastforce simp: unat_gt_0 intro!: array_assertion_abs_irq[rule_format])
+    apply (simp add: rf_sr_def cstate_relation_def Let_def)
    apply (clarsimp simp: IRQReserved_def)+
   done
 end
