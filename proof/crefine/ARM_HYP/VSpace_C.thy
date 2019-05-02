@@ -2208,7 +2208,7 @@ lemma setVMRoot_ccorres:
    apply (ctac)
      apply csymbr
      apply csymbr
-     apply (simp add: if_1_0_0 cap_get_tag_isCap_ArchObject2 del: Collect_const)
+     apply (simp add: cap_get_tag_isCap_ArchObject2 del: Collect_const)
      apply (rule ccorres_Cond_rhs_Seq)
       apply (simp add: cap_case_isPageDirectoryCap cong: if_cong)
       apply (rule ccorres_cond_true_seq)
@@ -2230,7 +2230,7 @@ lemma setVMRoot_ccorres:
      apply (rule_tac P="to_bool (capPDIsMapped_CL (cap_page_directory_cap_lift threadRoot))
                               = (capPDMappedASID (capCap rv) \<noteq> None)"
                    in ccorres_gen_asm2)
-     apply (simp add: if_1_0_0 to_bool_def del: Collect_const)
+     apply (simp add: to_bool_def del: Collect_const)
      apply (rule ccorres_Cond_rhs_Seq)
       apply (simp add: cap_case_isPageDirectoryCap cong: if_cong)
       apply (simp add: throwError_def catch_def)
@@ -2305,7 +2305,7 @@ lemma setVMRoot_ccorres:
      apply (vcg exspec=findPDForASID_modifies)
     apply (simp add: getSlotCap_def)
     apply (wp getCTE_wp')
-   apply (clarsimp simp add:  if_1_0_0 simp del: Collect_const)
+   apply (clarsimp simp del: Collect_const)
    apply vcg
   apply (clarsimp simp: Collect_const_mem word_sle_def)
   apply (rule conjI)
@@ -2348,7 +2348,7 @@ lemma setVMRootForFlush_ccorres:
    apply (ctac add: getSlotCap_h_val_ccorres)
      apply csymbr
      apply csymbr
-     apply (simp add: cap_get_tag_isCap_ArchObject2 if_1_0_0
+     apply (simp add: cap_get_tag_isCap_ArchObject2
                  del: Collect_const)
      apply (rule ccorres_if_lhs)
       apply (rule_tac P="(capPDIsMapped_CL (cap_page_directory_cap_lift threadRoot) = 0)
@@ -2374,7 +2374,7 @@ lemma setVMRootForFlush_ccorres:
     apply simp
     apply (wp hoare_drop_imps)
    apply vcg
-  apply (clarsimp simp: Collect_const_mem if_1_0_0 word_sle_def
+  apply (clarsimp simp: Collect_const_mem word_sle_def
                         ccap_rights_relation_def cap_rights_to_H_def
                         mask_def[where n="Suc 0"] true_def to_bool_def
                         allRights_def size_of_def cte_level_bits_def
