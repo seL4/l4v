@@ -44,6 +44,14 @@ abbreviation
   pdpte_Ptr :: "word64 \<Rightarrow> pdpte_C ptr" where "pdpte_Ptr == Ptr"
 abbreviation
   pml4e_Ptr :: "word64 \<Rightarrow> pml4e_C ptr" where "pml4e_Ptr == Ptr"
+abbreviation
+  pml4_Ptr :: "machine_word \<Rightarrow> (pml4e_C[512]) ptr" where "pml4_Ptr == Ptr"
+abbreviation
+  pdpt_Ptr :: "machine_word \<Rightarrow> (pdpte_C[512]) ptr" where "pdpt_Ptr == Ptr"
+abbreviation
+  pd_Ptr :: "machine_word \<Rightarrow> (pde_C[512]) ptr" where "pd_Ptr == Ptr"
+abbreviation
+  pt_Ptr :: "machine_word \<Rightarrow> (pte_C[512]) ptr" where "pt_Ptr == Ptr"
 
 (* 1024 = number of entries in ioport table
         = 2^16 (total number of ioports) / word_bits *)

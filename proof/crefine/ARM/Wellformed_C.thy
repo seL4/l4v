@@ -38,6 +38,10 @@ abbreviation
   pte_Ptr :: "word32 \<Rightarrow> pte_C ptr" where "pte_Ptr == Ptr"
 abbreviation
   pde_Ptr :: "word32 \<Rightarrow> pde_C ptr" where "pde_Ptr == Ptr"
+abbreviation
+  pt_Ptr :: "32 word \<Rightarrow> (pte_C[256]) ptr" where "pt_Ptr == Ptr"
+abbreviation
+  pd_Ptr :: "32 word \<Rightarrow> (pde_C[4096]) ptr" where "pd_Ptr == Ptr"
 
 lemma halt_spec:
   "Gamma \<turnstile> {} Call halt_'proc {}"
