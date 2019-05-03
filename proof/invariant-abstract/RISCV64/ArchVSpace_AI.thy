@@ -252,7 +252,6 @@ lemma valid_asid_map_unmap:
    valid_asid_map(s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (riscv_asid_table (arch_state s))(asid_high_bits_of base := None)\<rparr>\<rparr>)"
   by (clarsimp simp: valid_asid_map_def)
 
-
 lemma asid_low_bits_word_bits:
   "asid_low_bits < word_bits"
   by (simp add: asid_low_bits_def word_bits_def)
@@ -267,15 +266,16 @@ definition valid_unmap :: "vmpage_size \<Rightarrow> asid * vspace_ref \<Rightar
   "valid_unmap sz \<equiv> \<lambda>(asid, vptr). 0 < asid \<and> is_aligned vptr (pageBitsForSize sz)"
 
 definition
-  "parent_for_refs \<equiv> \<lambda>(_, slot) cap. cap = ArchObjectCap (PageTableCap (table_base slot) None)"
+  "parent_for_refs \<equiv> \<lambda>(_, slot) cap.
+     \<exists>m. cap = ArchObjectCap (PageTableCap (table_base slot) m) \<and> m \<noteq> None"
 
 definition
   "same_ref \<equiv> \<lambda>(pte, slot) cap s.
      (\<exists>p. pte_ref pte = Some p \<and> obj_refs cap = {p}) \<and>
-     (\<forall>level asid vref. vs_lookup_table level asid vref s = Some (level, slot) \<longrightarrow>
+     (\<forall>level asid vref. vs_lookup_slot level asid vref s = Some (level, slot) \<longrightarrow>
+                        vref \<in> user_region \<longrightarrow>
+                        level \<le> max_pt_level \<longrightarrow>
                         vs_cap_ref cap = Some (asid, vref_for_level vref level))"
-  (* FIXME RISCV: level might be off by one. We want the part of the vref that goes to the slot,
-                  not only to the beginning of the table *)
 
 definition
   "valid_page_inv pg_inv \<equiv> case pg_inv of
