@@ -913,7 +913,7 @@ lemma sts_valid_slots_inv[wp]:
 
 lemma sts_same_ref[wp]:
   "set_thread_state t st \<lbrace>\<lambda>s. P (same_ref ref cap s)\<rbrace>"
-  unfolding same_ref_def by (cases ref) wpsimp
+  unfolding same_ref_def by (cases ref) (wpsimp simp: vs_lookup_slot_def in_omonad)
 
 lemma sts_valid_page_inv[wp]:
   "set_thread_state t st \<lbrace>valid_page_inv page_invocation\<rbrace>"

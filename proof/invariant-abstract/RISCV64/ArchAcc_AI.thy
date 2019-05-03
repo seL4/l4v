@@ -16,6 +16,32 @@ theory ArchAcc_AI
 imports "../SubMonad_AI" "Lib.Crunch_Instances_NonDet"
 begin
 
+(* FIXME: move to Word and replace nth_ucast, possibly breaks things.. *)
+lemma nth_ucast':
+  "(ucast (w::'a::len0 word)::'b::len0 word) !! n =
+   (w !! n \<and> n < min (len_of TYPE('a)) (len_of TYPE('b)))"
+  by (simp add: ucast_def test_bit_bin word_ubin.eq_norm nth_bintr word_size)
+     (fast elim!: bin_nth_uint_imp)
+
+(* FIXME: move to Word *)
+lemma ucast_leq_mask:
+  "LENGTH('a) \<le> n \<Longrightarrow> ucast (x::'a::len0 word) \<le> mask n"
+  by (clarsimp simp: le_mask_high_bits word_size nth_ucast')
+
+(* FIXME: move to Word *)
+lemma shiftl_inj:
+  "\<lbrakk> x << n = y << n; x \<le> mask (LENGTH('a)-n); y \<le> mask (LENGTH('a)-n) \<rbrakk> \<Longrightarrow>
+   x = (y :: 'a :: len word)"
+  apply (rule word_eqI)
+  apply (clarsimp simp: bang_eq le_mask_high_bits word_eqI_solve_simps)
+  apply (rename_tac n')
+  apply (case_tac "LENGTH('a) - n \<le> n'", simp)
+  apply (simp add: not_le)
+  apply (erule_tac x="n'+n" in allE)
+  apply (subgoal_tac "n' + n < LENGTH('a)", simp)
+  apply arith
+  done
+
 context non_vspace_op
 begin
 
@@ -87,6 +113,34 @@ lemma valid_vs_lookupD:
                     \<and> vs_cap_ref cap = Some (asid, vref_for_level vref level))"
   unfolding valid_vs_lookup_def
   by auto
+
+lemma vs_lookup_table_valid_cap:
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); vref \<in> user_region;
+     valid_vs_lookup s; valid_asid_pool_caps s \<rbrakk> \<Longrightarrow>
+   (\<exists>p' cap. caps_of_state s p' = Some cap \<and> obj_refs cap = {p} \<and>
+             vs_cap_ref cap = Some (asid_for_level asid level,
+                                    vref_for_level vref (if level=asid_pool_level
+                                                         then asid_pool_level else level + 1)))"
+  apply (cases "level \<le> max_pt_level")
+   apply (drule (1) vs_lookup_table_target)
+   apply (drule valid_vs_lookupD, erule vref_for_level_user_region, assumption)
+   apply (fastforce simp: asid_for_level_def)
+  apply (simp add: not_le)
+  apply (clarsimp simp: vs_lookup_table_def pool_for_asid_def valid_asid_pool_caps_def)
+  apply (erule allE)+
+  apply (erule (1) impE)
+  apply clarsimp
+  apply (rule exI)+
+  apply (rule conjI, assumption)
+  apply (simp add: asid_for_level_def vref_for_level_asid_pool user_region_def)
+  apply (simp add: asid_high_bits_of_def)
+  apply word_bitwise
+  apply (simp add: asid_low_bits_def word_size)
+  done
+
+lemma invs_valid_asid_pool_caps[elim!]:
+  "invs s \<Longrightarrow> valid_asid_pool_caps s"
+  by (simp add: invs_def valid_state_def valid_arch_caps_def)
 
 lemma vs_lookup_table_asid_not_0:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); level \<le> max_pt_level;
@@ -429,6 +483,85 @@ lemma ex_vs_lookup_level:
   apply (frule_tac asid=asid and asid'=asid' in unique_vs_lookup_table, assumption; simp)
   apply (drule_tac level=level and level'=level' and vref'=vref' in no_loop_vs_lookup_table
          ; fastforce dest: vref_for_level_eq_max_mono simp: max.commute)
+  done
+
+lemma valid_objs_caps:
+  "valid_objs s \<Longrightarrow> valid_caps (caps_of_state s) s"
+  apply (clarsimp simp: valid_caps_def)
+  apply (erule (1) caps_of_state_valid_cap)
+  done
+
+lemma invs_valid_asid_table [elim!]:
+  "invs s \<Longrightarrow> valid_asid_table s"
+  by (simp add: invs_def valid_state_def valid_arch_state_def)
+
+(* invs could be relaxed; lemma so far only needed when invs is present *)
+lemma vs_lookup_table_unique_level:
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
+     vs_lookup_table level' asid' vref' s = Some (level', p');
+     p' = p;
+     level \<le> max_pt_level; level' \<le> max_pt_level; vref \<in> user_region; vref' \<in> user_region;
+     invs s\<rbrakk>
+  \<Longrightarrow> level' = level \<and> asid' = asid \<and>
+      vref_for_level vref' (level+1) = vref_for_level vref (level+1)"
+  apply (frule (1) unique_vs_lookup_table[where level'=level']; (clarsimp intro!: valid_objs_caps)?)
+  apply (drule (1) no_loop_vs_lookup_table; (clarsimp intro!: valid_objs_caps)?)
+  apply (thin_tac "p' = p")
+  apply (drule arg_cong[where f="\<lambda>vref. vref_for_level vref (level + 1)"])
+  apply (drule arg_cong[where f="\<lambda>vref. vref_for_level vref (level' + 1)"])
+  apply (auto simp: max_def split: if_split_asm)
+  done
+
+(* invs could be relaxed; lemma so far only needed when invs is present *)
+lemma vs_lookup_slot_table_base:
+  "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, slot); vref \<in> user_region;
+     level \<le> max_pt_level; invs s \<rbrakk> \<Longrightarrow>
+   vs_lookup_table level asid vref s = Some (level, table_base slot)"
+  apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
+  apply (drule vs_lookup_table_is_aligned; clarsimp)
+  done
+
+(* invs could be relaxed; lemma so far only needed when invs is present *)
+lemma vs_lookup_slot_table_unfold:
+  "\<lbrakk> level \<le> max_pt_level; vref \<in> user_region; invs s \<rbrakk> \<Longrightarrow>
+   vs_lookup_slot level asid vref s = Some (level, pt_slot) =
+   (vs_lookup_table level asid vref s = Some (level, table_base pt_slot) \<and>
+    pt_slot = pt_slot_offset level (table_base pt_slot) vref)"
+  apply (rule iffI)
+   apply (frule (3) vs_lookup_slot_table_base)
+   apply (clarsimp simp: vs_lookup_slot_def in_omonad split: if_split_asm)
+  apply (clarsimp simp: vs_lookup_slot_def in_omonad)
+  done
+
+lemma pt_slot_offset_vref_for_level:
+  "\<lbrakk> vref_for_level vref' (level + 1) = vref_for_level vref (level + 1);
+     pt_slot_offset level p vref = pt_slot_offset level p vref';
+     is_aligned p pt_bits; level \<le> max_pt_level \<rbrakk>
+    \<Longrightarrow> vref_for_level vref' level = vref_for_level vref level"
+  apply (clarsimp simp: pt_slot_offset_def vref_for_level_def pt_index_def)
+  apply (drule shiftl_inj; (clarsimp simp: le_mask_iff,
+                            rule word_eqI, simp add: word_eqI_solve_simps bit_simps)?)
+  apply (rule word_eqI)
+  apply (clarsimp simp: word_eqI_solve_simps bang_eq)
+  apply (case_tac "pt_bits_left level \<le> n"; simp)
+  apply (case_tac "pt_bits_left (level + 1) \<le> n", fastforce)
+  apply (clarsimp simp: not_le pt_bits_left_plus1)
+  apply (thin_tac "All P" for P)
+  apply (thin_tac "All P" for P)
+  apply (erule_tac x="n - pt_bits_left level" in allE)
+  by fastforce
+
+(* invs could be relaxed; lemma so far only needed when invs is present *)
+lemma vs_lookup_slot_unique_level:
+  "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, p);
+     vs_lookup_slot level' asid' vref' s = Some (level', p');
+     p' = p;
+     level \<le> max_pt_level; level' \<le> max_pt_level; vref \<in> user_region; vref' \<in> user_region;
+     invs s\<rbrakk>
+  \<Longrightarrow> level' = level \<and> asid' = asid \<and> vref_for_level vref' level = vref_for_level vref level"
+  apply (clarsimp simp: vs_lookup_slot_table_unfold)
+  apply (drule (1) vs_lookup_table_unique_level; clarsimp)
+  apply (drule pt_slot_offset_vref_for_level[where p="table_base p"]; clarsimp)
   done
 
 lemma get_asid_pool_wp [wp]:
@@ -872,13 +1005,6 @@ lemma unique_table_caps_ptD:
      unique_table_caps_2 cs\<rbrakk>
   \<Longrightarrow> p = p'"
   unfolding unique_table_caps_2_def by fastforce
-
-
-lemma valid_objs_caps:
-  "valid_objs s \<Longrightarrow> valid_caps (caps_of_state s) s"
-  apply (clarsimp simp: valid_caps_def)
-  apply (erule (1) caps_of_state_valid_cap)
-  done
 
 lemma set_pt_table_caps:
   "\<lbrace>valid_table_caps and (\<lambda>s. valid_caps (caps_of_state s) s) and
@@ -1526,12 +1652,6 @@ lemma set_pt_vms[wp]:
 
 crunch valid_irq_states[wp]: set_pt "valid_irq_states"
   (wp: crunch_wps)
-
-
-(* FIXME: move to ArchInvariants_A *)
-lemma invs_valid_asid_table [elim!]:
-  "invs s \<Longrightarrow> valid_asid_table s"
-  by (simp add: invs_def valid_state_def valid_arch_state_def)
 
 
 (* FIXME: move to ArchInvariants_A *)

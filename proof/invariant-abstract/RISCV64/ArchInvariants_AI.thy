@@ -320,9 +320,13 @@ definition wellformed_vspace_obj :: "arch_kernel_obj \<Rightarrow> bool" where
 
 lemmas wellformed_aobj_simps[simp] = wellformed_aobj_def[split_simps arch_kernel_obj.split]
 
+(* FIXME RISCV: move to spec? *)
+locale_abbrev global_pt :: "'z state \<Rightarrow> obj_ref" where
+  "global_pt s \<equiv> riscv_global_pt (arch_state s)"
+
 definition has_kernel_mappings :: "pt \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "has_kernel_mappings pt \<equiv> \<lambda>s.
-     \<forall>pt'. pts_of s (riscv_global_pt (arch_state s)) = Some pt' \<longrightarrow>
+     \<forall>pt'. pts_of s (global_pt s) = Some pt' \<longrightarrow>
            (\<forall>i \<in> kernel_mapping_slots. pt i = pt' i)"
 
 (* To find the top-level page tables, we need to start with ASIDs *)
@@ -546,7 +550,7 @@ definition valid_asid_table_2 :: "(asid_high_index \<rightharpoonup> obj_ref) \<
   "valid_asid_table_2 table pools \<equiv> ran table \<subseteq> dom pools \<and> inj_on table (dom table)"
 
 locale_abbrev valid_asid_table :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_asid_table \<equiv> \<lambda>s. valid_asid_table_2 (riscv_asid_table (arch_state s)) (asid_pools_of s)"
+  "valid_asid_table \<equiv> \<lambda>s. valid_asid_table_2 (asid_table s) (asid_pools_of s)"
 
 lemmas valid_asid_table_def = valid_asid_table_2_def
 
@@ -565,7 +569,7 @@ definition valid_global_arch_objs :: "'z::state_ext state \<Rightarrow> bool" wh
 
 definition valid_global_vspace_mappings :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_global_vspace_mappings \<equiv> \<lambda>s.
-     let root = riscv_global_pt (arch_state s) in
+     let root = global_pt s in
        is_aligned root pt_bits \<and>
        (\<forall>vref \<in> kernel_window s. translate_address root vref (ptes_of s) = Some (addrFromPPtr vref)) \<and>
        (\<forall>vref \<in> kernel_elf_window s. translate_address root vref (ptes_of s) = Some (addrFromKPPtr vref))"
@@ -1477,6 +1481,11 @@ lemma max_pt_bits_left[simp]:
   apply simp
   done
 
+lemma pt_bits_left_plus1:
+  "level \<le> max_pt_level \<Longrightarrow>
+   pt_bits_left (level + 1) = ptTranslationBits + pt_bits_left level"
+  by (clarsimp simp: pt_bits_left_def)
+
 lemma vref_for_level_idem:
   "level' \<le> level \<Longrightarrow>
    vref_for_level (vref_for_level vref level') level = vref_for_level vref level"
@@ -1553,11 +1562,11 @@ lemma vs_lookup_vref_for_level:
 
 lemma valid_global_vspace_mappings_kwD:
   "\<lbrakk> valid_global_vspace_mappings s; vref \<in> kernel_window s \<rbrakk>
-   \<Longrightarrow> translate_address (riscv_global_pt (arch_state s)) vref (ptes_of s) = Some (addrFromPPtr vref)"
+   \<Longrightarrow> translate_address (global_pt s) vref (ptes_of s) = Some (addrFromPPtr vref)"
   by (simp add: valid_global_vspace_mappings_def Let_def)
 
 lemma valid_global_vspace_mappings_aligned[simp]:
-  "valid_global_vspace_mappings s \<Longrightarrow> is_aligned (riscv_global_pt (arch_state s)) pt_bits"
+  "valid_global_vspace_mappings s \<Longrightarrow> is_aligned (global_pt s) pt_bits"
   by (simp add: valid_global_vspace_mappings_def Let_def)
 
 lemmas ptes_of_def = pte_of_def
@@ -1606,7 +1615,7 @@ lemma ptes_of_pt_slot_offset:
 
 lemma valid_global_vspace_mappings_pt_at:
   "\<lbrakk> valid_global_vspace_mappings s; valid_uses s \<rbrakk>
-  \<Longrightarrow> pt_at (riscv_global_pt (arch_state s)) s"
+  \<Longrightarrow> pt_at (global_pt s) s"
   apply (clarsimp simp: pt_at_eq Let_def)
   apply (frule valid_global_vspace_mappings_kwD)
    apply (fastforce simp: valid_uses_def window_defs)
@@ -1616,7 +1625,7 @@ lemma valid_global_vspace_mappings_pt_at:
   by (auto simp: in_omonad dest!: ptes_of_pt_slot_offset split: if_split_asm)
 
 lemma valid_global_arch_objs_pt_at:
-  "valid_global_arch_objs s \<Longrightarrow> pt_at (riscv_global_pt (arch_state s)) s"
+  "valid_global_arch_objs s \<Longrightarrow> pt_at (global_pt s) s"
   unfolding valid_global_arch_objs_def riscv_global_pt_def
   by fastforce
 
@@ -2246,13 +2255,13 @@ lemma equal_mappings_pt_slot_offset:
      valid_vspace_objs s; valid_asid_table s; valid_uses s;
      pspace_aligned s \<rbrakk>
    \<Longrightarrow> ptes_of s (pt_slot_offset max_pt_level root_pt vref) =
-       ptes_of s (pt_slot_offset max_pt_level (riscv_global_pt (arch_state s)) vref)"
+       ptes_of s (pt_slot_offset max_pt_level (global_pt s) vref)"
   apply (simp add: equal_kernel_mappings_def has_kernel_mappings_def)
   apply ((erule allE)+, erule (1) impE)
   apply (drule (2) vspace_for_asid_valid_pt)
   apply (drule (1) valid_global_vspace_mappings_pt_at)
   apply (clarsimp simp: in_omonad pt_at_eq)
-  apply (frule_tac p="riscv_global_pt (arch_state s)" in pspace_alignedD, assumption)
+  apply (frule_tac p="(global_pt s)" in pspace_alignedD, assumption)
   apply (frule_tac p=root_pt in pspace_alignedD, assumption)
   apply (drule kernel_mapping_slots[where vref=vref])
   apply (simp add: pt_bits_def[symmetric])
@@ -2267,7 +2276,7 @@ lemma equal_mappings_translate_address:
      valid_vspace_objs s; valid_asid_table s; valid_uses s;
      pspace_aligned s \<rbrakk>
   \<Longrightarrow> translate_address root_pt vref (ptes_of s)
-     = translate_address (riscv_global_pt (arch_state s)) vref (ptes_of s)"
+     = translate_address (global_pt s) vref (ptes_of s)"
   by (fastforce dest: equal_mappings_pt_slot_offset translate_address_equal_top_slot)
 
 lemma pte_ref_def2:
@@ -2500,6 +2509,13 @@ lemma global_pts_ofD:
   "\<lbrakk> pt_ptr \<in> riscv_global_pts (arch_state s) level; valid_global_arch_objs s \<rbrakk> \<Longrightarrow>
    pts_of s pt_ptr \<noteq> None"
   by (simp add: valid_global_arch_objs_def pt_at_eq)
+
+lemma vs_lookup_slot_table:
+  "level \<le> max_pt_level \<Longrightarrow>
+   vs_lookup_slot level asid vref s = Some (level, pt_slot) =
+   (\<exists>pt_ptr. vs_lookup_table level asid vref s = Some (level, pt_ptr) \<and>
+             pt_slot = pt_slot_offset level pt_ptr vref)"
+  by (clarsimp simp: vs_lookup_slot_def in_omonad) fastforce
 
 end
 

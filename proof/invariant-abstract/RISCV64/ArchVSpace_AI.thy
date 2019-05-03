@@ -16,19 +16,6 @@ theory ArchVSpace_AI
 imports "../VSpacePre_AI"
 begin
 
-
-(* FIXME: move to Word and replace nth_ucast, possibly breaks things.. *)
-lemma nth_ucast':
-  "(ucast (w::'a::len0 word)::'b::len0 word) !! n =
-   (w !! n \<and> n < min (len_of TYPE('a)) (len_of TYPE('b)))"
-  by (simp add: ucast_def test_bit_bin word_ubin.eq_norm nth_bintr word_size)
-     (fast elim!: bin_nth_uint_imp)
-
-(* FIXME: move to Word *)
-lemma ucast_leq_mask:
-  "LENGTH('a) \<le> n \<Longrightarrow> ucast (x::'a::len0 word) \<le> mask n"
-  by (clarsimp simp: le_mask_high_bits word_size nth_ucast')
-
 (* FIXME: move to Word, replace word_upto_Cons_eq *)
 lemma word_upto_Cons:
   "x < y \<Longrightarrow> [x::'a::len word .e. y] = x # [x + 1 .e. y]"
@@ -123,10 +110,6 @@ lemma arch_cap_fun_lift_Some[simp]:
   by (cases cap; simp)
 
 context Arch begin global_naming RISCV64
-
-(* FIXME RISCV: move to ArchInvariants *)
-locale_abbrev global_pt :: "'z state \<Rightarrow> obj_ref" where
-  "global_pt s \<equiv> riscv_global_pt (arch_state s)"
 
 (* FIXME RISCV: move up? *)
 (* this is what copy_global_mappings needs to establish from an empty_pt *)
@@ -2140,36 +2123,6 @@ lemma copy_global_mappings_invs:
 lemma cap_asid_pt_None[simp]:
   "(cap_asid (ArchObjectCap (PageTableCap p m)) = None) = (m = None)"
   by (simp add: cap_asid_def split: option.splits)
-
-(* FIXME RISCV: move *)
-lemma vs_lookup_table_valid_cap:
-  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); vref \<in> user_region;
-     valid_vs_lookup s; valid_asid_pool_caps s \<rbrakk> \<Longrightarrow>
-   (\<exists>p' cap. caps_of_state s p' = Some cap \<and> obj_refs cap = {p} \<and>
-             vs_cap_ref cap = Some (asid_for_level asid level,
-                                    vref_for_level vref (if level=asid_pool_level
-                                                         then asid_pool_level else level + 1)))"
-  apply (cases "level \<le> max_pt_level")
-   apply (drule (1) vs_lookup_table_target)
-   apply (drule valid_vs_lookupD, erule vref_for_level_user_region, assumption)
-   apply (fastforce simp: asid_for_level_def)
-  apply (simp add: not_le)
-  apply (clarsimp simp: vs_lookup_table_def pool_for_asid_def valid_asid_pool_caps_def)
-  apply (erule allE)+
-  apply (erule (1) impE)
-  apply clarsimp
-  apply (rule exI)+
-  apply (rule conjI, assumption)
-  apply (simp add: asid_for_level_def vref_for_level_asid_pool user_region_def)
-  apply (simp add: asid_high_bits_of_def)
-  apply word_bitwise
-  apply (simp add: asid_low_bits_def word_size)
-  done
-
-(* FIXME RISCV: move *)
-lemma invs_valid_asid_pool_caps[elim!]:
-  "invs s \<Longrightarrow> valid_asid_pool_caps s"
-  by (simp add: invs_def valid_state_def valid_arch_caps_def)
 
 lemma perform_asid_pool_invs [wp]:
   "\<lbrace>invs and valid_apinv api\<rbrace> perform_asid_pool_invocation api \<lbrace>\<lambda>_. invs\<rbrace>"
