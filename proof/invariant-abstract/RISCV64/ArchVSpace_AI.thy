@@ -781,11 +781,16 @@ lemma not_in_global_refs_vs_lookup:
 lemma no_irq_sfence[wp,intro!]: "no_irq sfence"
   by (wpsimp simp: sfence_def no_irq_def machine_op_lift_def machine_rest_lift_def)
 
-lemma pt_lookup_from_level_wp[wp]:
-  "\<lbrace>\<lambda>s. (\<forall>level. pt_walk top_level level top_level_pt vref (ptes_of s) = Some (level, pt) \<longrightarrow>
-                 Q (pt_slot_offset level pt vref) s) \<and>
-        ((\<forall>level < top_level. pt_walk top_level level top_level_pt vref (ptes_of s) \<noteq> Some (level, pt)) \<longrightarrow>
-                 E InvalidRoot s)\<rbrace>
+lemma pt_lookup_from_level_wp:
+  "\<lbrace>\<lambda>s. (\<forall>level pt' pte.
+            pt_walk top_level level top_level_pt vref (ptes_of s) = Some (level, pt') \<longrightarrow>
+            ptes_of s (pt_slot_offset level pt' vref) = Some pte \<longrightarrow>
+            is_PageTablePTE pte \<longrightarrow>
+            pte_ref pte = Some pt \<longrightarrow>
+            Q (pt_slot_offset level pt' vref) s) \<and>
+        ((\<forall>level < top_level.
+            pt_walk top_level level top_level_pt vref (ptes_of s) \<noteq> Some (level, pt)) \<longrightarrow>
+            E InvalidRoot s)\<rbrace>
   pt_lookup_from_level top_level top_level_pt vref pt
   \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
 proof (induct top_level arbitrary: top_level_pt)
@@ -801,20 +806,20 @@ next
     apply (wpsimp wp: IH)
     apply (rule conjI; clarsimp)
      prefer 2
-     apply (clarsimp simp: pte_at_offset_def)
      apply (subst (asm) (2) pt_walk.simps)
      apply (clarsimp)
     apply (rule conjI; clarsimp)
-     apply (clarsimp simp: pte_at_offset_def)
-     apply (erule_tac x="top_level - 1" in allE)
-     apply (simp add: in_omonad pt_walk.simps)
+     apply (erule_tac x="top_level" in allE)
+     apply (clarsimp simp: in_omonad is_PageTablePTE_def pptr_from_pte_def)
     apply (rule conjI; clarsimp)
+     apply (rename_tac pt' pte)
      apply (frule pt_walk_max_level)
      apply (erule_tac x=level in allE)
+     apply (erule_tac x=pt' in allE)
+     apply simp
      apply (erule mp)
      apply (subst pt_walk.simps)
-     apply (simp add: in_omonad bit0.leq_minus1_less pte_at_offset_def)
-    apply (clarsimp simp: pte_at_offset_def)
+     apply (simp add: in_omonad bit0.leq_minus1_less)
     apply (subst (asm) (3) pt_walk.simps)
     apply (case_tac "level = top_level - 1"; clarsimp)
     apply (subgoal_tac "level < top_level - 1", fastforce)
@@ -870,7 +875,7 @@ lemma unmap_page_table_invs[wp]:
                                   underlying_memory m p" in use_valid)
          apply ((wp | simp)+)[3]
       apply(erule use_valid, wp no_irq, assumption)
-     apply (wpsimp wp: store_pte_invs_unmap)+
+     apply (wpsimp wp: store_pte_invs_unmap pt_lookup_from_level_wp)+
   apply (frule pt_walk_max_level)
   apply (drule (2) pt_lookup_vs_lookupI)
   apply (frule (2) valid_vspace_objs_strongD[rotated]; clarsimp)
@@ -940,7 +945,7 @@ lemma unmap_page_table_unmapped:
      unmap_page_table asid vaddr pt
    \<lbrace>\<lambda>rv s. vs_lookup_table level asid vaddr s \<noteq> Some (level, pt) \<rbrace>"
   unfolding unmap_page_table_def
-  apply (wpsimp wp: store_pte_non_PageTablePTE_vs_lookup)
+  apply (wpsimp wp: store_pte_non_PageTablePTE_vs_lookup pt_lookup_from_level_wp)
   apply (rule conjI; clarsimp)
    apply (clarsimp simp: vs_lookup_table_def in_omonad split: if_split_asm)
    apply (simp add: obind_def vspace_for_asid_def less_le split: option.splits if_split_asm)

@@ -163,10 +163,6 @@ definition pt_slot_offset :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspac
   where
   "pt_slot_offset level pt_ptr vptr = pt_ptr + (pt_index level vptr << pte_bits)"
 
-definition pte_at_offset :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> pte option"
-  where
-  "pte_at_offset level pt_ptr vptr \<equiv> oapply (pt_slot_offset level pt_ptr vptr)"
-
 text \<open>
   This is the base function for walking a page table structure.
   The walk proceeds from higher-level tables at the provided @{term level} (e.g. 2) to lower
@@ -208,16 +204,18 @@ definition pt_lookup_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (ob
   where
   "pt_lookup_slot = pt_lookup_slot_from_level max_pt_level 0"
 
+(* Returns the slot that points to target_pt_ptr *)
 fun pt_lookup_from_level ::
   "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (machine_word, 'z::state_ext) lf_monad"
   where
   "pt_lookup_from_level level pt_ptr vptr target_pt_ptr = doE
      unlessE (0 < level) $ throwError InvalidRoot;
-     pte <- liftE $ gets_the $ pte_at_offset level pt_ptr vptr o ptes_of;
+     slot <- returnOk $ pt_slot_offset level pt_ptr vptr;
+     pte <- liftE $ gets_the $ oapply slot o ptes_of;
      unlessE (is_PageTablePTE pte) $ throwError InvalidRoot;
      ptr <- returnOk (pptr_from_pte pte);
      if ptr = target_pt_ptr
-       then returnOk $ pt_slot_offset (level - 1) ptr vptr
+       then returnOk slot
        else pt_lookup_from_level (level - 1) ptr vptr target_pt_ptr
    odE"
 
