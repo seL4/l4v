@@ -1630,9 +1630,9 @@ lemma valid_global_arch_objs_pt_at:
   by fastforce
 
 lemma pool_for_asid_vs_lookup:
-  "(vs_lookup_table asid_pool_level asid vref s = Some (asid_pool_level, p)) =
-   (pool_for_asid asid s = Some p)"
-  by (simp add: vs_lookup_table_def in_omonad)
+  "(vs_lookup_table asid_pool_level asid vref s = Some (level, p)) =
+   (pool_for_asid asid s = Some p \<and> level = asid_pool_level)"
+  by (auto simp: vs_lookup_table_def in_omonad)
 
 lemma pool_for_asid_validD:
   "\<lbrakk> pool_for_asid asid s = Some p; valid_asid_table s \<rbrakk> \<Longrightarrow> asid_pools_of s p \<noteq> None"
