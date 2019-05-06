@@ -1073,7 +1073,7 @@ lemma cap_insert_silc_inv:
   (* The order here matters. The first two need to be first. *)
   apply (wp assert_wp static_imp_conj_wp set_cap_silc_inv hoare_vcg_ex_lift
             set_untyped_cap_as_full_slots_holding_overlapping_caps_other[where aag=aag]
-            get_cap_wp update_cdt_silc_inv | simp | wp_once hoare_drop_imps)+
+            get_cap_wp update_cdt_silc_inv | simp | wp (once) hoare_drop_imps)+
   apply clarsimp
   apply (rule disj_dup)
   apply(rule conjI)
@@ -1305,7 +1305,7 @@ lemma reply_cancel_ipc_silc_inv:
    reply_cancel_ipc t
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding reply_cancel_ipc_def
-  apply (wp_trace cap_delete_one_silc_inv select_wp hoare_vcg_if_lift | simp)+
+  apply (wp cap_delete_one_silc_inv select_wp hoare_vcg_if_lift | simp)+
   apply wps
   apply (wp static_imp_wp hoare_vcg_all_lift hoare_vcg_ball_lift)
   apply clarsimp
@@ -1332,7 +1332,7 @@ lemma cancel_ipc_silc_inv:
        | wpc
        | simp(no_asm) add: blocked_cancel_ipc_def get_ep_queue_def
                             get_blocking_object_def
-       | wp_once hoare_drop_imps)+
+       | wp (once) hoare_drop_imps)+
   apply auto
   done
 
@@ -2446,7 +2446,7 @@ lemma perform_page_invocation_silc_inv:
            hoare_vcg_all_lift hoare_vcg_if_lift static_imp_wp
        | wpc
        | simp only: swp_def o_def fun_app_def K_def
-       |wp_once hoare_drop_imps)+
+       |wp (once) hoare_drop_imps)+
   apply (clarsimp simp: valid_page_inv_def authorised_page_inv_def
                   split: page_invocation.splits)
    apply(intro allI impI conjI)
@@ -2844,7 +2844,7 @@ lemma do_ipc_transfer_silc_inv:
      do_ipc_transfer sender ep badge grant receiver
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding do_ipc_transfer_def
-  apply (wp do_normal_transfer_silc_inv hoare_vcg_all_lift | wpc | wp_once hoare_drop_imps)+
+  apply (wp do_normal_transfer_silc_inv hoare_vcg_all_lift | wpc | wp (once) hoare_drop_imps)+
   apply clarsimp
   done
 
@@ -3144,7 +3144,7 @@ lemma invoke_tcb_silc_inv:
         |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def st_tcb_at_triv
                    option_update_thread_def
         |strengthen use_no_cap_to_obj_asid_strg invs_mdb
-        |wp_once hoare_drop_imps)+
+        |wp (once) hoare_drop_imps)+
   apply (clarsimp simp: authorised_tcb_inv_def emptyable_def)
   (* also slow, ~15s *)
   by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
@@ -3258,7 +3258,7 @@ lemma handle_interrupt_silc_inv:
   "\<lbrace>silc_inv aag st\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding handle_interrupt_def
   apply (rule hoare_if)
-  apply(wp | wpc | simp add: handle_reserved_irq_def | wp_once hoare_drop_imps)+
+  apply(wp | wpc | simp add: handle_reserved_irq_def | wp (once) hoare_drop_imps)+
   done
 
 lemma handle_vm_fault_silc_inv:

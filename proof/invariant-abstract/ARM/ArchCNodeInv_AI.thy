@@ -886,7 +886,7 @@ next
     apply simp
     apply (fold o_def)
     apply (rule hoare_pre_spec_validE)
-     apply (simp del: o_apply | wp_once cap_swap_fd_rvk_prog)+
+     apply (simp del: o_apply | wp (once) cap_swap_fd_rvk_prog)+
     apply (clarsimp simp: cte_wp_at_caps_of_state cap_to_rpo_def)
     done
 next

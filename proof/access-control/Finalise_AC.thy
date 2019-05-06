@@ -1079,7 +1079,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
      apply (wp "1.hyps")
             apply ((wp preemption_point_inv' | simp add: integrity_subjects_def pas_refined_def)+)[1]
            apply (wp select_ext_weak_wp cap_delete_respects cap_delete_pas_refined
-                 | simp split del: if_split | wp_once hoare_vcg_const_imp_lift hoare_drop_imps)+
+                 | simp split del: if_split | wp (once) hoare_vcg_const_imp_lift hoare_drop_imps)+
     by (auto simp: emptyable_def descendants_of_def
              dest: reply_slot_not_descendant
             intro: cca_owned)
@@ -1351,7 +1351,7 @@ lemma invoke_cnode_pas_refined:
              get_cap_wp cap_move_empty_src_slot
              | wpc
              | simp split del: if_split
-             | wp_once cap_move_cte_wp_at_separation)+
+             | wp (once) cap_move_cte_wp_at_separation)+
   by (cases ci;
       simp add: authorised_cnode_inv_def
                 cnode_inv_auth_derivations_def integrity_def;

@@ -216,7 +216,7 @@ lemma arch_decode_irq_control_corres:
             apply (clarsimp simp: arch_irq_control_inv_relation_def )
            apply ((wpsimp wp: isIRQActive_inv
       simp: invs_valid_objs invs_psp_aligned invs_valid_objs' invs_pspace_aligned' invs_pspace_distinct'
-      | wp_once hoare_drop_imps)+)
+      | wp (once) hoare_drop_imps)+)
     \<comment> \<open>IOAPIC\<close>
   apply (rule conjI, clarsimp)
   apply (rule corres_guard_imp)
@@ -236,7 +236,7 @@ lemma arch_decode_irq_control_corres:
               apply (clarsimp simp: arch_irq_control_inv_relation_def )
              apply ((wpsimp wp: isIRQActive_inv
                           simp: invs_valid_objs invs_psp_aligned invs_valid_objs' invs_pspace_aligned' invs_pspace_distinct'
-                     | wp_once hoare_drop_imps)+)
+                     | wp (once) hoare_drop_imps)+)
   by (auto split: arch_invocation_label.splits invocation_label.splits)
 
 
@@ -283,7 +283,7 @@ lemma lsfco_real_cte_at'[wp]:
   apply (rule hoare_pre)
    apply (wp resolveAddressBits_real_cte_at'
             | simp
-            | wpc | wp_once hoare_drop_imps)+
+            | wpc | wp (once) hoare_drop_imps)+
   done
 
 lemma arch_decode_irq_control_valid'[wp]:
@@ -300,7 +300,7 @@ lemma arch_decode_irq_control_valid'[wp]:
    apply (simp add: rangeCheck_def unlessE_whenE cong: list.case_cong prod.case_cong
           | wp whenE_throwError_wp isIRQActive_wp ensureEmptySlot_stronger
           | wpc
-          | wp_once hoare_drop_imps)+
+          | wp (once) hoare_drop_imps)+
   apply (fastforce simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt)
   done
 
@@ -318,7 +318,7 @@ lemma decode_irq_control_valid'[wp]:
    apply (wp ensureEmptySlot_stronger isIRQActive_wp
              whenE_throwError_wp
                 | simp add: o_def | wpc
-                | wp_once hoare_drop_imps)+
+                | wp (once) hoare_drop_imps)+
   done
 
 lemma valid_globals_ex_cte_cap_irq:

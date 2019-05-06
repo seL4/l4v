@@ -1628,7 +1628,7 @@ lemma do_ipc_transfer_integrity_autarch:
   apply (simp add: do_ipc_transfer_def)
   apply (wp do_normal_transfer_send_integrity_autarch do_fault_transfer_integrity_autarch
             thread_get_wp' lookup_ipc_buffer_has_auth hoare_vcg_all_lift
-       | wpc | simp | wp_once hoare_drop_imps)+
+       | wpc | simp | wp (once) hoare_drop_imps)+
   done
 
 lemma set_thread_state_running_respects:
@@ -1759,7 +1759,7 @@ lemma receive_ipc_base_integrity:
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: thread_get_def get_thread_state_def cong: endpoint.case_cong)
   apply (rule hoare_pre)
-   apply (wp_trace set_endpoinintegrity set_thread_state_running_respects
+   apply (wp set_endpoinintegrity set_thread_state_running_respects
              setup_caller_cap_integrity_recv[where ep = epptr]
              do_ipc_transfer_integrity_autarch
              set_thread_state_integrity_autarch[where param_a=receiver]

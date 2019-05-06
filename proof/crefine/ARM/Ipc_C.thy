@@ -5011,7 +5011,7 @@ lemma sendIPC_ccorres [corres]:
           apply vcg
          apply (wpsimp wp: doIPCTransfer_sch_act setEndpoint_ksQ hoare_vcg_all_lift
                           set_ep_valid_objs' setEndpoint_valid_mdb'
-                | wp_once hoare_drop_imp
+                | wp (once) hoare_drop_imp
                 | strengthen sch_act_wf_weak)+
        apply (fastforce simp: guard_is_UNIV_def ThreadState_Inactive_def Collect_const_mem
                                ThreadState_Running_def mask_def from_bool_def

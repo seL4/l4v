@@ -48,7 +48,7 @@ lemma get_object_rev:
   "reads_equiv_valid_inv A aag (\<lambda> s. aag_can_read aag oref) (get_object oref)"
   apply (unfold get_object_def fun_app_def)
   apply (subst gets_apply)
-  apply (wp gets_apply_ev | wp_once hoare_drop_imps)+
+  apply (wp gets_apply_ev | wp (once) hoare_drop_imps)+
   apply (fastforce elim: reads_equivE equiv_forE)
   done
 
@@ -976,7 +976,7 @@ lemma preemption_point_reads_respects:
   apply (simp add: preemption_point_def2)
   apply (wp | wpc | simp add: comp_def)+
             apply ((wp dmo_getActiveIRQ_reads_respects hoare_TrueI | simp
-                  | wp_once hoare_drop_imps)+)[8]
+                  | wp (once) hoare_drop_imps)+)[8]
    apply wp
   apply force
   done

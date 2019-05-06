@@ -232,7 +232,7 @@ lemma arch_decode_irq_control_corres:
                               simp: invs_valid_objs invs_psp_aligned invs_valid_objs'
                                     invs_pspace_aligned' invs_pspace_distinct'
                       | strengthen invs_valid_objs invs_psp_aligned
-                      | wp_once hoare_drop_imps arch_check_irq_inv)+)
+                      | wp (once) hoare_drop_imps arch_check_irq_inv)+)
   apply (auto split: arch_invocation_label.splits invocation_label.splits)
   done
 
@@ -283,7 +283,7 @@ lemma decode_irq_control_corres:
                           simp: invs_valid_objs invs_psp_aligned invs_valid_objs'
                                 invs_pspace_aligned' invs_pspace_distinct'
                    | strengthen invs_valid_objs invs_psp_aligned
-                   | wp_once hoare_drop_imps arch_check_irq_inv)+
+                   | wp (once) hoare_drop_imps arch_check_irq_inv)+
    apply (auto split: arch_invocation_label.splits invocation_label.splits
                simp: not_less unat_le_helper)
   done
@@ -306,7 +306,7 @@ lemma lsfco_real_cte_at'[wp]:
   apply (rule hoare_pre)
    apply (wp resolveAddressBits_real_cte_at'
             | simp
-            | wpc | wp_once hoare_drop_imps)+
+            | wpc | wp (once) hoare_drop_imps)+
   done
 
 lemma arch_decode_irq_control_valid'[wp]:
@@ -324,7 +324,7 @@ lemma arch_decode_irq_control_valid'[wp]:
                cong: list.case_cong prod.case_cong
           | wp whenE_throwError_wp isIRQActive_wp ensureEmptySlot_stronger
           | wpc
-          | wp_once hoare_drop_imps)+
+          | wp (once) hoare_drop_imps)+
   apply (clarsimp simp add: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
                             not_less unat_le_helper unat_of_nat)
   done
@@ -341,7 +341,7 @@ lemma decode_irq_control_valid'[wp]:
                                           invocation_label.case_cong)
   apply (wpsimp wp: ensureEmptySlot_stronger isIRQActive_wp whenE_throwError_wp
                 simp: o_def
-         | wp_once hoare_drop_imps)+
+         | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
                         not_less unat_le_helper unat_of_nat)
   done
@@ -931,7 +931,7 @@ lemma handle_interrupt_corres:
              apply wp+
            apply clarsimp
           apply clarsimp
-          apply (rule hoare_post_taut) (* FIXME: wp_once does not terminate? *)
+          apply (rule hoare_post_taut) (* FIXME: wp (once) does not terminate? *)
          apply wp+
      apply clarsimp
     apply fastforce

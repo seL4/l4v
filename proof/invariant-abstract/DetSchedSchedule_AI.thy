@@ -2461,7 +2461,7 @@ lemma invoke_cnode_valid_sched:
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
    apply wpc
-         apply (simp add: liftE_def | (wp hoare_vcg_all_lift)+ | wp_once hoare_drop_imps | wpc)+
+         apply (simp add: liftE_def | (wp hoare_vcg_all_lift)+ | wp (once) hoare_drop_imps | wpc)+
   apply force
   done
 end
@@ -2663,7 +2663,7 @@ lemma send_ipc_valid_sched:
     apply (wpsimp wp: hoare_vcg_imp_lift get_object_wp
           | simp add: get_simple_ko_def
           | wpc |
-           wp_once hoare_vcg_all_lift)+
+           wp (once) hoare_vcg_all_lift)+
   apply (subst st_tcb_at_kh_simp[symmetric])
   apply (clarsimp simp: st_tcb_at_kh_if_split pred_tcb_at_def2 obj_at_def a_type_def
                         valid_sched_def valid_sched_action_def
@@ -2841,7 +2841,7 @@ lemma receive_ipc_valid_sched:
                | simp add: get_simple_ko_def do_nbrecv_failed_transfer_def a_type_def
                     split: kernel_object.splits
                | wpc
-               | wp_once hoare_vcg_all_lift hoare_vcg_ex_lift)+
+               | wp (once) hoare_vcg_all_lift hoare_vcg_ex_lift)+
   apply (subst st_tcb_at_kh_simp[symmetric])+
   apply (clarsimp simp: st_tcb_at_kh_if_split default_notification_def default_ntfn_def isActive_def)
   apply (rename_tac xh xi xj)
@@ -2925,7 +2925,7 @@ lemma cancel_all_ipc_not_queued:
     apply (wp hoare_vcg_imp_lift
          | simp add: get_ep_queue_def get_simple_ko_def a_type_def get_object_def
               split: kernel_object.splits
-         | wpc | wp_once hoare_vcg_all_lift)+
+         | wpc | wp (once) hoare_vcg_all_lift)+
    apply safe
    apply (rename_tac xa)
    apply (drule_tac P="\<lambda>ts. \<not> active ts" and ep="SendEP xa" in
@@ -2955,7 +2955,7 @@ lemma cancel_all_signals_not_queued:
       apply (wp tcb_sched_action_enqueue_not_queued | clarsimp)+
   apply (wp hoare_vcg_imp_lift
          | simp add: get_simple_ko_def get_object_def a_type_def split: kernel_object.splits
-         | wpc | wp_once hoare_vcg_all_lift)+
+         | wpc | wp (once) hoare_vcg_all_lift)+
    apply safe
   apply (rename_tac ep x y)
   apply (drule_tac P="\<lambda>ts. \<not> active ts" and ep=ep in
@@ -3345,7 +3345,7 @@ lemma do_reply_transfer_not_queued[wp]:
    \<lbrace>\<lambda>_. not_queued t\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wp cap_delete_one_not_queued hoare_vcg_if_lift | wpc |
-         clarsimp split del: if_split | wp_once hoare_drop_imps)+
+         clarsimp split del: if_split | wp (once) hoare_drop_imps)+
    apply (simp add: invs_def valid_state_def valid_pspace_def)+
   done
 
@@ -3355,7 +3355,7 @@ lemma do_reply_transfer_schedact_not[wp]:
    \<lbrace>\<lambda>_. scheduler_act_not t\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wp hoare_vcg_if_lift | wpc | clarsimp split del: if_split |
-         wp_once hoare_drop_imps)+
+         wp (once) hoare_drop_imps)+
   done
 
 end

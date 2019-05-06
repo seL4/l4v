@@ -797,7 +797,7 @@ lemma aci_invs':
     apply (wp set_cap_caps_no_overlap set_cap_no_overlap get_cap_wp
       max_index_upd_caps_overlap_reserved max_index_upd_invs_simple
       set_cap_cte_cap_wp_to set_cap_cte_wp_at max_index_upd_no_cap_to
-      | simp split del: if_split | wp_once hoare_vcg_ex_lift)+
+      | simp split del: if_split | wp (once) hoare_vcg_ex_lift)+
     apply (rule_tac P = "is_aligned word1 page_bits" in hoare_gen_asm)
     apply (subst delete_objects_rewrite)
        apply (simp add:page_bits_def pageBits_def word_size_bits_def)
@@ -999,7 +999,7 @@ lemma associate_vcpu_tcb_invs[wp]:
   apply (rule hoare_pre)
    apply (rule hoare_vcg_conj_lift[rotated])+
    by (wp get_vcpu_wp arch_thread_get_wp weak_if_wp as_user_only_idle hoare_vcg_all_lift
-        | wp_once hoare_drop_imps
+        | wp (once) hoare_drop_imps
         | wpc
         | clarsimp
         | strengthen valid_arch_state_vcpu_update_str valid_global_refs_vcpu_update_str
@@ -1443,7 +1443,7 @@ lemma find_pd_for_asid_lookup_pd_wp:
    apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_page_directory])
    apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_lookup, simplified])
    apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_pd_at_asid, simplified])
-   apply (wp_once find_pd_for_asid_inv)
+   apply (wp (once) find_pd_for_asid_inv)
   apply auto
   done
 
@@ -1642,7 +1642,7 @@ lemma arch_decode_inv_wf[wp]:
              simp add: valid_arch_inv_def valid_pti_def unlessE_whenE vs_cap_ref_def
                   split: if_split|
              rule_tac x="fst p" in hoare_imp_eq_substR|
-             wp_once hoare_vcg_ex_lift_R)+)[1]
+             wp (once) hoare_vcg_ex_lift_R)+)[1]
           apply (rule_tac Q'="\<lambda>a b. ko_at (ArchObj (PageDirectory pd))
                                     (a + (args ! 0 >> 21 << 3) && ~~ mask pd_bits) b \<longrightarrow>
                                     pd (ucast (a + (args ! 0 >> 21 << 3) && mask pd_bits >> 3)) =
@@ -1660,7 +1660,7 @@ lemma arch_decode_inv_wf[wp]:
                   | wpc
                   | simp add: valid_arch_inv_def valid_pti_def unlessE_whenE empty_pde_atI
                               vs_cap_ref_def pageBits_def pt_bits_def pde_bits_def
-                  | wp_once hoare_drop_imps hoare_vcg_ex_lift_R)+)[6]
+                  | wp (once) hoare_drop_imps hoare_vcg_ex_lift_R)+)[6]
     apply (clarsimp simp: is_cap_simps if_apply_def2)
     apply (rule conjI)
      apply clarsimp

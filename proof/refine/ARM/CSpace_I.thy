@@ -85,10 +85,10 @@ proof (induct arbitrary: s rule: resolveAddressBits.induct)
     apply (simp add: Let_def split_def cap_case_CNodeCap[unfolded isCap_simps]
                split del: if_split cong: if_cong)
     apply (rule hoare_pre_spec_validE)
-     apply ((elim exE | wp_once spec_strengthen_postE[OF "1.hyps"])+,
+     apply ((elim exE | wp (once) spec_strengthen_postE[OF "1.hyps"])+,
               (rule refl conjI | simp add: in_monad split del: if_split)+)
             apply (wp | simp add: locateSlot_conv split del: if_split
-                      | wp_once hoare_drop_imps)+
+                      | wp (once) hoare_drop_imps)+
   done
 qed
 

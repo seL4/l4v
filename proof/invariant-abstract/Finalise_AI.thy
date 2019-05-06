@@ -224,7 +224,7 @@ lemma empty_slot_valid_objs[wp]:
    apply (wp set_cap_valid_objs set_cdt_valid_objs set_cdt_valid_cap
                  | simp add: trans_state_update[symmetric] del: trans_state_update| wpcw
                  | strengthen emptyable_valid_NullCap_strg
-                 | wp_once hoare_drop_imps)+
+                 | wp (once) hoare_drop_imps)+
   done
 
 lemmas empty_slot_valid_cap[wp] = valid_cap_typ [OF empty_slot_typ_at]

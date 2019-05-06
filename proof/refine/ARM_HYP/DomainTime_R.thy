@@ -294,7 +294,7 @@ lemma handleInterrupt_valid_domain_time:
      apply wp
     (* IRQTimer : tick occurs *) (* IRQReserved : trivial *)
     apply (wpsimp wp: timerTick_valid_domain_time
-          | wp_once hoare_vcg_imp_lift )+
+          | wp (once) hoare_vcg_imp_lift )+
   done
 
 lemma schedule_domain_time_left':
@@ -306,7 +306,7 @@ lemma schedule_domain_time_left':
   supply word_neq_0_conv[simp]
   apply wpsimp+
        apply (rule_tac Q="\<lambda>_. valid_domain_list'" in hoare_post_imp, clarsimp)
-       apply (wp | clarsimp | wp_once hoare_drop_imps)+
+       apply (wp | clarsimp | wp (once) hoare_drop_imps)+
   done
 
 lemma handleEvent_ksDomainTime_inv:

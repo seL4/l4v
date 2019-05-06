@@ -3402,7 +3402,7 @@ lemma lookup_cap_corres:
           apply (simp add: word_bits_def)
          apply (clarsimp simp: obj_at_def opt_cap_tcb not_idle_thread_def transform_cap_def word_bits_def)+
        apply (case_tac x, auto)[1]
-      apply (wp_once+)[1]
+      apply wp
      apply wp
      apply (rule validE_validE_R)
      apply (wp not_idle_thread_resolve_address_bits[where thread = thread])
@@ -3470,7 +3470,7 @@ lemma dcorres_lookup_cap_and_slot:
            apply (rule get_cap_corres, rule refl)
           apply (rule dcorres_returnOk, simp)
          apply ((wp|simp)+)[5]
-    apply wp_trace
+    apply wp
     apply (rule hoare_post_imp_R [where Q'="\<lambda>rv. valid_idle and valid_etcbs and real_cte_at (fst rv)"])
      apply (wp lookup_slot_real_cte_at_wp)
     apply (clarsimp simp: valid_idle_def not_idle_thread_def

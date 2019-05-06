@@ -1063,7 +1063,7 @@ shows
             apply (clarsimp simp: attribs_from_word_def attribsFromWord_def Let_def)
             apply (simp add: shiftr_shiftl1 pageBits_def ptBits_def pdeBits_def pteBits_def)
            apply (wp hoare_whenE_wp get_master_pde_wp getPDE_wp find_pd_for_asid_inv
-                     | wp_once hoare_drop_imps)+
+                     | wp (once) hoare_drop_imps)+
      apply (fastforce simp: valid_cap_def mask_def
                             invs_vspace_objs[simplified])
     apply (clarsimp simp: valid_cap'_def)
@@ -1081,7 +1081,7 @@ shows
            apply simp
           apply (rule corres_trivial, simp add: returnOk_def archinv_relation_def
                                                 page_table_invocation_map_def)
-         apply (wp getCTE_wp' | wp_once hoare_drop_imps)+
+         apply (wp getCTE_wp' | wp (once) hoare_drop_imps)+
       apply (clarsimp)
      apply (rule no_fail_pre, rule no_fail_getCTE)
      apply (erule conjunct2)

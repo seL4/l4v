@@ -1029,7 +1029,7 @@ lemma perform_page_valid_pdpt[wp]:
                                   valid_slots_def page_inv_entries_safe_def pte_check_if_mapped_def
                                   pde_check_if_mapped_def
                            split: pte.splits pde.splits
-                 | wp_once hoare_drop_imps)+
+                 | wp (once) hoare_drop_imps)+
   done
 
 definition
@@ -1529,7 +1529,7 @@ lemma handle_invocation_valid_pdpt[wp]:
   apply (simp add: handle_invocation_def)
   apply (wp syscall_valid set_thread_state_ct_st
                | simp add: split_def | wpc
-               | wp_once hoare_drop_imps)+
+               | wp (once) hoare_drop_imps)+
   apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
   done
 
@@ -1556,7 +1556,7 @@ lemma call_kernel_valid_pdpt[wp]:
        apply (wp | simp add: if_apply_def2 | wpc
                  | rule conjI | clarsimp simp: ct_in_state_def
                  | erule pred_tcb_weakenE
-                 | wp_once hoare_drop_imps)+
+                 | wp (once) hoare_drop_imps)+
   done
 
 end

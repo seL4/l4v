@@ -2038,7 +2038,7 @@ lemma perform_asid_pool_invs [wp]:
   apply (wpsimp wp: set_asid_pool_invs_map hoare_vcg_all_lift hoare_vcg_imp_lift'
                     copy_global_mappings_invs arch_update_cap_invs_map get_cap_wp set_cap_typ_at
                 simp: ako_asid_pools_of
-         | wp_once hoare_vcg_ex_lift)+
+         | wp (once) hoare_vcg_ex_lift)+
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_apinv_def cong: conj_cong)
   apply (rename_tac asid pool_ptr slot_ptr slot_idx s pool cap)
   apply (clarsimp simp: is_cap_simps update_map_data_def is_arch_update_def is_arch_cap_def

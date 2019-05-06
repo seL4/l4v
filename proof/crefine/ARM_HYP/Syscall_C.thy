@@ -2038,7 +2038,7 @@ proof -
         (* we only care about lifting state-related imps, nothing rv-related is relevant *)
         apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift
                           hoare_vcg_imp_lift'[where P="\<lambda>_ s. P s" for P]
-               | wp_once hoare_drop_imp)+
+               | wp (once) hoare_drop_imp)+
 
     apply (clarsimp cong: conj_cong simp: dc_def tcb_at_invs')
     apply (frule invs_arch_state')

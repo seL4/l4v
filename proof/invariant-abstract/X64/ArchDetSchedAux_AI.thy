@@ -82,7 +82,7 @@ lemma invoke_untyped_etcb_at [DetSchedAux_AI_assms]:
             hoare_convert_imp[OF create_cap_no_pred_tcb_at]
             hoare_convert_imp[OF _ init_arch_objects_exst]
       | simp
-      | (wp_once hoare_drop_impE_E))+
+      | (wp (once) hoare_drop_impE_E))+
   done
 
 

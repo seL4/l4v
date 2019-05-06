@@ -861,7 +861,7 @@ lemma decodeARMPageTableInvocation_ccorres:
        apply simp
        apply (vcg exspec=findPDForASID_modifies)
       apply simp
-      apply (wp | wp_once hoare_drop_imps)+
+      apply (wp | wp (once) hoare_drop_imps)+
      apply simp
      apply vcg
     apply simp
@@ -3107,7 +3107,7 @@ lemma decodeARMFrameInvocation_ccorres:
                                      syscall_error_to_H_cases false_def)
                apply (erule lookup_failure_rel_fault_lift[rotated], simp add: exception_defs)
               apply simp
-              apply (wp injection_wp[OF refl] | wp_once hoare_drop_imps)+
+              apply (wp injection_wp[OF refl] | wp (once) hoare_drop_imps)+
              apply (simp add: all_ex_eq_helper, vcg exspec=findPDForASID_modifies)
             apply (simp add: getSlotCap_def)
             apply (prop_tac "y = the (capPDMappedASID (capCap (fst (extraCaps ! 0))))", fastforce)
@@ -3116,7 +3116,7 @@ lemma decodeARMFrameInvocation_ccorres:
            apply simp
            apply (prop_tac "y = the(capPDMappedASID (capCap (fst (extraCaps ! 0))))"; clarsimp)
            apply vcg
-          apply (simp, wp_once hoare_drop_imps, wpsimp)
+          apply (simp, wp (once) hoare_drop_imps, wpsimp)
          apply (clarsimp, vcg)
         apply (wpsimp, (simp, vcg exspec=getSyscallArg_modifies))+
   apply (rename_tac word rghts pg_sz mapdata buffera cap excaps cte length___unsigned_long invLabel s s')
@@ -3583,7 +3583,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
          apply simp
          apply (vcg exspec=findPDForASID_modifies)
         apply simp
-        apply (wp | wp_once hoare_drop_imps)+
+        apply (wp | wp (once) hoare_drop_imps)+
        apply simp
        apply vcg
       apply simp
@@ -5131,7 +5131,7 @@ lemma decodeVCPUSetTCB_ccorres:
        apply (vcg exspec=invokeVCPUSetTCB_modifies)
       apply (wpsimp wp: sts_invs_minor' ct_in_state'_set)+
      apply (vcg exspec=setThreadState_modifies)
-    apply (wpsimp | wp_once hoare_drop_imps)+
+    apply (wpsimp | wp (once) hoare_drop_imps)+
    apply vcg
 
   apply (clarsimp simp: word_less_nat_alt word_le_nat_alt conj_commute

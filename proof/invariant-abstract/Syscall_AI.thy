@@ -46,7 +46,7 @@ lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,d
           | wpc
           | clarsimp simp: guarded_switch_to_def get_tcb_def choose_thread_def ethread_get_def
                            ethread_get_when_def
-          | wp_once hoare_drop_imps
+          | wp (once) hoare_drop_imps
           | simp add: schedule_choose_new_thread_def if_apply_def2)+
   done
 
@@ -87,7 +87,7 @@ lemma schedule_ct_activateable[wp]:
       (* switch to thread *)
       apply wpsimp
               apply (simp add: set_scheduler_action_def)
-              apply (simp | wp gts_wp | wp_once hoare_drop_imps)+
+              apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
   apply (frule invs_valid_idle)
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def valid_idle_def)
   done
@@ -341,7 +341,7 @@ lemma (in Systemcall_AI_Pre) handle_fault_reply_cte_wp_at:
       done
     show ?thesis
       apply (case_tac f; clarsimp simp: as_user_def)
-       apply (wp set_object_wp thread_get_wp' | simp add: split_def NC | wp_once hoare_drop_imps)+
+       apply (wp set_object_wp thread_get_wp' | simp add: split_def NC | wp (once) hoare_drop_imps)+
       done
   qed
 
@@ -507,7 +507,7 @@ lemma pinv_tcb[wp]:
   apply (case_tac i, simp_all split:option.splits,
     (wp invoke_arch_tcb
               | simp | clarsimp elim!: st_tcb_at_tcb_at
-              | wp_once tcb_at_typ_at)+
+              | wp (once) tcb_at_typ_at)+
     )
   done
 
@@ -1155,7 +1155,7 @@ lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_recv is_blocking
      apply ((wp hoare_vcg_all_lift_R lookup_cap_ex_cap
           | simp add: obj_at_def
           | simp add: conj_disj_distribL ball_conj_distrib
-          | wp_once hoare_drop_imps)+)
+          | wp (once) hoare_drop_imps)+)
   apply (simp add: ct_in_state_def)
   apply (fold obj_at_def)
   apply (fastforce elim!: invs_valid_tcb_ctable st_tcb_ex_cap)
@@ -1453,7 +1453,7 @@ lemma receive_ipc_st_tcb_at_runnable:
               apply (wp hoare_drop_imps)
              apply wpc
                     apply ((wp gts_wp gbn_wp  hoare_vcg_all_lift sts_st_tcb_at_other | wpc
-                           | simp add: do_nbrecv_failed_transfer_def | wp_once hoare_drop_imps)+)[8]
+                           | simp add: do_nbrecv_failed_transfer_def | wp (once) hoare_drop_imps)+)[8]
             apply clarsimp
             apply (wp gts_wp)
            apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
@@ -1487,7 +1487,7 @@ lemma send_fault_ipc_st_tcb_at_runnable:
                 apply (wp send_ipc_st_tcb_at_runnable thread_set_no_change_tcb_state thread_set_refs_trivial
                           hoare_vcg_all_lift_R thread_get_wp
                         | clarsimp
-                        | wp_once hoare_drop_imps)+
+                        | wp (once) hoare_drop_imps)+
   apply (clarsimp simp:  pred_tcb_at_def obj_at_def is_tcb)
   done
 

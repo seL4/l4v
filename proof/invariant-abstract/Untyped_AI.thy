@@ -175,7 +175,7 @@ lemma dui_inv[wp]:
               split del: if_split cong: if_cong)
   apply (rule hoare_pre)
    apply (simp split del: if_split
-              | wp_once mapME_x_inv_wp hoare_drop_imps const_on_failure_wp
+              | wp (once) mapME_x_inv_wp hoare_drop_imps const_on_failure_wp
               | assumption
               | simp add: lookup_target_slot_def
               | wpcw
@@ -2747,7 +2747,7 @@ lemma reset_untyped_cap_invs_etc:
     ?f \<lbrace>\<lambda>_. invs and ?vu2 and ct_active and ?psp\<rbrace>, \<lbrace>\<lambda>_. invs\<rbrace>")
   apply (simp add: reset_untyped_cap_def)
   apply (rule hoare_vcg_seqE[rotated])
-   apply ((wp_once get_cap_sp)+)[1]
+   apply ((wp (once) get_cap_sp)+)[1]
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp: cte_wp_at_caps_of_state bits_of_def split del: if_split)
   apply (subgoal_tac "is_aligned ptr sz")
@@ -2817,7 +2817,7 @@ lemma reset_untyped_cap_invs_etc:
                 | simp
                 | rule irq_state_independent_A_conjI
                 | simp add: cte_wp_at_caps_of_state
-                | wp_once ct_in_state_thread_state_lift
+                | wp (once) ct_in_state_thread_state_lift
                 | (rule irq_state_independent_A_def[THEN meta_eq_to_obj_eq, THEN iffD2],
                   simp add: ex_cte_cap_wp_to_def ct_in_state_def))+
      apply (clarsimp simp: is_aligned_neg_mask_eq bits_of_def field_simps
@@ -3760,7 +3760,7 @@ lemma invoke_untyp_invs':
                    distinct_tuple_helper
                    init_arch_objects_wps
                    init_arch_objects_nonempty_table
-              | wp_once retype_region_ret_folded_general)+
+              | wp (once) retype_region_ret_folded_general)+
         apply ((wp hoare_vcg_const_imp_lift hoare_drop_imp
                    retype_region_invs_extras[where sz = sz]
                    retype_region_aligned_for_init[where sz = sz]
@@ -3770,7 +3770,7 @@ lemma invoke_untyp_invs':
             | strengthen tup_in_fst_image_set_zipD[mk_strg D]
                          distinct_map_fst_zip
             | simp add: ptr_base
-            | wp_once retype_region_ret_folded_general)+)[1]
+            | wp (once) retype_region_ret_folded_general)+)[1]
        apply (clarsimp simp:conj_comms,simp cong:conj_cong)
        apply (simp add:ball_conj_distrib conj_comms)
        apply (strengthen invs_mdb invs_valid_pspace
@@ -3790,7 +3790,7 @@ lemma invoke_untyp_invs':
                    idx="if reset then 0 else idx"]
                  set_cap_cte_cap_wp_to
                  hoare_vcg_ex_lift
-               | wp_once hoare_drop_imps)+
+               | wp (once) hoare_drop_imps)+
        apply (wp set_cap_cte_wp_at_neg hoare_vcg_all_lift get_cap_wp)+
 
       apply (clarsimp simp: slot_not_in field_simps ui free_index_of_def

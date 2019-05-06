@@ -1398,7 +1398,7 @@ lemma create_objects_sep:
   apply (clarsimp simp: si_objects_def si_objects_extra_caps'_def)
   apply (rule hoare_assume_pre)
   apply (rule hoare_chain)
-    apply (wp_once retype_untypeds_wp_helper
+    apply (wp (once) retype_untypeds_wp_helper
       [where R="(si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>* si_asid \<and>* R"
          and untyped_slots = "map unat untyped_cptrs" and dev = dev
          and free_slots    = "map unat free_cptrs"],

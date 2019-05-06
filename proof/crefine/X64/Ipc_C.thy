@@ -2021,7 +2021,7 @@ proof -
                                  seL4_VMFault_IP_def
                                  msgMaxLength_def
                             del: Collect_const split del: if_split
-                     | wp_once hoare_drop_imp)+
+                     | wp (once) hoare_drop_imp)+
 
     apply (clarsimp simp: msgMaxLength_def seL4_VMFault_IP_def option_to_ptr_def
                           pageBits_def mask_def Collect_const_mem | rule conjI
@@ -3231,7 +3231,7 @@ lemma lookupExtraCaps_srcs2:
                    getSlotCap_def)
   apply (wp mapME_set[where R=\<top>] getCTE_wp'
              | simp add: cte_wp_at_ctes_of
-             | wp_once hoare_drop_imps
+             | wp (once) hoare_drop_imps
              | (rule hoare_strengthen_post [OF hoare_TrueI], rule allI, rule impI, rule TrueI))+
   done
 
@@ -5447,7 +5447,7 @@ lemma sendIPC_ccorres [corres]:
           apply vcg
          apply (wpsimp wp: doIPCTransfer_sch_act setEndpoint_ksQ hoare_vcg_all_lift
                           set_ep_valid_objs' setEndpoint_valid_mdb'
-                | wp_once hoare_drop_imp
+                | wp (once) hoare_drop_imp
                 | strengthen sch_act_wf_weak)+
        apply (fastforce simp: guard_is_UNIV_def ThreadState_Inactive_def Collect_const_mem
                                ThreadState_Running_def mask_def from_bool_def

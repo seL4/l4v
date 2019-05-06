@@ -840,7 +840,7 @@ lemma do_user_op_if_invs:
    do_user_op_if f tc
    \<lbrace>\<lambda>_. invs and ct_running\<rbrace>"
   apply (simp add: do_user_op_if_def split_def)
-  apply (wp ct_running_machine_op select_wp device_update_invs | wp_once dmo_invs | simp)+
+  apply (wp ct_running_machine_op select_wp device_update_invs | wp (once) dmo_invs | simp)+
   apply (clarsimp simp: user_mem_def user_memory_update_def simpler_modify_def
                     restrict_map_def invs_def cur_tcb_def ptable_rights_s_def
                     ptable_lift_s_def)
@@ -1098,7 +1098,7 @@ lemma kernel_entry_silc_inv[wp]:
                   wp: static_imp_wp handle_event_silc_inv thread_set_silc_inv_trivial
                       thread_set_invs_trivial thread_set_not_state_valid_sched
                       thread_set_pas_refined
-        | wp_once hoare_vcg_imp_lift)+
+        | wp (once) hoare_vcg_imp_lift)+
   by force
 
 lemma kernel_entry_pas_refined[wp]:
@@ -1303,7 +1303,7 @@ lemma switch_to_idle_thread_guarded_pas_domain[wp]:
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>xb. guarded_pas_domain aag\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def bind_assoc
                    double_gets_drop_regets)
-  apply (wp modify_wp dmo_wp hoare_vcg_imp_lift | wp_once | simp add: guarded_pas_domain_def)+
+  apply (wp modify_wp dmo_wp hoare_vcg_imp_lift | wp (once) | simp add: guarded_pas_domain_def)+
   done
 
 lemma choose_thread_guarded_pas_domain:
@@ -1356,8 +1356,8 @@ lemma schedule_guarded_pas_domain:
           | wpc
           | rule choose_thread_guarded_pas_domain
           | simp add: schedule_choose_new_thread_def ethread_get_when_def split del: if_split
-          | wp_once hoare_drop_imp[where f="ethread_get t v" for t v]
-          | wp_once hoare_drop_imp[where f="schedule_switch_thread_fastfail c i cp p" for c i cp p])+
+          | wp (once) hoare_drop_imp[where f="ethread_get t v" for t v]
+          | wp (once) hoare_drop_imp[where f="schedule_switch_thread_fastfail c i cp p" for c i cp p])+
 
 
 
@@ -1370,8 +1370,8 @@ apply (wpsimp wp: guarded_pas_domain_lift[where f="activate_thread"]
           | wpc
           | rule choose_thread_guarded_pas_domain
           | simp add: schedule_choose_new_thread_def ethread_get_when_def split del: if_split
-          | wp_once hoare_drop_imp[where f="ethread_get t v" for t v]
-          | wp_once hoare_drop_imp[where f="schedule_switch_thread_fastfail c i cp p" for c i cp p])+
+          | wp (once) hoare_drop_imp[where f="ethread_get t v" for t v]
+          | wp (once) hoare_drop_imp[where f="schedule_switch_thread_fastfail c i cp p" for c i cp p])+
 
    apply (fastforce intro: switch_within_domain switch_thread_runnable
                     simp: valid_sched_def elim!: st_tcb_weakenE)+
@@ -2928,7 +2928,7 @@ lemma rec_del_irq_state_inv':
                    finalise_cap_returns_NullCap[where irqs=False, simplified]
                    drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
                |simp add: without_preemption_def split del: if_split
-               |wp_once hoare_drop_imps
+               |wp (once) hoare_drop_imps
                |wp irq_state_inv_triv)+
     apply(blast dest: cte_wp_at_domain_sep_inv_cap)
     done
@@ -2996,7 +2996,7 @@ lemma cap_revoke_irq_state_inv'':
                     drop_spec_validE[OF assertE_wp] drop_spec_validE[OF returnOk_wp]
                     drop_spec_validE[OF liftE_wp] select_wp
                     drop_spec_validE[OF  hoare_vcg_conj_liftE1]
-                | simp | wp_once hoare_drop_imps)+
+                | simp | wp (once) hoare_drop_imps)+
   apply fastforce
   done
   qed
@@ -3026,8 +3026,8 @@ lemma invoke_cnode_irq_state_inv:
          apply((wp cap_revoke_irq_state_inv' cap_delete_irq_state_inv hoare_vcg_all_lift
                | wpc
                | simp add: cap_move_def split del: if_split
-               | wp_once irq_state_inv_triv
-               | wp_once hoare_drop_imps)+)[7]
+               | wp (once) irq_state_inv_triv
+               | wp (once) hoare_drop_imps)+)[7]
   apply fastforce
   done
 
@@ -3065,7 +3065,7 @@ lemma invoke_tcb_irq_state_inv:
             | wpc
             | simp split del: if_split add: check_cap_at_def
             | clarsimp
-            | wp_once irq_state_inv_triv)+)[3]
+            | wp (once) irq_state_inv_triv)+)[3]
     defer
     apply((wp irq_state_inv_triv | simp )+)[2]
   (* just ThreadControl left *)
@@ -3081,8 +3081,8 @@ lemma invoke_tcb_irq_state_inv:
         |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
                   tcb_at_st_tcb_at option_update_thread_def
         |strengthen use_no_cap_to_obj_asid_strg
-        |wp_once irq_state_inv_triv
-        |wp_once hoare_drop_imps | clarsimp split: option.splits | intro impI conjI allI)+
+        |wp (once) irq_state_inv_triv
+        |wp (once) hoare_drop_imps | clarsimp split: option.splits | intro impI conjI allI)+
 
 lemma do_reply_transfer_irq_state_inv_triv[wp]:
   "\<lbrace>irq_state_inv st\<rbrace> do_reply_transfer a b c d \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"
@@ -3150,7 +3150,7 @@ lemma reset_untyped_cap_irq_state_inv:
              get_cap_wp
      | rule irq_state_inv_triv
      | simp add: unless_def
-     | wp_once dmo_wp)+
+     | wp (once) dmo_wp)+
   done
 
 lemma invoke_untyped_irq_state_inv:
@@ -3210,9 +3210,9 @@ lemma handle_invocation_irq_state_inv:
        apply(wp static_imp_wp perform_invocation_irq_state_inv hoare_vcg_all_lift
                 hoare_vcg_ex_lift decode_invocation_IRQHandlerCap
             | wpc
-            | wp_once hoare_drop_imps
+            | wp (once) hoare_drop_imps
             | simp split del: if_split
-            | wp_once irq_state_inv_triv)+
+            | wp (once) irq_state_inv_triv)+
   apply fastforce
   done
 
@@ -3236,7 +3236,7 @@ lemma schedule_if_irq_state_inv:
   by (wp irq_state_inv_triv
      | simp add: schedule_if_def activate_thread_def arch_activate_idle_thread_def
      | wpc
-     | wp_once hoare_drop_imps)+
+     | wp (once) hoare_drop_imps)+
 
 lemma irq_measure_if_inv:
   assumes irq_state:

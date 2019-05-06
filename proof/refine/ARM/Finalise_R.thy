@@ -62,7 +62,7 @@ lemma emptySlot_cte_wp_cap_other:
    apply (wp updateMDB_weak_cte_wp_at updateCap_cte_wp_at_cases
              updateFreeIndex_cte_wp_at getCTE_wp' hoare_vcg_all_lift
               | simp add:  | wpc
-              | wp_once hoare_drop_imps)+
+              | wp (once) hoare_drop_imps)+
   done
 
 crunch typ_at'[wp]: emptySlot "\<lambda>s. P (typ_at' T p s)"
@@ -1202,7 +1202,7 @@ lemma emptySlot_iflive'[wp]:
              clearUntypedFreeIndex_ctes_of
              clearUntypedFreeIndex_cteCaps_of
              hoare_vcg_ex_lift
-             | wp_once hoare_vcg_imp_lift
+             | wp (once) hoare_vcg_imp_lift
              | simp add: cte_wp_at_ctes_of del: comp_apply)+
   apply (clarsimp simp: modify_map_same
     imp_conjR[symmetric])
@@ -2480,7 +2480,7 @@ lemma cteDeleteOne_cteCaps_of:
    apply (simp add: return_def fail_def)
   apply (wp emptySlot_cteCaps_of)
     apply (simp add: cteCaps_of_def)
-    apply (wp_once hoare_drop_imps)
+    apply (wp (once) hoare_drop_imps)
     apply (wp isFinalCapability_inv getCTE_wp')+
   apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of)
   apply (auto simp: fun_upd_idem fun_upd_def[symmetric] o_def)
@@ -2677,7 +2677,7 @@ lemma capDeleteOne_bound_tcb_at':
   apply (rule hoare_pre)
    apply (wp finaliseCapTrue_standin_bound_tcb_at' hoare_vcg_all_lift
             hoare_vcg_if_lift2 getCTE_cteCap_wp
-        | wpc | simp | wp_once hoare_drop_imp)+
+        | wpc | simp | wp (once) hoare_drop_imp)+
   apply (clarsimp simp:  cteCaps_of_def projectKOs isReplyCap_def cte_wp_at_ctes_of
                  split: option.splits)
   apply (case_tac "cteCap cte", simp_all)
@@ -2811,12 +2811,12 @@ lemma cancelIPC_cteCaps_of:
   apply (rule hoare_pre)
    apply (wp cteDeleteOne_cteCaps_of getCTE_wp' | wpcw
         | simp add: cte_wp_at_ctes_of
-        | wp_once hoare_drop_imps ctes_of_cteCaps_of_lift)+
+        | wp (once) hoare_drop_imps ctes_of_cteCaps_of_lift)+
           apply (wp hoare_convert_imp hoare_vcg_all_lift
                     threadSet_ctes_of threadSet_cteCaps_of
                | clarsimp)+
     apply (wp cteDeleteOne_cteCaps_of getCTE_wp' | wpcw | simp
-       | wp_once hoare_drop_imps ctes_of_cteCaps_of_lift)+
+       | wp (once) hoare_drop_imps ctes_of_cteCaps_of_lift)+
   apply (clarsimp simp: cte_wp_at_ctes_of cteCaps_of_def)
   apply (drule_tac x="mdbNext (cteMDBNode x)" in spec)
   apply clarsimp
@@ -3244,7 +3244,7 @@ lemma cteDeleteOne_invs[wp]:
     subgoal by (auto dest!: isCapDs simp: pred_tcb_at'_def obj_at'_def projectKOs
                                      ko_wp_at'_def)
    apply (wp isFinalCapability_inv getCTE_wp' static_imp_wp
-        | wp_once isFinal[where x=ptr])+
+        | wp (once) isFinal[where x=ptr])+
   apply (fastforce simp: cte_wp_at_ctes_of)
   done
 
@@ -3543,7 +3543,7 @@ lemma cap_delete_one_corres:
               apply (rule empty_slot_corres)
              apply simp+
           apply (wp hoare_drop_imps)+
-        apply (wp isFinalCapability_inv | wp_once isFinal[where x="cte_map ptr"])+
+        apply (wp isFinalCapability_inv | wp (once) isFinal[where x="cte_map ptr"])+
       apply (rule corres_trivial, simp)
      apply (wp get_cap_wp getCTE_wp)+
    apply (clarsimp simp: cte_wp_at_caps_of_state can_fast_finalise_Null
@@ -4004,7 +4004,7 @@ lemma cteDeleteOne_ct_not_ksQ:
    apply (clarsimp)
   apply (wp emptySlot_cteCaps_of hoare_lift_Pf2 [OF emptySlot_ksRQ emptySlot_ct])
     apply (simp add: cteCaps_of_def)
-    apply (wp_once hoare_drop_imps)
+    apply (wp (once) hoare_drop_imps)
     apply (wp finaliseCapTrue_standin_ct_not_ksQ isFinalCapability_inv)+
   apply (clarsimp)
   done

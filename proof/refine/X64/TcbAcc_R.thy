@@ -1206,7 +1206,7 @@ lemma threadSet_cd[wp]:
 lemma threadSet_ksDomSchedule[wp]:
   "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
   apply (simp add: threadSet_def)
-  apply (wp_trace setObject_ksDomSchedule_inv)
+  apply (wp setObject_ksDomSchedule_inv)
   done
 
 lemma threadSet_it[wp]:
@@ -2969,7 +2969,7 @@ lemma rescheduleRequired_valid_queues_sch_act_simple:
     rescheduleRequired
    \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
   apply (simp add: rescheduleRequired_def)
-  apply (wp_trace | wpc | simp | fastforce simp: Invariants_H.valid_queues_def sch_act_simple_def)+
+  apply (wp | wpc | simp | fastforce simp: Invariants_H.valid_queues_def sch_act_simple_def)+
   done
 
 lemma valid_bitmapQ_ksSchedulerAction_upd[simp]:

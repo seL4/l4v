@@ -416,7 +416,7 @@ next
           apply wp+
          apply (clarsimp simp:invs_pspace_aligned' invs_pspace_distinct' )
          apply auto[1]
-      apply (wp whenE_throwError_wp | wp_once hoare_drop_imps)+
+      apply (wp whenE_throwError_wp | wp (once) hoare_drop_imps)+
    apply (clarsimp simp: invs_valid_objs' invs_pspace_aligned' invs_pspace_distinct'
                          cte_wp_at_caps_of_state cte_wp_at_ctes_of )
    apply (clarsimp simp: invs_valid_objs invs_psp_aligned)
@@ -3422,7 +3422,7 @@ lemma updateFreeIndex_pspace_no_overlap':
    \<lbrace>\<lambda>r s. pspace_no_overlap' ptr sz s\<rbrace>"
   apply (simp add: updateFreeIndex_def getSlotCap_def updateTrackedFreeIndex_def)
   apply (rule hoare_pre)
-   apply (wp getCTE_wp' | wp_once pspace_no_overlap'_lift
+   apply (wp getCTE_wp' | wp (once) pspace_no_overlap'_lift
      | simp)+
   apply (clarsimp simp:valid_pspace'_def pspace_no_overlap'_def)
   done
@@ -3745,7 +3745,7 @@ lemma updateFreeIndex_clear_invs':
       apply (simp add:updateCap_def)
       apply (wp irqs_masked_lift valid_queues_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift
                 hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp setCTE_ioports'
-               | wp_once hoare_use_eq[where f="gsUntypedZeroRanges"]
+               | wp (once) hoare_use_eq[where f="gsUntypedZeroRanges"]
                | simp add: getSlotCap_def
                | simp add: cte_wp_at_ctes_of)+
   apply (clarsimp simp: cte_wp_at_ctes_of fun_upd_def[symmetric])
@@ -4647,7 +4647,7 @@ lemma resetUntypedCap_invs_etc:
               doMachineOp_psp_no_overlap
               updateFreeIndex_ctes_of
               updateFreeIndex_cte_wp_at
-            | simp | wps | wp_once ex_cte_cap_to'_pres)+
+            | simp | wps | wp (once) ex_cte_cap_to'_pres)+
    apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps
                          modify_map_def)
    apply auto[1]
@@ -4675,9 +4675,9 @@ lemma resetUntypedCap_invs_etc:
               | simp add: ct_in_state'_def
                           sch_act_simple_def
               | rule hoare_vcg_conj_lift_R
-              | wp_once preemptionPoint_inv
+              | wp (once) preemptionPoint_inv
               | wps
-              | wp_once ex_cte_cap_to'_pres)+
+              | wp (once) ex_cte_cap_to'_pres)+
      apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps
                            conj_comms)
      apply (subgoal_tac "getFreeIndex ptr
@@ -5227,7 +5227,7 @@ lemma insertNewCap_valid_pspace':
      insertNewCap parent slot cap
    \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   apply (simp add: valid_pspace'_def)
-  apply (wp_trace insertNewCap_valid_mdb)
+  apply (wp insertNewCap_valid_mdb)
      apply simp_all
   done
 
@@ -5330,9 +5330,9 @@ lemma insertNewCap_valid_irq_handlers:
      insertNewCap parent slot cap
    \<lbrace>\<lambda>rv. valid_irq_handlers'\<rbrace>"
   apply (simp add: insertNewCap_def valid_irq_handlers'_def irq_issued'_def)
-  apply (wp | wp_once hoare_use_eq[where f=ksInterruptState, OF updateNewFreeIndex_ksInterrupt])+
+  apply (wp | wp (once) hoare_use_eq[where f=ksInterruptState, OF updateNewFreeIndex_ksInterrupt])+
      apply (simp add: cteCaps_of_def)
-     apply (wp | wp_once hoare_use_eq[where f=ksInterruptState, OF setCTE_ksInterruptState]
+     apply (wp | wp (once) hoare_use_eq[where f=ksInterruptState, OF setCTE_ksInterruptState]
                getCTE_wp)+
   apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of ran_def)
   apply auto
@@ -5418,7 +5418,7 @@ lemma insertNewCap_urz[wp]:
   apply (wp getCTE_cteCap_wp
     | simp add: updateTrackedFreeIndex_def getSlotCap_def case_eq_if_isUntypedCap
                split: option.split split del: if_split
-    | wps | wp_once getCTE_wp')+
+    | wps | wp (once) getCTE_wp')+
   apply (clarsimp simp: cte_wp_at_ctes_of fun_upd_def[symmetric])
   apply (strengthen untyped_ranges_zero_fun_upd[mk_strg I E])
   apply (intro conjI impI; clarsimp simp: isCap_simps)
@@ -5799,7 +5799,7 @@ lemma resetUntypedCap_st_tcb_at':
    apply (wp mapME_x_inv_wp preemptionPoint_inv
              deleteObjects_st_tcb_at'[where p=slot] getSlotCap_wp
            | simp add: unless_def
-           | wp_once hoare_drop_imps)+
+           | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (strengthen refl)
   apply (rule exI, strengthen refl)

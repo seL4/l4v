@@ -111,7 +111,7 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
      apply (clarsimp simp: timer_tick_def num_domains_def)
      apply (wp reschedule_required_valid_domain_time handle_reserved_irq_valid_domain_time
            | simp
-           | wp_once hoare_drop_imp)+
+           | wp (once) hoare_drop_imp)+
    done
 
 

@@ -2378,7 +2378,7 @@ prefer 2
               apply (rule dcorres_flush_page)
              apply (wp do_machine_op_wp | clarsimp)+
          apply (simp add: imp_conjR)
-         apply ((wp check_mapping_pptr_pt_relation | wp_once hoare_drop_imps)+)[1]
+         apply ((wp check_mapping_pptr_pt_relation | wp (once) hoare_drop_imps)+)[1]
         apply (simp | wp lookup_pt_slot_inv)+
      apply (simp add: dc_def
        | wp lookup_pt_slot_inv find_pd_for_asid_kernel_mapping_help
@@ -2444,7 +2444,7 @@ prefer 2
               apply (rule dcorres_flush_page[unfolded dc_def])
              apply (wp do_machine_op_wp | clarsimp)+
          apply (simp add: imp_conjR)
-         apply ((wp check_mapping_pptr_section_relation | wp_once hoare_drop_imps)+)[1]
+         apply ((wp check_mapping_pptr_section_relation | wp (once) hoare_drop_imps)+)[1]
         apply (simp | wp lookup_pt_slot_inv)+
      apply (simp add: dc_def
        | wp lookup_pt_slot_inv find_pd_for_asid_kernel_mapping_help
@@ -3514,7 +3514,7 @@ proof (induct arbitrary: S rule: rec_del.induct,
          apply (rule monadic_trancl_preemptible_return)
         apply (rule corres_trivial, simp add: returnOk_liftE)
         apply wp
-       apply (wp_trace cutMon_validE_R_drop rec_del_invs
+       apply (wp cutMon_validE_R_drop rec_del_invs
                   | simp add: not_idle_thread_def
                   | strengthen invs_weak_valid_mdb invs_valid_idle_strg
                   | rule hoare_vcg_E_elim[rotated])+

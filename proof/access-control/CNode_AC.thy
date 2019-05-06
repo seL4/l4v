@@ -228,7 +228,7 @@ lemma decode_cnode_inv_authorised:
               lsfco_cte_at
         | simp only: simp_thms if_simps fst_conv snd_conv Invocations_A.cnode_invocation.simps K_def
         | wpc
-        | wp_once get_cap_cur_auth)+
+        | wp (once) get_cap_cur_auth)+
   apply clarsimp
   apply (frule is_cnode_into_is_subject [rotated], fastforce)
   apply simp
@@ -1877,7 +1877,7 @@ lemma decode_cnode_invocation_auth_derived:
                     split del: if_split
             | strengthen cte_wp_at_auth_derived_mask_cap_strg
                          cte_wp_at_auth_derived_update_cap_data_strg
-            | wp_once hoare_drop_imps)+
+            | wp (once) hoare_drop_imps)+
   done
 
 

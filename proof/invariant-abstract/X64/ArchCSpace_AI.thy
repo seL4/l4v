@@ -646,7 +646,7 @@ lemma cap_insert_simple_invs:
   cap_insert cap src dest \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
-   apply (wp_trace cap_insert_simple_mdb cap_insert_iflive
+   apply (wp cap_insert_simple_mdb cap_insert_iflive
              cap_insert_zombies cap_insert_ifunsafe cap_insert_simple_ioports
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_no_ap)

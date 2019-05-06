@@ -747,7 +747,7 @@ proof -
                  apply simp
                  apply (rule arm_context_switch_corres)
                 apply ((wp find_pd_for_asid_pd_at_asid_again
-                  | simp add: if_apply_def2 | wp_once hoare_drop_imps)+)
+                  | simp add: if_apply_def2 | wp (once) hoare_drop_imps)+)
             apply clarsimp
             apply (frule page_directory_cap_pd_at_uniq, simp+)
             apply (frule(1) cte_wp_at_valid_objs_valid_cap)
@@ -791,7 +791,7 @@ lemma loadHWASID_wp [wp]:
          loadHWASID asid \<lbrace>P\<rbrace>"
   apply (simp add: loadHWASID_def)
   apply (wp findPDForASIDAssert_pd_at_wp
-            | wpc | simp | wp_once hoare_drop_imps)+
+            | wpc | simp | wp (once) hoare_drop_imps)+
   apply (auto split: option.split)
   done
 
@@ -1581,7 +1581,7 @@ lemma unmap_page_corres:
                          apply (rule store_pte_corres',  simp add:pte_relation_aligned_def)
                         apply clarsimp
                        apply clarsimp
-                      apply (wp store_pte_typ_at hoare_vcg_const_Ball_lift | simp | wp_once hoare_drop_imps)+
+                      apply (wp store_pte_typ_at hoare_vcg_const_Ball_lift | simp | wp (once) hoare_drop_imps)+
                apply (wp lookup_pt_slot_ptes lookup_pt_slot_inv lookupPTSlot_inv
                          lookup_pt_slot_is_aligned lookup_pt_slot_is_aligned_6)+
              apply (clarsimp simp: page_directory_pde_at_lookupI vmsz_aligned_def pd_aligned
@@ -1598,7 +1598,7 @@ lemma unmap_page_corres:
                   apply (rule corres_Id, rule refl, simp)
                   apply (rule no_fail_cleanByVA_PoU)
                  apply (wp | simp add:pde_relation_aligned_def
-                   | wp_once hoare_drop_imps)+
+                   | wp (once) hoare_drop_imps)+
             apply (clarsimp simp: page_directory_pde_at_lookupI
                                   pg_entry_align_def)
             apply (clarsimp simp:lookup_pd_slot_def)
@@ -1629,7 +1629,7 @@ lemma unmap_page_corres:
                     apply (erule (2) pde_at_aligned_vptr)
                     apply (simp add: valid_unmap_def)
                    apply assumption
-                  apply (wp | simp add: superSectionPDEOffsets_def pdeBits_def | wp_once hoare_drop_imps)+
+                  apply (wp | simp add: superSectionPDEOffsets_def pdeBits_def | wp (once) hoare_drop_imps)+
            apply (clarsimp simp: valid_unmap_def page_directory_pde_at_lookupI
                                  lookup_pd_slot_aligned_6 pg_entry_align_def
                                  pd_aligned vmsz_aligned_def)
@@ -2252,7 +2252,7 @@ proof -
           apply (drule (1) subsetD)
           apply (clarsimp simp: cap_range_def)
          apply clarsimp
-        apply (wp_trace arch_update_cap_invs_map set_cap_valid_page_map_inv)
+        apply (wp arch_update_cap_invs_map set_cap_valid_page_map_inv)
        apply (wp arch_update_updateCap_invs)
       apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct valid_page_inv_def
                             cte_wp_at_caps_of_state is_arch_update_def is_cap_simps)

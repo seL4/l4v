@@ -1160,7 +1160,7 @@ shows
              apply (clarsimp simp: archinv_relation_def page_table_invocation_map_def)
              apply (simp add: shiftr_shiftl1)
             apply (wp hoare_whenE_wp get_master_pde_wp getPDE_wp find_pd_for_asid_inv
-                   | wp_once hoare_drop_imps)+
+                   | wp (once) hoare_drop_imps)+
       apply (fastforce simp: valid_cap_def mask_def)
      apply (clarsimp simp: valid_cap'_def)
      apply fastforce
@@ -1177,7 +1177,7 @@ shows
             apply simp
            apply (rule corres_trivial, simp add: returnOk_def archinv_relation_def
                                                  page_table_invocation_map_def)
-          apply (wp getCTE_wp' | wp_once hoare_drop_imps)+
+          apply (wp getCTE_wp' | wp (once) hoare_drop_imps)+
        apply (clarsimp)
       apply (rule no_fail_pre, rule no_fail_getCTE)
       apply (erule conjunct2)
@@ -2270,7 +2270,7 @@ lemma assoc_invs':
                     setVCPU_valid_arch'
               simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb valid_arch_tcb'_def
-        | wp_once hoare_vcg_imp_lift)+
+        | wp (once) hoare_vcg_imp_lift)+
   apply (drule (1) valid_objs_valid_vcpu')
   apply (clarsimp simp: valid_vcpu'_def)
   apply (rule conjI)

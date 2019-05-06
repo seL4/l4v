@@ -708,7 +708,7 @@ lemma detype_corres:
     apply (simp add: valid_mdb_def)
    apply (wp hoare_vcg_ex_lift hoare_vcg_ball_lift | wps |
           simp add: invs_def valid_state_def valid_pspace_def
-                    descendants_range_def | wp_once hoare_drop_imps)+
+                    descendants_range_def | wp (once) hoare_drop_imps)+
   done
 
 

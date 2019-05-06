@@ -689,7 +689,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                               apply (ctac add: setPriority_ccorres)
                              apply (rule ccorres_return_Skip)
                             apply (rule ccorres_return_CE, simp+)[1]
-                           apply wp_once
+                           apply (wp (once))
                           apply (clarsimp simp: guard_is_UNIV_def)
                          apply (wpsimp wp: when_def static_imp_wp)
                           apply (strengthen sch_act_wf_weak, wp)
@@ -1100,7 +1100,7 @@ lemma restart_ccorres:
        apply (wp sts_valid_queues setThreadState_st_tcb)[1]
       apply (simp add: valid_tcb_state'_def)
       apply wp
-      apply (wp_once sch_act_wf_lift, (wp tcb_in_cur_domain'_lift)+)
+      apply (wp (once) sch_act_wf_lift, (wp tcb_in_cur_domain'_lift)+)
      apply (rule hoare_strengthen_post)
       apply (rule hoare_vcg_conj_lift)
        apply (rule delete_one_conc_fr.cancelIPC_invs)
@@ -2160,14 +2160,14 @@ shows
                                           msgMaxLength_def msgLengthBits_def
                                           word_less_nat_alt unat_of_nat)
                     apply (simp add: min_def split: if_split_asm)
-                   apply (wp_once hoare_drop_imps)
+                   apply (wp (once) hoare_drop_imps)
                    apply (wp asUser_obj_at'[where t'=target] static_imp_wp
                              asUser_valid_ipc_buffer_ptr')
                   apply (vcg exspec=setRegister_modifies)
                  apply simp
                  apply (strengthen valid_ipc_buffer_ptr_the_strengthen)
                  apply simp
-                 apply (wp lookupIPCBuffer_Some_0 | wp_once hoare_drop_imps)+
+                 apply (wp lookupIPCBuffer_Some_0 | wp (once) hoare_drop_imps)+
                 apply (simp add: Collect_const_mem ARM_HYP_H.badgeRegister_def
                                  ARM_HYP.badgeRegister_def
                                  "StrictC'_register_defs")
@@ -3187,18 +3187,18 @@ lemma decodeTCBConfigure_ccorres:
                        apply (simp add: Collect_const_mem del: Collect_const)
                        apply vcg
                       apply (simp cong: if_cong)
-                      apply (wp | wp_once hoare_drop_imps)+
+                      apply (wp | wp (once) hoare_drop_imps)+
                      apply (simp add: Collect_const_mem all_ex_eq_helper
                                 cong: option.case_cong)
                      apply (vcg exspec=slotCapLongRunningDelete_modifies)
                     apply (simp cong: if_cong)
-                    apply (wp | wp_once hoare_drop_imps)+
+                    apply (wp | wp (once) hoare_drop_imps)+
                    apply (simp add: Collect_const_mem)
                    apply (vcg exspec=slotCapLongRunningDelete_modifies)
                   apply (simp add: pred_conj_def cong: if_cong)
                   apply (wp injection_wp_E[OF refl] checkValidIPCBuffer_ArchObject_wp)
                   apply simp
-                  apply (wp | wp_once hoare_drop_imps)+
+                  apply (wp | wp (once) hoare_drop_imps)+
                  apply (simp add: Collect_const_mem all_ex_eq_helper)
                  apply (rule_tac P="{s. cRootCap_' s = cRootCap \<and> vRootCap_' s = vRootCap
                                         \<and> bufferAddr_' s = args ! 3
@@ -3234,16 +3234,16 @@ lemma decodeTCBConfigure_ccorres:
                   apply (fastforce+)[2]
                 apply clarsimp
                 apply (strengthen if_n_updateCapData_valid_strg)
-                apply (wp | wp_once hoare_drop_imps)+
+                apply (wp | wp (once) hoare_drop_imps)+
                apply (clarsimp simp: Collect_const_mem all_ex_eq_helper
                                cong: option.case_cong)
                apply vcg
               apply simp
-              apply (wp | wp_once hoare_drop_imps)+
+              apply (wp | wp (once) hoare_drop_imps)+
              apply (simp add: Collect_const_mem all_ex_eq_helper)
              apply vcg
             apply simp
-            apply (wp | wp_once hoare_drop_imps)+
+            apply (wp | wp (once) hoare_drop_imps)+
            apply (wpsimp | vcg exspec=getSyscallArg_modifies)+
   apply (clarsimp simp: Collect_const_mem all_ex_eq_helper)
   apply (rule conjI)
@@ -3389,7 +3389,7 @@ lemma decodeSetMCPriority_ccorres:
          apply (rule injection_handler_wp)
          apply (rule checkPrio_wp[simplified validE_R_def])
         apply vcg
-       apply (wp | simp | wpc | wp_once hoare_drop_imps)+
+       apply (wp | simp | wpc | wp (once) hoare_drop_imps)+
       apply vcg
      apply wp
     apply (vcg exspec=getSyscallArg_modifies)
@@ -3524,7 +3524,7 @@ lemma decodeSetPriority_ccorres:
          apply (rule injection_handler_wp)
          apply (rule checkPrio_wp[simplified validE_R_def])
         apply vcg
-       apply (wp | simp | wpc | wp_once hoare_drop_imps)+
+       apply (wp | simp | wpc | wp (once) hoare_drop_imps)+
       apply vcg
      apply wp
     apply (vcg exspec=getSyscallArg_modifies)
@@ -3672,7 +3672,7 @@ lemma decodeSetSchedParams_ccorres:
            apply (rule injection_handler_wp)
            apply (rule checkPrio_wp[simplified validE_R_def])
           apply vcg
-         apply (wp | simp | wpc | wp_once hoare_drop_imps)+
+         apply (wp | simp | wpc | wp (once) hoare_drop_imps)+
         apply vcg
        apply simp
        apply (rule return_wp)
@@ -3822,11 +3822,11 @@ lemma decodeSetIPCBuffer_ccorres:
           apply (rule ccorres_return_C_errorE, simp+)[1]
          apply vcg
         apply simp
-        apply (wp | wp_once hoare_drop_imps)+
+        apply (wp | wp (once) hoare_drop_imps)+
        apply (simp add: Collect_const_mem)
        apply (vcg exspec=deriveCap_modifies)
       apply simp
-      apply (wp | wp_once hoare_drop_imps)+
+      apply (wp | wp (once) hoare_drop_imps)+
      apply simp
      apply vcg
     apply wp
@@ -4177,7 +4177,7 @@ lemma decodeBindNotification_ccorres:
      apply (clarsimp simp: throwError_def return_def syscall_error_rel_def syscall_error_to_H_cases
                            exception_defs)
     apply clarsimp
-    apply (wp | simp | wpc | wp_once hoare_drop_imps)+
+    apply (wp | simp | wpc | wp (once) hoare_drop_imps)+
    apply vcg
   apply clarsimp
   apply (rule conjI)

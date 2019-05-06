@@ -122,7 +122,7 @@ lemma kernelEntry_ex_abs[wp]:
    \<lbrace>\<lambda>_. ex_abs (einvs)\<rbrace>"
   apply (rule hoare_pre)
    apply (rule corres_ex_abs_lift[OF kernel_entry_if_corres])
-   apply (wp_trace kernel_entry_if_invs kernel_entry_if_valid_sched)
+   apply (wp kernel_entry_if_invs kernel_entry_if_valid_sched)
   apply (clarsimp simp: ex_abs_def)
   apply (rule_tac x=sa in exI)
   apply (fastforce simp: ct_running_related ct_idle_related schedaction_related
@@ -208,26 +208,26 @@ lemma setExMonitor_no_fail[wp]:
 
 lemma doUserOp_if_empty_fail: "empty_fail (doUserOp_if uop tc)"
   apply (simp add: doUserOp_if_def)
-  apply wp_once
-   apply wp_once
-  apply wp_once
-   apply wp_once
-  apply wp_once
-   apply wp_once
-  apply wp_once
-   apply wp_once
-  apply wp_once
-   apply wp_once
-  apply wp_once
-   apply wp[1]
-  apply wp_once
-   apply wp[1]
-  apply wp_once
-   apply wp[1]
-  apply wp_once
-   apply wp[1]
-  apply wp_once
-   apply wp[1]
+  apply (wp (once))
+   apply wp
+  apply (wp (once))
+   apply wp
+  apply (wp (once))
+   apply wp
+  apply (wp (once))
+   apply wp
+  apply (wp (once))
+   apply wp
+  apply (wp (once))
+   apply wp
+  apply (wp (once))
+   apply wp
+  apply (wp (once))
+   apply wp
+  apply (wp (once))
+   apply wp
+  apply (wp (once))
+   apply wp
   apply (subst bind_assoc[symmetric])
   apply (rule empty_fail_bind)
    apply (rule empty_fail_select_bind)
@@ -1239,8 +1239,8 @@ lemma haskell_invs:
                                     kernelCall_H_if_def handlePreemption_H_if_def
                                     schedule'_H_if_def kernelExit_H_if_def split del: if_split)[12]
               apply (rule preserves_lifts | wp | simp add: full_invs_if'_def
-                  | wp_once hoare_vcg_disj_lift)+
-          apply (wp | wp_once hoare_vcg_disj_lift hoare_drop_imps)+
+                  | wp (once) hoare_vcg_disj_lift)+
+          apply (wp | wp (once) hoare_vcg_disj_lift hoare_drop_imps)+
          apply simp
         apply (rule preserves_lifts)
         apply (simp add: full_invs_if'_def)

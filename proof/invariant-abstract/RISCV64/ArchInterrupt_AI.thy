@@ -43,7 +43,7 @@ lemma decode_irq_control_valid [Interrupt_AI_asms]:
                    arch_decode_irq_control_invocation_def
                  split del: if_split cong: if_cong)
   apply (wpsimp wp: ensure_empty_stronger simp: cte_wp_at_eq_simp arch_irq_control_inv_valid_def
-        | wp_once hoare_drop_imps)+
+        | wp (once) hoare_drop_imps)+
   done
 
 lemma get_irq_slot_different_ARCH[Interrupt_AI_asms]:

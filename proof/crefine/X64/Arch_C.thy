@@ -2729,7 +2729,7 @@ lemma decodeX64FrameInvocation_ccorres:
                  apply (simp add: exception_defs)
                 apply (simp add: isCap_simps)
                 apply (wp injection_wp[OF refl]
-                       | wp_once hoare_drop_imps)+
+                       | wp (once) hoare_drop_imps)+
                apply (simp add: all_ex_eq_helper)
                apply (rule_tac t=y and s="the (capPML4MappedASID (capCap (fst (extraCaps ! 0))))"
                         in ssubst, fastforce)

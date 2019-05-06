@@ -164,7 +164,7 @@ lemma decode_invocation_authorised:
               | strengthen cnode_diminished_strg
               | wpc | simp add: comp_def authorised_invocation_def decode_invocation_def
                         split del: if_split del: hoare_True_E_R
-              | wp_once hoare_FalseE_R)+
+              | wp (once) hoare_FalseE_R)+
 
   apply (clarsimp simp: aag_has_Control_iff_owns split_def aag_cap_auth_def)
   apply (cases cap, simp_all)
@@ -510,7 +510,7 @@ lemma handle_interrupt_integrity_autarch:
   apply (simp add: handle_interrupt_def  cong: irq_state.case_cong maskInterrupt_def
                    ackInterrupt_def resetTimer_def )
   apply (rule conjI; rule impI; rule hoare_pre)
-  apply (wp_once send_signal_respects get_cap_auth_wp [where aag = aag] dmo_mol_respects
+  apply (wp (once) send_signal_respects get_cap_auth_wp [where aag = aag] dmo_mol_respects
        | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def
                    handle_reserved_irq_def
        | wp dmo_no_mem_respects
@@ -540,7 +540,7 @@ lemma handle_interrupt_integrity:
   apply (simp add: handle_interrupt_def maskInterrupt_def ackInterrupt_def resetTimer_def
              cong: irq_state.case_cong bind_cong)
   apply (rule conjI; rule impI; rule hoare_pre)
-  apply (wp_once send_signal_respects get_cap_wp dmo_mol_respects dmo_no_mem_respects
+  apply (wp (once) send_signal_respects get_cap_wp dmo_mol_respects dmo_no_mem_respects
        | wpc
        | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def
                    handle_reserved_irq_def)+
@@ -964,7 +964,7 @@ lemma schedule_integrity_pasMayEditReadyQueues:
                         guarded_switch_to_lift switch_to_thread_respects_pasMayEditReadyQueues)+
             (* is_highest_prio *)
             apply (simp add: wrap_is_highest_prio_def)
-            apply ((wp_once hoare_drop_imp)+)[1]
+            apply ((wp (once) hoare_drop_imp)+)[1]
            apply (wpsimp wp: tcb_sched_action_enqueue_valid_blocked_except hoare_vcg_imp_lift' gts_wp)+
   apply (clarsimp simp: if_apply_def2 cong: imp_cong conj_cong)
 

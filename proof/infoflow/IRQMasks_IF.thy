@@ -101,7 +101,7 @@ lemma handle_interrupt_irq_masks:
         | simp add: ackInterrupt_def maskInterrupt_def when_def split del: if_split
         | wpc
         | simp add: get_irq_state_def handle_reserved_irq_def
-        | wp_once hoare_drop_imp)+
+        | wp (once) hoare_drop_imp)+
   apply (fastforce simp: domain_sep_inv_def)
   done
 
@@ -138,7 +138,7 @@ lemma rec_del_irq_masks':
                    finalise_cap_returns_NullCap[where irqs=False, simplified]
                    drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
                |simp split del: if_split
-               |wp_once hoare_drop_imps)+
+               |wp (once) hoare_drop_imps)+
     apply(blast dest: cte_wp_at_domain_sep_inv_cap)
     done
   next
@@ -313,7 +313,7 @@ lemma cap_revoke_irq_masks':
                     drop_spec_validE[OF assertE_wp] drop_spec_validE[OF returnOk_wp]
                     drop_spec_validE[OF liftE_wp] select_wp
                     drop_spec_validE[OF  hoare_vcg_conj_liftE1]
-                | simp | wp_once hoare_drop_imps)+
+                | simp | wp (once) hoare_drop_imps)+
   apply fastforce
   done
   qed
@@ -338,7 +338,7 @@ lemma invoke_cnode_irq_masks:
   apply(case_tac ci)
         apply(wp cap_insert_irq_masks cap_move_irq_masks cap_revoke_irq_masks[where st=st] cap_delete_irq_masks[where st=st] | simp split del: if_split)+
     apply(rule hoare_pre)
-     by(wp hoare_vcg_all_lift  | simp | wpc | wp_once hoare_drop_imps | rule hoare_pre)+
+     by(wp hoare_vcg_all_lift  | simp | wpc | wp (once) hoare_drop_imps | rule hoare_pre)+
 
 fun irq_of_handler_inv where
   "irq_of_handler_inv (ACKIrq irq) = irq" |
@@ -441,7 +441,7 @@ lemma handle_event_irq_masks:
                  | wp handle_invocation_irq_masks[where st=st] handle_interrupt_irq_masks[where st=st]
                       hoare_vcg_all_lift
                  | wpc
-                 | wp_once hoare_drop_imps)+\<close>)?)
+                 | wp (once) hoare_drop_imps)+\<close>)?)
   apply (rule hoare_pre)
   apply simp
   apply (wp handle_interrupt_irq_masks[where st=st] | wpc | simp )+

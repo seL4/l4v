@@ -544,7 +544,7 @@ lemma doUserOp_invs':
         (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
   apply (wp device_update_invs' doMachineOp_ct_running' select_wp
-    | (wp_once dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
+    | (wp (once) dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
                                        user_memory_update_def))+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def

@@ -3947,7 +3947,7 @@ lemma mapM_x_threadSet_createNewCaps_futz:
     apply simp
    apply (rule hoare_pre)
    apply (wp hoare_vcg_ball_lift threadSet_ko_wp_at2'[where P="id", simplified]
-      | wp_once threadSet_ko_wp_at2'_futz[where Q="\<lambda>tcb. \<not>tcbQueued tcb \<and> tcbState tcb = Inactive"]
+      | wp (once) threadSet_ko_wp_at2'_futz[where Q="\<lambda>tcb. \<not>tcbQueued tcb \<and> tcbState tcb = Inactive"]
       | simp)+
   done
 

@@ -1207,7 +1207,7 @@ lemma invoke_untyped_no_pending[wp]:
   apply (wpsimp wp: mapM_x_wp' set_cap_no_pending_asm_in_pre get_cap_wp select_wp
         simp: update_available_range_def
     )+
-     apply (wp_once hoare_drop_imps)
+     apply (wp (once) hoare_drop_imps)
      apply (wpsimp  split_del: if_split)+
    apply (rule_tac Q' = "\<lambda>r s. no_pending s \<and> ((\<exists>y. opt_cap ref s = Some y) \<longrightarrow>
                         \<not> is_pending_cap (the (opt_cap ref s)))" in hoare_post_imp_R)

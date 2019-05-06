@@ -940,12 +940,12 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
              | rule conjI
              | erule cte_wp_at_weakenE tcb_cap_valid_imp'[rule_format, rotated -1]
              | erule(1) no_cap_to_obj_with_diff_ref_finalI_ARCH
-             | (wp_once hoare_drop_imps,
-                        wp_once cancel_all_ipc_unlive[unfolded o_def]
+             | (wp (once) hoare_drop_imps,
+                        wp (once) cancel_all_ipc_unlive[unfolded o_def]
                        cancel_all_signals_unlive[unfolded o_def])
-             | ((wp_once hoare_drop_imps)?,
-                (wp_once hoare_drop_imps)?,
-                wp_once deleting_irq_handler_empty)
+             | ((wp (once) hoare_drop_imps)?,
+                (wp (once) hoare_drop_imps)?,
+                wp (once) deleting_irq_handler_empty)
              | wpc
              | simp add: valid_cap_simps is_nondevice_page_cap_simps)+))
   done

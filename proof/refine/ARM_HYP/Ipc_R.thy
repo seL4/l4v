@@ -577,7 +577,7 @@ lemma transferCapsToSlots_pres1[crunch_rules]:
              split del: if_split)
   apply (rule hoare_pre)
    apply (wp x eb | assumption | simp split del: if_split | wpc
-             | wp_once hoare_drop_imps)+
+             | wp (once) hoare_drop_imps)+
   done
 
 lemma cteInsert_cte_cap_to':
@@ -1998,7 +1998,7 @@ lemma cteDeleteOne_cur' [wp]:
   "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> cteDeleteOne slot \<lbrace>\<lambda>_ s'. cur_tcb' s'\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_def when_def)
   apply (wp hoare_drop_imps finaliseCapTrue_standin_cur' isFinalCapability_cur'
-         | simp add: split_def | wp_once cur_tcb_lift)+
+         | simp add: split_def | wp (once) cur_tcb_lift)+
   done
 
 lemma handleFaultReply_cur' [wp]:
@@ -2970,7 +2970,7 @@ lemma cteDeleteOne_reply_cap_to'[wp]:
   apply (subgoal_tac "isReplyCap (cteCap cte)")
    apply (wp hoare_vcg_ex_lift emptySlot_cte_wp_cap_other isFinalCapability_inv
         | clarsimp simp: finaliseCap_def isCap_simps | simp
-        | wp_once hoare_drop_imps)+
+        | wp (once) hoare_drop_imps)+
    apply (fastforce simp: cte_wp_at_ctes_of)
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   done
@@ -3523,7 +3523,7 @@ lemma send_fault_ipc_corres:
                    | simp add: tcb_cap_cases_def)+
              apply ((wp threadSet_invs_trivial threadSet_tcb'
                    | simp add: tcb_cte_cases_def
-                   | wp_once sch_act_sane_lift)+)[1]
+                   | wp (once) sch_act_sane_lift)+)[1]
             apply (rule corres_trivial, simp add: lookup_failure_map_def)
            apply (clarsimp simp: st_tcb_at_tcb_at split: if_split)
            apply (simp add: valid_cap_def)
@@ -3687,7 +3687,7 @@ lemma setupCallerCap_iflive[wp]:
   by (wp getSlotCap_cte_wp_at
           | simp add: unique_master_reply_cap'
           | strengthen eq_imp_strg
-          | wp_once hoare_drop_imp[where f="getCTE rs" for rs])+
+          | wp (once) hoare_drop_imp[where f="getCTE rs" for rs])+
 
 lemma setupCallerCap_ifunsafe[wp]:
   "\<lbrace>if_unsafe_then_cap' and valid_objs' and
@@ -3698,7 +3698,7 @@ lemma setupCallerCap_ifunsafe[wp]:
             getThreadReplySlot_def locateSlot_conv
   apply (wp getSlotCap_cte_wp_at
        | simp add: unique_master_reply_cap' | strengthen eq_imp_strg
-       | wp_once hoare_drop_imp[where f="getCTE rs" for rs])+
+       | wp (once) hoare_drop_imp[where f="getCTE rs" for rs])+
    apply (rule_tac Q="\<lambda>rv. valid_objs' and tcb_at' rcvr and ex_nonz_cap_to' rcvr"
                 in hoare_post_imp)
     apply (clarsimp simp: ex_nonz_tcb_cte_caps' tcbCallerSlot_def
@@ -3716,7 +3716,7 @@ lemma setupCallerCap_global_refs'[wp]:
   apply (wp getSlotCap_cte_wp_at
     | simp add: o_def unique_master_reply_cap'
     | strengthen eq_imp_strg
-    | wp_once getCTE_wp | clarsimp simp: cte_wp_at_ctes_of)+
+    | wp (once) getCTE_wp | clarsimp simp: cte_wp_at_ctes_of)+
   (* at setThreadState *)
   apply (rule_tac Q="\<lambda>_. valid_global_refs'" in hoare_post_imp, wpsimp+)
   done
@@ -3987,7 +3987,7 @@ lemma ri_invs' [wp]:
          | simp add: valid_tcb_state'_def case_bool_If
                      case_option_If del: fun_upd_apply
               split del: if_split cong: if_cong
-        | wp_once sch_act_sane_lift hoare_vcg_conj_lift hoare_vcg_all_lift
+        | wp (once) sch_act_sane_lift hoare_vcg_conj_lift hoare_vcg_all_lift
                   untyped_ranges_zero_lift)+
    apply (clarsimp split del: if_split simp: pred_tcb_at' state_hyp_refs_of'_ep)
    apply (frule obj_at_valid_objs')
@@ -4214,7 +4214,7 @@ lemma si_invs'[wp]:
                hoare_convert_imp [OF setEndpoint_nosch setEndpoint_ct']
                hoare_drop_imp [where f="threadGet tcbFault t"]
              | rule_tac f="getThreadState a" in hoare_drop_imp
-             | wp_once hoare_drop_imp[where R="\<lambda>_ _. call"]
+             | wp (once) hoare_drop_imp[where R="\<lambda>_ _. call"]
                hoare_drop_imp[where R="\<lambda>_ _. \<not> call"]
                hoare_drop_imp[where R="\<lambda>_ _. cg"]
              | simp    add: valid_tcb_state'_def case_bool_If
@@ -4222,7 +4222,7 @@ lemma si_invs'[wp]:
                       cong: if_cong
                        del: fun_upd_apply
                  split del: if_split
-             | wp_once sch_act_sane_lift tcb_in_cur_domain'_lift hoare_vcg_const_imp_lift)+
+             | wp (once) sch_act_sane_lift tcb_in_cur_domain'_lift hoare_vcg_const_imp_lift)+
     apply (clarsimp simp: pred_tcb_at' state_hyp_refs_of'_ep cong: conj_cong imp_cong
                split del: if_split)
     apply (frule obj_at_valid_objs', clarsimp)

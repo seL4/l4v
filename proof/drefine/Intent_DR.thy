@@ -2054,7 +2054,7 @@ lemma copy_mrs_corres:
     apply (rule mapM_wp_inv)
     apply (case_tac rv)
      apply clarsimp
-     apply (wp_once+)[1]
+     apply wp
     apply (clarsimp|rule conjI)+
     apply ((wp|clarsimp)+)[3]
   apply (case_tac rv)

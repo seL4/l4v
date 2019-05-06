@@ -4710,8 +4710,8 @@ lemma perform_page_table_invocation_invs[wp]:
                  mapM_x_swp_store_empty_table
                  valid_cap_typ[OF unmap_page_table_typ_at]
                  unmap_page_table_unmapped3 store_pte_no_lookup_pages
-              | wp_once hoare_vcg_conj_lift
-              | wp_once mapM_x_wp'
+              | wp (once) hoare_vcg_conj_lift
+              | wp (once) mapM_x_wp'
               | simp)+
   apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state
                         is_arch_diminished_def is_cap_simps
@@ -5106,7 +5106,7 @@ lemma unmap_page_invs:
                      page_directory_at_lookup_mask_add_aligned_strg)+
    apply (wp find_pd_for_asid_page_directory
              hoare_vcg_const_imp_lift_R hoare_vcg_const_Ball_lift_R
-          | wp_once hoare_drop_imps)+
+          | wp (once) hoare_drop_imps)+
   apply (auto simp: vmsz_aligned_def)
   done
 
@@ -5666,7 +5666,7 @@ lemma perform_page_invs [wp]:
              | wpc
              | simp add: pte_check_if_mapped_def pde_check_if_mapped_def del: fun_upd_apply
              | subst cte_wp_at_caps_of_state)+
-       apply (wp_once hoare_drop_imp)
+       apply (wp (once) hoare_drop_imp)
        apply (wp arch_update_cap_invs_map)
        apply (rule hoare_vcg_conj_lift)
         apply (rule hoare_lift_Pf[where f=vs_lookup, OF _ set_cap.vs_lookup])
@@ -5680,7 +5680,7 @@ lemma perform_page_invs [wp]:
                  set_cap.vs_lookup
               | wpc | simp add: same_refs_def del: fun_upd_apply split del: if_split
               | subst cte_wp_at_caps_of_state)+)
-      apply (wp_once hoare_drop_imp)
+      apply (wp (once) hoare_drop_imp)
       apply (wp arch_update_cap_invs_map hoare_vcg_ex_lift set_cap_arch_obj)
      apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state neq_Nil_conv
                            valid_slots_def empty_refs_def parent_for_refs_def
@@ -6072,7 +6072,7 @@ lemma perform_asid_pool_invs [wp]:
   apply (wp arch_update_cap_invs_map set_asid_pool_invs_map
             get_cap_wp set_cap_typ_at empty_table_lift[OF _ hoare_weaken_pre]
             set_cap_obj_at_other
-               |wpc|simp|wp_once hoare_vcg_ex_lift)+
+               |wpc|simp|wp (once) hoare_vcg_ex_lift)+
   apply (clarsimp simp: valid_apinv_def cte_wp_at_caps_of_state is_arch_update_def is_cap_simps cap_master_cap_simps)
   apply (frule caps_of_state_cteD)
   apply (drule cte_wp_valid_cap, fastforce)

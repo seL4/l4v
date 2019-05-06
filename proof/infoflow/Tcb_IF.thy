@@ -198,7 +198,7 @@ next
     apply (rule hoare_pre_spec_validE)
     apply wp
      apply (wp set_cap_P set_cap_Q "2.hyps")+
-          apply ((wp preemption_point_Q preemption_point_P | simp | wp_once preemption_point_inv)+)[1]
+          apply ((wp preemption_point_Q preemption_point_P | simp | wp (once) preemption_point_inv)+)[1]
          apply (simp(no_asm))
          apply (rule spec_strengthen_postE)
           apply (rule spec_valid_conj_liftE1, rule valid_validE_R, rule rec_del_invs)
@@ -492,7 +492,7 @@ lemma setup_reply_master_reads_respects:
   "reads_respects aag l (K (is_subject aag t)) (setup_reply_master t)"
   apply (simp add: setup_reply_master_def when_def)
   apply (wp set_cap_reads_respects set_original_reads_respects get_cap_rev | simp)+
-   apply (wp | wp_once hoare_drop_imps)+
+   apply (wp | wp (once) hoare_drop_imps)+
   apply clarsimp
   done
 
@@ -607,7 +607,7 @@ lemma set_priority_reads_respects:
             tcb_sched_action_reads_respects
             possible_switch_to_reads_respects
          | simp split del: if_split
-         | wp_once hoare_drop_imps
+         | wp (once) hoare_drop_imps
          | (rule hoare_strengthen_post, rule ethread_set_priority_pas_refined)
          | force)+
   done
@@ -793,7 +793,7 @@ lemma invoke_tcb_reads_respects_f:
                 |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
                            when_def st_tcb_at_triv
                 |strengthen use_no_cap_to_obj_asid_strg invs_mdb
-                |wp_once hoare_drop_imp)+
+                |wp (once) hoare_drop_imp)+
     apply(simp add: option_update_thread_def tcb_cap_cases_def
          | wp static_imp_wp static_imp_conj_wp reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
               thread_set_pas_refined | wpc)+
@@ -803,7 +803,7 @@ lemma invoke_tcb_reads_respects_f:
             thread_set_pas_refined thread_set_emptyable thread_set_valid_cap
             thread_set_cte_at  thread_set_no_cap_to_trivial
             thread_set_tcb_fault_handler_update_only_timer_irq_inv
-        | simp add: tcb_cap_cases_def | wpc | wp_once hoare_drop_imp)+
+        | simp add: tcb_cap_cases_def | wpc | wp (once) hoare_drop_imp)+
   apply (clarsimp simp: authorised_tcb_inv_def  authorised_tcb_inv_extra_def emptyable_def)
   by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
                      det_setRegister

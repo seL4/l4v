@@ -190,7 +190,7 @@ lemma get_pt_reads_respects:
   "reads_respects aag l (K (is_subject aag ptr)) (get_pt ptr)"
   unfolding get_pt_def
   apply(wp get_object_rev hoare_vcg_all_lift
-       | wp_once hoare_drop_imps | simp | wpc)+
+       | wp (once) hoare_drop_imps | simp | wpc)+
   done
 
 lemma store_pte_reads_respects:
@@ -623,7 +623,7 @@ lemma arm_context_switch_states_equiv_for:
 lemma set_vm_root_states_equiv_for[wp]:
   "invariant (set_vm_root thread) (states_equiv_for P Q R S st)"
   unfolding set_vm_root_def catch_def fun_app_def set_current_pd_def isb_def dsb_def writeTTBR0_def
-  apply (wp_once hoare_drop_imps
+  apply (wp (once) hoare_drop_imps
         |wp do_machine_op_mol_states_equiv_for hoare_vcg_all_lift arm_context_switch_states_equiv_for hoare_whenE_wp
         | wpc | simp add: dmo_bind_valid if_apply_def2)+
   done
@@ -652,7 +652,7 @@ lemma set_vm_root_for_flush_reads_respects:
     (set_vm_root_for_flush pd asid)"
   unfolding set_vm_root_for_flush_def fun_app_def set_current_pd_def
   apply(rule equiv_valid_guard_imp)
-  apply (wp_once hoare_drop_imps
+  apply (wp (once) hoare_drop_imps
         |wp arm_context_switch_reads_respects dmo_mol_reads_respects
             hoare_vcg_all_lift gets_cur_thread_ev get_cap_rev
         |wpc)+
@@ -697,7 +697,7 @@ lemma unmap_page_table_reads_respects:
   apply(wp find_pd_for_asid_pd_slot_authorised
            dmo_mol_reads_respects store_pde_reads_respects get_pde_rev get_pde_wp
            flush_table_reads_respects find_pd_for_asid_reads_respects hoare_vcg_all_lift_R catch_ev
-       | wpc | simp add: cleanByVA_PoU_def | wp_once hoare_drop_imps)+
+       | wpc | simp add: cleanByVA_PoU_def | wp (once) hoare_drop_imps)+
   done
 
 
@@ -726,7 +726,7 @@ lemma perform_page_directory_invocation_reads_respects:
   "reads_respects aag l (is_subject aag \<circ> cur_thread) (perform_page_directory_invocation pdi)"
   unfolding perform_page_directory_invocation_def
   apply (cases pdi)
-  apply (wp do_flush_reads_respects set_vm_root_reads_respects set_vm_root_for_flush_reads_respects | simp add: when_def requiv_cur_thread_eq split del: if_split | wp_once hoare_drop_imps | clarsimp)+
+  apply (wp do_flush_reads_respects set_vm_root_reads_respects set_vm_root_for_flush_reads_respects | simp add: when_def requiv_cur_thread_eq split del: if_split | wp (once) hoare_drop_imps | clarsimp)+
   done
 
 lemma throw_on_false_reads_respects:
@@ -787,7 +787,7 @@ lemma unmap_page_reads_respects:
 
        | wpc
        | simp add: is_aligned_6_masks is_aligned_mask[symmetric] cleanByVA_PoU_def
-       | wp_once hoare_drop_imps)+
+       | wp (once) hoare_drop_imps)+
   done
 
 lemma dmo_mol_2_reads_respects:
@@ -824,7 +824,7 @@ lemma get_master_pte_reads_respects:
   "reads_respects aag l (K (is_subject aag (p && ~~ mask pt_bits))) (get_master_pte p)"
   unfolding get_master_pte_def
   apply(wp get_pte_reads_respects | wpc | simp
-       | wp_once hoare_drop_imps)+
+       | wp (once) hoare_drop_imps)+
   apply(fastforce simp: pt_bits_def pageBits_def mask_lower_twice)
   done
 
@@ -833,7 +833,7 @@ lemma get_master_pde_reads_respects:
   "reads_respects aag l (K (is_subject aag (x && ~~ mask pd_bits))) (get_master_pde x)"
   unfolding get_master_pde_def
   apply(wp get_pde_rev | wpc | simp
-       | wp_once hoare_drop_imps)+
+       | wp (once) hoare_drop_imps)+
   apply(fastforce simp: pd_bits_def pageBits_def mask_lower_twice)
   done
 
@@ -1050,7 +1050,7 @@ lemma perform_page_invocation_reads_respects:
                 do_flush_reads_respects invalidate_tlb_by_asid_reads_respects
                 get_master_pte_reads_respects get_master_pde_reads_respects
                 set_mrs_reads_respects set_message_info_reads_respects
-            | simp add: cleanByVA_PoU_def pte_check_if_mapped_def pde_check_if_mapped_def  | wpc | wp_once hoare_drop_imps[where R="\<lambda> r s. r"])+
+            | simp add: cleanByVA_PoU_def pte_check_if_mapped_def pde_check_if_mapped_def  | wpc | wp (once) hoare_drop_imps[where R="\<lambda> r s. r"])+
   apply(clarsimp simp: authorised_page_inv_def valid_page_inv_def)
   apply (auto simp: cte_wp_at_caps_of_state is_arch_diminished_def valid_slots_def
                     cap_auth_conferred_def cap_rights_update_def acap_rights_update_def
@@ -1547,7 +1547,7 @@ lemma set_vm_root_globals_equiv[wp]:
   apply(wp dmo_mol_globals_equiv arm_context_switch_globals_equiv whenE_inv
         | wpc
         | clarsimp simp: dmo_bind_valid isb_def dsb_def writeTTBR0_def)+
-   apply(wp hoare_vcg_all_lift | wp_once hoare_drop_imps | clarsimp)+
+   apply(wp hoare_vcg_all_lift | wp (once) hoare_drop_imps | clarsimp)+
    done
 
 lemma invalidate_asid_entry_globals_equiv[wp]:
@@ -1862,10 +1862,10 @@ lemma unmap_page_globals_equiv:
      apply simp
     apply(wp store_pte_globals_equiv | simp add: cleanByVA_PoU_def)+
       apply(wp hoare_drop_imps)+
-     apply(wp_once lookup_pt_slot_inv)
-     apply(wp_once lookup_pt_slot_inv)
-     apply(wp_once lookup_pt_slot_inv)
-     apply(wp_once lookup_pt_slot_inv)
+     apply(wp (once) lookup_pt_slot_inv)
+     apply(wp (once) lookup_pt_slot_inv)
+     apply(wp (once) lookup_pt_slot_inv)
+     apply(wp (once) lookup_pt_slot_inv)
     apply(simp)
     apply(rule hoare_pre)
      apply wp

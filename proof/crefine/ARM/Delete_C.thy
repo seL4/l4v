@@ -859,7 +859,7 @@ lemma finaliseSlot_ccorres:
         apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
         apply (frule valid_global_refsD_with_objSize, clarsimp)
         apply (auto simp: typ_heap_simps dest!: ccte_relation_ccap_relation)[1]
-       apply (wp isFinalCapability_inv static_imp_wp | wp_once isFinal[where x=slot'])+
+       apply (wp isFinalCapability_inv static_imp_wp | wp (once) isFinal[where x=slot'])+
       apply vcg
      apply (rule conseqPre, vcg)
      apply clarsimp

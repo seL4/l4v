@@ -1022,7 +1022,7 @@ lemma reset_untyped_cap_reads_respects_g:
          apply (wp only_timer_irq_inv_pres[where P=\<top> and Q=\<top>]
                    no_irq_clearMemory
               | simp
-              | wp_once dmo_wp)+
+              | wp (once) dmo_wp)+
         apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
         apply (frule(1) caps_of_state_valid)
         apply (clarsimp simp: valid_cap_simps cap_aligned_def
@@ -1039,7 +1039,7 @@ lemma reset_untyped_cap_reads_respects_g:
          apply (wp only_timer_irq_inv_pres[where P=\<top> and Q=\<top>]
                    no_irq_clearMemory
              | simp
-             | wp_once dmo_wp)+
+             | wp (once) dmo_wp)+
         apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
         apply (frule(1) caps_of_state_valid)
         apply (clarsimp simp: valid_cap_simps cap_aligned_def

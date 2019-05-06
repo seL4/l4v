@@ -1224,7 +1224,7 @@ proof -
                      apply (clarsimp simp add: tcb_relation_def arch_tcb_relation_def)
                  apply (wpsimp simp: armv_contextSwitch_def if_apply_def2 wp: assert_get_tcb_ko')+
             apply ((wp find_pd_for_asid_pd_at_asid_again
-                  | simp add: if_apply_def2 | wp_once hoare_drop_imps)+)
+                  | simp add: if_apply_def2 | wp (once) hoare_drop_imps)+)
 
             apply clarsimp
             apply (frule page_directory_cap_pd_at_uniq, simp+)
@@ -1269,7 +1269,7 @@ lemma loadHWASID_wp [wp]:
          loadHWASID asid \<lbrace>P\<rbrace>"
   apply (simp add: loadHWASID_def)
   apply (wp findPDForASIDAssert_pd_at_wp
-            | wpc | simp | wp_once hoare_drop_imps)+
+            | wpc | simp | wp (once) hoare_drop_imps)+
   apply (auto split: option.split)
   done
 
@@ -2169,7 +2169,7 @@ lemma unmap_page_corres:
                       apply (rule store_pte_corres',  simp add:pte_relation_aligned_def)
                       apply clarsimp
                       apply clarsimp
-                      apply (wp store_pte_typ_at hoare_vcg_const_Ball_lift | clarsimp | wp_once hoare_drop_imps)+
+                      apply (wp store_pte_typ_at hoare_vcg_const_Ball_lift | clarsimp | wp (once) hoare_drop_imps)+
                (* this is dumb... *)
                apply (subst mult_is_add.mult_commute)
                      apply (wpsimp wp: lookup_pt_slot_ptes lookup_pt_slot_inv lookupPTSlot_inv
@@ -2189,7 +2189,7 @@ lemma unmap_page_corres:
                  apply (simp add: pde_relation_aligned_def)
                 apply (rule wp_post_taut)+
                  apply (wp | simp add:pde_relation_aligned_def
-                       | wp_once hoare_drop_imps)+
+                       | wp (once) hoare_drop_imps)+
             apply (clarsimp simp: page_directory_pde_at_lookupI
                                   pg_entry_align_def)
             apply (clarsimp simp:lookup_pd_slot_def)
@@ -2227,7 +2227,7 @@ lemma unmap_page_corres:
                     apply (simp add: lookup_pd_slot_def vspace_bits_defs)
                     apply (simp add: valid_unmap_def)
                    apply assumption
-                  apply (wp | simp | wp_once hoare_drop_imps)+
+                  apply (wp | simp | wp (once) hoare_drop_imps)+
            apply (clarsimp simp: valid_unmap_def page_directory_pde_at_lookupI
                                  lookup_pd_slot_aligned_6 pg_entry_align_def
                                  pd_aligned vmsz_aligned_def)
@@ -2906,7 +2906,7 @@ proof -
           apply (drule (1) subsetD)
           apply (clarsimp simp: cap_range_def)
          apply clarsimp
-        apply (wp_trace arch_update_cap_invs_map set_cap_valid_page_map_inv)
+        apply (wp arch_update_cap_invs_map set_cap_valid_page_map_inv)
        apply (wp arch_update_updateCap_invs)
       apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct valid_page_inv_def
                             cte_wp_at_caps_of_state is_arch_update_def is_cap_simps

@@ -486,11 +486,11 @@ lemma vgic_maintenance_irq_valid_sched[wp]:
                       get_gic_vcpu_ctrl_eisr0_def
                  wp: thread_get_wp' handle_fault_valid_sched
                      ct_in_state_thread_state_lift ct_not_queued_lift sch_act_sane_lift
-         | wp_once hoare_drop_imp[where f="do_machine_op m" for m]
+         | wp (once) hoare_drop_imp[where f="do_machine_op m" for m]
                    hoare_drop_imp[where f="return $ m" for m]
                    hoare_vcg_disj_lift
          | clarsimp simp: if_apply_def2
-         | wp_once hoare_vcg_imp_lift'
+         | wp (once) hoare_vcg_imp_lift'
          | rule hoare_vcg_conj_lift
                 hoare_lift_Pf[where f=cur_thread and m="vgic_update_lr p i v" for p i v])+
   apply (clarsimp intro!: st_tcb_ex_cap[where P=active]

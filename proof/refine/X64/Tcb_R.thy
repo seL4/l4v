@@ -117,7 +117,7 @@ lemma activate_invs':
                  in hoare_post_imp, simp)
     apply (rule hoare_weaken_pre)
      apply (wp ct_in_state'_set asUser_ct sts_invs_minor'
-          | wp_once sch_act_simple_lift)+
+          | wp (once) sch_act_simple_lift)+
       apply (rule_tac Q="\<lambda>_. st_tcb_at' runnable' thread
                              and sch_act_simple and invs'
                              and (\<lambda>s. thread = ksCurThread s)"
@@ -217,7 +217,7 @@ lemma restart_corres:
         apply (rule corres_split_nor [OF _ setup_reply_master_corres])
           apply (rule corres_split_nor [OF _ sts_corres])
              apply (rule corres_split [OF possibleSwitchTo_corres tcbSchedEnqueue_corres])
-              apply (wp_trace set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at' sts_valid_queues sts_st_tcb'  | clarsimp simp: valid_tcb_state'_def)+
+              apply (wp set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at' sts_valid_queues sts_st_tcb'  | clarsimp simp: valid_tcb_state'_def)+
        apply (rule_tac Q="\<lambda>rv. valid_sched and cur_tcb" in hoare_strengthen_post)
         apply wp
        apply (simp add: valid_sched_def valid_sched_action_def)
@@ -236,7 +236,7 @@ lemma restart_invs':
   apply (simp add: restart_def isBlocked_def2)
   apply (wp setThreadState_nonqueued_state_update
             cancelIPC_simple setThreadState_st_tcb
-       | wp_once sch_act_simple_lift)+
+       | wp (once) sch_act_simple_lift)+
        apply (wp hoare_convert_imp)
       apply (wp setThreadState_nonqueued_state_update
                 setThreadState_st_tcb)
@@ -1596,7 +1596,7 @@ proof -
                                emptyable_def
                    | wpc | strengthen tcb_cap_always_valid_strg
                                       use_no_cap_to_obj_asid_strg
-                   | wp_once add: sch_act_simple_lift hoare_drop_imps del: cteInsert_invs
+                   | wp (once) add: sch_act_simple_lift hoare_drop_imps del: cteInsert_invs
                    | (erule exE, clarsimp simp: word_bits_def))+
      (* the last two subgoals *)
      apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified] tcb_at_st_tcb_at[symmetric]
@@ -2126,7 +2126,7 @@ lemma decodeSetPriority_wf[wp]:
     decodeSetPriority args (ThreadCap t) extras \<lbrace>tcb_inv_wf'\<rbrace>,-"
   unfolding decodeSetPriority_def
   apply (rule hoare_pre)
-  apply (wp checkPrio_lt_ct_weak | wpc | simp | wp_once checkPrio_inv)+
+  apply (wp checkPrio_lt_ct_weak | wpc | simp | wp (once) checkPrio_inv)+
   apply (clarsimp simp: maxPriority_def numPriorities_def)
   apply (cut_tac max_word_max[where 'a=8, unfolded max_word_def])
   apply simp
@@ -2146,7 +2146,7 @@ lemma decodeSetMCPriority_wf[wp]:
     decodeSetMCPriority args (ThreadCap t) extras \<lbrace>tcb_inv_wf'\<rbrace>,-"
   unfolding decodeSetMCPriority_def Let_def
   apply (rule hoare_pre)
-  apply (wp checkPrio_lt_ct_weak | wpc | simp | wp_once checkPrio_inv)+
+  apply (wp checkPrio_lt_ct_weak | wpc | simp | wp (once) checkPrio_inv)+
   apply (clarsimp simp: maxPriority_def numPriorities_def)
   apply (cut_tac max_word_max[where 'a=8, unfolded max_word_def])
   apply simp
@@ -2166,7 +2166,7 @@ lemma decodeSetSchedParams_wf[wp]:
     decodeSetSchedParams args (ThreadCap t) extras
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
   unfolding decodeSetSchedParams_def
-  apply (wpsimp wp: checkPrio_lt_ct_weak | wp_once checkPrio_inv)+
+  apply (wpsimp wp: checkPrio_lt_ct_weak | wp (once) checkPrio_inv)+
   apply (clarsimp simp: maxPriority_def numPriorities_def)
   apply (rule conjI;
          cut_tac max_word_max[where 'a=8, unfolded max_word_def];

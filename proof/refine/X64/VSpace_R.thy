@@ -770,7 +770,7 @@ lemma unmap_page_table_corres:
                    apply (rule invalidatePageStructureCacheASID_corres)
                   apply simp
                  apply ((wpsimp wp: hoare_if get_pde_wp getPDE_wp)+)[8]
-         apply ((wpsimp wp: lookup_pd_slot_wp hoare_vcg_all_lift_R | wp_once hoare_drop_imps)+)[2]
+         apply ((wpsimp wp: lookup_pd_slot_wp hoare_vcg_all_lift_R | wp (once) hoare_drop_imps)+)[2]
        apply ((wp find_vspace_for_asid_wp)+)[4]
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_arch_caps_def
                          word_neq_0_conv[symmetric])
@@ -874,7 +874,7 @@ lemma unmap_page_corres:
                                   simp: page_entry_map_def unlessE_def is_aligned_pml4 if_apply_def2
                              split_del: if_split
                               simp_del: dc_simp)+
-                           | wp_once hoare_drop_imps)+)[10]
+                           | wp (once) hoare_drop_imps)+)[10]
          apply (rule corres_guard_imp)
            apply (rule corres_split_strengthen_ftE[OF lookup_pd_slot_corres])
              apply (simp del: dc_simp)
@@ -886,7 +886,7 @@ lemma unmap_page_corres:
                                  simp: page_entry_map_def unlessE_def is_aligned_pml4 if_apply_def2
                             split_del: if_split
                              simp_del: dc_simp)+
-                         | wp_once hoare_drop_imps)+)[10]
+                         | wp (once) hoare_drop_imps)+)[10]
         apply (rule corres_guard_imp)
           apply (rule corres_split_strengthen_ftE[OF lookup_pdpt_slot_corres])
             apply (simp del: dc_simp)
@@ -899,7 +899,7 @@ lemma unmap_page_corres:
                                 simp: page_entry_map_def unlessE_def is_aligned_pml4 if_apply_def2
                            split_del: if_split
                             simp_del: dc_simp)+
-                         | wp_once hoare_drop_imps)+)
+                         | wp (once) hoare_drop_imps)+)
    apply (rule conjI[OF disjI1], clarsimp)
    apply (clarsimp simp: invs_vspace_objs invs_psp_aligned valid_unmap_def invs_arch_state
                          invs_equal_kernel_mappings)
@@ -1109,7 +1109,7 @@ proof -
                apply (rule corres_fail[where P=\<top> and P'=\<top>])
                apply (simp add: same_refs_def)
               apply (wpsimp simp: invs_psp_aligned)+
-       apply (wp_trace arch_update_cap_invs_map set_cap_valid_page_map_inv)
+       apply (wp arch_update_cap_invs_map set_cap_valid_page_map_inv)
       apply (wp arch_update_updateCap_invs)
      apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct valid_page_inv_def
                            cte_wp_at_caps_of_state is_arch_update_def is_cap_simps)
@@ -2721,7 +2721,7 @@ lemma perform_pti_invs [wp]:
                          capAligned_def)
   apply (rule hoare_pre)
    apply (wpsimp wp: arch_update_updateCap_invs valid_pde_lift' hoare_vcg_all_lift hoare_vcg_ex_lift
-             | wp_once hoare_drop_imps)+
+             | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: cte_wp_at_ctes_of valid_pti'_def)
   done
 
@@ -2740,7 +2740,7 @@ lemma perform_pdi_invs [wp]:
                          capAligned_def)
   apply (rule hoare_pre)
    apply (wpsimp wp: arch_update_updateCap_invs valid_pdpte_lift' hoare_vcg_all_lift hoare_vcg_ex_lift
-             | wp_once hoare_drop_imps)+
+             | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: cte_wp_at_ctes_of valid_pdi'_def)
   done
 
@@ -2759,7 +2759,7 @@ lemma perform_pdpti_invs [wp]:
                          capAligned_def)
   apply (rule hoare_pre)
    apply (wpsimp wp: arch_update_updateCap_invs hoare_vcg_all_lift hoare_vcg_ex_lift
-             | wp_once hoare_drop_imps)+
+             | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: cte_wp_at_ctes_of valid_pdpti'_def)
   done
 

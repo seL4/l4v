@@ -792,7 +792,7 @@ lemma chooseThread_no_orphans [wp]:
     apply (rename_tac l1)
     apply (case_tac "l1 = 0")
      (* switch to idle thread *)
-     apply (simp, wp_once, simp)
+     apply (simp, wp (once), simp)
     (* we have a thread to switch to *)
     apply (clarsimp simp: bitmap_fun_defs)
     apply (wp assert_inv ThreadDecls_H_switchToThread_no_orphans)
@@ -1059,7 +1059,7 @@ proof -
                 hoare_lift_Pf2[where f=ksCurThread, OF tcbSchedEnqueue_in_ksQ_already_queued]
                 tcbSchedEnqueue_no_orphans
              | strengthen not_pred_tcb_at'_strengthen
-             | wp_once hoare_vcg_imp_lift')+
+             | wp (once) hoare_vcg_imp_lift')+
     apply (clarsimp)
     apply (frule invs_sch_act_wf', clarsimp simp: pred_tcb_at')
     apply (simp add: st_tcb_at_neg' tcb_at_invs')
@@ -1086,7 +1086,7 @@ proof -
                 hoare_lift_Pf2[where f=ksCurThread, OF tcbSchedAppend_in_ksQ_already_queued]
                 tcbSchedAppend_no_orphans
              | strengthen not_pred_tcb_at'_strengthen
-             | wp_once hoare_vcg_imp_lift')+
+             | wp (once) hoare_vcg_imp_lift')+
     apply (clarsimp)
     apply (frule invs_sch_act_wf', clarsimp simp: pred_tcb_at')
     apply (simp add: st_tcb_at_neg' tcb_at_invs')
@@ -1165,7 +1165,7 @@ lemma possibleSwitchTo_almost_no_orphans [wp]:
   by (wp rescheduleRequired_valid_queues'_weak tcbSchedEnqueue_almost_no_orphans
          ssa_almost_no_orphans static_imp_wp
      | wpc | clarsimp
-     | wp_once hoare_drop_imp)+
+     | wp (once) hoare_drop_imp)+
 
 lemma possibleSwitchTo_almost_no_orphans':
   "\<lbrace> \<lambda>s. almost_no_orphans target s \<and> valid_queues' s \<and> st_tcb_at' runnable' target s
@@ -1312,7 +1312,7 @@ lemma sendIPC_valid_queues' [wp]:
    \<lbrace> \<lambda>rv s. valid_queues' s \<rbrace>"
   unfolding sendIPC_def
   apply (wpsimp wp: hoare_drop_imps)
-        apply (wpsimp | wp_once sts_st_tcb')+
+        apply (wpsimp | wp (once) sts_st_tcb')+
   apply (rule_tac Q="\<lambda>rv. valid_queues' and valid_objs' and ko_at' rv epptr
                           and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)" in hoare_post_imp)
    apply (clarsimp)
@@ -1925,7 +1925,7 @@ lemma doReplyTransfer_no_orphans[wp]:
   apply (wp sts_st_tcb' setThreadState_not_active_no_orphans threadSet_no_orphans
             threadSet_valid_queues' threadSet_weak_sch_act_wf
          | wpc | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def
-         | wp_once hoare_drop_imps
+         | wp (once) hoare_drop_imps
          | strengthen sch_act_wf_weak invs_valid_queues')+
               apply (rule_tac Q="\<lambda>rv. invs' and no_orphans" in hoare_post_imp)
                apply (fastforce simp: inQ_def)
@@ -1956,7 +1956,7 @@ lemma restart_no_orphans [wp]:
          | clarsimp simp: o_def if_apply_def2
          | strengthen no_orphans_strg_almost
          | strengthen invs_valid_queues'
-         | wp_once hoare_drop_imps)+
+         | wp (once) hoare_drop_imps)+
   apply auto
   done
 

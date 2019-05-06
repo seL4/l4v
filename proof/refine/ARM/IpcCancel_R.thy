@@ -552,7 +552,7 @@ lemma (in delete_one) reply_cancel_ipc_corres:
     apply (wp thread_set_invs_trivial thread_set_no_change_tcb_state
               threadSet_invs_trivial threadSet_pred_tcb_no_state thread_set_not_state_valid_sched
          | fastforce simp: tcb_cap_cases_def inQ_def
-         | wp_once sch_act_simple_lift)+
+         | wp (once) sch_act_simple_lift)+
   apply (rule corres_split')
      apply (rule corres_guard_imp)
        apply (rule get_cap_corres [where cslot_ptr="(t, tcb_cnode_index 2)",
@@ -1010,7 +1010,7 @@ crunch pred_tcb_at'[wp]: isFinalCapability "pred_tcb_at' proj st t"
 lemma (in delete_one_conc_pre) cteDeleteOne_tcb_at_runnable':
   "\<lbrace>st_tcb_at' runnable' t\<rbrace> cteDeleteOne callerCap \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_def)
-  apply (wp finaliseCap_tcb_at_runnable' | clarsimp | wp_once hoare_drop_imps)+
+  apply (wp finaliseCap_tcb_at_runnable' | clarsimp | wp (once) hoare_drop_imps)+
   done
 
 crunch pred_tcb_at'[wp]: getThreadReplySlot, getEndpoint "pred_tcb_at' proj st t"
@@ -1722,7 +1722,7 @@ lemma (in delete_one_conc) suspend_invs'[wp]:
   "\<lbrace>invs' and sch_act_simple and tcb_at' t and (\<lambda>s. t \<noteq> ksIdleThread s)\<rbrace>
    ThreadDecls_H.suspend t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: suspend_def)
-  apply (wp_trace sts_tcbSchedDequeue_invs')
+  apply (wp sts_tcbSchedDequeue_invs')
       apply (simp add: updateRestartPC_def | strengthen no_refs_simple_strg')+
       prefer 2
     apply (wpsimp wp: hoare_drop_imps hoare_vcg_imp_lift'
@@ -2460,7 +2460,7 @@ lemma cancelAllIPC_unlive:
   apply (simp add: cancelAllIPC_def ep'_Idle_case_helper)
   apply (rule hoare_seq_ext [OF _ get_ep_sp'])
   apply (rule hoare_pre)
-   apply (wp_trace cancelAll_unlive_helper setEndpoint_ko_wp_at'
+   apply (wp cancelAll_unlive_helper setEndpoint_ko_wp_at'
              hoare_vcg_const_Ball_lift rescheduleRequired_unlive
              mapM_x_wp'
         | simp add: objBits_simps')+
@@ -2585,7 +2585,7 @@ lemma cancelBadgedSends_invs[wp]:
     apply (clarsimp simp: ep_redux_simps3 fun_upd_def[symmetric])
     apply (clarsimp simp add: valid_ep'_def split: list.split)
     apply blast
-   apply (wp valid_irq_node_lift irqs_masked_lift | wp_once sch_act_sane_lift)+
+   apply (wp valid_irq_node_lift irqs_masked_lift | wp (once) sch_act_sane_lift)+
   apply (clarsimp simp: invs'_def valid_state'_def
                         valid_ep'_def fun_upd_def[symmetric]
                         obj_at'_weakenE[OF _ TrueI])

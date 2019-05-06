@@ -450,7 +450,7 @@ lemma decodeCNodeInv_wf[wp]:
                apply (rule deriveCap_Null_helper)
                apply (simp add: imp_conjR)
                apply ((wp deriveCap_derived deriveCap_untyped_derived
-                 | wp_once hoare_drop_imps)+)[1]
+                 | wp (once) hoare_drop_imps)+)[1]
               apply (wp whenE_throwError_wp getCTE_wp | wpc | simp(no_asm))+
            apply (rule_tac Q'="\<lambda>rv. invs' and cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) destSlot
                                           and ex_cte_cap_to' destSlot"
@@ -464,7 +464,7 @@ lemma decodeCNodeInv_wf[wp]:
                             untyped_derived_eq_updateCapData
                             untyped_derived_eq_refl)
            apply (auto simp:isCap_simps updateCapData_def)[1]
-          apply (wp ensureEmptySlot_stronger | simp | wp_once hoare_drop_imps)+
+          apply (wp ensureEmptySlot_stronger | simp | wp (once) hoare_drop_imps)+
        \<comment> \<open>Revoke\<close>
        apply (simp add: decodeCNodeInvocation_def isCNodeCap_CNodeCap split_def
                         unlessE_whenE
@@ -483,7 +483,7 @@ lemma decodeCNodeInv_wf[wp]:
      apply (simp add: decodeCNodeInvocation_def isCNodeCap_CNodeCap split_def
                       unlessE_whenE)
      apply (rule hoare_pre)
-      apply (wp lsfco_cte_at' | simp | wp_once hoare_drop_imps)+
+      apply (wp lsfco_cte_at' | simp | wp (once) hoare_drop_imps)+
     \<comment> \<open>CancelBadgedSends\<close>
     apply (simp add: decodeCNodeInvocation_def isCNodeCap_CNodeCap split_def
                      unlessE_whenE)
@@ -6270,7 +6270,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
         apply clarsimp
        apply (case_tac "cteCap rv",
               simp_all add: isCap_simps final_matters'_def)[1]
-      apply (wp isFinalCapability_inv static_imp_wp | simp | wp_once isFinal[where x=sl])+
+      apply (wp isFinalCapability_inv static_imp_wp | simp | wp (once) isFinal[where x=sl])+
      apply (wp getCTE_wp')
     apply (clarsimp simp: cte_wp_at_ctes_of)
     apply (rule conjI, clarsimp simp: removeable'_def)

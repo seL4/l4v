@@ -296,19 +296,19 @@ shows
 
   show ?case
     apply (simp add: rec_del.simps)
-    apply (wp "2" | wpc | simp split: prod.splits | intro impI conjI allI | (rule ssubst[rotated, where s="fst x" for x], rule "2",simp+) | wp_once drop_sbcorres_underlying)+
+    apply (wp "2" | wpc | simp split: prod.splits | intro impI conjI allI | (rule ssubst[rotated, where s="fst x" for x], rule "2",simp+) | wp (once) drop_sbcorres_underlying)+
     done
   next
   case (3 slot exposed s)
   show ?case
     apply (simp add: rec_del.simps)
-    apply (wp | wp_once drop_sbcorres_underlying)+
+    apply (wp | wp (once) drop_sbcorres_underlying)+
     done
   next
   case (4 slot exposed s)
   show ?case
     apply (simp add: rec_del.simps)
-    apply (simp add: in_monad | wp "4" | intro impI conjI | wp_once drop_sbcorres_underlying)+
+    apply (simp add: in_monad | wp "4" | intro impI conjI | wp (once) drop_sbcorres_underlying)+
     done
   qed
 
@@ -366,7 +366,7 @@ proof (induct a arbitrary: s rule: resolve_address_bits'.induct[where ?a0.0="TYP
   case (1 z cap cref s')
   show ?case
     apply (simp add: resolve_address_bits'.simps)
-    apply (wp | wpc | intro impI conjI allI | simp split: cap.splits | (rule "1", (simp add: in_monad | force)+) | wp_once drop_sbcorres_underlying)+
+    apply (wp | wpc | intro impI conjI allI | simp split: cap.splits | (rule "1", (simp add: in_monad | force)+) | wp (once) drop_sbcorres_underlying)+
   done
 qed
 

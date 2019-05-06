@@ -1346,7 +1346,7 @@ lemma lookup_pd_slot_corres:
         apply (rule page_directory_at_state_relation)
            apply fastforce
           apply simp+
-       apply (wpsimp wp: getPDPTE_wp | wp_once hoare_drop_imps)+
+       apply (wpsimp wp: getPDPTE_wp | wp (once) hoare_drop_imps)+
   done
 
 lemma pt_at_lift:
@@ -1392,7 +1392,7 @@ lemma lookup_pt_slot_corres:
         apply (rule page_table_at_state_relation)
            apply fastforce
           apply simp+
-       apply (wpsimp wp: getPDE_wp | wp_once hoare_drop_imps)+
+       apply (wpsimp wp: getPDE_wp | wp (once) hoare_drop_imps)+
   done
 
 declare in_set_zip_refl[simp]

@@ -44,7 +44,7 @@ lemma decode_untyped_invocation_rev:
   apply(rule gen_asm_ev)
   apply(simp add: unlessE_def[symmetric] unlessE_whenE
        split del: if_split)
-  apply (wp_once whenE_throwError_wp
+  apply (wp (once) whenE_throwError_wp
        | wp mapME_x_ev' ensure_empty_rev get_cap_rev
              lookup_slot_for_cnode_op_rev
              ensure_no_children_rev
@@ -56,11 +56,11 @@ lemma decode_untyped_invocation_rev:
                                   where Q="\<lambda> rv s. (is_cnode_cap rv
                                                          \<longrightarrow> is_subject aag (obj_ref_of rv))
                                                  \<and> pas_refined aag s"])
-                   apply(wp_once whenE_throwError_wp
+                   apply(wp (once) whenE_throwError_wp
                         |wp get_cap_ret_is_subject
                             data_to_obj_type_rev data_to_obj_type_inv
                         | simp
-                        | wp_once hoare_drop_imps)+
+                        | wp (once) hoare_drop_imps)+
   apply(clarify, drule_tac x="excaps ! 0" in bspec, fastforce intro: bang_0_in_set)
   apply safe
      apply(drule (1) is_cnode_into_is_subject)
@@ -121,7 +121,7 @@ lemma decode_cnode_invocation_rev:
         | simp add: split_def unlessE_whenE split del: if_split
                del: hoare_True_E_R
         | wpc
-        | (wp_once hoare_drop_imps, wp_once lookup_slot_for_cnode_op_authorised)
+        | (wp (once) hoare_drop_imps, wp (once) lookup_slot_for_cnode_op_authorised)
         | strengthen aag_can_read_self)+)
    apply(auto dest: bspec[where x="excaps ! 0"] bspec[where x="excaps ! Suc 0"]
               intro: nth_mem elim: prop_of_obj_ref_of_cnode_cap
@@ -255,7 +255,7 @@ lemma decode_tcb_invocation_reads_respects_f:
         split del: if_split
              cong: invocation_label.case_cong)
   apply (rule equiv_valid_guard_imp)
-   apply (wp_once requiv_cur_thread_eq range_check_ev
+   apply (wp (once) requiv_cur_thread_eq range_check_ev
              respects_f[OF derive_cap_rev]
              derive_cap_inv slot_cap_long_running_delete_reads_respects_f[where st=st]
              respects_f[OF check_valid_ipc_buffer_rev]
@@ -265,8 +265,8 @@ lemma decode_tcb_invocation_reads_respects_f:
              respects_f[OF decode_set_sched_params_rev]
              respects_f[OF get_simple_ko_reads_respects]
              respects_f[OF get_bound_notification_reads_respects']
-        | wp_once whenE_throwError_wp
-        | wp_once hoare_drop_imps
+        | wp (once) whenE_throwError_wp
+        | wp (once) hoare_drop_imps
         | wpc
         | simp add: if_apply_def2 split del: if_split add: o_def split_def)+
   unfolding get_tcb_ctable_ptr_def get_tcb_vtable_ptr_def
@@ -306,7 +306,7 @@ lemma arch_decode_irq_control_invocation_rev:
   unfolding arch_decode_irq_control_invocation_def arch_check_irq_def
   apply (wp ensure_empty_rev lookup_slot_for_cnode_op_rev
             is_irq_active_rev whenE_inv
-        | wp_once hoare_drop_imps
+        | wp (once) hoare_drop_imps
         | simp add: Let_def)+
   apply safe
        apply simp+
@@ -329,7 +329,7 @@ lemma decode_irq_control_invocation_rev:
   unfolding decode_irq_control_invocation_def arch_check_irq_def
   apply (wp ensure_empty_rev lookup_slot_for_cnode_op_rev
             is_irq_active_rev whenE_inv arch_decode_irq_control_invocation_rev
-         | wp_once hoare_drop_imps
+         | wp (once) hoare_drop_imps
          | simp add: Let_def)+
   apply safe
        apply simp+
@@ -592,7 +592,7 @@ lemma arch_decode_invocation_reads_respects_f:
              select_ext_ev_bind_lift[simplified]
          | wpc
          | simp add: Let_def unlessE_whenE
-         | wp_once whenE_throwError_wp)+
+         | wp (once) whenE_throwError_wp)+
   apply (intro impI allI conjI)
                               apply(rule requiv_arm_asid_table_asid_high_bits_of_asid_eq')
                                 apply fastforce
@@ -758,7 +758,7 @@ lemma decode_invocation_reads_respects_f:
             arch_decode_invocation_reads_respects_f
        | wpc
        | simp
-       | (rule hoare_pre, wp_once))+
+       | (rule hoare_pre, wp (once)))+
   apply (clarsimp simp: aag_has_Control_iff_owns split_def aag_cap_auth_def)
   apply (cases cap, simp_all)
   apply ((clarsimp simp: valid_cap_def cte_wp_at_eq_simp

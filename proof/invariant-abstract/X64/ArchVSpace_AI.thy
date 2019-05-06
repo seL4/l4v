@@ -644,7 +644,7 @@ lemma lookup_pd_slot_is_aligned:
   apply (simp add: lookup_pd_slot_def)
   apply (rule hoare_pre)
    apply (wp get_pdpte_wp hoare_vcg_all_lift_R | wpc | simp)+
-   apply (wp_once hoare_drop_imps)
+   apply (wp (once) hoare_drop_imps)
    apply (wp hoare_vcg_all_lift_R hoare_vcg_ex_lift_R)
   apply (clarsimp simp: get_pd_index_def bit_simps)
   apply (subgoal_tac "is_aligned (ptrFromPAddr x) word_size_bits")
@@ -2547,7 +2547,7 @@ lemma unmap_pt_invs[wp]:
   apply (rule hoare_gen_asm)
   apply (simp add: unmap_page_table_def)
   apply (rule hoare_pre)
-   apply (wp_trace store_pde_invs do_machine_op_global_refs_inv get_pde_wp
+   apply (wp store_pde_invs do_machine_op_global_refs_inv get_pde_wp
              hoare_vcg_all_lift find_vspace_for_asid_lots
         | wpc | simp add: flush_all_def pdpte_ref_pages_def
         | strengthen imp_consequent )+
@@ -3399,7 +3399,7 @@ lemma unmap_page_invs[wp]:
                      not_in_global_refs_vs_lookup invs_valid_vs_lookup
                       invs_valid_global_refs
            invs_arch_state invs_valid_global_objs | clarsimp simp: conj_comms
-        | wp_once hoare_drop_imps)+)
+        | wp (once) hoare_drop_imps)+)
   apply (auto simp: vspace_at_asid_def is_aligned_pml4[simplified] invs_vspace_objs
                     invs_psp_aligned lookup_pml4_slot_eq pml4e_ref_def)
   done

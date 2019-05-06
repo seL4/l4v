@@ -3231,7 +3231,7 @@ lemma cancelIPC_ccorres_reply_helper:
     apply (rule_tac Q="\<lambda>rv. tcb_at' thread and invs'" in hoare_post_imp)
      apply (clarsimp simp: cte_wp_at_ctes_of capHasProperty_def cap_get_tag_isCap ucast_id)
     apply (wp hoare_vcg_all_lift threadSet_invs_trivial
-               | wp_once hoare_drop_imps | simp)+
+               | wp (once) hoare_drop_imps | simp)+
    apply (clarsimp simp: guard_is_UNIV_def tcbReplySlot_def
                          Kernel_C.tcbReply_def mask_def tcbCNodeEntries_def)
   apply (fastforce simp: pred_tcb_at' inQ_def tcb_aligned'[OF pred_tcb_at'])

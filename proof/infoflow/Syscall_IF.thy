@@ -67,7 +67,7 @@ lemma invoke_cnode_globals_equiv:
           apply(wp cap_insert_globals_equiv cap_move_globals_equiv cap_revoke_globals_equiv
                    cap_delete_globals_equiv cap_swap_globals_equiv hoare_vcg_all_lift
                    cancel_badged_sends_globals_equiv
-                    | wpc | wp_once hoare_drop_imps | simp add: invs_valid_global_objs)+
+                    | wpc | wp (once) hoare_drop_imps | simp add: invs_valid_global_objs)+
   apply (case_tac cinv)
   apply (clarsimp simp: invs_valid_ko_at_arm | strengthen real_cte_emptyable_strg)+
 done
@@ -719,7 +719,7 @@ lemma handle_invocation_reads_respects_g:
                        get_mi_length'
               | rule doesnt_touch_globalsI
               | (clarify,assumption)
-              | wp_once hoare_drop_imps
+              | wp (once) hoare_drop_imps
           )+
   apply (rule conjI)
    apply (clarsimp simp: requiv_g_cur_thread_eq simp: reads_equiv_f_g_conj)
@@ -1206,7 +1206,7 @@ lemma handle_invocation_globals_equiv:
             reply_from_kernel_globals_equiv set_thread_state_globals_equiv
             hoare_vcg_all_lift
        | simp split del: if_split
-       | wp_once hoare_drop_imps)+
+       | wp (once) hoare_drop_imps)+
         apply (rule_tac Q="\<lambda>r. invs and globals_equiv st and (\<lambda>s. thread \<noteq> idle_thread s)"
                     and E="\<lambda>_. globals_equiv st"
                      in hoare_post_impErr)
@@ -1245,7 +1245,7 @@ lemma handle_event_globals_equiv:
                  handle_hypervisor_fault_globals_equiv
              | wpc
              | simp add: handle_send_def handle_call_def Let_def
-             | wp_once hoare_drop_imps
+             | wp (once) hoare_drop_imps
              | clarsimp simp: invs_imps invs_valid_idle ct_active_not_idle)+
   done
 

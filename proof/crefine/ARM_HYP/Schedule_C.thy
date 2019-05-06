@@ -627,11 +627,11 @@ lemma schedule_ccorres:
              apply vcg
             apply clarsimp
             apply (strengthen invs'_invs_no_cicd')
-            apply (wp | wp_once hoare_drop_imp)+
+            apply (wp | wp (once) hoare_drop_imp)+
            apply clarsimp
            apply (vcg exspec=isHighestPrio_modifies)
           apply clarsimp
-          apply (wp_once hoare_drop_imps)
+          apply (wp (once) hoare_drop_imps)
            apply wp
           apply (strengthen strenghten_False_imp[where P="a = ResumeCurrentThread" for a])
           apply (clarsimp simp: conj_ac invs_queues invs_valid_objs' cong: conj_cong)

@@ -516,7 +516,7 @@ next
                apply assumption
               apply vcg
              apply (simp add: getSlotCap_def imp_conjR)
-             apply (wp getCTE_ctes_of | (wp_once hoare_drop_imps))+
+             apply (wp getCTE_ctes_of | (wp (once) hoare_drop_imps))+
             apply (clarsimp simp: Collect_const_mem if_then_simps lookup_fault_lifts cong: imp_cong conj_cong)
             apply vcg
            apply (vcg strip_guards=true)

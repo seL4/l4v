@@ -300,7 +300,7 @@ lemma get_object_reads_respects:
   "reads_respects aag l (K (aag_can_read aag ptr \<or> (aag_can_affect aag l ptr))) (get_object ptr)"
   apply (unfold get_object_def fun_app_def)
   apply (subst gets_apply)
-  apply (wp gets_apply_ev | wp_once hoare_drop_imps)+
+  apply (wp gets_apply_ev | wp (once) hoare_drop_imps)+
   apply (fastforce elim: reads_equivE affects_equivE equiv_forE)
   done
 
@@ -745,7 +745,7 @@ lemma possible_switch_to_reads_respects:
            | force)+
    done
   apply clarsimp
-  apply (wp_once, rename_tac cur_dom)
+  apply (wp (once), rename_tac cur_dom)
    apply (simp add: equiv_valid_def2)
      apply (rule_tac W="\<top>\<top>" and Q="\<lambda>tcb. pas_refined aag and K (tcb_domain tcb \<noteq> cur_dom)" in equiv_valid_rv_bind)
        prefer 3
@@ -779,7 +779,7 @@ lemma cancel_all_ipc_reads_respects:
         | wpc
         | clarsimp simp: ball_conj_distrib
         | rule subset_refl
-        | wp_once hoare_drop_imps
+        | wp (once) hoare_drop_imps
         | assumption)+
   done
 
@@ -857,7 +857,7 @@ lemma cancel_all_signals_reads_respects:
      | wpc
      | clarsimp simp: ball_conj_distrib
      | rule subset_refl
-     | wp_once hoare_drop_imps
+     | wp (once) hoare_drop_imps
      | simp)+
 
 lemma get_bound_notification_reads_respects':
@@ -1298,7 +1298,7 @@ lemma finalise_cap_reads_respects:
                   | rule aag_Control_into_owns_irq
                   | clarsimp split del: if_split
                   | rule conjI
-                  | wp_once reads_respects_f[where st=st]
+                  | wp (once) reads_respects_f[where st=st]
                   | blast
                   | clarsimp
                   | force dest:caps_of_state_valid simp: valid_cap_def)+)[11]
@@ -1347,7 +1347,7 @@ lemma rec_del_only_timer_irq:
   apply (rule hoare_pre, rule only_timer_irq_pres)
     apply (rule hoare_pre, wp rec_del_irq_masks)
     apply (wp rec_del_domain_sep_inv | force
-      | (rule hoare_pre, wp_once rec_del_domain_sep_inv))+
+      | (rule hoare_pre, wp (once) rec_del_domain_sep_inv))+
   done
 
 lemma rec_del_only_timer_irq_inv:
@@ -1697,7 +1697,7 @@ lemma cancel_all_ipc_globals_equiv':
   apply(wp mapM_x_wp[OF _ subset_refl] set_thread_state_globals_equiv
            set_simple_ko_globals_equiv hoare_vcg_all_lift get_object_inv
            dxo_wp_weak | wpc | simp
-        | wp_once hoare_drop_imps)+
+        | wp (once) hoare_drop_imps)+
   done
 
 lemma cancel_all_ipc_globals_equiv:
@@ -1731,7 +1731,7 @@ lemma cancel_all_signals_globals_equiv':
   apply(wp mapM_x_wp[OF _ subset_refl] set_thread_state_globals_equiv
            set_notification_valid_ko_at_arm dxo_wp_weak
            set_notification_globals_equiv hoare_vcg_all_lift | wpc | simp
-        | wp_once hoare_drop_imps)+
+        | wp (once) hoare_drop_imps)+
   done
 
 lemma cancel_all_signals_globals_equiv:

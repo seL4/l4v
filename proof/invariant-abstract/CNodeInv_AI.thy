@@ -448,7 +448,7 @@ lemma decode_cnode_inv_wf[wp]:
                apply ((wp derive_cap_is_derived
                           derive_cap_valid_cap
                           derive_cap_zobjrefs derive_cap_objrefs_iszombie
-                            | wp_once hoare_drop_imps)+ )[1]
+                            | wp (once) hoare_drop_imps)+ )[1]
               apply (wp whenE_throwError_wp | wpcw)+
             apply simp
             apply (rule_tac Q="\<lambda>src_cap. valid_cap src_cap and ex_cte_cap_wp_to is_cnode_cap x
@@ -494,7 +494,7 @@ lemma decode_cnode_inv_wf[wp]:
                 lsfco_cte_at lookup_slot_for_cnode_op_cap_to
                 hoare_vcg_const_imp_lift
                 | simp add: split_beta
-                | wp_once hoare_drop_imps)+
+                | wp (once) hoare_drop_imps)+
      apply clarsimp
     \<comment> \<open>CancelBadgedSends\<close>
     apply (simp add: decode_cnode_invocation_def

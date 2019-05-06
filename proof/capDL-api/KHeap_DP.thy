@@ -604,7 +604,7 @@ lemma derive_cap_wpE:
 
 lemma derive_cap_wp2: "\<lbrace>P\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. if rv = NullCap then True else P s\<rbrace>, -"
   apply (rule hoare_post_imp_R)
-   apply (wp_once derive_cap_wpE)
+   apply (wp (once) derive_cap_wpE)
   apply (clarsimp)
   done
 

@@ -80,7 +80,7 @@ lemma setDomain_ccorres:
       apply wp
      apply (rule_tac Q="\<lambda>_. all_invs_but_sch_extra and tcb_at' t and sch_act_simple
                         and (\<lambda>s. rv = ksCurThread s)" in hoare_strengthen_post)
-      apply (wp_trace threadSet_all_invs_but_sch_extra)
+      apply (wp threadSet_all_invs_but_sch_extra)
      apply (clarsimp simp:valid_pspace_valid_objs' st_tcb_at_def[symmetric]
        sch_act_simple_def st_tcb_at'_def o_def weak_sch_act_wf_def split:if_splits)
     apply (simp add: guard_is_UNIV_def)
@@ -1318,11 +1318,11 @@ lemma decodeCNodeInvocation_ccorres:
                            apply (simp add: Collect_const_mem all_ex_eq_helper)
                            apply (vcg exspec=lookupSourceSlot_modifies)
                           apply simp
-                          apply (wp | wp_once hoare_drop_imps)+
+                          apply (wp | wp (once) hoare_drop_imps)+
                          apply simp
                          apply vcg
                         apply simp
-                        apply (wp | wp_once hoare_drop_imps)+
+                        apply (wp | wp (once) hoare_drop_imps)+
                        apply simp
                        apply vcg
                       apply wp
@@ -1355,7 +1355,7 @@ lemma decodeCNodeInvocation_ccorres:
                   hoare_vcg_all_lift_R lsfco_cte_at' static_imp_wp
                 | simp add: hasCancelSendRights_not_Null ctes_of_valid_strengthen
                       cong: conj_cong
-                | wp_once hoare_drop_imps)+
+                | wp (once) hoare_drop_imps)+
        apply (simp add: all_ex_eq_helper)
        apply (vcg exspec=lookupTargetSlot_modifies)
       apply simp
@@ -1423,7 +1423,7 @@ lemma deleteObjects_gsCNodes_at_pt:
   apply (rule hoare_gen_asm)
   apply (simp add: deleteObjects_def2)
   apply (wp | simp cong: conj_cong
-        | wp_once hoare_drop_imps)+
+        | wp (once) hoare_drop_imps)+
   done
 
 crunch gsCNodes[wp]: setThreadState, updateFreeIndex,
@@ -2015,7 +2015,7 @@ lemma resetUntypedCap_ccorres:
                       updateFreeIndex_descendants_of2
                       doMachineOp_psp_no_overlap
                       hoare_vcg_ex_lift
-              | (wp_once preemptionPoint_inv, simp, simp add: pspace_no_overlap'_def)
+              | (wp (once) preemptionPoint_inv, simp, simp add: pspace_no_overlap'_def)
               | simp)+
            apply (simp add: cte_wp_at_ctes_of isCap_simps | clarify)+
            apply (clarsimp simp: length_upto_enum_step upto_enum_step_nth
@@ -2054,9 +2054,9 @@ lemma resetUntypedCap_ccorres:
                 deleteObject_no_overlap
         | rule_tac d="capIsDevice (cteCap cte)" and idx="capFreeIndex (cteCap cte)" in
                 deleteObjects_cte_wp_at'
-        | wp_once hoare_vcg_const_imp_lift
+        | wp (once) hoare_vcg_const_imp_lift
                 hoare_vcg_conj_lift
-        | wp_once deleteObjects_invs'[where p=slot]
+        | wp (once) deleteObjects_invs'[where p=slot]
                  deleteObjects_descendants[where p=slot]
         | strengthen exI[mk_strg I])+)[1]
      apply (simp add: word_sle_def)
@@ -3079,7 +3079,7 @@ shows
                                 apply (simp(no_asm) add: throwError_def, rule ccorres_return_Skip')
                                apply (rule hoare_vcg_conj_lift
                                       | rule_tac p="capCNodePtr rv" in setThreadState_cap_to'
-                                      | wp_once sts_invs_minor' setThreadStateRestart_ct_active'
+                                      | wp (once) sts_invs_minor' setThreadStateRestart_ct_active'
                                                 sts_valid_untyped_inv')+
                              apply (clarsimp simp: ccap_relation_untyped_CL_simps shiftL_nat
                                                    toEnum_object_type_to_H unat_of_nat_APIType_capBits
@@ -3198,7 +3198,7 @@ shows
                       \<and> sch_act_simple s \<and> ct_active' s" in hoare_post_imp_R)
                  apply clarsimp
                  apply (wp injection_wp_E[OF refl] getSlotCap_cap_to'
-                           | wp_once hoare_drop_imps)+
+                           | wp (once) hoare_drop_imps)+
                 apply (clarsimp simp: valid_capAligned isCap_simps)
                 apply (drule_tac x=0 in bspec, simp+)
                 apply (frule(1) base_length_minus_one_inequality[where

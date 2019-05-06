@@ -141,7 +141,7 @@ lemma unmap_page_table_respects:
              hoare_vcg_all_lift_R dmo_mol_respects
         | wpc
         | simp add: cleanByVA_PoU_def
-        | wp_once hoare_drop_imps)+
+        | wp (once) hoare_drop_imps)+
   apply auto
   done
 
@@ -456,10 +456,10 @@ lemma unmap_page_respects:
              lookup_pt_slot_authorised
                    | wpc
                    | simp add: is_aligned_6_masks is_aligned_mask[symmetric] cleanByVA_PoU_def
-                   | wp_once hoare_drop_imps
+                   | wp (once) hoare_drop_imps
                      mapM_set'' [where f = "(\<lambda>a. store_pte a InvalidPTE)" and I = "\<lambda>x s. is_subject aag (x && ~~ mask pt_bits)" and Q = "integrity aag X st"]
                      mapM_set'' [where f = "(\<lambda>a. store_pde a InvalidPDE)" and I = "\<lambda>x s. is_subject aag (x && ~~ mask pd_bits)" and Q = "integrity aag X st"]
-                   | wp_once hoare_drop_imps[where R="\<lambda>rv s. rv"])+
+                   | wp (once) hoare_drop_imps[where R="\<lambda>rv s. rv"])+
   done
 
 (* FIXME: MOVE *)

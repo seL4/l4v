@@ -2034,10 +2034,10 @@ lemma schedule_corres:
 
                              (* isHighestPrio *)
                              apply (clarsimp simp: if_apply_def2)
-                             apply ((wp_once hoare_drop_imp)+)[1]
+                             apply ((wp (once) hoare_drop_imp)+)[1]
 
                             apply (simp add: if_apply_def2)
-                             apply ((wp_once hoare_drop_imp)+)[1]
+                             apply ((wp (once) hoare_drop_imp)+)[1]
                            apply wpsimp+
                      apply (wpsimp simp: etcb_relation_def)+
             apply (rule tcbSchedEnqueue_corres)
@@ -2226,8 +2226,8 @@ proof -
        (* switch to idle thread *)
        apply simp
        apply (rule hoare_pre)
-        apply (wp_once switchToIdleThread_ct_not_queued_no_cicd')
-        apply (wp_once)
+        apply (wp (once) switchToIdleThread_ct_not_queued_no_cicd')
+        apply (wp (once))
         apply ((wp hoare_disjI1 switchToIdleThread_curr_is_idle)+)[1]
        apply simp
       (* we have a thread to switch to *)
@@ -2277,7 +2277,7 @@ proof -
       apply (rename_tac l1)
       apply (case_tac "l1 = 0")
        (* switch to idle thread *)
-       apply (simp, wp_once switchToIdleThread_invs_no_cicd', simp)
+       apply (simp, wp (once) switchToIdleThread_invs_no_cicd', simp)
       (* we have a thread to switch to *)
       apply (clarsimp simp: bitmap_fun_defs)
       apply (wp assert_inv)

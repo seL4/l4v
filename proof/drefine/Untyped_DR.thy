@@ -1556,7 +1556,7 @@ lemma invoke_untyped_corres:
          apply wp
         apply (simp split del: if_split)
         apply (wp get_cap_wp)+
-       apply (wp_once hoare_drop_imps)
+       apply (wp (once) hoare_drop_imps)
        apply wp
       apply ((rule validE_validE_R)?,
              rule_tac E="\<top>\<top>" and

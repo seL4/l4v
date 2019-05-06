@@ -357,7 +357,7 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
                    in hoare_strengthen_post)
     apply (wp hoare_vcg_all_lift hoare_vcg_conj_lift hoare_vcg_imp_lift)+
      apply (simp add: threadSet_def)
-     apply (wp_trace getObject_tcb_wp threadSet_tcbDomain_triv')+
+     apply (wp getObject_tcb_wp threadSet_tcbDomain_triv')+
    apply (auto simp: obj_at'_def)
   done
 
@@ -383,7 +383,7 @@ lemma set_domain_setDomain_corres:
                      apply (rule tcbSchedEnqueue_corres)
                     apply (wp hoare_drop_imps hoare_vcg_conj_lift | clarsimp| assumption)+
           apply (clarsimp simp: etcb_relation_def)
-         apply ((wp_trace hoare_vcg_conj_lift hoare_vcg_disj_lift | clarsimp)+)[1]
+         apply ((wp hoare_vcg_conj_lift hoare_vcg_disj_lift | clarsimp)+)[1]
         apply clarsimp
         apply (rule_tac Q="\<lambda>_. valid_objs' and valid_queues' and valid_queues and
           (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and tcb_at' tptr"
@@ -809,9 +809,9 @@ lemma doReply_invs[wp]:
   apply (rule hoare_seq_ext [OF _ getCTE_sp])
   apply (wp, wpc)
         apply (wp)
-          apply (wp_once sts_invs_minor'')
+          apply (wp (once) sts_invs_minor'')
           apply (simp)
-          apply (wp_once sts_st_tcb')
+          apply (wp (once) sts_st_tcb')
           apply (wp)[1]
          apply (rule_tac Q="\<lambda>rv s. invs' s
                                    \<and> t \<noteq> ksIdleThread s
@@ -929,7 +929,7 @@ lemma tcbSchedEnqueue_valid_action:
   "\<lbrace>\<lambda>s. \<forall>x. ksSchedulerAction s = SwitchToThread x \<longrightarrow> st_tcb_at' runnable' x s\<rbrace>
   tcbSchedEnqueue ptr
   \<lbrace>\<lambda>rv s. \<forall>x. ksSchedulerAction s = SwitchToThread x \<longrightarrow> st_tcb_at' runnable' x s\<rbrace>"
-  apply (wp_trace hoare_vcg_all_lift hoare_vcg_imp_lift)
+  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift)
   apply clarsimp
   done
 
@@ -1018,7 +1018,7 @@ lemma setDomain_invs':
   (\<lambda>y. domain \<le> maxDomain))\<rbrace>
   setDomain ptr domain \<lbrace>\<lambda>y. invs'\<rbrace>"
   apply (simp add:setDomain_def )
-  apply (wp_trace add: hoare_when_wp static_imp_wp static_imp_conj_wp rescheduleRequired_all_invs_but_extra
+  apply (wp add: hoare_when_wp static_imp_wp static_imp_conj_wp rescheduleRequired_all_invs_but_extra
     tcbSchedEnqueue_valid_action hoare_vcg_if_lift2)
      apply (rule_tac Q = "\<lambda>r s. all_invs_but_sch_extra s \<and> curThread = ksCurThread s
       \<and> (ptr \<noteq> curThread \<longrightarrow> ct_not_inQ s \<and> sch_act_wf (ksSchedulerAction s) s \<and> ct_idle_or_in_cur_domain' s)"
@@ -1479,7 +1479,7 @@ lemma cteDeleteOne_reply_cap_to''[wp]:
   apply (subgoal_tac "isReplyCap (cteCap cte) \<or> isNullCap (cteCap cte)")
    apply (wp hoare_vcg_ex_lift emptySlot_cte_wp_cap_other isFinalCapability_inv
         | clarsimp simp: finaliseCap_def isCap_simps | simp
-        | wp_once hoare_drop_imps)+
+        | wp (once) hoare_drop_imps)+
    apply (fastforce simp: cte_wp_at_ctes_of)
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   done
@@ -2076,7 +2076,7 @@ proof -
            apply (wp hoare_vcg_all_lift
                      doMachineOp_getActiveIRQ_IRQ_active'
                     | simp
-                    | simp add: imp_conjR | wp_once hoare_drop_imps)+
+                    | simp add: imp_conjR | wp (once) hoare_drop_imps)+
         apply force
        apply simp
        apply (simp add: invs'_def valid_state'_def)
@@ -2211,7 +2211,7 @@ proof -
                  | clarsimp simp: tcb_at_invs ct_in_state'_def simple_sane_strg sch_act_simple_def
                  | drule st_tcb_at_idle_thread'
                  | drule ct_not_ksQ[rotated]
-                 | wpc | wp_once hoare_drop_imps)+
+                 | wpc | wp (once) hoare_drop_imps)+
   done
 qed
 

@@ -898,7 +898,7 @@ lemma resetUntypedCap_valid_duplicates'[wp]:
   apply (clarsimp simp: resetUntypedCap_def)
   apply (rule hoare_pre)
    apply (wp | simp add: unless_def)+
-   apply (wp mapME_x_inv_wp preemptionPoint_inv | simp | wp_once hoare_drop_imps)+
+   apply (wp mapME_x_inv_wp preemptionPoint_inv | simp | wp (once) hoare_drop_imps)+
    apply (wp getSlotCap_wp)
   apply (clarsimp simp: cte_wp_at_ctes_of split del: if_split)
   apply (frule cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD], clarsimp+)
@@ -1202,7 +1202,7 @@ lemma unmapPage_valid_duplicates'[wp]:
     storePDE_no_duplicates' checkMappingPPtr_Section
     lookupPTSlot_page_table_at'
     checkMappingPPtr_SmallPage)+ | wpc
-    | simp add:split_def conj_comms | wp_once checkMappingPPtr_inv)+
+    | simp add:split_def conj_comms | wp (once) checkMappingPPtr_inv)+
           apply (rule_tac ptr = "p && ~~ mask ptBits" and word = p
             in mapM_x_storePTE_update_helper[where sz = 7])
           apply (wp checkMappingPPtr_inv lookupPTSlot_page_table_at'
@@ -1216,7 +1216,7 @@ lemma unmapPage_valid_duplicates'[wp]:
         apply ((wp storePTE_no_duplicates' mapM_x_mapM_valid
           storePDE_no_duplicates' checkMappingPPtr_Section
           checkMappingPPtr_SmallPage)+ | wpc
-          | simp add:split_def conj_comms | wp_once checkMappingPPtr_inv)+
+          | simp add:split_def conj_comms | wp (once) checkMappingPPtr_inv)+
         apply (rule_tac ptr = "p && ~~ mask pdBits" and word = p
                         in mapM_x_storePDE_update_helper[where sz = 7])
        apply (wp mapM_x_mapM_valid checkMappingPPtr_inv)+

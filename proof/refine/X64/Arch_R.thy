@@ -715,7 +715,7 @@ lemma decode_page_table_inv_corres:
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
                      | wp hoare_whenE_wp hoare_vcg_all_lift_R getPDE_wp get_pde_wp
-                     | wp_once hoare_drop_imps)+)[6]
+                     | wp (once) hoare_drop_imps)+)[6]
       apply (clarsimp intro!: validE_R_validE)
       apply (rule_tac Q'="\<lambda>rv s.  pspace_aligned s \<and> valid_vspace_objs s \<and> valid_arch_state s \<and>
                            equal_kernel_mappings s \<and> valid_global_objs s \<and>
@@ -723,7 +723,7 @@ lemma decode_page_table_inv_corres:
                            is_aligned rv pml4_bits"
                        in hoare_post_imp_R[rotated])
        apply fastforce
-      apply (wpsimp | wp_once hoare_drop_imps)+
+      apply (wpsimp | wp (once) hoare_drop_imps)+
     apply (fastforce simp: valid_cap_def mask_def)
    apply (clarsimp simp: valid_cap'_def)
    apply fastforce
@@ -743,7 +743,7 @@ lemma decode_page_table_inv_corres:
            apply simp
           apply (rule corres_trivial, simp add: returnOk_def archinv_relation_def
                                  page_table_invocation_map_def)
-         apply (wp getCTE_wp' | wp_once hoare_drop_imps)+
+         apply (wp getCTE_wp' | wp (once) hoare_drop_imps)+
       apply (clarsimp)
      apply (rule no_fail_pre, rule no_fail_getCTE)
      apply (erule conjunct2)
@@ -817,7 +817,7 @@ lemma decode_page_directory_inv_corres:
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
                         | wp hoare_whenE_wp hoare_vcg_all_lift_R getPDPTE_wp get_pdpte_wp
-                        | wp_once hoare_drop_imps)+)[6]
+                        | wp (once) hoare_drop_imps)+)[6]
       apply (clarsimp intro!: validE_R_validE)
       apply (rule_tac Q'="\<lambda>rv s.  pspace_aligned s \<and> valid_vspace_objs s \<and> valid_arch_state s \<and>
                            equal_kernel_mappings s \<and> valid_global_objs s \<and>
@@ -825,7 +825,7 @@ lemma decode_page_directory_inv_corres:
                            is_aligned rv pml4_bits"
                         in hoare_post_imp_R[rotated])
        apply fastforce
-      apply (wpsimp | wp_once hoare_drop_imps)+
+      apply (wpsimp | wp (once) hoare_drop_imps)+
     apply (fastforce simp: valid_cap_def mask_def)
    apply (clarsimp simp: valid_cap'_def)
    apply fastforce
@@ -845,7 +845,7 @@ lemma decode_page_directory_inv_corres:
            apply simp
           apply (rule corres_trivial, simp add: returnOk_def archinv_relation_def
                         page_directory_invocation_map_def)
-         apply (wp getCTE_wp' | wp_once hoare_drop_imps)+
+         apply (wp getCTE_wp' | wp (once) hoare_drop_imps)+
       apply (clarsimp)
      apply (rule no_fail_pre, rule no_fail_getCTE)
      apply (erule conjunct2)
@@ -915,7 +915,7 @@ lemma decode_pdpt_inv_corres:
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
                     | wp hoare_whenE_wp hoare_vcg_all_lift_R getPML4E_wp get_pml4e_wp
-                    | wp_once hoare_drop_imps)+)
+                    | wp (once) hoare_drop_imps)+)
     apply (fastforce simp: valid_cap_def mask_def intro!: page_map_l4_pml4e_at_lookupI)
    apply (clarsimp simp: valid_cap'_def)
    apply fastforce
@@ -935,7 +935,7 @@ lemma decode_pdpt_inv_corres:
            apply simp
           apply (rule corres_trivial, simp add: returnOk_def archinv_relation_def
                         pdpt_invocation_map_def)
-         apply (wp getCTE_wp' | wp_once hoare_drop_imps)+
+         apply (wp getCTE_wp' | wp (once) hoare_drop_imps)+
       apply (clarsimp)
      apply (rule no_fail_pre, rule no_fail_getCTE)
      apply (erule conjunct2)
@@ -1693,7 +1693,7 @@ lemma decode_page_inv_wf[wp]:
               cong: list.case_cong prod.case_cong)
    apply (rule hoare_pre)
     apply (wp createMappingEntries_wf checkVP_wpR whenE_throwError_wp hoare_vcg_const_imp_lift_R
-           | wpc | simp add: valid_arch_inv'_def valid_page_inv'_def | wp_once hoare_drop_imps)+
+           | wpc | simp add: valid_arch_inv'_def valid_page_inv'_def | wp (once) hoare_drop_imps)+
    apply (clarsimp simp: neq_Nil_conv invs_valid_objs' linorder_not_le
                            cte_wp_at_ctes_of)
    apply (drule ctes_of_valid', fastforce)+
@@ -1740,7 +1740,7 @@ lemma decode_page_table_inv_wf[wp]:
    apply ((wp whenE_throwError_wp isFinalCapability_inv getPDE_wp
         | wpc
         | simp add: valid_arch_inv'_def valid_pti'_def if_apply_def2
-        | wp_once hoare_drop_imps)+)
+        | wp (once) hoare_drop_imps)+)
   apply (clarsimp simp: linorder_not_le isCap_simps
                         cte_wp_at_ctes_of diminished_arch_update')
   apply (simp add: valid_cap'_def capAligned_def)
@@ -1772,7 +1772,7 @@ lemma decode_page_directory_inv_wf[wp]:
    apply ((wp whenE_throwError_wp isFinalCapability_inv getPDPTE_wp
         | wpc
         | simp add: valid_arch_inv'_def valid_pdi'_def if_apply_def2
-        | wp_once hoare_drop_imps)+)
+        | wp (once) hoare_drop_imps)+)
   apply (clarsimp simp: linorder_not_le isCap_simps
                         cte_wp_at_ctes_of diminished_arch_update')
   apply (simp add: valid_cap'_def capAligned_def)
@@ -1804,7 +1804,7 @@ lemma decode_pdpt_inv_wf[wp]:
    apply ((wp whenE_throwError_wp isFinalCapability_inv getPML4E_wp
         | wpc
         | simp add: valid_arch_inv'_def valid_pdpti'_def if_apply_def2
-        | wp_once hoare_drop_imps)+)
+        | wp (once) hoare_drop_imps)+)
   apply (clarsimp simp: linorder_not_le isCap_simps
                         cte_wp_at_ctes_of diminished_arch_update')
   apply (simp add: valid_cap'_def capAligned_def)
@@ -1848,7 +1848,7 @@ lemma decode_port_control_inv_wf:
               cong: list.case_cong prod.case_cong
           | wp whenE_throwError_wp ensureEmptySlot_stronger isIOPortRangeFree_wp
           | wpc
-          | wp_once hoare_drop_imps)+
+          | wp (once) hoare_drop_imps)+
   by (auto simp: invs_valid_objs')
 
 lemma diminished_IOPortControl':

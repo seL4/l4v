@@ -5799,7 +5799,7 @@ lemma lookupSlotForCNodeOp_real_cte_at'[wp]:
   apply (simp add: lookupSlotForCNodeOp_def split_def unlessE_def
                      split del: if_split cong: if_cong)
   apply (rule hoare_pre)
-   apply (wp resolveAddressBits_real_cte_at' | simp | wp_once hoare_drop_imps)+
+   apply (wp resolveAddressBits_real_cte_at' | simp | wp (once) hoare_drop_imps)+
   done
 
 lemma cte_refs_maskCapRights[simp]:
@@ -5856,12 +5856,12 @@ proof (induct arbitrary: s rule: resolveAddressBits.induct)
     apply (simp add: Let_def split_def cap_case_CNodeCap[unfolded isCap_simps]
                split del: if_split cong: if_cong)
     apply (rule hoare_pre_spec_validE)
-     apply ((elim exE | wp_once spec_strengthen_postE[OF "1.hyps"])+,
+     apply ((elim exE | wp (once) spec_strengthen_postE[OF "1.hyps"])+,
               (rule refl conjI | simp add: in_monad split del: if_split del: cte_refs'.simps)+)
             apply (wp getSlotCap_cap_to2
                      | simp    add: assertE_def split_def whenE_def locateSlotCap_def
                         split del: if_split | simp add: imp_conjL[symmetric]
-                     | wp_once hoare_drop_imps)+
+                     | wp (once) hoare_drop_imps)+
     apply (clarsimp simp: P)
   done
 qed
@@ -6191,7 +6191,7 @@ lemma updateFreeIndex_forward_invs':
       apply (simp add:updateCap_def)
       apply (wp irqs_masked_lift valid_queues_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift
                 hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp
-               | wp_once hoare_use_eq[where f="gsUntypedZeroRanges"]
+               | wp (once) hoare_use_eq[where f="gsUntypedZeroRanges"]
                | simp add: getSlotCap_def)+
   apply (clarsimp simp: cte_wp_at_ctes_of fun_upd_def[symmetric])
   apply (clarsimp simp: isCap_simps valid_pspace'_def)

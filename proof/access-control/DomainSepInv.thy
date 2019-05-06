@@ -530,7 +530,7 @@ lemma rec_del_domain_sep_inv':
                    finalise_cap_returns_NullCap
                    drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
                |simp add: without_preemption_def split del: if_split
-               |wp_once hoare_drop_imps)+
+               |wp (once) hoare_drop_imps)+
     apply(blast dest: cte_wp_at_domain_sep_inv_cap)
     done
   next
@@ -584,7 +584,7 @@ lemma cap_revoke_domain_sep_inv':
                     drop_spec_validE[OF valid_validE[OF cap_delete_domain_sep_inv]]
                     drop_spec_validE[OF assertE_wp] drop_spec_validE[OF returnOk_wp]
                     drop_spec_validE[OF liftE_wp] select_wp
-                | simp | wp_once hoare_drop_imps)+
+                | simp | wp (once) hoare_drop_imps)+
   done
   qed
 
@@ -645,7 +645,7 @@ lemma cancel_badged_sends_domain_sep_inv[wp]:
    \<lbrace>\<lambda>rv. domain_sep_inv irqs st\<rbrace>"
   apply(simp add: cancel_badged_sends_def)
   apply(rule hoare_pre)
-   apply(wp dxo_wp_weak mapM_wp | wpc | simp add: filterM_mapM | rule subset_refl | wp_once hoare_drop_imps)+
+   apply(wp dxo_wp_weak mapM_wp | wpc | simp add: filterM_mapM | rule subset_refl | wp (once) hoare_drop_imps)+
    done
 
 crunch domain_sep_inv[wp]: finalise_slot "domain_sep_inv irqs st"
@@ -992,7 +992,7 @@ lemma do_ipc_transfer_domain_sep_inv:
    do_ipc_transfer sender ep badge grant receiver
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   unfolding do_ipc_transfer_def
-  apply (wp do_normal_transfer_domain_sep_inv hoare_vcg_all_lift | wpc | wp_once hoare_drop_imps)+
+  apply (wp do_normal_transfer_domain_sep_inv hoare_vcg_all_lift | wpc | wp (once) hoare_drop_imps)+
   apply clarsimp
   done
 
@@ -1016,7 +1016,7 @@ lemma send_ipc_domain_sep_inv:
   apply (wp setup_caller_cap_domain_sep_inv hoare_vcg_if_lift | wpc | simp split del:if_split)+
         apply(rule_tac Q="\<lambda> r s. domain_sep_inv irqs st s" in hoare_strengthen_post)
          apply(wp do_ipc_transfer_domain_sep_inv dxo_wp_weak | wpc | simp)+
-    apply (wp_once hoare_drop_imps)
+    apply (wp (once) hoare_drop_imps)
     apply (wp get_simple_ko_wp)+
   apply clarsimp
   apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def ep_q_refs_of_def

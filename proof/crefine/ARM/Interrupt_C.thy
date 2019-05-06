@@ -566,7 +566,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
                apply (wp injection_wp_E[OF refl] checkIRQ_ret_good)
               apply (simp add: Collect_const_mem all_ex_eq_helper)
               apply (vcg exspec=Arch_checkIRQ_modifies)
-             apply (wp hoare_vcg_const_imp_lift |wp_once hoare_drop_imps)+
+             apply (wp hoare_vcg_const_imp_lift |wp (once) hoare_drop_imps)+
             apply (simp add: Collect_const_mem all_ex_eq_helper)
             apply vcg
            apply wp
@@ -736,7 +736,7 @@ lemma decodeIRQControlInvocation_ccorres:
              apply (wp injection_wp_E[OF refl] checkIRQ_ret_good)
             apply (simp add: Collect_const_mem all_ex_eq_helper)
             apply (vcg exspec=Arch_checkIRQ_modifies)
-           apply (wp hoare_vcg_const_imp_lift |wp_once hoare_drop_imps)+
+           apply (wp hoare_vcg_const_imp_lift |wp (once) hoare_drop_imps)+
           apply (simp add: Collect_const_mem all_ex_eq_helper)
           apply vcg
          apply wp

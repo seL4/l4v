@@ -343,7 +343,7 @@ ML \<open>
 fun wp_all_tac ctxt = let fun f n thm =
       if n > Thm.nprems_of thm then Seq.single thm else
         let val thms = WeakestPre.apply_rules_tac_n false
-                         ctxt [] (Unsynchronized.ref []) n thm
+                         ctxt [] n thm
                        |> Seq.list_of
         in if null thms then f (n+1) thm else f n (hd thms) end
      in f 0 end

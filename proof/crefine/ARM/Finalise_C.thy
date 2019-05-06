@@ -623,7 +623,7 @@ lemma suspend_ccorres:
         apply (drule_tac x=d in spec)
         apply (drule_tac x=p in spec)
         apply (clarsimp elim!: obj_at'_weakenE simp: inQ_def)
-       apply (wp_trace sts_valid_queues_partial)[1]
+       apply (wp sts_valid_queues_partial)[1]
       apply clarsimp
       apply (wpsimp simp: valid_tcb_state'_def)
      apply clarsimp

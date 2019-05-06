@@ -685,7 +685,7 @@ lemma send_signal_reads_respects:
      apply (simp split del: if_split
           | rule_tac ntfnptr=ntfnptr in blocked_cancel_ipc_nosts_reads_respects
           | rule cancel_ipc_reads_respects_rewrite
-          | wp_once
+          | wp (once)
               set_simple_ko_reads_respects
               possible_switch_to_reads_respects
               as_user_set_register_reads_respects'
@@ -748,7 +748,7 @@ lemma send_signal_reads_respects:
 
      apply ( simp split del: if_split
            | rule cancel_ipc_valid_rewrite
-           | wp_once
+           | wp (once)
                set_notification_equiv_but_for_labels
                possible_switch_to_equiv_but_for_labels
                as_user_equiv_but_for_labels
@@ -833,7 +833,7 @@ lemma receive_signal_reads_respects:
   apply(wp set_simple_ko_reads_respects set_thread_state_reads_respects
            as_user_set_register_reads_respects' get_simple_ko_reads_respects hoare_vcg_all_lift
        | wpc
-       | wp_once hoare_drop_imps)+
+       | wp (once) hoare_drop_imps)+
   apply(force dest: reads_ep)
   done
 
@@ -1377,7 +1377,7 @@ lemma cancel_badged_sends_reads_respects:
      apply ((wp mapM_ev'' mapM_wp get_thread_state_reads_respects set_thread_state_runnable_reads_respects
                 set_simple_ko_reads_respects get_simple_ko_reads_respects hoare_vcg_ball_lift
                 tcb_sched_action_reads_respects set_thread_state_pas_refined
-            | wpc | simp add: filterM_mapM tcb_at_st_tcb_at[symmetric] | wp_once hoare_drop_imps | rule subset_refl | force)+)[1]
+            | wpc | simp add: filterM_mapM tcb_at_st_tcb_at[symmetric] | wp (once) hoare_drop_imps | rule subset_refl | force)+)[1]
     apply (wp get_simple_ko_reads_respects)
    apply (wp get_simple_ko_wp)
   apply simp
@@ -1404,7 +1404,7 @@ lemma get_receive_slots_rev:
        | wp empty_on_failure_ev unify_failure_ev lookup_slot_for_cnode_op_rev get_cap_rev
             lookup_slot_for_thread_rev lookup_slot_for_thread_authorised
             get_cap_ret_is_subject get_cap_ret_is_subject' load_cap_transfer_rev
-       | wp_once hoare_drop_imps
+       | wp (once) hoare_drop_imps
        | strengthen aag_can_read_self)+
   done
 
@@ -1690,7 +1690,7 @@ lemma do_fault_transfer_reads_respects:
             set_mrs_reads_respects' make_fault_msg_reads_respects thread_get_reads_respects
          | wpc
          | simp add: split_def det_setRegister
-         | wp_once hoare_drop_imps)+
+         | wp (once) hoare_drop_imps)+
   done
 
 
@@ -1740,7 +1740,7 @@ lemma do_ipc_transfer_reads_respects:
             lookup_ipc_buffer_aligned
         | wpc
         | simp
-        | wp_once hoare_drop_imps
+        | wp (once) hoare_drop_imps
         | fastforce)+
   done
 
@@ -1953,7 +1953,7 @@ lemma handle_fault_reads_respects:
         and K (is_subject aag thread \<and> valid_fault fault))
      (handle_fault thread fault)"
   unfolding handle_fault_def catch_def fun_app_def handle_double_fault_def
-  apply(wp_once hoare_drop_imps |
+  apply(wp (once) hoare_drop_imps |
         wp set_thread_state_reads_respects send_fault_ipc_reads_respects | wpc | simp)+
   apply(fastforce intro: reads_affects_equiv_get_tcb_eq)
   done
@@ -2009,14 +2009,14 @@ lemma do_reply_transfer_reads_respects_f:
             when_ev
         | wpc
         | simp split del: if_split
-        | wp_once reads_respects_f[where aag=aag and st=st]
+        | wp (once) reads_respects_f[where aag=aag and st=st]
         | elim conjE
-        | wp_once hoare_drop_imps)+
+        | wp (once) hoare_drop_imps)+
          apply(rule_tac Q="\<lambda> rv s. pas_refined aag s \<and> pas_cur_domain aag s \<and> invs s
                                  \<and> is_subject aag (cur_thread s)
                                  \<and> silc_inv aag st s"
                      in hoare_strengthen_post[rotated])
-          apply((wp_once hoare_drop_imps
+          apply((wp (once) hoare_drop_imps
                | wp cap_delete_one_invs  hoare_vcg_all_lift
                     cap_delete_one_silc_inv reads_respects_f[OF thread_get_reads_respects]
                     reads_respects_f[OF get_thread_state_rev]

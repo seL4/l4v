@@ -2649,8 +2649,8 @@ proof -
                               apply (vcg exspec=mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged_modifies)
                              apply (simp add: o_def)
                              apply (wp | simp
-                                        | wp_once updateMDB_weak_cte_wp_at
-                                        | wp_once updateMDB_cte_wp_at_other)+
+                                        | wp (once) updateMDB_weak_cte_wp_at
+                                        | wp (once) updateMDB_cte_wp_at_other)+
                             apply (vcg exspec=mdb_node_ptr_set_mdbPrev_np_modifies)
                            apply (wp updateCap_cte_wp_at_cteMDBNode
                                      updateCap_cte_wp_at_cases
@@ -2703,8 +2703,8 @@ proof -
                             exspec=cap_endpoint_cap_get_capCanGrantReply_modifies)
                   apply clarsimp
                   (* throw away results of isHighestPrio and the fastfail shortcut *)
-                  apply (wp_once hoare_drop_imp, wp)
-                  apply (wp_once hoare_drop_imp, wp)
+                  apply (wp (once) hoare_drop_imp, wp)
+                  apply (wp (once) hoare_drop_imp, wp)
                  apply simp
                  apply (vcg exspec=isHighestPrio_modifies)
                 apply clarsimp
@@ -3406,8 +3406,8 @@ lemma fastpath_reply_recv_ccorres:
                             apply vcg
                            apply (simp add: o_def)
                            apply (wp | simp
-                                      | wp_once updateMDB_weak_cte_wp_at
-                                      | wp_once updateMDB_cte_wp_at_other)+
+                                      | wp (once) updateMDB_weak_cte_wp_at
+                                      | wp (once) updateMDB_cte_wp_at_other)+
                           apply (vcg exspec=mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged_modifies)
                          apply simp
                          apply (wp getCTE_wp')
@@ -3433,9 +3433,9 @@ lemma fastpath_reply_recv_ccorres:
                     apply simp
                     apply wp[1]
                       apply clarsimp
-                      apply (wp_once hoare_drop_imp)
+                      apply (wp (once) hoare_drop_imp)
                       apply wp
-                      apply (wp_once hoare_drop_imps)
+                      apply (wp (once) hoare_drop_imps)
                       apply wp
                      apply (simp del: Collect_const)
                      apply clarsimp
@@ -3993,11 +3993,8 @@ lemma fastpath_callKernel_SysCall_corres:
                            apply (rule monadic_rewrite_bind)
                              apply (rule switchToThread_rewrite)
                             apply (rule activateThread_simple_rewrite)
-                           apply wp_once
-                            apply wp_once
-                            apply (wp_once setCurThread_ct_in_state)
-                           apply ((rule Arch_switchToThread_pred_tcb'
-                                      | simp only: st_tcb_at'_def[symmetric])+)[1]
+                           apply (wp setCurThread_ct_in_state)
+                          apply (simp only: st_tcb_at'_def[symmetric])
                           apply (wp, clarsimp simp: cur_tcb'_def ct_in_state'_def)
                          apply (simp add: getThreadCallerSlot_def getThreadReplySlot_def
                                           locateSlot_conv ct_in_state'_def cur_tcb'_def)
@@ -4034,7 +4031,7 @@ lemma fastpath_callKernel_SysCall_corres:
                                   setThreadState_runnable_bitmap_inv
                                   threadSet_lookupBitmapPriority_inv
                                 | simp add: setMessageInfo_def
-                                | wp_once hoare_vcg_disj_lift)+)
+                                | wp (once) hoare_vcg_disj_lift)+)
 
                    apply (simp add: setThreadState_runnable_simp
                                     getThreadCallerSlot_def getThreadReplySlot_def
@@ -4053,10 +4050,10 @@ lemma fastpath_callKernel_SysCall_corres:
                  apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
                    apply (rule_tac v=destState in monadic_rewrite_getThreadState
                           | rule monadic_rewrite_bind monadic_rewrite_refl)+
-                                 apply (wp mapM_x_wp' getObject_inv | wpc | simp | wp_once hoare_drop_imps)+
+                                 apply (wp mapM_x_wp' getObject_inv | wpc | simp | wp (once) hoare_drop_imps)+
                   apply (rule_tac v=destState in monadic_rewrite_getThreadState
                           | rule monadic_rewrite_bind monadic_rewrite_refl)+
-                            apply (wp mapM_x_wp' getObject_inv | wpc | simp | wp_once hoare_drop_imps)+
+                            apply (wp mapM_x_wp' getObject_inv | wpc | simp | wp (once) hoare_drop_imps)+
 
                   apply (rule_tac P="inj (case_bool thread (hd (epQueue send_ep)))"
                                  in monadic_rewrite_gen_asm)
@@ -4985,10 +4982,10 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
 
                       apply (rule_tac v=ipcBuffer in monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+
                       apply (wp mapM_x_wp' getObject_inv | wpc | simp add:
-                        | wp_once hoare_drop_imps )+
+                        | wp (once) hoare_drop_imps )+
                       apply (rule_tac v=ipcBuffer in  monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+
                       apply (wp setCTE_obj_at'_tcbIPCBuffer assert_inv mapM_x_wp' getObject_inv | wpc | simp
-                        | wp_once hoare_drop_imps )+
+                        | wp (once) hoare_drop_imps )+
 
                    apply (rule monadic_rewrite_trans)
                     apply (rule monadic_rewrite_trans)
@@ -5011,7 +5008,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                  setThreadState_runnable_bitmap_inv
                                  threadSet_lookupBitmapPriority_inv
                            | simp add: setMessageInfo_def setThreadState_runnable_simp
-                           | wp_once hoare_vcg_disj_lift)+)[1]
+                           | wp (once) hoare_vcg_disj_lift)+)[1]
                     apply (simp add: setMessageInfo_def)
                     apply (rule monadic_rewrite_bind_tail)
                     apply (rename_tac unblocked)
@@ -5126,10 +5123,10 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
 
                       apply (rule_tac v=ipcBuffer in monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+
                       apply (wp mapM_x_wp' handleFault_obj_at'_tcbIPCBuffer getObject_inv | wpc | simp
-                        | wp_once hoare_drop_imps )+
+                        | wp (once) hoare_drop_imps )+
                       apply (rule_tac v=ipcBuffer in  monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+
                       apply (wp setCTE_obj_at'_tcbIPCBuffer assert_inv mapM_x_wp' getObject_inv | wpc | simp
-                        | wp_once hoare_drop_imps )+
+                        | wp (once) hoare_drop_imps )+
 
                    apply (simp add: bind_assoc catch_liftE
                                     receiveIPC_def Let_def liftM_def
