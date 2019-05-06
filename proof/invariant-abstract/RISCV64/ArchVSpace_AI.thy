@@ -1975,7 +1975,8 @@ lemma store_pte_invs_unreachable:
   unfolding invs_def valid_state_def valid_pspace_def
   apply (wpsimp wp: store_pte_valid_arch_state_unreachable store_pte_valid_arch_caps_unreachable
                     store_pte_equal_kernel_mappings_no_kernel_slots
-                    store_pte_valid_global_vspace_mappings)
+                    store_pte_valid_global_vspace_mappings
+                    store_pte_valid_vspace_objs_FIXME_RISCV)
   apply (simp cong: conj_cong)
   apply (rule conjI, clarsimp simp: invs_def valid_state_def valid_pspace_def)
   apply (rule conjI, fastforce dest!: vspace_for_asid_vs_lookup)

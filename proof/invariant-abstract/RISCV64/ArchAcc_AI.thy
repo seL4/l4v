@@ -1076,19 +1076,6 @@ lemma set_pt_aobjs_of:
   by (wpsimp wp: set_object_wp)
      (simp add: obj_at_def opt_map_def)
 
-lemma set_pt_valid_vspace_objs[wp]:
-  "\<lbrace>\<lambda>s. valid_vspace_objs s \<and>
-        (\<forall>level. (\<exists>\<rhd> (level,p)) s \<longrightarrow>
-           (\<forall>i\<in>if level = max_pt_level then - kernel_mapping_slots else UNIV. valid_pte level (pt i) s))\<rbrace>
-   set_pt p pt
-   \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
-  unfolding set_pt_def
-  apply (wp set_object_wp)
-  sorry (* FIXME RISCV
-  apply (clarsimp simp: valid_vspace_objs_def)
-  *)
-
-
 (* FIXME RISCV: assumption is potentially missing something about asid \<noteq> 0 *)
 lemma set_pt_valid_vs_lookup [wp]:
   "\<lbrace>\<lambda>s. valid_vs_lookup s \<and> valid_arch_state s \<and>
@@ -2254,14 +2241,12 @@ lemma vs_lookup_pages_arch_update[simp]:
    vs_lookup_pages (arch_state_update f s) = vs_lookup_pages s"
   by (rule ext)+ simp
 
-lemma store_pte_valid_vspace_objs[wp]:
+(* FIXME RISCV: this is currently not correct and should be removed *)
+lemma store_pte_valid_vspace_objs_FIXME_RISCV:
   "\<lbrace>valid_vspace_objs and (\<lambda>s. \<forall>level. \<exists>\<rhd> (level, p && ~~mask pt_bits) s \<longrightarrow> valid_pte level pte s)\<rbrace>
    store_pte p pte
    \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
-  unfolding store_pte_def
-  apply (wpsimp simp: valid_vspace_objs_def in_opt_map_eq obj_at_def)
-  apply fastforce
-  done
+  sorry
 
 lemma unique_table_caps_ptE:
   "\<lbrakk> unique_table_caps_2 cs; cs p = Some cap; vs_cap_ref cap = None;
