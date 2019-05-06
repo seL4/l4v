@@ -439,77 +439,6 @@ lemma set_cap_valid_pte_stronger:
   "set_cap cap p \<lbrace>\<lambda>s. P (valid_pte level pte s)\<rbrace>"
   by (wp valid_pte_lift3 set_cap_typ_at)
 
-lemma store_pte_vspace_objs_map:
-  "\<lbrace>valid_vspace_objs and
-   (\<lambda>s. \<forall>ref. pte_ref pte = Some ref \<longrightarrow>
-          (\<forall>level. \<exists>\<rhd>(level,table_base p) s \<longrightarrow>
-                 (pt_at ref s \<or> data_at (vmpage_size_of_level level) ref s) \<and>
-                 (\<forall>ao. aobjs_of s ref = Some ao \<longrightarrow> valid_vspace_obj level ao s)))\<rbrace>
-  store_pte p pte \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
-  unfolding store_pte_def set_pt_def
-  apply (wpsimp wp: set_object_wp)
-  sorry (* FIXME RISCV: waiting for ArchAcc
-  apply (clarsimp simp: obj_at_def valid_vspace_objs_def
-           simp del: fun_upd_apply
-           split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (frule (1) vs_lookup_map_some_pdes.intro, simp add: obj_at_def)
-  apply (frule vs_lookup_map_some_pdes.vs_lookup2)
-  apply (drule(1) subsetD)
-  apply (erule UnE)
-   apply (simp only: fun_upd_apply split: if_split_asm)
-    apply (rule valid_vspace_obj_same_type)
-      apply fastforce
-     apply assumption
-    apply (clarsimp simp add: a_type_def)
-   apply (rule valid_vspace_obj_same_type)
-     apply fastforce
-    apply assumption
-   apply (clarsimp simp: a_type_def)
-  apply (clarsimp simp add: vs_lookup_map_some_pdes.new_lookups_def)
-  apply (drule(1) bspec)+
-  apply (clarsimp simp add: a_type_simps  split: if_split_asm)
-  apply (drule mp, erule exI)+
-  apply (erule(1) valid_vspace_obj_same_type)
-  apply (simp add: a_type_def)
-  done
-  *)
-
-lemma store_pte_valid_vs_lookup_map:
-  "\<lbrace>valid_vs_lookup and valid_arch_state and valid_vspace_objs and
-    (\<lambda>s. \<forall>ref. pte_ref pte = Some ref \<longrightarrow>
-           (\<forall>level. \<exists>\<rhd>(level, table_base p) s \<longrightarrow>
-               (pt_at ref s \<or> data_at (vmpage_size_of_level level) ref s) \<and>
-               (\<forall>ao. aobjs_of s ref = Some ao \<longrightarrow> valid_vspace_obj level ao s))) and
-    (\<lambda>s. \<forall>level asid vref. vs_lookup_slot level asid vref s = Some (level, p) \<longrightarrow>
-           (\<forall>ref. pte_ref pte = Some ref \<longrightarrow>
-              (\<exists>cslot cap.
-                 caps_of_state s cslot = Some cap \<and>
-                 obj_refs cap = {r} \<and>
-                 vs_cap_ref cap = Some (asid, vref_for_level vref level)))) and
-    (\<lambda>s. is_PageTablePTE pte \<longrightarrow> (\<forall>ref. pte_ref pte = Some ref \<longrightarrow> pts_of s ref = Some empty_pt))\<rbrace>
-   store_pte p pte
-   \<lbrace>\<lambda>rv. valid_vs_lookup\<rbrace>"
-  sorry (* FIXME RISCV: waiting for ArchAcc *)
-
-lemma store_pte_invs_map: (* FIXME RISCV: probably missing some preconditions *)
-  "\<lbrace>\<lambda>s. invs s \<and>
-    (\<forall>ref. pte_ref pte = Some ref \<longrightarrow>
-           (\<forall>level. \<exists>\<rhd>(level, table_base p) s \<longrightarrow>
-               (pt_at ref s \<or> data_at (vmpage_size_of_level level) ref s) \<and>
-               (\<forall>ao. aobjs_of s ref = Some ao \<longrightarrow> valid_vspace_obj level ao s))) \<and>
-    (\<forall>level asid vref. vs_lookup_slot level asid vref s = Some (level, p) \<longrightarrow>
-           (\<forall>ref. pte_ref pte = Some ref \<longrightarrow>
-              (\<exists>cslot cap.
-                 caps_of_state s cslot = Some cap \<and>
-                 obj_refs cap = {r} \<and>
-                 vs_cap_ref cap = Some (asid, vref_for_level vref level)))) \<and>
-    (is_PageTablePTE pte \<longrightarrow> (\<forall>ref. pte_ref pte = Some ref \<longrightarrow> pts_of s ref = Some empty_pt)) \<and>
-    (\<exists>p' cap. caps_of_state s p' = Some cap \<and> is_pt_cap cap \<and> p \<in> obj_refs cap \<and>
-              cap_asid cap \<noteq> None) \<rbrace>
-  store_pte p pte \<lbrace>\<lambda>_. invs\<rbrace>"
-  unfolding invs_def valid_state_def valid_pspace_def
-  sorry (* FIXME RISCV: waiting for ArchAcc *)
-
 (* FIXME: move *)
 lemma valid_cap_to_pt_cap:
   "\<lbrakk>valid_cap c s; obj_refs c = {p}; pt_at p s\<rbrakk> \<Longrightarrow> is_pt_cap c"
@@ -1976,9 +1905,10 @@ lemma store_pte_invs_unreachable:
   apply (wpsimp wp: store_pte_valid_arch_state_unreachable store_pte_valid_arch_caps_unreachable
                     store_pte_equal_kernel_mappings_no_kernel_slots
                     store_pte_valid_global_vspace_mappings
-                    store_pte_valid_vspace_objs_FIXME_RISCV)
-  apply (simp cong: conj_cong)
-  apply (rule conjI, clarsimp simp: invs_def valid_state_def valid_pspace_def)
+                    store_pte_valid_vspace_objs)
+  apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_state_def
+                   valid_arch_caps_def valid_objs_caps
+              cong: conj_cong)
   apply (rule conjI, fastforce dest!: vspace_for_asid_vs_lookup)
   apply (fastforce simp: valid_arch_state_def dest: riscv_global_pt_in_global_refs)
   done
