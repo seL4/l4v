@@ -329,9 +329,12 @@ where
       sc_yf_opt \<leftarrow> get_sc_obj_ref sc_yield_from sc_ptr;
       assert (sc_yf_opt = None)
     od;
-    flag \<leftarrow> return True;
+
     sc_tcb_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
     tcb_ptr \<leftarrow> assert_opt sc_tcb_opt;
+
+    sched_context_resume (Some sc_ptr);
+    flag \<leftarrow> return True;
     in_release_q <- gets $ in_release_queue tcb_ptr;
     schedulable <- is_schedulable tcb_ptr in_release_q;
     when (schedulable) $ do
