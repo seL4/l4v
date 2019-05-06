@@ -597,7 +597,7 @@ val mism_term_trace = Unsynchronized.ref []
 fun seq_try_apply f x = Seq.map_filter (try f) (Seq.single x)
 
 fun wp ctxt rules =
-  WeakestPre.apply_rules_tac_n false ctxt rules (Unsynchronized.ref [])
+  WeakestPre.apply_rules_tac_n false ctxt rules
 
 fun crunch_rule cfg const goal extra thms =
   let

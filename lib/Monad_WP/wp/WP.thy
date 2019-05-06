@@ -36,21 +36,11 @@ lemma conj_TrueI2: "P \<Longrightarrow> P \<and> True" by simp
 
 ML_file "WP-method.ML"
 
-declare [[wp_warn_unused = false]]
+declare [[wp_trace = false]]
 
 setup WeakestPre.setup
 
-method_setup wp = \<open>WeakestPre.apply_rules_args false\<close>
+method_setup wp = \<open>WeakestPre.apply_wp_args\<close>
   "applies weakest precondition rules"
-
-method_setup wp_once = \<open>WeakestPre.apply_once_args false\<close>
-  "applies one weakest precondition rule"
-
-method_setup wp_trace = \<open>WeakestPre.apply_rules_args true\<close>
-  "applies weakest precondition rules with tracing"
-
-method_setup wp_once_trace = \<open>WeakestPre.apply_once_args true\<close>
-  "applies one weakest precondition rule with tracing"
-
 
 end

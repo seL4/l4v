@@ -10,8 +10,7 @@
 theory TraceMonadVCG
 imports
   TraceMonad
-  "wp/WP"
-  "wp/WPC"
+  "wp/WPSimp"
   "Strengthen"
 begin
 
