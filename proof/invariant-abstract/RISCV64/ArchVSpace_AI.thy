@@ -439,6 +439,7 @@ lemma set_cap_valid_pte_stronger:
   "set_cap cap p \<lbrace>\<lambda>s. P (valid_pte level pte s)\<rbrace>"
   by (wp valid_pte_lift3 set_cap_typ_at)
 
+
 (* FIXME: move *)
 lemma valid_cap_to_pt_cap:
   "\<lbrakk>valid_cap c s; obj_refs c = {p}; pt_at p s\<rbrakk> \<Longrightarrow> is_pt_cap c"
@@ -836,7 +837,7 @@ lemma store_pte_no_lookup_target:
   "\<lbrace>\<lambda>s. vs_lookup_target level asid vref s \<noteq> Some (level, q)\<rbrace>
    store_pte p InvalidPTE
    \<lbrace>\<lambda>_ s. vs_lookup_target level asid vref s \<noteq> Some (level, q)\<rbrace>"
-  sorry (* FIXME RISCV: store_pte_InvalidPTE_vs_lookup
+  sorry (* FIXME RISCV: store_pte_InvalidPTE_vs_lookup, currently unused, need for unmap?
   apply (simp add: store_pte_def set_pt_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def)
@@ -849,21 +850,28 @@ lemma store_pte_no_lookup_target:
                      graph_of_def image_def
               split: if_split_asm) *)
 
+lemma store_pte_vspace_for_asid[wp]:
+  "store_pte p pte \<lbrace>\<lambda>s. P (vspace_for_asid asid s)\<rbrace>"
+  by (wp vspace_for_asid_lift)
+
 lemma mapM_swp_store_pte_invs_unmap:
-  "\<lbrace>invs and (\<lambda>s. \<forall>sl\<in>set slots. table_base sl \<notin> global_refs s) and
+  "\<lbrace>invs and
+    (\<lambda>s. \<forall>sl\<in>set slots. table_base sl \<notin> global_refs s \<and>
+                        (\<forall>asid. vspace_for_asid asid s \<noteq> Some (table_base sl))) and
     K (pte = InvalidPTE)\<rbrace>
   mapM (swp store_pte pte) slots \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (rule hoare_post_imp)
    prefer 2
    apply (rule mapM_wp')
    apply simp
-   apply (rule hoare_pre, wp store_pte_invs hoare_vcg_const_Ball_lift
-                             hoare_vcg_ex_lift)
-    apply (clarsimp)+
-  sorry (* FIXME RISCV *)
+   apply (wp store_pte_invs hoare_vcg_const_Ball_lift hoare_vcg_ex_lift hoare_vcg_all_lift)
+   apply (clarsimp simp: wellformed_pte_def)
+  apply simp
+  done
 
 lemma mapM_x_swp_store_pte_invs_unmap:
-  "\<lbrace>invs and (\<lambda>s. \<forall>sl \<in> set slots. table_base sl \<notin> global_refs s) and
+  "\<lbrace>invs and (\<lambda>s. \<forall>sl \<in> set slots. table_base sl \<notin> global_refs s \<and>
+                                    (\<forall>asid. vspace_for_asid asid s \<noteq> Some (table_base sl))) and
     K (pte = InvalidPTE)\<rbrace>
   mapM_x (swp store_pte pte) slots \<lbrace>\<lambda>_. invs\<rbrace>"
   by (simp add: mapM_x_mapM | wp mapM_swp_store_pte_invs_unmap)+
@@ -882,7 +890,7 @@ lemma unmap_page_table_unmapped:
    prefer 2
    apply (clarsimp simp: vs_lookup_table_def vspace_for_asid_def split: if_split_asm)
   apply (rule conjI; clarsimp)
-  sorry (* FIXME RISCV
+  sorry (* FIXME RISCV, currently unused unmap_page_table_unmapped3 variant in invocation
   apply (simp add: unmap_page_table_def lookup_pd_slot_def Let_def
              cong: option.case_cong)
   apply (rule hoare_pre)
@@ -895,7 +903,7 @@ lemma unmap_page_table_unmapped2:
       K (asid = asid' \<and> vaddr = vaddr' \<and> p = pt)\<rbrace>
      unmap_page_table asid vaddr pt
    \<lbrace>\<lambda>rv s. vs_lookup_table level asid' vaddr' s \<noteq> Some (level', p)\<rbrace>"
-  sorry (* FIXME RISCV
+  sorry (* FIXME RISCV, currently unused, unmap_page_table_unmapped3 variant in invocation
   apply (rule hoare_gen_asm)
   apply (simp add: unmap_page_table_def lookup_pd_slot_def Let_def
              cong: option.case_cong)
