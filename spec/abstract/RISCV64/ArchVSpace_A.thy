@@ -224,7 +224,7 @@ definition arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap 
    | (PageTableCap ptr (Some (a, v)), True) \<Rightarrow> do
        doE
          vroot \<leftarrow> find_vspace_for_asid a;
-         whenE (vroot = ptr) (liftE $ delete_asid a ptr)
+         if vroot = ptr then liftE $ delete_asid a ptr else throwError InvalidRoot
        odE <catch>
        (\<lambda>_. unmap_page_table a v ptr);
        return (NullCap, NullCap)
