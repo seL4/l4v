@@ -1126,14 +1126,6 @@ lemma pt_lookup_slot_vs_lookup_slotI:
   apply (fastforce dest: pt_walk_max_level)
   done
 
-lemma diminished_FrameCap[simp]:
-  "diminished (ArchObjectCap (FrameCap p rights sz dev m)) cap =
-  (\<exists>R R'. cap = ArchObjectCap (FrameCap p R sz dev m) \<and> rights = validate_vm_rights (R \<inter> R'))"
-  apply (cases cap; simp add: diminished_def mask_cap_def cap_rights_update_def)
-  apply (rename_tac acap, case_tac acap; simp add: acap_rights_update_def)
-  apply auto
-  done
-
 lemma is_aligned_pageBitsForSize_table_size:
   "is_aligned p (pageBitsForSize vmpage_size) \<Longrightarrow> is_aligned p table_size"
   apply (erule is_aligned_weaken)
