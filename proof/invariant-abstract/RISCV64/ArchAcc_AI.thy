@@ -2880,7 +2880,7 @@ lemma store_pte_valid_arch_caps:
   by (wpsimp wp: store_pte_valid_vs_lookup store_pte_valid_table_caps)
 
 lemma store_pte_invs:
-  "\<lbrace> invs and P
+  "\<lbrace> invs
      and (\<lambda>s. table_base p \<notin> global_refs s)
      and K (wellformed_pte pte)
      and (\<lambda>s. \<forall>level. \<exists>\<rhd> (level, table_base p) s
