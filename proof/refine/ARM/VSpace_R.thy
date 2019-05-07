@@ -173,24 +173,6 @@ lemma find_pd_for_asid_valids:
              elim!: is_aligned_weaken)
   done
 
-lemma valid_asid_map_inj_map:
-  "\<lbrakk> valid_asid_map s; (s, s') \<in> state_relation;
-        unique_table_refs (caps_of_state s);
-        valid_vs_lookup s; valid_vspace_objs s;
-        valid_arch_state s; valid_global_objs s \<rbrakk>
-        \<Longrightarrow> inj_on (option_map snd \<circ> armKSASIDMap (ksArchState s'))
-                   (dom (armKSASIDMap (ksArchState s')))"
-  apply (rule inj_onI)
-  apply (clarsimp simp: valid_asid_map_def state_relation_def
-                        arch_state_relation_def)
-  apply (frule_tac c=x in subsetD, erule domI)
-  apply (frule_tac c=y in subsetD, erule domI)
-  apply (drule(1) bspec [rotated, OF graph_ofI])+
-  apply clarsimp
-  apply (erule(6) pd_at_asid_unique)
-   apply (simp add: mask_def)+
-  done
-
 lemma asidBits_asid_bits[simp]:
   "asidBits = asid_bits"
   by (simp add: asid_bits_def asidBits_def
@@ -2008,17 +1990,6 @@ lemma pde_check_if_mapped_corres:
 crunch unique_table_refs[wp]: do_machine_op, store_pte "\<lambda>s. (unique_table_refs (caps_of_state s))"
 crunch valid_asid_map[wp]: store_pte "valid_asid_map"
 
-lemma store_pte_valid_global_objs[wp]:
-  "\<lbrace>valid_global_objs and valid_arch_state and K (aligned_pte pte)\<rbrace> store_pte slot pte \<lbrace>\<lambda>_. valid_global_objs\<rbrace>"
-  apply (simp add: store_pte_def)
-  apply (wp)
-  apply clarsimp
-  apply (frule valid_global_ptsD, simp)
-  apply clarsimp
-  apply (subgoal_tac "pt=pta")
-   apply (auto simp: obj_at_def)
-  done
-
 lemma set_cap_pd_at_asid [wp]:
   "\<lbrace>vspace_at_asid asid pd\<rbrace> set_cap t st \<lbrace>\<lambda>rv. vspace_at_asid asid pd\<rbrace>"
   apply (simp add: vspace_at_asid_def)
@@ -2752,33 +2723,6 @@ lemma getHWASID_invs_no_cicd':
 
 lemmas armv_ctxt_sw_defs = armv_contextSwitch_HWASID_def setHardwareASID_def setCurrentPD_def
                            writeTTBR0_def writeTTBR0Ptr_def set_current_pd_def isb_def dsb_def
-
-lemma dmo_armv_contextSwitch_HWASID_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (armv_contextSwitch_HWASID pd hwasid) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs')
-   apply (simp add: armv_contextSwitch_HWASID_def setCurrentPD_to_abs)
-   apply (wp no_irq_set_current_pd no_irq_setHardwareASID no_irq)
-  apply safe
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-    apply (simp add: machine_op_lift_def machine_rest_lift_def split_def armv_ctxt_sw_defs
-                     writeTTBR0Ptr_def
-              | wp)+
-  done
-
-
-lemma dmo_armv_contextSwitch_HWASID_invs_no_cicd':
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (armv_contextSwitch_HWASID pd hwasid) \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
-  apply (wp dmo_invs_no_cicd')
-   apply (simp add: armv_contextSwitch_HWASID_def setCurrentPD_to_abs)
-   apply (wp no_irq_set_current_pd no_irq_setHardwareASID no_irq)
-  apply safe
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-    apply (simp add: machine_op_lift_def machine_rest_lift_def split_def armv_ctxt_sw_defs
-                     writeTTBR0Ptr_def
-              | wp)+
-  done
 
 lemma no_irq_armv_contextSwitch_HWASID:
   "no_irq (armv_contextSwitch_HWASID pd hwasid)"
@@ -3566,29 +3510,6 @@ lemma perform_pti_invs [wp]:
 
 crunch invs'[wp]: setVMRootForFlush "invs'"
 
-lemma mapM_x_storePTE_invs:
-  "\<lbrace>invs' and valid_pte' pte\<rbrace> mapM_x (swp storePTE pte) ps \<lbrace>\<lambda>xa. invs'\<rbrace>"
-  apply (rule hoare_post_imp)
-   prefer 2
-   apply (rule mapM_x_wp')
-   apply simp
-   apply (wp valid_pte_lift')
-    apply simp+
-  done
-
-lemma mapM_x_storePDE_invs:
-  "\<lbrace>invs' and valid_pde' pde
-       and K (\<forall>p \<in> set ps. valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
-         mapM_x (swp storePDE pde) ps \<lbrace>\<lambda>xa. invs'\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (rule hoare_post_imp)
-   prefer 2
-   apply (rule mapM_x_wp[OF _ subset_refl])
-   apply simp
-   apply (wp valid_pde_lift')
-    apply simp+
-  done
-
 lemma mapM_storePTE_invs:
   "\<lbrace>invs' and valid_pte' pte\<rbrace> mapM (swp storePTE pte) ps \<lbrace>\<lambda>xa. invs'\<rbrace>"
   apply (rule hoare_post_imp)
@@ -3664,12 +3585,11 @@ lemma perform_pt_invs [wp]:
        apply (erule use_valid)
         apply (clarsimp simp: doFlush_def split: flush_type.splits)
         apply (clarsimp split: sum.split | intro conjI impI
-               | wp mapM_x_storePTE_invs mapM_x_storePDE_invs)+
+               | wp)+
      apply (clarsimp simp: valid_page_inv'_def valid_slots'_def
                            valid_pde_slots'_def
                     split: sum.split option.splits | intro conjI impI
             | wp mapM_storePTE_invs mapM_storePDE_invs
-                 mapM_x_storePTE_invs mapM_x_storePDE_invs
                  hoare_vcg_all_lift hoare_vcg_const_imp_lift
                  arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp
             | wpc)+

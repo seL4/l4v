@@ -148,17 +148,4 @@ proof (induct cap capptr bits rule: resolveAddressBits.induct)
   done
 qed
 
-lemma resolveAddressBitsFn_real_cte_at':
-  "resolveAddressBitsFn cap addr depth (only_cnode_caps (ctes_of s)) = Inr rv
-    \<Longrightarrow> (isCNodeCap cap \<longrightarrow> cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s)
-    \<Longrightarrow> cnode_caps_gsCNodes (only_cnode_caps (ctes_of s)) (gsCNodes s)
-    \<Longrightarrow> valid_objs' s \<Longrightarrow> valid_cap' cap s
-    \<Longrightarrow> real_cte_at' (fst rv) s"
-  using monadic_rewrite_refine_validE_R[where F=False and P''=\<top>,
-    OF resolveAddressBitsFn_eq resolveAddressBits_real_cte_at']
-  apply (clarsimp simp: valid_def validE_R_def validE_def simpler_gets_def)
-  apply (cases rv, clarsimp)
-  apply metis
-  done
-
 end

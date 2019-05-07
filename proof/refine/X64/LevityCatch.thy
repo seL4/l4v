@@ -17,19 +17,6 @@ begin
 (* Try again, clagged from Include *)
 no_notation bind_drop (infixl ">>" 60)
 
-lemma no_fail_getCurThread:
-  "no_fail \<top> getCurThread"
-  by (clarsimp simp: getCurThread_def no_fail_def gets_def
-                     bind_def return_def get_def)
-
-lemma no_fail_getSchedulerAction:
-  "no_fail \<top> getSchedulerAction"
-  by (auto simp: getSchedulerAction_def)
-
-lemma projectKO_def2:
-  "projectKO x = assert_opt (projectKO_opt x)"
-  by (simp add: assert_opt_def projectKO_def)
-
 lemma magnitudeCheck_assert:
   "magnitudeCheck x y n = assert (case y of None \<Rightarrow> True | Some z \<Rightarrow> 1 << n \<le> z - x)"
   apply (simp add: magnitudeCheck_def assert_def when_def

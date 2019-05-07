@@ -40,10 +40,6 @@ definition
                                             cap_relation c c')
              | None \<Rightarrow> rv' = None)"
 
-lemma get_send_cap_relation_None [simp]:
-  "get_send_cap_relation None None"
-  by (simp add: get_send_cap_relation_def)
-
 lemma cap_relation_mask:
   "\<lbrakk> cap_relation c c'; msk' = rights_mask_map msk \<rbrakk> \<Longrightarrow>
   cap_relation (mask_cap msk c) (maskCapRights msk' c')"
@@ -84,11 +80,6 @@ where
     ct_receive_root ct = to_bl (ctReceiveRoot ct')
   \<and> ct_receive_index ct = to_bl (ctReceiveIndex ct')
   \<and> ctReceiveDepth ct' = unat (ct_receive_depth ct)"
-
-lemma rights_mask_map_data_to_rights:
-  "rights_mask_map (data_to_rights x) = rightsFromWord x"
-  by (simp add: rights_mask_map_def rightsFromWord_def
-                data_to_rights_def Let_def nth_ucast)
 
 (* MOVE *)
 lemma valid_ipc_buffer_ptr_aligned_2:
@@ -228,55 +219,10 @@ lemma load_word_offs_corres':
 
 declare loadWordUser_inv [wp]
 
-lemma get_extra_cptrs_corres:
-  "corres (\<lambda>xs ys. xs = map to_bl ys) (\<lambda>_. valid_message_info mi)
-      (case_option \<top> valid_ipc_buffer_ptr' buf)
-      (get_extra_cptrs buf mi) (getExtraCPtrs buf (message_info_map mi))"
-  apply (rule corres_gen_asm [where P = \<top>, simplified])
-  apply (cases mi, cases buf; simp add: getExtraCPtrs_def del: upt.simps)
-  apply (rule corres_guard_imp)
-    apply (simp add: mapM_map_simp comp_def del: upt.simps)
-  apply (rule corres_mapM_list_all2[where r'="(=)" and S="\<lambda>x y. y < 7 \<and> x = Suc msg_max_length + unat y"])
-         apply simp
-        apply simp
-       apply simp
-       apply (rule load_word_offs_corres')
-        apply (simp add: word_size_def word_size field_simps
-                         msg_max_length_def msgMaxLength_def
-                         msgLengthBits_def max_ipc_words word_less_nat_alt)
-       apply (simp add: word_size_def word_size field_simps
-                        msg_max_length_def msgMaxLength_def wordSize_def wordBits_def
-                        msgLengthBits_def max_ipc_words word_less_nat_alt)
-      apply wp+
-    apply (simp add: map_Suc_upt[symmetric] upt_lhs_sub_map[where x=msg_max_length]
-                     upto_enum_step_def upto_enum_def unat_minus_one unat_gt_0
-                     list_all2_map2 list_all2_map1
-                del: upt.simps)
-    apply (rule impI)
-    apply (rule list_all2I)
-     apply (subst upt_lhs_sub_map)
-     apply (clarsimp simp: set_zip_same zip_map1 buffer_cptr_index_def)
-     apply (clarsimp simp add: valid_message_info_def msg_max_extra_caps_def)
-      apply (subgoal_tac "b < 6")
-     apply (simp add: of_nat_Suc [symmetric] word_less_nat_alt unat_of_nat32 word_bits_conv
-     del: of_nat_Suc)
-     apply (simp add: word_le_nat_alt)
-    apply simp+
-  done
-
 lemma getExtraCptrs_inv[wp]:
   "\<lbrace>P\<rbrace> getExtraCPtrs buf mi \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (cases mi, cases buf, simp_all add: getExtraCPtrs_def)
   apply (wp dmo_inv' mapM_wp' loadWord_inv)
-  done
-
-lemma getSlotCap_cte_wp_at_rv:
-  "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte) cte) p\<rbrace>
-     getSlotCap p
-   \<lbrace>\<lambda>rv. cte_wp_at' (P rv) p\<rbrace>"
-  apply (simp add: getSlotCap_def)
-  apply (wp getCTE_ctes_wp)
-  apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
 lemma badge_derived_mask [simp]:
@@ -317,21 +263,6 @@ crunch cte_wp_at' [wp]: setExtraBadge "cte_wp_at' P p"
 crunch ipc_buffer' [wp]: setExtraBadge "valid_ipc_buffer_ptr' buffer"
 
 crunch inv'[wp]: getExtraCPtr P (wp: dmo_inv' loadWord_inv)
-
-lemma get_extra_cptr_corres:
-  "corres (\<lambda>a c. a = to_bl c) \<top>
-          (valid_ipc_buffer_ptr' buffer and K (2 + msg_max_length + n < unat max_ipc_words))
-          (get_extra_cptr buffer n)
-          (getExtraCPtr buffer n)"
-  apply (unfold K_def)
-  apply (rule corres_gen_asm2)
-  apply (simp add: get_extra_cptr_def getExtraCPtr_def buffer_cptr_index_def
-                   word_size_def msg_max_length_def word_size bufferCPtrOffset_def
-                   msgMaxLength_def msgLengthBits_def wordSize_def wordBits_def)
-  apply (simp add: field_simps)
-  apply (rule corres_guard_imp, rule corres_rel_imp,
-         rule load_word_offs_corres', simp_all)
-  done
 
 lemmas unifyFailure_discard2
     = corres_injection[OF id_injection unifyFailure_injection, simplified]
@@ -444,10 +375,6 @@ lemma maskCapRights_eq_null:
       apply (simp_all add: ARM_H.maskCapRights_def isCap_simps)
   done
 
-lemma capMasterCap_maskedAsFull[simp]:
-  "capMasterCap (maskedAsFull xa xa) = capMasterCap xa"
-  by (cases xa; simp add: maskedAsFull_def isCap_simps capMasterCap_def)
-
 lemma cte_refs'_maskedAsFull[simp]:
   "cte_refs' (maskedAsFull a b) = cte_refs' a"
   apply (rule ext)+
@@ -523,7 +450,7 @@ next
          apply (rule unifyFailure_discard2)
           apply (case_tac mi, clarsimp)
          apply (rule derive_cap_corres)
-          apply (simp add: remove_rights_def cap_relation_update_masks)
+          apply (simp add: remove_rights_def)
          apply clarsimp
         apply (rule corres_split_norE)
            apply (simp add: liftE_bindE)
@@ -642,14 +569,6 @@ lemma transferCapsToSlots_pres1[crunch_rules]:
              | wp_once hoare_drop_imps)+
   done
 
-lemma is_derived'_cte_refs':
-  "is_derived' m src a b \<Longrightarrow> cte_refs' a = cte_refs' b"
-  apply (rule ext)+
-  apply (case_tac a)
-  apply (clarsimp simp: is_derived'_def badge_derived'_def vsCapRef_def isCap_simps
-                  split: capability.split_asm)+
-  done
-
 lemma cteInsert_cte_cap_to':
   "\<lbrace>ex_cte_cap_to' p and cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) dest\<rbrace>
    cteInsert cap src dest
@@ -667,16 +586,6 @@ lemma cteInsert_cte_cap_to':
   done
 
 declare maskCapRights_eq_null[simp]
-
-lemma lsfco_cte_wp_at_univ':
-  "\<lbrace>valid_objs' and valid_cap' cap and K (\<forall>cte rv. P cte rv)\<rbrace>
-      lookupSlotForCNodeOp f cap idx depth
-   \<lbrace>\<lambda>rv. cte_wp_at' (P rv) rv\<rbrace>, -"
-  apply (rule hoare_gen_asmE)
-  apply (rule hoare_post_imp_R)
-   apply (rule lsfco_cte_at')
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  done
 
 crunch ex_cte_cap_wp_to' [wp]: setExtraBadge "ex_cte_cap_wp_to' P p"
   (rule: ex_cte_cap_to'_pres)
@@ -893,32 +802,6 @@ crunch it[wp]: ensureNoChildren "\<lambda>s. P (ksIdleThread s)"
 
 crunch idle'[wp]: deriveCap "valid_idle'"
 
-lemma deriveCap_not_idle [wp]:
-  "\<lbrace>\<lambda>s. valid_idle' s \<and> ksIdleThread s \<notin> capRange cap\<rbrace>
-   deriveCap slot cap
-   \<lbrace>\<lambda>rv s. ksIdleThread s \<notin> capRange rv\<rbrace>, -"
-  unfolding deriveCap_def badge_derived'_def
-  apply (cases cap; simp add: isCap_simps Let_def;
-      (solves \<open>wp ensureNoChildren_wp; clarsimp\<close>)?)
-  apply (rename_tac arch_capability)
-  apply (case_tac arch_capability;
-          simp_all add: ARM_H.deriveCap_def Let_def isCap_simps
-                 split: if_split;
-          safe; wp; clarsimp simp: capRange_def)
-  done
-
-lemma maskCapRights_capRange[simp]:
-  "capRange (maskCapRights r c) = capRange c"
-  apply (case_tac c)
-  apply (simp_all add: maskCapRights_def isCap_defs capRange_def Let_def
-                       ARM_H.maskCapRights_def
-                split: arch_capability.split)
-  done
-
-lemma getSlotCap_not_idle [wp]:
-  "\<lbrace>valid_global_refs'\<rbrace> getSlotCap addr \<lbrace>\<lambda>rv s. ksIdleThread s \<notin> capRange rv\<rbrace>"
-  by (simp add: getSlotCap_def | wp getCTE_no_idle_cap)+
-
 crunch valid_idle' [wp]: setExtraBadge valid_idle'
 
 lemma tcts_idle'[wp]:
@@ -1116,19 +999,6 @@ lemma transferCapsToSlots_invs[wp]:
   apply fastforce
   done
 
-lemma set_extra_badges_flags_eq:
-  "length badges \<le> msgMaxExtraCaps \<Longrightarrow>
-   of_bl (rev (map (\<lambda>x. x = None) badges)) =
-          foldl (+) (0::word32)
-           (zipWith (\<lambda>n. case_option (2 ^ n) (\<lambda>v5. 0)) [0..< Suc msgMaxExtraCaps]
-             badges)"
-  apply (induct badges rule: rev_induct)
-   apply (simp add: zipWith_def)
-  apply (simp add: of_bl_Cons zipWith_append2
-              del: upt.simps)
-  apply (simp split: option.split)
-  done
-
 lemma grs_distinct'[wp]:
   "\<lbrace>\<top>\<rbrace> getReceiveSlots t buf \<lbrace>\<lambda>rv s. distinct rv\<rbrace>"
   apply (cases buf, simp_all add: getReceiveSlots_def
@@ -1136,22 +1006,6 @@ lemma grs_distinct'[wp]:
    apply (wp, simp)
   apply (wp | simp only: distinct.simps list.simps empty_iff)+
   apply simp
-  done
-
-lemma getExtraCPtrs_length [wp]:
-  "\<lbrace>\<lambda>s. msgExtraCaps msg < 6\<rbrace>
-  getExtraCPtrs send_buf msg \<lbrace>\<lambda>rv s. Suc (Suc (msg_max_length + length rv)) < unat max_ipc_words\<rbrace>"
-  apply (simp add: getExtraCPtrs_def)
-  apply (rule hoare_pre)
-   apply (wpc|wp)+
-  apply (clarsimp simp: max_ipc_words msg_max_length_def)
-  apply (case_tac "1 \<le> xa")
-   apply (simp add: length_upto_enum_step)
-   apply unat_arith
-  apply (subgoal_tac "0 = xa")
-   prefer 2
-   apply unat_arith
-  apply (simp add: upto_enum_step_def)
   done
 
 lemma tc_corres:
@@ -1213,24 +1067,6 @@ crunch typ_at'[wp]: transferCaps "\<lambda>s. P (typ_at' T p s)"
 
 lemmas transferCaps_typ_ats[wp] = typ_at_lifts [OF transferCaps_typ_at']
 
-lemma capRights_Null_eq [simp]:
-  "(maskCapRights R cap = NullCap) = (cap = NullCap)"
-  apply (cases cap)
-  apply (simp_all add: Let_def maskCapRights_def isCap_simps)
-  apply (simp add: ARM_H.maskCapRights_def
-            split: arch_capability.split)
-  done
-
-lemma updateCapData_not_nullD:
-  "updateCapData p d cap \<noteq> NullCap \<Longrightarrow> cap \<noteq> NullCap"
-  apply (cases cap)
-  by (simp_all add: updateCapData_def isCap_simps)
-
-lemma cte_wp_at_orth':
-  "\<lbrakk> cte_wp_at' (\<lambda>c. P c) p s; cte_wp_at' (\<lambda>c. \<not> P c) p s \<rbrakk> \<Longrightarrow> False"
-  unfolding cte_wp_at'_def
-  by clarsimp
-
 declare maskCapRights_Reply [simp]
 
 lemma isIRQControlCap_mask [simp]:
@@ -1260,11 +1096,6 @@ lemma is_derived_mask' [simp]:
   apply (simp add: is_derived'_def badge_derived'_def)
   done
 
-lemma sameRegionAs_update:
-  "\<lbrakk> updateCapData P d cap \<noteq> NullCap; sameRegionAs cap' cap\<rbrakk>
-  \<Longrightarrow> sameRegionAs cap' (updateCapData P d cap)"
-  by (drule updateCapData_Master, simp add: sameRegionAs_def2)
-
 lemma updateCapData_ordering:
   "\<lbrakk> (x, capBadge cap) \<in> capBadge_ordering P; updateCapData p d cap \<noteq> NullCap \<rbrakk>
     \<Longrightarrow> (x, capBadge (updateCapData p d cap)) \<in> capBadge_ordering P"
@@ -1272,53 +1103,6 @@ lemma updateCapData_ordering:
                                   capBadge_def ARM_H.updateCapData_def
                            split: if_split_asm)
    apply fastforce+
-  done
-
-lemma updateCapData_capReplyMaster:
-  "isReplyCap cap \<Longrightarrow> capReplyMaster (updateCapData p d cap) = capReplyMaster cap"
-  by (clarsimp simp: isCap_simps updateCapData_def split del: if_split)
-
-lemma updateCapData_is_Reply[simp]:
-  "(updateCapData p d cap = ReplyCap x y z) = (cap = ReplyCap x y z)"
-  by (rule ccontr,
-      clarsimp simp: isCap_simps updateCapData_def Let_def
-                     ARM_H.updateCapData_def
-          split del: if_split
-              split: if_split_asm)
-
-lemma updateCapDataIRQ:
-  "updateCapData p d cap \<noteq> NullCap \<Longrightarrow>
-  isIRQControlCap (updateCapData p d cap) = isIRQControlCap cap"
-  apply (cases cap, simp_all add: updateCapData_def isCap_simps Let_def
-                                  ARM_H.updateCapData_def
-                           split: if_split_asm)
-  done
-
-lemma updateCapData_vsCapRef[simp]:
-  "vsCapRef (updateCapData pr D c) = vsCapRef c"
-  by (rule ccontr,
-      clarsimp simp: isCap_simps updateCapData_def Let_def
-                     ARM_H.updateCapData_def
-                     vsCapRef_def
-          split del: if_split
-              split: if_split_asm)
-
-lemma isPageCap_updateCapData[simp]:
-"isArchCap isPageCap (updateCapData pr D c) = isArchCap isPageCap c"
-  apply (case_tac c; simp add:updateCapData_def isCap_simps isArchCap_def)
-   apply (rename_tac arch_capability)
-   apply (case_tac arch_capability; simp add: ARM_H.updateCapData_def isCap_simps isArchCap_def)
-  apply (clarsimp split:capability.splits simp:Let_def)
-  done
-
-lemma updateCapData_derived:
-  "\<lbrakk> updateCapData pr D c \<noteq> NullCap; is_derived' m p c c' \<rbrakk> \<Longrightarrow>
-  is_derived' m p (updateCapData pr D c) c'"
-  apply (frule updateCapData_Master,
-         clarsimp simp add: is_derived'_def badge_derived'_def updateCapDataIRQ)
-  apply (rule conjI, erule(1) updateCapData_ordering)
-  apply (clarsimp simp add: isCap_simps updateCapData_capReplyMaster)
-  apply auto
   done
 
 lemma lookup_cap_to'[wp]:
@@ -1329,7 +1113,7 @@ lemma grs_cap_to'[wp]:
   "\<lbrace>\<top>\<rbrace> getReceiveSlots t buf \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. ex_cte_cap_to' x s\<rbrace>"
   apply (cases buf; simp add: getReceiveSlots_def split_def unlessE_def)
    apply (wp, simp)
-  apply (wp nothingOnFailure_wp | simp | rule hoare_drop_imps)+
+  apply (wp | simp | rule hoare_drop_imps)+
   done
 
 lemma grs_length'[wp]:
@@ -1338,10 +1122,6 @@ lemma grs_length'[wp]:
   apply (rule hoare_pre)
    apply (wp | wpc | simp)+
   done
-
-lemma sameObjectAs_maskCapRights[simp]:
-  "sameObjectAs (maskCapRights msk cap) cap' = sameObjectAs cap cap'"
-  by (simp add: sameObjectAs_def2)
 
 lemma transferCaps_invs' [wp]:
   "\<lbrace>invs' and transferCaps_srcs caps\<rbrace>
@@ -1452,10 +1232,6 @@ lemma copyMRs_invs_bits[wp]:
 
 crunch no_0_obj'[wp]: copyMRs no_0_obj'
   (wp: crunch_wps ignore: getObject simp: crunch_simps)
-
-lemma valid_pspace_mdb_strengthen:
-  "valid_pspace' s \<longrightarrow> valid_mdb' s"
-  by clarsimp
 
 lemma mi_map_length[simp]: "msgLength (message_info_map mi) = mi_length mi"
   by (cases mi, simp)
@@ -1820,18 +1596,6 @@ lemma doFaultTransfer_invs[wp]:
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   by (simp add: doFaultTransfer_def split_def | wp
     | clarsimp split: option.split)+
-
-lemma corres_return_ignore:
-  "\<lbrakk> m = return x; corres r P Q (f x) g \<rbrakk> \<Longrightarrow> corres r P Q (m >>= f) g"
-  by simp
-
-lemma invs_mdb_absorb' [simp]:
-  "(invs' s \<and> valid_mdb' s) = invs' s"
-  by (simp add: invs'_def valid_state'_def valid_pspace'_def conj_comms)
-
-lemma invs_mdb_absorb'_ac [simp]:
-  "(invs' s \<and> valid_mdb' s \<and> P s) = (invs' s \<and> P s)"
-  by (simp add: invs'_def valid_state'_def valid_pspace'_def conj_comms)
 
 lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   "\<lbrace>valid_objs'\<rbrace> VSpace_H.lookupIPCBuffer b s \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
@@ -2199,25 +1963,6 @@ lemma reply_cap_end_mdb_chain:
   apply (simp add: cdt_parent_rel_def is_cdt_parent_def)
   done
 
-lemma unbindNotification_valid_objs'_strengthen:
-  "valid_tcb' tcb s \<longrightarrow> valid_tcb' (tcbBoundNotification_update Map.empty tcb) s"
-  "valid_ntfn' ntfn s \<longrightarrow> valid_ntfn' (ntfnBoundTCB_update Map.empty ntfn) s"
-  by (simp_all add: valid_tcb'_def valid_ntfn'_def valid_bound_tcb'_def valid_tcb_state'_def tcb_cte_cases_def split: ntfn.splits)
-
-lemma unbindNotification_valid_objs':
-  "\<lbrace>valid_objs'\<rbrace>
-     unbindNotification tcb
-   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (simp add: unbindNotification_def threadGet_def)
-  apply (wp sts_valid_objs' threadSet_valid_objs' set_ntfn_valid_objs' gbn_wp'
-            hoare_vcg_all_lift getObject_tcb_wp getNotification_wp sbn_valid_objs'
-       | wpc
-       | simp add: valid_tcb_state'_def
-       | strengthen unbindNotification_valid_objs'_strengthen)+
-  apply (fastforce simp: ran_def valid_objs'_def valid_obj'_def obj_at'_def
-                         projectKOs valid_tcb'_def)
-  done
-
 crunch valid_objs'[wp]: cteDeleteOne "valid_objs'"
   (simp: crunch_simps unless_def
    wp: crunch_wps getObject_inv loadObject_default_inv
@@ -2313,23 +2058,6 @@ crunch valid_objs'[wp]: handleFaultReply valid_objs'
 lemma valid_tcb'_tcbFault_update[simp]: "\<And>tcb s. valid_tcb' tcb s \<Longrightarrow> valid_tcb' (tcbFault_update f tcb) s"
   by (clarsimp simp: valid_tcb'_def  tcb_cte_cases_def)
 
-lemma restart_rewrite:
-  "(if rst then
-     do y \<leftarrow> setThreadState Structures_H.Restart receiver;
-        y \<leftarrow> possibleSwitchTo receiver;
-        return (Some receiver)
-     od
-   else
-     do y \<leftarrow> setThreadState Structures_H.Inactive receiver;
-        return None
-     od) =
-  do
-   setThreadState (if rst then Structures_H.Restart else Structures_H.Inactive) receiver;
-   when rst (possibleSwitchTo receiver);
-   return (if rst then Some receiver else None)
-  od"
-  by (simp add: when_def)
-
 lemma cte_wp_at_is_reply_cap_toI:
   "cte_wp_at ((=) (cap.ReplyCap t False rights)) ptr s
    \<Longrightarrow> cte_wp_at (is_reply_cap_to t) ptr s"
@@ -2343,7 +2071,7 @@ lemma do_reply_transfer_corres:
             and valid_pspace' and cte_at' (cte_map slot))
      (do_reply_transfer sender receiver slot grant)
      (doReplyTransfer sender receiver (cte_map slot) grant)"
-  apply (simp add: do_reply_transfer_def doReplyTransfer_def restart_rewrite cong: option.case_cong)
+  apply (simp add: do_reply_transfer_def doReplyTransfer_def cong: option.case_cong)
   apply (rule corres_split' [OF _ _ gts_sp gts_sp'])
    apply (rule corres_guard_imp)
      apply (rule gts_corres, (clarsimp simp add: st_tcb_at_tcb_at)+)
@@ -2586,13 +2314,6 @@ lemma setupCallerCap_sch_act [wp]:
   apply clarsimp
   done
 
-lemma setupCallerCap_weak_sch_act_from_sch_act:
-  "\<lbrace>\<lambda>s. sch_act_not t s \<and> sch_act_wf (ksSchedulerAction s) s\<rbrace>
-  setupCallerCap t r g \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (rule hoare_strengthen_post, rule setupCallerCap_sch_act)
-  apply (clarsimp simp: weak_sch_act_wf_def)
-  done
-
 lemma possibleSwitchTo_weak_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
       possibleSwitchTo t \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
@@ -2825,12 +2546,6 @@ proof -
   done
 qed
 
-lemma threadSet_ep_at:
-  "\<lbrace>ep_at' p\<rbrace> threadSet f r \<lbrace>\<lambda>x. ep_at' p\<rbrace>"
-  apply (simp add: threadSet_def)
-  apply (wp setObject_tcb_ep_at)
-  done
-
 crunch typ_at'[wp]: setMessageInfo "\<lambda>s. P (typ_at' T p s)"
 
 lemmas setMessageInfo_typ_ats[wp] = typ_at_lifts [OF setMessageInfo_typ_at']
@@ -2846,10 +2561,6 @@ crunch valid_objs'[wp]: asUser "valid_objs'"
 lemma valid_sched_weak_strg:
   "valid_sched s \<longrightarrow> weak_valid_sched_action s"
   by (simp add: valid_sched_def valid_sched_action_def)
-
-lemma invs_psp'_strg:
-  "invs' s \<longrightarrow> valid_pspace' s"
-  by clarsimp
 
 crunch weak_valid_sched_action[wp]: as_user weak_valid_sched_action
   (wp: weak_valid_sched_action_lift)
@@ -2982,12 +2693,6 @@ lemma valid_Running'[simp]:
   "valid_tcb_state' Running = \<top>"
   by (rule ext, simp add: valid_tcb_state'_def)
 
-lemma ko_wp_at_state_refs_of':
-  "ko_wp_at' P p s \<Longrightarrow> \<exists>ko. P ko \<and> state_refs_of' s p = refs_of' ko"
-  apply (clarsimp simp: state_refs_of'_def ko_wp_at'_def)
-  apply fastforce
-  done
-
 crunch typ'[wp]: setMRs "\<lambda>s. P (typ_at' T p s)"
    (wp: crunch_wps simp: zipWithM_x_mapM)
 
@@ -3011,11 +2716,6 @@ lemma possibleSwitchTo_valid_queues[wp]:
               dest: pred_tcb_at'
              elim!: valid_objs_valid_tcbE)
   done
-
-(* FIXME: move *)
-lemma valid_queues'_ksSchedulerAction_update[simp]:
-  "valid_queues' (s \<lparr>ksSchedulerAction := sa\<rparr>) = valid_queues' s"
-  by (simp add: valid_queues'_def)
 
 lemma possibleSwitchTo_ksQ':
   "\<lbrace>(\<lambda>s. t' \<notin> set (ksReadyQueues s p) \<and> sch_act_not t' s) and K(t' \<noteq> t)\<rbrace>
@@ -3280,10 +2980,6 @@ proof -
   done
 qed
 
-lemma ntfn_q_refs_no_TCBBound':
-  "(x, TCBBound) \<notin> ntfn_q_refs_of' ntfn"
-  by (simp add: ntfn_q_refs_of'_def split: ntfn.splits)
-
 crunch nosch[wp]: setMRs "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma sai_invs'[wp]:
@@ -3342,7 +3038,7 @@ lemma sai_invs'[wp]:
                          simp: st_tcb_at_refs_of_rev' ep_redux_simps' ntfn_bound_refs'_def)
       apply (frule st_tcb_at_state_refs_ofD')
       apply (erule delta_sym_refs)
-       apply (fastforce simp: ntfn_q_refs_no_TCBBound' split: if_split_asm)
+       apply (fastforce simp: split: if_split_asm)
       apply (fastforce simp: tcb_bound_refs'_def set_eq_subset symreftype_inverse'
                       split: if_split_asm)
      apply (clarsimp simp:invs'_def)
@@ -3378,25 +3074,6 @@ lemma sai_invs'[wp]:
                    dest!: invs_rct_ct_activatable'
                    split: thread_state.splits)+
 
-lemma ncof_invs' [wp]:
-  "\<lbrace>invs'\<rbrace> nullCapOnFailure (lookupCap t ref) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  by (simp add: nullCapOnFailure_def | wp)+
-
-lemma ncof_corres:
-  "ref = to_bl ref' \<Longrightarrow>
-   corres cap_relation (invs and tcb_at t) (invs' and tcb_at' t)
-   (null_cap_on_failure (lookup_cap t ref))
-   (nullCapOnFailure (lookupCap t ref'))"
-  apply (simp add: nullCapOnFailure_def ncof_is_a_catch)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_catch)
-       apply (rule corres_trivial, simp)
-      apply (rule lc_corres)
-     apply wp+
-   apply fastforce
-  apply fastforce
-  done
-
 lemma rfk_corres:
   "corres dc (tcb_at t and invs) (tcb_at' t and invs')
              (reply_from_kernel t r) (replyFromKernel t r)"
@@ -3416,8 +3093,7 @@ lemma rfk_invs':
   "\<lbrace>invs' and tcb_at' t\<rbrace> replyFromKernel t r \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: replyFromKernel_def)
   apply (cases r)
-   apply (wp guarded_lookup_valid_cap'
-           | clarsimp)+
+  apply wpsimp
   done
 
 crunch nosch[wp]: replyFromKernel "\<lambda>s. P (ksSchedulerAction s)"
@@ -3748,16 +3424,6 @@ lemma hdf_corres:
 
 crunch tcb' [wp]: sendFaultIPC "tcb_at' t" (wp: crunch_wps)
 
-lemma possibleSwitchTo_weak_sch_act[wp]:
-  "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s \<and> tcb_in_cur_domain' t s\<rbrace>
-      possibleSwitchTo t
-   \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add: possibleSwitchTo_def setSchedulerAction_def curDomain_def)
-  apply (wp static_imp_wp rescheduleRequired_weak_sch_act_wf threadGet_wp | wpc)+
-  apply (clarsimp simp: obj_at'_def projectKOs weak_sch_act_wf_def
-                        objBits_simps ps_clear_def)
-  done
-
 crunch typ_at'[wp]: receiveIPC "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 
@@ -3770,10 +3436,6 @@ lemmas receiveAIPC_typ_ats[wp] = typ_at_lifts [OF receiveSignal_typ_at']
 
 declare cart_singleton_empty[simp]
 
-lemma cte_wp_at_queues[simp]:
-  "cte_wp_at' P p (ksReadyQueues_update f s) = cte_wp_at' P p s"
-  by (fastforce intro: cte_wp_at'_pspaceI)
-
 declare cart_singleton_empty2[simp]
 
 crunch aligned'[wp]: setupCallerCap "pspace_aligned'"
@@ -3782,18 +3444,6 @@ crunch distinct'[wp]: setupCallerCap "pspace_distinct'"
   (wp: crunch_wps)
 crunch cur_tcb[wp]: setupCallerCap "cur_tcb'"
   (wp: crunch_wps)
-
-lemma setupCallerCap_valid_objs[wp]:
-  "\<lbrace>valid_objs' and tcb_at' sender\<rbrace> setupCallerCap sender receiver grant \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
-  apply (simp add: setupCallerCap_def getThreadCallerSlot_def
-                   getThreadReplySlot_def)
-  apply (rule hoare_pre)
-   apply wp
-   apply (wp sts_valid_objs' hoare_drop_imps hoare_vcg_all_lift)+
-  apply (clarsimp simp: valid_cap'_def valid_tcb_state'_def)
-  apply (drule obj_at_aligned')
-   apply (simp add: objBits_simps' capAligned_def word_bits_conv isCap_simps)+
-  done
 
 lemma setupCallerCap_state_refs_of[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of' s) (sender := {r \<in> state_refs_of' s sender. snd r = TCBBound}))\<rbrace>
@@ -4004,12 +3654,6 @@ lemma setupCallerCap_ct_not_inQ[wp]:
   apply (simp add: setupCallerCap_def)
   apply (wp hoare_drop_imp setThreadState_ct_not_inQ)
   done
-
-lemma copyMRs_ksQ[wp]:
-  "\<lbrace>\<lambda>s. P (ksReadyQueues s p)\<rbrace> copyMRs a b c d e
-        \<lbrace>\<lambda>_ s. P (ksReadyQueues s p)\<rbrace>"
-  apply (simp add: copyMRs_def msgRegisters_def)
-by (case_tac b; case_tac d; simp; wp mapM_wp')
 
 crunch ksQ'[wp]: copyMRs "\<lambda>s. P (ksReadyQueues s)"
   (wp: mapM_wp' hoare_drop_imps simp: crunch_simps)
@@ -4321,14 +3965,6 @@ lemma rai_invs'[wp]:
   apply (clarsimp dest!: global'_no_ex_cap)
   done
 
-lemma zobj_refs_maskCapRights[simp]:
-  "zobj_refs' (maskCapRights msk cap) = zobj_refs' cap"
-  by (cases cap;
-      clarsimp
-          simp add: maskCapRights_def isCap_simps
-                    Let_def ARM_H.maskCapRights_def
-             split: arch_capability.split)
-
 lemma getCTE_cap_to_refs[wp]:
   "\<lbrace>\<top>\<rbrace> getCTE p \<lbrace>\<lambda>rv s. \<forall>r\<in>zobj_refs' (cteCap rv). ex_nonz_cap_to' r s\<rbrace>"
   apply (rule hoare_strengthen_post [OF getCTE_sp])
@@ -4349,13 +3985,6 @@ lemma arch_stt_objs' [wp]:
   apply wp
   done
 
-(* FIXME: arch_split: is there a better way to refer to the Thread_H.switchToThread_def? *)
-lemma stt_objs' [wp]:
-  "\<lbrace>valid_objs'\<rbrace> switchToThread t \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
-  apply (simp add: Thread_H.switchToThread_def setCurThread_def)
-  apply (wp threadSet_valid_objs' | simp)+
-  done
-
 declare zipWithM_x_mapM [simp]
 
 lemma cteInsert_invs_bits[wp]:
@@ -4370,26 +3999,6 @@ lemma cteInsert_invs_bits[wp]:
 apply (wp sch_act_wf_lift valid_queues_lift
           cur_tcb_lift tcb_in_cur_domain'_lift)+
 done
-
-lemma setupCallerCap_cap_to' [wp]:
-  "\<lbrace>ex_nonz_cap_to' p\<rbrace> setupCallerCap a b c \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
-  apply (simp add: setupCallerCap_def getThreadCallerSlot_def getThreadReplySlot_def)
-  apply (wp cteInsert_cap_to')
-       apply (rule_tac Q="\<lambda>rv. ex_nonz_cap_to' p
-                           and cte_wp_at' (\<lambda>c. (cteCap c) = rv) callerSlot"
-                    in hoare_post_imp)
-        apply (clarsimp simp: cte_wp_at_ctes_of)
-       apply (wp getSlotCap_cte_wp_at hoare_drop_imps)+
-  apply simp
-  done
-
-lemma setupCaller_pred_tcb_recv':
-  "\<lbrace>pred_tcb_at' proj P r and K (s \<noteq> r)\<rbrace> setupCallerCap s r g \<lbrace>\<lambda>_. pred_tcb_at' proj P r\<rbrace>"
-  apply (simp add: setupCallerCap_def getThreadCallerSlot_def getSlotCap_def
-                   getThreadReplySlot_def locateSlot_conv)
-  apply (wp getCTE_wp' hoare_drop_imps hoare_vcg_all_lift sts_pred_tcb_neq')
-  apply clarsimp
-  done
 
 lemma possibleSwitchTo_sch_act_not:
   "\<lbrace>sch_act_not t' and K (t \<noteq> t')\<rbrace> possibleSwitchTo t \<lbrace>\<lambda>rv. sch_act_not t'\<rbrace>"
@@ -4426,7 +4035,7 @@ lemma si_invs'[wp]:
     apply (simp split del: if_split add: invs'_def valid_state'_def)
     apply (rule hoare_pre)
      apply (rule_tac P="a\<noteq>t" in hoare_gen_asm)
-     apply (wp valid_irq_node_lift setupCaller_pred_tcb_recv'
+     apply (wp valid_irq_node_lift
                sts_valid_objs' set_ep_valid_objs' setEndpoint_valid_mdb' sts_st_tcb' sts_sch_act'
                possibleSwitchTo_sch_act_not sts_valid_queues setThreadState_ct_not_inQ
                possibleSwitchTo_ksQ' possibleSwitchTo_ct_not_inQ hoare_vcg_all_lift sts_ksQ'
@@ -4634,14 +4243,6 @@ lemma hf_invs' [wp]:
 
 declare zipWithM_x_mapM [simp del]
 
-lemma receive_not_active [simp]:
-  "(isReceive st \<and> active' st) = False"
-  by (cases st, auto simp: isReceive_def)
-
-lemma send_not_active [simp]:
-  "(isSend st \<and> active' st) = False"
-  by (cases st, auto simp: isSend_def)
-
 lemma gts_st_tcb':
   "\<lbrace>\<top>\<rbrace> getThreadState t \<lbrace>\<lambda>r. st_tcb_at' (\<lambda>st. st = r) t\<rbrace>"
   apply (rule hoare_strengthen_post)
@@ -4702,77 +4303,7 @@ lemma si_blk_makes_runnable':
   apply clarsimp
   done
 
-lemma sfi_makes_simple':
-  "\<lbrace>st_tcb_at' simple' t and K (t \<noteq> t')\<rbrace>
-     sendFaultIPC t' ft
-   \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (simp add: sendFaultIPC_def
-             cong: if_cong capability.case_cong bool.case_cong)
-  apply (wpsimp wp: si_blk_makes_simple' threadSet_pred_tcb_no_state hoare_drop_imps
-                    hoare_vcg_all_lift_R)
-  done
-
-lemma sfi_makes_runnable':
-  "\<lbrace>st_tcb_at' runnable' t and K (t \<noteq> t')\<rbrace>
-     sendFaultIPC t' ft
-   \<lbrace>\<lambda>rv. st_tcb_at' runnable' t\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (simp add: sendFaultIPC_def
-             cong: if_cong capability.case_cong bool.case_cong)
-  apply (wpsimp wp: si_blk_makes_runnable' threadSet_pred_tcb_no_state hoare_drop_imps
-                    hoare_vcg_all_lift_R)
-  done
-
-lemma hf_makes_runnable_simple':
-  "\<lbrace>st_tcb_at' P t' and K (t \<noteq> t') and K (P = runnable' \<or> P = simple')\<rbrace>
-     handleFault t ft
-   \<lbrace>\<lambda>rv. st_tcb_at' P t'\<rbrace>"
-  apply (safe intro!: hoare_gen_asm)
-  apply (simp_all add: handleFault_def handleDoubleFault_def)
-   apply (wp sfi_makes_runnable' sfi_makes_simple' sts_st_tcb_at'_cases
-           | simp add: handleDoubleFault_def)+
-  done
-
 crunch pred_tcb_at'[wp]: possibleSwitchTo, completeSignal "pred_tcb_at' proj P t"
-
-lemma ri_makes_runnable_simple':
-  "\<lbrace>st_tcb_at' P t' and K (t \<noteq> t') and K (P = runnable' \<or> P = simple')\<rbrace>
-     receiveIPC t cap isBlocking
-   \<lbrace>\<lambda>rv. st_tcb_at' P t'\<rbrace>"
-  including no_pre
-  apply (rule hoare_gen_asm)+
-  apply (simp add: receiveIPC_def)
-  apply (case_tac cap, simp_all add: isEndpointCap_def)
-  apply (rule hoare_seq_ext [OF _ get_ep_inv'])
-  apply (rule hoare_seq_ext [OF _ gbn_sp'])
-  apply wp
-   apply (rename_tac ep q r)
-   apply (case_tac ep, simp_all)
-     apply (wp sts_st_tcb_at'_cases | wpc | simp add: doNBRecvFailedTransfer_def)+
-   apply (rename_tac list)
-   apply (case_tac list, simp_all add: case_bool_If case_option_If
-                            split del: if_split cong: if_cong)
-   apply (rule hoare_pre)
-    apply (wp sts_st_tcb_at'_cases setupCallerCap_pred_tcb_unchanged
-              hoare_vcg_const_imp_lift)+
-     apply (simp, simp only: imp_conv_disj)
-     apply (wp hoare_vcg_disj_lift)+
-   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
-   apply (fastforce simp: pred_tcb_at'_def obj_at'_def isSend_def
-                  split: Structures_H.thread_state.split_asm)
-  apply (rule hoare_pre)
-   apply wpsimp+
-  done
-
-lemma rai_makes_runnable_simple':
-  "\<lbrace>st_tcb_at' P t' and K (t \<noteq> t') and K (P = runnable' \<or> P = simple')\<rbrace>
-     receiveSignal t cap isBlocking
-   \<lbrace>\<lambda>rv. st_tcb_at' P t'\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (simp add: receiveSignal_def)
-  apply (rule hoare_pre)
-   by (wp sts_st_tcb_at'_cases getNotification_wp | wpc | simp add: doNBRecvFailedTransfer_def)+
 
 lemma sendSignal_st_tcb'_Running:
   "\<lbrace>st_tcb_at' (\<lambda>st. st = Running \<or> P st) t\<rbrace>
@@ -4781,16 +4312,6 @@ lemma sendSignal_st_tcb'_Running:
   apply (simp add: sendSignal_def)
   apply (wp sts_st_tcb_at'_cases cancelIPC_st_tcb_at' gts_wp' getNotification_wp static_imp_wp
        | wpc | clarsimp simp: pred_tcb_at')+
-  done
-
-lemma sai_st_tcb':
-  "\<lbrace>st_tcb_at' P t and K (P Running)\<rbrace>
-     sendSignal ntfn bdg
-   \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (subgoal_tac "\<exists>Q. P = (\<lambda>st. st = Running \<or> Q st)")
-   apply (clarsimp intro!: sendSignal_st_tcb'_Running)
-  apply (fastforce intro!: exI[where x=P])
   done
 
 end

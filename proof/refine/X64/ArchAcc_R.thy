@@ -129,13 +129,6 @@ lemma storePML4E_cte_wp_at'[wp]:
   apply simp
   done
 
-lemma storePML4E_state_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
-     storePML4E ptr val
-   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
-  unfolding storePML4E_def
-  by (wp setObject_state_refs_of_eq; clarsimp simp: updateObject_default_def in_monad projectKOs)
-
 lemma storePDPTE_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
      storePDPTE ptr val
@@ -150,13 +143,6 @@ lemma storePDPTE_cte_wp_at'[wp]:
   apply simp
   done
 
-lemma storePDPTE_state_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
-     storePDPTE ptr val
-   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
-  unfolding storePDPTE_def
-  by (wp setObject_state_refs_of_eq; clarsimp simp: updateObject_default_def in_monad projectKOs)
-
 lemma storePDE_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
      storePDE ptr val
@@ -170,13 +156,6 @@ lemma storePDE_cte_wp_at'[wp]:
                          projectKOs projectKO_opts_defs)
   apply simp
   done
-
-lemma storePDE_state_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
-     storePDE ptr val
-   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
-  unfolding storePDE_def
-  by (wp setObject_state_refs_of_eq; clarsimp simp: updateObject_default_def in_monad projectKOs)
 
 lemma storePTE_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
@@ -304,18 +283,6 @@ lemma aligned_distinct_relation_pde_atI'[elim]:
                         projectKOs)
   done
 
-lemma pde_relation_alignedD:
-  "\<lbrakk> kheap s (p && ~~ mask pd_bits) = Some (ArchObj (PageDirectory pd));
-     pspace_relation (kheap s) (ksPSpace s');
-     ksPSpace s' ((p && ~~ mask pd_bits) + (ucast x << word_size_bits)) = Some (KOArch (KOPDE pde))\<rbrakk>
-     \<Longrightarrow> pde_relation' (pd x) pde"
-  apply (clarsimp simp:pspace_relation_def)
-  apply (drule bspec,blast)
-  apply (clarsimp simp:pde_relation_def)
-  apply (drule_tac x = x in spec)
-  apply (clarsimp split:X64_H.pde.splits)
-  done
-
 lemma get_pde_corres':
   "corres (pde_relation') (pde_at p)
      (pspace_aligned' and pspace_distinct')
@@ -363,18 +330,6 @@ lemma get_pte_corres:
   apply (erule_tac x="(ucast (p && mask pt_bits >> word_size_bits))" in allE)
   apply (clarsimp simp: mask_pt_bits_inner_beauty[simplified bit_simps] bit_simps
                         obj_at_def)
-  done
-
-lemma pte_relation_alignedD:
-  "\<lbrakk> kheap s (p && ~~ mask pt_bits) = Some (ArchObj (PageTable pt));
-     pspace_relation (kheap s) (ksPSpace s');
-     ksPSpace s' ((p && ~~ mask pt_bits) + (ucast x << word_size_bits)) = Some (KOArch (KOPTE pte))\<rbrakk>
-     \<Longrightarrow> pte_relation' (pt x) pte"
-  apply (clarsimp simp:pspace_relation_def)
-  apply (drule bspec,blast)
-  apply (clarsimp simp:pte_relation_def)
-  apply (drule_tac x = x in spec)
-  apply clarsimp
   done
 
 lemmas aligned_distinct_pte_atI'
@@ -457,18 +412,6 @@ lemma get_pdpte_corres:
                         obj_at_def)
   done
 
-lemma pdpte_relation_alignedD:
-  "\<lbrakk> kheap s (p && ~~ mask pdpt_bits) = Some (ArchObj (PDPointerTable pt));
-     pspace_relation (kheap s) (ksPSpace s');
-     ksPSpace s' ((p && ~~ mask pdpt_bits) + (ucast x << word_size_bits)) = Some (KOArch (KOPDPTE pdpte))\<rbrakk>
-     \<Longrightarrow> pdpte_relation' (pt x) pdpte"
-  apply (clarsimp simp:pspace_relation_def)
-  apply (drule bspec,blast)
-  apply (clarsimp simp:pdpte_relation_def)
-  apply (drule_tac x = x in spec)
-  apply clarsimp
-  done
-
 lemmas aligned_distinct_pdpte_atI'
     = aligned_distinct_obj_atI'[where 'a=pdpte,
                                 simplified, OF _ _ _ refl]
@@ -549,18 +492,6 @@ lemma get_pml4e_corres [corres]:
   apply (erule_tac x="(ucast (p && mask pml4_bits >> word_size_bits))" in allE)
   apply (clarsimp simp: mask_pt_bits_inner_beauty[simplified bit_simps] bit_simps
                         obj_at_def)
-  done
-
-lemma pml4e_relation_alignedD:
-  "\<lbrakk> kheap s (p && ~~ mask pml4_bits) = Some (ArchObj (PageMapL4 pt));
-     pspace_relation (kheap s) (ksPSpace s');
-     ksPSpace s' ((p && ~~ mask pml4_bits) + (ucast x << word_size_bits)) = Some (KOArch (KOPML4E pml4e))\<rbrakk>
-     \<Longrightarrow> pml4e_relation' (pt x) pml4e"
-  apply (clarsimp simp:pspace_relation_def)
-  apply (drule bspec,blast)
-  apply (clarsimp simp:pml4e_relation_def)
-  apply (drule_tac x = x in spec)
-  apply clarsimp
   done
 
 lemmas aligned_distinct_pml4e_atI'
@@ -1671,16 +1602,6 @@ definition
   | (VMPDE pde, p) \<Rightarrow> \<lambda>s. valid_pde' pde s
   | (VMPDPTE pdpte, p) \<Rightarrow> \<lambda>s. valid_pdpte' pdpte s"
 
-lemma valid_slots_typ_at':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows "\<lbrace>valid_slots' m\<rbrace> f \<lbrace>\<lambda>rv. valid_slots' m\<rbrace>"
-  unfolding valid_slots'_def
-  apply (cases m)
-   apply (case_tac a)
-    apply simp
-    apply (wpsimp wp: x valid_pte_lift' valid_pde_lift' valid_pdpte_lift')+
-  done
-
 lemma createMappingEntries_valid_slots' [wp]:
   "\<lbrace>valid_objs' and
     K (vmsz_aligned' base sz \<and> vmsz_aligned' vptr sz \<and> ptrFromPAddr base \<noteq> 0) \<rbrace>
@@ -2001,34 +1922,6 @@ lemma getASID_wp:
                      archObjSize_def in_magnitude_check pageBits_def
                      projectKOs in_monad valid_def obj_at'_def objBits_simps)
 
-lemma page_map_l4_pml4e_at_lookupI':
-  "page_map_l4_at' pm s \<Longrightarrow> pml4e_at' (lookup_pml4_slot pm vptr) s"
-  apply (simp add: lookup_pml4_slot_def Let_def)
-  apply (erule page_map_l4_pml4e_atI')
-  apply (clarsimp simp: bit_simps getPML4Index_def mask_def, word_bitwise)
-  done
-
-lemma pd_pointer_table_pdpte_at_lookupI':
-  "pd_pointer_table_at' pm s \<Longrightarrow> pdpte_at' (lookup_pdpt_slot_no_fail pm vptr) s"
-  apply (simp add: lookup_pdpt_slot_no_fail_def Let_def)
-  apply (erule pd_pointer_table_pdpte_atI')
-  apply (clarsimp simp: bit_simps getPDPTIndex_def mask_def, word_bitwise)
-  done
-
-lemma page_directory_pde_at_lookupI':
-  "page_directory_at' pm s \<Longrightarrow> pde_at' (lookup_pd_slot_no_fail pm vptr) s"
-  apply (simp add: lookup_pd_slot_no_fail_def Let_def)
-  apply (erule page_directory_pde_atI')
-  apply (clarsimp simp: bit_simps getPDIndex_def mask_def, word_bitwise)
-  done
-
-lemma page_table_pte_at_lookupI':
-  "page_table_at' pt s \<Longrightarrow> pte_at' (lookup_pt_slot_no_fail pt vptr) s"
-  apply (simp add: lookup_pt_slot_no_fail_def)
-  apply (erule page_table_pte_atI')
-  apply (clarsimp simp: bit_simps getPTIndex_def mask_def, word_bitwise)
-  done
-
 lemma storePTE_ctes [wp]:
   "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> storePTE p pte \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
   apply (rule ctes_of_from_cte_wp_at [where Q=\<top>, simplified])
@@ -2107,11 +2000,6 @@ lemma setObject_ASID_ctes_of'[wp]:
      setObject ptr (asid::asidpool)
    \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   by (rule ctes_of_from_cte_wp_at [where Q=\<top>, simplified]) wp
-
-lemma loadWordUser_inv :
-  "\<lbrace>P\<rbrace> loadWordUser p \<lbrace>\<lambda>_. P\<rbrace>"
-  unfolding loadWordUser_def
-  by (wp dmo_inv' loadWord_inv stateAssert_wp | simp)+
 
 lemma clearMemory_vms':
   "valid_machine_state' s \<Longrightarrow>

@@ -2632,7 +2632,7 @@ proof -
                                     apply (clarsimp simp: ccap_relation_ep_helpers guard_is_UNIV_def
                                                           mi_from_H_def)
                                    apply (simp add: pd_has_hwasid_def)
-                                   apply (wp sts_ct_in_state_neq' sts_valid_objs')
+                                   apply (wp sts_valid_objs')
                                   apply (simp del: Collect_const)
                                   apply (vcg exspec=thread_state_ptr_set_tsType_np_modifies)
                                  apply (simp add: pred_conj_def)
@@ -3391,7 +3391,7 @@ lemma fastpath_reply_recv_ccorres:
                                   apply (clarsimp simp: ccap_relation_ep_helpers guard_is_UNIV_def
                                                         mi_from_H_def)
                                  apply (simp add: pd_has_hwasid_def)
-                                 apply (wp sts_ct_in_state_neq' sts_valid_objs')
+                                 apply (wp sts_valid_objs')
                                 apply (simp del: Collect_const)
                                 apply (vcg exspec=thread_state_ptr_set_tsType_np_modifies)
                                apply simp

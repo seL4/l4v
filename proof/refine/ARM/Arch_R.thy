@@ -415,13 +415,6 @@ lemma checkVP_wpR [wp]:
   apply (simp add: is_aligned_mask vmsz_aligned'_def)
   done
 
-lemma checkVP_inv: "\<lbrace>P\<rbrace> checkVPAlignment sz w \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: checkVPAlignment_def unlessE_whenE cong: vmpage_size.case_cong)
-  apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp|wpc)+
-  apply simp
-  done
-
 lemma asidHighBits [simp]:
   "asidHighBits = asid_high_bits"
   by (simp add: asidHighBits_def asid_high_bits_def)
@@ -449,18 +442,6 @@ crunch inv [wp]: "ARM_H.decodeInvocation" "P"
    simp: forME_x_def crunch_simps
          ARMMMU_improve_cases
    ignore: forME_x getObject)
-
-(* FIXME: Move *)
-lemma case_option_corres:
-  assumes nonec: "corres r Pn Qn (nc >>= f) (nc' >>= g)"
-  and     somec: "\<And>v'. corres r (Ps v') (Qs v') (sc v' >>= f) (sc' v' >>= g)"
-  shows "corres r (case_option Pn Ps v) (case_option Qn Qs v) (case_option nc sc v >>= f) (case_option nc' sc' v >>= g)"
-  apply (cases v)
-   apply simp
-   apply (rule nonec)
-  apply simp
-  apply (rule somec)
-  done
 
 lemma case_option_corresE:
   assumes nonec: "corres r Pn Qn (nc >>=E f) (nc' >>=E g)"
@@ -615,18 +596,6 @@ lemma dec_arch_inv_page_flush_corres:
    apply (fastforce simp: valid_cap_def mask_def
                           invs_vspace_objs[simplified])
   apply (auto)
-  done
-
-lemma lookup_pd_slot_mask_6_gumpf:
-  "is_aligned pd pd_bits \<Longrightarrow>
-    lookup_pd_slot pd vaddr && ~~ mask 6
-        = lookup_pd_slot pd (vaddr && ~~ mask (pageBitsForSize ARMSuperSection))"
-  apply (clarsimp simp: lookup_pd_slot_def pageBits_def
-                        is_aligned_mask pd_bits_def shiftr_shiftl1)
-  apply (simp add: shiftr_over_and_dist)
-  apply (simp add: mask_def word_bw_assocs)
-  apply word_bitwise
-  apply (clarsimp simp: xor3_simps carry_simps)
   done
 
 lemma vs_lookup_pages1I:
@@ -1427,10 +1396,6 @@ lemma setTCB_pdpt_bits'[wp]:
   apply (erule(1) ps_clear_updE)
   done
 
-lemma ko_wp_at'_cong:
- "ksPSpace s = ksPSpace m \<Longrightarrow> ko_wp_at' P p s = ko_wp_at' P p m"
-  by (simp add:ko_wp_at'_def ps_clear_def)
-
 crunch vs_entry_align'[wp]:
   threadSet "ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p"
   (ignore: getObject setObject wp:crunch_wps)
@@ -1952,30 +1917,6 @@ lemma arch_decodeInvocation_wf[wp]:
    apply(simp, wp)
   done
 
-lemma setObject_cte_nosch [wp]:
-  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setObject p (cte::cte) \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
-  apply (rule setObject_nosch)
-  apply (simp add: updateObject_cte)
-  apply (rule hoare_pre)
-   apply (wp|wpc|simp add: unless_def)+
-  done
-
-lemma setObject_pte_nosch [wp]:
-  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setObject p (pte::pte) \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
-  apply (rule setObject_nosch)
-  apply (simp add: updateObject_default_def)
-  apply wp
-  apply simp
-  done
-
-lemma setObject_pde_nosch [wp]:
-  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setObject p (pde::pde) \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
-  apply (rule setObject_nosch)
-  apply (simp add: updateObject_default_def)
-  apply wp
-  apply simp
-  done
-
 crunch nosch[wp]: setMRs "\<lambda>s. P (ksSchedulerAction s)"
     (ignore: getRestartPC setRegister transferCapsToSlots
    wp: hoare_drop_imps hoare_vcg_split_case_option
@@ -1986,95 +1927,12 @@ crunch nosch [wp]: performARMMMUInvocation "\<lambda>s. P (ksSchedulerAction s)"
   (ignore: getObject setObject
    wp: crunch_wps getObject_cte_inv getASID_wp)
 
-lemma arch_pinv_nosch[wp]:
-  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
-     Arch.performInvocation invok
-   \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  by (simp add: ARM_H.performInvocation_def) wp
-
 lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
 
 crunch st_tcb_at': performPageDirectoryInvocation, performPageTableInvocation, performPageInvocation,
             performASIDPoolInvocation "st_tcb_at' P t"
   (ignore: getObject setObject
    wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps)
-
-lemma performASIDControlInvocation_st_tcb_at':
-  "\<lbrace>st_tcb_at' (P and (\<noteq>) Inactive and (\<noteq>) IdleThreadState) t and
-    valid_aci' aci and invs' and ct_active'\<rbrace>
-    performASIDControlInvocation aci
-  \<lbrace>\<lambda>y. st_tcb_at' P t\<rbrace>"
-  apply (rule hoare_name_pre_state)
-  apply (clarsimp simp: performASIDControlInvocation_def split: asidcontrol_invocation.splits)
-  apply (clarsimp simp: valid_aci'_def cte_wp_at_ctes_of cong: conj_cong)
-  apply (rule hoare_pre)
-   apply (wp createObjects_orig_obj_at'[where P="P \<circ> tcbState", folded st_tcb_at'_def]
-             updateFreeIndex_pspace_no_overlap' getSlotCap_wp
-             hoare_vcg_ex_lift
-             deleteObjects_cte_wp_at' deleteObjects_invs_derivatives
-             deleteObjects_st_tcb_at'
-             static_imp_wp
-        | simp add: placeNewObject_def2)+
-  apply (case_tac ctea)
-  apply (clarsimp)
-  apply (frule ctes_of_valid_cap')
-   apply (simp add:invs_valid_objs')+
-  apply (clarsimp simp:valid_cap'_def capAligned_def cte_wp_at_ctes_of)
-  apply (rule conjI)
-    apply clarsimp
-    apply (drule (1) cte_cap_in_untyped_range)
-        apply (fastforce simp add: cte_wp_at_ctes_of)
-       apply assumption+
-      subgoal by (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
-     subgoal by fastforce
-    apply simp
-   apply (rule conjI,assumption)
-  apply (clarsimp simp:invs_valid_pspace' objBits_simps archObjSize_def
-    range_cover_full descendants_range'_def2 isCap_simps)
-  apply (intro conjI)
-               apply (fastforce simp:empty_descendants_range_in')+
-       apply clarsimp
-       apply (drule (1) cte_cap_in_untyped_range)
-           apply (fastforce simp add: cte_wp_at_ctes_of)
-          apply assumption+
-         apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
-        apply fastforce
-       apply simp
-  apply auto
-  done
-
-lemma arch_pinv_st_tcb_at':
-  "\<lbrace>valid_arch_inv' ai and st_tcb_at' (P and (\<noteq>) Inactive and (\<noteq>) IdleThreadState) t and
-    invs' and ct_active'\<rbrace>
-     Arch.performInvocation ai
-   \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>" (is "?pre (pgi ai) ?post")
-proof(cases ai)
-  txt {* The preservation rules for each invocation have already been proved by crunch, so
-    this just becomes a case distinction. *}
-  case InvokePage thus ?thesis
-    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def,
-        wp performPageInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
-next
-  case InvokeASIDControl thus ?thesis
-    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def
-                  valid_arch_inv'_def,
-        wp performASIDControlInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
-next
-  case InvokeASIDPool thus ?thesis
-    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def
-                  valid_arch_inv'_def,
-        wp performASIDPoolInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
-next
-  case InvokePageTable thus ?thesis
-    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def
-                  valid_arch_inv'_def,
-        wp performPageTableInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
-next
-  case InvokePageDirectory thus ?thesis
-    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def
-                  valid_arch_inv'_def,
-        wp performPageDirectoryInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
-qed
 
 crunch aligned': "Arch.finaliseCap" pspace_aligned'
   (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps)
@@ -2114,20 +1972,6 @@ lemma invs_asid_table_strenghten':
   apply (rule conjI)
    apply (clarsimp simp: valid_pspace'_def)
   apply (simp add: valid_machine_state'_def)
-  done
-
-lemma freeIndexUpdate_ex_cte:
-  "\<lbrace>\<lambda>s. ex_cte_cap_wp_to' (\<lambda>_. True) slot s \<and>
-        cte_wp_at' (\<lambda>c. cteCap c = pcap) src s \<and> isUntypedCap pcap\<rbrace>
-   updateCap src (capFreeIndex_update (\<lambda>_. idx) pcap)
-   \<lbrace>\<lambda>rv s. ex_cte_cap_wp_to' (\<lambda>_. True) slot s\<rbrace>"
-  apply (clarsimp simp:ex_cte_cap_wp_to'_def)
-  apply (rule hoare_pre)
-  apply (wps)
-  apply (wp hoare_vcg_ex_lift updateCap_cte_wp_at_cases)
-  apply (clarsimp simp:cte_wp_at_ctes_of isCap_simps)
-  apply (rule_tac x = cref in exI)
-   apply clarsimp
   done
 
 lemma ex_cte_not_in_untyped_range:
@@ -2191,7 +2035,7 @@ lemma performASIDControlInvocation_invs' [wp]:
            updateFreeIndex_caps_no_overlap''
            updateFreeIndex_descendants_of2
            updateFreeIndex_caps_overlap_reserved
-           updateCap_cte_wp_at_cases freeIndexUpdate_ex_cte static_imp_wp
+           updateCap_cte_wp_at_cases static_imp_wp
            getSlotCap_wp)+
   apply (clarsimp simp:conj_comms ex_disj_distrib is_aligned_mask
            | strengthen invs_valid_pspace' invs_pspace_aligned'

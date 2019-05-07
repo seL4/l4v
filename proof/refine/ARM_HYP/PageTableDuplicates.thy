@@ -14,24 +14,6 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma set_ep_valid_duplicate' [wp]:
-  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
-  setEndpoint ep v  \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add:setEndpoint_def)
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
-                        objBits_def[symmetric] lookupAround2_char1
-                 split: if_split_asm)
-  apply (frule pspace_storable_class.updateObject_type[where v = v,simplified])
-  apply (clarsimp simp:updateObject_default_def assert_def bind_def
-    alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
-    assert_opt_def return_def fail_def split:if_splits option.splits)
-   apply (rule_tac ko = ba in valid_duplicates'_non_pd_pt_I)
-       apply simp+
-  apply (rule_tac ko = ba in valid_duplicates'_non_pd_pt_I)
-      apply simp+
-  done
-
 lemma set_ntfn_valid_duplicate' [wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
   setNotification ep v  \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
@@ -587,43 +569,11 @@ lemma mapM_x_storePDE_update_helper:
   apply (simp add: mask_lower_twice)
   done
 
-lemma is_aligned_le_mask:
-  "\<lbrakk>is_aligned a n; a\<le>b\<rbrakk> \<Longrightarrow> a \<le> b && ~~ mask n"
-  by (rule aligned_le_sharp)
-
-lemma global_pd_offset:
-  "\<lbrakk>is_aligned ptr pdBits ; x \<in> {ptr + (kernelBase >> 21 << 3)..ptr + 2 ^ pdBits - 1}\<rbrakk>
-  \<Longrightarrow> ptr  + (x && mask pdBits) = x"
-  apply (rule mask_eqI[where n = pdBits])
-   apply (simp add:mask_add_aligned mask_twice vspace_bits_defs)
-  apply (subst mask_out_sub_mask)
-  apply (simp add:mask_add_aligned mask_twice vspace_bits_defs)
-  apply clarsimp
-  apply (drule neg_mask_mono_le[where n = 14])
-  apply (drule neg_mask_mono_le[where n = 14])
-  apply (simp add:field_simps)
-  apply (frule_tac d1 = "0x3FFF" and p1="ptr" in is_aligned_add_helper[THEN conjunct2])
-   apply simp
-  apply (frule_tac d1 = "kernelBase >> 21 << 3" and p1 = "ptr"
-    in is_aligned_add_helper[THEN conjunct2])
-   apply (simp add: ARM_HYP.kernelBase_def kernelBase_def)
-  apply simp
-  done
-
 lemma foldr_data_map_insert[simp]:
  "foldr (\<lambda>addr map a. if a = addr then Some b else map a)
  = foldr (\<lambda>addr. data_map_insert addr b)"
   apply (rule ext)+
   apply (simp add:data_map_insert_def[abs_def] fun_upd_def)
-  done
-
-lemma in_new_cap_addrs_aligned:
-  "is_aligned ptr 3 \<Longrightarrow> p \<in> set (new_cap_addrs (2 ^ us) ptr ko) \<Longrightarrow> is_aligned p 3"
-  apply (clarsimp simp:new_cap_addrs_def image_def)
-  apply (erule aligned_add_aligned)
-    apply (rule is_aligned_weaken[OF is_aligned_shiftl_self])
-    apply (case_tac ko,simp_all add:objBits_simps' word_bits_def
-       vspace_bits_defs vcpu_bits_def archObjSize_def split:arch_kernel_object.splits)
   done
 
 definition
@@ -1328,12 +1278,6 @@ crunch nondup_obj[wp]: setVMRoot, setVMRootForFlush
   (wp: crunch_wps simp: crunch_simps
     ignore:getObject updateObject setObject)
 
-lemma flushTable_nondup_obj[wp]:
-  "flushTable a aa ba \<lbrace>ko_wp_at' nondup_obj p\<rbrace>"
-  apply (simp add:flushTable_def)
-  apply (wp mapM_wp' | wpc | simp)+
-  done
-
 lemma unmapPageTable_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
     unmapPageTable aa ba word \<lbrace>\<lambda>x a. vs_valid_duplicates' (ksPSpace a)\<rbrace>"
@@ -1675,11 +1619,6 @@ lemma superSectionPDEOffsets_aligned:
   using is_aligned_mult_triv2[where n=3]
   by (auto simp: superSectionPDEOffsets_def upto_enum_step_def vspace_bits_defs zip_map1)
 
-lemma largePagePTEOffsets_unfold:
-  "is_aligned p 7 \<Longrightarrow> map ((+) p) largePagePTEOffsets = [p , p + 8 .e. p + mask 7]"
-  by (fastforce simp: largePagePTEOffsets_def vspace_bits_defs mask_def upto_enum_step_def
-                dest: is_aligned_no_overflow')
-
 lemma slots_length:
   "is_aligned p 7 \<Longrightarrow> length [p , p + 8 .e. p + mask 7 :: machine_word] = 16"
   apply (drule is_aligned_no_overflow)
@@ -2009,23 +1948,6 @@ lemma placeASIDPool_valid_duplicates'[wp]:
   apply assumption
   done
 
-lemma setASIDPool_valid_duplicates':
-  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
-  setObject poolPtr $ (ap::asidpool)
-  \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add:setObject_def)
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
-                        objBits_def[symmetric] lookupAround2_char1
-                 split: if_split_asm)
-  apply (frule pspace_storable_class.updateObject_type[where v = ap,simplified])
-  apply (clarsimp simp:updateObject_default_def assert_def bind_def
-    alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
-    assert_opt_def return_def fail_def typeError_def
-    split:if_splits option.splits Structures_H.kernel_object.splits)
-     apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],clarsimp+)+
-  done
-
 crunch valid_duplicates'[wp]: performARMVCPUInvocation "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps ignore: setObject getObject)
 
@@ -2156,7 +2078,7 @@ lemma tc_valid_duplicates':
          )+)
   apply (clarsimp simp: tcb_cte_cases_def cte_level_bits_def objBits_defs
                         tcbIPCBufferSlot_def)
-  apply (auto dest!: isCapDs isReplyCapD isValidVTableRootD
+  apply (auto dest!: isCapDs isValidVTableRootD
                simp: isCap_simps)
   done
 
@@ -2248,7 +2170,7 @@ lemma handleInterrupt_valid_duplicates'[wp]:
   handleInterrupt irq \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: handleInterrupt_def)
   apply (rule conjI; rule impI)
-   apply (wp sai_st_tcb' hoare_vcg_all_lift hoare_drop_imps
+   apply (wp hoare_vcg_all_lift hoare_drop_imps
              threadSet_pred_tcb_no_state getIRQState_inv haskell_fail_wp
           |wpc|simp add: handleReservedIRQ_def)+
   done

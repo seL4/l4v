@@ -69,10 +69,6 @@ crunch ksDomSchedule_inv[wp]: doReplyTransfer "\<lambda>s. P (ksDomSchedule s)"
         simp: unless_def crunch_simps
       ignore: transferCapsToSlots setObject getObject)
 
-lemma cteRevoke_ksDomSchedule_inv[wp]:
-  "cteRevoke p \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
-  by (wp cteRevoke_preservation cteDelete_preservation | clarsimp)+
-
 crunch ksDomSchedule_inv[wp]: finaliseCap "\<lambda>s. P (ksDomSchedule s)"
   (simp: crunch_simps assertE_def unless_def
  ignore: getObject setObject forM ignoreFailure
@@ -180,10 +176,6 @@ crunch ksDomainTime_inv[wp]: doReplyTransfer "\<lambda>s. P (ksDomainTime s)"
        setObject_ntfn_ct
         simp: unless_def crunch_simps
       ignore: transferCapsToSlots setObject getObject)
-
-lemma cteRevoke_ksDomainTime_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomainTime s) \<rbrace> cteRevoke param_a \<lbrace>\<lambda>_ s. P (ksDomainTime s)\<rbrace>"
-  by (wp cteRevoke_preservation | clarsimp)+
 
 crunch ksDomainTime_inv[wp]: finaliseCap "\<lambda>s. P (ksDomainTime s)"
   (simp: crunch_simps assertE_def unless_def

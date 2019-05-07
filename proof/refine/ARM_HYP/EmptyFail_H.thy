@@ -268,18 +268,6 @@ lemma catchError_empty_fail[intro!, wp, simp]:
   "\<lbrakk> empty_fail f; \<And>x. empty_fail (g x) \<rbrakk> \<Longrightarrow> empty_fail (catchError f g)"
   by (simp add: catchError_def handle_empty_fail)
 
-lemma findM_empty_fail [intro!, wp, simp]:
-  assumes m: "\<And>x. empty_fail (f x)"
-  shows "empty_fail (findM f xs)"
-proof (induct xs)
-  case Nil
-  thus ?case by (simp add: findM_def)
-next
-  case Cons
-  from Cons
-  show ?case by (simp add: m)
-qed
-
 crunch (empty_fail) empty_fail[intro!, wp, simp]:
   chooseThread, getDomainTime, nextDomain, isHighestPrio
   (wp: empty_fail_catch)

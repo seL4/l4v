@@ -323,21 +323,6 @@ fun
                     (arch_capability.PageDirectoryCap word data)) =
   cap.ArchObjectCap (arch_cap.PageDirectoryCap word data)"
 
-lemma cap_relation_CapabilityMap:
-  "\<lbrakk>\<forall>dev w r s d. c = capability.ArchObjectCap (arch_capability.PageCap dev w r s d) \<longrightarrow>
-              r \<noteq> VMNoAccess;
-    \<forall>ref n L l. c = capability.CNodeCap ref n L l \<longrightarrow>
-                of_bl (bin_to_bl l (uint L)) = L\<rbrakk>
-   \<Longrightarrow> cap_relation (CapabilityMap c) c"
-apply (case_tac c; simp del: bin_to_bl_def)
- apply (clarsimp simp: zbits_map_def split: zombie_type.splits)
-apply (rename_tac arch_capability)
-apply (case_tac arch_capability,
-       simp_all add: vmrights_map_def vm_rights_of_def vm_kernel_only_def
-                     vm_read_only_def vm_read_write_def
-              split: vmrights.splits)
-done
-
 (* FIXME: wellformed_cap_simps has lots of duplicates. *)
 lemma cap_relation_imp_CapabilityMap:
   "\<lbrakk>wellformed_cap c; cap_relation c c'\<rbrakk> \<Longrightarrow> CapabilityMap c' = c"
@@ -380,10 +365,6 @@ where
 | "ThStateMap (Structures_H.thread_state.BlockedOnNotification oref) =
               Structures_A.thread_state.BlockedOnNotification oref"
 
-lemma thread_state_relation_ThStateMap:
-  "thread_state_relation (ThStateMap ts) ts"
-by (cases ts) simp_all
-
 lemma thread_state_relation_imp_ThStateMap:
   "thread_state_relation ts ts' \<Longrightarrow> ThStateMap ts' = ts"
 by (cases ts) simp_all
@@ -398,14 +379,6 @@ definition
          ExceptionTypes_A.lookup_failure.DepthMismatch n m
      | Fault_H.lookup_failure.GuardMismatch n g l \<Rightarrow>
          ExceptionTypes_A.lookup_failure.GuardMismatch n (bin_to_bl l (uint g))"
-
-lemma lookup_failure_map_LookupFailureMap:
-  "(\<forall>n g l. lf = Fault_H.lookup_failure.GuardMismatch n g l \<longrightarrow>
-                of_bl (bin_to_bl l (uint g)) = g)
-   \<Longrightarrow> lookup_failure_map (LookupFailureMap lf) = lf"
-by (clarsimp simp add: LookupFailureMap_def lookup_failure_map_def
-             simp del: bin_to_bl_def
-        split: lookup_failure.splits)
 
 lemma LookupFailureMap_lookup_failure_map:
   "(\<forall>n g. lf = ExceptionTypes_A.GuardMismatch n g \<longrightarrow> length g \<le> 32)
@@ -995,18 +968,6 @@ definition
    in if \<exists>x. P x then (SOME x. P x)
       else (p && ~~ mask tcbBlockSizeBits, bin_to_bl 3 (uint (p >> cte_level_bits)))"
 
-lemma wf_unique':
-   "P (THE x. \<forall>y\<in>dom fun. length y = x) \<Longrightarrow>
-    well_formed_cnode_n n fun \<Longrightarrow> P n"
-apply (subgoal_tac "(THE x. \<forall>y\<in>dom fun. length y = x) = n")
-apply simp
-apply (rule the_equality)
-apply (clarsimp simp add: well_formed_cnode_n_def dom_def Collect_eq)+
-apply (erule impE)
-apply (rule_tac x="replicate n False" in exI, simp)
-apply simp
-done
-
 lemma tcb_cap_cases_length:
   "tcb_cap_cases b = Some x \<Longrightarrow> length b = 3"
 by (simp add: tcb_cap_cases_def tcb_cnode_index_def split: if_split_asm)
@@ -1051,25 +1012,6 @@ lemma bin_to_bl_of_bl_eq:
                    test_bit_of_bl nth_rev)
   apply (case_tac "b ! i", simp_all)
   apply arith
-  done
-
-lemma CNode_implies_KOCTE:
-  "\<lbrakk>pspace_relation (kheap s) (ksPSpace s');
-    kheap s a = Some (CNode sz cs); well_formed_cnode_n sz cs; cs b = Some cap\<rbrakk>
-   \<Longrightarrow> \<exists>cte. ksPSpace s' (cte_map (a, b)) = Some (KOCTE cte) \<and>
-             cap_relation cap (cteCap cte)"
-  apply (clarsimp simp add: pspace_relation_def pspace_dom_def
-                            dom_def UNION_eq Collect_eq)
-  apply (erule_tac x="cte_map (a, b)" in allE)
-  apply (erule_tac x=a in allE)
-  apply clarsimp
-  apply (erule_tac x="cte_map (a, b)" in allE)
-  apply (erule_tac x="cte_relation b" in allE)
-  apply (erule impE, fastforce simp add: dom_def)
-  apply (clarsimp simp add: cte_relation_def)
-  apply (drule iffD1)
-   apply (fastforce simp add: dom_def image_def)
-  apply clarsimp
   done
 
 lemma TCB_implies_KOTCB:
@@ -1302,11 +1244,6 @@ lemma valid_mdb_mdb_cte_at:
       (cdt s)"
   by (simp add: valid_mdb_def2)
 
-lemma cte_map_inj_through_cnp:
-  "\<lbrakk> cte_map p = cte_map p'; cnp (cte_map p) = p; cnp (cte_map p') = p' \<rbrakk>
-    \<Longrightarrow> p = p'"
-  by (drule arg_cong[where f=cnp]) metis
-
 lemma ctes_of_cte_wp_atD:
   "ctes_of s p = Some cte \<Longrightarrow> cte_wp_at' ((=) cte) p s"
 by (simp add: KHeap_R.cte_wp_at_ctes_of)
@@ -1495,13 +1432,6 @@ qed
 
 lemmas absCDT_correct = absCDT_correct'(1)
 lemmas cdt_simple_rel =  absCDT_correct'(2)
-
-
-lemma has_child_cte_at:"valid_mdb s \<Longrightarrow> (cdt s) c = Some p \<Longrightarrow> cte_at p s"
-  apply (rule cte_wp_cte_at)
-  apply (simp add: valid_mdb_def mdb_cte_at_def del: split_paired_All)
-  apply blast
-  done
 
 
 (* Produce a cdt_list from a cdt by sorting the children
@@ -1810,14 +1740,6 @@ definition
    | irqstate.IRQSignal \<Rightarrow> irq_state.IRQSignal
    | irqstate.IRQTimer \<Rightarrow> irq_state.IRQTimer
    | irqstate.IRQReserved \<Rightarrow> irq_state.IRQReserved"
-
-lemma irq_state_map_inv:
-  "irq_state_map (IRQStateMap s) = s"
-  by (cases s) (simp_all add: irq_state_map_def IRQStateMap_def)
-
-lemma IRQStateMap_inv:
-  "IRQStateMap (irq_state_map s) = s"
-  by (cases s) (simp_all add: irq_state_map_def IRQStateMap_def)
 
 definition
   "absInterruptStates is' \<equiv>

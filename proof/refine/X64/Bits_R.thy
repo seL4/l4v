@@ -60,10 +60,6 @@ lemma withoutFailure_wp [wp]:
   "\<lbrace>\<top>\<rbrace> withoutFailure f -,\<lbrace>E\<rbrace>"
   by (auto simp: validE_R_def validE_E_def valid_def)
 
-lemma no_fail_alignError [simp, wp]:
-  "no_fail \<bottom> (alignError x)"
-  by (simp add: alignError_def)
-
 lemma no_fail_typeError [simp, wp]:
   "no_fail \<bottom> (typeError xs ko)"
   by (simp add: typeError_def)
@@ -279,10 +275,6 @@ lemma corres_injection:
   apply (case_tac v, (clarsimp simp: z)+)
   done
 
-lemma corres_gets_pspace:
-  "corres pspace_relation \<top> \<top> (gets kheap) (gets ksPSpace)"
-  by (subst corres_gets, clarsimp)
-
 lemma rethrowFailure_injection:
   "rethrowFailure = injection_handler"
   by (intro ext, simp add: rethrowFailure_def injection_handler_def o_def)
@@ -379,25 +371,6 @@ lemma ntfn'_cases_weak_wp:
   apply (simp, rule hoare_weaken_pre, rule assms, simp)+
   done
 
-lemma ko_at_cte_ctable:
-  fixes ko :: tcb
-  shows "\<lbrakk> ko_at' tcb p s \<rbrakk> \<Longrightarrow> cte_wp_at' (\<lambda>x. x = tcbCTable tcb) p s"
-  unfolding obj_at'_def
-  apply (clarsimp simp: projectKOs objBits_simps)
-  apply (erule(2) cte_wp_at_tcbI')
-   apply fastforce
-  apply simp
-  done
-
-lemma ko_at_cte_vtable:
-  fixes ko :: tcb
-  shows "\<lbrakk> ko_at' tcb p s \<rbrakk> \<Longrightarrow> cte_wp_at' (\<lambda>x. x = tcbVTable tcb) (p + 32) s"
-  apply (clarsimp simp: obj_at'_def objBits_simps projectKOs)
-  apply (erule(2) cte_wp_at_tcbI')
-   apply fastforce
-  apply simp
-  done
-
 lemma ko_at_imp_cte_wp_at':
   fixes x :: cte
   shows "\<lbrakk> ko_at' x ptr s \<rbrakk> \<Longrightarrow> cte_wp_at' (\<lambda>cte. cte = x) ptr s"
@@ -474,13 +447,6 @@ lemma modify_map_if:
   apply (auto simp: modify_map_def)
   done
 
-lemma nothingOnFailure_wp [wp]:
-  assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv. Q None\<rbrace>"
-  shows      "\<lbrace>P\<rbrace> nothingOnFailure f \<lbrace>Q\<rbrace>"
-  apply (simp add: nothingOnFailure_def)
-  apply (wp x)
-  done
-
 lemma corres_empty_on_failure:
   "corres ((\<lambda>x y. r [] []) \<oplus> r) P P' m m' \<Longrightarrow>
    corres r P P' (empty_on_failure m) (emptyOnFailure m')"
@@ -515,35 +481,6 @@ lemma ko_at_cte_ipcbuffer:
    apply (fastforce simp add: tcb_cte_cases_def tcbIPCBufferSlot_def)
   apply simp
   done
-
-lemma tcb_at_cte_offset_unique:
-  assumes tat: "tcb_at' t s"
-  and      vo: "valid_objs' s"
-  and     pal: "pspace_aligned' s"
-  and     csx: "x \<in> dom tcb_cte_cases"
-  and     csy: "y \<in> dom tcb_cte_cases"
-  shows "(tcb_at' (t + x - y) s) = (x = y)"
-proof (rule iffI)
-  assume "tcb_at' (t + x - y) s"
-  hence "is_aligned (t + x - y) 11" using pal
-    apply -
-    apply (erule obj_atE')
-    apply (simp add: projectKOs objBits_simps')
-    done
-  moreover from tat pal have "is_aligned t 11"
-    apply -
-    apply (erule obj_atE')
-    apply (simp add: projectKOs objBits_simps')
-    done
-  ultimately show "x = y" using csx csy
-    apply -
-    apply (drule (1) is_aligned_addD1 [where y = "x - y", simplified add_diff_eq])
-    apply (simp add: tcb_cte_cases_def)
-    by (auto simp: is_aligned_def dvd_def; arith)
-next
-  assume "x = y"
-  thus "tcb_at' (t + x - y) s" using tat by simp
-qed
 
 lemma set_ep_arch':  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setEndpoint ntfn p \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
   apply (simp add: setEndpoint_def setObject_def split_def)

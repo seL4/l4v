@@ -450,10 +450,6 @@ lemma ckernel_invs:
           | strengthen non_kernel_IRQs_strg[where Q=True, simplified], simp cong: conj_cong)+
   done
 
-lemma doMachineOp_sch_act_simple:
-  "\<lbrace>sch_act_simple\<rbrace> doMachineOp f \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
-  by (simp add: sch_act_simple_def) wp
-
 lemma doMachineOp_ct_running':
   "\<lbrace>ct_running'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. ct_running'\<rbrace>"
   apply (simp add: ct_in_state'_def doMachineOp_def split_def)
@@ -756,9 +752,6 @@ lemma valid_corres_combined:
   shows "valid ?P f' (\<lambda>r' s'. \<exists>r s. (s,s') \<in> sr \<and> Q r s \<and> Q' r' s' \<and> rr r r')"
   using assms
   by (fastforce simp: valid_def corres_underlying_def split_def)
-
-(* FIXME: move *)
-lemma fw_sim_LI: "fw_sim r C A = LI A C r UNIV" by (simp add: fw_sim_def LI_def)
 
 definition
   "full_invs' \<equiv> {((tc,s),m,e). invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and>

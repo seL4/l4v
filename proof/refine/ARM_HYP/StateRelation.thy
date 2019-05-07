@@ -603,10 +603,6 @@ lemma curthread_relation:
   "(a, b) \<in> state_relation \<Longrightarrow> ksCurThread b = cur_thread a"
   by (simp add: state_relation_def)
 
-lemma workunitscompleted_relation:
-  "(a, b) \<in> state_relation \<Longrightarrow> ksWorkUnitsCompleted b = work_units_completed a"
-  by (simp add: state_relation_def)
-
 lemma state_relation_pspace_relation[elim!]:
   "(s,s') \<in> state_relation \<Longrightarrow> pspace_relation (kheap s) (ksPSpace s')"
   by (simp add: state_relation_def)
@@ -614,29 +610,6 @@ lemma state_relation_pspace_relation[elim!]:
 lemma state_relation_ekheap_relation[elim!]:
   "(s,s') \<in> state_relation \<Longrightarrow> ekheap_relation (ekheap s) (ksPSpace s')"
   by (simp add: state_relation_def)
-
-(* intro/dest/elim for state_relation *)
-lemma state_relationI [intro?]:
-  "\<And>s s'. \<lbrakk> pspace_relation (kheap s) (ksPSpace s');
-  ekheap_relation (ekheap s) (ksPSpace s');
-  sched_act_relation (scheduler_action s) (ksSchedulerAction s');
-  ready_queues_relation (ready_queues s) (ksReadyQueues s');
-  ghost_relation (kheap s) (gsUserPages s') (gsCNodes s');
-  cdt_relation (swp cte_at s) (cdt s) (ctes_of s');
-  cdt_list_relation (cdt_list s) (cdt s) (ctes_of s');
-  revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s');
-  (arch_state s, ksArchState s') \<in> arch_state_relation;
-  interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s');
-  cur_thread s = ksCurThread s';
-  idle_thread s = ksIdleThread s';
-  machine_state s = ksMachineState s';
-  work_units_completed s = ksWorkUnitsCompleted s';
-  domain_index s = ksDomScheduleIdx s';
-  domain_list s = ksDomSchedule s';
-  cur_domain s = ksCurDomain s';
-  domain_time s = ksDomainTime s' \<rbrakk> \<Longrightarrow>
-  (s, s') \<in> state_relation"
-  unfolding state_relation_def by blast
 
 lemma state_relationD:
   assumes sr:  "(s, s') \<in> state_relation"
@@ -685,20 +658,6 @@ lemma state_relationE [elim?]:
 
 text {* This isn't defined for arch objects *}
 
-lemma objBits_obj_bits:
-  assumes rel: "other_obj_relation obj obj'"
-  shows   "obj_bits obj = objBitsKO obj'"
-  using rel
-  by (simp add: other_obj_relation_def objBits_simps' pageBits_def
-                archObjSize_def vcpuBits_def vcpu_bits_def
-         split: Structures_A.kernel_object.split_asm
-                ARM_A.arch_kernel_obj.split_asm
-                Structures_H.kernel_object.split_asm
-                ARM_HYP_H.arch_kernel_object.split_asm)
-
-lemma replicate_length_cong:
-  "x = y \<Longrightarrow> replicate x n = replicate y n" by simp
-
 lemmas isCap_defs =
   isZombie_def isArchObjectCap_def
   isThreadCap_def isCNodeCap_def isNotificationCap_def
@@ -712,23 +671,6 @@ lemma isCNodeCap_cap_map [simp]:
   "cap_relation c c' \<Longrightarrow> isCNodeCap c' = is_cnode_cap c"
   apply (cases c, simp_all add: isCap_defs split: sum.splits)
    apply clarsimp+
-  done
-
-lemma isNullCap_cap_map [simp]:
-  "cap_relation c c' \<Longrightarrow> isNullCap c' = (c = cap.NullCap)"
-  apply (cases c, simp_all add: isCap_defs split: sum.splits)
-   apply clarsimp+
-  done
-
-lemma revokable_relation_eqI:
-  assumes r: "revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) m"
-  assumes c: "\<And>P p. cte_wp_at P p s'' \<Longrightarrow> cte_wp_at P p s"
-  assumes m: "\<And>p. is_original_cap s' p = is_original_cap s p"
-  shows "revokable_relation (is_original_cap s') (null_filter (caps_of_state s'')) m" using r
-  apply (clarsimp simp add: m revokable_relation_def null_filter_def)
-  apply (drule caps_of_state_cteD)
-  apply (drule c)
-  apply (simp add: cte_wp_at_caps_of_state)
   done
 
 lemma sts_rel_idle :
@@ -781,11 +723,6 @@ lemma ghost_relation_typ_at:
    apply (intro conjI impI iffI allI,simp_all)
     apply (auto elim!: allE)
    done
-
-lemma runnable_coerce_abstract:
-  "\<lbrakk> runnable' st'; thread_state_relation st st' \<rbrakk>
-    \<Longrightarrow> runnable st"
-  by (case_tac st, simp_all)
 
 end
 end
