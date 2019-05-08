@@ -176,6 +176,13 @@ definition decode_page_table_invocation :: "'z::state_ext arch_decoder"
      then doE
        final \<leftarrow> liftE $ is_final_cap (ArchObjectCap cap);
        unlessE final $ throwError RevokeFirst;
+       case cap of
+         PageTableCap pt (Some (asid, _)) \<Rightarrow> doE
+             \<comment> \<open>cannot invoke unmap on top level page table\<close>
+             pt_opt \<leftarrow> liftE $ gets $ vspace_for_asid asid;
+             whenE (pt_opt = Some pt) $ throwError RevokeFirst
+           odE
+       | _ \<Rightarrow> returnOk ();
        returnOk $ InvokePageTable $ PageTableUnmap cap cte
      odE
      else throwError IllegalOperation"
