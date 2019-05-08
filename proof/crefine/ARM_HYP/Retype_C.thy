@@ -173,14 +173,14 @@ lemma memzero_spec:
   apply (hoare_rule HoarePartial.ProcNoRec1)
   apply (clarsimp simp: whileAnno_def)
   apply (rule_tac I1="{t. (ptr_val (s_' s) \<le> ptr_val (s_' s) + ((n_' s) - 1) \<and> ptr_val (s_' s) \<noteq> 0) \<and>
-                             ptr_val (s_' s) + (n_' s - n_' t) = ptr_val (p_' t) \<and>
+                             ptr_val (s_' s) + (n_' s - n_' t) = ptr_val (p___ptr_to_unsigned_char_' t) \<and>
                              n_' t \<le> n_' s \<and>
                              (is_aligned (n_' t) 2) \<and>
                              (is_aligned (n_' s) 2) \<and>
                              (is_aligned (ptr_val (s_' t)) 2) \<and>
                              (is_aligned (ptr_val (s_' s)) 2) \<and>
-                             (is_aligned (ptr_val (p_' t)) 2) \<and>
-                             {ptr_val (p_' t) ..+ unat (n_' t)} \<times> {SIndexVal, SIndexTyp 0}
+                             (is_aligned (ptr_val (p___ptr_to_unsigned_char_' t)) 2) \<and>
+                             {ptr_val (p___ptr_to_unsigned_char_' t) ..+ unat (n_' t)} \<times> {SIndexVal, SIndexTyp 0}
                                  \<subseteq> dom_s (hrs_htd (t_hrs_' (globals t))) \<and>
                              globals t = (globals s)\<lparr> t_hrs_' :=
                              hrs_mem_update (heap_update_list (ptr_val (s_' s))
@@ -191,7 +191,7 @@ lemma memzero_spec:
     apply (clarsimp simp add: hrs_mem_update_def)
 
    apply clarsimp
-   apply (case_tac s, case_tac p)
+   apply (case_tac s, case_tac p___ptr_to_unsigned_char)
 
    apply (subgoal_tac "4 \<le> unat na")
     apply (intro conjI)
@@ -248,9 +248,9 @@ lemma memset_spec:
   apply (clarsimp simp: whileAnno_def)
   apply (rule_tac I1="{t. (ptr_val (s_' s) \<le> ptr_val (s_' s) + ((n_' s) - 1) \<and> ptr_val (s_' s) \<noteq> 0) \<and>
                              c_' t = c_' s \<and>
-                             ptr_val (s_' s) + (n_' s - n_' t) = ptr_val (p_' t) \<and>
+                             ptr_val (s_' s) + (n_' s - n_' t) = ptr_val (p___ptr_to_unsigned_char_' t) \<and>
                              n_' t \<le> n_' s \<and>
-                             {ptr_val (p_' t) ..+ unat (n_' t)} \<times> {SIndexVal, SIndexTyp 0}
+                             {ptr_val (p___ptr_to_unsigned_char_' t) ..+ unat (n_' t)} \<times> {SIndexVal, SIndexTyp 0}
                                 \<subseteq> dom_s (hrs_htd (t_hrs_' (globals t))) \<and>
                              globals t = (globals s)\<lparr> t_hrs_' :=
                              hrs_mem_update (heap_update_list (ptr_val (s_' s))
@@ -281,7 +281,7 @@ lemma memset_spec:
         apply assumption
        apply (erule order_trans [rotated])
        apply (simp add: lt1_neq0)
-      apply (case_tac p, simp add: CTypesDefs.ptr_add_def unat_minus_one field_simps)
+      apply (case_tac p___ptr_to_unsigned_char, simp add: CTypesDefs.ptr_add_def unat_minus_one field_simps)
      apply (metis word_must_wrap word_not_simps(1) linear)
     apply (erule order_trans[rotated])
     apply (clarsimp simp: ptr_val_case split: ptr.splits)
