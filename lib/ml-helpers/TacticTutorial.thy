@@ -448,9 +448,15 @@ ML \<open>
     We usually see `[n]` used with methods that heavily modify proof state in
     ways that are unsafe or hard to predict, such as @{method auto}.
 
-    Let's write a subgoal-targeted tactic version of auto. Before we can do
-    that, we're going to need to understand how to "protect" subgoals. We'll
-    start with a proof state with lots of subgoals.
+    The tactic combinator @{ML Goal.SELECT_GOAL} turns a general tactic into a
+    subgoal-targeted tactic, by restricting which subgoals the tactic can
+    modify (side note: there's also a combinator @{ML Goal.PREFER_GOAL} which
+    merely moves a specific subgoal to the "front").
+
+    We're going to write a subgoal-targeting version of `auto` *without* using
+    `SELECT_GOAL`, to learn how it works. To start, we're going to need to
+    understand how to "protect" subgoals. We'll begin with a proof state with
+    lots of subgoals for us to play with.
   \<close>
   val cterm = @{cterm "A \<or> B \<or> C \<or> D \<or> E \<Longrightarrow> X"};
   val goal =
@@ -532,6 +538,19 @@ lemma "A = B \<and> B = C \<and> C = D \<and> D = E \<and> E = X \<Longrightarro
   apply (tactic \<open>HEADGOAL (REPEAT_ALL_NEW (eresolve_tac @{context} @{thms disjE}))\<close>)
       apply (tactic \<open>subgoal_auto_tac @{context} 3\<close>) (* Only removes "C ==> X" case. *)
      apply (tactic \<open>subgoal_auto_tac @{context} 4\<close>) (* Only removes "E ==> X" case. *)
+  oops
+ML \<open>
+  \<comment> \<open>
+    For reference, here's the version that uses SELECT_GOAL (the main
+    difference is that SELECT_GOAL handles the case where there's only one
+    subgoal).
+  \<close>
+  fun better_subgoal_auto_tac ctxt = Goal.SELECT_GOAL (auto_tac ctxt);
+\<close>
+lemma "A = B \<and> B = C \<and> C = D \<and> D = E \<and> E = X \<Longrightarrow> A \<or> B \<or> C \<or> D \<or> E \<Longrightarrow> X"
+  apply (tactic \<open>HEADGOAL (REPEAT_ALL_NEW (eresolve_tac @{context} @{thms disjE}))\<close>)
+      apply (tactic \<open>better_subgoal_auto_tac @{context} 3\<close>) (* Only removes "C ==> X" case. *)
+     apply (tactic \<open>better_subgoal_auto_tac @{context} 4\<close>) (* Only removes "E ==> X" case. *)
   oops
 
 end
