@@ -9,7 +9,7 @@
  *)
 
 (*
-X64-specific CSpace invariants
+RISCV64-specific CSpace invariants
 *)
 
 theory ArchCSpacePre_AI
