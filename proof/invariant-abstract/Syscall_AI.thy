@@ -648,6 +648,7 @@ context Syscall_AI begin
 
 lemma decode_inv_wf[wp]:
   "\<lbrace>valid_cap cap and invs and cte_wp_at (diminished cap) slot
+           and real_cte_at slot
            and ex_cte_cap_to slot
            and (\<lambda>s::'state_ext state. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)
            and (\<lambda>s. \<forall>r\<in>cte_refs cap (interrupt_irq_node s). ex_cte_cap_to r s)
@@ -726,6 +727,10 @@ lemma lcs_cte_at[wp]:
   apply (simp add: lookup_cap_and_slot_def split_def)
   apply (wp | simp)+
   done
+
+lemma lcs_real_cte_at[wp]:
+  "\<lbrace>valid_objs\<rbrace> lookup_cap_and_slot t xs \<lbrace>\<lambda>rv. real_cte_at (snd rv)\<rbrace>,-"
+  by (wpsimp simp: lookup_cap_and_slot_def split_def)
 
 lemma lec_ex_cap_to [wp]:
   "\<lbrace>invs\<rbrace>
