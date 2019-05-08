@@ -730,63 +730,6 @@ lemma vs_lookup_slot_non_PageTablePTE:
             fastforce split: option.splits))
   done
 
-lemma pt_lookup_from_level_wrp:
-  "\<lbrace>\<lambda>s. \<exists>asid. vspace_for_asid asid s = Some top_level_pt \<and>
-               (\<forall>level slot pte.
-                   vs_lookup_slot level asid vref s = Some (level, slot) \<longrightarrow>
-                   ptes_of s slot = Some pte \<longrightarrow>
-                   is_PageTablePTE pte \<longrightarrow>
-                   pte_ref pte = Some pt \<longrightarrow>
-                   Q slot s) \<and>
-               ((\<forall>level<max_pt_level. vs_lookup_table level asid vref s \<noteq> Some (level, pt)) \<longrightarrow>
-                   E InvalidRoot s)\<rbrace>
-   pt_lookup_from_level max_pt_level top_level_pt vref pt
-   \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
-  apply (wp pt_lookup_from_level_wp)
-  apply (clarsimp simp: vspace_for_asid_def)
-  apply (rule conjI; clarsimp)
-   apply (frule pt_walk_max_level)
-   apply (erule_tac x=level in allE)
-   apply (erule allE, erule impE[where P="f = Some x" for f x])
-    apply (clarsimp simp: vs_lookup_slot_def vs_lookup_table_def in_omonad)
-    apply fastforce
-   apply simp
-  apply (erule allE, erule (1) impE)
-  apply (clarsimp simp: vs_lookup_table_def split: if_split_asm)
-  done
-
-lemma unmap_page_table_not_target:
-  "\<lbrace>\<lambda>s. pt_at pt s \<and> pspace_aligned s \<and> valid_asid_table s \<and> valid_vspace_objs s \<and>
-        unique_table_refs s \<and> valid_vs_lookup s \<and> valid_caps (caps_of_state s) s \<and>
-        0 < asid \<and> vref \<in> user_region \<and> vspace_for_asid asid s \<noteq> Some pt \<rbrace>
-   unmap_page_table asid vref pt
-   \<lbrace>\<lambda>_ s. vs_lookup_target level asid vref s \<noteq> Some (level, pt)\<rbrace>"
-  unfolding unmap_page_table_def
-  apply (wpsimp wp: store_pte_invalid_vs_lookup_target_unmap pt_lookup_from_level_wrp)
-  apply (rule conjI; clarsimp)
-   apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def vs_lookup_table_def
-                   split: if_split_asm;
-          clarsimp simp: vspace_for_asid_def obind_def)
-  apply (rule exI, rule conjI, assumption)
-  apply (rule conjI; clarsimp)
-   apply (fastforce simp: in_omonad)
-  apply (clarsimp simp: vs_lookup_target_def split: if_split_asm)
-   apply (clarsimp simp: pool_for_asid_vs_lookup vs_lookup_slot_def vspace_for_asid_def
-                   split: if_split_asm)
-  apply (rename_tac slot)
-  apply (clarsimp simp: in_omonad)
-  apply (rename_tac pte)
-  apply (prop_tac "0 < level \<and> is_PageTablePTE pte")
-   apply (drule (5) valid_vspace_objs_strong_slotD)
-   apply clarsimp
-   apply (case_tac pte; clarsimp simp: pte_ref_def)
-   apply (clarsimp simp: data_at_def obj_at_def)
-  apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
-  apply (drule (4) vs_lookup_table_step, simp)
-  apply (prop_tac "level - 1 < max_pt_level", erule (1) bit0.minus_one_leq_less)
-  apply fastforce
-  done
-
 lemma unmap_page_table_pool_for_asid[wp]:
   "unmap_page_table asid vref pt \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
   unfolding unmap_page_table_def by (wpsimp simp: pool_for_asid_def)
