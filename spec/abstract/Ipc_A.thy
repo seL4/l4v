@@ -651,32 +651,25 @@ definition
 where
   "end_timeslice canTimeout = do
      ct \<leftarrow> gets cur_thread;
-     it \<leftarrow> gets idle_thread;
-     when (ct \<noteq> it) $ do
-       sc_ptr \<leftarrow> gets cur_sc;
-       csc \<leftarrow> get_sched_context sc_ptr;
+     sc_ptr \<leftarrow> gets cur_sc;
+     csc \<leftarrow> get_sched_context sc_ptr;
+     cur_time \<leftarrow> gets cur_time;
+     ready \<leftarrow> return $ (r_time (refill_hd csc)) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr *)
+     sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills csc); (* refill_sufficient sc_ptr 0 *)
+     tcb \<leftarrow> gets_the $ get_tcb ct;
 
-       cur_time \<leftarrow> gets cur_time;
-       ready \<leftarrow> return $ (r_time (refill_hd csc)) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr *)
-
-       sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills csc); (* refill_sufficient sc_ptr 0 *)
-
-       tcb \<leftarrow> gets_the $ get_tcb ct;
-       if canTimeout \<and> (is_ep_cap (tcb_timeout_handler tcb)) then
-         handle_timeout ct (Timeout (sc_badge csc))
-       else if ready \<and> sufficient then do
-
-       (* C code assets cur_thread not to be in ready q at this point *)
-         d \<leftarrow> thread_get tcb_domain ct;
-         prio \<leftarrow> thread_get tcb_priority ct;
-         queue \<leftarrow> get_tcb_queue d prio;
-         assert (\<not>(ct \<in> set queue));
-
-         tcb_sched_action tcb_sched_append ct (* not_queued & ready & sufficient & runnable *)
-       od
-       else
-         postpone sc_ptr
-    od
+     if canTimeout \<and> (is_ep_cap (tcb_timeout_handler tcb)) then
+       handle_timeout ct (Timeout (sc_badge csc))
+     else if ready \<and> sufficient then do
+     (* C code assets cur_thread not to be in ready q at this point *)
+       d \<leftarrow> thread_get tcb_domain ct;
+       prio \<leftarrow> thread_get tcb_priority ct;
+       queue \<leftarrow> get_tcb_queue d prio;
+       assert (\<not>(ct \<in> set queue));
+       tcb_sched_action tcb_sched_append ct (* not_queued & ready & sufficient & runnable *)
+     od
+     else
+       postpone sc_ptr
   od"
 
 definition
@@ -695,8 +688,9 @@ where
     update_sched_context csc_ptr (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);
     modify $ consumed_time_update (K 0);
     ct \<leftarrow> gets cur_thread;
-    st \<leftarrow> get_thread_state ct;
-    when (runnable st) $ do
+    in_release_q \<leftarrow> gets $ in_release_queue ct;
+    sched \<leftarrow> is_schedulable ct in_release_q;
+    when (sched) $ do
       sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context ct;
       assert (sc_opt = (Some csc_ptr));
       end_timeslice canTimeout;

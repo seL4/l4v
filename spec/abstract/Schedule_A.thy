@@ -148,7 +148,9 @@ where
     cur_th \<leftarrow> gets cur_thread;
     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context cur_th;
     scp \<leftarrow> assert_opt sc_opt;
-    when (scp \<noteq> cur_sc) $ do
+    sc' \<leftarrow> get_sched_context scp;
+
+    when (scp \<noteq> cur_sc \<and> 0 < sc_refill_max sc') $ do
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
       refill_unblock_check scp;
       sc \<leftarrow> get_sched_context scp;
@@ -158,22 +160,13 @@ where
       assert sufficient;
       assert ready   (* asserting ready & sufficient *)
      od;
+
     reprogram \<leftarrow> gets reprogram_timer;
     if reprogram
     then
       commit_time
     else
       rollback_time;
-
-   (* the C code asserts ((ready & sufficient cur_sc) \<or> not in ready q) here *)
-      sc_tcb_opt \<leftarrow> get_sc_obj_ref sc_tcb cur_sc;
-      ct \<leftarrow> assert_opt sc_tcb_opt;
-      d \<leftarrow> thread_get tcb_domain ct;
-      prio \<leftarrow> thread_get tcb_priority ct;
-      queue \<leftarrow> get_tcb_queue d prio;
-      sufficient \<leftarrow> refill_sufficient cur_sc 0;
-      ready \<leftarrow> refill_ready cur_sc;
-      assert ((ready \<and> sufficient) \<or>\<not>(ct \<in> set queue));
 
     modify (\<lambda>s. s\<lparr> cur_sc:= scp \<rparr>)
   od"

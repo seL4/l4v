@@ -423,6 +423,11 @@ text {*
   and switches back to the active thread.
 *}
 
+(* fixme: move *)
+definition
+  kernel_irq_timer :: "irq" where
+  "kernel_irq_timer \<equiv> 0x1B" \<comment> \<open>27 for ARM MCS\<close>
+
 definition
   call_kernel :: "event \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "call_kernel ev \<equiv> do
@@ -430,7 +435,23 @@ definition
            (\<lambda>_. without_preemption $ do
                   irq \<leftarrow> do_machine_op $ getActiveIRQ True;
                   when (irq \<noteq> None) $ do
-                    check_budget;
+                    when (irq = Some (kernel_irq_timer)) $ update_time_stamp;
+                    ct \<leftarrow> gets cur_thread;
+                    in_release_q <- gets $ in_release_queue ct;
+                    schedulable <- is_schedulable ct in_release_q;
+                    if schedulable then do
+                      check_budget;
+                      return ()
+                    od
+                    else do
+                      csc \<leftarrow> gets cur_sc;
+                      sc \<leftarrow> get_sched_context csc;
+                      when (0 < sc_refill_max sc) $ do
+                        consumed \<leftarrow> gets consumed_time;
+                        capacity \<leftarrow> refill_capacity csc consumed;
+                        charge_budget capacity consumed True
+                      od
+                    od;
                     handle_interrupt (the irq)
                   od
                 od);

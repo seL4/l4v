@@ -513,27 +513,29 @@ where
     consumed \<leftarrow> gets consumed_time;
     csc \<leftarrow> gets cur_sc;
     sc \<leftarrow> get_sched_context csc;
-    when (0 < consumed) $ do
-      curtime \<leftarrow> gets cur_time;
-      sufficient \<leftarrow> return $ sufficient_refills consumed (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
-      ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; (* refill_ready sc_ptr *)
-      assert sufficient;
-      assert ready;   (* asserting ready & sufficient *)
-      robin \<leftarrow> return (sc_period sc = 0); (* is_round_robin csc;*)
-      if robin then
-        let new_hd = ((refill_hd sc) \<lparr> r_time := r_time (refill_hd sc) - consumed \<rparr>);
-            new_tl = ((refill_tl sc) \<lparr> r_time := r_time (refill_tl sc) + consumed \<rparr>) in
-        set_refills csc (new_hd # [new_tl])
+    when (0 < sc_refill_max sc) $ do
+      when (0 < consumed) $ do
+        curtime \<leftarrow> gets cur_time;
+        sufficient \<leftarrow> return $ sufficient_refills consumed (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
+        ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; (* refill_ready sc_ptr *)
+        assert sufficient;
+        assert ready;   (* asserting ready & sufficient *)
+        robin \<leftarrow> return (sc_period sc = 0); (* is_round_robin csc;*)
+        if robin then
+          let new_hd = ((refill_hd sc) \<lparr> r_time := r_time (refill_hd sc) - consumed \<rparr>);
+              new_tl = ((refill_tl sc) \<lparr> r_time := r_time (refill_tl sc) + consumed \<rparr>) in
+          set_refills csc (new_hd # [new_tl])
       else refill_split_check consumed;
-      sc2 \<leftarrow> get_sched_context csc;
-      curtime2 \<leftarrow> gets cur_time;
-      sufficient2 \<leftarrow> return $ sufficient_refills consumed (sc_refills sc2); (* refill_sufficient sc_ptr 0 *)
-      ready2 \<leftarrow> return $ (r_time (refill_hd sc2)) \<le> curtime2 + kernelWCET_ticks; (* refill_ready sc_ptr *)
-      assert sufficient2;
-      assert ready2   (* asserting ready & sufficient again *)
+        sc2 \<leftarrow> get_sched_context csc;
+        curtime2 \<leftarrow> gets cur_time;
+        sufficient2 \<leftarrow> return $ sufficient_refills consumed (sc_refills sc2); (* refill_sufficient sc_ptr 0 *)
+        ready2 \<leftarrow> return $ (r_time (refill_hd sc2)) \<le> curtime2 + kernelWCET_ticks; (* refill_ready sc_ptr *)
+        assert sufficient2;
+        assert ready2  (* asserting ready & sufficient again *)
+      od;
+      update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>)
     od;
-    commit_domain_time; (***)
-    update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);
+    commit_domain_time;
     modify (\<lambda>s. s\<lparr>consumed_time := 0\<rparr> )
   od"
 
@@ -559,7 +561,7 @@ where
     prev_time \<leftarrow> gets cur_time;
     cur_time' \<leftarrow> do_machine_op getCurrentTime;
     modify (\<lambda>s. s\<lparr> cur_time := cur_time' \<rparr>);
-    modify (\<lambda>s. s\<lparr> consumed_time := cur_time' - prev_time \<rparr>)
+    modify (\<lambda>s. s\<lparr> consumed_time := consumed_time s + cur_time' - prev_time \<rparr>)
   od"
 
 text {* Suspend a thread, cancelling any pending operations and preventing it
