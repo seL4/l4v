@@ -1308,6 +1308,8 @@ lemma decode_pt_inv_map_wf[wp]:
   apply (rule conjI, clarsimp)
   apply (drule valid_table_caps_pdD, clarsimp)
   apply (clarsimp simp: in_omonad)
+  apply (rule_tac x="args!0" in exI)
+  apply (simp add: vref_for_level_def)
   done
 
 lemma decode_page_table_invocation_wf[wp]:
