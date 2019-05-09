@@ -181,7 +181,6 @@ lemmas user_window_def = user_window_2_def
 section "Wellformed Addresses and ASIDs"
 
 (* Note: no alignment check as in other architectures, because we would need to know the PT level. *)
-(* FIXME RISCV: should simplify to vref \<le> canonical_user; also could demand is_aligned pt_bits (real alignment might be higher) *)
 definition wellformed_mapdata :: "asid \<times> vspace_ref \<Rightarrow> bool" where
   "wellformed_mapdata \<equiv> \<lambda>(asid, vref). 0 < asid \<and> vref \<in> user_region"
 
@@ -358,7 +357,6 @@ definition vref_for_level :: "vspace_ref \<Rightarrow> vm_level \<Rightarrow> vs
   "vref_for_level vref level = vref && ~~mask (pt_bits_left level)"
 
 (* Mask out asid_low_bits if a lookup only goes to asid_pool_level *)
-(* FIXME RISCV: currently unused *)
 definition asid_for_level :: "asid \<Rightarrow> vm_level \<Rightarrow> asid" where
   "asid_for_level asid level \<equiv>
      if level = asid_pool_level then asid && ~~mask asid_low_bits else asid"
@@ -384,8 +382,6 @@ abbreviation
   "vs_lookup_pages s \<equiv> \<lambda>level asid vref. vs_lookup_target level asid vref s"
 
 (* Walk page table until we get to a slot or run out of levels; return obj_ref in slot. *)
-(* FIXME RISCV: to consider: returning the type of ref along with the ref, so that translate_address
-   can assert that it's not getting a PTE ref *)
 definition pt_lookup_target ::
   "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<Rightarrow> pte option) \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
@@ -1094,22 +1090,6 @@ lemma aobj_at_default_arch_cap_valid:
 
 lemmas aobj_ref_default = aobj_ref_arch_cap
 
-lemma valid_validate_vm_rights[simp]:
-  "validate_vm_rights rs \<in> valid_vm_rights"
-and validate_vm_rights_subseteq[simp]:
-  "validate_vm_rights rs \<subseteq> rs"
-and validate_vm_rights_simps[simp]:
-  "validate_vm_rights vm_read_write = vm_read_write"
-  "validate_vm_rights vm_read_only = vm_read_only"
-  "validate_vm_rights vm_kernel_only = vm_kernel_only"
-  by (simp_all add: validate_vm_rights_def valid_vm_rights_def
-                    vm_read_write_def vm_read_only_def vm_kernel_only_def)
-
-lemma validate_vm_rights_eq[simp]:
-  "rs \<in> valid_vm_rights \<Longrightarrow> validate_vm_rights rs = rs"
-  by (auto simp add: validate_vm_rights_def valid_vm_rights_def
-                     vm_read_write_def vm_read_only_def vm_kernel_only_def)
-
 lemma acap_rights_update_id [intro!, simp]:
   "wellformed_acap cap \<Longrightarrow> acap_rights_update (acap_rights cap) cap = cap"
   unfolding acap_rights_update_def
@@ -1428,38 +1408,14 @@ lemma translate_address_equal_top_slot:
   "ptes (pt_slot_offset max_pt_level pt_ptr vptr) =
      ptes (pt_slot_offset max_pt_level pt_ptr' vptr)
    \<Longrightarrow> translate_address pt_ptr vptr ptes = translate_address pt_ptr' vptr ptes"
-  apply (simp add: translate_address_def obind_def oassert_def ofail_def oreturn_def
-                   pt_lookup_slot_from_level_def pt_lookup_target_def
+  supply if_split_asm[split] opt_map_def[simp]
+  apply (simp add: translate_address_def obind_def pt_lookup_slot_from_level_def pt_lookup_target_def
             split: option.splits)
   apply (rule conjI; clarsimp)
-   apply (drule (1) pt_walk_equal_top_slot_None)
-   apply simp
+   apply (fastforce dest: pt_walk_equal_top_slot_None)
   apply (rule conjI; clarsimp)
-   apply (frule (1) pt_walk_equal_top_slot_Some)
-   apply (fastforce simp: opt_map_def split: if_split_asm option.splits)
-  apply (rule conjI; clarsimp)
-   apply (drule sym)
-   apply (frule (1) pt_walk_equal_top_slot_Some)
-   apply (fastforce simp: opt_map_def split: if_split_asm)
-  apply (rule conjI; clarsimp)
-   apply (drule sym)
-   apply (frule (1) pt_walk_equal_top_slot_Some)
-   apply (fastforce simp: opt_map_def split: if_split_asm)
-  apply (rule conjI; clarsimp)
-   apply (drule sym)
-   apply (frule (1) pt_walk_equal_top_slot_Some)
-   apply (fastforce simp: opt_map_def split: if_split_asm)
-  apply (rule conjI; clarsimp)
-   apply (drule sym)
-   apply (frule (1) pt_walk_equal_top_slot_Some)
-   apply (fastforce simp: opt_map_def split: if_split_asm)
-  apply (rule conjI; clarsimp)
-   apply (drule sym)
-   apply (frule (1) pt_walk_equal_top_slot_Some)
-   apply (fastforce simp: opt_map_def split: if_split_asm)
-  (* FIXME RISCV: clean up, this is a bit repetitive *)
-  apply (frule (1) pt_walk_equal_top_slot_Some)
-  apply (fastforce elim!: opt_mapE split: if_split_asm)
+   apply (frule (1) pt_walk_equal_top_slot_Some, fastforce)
+  apply (rule conjI; clarsimp; frule (1) pt_walk_equal_top_slot_Some[OF sym]; fastforce)
   done
 
 lemmas min_max_pt_level[simp] = min_absorb2[where x=max_pt_level]
