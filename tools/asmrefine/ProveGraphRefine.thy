@@ -282,11 +282,25 @@ lemma array_index_update_If:
 \<comment> \<open>Of the assumptions, only pos is needed to prove the conclusion.
     The guard assumptions are there to ensure that when used as a simp rule,
     the RHS array pointer gets an appropriate type.\<close>
-lemma ptr_safe_ptr_add_array_ptr_index:
+lemma ptr_safe_ptr_add_array_ptr_index_int:
+  assumes guard: "ptr_safe (Ptr p::('a['b]) ptr) htd" (* "nat i < CARD('b)" *)
+  assumes pos: "0 \<le> i"
+  shows "(Ptr p::'a::c_type ptr) +\<^sub>p i = array_ptr_index (Ptr p::('a['b::finite]) ptr) False (nat i)"
+  using pos by (simp add: array_ptr_index_def)
+
+lemma ptr_safe_ptr_add_array_ptr_index_sint:
   assumes guard: "ptr_safe (Ptr p::('a['b]) ptr) htd" "i <s of_nat CARD('b)"
   assumes pos: "0 <=s i"
   shows "(Ptr p::'a::c_type ptr) +\<^sub>p sint i = array_ptr_index (Ptr p::('a['b::finite]) ptr) False (unat i)"
   using pos by (simp add: array_ptr_index_def int_unat sint_eq_uint word_sle_msb_le)
+
+lemmas ptr_safe_ptr_add_array_ptr_index =
+  ptr_safe_ptr_add_array_ptr_index_int
+  ptr_safe_ptr_add_array_ptr_index_sint
+
+lemma ptr_safe_Array_element_0:
+  "ptr_safe (PTR('a::mem_type['b::finite]) p) htd \<Longrightarrow> ptr_safe (PTR('a) p) htd"
+  by (drule ptr_safe_Array_element[where coerce=False and n=0]; simp add: array_ptr_index_def)
 
 ML {*
 fun preserve_skel_conv consts arg_conv ct = let
@@ -444,10 +458,12 @@ fun prove_ptr_safe reason ctxt = DETERM o
                 @{thms array_ptr_index_coerce}
             )
         THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps
-            @{thms word_sle_msb_le word_sless_msb_less})
+            @{thms ptr_safe_ptr_add_array_ptr_index
+                   word_sle_msb_le word_sless_msb_less})
         THEN_ALL_NEW asm_simp_tac (ctxt addsimps
             @{thms ptr_safe_field[unfolded typ_uinfo_t_def]
                    ptr_safe_Array_element unat_less_helper
+                   ptr_safe_Array_element_0
                    h_t_valid_Array_element' h_t_valid_field})
         THEN_ALL_NEW except_tac ctxt
             ("prove_ptr_safe: failed for " ^ reason)
