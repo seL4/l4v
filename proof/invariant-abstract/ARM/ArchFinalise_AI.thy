@@ -533,7 +533,8 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
         \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)
         \<and> (is_arch_cap cap \<longrightarrow> pspace_aligned s \<and>
                                valid_vspace_objs s \<and>
-                               valid_arch_state s)\<rbrace>
+                               valid_arch_state s \<and>
+                               valid_arch_caps s)\<rbrace>
      finalise_cap cap x
    \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
   apply (cases "is_arch_cap cap")
