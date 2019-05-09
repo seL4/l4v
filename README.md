@@ -213,6 +213,25 @@ since Google repo will overwrite this link when you synchronise repositories
 and Isabelle upgrades will have to be performed manually as development
 progresses.
 
+### JEdit
+We provide a JEdit macro that is very useful when working with large theory
+files, **goto-error**, which moves the cursor to the first error in the file.
+
+To install the macro, run the following commands in the directory
+`verification/l4v/`:
+```bash
+mkdir -p ~/.isabelle/jedit/macros
+cp misc/jedit/macros/goto-error.bsh ~/.isabelle/jedit/macros/.
+```
+
+You can add keybindings for this macro in the usual way, by going to
+`Utilities -> Global Options -> jEdit -> Shortcuts`.
+
+Additionally, our fork of Isabelle/jEdit has an updated indenter which is more
+proof-context aware than the 'original' indenter. Pressing `ctrl+i` while some
+`apply`-script text is selected should auto-indent the script while respecting
+subgoal depth and maintaining the relative indentation of multi-line `apply`
+statements.
 
 Running the Proofs
 ------------------
