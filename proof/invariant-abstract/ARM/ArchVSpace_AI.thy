@@ -417,12 +417,8 @@ lemma invalidate_asid_entry_arch_state [wp]:
   "\<lbrace>valid_arch_state\<rbrace> invalidate_asid_entry asid \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   apply (simp add: invalidate_asid_entry_def invalidate_asid_def invalidate_hw_asid_entry_def)
   apply (wp load_hw_asid_wp)
-  apply (clarsimp simp: valid_arch_state_def simp del: fun_upd_apply)
-  apply (rule conjI)
-   apply (clarsimp simp: is_inv_None_upd comp_upd_simp)
-  apply (simp add: None_upd_eq comp_upd_simp)
+  apply (clarsimp simp: valid_arch_state_def is_inv_None_upd comp_upd_simp simp del: fun_upd_apply)
   done
-
 
 lemma flush_space_asid_map[wp]:
   "\<lbrace>valid_asid_map\<rbrace> flush_space space \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
@@ -455,7 +451,7 @@ lemma invalidate_asid_entry_asid_map [wp]:
   "\<lbrace>valid_asid_map\<rbrace> invalidate_asid_entry asid \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
   apply (simp add: invalidate_asid_entry_def invalidate_asid_def invalidate_hw_asid_entry_def)
   apply (wp load_hw_asid_wp)
-  apply (clarsimp simp: valid_asid_map_def simp del: fun_upd_apply)
+  apply (clarsimp simp: valid_asid_map_def simp del: fun_upd_apply None_upd_eq)
   apply (clarsimp simp: vspace_at_asid_def vs_lookup_arch_update)
   apply blast
   done
@@ -476,7 +472,7 @@ lemma invalidate_asid_entry_invalidates:
               arm_asid_map (arch_state s) asida = None\<rbrace>"
   apply (simp add: invalidate_asid_entry_def invalidate_asid_def invalidate_hw_asid_entry_def)
   apply (wp load_hw_asid_wp)
-  apply clarsimp
+  apply (clarsimp simp del: None_upd_eq)
   apply (rule drop_imp)
   apply (clarsimp simp: valid_arch_state_def valid_asid_table_def)
   apply (drule_tac x="asid_high_bits_of asid" and y="asid_high_bits_of asida" in inj_onD)
@@ -553,11 +549,10 @@ lemma invalidate_asid_entry_invs [wp]:
                   simp del: fun_upd_apply)
   apply (rule conjI)
    apply (clarsimp simp: comp_upd_simp is_inv_None_upd)
-   apply (clarsimp simp: valid_asid_map_def valid_machine_state_def)
-   apply (rule conjI)
-    apply (erule order_trans[rotated], clarsimp)
-   apply (simp add: pd_at_asid_arch_up')
-  apply (clarsimp simp: comp_upd_simp None_upd_eq)
+  apply (clarsimp simp: valid_asid_map_def valid_machine_state_def)
+  apply (rule conjI)
+   apply (erule order_trans[rotated], clarsimp)
+  apply (simp add: pd_at_asid_arch_up')
   done
 
 lemmas cleanCaches_PoU_irq_masks = no_irq[OF no_irq_cleanCaches_PoU]

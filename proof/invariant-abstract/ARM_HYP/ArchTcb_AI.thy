@@ -247,6 +247,7 @@ lemma tc_invs[Tcb_AI_asms]:
   apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
   apply (rule hoare_vcg_precond_imp)
    apply wp
+      (* takes long: *)
       apply ((simp only: simp_thms
         | rule wp_split_const_if wp_split_const_if_R
                    hoare_vcg_all_lift_R
