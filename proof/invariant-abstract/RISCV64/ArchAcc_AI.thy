@@ -2543,6 +2543,19 @@ lemma store_pte_InvalidPTE_valid_vs_lookup:
     apply (drule valid_vs_lookupD; assumption?; clarsimp)
   done
 
+lemma table_index_slot_offset_inj:
+  "\<lbrakk> table_index (pt_slot_offset level (table_base p) vref) = table_index p;
+     level \<le> max_pt_level; is_aligned p pte_bits \<rbrakk>
+   \<Longrightarrow> pt_slot_offset level (table_base p) vref = p"
+  apply (simp add: pt_slot_offset_def is_aligned_nth)
+  apply (prop_tac "table_base p && (pt_index level vref << pte_bits) = 0")
+   apply word_bitwise
+   apply (simp add: bit_simps pt_index_def word_size)
+  apply (simp add: word_plus_and_or_coroll)
+  apply word_bitwise
+  apply (drule max_pt_level_enum)
+  by (auto simp: pt_bits_left_def pt_index_def word_size bit_simps)
+
 lemma store_pte_non_InvalidPTE_valid_vs_lookup:
   "\<lbrace> valid_vs_lookup
      and pspace_aligned and valid_vspace_objs and valid_asid_table and unique_table_refs
@@ -2550,6 +2563,7 @@ lemma store_pte_non_InvalidPTE_valid_vs_lookup:
      and (\<lambda>s. \<forall>level asid vref.
                  vs_lookup_table level asid vref s = Some (level, table_base p)
                       \<longrightarrow> vref \<in> user_region
+                      \<longrightarrow> pt_slot_offset level (table_base p) vref = p
                       \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some empty_pt)
                          \<and> the (pte_ref pte) \<noteq> table_base p
                          \<and> (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
@@ -2615,6 +2629,7 @@ lemma store_pte_non_InvalidPTE_valid_vs_lookup:
    apply (prop_tac "is_aligned table_ptr pt_bits")
     apply (fastforce elim!: vs_lookup_table_is_aligned)
    apply (clarsimp simp: in_omonad fun_upd_apply pte_of_def split: if_splits)
+     apply (drule (2) table_index_slot_offset_inj, simp)
     (* miss on pte *)
     apply (prop_tac "level' = level")
      apply (drule no_loop_vs_lookup_table; simp?; blast)
@@ -2698,8 +2713,11 @@ lemma store_pte_non_InvalidPTE_valid_vs_lookup:
      precondition, we are not creating a loop *)
   apply (drule_tac pt=empty_pt in pt_walk_non_empty_ptD; simp add: in_omonad fun_upd_apply)
    apply (cases pte; clarsimp simp: pptr_from_pte_def)
+   apply (drule (2) table_index_slot_offset_inj, simp)
   apply (clarsimp simp: in_omonad pte_of_def)
-  apply (cases pte; clarsimp simp: pptr_from_pte_def in_omonad fun_upd_apply)
+  apply (cases pte; clarsimp)
+  apply (fastforce simp: pptr_from_pte_def in_omonad fun_upd_apply
+                   intro!: table_index_slot_offset_inj)
   done
 
 (* NOTE: should be able to derive the (pte_ref pte) \<noteq> table_base p) from
@@ -2847,6 +2865,7 @@ lemma store_pte_valid_vs_lookup:
               \<longrightarrow> (\<forall>level asid vref.
                      vs_lookup_table level asid vref s = Some (level, table_base p)
                      \<longrightarrow> vref \<in> user_region
+                     \<longrightarrow> pt_slot_offset level (table_base p) vref = p
                      \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some empty_pt)
                          \<and> the (pte_ref pte) \<noteq> table_base p
                          \<and> (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
@@ -2869,6 +2888,7 @@ lemma store_pte_valid_arch_caps:
               \<longrightarrow> (\<forall>level asid vref.
                      vs_lookup_table level asid vref s = Some (level, table_base p)
                      \<longrightarrow> vref \<in> user_region
+                     \<longrightarrow> pt_slot_offset level (table_base p) vref = p
                      \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some empty_pt)
                          \<and> the (pte_ref pte) \<noteq> table_base p
                          \<and> (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
@@ -2895,6 +2915,7 @@ lemma store_pte_invs:
               \<longrightarrow> (\<forall>level asid vref.
                      vs_lookup_table level asid vref s = Some (level, table_base p)
                      \<longrightarrow> vref \<in> user_region
+                     \<longrightarrow> pt_slot_offset level (table_base p) vref = p
                      \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some empty_pt)
                          \<and> the (pte_ref pte) \<noteq> table_base p
                          \<and> (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
