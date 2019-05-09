@@ -160,6 +160,7 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
            old_pte \<leftarrow> liftE $ get_pte slot;
            whenE (pt_bits_left level = pageBits \<or> old_pte \<noteq> InvalidPTE) $ throwError DeleteFirst;
+           unlessE (is_aligned vaddr (pt_bits_left level)) $ throwError AlignmentError;
            pte \<leftarrow> returnOk $ PageTablePTE (ucast (addrFromPPtr p >> pageBits)) {};
            cap' <- returnOk $ PageTableCap p $ Some (asid, vaddr);
            returnOk $ InvokePageTable $ PageTableMap cap' cte pte slot
