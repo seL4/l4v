@@ -250,12 +250,6 @@ lemma pte_range_interD:
   apply (case_tac pte',simp_all split:if_splits)
   done
 
-lemma mask_pt_bits_shift_ucast_align[simp]: (* FIXME RISCV: 4? *)
-  "is_aligned (ucast (p && mask pt_bits >> pte_bits)::pt_index) 4 =
-   is_aligned ((p::machine_word) >> pte_bits) 4"
-  by (clarsimp simp: is_aligned_mask mask_def bit_simps) word_bitwise
-
-
 lemma perform_page_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and valid_page_inv pinv\<rbrace>
         perform_page_invocation pinv \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
