@@ -1181,7 +1181,8 @@ lemma decode_fr_inv_map_wf[wp]:
   apply (frule is_aligned_pageBitsForSize_table_size)
   apply (rule conjI)
    apply (clarsimp simp: same_ref_def make_user_pte_def ptrFromPAddr_addr_from_ppn)
-   apply (drule (1) vs_lookup_slot_unique_level; clarsimp)
+   apply (rule_tac x=level in exI)
+   apply (rule_tac x="args!0" in exI)
    apply (simp add: vmsz_aligned_vref_for_level)
   apply (rule conjI)
    apply (clarsimp simp: valid_slots_def make_user_pte_def wellformed_pte_def
@@ -1259,7 +1260,8 @@ lemma decode_fr_inv_remap_wf[wp]:
   apply (rule exI)+
   apply (rule conjI, assumption)
   apply (clarsimp simp: same_ref_def make_user_pte_def ptrFromPAddr_addr_from_ppn)
-  apply (drule (1) vs_lookup_slot_unique_level; clarsimp)
+  apply (rule_tac x=level in exI)
+  apply (rule_tac x="vref" in exI)
   apply (simp add: vmsz_aligned_vref_for_level)
   done
 
