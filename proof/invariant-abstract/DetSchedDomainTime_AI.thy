@@ -383,7 +383,8 @@ lemma call_kernel_domain_list_inv_det_ext:
   unfolding call_kernel_def
   apply (wp)
    apply (simp add: schedule_def)
-   apply (wpsimp wp: without_preemption_wp simp: if_apply_def2)+
+   apply (wpsimp wp: without_preemption_wp is_schedulable_wp hoare_vcg_all_lift hoare_drop_imps
+               simp: if_apply_def2)+
   done
 
 end

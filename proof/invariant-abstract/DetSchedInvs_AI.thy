@@ -1058,8 +1058,8 @@ lemmas valid_idle_etcb_lift = valid_idle_etcb_lift_pre_conj[where R = \<top>, si
 lemma valid_sched_lift_pre_conj:
   assumes a: "\<And>Q t. \<lbrace>\<lambda>s. (st_tcb_at Q t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. (st_tcb_at Q t s)\<rbrace>"
   assumes a': "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
-  assumes r: "\<And>P t. \<lbrace>\<lambda>s. P (budget_ready t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (budget_ready t s)\<rbrace>"
-  assumes s: "\<And>P t. \<lbrace>\<lambda>s. P (budget_sufficient t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (budget_sufficient t s)\<rbrace>"
+  assumes r: "\<And>t. \<lbrace>\<lambda>s. budget_ready t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_ready t s\<rbrace>"
+  assumes s: "\<And>t. \<lbrace>\<lambda>s. budget_sufficient t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_sufficient t s\<rbrace>"
   assumes c: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T t s)\<rbrace>"
   assumes d: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
   assumes e: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"

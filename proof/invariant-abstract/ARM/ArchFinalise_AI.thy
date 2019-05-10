@@ -817,6 +817,14 @@ lemma sched_context_unbind_yield_from_not_live:
   apply (auto simp: obj_at_def live_def live_sc_def)
   done
 
+lemma set_sc_rm_not_live:
+  "\<lbrace>obj_at (Not \<circ> live) sc\<rbrace>
+        set_sc_obj_ref sc_refill_max_update zz 0
+   \<lbrace>\<lambda>yc a. obj_at (Not \<circ> live) sc a\<rbrace>"
+  apply (wpsimp simp: set_sc_obj_ref_def wp: update_sched_context_wp)
+  apply (auto simp: obj_at_def live_def live_sc_def)
+  done
+
 method hammer = ((clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
                                      ran_tcb_cap_cases is_cap_simps
                                      cap_range_def prepare_thread_delete_def
@@ -965,13 +973,14 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
         \<comment> \<open>domain\<close>
         apply ((wpsimp | hammer)+)[1]
        \<comment> \<open>schedcontext\<close>
-       apply ((wpsimp wp: sched_context_unbind_ntfn_unbinds
+        apply ((wpsimp wp: sched_context_unbind_ntfn_unbinds
                           sched_context_unbind_all_tcbs_unbinds
                           finalise_cap_replaceable_helper
                     simp: no_cap_to_idle_sc_ptr
         | hammer
-        | wp_once hoare_drop_imps, wp_once hoare_vcg_conj_lift,
-          wp_once sched_context_unbind_yield_from_not_live[unfolded o_def])+)[1]
+        | wp_once sched_context_unbind_yield_from_not_live[unfolded o_def]
+        | wp_once hoare_drop_imps; wp_once hoare_vcg_conj_lift,
+          wp_once set_sc_rm_not_live[unfolded o_def])+)[1]
       \<comment> \<open>schedcontrol\<close>
       apply ((wpsimp | hammer)+)[1]
      \<comment> \<open>irqcontrol\<close>
@@ -1032,9 +1041,9 @@ lemma (* cap_delete_one_invs *) [Finalise_AI_asms,wp]:
   "\<lbrace>invs\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
   apply (rule hoare_pre)
-  apply (wp empty_slot_invs get_cap_wp)
-  apply clarsimp
-  apply (drule cte_wp_at_valid_objs_valid_cap, fastforce+)
+  apply (wp empty_slot_invs get_cap_wp fast_finalise_invs)
+  apply (clarsimp; intro conjI; simp?)
+   apply (drule cte_wp_at_valid_objs_valid_cap, fastforce+)
   done
 
 end
@@ -1671,7 +1680,7 @@ lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
                         sched_context_unbind_yield_from_invs
                     | simp add: o_def split del: if_split cong: if_cong
                     | wpc
-                    | solves \<open>clarsimp\<close>
+                    | solves \<open>clarsimp dest!: no_cap_to_idle_sc_ptr\<close>
                     | solves \<open> clarsimp,
                                (frule (2) reply_tcb_state_refs[OF _ invs_valid_objs invs_sym_refs],
                                 fastforce simp: obj_at_def, clarsimp),

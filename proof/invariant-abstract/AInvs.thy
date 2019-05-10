@@ -47,7 +47,8 @@ lemma akernel_invs:
      (call_kernel e)
    \<lbrace>\<lambda>rv s. (invs s \<and> (ct_running s \<or> ct_idle s))\<rbrace>"
   unfolding call_kernel_def
-  apply (wpsimp wp: activate_invs check_budget_invs)
+  apply (wpsimp wp: activate_invs check_budget_invs charge_budget_invs is_schedulable_wp
+                    update_time_stamp_invs hoare_drop_imps hoare_vcg_all_lift hoare_vcg_if_lift2)
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 

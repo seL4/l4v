@@ -1528,7 +1528,7 @@ crunches update_time_stamp
   for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   and ct_in_state[wp]: "ct_in_state P"
-  and pred_tcb_at[wp]: "pred_tcb_at p P t"
+  and pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at p P t s)"
   and pred_tcb_at_ct[wp]: "\<lambda>s. pred_tcb_at p P (cur_thread s) s"
 
 crunches thread_set
@@ -1782,14 +1782,8 @@ lemma do_nbrecv_failed_transfer_state_refs_of[wp]:
   done
 
 lemma fast_finalise_sym_refs:
-  "\<lbrace>invs\<rbrace> fast_finalise cap final \<lbrace>\<lambda>y s. sym_refs (state_refs_of s)\<rbrace>"
-  apply (cases cap;
-         (solves \<open>simp\<close>)?)
-      apply (wp cancel_all_signals_invs cancel_all_ipc_invs unbind_maybe_notification_invs
-                cancel_ipc_invs sched_context_unbind_yield_from_invs get_simple_ko_wp
-             | strengthen invs_sym_refs
-             | clarsimp)+
-  done
+  "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> fast_finalise cap final \<lbrace>\<lambda>y s. sym_refs (state_refs_of s)\<rbrace>"
+  by (strengthen invs_sym_refs, rule fast_finalise_invs)
 
 crunch state_refs_of[wp]: empty_slot "\<lambda>s. P (state_refs_of s)"
   (wp: crunch_wps simp: crunch_simps interrupt_update.state_refs_update)

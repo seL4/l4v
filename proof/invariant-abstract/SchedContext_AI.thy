@@ -655,6 +655,14 @@ lemma sc_consumed_update_eq:
   "(\<lambda>sc. sc_consumed_update (\<lambda>v. v + x) sc) = (\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed sc + x\<rparr>)"
   by auto
 
+lemma update_sched_context_domain_time_consumed_time[wp]:
+  "update_sched_context csc f \<lbrace>\<lambda>s. P (domain_time s)  (consumed_time s)\<rbrace>"
+   by (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
+
+lemma cur_sc_tcb_domain_time[simp]:
+  "cur_sc_tcb (s\<lparr>domain_time := k\<rparr>) = cur_sc_tcb s"
+  by (clarsimp simp: cur_sc_tcb_def)
+
 lemma commit_times_invs_helper:
   " \<lbrace>(\<lambda>s. invs s \<and>
              consumed_time s = consumed \<and>
@@ -663,18 +671,16 @@ lemma commit_times_invs_helper:
           xa <- gets cur_time;
           xb <- assert (sufficient_refills consumed (sc_refills x));
           y <- assert (r_time (refill_hd x) \<le> xa + kernelWCET_ticks);
+          y <- update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed sc + consumed\<rparr>);
           y <- commit_domain_time;
-          y <-
-          update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed sc + consumed\<rparr>);
           modify (consumed_time_update (\<lambda>_. 0))
        od
        \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                        consumed_time_update_arch.state_refs_update
                       commit_domain_time_def sc_consumed_update_eq[symmetric]
-                  wp: valid_irq_node_typ
+                  wp: valid_irq_node_typ hoare_vcg_imp_lift'
                       update_sched_context_valid_objs_same_eq)
-  apply (auto simp: cur_sc_tcb_def)
   done
 
 lemma commit_time_invs:
@@ -684,16 +690,20 @@ lemma commit_time_invs:
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (case_tac "0 < consumed"; clarsimp split del: if_split simp: bind_assoc)
-   apply (wpsimp wp: commit_times_invs_helper hoare_vcg_ex_lift)
-   apply (clarsimp simp: obj_at_def is_sc_obj_def)
-   apply (frule invs_valid_objs)
-   apply (frule (1) valid_sched_context_size_objsI, simp)
+  apply (case_tac "0 < sc_refill_max sc"; clarsimp split del: if_split simp: bind_assoc)
+   apply (case_tac "0 < consumed"; clarsimp split del: if_split simp: bind_assoc)
+    apply (wpsimp wp: commit_times_invs_helper hoare_vcg_ex_lift)
+    apply (clarsimp simp: obj_at_def is_sc_obj_def)
+    apply (frule invs_valid_objs)
+    apply (frule (1) valid_sched_context_size_objsI, simp)
+   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
+                       consumed_time_update_arch.state_refs_update
+                       commit_domain_time_def sc_consumed_update_eq[symmetric]
+                   wp: valid_irq_node_typ update_sched_context_valid_objs_same_eq
+                       hoare_vcg_imp_lift')
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                       consumed_time_update_arch.state_refs_update
-                      commit_domain_time_def sc_consumed_update_eq[symmetric]
-                  wp: valid_irq_node_typ update_sched_context_valid_objs_same_eq)
-  apply (auto simp: cur_sc_tcb_def)
+                      commit_domain_time_def)
   done
 
 crunches switch_sched_context

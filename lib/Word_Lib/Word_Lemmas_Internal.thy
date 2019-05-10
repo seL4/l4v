@@ -1088,6 +1088,10 @@ lemma multi_lessD:
 
 lemmas unat_le_helper = word_unat_less_le
 
+lemma unat_of_nat_closure:
+  "unat (of_nat x) \<le> x"
+  by (rule word_unat_less_le, simp)
+
 lemmas word_of_nat_plus = of_nat_add[where 'a="'a :: len word"]
 lemmas word_of_nat_minus = of_nat_diff[where 'a="'a :: len word"]
 

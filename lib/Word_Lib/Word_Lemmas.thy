@@ -4731,6 +4731,10 @@ lemma less_1_helper:
   "n \<le> m \<Longrightarrow> (n - 1 :: int) < m"
   by arith
 
+lemma le_minus_1_lessD:
+  "0 < (n::nat) \<Longrightarrow> (m \<le> n - 1 \<Longrightarrow> m < n)"
+  by (induct n; simp)
+
 lemma div_power_helper:
   "\<lbrakk> x \<le> y; y < len_of TYPE('a) \<rbrakk> \<Longrightarrow> (2 ^ y - 1) div (2 ^ x :: 'a::len word) = 2 ^ (y - x) - 1"
   apply (rule word_uint.Rep_eqD)
@@ -5726,5 +5730,12 @@ lemma word_ctz_not_minus_1:
   done
 
 lemmas word_ctz_not_minus_1_32 = word_ctz_not_minus_1[where 'a=32, simplified]
+
+lemma no_plus_overflow_unat_size2:
+  "unat x + unat y \<le> 2^LENGTH('a) - 1 \<Longrightarrow>
+   x \<le> x + (y::('a::len word))"
+  apply (subst no_plus_overflow_unat_size)
+  by (metis One_nat_def diff_less le_less_trans lessI nat_zero_less_power_iff no_olen_add_nat
+            no_plus_overflow_unat_size semiring_norm(118))
 
 end

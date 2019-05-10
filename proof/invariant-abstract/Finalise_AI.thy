@@ -864,14 +864,54 @@ lemma sched_context_unbind_all_tcbs_sc_yf_helper[wp]:
       update_sched_context_def set_object_def)
   done
 
-lemma (in Finalise_AI_1) fast_finalise_invs[wp]:
-  "\<lbrace>invs\<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (cases cap
-      ; wpsimp wp: cancel_all_ipc_invs cancel_all_signals_invs
+lemma set_sc_rm_valid_objs[wp]:
+  "\<lbrace>valid_objs\<rbrace> set_sc_obj_ref sc_refill_max_update a b \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  apply (wpsimp wp: set_object_valid_objs get_object_wp
+          simp: set_sc_obj_ref_def obj_at_def update_sched_context_def
+          split: option.splits kernel_object.splits)
+  apply (erule (1) valid_objsE)
+  apply (auto simp: valid_obj_def valid_sched_context_def a_type_def)
+  done
+
+lemma set_sc_rm_iflive[wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
+     set_sc_obj_ref sc_refill_max_update t tcb
+   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def wp: get_object_wp)
+  apply (clarsimp simp: if_live_then_nonz_cap_def, drule_tac x=t in spec)
+  apply (fastforce simp: obj_at_def live_def live_sc_def)
+  done
+
+lemma set_sc_rm_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>
+   set_sc_obj_ref sc_refill_max_update t tcb
+   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp simp: set_sc_obj_ref_def set_object_def update_sched_context_def
+                wp: get_object_wp)
+  by (fastforce elim!: rsubst[where P=P]
+                 simp: state_refs_of_def obj_at_def Un_def split_def  Collect_eq get_refs_def2
+                split: option.splits if_splits)
+
+lemma sc_refill_max_update_cur_sc_tcb[wp]:
+  "set_sc_obj_ref sc_refill_max_update b c \<lbrace>cur_sc_tcb\<rbrace>"
+  unfolding cur_sc_tcb_def
+  apply (wpsimp simp: set_sc_obj_ref_def wp: update_sched_context_wp)
+  apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  done
+
+lemma set_sc_obj_ref_invs[wp]:
+    "\<lbrace>invs and K (b \<noteq> idle_sc_ptr)\<rbrace> set_sc_obj_ref sc_refill_max_update b c \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding invs_def valid_state_def valid_pspace_def
+  by wpsimp
+
+lemma (in Finalise_AI_1) fast_finalise_invs:
+  "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (cases cap;
+      wpsimp wp: cancel_all_ipc_invs cancel_all_signals_invs
                    unbind_maybe_notification_invs sched_context_maybe_unbind_ntfn_invs
                    sched_context_unbind_yield_from_invs get_simple_ko_wp
-                   reply_remove_invs gts_wp
-      ; fastforce)
+                   reply_remove_invs gts_wp;
+      fastforce dest: no_cap_to_idle_sc_ptr)
 
 lemma cnode_at_unlive[elim!]:
   "s \<turnstile> cap.CNodeCap ptr bits gd \<Longrightarrow> obj_at (\<lambda>ko. \<not> live ko) ptr s"
@@ -1020,10 +1060,11 @@ lemma fast_finalise_lift:
   and unbind6:"\<And>r. sched_context_unbind_ntfn r \<lbrace>P\<rbrace>"
   and unbind7:"\<And>r. sched_context_unbind_yield_from r \<lbrace>P\<rbrace>"
   and unbind8:"\<And>r. sched_context_unbind_reply r \<lbrace>P\<rbrace>"
+  and unbind9:"\<And>sc. set_sc_obj_ref sc_refill_max_update sc 0 \<lbrace>P\<rbrace>"
   shows "fast_finalise cap final \<lbrace>P\<rbrace>"
   by (case_tac cap
       ; wpsimp wp: ep ntfn reply reply2 unbind unbind2 unbind3 unbind4 unbind5
-                   unbind6 unbind7 unbind8 hoare_drop_imps get_simple_ko_wp gts_wp)+
+                   unbind6 unbind7 unbind8 unbind9 hoare_drop_imps get_simple_ko_wp gts_wp)
 
 lemma reply_unlink_sc_cte_wp_at:
   shows "\<lbrace>cte_wp_at P p\<rbrace> reply_unlink_sc ptr ptr' \<lbrace>\<lambda>rv s. cte_wp_at P p s\<rbrace>"
@@ -1238,10 +1279,10 @@ lemma (in Finalise_AI_3) finalise_cap_cte_cap_to[wp]:
                  deleting_irq_handler_cte_preserved_irqn
                  reply_unlink_sc_cte_preserved_irqn
                  cancel_ipc_cte_preserved_irqn
-                 reply_remove_cte_preserved_irqn
+                 reply_remove_cte_preserved_irqn set_sc_obj_ref_cte_wp_at
                  | simp
                  | clarsimp simp: can_fast_finalise_def
-                           split: cap.split_asm | wpc)+
+                           split: cap.split_asm | wpc | wps)+
   done
 
 lemma (in Finalise_AI_3) finalise_cap_zombie_cap[wp]:

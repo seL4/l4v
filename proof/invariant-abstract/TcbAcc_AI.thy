@@ -903,10 +903,10 @@ lemma set_object_tcb_at [wp]:
   "\<lbrace> tcb_at t' \<rbrace> set_object t (TCB x) \<lbrace>\<lambda>_. tcb_at t'\<rbrace>"
   by (rule set_object_at_obj1) (simp add: is_tcb)
 
-lemma as_user_tcb [wp]: "\<lbrace>tcb_at t'\<rbrace> as_user t m \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
+lemma as_user_tcb [wp]: "\<lbrace>\<lambda>s. P (tcb_at t' s)\<rbrace> as_user t m \<lbrace>\<lambda>rv s. P (tcb_at t' s)\<rbrace>"
   apply (simp add: as_user_def split_def)
-  apply wp
-  apply simp
+  apply (wp set_object_wp)
+  apply (clarsimp simp: get_tcb_def tcb_at_def)
   done
 
 

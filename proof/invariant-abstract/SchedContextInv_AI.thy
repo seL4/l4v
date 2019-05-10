@@ -1540,7 +1540,7 @@ lemma end_timeslice_invs:
   "\<lbrace>\<lambda>s. invs s \<and> ct_active s\<rbrace>
       end_timeslice t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: end_timeslice_def ct_in_state_def get_tcb_queue_def
-          wp: handle_timeout_Timeout_invs hoare_drop_imp)
+          wp: handle_timeout_Timeout_invs hoare_drop_imp hoare_vcg_if_lift2)
   done
 
 lemma invs_valid_refills:
@@ -1704,12 +1704,15 @@ lemma charge_budget_invs:
   apply clarsimp
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (wpsimp wp: end_timeslice_invs assert_inv hoare_vcg_if_lift2 gts_wp)
+  apply (wpsimp wp: end_timeslice_invs assert_inv hoare_vcg_if_lift2 gts_wp is_schedulable_wp)
     apply (rule_tac Q="\<lambda>_. invs" in hoare_strengthen_post[rotated])
-     apply (clarsimp simp: ct_in_state_def runnable_eq pred_tcb_at_def obj_at_def)
-    apply (wpsimp wp: end_timeslice_invs assert_inv hoare_vcg_if_lift2 gts_wp
-                      hoare_vcg_all_lift  sc_consumed_add_invs refill_budget_check_invs
-                simp: Let_def)+
+     apply (clarsimp simp: ct_in_state_def runnable_eq pred_tcb_at_def obj_at_def is_schedulable_opt_def
+                    split: option.splits)
+     apply (subgoal_tac "cur_tcb s")
+      apply (clarsimp simp: get_tcb_def cur_tcb_def tcb_at_def is_tcb split: option.splits kernel_object.splits)
+     apply (wpsimp wp: end_timeslice_invs assert_inv hoare_vcg_if_lift2 gts_wp
+                       hoare_vcg_all_lift  sc_consumed_add_invs refill_budget_check_invs
+                 simp: Let_def)+
   done
 
 lemma check_budget_invs[wp]:

@@ -483,6 +483,13 @@ locale EmptyFail_AI_call_kernel = EmptyFail_AI_schedule state_ext_t
     "\<And>tptr fault. empty_fail (handle_timeout tptr fault :: (unit, 'state_ext) s_monad)"
   assumes check_budget_empty_fail[wp]:
     "empty_fail (check_budget :: (bool, 'state_ext) s_monad)"
+   assumes charge_budget_empty_fail[wp]:
+    "\<And>a b c. empty_fail (charge_budget a b c :: (unit, 'state_ext) s_monad)"
+  assumes update_time_stamp_empty_fail[wp]:
+    "empty_fail (update_time_stamp :: (unit, 'state_ext) s_monad)"
+   assumes refill_capacity_empty_fail[wp]:
+    "\<And>a b. empty_fail (refill_capacity a b :: (time, 'state_ext) s_monad)"
+
 begin
 
 lemma call_kernel_empty_fail: "empty_fail (call_kernel a :: (unit,'state_ext) s_monad)"
