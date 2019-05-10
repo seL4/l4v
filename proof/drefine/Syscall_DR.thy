@@ -1336,7 +1336,9 @@ lemma handle_invocation_corres:
       apply (rule_tac Q="\<lambda>r s. s = s'a \<and>
                                evalMonad (lookup_ipc_buffer False (cur_thread s'a)) s'a = Some r \<and>
                                cte_wp_at (Not \<circ> is_master_reply_cap) (snd x) s \<and>
-                               cte_wp_at (diminished (fst x)) (snd x) s \<and> s \<turnstile> fst x \<and>
+                               cte_wp_at (diminished (fst x)) (snd x) s \<and>
+                               real_cte_at (snd x) s \<and>
+                               s \<turnstile> fst x \<and>
                                ex_cte_cap_wp_to (\<lambda>_. True) (snd x) s \<and>
                                (\<forall>r\<in>zobj_refs (fst x). ex_nonz_cap_to r s) \<and>
                                (\<forall>r\<in>cte_refs (fst x) (interrupt_irq_node s). ex_cte_cap_wp_to \<top> r s)"
