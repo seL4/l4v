@@ -1314,11 +1314,9 @@ lemma invalidateASID_valid_arch_state [wp]:
   apply (wp | simp)+
   apply (clarsimp simp: valid_arch_state'_def simp del: fun_upd_apply)
   apply (rule conjI)
-   apply (clarsimp simp: is_inv_None_upd fun_upd_def[symmetric]
-                         comp_upd_simp inj_on_fun_upd_elsewhere
-                         valid_asid_map'_def)
-   apply (auto elim!: subset_inj_on dest!: ran_del_subset split: option.splits)[1]
-  apply (clarsimp simp add: None_upd_eq fun_upd_def[symmetric] split: option.splits)
+   apply (clarsimp simp: is_inv_None_upd fun_upd_def[symmetric] comp_upd_simp
+                         inj_on_fun_upd_elsewhere valid_asid_map'_def)
+   apply (auto elim!: subset_inj_on dest!: ran_del_subset split: option.splits)
   done
 
 crunch no_0_obj'[wp]: vcpuDisable, vcpuEnable, vcpuSave, vcpuRestore no_0_obj'

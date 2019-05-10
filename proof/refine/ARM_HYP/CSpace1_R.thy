@@ -1050,7 +1050,7 @@ lemma update_prev_next_trancl:
 proof (cases "m ptr")
   case None
   thus ?thesis using nxt
-    by (simp add: modify_map_def) (simp add: None [symmetric])
+    by (simp add: modify_map_def)
 next
   case (Some cte)
   let ?m = "m(ptr \<mapsto> cteMDBNode_update (mdbPrev_update z) cte)"
@@ -1078,7 +1078,7 @@ lemma update_prev_next_trancl2:
 proof (cases "m ptr")
   case None
   thus ?thesis using nxt
-    by (simp add: modify_map_def) (simp add: None [symmetric] fun_upd_triv)
+    by (simp add: modify_map_def)
 next
   case (Some cte)
   let ?m = "m(ptr \<mapsto> cteMDBNode_update (mdbPrev_update z) cte)"
@@ -1087,8 +1087,7 @@ next
   proof induct
     case (base y)
     thus ?case using Some
-      by (auto intro!: r_into_trancl
-        simp: modify_map_def mdb_next_update next_unfold' split: if_split_asm)
+      by (fastforce simp: modify_map_def mdb_next_update next_unfold' split: if_split_asm)
   next
     case (step q r)
     show ?case
@@ -1180,7 +1179,7 @@ proof
   proof (cases "m ptr")
     case None
     thus ?thesis
-      by (simp add: modify_map_def, rule subst, subst fun_upd_triv) (rule x0)
+      by (simp add: modify_map_def) (rule x0)
   next
     case (Some cte)
     show ?thesis
@@ -6637,6 +6636,7 @@ lemma cap_swap_corres:
                cte_wp_at' (weak_derived' dcap' o cteCap) dest' s))
          (cap_swap scap src dcap dest) (cteSwap scap' src' dcap' dest')"
   (is "corres _ ?P ?P' _ _") using assms including no_pre
+  supply None_upd_eq[simp del]
   apply (unfold cap_swap_def cteSwap_def)
   apply (cases "src=dest")
    apply (rule corres_assume_pre)

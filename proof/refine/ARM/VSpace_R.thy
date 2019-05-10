@@ -835,12 +835,9 @@ lemma invalidateASID_valid_arch_state [wp]:
                    invalidateASIDEntry_def invalidateHWASIDEntry_def)
   apply (wp | simp)+
   apply (clarsimp simp: valid_arch_state'_def simp del: fun_upd_apply)
-  apply (rule conjI)
-   apply (clarsimp simp: is_inv_None_upd fun_upd_def[symmetric]
-                         comp_upd_simp inj_on_fun_upd_elsewhere
-                         valid_asid_map'_def)
-   apply (auto elim!: subset_inj_on dest!: ran_del_subset)[1]
-  apply (clarsimp simp add: None_upd_eq fun_upd_def[symmetric])
+  apply (clarsimp simp: is_inv_None_upd fun_upd_def[symmetric] comp_upd_simp
+                        inj_on_fun_upd_elsewhere valid_asid_map'_def)
+  apply (auto elim!: subset_inj_on dest!: ran_del_subset)[1]
   done
 
 crunch no_0_obj'[wp]: deleteASID "no_0_obj'"

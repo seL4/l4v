@@ -869,7 +869,7 @@ lemma modify_map_next_trancl:
 proof (cases "m ptr")
   case None
   thus ?thesis using nxt
-    by (simp add: modify_map_def) (simp add: None [symmetric] fun_upd_triv)
+    by (simp add: modify_map_def)
 next
   case (Some cte)
   let ?m = "m(ptr \<mapsto> f cte)"
@@ -900,7 +900,7 @@ lemma modify_map_next_trancl2:
 proof (cases "m ptr")
   case None
   thus ?thesis using nxt
-    by (simp add: modify_map_def) (simp add: None [symmetric] fun_upd_triv)
+    by (simp add: modify_map_def)
 next
   case (Some cte)
   let ?m = "m(ptr \<mapsto> f cte)"
@@ -942,7 +942,7 @@ lemma modify_map_dlist:
 proof (cases "m ptr")
   case None
   thus ?thesis using nxt
-    by (simp add: modify_map_def) (simp add: None [symmetric] fun_upd_triv)
+    by (simp add: modify_map_def)
 next
   case (Some ptrcte)
   let ?m = "m(ptr \<mapsto> f ptrcte)"
@@ -1010,7 +1010,7 @@ lemma modify_map_dlist2:
 proof (cases "m ptr")
   case None
   thus ?thesis using nxt
-    by (simp add: modify_map_def) (simp add: None [symmetric] fun_upd_triv)
+    by (simp add: modify_map_def)
 next
   case (Some ptrcte)
   let ?m = "modify_map m ptr f"
@@ -1150,7 +1150,7 @@ proof
   proof (cases "m ptr")
     case None
     thus ?thesis
-      by (simp add: modify_map_def, rule subst, subst fun_upd_triv) (rule x0)
+      by (simp add: modify_map_def) (rule x0)
   next
     case (Some cte)
     show ?thesis
