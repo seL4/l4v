@@ -554,6 +554,8 @@ locale Syscall_AI = Systemcall_AI_Pre:Systemcall_AI_Pre _ state_ext_t
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_fault_msg_cur_thread[wp]:
     "\<And>ft t P. make_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. P (cur_thread s)\<rbrace>"
+  assumes make_fault_msg_cur_sc[wp]:
+    "\<And>ft t P. make_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. P (cur_sc s)\<rbrace>"
   assumes make_fault_msg_fault_tcb_at[wp]:
     "\<And>ft t t' P. make_fault_msg ft t \<lbrace>fault_tcb_at P t' :: 'state_ext state \<Rightarrow> _\<rbrace>"
 
@@ -1369,6 +1371,8 @@ lemma tcb_caller_cap:
 
 crunch cur_thread[wp]: set_extra_badge "\<lambda>s. P (cur_thread s)"
 
+crunch cur_sc[wp]: set_extra_badge "\<lambda>s. P (cur_sc s)"
+
 lemmas cap_delete_one_st_tcb_at_simple[wp] =
     cap_delete_one_st_tcb_at[where P=simple, simplified]
 
@@ -1419,67 +1423,6 @@ lemma select_insert:
   "select (insert x X) = (return x \<sqinter> select X)"
   by (simp add: alternative_def select_def return_def)
 
-(* when check_budget returns True, it has not called reschedule_required. Hence the
-scheduler_action remains unchanged *)
-lemma check_budget_true_sched_action:
-  "\<lbrace> \<lambda>s. P (scheduler_action s) \<rbrace>
-     check_budget
-   \<lbrace> \<lambda>rv s. rv \<longrightarrow> P (scheduler_action s)\<rbrace>"
-  apply (clarsimp simp: check_budget_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (rule hoare_seq_ext[OF _ refill_capacity_sp])
-  apply (rule hoare_if)
-   apply (rule hoare_seq_ext[OF _ gets_sp])
-   apply (rule hoare_if)
-    by wpsimp+
-
-lemma check_budget_restart_true_sched_action[wp]:
-  "\<lbrace> \<lambda>s. P (scheduler_action s) \<rbrace>
-     check_budget_restart
-   \<lbrace> \<lambda>rv s. rv \<longrightarrow> P (scheduler_action s)\<rbrace>"
-  apply (clarsimp simp: check_budget_restart_def)
-  apply (rule hoare_seq_ext[OF _ check_budget_true_sched_action])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (wpsimp wp: hoare_vcg_if_lift)
-  done
-
-(* when check_budget returns True, it has not called charge_budget. Hence the
-thread_state remains unchanged *)
-lemma check_budget_true_st_tcb_at[wp]:
-  "\<lbrace> \<lambda>s. st_tcb_at P t s \<rbrace> check_budget \<lbrace> \<lambda>rv s. rv \<longrightarrow>  st_tcb_at P t s\<rbrace>"
-  apply (clarsimp simp: check_budget_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (rule hoare_seq_ext[OF _ refill_capacity_sp])
-  apply (rule hoare_if)
-   apply (rule hoare_seq_ext[OF _ gets_sp])
-   apply (rule hoare_if)
-    by wpsimp+
-
-lemma check_budget_restart_true_st_tcb_at[wp]:
-  "\<lbrace> \<lambda>s. st_tcb_at P t s \<rbrace> check_budget_restart \<lbrace> \<lambda>rv s. rv \<longrightarrow> st_tcb_at P t s\<rbrace>"
-  apply (clarsimp simp: check_budget_restart_def)
-  apply (rule hoare_seq_ext[OF _ check_budget_true_st_tcb_at])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (wpsimp wp: hoare_vcg_if_lift)
-  done
-
-lemma check_budget_true_ct_in_state[wp]:
-  "\<lbrace>ct_in_state P\<rbrace> check_budget \<lbrace>\<lambda>rv s. rv \<longrightarrow> ct_in_state P s\<rbrace>"
-  apply (clarsimp simp: check_budget_def)
-  by (wpsimp | wp_once hoare_drop_imps)+
-
-lemma check_budget_restart_true_ct_in_state[wp]:
-  "\<lbrace>ct_in_state P\<rbrace> check_budget_restart \<lbrace>\<lambda>rv s. rv \<longrightarrow> ct_in_state P s\<rbrace>"
-  apply (clarsimp simp: check_budget_restart_def)
-  by (wpsimp wp: ct_in_state_set gts_wp hoare_vcg_all_lift hoare_vcg_if_lift2
-      | wp_once hoare_drop_imps)+
-
 lemma update_time_stamp_is_schedulable_bool [wp]:
   "\<lbrace>\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
      update_time_stamp
@@ -1487,31 +1430,6 @@ lemma update_time_stamp_is_schedulable_bool [wp]:
   by (wpsimp simp: update_time_stamp_def do_machine_op_def is_schedulable_bool_def
                    test_sc_refill_max_def get_tcb_def in_release_queue_def
             split: option.splits)
-
-lemma check_budget_true_is_schedulable_bool[wp]:
-  "\<lbrace>\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
-     check_budget
-   \<lbrace>\<lambda>rv s. rv \<longrightarrow> is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>"
-  apply (clarsimp simp: check_budget_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (rule hoare_seq_ext[OF _ refill_capacity_sp])
-  apply (rule hoare_if)
-   apply (rule hoare_seq_ext[OF _ gets_sp])
-   apply (rule hoare_if)
-  by wpsimp+
-
-lemma check_budget_restart_true_is_schedulable_bool[wp]:
-  "\<lbrace>\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
-     check_budget_restart
-   \<lbrace>\<lambda>rv s. rv \<longrightarrow> is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>"
-  apply (clarsimp simp: check_budget_restart_def)
-  apply (rule hoare_seq_ext[OF _ check_budget_true_is_schedulable_bool])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (wpsimp wp: hoare_vcg_if_lift)
-  done
 
 lemma getCurrentTime_invs[wp]:
   "do_machine_op getCurrentTime \<lbrace>invs\<rbrace>"
@@ -1547,6 +1465,11 @@ context Syscall_AI begin
 
 crunches check_budget_restart, handle_fault_reply, reply_remove
   for cur_thread[wp]: "\<lambda>s :: 'state_ext state. P (cur_thread s)"
+  (wp: transfer_caps_loop_pres mapM_wp' hoare_drop_imps
+   simp: crunch_simps)
+
+crunches check_budget_restart
+  for cur_sc[wp]: "\<lambda>s :: 'state_ext state. P (cur_sc s)"
   (wp: transfer_caps_loop_pres mapM_wp' hoare_drop_imps
    simp: crunch_simps)
 

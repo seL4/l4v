@@ -52,6 +52,9 @@ lemma switch_to_idle_thread_ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
                          valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
+crunches arch_switch_to_idle_thread, prepare_thread_delete
+  for release_queue[wp]: "\<lambda>s. P (release_queue s)"
+
 crunch valid_sched_action'[wp]: set_vm_root "\<lambda>s. valid_sched_action_2 (scheduler_action s)
                                                  (kheap s) thread (cur_domain s) (release_queue s)"
   (wp: crunch_wps simp: crunch_simps)

@@ -1164,4 +1164,19 @@ crunches
   for ct_in_state[wp]: "ct_in_state P"
   (wp: ct_in_state_thread_state_lift)
 
+crunch inv[wp]: refill_capacity,refill_sufficient,refill_ready "\<lambda>s. P s"
+
+lemma check_budget_true:
+  "\<lbrace>P\<rbrace> check_budget \<lbrace>\<lambda>rv s. rv \<longrightarrow> P s\<rbrace>"
+  unfolding check_budget_def
+  by (wpsimp | rule hoare_drop_imp)+
+
+lemma check_budget_restart_true:
+  "\<lbrace>P\<rbrace> check_budget_restart \<lbrace>\<lambda>rv s. rv \<longrightarrow> P s\<rbrace>"
+  unfolding check_budget_restart_def
+  apply (wpsimp wp: gts_wp hoare_vcg_all_lift)
+   apply (rule hoare_drop_imp)
+   apply (wpsimp wp: hoare_vcg_if_lift2 check_budget_true | rule hoare_drop_imp)+
+  done
+
 end

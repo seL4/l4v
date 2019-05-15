@@ -1750,7 +1750,7 @@ lemma call_kernel_valid_pdpt[wp]:
            (\<lambda>s. rv \<longrightarrow> scheduler_action s = resume_cur_thread) and
            (\<lambda>s. rv \<longrightarrow> is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)" in seqE)
           apply (rule liftE_wp)
-          apply (wpsimp wp: check_budget_restart_true_ct_in_state)
+          apply (wpsimp wp: check_budget_restart_true)
          apply (rule valid_validE)
          apply (wpsimp, fastforce simp: ct_in_state_def pred_tcb_weakenE)
         apply (wpsimp wp: is_schedulable_wp hoare_vcg_all_lift hoare_drop_imps hoare_vcg_if_lift2)
@@ -1765,7 +1765,7 @@ lemma call_kernel_valid_pdpt[wp]:
         apply wpsimp
        apply (rule_tac B="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and
            (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in hoare_seq_ext[rotated])
-        apply wpsimp
+        apply (wpsimp wp: check_budget_restart_true)
        apply (wpsimp+)[2]
     (***)
      apply (rule_tac B="\<lambda>_. (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in hoare_seq_ext[rotated])
@@ -1777,7 +1777,7 @@ lemma call_kernel_valid_pdpt[wp]:
        apply wpsimp
       apply (rule_tac B="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and
            (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in hoare_seq_ext[rotated])
-       apply wpsimp
+       apply (wpsimp wp: check_budget_restart_true)
       apply (wpsimp+)[2]
     (***)
     apply wpsimp
@@ -1791,7 +1791,7 @@ lemma call_kernel_valid_pdpt[wp]:
      apply wpsimp
     apply (rule_tac B="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and
            (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in hoare_seq_ext[rotated])
-     apply wpsimp
+     apply (wpsimp wp: check_budget_restart_true)
     apply (wpsimp+)[2]
     (***)
   apply wpsimp

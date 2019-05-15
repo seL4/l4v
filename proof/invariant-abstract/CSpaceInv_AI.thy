@@ -2055,6 +2055,7 @@ lemma cap_insert_objs [wp]:
 crunches cap_insert, set_cdt
   for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
   and ct [wp]: "\<lambda>s. P (cur_thread s)"
+  and cur_sc [wp]: "\<lambda>s. P (cur_sc s)"
   and ct_in_state[wp]: "ct_in_state P"
   and valid_cap[wp]: "valid_cap c"
   (wp: ct_in_state_thread_state_lift hoare_drop_imps crunch_wps valid_cap_typ

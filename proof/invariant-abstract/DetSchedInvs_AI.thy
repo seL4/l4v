@@ -1172,4 +1172,44 @@ abbreviation ct_schedulable where
       \<and> budget_ready (cur_thread s) s
       \<and> budget_sufficient (cur_thread s) s"
 
+lemma scheduler_act_sane_lift:
+  assumes A: "\<And>P. f \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>"
+  assumes B: "\<And>P. f \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+  shows " f \<lbrace>scheduler_act_sane\<rbrace>"
+  using A B hoare_lift_Pf by fastforce
+
+lemma valid_ready_qs_in_ready_qD:
+  "valid_ready_qs s \<Longrightarrow>
+   in_ready_q tcb_ptr s \<Longrightarrow>
+   st_tcb_at_kh runnable tcb_ptr (kheap s) \<and>
+   active_sc_tcb_at_kh tcb_ptr (kheap s) \<and>
+   budget_sufficient_kh tcb_ptr (kheap s) \<and>
+   budget_ready_kh (cur_time s) tcb_ptr (kheap s)"
+  by (clarsimp simp: valid_ready_qs_def in_ready_q_def)
+
+lemma invs_cur_sc_tcb_symref:
+  "invs s \<Longrightarrow> schact_is_rct s \<Longrightarrow> bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) (cur_thread s) s"
+  apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl invs_sym_refs], simp)
+  apply (simp add: invs_def cur_sc_tcb_def sc_at_pred_n_def obj_at_def schact_is_rct_def)
+  done
+
+definition cur_sc_cur_thread_bound where
+  "cur_sc_cur_thread_bound \<equiv> \<lambda>s. (\<forall>scp. bound_sc_tcb_at (\<lambda>x. x = Some scp) (cur_thread s) s \<longrightarrow> scp = cur_sc s) \<and>
+                                (\<forall>tp. sc_tcb_sc_at (\<lambda>x. x = Some tp) (cur_sc s) s \<longrightarrow> tp = cur_thread s)"
+
+lemma invs_cur_sc_cur_thread_boundE:
+  "invs s \<Longrightarrow> schact_is_rct s \<Longrightarrow> cur_sc_cur_thread_bound s"
+  apply (subgoal_tac "bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) (cur_thread s) s")
+   apply (clarsimp simp: cur_sc_cur_thread_bound_def; intro conjI allI impI)
+    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+   apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl invs_sym_refs], simp)
+   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl invs_sym_refs], simp)
+  apply (simp add: invs_def cur_sc_tcb_def sc_at_pred_n_def obj_at_def schact_is_rct_def)
+  done
+
+lemma schact_is_rct_sane[elim!]: "schact_is_rct s \<Longrightarrow> scheduler_act_sane s"
+  apply (simp add: simple_sched_action_def schact_is_rct_def scheduler_act_not_def)
+  done
+
 end

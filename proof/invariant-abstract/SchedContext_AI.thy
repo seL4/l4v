@@ -713,8 +713,6 @@ crunches switch_sched_context
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps hoare_vcg_if_lift2 simp: Let_def ignore: commit_domain_time)
 
-crunch inv[wp]: refill_capacity,refill_sufficient,refill_ready "\<lambda>s. P s"
-
 lemma cur_sc_update_invs:
   "\<lbrace>\<lambda>s. valid_state s \<and> cur_tcb s \<and>
         bound_sc_tcb_at ((=) (Some sc_ptr)) (cur_thread s) s\<rbrace>
