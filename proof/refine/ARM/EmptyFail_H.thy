@@ -270,7 +270,7 @@ lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
 crunch (empty_fail) empty_fail: callKernel
   (wp: empty_fail_catch)
 
-lemma call_kernel_serial:
+theorem call_kernel_serial:
   "\<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
               (\<lambda>s. scheduler_action s = resume_cur_thread)) s;
        \<exists>s'. (s, s') \<in> state_relation \<and>
