@@ -26,7 +26,7 @@ instantiation signed :: (len0) len0
 begin
 
 definition
-  len_signed [simp]: "len_of (x::'a::len0 signed itself) = len_of TYPE('a)"
+  len_signed [simp]: "len_of (x::'a::len0 signed itself) = LENGTH('a)"
 
 instance ..
 

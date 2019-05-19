@@ -12,7 +12,7 @@ section "Additional Syntax for Word Bit Operations"
 
 theory Word_Syntax
 imports
-  "HOL-Word.WordBitwise"
+  "HOL-Word.More_Word"
   WordBitwise_Signed
   Hex_Words
   Norm_Words

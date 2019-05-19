@@ -681,7 +681,7 @@ lemma bits_2_subtract_ineq:
    apply clarsimp
    apply unat_arith
   apply (simp only: mult_Suc_right[symmetric])
-  apply (rule trans[OF mult.commute], rule arg_cong2[where f="( * )"], simp_all)
+  apply (rule trans[OF mult.commute], rule arg_cong2[where f="(*)"], simp_all)
   apply (simp add: word_less_nat_alt)
   done
 
@@ -783,8 +783,7 @@ lemma mask_eq_ucast_eq:
   "\<lbrakk> x && mask LENGTH('a) = (x :: ('c :: len word));
      LENGTH('a) \<le> LENGTH('b)\<rbrakk>
     \<Longrightarrow> ucast (ucast x :: ('a :: len word)) = (ucast x :: ('b :: len word))"
-  apply (rule word_eqI)
-  by (metis (mono_tags, lifting) nth_ucast ucast_and_mask ucast_ucast_mask)
+  by (metis ucast_and_mask ucast_id ucast_ucast_mask ucast_up_eq)
 
 lemma of_nat_less_t2n:
   "of_nat i < (2 :: ('a :: len) word) ^ n
