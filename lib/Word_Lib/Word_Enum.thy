@@ -20,7 +20,7 @@ instantiation word :: (len) enum
 begin
 
 definition
-  "(enum_class.enum :: ('a :: len) word list) \<equiv> map of_nat [0 ..< 2 ^ len_of TYPE('a)]"
+  "(enum_class.enum :: ('a :: len) word list) \<equiv> map of_nat [0 ..< 2 ^ LENGTH('a)]"
 
 definition
   "enum_class.enum_all (P :: ('a :: len) word \<Rightarrow> bool) \<longleftrightarrow> Ball UNIV P"
@@ -54,10 +54,10 @@ proof -
   show ?thesis by (simp add: fromEnum_def enum_word_def)
 qed
 
-lemma length_word_enum: "length (enum :: ('a :: len) word list) = 2 ^ len_of TYPE('a)"
+lemma length_word_enum: "length (enum :: 'a :: len word list) = 2 ^ LENGTH('a)"
   by (simp add: enum_word_def)
 
-lemma toEnum_of_nat[simp]: "n < 2 ^ len_of TYPE('a) \<Longrightarrow> ((toEnum n) :: ('a :: len) word) = of_nat n"
+lemma toEnum_of_nat[simp]: "n < 2 ^ LENGTH('a) \<Longrightarrow> (toEnum n :: 'a :: len word) = of_nat n"
   by (simp add: toEnum_def length_word_enum enum_word_def)
 
 declare of_nat_diff [simp]

@@ -132,7 +132,7 @@ lemma shiftl_power:
 lemmas of_bl_reasoning = to_bl_use_of_bl of_bl_append
 
 lemma uint_of_bl_is_bl_to_bin_drop:
-  "length (dropWhile Not l) \<le> len_of TYPE('a) \<Longrightarrow> uint (of_bl l :: 'a::len word) = bl_to_bin l"
+  "length (dropWhile Not l) \<le> LENGTH('a) \<Longrightarrow> uint (of_bl l :: 'a::len word) = bl_to_bin l"
   apply (simp add: of_bl_def)
   apply (rule word_uint.Abs_inverse)
   apply (simp add: uints_num bl_to_bin_ge0)
@@ -142,7 +142,7 @@ lemma uint_of_bl_is_bl_to_bin_drop:
   done
 
 corollary uint_of_bl_is_bl_to_bin:
-  "length l\<le>len_of TYPE('a) \<Longrightarrow> uint ((of_bl::bool list\<Rightarrow> ('a :: len) word) l) = bl_to_bin l"
+  "length l\<le>LENGTH('a) \<Longrightarrow> uint ((of_bl::bool list\<Rightarrow> ('a :: len) word) l) = bl_to_bin l"
   apply(rule uint_of_bl_is_bl_to_bin_drop)
   using le_trans length_dropWhile_le by blast
 
@@ -189,11 +189,11 @@ lemma word_combine_masks:
   by (auto simp: word_eq_iff)
 
 lemma nth_w2p_same:
-  "(2^n :: 'a :: len word) !! n = (n < len_of TYPE('a))"
+  "(2^n :: 'a :: len word) !! n = (n < LENGTH('a))"
   by (simp add : nth_w2p)
 
 lemma p2_gt_0:
-  "(0 < (2 ^ n :: 'a :: len word)) = (n < len_of TYPE('a))"
+  "(0 < (2 ^ n :: 'a :: len word)) = (n < LENGTH('a))"
   apply (simp add : word_gt_0)
   apply safe
    apply (erule swap)
@@ -238,9 +238,6 @@ lemma neg_mask_is_div:
 lemma and_mask_arith':
   "0 < n \<Longrightarrow> w AND mask n = (w * 2^(size w - n)) div 2^(size w - n)"
   by (simp add: and_mask shiftr_div_2n_w shiftl_t2n word_size mult.commute)
-
-lemma mask_0[simp]: "mask 0 = 0"
-  unfolding mask_def by simp
 
 lemmas p2len = iffD2 [OF p2_eq_0 order_refl]
 
@@ -579,8 +576,8 @@ lemma word_fixed_sint_1[simp]:
   by (auto simp: sint_word_ariths)
 
 lemma word_sint_1 [simp]:
-  "sint (1::'a::len word) = (if len_of TYPE('a) = 1 then -1 else 1)"
-  apply (case_tac "len_of TYPE('a) \<le> 1")
+  "sint (1::'a::len word) = (if LENGTH('a) = 1 then -1 else 1)"
+  apply (case_tac "LENGTH('a) \<le> 1")
    apply (metis diff_is_0_eq sbintrunc_0_numeral(1) sint_n1 word_1_wi
            word_m1_wi word_msb_1 word_msb_n1 word_sbin.Abs_norm)
   apply (metis bin_nth_1 diff_is_0_eq neq0_conv sbintrunc_minus_simps(4)
@@ -589,11 +586,11 @@ lemma word_sint_1 [simp]:
 
 lemma scast_1':
   "(scast (1::'a::len word) :: 'b::len word) =
-   (word_of_int (sbintrunc (len_of TYPE('a::len) - Suc 0) (1::int)))"
+   (word_of_int (sbintrunc (LENGTH('a::len) - Suc 0) (1::int)))"
   by (metis One_nat_def scast_def sint_word_ariths(8))
 
 lemma scast_1 [simp]:
-  "(scast (1::'a::len word) :: 'b::len word) = (if len_of TYPE('a) = 1 then -1 else 1)"
+  "(scast (1::'a::len word) :: 'b::len word) = (if LENGTH('a) = 1 then -1 else 1)"
   by (clarsimp simp: scast_1')
      (metis Suc_pred len_gt_0 nat.exhaust sbintrunc_Suc_numeral(1) uint_1 word_uint.Rep_inverse')
 
@@ -621,7 +618,7 @@ lemma of_int_uint [simp]:
   by (metis word_of_int word_uint.Rep_inverse')
 
 lemma shiftr_mask2:
-  "n \<le> len_of TYPE('a) \<Longrightarrow> (mask n >> m :: ('a :: len) word) = mask (n - m)"
+  "n \<le> LENGTH('a) \<Longrightarrow> (mask n >> m :: ('a :: len) word) = mask (n - m)"
   apply (rule word_eqI)
   apply (simp add: nth_shiftr word_size)
   apply arith
@@ -668,13 +665,13 @@ lemmas extra_sle_sless_unfolds [simp] =
 
 
 lemma to_bl_1:
-  "to_bl (1::'a::len word) = replicate (len_of TYPE('a) - 1) False @ [True]"
+  "to_bl (1::'a::len word) = replicate (LENGTH('a) - 1) False @ [True]"
 proof -
   have "to_bl (1 :: 'a::len word) = to_bl (mask 1 :: 'a::len word)"
     by (simp add: mask_def)
 
-  also have "\<dots> = replicate (len_of TYPE('a) - 1) False @ [True]"
-    by (cases "len_of TYPE('a)"; clarsimp simp: to_bl_mask)
+  also have "\<dots> = replicate (LENGTH('a) - 1) False @ [True]"
+    by (cases "LENGTH('a)"; clarsimp simp: to_bl_mask)
 
   finally show ?thesis .
 qed

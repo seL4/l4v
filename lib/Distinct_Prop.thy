@@ -26,7 +26,7 @@ primrec
   distinct_sets :: "'a set list \<Rightarrow> bool"
 where
   "distinct_sets [] = True"
-| "distinct_sets (x#xs) = (x \<inter> \<Union>set xs = {} \<and> distinct_sets xs)"
+| "distinct_sets (x#xs) = (x \<inter> \<Union> (set xs) = {} \<and> distinct_sets xs)"
 
 
 lemma distinct_prop_map:
@@ -98,7 +98,7 @@ lemma distinct_sets_append_Cons:
   done
 
 lemma distinct_sets_append_Cons_disjoint:
-  "distinct_sets (xs @ a # ys) \<Longrightarrow>  a \<inter> \<Union>set xs = {} "
+  "distinct_sets (xs @ a # ys) \<Longrightarrow>  a \<inter> \<Union> (set xs) = {} "
   apply (subst (asm) distinct_sets_prop)
   apply (subst (asm) distinct_prop_append)
   apply (subst Int_commute)

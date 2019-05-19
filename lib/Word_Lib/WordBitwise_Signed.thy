@@ -12,7 +12,7 @@ section "Bitwise tactic for Signed Words"
 
 theory WordBitwise_Signed
 imports
-  "HOL-Word.WordBitwise"
+  "HOL-Word.More_Word"
   Signed_Words
 begin
 

@@ -21,7 +21,7 @@ type_synonym machine_word = "machine_word_len word"
 
 definition word_bits :: nat
 where
-  "word_bits = len_of TYPE(machine_word_len)"
+  "word_bits = LENGTH(machine_word_len)"
 
 text \<open>The following two are numerals so they can be used as nats and words.\<close>
 definition word_size_bits :: "'a :: numeral"
