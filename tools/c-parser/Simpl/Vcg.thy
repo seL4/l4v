@@ -28,12 +28,12 @@ USA
 section \<open>Facilitating the Hoare Logic\<close>
 theory Vcg
 imports StateSpace "HOL-Statespace.StateSpaceLocale" Generalise
-keywords "procedures" "hoarestate" :: thy_decl
+keywords "procedures" "hoarestate" :: thy_defn
 begin
 
 axiomatization NoBody::"('s,'p,'f) com"
 
-ML_file "hoare.ML"
+ML_file \<open>hoare.ML\<close>
 
 method_setup hoare = "Hoare.hoare"
   "raw verification condition generator for Hoare Logic"
@@ -421,7 +421,7 @@ translations
 definition Let':: "['a, 'a => 'b] => 'b"
   where "Let' = Let"
 
-ML_file "hoare_syntax.ML"
+ML_file \<open>hoare_syntax.ML\<close>
 
 
 parse_translation \<open>
@@ -460,7 +460,7 @@ parse_translation \<open>
   in
    [(@{syntax_const "_may_modify"}, may_modify_tr),
     (@{syntax_const "_may_not_modify"}, may_not_modify_tr)]
-  end;
+  end
 \<close>
 
 
@@ -498,7 +498,7 @@ print_translation \<open>
   in
     [(@{const_syntax mex}, K may_modify_tr'),
      (@{const_syntax meq}, K may_not_modify_tr')]
-  end;
+  end
 \<close>
 
 
