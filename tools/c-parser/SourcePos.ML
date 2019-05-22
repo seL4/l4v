@@ -57,7 +57,7 @@ fun make {column, file, line} =
       file = file,
       line = line}
 
-fun file (p as T {file, ...}) = file
+fun file (T {file, ...}) = file
 
 val bogus = T {column = ~1,
                file = "<bogus>",

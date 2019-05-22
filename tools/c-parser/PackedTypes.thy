@@ -853,7 +853,7 @@ proof (simp add: packed_type_access_ti, rule ext)
     by (rule wf_size_desc_gt)
 
   have uofn: "unat (of_nat n :: addr_bitsize word) = n" using szn szb
-    by (simp add: unat_simps)
+    by (simp add: nat_less_le unat_of_nat_eq)
 
   from eu have std: "size_td t = size_of TYPE('a)" using fl
     by (simp add: export_size_of)

@@ -35,7 +35,6 @@ structure IsarInstall : ISAR_INSTALL =
 struct
 
 type 'a wrap = 'a Region.Wrap.t
-val bogus = SourcePos.bogus
 
 fun setup_feedback extra_output_filename = let
     val trace_extra = case extra_output_filename of
@@ -44,7 +43,7 @@ fun setup_feedback extra_output_filename = let
         val out = TextIO.openOut f
       in fn s => (TextIO.output (out, s); TextIO.flushOut out) end
     val add_extra = case extra_output_filename of
-        NONE => (fn pfx => fn f => f)
+        NONE => (fn _ => fn f => f)
       | SOME _ => (fn pfx => fn f => fn s => (trace_extra (pfx ^ s); f s))
   in
     Feedback.errorf := add_extra "ERROR: " (ignore o error);
@@ -182,10 +181,11 @@ fun define_function_names fninfo thy = let
     val _ = informStr (4, "Adding ("^cname^" :: int) = "^Int.toString n)
     val b = Binding.name cname
     val ((_, (_, th)), lthy) =
-        Local_Theory.define ((b, NoSyn),
-                             ((Thm.def_binding b, []), mk_int_numeral n))
-                            lthy
-    val lthy' = Local_Theory.reset lthy
+        lthy
+        |> Local_Theory.open_target |> snd
+        |>Local_Theory.define ((b, NoSyn),
+                              ((Thm.def_binding b, []), mk_int_numeral n))
+    val lthy' = Local_Theory.close_target lthy
     val morph  = Proof_Context.export_morphism lthy lthy'
     val th'     = Morphism.thm morph th
 

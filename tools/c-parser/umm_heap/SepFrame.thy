@@ -118,9 +118,8 @@ where
 | "intra_safe (Call p) = True"
 | "intra_safe (DynCom f) = (htd_ind f \<and> (\<forall>s. intra_safe (f s)))"
 | "intra_safe (Guard f P C) = (mono_guard P \<and> (case C of
-      Basic g \<Rightarrow> comm_restrict_safe P g \<and> (*point_eq_mod_safe P g hst_mem \<and> *)
-
-                     point_eq_mod_safe P g (\<lambda>s. lift_state (hst_mem s,hst_htd s))
+      Basic g \<Rightarrow> comm_restrict_safe P g \<and>
+                 point_eq_mod_safe P g (\<lambda>s. lift_state (hst_mem s,hst_htd s))
       | _ \<Rightarrow> intra_safe C))"
 | "intra_safe Throw = True"
 | "intra_safe (Catch C D) = (intra_safe C \<and> intra_safe D)"
@@ -224,7 +223,7 @@ lemma lift_state_point_eq_mod:
   "\<lbrakk> point_eq_mod (lift_state (h,d)) (lift_state (h',d')) X \<rbrakk> \<Longrightarrow>
       lift_state (h,d) |` (UNIV - X) =
           lift_state (h',d') |` (UNIV - X)"
-  by (auto simp: point_eq_mod_def restrict_map_def intro: ext)
+  by (auto simp: point_eq_mod_def restrict_map_def)
 
 lemma htd_'_update_ind [simp]:
   "htd_ind f \<Longrightarrow> f (hst_htd_update x s) = f s"
@@ -325,48 +324,51 @@ lemma expr_htd_ind:
   "expr_htd_ind P \<Longrightarrow> restrict_htd s X \<in> P = (s \<in> P)"
   by (simp add: expr_htd_ind_def restrict_htd_def)
 
+(* exec.intros without those already declared as [intro] *)
+lemmas exec_other_intros = exec.intros(1-3) exec.intros(5-14) exec.intros(16-17) exec.intros(19-)
+
 lemma exec_fatal_Seq:
   "exec_fatal C \<Gamma> s \<Longrightarrow> exec_fatal (C;;D) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros)
+  by (force simp: exec_fatal_def intro: exec_other_intros)
 
 lemma exec_fatal_Seq2:
   "\<lbrakk> \<Gamma> \<turnstile> \<langle>C,Normal s\<rangle> \<Rightarrow> Normal t; exec_fatal D \<Gamma> t \<rbrakk> \<Longrightarrow> exec_fatal (C;;D) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros)
+  by (force simp: exec_fatal_def intro: exec_other_intros)
 
 lemma exec_fatal_Cond:
   "exec_fatal (Cond P C D) \<Gamma> s = (if s \<in> P then exec_fatal C \<Gamma> s else
       exec_fatal D \<Gamma> s)"
-  by (force simp: exec_fatal_def intro: exec.intros
+  by (force simp: exec_fatal_def intro: exec_other_intros
             elim: exec_Normal_elim_cases)
 
 lemma exec_fatal_While:
   "\<lbrakk> exec_fatal C \<Gamma> s; s \<in> P \<rbrakk> \<Longrightarrow> exec_fatal (While P C) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros
+  by (force simp: exec_fatal_def intro: exec_other_intros
             elim: exec_Normal_elim_cases)
 
 lemma exec_fatal_While2:
   "\<lbrakk> exec_fatal (While P C) \<Gamma> t; \<Gamma> \<turnstile> \<langle>C,Normal s\<rangle> \<Rightarrow> Normal t; s \<in> P \<rbrakk> \<Longrightarrow>
       exec_fatal (While P C) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros
+  by (force simp: exec_fatal_def intro: exec_other_intros
             elim: exec_Normal_elim_cases)
 
 lemma exec_fatal_Call:
   "\<lbrakk> \<Gamma> p = Some C; exec_fatal C \<Gamma> s \<rbrakk> \<Longrightarrow> exec_fatal (Call p) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros)
+  by (force simp: exec_fatal_def intro: exec_other_intros)
 
 lemma exec_fatal_DynCom:
   "exec_fatal (f s) \<Gamma> s \<Longrightarrow> exec_fatal (DynCom f) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros)
+  by (force simp: exec_fatal_def intro: exec_other_intros)
 
 lemma exec_fatal_Guard:
   "exec_fatal (Guard f P C) \<Gamma> s = (s \<in> P \<longrightarrow> exec_fatal C \<Gamma> s)"
 proof (cases "s \<in> P")
   case True thus ?thesis
-    by (force simp: exec_fatal_def intro: exec.intros
+    by (force simp: exec_fatal_def intro: exec_other_intros
               elim: exec_Normal_elim_cases)
 next
   case False thus ?thesis
-    by (force simp: exec_fatal_def intro: exec.intros)
+    by (force simp: exec_fatal_def intro: exec_other_intros)
 qed
 
 lemma restrict_safe_Guard:
@@ -375,11 +377,11 @@ lemma restrict_safe_Guard:
 proof (cases t)
   case (Normal s) with restrict show ?thesis
     by (force simp: restrict_safe_def restrict_safe_OK_def exec_fatal_Guard
-              intro: exec.intros)
+              intro: exec_other_intros)
 next
   case (Abrupt s) with restrict show ?thesis
     by (force simp: restrict_safe_def restrict_safe_OK_def exec_fatal_Guard
-              intro: exec.intros)
+              intro: exec_other_intros)
 next
   case (Fault f) with restrict show ?thesis
     by (force simp: restrict_safe_def exec_fatal_Guard)
@@ -390,17 +392,17 @@ qed
 
 lemma restrict_safe_Guard2:
   "\<lbrakk> s \<notin> P; mono_guard P \<rbrakk> \<Longrightarrow> restrict_safe s (Fault f) (Guard f P C) \<Gamma>"
-  by (force simp: restrict_safe_def exec_fatal_def intro: exec.intros
+  by (force simp: restrict_safe_def exec_fatal_def intro: exec_other_intros
             dest: mono_guardD)
 
 lemma exec_fatal_Catch:
   "exec_fatal C \<Gamma> s \<Longrightarrow> exec_fatal (TRY C CATCH D END) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros)
+  by (force simp: exec_fatal_def intro: exec_other_intros)
 
 lemma exec_fatal_Catch2:
   "\<lbrakk> \<Gamma> \<turnstile> \<langle>C,Normal s\<rangle> \<Rightarrow> Abrupt t; exec_fatal D \<Gamma> t \<rbrakk> \<Longrightarrow>
       exec_fatal (TRY C CATCH D END) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros)
+  by (force simp: exec_fatal_def intro: exec_other_intros)
 
 lemma intra_safe_restrict [rule_format]:
   assumes safe_env: "\<And>n C. \<Gamma> n = Some C \<Longrightarrow> intra_safe C" and
@@ -409,7 +411,7 @@ lemma intra_safe_restrict [rule_format]:
 using exec
 proof induct
   case (Skip s) thus ?case
-    by (force simp: restrict_safe_def restrict_safe_OK_def intro: exec.intros)
+    by (force simp: restrict_safe_def restrict_safe_OK_def intro: exec_other_intros)
 next
   case (Guard s' P C t f) show ?case
   proof (cases "\<exists>g. C = Basic g")
@@ -419,7 +421,7 @@ next
     case True with Guard show ?thesis
       by (cases t) (force simp: restrict_safe_def restrict_safe_OK_def
                                 point_eq_mod_safe_def exec_fatal_Guard
-                          intro: exec.intros
+                          intro: exec_other_intros
                           elim: exec_Normal_elim_cases,
                     (fast elim: exec_Normal_elim_cases)+)
   qed
@@ -431,7 +433,7 @@ next
 next
   case (Basic f s) thus ?case
     by (force simp: restrict_safe_def restrict_safe_OK_def point_eq_mod_safe_def
-              intro: exec.intros)
+              intro: exec_other_intros)
 next
   case (Spec r s t) thus ?case
     apply (clarsimp simp: mem_safe_def)
@@ -451,12 +453,12 @@ next
     case (Normal s') with Seq show ?thesis
       by (cases ta)
          (clarsimp simp: restrict_safe_def restrict_safe_OK_def,
-          (drule_tac x=X in spec)+, auto intro: exec.intros point_eq_mod_trans
+          (drule_tac x=X in spec)+, auto intro: exec_other_intros point_eq_mod_trans
                                                exec_fatal_Seq exec_fatal_Seq2)+
   next
     case (Abrupt s') with Seq show ?thesis
       by (force simp: restrict_safe_def restrict_safe_OK_def
-                intro: exec.intros dest: exec_fatal_Seq
+                intro: exec_other_intros dest: exec_fatal_Seq
                 elim: exec_Normal_elim_cases)
   next
     case (Fault f) with Seq show ?thesis
@@ -471,24 +473,24 @@ next
   case (CondTrue s P C t D) thus ?case
     by (cases t)
        (auto simp: restrict_safe_def restrict_safe_OK_def exec_fatal_Cond
-             intro: exec.intros dest: expr_htd_ind split: if_split_asm)
+             intro: exec_other_intros dest: expr_htd_ind split: if_split_asm)
 next
   case (CondFalse s P C t D) thus ?case
     by (cases t)
        (auto simp: restrict_safe_def restrict_safe_OK_def exec_fatal_Cond
-             intro: exec.intros dest: expr_htd_ind split: if_split_asm)
+             intro: exec_other_intros dest: expr_htd_ind split: if_split_asm)
 next
   case (WhileTrue P C s s' t) show ?case
   proof (cases s')
     case (Normal sa) with WhileTrue show ?thesis
       by (cases t)
          (clarsimp simp: restrict_safe_def restrict_safe_OK_def,
-          (drule_tac x=X in spec)+, auto simp: expr_htd_ind intro: exec.intros
+          (drule_tac x=X in spec)+, auto simp: expr_htd_ind intro: exec_other_intros
                point_eq_mod_trans exec_fatal_While exec_fatal_While2)+
   next
     case (Abrupt sa) with WhileTrue show ?thesis
       by (force simp: restrict_safe_def restrict_safe_OK_def expr_htd_ind
-                intro: exec.intros exec_fatal_While
+                intro: exec_other_intros exec_fatal_While
                 elim: exec_Normal_elim_cases)
   next
     case (Fault f) with WhileTrue show ?thesis
@@ -500,15 +502,15 @@ next
 next
   case (WhileFalse P C s) thus ?case
     by (force simp: restrict_safe_def restrict_safe_OK_def expr_htd_ind
-              intro: exec.intros)
+              intro: exec_other_intros)
 next
   case (Call C p s t) with safe_env show ?case
     by (cases t)
        (auto simp: restrict_safe_def restrict_safe_OK_def
-             intro: exec_fatal_Call exec.intros)
+             intro: exec_fatal_Call exec_other_intros)
 next
   case (CallUndefined p s) thus ?case
-    by (force simp: restrict_safe_def exec_fatal_def intro: exec.intros)
+    by (force simp: restrict_safe_def exec_fatal_def intro: exec_other_intros)
 
 next
   case (StuckProp C) thus ?case by simp
@@ -517,23 +519,23 @@ next
     by (cases t)
        (auto simp: restrict_safe_def restrict_safe_OK_def
                    restrict_htd_def
-             intro!: exec.intros exec_fatal_DynCom)
+             intro!: exec_other_intros exec_fatal_DynCom)
 next
   case (Throw s) thus ?case
-    by (force simp: restrict_safe_def restrict_safe_OK_def intro: exec.intros)
+    by (force simp: restrict_safe_def restrict_safe_OK_def intro: exec_other_intros)
 next
   case (AbruptProp C s) thus ?case by simp
 next
   case (CatchMatch C D s s' t) thus ?case
     by (cases t)
        (clarsimp simp: restrict_safe_def, drule_tac x=X in spec,
-        auto simp: restrict_safe_OK_def intro: exec.intros point_eq_mod_trans
+        auto simp: restrict_safe_OK_def intro: exec_other_intros point_eq_mod_trans
              dest: exec_fatal_Catch exec_fatal_Catch2)+
 next
   case (CatchMiss C s t D) thus ?case
     by (cases t)
        (clarsimp simp: restrict_safe_def, drule_tac x=X in spec,
-        auto simp: restrict_safe_OK_def intro: exec.intros
+        auto simp: restrict_safe_OK_def intro: exec_other_intros
              dest: exec_fatal_Catch)+
 qed
 
@@ -914,98 +916,23 @@ lemma exec_restrict:
   shows "\<And>\<Gamma> X. \<lbrakk> \<Gamma>' = \<Gamma> |` X; proc_deps C \<Gamma> \<subseteq> X \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<langle>C,s\<rangle> \<Rightarrow> t"
 using exec
 proof induct
-  case Skip thus ?case by (fast intro: exec.intros)
-next
-  case (Guard C f P s' t) thus ?case by (force intro: exec.intros)
-next
-  case (GuardFault C f P s) thus ?case by (fast intro: exec.intros)
-next
-  case (FaultProp C f) thus ?case by simp
-next
-  case (Basic f s) thus ?case by (fast intro: exec.intros)
-next
-  case (Spec r s t) thus ?case by (fast intro: exec.intros)
-next
-  case (SpecStuck r s) thus ?case by (fast intro: exec.intros)
-next
-  case (Seq C D s sa ta) thus ?case by (force intro: exec.intros)
-next
-  case (CondTrue P C D s t) thus ?case by (force intro: exec.intros)
-next
-  case (CondFalse P C D s t) thus ?case by (force intro: exec.intros)
-next
-  case (WhileTrue P C s s' t) thus ?case by (force intro: exec.intros)
-next
-  case (WhileFalse P C s) thus ?case by (force intro: exec.intros)
-next
-  case (Call p C s t) thus ?case
-    by - (insert proc_deps_restrict [of C \<Gamma> p], force intro: exec.intros)
-next
-  case (CallUndefined p s) thus ?case by (force intro: exec.intros)
-next
-  case (StuckProp C) thus ?case by simp
-next
-  case (DynCom f s t) thus ?case by (force intro: exec.intros)
-next
-  case (Throw s) thus ?case by (force intro: exec.intros)
-next
-  case (AbruptProp C s) thus ?case by simp
-next
-  case (CatchMatch C D s s' t) thus ?case by (force intro: exec.intros)
-next
-  case (CatchMiss C D s t) thus ?case by (force intro: exec.intros)
-qed
+  case (Call p C s t)
+  thus ?case
+    using proc_deps_restrict [of C \<Gamma> p] by (force intro: exec_other_intros)
+qed (force intro: exec_other_intros)+
 
 lemma exec_restrict2:
   assumes exec: "\<Gamma> \<turnstile> \<langle>C,s\<rangle> \<Rightarrow> t"
   shows "\<And>X. proc_deps C \<Gamma> \<subseteq> X \<Longrightarrow> \<Gamma> |` X \<turnstile> \<langle>C,s\<rangle> \<Rightarrow> t"
 using exec
 proof induct
-  case Skip thus ?case by (fast intro: exec.intros)
-next
-  case (Guard C f P s' t) thus ?case by (force intro: exec.intros)
-next
-  case (GuardFault C f P s) thus ?case by (fast intro: exec.intros)
-next
-  case (FaultProp C f) thus ?case by simp
-next
-  case (Basic f s) thus ?case by (fast intro: exec.intros)
-next
-  case (Spec r s t) thus ?case by (fast intro: exec.intros)
-next
-  case (SpecStuck r s) thus ?case by (fast intro: exec.intros)
-next
-  case (Seq C D s sa ta) thus ?case by (auto intro: exec.intros)
-next
-  case (CondTrue P C D s t) thus ?case
-    by (force intro: exec.intros)
-next
-  case (CondFalse P C D s t) thus ?case
-    by (force intro: exec.intros)
-next
-  case (WhileTrue P C s s' t) thus ?case by (auto intro: exec.intros)
-next
-  case (WhileFalse P C s) thus ?case by (force intro: exec.intros)
-next
   case (Call p C s t) thus ?case
-    by - (insert proc_deps_restrict [of C \<Gamma> p],
-          auto intro!: exec.intros split: option.splits)
-next
-  case (CallUndefined p s) thus ?case by (force intro: exec.intros)
-next
-  case (StuckProp C) thus ?case by simp
+  using proc_deps_restrict [of C \<Gamma> p]
+    by (auto intro!: exec_other_intros split: option.splits)
 next
   case (DynCom f s t) thus ?case
     by - (rule exec.intros, simp, blast)
-next
-  case (Throw s) thus ?case by (force intro: exec.intros)
-next
-  case (AbruptProp C s) thus ?case by simp
-next
-  case (CatchMatch C D s s' t) thus ?case by (auto intro: exec.intros)
-next
-  case (CatchMiss C D s t) thus ?case by (force intro: exec.intros)
-qed
+qed (auto intro: exec_other_intros)
 
 lemma exec_restrict_eq:
   "\<Gamma> |` proc_deps C \<Gamma> \<turnstile> \<langle>C,s\<rangle> \<Rightarrow> t = \<Gamma> \<turnstile> \<langle>C,s\<rangle> \<Rightarrow> t"

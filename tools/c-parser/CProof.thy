@@ -89,7 +89,7 @@ let
     | repl x = x
   fun heap_assert_tr [b] = repl b
     | heap_assert_tr ts = raise TERM ("heap_assert_tr", ts);
-in [("_heap",K heap_assert_tr)] end;
+in [("_heap",K heap_assert_tr)] end
 \<close>
 
 
@@ -120,7 +120,7 @@ let
   and nst2 x n = new_heap (st2 x n);
   fun sep_tr [t] = Syntax.const "sep_app" $ (*new_heap *) t $ hd ac
     | sep_tr ts = raise TERM ("sep_tr", ts);
-in [("_sep_assert",K sep_tr)] end;
+in [("_sep_assert",K sep_tr)] end
 \<close>
 
 
@@ -300,14 +300,14 @@ let
     | deref_assign l r = raise Match
   fun assign_tr [l,r] = deref_assign l r
     | assign_tr ts = raise Match
-in [("CTypesDefs.lift",K lift_tr),("_Assign",K assign_tr)] end;
+in [("CTypesDefs.lift",K lift_tr),("_Assign",K assign_tr)] end
 \<close>
 
 print_translation \<open>
 let
   fun sep_app_tr [l,r] = Syntax.const "_sep_assert" $ l
     | sep_app_tr ts = raise Match
-in [("sep_app",K sep_app_tr)] end;
+in [("sep_app",K sep_app_tr)] end
 \<close>
 
 syntax "_h_t_valid" :: "'a::c_type ptr \<Rightarrow> bool" ("\<Turnstile>\<^sub>t _" [99] 100)

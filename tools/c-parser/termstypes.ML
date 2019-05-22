@@ -68,11 +68,11 @@ fun mk_i2w_t rty = Const(@{const_name "Word.word_of_int"},
                          int --> rty)
 
 fun mk_lshift(t1 : term, t2 : term) : term =
-    Const(@{const_name "Bits.bits_class.shiftl"},
+    Const(@{const_name "shiftl"},
           type_of t1 --> nat --> type_of t1) $ t1 $ t2
 
 fun mk_rshift(t1, t2) =
-    Const(@{const_name "Bits.bits_class.shiftr"},
+    Const(@{const_name "shiftr"},
           type_of t1 --> nat --> type_of t1) $ t1 $ t2
 
 

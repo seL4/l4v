@@ -117,6 +117,7 @@ fun find_short_name ctxt (long_name, typ) =
                   then (warn_typ (); SOME short_name)
                   else NONE
                 end
+              | check _ = raise Match
           in
             Option.mapPartial check candidate
           end

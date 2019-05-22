@@ -1891,7 +1891,7 @@ apply(clarsimp split: if_split_asm)
 done
 
 lemma lift_t_sub_field_update:
-  "\<lbrakk> d,g' \<Turnstile>\<^sub>t p; \<not> (TYPE('a) <\<^sub>\<tau> TYPE('b)) (*; guard_mono g' p g *)\<rbrakk> \<Longrightarrow>
+  "\<lbrakk> d,g' \<Turnstile>\<^sub>t p; \<not> (TYPE('a) <\<^sub>\<tau> TYPE('b))\<rbrakk> \<Longrightarrow>
       lift_t g (heap_update p (v::'a::mem_type) h,d) =
           sub_field_update_t (field_names (typ_info_t TYPE('a)) (typ_uinfo_t TYPE('b))) p v
               ((lift_t g (h,d))::'b::mem_type typ_heap)"
@@ -2519,10 +2519,7 @@ apply(case_tac q)
 done
 
 lemma htd_update_list_dom [rule_format, simp]:
-  "length xs < addr_card \<longrightarrow>
-      (\<forall>p d. dom_s (htd_update_list p xs d) =
-          (dom_s d(*  - {(p + of_nat x,y) | x y. x < length xs}*))
-              \<union> dom_tll p xs)"
+  "length xs < addr_card \<longrightarrow> (\<forall>p d. dom_s (htd_update_list p xs d) = dom_s d \<union> dom_tll p xs)"
 apply(induct_tac xs)
  apply simp
 apply clarsimp
@@ -2610,10 +2607,8 @@ apply fast
 done
 
 lemma ptr_retyp_dom [simp]:
-  "dom_s (ptr_retyp (p::'a::mem_type ptr) d) =
-      (dom_s d (*-{(ptr_val p + of_nat x,y) | x y. x < size_of TYPE('a)} *)) \<union> s_footprint p"
-apply (simp add: ptr_retyp_def)
-done
+  "dom_s (ptr_retyp (p::'a::mem_type ptr) d) = dom_s d \<union> s_footprint p"
+  by (simp add: ptr_retyp_def)
 
 lemma dom_s_empty_htd [simp]:
   "dom_s empty_htd = {}"
@@ -2795,7 +2790,7 @@ done
 
 lemma ptr_retyp_d_eq_fst:
   "fst (ptr_retyp p d x) = (if x \<in> {ptr_val (p::'a::mem_type ptr)..+size_of TYPE('a)}
-      then True (*ptr_retyp p empty_htd x *) else fst (d x))"
+      then True else fst (d x))"
 apply(auto)
  apply(drule_tac d=d in ptr_retyp_d_empty)
  apply auto

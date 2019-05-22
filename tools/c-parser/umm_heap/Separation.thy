@@ -352,7 +352,7 @@ apply(simp add: size_of_def)
 done
 
 lemma heap_list_s_heap_merge_right':
-  "\<lbrakk> s\<^sub>1,g \<Turnstile>\<^sub>s (p::'a::c_type ptr); (*wf_heap_val s\<^sub>1;*) n \<le> size_of TYPE('a) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> s\<^sub>1,g \<Turnstile>\<^sub>s (p::'a::c_type ptr); n \<le> size_of TYPE('a) \<rbrakk> \<Longrightarrow>
       heap_list_s (s\<^sub>0 ++ s\<^sub>1) n (ptr_val p + of_nat (size_of TYPE('a) - n))
           = heap_list_s s\<^sub>1 n (ptr_val p + of_nat (size_of TYPE('a) - n))"
 proof (induct n)
@@ -368,22 +368,18 @@ apply auto
 qed
 
 lemma heap_list_s_heap_merge_right:
-  "\<lbrakk> s\<^sub>1,g \<Turnstile>\<^sub>s ((Ptr p)::'a::c_type ptr) (*; wf_heap_state s\<^sub>1*) \<rbrakk> \<Longrightarrow>
-      heap_list_s (s\<^sub>0 ++ s\<^sub>1) (size_of TYPE('a)) p =
-          heap_list_s s\<^sub>1 (size_of TYPE('a)) p"
+  "s\<^sub>1,g \<Turnstile>\<^sub>s ((Ptr p)::'a::c_type ptr) \<Longrightarrow>
+   heap_list_s (s\<^sub>0 ++ s\<^sub>1) (size_of TYPE('a)) p = heap_list_s s\<^sub>1 (size_of TYPE('a)) p"
   by (force dest: heap_list_s_heap_merge_right')
 
 lemma lift_typ_heap_heap_merge_right:
-  "\<lbrakk> lift_typ_heap g s\<^sub>1 p = Some v (*; wf_heap_state s\<^sub>1*) \<rbrakk> \<Longrightarrow>
-      lift_typ_heap g (s\<^sub>0 ++ s\<^sub>1) (p::'a::c_type ptr) = Some v"
-  by (force simp: lift_typ_heap_if s_valid_heap_merge_right
-                  heap_list_s_heap_merge_right split: if_split_asm)
+  "lift_typ_heap g s\<^sub>1 p = Some v \<Longrightarrow> lift_typ_heap g (s\<^sub>0 ++ s\<^sub>1) (p::'a::c_type ptr) = Some v"
+  by (force simp: lift_typ_heap_if s_valid_heap_merge_right heap_list_s_heap_merge_right
+            split: if_split_asm)
 
 lemma lift_typ_heap_heap_merge_sep_map:
-  "(p \<mapsto>\<^sub>g v) s\<^sub>1 \<Longrightarrow>
-      lift_typ_heap g (s\<^sub>0 ++ s\<^sub>1) p = Some (v::'a::c_type)"
-  by - (drule sep_map_lift_typ_heapD,
-        erule lift_typ_heap_heap_merge_right)
+  "(p \<mapsto>\<^sub>g v) s\<^sub>1 \<Longrightarrow> lift_typ_heap g (s\<^sub>0 ++ s\<^sub>1) p = Some (v::'a::c_type)"
+  by (drule sep_map_lift_typ_heapD, erule lift_typ_heap_heap_merge_right)
 
 lemma sep_conjI:
   "\<lbrakk> P s\<^sub>0; Q s\<^sub>1; s\<^sub>0 \<bottom> s\<^sub>1; s = s\<^sub>1 ++ s\<^sub>0 \<rbrakk> \<Longrightarrow> (P \<and>\<^sup>* Q) s"
@@ -931,12 +927,12 @@ qed
 lemma strongest_intuitionistic:
   "\<not> (\<exists>Q. (\<forall>s. (Q s \<longrightarrow> (P \<and>\<^sup>* sep_true) s)) \<and> intuitionistic Q \<and>
       Q \<noteq> (P \<and>\<^sup>* sep_true) \<and> (\<forall>s. P s \<longrightarrow> Q s))"
-  by (force intro!: ext dest!: sep_conjD intuitionisticD)
+  by (clarsimp, rule ext) (force dest!: sep_conjD intuitionisticD)
 
 lemma weakest_intuitionistic:
   "\<not> (\<exists>Q. (\<forall>s. ((sep_true \<longrightarrow>\<^sup>* P) s \<longrightarrow> Q s)) \<and> intuitionistic Q \<and>
       Q \<noteq> (sep_true \<longrightarrow>\<^sup>* P) \<and> (\<forall>s. Q s \<longrightarrow> P s))"
-  apply (clarsimp intro!: ext)
+  apply (clarsimp, rule ext)
   apply (rule iffI)
    apply (rule sep_implI')
    apply (drule_tac s=x and s'="x ++ h'" in intuitionisticD)
