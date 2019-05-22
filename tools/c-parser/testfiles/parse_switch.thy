@@ -24,16 +24,16 @@ thm h_body_def
 thm j_body_def
 thm k_body_def
 
-ML {*
+ML \<open>
   val kthm = @{thm k_body_def}
   val k_t = Thm.concl_of kthm
   val cs = Term.add_consts k_t []
-*}
+\<close>
 
-ML {*
+ML \<open>
   member (=) (map #1 cs) "CProof.strictc_errortype.C_Guard" orelse
   OS.Process.exit OS.Process.failure
-*}
+\<close>
 
 end
 

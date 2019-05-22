@@ -127,12 +127,12 @@ end
 
 subsection "Raw heap"
 
-text {* A raw map from addresses to bytes *}
+text \<open>A raw map from addresses to bytes\<close>
 
 type_synonym heap_mem = "addr \<Rightarrow> byte"
 
-text {* For heap h, pointer p and nat n, (heap_list h n p) returns the list
-        of bytes in the heap taken from addresses {p..+n} *}
+text \<open>For heap h, pointer p and nat n, (heap_list h n p) returns the list
+        of bytes in the heap taken from addresses {p..+n}\<close>
 
 primrec
   heap_list :: "heap_mem \<Rightarrow> nat \<Rightarrow> addr \<Rightarrow> byte list"
@@ -143,9 +143,9 @@ where
 
 section "Intervals"
 
-text {*
+text \<open>
   For word a and nat b, {a..+b} is the set of words x,
-  with unat (x - a) < b. *}
+  with unat (x - a) < b.\<close>
 
 definition
   intvl :: "'a::len word \<times> nat \<Rightarrow> 'a::len word set" where

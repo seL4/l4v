@@ -80,7 +80,7 @@ lemma update_ti_pair_t_dtpair [simp]:
   "update_ti_pair_t (DTPair t f) = update_ti_t t"
   by (rule ext, simp add: update_ti_pair_t_def update_ti_t_def)
 
-text {* --------------------------------------------------------------- *}
+text \<open>---------------------------------------------------------------\<close>
 
 lemma field_desc_empty [simp]:
   "field_desc (TypDesc (TypAggregate []) nm) = \<lparr> field_access = \<lambda>x bs. [],

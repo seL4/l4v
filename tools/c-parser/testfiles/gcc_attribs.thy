@@ -21,10 +21,10 @@ begin
   thm f_body_def
 end
 
-ML {*
+ML \<open>
   val SOME cse = CalculateState.get_csenv @{theory} "gcc_attribs.c"
   val spec1 = Symtab.lookup (ProgramAnalysis.function_specs cse) "myexit"
   val spec2 = Symtab.lookup (ProgramAnalysis.function_specs cse) "myexit2"
-*}
+\<close>
 
 end

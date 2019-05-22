@@ -65,7 +65,7 @@ definition
 where
   "sep_cut x y \<equiv> sep_cut' x (unat y)"
 
-text {* ---- *}
+text \<open>----\<close>
 
 (* FIXME MOVE *)
 lemma heap_list_h_eq:

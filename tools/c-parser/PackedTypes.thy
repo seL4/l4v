@@ -12,9 +12,9 @@ theory PackedTypes
 imports "Word_Lib.WordSetup" CProof
 begin
 
-section {* Underlying definitions for the class axioms *}
+section \<open>Underlying definitions for the class axioms\<close>
 
-text {* field_access / field_update is the identity for packed types *}
+text \<open>field_access / field_update is the identity for packed types\<close>
 
 definition
   "fa_fu_idem fd n \<equiv>
@@ -39,7 +39,7 @@ where
 
 lemmas td_fafu_idem_simps = fai0 fai1 fai2 fai3 fai4 fai5
 
-text {* field_access is independent of the underlying bytes *}
+text \<open>field_access is independent of the underlying bytes\<close>
 
 definition
   "fa_heap_indep fd n \<equiv>
@@ -64,7 +64,7 @@ where
 
 lemmas td_fa_hi_simps = fahi0 fahi1 fahi2 fahi3 fahi4 fahi5
 
-section {* Lemmas about td_fafu_idem *}
+section \<open>Lemmas about td_fafu_idem\<close>
 
 lemma field_lookup_td_fafu_idem:
   shows "\<And>(s :: 'a field_desc typ_desc) f m n. \<lbrakk> field_lookup t f m = Some (s, n); td_fafu_idem t \<rbrakk> \<Longrightarrow> td_fafu_idem s"
@@ -225,7 +225,7 @@ next
         by (rule field_lookup_offset2_list [where m = 0, simplified])
 
       show "access_ti_list ts' (update_ti s bs v) (drop (size_td (dt_fst p')) bs') ! (x - size_td (dt_fst p')) = bs ! (x - n)"
-        using mlt nlex xln lbs lbs' wf wfts `td_fafu_idem s` `wf_fd s`
+        using mlt nlex xln lbs lbs' wf wfts \<open>td_fafu_idem s\<close> \<open>wf_fd s\<close>
         by (simp add: Cons_typ_desc.hyps(2) [OF fl'] size_td_pair_dt_fst)
     qed
   }
@@ -244,13 +244,13 @@ next
       apply simp
       done
 
-    hence ?case using wf lbs lbs' nlex xln wf wfts `td_fafu_idem s` `wf_fd s`
+    hence ?case using wf lbs lbs' nlex xln wf wfts \<open>td_fafu_idem s\<close> \<open>wf_fd s\<close>
       by (simp add: nth_append length_fa_ti access_ti_pair_dt_fst size_td_pair_dt_fst ih[OF fl])
   }
-  ultimately show ?case using `field_lookup_list (p' # ts') f 0 = Some (s, n)` by (simp split: option.splits)
+  ultimately show ?case using \<open>field_lookup_list (p' # ts') f 0 = Some (s, n)\<close> by (simp split: option.splits)
 qed (clarsimp split: if_split_asm)+
 
-subsection {* td_fa_hi *}
+subsection \<open>td_fa_hi\<close>
 
 (* \<lbrakk> size_of TYPE('a::mem_type) \<le> length h; size_of TYPE('a) \<le> length h' \<rbrakk> \<Longrightarrow> *)
 
@@ -302,9 +302,9 @@ next
     by simp (erule (2) DTPair_typ_desc.hyps)
 qed
 
-section {* Simp rules for deriving packed props from the type combinators *}
+section \<open>Simp rules for deriving packed props from the type combinators\<close>
 
-subsection {* td_fafu_idem *}
+subsection \<open>td_fafu_idem\<close>
 
 lemma td_fafu_idem_final_pad:
   "padup (2 ^ align_td t) (size_td t) = 0
@@ -455,7 +455,7 @@ lemma td_fafu_idem_empty_typ_info:
   unfolding empty_typ_info_def
   by simp
 
-subsection {* td_fa_hi *}
+subsection \<open>td_fa_hi\<close>
 
 (* These are mostly identical to the above --- surely there is something which implies both? *)
 
@@ -586,11 +586,11 @@ lemma td_fa_hi_empty_typ_info:
   unfolding empty_typ_info_def
   by simp
 
-section {* The type class and simp sets *}
+section \<open>The type class and simp sets\<close>
 
-text {* Packed types, with no padding, have the defining property that
+text \<open>Packed types, with no padding, have the defining property that
         access is invariant under substitution of the underlying heap and
-        access/update is the identity *}
+        access/update is the identity\<close>
 
 class packed_type = mem_type +
   assumes td_fafu_idem: "td_fafu_idem (typ_info_t TYPE('a::c_type))"
@@ -630,9 +630,9 @@ next
   case (Cons x xs) thus ?case by (simp add: min_def ac_simps drop_take)
 qed
 
-section {* Instances *}
+section \<open>Instances\<close>
 
-text {* Words (of multiple of 8 size) are packed *}
+text \<open>Words (of multiple of 8 size) are packed\<close>
 
 instantiation word :: (len8) packed_type
 begin
@@ -643,7 +643,7 @@ instance
   done
 end
 
-text {* Pointers are always packed *}
+text \<open>Pointers are always packed\<close>
 
 instantiation ptr :: (c_type)packed_type
 begin
@@ -654,7 +654,7 @@ instance
   done
 end
 
-text {* Arrays of packed types are in turn packed *}
+text \<open>Arrays of packed types are in turn packed\<close>
 
 class array_outer_packed = packed_type + array_outer_max_size
 class array_inner_packed = array_outer_packed + array_inner_max_size
@@ -670,9 +670,9 @@ instance array :: (array_outer_packed, array_max_count) packed_type
 
 instance array :: (array_inner_packed, array_max_count) array_outer_packed ..
 
-section {* Theorems about packed types *}
+section \<open>Theorems about packed types\<close>
 
-subsection {* td_fa_hi *}
+subsection \<open>td_fa_hi\<close>
 
 lemma heap_independence:
   "\<lbrakk>length h = size_of TYPE('a :: packed_type); length h' = size_of TYPE('a) \<rbrakk>
@@ -705,7 +705,7 @@ lemma packed_heap_update_collapse_hrs:
   unfolding hrs_mem_update_def
   by (simp add: split_def packed_heap_update_collapse)
 
-subsection {* td_fafu_idem *}
+subsection \<open>td_fafu_idem\<close>
 
 lemma order_leE:
   fixes x :: "'a :: order"
@@ -771,10 +771,10 @@ next
 
   show ?case
   proof (cases n')
-    case 0 thus ?thesis using `Suc m' < n'` by simp
+    case 0 thus ?thesis using \<open>Suc m' < n'\<close> by simp
   next
     case (Suc n'')
-    hence "m' < n''" using `Suc m' < n'` by simp
+    hence "m' < n''" using \<open>Suc m' < n'\<close> by simp
     thus ?thesis using Suc
       by (simp add: Suc.hyps ac_simps)
   qed

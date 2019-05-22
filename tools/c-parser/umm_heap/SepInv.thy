@@ -21,11 +21,11 @@ definition inv_footprint :: "'a::c_type ptr \<Rightarrow> heap_assert" where
   "inv_footprint p \<equiv> \<lambda>s. dom s = {(x,y). x \<in> {ptr_val p..+size_of TYPE('a)}} -
       s_footprint p"
 
-text {*
+text \<open>
   Like in Separation.thy, these arrows are defined using bsub and esub but
   have an \emph{input} syntax abbreviation with just sub.
   See original comment there for justification.
-*}
+\<close>
 
 definition
   sep_map_inv :: "'a::c_type ptr \<Rightarrow> 'a ptr_guard \<Rightarrow> 'a \<Rightarrow> heap_assert"
@@ -68,7 +68,7 @@ definition
 where
   "g \<turnstile>\<^sub>s\<^sup>i p \<equiv> g \<turnstile>\<^sub>s p \<and>\<^sup>* inv_footprint p"
 
-text {* ---- *}
+text \<open>----\<close>
 
 lemma sep_map'_g:
   "(p \<hookrightarrow>\<^sup>i\<^sub>g v) s \<Longrightarrow> g p"

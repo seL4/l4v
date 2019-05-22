@@ -299,7 +299,7 @@ definition
 where
   "s \<bottom>\<^sub>\<tau> t \<equiv> typ_uinfo_t s \<bottom>\<^sub>t typ_uinfo_t t"
 
-text {* ---- *}
+text \<open>----\<close>
 
 lemma wf_heap_val_SIndexVal_STyp_simp [simp]:
   "wf_heap_val s \<Longrightarrow> s (x,SIndexVal) \<noteq> Some (STyp t)"

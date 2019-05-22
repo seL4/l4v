@@ -56,7 +56,7 @@ next
   then obtain b B where
     S: "S = insert b B \<and> b \<notin> B \<and> card B = n \<and> (n = 0 \<longrightarrow> B = {})"
     by (auto simp: card_Suc_eq)
-  with `finite S` Suc.hyps [of B]
+  with \<open>finite S\<close> Suc.hyps [of B]
   obtain f where IH: "(\<forall>m<n. f m \<in> B) \<and> (\<forall>x. x \<in> B \<longrightarrow> (\<exists>!m. m < n \<and> f m = x))" by auto
   define f' where "f' \<equiv> \<lambda>m. if m = card B then b else f m"
   from Suc.prems S IH
@@ -87,7 +87,7 @@ lemma forall_finite_index:
   by (metis (mono_tags, hide_lams) finite_index_works)
 
 
-section {* Finite Cartesian Products *}
+section \<open>Finite Cartesian Products\<close>
 
 typedef ('a,'n::finite) array ("_[_]" [30,0] 31) = "UNIV :: ('n => 'a) set"
   by simp

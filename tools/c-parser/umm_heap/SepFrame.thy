@@ -168,7 +168,7 @@ where
   "x \<in> intra_deps C \<Longrightarrow> x \<in> proc_deps C \<Gamma>"
 | "\<lbrakk> x \<in> proc_deps C \<Gamma>; \<Gamma> x = Some D; y \<in> intra_deps D \<rbrakk> \<Longrightarrow> y \<in> proc_deps C \<Gamma>"
 
-text {* ---- *}
+text \<open>----\<close>
 
 lemma point_eq_mod_refl [simp]:
   "point_eq_mod f f X"

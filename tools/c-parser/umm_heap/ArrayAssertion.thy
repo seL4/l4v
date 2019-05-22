@@ -67,15 +67,15 @@ lemma typ_uinfo_array_tag_n_m_eq:
   by (simp add: typ_uinfo_t_def typ_info_array array_tag_def
                 uinfo_array_tag_n_m_eq)
 
-text {* Alternative to h_t_valid for arrays. This allows reasoning
-about arrays of variable width. *}
+text \<open>Alternative to h_t_valid for arrays. This allows reasoning
+about arrays of variable width.\<close>
 definition
   h_t_array_valid :: "heap_typ_desc \<Rightarrow> ('a :: c_type) ptr \<Rightarrow> nat \<Rightarrow> bool"
 where
   "h_t_array_valid htd ptr n = valid_footprint htd (ptr_val ptr) (uinfo_array_tag_n_m TYPE ('a) n n)"
 
-text {* Assertion that pointer p is within an array that continues
-for at least n more elements. *}
+text \<open>Assertion that pointer p is within an array that continues
+for at least n more elements.\<close>
 definition
   "array_assertion (p :: ('a :: c_type) ptr) n htd
     = (\<exists>q i j. h_t_array_valid htd q j
@@ -120,7 +120,7 @@ lemma array_ptr_valid_array_assertionI:
   by (auto dest: array_ptr_valid_array_assertionD
            simp: array_assertion_shrink_right)
 
-text {* Derived from array_assertion, an appropriate assertion for performing
+text \<open>Derived from array_assertion, an appropriate assertion for performing
 a pointer addition, or for dereferencing a pointer addition (the strong case).
 
 In either case, there must be an array connecting the two ends of the pointer
@@ -128,7 +128,7 @@ transition, with the caveat that the last address can be just out of the array
 if the pointer is not dereferenced, thus the strong/weak distinction.
 
 If the pointer doesn't actually move, nothing is learned.
-*}
+\<close>
 definition
   ptr_add_assertion :: "('a :: c_type) ptr \<Rightarrow> int \<Rightarrow> bool \<Rightarrow> heap_typ_desc \<Rightarrow> bool"
 where
@@ -155,8 +155,8 @@ lemma ptr_add_assertion_uint[simp]:
   by (simp add: ptr_add_assertion_positive uint_0_iff unat_def
          split: bool.split)
 
-text {* Ignore char and void pointers. The C standard specifies that arithmetic on
-char and void pointers doesn't create any special checks. *}
+text \<open>Ignore char and void pointers. The C standard specifies that arithmetic on
+char and void pointers doesn't create any special checks.\<close>
 
 definition
   ptr_add_assertion' :: "('a :: c_type) ptr \<Rightarrow> int \<Rightarrow> bool \<Rightarrow> heap_typ_desc \<Rightarrow> bool"
@@ -176,7 +176,7 @@ lemma typ_name_void:
 
 lemmas ptr_add_assertion' = ptr_add_assertion'_def td_diff_from_typ_name typ_name_void
 
-text {* Mechanism for retyping a range of memory to a non-constant array size. *}
+text \<open>Mechanism for retyping a range of memory to a non-constant array size.\<close>
 
 definition
   ptr_arr_retyps :: "nat \<Rightarrow> ('a :: c_type) ptr \<Rightarrow> heap_typ_desc \<Rightarrow> heap_typ_desc"

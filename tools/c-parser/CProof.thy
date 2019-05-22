@@ -41,9 +41,9 @@ ML_file "name_generation.ML"
 
 
 (* set up hoare package to rewrite state updates more *)
-setup {*
+setup \<open>
   Hoare.add_foldcongsimps [@{thm "update_update"}, @{thm "o_def"}]
-*}
+\<close>
 
 
 (* Syntax for apply antiquotation parsing explicitly *)
@@ -71,7 +71,7 @@ definition hrs_id :: "heap_raw_state \<Rightarrow> heap_raw_state" where
 
 declare hrs_id_def [simp add]
 
-parse_translation {*
+parse_translation \<open>
 let
   fun ac x = Syntax.const "_antiquoteCur" $ Syntax.const x
   fun aco x y = Syntax.const y $ (Syntax.const "globals" $ x)
@@ -90,11 +90,11 @@ let
   fun heap_assert_tr [b] = repl b
     | heap_assert_tr ts = raise TERM ("heap_assert_tr", ts);
 in [("_heap",K heap_assert_tr)] end;
-*}
+\<close>
 
 
 (* Separation logic assertion parse translation *)
-parse_translation {*
+parse_translation \<open>
 let
   fun ac x = Syntax.const "_antiquoteCur" $ Syntax.const x
   fun aco x y = Syntax.const y $ (Syntax.const "globals" $ x)
@@ -121,7 +121,7 @@ let
   fun sep_tr [t] = Syntax.const "sep_app" $ (*new_heap *) t $ hd ac
     | sep_tr ts = raise TERM ("sep_tr", ts);
 in [("_sep_assert",K sep_tr)] end;
-*}
+\<close>
 
 
 definition c_null_guard :: "'a::c_type ptr_guard" where
@@ -280,7 +280,7 @@ syntax (output)
   "_Deref" :: "'b \<Rightarrow> 'b" ("*_" [1000] 1000)
   "_AssignH" :: "'b => 'b => ('a,'p,'f) com" ("(2*_ :==/ _)" [30, 30] 23)
 
-print_translation {*
+print_translation \<open>
 let
   fun deref (Const ("_antiquoteCur",_)$Const (h,_)) p =
       if h=NameGeneration.global_heap then Syntax.const "_Deref" $ p else
@@ -301,14 +301,14 @@ let
   fun assign_tr [l,r] = deref_assign l r
     | assign_tr ts = raise Match
 in [("CTypesDefs.lift",K lift_tr),("_Assign",K assign_tr)] end;
-*}
+\<close>
 
-print_translation {*
+print_translation \<open>
 let
   fun sep_app_tr [l,r] = Syntax.const "_sep_assert" $ l
     | sep_app_tr ts = raise Match
 in [("sep_app",K sep_app_tr)] end;
-*}
+\<close>
 
 syntax "_h_t_valid" :: "'a::c_type ptr \<Rightarrow> bool" ("\<Turnstile>\<^sub>t _" [99] 100)
 

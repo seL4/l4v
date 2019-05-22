@@ -25,11 +25,11 @@ type_synonym qualified_field_name = "field_name list"
 type_synonym typ_name = string
 
 
-text {* A typ_desc wraps a typ_struct with a typ name.
+text \<open>A typ_desc wraps a typ_struct with a typ name.
         A typ_struct is either a Scalar, with size, alignment and either a
         field accessor/updator pair (for typ_info) or a 'normalisor'
         (for typ_uinfo), or an Aggregate, with a list of typ_desc,
-        field name pairs.*}
+        field name pairs.\<close>
 
 datatype
          'a typ_desc   = TypDesc "'a typ_struct" typ_name
@@ -94,8 +94,8 @@ definition fu_commutes :: "('b \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> 
   "fu_commutes f g \<equiv> \<forall>v bs bs'. f bs (g bs' v) = g bs' (f bs v)"
 
 
-text {* size_td returns the sum of the sizes of all Scalar fields
-        comprising a typ_desc i.e. the overall size of the type *}
+text \<open>size_td returns the sum of the sizes of all Scalar fields
+        comprising a typ_desc i.e. the overall size of the type\<close>
 
 (* Could express this and many other typ_desc primrecs as tree fold/map
    combos, but the intuition this way is clearer for anything non-trivial *)
@@ -116,8 +116,8 @@ where
 | tz5: "size_td_pair (DTPair t n) = size_td t"
 
 
-text {* access_ti overlays the byte-wise representation of an object
-        on a given byte list, given the typ_info (i.e. the layout) *}
+text \<open>access_ti overlays the byte-wise representation of an object
+        on a given byte list, given the typ_info (i.e. the layout)\<close>
 
 primrec
   access_ti :: "'a typ_info \<Rightarrow> ('a \<Rightarrow> byte list \<Rightarrow> byte list)" and
@@ -145,8 +145,8 @@ text \<open>@{text access_ti\<^sub>0} overlays the representation of an object o
 definition access_ti\<^sub>0 :: "'a typ_info \<Rightarrow> ('a \<Rightarrow> byte list)" where
   "access_ti\<^sub>0 t \<equiv> \<lambda>v. access_ti t v (replicate (size_td t) 0)"
 
-text {* update_ti updates an object, given a list of bytes (the
-        representation of the new value), and the typ_info *}
+text \<open>update_ti updates an object, given a list of bytes (the
+        representation of the new value), and the typ_info\<close>
 
 primrec
   update_ti :: "'a typ_info \<Rightarrow> (byte list \<Rightarrow> 'a \<Rightarrow> 'a)" and
@@ -167,8 +167,8 @@ where
 | fu5: "update_ti_pair (DTPair t nm) = update_ti t"
 
 
-text {* update_ti_t updates an object only if the length of the
-        supplied representation equals the object size *}
+text \<open>update_ti_t updates an object only if the length of the
+        supplied representation equals the object size\<close>
 
 definition update_ti_t :: "'a typ_info \<Rightarrow> (byte list \<Rightarrow> 'a \<Rightarrow> 'a)" where
   "update_ti_t t \<equiv> \<lambda>bs. if length bs = size_td t then
@@ -187,8 +187,8 @@ definition update_ti_pair_t :: "'a typ_info_pair \<Rightarrow> (byte list \<Righ
       update_ti_pair t bs else id"
 
 
-text {* field_desc generates the access/update pair for a field,
-        given the field's type_desc *}
+text \<open>field_desc generates the access/update pair for a field,
+        given the field's type_desc\<close>
 
 definition field_desc :: "'a typ_info \<Rightarrow> 'a field_desc" where
   "field_desc t \<equiv> \<lparr> field_access = access_ti t,

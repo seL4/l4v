@@ -46,13 +46,13 @@ definition
 where
   "singleton p v h d \<equiv> lift_state (heap_update p v h,d) |` s_footprint p"
 
-text {*
+text \<open>
   Like in Separation.thy, these arrows are defined using bsub and esub but
   have an \emph{input} syntax abbreviation with just sub.
   Why? Because if sub is the only way, people write things like
   @{text "p \<mapsto>\<^sup>i\<^sub>(f x y) v"} instead of @{text "p \<mapsto>\<^sup>i\<^bsub>(f x y)\<^esub> v"}. We preserve
   the sub syntax though, because esub and bsub are a pain to type.
-*}
+\<close>
 
 definition
   sep_map :: "'a::c_type ptr \<Rightarrow> 'a ptr_guard \<Rightarrow> 'a \<Rightarrow> heap_assert"
@@ -91,7 +91,7 @@ syntax
   "_sep_assert" :: "bool \<Rightarrow> heap_state \<Rightarrow> bool" ("'(_')\<^bsup>sep\<^esup>" [0] 100)
 
 
-text {* ---- *}
+text \<open>----\<close>
 
 lemma sep_empD:
   "\<box> s \<Longrightarrow> s = Map.empty"
