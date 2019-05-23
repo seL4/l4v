@@ -250,7 +250,7 @@ where
         let r2 = hd (tl refills); rs = tl (tl refills) in
         set_refills sc_ptr (min_budget_merge (size refills = sc_refill_max sc)(schedule_used (r2 \<lparr>r_amount := r_amount r2 + remaining\<rparr> # rs) new))
     else
-      set_refills sc_ptr (schedule_used (rfhd\<lparr>r_amount := remaining, r_time := r_time rfhd + usage\<rparr> # tl refills) new)
+      set_refills sc_ptr (schedule_used (rfhd\<lparr>r_amount := remaining\<rparr> # tl refills) new)
   od"
 
 function
