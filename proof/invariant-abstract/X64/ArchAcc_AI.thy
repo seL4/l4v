@@ -1696,14 +1696,14 @@ lemma valid_vspace_obj_kheap_upd:
 lemma update_object_valid_vspace_objs[wp]:
   "\<lbrace> \<lambda>s. valid_vspace_objs s
 
-    (* Lattice Preserving *)
+    \<comment> \<open>Lattice Preserving\<close>
     \<and> (\<forall>nref np nq stepref. ((nref, np) \<in> (vs_lookup1 s)\<^sup>* `` refs_diff vs_lookup1_on_heap_obj obj ptr s
         \<and>  (([], np), [stepref], nq) \<in> vs_lookup1 s)
         \<longrightarrow> vs_ref_lvl (kheap s np) < vs_ref_lvl (kheap s nq))
     \<and> (\<forall>nref np. (nref, np) \<in> refs_diff vs_lookup1_on_heap_obj obj ptr s
         \<longrightarrow> vs_ref_lvl (Some (ArchObj obj)) < vs_ref_lvl (kheap s np))
 
-    (* New reachable objs are valid *)
+    \<comment> \<open>New reachable objs are valid\<close>
     \<and> (\<forall>rs. (rs \<rhd> ptr) s \<longrightarrow> valid_vspace_obj obj s)
     \<and> (\<forall>rs p pobj. (ko_at (ArchObj pobj) p s \<and> (rs, p)
         \<in> lookupable_refs (vs_lookup1 s) {ref. (ref \<rhd> ptr) s}
@@ -1761,14 +1761,14 @@ lemma valid_vs_lookup_fullD:
 lemma update_object_valid_vs_lookup[wp]:
   "\<lbrace> \<lambda>s. valid_vspace_objs s \<and> valid_vs_lookup s \<and> valid_asid_table (x64_asid_table (arch_state s)) s
 
-    (* Lattice Preserving *)
+    \<comment> \<open>Lattice Preserving\<close>
     \<and> (\<forall>nref np nq stepref. ((nref, np) \<in> (vs_lookup_pages1 s)\<^sup>* `` refs_diff vs_lookup_pages1_on_heap_obj obj ptr s
         \<and>  (([], np), [stepref], nq) \<in> vs_lookup_pages1 s)
         \<longrightarrow> vs_ref_lvl (kheap s np) < vs_ref_lvl (kheap s nq))
     \<and> (\<forall>nref np. (nref, np) \<in> refs_diff vs_lookup_pages1_on_heap_obj obj ptr s
         \<longrightarrow> vs_ref_lvl (Some (ArchObj obj)) < vs_ref_lvl (kheap s np))
 
-    (* New reachable objs are valid *)
+    \<comment> \<open>New reachable objs are valid\<close>
     \<and> (\<forall>rs p pobj. ((rs, p)
         \<in> lookupable_refs (vs_lookup_pages1 s) {ref. (ref \<unrhd> ptr) s}
             (refs_diff vs_lookup_pages1_on_heap_obj obj ptr s))
@@ -1815,14 +1815,14 @@ lemma update_object_valid_arch_caps[wp]:
     \<and> valid_table_caps_aobj (caps_of_state s) (arch_state s) (ArchObj obj) ptr
     \<and> valid_asid_table (x64_asid_table (arch_state s)) s
 
-    (* Lattice Preserving *)
+    \<comment> \<open>Lattice Preserving\<close>
     \<and> (\<forall>nref np nq stepref. ((nref, np) \<in> (vs_lookup_pages1 s)\<^sup>* `` refs_diff vs_lookup_pages1_on_heap_obj obj ptr s
         \<and>  (([], np), [stepref], nq) \<in> vs_lookup_pages1 s)
         \<longrightarrow> vs_ref_lvl (kheap s np) < vs_ref_lvl (kheap s nq))
     \<and> (\<forall>nref np. (nref, np) \<in> refs_diff vs_lookup_pages1_on_heap_obj obj ptr s
         \<longrightarrow> vs_ref_lvl (Some (ArchObj obj)) < vs_ref_lvl (kheap s np))
 
-    (* New reachable objs are valid *)
+    \<comment> \<open>New reachable objs are valid\<close>
     \<and> (\<forall>rs p pobj. ((rs, p)
         \<in> lookupable_refs (vs_lookup_pages1 s) {ref. (ref \<unrhd> ptr) s}
             (refs_diff vs_lookup_pages1_on_heap_obj obj ptr s))
@@ -1853,7 +1853,7 @@ lemma update_object_invs[wp]:
     \<and> valid_global_objs_upd ptr obj (arch_state s)
     \<and> ((\<exists>\<rhd> ptr) s \<longrightarrow> (valid_vspace_obj obj s)) \<and> (arch_valid_obj obj s)
 
-    (* Lattice Preserving *)
+    \<comment> \<open>Lattice Preserving\<close>
     \<and> (\<forall>nref np nq stepref. ((nref, np) \<in> (vs_lookup1 s)\<^sup>* `` refs_diff vs_lookup1_on_heap_obj obj ptr s
     \<and>  (([], np), [stepref], nq) \<in> vs_lookup1 s)
         \<longrightarrow> vs_ref_lvl (kheap s np) < vs_ref_lvl (kheap s nq))
@@ -1865,13 +1865,13 @@ lemma update_object_invs[wp]:
     \<and> (\<forall>nref np. (nref, np) \<in> refs_diff vs_lookup_pages1_on_heap_obj obj ptr s
         \<longrightarrow> vs_ref_lvl (Some (ArchObj obj)) < vs_ref_lvl (kheap s np))
 
-    (* New reachable objs are arch valid *)
+    \<comment> \<open>New reachable objs are arch valid\<close>
 
     \<and> (\<forall>rs p pobj. (ko_at (ArchObj pobj) p s \<and> (rs, p)
         \<in> lookupable_refs (vs_lookup1 s) {ref. (ref \<rhd> ptr) s}
             (refs_diff vs_lookup1_on_heap_obj obj ptr s))
         \<longrightarrow> valid_vspace_obj pobj s)
-    (* New reachable objs are vs_lookup valid *)
+    \<comment> \<open>New reachable objs are vs_lookup valid\<close>
     \<and> (\<forall>rs p pobj. ((rs, p)
         \<in> lookupable_refs (vs_lookup_pages1 s) {ref. (ref \<unrhd> ptr) s}
             (refs_diff vs_lookup_pages1_on_heap_obj obj ptr s))

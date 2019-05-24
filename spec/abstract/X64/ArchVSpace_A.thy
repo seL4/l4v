@@ -386,11 +386,9 @@ where
    | PageCap dev r R mt pgs x \<Rightarrow> returnOk $ ArchObjectCap (PageCap dev r R VMNoMap pgs None)
    | ASIDControlCap \<Rightarrow> returnOk (ArchObjectCap c)
    | ASIDPoolCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)
-(* FIXME x64-vtd: *)
-(*
-   | IOSpaceCap _ _ \<Rightarrow> returnOk c
-   | IOPageTableCap _ _ _ \<Rightarrow> returnOk c
-*)
+\<comment> \<open>FIXME x64-vtd:\<close>
+\<comment> \<open>| IOSpaceCap _ _ \<Rightarrow> returnOk c
+   | IOPageTableCap _ _ _ \<Rightarrow> returnOk c\<close>
    | IOPortCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)
    | IOPortControlCap \<Rightarrow> returnOk NullCap"
 
@@ -432,7 +430,7 @@ where
      return (NullCap, NullCap)
   od
   | (IOPortCap f l, True) \<Rightarrow> return (NullCap, (ArchObjectCap (IOPortCap f l)))
-  (* FIXME x64-vtd: IOSpaceCap and IOPageTableCap for arch_finalise_cap *)
+  \<comment> \<open>FIXME x64-vtd: IOSpaceCap and IOPageTableCap for arch_finalise_cap\<close>
   | _ \<Rightarrow> return (NullCap, NullCap)"
 
 

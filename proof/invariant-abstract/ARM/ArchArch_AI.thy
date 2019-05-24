@@ -123,7 +123,7 @@ lemma asid_high_bits_max_word:
   by (simp add: asid_high_bits_def max_word_def)
 
 lemma dom_ucast_eq_7:
-  "(- dom (\<lambda>a::7 (*asid_high_bits*) word. p (ucast a::word32)) \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} = {}) =
+  "(- dom (\<lambda>a::7 \<comment> \<open>asid_high_bits\<close> word. p (ucast a::word32)) \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} = {}) =
    (- dom p \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} = {})"
   apply safe
    apply clarsimp
@@ -802,7 +802,7 @@ lemma aci_invs':
      apply (simp add:is_aligned_neg_mask_eq)
     apply wp
   apply (clarsimp simp: cte_wp_at_caps_of_state if_option_Some
-                        Word_Miscellaneous.if_bool_simps
+                        Misc_Arithmetic.if_bool_simps
              split del: if_split)
   apply (strengthen refl)
   apply (frule_tac cap = "(cap.UntypedCap False word1 pageBits idx)"

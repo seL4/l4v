@@ -168,7 +168,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
                         | _ \<Rightarrow> fail)
             | None \<Rightarrow> return ())
       | _ \<Rightarrow> fail)
-(*  | PageIOMap asid cap ct_slot entries \<Rightarrow> undefined *)
+\<comment> \<open>  | PageIOMap asid cap ct_slot entries \<Rightarrow> undefined\<close>
   | PageGetAddr ptr \<Rightarrow> do
       paddr \<leftarrow> return $ fromPAddr $ addrFromPPtr ptr;
       ct \<leftarrow> gets cur_thread;

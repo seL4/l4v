@@ -1985,7 +1985,7 @@ definition
               \<and> (ref \<rhd> (p && ~~ mask pd_bits)) s
               \<and> pde_ref pde = Some p' \<and> p' \<in> obj_refs cap
               \<and> (\<exists>ao. ko_at (ArchObj ao) p' s \<and> valid_vspace_obj ao s)
-            (*  \<and> hd (the (vs_cap_ref cap)) \<notin> kernel_vsrefs*)) and
+           \<comment> \<open>\<and> hd (the (vs_cap_ref cap)) \<notin> kernel_vsrefs\<close>) and
      K (is_pt_cap cap \<and> cap_asid cap \<noteq> None)
    | PageTableUnmap cap ptr \<Rightarrow>
      cte_wp_at (\<lambda>c. is_arch_diminished cap c) ptr and valid_cap cap
@@ -3115,7 +3115,7 @@ lemma set_pd_invs_map:
      obj_at (\<lambda>ko. vs_refs (ArchObj (PageDirectory pd)) = vs_refs ko \<union> S) p and
      obj_at (\<lambda>ko. vs_refs_pages (ArchObj (PageDirectory pd)) = vs_refs_pages ko - T' \<union> S') p and
      obj_at (\<lambda>ko. \<exists>pd'. ko = ArchObj (PageDirectory pd')
-                 (* \<and> (\<forall>x. pd x = pd' x)*)) p and
+                 \<comment> \<open>\<and> (\<forall>x. pd x = pd' x)\<close>) p and
      (\<lambda>s. \<forall>(r,p) \<in> S. \<forall>ao. ko_at (ArchObj ao) p s \<longrightarrow> valid_vspace_obj ao s) and
      (\<lambda>s. \<forall>(r,p) \<in> S. page_table_at p s) and
      (\<lambda>s. \<forall>(r,p) \<in> S. (r \<in> kernel_vsrefs)
@@ -3679,8 +3679,6 @@ lemma set_pd_invs_unmap':
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_arch_caps_def valid_objs_caps obj_at_def
     del: disjCI)
   apply (rule conjI, clarsimp)
-  apply (rule conjI)
-   apply clarsimp
    apply (erule_tac x="(VSRef (ucast c) (Some APageDirectory), q)" in ballE)
     apply clarsimp
    apply (frule vs_refs_pages_pdI)
@@ -3689,7 +3687,6 @@ lemma set_pd_invs_unmap':
     apply (clarsimp simp: vs_lookup_pages1_def obj_at_def)
    apply (drule (1) valid_vs_lookupD)
    apply (clarsimp)
-  apply (rule conjI)
    apply clarsimp
    apply (drule vs_refs_pdI3)
    apply clarsimp
@@ -3702,7 +3699,6 @@ lemma set_pd_invs_unmap':
     apply (erule pte_ref_pagesD)
    apply (drule (1) valid_vs_lookupD)
    apply clarsimp
-  apply auto
   done
 
 lemma same_refs_lD:
@@ -3731,8 +3727,8 @@ lemma store_pde_invs_unmap':
     and valid_pde pde
     and (\<lambda>s. p && ~~ mask pd_bits \<notin> global_refs s)
     and K (wellformed_pde pde \<and> pde_ref pde = None)
-    and K ((*ucast (p && mask pd_bits >> 2) \<notin> kernel_mapping_slots
-           \<and> *)(\<exists>xs. slots = p # xs) )
+    and K (\<comment> \<open>ucast (p && mask pd_bits >> 2) \<notin> kernel_mapping_slots
+           \<and>\<close>(\<exists>xs. slots = p # xs) )
     and (\<lambda>s. \<exists>pd. ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s)\<rbrace>
    store_pde p pde
    \<lbrace>\<lambda>_. invs\<rbrace>"

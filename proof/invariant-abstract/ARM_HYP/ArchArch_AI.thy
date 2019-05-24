@@ -804,7 +804,7 @@ lemma aci_invs':
      apply (simp add:is_aligned_neg_mask_eq)
     apply wp
   apply (clarsimp simp: cte_wp_at_caps_of_state if_option_Some
-                        Word_Miscellaneous.if_bool_simps
+                        Misc_Arithmetic.if_bool_simps
              split del: if_split)
   apply (strengthen refl)
   apply (frule_tac cap = "(cap.UntypedCap False word1 pageBits idx)"

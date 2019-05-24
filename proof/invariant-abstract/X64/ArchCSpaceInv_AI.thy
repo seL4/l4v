@@ -22,11 +22,11 @@ definition
    safe_ioport_insert :: "cap \<Rightarrow> cap \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
 where
   "safe_ioport_insert newcap oldcap \<equiv>
-          \<lambda>s. (cap_ioports newcap = {} (* replacing with any non-IOPortCap *)
+          \<lambda>s. (cap_ioports newcap = {} \<comment> \<open>replacing with any non-IOPortCap\<close>
           \<or> ((\<forall>cap''\<in> ran (caps_of_state s).
-                   cap_ioports newcap = cap_ioports cap'' (* copy another IOPortCap *)
-                \<or> cap_ioports newcap \<inter> cap_ioports cap'' = {} (* new IOPortCap with unoverlapping range *))))
-          \<and> ((cap_ioports newcap - cap_ioports oldcap) \<subseteq> issued_ioports (arch_state s)) (* all ioports are issued *)"
+                   cap_ioports newcap = cap_ioports cap'' \<comment> \<open>copy another IOPortCap\<close>
+                \<or> cap_ioports newcap \<inter> cap_ioports cap'' = {} \<comment> \<open>new IOPortCap with unoverlapping range\<close>)))
+          \<and> ((cap_ioports newcap - cap_ioports oldcap) \<subseteq> issued_ioports (arch_state s)) \<comment> \<open> all ioports are issued\<close>"
 
 lemma cap_ioports_triv[simp]:
   "\<not>is_arch_cap cap \<Longrightarrow> cap_ioports cap = {}"

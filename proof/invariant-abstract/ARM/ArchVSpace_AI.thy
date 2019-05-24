@@ -2667,8 +2667,6 @@ lemma set_pd_invs_unmap':
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_arch_caps_def valid_objs_caps obj_at_def
     del: disjCI)
   apply (rule conjI, clarsimp)
-  apply (rule conjI)
-   apply clarsimp
    apply (erule_tac x="(VSRef (ucast c) (Some APageDirectory), q)" in ballE)
     apply clarsimp
    apply (frule (1) vs_refs_pages_pdI)

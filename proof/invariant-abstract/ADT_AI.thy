@@ -135,22 +135,22 @@ definition
      \<Rightarrow> ('k global_state \<times> 'k global_state) set"
   where
   "global_automaton get_active_irq do_user_op kernel_call \<equiv>
-  (* Kernel transition *)
+  \<comment> \<open> Kernel transition \<close>
      { ( (s, KernelMode, Some e),
          (s', m, None) ) |s s' e m. (s, m, s') \<in> kernel_call e } \<union>
-  (* User to user transition, no kernel entry *)
+  \<comment> \<open> User to user transition, no kernel entry \<close>
      { ( (s, UserMode, None),
          (s', UserMode, None) ) |s s'. (s, None, s') \<in> do_user_op} \<union>
-  (* User to kernel transition, potentially includes Interrupt from user mode *)
+  \<comment> \<open> User to kernel transition, potentially includes Interrupt from user mode \<close>
      { ( (s, UserMode, None),
          (s', KernelMode, Some e) ) |s s' e. (s, Some e, s') \<in> do_user_op} \<union>
-  (* User to kernel transition, Interrupt from user mode *)
+  \<comment> \<open> User to kernel transition, Interrupt from user mode \<close>
      { ( (s, UserMode, None),
          (s', KernelMode, Some Interrupt) ) |s s'. (s, True, s') \<in> get_active_irq} \<union>
-  (* Idling in idle mode *)
+  \<comment> \<open> Idling in idle mode \<close>
      { ( (s, IdleMode, None),
          (s', IdleMode, None) ) |s s'.  (s, False, s') \<in> get_active_irq} \<union>
-  (* Interrupt while in idle mode *)
+  \<comment> \<open> Interrupt while in idle mode \<close>
      { ( (s, IdleMode, None),
          (s', KernelMode, Some Interrupt) ) |s s'.  (s, True, s') \<in> get_active_irq}"
 
