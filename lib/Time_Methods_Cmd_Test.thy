@@ -93,10 +93,10 @@ experiment begin
     Fast and slow subsequence testing.
   \<close>
   lemma
-    "subseq (map (( * ) 2) [1 ..  5]) [1 .. 10]"
-    "subseq (map (( * ) 2) [1 ..  6]) [1 .. 12]"
-    "subseq (map (( * ) 2) [1 ..  7]) [1 .. 14]"
-    "subseq (map (( * ) 2) [1 ..  8]) [1 .. 16]"
+    "subseq (map ((*) 2) [1 ..  5]) [1 .. 10]"
+    "subseq (map ((*) 2) [1 ..  6]) [1 .. 12]"
+    "subseq (map ((*) 2) [1 ..  7]) [1 .. 14]"
+    "subseq (map ((*) 2) [1 ..  8]) [1 .. 16]"
     apply (all \<open>match conclusion in "subseq x y" for x y \<Rightarrow>
                   \<open>rule subst[where t = x], simp add: upto.simps,
                    rule subst[where t = y], simp add: upto.simps\<close>\<close>)

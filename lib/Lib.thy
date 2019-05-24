@@ -899,7 +899,7 @@ lemma UN_sub_empty:
 
 lemma bij_betw_fun_updI:
   "\<lbrakk>x \<notin> A; y \<notin> B; bij_betw f A B\<rbrakk> \<Longrightarrow> bij_betw (f(x := y)) (insert x A) (insert y B)"
-  by (clarsimp simp: bij_betw_def fun_upd_image inj_on_fun_updI split: if_split_asm)
+  by (clarsimp simp: bij_betw_def fun_upd_image inj_on_fun_updI split: if_split_asm; blast)
 
 definition
   "bij_betw_map f A B \<equiv> bij_betw f A (Some ` B)"

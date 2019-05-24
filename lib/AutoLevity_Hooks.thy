@@ -53,7 +53,7 @@ end;
 (* This has the usual race condition, but should be very unlikely in practice *)
 fun local_temp_file path = let
   val dir = Path.dir path;
-  val file = Path.base_name path;
+  val file = Path.file_name path;
   fun try_path () = let
     (* avoid colliding with other processes *)
     val pid = Posix.ProcEnv.getpid () |> Posix.Process.pidToWord |> SysWord.toInt;
@@ -168,8 +168,7 @@ end
    this code to be a no-op on vanilla Isabelle installations. *)
 ML \<open>
 try (ML_Context.eval ML_Compiler.flags @{here})
-    (ML_Lex.read_pos @{here}
-      "Session.register_shutdown_hook AutoLevity_Combined_Report.levity_session_log")
+    (ML_Lex.read_text ("Session.register_shutdown_hook AutoLevity_Combined_Report.levity_session_log", @{here}))
 \<close>
 
 end

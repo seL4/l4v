@@ -258,16 +258,14 @@ lemma wpc_helper_validF:
   "wpc_test Q' R S \<Longrightarrow> wpc_helper (P, P') (Q, Q') (wpc_test P' R S)"
   by (simp add: wpc_test_def wpc_helper_def, blast)
 
-setup {*
-
+setup \<open>
 let
   val tm  = Thm.cterm_of @{context} (Logic.varify_global @{term "\<lambda>R. wpc_test P R S"});
   val thm = @{thm wpc_helper_validF};
 in
   WPCPredicateAndFinals.map (fn xs => (tm, thm) :: xs)
-end;
-
-*}
+end
+\<close>
 
 lemma set_conj_Int_simp:
   "{s \<in> S. P s} = S \<inter> {s. P s}"

@@ -407,8 +407,19 @@ subsection "Monad Laws for the Exception Monad"
 text \<open> More direct definition of @{const liftE}: \<close>
 lemma liftE_def2:
   "liftE f = (\<lambda>s. snd_upd (map_tmres_rv Inr) ` (f s))"
-  by (auto simp: fun_eq_iff liftE_def return_def split_def bind_def image_def
-          elim!: rev_bexI[where A="f s" for s] split: tmres.splits)
+  apply (clarsimp simp: fun_eq_iff liftE_def return_def split_def bind_def image_def)
+  apply (rule set_eqI)
+  apply (rule iffI)
+  apply clarsimp
+   apply (erule rev_bexI[where A="f s" for s])
+   apply (clarsimp split: tmres.splits)
+  apply clarsimp
+  apply (rule exI)
+  apply (rule conjI)
+   apply (erule rev_bexI[where A="f s" for s])
+   apply (rule refl)
+  apply (clarsimp split: tmres.splits)
+  done
 
 text \<open> Left @{const returnOk} absorbtion over @{term bindE}: \<close>
 lemma returnOk_bindE [simp]: "(returnOk x >>=E f) = f x"
@@ -507,11 +518,11 @@ where
   "env_steps \<equiv>
   do
     s \<leftarrow> get;
-    (* Add unfiltered environment events to the trace *)
+    \<comment> \<open>Add unfiltered environment events to the trace\<close>
     xs \<leftarrow> select UNIV;
     tr \<leftarrow> return (map (Pair Env) xs);
     put_trace tr;
-    (* Pick the last event of the trace as the final state *)
+    \<comment> \<open>Pick the last event of the trace as the final state\<close>
     put (last_st_tr tr s)
   od"
 
@@ -830,12 +841,12 @@ where
   "Await c \<equiv>
   do
     s \<leftarrow> get;
-    (* Add unfiltered environment events, with the last one
-       satisfying the `c' state predicate *)
+    \<comment> \<open>Add unfiltered environment events, with the last one
+       satisfying the `c' state predicate\<close>
     xs \<leftarrow> select {xs. c (last_st_tr (map (Pair Env) xs) s)};
     tr \<leftarrow> return (map (Pair Env) xs);
     put_trace tr;
-    (* Pick the last event of the trace *)
+    \<comment> \<open>Pick the last event of the trace\<close>
     put (last_st_tr tr s)
   od"
 

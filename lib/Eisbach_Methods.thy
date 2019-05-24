@@ -224,7 +224,7 @@ setup \<open>
           (EVERY' (map (fn prop => Rule_Insts.subgoal_tac ctxt prop fixes) props)
             THEN'
             (K (prefer_tac 2))))))
-    "insert prop (dynamic instantiation), introducing prop subgoal first";
+    "insert prop (dynamic instantiation), introducing prop subgoal first"
 \<close>
 
 notepad begin {

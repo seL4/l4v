@@ -14,7 +14,7 @@ begin
 
 (* We can build rotators on the basis of selectors *)
 
-ML {*
+ML \<open>
 (* generic rotator *)
 
 fun range lo hi =
@@ -37,6 +37,6 @@ fun rotator lens tactic ctxt i st =
 fun rotator' ctxt lens tactic = rotator lens tactic ctxt
 
 fun sep_apply_tactic ctxt lens_tac thms = lens_tac THEN' eresolve_tac ctxt thms
-*}
+\<close>
 
 end
