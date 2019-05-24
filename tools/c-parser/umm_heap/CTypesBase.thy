@@ -171,6 +171,29 @@ primrec
 where
   "dt_snd (DTPair a b) = b"
 
+
+lemma split_DTPair_All:
+  "(\<forall>x. P x) = (\<forall>a b. P (DTPair a b))"
+  by (rule iffI; clarsimp) (case_tac x, simp)
+
+lemma surjective_dt_pair:
+  "p = DTPair (dt_fst p) (dt_snd p)"
+  by (cases p) simp
+
+lemmas dt_pair_collapse [simp] = surjective_dt_pair[symmetric]
+
+lemma split_DTPair_all[no_atp]: "(\<And>x. PROP P x) \<equiv> (\<And>a b. PROP P (DTPair a b))"
+proof
+  fix a b
+  assume "\<And>x. PROP P x"
+  then show "PROP P (DTPair a b)" .
+next
+  fix x
+  assume "\<And>a b. PROP P (DTPair a b)"
+  from \<open>PROP P (DTPair (dt_fst x) (dt_snd x))\<close> show "PROP P x" by simp
+qed
+
+
 type_synonym normalisor = "byte list \<Rightarrow> byte list"
 
 
