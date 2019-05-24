@@ -286,7 +286,6 @@ lemma Await_redef:
   apply (simp add: bind_promote_If2 if_fun_lift if_distrib[where f=select])
   apply (simp add: exec_put_trace cong: if_cong)
   apply (simp add: put_def bind_def select_def cong: if_cong)
-  apply (simp add: UN_If_distrib)
   apply (strengthen equalityI)
   apply clarsimp
   apply (strengthen exI[where x="s # xs" for s xs])

@@ -204,7 +204,7 @@ lemma either_simp[simp]: "either = case_sum"
   done
 
 
-instantiation nat :: bit
+instantiation nat :: bit_operations
 begin
 
 definition
@@ -223,7 +223,7 @@ instance ..
 
 end
 
-class HS_bit = bit +
+class HS_bit = bit_operations +
   fixes shiftL :: "'a \<Rightarrow> nat \<Rightarrow> 'a"
   fixes shiftR :: "'a \<Rightarrow> nat \<Rightarrow> 'a"
   fixes bitSize :: "'a \<Rightarrow> nat"
@@ -259,7 +259,7 @@ instance ..
 
 end
 
-class finiteBit = bit +
+class finiteBit = bit_operations +
   fixes finiteBitSize :: "'a \<Rightarrow> nat"
 
 instantiation word :: (len0) finiteBit

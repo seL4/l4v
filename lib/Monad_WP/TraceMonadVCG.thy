@@ -237,8 +237,8 @@ proof -
      apply clarsimp
      apply (simp add: list_all2_conv_all_nth last_st_tr_def drop_map[symmetric]
                       hd_drop_conv_nth hd_append)
-     apply (simp add: nth_equalityI split_def)
-    apply clarsimp
+     apply (fastforce simp: split_def intro!: nth_equalityI)
+     apply clarsimp
     apply (erule_tac x=n in meta_allE)+
     apply (drule meta_mp, erule rely_cond_is_drop, simp)
     apply (subst(asm) rely_cond_drop_Suc_eq[where xs="map f xs" for f xs], simp)

@@ -15,7 +15,7 @@ keywords "add_upd_simps" :: thy_decl
 
 begin
 
-ML {*
+ML \<open>
 fun mk_var_app nm (f $ _) = let
     val (_, xs) = strip_comb f
     val n = length xs
@@ -81,6 +81,6 @@ val add_upd_simps_syn = Outer_Syntax.local_theory @{command_keyword "add_upd_sim
       (Parse.$$$ "(" |-- Scan.repeat Parse.thm --| Parse.$$$ ")") []
      >> (fn (t, simps) => fn ctxt => add_upd_simps (Syntax.read_term ctxt t)
          (Attrib.eval_thms ctxt simps) ctxt))
-*}
+\<close>
 
 end

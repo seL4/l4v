@@ -24,7 +24,7 @@ fun is_simp (_: Proof.context) (_: thm) = true
 ML \<open>
 val is_simp_installed = is_some (
  try (ML_Context.eval ML_Compiler.flags @{here})
-  (ML_Lex.read_pos @{here} "val is_simp = Raw_Simplifier.is_simp"));
+  (ML_Lex.read_text ("val is_simp = Raw_Simplifier.is_simp", @{here} )));
 \<close>
 
 ML\<open>
@@ -292,11 +292,11 @@ val post_apply_hook = (fn ctxt => fn text => fn pre_thm => fn post_thm =>
 
 fun setup_pre_apply_hook () =
  try (ML_Context.eval ML_Compiler.flags @{here})
-  (ML_Lex.read_pos @{here} "Proof.set_pre_apply_hook AutoLevity_Base.pre_apply_hook");
+  (ML_Lex.read_text ("Proof.set_pre_apply_hook AutoLevity_Base.pre_apply_hook", @{here}));
 
 fun setup_post_apply_hook () =
  try (ML_Context.eval ML_Compiler.flags @{here})
-  (ML_Lex.read_pos @{here} "Proof.set_post_apply_hook AutoLevity_Base.post_apply_hook");
+  (ML_Lex.read_text ("Proof.set_post_apply_hook AutoLevity_Base.post_apply_hook", @{here}));
 
 (* This command is treated specially by AutoLevity_Theory_Report. The command executed directly
    after this one will be tagged with the given tag *)

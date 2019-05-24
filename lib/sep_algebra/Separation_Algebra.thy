@@ -667,20 +667,20 @@ subclass sep_algebra by standard auto
 
 end
 
-interpretation sep: ab_semigroup_mult "( ** )"
+interpretation sep: ab_semigroup_mult "(**)"
   by unfold_locales (simp add: sep_conj_ac)+
 
-interpretation sep: comm_monoid "( ** )" \<box>
+interpretation sep: comm_monoid "(**)" \<box>
   by unfold_locales simp
 
-interpretation sep: comm_monoid_mult "( ** )" \<box>
+interpretation sep: comm_monoid_mult "(**)" \<box>
   by unfold_locales simp
 
 section {* Folding separating conjunction over lists and sets of predicates *}
 
 definition
   sep_list_conj :: "('a::sep_algebra \<Rightarrow> bool) list \<Rightarrow> ('a \<Rightarrow> bool)"  where
-  "sep_list_conj Ps \<equiv> foldl (( ** )) \<box> Ps"
+  "sep_list_conj Ps \<equiv> foldl ((**)) \<box> Ps"
 
 abbreviation
   sep_map_list_conj :: "('b \<Rightarrow> 'a::sep_algebra \<Rightarrow> bool) \<Rightarrow> 'b list \<Rightarrow> ('a \<Rightarrow> bool)"
