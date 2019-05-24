@@ -3517,7 +3517,7 @@ proof -
     unfolding setMRs_def set_mrs_def
     apply (clarsimp  cong: option.case_cong split del: if_split)
     apply (subst bind_assoc[symmetric])
-    apply (fold thread_set_def[simplified]) thm thread_set_as_user
+    apply (fold thread_set_def[simplified])
     apply (subst thread_set_as_user_registers)
     apply (cases buf)
      apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_Nil zipWithM_x_modify

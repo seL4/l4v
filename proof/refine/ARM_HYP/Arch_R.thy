@@ -1367,9 +1367,6 @@ lemma invoke_vcpu_write_register_corres:
         (invokeVCPUWriteReg vcpu r v)"
   unfolding invokeVCPUWriteReg_def invoke_vcpu_write_register_def write_vcpu_register_def
             writeVCPUReg_def
-
-thm write_vcpu_register_def
-
   apply (rule corres_discard_r)
   apply (corressimp corres: set_vcpu_corres get_vcpu_corres wp: get_vcpu_wp)
   subgoal by (auto simp: vcpu_relation_def split: option.splits)

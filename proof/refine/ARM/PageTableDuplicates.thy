@@ -1821,8 +1821,6 @@ crunch pspace_aligned'[wp]:
   invalidateTLBByASID pspace_aligned'
   (wp: crunch_wps simp: crunch_simps unless_def ignore:getObject setObject)
 
-thm vs_valid_duplicates'_def
-
 crunch valid_duplicates'[wp]:
   isFinalCapability "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def

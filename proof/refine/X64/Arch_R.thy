@@ -1412,8 +1412,6 @@ lemma not_InvokeIOPort_perform_simp':"\<forall>y. ai' \<noteq> InvokeIOPort y \<
 
 lemmas not_InvokeIOPort_perform_simp[simp] = not_InvokeIOPort_perform_simp'[OF not_InvokeIOPort_rel]
 
-thm corres_machine_op[no_vars]
-
 lemma port_in_corres[corres]:
   "no_fail \<top> a \<Longrightarrow> corres (=) \<top> \<top> (port_in a) (portIn a)"
   apply (clarsimp simp: port_in_def portIn_def)

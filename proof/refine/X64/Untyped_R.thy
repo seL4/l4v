@@ -5228,7 +5228,6 @@ lemma insertNewCap_valid_pspace':
    \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   apply (simp add: valid_pspace'_def)
   apply (wp_trace insertNewCap_valid_mdb)
-thm insertNewCap_wps(1)
      apply simp_all
   done
 

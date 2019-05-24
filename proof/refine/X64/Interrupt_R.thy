@@ -787,7 +787,6 @@ lemma timerTick_corres:
   done
 
 lemmas corres_eq_trivial = corres_Id[where f = h and g = h for h, simplified]
-thm corres_Id
 
 lemma handle_interrupt_corres:
   "corres dc
