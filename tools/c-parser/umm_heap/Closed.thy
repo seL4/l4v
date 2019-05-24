@@ -101,7 +101,7 @@ lemma update_ti_fm':
   "update_ti_pair (x::'a typ_info_pair) = snd (fold_td_pair fut  (map_td_pair (\<lambda>n x d. (n, field_update d)) x))"
 apply(induct t and st and ts and x)
      apply(auto simp: split: dt_pair.splits)
-  apply(clarsimp split: typ_struct_splits)
+  apply(clarsimp split: typ_struct.splits)
   apply(simp add: fut_def)
  apply(simp add: fut_def)
 apply(rule ext)+
@@ -141,7 +141,7 @@ lemma norm_tu_fm':
   "norm_tu_pair (x::(normalisor typ_desc,field_name) dt_pair) = snd (fold_td_pair tyn  (map_td_pair (\<lambda>n x d. (n,d)) x))"
 apply(induct t and st and ts and x)
      apply(auto simp: split: dt_pair.splits)
-  apply(clarsimp simp: tyn_def split: typ_struct_splits)
+  apply(clarsimp simp: tyn_def split: typ_struct.splits)
  apply(simp add: tyn_def)
 apply(rule ext)+
 apply(simp add: size_td_fst_norm_tu)
