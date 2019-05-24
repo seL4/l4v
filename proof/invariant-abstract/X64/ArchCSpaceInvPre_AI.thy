@@ -91,35 +91,35 @@ definition
   replaceable_final_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
 where
  "replaceable_final_arch_cap s sl newcap \<equiv> \<lambda>cap.
-    (* Don't leave dangling vspace references. That is, if cap points to a mapped vspace object, *)
+    \<comment> \<open>Don't leave dangling vspace references. That is, if cap points to a mapped vspace object,\<close>
     (\<forall>vref. vs_cap_ref cap = Some vref
-             (* then either newcap maintains the same chain of vs_refs, *)
+             \<comment> \<open>then either newcap maintains the same chain of vs_refs,\<close>
             \<longrightarrow> (vs_cap_ref newcap = Some vref \<and> obj_refs newcap = obj_refs cap)
-             (* or the object pointed to by cap is not currently mapped. *)
+             \<comment> \<open>or the object pointed to by cap is not currently mapped.\<close>
               \<or> (\<forall>oref \<in> obj_refs cap. \<not> (vref \<unrhd> oref) s))
-    (* Don't introduce duplicate caps to vspace table objects with different vs_ref chains. *)
+    \<comment> \<open>Don't introduce duplicate caps to vspace table objects with different vs_ref chains.\<close>
   \<and> no_cap_to_obj_with_diff_ref newcap {sl} s
-    (* Don't introduce non-empty unmapped table objects. *)
+    \<comment> \<open>Don't introduce non-empty unmapped table objects.\<close>
   \<and> (is_vspace_table_cap newcap
       \<longrightarrow> cap_asid newcap = None
       \<longrightarrow> (\<forall> r \<in> obj_refs newcap.
             obj_at (empty_table (set (second_level_tables (arch_state s)))) r s))
-    (* If newcap is vspace table cap such that either:
+    \<comment> \<open>If newcap is vspace table cap such that either:
          - newcap and cap have different types or different obj_refs, or
-         - newcap is unmapped while cap is mapped, *)
+         - newcap is unmapped while cap is mapped,\<close>
   \<and> (is_vspace_table_cap newcap
          \<longrightarrow> (same_vspace_table_cap_type newcap cap
                   \<longrightarrow> (cap_asid newcap = None \<longrightarrow> cap_asid cap = None)
                   \<longrightarrow> obj_refs cap \<noteq> obj_refs newcap)
-    (* then, aside from sl, there is no other slot with a cap that
+    \<comment> \<open>then, aside from sl, there is no other slot with a cap that
          - has the same obj_refs and type as newcap, and
-         - is unmapped if newcap is mapped. *)
+         - is unmapped if newcap is mapped.\<close>
          \<longrightarrow> (\<forall>sl'. cte_wp_at (\<lambda>cap'. obj_refs cap' = obj_refs newcap
                      \<and> (same_vspace_table_cap_type newcap cap')
                      \<and> (cap_asid newcap = None \<or> cap_asid cap' = None)) sl' s \<longrightarrow> sl' = sl))
-  (* Don't replace with an ASID pool. *)
+  \<comment> \<open>Don't replace with an ASID pool.\<close>
   \<and> \<not>is_ap_cap newcap
-  (* or an IOPortControlCap *)
+  \<comment> \<open>or an IOPortControlCap\<close>
   \<and> \<not>is_ioport_control_cap newcap
   \<and> (cap_ioports newcap = cap_ioports cap \<or> cap_ioports newcap = {})"
 

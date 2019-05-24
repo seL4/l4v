@@ -220,9 +220,9 @@ lemma tc_invs[Tcb_AI_asms]:
        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) e)
        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) f)
        and (case_option \<top> (case_option \<top> (no_cap_to_obj_dr_emp o fst) o snd) g)
-       (* only set prio \<le> mcp of authorising thread *)
+       \<comment> \<open>only set prio \<le> mcp of authorising thread\<close>
        and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) auth s) pr)
-       (* only set mcp \<le> mcp of authorising thread *)
+       \<comment> \<open>only set mcp \<le> mcp of authorising thread\<close>
        and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp)
        and K (case_option True (is_cnode_cap o fst) e)
        and K (case_option True (is_valid_vtable_root o fst) f)

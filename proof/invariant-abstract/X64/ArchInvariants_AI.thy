@@ -68,10 +68,10 @@ lemma arch_cap_fun_lift_expand[simp]:
                               | PML4Cap obj_ref asid \<Rightarrow> P_PML4Cap obj_ref asid
                               | IOPortCap first lst \<Rightarrow> P_IOPortCap first lst
                               | IOPortControlCap \<Rightarrow> P_IOPortControlCap)
-                              (* FIXME x64-vtd:
+                              \<comment> \<open>FIXME x64-vtd:
                               | IOSpaceCap domn pci \<Rightarrow> P_IOSpaceCap domn pci
                               | IOPageTableCap obj_ref lvl vr \<Rightarrow> P_IOPageTableCap obj_ref lvl vr)
-                              *)
+                              \<close>
                       F) = (\<lambda>c.
    (case c of
       ArchObjectCap (ASIDPoolCap obj_ref asid) \<Rightarrow> P_ASIDPoolCap obj_ref asid
@@ -83,10 +83,10 @@ lemma arch_cap_fun_lift_expand[simp]:
     | ArchObjectCap (PML4Cap obj_ref asid) \<Rightarrow> P_PML4Cap obj_ref asid
     | ArchObjectCap (IOPortCap first lst) \<Rightarrow> P_IOPortCap first lst
     | ArchObjectCap (IOPortControlCap) \<Rightarrow> P_IOPortControlCap
-(* FIXME x64-vtd:
+\<comment> \<open>FIXME x64-vtd:
     | ArchObjectCap (IOSpaceCap domn pci) \<Rightarrow> P_IOSpaceCap domn pci
     | ArchObjectCap (IOPageTableCap obj_ref lvl vr) \<Rightarrow> P_IOPageTableCap obj_ref lvl vr
-*)
+\<close>
     | _ \<Rightarrow> F))"
   apply (rule ext)
   by (simp add: arch_cap_fun_lift_def)
@@ -952,11 +952,11 @@ lemmas aligned_pdpte_simps[simp] =
 
 (* FIXME x64: this is correct, but do we need the final bit? *)
 definition
-  valid_global_pdpt :: "(9 word \<Rightarrow> pdpte) (*\<Rightarrow> 'z::state_ext state*) \<Rightarrow> bool"
+  valid_global_pdpt :: "(9 word \<Rightarrow> pdpte) \<comment> \<open>*\<Rightarrow> 'z::state_ext state\<close> \<Rightarrow> bool"
 where
   "valid_global_pdpt m \<equiv> (\<forall>x\<in>{0 .. 0x1FE}. \<exists>ptr attr R. m x =  HugePagePDPTE ptr attr R)
                              \<and> (\<exists>t attr R. m 0x1FF = PageDirectoryPDPTE t attr R
-                                 (* \<and> t \<in> set (x64_global_pds (arch_state s))*))"
+                                 \<comment> \<open>\<and> t \<in> set (x64_global_pds (arch_state s))\<close>)"
 
 definition
   valid_global_objs :: "'z::state_ext state \<Rightarrow> bool"

@@ -119,7 +119,7 @@ lemma typ_at_pred_tcb_at_lift:
 
 
 lemma create_cap_no_pred_tcb_at: "\<lbrace>\<lambda>s. \<not> pred_tcb_at proj P t s\<rbrace>
-          create_cap apiobject_type nat' prod' dev x
+          create_cap apiobject_type nat' prod'' dev x
           \<lbrace>\<lambda>r s. \<not> pred_tcb_at proj P t s\<rbrace>"
   by (rule typ_at_pred_tcb_at_lift; wp)
 

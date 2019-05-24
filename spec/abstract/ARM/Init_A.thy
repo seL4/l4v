@@ -80,7 +80,7 @@ definition
     tcb_mcpriority = minBound,
     tcb_arch = init_arch_tcb
   \<rparr>,
-  init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage), (* same reason as why we kept the definition of init_globals_frame *)
+  init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage), \<comment> \<open>same reason as why we kept the definition of @{term init_globals_frame}\<close>
   init_global_pd \<mapsto> ArchObj (PageDirectory global_pd)
   )"
 

@@ -73,8 +73,8 @@ definition
         dest_slot \<leftarrow> lookup_target_slot cnode (data_to_cptr index) (unat depth);
         ensure_empty dest_slot;
 
-       (* Following should be wrapped in to a funcion like what c did
-          since it is pc99 related, problem is where to put this function*)
+       \<comment> \<open>Following should be wrapped in to a function like what c did
+          since it is pc99 related, problem is where to put this function\<close>
 
         numIOAPICs \<leftarrow> liftE $ gets (x64_num_ioapics \<circ> arch_state);
         whenE (numIOAPICs = 0) $ throwError IllegalOperation;
@@ -101,8 +101,8 @@ definition
         dest_slot \<leftarrow> lookup_target_slot cnode (data_to_cptr index) (unat depth);
         ensure_empty dest_slot;
 
-       (* Following should be wrapped in to a funcion like what c did
-          since it is pc99 related, problem is where to put this function*)
+       \<comment> \<open>Following should be wrapped in to a function like what c did
+          since it is pc99 related, problem is where to put this function\<close>
         whenE (bus > maxPCIBus) $ throwError (RangeError 0 maxPCIBus);
         whenE (dev > maxPCIDev) $ throwError (RangeError 0 maxPCIDev);
         whenE (func > maxPCIFunc) $ throwError (RangeError 0 maxPCIFunc);
@@ -382,13 +382,12 @@ where
          odE
     else throwError TruncatedMessage
     else if invocation_type label = ArchInvocationLabel X64PageUnmap then
-             (*case map_type of
+             \<comment> \<open>case map_type of
                  VMIOSpaceMap \<Rightarrow> decode_io_unmap_invocation label args cte cap extra_caps
-               | _ \<Rightarrow>*) returnOk $ InvokePage $ PageUnmap cap cte
-    (* FIXME x64-vtd:
+               | _ \<Rightarrow>\<close> returnOk $ InvokePage $ PageUnmap cap cte
+    \<comment> \<open>FIXME x64-vtd:
     else if invocation_type label = ArchInvocationLabel X64PageMapIO
-    then decode_io_map_invocation label args cte cap extra_caps
-    *)
+    then decode_io_map_invocation label args cte cap extra_caps \<close>
     else if invocation_type label = ArchInvocationLabel X64PageGetAddress
     then returnOk $ InvokePage $ PageGetAddr p
   else throwError IllegalOperation

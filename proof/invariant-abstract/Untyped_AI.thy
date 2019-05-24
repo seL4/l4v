@@ -288,7 +288,7 @@ locale Untyped_AI_arch =
                 \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object CapTableObject dev us)) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api CapTableObject us)) [0..<n])
                            (kheap s)\<rparr> \<turnstile> CNodeCap (ptr_add ptr (y * 2 ^ obj_bits_api CapTableObject us)) us []"
   assumes retype_ret_valid_caps_aobj:
-  "\<And>ptr sz s x6 us n dev. \<lbrakk>pspace_no_overlap_range_cover ptr sz (s::'state_ext state) \<and> x6 \<noteq> ASIDPoolObj \<and> range_cover ptr sz (obj_bits_api (ArchObject x6) us) n \<and> ptr \<noteq> 0(*; tp = ArchObject x6*)\<rbrakk>
+  "\<And>ptr sz s x6 us n dev. \<lbrakk>pspace_no_overlap_range_cover ptr sz (s::'state_ext state) \<and> x6 \<noteq> ASIDPoolObj \<and> range_cover ptr sz (obj_bits_api (ArchObject x6) us) n \<and> ptr \<noteq> 0 \<comment> \<open>; tp = ArchObject x6\<close>\<rbrakk>
             \<Longrightarrow> \<forall>y\<in>{0..<n}. s
                    \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object (ArchObject x6) dev us)) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api (ArchObject x6) us)) [0..<n])
                               (kheap s)\<rparr> \<turnstile> ArchObjectCap (arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us dev)"
@@ -739,7 +739,7 @@ lemma pspace_no_overlap_detype':
   apply (clarsimp simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
                             Int_atLeastAtMost atLeastatMost_empty_iff is_aligned_neg_mask_eq
                       simp: valid_cap_def cap_aligned_def obj_range_def cap_range_def is_aligned_neg_mask_eq p_assoc_help)
-  apply (drule_tac x= x in set_mp)
+  apply (drule_tac c= x in set_mp)
    apply simp+
   done
 
@@ -1618,6 +1618,8 @@ lemma cap_range_def2:
   apply (case_tac ty)
   by (simp_all add: cap_range_def)
 
+find_theorems preemption_point
+
 context Untyped_AI_arch begin
 lemma retype_region_descendants_range_ret:
   "\<lbrace>\<lambda>s. (range_cover ptr sz (obj_bits_api ty us) n)
@@ -1631,7 +1633,8 @@ lemma retype_region_descendants_range_ret:
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp: valid_def)
   apply (frule retype_region_ret[unfolded valid_def,simplified,THEN spec,THEN bspec])
-  apply clarsimp
+  apply (clarsimp)
+  apply (rename_tac x)
   apply (erule use_valid[OF _ retype_region_descendants_range])
   apply (intro conjI,simp_all)
    apply (clarsimp simp: descendants_range_def descendants_range_in_def)
@@ -1641,8 +1644,8 @@ lemma retype_region_descendants_range_ret:
   apply (frule(1) range_cover_subset)
    apply simp
   apply (erule subset_trans[rotated])
-  apply (subgoal_tac "ptr + of_nat p * 2 ^ obj_bits_api ty us
-          \<le> ptr + of_nat p * 2 ^ obj_bits_api ty us + 2 ^ obj_bits_api ty us - 1")
+  apply (subgoal_tac "ptr + of_nat x * 2 ^ obj_bits_api ty us
+          \<le> ptr + of_nat x * 2 ^ obj_bits_api ty us + 2 ^ obj_bits_api ty us - 1")
    prefer 2
    apply (rule is_aligned_no_overflow)
      apply (rule is_aligned_add_multI)

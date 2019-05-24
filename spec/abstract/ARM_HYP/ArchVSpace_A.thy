@@ -393,9 +393,9 @@ where
       od
     | _ \<Rightarrow> return ());
     do_machine_op $ do
-        set_gic_vcpu_ctrl_hcr 0; (* turn VGIC off *)
+        set_gic_vcpu_ctrl_hcr 0; \<comment> \<open>turn VGIC off\<close>
         isb;
-        setSCTLR sctlrDefault; (* turn SI MMU off *)
+        setSCTLR sctlrDefault; \<comment> \<open>turn SI MMU off\<close>
         setHCR hcrNative;
         isb
       od
@@ -437,7 +437,7 @@ definition dissociate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (
 where "dissociate_vcpu_tcb vr t \<equiv> do
   t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
   v \<leftarrow> get_vcpu vr;
-  assert (t_vcpu = Some vr \<and> vcpu_tcb v = Some t); (* make sure they were associated *)
+  assert (t_vcpu = Some vr \<and> vcpu_tcb v = Some t); \<comment> \<open>make sure they were associated\<close>
   cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
   when (\<exists>a. cur_v = Some (vr,a)) vcpu_invalidate_active;
   arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := None \<rparr>) t;
@@ -498,16 +498,16 @@ where
           vcpu_save_reg_range vr VCPURegACTLR VCPURegSPSRfiq;
           do_machine_op isb
        od
-     | _ \<Rightarrow> fail (* vcpu_save: no VCPU to save *)"
+     | _ \<Rightarrow> fail \<comment> \<open>vcpu_save: no VCPU to save\<close>"
 
 text {* Register + context restore for VCPUs *}
 definition
   vcpu_restore :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "vcpu_restore vr \<equiv> do
-     do_machine_op $ set_gic_vcpu_ctrl_hcr 0;   (* turn off VGIC *)
+     do_machine_op $ set_gic_vcpu_ctrl_hcr 0;  \<comment> \<open>turn off VGIC\<close>
      do_machine_op $ isb;
-     vcpu \<leftarrow> get_vcpu vr;   (* restore GIC VCPU control state *)
+     vcpu \<leftarrow> get_vcpu vr;  \<comment> \<open>restore GIC VCPU control state\<close>
      vgic \<leftarrow> return (vcpu_vgic vcpu);
      num_list_regs \<leftarrow> gets (arm_gicvcpu_numlistregs \<circ> arch_state);
      gicIndices \<leftarrow> return [0..<num_list_regs];
@@ -517,7 +517,7 @@ where
          mapM (\<lambda>p. set_gic_vcpu_ctrl_lr (of_int (fst p)) (snd p))
               (map (\<lambda>i. (i, (vgic_lr vgic) i)) gicIndices)
      od;
-     (* restore banked VCPU registers except SCTLR (that's in VCPUEnable) *)
+    \<comment> \<open>restore banked VCPU registers except SCTLR (that's in VCPUEnable)\<close>
      vcpu_restore_reg_range vr VCPURegACTLR VCPURegSPSRfiq;
      vcpu_enable vr
   od"
@@ -534,9 +534,9 @@ where
    None \<Rightarrow> do
      cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
      (case cur_v of
-        None \<Rightarrow> return () (* both null, current cannot be active *)
-      | Some (vr, active) \<Rightarrow> do (* switch to thread without vcpu *)
-          when active $ do   (* save state if not saved already *)
+        None \<Rightarrow> return () \<comment> \<open>both null, current cannot be active\<close>
+      | Some (vr, active) \<Rightarrow> do \<comment> \<open>switch to thread without vcpu\<close>
+          when active $ do  \<comment> \<open> save state if not saved already\<close>
             vcpu_disable (Some vr);
             modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (vr, False) \<rparr>\<rparr>)
           od;
@@ -546,18 +546,18 @@ where
  | Some new \<Rightarrow> do
      cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
      (case cur_v of
-        None \<Rightarrow> do (* switch to the new vcpu with no current one *)
+        None \<Rightarrow> do \<comment> \<open>switch to the new vcpu with no current one\<close>
           vcpu_restore new;
           modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>)
         od
-      | Some (vr, active) \<Rightarrow> (* switch from an existing vcpu *)
+      | Some (vr, active) \<Rightarrow> \<comment> \<open>switch from an existing vcpu\<close>
           (if vr \<noteq> new
-          then do (* different vcpu *)
+          then do \<comment> \<open>different vcpu\<close>
             vcpu_save cur_v;
             vcpu_restore new;
             modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>)
           od
-          else (* same vcpu *)
+          else \<comment> \<open>same vcpu\<close>
             when (\<not> active) $ do
               do_machine_op isb;
               vcpu_enable new;

@@ -519,7 +519,7 @@ locale Tcb_AI = Tcb_AI_1 state_ext_t is_cnode_or_valid_arch
         and (case_option \<top> (no_cap_to_obj_dr_emp o fst) e)
         and (case_option \<top> (no_cap_to_obj_dr_emp o fst) f)
         and (case_option \<top> (case_option \<top> (no_cap_to_obj_dr_emp o fst) o snd) g)
-        (* NOTE: The auth TCB does not really belong in the tcb_invocation type, and
+        \<comment> \<open>NOTE: The auth TCB does not really belong in the tcb_invocation type, and
           is only included so that we can assert here that the priority we are setting is
           bounded by the MCP of some auth TCB. Unfortunately, current proofs about the
           decode functions throw away the knowledge that the auth TCB actually came from
@@ -529,7 +529,7 @@ locale Tcb_AI = Tcb_AI_1 state_ext_t is_cnode_or_valid_arch
           don't care which TCB is used as the auth TCB; we only care that there exists
           some auth TCB accessible from the current thread's c-space. Phrased that way,
           we could drop the auth TCB from tcb_invocation. For now, we leave this as
-          future work.*)
+          future work.\<close>
         and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) auth s) pr)
         and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp)
         and K (case_option True (is_cnode_cap o fst) e)

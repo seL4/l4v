@@ -160,7 +160,7 @@ text {* The following function takes a page-directory reference as well as
 definition
 lookup_pd_slot :: "word32 \<Rightarrow> vspace_ref \<Rightarrow> word32" where
 "lookup_pd_slot pd vptr \<equiv>
-    let pd_index = vptr >> (pageBits + pt_bits - pte_bits) (* ARMHYP *)
+    let pd_index = vptr >> (pageBits + pt_bits - pte_bits) \<comment> \<open>ARMHYP\<close>
     in pd + (pd_index << pde_bits)"
 
 text {* The following function takes a page-directory reference as well as

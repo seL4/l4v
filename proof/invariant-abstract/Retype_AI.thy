@@ -878,12 +878,13 @@ crunch valid_pspace: do_machine_op "valid_pspace"
 
 lemma do_machine_op_return_foo:
   "do_machine_op (do x\<leftarrow>a;return () od) = (do (do_machine_op a); return () od)"
-  apply (clarsimp simp:do_machine_op_def bind_def gets_def
+  apply (clarsimp simp:do_machine_op_def bind_def' gets_def
     get_def return_def select_f_def split_def simpler_modify_def)
   apply (rule ext)+
   apply (clarsimp simp:image_def)
   apply (rule set_eqI)
   apply clarsimp
+  apply blast
   done
 
 abbreviation(input)
@@ -1255,7 +1256,7 @@ lemma retype_addrs_range_subset:
   \<Longrightarrow> {p .. p + 2 ^ obj_bits_api ty us - 1} \<subseteq> {ptr..(ptr && ~~ mask sz) + 2^sz - 1}"
   apply (clarsimp simp: retype_addrs_def ptr_add_def
               simp del: atLeastatMost_subset_iff atLeastAtMost_iff)
-  apply (frule_tac x = "of_nat pa" in range_cover_cell_subset)
+  apply (frule_tac x = "of_nat x" in range_cover_cell_subset)
     apply (erule of_nat_mono_maybe[rotated])
     apply (drule range_cover.range_cover_n_less)
    apply (simp add:word_bits_def)

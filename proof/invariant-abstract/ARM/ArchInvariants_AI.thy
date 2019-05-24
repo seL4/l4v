@@ -234,7 +234,7 @@ where
   "valid_ipc_buffer_cap_arch ac bufptr \<equiv>
          case ac of
               (PageCap False ref rghts sz mapdata) \<Rightarrow>
-                   is_aligned bufptr msg_align_bits (* \<and> bufptr \<noteq> 0 *)
+                   is_aligned bufptr msg_align_bits \<comment> \<open> \<and> bufptr \<noteq> 0 \<close>
             | _ \<Rightarrow> False"
 
 declare valid_ipc_buffer_cap_arch_def[simp]

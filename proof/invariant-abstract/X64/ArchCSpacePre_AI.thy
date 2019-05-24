@@ -27,7 +27,7 @@ definition
      (case ac of
          ASIDPoolCap r as \<Rightarrow> True
        | ASIDControlCap \<Rightarrow> False
-       | IOPortCap first_port last_port \<Rightarrow> True (* FIXME: stab in the dark. *)
+       | IOPortCap first_port last_port \<Rightarrow> True \<comment> \<open>FIXME: stab in the dark.\<close>
        | IOPortControlCap \<Rightarrow> False
        | PageCap dev r rghts maptype sz mapdata \<Rightarrow> False
        | PageTableCap r mapdata \<Rightarrow> True

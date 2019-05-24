@@ -536,7 +536,7 @@ lemma page_table_pte_at_diffE:
   done
 
 lemma pte_at_aligned_vptr:
-  "\<lbrakk>x \<in> set [0 , 8 .e. 0x78]; page_table_at pt s;  (* 0x78? *)
+  "\<lbrakk>x \<in> set [0 , 8 .e. 0x78]; page_table_at pt s; \<comment> \<open>0x78?\<close>
    pspace_aligned s; is_aligned vptr 16 \<rbrakk>
   \<Longrightarrow> pte_at (x + (pt + (((vptr >> pageBits) &&  mask (pt_bits - pte_bits)) << pte_bits))) s"
   apply (erule page_table_pte_at_diffE[where x="(x >> pte_bits) + ((vptr >> 12) &&  mask (pt_bits - pte_bits))"];simp?)
@@ -696,7 +696,7 @@ lemmas lookup_pt_slot_ptes3[wp] =
    [@ \<open>post_asm \<open>thin_tac _\<close>\<close>]
 
 lemma create_mapping_entries_valid [wp]:
-  "\<lbrace>pspace_aligned and valid_arch_state and valid_vspace_objs  (* ARMHYP *)
+  "\<lbrace>pspace_aligned and valid_arch_state and valid_vspace_objs  \<comment> \<open>ARMHYP\<close>
    and equal_kernel_mappings and valid_global_objs
    and \<exists>\<rhd> pd and page_directory_at pd and
     K ((sz = ARMLargePage \<longrightarrow> is_aligned vptr 16) \<and>
@@ -3092,8 +3092,8 @@ lemma set_pd_invs_unmap: (* ARMHYP *)
     (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_vspace_obj (PageDirectory pd) s) and
     obj_at (\<lambda>ko. vs_refs_pages (ArchObj (PageDirectory pd)) \<subseteq> vs_refs_pages ko) p and
     obj_at (\<lambda>ko. vs_refs (ArchObj (PageDirectory pd)) \<subseteq> vs_refs ko) p and
-(*    obj_at (\<lambda>ko. \<exists>pd'. ko = ArchObj (PageDirectory pd')
-                       \<and> (\<forall>x \<in> kernel_mapping_slots. pd x = pd' x)) p and *)
+\<comment> \<open> obj_at (\<lambda>ko. \<exists>pd'. ko = ArchObj (PageDirectory pd')
+                       \<and> (\<forall>x \<in> kernel_mapping_slots. pd x = pd' x)) p and\<close>
     (\<lambda>s. p \<notin> global_refs s) and
     (\<lambda>s. (obj_at (empty_table {}) p s \<longrightarrow>
      empty_table {} (ArchObj (PageDirectory pd))))\<rbrace>

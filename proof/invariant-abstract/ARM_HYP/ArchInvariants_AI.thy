@@ -1885,7 +1885,7 @@ lemma pde_graph_ofI:
 
 lemma vs_refs_pdI:
   "\<lbrakk>pd (ucast r) = PageTablePDE x;
-   \<forall>n \<ge> 11. n < 32 \<longrightarrow> \<not> r !! n\<rbrakk>  (* ARMHYP *)
+   \<forall>n \<ge> 11. n < 32 \<longrightarrow> \<not> r !! n\<rbrakk> \<comment> \<open>ARMHYP\<close>
    \<Longrightarrow> (VSRef r (Some APageDirectory), ptrFromPAddr x)
        \<in> vs_refs (ArchObj (PageDirectory pd))"
   apply (simp add: vs_refs_def)

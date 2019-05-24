@@ -207,7 +207,7 @@ case cap of
             page_size \<leftarrow> returnOk $ 1 << pageBitsForSize pgsz;
             whenE (start \<ge> page_size \<or> end > page_size) $ throwError $ InvalidArgument 0;
             returnOk $ InvokePage $ PageFlush
-                (label_to_flush_type (invocation_type label)) (start + p) (* check *)
+                (label_to_flush_type (invocation_type label)) (start + p) \<comment> \<open>check\<close>
                 (end + p - 1) (addrFromPPtr p + start) pd asid
     odE
     else throwError TruncatedMessage
@@ -263,7 +263,7 @@ case cap of
         | _ \<Rightarrow>  throwError $ InvalidCapability 1
   else  throwError TruncatedMessage
   else  throwError IllegalOperation
-| VCPUCap p \<Rightarrow> fail (* not an MMU invocation *)"
+| VCPUCap p \<Rightarrow> fail \<comment> \<open>not an MMU invocation\<close>"
 
 (* arch decode invocations *)
 
@@ -274,7 +274,7 @@ definition
 where
   "arch_decode_invocation label args x_slot cte cap extra_caps \<equiv> case cap of
  VCPUCap _ \<Rightarrow> decode_vcpu_invocation label args cap extra_caps
-(* arm-hyp: add cases for iommu *)
+\<comment> \<open>arm-hyp: add cases for iommu\<close>
 | _ \<Rightarrow> decode_mmu_invocation label args x_slot cte cap extra_caps"
 
 definition

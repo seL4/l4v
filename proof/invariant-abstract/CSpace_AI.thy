@@ -593,7 +593,7 @@ lemma no_True_set_nth:
 
 lemma map2_append1:
   "map2 f (as @ bs) cs = map2 f as (take (length as) cs) @ map2 f bs (drop (length as) cs)"
-  by (simp add: map2_def zip_append1)
+  by (simp add: map_def zip_append1)
 
 
 lemma set_cap_caps_of_state_monad:

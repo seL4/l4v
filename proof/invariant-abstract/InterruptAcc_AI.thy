@@ -48,7 +48,7 @@ definition all_invs_but_valid_irq_states_for where
   valid_irq_handlers and
   valid_irq_states_but irq and
   valid_machine_state and
-  valid_vspace_objs and (* ARMHYP *)
+  valid_vspace_objs and \<comment> \<open> ARMHYP \<close>
   valid_arch_caps and
   valid_kernel_mappings and
   equal_kernel_mappings and

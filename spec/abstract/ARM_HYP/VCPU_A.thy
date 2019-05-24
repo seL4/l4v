@@ -183,7 +183,7 @@ VCPUCap _ \<Rightarrow> (case invocation_type label of
     ArchInvocationLabel ARMVCPUSetTCB \<Rightarrow> decode_vcpu_set_tcb cap extras
   | ArchInvocationLabel ARMVCPUReadReg \<Rightarrow> decode_vcpu_read_register args cap
   | ArchInvocationLabel ARMVCPUWriteReg \<Rightarrow> decode_vcpu_write_register args cap
-  | ArchInvocationLabel ARMVCPUInjectIRQ \<Rightarrow> decode_vcpu_inject_irq args cap (* ARMHYP *)
+  | ArchInvocationLabel ARMVCPUInjectIRQ \<Rightarrow> decode_vcpu_inject_irq args cap \<comment> \<open>ARMHYP\<close>
   |  _ \<Rightarrow> throwError IllegalOperation)
 | _ \<Rightarrow> throwError IllegalOperation"
 
