@@ -206,7 +206,7 @@ lemma memcpy_word:
     apply clarsimp+
   done
 
-text {* The bytes at the pointer @{term p} are @{term bs}. *}
+text \<open>The bytes at the pointer @{term p} are @{term bs}.\<close>
 definition
   bytes_at :: "'a globals_scheme \<Rightarrow> 'b::c_type ptr \<Rightarrow> word8 list \<Rightarrow> bool"
 where
@@ -216,13 +216,13 @@ where
 lemma bytes_at_none[simp]: "bytes_at s p []"
   by (clarsimp simp:bytes_at_def)
 
-text {* The bytes of typed pointer @{term p} are @{term bs}. *}
+text \<open>The bytes of typed pointer @{term p} are @{term bs}.\<close>
 definition
   bytes_of :: "'a globals_scheme \<Rightarrow> 'b::c_type ptr \<Rightarrow> word8 list \<Rightarrow> bool"
 where
   "bytes_of s p bs \<equiv> length bs = size_of TYPE('b) \<and> bytes_at s p bs"
 
-text {* The bytes at a char pointer are just it dereferenced. *}
+text \<open>The bytes at a char pointer are just it dereferenced.\<close>
 lemma bytes_of_char[simp]: "bytes_of s (p::8word ptr) bs = (length bs = 1 \<and> deref s p = hd bs)"
   apply (clarsimp simp:bytes_of_def bytes_at_def)
   apply (rule iffI)
@@ -237,13 +237,13 @@ lemma bytes_of_char[simp]: "bytes_of s (p::8word ptr) bs = (length bs = 1 \<and>
   apply clarsimp
   done
 
-text {* A pointer does not wrap around memory. *}
+text \<open>A pointer does not wrap around memory.\<close>
 definition
   no_wrap :: "'a::c_type ptr \<Rightarrow> nat \<Rightarrow> bool"
 where
   "no_wrap p sz \<equiv> 0 \<notin> {ptr_val p ..+ sz}"
 
-text {* Two pointers do not overlap. *}
+text \<open>Two pointers do not overlap.\<close>
 definition
   no_overlap :: "'a::c_type ptr \<Rightarrow> 'b::c_type ptr \<Rightarrow> nat \<Rightarrow> bool"
 where
@@ -449,9 +449,9 @@ lemma heap_update_list_singleton: "heap_update_list p [x] = heap_update (Ptr p) 
 lemma update_bytes_eq: "\<lbrakk>s = s'; p = p'; bs = bs'\<rbrakk> \<Longrightarrow> update_bytes s p bs = update_bytes s' p' bs'"
   by clarsimp
 
-text {*
+text \<open>
   Memcpy does what it says on the box.
-*}
+\<close>
 lemma memcpy_wp':
   fixes src :: "'a::mem_type ptr"
     and dst :: "'b::mem_type ptr"
@@ -682,14 +682,14 @@ lemma h_val_not_id_update_bytes:
    apply (metis less_imp_le max_size)
   by clarsimp
 
-text {*
+text \<open>
   Test that we can use memcpy in a compositional proof. The following proof can be done much more
   pleasantly, but we're just trying to check that the memcpy WP lemma is usable.
   TODO: This relies on disabling heap abstraction for the calling function as well. We should be
   able to phrase an exec_concrete WP lemma over memcpy that lets us prove properties about
   heap-abstracted callers. This will need AutoCorres support to connect is_valid_* with
   c_guard/no_overlap/no_wrap.
-*}
+\<close>
 
 definition
   memcpy_int_spec :: "sword32 ptr \<Rightarrow> sword32 ptr \<Rightarrow> bool"
@@ -747,7 +747,7 @@ lemma memcpy_int_wp'[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
   apply (clarsimp simp:h_val_def ptr_add_def from_bytes_eq)
   done
 
-text {* memcpying a typed variable is equivalent to assignment. *}
+text \<open>memcpying a typed variable is equivalent to assignment.\<close>
 lemma memcpy_type_wp':
   fixes dst :: "'a::mem_type ptr"
     and src :: "'a::mem_type ptr"
@@ -768,7 +768,7 @@ lemma memcpy_type_wp':
 
 lemmas memcpy_type_wp = memcpy_type_wp'[THEN validNF_make_schematic_post', simplified]
 
-text {* Confirm that we can also prove memcpy_int using the previous generic lemma. *}
+text \<open>Confirm that we can also prove memcpy_int using the previous generic lemma.\<close>
 lemma memcpy_int_wp''[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
   unfolding memcpy_int_spec_def memcpy_int'_def
   apply (rule allI)
@@ -822,13 +822,13 @@ lemma bytes_at_imp_of:
   shows "\<lbrakk>bytes_at s x bs; length bs = size_of TYPE('a)\<rbrakk> \<Longrightarrow> bytes_of s x bs"
   by (clarsimp simp:bytes_of_def bytes_at_def)
 
-text {*
+text \<open>
   Memcpying from a source to a destination via an intermediary does what it should. This is close to
   the desirable property we want for CAmkES systems; i.e. that copying into your IPC buffer on one
   side and then out on the other gives you back what you put in. Note that the type of the
   intermediate pointer is irrelevant and we don't need to assume that the source and final
   destination do not overlap.
-*}
+\<close>
 lemma memcpy_seq:
   fixes x :: "'a::mem_type ptr"
     and y :: "'b::mem_type ptr"
@@ -869,10 +869,10 @@ lemma from_bytes_cong: "x = y \<Longrightarrow> from_bytes x = from_bytes y"
 
 declare from_bytes_eq [simp]
 
-text {*
+text \<open>
   If you dereference a pointer, the value you get is the same as the underlying bytes backing that
   memory.
-*}
+\<close>
 lemma val_eq_bytes:
   fixes x :: "'a::mem_type ptr"
   shows "deref s x = from_bytes (map (\<lambda>off. deref s (byte_cast x +\<^sub>p of_nat off)) [0..<size_of TYPE('a)])"
@@ -900,10 +900,10 @@ lemma update_deref:
   apply clarsimp
   done
 
-text {*
+text \<open>
   The memcpy_int proof can now be completed more elegantly. Note that the body of this proof is more
   generic than the previous attempts and doesn't involve manually reasoning about each byte.
-*}
+\<close>
 lemma memcpy_int_wp'''[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
   unfolding memcpy_int_spec_def memcpy_int'_def
   apply (rule allI)
@@ -929,10 +929,10 @@ lemma bytes_at_heap_list:
   apply clarsimp
   done
 
-text {*
+text \<open>
   A collection of useful type-generic implications for moving from the abstract heap to the concrete
   heap.
-*}
+\<close>
 definition
   is_valid_imp_c_guard :: "(lifted_globals \<Rightarrow> 'b::mem_type ptr \<Rightarrow> bool) \<Rightarrow> bool"
 where
@@ -959,7 +959,7 @@ where
   "is_valid_imp_heap_ptr_valid is_valid \<equiv>
      \<forall>s p. is_valid (lift_global_heap s) p \<longrightarrow> heap_ptr_valid (hrs_htd (t_hrs_' s)) p"
 
-text {* We can easily discharge these for a given type. *}
+text \<open>We can easily discharge these for a given type.\<close>
 lemma is_valid_w32_imp_c_guard[unfolded is_valid_imp_c_guard_def, simplified]:
     "is_valid_imp_c_guard is_valid_w32"
   unfolding is_valid_imp_c_guard_def
@@ -1009,12 +1009,12 @@ lemma is_valid_w32_imp_heap_ptr_valid[unfolded is_valid_imp_heap_ptr_valid_def, 
   apply clarsimp
   by (rule simple_lift_heap_ptr_valid, force)
 
-text {*
+text \<open>
   With that support in place, we can now prove a heap-abstracted call to memcpy of a type in a
   reasonably generic way. Note that we leverage the relationship between
   is_valid_*/lift_global_heap/simple_lift to transfer assumptions across the boundary between the
   abstract and concrete heaps.
-*}
+\<close>
 lemma
   fixes dst :: "32word ptr"
     and src :: "32word ptr"
@@ -1045,11 +1045,11 @@ lemma
   apply (clarsimp simp:update_bytes_def is_valid_w32_imp_heap_ptr_valid)
   done
 
-text {*
+text \<open>
   Let's do the same instantiation for a structure. Note that the proof text for the following lemmas
   is identical to the word 32 instantiation above. These could be straightforwardly abstracted into
   a locale which could be automatically interpreted with the use of generated proofs.
-*}
+\<close>
 lemma is_valid_my_structure_imp_c_guard[unfolded is_valid_imp_c_guard_def, simplified]:
     "is_valid_imp_c_guard is_valid_my_structure_C"
   unfolding is_valid_imp_c_guard_def
@@ -1099,9 +1099,9 @@ lemma is_valid_my_structure_imp_heap_ptr_valid[unfolded is_valid_imp_heap_ptr_va
   apply clarsimp
   by (rule simple_lift_heap_ptr_valid, force)
 
-text {*
+text \<open>
   Again, we can now trivially transfer Hoare triple properties.
-*}
+\<close>
 lemma
   fixes dst :: "my_structure_C ptr"
     and src :: "my_structure_C ptr"

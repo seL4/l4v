@@ -155,7 +155,7 @@ by (induct xs arbitrary: p) auto
 
 (*** Main Proof ***)
 
-section {* Machinery for the Schorr-Waite proof*}
+section \<open>Machinery for the Schorr-Waite proof\<close>
 
 definition
   \<comment> \<open>Relations induced by a mapping\<close>
@@ -176,7 +176,7 @@ definition
 
 lemmas rel_defs = relS_def rel_def
 
-text {* Rewrite rules for relations induced by a mapping*}
+text \<open>Rewrite rules for relations induced by a mapping\<close>
 
 lemma self_reachable: "b \<in> B \<Longrightarrow> b \<in> R\<^sup>* `` B"
 apply blast
@@ -234,7 +234,7 @@ definition
   restr ::"('a ptr \<times> 'a ptr) set \<Rightarrow> ('a ptr \<Rightarrow> bool) \<Rightarrow> ('a ptr \<times> 'a ptr) set"       ("(_/ | _)" [50, 51] 50)
   where "restr r m = {(x,y). (x,y) \<in> r \<and> \<not> m x}"
 
-text {* Rewrite rules for the restriction of a relation *}
+text \<open>Rewrite rules for the restriction of a relation\<close>
 
 lemma restr_identity[simp]:
  " (\<forall>x. \<not> m x) \<Longrightarrow> (R |m) = R"
@@ -263,7 +263,7 @@ definition
   S :: "('a ptr \<Rightarrow> bool) \<Rightarrow> ('a ptr \<Rightarrow> 'a ptr) \<Rightarrow> ('a ptr \<Rightarrow> 'a ptr) \<Rightarrow> ('a ptr \<Rightarrow> 'a ptr)"
   where "S c l r = (\<lambda>x. if c x then r x else l x)"
 
-text {* Rewrite rules for Lists using S as their mapping *}
+text \<open>Rewrite rules for Lists using S as their mapping\<close>
 
 lemma [rule_format,simp]:
  "\<forall>p. a \<notin> set stack \<longrightarrow> List (S c l r) p stack = List (S (c(a:=x)) (l(a:=y)) (r(a:=z))) p stack"
@@ -300,7 +300,7 @@ where
       iR p = (if c p then t else r p) \<and>
       p \<noteq> NULL)"
 
-text {* Rewrite rules for stkOk *}
+text \<open>Rewrite rules for stkOk\<close>
 
 lemma [simp]: "\<And>t. \<lbrakk> x \<notin> set xs; x \<noteq> t \<rbrakk> \<Longrightarrow>
   stkOk (c(x := f)) l r iL iR t xs = stkOk c l r iL iR t xs"
@@ -388,7 +388,7 @@ lemma the_equality': "\<And>P a. \<lbrakk>P a; \<And>x. \<lbrakk> P a; P x \<rbr
   by blast
 
 (* Hypothetical "wp_all" tactic *)
-ML {*
+ML \<open>
 fun wp_all_tac ctxt = let fun f n thm =
       if n > Thm.nprems_of thm then Seq.single thm else
         let val thms = WeakestPre.apply_rules_tac_n false
@@ -396,14 +396,14 @@ fun wp_all_tac ctxt = let fun f n thm =
                        |> Seq.list_of
         in if null thms then f (n+1) thm else f n (hd thms) end
      in f 0 end
-*}
+\<close>
 
 (*** Main Proof ***)
 
 declare fun_upd_apply[simp del] fun_upd_same[simp] fun_upd_other[simp]
 declare validNF_whileLoop_inv_measure_twosteps [wp]
 
-section{*The Schorr-Waite algorithm*}
+section\<open>The Schorr-Waite algorithm\<close>
 
 theorem SchorrWaiteAlgorithm:
 "\<lbrace>\<lambda>s. R = reachable (relS {\<lambda>x. s[x]\<rightarrow>l, \<lambda>x. s[x]\<rightarrow>r}) {root_ptr} \<and>
@@ -413,8 +413,8 @@ theorem SchorrWaiteAlgorithm:
  \<lbrace>\<lambda>r s. \<forall>x. (x \<in> R) = (s[x]\<rightarrow>m \<noteq> 0) \<and> s[x]\<rightarrow>l = s0[x]\<rightarrow>l \<and> s[x]\<rightarrow>r = s0[x]\<rightarrow>r\<rbrace>!"
 unfolding schorr_waite'_prove_def[of root_ptr R s0]
 
-txt {* wp currently generates many tuples for the whileLoop state,
-       we simplify them with the second simp rule. *}
+txt \<open>wp currently generates many tuples for the whileLoop state,
+       we simplify them with the second simp rule.\<close>
 proof (tactic "wp_all_tac @{context}",
     simp_all (no_asm_use) only: split_tupled_all split_conv)
   let "\<lbrace> ?Pre root_ptr \<rbrace> _ \<lbrace> ?Post \<rbrace>!" = ?thesis
@@ -786,7 +786,7 @@ proof (tactic "wp_all_tac @{context}",
   }
   note puStack = this
 
-  txt {* Loop invariant and correctness *}
+  txt \<open>Loop invariant and correctness\<close>
   {
     fix s p t cond
     assume loopInv: "?inv p t cond s \<and> cond \<noteq> 0" (is "_ \<and> ?whileB")
@@ -876,7 +876,7 @@ proof (tactic "wp_all_tac @{context}",
     qed
   }
 
-  txt {* Loop termination *}
+  txt \<open>Loop termination\<close>
   {
     fix p t cond m1 m2 m3 s
     assume loopInv: "?inv p t cond s \<and> cond \<noteq> 0

@@ -16,9 +16,9 @@ begin
 external_file "swap.c"
 (*>*)
 
-subsection {* \texttt{swap} *}
+subsection \<open>\texttt{swap}\<close>
 
-text {*
+text \<open>
 
   Here, we use AutoCorres to verify a C program that reads and writes to the heap.
   Our C function, \texttt{swap}, swaps two words in memory:
@@ -26,7 +26,7 @@ text {*
 \lstinputlisting[language=C, firstline=15]{../../swap.c}
 
   Again, we translate the program using the C parser and AutoCorres.
-*}
+\<close>
 
 install_C_file "swap.c"
 autocorres [heap_abs_syntax, ts_rules = nondet] "swap.c"
@@ -34,7 +34,7 @@ autocorres [heap_abs_syntax, ts_rules = nondet] "swap.c"
 context swap begin
 (*>*)
 
-text {*
+text \<open>
   Most heap operations in C programs consist of accessing a pointer.
   AutoCorres abstracts the global C heap by creating one heap for
   each type. (In our simple \texttt{swap} example, it creates only
@@ -45,23 +45,23 @@ text {*
   such as changing the type that occupies a given region of memory.
   AutoCorres will not abstract any functions that use these operations,
   so verifying them will be more complicated (but still possible).
-*}
+\<close>
 
-text {*
+text \<open>
   The C parser expresses \texttt{swap} like this:
-*}
+\<close>
 
 thm swap_body_def
-text {* @{thm [display] swap_body_def} *}
+text \<open>@{thm [display] swap_body_def}\<close>
 
-text {*
+text \<open>
   AutoCorres abstracts the function to this:
-*}
+\<close>
 
 thm swap'_def
-text {* @{thm [display] swap'_def } *}
+text \<open>@{thm [display] swap'_def }\<close>
 
-text {*
+text \<open>
   There are some things to note:
 
   The function contains guards (assertions) that the pointers
@@ -73,22 +73,22 @@ text {*
 
   We saw a monadic program in the previous section, but here
   the monad is actually being used to carry the program heap.
-*}
+\<close>
 
 (* FIXME: something about heap syntax here. *)
 
-text {*
+text \<open>
   Now we prove that \texttt{swap} is correct. We use @{term x}
   and @{term y} to ``remember'' the initial values so that we can
   talk about them in the postcondition.
-*}
+\<close>
 lemma "\<lbrace> \<lambda>s. is_valid_w32 s a \<and> s[a] = x \<and> is_valid_w32 s b \<and> s[b] = y \<rbrace>
          swap' a b
        \<lbrace> \<lambda>_ s. s[a] = y \<and> s[b] = x \<rbrace>!"
   apply (unfold swap'_def)
   apply wp
   apply clarsimp
-  txt {*
+  txt \<open>
     The C parser and AutoCorres both model the C heap using functions,
     which takes a pointer to some object in memory. Heap updates are
     modelled using the functional update @{term fun_upd}:
@@ -96,17 +96,17 @@ lemma "\<lbrace> \<lambda>s. is_valid_w32 s a \<and> s[a] = x \<and> is_valid_w3
       @{thm [display] fun_upd_def}
 
     To reason about functional updates, we use the rule fun\_upd\_apply.
-  *}
+\<close>
   apply (simp add: fun_upd_apply)
   done
 
-text {*
+text \<open>
   Note that we have ``only'' proved that the function swaps its
   arguments. We have not proved that it does \emph{not} change
   any other state. This is a typical \emph{frame problem} with
   pointer reasoning. We can prove a more complete specification
   of \texttt{swap}:
-*}
+\<close>
 lemma "(\<And>x y s. P (s[a := x][b := y]) = P s) \<Longrightarrow>
        \<lbrace> \<lambda>s. is_valid_w32 s a \<and> s[a] = x \<and> is_valid_w32 s b \<and> s[b] = y \<and> P s \<rbrace>
          swap' a b
@@ -116,13 +116,13 @@ lemma "(\<And>x y s. P (s[a := x][b := y]) = P s) \<Longrightarrow>
   apply (clarsimp simp: fun_upd_apply)
   done
 
-text {*
+text \<open>
   In other words, if predicate @{term P} does not depend on the
   inputs to \texttt{swap}, it will continue to hold.
 
   \emph{Separation logic} provides a more structured approach
   to this problem.
-*}
+\<close>
 
 (*<*)
 end

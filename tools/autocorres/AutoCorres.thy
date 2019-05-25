@@ -165,11 +165,11 @@ ML_file "type_strengthen.ML"
 ML_file "autocorres.ML"
 
 (* Setup "autocorres" keyword. *)
-ML {*
+ML \<open>
   Outer_Syntax.command @{command_keyword "autocorres"}
     "Abstract the output of the C parser into a monadic representation."
     (AutoCorres.autocorres_parser >>
       (Toplevel.theory o (fn (opt, filename) => AutoCorres.do_autocorres opt filename)))
-*}
+\<close>
 
 end
