@@ -165,7 +165,7 @@ lemma le_to_less_plus_one:
 
 lemma unat_abstract_binops:
   "abstract_binop (\<lambda>a b. a + b \<le> UWORD_MAX TYPE('a::len)) (unat :: 'a word \<Rightarrow> nat) (+) (+)"
-  "abstract_binop (\<lambda>a b. a * b \<le> UWORD_MAX TYPE('a)) (unat :: 'a word \<Rightarrow> nat) (( * ) ) (( * ) )"
+  "abstract_binop (\<lambda>a b. a * b \<le> UWORD_MAX TYPE('a)) (unat :: 'a word \<Rightarrow> nat) (*) (*)"
   "abstract_binop (\<lambda>a b. a \<ge> b) (unat :: 'a word \<Rightarrow> nat) (-) (-)"
   "abstract_binop (\<lambda>a b. True) (unat :: 'a word \<Rightarrow> nat) (div) (div)"
   "abstract_binop (\<lambda>a b. True) (unat :: 'a word \<Rightarrow> nat) (mod) (mod)"
@@ -180,7 +180,7 @@ lemma snat_abstract_bool_binops:
 
 lemma snat_abstract_binops:
   "abstract_binop (\<lambda>a b. WORD_MIN TYPE('a::len) \<le> a + b \<and> a + b \<le> WORD_MAX TYPE('a)) (sint :: 'a signed word \<Rightarrow> int) (+) (+)"
-  "abstract_binop (\<lambda>a b. WORD_MIN TYPE('a) \<le> a * b \<and> a * b \<le> WORD_MAX TYPE('a)) (sint :: 'a signed word \<Rightarrow> int) (( * )) (( * ))"
+  "abstract_binop (\<lambda>a b. WORD_MIN TYPE('a) \<le> a * b \<and> a * b \<le> WORD_MAX TYPE('a)) (sint :: 'a signed word \<Rightarrow> int) (*) (*)"
   "abstract_binop (\<lambda>a b. WORD_MIN TYPE('a) \<le> a - b \<and> a - b \<le> WORD_MAX TYPE('a)) (sint :: 'a signed word \<Rightarrow> int) (-) (-)"
   "abstract_binop (\<lambda>a b. WORD_MIN TYPE('a) \<le> a sdiv b \<and> a sdiv b \<le> WORD_MAX TYPE('a)) (sint :: 'a signed word \<Rightarrow> int) (sdiv) (sdiv)"
   "abstract_binop (\<lambda>a b. WORD_MIN TYPE('a) \<le> a smod b \<and> a smod b \<le> WORD_MAX TYPE('a)) (sint :: 'a signed word \<Rightarrow> int) (smod) (smod)"
