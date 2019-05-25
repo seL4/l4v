@@ -18,7 +18,7 @@ ML \<open>
 
 fun filename_relative thy name =
     Path.append (Resources.master_directory thy) (Path.explode name)
-    |> Path.implode
+    |> File.standard_path
 
 fun write_speed_test_file n_globs n_funcs = let
     val f = filename_relative @{theory} "modifies_speed.c"

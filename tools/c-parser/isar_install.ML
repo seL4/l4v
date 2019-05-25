@@ -24,6 +24,7 @@ sig
   val mk_thy_relative : theory -> string -> string
 
   val extra_trace_filename : string Config.T
+  val cpp_path : string Config.T
 
   val installed_C_files : theory
     -> {c_filename : string, locale_names : string list,
@@ -121,7 +122,7 @@ end
 
 fun do_cpp {error_detail, cpp_path} {includes, filename} =
   case cpp_path of
-      NONE => filename
+      NONE => File.standard_path (Path.explode filename)
     | SOME p =>
       let
         open OS.FileSys OS.Process
