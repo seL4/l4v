@@ -63,7 +63,8 @@ the (Symtab.lookup (the (Symtab.lookup all_traces "incr")) "HL")
 |> (fn AutoCorresData.RuleTrace x => x)
 |> AutoCorresTrace.print_ac_trace
 |> AutoCorresTrace.writeFile
-       (Path.append (Resources.master_directory @{theory}) (Path.make ["trace_demo_incr.trace"]) |> Path.implode)
+       (Path.append (Resources.master_directory @{theory}) (Path.make ["trace_demo_incr.trace"])
+        |> File.standard_path)
 \<close>
 (* Then, open the file and set the "folding mode" buffer option to "indent". *)
 
