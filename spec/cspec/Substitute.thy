@@ -15,7 +15,7 @@ imports
   "AsmRefine.GlobalsSwap"
 begin
 
-ML {*
+ML \<open>
 
 structure SubstituteSpecs = struct
 
@@ -126,9 +126,9 @@ fun take_all_actions prefix src_ctxt proc tm csenv
 
 end
 
-*}
+\<close>
 
-ML {*
+ML \<open>
 fun com_rewrite f t = case fastype_of t of
     (comT as Type (@{type_name com}, [s, _, ft]))
       => let
@@ -175,10 +175,10 @@ fun com_rewrite f t = case fastype_of t of
   in inner (Envir.beta_eta_contract t) end
   | _ => t;
 
-*}
+\<close>
 
-setup {* DefineGlobalsList.define_globals_list_i
-  "../c/build/$L4V_ARCH/kernel_all.c_pp" @{typ globals} *}
+setup \<open>DefineGlobalsList.define_globals_list_i
+  "../c/build/$L4V_ARCH/kernel_all.c_pp" @{typ globals}\<close>
 
 
 locale substitute_pre
@@ -195,7 +195,7 @@ end
 locale kernel_all_substitute = substitute_pre
 begin
 
-ML {*
+ML \<open>
 fun mk_rew (t as Abs (s, T, _)) = mk_rew (betapply (t, Var ((s, 0), T)))
   | mk_rew t = HOLogic.dest_eq t
 
@@ -219,7 +219,7 @@ fun strengthen_c_guards ss thy s =
   then Pattern.rewrite_term thy [c_guard_rew_weak] []
   else Pattern.rewrite_term thy [c_guard_rew] []
 end;
-*}
+\<close>
 
 lemmas global_data_defs
     = kernel_all_global_addresses.global_data_defs
@@ -227,7 +227,7 @@ lemmas global_data_defs
 lemmas globals_list_def
     = kernel_all_global_addresses.global_data_list_def
 
-ML {*
+ML \<open>
 
 (* the unvarify sets ?symbol_table back to symbol_table. be careful *)
 val global_datas = @{thms global_data_defs}
@@ -339,11 +339,11 @@ val guard_acc_ptr_adds = com_rewrite
 
 end
 
-*}
+\<close>
 
 cond_sorry_modifies_proofs SORRY_MODIFIES_PROOFS
 
-local_setup {*
+local_setup \<open>
 SubstituteSpecs.take_all_actions
   "Kernel_C.kernel_all_global_addresses."
   (Locale.init "Kernel_C.kernel_all_global_addresses" @{theory})
@@ -356,7 +356,7 @@ SubstituteSpecs.take_all_actions
   @{term kernel_all_global_addresses.\<Gamma>}
   (CalculateState.get_csenv @{theory} "../c/build/$L4V_ARCH/kernel_all.c_pp" |> the)
   [@{typ "globals myvars"}, @{typ int}, @{typ strictc_errortype}]
-*}
+\<close>
 
 end
 
