@@ -158,7 +158,7 @@ val ts_attrib : attribute context_parser =
 
 (* Lazy check_lifting, which only checks the head term. *)
 fun check_lifting_head (heads : term list) : (Proof.context -> term -> bool) =
-  let val head_names = map (fn Const (name, _) => name) heads
+  let val head_names = map (fn Const (name, _) => name | _ => raise Match) heads
       fun check _ t = case head_of t of
                           Const (name, _) => member (op =) head_names name
                         | _ => false
