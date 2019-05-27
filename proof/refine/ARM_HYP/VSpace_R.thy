@@ -2350,10 +2350,6 @@ definition "valid_slots_duplicated' \<equiv> \<lambda>m s. case m of
     | _ \<Rightarrow> \<exists>p. xs = [p] \<and> ko_wp_at' (\<lambda>ko. vs_entry_align ko = 0) p s
       \<and> page_directory_at' (p && ~~ mask pdBits) s)"
 
-lemma tl_nat_list_simp:
- "tl [a..<b] = [a + 1 ..<b]"
-  by (induct b,auto)
-
 lemma valid_slots_duplicated_pteD':
   assumes "valid_slots_duplicated' (Inl (pte, xs)) s"
   shows "(is_aligned (hd xs >> pte_bits) (pte_align' pte))

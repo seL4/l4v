@@ -456,6 +456,10 @@ lemma map_upt_unfold:
   shows   "map f [a ..< b] = f a # map f [Suc a ..< b]"
   using assms upt_conv_Cons by auto
 
+lemma tl_nat_list_simp:
+  "tl [a..<b] = [a + 1 ..<b]"
+  by (induct b, auto)
+
 lemma image_Collect2:
   "case_prod f ` {x. P (fst x) (snd x)} = {f x y |x y. P x y}"
   by (subst image_Collect) simp
