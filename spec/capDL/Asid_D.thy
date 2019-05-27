@@ -28,14 +28,14 @@ where
        doE
          base \<leftarrow> liftE $ select {x. x < 2 ^ asid_high_bits};
 
-         (* Fetch the untyped item, and ensure it is valid. *)
+         \<comment> \<open>Fetch the untyped item, and ensure it is valid.\<close>
          (untyped_cap, untyped_cap_ref) \<leftarrow> throw_on_none $ get_index caps 0;
          (case untyped_cap of
              UntypedCap _ s _ \<Rightarrow> returnOk ()
            | _ \<Rightarrow> throw);
          ensure_no_children untyped_cap_ref;
 
-         (* Fetch the slot we plan to put the generated cap into. *)
+         \<comment> \<open>Fetch the slot we plan to put the generated cap into.\<close>
          (cspace_cap, _) \<leftarrow> throw_on_none $ get_index caps 1;
          target_slot \<leftarrow> lookup_slot_for_cnode_op cspace_cap index (unat depth);
          ensure_empty target_slot;
@@ -70,21 +70,21 @@ where
     case params of
         MakePool untyped_cap untyped_cap_ref untyped_covers target_slot base \<Rightarrow>
           do
-            (* Untype the region. A choice may be made about whether to detype
-               objects with Untyped addresses. *)
+            \<comment> \<open>Untype the region. A choice may be made about whether to detype
+               objects with Untyped addresses.\<close>
             modify (detype untyped_covers);
             set_cap untyped_cap_ref untyped_cap;
             targets \<leftarrow> generate_object_ids 1 AsidPoolType untyped_covers;
 
-            (* Retype the region. *)
+            \<comment> \<open>Retype the region.\<close>
             retype_region 0 AsidPoolType targets;
             assert (targets \<noteq> []);
 
-            (* Insert the cap. *)
+            \<comment> \<open>Insert the cap.\<close>
             frame \<leftarrow> return $ pick (hd targets);
             insert_cap_child (AsidPoolCap frame base) untyped_cap_ref target_slot;
 
-            (* Update the asid table. *)
+            \<comment> \<open>Update the asid table.\<close>
             asid_table \<leftarrow> gets cdl_asid_table;
             asid_table' \<leftarrow> return $ asid_table (base \<mapsto> AsidPoolCap frame 0);
             modify (\<lambda>s. s \<lparr>cdl_asid_table := asid_table'\<rparr>)

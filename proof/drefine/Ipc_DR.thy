@@ -1952,7 +1952,7 @@ lemma corres_complete_ipc_transfer:
            (valid_objs and pspace_aligned and valid_global_refs and pspace_distinct and valid_mdb
             and (\<lambda>s. not_idle_thread (cur_thread s) s) and valid_irq_node
             and valid_idle and not_idle_thread recv and not_idle_thread send and valid_etcbs)
-           (Endpoint_D.do_ipc_transfer ep' send recv can_grant) (* FIXME argument order *)
+           (Endpoint_D.do_ipc_transfer ep' send recv can_grant) \<comment> \<open>FIXME argument order\<close>
            (Ipc_A.do_ipc_transfer send ep badge can_grant recv)"
   apply (clarsimp simp: Endpoint_D.do_ipc_transfer_def Ipc_A.do_ipc_transfer_def)
   apply (rule dcorres_expand_pfx)

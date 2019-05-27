@@ -109,16 +109,16 @@ where
       extra_cap_cptrs \<leftarrow> returnOk $ cdl_intent_extras full_intent;
 
       syscall
-        (* Lookup all caps presented. *)
+        \<comment> \<open>Lookup all caps presented.\<close>
         (doE
           (cap, cap_ref) \<leftarrow> lookup_cap_and_slot thread_ptr invoked_cptr;
           extra_caps \<leftarrow> lookup_extra_caps thread_ptr extra_cap_cptrs;
           returnOk (cap, cap_ref, extra_caps)
         odE)
-        (* If that failed, send off a fault IPC (if we did a blocking operation). *)
+        \<comment> \<open>If that failed, send off a fault IPC (if we did a blocking operation).\<close>
         (when can_block $ handle_fault)
 
-        (* Decode the user's intent. *)
+        \<comment> \<open>Decode the user's intent.\<close>
         (\<lambda> (cap, cap_ref, extra_caps).
           case intent of
               None \<Rightarrow> (if ep_related_cap cap then
@@ -127,12 +127,12 @@ where
             | Some intent' \<Rightarrow>
                 decode_invocation cap cap_ref extra_caps intent')
 
-        (* If that stuffed up, we do nothing more than corrupt the frames. *)
+        \<comment> \<open>If that stuffed up, we do nothing more than corrupt the frames.\<close>
         (do corrupt_ipc_buffer thread_ptr True;
             when is_call (mark_tcb_intent_error thread_ptr True)
          od)
 
-        (* Invoke the system call. *)
+        \<comment> \<open>Invoke the system call.\<close>
         (\<lambda> inv. doE
             liftE $ set_cap (thread_ptr,tcb_pending_op_slot) RestartCap;
             perform_invocation is_call can_block inv;
@@ -151,10 +151,10 @@ definition
 where
   "handle_recv \<equiv>
     do
-      (* Get the current thread. *)
+      \<comment> \<open>Get the current thread.\<close>
       tcb_id \<leftarrow> gets_the cdl_current_thread;
       tcb \<leftarrow> get_thread tcb_id;
-      (* Get the endpoint it is trying to receive from. *)
+      \<comment> \<open>Get the endpoint it is trying to receive from.\<close>
       (doE
         ep_cptr \<leftarrow> returnOk $ cdl_intent_cap (cdl_tcb_intent tcb);
         ep_cap \<leftarrow> lookup_cap tcb_id ep_cptr;
@@ -232,7 +232,7 @@ definition
 where
   "call_kernel ev \<equiv>
     do
-      (* Deal with the event. *)
+      \<comment> \<open>Deal with the event.\<close>
       handle_event ev
         <handle> (\<lambda> _. liftE handle_pending_interrupts);
       schedule;

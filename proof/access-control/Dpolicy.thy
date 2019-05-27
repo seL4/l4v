@@ -1008,6 +1008,7 @@ lemma transform_asid_low_bits_of:
 
 lemma cap_asid'_transform:
   "\<lbrakk> invs s; caps_of_state s ptr = Some cap \<rbrakk> \<Longrightarrow> cap_asid' cap = cdl_cap_asid' (transform_cap cap)"
+  supply image_cong_simp [cong del]
   apply (case_tac cap; simp)
   apply (drule caps_of_state_valid, simp)
   apply (rename_tac arch_cap)

@@ -51,11 +51,11 @@ where
             return None
         | Some (croot, index, depth) \<Rightarrow>
             doE
-              (* Lookup the slot. *)
+              \<comment> \<open>Lookup the slot.\<close>
               cspace_root \<leftarrow> unify_failure $ lookup_cap thread croot;
               result \<leftarrow> unify_failure $ lookup_slot_for_cnode_op cspace_root index depth;
 
-              (* Ensure nothing is already in it. *)
+              \<comment> \<open>Ensure nothing is already in it.\<close>
               cap \<leftarrow> liftE $ get_cap result;
               whenE (cap \<noteq> NullCap) throw;
 
@@ -110,29 +110,29 @@ fun
 where
   "transfer_caps_loop ep receiver [] dest = return ()"
 | "transfer_caps_loop ep receiver ((cap,slot)#caps) dest =
-      (* Transfer badge, transfer cap, or abort early if more than
-         one cap to transfer *)
+      \<comment> \<open>Transfer badge, transfer cap, or abort early if more than
+         one cap to transfer\<close>
       (if is_ep_cap cap \<and> ep = Some (cap_object cap)
       then do
-        (* transfer badge *)
+        \<comment> \<open>transfer badge\<close>
         corrupt_ipc_buffer receiver True;
-        (* transfer rest of badges or cap *)
+        \<comment> \<open>transfer rest of badges or cap\<close>
         transfer_caps_loop ep receiver caps dest
       od
       else if dest \<noteq> None then doE
-        (* Possibly diminish rights (if diminish flag was set on endpoint) *)
+        \<comment> \<open>Possibly diminish rights (if diminish flag was set on endpoint)\<close>
         new_cap \<leftarrow> returnOk (update_cap_rights (cap_rights cap - {Write}) cap) \<sqinter>
                   returnOk cap;
 
-        (* Target cap is derived. This may abort transfer early. *)
+        \<comment> \<open>Target cap is derived. This may abort transfer early.\<close>
         target_cap \<leftarrow> derive_cap slot new_cap;
         whenE (target_cap = NullCap) throw;
 
-        (* Copy the cap across as either a child or sibling. *)
+        \<comment> \<open>Copy the cap across as either a child or sibling.\<close>
         liftE (insert_cap_child target_cap slot (the dest)
                \<sqinter> insert_cap_sibling target_cap slot (the dest));
 
-        (* Transfer rest of badges *)
+        \<comment> \<open>Transfer rest of badges\<close>
         liftE $ transfer_caps_loop ep receiver caps None
       odE <catch> (\<lambda>_. return ())
       else
@@ -246,20 +246,20 @@ definition
   do_ipc_transfer :: "cdl_object_id option \<Rightarrow> cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> bool \<Rightarrow> unit k_monad"
 where
   "do_ipc_transfer ep_id sender_id receiver_id can_grant \<equiv> do
-      (* look up cap transfer *)
+      \<comment> \<open>look up cap transfer\<close>
       src_slots \<leftarrow> get_send_slots sender_id;
-      do (* do normal transfer *)
+      do \<comment> \<open>do normal transfer\<close>
         caps \<leftarrow> if can_grant then
                 lookup_extra_caps sender_id src_slots <catch> (\<lambda>_. return [])
               else
                 return [];
-        (* copy registers, transfer message or fault *)
+        \<comment> \<open>copy registers, transfer message or fault\<close>
         corrupt_ipc_buffer receiver_id True;
-        (* transfer caps if no fault occured *)
+        \<comment> \<open>transfer caps if no fault occured\<close>
         transfer_caps ep_id caps sender_id receiver_id
-      od  \<sqinter>  (* fault transfer *)
+      od  \<sqinter>  \<comment> \<open>fault transfer\<close>
       corrupt_ipc_buffer receiver_id True;
-      (* set message info *)
+      \<comment> \<open>set message info\<close>
       corrupt_tcb_intent receiver_id
   od"
 
@@ -279,7 +279,7 @@ where
     do
       has_fault \<leftarrow> get_thread_fault receiver_id;
       when (\<not> has_fault) $ do_ipc_transfer None sender_id receiver_id can_grant;
-      (* Clear out any pending operation caps. *)
+      \<comment> \<open>Clear out any pending operation caps.\<close>
       delete_cap_simple reply_cap_slot;
       when (has_fault) $ (do corrupt_tcb_intent receiver_id;
         update_thread_fault receiver_id (\<lambda>_. False) od );
@@ -447,7 +447,7 @@ definition
   where
   "send_fault_ipc tcb_id \<equiv>
     doE
-      (* Lookup where we should send the fault IPC to. *)
+      \<comment> \<open>Lookup where we should send the fault IPC to.\<close>
       tcb \<leftarrow> liftE $ get_thread tcb_id;
       target_ep_cptr \<leftarrow> returnOk $ cdl_tcb_fault_endpoint tcb;
       handler_cap \<leftarrow> lookup_cap tcb_id target_ep_cptr;

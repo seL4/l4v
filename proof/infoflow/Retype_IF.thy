@@ -671,7 +671,7 @@ lemma retype_region_globals_equiv:
     apply(clarsimp simp: pspace_no_overlap_def)
     apply(drule_tac x="arm_global_pd (arch_state sa)" in spec)
     apply(clarsimp simp: invs_def valid_state_def valid_global_objs_def valid_vso_at_def obj_at_def ptr_add_def)
-    apply(frule_tac p=p in range_cover_subset)
+    apply(frule_tac p=x in range_cover_subset)
       apply(simp add: blah)
      apply simp
     apply(frule range_cover_subset')

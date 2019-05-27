@@ -25,7 +25,7 @@ where
        doE
          (root_cap, root_slot) \<leftarrow> throw_on_none $ get_index caps 0;
 
-         (* Lookup the destination slots. *)
+         \<comment> \<open>Lookup the destination slots.\<close>
          target_node \<leftarrow> if node_depth = 0 then
              returnOk root_cap
            else
@@ -34,15 +34,15 @@ where
                liftE $ get_cap target_slot
              odE;
 
-         (* Ensure it is a CNode cap. *)
+         \<comment> \<open>Ensure it is a CNode cap.\<close>
          unlessE (is_cnode_cap target_node) throw;
 
-         (* Find our target slots. *)
+         \<comment> \<open>Find our target slots.\<close>
          slots \<leftarrow> returnOk $ map (\<lambda>n. (cap_object target_node, n))
                [unat node_offset ..< unat node_offset + unat node_window];
          mapME_x ensure_empty slots;
 
-         (* Work out what names are available. If we haven't haven't already been typed into something we can reuse our names. *)
+         \<comment> \<open>Work out what names are available. If we haven't haven't already been typed into something we can reuse our names.\<close>
          s \<leftarrow> liftE $ get;
          has_kids \<leftarrow> returnOk $ has_children untyped_ref s;
 
@@ -115,8 +115,8 @@ definition
 where
   "retype_region target_bits target_type target_object_ids \<equiv>
     do
-      (* Get a list of target locations. We are happy with any unused name
-         within the target range. *)
+      \<comment> \<open>Get a list of target locations. We are happy with any unused name
+         within the target range.\<close>
 
       if (target_type \<noteq> UntypedType) then
        do
@@ -125,7 +125,8 @@ where
        od
       else return ();
 
-      (* Return the list of new objects. *)
+      \<comment> \<open>Get a list of target locations. We are happy with any unused name
+         within the target range.\<close>
       return target_object_ids
     od"
 
@@ -166,14 +167,14 @@ where
 
          update_available_range new_range (map (\<lambda>s. pick s) new_obj_refs) untyped_ref untyped_cap;
 
-         (* Construct new objects within the covered range. *)
+         \<comment> \<open>Construct new objects within the covered range.\<close>
          retype_region type_size new_type new_obj_refs;
 
-         (* Construct caps for the new objects. *)
+         \<comment> \<open>Construct caps for the new objects.\<close>
          mapM_x (create_cap new_type type_size untyped_ref (untyped_is_device untyped_cap)) (zip target_slots new_obj_refs);
 
-         (* Ideally, we should return back to the user how many
-          * objects were created. *)
+         \<comment> \<open>Ideally, we should return back to the user how many
+            objects were created.\<close>
 
          return ()
        od

@@ -355,14 +355,16 @@ begin
 
 lemma enabled:
   "enabled_system A s0"
+  supply image_cong_simp [cong del]
+  supply ex_image_cong_iff [simp del]
   apply (clarsimp simp: enabled_system_def)
   apply (rename_tac jsa, induct_tac jsa rule: rev_induct)
-   apply (clarsimp simp: execution_def steps_def)
+  apply (clarsimp simp: execution_def steps_def)
    apply (fold steps_def)
-   apply (rule_tac x="Fin A x" in exI)
+    apply (rule_tac x="Fin A x" in exI)
    apply (rule imageI)
    apply (rule Init_Fin)
-   apply (rule set_mp)
+    apply (rule set_mp)
     apply (rule inv_holds_steps[OF I])
     apply (rule s0_I)
    apply simp
@@ -467,6 +469,8 @@ begin
 
 lemma enabled:
   "enabled_system A s0"
+  supply image_cong_simp [cong del]
+  supply ex_image_cong_iff [simp del]
   apply (clarsimp simp: enabled_system_def)
   apply (induct_tac jsa  rule: rev_induct)
    apply (clarsimp simp: execution_def steps_def)
@@ -735,43 +739,43 @@ definition global_automaton_if
 where
   "global_automaton_if get_active_irqf do_user_opf kernel_callf
                        preemptionf schedulef kernel_exitf \<equiv>
-  (* Kernel entry with preemption during event handling
-     NOTE: kernel cannot be preempted while servicing an interrupt *)
+  \<comment> \<open>Kernel entry with preemption during event handling
+     NOTE: kernel cannot be preempted while servicing an interrupt\<close>
      { ( (s, KernelEntry e),
          (s', KernelPreempted) ) |s s' e. (s, True, s') \<in> kernel_callf e \<and>
                                           e \<noteq> Interrupt} \<union>
-  (* kernel entry without preemption during event handling *)
+  \<comment> \<open>kernel entry without preemption during event handling\<close>
      { ( (s, KernelEntry e),
          (s', KernelSchedule (e = Interrupt)) ) |s s' e. (s, False, s') \<in> kernel_callf e } \<union>
-  (* handle in-kernel preemption *)
+  \<comment> \<open>handle in-kernel preemption\<close>
      { ( (s, KernelPreempted),
          (s', KernelSchedule True) ) |s s'. (s, (), s') \<in> preemptionf } \<union>
-  (* schedule *)
+  \<comment> \<open>schedule\<close>
      { ( (s, KernelSchedule b),
          (s', KernelExit) ) |s s' b. (s, (), s') \<in> schedulef } \<union>
-  (* kernel exit *)
+  \<comment> \<open>kernel exit\<close>
      { ( (s, KernelExit),
          (s', m) ) |s s' m. (s, m, s') \<in> kernel_exitf } \<union>
-  (* User runs, causes exception *)
+  \<comment> \<open>User runs, causes exception\<close>
      { ( (s, InUserMode),
          (s', KernelEntry e ) ) |s s_aux s' e.
                                  (s, None, s_aux) \<in> get_active_irqf \<and>
                                  (s_aux, Some e, s') \<in> do_user_opf \<and>
                                  e \<noteq> Interrupt} \<union>
-  (* User runs, no exception happens *)
+  \<comment> \<open>User runs, no exception happens\<close>
      { ( (s, InUserMode),
          (s', InUserMode) ) |s s_aux s'.
                              (s, None, s_aux) \<in> get_active_irqf \<and>
                              (s_aux, None, s') \<in> do_user_opf} \<union>
-  (* Interrupt while in user mode *)
+  \<comment> \<open>Interrupt while in user mode\<close>
      { ( (s, InUserMode),
          (s', KernelEntry Interrupt) ) |s s' i.
                                         (s, Some i, s') \<in> get_active_irqf} \<union>
-  (* Interrupt while in idle mode *)
+  \<comment> \<open>Interrupt while in idle mode\<close>
      { ( (s, InIdleMode),
          (s', KernelEntry Interrupt) ) |s s' i.
                                         (s, Some i, s') \<in> get_active_irqf} \<union>
-  (* No interrupt while in idle mode *)
+  \<comment> \<open>No interrupt while in idle mode\<close>
      { ( (s, InIdleMode),
          (s', InIdleMode) ) |s s'. (s, None, s') \<in> get_active_irqf}"
 
@@ -3881,7 +3885,7 @@ lemma LI_sub_big_steps:
   apply (clarsimp simp: LI_def)
   apply (erule_tac x=e in allE)
   apply (clarsimp simp: rel_semi_def)
-  apply (drule_tac x="(t', ta)" in set_mp)
+  apply (drule_tac c="(t', ta)" in set_mp)
    apply (rule_tac b=s' in relcompI)
     apply simp
     apply (rule sub_big_steps_I_holds)
@@ -3921,7 +3925,7 @@ lemma LI_big_steps:
   apply (clarsimp simp: LI_def)
   apply (erule_tac x=a in allE)
   apply (clarsimp simp: rel_semi_def)
-  apply (drule_tac x="(t', s')" in set_mp)
+  apply (drule_tac c="(t', s')" in set_mp)
    apply (rule_tac b="s'a" in relcompI)
     apply simp
    apply simp

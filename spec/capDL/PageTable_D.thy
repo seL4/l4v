@@ -40,18 +40,18 @@ definition
       cdl_page_table_intent \<Rightarrow> cdl_page_table_invocation except_monad"
 where
   "decode_page_table_invocation target target_ref caps intent \<equiv> case intent of
-    (*
-     * Map the given PageTable into the given PageDirectory at the given
-     * virtual address.
-     *
-     * The concrete implementation only allows a PageTable to be mapped
-     * once at any point in time, but we don't enforce that here.
-     *)
+    \<comment> \<open>
+      Map the given PageTable into the given PageDirectory at the given
+      virtual address.
+     
+      The concrete implementation only allows a PageTable to be mapped
+      once at any point in time, but we don't enforce that here.
+     \<close>
     PageTableMapIntent vaddr attr \<Rightarrow>
       doE
         case cdl_get_pt_mapped_addr target of Some a \<Rightarrow> throw
         | None \<Rightarrow> returnOk ();
-        (* Ensure that a PD was passed in. *)
+        \<comment> \<open>Ensure that a PD was passed in.\<close>
         pd \<leftarrow> throw_on_none $ get_index caps 0;
         (pd_object_id, asid) \<leftarrow>
           case (fst pd) of
@@ -63,7 +63,7 @@ where
         returnOk $ PageTableMap (PageTableCap (cap_object target) Real (Some (asid,vaddr && ~~ mask 20)))
           (PageTableCap (cap_object target) Fake None) target_ref target_slot
       odE \<sqinter> throw
-    (* Unmap this PageTable. *)
+    \<comment> \<open>Unmap this PageTable.\<close>
     | PageTableUnmapIntent \<Rightarrow> (
         case target of PageTableCap pid ctype maddr \<Rightarrow>
         (returnOk $ PageTableUnmap maddr pid target_ref)
@@ -92,36 +92,36 @@ definition
       cdl_page_intent \<Rightarrow> cdl_page_invocation except_monad"
 where
   "decode_page_invocation target target_ref caps intent \<equiv> case intent of
-      (*
-       * Map the given Page into the given PageDirectory or PageTable at
-       * the given virtual address.
-       *
-       * The concrete implementation only allows a Page to be mapped
-       * once at any point in time, but we don't enforce that here.
-       *)
+      \<comment> \<open>
+        Map the given Page into the given PageDirectory or PageTable at
+        the given virtual address.
+       
+        The concrete implementation only allows a Page to be mapped
+        once at any point in time, but we don't enforce that here.
+       \<close>
       PageMapIntent vaddr rights attr \<Rightarrow>
         doE
-          (* Ensure that a PD was passed in. *)
+          \<comment> \<open>Ensure that a PD was passed in.\<close>
           pd \<leftarrow> throw_on_none $ get_index caps 0;
           (pd_object_id, asid) \<leftarrow>
             case (fst pd) of
                 PageDirectoryCap x _ (Some asid) \<Rightarrow> returnOk (x, asid)
               | _ \<Rightarrow> throw;
 
-          (* Collect mapping from target cap. *)
+          \<comment> \<open>Collect mapping from target cap.\<close>
           (frame, sz,dev) \<leftarrow> returnOk $ (case target of FrameCap dev p R sz m mp \<Rightarrow> (p,sz,dev));
 
           target_slots \<leftarrow> cdl_page_mapping_entries vaddr sz pd_object_id;
 
-          (* Calculate rights. *)
+          \<comment> \<open>Calculate rights.\<close>
           new_rights \<leftarrow> returnOk $ validate_vm_rights $ cap_rights target \<inter> rights;
 
-          (* Return the map intent. *)
+          \<comment> \<open>Return the map intent.\<close>
           returnOk $ PageMap (FrameCap dev frame (cap_rights target) sz Real (Some (asid,vaddr)))
             (FrameCap False frame new_rights sz Fake None) target_ref target_slots
         odE \<sqinter> throw
 
-    (* Unmap this PageTable. *)
+    \<comment> \<open>Unmap this PageTable.\<close>
     | PageUnmapIntent \<Rightarrow> doE
         (frame, asid, sz) \<leftarrow> (case target of
            FrameCap _ p R sz m mp \<Rightarrow> returnOk (p, mp , sz)
@@ -129,10 +129,10 @@ where
       (returnOk $ PageUnmap asid frame target_ref sz) \<sqinter> throw
       odE
 
-    (* Change the rights on a given mapping. *)
+    \<comment> \<open>Change the rights on a given mapping.\<close>
     | PageRemapIntent rights attrs \<Rightarrow>
         doE
-          (* Ensure user has a right to the PD. *)
+          \<comment> \<open>Ensure user has a right to the PD.\<close>
           pd \<leftarrow> throw_on_none $ get_index caps 0;
           pd_object_id \<leftarrow>
             case (fst pd) of
@@ -141,20 +141,20 @@ where
 
           pd_object \<leftarrow> liftE $ get_object pd_object_id;
 
-          (* Find all of our children caps. *)
+          \<comment> \<open>Find all of our children caps.\<close>
           pd_slots \<leftarrow> liftE $ gets $ all_pd_pt_slots pd_object pd_object_id;
           target_slots \<leftarrow> liftE $ select {M. set M \<subseteq> pd_slots \<and> distinct M};
 
-          (* Calculate rights. *)
+          \<comment> \<open>Calculate rights.\<close>
           new_rights \<leftarrow> returnOk $ validate_vm_rights $ cap_rights target \<inter> rights;
 
-          (* Collect mapping from target cap. *)
+          \<comment> \<open>Collect mapping from target cap.\<close>
           (frame, sz, dev) \<leftarrow> returnOk $ (case target of FrameCap dev p R sz m mp \<Rightarrow> (p,sz,dev));
 
           returnOk $ PageRemap (FrameCap False frame new_rights sz Fake None) target_slots
         odE \<sqinter> throw
 
-    (* Flush the caches associated with this page. *)
+    \<comment> \<open>Flush the caches associated with this page.\<close>
     | PageFlushCachesIntent \<Rightarrow>
        (returnOk $ PageFlushCaches Unify)  \<sqinter>  (returnOk $ PageFlushCaches Clean)  \<sqinter>
       (returnOk $ PageFlushCaches CleanInvalidate )  \<sqinter> (returnOk $ PageFlushCaches Invalidate)
@@ -182,11 +182,11 @@ where
   "invoke_page_table params \<equiv> case params of
       PageTableMap real_pt_cap pt_cap pt_cap_ref pd_target_slot \<Rightarrow>
         do set_cap pt_cap_ref real_pt_cap;
-           (*
-            * We install the Page Table into the Page Directory.  The
-            * concrete kernel uses hardware-defined PDEs (Page Directory
-            * Entries). Our abstract spec just uses caps.
-            *)
+           \<comment> \<open>
+             We install the Page Table into the Page Directory.  The
+             concrete kernel uses hardware-defined PDEs (Page Directory
+             Entries). Our abstract spec just uses caps.
+            \<close>
            insert_cap_orphan pt_cap pd_target_slot
         od
     | PageTableUnmap mapped_addr pt_id pt_cap_ref \<Rightarrow> do
@@ -207,7 +207,7 @@ definition
 where
   "invoke_page params \<equiv> case params of
       PageMap frame_cap pseudo_frame_cap frame_cap_ref target_slots \<Rightarrow>
-          (* Clear out the target slots. *)
+          \<comment> \<open>Clear out the target slots.\<close>
         do
           set_cap frame_cap_ref frame_cap;
           mapM_x (swp set_cap pseudo_frame_cap) target_slots

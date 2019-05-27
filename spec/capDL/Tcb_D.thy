@@ -50,15 +50,15 @@ definition
       cdl_tcb_intent \<Rightarrow> cdl_tcb_invocation except_monad"
 where
   "decode_tcb_invocation target slot caps intent \<equiv> case intent of
-       (* Read another thread's registers. *)
+       \<comment> \<open>Read another thread's registers.\<close>
        TcbReadRegistersIntent suspend flags count \<Rightarrow>
          returnOk (ReadRegisters (cap_object target) suspend 0 0) \<sqinter> throw
 
-       (* Write another thread's registers. *)
+       \<comment> \<open>Write another thread's registers.\<close>
      | TcbWriteRegistersIntent resume flags count regs \<Rightarrow>
          returnOk (WriteRegisters (cap_object target) resume [0] 0) \<sqinter> throw
 
-       (* Copy registers from one thread to another. *)
+       \<comment> \<open>Copy registers from one thread to another.\<close>
      | TcbCopyRegistersIntent suspend_source resume_target f1 f2 f3 \<Rightarrow>
          doE
            (source_cap, _) \<leftarrow> throw_on_none $ get_index caps 0;
@@ -70,15 +70,15 @@ where
            returnOk (CopyRegisters target_tcb source_tcb suspend_source resume_target f1 f2 0)
          odE \<sqinter> throw
 
-       (* Suspend the target thread. *)
+       \<comment> \<open>Suspend the target thread.\<close>
      | TcbSuspendIntent \<Rightarrow>
          returnOk (Suspend (cap_object target)) \<sqinter> throw
 
-       (* Resume the target thread. *)
+       \<comment> \<open>Resume the target thread.\<close>
      | TcbResumeIntent \<Rightarrow>
          returnOk (Resume (cap_object target)) \<sqinter> throw
 
-       (* Configure: target, fault_ep, mcp, priority, cspace_root_data, vspace_root_data, buffer *)
+       \<comment> \<open>Configure: target, fault_ep, mcp, priority, cspace_root_data, vspace_root_data, buffer\<close>
      | TcbConfigureIntent fault_ep cspace_root_data vspace_root_data buffer \<Rightarrow>
          doE
            cspace_root \<leftarrow> throw_on_none $ get_index caps 0;
@@ -91,28 +91,28 @@ where
                (Some cspace_root_cap_ref) (Some vspace_root_cap_ref) (buffer_frame_opt))
          odE \<sqinter> throw
 
-       (* Modify a thread's maximum control priority. *)
+       \<comment> \<open>Modify a thread's maximum control priority.\<close>
      | TcbSetMCPriorityIntent mcp \<Rightarrow>
          doE
            auth_cap \<leftarrow> throw_on_none $ get_index caps 0;
            returnOk (ThreadControl (cap_object target) slot None None None None)
          odE \<sqinter> throw
 
-       (* Modify a thread's priority. *)
+       \<comment> \<open>Modify a thread's priority.\<close>
      | TcbSetPriorityIntent priority \<Rightarrow>
          doE
            auth_cap \<leftarrow> throw_on_none $ get_index caps 0;
            returnOk (ThreadControl (cap_object target) slot None None None None)
          odE \<sqinter> throw
 
-       (* Modify a thread's mcp and priority at the same time. *)
+       \<comment> \<open>Modify a thread's mcp and priority at the same time.\<close>
      | TcbSetSchedParamsIntent mcp priority \<Rightarrow>
          doE
            auth_cap \<leftarrow> throw_on_none $ get_index caps 0;
            returnOk (ThreadControl (cap_object target) slot None None None None)
          odE \<sqinter> throw
 
-       (* Modify a thread's IPC buffer. *)
+       \<comment> \<open>Modify a thread's IPC buffer.\<close>
      | TcbSetIPCBufferIntent buffer \<Rightarrow>
          doE
            buffer_frame \<leftarrow> throw_on_none $ get_index caps 0;
@@ -120,7 +120,7 @@ where
            returnOk (ThreadControl (cap_object target) slot None None None buffer_frame_opt)
          odE \<sqinter> throw
 
-       (* Update the various spaces (CSpace/VSpace) of a thread. *)
+       \<comment> \<open>Update the various spaces (CSpace/VSpace) of a thread.\<close>
      | TcbSetSpaceIntent fault_ep cspace_root_data vspace_root_data \<Rightarrow>
          doE
            cspace_root \<leftarrow> throw_on_none $ get_index caps 0;
@@ -244,7 +244,7 @@ definition
   invoke_tcb :: "cdl_tcb_invocation \<Rightarrow> unit preempt_monad"
 where
   "invoke_tcb params \<equiv> case params of
-    (* Modify a thread's registers. *)
+    \<comment> \<open>Modify a thread's registers.\<close>
       WriteRegisters target_tcb resume _ _ \<Rightarrow>
         liftE $
         do
@@ -252,11 +252,11 @@ where
           when resume $ restart target_tcb
         od
 
-    (* Read a thread's registers. *)
+    \<comment> \<open>Read a thread's registers.\<close>
     | ReadRegisters src_tcb _ _ _ \<Rightarrow>
         liftE $ suspend src_tcb \<sqinter> return ()
 
-    (* Copy registers from one thread to another *)
+    \<comment> \<open>Copy registers from one thread to another\<close>
     | CopyRegisters target_tcb source_tcb _ _ _ _ _ \<Rightarrow>
         liftE $
         do
@@ -265,32 +265,32 @@ where
           corrupt_tcb_intent target_tcb
        od
 
-    (* Suspend this thread. *)
+    \<comment> \<open>Suspend this thread.\<close>
     | Suspend target_tcb \<Rightarrow>
         liftE $ suspend target_tcb \<sqinter> return ()
 
-    (* Resume this thread. *)
+    \<comment> \<open>Resume this thread.\<close>
     | Resume target_tcb \<Rightarrow>
         liftE $ restart target_tcb
 
-    (* Update a thread's options. *)
+    \<comment> \<open>Update a thread's options.\<close>
     | ThreadControl target_tcb tcb_cap_slot faultep croot vroot ipc_buffer \<Rightarrow>
         doE
           case faultep of
               Some x \<Rightarrow> liftE $ update_thread target_tcb (\<lambda>tcb. tcb\<lparr>cdl_tcb_fault_endpoint := x\<rparr>)
             | None \<Rightarrow> returnOk ();
 
-          (* Possibly update CSpace *)
+          \<comment> \<open>Possibly update CSpace\<close>
           case croot of
               Some x \<Rightarrow> tcb_update_cspace_root target_tcb tcb_cap_slot x
             | None \<Rightarrow> returnOk ();
 
-          (* Possibly update VSpace *)
+          \<comment> \<open>Possibly update VSpace\<close>
           case vroot of
               Some x \<Rightarrow> tcb_update_vspace_root target_tcb tcb_cap_slot x
             | None \<Rightarrow> returnOk ();
 
-          (* Possibly update Ipc Buffer *)
+          \<comment> \<open>Possibly update Ipc Buffer\<close>
           case ipc_buffer of
               Some x \<Rightarrow> tcb_update_ipc_buffer target_tcb tcb_cap_slot x
             | None \<Rightarrow> (returnOk () \<sqinter> (doE tcb_empty_thread_slot target_tcb tcb_ipcbuffer_slot;

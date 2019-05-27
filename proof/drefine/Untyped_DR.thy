@@ -1082,7 +1082,7 @@ lemma retype_addrs_range_subset_strong:
   shows "\<lbrakk>p \<in> set (retype_addrs ptr ty n us); range_cover ptr sz (obj_bits_api ty us) n\<rbrakk>
   \<Longrightarrow> {p..p + 2 ^ obj_bits_api ty us - 1} \<subseteq> {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}"
   apply (clarsimp simp: retype_addrs_def ptr_add_def)
-  apply (drule_tac p = pa in range_cover_subset)
+  apply (drule_tac p = x in range_cover_subset)
    apply clarsimp+
   apply blast
   done
