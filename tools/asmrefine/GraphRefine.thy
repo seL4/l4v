@@ -1617,7 +1617,7 @@ lemma ucast_eq_0:
 
 lemmas ucast_eq_0s = ucast_eq_0 ucast_eq_0[THEN arg_cong[where f=Not], simplified]
 
-text {* Proof process for store_word32 equalities. *}
+text \<open>Proof process for store_word32 equalities.\<close>
 
 lemma load_store_word32_offset:
   "(p - p') AND 3 = 0
@@ -1748,7 +1748,7 @@ lemma store_word32s_equality_final:
 
 
 
-ML {*
+ML \<open>
 
 val dest_word = HOLogic.dest_number
   #> snd #> (fn x => x mod 4294967296)
@@ -1790,9 +1790,9 @@ val store_word32s_equality_simproc =
       {lhss = lhss, proc = proc}
   end
 
-*}
+\<close>
 
-ML {*
+ML \<open>
 
 structure SimplToGraphProof = struct
 
@@ -2361,14 +2361,14 @@ fun simpl_to_graph_upto_subgoals funs hints nm ctxt =
 
 end
 
-*}
+\<close>
 
-ML {*
-fun define_graph_fun_short funs s
-    = ParseGraph.define_graph_fun funs (Long_Name.base_name s ^ "_graph")
-        (Binding.name (Long_Name.base_name s ^ "_graph_fun")) s
-        #> Local_Theory.reset
-*}
+ML \<open>
+fun define_graph_fun_short funs s =
+  Local_Theory.subtarget
+    (ParseGraph.define_graph_fun funs (Long_Name.base_name s ^ "_graph")
+                                 (Binding.name (Long_Name.base_name s ^ "_graph_fun")) s)
+\<close>
 
 end
 

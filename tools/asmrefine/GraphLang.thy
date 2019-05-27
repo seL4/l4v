@@ -17,8 +17,8 @@ imports
 
 begin
 
-text {* Note that machine states here are assumed to be countable and
-are thus represented by naturals. *}
+text \<open>Note that machine states here are assumed to be countable and
+are thus represented by naturals.\<close>
 
 datatype variable =
     VarNone
@@ -33,12 +33,12 @@ datatype variable =
   | VarMS "unit \<times> nat"
   | VarBool bool
 
-text {* States are a mapping from names to the variable type, which is
-a union of the available names. *}
+text \<open>States are a mapping from names to the variable type, which is
+a union of the available names.\<close>
 
 datatype state = State "string \<Rightarrow> variable"
 
-text {* Accessors for grabbing variables by name and expected type. *}
+text \<open>Accessors for grabbing variables by name and expected type.\<close>
 
 definition
   "var_acc nm st = (case st of State f \<Rightarrow> f nm)"
@@ -83,7 +83,7 @@ definition
   "var_bool nm st = (case var_acc nm st of
     VarBool bool \<Rightarrow> bool | _ \<Rightarrow> False)"
 
-text {* The variable updator. *}
+text \<open>The variable updator.\<close>
 
 definition
   "var_upd nm v st = (case st of State f \<Rightarrow> State (f (nm := v)))"
@@ -91,7 +91,7 @@ definition
 definition
   "default_state = State (\<lambda>_. VarNone)"
 
-text {* The type of nodes. *}
+text \<open>The type of nodes.\<close>
 
 datatype next_node =
     NextNode nat | Ret | Err
@@ -104,8 +104,8 @@ datatype node =
 definition Skip where
   "Skip nn = Cond nn nn (\<lambda>x. True)"
 
-text {* The type for a total graph function, including list of inputs,
-  list of outputs, graph, and entry point. *}
+text \<open>The type for a total graph function, including list of inputs,
+  list of outputs, graph, and entry point.\<close>
 
 datatype graph_function
   = GraphFunction "string list" "string list" "nat \<Rightarrow> node option" nat
@@ -122,7 +122,7 @@ primrec function_inputs where
 primrec function_outputs where
   "function_outputs (GraphFunction inputs outputs graph ep) = outputs"
 
-text {* The definition of execution, including a stack to allow function calls. *}
+text \<open>The definition of execution, including a stack to allow function calls.\<close>
 
 definition
   save_vals :: "string list \<Rightarrow> variable list \<Rightarrow> state \<Rightarrow> state"
@@ -182,7 +182,7 @@ where
             | Some (GraphFunction inps outps graph ep)
                 \<Rightarrow> {upd_stack cont (return_vars outps outputs st) stack})"
 
-text {* The single-step relation on graph states. *}
+text \<open>The single-step relation on graph states.\<close>
 
 definition
   exec_graph_step :: "(string \<Rightarrow> graph_function option)
@@ -200,11 +200,11 @@ where
                         (case graph nn of None \<Rightarrow> stack' = upd_stack Err id (tl stack)
                             | Some node \<Rightarrow> stack' \<in> exec_node_return Gamma st node (tl stack)))
           | [] \<Rightarrow> False
-          | [_] \<Rightarrow> False (* note NextNode case is handled *)
+          | [_] \<Rightarrow> False \<comment> \<open>note NextNode case is handled\<close>
           | _ \<Rightarrow> stack' = upd_stack Err id (tl stack)
       }"
 
-text {* Multi-step relations. *}
+text \<open>Multi-step relations.\<close>
 
 definition exec_graph
 where "exec_graph Gamma = rtrancl (exec_graph_step Gamma)"
@@ -406,7 +406,7 @@ next
     done
 qed
 
-text {* Possibly infinite traces. *}
+text \<open>Possibly infinite traces.\<close>
 
 definition nat_trace_rel
   where "nat_trace_rel cont r = {tr. (\<forall>n. (tr n = None \<longrightarrow> tr (Suc n) = None)
@@ -491,9 +491,9 @@ lemma relpow_nat_trace:
   apply (clarsimp simp: nat_trace_rel_def)
   done
 
-text {* Parsing code for the graph language. *}
+text \<open>Parsing code for the graph language.\<close>
 
-ML {*
+ML \<open>
 
 structure ParseGraph = struct
 
@@ -514,7 +514,7 @@ val s = @{term "s :: state"}
 fun parse_n p (n :: ss) = let
     val n = parse_int n
   in funpow_yield n p ss end
-  | parse_n p [] = raise PARSEGRAPH ["parse_n: empty"]
+  | parse_n _ [] = raise PARSEGRAPH ["parse_n: empty"]
 
 fun mk_binT sz = Word_Lib.mk_wordT sz |> dest_Type |> snd |> hd
 
@@ -625,7 +625,7 @@ fun parse_val ("Num" :: ss) = let
     val (typ, ss) = parse_typ ss
   in (Logic.mk_type typ, ss) end
   | parse_val ("Symbol" :: nm :: ss) = let
-    val (typ, ss) = parse_typ ss
+    val (_, ss) = parse_typ ss
   in (TermsTypes.symbol_table $ HOLogic.mk_string nm, ss) end
   | parse_val ss = raise PARSEGRAPH ("parse_val: malformed" :: ss)
 
@@ -718,7 +718,7 @@ fun parse_fun (["Function" :: ss]) = let
     val _ = tracing ("Parsing " ^ nm)
     val (node_sss, sss) = chop_prefix
         (fn ss => not (is_prefix (op =) ["EntryPoint"] ss)) sss
-    val (ep, sss) = case sss of (ep :: sss) => (ep, sss)
+    val (ep, _) = case sss of (ep :: sss) => (ep, sss)
         | [] => raise PARSEGRAPH [
         "parse_fun: EntryPoint not found"]
     val ep = case ep of [_, n] => parse_int n
@@ -742,7 +742,7 @@ fun fun_groups gp ((fs as ("Function" :: _)) :: sss) =
 
 fun filename_relative thy name =
     Path.append (Resources.master_directory thy) (Path.explode name)
-    |> Path.implode
+    |> File.standard_path
 
 fun openIn_relative thy = filename_relative thy #> TextIO.openIn
 
@@ -764,13 +764,6 @@ fun funs thy file : funs = get_funs thy file
   |> Symtab.make
 
 fun define_graph s nodes = let
-    fun eq_nm i = s ^ "_" ^ Int.toString i
-    fun eq_bdy i v = ((v, @{thm refl}), eq_nm i)
-    fun match_ts i ((j, n) :: ns) =
-        if i < j then eq_bdy i NONE :: match_ts (i + 1) ((j, n) :: ns)
-        else if i = j then eq_bdy i (SOME n) :: match_ts (i + 1) ns
-        else error "match_ts: idx too small"
-      | match_ts _ [] = []
     val nodes = sort (int_ord o apply2 fst) nodes
   in StaticFun.define_tree_and_save_thms (Binding.name s)
     (map (fst #> Int.toString #> prefix (s ^ "_")) nodes)
@@ -790,6 +783,6 @@ fun define_graph_fun (funs : funs) b1 b2 nm ctxt =
 
 end
 
-*}
+\<close>
 
 end

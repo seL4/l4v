@@ -21,7 +21,7 @@ lemma field_lvalue_offset_eq:
   apply (simp add: field_lvalue_def)
   done
 
-ML {*
+ML \<open>
 fun dest_binT (Type (@{type_name signed}, [t])) = Word_Lib.dest_binT t
   | dest_binT t = Word_Lib.dest_binT t
 
@@ -200,9 +200,9 @@ fun get_all_export_params ctxt csenv : export_params = let
     structs_by_typ = structs_by_typ ctxt csenv,
     locals = locals ctxt,
     local_upds = local_upds ctxt} end
-*}
+\<close>
 
-ML {*
+ML \<open>
 
 fun convert_type _ _ @{typ bool} = "Bool"
   | convert_type _ _ (Type (@{type_name word}, [n]))
@@ -228,19 +228,19 @@ fun convert_type _ _ @{typ bool} = "Bool"
     else (Proof_Context.get_thm ctxt
         (Long_Name.base_name s ^ "_td_names"); "Struct " ^ s)
   | convert_type _ _ T = raise TYPE ("convert_type", [T], [])
-*}
+\<close>
 
 consts
   pseudo_acc :: "'a \<Rightarrow> 'a"
 
-text {*
+text \<open>
 
 Phase 1 of the conversion, converts accs and upds on SIMPL
 state (a record) to accs of named vars, using the pseudo_acc
 constant above to guard the accesses and lists of upds with strings.
-*}
+\<close>
 
-ML {*
+ML \<open>
 
 fun naming localname = Long_Name.base_name localname
     |> unsuffix "_'" |> suffix "#v"
@@ -334,12 +334,12 @@ fun convert_upd_phase1 ctxt params (t as (Const (@{const_name globals_update}, _
     val v = betapply (f, Const (c', cT') $ s)
   in [(naming c', convert_fetch_phase1 params v)] end
   | convert_upd_phase1 _ _ t = raise TERM ("convert_upd_phase1", [t])
-*}
+\<close>
 
-text {* Phase 2 eliminates compound types, so we access and
-update only words from memory and local values. *}
+text \<open>Phase 2 eliminates compound types, so we access and
+update only words from memory and local values.\<close>
 
-ML {*
+ML \<open>
 fun ptr_simp ctxt = ctxt addsimps @{thms CTypesDefs.ptr_add_def size_of_def size_td_array
         field_lvalue_offset_eq align_td_array' word_of_int scast_def[symmetric]
         sint_sbintrunc' word_smod_numerals word_sdiv_numerals sdiv_int_def smod_int_def}
@@ -454,7 +454,7 @@ fun narrow_mem_upd ctxt (params : export_params) p v = let
         val (elT, n) = dest_arrayT T
         val elT_size = get_c_type_size ctxt elT
       in case v of (Const (@{const_name Arrays.update}, _) $ arr $ i $ x)
-          => narrow_mem_upd ctxt params (mk_offs elT (@{term "( * ) :: word32 => _"}
+          => narrow_mem_upd ctxt params (mk_offs elT (@{term "(*) :: word32 => _"}
                   $ HOLogic.mk_number @{typ word32} elT_size
                       $ (@{term "of_nat :: nat \<Rightarrow> word32"} $ i)))
               x @ narrow_mem_upd ctxt params p arr
@@ -491,7 +491,7 @@ fun narrow_mem_acc _ _ [] p = p
     fun get_offs (Const (@{const_name Arrays.index}, idxT) $ i) = let
         val (elT, _) = dest_arrayT (domain_type idxT)
         val elT_size = get_c_type_size ctxt elT
-      in @{term "( * ) :: word32 \<Rightarrow> _"} $ HOLogic.mk_number @{typ word32} elT_size
+      in @{term "(*) :: word32 \<Rightarrow> _"} $ HOLogic.mk_number @{typ word32} elT_size
               $ (@{term "of_nat :: nat \<Rightarrow> word32"} $ i) end
       | get_offs (Const (s, T)) = let
         val struct_typ = domain_type T |> dest_Type |> fst
@@ -642,11 +642,11 @@ fun convert_upd_ph2_worker ctxt params s v T accs =
 fun convert_upd_ph2 ctxt params (s, v)
     = convert_upd_ph2_worker ctxt params s v (fastype_of v) []
 (*      |> tap (map (snd #> Syntax.pretty_term ctxt #> Pretty.writeln)) *)
-*}
+\<close>
 
-text {* The final conversion reduces Isabelle terms to strings *}
+text \<open>The final conversion reduces Isabelle terms to strings\<close>
 
-ML {*
+ML \<open>
 val space_pad = space_implode " "
 
 fun space_pad_list xs = space_pad (string_of_int (length xs) :: xs)
@@ -800,9 +800,9 @@ fun convert_upd_ph3 ctxt params (s, v) =
     val v = convert_ph3 ctxt params v
   in (nm, v) end
     handle TERM (s, ts) => raise TERM ("convert_upd_ph3: " ^ s, v :: ts)
-*}
+\<close>
 
-ML {*
+ML \<open>
 fun convert_fetch ctxt params t =
     Envir.beta_eta_contract t
     |> convert_fetch_phase1 params
@@ -827,11 +827,11 @@ fun convert_param_upds ctxt params (t as (Const (c, _) $ _ $ s))
   | convert_param_upds ctxt _ t = (if t = s_st ctxt then []
     else raise TERM ("convert_param_upds", [t]))
 
-*}
+\<close>
 
 lemmas sdiv_word32_max_ineq = sdiv_word32_max[folded zle_diff1_eq, simplified]
 
-ML {*
+ML \<open>
 
 val all_c_params = ["Mem Mem", "HTD HTD", "PMS PMS", "GhostAssertions WordArray 64 32"]
 val all_c_in_params = map (prefix "Var ") all_c_params
@@ -1154,16 +1154,16 @@ fun emit_C_everything ctxt csenv outfile = let
   in app (emit_struct ctxt outfile csenv) structs;
      app (emit_func_body ctxt outfile params) fs;
      emit_asm_protoes ctxt outfile fs end
-*}
+\<close>
 
-ML {*
+ML \<open>
 fun openOut_relative thy = ParseGraph.filename_relative thy #> TextIO.openOut;
 
 fun emit_C_everything_relative ctxt csenv fname = let
     val thy = Proof_Context.theory_of ctxt
     val outfile = openOut_relative thy fname
   in emit_C_everything ctxt csenv outfile; TextIO.closeOut outfile end
-*}
+\<close>
 
 end
 

@@ -712,7 +712,7 @@ lemma const_globals_in_memory_after_swap:
                  split: global_data.split_asm)
   done
 
-ML {*
+ML \<open>
 structure DefineGlobalsList = struct
 
 fun dest_conjs t = (t RS @{thm conjunct1})
@@ -794,7 +794,7 @@ fun define_globals_list_i s globty thy = let
 
 end
 
-*}
+\<close>
 
 lemma globals_list_distinct_filter_member:
   "x \<in> set xs \<Longrightarrow> globals_list_distinct D symtab xs
@@ -852,10 +852,10 @@ lemma const_globals_in_memory_to_h_val_with_swap:
   apply (erule(1) const_globals_in_memory_h_val[symmetric])
   done
 
-text {* This alternative ptr_safe definition will apply to all
+text \<open>This alternative ptr_safe definition will apply to all
   global pointers given globals_list_distinct etc. It supports
   the same nonoverlapping properties with h_t_valid as h_t_valid
-  itself. *}
+  itself.\<close>
 definition
   ptr_inverse_safe :: "('a :: mem_type) ptr \<Rightarrow> heap_typ_desc \<Rightarrow> bool"
 where
@@ -876,7 +876,7 @@ lemma global_data_implies_ptr_inverse_safe:
   apply (auto dest!: s_footprint_intvl_subset[THEN subsetD])
   done
 
-ML {*
+ML \<open>
 fun add_globals_swap_rewrites member_thms ctxt = let
     fun cpat pat = Thm.cterm_of ctxt (Proof_Context.read_term_pattern ctxt pat)
     val gav = Proof_Context.get_thm ctxt "global_acc_valid"
@@ -920,6 +920,6 @@ fun add_globals_swap_rewrites member_thms ctxt = let
             pinv_safe_intros)
     |> snd
   end
-*}
+\<close>
 
 end

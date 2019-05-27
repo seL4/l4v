@@ -307,11 +307,11 @@ lemma ptr_safe_Array_element_0:
   "ptr_safe (PTR('a::mem_type['b::finite]) p) htd \<Longrightarrow> ptr_safe (PTR('a) p) htd"
   by (drule ptr_safe_Array_element[where coerce=False and n=0]; simp add: array_ptr_index_def)
 
-ML {*
+ML \<open>
 fun preserve_skel_conv consts arg_conv ct = let
     val (hd, xs) = strip_comb (Thm.term_of ct)
     val self = preserve_skel_conv consts arg_conv
-  in if is_Const hd andalso member (=) consts
+  in if is_Const hd andalso member (op =) consts
         (fst (dest_Const hd))
     then  if null xs then Conv.all_conv ct
         else Conv.combination_conv self self ct
@@ -372,9 +372,9 @@ val unfold_assertion_data_get_set = Simplifier.make_simproc
   , proc = fn _ => fn ctxt => SOME o (unfold_assertion_data_get_set_conv ctxt) o Thm.term_of
   }
 
-*}
+\<close>
 
-ML {*
+ML \<open>
 fun wrap_tac tac i t = if Thm.nprems_of t = 0 then no_tac t else let
     val t' = Goal.restrict i 1 t
     val r = tac 1 t'
@@ -386,15 +386,15 @@ fun eqsubst_wrap_tac ctxt thms = wrap_tac (EqSubst.eqsubst_tac ctxt [0] thms)
 fun eqsubst_asm_wrap_tac ctxt thms = wrap_tac (EqSubst.eqsubst_asm_tac ctxt [0] thms)
 fun eqsubst_either_wrap_tac ctxt thms = (eqsubst_asm_wrap_tac ctxt thms
     ORELSE' eqsubst_wrap_tac ctxt thms)
-*}
+\<close>
 
 
 
-ML {*
+ML \<open>
 structure ProveSimplToGraphGoals = struct
 
 fun goal_eq (g, g') =
-    (eq_list (aconv) (Logic.strip_assums_hyp g, Logic.strip_assums_hyp g'))
+    (eq_list (op aconv) (Logic.strip_assums_hyp g, Logic.strip_assums_hyp g'))
     andalso (Logic.strip_assums_concl g aconv Logic.strip_assums_concl g')
     andalso (map snd (Logic.strip_params g) = map snd (Logic.strip_params g'))
 
@@ -895,6 +895,6 @@ fun test_all_graph_refine_proofs_parallel funs csenv ctxt = let
   in "success" end
 
 end
-*}
+\<close>
 
 end

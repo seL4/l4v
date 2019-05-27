@@ -543,7 +543,7 @@ lemma not_trancl_converse_step:
   "converse stp `` {y} \<subseteq> S
     \<Longrightarrow> \<forall>z \<in> S. (x, z) \<notin> rtrancl (stp \<inter> constraint)
     \<Longrightarrow> (x, y) \<notin> trancl (stp \<inter> constraint)"
-  by (blast elim: tranclE intro: trancl_into_rtrancl)
+  using tranclD2 by fastforce
 
 lemma reachable_order_mono:
   "(nn, nn') \<in> rtrancl R
@@ -734,8 +734,8 @@ lemma graph_function_restr_trace_refine:
                     restrs_list_def
               cong: if_cong
              elim!: restrs_eventually_init[where Gamma=Gamma1, OF _ _ inps(1)]
-                    restrs_eventually_init[where Gamma=Gamma2, OF _ _ inps(2)],
-         (metis exec_trace_init)+)
+                    restrs_eventually_init[where Gamma=Gamma2, OF _ _ inps(2)];
+         metis)
   done
 
 lemma restrs_list_Int:
@@ -1269,7 +1269,8 @@ proof -
     apply (clarsimp simp: restrs_list_def vis)
     done
   show ?thesis
-    by (auto simp add: visit_def disj, (metis indep3)+)
+    unfolding visit_def
+    by (auto simp: disj dest: indep3[rule_format]; metis)
 qed
 
 theorem visit_explode_restr:
@@ -1326,7 +1327,7 @@ lemma visit_impossible:
   apply clarsimp
   apply (drule(5) reachable_trace)
   apply (drule trancl_mono[OF _ Int_lower1])
-  apply (blast intro: trancl_into_rtrancl)
+  apply (simp add: trancl_into_rtrancl)
   done
 
 lemma visit_inconsistent:
@@ -1399,7 +1400,7 @@ lemma visit_Cond:
     \<Longrightarrow> (r, NextNode n) \<notin> rtrancl (reachable_step graph \<inter> {(x, y). x \<notin> set cuts})
     \<Longrightarrow> visit tr nn restrs = option_guard (\<lambda>st. (nn = l \<and> cond st) \<or> (nn = r \<and> \<not> cond st))
         (visit tr (NextNode n) (pred_restrs' n restrs))"
-  apply (cases "visit tr (NextNode n) (pred_restrs' n restrs)", simp_all split del: if_split_asm)
+  apply (cases "visit tr (NextNode n) (pred_restrs' n restrs)"; simp)
    apply (clarsimp simp: visit_eqs)
    apply (frule(5) visit_immediate_pred)
    apply (clarsimp simp: pred_restrs)
@@ -1561,7 +1562,7 @@ lemma extended_pred_trace_drop_n:
   apply (frule subsetD, rule_tac x="j - 1" and f="trace_bottom_addr tr" in imageI, simp)
   apply (frule_tac i="j - 1" in exec_trace_step_cases)
   apply clarsimp
-  apply (simp add: all_exec_graph_step_cases, safe, simp_all add: trace_addr_def)[1]
+  apply (simp add: all_exec_graph_step_cases, safe; (solves \<open>simp add: trace_addr_def\<close>)?)
   apply (simp(no_asm) add: trace_drop_n_def if_x_None_eq_Some)
   apply clarsimp
   apply (cut_tac tr=tr and i="Suc (i + ja)" in bottom_addr_only)
@@ -1700,10 +1701,9 @@ lemma pred_restrs_list:
         then map (\<lambda>x. x - 1) (filter ((\<noteq>) 0) ns) else ns)) xs)"
   apply (clarsimp simp: pred_restrs_def split: next_node.split)
   apply (rule sym)
-  apply (induct xs, simp_all)
-   apply (rule ext, simp add: restrs_list_def)
-  apply (clarsimp simp: restrs_list_Cons split del: if_split
-                intro!: ext cong: if_cong)
+  apply (induct xs; simp, rule ext)
+   apply (simp add: restrs_list_def)
+  apply (clarsimp simp: restrs_list_Cons split del: if_split cong: if_cong)
   apply (auto intro: image_eqI[rotated])
   done
 
@@ -1928,7 +1928,7 @@ proof -
 
   note H_intro = H_def[THEN meta_eq_to_obj_eq, THEN iffD2, OF conjI]
 
-  have Suc_Max: "finite S \<Longrightarrow> Suc (Max S) \<notin> S" for x S
+  have Suc_Max: "finite S \<Longrightarrow> Suc (Max S) \<notin> S" for S
     by (auto dest: Max_ge)
 
   have unreached:
@@ -1949,7 +1949,7 @@ proof -
             \<longrightarrow> restrs_condition tr (snd (vis j)) k \<longrightarrow> i = j
         \<Longrightarrow> \<not> finite {n. pc (fst (vis n)) (snd (vis n)) tr}
         \<Longrightarrow> trace_end tr = None"
-    for tr G f vis
+    for tr G f and vis :: "'b \<Rightarrow> next_node \<times> (nat \<Rightarrow> nat set)"
     apply (clarsimp simp: trace_end_def)
     apply (drule(1) exec_trace_None_dom_subset)
     apply (drule_tac R="\<lambda>n i. restrs_condition tr (snd (vis n)) i"

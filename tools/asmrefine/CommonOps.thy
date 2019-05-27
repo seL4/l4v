@@ -15,7 +15,7 @@ imports "CLib.CTranslationNICTA"
 
 begin
 
-text {* Additional constants needed to make conversion to and from the graph lang easy *}
+text \<open>Additional constants needed to make conversion to and from the graph lang easy\<close>
 
 definition
   bvshl :: "'a :: len0 word \<Rightarrow> 'a word \<Rightarrow> 'a word"

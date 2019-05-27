@@ -62,7 +62,7 @@ lemma c_guard_align_of:
        c_guard (Ptr (of_nat (align_of TYPE('a))) :: 'a ptr)"
   unfolding c_guard_def
   apply (simp add: ptr_aligned_def unat_of_nat c_null_guard_def)
-  apply (clarsimp simp: intvl_def simp del: word_neq_0_conv)
+  apply (clarsimp simp: intvl_def)
   apply (drule trans[rotated], rule sym, rule Abs_fnat_hom_add)
   apply (subst(asm) of_nat_neq_0, simp_all)
   done
@@ -222,7 +222,7 @@ lemma to_bytes_array:
   apply (subst fcp_eta[where g=v, symmetric], rule access_ti_list_array)
     apply simp
    apply (simp add: size_of_def)
-  apply (clarsimp simp: fcp_beta size_of_def)
+  apply (clarsimp simp: size_of_def)
   done
 
 lemma take_heap_list_min:
@@ -249,7 +249,7 @@ lemma heap_update_mono_to_field_rewrite:
                 packed_heap_update_collapse h_val_heap_update
                 field_ti_def update_ti_t_def size_of_def)
 
-ML {*
+ML \<open>
 fun get_field_h_val_rewrites lthy =
   (simpset_of lthy |> dest_ss |> #simps |> map snd
     |> map (Thm.transfer (Proof_Context.theory_of lthy))
@@ -261,9 +261,9 @@ fun get_field_h_val_rewrites lthy =
 fun add_field_h_val_rewrites lthy =
   Local_Theory.note ((@{binding field_h_val_rewrites}, []),
       get_field_h_val_rewrites lthy) lthy |> snd
-*}
+\<close>
 
-ML {*
+ML \<open>
 fun get_field_to_bytes_rewrites lthy = let
     val fl_thms = Global_Theory.facts_of (Proof_Context.theory_of lthy)
         |> Facts.dest_static false []
@@ -287,6 +287,6 @@ fun get_field_to_bytes_rewrites lthy = let
 fun add_field_to_bytes_rewrites lthy =
   Local_Theory.note ((@{binding field_to_bytes_rewrites}, []),
       get_field_to_bytes_rewrites lthy) lthy |> snd
-*}
+\<close>
 
 end
