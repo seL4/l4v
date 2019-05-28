@@ -500,7 +500,7 @@ lemma valid_blocked_fold_update:
   apply (induct ptrs)
    apply simp
   apply (case_tac type)
-        apply_trace (fastforce simp: valid_blocked_def st_tcb_at_kh_def default_sched_context_def
+        apply (fastforce simp: valid_blocked_def st_tcb_at_kh_def default_sched_context_def
                               default_object_def default_tcb_def active_sc_tcb_at_defs
               split: option.splits if_splits)+
   done
@@ -674,12 +674,12 @@ lemma valid_sched_tcb_state_preservation_gen:
                            and (\<lambda>s. (budget_sufficient t s))\<rbrace> f \<lbrace>\<lambda>r s. (budget_sufficient t s)\<rbrace>"
   assumes budget_r: "\<And>t. \<lbrace>I and st_tcb_at (Not o inactive and Not o idle) t
                            and (\<lambda>s. (budget_ready t s))\<rbrace> f \<lbrace>\<lambda>r s. (budget_ready t s)\<rbrace>"
-(*  assumes time: "\<And>P t t'. \<lbrace>\<lambda>s. P (tcb_ready_time t s)(tcb_ready_time t' s)
-                      \<and> (I and st_tcb_at (Not o inactive and Not o idle) t) s\<rbrace>
-                             f \<lbrace>\<lambda>r s. P (tcb_ready_time t s)(tcb_ready_time t' s)\<rbrace>"
-      and time: "\<And>P t t'. \<lbrace>\<lambda>a. P (tcb_ready_time t a)(tcb_ready_time t' a) \<rbrace> f
-                  \<lbrace>\<lambda>rv a. P (tcb_ready_time t a)(tcb_ready_time t' a)\<rbrace>"*)
-  assumes sorted: "\<lbrace>valid_release_q\<rbrace> f \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
+ (* assumes time: "\<And>P t t'. \<lbrace>\<lambda>s. P (tcb_ready_time t s)(tcb_ready_time t' s)
+                     \<rbrace>
+                             f \<lbrace>\<lambda>r s. P (tcb_ready_time t s)(tcb_ready_time t' s)\<rbrace>"*)
+      and time': "\<And>P t t'. \<lbrace>\<lambda>a. P (tcb_ready_time t a)(tcb_ready_time t' a) \<rbrace> f
+                  \<lbrace>\<lambda>rv a. P (tcb_ready_time t a)(tcb_ready_time t' a)\<rbrace>"
+(*  assumes sorted: "\<lbrace>valid_release_q\<rbrace> f \<lbrace>\<lambda>_. valid_release_q\<rbrace>"*)
   assumes cur_thread: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   assumes idle_thread: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   assumes valid_blocked: "\<lbrace>valid_blocked\<rbrace> f \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
@@ -718,7 +718,7 @@ proof -
            apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[7]
     apply (rule conjI)
       (* valid_release_q *)
-(*     apply (unfold valid_release_q_def)
+     apply (unfold valid_release_q_def)
      apply (rule conjI, clarsimp)
       apply (drule_tac x=t in bspec, simp, clarsimp)
       apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b")
@@ -726,8 +726,22 @@ proof -
       apply (rule_tac conjI[OF use_valid[OF _ st_tcb] use_valid[OF _ bound_sc]], assumption)
         apply simp
         apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[3]
-     apply (rule conjI, simp)*)
-     apply (rule_tac use_valid[OF _ sorted], simp+)
+     apply (rule conjI, simp)
+     apply (clarsimp simp: sorted_release_q_def)subgoal sorry
+
+
+(*
+     apply (unfold valid_release_q_def)
+     apply (rule conjI, clarsimp)
+      apply (drule_tac x=t in bspec, simp, clarsimp)
+      apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b")
+       apply simp
+      apply (rule_tac conjI[OF use_valid[OF _ st_tcb] use_valid[OF _ bound_sc]], assumption)
+        apply simp
+        apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[3]
+     apply (rule conjI, simp)
+     apply (rule_tac use_valid[OF _ time], simp+)
+*)
       (* ct_not_in_q and others *)
     apply (frule_tac P1="\<lambda>ct. ct = (cur_thread s)" in use_valid[OF _ cur_thread])
      apply simp+
@@ -956,60 +970,23 @@ for tcb_ready_time_inv'[wp]: "\<lambda>s::det_state. P (tcb_ready_time t s)"
 crunches create_cap, update_cdt
 for tcb_ready_time_inv'[wp]: "\<lambda>s::det_state. P (tcb_ready_time t s)"
 and sorted_release_q[wp]: "\<lambda>s::det_state. sorted_release_q s"
+and valid_release_q[wp]: "\<lambda>s::det_state. valid_release_q s"
   (wp: crunch_wps simp: crunch_simps)
 
 crunches set_untyped_cap_as_full
 for valid_release_q[wp]: valid_release_q
 
-lemma cap_insert_sorted_release_q[wp]:
+lemma cap_insert_valid_release_q[wp]:
   "\<lbrace>valid_release_q\<rbrace>
-   cap_insert new_cap src_slot dest_slot \<lbrace>\<lambda>_ . sorted_release_q::det_state \<Rightarrow> _\<rbrace>"
+   cap_insert new_cap src_slot dest_slot \<lbrace>\<lambda>_ . valid_release_q::det_state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: cap_insert_def update_sched_context_def set_object_def
                   wp: get_object_wp hoare_drop_imp simp_del: fun_upd_apply)
+
 
 lemma valid_release_imp_sorted: "valid_release_q s \<Longrightarrow> sorted_release_q s"
   by (clarsimp simp: valid_release_q_def)
 
-crunch sorted_release_q[wp]: create_cap, cap_insert, set_cap "sorted_release_q::det_state \<Rightarrow> _"
-  (wp: crunch_wps valid_blocked_lift set_cap_typ_at hoare_drop_imps simp: crunch_simps)
-
-lemma valid_release_q_fold_update:
-  "\<lbrakk> valid_release_q_2 rlq kh; type \<noteq> apiobject_type.Untyped \<rbrakk> \<Longrightarrow>
-  valid_release_q_2 rlq (foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits dm)) ptrs kh)"
-  apply (induct ptrs)
-   apply simp
-  apply (case_tac type)
-        apply_trace (fastfo rce simp: valid_release_q_def st_tcb_at_kh_def default_sched_context_def
-                              default_object_def default_tcb_def active_sc_tcb_at_defs
-              split: option.splits if_splits)+
-  sorry
-
-lemma retype_region_sorted_release_q[wp]:
-  "\<lbrace>valid_release_q\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
-  apply (simp add: retype_region_def)
-  apply wp
-  apply (clarsimp simp del: fun_upd_apply)
-  apply (blast intro: valid_release_q_fold_update)
-  done
-
-lemma delete_objects_sorted_release_q[wp]:
-  "\<lbrace>valid_release_q\<rbrace> delete_objects a b \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
-  apply (simp add: delete_objects_def)
-  apply (wpsimp simp: detype_def wrap_ext_det_ext_ext_def do_machine_op_def)
-  apply (fastforce simp add: valid_release_q_def st_tcb_at_kh_def
-                   is_etcb_at_def active_sc_tcb_at_defs split: option.splits)
-  sorry
-
-crunch valid_release_q[wp]: reset_untyped_cap "valid_release_q::det_state \<Rightarrow> _"
-  (wp: preemption_point_inv mapME_x_inv_wp crunch_wps
-   simp: unless_def)
-
 context DetSchedAux_AI_det_ext begin
-
-crunches invoke_untyped
-for valid_release_q[wp]: "\<lambda>s::det_state. valid_release_q s"
-  (wp: crunch_wps simp: )
-
 
 lemma invoke_untyped_valid_sched:
   "\<lbrace>invs and valid_untyped_inv ui and ct_active and valid_sched and valid_idle and
@@ -1025,7 +1002,7 @@ lemma invoke_untyped_valid_sched:
             apply simp
            apply (wpsimp wp: invoke_untyped_etcb_at invoke_untyped_active_sc_tcb_at
                              invoke_untyped_budget_sufficient invoke_untyped_budget_ready
-(*                             valid_validE[OF release_queue_cmp_lift[OF invoke_untyped_tcb_ready_time]]*))+
+                             valid_validE[OF release_queue_cmp_lift[OF invoke_untyped_tcb_ready_time]])+
      apply (rule hoare_post_impErr, rule hoare_pre, rule invoke_untyp_invs,
            simp_all add: invs_valid_idle)[1]
    apply (rule_tac f="\<lambda>s. P (scheduler_action s)" in hoare_lift_Pf)
@@ -1033,7 +1010,7 @@ lemma invoke_untyped_valid_sched:
      apply (rule_tac f="\<lambda>s. xa (cur_domain s)" in hoare_lift_Pf)
       apply wp+
   apply auto
-  sorry
+  done
 
 end
 

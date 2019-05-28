@@ -975,11 +975,18 @@ definition valid_reply_scs where
                          (\<forall>scptr r. reply_sc_reply_at (\<lambda>scopt. scopt = Some scptr) r s
                                \<longrightarrow> test_sc_refill_max scptr s)"
 
-(* ct_in_q, either in a ready_queue or the release_queue *)
+(* ct_in_q, runnable then in a ready_queue *)
+(* FIXME rename *)
 definition ct_in_q where
-  "ct_in_q s \<equiv> st_tcb_at runnable (cur_thread s) s
-     \<longrightarrow> (\<exists>d p. cur_thread s \<in> set (ready_queues s d p) \<or> cur_thread s \<in> set (release_queue s))"
+  "ct_in_q s \<equiv>
+       (st_tcb_at runnable (cur_thread s) s
+         \<and> active_sc_tcb_at (cur_thread s) s \<and> not_in_release_q (cur_thread s) s)
+              \<longrightarrow> (\<exists>d p. cur_thread s \<in> set (ready_queues s d p))"
 
+(* ct_in_q', either in a ready_queue or the release_queue *)
+definition ct_in_q' where
+  "ct_in_q' s \<equiv> st_tcb_at runnable (cur_thread s) s
+     \<longrightarrow> (\<exists>d p. cur_thread s \<in> set (ready_queues s d p) \<or> cur_thread s \<in> set (release_queue s))"
 
 (* next_thread *)
 definition next_thread where
