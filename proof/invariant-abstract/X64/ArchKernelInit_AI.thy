@@ -235,7 +235,9 @@ lemma valid_global_vspace_mappings_init_A_st: "valid_global_vspace_mappings init
 done
 
 lemma invs_A:
-  "invs init_A_st"
+  "invs init_A_st" (is "invs ?st")
+  supply is_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD2, simp]
+  supply image_cong_simp [cong del]
   apply (simp add: invs_def)
   apply (rule conjI)
    prefer 2
