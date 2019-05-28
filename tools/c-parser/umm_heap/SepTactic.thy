@@ -37,16 +37,16 @@ lemma sep_conj_extract_assoc:
 lemma sep_conj_extract_decomposeD:
   "(sep_conj_extract (P \<and>\<^sup>* Q) \<and>\<^sup>* sep_true) s \<Longrightarrow> sep_points P s \<and>
       (sep_conj_extract Q \<and>\<^sup>* sep_true) s"
-apply (rule conjI)
- apply(simp add: sep_conj_extract_def sep_points_def sep_conj_ac)
- apply(erule (1) sep_conj_impl, simp)
-apply(simp add: sep_conj_extract_def sep_conj_ac)
-apply(subst (asm) sep_conj_assoc [symmetric])
-apply(subst (asm) sep_conj_com)
-apply(subst (asm) sep_conj_assoc)
-apply(erule (1) sep_conj_impl)
-apply simp
-done
+  apply (rule conjI)
+   apply(simp add: sep_conj_extract_def sep_points_def sep_conj_ac)
+   apply(erule (1) sep_conj_impl, simp)
+  apply(simp add: sep_conj_extract_def sep_conj_ac)
+  apply(subst (asm) sep_conj_assoc [symmetric])
+  apply(subst (asm) sep_conj_com)
+  apply(subst (asm) sep_conj_assoc)
+  apply(erule (1) sep_conj_impl)
+  apply simp
+  done
 
 lemma sep_conj_extract_decomposeD2:
   "(sep_conj_extract P \<and>\<^sup>* sep_true) s \<Longrightarrow> sep_points P s"
@@ -222,21 +222,21 @@ method_setup sep_select_tac =
 
 lemma
   "\<And>R x f n. ((P::heap_assert) \<and>\<^sup>* fac x n \<and>\<^sup>* R (f x)) s"
-apply(sep_select_tac "fac _ _")
-apply(sep_select_tac "R _")
-apply(sep_select_tac "fac x _")
-apply(sep_select_tac "R _")
-oops
+  apply(sep_select_tac "fac _ _")
+  apply(sep_select_tac "R _")
+  apply(sep_select_tac "fac x _")
+  apply(sep_select_tac "R _")
+  oops
 
 lemma
   "((P::heap_assert) \<and>\<^sup>* fac x n) s"
-apply(sep_select_tac "fac _ _")
-oops
+  apply(sep_select_tac "fac _ _")
+  oops
 
 lemma
   "((P::heap_assert) \<and>\<^sup>* long_name) s"
   apply(sep_select_tac "long_name")
-oops
+  oops
 
 consts c_guard :: "'a::c_type ptr_guard"
 
@@ -340,8 +340,8 @@ method_setup sep_wp_tac =
 (* see testfiles/sep_example_pre_list.thy for a more detailed example *)
 lemma
   "((\<lambda>z. lift (hrs_mem s) (p::(32 word) ptr) + 1 = 2) \<and>\<^sup>* P) (lift_state s)"
-apply sep_wp_tac
-oops
+  apply sep_wp_tac
+  oops
 
 
 end

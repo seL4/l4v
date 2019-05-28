@@ -95,10 +95,10 @@ begin
 
 lemma len8_size:
   "len_of TYPE('a) div 8 < addr_card"
-apply(subgoal_tac "len_of TYPE('a) \<le> 128")
- apply(simp add: addr_card)
-apply(rule len8_width)
-done
+  apply(subgoal_tac "len_of TYPE('a) \<le> 128")
+   apply(simp add: addr_card)
+  apply(rule len8_width)
+  done
 
 lemma len8_dv8:
   "8 dvd len_of TYPE('a)"

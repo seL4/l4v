@@ -202,7 +202,7 @@ apply(simp add: field_lvalue_def field_offset_def field_offset_untyped_def typ_u
 apply(unfold c_guard_def)
 apply clarsimp
 apply(drule c_null_guard)+
-apply clarsimp
+apply (clarsimp simp: word_neq_0_conv)
 done
 
 lemma c_guard_ptr_aligned_fl:

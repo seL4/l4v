@@ -605,8 +605,7 @@ instantiation typ_desc :: (type) order
 begin
 instance
   apply intro_classes
-     apply(auto simp: typ_tag_lt_def typ_tag_le_def)[1]
-     apply(auto dest!: td_set_size_lte)[1]
+     apply(fastforce simp: typ_tag_lt_def typ_tag_le_def dest: td_set_size_lte)
     apply(rule sub_tag_refl)
    apply(erule (1) sub_tag_trans)
   apply(erule (1) sub_tag_antisym)
@@ -1177,7 +1176,7 @@ lemma ti_ind_fn:
   "\<forall>fn. ti_ind (lf_set_list ts fn) Y = ti_ind (lf_set_list ts []) Y"
   "\<forall>fn. ti_ind (lf_set_pair x fn) Y = ti_ind (lf_set_pair x []) Y"
   apply(induct t and st and ts and x, all \<open>clarsimp\<close>)
-    apply (auto simp: ti_ind_def)[1]
+    apply (fastforce simp: ti_ind_def)
    apply auto
   done
 
