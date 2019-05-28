@@ -128,14 +128,6 @@ lemma is_cnode_mask:
   by (case_tac c, simp_all add: mask_cap_def cap_rights_update_def is_cap_simps)
 
 
-lemma Suc_length_not_empty:
-  "length xs = length xs' \<Longrightarrow> Suc 0 \<le> length xs' = (xs \<noteq> [])"
-  by (fastforce simp: le_simps)
-
-
-lemmas Suc_length_not_empty' = Suc_length_not_empty [OF refl]
-
-
 (* FIXME: hides Invariants_AI.caps_of_state_valid,
    FIXME: duplicate of Invariants_AI.caps_of_state_valid_cap *)
 lemma caps_of_state_valid:

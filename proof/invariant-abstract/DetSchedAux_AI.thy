@@ -211,6 +211,38 @@ lemma sorted_release_q_is_original_cap_update[simp]:
   "sorted_release_q (s\<lparr>is_original_cap := param_a\<rparr>) = sorted_release_q s"
   by (clarsimp simp: sorted_release_q_def)
 
+lemma sc_at_period_scheduler_action_update[simp]:
+  "sc_at_period P p (s\<lparr>scheduler_action := param_a\<rparr>) = sc_at_period P p s"
+  by (clarsimp simp: sc_at_period_def)
+
+lemma sc_at_period_ready_queues_update[simp]:
+  "sc_at_period P p (s\<lparr>ready_queues := param_a\<rparr>) = sc_at_period P p s"
+  by (clarsimp simp: sc_at_period_def)
+
+lemma sc_at_period_release_queue_update[simp]:
+  "sc_at_period P p (s\<lparr>release_queue := param_a\<rparr>) = sc_at_period P p s"
+  by (clarsimp simp: sc_at_period_def)
+
+lemma sc_at_period_reprogram_timer_update[simp]:
+  "sc_at_period P p (s\<lparr>reprogram_timer := param_a\<rparr>) = sc_at_period P p s"
+  by (clarsimp simp: sc_at_period_def)
+
+lemma sc_at_period_consumed_time_update[simp]:
+  "sc_at_period P p (s\<lparr>consumed_time := param_a\<rparr>) = sc_at_period P p s"
+  by (clarsimp simp: sc_at_period_def)
+
+lemma sc_at_period_arch_state_update[simp]:
+  "sc_at_period P p (s\<lparr>arch_state := param_a\<rparr>) = sc_at_period P p s"
+  by (clarsimp simp: sc_at_period_def)
+
+lemma sc_at_period_trans_state_update[simp]:
+  "sc_at_period P p (trans_state f s) = sc_at_period P p s"
+  by (clarsimp simp: sc_at_period_def)
+
+lemma sc_at_period_is_original_cap_update[simp]:
+  "sc_at_period P p  (s\<lparr>is_original_cap := param_a\<rparr>) = sc_at_period P p s"
+  by (clarsimp simp: sc_at_period_def)
+
 lemma set_mrs_active_sc_tcb_at [wp]:
   "\<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace>
      set_mrs r t' mrs \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
@@ -388,17 +420,17 @@ locale DetSchedAux_AI_det_ext = DetSchedAux_AI "TYPE(det_ext)" +
       \<lbrace>(\<lambda>s :: det_ext state. etcb_at P t s)\<rbrace>
         invoke_untyped ui
       \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
-  assumes invoke_untyped_active_sc_tcb_at:  (* are the preconditions correct? *)
+  assumes invoke_untyped_active_sc_tcb_at:
     "\<And>i t. \<lbrace>\<lambda>s :: det_ext state. (invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
        and active_sc_tcb_at t and ct_active and valid_untyped_inv i
        and (\<lambda>s. scheduler_action s = resume_cur_thread)) s\<rbrace> invoke_untyped i
        \<lbrace>\<lambda>_ s. active_sc_tcb_at t s\<rbrace>"
-  assumes invoke_untyped_budget_sufficient: (* check precondition *)
+  assumes invoke_untyped_budget_sufficient:
     "\<And>t i. \<lbrace>\<lambda>s::det_ext state. (invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
        and (\<lambda>s. (budget_sufficient t s)) and ct_active and valid_untyped_inv i
        and (\<lambda>s. scheduler_action s = resume_cur_thread)) s\<rbrace>
                  invoke_untyped i \<lbrace>\<lambda>_ s. (budget_sufficient t s)\<rbrace>"
-  assumes invoke_untyped_budget_ready: (* check precondition *)
+  assumes invoke_untyped_budget_ready:
     "\<And>t i. \<lbrace>\<lambda>s::det_ext state. (invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
        and (\<lambda>s. (budget_ready t s)) and ct_active and valid_untyped_inv i
        and (\<lambda>s. scheduler_action s = resume_cur_thread)) s\<rbrace>
@@ -412,18 +444,12 @@ locale DetSchedAux_AI_det_ext = DetSchedAux_AI "TYPE(det_ext)" +
   assumes invoke_untyped_release_queue[wp]:
     "\<And>P i. \<lbrace>\<lambda>s::det_ext state. P (release_queue s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (release_queue s)\<rbrace>"
   assumes invoke_untyped_tcb_ready_time[wp]:
-    "\<And>P t i. \<lbrace>\<lambda>s::det_ext state. P (tcb_ready_time t s)\<rbrace>
-                  invoke_untyped i \<lbrace>\<lambda>_ s. P (tcb_ready_time t s)\<rbrace>"
-(*  assumes invoke_untyped_tcb_ready_time[wp]:
-    "\<And>P t i. \<lbrace>\<lambda>s::det_ext state. (invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
-       and (\<lambda>s. P (tcb_ready_time t s)) and ct_active and valid_untyped_inv i
-       and (\<lambda>s. scheduler_action s = resume_cur_thread)) s\<rbrace>
-                  invoke_untyped i \<lbrace>\<lambda>_ s. P (tcb_ready_time t s)\<rbrace>"
-  assumes invoke_untyped_budget_sufficient[wp]:
-    "\<And>P t i. \<lbrace>\<lambda>s::det_ext state. P (budget_sufficient t s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (budget_sufficient t s)\<rbrace>"
-  assumes invoke_untyped_budget_ready[wp]:
-    "\<And>P t i. \<lbrace>\<lambda>s::det_ext state. P (budget_ready t s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (budget_ready t s)\<rbrace>"
-*)  assumes init_arch_objects_valid_blocked[wp]:
+    "\<And>P t i. \<lbrace>invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and
+     active_sc_tcb_at t and
+    ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
+    valid_untyped_inv i and (\<lambda>s::det_ext state. P (tcb_ready_time t s))\<rbrace>
+                  invoke_untyped i \<lbrace>\<lambda>_ s. P (tcb_ready_time t s) \<and> active_sc_tcb_at t s\<rbrace>"
+    assumes init_arch_objects_valid_blocked[wp]:
     "\<And>t r n sz refs. \<lbrace>valid_blocked::det_ext state \<Rightarrow> _\<rbrace> init_arch_objects t r n sz refs \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   assumes init_arch_objects_valid_machine_time[wp]:
     "\<And>t r n sz refs. init_arch_objects t r n sz refs \<lbrace>valid_machine_time::det_ext state \<Rightarrow> _\<rbrace>"
@@ -547,8 +573,10 @@ lemma valid_sched_tcb_state_preservation:
   assumes bound_sc: "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
   assumes budget_s: "\<And>t. \<lbrace>\<lambda>s. (budget_sufficient t s)\<rbrace> f \<lbrace>\<lambda>rv s. (budget_sufficient t s)\<rbrace>"
   assumes budget_r: "\<And>t. \<lbrace>\<lambda>s. (budget_ready t s)\<rbrace> f \<lbrace>\<lambda>rv s. (budget_ready t s)\<rbrace>"
-      and time: "\<And>P t t'. \<lbrace>\<lambda>a. P (tcb_ready_time t a)(tcb_ready_time t' a) \<rbrace> f
+      and time': "\<And>P t t'. \<lbrace>\<lambda>a. P (tcb_ready_time t a)(tcb_ready_time t' a) \<rbrace> f
                   \<lbrace>\<lambda>rv a. P (tcb_ready_time t a)(tcb_ready_time t' a)\<rbrace>"
+      and time: "\<And>P t. \<lbrace>\<lambda>a. P (tcb_ready_time t a)\<rbrace> f
+                  \<lbrace>\<lambda>rv a. P (tcb_ready_time t a)\<rbrace>"
   assumes cur_thread: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   assumes idle_thread: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   assumes valid_blocked: "\<lbrace>valid_blocked\<rbrace> f \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
@@ -604,7 +632,7 @@ proof -
      apply (case_tac "itcb_state tcb")
                apply (simp+)[10]
      apply (clarsimp simp: sorted_release_q_def elim!: sorted_wrt_mono_rel[rotated])
-     apply (frule_tac P1="\<lambda>t t'. t \<le> t'" in use_valid[OF _ time], simp+)
+     apply (frule_tac P1="\<lambda>t t'. t \<le> t'" in use_valid[OF _ release_queue_cmp_lift[OF time]], simp+)
   apply (frule_tac P1="\<lambda>ct. ct = (cur_thread s)" in use_valid[OF _ cur_thread])
    apply simp
   apply (rule conjI)
@@ -674,12 +702,8 @@ lemma valid_sched_tcb_state_preservation_gen:
                            and (\<lambda>s. (budget_sufficient t s))\<rbrace> f \<lbrace>\<lambda>r s. (budget_sufficient t s)\<rbrace>"
   assumes budget_r: "\<And>t. \<lbrace>I and st_tcb_at (Not o inactive and Not o idle) t
                            and (\<lambda>s. (budget_ready t s))\<rbrace> f \<lbrace>\<lambda>r s. (budget_ready t s)\<rbrace>"
- (* assumes time: "\<And>P t t'. \<lbrace>\<lambda>s. P (tcb_ready_time t s)(tcb_ready_time t' s)
-                     \<rbrace>
-                             f \<lbrace>\<lambda>r s. P (tcb_ready_time t s)(tcb_ready_time t' s)\<rbrace>"*)
-      and time': "\<And>P t t'. \<lbrace>\<lambda>a. P (tcb_ready_time t a)(tcb_ready_time t' a) \<rbrace> f
-                  \<lbrace>\<lambda>rv a. P (tcb_ready_time t a)(tcb_ready_time t' a)\<rbrace>"
-(*  assumes sorted: "\<lbrace>valid_release_q\<rbrace> f \<lbrace>\<lambda>_. valid_release_q\<rbrace>"*)
+      and time: "\<And>P t. \<lbrace>(\<lambda>a. P (tcb_ready_time t a))
+              and I and st_tcb_at (Not o inactive and Not o idle) t and active_sc_tcb_at t\<rbrace> f \<lbrace>\<lambda>rv a. P (tcb_ready_time t a)\<rbrace>"
   assumes cur_thread: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   assumes idle_thread: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   assumes valid_blocked: "\<lbrace>valid_blocked\<rbrace> f \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
@@ -718,7 +742,7 @@ proof -
            apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[7]
     apply (rule conjI)
       (* valid_release_q *)
-     apply (unfold valid_release_q_def)
+     apply (clarsimp simp: valid_release_q_def)
      apply (rule conjI, clarsimp)
       apply (drule_tac x=t in bspec, simp, clarsimp)
       apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b")
@@ -726,22 +750,13 @@ proof -
       apply (rule_tac conjI[OF use_valid[OF _ st_tcb] use_valid[OF _ bound_sc]], assumption)
         apply simp
         apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[3]
-     apply (rule conjI, simp)
-     apply (clarsimp simp: sorted_release_q_def)subgoal sorry
-
-
-(*
-     apply (unfold valid_release_q_def)
-     apply (rule conjI, clarsimp)
-      apply (drule_tac x=t in bspec, simp, clarsimp)
-      apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b")
-       apply simp
-      apply (rule_tac conjI[OF use_valid[OF _ st_tcb] use_valid[OF _ bound_sc]], assumption)
-        apply simp
-        apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[3]
-     apply (rule conjI, simp)
-     apply (rule_tac use_valid[OF _ time], simp+)
-*)
+     apply (clarsimp simp: sorted_release_q_def elim!: sorted_wrt_mono_rel[rotated])
+     apply (frule_tac x=x in bspec, simp)
+     apply (drule_tac x=y in bspec, simp, clarsimp)
+     apply (frule_tac P1="\<lambda>t. t \<le> tcb_ready_time y b" and t1=x in use_valid[OF _ time], simp+)
+      apply (rule conjI)
+       apply (frule_tac P1="\<lambda>t. tcb_ready_time x s \<le> t" and t1=y in use_valid[OF _ time], simp+)
+        apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[4]
       (* ct_not_in_q and others *)
     apply (frule_tac P1="\<lambda>ct. ct = (cur_thread s)" in use_valid[OF _ cur_thread])
      apply simp+
@@ -810,8 +825,6 @@ lemma valid_idle_etcb_lift:
   done
 
 (* sorted_release_q lemmas *)
-
-
 crunches set_thread_state_act
 for sorted_release_q[wp]: "sorted_release_q::det_state \<Rightarrow> _"
  (wp: crunch_wps hoare_drop_imp simp: crunch_simps)
@@ -1000,10 +1013,12 @@ lemma invoke_untyped_valid_sched:
           in valid_sched_tcb_state_preservation_gen)
             apply (wp invoke_untyped_st_tcb_at)
             apply simp
-           apply (wpsimp wp: invoke_untyped_etcb_at invoke_untyped_active_sc_tcb_at
-                             invoke_untyped_budget_sufficient invoke_untyped_budget_ready
-                             valid_validE[OF release_queue_cmp_lift[OF invoke_untyped_tcb_ready_time]])+
-     apply (rule hoare_post_impErr, rule hoare_pre, rule invoke_untyp_invs,
+            apply (wpsimp wp: invoke_untyped_etcb_at invoke_untyped_active_sc_tcb_at
+                              invoke_untyped_budget_sufficient invoke_untyped_budget_ready)+
+        apply (rule_tac Q="\<lambda> s. P (tcb_ready_time t s) \<and> active_sc_tcb_at t s" in hoare_post_imp_dc[rotated])
+         apply clarsimp
+        apply (wpsimp wp: invoke_untyped_tcb_ready_time)+
+    apply (rule hoare_post_impErr, rule hoare_pre, rule invoke_untyp_invs,
            simp_all add: invs_valid_idle)[1]
    apply (rule_tac f="\<lambda>s. P (scheduler_action s)" in hoare_lift_Pf)
     apply (rule_tac f="\<lambda>s. x (ready_queues s)" in hoare_lift_Pf)
