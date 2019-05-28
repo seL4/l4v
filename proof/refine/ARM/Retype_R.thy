@@ -761,11 +761,12 @@ lemma obj_relation_retype_addrs_eq:
       = set (new_cap_addrs m ptr ko)"
   apply (rule set_eqI, rule iffI)
    apply (clarsimp simp: retype_addrs_def)
+   apply (rename_tac p a b)
    apply (drule obj_relation_retype_cutsD[OF _ orr])
    apply (cut_tac obj_relation_retype_default_leD[OF orr not_unt])
    apply (clarsimp simp: new_cap_addrs_def image_def
                   dest!: less_two_pow_divD)
-   apply (rule_tac x="xa * 2 ^ (obj_bits_api (APIType_map2 ty) us - objBitsKO ko) + unat y"
+   apply (rule_tac x="p * 2 ^ (obj_bits_api (APIType_map2 ty) us - objBitsKO ko) + unat y"
                  in rev_bexI)
     apply (simp add: amp obj_bits_api_default_object not_unt obj_bits_dev_irr)
     apply (rule less_le_trans[OF nat_add_left_cancel_less[THEN iffD2]])
@@ -782,10 +783,11 @@ lemma obj_relation_retype_addrs_eq:
    apply (simp add: power_add[symmetric])
   apply (clarsimp simp: new_cap_addrs_def retype_addrs_def
                  dest!: less_two_pow_divD)
+  apply (rename_tac p)
   apply (cut_tac obj_relation_retype_default_leD[OF orr not_unt])
   apply (cut_tac obj_relation_retype_leD[OF orr])
   apply (case_tac "n = 0")
-    apply (simp add:amp)
+   apply (simp add:amp)
   apply (case_tac "p = 0")
     apply simp
     apply (rule_tac x = 0 in rev_bexI)
@@ -3341,6 +3343,7 @@ proof -
   apply (simp add:shiftL_nat )
   apply (simp add:range_cover.unat_of_nat_n_shift)
   apply (clarsimp simp:new_cap_addrs_def shiftl_t2n)
+  apply (rename_tac pa)
   apply (rule word_plus_mono_right)
     apply (rule order_trans)
     apply (subst mult.commute)
@@ -4443,7 +4446,7 @@ lemma doMachineOp_return_foo:
   apply (clarsimp simp: doMachineOp_def bind_def gets_def
                         get_def return_def select_f_def split_def simpler_modify_def)
   apply (rule ext)+
-  apply (clarsimp simp: image_def)
+  apply simp
   apply (rule set_eqI)
   apply clarsimp
   done

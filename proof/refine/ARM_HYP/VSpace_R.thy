@@ -1675,6 +1675,7 @@ lemma storeHWASID_valid_arch' [wp]:
          armKSHWASIDTable (ksArchState s) hw_asid = None)\<rbrace>
   storeHWASID asid hw_asid
   \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  supply image_cong_simp [cong del]
   apply (simp add: storeHWASID_def)
   apply wp
    prefer 2

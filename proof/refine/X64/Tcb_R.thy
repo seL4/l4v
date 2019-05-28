@@ -1100,8 +1100,8 @@ lemma tc_corres:
       and case_option \<top> (case_option \<top> (valid_cap o fst) o snd) g
       and K (case_option True ((\<lambda>v. is_aligned v msg_align_bits) o fst) g)
       and K (case_option True (case_option True (is_cnode_or_valid_arch o fst) o snd) g)
-      and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>m. pr \<le> m) auth s) p_auth) (* only set prio \<le> mcp *)
-      and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp_auth) (* only set mcp \<le> prev_mcp *))
+      and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>m. pr \<le> m) auth s) p_auth) \<comment> \<open>only set prio \<le> mcp\<close>
+      and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp_auth) \<comment> \<open>only set mcp \<le> prev_mcp\<close>)
     (invs' and sch_act_simple and case_option \<top> (valid_cap' o fst) e' and
      (\<lambda>s. {e', f', option_map undefined g'} \<noteq> {None} \<longrightarrow> cte_at' (cte_map slot) s) and
      K (case_option True (isCNodeCap o fst) e') and

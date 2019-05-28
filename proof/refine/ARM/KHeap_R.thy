@@ -925,6 +925,7 @@ lemma set_other_obj_corres:
   corres dc (obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr)
             (obj_at' (P :: 'a \<Rightarrow> bool) ptr)
             (set_object ptr ob) (setObject ptr ob')"
+  supply image_cong_simp [cong del]
   apply (rule corres_no_failI)
    apply (rule no_fail_pre)
     apply wp
@@ -943,7 +944,7 @@ lemma set_other_obj_corres:
   apply (rule conjI[rotated])
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x=ptr in allE)+
-   apply (clarsimp simp: obj_at_def a_type_def
+   apply_trace (clarsimp simp: obj_at_def a_type_def
                    split: Structures_A.kernel_object.splits if_split_asm)
    apply (simp split: arch_kernel_obj.splits if_splits)
   apply (fold fun_upd_def)

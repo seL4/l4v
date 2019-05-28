@@ -325,7 +325,7 @@ definition
      case h x of
        Some (KOEndpoint ep) \<Rightarrow> Some (Endpoint (EndpointMap ep))
      | Some (KONotification ntfn) \<Rightarrow> Some (Notification (AEndpointMap ntfn))
-     | Some KOKernelData \<Rightarrow> undefined (* forbidden by pspace_relation *)
+     | Some KOKernelData \<Rightarrow> undefined \<comment> \<open>forbidden by pspace_relation\<close>
      | Some KOUserData \<Rightarrow> map_option (ArchObj \<circ> DataPage False) (ups x)
      | Some KOUserDataDevice \<Rightarrow> map_option (ArchObj \<circ> DataPage True) (ups x)
      | Some (KOTCB tcb) \<Rightarrow> Some (TCB (TcbMap tcb))
@@ -460,6 +460,7 @@ proof -
     by (fastforce simp add: ghost_relation_def)+
 
   show "?thesis"
+  supply image_cong_simp [cong del]
     apply (rule ext)
     apply (simp add: absHeap_def split: option.splits)
     apply (rule conjI)

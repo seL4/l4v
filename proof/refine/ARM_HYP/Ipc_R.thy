@@ -1752,7 +1752,7 @@ lemma dit_corres:
                        (case ep of None \<Rightarrow> True | Some x \<Rightarrow> ep_at x sa) \<and>
                        case_option (\<lambda>_. True) in_user_frame receiveBuffer sa \<and>
                        obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb
-                                    (*\<exists>ft. tcb_fault tcb = Some ft*)) s sa"
+                                    \<comment> \<open>\<exists>ft. tcb_fault tcb = Some ft\<close>) s sa"
                in corres_split')
      apply (rule corres_guard_imp)
        apply (rule lipcb_corres')
@@ -3242,7 +3242,8 @@ lemma rfk_invs':
 crunch nosch[wp]: replyFromKernel "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma complete_signal_corres:
-  "corres dc (ntfn_at ntfnptr and tcb_at tcb and pspace_aligned and valid_objs(* and obj_at (\<lambda>ko. ko = Notification ntfn \<and> Ipc_A.isActive ntfn) ntfnptr*))
+  "corres dc (ntfn_at ntfnptr and tcb_at tcb and pspace_aligned and valid_objs
+            \<comment> \<open>and obj_at (\<lambda>ko. ko = Notification ntfn \<and> Ipc_A.isActive ntfn) ntfnptr\<close>)
              (ntfn_at' ntfnptr and tcb_at' tcb and valid_pspace' and obj_at' isActive ntfnptr)
              (complete_signal ntfnptr tcb) (completeSignal ntfnptr tcb)"
   apply (simp add: complete_signal_def completeSignal_def)
@@ -3599,7 +3600,7 @@ lemma setupCallerCap_state_refs_of[wp]:
   done
 
 lemma setupCallerCap_state_hyp_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s) (*sender := {r \<in> state_hyp_refs_of' s sender. snd r = TCBBound}*))\<rbrace>
+  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s) \<comment> \<open>sender := {r \<in> state_hyp_refs_of' s sender. snd r = TCBBound}\<close>)\<rbrace>
      setupCallerCap sender rcvr canGrant
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   apply (simp add: setupCallerCap_def getThreadCallerSlot_def

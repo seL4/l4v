@@ -847,9 +847,9 @@ lemma valid_cap_ctes_pre:
                     | Zombie ref (ZombieCNode bits) n
                       \<Rightarrow> \<forall>x. ref + (x && mask bits) * 2^cteSizeBits \<in> capRange c
                     | ArchObjectCap (PageTableCap ref data)
-                      \<Rightarrow> \<forall>x < 0x100. ref + x * 2^pteBits \<in> capRange c (* number of entries in page table *)
+                      \<Rightarrow> \<forall>x < 0x100. ref + x * 2^pteBits \<in> capRange c \<comment> \<open>number of entries in page table\<close>
                     | ArchObjectCap (PageDirectoryCap ref data)
-                      \<Rightarrow> \<forall>x < 0x1000. ref + x * 2^pdeBits \<in> capRange c (* number of entries in page directory *)
+                      \<Rightarrow> \<forall>x < 0x1000. ref + x * 2^pdeBits \<in> capRange c \<comment> \<open>number of entries in page directory\<close>
                     | _ \<Rightarrow> True"
   apply (drule valid_capAligned)
   apply (simp split: capability.split zombie_type.split arch_capability.split, safe)

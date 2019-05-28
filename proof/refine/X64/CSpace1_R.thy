@@ -462,7 +462,7 @@ lemma cte_map_shift:
   assumes aligned: "is_aligned ptr (5 + cbits)" (* cte_level_bits *)
   assumes cbits: "cbits \<le> word_bits - cte_level_bits"
   shows
-  "ptr + 32 * ((cref' >> length cref - (cbits + length guard)) && mask cbits) = (*2^cte_level_bits *)
+  "ptr + 32 * ((cref' >> length cref - (cbits + length guard)) && mask cbits) = \<comment> \<open>2^cte_level_bits\<close>
    cte_map (ptr, take cbits (drop (length guard) cref))"
 proof -
   let ?l = "length cref - (cbits + length guard)"
@@ -1295,7 +1295,7 @@ definition
   capASID cap = capASID cap' \<and>
   cap_asid_base' cap = cap_asid_base' cap' \<and>
   cap_vptr' cap = cap_vptr' cap' \<and>
-  (* check all fields of ReplyCap except capReplyCanGrant *)
+  \<comment> \<open>check all fields of ReplyCap except capReplyCanGrant\<close>
   (isReplyCap cap \<longrightarrow> capTCBPtr cap = capTCBPtr cap' \<and>
                      capReplyMaster cap = capReplyMaster cap')"
 

@@ -701,7 +701,7 @@ lemma decode_page_inv_corres:
           apply (rule_tac Q'="\<lambda>rv s. valid_vspace_objs s \<and> pspace_aligned s \<and>
                                 (snd v') < pptr_base \<and> canonical_address (snd v') \<and>
                                 equal_kernel_mappings s \<and> valid_global_objs s \<and> valid_arch_state s \<and>
-                                (*(\<exists>\<rhd> (lookup_pml4_slot (fst pa) (snd v') && ~~ mask pml4_bits)) s \<and>*)
+                                \<comment> \<open>(\<exists>\<rhd> (lookup_pml4_slot (fst pa) (snd v') && ~~ mask pml4_bits)) s \<and>\<close>
                                 page_map_l4_at rv s \<and> (\<exists>\<rhd> rv) s"
               in hoare_post_imp_R, wp)
            apply (clarsimp simp: page_directory_at_aligned_pd_bits valid_global_objs_def)

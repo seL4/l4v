@@ -864,9 +864,9 @@ lemma valid_cap_ctes_pre:
                     | Zombie ref (ZombieCNode bits) n
                       \<Rightarrow> \<forall>x. ref + (x && mask bits) * 2^cteSizeBits \<in> capRange c
                     | ArchObjectCap (PageTableCap ref data)
-                      \<Rightarrow> \<forall>x < 0x200. ref + x * 2^pteBits \<in> capRange c (* number of entries in page table *)
+                      \<Rightarrow> \<forall>x < 0x200. ref + x * 2^pteBits \<in> capRange c \<comment> \<open>number of entries in page table\<close>
                     | ArchObjectCap (PageDirectoryCap ref data)
-                      \<Rightarrow> \<forall>x < 0x800. ref + x * 2^pdeBits \<in> capRange c (* number of entries in page directory *)
+                      \<Rightarrow> \<forall>x < 0x800. ref + x * 2^pdeBits \<in> capRange c \<comment> \<open>number of entries in page directory\<close>
                     | _ \<Rightarrow> True"
   apply (drule valid_capAligned)
   apply (simp split: capability.split zombie_type.split arch_capability.split, safe)
@@ -4465,7 +4465,8 @@ lemma dmo'_gets_ksPSpace_comm:
    gets ksPSpace >>= (\<lambda>x. doMachineOp f >>= (\<lambda>_. m x))"
   apply (rule ext)
   apply (auto simp add: doMachineOp_def simpler_modify_def simpler_gets_def
-                        return_def select_f_def bind_def split_def image_def)
+                        return_def select_f_def bind_def split_def image_def
+                  cong: SUP_cong_simp)
      apply (rule_tac x=aa in exI; drule prod_injects; clarsimp)
      apply (rule_tac x="snd (m (ksPSpace x) (x\<lparr>ksMachineState := bb\<rparr>))" in exI, clarsimp)
      apply (rule_tac x="{(ab, x\<lparr>ksMachineState := bb\<rparr>)}" in exI, simp)

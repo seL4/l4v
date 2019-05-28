@@ -1017,6 +1017,7 @@ lemma set_other_obj_corres:
   corres dc (obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr)
             (obj_at' (P :: 'a \<Rightarrow> bool) ptr)
             (set_object ptr ob) (setObject ptr ob')"
+  supply image_cong_simp [cong del]
   apply (rule corres_no_failI)
    apply (rule no_fail_pre)
     apply wp

@@ -584,7 +584,7 @@ lemma dec_arch_inv_page_flush_corres:
                         throwError $ ExceptionTypes_A.syscall_error.InvalidArgument 0;
                         returnOk $
                         arch_invocation.InvokePage $
-                        ARM_A.page_invocation.PageFlush (* Must use word in hyp mode. *)
+                        ARM_A.page_invocation.PageFlush \<comment> \<open>Must use word in hyp mode.\<close>
                          (label_to_flush_type (invocation_type (mi_label mi))) (start + word)
                          (end + word - 1) (addrFromPPtr word + start) pd asid
                     odE
@@ -662,8 +662,8 @@ lemma get_master_pde_sp:
   "\<lbrace> P \<rbrace> get_master_pde pd_slot \<lbrace> \<lambda>pde s. P s
     \<and> (\<exists>pd pd_slot'. ko_at (ArchObj (PageDirectory pd)) (pd_slot && ~~ mask pd_bits) s
         \<and> pd_slot' && ~~ mask pd_bits = pd_slot && ~~ mask pd_bits
-(*        \<and> ((ucast (pd_slot' && mask pd_bits >> 2) \<in> kernel_mapping_slots)
-            \<longrightarrow> (ucast (pd_slot && mask pd_bits >> 2) \<in> kernel_mapping_slots))*)
+\<comment> \<open>     \<and> ((ucast (pd_slot' && mask pd_bits >> 2) \<in> kernel_mapping_slots)
+            \<longrightarrow> (ucast (pd_slot && mask pd_bits >> 2) \<in> kernel_mapping_slots))\<close>
         \<and> pd (ucast (pd_slot' && mask pd_bits >> 3)) = pde)  \<rbrace>"
   apply (simp add: get_master_pde_def)
   apply (wp get_pde_wp | wpc)+

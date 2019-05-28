@@ -1247,7 +1247,7 @@ definition
   capASID cap = capASID cap' \<and>
   cap_asid_base' cap = cap_asid_base' cap' \<and>
   cap_vptr' cap = cap_vptr' cap' \<and>
-  (* check all fields of ReplyCap except capReplyCanGrant *)
+  \<comment> \<open>check all fields of ReplyCap except capReplyCanGrant\<close>
   (isReplyCap cap \<longrightarrow> capTCBPtr cap = capTCBPtr cap' \<and>
                      capReplyMaster cap = capReplyMaster cap')"
 

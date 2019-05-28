@@ -206,6 +206,7 @@ lemma
               map_option ArchObj (absHeapArch (ksPSpace \<sigma>) x ako)
           | _ \<Rightarrow> None)
      (%x. case ksPSpace \<sigma> x of Some (KOArch _) \<Rightarrow> ksPSpace \<sigma> x | _ \<Rightarrow> None)"
+  supply image_cong_simp [cong del]
   apply (clarsimp simp add: pspace_relation_def dom_def)
   apply (rule conjI)
    apply (clarsimp simp add: pspace_dom_def dom_def UNION_eq)
@@ -550,7 +551,7 @@ definition
      case h x of
        Some (KOEndpoint ep) \<Rightarrow> Some (Endpoint (EndpointMap ep))
      | Some (KONotification ntfn) \<Rightarrow> Some (Notification (AEndpointMap ntfn))
-     | Some KOKernelData \<Rightarrow> undefined (* forbidden by pspace_relation *)
+     | Some KOKernelData \<Rightarrow> undefined \<comment> \<open>forbidden by pspace_relation\<close>
      | Some KOUserData \<Rightarrow> map_option (ArchObj \<circ> DataPage False) (ups x)
      | Some KOUserDataDevice \<Rightarrow> map_option (ArchObj \<circ> DataPage True) (ups x)
      | Some (KOTCB tcb) \<Rightarrow> Some (TCB (TcbMap tcb))
@@ -686,6 +687,7 @@ proof -
     by (fastforce simp add: ghost_relation_def)+
 
   show "?thesis"
+  supply image_cong_simp [cong del]
     apply (rule ext)
     apply (simp add: absHeap_def split: option.splits)
     apply (rule conjI)
