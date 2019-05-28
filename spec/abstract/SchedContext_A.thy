@@ -525,9 +525,9 @@ where
         assert ready;   (* asserting ready & sufficient *)
         robin \<leftarrow> return (sc_period sc = 0); (* is_round_robin csc;*)
         if robin then
-          let new_hd = ((refill_hd sc) \<lparr> r_time := r_time (refill_hd sc) - consumed \<rparr>);
-              new_tl = ((refill_tl sc) \<lparr> r_time := r_time (refill_tl sc) + consumed \<rparr>) in
-          set_refills csc (new_hd # [new_tl])
+        let new_hd = ((refill_hd sc) \<lparr> r_amount := r_amount (refill_hd sc) - consumed \<rparr>);
+            new_tl = ((refill_tl sc) \<lparr> r_amount := r_amount (refill_tl sc) + consumed \<rparr>) in
+        set_refills csc (new_hd # [new_tl])
       else refill_split_check consumed;
         sc2 \<leftarrow> get_sched_context csc;
         curtime2 \<leftarrow> gets cur_time;
