@@ -147,11 +147,11 @@ where
   "getCurrentTime = do
     modify (\<lambda>s. s \<lparr> time_state := time_state s + 1 \<rparr>);
     passed \<leftarrow> gets $ time_oracle o time_state;
-    last \<leftarrow> gets last_machine_time;
-    current \<leftarrow> return (if last + passed + kernelWCET_ticks < last + passed \<or> last + passed < last
-                       then -(kernelWCET_ticks+1) else last + passed);
-    modify (\<lambda>s. s\<lparr>last_machine_time := current\<rparr>);
-    return current
+    last' \<leftarrow> gets last_machine_time;
+    last \<leftarrow> return (unat last');
+    current \<leftarrow> return  (min (2^64 -(unat kernelWCET_ticks + 1)) (last + passed));
+    modify (\<lambda>s. s\<lparr>last_machine_time := of_nat current\<rparr>);
+    return (of_nat current)
   od"
 
 consts'
