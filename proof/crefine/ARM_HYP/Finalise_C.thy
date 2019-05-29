@@ -1935,11 +1935,6 @@ lemma vcpuInvalidateActive_ccorres:
   apply (rule UNIV_I)
   done
 
-lemmas Kernel_C_reg_simps = Kernel_C.R0_def Kernel_C.R1_def  Kernel_C.CPSR_def
-    Kernel_C.R2_def Kernel_C.R3_def Kernel_C.R4_def Kernel_C.R5_def Kernel_C.R6_def Kernel_C.R7_def
-    Kernel_C.R8_def Kernel_C.R9_def Kernel_C.R10_def Kernel_C.R11_def Kernel_C.R12_def Kernel_C.SP_def
-    Kernel_C.LR_def Kernel_C.FaultInstruction_def Kernel_C.TPIDRURW_def Kernel_C.LR_svc_def
-
 lemma sanitiseSetRegister_ccorres:
   "\<lbrakk> val = val'; reg' = register_from_H reg\<rbrakk> \<Longrightarrow>
      ccorres dc xfdc (tcb_at' tptr)
@@ -1953,7 +1948,7 @@ lemma sanitiseSetRegister_ccorres:
      apply (ctac add: setRegister_ccorres)
     apply (vcg)
    apply (rule conseqPre, vcg)
-   apply (fastforce simp: sanitiseRegister_def Kernel_C_reg_simps split: register.splits)
+   apply (fastforce simp: sanitiseRegister_def C_register_defs split: register.splits)
   by (auto simp: sanitiseRegister_def from_bool_def simp del: Collect_const split: register.splits bool.splits)
 
 lemma dissociateVCPUTCB_ccorres:

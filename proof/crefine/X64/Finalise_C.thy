@@ -1769,12 +1769,6 @@ lemma cnotification_relation_udpate_arch:
   apply (safe ; case_tac "xa = p" ; clarsimp simp: option_map2_def map_option_case)
   done
 
-(*
-lemmas Kernel_C_reg_simps = Kernel_C.E_def Kernel_C.R1_def  Kernel_C.CPSR_def
-    Kernel_C.R2_def Kernel_C.R3_def Kernel_C.R4_def Kernel_C.R5_def Kernel_C.R6_def Kernel_C.R7_def
-    Kernel_C.R8_def Kernel_C.R9_def Kernel_C.R10_def Kernel_C.R11_def Kernel_C.R12_def Kernel_C.SP_def
-    Kernel_C.LR_def Kernel_C.FaultInstruction_def Kernel_C.TPIDRURW_def Kernel_C.LR_svc_def
-*)
 lemma sanitiseSetRegister_ccorres:
   "\<lbrakk> val = val'; reg' = register_from_H reg\<rbrakk> \<Longrightarrow>
      ccorres dc xfdc (tcb_at' tptr)
