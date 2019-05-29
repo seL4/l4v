@@ -835,7 +835,7 @@ fun graph_refine_proof_full_tac csenv ctxt = EVERY
         (graph_refine_proof_tacs csenv ctxt))
 
 fun graph_refine_proof_full_goal_tac csenv ctxt i t
-    = (foldr1 (THEN_ALL_NEW)
+    = (foldr1 (op THEN_ALL_NEW)
         (map snd (graph_refine_proof_tacs csenv ctxt)) i t)
         |> try Seq.hd |> (fn NONE => Seq.empty | SOME t => Seq.single t)
 
@@ -875,8 +875,8 @@ fun test_graph_refine_proof_with_def funs csenv ctxt nm = case
     Symtab.lookup funs nm of SOME (_, _, NONE) => "skipped " ^ nm
   | _ => let
     val ctxt = define_graph_fun_short funs nm ctxt
-  in simpl_to_graph_thm funs csenv ctxt nm;
-    "success on " ^ nm end
+    val (time, _) = Timing.timing (simpl_to_graph_thm funs csenv ctxt) nm
+  in "success on " ^ nm ^ "  [" ^ Timing.message time ^ "]" end
 
 fun test_all_graph_refine_proofs_after funs csenv ctxt nm = let
     val ss = Symtab.keys funs
