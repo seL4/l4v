@@ -248,11 +248,11 @@ fun
   | "register_from_H ARM_HYP.IP = scast Kernel_C.R12"
   | "register_from_H ARM_HYP.SP = scast Kernel_C.SP"
   | "register_from_H ARM_HYP.LR = scast Kernel_C.LR"
-  | "register_from_H ARM_HYP.LR_svc = scast Kernel_C.LR_svc"
+  | "register_from_H ARM_HYP.LR_svc = scast Kernel_C.NextIP"
   | "register_from_H ARM_HYP.CPSR = scast Kernel_C.CPSR"
   | "register_from_H ARM_HYP.TLS_BASE = scast Kernel_C.TLS_BASE"
   | "register_from_H ARM_HYP.TPIDRURW = scast Kernel_C.TPIDRURW"
-  | "register_from_H ARM_HYP.FaultInstruction = scast Kernel_C.FaultInstruction"
+  | "register_from_H ARM_HYP.FaultInstruction = scast Kernel_C.FaultIP"
 
 definition
   ccontext_relation :: "(MachineTypes.register \<Rightarrow> word32) \<Rightarrow> user_context_C \<Rightarrow> bool"
