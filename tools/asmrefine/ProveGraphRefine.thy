@@ -268,6 +268,11 @@ lemma of_int_sint_scast:
   "of_int (sint x) = scast x"
   by (simp add: scast_def word_of_int)
 
+lemma less_is_non_zero_p1':
+  fixes a :: "'a :: len word"
+  shows "a < k \<Longrightarrow> 1 + a \<noteq> 0"
+  by (metis less_is_non_zero_p1 add.commute)
+
 lemma(in comm_semiring_1) add_mult_comms:
   "a + b + c = a + c + b"
   "a * b * c = a * c * b"
@@ -531,6 +536,7 @@ fun normalise_mem_accs reason ctxt = DETERM o let
                        o_def fupdate_def
                        pointer_inverse_safe_sign
                        ptr_safe_ptr_add_array_ptr_index
+                       unat_less_helper
             } @ get_field_h_val_rewrites ctxt
         @ #1 gr @ #2 gr
     val h_val = get_disjoint_h_val_globals_swap ctxt
@@ -807,6 +813,7 @@ fun graph_refine_proof_tacs csenv ctxt = let
                         fold_all_htd_updates
                         array_assertion_shrink_right
                         sdiv_word_def sdiv_int_def
+                        unatSuc[OF less_is_non_zero_p1'] unatSuc2[OF less_is_non_zero_p1]
                 }
                 delsimps @{thms ptr_val_inj}
             )),
