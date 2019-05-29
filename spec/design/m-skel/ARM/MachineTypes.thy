@@ -88,7 +88,7 @@ where
 
 text {* The values the timer device will return (how much time passed since last query) *}
 axiomatization
-  time_oracle :: "nat \<Rightarrow> 64 word"
+  time_oracle :: "nat \<Rightarrow> nat"
 
 end_qualify
 
