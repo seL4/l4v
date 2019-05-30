@@ -129,15 +129,11 @@ definition c_null_guard :: "'a::c_type ptr_guard" where
 
 lemma c_null_guard:
   "c_null_guard (p::'a::mem_type ptr) \<Longrightarrow> p \<noteq> NULL"
-apply(clarsimp simp: c_null_guard_def)
-apply(erule notE)
-apply(rule intvl_self)
-apply simp
-done
+  by (fastforce simp: c_null_guard_def intro: intvl_self)
 
 overloading c_guard_def \<equiv> c_guard begin
 definition
-c_guard_def:  "c_guard_def \<equiv> \<lambda>p. ptr_aligned p \<and> c_null_guard p"
+  c_guard_def:  "c_guard_def \<equiv> \<lambda>p. ptr_aligned p \<and> c_null_guard p"
 end
 
 definition
@@ -145,10 +141,7 @@ c_fnptr_guard_def: "c_fnptr_guard (fnptr::unit ptr) \<equiv> ptr_val fnptr \<not
 
 lemma c_guardD:
   "c_guard (p::'a::mem_type ptr) \<Longrightarrow> ptr_aligned p \<and> p \<noteq> NULL"
-apply(clarsimp simp: c_guard_def)
-apply(drule c_null_guard)
-apply simp
-done
+  by (clarsimp simp: c_guard_def c_null_guard)
 
 lemma c_guard_ptr_aligned:
   "c_guard p \<Longrightarrow> ptr_aligned p"
@@ -164,70 +157,50 @@ lemma c_guard_NULL_simp [simp]:
 
 lemma c_guard_mono:
   "guard_mono (c_guard::'a::mem_type ptr_guard) (c_guard::'b::mem_type ptr_guard)"
-apply(clarsimp simp: guard_mono_def c_guard_def)
-apply(subgoal_tac   "guard_mono (ptr_aligned::'a::mem_type ptr_guard) (ptr_aligned::'b::mem_type ptr_guard)")
- prefer 2
- apply(rule ptr_aligned_mono)
-apply(clarsimp simp: guard_mono_def)
-apply(clarsimp simp: ptr_aligned_def)
-apply(clarsimp simp: c_null_guard_def typ_uinfo_t_def)
-apply(frule field_lookup_export_uinfo_Some_rev)
-apply clarsimp
-apply(drule_tac p=p in field_tag_sub)
-apply(clarsimp simp: field_lvalue_def field_offset_def field_offset_untyped_def typ_uinfo_t_def)
-apply(subgoal_tac "size_td k = size_of TYPE('b)")
- apply simp
- apply fast
-apply(clarsimp simp: size_of_def)
-apply(subst typ_uinfo_size [symmetric])
-apply(drule_tac s="export_uinfo k" in sym)
-apply(subst typ_uinfo_t_def)
-apply simp
-done
+  apply(clarsimp simp: guard_mono_def c_guard_def)
+  apply(subgoal_tac "guard_mono (ptr_aligned::'a::mem_type ptr_guard) (ptr_aligned::'b::mem_type ptr_guard)")
+   prefer 2
+   apply(rule ptr_aligned_mono)
+  apply(clarsimp simp: guard_mono_def ptr_aligned_def c_null_guard_def typ_uinfo_t_def)
+  apply(frule field_lookup_export_uinfo_Some_rev)
+  apply clarsimp
+  apply(drule_tac p=p in field_tag_sub)
+  apply(clarsimp simp: field_lvalue_def field_offset_def field_offset_untyped_def typ_uinfo_t_def)
+  apply(metis (mono_tags, hide_lams) export_size_of subsetD typ_uinfo_t_def)
+  done
 
 lemma c_guard_NULL_fl:
-  "\<lbrakk> c_guard (p::'a::mem_type ptr);
-      field_lookup (typ_info_t TYPE('a)) f 0 = Some (t,n);
-      export_uinfo t = typ_uinfo_t TYPE('b::mem_type) \<rbrakk> \<Longrightarrow> 0 < &(p\<rightarrow>f)"
-apply(insert c_guard_mono)
-apply(clarsimp simp: guard_mono_def)
-apply((erule allE)+)
-apply(erule impE)
- apply rule
-  apply assumption
- apply(drule field_lookup_export_uinfo_Some)
- apply(simp add: typ_uinfo_t_def)
-apply(drule field_lookup_export_uinfo_Some)
-apply(simp add: field_lvalue_def field_offset_def field_offset_untyped_def typ_uinfo_t_def)
-apply(unfold c_guard_def)
-apply clarsimp
-apply(drule c_null_guard)+
-apply (clarsimp simp: word_neq_0_conv)
-done
+  "\<lbrakk> c_guard (p::'a::mem_type ptr); field_lookup (typ_info_t TYPE('a)) f 0 = Some (t,n);
+     export_uinfo t = typ_uinfo_t TYPE('b::mem_type) \<rbrakk>
+   \<Longrightarrow> 0 < &(p\<rightarrow>f)"
+  using c_guard_mono
+  apply(clarsimp simp: guard_mono_def)
+  apply((erule allE)+, erule impE)
+   apply(fastforce dest: field_lookup_export_uinfo_Some simp: typ_uinfo_t_def)
+  apply(drule field_lookup_export_uinfo_Some)
+  apply(simp add: field_lvalue_def field_offset_def field_offset_untyped_def typ_uinfo_t_def)
+  apply(clarsimp simp: c_guard_def)
+  apply(drule c_null_guard)+
+  apply(clarsimp simp: word_neq_0_conv)
+  done
 
 lemma c_guard_ptr_aligned_fl:
-  "\<lbrakk> c_guard (p::'a::mem_type ptr);
-      field_lookup (typ_info_t TYPE('a)) f 0 = Some (t,n);
-      export_uinfo t = typ_uinfo_t TYPE('b::mem_type) \<rbrakk> \<Longrightarrow>
-      ptr_aligned ((Ptr &(p\<rightarrow>f))::'b ptr)"
-apply(insert c_guard_mono)
-apply(clarsimp simp: guard_mono_def)
-apply((erule allE)+)
-apply(erule impE)
- apply rule
-  apply assumption
- apply(drule field_lookup_export_uinfo_Some)
- apply(simp add: typ_uinfo_t_def)
-apply(drule field_lookup_export_uinfo_Some)
-apply(unfold c_guard_def)
-apply(simp add: field_lvalue_def field_offset_def field_offset_untyped_def typ_uinfo_t_def)
-done
+  "\<lbrakk> c_guard (p::'a::mem_type ptr); field_lookup (typ_info_t TYPE('a)) f 0 = Some (t,n);
+     export_uinfo t = typ_uinfo_t TYPE('b::mem_type) \<rbrakk> \<Longrightarrow>
+   ptr_aligned ((Ptr &(p\<rightarrow>f))::'b ptr)"
+  using c_guard_mono
+  apply(clarsimp simp: guard_mono_def)
+  apply((erule allE)+, erule impE)
+   apply(fastforce dest: field_lookup_export_uinfo_Some simp: typ_uinfo_t_def)
+  apply(drule field_lookup_export_uinfo_Some)
+  apply(simp add: c_guard_def field_lvalue_def field_offset_def field_offset_untyped_def typ_uinfo_t_def)
+  done
 
 (* StrictC guard separation syntax translations *)
 
 (* FIXME: make these abbreviations *)
 syntax
-  "_sep_map" :: "'a::c_type ptr \<Rightarrow> 'a \<Rightarrow> heap_assert" ("_ \<mapsto> _" [56,51] 56)
+  "_sep_map" :: "'a::c_type ptr \<Rightarrow> 'a \<Rightarrow> heap_assert" ("_ \<mapsto> _" [56,51] 56) (* FIXME: clashes with map update *)
   "_sep_map_any" :: "'a::c_type ptr \<Rightarrow> heap_assert" ("_ \<mapsto> -" [56] 56)
   "_sep_map'" :: "'a::c_type ptr \<Rightarrow> 'a \<Rightarrow> heap_assert" ("_ \<hookrightarrow>  _" [56,51] 56)
   "_sep_map'_any" :: "'a::c_type ptr \<Rightarrow> heap_assert" ("_ \<hookrightarrow> -" [56] 56)
@@ -252,30 +225,25 @@ lemma sep_map_NULL [simp]:
 
 lemma sep_map'_NULL_simp [simp]:
   "NULL \<hookrightarrow> (v::'a::mem_type) = sep_false"
-apply(simp add: sep_map'_def sep_map'_inv_def sep_conj_ac)
-apply(subst sep_conj_com, subst sep_map_inv_def [symmetric])
-apply simp
-done
+  apply(simp add: sep_map'_def sep_map'_inv_def sep_conj_ac)
+  apply(subst sep_conj_com, subst sep_map_inv_def [symmetric])
+  apply simp
+  done
 
 lemma sep_map'_ptr_aligned:
   "(p \<hookrightarrow> v) s \<Longrightarrow> ptr_aligned p"
-apply(rule c_guard_ptr_aligned)
-apply(erule sep_map'_g)
-done
+  by (rule c_guard_ptr_aligned) (erule sep_map'_g)
 
 lemma sep_map'_NULL:
   "(p \<hookrightarrow> (v::'a::mem_type)) s \<Longrightarrow> p \<noteq> NULL"
-apply(rule c_guard_NULL)
-apply(erule sep_map'_g)
-done
+  by (rule c_guard_NULL) (erule sep_map'_g)
 
 lemma tagd_sep_false [simp]:
   "\<turnstile>\<^sub>s (NULL::'a::mem_type ptr) = sep_false"
   by (auto simp: tagd_inv_def tagd_def dest!: sep_conjD s_valid_g)
 
 (* Print translations for pointer dereferencing in program statements and
-   expressions.
-*)
+   expressions. *)
 syntax (output)
   "_Deref" :: "'b \<Rightarrow> 'b" ("*_" [1000] 1000)
   "_AssignH" :: "'b => 'b => ('a,'p,'f) com" ("(2*_ :==/ _)" [30, 30] 23)
@@ -315,13 +283,10 @@ syntax "_h_t_valid" :: "'a::c_type ptr \<Rightarrow> bool" ("\<Turnstile>\<^sub>
 (* will only work when globals record is defined
 term "\<lbrace> \<Turnstile>\<^sub>t bar \<rbrace>" *)
 
-abbreviation
-  "lift_t_c" :: "heap_mem \<times> heap_typ_desc \<Rightarrow> 'a::c_type typ_heap"
-where
+abbreviation "lift_t_c" :: "heap_mem \<times> heap_typ_desc \<Rightarrow> 'a::c_type typ_heap" where
   "lift_t_c s == lift_t c_guard s"
 
-syntax
-  "_h_t_valid" :: "heap_typ_desc \<Rightarrow> 'a::c_type ptr \<Rightarrow> bool"  ("_ \<Turnstile>\<^sub>t _" [99,99] 100)
+syntax "_h_t_valid" :: "heap_typ_desc \<Rightarrow> 'a::c_type ptr \<Rightarrow> bool"  ("_ \<Turnstile>\<^sub>t _" [99,99] 100)
 translations
   "d \<Turnstile>\<^sub>t p" == "d,CONST c_guard \<Turnstile>\<^sub>t p"
 
@@ -339,9 +304,7 @@ lemma h_t_valid_ptr_aligned:
 
 lemma lift_t_NULL:
   "lift_t_c s (NULL::'a::mem_type ptr) = None"
-apply(case_tac s)
-apply(auto simp: lift_t_if)
-done
+  by (case_tac s) (auto simp: lift_t_if)
 
 lemma lift_t_ptr_aligned [simp]:
   "lift_t_c s p = Some v \<Longrightarrow> ptr_aligned p"
@@ -366,35 +329,24 @@ datatype strictc_errortype =
        | AdditionalError string
        | ImpossibleSpec
 
-definition
-  unspecified_syntax_error :: "string => bool"
-where
+definition unspecified_syntax_error :: "string \<Rightarrow> bool" where
   "unspecified_syntax_error s = False"
 
-lemmas hrs_simps = hrs_mem_update_def hrs_mem_def hrs_htd_update_def
-    hrs_htd_def
+lemmas hrs_simps = hrs_mem_update_def hrs_mem_def hrs_htd_update_def hrs_htd_def
 
 lemma sep_map'_lift_lift:
   fixes pa :: "'a :: mem_type ptr" and xf :: "'a \<Rightarrow> 'b :: mem_type"
-  assumes fl: "(field_lookup (typ_info_t TYPE('a)) f 0) \<equiv>
-  Some (adjust_ti (typ_info_t TYPE('b)) xf (xfu \<circ> (\<lambda>x _. x)), m')"
-  and   xf_xfu: "fg_cons xf (xfu \<circ> (\<lambda>x _. x))"
+  assumes fl: "field_lookup (typ_info_t TYPE('a)) f 0 \<equiv>
+                 Some (adjust_ti (typ_info_t TYPE('b)) xf (xfu \<circ> (\<lambda>x _. x)), m')"
+  and xf_xfu: "fg_cons xf (xfu \<circ> (\<lambda>x _. x))"
   shows "(pa \<hookrightarrow> v)(lift_state h) \<Longrightarrow> CTypesDefs.lift (fst h) (Ptr &(pa\<rightarrow>f)) = xf v"
   using fl xf_xfu
-  apply -
   apply (clarsimp simp: o_def)
-  apply (rule sep_map'_lift [OF sep_map'_field_map_inv, where g1=c_guard])
-      apply (subst (asm) surjective_pairing [where t = h])
-      apply assumption
-     apply fastforce
-    apply (subst export_tag_adjust_ti2 [OF _ wf_lf wf_desc])
-     apply (simp add: fg_cons_def)
-    apply (rule meta_eq_to_obj_eq [OF typ_uinfo_t_def, symmetric])
+  apply (rule sep_map'_lift [OF sep_map'_field_map_inv, where g1=c_guard]; simp?)
+     apply (subst (asm) surjective_pairing, assumption)
+    apply (simp add: typ_uinfo_t_def)
    apply (rule guard_mono_True)
-  apply (subst access_ti\<^sub>0_update_ti)
-  apply (subst access_ti\<^sub>0_to_bytes)
-  apply (subst o_def)
-  apply (rule inv_p [symmetric])
+  apply (simp add: o_def)
   done
 
 lemma lift_t_update_fld_other:
@@ -409,24 +361,13 @@ lemma lift_t_update_fld_other:
 proof -
   let ?ati = "adjust_ti (typ_info_t TYPE('b)) xf (xfu \<circ> (\<lambda>x _. x))"
   have eui: "typ_uinfo_t TYPE('b) = export_uinfo (?ati)" using xf_xfu
-    apply (subst export_tag_adjust_ti2 [OF _ wf_lf wf_desc])
-    apply (simp add: fg_cons_def )
-    apply (rule meta_eq_to_obj_eq [OF typ_uinfo_t_def])
-    done
+    by (simp add: typ_uinfo_t_def)
 
   have cl': "lift_t c_guard (fst hp, snd hp) ptr = Some z" using cl by simp
 
   show ?thesis using fl
     apply (clarsimp simp add: hrs_mem_update_def split_def field_ti_def split: option.splits)
-    apply (subst typ_rewrs(5))
-      apply (rule lift_t_mono)
-       apply assumption
-      apply (rule cl')
-       apply (rule eui [symmetric])
-      apply (rule guard_mono_True)
-     apply (rule disj)
-    apply simp
-    done
+    by (metis cl' disj eui fl h_t_valid_sub lift_t_h_t_valid lift_t_heap_update_same prod.collapse)
 qed
 
 lemma idupdate_compupdate_fold_congE:
@@ -444,25 +385,18 @@ lemma field_lookup_field_ti:
   "field_lookup (typ_info_t TYPE('a :: c_type)) f 0 \<equiv> Some (a, b) \<Longrightarrow> field_ti TYPE('a) f = Some a"
   unfolding field_ti_def by simp
 
-definition
-  lvar_nondet_init :: "(('c,'d) state_scheme \<Rightarrow> 'a) \<Rightarrow> (('a \<Rightarrow> 'a) \<Rightarrow> (('c, 'd) state_scheme \<Rightarrow> ('c, 'd) state_scheme))
-           \<Rightarrow> (('c, 'd) state_scheme, 'x, 'e) com"
-where
+definition lvar_nondet_init ::
+  "(('c,'d) state_scheme \<Rightarrow> 'a) \<Rightarrow> (('a \<Rightarrow> 'a) \<Rightarrow> (('c, 'd) state_scheme \<Rightarrow> ('c, 'd) state_scheme))
+      \<Rightarrow> (('c, 'd) state_scheme, 'x, 'e) com" where
   "lvar_nondet_init accessor upd \<equiv> Spec {(s, t). \<exists>v. t = (upd (\<lambda>_. v)) s}"
 
 axiomatization
-  asm_semantics :: "string \<Rightarrow> addr list
-    \<Rightarrow> (heap_mem \<times> 'a) \<Rightarrow> (addr \<times> (heap_mem \<times> 'a)) set"
-and
-  asm_fetch :: "'s \<Rightarrow> (heap_mem \<times> 'a)"
-and
+  asm_semantics :: "string \<Rightarrow> addr list \<Rightarrow> (heap_mem \<times> 'a) \<Rightarrow> (addr \<times> (heap_mem \<times> 'a)) set" and
+  asm_fetch :: "'s \<Rightarrow> (heap_mem \<times> 'a)" and
   asm_store :: "('s \<Rightarrow> 'b) \<Rightarrow> (heap_mem \<times> 'a) \<Rightarrow> 's \<Rightarrow> 's"
 where
-  asm_semantics_enabled:
-    "\<forall>iv. asm_semantics nm addr iv \<noteq> {}"
-and
-  asm_store_eq:
-    "\<forall>x s. ghost_data (asm_store ghost_data x s) = ghost_data s"
+  asm_semantics_enabled: "\<forall>iv. asm_semantics nm addr iv \<noteq> {}" and
+  asm_store_eq: "\<forall>x s. ghost_data (asm_store ghost_data x s) = ghost_data s"
 
 definition
   asm_spec :: "'a itself \<Rightarrow> ('g \<Rightarrow> 'b) \<Rightarrow> bool \<Rightarrow> string
@@ -472,8 +406,8 @@ definition
 where
   "asm_spec ti gdata vol spec lhs vs
     = {(s, s'). \<exists>(v', (gl' :: (heap_mem \<times> 'a)))
-            \<in> asm_semantics spec (vs s) (asm_fetch (globals s)).
-        s' = lhs v' (globals_update (asm_store gdata gl') s)}"
+                   \<in> asm_semantics spec (vs s) (asm_fetch (globals s)).
+                        s' = lhs v' (globals_update (asm_store gdata gl') s)}"
 
 lemma asm_spec_enabled:
   "\<exists>s'. (s, s') \<in> asm_spec ti gdata vol spec lhs vs"
@@ -482,25 +416,21 @@ lemma asm_spec_enabled:
   by (auto simp add: asm_spec_def)
 
 lemma asm_specE:
-  assumes s: "(s, s') \<in> asm_spec (ti :: 'a itself) gdata vol spec lhs vs"
-  and concl: "\<And>v' gl'. \<lbrakk> (v', (gl' :: (heap_mem \<times> 'a))) \<in> asm_semantics spec (vs s) (asm_fetch (globals s));
-        s' = lhs v' (globals_update (asm_store gdata gl') s);
-        gdata (asm_store gdata gl' (globals s)) = gdata (globals s) \<rbrakk>
-        \<Longrightarrow> P"
-  shows "P"
-  using s concl
+  "\<lbrakk> (s, s') \<in> asm_spec (ti :: 'a itself) gdata vol spec lhs vs;
+     \<And>v' gl'. \<lbrakk> (v', (gl' :: (heap_mem \<times> 'a))) \<in> asm_semantics spec (vs s) (asm_fetch (globals s));
+                 s' = lhs v' (globals_update (asm_store gdata gl') s);
+                 gdata (asm_store gdata gl' (globals s)) = gdata (globals s) \<rbrakk>
+              \<Longrightarrow> P \<rbrakk>
+  \<Longrightarrow> P"
   by (clarsimp simp: asm_spec_def asm_store_eq)
 
 lemmas state_eqE = arg_cong[where f="\<lambda>s. (globals s, state.more s)", elim_format]
 
 lemmas asm_store_eq_helper
     = arg_cong2[where f="(=)" and a="asm_store f v s"]
-      arg_cong2[where f="(=)" and c="asm_store f v s"]
-  for f v s
+      arg_cong2[where f="(=)" and c="asm_store f v s"] for f v s
 
-definition
-  asm_semantics_ok_to_ignore :: "'a itself \<Rightarrow> bool \<Rightarrow> string \<Rightarrow> bool"
-where
+definition asm_semantics_ok_to_ignore :: "'a itself \<Rightarrow> bool \<Rightarrow> string \<Rightarrow> bool" where
   "asm_semantics_ok_to_ignore ti volatile specifier
     = (\<forall>xs gl. snd ` asm_semantics specifier xs (gl :: (heap_mem \<times> 'a)) = {gl})"
 
