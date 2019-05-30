@@ -877,7 +877,7 @@ lemma finaliseCap_True_cases_ccorres:
                    \<and> ccap_relation (snd rv) (finaliseCap_ret_C.cleanupInfo_C rv'))
    ret__struct_finaliseCap_ret_C_'
    (invs') (UNIV \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. final_' s = from_bool final}
-                        \<inter> {s. exposed_' s = from_bool flag (* dave has name wrong *)}) []
+                        \<inter> {s. exposed_' s = from_bool flag \<comment> \<open>dave has name wrong\<close>}) []
    (finaliseCap cap final flag) (Call finaliseCap_'proc)"
   apply (subgoal_tac "\<not> isArchCap \<top> cap")
    prefer 2
@@ -996,7 +996,7 @@ lemma finaliseCap_True_standin_ccorres:
                    \<and> ccap_relation (snd rv) (finaliseCap_ret_C.cleanupInfo_C rv'))
    ret__struct_finaliseCap_ret_C_'
    (invs') (UNIV \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. final_' s = from_bool final}
-                        \<inter> {s. exposed_' s = from_bool True (* dave has name wrong *)}) []
+                        \<inter> {s. exposed_' s = from_bool True \<comment> \<open>dave has name wrong\<close>}) []
    (finaliseCapTrue_standin cap final) (Call finaliseCap_'proc)"
   unfolding finaliseCapTrue_standin_simple_def
   apply (case_tac "P :: bool" for P)
@@ -2466,7 +2466,7 @@ lemma finaliseCap_ccorres:
    (invs' and sch_act_simple and valid_cap' cap and (\<lambda>s. ksIdleThread s \<notin> capRange cap)
           and (\<lambda>s. 2 ^ capBits cap \<le> gsMaxObjectSize s))
    (UNIV \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. final_' s = from_bool final}
-                        \<inter> {s. exposed_' s = from_bool flag (* dave has name wrong *)}) []
+                        \<inter> {s. exposed_' s = from_bool flag \<comment> \<open>dave has name wrong\<close>}) []
    (finaliseCap cap final flag) (Call finaliseCap_'proc)"
   apply (rule_tac F="capAligned cap" in Corres_UL_C.ccorres_req)
    apply (clarsimp simp: valid_capAligned)

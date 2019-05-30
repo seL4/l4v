@@ -428,7 +428,7 @@ where
   (let cpde' = pde_lift cpde in
   case pde of
     InvalidPDE \<Rightarrow>
-      (\<exists>inv. cpde' = Some (Pde_pde_invalid inv)) (* seL4 uses invalid PDEs to stash other info *)
+      (\<exists>inv. cpde' = Some (Pde_pde_invalid inv)) \<comment> \<open>seL4 uses invalid PDEs to stash other info\<close>
   | PageTablePDE table \<Rightarrow>
     cpde' = Some (Pde_pde_coarse
       \<lparr> pde_pde_coarse_CL.address_CL = table \<rparr>)

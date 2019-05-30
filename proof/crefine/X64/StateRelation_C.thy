@@ -155,7 +155,7 @@ definition
 where
   "x64_irq_state_relation s s' \<equiv>
      case x86_irq_state_lift s' of
-       None \<Rightarrow> False (* should never happen *)
+       None \<Rightarrow> False \<comment> \<open>should never happen\<close>
      | Some x \<Rightarrow> s = x86_irq_state_to_H x"
 
 (* This is required for type collision shenanigans, 1024 matches above *)
@@ -210,7 +210,7 @@ where
   irq_masks s = irq_masks (phantom_machine_state_' s') \<and>
   irq_state s = irq_state (phantom_machine_state_' s') \<and>
   device_state s = device_state (phantom_machine_state_' s') \<and>
-  (* exclusive_state s = exclusive_state (phantom_machine_state_' s') \<and> *) (* FIXME x64:this is needed for infoflow so we'll leave it commented *)
+  \<comment> \<open>exclusive_state s = exclusive_state (phantom_machine_state_' s') \<and>\<close> \<comment> \<open>FIXME x64:this is needed for infoflow so we'll leave it commented\<close>
   machine_state_rest s = machine_state_rest (phantom_machine_state_' s')"
 
 
@@ -685,7 +685,7 @@ definition
 where
   "asid_map_relation pml4ptr casid_map \<equiv>
     case (asid_map_lift casid_map) of
-        None \<Rightarrow> False (* should never happen *)
+        None \<Rightarrow> False \<comment> \<open>should never happen\<close>
       | Some Asid_map_asid_map_none \<Rightarrow> pml4ptr = None
       | Some (Asid_map_asid_map_vspace vspace_root) \<Rightarrow> pml4ptr = Some (vspace_root_CL vspace_root)"
 

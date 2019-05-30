@@ -617,7 +617,7 @@ definition
       x64KSKernelVSpace_C
       (cioport_bitmap_to_H (the (clift (t_hrs_' cstate) (Ptr (symbol_table ''x86KSAllocatedIOPorts'')))))
       (ucast (num_ioapics_' cstate))
-      (* Map IRQ states to their Haskell equivalent, and out-of-bounds entries to X64IRQFree *)
+      \<comment> \<open>Map IRQ states to their Haskell equivalent, and out-of-bounds entries to X64IRQFree\<close>
       (case_option X64IRQFree id \<circ>
           (array_map_conv
             (\<lambda>x. map_option x86_irq_state_to_H (x86_irq_state_lift x))

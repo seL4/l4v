@@ -984,12 +984,12 @@ proof -
 qed
 
 lemma mdbNext_not_zero_eq:
-  "cmdbnode_relation n n' \<Longrightarrow> \<forall>s s'. (s, s') \<in> rf_sr (*ja \<and> (is_aligned (mdbNext n) 3)*)
+  "cmdbnode_relation n n' \<Longrightarrow> \<forall>s s'. (s, s') \<in> rf_sr \<comment> \<open>ja \<and> (is_aligned (mdbNext n) 3)\<close>
   \<longrightarrow> (mdbNext n \<noteq> 0) = (s' \<in> {_. mdbNext_CL (mdb_node_lift n') \<noteq> 0})"
   by (fastforce elim: cmdbnode_relationE)
 
 lemma mdbPrev_not_zero_eq:
-  "cmdbnode_relation n n' \<Longrightarrow> \<forall>s s'. (s, s') \<in> rf_sr (*ja\<and> (is_aligned (mdbPrev n) 3)*)
+  "cmdbnode_relation n n' \<Longrightarrow> \<forall>s s'. (s, s') \<in> rf_sr \<comment> \<open>ja\<and> (is_aligned (mdbPrev n) 3)\<close>
   \<longrightarrow> (mdbPrev n \<noteq> 0) = (s' \<in> {_. mdbPrev_CL (mdb_node_lift n') \<noteq> 0})"
   by (fastforce elim: cmdbnode_relationE)
 

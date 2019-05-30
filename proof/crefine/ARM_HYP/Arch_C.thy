@@ -319,6 +319,7 @@ proof -
   hence "cpspace_relation ?ks (underlying_memory (ksMachineState \<sigma>)) ?ks'"
     unfolding cpspace_relation_def
     apply -
+  supply image_cong_simp [cong del]
     apply (clarsimp simp: rl' cterl[unfolded ko_def] tag_disj_via_td_name
                  foldr_upd_app_if [folded data_map_insert_def] cte_C_size tcb_C_size)
     apply (subst cslift_ptr_retyp_helper[simplified])
@@ -973,13 +974,13 @@ definition
 definition
  "vm_attribs_relation attr attr' \<equiv>
        armPageCacheable_CL (vm_attributes_lift attr') = from_bool (armPageCacheable attr)
-       (* armParityEnabled_CL / armParityEnabled is not used on ARM with hypervisor
+       \<comment> \<open>armParityEnabled_CL / armParityEnabled is not used on ARM with hypervisor
           Note: Slight divergence between the generated vmAttributesFromWord in C which maps
                 across all the attributes, and the Haskell which explicitly sets the parity
                 enabled attribute to False.
                 In C, the complete set of attributes are passed around, then subsequently parity
                 attribute is ignored when constructing PTE/PDEs.
-        *)
+         \<close>
      \<and> armExecuteNever_CL (vm_attributes_lift attr') = from_bool (armExecuteNever attr)"
 
 lemma framesize_from_H_eqs:
@@ -5724,7 +5725,7 @@ lemma decodeVCPUSetTCB_ccorres:
               and (excaps_in_mem extraCaps \<circ> ctes_of)
               and K (isVCPUCap cp \<and> interpret_excaps extraCaps' = excaps_map extraCaps))
        (UNIV \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
-             (* FIXME ARMHYP this is a really inconvienient name *)
+             \<comment> \<open>FIXME ARMHYP this is a really inconvienient name\<close>
              \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
              ) hs
        (decodeVCPUSetTCB cp extraCaps
@@ -5811,7 +5812,7 @@ lemma decodeARMVCPUInvocation_ccorres:
               and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
               and sysargs_rel args buffer and valid_objs'
               and (valid_cap' (ArchObjectCap cp)))
-       (* whoever wrote the C code decided to name these arbitrarily differently from other functions *)
+       \<comment> \<open>whoever wrote the C code decided to name these arbitrarily differently from other functions\<close>
        (UNIV \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length_' s) = length args}
              \<inter> {s. slot_' s = cte_Ptr slot}

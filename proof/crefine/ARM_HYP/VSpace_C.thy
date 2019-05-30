@@ -2185,7 +2185,7 @@ lemma vcpu_switch_ccorres:
     (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj'
                      and valid_arch_state'
           and (case v of None \<Rightarrow> \<top> | Some new \<Rightarrow> vcpu_at' new))
-    (UNIV \<inter> {s. new_' s = option_to_ptr v (*(case v of None \<Rightarrow> NULL | Some new \<Rightarrow> vcpu_Ptr new)*) }) hs
+    (UNIV \<inter> {s. new_' s = option_to_ptr v \<comment> \<open>(case v of None \<Rightarrow> NULL | Some new \<Rightarrow> vcpu_Ptr new)\<close> }) hs
         (vcpuSwitch v) (Call vcpu_switch_'proc)"
   by (cases v; clarsimp simp: vcpu_switch_ccorres_None[simplified] vcpu_switch_ccorres_Some[simplified])
 
@@ -2456,7 +2456,7 @@ lemma ptrFromPAddr_mask6_simp[simp]:
 
 lemma doFlush_ccorres:
   "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask 6 = ps && mask 6
-        (* hyp version translates ps into kernel virtual before flushing *)
+        \<comment> \<open>ahyp version translates ps into kernel virtual before flushing\<close>
         \<and> ptrFromPAddr ps \<le> ptrFromPAddr ps + (ve - vs)
         \<and> unat (ve - vs) \<le> gsMaxObjectSize s)
      (\<lbrace>flushtype_relation t \<acute>invLabel___int\<rbrace> \<inter> \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end = ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace>) []

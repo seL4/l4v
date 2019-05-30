@@ -1045,7 +1045,6 @@ lemma tcb_ptr_to_ctcb_ptr_to_Ptr:
    apply (subgoal_tac "p + ctcb_offset + of_nat k \<in> {p + ctcb_offset..+b}")
     apply (simp add: field_simps)
    apply (erule intvlI)
-  apply (rule image_mono)
   apply clarsimp
   apply (drule intvlD)
   apply clarsimp
