@@ -733,9 +733,8 @@ lemma clift_ptr_retyps_gen_memset_same:
    apply (clarsimp simp: h_val_def)
    apply (simp only: Word.Abs_fnat_hom_mult hrs_mem_update)
    apply (frule_tac k="size_of TYPE('a)" in mult_le_mono1[where j=n, OF Suc_leI])
-   apply (subst heap_list_update_list)
-    apply (simp add: addr_card_def card_word word_bits_def)
-   apply simp
+   apply (subst heap_list_update_list; simp?)
+   apply (simp add: addr_card_def card_word word_bits_def)
   apply (clarsimp split: if_split)
   apply (simp add: h_val_def)
   apply (subst heap_list_update_disjoint_same, simp_all)
