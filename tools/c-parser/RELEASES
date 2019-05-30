@@ -92,3 +92,21 @@
 
       declare [[allow_underscore_idents=true]]
 - Fixes guards for some nested pointer-dereferences (VER 345)
+
+1.14
+- Builds with Isabelle2017
+- avoid complex call lvals
+- add x64 definitions and support for multiple architectures
+- improved performance of automatic modifies-proofs
+- improved tracing
+
+1.15
+- Builds with Isabelle2018
+- update documentation
+- always attach GCC attributes to vars in the AST
+
+1.16
+- Builds with Isabelle2019
+- added syntax for displaying pointer types (PTR and PTR_COERCE)
+- always emit long (type-wrangled) variable names,
+  provide short names as abbreviation
