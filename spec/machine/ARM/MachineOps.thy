@@ -104,7 +104,6 @@ definition
   storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
   where "storeWordVM w p \<equiv> return ()"
 
-consts' kernelWCET_us :: "64 word"
 consts' maxTimer_us :: "64 word"
 consts' timerPrecision :: "64 word"
 consts' max_ticks_to_us :: "64 word"
@@ -114,6 +113,13 @@ consts' us_to_ticks :: "64 word \<Rightarrow> 64 word"
 end
 
 qualify ARM (in Arch)
+
+axiomatization
+  kernelWCET_us :: "64 word"
+where
+  kernelWCET_us_pos: "0 < kernelWCET_us"
+and
+  kernelWCET_us_pos2: "0 < 2 * kernelWCET_us"
 
 axiomatization
   us_to_ticks :: "64 word \<Rightarrow> 64 word"
@@ -135,6 +141,9 @@ context Arch begin global_naming ARM
 
 definition
   "kernelWCET_ticks = us_to_ticks (kernelWCET_us)"
+
+lemma kernelWCET_ticks_pos2: "0 < 2 * kernelWCET_ticks"
+  by (metis ARM.kernelWCET_ticks_def ARM.kernelWCET_us_pos2 ARM.us_to_ticks_mult ARM.us_to_ticks_nonzero word_neq_0_conv)
 
 text \<open>
 This encodes the following assumptions:
