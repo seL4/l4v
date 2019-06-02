@@ -468,6 +468,8 @@ definition "MIN_REFILLS = 2"
 definition "MIN_BUDGET = 2 * kernelWCET_ticks"
 definition "MIN_BUDGET_US = 2 * kernelWCET_us"
 
+lemma MIN_BUDGET_pos: "0 < MIN_BUDGET" using MIN_BUDGET_def ARM.kernelWCET_ticks_pos2 by clarsimp
+
 definition "min_sched_context_bits = 8"
 definition "core_sched_context_bytes = (10 * 4 + (6 * 8))" (* RT *)
 definition "refill_size_bytes = 2 * 8"
