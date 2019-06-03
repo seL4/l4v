@@ -26,7 +26,7 @@
 theory MonadEq
 imports "Monad_WP/NonDetMonadVCG"
 begin
-      
+
 (* Setup "monad_eq" attributes. *)
 ML {*
 structure MonadEqThms = Named_Thms (

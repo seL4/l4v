@@ -297,7 +297,7 @@ proof -
   hence "cpspace_relation ?ks (underlying_memory (ksMachineState \<sigma>)) ?ks'"
     unfolding cpspace_relation_def
     apply -
-  supply image_cong_simp [cong del]
+    supply image_cong_simp [cong del]
     apply (clarsimp simp: rl' cterl[unfolded ko_def] tag_disj_via_td_name
                  foldr_upd_app_if [folded data_map_insert_def] cte_C_size tcb_C_size)
     apply (subst cslift_ptr_retyp_helper[simplified])

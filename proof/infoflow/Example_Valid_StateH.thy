@@ -218,23 +218,23 @@ definition
   Low_tcbH :: Structures_H.tcb
 where
   "Low_tcbH \<equiv> Thread
-     (* tcbCTable          = *) (CTE (CNodeCap Low_cnode_ptr 10 2 10)
+     \<comment> \<open>tcbCTable          =\<close> (CTE (CNodeCap Low_cnode_ptr 10 2 10)
                                      (MDB (Low_cnode_ptr + 0x20) 0 False False))
-     (* tcbVTable          = *) (CTE (ArchObjectCap (PageDirectoryCap Low_pd_ptr (Some Low_asid))) (MDB (Low_cnode_ptr + 0x30) 0 False False))
-     (* tcbReply           = *) (CTE (ReplyCap Low_tcb_ptr True True) (MDB 0 0 True True)) (* master reply cap to itself *)
-     (* tcbCaller          = *) (CTE NullCap Null_mdb)
-     (* tcbIPCBufferFrame  = *) (CTE NullCap Null_mdb)
-     (* tcbDomain          = *) Low_domain
-     (* tcbState           = *) Running
-     (* tcbMCPriority      = *) Low_mcp
-     (* tcbPriority        = *) Low_prio
-     (* tcbQueued          = *) False
-     (* tcbFault           = *) None
-     (* tcbTimeSlice       = *) Low_time_slice
-     (* tcbFaultHandler    = *) 0
-     (* tcbIPCBuffer       = *) 0
-     (* tcbBoundNotification        = *) None
-     (* tcbContext         = *) (ArchThread undefined)"
+     \<comment> \<open>tcbVTable          =\<close> (CTE (ArchObjectCap (PageDirectoryCap Low_pd_ptr (Some Low_asid))) (MDB (Low_cnode_ptr + 0x30) 0 False False))
+     \<comment> \<open>tcbReply           =\<close> (CTE (ReplyCap Low_tcb_ptr True True) (MDB 0 0 True True)) \<comment> \<open>master reply cap to itself\<close>
+     \<comment> \<open>tcbCaller          =\<close> (CTE NullCap Null_mdb)
+     \<comment> \<open>tcbIPCBufferFrame  =\<close> (CTE NullCap Null_mdb)
+     \<comment> \<open>tcbDomain          =\<close> Low_domain
+     \<comment> \<open>tcbState           =\<close> Running
+     \<comment> \<open>tcbMCPriority      =\<close> Low_mcp
+     \<comment> \<open>tcbPriority        =\<close> Low_prio
+     \<comment> \<open>tcbQueued          =\<close> False
+     \<comment> \<open>tcbFault           =\<close> None
+     \<comment> \<open>tcbTimeSlice       =\<close> Low_time_slice
+     \<comment> \<open>tcbFaultHandler    =\<close> 0
+     \<comment> \<open>tcbIPCBuffer       =\<close> 0
+     \<comment> \<open>tcbBoundNotification        =\<close> None
+     \<comment> \<open>tcbContext         =\<close> (ArchThread undefined)"
 
 
 text {* High's tcb *}
@@ -242,23 +242,23 @@ definition
   High_tcbH :: Structures_H.tcb
 where
   "High_tcbH \<equiv> Thread
-     (* tcbCTable          = *) (CTE (CNodeCap High_cnode_ptr 10 2 10)
+     \<comment> \<open>tcbCTable          =\<close> (CTE (CNodeCap High_cnode_ptr 10 2 10)
                                      (MDB (High_cnode_ptr + 0x20) 0 False False))
-     (* tcbVTable          = *) (CTE (ArchObjectCap (PageDirectoryCap High_pd_ptr (Some High_asid))) (MDB (High_cnode_ptr + 0x30) 0 False False))
-     (* tcbReply           = *) (CTE (ReplyCap High_tcb_ptr True True) (MDB 0 0 True True)) (* master reply cap to itself *)
-     (* tcbCaller          = *) (CTE NullCap Null_mdb)
-     (* tcbIPCBufferFrame  = *) (CTE NullCap Null_mdb)
-     (* tcbDomain          = *) High_domain
-     (* tcbState           = *) (BlockedOnNotification ntfn_ptr)
-     (* tcbMCPriority      = *) High_mcp
-     (* tcbPriority        = *) High_prio
-     (* tcbQueued          = *) False
-     (* tcbFault           = *) None
-     (* tcbTimeSlice       = *) High_time_slice
-     (* tcbFaultHandler    = *) 0
-     (* tcbIPCBuffer       = *) 0
-     (* tcbBoundNotification        = *) None
-     (* tcbContext         = *) (ArchThread undefined)"
+     \<comment> \<open>tcbVTable          =\<close> (CTE (ArchObjectCap (PageDirectoryCap High_pd_ptr (Some High_asid))) (MDB (High_cnode_ptr + 0x30) 0 False False))
+     \<comment> \<open>tcbReply           =\<close> (CTE (ReplyCap High_tcb_ptr True True) (MDB 0 0 True True)) \<comment> \<open>master reply cap to itself\<close>
+     \<comment> \<open>tcbCaller          =\<close> (CTE NullCap Null_mdb)
+     \<comment> \<open>tcbIPCBufferFrame  =\<close> (CTE NullCap Null_mdb)
+     \<comment> \<open>tcbDomain          =\<close> High_domain
+     \<comment> \<open>tcbState           =\<close> (BlockedOnNotification ntfn_ptr)
+     \<comment> \<open>tcbMCPriority      =\<close> High_mcp
+     \<comment> \<open>tcbPriority        =\<close> High_prio
+     \<comment> \<open>tcbQueued          =\<close> False
+     \<comment> \<open>tcbFault           =\<close> None
+     \<comment> \<open>tcbTimeSlice       =\<close> High_time_slice
+     \<comment> \<open>tcbFaultHandler    =\<close> 0
+     \<comment> \<open>tcbIPCBuffer       =\<close> 0
+     \<comment> \<open>tcbBoundNotification        =\<close> None
+     \<comment> \<open>tcbContext         =\<close> (ArchThread undefined)"
 
 
 text {* idle's tcb *}
@@ -267,22 +267,22 @@ definition
   idle_tcbH :: Structures_H.tcb
 where
   "idle_tcbH \<equiv> Thread
-     (* tcbCTable          = *) (CTE NullCap Null_mdb)
-     (* tcbVTable          = *) (CTE NullCap Null_mdb)
-     (* tcbReply           = *) (CTE NullCap Null_mdb)
-     (* tcbCaller          = *) (CTE NullCap Null_mdb)
-     (* tcbIPCBufferFrame  = *) (CTE NullCap Null_mdb)
-     (* tcbDomain          = *) default_domain
-     (* tcbState           = *) IdleThreadState
-     (* tcbMCPriority      = *) default_priority
-     (* tcbPriority        = *) default_priority
-     (* tcbQueued          = *) False
-     (* tcbFault           = *) None
-     (* tcbTimeSlice       = *) time_slice
-     (* tcbFaultHandler    = *) 0
-     (* tcbIPCBuffer       = *) 0
-     (* tcbBoundNotification        = *) None
-     (* tcbContext         = *) (ArchThread empty_context)"
+     \<comment> \<open>tcbCTable          =\<close> (CTE NullCap Null_mdb)
+     \<comment> \<open>tcbVTable          =\<close> (CTE NullCap Null_mdb)
+     \<comment> \<open>tcbReply           =\<close> (CTE NullCap Null_mdb)
+     \<comment> \<open>tcbCaller          =\<close> (CTE NullCap Null_mdb)
+     \<comment> \<open>tcbIPCBufferFrame  =\<close> (CTE NullCap Null_mdb)
+     \<comment> \<open>tcbDomain          =\<close> default_domain
+     \<comment> \<open>tcbState           =\<close> IdleThreadState
+     \<comment> \<open>tcbMCPriority      =\<close> default_priority
+     \<comment> \<open>tcbPriority        =\<close> default_priority
+     \<comment> \<open>tcbQueued          =\<close> False
+     \<comment> \<open>tcbFault           =\<close> None
+     \<comment> \<open>tcbTimeSlice       =\<close> time_slice
+     \<comment> \<open>tcbFaultHandler    =\<close> 0
+     \<comment> \<open>tcbIPCBuffer       =\<close> 0
+     \<comment> \<open>tcbBoundNotification        =\<close> None
+     \<comment> \<open>tcbContext         =\<close> (ArchThread empty_context)"
 
 definition
   irq_cte :: "Structures_H.cte"
@@ -1081,13 +1081,13 @@ lemma kh0H_SomeD:
 
 definition arch_state0H :: Arch.kernel_state where
   "arch_state0H \<equiv> ARMKernelState
-             (* armKSASIDTable    = *) Map.empty
-             (* armKSHWASIDTable  = *) Map.empty
-             (* armKSNextASID     = *) 0
-             (* armKSASIDMap      = *) Map.empty
-             (* armKSGlobalPD     = *) init_global_pd
-             (* armKSGlobalPTs    = *) []
-             (* armKSKernelVSpace = *)
+             \<comment> \<open>armKSASIDTable    =\<close> Map.empty
+             \<comment> \<open>armKSHWASIDTable  =\<close> Map.empty
+             \<comment> \<open>armKSNextASID     =\<close> 0
+             \<comment> \<open>armKSASIDMap      =\<close> Map.empty
+             \<comment> \<open>armKSGlobalPD     =\<close> init_global_pd
+             \<comment> \<open>armKSGlobalPTs    =\<close> []
+             \<comment> \<open>armKSKernelVSpace =\<close>
          (\<lambda>ref. if ref \<in> {kernel_base..kernel_base + mask 20} then ArmVSpaceKernelWindow
                 else ArmVSpaceInvalidRegion)"
 

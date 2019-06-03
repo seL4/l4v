@@ -1277,7 +1277,7 @@ proof (intro impI allI)
   hence "cpspace_relation ?ks  (underlying_memory (ksMachineState \<sigma>)) ?ks'"
     unfolding cpspace_relation_def
     apply -
-  supply image_cong_simp [cong del]
+    supply image_cong_simp [cong del]
     apply (clarsimp simp: rl' cterl tag_disj_via_td_name foldr_upd_app_if [folded data_map_insert_def]
       heap_to_user_data_def cte_C_size heap_to_device_data_def)
     apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard _ _ szo' _ zero],
@@ -1392,7 +1392,7 @@ proof (intro impI allI)
   hence "cpspace_relation ?ks  (underlying_memory (ksMachineState \<sigma>)) ?ks'"
     unfolding cpspace_relation_def
     apply -
-  supply image_cong_simp [cong del]
+    supply image_cong_simp [cong del]
     apply (clarsimp simp: rl' cterl tag_disj_via_td_name foldr_upd_app_if [folded data_map_insert_def]
       heap_to_user_data_def cte_C_size)
     apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard _ _ szo' _ zero],
@@ -1539,7 +1539,7 @@ proof (intro impI allI)
   hence "cpspace_relation ?ks (underlying_memory (ksMachineState \<sigma>)) ?ks'"
     unfolding cpspace_relation_def
     apply -
-  supply image_cong_simp [cong del]
+    supply image_cong_simp [cong del]
     apply (clarsimp simp: rl' cterl tag_disj_via_td_name foldr_upd_app_if [folded data_map_insert_def])
     apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard _ _ szo' _ zero],
       simp_all only: szo empty, simp_all)
@@ -1788,21 +1788,21 @@ proof (intro impI allI)
   hence "cpspace_relation ?ks (underlying_memory (ksMachineState \<sigma>))  ?ks'"
     unfolding cpspace_relation_def
     using pte_arr
-  supply image_cong_simp [cong del]
-  apply (clarsimp simp: rl' cterl cte_C_size tag_disj_via_td_name
-                        foldr_upd_app_if [folded data_map_insert_def])
-  apply (simp add: ht_rl)
-  apply (simp add: ptr_retyp_to_array[simplified])
-  apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard'], simp_all only: szo2 empty)
-     apply simp
-    apply (simp(no_asm) add: ptBits_def pageBits_def word_bits_def pteBits_def)
-   apply (simp add: zero)
-  apply (simp add: rl projectKOs del: pte_C_size)
-  apply (simp add: rl projectKO_opt_retyp_same ko_def projectKOs Let_def
-                   ptr_add_to_new_cap_addrs [OF szo']
-              cong: if_cong del: pte_C_size)
-  apply (erule cmap_relation_retype)
-  apply (insert relrl, auto)
+    supply image_cong_simp [cong del]
+    apply (clarsimp simp: rl' cterl cte_C_size tag_disj_via_td_name
+                          foldr_upd_app_if [folded data_map_insert_def])
+    apply (simp add: ht_rl)
+    apply (simp add: ptr_retyp_to_array[simplified])
+    apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard'], simp_all only: szo2 empty)
+       apply simp
+      apply (simp(no_asm) add: ptBits_def pageBits_def word_bits_def pteBits_def)
+     apply (simp add: zero)
+    apply (simp add: rl projectKOs del: pte_C_size)
+    apply (simp add: rl projectKO_opt_retyp_same ko_def projectKOs Let_def
+                     ptr_add_to_new_cap_addrs [OF szo']
+               cong: if_cong del: pte_C_size)
+    apply (erule cmap_relation_retype)
+    apply (insert relrl, auto)
   done
 
   moreover
@@ -1979,21 +1979,21 @@ proof (intro impI allI)
   hence "cpspace_relation ?ks (underlying_memory (ksMachineState \<sigma>))  ?ks'"
     unfolding cpspace_relation_def
     using pde_arr
-  supply image_cong_simp [cong del]
-  apply (clarsimp simp: rl' cterl cte_C_size tag_disj_via_td_name
-                        foldr_upd_app_if [folded data_map_insert_def])
-  apply (simp add: ht_rl)
-  apply (simp add: ptr_retyp_to_array[simplified])
-  apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard'], simp_all only: szo2 empty)
-     apply simp
-    apply (simp(no_asm) add: pdBits_def pageBits_def word_bits_def pdeBits_def)
-   apply (simp add: zero)
-  apply (simp add: rl projectKOs)
-  apply (simp add: rl projectKO_opt_retyp_same ko_def projectKOs Let_def
-                   ptr_add_to_new_cap_addrs [OF szo']
-              cong: if_cong)
-  apply (erule cmap_relation_retype)
-  apply (insert relrl, auto)
+    supply image_cong_simp [cong del]
+    apply (clarsimp simp: rl' cterl cte_C_size tag_disj_via_td_name
+                          foldr_upd_app_if [folded data_map_insert_def])
+    apply (simp add: ht_rl)
+    apply (simp add: ptr_retyp_to_array[simplified])
+    apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard'], simp_all only: szo2 empty)
+       apply simp
+      apply (simp(no_asm) add: pdBits_def pageBits_def word_bits_def pdeBits_def)
+     apply (simp add: zero)
+    apply (simp add: rl projectKOs)
+    apply (simp add: rl projectKO_opt_retyp_same ko_def projectKOs Let_def
+                     ptr_add_to_new_cap_addrs [OF szo']
+               cong: if_cong)
+    apply (erule cmap_relation_retype)
+    apply (insert relrl, auto)
   done
 
   moreover
@@ -2009,7 +2009,7 @@ proof (intro impI allI)
                          = (pde_stored_asid \<circ>\<^sub>m cslift x)"
     unfolding rf_sr_def
     using cpsp empty
-  supply image_cong_simp [cong del]
+    supply image_cong_simp [cong del]
     apply (clarsimp simp: rl' cterl cte_C_size tag_disj_via_td_name foldr_upd_app_if [folded data_map_insert_def])
     apply (simp add: ptr_retyp_to_array[simplified])
     apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard'], simp_all only: szo2 empty)
@@ -3659,7 +3659,7 @@ proof (intro impI allI)
     unfolding cpspace_relation_def
     using empty rc' szo
     apply -
-  supply image_cong_simp [cong del]
+    supply image_cong_simp [cong del]
     apply (clarsimp simp: rl' tag_disj_via_td_name cte_C_size ht_rl
                           foldr_upd_app_if [folded data_map_insert_def])
     apply (simp add: rl ko_def projectKOs p2dist
@@ -4375,7 +4375,7 @@ proof (intro impI allI)
     apply (rule cmap_relationI)
      apply (clarsimp simp: dom_heap_to_device_data cmap_relation_def dom_if image_Un
                            projectKO_opt_retyp_same projectKOs liftt_if[folded hrs_mem_def hrs_htd_def]
-                           hrs_htd_update hrs_mem_update ptr_retyps_valid dom_disj_union 
+                           hrs_htd_update hrs_mem_update ptr_retyps_valid dom_disj_union
                 simp flip: ptr_add_to_new_cap_addrs)
     apply (simp add: heap_to_device_data_def cuser_user_data_device_relation_def)
     done (* dont need to track all the device memory *)

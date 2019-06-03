@@ -120,7 +120,7 @@ where
     | PageTableCap  _ _ ad    \<Rightarrow> ad = None
     | PageDirectoryCap _ _ ad \<Rightarrow> ad = None
     | IrqHandlerCap _         \<Rightarrow> True
-(* LIMITATION: The following should probably eventually be true. *)
+\<comment> \<open>LIMITATION: The following should probably eventually be true.\<close>
     | IrqControlCap           \<Rightarrow> False
     | UntypedCap _ _ _          \<Rightarrow> False
     | AsidControlCap          \<Rightarrow> False

@@ -238,31 +238,31 @@ lemma tcb_configure_pre:
     \<guillemotleft>si_tcb_id \<mapsto>f root_tcb \<and>*
      (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
 
-     (* Root CNode. *)
+     \<comment> \<open>Root CNode.\<close>
      si_cnode_id \<mapsto>f CNode (empty_cnode si_cnode_size) \<and>*
-     (* Cap to the root CNode. *)
+     \<comment> \<open>Cap to the root CNode.\<close>
      (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
-     (* Cap that the root task has to it's own CNode. *)
+     \<comment> \<open>Cap that the root task has to its own CNode.\<close>
      (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>*
 
-     (* IRQ control cap *)
+     \<comment> \<open>IRQ control cap\<close>
      (si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>*
 
-     (* ASID caps. *)
+     \<comment> \<open>ASID caps.\<close>
       si_asid \<and>*
 
-     (* Client TCB. *)
+     \<comment> \<open>Client TCB.\<close>
      k_obj_id \<mapsto>f Tcb (default_tcb minBound) \<and>*
 
-     (* Cap to the client TCB. *)
+     \<comment> \<open>Cap to the client TCB.\<close>
      (si_cnode_id, tcb_slot) \<mapsto>c tcb_cap \<and>*
 
-     (* Caps to install in the TCB *)
+     \<comment> \<open>Caps to install in the TCB\<close>
      (si_cnode_id, cspace_slot) \<mapsto>c k_cspace_cap \<and>*
      (si_cnode_id, vspace_slot) \<mapsto>c k_vspace_cap \<and>*
      (si_cnode_id, buffer_frame_slot) \<mapsto>c k_buffer_frame_cap \<and>*
 
-     (* Caps slots in the TCB. *)
+     \<comment> \<open>Caps slots in the TCB.\<close>
      (k_obj_id, tcb_cspace_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_vspace_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_ipcbuffer_slot) \<mapsto>c NullCap \<and>*
@@ -504,20 +504,20 @@ lemma cdl_update_cnode_cap_data_non_zero:
               split: cdl_cap.splits)
 
 lemma seL4_TCB_Configure_sep:
-  "\<lbrakk>(* Caps point to the right objects. *)
+  "\<lbrakk>\<comment> \<open>Caps point to the right objects.\<close>
      cap_object cnode_cap = cnode_id;
      cap_object cnode_cap' = cnode_id;
 
      cap_object tcb_cap    = tcb_id;
 
-     (* Caps are of the right type. *)
+     \<comment> \<open>Caps are of the right type.\<close>
      is_tcb_cap tcb_cap;
      is_cnode_cap cnode_cap;
      is_cnode_cap cspace_cap;
      is_pd_cap vspace_cap;
      is_frame_cap buffer_frame_cap;
 
-     (* Cap slots match their cptrs. *)
+     \<comment> \<open>Cap slots match their cptrs.\<close>
      cnode_cap_slot = offset src_root root_size;
      tcb_cap_slot = offset tcb_root root_size;
      cspace_slot = offset cspace_root root_size;
@@ -539,30 +539,30 @@ lemma seL4_TCB_Configure_sep:
      si_tcb_id \<mapsto>f root_tcb \<and>*
      (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
 
-     (* Root CNode. *)
+     \<comment> \<open>Root CNode.\<close>
      cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*
-     (* Cap to the root CNode. *)
+     \<comment> \<open>Cap to the root CNode.\<close>
      (si_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
 
-     (* Cap that the root task has to it's own CNode. *)
+     \<comment> \<open>Cap that the root task has to it's own CNode.\<close>
      (cnode_id, cnode_cap_slot) \<mapsto>c cnode_cap' \<and>*
 
-     (* IRQ control cap *)
+     \<comment> \<open>IRQ control cap\<close>
      (si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>*
 
-     (* ASID caps. *)
+     \<comment> \<open>ASID caps.\<close>
      si_asid \<and>*
 
-     (* TCB's stuff *)
+     \<comment> \<open>TCB's stuff\<close>
      tcb_id    \<mapsto>f Tcb tcb \<and>*
 
-     (* Where to copy the cap from (in the client CNode). *)
+     \<comment> \<open>Where to copy the cap from (in the client CNode).\<close>
      (cnode_id, tcb_cap_slot) \<mapsto>c tcb_cap \<and>*
      (cnode_id, cspace_slot)  \<mapsto>c cspace_cap \<and>*
      (cnode_id, vspace_slot)  \<mapsto>c vspace_cap \<and>*
      (cnode_id, buffer_frame_slot) \<mapsto>c buffer_frame_cap \<and>*
 
-     (* Cap to the TCB. *)
+     \<comment> \<open>Cap to the TCB.\<close>
      (tcb_id, tcb_cspace_slot) \<mapsto>c NullCap \<and>*
      (tcb_id, tcb_vspace_slot) \<mapsto>c NullCap \<and>*
      (tcb_id, tcb_ipcbuffer_slot) \<mapsto>c NullCap \<and>*
@@ -574,29 +574,29 @@ lemma seL4_TCB_Configure_sep:
   \<lbrace>\<lambda>_. \<guillemotleft>si_tcb_id \<mapsto>f root_tcb \<and>*
        (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
 
-       (* Root CNode. *)
+       \<comment> \<open>Root CNode.\<close>
        cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*
-       (* Cap to the root CNode. *)
+       \<comment> \<open>Cap to the root CNode.\<close>
        (si_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
-       (* Cap that the root task has to it's own CNode. *)
+       \<comment> \<open>Cap that the root task has to its own CNode.\<close>
        (cnode_id, cnode_cap_slot) \<mapsto>c cnode_cap' \<and>*
 
-       (* IRQ control cap *)
+       \<comment> \<open>IRQ control cap\<close>
        (si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>*
 
-       (* ASID caps. *)
+       \<comment> \<open>ASID caps.\<close>
        si_asid \<and>*
 
-       (* TCB's stuff *)
+       \<comment> \<open>TCB's stuff\<close>
        tcb_id    \<mapsto>f Tcb new_tcb_fields \<and>*
 
-       (* Where to copy the cap from (in the client CNode). *)
+       \<comment> \<open>Where to copy the cap from (in the client CNode).\<close>
        (cnode_id, tcb_cap_slot) \<mapsto>c tcb_cap \<and>*
        (cnode_id, cspace_slot)  \<mapsto>c cspace_cap \<and>*
        (cnode_id, vspace_slot)  \<mapsto>c vspace_cap \<and>*
        (cnode_id, buffer_frame_slot) \<mapsto>c buffer_frame_cap \<and>*
 
-       (* Cap to the TCB. *)
+       \<comment> \<open>Cap to the TCB.\<close>
        (tcb_id, tcb_cspace_slot) \<mapsto>c cspace_cap' \<and>*
        (tcb_id, tcb_vspace_slot) \<mapsto>c vspace_cap \<and>*
        (tcb_id, tcb_ipcbuffer_slot) \<mapsto>c buffer_frame_cap \<and>*
@@ -657,9 +657,9 @@ lemma seL4_TCB_Configure_object_initialised_sep_helper:
     vspace_index < 2 ^ si_cnode_size;
     buffer_frame_index < 2 ^ si_cnode_size;
 
-(* Put this in later once we have priorities.
+\<comment> \<open>Put this in later once we have priorities.
     priority = tcb_priority tcb;
-    tcb_ipc_buffer_address tcb = buffer_addr; *)
+    tcb_ipc_buffer_address tcb = buffer_addr;\<close>
     buffer_addr \<noteq> 0;
     cspace_root_data = cap_data spec_cspace_cap;
     fault_ep = cdl_tcb_fault_endpoint tcb\<rbrakk>

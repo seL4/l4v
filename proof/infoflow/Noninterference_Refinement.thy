@@ -40,7 +40,7 @@ lemma LI_trans:
     apply blast
    apply (clarsimp simp: rel_semi_def)
    apply (erule_tac x=j in allE)+
-   apply (drule_tac x="(ya, z)" in set_mp)
+   apply (drule_tac c="(ya, z)" in set_mp)
     apply blast
    apply (clarsimp simp: invariant_holds_def)
    apply blast
@@ -88,7 +88,7 @@ lemma LI_sub_big_steps':
   apply (clarsimp simp: LI_def)
   apply (erule_tac x=e in allE)
   apply (clarsimp simp: rel_semi_def)
-  apply (drule_tac x="(t', ta)" in set_mp)
+  apply (drule_tac c="(t', ta)" in set_mp)
    apply (rule_tac b=s' in relcompI)
     apply simp
     apply (rule sub_big_steps_I_holds)
@@ -142,7 +142,7 @@ lemma LI_rel_terminate:
    apply (erule_tac x=a in allE)
    apply (clarsimp simp: rel_semi_def)
    apply (frule(1) sub_big_steps_I_holds[OF Ic_inv])
-   apply (drule_tac x="(t', s'')" in set_mp)
+   apply (drule_tac c="(t', s'')" in set_mp)
     apply blast
    apply clarsimp
    apply (erule_tac x=y in allE)
@@ -156,8 +156,8 @@ lemma LI_rel_terminate:
    using Ia_inv Ic_inv
    apply (clarsimp simp: invariant_holds_def inv_holds_def)
    apply (erule_tac x=a in allE)+
-   apply (drule_tac x=y in set_mp, blast)
-   apply (drule_tac x=z in set_mp, blast)
+   apply (drule_tac c=y in set_mp, blast)
+   apply (drule_tac c=z in set_mp, blast)
    apply simp
   apply clarsimp
   apply (cut_tac s0''=s0' in init_rel_correct, assumption+)
@@ -176,7 +176,7 @@ lemma LI_rel_terminate:
   apply (erule_tac x=a in allE)+
   apply (clarsimp simp: rel_semi_def)
   apply (frule(1) sub_big_steps_I_holds[OF Ic_inv])
-  apply (drule_tac x="(t', s'')" in set_mp)
+  apply (drule_tac c="(t', s'')" in set_mp)
    apply blast
   apply clarsimp
   apply (erule_tac x=y in allE)
@@ -190,8 +190,8 @@ lemma LI_rel_terminate:
   using Ia_inv Ic_inv
   apply (clarsimp simp: invariant_holds_def inv_holds_def)
   apply (erule_tac x=a in allE)+
-  apply (drule_tac x=y in set_mp, blast)
-  apply (drule_tac x=z in set_mp, blast)
+  apply (drule_tac c=y in set_mp, blast)
+  apply (drule_tac c=z in set_mp, blast)
   apply simp
   done
 

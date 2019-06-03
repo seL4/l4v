@@ -190,7 +190,8 @@ lemma repeat_n_nothing:
 lemma repeat_nothing:
   "repeat (\<lambda>_. {}) = return ()"
   by (simp add: repeat_def bind_def select_def repeat_n_nothing
-                Sigma_def if_fun_lift UN_If_distrib)
+                Sigma_def if_fun_lift UN_If_distrib return_def
+           cong del: image_cong_simp)
 
 lemma detrace_env_steps:
   "detrace env_steps = return ()"

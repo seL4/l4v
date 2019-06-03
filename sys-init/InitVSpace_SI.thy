@@ -645,7 +645,7 @@ lemma map_page_directory_slot_pt_wp:
       apply (clarsimp simp: pt_size_def small_frame_size_def word_of_nat_less word_bits_def
                             unat_of_nat32)
       apply (sep_fold_cancel, rule sep_map_sep_foldI)
-       apply (clarsimp simp: map2_def comp_def object_empty_decomp object_initialised_decomp
+       apply (clarsimp simp: map_def comp_def object_empty_decomp object_initialised_decomp
                              object_empty_slots_empty_initialised object_fields_empty_initialised_pt
                              object_slots_initialised_decomp object_slots_empty_decomp sep_conj_ac)
        apply sep_cancel+
@@ -1021,7 +1021,7 @@ lemma pd_quotient_eq_pts_of_pds:
    {x. pt_at x spec \<and> (\<exists>obj. pd_at obj spec \<and>
      (\<exists>slot\<in>dom (slots_of obj spec). cap_at cap_has_object (obj, slot) spec
                                     \<and> ref_obj spec obj slot = x))} // pd_equiv_class spec - {{}}"
-  apply (clarsimp simp: image_def quotient_def Image_def)
+  apply (clarsimp simp: image_def quotient_def Image_def cong: SUP_cong_simp)
   apply (intro set_eqI iffI; clarsimp simp: cap_at_def)
    apply (guess_exI)
    apply safe

@@ -202,8 +202,8 @@ definition
                   0x1FE       \<mapsto> IRQNode empty_irq_node],
    cdl_cdt = [(cnode_a2_id, 0)  \<mapsto> (cnode_extra_id, 1),
               (cnode_b_id,  4)  \<mapsto> (cnode_extra_id, 1),
-              (cnode_a2_id, 10) \<mapsto> (cnode_extra_id, 2)], (* All caps are orig caps,
-                                                            except endpoints and notifications. *)
+              (cnode_a2_id, 10) \<mapsto> (cnode_extra_id, 2)], \<comment> \<open>All caps are orig caps,
+                                                            except endpoints and notifications.\<close>
    cdl_current_thread = undefined,
    cdl_irq_node = example_irq_node,
    cdl_asid_table = undefined,

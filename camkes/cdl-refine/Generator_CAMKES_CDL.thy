@@ -415,7 +415,7 @@ definition
   tcb_objs :: "camkes_state \<Rightarrow> (string \<times> cdl_object) list"
 where
   "tcb_objs spec \<equiv> concat (
-     (* The 'control' TCB *)
+     \<comment> \<open>The 'control' TCB\<close>
      map (\<lambda>(n, c). (n @ ''_tcb_0_control'', Types_D.Tcb \<lparr>cdl_tcb_caps = [
        cspace \<mapsto> Types_D.CNodeCap (the_cnode_of n) (cnode_guard spec n) (cnode_guard_size spec n)
                    (cnode_size_bits spec n),
@@ -426,7 +426,7 @@ where
                         cdl_tcb_has_fault = False,
                         cdl_tcb_domain = 0\<rparr>) #
 
-     (* The interface TCBs *)
+     \<comment> \<open>The interface TCBs\<close>
      map (\<lambda>(i, inf). (n @ ''_tcb_'' @ inf, Types_D.Tcb \<lparr>cdl_tcb_caps = [
        cspace \<mapsto> Types_D.CNodeCap (the_cnode_of n) (cnode_guard spec n) (cnode_guard_size spec n)
                    (cnode_size_bits spec n),
@@ -488,7 +488,7 @@ definition
 where
   "poa_of spec extra irqs \<equiv> (\<lambda>id. case (
 
-     (* Labelling of the output of the low-level generator: *)
+     \<comment> \<open>Labelling of the output of the low-level generator:\<close>
      fold (++)
        (map (\<lambda>(name, _). [the_id_of name \<mapsto> behead name ''cnode_'']) (cnode_objs spec))
          Map.empty
@@ -500,7 +500,7 @@ where
      fold (++)
        (map (\<lambda>(name, _). [the_id_of name \<mapsto> behead name ''tcb_'']) (tcb_objs spec)) Map.empty
 
-     (* Labelling of address space objects: *)
+     \<comment> \<open>Labelling of address space objects:\<close>
      ++
      (\<lambda>id. case extra id of
              Some _ \<Rightarrow> if \<exists>name. id_of name = Some id
@@ -510,7 +510,7 @@ where
                           else None
            | None \<Rightarrow> None)
 
-     (* Labelling of IRQ objects: *)
+     \<comment> \<open>Labelling of IRQ objects:\<close>
      ++
      (\<lambda>id. if id \<in> dom (irqs_objects irqs)
               then Some irq_label
