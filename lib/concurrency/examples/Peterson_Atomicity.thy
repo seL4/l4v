@@ -188,15 +188,15 @@ lemmas invs_defs = req_peterson_inv_def key_peterson_inv_def local_peterson_inv_
 definition
   peterson_rel :: "ident \<Rightarrow> ('a, 'b) p_state \<Rightarrow> ('a, 'b) p_state \<Rightarrow> bool"
 where
-  "peterson_rel ident s_prior s = ((* assume invs *) invs s_prior \<longrightarrow>
-            (* invariants are preserved *)
+  "peterson_rel ident s_prior s = (\<comment> \<open>assume invs\<close> invs s_prior \<longrightarrow>
+            \<comment> \<open>invariants are preserved\<close>
         (invs s
-            (* I won't adjust your variables *)
+            \<comment> \<open>I won't adjust your variables\<close>
         \<and> (ab_v s (other_ident ident) = ab_v s_prior (other_ident ident))
         \<and> (ab_label s (other_ident ident) = ab_label s_prior (other_ident ident))
-            (* I will only ever give you priority *)
+            \<comment> \<open>I will only ever give you priority\<close>
         \<and> (t_v s_prior = other_ident ident \<longrightarrow> t_v s = other_ident ident)
-            (* If you're in the critical section, I won't change cs2_v and cs1_v *)
+            \<comment> \<open>If you're in the critical section, I won't change cs2_v and cs1_v\<close>
         \<and> (critical (ab_label s_prior (other_ident ident))
                 \<longrightarrow> cs2_v s = cs2_v s_prior \<and> cs1_v s = cs1_v s_prior)
   ))"
@@ -607,23 +607,23 @@ theorem peterson_proc_refinement:
 definition
   peterson_rel2 :: "ident \<Rightarrow> ('a, 'b) p_state \<Rightarrow> ('a, 'b) p_state \<Rightarrow> bool"
 where
-  "peterson_rel2 ident s_prior s = ((* assume invs *) invs s_prior \<longrightarrow>
-            (* If you're in the critical section, I won't change cs1_v *)
+  "peterson_rel2 ident s_prior s = (\<comment> \<open>assume invs\<close> invs s_prior \<longrightarrow>
+            \<comment> \<open>If you're in the critical section, I won't change cs1_v\<close>
         (critical (ab_label s_prior (other_ident ident))
                 \<longrightarrow> cs1_v s = cs1_v s_prior))"
 
 definition
   peterson_rel3 :: "ident \<Rightarrow> ('a, 'b) p_state \<Rightarrow> ('a, 'b) p_state \<Rightarrow> bool"
 where
-  "peterson_rel3 ident s_prior s = ((* assume invs *) invs s_prior \<longrightarrow>
-            (* invariants are preserved *)
+  "peterson_rel3 ident s_prior s = (\<comment> \<open>assume invs\<close> invs s_prior \<longrightarrow>
+            \<comment> \<open>invariants are preserved\<close>
         (invs s
-            (* I won't adjust your variables *)
+            \<comment> \<open>I won't adjust your variables\<close>
         \<and> (ab_v s (other_ident ident) = ab_v s_prior (other_ident ident))
         \<and> (ab_label s (other_ident ident) = ab_label s_prior (other_ident ident))
-            (* I will only ever give you priority *)
+            \<comment> \<open>I will only ever give you priority\<close>
         \<and> (t_v s_prior = other_ident ident \<longrightarrow> t_v s = other_ident ident)
-            (* If you're in the critical section, I won't change cs2_v *)
+            \<comment> \<open>If you're in the critical section, I won't change cs2_v\<close>
         \<and> (critical (ab_label s_prior (other_ident ident))
                 \<longrightarrow> cs2_v s = cs2_v s_prior)))"
 

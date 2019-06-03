@@ -86,16 +86,16 @@ definition
   wellformed_component :: "component \<Rightarrow> bool"
 where
   "wellformed_component c \<equiv>
-     (* No symbol collisions *)
+     \<comment> \<open>No symbol collisions\<close>
     (distinct (map fst (requires c) @ map fst (provides c) @ map fst (dataports c) @
      map fst (emits c) @ map fst (consumes c)) \<and>
-     (* No C symbol collisions. *)
+     \<comment> \<open>No C symbol collisions.\<close>
     (\<forall>x \<in> set (requires c). wellformed_procedure (snd x)) \<and>
     (\<forall>x \<in> set (provides c). wellformed_procedure (snd x)) \<and>
-     (* Events valid. *)
+     \<comment> \<open>Events valid.\<close>
     (\<forall>x \<in> set (emits c). wellformed_event (snd x)) \<and>
     (\<forall>x \<in> set (consumes c). wellformed_event (snd x)) \<and>
-     (* Dataports valid. *)
+     \<comment> \<open>Dataports valid.\<close>
     (\<forall>x \<in> set (dataports c). wellformed_dataport (snd x)))"
 
 subsection {* \label{subsec:wconnectors}Connectors *}
@@ -183,7 +183,7 @@ where
   wellformed_connector (conn_type conn) \<and>
   (case conn_type conn of
     SyncConnector _ \<Rightarrow>
-      (* Corresponding procedures exist. *)
+      \<comment> \<open>Corresponding procedures exist.\<close>
         (\<forall>to \<in> set (to_components conn).
            \<exists>1comp \<in> component_list.
              fst comp = to \<and> does_provide (snd comp) (to_interfaces conn))
@@ -191,7 +191,7 @@ where
            \<exists>1comp \<in> component_list.
              fst comp = from \<and> does_require (snd comp) (from_interfaces conn))
   | AsyncConnector _ \<Rightarrow>
-      (* Corresponding events exist. *)
+      \<comment> \<open>Corresponding events exist.\<close>
         (\<forall>to \<in> set (to_components conn).
            \<exists>1comp \<in> component_list.
              fst comp = to \<and> does_consume (snd comp) (to_interfaces conn))
@@ -199,7 +199,7 @@ where
            \<exists>1comp \<in> component_list.
              fst comp = from \<and> does_emit (snd comp) (from_interfaces conn))
   | MemoryConnector _ \<Rightarrow>
-      (* Corresponding dataports exist. *)
+      \<comment> \<open>Corresponding dataports exist.\<close>
         (\<forall>to \<in> set (to_components conn).
            \<exists>1comp \<in> component_list.
              fst comp = to \<and> has_dataport (snd comp) (to_interfaces conn))
@@ -231,16 +231,16 @@ definition
   wellformed_composition :: "composition \<Rightarrow> bool"
 where
   "wellformed_composition c \<equiv>
-     (* This system contains \<ge> 1 active component. *)
+     \<comment> \<open>This system contains @{text \<open>\<ge> 1\<close>} active component.\<close>
     (\<exists>x \<in> set (components c). control (snd x)) \<and>
-     (* All references resolve. *)
+     \<comment> \<open>All references resolve.\<close>
     refs_valid_composition c \<and>
-     (* All connectors and components have distinct names.
-        These names will correspond to integrity policy labels. *)
+     \<comment> \<open>All connectors and components have distinct names.
+        These names will correspond to integrity policy labels.\<close>
     distinct (map fst (components c) @ map fst (connections c)) \<and>
-     (* All components are valid. *)
+     \<comment> \<open>All components are valid.\<close>
     (\<forall>x \<in> set (components c). wellformed_component (snd x)) \<and>
-     (* All connections are valid. *)
+     \<comment> \<open>All connections are valid.\<close>
     (\<forall>x \<in> set (connections c). wellformed_connection (snd x))"
 
 (*<*)

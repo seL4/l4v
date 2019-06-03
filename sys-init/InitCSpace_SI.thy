@@ -367,28 +367,28 @@ lemma mint_pre:
     \<guillemotleft>si_tcb_id \<mapsto>f root_tcb \<and>*
      (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
 
-     (* Root CNode. *)
+     \<comment> \<open>Root CNode.\<close>
      si_cnode_id \<mapsto>f CNode (empty_cnode si_cnode_size) \<and>*
-     (* Client cnode. *)
+     \<comment> \<open>Client cnode.\<close>
      dest_id \<mapsto>f CNode (empty_cnode dest_size) \<and>*
 
-     (* Cap to the root CNode. *)
+     \<comment> \<open>Cap to the root CNode.\<close>
      (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
-     (* Cap to the client CNode. *)
+     \<comment> \<open>Cap to the client CNode.\<close>
      (si_cnode_id, dest_root_slot) \<mapsto>c dest_root_cap \<and>*
-     (* Cap that the root task has to it's own CNode. *)
+     \<comment> \<open>Cap that the root task has to its own CNode.\<close>
      (si_cnode_id, cnode_cap_slot) \<mapsto>c si_cnode_cap \<and>*
-     (* Cap to be copied, in the root CNode. *)
+     \<comment> \<open>Cap to be copied, in the root CNode.\<close>
      (si_cnode_id, src_slot) \<mapsto>c src_cap dev \<and>*
-     (* Where to copy the cap (in the client CNode). *)
+     \<comment> \<open>Where to copy the cap (in the client CNode).\<close>
      (dest_id, dest_slot) \<mapsto>c NullCap \<and>*
-     (* IRQ control cap *)
+     \<comment> \<open>IRQ control cap\<close>
      (si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>*
-     (* ASID caps. *)
+     \<comment> \<open>ASID caps.\<close>
      si_asid \<and>*
       R\<guillemotright> s \<and>
 
-     (* Cap slots match their cptrs. *)
+     \<comment> \<open>Cap slots match their cptrs.\<close>
      one_lvl_lookup si_cspace_cap 32 si_cnode_size \<and>
      one_lvl_lookup si_cspace_cap 32 si_cnode_size \<and>
      one_lvl_lookup si_cspace_cap (unat src_depth) si_cnode_size \<and>
@@ -482,28 +482,28 @@ lemma move_pre_irq_handler:
     \<guillemotleft>si_tcb_id \<mapsto>f root_tcb \<and>*
      (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
 
-     (* Root CNode. *)
+     \<comment> \<open>Root CNode.\<close>
      si_cnode_id \<mapsto>f CNode (empty_cnode si_cnode_size) \<and>*
-     (* Client cnode. *)
+     \<comment> \<open>Client cnode.\<close>
      dest_id \<mapsto>f CNode (empty_cnode dest_size) \<and>*
 
-     (* Cap to the root CNode. *)
+     \<comment> \<open>Cap to the root CNode.\<close>
      (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
-     (* Cap to the client CNode. *)
+     \<comment> \<open>Cap to the client CNode.\<close>
      (si_cnode_id, dest_root_slot) \<mapsto>c dest_root_cap \<and>*
-     (* Cap that the root task has to it's own CNode. *)
+     \<comment> \<open>Cap that the root task has to its own CNode.\<close>
      (si_cnode_id, cnode_cap_slot) \<mapsto>c si_cnode_cap \<and>*
-     (* Cap to be copied, in the root CNode. *)
+     \<comment> \<open>Cap to be copied, in the root CNode.\<close>
      (si_cnode_id, src_slot) \<mapsto>c spec_cap \<and>*
-     (* Where to copy the cap (in the client CNode). *)
+     \<comment> \<open>Where to copy the cap (in the client CNode).\<close>
      (dest_id, dest_slot) \<mapsto>c NullCap \<and>*
-     (* IRQ control cap *)
+     \<comment> \<open>IRQ control cap\<close>
      (si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>*
-     (* ASID caps. *)
+     \<comment> \<open>ASID caps.\<close>
      si_asid \<and>*
       R\<guillemotright> s \<and>
 
-     (* Cap slots match their cptrs. *)
+     \<comment> \<open>Cap slots match their cptrs.\<close>
      one_lvl_lookup si_cspace_cap 32 si_cnode_size \<and>
      one_lvl_lookup si_cspace_cap 32 si_cnode_size \<and>
      one_lvl_lookup si_cspace_cap (unat src_depth) si_cnode_size \<and>
@@ -577,7 +577,7 @@ lemma mint_post:
     src_index < 2 ^ si_cnode_size;
     dest_root < 2 ^ si_cnode_size;
 
-    (* Remove me. *)
+    \<comment> \<open>Remove me.\<close>
     \<not> is_untyped_cap spec_cap;
     spec_cap \<noteq> NullCap;
 

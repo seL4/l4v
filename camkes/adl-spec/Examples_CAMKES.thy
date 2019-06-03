@@ -449,7 +449,7 @@ definition
 where
   "x \<equiv> \<lparr>
     control = undefined,
-    requires = [(undefined, undefined)], (* 1 required interface...*)
+    requires = [(undefined, undefined)], \<comment> \<open>1 required interface...\<close>
     provides = undefined,
     dataports = undefined,
     emits = undefined,
@@ -462,7 +462,7 @@ definition
 where
   "broken_assembly \<equiv> \<lparr>composition = \<lparr>
     components = [(undefined, x)],
-    connections = [] (*... that is unsatisfied. *)
+    connections = [] \<comment> \<open>... that is unsatisfied.\<close>
   \<rparr>, configuration = undefined\<rparr>"
 
 lemma "\<not> wellformed_assembly broken_assembly"

@@ -251,7 +251,7 @@ definition set_asid :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl
                                                                          \<Rightarrow> unit u_monad"
 where
   "set_asid spec orig_caps page_id \<equiv> do
-    (* Set asid pool for the page directory. *)
+    \<comment> \<open>Set asid pool for the page directory.\<close>
     sel4_asid_pool \<leftarrow> return seL4_CapInitThreadASIDPool;
     sel4_page \<leftarrow> assert_opt $ orig_caps page_id;
     fail \<leftarrow> seL4_ASIDPool_Assign sel4_asid_pool sel4_page;
@@ -321,9 +321,9 @@ where
     frame_cap  \<leftarrow> assert_opt $ opt_cap (pt_id, pt_slot) spec;
     page       \<leftarrow> return $ cap_object frame_cap;
 
-    (* The page's virtual address is the page table's virtual address,
+    \<comment> \<open>The page's virtual address is the page table's virtual address,
        plus the relative address of the page in the page table.
-       Each page stores 12 bits of memory. *)
+       Each page stores 12 bits of memory.\<close>
     page_vaddr   \<leftarrow> return $ pt_vaddr + (of_nat pt_slot << small_frame_size);
     page_rights  \<leftarrow> return (cap_rights frame_cap);
     when (frame_cap \<noteq> NullCap)
@@ -339,8 +339,8 @@ where
     page        \<leftarrow> return $ cap_object page_cap;
     page_slots  \<leftarrow> return $ slots_of_list spec page;
 
-    (* The page's virtual address is given by the number of slots and how much memory each maps.
-       Each page directory slot maps 10+12 bits of memory (by the page table and page respectively). *)
+    \<comment> \<open>The page table's virtual address is given by the number of slots and how much memory each maps.
+       Each page directory slot maps 10+12 bits of memory (by the page table and page respectively).\<close>
     page_vaddr  \<leftarrow> return $ of_nat pd_slot << (pt_size + small_frame_size);
 
     when (fake_pt_cap_at (pd_id, pd_slot) spec)
@@ -385,35 +385,35 @@ where
 
     target_cap_rights     \<leftarrow> return (cap_rights target_cap);
 
-    (* for endpoint this is the badge, for cnodes, this is the (encoded) guard *)
+    \<comment> \<open>for endpoint this is the badge, for cnodes, this is the (encoded) guard\<close>
     target_cap_data \<leftarrow> return (cap_data target_cap);
 
     is_ep_cap   \<leftarrow> return (ep_related_cap target_cap);
     is_irqhandler_cap \<leftarrow> return (is_irqhandler_cap target_cap);
 
-    (* Any original caps (which includes IRQ Hander caps) are moved, not copied. *)
+    \<comment> \<open>ny original caps (which includes IRQ Hander caps) are moved, not copied.\<close>
     move_cap \<leftarrow> return (original_cap_at (cnode_id, cnode_slot) spec);
 
     dest_obj   \<leftarrow> get_spec_object spec cnode_id;
     dest_size  \<leftarrow> return (object_size_bits dest_obj);
 
-    (* Use a copy of the cap to reference the destination,
-        in case the original has already been moved. *)
+    \<comment> \<open>Use a copy of the cap to reference the destination,
+        in case the original has already been moved.\<close>
     dest_root  \<leftarrow> assert_opt (dup_caps cnode_id);
     dest_index \<leftarrow> return (of_nat cnode_slot);
     dest_depth \<leftarrow> return (of_nat dest_size);
 
-    (* Use an original cap to reference the object to copy. *)
+    \<comment> \<open>Use an original cap to reference the object to copy.\<close>
     src_root   \<leftarrow> return seL4_CapInitThreadCNode;
     src_index  \<leftarrow> assert_opt (if is_irqhandler_cap
                               then irq_caps target_cap_irq
                               else orig_caps target_cap_obj);
     src_depth  \<leftarrow> return (32::word32);
 
-    (* If it's a NullCap, then there's no need to do anything.
-     * If it's a cap that wants to be moved, and we want to move the cap, move (mutate) it.
-     * If it's a cap that wants to be copied, and we want to copy it, then copy (mint) it.
-     *)
+    \<comment> \<open>If it's a NullCap, then there's no need to do anything.
+     d If it's a cap that wants to be moved, and we want to move the cap, move (mutate) it.
+      If it's a cap that wants to be copied, and we want to copy it, then copy (mint) it.
+     \<close>
     if (target_cap = NullCap) then
       return True
     else if (mode = Move \<and> move_cap) then (
