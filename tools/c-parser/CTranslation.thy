@@ -183,4 +183,6 @@ lemma proc_deps_lvar_nondet_init [simp]:
   "proc_deps (lvar_nondet_init accessor upd) \<Gamma> = {}"
   by (simp add: lvar_nondet_init_def)
 
+declare word_neq_0_conv[simp] (* FIXME: for backward compatibility; remove *)
+
 end
