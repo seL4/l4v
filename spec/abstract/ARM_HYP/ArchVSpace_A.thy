@@ -498,7 +498,7 @@ where
           vcpu_save_reg_range vr VCPURegACTLR VCPURegSPSRfiq;
           do_machine_op isb
        od
-     | _ \<Rightarrow> fail \<comment> \<open>vcpu_save: no VCPU to save\<close>"
+     | _ \<Rightarrow> fail"
 
 text {* Register + context restore for VCPUs *}
 definition

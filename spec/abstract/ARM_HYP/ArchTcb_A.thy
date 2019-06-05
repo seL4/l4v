@@ -35,7 +35,7 @@ where
       CPSR \<Rightarrow>
        if t \<and>
           v && 0x1f \<in> {0x10, 0x11, 0x12, 0x13, 0x17, 0x1b, 0x1f}
-            \<comment> \<open>PMODE_(USER/FIQ/IRQ/SUPERVISOR/ABORT/UNDEFINED/SYSTEM)\<close>
+            \<comment> \<open>@{text \<open>PMODE_(USER/FIQ/IRQ/SUPERVISOR/ABORT/UNDEFINED/SYSTEM)\<close>}\<close>
        then v
        else (v && 0xf8000000) || 0x150
     | _    \<Rightarrow> v"
