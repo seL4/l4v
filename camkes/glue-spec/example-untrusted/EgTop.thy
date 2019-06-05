@@ -13,9 +13,9 @@ imports GenFilterSystem
 begin
 (*>*)
 
-subsection {* \label{ssec:archprop}Architectural Properties *}
+subsection \<open>\label{ssec:archprop}Architectural Properties\<close>
 
-text {*
+text \<open>
   Using the most generalised (untrusted) version of the system, we cannot show
   anything except architectural properties. These are true by construction of
   the generated system. To demonstrate this, we show a proof that the
@@ -24,7 +24,7 @@ text {*
   First we introduce some definitions to aid the statement of the property. A
   predicate specifying that a component sends on a given channel is defined as
   @{term sends_on}.
-*}
+\<close>
 
 fun
   sends_on :: "channel \<Rightarrow> component \<Rightarrow> bool"
@@ -37,10 +37,10 @@ where
  | "sends_on c (a \<squnion> b) = (sends_on c a \<or> sends_on c b)"
  | "sends_on _ _ = False"
 
-text {*
+text \<open>
   The corresponding predicate for receiving on a channel is defined as
   @{term receives_on}.
-*}
+\<close>
 
 fun
   receives_on :: "channel \<Rightarrow> component \<Rightarrow> bool"
@@ -54,20 +54,20 @@ where
  | "receives_on c (a \<squnion> b) = (receives_on c a \<or> receives_on c b)"
  | "receives_on _ _ = False"
 
-text {*
+text \<open>
   Now whether a component communicates on a channel can be defined as the
   disjunction of these two.
-*}
+\<close>
 
 definition
   communicates_on :: "channel \<Rightarrow> component \<Rightarrow> bool"
 where
   "communicates_on ch c \<equiv> sends_on ch c \<or> receives_on ch c"
 
-text {*
+text \<open>
   We can now state, and prove, the property that @{term client} and
   @{term store} never directly communicate.
-*}
+\<close>
 
 lemma "\<forall>c.
   \<not>(communicates_on c client_untrusted \<and> communicates_on c store_untrusted)"
@@ -79,13 +79,13 @@ lemma "\<forall>c.
   apply (case_tac c, clarsimp+)
   done
 
-text {*
+text \<open>
   Were we to try reasoning about a property of the system that depended upon
   the behaviour of any component in the system, we would not be able to do it
   using the existing definitions. To show a property of this form we need to
   provide a more precise definition of the critical components. An example of
   this is shown in the next section.
-*}
+\<close>
 
 (*<*)
 (* Whether a component ever sends a question in a given set. *)
@@ -99,11 +99,11 @@ where
  | "sends (a \<squnion> b) qs = (sends a qs \<or> sends b qs)"
  | "sends _ _ = False"
 
-text {*
+text \<open>
   Reasoning about a property of the system execution itself is not possible
   because we have not described what the components themselves actually do. For
   example, proving that the client never reads the secret is not possible.
-*}
+\<close>
 
 lemma "\<forall>p. \<exists>e s. gs\<^sub>0 p = Some (e, s) \<and>
            (e = client_untrusted \<or>

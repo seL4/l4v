@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-chapter {* ARM_HYP-specific definitions for abstract datatype for the abstract specification *}
+chapter \<open>ARM_HYP-specific definitions for abstract datatype for the abstract specification\<close>
 
 theory ArchADT_AI
 imports
@@ -23,9 +23,9 @@ lemma word_1FF_is_mask:
 
 (*** FIXME end ***)
 
-subsection {* Constructing a virtual-memory view *}
+subsection \<open>Constructing a virtual-memory view\<close>
 
-text {*
+text \<open>
   Function @{text get_pd_of_thread} takes three parameters:
   the kernel heap, the architecture-specific state, and
   a thread identifier.
@@ -44,7 +44,7 @@ text {*
   to a page directory with valid mapping data.
   Note that the mapping data might become stale.
   Hence, we have to follow the mapping data through the ASID table.
-*}
+\<close>
 definition
   get_pd_of_thread :: "kheap \<Rightarrow> arch_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref"
 where
@@ -173,7 +173,7 @@ lemma get_pd_of_thread_eq: (* ARMHYP *)
                  cap.splits arch_cap.splits)
 
 
-text {* Non-monad versions of @{term get_pte} and @{term get_pde}.
+text \<open>Non-monad versions of @{term get_pte} and @{term get_pde}.
   The parameters are:
   \begin{description}
   \item[@{term ahp}] a heap of architecture-specific objects,
@@ -181,7 +181,7 @@ text {* Non-monad versions of @{term get_pte} and @{term get_pde}.
   \item[@{term pd_ref}] a page-directory reference, and
   \item[@{term vptr}] a virtual address.
   \end{description}
-*}
+\<close>
 
 definition
   "get_pt_entry ahp pt_ref vptr \<equiv>
@@ -196,8 +196,8 @@ definition
      Some (PageDirectory pd) \<Rightarrow> Some (pd (ucast (vptr >> pageBits + pt_bits - pte_bits)))
    | _ \<Rightarrow> None"
 
-text {* The following function is used to extract the
-  architecture-specific objects from the kernel heap  *}
+text \<open>The following function is used to extract the
+  architecture-specific objects from the kernel heap\<close>
 definition
   "get_arch_obj ==
    case_option None (%x. case x of ArchObj a \<Rightarrow> Some a | _ \<Rightarrow> None)"
@@ -314,7 +314,7 @@ definition
    | Some (LargePagePTE base attrs rights) \<Rightarrow> Some (base, 16, attrs, rights)
    | _ \<Rightarrow> None"
 
-text {*
+text \<open>
   @{text get_page_info} takes the architecture-specific part of the kernel heap,
   a reference to the page directory, and a virtual memory address.
   It returns a tuple containing
@@ -322,7 +322,7 @@ text {*
   (b) the page table's size in bits, and
   (c) the page attributes (cachable, XNever, etc)
   (d) the access rights (a subset of @{term "{AllowRead, AllowWrite}"}).
-*}
+\<close>
 definition
   get_page_info :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> obj_ref \<Rightarrow>
                     word32 \<rightharpoonup> (word32 \<times> nat \<times> vm_attributes \<times> vm_rights)"
@@ -480,11 +480,11 @@ lemma get_page_info_super_section:
   apply (clarsimp simp: vspace_bits_defs)
 done
 
-text {*
+text \<open>
   Both functions, @{text ptable_lift} and @{text vm_rights},
   take a kernel state and a virtual address.
   The former returns the physical address, the latter the associated rights.
-*}
+\<close>
 definition
   ptable_lift :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> word32 \<rightharpoonup> word32" where
   "ptable_lift tcb s \<equiv> \<lambda>addr.

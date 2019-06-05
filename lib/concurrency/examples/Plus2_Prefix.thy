@@ -12,9 +12,9 @@ imports
   "../Prefix_Refinement"
 begin
 
-section {* The plus2 example. *}
+section \<open>The plus2 example.\<close>
 
-text {*
+text \<open>
 This example presents an application of prefix refinement
 to solve the plus2 verification problem.
 
@@ -28,13 +28,13 @@ which is far too general.
 We address the issue with a ghost variable which records the number
 of increments by each thread. We use prefix refinement to relate the
 program with ghost variable to the initial program.
-*}
+\<close>
 
 definition
   "plus2 \<equiv> do env_steps; modify ((+) (1 :: nat));
     interference; modify ((+) 1); interference od"
 
-section {* The ghost-extended program. *}
+section \<open>The ghost-extended program.\<close>
 
 record
   plus2_xstate =
@@ -54,8 +54,8 @@ definition
     interference
   od"
 
-section {* Verifying the extended @{term plus2}. *}
-text {* The RG-reasoning needed to verify the @{term plus2_x} program. *}
+section \<open>Verifying the extended @{term plus2}.\<close>
+text \<open>The RG-reasoning needed to verify the @{term plus2_x} program.\<close>
 definition
   "plus2_inv tids s = (mainv s = sum (threadv s) tids)"
 
@@ -98,9 +98,9 @@ corollary plus2_x_parallel:
   apply (clarsimp simp add: bipred_conj_def plus2_inv_def)
   done
 
-section {* Mapping across prefix refinement. *}
-text {* Proving prefix refinement of @{term plus2} and @{term plus2_x} and
-deriving the final result. *}
+section \<open>Mapping across prefix refinement.\<close>
+text \<open>Proving prefix refinement of @{term plus2} and @{term plus2_x} and
+deriving the final result.\<close>
 
 lemma env_stable:
   "env_stable AR R (\<lambda>s t. t = mainv s) (\<lambda>s t. t = mainv s) \<top>"
@@ -153,9 +153,9 @@ theorem plus2_parallel:
   apply (intro parallel_prefix_closed prefix_closed_plus2)
   done
 
-section {* Generalising *}
-text {* Just for fun, generalise to arbitrarily many
-copies of the @{term plus2} program. *}
+section \<open>Generalising\<close>
+text \<open>Just for fun, generalise to arbitrarily many
+copies of the @{term plus2} program.\<close>
 
 lemma plus2_x_n_parallel_induct:
   "n > 0 \<Longrightarrow> n \<le> N \<Longrightarrow>

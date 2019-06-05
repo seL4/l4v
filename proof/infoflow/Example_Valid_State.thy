@@ -14,7 +14,7 @@ imports
   "Lib.Distinct_Cmd"
 begin
 
-section {* Example *}
+section \<open>Example\<close>
 
 (* This example is a classic 'one way information flow'
    example, where information is allowed to flow from Low to High,
@@ -34,8 +34,8 @@ axiomatization where
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-subsection {* We show that the authority graph does not let
-              information flow from High to Low *}
+subsection \<open>We show that the authority graph does not let
+              information flow from High to Low\<close>
 
 datatype auth_graph_label = High | Low | IRQ0
 
@@ -145,10 +145,10 @@ lemma "policyFlows Sys1AuthGraph = example_policy"
   apply(fastforce intro: policyFlows_refl refl_onD)
   done
 
-subsection {* We show there exists a valid initial state associated to the
-              above authority graph *}
+subsection \<open>We show there exists a valid initial state associated to the
+              above authority graph\<close>
 
-text {*
+text \<open>
 
 This example (modified from ../access-control/ExampleSystem) is a system Sys1 made
 of 2 main components Low and High, connected through an notification NTFN.
@@ -192,9 +192,9 @@ The aim is to be able to prove
 where Sys1PAS is the label graph defining the AC policy for Sys1 using
 the authority graph defined above and s0 is the state of Sys1 described above.
 
-*}
+\<close>
 
-subsubsection {* Defining the State *}
+subsubsection \<open>Defining the State\<close>
 
 
 definition "ntfn_ptr \<equiv> kernel_base + 0x10"
@@ -251,17 +251,17 @@ distinct ptrs_distinct [simp]:
   by (auto simp: s0_ptr_defs)
 
 
-text {* We need to define the asids of each pd and pt to ensure that
-the object is included in the right ASID-label *}
+text \<open>We need to define the asids of each pd and pt to ensure that
+the object is included in the right ASID-label\<close>
 
-text {* Low's ASID *}
+text \<open>Low's ASID\<close>
 
 definition
   Low_asid :: machine_word
 where
   "Low_asid \<equiv> 1<<asid_low_bits"
 
-text {* High's ASID *}
+text \<open>High's ASID\<close>
 
 definition
   High_asid :: machine_word
@@ -272,7 +272,7 @@ lemma "asid_high_bits_of High_asid \<noteq> asid_high_bits_of Low_asid"
 by (simp add: Low_asid_def asid_high_bits_of_def High_asid_def asid_low_bits_def)
 
 
-text {* converting a nat to a bool list of size 10 - for the cnodes *}
+text \<open>converting a nat to a bool list of size 10 - for the cnodes\<close>
 
 definition
   nat_to_bl :: "nat \<Rightarrow> nat \<Rightarrow> bool list option"
@@ -381,7 +381,7 @@ lemma empty_cnode_eq_None [simp]:
     "(empty_cnode n x = None) = (length x \<noteq> n)"
   by (clarsimp simp: empty_cnode_def)
 
-text {* Low's CSpace *}
+text \<open>Low's CSpace\<close>
 
 definition
   Low_caps :: cnode_contents
@@ -432,7 +432,7 @@ lemma Low_caps_ran:
   apply simp
   done
 
-text {* High's Cspace *}
+text \<open>High's Cspace\<close>
 
 definition
   High_caps :: cnode_contents
@@ -469,8 +469,8 @@ lemma High_caps_ran:
   apply simp
   done
 
-text {* We need a copy of boundary crossing caps owned by SilcLabel.
-        The only such cap is Low's cap to the notification *}
+text \<open>We need a copy of boundary crossing caps owned by SilcLabel.
+        The only such cap is Low's cap to the notification\<close>
 
 definition
   Silc_caps :: cnode_contents
@@ -499,7 +499,7 @@ lemma Silc_caps_ran:
   apply simp
   done
 
-text {* notification between Low and High *}
+text \<open>notification between Low and High\<close>
 
 definition
   ntfn :: kernel_object
@@ -507,7 +507,7 @@ where
   "ntfn \<equiv> Notification \<lparr>ntfn_obj = WaitingNtfn [High_tcb_ptr], ntfn_bound_tcb=None\<rparr>"
 
 
-text {* Low's VSpace (PageDirectory)*}
+text \<open>Low's VSpace (PageDirectory)\<close>
 
 definition
   Low_pt' :: "word8 \<Rightarrow> pte "
@@ -540,7 +540,7 @@ where
   "Low_pd \<equiv> ArchObj (PageDirectory Low_pd')"
 
 
-text {* High's VSpace (PageDirectory)*}
+text \<open>High's VSpace (PageDirectory)\<close>
 
 
 definition
@@ -576,7 +576,7 @@ where
   "High_pd \<equiv> ArchObj (PageDirectory High_pd')"
 
 
-text {* Low's tcb *}
+text \<open>Low's tcb\<close>
 
 definition
   Low_tcb :: kernel_object
@@ -605,7 +605,7 @@ where
                tcb_domain     = Low_domain\<rparr>"
 
 
-text {* High's tcb *}
+text \<open>High's tcb\<close>
 
 definition
   High_tcb :: kernel_object
@@ -634,7 +634,7 @@ where
                 tcb_domain     = High_domain\<rparr>"
 
 
-text {* idle's tcb *}
+text \<open>idle's tcb\<close>
 
 definition
   idle_tcb :: kernel_object
@@ -868,7 +868,7 @@ where
     \<rparr>"
 
 
-subsubsection {* Defining the policy graph *}
+subsubsection \<open>Defining the policy graph\<close>
 
 (* FIXME: should incorporate SharedPage above *)
 
@@ -937,7 +937,7 @@ definition Sys1PAS :: "(auth_graph_label subject_label) PAS" where
     pasDomainAbs = ((\<lambda>_. {partition_label High})(0 := {partition_label Low}))
     \<rparr>"
 
-subsubsection {* Proof of pas_refined for Sys1 *}
+subsubsection \<open>Proof of pas_refined for Sys1\<close>
 
 lemma High_caps_well_formed: "well_formed_cnode_n 10 High_caps"
   by (auto simp: High_caps_def well_formed_cnode_n_def  split: if_split_asm)
@@ -1207,7 +1207,7 @@ definition
 
 
 
-subsubsection {* einvs *}
+subsubsection \<open>einvs\<close>
 
 
 lemma well_formed_cnode_n_s0_caps[simp]:
@@ -1805,11 +1805,11 @@ lemma obj_valid_pdpt_kh0:
                  High_pt_def High_pt'_def entries_align_def Low_pt_def High_pd_def Low_pt'_def High_pd'_def
                  Low_pd_def irq_cnode_def ntfn_def Silc_cnode_def High_cnode_def Low_cnode_def Low_pd'_def)
 
-subsubsection {* Haskell state *}
+subsubsection \<open>Haskell state\<close>
 
-text {* One invariant we need on s0 is that there exists
+text \<open>One invariant we need on s0 is that there exists
         an associated Haskell state satisfying the invariants.
-        This does not yet exist.  *}
+        This does not yet exist.\<close>
 
 lemma Sys1_valid_initial_state_noenabled:
   assumes extras_s0: "step_restrict s0"
@@ -1853,8 +1853,8 @@ lemma Sys1_valid_initial_state_noenabled:
   apply (simp add: extras_s0[simplified s0_def])
   done
 
-text {* the extra assumptions in valid_initial_state of being enabled,
-        and a serial system, follow from ADT_IF_Refine *}
+text \<open>the extra assumptions in valid_initial_state of being enabled,
+        and a serial system, follow from ADT_IF_Refine\<close>
 
 end
 

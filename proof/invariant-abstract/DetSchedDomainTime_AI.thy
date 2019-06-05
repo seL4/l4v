@@ -12,10 +12,10 @@ theory DetSchedDomainTime_AI
 imports "$L4V_ARCH/ArchDetSchedAux_AI"
 begin
 
-text {*
+text \<open>
   This theory deals with the preservation of domain_list validity over kernel invocations,
   as well as ensuring preserving that the domain time is never zero at kernel exit.
-*}
+\<close>
 
 (* Note: domains in the domain list should also be \<le> maxDomain, but this is not needed right now *)
 definition
@@ -29,7 +29,7 @@ where
 lemmas valid_domain_list_def = valid_domain_list_2_def
 
 
-section {* Preservation of domain list validity *}
+section \<open>Preservation of domain list validity\<close>
 
 lemma ethread_get_wp[wp]:
   "\<lbrace>\<lambda>s. etcb_at (\<lambda>t. P (f t) s) ptr s\<rbrace> ethread_get f ptr \<lbrace>P\<rbrace>"
@@ -250,7 +250,7 @@ lemma call_kernel_domain_list_inv_det_ext:
 end
 
 
-section {* Preservation of domain time remaining *}
+section \<open>Preservation of domain time remaining\<close>
 
 crunch domain_time_inv[wp]: do_user_op "(\<lambda>s. P (domain_time s))"
   (wp: select_wp)

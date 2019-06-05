@@ -14,7 +14,7 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-text {*
+text \<open>
 NB: the @{term is_subject} assumption is not appropriate for some of
     the scheduler lemmas. This is because a scheduler domain may have
     threads from multiple labels, hence the thread being acted upon
@@ -23,7 +23,7 @@ NB: the @{term is_subject} assumption is not appropriate for some of
     In some of the scheduling lemmas, we replace the @{term is_subject}
     assumption with a statement that the scheduled thread is in one of
     the current subject's domains.
-*}
+\<close>
 
 lemma tcb_sched_action_dequeue_integrity':
   "\<lbrace>integrity aag X st and pas_refined aag and
@@ -63,7 +63,7 @@ lemma tcb_sched_action_enqueue_integrity[wp]:
   apply (metis append.simps(2))
   done
 
-text {* See comment for @{thm tcb_sched_action_dequeue_integrity'} *}
+text \<open>See comment for @{thm tcb_sched_action_dequeue_integrity'}\<close>
 lemma tcb_sched_action_append_integrity':
   "\<lbrace>integrity aag X st and
     (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag (tcb_domain (the (ekheap s thread))))\<rbrace>

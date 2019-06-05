@@ -81,7 +81,7 @@ lemma syscall_valid':
   done
 
 
-text {* Completing the relationship between abstract/haskell invocations *}
+text \<open>Completing the relationship between abstract/haskell invocations\<close>
 
 primrec
   inv_relation :: "Invocations_A.invocation \<Rightarrow> Invocations_H.invocation \<Rightarrow> bool"

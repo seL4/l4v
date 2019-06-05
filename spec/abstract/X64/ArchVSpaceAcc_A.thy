@@ -20,21 +20,21 @@ begin
 
 context Arch begin global_naming X64_A
 
-text {*
+text \<open>
   This part of the specification is fairly concrete as the machine architecture
   is visible to the user in seL4 and therefore needs to be described.
   The abstraction compared to the implementation is in the data types for
   kernel objects. The interface which is rich in machine details remains the same.
-*}
+\<close>
 
 section "Encodings"
 
-text {* The high bits of a virtual ASID. *}
+text \<open>The high bits of a virtual ASID.\<close>
 definition
   asid_high_bits_of :: "asid \<Rightarrow> asid_high_index" where
   "asid_high_bits_of asid \<equiv> ucast (asid >> asid_low_bits)"
 
-text {* The low bits of a virtual ASID. *}
+text \<open>The low bits of a virtual ASID.\<close>
 definition
   asid_low_bits_of :: "asid \<Rightarrow> asid_low_index" where
   "asid_low_bits_of asid \<equiv> ucast asid"
@@ -44,8 +44,8 @@ lemmas asid_bits_of_defs =
 
 section "Kernel Heap Accessors"
 
-text {* Manipulate ASID pools, page directories and page tables in the kernel
-heap. *}
+text \<open>Manipulate ASID pools, page directories and page tables in the kernel
+heap.\<close>
 definition
   get_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref, 'z::state_ext) s_monad" where
   "get_asid_pool ptr \<equiv> do
@@ -70,8 +70,8 @@ definition
   set_pd :: "obj_ref \<Rightarrow> (9 word \<Rightarrow> pde) \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_pd ptr pd \<equiv> set_object ptr (ArchObj (PageDirectory pd))"
 
-text {* The following function takes a pointer to a PDE in kernel memory
-  and returns the actual PDE. *}
+text \<open>The following function takes a pointer to a PDE in kernel memory
+  and returns the actual PDE.\<close>
 definition
   get_pde :: "obj_ref \<Rightarrow> (pde,'z::state_ext) s_monad" where
   "get_pde ptr \<equiv> do
@@ -104,8 +104,8 @@ definition
   set_pt :: "obj_ref \<Rightarrow> (9 word \<Rightarrow> pte) \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_pt ptr pt \<equiv> set_object ptr (ArchObj (PageTable pt))"
 
-text {* The following function takes a pointer to a PTE in kernel memory
-  and returns the actual PTE. *}
+text \<open>The following function takes a pointer to a PTE in kernel memory
+  and returns the actual PTE.\<close>
 definition
   get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad" where
   "get_pte ptr \<equiv> do
@@ -137,8 +137,8 @@ definition
   set_pdpt :: "obj_ref \<Rightarrow> (9 word \<Rightarrow> pdpte) \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_pdpt ptr pt \<equiv> set_object ptr (ArchObj (PDPointerTable pt))"
 
-text {* The following function takes a pointer to a PDPTE in kernel memory
-  and returns the actual PDPTE. *}
+text \<open>The following function takes a pointer to a PDPTE in kernel memory
+  and returns the actual PDPTE.\<close>
 definition
   get_pdpte :: "obj_ref \<Rightarrow> (pdpte,'z::state_ext) s_monad" where
   "get_pdpte ptr \<equiv> do
@@ -170,8 +170,8 @@ definition
   set_pml4 :: "obj_ref \<Rightarrow> (9 word \<Rightarrow> pml4e) \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_pml4 ptr pt \<equiv> set_object ptr (ArchObj (PageMapL4 pt))"
 
-text {* The following function takes a pointer to a PML4E in kernel memory
-  and returns the actual PML4E. *}
+text \<open>The following function takes a pointer to a PML4E in kernel memory
+  and returns the actual PML4E.\<close>
 definition
   get_pml4e :: "obj_ref \<Rightarrow> (pml4e,'z::state_ext) s_monad" where
   "get_pml4e ptr \<equiv> do
@@ -210,9 +210,9 @@ definition
 get_pml4_index :: "vspace_ref \<Rightarrow> machine_word" where
 "get_pml4_index vptr \<equiv> (vptr >> pml4_shift_bits) && mask ptTranslationBits"
 
-text {* The kernel window is mapped into every virtual address space from the
+text \<open>The kernel window is mapped into every virtual address space from the
 @{term pptr_base} pointer upwards. This function copies the mappings which
-create the kernel window into a new page directory object. *}
+create the kernel window into a new page directory object.\<close>
 
 definition
 copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
@@ -228,7 +228,7 @@ copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" whe
     od) [base  .e.  pm_size - 1]
   od"
 
-text {* Walk the page directories and tables in software. *}
+text \<open>Walk the page directories and tables in software.\<close>
 
 definition
 lookup_pml4_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref" where
@@ -250,15 +250,15 @@ lookup_pdpt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z:
         | _ \<Rightarrow> throwError $ MissingCapability pml4_shift_bits)
  odE"
 
-text {* A non-failing version of @{const lookup_pdpt_slot} when the pml4 is already known *}
+text \<open>A non-failing version of @{const lookup_pdpt_slot} when the pml4 is already known\<close>
 definition
   lookup_pdpt_slot_no_fail :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
 where
   "lookup_pdpt_slot_no_fail pdpt vptr \<equiv>
      pdpt + (get_pdpt_index vptr << word_size_bits)"
 
-text {* The following function takes a page-directory reference as well as
-  a virtual address and then computes a pointer to the PDE in kernel memory *}
+text \<open>The following function takes a page-directory reference as well as
+  a virtual address and then computes a pointer to the PDE in kernel memory\<close>
 definition
 lookup_pd_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z::state_ext) lf_monad" where
 "lookup_pd_slot pd vptr \<equiv> doE
@@ -274,17 +274,17 @@ lookup_pd_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z::s
         | _ \<Rightarrow> throwError $ MissingCapability pdpt_shift_bits)
  odE"
 
-text {* A non-failing version of @{const lookup_pd_slot} when the pdpt is already known *}
+text \<open>A non-failing version of @{const lookup_pd_slot} when the pdpt is already known\<close>
 definition
   lookup_pd_slot_no_fail :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
 where
   "lookup_pd_slot_no_fail pd vptr \<equiv>
      pd + (get_pd_index vptr << word_size_bits)"
 
-text {* The following function takes a page-directory reference as well as
+text \<open>The following function takes a page-directory reference as well as
   a virtual address and then computes a pointer to the PTE in kernel memory.
   Note that the function fails if the virtual address is mapped on a section or
-  super section. *}
+  super section.\<close>
 definition
 lookup_pt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z::state_ext) lf_monad" where
 "lookup_pt_slot vspace vptr \<equiv> doE
@@ -300,7 +300,7 @@ lookup_pt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z::s
         | _ \<Rightarrow> throwError $ MissingCapability pd_shift_bits)
    odE"
 
-text {* A non-failing version of @{const lookup_pt_slot} when the pd is already known *}
+text \<open>A non-failing version of @{const lookup_pt_slot} when the pd is already known\<close>
 definition
   lookup_pt_slot_no_fail :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
 where

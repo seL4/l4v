@@ -14,15 +14,15 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-section {* Haskell state *}
+section \<open>Haskell state\<close>
 
-text {* One invariant we need on s0 is that there exists
+text \<open>One invariant we need on s0 is that there exists
         an associated Haskell state satisfying the invariants.
-        This does not yet exist.  *}
+        This does not yet exist.\<close>
 
-subsection {* Defining the State *}
+subsection \<open>Defining the State\<close>
 
-text {* Low's CSpace *}
+text \<open>Low's CSpace\<close>
 
 definition
   empty_cte :: "nat \<Rightarrow> bool list \<Rightarrow> (capability \<times> mdbnode) option"
@@ -62,7 +62,7 @@ where
                          then map_option (\<lambda>cte. KOCTE cte) (Low_cte' (ucast (offs - base >> cte_level_bits))) else None"
 
 
-text {* High's Cspace *}
+text \<open>High's Cspace\<close>
 
 definition
   High_capsH :: "cnode_index \<Rightarrow> (capability \<times> mdbnode) option"
@@ -91,8 +91,8 @@ where
   "High_cte \<equiv> \<lambda>base offs. if is_aligned offs cte_level_bits \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
                           then map_option (\<lambda>cte. KOCTE cte) (High_cte' (ucast (offs - base >> cte_level_bits))) else None"
 
-text {* We need a copy of boundary crossing caps owned by SilcLabel.
-        The only such cap is Low's cap to the notification *}
+text \<open>We need a copy of boundary crossing caps owned by SilcLabel.
+        The only such cap is Low's cap to the notification\<close>
 
 definition
   Silc_capsH :: "cnode_index \<Rightarrow> (capability \<times> mdbnode) option"
@@ -116,7 +116,7 @@ where
   "Silc_cte \<equiv> \<lambda>base offs. if is_aligned offs cte_level_bits \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
                           then map_option (\<lambda>cte. KOCTE cte) (Silc_cte' (ucast (offs - base >> cte_level_bits))) else None"
 
-text {* notification between Low and High *}
+text \<open>notification between Low and High\<close>
 
 definition
   ntfnH :: Structures_H.notification
@@ -124,7 +124,7 @@ where
   "ntfnH \<equiv> Structures_H.NTFN (Structures_H.ntfn.WaitingNtfn [High_tcb_ptr]) None"
 
 
-text {* Low's VSpace (PageDirectory)*}
+text \<open>Low's VSpace (PageDirectory)\<close>
 
 definition
   Low_pt'H :: "word8 \<Rightarrow> ARM_H.pte "
@@ -169,7 +169,7 @@ where
                     then Some (ucast (offs - base >> 2)) else None)"
 
 
-text {* High's VSpace (PageDirectory)*}
+text \<open>High's VSpace (PageDirectory)\<close>
 
 
 definition
@@ -212,7 +212,7 @@ where
                     then Some (ucast (offs - base >> 2)) else None)"
 
 
-text {* Low's tcb *}
+text \<open>Low's tcb\<close>
 
 definition
   Low_tcbH :: Structures_H.tcb
@@ -237,7 +237,7 @@ where
      \<comment> \<open>tcbContext         =\<close> (ArchThread undefined)"
 
 
-text {* High's tcb *}
+text \<open>High's tcb\<close>
 definition
   High_tcbH :: Structures_H.tcb
 where
@@ -261,7 +261,7 @@ where
      \<comment> \<open>tcbContext         =\<close> (ArchThread undefined)"
 
 
-text {* idle's tcb *}
+text \<open>idle's tcb\<close>
 
 definition
   idle_tcbH :: Structures_H.tcb

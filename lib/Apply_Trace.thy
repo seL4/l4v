@@ -15,7 +15,7 @@ imports Main
 begin
 
 
-ML {*
+ML \<open>
 signature APPLY_TRACE =
 sig
   val apply_results :
@@ -317,7 +317,7 @@ end
 val _ = Context.>> (Context.map_theory Filter_Thms.setup)
 
 end
-*}
+\<close>
 
 end
 

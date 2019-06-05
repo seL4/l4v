@@ -8,12 +8,12 @@
  * @TAG(NICTA_GPL)
  *)
 
-text {*
+text \<open>
   The InfoFlow theorem needs that caps shared between labels cannot be deleted.
   In order to do that, this file introduces a dummy label, SilcLabel that will
   own all those caps. It then proves all the properties needed about SilcLabel
   doing its job.
-*}
+\<close>
 
 theory FinalCaps
 imports InfoFlow
@@ -89,10 +89,10 @@ where
           l \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
 
 
-text {* We introduce a new label. The name 'silc' here stands for 'safe inter-label caps',
+text \<open>We introduce a new label. The name 'silc' here stands for 'safe inter-label caps',
   since the domain with this label holds copies of all inter-label caps to ensure that
   any others remain 'safe' by never becoming final caps, which would otherwise introduce
-  a potential covert storage channel *}
+  a potential covert storage channel\<close>
 datatype 'a subject_label = OrdinaryLabel 'a | SilcLabel
 
 
@@ -101,25 +101,25 @@ where
   "aag_can_read_not_silc aag ptr \<equiv> aag_can_read aag ptr \<and> pasObjectAbs aag ptr \<noteq> SilcLabel"
 
 
-text{* We need to introduce an equivalence on the dummy domain, and add
+text\<open>We need to introduce an equivalence on the dummy domain, and add
    it to the state that the current subject can read from (i.e.
    effectively add it to the current subject's domain), to complete
    the proof for is_final_cap. This will necessitate showing that
    the dummy domain's state is never affected, but this should be
    relatively easy. The annoying part is that now we end up proving
    a different property; it will take some finesse to avoid having
-   to do a search/replace on @{term reads_respects} \<rightarrow> reads_respects_f *}
+   to do a search/replace on @{term reads_respects} \<rightarrow> reads_respects_f\<close>
 definition silc_dom_equiv
 where
   "silc_dom_equiv aag \<equiv>
     equiv_for (\<lambda> x. pasObjectAbs aag x = SilcLabel) kheap"
 
-text{* This is an invariant that ensures that the info leak due to is_final_cap doesn't
+text\<open>This is an invariant that ensures that the info leak due to is_final_cap doesn't
    arise. Silc stands for 'safe inter label caps'.
    We include a condition that the contents of SilcLabel wrt the kheap are unchanged from
    some fixed reference state, since we invariably use this fact to reason that the
    invariant is preserved anyway. Including it here saves duplicating essentially identical
-   reasoning. *}
+   reasoning.\<close>
 
 definition silc_inv :: "'a subject_label PAS \<Rightarrow> det_ext state \<Rightarrow> det_ext state \<Rightarrow> bool"
 where

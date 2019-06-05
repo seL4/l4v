@@ -18,7 +18,7 @@ lemmas [crunch_param_rules] = Let_def return_bind returnOk_bindE
     K_bind_def split_def bind_assoc bindE_assoc
     trans[OF liftE_bindE return_bind]
 
-ML {*
+ML \<open>
 fun get_trace_monad_state_type
   (Type ("Set.set",
          [Type ("Product_Type.prod",
@@ -133,19 +133,19 @@ struct
 end;
 
 structure CrunchPrefixClosed : CRUNCH = Crunch(CrunchPrefixClosedInstance);
-*}
+\<close>
 
-setup {*
+setup \<open>
   add_crunch_instance "" (CrunchValid.crunch_x, CrunchValid.crunch_ignore_add_del)
-*}
-setup {*
+\<close>
+setup \<open>
   add_crunch_instance "valid" (CrunchValid.crunch_x, CrunchValid.crunch_ignore_add_del)
-*}
-setup {*
+\<close>
+setup \<open>
   add_crunch_instance "no_fail" (CrunchNoFail.crunch_x, CrunchNoFail.crunch_ignore_add_del)
-*}
-setup {*
+\<close>
+setup \<open>
   add_crunch_instance "pfx_closed" (CrunchPrefixClosed.crunch_x, CrunchPrefixClosed.crunch_ignore_add_del)
-*}
+\<close>
 
 end

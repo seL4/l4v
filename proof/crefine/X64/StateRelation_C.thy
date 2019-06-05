@@ -69,7 +69,7 @@ where
 
 end
 
-text {*
+text \<open>
   Conceptually, the constant x64KSKernelVSpace_C resembles ghost state.
   The constant specifies the use of certain address ranges, or ``windows''.
   It is the very nature of these ranges is that they remain fixed
@@ -83,7 +83,7 @@ text {*
   Hence, we can later base definitions for the ADT on it,
   which can subsequently be instantiated for
   @{text kernel_all_global_addresses} as well as @{text kernel_all_substitute}.
-*}
+\<close>
 locale state_rel = Arch + substitute_pre + (*FIXME: arch_split*)
   fixes x64KSKernelVSpace_C :: "machine_word \<Rightarrow> x64vspace_region_use"
 

@@ -137,7 +137,7 @@ lemma getObject_tcb_at':
                      loadObject_default_def obj_at'_def projectKOs split_def
                      in_magnitude_check objBits_simps')
 
-text {* updateObject_cte lemmas *}
+text \<open>updateObject_cte lemmas\<close>
 
 lemma koType_objBitsKO:
   "koTypeOf k = koTypeOf k' \<Longrightarrow> objBitsKO k = objBitsKO k'"

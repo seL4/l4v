@@ -59,8 +59,8 @@ lemma map_option_byte_to_word_heap:
                      Let_def disj disj[where x = 0,simplified]
               split: option.splits)
 
-text {* Generalise the different kinds of retypes to allow more general proofs
-about what they might change. *}
+text \<open>Generalise the different kinds of retypes to allow more general proofs
+about what they might change.\<close>
 definition
   ptr_retyps_gen :: "nat \<Rightarrow> ('a :: c_type) ptr \<Rightarrow> bool \<Rightarrow> heap_typ_desc \<Rightarrow> heap_typ_desc"
 where
@@ -5042,7 +5042,7 @@ lemma memzero_modifies:
   "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call memzero_'proc {t. t may_only_modify_globals \<sigma> in [t_hrs]}"
   apply (rule allI, rule conseqPre)
   apply (hoare_rule HoarePartial.ProcNoRec1)
-   apply (tactic {* HoarePackage.vcg_tac "_modifies" "false" [] @{context} 1 *})
+   apply (tactic \<open>HoarePackage.vcg_tac "_modifies" "false" [] @{context} 1\<close>)
   apply (clarsimp simp: mex_def meq_def simp del: split_paired_Ex)
   apply (intro exI globals.equality, simp_all)
   done

@@ -656,7 +656,7 @@ lemma setVCPU_ct_not_inQ[wp]:
 
 (* FIXME: move *)
 (* prefer 2 as a tactic *)
-method prefer_next = tactic {* SUBGOAL (K (prefer_tac 2)) 1 *}
+method prefer_next = tactic \<open>SUBGOAL (K (prefer_tac 2)) 1\<close>
 
 lemma hv_corres:
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)

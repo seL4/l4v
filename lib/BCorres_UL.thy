@@ -271,7 +271,7 @@ lemma gets_the_bcorres_underlying[wp]:
   "(\<And>s. f' (t s) = f s) \<Longrightarrow> bcorres_underlying t (gets_the f) (gets_the f')"
   by (wpsimp simp: gets_the_def)
 
-ML {*
+ML \<open>
 structure CrunchBCorresInstance : CrunchInstance =
 struct
   val name = "bcorres";
@@ -298,10 +298,10 @@ struct
 end;
 
 structure CrunchBCorres : CRUNCH = Crunch(CrunchBCorresInstance);
-*}
+\<close>
 
-setup {*
+setup \<open>
   add_crunch_instance "bcorres" (CrunchBCorres.crunch_x, CrunchBCorres.crunch_ignore_add_del)
-*}
+\<close>
 
 end

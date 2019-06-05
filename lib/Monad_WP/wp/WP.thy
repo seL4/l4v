@@ -40,16 +40,16 @@ declare [[wp_warn_unused = false]]
 
 setup WeakestPre.setup
 
-method_setup wp = {* WeakestPre.apply_rules_args false *}
+method_setup wp = \<open>WeakestPre.apply_rules_args false\<close>
   "applies weakest precondition rules"
 
-method_setup wp_once = {* WeakestPre.apply_once_args false *}
+method_setup wp_once = \<open>WeakestPre.apply_once_args false\<close>
   "applies one weakest precondition rule"
 
-method_setup wp_trace = {* WeakestPre.apply_rules_args true *}
+method_setup wp_trace = \<open>WeakestPre.apply_rules_args true\<close>
   "applies weakest precondition rules with tracing"
 
-method_setup wp_once_trace = {* WeakestPre.apply_once_args true *}
+method_setup wp_once_trace = \<open>WeakestPre.apply_once_args true\<close>
   "applies one weakest precondition rule with tracing"
 
 

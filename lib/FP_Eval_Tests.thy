@@ -88,15 +88,15 @@ text \<open>
 \<close>
 thm FP_Eval.let_weak_cong'
 
-ML_val {*
+ML_val \<open>
   @{assert} (not (Thm.eq_thm_prop (@{thm let_weak_cong}, @{thm FP_Eval.let_weak_cong'})));
-*}
+\<close>
 
 text \<open>
   Example: avoid evaluating both branches of an @{const If}
 \<close>
 
-ML_val {*
+ML_val \<open>
 local
   fun eval eqns congs =
     FP_Eval.eval @{context} (FP_Eval.make_rules eqns congs)
@@ -114,7 +114,7 @@ in
   val p1 = eval eqns @{thms} input |> snd;
   val p2 = eval eqns @{thms if_weak_cong} input |> snd;
 end
-*}
+\<close>
 
 subsection \<open>Preventing evaluation\<close>
 
@@ -132,7 +132,7 @@ lemma quote:
   by (simp add: quote_def)
 end
 
-ML_val {*
+ML_val \<open>
 local
   fun eval eqns congs =
     FP_Eval.eval @{context} (FP_Eval.make_rules eqns congs);
@@ -149,7 +149,7 @@ in
   val r3 = fst r2 |> apfst Thm.rhs_of
            |> eval @{thms fun_upd_def} @{thms};
 end;
-*}
+\<close>
 
 
 section \<open>Tests\<close>

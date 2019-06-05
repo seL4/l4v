@@ -838,10 +838,10 @@ lemma switch_to_thread_respects:
   apply (wp | simp add: clearExMonitor_def)+
   done
 
-text {*
+text \<open>
 Variants of scheduling lemmas without is_subject assumption.
 See comment for @{thm tcb_sched_action_dequeue_integrity'}
-*}
+\<close>
 lemma switch_to_thread_respects':
   "\<lbrace>integrity aag X st and pas_refined aag
     and (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag (tcb_domain (the (ekheap s t)))) \<rbrace>
@@ -867,7 +867,7 @@ lemma choose_thread_respects_pasMayEditReadyQueues:
   by (simp add: choose_thread_def guarded_switch_to_def
       | wp switch_to_thread_respects_pasMayEditReadyQueues switch_to_idle_thread_respects gts_wp)+
 
-text {* integrity for @{const choose_thread} without @{const pasMayEditReadyQueues} *}
+text \<open>integrity for @{const choose_thread} without @{const pasMayEditReadyQueues}\<close>
 lemma choose_thread_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and pas_cur_domain aag and einvs and valid_queues\<rbrace>
    choose_thread
@@ -933,11 +933,11 @@ lemma next_domain_valid_sched:
 crunch current_ipc_buffer_register [wp]: tcb_sched_action "\<lambda>s. P (current_ipc_buffer_register s)"
    (wp: crunch_wps without_preemption_wp simp: crunch_simps current_ipc_buffer_register_def get_tcb_def)
 
-text {*
+text \<open>
 We need to use the domain of t instead of @{term "is_subject aag t"}
 because t's domain may contain multiple labels. See the comment for
 @{thm tcb_sched_action_dequeue_integrity'}
-*}
+\<close>
 lemma valid_sched_action_switch_subject_thread:
    "\<lbrakk> scheduler_action s = switch_thread t ; valid_sched_action s ;
       valid_etcbs s ; pas_refined aag s ; pas_cur_domain aag s \<rbrakk>

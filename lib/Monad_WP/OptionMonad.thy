@@ -22,7 +22,7 @@ begin
 
 type_synonym ('s,'a) lookup = "'s \<Rightarrow> 'a option"
 
-text {* Similar to map_option but the second function returns option as well *}
+text \<open>Similar to map_option but the second function returns option as well\<close>
 definition
   opt_map :: "('s,'a) lookup \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow> ('s,'b) lookup" (infixl "|>" 54)
 where
@@ -63,10 +63,10 @@ definition oapply :: "'a \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow
   where
   "oapply x \<equiv> \<lambda>s. s x"
 
-text {*
+text \<open>
   If the result can be an exception.
   Corresponding bindE would be analogous to lifting in NonDetMonad.
-*}
+\<close>
 
 definition
   "oreturnOk x = K (Some (Inr x))"
@@ -83,7 +83,7 @@ definition
 definition
   "oskip \<equiv> oreturn ()"
 
-text {* Monad laws *}
+text \<open>Monad laws\<close>
 lemma oreturn_bind [simp]: "(oreturn x |>> f) = f x"
   by (auto simp add: oreturn_def obind_def K_def)
 
@@ -95,7 +95,7 @@ lemma obind_assoc:
   by (auto simp add: oreturn_def obind_def K_def split: option.splits)
 
 
-text {* Binding fail *}
+text \<open>Binding fail\<close>
 
 lemma obind_fail [simp]:
   "f |>> (\<lambda>_. ofail) = ofail"
@@ -107,7 +107,7 @@ lemma ofail_bind [simp]:
 
 
 
-text {* Function package setup *}
+text \<open>Function package setup\<close>
 lemma opt_bind_cong [fundef_cong]:
   "\<lbrakk> f = f'; \<And>v s. f' s = Some v \<Longrightarrow> g v s = g' v s \<rbrakk> \<Longrightarrow> f |>> g = f' |>> g'"
   by (rule ext) (simp add: obind_def split: option.splits)
@@ -146,7 +146,7 @@ lemma ocondition_cong [fundef_cong]:
   by (auto simp: ocondition_def)
 
 
-text {* Decomposition *}
+text \<open>Decomposition\<close>
 
 lemma ocondition_K_true [simp]:
   "ocondition (\<lambda>_. True) T F = T"
@@ -216,12 +216,12 @@ lemma oreturnOkE:
 lemmas omonadE [elim!] =
   opt_mapE obindE oreturnE ofailE othrowE oreturnOkE oassertE
 
-section {* "While" loops over option monad. *}
+section \<open>"While" loops over option monad.\<close>
 
-text {*
+text \<open>
   This is an inductive definition of a while loop over the plain option monad
   (without passing through a state)
-*}
+\<close>
 
 inductive_set
   option_while' :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'a option) \<Rightarrow> 'a option rel"
@@ -269,7 +269,7 @@ lemma option_while_rule:
   shows "I s' \<and> \<not> C s'"
 proof -
   { fix ss ss' assume "(ss, ss') \<in> option_while' C B" "ss = Some s" "ss' = Some s'"
-    then have ?thesis using `I s`
+    then have ?thesis using \<open>I s\<close>
       by (induct arbitrary: s) (auto intro: istep) }
   then show ?thesis using assms(1)
     by (auto simp: option_while_def option_while'_THE split: if_split_asm)
@@ -310,19 +310,19 @@ proof -
   define ss where "ss \<equiv> Some s"
   obtain ss1' where "(Some s, ss1') \<in> option_while' C B"
     using assms(3,2,4,5) by (rule option_while'_term)
-  then have *: "(ss, ss') \<in> option_while' C B" using `option_while C B s = ss'`
+  then have *: "(ss, ss') \<in> option_while' C B" using \<open>option_while C B s = ss'\<close>
     by (auto simp: option_while_simps ss_def)
   show ?thesis
   proof (cases ss')
-    case (Some s') with * ss_def show ?thesis using `I _`
+    case (Some s') with * ss_def show ?thesis using \<open>I _\<close>
       by (induct arbitrary:s) (auto intro: step)
   next
-    case None with * ss_def show ?thesis using `I _`
+    case None with * ss_def show ?thesis using \<open>I _\<close>
       by (induct arbitrary:s) (auto intro: step final)
   qed
 qed
 
-section {* Lift @{term option_while} to the @{typ "('a,'s) lookup"} monad  *}
+section \<open>Lift @{term option_while} to the @{typ "('a,'s) lookup"} monad\<close>
 
 definition
   owhile :: "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('s,'a) lookup) \<Rightarrow> 'a \<Rightarrow> ('s,'a) lookup"
@@ -334,7 +334,7 @@ lemma owhile_unroll:
   by (auto simp: ocondition_def obind_def oreturn_def owhile_def
            option_while_simps K_def split: option.split)
 
-text {* rule for terminating loops *}
+text \<open>rule for terminating loops\<close>
 
 lemma owhile_rule:
   assumes "I r s"
@@ -348,7 +348,7 @@ proof -
   let ?rs' = "owhile C B r s"
   have "(case ?rs' of Some r \<Rightarrow> I r s | _ \<Rightarrow> Q None)
       \<and> (case ?rs' of Some r' \<Rightarrow> \<not> C r' s | _ \<Rightarrow> True)"
-    by (rule option_while_rule'[where B="\<lambda>r. B r s" and s=r, OF _ `wf _`])
+    by (rule option_while_rule'[where B="\<lambda>r. B r s" and s=r, OF _ \<open>wf _\<close>])
        (auto simp: owhile_def intro: assms)
   then show ?thesis by (auto intro: final split: option.split_asm)
 qed

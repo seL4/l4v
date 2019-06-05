@@ -14,9 +14,9 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-section{* Notifications *}
+section\<open>Notifications\<close>
 
-subsection{* @{term "pas_refined"} *}
+subsection\<open>@{term "pas_refined"}\<close>
 
 crunch thread_bound_ntfns[wp]: do_machine_op "\<lambda>s. P (thread_bound_ntfns s)"
 
@@ -116,15 +116,15 @@ lemma receive_signal_pas_refined:
        | wpc | simp add: do_nbrecv_failed_transfer_def)+
 
 
-subsection{* integrity *}
+subsection\<open>integrity\<close>
 
-subsubsection{* autarchy *}
+subsubsection\<open>autarchy\<close>
 
-text{*
+text\<open>
   For the case when the currently-running thread owns the receiver
   (i.e. receiver last to the notification rendezvous or sender owns
   receiver).
-*}
+\<close>
 
 lemma st_tcb_at_tcb_states_of_state:
   "(st_tcb_at stf p s) = (\<exists>st. tcb_states_of_state s p = Some st \<and> stf st)"
@@ -291,7 +291,7 @@ lemma receive_signal_integrity_autarch:
        | simp add: do_nbrecv_failed_transfer_def)+
   done
 
-subsubsection{* Non-autarchy: the sender is running *}
+subsubsection\<open>Non-autarchy: the sender is running\<close>
 
 
 lemma length_msg_registers:
@@ -649,9 +649,9 @@ lemma send_signal_respects:
   apply clarsimp
   done
 
-section{* Sync IPC *}
+section\<open>Sync IPC\<close>
 
-text{*
+text\<open>
 
 When transferring caps, i.e. when the grant argument is true on the
 IPC operations, the currently-running thread owns the receiver. Either
@@ -659,9 +659,9 @@ it is the receiver (and ?thesis by well-formedness) or it is the
 sender, and that can send arbitrary caps, hence ?thesis by sbta_ipc
 etc.
 
-*}
+\<close>
 
-subsection{* auxiliary *}
+subsection\<open>auxiliary\<close>
 
 
 lemma cap_master_cap_masked_as_full:
@@ -780,7 +780,7 @@ lemma transfer_caps_loop_pres_dest:
   apply simp
   done
 
-subsection{* pas_refined *}
+subsection\<open>pas_refined\<close>
 
 lemma lookup_slot_for_thread_authorised:
   "\<lbrace>pas_refined aag and K (is_subject aag thread)\<rbrace>
@@ -1491,16 +1491,16 @@ lemma receive_ipc_pas_refined:
   done
 
 
-subsection {* @{term "integrity"} *}
+subsection \<open>@{term "integrity"}\<close>
 
-subsubsection{* autarchy *}
+subsubsection\<open>autarchy\<close>
 
-text{*
+text\<open>
 
   For the case when the currently-running thread owns the receiver
   (i.e. receiver last to the IPC rendezvous or sender owns receiver).
 
-*}
+\<close>
 
 
 lemma set_extra_badge_integrity_autarch:
@@ -1832,9 +1832,9 @@ lemma receive_ipc_integrity_autarch:
   apply (fastforce simp:aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)
   done
 
-subsubsection{* Non-autarchy: the sender is running *}
+subsubsection\<open>Non-autarchy: the sender is running\<close>
 
-text{*
+text\<open>
 
   If the sender is running (i.e. last to the IPC rendezvous) then we
   need this auxiliary machinery to show that the sequence of TCB
@@ -1845,7 +1845,7 @@ text{*
   The sender can update an IPC receiver's context as much as it likes,
   provided it eventually changes the thread state to Running.
 
-*}
+\<close>
 
 datatype tcb_respects_state = TRContext | TRFinal | TRFinalOrCall | TRReplyContext
 
@@ -2648,7 +2648,7 @@ lemma send_ipc_integrity_autarch:
   apply (force elim:obj_at_ko_atE)
   done
 
-section{* Faults *}
+section\<open>Faults\<close>
 
 (* FIXME: move *)
 lemma valid_tcb_fault_update:
@@ -2808,7 +2808,7 @@ lemma handle_fault_integrity_autarch:
        | simp add: handle_double_fault_def)+
   done
 
-section{* Replies *}
+section\<open>Replies\<close>
 
 crunch pas_refined[wp]: handle_fault_reply "pas_refined aag"
 
@@ -2996,8 +2996,8 @@ lemma cte_delete_one_respects_in_ipc_autharch:
 
 
 
-text {* The special case of fault reply need a different machinery than *_in_ipc stuff because,
-        there is no @{term underlying_memory} modification *}
+text \<open>The special case of fault reply need a different machinery than *_in_ipc stuff because,
+        there is no @{term underlying_memory} modification\<close>
 
 datatype tcb_respects_fault_state = TRFContext | TRFRemoveFault | TRFFinal
 

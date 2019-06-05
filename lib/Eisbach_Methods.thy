@@ -174,12 +174,12 @@ text \<open>
   - Fails if \<open>text\<close> can't be applied n times.
 \<close>
 
-ML {*
+ML \<open>
   fun repeat_tac count tactic =
     if count = 0
     then all_tac
     else tactic THEN (repeat_tac (count - 1) tactic)
-*}
+\<close>
 
 method_setup repeat = \<open>
   Scan.lift Parse.nat -- Method.text_closure >> (fn (count, text) => fn ctxt => fn facts =>

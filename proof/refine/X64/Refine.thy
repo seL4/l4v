@@ -22,7 +22,7 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-text {* User memory content is the same on both levels *}
+text \<open>User memory content is the same on both levels\<close>
 lemma typ_at_AUserDataI:
   "\<lbrakk> typ_at (AArch (AUserData sz)) p s; pspace_relation (kheap s) (ksPSpace s');
      pspace_aligned' s'; pspace_distinct' s'; n < 2 ^ (pageBitsForSize sz - pageBits) \<rbrakk>
@@ -219,7 +219,7 @@ shows "absKState s' = abs_state s"
   apply (rule absExst_correct, simp+)
   done
 
-text {* The top-level invariance *}
+text \<open>The top-level invariance\<close>
 
 lemma set_thread_state_sched_act:
   "\<lbrace>(\<lambda>s. runnable state) and (\<lambda>s. P (scheduler_action s))\<rbrace>
@@ -553,7 +553,7 @@ lemma doUserOp_invs':
   done
 
 
-text {* The top-level correspondence *}
+text \<open>The top-level correspondence\<close>
 
 lemma kernel_corres:
   "corres dc (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle)
@@ -926,7 +926,7 @@ lemma ckernel_invariant:
   apply (fastforce simp: ex_abs_def)
   done
 
-text {* The top-level theorem *}
+text \<open>The top-level theorem\<close>
 
 lemma fw_sim_A_H:
   "LI (ADT_A uop)

@@ -40,26 +40,26 @@ lemma hoare_eq_postE: " \<lbrakk> \<And>rv s. Q rv s = G rv s; \<lbrace>P\<rbrac
 lemma hoare_eq_postE_R: " \<lbrakk> \<And>rv s. Q rv s = G rv s; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>G\<rbrace>, -"
   by (metis hoare_post_imp_R)
 
-ML {*
+ML \<open>
 val sep_select_post_method =  sep_select_generic_method false [@{thm hoare_eq_post},
                                                                @{thm hoare_eq_postE},
                                                                @{thm hoare_eq_postE_R}]
 val sep_select_pre_method  =  sep_select_generic_method false [@{thm hoare_eq_pre},
                                                                @{thm hoare_eq_preE},
                                                                @{thm hoare_eq_preE_R}]
-*}
+\<close>
 
-method_setup sep_select_pre = {*
+method_setup sep_select_pre = \<open>
 
 Scan.lift (Scan.repeat Parse.int) >> sep_select_pre_method
 
-*}
+\<close>
 
-method_setup sep_select_post = {*
+method_setup sep_select_post = \<open>
 
 Scan.lift (Scan.repeat Parse.int) >> sep_select_post_method
 
-*}
+\<close>
 
 lemma strong_sep_impl_sep_wp:
     "\<And>sep_lift.
@@ -255,7 +255,7 @@ lemma strong_sep_impl_sep_wp_rv_ex_pre_post:
   apply (clarsimp simp: sep_conj_def sep_impl_def)
   by (metis (full_types) sep_add_commute sep_disj_commute)
 
-ML {*
+ML \<open>
 local
   val simpset = simpset_of (
       put_simpset HOL_basic_ss @{context}
@@ -347,17 +347,17 @@ fun apply_once_args trace xs =
   end xs;
 
 end;
-*}
+\<close>
 
-attribute_setup sep_wand_side_wp =  {* Scan.succeed sep_magic_wand_side *}
-attribute_setup sep_wand_side_wp' =  {* Scan.succeed sep_magic_wand_side' *}
-attribute_setup sep_wand_wp = {* Scan.succeed sep_magic_wand *}
-attribute_setup sep_wand_wpE =  {* Scan.succeed sep_magic_wandE *}
-attribute_setup sep_wand_side_wpE = {* Scan.succeed sep_magic_wand_sideE *}
-attribute_setup sep_wand_side_wpE' = {* Scan.succeed sep_magic_wand_sideE' *}
-attribute_setup sep_wandise = {* Scan.succeed sep_wandise *}
+attribute_setup sep_wand_side_wp =  \<open>Scan.succeed sep_magic_wand_side\<close>
+attribute_setup sep_wand_side_wp' =  \<open>Scan.succeed sep_magic_wand_side'\<close>
+attribute_setup sep_wand_wp = \<open>Scan.succeed sep_magic_wand\<close>
+attribute_setup sep_wand_wpE =  \<open>Scan.succeed sep_magic_wandE\<close>
+attribute_setup sep_wand_side_wpE = \<open>Scan.succeed sep_magic_wand_sideE\<close>
+attribute_setup sep_wand_side_wpE' = \<open>Scan.succeed sep_magic_wand_sideE'\<close>
+attribute_setup sep_wandise = \<open>Scan.succeed sep_wandise\<close>
 
-method_setup wp = {* apply_rules_args false *}
+method_setup wp = \<open>apply_rules_args false\<close>
   "applies weakest precondition rules"
 
 lemma boxsolve: "P s \<Longrightarrow> (\<box> \<and>* (\<box> \<longrightarrow>* P)) s"
@@ -366,7 +366,7 @@ lemma boxsolve: "P s \<Longrightarrow> (\<box> \<and>* (\<box> \<longrightarrow>
 done
 
 
-ML {*
+ML \<open>
    fun J f x = f x
                handle _ => x   (* FIXME! exceptions *)
 
@@ -384,11 +384,11 @@ ML {*
      (TRY o (sep_match_trivial_tac ctxt |> REPEAT_ALL_NEW)) THEN'
      (TRY o sep_flatten ctxt)) ORELSE' (CHANGED o wp_pre_tac)
    end
-*}
+\<close>
 
-method_setup sep_wp = {*
+method_setup sep_wp = \<open>
   Attrib.thms >> (fn thms => fn ctxt => Method.SIMPLE_METHOD' (sep_wp thms ctxt))
-*}
+\<close>
 
 
 

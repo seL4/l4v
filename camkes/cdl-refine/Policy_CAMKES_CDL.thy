@@ -27,11 +27,11 @@ type_synonym label = string
 
 
 section \<open>Generic policy definitions\<close>
-text {*
+text \<open>
   Access rights entailed by a given CAmkES component system. We assign
   each component and connector its own label, which is just its name
   in the CAmkES assembly.
-*}
+\<close>
 definition
   policy_of :: "assembly \<Rightarrow> label auth_graph"
 where

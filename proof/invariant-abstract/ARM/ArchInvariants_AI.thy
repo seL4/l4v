@@ -2150,7 +2150,7 @@ lemma valid_vspace_obj_default':
   unfolding default_arch_object_def
   by (cases aobject_type; simp)
 
-text {* arch specific symrefs *} (* hyp_ref stubs : for compatibility with arm-hyp *)
+text \<open>arch specific symrefs\<close> (* hyp_ref stubs : for compatibility with arm-hyp *)
 
 definition
   tcb_hyp_refs :: "arch_tcb \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -2411,7 +2411,7 @@ end
 declare ARM.arch_tcb_context_absorbs[simp]
 declare ARM.arch_tcb_context_get_set[simp]
 
-setup {* Add_Locale_Code_Defs.setup "ARM" *}
-setup {* Add_Locale_Code_Defs.setup "ARM_A" *}
+setup \<open>Add_Locale_Code_Defs.setup "ARM"\<close>
+setup \<open>Add_Locale_Code_Defs.setup "ARM_A"\<close>
 
 end

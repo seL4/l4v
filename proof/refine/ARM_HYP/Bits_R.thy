@@ -92,7 +92,7 @@ lemma isCap_simps:
 lemma untyped_not_null [simp]:
   "\<not> isUntypedCap NullCap" by (simp add: isCap_simps)
 
-text {* Miscellaneous facts about low level constructs *}
+text \<open>Miscellaneous facts about low level constructs\<close>
 
 lemma projectKO_tcb:
   "(projectKO_opt ko = Some t) = (ko = KOTCB t)"
@@ -225,7 +225,7 @@ lemma git_wp [wp]: "\<lbrace>\<lambda>s. P (ksIdleThread s) s\<rbrace> getIdleTh
 lemma gsa_wp [wp]: "\<lbrace>\<lambda>s. P (ksSchedulerAction s) s\<rbrace> getSchedulerAction \<lbrace>P\<rbrace>"
   by (unfold getSchedulerAction_def, wp)
 
-text {* Shorthand names for the relations between faults, errors and failures *}
+text \<open>Shorthand names for the relations between faults, errors and failures\<close>
 
 definition
   fr :: "ExceptionTypes_A.fault \<Rightarrow> Fault_H.fault \<Rightarrow> bool"
@@ -245,8 +245,8 @@ where
   lfr_def[simp]:
  "lfr x y \<equiv> (y = lookup_failure_map x)"
 
-text {* Correspondence and weakest precondition
-        rules for the "on failure" transformers *}
+text \<open>Correspondence and weakest precondition
+        rules for the "on failure" transformers\<close>
 
 lemma corres_injection:
   assumes x: "t = injection_handler fn"

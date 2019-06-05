@@ -14,11 +14,11 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-section {* Policy and policy refinement *}
+section \<open>Policy and policy refinement\<close>
 
-subsection {* Policy definition *}
+subsection \<open>Policy definition\<close>
 
-text{*
+text\<open>
 
 The goal is to place limits on what untrusted agents can do while the
 trusted agents are not running. This supports a framing constraint in
@@ -38,14 +38,14 @@ to send capabilities to trusted components (T), and so T must ensure
 that all endpoints it shares with UT that it receives on do not have
 the grant bit set.
 
-*}
+\<close>
 
 type_synonym 'a agent_map = "obj_ref \<Rightarrow> 'a"
 type_synonym 'a agent_asid_map = "asid \<Rightarrow> 'a"
 type_synonym 'a agent_irq_map = "10 word \<Rightarrow> 'a"
 type_synonym 'a agent_domain_map = "domain \<Rightarrow> 'a set"
 
-text{*
+text\<open>
 
 What one agent can do to another. We allow multiple edges between
 agents in the graph.
@@ -54,13 +54,13 @@ Control is special. It implies the ability to do pretty much anything,
 including get access the other rights, create, remove, etc.
 
 DeleteDerived allows you to delete a cap derived from a cap you own
-*}
+\<close>
 
 datatype auth = Control | Receive | SyncSend | Notify
                     | Reset | Grant | Call | Reply | Write | Read
                     | ASIDPoolMapsASID | DeleteDerived
 
-text{*
+text\<open>
 
 The interesting case is for endpoints.
 
@@ -77,11 +77,11 @@ Now UT can interfere with EP and all of T's tcbs blocked for receive on EP,
 but not endpoints internal to T, or tcbs blocked on other (suitably
 labelled) EPs, etc.
 
-*}
+\<close>
 
 type_synonym 'a auth_graph = "('a \<times> auth \<times> 'a) set"
 
-text {*
+text \<open>
 
 Each global namespace will need a labeling function.
 
@@ -104,7 +104,7 @@ The @{text pasDomainAbs} relation describes which labels may run in
 a given scheduler domain. This relation is not relevant to integrity
 but will be used in the information flow theory (with additional
 constraints on its structure).
-*}
+\<close>
 
 end
 
@@ -119,23 +119,23 @@ record 'a PAS =
   pasMaySendIrqs :: "bool"
   pasDomainAbs :: "'a agent_domain_map"
 
-text{*
+text\<open>
 
 Very often we want to say that the agent currently running owns a
 given pointer.
 
-*}
+\<close>
 
 abbreviation is_subject :: "'a PAS \<Rightarrow> word32 \<Rightarrow> bool"
 where
   "is_subject aag ptr \<equiv> pasObjectAbs aag ptr = pasSubject aag"
 
-text{*
+text\<open>
 
 Also we often want to say the current agent can do something to a
 pointer that he doesn't own but has some authority to.
 
-*}
+\<close>
 
 abbreviation(input) aag_has_auth_to :: "'a PAS \<Rightarrow> auth \<Rightarrow> word32 \<Rightarrow> bool"
 where
@@ -154,9 +154,9 @@ where
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-subsection {* Policy wellformedness *}
+subsection \<open>Policy wellformedness\<close>
 
-text{*
+text\<open>
 
 Wellformedness of the agent authority function with respect to a label
 (the current thread):
@@ -188,7 +188,7 @@ Wellformedness of the agent authority function with respect to a label
 
 \end{itemize}
 
-*}
+\<close>
 
 definition policy_wellformed
 where
@@ -269,14 +269,14 @@ lemma aag_wellformed_grant_Control_to_recv_by_reply:
   unfolding policy_wellformed_def by blast
 
 
-subsection {* auth_graph_map *}
+subsection \<open>auth_graph_map\<close>
 
-text{*
+text\<open>
 
 Abstract a graph by relabelling the nodes (agents). Clearly this can
 collapse (and not create) distinctions.
 
-*}
+\<close>
 
 definition
   auth_graph_map :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a auth_graph \<Rightarrow> 'b auth_graph"
@@ -305,15 +305,15 @@ lemma auth_graph_map_mono:
 
 
 
-subsection {* Transform caps and tcb states into authority *}
+subsection \<open>Transform caps and tcb states into authority\<close>
 
-text{*
+text\<open>
 
 Abstract the state to an agent authority graph. This definition states
 what authority is conferred by a particular capability to the obj_refs
 in it.
 
-*}
+\<close>
 
 definition cap_rights_to_auth :: "cap_rights \<Rightarrow> bool \<Rightarrow> auth set"
 where
@@ -366,7 +366,7 @@ where
      = {(ep, Receive)} \<union> (if receiver_can_grant payl then {(ep, Grant)} else {})"
 | "tcb_st_to_auth _ = {}"
 
-subsection {* FIXME MOVE *}
+subsection \<open>FIXME MOVE\<close>
 
 definition pte_ref
 where
@@ -413,12 +413,12 @@ where
           (\<lambda>(p, a). (p, VSRef (ucast r) (Some APageTable), a)) ` (ptr_range p sz \<times> auth)
   | _ \<Rightarrow> {}"
 
-subsection {* Transferability: Moving caps between agents *}
+subsection \<open>Transferability: Moving caps between agents\<close>
 
-text {*
+text \<open>
   Tells if cap can move/be derived between agents without grant
   due to the inner workings of the system (Calling and replying for now)
-*}
+\<close>
 (* FIXME is_transferable should garantee directly that a non-NullCap cap is owned by its CDT
    parents without using directly the CDT so that we can use it in integrity *)
 inductive is_transferable for opt_cap
@@ -521,13 +521,13 @@ done
 
 
 
-subsection {* Generating a policy from the current cap, ASID and IRQs distribution *}
+subsection \<open>Generating a policy from the current cap, ASID and IRQs distribution\<close>
 
 (* TODO split that section between stba sata and sita and move a maximun
    of accesor functions back to AInvs *)
 
 
-text {*
+text \<open>
   sbta_caps/sbta_asid imply that a thread and it's vspace are labelled
   the same -- caps_of_state (tcb, vspace_index) will be the PD cap.
   Thus, a thread is completely managed or completely self-managed.
@@ -544,7 +544,7 @@ text {*
   construct for convenience, i.e. to get a nice set of intro rules,
   cases, etc.
 
-*}
+\<close>
 
 primrec aobj_ref' :: "arch_cap \<Rightarrow> obj_ref set"
 where
@@ -762,10 +762,10 @@ lemma sata_null_filter:
   by (auto elim!: state_asids_to_policy_aux.induct null_filterE
            intro: state_asids_to_policy_aux.intros sata_asid[OF null_filterI])
 
-subsection {* Policy Refinement *}
+subsection \<open>Policy Refinement\<close>
 
 
-text{*
+text\<open>
 
 We map scheduler domains to labels. This asserts that the labels on
 tcbs are consistent with the labels on the domains they run in.
@@ -773,7 +773,7 @@ tcbs are consistent with the labels on the domains they run in.
 We need this to show that the ready queues are not reordered by
 unauthorised subjects (see integrity_ready_queues).
 
-*}
+\<close>
 
 inductive_set domains_of_state_aux for ekheap
 where
@@ -797,16 +797,16 @@ lemma tcb_domain_map_wellformed_mono:
   "\<lbrakk> domains_of_state s' \<subseteq> domains_of_state s; tcb_domain_map_wellformed pas s \<rbrakk> \<Longrightarrow> tcb_domain_map_wellformed pas s'"
 by (auto simp: tcb_domain_map_wellformed_aux_def get_etcb_def)
 
-text{*
+text\<open>
 
 We sometimes need to know that our current subject may run in the current domain.
 
-*}
+\<close>
 
 abbreviation
   "pas_cur_domain aag s \<equiv> pasSubject aag \<in> pasDomainAbs aag (cur_domain s)"
 
-text{*
+text\<open>
 
 The relation we want to hold between the current state and
 the policy:
@@ -818,7 +818,7 @@ the policy:
 
 \end{itemize}
 
-*}
+\<close>
 abbreviation state_objs_in_policy :: "'a PAS \<Rightarrow> det_ext state \<Rightarrow> bool"
 where
   "state_objs_in_policy aag s \<equiv>
@@ -895,9 +895,9 @@ lemma pas_refined_sita_mem:
 
 
 
-section {* Integrity definition *}
+section \<open>Integrity definition\<close>
 
-subsection {* How kernel objects can change *}
+subsection \<open>How kernel objects can change\<close>
 
 fun blocked_on :: "obj_ref \<Rightarrow> Structures_A.thread_state \<Rightarrow> bool"
 where
@@ -1065,8 +1065,8 @@ definition asid_pool_integrity ::
        \<and> aag_subjects_have_auth_to subjects aag Control (the (pool x))"
 
 
-subsubsection {* Definition of object integrity *}
-text {*
+subsubsection \<open>Definition of object integrity\<close>
+text \<open>
   The object integrity relation describes which modification to kernel objects are allowed by the
   policy aag when the system is controlled by subjects.
 
@@ -1077,7 +1077,7 @@ text {*
   The activate boolean allows reactivation of a thread in a @{term Restart} state.
 
   Creation and destruction or retyping of kernel objects are not allowed unless l \<in> subjects
-*}
+\<close>
 (* FIXME it would be nice if there was an arch_tcb_context_update with all the required lemmas*)
 inductive integrity_obj_atomic for aag activate subjects l ko ko'
   where
@@ -1198,7 +1198,7 @@ definition integrity_obj
   where
   "integrity_obj aag activate subjects l \<equiv> (integrity_obj_atomic aag activate subjects l)\<^sup>*\<^sup>*"
 
-subsubsection {* Introduction rules for object integrity *}
+subsubsection \<open>Introduction rules for object integrity\<close>
 
 lemma troa_tro:
   "integrity_obj_atomic aag activate subjects l ko ko'
@@ -1291,7 +1291,7 @@ where
 
 
 
-subsubsection {* Alternative tagged formulation of object integrity *}
+subsubsection \<open>Alternative tagged formulation of object integrity\<close>
 
 datatype Tro_rules = LRefl | ORefl | RNtfn | REp | EpUnblock | TCBSend | TCBCall |
   TCBReply | TCBReceive | TCBRestart | TCBGeneric | RASID | TCBActivate | RCNode
@@ -1319,7 +1319,7 @@ lemma tro_tag_to_prime:
   unfolding tro_tag_def tro_tag'_def by simp
 
 
-text {*
+text \<open>
   This is the old definition of @{const integrity_obj}, corresponding
   to @{const integrity_obj_atomic} but with certain atomic steps
   combined (notably TCB updates).
@@ -1335,7 +1335,7 @@ text {*
   NB: we do not try to prove the converse, i.e. integrity_obj_alt
       implying @{const integrity_obj}. It is not quite true, and we
       do not need it in any case.
-*}
+\<close>
 inductive integrity_obj_alt for aag activate subjects l' ko ko'
 where
   tro_alt_lrefl:
@@ -1477,9 +1477,9 @@ lemma troa_tro_alt[elim!]:
 
 
 
-subsubsection {* ekheap and ready queues *}
+subsubsection \<open>ekheap and ready queues\<close>
 
-text{*
+text\<open>
 
   Assume two subjects can't interact. Then AINVS already implies that
   the ready queues of one won't change when the other is running.
@@ -1490,7 +1490,7 @@ text{*
   the running subject, e.g. by sending a message. Note these threads are
   added to the start of the queue.
 
-*}
+\<close>
 
 definition integrity_ready_queues
 where
@@ -1505,7 +1505,7 @@ where
   tre_lrefl: "\<lbrakk> l' \<in> subjects \<rbrakk> \<Longrightarrow> integrity_eobj aag subjects l' eko eko'"
 | tre_orefl: "\<lbrakk> eko = eko' \<rbrakk> \<Longrightarrow> integrity_eobj aag subjects l' eko eko'"
 
-subsubsection {* generic stuff : FIXME MOVE *}
+subsubsection \<open>generic stuff : FIXME MOVE\<close>
 
 lemma integrity_obj_activate:
   "integrity_obj aag False subjects l' ko ko' \<Longrightarrow>
@@ -1520,7 +1520,7 @@ where
   "object_integrity aag \<equiv> integrity_obj (aag :: 'a PAS) (pasMayActivate aag) {pasSubject aag}"
 
 
-subsection {* auth_ipc_buffer *}
+subsection \<open>auth_ipc_buffer\<close>
 
 definition auth_ipc_buffers :: "'z::state_ext state \<Rightarrow> word32 \<Rightarrow> word32 set"
 where
@@ -1566,9 +1566,9 @@ lemma auth_ipc_buffers_member_def:
   unfolding auth_ipc_buffers_def
   by (clarsimp simp: caps_of_state_tcb' split: option.splits cap.splits arch_cap.splits bool.splits)
 
-subsection {* How User and device memory can change *}
+subsection \<open>How User and device memory can change\<close>
 
-text {*
+text \<open>
   The memory integrity relation describes which modification to user memory are allowed by the
   policy aag when the system is controlled by subjects.
 
@@ -1589,7 +1589,7 @@ text {*
         to decide when to allow that in order to avoid duplicating the definitions.
 
   Inductive for now, we should add something about user memory/transitions.
-*}
+\<close>
 
 inductive integrity_mem for aag subjects p ts ts' ipcbufs globals w w'
 where
@@ -1624,9 +1624,9 @@ lemmas integrity_obj_simps [simp] = tro_orefl[OF refl]
 
 
 
-subsection {* How the CDT can change *}
+subsection \<open>How the CDT can change\<close>
 
-text {*
+text \<open>
   The CDT and CDT_list integrity relations describe which modification to the CDT (@{term cdt})
   , @{term is_original_cap} and @{term cdt_list})
   are allowed by the policy aag when the system is controlled by subjects.
@@ -1637,7 +1637,7 @@ text {*
         if an ancestor of a slot is owned by the subject, the slot is indirectly own by the subject
   \item we are allowed explicitly to take ownership of the slot, for now this only happens when
         we call someone: we are allowed to put a reply cap in its caller slot (slot number 3)
-*}
+\<close>
 
 (* FIXME MOVE*)
 notation parent_of_rtrancl ("_ \<Turnstile> _ \<rightarrow>* _" [60,0,60] 60)
@@ -1688,12 +1688,12 @@ where
 
 
 
-text{*
+text\<open>
   ptr is the slot we currently looking at
   s is the initial state (v should be coherent with s)
   v = (initial parent of ptr, initial "originality" of ptr)
   v' = (final parent of ptr, final "originality" of ptr)
- *}
+\<close>
 definition integrity_cdt
   :: "'a PAS \<Rightarrow> 'a set \<Rightarrow> cdt \<Rightarrow> (32 word \<Rightarrow> thread_state option)
        \<Rightarrow> cslot_ptr \<Rightarrow> (cslot_ptr option \<times> bool) \<Rightarrow> (cslot_ptr option \<times> bool) \<Rightarrow> bool"
@@ -1735,12 +1735,12 @@ lemmas integrity_cdt_direct = cca_direct[THEN  integrity_cdt_change_allowed]
 
 
 
-text{*
+text\<open>
   m is the cdt of the initial state
   tcbsts are tcb_states_of_state of the initial state
   ptr is the slot we currently looking at
   l and l' are the initial and final list of children of ptr
- *}
+\<close>
 definition integrity_cdt_list
   :: "'a PAS \<Rightarrow> 'a set \<Rightarrow> cdt \<Rightarrow> (32 word \<Rightarrow> thread_state option) \<Rightarrow> cslot_ptr \<Rightarrow>
       (cslot_ptr list) \<Rightarrow> (cslot_ptr list) \<Rightarrow> bool"
@@ -1784,7 +1784,7 @@ lemma integrity_cdt_listE:
 
 
 
-subsection {* How other stuff can change *}
+subsection \<open>How other stuff can change\<close>
 
 definition integrity_interrupts
   :: "'a PAS \<Rightarrow> 'a set \<Rightarrow> irq \<Rightarrow> (obj_ref \<times> irq_state) \<Rightarrow> (obj_ref \<times> irq_state) \<Rightarrow> bool"
@@ -1803,9 +1803,9 @@ where
 lemma integrity_asids_refl[simp]: "integrity_asids aag subjects ptr s s"
   by (simp add: integrity_asids_def)
 
-subsection {* General integrity *}
+subsection \<open>General integrity\<close>
 
-text{*
+text\<open>
 
 Half of what we ultimately want to say: that the parts of the
 system state that change are allowed to by the labelling @{term
@@ -1814,7 +1814,7 @@ system state that change are allowed to by the labelling @{term
 The other half involves showing that @{term "aag"} concords with the
 policy. See @{term "state_objs_to_policy s"} and @{term "pas_refined aag s"}.
 
-*}
+\<close>
 
 definition integrity_subjects
   :: "'a set \<Rightarrow> 'a PAS \<Rightarrow> bool \<Rightarrow> obj_ref set \<Rightarrow> det_ext state \<Rightarrow> det_ext state \<Rightarrow> bool"
@@ -1844,9 +1844,9 @@ where
 
 
 
-section {* Integrity transitivity *}
+section \<open>Integrity transitivity\<close>
 
-subsection {* Object integrity transitivity *}
+subsection \<open>Object integrity transitivity\<close>
 
 lemma clear_asidpool_trans[elim]:
   "\<lbrakk>asid_pool_integrity subjects aag pool pool';
@@ -2030,7 +2030,7 @@ by (fastforce elim!: integrity_eobj.cases
 
 
 
-subsection {* CDT integrity transitivity *}
+subsection \<open>CDT integrity transitivity\<close>
 
 lemma tcb_caller_slot_empty_on_recieve:
   "\<lbrakk> valid_mdb s ; valid_objs s; kheap s tcb_ptr = Some (TCB tcb); ep_recv_blocked ep (tcb_state tcb) \<rbrakk> \<Longrightarrow>
@@ -2139,7 +2139,7 @@ lemma trcdtlist_trans:
   by (blast intro: integrity_cdt_list_intros dest: cdt_change_allowed_backward)+
 
 
-subsection {* Main integrity transitivity *}
+subsection \<open>Main integrity transitivity\<close>
 
 
 lemma trinterrupts_trans:
@@ -2327,9 +2327,9 @@ lemma integrity_refl [simp]:
 unfolding integrity_subjects_def
 by simp
 
-section {* Generic AC stuff *}
+section \<open>Generic AC stuff\<close>
 
-subsection {* Basic integrity lemmas *}
+subsection \<open>Basic integrity lemmas\<close>
 
 (* Tom says that Gene Wolfe says that autarchy \<equiv> self authority. *)
 
@@ -2378,7 +2378,7 @@ crunch integrity_autarch: set_thread_state "integrity aag X st"
 
 lemmas integrity_def = integrity_subjects_def
 
-subsection {* Out of subject cap manipulation *}
+subsection \<open>Out of subject cap manipulation\<close>
 
 (* FIXME MOVE *)
 lemma all_children_descendants_of:
@@ -2565,7 +2565,7 @@ lemma integrity_update_eq[iff]:
 
 end
 
-subsection {* Various abbreviations *}
+subsection \<open>Various abbreviations\<close>
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -2611,7 +2611,7 @@ abbreviation pas_cap_cur_auth :: "'a PAS \<Rightarrow> cap \<Rightarrow> bool"
 where
   "pas_cap_cur_auth aag cap \<equiv> aag_cap_auth aag (pasSubject aag) cap"
 
-subsection {* Random lemmas that belong here *}
+subsection \<open>Random lemmas that belong here\<close>
 
 crunch integrity_autarch: as_user "integrity aag X st"
 
@@ -2690,7 +2690,7 @@ done
 
 (* **************************************** *)
 
-subsection{* Random lemmas that belong elsewhere. *}
+subsection\<open>Random lemmas that belong elsewhere.\<close>
 
 (* FIXME: move *)
 lemma bang_0_in_set:
@@ -2819,7 +2819,7 @@ lemma aag_Control_owns_strg:
 
 (* **************************************** *)
 
-subsection {* Policy entailments *}
+subsection \<open>Policy entailments\<close>
 
 lemma owns_ep_owns_receivers:
   "\<lbrakk>\<forall>auth. aag_has_auth_to aag auth epptr; pas_refined aag s; invs s;
@@ -2872,7 +2872,7 @@ lemma cap_cur_auth_caps_of_state:
   \<Longrightarrow> pas_cap_cur_auth aag cap"
   by (metis cap_auth_caps_of_state)
 
-subsection {* Integrity monotony over subjects *}
+subsection \<open>Integrity monotony over subjects\<close>
 
 lemmas new_range_subset' = aligned_range_offset_subset
 lemmas ptr_range_subset = new_range_subset' [folded ptr_range_def]
@@ -2989,7 +2989,7 @@ lemma integrity_mono:
   apply blast
   done
 
-subsection{* Access control do not care about machine_state *}
+subsection\<open>Access control do not care about machine_state\<close>
 
 lemma integrity_irq_state_independent[intro!, simp]:
   "integrity x y z (s\<lparr>machine_state :=
@@ -3015,7 +3015,7 @@ lemma pas_refined_irq_state_independent[intro!, simp]:
   by (simp add: pas_refined_def)
 
 
-subsection{* Transitivity of integrity lemmas and tactics *}
+subsection\<open>Transitivity of integrity lemmas and tactics\<close>
 
 lemma integrity_trans_start:
   "(\<And> s. P s \<Longrightarrow> \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_. integrity aag X s\<rbrace>)

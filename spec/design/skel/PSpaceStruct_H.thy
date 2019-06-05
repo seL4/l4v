@@ -16,7 +16,7 @@ imports
   "Lib.DataMap"
 begin
 
-text {* Helper Functions *}
+text \<open>Helper Functions\<close>
 
 definition
   ptrBits_def[simp]:
@@ -24,7 +24,7 @@ definition
 
 #INCLUDE_HASKELL SEL4/Model/PSpace.lhs ONLY ptrBitsForSize
 
-text {* Physical Memory Structures *}
+text \<open>Physical Memory Structures\<close>
 
 #INCLUDE_HASKELL SEL4/Model/PSpace.lhs Data.Map=DataMap ONLY PSpace
 

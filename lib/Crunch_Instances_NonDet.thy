@@ -18,7 +18,7 @@ lemmas [crunch_param_rules] = Let_def return_bind returnOk_bindE
     K_bind_def split_def bind_assoc bindE_assoc
     trans[OF liftE_bindE return_bind]
 
-ML {*
+ML \<open>
 fun get_nondet_monad_state_type
   (Type ("Product_Type.prod",
          [Type ("Set.set", [Type ("Product_Type.prod", [_,v])]),
@@ -133,19 +133,19 @@ struct
 end;
 
 structure CrunchValidE : CRUNCH = Crunch(CrunchValidEInstance);
-*}
+\<close>
 
-setup {*
+setup \<open>
   add_crunch_instance "" (CrunchValid.crunch_x, CrunchValid.crunch_ignore_add_del)
-*}
-setup {*
+\<close>
+setup \<open>
   add_crunch_instance "valid" (CrunchValid.crunch_x, CrunchValid.crunch_ignore_add_del)
-*}
-setup {*
+\<close>
+setup \<open>
   add_crunch_instance "no_fail" (CrunchNoFail.crunch_x, CrunchNoFail.crunch_ignore_add_del)
-*}
-setup {*
+\<close>
+setup \<open>
   add_crunch_instance "empty_fail" (CrunchEmptyFail.crunch_x, CrunchEmptyFail.crunch_ignore_add_del)
-*}
+\<close>
 
 end

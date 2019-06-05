@@ -541,27 +541,27 @@ lemma decodeCNodeInvocation_inv[wp]:
   apply (wp | simp)+
   done
 
-text {* Various proofs about the two recursive deletion operations.
+text \<open>Various proofs about the two recursive deletion operations.
         These call out to various functions in Tcb and Ipc, and are
-        thus better proved here than in CSpace_R. *}
+        thus better proved here than in CSpace_R.\<close>
 
-text {* Proving the termination of rec_del *}
+text \<open>Proving the termination of rec_del\<close>
 
 crunch typ_at[wp]: cancel_ipc "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps hoare_vcg_if_splitE simp: crunch_simps)
 
 declare if_split [split]
 
-text {* Proving desired properties about rec_del/cap_delete *}
+text \<open>Proving desired properties about rec_del/cap_delete\<close>
 
 declare of_nat_power [simp del]
 
 (* FIXME: pull up *)
 declare word_unat_power [symmetric, simp del]
 
-text {* Proving desired properties about recursiveDelete/cteDelete *}
+text \<open>Proving desired properties about recursiveDelete/cteDelete\<close>
 
-text {* Proving the termination of finaliseSlot *}
+text \<open>Proving the termination of finaliseSlot\<close>
 
 definition
   not_recursive_ctes :: "kernel_state \<Rightarrow> word32 set"
@@ -6782,7 +6782,7 @@ lemma cteDelete_rvk_prog:
   apply (rule use_spec, rule finaliseSlot_rvk_prog)
   done
 
-text {* Proving correspondence between the delete functions. *}
+text \<open>Proving correspondence between the delete functions.\<close>
 
 definition
   "spec_corres s r P P' f f' \<equiv> corres r (P and ((=) s)) P' f f'"
@@ -7422,11 +7422,11 @@ lemma cap_delete_corres:
   done
 
 
-text {* The revoke functions, and their properties, are
+text \<open>The revoke functions, and their properties, are
         slightly easier to deal with than the delete
         function. However, their termination arguments
         are complex, requiring that the delete functions
-        reduce the number of non-null capabilities. *}
+        reduce the number of non-null capabilities.\<close>
 
 definition
   cteRevoke_recset :: "((machine_word \<times> kernel_state) \<times> (machine_word \<times> kernel_state)) set"

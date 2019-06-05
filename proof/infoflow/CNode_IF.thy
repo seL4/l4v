@@ -682,10 +682,10 @@ definition irq_at :: "nat \<Rightarrow> (10 word \<Rightarrow> bool) \<Rightarro
 definition is_irq_at :: "('z::state_ext) state \<Rightarrow> irq \<Rightarrow> nat \<Rightarrow> bool" where
   "is_irq_at s \<equiv> \<lambda> irq pos. irq_at pos (irq_masks (machine_state s)) = Some irq"
 
-text {*
+text \<open>
   We require that interrupts recur in order to ensure that no individual
   big step ever diverges.
-*}
+\<close>
 definition irq_is_recurring :: "irq \<Rightarrow> ('z::state_ext) state \<Rightarrow> bool" where
   "irq_is_recurring irq s \<equiv> \<forall>n. (\<exists>m. is_irq_at s irq (n+m))"
 
@@ -721,10 +721,10 @@ lemma dmo_getActiveIRQ_only_timer:
   apply(simp add: is_irq_at_def)
   done
 
-text {*
+text \<open>
   There is only one interrupt turned on, namely @{term irq}, and it is
   a timer interrupt.
-*}
+\<close>
 definition only_timer_irq :: "10 word \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "only_timer_irq irq s \<equiv> (\<forall>x. interrupt_states s x = IRQTimer \<longrightarrow> x = irq) \<and> irq_is_recurring irq s"
 

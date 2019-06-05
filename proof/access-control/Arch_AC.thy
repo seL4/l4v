@@ -14,11 +14,11 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-text{*
+text\<open>
 
 Arch-specific access control.
 
-*}
+\<close>
 
 lemma store_pde_respects:
   "\<lbrace>integrity aag X st and K (is_subject aag (p && ~~ mask pd_bits)) \<rbrace>

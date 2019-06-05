@@ -104,7 +104,7 @@ where
     | Inr SuperSectionObject \<Rightarrow> Some (if dev then KOUserDataDevice else KOUserData)
     | _ \<Rightarrow> None"
 
-text {* makeObject etc. lemmas *}
+text \<open>makeObject etc. lemmas\<close>
 
 lemma NullCap_valid' [iff]: "s \<turnstile>' capability.NullCap"
   unfolding valid_cap'_def by simp
@@ -162,9 +162,9 @@ lemmas valid_obj_makeObject_rules =
   valid_obj_makeObject_cte valid_obj_makeObject_pte valid_obj_makeObject_pde
   valid_obj_makeObject_asid_pool valid_obj_makeObject_user_data_device
 
-text {* On the abstract side *}
+text \<open>On the abstract side\<close>
 
-text {* Lemmas for createNewObjects etc. *}
+text \<open>Lemmas for createNewObjects etc.\<close>
 
 lemma pspace_dom_upd:
   assumes      orth: "set as \<inter> dom ps = {}"

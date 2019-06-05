@@ -144,7 +144,7 @@ lemma st_tcb_at'_def:
   by (simp add: pred_tcb_at'_def o_def)
 
 
-text {* cte with property at *}
+text \<open>cte with property at\<close>
 definition
   "cte_wp_at' P p s \<equiv> \<exists>cte::cte. fst (getObject p s) = {(cte,s)} \<and> P cte"
 

@@ -497,8 +497,8 @@ lemma array_relation_to_map:
   by (simp add: array_relation_def array_to_map_def)
 
 
-text {* Note: Sometimes, @{text array_map_conv} might be more convenient
-              in conjunction with @{const array_relation}. *}
+text \<open>Note: Sometimes, @{text array_map_conv} might be more convenient
+              in conjunction with @{const array_relation}.\<close>
 definition "array_map_conv f n c \<equiv> map_comp f (array_to_map n c)"
 
 lemma array_map_conv_def2:
@@ -511,11 +511,11 @@ lemma array_relation_map_conv2:
   by (rule ext) (simp add: array_relation_def array_map_conv_def2)
 
 (* FIXME: move to somewhere sensible >>> *)
-text {* Map inversion (implicitly assuming injectivity). *}
+text \<open>Map inversion (implicitly assuming injectivity).\<close>
 definition
   "the_inv_map m = (\<lambda>s. if s\<in>ran m then Some (THE x. m x = Some s) else None)"
 
-text {* Map inversion can be expressed by function inversion. *}
+text \<open>Map inversion can be expressed by function inversion.\<close>
 lemma the_inv_map_def2:
   "the_inv_map m = (Some \<circ> the_inv_into (dom m) (the \<circ> m)) |` (ran m)"
   apply (rule ext)
@@ -525,10 +525,10 @@ lemma the_inv_map_def2:
   apply auto
   done
 
-text {* The domain of a function composition with Some is the universal set. *}
+text \<open>The domain of a function composition with Some is the universal set.\<close>
 lemma dom_comp_Some[simp]: "dom (comp Some f) = UNIV" by (simp add: dom_def)
 
-text {* Assuming injectivity, map inversion produces an inversive map. *}
+text \<open>Assuming injectivity, map inversion produces an inversive map.\<close>
 lemma is_inv_the_inv_map:
   "inj_on m (dom m) \<Longrightarrow> is_inv m (the_inv_map m)"
   apply (simp add: is_inv_def)

@@ -13,12 +13,12 @@ imports "Prefix_Refinement"
 
 begin
 
-text {* This library introduces a number of proofs about the question of
+text \<open>This library introduces a number of proofs about the question of
 atomicity refinement, particularly in combination with the existing
 prefix refinement notion. It introduces an additional notion of refinement
 which left-composes with prefix refinement and can be used to rearrange
 operations around interference points.
-*}
+\<close>
 
 abbreviation
   "interferences \<equiv> repeat interference"
@@ -105,11 +105,11 @@ schematic_goal prefix_refinement_interferences_split:
   apply (simp add: bind_assoc)
   done
 
-text {* Suppressing interference points. The constant below discards
+text \<open>Suppressing interference points. The constant below discards
 the self actions within a trace and filters out traces in which the
 environment acts. This reduces both env_steps and interference to
 noops.
-*}
+\<close>
 
 definition
   detrace :: "('s, 'a) tmonad \<Rightarrow> ('s, 'a) tmonad"
@@ -204,8 +204,8 @@ lemma detrace_interference:
   apply (simp add: bind_def get_def)
   done
 
-text {* Decomposition of environment and program actions by strict
-separation, possibly relevant for ``recovering'' atomicity. *}
+text \<open>Decomposition of environment and program actions by strict
+separation, possibly relevant for ``recovering'' atomicity.\<close>
 
 lemma equivp_compare_f:
   "equivp (\<lambda>x y. f x = f y)"
@@ -226,11 +226,11 @@ lemma equivp_split_eqs:
   "equivp (snd_split_eq f)"
   by (simp_all add: fst_split_eq_def snd_split_eq_def equivp_compare_f)
 
-text {* One way of defining the "diamond" pattern in which two state
+text \<open>One way of defining the "diamond" pattern in which two state
 changes commute. Depends on a way of splitting the state into domains,
 in which state changes can be observed to impact only certain domains.
 This can define a unique way of reordering operations that impact
-disjoint sets of domains. *}
+disjoint sets of domains.\<close>
 
 type_synonym
   ('s, 'd) domain_split = "'s \<Rightarrow> 'd \<Rightarrow> 's"
@@ -312,7 +312,7 @@ lemma diamond_trans_eq:
   "diamond ds s sa sb sab \<Longrightarrow> (diamond ds sb sab = diamond ds s sa)"
   by (simp add: fun_eq_iff, metis diamond_trans diamond_flips)
 
-text {*
+text \<open>
 A notion of refinement by traces related under a state relation. Simpler
 than @{term prefix_refinement}, and left-composes with
 @{term prefix_refinement}.
@@ -320,7 +320,7 @@ than @{term prefix_refinement}, and left-composes with
 We'll use this notion to show how the concrete side of a @{term prefix_refinement}
 hypothesis can be reordered to better match its specification, in particular
 how interference points can be moved.
-*}
+\<close>
 
 definition
   rel_tr_refinement :: "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> 's rg_pred

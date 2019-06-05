@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-chapter {* \label{h:connector}Connector Components *}
+chapter \<open>\label{h:connector}Connector Components\<close>
 
 (*<*)
 theory Connector
@@ -15,7 +15,7 @@ imports Abbreviations
 begin
 (*>*)
 
-text {*
+text \<open>
   As mentioned in previous sections, we represent events and shared memory
   as components. These connector components, unlike the component instances in
   the system, \emph{always} have a well-defined, constrained execution because
@@ -34,10 +34,10 @@ text {*
   unsafe transitions involving malformed messages, but these transitions can
   never be taken in a global step because there is no corresponding unsafe step
   in the connector component definition.
-*}
+\<close>
 
-subsection {* \label{ssec:eventcomponents}Event Components *}
-text {*
+subsection \<open>\label{ssec:eventcomponents}Event Components\<close>
+text \<open>
   We represent a \camkes event connector as a component always listening for @{term Set} or
   @{term Poll} questions that then simultaneously responds with the relevant
   answer. In particular, the local state is expected to be of the form @{term "Event s"},
@@ -45,7 +45,7 @@ text {*
   messages are enabled. If a @{const Set} is received, the local state becomes @{term "Event True"},
   and the response back is @{const Void}. If the message is @{const Poll}, the local event
   state is cleared, and the response message contains the previous event state @{term s}.
-*}
+\<close>
 definition
   event :: "'channel \<Rightarrow> ('channel, 'component_state) comp"
 where
@@ -56,22 +56,22 @@ where
        | Poll \<Rightarrow> {(Event False, \<lparr>a_channel = q_channel q, a_data = Pending s\<rparr>)}
        | _ \<Rightarrow> {}))"
 
-text {*
+text \<open>
   An event component always starts without a pending event.
-*}
+\<close>
 definition
   init_event_state :: "'component_state local_state"
 where
   "init_event_state \<equiv> Event False"
 
-subsection {* \label{ssec:memorycomponents}Shared Memory Components *}
-text {*
+subsection \<open>\label{ssec:memorycomponents}Shared Memory Components\<close>
+text \<open>
   We represent shared memory as an always listening component that reads or
   writes information into its local state. Executing these reads and writes
   unconditionally accurately represents the behaviour of a read/write region of
   memory. The implementation is similar to @{const event}, it merely replaces
   a one-place buffer with a map.
-*}
+\<close>
 definition
   memory :: "'channel \<Rightarrow> ('channel, 'component_state) comp"
 where
@@ -84,22 +84,22 @@ where
                          \<lparr>a_channel = q_channel q, a_data = Void\<rparr>)})
     | _ \<Rightarrow> {})"
 
-text {*
+text \<open>
   The initial state of a shared memory component is an empty map. A shared
   memory region is assumed to be zeroed on startup.
-*}
+\<close>
 definition
   init_memory_state :: "'component_state local_state"
 where
   "init_memory_state \<equiv> Memory Map.empty"
 
-text {*
+text \<open>
   In \camkes ADL descriptions, shared memory regions can have a type, typically
   defined as a C struct. For now only the default type @{term Buf} is
   represented in this model. The model can be trivially extended to represent
   user types as components with a memory local state that have additional
   constraints on what can be read from or written to the state.
-*}
+\<close>
 type_synonym Buf\<^sub>d_channel = unit
 
 definition

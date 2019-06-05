@@ -15,7 +15,7 @@ imports
   Lib.Defs
 begin
 
-text {* Test cases for crunch *}
+text \<open>Test cases for crunch\<close>
 
 definition
   "crunch_foo1 (x :: nat) \<equiv> do

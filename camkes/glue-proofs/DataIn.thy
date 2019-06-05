@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-chapter {* Shared Memory *}
+chapter \<open>Shared Memory\<close>
 (*<*)
 theory DataIn imports
   "CParser.CTranslation"
@@ -35,7 +35,7 @@ lemma DataIn__run_nf: "\<lbrace>\<lambda>s. \<forall>r. P r s\<rbrace> DataIn__r
   done
 (*>*)
 
-text {*
+text \<open>
   The CAmkES glue code for dataports (shared memory regions) involves no system calls, but we can
   show safety of the utility functions provided to the user code. These functions for ``wrapping''
   and ``unwrapping'' a pointer to a dataport are designed to convert a local pointer to and from a
@@ -43,7 +43,7 @@ text {*
   interface, and then ``unwrapped'' on the other side for access. This requires the sender and the
   receiver to both have access to the given dataport. The following two proofs characterise the
   safety of such functions.
-*}
+\<close>
 lemma DataIn_wrap_ptr_nf:
   "\<lbrace>\<lambda>s. (\<forall>x\<in>set (array_addrs (Ptr (symbol_table ''DataIn_data'')) 4096).
           is_valid_w8 s x) \<and>

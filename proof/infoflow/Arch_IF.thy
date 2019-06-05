@@ -68,7 +68,7 @@ lemma detype_irq_state_of_state[simp]:
   apply(simp add: detype_def)
   done
 
-text {* Not true of invoke_untyped any more. *}
+text \<open>Not true of invoke_untyped any more.\<close>
 crunch irq_state_of_state[wp]: retype_region,create_cap,delete_objects "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp crunch_wps
     simp: crunch_simps ignore: freeMemory

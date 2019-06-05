@@ -31,7 +31,7 @@ requalify_consts
 end
 
 
-text{*
+text\<open>
 \label{c:syscall}
 
 This theory defines the entry point to the kernel, @{term
@@ -59,13 +59,13 @@ user (using the @{term decode_invocation} operation), and finally
 actually performing the invocation (using the @{term
 perform_invocation}).  These three phases are wrapped into a more
 generic @{term syscall} framework function described below.
-*}
+\<close>
 
 
-section {* Generic system call structure\label{s:spec_syscall} *}
+section \<open>Generic system call structure\label{s:spec_syscall}\<close>
 
 
-text{* The @{term syscall} operation generically describes the usual
+text\<open>The @{term syscall} operation generically describes the usual
 execution of system calls in three phases, where the first phase may
 result in a fault, the second phase may result in an error and the third
 phase may be interrupted. The first two phases are used for argument decoding
@@ -86,7 +86,7 @@ operation resulted in an error;
 no error occurred in the second operation); this operation may be
 interrupted.
 \end{itemize}
-*}
+\<close>
 
 definition
   syscall :: "('a,'z::state_ext) f_monad
@@ -108,9 +108,9 @@ where
 odE"
 
 
-section {* System call entry point *}
+section \<open>System call entry point\<close>
 
-text{* The kernel user can perform seven kinds of system calls,
+text\<open>The kernel user can perform seven kinds of system calls,
 described by the enumerated type @{term syscall}, defined in \autoref{s:spec_syscall}.
 These seven system calls can be categorised into two broad
 families: sending messages and receiving messages, the two main
@@ -142,9 +142,9 @@ excessive switching between user and kernel mode, the kernel provides
 a ReplyRecv operation, which is simply a Reply followed by Recv.
 
 Finally, the last event, @{text Yield}, enables the user to donate its
-remaining timeslice. *}
+remaining timeslice.\<close>
 
-text{* The invocation is made up of three phases. The first phase
+text\<open>The invocation is made up of three phases. The first phase
 corresponds to a lookup of capabilities to check that the invocation
 is valid. This phase can result in a fault if a given CSpace address
 is invalid (see the function @{text "resolve_address_bits"}). The
@@ -155,7 +155,7 @@ less than required by the operation, or if some argument capability
 has the wrong type. Finally, the actual invocation is performed, using
 the @{text perform_invocation} function. Note that this last phase is
 preemptable.
-*}
+\<close>
 
 fun
   perform_invocation :: "bool \<Rightarrow> bool \<Rightarrow> invocation \<Rightarrow> (data list,'z::state_ext) p_monad"
@@ -322,7 +322,7 @@ definition
   od"
 
 
-section {* Top-level event handling  *}
+section \<open>Top-level event handling\<close>
 
 fun
   handle_event :: "event \<Rightarrow> (unit,'z::state_ext) p_monad"
@@ -372,13 +372,13 @@ where
   od)"
 
 
-section {* Kernel entry point  *}
+section \<open>Kernel entry point\<close>
 
-text {*
+text \<open>
   This function is the main kernel entry point. The main event loop of the
   kernel handles events, handles a potential preemption interrupt, schedules
   and switches back to the active thread.
-*}
+\<close>
 
 definition
   call_kernel :: "event \<Rightarrow> (unit,'z::state_ext_sched) s_monad" where

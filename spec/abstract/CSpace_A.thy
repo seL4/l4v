@@ -41,7 +41,7 @@ requalify_consts
 end
 
 
-text {* This theory develops an abstract model of \emph{capability
+text \<open>This theory develops an abstract model of \emph{capability
 spaces}, or CSpace, in seL4. The CSpace of a thread can be thought of
 as the set of all capabilities it has access to. More precisely, it
 is a directed graph of CNodes starting in the CSpace slot of a TCB.
@@ -53,11 +53,11 @@ The following sections show basic manipulation of capabilities,
 resolving user-specified, path-based capability references into
 internal kernel references, transfer, revokation, deletion,
 and finally toplevel capability invocations.
-*}
+\<close>
 
-section {* Basic capability manipulation *}
+section \<open>Basic capability manipulation\<close>
 
-text {* Interpret a set of rights from a user data word. *}
+text \<open>Interpret a set of rights from a user data word.\<close>
 definition
   data_to_rights :: "data \<Rightarrow> cap_rights" where
   "data_to_rights data \<equiv> let
@@ -67,8 +67,8 @@ definition
                   | AllowGrant \<Rightarrow> w !! 2
                   | AllowGrantReply \<Rightarrow> w !! 3}"
 
-text {* Check that a capability stored in a slot is not a parent of any other
-capability. *}
+text \<open>Check that a capability stored in a slot is not a parent of any other
+capability.\<close>
 definition
   ensure_no_children :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) se_monad" where
   "ensure_no_children cslot_ptr \<equiv> doE
@@ -104,9 +104,9 @@ where
        \<and> obj_ref_of src_cap = obj_ref_of new_cap \<and> cap_bits_untyped src_cap = cap_bits_untyped new_cap)
        then set_cap (max_free_index_update src_cap) src_slot else return ()"
 
-text {* Derive a cap into a form in which it can be copied. For internal reasons
+text \<open>Derive a cap into a form in which it can be copied. For internal reasons
 not all capability types can be copied at all times and not all capability types
-can be copied unchanged. *}
+can be copied unchanged.\<close>
 definition
 derive_cap :: "cslot_ptr \<Rightarrow> cap \<Rightarrow> (cap,'z::state_ext) se_monad" where
 "derive_cap slot cap \<equiv>
@@ -118,11 +118,11 @@ derive_cap :: "cslot_ptr \<Rightarrow> cap \<Rightarrow> (cap,'z::state_ext) se_
     | IRQControlCap \<Rightarrow> returnOk NullCap
     | _ \<Rightarrow> returnOk cap"
 
-text {* Transform a capability on request from a user thread. The user-supplied
+text \<open>Transform a capability on request from a user thread. The user-supplied
 argument word is interpreted differently for different cap types. If the
 preserve flag is set this transformation is being done in-place which means some
 changes are disallowed because they would invalidate existing CDT relationships.
-*}
+\<close>
 definition
   update_cap_data :: "bool \<Rightarrow> data \<Rightarrow> cap \<Rightarrow> cap" where
 "update_cap_data preserve w cap \<equiv>
@@ -148,13 +148,13 @@ definition
   else
     cap"
 
-section {* Resolving capability references *}
+section \<open>Resolving capability references\<close>
 
-text {*
+text \<open>
 Recursively looks up a capability address to a CNode slot by walking over
 multiple CNodes until all the bits in the address are used or there are
 no further CNodes.
-*}
+\<close>
 function resolve_address_bits' :: "'z itself \<Rightarrow> cap \<times> cap_ref \<Rightarrow> (cslot_ptr \<times> cap_ref,'z::state_ext) lf_monad"
 where
   "resolve_address_bits' z (cap, cref) =
@@ -206,8 +206,8 @@ termination
 definition resolve_address_bits where
 "resolve_address_bits \<equiv> resolve_address_bits' TYPE('z::state_ext)"
 
-text {* Specialisations of the capability lookup process to various standard
-cases. *}
+text \<open>Specialisations of the capability lookup process to various standard
+cases.\<close>
 definition
   lookup_slot_for_thread :: "obj_ref \<Rightarrow> cap_ref \<Rightarrow> (cslot_ptr \<times> cap_ref,'z::state_ext) lf_monad"
 where
@@ -267,10 +267,10 @@ where
  "lookup_pivot_slot  \<equiv> lookup_slot_for_cnode_op True"
 
 
-section {* Transferring capabilities *}
+section \<open>Transferring capabilities\<close>
 
-text {* These functions are used in interpreting from user arguments the manner
-in which a capability transfer should take place. *}
+text \<open>These functions are used in interpreting from user arguments the manner
+in which a capability transfer should take place.\<close>
 
 definition
   captransfer_from_words :: "machine_word \<Rightarrow> (captransfer,'z::state_ext) s_monad"
@@ -314,10 +314,10 @@ where
 |  "get_receive_slots x None = return []"
 
 
-section {* Revoking and deleting capabilities *}
+section \<open>Revoking and deleting capabilities\<close>
 
-text {* Deletion of the final capability to any object is a long running
-operation if the capability is of these types. *}
+text \<open>Deletion of the final capability to any object is a long running
+operation if the capability is of these types.\<close>
 definition
   long_running_delete :: "cap \<Rightarrow> bool" where
  "long_running_delete cap \<equiv> case cap of
@@ -340,9 +340,9 @@ where
          od
    od"
 
-text {* Swap the contents of two capability slots. The capability parameters are
+text \<open>Swap the contents of two capability slots. The capability parameters are
 the new states of the capabilities, as the user may request that the
-capabilities are transformed as they are swapped. *}
+capabilities are transformed as they are swapped.\<close>
 definition
   cap_swap :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -367,8 +367,8 @@ where
     set_original slot2 (is_original slot1)
   od"
 
-text {* Move a capability from one slot to another. Once again the new
-capability is a parameter as it may be transformed while it is moved. *}
+text \<open>Move a capability from one slot to another. Once again the new
+capability is a parameter as it may be transformed while it is moved.\<close>
 definition
   cap_move :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -387,8 +387,8 @@ where
     set_original src_slot False
   od"
 
-text {* This version of capability swap does not change the capabilities that
-are swapped, passing the existing capabilities to the more general function. *}
+text \<open>This version of capability swap does not change the capabilities that
+are swapped, passing the existing capabilities to the more general function.\<close>
 definition
   cap_swap_for_delete :: "cslot_ptr \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -399,20 +399,20 @@ where
     cap_swap cap1 slot1 cap2 slot2
   od"
 
-text {* The type of possible recursive deletes. *}
+text \<open>The type of possible recursive deletes.\<close>
 datatype
   rec_del_call
   = CTEDeleteCall cslot_ptr bool
   | FinaliseSlotCall cslot_ptr bool
   | ReduceZombieCall cap cslot_ptr bool
 
-text {* Locate the nth capability beyond some base capability slot. *}
+text \<open>Locate the nth capability beyond some base capability slot.\<close>
 definition
   locate_slot :: "cslot_ptr \<Rightarrow> nat \<Rightarrow> cslot_ptr" where
  "locate_slot \<equiv> \<lambda>(a, b) n. (a, drop (32 - length b)
                            (to_bl (of_bl b + of_nat n :: word32)))"
 
-text {* Actions to be taken after deleting an IRQ Handler capability. *}
+text \<open>Actions to be taken after deleting an IRQ Handler capability.\<close>
 definition
   deleting_irq_handler :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -421,14 +421,14 @@ where
     cap_delete_one slot
   od"
 
-text {* Actions that must be taken when a capability is deleted. Returns two
+text \<open>Actions that must be taken when a capability is deleted. Returns two
 capabilities: The first is a capability to be re-inserted into the slot in place
 of the deleted capability; in particular, this will be a Zombie if the deletion
 requires a long-running operation. The second represents some further
 post-deletion action to be performed after the slot is cleared. For example,
 an IRQHandlerCap indicates an IRQ to be cleared. Arch capabilities may also be
 associated with arch-specific post-deletion actions. For most cases, however,
-NullCap is used to indicate that no post-deletion action is required. *}
+NullCap is used to indicate that no post-deletion action is required.\<close>
 
 fun
   finalise_cap :: "cap \<Rightarrow> bool \<Rightarrow> (cap \<times> cap,'z::state_ext) s_monad"
@@ -474,10 +474,10 @@ definition
   | NullCap \<Rightarrow> True
   | _ \<Rightarrow> False"
 
-text {* This operation is used to delete a capability when it is known that a
+text \<open>This operation is used to delete a capability when it is known that a
 long-running operation is impossible. It is equivalent to calling the regular
 finalisation operation. It cannot be defined in that way as doing so
-would create a circular definition. *}
+would create a circular definition.\<close>
 
 
 lemma fast_finalise_def2:
@@ -489,9 +489,9 @@ lemma fast_finalise_def2:
   supply K_def[simp]
   by (cases cap, simp_all add: liftM_def assert_def can_fast_finalise_def)
 
-text {* The finalisation process on a Zombie or Null capability is finished for
+text \<open>The finalisation process on a Zombie or Null capability is finished for
 all Null capabilities and for Zombies that cover no slots or only the slot they
-are currently stored in. *}
+are currently stored in.\<close>
 primrec (nonexhaustive)
   cap_removeable :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> bool"
 where
@@ -499,15 +499,15 @@ where
 | "cap_removeable (Zombie slot' bits n) slot =
     ((n = 0) \<or> (n = 1 \<and> (slot', replicate (zombie_cte_bits bits) False) = slot))"
 
-text {* Checks for Zombie capabilities that refer to the CNode or TCB they are
-stored in. *}
+text \<open>Checks for Zombie capabilities that refer to the CNode or TCB they are
+stored in.\<close>
 definition
   cap_cyclic_zombie :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> bool" where
  "cap_cyclic_zombie cap slot \<equiv> case cap of
          Zombie slot' bits n \<Rightarrow> (slot', replicate (zombie_cte_bits bits) False) = slot
        | _ \<Rightarrow> False"
 
-text {* The complete recursive delete operation. *}
+text \<open>The complete recursive delete operation.\<close>
 function (sequential)
   rec_del :: "rec_del_call \<Rightarrow> (bool * cap,'z::state_ext) p_monad"
 where
@@ -567,18 +567,18 @@ where
   fail s"
   by pat_completeness auto
 
-text {* Delete a capability by calling the recursive delete operation. *}
+text \<open>Delete a capability by calling the recursive delete operation.\<close>
 definition
   cap_delete :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) p_monad" where
  "cap_delete slot \<equiv> doE rec_del (CTEDeleteCall slot True); returnOk () odE"
 
-text {* Prepare the capability in a slot for deletion but do not delete it. *}
+text \<open>Prepare the capability in a slot for deletion but do not delete it.\<close>
 definition
   finalise_slot :: "cslot_ptr \<Rightarrow> bool \<Rightarrow> (bool * cap,'z::state_ext) p_monad"
 where
   "finalise_slot p e \<equiv> rec_del (FinaliseSlotCall p e)"
 
-text {* Helper functions for the type of recursive delete calls. *}
+text \<open>Helper functions for the type of recursive delete calls.\<close>
 primrec
   exposed_rdcall :: "rec_del_call \<Rightarrow> bool"
 where
@@ -600,8 +600,8 @@ where
 | "slot_rdcall (FinaliseSlotCall slot exposed) = slot"
 | "slot_rdcall (ReduceZombieCall cap slot exposed) = slot"
 
-text {* Revoke the derived capabilities of a given capability, deleting them
-all. *}
+text \<open>Revoke the derived capabilities of a given capability, deleting them
+all.\<close>
 
 function cap_revoke :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) p_monad"
 where
@@ -620,7 +620,7 @@ where
 odE) s"
 by auto
 
-section {* Inserting and moving capabilities *}
+section \<open>Inserting and moving capabilities\<close>
 
 definition
   get_badge :: "cap \<Rightarrow> badge option" where
@@ -668,7 +668,7 @@ where
 | "same_region_as (ArchObjectCap a) c' =
     (case c' of ArchObjectCap a' \<Rightarrow> arch_same_region_as a a' | _ \<Rightarrow> False)"
 
-text {* Check whether two capabilities are to the same object. *}
+text \<open>Check whether two capabilities are to the same object.\<close>
 definition
   same_object_as :: "cap \<Rightarrow> cap \<Rightarrow> bool" where
  "same_object_as cp cp' \<equiv>
@@ -680,7 +680,7 @@ definition
 
 
 
-text {*
+text \<open>
 The function @{text "should_be_parent_of"}
 checks whether an existing capability should be a parent of
 another to-be-inserted capability. The test is the following:
@@ -721,7 +721,7 @@ the capability with a specific badge can be created. This new, badged
 capability to the same object is treated as an original capability
 (the ``original badged endpoint capability'') and supports one level
 of derived children like other capabilities.
-*}
+\<close>
 definition
   should_be_parent_of :: "cap \<Rightarrow> bool \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> bool" where
   "should_be_parent_of c original c' original' \<equiv>
@@ -732,11 +732,11 @@ definition
     | NotificationCap ref badge R \<Rightarrow> badge \<noteq> 0 \<longrightarrow> cap_ep_badge c' = badge \<and> \<not>original'
     | _ \<Rightarrow> True)"
 
-text {* This helper function determines if the new capability
+text \<open>This helper function determines if the new capability
 should be counted as the original capability to the object. This test
 is usually false, apart from the exceptions listed (newly badged
 endpoint capabilities, irq handlers, untyped caps, and possibly some
-arch caps). *}
+arch caps).\<close>
 definition
   is_cap_revocable :: "cap \<Rightarrow> cap \<Rightarrow> bool"
 where
@@ -748,7 +748,7 @@ where
     | UntypedCap _ _ _ _ \<Rightarrow> True
     | _ \<Rightarrow> False"
 
-text {* Insert a new capability as either a sibling or child of an
+text \<open>Insert a new capability as either a sibling or child of an
 existing capability. The function @{const should_be_parent_of}
 determines which it will be.
 
@@ -756,7 +756,7 @@ The term for @{text dest_original} determines if the new capability
 should be counted as the original capability to the object. This test
 is usually false, apart from the exceptions listed (newly badged
 endpoint capabilities, irq handlers, and untyped caps).
-*}
+\<close>
 
 
 definition
@@ -790,8 +790,8 @@ definition
    EndpointCap _ _ R \<Rightarrow> R = all_rights
    | _ \<Rightarrow> False"
 
-text {* Overwrite the capabilities stored in a TCB while preserving the register
-set and other fields. *}
+text \<open>Overwrite the capabilities stored in a TCB while preserving the register
+set and other fields.\<close>
 definition
   tcb_registers_caps_merge :: "tcb \<Rightarrow> tcb \<Rightarrow> tcb"
 where
@@ -802,16 +802,16 @@ where
            tcb_caller := tcb_caller captcb,
            tcb_ipcframe := tcb_ipcframe captcb \<rparr>"
 
-section {* Invoking CNode capabilities *}
+section \<open>Invoking CNode capabilities\<close>
 
-text {* The CNode capability confers authority to various methods
+text \<open>The CNode capability confers authority to various methods
 which act on CNodes and the capabilities within them. Copies of
 capabilities may be inserted in empty CNode slots by
 Insert. Capabilities may be moved to empty slots with Move or swapped
 with others in a three way rotate by Rotate. A Reply capability stored
 in a thread's last-caller slot may be saved into a regular CNode slot
 with Save.  The Revoke, Delete and Recycle methods may also be
-invoked on the capabilities stored in the CNode. *}
+invoked on the capabilities stored in the CNode.\<close>
 
 definition
   invoke_cnode :: "cnode_invocation \<Rightarrow> (unit,'z::state_ext) p_monad" where

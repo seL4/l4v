@@ -31,10 +31,10 @@ end
 
 section "Activating Threads"
 
-text {* Threads that are active always have a master Reply capability to
+text \<open>Threads that are active always have a master Reply capability to
 themselves stored in their reply slot. This is so that a derived Reply
 capability can be generated immediately if they wish to issue one. This function
-sets up a new master Reply capability if one does not exist. *}
+sets up a new master Reply capability if one does not exist.\<close>
 definition
   "setup_reply_master thread \<equiv> do
      old_cap <- get_cap (thread, tcb_cnode_index 2);
@@ -44,7 +44,7 @@ definition
      od
   od"
 
-text {* Reactivate a thread if it is not already running. *}
+text \<open>Reactivate a thread if it is not already running.\<close>
 definition
   restart :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
  "restart thread \<equiv> do
@@ -58,10 +58,10 @@ definition
     od
   od"
 
-text {* This action is performed at the end of a system call immediately before
+text \<open>This action is performed at the end of a system call immediately before
 control is restored to a used thread. If it needs to be restarted then its
 program counter is set to the operation it was performing rather than the next
-operation. The idle thread is handled specially. *}
+operation. The idle thread is handled specially.\<close>
 definition
   activate_thread :: "(unit,'z::state_ext) s_monad" where
   "activate_thread \<equiv> do
@@ -89,7 +89,7 @@ definition
  "load_word_offs_word ptr offs \<equiv>
     do_machine_op $ loadWord (ptr + (offs * word_size))"
 
-text {* Copy message registers from one thread to another. *}
+text \<open>Copy message registers from one thread to another.\<close>
 definition
   copy_mrs :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> obj_ref \<Rightarrow>
                obj_ref option \<Rightarrow> length_type \<Rightarrow> (length_type,'z::state_ext) s_monad" where
@@ -110,7 +110,7 @@ definition
      return $ min n $ nat_to_len $ length hardware_mrs + length buf_mrs
    od"
 
-text {* The ctable and vtable slots of the TCB. *}
+text \<open>The ctable and vtable slots of the TCB.\<close>
 definition
   get_tcb_ctable_ptr :: "obj_ref \<Rightarrow> cslot_ptr" where
   "get_tcb_ctable_ptr tcb_ref \<equiv> (tcb_ref, tcb_cnode_index 0)"
@@ -119,14 +119,14 @@ definition
   get_tcb_vtable_ptr :: "obj_ref \<Rightarrow> cslot_ptr" where
   "get_tcb_vtable_ptr tcb_ref \<equiv> (tcb_ref, tcb_cnode_index 1)"
 
-text {* Optionally update the tcb at an address. *}
+text \<open>Optionally update the tcb at an address.\<close>
 definition
   option_update_thread :: "obj_ref \<Rightarrow> ('a \<Rightarrow> tcb \<Rightarrow> tcb) \<Rightarrow> 'a option \<Rightarrow> (unit,'z::state_ext) s_monad" where
  "option_update_thread thread fn \<equiv> case_option (return ()) (\<lambda>v. thread_set (fn v) thread)"
 
-text {* Check that a related capability is at an address. This is done before
+text \<open>Check that a related capability is at an address. This is done before
 calling @{const cap_insert} to avoid a corner case where the would-be parent of
-the cap to be inserted has been moved or deleted. *}
+the cap to be inserted has been moved or deleted.\<close>
 definition
   check_cap_at :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad \<Rightarrow> (unit,'z::state_ext) s_monad" where
  "check_cap_at cap slot m \<equiv> do
@@ -135,7 +135,7 @@ definition
   od"
 
 
-text {* Helper function for binding notifications *}
+text \<open>Helper function for binding notifications\<close>
 definition
   bind_notification :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -146,10 +146,10 @@ where
      set_bound_notification tcbptr $ Some ntfnptr
    od"
 
-text {* TCB capabilities confer authority to perform seven actions. A thread can
+text \<open>TCB capabilities confer authority to perform seven actions. A thread can
 request to yield its timeslice to another, to suspend or resume another, to
 reconfigure another thread, or to copy register sets into, out of or between
-other threads. *}
+other threads.\<close>
 fun
   invoke_tcb :: "tcb_invocation \<Rightarrow> (data list,'z::state_ext) p_monad"
 where
@@ -276,8 +276,8 @@ where
   "invoke_domain thread domain \<equiv>
      liftE (do do_extended_op (set_domain thread domain); return [] od)"
 
-text {* Get all of the message registers, both from the sending thread's current
-register file and its IPC buffer. *}
+text \<open>Get all of the message registers, both from the sending thread's current
+register file and its IPC buffer.\<close>
 definition
   get_mrs :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> message_info \<Rightarrow>
               (message list,'z::state_ext) s_monad" where

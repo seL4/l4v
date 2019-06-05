@@ -155,10 +155,10 @@ lemma linorder_min_same2 [simp]:
   "(min x y = y) = (y \<le> (x::'a::linorder))"
   by (auto simp: min_def linorder_not_le)
 
-text {* A combinator for pairing up well-formed relations.
+text \<open>A combinator for pairing up well-formed relations.
         The divisor function splits the population in halves,
         with the True half greater than the False half, and
-        the supplied relations control the order within the halves. *}
+        the supplied relations control the order within the halves.\<close>
 
 definition
   wf_sum :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<times> 'a) set \<Rightarrow> ('a \<times> 'a) set \<Rightarrow> ('a \<times> 'a) set"
@@ -417,7 +417,7 @@ lemma allEI:
   shows   "\<forall>x. Q x"
   using assms by (rule all_forward)
 
-text {* General lemmas that should be in the library *}
+text \<open>General lemmas that should be in the library\<close>
 
 lemma dom_ran:
   "x \<in> dom f \<Longrightarrow> the (f x) \<in> ran f"
@@ -653,9 +653,9 @@ lemma trancl_trancl:
   "(R\<^sup>+)\<^sup>+ = R\<^sup>+"
   by auto
 
-text {* Some rules for showing that the reflexive transitive closure of a
+text \<open>Some rules for showing that the reflexive transitive closure of a
 relation/predicate doesn't add much if it was already transitively
-closed. *}
+closed.\<close>
 
 lemma rtrancl_eq_reflc_trans:
   assumes trans: "trans X"

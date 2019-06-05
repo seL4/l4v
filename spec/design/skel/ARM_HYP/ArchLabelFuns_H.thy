@@ -14,9 +14,9 @@ theory ArchLabelFuns_H
 imports "../InvocationLabels_H"
 begin
 context Arch begin global_naming ARM_HYP_H
-text {*
+text \<open>
   Arch-specific functions on invocation labels
-*}
+\<close>
 
 #INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs CONTEXT ARM_HYP_H ONLY isPDFlushLabel isPageFlushLabel
 

@@ -17,8 +17,8 @@ imports
   Retype_H
 begin
 
-text {*
+text \<open>
   this theory collects the SEL4.Model.* modules
-*}
+\<close>
 
 end

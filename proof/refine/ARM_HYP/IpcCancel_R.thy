@@ -1149,7 +1149,7 @@ lemma (in delete_one_conc_pre) cancelIPC_weak_sch_act_wf:
   apply (wp cancelIPC_sch_act_not cancelIPC_tcb_in_cur_domain' cancelIPC_tcb_at_runnable')+
   done
 
-text {* The suspend operation, significant as called from delete *}
+text \<open>The suspend operation, significant as called from delete\<close>
 
 lemma rescheduleRequired_weak_sch_act_wf:
   "\<lbrace>\<top>\<rbrace> rescheduleRequired \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
@@ -2070,7 +2070,7 @@ lemma sts_sch_act_not_ct[wp]:
    setThreadState st t \<lbrace>\<lambda>_ s. sch_act_not (ksCurThread s) s\<rbrace>"
   by (rule hoare_weaken_pre, wps tcbSchedEnqueue_ct', wp, simp)
 
-text {* Cancelling all IPC in an endpoint or notification object *}
+text \<open>Cancelling all IPC in an endpoint or notification object\<close>
 
 lemma ep_cancel_corres_helper:
   "corres dc ((\<lambda>s. \<forall>t \<in> set list. tcb_at t s) and valid_etcbs)

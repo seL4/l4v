@@ -38,10 +38,10 @@ type_synonym ready_queue = "machine_word list"
 translations
 (type) "machine_word list" <= (type) "ready_queue"
 
-text {* We pull a fast one on haskell here ... although Haskell expects
+text \<open>We pull a fast one on haskell here ... although Haskell expects
 a KernelMonad which is a StateT monad in KernelData that wraps a MachineMonad,
 we push the extra MachineMonad data into the KernelState. Fortunately the
-update and accessor functions all still work. *}
+update and accessor functions all still work.\<close>
 
 record kernel_state =
   ksPSpace             :: pspace

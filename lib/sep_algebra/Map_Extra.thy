@@ -13,23 +13,23 @@
                 Rafal Kolanski <rafal.kolanski at nicta.com.au>
 *)
 
-chapter {* More properties of maps plus map disjuction. *}
+chapter \<open>More properties of maps plus map disjuction.\<close>
 
 theory Map_Extra
 imports Main
 begin
 
-text {*
+text \<open>
   A note on naming:
   Anything not involving heap disjuction can potentially be incorporated
   directly into Map.thy, thus uses @{text "m"} for map variable names.
   Anything involving heap disjunction is not really mergeable with Map, is
   destined for use in separation logic, and hence uses @{text "h"}
-*}
+\<close>
 
-section {* Things that could go into Option Type *}
+section \<open>Things that could go into Option Type\<close>
 
-text {* Misc option lemmas *}
+text \<open>Misc option lemmas\<close>
 
 lemma None_not_eq: "(None \<noteq> x) = (\<exists>y. x = Some y)" by (cases x) auto
 
@@ -38,15 +38,15 @@ lemma None_com: "(None = x) = (x = None)" by fast
 lemma Some_com: "(Some y = x) = (x = Some y)" by fast
 
 
-section {* Things that go into Map.thy *}
+section \<open>Things that go into Map.thy\<close>
 
-text {* Map intersection: set of all keys for which the maps agree. *}
+text \<open>Map intersection: set of all keys for which the maps agree.\<close>
 
 definition
   map_inter :: "('a \<rightharpoonup> 'b) \<Rightarrow> ('a \<rightharpoonup> 'b) \<Rightarrow> 'a set" (infixl "\<inter>\<^sub>m" 70) where
   "m\<^sub>1 \<inter>\<^sub>m m\<^sub>2 \<equiv> {x \<in> dom m\<^sub>1. m\<^sub>1 x = m\<^sub>2 x}"
 
-text {* Map restriction via domain subtraction *}
+text \<open>Map restriction via domain subtraction\<close>
 
 definition
   sub_restrict_map :: "('a \<rightharpoonup> 'b) => 'a set => ('a \<rightharpoonup> 'b)" (infixl "`-"  110)
@@ -54,7 +54,7 @@ definition
   "m `- S \<equiv> (\<lambda>x. if x \<in> S then None else m x)"
 
 
-subsection {* Properties of maps not related to restriction *}
+subsection \<open>Properties of maps not related to restriction\<close>
 
 lemma empty_forall_equiv: "(m = Map.empty) = (\<forall>x. m x = None)"
   by (rule fun_eq_iff)
@@ -114,7 +114,7 @@ lemma map_le_same_dom_eq:
   by (simp add: map_le_antisym map_le_def)
 
 
-subsection {* Properties of map restriction *}
+subsection \<open>Properties of map restriction\<close>
 
 lemma restrict_map_cancel:
   "(m |` S = m |` T) = (dom m \<inter> S = dom m \<inter> T)"
@@ -215,11 +215,11 @@ lemma prod_restrict_map_add:
   by (auto simp: map_add_def restrict_map_def split: option.splits)
 
 
-section {* Things that should not go into Map.thy (separation logic) *}
+section \<open>Things that should not go into Map.thy (separation logic)\<close>
 
-subsection {* Definitions *}
+subsection \<open>Definitions\<close>
 
-text {* Map disjuction *}
+text \<open>Map disjuction\<close>
 
 definition
   map_disj :: "('a \<rightharpoonup> 'b) \<Rightarrow> ('a \<rightharpoonup> 'b) \<Rightarrow> bool" (infix "\<bottom>" 51) where
@@ -228,7 +228,7 @@ definition
 declare None_not_eq [simp]
 
 
-subsection {* Properties of @{term "sub_restrict_map"} *}
+subsection \<open>Properties of @{term "sub_restrict_map"}\<close>
 
 lemma restrict_map_sub_disj: "h |` S \<bottom> h `- S"
   by (fastforce simp: sub_restrict_map_def restrict_map_def map_disj_def
@@ -239,7 +239,7 @@ lemma restrict_map_sub_add: "h |` S ++ h `- S = h"
                split: option.splits if_split)
 
 
-subsection {* Properties of map disjunction *}
+subsection \<open>Properties of map disjunction\<close>
 
 lemma map_disj_empty_right [simp]:
   "h \<bottom> Map.empty"
@@ -262,7 +262,7 @@ lemma map_disjI:
   by (simp add: map_disj_def)
 
 
-subsection {* Map associativity-commutativity based on map disjuction *}
+subsection \<open>Map associativity-commutativity based on map disjuction\<close>
 
 lemma map_add_com:
   "h\<^sub>0 \<bottom> h\<^sub>1 \<Longrightarrow> h\<^sub>0 ++ h\<^sub>1 = h\<^sub>1 ++ h\<^sub>0"
@@ -280,27 +280,27 @@ lemma map_add_disj':
   "(h\<^sub>1 ++ h\<^sub>2) \<bottom> h\<^sub>0 = (h\<^sub>1 \<bottom> h\<^sub>0 \<and> h\<^sub>2 \<bottom> h\<^sub>0)"
   by (simp add: map_disj_def, fast)
 
-text {*
+text \<open>
   We redefine @{term "map_add"} associativity to bind to the right, which
   seems to be the more common case.
   Note that when a theory includes Map again, @{text "map_add_assoc"} will
   return to the simpset and will cause infinite loops if its symmetric
   counterpart is added (e.g. via @{text "map_add_ac"})
-  *}
+\<close>
 
 declare map_add_assoc [simp del]
 
-text {*
+text \<open>
   Since the associativity-commutativity of @{term "map_add"} relies on
   map disjunction, we include some basic rules into the ac set.
-  *}
+\<close>
 
 lemmas map_add_ac =
   map_add_assoc[symmetric] map_add_com map_disj_com
   map_add_left_commute map_add_disj map_add_disj'
 
 
-subsection {* Basic properties *}
+subsection \<open>Basic properties\<close>
 
 lemma map_disj_None_right:
   "\<lbrakk> h\<^sub>0 \<bottom> h\<^sub>1 ; x \<in> dom h\<^sub>0 \<rbrakk> \<Longrightarrow> h\<^sub>1 x = None"
@@ -327,7 +327,7 @@ lemma map_disj_eq_dom_left:
   by (auto simp: map_disj_def)
 
 
-subsection {* Map disjunction and addition *}
+subsection \<open>Map disjunction and addition\<close>
 
 lemma map_add_eval_left:
   "\<lbrakk> x \<in> dom h ; h \<bottom> h' \<rbrakk> \<Longrightarrow> (h ++ h') x = h x"
@@ -417,7 +417,7 @@ lemma map_add_lr_disj:
      (auto split: option.splits)
 
 
-subsection {* Map disjunction and map updates *}
+subsection \<open>Map disjunction and map updates\<close>
 
 lemma map_disj_update_left [simp]:
   "p \<in> dom h\<^sub>1 \<Longrightarrow> h\<^sub>0 \<bottom> h\<^sub>1(p \<mapsto> v) = h\<^sub>0 \<bottom> h\<^sub>1"
@@ -443,7 +443,7 @@ lemma map_add3_update:
   by (auto simp: map_add_update_left[symmetric] map_add_ac)
 
 
-subsection {* Map disjunction and @{term "map_le"} *}
+subsection \<open>Map disjunction and @{term "map_le"}\<close>
 
 lemma map_le_override [simp]:
   "\<lbrakk> h \<bottom> h' \<rbrakk> \<Longrightarrow> h \<subseteq>\<^sub>m h ++ h'"
@@ -500,7 +500,7 @@ lemma map_le_conv2:
   by (case_tac "h\<^sub>0'=h\<^sub>0", insert map_le_conv, auto intro: exI[where x=Map.empty])
 
 
-subsection {* Map disjunction and restriction *}
+subsection \<open>Map disjunction and restriction\<close>
 
 lemma map_disj_comp [simp]:
   "h\<^sub>0 \<bottom> h\<^sub>1 |` (UNIV - dom h\<^sub>0)"

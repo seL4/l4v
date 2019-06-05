@@ -17,9 +17,9 @@ imports
 begin
 context Arch begin global_naming X64_H
 
-text {*
+text \<open>
   An enumeration of arch-specific system call labels.
-*}
+\<close>
 
 #INCLUDE_HASKELL SEL4/API/InvocationLabels/X64.lhs CONTEXT X64_H ONLY ArchInvocationLabel
 

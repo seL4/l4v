@@ -42,8 +42,8 @@ definition "seL4_CapInitThreadIPCBuffer = (10 :: cdl_cptr)"
 consts
   root_tcb_id :: cdl_object_id
 
-text {* This wrapper lifts monadic operations on the underlying kernel state to
-monadic operations on the user state. *}
+text \<open>This wrapper lifts monadic operations on the underlying kernel state to
+monadic operations on the user state.\<close>
 definition
   do_kernel_op :: "(cdl_state, 'a) nondet_monad \<Rightarrow> (user_state, 'a) nondet_monad"
 where

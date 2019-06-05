@@ -12,7 +12,7 @@
 Arch Functions for cancelling IPC.
 *)
 
-chapter {* Arch IPC Cancelling *}
+chapter \<open>Arch IPC Cancelling\<close>
 
 
 theory ArchIpcCancel_A
@@ -21,13 +21,13 @@ begin
 
 context Arch begin global_naming ARM_A
 
-text {* Actions to be taken after a cap is deleted *}
+text \<open>Actions to be taken after a cap is deleted\<close>
 definition
   arch_post_cap_deletion :: "arch_cap \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "arch_post_cap_deletion _ \<equiv> return ()"
 
-text {* Arch specific generic object references not covered by generic references *}
+text \<open>Arch specific generic object references not covered by generic references\<close>
 datatype arch_gen_obj_ref = unit
 
 definition

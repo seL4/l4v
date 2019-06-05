@@ -20,7 +20,7 @@ begin
 
 context Arch begin global_naming ARM_A
 
-text {* VGIC Maintenance *}
+text \<open>VGIC Maintenance\<close>
 
 definition
   virqSetEOIIRQEN :: "virq \<Rightarrow> 32 word \<Rightarrow> virq"

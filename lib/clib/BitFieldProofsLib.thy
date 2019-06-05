@@ -67,19 +67,19 @@ lemma s_footprint_distinct_helper:
   apply (blast dest: s_footprintD)
   done
 
-text {* Use these handy rules to prove that clift doesn't change
-  over various updates. *}
+text \<open>Use these handy rules to prove that clift doesn't change
+  over various updates.\<close>
 method prove_one_bf_clift_invariance
     = (intro clift_heap_update_footprint[THEN trans]
                s_footprint_field_lvalue_disj_helper
                s_footprint_distinct_helper,
       simp_all only: hrs_htd_mem_update,
-      tactic {* distinct_subgoals_tac *},
+      tactic \<open>distinct_subgoals_tac\<close>,
       (auto simp: typ_uinfo_t_def[symmetric] tag_disj_via_td_name ntbs
             elim: h_t_valid_clift)+)[1]
 
-text {* Select points in the goal where we need to prove that
-  clift doesn't change over updates, and prove them with the above. *}
+text \<open>Select points in the goal where we need to prove that
+  clift doesn't change over updates, and prove them with the above.\<close>
 method prove_bf_clift_invariance
     = ((subst Eq_TrueI[where P="lift_t g h = lift_t g h'" for g h h'],
           prove_one_bf_clift_invariance)+, simp)

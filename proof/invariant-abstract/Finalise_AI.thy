@@ -148,7 +148,7 @@ locale Finalise_AI_1 =
     "\<And>P t. \<lbrace>\<lambda>(s :: 'a state). P (caps_of_state s)\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
 
 
-text {* Properties about empty_slot *}
+text \<open>Properties about empty_slot\<close>
 
 definition
  "halted_if_tcb \<equiv> \<lambda>t s. tcb_at t s \<longrightarrow> st_tcb_at halted t s"

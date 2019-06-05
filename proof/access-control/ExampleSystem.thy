@@ -31,9 +31,9 @@ lemma nat_to_bl_id [simp]: "nat_to_bl (size (x :: (('a::len) word))) (unat x) = 
 
 (*---------------------------------------------------------*)
 
-subsection {* Purpose *}
+subsection \<open>Purpose\<close>
 
-text {*
+text \<open>
 
 This file defines some example systems using the access control
 definitions. The aim is a sanity check of the AC definitions, to
@@ -48,14 +48,14 @@ In particular, we want to make sure that
   . we can have more than 1 untrusted component
   . we can have an EP between two untrusted components
 
-*}
+\<close>
 
 (*---------------------------------------------------------*)
 
-subsection {* Generic functions / lemmas *}
+subsection \<open>Generic functions / lemmas\<close>
 
 
-text {* Defining the authority between labels.
+text \<open>Defining the authority between labels.
 
 In addition to the intuitive authority we want, we need to add all the
 authority required to have a wellformed graph. So we define
@@ -70,7 +70,7 @@ the ones not depending on the current label). These are:
     edges. Actually we add all authorities because of the second
     clause.
 
-*}
+\<close>
 
 
 definition
@@ -79,7 +79,7 @@ where
   "complete_AuthGraph g ls \<equiv>
      g \<union> {(l,a,l) | a l. l \<in> ls}"
 
-text {* converting a nat to a bool list of size 10 - for the cnodes *}
+text \<open>converting a nat to a bool list of size 10 - for the cnodes\<close>
 
 definition
   the_nat_to_bl :: "nat \<Rightarrow> nat \<Rightarrow> bool list"
@@ -99,9 +99,9 @@ lemma tcb_cnode_index_nat_to_bl:
 
 
 (*---------------------------------------------------------*)
-subsection {* Example 1 *}
+subsection \<open>Example 1\<close>
 
-text {*
+text \<open>
 
 This example aims at checking that we can extract a reasonable policy
 from the state, i.e. that the function state_objs_to_policy does not connect
@@ -151,22 +151,22 @@ s1 is the state of Sys1 described above.
 This shows that the aag extracted from s1 (by state_objs_to_policy) is
 included in the policy graph Sys1PAS.
 
-*}
+\<close>
 
 
-subsubsection {* Defining the State *}
+subsubsection \<open>Defining the State\<close>
 
-text {* We need to define the asids of each pd and pt to ensure that
-the object is included in the right ASID-label *}
+text \<open>We need to define the asids of each pd and pt to ensure that
+the object is included in the right ASID-label\<close>
 
-text {* UT1's ASID *}
+text \<open>UT1's ASID\<close>
 
 definition
   asid1_3063 :: machine_word
 where
   "asid1_3063 \<equiv> 1<<asid_low_bits"
 
-text {* T1's ASID *}
+text \<open>T1's ASID\<close>
 
 definition
   asid1_3065 :: machine_word
@@ -177,7 +177,7 @@ lemma "asid_high_bits_of asid1_3065 \<noteq> asid_high_bits_of asid1_3063"
 by (simp add: asid1_3063_def asid_high_bits_of_def asid1_3065_def asid_low_bits_def)
 
 
-text {* UT1's CSpace *}
+text \<open>UT1's CSpace\<close>
 
 definition
   caps1_6 :: cnode_contents
@@ -200,7 +200,7 @@ definition
 where
   "obj1_6 \<equiv> CNode 10 caps1_6"
 
-text {* T1's Cspace *}
+text \<open>T1's Cspace\<close>
 
 definition
   caps1_7 :: cnode_contents
@@ -223,7 +223,7 @@ where
   "obj1_7 \<equiv> CNode 10 caps1_7"
 
 
-text {* endpoint between UT1 and T1 *}
+text \<open>endpoint between UT1 and T1\<close>
 
 definition
   obj1_9 :: kernel_object
@@ -231,7 +231,7 @@ where
   "obj1_9 \<equiv> Endpoint IdleEP"
 
 
-text {* UT1's VSpace (PageDirectory)*}
+text \<open>UT1's VSpace (PageDirectory)\<close>
 
 definition
   pt1_3072 :: "word8 \<Rightarrow> pte "
@@ -263,7 +263,7 @@ where
   "obj1_3063 \<equiv> ArchObj (PageDirectory pd1_3063)"
 
 
-text {* T1's VSpace (PageDirectory)*}
+text \<open>T1's VSpace (PageDirectory)\<close>
 
 
 definition
@@ -298,7 +298,7 @@ where
   "obj1_3065 \<equiv> ArchObj (PageDirectory pd1_3065)"
 
 
-text {* UT1's tcb *}
+text \<open>UT1's tcb\<close>
 
 definition
   obj1_3079 :: kernel_object
@@ -319,7 +319,7 @@ where
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr> \<rparr>"
 
 
-text {* T1's tcb *}
+text \<open>T1's tcb\<close>
 
 definition
   obj1_3080 :: kernel_object
@@ -400,7 +400,7 @@ where
     \<rparr>"
 
 
-subsubsection {* Defining the policy graph *}
+subsubsection \<open>Defining the policy graph\<close>
 
 
 datatype Sys1Labels =
@@ -463,7 +463,7 @@ definition Sys1PAS :: "Sys1Labels PAS" where
   "Sys1PAS \<equiv> \<lparr> pasObjectAbs = Sys1AgentMap, pasASIDAbs = Sys1ASIDMap, pasIRQAbs = (\<lambda>_. IRQ1),
               pasPolicy = Sys1AuthGraph, pasSubject = UT1, pasMayActivate = True, pasMayEditReadyQueues = True, pasMaySendIrqs = True, pasDomainAbs = undefined \<rparr>"
 
-subsubsection {* Proof of pas_refined for Sys1 *}
+subsubsection \<open>Proof of pas_refined for Sys1\<close>
 
 lemma caps1_7_well_formed: "well_formed_cnode_n 10 caps1_7"
  apply (clarsimp simp: caps1_7_def well_formed_cnode_n_def)
@@ -625,9 +625,9 @@ lemma "pas_refined Sys1PAS s1"
 
 
 (*---------------------------------------------------------*)
-subsection {* Example 2 *}
+subsection \<open>Example 2\<close>
 
-text {*
+text \<open>
 
 This example systems Sys2 aims at checking that we can have 2
 components, one untrusted UT2 and one truted T1, sharing a cnode obj2_5.
@@ -673,24 +673,24 @@ s2 is the state of Sys2 described above.
 This shows that the aag extracted from s2 (by state_objs_to_policy) is
 included in the policy graph Sys2PAS.
 
-*}
+\<close>
 
 
-subsubsection {* Defining the State *}
+subsubsection \<open>Defining the State\<close>
 
 
 
-text {* We need to define the asids of each pd and pt to ensure that
-the object is included in the right ASID-label *}
+text \<open>We need to define the asids of each pd and pt to ensure that
+the object is included in the right ASID-label\<close>
 
-text {* UT2's ASID *}
+text \<open>UT2's ASID\<close>
 
 definition
   asid2_3063 :: machine_word
 where
   "asid2_3063 \<equiv> 1<<asid_low_bits"
 
-text {* T2's ASID *}
+text \<open>T2's ASID\<close>
 
 definition
   asid2_3065 :: machine_word
@@ -702,7 +702,7 @@ by (simp add: asid2_3063_def asid_high_bits_of_def asid2_3065_def asid_low_bits_
 
 
 
-text {* the intermediaite CSpace *}
+text \<open>the intermediaite CSpace\<close>
 
 definition
   caps2_5 :: cnode_contents
@@ -717,7 +717,7 @@ where
 
 
 
-text {* UT2's CSpace *}
+text \<open>UT2's CSpace\<close>
 
 definition
   caps2_6 :: cnode_contents
@@ -740,7 +740,7 @@ definition
 where
   "obj2_6 \<equiv> CNode 10 caps2_6"
 
-text {* T2's Cspace *}
+text \<open>T2's Cspace\<close>
 
 definition
   caps2_7 :: cnode_contents
@@ -763,7 +763,7 @@ where
   "obj2_7 \<equiv> CNode 10 caps2_7"
 
 
-text {* endpoint between UT2 and T2 *}
+text \<open>endpoint between UT2 and T2\<close>
 
 definition
   obj2_9 :: kernel_object
@@ -771,7 +771,7 @@ where
   "obj2_9 \<equiv> Endpoint IdleEP"
 
 
-text {* UT2's VSpace (PageDirectory)*}
+text \<open>UT2's VSpace (PageDirectory)\<close>
 
 definition
   pt2_3072 :: "word8 \<Rightarrow> pte "
@@ -803,7 +803,7 @@ where
   "obj2_3063 \<equiv> ArchObj (PageDirectory pd2_3063)"
 
 
-text {* T1's VSpace (PageDirectory)*}
+text \<open>T1's VSpace (PageDirectory)\<close>
 
 
 definition
@@ -837,7 +837,7 @@ where
   "obj2_3065 \<equiv> ArchObj (PageDirectory pd2_3065)"
 
 
-text {* UT1's tcb *}
+text \<open>UT1's tcb\<close>
 
 definition
   obj2_3079 :: kernel_object
@@ -858,7 +858,7 @@ where
      tcb_arch          = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 
-text {* T1's tcb *}
+text \<open>T1's tcb\<close>
 
 definition
   obj2_3080 :: kernel_object
@@ -924,7 +924,7 @@ where
     \<rparr>"
 
 
-subsubsection {* Defining the policy graph *}
+subsubsection \<open>Defining the policy graph\<close>
 
 
 datatype Sys2Labels =
@@ -975,7 +975,7 @@ definition Sys2PAS :: "Sys2Labels PAS" where
 
 
 
-subsubsection {* Proof of pas_refined for Sys2 *}
+subsubsection \<open>Proof of pas_refined for Sys2\<close>
 
 lemma caps2_7_well_formed: "well_formed_cnode_n 10 caps2_7"
  apply (clarsimp simp: caps2_7_def well_formed_cnode_n_def)

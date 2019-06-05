@@ -14,13 +14,13 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-text {*
+text \<open>
   This theory defines an enhanced @{term do_user_op} function for the
   automaton used for the information flow proofs. This enhanced model of
   user behaviour is a less abstract representation than the original one;
   eventually we should probably extend the original one to match up with
   this one and remove the duplication.
-*}
+\<close>
 
 definition ptable_lift_s where
   "ptable_lift_s s \<equiv>  ptable_lift (cur_thread s) s"

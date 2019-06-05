@@ -20,16 +20,16 @@ begin
 
 context Arch begin global_naming ARM_A
 
-text {*
+text \<open>
   This part of the specification is fairly concrete as the machine architecture
   is visible to the user in seL4 and therefore needs to be described.
   The abstraction compared to the implementation is in the data types for
   kernel objects. The interface which is rich in machine details remains the same.
-*}
+\<close>
 
 section "Encodings"
 
-text {* The high bits of a virtual ASID. *}
+text \<open>The high bits of a virtual ASID.\<close>
 definition
   asid_high_bits_of :: "asid \<Rightarrow> 7 word" where
   "asid_high_bits_of asid \<equiv> ucast (asid >> asid_low_bits)"
@@ -37,8 +37,8 @@ definition
 
 section "Kernel Heap Accessors"
 
-text {* Manipulate ASID pools, page directories and page tables in the kernel
-heap. *}
+text \<open>Manipulate ASID pools, page directories and page tables in the kernel
+heap.\<close>
 definition
   get_asid_pool :: "obj_ref \<Rightarrow> (10 word \<rightharpoonup> obj_ref,'z::state_ext) s_monad" where
   "get_asid_pool ptr \<equiv> do
@@ -72,8 +72,8 @@ where
      isb
    od"
 
-text {* The following function takes a pointer to a PDE in kernel memory
-  and returns the actual PDE. *}
+text \<open>The following function takes a pointer to a PDE in kernel memory
+  and returns the actual PDE.\<close>
 definition
   get_pde :: "obj_ref \<Rightarrow> (pde,'z::state_ext) s_monad" where
   "get_pde ptr \<equiv> do
@@ -106,8 +106,8 @@ definition
   set_pt :: "obj_ref \<Rightarrow> (word8 \<Rightarrow> pte) \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_pt ptr pt \<equiv> set_object ptr (ArchObj (PageTable pt))"
 
-text {* The following function takes a pointer to a PTE in kernel memory
-  and returns the actual PTE. *}
+text \<open>The following function takes a pointer to a PTE in kernel memory
+  and returns the actual PTE.\<close>
 definition
   get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad" where
   "get_pte ptr \<equiv> do
@@ -130,9 +130,9 @@ definition
 
 section "Basic Operations"
 
-text {* The kernel window is mapped into every virtual address space from the
+text \<open>The kernel window is mapped into every virtual address space from the
 @{term kernel_base} pointer upwards. This function copies the mappings which
-create the kernel window into a new page directory object. *}
+create the kernel window into a new page directory object.\<close>
 definition
 copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "copy_global_mappings new_pd \<equiv> do
@@ -146,20 +146,20 @@ copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" whe
     od) [kernel_base >> 20  .e.  pd_size - 1]
 od"
 
-text {* Walk the page directories and tables in software. *}
+text \<open>Walk the page directories and tables in software.\<close>
 
-text {* The following function takes a page-directory reference as well as
-  a virtual address and then computes a pointer to the PDE in kernel memory *}
+text \<open>The following function takes a page-directory reference as well as
+  a virtual address and then computes a pointer to the PDE in kernel memory\<close>
 definition
 lookup_pd_slot :: "word32 \<Rightarrow> vspace_ref \<Rightarrow> word32" where
 "lookup_pd_slot pd vptr \<equiv>
     let pd_index = vptr >> 20
     in pd + (pd_index << 2)"
 
-text {* The following function takes a page-directory reference as well as
+text \<open>The following function takes a page-directory reference as well as
   a virtual address and then computes a pointer to the PTE in kernel memory.
   Note that the function fails if the virtual address is mapped on a section or
-  super section. *}
+  super section.\<close>
 definition
 lookup_pt_slot :: "word32 \<Rightarrow> vspace_ref \<Rightarrow> (word32,'z::state_ext) lf_monad" where
 "lookup_pt_slot pd vptr \<equiv> doE
@@ -176,7 +176,7 @@ lookup_pt_slot :: "word32 \<Rightarrow> vspace_ref \<Rightarrow> (word32,'z::sta
 odE"
 
 
-text {* A non-failing version of @{const lookup_pt_slot} when the pd is already known *}
+text \<open>A non-failing version of @{const lookup_pt_slot} when the pd is already known\<close>
 definition
   lookup_pt_slot_no_fail :: "word32 \<Rightarrow> vspace_ref \<Rightarrow> word32"
 where

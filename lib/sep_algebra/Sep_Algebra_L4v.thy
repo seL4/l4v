@@ -17,9 +17,9 @@ theory Sep_Algebra_L4v
 imports "Sep_Tactics" "Sep_Fold"
 begin
 
-text {*
+text \<open>
   Remove anything conflicting with @{text "pred_*"} in lib,
-  e.g. @{text pred_and} vs @{text pred_conj} *}
+  e.g. @{text pred_and} vs @{text pred_conj}\<close>
 
 no_notation pred_and (infixr "and" 35)
 no_notation pred_or (infixr "or" 30)

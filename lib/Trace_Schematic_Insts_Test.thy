@@ -85,20 +85,20 @@ fun trace_schematic_assert ctxt test_name tac expected_vars expected_tvars =
 text \<open>Schematic variables\<close>
 lemma "\<lbrakk> \<forall>x. P x \<rbrakk> \<Longrightarrow> P x"
   apply (drule spec)
-  apply (tactic {* let
+  apply (tactic \<open>let
       val alpha = TFree ("'a", @{sort type})
       val expected_vars = [(Var (("x", 0), alpha), Free ("x", alpha))]
       val expected_tvars = []
       in trace_schematic_assert @{context}
             "basic Var test" (assume_tac @{context} 1)
             expected_vars expected_tvars
-      end *})
+      end\<close>)
   done
 
 text \<open>Schematic type variables\<close>
 lemma "foo x \<Longrightarrow> foo y"
   apply (rule fooI1)
-  apply (tactic {* let
+  apply (tactic \<open>let
       val expected_vars = []
       val expected_tvars = [(TVar (("'a", 0), @{sort zero}), @{typ nat})]
       in trace_schematic_assert
@@ -106,7 +106,7 @@ lemma "foo x \<Longrightarrow> foo y"
             "basic TVar test"
             (eresolve_tac @{context} @{thms fooI2'} 1)
             expected_vars expected_tvars
-      end *})
+      end\<close>)
   done
 
 end

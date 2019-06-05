@@ -2176,7 +2176,7 @@ lemma valid_vspace_obj_default':
   by (cases aobject_type; simp)
 
 
-text {* arch specific symrefs *}
+text \<open>arch specific symrefs\<close>
 
 definition
   tcb_vcpu_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -2528,7 +2528,7 @@ end
 declare ARM_HYP.arch_tcb_context_absorbs[simp]
 declare ARM_HYP.arch_tcb_context_get_set[simp]
 
-setup {* Add_Locale_Code_Defs.setup "ARM_HYP" *}
-setup {* Add_Locale_Code_Defs.setup "ARM_HYP_A" *}
+setup \<open>Add_Locale_Code_Defs.setup "ARM_HYP"\<close>
+setup \<open>Add_Locale_Code_Defs.setup "ARM_HYP_A"\<close>
 
 end

@@ -8,7 +8,7 @@
  * @TAG(NICTA_GPL)
  *)
 
-chapter {* \label{sec:examples}Example Systems *}
+chapter \<open>\label{sec:examples}Example Systems\<close>
 
 (*<*)
 theory Examples_CAMKES
@@ -19,8 +19,8 @@ imports
 begin
 (*>*)
 
-subsection {* \label{subsec:echo}Echo *}
-text {*
+subsection \<open>\label{subsec:echo}Echo\<close>
+text \<open>
   The following ADL and IDL describe an example system involving two
   components, client and echo. There is a single connection between them, from
   a procedure @{text client.s} that client requires to a procedure
@@ -33,9 +33,9 @@ text {*
   \includegraphics[width=0.6\textwidth]{imgs/echo}
   \end{center}
   \end{figure}
-*}
+\<close>
 
-text {*
+text \<open>
   The procedure used in this system is expressed by the following IDL:
 
 \begin{verbatim}
@@ -51,7 +51,7 @@ text {*
   is a synonym for
   @{term integer} and is
   therefore not modelled in Isabelle.}
-*}
+\<close>
 definition
   simple :: procedure (* Sourced from Simple.idl4 *)
 where
@@ -78,7 +78,7 @@ where
       ] \<rparr>
   ]"
 
-text {*
+text \<open>
   Each component of the system is described by a separate IDL representation:
 
 \begin{verbatim}
@@ -95,7 +95,7 @@ text {*
 \end{verbatim}
 
   These generate the following formal representations in Isabelle:
-*}
+\<close>
 definition
   client :: component (* Sourced from Client.camkes *)
 where
@@ -122,7 +122,7 @@ where
     attributes = []
   \<rparr>"
 
-text {*
+text \<open>
   A @{term composition} block is used to combine these elements into the
   complete system. There are no attributes in this simple system so the
   @{term configuration} block of the @{term assembly} can be omitted. The two
@@ -140,7 +140,7 @@ text {*
 \end{verbatim}
 
   Once again the generated Isabelle formalism looks similar:
-*}
+\<close>
 definition
   system :: assembly (* Sourced from simple.camkes *)
 where
@@ -156,15 +156,15 @@ where
     configuration = None
   \<rparr>"
 
-text {*
+text \<open>
   Since our wellformedness conditions are executable, we can now prove that
   this example is a wellformed assembly by evaluation.
-*}
+\<close>
 lemma "wellformed_assembly system"
   by (simp add: wellformed_CAMKES_simps system_def echo_def client_def simple_def)
 
-subsection {* \label{subsec:events}Events *}
-text {*
+subsection \<open>\label{subsec:events}Events\<close>
+text \<open>
   \begin{figure}[h]
   \begin{center}
   \caption{\label{fig:event}Event example}
@@ -176,16 +176,16 @@ text {*
   asynchronous communication between two components. The identifier assigned
   to the event, @{text 1}, is unimportant in this example as there is only
   one event in use.
-*}
+\<close>
 definition
   signal :: event
 where
   "signal \<equiv> 1"
 
-text {*
+text \<open>
   The active component @{text emitter} generates events of the type
   @{term signal}.
-*}
+\<close>
 definition
   emitter :: component
 where
@@ -199,7 +199,7 @@ where
     attributes = []
   \<rparr>"
 
-text {*
+text \<open>
   The component @{text consumer} expects to receive these events. When a
   component is defined to consume an event, a function for registering a
   callback for this event is made available to the component. The component
@@ -208,7 +208,7 @@ text {*
   even when consuming components are conceptually passive they are usually
   specified as active (@{text "control = True"}) with an entry function that
   performs some initialisation and then registers an event handler.
-*}
+\<close>
 definition
   consumer :: component
 where
@@ -222,11 +222,11 @@ where
     attributes = []
   \<rparr>"
 
-text {*
+text \<open>
   The system assembly looks similar to that shown in Section
   \ref{subsec:echo}, but an asynchronous connector is used between the
   components.
-*}
+\<close>
 definition
   event_system :: assembly
 where
@@ -242,14 +242,14 @@ where
     configuration = None
   \<rparr>"
 
-text {*
+text \<open>
   Again, wellformedness is proved easily by evaluation.
-*}
+\<close>
 lemma "wellformed_assembly event_system"
   by (simp add: wellformed_CAMKES_simps event_system_def emitter_def consumer_def signal_def)
 
-subsection {* \label{subsec:dataport}Dataport Usage *}
-text {*
+subsection \<open>\label{subsec:dataport}Dataport Usage\<close>
+text \<open>
   \begin{figure}[h]
   \begin{center}
   \caption{\label{fig:dataport}Dataport example}
@@ -261,7 +261,7 @@ text {*
   to as a dataport in CAmkES. It also uses one of the key aspects of a component
   platform, component re-use. First the definition of a simple component that
   uses two dataports:
-*}
+\<close>
 definition
   data_client :: component
 where
@@ -275,7 +275,7 @@ where
     attributes = []
   \<rparr>"
 
-text {*
+text \<open>
   By instantiating this component twice (once as @{text comp1} and once as
   @{text comp2})
   the system contains two identical components. The assembly below connects the
@@ -284,7 +284,7 @@ text {*
   It is possible to specify a system that instantiates @{term data_client} once and
   connects one of the instance's dataports to the other, but there is nothing to
   be gained from a component communicating with itself via shared memory.
-*}
+\<close>
 definition
   data_system :: assembly
 where
@@ -304,12 +304,12 @@ where
     configuration = None
   \<rparr>"
 
-text {* The data port example is wellformed: *}
+text \<open>The data port example is wellformed:\<close>
 lemma "wellformed_assembly data_system"
   by (simp add: wellformed_CAMKES_simps data_system_def data_client_def)
 
-subsection {* \label{subsec:terminal}Secure Terminal *}
-text {*
+subsection \<open>\label{subsec:terminal}Secure Terminal\<close>
+text \<open>
   This section presents a more realistic component system as a prototype of a
   secure terminal. Two components are each given a separate region of a text
   terminal to which they can write character data. They accomplish this by using
@@ -327,7 +327,7 @@ text {*
   dedicated region. That is, (0, 0) represents the upper left corner of the
   caller's region, not the terminal as a whole. The method @{text put_char}
   returns 0 on success and non-zero if the coordinates are out of range.
-*}
+\<close>
 definition
   display :: procedure
 where
@@ -345,13 +345,13 @@ where
           p_name = ''data'' \<rparr>
       ] \<rparr> ]"
 
-text {*
+text \<open>
   The trusted component that manages the terminal is passive and executes only
   in response to @{text put_char} calls from its clients. The component
   described below supports exactly two components. This is a case where a more
   flexible definition would be possible using interface arrays as described in
   Section \ref{subsubsec:iarrays}.
-*}
+\<close>
 definition
   manager :: component
 where
@@ -365,12 +365,12 @@ where
     attributes = []
   \<rparr>"
 
-text {*
+text \<open>
   The definition of the client adds an attribute so the execution can branch
   based on which instance of the component is running, but the instances could
   equally well execute exactly the same code and have their (identical) output
   written to the two distinct regions by the manager.
-*}
+\<close>
 definition
   terminal_client :: component
 where
@@ -384,9 +384,9 @@ where
     attributes = [(''ID'', Primitive (Numerical Integer))]
   \<rparr>"
 
-text {*
+text \<open>
   Each client is connected to a single interface of the manager.
-*}
+\<close>
 definition
   channel1 :: connection
 where
@@ -415,11 +415,11 @@ where
                    (''channel2'', channel2)]
   \<rparr>"
 
-text {*
+text \<open>
   Each client is given a unique identifier so it can distinguish itself. As
   noted above, this is not necessarily required in all systems with multiple
   instantiations of a single component.
-*}
+\<close>
 definition
   conf :: configuration
 where
@@ -434,9 +434,9 @@ where
     configuration = Some conf
   \<rparr>"
 
-text {*
+text \<open>
   Wellformedness for this more complex example is easy as well.
-*}
+\<close>
 lemma "wellformed_assembly terminal"
   by (simp add: wellformed_CAMKES_simps
                 terminal_def comp_def manager_def terminal_client_def display_def

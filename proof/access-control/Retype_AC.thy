@@ -26,7 +26,7 @@ where
        new_type \<noteq> ArchObject ASIDPoolObj \<and>
        (\<forall>x\<in>set slots. is_subject aag (fst x))"
 
-subsection{* invoke *}
+subsection\<open>invoke\<close>
 
 lemma create_cap_integrity:
   "\<lbrace>integrity aag X st and K (is_subject aag (fst (fst ref)))\<rbrace>
@@ -1444,7 +1444,7 @@ lemma invoke_untyped_pas_refined:
                            cte_wp_at_caps_of_state authorised_untyped_inv_def)+
   done
 
-subsection{* decode *}
+subsection\<open>decode\<close>
 
 lemma data_to_obj_type_ret_not_asid_pool:
   "\<lbrace> \<top> \<rbrace> data_to_obj_type v \<lbrace> \<lambda>r s. r \<noteq> ArchObject ASIDPoolObj \<rbrace>,-"

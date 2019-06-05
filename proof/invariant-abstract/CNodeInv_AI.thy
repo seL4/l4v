@@ -2931,11 +2931,11 @@ lemma rec_del_ReduceZombie_emptyable:
 end
 
 
-text {* The revoke function and its properties are
+text \<open>The revoke function and its properties are
         slightly easier to deal with than the delete
         function. However, its termination argument
         is complex, requiring that the delete function
-        reduces the number of non-null capabilities. *}
+        reduces the number of non-null capabilities.\<close>
 definition
   cap_revoke_recset :: "((cslot_ptr \<times> 'z::state_ext state) \<times> (cslot_ptr \<times> 'z::state_ext state)) set"
 where

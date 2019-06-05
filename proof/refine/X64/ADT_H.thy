@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-chapter {* Abstract datatype for the executable specification *}
+chapter \<open>Abstract datatype for the executable specification\<close>
 
 theory ADT_H
 imports
@@ -16,13 +16,13 @@ imports
   Syscall_R
 begin
 
-text {*
+text \<open>
   The general refinement calculus (see theory Simulation) requires
   the definition of a so-called ``abstract datatype'' for each refinement layer.
   This theory defines this datatype for the executable specification.
   It is based on the abstract specification because we chose
   to base the refinement's observable state on the abstract state.
-*}
+\<close>
 
 consts
   initEntry :: machine_word
@@ -34,11 +34,11 @@ consts
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-text {*
+text \<open>
   The construction of the abstract data type
   for the executable specification largely follows
   the one for the abstract specification.
-*}
+\<close>
 definition
   Init_H :: "kernel_state global_state set"
   where
@@ -1167,7 +1167,7 @@ shows
                         X64_A.arch_kernel_obj.split_asm)+
   done
 
-text {* The following function can be used to reverse cte_map. *}
+text \<open>The following function can be used to reverse cte_map.\<close>
 definition
   "cteMap cns \<equiv> \<lambda>p.
    let P = (%(a,bl). cte_map (a,bl) = p \<and> cns a = Some (length bl))
@@ -1416,7 +1416,7 @@ proof -
     done
 qed
 
-text {*
+text \<open>
   In the executable specification,
   a linked list connects all children of a certain node.
   More specifically, the predicate @{term "subtree h c c'"} holds iff
@@ -1431,7 +1431,7 @@ text {*
   which represents a childhood relation like @{term "subtree h"},
   and converts this into an optional function to the immediate parent
   in the same format as @{term "cdt s"}.
-*}
+\<close>
 definition
   "parent_of' ds \<equiv> %x.
    if \<forall>p. \<not> ds p x then None

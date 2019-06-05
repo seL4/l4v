@@ -151,13 +151,13 @@ proof (cases x rule: of_nat_cases)
   have "P (of_nat m)"
   proof (induct m)
     case 0
-    then show ?case using `P 0` by simp
+    then show ?case using \<open>P 0\<close> by simp
   next
     case (Suc m)
     show ?case
     proof (cases "1 + of_nat m = (0::'a)")
       case True
-      then show ?thesis using `P 0` by simp
+      then show ?thesis using \<open>P 0\<close> by simp
     next
       case False
       with Suc suc show ?thesis by (metis add_diff_cancel_left' less_eq_0 not_less of_nat_Suc)
@@ -175,10 +175,10 @@ proof (cases x rule: of_nat_cases)
   have "P (of_nat m)"
   proof (induct m)
     case 0
-    then show ?case using `P 0` by simp
+    then show ?case using \<open>P 0\<close> by simp
   next
     case (Suc m)
-    with `P 0` suc show ?case by (metis diff_add_cancel minus_induct pred)
+    with \<open>P 0\<close> suc show ?case by (metis diff_add_cancel minus_induct pred)
   qed
   with of_nat show ?thesis by simp
 qed

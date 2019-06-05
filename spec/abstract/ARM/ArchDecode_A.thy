@@ -23,8 +23,8 @@ context Arch begin global_naming ARM_A
 
 section "Helper definitions"
 
-text {* This definition ensures that the given pointer is aligned
-to the given page size. *}
+text \<open>This definition ensures that the given pointer is aligned
+to the given page size.\<close>
 
 definition
   check_vp_alignment :: "vmpage_size \<Rightarrow> word32 \<Rightarrow> (unit,'z::state_ext) se_monad" where
@@ -32,9 +32,9 @@ definition
      unlessE (is_aligned vptr (pageBitsForSize sz)) $
        throwError AlignmentError"
 
-text {* This definition converts a user-supplied argument into an
+text \<open>This definition converts a user-supplied argument into an
 invocation label, used to determine the method to invoke.
-*}
+\<close>
 
 definition
   label_to_flush_type :: "invocation_label \<Rightarrow> flush_type"
@@ -51,8 +51,8 @@ where
 
 section "Architecture calls"
 
-text {* This definition decodes architecture-specific invocations.
-*}
+text \<open>This definition decodes architecture-specific invocations.
+\<close>
 
 definition
   page_base :: "vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vspace_ref"

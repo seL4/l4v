@@ -12,12 +12,12 @@ theory Sep_Cancel_Set
 imports Separation_Algebra Sep_Tactic_Helpers
 begin
 
-ML {*
+ML \<open>
   structure SepCancel_Rules = Named_Thms (
     val name = @{binding "sep_cancel"}
     val description = "sep_cancel rules"
   )
-*}
+\<close>
 
 setup SepCancel_Rules.setup
 

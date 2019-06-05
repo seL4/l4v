@@ -9,10 +9,10 @@
  *)
 
 
-text {*
+text \<open>
   Lemmas about updating the external flags of a PAS.
   These flags are: pasSubject, pasMayEditReadyQueues and pasMayActivate.
-*}
+\<close>
 
 theory PasUpdates
 imports
@@ -23,7 +23,7 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-section {* Separation lemmas for the idle thread and domain fields *}
+section \<open>Separation lemmas for the idle thread and domain fields\<close>
 
 abbreviation (input) domain_fields
 where
@@ -63,7 +63,7 @@ crunch domain_fields[wp]:
    ignore: check_cap_at syscall
    rule: transfer_caps_loop_pres)
 
-section {* PAS wellformedness property for non-interference *}
+section \<open>PAS wellformedness property for non-interference\<close>
 
 definition pas_wellformed_noninterference where
   "pas_wellformed_noninterference aag \<equiv>
@@ -81,7 +81,7 @@ lemma pas_wellformed_noninterference_silc[intro!]:
   apply (fastforce simp: pas_wellformed_noninterference_def)
   done
 
-section {* PAS subject update *}
+section \<open>PAS subject update\<close>
 
 lemma pasObjectAbs_pasSubject_update:
   "pasObjectAbs (aag\<lparr> pasSubject := x \<rparr>) = pasObjectAbs aag"
@@ -176,7 +176,7 @@ lemma silc_inv_pasSubject_update:
   apply (fastforce intro: silc_inv_pasSubject_update' dest: pas_wellformed_noninterference_silc)
   done
 
-section {* PAS MayActivate update *}
+section \<open>PAS MayActivate update\<close>
 
 lemma prop_of_pasMayActivate_update_idemp:
   "\<lbrakk>P aag; pasMayActivate aag = v\<rbrakk> \<Longrightarrow> P (aag\<lparr> pasMayActivate := v \<rparr>)"
@@ -243,7 +243,7 @@ lemma cdt_change_allowedMayActivate_update[simp]:
    cdt_change_allowed aag "
   by (simp add: cdt_change_allowed_def[abs_def] cdt_direct_change_allowed.simps direct_call_def)
 
-section {* PAS MayEditReadyQueue update *}
+section \<open>PAS MayEditReadyQueue update\<close>
 
 lemma prop_of_pasMayEditReadyQueues_update_idemp:
   "\<lbrakk>P aag; pasMayEditReadyQueues aag = v\<rbrakk> \<Longrightarrow> P (aag\<lparr> pasMayEditReadyQueues := v \<rparr>)"

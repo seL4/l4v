@@ -28,7 +28,7 @@ lemma tcb_domain_map_wellformed_ekheap[intro!, simp]:
 by (simp add: tcb_domain_map_wellformed_aux_def get_etcb_def)
 
 
-section{* CNode-specific AC. *}
+section\<open>CNode-specific AC.\<close>
 
 lemma set_original_integrity_autarch:
   "\<lbrace>integrity aag X st and K (is_subject aag (fst slot))\<rbrace>
@@ -121,7 +121,7 @@ lemma cap_insert_integrity_autarch:
   apply fastforce
   done
 
-text{*
+text\<open>
 
 Establish that the pointers this syscall will change are labelled with
 the current agent's label.
@@ -129,7 +129,7 @@ the current agent's label.
 NOTE: @{term "(\<subseteq>)"} is used consciously here to block the simplifier
 rewriting (the equivalent equalities) in the wp proofs.
 
-*}
+\<close>
 
 definition
   authorised_cnode_inv :: "'a PAS \<Rightarrow> Invocations_A.cnode_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"

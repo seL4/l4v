@@ -90,15 +90,15 @@ lemma sep_factor_foldI'':
   apply (sep_mp)
   by (clarsimp simp: sep_conj_ac)
 
-ML {*
+ML \<open>
  fun sep_fold_tactic ctxt =
      rotator' ctxt (resolve_tac ctxt [@{thm sep_fold_cong2 }])
                    (resolve_tac ctxt [@{thm sep_factor_foldI' }]) |>
      rotator' ctxt (resolve_tac ctxt [@{thm sep_fold_cong1 }]);
-*}
+\<close>
 
 method_setup sep_fold_cancel_inner =
-  {* Scan.succeed (SIMPLE_METHOD' o sep_fold_tactic) *} {* Simple elimination of conjuncts *}
+  \<open>Scan.succeed (SIMPLE_METHOD' o sep_fold_tactic)\<close> \<open>Simple elimination of conjuncts\<close>
 
 (* Cancels out shared resources according to the rule sep_factor_foldI' *)
 

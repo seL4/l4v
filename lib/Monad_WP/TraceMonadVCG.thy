@@ -506,12 +506,12 @@ declare K_def [simp]
 
 section "Satisfiability"
 
-text {*
+text \<open>
   The dual to validity: an existential instead of a universal
   quantifier for the post condition. In refinement, it is
   often sufficient to know that there is one state that
   satisfies a condition.
-*}
+\<close>
 definition
   exs_valid :: "('a \<Rightarrow> bool) \<Rightarrow> ('a, 'b) tmonad \<Rightarrow>
                 ('b \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool"
@@ -520,7 +520,7 @@ where
   "exs_valid P f Q \<equiv> (\<forall>s. P s \<longrightarrow> (\<exists>(rv, s') \<in> mres (f s). Q rv s'))"
 
 
-text {* The above for the exception monad *}
+text \<open>The above for the exception monad\<close>
 definition
   ex_exs_validE :: "('a \<Rightarrow> bool) \<Rightarrow> ('a, 'e + 'b) tmonad \<Rightarrow>
                     ('b \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool"
@@ -532,7 +532,7 @@ where
 
 section "Lemmas"
 
-subsection {* Determinism *}
+subsection \<open>Determinism\<close>
 
 lemma det_set_iff:
   "det f \<Longrightarrow> (r \<in> mres (f s)) = (mres (f s) = {r})"
@@ -794,7 +794,7 @@ lemma hoare_pre_cont [simp]: "\<lbrace> \<bottom> \<rbrace> a \<lbrace> P \<rbra
   by (simp add:valid_def)
 
 
-subsection {* Strongest Postcondition Rules *}
+subsection \<open>Strongest Postcondition Rules\<close>
 
 lemma get_sp:
   "\<lbrace>P\<rbrace> get \<lbrace>\<lambda>a s. s = a \<and> P s\<rbrace>"
@@ -1359,14 +1359,14 @@ lemma fail_update [iff]:
   by (simp add: fail_def)
 
 
-text {* We can prove postconditions using hoare triples *}
+text \<open>We can prove postconditions using hoare triples\<close>
 
 lemma post_by_hoare: "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; P s; (r, s') \<in> mres (f s) \<rbrakk> \<Longrightarrow> Q r s'"
   apply (simp add: valid_def)
   apply blast
   done
 
-text {* Weakest Precondition Rules *}
+text \<open>Weakest Precondition Rules\<close>
 
 lemma hoare_vcg_prop:
   "\<lbrace>\<lambda>s. P\<rbrace> f \<lbrace>\<lambda>rv s. P\<rbrace>"
@@ -1655,7 +1655,7 @@ lemma state_assert_wp [wp]: "\<lbrace> \<lambda>s. f s \<longrightarrow> P () s 
     assert_def bind_def valid_def return_def fail_def mres_def)
   done
 
-text {* The weakest precondition handler which works on conjunction *}
+text \<open>The weakest precondition handler which works on conjunction\<close>
 
 lemma hoare_vcg_conj_lift:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
@@ -1884,7 +1884,7 @@ lemmas [wp] = hoare_vcg_prop
 lemmas [wp_trip] = valid_is_triple validE_is_triple validE_E_is_triple validE_R_is_triple
 
 
-text {* Simplifications on conjunction *}
+text \<open>Simplifications on conjunction\<close>
 
 lemma hoare_post_eq: "\<lbrakk> Q = Q'; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   by simp
@@ -1956,7 +1956,7 @@ declare no_fail_pre [wp_pre]
 
 bundle no_pre = hoare_pre [wp_pre del] no_fail_pre [wp_pre del]
 
-text {* Miscellaneous lemmas on hoare triples *}
+text \<open>Miscellaneous lemmas on hoare triples\<close>
 
 lemma hoare_vcg_mp:
   assumes a: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
@@ -2033,7 +2033,7 @@ lemma hoare_K_bind [wp]:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> K_bind f x \<lbrace>Q\<rbrace>"
   by simp
 
-text {* Setting up the precondition case splitter. *}
+text \<open>Setting up the precondition case splitter.\<close>
 
 lemma wpc_helper_valid:
   "\<lbrace>Q\<rbrace> g \<lbrace>S\<rbrace> \<Longrightarrow> wpc_helper (P, P') (Q, Q') \<lbrace>P\<rbrace> g \<lbrace>S\<rbrace>"
@@ -2623,7 +2623,7 @@ lemma validI_well_behaved':
 
 lemmas validI_well_behaved = validI_well_behaved'[unfolded le_fun_def, simplified]
 
-text {* Strengthen setup. *}
+text \<open>Strengthen setup.\<close>
 
 context strengthen_implementation begin
 

@@ -26,14 +26,14 @@ requalify_consts
 end
 
 
-text {* Tests whether an IRQ identifier is in use. *}
+text \<open>Tests whether an IRQ identifier is in use.\<close>
 definition
   is_irq_active :: "irq \<Rightarrow> (bool,'z::state_ext) s_monad" where
  "is_irq_active irq \<equiv> liftM (\<lambda>st. st \<noteq> IRQInactive) $ get_irq_state irq"
 
-text {* The IRQControl capability can be used to create a new IRQHandler
+text \<open>The IRQControl capability can be used to create a new IRQHandler
 capability as well as to perform whatever architecture specific interrupt
-actions are available. *}
+actions are available.\<close>
 fun
   invoke_irq_control :: "irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
 where
@@ -43,10 +43,10 @@ where
 | "invoke_irq_control (ArchIRQControl invok) =
      arch_invoke_irq_control invok"
 
-text {* The IRQHandler capability may be used to configure how interrupts on an
+text \<open>The IRQHandler capability may be used to configure how interrupts on an
 IRQ are delivered and to acknowledge a delivered interrupt. Interrupts are
 delivered when Notification capabilities are installed in the relevant per-IRQ
-slot. The IRQHandler operations load or clear those capabilities. *}
+slot. The IRQHandler operations load or clear those capabilities.\<close>
 
 fun
   invoke_irq_handler :: "irq_handler_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
@@ -62,10 +62,10 @@ where
      cap_delete_one irq_slot
    od)"
 
-text {* Handle an interrupt occurence. Timing and scheduling details are not
+text \<open>Handle an interrupt occurence. Timing and scheduling details are not
 included in this model, so no scheduling action needs to be taken on timer
 ticks. If the IRQ has a valid Notification cap loaded a message is
-delivered. *}
+delivered.\<close>
 
 definition timer_tick :: "unit det_ext_monad" where
   "timer_tick \<equiv> do

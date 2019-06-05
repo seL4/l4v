@@ -17,7 +17,7 @@ theory TermPatternAntiquote imports
   Pure
 begin
 
-ML {*
+ML \<open>
 structure Term_Pattern_Antiquote = struct
 
 val quote_string = quote
@@ -66,6 +66,6 @@ val _ = Context.>> (Context.map_theory (
     ML_Antiquotation.inline @{binding "term_pat"}
       ((Args.context -- Scan.lift Args.embedded_inner_syntax)
          >> uncurry Term_Pattern_Antiquote.term_pattern_antiquote)))
-*}
+\<close>
 
 end

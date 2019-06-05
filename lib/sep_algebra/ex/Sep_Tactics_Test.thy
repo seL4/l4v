@@ -17,7 +17,7 @@ theory Sep_Tactics_Test
 imports "../Sep_Tactics"
 begin
 
-text {* Substitution and forward/backward reasoning *}
+text \<open>Substitution and forward/backward reasoning\<close>
 
 typedecl p
 typedecl val
@@ -72,7 +72,7 @@ schematic_goal
 
 
 
-text {* Conjunct selection *}
+text \<open>Conjunct selection\<close>
 
 lemma "(A ** B ** Q ** P) s"
   apply (sep_select 1)
@@ -85,7 +85,7 @@ lemma "\<lbrakk> also unrelated; (A ** B ** Q ** P) s \<rbrakk> \<Longrightarrow
   oops
 
 
-section {* Test cases for @{text sep_cancel}. *}
+section \<open>Test cases for @{text sep_cancel}.\<close>
 
 lemma
   assumes forward: "\<And>s g p v. A g p v s \<Longrightarrow> AA g p s "

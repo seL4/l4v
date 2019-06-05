@@ -17,15 +17,15 @@ theory Generator_CAMKES_CDL imports
   "DPolicy.Dpolicy"
 begin
 
-text {*
+text \<open>
   This theory is a work in progress on specifying the CapDL-producing logic of the CAmkES code
   generator as an Isabelle function.
-*}
+\<close>
 
-text {*
+text \<open>
   Merge two CapDL states to form a single one. Note that, in the case of conflicts, the second takes
   precedence.
-*}
+\<close>
 definition
   merge_cdl :: "cdl_state \<Rightarrow> cdl_state \<Rightarrow> cdl_state"
 where
@@ -74,12 +74,12 @@ abbreviation "RWG \<equiv> {AllowRead, AllowWrite, AllowGrant}"
 abbreviation "W \<equiv> {AllowWrite}"
 abbreviation "WG \<equiv> {AllowWrite, AllowGrant}"
 
-text {*
+text \<open>
   A type for representing extra information relating to hardware interrupts that will be appended
   to a generated CapDL specification. We would prefer not to deal with interrupts, but CapDL
   represents each interrupt as a mapping to a single-slot CNode. We need to note the existence of
   these artificial CNodes for the final correspondence proof.
-*}
+\<close>
 record irqs =
   irqs_map :: "cdl_irq \<Rightarrow> cdl_object_id"
   irqs_objects :: cdl_heap
@@ -95,11 +95,11 @@ where
         Types_D.CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = Map.empty, cdl_cnode_size_bits = 0\<rparr>
       | _ \<Rightarrow> False)"
 
-text {*
+text \<open>
   Predicate that the extra capability distribution we provide to the @{text generate} function is a
   valid extension to the basic distribution we generate. Essentially the extension must only contain
   address space objects.
-*}
+\<close>
 definition
   valid_extra :: "cdl_state \<Rightarrow> cdl_heap \<Rightarrow> bool"
 where
@@ -112,7 +112,7 @@ where
         | _ \<Rightarrow> False) \<and>
      dom (cdl_objects initial) \<inter> dom extra = {}"
 
-text {*
+text \<open>
   Now, for each of the types of items present in a base CAmkES-derived CapDL specification (CNodes,
   TCBs, endpoints), we define two things:
    * count - How many of this type of object we have; and
@@ -122,7 +122,7 @@ text {*
   itself is that, in some cases, the count of a type of object is required before we are actually at
   the point where we can define the object list itself. This is basically to work around circular
   dependencies.
-*}
+\<close>
 
 definition cnode_count :: "camkes_state \<Rightarrow> nat"
   where "cnode_count spec \<equiv> length (components (composition spec))"
@@ -153,14 +153,14 @@ definition ep_objs :: "camkes_state \<Rightarrow> (string \<times> cdl_object) l
 definition ep_count :: "camkes_state \<Rightarrow> nat"
   where "ep_count spec \<equiv> length (ep_objs spec)"
 
-text {*
+text \<open>
   When debugging a system (or when you would like your threads to terminate smoothly), we install
   TCB caps for all a component instance's threads in the first few CNode slots. When producing a
   verified system, we do not install these TCB caps, but we still need to account for the slots
   they would occupy as an offset into the CNode at which the following caps begin. Note, that we
   intentionally leave these slots empty so that any code expecting to invoke a TCB cap causes a cap
   fault, rather than incorrectly invoking an endpoint.
-*}
+\<close>
 definition cap_offset :: "camkes_state \<Rightarrow> string \<Rightarrow> nat"
   where "cap_offset spec instance \<equiv> 2 +
     (\<lambda>(_, c). length (requires c) + length (provides c) + length (dataports c) +
@@ -324,12 +324,12 @@ lemma helper23:
 
 type_synonym label = string
 
-text {*
+text \<open>
   We assume that the user, when instantiating the following locale to use the contained lemmas, will
   provide us with a function to find the object IDs of the IPC buffers. We need to assume this
   because the IPC buffer frames (and caps to them) are inferred late in the CapDL generation
   process, while deriving the rest of the backing frames for the address space.
-*}
+\<close>
 locale cdl_translation =
   fixes ipc_buffer :: "string \<Rightarrow> nat \<Rightarrow> cdl_object_id option"
   assumes buffers_distinct: "\<And>n i m j. \<exists>f. ipc_buffer n i = Some f \<and> ipc_buffer m j = Some f
@@ -354,10 +354,10 @@ abbreviation the_cnode_of :: "string \<Rightarrow> cdl_object_id"
 abbreviation the_pd_of :: "string \<Rightarrow> cdl_object_id"
   where "the_pd_of instance \<equiv> the_id_of (''pd_'' @ instance @ ''_group_bin'')"
 
-text {*
+text \<open>
   The contents of a CNode of a given component instance. It is easier to define this out-of-line
   here.
-*}
+\<close>
 definition
   cap_map :: "camkes_state \<Rightarrow> string \<Rightarrow> nat \<Rightarrow> cdl_cap option"
 where
@@ -379,12 +379,12 @@ where
                       else
                         []) (ep_objs' spec))))"
 
-text {*
+text \<open>
   Various minutiae related to CNode sizes. Ordinarily, in a hand-written system, this would not be a
   big deal. However, in CAmkES we automatically infer the CNode size based on the number of
   capabilities it needs to contain. The definition below is intended to replicate the calculation in
   the python-capdl module.
-*}
+\<close>
 definition cnode_size_bits :: "camkes_state \<Rightarrow> string \<Rightarrow> nat"
   where "cnode_size_bits spec name \<equiv>
     LEAST bits. 2 ^ bits > Max (dom (cap_map spec name) \<union> {2})"
@@ -395,7 +395,7 @@ definition cnode_size :: "camkes_state \<Rightarrow> string \<Rightarrow> nat"
 definition cnode_guard_size :: "camkes_state \<Rightarrow> string \<Rightarrow> nat"
   where "cnode_guard_size spec instance \<equiv> 32 - cnode_size_bits spec instance"
 
-text {* All CNodes have a guard of 0. *}
+text \<open>All CNodes have a guard of 0.\<close>
 definition cnode_guard :: "camkes_state \<Rightarrow> string \<Rightarrow> 32 word"
   where "cnode_guard _ _ \<equiv> 0"
 
@@ -452,7 +452,7 @@ lemma tcb_count_correct: "tcb_count spec = length (tcb_objs spec)"
   apply clarsimp
   by (metis (no_types, hide_lams) add.commute add.left_commute)
 
-text {* The CapDL heap; that is, all the objects in the system. *}
+text \<open>The CapDL heap; that is, all the objects in the system.\<close>
 definition
   obj_heap :: "camkes_state \<Rightarrow> cdl_object_id \<Rightarrow> cdl_object option"
 where
@@ -466,7 +466,7 @@ lemma obj_heap_dom_bounded:"card (dom (obj_heap spec)) \<le> CARD(cdl_object_id)
   apply (rule card_mono[where B=UNIV])
    by clarsimp+
 
-text {* Low-level generator. This describes the actual logic of the CAmkES code generator. *}
+text \<open>Low-level generator. This describes the actual logic of the CAmkES code generator.\<close>
 definition
   generate' :: "camkes_state \<Rightarrow> cdl_state"
 where
@@ -479,10 +479,10 @@ where
      cdl_asid_table = Map.empty,
      cdl_current_domain = undefined\<rparr>"
 
-text {*
+text \<open>
   An object abstraction (that is, a mapping from object IDs to labels) for a CAmkES-generated
   specification. WIP.
-*}
+\<close>
 definition
   poa_of :: "camkes_state \<Rightarrow> cdl_heap \<Rightarrow> irqs \<Rightarrow> label agent_map"
 where
@@ -578,10 +578,10 @@ where
      \<not> pasMaySendIrqs pas
    }"
 
-text {*
+text \<open>
   Top-level state generator. We validate the capability extension and then use the low-level
   generator above.
-*}
+\<close>
 definition
   state_of :: "camkes_state \<Rightarrow> cdl_heap \<Rightarrow> irqs \<Rightarrow> cdl_state option"
 where
@@ -726,7 +726,7 @@ lemma only_endpoint_caps2:
    apply assumption
   by clarsimp
 
-text {* All the caps in a generated spec are only to endpoints. *}
+text \<open>All the caps in a generated spec are only to endpoints.\<close>
 lemma generated_caps_limited:
   "state_of spec extra irqs = Some cdl \<Longrightarrow>
      \<forall>cnode \<in> ((\<lambda>c. case c of Types_D.CNode c' \<Rightarrow> c') `
@@ -788,7 +788,7 @@ lemma generated_caps_limited:
    apply (case_tac cnode; simp_all)
   by clarsimp
 
-text {* Compose the functions for producing a state and PAS into a single top-level generator. *}
+text \<open>Compose the functions for producing a state and PAS into a single top-level generator.\<close>
 definition
   generate :: "camkes_state \<Rightarrow> cdl_heap \<Rightarrow> irqs \<Rightarrow> (cdl_state \<times> label PAS set) option"
 where

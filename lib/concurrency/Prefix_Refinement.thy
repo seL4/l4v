@@ -15,21 +15,21 @@ imports
 
 begin
 
-section {* Definition of prefix fragment refinement. *}
+section \<open>Definition of prefix fragment refinement.\<close>
 
-text {*
+text \<open>
 This is a notion of refinement/simulation making use of prefix closure.
 For a concrete program to refine an abstract program, then for every
 trace of the concrete program there must exist a well-formed fragment
 of the abstract program that matches (according to the simulation
 relation) but which leaves enough decisions available to the abstract
 environment to permit parallel composition.
-*}
+\<close>
 
-text {*
+text \<open>
 Fragments must be self-closed, or enabled. Certain incomplete traces
 must be possible to extend by a program step.
-*}
+\<close>
 definition
   self_closed :: "((tmid \<times> 's) list \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> ('s, 'a) tmonad \<Rightarrow> bool"
 where
@@ -38,11 +38,11 @@ where
 
 lemmas self_closedD = self_closed_def[THEN iffD1, rule_format]
 
-text {*
+text \<open>
 Fragments must be environment-closed. Certain incomplete traces
 must be possible to extend by any environment step that is
 compatible with some condition.
-*}
+\<close>
 definition
   env_closed :: "((tmid \<times> 's) list \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> ('s, 'a) tmonad \<Rightarrow> bool"
 where
@@ -57,9 +57,9 @@ lemma env_closed_strengthen_cond:
     \<Longrightarrow> env_closed Q s f"
   by (simp add: env_closed_def)
 
-text {*
+text \<open>
 Two traces match according to some state relation if they match at every step.
-*}
+\<close>
 definition
   matching_tr :: "('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> (tmid \<times> 's) list \<Rightarrow> (tmid \<times> 't) list \<Rightarrow> bool"
 where
@@ -81,13 +81,13 @@ abbreviation(input)
   "matching_env_cond sr ctr s0 R \<equiv> (\<lambda>xs s. matching_tr_pfx sr ((Env, s) # xs) ctr
                 \<and> rely_cond R s0 ((Env, s) # xs))"
 
-text {*
+text \<open>
 The collection of properties a fragment must have to match some concrete
 trace. It must be prefix, self and environment closed, nonempty, and all
 outcomes must be matching. The outcomes (trace and result) must match
 the rely condition, the concrete trace (or a prefix), and must either be
 a matching result or @{term Incomplete} if a prefix.
-*}
+\<close>
 definition
   is_matching_fragment :: "('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 't \<Rightarrow> bool)
         \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> (tmid \<times> 't) list \<Rightarrow> ('t, 'b) tmres
@@ -115,11 +115,11 @@ lemmas is_matching_fragment_trD
     = is_matching_fragmentD[THEN conjunct2, THEN conjunct2,
         rule_format, where x="(tr, res)" for tr res, simplified, rule_format]
 
-text {*
+text \<open>
 Prefix fragment refinement. Given the initial conditions, every concrete outcome
 (trace and result) must have a matching fragment which is a simple refinement of
 the abstract program.
-*}
+\<close>
 definition
   prefix_refinement :: "('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 't \<Rightarrow> bool)
     \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> 't \<Rightarrow> bool)
@@ -174,12 +174,12 @@ lemma is_matching_fragment_Nil:
   apply (clarsimp simp add: in_fst_snd_image)
   done
 
-section {* Implications *}
-text {*
+section \<open>Implications\<close>
+text \<open>
 The notions of matching fragment and prefix refinement we have defined
 allow us to prove the existence of a matching trace in the abstract
 program.
-*}
+\<close>
 theorem matching_fragment_matching_tr:
   assumes match: "is_matching_fragment sr osr rvr ctr cres s0 R' s f"
   and rely: "rely_cond R t0 ctr"
@@ -290,9 +290,9 @@ lemma rely_cond_True:
   "rely_cond (\<lambda>_ _. True) = (\<lambda>_ _. True)"
   by (simp add: rely_cond_def fun_eq_iff)
 
-section {* Compositionality. *}
-text {* The crucial rules for proving prefix refinement
-of parallel and sequential compositions. *}
+section \<open>Compositionality.\<close>
+text \<open>The crucial rules for proving prefix refinement
+of parallel and sequential compositions.\<close>
 
 lemma ball_set_zip_conv_nth:
   "(\<forall>x \<in> set (zip ys zs). P x)
@@ -944,13 +944,13 @@ theorem prefix_refinement_bind_general[rule_format]:
   apply blast
   done
 
-section {* Using prefix refinement. *}
-text {*
+section \<open>Using prefix refinement.\<close>
+text \<open>
 Using prefix refinement to map the validI Hoare quadruple
 (precond/rely/guarantee/postcond). Proofs of quadruples for
 abstract programs imply related quadruples for concrete
 programs.
-*}
+\<close>
 
 lemma list_all2_all_trace_steps:
   assumes P: "\<forall>x\<in>trace_steps (rev tr) s0. P x"
@@ -1003,10 +1003,10 @@ theorem prefix_refinement_validI:
 
 lemmas prefix_refinement_validI' = prefix_refinement_validI[OF _ validI_strengthen_guar, OF _ validI_strengthen_post]
 
-section {* Building blocks. *}
-text {*
+section \<open>Building blocks.\<close>
+text \<open>
 Prefix refinement rules for various basic constructs.
-*}
+\<close>
 
 lemma prefix_refinement_weaken_pre:
   "prefix_refinement sr isr osr rvr P' Q' AR R f g
@@ -1505,8 +1505,8 @@ lemma prefix_refinement_weaken_rely:
   apply (auto simp add: triv_refinement_def rely_def)
   done
 
-text {* Using prefix refinement as an in-place calculus, permitting
-multiple applications at the same level. *}
+text \<open>Using prefix refinement as an in-place calculus, permitting
+multiple applications at the same level.\<close>
 
 lemmas trivial = imp_refl[rule_format]
 

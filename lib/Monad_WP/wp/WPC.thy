@@ -64,7 +64,7 @@ lemma foo:
          (case y of Some x \<Rightarrow> f x | None \<Rightarrow> g)"
   by (auto split: option.split intro: foo_elim)
 
-ML {*
+ML \<open>
 
 signature WPC = sig
   exception WPCFailed of string * term list * thm list;
@@ -225,21 +225,21 @@ val _ =
 end;
 end;
 
-*}
+\<close>
 
-ML {*
+ML \<open>
 
 val wp_cases_tactic_weak = WeakestPreCases.wp_cases_tac @{thms wpc_weak_processors};
 val wp_cases_method_strong = WeakestPreCases.wp_cases_method @{thms wpc_processors};
 val wp_cases_method_weak   = WeakestPreCases.wp_cases_method @{thms wpc_weak_processors};
 val wp_cases_method_vweak  = WeakestPreCases.wp_cases_method @{thms wpc_vweak_processors};
 
-*}
+\<close>
 
-method_setup wpc0 = {* wp_cases_method_strong *}
+method_setup wpc0 = \<open>wp_cases_method_strong\<close>
   "case splitter for weakest-precondition proofs"
 
-method_setup wpcw0 = {* wp_cases_method_weak *}
+method_setup wpcw0 = \<open>wp_cases_method_weak\<close>
   "weak-form case splitter for weakest-precondition proofs"
 
 method wpc = (wp_pre, wpc0)

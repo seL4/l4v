@@ -241,7 +241,7 @@ abbreviation "mcpriority_tcb_at \<equiv> pred_tcb_at itcb_mcpriority"
 lemma st_tcb_at_def: "st_tcb_at test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
   by (simp add: pred_tcb_at_def)
 
-text {* cte with property at *}
+text \<open>cte with property at\<close>
 
 definition
   cte_wp_at :: "(cap \<Rightarrow> bool) \<Rightarrow> cslot_ptr \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -327,7 +327,7 @@ definition
    is_aligned (obj_ref_of c) (cap_bits c) \<and> cap_bits c < word_bits"
 
 
-text {*
+text \<open>
   Below, we define several predicates for capabilities on the abstract specification.
   Please note that we distinguish between well-formedness predicates,
   which merely refine the basic type and are independent of the kernel state,
@@ -335,7 +335,7 @@ text {*
   which necessarily depends on the current kernel state.
 
   Eventually, we will combine all predicates into @{text valid_cap}.
-*}
+\<close>
 
 
 definition
@@ -448,12 +448,12 @@ abbreviation
                    | IdleThreadState \<Rightarrow> True
                    | _ \<Rightarrow> False"
 
-text {*
+text \<open>
   For each slot in the tcb, we give the accessor function, the update function and
   The invariant that should be verified about that slot.
 
   The invariant parameters are: thread_ptr, thread_state, cap_in_that_slot
-*}
+\<close>
 (* WARNING to anyone who would like to add an invariant to ctable slot:
    During deletion procedure, any type of cap can land in that slot *)
 definition
@@ -562,7 +562,7 @@ definition
 where
   "valid_objs s \<equiv> \<forall>ptr \<in> dom $ kheap s. \<exists>obj. kheap s ptr = Some obj \<and> valid_obj ptr obj s"
 
-text {* simple kernel objects *}
+text \<open>simple kernel objects\<close>
 
 lemma obj_at_eq_helper:
   "\<lbrakk> \<And>obj. P obj = P' obj \<rbrakk> \<Longrightarrow> obj_at P = obj_at P'"
@@ -620,7 +620,7 @@ lemma valid_simple_kheap:"\<lbrakk>kheap s p = Some v ;
 abbreviation
   "simple_typ_at \<equiv> obj_at (\<lambda>ob. a_type ob \<in> {AEndpoint, ANTFN})"
 
-text {* symref related definitions *}
+text \<open>symref related definitions\<close>
 
 definition
   tcb_st_refs_of :: "thread_state  \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -734,11 +734,11 @@ definition
 where
  "ex_nonz_cap_to ref \<equiv> (\<lambda>s. \<exists>cref. cte_wp_at (\<lambda>c. ref \<in> zobj_refs c) cref s)"
 
-text {* All live objects have caps. The contrapositive
+text \<open>All live objects have caps. The contrapositive
         of this is significant in establishing invariants
         over retype. The exception are objects that are
         not in the scope of any untyped capability, as
-        these can never be retyped. *}
+        these can never be retyped.\<close>
 definition
   if_live_then_nonz_cap :: "'z::state_ext state \<Rightarrow> bool"
 where
@@ -793,7 +793,7 @@ where
                          \<longrightarrow> cap \<noteq> NullCap
                         \<longrightarrow> ex_cte_cap_wp_to (appropriate_cte_cap cap) cref s"
 
-text {* All zombies are final. *}
+text \<open>All zombies are final.\<close>
 definition
   zombies_final :: "'z::state_ext state \<Rightarrow> bool"
 where
@@ -1860,7 +1860,7 @@ lemma test:
   apply (clarsimp simp: is_obj_defs)
   done
 
-text {* Lemmas about well-formed states *}
+text \<open>Lemmas about well-formed states\<close>
 
 lemma valid_pspaceI [intro]:
   "\<lbrakk> valid_objs s; pspace_aligned s; sym_refs (state_refs_of s); sym_refs (state_hyp_refs_of s);
@@ -2204,7 +2204,7 @@ lemma not_obj_at_strengthen:
   "obj_at (Not \<circ> P) p s \<Longrightarrow> \<not> obj_at P p s"
   by (clarsimp simp: obj_at_def)
 
-text {* using typ_at triples to prove other triples *}
+text \<open>using typ_at triples to prove other triples\<close>
 
 lemma cte_at_typ:
   "cte_at p = (\<lambda>s. typ_at (ACapTable (length (snd p))) (fst p) s

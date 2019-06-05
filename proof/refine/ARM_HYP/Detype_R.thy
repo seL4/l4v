@@ -13,9 +13,9 @@ imports Retype_R
 begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-text {* Establishing that the invariants are maintained
+text \<open>Establishing that the invariants are maintained
         when a region of memory is detyped, that is,
-        removed from the model. *}
+        removed from the model.\<close>
 
 definition
   "descendants_range_in' S p \<equiv>
@@ -716,7 +716,7 @@ lemma detype_corres:
   done
 
 
-text {* Invariant preservation across concrete deletion *}
+text \<open>Invariant preservation across concrete deletion\<close>
 
 lemma caps_containedD':
   "\<lbrakk> ctes_of s p = Some cte; ctes_of s p' = Some cte';

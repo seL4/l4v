@@ -27,7 +27,7 @@ lemma pred_tcb_at_upd_apply:
   by (simp add: pred_tcb_at_def obj_at_def)
 
 
-text {* The top-level invariance *}
+text \<open>The top-level invariance\<close>
 
 lemma akernel_invs:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>

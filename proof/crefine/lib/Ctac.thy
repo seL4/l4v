@@ -1641,30 +1641,30 @@ ML_file "ctac-method.ML"
 
 setup CtacImpl.setup
 
-method_setup ctac = {* CtacImpl.corres_ctac_tactic *}
+method_setup ctac = \<open>CtacImpl.corres_ctac_tactic\<close>
   "Split and rewrite corres rules.  Arguments simp (add|del|only), pre (add|del|only), (ccorres) (add|del|only)"
 
-method_setup clift = {* CtacImpl.corres_abstract_args *}
+method_setup clift = \<open>CtacImpl.corres_abstract_args\<close>
   "Abstract a local variable into a HOL variable"
 
-method_setup cinitlift = {* CtacImpl.corres_abstract_init_args *}
+method_setup cinitlift = \<open>CtacImpl.corres_abstract_init_args\<close>
   "Abstract a list of local variables into HOL variable without touching the remaining guards"
 
-method_setup csymbr = {* CtacImpl.corres_symb_rhs *}
+method_setup csymbr = \<open>CtacImpl.corres_symb_rhs\<close>
   "Symbolically execute the call on the right hand side of corres (see ccorres_lift_rhss). Arguments simp (add|del|only)."
 
-method_setup ceqv = {* CtacImpl.corres_ceqv *}
+method_setup ceqv = \<open>CtacImpl.corres_ceqv\<close>
   "Solve ceqv goals."
 
 (* The true here says to unfold the Haskell side *)
-method_setup cinit = {* CtacImpl.corres_boilerplate true *}
+method_setup cinit = \<open>CtacImpl.corres_boilerplate true\<close>
   "Boilerplate tactic for the start of a Call ccorres proof. Arguments 'lift' then 'simp (add|del|only)', e.g. apply (cinit lift: var1_' var2_' simp add: return_bind)"
 
-method_setup cinit' = {* CtacImpl.corres_boilerplate false *}
+method_setup cinit' = \<open>CtacImpl.corres_boilerplate false\<close>
   "As for cinit without unfolding the abstract side"
 
 (* Debugging *)
-method_setup ctac_print_xf = {* CtacImpl.corres_print_xf *}
+method_setup ctac_print_xf = \<open>CtacImpl.corres_print_xf\<close>
   "Print out what ctac thinks is the current xf"
 
 (* Set up wpc *)
@@ -1837,7 +1837,7 @@ lemma semantic_equiv_IF_True:
 
 lemmas ccorres_IF_True = ccorres_semantic_equiv[OF semantic_equiv_IF_True]
 
-ML {*
+ML \<open>
 fun tac ctxt =
   resolve_tac ctxt [@{thm ccorres_abstract[where xf'="\<lambda>s. ()"]}] 1
   THEN (REPEAT_DETERM
@@ -1848,11 +1848,11 @@ fun tac ctxt =
         ORELSE (resolve_tac ctxt [@{thm xpresI}] THEN' simp_tac (ctxt |> Splitter.del_split @{thm "if_split"})) 1
     ))
   THEN simp_tac (put_simpset HOL_basic_ss ctxt addsimps @{thms com.case}) 1
-*}
+\<close>
 
 end
 
-method_setup ccorres_remove_UNIV_guard = {* Args.context >> (fn ctxt => (K (Method.SIMPLE_METHOD (tac ctxt)))) *}
+method_setup ccorres_remove_UNIV_guard = \<open>Args.context >> (fn ctxt => (K (Method.SIMPLE_METHOD (tac ctxt))))\<close>
   "removes UNIV guards"
 
 end

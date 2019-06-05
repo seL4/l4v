@@ -20,9 +20,9 @@ begin
 
 context Arch begin global_naming ARM_A
 
-text {* Save the set of entries that would be inserted into a page table or
+text \<open>Save the set of entries that would be inserted into a page table or
 page directory to map various different sizes of frame at a given virtual
-address. *}
+address.\<close>
 
 definition largePagePTE_offsets :: "obj_ref list"
   where
@@ -80,9 +80,9 @@ definition get_master_pte :: "word32 \<Rightarrow> (pte, 'z::state_ext)s_monad"
     | _ \<Rightarrow> get_pte ptr)
   od"
 
-text {* Placing an entry which maps a frame within the set of entries that map a
+text \<open>Placing an entry which maps a frame within the set of entries that map a
 larger frame is unsafe. This function checks that given entries replace either
-invalid entries or entries of the same granularity. *}
+invalid entries or entries of the same granularity.\<close>
 fun ensure_safe_mapping ::
   "(pte * word32 list) + (pde * word32 list) \<Rightarrow> (unit,'z::state_ext) se_monad"
 where
@@ -131,8 +131,8 @@ where
             )
     odE)) pd_slots"
 
-text {* Look up a thread's IPC buffer and check that the thread has the right
-authority to read or (in the receiver case) write to it. *}
+text \<open>Look up a thread's IPC buffer and check that the thread has the right
+authority to read or (in the receiver case) write to it.\<close>
 definition
 lookup_ipc_buffer :: "bool \<Rightarrow> word32 \<Rightarrow> (word32 option,'z::state_ext) s_monad" where
 "lookup_ipc_buffer is_receiver thread \<equiv> do
@@ -147,7 +147,7 @@ lookup_ipc_buffer :: "bool \<Rightarrow> word32 \<Rightarrow> (word32 option,'z:
     | _ \<Rightarrow> return None)
 od"
 
-text {* Locate the page directory associated with a given virtual ASID. *}
+text \<open>Locate the page directory associated with a given virtual ASID.\<close>
 definition
 find_pd_for_asid :: "asid \<Rightarrow> (word32,'z::state_ext) lf_monad" where
 "find_pd_for_asid asid \<equiv> doE
@@ -163,8 +163,8 @@ find_pd_for_asid :: "asid \<Rightarrow> (word32,'z::state_ext) lf_monad" where
         | None \<Rightarrow> throwError InvalidRoot)
 odE"
 
-text {* Locate the page directory and check that this process succeeds and
-returns a pointer to a real page directory. *}
+text \<open>Locate the page directory and check that this process succeeds and
+returns a pointer to a real page directory.\<close>
 definition
 find_pd_for_asid_assert :: "asid \<Rightarrow> (word32,'z::state_ext) s_monad" where
 "find_pd_for_asid_assert asid \<equiv> do
@@ -173,8 +173,8 @@ find_pd_for_asid_assert :: "asid \<Rightarrow> (word32,'z::state_ext) s_monad" w
    return pd
  od"
 
-text {* Format a VM fault message to be passed to a thread's supervisor after
-it encounters a page fault. *}
+text \<open>Format a VM fault message to be passed to a thread's supervisor after
+it encounters a page fault.\<close>
 fun
 handle_vm_fault :: "word32 \<Rightarrow> vmfault_type \<Rightarrow> (unit,'z::state_ext) f_monad"
 where
@@ -190,8 +190,8 @@ odE"
     throwError $ ArchFault $ VMFault pc [1, fault && mask 14]
 odE"
 
-text {* Load the optional hardware ASID currently associated with this virtual
-ASID. *}
+text \<open>Load the optional hardware ASID currently associated with this virtual
+ASID.\<close>
 definition
 load_hw_asid :: "asid \<Rightarrow> (hardware_asid option,'z::state_ext) s_monad" where
 "load_hw_asid asid \<equiv> do
@@ -199,7 +199,7 @@ load_hw_asid :: "asid \<Rightarrow> (hardware_asid option,'z::state_ext) s_monad
     return $ option_map fst $ asid_map asid
 od"
 
-text {* Associate a hardware ASID with a virtual ASID. *}
+text \<open>Associate a hardware ASID with a virtual ASID.\<close>
 definition
 store_hw_asid :: "asid \<Rightarrow> hardware_asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "store_hw_asid asid hw_asid \<equiv> do
@@ -212,7 +212,7 @@ store_hw_asid :: "asid \<Rightarrow> hardware_asid \<Rightarrow> (unit,'z::state
     modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_hwasid_table := hw_asid_map' \<rparr>\<rparr>)
 od"
 
-text {* Clear all TLB mappings associated with this virtual ASID. *}
+text \<open>Clear all TLB mappings associated with this virtual ASID.\<close>
 definition
 invalidate_tlb_by_asid :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "invalidate_tlb_by_asid asid \<equiv> do
@@ -222,7 +222,7 @@ invalidate_tlb_by_asid :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" wher
         | Some hw_asid \<Rightarrow> do_machine_op $ invalidateLocalTLB_ASID hw_asid)
 od"
 
-text {* Flush all cache and TLB entries associated with this virtual ASID. *}
+text \<open>Flush all cache and TLB entries associated with this virtual ASID.\<close>
 definition
 flush_space :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "flush_space asid \<equiv> do
@@ -233,7 +233,7 @@ flush_space :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
         | Some hw_asid \<Rightarrow> do_machine_op $ invalidateLocalTLB_ASID hw_asid)
 od"
 
-text {* Remove any mapping from this virtual ASID to a hardware ASID. *}
+text \<open>Remove any mapping from this virtual ASID to a hardware ASID.\<close>
 definition
 invalidate_asid :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "invalidate_asid asid \<equiv> do
@@ -242,7 +242,7 @@ invalidate_asid :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
     modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_asid_map := asid_map' \<rparr>\<rparr>)
 od"
 
-text {* Remove any mapping from this hardware ASID to a virtual ASID. *}
+text \<open>Remove any mapping from this hardware ASID to a virtual ASID.\<close>
 definition
 invalidate_hw_asid_entry :: "hardware_asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "invalidate_hw_asid_entry hw_asid \<equiv> do
@@ -251,8 +251,8 @@ invalidate_hw_asid_entry :: "hardware_asid \<Rightarrow> (unit,'z::state_ext) s_
   modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_hwasid_table := hw_asid_map' \<rparr>\<rparr>)
 od"
 
-text {* Remove virtual to physical mappings in either direction involving this
-virtual ASID. *}
+text \<open>Remove virtual to physical mappings in either direction involving this
+virtual ASID.\<close>
 definition
 invalidate_asid_entry :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "invalidate_asid_entry asid \<equiv> do
@@ -261,8 +261,8 @@ invalidate_asid_entry :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
   invalidate_asid asid
 od"
 
-text {* Locate a hardware ASID that is not in use, if necessary by reclaiming
-one from another virtual ASID in a round-robin manner. *}
+text \<open>Locate a hardware ASID that is not in use, if necessary by reclaiming
+one from another virtual ASID in a round-robin manner.\<close>
 definition
 find_free_hw_asid :: "(hardware_asid,'z::state_ext) s_monad" where
 "find_free_hw_asid \<equiv> do
@@ -283,8 +283,8 @@ find_free_hw_asid :: "(hardware_asid,'z::state_ext) s_monad" where
        od)
 od"
 
-text {* Get the hardware ASID associated with a virtual ASID, assigning one if
-none is already assigned. *}
+text \<open>Get the hardware ASID associated with a virtual ASID, assigning one if
+none is already assigned.\<close>
 definition
 get_hw_asid :: "asid \<Rightarrow> (hardware_asid,'z::state_ext) s_monad" where
 "get_hw_asid asid \<equiv> do
@@ -313,8 +313,8 @@ where
       do_machine_op $ arm_context_switch_hwasid pd hwasid
     od"
 
-text {* Switch into the address space of a given thread or the global address
-space if none is correctly configured. *}
+text \<open>Switch into the address space of a given thread or the global address
+space if none is correctly configured.\<close>
 definition
   set_vm_root :: "word32 \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "set_vm_root tcb \<equiv> do
@@ -333,8 +333,8 @@ definition
     od)
 od"
 
-text {* Before deleting an ASID pool object we must deactivate all page
-directories that are installed in it. *}
+text \<open>Before deleting an ASID pool object we must deactivate all page
+directories that are installed in it.\<close>
 definition
 delete_asid_pool :: "asid \<Rightarrow> word32 \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "delete_asid_pool base ptr \<equiv> do
@@ -353,8 +353,8 @@ delete_asid_pool :: "asid \<Rightarrow> word32 \<Rightarrow> (unit,'z::state_ext
   od
 od"
 
-text {* When deleting a page directory from an ASID pool we must deactivate
-it. *}
+text \<open>When deleting a page directory from an ASID pool we must deactivate
+it.\<close>
 definition
 delete_asid :: "asid \<Rightarrow> word32 \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "delete_asid asid pd \<equiv> do
@@ -374,8 +374,8 @@ delete_asid :: "asid \<Rightarrow> word32 \<Rightarrow> (unit,'z::state_ext) s_m
     od)
 od"
 
-text {* Switch to a particular address space in order to perform a flush
-operation. *}
+text \<open>Switch to a particular address space in order to perform a flush
+operation.\<close>
 definition
 set_vm_root_for_flush :: "word32 \<Rightarrow> asid \<Rightarrow> (bool,'z::state_ext) s_monad" where
 "set_vm_root_for_flush pd asid \<equiv> do
@@ -407,7 +407,7 @@ do_flush :: "flush_type \<Rightarrow> vspace_ref \<Rightarrow> vspace_ref \<Righ
          isb
      od"
 
-text {* Flush mappings associated with a page table. *}
+text \<open>Flush mappings associated with a page table.\<close>
 definition
 flush_table :: "word32 \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> word32 \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "flush_table pd asid vptr pt \<equiv> do
@@ -424,7 +424,7 @@ flush_table :: "word32 \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow>
     od
 od"
 
-text {* Flush mappings associated with a given page. *}
+text \<open>Flush mappings associated with a given page.\<close>
 definition
 flush_page :: "vmpage_size \<Rightarrow> word32 \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "flush_page page_size pd asid vptr\<equiv> do
@@ -441,7 +441,7 @@ flush_page :: "vmpage_size \<Rightarrow> word32 \<Rightarrow> asid \<Rightarrow>
    od
 od"
 
-text {* Return the optional page directory a page table is mapped in. *}
+text \<open>Return the optional page directory a page table is mapped in.\<close>
 definition
 page_table_mapped :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad" where
 "page_table_mapped asid vaddr pt \<equiv> doE
@@ -454,7 +454,7 @@ page_table_mapped :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Righ
     | _ \<Rightarrow> returnOk None
 odE <catch> (K $ return None)"
 
-text {* Unmap a page table from its page directory. *}
+text \<open>Unmap a page table from its page directory.\<close>
 definition
 unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> word32 \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "unmap_page_table asid vaddr pt \<equiv> do
@@ -469,7 +469,7 @@ unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> word32 \<Righta
     od
 od"
 
-text {* Check that a given frame is mapped by a given mapping entry. *}
+text \<open>Check that a given frame is mapped by a given mapping entry.\<close>
 definition
 check_mapping_pptr :: "obj_ref \<Rightarrow> vmpage_size \<Rightarrow> (obj_ref + obj_ref) \<Rightarrow> (bool,'z::state_ext) s_monad" where
 "check_mapping_pptr pptr pgsz tablePtr \<equiv> case tablePtr of
@@ -495,7 +495,7 @@ definition
 definition
   "last_byte_pde x \<equiv> let pde_bits = 2 in x + ((1 << pde_bits) - 1)"
 
-text {* Unmap a mapped page if the given mapping details are still current. *}
+text \<open>Unmap a mapped page if the given mapping details are still current.\<close>
 definition
 unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "unmap_page pgsz asid vptr pptr \<equiv> doE
@@ -547,10 +547,10 @@ unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightar
 odE <catch> (K $ return ())"
 
 
-text {* PageDirectory and PageTable capabilities cannot be copied until they
+text \<open>PageDirectory and PageTable capabilities cannot be copied until they
 have a virtual ASID and location assigned. This is because page directories
 cannot have multiple current virtual ASIDs and page tables cannot be shared
-between address spaces or virtual locations. *}
+between address spaces or virtual locations.\<close>
 definition
   arch_derive_cap :: "arch_cap \<Rightarrow> (cap,'z::state_ext) se_monad"
 where
@@ -563,15 +563,15 @@ where
    | ASIDControlCap \<Rightarrow> returnOk (ArchObjectCap c)
    | ASIDPoolCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)"
 
-text {* No user-modifiable data is stored in ARM-specific capabilities. *}
+text \<open>No user-modifiable data is stored in ARM-specific capabilities.\<close>
 definition
   arch_update_cap_data :: "bool \<Rightarrow> data \<Rightarrow> arch_cap \<Rightarrow> cap"
 where
   "arch_update_cap_data preserve data c \<equiv> ArchObjectCap c"
 
 
-text {* Actions that must be taken on finalisation of ARM-specific
-capabilities. *}
+text \<open>Actions that must be taken on finalisation of ARM-specific
+capabilities.\<close>
 definition
   arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap \<times> cap,'z::state_ext) s_monad"
 where
@@ -601,8 +601,8 @@ where
   "prepare_thread_delete p \<equiv> return ()"
 
 
-text {* A thread's virtual address space capability must be to a page directory
-to be valid on the ARM architecture. *}
+text \<open>A thread's virtual address space capability must be to a page directory
+to be valid on the ARM architecture.\<close>
 definition
   is_valid_vtable_root :: "cap \<Rightarrow> bool" where
   "is_valid_vtable_root c \<equiv> \<exists>r a. c = ArchObjectCap (PageDirectoryCap r (Some a))"
@@ -616,8 +616,8 @@ check_valid_ipc_buffer :: "vspace_ref \<Rightarrow> cap \<Rightarrow> (unit,'z::
   odE
 | _ \<Rightarrow> throwError IllegalOperation"
 
-text {* Decode a user argument word describing the kind of VM attributes a
-mapping is to have. *}
+text \<open>Decode a user argument word describing the kind of VM attributes a
+mapping is to have.\<close>
 definition
 attribs_from_word :: "word32 \<Rightarrow> vm_attributes" where
 "attribs_from_word w \<equiv>
@@ -625,13 +625,13 @@ attribs_from_word :: "word32 \<Rightarrow> vm_attributes" where
       V' = (if w!!1 then insert ParityEnabled V else V)
   in if w!!2 then insert XNever V' else V'"
 
-text {* Update the mapping data saved in a page or page table capability. *}
+text \<open>Update the mapping data saved in a page or page table capability.\<close>
 definition
   update_map_data :: "arch_cap \<Rightarrow> (word32 \<times> word32) option \<Rightarrow> arch_cap" where
   "update_map_data cap m \<equiv> case cap of PageCap dev p R sz _ \<Rightarrow> PageCap dev p R sz m
                                      | PageTableCap p _ \<Rightarrow> PageTableCap p m"
 
-text {* Get information about the frame of a given virtual address *}
+text \<open>Get information about the frame of a given virtual address\<close>
 definition
   resolve_vaddr :: "word32 \<Rightarrow> vspace_ref \<Rightarrow> ((vmpage_size \<times> obj_ref) option, 'z::state_ext) s_monad"
 where
@@ -653,16 +653,16 @@ where
        | _ \<Rightarrow> return None
    od"
 
-text {*
+text \<open>
   A pointer is inside a user frame if its top bits point to a @{text DataPage}.
-*}
+\<close>
 definition
   in_user_frame :: "word32 \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "in_user_frame p s \<equiv>
    \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) =
         Some (ArchObj (DataPage False sz))"
 
-text {* Make numeric value of @{const msg_align_bits} visible. *}
+text \<open>Make numeric value of @{const msg_align_bits} visible.\<close>
 lemmas msg_align_bits = msg_align_bits'[unfolded word_size_bits_def, simplified]
 
 end

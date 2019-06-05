@@ -25,7 +25,7 @@ requalify_consts
 
 end
 
-text {* Store or load a word at an offset from an IPC buffer. *}
+text \<open>Store or load a word at an offset from an IPC buffer.\<close>
 definition
   store_word_offs :: "obj_ref \<Rightarrow> nat \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad" where
  "store_word_offs ptr offs v \<equiv>

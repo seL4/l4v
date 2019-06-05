@@ -16,7 +16,7 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-text {*
+text \<open>
   We define and prove an invariant that is necessary to achieve domain
   separation on seL4. In its strongest form, we require that all IRQs, other than
   those for the timer, are inactive, and that no IRQControl or
@@ -24,11 +24,11 @@ text {*
   active in the future).
 
   It always requires that there are no domain caps.
-*}
+\<close>
 
-text {*
+text \<open>
   When @{term irqs} is @{term False} we require that non-timer IRQs are off permanently.
-*}
+\<close>
 definition domain_sep_inv where
   "domain_sep_inv irqs st s \<equiv>
     (\<forall> slot. \<not> cte_wp_at ((=) DomainCap) slot s) \<and>

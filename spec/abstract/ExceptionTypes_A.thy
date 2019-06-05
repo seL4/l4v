@@ -22,14 +22,14 @@ context begin interpretation Arch .
 requalify_types arch_fault
 end
 
-text {*
+text \<open>
   There are two types of exceptions that can occur in the kernel:
   faults and errors. Faults are reported to the user's fault handler.
   Errors are reported to the user directly.
 
   Capability lookup failures can be be either fault or error,
   depending on context.
-*}
+\<close>
 
 datatype lookup_failure
      = InvalidRoot
@@ -55,12 +55,12 @@ datatype syscall_error
          | RevokeFirst
          | NotEnoughMemory data
 
-text {* Preemption in the system is caused by the arrival of hardware interrupts
-which are tagged with their hardware IRQ. *}
+text \<open>Preemption in the system is caused by the arrival of hardware interrupts
+which are tagged with their hardware IRQ.\<close>
 datatype interrupt = Interrupted irq
 
-text {* Create a message from a system-call failure to be returned to the
-thread attempting the operation that failed. *}
+text \<open>Create a message from a system-call failure to be returned to the
+thread attempting the operation that failed.\<close>
 primrec
   msg_from_lookup_failure :: "lookup_failure \<Rightarrow> data list"
 where

@@ -102,7 +102,7 @@ where
     | Inr HugePageObject \<Rightarrow> Some (if dev then KOUserDataDevice else KOUserData)
     | _ \<Rightarrow> None"
 
-text {* makeObject etc. lemmas *}
+text \<open>makeObject etc. lemmas\<close>
 
 lemma NullCap_valid' [iff]: "s \<turnstile>' capability.NullCap"
   unfolding valid_cap'_def by simp
@@ -164,9 +164,9 @@ lemmas valid_obj_makeObject_rules =
   valid_obj_makeObject_asid_pool valid_obj_makeObject_user_data_device
   valid_obj_makeObject_pdpte valid_obj_makeObject_pml4e
 
-text {* On the abstract side *}
+text \<open>On the abstract side\<close>
 
-text {* Lemmas for createNewObjects etc. *}
+text \<open>Lemmas for createNewObjects etc.\<close>
 
 lemma pspace_dom_upd:
   assumes      orth: "set as \<inter> dom ps = {}"

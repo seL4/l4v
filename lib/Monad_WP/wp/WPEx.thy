@@ -14,7 +14,7 @@ imports
   "../Strengthen"
 begin
 
-text {* WPEx - the WP Extension Experiment *}
+text \<open>WPEx - the WP Extension Experiment\<close>
 
 definition
   mresults :: "('s, 'a) nondet_monad \<Rightarrow> ('a \<times> 's \<times> 's) set"
@@ -207,7 +207,7 @@ val annotate_method =
 
 \<close>
 
-method_setup annotate = {* annotate_method *} "tries to annotate"
+method_setup annotate = \<open>annotate_method\<close> "tries to annotate"
 
 lemma use_valid_mresults:
   "\<lbrakk> (rv, s', s) \<in> mresults f; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> P s \<longrightarrow> Q rv s'"
@@ -218,7 +218,7 @@ lemma mresults_validI:
         \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   by (auto simp: mresults_def valid_def)
 
-ML {*
+ML \<open>
 
 val use_valid_mresults = @{thm use_valid_mresults};
 
@@ -298,9 +298,9 @@ fun wpx_tac ctxt rules
 val wpx_method = Attrib.thms >> curry (fn (ts, ctxt) =>
   Method.SIMPLE_METHOD (wpx_tac ctxt ts));
 
-*}
+\<close>
 
-method_setup wpx = {* wpx_method *} "experimental wp method"
+method_setup wpx = \<open>wpx_method\<close> "experimental wp method"
 
 lemma foo:
   "(rv, s', s) \<in> mresults (do x \<leftarrow> get; y \<leftarrow> get; put (x + y :: nat); return () od)
@@ -316,7 +316,7 @@ lemma foo2:
   apply simp
   done
 
-text {* Have played around with it, the issues are:
+text \<open>Have played around with it, the issues are:
   1: Need to deal with non-linear code, known issue.
   2: Using fastforce in annotate isn't cutting the mustard, need to automate better.
      Probably half the issue is that there are too many simp rules available.
@@ -327,7 +327,7 @@ text {* Have played around with it, the issues are:
      postcondition once we get up to a particular point. Related to 4, it's hard to
      say where that point is hit.
   6: Performance problems with getting the set of available rules.
-*}
+\<close>
 
 lemma valid_strengthen_with_mresults:
   "\<lbrakk> \<And>s rv s'. \<lbrakk> (rv, s', s) \<in> mresults f;
@@ -342,7 +342,7 @@ lemma valid_strengthen_with_mresults:
 lemma wpex_name_for_idE: "wpex_name_for_id P \<Longrightarrow> P"
   by (simp add: wpex_name_for_id_def)
 
-ML {*
+ML \<open>
 
 val valid_strengthen_with_mresults = @{thm valid_strengthen_with_mresults};
 val wpex_name_for_idE = @{thm wpex_name_for_idE};
@@ -364,9 +364,9 @@ end
 val wps_method = Attrib.thms >> curry
   (fn (ts, ctxt) => Method.SIMPLE_METHOD (wps_tac ctxt ts));
 
-*}
+\<close>
 
-method_setup wps = {* wps_method *} "experimental wp simp method"
+method_setup wps = \<open>wps_method\<close> "experimental wp simp method"
 
 lemma foo3:
   "\<lbrace>P\<rbrace> do v \<leftarrow> return (Suc 0); return (Suc (Suc 0)) od \<lbrace>(=)\<rbrace>"

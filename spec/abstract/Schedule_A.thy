@@ -29,7 +29,7 @@ end
 abbreviation
   "idle st \<equiv> st = Structures_A.IdleThreadState"
 
-text {* Gets the TCB at an address if the thread can be scheduled. *}
+text \<open>Gets the TCB at an address if the thread can be scheduled.\<close>
 definition
   getActiveTCB :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> tcb option"
 where
@@ -39,7 +39,7 @@ where
       | Some tcb       \<Rightarrow> if (runnable $ tcb_state tcb)
                          then Some tcb else None"
 
-text {* Gets all schedulable threads in the system. *}
+text \<open>Gets all schedulable threads in the system.\<close>
 definition
   allActiveTCBs :: "(obj_ref set,'z::state_ext) s_monad" where
   "allActiveTCBs \<equiv> do
@@ -47,7 +47,7 @@ definition
     return {x. getActiveTCB x state \<noteq> None}
    od"
 
-text {* Switches the current thread to the specified one. *}
+text \<open>Switches the current thread to the specified one.\<close>
 definition
   switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "switch_to_thread t \<equiv> do
@@ -58,14 +58,14 @@ definition
      modify (\<lambda>s. s \<lparr> cur_thread := t \<rparr>)
    od"
 
-text {* Asserts that a thread is runnable before switching to it. *}
+text \<open>Asserts that a thread is runnable before switching to it.\<close>
 definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "guarded_switch_to thread \<equiv> do ts \<leftarrow> get_thread_state thread;
                     assert (runnable ts);
                     switch_to_thread thread
                  od"
 
-text {* Switches to the idle thread. *}
+text \<open>Switches to the idle thread.\<close>
 definition
   switch_to_idle_thread :: "(unit,'z::state_ext) s_monad" where
   "switch_to_idle_thread \<equiv> do
@@ -86,9 +86,9 @@ definition choose_thread :: "det_ext state \<Rightarrow> (unit \<times> det_ext 
         else (guarded_switch_to (hd (max_non_empty_queue queues)))
       od"
 
-text {*
+text \<open>
   Determine whether given priority is highest among queued ready threads in given domain.
-  Trivially true if no threads are ready. *}
+  Trivially true if no threads are ready.\<close>
 definition
   is_highest_prio :: "domain \<Rightarrow> priority \<Rightarrow> det_ext state \<Rightarrow> bool"
 where
@@ -175,14 +175,14 @@ instantiation unit :: state_ext_sched
 begin
 
 
-text {*
+text \<open>
   The scheduler is heavily underspecified.
   It is allowed to pick any active thread or the idle thread.
   If the thread the scheduler picked is the current thread, it
   may omit the call to @{const switch_to_thread}. Likewise it
   may omit the call to @{const switch_to_idle_thread} if the
   idle thread is the current thread.
-*}
+\<close>
 definition schedule_unit :: "(unit,unit) s_monad" where
 "schedule_unit \<equiv> (do
    cur \<leftarrow> gets cur_thread;

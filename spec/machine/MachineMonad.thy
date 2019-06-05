@@ -30,9 +30,9 @@ requalify_consts
 
 end
 
-text {*
+text \<open>
   The machine monad is used for operations on the state defined above.
-*}
+\<close>
 type_synonym 'a machine_monad = "(machine_state, 'a) nondet_monad"
 
 translations
@@ -57,7 +57,7 @@ definition
   "ignore_failure f \<equiv>
   \<lambda>s. if fst (f s) = {} then ({((),s)},False) else (fst (f s), False)"
 
-text {* The wrapper doesn't do anything for usual operations: *}
+text \<open>The wrapper doesn't do anything for usual operations:\<close>
 lemma failure_consistent:
   "\<lbrakk> empty_fail f; no_fail \<top> f \<rbrakk> \<Longrightarrow> ignore_failure f = f"
   apply (simp add: ignore_failure_def empty_fail_def no_fail_def)
@@ -65,7 +65,7 @@ lemma failure_consistent:
   apply (auto intro: prod_eqI)
   done
 
-text {* And it has the desired properties *}
+text \<open>And it has the desired properties\<close>
 lemma ef_ignore_failure [simp]:
   "empty_fail (ignore_failure f)"
   by (simp add: empty_fail_def ignore_failure_def)

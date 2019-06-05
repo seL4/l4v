@@ -16,7 +16,7 @@ imports    "Noninterference_Base"
     "Access.ADT_AC"
 begin
 
-text {*
+text \<open>
 
 The top-level information flow theorems. (There are also theories for
 example systems, which go on top of this one.)
@@ -32,11 +32,11 @@ The Noninterference property does not hold on the kernel and is not
 proven despite the name of the file, but a partial integrity result
 holds in integrity_part.
 
-*}
+\<close>
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-section {* sameFor : unwinding relation *}
+section \<open>sameFor : unwinding relation\<close>
 
 datatype 'a partition = Partition 'a | PSched
 
@@ -95,11 +95,11 @@ where
         scheduler_modes (sys_mode_of os) = scheduler_modes (sys_mode_of os') \<and>
         interrupted_modes (sys_mode_of os) = interrupted_modes (sys_mode_of os')}"
 
-text {*
+text \<open>
   From the graph we define an equivalence relation on states for each partition.
 
   This is the unwinding relation of domain d with the right parameters (cf uwr later in this file)
-*}
+\<close>
 definition sameFor
   :: "'a subject_label auth_graph \<Rightarrow> 'a subject_label agent_map \<Rightarrow>
       'a subject_label agent_irq_map \<Rightarrow> 'a subject_label agent_asid_map \<Rightarrow>
@@ -114,9 +114,9 @@ where
   "same_for aag d \<equiv> sameFor (pasPolicy aag) (pasObjectAbs aag) (pasIRQAbs aag)
                                              (pasASIDAbs aag) (pasDomainAbs aag) d"
 
-text {*
+text \<open>
   We want @{term sameFor} to be an equivalence relation always.
-*}
+\<close>
 lemma sameFor_refl: "refl (sameFor g ab irqab asidab domainab d)"
   by(auto intro!: refl_onI equiv_for_refl
                simp: sameFor_def sameFor_subject_def sameFor_scheduler_def domain_fields_equiv_def
@@ -300,14 +300,14 @@ lemma no_subject_affects_PSched:
   "PSched \<notin> partsSubjectAffects g l"
   by(auto simp: partsSubjectAffects_def elim: subjectAffects.cases)
 
-section {* InfoFlow policy and partition integrity *}
+section \<open>InfoFlow policy and partition integrity\<close>
 
-text {*
+text \<open>
   We derive a noninterference policy from the authority graph
   We exclude the silc label from the noninterference policy
   since it exists in the authority graph solely to ensure that no actual subject's
   label covers the inter label caps.
-*}
+\<close>
 
 inductive_set policyFlows :: "'a subject_label auth_graph \<Rightarrow> ('a partition \<times> 'a partition) set"
   for g :: "'a subject_label auth_graph"
@@ -867,10 +867,10 @@ lemma fun_noteqD:
   "f \<noteq> g \<Longrightarrow> \<exists> a. f a \<noteq> g a"
   by blast
 
-text {*
+text \<open>
   This a very important theorem that ensures that @{const subjectAffects} is
   coherent with @{const integrity_obj}
-*}
+\<close>
 lemma partitionIntegrity_subjectAffects_obj:
   assumes par_inte: "partitionIntegrity aag s s'"
   assumes pas_ref: "pas_refined aag s"
@@ -1430,10 +1430,10 @@ lemma sameFor_subject_def2:
   apply fastforce
   done
 
-text {*
+text \<open>
   This lemma says that everything the current subject can affect, according to the
   integrity property, is included in @{term partsSubjectAffects}.
-*}
+\<close>
 
 lemma subject_can_affect_its_own_partition:
   "d\<notin>partsSubjectAffects (pasPolicy aag) (label_of (pasSubject aag)) \<Longrightarrow>
@@ -1539,29 +1539,29 @@ crunch schact_is_rct[wp]: thread_set "schact_is_rct"
 
 end
 
-section {* Valid initial state is complete unwinding system *}
+section \<open>Valid initial state is complete unwinding system\<close>
 
 context valid_initial_state begin
 
-text{* current running partition *}
+text\<open>current running partition\<close>
 definition part
 where
   "part s \<equiv> if scheduler_modes (sys_mode_of s) then PSched
              else Partition (partition (pasDomainAbs initial_aag) (internal_state_if s))"
 
-text{* unwinding relation *}
+text\<open>unwinding relation\<close>
 definition uwr
 where
   "uwr \<equiv> same_for initial_aag"
 
 end
 
-text {* Here we are basically that the big step ADT of the kernel is a
+text \<open>Here we are basically that the big step ADT of the kernel is a
         valid complete unwinding system on the policyFlow policy
 
   For those unfamiliar with the local subtleties, we are importing the all the facts
   of the complete_unwinding_system locale in the valid_initial_state locale under namespace ni.
- *}
+\<close>
 sublocale valid_initial_state \<subseteq>
           ni?: complete_unwinding_system
                            "big_step_ADT_A_if utf" (* the ADT that we prove infoflow for *)
@@ -2614,7 +2614,7 @@ lemma reads_respects_ethread_get_when:
   apply wp
   done
 
-text {* strengthening of @{thm Syscall_AC.valid_sched_action_switch_subject_thread} *}
+text \<open>strengthening of @{thm Syscall_AC.valid_sched_action_switch_subject_thread}\<close>
 lemma valid_sched_action_switch_is_subject:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows
@@ -2669,7 +2669,7 @@ lemma schedule_reads_respects_g:
   apply (intro allI conjI impI ; (elim conjE)?
          ; (solves \<open>clarsimp simp: valid_sched_def valid_sched_action_switch_is_subject[OF domains_distinct]
                              dest!: reads_equiv_gD intro!: globals_equiv_idle_thread_ptr\<close>)?)
-                    apply (tactic {* distinct_subgoals_tac *})
+                    apply (tactic \<open>distinct_subgoals_tac\<close>)
               apply (all \<open>(erule requiv_g_cur_thread_eq)?\<close>)
              apply (simp_all add: requiv_sched_act_eq[OF reads_equiv_gD[THEN conjunct1]])
            apply (simp_all add: requiv_cur_domain_eq[OF reads_equiv_gD[THEN conjunct1]])
@@ -3684,7 +3684,7 @@ lemma strict_prefixE'[elim?]:
   assumes "xs < ys"
   obtains z zs where "ys = xs @ z # zs"
 proof -
-  from `xs < ys` obtain us where "ys = xs @ us" and "xs \<noteq> ys"
+  from \<open>xs < ys\<close> obtain us where "ys = xs @ us" and "xs \<noteq> ys"
     apply(simp add: less_list_def' strict_prefix_def prefix_def)
     apply blast
     done

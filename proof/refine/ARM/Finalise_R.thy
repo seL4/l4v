@@ -18,7 +18,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare doUnbindNotification_def[simp]
 
-text {* Properties about empty_slot/emptySlot *}
+text \<open>Properties about empty_slot/emptySlot\<close>
 
 lemma case_Null_If:
   "(case c of NullCap \<Rightarrow> a | _ \<Rightarrow> b) = (if c = NullCap then a else b)"
@@ -1747,7 +1747,7 @@ lemma empty_slot_corres:
 
 
 
-text {* Some facts about is_final_cap/isFinalCapability *}
+text \<open>Some facts about is_final_cap/isFinalCapability\<close>
 
 lemma isFinalCapability_inv:
   "\<lbrace>P\<rbrace> isFinalCapability cap \<lbrace>\<lambda>_. P\<rbrace>"
@@ -2142,8 +2142,8 @@ lemma final_cap_corres:
   apply fastforce
   done
 
-text {* Facts about finalise_cap/finaliseCap and
-        cap_delete_one/cteDelete in no particular order *}
+text \<open>Facts about finalise_cap/finaliseCap and
+        cap_delete_one/cteDelete in no particular order\<close>
 
 
 definition

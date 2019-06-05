@@ -219,7 +219,7 @@ lemma transform_objects_update_same:
   unfolding transform_objects_def
   by (rule ext) (simp)
 
-text {* Facts about map_lift_over *}
+text \<open>Facts about map_lift_over\<close>
 
 lemma map_lift_over_eq_Some:
   "(map_lift_over f m x = Some y)

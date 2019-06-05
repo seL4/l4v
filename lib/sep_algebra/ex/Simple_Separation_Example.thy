@@ -95,7 +95,7 @@ lemma "VARS H
   apply (auto intro: maps_to_write)
 done
 
-text {* First a proof without using tactics *}
+text \<open>First a proof without using tactics\<close>
 lemma "VARS H p q r
   {(list p Ps ** list q Qs) H}
   WHILE p \<noteq> 0
@@ -132,7 +132,7 @@ lemma "VARS H p q r
   apply clarsimp
   done
 
-text {* Now with tactics *}
+text \<open>Now with tactics\<close>
 lemma "VARS H p q r
   {(list p Ps ** list q Qs) H}
   WHILE p \<noteq> 0

@@ -52,7 +52,7 @@ text \<open>
 text \<open>
   Example: evaluate arithmetic expressions in ML.
 \<close>
-ML_val {*
+ML_val \<open>
 fun eval_num @{term_pat "numeral ?n"} = HOLogic.dest_numeral n
   | eval_num @{term_pat "Suc ?n"} = eval_num n + 1
   | eval_num @{term_pat "0"} = 0
@@ -64,16 +64,16 @@ fun eval_num @{term_pat "numeral ?n"} = HOLogic.dest_numeral n
   | eval_num t = raise TERM ("eval_num", [t]);
 
 eval_num @{term "(1 + 2) * 3 - 4 div 5"}
-*}
+\<close>
 
 text \<open>Regression test: backslash handling\<close>
-ML_val {*
+ML_val \<open>
 val @{term_pat "\<alpha>"} = @{term "\<alpha>"}
-*}
+\<close>
 
 text \<open>Regression test: special-casing for dummy vars\<close>
-ML_val {*
+ML_val \<open>
 val @{term_pat "\<lambda>x y. _"} = @{term "\<lambda>x y. z"}
-*}
+\<close>
 
 end

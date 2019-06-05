@@ -15,11 +15,11 @@ begin
 
 text \<open>See documentation in @{file Local_Method_Tests.thy}.\<close>
 
-ML {*
+ML \<open>
   structure MethodData = Proof_Data(
     type T = Method.method Symtab.table
     val init = K Symtab.empty);
-*}
+\<close>
 
 method_setup local_method = \<open>
   Scan.lift Parse.liberal_name >>

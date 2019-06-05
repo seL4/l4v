@@ -12,7 +12,7 @@ theory Sep_Solve
 imports Sep_Cancel Sep_MP
 begin
 
-ML {*
+ML \<open>
   fun sep_schem ctxt =
     rotator' ctxt (sep_asm_erule_select ctxt)
             (SOLVED' ((eresolve0_tac [@{thm sep_conj_sep_impl2}] THEN'
@@ -40,9 +40,9 @@ ML {*
 
   fun sep_solve_method _ ctxt = SIMPLE_METHOD' (sep_solve_tactic ctxt)
   fun sep_schem_method _ ctxt = SIMPLE_METHOD' (sep_schem ctxt)
-*}
+\<close>
 
-method_setup sep_solve = {* sep_cancel_syntax >> sep_solve_method *}
-method_setup sep_schem = {* sep_cancel_syntax >> sep_schem_method *}
+method_setup sep_solve = \<open>sep_cancel_syntax >> sep_solve_method\<close>
+method_setup sep_schem = \<open>sep_cancel_syntax >> sep_schem_method\<close>
 
 end

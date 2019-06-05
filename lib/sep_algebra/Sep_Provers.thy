@@ -27,7 +27,7 @@ lemma sep_erule:
 
 (* Construct analogues to rule/drule etc,  for separation logic *)
 
-ML {*
+ML \<open>
 fun sep_select ctxt = resolve_tac ctxt [@{thm sep_eq}]
 fun sep_asm_select ctxt = dresolve_tac ctxt [@{thm sep_asm_eq}]
 fun sep_asm_erule_select ctxt = eresolve_tac ctxt [@{thm sep_asm_eq_erule}]
@@ -90,30 +90,30 @@ fun sep_erule_full_method true thms ctxt =
       SIMPLE_METHOD' (sep_erule_full_tac (eresolve_tac ctxt thms) ctxt)
   | sep_erule_full_method false thms ctxt =
       SIMPLE_METHOD' (sep_erule_full_tac (sep_erule_tactic ctxt thms) ctxt)
-*}
+\<close>
 
-method_setup sep_rule = {*
+method_setup sep_rule = \<open>
   Scan.lift (Args.mode "direct") -- Attrib.thms  >> uncurry sep_rule_method
-*}
+\<close>
 
-method_setup sep_drule = {*
+method_setup sep_drule = \<open>
   Scan.lift (Args.mode "direct") -- Attrib.thms >> uncurry sep_drule_method
-*}
+\<close>
 
-method_setup sep_frule = {*
+method_setup sep_frule = \<open>
   Scan.lift (Args.mode "direct") -- Attrib.thms >> uncurry sep_frule_method
-*}
+\<close>
 
-method_setup sep_erule = {*
+method_setup sep_erule = \<open>
   Scan.lift (Args.mode "direct") -- Attrib.thms >> uncurry sep_erule_method
-*}
+\<close>
 
-method_setup sep_erule_concl = {*
+method_setup sep_erule_concl = \<open>
   Scan.lift (Args.mode "direct") -- Attrib.thms >> uncurry sep_erule_concl_method
-*}
+\<close>
 
-method_setup sep_erule_full = {*
+method_setup sep_erule_full = \<open>
   Scan.lift (Args.mode "direct") -- Attrib.thms>> uncurry sep_erule_full_method
-*}
+\<close>
 
 end

@@ -33,7 +33,7 @@ requalify_types
 
 end
 
-text {* Getting and setting endpoint queues. *}
+text \<open>Getting and setting endpoint queues.\<close>
 definition
   get_ep_queue :: "endpoint \<Rightarrow> (obj_ref list,'z::state_ext) s_monad"
 where
@@ -48,10 +48,10 @@ where
 | "update_ep_queue (SendEP q) q' = SendEP q'"
 
 
-text {* Cancel all message operations on threads currently queued within this
+text \<open>Cancel all message operations on threads currently queued within this
 synchronous message endpoint. Threads so queued are placed in the Restart state.
 Once scheduled they will reattempt the operation that previously caused them
-to be queued here. *}
+to be queued here.\<close>
 definition
   cancel_all_ipc :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -67,14 +67,14 @@ where
                      od
    od"
 
-text {* The badge stored by thread waiting on a message send operation. *}
+text \<open>The badge stored by thread waiting on a message send operation.\<close>
 primrec (nonexhaustive)
   blocking_ipc_badge :: "thread_state \<Rightarrow> badge"
 where
   "blocking_ipc_badge (BlockedOnSend t payload) = sender_badge payload"
 
-text {* Cancel all message send operations on threads queued in this endpoint
-and using a particular badge. *}
+text \<open>Cancel all message send operations on threads queued in this endpoint
+and using a particular badge.\<close>
 definition
   cancel_badged_sends :: "obj_ref \<Rightarrow> badge \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -101,8 +101,8 @@ where
         od
   od"
 
-text {* Cancel all message operations on threads queued in a notification
-endpoint. *}
+text \<open>Cancel all message operations on threads queued in a notification
+endpoint.\<close>
 
 abbreviation
   do_unbind_notification :: "obj_ref \<Rightarrow> notification \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
@@ -150,8 +150,8 @@ where
                | _ \<Rightarrow> return ()
    od"
 
-text {* The endpoint pointer stored by a thread waiting for a message to be
-transferred in either direction. *}
+text \<open>The endpoint pointer stored by a thread waiting for a message to be
+transferred in either direction.\<close>
 definition
   get_blocking_object :: "thread_state \<Rightarrow> (obj_ref,'z::state_ext) s_monad"
 where
@@ -161,7 +161,7 @@ where
                     | _ \<Rightarrow> fail"
 
 
-text {* Cancel whatever IPC operation a thread is engaged in. *}
+text \<open>Cancel whatever IPC operation a thread is engaged in.\<close>
 definition
   blocked_cancel_ipc :: "thread_state \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -176,9 +176,9 @@ where
      set_thread_state tptr Inactive
    od"
 
-text {* Finalise a capability if the capability is known to be of the kind
+text \<open>Finalise a capability if the capability is known to be of the kind
 which can be finalised immediately. This is a simplified version of the
-@{text finalise_cap} operation. *}
+@{text finalise_cap} operation.\<close>
 fun
   fast_finalise :: "cap \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -200,8 +200,8 @@ where
 | "fast_finalise (UntypedCap dev r n f)       final = fail"
 | "fast_finalise (ArchObjectCap a)        final = fail"
 
-text {* The optional IRQ stored in a capability, presented either as an optional
-value or a set. *}
+text \<open>The optional IRQ stored in a capability, presented either as an optional
+value or a set.\<close>
 definition
   cap_irq_opt :: "cap \<Rightarrow> irq option" where
  "cap_irq_opt cap \<equiv> case cap of IRQHandlerCap irq \<Rightarrow> Some irq | _ \<Rightarrow> None"
@@ -210,9 +210,9 @@ definition
   cap_irqs :: "cap \<Rightarrow> irq set" where
  "cap_irqs cap \<equiv> set_option (cap_irq_opt cap)"
 
-text {* A generic reference to an object. Used for the purposes of finalisation,
+text \<open>A generic reference to an object. Used for the purposes of finalisation,
 where we want to be able to compare caps to decide if they refer to the "same object",
-which can be determined in several ways *}
+which can be determined in several ways\<close>
 datatype gen_obj_ref =
     ObjRef obj_ref
   | IRQRef irq
@@ -246,9 +246,9 @@ where
     | _ \<Rightarrow> NullCap"
 
 
-text {* Detect whether a capability is the final capability to a given object
+text \<open>Detect whether a capability is the final capability to a given object
 remaining in the system. Finalisation actions need to be taken when the final
-capability to the object is deleted. *}
+capability to the object is deleted.\<close>
 definition
   is_final_cap' :: "cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
  "is_final_cap' cap s \<equiv>
@@ -260,13 +260,13 @@ definition
   is_final_cap :: "cap \<Rightarrow> (bool,'z::state_ext) s_monad" where
   "is_final_cap cap \<equiv> gets (is_final_cap' cap)"
 
-text {* Actions to be taken after an IRQ handler capability is deleted. *}
+text \<open>Actions to be taken after an IRQ handler capability is deleted.\<close>
 definition
   deleted_irq_handler :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
  "deleted_irq_handler irq \<equiv> set_irq_state IRQInactive irq"
 
-text {* Actions to be taken after a cap is deleted *}
+text \<open>Actions to be taken after a cap is deleted\<close>
 definition
   post_cap_deletion :: "cap \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -275,8 +275,8 @@ where
      | ArchObjectCap acap \<Rightarrow> arch_post_cap_deletion acap
      | _ \<Rightarrow> return ()"
 
-text {* Empty a capability slot assuming that the capability in it has been
-finalised already. *}
+text \<open>Empty a capability slot assuming that the capability in it has been
+finalised already.\<close>
 
 definition
   empty_slot :: "cslot_ptr \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) s_monad"
@@ -300,8 +300,8 @@ where
       od
   od"
 
-text {* Delete a capability with the assumption that the fast finalisation
-process will be sufficient. *}
+text \<open>Delete a capability with the assumption that the fast finalisation
+process will be sufficient.\<close>
 definition
   cap_delete_one :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad" where
  "cap_delete_one slot \<equiv> do
@@ -313,8 +313,8 @@ definition
     od
   od"
 
-text {* Cancel the message receive operation of a thread waiting for a Reply
-capability it has issued to be invoked. *}
+text \<open>Cancel the message receive operation of a thread waiting for a Reply
+capability it has issued to be invoked.\<close>
 definition
   reply_cancel_ipc :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -329,8 +329,8 @@ where
     od
   od"
 
-text {* Cancel the message receive operation of a thread queued in an
-notification object. *}
+text \<open>Cancel the message receive operation of a thread queued in an
+notification object.\<close>
 definition
   cancel_signal :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -345,7 +345,7 @@ where
      set_thread_state threadptr Inactive
    od"
 
-text {* Cancel any message operations a given thread is waiting on. *}
+text \<open>Cancel any message operations a given thread is waiting on.\<close>
 definition
   cancel_ipc :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -360,8 +360,8 @@ where
         | _ \<Rightarrow> return ()
    od"
 
-text {* Currently, @{text update_restart_pc} can be defined generically up to
-the actual register numbers. *}
+text \<open>Currently, @{text update_restart_pc} can be defined generically up to
+the actual register numbers.\<close>
 definition
   update_restart_pc :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -369,8 +369,8 @@ where
         as_user thread_ptr (getRegister nextInstructionRegister
                             >>= setRegister faultRegister)"
 
-text {* Suspend a thread, cancelling any pending operations and preventing it
-from further execution by setting it to the Inactive state. *}
+text \<open>Suspend a thread, cancelling any pending operations and preventing it
+from further execution by setting it to the Inactive state.\<close>
 definition
   suspend :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where

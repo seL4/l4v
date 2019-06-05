@@ -139,7 +139,7 @@ definition
 where
   "get_irq_slot irq s \<equiv> (cdl_irq_node s irq, 0)"
 
-text {* Actions to be taken after deleting an IRQ Handler capability. *}
+text \<open>Actions to be taken after deleting an IRQ Handler capability.\<close>
 definition
   deleting_irq_handler :: "cdl_irq \<Rightarrow> unit k_monad"
 where
@@ -171,9 +171,9 @@ definition
   prepare_thread_delete ::"cdl_object_id \<Rightarrow> unit k_monad"
   where "prepare_thread_delete ptr \<equiv> return ()" (* for ARM it does nothing *)
 
-text {* Actions that must be taken when a capability is deleted. Returns a
+text \<open>Actions that must be taken when a capability is deleted. Returns a
 Zombie capability if deletion requires a long-running operation and also a
-possible IRQ to be cleared. *}
+possible IRQ to be cleared.\<close>
 fun
   finalise_cap :: "cdl_cap \<Rightarrow> bool \<Rightarrow> (cdl_cap \<times> cdl_cap) k_monad"
 where
@@ -240,10 +240,10 @@ where
 | "finalise_cap _ final = return (NullCap, NullCap)"
 
 
-text {* The fast_finalise operation is used to delete a capability when it is
+text \<open>The fast_finalise operation is used to delete a capability when it is
 known that a long-running operation is impossible. It is equivalent to calling
 the regular finalise operation. It cannot be defined in that way as doing so
-would create a circular definition. *}
+would create a circular definition.\<close>
 lemma fast_finalise_def2:
   "fast_finalise cap final = do
      assert (can_fast_finalise cap);

@@ -13,9 +13,9 @@ imports
   ADT_H
 begin
 
-text {* Preservation of domain time remaining over kernel invocations;
+text \<open>Preservation of domain time remaining over kernel invocations;
         invariance of domain list validity
-*}
+\<close>
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 

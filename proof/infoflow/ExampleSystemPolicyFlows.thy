@@ -14,9 +14,9 @@ imports
   "Access.ExampleSystem"
 begin
 
-subsection {* Example 1 -- similar to Sys1 in ../access-control/ExampleSystem.thy *}
+subsection \<open>Example 1 -- similar to Sys1 in ../access-control/ExampleSystem.thy\<close>
 
-subsubsection {* Definitions *}
+subsubsection \<open>Definitions\<close>
 
 datatype Sys3Labels = UT3 | T3 | EP3 | IRQ3
 
@@ -52,7 +52,7 @@ where
      (PSched, Partition IRQ3),
      (PSched, PSched) }"
 
-subsubsection {* Generalisations *}
+subsubsection \<open>Generalisations\<close>
 
 definition Sys3Reads where
   "Sys3Reads \<equiv> { (OrdinaryLabel (UT3)), (OrdinaryLabel (EP3)), (OrdinaryLabel (T3)) }"
@@ -70,7 +70,7 @@ lemma Sys3Affects_correct_fw : "\<lbrakk>x \<in> subjectAffects Sys3AuthGraph (O
         apply (auto simp:Sys3AuthGraph_def Sys3AuthGraph_aux_def complete_AuthGraph_def Sys3Affects_def)
   done
 
-subsubsection {* UT3 *}
+subsubsection \<open>UT3\<close>
 
 lemma Sys3UT3Reads_correct_bw : "x \<in> Sys3Reads \<Longrightarrow> x \<in> subjectReads Sys3AuthGraph (OrdinaryLabel (UT3))"
   apply (simp add: Sys3AuthGraph_def Sys3AuthGraph_aux_def complete_AuthGraph_def Sys3Reads_def)
@@ -107,7 +107,7 @@ lemma Sys3UT3Affects_correct_bw : "x \<in> Sys3Affects \<Longrightarrow> x \<in>
      apply (simp_all add:insertI1)
   done
 
-subsubsection {* T3 *}
+subsubsection \<open>T3\<close>
 
 lemma Sys3T3Reads_correct_bw : "x \<in> Sys3Reads \<Longrightarrow> x \<in> subjectReads Sys3AuthGraph (OrdinaryLabel (T3))"
   apply (simp add: Sys3AuthGraph_def Sys3AuthGraph_aux_def complete_AuthGraph_def Sys3Reads_def)
@@ -145,7 +145,7 @@ lemma Sys3T3Affects_correct_bw : "x \<in> Sys3Affects \<Longrightarrow> x \<in> 
   apply (simp add:affects_lrefl)
   done
 
-subsubsection {* EP3 *}
+subsubsection \<open>EP3\<close>
 
 definition Sys3EP3Affects :: "(Sys3Labels subject_label) set"
 where
@@ -182,7 +182,7 @@ lemma Sys3EP3Affects_correct : "subjectAffects Sys3AuthGraph (OrdinaryLabel (EP3
    apply (simp_all add:subsetI Sys3EP3Affects_correct_fw Sys3EP3Affects_correct_bw)
   done
 
-subsubsection {* Generalisations pt2 *}
+subsubsection \<open>Generalisations pt2\<close>
 
 lemma Sys3Reads_correct : "l \<in> {T3, UT3, EP3} \<Longrightarrow> subjectReads Sys3AuthGraph (OrdinaryLabel (l)) = Sys3Reads"
   by (auto simp:subsetI Sys3Reads_correct_fw Sys3UT3Reads_correct_bw Sys3T3Reads_correct_bw Sys3EP3Reads_correct_bw)
@@ -190,7 +190,7 @@ lemma Sys3Reads_correct : "l \<in> {T3, UT3, EP3} \<Longrightarrow> subjectReads
 lemma Sys3Affects_correct : "l \<in> {T3, UT3} \<Longrightarrow> subjectAffects Sys3AuthGraph (OrdinaryLabel (l)) = Sys3Affects"
   by (auto simp:subsetI Sys3Affects_correct_fw Sys3UT3Affects_correct_bw Sys3T3Affects_correct_bw)
 
-subsubsection {* IRQ3 *}
+subsubsection \<open>IRQ3\<close>
 
 lemma IRQ3Reads : " d \<in> subjectReads Sys3AuthGraph (OrdinaryLabel (IRQ3)) \<Longrightarrow> d = OrdinaryLabel (IRQ3)"
   apply (simp add: Sys3AuthGraph_def Sys3AuthGraph_aux_def complete_AuthGraph_def)
@@ -211,7 +211,7 @@ lemma IRQ3ReadsAndAffects :
   apply (erule subjectAffects.cases, auto)
   done
 
-subsubsection {* Policy flows *}
+subsubsection \<open>Policy flows\<close>
 
 lemma Sys3_policyFlows_correct_fw : "(a,b) \<in> policyFlows Sys3AuthGraph \<Longrightarrow> (a,b) \<in> Sys3PolicyFlows"
   apply (induct a b rule:policyFlows.induct)

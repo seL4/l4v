@@ -12,7 +12,7 @@ theory Corres
 imports StateRelation "CorresK.CorresK_Lemmas"
 begin
 
-text {* Instantiating the corres framework to this particular state relation. *}
+text \<open>Instantiating the corres framework to this particular state relation.\<close>
 abbreviation
  "corres \<equiv> corres_underlying state_relation False True"
 

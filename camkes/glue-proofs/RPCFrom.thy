@@ -55,9 +55,9 @@ locale RPCFrom_glue = RPCFrom +
 begin
 (*>*)
 
-chapter {* Assumptions *}
+chapter \<open>Assumptions\<close>
 
-text {*
+text \<open>
   This chapter introduces some definitions for properties that we assume to be invariant across the
   execution of user code. That is, the glue code lemmas in chapters that follow contain explicit
   assumptions that the user code in a component preserves the properties given below.
@@ -75,7 +75,7 @@ text {*
   require the globals frame not to have been modified. We create the following two definitions as
   shorthands for the globals frame still containing a valid pointer to the IPC buffer and the
   pointed to buffer still being valid, typed memory, respectively.
-*}
+\<close>
 definition
   globals_frame_intact :: "lifted_globals \<Rightarrow> bool"
 where
@@ -88,7 +88,7 @@ where
   "ipc_buffer_valid s \<equiv> is_valid_seL4_IPCBuffer__C s
     (heap_seL4_IPCBuffer__C'ptr s (Ptr (scast seL4_GlobalsFrame)))"
 
-text {*
+text \<open>
   One of the underlying tools we rely on does not currently fully abstract writes to arrays within
   structs. The glue code performs such operations when writing to threads' IPC buffers, in the
   function \code{seL4\_SetMR}. In order to work with a fully abstracted representation of these writes, we
@@ -96,8 +96,8 @@ text {*
   partially abstracted representation we have. In future this axiomatisation will be removed and the
   abstraction framework will emit the definition below and an accompanying proof of equivalence in
   place of the axiom.
-*}
-text {* \newpage *}
+\<close>
+text \<open>\newpage\<close>
 (* We repeat this definition because Isabelle's rendering of the original back to us via @{thm ...}
  * does not get formatted nicely. We use a different name in order not to interfere with any
  * following lemmas. Hopefully it won't confuse the reader.
@@ -117,14 +117,14 @@ where
        \<rparr>)
     od"
 
-text {*
+text \<open>
   The number of threads in a CAmkES component is dependent on the incoming and outgoing interfaces
   to that component. Per-thread data is generated as part of the connector glue code, including
   thread-local storage (TLS) variables. These variables are accessed via the current thread's TLS
   region. The following definitions are later used to express assumptions that the TLS region of
   the current thread has not been modified by intervening user code. In practice, non-malicious user
   code should never modify the TLS region or any thread-local variables.
-*}
+\<close>
 definition
   tls_ptr :: "lifted_globals \<Rightarrow> camkes_tls_t_C ptr"
 where
@@ -141,20 +141,20 @@ definition
 where
   "tls_valid s \<equiv> is_valid_camkes_tls_t_C s (tls_ptr s)"
 
-text {*
+text \<open>
   We make a further assumption about the execution of the kernel on behalf of a user thread that is
   explained in the next chapter.
-*}
+\<close>
 
-chapter {* System Calls *}
+chapter \<open>System Calls\<close>
 
-text {*
+text \<open>
   A thread's IPC buffer contains a number of message registers that are used for transferring data
   during an IPC operation. The following two definitions are used to abbreviate the operation of
   setting a specific message register and setting the first four message registers, respectively.
   We have a specific definition for setting the first four message registers because this is a
   common operation performed by the seL4 syscall stubs (user-level kernel entry utility functions).
-*}
+\<close>
 definition
   setMR :: "lifted_globals \<Rightarrow> nat \<Rightarrow> word32 \<Rightarrow> lifted_globals"
 where
@@ -172,7 +172,7 @@ where
   "setMRs s mr0 mr1 mr2 mr3 \<equiv>
     setMR (setMR (setMR (setMR s 0 mr0) 1 mr1) 2 mr2) 3 mr3"
 
-text {*
+text \<open>
   Before showing properties of the syscall stubs, we introduce some lemmas specifying the effect
   of some seL4 supporting functions. The function \code{seL4\_GetIPCBuffer} returns a pointer to
   the current thread's IPC buffer, while the functions \code{seL4\_SetMR} and \code{seL4\_GetMR}
@@ -186,8 +186,8 @@ text {*
   header of a lemma allows existing lemmas to be modified for the duration of the current proof.
   The \code{seL4\_SetMR} proof uses this to make the axiom we discussed previously available to
   Isabelle's simp tactic.
-*}
-text {* \newpage *}
+\<close>
+text \<open>\newpage\<close>
 lemma seL4_GetIPCBuffer_wp':
   "\<forall>s'. \<lbrace>\<lambda>s. globals_frame_intact s \<and>
              s = s'\<rbrace>
@@ -234,23 +234,23 @@ lemma seL4_GetMR_wp[wp_unsafe]:
   apply (simp add:globals_frame_intact_def ipc_buffer_valid_def)
   done
 
-text {*
+text \<open>
   The C standard library provides a function, \code{abort}, that is called by
   the CAmkES glue code in the event of an unrecoverable error. We do not
   provide a definition of the function itself and instead use the following
   lemma to later prove that all invocations to \code{abort} are dead code that
   is never executed.
-*}
+\<close>
 lemma abort_wp[wp]:
   "\<lbrace>\<lambda>_. False\<rbrace> abort' \<lbrace>P\<rbrace>!"
   by (rule validNF_false_pre)
 
-text {*
+text \<open>
   We now introduce lemmas specifying the behaviour of seL4 syscall stubs. These functions write
   syscall arguments into hardware registers, perform an assembly instruction to enter the kernel
   and then unpack the kernel's response. The following lemmas express that these invocations can
   never fail. We only provide lemmas for the syscalls used by the CAmkES glue code.
-*}
+\<close>
 lemma seL4_Call_wp[wp_unsafe]:
   notes seL4_SetMR_wp[wp] seL4_GetMR_wp[wp]
   shows
@@ -291,7 +291,7 @@ lemma seL4_Poll_wp[wp_unsafe]:
                   setMR_def)
   done
 
-text {* \newpage *}
+text \<open>\newpage\<close>
 lemma seL4_ReplyWait_wp[wp_unsafe]:
   "\<lbrace>\<lambda>s. globals_frame_intact s \<and>
         ipc_buffer_valid s \<and>
@@ -316,14 +316,14 @@ lemma seL4_Wait_wp[wp_unsafe]:
                   setMR_def)
   done
 
-text {*
+text \<open>
   It should be noted that each of these proofs about a system call stub implicitly assumes that the
   execution of the kernel itself has no effect on the user state. Obviously this is not true in
   practice or components would not be able to communicate via IPC. For now, the actual behaviour of
   the kernel is not required to show safe execution of the glue code. Further functional
   correctness proofs in future will involve a semantics of the kernel's execution and its effect on
   the user state.
-*}
+\<close>
 
 (*<*)
 
@@ -338,7 +338,7 @@ where
 
 (*>*)
 
-chapter {* RPC Send *}
+chapter \<open>RPC Send\<close>
 (*<*)
 (* This lemma captures the safety of the RPCFrom__run function
  * which is invoked on startup in this glue code. It is excluded from the final document because
@@ -351,7 +351,7 @@ lemma RPCFrom_run_nf: "\<lbrace>\<lambda>s. \<forall>r. P r s\<rbrace> RPCFrom__
   done
 (*>*)
 
-text {*
+text \<open>
   Having introduced supporting lemmas, we are now in a position to express the safety of the CAmkES
   glue code itself. The lemmas and proofs in this chapter are generated from the following CAmkES
   interface definition:
@@ -372,7 +372,7 @@ text {*
   consistently terminates (returns to the user) and does not reference invalid memory. The
   assumptions are the properties of the globals frame and TLS region discussed previously and,
   where relevant, that any pointers passed to the glue code can be safely dereferenced.
-*}
+\<close>
 
 lemma RPCFrom_echo_int_nf:
   notes seL4_SetMR_wp[wp] seL4_GetMR_wp[wp]
@@ -408,7 +408,7 @@ lemma RPCFrom_echo_parameter_nf:
                   setMRs_def setMR_def)
   done
 
-    text {* \newpage *}
+    text \<open>\newpage\<close>
 
 lemma RPCFrom_echo_char_nf:
   notes seL4_SetMR_wp[wp] seL4_GetMR_wp[wp]
@@ -444,7 +444,7 @@ lemma RPCFrom_increment_char_nf:
                   setMRs_def setMR_def)
   done
 
-    text {* \newpage *}
+    text \<open>\newpage\<close>
 
 lemma RPCFrom_increment_parameter_nf:
   notes seL4_SetMR_wp[wp] seL4_GetMR_wp[wp]

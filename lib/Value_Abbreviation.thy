@@ -17,15 +17,15 @@ keywords "value_abbreviation" :: thy_decl
 
 begin
 
-text {* Computing values and saving as abbreviations.
+text \<open>Computing values and saving as abbreviations.
 
 Useful in program verification to handle some configuration constant
 (e.g. n = 4) which may change. This mechanism can be used to give
 names (abbreviations) to other related constants (e.g. 2 ^ n, 2 ^ n - 1,
 [1 .. n], rev [1 .. n]) which may appear repeatedly.
-*}
+\<close>
 
-ML {*
+ML \<open>
 structure Value_Abbreviation = struct
 fun value_and_abbreviation mode name expr int ctxt = let
     val decl = (name, NONE, Mixfix.NoSyn)
@@ -44,12 +44,12 @@ val _ =
       >> (fn ((mode, name), expr) => value_and_abbreviation mode name expr));
 
 end
-*}
+\<close>
 
-text {* Testing it out.
+text \<open>Testing it out.
 Unfortunately locale/experiment/notepad all won't work here because
 the code equation setup is all global.
-*}
+\<close>
 
 definition
   "value_abbreviation_test_config_constant_1 = (24 :: nat)"

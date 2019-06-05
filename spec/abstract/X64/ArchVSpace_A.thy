@@ -19,18 +19,18 @@ imports "../Retype_A"
 begin
 
 context Arch begin global_naming X64_A
-text {*
+text \<open>
   These attributes are always set to @{const False} when pages are mapped.
-*}
+\<close>
 definition
   "attr_mask = {Global,Dirty,PTAttr Accessed,PTAttr ExecuteDisable}"
 
 definition
   "attr_mask' = attr_mask \<union> {PAT}"
 
-text {* Save the set of entries that would be inserted into a page table or
+text \<open>Save the set of entries that would be inserted into a page table or
 page directory to map various different sizes of frame at a given virtual
-address. *}
+address.\<close>
 primrec create_mapping_entries ::
   "paddr \<Rightarrow> vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vm_rights \<Rightarrow> frame_attrs \<Rightarrow> obj_ref \<Rightarrow>
   (vm_page_entry * obj_ref,'z::state_ext) se_monad"
@@ -54,8 +54,8 @@ where
   odE"
 
 
-text {* This function checks that given entries are either invalid entries (for unmapping)
-or replace invalid entries (for mapping). *}
+text \<open>This function checks that given entries are either invalid entries (for unmapping)
+or replace invalid entries (for mapping).\<close>
 fun ensure_safe_mapping ::
   "(vm_page_entry * obj_ref) \<Rightarrow> (unit,'z::state_ext) se_monad"
 where
@@ -89,8 +89,8 @@ where
 |
 "ensure_safe_mapping (VMPDPTE (PageDirectoryPDPTE _ _ _), _) = fail"
 
-text {* Look up a thread's IPC buffer and check that the thread has the right
-authority to read or (in the receiver case) write to it. *}
+text \<open>Look up a thread's IPC buffer and check that the thread has the right
+authority to read or (in the receiver case) write to it.\<close>
 definition
 lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad" where
 "lookup_ipc_buffer is_receiver thread \<equiv> do
@@ -105,7 +105,7 @@ lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'
     | _ \<Rightarrow> return None)
 od"
 
-text {* Locate the page directory associated with a given virtual ASID. *}
+text \<open>Locate the page directory associated with a given virtual ASID.\<close>
 definition
 find_vspace_for_asid :: "asid \<Rightarrow> (obj_ref,'z::state_ext) lf_monad" where
 "find_vspace_for_asid asid \<equiv> doE
@@ -122,8 +122,8 @@ find_vspace_for_asid :: "asid \<Rightarrow> (obj_ref,'z::state_ext) lf_monad" wh
 odE"
 
 
-text {* Locate the page directory and check that this process succeeds and
-returns a pointer to a real page directory. *}
+text \<open>Locate the page directory and check that this process succeeds and
+returns a pointer to a real page directory.\<close>
 definition
 find_vspace_for_asid_assert :: "asid \<Rightarrow> (obj_ref,'z::state_ext) s_monad" where
 "find_vspace_for_asid_assert asid \<equiv> do
@@ -132,8 +132,8 @@ find_vspace_for_asid_assert :: "asid \<Rightarrow> (obj_ref,'z::state_ext) s_mon
    return pml4
  od"
 
-text {* Format a VM fault message to be passed to a thread's supervisor after
-it encounters a page fault. *}
+text \<open>Format a VM fault message to be passed to a thread's supervisor after
+it encounters a page fault.\<close>
 fun
 handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit,'z::state_ext) f_monad"
 where
@@ -183,8 +183,8 @@ definition
 where
   "set_current_vspace_root vspace asid \<equiv> set_current_cr3 $ make_cr3 vspace asid"
 
-text {* Switch into the address space of a given thread or the global address
-space if none is correctly configured. *}
+text \<open>Switch into the address space of a given thread or the global address
+space if none is correctly configured.\<close>
 definition
   set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "set_vm_root tcb \<equiv> do
@@ -205,8 +205,8 @@ definition
     od)
 od"
 
-text {* Remove virtual to physical mappings in either direction involving this
-virtual ASID. *}
+text \<open>Remove virtual to physical mappings in either direction involving this
+virtual ASID.\<close>
 definition
 hw_asid_invalidate :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "hw_asid_invalidate asid vspace \<equiv>
@@ -229,8 +229,8 @@ delete_asid_pool :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ex
   od
 od"
 
-text {* When deleting a page map level 4 from an ASID pool we must deactivate
-it. *}
+text \<open>When deleting a page map level 4 from an ASID pool we must deactivate
+it.\<close>
 definition
 delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "delete_asid asid pml4 \<equiv> do
@@ -261,7 +261,7 @@ abbreviation
   flush_pd :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "flush_pd \<equiv> flush_all"
 
-text {* Flush mappings associated with a page table. *}
+text \<open>Flush mappings associated with a page table.\<close>
 definition
 flush_table :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "flush_table pml4_ref vptr pt_ref asid \<equiv> do
@@ -276,7 +276,7 @@ flush_table :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightar
 od"
 
 
-text {* Unmap a Page Directory Pointer Table from a PML4. *}
+text \<open>Unmap a Page Directory Pointer Table from a PML4.\<close>
 definition
 unmap_pdpt :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "unmap_pdpt asid vaddr pdpt \<equiv> doE
@@ -293,7 +293,7 @@ unmap_pdpt :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow>
   od
 odE <catch> (K $ return ())"
 
-text {* Unmap a Page Directory from a Page Directory Pointer Table. *}
+text \<open>Unmap a Page Directory from a Page Directory Pointer Table.\<close>
 definition
 unmap_pd :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "unmap_pd asid vaddr pd \<equiv> doE
@@ -311,7 +311,7 @@ unmap_pd :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (
   od
 odE <catch> (K $ return ())"
 
-text {* Unmap a page table from its page directory. *}
+text \<open>Unmap a page table from its page directory.\<close>
 definition
 unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "unmap_page_table asid vaddr pt \<equiv> doE
@@ -329,7 +329,7 @@ unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Right
     od
 odE <catch> (K $ return ())"
 
-text {* Check that a given frame is mapped by a given mapping entry. *}
+text \<open>Check that a given frame is mapped by a given mapping entry.\<close>
 definition
 check_mapping_pptr :: "machine_word \<Rightarrow> vm_page_entry \<Rightarrow> bool" where
 "check_mapping_pptr pptr entry \<equiv> case entry of
@@ -339,7 +339,7 @@ check_mapping_pptr :: "machine_word \<Rightarrow> vm_page_entry \<Rightarrow> bo
  | _ \<Rightarrow> False"
 
 
-text {* Unmap a mapped page if the given mapping details are still current. *}
+text \<open>Unmap a mapped page if the given mapping details are still current.\<close>
 definition
 unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "unmap_page pgsz asid vptr pptr \<equiv> doE
@@ -367,10 +367,10 @@ unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightar
 odE <catch> (K $ return ())"
 
 
-text {* Page table structure capabilities cannot be copied until they
+text \<open>Page table structure capabilities cannot be copied until they
 have a virtual ASID and location assigned. This is because they
 cannot have multiple current virtual ASIDs and cannot be shared
-between address spaces or virtual locations. *}
+between address spaces or virtual locations.\<close>
 definition
   arch_derive_cap :: "arch_cap \<Rightarrow> (cap,'z::state_ext) se_monad"
 where
@@ -392,15 +392,15 @@ where
    | IOPortCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)
    | IOPortControlCap \<Rightarrow> returnOk NullCap"
 
-text {* No user-modifiable data is stored in x64-specific capabilities. *}
+text \<open>No user-modifiable data is stored in x64-specific capabilities.\<close>
 definition
   arch_update_cap_data :: "bool \<Rightarrow> data \<Rightarrow> arch_cap \<Rightarrow> cap"
 where
   "arch_update_cap_data preserve data c \<equiv> ArchObjectCap c"
 
 
-text {* Actions that must be taken on finalisation of x64-specific
-capabilities. *}
+text \<open>Actions that must be taken on finalisation of x64-specific
+capabilities.\<close>
 definition
   arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap \<times> cap,'z::state_ext) s_monad"
 where
@@ -435,8 +435,8 @@ where
 
 
 
-text {* A thread's virtual address space capability must be to a mapped PML4 (page map level 4)
-to be valid on the x64 architecture. *}
+text \<open>A thread's virtual address space capability must be to a mapped PML4 (page map level 4)
+to be valid on the x64 architecture.\<close>
 definition
   is_valid_vtable_root :: "cap \<Rightarrow> bool" where
   "is_valid_vtable_root c \<equiv> \<exists>r a. c = ArchObjectCap (PML4Cap r (Some a))"
@@ -450,8 +450,8 @@ check_valid_ipc_buffer :: "vspace_ref \<Rightarrow> cap \<Rightarrow> (unit,'z::
   odE
 | _ \<Rightarrow> throwError IllegalOperation"
 
-text {* Decode a user argument word describing the kind of VM attributes a
-mapping is to have. *}
+text \<open>Decode a user argument word describing the kind of VM attributes a
+mapping is to have.\<close>
 definition
 attribs_from_word :: "machine_word \<Rightarrow> frame_attrs" where
 "attribs_from_word w \<equiv>
@@ -460,7 +460,7 @@ attribs_from_word :: "machine_word \<Rightarrow> frame_attrs" where
   in if w!!2 then insert PAT V' else V'"
 
 
-text {* Update the mapping data saved in a page or page table capability. *}
+text \<open>Update the mapping data saved in a page or page table capability.\<close>
 definition
   update_map_data :: "arch_cap \<Rightarrow> (asid \<times> vspace_ref) option \<Rightarrow> vmmap_type option \<Rightarrow> arch_cap" where
   "update_map_data cap m mt \<equiv> case cap of
@@ -469,9 +469,9 @@ definition
    | PageDirectoryCap p _ \<Rightarrow> PageDirectoryCap p m
    | PDPointerTableCap p _ \<Rightarrow> PDPointerTableCap p m"
 
-text {*
+text \<open>
   A pointer is inside a user frame if its top bits point to a @{text DataPage}.
-*}
+\<close>
 definition
   in_user_frame :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "in_user_frame p s \<equiv>
@@ -491,7 +491,7 @@ definition
 where
   "prepare_thread_delete thread_ptr \<equiv> fpu_thread_delete thread_ptr"
 
-text {* Make numeric value of @{const msg_align_bits} visible. *}
+text \<open>Make numeric value of @{const msg_align_bits} visible.\<close>
 lemmas msg_align_bits = msg_align_bits'[unfolded word_size_bits_def, simplified]
 
 end

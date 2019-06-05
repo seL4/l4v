@@ -3104,7 +3104,7 @@ lemma vs_refs_pdptI:
   apply (rule ccontr, auto)
   done
 
-text {* arch specific symrefs *} (* hyp_ref stubs : for compatibility with arm-hyp *)
+text \<open>arch specific symrefs\<close> (* hyp_ref stubs : for compatibility with arm-hyp *)
 
 definition
   tcb_hyp_refs :: "arch_tcb \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -3361,7 +3361,7 @@ end
 declare X64.arch_tcb_context_absorbs[simp]
 declare X64.arch_tcb_context_get_set[simp]
 
-setup {* Add_Locale_Code_Defs.setup "X64" *}
-setup {* Add_Locale_Code_Defs.setup "X64_A" *}
+setup \<open>Add_Locale_Code_Defs.setup "X64"\<close>
+setup \<open>Add_Locale_Code_Defs.setup "X64_A"\<close>
 
 end

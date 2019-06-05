@@ -19,9 +19,9 @@ imports "ASpec.Syscall_A"
 begin
 
 
-section {* Asynchronous Message Transfers *}
+section \<open>Asynchronous Message Transfers\<close>
 
-text {*
+text \<open>
 
   \texttt{handle_fault} in \texttt{sep-abstract} always sets the thread state to
   \texttt{Inactive}. This is the same behaviour as \texttt{handle_double_fault} in the abstract
@@ -33,7 +33,7 @@ text {*
   of the restricted capabilities their behaviour is the same. This means, the system assumes
   fully static virtual memory and no dynamic paging of any kind.
   Faulting threads will be disabled by the kernel.
-*}
+\<close>
 
 definition
   handle_fault :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit,'z::state_ext) s_monad"

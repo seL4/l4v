@@ -212,8 +212,8 @@ done
 end
 
 
-text {* These list operations roughly correspond to cdt
-        operations. *}
+text \<open>These list operations roughly correspond to cdt
+        operations.\<close>
 
 lemma after_can_split: "after_in_list list x = Some y \<Longrightarrow> \<exists>ys xs. list = xs @ (x # y # ys)"
   apply (induct list x rule: after_in_list.induct)

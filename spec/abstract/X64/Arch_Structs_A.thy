@@ -19,20 +19,20 @@ begin
 
 context Arch begin global_naming X64_A
 
-text {*
+text \<open>
 This theory provides architecture-specific definitions and datatypes
 including architecture-specific capabilities and objects.
-*}
+\<close>
 
-section {* Architecture-specific virtual memory *}
+section \<open>Architecture-specific virtual memory\<close>
 
 type_synonym io_port = "16 word"
 type_synonym io_asid = "16 word"
 
-section {* Architecture-specific capabilities *}
+section \<open>Architecture-specific capabilities\<close>
 
-text {*  The x64 kernel supports capabilities for ASID pools and an ASID controller capability,
-along with capabilities for IO ports and spaces, as well as virtual memory mappings. *}
+text \<open>The x64 kernel supports capabilities for ASID pools and an ASID controller capability,
+along with capabilities for IO ports and spaces, as well as virtual memory mappings.\<close>
 
 datatype arch_cap =
    ASIDPoolCap (acap_asid_pool : obj_ref) (acap_asid_base : asid)
@@ -62,7 +62,7 @@ primrec
 where
   "cr3_pcid (cr3 _ pcid) = pcid"
 
-section {* Architecture-specific objects *}
+section \<open>Architecture-specific objects\<close>
 
 datatype table_attr = Accessed | CacheDisabled | WriteThrough | ExecuteDisable
 type_synonym table_attrs = "table_attr set"
@@ -234,7 +234,7 @@ definition
     PageCap dev x rs' m sz as \<Rightarrow> PageCap dev x (validate_vm_rights rs) m sz as
   | _                   \<Rightarrow> ac"
 
-section {* Architecture-specific object types and default objects *}
+section \<open>Architecture-specific object types and default objects\<close>
 
 datatype
   aobject_type =
@@ -301,7 +301,7 @@ end
 
 qualify X64_A (in Arch)
 
-section {* Architecture-specific state *}
+section \<open>Architecture-specific state\<close>
 
 record arch_state =
   x64_asid_table            :: "3 word \<rightharpoonup> obj_ref"
@@ -396,7 +396,7 @@ where
          | PDPointerTable pdpt      \<Rightarrow> APDPointerTable
          | PageMapL4 pm             \<Rightarrow> APageMapL4)"
 
-text {* For implementation reasons the badge word has differing amounts of bits *}
+text \<open>For implementation reasons the badge word has differing amounts of bits\<close>
 definition
   badge_bits :: nat where
   "badge_bits \<equiv> 64"

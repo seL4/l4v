@@ -8,12 +8,12 @@
  * @TAG(NICTA_GPL)
  *)
 
-text {*
+text \<open>
   This file sets up a kernel automaton, ADT_A_if, which is
   slightly different from ADT_A.
   It then setups a big step framework to transfrom this automaton in the
   big step automaton on which the infoflow theorem will be proved
-*}
+\<close>
 
 theory ADT_IF
 imports
@@ -23,7 +23,7 @@ imports
     IRQMasks_IF FinalCaps Scheduler_IF UserOp_IF
 begin
 
-section {* Generic big step automaton *}
+section \<open>Generic big step automaton\<close>
 
 inductive_set sub_big_steps
   :: "('a,'b,'c) data_type \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool)  \<Rightarrow>  'a  \<Rightarrow> ('a \<times> 'c list) set"
@@ -33,12 +33,12 @@ where
   step: "\<lbrakk>evlist = evlist' @ [e]; (s',evlist') \<in> sub_big_steps A R s;
           (s',t) \<in> data_type.Step A e; \<not> R s t\<rbrakk> \<Longrightarrow>  (t,evlist) \<in> sub_big_steps A R s"
 
-text {*
+text \<open>
   Turn the (observable) multi-step executions of one automaton into the
   steps of another. We call this second automaton a \emph{big step} automaton
   of the first. We use a relation on observable states of the original
   automaton to demarcate one big step from the next.
-*}
+\<close>
 inductive_set big_steps
   :: "('a,'b,'c) data_type \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('c list \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> ('a \<times> 'a) set)"
   for A :: "('a,'b,'c) data_type" and R :: "'a \<Rightarrow> 'a \<Rightarrow> bool" and exmap :: "'c list \<Rightarrow> 'd"
@@ -98,10 +98,10 @@ definition Fin_trancl
 where
   "Fin_trancl A R s s' \<equiv> R\<^sup>+\<^sup>+ s s' \<or> Fin A s = Fin A s'"
 
-text {*
+text \<open>
   A sufficient condition to show that the big steps of a big step ADT
   terminate (i.e. that the relation R eventually becomes satisfied.)
-*}
+\<close>
 definition rel_terminate
   :: "('a,'b,'c) data_type \<Rightarrow> 'b \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('a set) \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> nat) \<Rightarrow> bool"
 where
@@ -164,11 +164,11 @@ lemma Step_system_execution_Run_s0:
   apply(erule Step_system.reachable_s0)
   done
 
-text {*
+text \<open>
   Define a relation on states that is basically the inverse of the
   Step relation for states @{term y} reachable from a given state @{term s}
   before the next big step has finished.
-*}
+\<close>
 definition step_measuref_rel_from
   :: "('a,'b,'c) data_type \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> ('a \<times> 'a) set"
 where
@@ -301,12 +301,12 @@ lemma big_steps_enabled:
   apply(fastforce intro: cstep)
   done
 
-text {*
+text \<open>
   We assume here that there is only one event that can ever occur. This
   is overly restrictive in general, but should be fine for the seL4
   automata (which shouldn't need multiple event labels since it should only
   ever be able to perform one event in each state).
-*}
+\<close>
 lemma Step_system_to_enabled_system:
   assumes single_event: "(\<forall>(x::'b) (y::'b). x = y)"
   assumes st: "Step_system A s0"
@@ -678,13 +678,13 @@ lemma big_step_adt_enabled_Step_system:
   using assms by (simp add: enabled_Step_system_def big_step_adt_Step_system
                             big_step_adt_enabled_system)
 
-section {* ADT_A_if definition and enabledness *}
+section \<open>ADT_A_if definition and enabledness\<close>
 
-subsection {* global_automaton_if definition *}
+subsection \<open>global_automaton_if definition\<close>
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-text {*
+text \<open>
   We define a bunch of states that the system can be in. The first two
   are when the processor is in user mode, the final four are for when in
   kernel mode.
@@ -697,14 +697,14 @@ text {*
        is ghost state to capture when the schedule event follows interrupt-handling
        (i.e. is True when the previous mode was KernelEntry Interrupt or KernelPreempted)
      - in kernel mode, about to exit to userspace
-*}
+\<close>
 datatype sys_mode = InUserMode | InIdleMode |
                     KernelEntry event | KernelPreempted |
                     KernelSchedule bool | KernelExit
 
 type_synonym 'k global_sys_state = "(user_context \<times> 'k) \<times> sys_mode"
 
-text {*
+text \<open>
   We take the @{term global_automaton} and split the kernel transitions
   into multiple steps. This is done because, while the entire execution
   from kernel entry to exit is atomic, different parts of it need to be
@@ -727,7 +727,7 @@ text {*
   We also have the user operations possibly give an event, which gives us
   a handle on modelling when user programs request system calls or cause
   other exceptions to occur.
-*}
+\<close>
 definition global_automaton_if
   :: "((user_context \<times> 'k) \<times> irq option \<times> (user_context \<times> 'k)) set
       \<Rightarrow> ((user_context \<times> 'k) \<times> event option \<times> (user_context \<times> 'k)) set
@@ -781,10 +781,10 @@ where
 
 type_synonym user_state_if = "user_context \<times> user_mem \<times> device_state \<times> exclusive_monitors"
 
-text {*
+text \<open>
   A user transition gives back a possible event that is the next
   event the user wants to perform
-*}
+\<close>
 type_synonym user_transition_if =
   "obj_ref \<Rightarrow> (word32 \<rightharpoonup> word32) \<Rightarrow> (word32 \<Rightarrow> vm_rights) \<Rightarrow> (word32 \<Rightarrow> bool) \<Rightarrow>
    user_state_if \<Rightarrow> (event option \<times> user_state_if) set"
@@ -832,7 +832,7 @@ lemma invs_exclusive_state_update[iff]:
   "invs (s\<lparr>machine_state := machine_state s\<lparr>exclusive_state := es\<rparr>\<rparr>) = invs s"
   by (simp add: invs_def)
 
-subsection {* do_user_op_if lemmas *}
+subsection \<open>do_user_op_if lemmas\<close>
 
 (* FIXME: clagged from AInvs.do_user_op_invs *)
 lemma do_user_op_if_invs:
@@ -908,13 +908,13 @@ where
   "do_user_op_A_if uop \<equiv>
        {(s,e,(tc,s'))| s e tc s'. ((e,tc),s') \<in> fst (split (do_user_op_if uop) s)}"
 
-subsection {* kernel_entry_if*}
+subsection \<open>kernel_entry_if\<close>
 
-text {*
+text \<open>
   Enter the kernel, and handle the event. Leave the user context
   unchanged; although it shouldn't matter really what its value is
   while we are still in kernel mode.
-*}
+\<close>
 definition kernel_entry_if
   :: "event \<Rightarrow> user_context \<Rightarrow> (((interrupt + unit) \<times> user_context),det_ext) s_monad"
 where
@@ -1162,12 +1162,12 @@ where
       {(s, b, (tc,s'))|s b tc s' r. ((r,tc),s') \<in> fst (split (kernel_entry_if e) s) \<and>
                    b = (case r of Inl _ \<Rightarrow> True | Inr _ \<Rightarrow> False)}"
 
-subsection {* handle_preemption_if *}
+subsection \<open>handle_preemption_if\<close>
 
-text {*
+text \<open>
   Since this executes entirely in kernel mode, leave the
   user context unchanged
-*}
+\<close>
 definition handle_preemption_if :: "user_context \<Rightarrow> (user_context,det_ext) s_monad"
 where
   "handle_preemption_if tc \<equiv> do
@@ -1242,12 +1242,12 @@ where
   "kernel_handle_preemption_if \<equiv>
       {(s, u, s'). s' \<in> fst (split handle_preemption_if s)}"
 
-subsection {* schedule_if *}
+subsection \<open>schedule_if\<close>
 
-text {*
+text \<open>
   Since this executes entirely in kernel mode, leave the
   user context unchanged
-*}
+\<close>
 definition schedule_if
   :: "user_context \<Rightarrow> (user_context,det_ext) s_monad"
 where
@@ -1440,11 +1440,11 @@ where
   "kernel_schedule_if \<equiv>
       {(s, e, s'). s' \<in> fst (split schedule_if s)}"
 
-subsection {* kernel_exit_if *}
+subsection \<open>kernel_exit_if\<close>
 
-text {*
+text \<open>
   Restore the user context
-*}
+\<close>
 definition kernel_exit_if
   :: "user_context \<Rightarrow> (user_context,det_ext) s_monad"
 where
@@ -1463,13 +1463,13 @@ where
                    m = (if ct_running (snd s') then InUserMode else InIdleMode)}"
 
 
-subsection {* check_active_irq_if *}
+subsection \<open>check_active_irq_if\<close>
 
 type_synonym observable_if = "det_state global_sys_state"
 
-text {*
+text \<open>
   Check for active IRQs without updating the user context
-*}
+\<close>
 definition check_active_irq_if
   :: "user_context \<Rightarrow> (irq option \<times> user_context, ('z :: state_ext)) s_monad"
 where
@@ -1478,7 +1478,7 @@ where
       return (irq, tc)
    od"
 
-subsection {* ADT_A_if definition *}
+subsection \<open>ADT_A_if definition\<close>
 
 definition check_active_irq_A_if
   :: "((user_context \<times> ('z :: state_ext) state) \<times> irq option \<times>
@@ -1592,14 +1592,14 @@ lemma schedule_if_only_timer_irq_inv[wp]:
    apply(wp only_timer_irq_inv_pres schedule_if_irq_masks | blast)+
   done
 
-subsection {* Big step IF automaton *}
+subsection \<open>Big step IF automaton\<close>
 
 fun interrupted_modes where
   "interrupted_modes KernelPreempted = True" |
   "interrupted_modes (KernelEntry Interrupt) = True" |
   "interrupted_modes _ = False"
 
-text {*
+text \<open>
   A first attempt at defining the big steps. They look like this:
 
   user mode           +-----------+                   +------ ...
@@ -1623,7 +1623,7 @@ text {*
 
   The scheduler domain then runs until the next kernel exit, at which point
   whoever is now the current domain begins its big execution step.
-*}
+\<close>
 
 definition big_step_R :: "det_state global_sys_state \<Rightarrow> det_state global_sys_state \<Rightarrow> bool"
 where
@@ -1646,7 +1646,7 @@ where
 
 end
 
-subsection {* Locales setup *}
+subsection \<open>Locales setup\<close>
 
 (* the second argument of det_inv the user_context, which is saved in kernel state
    on kernel_entry_if, and restored on kernel_exit_if.
@@ -1751,7 +1751,7 @@ locale valid_initial_state = valid_initial_state_noenabled +
        assumes ADT_A_if_Init_Fin_serial:
        "Init_Fin_serial (ADT_A_if utf) s0 (full_invs_if \<inter> {s. step_restrict s})"
 
-subsection {* TODO *}
+subsection \<open>TODO\<close>
 
 function (domintros) next_irq_state :: "nat \<Rightarrow> (10 word \<Rightarrow> bool) \<Rightarrow> nat" where
   "next_irq_state cur masks =
@@ -1783,7 +1783,7 @@ lemma recurring_next_irq_state_dom:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-subsection {* domain_field preserved on non-interrupt kernel event *}
+subsection \<open>domain_field preserved on non-interrupt kernel event\<close>
 
 crunch irq_state_of_state[wp]: cap_move "\<lambda>s. P (irq_state_of_state s)"
 crunch domain_fields[wp]: handle_yield "domain_fields P"
@@ -1863,7 +1863,7 @@ lemma kernel_entry_if_domain_fields:
   apply(wp handle_event_domain_fields | simp)+
   done
 
-subsection {* to split generic preservation lemma *}
+subsection \<open>to split generic preservation lemma\<close>
 
 lemma hoare_vcg_imp_lift':
    "\<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>
@@ -2067,7 +2067,7 @@ lemma current_aag_initial:
   apply (simp add: current_aag_def the_subject_of_aag_domain cur_domain_subject_s0)
   done
 
-subsection {* @{term ADT_A_if} is a step system with the invs_if invariant*}
+subsection \<open>@{term ADT_A_if} is a step system with the invs_if invariant\<close>
 
 definition cur_thread_context_of :: "observable_if \<Rightarrow> user_context"
 where
@@ -2582,7 +2582,7 @@ lemma ADT_A_if_enabled_Step_system:
   apply(simp add: enabled_Step_system_def ADT_A_if_Step_system ADT_A_if_enabled_system)
   done
 
-section {* IRQs and big step automaton enabledness *}
+section \<open>IRQs and big step automaton enabledness\<close>
 
 definition irq_measure_if
 where
@@ -3849,7 +3849,7 @@ lemma big_step_ADT_A_if_enabled_Step_system:
   done
 
 end
-section {* Generic big step refinement *}
+section \<open>Generic big step refinement\<close>
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition internal_R
@@ -3975,10 +3975,10 @@ lemma refines_Run_big_steps:
   apply (force intro: Run_trans)
   done
 
-text{*
+text\<open>
    TODO: with some more work we can probably change both @{term "refines"}
    to be @{term "refines'"} (see below).
-*}
+\<close>
 
 lemma big_step_adt_refines:
   "\<lbrakk>LI A C S (Ia \<times> Ic); A \<Turnstile> Ia; C \<Turnstile> Ic\<rbrakk>
@@ -4007,14 +4007,14 @@ lemma big_step_adt_refines:
   apply simp
   done
 
-text {*
+text \<open>
   A start at making the change mentioned above to
   @{thm big_step_adt_refines}.
-*}
+\<close>
 
-text {*
+text \<open>
   Refinement restricted to states reachable from a common initial state
-*}
+\<close>
 definition refines'
 where
   "refines' C A s0 \<equiv> \<forall>js s. system.reachable C s0 s \<longrightarrow> execution C s js \<subseteq> execution A s js"
@@ -4024,15 +4024,15 @@ lemma refines_refines':
   apply(auto simp: refines_def refines'_def)
   done
 
-text {* Two validity requirements on the user operation (uop) of the infoflow adt.
-        These definitions are mostly only needed in ADT_A_if_Refine. *}
+text \<open>Two validity requirements on the user operation (uop) of the infoflow adt.
+        These definitions are mostly only needed in ADT_A_if_Refine.\<close>
 
-text {* uop_nonempty is required to prove corres between do_user_op_if and doUserOp_if *}
+text \<open>uop_nonempty is required to prove corres between do_user_op_if and doUserOp_if\<close>
 definition uop_nonempty :: "user_transition_if \<Rightarrow> bool"
 where
   "uop_nonempty uop \<equiv> \<forall>t pl pr pxn tc um es. uop t pl pr pxn (tc, um, es) \<noteq> {}"
 
-text {* uop_sane is required to prove that the infoflow adt describes an enabled system *}
+text \<open>uop_sane is required to prove that the infoflow adt describes an enabled system\<close>
 definition uop_sane :: "user_transition_if \<Rightarrow> bool"
 where
   "uop_sane f \<equiv> \<forall>t pl pr pxn tcu. (f t pl pr pxn tcu) \<noteq> {} \<and>

@@ -52,12 +52,12 @@ where
    Fault_H.UserException x y"
 
 
-text {*
+text \<open>
   A pspace and a tree are related if every object in the pspace
   corresponds to an object in the tree. Some abstract objects
   like CapTables correspond to multiple concrete ones, thus we
   have to make cuts.
-*}
+\<close>
 
 type_synonym obj_relation_cut = "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
 type_synonym obj_relation_cuts = "(machine_word \<times> obj_relation_cut) set"
@@ -560,8 +560,8 @@ lemmas cap_relation_split_asm =
 
 
 
-text {* Relations on other data types that aren't stored but
-        used as intermediate values in the specs. *}
+text \<open>Relations on other data types that aren't stored but
+        used as intermediate values in the specs.\<close>
 
 primrec
   message_info_map :: "Structures_A.message_info \<Rightarrow> Types_H.message_info"
@@ -626,7 +626,7 @@ where
        \<and> (cur_domain s = ksCurDomain s')
        \<and> (domain_time s = ksDomainTime s')}"
 
-text {* Rules for using states in the relation. *}
+text \<open>Rules for using states in the relation.\<close>
 
 lemma curthread_relation:
   "(a, b) \<in> state_relation \<Longrightarrow> ksCurThread b = cur_thread a"
@@ -685,7 +685,7 @@ lemma state_relationE [elim?]:
   shows "R"
   using sr by (blast intro!: rl dest: state_relationD)
 
-text {* This isn't defined for arch objects *}
+text \<open>This isn't defined for arch objects\<close>
 
 lemmas isCap_defs =
   isZombie_def isArchObjectCap_def

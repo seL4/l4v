@@ -527,12 +527,12 @@ lemma do_machine_op_mapM_x:
   apply(clarsimp simp: mapM_x_Cons do_machine_op_bind[OF ef empty_fail_mapM_x[OF ef]])
   done
 
-text {*
+text \<open>
 
         | simp add: unless_def when_def
         | intro conjI impI)+
      (create_word_objects ptr numObjects bits dev)"
-*}
+\<close>
 
 lemma init_arch_objects_reads_respects_g:
   "reads_respects_g aag l

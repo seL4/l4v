@@ -36,7 +36,7 @@ where
          is_subject aag src \<and> is_subject aag dest
    | tcb_invocation.SetTLSBase tcb tls_base \<Rightarrow> is_subject aag tcb"
 
-subsection{* invoke *}
+subsection\<open>invoke\<close>
 
 lemma setup_reply_master_respects:
   "\<lbrace>integrity aag X st and K (is_subject aag t)\<rbrace>
@@ -431,7 +431,7 @@ lemma invoke_tcb_respects:
             | rule conjI | subst(asm) idle_no_ex_cap)+)
   done
 
-subsubsection{* @{term "pas_refined"} *}
+subsubsection\<open>@{term "pas_refined"}\<close>
 
 lemmas ita_wps = as_user_pas_refined restart_pas_refined cap_insert_pas_refined
                  thread_set_pas_refined cap_delete_pas_refined' check_cap_inv2 hoare_vcg_all_liftE
@@ -489,7 +489,7 @@ lemma invoke_tcb_pas_refined:
                            simp: invs_valid_global_refs invs_valid_objs)+
   done
 
-subsection{* TCB / decode *}
+subsection\<open>TCB / decode\<close>
 
 lemma decode_registers_authorised:
   "\<lbrace>K (is_subject aag t)\<rbrace> decode_read_registers msg (cap.ThreadCap t) \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
@@ -642,12 +642,12 @@ lemma decode_tcb_invocation_authorised:
             decode_set_tls_base_authorised)+
   by (auto iff: authorised_tcb_inv_def)
 
-text{*
+text\<open>
 
 @{term "decode_tcb_invocation"} preserves all invariants, so no need
 to show @{term "integrity"} or @{term "pas_refined"}.
 
-*}
+\<close>
 
 end
 

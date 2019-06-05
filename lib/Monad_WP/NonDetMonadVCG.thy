@@ -28,12 +28,12 @@ declare K_def [simp]
 
 section "Satisfiability"
 
-text {*
+text \<open>
   The dual to validity: an existential instead of a universal
   quantifier for the post condition. In refinement, it is
   often sufficient to know that there is one state that
   satisfies a condition.
-*}
+\<close>
 definition
   exs_valid :: "('a \<Rightarrow> bool) \<Rightarrow> ('a, 'b) nondet_monad \<Rightarrow>
                 ('b \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool"
@@ -42,7 +42,7 @@ where
  "exs_valid P f Q \<equiv> (\<forall>s. P s \<longrightarrow> (\<exists>(rv, s') \<in> fst (f s). Q rv s'))"
 
 
-text {* The above for the exception monad *}
+text \<open>The above for the exception monad\<close>
 definition
   ex_exs_validE :: "('a \<Rightarrow> bool) \<Rightarrow> ('a, 'e + 'b) nondet_monad \<Rightarrow>
                     ('b \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool"
@@ -54,7 +54,7 @@ where
 
 section "Lemmas"
 
-subsection {* Determinism *}
+subsection \<open>Determinism\<close>
 
 lemma det_set_iff:
   "det f \<Longrightarrow> (r \<in> fst (f s)) = (fst (f s) = {r})"
@@ -313,7 +313,7 @@ lemma hoare_pre_cont [simp]: "\<lbrace> \<bottom> \<rbrace> a \<lbrace> P \<rbra
   by (simp add:valid_def)
 
 
-subsection {* Strongest Postcondition Rules *}
+subsection \<open>Strongest Postcondition Rules\<close>
 
 lemma get_sp:
   "\<lbrace>P\<rbrace> get \<lbrace>\<lambda>a s. s = a \<and> P s\<rbrace>"
@@ -833,7 +833,7 @@ lemma no_fail_bind [wp]:
   apply simp
   done
 
-text {* Empty results implies non-failure *}
+text \<open>Empty results implies non-failure\<close>
 
 lemma empty_fail_modify [simp, wp]:
   "empty_fail (modify f)"
@@ -908,14 +908,14 @@ lemma fail_update [iff]:
   by (simp add: fail_def)
 
 
-text {* We can prove postconditions using hoare triples *}
+text \<open>We can prove postconditions using hoare triples\<close>
 
 lemma post_by_hoare: "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; P s; (r, s') \<in> fst (f s) \<rbrakk> \<Longrightarrow> Q r s'"
   apply (simp add: valid_def)
   apply blast
   done
 
-text {* Weakest Precondition Rules *}
+text \<open>Weakest Precondition Rules\<close>
 
 lemma hoare_vcg_prop:
   "\<lbrace>\<lambda>s. P\<rbrace> f \<lbrace>\<lambda>rv s. P\<rbrace>"
@@ -1197,7 +1197,7 @@ lemma state_assert_wp [wp]: "\<lbrace> \<lambda>s. f s \<longrightarrow> P () s 
     assert_def bind_def valid_def return_def fail_def)
   done
 
-text {* The weakest precondition handler which works on conjunction *}
+text \<open>The weakest precondition handler which works on conjunction\<close>
 
 lemma hoare_vcg_conj_lift:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
@@ -1481,7 +1481,7 @@ lemmas validE_E_combs[wp_comb] =
     valid_validE_E
     hoare_vcg_E_conj[where Q'="\<top>\<top>", folded validE_E_def, OF valid_validE_E]
 
-text {* Simplifications on conjunction *}
+text \<open>Simplifications on conjunction\<close>
 
 lemma hoare_post_eq: "\<lbrakk> Q = Q'; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   by simp
@@ -1556,7 +1556,7 @@ bundle no_pre = hoare_pre [wp_pre del] no_fail_pre [wp_pre del]
 bundle classic_wp_pre = hoare_pre [wp_pre del] no_fail_pre [wp_pre del]
     all_classic_wp_combs[wp_comb del] all_classic_wp_combs[wp_comb]
 
-text {* Miscellaneous lemmas on hoare triples *}
+text \<open>Miscellaneous lemmas on hoare triples\<close>
 
 lemma hoare_vcg_mp:
   assumes a: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
@@ -1651,7 +1651,7 @@ lemma validE_K_bind [wp_split]:
   "\<lbrace> P \<rbrace> x \<lbrace> Q \<rbrace>, \<lbrace> E \<rbrace> \<Longrightarrow> \<lbrace> P \<rbrace> K_bind x f \<lbrace> Q \<rbrace>, \<lbrace> E \<rbrace>"
   by simp
 
-text {* Setting up the precondition case splitter. *}
+text \<open>Setting up the precondition case splitter.\<close>
 
 lemma wpc_helper_valid:
   "\<lbrace>Q\<rbrace> g \<lbrace>S\<rbrace> \<Longrightarrow> wpc_helper (P, P') (Q, Q') \<lbrace>P\<rbrace> g \<lbrace>S\<rbrace>"
@@ -2170,10 +2170,10 @@ lemma validNF_nobindE [wp]:
    \<lbrace>A\<rbrace> doE f; g odE \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace>!"
   by clarsimp wp
 
-text {*
+text \<open>
 Setup triple rules for @{term validE_NF} so that we can use
 wp combinator rules.
-*}
+\<close>
 
 definition "validE_NF_property Q E s b \<equiv> \<not> snd (b s)
        \<and> (\<forall>(r', s') \<in> fst (b s). case r' of Inl x \<Rightarrow> E x s' | Inr x \<Rightarrow> Q x s')"
@@ -2222,7 +2222,7 @@ lemma validE_NF_condition [wp]:
   apply (clarsimp simp: no_fail_def condition_def)
   done
 
-text {* Strengthen setup. *}
+text \<open>Strengthen setup.\<close>
 
 context strengthen_implementation begin
 

@@ -16,7 +16,7 @@ begin
 
 named_theorems wp_pre
 
-ML {*
+ML \<open>
 structure WP_Pre = struct
 
 fun pre_tac ctxt pre_rules i t = let
@@ -35,7 +35,7 @@ fun tac ctxt = let
 val method
     = Args.context >> (fn _ => fn ctxt => Method.SIMPLE_METHOD' (tac ctxt));
 end
-*}
+\<close>
 
 method_setup wp_pre0 = \<open>WP_Pre.method\<close>
 method wp_pre = wp_pre0?

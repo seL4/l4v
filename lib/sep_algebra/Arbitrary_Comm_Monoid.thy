@@ -12,10 +12,10 @@ theory Arbitrary_Comm_Monoid
 imports Main
 begin
 
-text {*
+text \<open>
   We define operations "arbitrary_add" and "arbitrary_zero"
   to represent an arbitrary commutative monoid.
-*}
+\<close>
 
 definition
   arbitrary_add :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
@@ -29,10 +29,10 @@ definition
 where
  "arbitrary_zero \<equiv> snd (SOME (f, z). comm_monoid f z)"
 
-text {*
+text \<open>
   For every type, there exists some function @{term f} and
   identity @{term e} on that type forming a monoid.
-*}
+\<close>
 lemma comm_monoid_exists:
       "\<exists>f e. comm_monoid f e"
 proof cases
@@ -59,9 +59,9 @@ next
           semigroup_def abel_semigroup_axioms_def comm_monoid_axioms_def)
 qed
 
-text {*
+text \<open>
   These operations form a commutative monoid.
-*}
+\<close>
 interpretation comm_monoid arbitrary_add arbitrary_zero
   unfolding arbitrary_add_def [abs_def] arbitrary_zero_def
   by (rule someI2_ex, auto simp: comm_monoid_exists)

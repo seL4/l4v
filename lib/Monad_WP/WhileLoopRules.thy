@@ -39,12 +39,12 @@ lemma wf_wellorder_measure: "wf {(a, b). (M a :: 'a :: wellorder) < M b}"
 
 section "whileLoop lemmas"
 
-text {*
+text \<open>
   The following @{const whileLoop} definitions with additional
   invariant/variant annotations allow the user to annotate
   @{const whileLoop} terms with information that can be used
   by automated tools.
-*}
+\<close>
 definition
   "whileLoop_inv (C :: 'a \<Rightarrow> 'b \<Rightarrow> bool) B x (I :: 'a \<Rightarrow> 'b \<Rightarrow> bool) (R :: (('a \<times> 'b) \<times> ('a \<times> 'b)) set) \<equiv> whileLoop C B x"
 
@@ -262,7 +262,7 @@ next
              clarsimp simp: condition_def return_def)
 
   thus ?thesis
-    by (metis init_I `\<not> C r s`)
+    by (metis init_I \<open>\<not> C r s\<close>)
 qed
 
 lemma snd_whileLoop_induct [consumes 1]:
@@ -478,7 +478,7 @@ proof (clarsimp simp: exs_valid_def Bex_def)
   }
 
   thus "\<exists>r' s'. (r', s') \<in> fst (whileLoop C B r s) \<and> Q r' s'"
-    by (metis `P s` fst_conv init_T snd_conv
+    by (metis \<open>P s\<close> fst_conv init_T snd_conv
                   final_I fst_whileLoop_cond_false)
 qed
 

@@ -8,7 +8,7 @@
  * @TAG(NICTA_GPL)
  *)
 
-chapter {* Wellformedness of Specifications *}
+chapter \<open>Wellformedness of Specifications\<close>
 
 (*<*)
 theory Wellformed_CAMKES
@@ -16,22 +16,22 @@ imports Types_CAMKES Helpers_CAMKES
 begin
 (*>*)
 
-text {*
+text \<open>
   To prove that a system specification is correct, we need to define what
   correctness means for the entities that can exist in a CAmkES specification.
   This section provides a definition of wellformedness for each syntactic
   element that captures the necessary conditions for it to represent a valid
   system configuration. Any wellformed system is capable of being instantiated
   in a way that corresponds to its ADL.
-*}
+\<close>
 
-subsection {* \label{subsec:winterfaces}Interfaces *}
+subsection \<open>\label{subsec:winterfaces}Interfaces\<close>
 
-text {*
+text \<open>
   A procedure method is considered wellformed if the symbols of its name and
   parameters are distinct. This constraint ensures the code generation process
   will produce valid code in the target language.
-*}
+\<close>
 definition
   wellformed_method :: "method \<Rightarrow> bool"
 where
@@ -39,10 +39,10 @@ where
     (m_name m \<notin> set (map p_name (m_parameters m)) \<and>
      distinct (map p_name (m_parameters m)))"
 
-text {*
+text \<open>
   The code generated for a procedure is within a single namespace and thus
   the names of all methods in a procedure must be distinct.
-*}
+\<close>
 definition
   wellformed_procedure :: "procedure \<Rightarrow> bool"
 where
@@ -51,19 +51,19 @@ where
     (\<forall>x \<in> set i. wellformed_method x) \<and>
      distinct (map m_name i)"
 
-text {*
+text \<open>
   The implementation currently only supports 32 distinct events (0 - 31). This
   limitation may be removed in a future iteration.
-*}
+\<close>
 definition
   wellformed_event :: "event \<Rightarrow> bool"
 where
   "wellformed_event e \<equiv> e < 32"
 
-text {*
+text \<open>
   Dataports do not have any attributes beyond their type, so their wellformedness
   is trivial.
-*}
+\<close>
 definition
   wellformed_dataport :: "dataport \<Rightarrow> bool"
 where
@@ -77,11 +77,11 @@ where
   | Event e \<Rightarrow> wellformed_event e
   | Dataport d \<Rightarrow> wellformed_dataport d)"
 
-subsection {* \label{subsec:wcomponents}Components *}
-text {*
+subsection \<open>\label{subsec:wcomponents}Components\<close>
+text \<open>
   For a component to be valid internally, its interfaces must not conflict and
   must themselves be wellformed.
-*}
+\<close>
 definition
   wellformed_component :: "component \<Rightarrow> bool"
 where
@@ -98,11 +98,11 @@ where
      \<comment> \<open>Dataports valid.\<close>
     (\<forall>x \<in> set (dataports c). wellformed_dataport (snd x)))"
 
-subsection {* \label{subsec:wconnectors}Connectors *}
-text {*
+subsection \<open>\label{subsec:wconnectors}Connectors\<close>
+text \<open>
   For a connector to be valid its mode of interaction must be
   consistent with the underlying mechanism.
-*}
+\<close>
 definition
   wellformed_connector :: "connector \<Rightarrow> bool"
 where
@@ -120,36 +120,36 @@ where
      |Hardware h \<Rightarrow> h \<in> {HardwareMMIO}
      |Export e \<Rightarrow> e \<in> {ExportData}))"
 
-subsection {* \label{subsec:wconnections}Connections *}
+subsection \<open>\label{subsec:wconnections}Connections\<close>
 definition
   wellformed_connection :: "connection \<Rightarrow> bool"
 where
   "wellformed_connection c \<equiv> True"
 
-subsection {* \label{subsec:wsymbols}ADL Symbol Resolution *}
-text {*
+subsection \<open>\label{subsec:wsymbols}ADL Symbol Resolution\<close>
+text \<open>
   All procedures must be satisfied by a unique connection. To define unique connections,
   we first define a general predicate @{text ex_one} that is true when a predicate
   is satisfied for precisely one element in a list.
-*}
+\<close>
 definition
   ex_one :: "'a list \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool"
 where
   "ex_one xs P \<equiv> length (filter P xs) = 1"
 
-text {*
+text \<open>
   The following two declarations provide more convenience for this function.
   @{text "\<exists>1 x \<in> xs. P x"} will be translated into @{term "ex_one xs P"}.
-*}
+\<close>
 syntax
   "_ex_one" :: "pttrn \<Rightarrow> 'a set \<Rightarrow> bool \<Rightarrow> bool" ("(4\<exists>1 _\<in>_./ _)" [0, 0, 10] 10)
 translations
   "\<exists>1 x\<in>xs. P" == "CONST ex_one xs (\<lambda>x. P)"
 
-text {*
+text \<open>
   We can now define valid procedures. For each procedure @{term x} there must be
   precisely one connection @{term y} that fits the component instance.
-*}
+\<close>
 
 definition
   refs_valid_procedures ::
@@ -160,10 +160,10 @@ where
     \<forall>x \<in> set procedures.
      (\<exists>1 y \<in> conns. (\<exists>1 z \<in> conn_from (snd y). z = (component_instance, fst x)))"
 
-text {*
+text \<open>
   For events and dataports, an interface can be left unconnected in a system with no
   adverse effects.
-*}
+\<close>
 
 definition
   refs_valid_components ::
@@ -172,9 +172,9 @@ where
   "refs_valid_components comps conns \<equiv>
     \<forall>x \<in> set comps. refs_valid_procedures (fst x) (requires (snd x)) conns"
 
-text {*
+text \<open>
   Each connection must be connecting interfaces of the same underlying type.
-*}
+\<close>
 
 definition
   refs_valid_connection :: "connection \<Rightarrow> (adl_symbol \<times> component) list \<Rightarrow> bool"
@@ -222,11 +222,11 @@ where
     refs_valid_components (components c) (connections c) \<and>
     refs_valid_connections (connections c) (components c)"
 
-subsection {* \label{subsec:wsystem}Overall System *}
-text {*
+subsection \<open>\label{subsec:wsystem}Overall System\<close>
+text \<open>
   We obtain a guarantee of the correctness of a component composition by composing
   the required properties of its constituents.
-*}
+\<close>
 definition
   wellformed_composition :: "composition \<Rightarrow> bool"
 where

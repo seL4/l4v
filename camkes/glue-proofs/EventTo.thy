@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-chapter {* Event Receive *}
+chapter \<open>Event Receive\<close>
 (*<*)
 theory EventTo imports
   "CParser.CTranslation"
@@ -160,7 +160,7 @@ lemma seL4_Wait_wp[wp_unsafe]:
   done
 (*>*)
 
-text {*
+text \<open>
   The glue code for receiving an event provides two functions, poll and wait. These functions
   perform a non-blocking and blocking check for an incoming event, respectively. To show the safety
   of these two generated functions we make a number of assumptions. Namely, that the globals frame,
@@ -168,7 +168,7 @@ text {*
   variables are still valid. Non-malicious user code should never touch any of these
   resources. The generated code for poll and its safety proof are as follows.
   \clisting{eventto-poll.c}
-*}
+\<close>
 lemma EventTo_poll_nf:
   notes seL4_SetMR_wp[wp]
   shows
@@ -210,10 +210,10 @@ lemma EventTo_run_nf: "\<lbrace>\<lambda>s. \<forall>r. P r s\<rbrace> EventTo__
   done
 (*>*)
 
-text {*
+text \<open>
   The code for wait is somewhat simpler as it is just a wrapper around the seL4 primitive.
   \clisting{eventto-wait.c}
-*}
+\<close>
 lemma EventTo_wait_nf:
   notes seL4_SetMR_wp[wp]
   shows

@@ -120,7 +120,7 @@ next
     qed
 
   show "\<exists>I' R'. ?LHS I' R'"
-    using `wf R` start fin step
+    using \<open>wf R\<close> start fin step
     by blast
 qed
 

@@ -18,9 +18,9 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-text {*
+text \<open>
   Toplevel @{text dcorres} theorem.
-*}
+\<close>
 
 lemma valid_etcbs_sched: "valid_sched s \<longrightarrow> valid_etcbs s" by (fastforce simp: valid_sched_def)
 

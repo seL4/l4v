@@ -91,7 +91,7 @@ lemma ko_at_weakenE:
   by (erule obj_at_weakenE, simp)
 
 
-text {* An alternative formulation that allows abstraction over type: *}
+text \<open>An alternative formulation that allows abstraction over type:\<close>
 
 lemmas a_type_simps =
   a_type_def[split_simps kernel_object.split]

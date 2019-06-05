@@ -22,7 +22,7 @@ lemma propagate_do_kernel_op:
                simp: liftE_def bind_assoc exec_gets exec_modify
                      bind_select_f_bind[symmetric])
 
-text {* Lifting rule for wp. Note: apply @{text "hoare_pre"} first. *}
+text \<open>Lifting rule for wp. Note: apply @{text "hoare_pre"} first.\<close>
 lemma do_kernel_op_wp:
   "\<lbrakk> \<And>kis. \<lbrace> \<lambda>s. P kis s \<rbrace> f \<lbrace> \<lambda>rv s. Q rv (kis \<lparr> ki_kernel_state := s \<rparr>) \<rbrace> \<rbrakk>
    \<Longrightarrow>\<lbrace> \<lambda>kis. P kis (ki_kernel_state kis) \<rbrace> do_kernel_op f \<lbrace> Q \<rbrace>,\<lbrace> E \<rbrace>"
@@ -30,8 +30,8 @@ lemma do_kernel_op_wp:
   by wp (fastforce elim: use_valid)
 
 
-section {* Deriving Frame Rules for @{term set_cap_local} and
-           @{term get_cap_local} *}
+section \<open>Deriving Frame Rules for @{term set_cap_local} and
+           @{term get_cap_local}\<close>
 
 lemma ki_get_cap:
   "\<lbrace> \<lambda>s. sep_map_cap atyp cptr cap (lift_sep_state s) \<rbrace>
@@ -181,7 +181,7 @@ lemma set_cap_local_via_explosion:
   done
 
 
-section {* EXPERIMENTAL *}
+section \<open>EXPERIMENTAL\<close>
 
 lemma sep_map_ko_tcb_explode:
   "sep_map_ko p (TCB tcb) s
@@ -241,13 +241,13 @@ lemma sep_map_ko_tcb_explode:
   (* FIXME: lots of automation opportunities here, assuming this lemma is
             at all useful! *)
 
-text {*
+text \<open>
   TODO:
   Think on improving notation (arrows etc)
 
   Relationship between a_base_type and a_type,
     wellformed cnodes and bounded_ko,
     t_obj_bits and obj_bits
-*}
+\<close>
 
 end

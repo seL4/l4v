@@ -26,7 +26,7 @@ requalify_consts
   handle_arch_fault_reply
 end
 
-section {* Getting and setting the message info register. *}
+section \<open>Getting and setting the message info register.\<close>
 
 definition
   get_message_info :: "obj_ref \<Rightarrow> (message_info,'z::state_ext) s_monad"
@@ -36,16 +36,16 @@ where
      return $ data_to_message_info x
    od"
 
-section {* IPC Capability Transfers *}
+section \<open>IPC Capability Transfers\<close>
 
 definition
   remove_rights :: "cap_rights \<Rightarrow> cap \<Rightarrow> cap"
 where
  "remove_rights rights cap \<equiv> cap_rights_update (cap_rights cap - rights) cap"
 
-text {* In addition to the data payload a message may also contain capabilities.
+text \<open>In addition to the data payload a message may also contain capabilities.
 When a thread requests additional capabilities be transferred the identities of
-those capabilities are retreived from the thread's IPC buffer. *}
+those capabilities are retreived from the thread's IPC buffer.\<close>
 definition
   buffer_cptr_index :: nat
 where
@@ -65,8 +65,8 @@ where
   "get_extra_cptr buffer n \<equiv> liftM data_to_cptr
       (load_word_offs buffer (n + buffer_cptr_index))"
 
-text {* This function both looks up the addresses of the additional capabilities
-and retreives them from the sender's CSpace. *}
+text \<open>This function both looks up the addresses of the additional capabilities
+and retreives them from the sender's CSpace.\<close>
 definition
   lookup_extra_caps :: "obj_ref \<Rightarrow> data option \<Rightarrow> message_info \<Rightarrow> ((cap \<times> cslot_ptr) list,'z::state_ext) f_monad" where
   "lookup_extra_caps thread buffer mi \<equiv> doE
@@ -74,14 +74,14 @@ definition
        mapME (\<lambda>cptr. cap_fault_on_failure (of_bl cptr) False $ lookup_cap_and_slot thread cptr) cptrs
   odE"
 
-text {* Capability transfers. Capabilities passed along with a message are split
+text \<open>Capability transfers. Capabilities passed along with a message are split
 into two groups. Capabilities to the same endpoint as the message is passed
 through are not copied. Their badges are unwrapped and stored in the receiver's
 message buffer instead. Other capabilities are copied into the given slots.
 
 Capability unwrapping allows a client to efficiently demonstrate to a server
 that it possesses authority to two or more services that server provides.
-*}
+\<close>
 definition
   set_extra_badge :: "obj_ref \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -135,14 +135,14 @@ where
          transfer_caps_loop endpoint receive_buffer 0 caps dest_slots mi'
    od"
 
-section {* Fault Handling *}
+section \<open>Fault Handling\<close>
 
-text {* Threads fault when they attempt to access services that are not backed
+text \<open>Threads fault when they attempt to access services that are not backed
 by any resources. Such a thread is then blocked and a fault messages is sent to
 its supervisor. When a reply to that message is sent the thread is reactivated.
-*}
+\<close>
 
-text {* Format a message for a given fault type. *}
+text \<open>Format a message for a given fault type.\<close>
 fun
   make_fault_msg :: "fault \<Rightarrow> obj_ref \<Rightarrow> (data \<times> data list,'z::state_ext) s_monad"
 where
@@ -160,11 +160,11 @@ where
    od)"
 | "make_fault_msg (ArchFault af) thread = make_arch_fault_msg af thread " (* arch_fault *)
 
-text {* React to a fault reply. The reply message is interpreted in a manner
+text \<open>React to a fault reply. The reply message is interpreted in a manner
 that depends on the type of the original fault. For some fault types a thread
 reconfiguration is performed. This is done entirely to save the fault message
 recipient an additional system call. This function returns a boolean indicating
-whether the thread should now be restarted. *}
+whether the thread should now be restarted.\<close>
 fun
   handle_fault_reply :: "fault \<Rightarrow> obj_ref \<Rightarrow>
                          data \<Rightarrow> data list \<Rightarrow> (bool,'z::state_ext) s_monad"
@@ -187,7 +187,7 @@ where
 | " handle_fault_reply (ArchFault af) thread label msg =
     handle_arch_fault_reply af thread label msg" (* arch_fault *)
 
-text {* Transfer a fault message from a faulting thread to its supervisor. *}
+text \<open>Transfer a fault message from a faulting thread to its supervisor.\<close>
 definition
   do_fault_transfer :: "data \<Rightarrow> obj_ref \<Rightarrow> obj_ref
                              \<Rightarrow> obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad"
@@ -203,9 +203,9 @@ where
     as_user receiver $ setRegister badge_register badge
   od"
 
-section {* Synchronous Message Transfers *}
+section \<open>Synchronous Message Transfers\<close>
 
-text {* Transfer a non-fault message. *}
+text \<open>Transfer a non-fault message.\<close>
 definition
   do_normal_transfer :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> obj_ref option
                                     \<Rightarrow> data \<Rightarrow> bool \<Rightarrow> obj_ref
@@ -225,7 +225,7 @@ where
     as_user receiver $ setRegister badge_register badge
   od"
 
-text {* Transfer a message either involving a fault or not. *}
+text \<open>Transfer a message either involving a fault or not.\<close>
 definition
   do_ipc_transfer :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow>
                        badge \<Rightarrow> bool \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
@@ -245,7 +245,7 @@ where
          | Some f \<Rightarrow> do_fault_transfer badge sender receiver recv_buffer
    od"
 
-text {* Transfer a reply message and delete the one-use Reply capability. *}
+text \<open>Transfer a reply message and delete the one-use Reply capability.\<close>
 definition
   do_reply_transfer :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> cslot_ptr \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -273,8 +273,8 @@ where
        od
   od"
 
-text {* This function transfers a reply message to a thread when that message
-is generated by a kernel service. *}
+text \<open>This function transfers a reply message to a thread when that message
+is generated by a kernel service.\<close>
 definition
   reply_from_kernel :: "obj_ref \<Rightarrow> (data \<times> data list) \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -286,7 +286,7 @@ where
     set_message_info thread $ MI len 0 0 label
   od"
 
-text {* Install a one-use Reply capability. *}
+text \<open>Install a one-use Reply capability.\<close>
 definition
   setup_caller_cap :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -297,10 +297,10 @@ where
       (receiver, tcb_cnode_index 3)
   od"
 
-text {* Handle a message send operation performed on an endpoint by a thread.
+text \<open>Handle a message send operation performed on an endpoint by a thread.
 If a receiver is waiting then transfer the message. If no receiver is available
 and the thread is willing to block waiting to send then put it in the endpoint
-sending queue. *}
+sending queue.\<close>
 definition
   send_ipc :: "bool \<Rightarrow> bool \<Rightarrow> badge \<Rightarrow> bool \<Rightarrow> bool
                 \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
@@ -347,9 +347,9 @@ where
        | (RecvEP [], _) \<Rightarrow> fail
    od"
 
-text {* Handle a message receive operation performed on an endpoint by a thread.
+text \<open>Handle a message receive operation performed on an endpoint by a thread.
 If a sender is waiting then transfer the message, otherwise put the thread in
-the endpoint receiving queue. *}
+the endpoint receiving queue.\<close>
 definition
   isActive :: "notification \<Rightarrow> bool"
 where
@@ -358,8 +358,8 @@ where
       | _ \<Rightarrow> False"
 
 
-text{* Helper function for performing \emph{signal} when receiving on a normal
-endpoint *}
+text\<open>Helper function for performing \emph{signal} when receiving on a normal
+endpoint\<close>
 definition
   complete_signal :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -432,10 +432,10 @@ where
             od
    od"
 
-section {* Asynchronous Message Transfers *}
+section \<open>Asynchronous Message Transfers\<close>
 
-text {* Helper function to handle a signal operation in the case
-where a receiver is waiting. *}
+text \<open>Helper function to handle a signal operation in the case
+where a receiver is waiting.\<close>
 definition
   update_waiting_ntfn :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref option \<Rightarrow> badge \<Rightarrow>
                          (unit,'z::state_ext) s_monad"
@@ -452,9 +452,9 @@ where
 
    od"
 
-text {* Handle a message send operation performed on a notification object.
+text \<open>Handle a message send operation performed on a notification object.
 If a receiver is waiting then transfer the message, otherwise combine the new
-message with whatever message is currently waiting. *}
+message with whatever message is currently waiting.\<close>
 
 (* helper function for checking if thread is blocked *)
 definition
@@ -489,9 +489,9 @@ where
    od"
 
 
-text {* Handle a receive operation performed on a notification object by a
+text \<open>Handle a receive operation performed on a notification object by a
 thread. If a message is waiting then perform the transfer, otherwise put the
-thread in the endpoint's receiving queue. *}
+thread in the endpoint's receiving queue.\<close>
 definition
   receive_signal :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -522,10 +522,10 @@ where
                    od
     od"
 
-section {* Sending Fault Messages *}
+section \<open>Sending Fault Messages\<close>
 
-text {* When a thread encounters a fault, retreive its fault handler capability
-and send a fault message. *}
+text \<open>When a thread encounters a fault, retreive its fault handler capability
+and send a fault message.\<close>
 definition
   send_fault_ipc :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit,'z::state_ext) f_monad"
 where
@@ -548,13 +548,13 @@ where
         | _ \<Rightarrow> throwError f)
    odE"
 
-text {* If a fault message cannot be sent then leave the thread inactive. *}
+text \<open>If a fault message cannot be sent then leave the thread inactive.\<close>
 definition
   handle_double_fault :: "obj_ref \<Rightarrow> fault \<Rightarrow> fault \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "handle_double_fault tptr ex1 ex2 \<equiv> set_thread_state tptr Inactive"
 
-text {* Handle a thread fault by sending a fault message if possible. *}
+text \<open>Handle a thread fault by sending a fault message if possible.\<close>
 definition
   handle_fault :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit,'z::state_ext) s_monad"
 where

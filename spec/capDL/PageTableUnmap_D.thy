@@ -224,14 +224,14 @@ where
   od"
 
 
-text {*
+text \<open>
  Non-premptable delete.
 
  Should only be used on deletes guaranteed not to preempt
  (and you are happy to prove this). In particular, it is
  useful for deleting caps that exist at the CapDL level
  but not at lower levels.
-*}
+\<close>
 definition
   delete_cap_simple :: "cdl_cap_ref \<Rightarrow> unit k_monad"
 where
@@ -245,7 +245,7 @@ where
   od"
 
 
-text {*
+text \<open>
   Non-preemptable revoke.
 
   Should only be used on bounded revokes.
@@ -253,7 +253,7 @@ text {*
    * PageRemap _ frame_cap_ref _
    * PageUnmap frame_cap_ref \<Rightarrow>
    * revoke_cap_simple (target_tcb, tcb_replycap_slot)
-*}
+\<close>
 function
   revoke_cap_simple :: "cdl_cap_ref \<Rightarrow> unit k_monad"
 where
@@ -338,9 +338,9 @@ where
      | _ \<Rightarrow> returnOk None )
    odE <catch> (K (return None))"
 
-text {*
+text \<open>
   Unmap a frame.
-*}
+\<close>
 
 definition
  "might_throw \<equiv> (returnOk ()) \<sqinter> throw"
@@ -358,12 +358,12 @@ where
     odE <catch> (K $ return ())"
 
 
-text {*
+text \<open>
   Unmap a page table.
 
   This hits the same problems as 'unmap_page', so we also
   non-deterministically choose a bunch of page-tables to unmap.
-*}
+\<close>
 definition
   unmap_page_table  :: "cdl_mapped_addr \<Rightarrow> cdl_object_id  \<Rightarrow> unit k_monad"
 where

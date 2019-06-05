@@ -16,7 +16,7 @@ begin
 
 (* The sep_simp, sep_flatten, and sep_map tactics. *)
 
-ML {*
+ML \<open>
 fun all_rotator lens tactic ctxt i st =
   let
     val len = case Seq.pull ((lens THEN' resolve0_tac [@{thm iffI}]) i st) of
@@ -43,18 +43,18 @@ fun sep_simp thms ctxt =
 end
 
 fun sep_simp_method (thms : thm list) ctxt = SIMPLE_METHOD' (sep_simp thms ctxt)
-*}
+\<close>
 
-method_setup sep_flatten = {*
+method_setup sep_flatten = \<open>
   Scan.succeed (SIMPLE_METHOD' o sep_flatten)
-*}
+\<close>
 
 (* sep_flatten is a tactic to apply the associativity rule for separating conjunction,
    and nothing else. *)
 
-method_setup sep_simp = {*
+method_setup sep_simp = \<open>
  Attrib.thms >> sep_simp_method
-*}
+\<close>
 
 (* sep_simp repeatedly applies clarsimp, rotating the premises in-between invocations,
    until it cannot apply. *)

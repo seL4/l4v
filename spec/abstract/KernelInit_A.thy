@@ -14,7 +14,7 @@ imports
   "./$L4V_ARCH/ArchVSpace_A"
 begin
 
-section {* Generic stuff *}
+section \<open>Generic stuff\<close>
 
 translations
   (type) "cslot_ptr" <= (type) "word32 \<times> bool list"
@@ -23,7 +23,7 @@ type_synonym slot_ptr = "cslot_ptr"
 type_synonym slot_region_t = "nat \<times> nat"
 type_synonym bi_dev_reg_t = "paddr \<times> word32 \<times> slot_region_t"
 
-text {* Select from state S, throw ex if S is empty. *}
+text \<open>Select from state S, throw ex if S is empty.\<close>
 definition
   "throw_select S ex \<equiv> doE
      whenE (S = {}) (throwError ex);
@@ -31,7 +31,7 @@ definition
    odE"
 
 
-section {* Parameters passed in from linker script *}
+section \<open>Parameters passed in from linker script\<close>
 
 consts
   ki_boot_end :: paddr
@@ -39,9 +39,9 @@ consts
   arm_kernel_stack :: obj_ref
   idle_thread_start :: vspace_ref (* &idle_thread *)
 
-section {* Kernel Init State *}
+section \<open>Kernel Init State\<close>
 
-text {* Ghost state representing the contents of the boot info frame *}
+text \<open>Ghost state representing the contents of the boot info frame\<close>
 record bi_frame_data =
   bi_f_node_id :: word32
   bi_f_num_nodes :: word32
@@ -62,7 +62,7 @@ type_synonym (* XXX: natural numbers represent components of kernel objects, for
               objects that can be subdivided *)
   component = "bool list"
 
-text {*
+text \<open>
   For kernel initialisation, we need the basic kernel state plus some extra
   information to keep track of, such as free memory.
   At the concrete level, this is managed by region lists.
@@ -76,7 +76,7 @@ text {*
   kernel state, but indicate which components of the object we have permission
   to access. The purpose is separation logic statements about heaps in which
   objects can be split up, e.g. only one cap in a CNode.
-  *}
+\<close>
 record ('z) ki_state =
   ki_kernel_state    :: "'z state"
   ki_free_mem        :: "obj_ref set" (* ndks_boot.freemem representative? *)
@@ -88,12 +88,12 @@ record ('z) ki_state =
   ndks_boot_bi_frame :: paddr
 
 
-section {* Kernel init monad *}
+section \<open>Kernel init monad\<close>
 
-text {*
+text \<open>
   The kernel init monad can fail. The actual value of the failure is largely
   irrelevant, just so long as we don't have assertion failures for no reason.
-*}
+\<close>
 
 datatype ki_failure = InitFailure
 type_synonym ('a,'z) ki_monad = "('z ki_state, ki_failure + 'a) nondet_monad"
@@ -101,7 +101,7 @@ translations
   (type) "'a ki_monad" <=
     (type) "((ki_failure + 'a) \<times> ki_state \<Rightarrow> bool) \<times> bool"
 
-text {* Lift kernel state monad ops to the kernel init monad. *}
+text \<open>Lift kernel state monad ops to the kernel init monad.\<close>
 definition
   do_kernel_op :: "('a,'z::state_ext) s_monad \<Rightarrow> ('a,'z) ki_monad" where
  "do_kernel_op kop \<equiv> liftE $ do
@@ -112,12 +112,12 @@ definition
   od"
 
 
-section {* Kernel constants *}
+section \<open>Kernel constants\<close>
 
 definition "MIN_NUM_4K_UNTYPED_OBJ \<equiv> 12 :: nat"
 definition "MAX_NUM_FREEMEM_REG \<equiv> 2 :: nat"
 
-text {* Fixed cap positions in root CNode (bootinfo.h) *}
+text \<open>Fixed cap positions in root CNode (bootinfo.h)\<close>
 definition "BI_CAP_NULL         \<equiv>  0 :: nat"
 definition "BI_CAP_IT_TCB       \<equiv>  1 :: nat"
 definition "BI_CAP_IT_CNODE     \<equiv>  2 :: nat"
@@ -135,7 +135,7 @@ definition "BI_FRAME_SIZE_BITS \<equiv> pageBits"
 definition "ROOT_CNODE_SIZE_BITS \<equiv> 12 :: nat"
 
 
-section {* ARM constants *}
+section \<open>ARM constants\<close>
 
 definition "PPTR_VECTOR_TABLE \<equiv> 0xffff0000 :: word32"
 definition "PPTR_GLOBALS_PAGE \<equiv> 0xffffc000 :: word32"
@@ -149,26 +149,26 @@ definition "ASID_POOL_SIZE_BITS \<equiv> ASID_POOL_BITS + WORD_SIZE_BITS"
 
 definition "CTE_SIZE_BITS \<equiv> 4 :: nat" (* from ARM structures.h *)
 
-text {* in abstract, these do not have a direct equivalent *}
+text \<open>in abstract, these do not have a direct equivalent\<close>
 definition "PD_BITS \<equiv> 12 :: nat"
 definition "PT_BITS \<equiv> 8 :: nat"
 
 definition "PDE_SIZE_BITS \<equiv> 2 :: nat"
 definition "PTE_SIZE_BITS \<equiv> 2 :: nat"
 
-text {* in abstract, these are pd_bits and pt_bits respectively *}
+text \<open>in abstract, these are pd_bits and pt_bits respectively\<close>
 definition "PD_SIZE_BITS \<equiv> PD_BITS + PDE_SIZE_BITS"
 definition "PT_SIZE_BITS \<equiv> PT_BITS + PTE_SIZE_BITS"
 
 
-section {* Platform constants (iMX31) *}
+section \<open>Platform constants (iMX31)\<close>
 
 definition "irqInvalid       \<equiv> 255 :: irq"
 definition "INTERRUPT_PMU    \<equiv> 23 :: irq"
 definition "INTERRUPT_EPIT1  \<equiv> 28 :: irq"
 definition "KERNEL_TIMER_IRQ \<equiv> INTERRUPT_EPIT1"
 
-text {* Kernel devices for imx31 *}
+text \<open>Kernel devices for imx31\<close>
 definition "EPIT_PADDR \<equiv> 0x53f94000 :: word32"
 definition "EPIT_PPTR  \<equiv> 0xfff00000 :: word32"
 definition "AVIC_PADDR \<equiv> 0x68000000 :: word32"
@@ -180,12 +180,12 @@ definition "UART_PPTR  \<equiv> 0xfff03000 :: word32"
 
 definition "BASE_OFFSET = physMappingOffset"
 
-section {* Functions cloned and modified for separation logic to work *}
+section \<open>Functions cloned and modified for separation logic to work\<close>
 
-text {*
+text \<open>
   These shadow the normal functions, but do not force a well-formedness
   check for the cnodes, as wellformed\_cnode\_sz is non-local with respect
-  to individual caps, and so get\_cap and set\_cap are also. *}
+  to individual caps, and so get\_cap and set\_cap are also.\<close>
 
 definition
   get_cap_local :: "cslot_ptr \<Rightarrow> (cap,'z::state_ext) s_monad"
@@ -274,7 +274,7 @@ definition
 
 
 
-section {* Kernel init functions *}
+section \<open>Kernel init functions\<close>
 
 consts (* TODO: serialise bi_frame_data and write it to the bootinfo frame *)
   sync_bootinfo_frame :: "paddr \<Rightarrow> (unit,'z::state_ext) ki_monad"
@@ -320,7 +320,7 @@ definition
      liftE $ modify (\<lambda>s. s \<lparr> ki_free_mem := free_addrs_sel \<rparr>)
    odE"
 
-text {*
+text \<open>
   The @{text "arm_global_pts"} arch state field means something completely
   different to the armKSGlobalPT in the C code. As such, the abstract spec as
   it stands now must have a list of pts there. Since the kernel init abstract
@@ -329,7 +329,7 @@ text {*
   armKSGlobalPT equivalent, whatever it ends up being.
 
   This means that kernel init assumes the initial state will provide a PT
-  there that it can use. *}
+  there that it can use.\<close>
 definition
   get_arm_global_pt :: "(paddr,'z::state_ext) s_monad" where
   "get_arm_global_pt \<equiv> do
