@@ -84,6 +84,8 @@ parser.add_argument('--l4v-arches', metavar='ARCH,...', type=str,
 parser.add_argument('--l4v-arch-all', dest='l4v_arches',
                     action='store_const', const=','.join(L4V_ARCH_LIST),
                     help='test all L4V_ARCHes')
+parser.add_argument('-h', '--help', action='store_true',
+                    help=argparse.SUPPRESS)
 
 args, passthrough_args = parser.parse_known_args()
 
@@ -97,6 +99,13 @@ else:
 for arch in archs:
     if arch not in L4V_ARCH_LIST:
         sys.exit("Unknown architecture: %s" % arch)
+
+if args.help:
+    parser.print_help()
+    print('Now printing help for main regression script:')
+    print('--------')
+    passthrough_args += ['--help']
+    archs = archs[:1]
 
 returncode = 0
 for arch in archs:
