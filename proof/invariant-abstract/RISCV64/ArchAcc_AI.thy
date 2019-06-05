@@ -2232,20 +2232,6 @@ lemma has_kernel_mappings_index_upd_idem:
   unfolding has_kernel_mappings_def
   by auto
 
-lemma store_pte_equal_kernel_mappings:
-  "\<lbrace>\<lambda>s. equal_kernel_mappings s
-        \<and> ((\<exists>asid. vspace_for_asid asid s = Some (table_base p))
-                      \<longrightarrow> (\<exists>pt. ako_at (PageTable pt) (table_base p) s
-                               \<and> has_kernel_mappings (pt(table_index p := pte)) s))
-        \<and> table_base p \<noteq> riscv_global_pt (arch_state s) \<rbrace>
-   store_pte p pte
-   \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
-  unfolding store_pte_def
-  supply fun_upd_apply[simp del]
-  apply (wpsimp wp: set_pt_equal_kernel_mappings)
-  apply (fastforce simp: obj_at_def)
-  done
-
 (* We only affect kernel mapping slots of not-yet-mapped page tables, in particular when copying
    global mappings for a root page table. For preserving validity of mapped tables, we use this
    form. *)
