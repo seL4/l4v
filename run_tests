@@ -12,6 +12,8 @@
 
 import os
 import sys
+import argparse
+import subprocess
 
 # Settings
 L4V_ARCH_DEFAULT="ARM"
@@ -22,25 +24,6 @@ DIR=os.path.dirname(os.path.realpath(__file__))
 
 # Add repo version of Isabelle to our path.
 os.environ["PATH"] += os.pathsep + DIR
-
-# Export L4V_ARCH variable as ARM (Default)
-if not os.environ.has_key("L4V_ARCH"):
-    os.environ["L4V_ARCH"] = L4V_ARCH_DEFAULT
-
-L4V_ARCH=os.environ["L4V_ARCH"]
-
-# Test Orphanage when L4V_ARCH=ARM;
-# we need to set this flag here to test the above equality in the ROOT file.
-# To be removed when we finish proving Orphanage for ARM_HYP and X64
-if L4V_ARCH == "ARM":
-   os.environ["L4V_ARCH_IS_ARM"]= L4V_ARCH
-   print "Testing Orphanage for ARM"
-
-# Check we are using a known Architecture
-if L4V_ARCH not in L4V_ARCH_LIST:
-    sys.exit("Unknown architecture L4V_ARCH=%s" % L4V_ARCH)
-
-print "Testing for L4V_ARCH=%s:" % L4V_ARCH
 
 # enable timing logs in isabelle builds and set report interval to 3 seconds
 os.environ["ISABELLE_TIMING_LOG"]="3.0s"
@@ -95,13 +78,44 @@ EXCLUDE["RISCV64"]=[
 if not set(L4V_ARCH_LIST) <= set(EXCLUDE.keys()):
     sys.exit("[INTERNAL ERROR] exclusion lists are non-exhaustive")
 
-# Run the tests from the script directory.
-os.chdir(DIR)
+parser = argparse.ArgumentParser(add_help=False)
+parser.add_argument('--l4v-arches', metavar='ARCH,...', type=str,
+                    help='test multiple L4V_ARCHs (comma-separated)')
+parser.add_argument('--l4v-arch-all', dest='l4v_arches',
+                    action='store_const', const=','.join(L4V_ARCH_LIST),
+                    help='test all L4V_ARCHes')
 
-# Arguments:
-args  = ['./misc/regression/run_tests.py']                 # Script name
-args += [r for t in EXCLUDE[L4V_ARCH] for r in ['-r', t]]  # Exclusion list
-args += sys.argv[1:]                                       # Other arguments
+args, passthrough_args = parser.parse_known_args()
 
-# Run the thing!!
-os.execvp('./misc/regression/run_tests.py',args)
+if args.l4v_arches:
+    archs = args.l4v_arches.split(',')
+elif os.environ.has_key("L4V_ARCH"):
+    archs = [os.environ["L4V_ARCH"]]
+else:
+    archs = [L4V_ARCH_DEFAULT]
+
+for arch in archs:
+    if arch not in L4V_ARCH_LIST:
+        sys.exit("Unknown architecture: %s" % arch)
+
+returncode = 0
+for arch in archs:
+    print "Testing for L4V_ARCH=%s:" % arch
+
+    os.environ["L4V_ARCH"] = arch
+    # Test Orphanage when L4V_ARCH=ARM;
+    # we need to set this flag here to test the above equality in the ROOT file.
+    # To be removed when we finish proving Orphanage for ARM_HYP and X64
+    if arch == "ARM":
+        os.environ["L4V_ARCH_IS_ARM"] = arch
+        print "Testing Orphanage for ARM"
+
+    # Arguments:
+    args  = ['./misc/regression/run_tests.py']                 # Script name
+    args += [r for t in EXCLUDE[arch] for r in ['-r', t]]  # Exclusion list
+    args += passthrough_args                                   # Other arguments
+
+    # Run the tests from the script directory.
+    # Also collect the last non-zero return code.
+    returncode = subprocess.call(args, cwd=DIR) or returncode
+sys.exit(returncode)
