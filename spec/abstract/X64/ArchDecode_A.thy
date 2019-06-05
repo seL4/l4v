@@ -382,10 +382,10 @@ where
          odE
     else throwError TruncatedMessage
     else if invocation_type label = ArchInvocationLabel X64PageUnmap then
-             \<comment> \<open>case map_type of
+             \<^cancel>\<open>case map_type of
                  VMIOSpaceMap \<Rightarrow> decode_io_unmap_invocation label args cte cap extra_caps
                | _ \<Rightarrow>\<close> returnOk $ InvokePage $ PageUnmap cap cte
-    \<comment> \<open>FIXME x64-vtd:
+    \<^cancel>\<open>FIXME x64-vtd:
     else if invocation_type label = ArchInvocationLabel X64PageMapIO
     then decode_io_map_invocation label args cte cap extra_caps \<close>
     else if invocation_type label = ArchInvocationLabel X64PageGetAddress
