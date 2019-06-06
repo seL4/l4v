@@ -213,8 +213,9 @@ fun tac ctxt = SUBGOAL (fn (t, _) => let
 fun both_tac ctxt = (Datatype_Schematic.tac ctxt THEN' (TRY o tac ctxt))
     ORELSE' tac ctxt
 
-val method
-    = Args.context >> (fn _ => fn ctxt => Method.SIMPLE_METHOD' (both_tac ctxt));
+val method =
+  Method.sections [Datatype_Schematic.add_section] >>
+    (fn _ => fn ctxt => Method.SIMPLE_METHOD' (both_tac ctxt));
 
 end
 *}
@@ -258,5 +259,14 @@ lemma demo2:
    apply (rule P)
   apply (simp add: P17)
   done
+
+\<comment> \<open>
+  Shows how to use @{attribute datatype_schematic} rules as "accessors".
+\<close>
+lemma (in datatype_schem_demo) demo3:
+  "\<exists>x. \<forall>a b. x (basic a b) = a"
+  apply (rule exI, (rule allI)+)
+  apply (wpfix add: get_basic_0.simps) \<comment> \<open>Only exposes `a` to the schematic.\<close>
+  by (rule refl)
 
 end
