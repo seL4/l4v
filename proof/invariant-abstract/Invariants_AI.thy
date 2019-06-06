@@ -1308,6 +1308,13 @@ abbreviation
                  st = Running \<or>
                  st = Restart \<or>
                  idle st \<or> awaiting_reply st"
+
+abbreviation
+  "not_blocked st \<equiv> inactive st \<or>
+                 st = Running \<or>
+                 st = Restart \<or>
+                 idle st"
+
 abbreviation
   "ct_active \<equiv> ct_in_state active"
 
@@ -1316,6 +1323,9 @@ abbreviation
 
 abbreviation
   "ct_idle \<equiv> ct_in_state idle"
+
+abbreviation
+  "ct_not_blocked \<equiv> ct_in_state not_blocked"
 
 abbreviation (input)
  "all_invs_but_sym_refs_and_fault_tcbs
@@ -4521,5 +4531,23 @@ lemma do_machine_op_machine_state:
   apply clarsimp
   apply (erule(2) use_valid)
   done
+
+lemma sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at:
+  assumes pre: "\<And>sc_opt. P sc_opt \<longleftrightarrow> sc_opt = Some sc"
+               "\<And>t_opt. Q t_opt \<longleftrightarrow> t_opt = Some t"
+  assumes sym: "sym_refs (state_refs_of s)"
+  shows "bound_sc_tcb_at P t s \<longleftrightarrow> sc_tcb_sc_at Q sc s"
+  using sym by (fastforce simp: pred_tcb_at_def sc_tcb_sc_at_def obj_at_def pre
+                                sym_refs_def state_refs_of_def get_refs_def2 refs_of_rev
+                         split: option.splits)
+
+lemma sym_refs_bound_sc_tcb_at_inj:
+  "sym_refs (state_refs_of s) \<Longrightarrow>
+   bound_sc_tcb_at (\<lambda>x. x = Some z) a s \<Longrightarrow>
+   bound_sc_tcb_at (\<lambda>x. x = Some z) b s \<Longrightarrow>
+   a = b"
+  apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl], assumption)
+  apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl], assumption)
+  by (clarsimp simp: sc_at_pred_n_def obj_at_def)
 
 end

@@ -576,6 +576,7 @@ crunches arch_post_cap_deletion
   and invs_no_pre[wp]: invs
   and cur_thread[wp]:  "\<lambda>s. P (cur_thread s)"
   and release_queue[wp]:  "\<lambda>s. P (release_queue s)"
+  and ready_queues[wp]:  "\<lambda>s. P (ready_queues s)"
   and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   and mdb_inv[wp]: "\<lambda>s. P (cdt s)"
   and valid_list[wp]: valid_list

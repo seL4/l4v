@@ -1980,6 +1980,7 @@ lemma dmo_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> do_machine_op mop \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (simp add: ex_nonz_cap_to_def, wp hoare_vcg_ex_lift)
 
+(* cleanup: This is not an accurate name *)
 lemma dmo_st_tcb [wp]:
   "do_machine_op f \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
@@ -1987,6 +1988,16 @@ lemma dmo_st_tcb [wp]:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
+(*
+  FIXME: replace these and similar with
+         global_interpretation do_machine_op: non_heap_op "do_machine_op f"
+*)
+lemma dmo_sc_at_pred_n [wp]:
+  "do_machine_op f \<lbrace>\<lambda>s. Q (sc_at_pred_n N proj P t s)\<rbrace>"
+  apply (simp add: do_machine_op_def split_def)
+  apply (wp select_wp)
+  apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  done
 
 crunch ct[wp]: do_machine_op "\<lambda>s. P (cur_thread s)" (wp: select_wp)
 

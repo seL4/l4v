@@ -43,6 +43,20 @@ lemma hoare_post_add:
   "\<lbrace>P\<rbrace> S \<lbrace>\<lambda>r s. R r s \<and> Q r s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> S \<lbrace>Q\<rbrace>"
   by (erule hoare_strengthen_post, simp)
 
+lemma hoare_post_addE:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. R s \<and> Q s\<rbrace>, \<lbrace>T\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. Q s\<rbrace>, \<lbrace>T\<rbrace>"
+  by (erule hoare_post_impErr'; simp)
+
+lemma hoare_pre_add:
+  "(\<forall>s. P s \<longrightarrow> R s) \<Longrightarrow> (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<longleftrightarrow> \<lbrace>P and R\<rbrace> f \<lbrace>Q\<rbrace>)"
+  apply (subst iff_conv_conj_imp)
+  by(intro conjI impI; rule hoare_weaken_pre, assumption, clarsimp)
+
+lemma hoare_pre_addE:
+  "(\<forall>s. P s \<longrightarrow> R s) \<Longrightarrow> (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>S\<rbrace> \<longleftrightarrow> \<lbrace>P and R\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>S\<rbrace>)"
+  apply (subst iff_conv_conj_imp)
+  by(intro conjI impI; rule hoare_weaken_preE, assumption, clarsimp)
+
 lemma hoare_disjI1:
   "\<lbrace>R\<rbrace> f \<lbrace>P\<rbrace> \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>\<lambda>r s. P r s \<or> Q r s\<rbrace>"
   apply (erule hoare_post_imp [rotated])

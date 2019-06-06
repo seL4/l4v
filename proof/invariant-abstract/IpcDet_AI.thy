@@ -726,15 +726,6 @@ lemma sc_at_pred_n_sc_at:
   by (fastforce simp: sc_at_pred_n_def obj_at_def is_sc_obj_def
                 elim: valid_objs_valid_sched_context_size)
 
-lemma sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at:
-  assumes pre: "\<And>sc_opt. P sc_opt \<longleftrightarrow> sc_opt = Some sc"
-               "\<And>t_opt. Q t_opt \<longleftrightarrow> t_opt = Some t"
-  assumes sym: "sym_refs (state_refs_of s)"
-  shows "bound_sc_tcb_at P t s \<longleftrightarrow> sc_tcb_sc_at Q sc s"
-  using sym by (fastforce simp: pred_tcb_at_def sc_tcb_sc_at_def obj_at_def pre
-                                sym_refs_def state_refs_of_def get_refs_def2 refs_of_rev
-                         split: option.splits)
-
 lemma sc_at_pred_nE:
   assumes "sc_at_pred_n N proj P ref s"
   assumes "\<And>sc n. kheap s ref = Some (SchedContext sc n) \<Longrightarrow> P (proj sc) \<Longrightarrow> N n \<Longrightarrow> R"

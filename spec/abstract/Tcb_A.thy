@@ -149,19 +149,22 @@ definition
   install_tcb_frame_cap :: "obj_ref \<Rightarrow> cslot_ptr \<Rightarrow> (vspace_ref \<times> (cap \<times> cslot_ptr) option) option \<Rightarrow> (unit, 'z::state_ext) p_monad"
 where
   "install_tcb_frame_cap target slot buffer \<equiv>
-     case buffer of None \<Rightarrow> returnOk ()
-     | Some (ptr, frame) \<Rightarrow> doE
-      cap_delete (target, tcb_cnode_index 2);
-      liftE $ thread_set (\<lambda>t. t \<lparr> tcb_ipc_buffer := ptr \<rparr>) target;
-      liftE $ arch_tcb_set_ipc_buffer target ptr;
-      liftE $ case frame of None \<Rightarrow> return ()
-       | Some (new_cap, src_slot) \<Rightarrow>
-            check_cap_at new_cap src_slot
-          $ check_cap_at (ThreadCap target) slot
-          $ cap_insert new_cap src_slot (target, tcb_cnode_index 2);
-      cur \<leftarrow> liftE $ gets cur_thread;
-      liftE $ when (target = cur) reschedule_required
-    odE"
+     case buffer of
+       None \<Rightarrow> returnOk ()
+     | Some (ptr, frame)
+         \<Rightarrow> doE
+              cap_delete (target, tcb_cnode_index 2);
+              liftE $ thread_set (\<lambda>t. t \<lparr> tcb_ipc_buffer := ptr \<rparr>) target;
+              liftE $ arch_tcb_set_ipc_buffer target ptr;
+              liftE $ case frame of
+                        None \<Rightarrow> return ()
+                      | Some (new_cap, src_slot)
+                          \<Rightarrow>  check_cap_at new_cap src_slot
+                              $ check_cap_at (ThreadCap target) slot
+                              $ cap_insert new_cap src_slot (target, tcb_cnode_index 2);
+              cur \<leftarrow> liftE $ gets cur_thread;
+              liftE $ when (target = cur) reschedule_required
+            odE"
 
 text {* TCB capabilities confer authority to perform seven actions. A thread can
 request to yield its timeslice to another, to suspend or resume another, to

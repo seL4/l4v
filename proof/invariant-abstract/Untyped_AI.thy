@@ -2811,9 +2811,9 @@ lemma reset_untyped_cap_st_tcb_at:
   done
 
 lemma reset_untyped_cap_bound_sc_tcb_at:
-  "\<lbrace>invs and bound_sc_tcb_at P t and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot\<rbrace>
+  "\<lbrace>invs and (\<lambda>s. Q (bound_sc_tcb_at P t s)) and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot\<rbrace>
     reset_untyped_cap slot
-  \<lbrace>\<lambda>_. bound_sc_tcb_at P t\<rbrace>, \<lbrace>\<lambda>_. bound_sc_tcb_at P t\<rbrace>"
+  \<lbrace>\<lambda>_ s. Q (bound_sc_tcb_at P t s)\<rbrace>, \<lbrace>\<lambda>_ s. Q (bound_sc_tcb_at P t s)\<rbrace>"
   apply (simp add: reset_untyped_cap_def)
   apply (rule hoare_pre)
    apply (wp mapME_x_inv_wp preemption_point_inv | simp add: unless_def)+

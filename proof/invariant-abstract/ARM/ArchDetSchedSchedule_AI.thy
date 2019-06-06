@@ -16,6 +16,9 @@ context Arch begin global_naming ARM
 
 named_theorems DetSchedSchedule_AI_assms
 
+crunches arch_post_cap_deletion, prepare_thread_delete
+  for inv[wp]: P
+
 crunch valid_ready_qs [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers valid_ready_qs
   (simp: whenE_def ignore: set_tcb_queue tcb_sched_action clearExMonitor wp: hoare_drop_imp tcb_sched_dequeue_valid_ready_qs)
@@ -52,7 +55,7 @@ lemma switch_to_idle_thread_ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
                          valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
-crunches arch_switch_to_idle_thread, prepare_thread_delete
+crunches arch_switch_to_idle_thread
   for release_queue[wp]: "\<lambda>s. P (release_queue s)"
 
 crunch valid_sched_action'[wp]: set_vm_root "\<lambda>s. valid_sched_action_2 (scheduler_action s)
@@ -247,17 +250,17 @@ lemma set_asid_pool_valid_sched[wp]:
   by (wpsimp wp: hoare_drop_imps valid_sched_lift simp: set_asid_pool_def)
 
 crunch ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
-  arch_finalise_cap, prepare_thread_delete ct_not_in_q
+  arch_finalise_cap ct_not_in_q
   (wp: crunch_wps hoare_drop_imps hoare_unless_wp select_inv mapM_wp
        subset_refl if_fun_split simp: crunch_simps ignore: tcb_sched_action)
 
 crunch simple_sched_action [wp, DetSchedSchedule_AI_assms]:
-  arch_finalise_cap, prepare_thread_delete simple_sched_action
+  arch_finalise_cap simple_sched_action
   (wp: hoare_drop_imps mapM_x_wp mapM_wp select_wp subset_refl
    simp: unless_def if_fun_split)
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
-  arch_finalise_cap, prepare_thread_delete "valid_sched::det_state \<Rightarrow> _"
+  arch_finalise_cap "valid_sched::det_state \<Rightarrow> _"
   (ignore: set_object as_user wp: crunch_wps subset_refl simp: if_fun_split)
 
 crunches arch_tcb_set_ipc_buffer
@@ -391,6 +394,13 @@ crunches arch_switch_to_thread, arch_switch_to_idle_thread
   and cur_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
   (simp: crunch_simps)
 
+crunches arch_perform_invocation, arch_invoke_irq_control, arch_finalise_cap
+  for scheduler_action[wp, DetSchedSchedule_AI_assms]: "\<lambda>(s :: det_state). P (scheduler_action s)"
+  and release_queue[wp, DetSchedSchedule_AI_assms]: "\<lambda>(s :: det_state). P (release_queue s)"
+  and ready_queues[wp, DetSchedSchedule_AI_assms]: "\<lambda>(s :: det_state). P (ready_queues s)"
+  and cur_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>(s :: det_state). P (cur_thread s)"
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma handle_vm_fault_valid_machine_time[DetSchedSchedule_AI_assms]:
   "handle_vm_fault a b \<lbrace>valid_machine_time\<rbrace>"
   apply (case_tac b; simp)
@@ -398,7 +408,7 @@ lemma handle_vm_fault_valid_machine_time[DetSchedSchedule_AI_assms]:
           clarsimp simp: in_monad getFAR_def getDFSR_def getIFSR_def)+
   done
 
-crunches as_user, arch_post_modify_registers, prepare_thread_delete, arch_post_cap_deletion
+crunches as_user, arch_post_modify_registers, arch_post_cap_deletion
   for valid_machine_time[wp]: "valid_machine_time:: det_state \<Rightarrow> _"
   (wp: crunch_wps)
 
@@ -570,14 +580,58 @@ lemma update_time_stamp_valid_machine_time[wp]:
   apply (fastforce simp: getCurrentTime_def elim: valid_machine_time_getCurrentTime)
   done
 
-crunches arch_finalise_cap, prepare_thread_delete
-  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+(* Note: Proving that retype_region preserves bound_sc_tcb_at is much harder *)
+lemma retype_region_not_bound_sc[wp]:
+  "\<lbrace>\<lambda>s. \<not> bound_sc_tcb_at P t s\<rbrace>
+   retype_region ptr' (Suc 0) us (ArchObject ASIDPoolObj) dev
+   \<lbrace>\<lambda>rv (s :: det_state). \<not> bound_sc_tcb_at P t s\<rbrace>"
+  by (wpsimp simp: retype_region_def,
+         clarsimp simp: pred_tcb_at_def sc_at_pred_def obj_at_def default_object_def
+                 split: if_splits)
+
+(* Note: Proving that delete_objects preserves bound_sc_tcb_at is much harder *)
+lemma delete_objects_not_bound_sc[wp]:
+  "\<lbrace>\<lambda>s. \<not> bound_sc_tcb_at P t s\<rbrace>
+   delete_objects a b
+   \<lbrace>\<lambda>rv (s :: det_state). \<not> bound_sc_tcb_at P t s\<rbrace>"
+  by (wpsimp simp: delete_objects_def)
+
+crunches arch_perform_invocation
+  for cur_sc[wp]: "(\<lambda>s. P (cur_sc s)):: det_state \<Rightarrow> _"
+  (wp: crunch_wps cur_sc_tcb_only_sym_bound_lift ignore: set_object)
+
+crunches arch_perform_invocation
+  for not_bound_sc_tcb_at[wp]: "(\<lambda>s. \<not> bound_sc_tcb_at P t s):: det_state \<Rightarrow> _"
+  (wp: crunch_wps cur_sc_tcb_only_sym_bound_lift ignore: retype_region delete_objects)
+
+lemma arch_perform_invocation_cur_sc_chargeable[DetSchedSchedule_AI_assms]:
+  "arch_perform_invocation i \<lbrace>cur_sc_tcb_only_sym_bound :: det_state \<Rightarrow> _\<rbrace>"
+  by (wpsimp wp: cur_sc_tcb_only_sym_bound_lift)
+
+crunches set_irq_state
+  for cur_sc_chargeable[wp]: "cur_sc_chargeable :: det_state \<Rightarrow> _"
+  (wp: crunch_wps simp: crunch_simps ignore: do_machine_op)
+
+lemma arch_invoke_irq_control_cur_sc_chargeable[DetSchedSchedule_AI_assms]:
+  "arch_invoke_irq_control i' \<lbrace>cur_sc_chargeable:: det_state \<Rightarrow> _\<rbrace>"
+  by (case_tac i'; wpsimp)
+
+lemma set_arch_objs_cur_sc_chargeable[wp]:
+  "set_pt param_a param_b \<lbrace>cur_sc_chargeable\<rbrace>"
+  "set_pd x y \<lbrace>cur_sc_chargeable\<rbrace>"
+  "set_asid_pool w c \<lbrace>cur_sc_chargeable\<rbrace>"
+  unfolding set_pt_def set_asid_pool_def set_pd_def cur_sc_chargeable_def2
+  apply (wpsimp wp: assert_inv set_object_wp, clarsimp simp: pred_tcb_at_def obj_at_def, fastforce)+
+  done
+
+crunches arch_finalise_cap, arch_post_cap_deletion
+  for cur_sc_chargeable[wp]: "cur_sc_chargeable :: det_state \<Rightarrow> _"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches arch_post_cap_deletion
-  for active_sc_tcb_at[wp]: "\<lambda>s. Q (active_sc_tcb_at t s)"
-  and budget_ready[wp]: "\<lambda>s. Q (budget_ready t s)"
-  and budget_sufficient[wp]: "\<lambda>s. Q (budget_sufficient t s)"
+lemma arch_finalise_cap_ct_in_state[DetSchedSchedule_AI_assms]:
+  "arch_finalise_cap c x \<lbrace>ct_in_state P :: det_state \<Rightarrow> _\<rbrace>"
+  apply (case_tac c; case_tac x; simp add: arch_finalise_cap_def)
+  by (wpsimp wp: ct_in_state_thread_state_lift)+
 
 end
 

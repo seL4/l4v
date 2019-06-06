@@ -1175,7 +1175,7 @@ where
   "thread_control_target (tcb_invocation.ThreadControlCaps a _ _ _ _ _ _) = a"
 | "thread_control_target (tcb_invocation.ThreadControlSched a _ _ _ _ _) = a"
 
-lemma is_thread_control_true[simp]:
+lemma is_thread_control_caps_true[simp]:
   "is_thread_control_caps (tcb_invocation.ThreadControlCaps a b c d e f g)"
   by (simp add: is_thread_control_caps_def)
 
@@ -1338,7 +1338,7 @@ lemma decode_set_space_inv[wp]:
 lemma decode_set_space_is_tc[wp]:
   "\<lbrace>\<top>\<rbrace> decode_set_space args cap slot extras \<lbrace>\<lambda>rv s. is_thread_control_caps rv\<rbrace>,-"
   apply (simp add: decode_set_space_def)
-  apply (wp | simp only: is_thread_control_true)+
+  apply (wp | simp only: is_thread_control_caps_true)+
   apply simp
   done
 
@@ -1745,5 +1745,193 @@ lemma set_priority_invs[wp]:
   unfolding set_priority_def
   by (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift
            simp: get_thread_state_def thread_get_def)
+
+
+lemma set_mcpriority_bound_sc_tcb_at[wp]:
+  "set_mcpriority ref mcp \<lbrace>\<lambda>s. Q (bound_sc_tcb_at P t s)\<rbrace>"
+  unfolding set_mcpriority_def
+  apply (wpsimp wp: thread_set_wp)
+  by (clarsimp simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
+
+lemma thread_set_priority_bound_sc_tcb_at[wp]:
+  "thread_set_priority ref p \<lbrace>\<lambda>s. Q (bound_sc_tcb_at P t s)\<rbrace>"
+  unfolding thread_set_priority_def
+  apply (wpsimp wp: thread_set_wp)
+  by (clarsimp simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
+
+crunches reorder_ntfn, reorder_ep
+  for bound_sc_tcb_at[wp]: "\<lambda>s. Q (bound_sc_tcb_at P t s)"
+  (wp: crunch_wps)
+
+lemma set_priority_bound_sc_tcb_at[wp]:
+  "set_priority ref p \<lbrace>\<lambda>s. Q (bound_sc_tcb_at P t s)\<rbrace>"
+  unfolding set_priority_def
+  by (wpsimp simp:  wp: hoare_drop_imps)
+
+crunches cancel_all_ipc
+  for bound_sc_tcb_at[wp]: "bound_sc_tcb_at P target"
+  (wp: crunch_wps)
+
+lemma cap_delete_fh_lift:
+  assumes A: "\<And>x. \<lbrace>Q1\<rbrace> empty_slot (target, tcb_cnode_index 3) x \<lbrace>\<lambda>_. P\<rbrace>"
+  and     C: "\<And>x. \<lbrace>Q2\<rbrace> cancel_all_ipc x \<lbrace>\<lambda>_. Q1\<rbrace>"
+  and     B: "\<And>s. (P and invs and tcb_at target and L) s \<Longrightarrow> Q1 s"
+  and     B': "\<And>s. (P and invs and tcb_at target and L) s \<Longrightarrow> Q2 s"
+  shows  "\<lbrace>P and invs and tcb_at target and L\<rbrace>
+   cap_delete (target, tcb_cnode_index 3)
+   \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding cap_delete_def
+  apply wpsimp
+   apply (subst rec_del_CTEDeleteCall)
+   apply (wpsimp wp: A)
+   apply (subst rec_del_FinaliseSlot)
+   prefer 2
+   apply assumption
+  apply (rule hoare_vcg_seqE[rotated])
+   apply (subst liftE_validE)
+   apply (rule get_cap_sp)
+  apply (subst hoare_pre_addE[where R="K (is_ep_cap cap \<or> cap = NullCap)"])
+   apply clarsimp
+   apply (subgoal_tac "cte_wp_at (\<lambda>c. is_ep_cap c \<or> c = NullCap) (target, tcb_cnode_index 3) s")
+    apply (simp add: cte_wp_at_caps_of_state)
+   apply (rule tcb_ep_slot_cte_wp_ats; clarsimp simp: pred_tcb_at_def obj_at_def is_tcb)
+  apply (case_tac cap; simp)
+   apply wpsimp
+   apply (rule B, simp)
+  apply wpsimp
+        apply (rule hoare_FalseE)
+      apply (rule hoare_FalseE)
+      apply (rule hoare_FalseE)
+     apply wpsimp
+    apply (subst liftE_liftM_liftME)
+    apply (wpsimp wp: liftME_wp C simp: is_final_cap_def)+
+    apply (intro conjI impI; rule B B', simp)
+  done
+
+lemma install_tcb_cap_bound_sc_tcb_at[wp]:
+  "\<lbrace>bound_sc_tcb_at P target' and tcb_at target and invs\<rbrace>
+   install_tcb_cap target slot 3 slot_opt
+   \<lbrace>\<lambda>_. bound_sc_tcb_at P target'\<rbrace>"
+  unfolding install_tcb_cap_def
+  by (wpsimp wp: check_cap_inv cap_delete_fh_lift)
+
+lemma set_simple_ko_sc_at_pred_n[wp]:
+  "set_simple_ko g ep v \<lbrace> \<lambda>s. P (sc_at_pred_n N proj f t s) \<rbrace>"
+  unfolding set_simple_ko_def
+  apply (wpsimp wp: set_object_wp get_object_wp)
+  apply (intro conjI;
+         intro impI;
+         erule rsubst[where P=P];
+         clarsimp split: option.splits simp: sc_at_pred_n_def obj_at_def)
+  done
+
+crunches cancel_all_ipc
+  for sc_tcb_sc_at[wp]: "\<lambda>s. Q (sc_tcb_sc_at P p s)"
+  and ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma valid_cap_not_ep_at_not_ep_cap:
+  "\<lbrakk> r \<in> obj_refs cap; \<not> ep_at r s; s \<turnstile> cap \<rbrakk>
+   \<Longrightarrow> \<not> is_ep_cap cap"
+  by (auto simp: valid_cap_def is_cap_simps obj_at_def is_obj_defs a_type_def
+          split: cap.splits
+           dest: obj_ref_is_arch)
+
+lemma cancel_all_ipc_ep[wp]:
+  "cancel_all_ipc ptr \<lbrace>\<lambda>s. Q (ep_at t s)\<rbrace>"
+  by (simp add: ep_at_typ, wp cancel_all_ipc_typ_at)
+
+lemma install_tcb_cap_ex_nonz_cap_to:
+  "\<lbrace>ex_nonz_cap_to t and invs and tcb_at t' and (not ep_at t)\<rbrace>
+   install_tcb_cap t' slot 3 slot_opt
+   \<lbrace>\<lambda>_. ex_nonz_cap_to t\<rbrace>"
+  unfolding install_tcb_cap_def
+  apply wpsimp
+    apply (wpsimp wp: check_cap_inv cap_insert_ex_cap)
+   apply (simp, rule valid_validE)
+   apply (rule cap_delete_fh_lift[where L="not ep_at t"](* [where Q1="valid_objs and tcb_at t' and not ep_at t"] *))
+      apply (wpsimp simp: ex_nonz_cap_to_def wp: hoare_vcg_ex_lift empty_slot_cte_wp_elsewhere)
+     apply (rule_tac Q="\<lambda>_. valid_objs and ex_nonz_cap_to t and not ep_at t and tcb_at t'" in hoare_strengthen_post)
+      apply (wpsimp simp: pred_neg_def wp: cancel_all_ipc_valid_objs cancel_all_ipc_tcb)
+     apply (clarsimp simp: ex_nonz_cap_to_def)
+     apply (rename_tac ref' x x' s ref index)
+     apply (rule_tac x=ref in exI)
+     apply (rule_tac x=index in exI)
+     apply (clarsimp)
+     apply (subgoal_tac "cte_wp_at (is_ep_cap or ((=) NullCap)) (t', tcb_cnode_index 3) s")
+      apply (clarsimp simp: zobj_refs_to_obj_refs cte_wp_at_def get_cap_caps_of_state pred_neg_def)
+      apply (subgoal_tac "cap = capa")
+       apply (frule valid_cap_not_ep_at_not_ep_cap, assumption)
+        apply (erule caps_of_state_valid[OF sym], assumption)
+       apply (clarsimp simp: )
+      apply (subst option.inject[symmetric])
+      apply (clarsimp)
+     apply (clarsimp simp: obj_at_def is_tcb)
+     apply (subgoal_tac "valid_tcb t' tcb s")
+      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def cte_wp_at_caps_of_state tcb_at_def is_tcb)
+      apply (subst (asm) caps_of_state_tcb_index_trans)
+       apply (erule get_tcb_rev)
+      apply (clarsimp simp: tcb_cnode_map_def)
+     apply (clarsimp simp: valid_objs_def valid_obj_def dom_def)
+     apply fastforce
+    apply (clarsimp simp: ex_nonz_cap_to_def)
+    apply (rename_tac ref x x' s ref' index)
+    apply (rule_tac x=ref' in exI)
+    apply (rule_tac x=index in exI)
+    apply (clarsimp)
+    apply (subgoal_tac "cte_wp_at (is_ep_cap or ((=) NullCap)) (t', tcb_cnode_index 3) s")
+     apply (clarsimp simp: zobj_refs_to_obj_refs cte_wp_at_def get_cap_caps_of_state pred_neg_def)
+     apply (subgoal_tac "cap = capa")
+      apply (frule valid_cap_not_ep_at_not_ep_cap, assumption)
+       apply (rule caps_of_state_valid[OF sym], assumption) apply clarsimp
+      apply (clarsimp simp: )
+     apply (subst option.inject[symmetric])
+     apply (clarsimp)
+    apply (clarsimp simp: obj_at_def is_tcb)
+    apply (subgoal_tac "valid_objs s")
+     apply (subgoal_tac "valid_tcb t' tcb s")
+      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def cte_wp_at_caps_of_state tcb_at_def is_tcb)
+      apply (subst (asm) caps_of_state_tcb_index_trans)
+       apply (erule get_tcb_rev)
+      apply (clarsimp simp: tcb_cnode_map_def)
+     apply (clarsimp simp: valid_objs_def valid_obj_def dom_def)
+     apply fastforce
+    apply clarsimp
+   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def pred_neg_def)
+  apply clarsimp
+  done
+
+(* FIXME: move *)
+lemma cte_wp_at_strengthen:
+  "cte_wp_at P p s \<Longrightarrow> \<forall>c. P c \<longrightarrow> Q c \<Longrightarrow> cte_wp_at Q p s"
+  by (auto simp add: cte_wp_at_cases)
+
+(* FIXME: move *)
+lemma sym_refs_bound_sc_tcb_at_eq:
+  "sym_refs (state_refs_of s)
+   \<Longrightarrow> bound_sc_tcb_at (\<lambda>a. a = Some t) x s
+   \<Longrightarrow> bound_sc_tcb_at (\<lambda>a. a = Some t) y s
+   \<Longrightarrow> x = y"
+  apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl], assumption)
+  apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl], assumption)
+  apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  done
+
+(* FIXME: move *)
+lemma bound_sc_tcb_at_idle_sc_idle_thread:
+  "sym_refs (state_refs_of s)
+   \<Longrightarrow> valid_idle s
+   \<Longrightarrow> bound_sc_tcb_at (\<lambda>a. a = Some idle_sc_ptr) t s
+   \<Longrightarrow> t = idle_thread_ptr"
+  apply (subgoal_tac "bound_sc_tcb_at (\<lambda>a. a = Some idle_sc_ptr) idle_thread_ptr s")
+  apply (erule sym_refs_bound_sc_tcb_at_eq[rotated], assumption, assumption)
+  apply (clarsimp simp: invs_def valid_state_def valid_idle_def pred_tcb_at_def obj_at_def)
+  done
+
+(* FIXME: move *)
+lemma maybeM_wp_drop_None:
+  "(\<And>x. y = Some x \<Longrightarrow> \<lbrace>\<lambda>s. Q () s \<and> P x s\<rbrace> m x \<lbrace>Q\<rbrace>) \<Longrightarrow>
+  \<lbrace>\<lambda>s. Q () s \<and> (\<forall>x. y = Some x \<longrightarrow> P x s)\<rbrace> maybeM m y \<lbrace>Q\<rbrace>"
+  unfolding maybeM_def by (cases y; simp; wp)
 
 end

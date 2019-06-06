@@ -747,9 +747,9 @@ lemma reply_unlink_sc_sc_at [wp]:
   done
 
 lemma reply_unlink_tcb_sc_tcb_sc_at [wp]:
-  "\<lbrace>\<lambda>s. sc_tcb_sc_at (P (idle_thread s)) scp' s\<rbrace>
+  "\<lbrace>\<lambda>s. Q (sc_tcb_sc_at (P (idle_thread s)) scp' s)\<rbrace>
    reply_unlink_tcb t rp
-   \<lbrace>\<lambda>_ s. sc_tcb_sc_at (P (idle_thread s)) scp' s\<rbrace>"
+   \<lbrace>\<lambda>_ s. Q (sc_tcb_sc_at (P (idle_thread s)) scp' s)\<rbrace>"
   apply (rule hoare_lift_Pf[where f=idle_thread, rotated], wp)
   by (wpsimp simp: reply_unlink_tcb_def wp: gts_wp get_simple_ko_wp)
 
@@ -1598,7 +1598,7 @@ lemma suspend_cte_wp_at_preserved:
 
 end
 
-crunch pred_tcb_at[wp]: empty_slot "pred_tcb_at proj P t"
+crunch pred_tcb_at[wp]: empty_slot "\<lambda>s. Q (pred_tcb_at proj P t s)"
 
 lemma set_thread_state_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
@@ -1681,16 +1681,15 @@ lemma descendants_of_nullcap:
   done
 
 lemma set_thread_state_bound_sc_tcb_at[wp]:
-  "\<lbrace>bound_sc_tcb_at P t'\<rbrace> set_thread_state t ts \<lbrace>\<lambda>rv. bound_sc_tcb_at P t'\<rbrace>"
-  by (wpsimp simp: set_thread_state_def set_object_def pred_tcb_at_def obj_at_def get_tcb_def)
+  "\<lbrace>\<lambda>s. Q (bound_sc_tcb_at P t' s)\<rbrace> set_thread_state t ts \<lbrace>\<lambda>rv s. Q (bound_sc_tcb_at P t' s)\<rbrace>"
+  unfolding set_thread_state_def set_thread_state_act_def
+  apply (wpsimp simp: set_thread_state_def set_object_def pred_tcb_at_def obj_at_def get_tcb_def)
+  by (clarsimp split: option.splits kernel_object.splits)
 
 lemma reply_unlink_tcb_bound_sc_tcb_at[wp]:
-  "\<lbrace>bound_sc_tcb_at P t'\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>rv. bound_sc_tcb_at P t'\<rbrace>"
-  apply (wpsimp simp: reply_unlink_tcb_def set_thread_state_def set_object_def
-                      update_sk_obj_ref_def set_simple_ko_def get_object_def get_simple_ko_def
-                      get_thread_state_def thread_get_def)
-  apply (auto simp: pred_tcb_at_def obj_at_def get_tcb_def)
-  done
+  "\<lbrace>\<lambda>s. Q (bound_sc_tcb_at P t' s)\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>rv s. Q (bound_sc_tcb_at P t' s)\<rbrace>"
+  unfolding reply_unlink_tcb_def
+  by (wpsimp wp: hoare_drop_imp)
 
 crunches blocked_cancel_ipc, cancel_signal, test_reschedule
   for bound_sc_tcb_at[wp]:  "bound_sc_tcb_at P t"

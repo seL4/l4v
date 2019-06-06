@@ -2141,7 +2141,7 @@ end
 
 
 lemma cap_swap_fd_st_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> cap_swap_for_delete sl sl' \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+  "cap_swap_for_delete sl sl' \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   unfolding cap_swap_for_delete_def
   by (wp, simp)
 
