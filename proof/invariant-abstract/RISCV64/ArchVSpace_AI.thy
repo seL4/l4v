@@ -16,23 +16,6 @@ theory ArchVSpace_AI
 imports "../VSpacePre_AI"
 begin
 
-(* FIXME RISCV: MOVE *)
-context mod_size_order
-begin
-
-lemma neq_0_conv:
-  "((x::'a) \<noteq> 0) = (0 < x)"
-  by (meson neqE not_less_zero_bit0)
-
-lemma minus_leq_less: "\<lbrakk> (x::'a) \<le> y; 0 < z; z \<le> x \<rbrakk> \<Longrightarrow> x - z < y"
-  by (metis le_less less_trans minus_less)
-
-lemma minus_one_leq_less: "\<lbrakk> (x::'a) \<le> y; 0 < x \<rbrakk> \<Longrightarrow> x - 1 < y"
-  using pred by fastforce
-
-end
-
-
 (* FIXME: move to Word, replace word_upto_Cons_eq *)
 lemma word_upto_Cons:
   "x < y \<Longrightarrow> [x::'a::len word .e. y] = x # [x + 1 .e. y]"
