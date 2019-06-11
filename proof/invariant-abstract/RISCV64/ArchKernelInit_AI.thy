@@ -21,13 +21,6 @@ text {*
   Showing that there is a state that satisfies the abstract invariants.
 *}
 
-definition
-  "init_vspace_uses p \<equiv>
-     if p \<in> {pptr_base ..< kernel_base} then RISCVVSpaceKernelWindow
-     else if kernel_base \<le> p then RISCVVSpaceKernelELFWindow
-     else if p \<le> canonical_user then RISCVVSpaceUserRegion
-     else RISCVVSpaceInvalidRegion"
-
 lemma "valid_uses_2 init_vspace_uses"
   using canonical_user_pptr_base pptr_base_kernel_base
   unfolding valid_uses_2_def init_vspace_uses_def window_defs

@@ -100,12 +100,6 @@ definition canonical_address :: "obj_ref \<Rightarrow> bool" where
 definition kernel_mappings :: "vspace_ref set" where
   "kernel_mappings \<equiv> {vref. pptr_base \<le> vref}"
 
-(* The highest user-level virtual address that is still canonical.
-   It can be larger than user_vtop, which is the highest address we allow to be mapped.
-   We need canonical_user, because the page tables have to have valid mappings there. *)
-definition canonical_user :: "vspace_ref" where
-  "canonical_user \<equiv> mask canonical_bit"
-
 (* All virtual user addresses *)
 definition user_region :: "vspace_ref set" where
   "user_region = {vref. vref \<le> canonical_user}"

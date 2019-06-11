@@ -29,12 +29,26 @@ definition init_irq_node_ptr :: obj_ref
   where
   "init_irq_node_ptr = kernel_base + 0x2000"
 
+(* The highest user-level virtual address that is still canonical.
+   It can be larger than user_vtop, which is the highest address we allow to be mapped.
+   We need canonical_user, because the page tables have to have valid mappings there. *)
+definition canonical_user :: "vspace_ref" where
+  "canonical_user \<equiv> mask canonical_bit"
+
+definition init_vspace_uses :: "vspace_ref \<Rightarrow> riscvvspace_region_use"
+  where
+  "init_vspace_uses p \<equiv>
+     if p \<in> {pptr_base ..< kernel_base} then RISCVVSpaceKernelWindow
+     else if kernel_base \<le> p then RISCVVSpaceKernelELFWindow
+     else if p \<le> canonical_user then RISCVVSpaceUserRegion
+     else RISCVVSpaceInvalidRegion"
+
 definition init_arch_state :: arch_state
   where
   "init_arch_state \<equiv> \<lparr>
      riscv_asid_table = Map.empty,
      riscv_global_pts = (\<lambda>level. if level = max_pt_level then {riscv_global_pt_ptr} else {}),
-     riscv_kernel_vspace = \<lambda>_. RISCVVSpaceKernelWindow  (* FIXME RISCV *)
+     riscv_kernel_vspace = init_vspace_uses
    \<rparr>"
 
 definition init_global_pt :: kernel_object
