@@ -18,11 +18,6 @@ begin
 
 context Arch begin global_naming RISCV64
 
-(* FIXME RISCV: move up *)
-lemma riscv_global_pts_global_ref:
-  "pt \<in> riscv_global_pts (arch_state s) level \<Longrightarrow> pt \<in> global_refs s"
-  by (auto simp: global_refs_def)
-
 named_theorems Retype_AI_assms
 
 lemma arch_kobj_size_cong[Retype_AI_assms]:
@@ -159,64 +154,6 @@ crunch pspace_respects_device_region[wp]: copy_global_mappings "pspace_respects_
 
 crunch cap_refs_respects_device_region[wp]: copy_global_mappings "cap_refs_respects_device_region"
   (wp: crunch_wps)
-
-(* FIXME RISCV: these should go to where something is assigned to an ASIDPool
-lemma copy_global_equal_kernel_mappings_restricted:
-  "is_aligned pt pt_bits \<Longrightarrow>
-   \<lbrace>\<lambda>s. equal_kernel_mappings (s \<lparr> kheap := restrict_map (kheap s) (- (insert pt S)) \<rparr>)
-              \<and> pspace_aligned s \<and> valid_arch_state s\<rbrace>
-     copy_global_mappings pt
-   \<lbrace>\<lambda>rv s. equal_kernel_mappings (s \<lparr> kheap := restrict_map (kheap s) (- S) \<rparr>)\<rbrace>"
-  apply (simp add: copy_global_mappings_def equal_kernel_mappings_def, wp)
-  done
-
-lemma copy_global_invs_mappings_restricted:
-  "\<lbrace>(\<lambda>s. all_invs_but_equal_kernel_mappings_restricted (insert pd S) s)
-          and (\<lambda>s. insert pd S \<inter> global_refs s = {})
-          and K (is_aligned pd pd_bits)\<rbrace>
-     copy_global_mappings pd
-   \<lbrace>\<lambda>rv. all_invs_but_equal_kernel_mappings_restricted S\<rbrace>"
-  apply (simp add: copy_global_mappings_def equal_kernel_mappings_def, wp, auto)
-  done
-
-lemma copy_global_mappings_valid_ioc[wp]:
- "\<lbrace>valid_ioc\<rbrace> copy_global_mappings pd \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
-  by (simp add: copy_global_mappings_def)
-
-lemma copy_global_mappings_vms[wp]:
- "\<lbrace>valid_machine_state\<rbrace> copy_global_mappings pd \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
-  by (simp add: copy_global_mappings_def)
-
-lemma copy_global_mappings_invs:
-  "\<lbrace>invs and (\<lambda>s. pd \<notin> global_refs s)
-         and K (is_aligned pd pd_bits)\<rbrace>
-     copy_global_mappings pd \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (fold all_invs_but_equal_kernel_mappings_restricted_eq)
-  apply (rule hoare_pre, rule copy_global_invs_mappings_restricted)
-  apply (clarsimp simp: equal_kernel_mappings_def obj_at_def
-                        restrict_map_def)
-  done
-
-crunch global_refs_inv[wp]: copy_global_mappings "\<lambda>s. P (global_refs s)"
-  (wp: crunch_wps)
-
-lemma mapM_copy_global_invs_mappings_restricted:
-  "\<lbrace>\<lambda>s. all_invs_but_equal_kernel_mappings_restricted (set pds) s
-            \<and> (set pds \<inter> global_refs s = {})
-            \<and> (\<forall>pd \<in> set pds. is_aligned pd pd_bits)\<rbrace>
-     mapM_x copy_global_mappings pds
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (fold all_invs_but_equal_kernel_mappings_restricted_eq)
-  apply (induct pds, simp_all only: mapM_x_Nil mapM_x_Cons K_bind_def)
-   apply (wp, simp)
-  apply (rule hoare_seq_ext, assumption, thin_tac "P" for P)
-  apply (rule hoare_conjI)
-   apply (rule hoare_pre, rule copy_global_invs_mappings_restricted)
-   apply clarsimp
-  apply (rule hoare_pre, wp)
-  apply clarsimp
-  done
-*)
 
 lemma dmo_eq_kernel_restricted [wp, Retype_AI_assms]:
   "\<lbrace>\<lambda>s. equal_kernel_mappings (kheap_update (f (kheap s)) s)\<rbrace>
@@ -803,7 +740,7 @@ lemma valid_table_caps:
 
 lemma caps_of_state':
   "caps_of_state s p = Some cap \<Longrightarrow> caps_of_state s' p = Some cap"
-  by (fastforce simp: F cte_wp_at_cases s'_def ps_def orthr) (* FIXME RISCV: F? *)
+  by (fastforce simp: F cte_wp_at_cases s'_def ps_def orthr)
 
 lemma valid_vs_lookup:
   "valid_vs_lookup s \<Longrightarrow> valid_vs_lookup s'"

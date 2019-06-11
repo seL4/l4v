@@ -210,27 +210,6 @@ lemma is_derived_is_cap:
   by (clarsimp simp: cap_master_cap_def is_cap_simps
               split: cap.splits arch_cap.splits)+
 
-(* FIXME RISCV: move up *)
-lemma vs_lookup_table_eq_lift:
-  "\<lbrakk> pts_of s' = pts_of s;
-    asid_pools_of s' = asid_pools_of s;
-    pool_for_asid asid s' = pool_for_asid asid s \<rbrakk>
-   \<Longrightarrow> vs_lookup_table level asid vref s' = vs_lookup_table level asid vref s"
-  unfolding vs_lookup_table_def
-  by (auto simp: obind_def split: option.splits)
-
-(* FIXME RISCV: move up *)
-lemma aobjs_of_non_aobj_upd:
-  "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
-   \<Longrightarrow> kheap s(p \<mapsto> ko') |> aobj_of = aobjs_of s"
-  by (rule ext)
-     (auto simp: opt_map_def is_ArchObj_def aobj_of_def split: kernel_object.splits if_split_asm)
-
-(* FIXME RISCV: move up *)
-lemma pool_for_asid_kheap_upd[simp]:
-  "pool_for_asid asid (s\<lparr>kheap := kheap'\<rparr>) = pool_for_asid asid s"
-  by (simp add: pool_for_asid_def)
-
 lemma vs_lookup_pages_non_aobj_upd:
   "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
    \<Longrightarrow> vs_lookup_pages (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>) = vs_lookup_pages s"
@@ -246,7 +225,6 @@ lemma vs_lookup_pages_non_aobj_upd:
   apply (rule obind_eqI; clarsimp)
   done
 
-(* FIXME RISCV: which do we want, the lookup_target or lookup_pages version? *)
 lemma vs_lookup_target_non_aobj_upd:
   "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
    \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)

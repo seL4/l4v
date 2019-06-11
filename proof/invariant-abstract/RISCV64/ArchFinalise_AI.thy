@@ -819,41 +819,6 @@ lemma arch_finalise_cap_replaceable:
   apply (rule conjI; clarsimp)
   apply (clarsimp simp: valid_cap_def wellformed_mapdata_def cap_aligned_def)
   done
-(*
-  apply (fastforce simp: valid_cap_def wellformed_mapdata_def cap_aligned_def)
-  done *)
-(*
-  apply (rule conjI, clarsimp)
-   apply (clarsimp simp: valid_cap_def)
-  apply (rule conjI; clarsimp)
-   apply (rule conjI; clarsimp)
-  apply (rule conjI; clarsimp)
-  apply (clarsimp simp: valid_cap_def wellformed_mapdata_def cap_aligned_def)
-  done
-*)
-  (* FIXME RISCV
-  apply (rule hoare_pre)
-   apply (simp add: simps split: option.splits vmpage_size.splits)
-   apply (wp wps
-          | strengthen strg
-          | simp add: simps reachable_frame_cap_def live_def
-          | wpc)+
-     (* unmap_page case is a bit unpleasant *)
-     apply (strengthen cases_conj_strg[where P="\<not> is_final_cap' cap s" for cap s, simplified])
-     apply (rule hoare_post_imp, clarsimp split: vmpage_size.split, assumption)
-     apply (simp add: vspace_bits_defs)
-     apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift hoare_vcg_const_imp_lift
-               unmap_page_tcb_cap_valid unmap_page_page_unmapped
-                   unmap_page_section_unmapped)[1]
-    apply (wp wps
-           | strengthen strg imp_and_strg tcb_cap_valid_imp_NullCap
-           | simp add: simps is_master_reply_cap_def reachable_pg_cap_def
-           | wpc)+
-  apply (intro conjI; clarsimp split: cap.splits arch_cap.splits vmpage_size.splits)
-  by (auto simp: valid_cap_def obj_at_def simps is_master_reply_cap_def
-                    a_type_def data_at_def vspace_bits_defs X
-             elim!: tcb_cap_valid_imp_NullCap[rule_format, rotated]
-             split: cap.splits arch_cap.splits vmpage_size.splits) *)
 
 
 global_naming Arch
@@ -1070,25 +1035,8 @@ crunch pred_tcb_at[wp]:
 crunch pred_tcb_at[wp_unsafe]: arch_finalise_cap "pred_tcb_at proj P t"
   (simp: crunch_simps wp: crunch_wps)
 
-lemma store_pte_unmap_empty: (* FIXME RISCV: check usage *)
-  "\<lbrace>\<lambda>s. obj_at (empty_table S) word s\<rbrace>
-    store_pte xa InvalidPTE
-   \<lbrace>\<lambda>rv s. obj_at (empty_table S) word s\<rbrace>"
-  apply (wp get_object_wp | simp add: store_pte_def set_pt_def set_object_def)+
-  apply (clarsimp simp: obj_at_def empty_table_def)
-  done
-
-lemma unmap_page_table_empty: (* FIXME RISCV: check usage *)
-  "\<lbrace>\<lambda>s. obj_at (empty_table S) word s\<rbrace>
-    unmap_page_table aa b word
-   \<lbrace>\<lambda>rv s. obj_at (empty_table S) word s\<rbrace>"
-  apply (simp add: unmap_page_table_def)
-  apply (wp store_pte_unmap_empty | simp | wpc)+
-  done
-
 definition
-  replaceable_or_arch_update
-where
+  replaceable_or_arch_update :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool" where
   "replaceable_or_arch_update \<equiv> \<lambda>s slot cap cap'.
    if is_frame_cap cap
    then is_arch_update cap cap' \<and>
@@ -1186,14 +1134,6 @@ lemma invs_valid_arch_capsI:
   by (simp add: invs_def valid_state_def)
 
 context Arch begin global_naming RISCV64 (*FIXME: arch_split*)
-
-lemma arch_finalise_pt_empty:
-  "\<lbrace>(\<lambda>s. obj_at (empty_table {}) ptr s) and valid_cap (ArchObjectCap acap) and
-    K (is_pt_cap (ArchObjectCap acap) \<and> aobj_ref acap = Some ptr)\<rbrace>
-  arch_finalise_cap acap final
-  \<lbrace>\<lambda>rv s. obj_at (empty_table {}) ptr s\<rbrace>"
-  by (rule hoare_gen_asm)
-     (wpsimp simp: is_cap_simps arch_finalise_cap_def wp: unmap_page_table_empty)
 
 lemma do_machine_op_reachable_pg_cap[wp]:
   "\<lbrace>\<lambda>s. P (reachable_frame_cap cap s)\<rbrace>

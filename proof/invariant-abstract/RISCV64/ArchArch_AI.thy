@@ -990,46 +990,6 @@ lemma shiftr_irrelevant:
   apply simp
   done
 
-(* FIXME RISCV: probably translate
-lemma lookup_pt_slot_cap_to:
-  "\<lbrace>invs and \<exists>\<rhd>pm and K (is_aligned pm pml4_bits \<and> vptr < pptr_base \<and> canonical_address vptr)\<rbrace>
-    lookup_pt_slot pm vptr
-   \<lbrace>\<lambda>rv s.  \<exists>a b cap. caps_of_state s (a, b) = Some cap \<and> is_pt_cap cap
-                                \<and> rv && ~~ mask pt_bits \<in> obj_refs cap
-                                \<and> s \<turnstile> cap \<and> cap_asid cap \<noteq> None\<rbrace>, -"
-  apply (rule hoare_gen_asmE)
-  apply (wp lookup_pt_slot_wp)
-  apply clarsimp
-  apply (drule_tac x=ref in spec)
-  apply (erule impE, fastforce, clarsimp)
-  apply (thin_tac "(_ \<rhd> pm) _")
-  apply (frule valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI]; clarsimp)
-  apply (intro exI, rule conjI, assumption)
-  apply (frule (1) caps_of_state_valid)
-  apply (clarsimp simp: pte_at_def)
-  apply (frule (2) valid_cap_to_pt_cap')
-  by (auto simp: vs_cap_ref_def is_pt_cap_def
-          split: cap.splits arch_cap.splits option.splits)
-*)
-
-
-(* FIXME RISCV: needed?
-lemma find_vspace_for_asid_ref_offset_voodoo:
-  "\<lbrace>pspace_aligned and valid_vspace_objs and
-         K (ref = [VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
-                   VSRef (ucast (asid_high_bits_of asid)) None])\<rbrace>
-      find_vspace_for_asid asid
-   \<lbrace>\<lambda>rv. (ref \<rhd> (rv + (get_pml4_index v  << word_size_bits) && ~~ mask pml4_bits))\<rbrace>,-"
-  apply (rule hoare_gen_asmE)
-  apply (rule_tac Q'="\<lambda>rv s. is_aligned rv pml4_bits \<and> (ref \<rhd> rv) s"
-               in hoare_post_imp_R)
-   apply simp
-   apply (rule hoare_pre, wp find_vspace_for_asid_lookup_ref)
-   apply simp
-  apply (simp add: pml4_shifting)
-  done
-*)
-
 
 declare mask_shift [simp]
 declare word_less_sub_le [simp del]
@@ -1041,21 +1001,6 @@ lemma valid_mask_vm_rights[simp]:
   "mask_vm_rights V R \<in> valid_vm_rights"
   by (simp add: mask_vm_rights_def)
 
-(* FIXME RISCV: looks duplicate-ish
-lemma vs_lookup_and_unique_refs:
-  "\<lbrakk>(ref \<rhd> p) s; caps_of_state s cptr = Some cap; table_cap_ref cap = Some ref';
-    p \<in> obj_refs cap; valid_vs_lookup s; unique_table_refs (caps_of_state s)\<rbrakk>
-   \<Longrightarrow> ref = ref'"
-  apply (frule_tac ref=ref in valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI], assumption)
-  apply clarsimp
-  apply (frule_tac cap'=capa in unique_table_refsD)
-     apply simp+
-   apply (case_tac capa, simp_all)
-        apply ((case_tac cap, simp_all)+)[6]
-     apply (clarsimp simp add: table_cap_ref_def vs_cap_ref_def split: cap.splits arch_cap.splits option.splits)
-  done
-*)
-
 lemma cte_wp_at_page_cap_weaken:
   "cte_wp_at (diminished (ArchObjectCap (FrameCap word seta vmpage_size dev None))) slot s \<Longrightarrow>
    cte_wp_at (\<lambda>a. \<exists>p R sz dev m. a = ArchObjectCap (FrameCap p R sz dev m)) slot s"
@@ -1063,36 +1008,11 @@ lemma cte_wp_at_page_cap_weaken:
   apply (clarsimp simp: acap_rights_update_def split: cap.splits arch_cap.splits)
   done
 
-(* FIXME RISCV: no longer the case for huge pages after kernel_base update
-lemma aligned_sum_less_kernel_base:
-  "vmsz_aligned p sz \<Longrightarrow> (p + 2 ^ pageBitsForSize sz - 1 < kernel_base) = (p < kernel_base)"
-  apply (rule iffI)
-   apply (rule le_less_trans)
-    apply (rule is_aligned_no_overflow)
-    apply (simp add: vmsz_aligned_def)
-   apply simp
-  apply (simp add:field_simps[symmetric])
-  apply (erule gap_between_aligned)
-    apply (simp add: vmsz_aligned_def)+
-   apply (case_tac sz; simp add: kernel_base_def bit_simps is_aligned_def)
-  done
-*)
-
 lemma le_user_vtop_less_pptr_base[simp]:
   "x \<le> user_vtop \<Longrightarrow> x < pptr_base"
   using dual_order.strict_trans2 by blast
 
 lemmas le_user_vtop_canonical_address = below_user_vtop_canonical[simp]
-
-(* FIXME RISCV: move to ArchInvariants *)
-lemma pte_at_eq:
-  "pte_at p s = (ptes_of s p \<noteq> None)"
-  by (auto simp: obj_at_def pte_at_def in_omonad pte_of_def)
-
-(* FIXME RISCV: move to ArchInvariants *)
-lemma user_vtop_canonical_user:
-  "vref < user_vtop \<Longrightarrow> vref \<le> canonical_user"
-  using user_vtop_canonical_user by simp
 
 lemma ptrFromPAddr_addr_from_ppn:
   "is_aligned pt_ptr table_size \<Longrightarrow>
@@ -1100,23 +1020,6 @@ lemma ptrFromPAddr_addr_from_ppn:
   apply (simp add: addr_from_ppn_def ucast_ucast_mask bit_simps)
   apply (frule is_aligned_addrFromPPtr[simplified bit_simps])
   apply (simp add: aligned_shiftr_mask_shiftl mask_len_id[where 'a=machine_word_len, simplified])
-  done
-
-(* FIXME RISCV: move to ArchInvariants *)
-lemma pt_bits_left_0[simp]:
-  "(pt_bits_left level = pageBits) = (level = 0)"
-  by (auto simp: pt_bits_left_def bit_simps)
-
-(* FIXME RISCV: move to ArchInvariants *)
-lemma pt_lookup_slot_vs_lookup_slotI:
-  "\<lbrakk> vspace_for_asid asid s = Some pt_ptr;
-     pt_lookup_slot pt_ptr vref (ptes_of s) = Some (level, slot) \<rbrakk>
-   \<Longrightarrow> vs_lookup_slot level asid vref s = Some (level, slot) \<and> level \<le> max_pt_level"
-  unfolding pt_lookup_slot_def pt_lookup_slot_from_level_def vs_lookup_slot_def
-  apply (clarsimp simp: in_omonad)
-  apply (drule (1) pt_lookup_vs_lookupI, simp)
-  apply (drule vs_lookup_level)
-  apply (fastforce dest: pt_walk_max_level)
   done
 
 lemma is_aligned_pageBitsForSize_table_size:
@@ -1143,15 +1046,6 @@ lemma vs_lookup_slot_pte_at:
   apply (clarsimp simp: pt_slot_offset_def)
   apply (rule is_aligned_add; simp add: is_aligned_shift)
   done
-
-(* FIXME RISCV: move up *)
-lemma size_level1[simp]:
-  "(size level = Suc 0) = (level = (1 :: vm_level))"
-proof
-  assume "size level = Suc 0"
-  hence "size level = size (1::vm_level)" by simp
-  thus "level = 1" by (subst (asm) bit0.size_inj)
-qed auto
 
 lemma vmpage_size_of_level_pt_bits_left:
   "\<lbrakk> pt_bits_left level = pageBitsForSize vmpage_size; level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
@@ -1281,11 +1175,6 @@ lemma decode_frame_invocation_wf[wp]:
                         vmsz_aligned_def
                   split: option.split)
   done
-
-(* FIXME RISCV: move to ArchInvariants *)
-lemma minus_one_max_pt_level[simp]:
-  "(level - 1 = max_pt_level) = (level = asid_pool_level)"
-  by (simp add: level_defs bit0.minus_1_eq)
 
 lemma decode_pt_inv_map_wf[wp]:
   "arch_cap = PageTableCap pt_ptr pt_map_data \<Longrightarrow>

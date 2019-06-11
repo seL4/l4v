@@ -99,7 +99,7 @@ definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     (\<lambda>_. do
-       global_pt \<leftarrow> gets (riscv_global_pt \<circ> arch_state);
+       global_pt \<leftarrow> gets global_pt;
        do_machine_op $ setVSpaceRoot (addrFromPPtr global_pt) 0
     od)
   od"

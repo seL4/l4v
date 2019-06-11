@@ -69,32 +69,32 @@ definition
   replaceable_final_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
 where
  "replaceable_final_arch_cap s sl newcap \<equiv> \<lambda>cap.
-    (* Don't leave dangling vspace references. That is, if cap points to a mapped vspace object, *)
+    \<comment> \<open>Don't leave dangling vspace references. That is, if cap points to a mapped vspace object,\<close>
     (\<forall>ref. vs_cap_ref cap = Some ref
-             (* then either newcap maintains the same vs_refs *)
+             \<comment> \<open> then either newcap maintains the same vs_refs \<close>
             \<longrightarrow> (vs_cap_ref newcap = Some ref \<and> obj_refs newcap = obj_refs cap)
-             (* or the object pointed to by cap is not currently mapped. *)
+             \<comment> \<open> or the object pointed to by cap is not currently mapped. \<close>
               \<or> (\<forall>oref \<in> obj_refs cap. \<not> reachable_target ref oref s))
-    (* Don't introduce duplicate caps to vspace table objects with different vs_refs. *)
+    \<comment> \<open> Don't introduce duplicate caps to vspace table objects with different vs_refs. \<close>
   \<and> no_cap_to_obj_with_diff_ref newcap {sl} s
-    (* Don't introduce non-empty unmapped table objects. *)
+    \<comment> \<open> Don't introduce non-empty unmapped table objects. \<close>
   \<and> (is_pt_cap newcap
       \<longrightarrow> cap_asid newcap = None
       \<longrightarrow> (\<forall>r \<in> obj_refs newcap. pts_of s r = Some empty_pt))
-    (* If newcap is vspace table cap such that either:
+    \<comment> \<open> If newcap is vspace table cap such that either:
          - newcap and cap have different types or different obj_refs, or
-         - newcap is unmapped while cap is mapped, *)
+         - newcap is unmapped while cap is mapped, \<close>
   \<and> (is_pt_cap newcap
          \<longrightarrow> (is_pt_cap cap
                   \<longrightarrow> (cap_asid newcap = None \<longrightarrow> cap_asid cap = None)
                   \<longrightarrow> obj_refs cap \<noteq> obj_refs newcap)
-    (* then, aside from sl, there is no other slot with a cap that
+    \<comment> \<open>then, aside from sl, there is no other slot with a cap that
          - has the same obj_refs and type as newcap, and
-         - is unmapped if newcap is mapped. *)
+         - is unmapped if newcap is mapped. \<close>
          \<longrightarrow> (\<forall>sl'. cte_wp_at (\<lambda>cap'. obj_refs cap' = obj_refs newcap
                      \<and> is_pt_cap cap'
                      \<and> (cap_asid newcap = None \<or> cap_asid cap' = None)) sl' s \<longrightarrow> sl' = sl))
-  (* Don't replace with an ASID pool. *)
+  \<comment> \<open>Don't replace with an ASID pool. \<close>
   \<and> \<not>is_ap_cap newcap"
 
 definition
@@ -116,7 +116,8 @@ lemma unique_table_refsD:
 lemma table_cap_ref_vs_cap_ref_Some:
   "table_cap_ref x = Some y \<Longrightarrow> vs_cap_ref x = Some y"
   by (clarsimp simp: table_cap_ref_def vs_cap_ref_def table_cap_ref_arch_def vs_cap_ref_arch_def
-                 split: cap.splits arch_cap.splits)
+               simp del: arch_cap_fun_lift_Some
+               split: cap.splits arch_cap.splits)
 
 lemma set_cap_aobjs_of[wp]:
   "set_cap cap ptr \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
@@ -128,30 +129,6 @@ lemma set_cap_aobjs_of[wp]:
 lemma set_cap_pool_for_asid[wp]:
   "set_cap cap ptr \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
   unfolding pool_for_asid_def by wpsimp
-
-(* FIXME RISCV: move to ArchInvariants *)
-lemmas vs_lookup_slot_vref_for_level_eq[simp] = vs_lookup_slot_vref_for_level[OF order_refl]
-
-(* FIXME RISCV: move to ArchInvariants *)
-lemmas vs_lookup_target_vref_for_level_eq[simp] = vs_lookup_target_vref_for_level[OF order_refl]
-
-(* FIXME RISCV: move to ArchInvariants *)
-lemma pool_for_asid_asid_for_level[simp]:
-  "pool_for_asid (asid_for_level asid level) = pool_for_asid asid"
-  by (clarsimp simp: pool_for_asid_def asid_for_level_def asid_high_bits_of_def mask_shift)
-
-(* FIXME RISCV: move to ArchInvariants *)
-lemma vs_lookup_asid_for_level[simp]:
-  "vs_lookup_table level (asid_for_level asid level) vref = vs_lookup_table level asid vref"
-  apply (simp add: vs_lookup_table_def)
-  apply (rule ext, rule obind_eqI, rule refl)
-  apply (clarsimp simp: asid_for_level_def)
-  done
-
-(* FIXME RISCV: move to ArchInvariants *)
-lemma vs_lookup_slot_asid_for_level[simp]:
-  "vs_lookup_slot level (asid_for_level asid level) vref = vs_lookup_slot level asid vref"
-  by (simp add: vs_lookup_slot_def)
 
 lemma set_cap_valid_vs_lookup:
   "\<lbrace>\<lambda>s. valid_vs_lookup s
@@ -412,11 +389,9 @@ lemma set_cap_hyp_refs_of [wp]:
   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: set_cap_def set_object_def split_def)
   apply (wp get_object_wp | wpc)+
-  apply (auto elim!: rsubst[where P=P]
-               simp: state_hyp_refs_of_def obj_at_def
-             intro!: ext
-             split: if_split_asm)
-  done
+  by (force elim!: rsubst[where P=P]
+            simp: state_hyp_refs_of_def obj_at_def
+            split: if_split_asm)
 
 lemma state_hyp_refs_of_revokable[simp]:
   "state_hyp_refs_of (s \<lparr> is_original_cap := m \<rparr>) = state_hyp_refs_of s"

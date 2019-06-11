@@ -134,6 +134,10 @@ definition riscv_global_pt :: "arch_state \<Rightarrow> obj_ref"
   where
   "riscv_global_pt s = the_elem (riscv_global_pts s max_pt_level)"
 
+locale_abbrev global_pt :: "'z state \<Rightarrow> obj_ref"
+  where
+  "global_pt s \<equiv> riscv_global_pt (arch_state s)"
+
 text \<open>
   The kernel window is mapped into every virtual address space from the @{term pptr_base}
   pointer upwards. This function copies the mappings which create the kernel window into a new
@@ -142,7 +146,7 @@ text \<open>
 definition copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "copy_global_mappings new_pm \<equiv> do
-    global_pt \<leftarrow> gets (riscv_global_pt \<circ> arch_state);
+    global_pt \<leftarrow> gets global_pt;
     base \<leftarrow> return $ pt_index max_pt_level pptr_base;
     pt_size \<leftarrow> return $ 1 << ptTranslationBits;
     mapM_x (\<lambda>index. do
