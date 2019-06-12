@@ -624,13 +624,6 @@ lemma invoke_cnode_valid_pdpt_objs[wp]:
    apply (wp get_cap_wp | wpc | simp split del: if_split)+
   done
 
-lemma as_user_valid_pdpt_objs[wp]:
-  "\<lbrace>valid_pdpt_objs\<rbrace> as_user t m \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  apply (simp add: as_user_def split_def)
-  apply wp
-  apply simp
-  done
-
 crunch valid_pdpt_objs[wp]: invoke_tcb "valid_pdpt_objs"
   (wp: check_cap_inv crunch_wps simp: crunch_simps
        ignore: check_cap_at)
