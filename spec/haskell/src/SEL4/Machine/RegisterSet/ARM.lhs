@@ -30,7 +30,7 @@ This module defines the ARM register set.
 
 > data Register =
 >     R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | SL | FP | IP | SP |
->     LR | LR_svc | FaultInstruction | CPSR | TLS_BASE | TPIDRURW
+>     LR | NextIP | FaultIP | CPSR | TLS_BASE | TPIDRURW
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
 > type Word = Data.Word.Word32
@@ -39,14 +39,16 @@ This module defines the ARM register set.
 > msgInfoRegister = R1
 > msgRegisters = [R2 .. R5]
 > badgeRegister = R0
-> frameRegisters = FaultInstruction : SP : CPSR : [R0, R1] ++ [R8 .. IP]
+> faultRegister = FaultIP
+> nextInstructionRegister = NextIP
+> frameRegisters = FaultIP : SP : CPSR : [R0, R1] ++ [R8 .. IP]
 > gpRegisters = [R2, R3, R4, R5, R6, R7, LR]
-> exceptionMessage = [FaultInstruction, SP, CPSR]
-> syscallMessage = [R0 .. R7] ++ [FaultInstruction, SP, LR, CPSR]
+> exceptionMessage = [FaultIP, SP, CPSR]
+> syscallMessage = [R0 .. R7] ++ [FaultIP, SP, LR, CPSR]
 > tlsBaseRegister = TLS_BASE
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-> elr_hyp = LR_svc
+> elr_hyp = NextIP
 
 \subsection{VCPU-saved Registers}
 

@@ -73,8 +73,8 @@ fun handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit,'
       storef = (\<lambda>a. throwError $ ArchFault $ VMFault a [0, vmFaultTypeFSR RISCVStoreAccessFault]);
       instrf = (\<lambda>a. throwError $ ArchFault $ VMFault a [1, vmFaultTypeFSR RISCVInstructionAccessFault]);
       set_pc = do
-                 sepc \<leftarrow> as_user thread $ getRegister SEPC;
-                 as_user thread $ setRegister NEXTPC sepc
+                 faultip \<leftarrow> as_user thread $ getRegister FaultIP;
+                 as_user thread $ setRegister NextIP faultip
                od
     in
       case fault_type of

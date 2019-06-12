@@ -116,27 +116,53 @@ lemma flush_space_valid_arch_state[wp]: "\<lbrace>valid_arch_state \<rbrace> flu
   apply (wp load_hw_asid_wp | wpc | simp)+
 done
 
-crunch globals_equiv[wp]: suspend,prepare_thread_delete "globals_equiv st"
+lemma get_thread_state_globals_equiv[wp]:
+  "\<lbrace>globals_equiv s and valid_ko_at_arm\<rbrace> get_thread_state ref \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding get_thread_state_def
+  apply(wp set_object_globals_equiv dxo_wp_weak |simp)+
+  done
+
+lemma suspend_globals_equiv[wp]:
+  "\<lbrace>globals_equiv st and (\<lambda>s. t \<noteq> idle_thread s) and valid_ko_at_arm\<rbrace> suspend t \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding suspend_def
+  apply (wp tcb_sched_action_extended.globals_equiv dxo_wp_weak)
+       apply simp
+      apply (wp set_thread_state_globals_equiv)
+     apply wp+
+      unfolding update_restart_pc_def
+      apply wp+
+    apply clarsimp
+    apply (rule hoare_vcg_conj_lift)
+     prefer 2
+     apply (rule hoare_drop_imps)
+     apply wp+
+    apply (rule hoare_drop_imps)
+    apply wp+
+  apply auto
+  done
+
+crunch globals_equiv[wp]: prepare_thread_delete "globals_equiv st"
   (wp: dxo_wp_weak)
 
 lemma finalise_cap_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_global_objs and valid_arch_state and pspace_aligned and valid_vspace_objs and valid_global_refs and valid_vs_lookup\<rbrace>
+  "\<lbrace>globals_equiv st and (\<lambda>s. \<forall>p. cap = ThreadCap p \<longrightarrow> p \<noteq> idle_thread s)
+    and valid_global_objs and valid_arch_state and pspace_aligned and valid_vspace_objs and valid_global_refs and valid_vs_lookup\<rbrace>
     finalise_cap cap b
    \<lbrace>\<lambda> _. globals_equiv st\<rbrace>"
   apply (induct cap)
-  apply (simp_all add:finalise_cap.simps)
-  apply (wp liftM_wp when_def cancel_all_ipc_globals_equiv cancel_all_ipc_valid_global_objs
-            cancel_all_signals_globals_equiv cancel_all_signals_valid_global_objs
-            arch_finalise_cap_globals_equiv unbind_maybe_notification_globals_equiv
-            unbind_notification_globals_equiv
-            | simp add: valid_arch_state_ko_at_arm | intro impI conjI)+
+             apply (simp_all add:finalise_cap.simps)
+             apply (wp liftM_wp when_def cancel_all_ipc_globals_equiv cancel_all_ipc_valid_global_objs
+                       cancel_all_signals_globals_equiv cancel_all_signals_valid_global_objs
+                       arch_finalise_cap_globals_equiv unbind_maybe_notification_globals_equiv
+                       unbind_notification_globals_equiv
+                       | clarsimp simp add: valid_arch_state_ko_at_arm | intro impI conjI)+
   done
 
 crunch valid_ko_at_arm[wp]: cap_swap_for_delete, restart "valid_ko_at_arm"
   (wp: dxo_wp_weak ignore: cap_swap_ext)
 
 lemma rec_del_preservation2':
-  assumes finalise_cap_P: "\<And>cap final. \<lbrace>R and P\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_.P\<rbrace>"
+  assumes finalise_cap_P: "\<And>cap final. \<lbrace>R cap and P\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_.P\<rbrace>"
   assumes set_cap_P : "\<And> cap b. \<lbrace>Q and P\<rbrace> set_cap cap b \<lbrace>\<lambda>_.P\<rbrace>"
   assumes set_cap_Q : "\<And> cap b. \<lbrace>Q\<rbrace> set_cap cap b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes empty_slot_P: "\<And> slot free. \<lbrace>Q and P\<rbrace> empty_slot slot free \<lbrace>\<lambda>_. P\<rbrace>"
@@ -146,7 +172,7 @@ lemma rec_del_preservation2':
   assumes preemption_point_Q: "\<And> a b. \<lbrace>Q\<rbrace> preemption_point \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes preemption_point_P: "\<And> a b. \<lbrace>Q and P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>"
   assumes invs_Q: "\<And> s. invs s \<Longrightarrow> Q s"
-  assumes invs_R: "\<And> s. invs s \<Longrightarrow> R s"
+  assumes invs_R: "  \<And>s slot cap. invs s \<Longrightarrow> caps_of_state s slot = Some cap \<Longrightarrow> R cap s"
   shows
   "s \<turnstile> \<lbrace>\<lambda>s. invs s \<and> P s \<and> Q s \<and> emptyable (slot_rdcall call) s \<and> valid_rec_del_call call s\<rbrace>
      rec_del call
@@ -248,10 +274,11 @@ done
 qed
 
 lemma rec_del_preservation2:
-  "\<lbrakk>\<And>cap final. \<lbrace>R and P\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_. P\<rbrace>; \<And>cap b. \<lbrace>Q and P\<rbrace> set_cap cap b \<lbrace>\<lambda>_. P\<rbrace>;
+  "\<lbrakk>\<And>cap final. \<lbrace>R cap and P\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_. P\<rbrace>; \<And>cap b. \<lbrace>Q and P\<rbrace> set_cap cap b \<lbrace>\<lambda>_. P\<rbrace>;
   \<And>cap b. invariant (set_cap cap b) Q; \<And>slot free. \<lbrace>Q and P\<rbrace> empty_slot slot free \<lbrace>\<lambda>_. P\<rbrace>;
   \<And>slot free. invariant (empty_slot slot free) Q; \<And>a b. invariant (cap_swap_for_delete a b) Q;
-  \<And>a b. \<lbrace>Q and P\<rbrace> cap_swap_for_delete a b \<lbrace>\<lambda>_. P\<rbrace>; \<And>s. invs s \<Longrightarrow> Q s; \<And>s. invs s \<Longrightarrow> R s;
+  \<And>a b. \<lbrace>Q and P\<rbrace> cap_swap_for_delete a b \<lbrace>\<lambda>_. P\<rbrace>; \<And>s. invs s \<Longrightarrow> Q s;
+  \<And>s slot cap. invs s \<Longrightarrow> caps_of_state s slot = Some cap \<Longrightarrow> R cap s;
   invariant preemption_point Q; \<lbrace>Q and P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>\<rbrakk>
  \<Longrightarrow> \<lbrace>\<lambda>s. invs s \<and> P s \<and> emptyable (slot_rdcall call) s \<and> valid_rec_del_call call s\<rbrace> rec_del call
     \<lbrace>\<lambda>r. P\<rbrace>"
@@ -260,8 +287,8 @@ lemma rec_del_preservation2:
   apply (rule_tac Q="\<lambda>rv s. P s \<and> Q s" in hoare_strengthen_post)
    apply (rule validE_valid)
    apply (rule use_spec)
-  apply (rule rec_del_preservation2' [where R=R],simp+)
-done
+   apply (rule rec_del_preservation2' [where R=R],simp+)
+  done
 
 lemma globals_equiv_irq_state_independent_A[simp, intro!]:
   "irq_state_independent_A (globals_equiv st)"
@@ -273,13 +300,24 @@ lemma valid_ko_at_arm_irq_state_independent_A[simp, intro!]:
   apply(auto simp: irq_state_independent_A_def valid_ko_at_arm_def)
   done
 
+lemma no_cap_to_idle_thread'': "valid_global_refs s \<Longrightarrow> caps_of_state s ref \<noteq> Some (ThreadCap (idle_thread s))"
+  apply (clarsimp simp add: valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
+  apply (drule_tac x="fst ref" in spec)
+  apply (drule_tac x="snd ref" in spec)
+  apply (simp add: cap_range_def global_refs_def)
+  done
+
 lemma rec_del_globals_equiv:
-  "\<lbrace>\<lambda>s. invs s \<and> globals_equiv st s \<and> emptyable (slot_rdcall call) s \<and> valid_rec_del_call call s\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> globals_equiv st s \<and> emptyable (slot_rdcall call) s
+     \<and> valid_rec_del_call call s\<rbrace>
      rec_del call
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (wp rec_del_preservation2[where Q="valid_ko_at_arm" and R="valid_global_objs and valid_arch_state and pspace_aligned and valid_vspace_objs and
- valid_global_refs and
- valid_vs_lookup"] finalise_cap_globals_equiv)
+  apply (wp rec_del_preservation2[where Q="valid_ko_at_arm"
+            and R="\<lambda>cap s. valid_global_objs s \<and> valid_arch_state s
+                       \<and> pspace_aligned s \<and> valid_vspace_objs s
+                       \<and> valid_global_refs s  \<and> valid_vs_lookup s
+                       \<and> (\<forall>p. cap = ThreadCap p \<longrightarrow> p \<noteq> idle_thread s)
+                     "]  finalise_cap_globals_equiv)
              apply simp
             apply (wp set_cap_globals_equiv'')
             apply simp
@@ -288,7 +326,7 @@ lemma rec_del_globals_equiv:
          apply (wp empty_slot_valid_ko_at_arm)+
        apply simp
       apply (simp add: invs_valid_ko_at_arm)
-     apply (simp add: invs_def valid_state_def valid_arch_caps_def valid_pspace_def)
+     apply (clarsimp simp: invs_def valid_state_def valid_arch_caps_def valid_pspace_def no_cap_to_idle_thread'')
     apply (wp preemption_point_inv | simp)+
   done
 

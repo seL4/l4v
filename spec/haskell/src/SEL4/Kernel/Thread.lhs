@@ -120,9 +120,16 @@ Note that the idle thread is not considered runnable; this is to prevent it bein
 
 When a thread is suspended, either explicitly by a TCB invocation or implicitly when it is being destroyed, any operation that it is currently performing must be cancelled.
 
+> updateRestartPC :: PPtr TCB -> Kernel ()
+> updateRestartPC tcb =
+>     asUser tcb (getRegister nextInstructionRegister
+>                 >>= setRegister faultRegister)
+
 > suspend :: PPtr TCB -> Kernel ()
 > suspend target = do
 >     cancelIPC target
+>     state <- getThreadState target
+>     if state == Running then updateRestartPC target else return ()
 >     setThreadState Inactive target
 >     tcbSchedDequeue target
 

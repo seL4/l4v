@@ -3979,6 +3979,8 @@ crunch (empty_fail) empty_fail[wp]: dec_domain_time
 global_interpretation dec_domain_time_extended: is_extended "dec_domain_time"
   by (unfold_locales; wp)
 
+crunch valid_list[wp]: update_restart_pc "valid_list"
+
 context Deterministic_AI_1 begin
 crunch valid_list[wp]: invoke_tcb valid_list
   (wp: mapM_x_wp' ignore: check_cap_at simp: check_cap_at_def)

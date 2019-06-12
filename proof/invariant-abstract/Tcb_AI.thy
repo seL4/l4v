@@ -151,15 +151,15 @@ lemma restart_tcb[wp]:
   "\<lbrace>tcb_at t'\<rbrace> Tcb_A.restart t \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
   by (wpsimp simp: tcb_at_typ wp: restart_typ_at)
 
-lemmas suspend_tcb_at[wp] = tcb_at_typ_at [OF suspend_typ_at]
+crunch ex_nonz_cap_to[wp]: update_restart_pc "ex_nonz_cap_to t"
 
-lemma suspend_nonz_cap_to_tcb:
+lemma suspend_nonz_cap_to_tcb[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to t s \<and> tcb_at t s \<and> valid_objs s\<rbrace>
      suspend t'
    \<lbrace>\<lambda>rv s. ex_nonz_cap_to t s\<rbrace>"
-  apply (simp add: suspend_def)
-  apply (wp cancel_ipc_ex_nonz_cap_to_tcb|simp)+
-  done
+  by (wp cancel_ipc_ex_nonz_cap_to_tcb | simp add: suspend_def)+
+
+lemmas suspend_tcb_at[wp] = tcb_at_typ_at [OF suspend_typ_at]
 
 lemma readreg_invs:
   "\<lbrace>invs and tcb_at src and ex_nonz_cap_to src\<rbrace>
@@ -182,7 +182,7 @@ lemma (in Tcb_AI_1) copyreg_invs:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: if_apply_def2
                   wp: mapM_x_wp' suspend_nonz_cap_to_tcb static_imp_wp)
-  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
+  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def suspend_def
                  dest!: idle_no_ex_cap)
   done
 

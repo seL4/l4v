@@ -514,11 +514,17 @@ lemma suspend_unlive':
       suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
   apply (simp add: suspend_def set_thread_state_def set_object_def get_object_def)
+  supply hoare_vcg_if_split[wp_split del] if_splits[split del]
   apply (wp | simp only: obj_at_exst_update)+
-  apply (simp add: obj_at_def)
-  apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
-  apply wp
-  apply (auto simp: pred_tcb_def2 live_def hyp_live_def dest: refs_of_live)
+     apply (simp add: obj_at_def live_def hyp_live_def)
+     apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
+      supply hoare_vcg_if_split[wp_split]
+      apply wp
+     apply (auto simp: pred_tcb_def2)[1]
+    apply (simp flip: if_split)
+    apply wp
+   apply wp
+  apply simp
   done
 
 lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:

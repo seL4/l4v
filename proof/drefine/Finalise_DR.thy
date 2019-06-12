@@ -2583,6 +2583,23 @@ lemma prepare_thread_delete_dcorres: "dcorres dc P P' (CSpace_D.prepare_thread_d
   apply (clarsimp simp: CSpace_D.prepare_thread_delete_def prepare_thread_delete_def)
   done
 
+lemma update_restart_pc_dcorres: "dcorres dc P P' (return ()) (update_restart_pc t)"
+  apply (monad_eq simp: update_restart_pc_def as_user_def gets_the_def
+                        getRegister_def setRegister_def set_object_def get_object_def
+                        corres_underlying_def return_def select_f_def)
+  apply (clarsimp simp: get_tcb_def split: option.splits kernel_object.splits)
+  apply (clarsimp simp: transform_def transform_objects_def)
+  apply (intro impI conjI)
+    apply (rule ext)
+    apply (clarsimp simp: map_add_def restrict_map_def transform_tcb_def
+                          transform_full_intent_def cap_register_def capRegister_def
+                          get_tcb_message_info_def msg_info_register_def msgInfoRegister_def
+                          get_tcb_mrs_def msgRegisters_A_unfold
+                          get_ipc_buffer_words_def transform_current_thread_def
+                          ARM.faultRegister_def ARM.nextInstructionRegister_def
+                   split: option.splits)+
+  done
+
 lemma dcorres_finalise_cap:
   "cdlcap = transform_cap cap \<Longrightarrow>
       dcorres (\<lambda>r r'. fst r = transform_cap (fst r'))
@@ -2605,6 +2622,11 @@ lemma dcorres_finalise_cap:
      apply (rule corres_guard_imp)
        apply (rule corres_split[OF _ dcorres_unbind_notification])
          apply (rule corres_split[OF _ finalise_cancel_ipc])
+         apply (rule dcorres_symb_exec_r[OF _ gts_inv gts_inv])
+         apply (rule dcorres_rhs_noop_above)
+          apply (case_tac "rv = Running"; simp)
+           apply (rule update_restart_pc_dcorres)
+          apply simp
            apply (rule corres_split)
               unfolding K_bind_def
               apply (rule dcorres_rhs_noop_above_True[OF tcb_sched_action_dcorres[where P=\<top> and P'=\<top>]])
@@ -2615,6 +2637,8 @@ lemma dcorres_finalise_cap:
              apply (rule set_cap_set_thread_state_inactive)
             apply wp+
          apply (simp add:not_idle_thread_def)
+          apply (case_tac "rv = Running"; simp)
+           apply (wp update_restart_pc_dcorres)
          apply (wp unbind_notification_invs | simp add: not_idle_thread_def)+
      apply clarsimp
      apply (drule(1) thread_in_thread_cap_not_idle[OF invs_valid_global_refs])

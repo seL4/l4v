@@ -1432,6 +1432,18 @@ lemma is_subject_not_silc_inv:
   "\<lbrakk>silc_inv aag st s; is_subject aag ptr\<rbrakk> \<Longrightarrow> pasObjectAbs aag ptr \<noteq> SilcLabel"
    using silc_inv_not_subject by fastforce
 
+lemma update_restart_pc_silc_inv[wp]:
+  "\<lbrace>silc_inv aag st\<rbrace> update_restart_pc t \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  unfolding update_restart_pc_def
+  apply(rule silc_inv_pres)
+    apply (simp add: as_user_def)
+    apply(wpsimp simp: set_object_wp)
+       apply(wp set_object_wp)+
+    apply clarsimp+
+    apply (fastforce simp: silc_inv_def dest: get_tcb_SomeD simp: obj_at_def is_cap_table_def)
+   apply wp+
+  done
+
 lemma finalise_cap_silc_inv:
   "\<lbrace>silc_inv aag st and valid_mdb and pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
       finalise_cap cap final

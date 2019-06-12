@@ -182,8 +182,8 @@ handleVMFault thread f = do
           storef a = ArchFault $ VMFault a [0, vmFaultTypeFSR RISCVStoreAccessFault]
           instrf a = ArchFault $ VMFault a [1, vmFaultTypeFSR RISCVInstructionAccessFault]
           setPC = do
-              sepc <- asUser thread $ getRegister (Register SEPC)
-              asUser thread $ setRegister (Register NEXTPC) sepc
+              faultip <- asUser thread $ getRegister (Register FaultIP)
+              asUser thread $ setRegister (Register NextIP) faultip
 
 {- Unmapping and Deletion -}
 

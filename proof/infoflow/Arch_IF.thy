@@ -980,6 +980,13 @@ lemma as_user_set_register_reads_respects':
   apply(simp add: labels_are_invisible_def)
   done
 
+lemma as_user_get_register_reads_respects:
+  "reads_respects aag l (K (is_subject aag thread)) (as_user thread (getRegister reg))"
+  apply (simp add: as_user_def split_def)
+  apply (wp set_object_reads_respects select_f_ev gets_the_ev)
+  apply (auto intro: reads_affects_equiv_get_tcb_eq det_getRegister)[1]
+  done
+
 lemma set_message_info_reads_respects:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows

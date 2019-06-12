@@ -56,7 +56,8 @@ lemma suspend_st_tcb_at':
   "\<lbrace>\<lambda>s. (t\<noteq>t' \<longrightarrow> st_tcb_at' P t' s) \<and> (t=t' \<longrightarrow> P Inactive)\<rbrace>
   suspend t
   \<lbrace>\<lambda>_. st_tcb_at' P t'\<rbrace>"
-  apply (simp add: suspend_def unless_def)
+  apply (simp add: suspend_def)
+  unfolding updateRestartPC_def
   apply (cases "t=t'")
   apply (simp|wp cancelIPC_st_tcb_at' sts_st_tcb')+
   done

@@ -1356,6 +1356,13 @@ lemma schedule_valid_sched:
                                    st_tcb_at_def obj_at_def)?)
   done
 
+crunch ct_not_in_q[wp]: as_user ct_not_in_q
+  (wp: ct_not_in_q_lift)
+
+crunches update_restart_pc
+  for ct_not_in_q[wp]: "\<lambda>s. ct_not_in_q s"
+
+
 crunch ct_not_in_q[wp]: finalise_cap ct_not_in_q
   (wp: crunch_wps hoare_drop_imps hoare_unless_wp select_inv mapM_wp
        subset_refl if_fun_split simp: crunch_simps ignore: tcb_sched_action)
@@ -1453,6 +1460,9 @@ lemma unbind_notification_valid_sched[wp]:
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (wp set_bound_notification_valid_sched, clarsimp)
   done
+
+crunches update_restart_pc
+  for valid_etcbs[wp]: "valid_etcbs"
 
 context DetSchedSchedule_AI begin
 
@@ -1594,28 +1604,38 @@ crunch simple_sched_action[wp]: tcb_sched_action, update_cdt_list simple_sched_a
 
 context DetSchedSchedule_AI begin
 
+crunches update_restart_pc
+  for simple_sched_action[wp]: "simple_sched_action"
+  and valid_sched[wp]: "valid_sched"
+  (simp: crunch_simps ignore: set_object)
+
 crunch simple_sched_action[wp]: finalise_cap simple_sched_action
   (wp: hoare_drop_imps mapM_x_wp mapM_wp select_wp subset_refl
    simp: unless_def if_fun_split)
 
 lemma suspend_valid_sched[wp]:
-  "\<lbrace>valid_sched and simple_sched_action\<rbrace> suspend t \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-apply (simp add: suspend_def)
-apply (rule seq_ext)
- apply (rule_tac R="K $ valid_sched and simple_sched_action" in hoare_strengthen_post[rotated])
+  notes seq_ext_inv = seq_ext[where A=I and B="\<lambda>_. I" for I]
+  shows "\<lbrace>valid_sched and simple_sched_action\<rbrace> suspend t \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  apply (simp add: suspend_def)
+  apply (rule seq_ext_inv)
+   apply wpsimp
+  apply (rule seq_ext_inv)
+   apply wp
+  apply (rule seq_ext_inv)
+   apply wpsimp
   apply (wp tcb_sched_action_dequeue_strong_valid_sched
        | simp)+
-    apply (simp add: set_thread_state_def)
-    apply (wp gts_wp | wpc |
-           simp add: set_thread_state_def set_thread_state_ext_def
-                     reschedule_required_def set_scheduler_action_def
-                     tcb_sched_action_def set_object_def get_object_def)+
-    apply (simp only: st_tcb_at_kh_simp[symmetric])
-    apply (clarsimp simp: valid_sched_def valid_queues_def st_tcb_at_kh_if_split
-                          valid_sched_action_def simple_sched_action_def
-                          is_activatable_def valid_blocked_def
-                    split: scheduler_action.splits)+
-    done
+   apply (simp add: set_thread_state_def)
+   apply (wp gts_wp | wpc |
+          simp add: set_thread_state_def set_thread_state_ext_def
+                    reschedule_required_def set_scheduler_action_def
+                    tcb_sched_action_def set_object_def get_object_def)+
+  apply (simp only: st_tcb_at_kh_simp[symmetric])
+  apply (clarsimp simp: valid_sched_def valid_queues_def st_tcb_at_kh_if_split
+                        valid_sched_action_def simple_sched_action_def
+                        is_activatable_def valid_blocked_def
+                  split: scheduler_action.splits)+
+  done
 
 crunch valid_sched[wp]: finalise_cap valid_sched
   (wp: crunch_wps simp: crunch_simps)
@@ -1957,9 +1977,6 @@ crunch valid_sched[wp]: store_word_offs valid_sched
 
 crunch exst[wp]: set_mrs, as_user "\<lambda>s. P (exst s)"
   (simp: crunch_simps wp: crunch_wps)
-
-crunch ct_not_in_q[wp]: as_user ct_not_in_q
-  (wp: ct_not_in_q_lift)
 
 crunch valid_sched[wp]: set_mrs valid_sched
   (wp: valid_sched_lift)

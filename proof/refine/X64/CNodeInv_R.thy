@@ -637,10 +637,10 @@ lemma suspend_not_recursive_ctes:
   "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
      suspend t
    \<lbrace>\<lambda>rv s. P (not_recursive_ctes s)\<rbrace>"
-  apply (simp only: suspend_def not_recursive_ctes_def cteCaps_of_def)
+  apply (simp only: suspend_def not_recursive_ctes_def cteCaps_of_def updateRestartPC_def)
   apply (wp threadSet_ctes_of | simp add: unless_def del: o_apply)+
-  apply (fold cteCaps_of_def)
-  apply (wp cancelIPC_cteCaps_of)
+   apply (fold cteCaps_of_def)
+   apply (wp cancelIPC_cteCaps_of)
   apply (clarsimp elim!: rsubst[where P=P] intro!: set_eqI)
   apply (clarsimp simp: cte_wp_at_ctes_of cteCaps_of_def)
   apply (auto simp: isCap_simps finaliseCap_def Let_def)

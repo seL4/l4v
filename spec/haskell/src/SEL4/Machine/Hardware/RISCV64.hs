@@ -132,8 +132,8 @@ resetTimer = do
     cbptr <- ask
     liftIO $ Platform.resetTimer cbptr
 
-getRestartPC = getRegister (Register RISCV64.SEPC)
-setNextPC = setRegister (Register RISCV64.NEXTPC)
+getRestartPC = getRegister (Register RISCV64.FaultIP)
+setNextPC = setRegister (Register RISCV64.NextIP)
 
 {- Memory Management -}
 

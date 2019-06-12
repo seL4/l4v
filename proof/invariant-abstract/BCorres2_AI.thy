@@ -33,13 +33,16 @@ locale BCorres2_AI =
     "bcorres (arch_switch_to_idle_thread :: 'a state \<Rightarrow> _)
         arch_switch_to_idle_thread"
 
-crunch (bcorres)bcorres[wp]: "IpcCancel_A.suspend",deleting_irq_handler truncate_state
+crunch (bcorres)bcorres[wp]: deleting_irq_handler truncate_state
   (simp: gets_the_def swp_def)
 
-lemma finalise_cap_bcorres[wp]: "bcorres (finalise_cap a b) (finalise_cap a b)"
-  apply (cases a)
-  apply (wp | wpc | simp | intro impI allI conjI)+
-  done
+lemma update_restart_pc_bcorres[wp]:
+  "bcorres (update_restart_pc t) (update_restart_pc t)"
+  by (wp
+      | clarsimp simp: update_restart_pc_def as_user_def bind_select_f_bind'
+                split: prod.splits)+
+
+crunch (bcorres)bcorres[wp]: suspend, finalise_cap truncate_state
 
 definition all_but_exst where
   "all_but_exst P \<equiv> (\<lambda>s. P (kheap s) (cdt s) (is_original_cap s)
@@ -274,8 +277,7 @@ global_interpretation cap_move_ext: is_extended "cap_move_ext a b c d"
 lemmas rec_del_simps_ext =
     rec_del.simps [THEN ext[where f="rec_del args" for args]]
 
-
-lemma rec_del_s_bcorres:
+lemma rec_del_s_bcorres[wp]:
 notes rec_del.simps[simp del]
 shows
 "s_bcorres (rec_del c) (rec_del c) s"
@@ -311,9 +313,17 @@ shows
   qed
 
 
-lemmas rec_del_bcorres = use_sbcorres_underlying[OF rec_del_s_bcorres]
+lemmas rec_del_bcorres[wp] = use_sbcorres_underlying[OF rec_del_s_bcorres]
 
-crunch (bcorres)bcorres[wp]: cap_delete truncate_state
+lemma cap_delete_bcorres'[wp]:
+  assumes finalise_cap_bcorres[wp]:
+    "\<And>r ra. bcorres (finalise_cap r ra :: 'a::state_ext state \<Rightarrow> _) (finalise_cap r ra)"
+  shows "bcorres (cap_delete slot :: 'a state \<Rightarrow> _) (cap_delete slot)"
+  unfolding cap_delete_def
+  apply wp
+  apply (simp add: returnOk_bcorres_underlying)
+  apply (wp rec_del_bcorres)
+  done
 
 lemma cap_revoke_s_bcorres:
   shows
@@ -332,7 +342,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
     done
 qed
 
-lemmas cap_revoke_bcorres = use_sbcorres_underlying[OF cap_revoke_s_bcorres]
+lemmas cap_revoke_bcorres[wp] = use_sbcorres_underlying[OF cap_revoke_s_bcorres]
 
 crunch (bcorres)bcorres[wp]: "Tcb_A.restart",as_user,option_update_thread truncate_state (simp: gets_the_def ignore: clearMemory check_cap_at gets_the getRegister setRegister getRestartPC setNextPC)
 

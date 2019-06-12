@@ -25,6 +25,8 @@ requalify_consts
   arch_post_cap_deletion
   arch_gen_obj_refs
   arch_cap_cleanup_opt
+  faultRegister
+  nextInstructionRegister
 
 requalify_types
   arch_gen_obj_ref
@@ -358,6 +360,15 @@ where
         | _ \<Rightarrow> return ()
    od"
 
+text {* Currently, @{text update_restart_pc} can be defined generically up to
+the actual register numbers. *}
+definition
+  update_restart_pc :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "update_restart_pc thread_ptr =
+        as_user thread_ptr (getRegister nextInstructionRegister
+                            >>= setRegister faultRegister)"
+
 text {* Suspend a thread, cancelling any pending operations and preventing it
 from further execution by setting it to the Inactive state. *}
 definition
@@ -365,6 +376,8 @@ definition
 where
   "suspend thread \<equiv> do
      cancel_ipc thread;
+     state \<leftarrow> get_thread_state thread;
+     (if state = Running then update_restart_pc thread else return ());
      set_thread_state thread Inactive;
      do_extended_op (tcb_sched_action (tcb_sched_dequeue) thread)
    od"

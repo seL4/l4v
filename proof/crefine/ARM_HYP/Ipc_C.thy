@@ -1631,7 +1631,7 @@ declare zipWithM_x_Nil2[simp]
 lemma getRestartPC_ccorres [corres]:
   "ccorres (=) ret__unsigned_long_' \<top>
      (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
-     (asUser thread (getRegister register.FaultInstruction))
+     (asUser thread (getRegister register.FaultIP))
      (Call getRestartPC_'proc)"
   apply (cinit' lift: thread_')
    apply (rule ccorres_trim_return, simp, simp)

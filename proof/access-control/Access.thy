@@ -1176,8 +1176,8 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko'
 | troa_tcb_activate:
     "\<lbrakk>ko = Some (TCB tcb); ko' = Some (TCB tcb');
       tcb' = tcb\<lparr>tcb_arch := arch_tcb_context_set
-                        ((arch_tcb_context_get (tcb_arch tcb))(LR_svc :=
-                                          (arch_tcb_context_get (tcb_arch tcb)) FaultInstruction)
+                        ((arch_tcb_context_get (tcb_arch tcb))(NextIP :=
+                                          (arch_tcb_context_get (tcb_arch tcb)) FaultIP)
                         ) (tcb_arch tcb),
                    tcb_state := Running\<rparr>;
       tcb_state tcb = Restart;
@@ -1416,7 +1416,7 @@ where
         (tcb_state tcb' = Running \<and>
         arch_tcb_context_get (tcb_arch tcb')
              = (arch_tcb_context_get (tcb_arch tcb))
-                   (LR_svc := arch_tcb_context_get (tcb_arch tcb) FaultInstruction));
+                   (NextIP := arch_tcb_context_get (tcb_arch tcb) FaultIP));
         tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
         reply_cap_deletion_integrity subjects aag (tcb_caller tcb) cap';
         reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap';
@@ -1437,8 +1437,8 @@ where
 | tro_alt_tcb_activate:
       "\<lbrakk>tro_tag TCBActivate; ko  = Some (TCB tcb); ko' = Some (TCB tcb');
         tcb' = tcb \<lparr> tcb_arch := arch_tcb_context_set
-                              ((arch_tcb_context_get (tcb_arch tcb))(LR_svc :=
-                                           (arch_tcb_context_get (tcb_arch tcb)) FaultInstruction)
+                              ((arch_tcb_context_get (tcb_arch tcb))(NextIP :=
+                                           (arch_tcb_context_get (tcb_arch tcb)) FaultIP)
                                ) (tcb_arch tcb),
                      tcb_caller := cap', tcb_ctable := ccap',
                      tcb_state := Running, tcb_bound_notification := ntfn'\<rparr>;

@@ -550,6 +550,25 @@ lemma setThreadState_ccorres_valid_queues'_simple:
   apply (clarsimp simp: weak_sch_act_wf_def valid_queues'_def)
   done
 
+lemma updateRestartPC_ccorres:
+  "ccorres dc xfdc (tcb_at' thread) \<lbrace> \<acute>tcb = tcb_ptr_to_ctcb_ptr thread \<rbrace> hs
+     (updateRestartPC thread) (Call updateRestartPC_'proc)"
+  apply (cinit lift: tcb_')
+   apply (subst asUser_bind_distrib; (wp add: empty_fail_getRegister)?)
+   apply (ctac (no_vcg) add: getRegister_ccorres)
+    apply (ctac (no_vcg) add: setRegister_ccorres)
+   apply wpsimp+
+  apply (simp add: ARM_H.faultRegister_def ARM_H.nextInstructionRegister_def
+                   ARM.faultRegister_def ARM.nextInstructionRegister_def)
+  done
+
+crunches updateRestartPC
+  for valid_queues'[wp]: valid_queues'
+  and sch_act_simple[wp]: sch_act_simple
+  and valid_queues[wp]: Invariants_H.valid_queues
+  and valid_objs'[wp]: valid_objs'
+  and tcb_at'[wp]: "tcb_at' p"
+
 lemma suspend_ccorres:
   assumes cteDeleteOne_ccorres:
   "\<And>w slot. ccorres dc xfdc
@@ -565,21 +584,54 @@ lemma suspend_ccorres:
    (suspend thread) (Call suspend_'proc)"
   apply (cinit lift: target_')
    apply (ctac(no_vcg) add: cancelIPC_ccorres1 [OF cteDeleteOne_ccorres])
-    apply (ctac(no_vcg) add: setThreadState_ccorres_valid_queues'_simple)
-     apply (ctac add: tcbSchedDequeue_ccorres')
-    apply (rule_tac Q="\<lambda>_.
+    apply (rule getThreadState_ccorres_foo)
+    apply (rename_tac threadState)
+    apply (rule ccorres_move_c_guard_tcb)
+    apply (rule_tac xf'=ret__unsigned_'
+            and val="thread_state_to_tsType threadState"
+            and R="st_tcb_at' ((=) threadState) thread"
+            and R'=UNIV
+            in
+            ccorres_symb_exec_r_known_rv)
+       apply clarsimp
+       apply (rule conseqPre, vcg)
+       apply (clarsimp simp: st_tcb_at'_def)
+       apply (frule (1) obj_at_cslift_tcb)
+       apply (clarsimp simp: typ_heap_simps ctcb_relation_thread_state_to_tsType)
+      apply ceqv
+     supply Collect_const[simp del]
+     apply (rule ccorres_split_nothrow)
+         apply (rule ccorres_cond[where R=\<top> and xf=xfdc])
+           apply clarsimp
+           apply (rule iffI)
+            apply simp
+           apply (erule thread_state_to_tsType.elims; simp add: StrictC'_thread_state_defs)
+          apply (ctac (no_vcg) add: updateRestartPC_ccorres)
+         apply (rule ccorres_return_Skip)
+        apply ceqv
+       apply (ctac(no_vcg) add: setThreadState_ccorres_valid_queues'_simple)
+        apply (ctac add: tcbSchedDequeue_ccorres')
+       apply (rule_tac Q="\<lambda>_.
                         (\<lambda>s. \<forall>t' d p. (t' \<in> set (ksReadyQueues s (d, p)) \<longrightarrow>
                               obj_at' (\<lambda>tcb. tcbQueued tcb \<and> tcbDomain tcb = d
                                                            \<and> tcbPriority tcb = p) t' s \<and>
                 (t' \<noteq> thread \<longrightarrow> st_tcb_at' runnable' t' s)) \<and>
                 distinct (ksReadyQueues s (d, p))) and valid_queues' and valid_objs' and tcb_at' thread"
               in hoare_post_imp)
+        apply clarsimp
+        apply (drule_tac x="t" in spec)
+        apply (drule_tac x=d in spec)
+        apply (drule_tac x=p in spec)
+        apply (clarsimp elim!: obj_at'_weakenE simp: inQ_def)
+       apply (wp_trace sts_valid_queues_partial)[1]
+      apply clarsimp
+      apply (wpsimp simp: valid_tcb_state'_def)
      apply clarsimp
-     apply (drule_tac x="t" in spec)
-     apply (drule_tac x=d in spec)
-     apply (drule_tac x=p in spec)
-     apply (clarsimp elim!: obj_at'_weakenE simp: inQ_def)
-    apply (wp_trace sts_valid_queues_partial)[1]
+     apply (rule conseqPre, vcg exspec=updateRestartPC_modifies)
+     apply (rule subset_refl)
+    apply clarsimp
+    apply (rule conseqPre, vcg)
+    apply (rule subset_refl)
   apply (rule hoare_strengthen_post)
     apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_vcg_conj_lift)
@@ -588,6 +640,7 @@ lemma suspend_ccorres:
     apply (rule delete_one_conc_fr.cancelIPC_invs)
    apply (fastforce simp: invs_valid_queues' invs_queues invs_valid_objs'
                           valid_tcb_state'_def)
+  apply clarsimp
   apply (auto simp: "StrictC'_thread_state_defs")
   done
 

@@ -3277,7 +3277,8 @@ lemma suspend_cte_wp_at':
   shows "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>
            suspend t
          \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
-  apply (simp add: suspend_def unless_def)
+  apply (simp add: suspend_def)
+  unfolding updateRestartPC_def
   apply (rule hoare_pre)
    apply (wp threadSet_cte_wp_at' cancelIPC_cte_wp_at'
              | simp add: x)+
@@ -4042,9 +4043,11 @@ lemmas getCTE_no_0_obj'_helper
   = getCTE_inv
     hoare_strengthen_post[where Q="\<lambda>_. no_0_obj'" and P=no_0_obj' and a="getCTE slot" for slot]
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunches ThreadDecls_H.suspend, unbindNotification
   for no_0_obj'[wp]: no_0_obj'
   (simp: crunch_simps wp: crunch_wps getCTE_no_0_obj'_helper)
+end
 
 lemma finalise_cap_corres:
   "\<lbrakk> final_matters' cap' \<Longrightarrow> final = final'; cap_relation cap cap';

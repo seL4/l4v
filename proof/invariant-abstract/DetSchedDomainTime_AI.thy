@@ -97,6 +97,10 @@ locale DetSchedDomainTime_AI =
   assumes arch_post_cap_deletion_domain_list_inv'[wp]:
     "\<And>P ft. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_post_cap_deletion ft \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
 
+crunches update_restart_pc
+  for domain_list[wp]: "\<lambda>s. P (domain_list s)"
+  and domain_time[wp]: "\<lambda>s. P (domain_time s)"
+
 locale DetSchedDomainTime_AI_2 = DetSchedDomainTime_AI +
   assumes handle_hypervisor_fault_domain_list_inv'[wp]:
     "\<And>P t f. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> handle_hypervisor_fault t f \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"

@@ -2513,9 +2513,22 @@ lemma valid_arch_mdb_eqI:
   shows "valid_arch_mdb (is original_cap s') (caps_of_state s')"
   by (clarsimp simp: valid_arch_mdb_def)
 
+lemma arch_tcb_context_absorbs[simp]:
+  "arch_tcb_context_set uc2 (arch_tcb_context_set uc1 a_tcb) \<equiv> arch_tcb_context_set uc2 a_tcb"
+  apply (simp add: arch_tcb_context_set_def)
+  done
+
+lemma arch_tcb_context_get_set[simp]:
+  "arch_tcb_context_get (arch_tcb_context_set uc a_tcb) = uc"
+  apply (simp add: arch_tcb_context_get_def arch_tcb_context_set_def)
+  done
+
 end
 
-setup {* Add_Locale_Code_Defs.setup "ARM" *}
-setup {* Add_Locale_Code_Defs.setup "ARM_A" *}
+declare ARM_HYP.arch_tcb_context_absorbs[simp]
+declare ARM_HYP.arch_tcb_context_get_set[simp]
+
+setup {* Add_Locale_Code_Defs.setup "ARM_HYP" *}
+setup {* Add_Locale_Code_Defs.setup "ARM_HYP_A" *}
 
 end

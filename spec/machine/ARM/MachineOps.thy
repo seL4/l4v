@@ -514,10 +514,10 @@ where
   "setRegister r v \<equiv> modify (\<lambda>uc. uc (r := v))"
 
 definition
-  "getRestartPC \<equiv> getRegister FaultInstruction"
+  "getRestartPC \<equiv> getRegister FaultIP"
 
 definition
-  "setNextPC \<equiv> setRegister LR_svc"
+  "setNextPC \<equiv> setRegister NextIP"
 
 end
 

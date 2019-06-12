@@ -3033,7 +3033,7 @@ lemma suspend_cte_wp_at':
   shows "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>
            suspend t
          \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
-  apply (simp add: suspend_def unless_def)
+  apply (simp add: suspend_def updateRestartPC_def)
   apply (rule hoare_pre)
    apply (wp threadSet_cte_wp_at' cancelIPC_cte_wp_at'
              | simp add: x)+

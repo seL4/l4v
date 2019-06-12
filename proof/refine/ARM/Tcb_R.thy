@@ -262,9 +262,15 @@ lemma restart_tcb'[wp]:
 lemma no_fail_setRegister: "no_fail \<top> (setRegister r v)"
   by (simp add: setRegister_def)
 
+lemma updateRestartPC_ex_nonz_cap_to'[wp]:
+  "\<lbrace>ex_nonz_cap_to' p\<rbrace> updateRestartPC t \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
+  unfolding updateRestartPC_def
+  apply (rule asUser_cap_to')
+  done
+
 lemma suspend_cap_to'[wp]:
   "\<lbrace>ex_nonz_cap_to' p\<rbrace> suspend t \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
-  apply (simp add: suspend_def unless_def)
+  apply (simp add: suspend_def)
   apply (wp threadSet_cap_to' | simp)+
   done
 
@@ -363,6 +369,26 @@ lemma writereg_corres:
   done
 
 crunch it[wp]: suspend "\<lambda>s. P (ksIdleThread s)"
+
+lemma tcbSchedDequeue_ResumeCurrentThread_imp_notct[wp]:
+  "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
+   tcbSchedDequeue t
+   \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
+  by (wp hoare_convert_imp)
+
+lemma updateRestartPC_ResumeCurrentThread_imp_notct[wp]:
+  "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
+   updateRestartPC t
+   \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
+  unfolding updateRestartPC_def
+  apply (wp hoare_convert_imp)
+  done
+
+lemma suspend_ResumeCurrentThread_imp_notct[wp]:
+  "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
+   suspend t
+   \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
+  by (wpsimp simp: suspend_def)
 
 lemma copyreg_corres:
   "corres (intr \<oplus> (=))

@@ -176,10 +176,7 @@ lemma ignoreFailure_empty_fail[intro!, wp, simp]:
 crunch (empty_fail) empty_fail[intro!, wp, simp]: cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isBlocked, possibleSwitchTo, tcbSchedAppend
 (simp: Let_def)
 
-crunch (empty_fail) "_H_empty_fail": "ThreadDecls_H.suspend"
-lemma ThreadDecls_H_suspend_empty_fail[intro!, wp, simp]:
-  "empty_fail (ThreadDecls_H.suspend target)"
-  by (simp add:suspend_def)
+crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
 
 lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   "empty_fail (ThreadDecls_H.restart target)"

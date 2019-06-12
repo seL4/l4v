@@ -1403,16 +1403,56 @@ lemma valid_queues_inQ_queues:
   by (force simp: Invariants_H.valid_queues_def valid_inQ_queues_def obj_at'_def
                   valid_queues_no_bitmap_def)
 
+lemma asUser_tcbQueued_inv[wp]:
+  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t'\<rbrace> asUser t m \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t'\<rbrace>"
+  apply (simp add: asUser_def tcb_in_cur_domain'_def threadGet_def)
+  apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
+  done
+
+lemma asUser_valid_inQ_queues[wp]:
+  "\<lbrace> valid_inQ_queues \<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_inQ_queues \<rbrace>"
+  unfolding valid_inQ_queues_def Ball_def
+  apply (wpsimp wp: hoare_vcg_all_lift)
+    defer
+    apply (wp asUser_ksQ)
+   apply assumption
+  apply (simp add: inQ_def[abs_def] obj_at'_conj)
+  apply (rule hoare_convert_imp)
+   apply (wp asUser_ksQ)
+  apply wp
+  done
+
 lemma (in delete_one) suspend_corres:
   "corres dc (einvs and tcb_at t) (invs' and tcb_at' t)
         (IpcCancel_A.suspend t) (ThreadDecls_H.suspend t)"
   apply (simp add: IpcCancel_A.suspend_def Thread_H.suspend_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor [OF _ cancel_ipc_corres])
-      apply (rule corres_split_nor [OF _ sts_corres])
-         apply (rule tcbSchedDequeue_corres')
+      apply (rule corres_split [OF _ gts_corres])
+        apply (rule corres_split_nor)
+           apply (rule corres_split_nor [OF _ sts_corres])
+              apply (rule tcbSchedDequeue_corres')
+             apply wpsimp
+            apply wp
+           apply wpsimp
+          apply (rule corres_if)
+            apply (case_tac state; simp)
+           apply (simp add: update_restart_pc_def updateRestartPC_def)
+           apply (rule corres_as_user')
+           apply (simp add: ARM_HYP.nextInstructionRegister_def ARM_HYP.faultRegister_def
+                            ARM_HYP_H.nextInstructionRegister_def ARM_HYP_H.faultRegister_def)
+           apply (simp add: ARM_HYP_H.Register_def)
+           apply (subst unit_dc_is_eq)
+           apply (rule corres_underlying_trivial)
+           apply (wpsimp simp: ARM_HYP.setRegister_def ARM_HYP.getRegister_def)
+          apply (rule corres_return_trivial)
+          apply (wpsimp simp: update_restart_pc_def updateRestartPC_def)+
+       apply (rule hoare_post_imp[where Q = "\<lambda>rv s. tcb_at t s \<and> is_etcb_at t s"])
         apply simp
-       apply (wp | simp)+
+       apply wp
+      apply (rule hoare_post_imp[where Q = "\<lambda>rv s. tcb_at' t s \<and> valid_inQ_queues s"])
+       apply (wpsimp simp: valid_queues_inQ_queues)
+      apply wp+
    apply (force simp: valid_sched_def tcb_at_is_etcb_at)
   apply (clarsimp simp add: invs'_def valid_state'_def valid_queues_inQ_queues)
   done
@@ -1840,30 +1880,40 @@ lemmas sts_tcbSchedDequeue_invs' =
   sts_invs_minor'_no_valid_queues
   tcbSchedDequeue_invs'_no_valid_queues
 
+lemma asUser_sch_act_simple[wp]:
+  "\<lbrace>sch_act_simple\<rbrace> asUser s t \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
+  unfolding sch_act_simple_def
+  apply (rule asUser_nosch)
+  done
+
 lemma (in delete_one_conc) suspend_invs'[wp]:
   "\<lbrace>invs' and sch_act_simple and tcb_at' t and (\<lambda>s. t \<noteq> ksIdleThread s)\<rbrace>
    ThreadDecls_H.suspend t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: suspend_def)
-  apply (wp sts_tcbSchedDequeue_invs')
-  apply (simp | strengthen no_refs_simple_strg')+
-  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift
-            cancelIPC_simple [simplified] cancelIPC_invs
-            cancelIPC_it cancelIPC_tcb_at' cancelIPC_sch_act_simple)
-     apply simp+
+  apply (wp_trace sts_tcbSchedDequeue_invs')
+      apply (simp add: updateRestartPC_def | strengthen no_refs_simple_strg')+
+      prefer 2
+    apply (wpsimp wp: hoare_drop_imps hoare_vcg_imp_lift'
+           | strengthen no_refs_simple_strg')+
   done
 
 lemma (in delete_one_conc_pre) suspend_tcb'[wp]:
   "\<lbrace>tcb_at' t'\<rbrace> ThreadDecls_H.suspend t \<lbrace>\<lambda>rv. tcb_at' t'\<rbrace>"
-  apply (simp add: suspend_def unless_def)
-  apply (wp hoare_drop_imps |clarsimp|rule conjI)+
+  apply (simp add: suspend_def)
+  apply wp
+      apply (wpsimp simp: updateRestartPC_def)
+     apply (wp hoare_drop_imps |clarsimp|rule conjI)+
   done
 
 lemma (in delete_one_conc_pre) suspend_sch_act_simple[wp]:
   "\<lbrace>sch_act_simple\<rbrace>
   ThreadDecls_H.suspend t \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
-  apply (simp add: suspend_def when_def)
+   apply (simp add: suspend_def when_def updateRestartPC_def)
   apply (wp cancelIPC_sch_act_simple | simp add: unless_def
        | rule sch_act_simple_lift)+
+      apply (simp add: updateRestartPC_def)
+      apply (rule asUser_nosch)
+     apply wpsimp+
   done
 
 lemma (in delete_one_conc) suspend_objs':
@@ -1879,9 +1929,9 @@ lemma (in delete_one_conc_pre) suspend_st_tcb_at':
   "\<lbrace>st_tcb_at' P t\<rbrace>
      suspend thread
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  apply (simp add: suspend_def unless_def)
+  unfolding suspend_def updateRestartPC_def
   apply (wp sts_st_tcb_at'_cases threadSet_pred_tcb_no_state
-            cancelIPC_st_tcb_at hoare_drop_imps
+            cancelIPC_st_tcb_at hoare_drop_imps asUser_pred_tcb_at' x
          | simp)+
   apply clarsimp
   done
@@ -1987,8 +2037,9 @@ lemma (in delete_one_conc_pre) suspend_nonq:
    \<lbrace>\<lambda>rv s. \<forall>d p. t' \<notin> set (ksReadyQueues s (d, p))\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: suspend_def unless_def)
+  unfolding updateRestartPC_def
   apply (wp hoare_allI tcbSchedDequeue_t_notksQ sts_ksQ_oaQ)
-  apply (clarsimp)
+    apply wpsimp+
   done
 
 lemma suspend_makes_inactive:
@@ -2797,11 +2848,11 @@ lemma suspend_unqueued:
   "\<lbrace>\<top>\<rbrace> suspend t \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
   apply (simp add: suspend_def unless_def tcbSchedDequeue_def)
   apply (wp hoare_vcg_if_lift hoare_vcg_conj_lift hoare_vcg_imp_lift)
-        apply (simp add: threadGet_def| wp getObject_tcb_wp)+
-    apply (rule hoare_strengthen_post, rule hoare_post_taut)
-    apply (fastforce simp: obj_at'_def projectKOs)
-   apply (rule hoare_post_taut)
-  apply (rule TrueI)
+          apply (simp add: threadGet_def| wp getObject_tcb_wp)+
+      apply (rule hoare_strengthen_post, rule hoare_post_taut)
+      apply (fastforce simp: obj_at'_def projectKOs)
+     apply (rule hoare_post_taut)
+    apply wp+
   done
 
 crunch no_vcpu[wp]: vcpuInvalidateActive "obj_at' (P::'a:: no_vcpu \<Rightarrow> bool) t"

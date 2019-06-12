@@ -1208,6 +1208,15 @@ lemma cancel_ipc_reads_respects_f:
        apply (simp add: st_tcb_at_def obj_at_def | blast)+
   done
 
+lemma update_restart_pc_reads_respects[wp]:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "reads_respects aag l (silc_inv aag s and K (is_subject aag thread))
+      (update_restart_pc thread)"
+  unfolding update_restart_pc_def
+  apply (subst as_user_bind)
+  apply (wpsimp wp: as_user_set_register_reads_respects' as_user_get_register_reads_respects)
+  done
 
 lemma suspend_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1215,9 +1224,19 @@ lemma suspend_reads_respects_f:
   "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and tcb_at thread and
   (K (is_subject aag thread))) (suspend thread)"
   unfolding suspend_def
-  apply(wp reads_respects_f[OF set_thread_state_owned_reads_respects, where st=st and Q="\<top>"] reads_respects_f[OF tcb_sched_action_reads_respects, where st=st and Q=\<top>] set_thread_state_pas_refined| simp)+
+  apply(wp reads_respects_f[OF set_thread_state_owned_reads_respects, where st=st and Q="\<top>"]
+           reads_respects_f[OF tcb_sched_action_reads_respects, where st=st and Q=\<top>]
+           reads_respects_f[OF get_thread_state_rev, where st=st and Q="\<top>"]
+           reads_respects_f[OF update_restart_pc_reads_respects, where st=st and Q="\<top>"]
+           gts_wp
+           set_thread_state_pas_refined| simp)+
     apply(wp cancel_ipc_reads_respects_f[where st=st] cancel_ipc_silc_inv)+
-  by force
+   apply clarsimp
+   apply (wp hoare_allI hoare_drop_imps)
+    apply clarsimp
+    apply(wp cancel_ipc_silc_inv)+
+  apply auto
+  done
 
 lemma prepare_thread_delete_reads_respects_f:
   "reads_respects_f aag l \<top> (prepare_thread_delete thread)"

@@ -51,6 +51,10 @@ definition
    | ArchObjectCap acap \<Rightarrow> arch_post_cap_delete_pre cap cs
    | _ \<Rightarrow> False"
 
+lemma update_restart_pc_caps_of_state[wp]:
+  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> update_restart_pc t \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  by (simp add: update_restart_pc_def as_user_caps)
+
 locale Finalise_AI_1 =
   fixes state_ext_type1 :: "('a :: state_ext) itself"
   fixes state_ext_type2 :: "('b :: state_ext) itself"
@@ -142,6 +146,7 @@ locale Finalise_AI_1 =
       \<lbrace>\<lambda>(s :: 'a state). P (cte_wp_at P' p s)\<rbrace> prepare_thread_delete a \<lbrace>\<lambda>_ s. P (cte_wp_at P' p s)\<rbrace>"
   assumes prepare_thread_delete_caps_of_state:
     "\<And>P t. \<lbrace>\<lambda>(s :: 'a state). P (caps_of_state s)\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+
 
 text {* Properties about empty_slot *}
 
@@ -511,16 +516,13 @@ lemma cancel_ipc_caps_of_state:
   apply (clarsimp simp: fun_upd_def[symmetric] cte_wp_at_caps_of_state)
   done
 
-
 lemma suspend_caps_of_state:
   "\<lbrace>\<lambda>s. (\<forall>p. cte_wp_at can_fast_finalise p s
            \<longrightarrow> P ((caps_of_state s) (p \<mapsto> cap.NullCap)))
            \<and> P (caps_of_state s)\<rbrace>
      suspend t
    \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  unfolding suspend_def
-  by (wpsimp wp: cancel_ipc_caps_of_state simp: fun_upd_def[symmetric])
-
+  by (wpsimp wp: cancel_ipc_caps_of_state simp: suspend_def fun_upd_def[symmetric])+
 
 lemma suspend_final_cap:
   "\<lbrace>\<lambda>s. is_final_cap' cap s \<and> \<not> can_fast_finalise cap
@@ -821,7 +823,7 @@ lemma cap_delete_one_cte_wp_at_preserved:
   done
 
 interpretation delete_one_pre
-  by (unfold_locales, wp cap_delete_one_cte_wp_at_preserved)
+  by (unfold_locales; wpsimp wp: cap_delete_one_cte_wp_at_preserved)
 
 lemma (in Finalise_AI_1) finalise_cap_equal_cap[wp]:
   "\<lbrace>cte_wp_at ((=) cap) sl\<rbrace>
@@ -1038,7 +1040,8 @@ locale Finalise_AI_3 = Finalise_AI_2 a b
      prepare_thread_delete t
        \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
 
-crunch irq_node[wp]: suspend, unbind_maybe_notification, unbind_notification "\<lambda>s. P (interrupt_irq_node s)"
+crunches suspend, unbind_maybe_notification, unbind_notification
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps select_wp simp: crunch_simps)
 
 crunch irq_node[wp]: deleting_irq_handler "\<lambda>s. P (interrupt_irq_node s)"

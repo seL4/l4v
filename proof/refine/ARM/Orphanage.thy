@@ -1686,15 +1686,36 @@ lemma handleInterrupt_no_orphans [wp]:
                                 handleReservedIRQ_def)+
   done
 
+lemma updateRestartPC_no_orphans[wp]:
+  "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
+   updateRestartPC t
+   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
+  by (wpsimp simp: updateRestartPC_def asUser_no_orphans)
+
+lemma updateRestartPC_valid_queues'[wp]:
+  "\<lbrace> \<lambda>s. valid_queues' s \<rbrace>
+   updateRestartPC t
+   \<lbrace> \<lambda>rv s. valid_queues' s \<rbrace>"
+  unfolding updateRestartPC_def
+  apply (rule asUser_valid_queues')
+  done
+
+lemma updateRestartPC_no_orphans_invs'_valid_queues'[wp]:
+  "\<lbrace>\<lambda>s. no_orphans s \<and> invs' s \<and> valid_queues' s \<rbrace>
+   updateRestartPC t
+   \<lbrace>\<lambda>rv s. no_orphans s \<and> valid_queues' s \<rbrace>"
+  by (wpsimp simp: updateRestartPC_def asUser_no_orphans)
+
 lemma suspend_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> tcb_at' t s \<rbrace>
    suspend t
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding suspend_def
   apply (wp | clarsimp simp: unless_def | rule conjI)+
-    apply (clarsimp simp: is_active_tcb_ptr_def is_active_thread_state_def st_tcb_at_neg2)
-    apply (wp setThreadState_not_active_no_orphans hoare_disjI1 setThreadState_st_tcb
-           | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def)+
+      apply (clarsimp simp: is_active_tcb_ptr_def is_active_thread_state_def st_tcb_at_neg2)
+      apply (wp setThreadState_not_active_no_orphans hoare_disjI1 setThreadState_st_tcb
+             | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def)+
+    apply (wp hoare_drop_imp)+
   apply auto
   done
 

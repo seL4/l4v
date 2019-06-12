@@ -238,8 +238,8 @@ seL4SaveContext breakFlag errorFlag errorString
                 asUser thread $ do
                     zipWithM_ setRegister [Register R.R0 .. Register R.LR] regs
                     setRegister (Register R.CPSR) cpsr
-                    setRegister (Register R.LR_svc) lr
-                    setRegister (Register R.FaultInstruction) fault
+                    setRegister (Register R.NextIP) lr
+                    setRegister (Register R.FaultIP) fault
 
 ---- seL4RestoreContext ----
 -- Restore the CPU exception context from the current thread's TCB.  This
@@ -260,7 +260,7 @@ seL4RestoreContext breakFlag errorFlag errorString
                 regs  <- asUser thread $
                     mapM getRegister [Register R.R0 .. Register R.LR]
                 cpsr  <- asUser thread $ getRegister $ Register R.CPSR
-                lr    <- asUser thread $ getRegister $ Register R.LR_svc
+                lr    <- asUser thread $ getRegister $ Register R.NextIP
                 return (regs, cpsr, lr)
             zipWithM_ (pokeElemOff regptr) [0,1..] regs
             poke cpsrptr cpsr

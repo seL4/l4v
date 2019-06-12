@@ -3346,7 +3346,20 @@ lemma asid_low_bits_of_mask_eq:
 lemmas asid_low_bits_of_p2m1_eq =
   asid_low_bits_of_mask_eq[simplified mask_2pm1]
 
+lemma arch_tcb_context_absorbs[simp]:
+  "arch_tcb_context_set uc2 (arch_tcb_context_set uc1 a_tcb) \<equiv> arch_tcb_context_set uc2 a_tcb"
+  apply (simp add: arch_tcb_context_set_def)
+  done
+
+lemma arch_tcb_context_get_set[simp]:
+  "arch_tcb_context_get (arch_tcb_context_set uc a_tcb) = uc"
+  apply (simp add: arch_tcb_context_get_def arch_tcb_context_set_def)
+  done
+
 end
+
+declare X64.arch_tcb_context_absorbs[simp]
+declare X64.arch_tcb_context_get_set[simp]
 
 setup {* Add_Locale_Code_Defs.setup "X64" *}
 setup {* Add_Locale_Code_Defs.setup "X64_A" *}

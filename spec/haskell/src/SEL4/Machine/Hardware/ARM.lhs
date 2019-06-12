@@ -182,8 +182,8 @@ The following functions define the ARM-specific interface between the kernel and
 > debugPrint :: String -> MachineMonad ()
 > debugPrint str = liftIO $ putStrLn str
 
-> getRestartPC = getRegister (Register ARM.FaultInstruction)
-> setNextPC = setRegister (Register ARM.LR_svc)
+> getRestartPC = getRegister (Register ARM.FaultIP)
+> setNextPC = setRegister (Register ARM.NextIP)
 
 \subsection{ARM Memory Management}
 

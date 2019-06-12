@@ -28,7 +28,7 @@ crunch weak_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers "weak_valid_sched_action"
   (simp: crunch_simps ignore: )
 
-crunch ct_not_in_q[wp]: set_vm_root "ct_not_in_q"
+crunch ct_not_in_q[wp, DetSchedSchedule_AI_assms]: set_vm_root "ct_not_in_q"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch ct_not_in_q'[wp]: set_vm_root "\<lambda>s. ct_not_in_q_2 (ready_queues s) (scheduler_action s) t"

@@ -513,12 +513,16 @@ lemma suspend_unlive':
   "\<lbrace>bound_tcb_at ((=) None) t and valid_mdb and valid_objs and tcb_at t \<rbrace>
       suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
-  apply (simp add: suspend_def set_thread_state_def)
-  apply (wpsimp wp: set_object_wp | simp only: obj_at_exst_update)+
-   apply (simp add: obj_at_def)
-   apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
-    apply wp
-   apply (auto simp: pred_tcb_def2 live_def hyp_live_def dest: refs_of_live)
+  apply (simp add: suspend_def set_thread_state_def set_object_def get_object_def)
+  supply hoare_vcg_if_split[wp_split del] if_splits[split del]
+  apply (wp | simp only: obj_at_exst_update)+
+     apply (simp add: obj_at_def live_def hyp_live_def)
+     apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
+      supply hoare_vcg_if_split[wp_split]
+      apply wp
+     apply (auto simp: pred_tcb_def2)[1]
+    apply (simp flip: if_split)
+    apply wpsimp+
   done
 
 crunch obj_at[wp]: fpu_thread_delete
@@ -1255,6 +1259,9 @@ lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
      apply (wp deleting_irq_handler_invs  | simp | intro conjI impI)+
   apply (auto dest: cte_wp_at_valid_objs_valid_cap)
   done
+
+crunch irq_node[wp, Finalise_AI_asms]: suspend "\<lambda>s. P (interrupt_irq_node s)"
+  (wp: crunch_wps select_wp simp: crunch_simps)
 
 lemma (* finalise_cap_irq_node *)[Finalise_AI_asms]:
 "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> finalise_cap a b \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"

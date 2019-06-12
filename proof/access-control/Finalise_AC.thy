@@ -538,13 +538,24 @@ lemma cancel_ipc_respects[wp]:
   apply (fastforce simp: obj_at_def is_ep_def dest: pas_refined_mem[OF sta_ts_mem])
   done
 
+lemma update_restart_pc_integrity_autarch[wp]:
+  "\<lbrace>integrity aag X st and K (is_subject aag t)\<rbrace> update_restart_pc t
+                                      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  apply (simp add: get_thread_state_def thread_get_def)
+  unfolding update_restart_pc_def
+  apply (wp as_user_integrity_autarch)
+  apply simp
+  done
+
 lemma suspend_respects[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and tcb_at t and
     K (is_subject aag t)\<rbrace>
     suspend t \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: suspend_def)
   apply (wp set_thread_state_integrity_autarch set_thread_state_pas_refined)
-  apply simp_all
+    apply (rule hoare_conjI)
+     apply (wp hoare_drop_imps)+
+    apply wpsimp+
   done
 
 lemma finalise_is_fast_finalise:

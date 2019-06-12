@@ -2393,15 +2393,16 @@ lemma reply_cancel_ipc_emptyable[wp]:
 
 crunch emptyable[wp]: cancel_ipc "emptyable sl"
 
+crunch emptyable[wp]: update_restart_pc "emptyable sl"
+  (rule: emptyable_lift)
+
 lemma suspend_emptyable[wp]:
-  "\<lbrace>invs and emptyable sl and valid_mdb\<rbrace> IpcCancel_A.suspend l \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
+  "\<lbrace>invs and emptyable sl and valid_mdb\<rbrace> suspend l \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
   apply (simp add: IpcCancel_A.suspend_def)
   apply (wp|simp)+
-    apply (wp emptyable_lift sts_st_tcb_at_cases)+
-    apply simp
-   apply (wp set_thread_state_cte_wp_at | simp)+
+      apply (wp emptyable_lift sts_st_tcb_at_cases)+
+      apply (wpsimp wp: set_thread_state_cte_wp_at)+
   done
-
 
 crunch emptyable[wp]: do_machine_op "emptyable sl"
   (rule: emptyable_lift)

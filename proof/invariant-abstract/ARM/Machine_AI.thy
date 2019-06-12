@@ -766,6 +766,14 @@ lemma empty_fail_clearMemory [simp, intro!]:
   by (simp add: clearMemory_def mapM_x_mapM ef_storeWord)
 
 end
+
+lemmas msgRegisters_A_unfold
+  = msg_registers_def
+    msgRegisters_def
+        [unfolded upto_enum_def, simplified,
+         unfolded fromEnum_def enum_register, simplified,
+         unfolded toEnum_def enum_register, simplified]
+
 end
 
 end

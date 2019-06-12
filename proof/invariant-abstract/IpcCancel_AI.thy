@@ -180,9 +180,23 @@ lemma fast_finalise_misc[wp]:
 locale IpcCancel_AI =
     fixes state_ext :: "('a::state_ext) itself"
     assumes arch_post_cap_deletion_typ_at[wp]:
-      "\<And>P T p. \<lbrace>\<lambda>(s :: 'a state). P (typ_at T p s)\<rbrace> arch_post_cap_deletion acap \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+      "\<And>P T p acap. \<lbrace>\<lambda>(s :: 'a state). P (typ_at T p s)\<rbrace> arch_post_cap_deletion acap \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
     assumes arch_post_cap_deletion_idle_thread[wp]:
-      "\<And>P. \<lbrace>\<lambda>(s :: 'a state). P (idle_thread s)\<rbrace> arch_post_cap_deletion acap \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
+      "\<And>P acap. \<lbrace>\<lambda>(s :: 'a state). P (idle_thread s)\<rbrace> arch_post_cap_deletion acap \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
+
+crunches update_restart_pc
+  for typ_at[wp]: "\<lambda>s. P (typ_at ty ptr s)"
+  (* NB: Q needed for following has_reply_cap proof *)
+  and cte_wp_at[wp]: "\<lambda>s. Q (cte_wp_at P cte s)"
+  and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  and pred_tcb_at[wp]: "\<lambda>s. pred_tcb_at P proj tcb s"
+  and invs[wp]: "\<lambda>s. invs s"
+
+lemma update_restart_pc_has_reply_cap[wp]:
+  "\<lbrace>\<lambda>s. \<not> has_reply_cap t s\<rbrace> update_restart_pc t \<lbrace>\<lambda>_ s. \<not> has_reply_cap t s\<rbrace>"
+  apply (simp add: has_reply_cap_def)
+  apply (wp hoare_vcg_all_lift)
+  done
 
 crunch st_tcb_at_simple[wp]: reply_cancel_ipc "st_tcb_at simple t"
   (wp: crunch_wps select_wp sts_st_tcb_at_cases thread_set_no_change_tcb_state
@@ -587,26 +601,23 @@ lemma (in delete_one_abs) cancel_ipc_no_reply_cap[wp]:
                    elim!: pred_tcb_weakenE)+
   done
 
-
 lemma (in delete_one_abs) suspend_invs[wp]:
   "\<lbrace>invs and tcb_at t and (\<lambda>s. t \<noteq> idle_thread s)\<rbrace>
    (suspend t :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: suspend_def)
-  apply (wp sts_invs_minor cancel_ipc_invs cancel_ipc_no_reply_cap
-       | strengthen no_refs_simple_strg | simp)+
-  done
+  by (wp sts_invs_minor user_getreg_inv as_user_invs sts_invs_minor cancel_ipc_invs
+         cancel_ipc_no_reply_cap
+     | strengthen no_refs_simple_strg
+     | simp add: suspend_def)+
 
 context IpcCancel_AI begin
 
 lemma suspend_typ_at [wp]:
   "\<lbrace>\<lambda>(s::'a state). P (typ_at T p s)\<rbrace> suspend t \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  by (simp add: suspend_def | wp)+
-
+  by (wpsimp simp: suspend_def)
 
 lemma suspend_valid_cap:
   "\<lbrace>valid_cap c\<rbrace> suspend tcb \<lbrace>\<lambda>_. (valid_cap c) :: 'a state \<Rightarrow> bool\<rbrace>"
   by (wp valid_cap_typ)
-
 
 lemma suspend_tcb[wp]:
   "\<lbrace>tcb_at t'\<rbrace> suspend t \<lbrace>\<lambda>rv. (tcb_at t')  :: 'a state \<Rightarrow> bool\<rbrace>"
@@ -629,7 +640,6 @@ locale delete_one_pre =
     "(\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap) \<Longrightarrow>
      \<lbrace>cte_wp_at P sl\<rbrace> (cap_delete_one sl' :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. cte_wp_at P sl\<rbrace>"
 
-
 lemma (in delete_one_pre) reply_cancel_ipc_cte_wp_at_preserved:
   "(\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap) \<Longrightarrow>
   \<lbrace>cte_wp_at P p\<rbrace> (reply_cancel_ipc t :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
@@ -649,11 +659,10 @@ lemma (in delete_one_pre) cancel_ipc_cte_wp_at_preserved:
    apply (wp reply_cancel_ipc_cte_wp_at_preserved | wpcw | simp)+
   done
 
-
 lemma (in delete_one_pre) suspend_cte_wp_at_preserved:
   "(\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap) \<Longrightarrow>
   \<lbrace>cte_wp_at P p\<rbrace> (suspend tcb :: (unit,'a) s_monad) \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>"
-  by (simp add: suspend_def) (wpsimp wp: cancel_ipc_cte_wp_at_preserved)
+  by (simp add: suspend_def) (wpsimp wp: cancel_ipc_cte_wp_at_preserved)+
 
 
 (* FIXME - eliminate *)
@@ -758,17 +767,26 @@ lemma reply_cancel_ipc_bound_tcb_at[wp]:
 crunch bound_tcb_at[wp]: cancel_ipc "bound_tcb_at P t"
 (ignore: set_object thread_set wp: mapM_x_wp_inv)
 
+context IpcCancel_AI begin
 lemma suspend_unlive:
-  "\<lbrace>bound_tcb_at ((=) None) t and valid_mdb and valid_objs and tcb_at t \<rbrace>
+  "\<lbrace>\<lambda>(s::'a state).
+      (bound_tcb_at ((=) None) t and valid_mdb and valid_objs) s \<rbrace>
       suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live0) t\<rbrace>"
   apply (simp add: suspend_def set_thread_state_def set_object_def get_object_def)
+    (* avoid creating two copies of obj_at *)
+  supply hoare_vcg_if_split[wp_split del] if_splits[split del]
   apply (wp | simp only: obj_at_exst_update)+
-  apply (simp add: obj_at_def)
-  apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
-  apply wp
-  apply (auto simp: pred_tcb_def2 dest: refs_of_live)
+     apply (simp add: obj_at_def)
+     apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
+      supply hoare_vcg_if_split[wp_split]
+      apply wp
+     apply (auto simp: pred_tcb_def2)[1]
+    apply (simp flip: if_split)
+    apply wpsimp+
+  apply (simp add: pred_tcb_at_tcb_at)
   done
+end
 
 definition bound_refs_of_tcb :: "'a state \<Rightarrow> machine_word \<Rightarrow> (machine_word \<times> reftype) set"
 where

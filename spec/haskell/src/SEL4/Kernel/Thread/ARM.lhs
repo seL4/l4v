@@ -47,7 +47,7 @@ The ARM idle thread runs in system mode with interrupts enabled, with the PC poi
 > configureIdleThread tcb = do
 >     doKernelOp $ asUser tcb $ do
 >         setRegister (Register CPSR) 0x1f
->         setRegister (Register LR_svc) $ fromVPtr idleThreadStart
+>         setRegister (Register NextIP) $ fromVPtr idleThreadStart
 
 When switching to the idle thread, we ensure that it runs in the address space of the kernel to prevent the possibility of a user-level address space being deleted whilst the idle thread is running (which is possible in a multi-core scenario).
 

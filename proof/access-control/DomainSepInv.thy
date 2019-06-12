@@ -463,6 +463,11 @@ lemma set_asid_pool_neg_cte_wp_at[wp]:
 crunch domain_sep_inv[wp]: set_asid_pool "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv)
 
+lemma as_user_domain_sep_inv[wp]:
+  "\<lbrace>\<lambda>s. domain_sep_inv irqs st s\<rbrace> as_user a b \<lbrace>\<lambda>_ s. domain_sep_inv irqs st s\<rbrace>"
+  by (wpsimp simp: domain_sep_inv_def
+               wp: as_user_cte_wp_at as_user_interrupt_states hoare_vcg_conj_lift
+                   hoare_vcg_all_lift hoare_vcg_disj_lift)
 
 crunch domain_sep_inv[wp]: finalise_cap "domain_sep_inv irqs st"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps ignore: set_object tcb_sched_action)

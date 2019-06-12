@@ -192,11 +192,11 @@ definition setRegister :: "register \<Rightarrow> machine_word \<Rightarrow> uni
 
 definition getRestartPC :: "machine_word user_monad"
   where
-  "getRestartPC \<equiv> getRegister SEPC"
+  "getRestartPC \<equiv> getRegister FaultIP"
 
 definition setNextPC :: "machine_word \<Rightarrow> unit user_monad"
   where
-  "setNextPC \<equiv> setRegister NEXTPC"
+  "setNextPC \<equiv> setRegister NextIP"
 
 
 subsection "Caches, Barriers, and Flushing"

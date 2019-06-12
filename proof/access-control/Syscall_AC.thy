@@ -1279,13 +1279,35 @@ lemma set_asid_pool_current_ipc_buffer_register[wp]:
              split: kernel_object.splits)
   done
 
+lemma set_tcb_context_current_ipc_buffer_register:
+  "\<lbrace>\<lambda>s. (f = cur_thread s \<longrightarrow> (P (cxt TPIDRURW) = P (arch_tcb_context_get (tcb_arch tcb) TPIDRURW) \<and>
+        obj_at (\<lambda>obj. obj = TCB tcb) f s)) \<and> P (current_ipc_buffer_register s)\<rbrace>
+     set_object f (TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>))
+   \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (wpsimp wp: set_object_wp)
+  by (auto simp: current_ipc_buffer_register_def get_tcb_def obj_at_def)
+
+lemma as_user_current_ipc_buffer_register[wp]:
+  assumes uc: "\<And>P. \<lbrace>\<lambda>s. P (s TPIDRURW)\<rbrace> a \<lbrace>\<lambda>r s. P (s TPIDRURW)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> as_user f a
+  \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (simp add: as_user_def)
+  apply (wp select_f_wp set_tcb_context_current_ipc_buffer_register | wpc | simp)+
+  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (simp add: obj_at_def get_tcb_def)
+  apply (drule use_valid[OF _ uc])
+   apply (clarsimp simp: current_ipc_buffer_register_def get_tcb_def)
+   apply assumption
+  apply (clarsimp simp: current_ipc_buffer_register_def get_tcb_def)
+  done
+
 crunch current_ipc_buffer_register [wp]: finalise_cap "\<lambda>s. P (current_ipc_buffer_register s)"
    (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch
         hoare_unless_wp select_wp
-    simp: crunch_simps
+    simp: crunch_simps setRegister_def getRegister_def
+          ARM.faultRegister_def ARM.nextInstructionRegister_def
     ignore: do_machine_op clearMemory empty_slot_ext reschedule_required
-            tcb_sched_action)
-
+            tcb_sched_action set_object as_user)
 
 lemma rec_del_current_ipc_buffer_register [wp]:
   "invariant (rec_del call) (\<lambda>s. P (current_ipc_buffer_register s))"
@@ -1325,28 +1347,6 @@ lemma transfer_caps_loop_current_ipc_buffer_register:
 
 crunch current_ipc_buffer_register [wp]: transfer_caps "\<lambda>s. P (current_ipc_buffer_register s)"
 
-lemma set_tcb_context_current_ipc_buffer_register:
-  "\<lbrace>\<lambda>s. (f = cur_thread s \<longrightarrow> (P (cxt TPIDRURW) = P (arch_tcb_context_get (tcb_arch tcb) TPIDRURW) \<and>
-        obj_at (\<lambda>obj. obj = TCB tcb) f s)) \<and> P (current_ipc_buffer_register s)\<rbrace>
-     set_object f (TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>))
-   \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s)\<rbrace>"
-  apply (wpsimp wp: set_object_wp)
-  by (auto simp: current_ipc_buffer_register_def get_tcb_def obj_at_def)
-
-lemma as_user_current_ipc_buffer_register[wp]:
-  assumes uc: "\<And>P. \<lbrace>\<lambda>s. P (s TPIDRURW)\<rbrace> a \<lbrace>\<lambda>r s. P (s TPIDRURW)\<rbrace>"
-  shows "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> as_user f a
-  \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s)\<rbrace>"
-  apply (simp add: as_user_def)
-  apply (wp select_f_wp set_tcb_context_current_ipc_buffer_register | wpc | simp)+
-  apply (clarsimp dest!: get_tcb_SomeD)
-  apply (simp add: obj_at_def get_tcb_def)
-  apply (drule use_valid[OF _ uc])
-   apply (clarsimp simp: current_ipc_buffer_register_def get_tcb_def)
-   apply assumption
-  apply (clarsimp simp: current_ipc_buffer_register_def get_tcb_def)
-  done
-
 lemma set_register_tpidrurw_inv[wp]:
   "r \<noteq> TPIDRURW \<Longrightarrow> \<lbrace>\<lambda>s. P (s TPIDRURW)\<rbrace> setRegister r v\<lbrace>\<lambda>r s. P (s TPIDRURW)\<rbrace>"
   by (simp add: setRegister_def simpler_modify_def valid_def)
@@ -1383,7 +1383,7 @@ lemma set_mrs_current_ipc_buffer_register:
   apply (simp add: set_mrs_def msg_registers_def)
   apply (subst zipWithM_x_mapM_x)
   apply (rule hoare_pre)
-  apply (wp mapM_x_wp[where S = UNIV] | wpc | simp)+
+   apply (wp mapM_x_wp[where S = UNIV] | wpc | simp)+
       apply (rule hoare_pre)
        apply (wp set_object_wp | wpc | simp)+
   apply (auto simp: current_ipc_buffer_register_def arch_tcb_set_registers_def
@@ -1415,7 +1415,8 @@ crunch current_ipc_buffer_register [wp]: set_message_info "\<lambda>s. P (curren
   (wp: crunch_wps simp: crunch_simps )
 
 crunch current_ipc_buffer_register [wp]: do_ipc_transfer "\<lambda>s. P (current_ipc_buffer_register s)"
-  (wp: crunch_wps simp: crunch_simps msg_registers_def)
+  (wp: crunch_wps simp: crunch_simps msg_registers_def
+  ignore: set_object as_user)
 
 crunch current_ipc_buffer_register [wp]: send_ipc "\<lambda>s. P (current_ipc_buffer_register s)"
   (wp: crunch_wps simp: crunch_simps )

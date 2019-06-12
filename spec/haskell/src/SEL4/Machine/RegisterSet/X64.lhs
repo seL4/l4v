@@ -39,6 +39,8 @@ This module defines the x86 64-bit register set.
 > msgInfoRegister = RSI
 > msgRegisters = [R10, R8, R9, R15]
 > badgeRegister = capRegister
+> faultRegister = FaultIP
+> nextInstructionRegister = NextIP
 > frameRegisters = FaultIP : RSP : FLAGS : [RAX .. R15]
 > gpRegisters = [TLS_BASE]
 > exceptionMessage = [FaultIP, RSP, FLAGS]

@@ -136,6 +136,16 @@ This list may be empty, though it should contain as many registers as possible. 
 > tlsBaseRegister :: Register
 > tlsBaseRegister = Register Arch.tlsBaseRegister
 
+\item[The fault register] holds the instruction which was being executed when the fault occured.
+
+> faultRegister :: Register
+> faultRegister = Register Arch.faultRegister
+
+\item[The next instruction register] holds the instruction that will be executed upon resumption.
+
+> nextInstructionRegister :: Register
+> nextInstructionRegister = Register Arch.nextInstructionRegister
+
 \end{description}
 
 

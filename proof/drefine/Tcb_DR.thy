@@ -441,16 +441,18 @@ lemma suspend_corres:
      (Tcb_D.suspend obj_id) (IpcCancel_A.suspend obj_id)"
   apply (rule corres_guard_imp)
     apply (clarsimp simp: IpcCancel_A.suspend_def Tcb_D.suspend_def)
-   apply (rule corres_split[OF _ finalise_cancel_ipc])
-     apply (rule dcorres_rhs_noop_below_True[OF tcb_sched_action_dcorres])
-     apply (rule set_thread_state_corres)
-     apply wp
-    apply (clarsimp simp:not_idle_thread_def conj_comms)
-    apply wp
-   apply simp
-  apply (clarsimp simp:st_tcb_at_def not_idle_thread_def
-    obj_at_def generates_pending_def
-      split:Structures_A.thread_state.split_asm)
+    apply (rule corres_split[OF _ finalise_cancel_ipc])
+      apply (rule dcorres_symb_exec_r[OF _ gts_inv gts_inv])
+      apply (rule dcorres_rhs_noop_above)
+         apply (case_tac "rv = Running"; simp)
+          apply (rule update_restart_pc_dcorres)
+         apply simp
+        apply (rule dcorres_rhs_noop_below_True[OF tcb_sched_action_dcorres])
+        apply (rule set_thread_state_corres)
+       apply wp
+      apply (case_tac "rv = Running"; simp)
+       apply wp+
+       apply (wpsimp simp: not_idle_thread_def conj_comms)+
 done
 
 lemma dcorres_setup_reply_master:
