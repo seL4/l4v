@@ -5907,26 +5907,6 @@ lemma ex_cte_cap_wp_to'_ksReadyQueuesL1Bitmap[simp]:
    "ex_cte_cap_wp_to' P p (s\<lparr> ksReadyQueuesL1Bitmap := x \<rparr>) = ex_cte_cap_wp_to' P p s"
    unfolding ex_cte_cap_wp_to'_def by simp
 
-lemma ex_cte_cap_wp_to'_ksReadyQueuesL2Bitmap[simp]:
-   "ex_cte_cap_wp_to' P p (s\<lparr> ksReadyQueuesL2Bitmap := x \<rparr>) = ex_cte_cap_wp_to' P p s"
-   unfolding ex_cte_cap_wp_to'_def by simp
-
-lemma removeFromBitmap_cte_cap_to'[wp]:
-  "\<lbrace>ex_cte_cap_wp_to' P p\<rbrace> removeFromBitmap d prio \<lbrace>\<lambda>rv. ex_cte_cap_wp_to' P p\<rbrace>"
-  apply (simp add: bitmap_fun_defs)
-  apply (wp ex_cte_cap_to'_pres [OF threadSet_cte_wp_at']
-            ex_cte_cap_to'_pres [OF setQueue_cte_wp_at']
-              | simp)+
-  done
-
-lemma tcbSchedDequeue_cte_cap_to'[wp]:
-  "\<lbrace>ex_cte_cap_wp_to' P p\<rbrace> tcbSchedDequeue t \<lbrace>\<lambda>rv. ex_cte_cap_wp_to' P p\<rbrace>"
-  apply (simp add: tcbSchedDequeue_def)
-  apply (wp ex_cte_cap_to'_pres [OF threadSet_cte_wp_at']
-            ex_cte_cap_to'_pres [OF setQueue_cte_wp_at']
-              | simp)+
-  done
-
 lemma emptySlot_deletes [wp]:
   "\<lbrace>\<top>\<rbrace> emptySlot p opt \<lbrace>\<lambda>rv s. cte_wp_at' (\<lambda>c. cteCap c = NullCap) p s\<rbrace>"
   apply (simp add: emptySlot_def case_Null_If)
