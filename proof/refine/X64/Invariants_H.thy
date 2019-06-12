@@ -3277,6 +3277,22 @@ lemma obj_at'_conj_distrib:
   "obj_at' (\<lambda>ko. P ko \<and> Q ko) p s \<Longrightarrow> obj_at' P p s \<and> obj_at' Q p s"
   by (auto simp: obj_at'_def)
 
+lemma obj_at'_conj:
+  "obj_at' (\<lambda>ko. P ko \<and> Q ko) p s = (obj_at' P p s \<and> obj_at' Q p s)"
+  using obj_at'_conj_distrib obj_at_conj' by blast
+
+lemma not_obj_at'_strengthen:
+  "obj_at' (Not \<circ> P) p s \<Longrightarrow> \<not> obj_at' P p s"
+  by (clarsimp simp: obj_at'_def)
+
+lemma not_pred_tcb_at'_strengthen:
+  "pred_tcb_at' f (Not \<circ> P) p s \<Longrightarrow> \<not> pred_tcb_at' f P p s"
+  by (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+
+lemma obj_at'_ko_at'_prop:
+  "ko_at' ko t s \<Longrightarrow> obj_at' P t s = P ko"
+  by (drule obj_at_ko_at', clarsimp simp: obj_at'_def)
+
 lemma idle_tcb_at'_split:
   "idle_tcb_at' (\<lambda>p. P (fst p) \<and> Q (snd p)) t s \<Longrightarrow> st_tcb_at' P t s \<and> bound_tcb_at' Q t s"
   by (clarsimp simp: pred_tcb_at'_def dest!: obj_at'_conj_distrib)

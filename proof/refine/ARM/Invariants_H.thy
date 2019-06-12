@@ -3118,6 +3118,10 @@ lemma obj_at'_conj_distrib:
   "obj_at' (\<lambda>ko. P ko \<and> Q ko) p s \<Longrightarrow> obj_at' P p s \<and> obj_at' Q p s"
   by (auto simp: obj_at'_def)
 
+lemma obj_at'_conj:
+  "obj_at' (\<lambda>ko. P ko \<and> Q ko) p s = (obj_at' P p s \<and> obj_at' Q p s)"
+  using obj_at'_conj_distrib obj_at_conj' by blast
+
 lemma not_obj_at'_strengthen:
   "obj_at' (Not \<circ> P) p s \<Longrightarrow> \<not> obj_at' P p s"
   by (clarsimp simp: obj_at'_def)
