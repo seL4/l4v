@@ -21,13 +21,15 @@ text \<open>
   initial state only, to show that the invariants and refinement relation are consistent.
 \<close>
 
+(* Some address sufficiently aligned address for one page *)
 definition riscv_global_pt_ptr :: obj_ref
   where
-  "riscv_global_pt_ptr = kernel_base + 0x1000"
+  "riscv_global_pt_ptr = pptr_base + 0x2000"
 
+(* Sufficiently aligned for irq type + cte_level_bits *)
 definition init_irq_node_ptr :: obj_ref
   where
-  "init_irq_node_ptr = kernel_base + 0x2000"
+  "init_irq_node_ptr = pptr_base + 0x3000"
 
 (* The highest user-level virtual address that is still canonical.
    It can be larger than user_vtop, which is the highest address we allow to be mapped.
