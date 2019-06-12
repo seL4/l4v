@@ -778,12 +778,12 @@ defer
   done
 
 lemma is_refill_ready_detype[simp]:
-  "(is_refill_ready scp (detype S s))
-    = (is_refill_ready scp s \<and> scp \<notin> S)"
+  "(is_refill_ready scp u (detype S s))
+    = (is_refill_ready scp u s \<and> scp \<notin> S)"
   by (clarsimp simp add: is_refill_ready_def detype_def obj_at_def)
 
 lemma is_refill_ready_clear_um[iff]:
-  "is_refill_ready scp (clear_um S s) = is_refill_ready scp s"
+  "is_refill_ready scp u (clear_um S s) = is_refill_ready scp u s"
   by (simp add: clear_um_def is_refill_ready_def)
 
 lemma budget_ready_detype[simp]:

@@ -72,15 +72,15 @@ lemma is_refill_sufficient_is_original_cap_update[simp]:
   by (clarsimp simp: is_refill_sufficient_def)
 
 lemma is_refill_ready_cdt_update[simp]:
-  "is_refill_ready t (s\<lparr>cdt := param_a\<rparr>) = is_refill_ready t s"
+  "is_refill_ready t u (s\<lparr>cdt := param_a\<rparr>) = is_refill_ready t u s"
   by (clarsimp simp: is_refill_ready_def)
 
 lemma is_refill_ready_cdt_list_update[simp]:
-  "is_refill_ready t (s\<lparr>cdt_list := param_a\<rparr>) = is_refill_ready t s"
+  "is_refill_ready t u (s\<lparr>cdt_list := param_a\<rparr>) = is_refill_ready t u s"
   by (clarsimp simp: is_refill_ready_def)
 
 lemma is_refill_ready_is_original_cap_update[simp]:
-  "is_refill_ready t (s\<lparr>is_original_cap := param_a\<rparr>) = is_refill_ready t s"
+  "is_refill_ready t u (s\<lparr>is_original_cap := param_a\<rparr>) = is_refill_ready t u s"
   by (clarsimp simp: is_refill_ready_def)
 
 lemma test_sc_refill_max_scheduler_action_update[simp]:
@@ -152,7 +152,7 @@ lemma is_refill_sufficient_scheduler_action_update[simp]:
   by (clarsimp simp: is_refill_sufficient_def)
 
 lemma is_refill_ready_scheduler_action_update[simp]:
-  "is_refill_ready t (s\<lparr>scheduler_action := param_a\<rparr>) = is_refill_ready t s"
+  "is_refill_ready t u (s\<lparr>scheduler_action := param_a\<rparr>) = is_refill_ready t u s"
   by (clarsimp simp: is_refill_ready_def)
 
 lemma is_refill_sufficient_ready_queues_update[simp]:
@@ -160,7 +160,7 @@ lemma is_refill_sufficient_ready_queues_update[simp]:
   by (clarsimp simp: is_refill_sufficient_def)
 
 lemma is_refill_ready_ready_queues_update[simp]:
-  "is_refill_ready t (s\<lparr>ready_queues := param_a\<rparr>) = is_refill_ready t s"
+  "is_refill_ready t u (s\<lparr>ready_queues := param_a\<rparr>) = is_refill_ready t u s"
   by (clarsimp simp: is_refill_ready_def)
 
 lemma is_refill_sufficient_release_queue_update[simp]:
@@ -168,7 +168,7 @@ lemma is_refill_sufficient_release_queue_update[simp]:
   by (clarsimp simp: is_refill_sufficient_def)
 
 lemma is_refill_ready_release_queue_update[simp]:
-  "is_refill_ready t (s\<lparr>release_queue := param_a\<rparr>) = is_refill_ready t s"
+  "is_refill_ready t u (s\<lparr>release_queue := param_a\<rparr>) = is_refill_ready t u s"
   by (clarsimp simp: is_refill_ready_def)
 
 lemma is_refill_sufficient_reprogram_timer_update[simp]:
@@ -176,7 +176,7 @@ lemma is_refill_sufficient_reprogram_timer_update[simp]:
   by (clarsimp simp: is_refill_sufficient_def)
 
 lemma is_refill_ready_reprogram_timer_update[simp]:
-  "is_refill_ready t (s\<lparr>reprogram_timer := param_a\<rparr>) = is_refill_ready t s"
+  "is_refill_ready t u (s\<lparr>reprogram_timer := param_a\<rparr>) = is_refill_ready t u s"
   by (clarsimp simp: is_refill_ready_def)
 
 lemma is_refill_sufficient_consumed_time_update[simp]:
@@ -184,7 +184,7 @@ lemma is_refill_sufficient_consumed_time_update[simp]:
   by (clarsimp simp: is_refill_sufficient_def)
 
 lemma is_refill_ready_consumed_time_update[simp]:
-  "is_refill_ready t (s\<lparr>consumed_time := param_a\<rparr>) = is_refill_ready t s"
+  "is_refill_ready t u (s\<lparr>consumed_time := param_a\<rparr>) = is_refill_ready t u s"
   by (clarsimp simp: is_refill_ready_def)
 
 lemma is_refill_sufficient_arch_state_update[simp]:
@@ -192,7 +192,7 @@ lemma is_refill_sufficient_arch_state_update[simp]:
   by (clarsimp simp: is_refill_sufficient_def)
 
 lemma is_refill_ready_arch_state_update[simp]:
-  "is_refill_ready t (s\<lparr>arch_state := param_a\<rparr>) = is_refill_ready t s"
+  "is_refill_ready t u (s\<lparr>arch_state := param_a\<rparr>) = is_refill_ready t u s"
   by (clarsimp simp: is_refill_ready_def)
 
 lemma is_refill_sufficient_trans_state_update[simp]:
@@ -200,7 +200,7 @@ lemma is_refill_sufficient_trans_state_update[simp]:
   by (clarsimp simp: is_refill_sufficient_def)
 
 lemma is_refill_ready_trans_state_update[simp]:
-  "is_refill_ready t (trans_state f s) = is_refill_ready t s"
+  "is_refill_ready t u (trans_state f s) = is_refill_ready t u s"
   by (clarsimp simp: is_refill_ready_def)
 
 lemma tcb_ready_time_is_original_cap_update[simp]:
@@ -284,7 +284,7 @@ lemma set_cap_active_sc_tcb_at[wp]:
   done
 
 lemma set_cap_is_refill_ready[wp]:
- "\<lbrace>is_refill_ready t\<rbrace> set_cap c p \<lbrace>\<lambda>rv. is_refill_ready t\<rbrace>"
+ "\<lbrace>is_refill_ready t u\<rbrace> set_cap c p \<lbrace>\<lambda>rv. is_refill_ready t u\<rbrace>"
   apply (simp add: set_cap_def set_object_def split_def)
   apply (wp get_object_wp | wpc)+
   apply (clarsimp simp: is_refill_ready_def obj_at_def
@@ -344,10 +344,10 @@ lemma budget_sufficient_cdt_list_update[simp]:
   "budget_sufficient t (s\<lparr>cdt_list := param_a\<rparr>) = budget_sufficient t s"
   by (clarsimp simp: is_refill_sufficient_def)
 
-crunches create_cap_ext,cap_insert_ext
+crunches create_cap_ext, cap_insert_ext
 for active_sc_tcb_at[wp]: "\<lambda>s:: det_ext state. P (active_sc_tcb_at t s)"
 and is_refill_sufficient[wp]: "is_refill_sufficient t u:: det_state \<Rightarrow> bool"
-and is_refill_ready[wp]: "is_refill_ready t:: det_state \<Rightarrow> bool"
+and is_refill_ready[wp]: "is_refill_ready t u:: det_state \<Rightarrow> bool"
 and budget_sufficient[wp]: "\<lambda>s:: det_ext state. P (budget_sufficient t s)"
 and budget_ready[wp]: "\<lambda>s:: det_ext state. P (budget_ready t s)"
  (simp: crunch_simps wp: hoare_drop_imps valid_ready_qs_lift)
@@ -355,7 +355,7 @@ and budget_ready[wp]: "\<lambda>s:: det_ext state. P (budget_ready t s)"
 crunches create_cap,cap_insert
 for active_sc_tcb_at[wp]: "\<lambda>s:: det_ext state. P (active_sc_tcb_at t s)"
 and is_refill_sufficient[wp]: "is_refill_sufficient t u:: det_state \<Rightarrow> bool"
-and is_refill_ready[wp]: "is_refill_ready t:: det_state \<Rightarrow> bool"
+and is_refill_ready[wp]: "is_refill_ready t u:: det_state \<Rightarrow> bool"
 and budget_sufficient[wp]: "\<lambda>s:: det_ext state. P (budget_sufficient t s)"
 and budget_ready[wp]: "\<lambda>s:: det_ext state. P (budget_ready t s)"
  (simp: crunch_simps wp: hoare_drop_imps crunch_wps)

@@ -390,6 +390,7 @@ crunches arch_switch_to_thread, arch_switch_to_idle_thread
   and cur_sc_valid_refills_consumed[wp, DetSchedSchedule_AI_assms]: "cur_sc_valid_refills_consumed budget"
   and cur_sc[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_sc s)"
   and cur_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
+  and rollback_safe[wp, DetSchedSchedule_AI_assms]: rollback_safe
   (simp: crunch_simps)
 
 
@@ -584,18 +585,18 @@ global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
 
 (* 1. \<lbrace>valid_blocked\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. valid_blocked\<rbrace>
  2. \<lbrace>ct_in_q\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. ct_in_q\<rbrace>
- 3. \<lbrace>\<lambda>s. in_release_q (cur_thread s) s\<rbrace> arch_switch_to_idle_thread 
+ 3. \<lbrace>\<lambda>s. in_release_q (cur_thread s) s\<rbrace> arch_switch_to_idle_thread
     \<lbrace>\<lambda>_ s. in_release_q (cur_thread s) s\<rbrace>
  4. \<And>t. \<lbrace>valid_release_q\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. valid_release_q\<rbrace>
  5. \<And>t t'.
-       \<lbrace>not_in_release_q t'\<rbrace> arch_switch_to_thread t 
+       \<lbrace>not_in_release_q t'\<rbrace> arch_switch_to_thread t
        \<lbrace>\<lambda>_. not_in_release_q t'\<rbrace>
- 6. \<lbrace>weak_valid_sched_action\<rbrace> arch_switch_to_idle_thread 
+ 6. \<lbrace>weak_valid_sched_action\<rbrace> arch_switch_to_idle_thread
     \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>
- 7. \<And>t. \<lbrace>weak_valid_sched_action\<rbrace> arch_switch_to_thread t 
+ 7. \<And>t. \<lbrace>weak_valid_sched_action\<rbrace> arch_switch_to_thread t
          \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>
  8. \<lbrace>valid_ready_qs and valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>
- 9. \<lbrace>valid_sched_action and valid_idle\<rbrace> switch_to_idle_thread 
+ 9. \<lbrace>valid_sched_action and valid_idle\<rbrace> switch_to_idle_thread
     \<lbrace>\<lambda>_. valid_sched_action\<rbrace>
  10. \<lbrace>\<lambda>_. True\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>*)
 
