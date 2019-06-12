@@ -320,7 +320,7 @@ proof (induct level arbitrary: pt_ptr)
 next
   case (minus level)
   note IH = minus(1)
-  from `0 < level`  show ?case by (subst pt_lookup_from_level.simps) (wpsimp wp: IH)
+  from \<open>0 < level\<close>  show ?case by (subst pt_lookup_from_level.simps) (wpsimp wp: IH)
 qed
 
 crunches unmap_page_table
@@ -709,7 +709,7 @@ proof (induct top_level arbitrary: top_level_pt)
 next
   case (minus top_level)
   note IH=minus(1)
-  from `0 < top_level`
+  from \<open>0 < top_level\<close>
   show ?case
     apply (subst pt_lookup_from_level.simps)
     apply (wpsimp wp: IH)

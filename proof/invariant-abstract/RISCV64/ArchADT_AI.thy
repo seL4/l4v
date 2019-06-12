@@ -8,7 +8,7 @@
  * @TAG(DATA61_GPL)
  *)
 
-chapter {* RISCV64-specific definitions for abstract datatype for the abstract specification *}
+chapter \<open>RISCV64-specific definitions for abstract datatype for the abstract specification\<close>
 
 theory ArchADT_AI
 imports
@@ -17,7 +17,7 @@ imports
 begin
 context Arch begin global_naming RISCV64
 
-subsection {* Constructing a virtual-memory view *}
+subsection \<open>Constructing a virtual-memory view\<close>
 
 text \<open>
   This function is used below for helpers that expect a full state, but depend
@@ -26,7 +26,7 @@ text \<open>
 definition state_from_arch :: "kheap \<Rightarrow> arch_state \<Rightarrow> det_ext state" where
   "state_from_arch kh as \<equiv> undefined \<lparr> kheap := kh, arch_state := as \<rparr>"
 
-text {*
+text \<open>
   Function @{text get_vspace_of_thread} takes three parameters:
   the kernel heap, the architecture-specific state, and
   a thread identifier.
@@ -45,7 +45,7 @@ text {*
   to an address space with valid mapping data.
   Note that the mapping data might become stale.
   Hence, we have to follow the mapping data through the ASID table.
-*}
+\<close>
 definition
   get_vspace_of_thread :: "kheap \<Rightarrow> arch_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref"
 where
@@ -81,9 +81,9 @@ lemma get_vspace_of_thread_eq:
   by (auto split: option.splits kernel_object.splits cap.splits arch_cap.splits)
 
 
-text {*
+text \<open>
   The following function is used to extract the architecture-specific objects from the kernel heap.
-*}
+\<close>
 
 definition pte_info :: "vm_level \<Rightarrow> pte \<rightharpoonup> (machine_word \<times> nat \<times> vm_attributes \<times> vm_rights)" where
   "pte_info level pte \<equiv>
@@ -91,7 +91,7 @@ definition pte_info :: "vm_level \<Rightarrow> pte \<rightharpoonup> (machine_wo
       PagePTE ppn attrs rights \<Rightarrow> Some (addr_from_ppn ppn, pt_bits_left level, attrs, rights)
     | _ \<Rightarrow> None"
 
-text {*
+text \<open>
   @{text get_page_info} takes the architecture-specific part of the kernel heap,
   a reference to the page directory, and a virtual memory address.
   It returns a tuple containing
@@ -99,7 +99,7 @@ text {*
   (b) the page table's size in bits, and
   (c) the page attributes (cachable, XNever, etc)
   (d) the access rights (a subset of @{term "{AllowRead, AllowWrite}"}).
-*}
+\<close>
 definition
   get_page_info :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<rightharpoonup>
                     (machine_word \<times> nat \<times> vm_attributes \<times> vm_rights)"
@@ -111,11 +111,11 @@ where
       K $ pte_info level pte
     }) (\<lambda>p. pte_of p (aobjs |> pt_of))"
 
-text {*
+text \<open>
   Both functions, @{text ptable_lift} and @{text vm_rights},
   take a kernel state and a virtual address.
   The former returns the physical address, the latter the associated rights.
-*}
+\<close>
 definition ptable_lift :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> machine_word \<rightharpoonup> machine_word" where
   "ptable_lift tcb s \<equiv> \<lambda>addr.
    case_option None (\<lambda>(base, bits, rights). Some (base + (addr && mask bits)))

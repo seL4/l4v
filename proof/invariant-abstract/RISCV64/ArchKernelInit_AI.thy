@@ -17,9 +17,9 @@ begin
 
 context Arch begin global_naming RISCV64
 
-text {*
+text \<open>
   Showing that there is a state that satisfies the abstract invariants.
-*}
+\<close>
 
 lemma "valid_uses_2 init_vspace_uses"
   using canonical_user_pptr_base pptr_base_kernel_base
