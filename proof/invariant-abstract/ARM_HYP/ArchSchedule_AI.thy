@@ -12,7 +12,7 @@ theory ArchSchedule_AI
 imports "../Schedule_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems Schedule_AI_asms
 
@@ -32,7 +32,7 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_asms]:
   apply simp
   done
 (*
-global_naming ARM (*FIXME: arch_split*)
+global_naming ARM_HYP (*FIXME: arch_split*)
 lemma set_vm_root_kheap_arch_state[wp]:
   "\<lbrace>\<lambda>s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace> set_vm_root a
    \<lbrace>\<lambda>_ s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace>" (is "valid ?P _ _")

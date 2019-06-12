@@ -17,7 +17,7 @@ imports "../SubMonad_AI"
  "Lib.Crunch_Instances_NonDet"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 
 bundle unfold_objects =
@@ -1961,7 +1961,7 @@ lemma set_asid_pool_table_caps [wp]:
   including unfold_objects
   apply (wpsimp wp: set_object_wp_strong
               simp: a_type_def empty_table_def)
-  apply (metis ARM.kernel_object_exhaust)
+  apply (metis ARM_HYP.kernel_object_exhaust)
   done
 
 

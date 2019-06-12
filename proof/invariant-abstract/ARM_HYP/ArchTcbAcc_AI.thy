@@ -12,7 +12,7 @@ theory ArchTcbAcc_AI
 imports "../TcbAcc_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems TcbAcc_AI_assms
 

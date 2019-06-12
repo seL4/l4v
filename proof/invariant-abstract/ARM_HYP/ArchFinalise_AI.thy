@@ -1333,7 +1333,7 @@ interpretation Finalise_AI_1?: Finalise_AI_1
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_asms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma fast_finalise_replaceable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s
@@ -1372,7 +1372,7 @@ interpretation Finalise_AI_2?: Finalise_AI_2
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_asms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 crunches
   vcpu_update, vgic_update, vcpu_disable, vcpu_restore, vcpu_save_reg_range, vgic_update_lr,
@@ -1853,7 +1853,7 @@ lemma invs_valid_arch_capsI:
   "invs s \<Longrightarrow> valid_arch_caps s"
   by (simp add: invs_def valid_state_def)
 
-context Arch begin global_naming ARM (*FIXME: arch_split*)
+context Arch begin global_naming ARM_HYP (*FIXME: arch_split*)
 
 lemma arch_finalise_case_no_lookup:
   "\<lbrace>pspace_aligned and valid_vspace_objs and valid_objs and
@@ -2067,7 +2067,7 @@ interpretation Finalise_AI_3?: Finalise_AI_3
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_asms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma typ_at_data_at_wp:
   assumes typ_wp: "\<And>a.\<lbrace>typ_at a p \<rbrace> g \<lbrace>\<lambda>s. typ_at a p\<rbrace>"
@@ -2085,7 +2085,7 @@ interpretation Finalise_AI_4?: Finalise_AI_4
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_asms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma set_asid_pool_obj_at_ptr:
   "\<lbrace>\<lambda>s. P (ArchObj (arch_kernel_obj.ASIDPool mp))\<rbrace>

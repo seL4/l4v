@@ -16,7 +16,7 @@ theory ArchRetype_AI
 imports "../Retype_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems Retype_AI_assms
 
@@ -402,7 +402,7 @@ global_interpretation Retype_AI_post_retype_invs?: Retype_AI_post_retype_invs
   by (unfold_locales; fact post_retype_invs_def)
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma dmo_mapM_x_ccr_invs[wp]:
   "\<lbrace>invs\<rbrace>
@@ -480,7 +480,7 @@ global_interpretation Retype_AI_slot_bits?: Retype_AI_slot_bits
   qed
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma valid_untyped_helper [Retype_AI_assms]:
   assumes valid_c : "s  \<turnstile> c"
@@ -661,7 +661,7 @@ lemma vs_lookup_pages':
 
 (* ARMHYP move *)
 lemma hyp_refs_eq:
-  "ARM.state_hyp_refs_of s' = ARM.state_hyp_refs_of s"
+  "ARM_HYP.state_hyp_refs_of s' = ARM_HYP.state_hyp_refs_of s"
   unfolding s'_def ps_def
   apply (clarsimp intro!: ext simp: state_hyp_refs_of_def
                     simp: orthr
@@ -670,7 +670,7 @@ lemma hyp_refs_eq:
                                  hyp_refs_of_def tcb_hyp_refs_def tcb_vcpu_refs_def
                                  default_arch_tcb_def)
   apply (rename_tac ao)
-  apply (clarsimp simp: refs_of_a_def ARM.vcpu_tcb_refs_def default_arch_object_def
+  apply (clarsimp simp: refs_of_a_def ARM_HYP.vcpu_tcb_refs_def default_arch_object_def
                         arch_kernel_obj.case ARM_A.default_vcpu_def
                   split: aobject_type.splits)
   done
@@ -751,7 +751,7 @@ sublocale retype_region_proofs_gen?: retype_region_proofs_gen
 end
 
 
-context Arch begin global_naming ARM (*FIXME: arch_split*)
+context Arch begin global_naming ARM_HYP (*FIXME: arch_split*)
 
 definition
   valid_vs_lookup2 :: "(vs_ref list \<times> word32) set \<Rightarrow> word32 set \<Rightarrow> (cslot_ptr \<rightharpoonup> cap) \<Rightarrow> bool"
@@ -1072,7 +1072,7 @@ lemmas post_retype_invs_axioms = retype_region_proofs_invs_axioms
 end
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems Retype_AI_assms'
 
@@ -1093,7 +1093,7 @@ end
 
 
 global_interpretation Retype_AI?: Retype_AI
-  where no_gs_types = ARM.no_gs_types
+  where no_gs_types = ARM_HYP.no_gs_types
     and post_retype_invs_check = post_retype_invs_check
     and post_retype_invs = post_retype_invs
     and region_in_kernel_window = region_in_kernel_window
@@ -1105,7 +1105,7 @@ global_interpretation Retype_AI?: Retype_AI
   qed
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma retype_region_plain_invs:
   "\<lbrace>invs and caps_no_overlap ptr sz and pspace_no_overlap_range_cover ptr sz
@@ -1212,22 +1212,22 @@ lemma valid_arch_mdb_detype:
 
 end
 
-lemmas clearMemory_invs[wp] = ARM.clearMemory_invs
+lemmas clearMemory_invs[wp] = ARM_HYP.clearMemory_invs
 
 lemmas invs_irq_state_independent[intro!, simp]
-    = ARM.invs_irq_state_independent
+    = ARM_HYP.invs_irq_state_independent
 
 lemmas init_arch_objects_invs_from_restricted
-    = ARM.init_arch_objects_invs_from_restricted
+    = ARM_HYP.init_arch_objects_invs_from_restricted
 
 lemmas caps_region_kernel_window_imp
-    = ARM.caps_region_kernel_window_imp
+    = ARM_HYP.caps_region_kernel_window_imp
 
 lemmas init_arch_objects_wps
-    = ARM.init_arch_objects_cte_wp_at
-      ARM.init_arch_objects_valid_cap
-      ARM.init_arch_objects_cap_table
-      ARM.init_arch_objects_excap
-      ARM.init_arch_objects_st_tcb_at
+    = ARM_HYP.init_arch_objects_cte_wp_at
+      ARM_HYP.init_arch_objects_valid_cap
+      ARM_HYP.init_arch_objects_cap_table
+      ARM_HYP.init_arch_objects_excap
+      ARM_HYP.init_arch_objects_st_tcb_at
 
 end

@@ -9,14 +9,14 @@
  *)
 
 (*
-ARM-specific CSpace invariants
+ARM_HYP-specific CSpace invariants
 *)
 
 theory ArchCSpace_AI
 imports "../CSpace_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems CSpace_AI_assms
 
@@ -336,7 +336,7 @@ end
 global_interpretation cap_insert_crunches?: cap_insert_crunches .
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma cap_insert_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
   "\<lbrace>cap_refs_in_kernel_window
@@ -533,7 +533,7 @@ global_interpretation CSpace_AI?: CSpace_AI
   qed
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma is_cap_simps':
   "is_cnode_cap cap = (\<exists>r bits g. cap = cap.CNodeCap r bits g)"
@@ -608,7 +608,7 @@ lemma arch_post_cap_deletion_invs:
 end
 
 (* is this the right way? we need this fact globally but it's proven with
-   ARM defns. *)
+   ARM_HYP defns. *)
 lemma set_cap_valid_arch_caps_simple:
   "\<lbrace>\<lambda>s. valid_arch_caps s
       \<and> valid_objs s
@@ -617,21 +617,21 @@ lemma set_cap_valid_arch_caps_simple:
       \<and> \<not> (is_arch_cap cap)\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
-  apply (wp ARM.set_cap_valid_arch_caps)
+  apply (wp ARM_HYP.set_cap_valid_arch_caps)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (frule(1) caps_of_state_valid_cap)
   apply (rename_tac cap')
-  apply (subgoal_tac "\<forall>x \<in> {cap, cap'}. \<not> ARM.is_pt_cap x \<and> \<not> ARM.is_pd_cap x")
+  apply (subgoal_tac "\<forall>x \<in> {cap, cap'}. \<not> ARM_HYP.is_pt_cap x \<and> \<not> ARM_HYP.is_pd_cap x")
    apply simp
    apply (rule conjI)
-    apply (clarsimp simp: ARM.vs_cap_ref_def is_cap_simps)
+    apply (clarsimp simp: ARM_HYP.vs_cap_ref_def is_cap_simps)
    apply (erule impCE)
     apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
                           cte_wp_at_caps_of_state
-                          ARM.obj_ref_none_no_asid)
-   apply (rule ARM.no_cap_to_obj_with_diff_ref_triv, simp_all)
-   apply (rule ccontr, clarsimp simp: ARM.table_cap_ref_def is_cap_simps)
-  apply (auto simp: ARM.is_cap_simps)
+                          ARM_HYP.obj_ref_none_no_asid)
+   apply (rule ARM_HYP.no_cap_to_obj_with_diff_ref_triv, simp_all)
+   apply (rule ccontr, clarsimp simp: ARM_HYP.table_cap_ref_def is_cap_simps)
+  apply (auto simp: ARM_HYP.is_cap_simps)
   done
 
 lemma set_cap_kernel_window_simple:
@@ -639,9 +639,9 @@ lemma set_cap_kernel_window_simple:
       \<and> cte_wp_at (\<lambda>cap'. cap_range cap' = cap_range cap) ptr s\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
-  apply (wp ARM.set_cap_cap_refs_in_kernel_window)
+  apply (wp ARM_HYP.set_cap_cap_refs_in_kernel_window)
   apply (clarsimp simp: cte_wp_at_caps_of_state
-                        ARM.cap_refs_in_kernel_windowD)
+                        ARM_HYP.cap_refs_in_kernel_windowD)
   done
 
 end

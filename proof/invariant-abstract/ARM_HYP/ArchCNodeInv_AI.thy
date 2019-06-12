@@ -12,7 +12,7 @@ theory ArchCNodeInv_AI
 imports "../CNodeInv_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems CNodeInv_AI_assms
 
@@ -564,7 +564,7 @@ global_interpretation CNodeInv_AI?: CNodeInv_AI
 termination rec_del by (rule rec_del_termination)
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma post_cap_delete_pre_is_final_cap':
   "\<And>rv s'' rva s''a s.
@@ -826,7 +826,7 @@ global_interpretation CNodeInv_AI_2?: CNodeInv_AI_2
   qed
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 crunch rvk_prog: prepare_thread_delete "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def
@@ -941,7 +941,7 @@ termination cap_revoke by (rule cap_revoke_termination)
 declare cap_revoke.simps[simp del]
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 crunch typ_at[wp, CNodeInv_AI_assms]: finalise_slot "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps filterM_mapM unless_def
@@ -965,7 +965,7 @@ global_interpretation CNodeInv_AI_4?: CNodeInv_AI_4
   qed
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma cap_move_invs[wp, CNodeInv_AI_assms]:
   "\<lbrace>invs and valid_cap cap and cte_wp_at ((=) cap.NullCap) ptr'

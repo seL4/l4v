@@ -12,7 +12,7 @@ theory ArchArch_AI
 imports "../Arch_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 definition
   "valid_aci aci \<equiv> case aci of MakePool frame slot parent base \<Rightarrow>
@@ -419,7 +419,7 @@ lemma valid_asid_map':
 end
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma valid_arch_state_strg:
   "valid_arch_state s \<and> ap \<notin> ran (arm_asid_table (arch_state s)) \<and> asid_pool_at ap s \<longrightarrow>

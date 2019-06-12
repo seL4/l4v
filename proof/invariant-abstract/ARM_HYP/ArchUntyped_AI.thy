@@ -12,7 +12,7 @@ theory ArchUntyped_AI
 imports "../Untyped_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems Untyped_AI_assms
 
@@ -532,7 +532,7 @@ lemma create_cap_ioports[wp, Untyped_AI_assms]:
 end
 
 global_interpretation Untyped_AI? : Untyped_AI
-  where nonempty_table = ARM.nonempty_table
+  where nonempty_table = ARM_HYP.nonempty_table
   proof goal_cases
     interpret Arch .
     case 1 show ?case

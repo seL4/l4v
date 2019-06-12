@@ -6780,7 +6780,7 @@ lemma cap_swap_corres:
    apply assumption
   apply (clarsimp simp: pspace_relations_def)
   apply (rule conjI)
-   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv ARM.data_at_def)
+   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv ARM_HYP.data_at_def)
   apply(subst conj_assoc[symmetric])
   apply (rule conjI)
    prefer 2

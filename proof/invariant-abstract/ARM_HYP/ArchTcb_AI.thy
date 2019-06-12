@@ -12,7 +12,7 @@ theory ArchTcb_AI
 imports "../Tcb_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems Tcb_AI_asms
 
@@ -388,7 +388,7 @@ requalify_facts invoke_tcb_typ_at
 end
 
 global_interpretation Tcb_AI?: Tcb_AI
-  where is_cnode_or_valid_arch = ARM.is_cnode_or_valid_arch
+  where is_cnode_or_valid_arch = ARM_HYP.is_cnode_or_valid_arch
  proof goal_cases
   interpret Arch .
   case 1 show ?case

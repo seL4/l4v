@@ -9,7 +9,7 @@
  *)
 
 (*
-ARM-specific VSpace invariants
+ARM_HYP-specific VSpace invariants
 *)
 
 theory ArchVSpace_AI
@@ -2834,7 +2834,7 @@ lemma vs_lookup2:
 
 end
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma set_pd_vspace_objs_map: (* ARMHYP *)
   notes valid_vspace_obj.simps[simp del] and a_type_elims[rule del]
@@ -5966,7 +5966,7 @@ lemma vs_lookup_pages2:
 
 end
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma not_kernel_slot_not_global_pt: (* ARMHYP? remove? *)
   "\<lbrakk>pde_ref (pd x) = Some p;

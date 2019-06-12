@@ -12,7 +12,7 @@ theory ArchEmptyFail_AI
 imports "../EmptyFail_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems EmptyFail_AI_assms
 
@@ -36,7 +36,7 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
@@ -118,7 +118,7 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 crunch (empty_fail) empty_fail[wp]: vcpu_update, vcpu_save_reg_range, vgic_update_lr
   (ignore: set_object get_object)
@@ -150,7 +150,7 @@ global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
   cap_delete, choose_thread
 end
@@ -173,7 +173,7 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma vgic_maintenance_empty_fail[wp]: "empty_fail vgic_maintenance"
   by (wpsimp simp: get_gic_vcpu_ctrl_eisr0_def

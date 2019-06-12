@@ -16,7 +16,7 @@ theory ArchCSpaceInv_AI
 imports "../CSpaceInv_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 definition
    safe_ioport_insert :: "cap \<Rightarrow> cap \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"

@@ -55,7 +55,7 @@ global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI
   case 1 show ?case by (unfold_locales; (fact DetSchedDomainTime_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)

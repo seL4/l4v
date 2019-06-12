@@ -12,7 +12,7 @@ theory ArchDetype_AI
 imports "../Detype_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems Detype_AI_asms
 

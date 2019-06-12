@@ -17,7 +17,7 @@ imports
   "../Syscall_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems Syscall_AI_assms
 

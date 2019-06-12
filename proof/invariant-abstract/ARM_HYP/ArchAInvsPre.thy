@@ -14,7 +14,7 @@ begin
 
 context Arch begin
 
-global_naming ARM
+global_naming ARM_HYP
 
 lemma get_pd_of_thread_reachable:
   "get_pd_of_thread (kheap s) (arch_state s) t \<noteq> 0
@@ -162,8 +162,8 @@ global_interpretation AInvsPre?: AInvsPre
   qed
 
 requalify_facts
-  ARM.user_mem_dom_cong
-  ARM.device_mem_dom_cong
-  ARM.device_frame_in_device_region
-  ARM.is_aligned_physMappingOffset
+  ARM_HYP.user_mem_dom_cong
+  ARM_HYP.device_mem_dom_cong
+  ARM_HYP.device_frame_in_device_region
+  ARM_HYP.is_aligned_physMappingOffset
 end

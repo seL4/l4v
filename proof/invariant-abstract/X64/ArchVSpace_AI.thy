@@ -9,7 +9,7 @@
  *)
 
 (*
-ARM-specific VSpace invariants
+X64-specific VSpace invariants
 *)
 
 theory ArchVSpace_AI

@@ -15,7 +15,7 @@ begin
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Move this up"
 
-qualify ARM (in Arch)
+qualify ARM_HYP (in Arch)
 
 (* FIXME: move to spec level *)
 (* global data and code of the kernel, not covered by any cap *)
@@ -32,7 +32,7 @@ record iarch_tcb =
   itcb_vcpu :: "obj_ref option"
 end_qualify
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 definition
   arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb"
@@ -545,7 +545,7 @@ abbreviation
   "\<exists>\<unrhd> p \<equiv> \<lambda>s. \<exists>ref. (ref \<unrhd> p) s"
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 definition
   pde_mapping_bits :: "nat"
@@ -1311,7 +1311,7 @@ lemma valid_vspace_objs_update' [iff]:
 
 end
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma global_refs_equiv:
   assumes "idle_thread s = idle_thread s'"

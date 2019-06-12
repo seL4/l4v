@@ -12,7 +12,7 @@ theory ArchKHeap_AI
 imports "../KHeapPre_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 fun
   non_vspace_obj :: "kernel_object \<Rightarrow> bool"
@@ -137,7 +137,7 @@ locale vspace_only_obj_pred = Arch +
 sublocale vspace_only_obj_pred < arch_only_obj_pred
   using vspace_pred_imp[OF vspace_only] by unfold_locales
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 sublocale empty_table: vspace_only_obj_pred "empty_table S" for S
   by unfold_locales (clarsimp simp: vspace_obj_pred_def empty_table_def
@@ -677,13 +677,13 @@ crunch device_state_inv: storeWord "\<lambda>ms. P (device_state ms)"
 lemma state_hyp_refs_of_ep_update: "\<And>s ep val. typ_at AEndpoint ep s \<Longrightarrow>
        state_hyp_refs_of (s\<lparr>kheap := kheap s(ep \<mapsto> Endpoint val)\<rparr>) = state_hyp_refs_of s"
   apply (rule all_ext)
-  apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)
+  apply (clarsimp simp add: ARM_HYP.state_hyp_refs_of_def obj_at_def ARM_HYP.hyp_refs_of_def)
   done
 
 lemma state_hyp_refs_of_ntfn_update: "\<And>s ep val. typ_at ANTFN ep s \<Longrightarrow>
        state_hyp_refs_of (s\<lparr>kheap := kheap s(ep \<mapsto> Notification val)\<rparr>) = state_hyp_refs_of s"
   apply (rule all_ext)
-  apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)
+  apply (clarsimp simp add: ARM_HYP.state_hyp_refs_of_def obj_at_def ARM_HYP.hyp_refs_of_def)
   done
 
 lemma state_hyp_refs_of_tcb_bound_ntfn_update:
@@ -691,7 +691,7 @@ lemma state_hyp_refs_of_tcb_bound_ntfn_update:
           state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_bound_notification := ntfn\<rparr>))\<rparr>)
             = state_hyp_refs_of s"
   apply (rule all_ext)
-  apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def split: option.splits)
+  apply (clarsimp simp add: ARM_HYP.state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
 lemma state_hyp_refs_of_tcb_state_update:
@@ -699,7 +699,7 @@ lemma state_hyp_refs_of_tcb_state_update:
           state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_state := ts\<rparr>))\<rparr>)
             = state_hyp_refs_of s"
   apply (rule all_ext)
-  apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def split: option.splits)
+  apply (clarsimp simp add: ARM_HYP.state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
 lemma valid_vcpu_lift:
@@ -715,7 +715,7 @@ lemma valid_vcpu_lift:
 lemma valid_vcpu_update: "\<And>s ep val. typ_at ANTFN ep s \<Longrightarrow>
        state_hyp_refs_of (s\<lparr>kheap := kheap s(ep \<mapsto> Notification val)\<rparr>) = state_hyp_refs_of s"
   apply (rule all_ext)
-  apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)
+  apply (clarsimp simp add: ARM_HYP.state_hyp_refs_of_def obj_at_def ARM_HYP.hyp_refs_of_def)
   done
 
 lemma valid_vcpu_same_type:
