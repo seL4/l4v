@@ -797,6 +797,42 @@ lemma dmo_invs:
   apply simp
   done
 
+lemma as_user_bind[wp]:
+  "as_user t (f >>= g) = (as_user t f) >>= (\<lambda>x. as_user t (g x))"
+  apply (monad_eq simp: as_user_def select_f_def set_object_def get_object_def gets_the_def get_tcb_def)
+  apply (clarsimp split: option.splits kernel_object.splits)
+  apply (intro conjI impI allI;
+         match premises in "kheap _ t = Some (TCB _)" \<Rightarrow> succeed \<bar> _ \<Rightarrow> fastforce)
+    apply clarsimp
+    apply (rename_tac value_g s tcb fail_g value_f fail_f)
+    apply (rule_tac x="value_f" in exI)
+    apply (rule_tac x="s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set fail_f (tcb_arch tcb)\<rparr>))\<rparr>" in exI)
+    apply fastforce
+   apply clarsimp
+   apply (rename_tac value_g ta s tcb value_f fail_g ko)
+   apply (drule_tac x="ko" in spec)
+   apply clarsimp
+   apply (case_tac ko; blast?)
+   apply (rename_tac tcb_2)
+   apply (drule_tac x=tcb_2 in spec)
+   apply clarsimp
+   apply blast
+  apply (rename_tac tcb_2)
+  apply (case_tac "snd (f (arch_tcb_context_get (tcb_arch tcb_2)))")
+   apply simp
+  apply clarsimp
+  apply (rule iffI)
+   apply fastforce
+  apply clarsimp
+  apply (case_tac "kheap s' t = None")
+   apply fastforce
+  apply clarsimp
+  apply (rename_tac ko)
+  apply (case_tac ko; (solves auto)?)
+  apply clarsimp
+  apply blast
+  done
+
 lemma as_user_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> as_user t m \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   unfolding as_user_def
