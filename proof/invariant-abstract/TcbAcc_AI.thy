@@ -2167,12 +2167,17 @@ lemma as_user_mdb [wp]:
   done
 
 
-lemma dom_mapM:
+lemma dmo_mapM:
   assumes "\<And>x. empty_fail (m x)"
   shows "do_machine_op (mapM m xs) = mapM (do_machine_op \<circ> m) xs"
   by (rule submonad_mapM [OF submonad_do_machine_op submonad_do_machine_op,
                              simplified]) fact+
 
+lemma dmo_mapM_x:
+  assumes "\<And>x. empty_fail (m x)"
+  shows "do_machine_op (mapM_x m xs) = mapM_x (do_machine_op \<circ> m) xs"
+  by (rule submonad_mapM_x [OF submonad_do_machine_op submonad_do_machine_op,
+                             simplified]) fact+
 
 lemma sts_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"

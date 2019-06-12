@@ -1095,20 +1095,25 @@ lemma valid_ntfn_q_lift:
   apply (fastforce simp: ko_at_fold[symmetric] split: option.splits)
   done
 
-lemma valid_ep_q_lift:
-  assumes A: "\<And>x2 p. f \<lbrace>\<lambda>s. ~ ko_at (Endpoint x2) p s\<rbrace>"
-  assumes B: "\<And>P t. f \<lbrace>st_tcb_at P t\<rbrace>"
-  assumes C: "\<And>t. f \<lbrace>\<lambda>s. t \<noteq> cur_thread s \<and>
-                          t \<noteq> idle_thread s \<and>
-                          (bound_sc_tcb_at ((=) None) t s \<or>
+lemma valid_ep_q_lift_pre_conj:
+  assumes A: "\<And>x2 p. \<lbrace>\<lambda>s. ~ ko_at (Endpoint x2) p s \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. ~ ko_at (Endpoint x2) p s\<rbrace>"
+  assumes B: "\<And>P t. \<lbrace>\<lambda>s. st_tcb_at P t s \<and> R s\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  assumes C: "\<And>t. \<lbrace>\<lambda>s. t \<noteq> cur_thread s \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. t \<noteq> cur_thread s\<rbrace>"
+  assumes D: "\<And>t. \<lbrace>\<lambda>s. t \<noteq> idle_thread s \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
+  assumes E: "\<And>t. \<lbrace>\<lambda>s. (bound_sc_tcb_at ((=) None) t s \<or>
+                         active_sc_tcb_at t s \<and> budget_sufficient t s \<and> budget_ready t s) \<and> R s\<rbrace>
+                   f
+                   \<lbrace>\<lambda>s s. (bound_sc_tcb_at ((=) None) t s \<or>
                            active_sc_tcb_at t s \<and> budget_sufficient t s \<and> budget_ready t s)\<rbrace>"
-  shows "f \<lbrace>valid_ep_q\<rbrace>"
+  shows " \<lbrace>\<lambda>s. valid_ep_q s \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. valid_ep_q s\<rbrace>"
   unfolding valid_ep_q_def
   apply (wpsimp wp: hoare_vcg_all_lift)
    apply (clarsimp simp: ko_at_fold split: kernel_object.splits option.splits)
-   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_ball_lift A B C)
+   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_ball_lift A B C D E)
   apply (fastforce simp: ko_at_fold[symmetric] split: option.splits)
   done
+
+lemmas valid_ep_q_lift = valid_ep_q_lift_pre_conj[where R = \<top>, simplified]
 
 lemma valid_blocked_except_lift_pre_conj:
   assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"

@@ -567,7 +567,7 @@ lemma dmo_mapM_x_ccr_invs[wp]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: mapM_x_mapM do_machine_op_return_foo)
   apply (rule hoare_pre)
-  apply (subst dom_mapM)
+  apply (subst dmo_mapM)
     apply ((simp add: clearMemory_def
       | wp empty_fail_cleanCacheRange_PoU ef_storeWord
       empty_fail_mapM_x empty_fail_bind)+)[1]

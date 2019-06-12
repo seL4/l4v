@@ -170,6 +170,13 @@ lemma mapME_x_wp:
 
 lemmas mapME_x_wp' = mapME_x_wp [OF _ subset_refl]
 
+lemma mapME_x_wp2:
+  assumes x: "\<And>x. x \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
+  shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapME_x f xs \<lbrace>\<lambda>rv. P\<rbrace>"
+  by (wpsimp wp: mapME_x_wp x)
+
+lemmas mapME_x_wp_inv = mapME_x_wp2[where S=UNIV, simplified]
+
 lemma hoare_vcg_all_liftE:
   "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q x rv s\<rbrace>,\<lbrace>E\<rbrace>"
   by (fastforce simp: validE_def valid_def split: sum.splits)

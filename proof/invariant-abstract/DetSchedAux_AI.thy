@@ -388,12 +388,10 @@ locale DetSchedAux_AI_det_ext = DetSchedAux_AI "TYPE(det_ext)" +
     "\<And>P i. \<lbrace>\<lambda>s::det_ext state. P (scheduler_action s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   assumes invoke_untyped_release_queue[wp]:
     "\<And>P i. \<lbrace>\<lambda>s::det_ext state. P (release_queue s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (release_queue s)\<rbrace>"
-(*  assumes invoke_untyped_budget_sufficient[wp]:
-    "\<And>P t i. \<lbrace>\<lambda>s::det_ext state. P (budget_sufficient t s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (budget_sufficient t s)\<rbrace>"
-  assumes invoke_untyped_budget_ready[wp]:
-    "\<And>P t i. \<lbrace>\<lambda>s::det_ext state. P (budget_ready t s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (budget_ready t s)\<rbrace>"
-*)  assumes init_arch_objects_valid_blocked[wp]:
+  assumes init_arch_objects_valid_blocked[wp]:
     "\<And>t r n sz refs. \<lbrace>valid_blocked::det_ext state \<Rightarrow> _\<rbrace> init_arch_objects t r n sz refs \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
+  assumes init_arch_objects_valid_machine_time[wp]:
+    "\<And>t r n sz refs. init_arch_objects t r n sz refs \<lbrace>valid_machine_time::det_ext state \<Rightarrow> _\<rbrace>"
   assumes invoke_untyped_idle_thread[wp]:
     "\<And>P i. \<lbrace>\<lambda>s::det_ext state. P (idle_thread s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
 

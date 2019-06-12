@@ -368,6 +368,118 @@ crunches arch_switch_to_thread
   and scheduler_action[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (scheduler_action s)"
   (simp: crunch_simps)
 
+lemma handle_vm_fault_valid_machine_time[DetSchedSchedule_AI_assms]:
+  "handle_vm_fault a b \<lbrace>valid_machine_time\<rbrace>"
+  apply (case_tac b; simp)
+   apply (wpsimp simp: do_machine_op_def |
+          clarsimp simp: in_monad getFAR_def getDFSR_def getIFSR_def)+
+  done
+
+crunches as_user, arch_post_modify_registers, prepare_thread_delete, arch_post_cap_deletion
+  for valid_machine_time[wp]: "valid_machine_time:: det_state \<Rightarrow> _"
+  (wp: crunch_wps)
+
+crunches setHardwareASID, set_current_pd, invalidateLocalTLB_ASID, cleanByVA, invalidateByVA,
+  invalidateL2Range, cleanInvalByVA, cleanInvalidateL2Range, isb, branchFlush, invalidateByVA_I,
+  cleanByVA_PoU, cleanL2Range, cleanCacheRange_PoC, branchFlushRange, invalidateCacheRange_I,
+  cleanCacheRange_PoU, cleanInvalidateCacheRange_RAM, cleanInvalidateCacheRange_RAM,
+  invalidateCacheRange_RAM, cleanCacheRange_RAM, setIRQTrigger, maskInterrupt,
+  invalidateLocalTLB_VAASID, do_flush, storeWord, freeMemory, ackDeadlineIRQ, clearMemory
+  for last_machine_time[wp]: "\<lambda>a. P (last_machine_time a)"
+  (simp: isb_def writeTTBR0_def wp: crunch_wps)
+
+lemma misc_dmo_valid_machine_time[wp]:
+  "do_machine_op cleanCaches_PoU \<lbrace>valid_machine_time\<rbrace>"
+  "do_machine_op ackDeadlineIRQ  \<lbrace>valid_machine_time\<rbrace>"
+  "\<And>a. do_machine_op (set_current_pd a) \<lbrace>valid_machine_time\<rbrace>"
+  "\<And>a. do_machine_op (invalidateLocalTLB_ASID a) \<lbrace>valid_machine_time\<rbrace>"
+  "\<And>a. do_machine_op (invalidateLocalTLB_VAASID a) \<lbrace>valid_machine_time\<rbrace>"
+  "\<And>a. do_machine_op (setHardwareASID a) \<lbrace>valid_machine_time\<rbrace>"
+  "\<And>a. do_machine_op (ackInterrupt a) \<lbrace>valid_machine_time\<rbrace>"
+  "\<And>a b. do_machine_op (clearMemory a b) \<lbrace>valid_machine_time\<rbrace>"
+  "\<And>a b. do_machine_op (setIRQTrigger a b) \<lbrace>valid_machine_time\<rbrace>"
+  "\<And>a b. do_machine_op (maskInterrupt a b) \<lbrace>valid_machine_time\<rbrace>"
+  "\<And>a b. do_machine_op (cleanByVA_PoU a b) \<lbrace>valid_machine_time\<rbrace>"
+  "\<And>a b. do_machine_op (freeMemory a b) \<lbrace>valid_machine_time\<rbrace>"
+  "\<And>a b. do_machine_op (storeWord a b) \<lbrace>valid_machine_time\<rbrace>"
+  "\<And>a b c. do_machine_op (cleanCacheRange_PoU a b c) \<lbrace>valid_machine_time\<rbrace>"
+  "\<And>a b c d. do_machine_op (do_flush a b c d) \<lbrace>valid_machine_time\<rbrace>"
+  apply (wpsimp wp: valid_machine_time_lift do_machine_op_machine_state)+
+  done
+
+crunches get_hw_asid, set_vm_root
+  for last_machine_time[wp]: "\<lambda>a. P (last_machine_time (machine_state a))"
+  and cur_time[wp]:  "\<lambda>a. Q (cur_time a)"
+  (simp: wp: do_machine_op_machine_state)
+
+lemma arm_context_switch_valid_machine_time[wp]:
+  "arm_context_switch a b \<lbrace>valid_machine_time\<rbrace>"
+  unfolding arm_context_switch_def
+  by (wpsimp wp: valid_machine_time_lift do_machine_op_machine_state simp: )
+
+crunches arch_invoke_irq_control
+  for valid_machine_time[wp]: "valid_machine_time:: det_state \<Rightarrow> _"
+  (wp: crunch_wps ignore: do_machine_op simp: crunch_simps)
+
+crunches delete_asid, delete_asid_pool, unmap_page_table, unmap_page
+  for valid_machine_time[wp]: "valid_machine_time:: det_state \<Rightarrow> _"
+  (wp: crunch_wps do_machine_op_machine_state ignore: do_machine_op simp: crunch_simps)
+
+lemma arch_finalise_cap_valid_machine_time[DetSchedSchedule_AI_assms]:
+  "\<And>a b. arch_finalise_cap a b  \<lbrace>valid_machine_time:: det_state \<Rightarrow> _\<rbrace>"
+  by (wpsimp wp: do_machine_op_machine_state
+              simp: arch_finalise_cap_def)
+
+crunches invalidate_tlb_by_asid, set_message_info, set_mrs, retype_region
+  for valid_machine_time[wp]: "valid_machine_time:: det_state \<Rightarrow> _"
+  (wp: crunch_wps ignore: do_machine_op simp: crunch_simps)
+
+lemma machine_state_detype[simp]:
+  "machine_state (detype S s) = machine_state (s)"
+  by (clarsimp simp: valid_machine_time_def detype_def)
+
+crunches delete_objects
+  for valid_machine_time[wp]: "valid_machine_time :: det_state \<Rightarrow> _"
+  (wp: crunch_wps hoare_vcg_all_lift ignore: do_machine_op)
+
+lemma arch_perform_invocation_valid_machine_time[DetSchedSchedule_AI_assms]:
+"\<And>a. arch_perform_invocation a \<lbrace>valid_machine_time:: det_state \<Rightarrow> _\<rbrace>"
+  unfolding arch_perform_invocation_def
+  apply (wpsimp)
+       apply (wpsimp simp: perform_page_table_invocation_def wp: mapM_x_wp_inv)
+      apply (wpsimp simp: perform_page_directory_invocation_def wp: )
+     apply (wpsimp simp: perform_page_invocation_def wp: mapM_wp_inv hoare_drop_imps mapM_x_wp_inv)
+    apply (wpsimp simp: perform_asid_control_invocation_def wp: hoare_drop_imps)
+   apply (wpsimp simp: perform_asid_pool_invocation_def  wp: hoare_drop_imps hoare_vcg_all_lift)
+  apply clarsimp
+  done
+
+crunches arch_get_sanitise_register_info, handle_arch_fault_reply
+  for valid_machine_time[DetSchedSchedule_AI_assms]: valid_machine_time
+
+crunches handle_hypervisor_fault, handle_reserved_irq
+  for valid_machine_time: valid_machine_time
+
+lemma valid_machine_time_getCurrentTime:
+  "\<And>s x s'. valid_machine_time s \<Longrightarrow> (x, s') \<in> fst (getCurrentTime (machine_state s)) \<Longrightarrow>
+            valid_machine_time_2 x s'"
+  apply (clarsimp simp: valid_machine_time_def getCurrentTime_def in_monad)
+  apply (rule word_of_nat_le)
+  apply (rule Lattices.linorder_class.min.coboundedI1)
+  apply (subst unat_minus_one)
+   using kernelWCET_ticks_pos2 apply fastforce
+  apply (subst unat_minus')
+   using kernelWCET_ticks_pos2 apply fastforce
+  apply clarsimp
+  done
+
+lemma update_time_stamp_valid_machine_time[wp]:
+  "update_time_stamp \<lbrace>valid_machine_time:: det_state \<Rightarrow> _\<rbrace>"
+  unfolding update_time_stamp_def
+  apply (wpsimp simp: do_machine_op_def)
+  apply (fastforce simp: getCurrentTime_def elim: valid_machine_time_getCurrentTime)
+  done
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
@@ -396,7 +508,8 @@ end
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault?: DetSchedSchedule_AI_handle_hypervisor_fault
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact handle_hyp_fault_valid_sched handle_reserved_irq_valid_sched)?)
+  case 1 show ?case by (unfold_locales; (fact handle_hyp_fault_valid_sched handle_reserved_irq_valid_sched
+                                              handle_hypervisor_fault_valid_machine_time handle_reserved_irq_valid_machine_time)?)
   qed
 
 end

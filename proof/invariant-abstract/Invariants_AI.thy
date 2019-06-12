@@ -52,6 +52,8 @@ requalify_consts
 
   ASIDPoolObj
 
+  last_machine_time
+
   vs_lookup1
   vs_lookup_trans
   vs_refs
@@ -112,6 +114,7 @@ requalify_facts
   same_aobject_same_arch_gen_refs
   valid_arch_mdb_eqI
   valid_sc_size_less_word_bits
+  kernelWCET_us_pos
 
 lemmas [simp] =
   tcb_bits_def
@@ -1245,6 +1248,20 @@ definition
      sc_tcb_sc_at
        (\<lambda>t. scheduler_action s = resume_cur_thread \<longrightarrow> t = Some (cur_thread s))
        (cur_sc s) s"
+
+definition valid_machine_time_2 where
+   "valid_machine_time_2 ct ms \<equiv> last_machine_time ms \<le> - kernelWCET_ticks - 1 \<and>
+                               ct \<le> last_machine_time ms"
+
+abbreviation valid_machine_time :: "'z state \<Rightarrow> bool" where
+ "valid_machine_time s \<equiv> valid_machine_time_2 (cur_time s) (machine_state s)"
+
+lemmas valid_machine_time_def = valid_machine_time_2_def
+
+lemma cur_time_bounded:
+  "valid_machine_time s \<Longrightarrow> cur_time s \<le> - kernelWCET_ticks - 1"
+  by (rule_tac b="last_machine_time (machine_state s)" in order.trans;
+      simp add: valid_machine_time_def)
 
 definition
   invs :: "'z::state_ext state \<Rightarrow> bool" where
@@ -4179,6 +4196,14 @@ lemma valid_replies_lift:
   shows "f \<lbrace> valid_replies_pred P \<rbrace>"
   by (rule hoare_lift_Pf[where f=replies_blocked]; wp replies_with_sc_lift replies_blocked_lift)
 
+lemma valid_machine_time_lift:
+  assumes A: "\<And>P. f \<lbrace>\<lambda>s. P (last_machine_time (machine_state s))\<rbrace>"
+  assumes B: "\<And>P. f \<lbrace>\<lambda>s. P (cur_time s)\<rbrace>"
+  shows "f \<lbrace>valid_machine_time\<rbrace>"
+  apply (rule hoare_weaken_pre)
+  apply (wps A B | wpsimp simp: valid_machine_time_def)+
+  done
+
 context
   fixes P r t s
   assumes eq: "\<And>st. P st \<longleftrightarrow> st = BlockedOnReply r"
@@ -4465,5 +4490,14 @@ lemma diminished_cap_simps[simp]:
 lemma ko_at_fold:
   "(kheap s p = Some ko) = (ko_at ko p s)"
   by (clarsimp simp: obj_at_def)
+
+lemma do_machine_op_machine_state:
+  "\<lbrace>P\<rbrace> mop \<lbrace>\<lambda>rv. Q\<rbrace> \<Longrightarrow>
+   \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op mop \<lbrace>\<lambda>_ s. Q (machine_state s)\<rbrace>"
+  apply (simp add: do_machine_op_def split_def)
+  apply wp
+  apply clarsimp
+  apply (erule(2) use_valid)
+  done
 
 end

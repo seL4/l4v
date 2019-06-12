@@ -1016,6 +1016,31 @@ crunch valid_sched_action[wp]: init_arch_objects "valid_sched_action :: det_ext 
 crunch valid_sched[wp]: init_arch_objects "valid_sched :: det_ext state \<Rightarrow> _"
   (wp: valid_sched_lift crunch_wps)
 
+crunches cleanByVA_PoU, cleanCacheRange_PoU
+  for last_machine_time[wp]: "\<lambda>a. P (last_machine_time a)"
+
+lemma dmo_cleanCacheRange_PoU_valid_machine_time[wp]:
+  "do_machine_op (cleanCacheRange_PoU x y z) \<lbrace>valid_machine_time\<rbrace>"
+  by (wpsimp wp: valid_machine_time_lift do_machine_op_machine_state simp: cleanCacheRange_PoU_def)
+
+crunches copy_global_mappings
+  for valid_machine_time[wp]: "valid_machine_time :: det_ext state \<Rightarrow> _"
+  (wp: crunch_wps)
+
+lemma init_arch_objects_valid_machine_time[wp]:
+  "init_arch_objects new_type ptr num_objects obj_sz refs \<lbrace>valid_machine_time :: det_ext state \<Rightarrow> _\<rbrace>"
+  unfolding init_arch_objects_def
+  by (wpsimp wp: mapM_x_wp_inv simp: dmo_mapM_x)
+
+lemma kernelWCET_us_non_zero:
+  "kernelWCET_us \<noteq> 0"
+  using kernelWCET_us_pos by fastforce
+
+lemma kernelWCET_ticks_non_zero:
+  "kernelWCET_ticks \<noteq> 0"
+  using kernelWCET_us_non_zero us_to_ticks_nonzero
+  by (fastforce simp: kernelWCET_ticks_def)
+
 end
 
 lemmas tcb_sched_action_valid_idle_etcb
