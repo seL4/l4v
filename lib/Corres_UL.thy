@@ -285,6 +285,10 @@ lemma dc_o_simp1[simp]: "dc \<circ> f = dc"
 lemma dc_o_simp2[simp]: "dc x \<circ> f = dc x"
   by (simp add: dc_def o_def)
 
+lemma unit_dc_is_eq:
+  "(dc::unit\<Rightarrow>_\<Rightarrow>_) = (=)"
+  by (fastforce simp: dc_def)
+
 lemma corres_split_nor:
  "\<lbrakk> corres_underlying sr nf nf' r R R' b d; corres_underlying sr nf nf' dc P P' a c;
     \<lbrace>Q\<rbrace> a \<lbrace>\<lambda>x. R\<rbrace>; \<lbrace>Q'\<rbrace> c \<lbrace>\<lambda>x. R'\<rbrace> \<rbrakk>
