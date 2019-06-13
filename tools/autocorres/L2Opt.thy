@@ -121,7 +121,7 @@ lemma monad_equiv_guard:
  * variables being expanded inside of guard statements. *)
 lemma monad_equiv_guard' [L2flow]:
     "\<lbrakk> \<And>s. simp_expr True (G s) (G' s) \<rbrakk> \<Longrightarrow>
-        monad_equiv P (L2_guard G) (L2_guard G') (\<lambda>r s. P s \<and> G' s \<and> r = ()) (\<lambda>_ _. False)"
+        monad_equiv P (L2_guard (\<lambda>s. G s)) (L2_guard (\<lambda>s. G' s)) (\<lambda>r s. P s \<and> G' s \<and> r = ()) (\<lambda>_ _. False)"
   apply (rule monad_equiv_guard)
   apply (rule simp_expr_weaken)
    apply assumption
