@@ -111,6 +111,10 @@ definition new_context :: "user_context"
   where
   "new_context \<equiv> UserContext (\<lambda>_. 0)"
 
+text \<open>
+  The lowest virtual address in the kernel window. The kernel reserves the virtual addresses
+  from here up in every virtual address space.
+\<close>
 definition pptr_base :: "machine_word"
   where
   "pptr_base = Platform.RISCV64.pptrBase"
@@ -121,16 +125,19 @@ definition user_vtop :: "machine_word"
   "user_vtop = Platform.RISCV64.pptrUserTop"
 
 text \<open>
-  The lowest virtual address in the kernel window. The kernel reserves the virtual addresses
-  from here up in every virtual address space.
+  The virtual address the kernel code is mapped.
 \<close>
 definition kernel_base :: "vspace_ref"
   where
   "kernel_base \<equiv> 0xFFFFFFFF84000000" \<comment> \<open>for Spike platform\<close>
 
+text \<open>
+  Currently an arbitrary aligned address for the idle thread.
+  Only has to exists, does not have to match up with the concrete value in C.
+\<close>
 definition idle_thread_ptr :: vspace_ref
   where
-  "idle_thread_ptr = kernel_base + 0x1000"
+  "idle_thread_ptr = pptr_base + 0x1000"
 
 (* FIXME: nat_to_cref is not arch specific *)
 definition nat_to_cref :: "nat \<Rightarrow> nat \<Rightarrow> cap_ref"
