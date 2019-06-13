@@ -245,6 +245,14 @@ lemma abstract_val_ucast:
   apply (clarsimp simp: uint_up_ucast is_up)
   done
 
+(* Base rule for heap-lifted signed words. See the function mk_sword_heap_get_rule. *)
+lemma abstract_val_heap_sword_template:
+  "\<lbrakk> introduce_typ_abs_fn (sint :: ('a::len) signed word \<Rightarrow> int);
+     abstract_val P p' id p \<rbrakk>
+   \<Longrightarrow> abstract_val P (sint (ucast (heap_get s p' :: 'a word) :: 'a signed word))
+                      sint (ucast (heap_get s p) :: 'a signed word)"
+  by simp
+
 lemma abstract_val_scast:
     "\<lbrakk> introduce_typ_abs_fn (sint :: ('a::len) signed word \<Rightarrow> int);
        abstract_val P C' sint C \<rbrakk>
