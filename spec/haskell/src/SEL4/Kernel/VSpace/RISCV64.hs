@@ -225,11 +225,12 @@ deleteASID asid pt = do
 lookupPTFromLevel :: Int -> PPtr PTE -> VPtr -> PPtr PTE -> KernelF LookupFailure (PPtr PTE)
 lookupPTFromLevel level ptPtr vPtr targetPtPtr = do
     unless (0 < level) $ throw InvalidRoot
-    pte <- withoutFailure $ pteAtIndex level ptPtr vPtr
+    let slot = ptSlotIndex level ptPtr vPtr
+    pte <- withoutFailure $ getObject slot
     unless (isPageTablePTE pte) $ throw InvalidRoot
     let ptr = getPPtrFromHWPTE pte
     if ptr == targetPtPtr
-        then return $ ptSlotIndex (level-1) ptr vPtr
+        then return $ slot
         else lookupPTFromLevel (level-1) ptr vPtr targetPtPtr
 
 unmapPageTable :: ASID -> VPtr -> PPtr PTE -> Kernel ()
