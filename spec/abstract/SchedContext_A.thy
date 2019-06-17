@@ -218,6 +218,16 @@ where
     od
   od"
 
+fun
+  min_budget_merge :: "bool \<Rightarrow> refill list \<Rightarrow> refill list"
+where
+  "min_budget_merge _ [] = []"
+| "min_budget_merge _ [r] = [r]"
+| "min_budget_merge full (r0#r1#rs) = (if (r_amount r0 < MIN_BUDGET \<or> full)
+     then min_budget_merge False (r1\<lparr> r_amount := r_amount r1 + r_amount r0 \<rparr> # rs)
+     else (r0#r1#rs))" (* RT: full can be true only at the beginning,
+                              because the refills size decreases by 1 in each call *)
+
 definition
   refill_split_check :: "time \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -238,7 +248,7 @@ where
       then set_refills sc_ptr [new \<lparr> r_amount := r_amount new + remaining \<rparr>]
       else
         let r2 = hd (tl refills); rs = tl (tl refills) in
-        set_refills sc_ptr (schedule_used (r2 \<lparr>r_amount := r_amount r2 + remaining\<rparr> # rs) new)
+        set_refills sc_ptr (min_budget_merge (size refills = sc_refill_max sc)(schedule_used (r2 \<lparr>r_amount := r_amount r2 + remaining\<rparr> # rs) new))
     else
       set_refills sc_ptr (schedule_used (rfhd\<lparr>r_amount := remaining, r_time := r_time rfhd + usage\<rparr> # tl refills) new)
   od"
@@ -258,17 +268,6 @@ termination refills_budget_check
    apply clarsimp
   apply unat_arith
   done
-
-fun
-  min_budget_merge :: "bool \<Rightarrow> refill list \<Rightarrow> refill list"
-where
-  "min_budget_merge _ [] = []"
-| "min_budget_merge _ [r] = [r]"
-| "min_budget_merge full (r0#r1#rs) = (if (r_amount r0 < MIN_BUDGET \<or> full)
-     then min_budget_merge False (r1\<lparr> r_amount := r_amount r1 + r_amount r0 \<rparr> # rs)
-     else (r0#r1#rs))" (* RT: full can be true only at the beginning,
-                              because the refills size decreases by 1 in each call *)
-
 
 definition
   refill_budget_check :: "ticks \<Rightarrow> ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
