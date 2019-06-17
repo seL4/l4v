@@ -74,6 +74,15 @@ There are six ARM-specific capability types: the global ASID control capability,
 #endif
 >     deriving (Eq, Show)
 
+The range of allowable sizes for Untyped objects depends on addressable memory
+size.
+
+> minUntypedSizeBits :: Int
+> minUntypedSizeBits = 4
+
+> maxUntypedSizeBits :: Int
+> maxUntypedSizeBits = 29
+
 \subsection{Kernel Objects}
 
 The ARM kernel stores some ARM-specific types of objects in the PSpace, such as ASID pools, which are second level nodes in the global ASID table.

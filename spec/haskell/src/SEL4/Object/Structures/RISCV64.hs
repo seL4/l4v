@@ -40,6 +40,13 @@ data ArchCapability
         capPTMappedAddress :: Maybe (ASID, VPtr) }
     deriving (Eq, Show)
 
+{- The range of allowable sizes for Untyped objects depends on addressable memory size. -}
+
+minUntypedSizeBits :: Int
+minUntypedSizeBits = 4
+
+maxUntypedSizeBits :: Int
+maxUntypedSizeBits = 38
 
 {- Kernel Objects -}
 

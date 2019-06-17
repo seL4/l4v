@@ -21,6 +21,14 @@ imports
   "../machine/MachineExports"
 begin
 
+context begin interpretation Arch .
+
+requalify_consts
+  minUntypedSizeBits
+  maxUntypedSizeBits
+
+end
+
 consts
   cNodeOverlap :: "(machine_word \<Rightarrow> nat option) \<Rightarrow> (machine_word \<Rightarrow> bool) \<Rightarrow> bool"
 
