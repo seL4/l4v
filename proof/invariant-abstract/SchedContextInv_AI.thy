@@ -904,6 +904,34 @@ definition
 where
   "sc_at_period P  = obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_period sc))"
 
+(* min_budget_merge *)
+
+lemma min_budget_merge_bounded:
+  "MIN_BUDGET \<le> refills_sum (a#ls) \<longrightarrow>
+         MIN_BUDGET \<le> r_amount (hd (min_budget_merge b (a#ls)))"
+  by (induction ls arbitrary: b a; clarsimp)
+     (auto simp: add.commute add.left_commute)
+
+lemma min_budget_merge_sufficient:
+  "ls \<noteq> [] \<longrightarrow> MIN_BUDGET \<le> refills_sum ls \<longrightarrow>
+         MIN_BUDGET \<le> r_amount (hd (min_budget_merge b ls))"
+  by (cases ls; clarsimp simp: min_budget_merge_bounded)
+
+lemma min_budget_merge_helper:
+  "refills_sum (min_budget_merge b (r0#r1#rs)) = refills_sum (r0#r1#rs)"
+  apply (induction rs arbitrary: r0 r1 b, clarsimp simp: refills_sum_def)
+  apply (clarsimp)
+  apply (drule_tac x="r1\<lparr>r_amount := r_amount r1 + r_amount r0\<rparr>" in meta_spec)
+  apply (drule_tac x=a in meta_spec)
+  apply (clarsimp simp: refills_sum_def)
+ done
+
+lemma min_budget_merge_refills_sum[iff]:
+  "refills_sum (min_budget_merge b refills) = refills_sum refills"
+  apply (cases refills, simp)
+  apply (case_tac list, simp)
+  by (simp only: min_budget_merge_helper)
+
 lemma refill_split_check_valid_refills[wp]: (* applicable only when sc is not round_robin *)
   "\<lbrace>valid_refills scptr budget and (\<lambda>s. sc_at_period (\<lambda>p. p \<noteq> 0) (cur_sc s) s)\<rbrace>
    refill_split_check consumed
@@ -926,60 +954,39 @@ lemma refill_split_check_valid_refills[wp]: (* applicable only when sc is not ro
                       hoare_vcg_if_lift2 hoare_drop_imp
                 simp: update_sched_context_def split_del: if_split)
     apply (case_tac "sc_refills x"; clarsimp simp: valid_refills_def obj_at_def refills_sum_def)
-
    apply clarsimp
    apply (wpsimp wp: get_refills_wp set_object_wp get_object_wp get_sched_context_wp
                      hoare_vcg_if_lift2 hoare_drop_imp
                simp: update_sched_context_def split_del: if_split)
    apply (case_tac "cur_sc s =scptr")
     apply (clarsimp simp: valid_refills_def obj_at_def schedule_used_length MIN_REFILLS_def
-                    split del: if_split)
+      split del: if_split)
     apply (rename_tac sc n)
     apply (case_tac "sc_refills sc", simp)
-    apply (case_tac "list"; clarsimp simp: valid_refills_def obj_at_def refills_sum_def)
+    apply (case_tac "list";
+           clarsimp simp: valid_refills_def obj_at_def refills_sum_def
+                          conjunct1[OF min_budget_merge_length, simplified]
+                          schedule_used_non_nil)
+    apply (rule le_trans)
+     apply (rule conjunct2[OF min_budget_merge_length, simplified, OF schedule_used_non_nil])
+    apply (subgoal_tac "length
+             (schedule_used
+               (aa\<lparr>r_amount := r_amount aa + (r_amount a - consumed)\<rparr> # lista)
+               \<lparr>r_time = r_time a + sc_period sc, r_amount = consumed\<rparr>) \<le> Suc (Suc (length lista))")
+     apply simp
+    apply (simp add: schedule_used_length)
    apply (clarsimp simp: valid_refills_def obj_at_def)
-  apply (clarsimp split del: if_split)
+  apply clarsimp
   apply (wpsimp wp: get_refills_wp set_object_wp get_object_wp get_sched_context_wp
                     hoare_vcg_if_lift2 hoare_drop_imp
               simp: update_sched_context_def split_del: if_split)
   apply (case_tac "cur_sc s=scptr")
    apply (clarsimp simp: valid_refills_def obj_at_def schedule_used_length MIN_REFILLS_def
-                   split del: if_split)
+              split del: if_split)
    apply (rename_tac sc n)
-   apply (case_tac "sc_refills sc", simp)
-   apply (case_tac "list"; clarsimp simp: valid_refills_def obj_at_def refills_sum_def)
+   apply (case_tac "sc_refills sc"; simp)
   apply (clarsimp simp: valid_refills_def obj_at_def)
   done
-
-lemma min_budget_merge_helper:
-   "refills_sum (min_budget_merge b (r0#r1#rs)) = refills_sum (r0#r1#rs)"
-  apply (induction rs arbitrary: r0 r1 b, clarsimp simp: refills_sum_def)
-  apply (clarsimp)
-  apply (drule_tac x="r1\<lparr>r_amount := r_amount r1 + r_amount r0\<rparr>" in meta_spec)
-  apply (drule_tac x=a in meta_spec)
-  apply (clarsimp simp: refills_sum_def)
- done
-
-lemma min_budget_merge_refills_sum[iff]:
-  "refills_sum (min_budget_merge b refills) = refills_sum refills"
-  apply (cases refills, simp)
-  apply (case_tac list, simp)
-  by (simp only: min_budget_merge_helper)
-
-lemma min_budget_merge_length_helper:
-  "1 \<le> length (min_budget_merge b (r0#r1#rs)) \<and> length (min_budget_merge b (r0#r1#rs)) \<le> length (r0#r1#rs)"
-  apply (induction rs arbitrary: r0 r1 b, simp)
-  apply (clarsimp split del: if_split)
-  apply (drule_tac x="r1\<lparr>r_amount := r_amount r1 + r_amount r0\<rparr>" in meta_spec)
-  apply (drule_tac x=a in meta_spec)
-  by clarsimp
-
-lemma min_budget_merge_length:
-  "1 \<le> length ls \<Longrightarrow> 1 \<le> length (min_budget_merge b ls) \<and> length (min_budget_merge b ls) \<le> length ls"
-  apply (cases ls, simp)
-  apply (case_tac list, simp)
-  by (simp only: min_budget_merge_length_helper)
-
 
 lemma set_min_budget_merge_valid_refills:
   "\<lbrace>valid_refills scptr budget

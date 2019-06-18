@@ -131,6 +131,21 @@ lemma refill_unblock_check_valid_objs[wp]:
   apply (auto simp: refills_merge_valid[simplified])
   done
 
+lemma min_budget_merge_length_helper:
+  "1 \<le> length (min_budget_merge b (r0#r1#rs)) \<and> length (min_budget_merge b (r0#r1#rs)) \<le> length (r0#r1#rs)"
+  apply (induction rs arbitrary: r0 r1 b, simp)
+  apply (clarsimp split del: if_split)
+  apply (drule_tac x="r1\<lparr>r_amount := r_amount r1 + r_amount r0\<rparr>" in meta_spec)
+  apply (drule_tac x=a in meta_spec)
+  by clarsimp
+
+lemma min_budget_merge_length:
+  "1 \<le> length ls \<Longrightarrow> 1 \<le> length (min_budget_merge b ls) \<and> length (min_budget_merge b ls) \<le> length ls"
+  apply (cases ls, simp)
+  apply (case_tac list, simp)
+  by (simp only: min_budget_merge_length_helper)
+
+
 lemma refill_split_check_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> refill_split_check usage \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (wpsimp wp: get_sched_context_wp get_refills_sp set_refills_valid_objs
@@ -139,7 +154,7 @@ lemma refill_split_check_valid_objs[wp]:
       split: kernel_object.splits split_del: if_split)
   apply (frule_tac sc=sc in valid_sc_valid_refills[rotated], simp)
   apply (case_tac "sc_refills sc", simp)
-  apply (auto simp: refills_merge_valid[simplified])
+  apply (auto simp: refills_merge_valid[simplified] conjunct1[OF min_budget_merge_length, simplified])
   done
 
 (* move to KHeap_AI *)
@@ -457,7 +472,7 @@ lemma refill_split_check_invs[wp]:
   "\<lbrace>invs\<rbrace> refill_split_check u \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: refill_split_check_def Let_def split_del: if_split
                   wp: hoare_drop_imp get_sched_context_wp get_refills_wp)
-  apply simp
+  apply (simp add: conjunct1[OF min_budget_merge_length, simplified])
   done
 
 lemma refill_split_check_valid_sc[wp]:
@@ -732,9 +747,11 @@ lemma refill_split_check_bound_sc_tcb_at [wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>
    refill_split_check usage
    \<lbrace>\<lambda>_ s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>"
-  apply (wpsimp simp: refill_split_check_def Let_def)
-        apply (intro conjI | wpsimp)+
-  done
+  unfolding refill_split_check_def
+  apply (wp | wpc)+
+             apply (simp add: Let_def split del: if_split)
+             apply (rule set_refills_bound_sc_tcb_at)
+  by wpsimp+
 
 lemma commit_time_bound_sc_tcb_at [wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>
@@ -771,7 +788,11 @@ lemma sc_consumed_update_valid_state [wp]:
 
 lemma refill_split_check_valid_idle:
   "\<lbrace>valid_idle\<rbrace> refill_split_check usage \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-  by (wpsimp simp: refill_split_check_def Let_def | intro conjI)+
+  unfolding refill_split_check_def
+  apply wpsimp
+             apply (simp add: Let_def split del: if_split)
+             apply (rule set_refills_valid_idle)
+  by wpsimp+
 
 lemma refill_split_check_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> refill_split_check usage \<lbrace>\<lambda>_. valid_state\<rbrace>"
