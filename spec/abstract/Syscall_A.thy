@@ -349,7 +349,7 @@ where
 
 | "handle_event (UserLevelFault w1 w2) = (without_preemption $ do
     thread \<leftarrow> gets cur_thread;
-    handle_fault thread $ UserException (w1 && mask 32) (w2 && mask 29);
+    handle_fault thread $ UserException (w1 && mask 32) (w2 && mask 28);
     return ()
   od)"
 

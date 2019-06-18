@@ -127,7 +127,7 @@ bottom 32 bits be communicated to the fault handler, for the second word
 
 > handleEvent (UserLevelFault w1 w2) = withoutPreemption $ do
 >     thread <- getCurThread
->     handleFault thread $ UserException (w1 .&. mask 32) (w2 .&. mask 29)
+>     handleFault thread $ UserException (w1 .&. mask 32) (w2 .&. mask 28)
 >     return ()
 
 \subsubsection{Virtual Memory Faults}
