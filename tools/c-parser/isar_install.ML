@@ -16,7 +16,7 @@ sig
   val get_Csyntax : theory -> string -> Absyn.ext_decl list
   val gen_umm_types_file : string -> string -> theory -> theory
   val do_cpp : {error_detail : int, cpp_path : string option} ->
-               {includes : string list, filename : string} -> string
+               {includes : string list, filename : string} -> string * bool
   val install_C_file : (((bool option * bool option) * bool option) * string) *
                        additional_options list option ->
                        theory -> theory
@@ -122,7 +122,7 @@ end
 
 fun do_cpp {error_detail, cpp_path} {includes, filename} =
   case cpp_path of
-      NONE => File.standard_path (Path.explode filename)
+      NONE => (File.standard_path (Path.explode filename), false)
     | SOME p =>
       let
         open OS.FileSys OS.Process
@@ -133,7 +133,8 @@ fun do_cpp {error_detail, cpp_path} {includes, filename} =
         val cmdline =
             p ^ " " ^ includes_string ^ " -CC \"" ^ filename ^ "\" > " ^ tmpname ^ " 2> " ^ err_tmpname
       in
-        if isSuccess (system cmdline) then (OS.FileSys.remove err_tmpname; tmpname)
+        if isSuccess (system cmdline)
+        then (OS.FileSys.remove err_tmpname; (tmpname, true))
         else let val _ = OS.FileSys.remove tmpname
                  val (msg, rest) = File.read_lines (Path.explode err_tmpname) |> chop error_detail
                  val _ = OS.FileSys.remove err_tmpname

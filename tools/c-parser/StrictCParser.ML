@@ -27,7 +27,7 @@ in
 end
 
 fun parse docpp error_lookahead (includes : string list) fname = let
-  val cpped_fname = docpp {includes=includes,filename=fname}
+  val (cpped_fname, fname_is_tmp) = docpp {includes=includes,filename=fname}
   val istream = TextIO.openIn cpped_fname
   val _ = Feedback.numErrors := 0 (* FIXME - global reference *)
   val lexarg = StrictCLex.UserDeclarations.new_state fname
@@ -36,7 +36,7 @@ fun parse docpp error_lookahead (includes : string list) fname = let
 in
   invoke error_lookahead pos lexer before
   (TextIO.closeIn istream;
-   if cpped_fname <> fname then
+   if fname_is_tmp then
      OS.FileSys.remove cpped_fname
    else ())
 end
