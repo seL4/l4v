@@ -190,7 +190,7 @@ lemma vspace_at_asid_cross_over:
   "\<lbrakk> vspace_at_asid' pm asid s; asid \<le> mask asid_bits;
           (s, s') \<in> rf_sr\<rbrakk>
       \<Longrightarrow> \<exists>apptr ap. index (x86KSASIDTable_' (globals s')) (unat (asid >> asid_low_bits))
-                     = (ap_Ptr apptr) \<and> cslift s' (ap_Ptr apptr) = Some (asid_pool_C ap)
+                     = (ap_Ptr apptr) \<and> cslift s' (ap_Ptr apptr) = Some (asid_pool_C.asid_pool_C ap)
                   \<and> asid_map_lift (index ap (unat (asid && mask asid_low_bits)))
                       = Some (Asid_map_asid_map_vspace \<lparr>vspace_root_CL = pm\<rparr>)
                   \<and> is_aligned pm pml4Bits
@@ -2455,7 +2455,7 @@ lemma asid_pool_at_c_guard:
 
 (* FIXME: move *)
 lemma setObjectASID_Basic_ccorres:
-  "ccorres dc xfdc \<top> {s. f s = p \<and> casid_pool_relation pool (asid_pool_C (pool' s))} hs
+  "ccorres dc xfdc \<top> {s. f s = p \<and> casid_pool_relation pool (asid_pool_C.asid_pool_C (pool' s))} hs
      (setObject p pool)
      ((Basic (\<lambda>s. globals_update( t_hrs_'_update
             (hrs_mem_update (heap_update (Ptr &(ap_Ptr (f s)\<rightarrow>[''array_C''])) (pool' s)))) s)))"

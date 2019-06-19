@@ -695,7 +695,7 @@ definition
 where
   "casid_pool_relation asid_pool casid_pool \<equiv>
   case asid_pool of ASIDPool pool \<Rightarrow>
-  case casid_pool of asid_pool_C cpool \<Rightarrow>
+  case casid_pool of asid_pool_C.asid_pool_C cpool \<Rightarrow>
   array_relation asid_map_relation (2^asid_low_bits - 1) pool cpool"
 
 

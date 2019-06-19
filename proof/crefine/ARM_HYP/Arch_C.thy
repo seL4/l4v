@@ -159,7 +159,7 @@ lemma cap_case_PageDirectoryCap2:
          split: capability.split arch_capability.split)
 
 lemma ap_eq_D:
-  "x \<lparr>array_C := arr'\<rparr> = asid_pool_C arr \<Longrightarrow> arr' = arr"
+  "x \<lparr>array_C := arr'\<rparr> = asid_pool_C.asid_pool_C arr \<Longrightarrow> arr' = arr"
   by (cases x) simp
 
 declare Kernel_C.asid_pool_C_size [simp del]
