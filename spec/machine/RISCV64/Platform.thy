@@ -20,7 +20,7 @@ begin
 
 context Arch begin global_naming RISCV64
 
-type_synonym irq = word32
+type_synonym irq = "3 word" (* maxIRQ currently 5; increase for real h/w *)
 type_synonym paddr = word64
 
 abbreviation (input) "toPAddr \<equiv> id"
