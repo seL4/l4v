@@ -108,6 +108,10 @@ findVSpaceForASIDAssert asid = do
     checkPTAt pm
     return pm
 
+maybeVSpaceForASID :: ASID -> Kernel (Maybe (PPtr PTE))
+maybeVSpaceForASID asid =
+    liftM Just (findVSpaceForASID asid) `catchFailure` const (return Nothing)
+
 -- used in proofs only, will be translated to ptable_at.
 checkPTAt :: PPtr PTE -> Kernel ()
 checkPTAt _ = return ()
@@ -415,6 +419,14 @@ decodeRISCVPageTableInvocation label args cte cap@(PageTableCap {}) extraCaps =
             cteVal <- withoutFailure $ getCTE cte
             final <- withoutFailure $ isFinalCapability cteVal
             unless final $ throw RevokeFirst
+            case cap of
+                PageTableCap { capPTMappedAddress = Just (asid,_),
+                               capPTBasePtr = pt }
+                    -> do
+                        -- top-level PTs must be unmapped via Revoke
+                        maybeVSpace <- withoutFailure $ maybeVSpaceForASID asid
+                        when (maybeVSpace == Just pt) $ throw RevokeFirst
+                _ -> return ()
             return $ InvokePageTable $ PageTableUnmap {
                 ptUnmapCap = cap,
                 ptUnmapCapSlot = cte }
