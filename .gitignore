@@ -9,6 +9,7 @@
 
 /spec/cspec/c/build
 
+/spec/haskell/stack.yaml.lock
 /spec/haskell/doc/**/*.aux
 /spec/haskell/doc/**/*.bbl
 /spec/haskell/doc/**/*.blg
