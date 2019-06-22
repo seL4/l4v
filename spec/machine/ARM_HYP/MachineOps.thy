@@ -333,6 +333,18 @@ definition
 where
   "ackInterrupt irq \<equiv> machine_op_lift (ackInterrupt_impl irq)"
 
+consts'
+  TPIDRURO_val :: "machine_state \<Rightarrow> machine_word"
+definition
+  getTPIDRURO :: "machine_word machine_monad"
+where "getTPIDRURO \<equiv> gets TPIDRURO_val"
+
+consts'
+  setTPIDRURO_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+  setTPIDRURO :: "machine_word \<Rightarrow> unit machine_monad"
+where
+  "setTPIDRURO w \<equiv> machine_op_lift (setTPIDRURO_impl w)"
 
 \<comment> \<open>Interrupt controller operations\<close>
 

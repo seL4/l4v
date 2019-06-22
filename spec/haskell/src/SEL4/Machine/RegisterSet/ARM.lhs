@@ -30,7 +30,7 @@ This module defines the ARM register set.
 
 > data Register =
 >     R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | SL | FP | IP | SP |
->     LR | NextIP | FaultIP | CPSR | TLS_BASE | TPIDRURW
+>     LR | NextIP | FaultIP | CPSR | TPIDRURW
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
 > type Word = Data.Word.Word32
@@ -42,10 +42,10 @@ This module defines the ARM register set.
 > faultRegister = FaultIP
 > nextInstructionRegister = NextIP
 > frameRegisters = FaultIP : SP : CPSR : [R0, R1] ++ [R8 .. IP]
-> gpRegisters = [R2, R3, R4, R5, R6, R7, LR]
+> gpRegisters = [R2, R3, R4, R5, R6, R7, LR, TPIDRURW]
 > exceptionMessage = [FaultIP, SP, CPSR]
 > syscallMessage = [R0 .. R7] ++ [FaultIP, SP, LR, CPSR]
-> tlsBaseRegister = TLS_BASE
+> tlsBaseRegister = TPIDRURW
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > elr_hyp = NextIP
@@ -69,6 +69,7 @@ This module defines the ARM register set.
 >     | VCPURegNMRR
 >     | VCPURegCIDR
 >     | VCPURegTPIDRPRW
+>     | VCPURegTPIDRURO
 >     | VCPURegFPEXC
 >     | VCPURegCNTVTVAL
 >     | VCPURegCNTVCTL

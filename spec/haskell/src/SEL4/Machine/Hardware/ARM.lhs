@@ -185,6 +185,12 @@ The following functions define the ARM-specific interface between the kernel and
 > getRestartPC = getRegister (Register ARM.FaultIP)
 > setNextPC = setRegister (Register ARM.NextIP)
 
+> getTPIDRURW :: MachineMonad Word
+> getTPIDRURW = error "machine callback unimplemented"
+
+> setTPIDRURW :: Word -> MachineMonad ()
+> setTPIDRURW = error "machine callback unimplemented"
+
 \subsection{ARM Memory Management}
 
 There are several operations used by the ARM memory management code to access relevant hardware registers.
@@ -265,6 +271,12 @@ caches must be done separately.
 
 > writeContextIDAndPD :: HardwareASID -> PAddr -> MachineMonad ()
 > writeContextIDAndPD = error "FIXME ARMHYP  machine callback unimplemented"
+
+> getTPIDRURO :: MachineMonad Word
+> getTPIDRURO = error "FIXME ARMHYP machine callback unimplemented"
+
+> setTPIDRURO :: Word -> MachineMonad ()
+> setTPIDRURO = error "FIXME ARMHYP machine callback unimplemented"
 
 #endif
 

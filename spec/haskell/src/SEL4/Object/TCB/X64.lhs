@@ -46,7 +46,7 @@ There are presently no x64-specific register subsets defined, but in future this
 
 > sanitiseRegister :: Bool -> Register -> Word -> Word
 > sanitiseRegister _ r v =
->     let val = if r == FaultIP || r == NextIP then
+>     let val = if r == FaultIP || r == NextIP || r == FS_BASE || r == GS_BASE then
 >                  if v > 0x00007fffffffffff && v < 0xffff800000000000 then 0 else v
 >               else v
 >     in
@@ -56,9 +56,6 @@ There are presently no x64-specific register subsets defined, but in future this
 
 > getSanitiseRegisterInfo :: PPtr TCB -> Kernel Bool
 > getSanitiseRegisterInfo _ = return False
-
-> setTCBIPCBuffer :: VPtr -> UserMonad ()
-> setTCBIPCBuffer ptr = return ()
 
 Here, cur = ksCurThread
 

@@ -34,7 +34,6 @@ requalify_consts
   msgInfoRegister
   msgRegisters
   fromVPtr
-  setTCBIPCBuffer
   postModifyRegisters
   tlsBaseRegister
 end

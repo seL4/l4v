@@ -29,7 +29,7 @@ This module defines the x86 64-bit register set.
 >     RAX | RBX | RCX | RDX | RSI | RDI | RBP |
 >     R8 | R9 | R10 | R11 | R12 | R13 | R14 | R15 |
 >     FaultIP | -- "FaultIP"
->     TLS_BASE |
+>     FS_BASE | GS_BASE |
 >     ErrorRegister | NextIP | CS | FLAGS | RSP | SS
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
@@ -42,9 +42,9 @@ This module defines the x86 64-bit register set.
 > faultRegister = FaultIP
 > nextInstructionRegister = NextIP
 > frameRegisters = FaultIP : RSP : FLAGS : [RAX .. R15]
-> gpRegisters = [TLS_BASE]
+> gpRegisters = [FS_BASE, GS_BASE]
 > exceptionMessage = [FaultIP, RSP, FLAGS]
-> tlsBaseRegister = TLS_BASE
+> tlsBaseRegister = FS_BASE
 
 > syscallMessage = [RAX .. R15] ++ [FaultIP, RSP, FLAGS]
 
@@ -56,8 +56,8 @@ This module defines the x86 64-bit register set.
 >     | GDT_TSS_Padding
 >     | GDT_CS_3
 >     | GDT_DS_3
->     | GDT_TLS
->     | GDT_IPCBUF
+>     | GDT_FS
+>     | GDT_GS
 >     | GDT_ENTRIES
 >     deriving (Eq, Show, Enum, Ord, Ix)
 
@@ -69,8 +69,8 @@ This module defines the x86 64-bit register set.
 
 > selCS3 = gdtToSel_masked GDT_CS_3
 > selDS3 = gdtToSel_masked GDT_DS_3
-> selTLS = gdtToSel_masked GDT_TLS
-> selIPCBUF = gdtToSel_masked GDT_IPCBUF
+> selFS = gdtToSel_masked GDT_FS
+> selGS = gdtToSel_masked GDT_GS
 > selCS0 = gdtToSel_masked GDT_CS_0
 > selDS0 = gdtToSel GDT_DS_0
 
