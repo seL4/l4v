@@ -1397,7 +1397,7 @@ lemma ptrFromPAddr_mask6_simp[simp]:
 
 (* FIXME: move *)
 lemma register_from_H_bound[simp]:
-  "unat (register_from_H v) < 23"
+  "unat (register_from_H v) < 24"
   by (cases v, simp_all add: "StrictC'_register_defs")
 
 (* FIXME: move *)

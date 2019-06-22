@@ -961,17 +961,19 @@ lemma vcpuDisable_corres:
          | wpsimp)+
      done
   (* have current VCPU *)
-  apply (rename_tac vcpu)
-  apply (clarsimp simp: doMachineOp_bind do_machine_op_bind bind_assoc)
-  apply (rule corres_guard_imp)
+   apply (rename_tac vcpu)
+   apply (clarsimp simp: doMachineOp_bind do_machine_op_bind bind_assoc)
+   apply (rule corres_guard_imp)
      apply (rule corres_split_dc[OF _ corres_machine_op])
-        apply (rule corres_split_eqr[OF _ corres_machine_op])
-           apply (rule corres_split_dc[OF _ vgicUpdate_corres])
-              apply (rule corres_split_dc[OF _ vcpuSaveReg_corres])
-                apply (rule corres_split_dc[OF _ corres_machine_op]
-                       | rule corres_machine_op corres_Id
-                       | wpsimp simp: vgic_map_def)+
-  done
+        apply (rule corres_split_dc[OF _ vcpuSaveReg_corres])
+          apply (rule corres_split_eqr[OF _ corres_machine_op])
+             apply (rule corres_split_eqr[OF _ corres_machine_op])
+                apply (rule corres_split_dc[OF _ vgicUpdate_corres])
+                   apply (rule corres_split_dc[OF _ vcpuSaveReg_corres])
+                     apply (rule corres_split_dc[OF _ corres_machine_op]
+                            | rule corres_machine_op corres_Id
+                            | wpsimp simp: vgic_map_def)+
+   done
 
 lemma vcpuEnable_corres:
   "corres dc (vcpu_at  vcpu) (vcpu_at' vcpu and no_0_obj')
@@ -980,7 +982,7 @@ lemma vcpuEnable_corres:
   supply no_fail_isb[wp] no_fail_dsb[wp] empty_fail_isb[wp,simp] empty_fail_dsb[wp,simp]
   apply (simp add: vcpu_enable_def vcpuEnable_def doMachineOp_bind do_machine_op_bind bind_assoc)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_dc[OF _ vcpuRestoreReg_corres])
+    apply (rule corres_split_dc[OF _ vcpuRestoreReg_corres])+
       apply (rule corres_split[OF _ get_vcpu_corres], rename_tac vcpu')
         apply (case_tac vcpu')
         apply (rule corres_split_dc[OF _ corres_machine_op]

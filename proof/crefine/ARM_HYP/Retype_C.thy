@@ -3174,9 +3174,9 @@ lemma cnc_tcb_helper:
         (\<lambda>a. hrs_mem_update (heap_update (Ptr &(p\<rightarrow>[''tcbTimeSlice_C'']) :: machine_word ptr) (5 :: machine_word))
               (hrs_mem_update
                 (heap_update ((Ptr &((Ptr &((Ptr &(p\<rightarrow>[''tcbArch_C'']) :: arch_tcb_C ptr)\<rightarrow>[''tcbContext_C''])
-                     :: user_context_C ptr)\<rightarrow>[''registers_C''])) :: (word32[20]) ptr)
+                     :: user_context_C ptr)\<rightarrow>[''registers_C''])) :: (word32[19]) ptr)
                   (Arrays.update (h_val (hrs_mem a) ((Ptr &((Ptr &((Ptr &(p\<rightarrow>[''tcbArch_C'']) :: arch_tcb_C ptr)\<rightarrow>[''tcbContext_C''])
-                       :: user_context_C ptr)\<rightarrow>[''registers_C''])) :: (word32[20]) ptr)) (unat Kernel_C.CPSR) (0x150 :: word32)))
+                       :: user_context_C ptr)\<rightarrow>[''registers_C''])) :: (word32[19]) ptr)) (unat Kernel_C.CPSR) (0x150 :: word32)))
                    (hrs_htd_update (\<lambda>xa. ptr_retyps_gen 1 (Ptr (ctcb_ptr_to_tcb_ptr p) :: (cte_C[5]) ptr) False
                        (ptr_retyps_gen 1 p False xa)) a)))) x)
              \<in> rf_sr"
@@ -3476,7 +3476,7 @@ proof -
     \<lparr>tcbArch_C := tcbArch_C undefined
       \<lparr>tcbContext_C := tcbContext_C (tcbArch_C undefined)
          \<lparr>registers_C :=
-           foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<20]
+           foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<19]
              (registers_C (tcbContext_C (tcbArch_C undefined)))
          \<rparr>,
        tcbVCPU_C := vcpu_Ptr 0
@@ -5470,7 +5470,7 @@ lemma ptr_retyp_fromzeroVCPU:
   assumes cor: "caps_overlap_reserved' {p ..+ 2 ^ vcpu_bits} \<sigma>"
   assumes ptr0: "p \<noteq> 0"
   assumes kdr: "{p ..+ 2 ^ vcpu_bits} \<inter> kernel_data_refs = {}"
-  assumes subr: "{p ..+ 428} \<subseteq> {p ..+ 2 ^ vcpu_bits}"
+  assumes subr: "{p ..+ 432} \<subseteq> {p ..+ 2 ^ vcpu_bits}"
   assumes act_bytes: "region_actually_is_bytes p (2 ^ vcpu_bits) \<sigma>'"
   assumes rep0: "heap_list (hrs_mem (t_hrs_' (globals \<sigma>'))) (2 ^ vcpu_bits) p = replicate (2 ^ vcpu_bits) 0"
   assumes "\<not> snd (placeNewObject p vcpu0 0 \<sigma>)"
@@ -5487,7 +5487,7 @@ proof -
   let ?htdret = "(hrs_htd_update (ptr_retyp (vcpu_Ptr p)) (t_hrs_' (globals \<sigma>')))"
   let ?zeros = "from_bytes (replicate (size_of TYPE(vcpu_C)) 0) :: vcpu_C"
 
-  have "size_of TYPE(vcpu_C) = 428" (is "_ = ?vcpusz")
+  have "size_of TYPE(vcpu_C) = 432" (is "_ = ?vcpusz")
     by simp
 
   have ptr_al:
@@ -5690,7 +5690,7 @@ proof -
     apply (clarsimp simp: ko_vcpu_def vcpu0_def)
     apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def
                           cmachine_state_relation_def Let_def h_t_valid_clift_Some_iff)
-    apply (subgoal_tac "region_is_bytes p 428 \<sigma>'")
+    apply (subgoal_tac "region_is_bytes p 432 \<sigma>'")
      prefer 2
      apply (fastforce simp: region_actually_is_bytes[OF act_bytes]
                             region_is_bytes_subset[OF _ subr])
@@ -5720,7 +5720,7 @@ lemma placeNewObject_vcpu_fromzero_ccorres:
   apply (rule ccorres_from_vcg_nofail, clarsimp)
   apply (rule conseqPre, vcg)
   apply (clarsimp simp: rf_sr_htd_safe)
-  apply (subgoal_tac "{regionBase..+428} \<subseteq> {regionBase..+2^vcpu_bits}")
+  apply (subgoal_tac "{regionBase..+432} \<subseteq> {regionBase..+2^vcpu_bits}")
    prefer 2
    apply clarsimp
    apply (drule intvlD, clarsimp)

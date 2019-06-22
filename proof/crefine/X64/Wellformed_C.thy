@@ -59,7 +59,7 @@ type_synonym ioport_table_C = "machine_word[1024]"
 
 type_synonym tcb_cnode_array = "cte_C[5]"
 type_synonym fpu_bytes_array = "word8[fpu_bytes]"
-type_synonym registers_array = "machine_word[23]"
+type_synonym registers_array = "machine_word[24]"
 
 abbreviation "user_context_Ptr \<equiv> Ptr :: addr \<Rightarrow> user_context_C ptr"
 abbreviation "machine_word_Ptr \<equiv> Ptr :: addr \<Rightarrow> machine_word ptr"

@@ -58,7 +58,7 @@ lemmas C_register_defs =
   Kernel_C.R12_def Kernel_C.R13_def Kernel_C.R14_def Kernel_C.R15_def
   Kernel_C.RSP_def Kernel_C.FLAGS_def Kernel_C.NextIP_def
   Kernel_C.FaultIP_def Kernel_C.Error_def Kernel_C.CS_def
-  Kernel_C.SS_def Kernel_C.TLS_BASE_def
+  Kernel_C.SS_def Kernel_C.FS_BASE_def Kernel_C.GS_BASE_def
 
 (* Levity: moved from Retype_C (20090419 09:44:41) *)
 lemma no_overlap_new_cap_addrs_disjoint:

@@ -236,7 +236,6 @@ fun
   | "register_from_H ARM.LR = scast Kernel_C.LR"
   | "register_from_H ARM.NextIP = scast Kernel_C.NextIP"
   | "register_from_H ARM.CPSR = scast Kernel_C.CPSR"
-  | "register_from_H ARM.TLS_BASE = scast Kernel_C.TLS_BASE"
   | "register_from_H ARM.TPIDRURW = scast Kernel_C.TPIDRURW"
   | "register_from_H ARM.FaultIP = scast Kernel_C.FaultIP"
 

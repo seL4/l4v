@@ -1017,18 +1017,10 @@ definition valid_tcb_invocation :: "tcbinvocation \<Rightarrow> bool" where
         ThreadControl _ _ _ mcp p _ _ _ \<Rightarrow> valid_option_prio p \<and> valid_option_prio mcp
       | _                           \<Rightarrow> True"
 
-lemma arch_tcb_set_ipc_buffer_corres:
-  "corres dc (tcb_at target) (tcb_at' target) (arch_tcb_set_ipc_buffer target ptr) (asUser target $ setTCBIPCBuffer ptr)"
-  apply (simp add: setTCBIPCBuffer_def)
-  apply (subst submonad_asUser.return)
-  apply (rule corres_stateAssert_assume)
-   apply simp+
-  done
-
 lemma threadcontrol_corres_helper1:
-  "\<lbrace> tcb_at a and einvs and simple_sched_action\<rbrace>
+  "\<lbrace> einvs and simple_sched_action\<rbrace>
      thread_set (tcb_ipc_buffer_update f) a
-           \<lbrace>\<lambda>x. tcb_at a and (weak_valid_sched_action and valid_etcbs)\<rbrace>"
+           \<lbrace>\<lambda>x. weak_valid_sched_action and valid_etcbs\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: thread_set_def)
    apply (wp set_object_wp)
@@ -1073,16 +1065,12 @@ lemma threadcontrol_corres_helper4:
       clarsimp simp: capBadge_def isCap_simps tcb_cnode_index_def cte_map_def cte_wp_at'_def
                      cte_level_bits_def)
 
-crunch valid_etcbs[wp]: arch_tcb_set_ipc_buffer valid_etcbs
-crunch weak_valid_sched_action[wp]: arch_tcb_set_ipc_buffer weak_valid_sched_action
-
 lemma tc_corres:
   assumes x: "newroot_rel e e'" and y: "newroot_rel f f'"
       and z: "(case g of None \<Rightarrow> g' = None
                        | Some (vptr, g'') \<Rightarrow> \<exists>g'''. g' = Some (vptr, g''')
                               \<and> newroot_rel g'' g''')"
      and sl: "{e, f, option_map undefined g} \<noteq> {None} \<longrightarrow> sl' = cte_map slot"
-  notes arch_tcb_set_ipc_buffer_def[simp del]
   shows
   "corres (intr \<oplus> (=))
     (einvs and simple_sched_action and tcb_at a and
@@ -1214,7 +1202,6 @@ proof -
          (\<lambda>ptr frame.
              doE cap_delete (a, tcb_cnode_index 4);
                  do y \<leftarrow> thread_set (tcb_ipc_buffer_update (\<lambda>_. ptr)) a;
-                   y \<leftarrow> arch_tcb_set_ipc_buffer a ptr;
                    y \<leftarrow> case_option (return ())
                    (case_prod
                       (\<lambda>new_cap src_slot.
@@ -1232,7 +1219,6 @@ proof -
             do bufferSlot \<leftarrow> getThreadBufferSlot a;
             doE y \<leftarrow> cteDelete bufferSlot True;
             do y \<leftarrow> threadSet (tcbIPCBuffer_update (\<lambda>_. ptr)) a;
-               y \<leftarrow> asUser a $ setTCBIPCBuffer ptr;
                y \<leftarrow> (case_option (return ())
                       (case_prod
                         (\<lambda>newCap srcSlot.
@@ -1260,18 +1246,14 @@ proof -
          apply (rule corres_split_norE)
             apply (rule_tac F="is_aligned aa msg_align_bits" in corres_gen_asm2)
             apply (rule corres_split_nor)
-               apply (rule corres_split)
-                  apply (rule corres_split [OF _ gct_corres], clarsimp)
-                    apply (rule corres_when[OF refl rescheduleRequired_corres])
-                   apply (wpsimp wp: gct_wp)+
-                 apply (rule arch_tcb_set_ipc_buffer_corres[simplified])
-                apply simp
-                apply (wp hoare_drop_imp)+
+               apply (rule corres_split [OF _ gct_corres], clarsimp)
+                 apply (rule corres_when[OF refl rescheduleRequired_corres])
+                apply (wpsimp wp: gct_wp)+
               apply (rule threadset_corres,
                       (simp add: tcb_relation_def), (simp add: exst_same_def)+)[1]
-             apply (subst pred_conj_def)
+             apply (wp hoare_drop_imp)
              apply (rule threadcontrol_corres_helper1[unfolded pred_conj_def])
-            apply simp
+            apply (wp hoare_drop_imp)
             apply (wp threadcontrol_corres_helper2 | wpc | simp)+
            apply (rule cap_delete_corres)
           apply wp
@@ -1285,20 +1267,15 @@ proof -
                         in corres_gen_asm)
           apply (rule_tac F="isArchObjectCap ac" in corres_gen_asm2)
           apply (rule corres_split_nor)
-             apply (rule corres_split[rotated])
-                apply (rule arch_tcb_set_ipc_buffer_corres[simplified])
-               prefer 3
-               apply simp
-               apply (rule corres_split_nor)
-                  apply (rule corres_split[OF _ gct_corres], clarsimp)
-                    apply (rule corres_when[OF refl rescheduleRequired_corres])
-                   apply (wp gct_wp)+
-                 apply (erule checked_insert_corres)
-                apply (wp hoare_drop_imp threadcontrol_corres_helper3)[1]
-               apply (wp hoare_drop_imp threadcontrol_corres_helper4)[1]
-              apply (wp | simp add: arch_tcb_set_ipc_buffer_def)+
+             apply (rule corres_split_nor)
+                apply (rule corres_split [OF _ gct_corres], clarsimp)
+                  apply (rule corres_when[OF refl rescheduleRequired_corres])
+                 apply (wp gct_wp)+
+               apply (erule checked_insert_corres)
+              apply (wp hoare_drop_imp threadcontrol_corres_helper3)[1]
+             apply (wp hoare_drop_imp threadcontrol_corres_helper4)[1]
             apply (rule threadset_corres,
-                   simp add: tcb_relation_def, (simp add: exst_same_def)+)
+                  simp add: tcb_relation_def, (simp add: exst_same_def)+)
            apply (wp thread_set_tcb_ipc_buffer_cap_cleared_invs
                      thread_set_cte_wp_at_trivial thread_set_not_state_valid_sched
                        | simp add: ran_tcb_cap_cases)+

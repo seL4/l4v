@@ -94,6 +94,16 @@ assumes setSCTLR_ccorres:
            (doMachineOp (setSCTLR scltr))
            (Call setSCTLR_'proc)"
 
+assumes readTPIDRURO_ccorres:
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp getTPIDRURO)
+           (Call readTPIDRURO_'proc)"
+
+assumes writeTPIDRURO_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>reg = reg \<rbrace>) []
+           (doMachineOp (setTPIDRURO reg))
+           (Call writeTPIDRURO_'proc)"
+
 assumes addressTranslateS1CPR_ccorres:
   "ccorres (=) ret__unsigned_long_' \<top> (\<lbrace>\<acute>vaddr = vaddr \<rbrace>) []
            (doMachineOp (addressTranslateS1CPR vaddr))

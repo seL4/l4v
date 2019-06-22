@@ -317,10 +317,11 @@ fun
   | "register_from_H X64.CS = scast Kernel_C.CS"
   | "register_from_H X64.SS = scast Kernel_C.SS"
   | "register_from_H X64.ErrorRegister = scast Kernel_C.Error"
-  | "register_from_H X64.TLS_BASE = scast Kernel_C.TLS_BASE"
+  | "register_from_H X64.FS_BASE = scast Kernel_C.FS_BASE"
+  | "register_from_H X64.GS_BASE = scast Kernel_C.GS_BASE"
 
 definition
-  cregs_relation :: "(MachineTypes.register \<Rightarrow> machine_word) \<Rightarrow> machine_word[23] \<Rightarrow> bool"
+  cregs_relation :: "(MachineTypes.register \<Rightarrow> machine_word) \<Rightarrow> machine_word[24] \<Rightarrow> bool"
 where
   "cregs_relation Hregs Cregs \<equiv>  \<forall>r. Hregs r = Cregs.[unat (register_from_H r)]"
 

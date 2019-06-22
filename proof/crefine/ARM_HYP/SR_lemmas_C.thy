@@ -2385,6 +2385,7 @@ lemmas seL4_VCPUReg_defs =
     seL4_VCPUReg_NMRR_def
     seL4_VCPUReg_CIDR_def
     seL4_VCPUReg_TPIDRPRW_def
+    seL4_VCPUReg_TPIDRURO_def
     seL4_VCPUReg_FPEXC_def
     seL4_VCPUReg_CNTV_TVAL_def
     seL4_VCPUReg_CNTV_CTL_def
@@ -2493,6 +2494,10 @@ where
 lemma unat_scast_seL4_VCPUReg_SCTLR_simp[simp]:
   "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_SCTLR) = fromEnum VCPURegSCTLR"
   by (simp add: vcpureg_eq_use_types[where reg=VCPURegSCTLR, simplified, symmetric])
+
+lemma unat_scast_seL4_VCPUReg_TPIDRURO_simp[simp]:
+  "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_TPIDRURO) = fromEnum VCPURegTPIDRURO"
+  by (simp add: vcpureg_eq_use_types[where reg=VCPURegTPIDRURO, simplified, symmetric])
 
 lemma unat_scast_seL4_VCPUReg_ACTLR_simp[simp]:
   "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_ACTLR) = fromEnum VCPURegACTLR"

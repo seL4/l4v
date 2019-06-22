@@ -62,7 +62,7 @@ lemma threadGet_obj_at2:
   done
 
 lemma register_from_H_less:
-  "register_from_H hr < 20"
+  "register_from_H hr < 19"
   by (cases hr, simp_all add: "StrictC'_register_defs")
 
 lemma getRegister_ccorres [corres]:

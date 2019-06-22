@@ -3546,7 +3546,7 @@ where
   "tcbContext_of_tcb_Ptr p \<equiv> Ptr &(atcb_Ptr &(p\<rightarrow>[''tcbArch_C''])\<rightarrow>[''tcbContext_C''])"
 
 abbreviation
-  registers_of_tcb_Ptr :: "tcb_C ptr \<Rightarrow> (machine_word[23]) ptr"
+  registers_of_tcb_Ptr :: "tcb_C ptr \<Rightarrow> (machine_word[24]) ptr"
 where
   "registers_of_tcb_Ptr p \<equiv> Ptr &(tcbContext_of_tcb_Ptr p \<rightarrow>[''registers_C''])"
 
@@ -3592,9 +3592,9 @@ where
      (unat Kernel_C.RSI, 0), (unat Kernel_C.RDI, 0), (unat Kernel_C.RBP, 0), (unat Kernel_C.R8 , 0),
      (unat Kernel_C.R9 , 0), (unat Kernel_C.R10, 0), (unat Kernel_C.R11, 0), (unat Kernel_C.R12, 0),
      (unat Kernel_C.R13, 0), (unat Kernel_C.R14, 0), (unat Kernel_C.R15, 0), (unat Kernel_C.RSP, 0),
-     (unat Kernel_C.TLS_BASE, 0), (unat Kernel_C.Error, 0), (unat Kernel_C.FaultIP, 0),
-     (unat Kernel_C.NextIP, 0), (unat Kernel_C.CS, 0x2B), (unat Kernel_C.FLAGS, 0x202),
-     (unat Kernel_C.SS, 0x33)]"
+     (unat Kernel_C.FS_BASE, 0), (unat Kernel_C.GS_BASE, 0), (unat Kernel_C.Error, 0), 
+     (unat Kernel_C.FaultIP, 0), (unat Kernel_C.NextIP, 0), (unat Kernel_C.CS, 0x2B), 
+     (unat Kernel_C.FLAGS, 0x202), (unat Kernel_C.SS, 0x33)]"
 
 (* FIXME: move *)
 lemma field_tag_sub':
@@ -3966,7 +3966,7 @@ proof -
 
   let ?tcb = "(tcbArch_C_update
      (\<lambda>_. tcbContext_C_update
-           (\<lambda>_. registers_C_update (\<lambda>_. foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<23]
+           (\<lambda>_. registers_C_update (\<lambda>_. foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<24]
                      (registers_C (tcbContext_C (tcbArch_C undefined))))
                  (fpuState_C_update
                    (\<lambda>_. state_C_update (\<lambda>_. foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<576]
