@@ -753,8 +753,8 @@ lemma invoke_tcb_reads_respects_f:
                         | simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
                                     tcb_at_st_tcb_at when_def
                         | strengthen use_no_cap_to_obj_asid_strg invs_mdb
-                        | fastforce)+)[9]
-  (* 11 subgoals here *)
+                        | fastforce)+)[8]
+  (* 10 subgoals here *)
   apply ((simp add: conj_comms,
           strengthen imp_consequent[where Q="x = None" for x],
           simp cong: conj_cong)
