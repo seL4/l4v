@@ -21,14 +21,6 @@ begin
 context Arch begin global_naming ARM_A
 
 definition
-  arch_tcb_set_ipc_buffer :: "machine_word \<Rightarrow> vspace_ref \<Rightarrow> (unit, 'a::state_ext) s_monad"
-where
-  "arch_tcb_set_ipc_buffer target ptr \<equiv> as_user target $ setRegister TPIDRURW ptr"
-
-(* Allow most pre-existing proofs to continue to work. *)
-declare arch_tcb_set_ipc_buffer_def [simp]
-
-definition
   sanitise_register :: "bool \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 where
   "sanitise_register t r v \<equiv> case r of
