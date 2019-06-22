@@ -955,7 +955,7 @@ crunches vcpu_save_reg, vgic_update, vcpu_disable
   and in_user_frame[wp]: "in_user_frame p"
   (wp: dmo_valid_irq_states
    simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
-         get_gic_vcpu_ctrl_hcr_def dsb_def readVCPUHardwareReg_def)
+         get_gic_vcpu_ctrl_hcr_def dsb_def readVCPUHardwareReg_def writeVCPUHardwareReg_def)
 
 crunches vgic_update, vcpu_update
   for valid_machine_state[wp]: valid_machine_state
@@ -973,7 +973,7 @@ lemma vcpu_disable_valid_machine_state[wp]:
   unfolding vcpu_disable_def valid_machine_state_def
   by (wpsimp wp: dmo_machine_state_lift hoare_vcg_all_lift hoare_vcg_disj_lift
              simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
-                   get_gic_vcpu_ctrl_hcr_def dsb_def)
+                   get_gic_vcpu_ctrl_hcr_def dsb_def writeVCPUHardwareReg_def)
 
 lemma valid_arch_state_vcpu_update_str:
   "valid_arch_state s \<Longrightarrow> valid_arch_state (s\<lparr>arch_state := arm_current_vcpu_update Map.empty (arch_state s)\<rparr>)"

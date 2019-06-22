@@ -214,7 +214,7 @@ crunch simple_sched_action [wp, DetSchedSchedule_AI_assms]:
    simp: unless_def if_fun_split)
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
-  arch_tcb_set_ipc_buffer, arch_finalise_cap, prepare_thread_delete valid_sched
+  arch_finalise_cap, prepare_thread_delete valid_sched
   (ignore: set_object wp: crunch_wps subset_refl simp: if_fun_split)
 
 lemma activate_thread_valid_sched [DetSchedSchedule_AI_assms]:

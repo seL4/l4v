@@ -269,7 +269,7 @@ lemma store_pde_valid_sched[wp]:
       | simp add: store_pde_def set_arch_obj_simps)+
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
-  arch_tcb_set_ipc_buffer, arch_finalise_cap, prepare_thread_delete valid_sched
+  arch_finalise_cap, prepare_thread_delete valid_sched
   (ignore: set_object set_object wp: crunch_wps subset_refl simp: if_fun_split crunch_simps)
 
 lemma activate_thread_valid_sched [DetSchedSchedule_AI_assms]:

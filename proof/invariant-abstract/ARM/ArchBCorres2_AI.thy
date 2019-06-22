@@ -28,7 +28,7 @@ crunch (bcorres)bcorres[wp]: set_extra_badge,derive_cap truncate_state (ignore: 
 crunch (bcorres)bcorres[wp]: invoke_untyped truncate_state
   (ignore: sequence_x)
 
-crunch (bcorres)bcorres[wp, BCorres2_AI_assms]: set_mcpriority,arch_tcb_set_ipc_buffer,
+crunch (bcorres)bcorres[wp, BCorres2_AI_assms]: set_mcpriority,
           arch_get_sanitise_register_info, arch_post_modify_registers truncate_state
 
 lemma invoke_tcb_bcorres[wp]:

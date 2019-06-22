@@ -698,8 +698,6 @@ locale DetSchedSchedule_AI =
     "\<And>acap final. \<lbrace>simple_sched_action\<rbrace> arch_finalise_cap acap final \<lbrace>\<lambda>_. simple_sched_action\<rbrace>"
   assumes arch_finalise_cap_valid_sched'[wp]:
     "\<And>acap final. \<lbrace>valid_sched\<rbrace> arch_finalise_cap acap final \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  assumes arch_tcb_set_ipc_buffer_valid_sched'[wp]:
-    "\<And>target ptr. \<lbrace>valid_sched\<rbrace> arch_tcb_set_ipc_buffer target ptr \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   assumes handle_arch_fault_reply_valid_sched'[wp]:
     "\<And>f t x y. \<lbrace>valid_sched\<rbrace> handle_arch_fault_reply f t x y \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   assumes activate_thread_valid_sched:
@@ -1828,8 +1826,6 @@ lemma reschedule_preserves_valid_sched: "\<lbrace> valid_sched \<rbrace> resched
   by (clarsimp simp:  set_nonmember_if_cong tcb_sched_enqueue_def split: if_split_asm; blast)
 
 context DetSchedSchedule_AI begin
-
-crunch valid_sched[wp]: arch_tcb_set_ipc_buffer valid_sched
 
 lemma tc_valid_sched[wp]:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace>
