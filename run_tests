@@ -27,7 +27,7 @@ DIR=os.path.dirname(os.path.realpath(__file__))
 # Add repo version of Isabelle to our path.
 os.environ["PATH"] += os.pathsep + DIR
 
-# enable timing logs in isabelle builds and set report interval to 3 seconds
+# Enable tracking stuck tasks, and set report interval to 3 seconds
 os.environ["ISABELLE_TIMING_LOG"]="3.0s"
 
 # Enable quick_and_dirty mode for various images
@@ -37,7 +37,7 @@ if os.environ.has_key("QUICK_AND_DIRTY"):
     os.environ["CREFINE_QUICK_AND_DIRTY"]=1
     print "Testing with QUICK_AND_DIRTY"
 
-# Lists of excluded tests for diferent archs
+# Lists of excluded tests for different archs
 EXCLUDE={}
 
 EXCLUDE["ARM_HYP"]=[
@@ -124,9 +124,9 @@ for arch in archs:
         del os.environ["L4V_ARCH_IS_ARM"]
 
     # Arguments:
-    args  = ['./misc/regression/run_tests.py']                 # Script name
-    args += [r for t in EXCLUDE[arch] for r in ['-r', t]]  # Exclusion list
-    args += passthrough_args                                   # Other arguments
+    args  = ['./misc/regression/run_tests.py']            # Script name
+    args += [r for t in EXCLUDE[arch] for r in ['-r', t]] # Exclusion list
+    args += passthrough_args                              # Other arguments
 
     # Run the tests from the script directory.
     # Also collect the last non-zero return code.
