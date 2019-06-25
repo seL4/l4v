@@ -227,7 +227,7 @@ where
   "min_budget_merge _ [] = []"
 | "min_budget_merge _ [r] = [r]"
 | "min_budget_merge full (r0#r1#rs) = (if (r_amount r0 < MIN_BUDGET \<or> full)
-     then min_budget_merge False (r1\<lparr> r_amount := r_amount r1 + r_amount r0 \<rparr> # rs)
+     then min_budget_merge False (r1\<lparr> r_amount := r_amount r0 + r_amount r1 \<rparr> # rs)
      else (r0#r1#rs))" (* RT: full can be true only at the beginning,
                               because the refills size decreases by 1 in each call *)
 
