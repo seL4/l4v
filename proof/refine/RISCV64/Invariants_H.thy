@@ -2885,7 +2885,8 @@ lemma vms_sch_act_update'[iff]:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemmas bit_simps = pteBits_def bit_simps
+lemmas bit_simps' = pteBits_def asidHighBits_def asidPoolBits_def asid_low_bits_def
+                    asid_high_bits_def bit_simps
 
 lemma objBitsT_simps:
   "objBitsT EndpointT = epSizeBits"
@@ -2898,14 +2899,14 @@ lemma objBitsT_simps:
   "objBitsT (ArchT PTET) = word_size_bits"
   "objBitsT (ArchT ASIDPoolT) = pageBits"
   unfolding objBitsT_def makeObjectT_def
-  by (simp add: makeObject_simps objBits_simps bit_simps)+
+  by (simp add: makeObject_simps objBits_simps bit_simps')+
 
 
 lemma objBitsT_koTypeOf :
   "(objBitsT (koTypeOf ko)) = objBitsKO ko"
   apply (cases ko; simp add: objBits_simps objBitsT_simps)
   apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps bit_simps)
+  apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps bit_simps')
   done
 
 lemma typ_at_aligned':
