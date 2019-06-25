@@ -502,7 +502,7 @@ lemmas isCap_defs =
   isIRQHandlerCap_def isIRQControlCap_def isReplyCap_def
   isFrameCap_def isPageTableCap_def
   isASIDControlCap_def isASIDPoolCap_def
-  isDomainCap_def
+  isDomainCap_def isArchFrameCap_def
 
 lemma isCNodeCap_cap_map[simp]:
   "cap_relation c c' \<Longrightarrow> isCNodeCap c' = is_cnode_cap c"

@@ -74,6 +74,7 @@ lemma isCap_simps:
   "isNullCap v = (v = NullCap)"
   "isDomainCap v = (v = DomainCap)"
   "isFrameCap w = (\<exists>v0 v1 v2 v3 v4. w = FrameCap v0 v1 v2 v3 v4)"
+  "isArchFrameCap v = (\<exists>v0 v1 v2 v3 v4. v = ArchObjectCap (FrameCap v0 v1 v2 v3 v4))"
   "isPageTableCap w = (\<exists>v0 v1. w = PageTableCap v0 v1)"
   "isASIDControlCap w = (w = ASIDControlCap)"
   "isASIDPoolCap w = (\<exists>v0 v1. w = ASIDPoolCap v0 v1)"
