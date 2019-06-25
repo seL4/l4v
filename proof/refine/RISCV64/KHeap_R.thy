@@ -1817,14 +1817,11 @@ lemma valid_global_refs_lift':
   done
 
 lemma valid_arch_state_lift':
-  assumes typs: "\<And>T p P. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
-  shows "\<lbrace>valid_arch_state'\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  apply (simp add: valid_arch_state'_def
-                   valid_asid_table'_def
-                   valid_global_pts'_def
-                   vspace_table_at'_defs
-                   All_less_Ball)
+  assumes typs: "\<And>T p P. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
+  assumes arch: "\<And>P. f \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace>"
+  shows "f \<lbrace>valid_arch_state'\<rbrace>"
+  apply (simp add: valid_arch_state'_def valid_asid_table'_def valid_global_pts'_def
+                   vspace_table_at'_defs)
   apply (rule hoare_lift_Pf [where f="ksArchState"])
    apply (wp typs hoare_vcg_all_lift hoare_vcg_ball_lift arch typ_at_lifts)+
   done
