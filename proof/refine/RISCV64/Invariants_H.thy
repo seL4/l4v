@@ -288,9 +288,8 @@ primrec zombieCTEs :: "zombie_type \<Rightarrow> nat" where
 context begin interpretation Arch .
 
 definition page_table_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
- "page_table_at' x \<equiv> \<lambda>s.
-    is_aligned x ptBits \<and>
-    (\<forall>y < 2 ^ ptTranslationBits. typ_at' (ArchT PTET) (x + (y << word_size_bits)) s)"
+ "page_table_at' p \<equiv> \<lambda>s.
+    is_aligned p ptBits \<and> (\<forall>i::pt_index. pte_at' (p + (ucast i << pte_bits)) s)"
 
 lemmas vspace_table_at'_defs = page_table_at'_def
 
@@ -2159,10 +2158,10 @@ lemma typ_at_lift_cte_at':
   done
 
 lemma typ_at_lift_page_table_at':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows      "\<lbrace>page_table_at' p\<rbrace> f \<lbrace>\<lambda>rv. page_table_at' p\<rbrace>"
-  unfolding page_table_at'_def All_less_Ball
-  by (wp hoare_vcg_const_Ball_lift x)
+  assumes x: "\<And>T p. f \<lbrace>typ_at' T p\<rbrace>"
+  shows "f \<lbrace>page_table_at' p\<rbrace>"
+  unfolding page_table_at'_def
+  by (wp hoare_vcg_all_lift x)
 
 lemma ko_wp_typ_at':
   "ko_wp_at' P p s \<Longrightarrow> \<exists>T. typ_at' T p s"
@@ -2722,8 +2721,8 @@ lemma ex_cte_cap_to'_pres:
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma page_table_pte_atI':
-  "\<lbrakk> page_table_at' p s; x < 2^ptTranslationBits \<rbrakk> \<Longrightarrow> pte_at' (p + (x << word_size_bits)) s"
-  by (simp add: page_table_at'_def pageBits_def ptBits_def)
+  "page_table_at' p s \<Longrightarrow> pte_at' (p + (ucast (x::pt_index) << pte_bits)) s"
+  by (simp add: page_table_at'_def)
 
 lemma valid_global_refsD':
   "\<lbrakk> ctes_of s p = Some cte; valid_global_refs' s \<rbrakk> \<Longrightarrow>
@@ -2899,7 +2898,7 @@ lemma objBitsT_simps:
   "objBitsT (ArchT PTET) = word_size_bits"
   "objBitsT (ArchT ASIDPoolT) = pageBits"
   unfolding objBitsT_def makeObjectT_def
-  by (simp add: makeObject_simps objBits_simps archObjSize_def bit_simps)+
+  by (simp add: makeObject_simps objBits_simps bit_simps)+
 
 
 lemma objBitsT_koTypeOf :
