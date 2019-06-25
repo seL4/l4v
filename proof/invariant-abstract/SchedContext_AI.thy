@@ -1284,6 +1284,17 @@ lemma sched_context_bind_tcb_invs[wp]:
    apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
+lemma maybe_sched_context_bind_tcb_invs[wp]:
+  "\<lbrace>invs and (\<lambda>s. tcb_at tcb s \<and> (bound_sc_tcb_at (\<lambda>x. x \<noteq> Some sc) tcb s \<longrightarrow>
+                    ex_nonz_cap_to sc s \<and> ex_nonz_cap_to tcb s
+                  \<and> sc_tcb_sc_at ((=) None) sc s \<and> bound_sc_tcb_at ((=) None) tcb s))\<rbrace>
+   maybe_sched_context_bind_tcb sc tcb
+   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  unfolding maybe_sched_context_bind_tcb_def
+  apply (wpsimp simp: get_tcb_obj_ref_def wp: thread_get_wp)
+  apply (fastforce simp: pred_tcb_at_def obj_at_def is_tcb)
+  done
+
 lemma sched_context_unbind_valid_replies[wp]:
   "tcb_release_remove tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp simp: tcb_release_remove_def)
@@ -1381,6 +1392,18 @@ lemma sched_context_unbind_tcb_invs[wp]:
                       hoare_vcg_disj_lift)
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cur_sc_tcb_def sc_tcb_sc_at_def
                         obj_at_def)
+  done
+
+lemma maybe_sched_context_unbind_tcb_invs[wp]:
+  notes refs_of_simps[simp del]
+  shows "\<lbrace>\<lambda>s. invs s \<and> tcb_at tcb_ptr s \<and>
+              (\<forall>xa. bound_sc_tcb_at (\<lambda>sc. sc = Some xa) tcb_ptr s \<longrightarrow>
+                    (xa \<noteq> idle_sc_ptr))\<rbrace>
+         maybe_sched_context_unbind_tcb tcb_ptr
+         \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (simp add: maybe_sched_context_unbind_tcb_def)
+  apply (wpsimp simp: get_tcb_obj_ref_def wp: thread_get_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb)
   done
 
 lemma sched_context_unbind_all_tcbs_invs[wp]:
@@ -1749,6 +1772,18 @@ lemma refill_capacity_sp:
   apply (rule hoare_seq_ext[OF _ get_refills_sp])
   apply wpsimp
   by (clarsimp simp: obj_at_def refills_capacity_def)
+
+lemma maybe_sched_context_unbind_tcb_lift:
+  assumes A: "\<And>scp. sched_context_unbind_tcb scp \<lbrace>P\<rbrace>"
+  shows "\<And>tp. maybe_sched_context_unbind_tcb tp \<lbrace>P\<rbrace>"
+  unfolding maybe_sched_context_unbind_tcb_def
+  by (wpsimp wp: A hoare_drop_imps)
+
+lemma maybe_sched_context_bind_tcb_lift:
+  assumes A: "sched_context_bind_tcb sc_ptr tcb_ptr \<lbrace>P\<rbrace>"
+  shows "maybe_sched_context_bind_tcb sc_ptr tcb_ptr \<lbrace>P\<rbrace>"
+  unfolding maybe_sched_context_bind_tcb_def
+  by (wpsimp wp: A hoare_drop_imps)
 
 (* sched_context_yield_to is moved to the start of SchedContextInv_AI
 because it needs to be after Ipc_AI *)

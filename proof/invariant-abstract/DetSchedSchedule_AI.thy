@@ -6827,6 +6827,19 @@ lemma sched_context_unbind_tcb_valid_sched:
   apply (clarsimp simp: valid_sched_def)
   done
 
+lemma maybe_sched_context_unbind_tcb_valid_sched:
+  "\<lbrace>valid_sched and
+   (\<lambda>s. \<forall>sc_ptr. bound_sc_tcb_at (\<lambda>x. x = Some sc_ptr) tcb_ptr s \<longrightarrow>
+                 (\<forall>sc. (\<exists>n. ko_at (SchedContext sc n) sc_ptr s) \<longrightarrow>
+                        (\<forall>y. sc_tcb sc = Some y \<longrightarrow>
+                             scheduler_act_not y s)))\<rbrace>
+   maybe_sched_context_unbind_tcb tcb_ptr
+   \<lbrace>\<lambda>y. valid_sched:: det_state \<Rightarrow> _\<rbrace>"
+  unfolding maybe_sched_context_unbind_tcb_def
+  apply (wpsimp wp: sched_context_unbind_tcb_valid_sched get_tcb_obj_ref_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  done
+
 lemma sched_context_unbind_all_tcbs_valid_sched[wp]:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace>
    sched_context_unbind_all_tcbs sc_ptr
@@ -7446,6 +7459,14 @@ lemma sched_context_bind_tcb_valid_sched:
   apply (clarsimp simp: not_cur_thread_def pred_tcb_at_def obj_at_def)
   done
 
+lemma maybe_sched_context_bind_tcb_valid_sched:
+  "\<lbrace>valid_sched and simple_sched_action and bound_sc_tcb_at ((=) None) tcbptr and
+    (\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s)\<rbrace>
+   maybe_sched_context_bind_tcb scptr tcbptr
+   \<lbrace>\<lambda>y. valid_sched:: det_state \<Rightarrow> _\<rbrace>"
+  unfolding maybe_sched_context_bind_tcb_def
+  by (wpsimp wp: sched_context_bind_tcb_valid_sched get_tcb_obj_ref_wp)
+
 lemma sched_context_unbind_tcb_valid_sched:
   "\<lbrace>valid_sched and simple_sched_action
     and (\<lambda>s. sc_tcb_sc_at (\<lambda>p. \<exists>tp. p = Some tp \<and> tp \<noteq> idle_thread s) sc_ptr s)\<rbrace>
@@ -7462,6 +7483,15 @@ lemma sched_context_unbind_tcb_valid_sched:
                     tcb_release_remove_not_in_release_q)
   by (clarsimp simp: valid_sched_def sc_tcb_sc_at_def obj_at_def)
   (* need to introduce the notion of idle_sc? *)
+
+lemma maybe_sched_context_unbind_tcb_valid_sched:
+  "\<lbrace>valid_sched and simple_sched_action
+    and (\<lambda>s. \<forall>sc_ptr. bound_sc_tcb_at (\<lambda>x. x = Some sc_ptr) tcb_ptr s \<longrightarrow> sc_tcb_sc_at (\<lambda>p. \<exists>tp. p = Some tp \<and> tp \<noteq> idle_thread s) sc_ptr s)\<rbrace>
+     maybe_sched_context_unbind_tcb tcb_ptr
+   \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
+  unfolding maybe_sched_context_unbind_tcb_def
+  apply (wpsimp wp: sched_context_unbind_tcb_valid_sched get_tcb_obj_ref_wp)
+  by (clarsimp simp: pred_tcb_at_def obj_at_def)
 
 lemma valid_sched_release_queue_update[simp]:
   "set queue = set (release_queue s) \<Longrightarrow> distinct queue \<Longrightarrow> distinct (release_queue s) \<Longrightarrow>
@@ -7582,18 +7612,6 @@ lemma set_mcpriority_budget_sufficient[wp]:
   apply (safe; rule_tac x=scp in exI; fastforce)
   done
 
-lemma horridly_specific_rewrite2:
-  "(obj_at (\<lambda>ko. \<exists>tcb. (tcb_sched_context tcb = Some xa \<longrightarrow> ko = TCB tcb) \<and>
-                   (tcb_sched_context tcb \<noteq> Some xa \<longrightarrow>
-                      ex_nonz_cap_to xa s \<and> ex_nonz_cap_to target s \<and> ko = TCB tcb
-                    \<and> bound_sc_tcb_at ((=) None) target s \<and> sc_tcb_sc_at ((=) None) xa s
-                    \<and> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s)) target s) =
-   (tcb_at target s \<and> (bound_sc_tcb_at (\<lambda>sc. sc \<noteq> Some xa) target s \<longrightarrow>
-                    ex_nonz_cap_to xa s \<and> ex_nonz_cap_to target s
-                  \<and> sc_tcb_sc_at ((=) None) xa s \<and> bound_sc_tcb_at ((=) None) target s
-                  \<and> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s))"
-  by (auto simp: obj_at_def is_tcb pred_tcb_at_def)
-
 lemma tc_valid_sched:
   "\<lbrace>valid_sched and invs and simple_sched_action
     and (\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s)
@@ -7610,15 +7628,17 @@ lemma tc_valid_sched:
                 hoare_vcg_const_imp_lift_R hoare_vcg_R_conj
          | wp case_option_wpE check_cap_inv cap_delete_deletes
               hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_all_lift
-              reschedule_preserves_valid_sched sched_context_bind_tcb_valid_sched
-              thread_set_not_state_valid_sched sched_context_unbind_tcb_valid_sched
+              reschedule_preserves_valid_sched maybe_sched_context_bind_tcb_valid_sched
+              thread_set_not_state_valid_sched maybe_sched_context_unbind_tcb_valid_sched
               install_tcb_cap_invs set_priority_valid_sched
               set_mcpriority_budget_ready[simplified conj_comms]
               set_mcpriority_budget_sufficient[simplified conj_comms]
               thread_set_valid_cap gbn_wp
               static_imp_wp static_imp_conj_wp
-         | simp add: ARM.horridly_specific_rewrite horridly_specific_rewrite2
-                     not_pred_tcb
+              maybe_sched_context_unbind_tcb_lift[where P="simple_sched_action"]
+              maybe_sched_context_bind_tcb_lift[where P="simple_sched_action"]
+         | rule maybe_sched_context_unbind_tcb_lift maybe_sched_context_bind_tcb_lift
+         | simp add: not_pred_tcb
          | wpc | wps
          | strengthen tcb_cap_always_valid_strg tcb_cap_valid_ep_strgs
          | wp cap_delete_ep install_tcb_cap_cte_wp_at_ep)+

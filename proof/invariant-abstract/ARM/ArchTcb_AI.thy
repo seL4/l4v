@@ -229,21 +229,6 @@ lemma as_user_ipc_tcb_cap_valid4[wp]:
   apply (clarsimp simp: get_tcb_def)
   done
 
-lemma horridly_specific_rewrite:
-  "(obj_at (\<lambda>ko. \<exists>tcb. (tcb_sched_context tcb = Some xa \<longrightarrow> ko = TCB tcb) \<and>
-                   (tcb_sched_context tcb \<noteq> Some xa \<longrightarrow>
-                      ex_nonz_cap_to xa s \<and> ex_nonz_cap_to a s \<and> ko = TCB tcb
-                    \<and> bound_sc_tcb_at ((=) None) a s \<and> sc_tcb_sc_at ((=) None) xa s)) a s) =
-   (tcb_at a s \<and> (bound_sc_tcb_at (\<lambda>sc. sc \<noteq> Some xa) a s \<longrightarrow>
-                    ex_nonz_cap_to xa s \<and> ex_nonz_cap_to a s
-                  \<and> sc_tcb_sc_at ((=) None) xa s \<and> bound_sc_tcb_at ((=) None) a s))"
-  "(obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and>
-                       (tcb_sched_context tcb = Some xa \<longrightarrow>
-                         xa \<noteq> idle_sc_ptr)) a s)
-     = (tcb_at a s \<and> (bound_sc_tcb_at (\<lambda>sc. sc = Some xa) a s \<longrightarrow>
-                        (xa \<noteq> idle_sc_ptr)))"
-  by (auto simp: obj_at_def is_tcb pred_tcb_at_def)
-
 lemma thread_set_mcp_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to a\<rbrace> thread_set (tcb_mcpriority_update g) t \<lbrace>\<lambda>rv. ex_nonz_cap_to a\<rbrace>"
   by (wpsimp wp: ex_nonz_cap_to_pres thread_set_cte_wp_at_trivial simp: tcb_cap_cases_def) auto
@@ -325,7 +310,8 @@ lemma tc_invs[Tcb_AI_asms]:
               checked_insert_tcb_invs[where ref="tcb_cnode_index 2"]
               thread_set_ipc_tcb_cap_valid gbn_wp
               static_imp_wp static_imp_conj_wp
-         | simp add: horridly_specific_rewrite not_pred_tcb
+         | rule maybe_sched_context_unbind_tcb_lift maybe_sched_context_bind_tcb_lift
+         | simp add: not_pred_tcb
          | wpc
          | strengthen use_no_cap_to_obj_asid_strg
                       tcb_cap_always_valid_strg tcb_cap_valid_ep_strgs
