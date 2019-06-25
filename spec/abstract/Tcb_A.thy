@@ -162,14 +162,8 @@ where
     liftE $ case priority of None \<Rightarrow> return()
      | Some (prio, _) \<Rightarrow> set_priority target prio;
     liftE $ case sc of None \<Rightarrow> return ()
-     | Some None \<Rightarrow> do
-       sc_ptr_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context target;
-       maybeM sched_context_unbind_tcb sc_ptr_opt
-     od
-     | Some (Some sc_ptr) \<Rightarrow> do
-        sc' \<leftarrow> get_tcb_obj_ref tcb_sched_context target;
-        when (sc' \<noteq> Some sc_ptr) $ sched_context_bind_tcb sc_ptr target
-     od;
+     | Some None \<Rightarrow> maybe_sched_context_unbind_tcb target
+     | Some (Some sc_ptr) \<Rightarrow> maybe_sched_context_bind_tcb sc_ptr target;
     install_tcb_cap target slot 3 fault_handler;
     install_tcb_cap target slot 4 timeout_handler;
     install_tcb_cap target slot 0 croot;
