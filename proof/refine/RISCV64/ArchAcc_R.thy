@@ -125,22 +125,210 @@ lemma cte_map_in_cnode1:
   apply (rule of_bl_max[unfolded mask_def add_diff_eq, simplified])
   done
 
-lemma cte_map_in_cnode2:
-  "x \<le> x + 2 ^ (cte_level_bits + length y) - 1 \<Longrightarrow>
-   cte_map (x, y) \<le> x + 2 ^ (cte_level_bits + length y) - 1"
-  apply (simp add: cte_map_def flip: add_diff_eq)
-  apply (rule word_plus_mono_right; assumption?)
-  sorry (* FIXME RISCV *)
+lemma pspace_aligned_cross:
+  "\<lbrakk> pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> pspace_aligned' s'"
+  apply (clarsimp simp: pspace_aligned'_def pspace_aligned_def pspace_relation_def)
+  apply (rename_tac p' ko')
+  apply (prop_tac "p' \<in> pspace_dom (kheap s)", fastforce)
+  apply (thin_tac "pspace_dom k = p" for k p)
+  apply (clarsimp simp: pspace_dom_def)
+  apply (drule bspec, fastforce)+
+  apply clarsimp
+  apply (erule (1) obj_relation_cutsE; clarsimp simp: objBits_simps)
+     apply (clarsimp simp: cte_map_def)
+     apply (simp add: cteSizeBits_def cte_level_bits_def)
+     apply (rule is_aligned_add)
+      apply (erule is_aligned_weaken)
+      apply simp
+     apply (rule is_aligned_shift)
+    apply (rule is_aligned_add)
+     apply (erule is_aligned_weaken)
+     apply (simp add: bit_simps)
+    apply (rule is_aligned_shift)
+   apply (rule is_aligned_add)
+    apply (erule is_aligned_weaken)
+    apply (rule pbfs_atleast_pageBits)
+   apply (rule is_aligned_shift)
+  apply (simp add: other_obj_relation_def)
+  apply (clarsimp simp: bit_simps' tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
+                  split: kernel_object.splits Structures_A.kernel_object.splits)
+  apply (clarsimp simp: archObjSize_def split: arch_kernel_object.splits arch_kernel_obj.splits)
+  apply (erule is_aligned_weaken)
+  apply (simp add: bit_simps)
+  done
 
-lemma pageBitsForSize_shiftl:
-  "n < 2 ^ (pageBitsForSize sz - pageBits) \<Longrightarrow>
-   (n::machine_word) << pageBits \<le> mask (pageBitsForSize sz)"
-  sorry (* FIXME RISCV *)
+lemma Suc_2p_unat_mask:
+  "n \<le> LENGTH('a) \<Longrightarrow> Suc (2 ^ n * k + unat (mask n :: 'a::len word)) = 2 ^ n * (k+1)"
+  by (simp add: unat_mask)
+
+(* FIXME RISCV: move to Word *)
+lemma mask_over_length:
+  "LENGTH('a) < n \<Longrightarrow> mask n = (-1::'a::len word)"
+  by (simp add: mask_def)
+
+(* FIXME RISCV: move to Word *)
+lemma is_aligned_over_length:
+  "\<lbrakk> is_aligned p n; LENGTH('a) < n \<rbrakk> \<Longrightarrow> (p::'a::len word) = 0"
+  by (simp add: is_aligned_mask mask_over_length)
+
+lemma is_aligned_add_step_le:
+  "\<lbrakk> is_aligned (a::'a::len word) n; is_aligned b n; a < b; b \<le> a + mask n \<rbrakk> \<Longrightarrow> False"
+  apply (simp flip: not_le)
+  apply (erule notE)
+  apply (cases "LENGTH('a) < n")
+   apply (drule (1) is_aligned_over_length)+
+   apply (drule mask_over_length)
+   apply clarsimp
+  apply (clarsimp simp: word_le_nat_alt not_less)
+  apply (subst (asm) unat_plus_simple[THEN iffD1], erule is_aligned_no_overflow_mask)
+  apply (clarsimp simp: is_aligned_def dvd_def word_le_nat_alt)
+  apply (drule le_imp_less_Suc)
+  apply (simp add: Suc_2p_unat_mask)
+  by (metis Groups.mult_ac(2) Suc_leI linorder_not_less mult_le_mono order_refl times_nat.simps(2))
+
+lemmas is_aligned_add_step_le' = is_aligned_add_step_le[simplified mask_2pm1 add_diff_eq]
+
+(* FIXME RISCV: move to objBits_simps *)
+lemma objBitsKO_Data:
+  "objBitsKO (if dev then KOUserDataDevice else KOUserData) = pageBits"
+  by (simp add: objBits_simps)
+
+lemma of_bl_shift_cte_level_bits:
+  "(of_bl z :: machine_word) << cte_level_bits \<le> mask (cte_level_bits + length z)"
+  by word_bitwise
+     (simp add: test_bit_of_bl bit_simps word_size cte_level_bits_def rev_bl_order_simps)
+
+lemma obj_relation_cuts_range_limit:
+  "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk>
+   \<Longrightarrow> \<exists>x n. p' = p + x \<and> is_aligned x n \<and> n \<le> obj_bits ko \<and> x \<le> mask (obj_bits ko)"
+  apply (erule (1) obj_relation_cutsE; clarsimp)
+     apply (drule (1) wf_cs_nD)
+     apply (clarsimp simp: cte_map_def)
+     apply (rule_tac x=cte_level_bits in exI)
+     apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits)
+    apply (rule_tac x=pte_bits in exI)
+    apply (simp add: bit_simps is_aligned_shift mask_def)
+    apply word_bitwise
+   apply (rule_tac x=pageBits in exI)
+   apply (simp add: is_aligned_shift pbfs_atleast_pageBits)
+   apply (simp add: mask_def shiftl_t2n mult_ac)
+   apply (erule word_less_power_trans2, rule pbfs_atleast_pageBits)
+   apply (simp add: pbfs_less_wb'[unfolded word_bits_def, simplified])
+  apply fastforce
+  done
+
+lemma obj_relation_cuts_range_ptr_range:
+  "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko'; is_aligned p (obj_bits ko) \<rbrakk>
+   \<Longrightarrow> p' \<in> ptr_range p (obj_bits ko)"
+  apply (drule (1) obj_relation_cuts_range_limit, clarsimp)
+  apply (rule conjI)
+   apply (rule word_plus_mono_right2; assumption?)
+   apply (simp add: is_aligned_no_overflow_mask)
+  apply (erule word_plus_mono_right)
+  apply (simp add: is_aligned_no_overflow_mask)
+  done
+
+lemma obj_relation_cuts_obj_bits:
+  "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk> \<Longrightarrow> objBitsKO ko' \<le> obj_bits ko"
+  apply (erule (1) obj_relation_cutsE;
+          clarsimp simp: objBits_simps objBits_defs bit_simps cte_level_bits_def
+                         pbfs_atleast_pageBits[simplified bit_simps])
+  apply (cases ko; simp add: other_obj_relation_def objBits_defs split: kernel_object.splits)
+  apply (rename_tac ako, case_tac ako; clarsimp)
+  apply (rename_tac ako', case_tac ako'; clarsimp simp: archObjSize_def)
+  done
+
+lemma power_2_mult_step_le:
+  "\<lbrakk>n' \<le> n; 2 ^ n' * k' < 2 ^ n * k\<rbrakk> \<Longrightarrow> 2 ^ n' * (k' + 1) \<le> 2 ^ n * (k::nat)"
+  apply (cases "n'=n", simp)
+   apply (metis Suc_leI le_refl mult_Suc_right mult_le_mono semiring_normalization_rules(7))
+  apply (drule (1) le_neq_trans)
+  apply clarsimp
+  apply (subgoal_tac "\<exists>m. n = n' + m")
+   prefer 2
+   apply (simp add: le_Suc_ex)
+  apply (clarsimp simp: power_add)
+  by (metis Suc_leI mult.assoc mult_Suc_right nat_mult_le_cancel_disj)
+
+(* FIXME RISCV: move to Word *)
+lemma aligned_mask_step:
+  "\<lbrakk> n' \<le> n; p' \<le> p + mask n; is_aligned p n; is_aligned p' n' \<rbrakk> \<Longrightarrow>
+   (p'::'a::len word) + mask n' \<le> p + mask n"
+  apply (cases "LENGTH('a) < n")
+   apply (frule (1) is_aligned_over_length)
+   apply (drule mask_over_length)
+   apply clarsimp
+  apply (simp add: not_less)
+  apply (simp add: word_le_nat_alt unat_plus_simple)
+  apply (subst unat_plus_simple[THEN iffD1], erule is_aligned_no_overflow_mask)+
+  apply (subst (asm) unat_plus_simple[THEN iffD1], erule is_aligned_no_overflow_mask)
+  apply (clarsimp simp: is_aligned_def dvd_def)
+  apply (rename_tac k k')
+  apply (thin_tac "unat p = x" for p x)+
+  apply (subst Suc_le_mono[symmetric])
+  apply (simp only: Suc_2p_unat_mask)
+  apply (drule le_imp_less_Suc, subst (asm) Suc_2p_unat_mask, assumption)
+  apply (erule (1) power_2_mult_step_le)
+  done
+
+lemma ptr_range_subsetD:
+  "\<lbrakk> p' \<in> ptr_range p n; x' \<in> ptr_range p' n'; n' \<le> n; is_aligned p n; is_aligned p' n' \<rbrakk> \<Longrightarrow>
+   x' \<in> ptr_range p n"
+  apply clarsimp
+  apply (rule conjI)
+   apply (erule (1) order_trans)
+  apply (rule order_trans, assumption)
+  apply (erule (3) aligned_mask_step)
+  done
+
+lemma pspace_distinct_cross:
+  "\<lbrakk> pspace_distinct s; pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow>
+   pspace_distinct' s'"
+  apply (frule (1) pspace_aligned_cross)
+  apply (clarsimp simp: pspace_distinct'_def)
+  apply (rename_tac p' ko')
+  apply (rule pspace_dom_relatedE; assumption?)
+  apply (rename_tac p ko P)
+  apply (frule (1) pspace_alignedD')
+  apply (frule (1) pspace_alignedD)
+  apply (rule ps_clearI, assumption)
+   apply (case_tac ko'; simp add: objBits_simps objBits_defs bit_simps')
+   apply (simp split: arch_kernel_object.splits add: bit_simps')
+  apply (rule ccontr, clarsimp)
+  apply (rename_tac x' ko_x')
+  apply (frule_tac x=x' in pspace_alignedD', assumption)
+  apply (rule_tac x=x' in pspace_dom_relatedE; assumption?)
+  apply (rename_tac x ko_x P')
+  apply (frule_tac p=x in pspace_alignedD, assumption)
+  apply (case_tac "p = x")
+   apply clarsimp
+   apply (erule (1) obj_relation_cutsE; clarsimp)
+      apply (clarsimp simp: cte_relation_def cte_map_def objBits_simps)
+      apply (rule_tac n=cte_level_bits in is_aligned_add_step_le'; assumption?)
+        apply (rule is_aligned_add; (rule is_aligned_shift)?)
+        apply (erule is_aligned_weaken, simp add: cte_level_bits_def)
+       apply (rule is_aligned_add; (rule is_aligned_shift)?)
+       apply (erule is_aligned_weaken, simp add: cte_level_bits_def)
+      apply (simp add: cte_level_bits_def cteSizeBits_def)
+     apply (clarsimp simp: pte_relation_def objBits_simps)
+     apply (rule_tac n=pte_bits in is_aligned_add_step_le'; assumption?)
+    apply (simp add: objBitsKO_Data)
+    apply (rule_tac n=pageBits in is_aligned_add_step_le'; assumption?)
+   apply (case_tac ko; simp split: if_split_asm add: is_other_obj_relation_type_CapTable)
+   apply (rename_tac ako, case_tac ako; simp add: is_other_obj_relation_type_def split: if_split_asm)
+  apply (frule (1) obj_relation_cuts_obj_bits)
+  apply (drule (2) obj_relation_cuts_range_ptr_range)+
+  apply (prop_tac "x' \<in> ptr_range p' (objBitsKO ko')", simp add: mask_def add_diff_eq)
+  apply (frule_tac x=p and y=x in pspace_distinctD; assumption?)
+  apply (drule (4) ptr_range_subsetD)
+  apply (erule (2) in_empty_interE)
+  done
 
 lemma asid_pool_at_cross:
   "\<lbrakk> asid_pool_at p s; pspace_relation (kheap s) (ksPSpace s');
      pspace_aligned s; pspace_distinct s \<rbrakk>
    \<Longrightarrow> asid_pool_at' p s'"
+  apply (drule (2) pspace_distinct_cross)
   apply (clarsimp simp: obj_at_def typ_at'_def ko_wp_at'_def)
   apply (prop_tac "p \<in> pspace_dom (kheap s)")
    apply (clarsimp simp: pspace_dom_def)
@@ -154,55 +342,9 @@ lemma asid_pool_at_cross:
   apply (clarsimp simp: objBits_simps)
   apply (frule (1) pspace_alignedD)
   apply (rule conjI, simp add: bit_simps)
-  apply (clarsimp simp: ps_clear_def)
-  apply (rule ccontr)
-  apply (drule int_not_emptyD, clarsimp)
-  apply (rename_tac ap' x obj', prop_tac "x \<in> pspace_dom (kheap s)", fastforce)
-  apply (thin_tac "pspace_dom s = x" for s x)
-  apply (clarsimp simp: pspace_dom_def)
-  apply (rename_tac x' a b obj)
-  apply (frule_tac p=x' in pspace_alignedD, assumption)
-  apply (drule is_aligned_no_overflow)+
-  apply (case_tac obj; clarsimp)
-      apply (clarsimp simp:  split: if_split_asm)
-       apply (case_tac "x'=p"; simp?)
-       apply (drule (1) wf_cs_nD)
-       apply (drule (3) pspace_distinctD)
-       apply (clarsimp simp: mask_def add_ac add_diff_eq)
-       apply (erule impE)
-        apply (rule order_trans, assumption, erule cte_map_in_cnode2)
-       apply (erule notE, rule order_trans, erule cte_map_in_cnode1, assumption)
-      apply (drule (3) pspace_distinctD, simp add: mask_def add_ac add_diff_eq bit_simps)
-     apply (drule (3) pspace_distinctD, simp add: mask_def add_ac bit_simps)
-    apply (drule (3) pspace_distinctD, simp add: mask_def add_ac bit_simps)
-   apply (drule (3) pspace_distinctD, simp add: mask_def add_ac bit_simps)
-  apply (rename_tac ako)
-  apply (case_tac ako; simp)
-    apply (drule (3) pspace_distinctD, simp add: mask_def add_ac bit_simps)
-   apply (case_tac "x'=p"; simp?)
-   apply (clarsimp simp: ran_def)
-   apply (drule (3) pspace_distinctD)
-   apply (simp add: mask_def add_ac bit_simps)
-   apply (erule impE)
-    apply (rule order_trans, assumption, rule word_plus_mono_right; assumption?)
-    apply (word_bitwise)
-   apply (erule notE, rule order_trans[rotated], assumption, erule word_plus_mono_right2)
-   apply (word_bitwise)
-  apply clarsimp
-  apply (rename_tac sz n)
-  apply (case_tac "x'=p"; simp?)
-  apply (drule (3) pspace_distinctD)
-  apply (clarsimp simp: mask_def add_ac add_diff_eq)
-  apply (erule impE)
-   apply (simp flip: add_diff_eq)
-   apply (rule order_trans, assumption, rule word_plus_mono_right; assumption?)
-   apply (simp flip: mask_2pm1)
-   apply (erule pageBitsForSize_shiftl)
-  apply (erule notE, rule order_trans[rotated], assumption)
-  apply (rule word_plus_mono_right2)
-   apply (simp flip: add_diff_eq)
-  apply (simp flip: mask_2pm1)
-  apply (erule pageBitsForSize_shiftl)
+  apply (clarsimp simp: pspace_distinct'_def)
+  apply (drule bspec, fastforce)
+  apply (simp add: objBits_simps)
   done
 
 (* FIXME RISCV: move *)
@@ -219,9 +361,10 @@ lemma corres_cross_over_asid_pool_at:
   done
 
 lemma get_asid_pool_corres:
-  "corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
+  "p' = p \<Longrightarrow>
+   corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
           (asid_pool_at p and pspace_aligned and pspace_distinct) \<top>
-          (get_asid_pool p) (getObject p)"
+          (get_asid_pool p) (getObject p')"
   apply (rule corres_cross_over_asid_pool_at, fastforce)
   apply (simp add: getObject_def gets_map_def split_def)
   apply (rule corres_no_failI)
@@ -366,6 +509,7 @@ lemma p_le_table_base:
 lemma pte_at_cross:
   "\<lbrakk> pte_at p s; pspace_relation (kheap s) (ksPSpace s'); pspace_aligned s; pspace_distinct s \<rbrakk>
    \<Longrightarrow> pte_at' p s'"
+  apply (drule (2) pspace_distinct_cross)
   apply (clarsimp simp: pte_at_def obj_at_def typ_at'_def ko_wp_at'_def)
   apply (prop_tac "p \<in> pspace_dom (kheap s)")
    apply (clarsimp simp: pspace_dom_def)
@@ -382,70 +526,9 @@ lemma pte_at_cross:
   apply (simp add: mask_pt_bits_inner_beauty)
   apply (clarsimp simp: pte_relation_def)
   apply (clarsimp simp: objBits_simps)
-  apply (frule (1) pspace_alignedD)
-  apply (clarsimp simp: ps_clear_def)
-  apply (rule ccontr)
-  apply (drule int_not_emptyD, clarsimp)
-  apply (rename_tac x obj', prop_tac "x \<in> pspace_dom (kheap s)", fastforce)
-  apply (thin_tac "pspace_dom s = x" for s x)
-  apply (clarsimp simp: pspace_dom_def)
-  apply (rename_tac x' a b obj)
-  apply (frule_tac p=x' in pspace_alignedD, assumption)
-  apply (case_tac "table_base p = x'")
-   apply clarsimp
-  subgoal sorry
-  apply (prop_tac "table_base p \<le> p", word_bitwise)
-  apply (prop_tac "table_base p \<le> a", simp)
-  apply (prop_tac "a \<le> table_base p + mask table_size")
-   apply (rule order_trans, assumption, erule p_le_table_base)
-  apply (case_tac obj; clarsimp)
-      apply (clarsimp split: if_split_asm)
-       apply (drule (1) wf_cs_nD)
-       apply (drule (3) pspace_distinctD)
-       apply (clarsimp simp: is_aligned_no_overflow_mask)
-       apply (erule impE)
-        apply (rule order_trans[rotated], assumption)
-        apply (rule cte_map_in_cnode1, erule is_aligned_no_overflow)
-       apply (erule notE, rule order_trans[rotated])
-        apply (simp add: mask_def add_diff_eq)
-        apply (rule cte_map_in_cnode2)
-        apply (erule is_aligned_no_overflow)
-       apply assumption
-      apply (drule (3) pspace_distinctD, clarsimp simp: is_aligned_no_overflow_mask)
-      apply (erule notE, rule order_trans, assumption, erule is_aligned_no_overflow_mask)
-     apply (drule (3) pspace_distinctD, clarsimp simp: is_aligned_no_overflow_mask)
-     apply (erule notE, rule order_trans, assumption, erule is_aligned_no_overflow_mask)
-    apply (drule (3) pspace_distinctD, clarsimp simp: is_aligned_no_overflow_mask)
-    apply (erule notE, rule order_trans, assumption, erule is_aligned_no_overflow_mask)
-   apply (drule (3) pspace_distinctD, clarsimp simp: is_aligned_no_overflow_mask)
-   apply (erule notE, rule order_trans, assumption, erule is_aligned_no_overflow_mask)
-  apply (rename_tac ako)
-  apply (case_tac ako; simp)
-    apply (drule (3) pspace_distinctD, clarsimp simp: is_aligned_no_overflow_mask)
-    apply (erule notE, rule order_trans, assumption, erule is_aligned_no_overflow_mask)
-   apply (clarsimp simp: ran_def)
-   apply (drule (3) pspace_distinctD, clarsimp simp: is_aligned_no_overflow_mask)
-   apply (drule is_aligned_no_overflow')+
-   apply (erule impE)
-    apply (rule order_trans[rotated], assumption)
-    apply (erule word_plus_mono_right2)
-    apply (simp add: bit_simps)
-    apply word_bitwise
-   apply (erule notE, rule order_trans, assumption, rule word_plus_mono_right)
-    apply (simp add: bit_simps mask_def)
-    apply (word_bitwise)
-   apply (simp add: mask_def)
-  apply clarsimp
-  apply (rename_tac sz n)
-  apply (drule (3) pspace_distinctD)
-  apply (clarsimp simp: is_aligned_no_overflow_mask)
-  apply (erule impE)
-   apply (rule order_trans[rotated], assumption, rule word_plus_mono_right2)
-    apply (erule is_aligned_no_overflow_mask)
-   apply (erule pageBitsForSize_shiftl)
-  apply (erule notE, rule order_trans, assumption, rule word_plus_mono_right; assumption?)
-   apply (erule pageBitsForSize_shiftl)
-  apply (erule is_aligned_no_overflow_mask)
+  apply (clarsimp simp: pspace_distinct'_def)
+  apply (drule bspec, fastforce)
+  apply (simp add: objBits_simps)
   done
 
 lemma corres_cross_over_pte_at:

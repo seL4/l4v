@@ -159,6 +159,30 @@ lemma pspace_relation_tcb_at':
   apply simp
   done
 
+lemma tcb_at_cross:
+  "\<lbrakk> tcb_at t s; pspace_aligned s; pspace_distinct s;
+     pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> tcb_at' t s'"
+  apply (drule (2) pspace_distinct_cross)
+  apply (drule (1) pspace_aligned_cross)
+  apply (erule (3) pspace_relation_tcb_at')
+  done
+
+lemma st_tcb_at_runnable_cross:
+  "\<lbrakk> st_tcb_at runnable t s; pspace_aligned s; pspace_distinct s; (s, s') \<in> state_relation \<rbrakk>
+  \<Longrightarrow> st_tcb_at' runnable' t s'"
+  apply (frule (1) pspace_distinct_cross, fastforce simp: state_relation_def)
+  apply (frule pspace_aligned_cross, fastforce simp: state_relation_def)
+  apply (prop_tac "tcb_at t s", clarsimp simp: st_tcb_at_def obj_at_def is_tcb)
+  apply (drule (2) tcb_at_cross, fastforce simp: state_relation_def)
+  apply (erule (2) st_tcb_at_runnable_coerce_concrete)
+  done
+
+lemma cur_tcb_cross:
+  "\<lbrakk> cur_tcb s; pspace_aligned s; pspace_distinct s; (s,s') \<in> state_relation \<rbrakk> \<Longrightarrow> cur_tcb' s'"
+  apply (clarsimp simp: cur_tcb'_def cur_tcb_def state_relation_def)
+  apply (erule (3) tcb_at_cross)
+  done
+
 lemma valid_objs_valid_tcbE: "\<And>s t.\<lbrakk> valid_objs' s; tcb_at' t s; \<And>tcb. valid_tcb' tcb s \<Longrightarrow> R s tcb \<rbrakk> \<Longrightarrow> obj_at' (R s) t s"
   apply (clarsimp simp add: valid_objs'_def ran_def typ_at'_def
                             ko_wp_at'_def valid_obj'_def valid_tcb'_def obj_at'_def)
