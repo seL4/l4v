@@ -1326,14 +1326,13 @@ lemma storePTE_valid_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> storePTE p pte \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
   by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
 
-lemma storePTE_valid_objs [wp]:
-  "\<lbrace>valid_objs' and valid_pte' pte\<rbrace> storePTE p pte \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+lemma storePTE_valid_objs[wp]:
+  "storePTE p pte \<lbrace>valid_objs'\<rbrace>"
   apply (simp add: storePTE_def doMachineOp_def split_def)
-  apply (rule hoare_pre, rule setObject_valid_objs')
+  apply (rule hoare_pre, rule setObject_valid_objs'[where P=\<top>])
    prefer 2
-   apply assumption
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  apply (clarsimp simp: valid_obj'_def)
+   apply simp
+  apply (clarsimp simp: updateObject_default_def in_monad  valid_obj'_def)
   done
 
 lemma setASIDPool_valid_objs [wp]:

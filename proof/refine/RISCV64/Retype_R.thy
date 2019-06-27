@@ -3210,9 +3210,10 @@ lemma createObjects_valid_pspace_untyped':
   apply simp
   done
 
-(* FIXME RISCV: crunch
-crunch valid_objs'[wp]: copyGlobalMappings "valid_objs'"
-  (ignore: getObject storePTE wp: crunch_wps) *)
+lemma copyGlobalMappings_valid_objs'[wp]:
+  "copyGlobalMappings pt \<lbrace>valid_objs'\<rbrace>"
+  unfolding copyGlobalMappings_def by (wpsimp wp: mapM_x_wp')
+
 crunch pspace_aligned'[wp]: copyGlobalMappings "pspace_aligned'"
   (ignore: getObject wp: crunch_wps)
 crunch pspace_canonical'[wp]: copyGlobalMappings "pspace_canonical'"
@@ -3232,8 +3233,7 @@ crunch no_0_obj' [wp]: copyGlobalMappings no_0_obj'
 
 lemma copyGlobalMappings_valid_pspace[wp]:
   "\<lbrace>valid_pspace'\<rbrace> copyGlobalMappings pt \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
-  sorry (* FIXME RISCV: copyGlobalMappings
-  by (simp add: valid_pspace'_def | wp)+ *)
+  by (wpsimp simp: valid_pspace'_def)
 
 declare bleeding_obvious [simp]
 
