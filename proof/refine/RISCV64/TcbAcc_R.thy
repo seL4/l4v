@@ -392,8 +392,10 @@ lemma tcb_update_corres:
   done
 
 lemma assert_get_tcb_corres:
-  "corres tcb_relation (tcb_at t) (tcb_at' t)
+  "corres tcb_relation (tcb_at t and pspace_aligned and pspace_distinct) \<top>
           (gets_the (get_tcb t)) (getObject t)"
+  apply (rule corres_cross_over_guard[where Q="tcb_at' t"])
+   apply (fastforce simp: tcb_at_cross state_relation_def)
   apply (rule corres_guard_imp)
     apply (rule corres_gets_the)
     apply (rule corres_get_tcb)
@@ -403,7 +405,8 @@ lemma assert_get_tcb_corres:
 
 lemma threadget_corres:
   assumes x: "\<And>tcb tcb'. tcb_relation tcb tcb' \<Longrightarrow> r (f tcb) (f' tcb')"
-  shows      "corres r (tcb_at t) (tcb_at' t) (thread_get f t) (threadGet f' t)"
+  shows      "corres r (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+                       (thread_get f t) (threadGet f' t)"
   apply (simp add: thread_get_def threadGet_def)
   apply (fold liftM_def)
   apply simp
@@ -435,9 +438,9 @@ lemma threadset_corresT:
   assumes z: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases.
                  getF (f' tcb) = getF tcb"
   assumes e: "\<And>tcb'. exst_same tcb' (f' tcb')"
-  shows      "corres dc (tcb_at t)
-                        (tcb_at' t)
-                    (thread_set f t) (threadSet f' t)"
+  shows      "corres dc (tcb_at t and pspace_aligned and pspace_distinct)
+                        \<top>
+                        (thread_set f t) (threadSet f' t)"
   apply (simp add: thread_set_def threadSet_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ assert_get_tcb_corres])
@@ -476,8 +479,8 @@ lemma threadSet_corres_noopT:
   assumes y: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases.
                  getF (fn tcb) = getF tcb"
   assumes e: "\<And>tcb'. exst_same tcb' (fn tcb')"
-  shows      "corres dc \<top> (tcb_at' t)
-                           (return v) (threadSet fn t)"
+  shows      "corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+                        (return v) (threadSet fn t)"
 proof -
   have S: "\<And>t s. tcb_at t s \<Longrightarrow> return v s = (thread_set id t >>= (\<lambda>x. return v)) s"
     apply (clarsimp simp: tcb_at_def)
@@ -500,12 +503,7 @@ proof -
          apply (rule corres_noop [where P=\<top> and P'=\<top>])
           apply simp
          apply (rule no_fail_pre, wpsimp+)[1]
-        apply wp+
-      apply simp
-      apply (erule pspace_relation_tcb_at[rotated])
-      apply clarsimp
-     apply simp
-    apply simp
+        apply wpsimp+
     done
 qed
 
@@ -520,7 +518,7 @@ lemma threadSet_corres_noop_splitT:
   assumes z: "corres r P Q' m m'"
   assumes w: "\<lbrace>P'\<rbrace> threadSet fn t \<lbrace>\<lambda>x. Q'\<rbrace>"
   assumes e: "\<And>tcb'. exst_same tcb' (fn tcb')"
-  shows      "corres r P (tcb_at' t and P')
+  shows      "corres r (tcb_at t and pspace_aligned and pspace_distinct and P) P'
                            m (threadSet fn t >>= (\<lambda>rv. m'))"
   apply (rule corres_guard_imp)
     apply (subst return_bind[symmetric])
@@ -1430,17 +1428,18 @@ lemma threadSet_valid_objs':
 
 lemma corres_as_user':
   assumes y: "corres_underlying Id False True r \<top> \<top> f g"
-  shows      "corres r (tcb_at t)
-                       (tcb_at' t)
+  shows      "corres r (tcb_at t and pspace_aligned and pspace_distinct) \<top>
                        (as_user t f) (asUser t g)"
-  proof -
+proof -
   note arch_tcb_context_get_def[simp]
   note atcbContextGet_def[simp]
   note arch_tcb_context_set_def[simp]
   note atcbContextSet_def[simp]
   have L1: "corres (\<lambda>tcb con. (arch_tcb_context_get o tcb_arch) tcb = con)
-             (tcb_at t) (tcb_at' t)
-             (gets_the (get_tcb t)) (threadGet (atcbContextGet o tcbArch) t)"
+              (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+              (gets_the (get_tcb t)) (threadGet (atcbContextGet o tcbArch) t)"
+    apply (rule corres_cross_over_guard[where Q="tcb_at' t"])
+     apply (fastforce simp: tcb_at_cross state_relation_def)
     apply (rule corres_guard_imp)
       apply (rule corres_gets_the)
       apply (simp add: threadGet_def)
@@ -1465,25 +1464,27 @@ lemma corres_as_user':
     using y
     by (fastforce simp: corres_underlying_def select_f_def split_def Id_def)
   show ?thesis
-  apply (simp add: as_user_def asUser_def)
-  apply (rule corres_guard_imp)
-    apply (rule_tac r'="\<lambda>tcb con. (arch_tcb_context_get o tcb_arch) tcb = con" in corres_split)
-       apply (rule corres_split [OF _ L4])
-          apply clarsimp
-          apply (rule corres_split_nor)
-             apply (rule corres_trivial, simp)
-            apply (simp add: threadSet_def)
-            apply (rule corres_symb_exec_r)
-               prefer 4
-               apply (rule no_fail_pre_and, wp)
-              apply (rule L3[simplified])
+    apply (rule corres_cross_over_guard[where Q="tcb_at' t"])
+     apply (fastforce simp: tcb_at_cross state_relation_def)
+    apply (simp add: as_user_def asUser_def)
+    apply (rule corres_guard_imp)
+      apply (rule_tac r'="\<lambda>tcb con. (arch_tcb_context_get o tcb_arch) tcb = con" in corres_split)
+         apply (rule corres_split [OF _ L4])
+            apply clarsimp
+            apply (rule corres_split_nor)
+               apply (rule corres_trivial, simp)
+              apply (simp add: threadSet_def)
+              apply (rule corres_symb_exec_r)
+                 prefer 4
+                 apply (rule no_fail_pre_and, wp)
+                apply (rule L3[simplified])
+                 apply simp
                 apply simp
-               apply simp
-              apply (wp select_f_inv | simp)+
-      apply (rule L1[simplified])
-     apply wp+
-   apply auto
-  done
+               apply (wp select_f_inv | simp)+
+        apply (rule L1[simplified])
+       apply wp+
+     apply auto
+    done
 qed
 
 lemma corres_as_user:
@@ -1516,7 +1517,7 @@ proof -
 qed
 
 lemma user_getreg_corres:
- "corres (=) (tcb_at t) (tcb_at' t)
+ "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
         (as_user t (getRegister r)) (asUser t (getRegister r))"
   apply (rule corres_as_user')
   apply (clarsimp simp: getRegister_def)
@@ -1670,8 +1671,7 @@ lemma no_fail_asUser [wp]:
   done
 
 lemma user_setreg_corres:
-  "corres dc (tcb_at t)
-             (tcb_at' t)
+  "corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
              (as_user t (setRegister r v))
              (asUser t (setRegister r v))"
   apply (simp add: setRegister_def)
@@ -1680,7 +1680,7 @@ lemma user_setreg_corres:
   done
 
 lemma gts_corres:
-  "corres thread_state_relation (tcb_at t) (tcb_at' t)
+  "corres thread_state_relation (tcb_at t and pspace_aligned and pspace_distinct) \<top>
           (get_thread_state t) (getThreadState t)"
   apply (simp add: get_thread_state_def getThreadState_def)
   apply (rule threadget_corres)
@@ -1711,7 +1711,7 @@ lemma gts_inv'[wp]: "\<lbrace>P\<rbrace> getThreadState t \<lbrace>\<lambda>rv. 
   by (simp add: getThreadState_def) wp
 
 lemma gbn_corres:
-  "corres (=) (tcb_at t) (tcb_at' t)
+  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
           (get_bound_notification t) (getBoundNotification t)"
   apply (simp add: get_bound_notification_def getBoundNotification_def)
   apply (rule threadget_corres)
@@ -1902,7 +1902,8 @@ lemmas addToBitmap_typ_ats [wp] = typ_at_lifts [OF addToBitmap_typ_at']
 lemmas removeFromBitmap_typ_ats [wp] = typ_at_lifts [OF removeFromBitmap_typ_at']
 
 lemma tcbSchedEnqueue_corres:
-  "corres dc (is_etcb_at t) (tcb_at' t and Invariants_H.valid_queues and valid_queues')
+  "corres dc (tcb_at t and is_etcb_at t and pspace_aligned and pspace_distinct)
+             (Invariants_H.valid_queues and valid_queues')
              (tcb_sched_action (tcb_sched_enqueue) t) (tcbSchedEnqueue t)"
 proof -
   have ready_queues_helper:
@@ -1913,6 +1914,8 @@ proof -
   by (fastforce dest: ekheap_relation_absD simp: obj_at'_def inQ_def etcb_relation_def)
 
   show ?thesis unfolding tcbSchedEnqueue_def tcb_sched_action_def
+    apply (rule corres_cross_over_guard[where P'=Q and Q="tcb_at' t and Q" for Q])
+     apply (fastforce simp: tcb_at_cross state_relation_def)
     apply (rule corres_symb_exec_r [OF _ _ threadGet_inv,
              where Q'="\<lambda>rv. tcb_at' t and Invariants_H.valid_queues and valid_queues' and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"])
       defer
@@ -1965,7 +1968,8 @@ lemma get_sa_corres:
   done
 
 lemma rescheduleRequired_corres:
-  "corres dc (weak_valid_sched_action and valid_etcbs) (Invariants_H.valid_queues and valid_queues' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
+  "corres dc (weak_valid_sched_action and valid_etcbs and pspace_aligned and pspace_distinct)
+             (Invariants_H.valid_queues and valid_queues')
      (reschedule_required) rescheduleRequired"
   apply (simp add: rescheduleRequired_def reschedule_required_def)
   apply (rule corres_guard_imp)
@@ -1980,10 +1984,9 @@ lemma rescheduleRequired_corres:
          apply (rule tcbSchedEnqueue_corres)
         apply simp
        apply (wp | wpc | simp)+
-   apply (force dest: st_tcb_weakenE simp: in_monad weak_valid_sched_action_def valid_etcbs_def
+   apply (force dest: st_tcb_weakenE simp: in_monad weak_valid_sched_action_def valid_etcbs_def st_tcb_at_def obj_at_def is_tcb
                split: Deterministic_A.scheduler_action.split)
-  apply simp
-  apply (clarsimp simp: weak_sch_act_wf_def pred_tcb_at' split: scheduler_action.splits)
+  apply (clarsimp split: scheduler_action.splits)
   done
 
 lemma rescheduleRequired_corres_simple:
@@ -2100,8 +2103,11 @@ lemma gets_the_exec: "f s \<noteq> None \<Longrightarrow>  (do x \<leftarrow> ge
   done
 
 lemma tcbSchedDequeue_corres:
-  "corres dc (is_etcb_at t) (tcb_at' t and Invariants_H.valid_queues)
+  "corres dc (is_etcb_at t and tcb_at t and pspace_aligned and pspace_distinct)
+             (Invariants_H.valid_queues)
              (tcb_sched_action tcb_sched_dequeue t) (tcbSchedDequeue t)"
+  apply (rule corres_cross_over_guard[where P'=Q and Q="tcb_at' t and Q" for Q])
+   apply (fastforce simp: tcb_at_cross state_relation_def)
   apply (simp only: tcbSchedDequeue_def tcb_sched_action_def)
   apply (rule corres_symb_exec_r[OF _ _ threadGet_inv, where Q'="\<lambda>rv. tcb_at' t and Invariants_H.valid_queues and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"])
     defer
@@ -2140,7 +2146,9 @@ lemma thread_get_test: "do cur_ts \<leftarrow> get_thread_state cur; g (test cur
   apply (simp add: get_thread_state_def thread_get_def)
   done
 
-lemma thread_get_isRunnable_corres: "corres (=) (tcb_at t) (tcb_at' t) (thread_get (\<lambda>tcb. runnable (tcb_state tcb)) t) (isRunnable t)"
+lemma thread_get_isRunnable_corres:
+  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+              (thread_get (\<lambda>tcb. runnable (tcb_state tcb)) t) (isRunnable t)"
   apply (simp add:  isRunnable_def getThreadState_def threadGet_def
                    thread_get_def)
   apply (fold liftM_def)
@@ -2154,8 +2162,8 @@ lemma thread_get_isRunnable_corres: "corres (=) (tcb_at t) (tcb_at' t) (thread_g
 lemma sts_corres:
   "thread_state_relation ts ts' \<Longrightarrow>
    corres dc
-          (tcb_at t)
-          (tcb_at' t)
+          (tcb_at t and pspace_aligned and pspace_distinct)
+          \<top>
           (set_thread_state t ts) (setThreadState ts' t)"
   (is "?tsr \<Longrightarrow> corres dc ?Pre ?Pre' ?sts ?sts'")
   apply (simp add: set_thread_state_def setThreadState_def)
@@ -2180,8 +2188,8 @@ lemma sts_corres:
 
 lemma sbn_corres:
   "corres dc
-          (tcb_at t)
-          (tcb_at' t)
+          (tcb_at t and pspace_aligned and pspace_distinct)
+          \<top>
           (set_bound_notification t ntfn) (setBoundNotification ntfn t)"
   apply (simp add: set_bound_notification_def setBoundNotification_def)
   apply (subst thread_set_def[simplified, symmetric])
@@ -3387,14 +3395,16 @@ lemma thread_get_registers:
   done
 
 lemma get_mrs_corres:
-  "corres (=) (tcb_at t)
-              (tcb_at' t and case_option \<top> valid_ipc_buffer_ptr' buf)
+  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct)
+              (case_option \<top> valid_ipc_buffer_ptr' buf)
               (get_mrs t buf mi) (getMRs t buf (message_info_map mi))"
   proof -
   have S: "get = gets id"
     by (simp add: gets_def)
-  have T: "corres (\<lambda>con regs. regs = map con msg_registers) (tcb_at t) (tcb_at' t)
-     (thread_get (arch_tcb_get_registers o tcb_arch) t) (asUser t (mapM getRegister RISCV64_H.msgRegisters))"
+  have T: "corres (\<lambda>con regs. regs = map con msg_registers)
+                  (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+                  (thread_get (arch_tcb_get_registers o tcb_arch) t)
+                  (asUser t (mapM getRegister RISCV64_H.msgRegisters))"
    apply (subst thread_get_registers)
     apply (rule corres_as_user')
     apply (subst mapM_gets)
@@ -3499,8 +3509,8 @@ lemma UserContext_fold:
 lemma set_mrs_corres:
   assumes m: "mrs' = mrs"
   shows
-  "corres (=) (tcb_at t and case_option \<top> in_user_frame buf)
-              (tcb_at' t and case_option \<top> valid_ipc_buffer_ptr' buf)
+  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct and case_option \<top> in_user_frame buf)
+              (case_option \<top> valid_ipc_buffer_ptr' buf)
               (set_mrs t buf mrs) (setMRs t buf mrs')"
 proof -
   have setRegister_def2:
@@ -3554,12 +3564,11 @@ proof -
 qed
 
 lemma copy_mrs_corres:
-  "corres (=) (tcb_at s and tcb_at r
+  "corres (=) (tcb_at s and tcb_at r and pspace_aligned and pspace_distinct
                and case_option \<top> in_user_frame sb
                and case_option \<top> in_user_frame rb
                and K (unat n \<le> msg_max_length))
-              (tcb_at' s and tcb_at' r
-               and case_option \<top> valid_ipc_buffer_ptr' sb
+              (case_option \<top> valid_ipc_buffer_ptr' sb
                and case_option \<top> valid_ipc_buffer_ptr' rb)
               (copy_mrs s sb r rb n) (copyMRs s sb r rb n)"
 proof -
@@ -3570,7 +3579,9 @@ proof -
   note R=R'[simplified]
 
   have as_user_bit:
-    "\<And>v :: machine_word. corres dc (tcb_at s and tcb_at r) (tcb_at' s and tcb_at' r)
+    "\<And>v :: machine_word.
+       corres dc (tcb_at s and tcb_at r and pspace_aligned and pspace_distinct)
+                 \<top>
            (mapM
              (\<lambda>ra. do v \<leftarrow> as_user s (getRegister ra);
                       as_user r (setRegister ra v)
@@ -3712,10 +3723,12 @@ qed
 lemmas valid_ipc_buffer_cap_simps = valid_ipc_buffer_cap_def [split_simps cap.split arch_cap.split]
 
 lemma lipcb_corres':
-  "corres (=) (tcb_at t and valid_objs and pspace_aligned)
-               (tcb_at' t and valid_objs' and pspace_aligned'
-                and pspace_distinct' and no_0_obj')
-               (lookup_ipc_buffer w t) (lookupIPCBuffer w t)"
+  "corres (=) (tcb_at t and valid_objs and pspace_aligned and pspace_distinct)
+              (no_0_obj')
+              (lookup_ipc_buffer w t) (lookupIPCBuffer w t)"
+  apply (rule corres_cross_over_guard[where P'=Q and
+                                            Q="pspace_aligned' and pspace_distinct' and Q" for Q])
+   apply (fastforce simp: pspace_aligned_cross pspace_distinct_cross state_relation_def)
   apply (simp add: lookup_ipc_buffer_def RISCV64_H.lookupIPCBuffer_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ threadget_corres])
@@ -3759,9 +3772,7 @@ lemma lipcb_corres':
   done
 
 lemma lipcb_corres:
-  "corres (=) (tcb_at t and invs)
-               (tcb_at' t and invs')
-               (lookup_ipc_buffer w t) (lookupIPCBuffer w t)"
+  "corres (=) (tcb_at t and invs) (no_0_obj') (lookup_ipc_buffer w t) (lookupIPCBuffer w t)"
   using lipcb_corres'
   by (rule corres_guard_imp, auto simp: invs'_def valid_state'_def)
 
