@@ -464,6 +464,9 @@ abbreviation valid_release_q_except :: "obj_ref \<Rightarrow> 'z state \<Rightar
 lemmas valid_release_q_except_set_def = valid_release_q_except_set_2_def
 lemmas valid_release_q_except_def = valid_release_q_except_set_2_def
 
+lemma valid_release_q_distinct[elim!]: "valid_release_q s \<Longrightarrow> distinct (release_queue s)"
+  by (clarsimp simp: valid_release_q_def)
+
 definition schedulable_ep_thread_2 where
   "schedulable_ep_thread_2 ep t ct it curtime kh =
        (st_tcb_at_kh (\<lambda>ts. case ep of RecvEP _ \<Rightarrow> \<exists>eptr r_opt. ts = BlockedOnReceive eptr r_opt
@@ -649,6 +652,24 @@ abbreviation valid_sched :: "'z state \<Rightarrow> bool" where
                   (idle_thread s) (release_queue s)"
 
 lemmas valid_sched_def = valid_sched_2_def
+
+lemma valid_sched_valid_blocked:
+  "valid_sched s \<Longrightarrow> valid_blocked s" by (clarsimp simp: valid_sched_def)
+
+lemma valid_sched_valid_ready_qs:
+  "valid_sched s \<Longrightarrow> valid_ready_qs s" by (clarsimp simp: valid_sched_def)
+
+lemma valid_sched_valid_release_q:
+  "valid_sched s \<Longrightarrow> valid_release_q s" by (clarsimp simp: valid_sched_def)
+
+lemma valid_sched_valid_sched_action:
+  "valid_sched s \<Longrightarrow> valid_sched_action s" by (simp add: valid_sched_def)
+
+lemma valid_sched_weak_valid_sched_action:
+  "valid_sched s \<Longrightarrow> weak_valid_sched_action s" by (simp add: valid_sched_def valid_sched_action_def)
+
+lemma valid_sched_ct_in_cur_domain:
+  "valid_sched s \<Longrightarrow> ct_in_cur_domain s" by (simp add: valid_sched_def)
 
 
 definition not_cur_thread_2 :: "obj_ref \<Rightarrow> scheduler_action \<Rightarrow> obj_ref \<Rightarrow> bool" where

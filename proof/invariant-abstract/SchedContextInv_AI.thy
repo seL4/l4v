@@ -395,34 +395,34 @@ lemma complete_yield_to_bound_yt_tcb_a_ct[wp]:
       apply (wpsimp wp: lookup_ipc_buffer_inv hoare_drop_imp)+
   done
 
-lemma sts_sc_tcb_sc_at_inv'[wp]:
+lemma sts_sc_tcb_sc_at_not_ct[wp]:
   "\<lbrace> \<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>
    set_thread_state t s \<lbrace> \<lambda>rv s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (wp | simp add: set_object_def sc_tcb_sc_at_def)+
   by (clarsimp simp: obj_at_def is_tcb get_tcb_def split: kernel_object.splits)
 
-lemma ssyf_sc_tcb_sc_at_inv'[wp]:
+lemma ssyf_sc_tcb_sc_at_not_ct[wp]:
   "\<lbrace> \<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>
    set_sc_obj_ref sc_yield_from_update sp new \<lbrace> \<lambda>rv s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>"
   apply (simp add: set_sc_obj_ref_def update_sched_context_def)
   apply (wp get_object_wp | simp add: set_object_def sc_tcb_sc_at_def | wpc)+
   by (clarsimp simp: obj_at_def is_tcb get_tcb_def split: kernel_object.splits)
 
-lemma styt_sc_tcb_sc_at_inv'[wp]:
+lemma styt_sc_tcb_sc_at_not_ct[wp]:
   "\<lbrace> \<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>
    set_tcb_obj_ref tcb_yield_to_update  sp new \<lbrace> \<lambda>rv s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
   apply (wp get_object_wp | simp add: set_object_def sc_tcb_sc_at_def | wpc)+
   by (clarsimp simp: obj_at_def is_tcb get_tcb_def split: kernel_object.splits)
 
-crunch sc_tcb_sc_at_inv'[wp]: do_machine_op "\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s"
+crunch sc_tcb_sc_at_not_ct[wp]: do_machine_op "\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s"
   (simp: crunch_simps split_def sc_tcb_sc_at_def wp: crunch_wps hoare_drop_imps)
 
-crunch sc_tcb_sc_at_inv'[wp]: store_word_offs "\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s"
+crunch sc_tcb_sc_at_not_ct[wp]: store_word_offs "\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s"
   (simp: crunch_simps split_def wp: crunch_wps hoare_drop_imps ignore: do_machine_op)
 
-lemma set_mrs_sc_tcb_sc_at_inv'[wp]:
+lemma set_mrs_sc_tcb_sc_at_not_ct[wp]:
   "\<lbrace> \<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>
    set_mrs thread buf msgs \<lbrace> \<lambda>rv s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>"
   apply (simp add: set_mrs_def)
@@ -430,7 +430,7 @@ lemma set_mrs_sc_tcb_sc_at_inv'[wp]:
          simp: split_def set_object_def zipWithM_x_mapM)
   by (clarsimp simp: sc_tcb_sc_at_def obj_at_def dest!: get_tcb_SomeD)
 
-lemma set_message_info_sc_tcb_sc_at_inv'[wp]:
+lemma set_message_info_sc_tcb_sc_at_not_ct[wp]:
   "\<lbrace> \<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>
    set_message_info thread info \<lbrace> \<lambda>rv s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>"
   apply (simp add: set_message_info_def)
@@ -438,7 +438,7 @@ lemma set_message_info_sc_tcb_sc_at_inv'[wp]:
           simp: split_def as_user_def set_object_def)
   by (clarsimp simp: sc_tcb_sc_at_def obj_at_def dest!: get_tcb_SomeD)
 
-lemma sched_context_update_consumed_sc_tcb_sc_at_inv'[wp]:
+lemma sched_context_update_consumed_sc_tcb_sc_at_not_ct[wp]:
   "\<lbrace> \<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>
    sched_context_update_consumed sp \<lbrace> \<lambda>rv s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>"
   apply (simp add: sched_context_update_consumed_def)
@@ -446,14 +446,14 @@ lemma sched_context_update_consumed_sc_tcb_sc_at_inv'[wp]:
            simp: split_def set_sched_context_def set_object_def)
   by (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
 
-lemma set_consumed_sc_tcb_sc_at_inv'[wp]:
+lemma set_consumed_sc_tcb_sc_at_not_ct[wp]:
   "\<lbrace> \<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>
    set_consumed sp buf \<lbrace> \<lambda>rv s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>"
   apply (simp add: set_consumed_def)
   by (wpsimp wp: get_object_wp mapM_wp' hoare_drop_imp split_del: if_split
  simp: split_def set_message_info_def as_user_def set_mrs_def set_object_def sc_tcb_sc_at_def zipWithM_x_mapM)
 
-lemma complete_yield_to_sc_tcb_sc_at'[wp]:
+lemma complete_yield_to_sc_tcb_sc_at_not_ct[wp]:
   "\<lbrace>(\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s) \<rbrace>
   complete_yield_to tcb_ptr \<lbrace>\<lambda>rv s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s \<rbrace>"
   apply (clarsimp simp: complete_yield_to_def maybeM_def)
@@ -552,6 +552,13 @@ lemma complete_yield_to_sc_yf_sc_at_None:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def refs_of_def
                  split: option.splits)
   done
+
+crunches sched_context_resume (* FIXME: investigate why wps doesn't work in the lemma below *)
+  for tcb_at_ct[wp]: "\<lambda>s. tcb_at (cur_thread s) s"
+  and ex_cap_ct[wp]: "\<lambda>s. ex_nonz_cap_to (cur_thread s) s"
+  and state_refs_of_ct[wp]: "\<lambda>s. P (state_refs_of s) (cur_thread s)"
+  and it_ct[wp]: "\<lambda>s. P (idle_thread s) (cur_thread s)"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma sched_context_yield_to_invs:
   notes refs_of_simps [simp del]
@@ -921,7 +928,7 @@ lemma min_budget_merge_helper:
   "refills_sum (min_budget_merge b (r0#r1#rs)) = refills_sum (r0#r1#rs)"
   apply (induction rs arbitrary: r0 r1 b, clarsimp simp: refills_sum_def)
   apply (clarsimp)
-  apply (drule_tac x="r1\<lparr>r_amount := r_amount r1 + r_amount r0\<rparr>" in meta_spec)
+  apply (drule_tac x="r1\<lparr>r_amount := r_amount r0 + r_amount r1\<rparr>" in meta_spec)
   apply (drule_tac x=a in meta_spec)
   apply (clarsimp simp: refills_sum_def)
  done

@@ -135,7 +135,7 @@ lemma min_budget_merge_length_helper:
   "1 \<le> length (min_budget_merge b (r0#r1#rs)) \<and> length (min_budget_merge b (r0#r1#rs)) \<le> length (r0#r1#rs)"
   apply (induction rs arbitrary: r0 r1 b, simp)
   apply (clarsimp split del: if_split)
-  apply (drule_tac x="r1\<lparr>r_amount := r_amount r1 + r_amount r0\<rparr>" in meta_spec)
+  apply (drule_tac x="r1\<lparr>r_amount := r_amount r0 + r_amount r1\<rparr>" in meta_spec)
   apply (drule_tac x=a in meta_spec)
   by clarsimp
 
@@ -598,7 +598,7 @@ lemma refill_unblock_check_cur_tcb [wp]:
 
 lemma refill_unblock_check_invs [wp]: "\<lbrace>invs\<rbrace> refill_unblock_check r \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: refill_unblock_check_def refills_merge_valid[simplified] is_round_robin_def
-               wp: hoare_drop_imp)
+               wp: hoare_drop_imp get_refills_wp)
 
 declare domain_time_update.state_refs_update[simp]
 
@@ -1765,7 +1765,6 @@ lemma refill_unblock_check_state_refs_of_ct[wp]:
             update_sched_context_def set_object_def
         wp: get_refills_wp hoare_vcg_if_lift2 get_object_wp get_sched_context_wp)
   by (clarsimp simp: state_refs_of_def get_refs_def2 obj_at_def
-            simp del: fun_upd_apply
             elim!: rsubst[where P="\<lambda>x. P x (cur_thread s)" for s] intro!: ext)
 
 lemma refill_unblock_check_it_ct[wp]:

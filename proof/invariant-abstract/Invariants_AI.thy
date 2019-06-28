@@ -4149,6 +4149,18 @@ lemma sym_refs_bound_tcb_atD: (* RT: other versions? *)
   apply auto
   done
 
+lemma sym_ref_sc_tcb:
+  "\<lbrakk> sym_refs (state_refs_of s); kheap s scp = Some (SchedContext sc n);
+   sc_tcb sc = Some tp \<rbrakk> \<Longrightarrow>
+  \<exists>tcb. kheap s tp = Some (TCB tcb) \<and> tcb_sched_context tcb = Some scp"
+  apply (drule sym_refs_obj_atD[rotated, where p=scp])
+   apply (clarsimp simp: obj_at_def, simp)
+  apply (clarsimp simp: state_refs_of_def get_refs_def2 elim!: sym_refsE)
+  apply (drule_tac x="(tp, SCTcb)" in bspec)
+   apply fastforce
+  apply (clarsimp simp: obj_at_def)
+  apply (case_tac koa; clarsimp simp: get_refs_def2)
+  done
 
 lemma vs_lookup_trans_sub2:
   assumes ko: "\<And>ko p. \<lbrakk> ko_at ko p s; vs_refs ko \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s'"

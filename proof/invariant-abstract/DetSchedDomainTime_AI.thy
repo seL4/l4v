@@ -175,7 +175,7 @@ crunch domain_list_inv[wp]: commit_time "\<lambda>s. P (domain_list s)"
 
 crunch domain_list_inv[wp]: set_next_interrupt, switch_sched_context
   "\<lambda>s::det_state. P (domain_list s)"
-  (simp: Let_def wp: get_sched_context_wp hoare_drop_imps)
+  (simp: crunch_simps Let_def wp: get_sched_context_wp hoare_drop_imps)
 
 lemma sc_and_timer_domain_list[wp]:
   "sc_and_timer \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
@@ -260,7 +260,7 @@ crunch domain_list_inv[wp]: sched_context_bind_tcb,sched_context_bind_ntfn "\<la
 crunch domain_list_inv[wp]: sched_context_unbind_reply "\<lambda>s. P (domain_list s)"
  (wp: hoare_drop_imps mapM_x_wp')
 crunch domain_list_inv[wp]: sched_context_yield_to "\<lambda>s. P (domain_list s)"
-  (wp: hoare_drop_imps mapM_wp' maybeM_inv simp: zipWithM_x_mapM)
+  (wp: hoare_drop_imps mapM_wp' maybeM_inv simp: crunch_simps zipWithM_x_mapM)
 
 
 context DetSchedDomainTime_AI begin
@@ -421,7 +421,7 @@ crunch domain_time_inv[wp]: choose_thread "\<lambda>s::det_state. P (domain_time
 crunch domain_time_inv[wp]: sched_context_donate "\<lambda>s::det_state. P (domain_time s)"
 
 crunch domain_time_inv[wp]: reply_remove, maybe_donate_sc "\<lambda>s::det_state. P (domain_time s)"
-  (wp: hoare_drop_imps crunch_wps)
+  (wp: hoare_drop_imps crunch_wps simp: crunch_simps)
 
 crunch domain_time_inv[wp]: send_signal "\<lambda>s::det_state. P (domain_time s)"
   (wp: hoare_drop_imps mapM_x_wp_inv maybeM_inv select_wp simp: crunch_simps unless_def)

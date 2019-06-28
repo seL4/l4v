@@ -4212,7 +4212,8 @@ crunch valid_list[wp]: sched_context_resume,suspend "valid_list"
 
 crunch valid_list[wp]: sched_context_bind_ntfn valid_list
 crunch valid_list[wp]: sched_context_unbind_reply valid_list (wp: mapM_x_wp')
-crunch valid_list[wp]: sched_context_yield_to valid_list (wp: hoare_drop_imp)
+crunch valid_list[wp]: sched_context_yield_to valid_list
+ (wp: hoare_drop_imps crunch_wps simp: crunch_simps)
 crunch valid_list[wp]: invoke_sched_context valid_list
 
 crunch valid_list[wp]: refill_update,refill_new valid_list (wp: hoare_drop_imp)
