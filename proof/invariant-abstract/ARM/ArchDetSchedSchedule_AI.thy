@@ -56,7 +56,7 @@ crunches arch_switch_to_idle_thread, prepare_thread_delete
   for release_queue[wp]: "\<lambda>s. P (release_queue s)"
 
 crunch valid_sched_action'[wp]: set_vm_root "\<lambda>s. valid_sched_action_2 (scheduler_action s)
-                                                 (kheap s) thread (cur_domain s) (release_queue s)"
+                                                 (kheap s) thread (cur_domain s) (cur_time s) (release_queue s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma switch_to_idle_thread_valid_sched_action [wp, DetSchedSchedule_AI_assms]:

@@ -582,7 +582,11 @@ proof -
   apply (erule pred_tcb_weakenE)
    apply simp
    apply (case_tac "itcb_state tcb", simp+)
-   apply (rule_tac use_valid[OF _ bound_sc],assumption)
+      apply (rule conjI)
+       apply (rule_tac use_valid[OF _ budget_s],assumption, simp)
+      apply (rule conjI)
+       apply (rule_tac use_valid[OF _ budget_r],assumption, simp)
+      apply (rule_tac use_valid[OF _ bound_sc],assumption)
    apply simp
    apply (clarsimp simp: switch_in_cur_domain_def in_cur_domain_def)
    apply (rule use_valid[OF _ stuff, rule_format], assumption)
@@ -635,92 +639,98 @@ lemma valid_sched_tcb_state_preservation_gen:
   shows "\<lbrace>I and ct_active and valid_sched and valid_idle\<rbrace> f \<lbrace>\<lambda>_. valid_sched\<rbrace>"
 proof -
   show ?thesis
-  apply (clarsimp simp add: valid_sched_def valid_def)
-  apply (frule(1) use_valid[OF _ valid_blocked])
-  apply simp
-  apply (frule_tac P1="\<lambda>sa rq cdom rlq. rq = ready_queues s \<and> sa = scheduler_action s \<and> cdom = cur_domain s \<and> rlq = release_queue s" in use_valid[OF _ valid_others])
-   apply simp
-  apply (rule conjI)
-   apply (clarsimp simp add: valid_ready_qs_def)
-   apply (drule_tac x=d in spec)
-   apply (drule_tac x=p in spec)
-   apply clarsimp
-   apply (drule_tac x=t in bspec)
+    apply (clarsimp simp add: valid_sched_def valid_def)
+    apply (frule(1) use_valid[OF _ valid_blocked])
     apply simp
-   apply clarsimp
-   apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b
+    apply (frule_tac P1="\<lambda>sa rq cdom rlq. rq = ready_queues s \<and> sa = scheduler_action s \<and> cdom = cur_domain s \<and> rlq = release_queue s" in use_valid[OF _ valid_others])
+     apply simp
+    apply (rule conjI)
+     apply (clarsimp simp add: valid_ready_qs_def)
+     apply (drule_tac x=d in spec)
+     apply (drule_tac x=p in spec)
+     apply clarsimp
+     apply (drule_tac x=t in bspec)
+      apply simp
+     apply clarsimp
+     apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b
                           \<and> budget_sufficient t b \<and> budget_ready t b")
-    apply simp
-    apply (frule_tac P1="\<lambda>t. etcb_priority t = p \<and> etcb_domain t = d" and t1=t in use_valid[OF _ stuff])
+      apply simp
+      apply (frule_tac P1="\<lambda>t. etcb_priority t = p \<and> etcb_domain t = d" and t1=t in use_valid[OF _ stuff])
+       apply simp
+      apply (simp add: pred_tcb_at_def obj_at_def)
+      apply force
+     apply (rule_tac conjI[OF use_valid[OF _ st_tcb]
+          conjI[OF use_valid[OF _ bound_sc]
+            conjI[OF use_valid[OF _ budget_s] use_valid[OF _ budget_r]]]], assumption)
+           apply simp
+           apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[7]
+    apply (rule conjI)
+     apply (clarsimp simp add: valid_release_q_def)
+     apply (drule_tac x=t in bspec)
+      apply simp
+     apply clarsimp
+     apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b")
+      apply simp
+     apply (rule_tac conjI[OF use_valid[OF _ st_tcb] use_valid[OF _ bound_sc]], assumption)
+       apply simp
+       apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[3]
+    apply (frule_tac P1="\<lambda>ct. ct = (cur_thread s)" in use_valid[OF _ cur_thread])
+     apply simp+
+    apply (clarsimp simp add: valid_sched_action_def is_activatable_def weak_valid_sched_action_def)
+    apply (rule conjI)
+     apply clarsimp
+     apply (frule_tac P1="active" and t1="cur_thread s" in use_valid[OF _ st_tcb])
+      apply (simp add: ct_in_state_def)
+      apply (erule pred_tcb_weakenE)
+      apply simp
+      apply (case_tac "itcb_state tcb"; simp)
+     apply (erule pred_tcb_weakenE)
+     apply (case_tac "itcb_state tcb"; simp)
+    apply (rule conjI)
+     apply clarsimp
+     apply (rule conjI)
+      apply (rule_tac use_valid[OF _ st_tcb],assumption)
+      apply simp
+      apply (erule pred_tcb_weakenE)
+      apply simp
+      apply (case_tac "itcb_state tcb", simp+)
+     apply (rule conjI)
+      apply (rule_tac use_valid[OF _ budget_s],assumption, simp)
+      apply (erule pred_tcb_weakenE, fastforce)
+     apply (rule conjI)
+      apply (rule_tac use_valid[OF _ budget_r],assumption, simp)
+      apply (erule pred_tcb_weakenE, fastforce)
+     apply (rule_tac use_valid[OF _ bound_sc],assumption)
      apply simp
-    apply (simp add: pred_tcb_at_def obj_at_def)
-    apply force
-   apply (rule_tac conjI[OF use_valid[OF _ st_tcb]
-        conjI[OF use_valid[OF _ bound_sc]
-          conjI[OF use_valid[OF _ budget_s] use_valid[OF _ budget_r]]]], assumption)
-         apply simp
-         apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[7]
-  apply (rule conjI)
-   apply (clarsimp simp add: valid_release_q_def)
-   apply (drule_tac x=t in bspec)
-    apply simp
-   apply clarsimp
-   apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b")
-    apply simp
-   apply (rule_tac conjI[OF use_valid[OF _ st_tcb] use_valid[OF _ bound_sc]], assumption)
+     apply (erule pred_tcb_weakenE, fastforce)
+    apply (rule conjI)
+     apply (clarsimp simp: switch_in_cur_domain_def in_cur_domain_def)
+     apply (rule use_valid[OF _ stuff, rule_format], assumption)
+      apply simp
+     apply (rule use_valid[OF _ st_tcb], assumption)
      apply simp
-     apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[3]
-  apply (frule_tac P1="\<lambda>ct. ct = (cur_thread s)" in use_valid[OF _ cur_thread])
-   apply simp+
-  apply (clarsimp simp add: valid_sched_action_def is_activatable_def weak_valid_sched_action_def)
-  apply (rule conjI)
-   apply clarsimp
-   apply (frule_tac P1="active" and t1="cur_thread s" in use_valid[OF _ st_tcb])
-    apply (simp add: ct_in_state_def)
-    apply (erule pred_tcb_weakenE)
-    apply simp
-    apply (case_tac "itcb_state tcb"; simp)
-   apply (erule pred_tcb_weakenE)
-   apply (case_tac "itcb_state tcb"; simp)
-  apply (rule conjI)
-   apply clarsimp
-  apply (rule conjI)
-   apply (rule_tac use_valid[OF _ st_tcb],assumption)
-   apply simp
-  apply (erule pred_tcb_weakenE)
-   apply simp
-   apply (case_tac "itcb_state tcb", simp+)
-   apply (rule_tac use_valid[OF _ bound_sc],assumption)
-   apply simp
-  apply (erule pred_tcb_weakenE, fastforce)
-  apply (rule conjI)
-   apply (clarsimp simp: switch_in_cur_domain_def in_cur_domain_def)
-   apply (rule use_valid[OF _ stuff, rule_format], assumption)
-    apply simp
-   apply (rule use_valid[OF _ st_tcb], assumption)
-   apply simp
-   apply (erule st_tcb_weakenE)
-   apply (case_tac st, simp+)
-  apply (clarsimp simp: ct_in_cur_domain_2_def in_cur_domain_2_def)
-  apply (frule_tac P1="\<lambda>idle. idle = (idle_thread s)" in use_valid[OF _ idle_thread], simp)
-  apply (rule conjI)
-   apply (rule impI)
-   apply (simp, erule disjE, simp)
-   apply (frule_tac P1="\<lambda>t. etcb_domain t = cur_domain s" and t1="cur_thread s" in use_valid[OF _ stuff])
-    apply (clarsimp simp: etcb_at_def split: option.splits)
-   apply clarsimp
-   apply (erule notE, rule use_valid[OF _ st_tcb],assumption)
-   apply (simp add: ct_in_state_def)
-   apply (erule st_tcb_weakenE)
-   apply simp
-   apply (case_tac st, simp+)
-  apply(frule (1) use_valid[OF _ valid_idle])
-  apply(simp add: valid_idle_etcb_def)
-  apply(frule use_valid[OF _ stuff[where t=idle_thread_ptr]])
-   apply simp
-  apply(erule mp)
-  apply(fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def)
-  done
+     apply (erule st_tcb_weakenE)
+     apply (case_tac st, simp+)
+    apply (clarsimp simp: ct_in_cur_domain_2_def in_cur_domain_2_def)
+    apply (frule_tac P1="\<lambda>idle. idle = (idle_thread s)" in use_valid[OF _ idle_thread], simp)
+    apply (rule conjI)
+     apply (rule impI)
+     apply (simp, erule disjE, simp)
+     apply (frule_tac P1="\<lambda>t. etcb_domain t = cur_domain s" and t1="cur_thread s" in use_valid[OF _ stuff])
+      apply (clarsimp simp: etcb_at_def split: option.splits)
+     apply clarsimp
+     apply (erule notE, rule use_valid[OF _ st_tcb],assumption)
+     apply (simp add: ct_in_state_def)
+     apply (erule st_tcb_weakenE)
+     apply simp
+     apply (case_tac st, simp+)
+    apply(frule (1) use_valid[OF _ valid_idle])
+    apply(simp add: valid_idle_etcb_def)
+    apply(frule use_valid[OF _ stuff[where t=idle_thread_ptr]])
+     apply simp
+    apply(erule mp)
+    apply(fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def)
+    done
 qed
 
 lemma valid_idle_etcb_lift:
