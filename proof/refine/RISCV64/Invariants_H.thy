@@ -367,7 +367,7 @@ where valid_cap'_def:
   | Zombie r b n \<Rightarrow> n \<le> zombieCTEs b \<and> zBits b < word_bits
                     \<and> (case b of ZombieTCB \<Rightarrow> tcb_at' r s | ZombieCNode n \<Rightarrow> n \<noteq> 0
                     \<and> (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask n)) s))
-  | ArchObjectCap ac \<Rightarrow> True)"
+  | ArchObjectCap ac \<Rightarrow> valid_arch_cap' ac s)"
 
 abbreviation (input) valid_cap'_syn ::
   "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>' _" [60, 60] 61) where

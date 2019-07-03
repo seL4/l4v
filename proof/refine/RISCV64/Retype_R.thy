@@ -2127,10 +2127,10 @@ lemma objBits_if_dev:
 lemma cwo_ret:
   assumes not_0: "n \<noteq> 0"
   assumes cover: "range_cover ptr sz (pageBits + bs) n"
+  assumes sz: "bs = pageBitsForSize vmsz - pageBits"
   shows "\<lbrace>pspace_no_overlap' ptr sz and valid_pspace'\<rbrace>
           createObjects ptr n (if dev then KOUserDataDevice else KOUserData) bs
-         \<lbrace>\<lambda>rv s. \<forall>x\<in>set rv. \<forall>p<2^bs.
-                 typ_at' (if dev then UserDataDeviceT else UserDataT) (x + p * 2 ^ pageBits) s\<rbrace>"
+         \<lbrace>\<lambda>rv s. \<forall>x\<in>set rv. frame_at' x vmsz dev s\<rbrace>"
 proof -
   note create_objs_device = hoare_post_imp [OF _ hoare_conj [OF createObjects_ret
         createObjects_ko_at[where val = UserDataDevice,simplified]]]
@@ -2139,10 +2139,11 @@ proof -
         createObjects_ko_at[where val = UserData,simplified]]]
 
   show ?thesis
+    unfolding frame_at'_def
     apply (cases dev)
      apply (rule hoare_pre)
       apply (rule create_objs_device)
-           apply (clarsimp simp add: pageBits_def)
+           apply (clarsimp simp add: sz pageBits_def)
            apply (drule bspec, simp, drule spec, drule(1) mp)
            apply (simp add: typ_at'_def obj_at'_real_def objBits_simps pageBits_def shiftl_t2n field_simps)
            apply (erule ko_wp_at'_weakenE)
@@ -2156,7 +2157,7 @@ proof -
        apply simp_all
     apply (rule hoare_pre)
      apply (rule create_objs_normal)
-          apply (clarsimp simp add: pageBits_def)
+          apply (clarsimp simp add: sz pageBits_def)
           apply (drule bspec, simp, drule spec, drule(1) mp)
           apply (simp add: typ_at'_def obj_at'_real_def objBits_simps pageBits_def shiftl_t2n field_simps)
           apply (erule ko_wp_at'_weakenE)
@@ -2236,7 +2237,12 @@ proof -
          apply (rule createObjects_obj_at[where 'a=pte, OF _ not_0];
                 simp add: objBits_simps bit_simps)
         apply simp
-       apply (clarsimp simp: objBits_simps bit_simps)
+       apply (clarsimp simp: objBits_simps bit_simps page_table_at'_def typ_at_to_obj_at_arches)
+       apply (drule (1) bspec)+
+       apply (erule_tac x="ucast i" in allE)
+       apply (erule impE)
+        apply (rule ucast_less[where 'b="pt_index_len" and 'a="machine_word_len", simplified])
+       apply simp
       apply clarsimp
    done
   next
@@ -2903,6 +2909,9 @@ lemma valid_untyped'_helper:
   apply (case_tac "cteCap cte";
          simp add: valid_cap'_def cte_wp_at_obj_cases' valid_pspace'_def retype_obj_at_disj'
             split: zombie_type.split_asm)
+   apply (clarsimp simp: valid_arch_cap'_def valid_arch_cap_ref'_def retype_obj_at_disj'
+                         typ_at_to_obj_at_arches frame_at'_def page_table_at'_def
+                   split: if_split_asm arch_capability.splits)
   unfolding valid_untyped'_def
   apply (intro allI)
   apply (rule ccontr)
@@ -3526,8 +3535,10 @@ lemma valid_cap'_range_no_overlap:
     range_cover ptr sz (objBitsKO val) n\<rbrakk>
    \<Longrightarrow> s\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr val)
                            (new_cap_addrs n ptr val) (ksPSpace s)\<rparr> \<turnstile>' c"
-  apply (cases c; simp add: valid_cap'_def cte_wp_at_obj_cases' valid_pspace'_def retype_obj_at_disj'
-                       split: zombie_type.split_asm
+  apply (cases c; simp add: valid_cap'_def valid_arch_cap'_def valid_arch_cap_ref'_def
+                            cte_wp_at_obj_cases' valid_pspace'_def retype_obj_at_disj'
+                            typ_at_to_obj_at_arches frame_at'_def page_table_at'_def
+                       split: zombie_type.split_asm arch_capability.splits if_splits
                        del: Int_atLeastAtMost)[1]
   apply (rename_tac word nat1 nat2)
   apply (clarsimp simp:valid_untyped'_def retype_ko_wp_at'

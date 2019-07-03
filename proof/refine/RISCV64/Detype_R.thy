@@ -810,20 +810,27 @@ lemma cte_wp_at'[simp]:
 
 (* the bits of caps they need for validity argument are within their capRanges *)
 lemma valid_cap_ctes_pre:
-    "\<And>c. s \<turnstile>' c \<Longrightarrow> case c of CNodeCap ref bits g gs
-                      \<Rightarrow> \<forall>x. ref + (x && mask bits) * 2^cteSizeBits \<in> capRange c
-                    | Zombie ref (ZombieCNode bits) n
-                      \<Rightarrow> \<forall>x. ref + (x && mask bits) * 2^cteSizeBits \<in> capRange c
-                    | ArchObjectCap (PageTableCap ref data)
-                      \<Rightarrow> \<forall>x < 2^ptTranslationBits. ref + x * 2^pte_bits \<in> capRange c
+    "\<And>c. s \<turnstile>' c \<Longrightarrow> case c of CNodeCap ref bits g gs \<Rightarrow>
+                      \<forall>x. ref + (x && mask bits) * 2^cteSizeBits \<in> capRange c
+                    | Zombie ref (ZombieCNode bits) n \<Rightarrow>
+                      \<forall>x. ref + (x && mask bits) * 2^cteSizeBits \<in> capRange c
+                    | ArchObjectCap (PageTableCap ref data) \<Rightarrow>
+                      \<forall>x::pt_index. ref + (ucast x << pte_bits) \<in> capRange c
+                    | ArchObjectCap (FrameCap ref r sz d m) \<Rightarrow>
+                      \<forall>p<2 ^ (pageBitsForSize sz - pageBits). ref + (p << pageBits) \<in> capRange c
                     | _ \<Rightarrow> True"
   apply (drule valid_capAligned)
   apply (simp split: capability.split zombie_type.split arch_capability.split, safe)
-  using pre_helper[where a=cteSizeBits]
-    apply (clarsimp simp add: capRange_def capAligned_def objBits_simps field_simps)
-   apply (clarsimp simp add: capRange_def capAligned_def
+     using pre_helper[where a=cteSizeBits]
+     apply (clarsimp simp add: capRange_def capAligned_def objBits_simps field_simps)
+    apply (clarsimp simp add: capRange_def capAligned_def shiftl_t2n)
+    apply (frule pre_helper2[where bits=pageBits]; simp add: pbfs_atleast_pageBits mult_ac)
+   using pbfs_less_wb' apply (simp add: word_bits_conv)
+   apply (clarsimp simp add: capRange_def capAligned_def shiftl_t2n
                    simp del: atLeastAtMost_iff capBits.simps)
-   apply (rule pre_helper2, simp_all add: bit_simps)[1]
+   apply (simp del: atLeastAtMost_iff)
+   apply (drule_tac bits="pte_bits" and x="ucast x" in pre_helper2; simp add: bit_simps mult_ac)
+   apply (rule ucast_less[where 'b=pt_index_len, simplified], simp)
   apply (clarsimp simp add: capRange_def capAligned_def
                   simp del: atLeastAtMost_iff capBits.simps)
   using pre_helper[where a=cteSizeBits]
@@ -848,11 +855,16 @@ lemma valid_cap':
                               split: zombie_type.split_asm)
       apply (simp add: field_simps del: atLeastAtMost_iff)
       apply blast
+     defer
      apply (simp add: valid_untyped'_def)
     apply (simp add: field_simps bit_simps word_size_def del: atLeastAtMost_iff)
     apply blast
    apply blast
   apply (clarsimp simp: capAligned_capUntypedPtr)
+  apply (rename_tac arch_cap)
+  apply (case_tac arch_cap; simp del: atLeastAtMost_iff add: frame_at'_def page_table_at'_def)
+   apply blast
+  apply blast
   done
 
 lemma objRefs_notrange:
