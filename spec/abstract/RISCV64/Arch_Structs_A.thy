@@ -156,7 +156,7 @@ definition untyped_min_bits :: nat
 
 definition untyped_max_bits :: nat
   where
-  "untyped_max_bits \<equiv> 47"
+  "untyped_max_bits \<equiv> 38"
 
 primrec arch_kobj_size :: "arch_kernel_obj \<Rightarrow> nat"
   where
