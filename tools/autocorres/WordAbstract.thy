@@ -9,8 +9,51 @@
  *)
 
 theory WordAbstract
-imports L2Defs ExecConcrete
+imports
+  L2Defs
+  ExecConcrete
 begin
+
+(* FIXME: merge with HaskellLib *)
+
+instantiation nat :: bit_operations
+begin
+
+(* NOT (int x) \<le> 0 for all x so this is not useful
+definition
+  "bitNOT = nat o bitNOT o int"
+*)
+
+definition
+  "bitAND x y = nat (bitAND (int x) (int y))"
+
+definition
+  "bitOR x y = nat (bitOR (int x) (int y))"
+
+definition
+  "bitXOR x y = nat (bitXOR (int x) (int y))"
+
+definition
+  "shiftl x y = nat (shiftl (int x) y)"
+
+definition
+  "shiftr x y = nat (shiftr (int x) y)"
+
+definition
+  "test_bit x y = test_bit (int x) y"
+
+definition
+  "lsb x = lsb (int x)"
+
+definition
+  "msb x = msb (int x)"
+
+definition
+  "set_bit x y z = nat (set_bit (int x) y z)"
+
+instance ..
+
+end
 
 definition "WORD_MAX x \<equiv> ((2 ^ (len_of x - 1) - 1) :: int)"
 definition "WORD_MIN x \<equiv> (- (2 ^ (len_of x - 1)) :: int)"
@@ -172,6 +215,62 @@ lemma unat_abstract_binops:
   by (auto simp: unat_plus_if' unat_div unat_mod UWORD_MAX_def le_to_less_plus_one
               WordAbstract.unat_mult_simple word_bits_def unat_sub word_le_nat_alt)
 
+lemma unat_of_int:
+  "\<lbrakk>i \<ge> 0; i < 2 ^ LENGTH('a)\<rbrakk> \<Longrightarrow> unat (of_int i :: 'a::len word) = nat i"
+  unfolding unat_def
+  apply (subst eq_nat_nat_iff, clarsimp+)
+  apply (simp add: word_of_int uint_word_of_int)
+  done
+
+(* FIXME generalises Word_Lemmas_32.unat_of_int_32 *)
+lemma unat_of_int_signed:
+  "\<lbrakk>i \<ge> 0; i < 2 ^ LENGTH('a)\<rbrakk> \<Longrightarrow> unat (of_int i :: 'a::len signed word) = nat i"
+  by (simp add: unat_of_int)
+
+lemma nat_sint:
+  "0 <=s (x :: 'a::len signed word) \<Longrightarrow> nat (sint x) = unat x"
+  apply (subst unat_of_int_signed[where 'a='a, symmetric])
+    apply (simp add: word_sle_def)
+   apply (rule less_trans[OF sint_lt])
+   apply simp
+  apply simp
+  done
+
+lemma int_unat_nonneg:
+  "0 <=s (x :: 'a::len signed word) \<Longrightarrow> int (unat x) = sint x"
+  by (simp add: int_unat word_sle_msb_le sint_eq_uint)
+
+lemma unat_bitwise_abstract_binops:
+  "abstract_binop (\<lambda>a b. True) (unat :: 'a::len word \<Rightarrow> nat) bitAND bitAND"
+  "abstract_binop (\<lambda>a b. True) (unat :: 'a::len word \<Rightarrow> nat) bitOR bitOR"
+  "abstract_binop (\<lambda>a b. True) (unat :: 'a::len word \<Rightarrow> nat) bitXOR bitXOR"
+  apply (simp add: bitAND_nat_def bitAND_word_def uint_nat unat_of_int
+           flip: word_of_int)
+  apply (simp add: bitOR_nat_def bitOR_word_def uint_nat unat_of_int OR_upper
+           flip: word_of_int)
+  apply (simp add: bitXOR_nat_def bitXOR_word_def uint_nat unat_of_int XOR_upper
+           flip: word_of_int)
+  done
+
+lemma unat_max_word:
+  "unat (max_word :: 'a::len word) = 2^LENGTH('a) - 1"
+  by (simp add: max_word_eq unat_minus_one_word)
+
+lemma abstract_val_unsigned_bitNOT:
+  "abstract_val P x unat (x' :: 'a::len word) \<Longrightarrow>
+   abstract_val P (UWORD_MAX TYPE('a) - x) unat (bitNOT x')"
+  apply (clarsimp simp: UWORD_MAX_def NOT_eq)
+  apply (rule subst[where t="-x' - 1" and s="-(x' + 1)"])
+   apply simp
+  apply (case_tac "x' + 1 = 0")
+   apply (simp only:)
+   apply (drule max_word_wrap)
+   apply (simp add: unat_max_word)
+  apply (subst unat_minus')
+   apply assumption
+  apply (simp add: unatSuc2)
+  done
+
 lemma snat_abstract_bool_binops:
     "abstract_bool_binop (\<lambda>_ _. True) (sint :: ('a::len) signed word \<Rightarrow> int) (<) (word_sless)"
     "abstract_bool_binop (\<lambda>_ _. True) (sint :: 'a signed word \<Rightarrow> int) (\<le>) (word_sle)"
@@ -186,6 +285,31 @@ lemma snat_abstract_binops:
   "abstract_binop (\<lambda>a b. WORD_MIN TYPE('a) \<le> a smod b \<and> a smod b \<le> WORD_MAX TYPE('a)) (sint :: 'a signed word \<Rightarrow> int) (smod) (smod)"
   by (auto simp: signed_arith_sint word_size WORD_MIN_def WORD_MAX_def)
 
+(* FIXME MOVE *)
+lemma int_eq_test_bit:
+  "((x :: int) = y) = (\<forall>i. test_bit x i = test_bit y i)"
+  apply simp
+  apply (metis bin_eqI)
+  done
+lemmas int_eq_test_bitI = int_eq_test_bit[THEN iffD2, rule_format]
+
+lemma sint_bitwise_abstract_binops:
+  "abstract_binop (\<lambda>a b. True) (sint :: 'a::len signed word \<Rightarrow> int) bitAND bitAND"
+  "abstract_binop (\<lambda>a b. True) (sint :: 'a::len signed word \<Rightarrow> int) bitOR bitOR"
+  "abstract_binop (\<lambda>a b. True) (sint :: 'a::len signed word \<Rightarrow> int) bitXOR bitXOR"
+  apply (fastforce intro: int_eq_test_bitI
+                   simp: nth_sint bin_nth_ops test_bit_def'[symmetric]
+                         test_bit_wi[where 'a="'a signed", simplified word_of_int[symmetric]])+
+  done
+
+lemma abstract_val_signed_bitNOT:
+  "abstract_val P x sint (x' :: 'a::len signed word) \<Longrightarrow>
+   abstract_val P (bitNOT x) sint (bitNOT x')"
+  apply (fastforce intro: int_eq_test_bitI
+                   simp: nth_sint bin_nth_ops word_nth_neq test_bit_def'[symmetric]
+                         test_bit_wi[where 'a="'a signed", simplified word_of_int[symmetric]])
+  done
+
 lemma abstract_val_signed_unary_minus:
   "\<lbrakk> abstract_val P r sint r' \<rbrakk> \<Longrightarrow>
        abstract_val (P \<and> (- r) \<le> WORD_MAX TYPE('a)) (- r) sint ( - (r' :: ('a :: len) signed word))"
@@ -197,10 +321,207 @@ lemma abstract_val_signed_unary_minus:
   apply simp
   done
 
+lemma bang_big_nonneg:
+  "\<lbrakk> 0 <=s (x::'a::len signed word); n \<ge> size x - 1 \<rbrakk> \<Longrightarrow> (x !! n) = False"
+  apply (case_tac "n = size x - 1")
+   apply (simp add: word_size msb_nth[where 'a="'a signed", symmetric, simplified] word_sle_msb_le)
+  apply (simp add: test_bit_bl)
+  apply arith
+  done
+
+lemma sint_shiftr_nonneg:
+  "\<lbrakk> 0 <=s (x :: 'a::len signed word); 0 \<le> n; n < LENGTH('a) \<rbrakk> \<Longrightarrow> sint (x >> n) = sint x >> n"
+  apply (rule int_eq_test_bitI)
+  apply (clarsimp simp: bang_big_nonneg[simplified word_size] nth_sint nth_shiftr field_simps)
+  done
+
 lemma abstract_val_unsigned_unary_minus:
   "\<lbrakk> abstract_val P r unat r' \<rbrakk> \<Longrightarrow>
        abstract_val P (if r = 0 then 0 else UWORD_MAX TYPE('a::len) + 1 - r) unat ( - (r' :: 'a word))"
   by (clarsimp simp: unat_minus' word_size unat_eq_zero UWORD_MAX_def)
+
+(* Rules for shifts *)
+lemma abstract_val_signed_shiftr_signed:
+  "\<lbrakk> abstract_val Px x sint (x' :: ('a :: len) signed word);
+     abstract_val Pn n sint (n' :: ('b :: len) signed word) \<rbrakk> \<Longrightarrow>
+   abstract_val (Px \<and> Pn \<and> 0 \<le> x \<and> 0 \<le> n \<and> n < LENGTH('a))
+                (x >> nat n) sint (x' >> unat n')"
+  apply (clarsimp simp only: abstract_val_def)
+  apply (subst nat_sint, simp add: word_sle_def)
+  apply (subst sint_shiftr_nonneg)
+     apply (simp add: word_sle_def)
+    apply simp
+   apply (subst SMT.nat_int_comparison(2))
+   apply (subst int_unat_nonneg)
+    apply (simp add: word_sle_def)
+   apply assumption
+  apply (rule refl)
+  done
+
+lemma abstract_val_signed_shiftr_unsigned:
+  "\<lbrakk> abstract_val Px x sint (x' :: ('a :: len) signed word);
+     abstract_val Pn n unat (n' :: ('b :: len) word) \<rbrakk> \<Longrightarrow>
+   abstract_val (Px \<and> Pn \<and> 0 \<le> x \<and> n < LENGTH('a))
+                (x >> n) sint (x' >> unat n')"
+  apply (clarsimp simp: shiftr_int_def)
+  apply (subst sint_shiftr_nonneg)
+     apply (simp add: word_sle_def)
+    apply simp
+   apply assumption
+  apply (clarsimp simp: shiftr_int_def)
+  done
+
+lemma int_2p_eq_shiftl:
+  "(2::int)^x = 1 << x"
+  by (simp add: shiftl_int_def)
+
+lemma nat_2p_eq_shiftl:
+  "(2::nat)^x = 1 << x"
+  by (simp add: shiftl_nat_def int_2p_eq_shiftl)
+
+lemma nat_int_mul:
+  "nat (int a * b) = a * nat b"
+  by (simp add: nat_mult_distrib)
+
+lemma nat_shiftl_alt_def:
+  "(x::nat) << n = x * 2^n"
+  by (simp add: shiftl_nat_def shiftl_int_def nat_int_mul)
+
+lemma int_shiftl_less_cancel:
+  "n \<le> m \<Longrightarrow> ((x :: int) << n < y << m) = (x < y << (m - n))"
+  apply (drule le_Suc_ex)
+  apply (clarsimp simp: shiftl_int_def power_add)
+  done
+
+lemma nat_shiftl_less_cancel:
+  "n \<le> m \<Longrightarrow> ((x :: nat) << n < y << m) = (x < y << (m - n))"
+  by (simp add: nat_int_comparison(2) shiftl_nat_def int_shiftl_less_cancel)
+
+lemma int_shiftl_lt_2p_bits:
+  "0 \<le> (x::int) \<Longrightarrow> x < 1 << n \<Longrightarrow> \<forall>i \<ge> n. \<not> x !! i"
+  apply (clarsimp simp: shiftl_int_def)
+  apply (clarsimp simp: bin_nth_eq_mod even_iff_mod_2_eq_zero)
+  apply (drule_tac z="2^i" in less_le_trans)
+   apply simp
+  apply simp
+  done
+
+lemma int_shiftl_lt_2p_bits':
+  "0 \<le> (x::int) \<Longrightarrow> \<forall>i \<ge> n. \<not> x !! i \<Longrightarrow> x < 1 << n"
+  \<comment> \<open>converse is also true, but proof seems annoyingly hard\<close>
+  oops
+
+lemma sint_shiftl_nonneg:
+  "\<lbrakk> 0 <=s (x :: 'a::len signed word); n < LENGTH('a); sint x << n < 2^(LENGTH('a) - 1) \<rbrakk> \<Longrightarrow>
+   sint (x << n) = sint x << n"
+  apply (rule int_eq_test_bitI)
+  apply (clarsimp simp: bang_big_nonneg[simplified word_size] nth_sint nth_shiftl
+                        int_shiftl_less_cancel int_2p_eq_shiftl word_sle_def)
+  (* FIXME: cleanup *)
+  apply (intro impI iffI conjI; (solves simp)?)
+    apply (drule(1) int_shiftl_lt_2p_bits[rotated])
+    apply (clarsimp simp: nth_sint)
+    apply (drule_tac x="LENGTH('a) - 1 - n" in spec)
+    apply (subgoal_tac "LENGTH('a) - 1 - n < LENGTH('a) - 1")
+     apply simp
+    apply arith
+   apply (drule(1) int_shiftl_lt_2p_bits[rotated])
+   apply (clarsimp simp: nth_sint)
+   apply (drule_tac x="i - n" in spec)
+   apply simp
+  apply (case_tac "n = 0")
+   apply (simp add: word_sle_msb_le[where x=0, simplified word_sle_def, simplified] msb_nth)
+  apply (drule(1) int_shiftl_lt_2p_bits[rotated])
+  apply (clarsimp simp: nth_sint)
+  apply (drule_tac x="LENGTH('a) - 1 - n" in spec)
+  apply (subgoal_tac "LENGTH('a) - 1 - n < LENGTH('a) - 1")
+   apply simp
+  apply simp
+  done
+
+lemma abstract_val_signed_shiftl_signed:
+  "\<lbrakk> abstract_val Px x sint (x' :: ('a :: len) signed word);
+     abstract_val Pn n sint (n' :: ('b :: len) signed word) \<rbrakk> \<Longrightarrow>
+   abstract_val (Px \<and> Pn \<and> 0 \<le> x \<and> 0 \<le> n \<and> n < LENGTH('a) \<and> x << nat n < 2^(LENGTH('a) - 1))
+                (x << nat n) sint (x' << unat n')"
+  apply clarsimp
+  apply (subst sint_shiftl_nonneg)
+     apply (simp add: word_sle_def)
+    apply (subst nat_sint[symmetric], simp add: word_sle_def)
+    apply (simp add: nat_less_eq_zless[where z="LENGTH('a)", simplified])
+   apply (simp add: nat_sint word_sle_def)
+  apply (simp add: nat_sint word_sle_def)
+  done
+
+lemma abstract_val_signed_shiftl_unsigned:
+  "\<lbrakk> abstract_val Px x sint (x' :: ('a :: len) signed word);
+     abstract_val Pn n unat (n' :: ('b :: len) word) \<rbrakk> \<Longrightarrow>
+   abstract_val (Px \<and> Pn \<and> 0 \<le> x \<and> n < LENGTH('a) \<and> x << n < 2^(LENGTH('a) - 1))
+                (x << n) sint (x' << unat n')"
+  by (clarsimp simp: sint_shiftl_nonneg word_sle_def
+                     nat_less_eq_zless[where z="LENGTH('a)", simplified])
+
+lemma abstract_val_unsigned_shiftr_unsigned:
+  "\<lbrakk> abstract_val Px x unat (x' :: ('a :: len) word);
+     abstract_val Pn n unat (n' :: ('a :: len) word) \<rbrakk> \<Longrightarrow>
+   abstract_val (Px \<and> Pn) (x >> n) unat (x' >> unat n')"
+  apply (simp add: shiftr_div_2n' shiftr_nat_def shiftr_int_def)
+  apply (simp flip: zdiv_int[where b="2^n" for n, simplified])
+  done
+
+lemma abstract_val_unsigned_shiftr_signed:
+  "\<lbrakk> abstract_val Px x unat (x' :: ('a :: len) word);
+     abstract_val Pn n sint (n' :: ('b :: len) signed word) \<rbrakk> \<Longrightarrow>
+   abstract_val (Px \<and> Pn \<and> 0 \<le> n) (x >> nat n) unat (x' >> unat n')"
+  apply (clarsimp simp: shiftr_div_2n' shiftr_nat_def shiftr_int_def)
+  apply (simp flip: zdiv_int[where b="2^n" for n, simplified])
+  apply (subst sint_eq_uint)
+   apply (simp add: word_msb_sint)
+  apply (simp add: unat_def)
+  done
+
+lemma abstract_val_unsigned_shiftl_unsigned:
+  "\<lbrakk> abstract_val Px x unat (x' :: ('a :: len) word);
+     abstract_val Pn n unat (n' :: ('b :: len) word) \<rbrakk> \<Longrightarrow>
+   abstract_val (Px \<and> Pn \<and> n < LENGTH('a) \<and> x << n < 2^LENGTH('a))
+                (x << n) unat (x' << unat n')"
+  by (clarsimp simp: shiftl_t2n nat_shiftl_alt_def unat_mult_simple field_simps)
+
+lemma abstract_val_unsigned_shiftl_signed:
+  "\<lbrakk> abstract_val Px x unat (x' :: ('a :: len) word);
+     abstract_val Pn n sint (n' :: ('b :: len) signed word) \<rbrakk> \<Longrightarrow>
+   abstract_val (Px \<and> Pn \<and> 0 \<le> n \<and> n < int (LENGTH('a)) \<and> x << nat n < 2^LENGTH('a))
+                (x << nat n) unat (x' << unat n')"
+  apply (clarsimp simp: shiftl_t2n nat_shiftl_alt_def unat_mult_simple field_simps)
+  apply (simp add: sint_eq_uint word_msb_sint)
+  apply (simp flip: unat_def)
+  apply (simp add: uint_nat unat_mult_simple)
+  done
+
+(* TODO: this would be useful for simplifying signed left shift c_guards,
+   which are already implied by the generated word abs guard (premise #2).
+
+   However, the c_guard is translated before the new word abs guards,
+   thus L2Opt (which only propagates guards forwards) is unable to
+   make use of this rule at present. *)
+lemma signed_shiftl_c_guard_simp (* [L2flow] *):
+  "\<lbrakk> int bound < 2^LENGTH('a); a * 2^b < int bound; 0 \<le> a \<rbrakk> \<Longrightarrow>
+   unat (of_int a :: 'a::len word) * 2 ^ b < bound"
+  apply (subst unat_of_int)
+    apply assumption
+   apply (drule(1) less_trans)
+   apply (subgoal_tac "a * 2^b < 2^LENGTH('a) * 2^b")
+    apply simp
+   apply (erule less_le_trans)
+   apply simp
+  apply (subgoal_tac "nat (a * 2^b) < nat (int bound)")
+   apply (simp add: nat_power_eq nat_mult_distrib)
+  apply (subst nat_mono_iff)
+   apply (rule le_less_trans, assumption)
+   apply (erule le_less_trans[rotated])
+   apply (simp add: mult_left_mono[where a="1::int", simplified])
+  apply simp
+  done
 
 lemmas abstract_val_signed_ops [simplified simp_thms] =
   abstract_expr_bool_binop [OF snat_abstract_bool_binops(1)]
@@ -211,7 +532,15 @@ lemmas abstract_val_signed_ops [simplified simp_thms] =
   abstract_expr_binop [OF snat_abstract_binops(3)]
   abstract_expr_binop [OF snat_abstract_binops(4)]
   abstract_expr_binop [OF snat_abstract_binops(5)]
+  abstract_expr_binop [OF sint_bitwise_abstract_binops(1)]
+  abstract_expr_binop [OF sint_bitwise_abstract_binops(2)]
+  abstract_expr_binop [OF sint_bitwise_abstract_binops(3)]
+  abstract_val_signed_bitNOT
   abstract_val_signed_unary_minus
+  abstract_val_signed_shiftr_signed
+  abstract_val_signed_shiftr_unsigned
+  abstract_val_signed_shiftl_signed
+  abstract_val_signed_shiftl_unsigned
 
 lemmas abstract_val_unsigned_ops [simplified simp_thms] =
   abstract_expr_bool_binop [OF unat_abstract_bool_binops(1)]
@@ -222,7 +551,15 @@ lemmas abstract_val_unsigned_ops [simplified simp_thms] =
   abstract_expr_binop [OF unat_abstract_binops(3)]
   abstract_expr_binop [OF unat_abstract_binops(4)]
   abstract_expr_binop [OF unat_abstract_binops(5)]
+  abstract_expr_binop [OF unat_bitwise_abstract_binops(1)]
+  abstract_expr_binop [OF unat_bitwise_abstract_binops(2)]
+  abstract_expr_binop [OF unat_bitwise_abstract_binops(3)]
+  abstract_val_unsigned_bitNOT
   abstract_val_unsigned_unary_minus
+  abstract_val_unsigned_shiftr_signed
+  abstract_val_unsigned_shiftr_unsigned
+  abstract_val_unsigned_shiftl_signed
+  abstract_val_unsigned_shiftl_unsigned
 
 lemma mod_less:
   "(a :: nat) < c \<Longrightarrow> a mod b < c"
