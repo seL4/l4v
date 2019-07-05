@@ -1671,7 +1671,7 @@ lemma he_invs[wp]:
   apply (case_tac e, simp_all)
        apply (rename_tac syscall)
        apply (case_tac syscall, simp_all)
-                 by (wpsimp wp: hvmf_active hoare_vcg_imp_conj_lift'
+                 by (wpsimp wp: hvmf_active hoare_vcg_imp_conj_lift' check_budget_restart_true
                           comb: hoare_drop_imps hoare_drop_imp_conj'
                           simp: if_apply_def2 valid_fault_def
                      | wps
