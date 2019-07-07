@@ -780,6 +780,15 @@ lemma pt_at_lift:
 lemmas checkPTAt_corres[corresK] =
   corres_stateAssert_implied_frame[OF pt_at_lift, folded checkPTAt_def]
 
+lemma lookupPTSlotFromLevel_inv:
+  "lookupPTSlotFromLevel level pt_ptr vptr \<lbrace>P\<rbrace>"
+  apply (induct level arbitrary: pt_ptr)
+   apply (subst lookupPTSlotFromLevel.simps)
+   apply (wpsimp simp: pteAtIndex_def wp: getPTE_wp)
+  apply (subst lookupPTSlotFromLevel.simps)
+  apply (wpsimp simp: pteAtIndex_def wp: getPTE_wp|assumption)+
+  done
+
 (* FIXME RISCV: something like this *)
 lemma lookup_pt_slot_corres:
   "corres (\<lambda>(level, p) (level', p'). level' = size level \<and> p' = p)

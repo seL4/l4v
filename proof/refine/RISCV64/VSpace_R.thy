@@ -23,6 +23,26 @@ end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+(* FIXME RISCV: move to ArchAcc *)
+crunch_ignore (add: lookupPTFromLevel)
+declare lookupPTFromLevel.simps[simp del]
+
+(* FIXME RISCV: move to ArchAcc *)
+declare lookupPTSlotFromLevel_inv[wp]
+
+(* FIXME RISCV: move to ArchAcc *)
+lemma lookupPTFromLevel_inv[wp]:
+  "lookupPTFromLevel level pt vptr target_pt \<lbrace>P\<rbrace>"
+proof (induct level arbitrary: pt)
+  case 0 show ?case
+    by (subst lookupPTFromLevel.simps, simp, wp)
+next
+  case (Suc level)
+  show ?case
+    by (subst lookupPTFromLevel.simps, simp)
+       (wpsimp wp: Suc getPTE_wp simp: pteAtIndex_def)
+qed
+
 crunch_ignore (add: throw_on_false)
 
 definition
@@ -465,14 +485,12 @@ lemma zip_map_rel:
   shows "f x = g y"
   using assms by (induct xs arbitrary: x y ys; cases ys) auto
 
-(* FIXME RISCV
 crunch aligned'[wp]: unmapPageTable "pspace_aligned'"
   (ignore: getObject simp: crunch_simps
        wp: crunch_wps getObject_inv loadObject_default_inv)
 crunch distinct'[wp]: unmapPageTable "pspace_distinct'"
   (ignore: getObject simp: crunch_simps
        wp: crunch_wps getObject_inv loadObject_default_inv)
-*)
 
 crunch no_0_obj'[wp]: storePTE no_0_obj'
 
@@ -481,11 +499,6 @@ crunch valid_arch'[wp]: storePTE valid_arch_state'
 
 crunch cur_tcb'[wp]: storePTE cur_tcb'
 (ignore: setObject)
-
-(* FIXME RISCV
-crunch inv[wp]: lookupPTSlot "P"
-  (wp: loadObject_default_inv)
-*)
 
 lemma unmap_page_table_corres:
   assumes "asid' = ucast asid" "vptr' = vptr" "pt' = pt"
@@ -524,13 +537,11 @@ lemma unmap_page_table_corres:
   apply simp
   done *)
 
-(* FIXME RISCV
 crunch aligned' [wp]: unmapPage pspace_aligned'
   (wp: crunch_wps simp: crunch_simps ignore: getObject)
 
 crunch distinct' [wp]: unmapPage pspace_distinct'
   (wp: crunch_wps simp: crunch_simps ignore: getObject)
-*)
 
 lemma corres_split_strengthen_ftE:
   "\<lbrakk> corres (ftr \<oplus> r') P P' f j;
@@ -672,10 +683,8 @@ definition
           s \<turnstile>' (ArchObjectCap cap)
   | PageGetAddr ptr \<Rightarrow> \<top>" *)
 
-(* FIXME RISCV:
 crunch ctes [wp]: unmapPage "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps simp: crunch_simps ignore: getObject)
-*)
 
 (*
 lemma updateCap_valid_slots'[wp]: FIXME RISCV
@@ -938,13 +947,10 @@ lemma clear_page_table_corres:
   apply simp
   done
 
-(* FIXME RISCV:
 crunch typ_at'[wp]: unmapPageTable "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps hoare_vcg_all_lift_R ignore: getObject)
 
 lemmas unmapPageTable_typ_ats[wp] = typ_at_lifts[OF unmapPageTable_typ_at']
-*)
-
 
 lemma perform_page_table_corres:
   "page_table_invocation_map pti pti' \<Longrightarrow>
@@ -1085,21 +1091,35 @@ crunches doMachineOp
   and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
 
-lemma setVMRoot_invs [wp]:
-  "\<lbrace>invs'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
-  apply (wp hoare_whenE_wp findVSpaceForASID_vs_at_wp
-         | wpcw
-         | clarsimp simp: if_apply_def2)+
+crunches sfence
+  for irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
+
+lemma dmo_sfence_invs'[wp]:
+  "doMachineOp sfence \<lbrace>invs'\<rbrace>"
+  apply (wp dmo_invs')
+  apply (clarsimp simp: in_monad sfence_def machine_op_lift_def machine_rest_lift_def select_f_def)
+  done
+
+lemma dmo_setVSpaceRoot_invs'[wp]:
+  "doMachineOp (setVSpaceRoot r a) \<lbrace>invs'\<rbrace>"
+  apply (wp dmo_invs')
   sorry (* FIXME RISCV *)
+
+lemma dmo_setVSpaceRoot_invs_no_cicd'[wp]:
+  "doMachineOp (setVSpaceRoot r a) \<lbrace>invs_no_cicd'\<rbrace>"
+  sorry (* FIXME RISCV *)
+
+lemma setVMRoot_invs [wp]:
+  "setVMRoot p \<lbrace>invs'\<rbrace>"
+  unfolding setVMRoot_def getThreadVSpaceRoot_def
+  by (wpsimp wp: hoare_whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
+                 hoare_vcg_all_lift)
 
 lemma setVMRoot_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
-  apply (wp hoare_whenE_wp findVSpaceForASID_vs_at_wp
-         | wpcw
-         | clarsimp simp: if_apply_def2)+
-  sorry (* FIXME RISCV *)
+  unfolding setVMRoot_def getThreadVSpaceRoot_def
+  by (wpsimp wp: hoare_whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
+                 hoare_vcg_all_lift)
 
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps
@@ -1109,11 +1129,9 @@ crunch it' [wp]: deleteASIDPool "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp'
    ignore: getObject)
 
-(* FIXME RISCV:
-crunch it' [wp]: lookupPTSlot "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv
-   ignore: getObject)
-*)
+lemma lookupPTSlot_inv:
+  "lookupPTSlot pt vptr \<lbrace>P\<rbrace>"
+  unfolding lookupPTSlot_def by (wp lookupPTSlotFromLevel_inv)
 
 crunch it' [wp]: storePTE "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps updateObject_default_def wp: setObject_idle'
@@ -1124,20 +1142,17 @@ crunch it' [wp]: deleteASID "\<lambda>s. P (ksIdleThread s)"
    wp: getObject_inv
    ignore: getObject setObject)
 
-(* FIXME RISCV
 crunch typ_at' [wp]: performPageTableInvocation "\<lambda>s. P (typ_at' T p s)"
   (ignore: getObject wp: crunch_wps)
 
 crunch typ_at' [wp]: performPageInvocation "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps simp: crunch_simps ignore: getObject)
-*)
 
 lemma performASIDPoolInvocation_typ_at' [wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> performASIDPoolInvocation api \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
   by (wpsimp simp: performASIDPoolInvocation_def
                wp: getASID_wp hoare_vcg_imp_lift[where P'=\<bottom>, simplified])
 
-(* FIXME RISCV:
 lemmas performPageTableInvocation_typ_ats' [wp] =
   typ_at_lifts [OF performPageTableInvocation_typ_at']
 
@@ -1146,10 +1161,9 @@ lemmas performPageInvocation_typ_ats' [wp] =
 
 lemmas performASIDPoolInvocation_typ_ats' [wp] =
   typ_at_lifts [OF performASIDPoolInvocation_typ_at']
-*)
 
 lemma storePTE_pred_tcb_at' [wp]:
-  "\<lbrace>pred_tcb_at' proj P t\<rbrace> storePTE p pte \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
+  "storePTE p pte \<lbrace>pred_tcb_at' proj P t\<rbrace>"
   apply (simp add: storePTE_def pred_tcb_at'_def)
   apply (rule obj_at_setObject2)
   apply (clarsimp simp add: updateObject_default_def in_monad)
@@ -1306,34 +1320,24 @@ crunch pspace_canonical'[wp]: storePTE "pspace_canonical'"
 crunch pspace_in_kernel_mappings'[wp]: storePTE "pspace_in_kernel_mappings'"
   (ignore: getObject setObject)
 
-lemma storePTE_invs[wp]:
-  "\<lbrace>invs' and valid_pte' pte\<rbrace>
-      storePTE p pte
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
-  apply (rule hoare_pre)
-   apply (wp sch_act_wf_lift valid_global_refs_lift'
-             irqs_masked_lift
-             valid_arch_state_lift' valid_irq_node_lift
-             cur_tcb_lift valid_irq_handlers_lift''
-             untyped_ranges_zero_lift
-           | simp add: cteCaps_of_def o_def)+
-  sorry (* FIXME RISCV
-  apply clarsimp
-  done *)
-
-lemma storePTE_valid_queues [wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> storePTE p pte \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
-
 lemma storePTE_valid_objs[wp]:
   "storePTE p pte \<lbrace>valid_objs'\<rbrace>"
   apply (simp add: storePTE_def doMachineOp_def split_def)
   apply (rule hoare_pre, rule setObject_valid_objs'[where P=\<top>])
-   prefer 2
-   apply simp
-  apply (clarsimp simp: updateObject_default_def in_monad  valid_obj'_def)
+   apply (clarsimp simp: updateObject_default_def in_monad  valid_obj'_def)
+  apply simp
   done
+
+lemma storePTE_valid_queues [wp]:
+  "\<lbrace>Invariants_H.valid_queues\<rbrace> storePTE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
+  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
+
+lemma storePTE_invs[wp]:
+  "storePTE p pte \<lbrace>invs'\<rbrace>"
+  unfolding invs'_def valid_state'_def valid_pspace'_def
+  by (wpsimp wp: sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift valid_arch_state_lift'
+                 valid_irq_node_lift cur_tcb_lift valid_irq_handlers_lift'' untyped_ranges_zero_lift
+             simp: cteCaps_of_def o_def)
 
 lemma setASIDPool_valid_objs [wp]:
   "setObject p (ap::asidpool) \<lbrace>valid_objs'\<rbrace>"
@@ -1514,19 +1518,15 @@ lemma setASIDPool_invs [wp]:
   apply (clarsimp simp:  o_def)
   done
 
-(* FIXME RISCV
 crunch cte_wp_at'[wp]: unmapPageTable "\<lambda>s. P (cte_wp_at' P' p s)"
   (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
-*)
 
 lemmas storePTE_Invalid_invs = storePTE_invs[where pte=InvalidPTE, simplified]
 
-(* FIXME RISCV: crunch
 crunch invs'[wp]: unmapPageTable "invs'"
   (ignore: getObject setObject doMachineOp
        wp: storePTE_Invalid_invs mapM_wp' crunch_wps
      simp: crunch_simps)
-*)
 
 lemma perform_pti_invs [wp]:
   "\<lbrace>invs' and valid_pti' pti\<rbrace> performPageTableInvocation pti \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -1548,26 +1548,16 @@ lemma perform_pti_invs [wp]:
   apply (clarsimp simp: cte_wp_at_ctes_of valid_pti'_def)
   done *)
 
-(* FIXME RISCV: crunch
-crunch cte_wp_at': unmapPage "\<lambda>s. P (cte_wp_at' P' p s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+crunches unmapPage
+  for cte_wp_at': "\<lambda>s. P (cte_wp_at' P' p s)"
+  (wp: crunch_wps lookupPTSlotFromLevel_inv simp: crunch_simps ignore: getObject)
 
 lemmas unmapPage_typ_ats [wp] = typ_at_lifts [OF unmapPage_typ_at']
 
-crunch inv: lookupPTSlot P
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
-*)
-
 lemma unmapPage_invs' [wp]:
-  "\<lbrace>invs'\<rbrace> unmapPage sz asid vptr pptr \<lbrace>\<lambda>_. invs'\<rbrace>"
-  sorry (* FIXME RISCV
-  apply (simp add: unmapPage_def)
-  apply (rule hoare_pre)
-   apply (wp lookupPTSlot_inv
-             hoare_vcg_const_imp_lift
-         |wpc
-         |simp)+
-  done *)
+  "unmapPage sz asid vptr pptr \<lbrace>invs'\<rbrace>"
+  unfolding unmapPage_def
+  by (wpsimp wp: lookupPTSlot_inv hoare_drop_imp hoare_vcg_all_lift)
 
 lemma perform_page_invs [wp]:
   notes no_irq[wp]

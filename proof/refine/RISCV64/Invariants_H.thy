@@ -22,6 +22,8 @@ axiomatization
 
 context Arch begin
 
+declare lookupPTSlotFromLevel.simps[simp del]
+
 lemmas haskell_crunch_def [crunch_def] =
   deriveCap_def finaliseCap_def
   hasCancelSendRights_def sameRegionAs_def isPhysicalCap_def
