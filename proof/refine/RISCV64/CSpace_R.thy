@@ -3270,8 +3270,7 @@ lemma cteInsert_invs:
  "\<lbrace>invs' and cte_wp_at' (\<lambda>c. cteCap c=NullCap) dest and valid_cap' cap and
   (\<lambda>s. src \<noteq> dest) and (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s)
   and cte_wp_at' (untyped_derived_eq cap o cteCap) src
-  and ex_cte_cap_to' dest and (\<lambda>s. \<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)
-  and safe_ioport_insert' cap NullCap\<rbrace>
+  and ex_cte_cap_to' dest and (\<lambda>s. \<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)\<rbrace>
   cteInsert cap src dest
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
