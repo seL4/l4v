@@ -5797,7 +5797,6 @@ lemma cteInsert_simple_invs:
  "\<lbrace>invs' and cte_wp_at' (\<lambda>c. cteCap c=NullCap) dest and valid_cap' cap and
   (\<lambda>s. src \<noteq> dest) and (\<lambda>s. safe_parent_for' (ctes_of s) src cap)
   and (\<lambda>s. \<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)
-  and safe_ioport_insert' cap NullCap
   and cte_at' src
   and ex_cte_cap_to' dest and K (is_simple_cap' cap)\<rbrace>
   cteInsert cap src dest
