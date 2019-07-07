@@ -84,7 +84,7 @@ lemma no_fail_getObject_tcb [wp]:
    apply (simp add: field_simps)
    apply (erule is_aligned_no_wrap')
    apply simp
-  apply (fastforce split: option.split_asm simp: objBits_simps' archObjSize_def)
+  apply (fastforce split: option.split_asm simp: objBits_simps')
   done
 
 lemma typ_at_to_obj_at':
@@ -662,11 +662,10 @@ lemma ctes_of_canonical:
 proof -
   from ctes_of have "cte_wp_at' ((=) cte) p s"
     by (simp add: cte_wp_at_ctes_of)
-  thus ?thesis using canonical
-  sorry (* FIXME RISCV
+  thus ?thesis using canonical canonical_bit_def
     by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def field_simps objBits_defs
                  split: if_splits
-                  elim: cte_wp_atE' canonical_address_add) *)
+                  elim: cte_wp_atE' canonical_address_add)
 qed
 
 lemma tcb_cte_cases_small:
@@ -823,8 +822,7 @@ lemma real_cte_at':
 
 lemma no_fail_getEndpoint [wp]:
   "no_fail (ep_at' ptr) (getEndpoint ptr)"
-  apply (simp add: getEndpoint_def getObject_def
-                   split_def)
+  apply (simp add: getEndpoint_def getObject_def split_def)
   apply (rule no_fail_pre)
    apply wp
   apply (clarsimp simp add: obj_at'_def objBits_simps' lookupAround2_known1)
@@ -832,8 +830,8 @@ lemma no_fail_getEndpoint [wp]:
     apply simp
    apply (simp add: field_simps)
    apply (erule is_aligned_no_wrap')
-    apply (simp add: word_bits_conv)
-   apply (clarsimp split: option.split_asm simp: objBits_simps' archObjSize_def)
+   apply (simp add: word_bits_conv)
+  apply (clarsimp split: option.split_asm simp: objBits_simps')
   done
 
 lemma get_ep_corres:
@@ -1035,8 +1033,7 @@ lemma set_ntfn_corres:
 
 lemma no_fail_getNotification [wp]:
   "no_fail (ntfn_at' ptr) (getNotification ptr)"
-  apply (simp add: getNotification_def getObject_def
-                   split_def)
+  apply (simp add: getNotification_def getObject_def split_def)
   apply (rule no_fail_pre)
    apply wp
   apply (clarsimp simp add: obj_at'_def objBits_simps' lookupAround2_known1)
@@ -1044,8 +1041,8 @@ lemma no_fail_getNotification [wp]:
     apply simp
    apply (simp add: field_simps)
    apply (erule is_aligned_no_wrap')
-    apply (simp add: word_bits_conv)
-   apply (clarsimp split: option.split_asm simp: objBits_simps' archObjSize_def)
+   apply (simp add: word_bits_conv)
+  apply (clarsimp split: option.split_asm simp: objBits_simps')
   done
 
 lemma get_ntfn_corres:
@@ -1057,8 +1054,7 @@ lemma get_ntfn_corres:
                    getObject_def bind_assoc)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_ntfn partial_inv_def)
-  apply (clarsimp simp: loadObject_default_def in_monad projectKOs
-                        in_magnitude_check objBits_simps')
+  apply (clarsimp simp: loadObject_default_def in_monad in_magnitude_check objBits_simps')
   apply (clarsimp simp add: state_relation_def pspace_relation_def)
   apply (drule bspec)
    apply blast
