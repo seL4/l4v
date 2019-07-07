@@ -1336,13 +1336,10 @@ lemma storePTE_valid_objs[wp]:
   done
 
 lemma setASIDPool_valid_objs [wp]:
-  "\<lbrace>valid_objs' and valid_asid_pool' ap\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (rule hoare_pre)
-   apply (rule setObject_valid_objs')
-   prefer 2
-   apply assumption
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  apply (clarsimp simp: valid_obj'_def)
+  "setObject p (ap::asidpool) \<lbrace>valid_objs'\<rbrace>"
+  apply (wp setObject_valid_objs'[where P=\<top>])
+   apply (clarsimp simp: updateObject_default_def in_monad valid_obj'_def)
+  apply simp
   done
 
 lemma setASIDPool_valid_mdb [wp]:
@@ -1505,17 +1502,16 @@ lemma setObject_ap_ksDomScheduleIdx [wp]:
   by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
 
 lemma setASIDPool_invs [wp]:
-  "\<lbrace>invs' and valid_asid_pool' ap\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  "setObject p (ap::asidpool) \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
-  apply (rule hoare_pre)
-   apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
-             valid_arch_state_lift' valid_irq_node_lift
-             cur_tcb_lift valid_irq_handlers_lift''
-             untyped_ranges_zero_lift
-             updateObject_default_inv
-           | simp add: cteCaps_of_def
-           | rule setObject_ksPSpace_only)+
-  apply (clarsimp simp add: setObject_def o_def)
+  apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
+            valid_arch_state_lift' valid_irq_node_lift
+            cur_tcb_lift valid_irq_handlers_lift''
+            untyped_ranges_zero_lift
+            updateObject_default_inv
+          | simp add: cteCaps_of_def
+          | rule setObject_ksPSpace_only)+
+  apply (clarsimp simp:  o_def)
   done
 
 (* FIXME RISCV
