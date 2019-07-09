@@ -33,7 +33,7 @@ decodeIRQControlInvocation label args srcSlot extraCaps =
     throw IllegalOperation
 
 performIRQControl :: ArchInv.IRQControlInvocation -> KernelP ()
-performIRQControl = error "Unreachable due to no IRQControl decode on this arch."
+performIRQControl _ = fail "Unreachable due to no IRQControl decode on this arch."
 
 handleReservedIRQ :: IRQ -> Kernel ()
 handleReservedIRQ _ = return ()
