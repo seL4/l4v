@@ -445,12 +445,9 @@ lemma ckernel_invs:
           | simp add: no_irq_getActiveIRQ)+
   done
 
-lemma doMachineOp_ct_running':
-  "\<lbrace>ct_running'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. ct_running'\<rbrace>"
-  apply (simp add: ct_in_state'_def doMachineOp_def split_def)
-  apply wp
-  apply (simp add: pred_tcb_at'_def o_def)
-  done
+lemma doMachineOp_sch_act_simple:
+  "doMachineOp f \<lbrace>sch_act_simple\<rbrace>"
+  by (wp sch_act_simple_lift)
 
 lemma kernelEntry_invs':
   "\<lbrace> invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s) and
@@ -462,15 +459,14 @@ lemma kernelEntry_invs':
          (invs' and (ct_running' or ct_idle')) and
          (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' \<rbrace>"
   apply (simp add: kernelEntry_def)
-  sorry (* FIXME RISCV
   apply (wp ckernel_invs callKernel_domain_time_left
             threadSet_invs_trivial threadSet_ct_running' select_wp
             TcbAcc_R.dmo_invs' static_imp_wp
-            doMachineOp_ct_running' doMachineOp_sch_act_simple
+            doMachineOp_ct_in_state' doMachineOp_sch_act_simple
             callKernel_domain_time_left
          | clarsimp simp: user_memory_update_def no_irq_def tcb_at_invs'
                           valid_domain_list'_def)+
-  done *)
+  done
 
 lemma absKState_correct':
   "\<lbrakk>einvs s; invs' s'; (s,s') \<in> state_relation\<rbrakk>
@@ -540,7 +536,7 @@ lemma doUserOp_invs':
         (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and
         (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
-  apply (wp device_update_invs' doMachineOp_ct_running' select_wp
+  apply (wp device_update_invs' doMachineOp_ct_in_state' select_wp
     | (wp (once) dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
                                          user_memory_update_def))+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
@@ -870,12 +866,11 @@ lemma ckernel_invariant:
      apply (rule valid_corres_combined[OF do_user_op_invs2 corres_guard_imp2[OF do_user_op_corres]])
       apply clarsimp
      apply (rule doUserOp_invs'[THEN hoare_weaken_pre])
-     apply (fastforce simp: ex_abs_def domain_time_rel_eq domain_list_rel_eq)
+     apply (fastforce simp: ex_abs_def)
     apply (clarsimp simp: invs_valid_objs' ex_abs_def, rule_tac x=s in exI,
             clarsimp simp: ct_running_related sched_act_rct_related)
    apply (clarsimp simp: ex_abs_def)
-   apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related
-                          domain_time_rel_eq)
+   apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related)
 
   apply (erule_tac P="a \<and> b \<and> c \<and> (\<exists>x. d x)" for a b c d in disjE)
    apply (clarsimp simp add: do_user_op_H_def monad_to_transition_def)
