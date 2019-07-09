@@ -11,6 +11,7 @@
 
 module SEL4.Model.StateData.RISCV64 where
 
+import Prelude hiding (Word)
 import SEL4.Machine
 import SEL4.Machine.Hardware.RISCV64 (PTE(..))
 import SEL4.Object.Structures.RISCV64
@@ -27,7 +28,12 @@ data RISCVVSpaceRegionUse
 
 data KernelState = RISCVKernelState {
     riscvKSASIDTable :: Array ASID (Maybe (PPtr ASIDPool)),
-    riscvKSGlobalPT :: PPtr PTE }
+    riscvKSGlobalPTs :: Int -> [PPtr PTE],
+    riscvKSKernelVSpace :: PPtr Word -> RISCVVSpaceRegionUse
+  }
+
+riscvKSGlobalPT :: KernelState -> PPtr PTE
+riscvKSGlobalPT s = head (riscvKSGlobalPTs s 0)
 
 newKernelState :: PAddr -> (KernelState, [PAddr])
 newKernelState _ = error "No initial state defined for RISC-V"
