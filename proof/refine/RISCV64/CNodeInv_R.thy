@@ -8910,19 +8910,16 @@ declare withoutPreemption_lift [wp]
 
 crunch irq_states' [wp]: capSwapForDelete valid_irq_states'
 
-(* FIXME RISCV: definition *)
 lemma no_irq_setVSpaceRoot:
   "no_irq (setVSpaceRoot r a)"
-  sorry
+  unfolding setVSpaceRoot_def by wpsimp
 
 lemma no_irq_hwASIDFlush:
   "no_irq (hwASIDFlush r)"
-  sorry
+  unfolding hwASIDFlush_def by wpsimp
 
-(* FIXME RISCV: definition *)
-lemma setVSpaceRoot_[wp]:
-  "setVSpaceRoot r a \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
-  sorry
+crunches setVSpaceRoot
+  for irq_masks [wp]: "\<lambda>s. P (irq_masks s)"
 
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq_setVSpaceRoot no_irq_hwASIDFlush
