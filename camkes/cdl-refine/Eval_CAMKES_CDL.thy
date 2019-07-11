@@ -50,14 +50,14 @@ text \<open>
   that the LHS is a concrete set builder expression
 \<close>
 method assign_schematic_set =
-  ((rule arg_cong[where f="insert _"])+, rule refl[where t="{}"])
+  (((rule arg_cong[where f="insert _"])+)?, rule refl[where t="{}"])
 
 text \<open>
   Resolve a schematic equality "(a = x \<and> b = y \<and> c = z \<and> \<dots>) = ?val",
   while checking that the LHS is a conjunction of equations
 \<close>
 method assign_schematic_eq_conjs =
-  ((rule conj_cong[where P="_ = _", OF refl])+, rule refl[where t="_ = _"])
+  (((rule conj_cong[where P="_ = _", OF refl])+)?, rule refl[where t="_ = _"])
 
 text \<open>
   Resolve a schematic equality of the form
@@ -65,7 +65,7 @@ text \<open>
   while ensuring that the LHS consists of equations in disjunctive normal form.
 \<close>
 method assign_schematic_dnf =
-  ((rule disj_cong, assign_schematic_eq_conjs)+, assign_schematic_eq_conjs)
+  (((rule disj_cong, assign_schematic_eq_conjs)+)?, assign_schematic_eq_conjs)
 
 text \<open>Policy graph manipulation utils\<close>
 lemma split_Collect_graph_edge:
