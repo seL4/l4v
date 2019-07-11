@@ -1659,25 +1659,25 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   apply (rule_tac x = ko in exI)
   apply (frule ko_at_cte_ipcbuffer)
   apply (clarsimp simp: cte_wp_at_ctes_of simp del: imp_disjL)
+  apply (rename_tac ref rg sz d m)
   apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
   apply (frule (1) ko_at_valid_objs')
    apply (clarsimp simp: projectKO_opts_defs split: kernel_object.split_asm)
   apply (clarsimp simp add: valid_obj'_def valid_tcb'_def
                             isCap_simps cte_level_bits_def field_simps)
-  apply (drule bspec [OF _ ranI [where a = "0x80"]])
-   apply simp
-  apply (clarsimp simp add: valid_cap'_def)
+  apply (drule bspec [OF _ ranI [where a = "4 << cteSizeBits"]])
+   apply (simp add: cteSizeBits_def)
+  apply (clarsimp simp add: valid_cap'_def frame_at'_def)
   apply (rule conjI)
    apply (rule aligned_add_aligned)
      apply (clarsimp simp add: capAligned_def)
      apply assumption
     apply (erule is_aligned_andI1)
-   apply (case_tac xd, simp_all add: msg_align_bits bit_simps)[1]
-  sorry (* FIXME RISCV
+   apply (rule order_trans[rotated])
+    apply (rule pbfs_atleast_pageBits)
+   apply (simp add: bit_simps msg_align_bits)
   apply (clarsimp simp: capAligned_def)
-  apply (drule_tac x =
-    "(tcbIPCBuffer ko && mask (pageBitsForSize xd))  >> pageBits" in spec)
-  apply (subst(asm) mult.commute mult.left_commute, subst(asm) shiftl_t2n[symmetric])
+  apply (drule_tac x = "(tcbIPCBuffer ko && mask (pageBitsForSize sz))  >> pageBits" in spec)
   apply (simp add: shiftr_shiftl1 )
   apply (subst (asm) mask_out_add_aligned)
    apply (erule is_aligned_weaken [OF _ pbfs_atleast_pageBits])
@@ -1685,8 +1685,8 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   apply (rule shiftr_less_t2n)
   apply (clarsimp simp: pbfs_atleast_pageBits)
   apply (rule and_mask_less')
-  apply (simp add: word_bits_conv)
-  done *)
+  apply (simp add: word_bits_conv pbfs_less_wb'[unfolded word_bits_conv])
+  done
 
 lemma dit_corres:
   "corres dc
@@ -3320,11 +3320,12 @@ lemma receive_ipc_corres:
                   dest!: invs_valid_objs
                   elim!: obj_at_valid_objsE
                   split: option.splits)
+  apply clarsimp
   apply (auto simp: valid_cap'_def invs_valid_pspace' valid_obj'_def valid_tcb'_def
                     valid_bound_ntfn'_def obj_at'_def pred_tcb_at'_def
              dest!: invs_valid_objs' obj_at_valid_objs'
-             split: option.splits)
-  sorry (* FIXME RISCV *)
+             split: option.splits)[1]
+  done
 
 lemma receive_signal_corres:
   "\<lbrakk> is_ntfn_cap cap; cap_relation cap cap' \<rbrakk> \<Longrightarrow>
