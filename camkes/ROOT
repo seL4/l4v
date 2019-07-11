@@ -51,6 +51,7 @@ session CamkesCdlRefine (Camkes) in "cdl-refine" = CamkesCdlBase +
   theories
     Generator_CAMKES_CDL
     Policy_CAMKES_CDL
+    Eval_CAMKES_CDL
 
 session CamkesGlueSpec (Camkes) in "glue-spec" = HOL +
   options [document = pdf]
