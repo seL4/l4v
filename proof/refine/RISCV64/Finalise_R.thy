@@ -2178,11 +2178,11 @@ lemma final_cap_corres':
    apply (rule classical)
    apply (frule(1) zombies_finalD2[OF _ _ _ invs_zombies],
           simp?, clarsimp, assumption+)
-   subgoal sorry (* apply (clarsimp simp: sameObjectAs_def3 isCap_simps valid_cap_def
-                         obj_at_def is_obj_defs a_type_def final_matters'_def
-                  split: cap.split_asm arch_cap.split_asm
-                         option.split_asm if_split_asm,
-          simp_all add: is_cap_defs) *)
+   subgoal by (clarsimp simp: sameObjectAs_def3 isCap_simps valid_cap_def valid_arch_cap_def
+                              valid_arch_cap_ref_def obj_at_def is_obj_defs a_type_def
+                              final_matters'_def
+                        split: cap.split_asm arch_cap.split_asm option.split_asm if_split_asm,
+               simp_all add: is_cap_defs)
   apply (rule classical)
   apply (clarsimp simp: cap_irqs_def cap_irq_opt_def sameObjectAs_def3 isCap_simps
                         acap_relation_def
@@ -2270,13 +2270,11 @@ lemma finaliseCap_cases[wp]:
   apply (auto simp add: isCap_simps cap_has_cleanup'_def)
   done
 
-(* FIXME RISCV: lookupPTSlot
 crunch aligned'[wp]: finaliseCap "pspace_aligned'"
   (simp: crunch_simps assertE_def unless_def o_def
  ignore: getObject setObject forM ignoreFailure
-     wp: getObject_inv loadObject_default_inv crunch_wps) *)
+     wp: getObject_inv loadObject_default_inv crunch_wps)
 
-(* FIXME RISCV: lookupPTSlot
 crunch distinct'[wp]: finaliseCap "pspace_distinct'"
   (ignore: getObject setObject forM ignoreFailure
      simp: crunch_simps assertE_def unless_def o_def
@@ -2287,10 +2285,13 @@ crunch typ_at'[wp]: finaliseCap "\<lambda>s. P (typ_at' T p s)"
      wp: getObject_inv loadObject_default_inv crunch_wps)
 lemmas finaliseCap_typ_ats[wp] = typ_at_lifts[OF finaliseCap_typ_at']
 
+lemma unmapPageTable_it'[wp]:
+  "unmapPageTable asid vaddr pt \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>"
+  unfolding unmapPageTable_def by wpsimp
+
 crunch it'[wp]: finaliseCap "\<lambda>s. P (ksIdleThread s)"
-  (ignore: getObject setObject forM ignoreFailure maskInterrupt
-   wp: mapM_x_wp_inv mapM_wp' hoare_drop_imps getObject_inv loadObject_default_inv
-   simp: crunch_simps o_def)  *)
+  (simp: crunch_simps assertE_def o_def ignore: getObject setObject
+     wp: crunch_wps)
 
 lemma ntfn_q_refs_of'_mult:
   "ntfn_q_refs_of' ntfn = (case ntfn of Structures_H.WaitingNtfn q \<Rightarrow> set q | _ \<Rightarrow> {}) \<times> {NTFNSignal}"
@@ -2801,7 +2802,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
            | (rule hoare_strengthen_post [OF arch_finaliseCap_removeable[where slot=slot]],
                   clarsimp simp: isCap_simps)
            | wpc)+
-  apply clarsimp sorry (* FIXME RISCV
+  apply clarsimp
   apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
   apply (case_tac "cteCap cte",
          simp_all add: isCap_simps capRange_def cap_has_cleanup'_def
@@ -2814,7 +2815,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
      apply (drule valid_globals_cte_wpD'[rotated], clarsimp)
      apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
     apply (clarsimp simp: obj_at'_def | rule conjI)+
-  done *)
+  done
 
 lemma cteDeleteOne_cte_wp_at_preserved:
   assumes x: "\<And>cap final. P cap \<Longrightarrow> finaliseCap cap final True = fail"
@@ -3585,7 +3586,6 @@ lemma cap_delete_one_corres:
               apply (rule empty_slot_corres)
              apply simp+
           apply (wp hoare_drop_imps)+
-  sorry (* FIXME RISCV
         apply (wp isFinalCapability_inv | wp (once) isFinal[where x="cte_map ptr"])+
       apply (rule corres_trivial, simp)
      apply (wp get_cap_wp getCTE_wp)+
@@ -3593,7 +3593,7 @@ lemma cap_delete_one_corres:
                   elim!: caps_of_state_valid_cap)
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply fastforce
-  done *)
+  done
 end
 (* FIXME: strengthen locale instead *)
 
