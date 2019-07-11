@@ -526,13 +526,7 @@ crunch typ_at'[wp]: doReplyTransfer "\<lambda>s. P (typ_at' T p s)"
 
 lemmas doReplyTransfer_typ_ats[wp] = typ_at_lifts [OF doReplyTransfer_typ_at']
 
-(* FIXME RISCV: define as error, not undefined
 crunch typ_at'[wp]: "performIRQControl" "\<lambda>s. P (typ_at' T p s)"
-*)
-
-lemma performIRQControl_typ_at'[wp]:
-  "performIRQControl i \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
-  sorry (* FIXME RISCV: crunch *)
 
 lemmas invokeIRQControl_typ_ats[wp] =
   typ_at_lifts [OF performIRQControl_typ_at']
@@ -609,16 +603,13 @@ lemma sts_valid_inv'[wp]:
 crunch inv[wp]: decodeDomainInvocation P
   (wp: crunch_wps simp: crunch_simps)
 
-lemma decode_inv_inv'[wp]:
-  "\<lbrace>P\<rbrace> decodeInvocation label args cap_index slot cap excaps \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: decodeInvocation_def Let_def
-              split del: if_split
-              cong: if_cong)
-  apply (rule hoare_pre)
-   apply (wp decodeTCBInvocation_inv |
-          simp only: o_def |
-          clarsimp split: capability.split_asm simp: isCap_defs)+
-  sorry (* FIXME RISCV *)
+lemma arch_cap_exhausted:
+  "\<lbrakk>\<not> isFrameCap param_e; \<not> isPageTableCap param_e; \<not> isASIDControlCap param_e; \<not> isASIDPoolCap param_e\<rbrakk>
+    \<Longrightarrow> undefined \<lbrace>P\<rbrace>"
+  by (cases param_e; simp add: isCap_simps)
+
+crunch inv[wp]: decodeInvocation P
+  (simp: crunch_simps wp: crunch_wps arch_cap_exhausted mapME_x_inv_wp getASID_wp ignore: getObject)
 
 lemma diminished_IRQHandler' [simp]:
   "diminished' (IRQHandlerCap h) cap = (cap = IRQHandlerCap h)"
@@ -2223,7 +2214,7 @@ lemma inv_irq_IRQInactive:
   apply (simp add: performIRQControl_def)
   apply (rule hoare_pre)
    apply (wpc|wp|simp add: RISCV64_H.performIRQControl_def)+
-  sorry (* FIXME RISCV *)
+  done
 
 lemma inv_arch_IRQInactive:
   "\<lbrace>\<top>\<rbrace> Arch.performInvocation invocation
