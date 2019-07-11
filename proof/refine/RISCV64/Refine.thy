@@ -391,7 +391,7 @@ lemma valid_sched_init[simp]:
                     riscv_global_pt_ptr_def init_global_pt_def
                     ct_in_cur_domain_2_def valid_blocked_2_def valid_idle_etcb_def
                     etcb_at'_def default_etcb_def)
-  sorry (* FIXME RISCV *)
+  done
 
 lemma valid_domain_list_init[simp]:
   "valid_domain_list init_A_st"
