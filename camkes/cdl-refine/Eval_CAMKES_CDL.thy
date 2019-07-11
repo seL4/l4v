@@ -28,7 +28,9 @@ text \<open>Retrieve page tables mapped into a page directory. (AARCH32 only)\<c
 definition mapped_pts_of :: "cdl_heap \<Rightarrow> cdl_cap_map \<Rightarrow> cdl_object_id set"
   where
   "mapped_pts_of object_map pd_caps \<equiv>
-      {pt_id. \<exists>pt \<in> ran pd_caps. pt_id \<in> cap_objects pt}"
+      {pt_id. \<exists>pt \<in> ran pd_caps.
+        case pt of FrameCap _ _ _ _ _ _ \<Rightarrow> False \<comment> \<open>ignore ARM section pages\<close>
+                 | _ \<Rightarrow> pt_id \<in> cap_objects pt}"
 
 text \<open>Retrieve frames mapped into a page directory. (AARCH32 only)\<close>
 definition mapped_frames_of :: "cdl_heap \<Rightarrow> cdl_cap_map \<Rightarrow> cdl_object_id set"
@@ -37,7 +39,11 @@ definition mapped_frames_of :: "cdl_heap \<Rightarrow> cdl_cap_map \<Rightarrow>
       {frame_id.
          \<exists>pt_id \<in> mapped_pts_of object_map pd_caps.
            \<exists>frame \<in> ran (object_slots (the (object_map pt_id))).
-             frame_id \<in> cap_objects frame}"
+             frame_id \<in> cap_objects frame}
+    \<union> {section_id.
+         \<exists>section \<in> ran pd_caps.
+            case section of FrameCap _ _ _ _ _ _ \<Rightarrow> section_id \<in> cap_objects section
+               | _ \<Rightarrow> False}"
 
 text \<open>
   Resolve a schematic equality "{a, b, c, ...} = ?val", while checking
