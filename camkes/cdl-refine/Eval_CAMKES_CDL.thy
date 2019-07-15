@@ -528,20 +528,6 @@ lemmas word_pow_arith_simps =
   arith_simps arith_special
   nat_0 nat_one_as_int[symmetric] nat_numeral nat_numeral_diff_1 mult_1_right
 
-(* unused *)
-notepad begin
-have unat_eq_numeral_helper:
-  "\<And>x n. (unat (x :: 'a :: len word) = numeral n) \<Longrightarrow> (x = numeral n)"
-  apply (case_tac "numeral n < 2^LENGTH('a)")
-   apply (subst (asm) of_nat_inj[symmetric])
-     apply (rule unat_lt2p)
-    apply assumption
-   apply simp
-  apply (fastforce dest: sym)
-  done
-thm unat_eq_0 unat_eq_1 (* other values *)
-end
-
 lemmas object_slots_eval_simps
          [simplified fun_upds_to_map_of] = (* NB: convert Map.empty for FP_Eval compatibility *)
     object_slots_def cdl_object.case
