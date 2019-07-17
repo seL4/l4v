@@ -67,7 +67,6 @@ EXCLUDE["RISCV64"]=[
     "Access",
     "AutoCorresSEL4",
     "Bisim",
-    "BaseRefine",
     "DSpec",
     "DBaseRefine",
     "CBaseRefine",
