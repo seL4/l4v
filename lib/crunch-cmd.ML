@@ -534,10 +534,6 @@ fun get_wp_rules ctxt n goal =
     SOME f => Net.unify_term (#1 (#rules wp_data)) f |> order_list |> rev
   | NONE => map snd (#3 (#rules wp_data)) end
 
-fun pretty_thm ctxt thm =
-  let val name = Thm.get_name_hint thm
-  in Find_Theorems.pretty_thm ctxt (Facts.named name, thm) |> Pretty.string_of end
-
 (*rule can either solve thm or can be applied and refers to the same const*)
 fun can_solve_or_apply ctxt goal thm rule =
   let
@@ -553,12 +549,7 @@ fun can_solve_or_apply ctxt goal thm rule =
          (body goal = const' andalso changed (the thm'))
     else false end
 
-fun test_thm_applies _ _ NONE = (false, false, "")
-  | test_thm_applies ctxt goal (SOME thm) =
-      if (is_some o SINGLE (CHANGED (resolve_tac ctxt [thm] 1))) goal
-      then (true, false, "")
-      else (false, true, ("the generated goal does not match the existing rule\n"
-                           ^ pretty_thm ctxt thm))
+fun test_thm_applies ctxt goal thm = SINGLE (CHANGED (resolve_tac ctxt [thm] 1)) goal
 
 fun crunch_known_rule cfg const thms goal =
   let
@@ -570,16 +561,22 @@ fun crunch_known_rule cfg const thms goal =
     val thms_proof = Seq.filter (is_proof_of cfg const) (Seq.of_list thms)
 
     fun used_rule thm =
-      (writeln ("found a rule for this constant:\n"
-                ^ pretty_thm ctxt thm); thm)
+      (Pretty.writeln (Pretty.big_list "found a rule for this constant:"
+                [ThmExtras.pretty_thm false ctxt thm]); thm)
 
     (*second option: thm with same name*)
     val stored_rule = try (get_stored cfg) const
-    val (stored_rule_applies, error', error_msg) =
-      test_thm_applies ctxt cgoal_in stored_rule
+    val stored_rule_applies =
+          Option.mapPartial (test_thm_applies ctxt cgoal_in) stored_rule |> is_some
+    val stored_rule_error =
+          if is_some stored_rule andalso not stored_rule_applies
+          then Pretty.big_list "the generated goal does not match the existing rule:"
+                            [ThmExtras.pretty_thm false ctxt (the stored_rule)]
+            |> Pretty.string_of |> SOME
+          else NONE
     val stored =
       if stored_rule_applies
-      then (Seq.single (the stored_rule)) |> Seq.map used_rule
+      then Seq.single (the stored_rule) |> Seq.map used_rule
       else Seq.empty
 
     (*third option: thm in wp set*)
@@ -590,7 +587,7 @@ fun crunch_known_rule cfg const thms goal =
 
     (*error if no thm found and thm with same name does not apply*)
     fun error'' (SOME opt) = SOME opt
-      | error'' NONE = if error' then error error_msg else NONE
+      | error'' NONE = Option.mapPartial error stored_rule_error
 
     val seq = Seq.append (Seq.map snd thms_proof) (Seq.append stored wps')
   in Seq.pull seq |> Option.map fst |> error'' end

@@ -247,26 +247,25 @@ fun resolve_ruleset_tac' ctxt rs used_thms_ref n t =
 fun resolve_ruleset_tac ctxt rs used_thms_ref n =
   (Apply_Debug.break ctxt (SOME "wp")) THEN (resolve_ruleset_tac' ctxt rs used_thms_ref n)
 
-fun pretty_thm ctxt thm =
-  let val name = Thm.get_name_hint thm
-  in Find_Theorems.pretty_thm ctxt (Facts.named name, thm) |> Pretty.string_of end
-
 val wp_trace = Attrib.setup_config_bool @{binding wp_trace} (K false);
 
 fun trace_used_thms trace used_thms_ref ctxt =
   if trace orelse Config.get ctxt wp_trace
-  then map (fn thm => tracing (pretty_thm ctxt thm)) (!used_thms_ref) |> Seq.of_list
-  else Seq.empty;
+  then Pretty.big_list "Theorems used by wp:" (map (ThmExtras.pretty_thm false ctxt) (!used_thms_ref))
+       |> Pretty.writeln
+  else ();
 
 fun warn_unsafe_rules unsafe_rules n ctxt t =
   let val used_thms_dummy = Unsynchronized.ref [] : thm list Unsynchronized.ref;
       val useful_unsafe_rules =
           filter (fn rule =>
             (is_some o SINGLE (
-              resolve_ruleset_tac ctxt (get_rules ctxt [rule]) used_thms_dummy n)) t) unsafe_rules
-      val unsafe_rules_names = map (fn rule => Thm.get_name_hint rule) useful_unsafe_rules
-  in if not (null unsafe_rules_names)
-     then "Unsafe theorems that could be used: " ^ commas_quote unsafe_rules_names |> tracing
+              resolve_ruleset_tac ctxt (get_rules ctxt [rule]) used_thms_dummy n)) t)
+            unsafe_rules
+  in if not (null useful_unsafe_rules)
+     then Pretty.list "Unsafe theorems that could be used: \n" ""
+                      (map (ThmExtras.pretty_thm true ctxt) useful_unsafe_rules)
+          |> Pretty.writeln
      else () end;
 
 fun apply_rules_tac_n trace ctxt extras n =
