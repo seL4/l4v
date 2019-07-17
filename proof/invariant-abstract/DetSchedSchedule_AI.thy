@@ -1240,6 +1240,7 @@ lemma set_thread_state_valid_release_q_except:
                       (\<lambda>a. if a = thread then Some (TCB (y\<lparr>tcb_state := ts\<rparr>)) else kheap s a)")
    apply fastforce
   apply (clarsimp simp: sorted_release_q_def tcb_sched_dequeue_def valid_release_q_except_set_def valid_release_q_2_def)
+  apply (clarsimp simp: tcb_sched_dequeue_def valid_release_q_except_set_def valid_release_q_except_set_2_def)
   apply (rule conjI, clarsimp)
    apply (case_tac "t = thread"; clarsimp simp: Ball_def)
    apply (erule_tac x=t in allE; clarsimp)
@@ -1259,6 +1260,7 @@ lemma tcb_release_remove_valid_release_q_except:
   unfolding tcb_release_remove_def
   by (wpsimp;
       clarsimp simp: tcb_sched_dequeue_def valid_release_q_except_set_def
+      clarsimp simp: tcb_sched_dequeue_def valid_release_q_except_set_def valid_release_q_except_set_def)
                      sorted_release_q_def valid_release_q_def)
 
 lemma set_thread_state_sched_act_not_valid_sched:
@@ -6650,7 +6652,7 @@ lemma tcb_sched_dequeue_not_active:
   by wpsimp
 
 lemma tcb_sched_dequeue_valid_release_q_except[wp]:
-  "tcb_sched_action tcb_sched_dequeue t \<lbrace>valid_release_q_except t\<rbrace>"
+  "tcb_sched_action tcb_sched_dequeue t' \<lbrace>valid_release_q_except t\<rbrace>"
   unfolding tcb_sched_action_def
   by wpsimp
 

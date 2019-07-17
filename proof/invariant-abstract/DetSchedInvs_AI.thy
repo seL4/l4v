@@ -654,16 +654,6 @@ lemma sorted_wrt_dropWhile_mono:
     t \<in> set (dropWhile P ls); \<forall>x y. f x \<le> f y \<longrightarrow> P y \<longrightarrow> P x\<rbrakk> \<Longrightarrow> \<not> P t "
   by (induction ls; auto split: if_split_asm)
 
-definition valid_release_q_2 where
-  "valid_release_q_2 queue kh =
-   ((\<forall>t \<in> set queue. st_tcb_at_kh runnable t kh \<and> active_sc_tcb_at_kh t kh)
-    \<and> distinct queue \<and> sorted_release_q_2 queue kh)"
-
-abbreviation valid_release_q :: "'z state \<Rightarrow> bool" where
-"valid_release_q s \<equiv> valid_release_q_2 (release_queue s) (kheap s)"
-
-lemmas valid_release_q_def = valid_release_q_2_def
-
 definition valid_release_q_except_set_2 where
    "valid_release_q_except_set_2 S queue kh \<equiv>
     ((\<forall>t \<in> set queue - S.
@@ -678,8 +668,12 @@ abbreviation valid_release_q_except :: "obj_ref \<Rightarrow> 'z state \<Rightar
 "valid_release_q_except t s \<equiv>
     valid_release_q_except_set_2 {t} (release_queue s) (kheap s)"
 
+abbreviation valid_release_q :: "'z state \<Rightarrow> bool" where
+  "valid_release_q s \<equiv> valid_release_q_except_set_2 {} (release_queue s) (kheap s)"
+
 lemmas valid_release_q_except_set_def = valid_release_q_except_set_2_def
 lemmas valid_release_q_except_def = valid_release_q_except_set_2_def
+lemmas valid_release_q_def = valid_release_q_except_set_2_def
 
 lemma valid_release_q_distinct[elim!]: "valid_release_q s \<Longrightarrow> distinct (release_queue s)"
   by (clarsimp simp: valid_release_q_def)
@@ -881,7 +875,7 @@ lemmas ct_not_in_q_def = ct_not_in_q_2_def
 
 definition valid_sched_2 where
   "valid_sched_2 queues sa cdom ctime kh ct it rq \<equiv>
-    valid_ready_qs_2 queues ctime kh \<and> valid_release_q_2 rq kh \<and> ct_not_in_q_2 queues sa ct \<and>
+    valid_ready_qs_2 queues ctime kh \<and> valid_release_q_except_set_2 {} rq kh \<and> ct_not_in_q_2 queues sa ct \<and>
     valid_sched_action_2 sa kh ct cdom ctime rq \<and> ct_in_cur_domain_2 ct it sa cdom (etcbs_of' kh) \<and>
     valid_blocked_2 queues rq kh sa ct \<and> valid_idle_etcb_2 (etcbs_of' kh)"
 
@@ -1377,7 +1371,7 @@ lemma sorted_release_q_simple_ko_update[iff]:
 
 lemma valid_release_q_simple_ko_update[iff]:
   "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
-     valid_release_q_2 (release_queue s) (kheap s(epptr \<mapsto> ko)) = valid_release_q s"
+     valid_release_q_except_set_2 S (release_queue s) (kheap s(epptr \<mapsto> ko)) = valid_release_q_except_set S s"
   by (fastforce simp: valid_release_q_def)
 
 lemma is_activatable_simple_ko_update[iff]:
