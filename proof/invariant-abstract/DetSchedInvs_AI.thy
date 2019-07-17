@@ -755,17 +755,6 @@ lemma no_sc_no_active[simp]:
      = True"
   by auto
 
-definition valid_blocked_2 where
-   "valid_blocked_2 queues rlq kh sa ct \<equiv>
-    (\<forall>t st. not_queued_2 queues t \<longrightarrow> not_in_release_q_2 rlq t \<longrightarrow> st_tcb_at_kh ((=) st) t kh \<longrightarrow>
-            t \<noteq> ct \<longrightarrow> sa \<noteq> switch_thread t \<longrightarrow>
-             (\<not> (active st \<and> active_sc_tcb_at_kh t kh)))"
-
-abbreviation valid_blocked :: "'z state \<Rightarrow> bool" where
- "valid_blocked s \<equiv> valid_blocked_2 (ready_queues s) (release_queue s) (kheap s) (scheduler_action s) (cur_thread s)"
-
-lemmas valid_blocked_def = valid_blocked_2_def
-
 definition valid_blocked_except_set_2 where
    "valid_blocked_except_set_2 S queues rlq kh sa ct \<equiv>
     (\<forall>t st. t \<notin> S \<longrightarrow> not_queued_2 queues t \<longrightarrow> not_in_release_q_2 rlq t \<longrightarrow>
@@ -778,8 +767,12 @@ abbreviation valid_blocked_except_set :: "obj_ref set \<Rightarrow> 'z state \<R
 abbreviation valid_blocked_except :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
 "valid_blocked_except t s \<equiv> valid_blocked_except_set_2 {t} (ready_queues s) (release_queue s) (kheap s) (scheduler_action s) (cur_thread s)"
 
+abbreviation valid_blocked :: "'z state \<Rightarrow> bool" where
+"valid_blocked s \<equiv> valid_blocked_except_set_2 {} (ready_queues s) (release_queue s) (kheap s) (scheduler_action s) (cur_thread s)"
+
 lemmas valid_blocked_except_set_def = valid_blocked_except_set_2_def
 lemmas valid_blocked_except_def = valid_blocked_except_set_2_def
+lemmas valid_blocked_def = valid_blocked_except_set_2_def
 
 lemma valid_blocked_except_set_empty:
   "valid_blocked_except_set {} = valid_blocked"
@@ -877,7 +870,7 @@ definition valid_sched_2 where
   "valid_sched_2 queues sa cdom ctime kh ct it rq \<equiv>
     valid_ready_qs_2 queues ctime kh \<and> valid_release_q_except_set_2 {} rq kh \<and> ct_not_in_q_2 queues sa ct \<and>
     valid_sched_action_2 sa kh ct cdom ctime rq \<and> ct_in_cur_domain_2 ct it sa cdom (etcbs_of' kh) \<and>
-    valid_blocked_2 queues rq kh sa ct \<and> valid_idle_etcb_2 (etcbs_of' kh)"
+    valid_blocked_except_set_2 {} queues rq kh sa ct \<and> valid_idle_etcb_2 (etcbs_of' kh)"
 
 abbreviation valid_sched :: "'z state \<Rightarrow> bool" where
   "valid_sched s \<equiv>
@@ -1039,11 +1032,10 @@ lemma valid_blocked_except_set_subset:
    valid_blocked_except_set S s"
   by (fastforce simp: valid_blocked_except_set_def)
 
-lemma valid_blocked_except_set_weaken:
+lemma valid_blocked_except_set_weaken[simp]:
   "valid_blocked s \<Longrightarrow>
    valid_blocked_except_set S s"
-  by (rule valid_blocked_except_set_subset[where T="{}"];
-      clarsimp simp: fun_cong[OF valid_blocked_except_set_empty])
+  by (rule valid_blocked_except_set_subset[where T="{}"]; clarsimp)
 
 lemma valid_blocked_except_set_cur_thread:
   "valid_blocked_except_set {cur_thread s} s = valid_blocked s"
@@ -1406,7 +1398,7 @@ lemma valid_sched_action_simple_ko_update[iff]:
 
 lemma valid_blocked_simple_ko_update[iff]:
   "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
-     valid_blocked_2 (ready_queues s) (release_queue s)
+     valid_blocked_except_set_2 {} (ready_queues s) (release_queue s)
       (kheap s(epptr \<mapsto> ko)) (scheduler_action s)
       (cur_thread s) = valid_blocked s"
   by (clarsimp simp: valid_blocked_def)
@@ -1618,27 +1610,6 @@ lemma typ_at_st_tcb_at_lift:
   apply simp
   done
 
-lemma valid_blocked_lift_pre_conj:
-  assumes a: "\<And>P Q t. \<lbrace>\<lambda>s. (st_tcb_at Q t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. (st_tcb_at Q t s)\<rbrace>"
-  assumes t: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T t s)\<rbrace>"
-      and c: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
-      and e: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
-      and d: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
-      and f: "\<And>Q. \<lbrace>\<lambda>s. Q (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. Q (release_queue s)\<rbrace>"
-  assumes b: "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
-    shows "\<lbrace>\<lambda>s. valid_blocked s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
-  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. scheduler_action s", OF _ c])
-  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. ready_queues s", OF _ d])
-  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. cur_thread s", OF _ e])
-  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. release_queue s", OF _ f])
-  apply (clarsimp simp add: valid_blocked_def imp_conv_disj conj_disj_distribR all_simps[symmetric]
-                  simp del: disj_not1 all_simps)
-  apply(rule hoare_vcg_all_lift)+
-  apply (rule hoare_vcg_disj_lift typ_at_st_tcb_at_lift | wp a b t | fastforce)+
-  done
-
-lemmas valid_blocked_lift = valid_blocked_lift_pre_conj[where R = \<top>, simplified]
-
 lemma valid_blocked_except_set_lift_pre_conj:
   assumes a: "\<And>P Q t. \<lbrace>\<lambda>s. (st_tcb_at Q t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. (st_tcb_at Q t s)\<rbrace>"
   assumes t: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T t s)\<rbrace>"
@@ -1660,6 +1631,11 @@ lemma valid_blocked_except_set_lift_pre_conj:
   done
 
 lemmas valid_blocked_except_set_lift = valid_blocked_except_set_lift_pre_conj[where R=\<top>, simplified]
+
+lemmas valid_blocked_except_lift_pre_conj = valid_blocked_except_set_lift_pre_conj
+lemmas valid_blocked_except_lift = valid_blocked_except_set_lift
+lemmas valid_blocked_lift_pre_conj = valid_blocked_except_set_lift_pre_conj
+lemmas valid_blocked_lift = valid_blocked_except_set_lift
 
 lemma ct_not_in_q_lift_pre_conj:
   assumes a: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
@@ -1813,27 +1789,6 @@ lemma valid_ep_q_lift_pre_conj:
   done
 
 lemmas valid_ep_q_lift = valid_ep_q_lift_pre_conj[where R = \<top>, simplified]
-
-lemma valid_blocked_except_lift_pre_conj:
-  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
-  assumes b: "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
-  assumes t: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T t s)\<rbrace>"
-      and c: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
-      and e: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
-      and d: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
-      and f: "\<And>P. \<lbrace>\<lambda>s. P (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
-    shows "\<lbrace>\<lambda>s. valid_blocked_except thread s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_blocked_except thread\<rbrace>"
-  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. scheduler_action s", OF _ c])
-  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. ready_queues s", OF _ d])
-  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. cur_thread s", OF _ e])
-  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. release_queue s", OF _ f])
-  apply (clarsimp simp add: valid_blocked_except_def imp_conv_disj conj_disj_distribR all_simps[symmetric]
-                  simp del: disj_not1 all_simps)
-  apply(rule hoare_vcg_all_lift)+
-  apply (rule hoare_vcg_disj_lift typ_at_st_tcb_at_lift | wp a b t | fastforce)+
-  done
-
-lemmas valid_blocked_except_lift = valid_blocked_except_lift_pre_conj[where R=\<top>, simplified]
 
 lemma valid_reply_scs_lift:
   assumes A: "\<And>b c. f \<lbrace>\<lambda>s. ~ reply_at_ppred reply_tcb b c s\<rbrace>"
