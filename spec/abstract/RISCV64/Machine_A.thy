@@ -109,7 +109,7 @@ definition msg_label_bits :: nat
 
 definition new_context :: "user_context"
   where
-  "new_context \<equiv> UserContext (\<lambda>_. 0)"
+  "new_context \<equiv> UserContext ((\<lambda>_. 0) (SSTATUS := sstatusSPIE))"
 
 text \<open>
   The lowest virtual address in the kernel window. The kernel reserves the virtual addresses
