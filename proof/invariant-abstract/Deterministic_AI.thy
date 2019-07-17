@@ -1510,9 +1510,12 @@ lemma set_cap_match: "(\<And>s x. P s = P (s\<lparr>kheap := x\<rparr>)) \<Longr
   apply wpsimp
   done
 
-crunch all_but_exst[wp]: cap_insert_ext "all_but_exst P"
-
-crunch (empty_fail) empty_fail[wp]: cap_insert_ext
+crunches cap_insert_ext, empty_slot_ext, cap_swap_ext, create_cap_ext, set_thread_state_ext,
+         retype_region_ext
+  for all_but_exst[wp]:  "all_but_exst P"
+  and (empty_fail) empty_fail[wp]
+  (ignore_del: cap_insert_ext empty_slot_ext cap_swap_ext create_cap_ext set_thread_state_ext
+               retype_region_ext)
 
 interpretation cap_insert_ext_extended: is_extended "cap_insert_ext a b c d e"
   by (unfold_locales; wp)
@@ -3115,10 +3118,6 @@ lemma (in mdb_empty_abs') next_slot:
 crunch valid_list[wp]: post_cap_deletion,set_cap valid_list
   (wp: crunch_wps)
 
-crunch all_but_exst[wp]: empty_slot_ext "all_but_exst P"
-
-crunch (empty_fail) empty_fail[wp]: empty_slot_ext
-
 interpretation empty_slot_extended: is_extended "empty_slot_ext a b"
   by (unfold_locales; wp)
 
@@ -3774,10 +3773,6 @@ lemma next_slot:
 end
 
 
-crunch all_but_exst[wp]: cap_swap_ext "all_but_exst P"
-
-crunch (empty_fail) empty_fail[wp]: cap_swap_ext
-
 interpretation cap_swap_ext_extended: is_extended "cap_swap_ext a b c d"
   by (unfold_locales; wp cap_swap_ext_all_but_exst)
 
@@ -3806,10 +3801,6 @@ lemma exst_set_cap:
   "(x,s') \<in> fst (set_cap p c s) \<Longrightarrow> exst s' = exst s"
   by (erule use_valid[OF _ set_cap_exst],simp)
 
-crunch all_but_exst[wp]: create_cap_ext "all_but_exst P"
-
-crunch (empty_fail) empty_fail[wp]: create_cap_ext
-
 interpretation create_cap_extended: is_extended "create_cap_ext a b c"
   by (unfold_locales; wp)
 
@@ -3837,7 +3828,7 @@ lemmas transfer_caps_loop_ext_valid[wp] =
   transfer_caps_loop_pres[OF cap_insert_valid_list set_extra_badge_valid_list]
 
 crunch valid_list[wp]: tcb_sched_action,reschedule_required,set_thread_state_ext "valid_list"
-  (simp: unless_def)
+  (simp: unless_def ignore_del: tcb_sched_action reschedule_required set_thread_state_ext)
 
 crunch all_but_exst[wp]: set_thread_state_ext "all_but_exst P"
 
@@ -3847,6 +3838,7 @@ interpretation set_thread_state_ext_extended: is_extended "set_thread_state_ext 
   by (unfold_locales; wp)
 
 crunch all_but_exst[wp]: reschedule_required "all_but_exst P"
+  (ignore_del: reschedule_required)
 
 interpretation reschedule_required_ext_extended: is_extended "reschedule_required"
   by (unfold_locales; wp)
@@ -3941,20 +3933,20 @@ lemma invoke_cnode_valid_list[wp]:
 
 end
 
-crunch all_but_exst[wp,intro!,simp]: possible_switch_to "all_but_exst P" (simp: ethread_get_def)
-
-crunch valid_list[wp]: possible_switch_to "valid_list"
-  (simp: ethread_get_def)
+crunches possible_switch_to
+  for all_but_exst[wp]: "all_but_exst P"
+  and valid_list[wp]: "valid_list"
+  and (empty_fail) empty_fail[wp]
+  (simp: ethread_get_def ignore_del: possible_switch_to)
 
 crunch valid_list[wp]: set_priority,set_mcpriority "valid_list"
-  (wp: crunch_wps)
-
-crunch (empty_fail)empty_fail[wp]: possible_switch_to
+  (wp: crunch_wps ignore_del: set_priority)
 
 global_interpretation possible_switch_to_extended: is_extended "possible_switch_to a"
   by (unfold_locales; wp)
 
-crunch all_but_exst[wp]: set_priority "all_but_exst P" (simp: ethread_get_def)
+crunch all_but_exst[wp]: set_priority "all_but_exst P"
+  (simp: ethread_get_def ignore_del: set_priority)
 
 crunch (empty_fail)empty_fail[wp]: set_priority,set_mcpriority
 
@@ -3993,21 +3985,16 @@ lemmas mapM_x_def_bak = mapM_x_def[symmetric]
 lemma retype_region_ext_valid_list_ext[wp]: "\<lbrace>valid_list\<rbrace> retype_region_ext a b \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: retype_region_ext_def)
 
-crunch all_but_exst[wp]: retype_region_ext "all_but_exst P" (simp: ethread_get_def)
-
-crunch (empty_fail)empty_fail[wp]: retype_region_ext
-
 global_interpretation retype_region_ext_extended: is_extended "retype_region_ext a b"
   by (unfold_locales; wp)
 
 crunch valid_list[wp]: invoke_irq_handler valid_list
 
-crunch valid_list[wp]: thread_set_time_slice,timer_tick "valid_list" (simp: Let_def)
-
-crunch all_but_exst[wp]: timer_tick "all_but_exst P" (simp: ethread_get_def crunch_simps)
-
-crunch (empty_fail)empty_fail[wp]: timer_tick
-  (simp: thread_state.splits)
+crunches timer_tick
+  for valid_list[wp]: "valid_list"
+  and all_but_exst[wp]: "all_but_exst P"
+  and (empty_fail) empty_fail[wp]
+  (ignore_del: timer_tick)
 
 global_interpretation timer_tick_extended: is_extended "timer_tick"
   by (unfold_locales; wp)

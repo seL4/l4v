@@ -3192,16 +3192,12 @@ lemma machine_op_lift_device_state[wp]:
                      select_def ignore_failure_def select_f_def
               split: if_splits)
 
-crunch device_state_inv[wp]: invalidateLocalTLB_ASID "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: invalidateLocalTLB_VAASID "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: setHardwareASID "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: isb "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: dsb "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: set_current_pd "\<lambda>ms. P (device_state ms)"
-  (simp: setCurrentPDPL2_def)
-crunch device_state_inv[wp]: storeWord "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: cleanByVA_PoU "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: cleanL2Range "\<lambda>ms. P (device_state ms)"
+crunches invalidateLocalTLB_ASID, invalidateLocalTLB_VAASID, setHardwareASID, isb, dsb,
+         set_current_pd, storeWord, cleanByVA_PoU, cleanL2Range
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
+  (simp: setCurrentPDPL2_def
+   ignore_del: invalidateLocalTLB_ASID invalidateLocalTLB_VAASID setHardwareASID isb
+               dsb storeWord cleanByVA_PoU cleanL2Range)
 
 lemma as_user_inv:
   assumes x: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>x. P\<rbrace>"

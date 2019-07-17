@@ -832,6 +832,7 @@ lemma cap_is_device_obj_is_device[simp]:
          split: apiobject_type.splits aobject_type.splits)
 
 crunch device_state_inv: storeWord "\<lambda>ms. P (device_state ms)"
+  (ignore_del: storeWord)
 
 (* some hyp_ref invariants *)
 

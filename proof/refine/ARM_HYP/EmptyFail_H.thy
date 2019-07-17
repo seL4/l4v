@@ -174,6 +174,7 @@ crunch (empty_fail) empty_fail[intro!, wp, simp]: cancelIPC, setThreadState, tcb
 (simp: Let_def)
 
 crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
+  (ignore_del: ThreadDecls_H.suspend)
 
 lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   "empty_fail (ThreadDecls_H.restart target)"

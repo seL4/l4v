@@ -1902,12 +1902,12 @@ lemma cap_delete_silc_inv_not_transferable:
   done
 
 crunch_ignore (valid) (add: getActiveIRQ)
-crunch silc_inv[wp]: preemption_point "silc_inv aag st"
-  (ignore: wrap_ext_bool OR_choiceE simp: OR_choiceE_def crunch_simps wp: crunch_wps)
 crunch tcb_domain_map_wellformed[wp]: update_work_units, reset_work_units
                                       "tcb_domain_map_wellformed aag"
-crunch pas_refined[wp]: preemption_point "pas_refined aag"
-  (ignore: wrap_ext_bool OR_choiceE simp: OR_choiceE_def crunch_simps wp: crunch_wps)
+crunches preemption_point
+  for silc_inv[wp]: "silc_inv aag st"
+  and pas_refined[wp]: "pas_refined aag"
+  (wp: crunch_wps OR_choiceE_weak_wp ignore_del: preemption_point)
 
 lemma cap_revoke_silc_inv':
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del]

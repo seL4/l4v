@@ -589,8 +589,9 @@ lemma restart_corres:
   apply (fastforce simp:opt_cap_tcb not_idle_thread_def)
   done
 
-crunch no_effect [wp]: get_thread P
-crunch no_effect [wp]: getRegister P
+crunches get_thread, getRegister
+  for inv [wp]: P
+  (ignore_del: getRegister)
 
 (* Read the registers of another thread. *)
 lemma invoke_tcb_corres_read_regs:

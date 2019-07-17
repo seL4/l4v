@@ -1159,7 +1159,7 @@ crunch cur_thread[wp]: handle_event "\<lambda>s. P (cur_thread s)"
 
 crunches ethread_set, timer_tick, possible_switch_to, handle_interrupt
   for pas_cur_domain[wp]: "pas_cur_domain pas"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps ignore_del: ethread_set timer_tick possible_switch_to)
 
 lemma dxo_idle_thread[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s) \<rbrace> do_extended_op f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
@@ -1194,8 +1194,8 @@ crunch cur_domain[wp]:
   set_domain, invoke_domain, cap_move_ext, timer_tick,
   cap_move, cancel_badged_sends, possible_switch_to
   "\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps simp: crunch_simps filterM_mapM
-   rule: transfer_caps_loop_pres)
+  (wp: crunch_wps simp: crunch_simps filterM_mapM rule: transfer_caps_loop_pres
+   ignore_del: ethread_set set_priority set_domain cap_move_ext timer_tick possible_switch_to)
 
 lemma invoke_cnode_cur_domain[wp]: "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (cur_domain s)\<rbrace>"
   apply (simp add: invoke_cnode_def)

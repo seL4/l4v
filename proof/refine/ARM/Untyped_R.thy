@@ -1393,10 +1393,12 @@ lemma set_cdt_symb_exec_l:
   "corres_underlying {(s, s'). f (kheap s) (exst s) s'} nf nf' dc P P' (set_cdt g) (return x)"
   by (simp add: corres_underlying_def return_def set_cdt_def in_monad Bex_def)
 
-crunch domain_index[wp]: create_cap_ext "\<lambda>s. P (domain_index s)"
-crunch domain_list[wp]: create_cap_ext "\<lambda>s. P (domain_list s)"
-crunch domain_time[wp]: create_cap_ext "\<lambda>s. P (domain_time s)"
-crunch work_units_completed[wp]: create_cap_ext "\<lambda>s. P (work_units_completed s)"
+crunches create_cap_ext
+  for domain_index[wp]: "\<lambda>s. P (domain_index s)"
+  and domain_list[wp]: "\<lambda>s. P (domain_list s)"
+  and domain_time[wp]: "\<lambda>s. P (domain_time s)"
+  and work_units_completed[wp]: "\<lambda>s. P (work_units_completed s)"
+  (ignore_del: create_cap_ext)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 

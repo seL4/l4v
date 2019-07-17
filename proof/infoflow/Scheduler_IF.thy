@@ -290,6 +290,7 @@ lemma silc_dom_equiv_scheduler_action_update[simp]:
   by (simp add: silc_dom_equiv_def equiv_for_def)
 
 crunch silc_dom_equiv[wp]: set_scheduler_action "silc_dom_equiv aag st"
+  (ignore_del: set_scheduler_action)
 
 lemma schedule_globals_frame_trans_state_upd[simp]:
   "scheduler_globals_frame_equiv st (trans_state f s) = scheduler_globals_frame_equiv st s"

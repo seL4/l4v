@@ -170,6 +170,7 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
 context Arch begin global_naming RISCV64
 
 crunch (empty_fail) empty_fail[wp]: read_sbadaddr
+  (ignore_del: read_sbadaddr)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: possible_switch_to, handle_event, activate_thread
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
@@ -177,7 +178,8 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: possible_switch_to, hand
          bool.splits apiobject_type.splits aobject_type.splits notification.splits
          thread_state.splits endpoint.splits catch_def sum.splits cnode_invocation.splits
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
-         asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits)
+         asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits
+   ignore_del: possible_switch_to)
 
 end
 

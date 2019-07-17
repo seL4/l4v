@@ -1519,11 +1519,12 @@ lemma user_getreg_corres:
   apply (clarsimp simp: getRegister_def)
   done
 
+crunch inv[wp]: getRegister "P"
+  (ignore_del: getRegister)
+
 lemma user_getreg_inv'[wp]:
   "\<lbrace>P\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>x. P\<rbrace>"
-  apply (rule asUser_inv)
-   apply (simp_all add: getRegister_def)
-  done
+  by (wp asUser_inv)
 
 lemma asUser_typ_at' [wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> asUser t' f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"

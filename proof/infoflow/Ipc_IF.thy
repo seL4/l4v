@@ -2351,7 +2351,7 @@ lemma cancel_ipc_blocked_globals_equiv:
 
 crunch globals_equiv[wp]: possible_switch_to "globals_equiv (st :: det_ext state)"
   (wp: tcb_sched_action_extended.globals_equiv reschedule_required_ext_extended.globals_equiv
-       crunch_wps)
+   ignore_del: possible_switch_to)
 
 lemma send_signal_globals_equiv:
   "\<lbrace>globals_equiv (s :: det_ext state) and valid_objs and valid_arch_state

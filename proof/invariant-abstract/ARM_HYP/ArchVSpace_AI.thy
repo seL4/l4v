@@ -677,6 +677,7 @@ lemma clean_D_PoU_underlying_memory[wp]:
 crunches dsb, invalidate_I_PoU, clean_D_PoU, cleanCaches_PoU
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   and underlying_memory_inv[wp]: "\<lambda>ms. P (underlying_memory ms)"
+  (ignore_del: dsb invalidate_I_PoU clean_D_PoU cleanCaches_PoU)
 
 lemma dmo_cleanCaches_PoU_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op cleanCaches_PoU \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)
@@ -4550,38 +4551,14 @@ lemma cacheRangeOp_respects_device_region[wp]:
   shows "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> cacheRangeOp f a b c\<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
   by (wpsimp simp: do_flush_def cacheRangeOp_def wp: mapM_x_wp valid_f)+
 
-
-lemma pspace_respects_device_region_dmo:
-  assumes valid_f: "\<And>P. \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms. P (device_state ms)\<rbrace>"
-  shows "\<lbrace>pspace_respects_device_region\<rbrace>do_machine_op f\<lbrace>\<lambda>r. pspace_respects_device_region\<rbrace>"
-  apply (clarsimp simp: do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
-                        get_def return_def)
-  apply (drule_tac P1 = "(=) (device_state (machine_state s))" in use_valid[OF _ valid_f])
-  apply auto
-  done
-
-lemma cap_refs_respects_device_region_dmo:
-  assumes valid_f: "\<And>P. \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms. P (device_state ms)\<rbrace>"
-  shows "\<lbrace>cap_refs_respects_device_region\<rbrace>do_machine_op f\<lbrace>\<lambda>r. cap_refs_respects_device_region\<rbrace>"
-  apply (clarsimp simp: do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
-                        get_def return_def)
-  apply (drule_tac P1 = "(=) (device_state (machine_state s))" in use_valid[OF _ valid_f])
-  apply auto
-  done
-
-lemma machine_op_lift_device_state[wp]:
-  "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> machine_op_lift f \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
-  by (clarsimp simp: machine_op_lift_def NonDetMonad.valid_def bind_def
-                     machine_rest_lift_def gets_def simpler_modify_def get_def
-                     return_def select_def ignore_failure_def select_f_def
-              split: if_splits)
-
 crunches cleanByVA, cleanCacheRange_PoC, cleanCacheRange_RAM,
   cleanInvalByVA, invalidateByVA, invalidateL2Range,
   invalidateCacheRange_RAM, branchFlush, branchFlushRange,
   invalidateByVA_I, cleanInvalidateL2Range, do_flush, storeWord
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
-  (simp: crunch_simps)
+  (simp: crunch_simps
+   ignore_del: cleanByVA cleanInvalByVA invalidateByVA invalidateL2Range
+               branchFlush invalidateByVA_I cleanInvalidateL2Range storeWord)
 
 crunch pspace_in_kernel_window[wp]: perform_page_invocation "pspace_in_kernel_window"
   (simp: crunch_simps wp: crunch_wps)

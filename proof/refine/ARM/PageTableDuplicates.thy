@@ -72,9 +72,6 @@ crunch valid_duplicates' [wp]: cteInsert "(\<lambda>s. vs_valid_duplicates' (ksP
 crunch valid_duplicates'[wp]: setupReplyMaster "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (wp: crunch_wps simp: crunch_simps)
 
-(* we need the following lemma in Syscall_R *)
-crunch inv[wp]: getRegister "P"
-
 lemma doMachineOp_ksPSpace_inv[wp]:
   "\<lbrace>\<lambda>s. P (ksPSpace s)\<rbrace> doMachineOp f \<lbrace>\<lambda>ya s. P (ksPSpace s)\<rbrace>"
   by (simp add:doMachineOp_def split_def | wp)+

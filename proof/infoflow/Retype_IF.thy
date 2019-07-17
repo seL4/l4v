@@ -204,7 +204,8 @@ lemma dmo_cleanCacheRange_PoU_reads_respects:
   by(wp dmo_cacheRangeOp_reads_respects dmo_mol_reads_respects | simp add: cleanByVA_PoU_def)+
 
 crunch irq_state[wp]: clearMemory "\<lambda>s. P (irq_state s)"
-  (wp: crunch_wps simp: crunch_simps storeWord_def cleanByVA_PoU_def ignore: cacheRangeOp)
+  (wp: crunch_wps simp: crunch_simps storeWord_def cleanByVA_PoU_def
+   ignore_del: clearMemory)
 
 lemma dmo_clearMemory_reads_respects:
   "reads_respects aag l \<top> (do_machine_op (clearMemory ptr bits))"

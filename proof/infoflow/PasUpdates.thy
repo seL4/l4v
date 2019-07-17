@@ -42,9 +42,11 @@ crunch domain_fields[wp]: retype_region_ext,create_cap_ext,cap_insert_ext,ethrea
                           finalise_cap,cap_move,cap_swap,cap_delete,cancel_badged_sends,
                           cap_insert
                           "domain_fields P"
-  (   wp: syscall_valid select_wp crunch_wps rec_del_preservation cap_revoke_preservation modify_wp
-    simp: crunch_simps check_cap_at_def filterM_mapM unless_def
-  ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
+  (    wp: syscall_valid select_wp crunch_wps rec_del_preservation cap_revoke_preservation modify_wp
+     simp: crunch_simps check_cap_at_def filterM_mapM unless_def
+   ignore: without_preemption filterM rec_del check_cap_at cap_revoke
+   ignore_del: retype_region_ext create_cap_ext cap_insert_ext ethread_set cap_move_ext
+               empty_slot_ext cap_swap_ext set_thread_state_ext tcb_sched_action reschedule_required)
 
 lemma cap_revoke_domain_fields[wp]:"\<lbrace>domain_fields P\<rbrace> cap_revoke a \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
   by (rule cap_revoke_preservation2; wp)
@@ -61,6 +63,7 @@ crunch domain_fields[wp]:
   (wp: syscall_valid crunch_wps mapME_x_inv_wp
    simp: crunch_simps check_cap_at_def detype_def detype_ext_def mapM_x_defsym
    ignore: check_cap_at syscall
+   ignore_del: set_domain set_priority possible_switch_to
    rule: transfer_caps_loop_pres)
 
 section \<open>PAS wellformedness property for non-interference\<close>

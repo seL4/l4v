@@ -2775,10 +2775,10 @@ lemma cancelBadgedSends_invs[wp]:
   apply (drule (1) bspec, drule st_tcb_at_state_refs_ofD', clarsimp)
   by (fastforce simp: set_eq_subset tcb_bound_refs'_def)
 
-
-crunch state_refs_of[wp]: tcb_sched_action "\<lambda>s. P (state_refs_of s)"
-crunch state_hyp_refs_of[wp]: tcb_sched_action "\<lambda>s. P (state_hyp_refs_of s)"
-
+crunches tcb_sched_action
+  for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
+  and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+  (ignore_del: tcb_sched_action)
 
 lemma cancel_badged_sends_corres:
   "corres dc (invs and valid_sched and ep_at epptr) (invs' and ep_at' epptr)

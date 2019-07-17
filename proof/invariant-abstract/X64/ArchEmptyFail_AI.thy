@@ -194,6 +194,7 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
 context Arch begin global_naming X64
 
 crunch (empty_fail) empty_fail[wp,EmptyFail_AI_assms]: possible_switch_to
+  (ignore_del: possible_switch_to)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_thread
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def

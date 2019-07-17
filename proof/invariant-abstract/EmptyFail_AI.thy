@@ -428,7 +428,7 @@ lemma schedule_empty_fail[wp]:
 end
 
 crunch (empty_fail) empty_fail[wp]: set_scheduler_action, next_domain, reschedule_required
-  (simp: scheduler_action.split)
+  (simp: scheduler_action.split ignore_del: reschedule_required)
 
 crunch (empty_fail) empty_fail[wp, intro!, simp]: ethread_get_when
 

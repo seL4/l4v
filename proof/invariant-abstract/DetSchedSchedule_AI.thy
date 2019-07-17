@@ -1940,7 +1940,8 @@ crunch idle_thread[wp]:
   preemption_point "\<lambda>(s:: det_state). P (idle_thread s)"
   (ignore: OR_choiceE
    simp: OR_choiceE_def wrap_ext_bool_det_ext_ext_def crunch_simps
-   wp: crunch_wps)
+   wp: crunch_wps
+   ignore_del: preemption_point)
 
 lemma rec_del_idle_thread[wp]:
   "\<lbrace>\<lambda>(s:: det_ext state). P (idle_thread s)\<rbrace> rec_del call \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"

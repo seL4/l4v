@@ -138,7 +138,7 @@ lemmas init_arch_objects_valid_cap[wp] = valid_cap_typ [OF init_arch_objects_typ
 lemmas init_arch_objects_cap_table[wp] = cap_table_at_lift_valid [OF init_arch_objects_typ_at]
 
 crunch device_state_inv[wp]: clearMemory "\<lambda>ms. P (device_state ms)"
-  (wp: mapM_x_wp)
+  (wp: mapM_x_wp ignore_del: clearMemory)
 
 crunch pspace_respects_device_region[wp]: reserve_region pspace_respects_device_region
 crunch cap_refs_respects_device_region[wp]: reserve_region cap_refs_respects_device_region
@@ -1165,11 +1165,11 @@ lemma invs_irq_state_independent:
   done
 
 crunch irq_masks_inv[wp]: cleanByVA_PoU, storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
-  (ignore: cacheRangeOp wp: crunch_wps)
+  (wp: crunch_wps ignore_del: cleanByVA_PoU storeWord clearMemory)
 
-crunch underlying_mem_0[wp]: cleanByVA_PoU, clearMemory
+crunch underlying_mem_0[wp]: clearMemory
     "\<lambda>s. underlying_memory s p = 0"
-  (ignore: cacheRangeOp wp: crunch_wps storeWord_um_eq_0)
+  (wp: crunch_wps storeWord_um_eq_0 ignore_del: clearMemory)
 
 lemma clearMemory_invs:
   "\<lbrace>invs\<rbrace> do_machine_op (clearMemory w sz) \<lbrace>\<lambda>_. invs\<rbrace>"

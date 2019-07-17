@@ -98,6 +98,7 @@ lemma scheduler_action_states_equiv[simp]:
   done
 
 crunch states_equiv[wp]: set_thread_state_ext "states_equiv_for P Q R S st"
+  (ignore_del: set_thread_state_ext)
 
 lemma set_scheduler_action_reads_respects[wp]:
   "reads_respects aag l \<top> (set_scheduler_action action)"
@@ -1681,6 +1682,7 @@ lemma set_irq_state_valid_global_objs:
   done
 
 crunch device_state_invs[wp]: maskInterrupt "\<lambda> ms. P (device_state ms)"
+  (ignore_del: maskInterrupt)
 
 lemma set_irq_state_globals_equiv:
   "invariant (set_irq_state state irq) (globals_equiv st)"

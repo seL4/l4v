@@ -182,6 +182,7 @@ lemma vgic_maintenance_empty_fail[wp]: "empty_fail vgic_maintenance"
                    vgic_maintenance_def)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: possible_switch_to
+  (ignore_del: possible_switch_to)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_thread
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def

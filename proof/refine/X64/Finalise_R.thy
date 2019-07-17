@@ -1195,7 +1195,6 @@ lemma not_Final_removeable:
 context begin interpretation Arch .
 crunch ko_wp_at'[wp]: postCapDeletion "\<lambda>s. P (ko_wp_at' P' p s)"
 crunch cteCaps_of[wp]: postCapDeletion "\<lambda>s. P (cteCaps_of s)"
-  (simp: cteCaps_of_def o_def)
 end
 
 crunch ko_at_live[wp]: clearUntypedFreeIndex "\<lambda>s. P (ko_wp_at' live' ptr s)"

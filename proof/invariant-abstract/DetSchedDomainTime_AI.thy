@@ -166,7 +166,7 @@ crunch domain_list_inv[wp]: delete_objects "\<lambda>s :: det_ext state. P (doma
 crunch domain_list_inv[wp]: update_work_units "\<lambda>s. P (domain_list s)"
 
 crunch domain_list_inv[wp]: preemption_point "\<lambda>s. P (domain_list s)"
-  (wp: select_inv OR_choiceE_weak_wp ignore: OR_choiceE)
+  (wp: OR_choiceE_weak_wp ignore_del: preemption_point)
 
 crunch domain_list_inv[wp]: reset_untyped_cap "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps hoare_unless_wp mapME_x_inv_wp select_inv
@@ -315,7 +315,7 @@ crunch domain_time_inv[wp]: delete_objects "\<lambda>s :: det_ext state. P (doma
 crunch domain_time_inv[wp]: update_work_units "\<lambda>s. P (domain_time s)"
 
 crunch domain_time_inv[wp]: preemption_point "\<lambda>s. P (domain_time s)"
-  (wp: select_inv OR_choiceE_weak_wp ignore: OR_choiceE)
+  (wp: OR_choiceE_weak_wp ignore_del: preemption_point)
 
 crunch domain_time_inv[wp]: reset_untyped_cap "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps hoare_unless_wp mapME_x_inv_wp select_inv

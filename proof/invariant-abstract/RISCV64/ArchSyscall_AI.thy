@@ -57,6 +57,7 @@ lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' 
   by (cases flt; wpsimp)
 
 crunch inv[wp]: getRegister, read_sbadaddr "P"
+  (ignore_del: getRegister)
 
 lemma hv_inv_ex [Syscall_AI_assms]:
   "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"

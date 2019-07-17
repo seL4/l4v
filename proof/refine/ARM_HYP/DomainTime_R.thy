@@ -83,7 +83,7 @@ crunch ksDomSchedule_inv[wp]: createNewObjects "\<lambda>s. P (ksDomSchedule s)"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps hoare_unless_wp)
 
 crunch ksDomSchedule_inv[wp]: preemptionPoint "\<lambda>s. P (ksDomSchedule s)"
-  (simp: whenE_def)
+  (simp: whenE_def ignore_del: preemptionPoint)
 
 crunch ksDomSchedule_inv[wp]: performARMMMUInvocation "\<lambda>s. P (ksDomSchedule s)"
   (ignore: getObject setObject
@@ -198,7 +198,7 @@ crunch ksDomainTime_inv[wp]: performARMMMUInvocation "\<lambda>s. P (ksDomainTim
    simp: unless_def)
 
 crunch ksDomainTime_inv[wp]: preemptionPoint "\<lambda>s. P (ksDomainTime s)"
-  (simp: whenE_def)
+  (simp: whenE_def ignore_del: preemptionPoint)
 
 lemma setObjectVCPU_ksDomainTime_inv[wp]:
   "setObject p (v::vcpu) \<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace>"

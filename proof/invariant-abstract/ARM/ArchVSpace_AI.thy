@@ -578,6 +578,7 @@ lemma clean_D_PoU_underlying_memory[wp]:
 crunches dsb, invalidate_I_PoU, clean_D_PoU, cleanCaches_PoU
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   and underlying_memory_inv[wp]: "\<lambda>ms. P (underlying_memory ms)"
+  (ignore_del: dsb invalidate_I_PoU clean_D_PoU cleanCaches_PoU)
 
 lemma dmo_cleanCaches_PoU_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op cleanCaches_PoU \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)
@@ -3509,7 +3510,9 @@ crunches cleanByVA, cleanCacheRange_PoC, cleanCacheRange_RAM,
   invalidateCacheRange_RAM, branchFlush, branchFlushRange,
   invalidateByVA_I, cleanInvalidateL2Range, do_flush, storeWord
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
-  (wp: cacheRangeOp_respects_device_region simp: crunch_simps)
+  (wp: cacheRangeOp_respects_device_region simp: crunch_simps
+   ignore_del: cleanByVA cleanInvalByVA invalidateByVA invalidateL2Range
+               branchFlush invalidateByVA_I cleanInvalidateL2Range storeWord)
 
 crunch pspace_in_kernel_window[wp]: perform_page_invocation "pspace_in_kernel_window"
   (simp: crunch_simps wp: crunch_wps)

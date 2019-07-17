@@ -471,8 +471,9 @@ lemma block_thread_on_ntfn_recv_corres:
 lemma corres_ignore_ret_lhs: "dcorres rv P P' (do f;g od) f' \<Longrightarrow> dcorres rv P P' (do a\<leftarrow>f;g od) f'"
  by (clarsimp simp:corres_underlying_def)
 
-crunch not_idle[wp]: set_thread_state "not_idle_thread y :: 'a::state_ext state \<Rightarrow> bool"
-(simp: not_idle_thread_def get_object_def wp: dxo_wp_weak)
+crunches set_thread_state, set_object
+  for not_idle[wp]: "not_idle_thread y :: 'a::state_ext state \<Rightarrow> bool"
+  (simp: not_idle_thread_def get_object_def wp: dxo_wp_weak)
 
 lemma set_scheduler_action_dcorres:
   "dcorres dc P P' (return ()) (set_scheduler_action sa)"

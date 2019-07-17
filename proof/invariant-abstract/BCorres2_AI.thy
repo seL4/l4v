@@ -257,9 +257,10 @@ lemma all_but_exst_update[simp]:
 
 crunch all_but_exst[wp]: set_scheduler_action,tcb_sched_action,next_domain,
                          cap_move_ext "all_but_exst P"
-  (simp: Let_def)
+  (simp: Let_def ignore_del: tcb_sched_action cap_move_ext)
 
 crunch (empty_fail) empty_fail[wp]: cap_move_ext
+  (ignore_del: cap_move_ext)
 
 global_interpretation set_scheduler_action_extended: is_extended "set_scheduler_action a"
   by (unfold_locales; wp)
