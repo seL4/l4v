@@ -10,7 +10,7 @@
 
 theory Crunch
 imports
-  "Monad_WP/wp/WP"
+  "Monad_WP/wp/WPSimp"
   Lib
   "ml-helpers/MLUtils"
 keywords "crunch" "crunch_ignore" "crunches" :: thy_decl

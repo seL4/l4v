@@ -292,6 +292,7 @@ struct
     | put_precond _ _ = error "put_precond: not an bcorres term";
   val pre_thms = [];
   val wpc_tactic = WeakestPreCases.wp_cases_tac @{thms wpc_processors};
+  fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. bcorres_underlying t_free_ignore mapp_lambda_ignore g_free_ignore";
   val get_monad_state_type = get_nondet_monad_state_type;

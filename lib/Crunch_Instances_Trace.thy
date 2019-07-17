@@ -47,6 +47,7 @@ struct
     | put_precond _ _ = error "put_precond: not a hoare triple";
   val pre_thms = @{thms "hoare_pre"};
   val wpc_tactic = wp_cases_tactic_weak;
+  fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. valid P_free_ignore mapp_lambda_ignore Q_free_ignore";
   val get_monad_state_type = get_trace_monad_state_type;
@@ -74,6 +75,7 @@ struct
     | put_precond _ _ = error "put_precond: not a no_fail term";
   val pre_thms = @{thms "no_fail_pre"};
   val wpc_tactic = wp_cases_tactic_weak;
+  fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. no_fail P_free_ignore mapp_lambda_ignore";
   val get_monad_state_type = get_trace_monad_state_type;
@@ -102,6 +104,7 @@ struct
     | put_precond _ _ = error "put_precond: not a validE term";
   val pre_thms = @{thms "hoare_pre"};
   val wpc_tactic = wp_cases_tactic_weak;
+  fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. validE P_free_ignore mapp_lambda_ignore Q_free_ignore Q_free_ignore";
   val get_monad_state_type = get_trace_monad_state_type;
@@ -127,6 +130,7 @@ struct
   fun put_precond _ _ = error "crunch prefix_closed should not be calling put_precond";
   val pre_thms = [];
   val wpc_tactic = wp_cases_tactic_weak;
+  fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. prefix_closed mapp_lambda_ignore";
   val get_monad_state_type = get_trace_monad_state_type;

@@ -48,11 +48,6 @@ lemma crunch_foo1_at_2:
       crunch_foo1 x \<lbrace>\<lambda>rv. crunch_always_true 2 and K True\<rbrace>"
   by (simp add: crunch_always_true_def, wp)
 
-lemma crunch_foo1_at_2':
-  "True \<Longrightarrow> \<lbrace>crunch_always_true 3 and crunch_always_true 2\<rbrace>
-      crunch_foo1 x \<lbrace>\<lambda>rv. crunch_always_true 3\<rbrace>"
-  by (simp add: crunch_always_true_def, wp)
-
 lemma crunch_foo1_at_3[wp]:
   "\<lbrace>crunch_always_true 3\<rbrace> crunch_foo1 x \<lbrace>\<lambda>rv. crunch_always_true 3\<rbrace>"
   by (simp add: crunch_always_true_def, wp)
@@ -67,7 +62,7 @@ lemma crunch_foo1_no_fail:
 crunch (no_fail) no_fail: crunch_foo2
   (ignore: modify bind wp: crunch_foo1_at_2[simplified])
 
-crunch (valid) at_2': crunch_foo2 "crunch_always_true 2"
+crunch (valid) at_2: crunch_foo2 "crunch_always_true 2"
   (ignore: modify bind wp: crunch_foo1_at_2[simplified])
 
 fun crunch_foo3 :: "nat => nat => 'a => (nat,unit) nondet_monad" where
@@ -79,6 +74,10 @@ crunch gt2: crunch_foo3 "\<lambda>x. x > y"
 
 crunch (empty_fail) empty_fail2: crunch_foo3
   (ignore: modify bind)
+
+(* check that simp rules can be used to solve a goal without crunching *)
+crunch (empty_fail) empty_fail: crunch_foo3
+  (ignore: modify bind ignore: crunch_foo1 simp: crunch_foo3_empty_fail2)
 
 class foo_class =
   fixes stuff :: 'a
@@ -106,7 +105,7 @@ crunch gt3: crunch_foo4 "\<lambda>x. x > y"
 crunch (no_fail) no_fail2: crunch_foo4
   (rule: crunch_foo4_alt ignore: modify bind)
 
-crunch gt3: crunch_foo4 "\<lambda>x. x > y"
+crunch gt3': crunch_foo4 "\<lambda>x. x > y"
   (rule: crunch_foo4_alt ignore: modify bind)
 
 crunch gt4: crunch_foo5 "\<lambda>x. x > y"
@@ -198,5 +197,17 @@ crunch test: foo_const P
 crunches crunch_foo3, crunch_foo4, crunch_foo5
   for silly: "\<lambda>s. True \<noteq> False" and (no_fail)nf and (empty_fail)ef
   (ignore: modify bind rule: crunch_foo4_alt wp_del: hoare_vcg_prop)
+
+(* check that crunch can use wps to lift sub-predicates
+   (and also that top-level constants can be ignored) *)
+consts f :: "(nat, unit) nondet_monad"
+consts Q :: "bool \<Rightarrow> nat \<Rightarrow> bool"
+consts R :: "nat \<Rightarrow> bool"
+axiomatization
+  where test1: "\<lbrace>Q x\<rbrace> f \<lbrace>\<lambda>_. Q x\<rbrace>"
+  and test2: "\<lbrace>\<lambda>s. P (R s)\<rbrace> f \<lbrace>\<lambda>_ s. P (R s)\<rbrace>"
+
+crunch test3: f "\<lambda>s. Q (R s) s"
+  (wp: test1 wps: test2 ignore: f)
 
 end

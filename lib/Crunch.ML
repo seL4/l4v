@@ -50,7 +50,9 @@ val crunch_parser =
     (((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
      -- Parse.opt_attribs --| P.$$$ ":") -- P.list1 P.const -- Scan.optional P.term ""
      -- Scan.optional
-       (P.$$$ "(" |-- read_sections [wp_sect,wp_del_sect,ignore_sect,simp_sect,simp_del_sect,rule_sect,rule_del_sect,ignore_del_sect] --| P.$$$ ")")
+       (P.$$$ "(" |-- read_sections [wp_sect,wp_del_sect,wps_sect,ignore_sect,simp_sect,
+                                     simp_del_sect,rule_sect,rule_del_sect,ignore_del_sect]
+        --| P.$$$ ")")
        []
     )
     >> (fn (((((crunch_instance, prp_name), att_srcs), consts), extra), wpigs) =>
@@ -65,7 +67,9 @@ val crunches_parser =
      -- P.and_list1 ((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
          -- Parse.opt_attribs) -- Scan.optional (P.$$$ ":" |-- P.term) "")
      -- Scan.optional
-       (P.$$$ "(" |-- read_sections [wp_sect,wp_del_sect,ignore_sect,simp_sect,simp_del_sect,rule_sect,rule_del_sect,ignore_del_sect] --| P.$$$ ")")
+       (P.$$$ "(" |-- read_sections [wp_sect,wp_del_sect,wps_sect,ignore_sect,simp_sect,
+                                     simp_del_sect,rule_sect,rule_del_sect,ignore_del_sect]
+        --| P.$$$ ")")
        []
     )
     >> (fn ((consts, confs), wpigs) =>

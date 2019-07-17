@@ -352,17 +352,17 @@ let
   (* avoid duplicate simp rule etc warnings: *)
   val ctxt = Context_Position.set_visible false ctxt
 in
-  resolve_tac ctxt [valid_strengthen_with_mresults] 1
-  THEN (safe_simp_tac (put_simpset (postcond_ss ctxt) ctxt) 1)
-  THEN Subgoal.FOCUS (fn focus => let
+  resolve_tac ctxt [valid_strengthen_with_mresults]
+  THEN' (safe_simp_tac (put_simpset (postcond_ss ctxt) ctxt))
+  THEN' Subgoal.FOCUS (fn focus => let
       val ctxt = #context focus;
       val (simps, _) = get_wp_simps_strgs ctxt rules (#prems focus);
-    in CHANGED (simp_tac (put_simpset (wp_default_ss ctxt) ctxt addsimps simps) 1) end) ctxt 1
-  THEN eresolve_tac ctxt [wpex_name_for_idE] 1
+    in CHANGED (simp_tac (put_simpset (wp_default_ss ctxt) ctxt addsimps simps) 1) end) ctxt
+  THEN' eresolve_tac ctxt [wpex_name_for_idE]
 end
 
 val wps_method = Attrib.thms >> curry
-  (fn (ts, ctxt) => Method.SIMPLE_METHOD (wps_tac ctxt ts));
+  (fn (ts, ctxt) => Method.SIMPLE_METHOD' (wps_tac ctxt ts));
 
 \<close>
 
