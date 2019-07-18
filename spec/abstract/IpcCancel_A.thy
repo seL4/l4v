@@ -157,7 +157,7 @@ where
      od
      else do
        assert (reply_sc reply = None); (* only the head of the list should point to the sc *)
-       set_sc_obj_ref sc_replies_update sc_ptr (takeWhile (\<lambda>r. r \<noteq> reply_ptr) sc_replies)
+       update_sched_context sc_ptr (sc_replies_update (takeWhile (\<lambda>r. r \<noteq> reply_ptr)))
                                      (* take until the (first and only) occurrence of reply_ptr *)
      od
   od"
@@ -222,7 +222,7 @@ where
         assert (if hd sc_replies = rptr then reply_sc = Some sc_ptr else reply_sc = None);
         \<comment> \<open>Drop this reply and all subsequent replies from the call stack.
             All the associated caller threads become stuck.\<close>
-        set_sc_obj_ref sc_replies_update sc_ptr (takeWhile (\<lambda>r. r \<noteq> rptr) sc_replies);
+        update_sched_context sc_ptr (sc_replies_update (takeWhile (\<lambda>r. r \<noteq> rptr)));
         \<comment> \<open>This will be a no-op if the reply is not at the head of the queue.\<close>
         set_reply_obj_ref reply_sc_update rptr None
       od;
