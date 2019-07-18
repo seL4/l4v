@@ -15,7 +15,9 @@ begin
 external_file "word_abs.c"
 install_C_file "word_abs.c"
 autocorres
-  [ (*signed_word_abs =
+  [ (* signed_word_abs is implicit; these are the functions that would be abstracted: *)
+    (*signed_word_abs =
+        S_add_S S_sub_S S_mul_S S_div_S S_mod_S neg_S
         S_and_S S_or_S S_xor_S not_S
         U_shiftl_U_abs_S U_shiftr_U_abs_S U_shiftl_S_abs_S U_shiftr_S_abs_S
         S_shiftl_U_abs_S S_shiftr_U_abs_S S_shiftl_S_abs_S S_shiftr_S_abs_S
@@ -28,6 +30,7 @@ autocorres
         S_shiftl_U_abs_U S_shiftr_U_abs_U S_shiftl_S_abs_U S_shiftr_S_abs_U
   , unsigned_word_abs =
         ver366
+        U_add_U U_sub_U U_mul_U U_div_U U_mod_U neg_U
         U_and_U U_or_U U_xor_U not_U
         U_shiftl_U_abs_U U_shiftr_U_abs_U U_shiftl_S_abs_U U_shiftr_S_abs_U
         S_shiftl_U_abs_U S_shiftr_U_abs_U S_shiftl_S_abs_U S_shiftr_S_abs_U
@@ -43,10 +46,84 @@ lemma "\<lbrace> P \<rbrace> ver366' 0 \<lbrace> \<lambda>v s. v = 0 \<and> P s 
 lemma "\<lbrace> P \<rbrace> ver366' UINT_MAX \<lbrace> \<lambda>v s. v = UINT_MAX-1 \<and> P s \<rbrace>"
   by (wpsimp simp: ver366'_def UINT_MAX_def)
 
+section \<open>Arithmetic ops\<close>
+thm S_add_S'_def S_sub_S'_def S_mul_S'_def S_div_S'_def S_mod_S'_def neg_S'_def
+    U_add_U'_def U_sub_U'_def U_mul_U'_def U_div_U'_def U_mod_U'_def neg_U'_def
+
+lemma "x + y < INT_MIN \<or> x + y > INT_MAX \<Longrightarrow> \<not> no_fail \<top> (S_add_S' (x::int) (y::int))"
+  by (monad_eq simp: S_add_S'_def no_fail_def INT_MIN_def INT_MAX_def)
+lemma "\<lbrace>\<lambda>s. INT_MIN \<le> x + y \<and> x + y \<le> INT_MAX \<and> P s\<rbrace>
+         S_add_S' (x::int) (y::int)
+       \<lbrace>\<lambda>r s. r = x + y \<and> P s\<rbrace>!"
+  by (wpsimp simp: S_add_S'_def INT_MIN_def INT_MAX_def)
+lemma "x - y < INT_MIN \<or> x - y > INT_MAX \<Longrightarrow> \<not> no_fail \<top> (S_sub_S' (x::int) (y::int))"
+  by (monad_eq simp: S_sub_S'_def no_fail_def INT_MIN_def INT_MAX_def)
+lemma "\<lbrace>\<lambda>s. INT_MIN \<le> x - y \<and> x - y \<le> INT_MAX \<and> P s\<rbrace>
+         S_sub_S' (x::int) (y::int)
+       \<lbrace>\<lambda>r s. r = x - y \<and> P s\<rbrace>!"
+  by (wpsimp simp: S_sub_S'_def INT_MIN_def INT_MAX_def)
+lemma "x * y < INT_MIN \<or> x * y > INT_MAX \<Longrightarrow> \<not> no_fail \<top> (S_mul_S' (x::int) (y::int))"
+  by (monad_eq simp: S_mul_S'_def no_fail_def INT_MIN_def INT_MAX_def)
+lemma "\<lbrace>\<lambda>s. INT_MIN \<le> x * y \<and> x * y \<le> INT_MAX \<and> P s\<rbrace>
+         S_mul_S' (x::int) (y::int)
+       \<lbrace>\<lambda>r s. r = x * y \<and> P s\<rbrace>!"
+  by (wpsimp simp: S_mul_S'_def INT_MIN_def INT_MAX_def)
+lemma "y = 0 \<or> x sdiv y < INT_MIN \<or> x sdiv y > INT_MAX \<Longrightarrow> \<not> no_fail \<top> (S_div_S' (x::int) (y::int))"
+  by (monad_eq simp: S_div_S'_def no_fail_def INT_MIN_def INT_MAX_def)
+lemma "\<lbrace>\<lambda>s. y \<noteq> 0 \<and> INT_MIN \<le> x sdiv y \<and> x sdiv y \<le> INT_MAX \<and> P s\<rbrace>
+         S_div_S' (x::int) (y::int)
+       \<lbrace>\<lambda>r s. r = x sdiv y \<and> P s\<rbrace>!"
+  by (wpsimp simp: S_div_S'_def INT_MIN_def INT_MAX_def)
+lemma "y = 0 \<or> x smod y < INT_MIN \<or> x smod y > INT_MAX \<Longrightarrow> \<not> no_fail \<top> (S_mod_S' (x::int) (y::int))"
+  by (monad_eq simp: S_mod_S'_def no_fail_def INT_MIN_def INT_MAX_def)
+lemma "\<lbrace>\<lambda>s. y \<noteq> 0 \<and> INT_MIN \<le> x smod y \<and> x smod y \<le> INT_MAX \<and> P s\<rbrace>
+         S_mod_S' (x::int) (y::int)
+       \<lbrace>\<lambda>r s. r = x smod y \<and> P s\<rbrace>!"
+  by (wpsimp simp: S_mod_S'_def INT_MIN_def INT_MAX_def)
+lemma "x \<le> INT_MIN \<or> x > -INT_MIN \<Longrightarrow> \<not> no_fail \<top> (neg_S' (x::int))"
+  by (monad_eq simp: neg_S'_def no_fail_def INT_MIN_def)
+lemma "\<lbrace>\<lambda>s. INT_MIN < x \<and> x \<le> -INT_MIN \<and> P s\<rbrace> neg_S' (x::int) \<lbrace>\<lambda>r s. r = -x \<and> P s\<rbrace>!"
+  by (wpsimp simp: neg_S'_def INT_MIN_def)
+
+lemma "x + y > UINT_MAX \<Longrightarrow> \<not> no_fail \<top> (U_add_U' (x::nat) (y::nat))"
+  by (monad_eq simp: U_add_U'_def no_fail_def)
+lemma "\<lbrace>\<lambda>s. x + y \<le> UINT_MAX \<and> P s\<rbrace>
+         U_add_U' (x::nat) (y::nat)
+       \<lbrace>\<lambda>r s. r = x + y \<and> P s\<rbrace>!"
+  by (wpsimp simp: U_add_U'_def UINT_MAX_def)
+lemma "x < y \<Longrightarrow> \<not> no_fail \<top> (U_sub_U' (x::nat) (y::nat))"
+  by (monad_eq simp: U_sub_U'_def no_fail_def)
+lemma "\<lbrace>\<lambda>s. x \<ge> y \<and> P s\<rbrace>
+         U_sub_U' (x::nat) (y::nat)
+       \<lbrace>\<lambda>r s. r = x - y \<and> P s\<rbrace>!"
+  by (wpsimp simp: U_sub_U'_def)
+lemma "x * y > UINT_MAX \<Longrightarrow> \<not> no_fail \<top> (U_mul_U' (x::nat) (y::nat))"
+  by (monad_eq simp: U_mul_U'_def no_fail_def)
+lemma "\<lbrace>\<lambda>s. x * y \<le> UINT_MAX \<and> P s\<rbrace>
+         U_mul_U' (x::nat) (y::nat)
+       \<lbrace>\<lambda>r s. r = x * y \<and> P s\<rbrace>!"
+  by (wpsimp simp: U_mul_U'_def UINT_MAX_def)
+lemma "y = 0 \<Longrightarrow> \<not> no_fail \<top> (U_div_U' (x::nat) (y::nat))"
+  by (monad_eq simp: U_div_U'_def no_fail_def)
+lemma "\<lbrace>\<lambda>s. y \<noteq> 0 \<and> P s\<rbrace>
+         U_div_U' (x::nat) (y::nat)
+       \<lbrace>\<lambda>r s. r = x div y \<and> P s\<rbrace>!"
+  by (wpsimp simp: U_div_U'_def UINT_MAX_def)
+lemma "y = 0 \<Longrightarrow> \<not> no_fail \<top> (U_mod_U' (x::nat) (y::nat))"
+  by (monad_eq simp: U_mod_U'_def no_fail_def)
+lemma "\<lbrace>\<lambda>s. y \<noteq> 0 \<and> P s\<rbrace>
+         U_mod_U' (x::nat) (y::nat)
+       \<lbrace>\<lambda>r s. r = x mod y \<and> P s\<rbrace>!"
+  by (wpsimp simp: U_mod_U'_def UINT_MAX_def)
+lemma "\<lbrace>P\<rbrace> neg_U' (x::nat) \<lbrace>\<lambda>r s. r = (if x = 0 then 0 else Suc UINT_MAX - x) \<and> P s\<rbrace>!"
+  unfolding neg_U'_def by (wp, simp)
+
+
 section \<open>Bitwise ops\<close>
 
 thm S_and_S'_def S_or_S'_def S_xor_S'_def not_S'_def
     U_and_U'_def U_or_U'_def U_xor_U'_def not_U'_def
+
 lemma "\<lbrace>P\<rbrace> S_and_S' (x::int) (y::int) \<lbrace>\<lambda>r s. r = x AND y \<and> P s\<rbrace>!"
   by (wpsimp simp: S_and_S'_def)
 lemma "\<lbrace>P\<rbrace> S_or_S' (x::int) (y::int) \<lbrace>\<lambda>r s. r = x OR y \<and> P s\<rbrace>!"
@@ -55,6 +132,7 @@ lemma "\<lbrace>P\<rbrace> S_xor_S' (x::int) (y::int) \<lbrace>\<lambda>r s. r =
   by (wpsimp simp: S_xor_S'_def)
 lemma "\<lbrace>P\<rbrace> not_S' (x::int) \<lbrace>\<lambda>r s. r = NOT x \<and> P s\<rbrace>!"
   by (wpsimp simp: not_S'_def)
+
 lemma "\<lbrace>P\<rbrace> U_and_U' (x::nat) (y::nat) \<lbrace>\<lambda>r s. r = x AND y \<and> P s\<rbrace>!"
   by (wpsimp simp: U_and_U'_def)
 lemma "\<lbrace>P\<rbrace> U_or_U' (x::nat) (y::nat) \<lbrace>\<lambda>r s. r = x OR y \<and> P s\<rbrace>!"
@@ -63,6 +141,7 @@ lemma "\<lbrace>P\<rbrace> U_xor_U' (x::nat) (y::nat) \<lbrace>\<lambda>r s. r =
   by (wpsimp simp: U_xor_U'_def)
 lemma "\<lbrace>P\<rbrace> not_U' (x::nat) \<lbrace>\<lambda>r s. r = UINT_MAX - x \<and> P s\<rbrace>!"
   by (wpsimp simp: not_U'_def)
+
 
 section \<open>Left shifts\<close>
 

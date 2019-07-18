@@ -14,6 +14,21 @@ unsigned ver366(unsigned x) {
   else        return x - 1;
 }
 
+/* All arithmetic operators */
+unsigned U_add_U(unsigned a, unsigned b) { return a + b; }
+unsigned U_sub_U(unsigned a, unsigned b) { return a - b; }
+unsigned U_mul_U(unsigned a, unsigned b) { return a * b; }
+unsigned U_div_U(unsigned a, unsigned b) { return a / b; }
+unsigned U_mod_U(unsigned a, unsigned b) { return a % b; }
+unsigned neg_U(unsigned a) { return -a; }
+
+int S_add_S(int a, int b) { return a + b; }
+int S_sub_S(int a, int b) { return a - b; }
+int S_mul_S(int a, int b) { return a * b; }
+int S_div_S(int a, int b) { return a / b; }
+int S_mod_S(int a, int b) { return a % b; }
+int neg_S(int a) { return -a; }
+
 /* All bitwise operators */
 unsigned U_and_U(unsigned a, unsigned b) { return a & b; }
 unsigned U_or_U (unsigned a, unsigned b) { return a | b; }
