@@ -12,48 +12,8 @@ theory WordAbstract
 imports
   L2Defs
   ExecConcrete
+  Lib.NatBitwise
 begin
-
-(* FIXME: merge with HaskellLib *)
-
-instantiation nat :: bit_operations
-begin
-
-(* NOT (int x) \<le> 0 for all x so this is not useful
-definition
-  "bitNOT = nat o bitNOT o int"
-*)
-
-definition
-  "bitAND x y = nat (bitAND (int x) (int y))"
-
-definition
-  "bitOR x y = nat (bitOR (int x) (int y))"
-
-definition
-  "bitXOR x y = nat (bitXOR (int x) (int y))"
-
-definition
-  "shiftl x y = nat (shiftl (int x) y)"
-
-definition
-  "shiftr x y = nat (shiftr (int x) y)"
-
-definition
-  "test_bit x y = test_bit (int x) y"
-
-definition
-  "lsb x = lsb (int x)"
-
-definition
-  "msb x = msb (int x)"
-
-definition
-  "set_bit x y z = nat (set_bit (int x) y z)"
-
-instance ..
-
-end
 
 definition "WORD_MAX x \<equiv> ((2 ^ (len_of x - 1) - 1) :: int)"
 definition "WORD_MIN x \<equiv> (- (2 ^ (len_of x - 1)) :: int)"
@@ -285,14 +245,6 @@ lemma snat_abstract_binops:
   "abstract_binop (\<lambda>a b. WORD_MIN TYPE('a) \<le> a smod b \<and> a smod b \<le> WORD_MAX TYPE('a)) (sint :: 'a signed word \<Rightarrow> int) (smod) (smod)"
   by (auto simp: signed_arith_sint word_size WORD_MIN_def WORD_MAX_def)
 
-(* FIXME MOVE *)
-lemma int_eq_test_bit:
-  "((x :: int) = y) = (\<forall>i. test_bit x i = test_bit y i)"
-  apply simp
-  apply (metis bin_eqI)
-  done
-lemmas int_eq_test_bitI = int_eq_test_bit[THEN iffD2, rule_format]
-
 lemma sint_bitwise_abstract_binops:
   "abstract_binop (\<lambda>a b. True) (sint :: 'a::len signed word \<Rightarrow> int) bitAND bitAND"
   "abstract_binop (\<lambda>a b. True) (sint :: 'a::len signed word \<Rightarrow> int) bitOR bitOR"
@@ -371,46 +323,6 @@ lemma abstract_val_signed_shiftr_unsigned:
   apply (clarsimp simp: shiftr_int_def)
   done
 
-lemma int_2p_eq_shiftl:
-  "(2::int)^x = 1 << x"
-  by (simp add: shiftl_int_def)
-
-lemma nat_2p_eq_shiftl:
-  "(2::nat)^x = 1 << x"
-  by (simp add: shiftl_nat_def int_2p_eq_shiftl)
-
-lemma nat_int_mul:
-  "nat (int a * b) = a * nat b"
-  by (simp add: nat_mult_distrib)
-
-lemma nat_shiftl_alt_def:
-  "(x::nat) << n = x * 2^n"
-  by (simp add: shiftl_nat_def shiftl_int_def nat_int_mul)
-
-lemma int_shiftl_less_cancel:
-  "n \<le> m \<Longrightarrow> ((x :: int) << n < y << m) = (x < y << (m - n))"
-  apply (drule le_Suc_ex)
-  apply (clarsimp simp: shiftl_int_def power_add)
-  done
-
-lemma nat_shiftl_less_cancel:
-  "n \<le> m \<Longrightarrow> ((x :: nat) << n < y << m) = (x < y << (m - n))"
-  by (simp add: nat_int_comparison(2) shiftl_nat_def int_shiftl_less_cancel)
-
-lemma int_shiftl_lt_2p_bits:
-  "0 \<le> (x::int) \<Longrightarrow> x < 1 << n \<Longrightarrow> \<forall>i \<ge> n. \<not> x !! i"
-  apply (clarsimp simp: shiftl_int_def)
-  apply (clarsimp simp: bin_nth_eq_mod even_iff_mod_2_eq_zero)
-  apply (drule_tac z="2^i" in less_le_trans)
-   apply simp
-  apply simp
-  done
-
-lemma int_shiftl_lt_2p_bits':
-  "0 \<le> (x::int) \<Longrightarrow> \<forall>i \<ge> n. \<not> x !! i \<Longrightarrow> x < 1 << n"
-  \<comment> \<open>converse is also true, but proof seems annoyingly hard\<close>
-  oops
-
 lemma sint_shiftl_nonneg:
   "\<lbrakk> 0 <=s (x :: 'a::len signed word); n < LENGTH('a); sint x << n < 2^(LENGTH('a) - 1) \<rbrakk> \<Longrightarrow>
    sint (x << n) = sint x << n"
@@ -485,14 +397,14 @@ lemma abstract_val_unsigned_shiftl_unsigned:
      abstract_val Pn n unat (n' :: ('b :: len) word) \<rbrakk> \<Longrightarrow>
    abstract_val (Px \<and> Pn \<and> n < LENGTH('a) \<and> x << n < 2^LENGTH('a))
                 (x << n) unat (x' << unat n')"
-  by (clarsimp simp: shiftl_t2n nat_shiftl_alt_def unat_mult_simple field_simps)
+  by (clarsimp simp: shiftl_t2n shiftl_nat_alt_def unat_mult_simple field_simps)
 
 lemma abstract_val_unsigned_shiftl_signed:
   "\<lbrakk> abstract_val Px x unat (x' :: ('a :: len) word);
      abstract_val Pn n sint (n' :: ('b :: len) signed word) \<rbrakk> \<Longrightarrow>
    abstract_val (Px \<and> Pn \<and> 0 \<le> n \<and> n < int (LENGTH('a)) \<and> x << nat n < 2^LENGTH('a))
                 (x << nat n) unat (x' << unat n')"
-  apply (clarsimp simp: shiftl_t2n nat_shiftl_alt_def unat_mult_simple field_simps)
+  apply (clarsimp simp: shiftl_t2n shiftl_nat_alt_def unat_mult_simple field_simps)
   apply (simp add: sint_eq_uint word_msb_sint)
   apply (simp flip: unat_def)
   apply (simp add: uint_nat unat_mult_simple)

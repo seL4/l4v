@@ -16,6 +16,7 @@
 theory HaskellLib_H
 imports
   Lib
+  NatBitwise
   "More_Numeral_Type"
   "Monad_WP/NonDetMonadVCG"
 begin
@@ -202,26 +203,6 @@ lemma either_simp[simp]: "either = case_sum"
   apply (rule ext)+
   apply (simp add: either_def)
   done
-
-
-instantiation nat :: bit_operations
-begin
-
-definition
-  "bitNOT = nat o bitNOT o int"
-
-definition
-  "bitAND x y = nat (bitAND (int x) (int y))"
-
-definition
-  "bitOR x y = nat (bitOR (int x) (int y))"
-
-definition
-  "bitXOR x y = nat (bitXOR (int x) (int y))"
-
-instance ..
-
-end
 
 class HS_bit = bit_operations +
   fixes shiftL :: "'a \<Rightarrow> nat \<Rightarrow> 'a"
