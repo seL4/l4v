@@ -230,15 +230,6 @@ where
    od"
 
 definition
-  set_sched_context_obj :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "set_sched_context_obj ptr sc n  \<equiv> do
-     obj \<leftarrow> get_object ptr;
-     assert (case obj of SchedContext sc n \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (SchedContext sc n)
-   od"
-
-definition
   get_sc_obj_ref :: "(sched_context => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
 where
   "get_sc_obj_ref f ref \<equiv> do
@@ -253,10 +244,6 @@ where
      obj \<leftarrow> get_object ptr;
      case obj of SchedContext sc n \<Rightarrow> set_object ptr (SchedContext (f sc) n) | _ \<Rightarrow> fail
    od"
-
-abbreviation "set_sched_context ptr sc \<equiv> update_sched_context ptr (\<lambda>_. sc)"
-
-lemmas set_sched_context_def = update_sched_context_def
 
 definition
   set_sc_obj_ref :: "(('a \<Rightarrow> 'a) \<Rightarrow> sched_context \<Rightarrow> sched_context) \<Rightarrow> obj_ref \<Rightarrow> 'a \<Rightarrow> (unit, 'z::state_ext) s_monad"

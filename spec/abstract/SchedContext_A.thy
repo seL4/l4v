@@ -322,12 +322,12 @@ where
      new_time \<leftarrow> return $ if ready then cur_time else (r_time refill_hd);
      if (r_amount refill_hd \<ge> new_budget)
      then do
-       set_sched_context sc_ptr (sc\<lparr>sc_period := new_period, sc_refill_max := new_max_refills,
-                                     sc_refills:=[\<lparr> r_time = new_time, r_amount = new_budget\<rparr>]\<rparr>);
+       update_sched_context sc_ptr (\<lambda>_. sc\<lparr>sc_period := new_period, sc_refill_max := new_max_refills,
+                                           sc_refills:=[\<lparr> r_time = new_time, r_amount = new_budget\<rparr>]\<rparr>);
        maybe_add_empty_tail sc_ptr
     od
     else
-      set_sched_context sc_ptr (sc\<lparr>sc_period := new_period, sc_refill_max := new_max_refills,
+      update_sched_context sc_ptr (\<lambda>_. sc\<lparr>sc_period := new_period, sc_refill_max := new_max_refills,
          sc_refills:=[\<lparr> r_time = new_time, r_amount = r_amount refill_hd\<rparr>,
                \<lparr>r_time = new_time + new_period, r_amount = new_budget - (r_amount refill_hd)\<rparr>]\<rparr>)
 od"
@@ -382,7 +382,7 @@ definition
   sched_context_update_consumed :: "obj_ref \<Rightarrow> (time,'z::state_ext) s_monad" where
   "sched_context_update_consumed sc_ptr \<equiv> do
     sc \<leftarrow> get_sched_context sc_ptr;
-    set_sched_context sc_ptr (sc\<lparr>sc_consumed := 0 \<rparr>);
+    update_sched_context sc_ptr (\<lambda>_. sc\<lparr>sc_consumed := 0 \<rparr>);
     return (sc_consumed sc)
    od"
 
