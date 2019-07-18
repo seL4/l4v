@@ -19,31 +19,6 @@ lemma invs_exst [iff]:
 
 text {* update\_sched\_context *}
 
-lemma set_sched_context_idle_thread[wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> set_sched_context ref sc \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
-  by (wpsimp simp: set_sched_context_def get_object_def)
-
-lemma set_sched_context_valid_idle:
-  "\<lbrace>\<lambda>s. valid_idle s \<and> ref \<noteq> idle_sc_ptr\<rbrace> set_sched_context ref sc \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-  apply (wpsimp simp: set_sched_context_def get_object_def)
-  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
-  done
-
-lemma set_sched_context_valid_irq_handlers[wp]:
-  "\<lbrace>valid_irq_handlers\<rbrace> set_sched_context ref sc \<lbrace>\<lambda>_. valid_irq_handlers\<rbrace>"
-  apply (wpsimp simp: set_sched_context_def set_object_def get_object_def valid_irq_handlers_def
-                      irq_issued_def ran_def)
-  apply (subgoal_tac "caps_of_state s (a, b) = Some cap")
-   apply fastforce
-  apply (subst cte_wp_caps_of_lift; auto simp: cte_wp_at_cases)
-  done
-
-lemma set_sched_context_valid_objs[wp]:
-  "\<lbrace>\<lambda>s. valid_objs s \<and> valid_sched_context sc s\<rbrace> set_sched_context ref sc \<lbrace>\<lambda>_. valid_objs\<rbrace>"
-  apply (wpsimp simp: set_sched_context_def get_object_def wp: set_object_valid_objs)
-  apply (auto simp: valid_obj_def valid_sched_context_def a_type_def obj_at_def)
-  done
-
 lemma update_sched_context_idle_thread[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> update_sched_context ref f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
   by (wpsimp simp: update_sched_context_def get_object_def)
@@ -51,12 +26,7 @@ lemma update_sched_context_idle_thread[wp]:
 lemma update_sched_context_valid_idle:
   "\<lbrace>\<lambda>s. valid_idle s \<and> ref \<noteq> idle_sc_ptr\<rbrace> update_sched_context ref f \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   apply (wpsimp simp: update_sched_context_def get_object_def)
-  apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def)
-  done
-
-lemma update_sched_context_fault_tcbs_valid_states[wp]:
-  "update_sched_context ref f \<lbrace>fault_tcbs_valid_states\<rbrace>"
-  apply (wpsimp simp: update_sched_context_def get_object_def)
+  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
 lemma update_sched_context_valid_irq_handlers[wp]:
@@ -66,6 +36,17 @@ lemma update_sched_context_valid_irq_handlers[wp]:
   apply (subgoal_tac "caps_of_state s (a, b) = Some cap")
    apply fastforce
   apply (subst cte_wp_caps_of_lift; auto simp: cte_wp_at_cases)
+  done
+
+lemma update_sched_context_valid_objs[wp]:
+  "\<lbrace>\<lambda>s. valid_objs s \<and> valid_sched_context sc s\<rbrace> update_sched_context ref (\<lambda>_. sc) \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def get_object_def wp: set_object_valid_objs)
+  apply (auto simp: valid_obj_def valid_sched_context_def a_type_def obj_at_def)
+  done
+
+lemma update_sched_context_fault_tcbs_valid_states[wp]:
+  "update_sched_context ref f \<lbrace>fault_tcbs_valid_states\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def get_object_def)
   done
 
 lemma update_sched_context_valid_objs_same:
@@ -1150,7 +1131,7 @@ lemma sched_context_update_consumed_if_live[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace>
      sched_context_update_consumed param_a
    \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
-  apply (wpsimp simp: sched_context_update_consumed_def set_sched_context_def
+  apply (wpsimp simp: sched_context_update_consumed_def update_sched_context_def
      wp: get_sched_context_wp get_object_wp)
   by (clarsimp simp: if_live_then_nonz_cap_def obj_at_def live_def live_sc_def)
 

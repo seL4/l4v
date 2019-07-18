@@ -3870,10 +3870,6 @@ lemma update_sk_obj_ref_valid_list[wp]:
 
 crunch valid_list[wp]: set_thread_state valid_list
 
-lemma set_sched_context_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> set_sched_context ptr sc \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: set_sched_context_def wp: hoare_drop_imp)
-
 lemma update_sched_context_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> update_sched_context ptr sc \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: update_sched_context_def wp: hoare_drop_imp)
@@ -3962,10 +3958,6 @@ lemma update_sk_obj_ref_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> update_sk_obj_ref C f p v \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
   by (wpsimp simp: update_sk_obj_ref_def set_simple_ko_def partial_inv_def the_equality
        wp: set_object_wp get_object_wp get_simple_ko_wp)
-
-lemma set_sched_context_cdt_cdt_list[wp]:
-  "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> set_sched_context p v \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp simp: set_sched_context_def wp: set_object_wp get_object_wp)
 
 lemma update_sched_context_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> update_sched_context p v \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"

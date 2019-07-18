@@ -518,8 +518,8 @@ global_interpretation do_normal_transfer:
                                   set_message_info.tcb_cspace_agnostic_obj_at
                                   copy_mrs.tcb_cspace_agnostic_obj_at)
 
-global_interpretation set_sched_context: non_reply_op "set_sched_context ptr sc"
-  by unfold_locales (wpsimp simp: set_sched_context_def reply_at_ppred_def obj_at_def
+global_interpretation update_sched_context: non_reply_op "update_sched_context ptr sc"
+  by unfold_locales (wpsimp simp: update_sched_context_def reply_at_ppred_def obj_at_def
                               wp: set_object_wp get_object_wp)
 
 global_interpretation get_sched_context: non_reply_op "get_sched_context ptr"
@@ -547,7 +547,7 @@ global_interpretation get_sched_context: non_sc_op "get_sched_context ptr"
 lemma make_fault_msg_ko_at_Endpoint[wp]:
   "make_fault_msg f sender \<lbrace>\<lambda>s. P (ko_at (Endpoint ep) p s)\<rbrace>"
   by (cases f;
-      wpsimp simp: tcb_agnostic_pred_def sched_context_update_consumed_def set_sched_context_def
+      wpsimp simp: tcb_agnostic_pred_def sched_context_update_consumed_def update_sched_context_def
                wp: as_user.tcb_agnostic_obj_at set_object_wp get_object_wp
         split_del: if_split;
       clarsimp simp: obj_at_def)

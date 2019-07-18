@@ -516,7 +516,7 @@ crunch cte_wp_at[wp]: unbind_notification "cte_wp_at P p"
 
 
 crunch cte_wp_at[wp]: sched_context_maybe_unbind_ntfn "cte_wp_at P p"
-  (wp: maybeM_inv ignore: set_tcb_obj_ref set_sched_context)
+  (wp: maybeM_inv ignore: set_tcb_obj_ref update_sched_context)
 
 lemma sched_context_update_consumed_cte_wp_at [wp]:
   "\<lbrace>cte_wp_at P c\<rbrace> sched_context_update_consumed p \<lbrace>\<lambda>rv. cte_wp_at P c\<rbrace>"

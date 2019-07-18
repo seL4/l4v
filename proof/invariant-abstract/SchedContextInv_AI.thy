@@ -375,7 +375,7 @@ lemma sched_context_update_consumed_pred_tcb_at_ct[wp]:
     sched_context_update_consumed sc_ptr \<lbrace>\<lambda>_ s. pred_tcb_at proj P (cur_thread s) s\<rbrace>"
   apply (clarsimp simp: sched_context_update_consumed_def)
   apply (wpsimp wp: get_object_wp hoare_drop_imp get_sched_context_wp
-            simp: split_def set_sched_context_def set_object_def)
+            simp: split_def update_sched_context_def set_object_def)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def tcb_to_itcb_def)
   done
 
@@ -446,7 +446,7 @@ lemma sched_context_update_consumed_sc_tcb_sc_at_not_ct[wp]:
    sched_context_update_consumed sp \<lbrace> \<lambda>rv s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>"
   apply (simp add: sched_context_update_consumed_def)
   apply (wpsimp wp: get_object_wp get_sched_context_wp hoare_drop_imp split_del: if_split
-           simp: split_def set_sched_context_def set_object_def)
+           simp: split_def update_sched_context_def set_object_def)
   by (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
 
 lemma set_consumed_sc_tcb_sc_at_not_ct[wp]:
@@ -745,33 +745,33 @@ lemma sched_context_resume_valid_refills[wp]:
 
 crunch valid_refills[wp]: sort_queue "valid_refills scp budget"  (wp: mapM_wp')
 
-lemma set_sched_context_valid_refills_no_budget_update:
+lemma update_sched_context_valid_refills_no_budget_update_const:
   "\<lbrace>valid_refills scptr budget
      and K (scptr=p \<longrightarrow> sc_valid_refills newsc budget)\<rbrace>
-     set_sched_context p newsc
+     update_sched_context p (\<lambda>_. newsc)
       \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
-  by (wpsimp simp: valid_refills_def set_sched_context_def obj_at_def sc_valid_refills_def
+  by (wpsimp simp: valid_refills_def update_sched_context_def obj_at_def sc_valid_refills_def
           wp: set_object_wp get_object_wp)
 
-lemma set_sched_context_valid_refills:
+lemma update_sched_context_valid_refills:
   "\<lbrace>valid_refills scptr budget
      and K (1 \<le> length (sc_refills newsc)\<and>MIN_REFILLS \<le> sc_refill_max newsc
          \<and> length (sc_refills newsc) \<le> sc_refill_max newsc
          \<and> (sc_period newsc = 0 \<longrightarrow> (sc_refill_max newsc = MIN_REFILLS
                                \<and> length (sc_refills newsc) = MIN_REFILLS)))\<rbrace>
-     set_sched_context p newsc
+     update_sched_context p (\<lambda>_. newsc)
       \<lbrace>\<lambda>_. valid_refills scptr (if p = scptr then refills_sum (sc_refills newsc) else budget)\<rbrace>"
-  apply (wpsimp simp: valid_refills_def set_sched_context_def obj_at_def
+  apply (wpsimp simp: valid_refills_def update_sched_context_def obj_at_def
           wp: set_object_wp get_object_wp split_del: if_split)
   by clarsimp
 
-lemma set_sched_context_valid_refills':
+lemma update_sched_context_valid_refills':
   "\<lbrace>K (1 \<le> length (sc_refills newsc) \<and> MIN_REFILLS \<le> sc_refill_max newsc
           \<and> length (sc_refills newsc) \<le> sc_refill_max newsc
           \<and> (sc_period newsc = 0 \<longrightarrow> (sc_refill_max newsc = MIN_REFILLS
                                \<and> length (sc_refills newsc) = MIN_REFILLS)))\<rbrace>
-   set_sched_context p newsc  \<lbrace>\<lambda>_. valid_refills p (refills_sum (sc_refills newsc))\<rbrace>"
-  by (wpsimp simp: valid_refills_def set_sched_context_def obj_at_def
+   update_sched_context p (\<lambda>_. newsc)  \<lbrace>\<lambda>_. valid_refills p (refills_sum (sc_refills newsc))\<rbrace>"
+  by (wpsimp simp: valid_refills_def update_sched_context_def obj_at_def
             wp: set_object_wp get_object_wp)
 
 lemma update_sched_context_valid_refills_no_budget_update:
@@ -817,7 +817,7 @@ lemma refill_update_valid_refills[wp]:
   apply (clarsimp simp: refill_update_def)
   apply (rule hoare_assume_pre)
   apply (wpsimp simp: set_refills_def get_refills_def set_object_def is_round_robin_def
-                      set_sched_context_def maybe_add_empty_tail_def refill_add_tail_def
+                      update_sched_context_def maybe_add_empty_tail_def refill_add_tail_def
                       update_sched_context_def
                 split_del: if_split
                 wp: get_object_wp get_sched_context_wp hoare_vcg_if_lift2)
@@ -953,7 +953,7 @@ lemma refill_split_check_valid_refills[wp]: (* applicable only when sc is not ro
    \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
   supply if_weak_cong[cong del] schedule_used.simps[simp del]
   apply (unfold refill_split_check_def)
-  apply (simp add: Let_def set_refills_def set_sched_context_def sc_at_period_def obj_at_def
+  apply (simp add: Let_def set_refills_def update_sched_context_def sc_at_period_def obj_at_def
               split del: if_split)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ gets_sp])
@@ -1199,31 +1199,31 @@ lemma set_tcb_obj_ref_valid_refills[wp]:
   "\<lbrace>valid_refills scptr budget\<rbrace>
       set_tcb_obj_ref f ptr new \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
   apply (wpsimp simp: set_tcb_obj_ref_def set_object_def
-         wp: get_object_wp set_sched_context_valid_refills_no_budget_update get_sched_context_wp)
+         wp: get_object_wp update_sched_context_valid_refills_no_budget_update get_sched_context_wp)
   apply (clarsimp simp: valid_refills_def obj_at_def sc_valid_refills_def dest!: get_tcb_SomeD)
   done
 
 crunch valid_refills[wp]: update_sk_obj_ref, test_reschedule "valid_refills scp budget"
- (wp: set_sched_context_valid_refills_no_budget_update simp: )
+ (wp: update_sched_context_valid_refills_no_budget_update simp: )
 
 lemma sched_context_donate_valid_refills[wp]:
   "\<lbrace>valid_refills scptr budget\<rbrace>
       sched_context_donate ptr callee \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
   apply (wpsimp simp: sched_context_donate_def set_object_def get_sc_obj_ref_def
-         wp: get_object_wp set_sched_context_valid_refills_no_budget_update get_sched_context_wp)
+         wp: get_object_wp update_sched_context_valid_refills_no_budget_update get_sched_context_wp)
   done
 
 lemma reply_push_valid_refills[wp]:
   "\<lbrace>valid_refills scptr budget\<rbrace>
       reply_push caller callee reply_ptr can_donate \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
   apply (wpsimp simp: reply_push_def set_object_def partial_inv_def a_type_def no_reply_in_ts_def
-         wp: get_object_wp set_sched_context_valid_refills_no_budget_update get_sched_context_wp
+         wp: get_object_wp update_sched_context_valid_refills_no_budget_update get_sched_context_wp
              hoare_drop_imp hoare_vcg_if_lift2 hoare_vcg_all_lift
          simp_del: fun_upd_apply split: kernel_object.splits)
   done
 
 crunch valid_refills[wp]: reply_unlink_tcb "valid_refills scp budget"
- (wp: set_sched_context_valid_refills_no_budget_update gts_inv hoare_drop_imps)
+ (wp: update_sched_context_valid_refills_no_budget_update gts_inv hoare_drop_imps)
 
 locale SchedContextInv_AI =
   fixes state_ext_t :: "'state_ext::state_ext itself"
@@ -1269,7 +1269,7 @@ lemma sched_context_update_consumed_valid_refills [wp]:
  "\<lbrace>valid_refills scp budget\<rbrace> sched_context_update_consumed scptr \<lbrace>\<lambda>rv. valid_refills scp budget\<rbrace>"
   apply (simp add: sched_context_update_consumed_def)
   apply (wpsimp simp: set_object_def
-      wp: get_object_wp set_sched_context_valid_refills_no_budget_update get_sched_context_wp)
+      wp: get_object_wp update_sched_context_valid_refills_no_budget_update_const get_sched_context_wp)
   apply (clarsimp simp: valid_refills_def obj_at_def sc_valid_refills_def)
   done
 
@@ -1425,38 +1425,38 @@ lemma invoke_sched_context_invs[wp]:
 
 lemma update_sc_badge_valid_replies:
   "\<lbrace>valid_replies_pred P and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
-   set_sched_context p (sc\<lparr>sc_badge := i \<rparr>)
+   update_sched_context p (\<lambda>_. sc\<lparr>sc_badge := i \<rparr>)
    \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>"
   by (wpsimp wp: update_sched_context_wp,
       fastforce dest: ko_at_obj_congD)
 
 lemma update_sc_refills_period_refill_max_valid_replies:
   "\<lbrace>valid_replies_pred P and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
-   set_sched_context p (sc\<lparr>sc_period := period, sc_refill_max := m, sc_refills := r\<rparr>)
+   update_sched_context p (\<lambda>_. sc\<lparr>sc_period := period, sc_refill_max := m, sc_refills := r\<rparr>)
    \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>"
   by (wpsimp wp: update_sched_context_wp,
       fastforce dest: ko_at_obj_congD)
 
 lemma update_sc_refills_valid_replies[wp]:
   "\<lbrace>valid_replies_pred P and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
-   set_sched_context p (sc\<lparr>sc_refills := r\<rparr>)
+   update_sched_context p (\<lambda>_. sc\<lparr>sc_refills := r\<rparr>)
    \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>"
   by (wpsimp wp: update_sched_context_wp,
       fastforce dest: ko_at_obj_congD)
 
 lemma update_sc_badge_cur_sc_tcb:
   "\<lbrace>\<lambda>s. cur_sc_tcb s \<and> (\<exists>n. ko_at (SchedContext sc n) p s)\<rbrace>
-   set_sched_context p (sc\<lparr>sc_badge := i\<rparr>)
+   update_sched_context p (\<lambda>_. sc\<lparr>sc_badge := i\<rparr>)
    \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
-  by (wpsimp simp: set_sched_context_def set_object_def get_object_def cur_sc_tcb_def
+  by (wpsimp simp: update_sched_context_def set_object_def get_object_def cur_sc_tcb_def
                    sc_tcb_sc_at_def obj_at_def)
 
 lemma update_sc_badge_invs:
   "\<lbrace>\<lambda>s. invs s \<and> p \<noteq> idle_sc_ptr \<and> (\<exists>n. ko_at (SchedContext sc n) p s)\<rbrace>
-   set_sched_context p (sc\<lparr>sc_badge := i\<rparr>)
+   update_sched_context p (\<lambda>_. sc\<lparr>sc_badge := i\<rparr>)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                  wp: set_sched_context_valid_idle update_sc_badge_cur_sc_tcb
+                  wp: update_sched_context_valid_idle update_sc_badge_cur_sc_tcb
                       update_sc_badge_valid_replies)
   apply (auto simp: state_refs_of_def obj_at_def valid_obj_def live_def
              elim!: delta_sym_refs if_live_then_nonz_capD
@@ -1564,11 +1564,11 @@ lemma invs_valid_refills:
 
 lemma sched_context_nonref_update_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> scp \<noteq> idle_sc_ptr \<and> (\<exists>n. ko_at (SchedContext sc n) scp s)\<rbrace>
-   set_sched_context scp (sc\<lparr> sc_period := period, sc_refill_max := m, sc_refills := r0#rs\<rparr>)
+   update_sched_context scp (\<lambda>_. sc\<lparr> sc_period := period, sc_refill_max := m, sc_refills := r0#rs\<rparr>)
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def simp_del: refs_of_defs
                   wp: valid_ioports_lift update_sc_refills_period_refill_max_valid_replies
-                      set_sched_context_valid_idle set_sc_others_cur_sc_tcb)
+                      update_sched_context_valid_idle set_sc_others_cur_sc_tcb)
   apply (auto simp: state_refs_of_def obj_at_def valid_obj_def valid_sched_context_def live_def
                     live_sc_def
              elim!: delta_sym_refs if_live_then_nonz_capD
@@ -1578,8 +1578,8 @@ lemma sched_context_nonref_update_invs[wp]:
 (* move to SchedContext_AI *)
 lemma set_sc_refills_cur_sc_tcb[wp]:
   "\<lbrace>\<lambda>s. cur_sc_tcb s \<and> (\<exists>n. ko_at (SchedContext sc n) p s)\<rbrace>
-   set_sched_context p (sc\<lparr>sc_refills := rs\<rparr>) \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
-  by (wpsimp simp: set_sched_context_def cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def
+   update_sched_context p (\<lambda>_. sc\<lparr>sc_refills := rs\<rparr>) \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
+  by (wpsimp simp: update_sched_context_def cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def
                wp: set_object_wp get_object_wp)
 
 lemma update_sc_refills_cur_sc_tcb[wp]:
@@ -1588,14 +1588,14 @@ lemma update_sc_refills_cur_sc_tcb[wp]:
 
 lemma set_sc_refills_valid_idle:
   "\<lbrace>valid_idle and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
-   set_sched_context p (sc\<lparr>sc_refills := r\<rparr>)
+   update_sched_context p (\<lambda>_. sc\<lparr>sc_refills := r\<rparr>)
    \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-  by (wpsimp simp: set_sched_context_def set_object_def get_object_def valid_idle_def
+  by (wpsimp simp: update_sched_context_def set_object_def get_object_def valid_idle_def
                    pred_tcb_at_def obj_at_def)
 
 lemma sched_context_refill_update_invs:
   "\<lbrace>\<lambda>s. invs s \<and> (\<exists>n. ko_at (SchedContext sc n) scp s)\<rbrace>
-   set_sched_context scp (sc\<lparr>sc_refills := r0#rs\<rparr>)
+   update_sched_context scp (\<lambda>_. sc\<lparr>sc_refills := r0#rs\<rparr>)
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: set_sc_refills_valid_idle)
   apply (auto simp: state_refs_of_def obj_at_def valid_obj_def valid_sched_context_def live_def

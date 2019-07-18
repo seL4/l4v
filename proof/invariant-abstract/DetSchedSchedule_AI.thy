@@ -63,6 +63,11 @@ lemma invs_cur_sc_tcb [elim!]:
   "invs s \<Longrightarrow> cur_sc_tcb s"
   by (clarsimp simp: invs_def)
 
+lemma update_sched_context_sc_at_pred_n_inv:
+  "(\<And>sc. proj (f sc) = proj sc) \<Longrightarrow>
+   update_sched_context csc_ptr f \<lbrace>\<lambda>s. Q (sc_at_pred_n N proj P sc_ptr s)\<rbrace>"
+  by (wpsimp wp: update_sched_context_wp simp: sc_at_pred_n_def obj_at_def)
+
 lemma update_sched_context_sc_tcb_sc_at:
   "\<forall>x. (P (sc_tcb x) = P (sc_tcb (f x))) \<Longrightarrow>
    update_sched_context sc_ptr f \<lbrace>\<lambda>s. Q (sc_tcb_sc_at P sc_ptr s)\<rbrace>"
@@ -2965,13 +2970,6 @@ lemma update_sched_context_valid_ready_qs:
                       active_sc_tcb_at_defs st_tcb_at_kh_if_split in_ready_q_def refills_capacity_def
                split: option.splits)
 
-lemma update_sched_context_valid_ready_qs_not_queued:
-  "\<lbrace>valid_ready_qs and sc_not_in_ready_q sc_ptr\<rbrace>
-   update_sched_context sc_ptr f
-   \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
-  by (wpsimp wp: update_sched_context_valid_ready_qs
-              simp: in_queue_2_def not_queued_def)
-
 lemma update_sched_context_valid_release_q:
   "\<lbrace>valid_release_q
      and (\<lambda>s.  \<forall>t. bound_sc_tcb_at ((=) (Some sc_ptr)) t s
@@ -2983,12 +2981,6 @@ lemma update_sched_context_valid_release_q:
   apply (wpsimp simp: set_object_def wp: get_object_wp)
   by (clarsimp simp: active_sc_tcb_at_defs get_tcb_rev in_release_q_def
                dest!: get_tcb_SomeD) solve_valid_release_q
-
-lemma update_sched_context_valid_release_q_not_in_release_q:
-  "\<lbrace>valid_release_q and sc_not_in_release_q ref\<rbrace>
-   update_sched_context ref f \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
-  by (wpsimp wp: update_sched_context_valid_release_q
-           simp: not_in_release_q_def in_release_q_def)
 
 lemma update_sched_context_valid_ep_q:
   "\<lbrace>valid_ep_q and (\<lambda>s. \<forall>t. bound_sc_tcb_at ((=) (Some sc_ptr)) t s
@@ -3042,7 +3034,6 @@ lemma update_sched_context_weak_valid_sched_action_simple_sched_action:
    update_sched_context ref f
    \<lbrace>\<lambda>_. weak_valid_sched_action::det_state \<Rightarrow> _\<rbrace>"
   by (wpsimp wp: update_sched_context_weak_valid_sched_action_act_not)
-
 lemma update_sched_context_switch_in_cur_domain[wp]:
   "\<lbrace>switch_in_cur_domain\<rbrace>
       update_sched_context ref f \<lbrace>\<lambda>_. switch_in_cur_domain\<rbrace>"
@@ -3703,38 +3694,6 @@ lemma refill_split_check_active_sc_tcb_at[wp]:
   by (wpsimp wp: active_sc_tcb_at_update_sched_context_no_change
       simp: Let_def set_refills_def split_del: if_split)
 
-lemma budget_sufficient_update_sched_context_no_budget_change:
-  "\<lbrakk>\<And>x. sufficient_refills 0 (sc_refills (f x)) = sufficient_refills 0 (sc_refills x)\<rbrakk>
-     \<Longrightarrow> \<lbrace>\<lambda>s. P (budget_sufficient t s)\<rbrace> update_sched_context scp f \<lbrace>\<lambda>rv s. P (budget_sufficient t s)\<rbrace>"
-  apply (clarsimp simp:  update_sched_context_def)
-  apply (rule hoare_seq_ext[OF _ get_object_sp])
-  apply (wpsimp simp: pred_tcb_at_def obj_at_def set_object_def wp: get_object_wp)
-  apply (rule conjI; clarsimp elim!: rsubst[where P=P])
-  by (rule iffI conjI; fastforce simp: is_refill_sufficient_def obj_at_def split: if_split_asm)
-
-lemma budget_ready_update_sched_context_no_time_change_gen:
-  "\<lbrace>\<lambda>s. P (budget_ready t s)
-    \<and> (\<forall>x.((r_time (hd (sc_refills (f x)))) \<le> (cur_time s) + kernelWCET_ticks) =
-            ((r_time (hd (sc_refills x))) \<le> (cur_time s) + kernelWCET_ticks))\<rbrace>
-     update_sched_context scp f \<lbrace>\<lambda>rv s. P (budget_ready t s)\<rbrace>"
-  apply (clarsimp simp:  update_sched_context_def)
-  apply (rule hoare_seq_ext[OF _ get_object_sp])
-  apply (wpsimp simp: pred_tcb_at_def obj_at_def set_object_def wp: get_object_wp)
-  apply (rule conjI; clarsimp elim!: rsubst[where P=P])
-  apply (rule iffI conjI; auto simp: is_refill_ready_def obj_at_def split: if_split_asm)
-  by (rule_tac x=scpa in exI; clarsimp)
-
-lemma budget_ready_update_sched_context_no_time_change:
-  "\<lbrace>\<lambda>s. P (budget_ready t s) \<and> (\<exists>sc n. ko_at (SchedContext sc n) scp s
-    \<and> ((r_time (hd (sc_refills (f sc)))) \<le> (cur_time s) + kernelWCET_ticks) =
-            ((r_time (hd (sc_refills sc))) \<le> (cur_time s) + kernelWCET_ticks))\<rbrace>
-     update_sched_context scp f \<lbrace>\<lambda>rv s. P (budget_ready t s)\<rbrace>"
-  apply (clarsimp simp:  update_sched_context_def)
-  apply (rule hoare_seq_ext[OF _ get_object_sp])
-  apply (wpsimp simp: pred_tcb_at_def obj_at_def set_object_def wp: get_object_wp)
-  apply (rule conjI; clarsimp elim!: rsubst[where P=P])
-  apply (rule iffI conjI; auto simp: is_refill_ready_def obj_at_def split: if_split_asm)
-  by (rule_tac x=scpa in exI; clarsimp)+
 
 crunches refill_split_check
   for ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
@@ -4115,8 +4074,10 @@ lemma refills_remove1_valid_sched[wp]:
   " \<lbrace>valid_sched\<rbrace>
     set_sc_obj_ref sc_replies_update scptr new
     \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
-  by (wpsimp wp: valid_sched_lift active_sc_tcb_at_update_sched_context_no_change
-                budget_ready_update_sched_context_no_change budget_sufficient_update_sched_context_no_change
+  by (wpsimp wp: valid_sched_lift
+                 active_sc_tcb_at_update_sched_context_no_change
+                 budget_ready_update_sched_context_no_change
+                 budget_sufficient_update_sched_context_no_change
          simp: set_sc_obj_ref_def set_object_def)+
 
 crunches update_sk_obj_ref,get_sk_obj_ref
@@ -4641,18 +4602,6 @@ crunches set_sc_obj_ref
 for cur_time[wp]: "\<lambda>s. P (cur_time s)"
   (wp: hoare_drop_imps hoare_vcg_if_lift2)
 
-lemma set_sc_obj_ref_valid_ready_qs_not_queued:
-  "\<lbrace>valid_ready_qs and sc_not_in_ready_q sc_ptr\<rbrace>
-        set_sc_obj_ref f sc_ptr new \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def
-         wp: update_sched_context_valid_ready_qs_not_queued)
-
-lemma set_sc_obj_ref_valid_release_q_not_queued:
-  "\<lbrace>valid_release_q and sc_not_in_release_q sc_ptr\<rbrace>
-        set_sc_obj_ref f sc_ptr new \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def
-         wp: update_sched_context_valid_release_q_not_in_release_q)
-
 lemma tcb_release_remove_not_in_release_q':
   "tcb_release_remove thread \<lbrace>not_in_release_q t \<rbrace>"
   by (wpsimp simp: tcb_release_remove_def not_in_release_q_def tcb_sched_dequeue_def)
@@ -4918,18 +4867,6 @@ lemma set_mrs_etcbs[wp]:
   supply if_split [split del]
   by (wpsimp simp: zipWithM_x_mapM wp: mapM_wp' set_object_wp)
 
-lemma set_sched_context_etcbs[wp]:
-  "set_sched_context p sc \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace>"
-  unfolding set_sched_context_def
-  apply (wpsimp wp: set_object_wp get_object_wp)
-  by (auto simp: obj_at_def etcbs_of'_def elim!: rsubst[where P=P])
-
-lemma update_sched_context_etcbs[wp]:
-  "update_sched_context p f \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace>"
-  unfolding update_sched_context_def
-  apply (wpsimp wp: set_object_wp get_object_wp)
-  by (auto simp: obj_at_def etcbs_of'_def elim!: rsubst[where P=P])
-
 crunches set_message_info,set_consumed,reply_unlink_sc
   for etcbs[wp]: "\<lambda>s. P (etcbs_of s)"
   (wp: crunch_wps)
@@ -5017,7 +4954,7 @@ lemma set_message_info_valid_sched[wp]:
 
 crunches store_word_offs
   for active_sc_tcb_at[wp]: "\<lambda>s. P (active_sc_tcb_at t s)"
-  (simp: zipWithM_x_mapM wp: dmo_active_sc_tcb_at mapM_wp' active_sc_tcb_at_set_object_no_change_sc ignore: set_sched_context)
+  (simp: zipWithM_x_mapM wp: dmo_active_sc_tcb_at mapM_wp' active_sc_tcb_at_set_object_no_change_sc ignore: update_sched_context)
 
 lemma reply_remove_not_queued[wp]:
   "\<lbrace>not_queued t and scheduler_act_not t and valid_objs::det_state \<Rightarrow> _\<rbrace>
@@ -5680,7 +5617,7 @@ lemma unbind_maybe_notification_valid_sched[wp]:
 
 lemma sched_context_update_consumed_active_sc_tcb_at[wp]:
   "\<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>y s. P (active_sc_tcb_at t s)\<rbrace>"
-  apply (clarsimp simp: sched_context_update_consumed_def set_sched_context_def)
+  apply (clarsimp simp: sched_context_update_consumed_def update_sched_context_def)
   apply (wpsimp simp: set_object_def wp: get_object_wp get_sched_context_wp)
   apply (clarsimp elim!: rsubst[where P=P])
   apply (rule iffI; clarsimp simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def test_sc_refill_max_def split: if_splits)
@@ -5690,7 +5627,7 @@ lemma sched_context_update_consumed_active_sc_tcb_at[wp]:
 
 lemma sched_context_update_consumed_budget_sufficient[wp]:
   "\<lbrace>\<lambda>s. P (budget_sufficient t s)\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>y s. P (budget_sufficient t s)\<rbrace>"
-  apply (clarsimp simp: sched_context_update_consumed_def set_sched_context_def)
+  apply (clarsimp simp: sched_context_update_consumed_def update_sched_context_def)
   apply (wpsimp simp: set_object_def wp: get_object_wp get_sched_context_wp)
   apply (clarsimp elim!: rsubst[where P=P])
   apply (rule iffI; clarsimp simp: pred_tcb_at_def obj_at_def is_refill_sufficient_def split: if_splits)
@@ -5700,7 +5637,7 @@ lemma sched_context_update_consumed_budget_sufficient[wp]:
 
 lemma sched_context_update_consumed_budget_ready[wp]:
   "\<lbrace>\<lambda>s. P (budget_ready t s)\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>y s. P (budget_ready t s)\<rbrace>"
-  apply (clarsimp simp: sched_context_update_consumed_def set_sched_context_def)
+  apply (clarsimp simp: sched_context_update_consumed_def update_sched_context_def)
   apply (wpsimp simp: set_object_def wp: get_object_wp get_sched_context_wp)
   apply (clarsimp elim!: rsubst[where P=P])
   apply (rule iffI; clarsimp simp: pred_tcb_at_def obj_at_def is_refill_ready_def split: if_splits)
@@ -6785,7 +6722,7 @@ lemma sched_context_update_consumed_sc_tcb_sc_at_inv'_none[wp]:
   "sched_context_update_consumed sp \<lbrace> \<lambda>s. sc_tcb_sc_at P scp s\<rbrace>"
   apply (simp add: sched_context_update_consumed_def)
   apply (wpsimp wp: get_object_wp get_sched_context_wp hoare_drop_imp split_del: if_split
-           simp: split_def set_sched_context_def set_object_def)
+           simp: split_def update_sched_context_def set_object_def)
   by (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
 
 lemma set_consumed_sc_tcb_sc_at_inv'_none[wp]:
@@ -9711,7 +9648,7 @@ crunches set_extra_badge
 lemma sched_context_update_consumed_ko_at_Endpoint[wp]:
   "sched_context_update_consumed scptr \<lbrace>\<lambda>s. Q (ko_at (Endpoint x) p s)\<rbrace>"
   unfolding sched_context_update_consumed_def
-  apply (wpsimp simp: set_sched_context_def wp: set_object_wp get_object_wp)
+  apply (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
   done
 
 crunches set_extra_badge
@@ -13340,7 +13277,7 @@ lemma refill_unblock_check_active_sc_tcb_at_ct[wp]:
 lemma sched_context_update_consumed_sc_tcb_sc_at[wp]:
   "sched_context_update_consumed e \<lbrace>sc_tcb_sc_at P sc_ptr\<rbrace>"
   unfolding sched_context_update_consumed_def
-  apply (wpsimp simp: set_sched_context_def wp: set_object_wp get_object_wp)
+  apply (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
   by (clarsimp simp: obj_at_def sc_tcb_sc_at_def)
 
 lemma set_consumed_sc_tcb_sc_at[wp]:
@@ -13438,7 +13375,7 @@ lemma sched_context_update_consumed_sc_tcb_sc_at_inv':
                                  \<and> budget_ready t s \<and> budget_sufficient t s) scp s \<rbrace>"
   apply (simp add: sched_context_update_consumed_def)
   apply (wpsimp wp: get_object_wp get_sched_context_wp hoare_drop_imp split_del: if_split
-              simp: split_def set_sched_context_def set_object_def)
+           simp: split_def update_sched_context_def set_object_def)
   by (clarsimp simp: sc_tcb_sc_at_def obj_at_def get_tcb_def fun_upd_def[symmetric]
                      budget_ready_sc_non_refill_update_kheap
                      budget_sufficient_sc_non_refill_update_kheap
@@ -13710,7 +13647,7 @@ lemma refill_update_cur_thread[wp]:
    refill_update sc_ptr period budget mrefills
    \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
   unfolding refill_update_def maybe_add_empty_tail_def refill_add_tail_def
-  by (wpsimp wp: is_round_robin_wp set_object_wp get_object_wp simp: set_sched_context_def)
+  by (wpsimp wp: is_round_robin_wp set_object_wp get_object_wp simp: update_sched_context_def)
 
 crunches refill_add_tail, set_refills, refill_update, refill_new
   for st_tcb_at[wp]: "\<lambda>s. P (st_tcb_at Q t s)"
@@ -13850,7 +13787,7 @@ lemma refill_update_valid_blocked:
   unfolding refill_update_def maybe_add_empty_tail_def
   apply (wpsimp wp: refill_add_tail_valid_blocked is_round_robin_wp set_object_wp
                     get_object_wp
-              simp: set_sched_context_def)
+              simp: update_sched_context_def)
   apply (clarsimp simp: valid_blocked_def active_sc_tcb_at_defs st_tcb_at_kh_def sc_at_pred_n_def
                  split: option.splits
          | safe)+
@@ -13965,14 +13902,13 @@ lemma set_refills_valid_sched_action:
   apply (clarsimp simp: switch_in_cur_domain_def weak_valid_sched_action_def)
   done
 
-lemma set_sched_context_valid_ready_qs_helper:
   "\<lbrace>valid_ready_qs and
        (\<lambda>s. \<forall>tcb_ptr. bound_sc_tcb_at (\<lambda>x. x = (Some sc_ptr)) tcb_ptr s \<longrightarrow>
                    in_ready_q tcb_ptr s \<longrightarrow>
                    (0 < mrefills) \<and>
                    (MIN_BUDGET \<le> budget) \<and>
                    (new_time \<le> cur_time s + kernelWCET_ticks))\<rbrace>
-   set_sched_context sc_ptr (sc\<lparr>sc_period := period,
+   update_sched_context sc_ptr (\<lambda>_. sc\<lparr>sc_period := period,
                                 sc_refill_max := mrefills,
                                 sc_refills := (\<lparr>r_time = new_time, r_amount = budget\<rparr> # tailh)\<rparr>)
    \<lbrace>\<lambda>r. valid_ready_qs\<rbrace>"
@@ -14127,7 +14063,7 @@ lemma refill_update_valid_blocked_except_set:
          wp update_sched_context_wp)+
   done
 
-lemma set_sched_context_valid_ready_qs_helper2:
+lemma update_sched_context_valid_ready_qs_helper2:
   "\<lbrace>valid_ready_qs and
     (\<lambda>s. \<forall>tcb_ptr. bound_sc_tcb_at ((=) (Some sc_ptr)) tcb_ptr s \<longrightarrow>
                    in_ready_q tcb_ptr s \<longrightarrow>
@@ -14155,7 +14091,7 @@ lemma refill_new_valid_ready_qs:
    \<lbrace>\<lambda>rv. valid_ready_qs\<rbrace>"
   supply if_split [split del]
   unfolding refill_new_def maybe_add_empty_tail_def refill_add_tail_def
-  apply (wpsimp wp: is_round_robin_wp set_sched_context_valid_ready_qs_helper2 set_refills_valid_ready_qs
+  apply (wpsimp wp: is_round_robin_wp update_sched_context_valid_ready_qs_helper2 set_refills_valid_ready_qs
                     hoare_vcg_all_lift hoare_vcg_if_lift2 hoare_vcg_imp_lift' | wp update_sched_context_wp )+
   apply (clarsimp simp: obj_at_def in_ready_q_def)
   by (intro conjI; intro impI allI; clarsimp)+
@@ -14166,13 +14102,11 @@ lemma update_sc_consumed_active_sc_tcb_at[wp]:
   "\<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace>
    update_sched_context csc (sc_consumed_update (\<lambda>_. consumed))
    \<lbrace>\<lambda>_ s:: det_state. P (active_sc_tcb_at t s) \<rbrace>"
-  apply (wpsimp wp: update_sched_context_wp)
   apply (erule rsubst[where P=P])
   apply (clarsimp simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def
                         test_sc_refill_max_def
                   cong: conj_cong imp_cong split: option.splits)
   apply fastforce
-  done
 
 lemma update_sc_consumed_budget_sufficient[wp]:
   "\<lbrace>\<lambda>s. P (budget_sufficient t s)\<rbrace>
@@ -14288,7 +14222,7 @@ lemma send_fault_ipc_sc_tcb_sc_at:
 
 lemma sc_refills_update_sc_tcb_sc_at[wp]:
   "update_sched_context csc_ptr (sc_refills_update a) \<lbrace>sc_tcb_sc_at P sc_ptr\<rbrace>"
-  by (wpsimp wp: update_sched_context_wp simp: sc_tcb_sc_at_def obj_at_def)
+  by (wpsimp wp: update_sched_context_sc_at_pred_n_inv)
 
 lemma check_budget_sc_tcb_sc_at[wp]:
   "check_budget \<lbrace>sc_tcb_sc_at P sc_ptr\<rbrace>"
@@ -14437,7 +14371,7 @@ lemma refill_budget_check_valid_blocked:
    refill_budget_check consumed capacity
    \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   unfolding refill_budget_check_def
-  by (wpsimp wp: update_sched_context_valid_blocked
+  by (wpsimp wp: update_sched_context_valid_blocked_except_set'
            simp: refill_full_def)
 
 lemma refill_budget_check_valid_idle_etcb:
@@ -14888,7 +14822,7 @@ apply clarsimp
         apply simp
        apply (wpsimp wp: sc_consumed_update_valid_queues ct_not_in_release_q_lift
                          update_sched_context_weak_valid_sched_action' active_sc_tcb_at_cur_thread_lift
-                         update_sched_context_valid_blocked' update_sched_context_cur_sc_tcb_no_change
+                         update_sched_context_valid_blocked_except_set' update_sched_context_cur_sc_tcb_no_change
                          active_sc_tcb_at_update_sched_context_no_change sc_consumed_add_invs
                    simp: schact_is_rct_def)
       apply (wp update_sc_consumed_valid_sched)
@@ -15042,41 +14976,6 @@ lemma tcb_release_remove_sc_tcb_at[wp]:
    unfolding tcb_release_remove_def
    by wpsimp
 
-lemma sc_badge_set_valid_idle:
-  "\<lbrace>valid_idle and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s)) and K (p \<noteq> idle_sc_ptr)\<rbrace>
-   set_sched_context p (sc\<lparr>sc_badge := i\<rparr>)
-   \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-  by (wpsimp simp: set_sched_context_def set_object_def get_object_def valid_idle_def
-                   pred_tcb_at_def obj_at_def)
-
-lemma sc_badge_set_cur_sc_tcb:
-  "\<lbrace>cur_sc_tcb and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
-   set_sched_context p (sc\<lparr>sc_badge := i\<rparr>)
-   \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
-  by (wpsimp simp: set_sched_context_def set_object_def get_object_def obj_at_def cur_sc_tcb_def
-                   sc_tcb_sc_at_def)
-
-lemma sc_badge_set_invs:
-  "\<lbrace>invs and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s)) and K (p \<noteq> idle_sc_ptr)\<rbrace>
-   set_sched_context p (sc\<lparr>sc_badge := i\<rparr>)
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
-            simp_del: fun_upd_apply
-                  wp: update_sched_context_valid_replies
-                      sc_badge_set_valid_idle sc_badge_set_cur_sc_tcb)
-  apply safe
-     apply (fastforce simp: valid_obj_def)
-    apply (fastforce simp: if_live_then_nonz_cap_def obj_at_def live_def)
-   apply (fastforce simp: replies_with_sc_upd_replies_trivial)
-  by (fastforce simp: state_refs_of_def refs_of_def fun_upd_idem)
-
-lemma set_sc_badge_sc_tcb_sc_at:
-  "set_sched_context sc_ptr (sc\<lparr>sc_badge := badge\<rparr>)
-   \<lbrace>\<lambda>s. sc_tcb_sc_at (\<lambda>a. a = sc_tcb sc) sc_ptr s\<rbrace>"
-  apply (wpsimp simp: set_sched_context_def wp: set_object_wp get_object_wp)
-  apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
-  done
-
 lemma set_sc_badge_tcb_ready_time:
   "\<lbrace>\<lambda>s. P (tcb_ready_time t s) \<and> (\<exists>n. obj_at (\<lambda>x. x = SchedContext sc n) sc_ptr s)\<rbrace>
    set_sched_context sc_ptr (sc\<lparr>sc_badge := badge\<rparr>)
@@ -15086,52 +14985,6 @@ lemma set_sc_badge_tcb_ready_time:
   apply (clarsimp simp: tcb_ready_time_def obj_at_def get_tcb_def elim!: rsubst[where P=P]
                  dest!: get_tcb_SomeD split: option.splits)
   done
-
-lemma set_sc_badge_active_sc_tcb_at:
-  "\<lbrace>\<lambda>s. P (active_sc_tcb_at tcb_ptr s) \<and> (\<exists>n. obj_at (\<lambda>x. x = SchedContext sc n) sc_ptr s)\<rbrace>
-   set_sched_context sc_ptr (sc\<lparr>sc_badge := badge\<rparr>)
-   \<lbrace>\<lambda>r s. P (active_sc_tcb_at tcb_ptr s)\<rbrace>"
-  apply (wpsimp wp: update_sched_context_wp)
-  apply (erule rsubst[where P=P])
-  apply (clarsimp simp: active_sc_tcb_at_defs)
-  apply fastforce
-  done
-
-lemma set_sc_badge_budget_ready:
-  "\<lbrace>\<lambda>s. P (budget_ready tcb_ptr s) \<and> (\<exists>n. obj_at (\<lambda>x. x = SchedContext sc n) sc_ptr s)\<rbrace>
-   set_sched_context sc_ptr (sc\<lparr>sc_badge := badge\<rparr>)
-   \<lbrace>\<lambda>r s. P (budget_ready tcb_ptr s)\<rbrace>"
-  apply (wpsimp wp: update_sched_context_wp)
-  apply (erule rsubst[where P=P])
-  apply (clarsimp simp: active_sc_tcb_at_defs is_refill_ready_def)
-  apply fastforce
-  done
-
-lemma set_sc_badge_budget_sufficient:
-  "\<lbrace>\<lambda>s. P (budget_sufficient tcb_ptr s) \<and> ( \<exists>n. obj_at (\<lambda>x. x = SchedContext sc n) sc_ptr s)\<rbrace>
-   set_sched_context sc_ptr (sc\<lparr>sc_badge := badge\<rparr>)
-   \<lbrace>\<lambda>r s. P (budget_sufficient tcb_ptr s)\<rbrace>"
-  apply (wpsimp wp: update_sched_context_wp)
-  apply (erule rsubst[where P=P])
-  apply (clarsimp simp: active_sc_tcb_at_defs is_refill_sufficient_def)
-  apply fastforce
-  done
-
-lemma update_sc_badge_valid_sched:
-  "\<lbrace>valid_sched and (\<lambda>s. \<exists>n. obj_at (\<lambda>x. x = SchedContext sc n) sc_ptr s)\<rbrace>
-   set_sched_context sc_ptr (sc\<lparr>sc_badge := badge\<rparr>)
-   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-   by (wpsimp wp: valid_sched_lift_pre_conj set_sc_badge_active_sc_tcb_at set_sc_badge_budget_ready
-                  set_sc_badge_budget_sufficient set_sc_badge_tcb_ready_time)
-
-lemma update_sc_badge_schact_is_rct:
-  "set_sched_context sc_ptr (sc\<lparr>sc_badge := badge\<rparr>) \<lbrace>schact_is_rct\<rbrace>"
-  by (wpsimp wp: update_sched_context_wp simp: schact_is_rct_def)
-
-lemma set_sc_badge_ready_or_released:
-  "set_sched_context sc_ptr (sc\<lparr>sc_badge := badge\<rparr>) \<lbrace>ready_or_released\<rbrace>"
-  by (wpsimp wp: update_sched_context_wp
-           simp: ready_or_released_def)
 
 lemma tcb_queue_remove_schact_is_rct:
   "tcb_sched_action tcb_sched_dequeue tcb_ptr \<lbrace>schact_is_rct\<rbrace>"
@@ -15910,33 +15763,6 @@ lemma end_timeslice_active_sc_tcb_at_ct[wp]:
      end_timeslice canTimeout \<lbrace>\<lambda>_ s::det_state. active_sc_tcb_at (cur_thread s) s\<rbrace>"
   by (rule hoare_lift_Pf[where f=cur_thread]) wpsimp+
 
-lemma update_sc_consumed_active_sc_tcb_at[wp]:
-  "\<lbrace>\<lambda>s. active_sc_tcb_at t s\<rbrace>
-     update_sched_context scptr (\<lambda>sc. sc\<lparr>sc_consumed := f sc\<rparr>)
-      \<lbrace>\<lambda>_ s. active_sc_tcb_at t s\<rbrace>"
-  apply (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
-  apply (clarsimp simp: active_sc_tcb_at_defs split: option.splits)
-  by (intro conjI impI, clarsimp, rule_tac x=scp in exI, fastforce)
-
-lemma update_sc_consumed_active_sc_tcb_at_ct[wp]:
-  "\<lbrace>\<lambda>s. active_sc_tcb_at (cur_thread s) s\<rbrace>
-     update_sched_context scptr (\<lambda>sc. sc\<lparr>sc_consumed := (f sc)\<rparr>) \<lbrace>\<lambda>_ s. active_sc_tcb_at (cur_thread s) s\<rbrace>"
-  by (rule hoare_lift_Pf[where f=cur_thread]) wpsimp+
-
-lemma update_sc_refills_active_sc_tcb_at[wp]:
-  "\<lbrace>active_sc_tcb_at t\<rbrace>
-     update_sched_context scptr (\<lambda>sc. sc\<lparr>sc_refills := (f sc)\<rparr>) \<lbrace>\<lambda>_. active_sc_tcb_at t\<rbrace>"
-  apply (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
-  apply (clarsimp simp: active_sc_tcb_at_defs split: option.splits)
-  by (intro conjI impI, clarsimp, rule_tac x=scp in exI, fastforce)
-
-lemma update_sc_refills_active_sc_tcb_at_ct[wp]:
-  "\<lbrace>\<lambda>s. active_sc_tcb_at (cur_thread s) s\<rbrace>
-     update_sched_context scptr (\<lambda>sc. sc\<lparr>sc_refills := (f sc)\<rparr>) \<lbrace>\<lambda>_ s. active_sc_tcb_at (cur_thread s) s\<rbrace>"
-  apply (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
-  apply (clarsimp simp: active_sc_tcb_at_defs split: option.splits)
-  by (intro conjI impI, clarsimp, rule_tac x=scp in exI, fastforce)
-
 lemma set_refills_active_sc_tcb_at[wp]:
   "\<lbrace>\<lambda>s. active_sc_tcb_at t s\<rbrace>
      set_refills scptr new \<lbrace>\<lambda>_ s. active_sc_tcb_at t s\<rbrace>"
@@ -15998,46 +15824,15 @@ lemma check_budget_restart_valid_sched:
   done
 
 (* moved?
-lemma update_sc_consumed_active_sc_tcb_at[wp]:
-  "\<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace>
-   update_sched_context csc (sc_consumed_update (\<lambda>_. consumed))
-   \<lbrace>\<lambda>_ s:: det_state. P (active_sc_tcb_at t s) \<rbrace>"
-  apply (wpsimp wp: update_sched_context_wp)
-  apply (erule rsubst[where P=P])
-  apply (clarsimp simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def
-                        test_sc_refill_max_def
-                  cong: conj_cong imp_cong split: option.splits)
-  apply fastforce
-  done
-
-lemma update_sc_consumed_budget_sufficient[wp]:
-  "\<lbrace>\<lambda>s. P (budget_sufficient t s)\<rbrace>
-   update_sched_context csc (sc_consumed_update (\<lambda>_. consumed))
-   \<lbrace>\<lambda>_ s:: det_state. P (budget_sufficient t s) \<rbrace>"
-  apply (wpsimp wp: update_sched_context_wp)
-  apply (erule rsubst[where P=P])
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_sufficient_def
-                  cong: conj_cong imp_cong split: option.splits)
-  apply fastforce
-  done
-
-lemma update_sc_consumed_budget_ready[wp]:
-  "\<lbrace>\<lambda>s. P (budget_ready t s)\<rbrace>
-   update_sched_context csc (sc_consumed_update (\<lambda>_. consumed))
-   \<lbrace>\<lambda>_ s:: det_state. P (budget_ready t s) \<rbrace>"
-  apply (wpsimp wp: update_sched_context_wp)
-  apply (erule rsubst[where P=P])
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_ready_def
-                  cong: conj_cong imp_cong split: option.splits)
-  apply fastforce
-  done
-*)
 (* FIXME: this should replace existing, weaker, lemma *)
 lemma update_sc_consumed_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace>
    update_sched_context csc (sc_consumed_update (\<lambda>_. consumed))
    \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  by (wpsimp wp: valid_sched_lift)
+  by (wpsimp wp: valid_sched_lift
+                 budget_ready_update_sched_context_no_change
+                 budget_sufficient_update_sched_context_no_change
+                 active_sc_tcb_at_update_sched_context_no_change)
 
 lemma handle_yield_valid_sched[wp]:
   "\<lbrace>valid_sched and invs and ct_not_in_release_q and ct_not_queued and

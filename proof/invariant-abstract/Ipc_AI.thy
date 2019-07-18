@@ -1676,7 +1676,7 @@ lemma do_ipc_transfer_aobj_at:
   apply (wpsimp wp: as_user.aobj_at set_mrs.aobj_at hoare_drop_imps mapM_wp' transfer_caps_loop_aobj_at)
        apply (case_tac f, simp split del: if_split)
           by (wpsimp simp: sched_context_update_consumed_def
-                 wp: as_user.aobj_at hoare_drop_imps set_sched_context.aobj_at)+
+                 wp: as_user.aobj_at hoare_drop_imps update_sched_context.aobj_at)+
 
 lemma do_ipc_transfer_valid_arch[wp]:
   "\<lbrace>valid_arch_state\<rbrace>
@@ -1892,7 +1892,7 @@ lemma sched_context_update_consumed_valid_idle [wp]:
   "\<lbrace>valid_idle\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: sched_context_update_consumed_def)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (wpsimp simp: sched_context_update_consumed_def set_sched_context_def set_object_def
+  apply (wpsimp simp: sched_context_update_consumed_def update_sched_context_def set_object_def
                       get_object_def valid_idle_def obj_at_def pred_tcb_at_def)
   done
 
@@ -1940,7 +1940,7 @@ lemma sched_context_update_consumed_cur_sc_tcb [wp]:
   "\<lbrace>cur_sc_tcb\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
   apply (simp add: sched_context_update_consumed_def)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (wpsimp simp: sched_context_update_consumed_def set_sched_context_def set_object_def
+  apply (wpsimp simp: sched_context_update_consumed_def update_sched_context_def set_object_def
                       get_object_def cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
   done
 

@@ -746,32 +746,18 @@ lemma set_simple_ko_mdb [wp]:
   "\<lbrace>valid_mdb\<rbrace> set_simple_ko f p ep \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
   by (wp valid_mdb_lift)
 
-lemma set_sched_context_caps_of_state [wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_sched_context ptr val \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
-  apply (wpsimp simp: set_sched_context_def get_object_def set_object_def)
-  apply (subst cte_wp_caps_of_lift; auto simp: cte_wp_at_cases)
-  done
-
-lemma set_sched_context_revokable [wp]:
-  "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> set_sched_context ptr val \<lbrace>\<lambda>r s. P (is_original_cap s)\<rbrace>"
-  by (wpsimp simp: set_sched_context_def set_object_def get_object_def)
-
-lemma set_sched_context_mdb [wp]:
-  "\<lbrace>valid_mdb\<rbrace> set_sched_context ptr val \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
-  by (wpsimp simp: set_sched_context_def get_object_def wp: valid_mdb_lift)
-
 lemma update_sched_context_caps_of_state [wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> update_sched_context ptr f \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
   apply (wpsimp simp: update_sched_context_def get_object_def set_object_def)
   apply (subst cte_wp_caps_of_lift; auto simp: cte_wp_at_cases)
   done
 
 lemma update_sched_context_revokable [wp]:
-  "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> update_sched_context ptr f \<lbrace>\<lambda>r s. P (is_original_cap s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>r s. P (is_original_cap s)\<rbrace>"
   by (wpsimp simp: update_sched_context_def set_object_def get_object_def)
 
 lemma update_sched_context_mdb [wp]:
-  "\<lbrace>valid_mdb\<rbrace> update_sched_context ptr f \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
+  "\<lbrace>valid_mdb\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
   by (wpsimp simp: update_sched_context_def get_object_def wp: valid_mdb_lift)
 
 lemma cte_wp_at_after_update:
@@ -1612,13 +1598,13 @@ interpretation
   as_user: non_aobj_non_cap_non_mem_op "as_user p g" +
   thread_set: non_aobj_non_astate_non_mem_op "thread_set f p" +
   set_tcb_sched_context: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_sched_context_update p sc" +
-  set_sched_context: non_aobj_non_cap_non_mem_op "set_sched_context p sc'" +
+  update_sched_context: non_aobj_non_cap_non_mem_op "update_sched_context p sc'" +
   update_sched_context: non_aobj_non_cap_non_mem_op "update_sched_context p update" +
   set_tcb_yt: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_yield_to_update p sc"
   apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
   unfolding set_simple_ko_def set_thread_state_def set_sc_obj_ref_def
             set_tcb_obj_ref_def thread_set_def set_cap_def[simplified split_def]
-            as_user_def set_mrs_def set_sched_context_def update_sched_context_def
+            as_user_def set_mrs_def update_sched_context_def update_sched_context_def
   apply -
   supply validNF_prop[wp_unsafe del]
   apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp split del: if_split)+\<close>)
@@ -1632,7 +1618,7 @@ interpretation
   apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
   unfolding set_simple_ko_def set_thread_state_def set_sc_obj_ref_def
             set_tcb_obj_ref_def thread_set_def set_cap_def[simplified split_def]
-            as_user_def set_mrs_def set_sched_context_def update_sched_context_def
+            as_user_def set_mrs_def update_sched_context_def update_sched_context_def
   apply -
   supply validNF_prop[wp_unsafe del]
   apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp split del: if_split)+\<close>)
@@ -2122,11 +2108,11 @@ lemma update_sched_context_refs_of_update:
   apply (clarsimp simp: state_refs_of_def ext obj_at_def elim!: rsubst[where P = P])
   done
 
-lemma set_sched_context_refs_of [wp]:
+lemma update_sched_context_refs_of [wp]:
  "\<lbrace>\<lambda>s. P ((state_refs_of s) (p := refs_of_sc val))\<rbrace>
-    set_sched_context p val
+    update_sched_context p (\<lambda>_. val)
   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: set_sched_context_def set_object_def get_object_def)
+  apply (wpsimp simp: update_sched_context_def set_object_def get_object_def)
   apply (clarsimp simp: state_refs_of_def ext elim!: rsubst[where P = P])
   done
 
@@ -2176,11 +2162,11 @@ lemma update_sched_context_iflive_update:
   by (wpsimp simp: update_sched_context_def get_object_def obj_at_def live_def)
 
 
-lemma set_sched_context_iflive[wp]:
+lemma update_sched_context_iflive[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and>
         (live_sc val \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
-     set_sched_context ptr val \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: set_sched_context_def get_object_def live_def live_sc_def obj_at_def)
+     update_sched_context ptr (\<lambda>_. val) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  by (wpsimp simp: update_sched_context_def get_object_def live_def live_sc_def obj_at_def)
 
 lemma update_sched_context_ifunsafe [wp]:
   "\<lbrace>if_unsafe_then_cap\<rbrace> update_sched_context ptr f \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
@@ -2237,17 +2223,17 @@ lemma update_sched_context_valid_ioc [wp]:
 
 lemma sc_consumed_set_iflive [wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (live_sc sc \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
-     set_sched_context ptr (sc_consumed_update f sc) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+     update_sched_context ptr (\<lambda>_. sc_consumed_update f sc) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   by (wpsimp simp: live_sc_def)
 
 lemma sc_refills_st_iflive [wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (live_sc sc \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
-     set_sched_context ptr (sc_refills_update f sc) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+     update_sched_context ptr (\<lambda>_. sc_refills_update f sc) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   by (wpsimp simp: live_sc_def)
 
 lemma sc_badge_set_iflive [wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (live_sc sc \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
-     set_sched_context ptr (sc_badge_update f sc) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+     update_sched_context ptr (\<lambda>_. sc_badge_update f sc) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   by (wpsimp simp: live_sc_def)
 
 lemma sc_consumed_update_iflive [wp]:
@@ -2410,7 +2396,7 @@ lemma sched_context_update_consumed_obj_at_trivial:
     K (\<forall>sc n. P (SchedContext sc n) \<longrightarrow> P (SchedContext (sc_consumed_update (K 0) sc) n))\<rbrace>
      sched_context_update_consumed t
    \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
-  by (wpsimp simp: sched_context_update_consumed_def set_sched_context_def
+  by (wpsimp simp: sched_context_update_consumed_def update_sched_context_def
                    set_object_def get_sched_context_def obj_at_def
                wp: get_object_wp)
 
