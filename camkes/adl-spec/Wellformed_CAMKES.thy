@@ -47,8 +47,7 @@ definition
   wellformed_procedure :: "procedure \<Rightarrow> bool"
 where
   "wellformed_procedure i \<equiv>
-    (i \<noteq> []) \<and>
-    (\<forall>x \<in> set i. wellformed_method x) \<and>
+     (\<forall>x \<in> set i. wellformed_method x) \<and>
      distinct (map m_name i)"
 
 text \<open>
@@ -136,6 +135,9 @@ translations
 text \<open>
   We can now define valid procedures. For each procedure @{term x} there must be
   precisely one connection @{term y} that fits the component instance.
+
+  The VirtQueue connector (in global-components) currently uses a dummy empty
+  procedure that is not a connector, so we ignore empty procedures as a special case.
 \<close>
 
 definition
@@ -145,7 +147,7 @@ definition
 where
   "refs_valid_procedures component_instance procedures conns \<equiv>
     \<forall>x \<in> set procedures.
-     (\<exists>1 y \<in> conns. (\<exists>1 z \<in> conn_from (snd y). z = (component_instance, fst x)))"
+      snd x \<noteq> [] \<longrightarrow> (\<exists>1 y \<in> conns. \<exists>1 z \<in> conn_from (snd y). z = (component_instance, fst x))"
 
 text \<open>
   For events and dataports, an interface can be left unconnected in a system with no
