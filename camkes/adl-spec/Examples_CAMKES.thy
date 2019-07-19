@@ -101,6 +101,7 @@ definition
 where
   "client \<equiv> \<lparr>
     control = True,
+    hardware = False,
     requires = [(''s'', simple)],
     provides = [],
     dataports = [],
@@ -114,6 +115,7 @@ definition
 where
   "echo \<equiv> \<lparr>
     control = False,
+    hardware = False,
     requires = [],
     provides = [(''s'', simple)],
     dataports = [],
@@ -191,6 +193,7 @@ definition
 where
   "emitter \<equiv> \<lparr>
     control = True,
+    hardware = False,
     requires = [],
     provides = [],
     dataports = [],
@@ -214,6 +217,7 @@ definition
 where
   "consumer \<equiv> \<lparr>
     control = True,
+    hardware = False,
     requires = [],
     provides = [],
     dataports = [],
@@ -267,6 +271,7 @@ definition
 where
   "data_client \<equiv> \<lparr>
     control = True,
+    hardware = False,
     requires = [],
     provides = [],
     dataports = [(''d1'', None), (''d2'', None)],
@@ -357,6 +362,7 @@ definition
 where
   "manager \<equiv> \<lparr>
     control = False,
+    hardware = False,
     requires = [],
     provides = [(''domain1'', display), (''domain2'', display)],
     dataports = [],
@@ -376,6 +382,7 @@ definition
 where
   "terminal_client \<equiv> \<lparr>
     control = True,
+    hardware = False,
     requires = [(''d'', display)],
     provides = [],
     dataports = [],
@@ -455,6 +462,7 @@ definition
 where
   "x \<equiv> \<lparr>
     control = undefined,
+    hardware = undefined,
     requires = [(undefined, undefined)], \<comment> \<open>1 required interface...\<close>
     provides = undefined,
     dataports = undefined,
@@ -531,6 +539,7 @@ lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
 lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
     components = [(''foo'', \<lparr>
       control = undefined,
+      hardware = undefined,
       requires = [(''bar'', undefined)],
       provides = undefined,
       dataports = undefined,

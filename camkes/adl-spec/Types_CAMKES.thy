@@ -254,6 +254,7 @@ text \<open>
 \<close>
 record component =
   control     :: bool
+  hardware    :: bool
   requires    :: "(adl_symbol \<times> procedure) list"
   provides    :: "(adl_symbol \<times> procedure) list"
   dataports   :: "(adl_symbol \<times> dataport) list"
