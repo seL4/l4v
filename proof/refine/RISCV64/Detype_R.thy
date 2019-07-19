@@ -1333,8 +1333,6 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
   show "valid_arch_state' ?s"
     using arch global_refs2
     apply (simp add: valid_arch_state'_def global_refs'_def)
-    apply (rule conjI)
-     apply (simp add: valid_asid_table'_def)
     apply (simp add: valid_global_pts'_def subset_iff page_table_at'_def table_refs'_def)
     apply clarsimp
     apply (erule_tac x="p + (ucast i << pte_bits)" in allE,

@@ -838,34 +838,36 @@ crunch typ_at'[wp]: copyGlobalMappings "\<lambda>s. P (typ_at' T p s)"
 
 lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']
 
-lemma corres_gets_global_pt [corres]:
-  "corres (=) \<top> \<top> (gets (riscv_global_pt \<circ> arch_state)) (gets (riscvKSGlobalPT \<circ> ksArchState))"
-  sorry (* FIXME: RISCV
-  by (simp add: state_relation_def arch_state_relation_def) *)
+lemma size_maxPTLevel[simp]:
+  "size max_pt_level = maxPTLevel"
+  by (simp add: maxPTLevel_def level_defs)
 
-lemma valid_arch_state_cross:
-  "\<lbrakk> valid_arch_state s; pspace_aligned s; pspace_distinct s; (s,s') \<in> state_relation \<rbrakk>
-   \<Longrightarrow> valid_arch_state' s'"
-  sorry (* FIXME: RISCV *)
+lemma corres_gets_global_pt [corres]:
+  "corres (=) valid_global_arch_objs \<top>
+              (gets global_pt) (gets (riscvKSGlobalPT \<circ> ksArchState))"
+  apply (clarsimp simp add: state_relation_def arch_state_relation_def riscv_global_pt_def
+                            riscvKSGlobalPT_def valid_global_arch_objs_def)
+  apply (case_tac "riscvKSGlobalPTs (ksArchState s') maxPTLevel"; simp)
+  done
+
+lemmas get_pte_corres'[corres] = get_pte_corres[@lift_corres_args]
+lemmas store_pte_corres'[corres] = store_pte_corres[@lift_corres_args]
 
 lemma copy_global_mappings_corres [@lift_corres_args, corres]:
-  "corres dc (valid_arch_state and pspace_aligned and pspace_distinct and pt_at pt)
+  "corres dc (valid_global_arch_objs and pspace_aligned and pspace_distinct and pt_at pt)
              \<top>
              (copy_global_mappings pt)
              (copyGlobalMappings pt)" (is "corres _ ?apre _ _ _")
   unfolding copy_global_mappings_def copyGlobalMappings_def objBits_simps archObjSize_def pptr_base_def
-  sorry (* FIXME RISCV
-  apply (fold word_size_bits_def)
   apply corressimp
-      apply (rule_tac P="page_map_l4_at global_pm and ?apre" and
-                     P'="page_map_l4_at' skimPM and page_map_l4_at' pm"
+      apply (rule_tac P="pt_at global_pt and ?apre" and P'="\<top>"
                 in corresK_mapM_x[OF order_refl])
-        apply (corressimp simp: objBits_def mask_def wp: get_pde_wp getPDE_wp)+
-  apply(rule conjI)
-   subgoal by (auto intro!: page_map_l4_pml4e_atI page_map_l4_pml4e_atI'
-                     simp: page_bits_def le_less_trans ptTranslationBits_def)
-  by (auto simp: valid_arch_state_def valid_arch_state'_def
-           elim: page_map_l4_pml4e_atI page_map_l4_pml4e_atI') *)
+        apply (corressimp simp: objBits_def mask_def wp: get_pte_wp getPTE_wp)+
+  apply (drule valid_global_arch_objs_pt_at)
+  apply (clarsimp simp: ptIndex_def ptBitsLeft_def maxPTLevel_def ptTranslationBits_def pageBits_def
+                        pt_index_def pt_bits_left_def level_defs)
+  apply (fastforce intro!: page_table_pte_atI simp add: bit_simps word_le_nat_alt word_less_nat_alt)
+  done
 
 lemma arch_cap_rights_update:
   "acap_relation c c' \<Longrightarrow>
@@ -952,23 +954,56 @@ lemma asid_case_zero[simp]:
   "0 < asid \<Longrightarrow> 0 < UCAST(asid_len \<rightarrow> machine_word_len) asid"
   by word_bitwise
 
+lemma gets_opt_bind_throw_opt:
+  "(gets (do { x \<leftarrow> f; g x }) >>= throw_opt E) =
+   (do x_opt \<leftarrow> gets f;
+       doE x \<leftarrow> throw_opt E x_opt;
+           gets (g x) >>= throw_opt E
+       odE
+    od)"
+  apply (rule ext)
+  apply (simp add: bind_def simpler_gets_def throw_opt_def)
+  apply (simp add: obind_def split: option.splits)
+  done
+
+lemma find_vspace_for_asid_rewite:
+  "monadic_rewrite False True (valid_asid_table and K (0 < asid))
+     (find_vspace_for_asid asid)
+     (doE
+        asid_table \<leftarrow> liftE $ gets (riscv_asid_table \<circ> arch_state);
+        pool_ptr \<leftarrow> returnOk (asid_table (asid_high_bits_of asid));
+        pool \<leftarrow> (case pool_ptr of
+                  Some ptr \<Rightarrow> liftE $ get_asid_pool ptr
+                | None \<Rightarrow> throwError ExceptionTypes_A.InvalidRoot);
+        pt \<leftarrow> returnOk (pool (ucast asid));
+        (case pt of
+            Some ptr \<Rightarrow> returnOk ptr
+          | None \<Rightarrow> throwError ExceptionTypes_A.InvalidRoot)
+      odE)"
+  unfolding find_vspace_for_asid_def vspace_for_asid_def pool_for_asid_def vspace_for_pool_def
+  apply (clarsimp simp: monadic_rewrite_def)
+  apply (simp add: gets_opt_bind_throw_opt liftE_bindE obind_comp_dist gets_map_def cong: option.case_cong)
+  apply (clarsimp simp: o_def exec_gets throw_opt_def split: option.splits)
+  apply (rule conjI; clarsimp)
+   apply (drule (1) valid_asid_tableD)
+   apply (clarsimp simp: obj_at_def opt_map_def)
+  apply (simp add: liftE_bindE bind_assoc exec_gets opt_map_def asid_low_bits_of_def)
+  done
+
 lemma find_vspace_for_asid_corres:
   assumes "asid' = ucast asid"
   shows "corres (lfr \<oplus> (=))
-                (vspace_at_asid_ex asid
-                    and valid_vspace_objs and pspace_aligned and pspace_distinct
+                (valid_vspace_objs and valid_asid_table
+                    and pspace_aligned and pspace_distinct
                     and K (0 < asid))
                 (no_0_obj')
-                (find_vspace_for_asid asid) (findVSpaceForASID asid')"
+                (find_vspace_for_asid asid) (findVSpaceForASID asid')" (is "corres _ ?P ?Q _ _")
   using assms
-  apply (simp add: find_vspace_for_asid_def findVSpaceForASID_def)
+  apply (simp add: findVSpaceForASID_def)
   apply (rule corres_gen_asm, simp add: ucast_down_ucast_id is_down_def target_size source_size)
+  apply (rule corres_guard_imp[where Q'="?Q"], rule monadic_rewrite_corres[where P="?P", rotated],
+         rule find_vspace_for_asid_rewite; simp)
   apply (simp add: liftE_bindE asidRange_def flip: mask_2pm1)
-  sorry (* FIXME RISCV
-
-  apply (rule corres_no_failI)
-  apply (simp add: vspace_for_asid_def pool_for_asid_def vspace_for_pool_def obind_comp_dist)
-
   apply (rule_tac r'="\<lambda>x y. x = y o ucast"
              in corres_split' [OF _ _ gets_sp gets_sp])
    apply (clarsimp simp: state_relation_def arch_state_relation_def)
@@ -977,9 +1012,9 @@ lemma find_vspace_for_asid_corres:
   apply (simp add: liftME_def bindE_assoc)
   apply (simp add: liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_asid_pool_corres'[OF refl]])
-      apply (rule_tac P="case_option \<top> page_map_l4_at (pool (ucast asid)) and pspace_aligned"
-                 and P'="no_0_obj' and pspace_distinct'" in corres_inst)
+    apply (rule corres_split [OF _ get_asid_pool_corres[OF refl]])
+      apply (rule_tac P="case_option \<top> pt_at (pool (ucast asid)) and pspace_aligned and pspace_distinct"
+                 and P'="no_0_obj'" in corres_inst)
       apply (rule_tac F="pool (ucast asid) \<noteq> Some 0" in corres_req)
        apply (clarsimp simp: obj_at_def no_0_obj'_def state_relation_def
                              pspace_relation_def a_type_def)
@@ -994,43 +1029,25 @@ lemma find_vspace_for_asid_corres:
         apply simp
        apply clarsimp
       apply (simp add: mask_asid_low_bits_ucast_ucast asid_low_bits_of_def returnOk_def
-                       lookup_failure_map_def
-                split: option.split)
+                       lookup_failure_map_def ucast_ucast_a is_down
+                  split: option.split)
       apply clarsimp
-      apply (simp add: returnOk_liftE checkPML4At_def liftE_bindE)
+      apply (simp add: returnOk_liftE checkPTAt_def liftE_bindE)
       apply (rule corres_stateAssert_implied[where P=\<top>, simplified])
-       apply (simp add: )
+       apply simp
       apply clarsimp
-      apply (rule page_map_l4_at_state_relation)
-         apply fastforce
-        apply simp+
+      apply (rule page_table_at_cross; assumption?)
+      apply fastforce
      apply (wp getObject_inv loadObject_default_inv | simp)+
-   apply clarsimp
-   apply (rule context_conjI)
-    apply (erule disjE)
-     apply (clarsimp simp: valid_arch_state_def valid_asid_table_def)
-     apply fastforce
-    apply (clarsimp simp: vspace_at_asid_ex_def vspace_at_asid_def)
-    apply (clarsimp simp: vs_asid_refs_def graph_of_def elim!: vs_lookupE)
-    apply (erule rtranclE)
-     apply simp
-    apply (clarsimp dest!: vs_lookup1D)
-    apply (erule rtranclE)
-     apply (clarsimp simp: vs_refs_def graph_of_def obj_at_def
-                           a_type_def
-                    split: Structures_A.kernel_object.splits
-                           arch_kernel_obj.splits)
-    apply (clarsimp dest!: vs_lookup1D)
-     apply (clarsimp dest!: vs_lookup1D)
-   apply (drule(1) valid_vspace_objsD[rotated])
-    apply (rule vs_lookupI)
-     apply (rule vs_asid_refsI)
-     apply simp
-    apply (rule rtrancl_refl)
-   apply (clarsimp split: option.split)
-   apply fastforce
+   apply (clarsimp simp: o_def)
+   apply (rule conjI)
+    apply (rule valid_asid_tableD; simp)
+   apply (clarsimp split: option.splits)
+   apply (rule vs_lookup_table_pt_at[where vptr=0 and level=max_pt_level and asid=asid]; simp?)
+   apply (simp add: vs_lookup_table_def pool_for_asid_def vspace_for_pool_def in_omonad obj_at_def
+                    asid_low_bits_of_def)
   apply simp
-  done *)
+  done
 
 lemma setObject_arch:
   assumes X: "\<And>p q n ko. \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv s. P (ksArchState s)\<rbrace>"

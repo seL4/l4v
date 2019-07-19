@@ -915,17 +915,17 @@ definition pspace_domain_valid :: "kernel_state \<Rightarrow> bool" where
   "pspace_domain_valid \<equiv> \<lambda>s.
      \<forall>x ko. ksPSpace s x = Some ko \<longrightarrow> ptr_range x (objBitsKO ko) \<inter> kernel_data_refs = {}"
 
-definition valid_asid_table' :: "(asid \<rightharpoonup> machine_word) \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_asid_table' table \<equiv> \<lambda>s. dom table \<subseteq> ptr_range 0 asid_high_bits \<and> 0 \<notin> ran table"
+definition valid_asid_table' :: "(asid \<rightharpoonup> machine_word) \<Rightarrow> bool" where
+  "valid_asid_table' table \<equiv> dom table \<subseteq> ptr_range 0 asid_high_bits \<and> 0 \<notin> ran table"
 
 definition valid_global_pts' :: "machine_word list \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_global_pts' pts \<equiv> \<lambda>s. \<forall>p \<in> set pts. page_table_at' p s"
 
 definition valid_arch_state' :: "kernel_state \<Rightarrow> bool" where
   "valid_arch_state' \<equiv> \<lambda>s.
-   valid_asid_table' (riscvKSASIDTable (ksArchState s)) s \<and>
+   valid_asid_table' (riscvKSASIDTable (ksArchState s)) \<and>
    (\<forall>l. valid_global_pts' (riscvKSGlobalPTs (ksArchState s) l) s) \<and>
-   length (riscvKSGlobalPTs (ksArchState s) 0) = 1"
+   riscvKSGlobalPTs (ksArchState s) maxPTLevel \<noteq> []"
 
 definition irq_issued' :: "irq \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "irq_issued' irq \<equiv> \<lambda>s. intStateIRQTable (ksInterruptState s) irq = IRQSignal"
@@ -2501,10 +2501,6 @@ lemma valid_cap_update [iff]:
 lemma typ_at_update' [iff]:
   "typ_at' T p (f s) = typ_at' T p s"
   by (simp add: typ_at'_def)
-
-lemma valid_asid_table_update' [iff]:
-  "valid_asid_table' t (f s) = valid_asid_table' t s"
-  by (simp add: valid_asid_table'_def)
 
 lemma page_table_at_update' [iff]:
   "page_table_at' p (f s) = page_table_at' p s"
