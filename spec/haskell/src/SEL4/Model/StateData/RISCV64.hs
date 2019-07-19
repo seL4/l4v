@@ -32,8 +32,13 @@ data KernelState = RISCVKernelState {
     riscvKSKernelVSpace :: PPtr Word -> RISCVVSpaceRegionUse
   }
 
+-- counting from 0 at bottom, i.e. number of levels = maxPTLevel + 1;
+-- maxPTLevel = level of top-level root table
+maxPTLevel :: Int
+maxPTLevel = 2
+
 riscvKSGlobalPT :: KernelState -> PPtr PTE
-riscvKSGlobalPT s = head (riscvKSGlobalPTs s 0)
+riscvKSGlobalPT s = head (riscvKSGlobalPTs s maxPTLevel)
 
 newKernelState :: PAddr -> (KernelState, [PAddr])
 newKernelState _ = error "No initial state defined for RISC-V"

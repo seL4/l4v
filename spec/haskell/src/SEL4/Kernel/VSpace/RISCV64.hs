@@ -39,10 +39,6 @@ import SEL4.API.Invocation.RISCV64 as ArchInv
 
 {- Constants -}
 
--- counting from 0, i.e. number of levels = maxPTLevel + 1 = top-level table
-maxPTLevel :: Int
-maxPTLevel = 2
-
 ipcBufferSizeBits :: Int
 ipcBufferSizeBits = 10
 
