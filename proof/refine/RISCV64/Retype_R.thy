@@ -2394,7 +2394,7 @@ lemma other_objs_default_relation:
                         default_arch_tcb_def newArchTCB_def
                         arch_tcb_relation_def
                  split: Structures_A.apiobject_type.split_asm)
-  sorry (* FIXME RISCV: abstract init_context should have (SSTATUS := sstatusSPIE) *)
+  done
 
 lemma captable_relation_retype:
   "n < word_bits \<Longrightarrow>

@@ -117,9 +117,11 @@ defs cNodePartialOverlap_def:
       \<or> (\<not> ptr_range p (cte_level_bits + n) \<subseteq> {p. inRange p}
         \<and> \<not> ptr_range p (cte_level_bits + n) \<subseteq> {p. \<not> inRange p}))"
 
+(* FIXME RISCV move: *)
 lemma mask_in_range':
   "is_aligned ptr bits \<Longrightarrow> (ptr' && (~~ mask bits) = ptr) = (ptr' \<in> ptr_range ptr bits)"
   by (drule mask_in_range[where ptr'=ptr']) (simp add: mask_def add_diff_eq)
+
 
 (* FIXME: move *)
 lemma deleteObjects_def2:
@@ -455,9 +457,8 @@ lemma (in detype_locale') deletionIsSafe:
   shows       "deletionIsSafe base magnitude s'"
 proof -
   interpret Arch . (* FIXME: arch_split *)
-  note blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
+  note [simp del] = atLeastatMost_subset_iff atLeastLessThan_iff atLeastAtMost_iff
+                    Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   have "\<And>t m r. \<exists>ptr. cte_wp_at ((=) (cap.ReplyCap t m r)) ptr s
         \<Longrightarrow> t \<notin> ptr_range base magnitude"
     by (fastforce dest!: valid_cap2 simp: cap obj_reply_refs_def mask_def add_diff_eq)
@@ -495,8 +496,8 @@ proof -
     apply (frule obj_relation_cuts_eqv_base_in_detype_range[symmetric])
         apply simp
        apply (clarsimp simp:valid_pspace_def)+
-      apply simp
-    apply (clarsimp simp:valid_untyped_def add_mask_fold)
+     apply simp
+    apply (clarsimp simp:valid_untyped_def add_mask_fold cong: if_cong)
     apply (drule spec)+
     apply (erule(1) impE)
     apply (erule impE)
@@ -516,15 +517,14 @@ proof -
     apply (simp add:not_le)
     apply (subgoal_tac "obj_bits koa < word_bits")
      prefer 2
-     apply (case_tac koa,simp_all add:objBits_simps word_bits_def)
+     apply (case_tac koa; simp add:objBits_simps word_bits_def)
       apply (drule(1) valid_cs_size_objsI)
       apply (clarsimp simp:valid_cs_size_def word_bits_def cte_level_bits_def)
      apply (rename_tac arch_kernel_obj)
-     apply (case_tac arch_kernel_obj,simp_all add:bit_simps word_bits_def)
+     apply (case_tac arch_kernel_obj; simp add:bit_simps word_bits_def)
      apply (simp add:pageBitsForSize_def bit_simps split:vmpage_size.splits)
-  sorry (* FIXME RISCV
     apply (subgoal_tac "6 \<le> obj_bits koa")
-     apply simp defer
+     apply (simp add: unat_mask_word64 mask_2pm1[symmetric] le_diff_iff)
     apply (case_tac koa, simp_all add: other_obj_relation_def
                                        objBits_simps cte_relation_def
                                 split: if_splits)
@@ -532,15 +532,11 @@ proof -
             case_tac ako;
              simp add: arch_kobj_size_def bit_simps pageBitsForSize_def
                 split: vmpage_size.splits)
-     apply (rename_tac ako,
-            case_tac ako;
-             simp add: arch_kobj_size_def bit_simps pageBitsForSize_def
-                split: vmpage_size.splits)
-     apply (rename_tac ako P,
-            case_tac ako;
-             simp add: arch_kobj_size_def bit_simps pageBitsForSize_def
-                split: vmpage_size.splits)
-    done *)
+    apply (rename_tac ako,
+           case_tac ako;
+            simp add: arch_kobj_size_def bit_simps pageBitsForSize_def
+               split: vmpage_size.splits)
+    done
   thus ?thesis using cte by (auto simp: deletionIsSafe_def)
 qed
 
@@ -1774,7 +1770,7 @@ proof -
      apply (clarsimp dest!:objBits_type)
     apply (rule ccontr)
     apply clarsimp
-    apply (frule_tac slot2 = x and Q2 = "koTypeOf ko" and P2 = "\<lambda>a. \<not> a" in use_valid[OF _ typ_at])
+    apply (frule_tac slot1 = x and Q1 = "koTypeOf ko" and P1 = "\<lambda>a. \<not> a" in use_valid[OF _ typ_at])
     apply (clarsimp simp:typ_at'_def ko_wp_at'_def)+
     apply (frule(1) use_valid[OF _ ps])
     apply (clarsimp simp:valid_pspace'_def)
@@ -1810,12 +1806,12 @@ lemma getCTE_commute:
    apply (rule iffI)
     apply clarsimp
     apply (rule bexI[rotated], assumption)
-    apply (drule_tac Q2 ="(=) cte" in use_valid[OF _ cte_at_modify])
+    apply (drule_tac Q1 ="(=) cte" in use_valid[OF _ cte_at_modify])
      apply (simp add:cte_wp_at'_def)
     apply (simp add:cte_wp_at'_def)
    apply clarsimp
    apply (rule conjI)
-    apply (frule_tac Q2 = "(=) cte" in use_valid[OF _ cte_at_modify])
+    apply (frule_tac Q1 = "(=) cte" in use_valid[OF _ cte_at_modify])
      apply (clarsimp simp:cte_wp_at'_def ko_wp_at'_def)
     apply (clarsimp simp:cte_wp_at'_def)
    apply (rule bexI[rotated], assumption)
@@ -1830,7 +1826,7 @@ lemma getCTE_commute:
   apply (cut_tac s = b in no_failD[OF no_fail_getCTE[unfolded getCTE_def]])
    prefer 2
    apply fastforce
-  apply (drule_tac Q2 = "(=) cte" in use_valid[OF _ cte_at_modify])
+  apply (drule_tac Q1 = "(=) cte" in use_valid[OF _ cte_at_modify])
    apply (simp add:cte_wp_at'_def)
   apply (simp add:cte_wp_at_ctes_of)
   done
@@ -2016,13 +2012,13 @@ proof -
   apply (clarsimp simp: locateCTE_def gets_def split_def
                         get_def bind_def return_def assert_opt_def fail_def assert_def
                   split: option.splits if_split_asm)
-  apply (frule_tac dest2 = src in use_valid[OF _ cte_wp_at])
+  apply (frule_tac dest1 = src in use_valid[OF _ cte_wp_at])
    apply simp
    apply (subst cte_wp_at_top)
    apply simp
   apply (clarsimp simp add:cte_wp_at_top)
   apply (clarsimp simp:lookupAround2_char1)
-  apply (frule_tac dest2 = ptr and  Q2 = "\<lambda>x. x = objBitsKO b" in use_valid[OF _ ko_wp_at])
+  apply (frule_tac dest1 = ptr and  Q1 = "\<lambda>x. x = objBitsKO b" in use_valid[OF _ ko_wp_at])
    apply (frule(1) pspace_alignedD')
    apply (frule(1) pspace_distinctD')
    apply (auto simp add:ko_wp_at'_def)[1]
@@ -2110,8 +2106,8 @@ proof -
     apply clarsimp
     apply (rule bexI[rotated],assumption)
     apply (clarsimp)
-    apply (frule_tac s1 = bb in same)
-    apply (frule_tac s1 = s in same)
+    apply (frule_tac s = bb in same)
+    apply (frule_tac s = s in same)
     apply clarsimp
     apply (frule_tac s1 = s in singleton_locateCTE[THEN iffD1])
     apply (frule locateCTE_monad [OF ko_wp_at cte_wp_at psp_distinct psp_aligned])
@@ -3453,12 +3449,12 @@ lemma curDomain_commute:
     apply clarsimp
     apply (rule bexI[rotated], assumption)
     apply clarsimp
-    apply (frule_tac P2 = "\<lambda>x. x = ksCurDomain s" in use_valid[OF _ cur])
+    apply (frule_tac P1 = "\<lambda>x. x = ksCurDomain s" in use_valid[OF _ cur])
       apply simp+
    apply clarsimp
    apply (rule bexI[rotated], assumption)
    apply clarsimp
-   apply (frule_tac P2 = "\<lambda>x. x = ksCurDomain s" in use_valid[OF _ cur])
+   apply (frule_tac P1 = "\<lambda>x. x = ksCurDomain s" in use_valid[OF _ cur])
     apply simp+
   apply auto
   done
@@ -4136,7 +4132,7 @@ lemma createNewCaps_pspace_no_overlap':
            | wp doMachineOp_psp_no_overlap createObjects'_pspace_no_overlap[where sz = sz]
                 createObjects'_psp_aligned[where sz = sz] createObjects'_psp_distinct[where sz = sz]
                 mapM_x_wp_inv
-                | assumption)+
+           | assumption)+
            apply (intro conjI range_cover_le[where n = "Suc n"] | simp)+
             apply ((simp add:objBits_simps pageBits_def range_cover_def word_bits_def)+)[5]
        by ((clarsimp simp: apiGetObjectSize_def bit_simps toAPIType_def
