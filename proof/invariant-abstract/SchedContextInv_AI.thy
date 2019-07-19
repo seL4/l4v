@@ -1630,7 +1630,7 @@ lemma sc_consumed_add_invs:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp simp: invs_def valid_state_def valid_pspace_def sc_consumed_update_eq[symmetric]
                wp: update_sched_context_valid_objs_same valid_irq_node_typ
-                   update_sched_context_iflive_same update_sched_context_refs_of_same)
+                   update_sched_context_iflive_implies update_sched_context_refs_of_same)
 
 lemma refill_update_invs:
   "\<lbrace>\<lambda>s. invs s \<and> sc_ptr \<noteq> idle_sc_ptr\<rbrace>
@@ -1758,7 +1758,7 @@ lemma update_sc_badge_invs':
       update_sched_context p (sc_badge_update (\<lambda>_. badge)) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
                   wp: update_sched_context_valid_objs_same valid_irq_node_typ
-                      update_sched_context_iflive_same
+                      update_sched_context_iflive_implies
                       update_sched_context_refs_of_same
                       update_sc_but_not_sc_replies_valid_replies'
                       update_sched_context_valid_idle

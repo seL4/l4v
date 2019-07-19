@@ -660,16 +660,19 @@ definition valid_release_q_except_set_2 where
               st_tcb_at_kh runnable t kh \<and> active_sc_tcb_at_kh t kh)
               \<and> distinct queue \<and> sorted_release_q_2 queue kh)"
 
+abbreviation valid_release_q_2 :: "32 word list \<Rightarrow> (32 word \<Rightarrow> kernel_object option) \<Rightarrow> bool" where
+ "valid_release_q_2 queue kh \<equiv> valid_release_q_except_set_2 {} queue kh"
+
 abbreviation valid_release_q_except_set :: "obj_ref set \<Rightarrow> 'z state \<Rightarrow> bool" where
  "valid_release_q_except_set S s \<equiv>
-    valid_release_q_except_set_2 S(release_queue s) (kheap s)"
+    valid_release_q_except_set_2 S (release_queue s) (kheap s)"
 
 abbreviation valid_release_q_except :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
 "valid_release_q_except t s \<equiv>
     valid_release_q_except_set_2 {t} (release_queue s) (kheap s)"
 
 abbreviation valid_release_q :: "'z state \<Rightarrow> bool" where
-  "valid_release_q s \<equiv> valid_release_q_except_set_2 {} (release_queue s) (kheap s)"
+  "valid_release_q s \<equiv> valid_release_q_except_set {} s"
 
 lemmas valid_release_q_except_set_def = valid_release_q_except_set_2_def
 lemmas valid_release_q_except_def = valid_release_q_except_set_2_def
@@ -768,15 +771,11 @@ abbreviation valid_blocked_except :: "obj_ref \<Rightarrow> 'z state \<Rightarro
 "valid_blocked_except t s \<equiv> valid_blocked_except_set_2 {t} (ready_queues s) (release_queue s) (kheap s) (scheduler_action s) (cur_thread s)"
 
 abbreviation valid_blocked :: "'z state \<Rightarrow> bool" where
-"valid_blocked s \<equiv> valid_blocked_except_set_2 {} (ready_queues s) (release_queue s) (kheap s) (scheduler_action s) (cur_thread s)"
+"valid_blocked s \<equiv> valid_blocked_except_set {} s"
 
 lemmas valid_blocked_except_set_def = valid_blocked_except_set_2_def
 lemmas valid_blocked_except_def = valid_blocked_except_set_2_def
 lemmas valid_blocked_def = valid_blocked_except_set_2_def
-
-lemma valid_blocked_except_set_empty:
-  "valid_blocked_except_set {} = valid_blocked"
-  by (clarsimp simp: valid_blocked_except_set_def valid_blocked_def)
 
 definition in_cur_domain_2 where
   "in_cur_domain_2 thread cdom ekh \<equiv> etcb_at' (\<lambda>t. etcb_domain t = cdom) thread ekh"
@@ -1360,11 +1359,10 @@ lemma sorted_release_q_simple_ko_update[iff]:
   apply (clarsimp simp: active_sc_tcb_at_defs tcb_ready_time_kh_def tcb_ready_time_def)
   by (cases ko; case_tac koa; fastforce simp: a_type_def get_tcb_def split: if_splits option.splits)
 
-
 lemma valid_release_q_simple_ko_update[iff]:
   "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
-     valid_release_q_except_set_2 S (release_queue s) (kheap s(epptr \<mapsto> ko)) = valid_release_q_except_set S s"
-  by (fastforce simp: valid_release_q_def)
+     valid_release_q_2 (release_queue s) (kheap s(epptr \<mapsto> ko)) = valid_release_q s"
+  by (auto simp: valid_release_q_def)
 
 lemma is_activatable_simple_ko_update[iff]:
   "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>

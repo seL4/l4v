@@ -520,8 +520,8 @@ crunches set_cdt, set_cap, create_cap, cap_insert
   (wp: valid_ep_q_lift crunch_wps hoare_vcg_disj_lift simp: crunch_simps)
 
 lemma valid_blocked_fold_update:
-  "\<lbrakk> valid_blocked_except_set_2 {} queues rlq kh sa ct; type \<noteq> apiobject_type.Untyped \<rbrakk> \<Longrightarrow>
-  valid_blocked_except_set_2 {} queues rlq (foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits dm)) ptrs kh) sa ct"
+  "\<lbrakk> valid_blocked_except_set_2 S queues rlq kh sa ct; type \<noteq> apiobject_type.Untyped \<rbrakk> \<Longrightarrow>
+  valid_blocked_except_set_2 S queues rlq (foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits dm)) ptrs kh) sa ct"
   apply (induct ptrs)
    apply simp
   apply (case_tac type)

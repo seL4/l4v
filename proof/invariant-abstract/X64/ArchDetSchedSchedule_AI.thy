@@ -136,8 +136,8 @@ lemma switch_to_idle_thread_ct_not_queued [wp, DetSchedSchedule_AI_assms]:
                          pred_tcb_at_def obj_at_def not_queued_def)
   done
 
-crunch valid_blocked_except_set_2 {}[wp]: set_vm_root
-        "\<lambda>s. valid_blocked_except_set_2 {} (ready_queues s) (kheap s) (scheduler_action s) thread"
+crunch valid_blocked_2[wp]: set_vm_root
+        "\<lambda>s. valid_blocked_2 (ready_queues s) (kheap s) (scheduler_action s) thread"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma switch_to_idle_thread_valid_blocked [wp, DetSchedSchedule_AI_assms]:

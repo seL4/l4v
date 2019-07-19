@@ -373,6 +373,18 @@ lemma update_sc_but_not_sc_replies_valid_replies[wp]:
   "\<And>f. update_sched_context sc_ptr (sc_yield_from_update f) \<lbrace> valid_replies_pred P \<rbrace>"
   by (rule update_sc_but_not_sc_replies_valid_replies', simp)+
 
+lemma update_sc_no_tcb_update[wp]:
+  "update_sched_context scp f \<lbrace>ko_at (TCB tcb) t\<rbrace>"
+  apply (clarsimp simp: set_sc_obj_ref_def update_sched_context_def)
+  by (wpsimp simp: set_object_def wp: get_object_wp simp: obj_at_def)
+
+lemma update_sched_context_sc_tcb_sc_at:
+  "\<lbrace>\<lambda>s. Q (sc_tcb_sc_at P sc_ptr s) \<and> (\<forall>x. (P (sc_tcb x) = P (sc_tcb (f x))))\<rbrace>
+   update_sched_context sc_ptr' f
+   \<lbrace>\<lambda>_ s. Q (sc_tcb_sc_at P sc_ptr s)\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
+  by (clarsimp simp: obj_at_def sc_at_pred_n_def)
+
 lemma set_refills_valid_replies[wp]:
   "set_refills ptr refills \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp simp: set_refills_def)
@@ -1592,7 +1604,7 @@ lemma update_sc_others_invs:
               sc_refill_max := max_refills\<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
                   wp: update_sched_context_valid_objs_same valid_irq_node_typ
-                      update_sched_context_iflive_same
+                      update_sched_context_iflive_implies
                       update_sched_context_refs_of_same
                       update_sc_but_not_sc_replies_valid_replies'
                       update_sched_context_valid_idle

@@ -2148,8 +2148,8 @@ lemma update_sched_context_respect_device_region [wp]:
   by (wpsimp simp: update_sched_context_def get_object_def obj_at_def a_type_def
                wp: set_object_pspace_respects_device_region)
 
-lemma update_sched_context_iflive_same:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (\<forall>sc. live_sc sc = live_sc (f sc))\<rbrace>
+lemma update_sched_context_iflive_implies:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (\<forall>sc. live_sc (f sc) \<longrightarrow> live_sc sc)\<rbrace>
      update_sched_context ptr f \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   by (wpsimp simp: update_sched_context_def get_object_def obj_at_def
                    if_live_then_nonz_cap_def live_def)
@@ -2239,17 +2239,23 @@ lemma sc_badge_set_iflive [wp]:
 lemma sc_consumed_update_iflive [wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
      update_sched_context ptr (sc_consumed_update f) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_same)
+  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_implies)
 
 lemma sc_refills_update_iflive [wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
      update_sched_context ptr (sc_refills_update f) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_same)
+  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_implies)
+
+lemma sc_replies_update_iflive [wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (\<forall>x. ((f x)\<noteq>[]) \<longrightarrow> (x\<noteq>[]))\<rbrace>
+     update_sched_context ptr (sc_replies_update f) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  apply (wpsimp simp: live_sc_def wp: update_sched_context_iflive_implies)
+  by fastforce
 
 lemma sc_badge_update_iflive [wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
      update_sched_context ptr (sc_badge_update f) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_same)
+  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_implies)
 
 lemma get_sched_context_sp:
   "\<lbrace>P\<rbrace> get_sched_context sc_ptr

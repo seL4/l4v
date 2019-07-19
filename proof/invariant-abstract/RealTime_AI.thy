@@ -198,6 +198,19 @@ lemma set_sc_replies_valid_objs[wp]:
   apply (auto simp: valid_obj_def valid_sched_context_def obj_at_def a_type_def)
   done
 
+lemma update_sched_context_sc_replies_update_valid_objs[wp]:
+  "\<lbrace>valid_objs and
+    (\<lambda>s. \<forall>x. list_all (\<lambda>rp. reply_at rp s) x \<longrightarrow> list_all (\<lambda>rp. reply_at rp s) (f x)) and
+    K (\<forall>x. distinct x \<longrightarrow> distinct (f x))\<rbrace>
+       update_sched_context t (sc_replies_update f)
+   \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  apply (wpsimp wp: set_object_valid_objs get_object_wp
+          simp: set_sc_obj_ref_def obj_at_def update_sched_context_def
+          split: option.splits kernel_object.splits)
+  apply (erule (1) valid_objsE)
+  apply (clarsimp simp: valid_obj_def valid_sched_context_def obj_at_def a_type_def)
+  done
+
 lemma set_sc_obj_ref_tcb'[wp]:
   "set_sc_obj_ref f t' sc \<lbrace>\<lambda>s. P (tcb_at t s)\<rbrace>"
   by (simp add: tcb_at_typ, wp)
@@ -246,6 +259,18 @@ lemma set_sc_replies_refs_of[wp]:
   by (fastforce simp: obj_at_def state_refs_of_def get_refs_def2
                split: option.splits if_splits
                elim!: rsubst[of P])
+
+lemma update_sched_context_state_refs_of:
+  "\<lbrace>\<lambda>s. P (state_refs_of s) \<and> sc_replies_sc_at (\<lambda>x. hd_opt (f x) = hd_opt x) sc s\<rbrace>
+    update_sched_context sc (sc_replies_update f)
+   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp simp: set_sc_obj_ref_def set_object_def update_sched_context_def
+                  wp: get_object_wp
+            simp_del: fun_upd_apply)
+  apply (clarsimp simp: obj_at_def state_refs_of_def get_refs_def2 sc_at_pred_n_def
+               split: option.splits if_splits
+               elim!: rsubst[of P])
+  by (rule ext; simp)
 
 text {* set_reply_obj_ref *}
 
@@ -968,8 +993,7 @@ lemmas valid_replies_in_replies_sc_live =
   valid_replies_in_replies_sc_reply_tcb[THEN reply_tcb_live]
 
 lemma reply_unlink_sc_iflive[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> valid_replies s \<and> valid_objs s \<and>
-        sym_refs (state_refs_of s)\<rbrace>
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> valid_replies s \<and> valid_objs s \<and> sym_refs (state_refs_of s)\<rbrace>
      reply_unlink_sc sc_ptr reply_ptr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: reply_unlink_sc_def)
@@ -988,8 +1012,6 @@ lemma reply_unlink_sc_iflive[wp]:
     apply (fastforce intro: list.set_sel)
    apply (fastforce simp: live_def live_reply_def obj_at_def
                    dest!: if_live_then_nonz_capD2 valid_objs_ko_at)
-  apply (fastforce simp: live_def live_sc_def obj_at_def
-                  dest!: if_live_then_nonz_capD2)
   done
 
 lemma reply_unlink_tcb_iflive[wp]:
