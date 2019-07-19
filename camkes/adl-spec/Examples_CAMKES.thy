@@ -153,7 +153,8 @@ where
         conn_type = seL4RPC,
         conn_from = [(''client'', ''s'')],
         conn_to = [(''echo'', ''s'')]
-      \<rparr>)]
+      \<rparr>)],
+      group_labels = []
     \<rparr>,
     configuration = None
   \<rparr>"
@@ -241,7 +242,8 @@ where
         conn_type = seL4Notification,
         conn_from = [(''source'', ''event'')],
         conn_to = [(''sink'', ''event'')]
-      \<rparr>)]
+      \<rparr>)],
+      group_labels = []
     \<rparr>,
     configuration = None
   \<rparr>"
@@ -304,7 +306,8 @@ where
         conn_type = seL4SharedData,
         conn_from = [(''comp2'', ''d1'')],
         conn_to = [(''comp1'', ''d2'')]
-      \<rparr>)]
+      \<rparr>)],
+      group_labels = []
     \<rparr>,
     configuration = None
   \<rparr>"
@@ -423,7 +426,8 @@ where
                   (''client1'', terminal_client),
                   (''client2'', terminal_client)],
     connections = [(''channel1'', channel1),
-                   (''channel2'', channel2)]
+                   (''channel2'', channel2)],
+    group_labels = []
   \<rparr>"
 
 text \<open>
@@ -480,7 +484,8 @@ definition
 where
   "broken_assembly \<equiv> \<lparr>composition = \<lparr>
     components = [(undefined, x)],
-    connections = [] \<comment> \<open>... that is unsatisfied.\<close>
+    connections = [], \<comment> \<open>... that is unsatisfied.\<close>
+    group_labels = undefined
   \<rparr>, configuration = undefined\<rparr>"
 
 lemma "\<not> wellformed_assembly broken_assembly"
@@ -507,7 +512,8 @@ definition
 where
   "broken_assembly \<equiv> \<lparr> composition = \<lparr>
     components = [],
-    connections = undefined
+    connections = undefined,
+    group_labels = undefined
   \<rparr>, configuration = undefined \<rparr>"
 
 lemma "\<not>wellformed_assembly broken_assembly"
@@ -523,19 +529,22 @@ lemma "\<not>wellformed_assembly broken_assembly"
 (*<*)
 lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
     components = [(''foo'', undefined), (''foo'', undefined)],
-    connections = undefined
+    connections = undefined,
+    group_labels = undefined
   \<rparr>, configuration = undefined \<rparr>"
   by (simp add:wellformed_assembly_def wellformed_composition_def)
 
 lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
     components = undefined,
-    connections = [(''foo'', undefined), (''foo'', undefined)]
+    connections = [(''foo'', undefined), (''foo'', undefined)],
+    group_labels = undefined
   \<rparr>, configuration = undefined \<rparr>"
   by (simp add:wellformed_assembly_def wellformed_composition_def)
 
 lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
     components = [(''foo'', undefined)],
-    connections = [(''foo'', undefined)]
+    connections = [(''foo'', undefined)],
+    group_labels = undefined
   \<rparr>, configuration = undefined \<rparr>"
   by (simp add:wellformed_assembly_def wellformed_composition_def)
 
@@ -558,7 +567,8 @@ lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
       (''dup2'', \<lparr>
         conn_type = undefined,
         conn_from = [(''foo'', ''bar'')],
-        conn_to = undefined \<rparr>)]
+        conn_to = undefined \<rparr>)],
+    group_labels = undefined
   \<rparr>, configuration = undefined \<rparr>"
   by (simp add: wellformed_assembly_def wellformed_composition_def refs_valid_components_def
                 refs_valid_composition_def refs_valid_procedures_def

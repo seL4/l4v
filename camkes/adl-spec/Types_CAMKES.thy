@@ -310,10 +310,29 @@ record connection =
 text \<open>
   A composition block is used to contain all components of the system and the
   connections that define their communication with each other.
+
+  Additionally, it records which components are defined in a CAmkES
+  @{text group} block. These components share a single address space
+  and must also share the same access-control label.
+  For more information, see the CAmkES documentation for groups.
 \<close>
 record composition =
   components  :: "(adl_symbol \<times> component) list"
   connections :: "(adl_symbol \<times> connection) list"
+  group_labels :: "(adl_symbol \<times> adl_symbol) list" \<comment> \<open>See @{text get_group_label}, below\<close>
+
+text \<open>
+  Get the access-control label for a component or connection, taking
+  groups into account. ADL names that are not part of groups are
+  assumed to have their own labels.
+\<close>
+definition
+  get_group_label :: "composition \<Rightarrow> adl_symbol \<Rightarrow> adl_symbol"
+where
+  "get_group_label spec c \<equiv>
+     case map_of (group_labels spec) c of
+         Some c' \<Rightarrow> c'
+       | None \<Rightarrow> c"
 
 text \<open>
   Configurations are used as a way of adding extra information to a component

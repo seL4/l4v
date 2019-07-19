@@ -232,6 +232,9 @@ where
     (\<exists>x \<in> set (components c). control (snd x)) \<and>
      \<comment> \<open>All references resolve.\<close>
     refs_valid_composition c \<and>
+     \<comment> \<open>The @{const group_labels} mapping refers to existing ADL names.\<close>
+    (\<forall>(comp, group) \<in> set (group_labels c).
+        comp \<in> (fst ` set (components c) \<union> fst ` set (connections c))) \<and>
      \<comment> \<open>All connectors and components have distinct names.
         These names will correspond to integrity policy labels.\<close>
     distinct (map fst (components c) @ map fst (connections c)) \<and>
@@ -376,6 +379,10 @@ lemma wellformed_composition_ann:
                      (\<exists>x \<in> set (components c). control (snd x)) \<and>
      \<comment> \<open>All references resolve.\<close>
     refs_valid_composition c \<and>
+     \<comment> \<open>The @{const group_labels} mapping refers to existing ADL names.\<close>
+    (\<forall>(comp, group) \<in> set (group_labels c).
+        check_wellformed (wellformed_composition, ''group_labels'', comp)
+          (comp \<in> (fst ` set (components c) \<union> fst ` set (connections c)))) \<and>
      \<comment> \<open>All connectors and components have distinct names.
         These names will correspond to integrity policy labels.\<close>
     check_wellformed (wellformed_composition, ''distinct'', map fst (components c) @ map fst (connections c))

@@ -35,11 +35,14 @@ definition
   policy_of :: "assembly \<Rightarrow> label auth_graph"
 where
   "policy_of spec \<equiv>
+     let component_groups = get_group_label (composition spec) `
+                            fst ` set (components (composition spec))
+     in
      \<comment> \<open>First, some global assumptions.\<close>
 
      \<comment> \<open>Every component has every authority over itself.\<close>
      {(subj, auth, obj).
-           subj \<in> fst ` set (components (composition spec)) \<and>
+           subj \<in> component_groups \<and>
            subj = obj
      } \<union>
 
@@ -47,8 +50,8 @@ where
          For now, we relax it even further and say that reply caps from any component
          can end up in any other component. (Jira VER-1030)\<close>
      {(subj, auth, obj).
-           subj \<in> fst ` set (components (composition spec)) \<and>
-           obj \<in> fst ` set (components (composition spec)) \<and>
+           subj \<in> component_groups \<and>
+           obj \<in> component_groups \<and>
            subj \<noteq> obj \<and>
            auth = DeleteDerived
      } \<union>
@@ -56,14 +59,14 @@ where
     \<comment> \<open>Now, just read out the rights implied by each connector.\<close>
     {(subj, auth, obj).
            \<exists>conn \<in> snd ` set (connections (composition spec)).
-             subj \<in> fst ` set (conn_from conn) \<and>
-             obj  \<in> fst ` set (conn_to conn) \<and>
+             subj \<in> get_group_label (composition spec) `fst ` set (conn_from conn) \<and>
+             obj  \<in> get_group_label (composition spec) `fst ` set (conn_to conn) \<and>
              auth \<in> access_from_to (connector_access (conn_type conn))
     } \<union>
     {(subj, auth, obj).
            \<exists>conn \<in> snd ` set (connections (composition spec)).
-             subj \<in> fst ` set (conn_to conn) \<and>
-             obj  \<in> fst ` set (conn_from conn) \<and>
+             subj \<in> get_group_label (composition spec) `fst ` set (conn_to conn) \<and>
+             obj  \<in> get_group_label (composition spec) `fst ` set (conn_from conn) \<and>
              auth \<in> access_to_from (connector_access (conn_type conn))
     } \<union>
     {(subj, auth, obj).
@@ -82,14 +85,14 @@ where
     } \<union>
     {(subj, auth, obj).
            \<exists>(conn_name, conn) \<in> set (connections (composition spec)).
-             subj \<in> fst ` set (conn_from conn) \<and>
-             obj = conn_name \<and>
+             subj \<in> get_group_label (composition spec) `fst ` set (conn_from conn) \<and>
+             obj = get_group_label (composition spec) conn_name \<and>
              auth \<in> access_from_conn (connector_access (conn_type conn))
     } \<union>
     {(subj, auth, obj).
            \<exists>(conn_name, conn) \<in> set (connections (composition spec)).
-             subj \<in> fst ` set (conn_to conn) \<and>
-             obj = conn_name \<and>
+             subj \<in> get_group_label (composition spec) `fst ` set (conn_to conn) \<and>
+             obj = get_group_label (composition spec) conn_name \<and>
              auth \<in> access_to_conn (connector_access (conn_type conn))
     }
   "
