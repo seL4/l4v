@@ -142,7 +142,7 @@ where
   "ep_objs' spec \<equiv> concat (map (\<lambda>(n, c).
      if conn_type c = seL4RPC then
        [(n @ ''_ep'', c, Types_D.Endpoint)]
-     else if conn_type c = seL4Asynch then
+     else if conn_type c = seL4Notification then
        [(n @ ''_ntfn'', c, Types_D.Notification)]
      else
        []) (connections (composition spec)))"
@@ -369,7 +369,7 @@ where
                           [Types_D.EndpointCap (the_id_of n) 0 RW]
                         else
                           [])
-                      else if conn_type c = seL4Asynch then (
+                      else if conn_type c = seL4Notification then (
                         if instance \<in> fst ` set (conn_from c) then
                           [Types_D.NotificationCap (the_id_of n) 0 W]
                         else if instance \<in> fst ` set (conn_to c) then
@@ -525,8 +525,11 @@ lemma pw_decompose:
     \<Longrightarrow> \<forall>agent. policy_wellformed aag False irqs agent"
   by (clarsimp simp:policy_wellformed_def)
 
-lemma no_trans_grant: "subj = obj \<or> (subj, Grant, obj) \<notin> policy_of spec"
+(* no longer true after introducing connector_access *)
+(*
+lemma no_trans_grant: "subj = obj \<or> (subj, auth.Grant, obj) \<notin> policy_of spec"
   by (clarsimp simp:policy_of_def)
+*)
 
 lemma pw_control:
   "\<lbrakk>policy_wellformed policy mirqs irqs l; (s, Receive, l) \<in> policy\<rbrakk> \<Longrightarrow> (l, Control, s) \<in> policy"
@@ -796,12 +799,15 @@ where
      case state_of spec extra irqs of Some state \<Rightarrow> Some (state, pas_of spec extra irqs)
                                     | None \<Rightarrow> None"
 
+(* no longer true after introducing connector_access *)
+(*
 lemma "\<lbrakk>generate spec extra irqs = Some (state, pases); pas \<in> pases;
         (subject, Control, object) \<in> pasPolicy pas\<rbrakk>
          \<Longrightarrow> subject = object"
   apply (clarsimp simp:generate_def pas_of_def policy_of_def)
-  apply (case_tac "state_of spec extra irqs"; clarsimp)+
+  apply (case_tac "state_of spec extra irqs"; clarsimp)
   done
+*)
 
 end
 

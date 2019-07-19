@@ -100,25 +100,13 @@ where
 
 subsection \<open>\label{subsec:wconnectors}Connectors\<close>
 text \<open>
-  For a connector to be valid its mode of interaction must be
-  consistent with the underlying mechanism.
+  For now, we don't really restrict what combinations of communication
+  mechanisms connectors can use. This can be refined later.
 \<close>
 definition
   wellformed_connector :: "connector \<Rightarrow> bool"
 where
-  "wellformed_connector c \<equiv> (case c of
-    SyncConnector t \<Rightarrow> (case t of
-      Native n \<Rightarrow> n \<in> {RPC}
-     |Hardware h \<Rightarrow> h \<in> {HardwareIOPort}
-     |Export e \<Rightarrow> e \<in> {ExportRPC})
-   |AsyncConnector t \<Rightarrow> (case t of
-      Native n \<Rightarrow> n \<in> {AsynchronousEvent}
-     |Hardware h \<Rightarrow> h \<in> {HardwareInterrupt}
-     |Export e \<Rightarrow> e \<in> {ExportAsynchronous})
-   |MemoryConnector t \<Rightarrow> (case t of
-      Native n \<Rightarrow> n \<in> {SharedData}
-     |Hardware h \<Rightarrow> h \<in> {HardwareMMIO}
-     |Export e \<Rightarrow> e \<in> {ExportData}))"
+  "wellformed_connector c \<equiv> True"
 
 subsection \<open>\label{subsec:wconnections}Connections\<close>
 definition
@@ -138,8 +126,7 @@ where
   "ex_one xs P \<equiv> length (filter P xs) = 1"
 
 text \<open>
-  The following two declarations provide more convenience for this function.
-  @{text "\<exists>1 x \<in> xs. P x"} will be translated into @{term "ex_one xs P"}.
+  More convenient syntax for @{const ex_one}.
 \<close>
 syntax
   "_ex_one" :: "pttrn \<Rightarrow> 'a set \<Rightarrow> bool \<Rightarrow> bool" ("(4\<exists>1 _\<in>_./ _)" [0, 0, 10] 10)
@@ -180,33 +167,37 @@ definition
   refs_valid_connection :: "connection \<Rightarrow> (adl_symbol \<times> component) list \<Rightarrow> bool"
 where
   "refs_valid_connection conn component_list \<equiv>
-  wellformed_connector (conn_type conn) \<and>
-  (case conn_type conn of
-    SyncConnector _ \<Rightarrow>
-      \<comment> \<open>Corresponding procedures exist.\<close>
-        (\<forall>to \<in> set (to_components conn).
-           \<exists>1comp \<in> component_list.
-             fst comp = to \<and> does_provide (snd comp) (to_interfaces conn))
-      \<and> (\<forall>from \<in> set (from_components conn).
-           \<exists>1comp \<in> component_list.
-             fst comp = from \<and> does_require (snd comp) (from_interfaces conn))
-  | AsyncConnector _ \<Rightarrow>
-      \<comment> \<open>Corresponding events exist.\<close>
-        (\<forall>to \<in> set (to_components conn).
-           \<exists>1comp \<in> component_list.
-             fst comp = to \<and> does_consume (snd comp) (to_interfaces conn))
-      \<and> (\<forall>from \<in> set (from_components conn).
-           \<exists>1comp \<in> component_list.
-             fst comp = from \<and> does_emit (snd comp) (from_interfaces conn))
-  | MemoryConnector _ \<Rightarrow>
-      \<comment> \<open>Corresponding dataports exist.\<close>
-        (\<forall>to \<in> set (to_components conn).
-           \<exists>1comp \<in> component_list.
-             fst comp = to \<and> has_dataport (snd comp) (to_interfaces conn))
-      \<and> (\<forall>from \<in> set (from_components conn).
-           \<exists>1comp \<in> component_list.
-             fst comp = from \<and> has_dataport (snd comp) (from_interfaces conn))
-  )"
+       wellformed_connector (conn_type conn) \<and>
+       (\<comment> \<open>Every to- and from-end of the component must exist.\<close>
+        \<forall>(from_name, from_interface) \<in> set (conn_from conn).
+          \<exists>1from \<in> component_list.
+            fst from = from_name \<and>
+            (\<forall>(to_name, to_interface) \<in> set (conn_to conn).
+               \<exists>1to \<in> component_list.
+                 fst to = to_name \<and>
+                 \<comment> \<open>The following checks that the component interfaces have the correct type.\<close>
+                (case connector_interface (conn_type conn) of
+                     RPCInterface \<Rightarrow>      from_interface \<in> fst ` set (requires (snd from)) \<and>
+                                          to_interface \<in> fst ` set (provides (snd to))
+                   | EventInterface \<Rightarrow>    from_interface \<in> fst ` set (emits (snd from)) \<and>
+                                          to_interface \<in> fst ` set (consumes (snd to))
+                   \<comment> \<open>TODO: the check for memory connectors could be optimised; we don't need to
+                             check all pairs of from- and to- for dataports with many subscribers.\<close>
+                   | DataportInterface \<Rightarrow> from_interface \<in> fst ` set (dataports (snd from)) \<and>
+                                          to_interface \<in> fst ` set (dataports (snd to))
+                )
+                \<and>
+                \<comment> \<open>Next, we check that the kind of components being connected are appropriate.\<close>
+                (case connector_type (conn_type conn) of
+                    \<comment> \<open>Both endpoints must be regular components.\<close>
+                    NativeConnector \<Rightarrow>  \<not> hardware (snd from) \<and> \<not> hardware (snd to)
+                    \<comment> \<open>At least one endpoint must be a hardware component.
+                        FIXME: might not be quite what we want.\<close>
+                  | HardwareConnector \<Rightarrow> hardware (snd from) \<or> hardware (snd to)
+                  | ExportConnector \<Rightarrow> undefined ''compound components not supported yet''
+                )
+            )
+     )"
 
 definition
   refs_valid_connections ::

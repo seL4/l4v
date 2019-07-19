@@ -238,7 +238,7 @@ where
     composition = \<lparr>
       components = [(''source'', emitter), (''sink'', consumer)],
       connections = [(''simpleEvent1'', \<lparr>
-        conn_type = seL4Asynch,
+        conn_type = seL4Notification,
         conn_from = [(''source'', ''event'')],
         conn_to = [(''sink'', ''event'')]
       \<rparr>)]
@@ -311,7 +311,11 @@ where
 
 text \<open>The data port example is wellformed:\<close>
 lemma "wellformed_assembly data_system"
-  by (simp add: wellformed_CAMKES_simps data_system_def data_client_def)
+  apply (simp add: data_system_def data_client_def)
+  apply (simp add: wellformed_CAMKES_simps
+                   refs_valid_connection_def (* HACK because the wellformed_CAMKES_simps version backtracks excessively *))
+  done
+
 
 subsection \<open>\label{subsec:terminal}Secure Terminal\<close>
 text \<open>
@@ -445,7 +449,7 @@ text \<open>
   Wellformedness for this more complex example is easy as well.
 \<close>
 lemma "wellformed_assembly terminal"
-  by (simp add: wellformed_CAMKES_simps
+  by (simp add: wellformed_CAMKES_simps refs_valid_connection_def
                 terminal_def comp_def manager_def terminal_client_def display_def
                 channel1_def channel2_def conf_def)
 
@@ -463,7 +467,7 @@ where
   "x \<equiv> \<lparr>
     control = undefined,
     hardware = undefined,
-    requires = [(undefined, undefined)], \<comment> \<open>1 required interface...\<close>
+    requires = [(undefined, [undefined])], \<comment> \<open>1 required interface...\<close>
     provides = undefined,
     dataports = undefined,
     emits = undefined,
@@ -489,7 +493,7 @@ lemma "\<not> wellformed_assembly broken_assembly"
                 refs_valid_procedures_def
                 x_def ex_one_def)
   apply fastforce
- done
+  done
 (*>*)
 (*<*)end(*>*)
 
@@ -512,7 +516,7 @@ lemma "\<not>wellformed_assembly broken_assembly"
    apply (unfold broken_assembly_def)
    apply (frule wellformed_composition_is_nonempty)
    apply simp+
- done
+  done
 (*>*)
 (*<*)end(*>*)
 
@@ -540,26 +544,27 @@ lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
     components = [(''foo'', \<lparr>
       control = undefined,
       hardware = undefined,
-      requires = [(''bar'', undefined)],
+      requires = [(''bar'', [undefined])],
       provides = undefined,
       dataports = undefined,
       emits = undefined,
       consumes = undefined,
       attributes = undefined \<rparr>)],
-    connections = [(''bar'', \<lparr>
-      conn_type = undefined,
-      conn_from = [(''foo'', ''bar'')],
-      conn_to = undefined \<rparr>),
-    (''baz'', \<lparr>
-      conn_type = undefined,
-      conn_from = [(''foo'', ''bar'')],
-      conn_to = undefined \<rparr>)]
+    connections = [
+      (''dup1'', \<lparr>
+        conn_type = undefined,
+        conn_from = [(''foo'', ''bar'')],
+        conn_to = undefined \<rparr>),
+      (''dup2'', \<lparr>
+        conn_type = undefined,
+        conn_from = [(''foo'', ''bar'')],
+        conn_to = undefined \<rparr>)]
   \<rparr>, configuration = undefined \<rparr>"
-  by (simp add:wellformed_assembly_def wellformed_composition_def refs_valid_components_def
-      refs_valid_composition_def refs_valid_procedures_def ex_one_def)
+  by (simp add: wellformed_assembly_def wellformed_composition_def refs_valid_components_def
+                refs_valid_composition_def refs_valid_procedures_def
+                ex_one_def
+           split: prod.splits)
 
-lemma "\<not>wellformed_procedure []"
-  by (simp add:wellformed_procedure_def)
 (*>*)
 
 (*<*)end(*>*)

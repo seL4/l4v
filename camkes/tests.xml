@@ -18,7 +18,7 @@
 
 -->
 <testsuite depends="isabelle Lib" cpu-timeout="3600">
-    <test name="CamkesAdlSpec">make CamkesAdlSpec</test>
+    <test name="CamkesAdlSpec" depends="Access">make CamkesAdlSpec</test>
     <test name="CamkesCdlRefine" depends="CamkesAdlSpec DPolicy">make CamkesCdlRefine</test>
     <test name="CamkesGlueSpec">make CamkesGlueSpec</test>
     <test name="CamkesGlueProofs" depends="AutoCorres" cpu-timeout="7200">make CamkesGlueProofs</test>

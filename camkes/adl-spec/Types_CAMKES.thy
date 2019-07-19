@@ -12,7 +12,8 @@ chapter \<open>\label{sec:types}Types\<close>
 
 (*<*)
 theory Types_CAMKES
-imports Main
+imports
+  Access.Access
 begin
 (*>*)
 
@@ -168,33 +169,25 @@ datatype interface =
 
 subsection \<open>\label{subsec:connectors}Connectors\<close>
 text \<open>
-  Two components are connected via a connector. The type of a connector is an
-  abstraction of the underlying communication mechanism. Connectors come in three
-  distinct types, native connectors, hardware connectors and export connectors.
+  Two components are connected via a connector. The type of a connector
+  comprises two orthogonal features:
 
-  Native connectors map directly to implementation mechanisms. These are the
-  types of connectors that are found in almost all component platform models. The
-  event-style connector, @{text AsynchronousEvent}, is
-  used to model communication consisting of an identifier with no associated message
-  data.
+  \begin{itemize}
+    \item The kind of components being connected: @{text connector_endpoint}
+    \item The communication mechanism: @{text connector_mechanism}
+  \end{itemize}
 \<close>
-datatype native_connector_type =
-    AsynchronousEvent \<comment> \<open>an asynchronous notification\<close>
-  | RPC \<comment> \<open>a synchronous channel\<close>
-  | SharedData \<comment> \<open>a shared memory region\<close>
 
 text \<open>
-  Recalling that hardware devices are modelled as components in CAmkES, hardware
-  connectors are used to connect the interface of a device to the interface of a
-  software component. Devices must be connected using the connector type that
-  corresponds to the mode of interaction with the device.
-\<close>
-datatype hardware_connector_type =
-    HardwareMMIO \<comment> \<open>memory mapped IO\<close>
-  | HardwareInterrupt \<comment> \<open>device interrupts\<close>
-  | HardwareIOPort \<comment> \<open>IA32 IO ports\<close>
+  Connector types.
 
-text \<open>
+  Native connectors are used for ordinary communication between software
+  components; these are found in almost all component platform models.
+
+  Hardware devices are also modelled as components in CAmkES.
+  Hardware connectors are used to connect the interface of a device to
+  the interface of a software component (typically, a driver).
+
   Export connectors are used when
   specifying a compound component. A compound component has a set of interfaces
   that are a subset of the unconnected interfaces of its constituent components.
@@ -213,25 +206,54 @@ text \<open>
   \includegraphics{imgs/composite-passthrough}
   \end{center}
   \end{figure}
-\<close>
-datatype export_connector_type =
-    ExportAsynchronous
-  | ExportRPC
-  | ExportData
 
+  (Our model does not support compound components yet, but we may add support
+   in the future. See \ref{subsubsec:composites} for more exposition.)
+\<close>
 datatype connector_type =
-    Native native_connector_type
-  | Hardware hardware_connector_type
-  | Export export_connector_type
+    NativeConnector
+  | HardwareConnector
+  | ExportConnector
 
 text \<open>
-  Connectors are distinguished by the mode of interaction they enable. The
-  reason for this will become clearer in \autoref{subsec:wconnectors}.
+  Connector interfaces.
+
+  Each connector is declared to bind to a certain type of interface
+  on its component endpoints. This also determines the interface
+  exposed to user code.
 \<close>
-datatype connector =
-    SyncConnector connector_type
-  | AsyncConnector connector_type
-  | MemoryConnector connector_type
+datatype connector_interface =
+    RPCInterface
+  | EventInterface
+  | DataportInterface
+
+text \<open>
+  Connector access rights.
+
+  This declares the types of access rights that may be made available
+  by the connector. There are two sets of rights, corresponding to
+  each nominal direction of the connector.
+
+  Note that we will model connections to have separate access-control
+  labels from components'. Hence we need \emph{four} sets: two for
+  component rights to the connection objects (e.g. endpoints), and
+  two for component rights to each other's objects.
+\<close>
+record connector_access =
+    \<comment> \<open>@{text access_foo_bar} means access from the "@{text foo}" label to
+        the "@{text bar}" label; labels may be from-components,
+        to-components, or the connection itself\<close>
+    access_from_to :: "auth set"
+    access_to_from :: "auth set"
+    access_from_conn :: "auth set"
+    access_to_conn :: "auth set"
+    \<comment> \<open>we assume connections are passive labels, so they do not
+        need access rights of their own\<close>
+
+record connector =
+    connector_type :: connector_type
+    connector_interface :: connector_interface
+    connector_access :: connector_access
 
 subsection \<open>\label{subsec:components}Components\<close>
 text \<open>
@@ -239,7 +261,7 @@ text \<open>
   are re-usable collections of source code with explicit descriptions of the
   exposed methods of interaction (@{term interfaces} described above).
 
-  Components have three distinct modes of communication:
+  Components have three distinct interfaces for communication:
   \begin{enumerate}
     \item Synchronous communication over procedures. This communication is
       analogous to a function call and happens over a channel established from
