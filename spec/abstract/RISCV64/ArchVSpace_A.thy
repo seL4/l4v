@@ -95,12 +95,12 @@ definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
        ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow> doE
            pt' \<leftarrow> find_vspace_for_asid asid;
            whenE (pt \<noteq> pt') $ throwError InvalidRoot;
-           liftE $ do_machine_op $ setVSpaceRoot pt (ucast asid)
+           liftE $ do_machine_op $ setVSpaceRoot (addrFromPPtr pt) (ucast asid)
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     (\<lambda>_. do
        global_pt \<leftarrow> gets global_pt;
-       do_machine_op $ setVSpaceRoot (addrFromPPtr global_pt) 0
+       do_machine_op $ setVSpaceRoot (addrFromKPPtr global_pt) 0
     od)
   od"
 
