@@ -16,22 +16,29 @@ theory ArchAcc_R
 imports SubMonad_R
 begin
 
-context Arch begin global_naming RISCV64 (*FIXME: arch_split*)
+(* RISCV FIXME: move to Lib.More_Numeral_Type *)
+context mod_size_order
+begin
 
-lemma asid_pool_at_ko:
-  "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (RISCV64_A.ASIDPool pool)) p s"
-  apply (clarsimp simp: obj_at_def a_type_def)
-  apply (case_tac ko, simp_all split: if_split_asm)
-  apply (rename_tac arch_kernel_obj)
-  apply (case_tac arch_kernel_obj, auto split: if_split_asm)
-  done
+lemma size_minus[simp]:
+  "y \<le> (x::'a) \<Longrightarrow> size (x - y) = size x - size y"
+  unfolding definitions Rep_Abs_mod
+  using Rep size0
+  by (simp flip: nat_diff_distrib add: eq_nat_nat_iff pos_mod_sign mod_sub_if_z split: if_split_asm)
 
+lemma size_minus_one[simp]:
+  "0 < (x::'a) \<Longrightarrow> size (x - 1) = size x - Suc 0"
+  by simp
 
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-declare if_cong[cong]
+declare if_cong[cong] (* FIXME: if_cong *)
+
+lemma asid_pool_at_ko:
+  "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (RISCV64_A.ASIDPool pool)) p s"
+  by (clarsimp simp: asid_pools_at_eq obj_at_def)
 
 lemma corres_gets_asid:
   "corres (\<lambda>a c. a = c o ucast) \<top> \<top> (gets (riscv_asid_table \<circ> arch_state)) (gets (riscvKSASIDTable \<circ> ksArchState))"
@@ -789,32 +796,302 @@ lemma lookupPTSlotFromLevel_inv:
   apply (wpsimp simp: pteAtIndex_def wp: getPTE_wp|assumption)+
   done
 
-(* FIXME RISCV: something like this *)
+lemma size_maxPTLevel[simp]:
+  "size max_pt_level = maxPTLevel"
+  by (simp add: maxPTLevel_def level_defs)
+
+lemma ptBitsLeft_0[simp]:
+  "ptBitsLeft 0 = pageBits"
+  by (simp add: ptBitsLeft_def)
+
+(* FIXME RISCV: move to NondetMonad *)
+lemma gets_the_Some[simp]:
+  "gets_the (\<lambda>_. Some x) = return x"
+  by (simp add: gets_the_def)
+
+lemma ptBitsLeft_eq[simp]:
+  "ptBitsLeft (size level) = pt_bits_left level"
+  by (simp add: ptBitsLeft_def pt_bits_left_def)
+
+lemma ptIndex_eq[simp]:
+  "ptIndex (size level) = pt_index level"
+  by (fastforce simp: ptIndex_def pt_index_def)
+
+lemma ptSlotIndex_eq[simp]:
+  "ptSlotIndex (size level) = pt_slot_offset level"
+  by (fastforce simp: ptSlotIndex_def pt_slot_offset_def)
+
+lemmas ptSlotIndex_0[simp] = ptSlotIndex_eq[where level=0, simplified]
+
+(* FIXME RISCV: move to NondetMonad *)
+lemma gets_the_oapply_comp[simp]:
+  "gets_the (oapply x \<circ> f) = gets_map f x"
+  by (fastforce simp: gets_map_def gets_the_def o_def exec_gets)
+
+lemma pteAtIndex_corres:
+  "level' = size level \<Longrightarrow>
+   corres pte_relation'
+     (pte_at (pt_slot_offset level pt vptr) and pspace_aligned and pspace_distinct)
+     \<top>
+     (get_pte (pt_slot_offset level pt vptr))
+     (pteAtIndex level' pt vptr)"
+  by (simp add: pteAtIndex_def) (rule get_pte_corres)
+
+(* FIXME RISCV: move to NondetMonad *)
+lemma gets_the_if_distrib:
+  "gets_the (if P then f else g) = (if P then gets_the f else gets_the g)"
+  by simp
+
+(* FIXME RISCV: move to Corres *)
+lemma corres_if3:
+ "\<lbrakk> G = G'; G \<Longrightarrow> corres r P P' a c; \<not> G' \<Longrightarrow> corres r Q Q' b d \<rbrakk>
+    \<Longrightarrow> corres r (if G then P else Q) (if G' then P' else Q') (if G then a else b) (if G' then c else d)"
+  by simp
+
+lemma user_region_or:
+  "\<lbrakk> vref \<in> user_region; vref' \<in> user_region \<rbrakk> \<Longrightarrow> vref || vref' \<in> user_region"
+  by (simp add: user_region_def canonical_user_def le_mask_high_bits word_size)
+
+(* FIXME RISCV: replace vref_for_level_pt_index_idem in ArchAcc_AI *)
+lemma vref_for_level_pt_index_idem:
+  assumes "level' \<le> max_pt_level" and "level'' \<le> level'"
+  shows "vref_for_level
+           (vref_for_level vref (level'' + 1) || (pt_index level vref' << pt_bits_left level''))
+           (level' + 1)
+         = vref_for_level vref (level' + 1)"
+proof -
+  have dist_zero_right':
+    "\<And>w x y. \<lbrakk> (w::('a::len) word) = y; x = 0\<rbrakk> \<Longrightarrow> w || x = y"
+    by auto
+  show ?thesis using assms
+    unfolding vref_for_level_def pt_index_def
+    apply (subst word_ao_dist)
+    apply (rule dist_zero_right')
+    apply (subst mask_lower_twice)
+   apply (rule pt_bits_left_mono, erule (1) vm_level_le_plus_1_mono, rule refl)
+  apply (simp add: mask_shifl_overlap_zero pt_bits_left_def)
+  done
+qed
+
+lemma lookup_pt_slot_from_level_corres:
+  "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>
+   corres (\<lambda>(level, p) (bits, p'). bits = pt_bits_left level \<and> p' = p)
+     (pspace_aligned and pspace_distinct and valid_vspace_objs and valid_asid_table and
+     \<exists>\<rhd> (level, pt) and K (vptr \<in> user_region \<and> level \<le> max_pt_level))
+     \<top>
+     (gets_the (pt_lookup_slot_from_level level 0 pt vptr \<circ> ptes_of))
+     (lookupPTSlotFromLevel level' pt' vptr)"
+proof (induct level arbitrary: pt pt' level')
+  case 0
+  thus ?case by (simp add: lookupPTSlotFromLevel.simps pt_bits_left_def)
+next
+  case (minus level)
+  from `0 < level`
+  obtain nlevel where nlevel: "level = nlevel + 1" by (auto intro: that[of "level-1"])
+  with `0 < level`
+  have nlevel1: "nlevel < nlevel + 1" using bit0.pred by fastforce
+  with nlevel
+  have level: "size level = Suc (size nlevel)" by simp
+
+  define vref_step where
+    "vref_step vref \<equiv>
+       vref_for_level vref (level+1) || (pt_index level vptr << pt_bits_left level)"
+    for vref
+
+  have vref_for_level_step[simp]:
+    "level \<le> max_pt_level \<Longrightarrow>
+     vref_for_level (vref_step vref) (level + 1) = vref_for_level vref (level + 1)"
+    for vref
+    unfolding vref_step_def
+    using vref_for_level_pt_index_idem[of level level vref level vptr] by simp
+
+  have pt_walk_vref[simp]:
+    "level \<le> max_pt_level \<Longrightarrow>
+     pt_walk max_pt_level level pt (vref_step vref) =
+     pt_walk max_pt_level level pt vref" for pt vref
+    by (rule pt_walk_vref_for_level_eq; simp)
+
+  have vref_step_user_region[simp]:
+    "\<lbrakk> vref \<in> user_region; vptr \<in> user_region; level \<le> max_pt_level \<rbrakk>
+     \<Longrightarrow> vref_step vref \<in> user_region"
+    for vref
+    unfolding vref_step_def
+    using nlevel1 nlevel
+    by (auto intro!: user_region_or vref_for_level_user_region
+             simp: pt_bits_left_def bit_simps canonical_bit_def user_region_def
+                   pt_index_def canonical_user_def le_mask_high_bits word_eqI_solve_simps
+             dest!: max_pt_level_enum)
+
+  have pt_slot_offset_step[simp]:
+    "\<lbrakk> is_aligned pt pt_bits; vref \<in> user_region \<rbrakk> \<Longrightarrow>
+    pt_slot_offset level pt (vref_step vref) = pt_slot_offset level pt vptr" for vref
+    unfolding vref_step_def using nlevel1 nlevel
+    by (auto simp: pt_slot_offset_or_def user_region_def canonical_user_def le_mask_high_bits
+                   canonical_bit_def word_eqI_solve_simps pt_index_def bit_simps pt_bits_left_def
+             dest!: max_pt_level_enum
+             intro!: word_eqI)
+
+  from `0 < level` `level' = size level` `pt' = pt` level
+  show ?case
+    apply (subst pt_lookup_slot_from_level_rec)
+    apply (simp add: lookupPTSlotFromLevel.simps Let_def obind_comp_dist if_comp_dist
+                     gets_the_if_distrib)
+    apply (rule corres_guard_imp, rule corres_split[where r'=pte_relation'])
+         apply (rule corres_if3)
+           apply (rename_tac pte pte', case_tac pte; (simp add: isPageTablePTE_def))
+          apply (rule minus(1))
+           apply (simp add: nlevel)
+          apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
+                                addr_from_ppn_def)
+         apply (rule corres_inst[where P=\<top> and P'=\<top>])
+         apply (clarsimp simp: ptSlotIndex_def pt_slot_offset_def pt_index_def pt_bits_left_def
+                               ptIndex_def ptBitsLeft_def)
+        apply (rule pteAtIndex_corres, simp)
+       apply wpsimp+
+     apply (frule (5) vs_lookup_table_is_aligned)
+     apply (rule conjI)
+      apply (drule (5) valid_vspace_objs_strongD)
+      apply (clarsimp simp: pte_at_def obj_at_def)
+      apply (simp add: pt_slot_offset_def)
+      apply (rule is_aligned_add)
+       apply (erule is_aligned_weaken)
+       apply (simp add: bit_simps)
+      apply (rule is_aligned_shiftl, simp)
+     apply clarsimp
+     apply (rule_tac x=asid in exI)
+     apply (rule_tac x="vref_step vref" in exI)
+     apply (clarsimp simp: vs_lookup_table_def in_omonad split: if_split_asm)
+     apply (rule conjI)
+      apply (clarsimp simp: level_defs)
+     apply (subst pt_walk_split_Some[where level'=level]; simp?)
+      apply (drule bit0.pred)
+      apply simp
+     apply (subst pt_walk.simps)
+     apply (simp add: in_omonad)
+    apply simp
+    done
+qed
+
 lemma lookup_pt_slot_corres:
-  "corres (\<lambda>(level, p) (level', p'). level' = size level \<and> p' = p)
+  "corres (\<lambda>(level, p) (bits, p'). bits = pt_bits_left level \<and> p' = p)
           (pspace_aligned and pspace_distinct and valid_vspace_objs
-           and valid_arch_state and (\<exists>\<rhd> (level,pt)) and K (vptr \<in> user_region))
+             and valid_asid_table and \<exists>\<rhd>(max_pt_level,pt)
+             and K (vptr \<in> user_region))
           \<top>
           (gets_the (pt_lookup_slot pt vptr \<circ> ptes_of)) (lookupPTSlot pt vptr)"
-  sorry (*
-    apply (simp add: lookup_pt_slot_def lookupPTSlot_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_eqrE[OF _ lookup_pd_slot_corres])
-      apply (rule corres_splitEE
-      [where R'="\<lambda>_. pspace_distinct'" and R="\<lambda>r. valid_pde r and pspace_aligned"])
-         prefer 2
-         apply (simp, rule get_pde_corres')
-        apply (case_tac pde; simp add: lookup_failure_map_def bit_simps lookupPTSlotFromPT_def
-                                  split: pde.splits)
-        apply (simp add: returnOk_liftE checkPTAt_def)
-        apply (rule corres_stateAssert_implied[where P=\<top>, simplified])
-         apply clarsimp
-        apply clarsimp
-        apply (rule page_table_at_state_relation)
-           apply fastforce
-          apply simp+
-       apply (wpsimp wp: getPDE_wp | wp_once hoare_drop_imps)+
-  done *)
+  unfolding lookupPTSlot_def pt_lookup_slot_def
+  by (corressimp corres: lookup_pt_slot_from_level_corres)
+
+declare lookupPTFromLevel.simps[simp del]
+
+lemma pt_lookup_from_level_corres:
+  "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>
+   corres (lfr \<oplus> (=))
+          (pspace_aligned and pspace_distinct and valid_vspace_objs
+             and valid_asid_table and \<exists>\<rhd>(level,pt)
+             and K (vptr \<in> user_region \<and> level \<le> max_pt_level))
+          \<top>
+          (pt_lookup_from_level level pt vptr target)
+          (lookupPTFromLevel level' pt' vptr target)"
+proof (induct level arbitrary: level' pt pt')
+  case 0
+  then show ?case
+    apply (subst lookupPTFromLevel.simps, subst pt_lookup_from_level_simps)
+    apply (clarsimp simp: lookup_failure_map_def)
+    done
+next
+  case (minus level)
+
+  (* FIXME RISCV: unfortunate duplication from lookup_pt_slot_from_level_corres *)
+  from `0 < level`
+  obtain nlevel where nlevel: "level = nlevel + 1" by (auto intro: that[of "level-1"])
+  with `0 < level`
+  have nlevel1: "nlevel < nlevel + 1" using bit0.pred by fastforce
+  with nlevel
+  have level: "size level = Suc (size nlevel)" by simp
+
+  define vref_step where
+    "vref_step vref \<equiv>
+       vref_for_level vref (level+1) || (pt_index level vptr << pt_bits_left level)"
+    for vref
+
+  have vref_for_level_step[simp]:
+    "level \<le> max_pt_level \<Longrightarrow>
+     vref_for_level (vref_step vref) (level + 1) = vref_for_level vref (level + 1)"
+    for vref
+    unfolding vref_step_def
+    using vref_for_level_pt_index_idem[of level level vref level vptr] by simp
+
+  have pt_walk_vref[simp]:
+    "level \<le> max_pt_level \<Longrightarrow>
+     pt_walk max_pt_level level pt (vref_step vref) =
+     pt_walk max_pt_level level pt vref" for pt vref
+    by (rule pt_walk_vref_for_level_eq; simp)
+
+  have vref_step_user_region[simp]:
+    "\<lbrakk> vref \<in> user_region; vptr \<in> user_region; level \<le> max_pt_level \<rbrakk>
+     \<Longrightarrow> vref_step vref \<in> user_region"
+    for vref
+    unfolding vref_step_def
+    using nlevel1 nlevel
+    by (auto intro!: user_region_or vref_for_level_user_region
+             simp: pt_bits_left_def bit_simps canonical_bit_def user_region_def
+                   pt_index_def canonical_user_def le_mask_high_bits word_eqI_solve_simps
+             dest!: max_pt_level_enum)
+
+  have pt_slot_offset_step[simp]:
+    "\<lbrakk> is_aligned pt pt_bits; vref \<in> user_region \<rbrakk> \<Longrightarrow>
+    pt_slot_offset level pt (vref_step vref) = pt_slot_offset level pt vptr" for vref
+    unfolding vref_step_def using nlevel1 nlevel
+    by (auto simp: pt_slot_offset_or_def user_region_def canonical_user_def le_mask_high_bits
+                   canonical_bit_def word_eqI_solve_simps pt_index_def bit_simps pt_bits_left_def
+             dest!: max_pt_level_enum
+             intro!: word_eqI)
+
+  from minus.prems
+  show ?case
+    apply (subst lookupPTFromLevel.simps, subst pt_lookup_from_level_simps)
+    apply (simp add: unlessE_whenE not_less)
+    apply (rule corres_initial_splitE[where r'=dc])
+       apply (corressimp simp: lookup_failure_map_def)
+      apply (rule corres_splitEE[where r'=pte_relation'])
+         apply (rule whenE_throwError_corres)
+           apply (simp add: lookup_failure_map_def)
+          apply (rename_tac pte pte', case_tac pte; simp add: isPageTablePTE_def)
+         apply (rule corres_if)
+           apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
+                                 addr_from_ppn_def)
+          apply (rule corres_returnOk[where P=\<top> and P'=\<top>], rule refl)
+         apply (rule minus.hyps)
+          apply (simp add: minus.hyps(2))
+         apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
+                               addr_from_ppn_def)
+        apply (simp, rule get_pte_corres)
+       apply wpsimp+
+     apply (simp add: bit0.neq_0_conv)
+     apply (frule (5) vs_lookup_table_is_aligned)
+     apply (rule conjI)
+      apply (drule (5) valid_vspace_objs_strongD)
+      apply (clarsimp simp: pte_at_def obj_at_def)
+      apply (simp add: pt_slot_offset_def)
+      apply (rule is_aligned_add)
+       apply (erule is_aligned_weaken)
+       apply (simp add: bit_simps)
+      apply (rule is_aligned_shiftl, simp)
+     apply clarsimp
+     apply (rule_tac x=asid in exI)
+     apply (rule_tac x="vref_step vref" in exI)
+     apply (clarsimp simp: vs_lookup_table_def in_omonad split: if_split_asm)
+     apply (rule conjI)
+      apply (clarsimp simp: level_defs)
+     apply (subst pt_walk_split_Some[where level'=level]; simp?)
+      apply (drule bit0.pred)
+      apply simp
+     apply (subst pt_walk.simps)
+     apply (simp add: in_omonad)
+    apply wpsimp
+    done
+qed
 
 declare in_set_zip_refl[simp]
 
@@ -837,10 +1114,6 @@ crunch typ_at'[wp]: copyGlobalMappings "\<lambda>s. P (typ_at' T p s)"
   (wp: mapM_x_wp' ignore: forM_x getObject)
 
 lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']
-
-lemma size_maxPTLevel[simp]:
-  "size max_pt_level = maxPTLevel"
-  by (simp add: maxPTLevel_def level_defs)
 
 lemma corres_gets_global_pt [corres]:
   "corres (=) valid_global_arch_objs \<top>
