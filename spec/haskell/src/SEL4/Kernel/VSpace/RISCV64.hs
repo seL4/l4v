@@ -146,12 +146,13 @@ pteAtIndex level ptPtr vPtr = getObject (ptSlotIndex level ptPtr vPtr)
 -- top-level page table, and level 0 is the bottom level that contains only
 -- pages or invalid entries.
 lookupPTSlotFromLevel :: Int -> PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
+lookupPTSlotFromLevel 0 ptPtr vPtr =
+    return (ptBitsLeft 0, ptSlotIndex 0 ptPtr vPtr)
 lookupPTSlotFromLevel level ptPtr vPtr = do
     pte <- pteAtIndex level ptPtr vPtr
-    let ptr = getPPtrFromHWPTE pte
-    if isPageTablePTE pte && level > 0
-        then lookupPTSlotFromLevel (level-1) ptr vPtr
-        else return (ptBitsLeft level, ptr)
+    if isPageTablePTE pte
+        then lookupPTSlotFromLevel (level-1) (getPPtrFromHWPTE pte) vPtr
+        else return (ptBitsLeft level, ptSlotIndex level ptPtr vPtr)
 
 -- lookupPTSlot walks the page table and returns a pointer to the slot that maps
 -- a given virtual address, together with the number of bits left to translate,
@@ -230,7 +231,7 @@ lookupPTFromLevel level ptPtr vPtr targetPtPtr = do
     unless (isPageTablePTE pte) $ throw InvalidRoot
     let ptr = getPPtrFromHWPTE pte
     if ptr == targetPtPtr
-        then return $ slot
+        then return slot
         else lookupPTFromLevel (level-1) ptr vPtr targetPtPtr
 
 unmapPageTable :: ASID -> VPtr -> PPtr PTE -> Kernel ()

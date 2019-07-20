@@ -27,13 +27,14 @@ context Arch begin global_naming RISCV64_H
 fun
   lookupPTSlotFromLevel :: "nat => machine_word => machine_word => (nat * machine_word) kernel"
 where
-  "lookupPTSlotFromLevel level ptPtr vPtr = do
-    pte <- pteAtIndex level ptPtr vPtr;
-    ptr <- return (getPPtrFromHWPTE pte);
-    if isPageTablePTE pte \<and> level > 0
-        then lookupPTSlotFromLevel (level - 1) ptr vPtr
-        else return (ptBitsLeft level, ptr)
-  od"
+  "lookupPTSlotFromLevel 0 ptPtr vPtr =
+     return (ptBitsLeft 0, ptSlotIndex 0 ptPtr vPtr)"
+| "lookupPTSlotFromLevel level ptPtr vPtr = do
+     pte <- pteAtIndex level ptPtr vPtr;
+     if isPageTablePTE pte
+     then lookupPTSlotFromLevel (level - 1) (getPPtrFromHWPTE pte) vPtr
+     else return (ptBitsLeft level, ptSlotIndex level ptPtr vPtr)
+   od"
 
 fun
   lookupPTFromLevel :: "nat => machine_word => machine_word => machine_word =>
@@ -41,11 +42,12 @@ fun
 where
   "lookupPTFromLevel level ptPtr vPtr targetPtPtr = doE
     unlessE (0 < level) $ throw InvalidRoot;
-    pte <- withoutFailure $ pteAtIndex level ptPtr vPtr;
+    slot <- returnOk $ ptSlotIndex level ptPtr vPtr;
+    pte <- withoutFailure $ getObject slot;
     unlessE (isPageTablePTE pte) $ throw InvalidRoot;
     ptr <- returnOk (getPPtrFromHWPTE pte);
     if ptr = targetPtPtr
-        then returnOk $ ptSlotIndex (level - 1) ptr vPtr
+        then returnOk slot
         else lookupPTFromLevel (level - 1) ptr vPtr targetPtPtr
   odE"
 
