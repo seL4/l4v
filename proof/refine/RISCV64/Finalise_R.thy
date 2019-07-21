@@ -3453,30 +3453,34 @@ lemma arch_finalise_cap_corres:
                        o_def dc_def[symmetric]
                 split: option.split,
          safe)
-       apply (rule corres_guard_imp, rule delete_asid_pool_corres[OF refl refl])
-        apply (clarsimp simp: valid_cap_def mask_def)
-       apply (clarsimp simp: valid_cap'_def)
-       apply auto[1]
-      apply (rule corres_guard_imp, rule unmap_page_corres[OF refl refl refl refl])
-       apply simp
-       apply (clarsimp simp: valid_cap_def valid_unmap_def)
-       apply (auto simp: vmsz_aligned_def pbfs_atleast_pageBits mask_def wellformed_mapdata_def
-                   elim: is_aligned_weaken)[2]
-  sorry (* FIXME RISCV
-     apply (rule corres_guard_imp, rule unmap_page_table_corres[OF refl refl refl])
-      apply (auto simp: valid_cap_def valid_cap'_def mask_def bit_simps wellformed_mapdata_def
-                 elim!: is_aligned_weaken)[2]
-    apply (rule corres_guard_imp, rule unmap_pd_corres[OF refl refl refl])
-     apply (auto simp: valid_cap_def valid_cap'_def mask_def bit_simps wellformed_mapdata_def
-                       vmsz_aligned_def
-                elim!: is_aligned_weaken)[2]
-   apply (rule corres_guard_imp, rule unmap_pdpt_corres[OF refl refl refl])
-    apply (auto simp: valid_cap_def valid_cap'_def mask_def bit_simps wellformed_mapdata_def
-                      vmsz_aligned_def
-               elim!: is_aligned_weaken)[2]
-  apply (rule corres_guard_imp, rule delete_asid_corres[OF refl refl])
-   apply (auto simp: mask_def valid_cap_def)[2]
-  done *)
+    apply (rule corres_guard_imp, rule delete_asid_pool_corres[OF refl refl])
+     apply (clarsimp simp: valid_cap_def mask_def)
+    apply (clarsimp simp: valid_cap'_def)
+   apply auto[1]
+   apply (rule corres_guard_imp, rule unmap_page_corres[OF refl refl refl refl])
+    apply simp
+    apply (clarsimp simp: valid_cap_def valid_unmap_def)
+    apply (auto simp: vmsz_aligned_def pbfs_atleast_pageBits mask_def wellformed_mapdata_def
+                elim: is_aligned_weaken)[2]
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_catch[where f=dc])
+       apply (rule unmap_page_table_corres; simp)
+      apply (rule corres_splitEE)
+         prefer 2
+         apply (rule corres_rel_imp[where r="dc \<oplus> (=)"], rule find_vspace_for_asid_corres; simp)
+         apply (case_tac x; simp)
+        apply (simp only: whenE_def)
+        apply (rule corres_if[where Q=\<top> and Q'=\<top>], simp)
+         apply simp
+         apply (rule delete_asid_corres; rule refl)
+        apply simp
+       apply (wpsimp wp: hoare_vcg_if_lift_ER hoare_drop_imps)+
+   apply (clarsimp simp: invs_psp_aligned invs_distinct invs_vspace_objs invs_valid_asid_table)
+   apply (clarsimp simp: cte_wp_at_caps_of_state)
+   apply (drule (1) caps_of_state_valid)
+   apply (simp add: valid_cap_def wellformed_mapdata_def)
+  apply (simp add: invs_no_0_obj')
+  done
 
 
 lemma unbind_notification_corres:
