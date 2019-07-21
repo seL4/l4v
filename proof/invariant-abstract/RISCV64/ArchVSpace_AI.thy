@@ -1356,10 +1356,8 @@ lemma unmap_page_invs:
   unfolding unmap_page_def
   apply (wpsimp wp: store_pte_invs_unmap)
   apply (rule conjI; clarsimp)
+  apply (frule (1) pt_lookup_slot_vs_lookup_slotI)
   apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
-   apply (clarsimp simp: pt_bits_left_not_asid_pool_size vs_lookup_slot_def vs_lookup_table_def
-                   split: if_split_asm)
-  apply clarsimp
   apply (rename_tac level pte pt_ptr)
   apply (drule vs_lookup_level)
   apply (frule (2) valid_vspace_objs_strongD[rotated]; clarsimp)
@@ -1407,6 +1405,19 @@ lemma data_at_level:
    level = level'"
   by (fastforce simp: data_at_def obj_at_def)
 
+lemma pt_lookup_slot_vs_lookup_slotI0:
+  "\<lbrakk> vspace_for_asid asid s = Some pt_ptr;
+     pt_lookup_slot pt_ptr vref (ptes_of s) = Some (level, slot) \<rbrakk>
+   \<Longrightarrow> vs_lookup_slot 0 asid vref s = Some (level, slot)"
+  unfolding pt_lookup_slot_def pt_lookup_slot_from_level_def vs_lookup_slot_def
+  apply (clarsimp simp: in_omonad)
+  apply (drule (1) pt_lookup_vs_lookupI, simp)
+  apply (rule_tac x=level in exI)
+  apply clarsimp
+  apply (drule vs_lookup_level)
+  apply (fastforce dest: pt_walk_max_level)
+  done
+
 lemma unmap_page_not_target:
   "\<lbrace> data_at pgsz pptr and valid_asid_table and valid_vspace_objs and pspace_aligned
      and unique_table_refs and valid_vs_lookup and (\<lambda>s. valid_caps (caps_of_state s) s)
@@ -1418,6 +1429,11 @@ lemma unmap_page_not_target:
          vs_lookup_slot_pool_for_asid[simp]
          pool_for_asid_vs_lookup[simp]
   apply (wpsimp wp: store_pte_invalid_vs_lookup_target_unmap)
+  apply (rule conjI; clarsimp)
+   apply (clarsimp simp: vs_lookup_target_def vspace_for_asid_def obind_def vs_lookup_slot_def
+                         vs_lookup_table_def
+                   split: if_split_asm option.splits)
+  apply (frule (1) pt_lookup_slot_vs_lookup_slotI0)
   apply (rule conjI; clarsimp simp: in_omonad)
    apply (drule vs_lookup_slot_level)
    apply (rename_tac slot level' pte)
