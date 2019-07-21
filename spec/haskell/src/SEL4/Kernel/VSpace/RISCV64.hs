@@ -249,7 +249,7 @@ checkMappingPPtr :: PPtr Word -> PTE -> KernelF LookupFailure ()
 checkMappingPPtr pptr pte =
     case pte of
         PagePTE { ptePPN = ppn } ->
-            unless (ptrFromPAddr ppn == pptr) $ throw InvalidRoot
+            unless (ptrFromPAddr (ppn `shiftL` ptBits) == pptr) $ throw InvalidRoot
         _ -> throw InvalidRoot
 
 unmapPage :: VMPageSize -> ASID -> VPtr -> PPtr Word -> Kernel ()
