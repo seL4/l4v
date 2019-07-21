@@ -1050,7 +1050,7 @@ lemma sts_valid_arch_inv':
   "\<lbrace>valid_arch_inv' ai\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_arch_inv' ai\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv'_def)
      apply (clarsimp simp: valid_pti'_def split: page_table_invocation.splits)
-     apply (wp | simp)+
+     apply (rule conjI|clarsimp|wpsimp)+
     apply (rename_tac page_invocation)
     apply (case_tac page_invocation, simp_all add: valid_page_inv'_def)[1]
        apply (wp  |simp)+
@@ -1076,6 +1076,15 @@ lemma diminished_arch_update':
   by (clarsimp simp: is_arch_update'_def isCap_simps
                      diminished'_def)
 
+lemma vmsz_aligned_user_region:
+  "\<lbrakk> vmsz_aligned p sz;  p + (2 ^ pageBitsForSize sz - 1) < RISCV64_H.pptrUserTop \<rbrakk>
+   \<Longrightarrow> p \<in> user_region"
+  using pbfs_atleast_pageBits[of sz]
+  apply (simp flip: mask_2pm1 add: vmsz_aligned_def)
+  apply (simp add: user_region_def canonical_user_def pptrUserTop_def RISCV64.pptrUserTop_def)
+  apply (simp add: bit_simps is_aligned_mask canonical_bit_def word_plus_and_or_coroll)
+  by (word_bitwise, clarsimp simp: word_size)
+
 lemma decode_page_inv_wf[wp]:
   "cap = (arch_capability.FrameCap word vmrights vmpage_size d option) \<Longrightarrow>
       \<lbrace>invs' and valid_cap' (capability.ArchObjectCap cap ) and
@@ -1087,56 +1096,17 @@ lemma decode_page_inv_wf[wp]:
   apply (simp add: decodeRISCVFrameInvocation_def Let_def isCap_simps
              cong: if_cong split del: if_split)
   apply (wpsimp simp: decodeRISCVFrameInvocationMap_def decodeRISCVFrameInvocationRemap_def
-                      valid_arch_inv'_def valid_page_inv'_def)
+                      valid_arch_inv'_def valid_page_inv'_def checkSlot_def
+                wp: getPTE_wp hoare_vcg_all_lift lookupPTSlot_inv hoare_vcg_if_lift2
+         | wp (once) hoare_drop_imps)+
+  apply ((rule conjI; clarsimp)+;
+          (clarsimp simp: cte_wp_at_ctes_of,
+           (drule ctes_of_valid', fastforce)+,
+           clarsimp simp: diminished_valid' [symmetric] valid_cap'_def ptBits_def pageBits_def
+                          is_arch_update'_def isCap_simps capAligned_def wellformed_mapdata'_def
+                          vmsz_aligned_user_region not_le
+                    dest!: diminished_capMaster))
   done
-(* FIXME RISCV: if we need valid_arch_inv' after all:
-  apply (cases "invocation_type label = ArchInvocationLabel RISCVPageMap")
-   apply (simp add: split_def split del: if_split
-              cong: list.case_cong prod.case_cong)
-   apply (rule hoare_pre)
-    apply (wp createMappingEntries_wf checkVP_wpR whenE_throwError_wp hoare_vcg_const_imp_lift_R
-           |wpc|simp add:valid_arch_inv'_def valid_page_inv'_def | wp (once) hoare_drop_imps)+
-   apply (clarsimp simp: neq_Nil_conv invs_valid_objs' linorder_not_le
-                           cte_wp_at_ctes_of)
-   apply (drule ctes_of_valid', fastforce)+
-   apply (clarsimp simp: diminished_valid' [symmetric])
-   apply (clarsimp simp: valid_cap'_def ptBits_def pageBits_def)
-   apply (clarsimp simp: is_arch_update'_def isCap_simps capAligned_def
-                           vmsz_aligned'_def
-                    dest!: diminished_capMaster)
-   apply (rule conjI)
-    apply (erule is_aligned_addrFromPPtr_n, case_tac vmpage_size, simp_all add: bit_simps)[1]
-   apply (simp add: user_vtop_def RISCV64.pptrBase_def RISCV64.pptrUserTop_def not_less)
-   subgoal by (word_bitwise, auto)
-  apply (cases "invocation_type label = ArchInvocationLabel RISCV64PageRemap")
-   apply (simp add: split_def invs_valid_objs' split del: if_split
-              cong: list.case_cong prod.case_cong)
-   apply (rule hoare_pre)
-    apply (wp createMappingEntries_wf checkVP_wpR whenE_throwError_wp hoare_vcg_const_imp_lift_R
-               |wpc|simp add:valid_arch_inv'_def valid_page_inv'_def
-               | wp (once) hoare_drop_imps)+
-   apply (clarsimp simp: invs_valid_objs' linorder_not_le
-                           cte_wp_at_ctes_of)
-   apply (drule ctes_of_valid', fastforce)+
-   apply (clarsimp simp: diminished_valid' [symmetric])
-   apply (clarsimp simp: valid_cap'_def ptBits_def pageBits_def)
-   apply (clarsimp simp: is_arch_update'_def isCap_simps capAligned_def
-                           vmsz_aligned'_def pdBits_def pageBits_def vmsz_aligned_def
-                    dest!: diminished_capMaster)
-   apply (erule is_aligned_addrFromPPtr_n, case_tac vmpage_size, simp_all add: bit_simps)[1]
-  apply (cases "invocation_type label = ArchInvocationLabel RISCV64PageUnmap")
-   apply (simp split del: if_split)
-   apply (rule hoare_pre, wp)
-   apply (clarsimp simp: valid_arch_inv'_def valid_page_inv'_def)
-   apply (thin_tac "Ball S P" for S P)
-   apply (erule cte_wp_at_weakenE')
-   apply (clarsimp simp: is_arch_update'_def isCap_simps dest!: diminished_capMaster)
-  apply (cases "invocation_type label = ArchInvocationLabel RISCV64PageGetAddress")
-   apply (simp split del: if_split)
-   apply (rule hoare_pre, wp)
-   apply (clarsimp simp: valid_arch_inv'_def valid_page_inv'_def)
-  by (simp add:throwError_R'
-              split: invocation_label.splits arch_invocation_label.splits) *)
 
 lemma decode_page_table_inv_wf[wp]:
   "arch_cap = PageTableCap word option \<Longrightarrow>
@@ -1172,6 +1142,16 @@ lemma decode_page_table_inv_wf[wp]:
   apply word_bitwise
   apply auto
   done *)
+
+lemma capMaster_isPageTableCap:
+  "capMasterCap cap' = capMasterCap cap \<Longrightarrow>
+   isArchCap isPageTableCap cap' = isArchCap isPageTableCap cap"
+  by (simp add: capMasterCap_def isArchCap_def isPageTableCap_def
+           split: capability.splits arch_capability.splits)
+
+lemma diminished_isPageTableCap:
+  "diminished' cap cap' \<Longrightarrow> isArchCap isPageTableCap cap' = isArchCap isPageTableCap cap"
+  by (drule diminished_capMaster) (erule capMaster_isPageTableCap)
 
 lemma arch_decodeInvocation_wf[wp]:
   shows "\<lbrace>invs' and valid_cap' (ArchObjectCap arch_cap) and
@@ -1219,29 +1199,24 @@ lemma arch_decodeInvocation_wf[wp]:
      apply (rule conjI, fastforce)
      apply (clarsimp simp: cte_wp_at_ctes_of objBits_simps)
 
-      \<comment> \<open>ASIDPool cap\<close>
-      apply (simp add: decodeRISCVMMUInvocation_def RISCV64_H.decodeInvocation_def
-                       Let_def split_def isCap_simps decodeRISCVASIDPoolInvocation_def
-                  cong: if_cong split del: if_split)
-     apply (wpsimp simp: valid_arch_inv'_def valid_apinv'_def cong: if_cong)
-(* FIXME RISCV: in case we need it after all
-      apply (rule hoare_pre)
-       apply ((wp whenE_throwError_wp getASID_wp|
-               wpc|
-               simp add: valid_arch_inv'_def valid_apinv'_def split del: if_split)+)[1]
-      apply (clarsimp simp: word_neq_0_conv valid_cap'_def valid_arch_inv'_def valid_apinv'_def)
-      apply (rule conjI)
-       apply (erule cte_wp_at_weakenE')
-       apply (clarsimp simp: diminished_isPML4Cap')
-      apply (subst (asm) conj_assoc [symmetric])
-      apply (subst (asm) assocs_empty_dom_comp [symmetric])
-      apply (drule dom_hd_assocsD)
-      apply (simp add: capAligned_def asid_wf_def)
-      apply (elim conjE)
-      apply (subst field_simps, erule is_aligned_add_less_t2n)
-        apply assumption
-       apply (simp add: asid_low_bits_def asid_bits_def)
-      apply assumption *)
+    \<comment> \<open>ASIDPool cap\<close>
+    apply (simp add: decodeRISCVMMUInvocation_def RISCV64_H.decodeInvocation_def
+                     Let_def split_def isCap_simps decodeRISCVASIDPoolInvocation_def
+                cong: if_cong split del: if_split)
+    apply (wpsimp simp: valid_arch_inv'_def valid_apinv'_def wp: getASID_wp cong: if_cong)
+    apply (clarsimp simp: word_neq_0_conv valid_cap'_def valid_arch_inv'_def valid_apinv'_def)
+    apply (rule conjI)
+     apply (erule cte_wp_at_weakenE')
+     apply (clarsimp simp: diminished_isPageTableCap isCap_simps)
+    apply (subst (asm) conj_assoc [symmetric])
+    apply (subst (asm) assocs_empty_dom_comp [symmetric])
+    apply (drule dom_hd_assocsD)
+    apply (simp add: capAligned_def asid_wf_def mask_def)
+    apply (elim conjE)
+    apply (subst field_simps, erule is_aligned_add_less_t2n)
+      apply assumption
+     apply (simp add: asid_low_bits_def asid_bits_def)
+      apply assumption
 
    \<comment> \<open>PageCap\<close>
    apply (simp add: decodeRISCVMMUInvocation_def isCap_simps RISCV64_H.decodeInvocation_def
@@ -1316,20 +1291,11 @@ lemma performASIDControlInvocation_st_tcb_at':
   apply auto
   done
 
-crunch aligned': "Arch.finaliseCap" pspace_aligned'
-  (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps)
-
 lemmas arch_finalise_cap_aligned' = ArchRetypeDecls_H_RISCV64_H_finaliseCap_aligned'
-
-crunch distinct': "Arch.finaliseCap" pspace_distinct'
-  (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemmas arch_finalise_cap_distinct' = ArchRetypeDecls_H_RISCV64_H_finaliseCap_distinct'
 
 crunch st_tcb_at' [wp]: "Arch.finaliseCap" "st_tcb_at' P t"
-  (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
-
-crunch typ_at' [wp]: "Arch.finaliseCap" "\<lambda>s. P (typ_at' T p s)"
   (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemma invs_asid_table_strengthen':
@@ -1359,9 +1325,12 @@ lemma ex_cte_not_in_untyped_range:
    apply (fastforce simp:cte_wp_at_ctes_of)+
   done
 
-lemma RISCV_FIXME1:
-  "xa \<in> kernel_mappings \<Longrightarrow> canonical_address (xa && ~~ mask 12)"
-  sorry
+lemma kernel_mappings_canonical_pt_base:
+  "x \<in> kernel_mappings \<Longrightarrow> canonical_address (table_base x)"
+  apply (simp add: kernel_mappings_def pptr_base_def RISCV64.pptrBase_def canonical_address_range
+                   canonical_bit_def bit_simps)
+  apply (word_bitwise, clarsimp simp: word_size)
+  done
 
 lemma performASIDControlInvocation_invs' [wp]:
   "\<lbrace>invs' and ct_active' and valid_aci' aci\<rbrace>
@@ -1402,7 +1371,7 @@ lemma performASIDControlInvocation_invs' [wp]:
                cong: rev_conj_cong
          |strengthen safe_parent_strg'[where idx = "2^ pageBits"]
          | rule in_kernel_mappings_neq_mask
-         | simp add: bit_simps RISCV_FIXME1)+
+         | simp add: bit_simps kernel_mappings_canonical_pt_base[unfolded bit_simps])+
      apply (simp add:asid_pool_typ_at_ext'[symmetric])
      apply (wp createObject_typ_at')
     apply (simp add: objBits_simps valid_cap'_def
