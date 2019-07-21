@@ -90,7 +90,9 @@ finaliseCap (PageTableCap {
     catchFailure
         (do
             vroot <- findVSpaceForASID asid
-            when (vroot == pte) (withoutFailure $ deleteASID asid pte))
+            if vroot == pte
+                then withoutFailure $ deleteASID asid pte
+                else throw InvalidRoot)
         (\_ -> unmapPageTable asid vptr pte)
 
     return (NullCap, NullCap)
