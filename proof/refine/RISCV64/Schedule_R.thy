@@ -92,10 +92,7 @@ crunches set_vm_root
 
 lemma arch_switch_thread_corres:
   "corres dc (valid_arch_state and valid_objs and pspace_aligned and pspace_distinct
-              and valid_vspace_objs
-              and valid_vs_lookup and valid_global_objs
-              and unique_table_refs
-              and st_tcb_at runnable t)
+                and valid_vspace_objs and st_tcb_at runnable t)
              (no_0_obj')
              (arch_switch_to_thread t) (Arch.switchToThread t)"
   apply (simp add: arch_switch_to_thread_def RISCV64_H.switchToThread_def)
@@ -105,7 +102,8 @@ lemma arch_switch_thread_corres:
          apply (simp add: tcb_relation_def)
         apply simp
         apply (rule user_setreg_corres)
-       apply (wpsimp simp: simp: st_tcb_at_tcb_at)+
+       apply (wpsimp simp: st_tcb_at_tcb_at valid_arch_state_asid_table
+                           valid_arch_state_global_arch_objs)+
   done
 
 lemma schedule_choose_new_thread_sched_act_rct[wp]:
@@ -674,15 +672,15 @@ qed
 
 lemma arch_switch_idle_thread_corres:
   "corres dc
-        (valid_arch_state and valid_objs and valid_asid_map and unique_table_refs
-           and valid_vs_lookup and valid_global_objs and pspace_aligned and pspace_distinct
+        (valid_arch_state and valid_objs and pspace_aligned and pspace_distinct
            and valid_vspace_objs and valid_idle)
         (no_0_obj')
         arch_switch_to_idle_thread Arch.switchToIdleThread"
   apply (simp add: arch_switch_to_idle_thread_def
                 RISCV64_H.switchToIdleThread_def)
   apply (corressimp corres: git_corres set_vm_root_corres)
-  apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb)
+  apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb
+                        valid_arch_state_asid_table valid_arch_state_global_arch_objs)
   done
 
 lemma switch_idle_thread_corres:
