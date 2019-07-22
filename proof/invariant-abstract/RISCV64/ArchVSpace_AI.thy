@@ -1493,13 +1493,14 @@ lemma perform_pg_inv_unmap[wp]:
   "\<lbrace>invs and valid_page_inv (PageUnmap cap ct_slot)\<rbrace> perform_pg_inv_unmap cap ct_slot \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding perform_pg_inv_unmap_def
   apply (wpsimp wp: arch_update_cap_invs_unmap_page hoare_vcg_ex_lift hoare_vcg_ball_lift
-                    hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                    hoare_vcg_all_lift hoare_vcg_const_imp_lift get_cap_wp unmap_page_cte_wp_at
+                    hoare_vcg_imp_lift'
                     unmap_page_not_target unmap_page_invs)
   apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state is_arch_diminished_def
                         is_cap_simps is_arch_update_def update_map_data_def cap_master_cap_simps)
   apply (frule caps_of_state_valid, clarsimp)
   apply (case_tac m; simp)
-   apply (simp add: valid_cap_def valid_arch_cap_def cap_aligned_def cap_master_cap_simps)
+   apply (clarsimp simp: valid_cap_def valid_arch_cap_def cap_aligned_def cap_master_cap_simps)
   apply (clarsimp simp: valid_unmap_def cap_master_cap_simps valid_cap_def wellformed_mapdata_def
                         cap_aligned_def)
   apply (fastforce simp: data_at_def split: if_split_asm intro: valid_objs_caps)

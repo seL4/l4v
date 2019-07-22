@@ -94,7 +94,7 @@ definition perform_pg_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarro
        Some (asid, vaddr) \<Rightarrow> unmap_page (acap_fsize cap) asid vaddr (acap_obj cap)
      | _ \<Rightarrow> return ();
      old_cap \<leftarrow> get_cap ct_slot;
-     set_cap (ArchObjectCap $ update_map_data cap None) ct_slot
+     set_cap (ArchObjectCap $ update_map_data (the_arch_cap old_cap) None) ct_slot
    od"
 
 definition perform_pg_inv_map :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> pte \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
