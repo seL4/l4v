@@ -75,13 +75,13 @@ signature WPC = sig
 
   val instantiate_concl_pred: Proof.context -> cterm -> thm -> thm;
 
-  val detect_term: Proof.context -> thm -> cterm -> (cterm * term) list;
-  val detect_terms: Proof.context -> (term -> cterm -> thm -> tactic) -> tactic;
+  val detect_term: Proof.context -> int -> thm -> cterm -> (cterm * term) list;
+  val detect_terms: Proof.context -> (term -> cterm -> thm -> int -> tactic) -> int -> tactic;
 
-  val split_term: thm list -> Proof.context -> term -> cterm -> thm -> tactic;
+  val split_term: thm list -> Proof.context -> term -> cterm -> thm -> int -> tactic;
 
-  val wp_cases_tac: thm list -> Proof.context -> tactic;
-  val wp_debug_tac: thm list -> Proof.context -> tactic;
+  val wp_cases_tac: thm list -> Proof.context -> int -> tactic;
+  val wp_debug_tac: thm list -> Proof.context -> int -> tactic;
   val wp_cases_method: thm list -> (Proof.context -> Method.method) context_parser;
 
 end;
@@ -130,10 +130,10 @@ in
   Thm.instantiate ([], [(thm2_pred, pred)]) thm2
 end;
 
-fun detect_term ctxt thm tm =
+fun detect_term ctxt n thm tm =
 let
   val foo_thm_tm   = instantiate_concl_pred ctxt tm foo_thm;
-  val matches      = resolve_tac ctxt [foo_thm_tm] 1 thm;
+  val matches      = resolve_tac ctxt [foo_thm_tm] n thm;
   val outcomes     = Seq.list_of matches;
   val get_goalterm = (HOLogic.dest_Trueprop o Logic.strip_assums_concl
                        o Envir.beta_eta_contract o hd o Thm.prems_of);
@@ -142,16 +142,16 @@ in
   map (pair tm o get_argument o get_goalterm) outcomes
 end;
 
-fun detect_terms ctxt tactic2 thm =
+fun detect_terms ctxt tactic2 n thm =
 let
   val pfs           = WPCPredicateAndFinals.get (Proof_Context.theory_of ctxt);
-  val detects       = map (fn (tm, rl) => (detect_term ctxt thm tm, rl)) pfs;
+  val detects       = map (fn (tm, rl) => (detect_term ctxt n thm tm, rl)) pfs;
   val detects2      = filter (not o null o fst) detects;
   val ((pred, arg), fin)   = case detects2 of
                                 [] => raise WPCFailed ("detect_terms: no match", [], [thm])
                                | ((d3, fin) :: _) => (hd d3, fin)
 in
-  tactic2 arg pred fin thm
+  tactic2 arg pred fin n thm
 end;
 
 (* give each rule in the list one possible resolution outcome *)
@@ -170,7 +170,7 @@ fun resolve_single_tac ctxt rules n thm =
                          [], thm :: rules)
    | ([x], _) => Seq.single x;
 
-fun split_term processors ctxt target pred fin t =
+fun split_term processors ctxt target pred fin =
 let
   val hdTarget      = head_of target;
   val (constNm, _)  = dest_Const hdTarget handle TERM (_, tms)
@@ -181,30 +181,29 @@ let
   val subst         = split RS iffd2_thm;
   val subst2        = instantiate_concl_pred ctxt pred subst;
 in
- ((resolve_tac ctxt [subst2] 1)
-    THEN
-  (resolve_tac ctxt [wpc_helperI] 1)
-    THEN
-  (REPEAT_ALL_NEW (resolve_tac ctxt processors)
-     THEN_ALL_NEW
-   resolve_single_tac ctxt [fin]) 1
- ) t
+ (resolve_tac ctxt [subst2])
+   THEN'
+ (resolve_tac ctxt [wpc_helperI])
+   THEN'
+ (REPEAT_ALL_NEW (resolve_tac ctxt processors)
+    THEN_ALL_NEW
+  resolve_single_tac ctxt [fin])
 end;
 
 (* n.b. need to concretise the lazy sequence via a list to ensure exceptions
   have been raised already and catch them *)
-fun wp_cases_tac processors ctxt thm =
-  detect_terms ctxt (split_term processors ctxt) thm
+fun wp_cases_tac processors ctxt n thm =
+  detect_terms ctxt (split_term processors ctxt) n thm
       |> Seq.list_of |> Seq.of_list
     handle WPCFailed _ => no_tac thm;
 
-fun wp_debug_tac processors ctxt thm =
-  detect_terms ctxt (split_term processors ctxt) thm
+fun wp_debug_tac processors ctxt n thm =
+  detect_terms ctxt (split_term processors ctxt) n thm
       |> Seq.list_of |> Seq.of_list
     handle WPCFailed e => (warning (@{make_string} (WPCFailed e)); no_tac thm);
 
 fun wp_cases_method processors = Scan.succeed (fn ctxt =>
-  Method.SIMPLE_METHOD (wp_cases_tac processors ctxt));
+  Method.SIMPLE_METHOD' (wp_cases_tac processors ctxt));
 
 local structure P = Parse and K = Keyword in
 

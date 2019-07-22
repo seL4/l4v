@@ -134,7 +134,7 @@ sig
     val pre_thms : thm list;
     (* The wpc_tactic used, normally wp_cases_tactic_weak. See BCorres_UL for
        an alternative. *)
-    val wpc_tactic : Proof.context -> tactic;
+    val wpc_tactic : Proof.context -> int -> tactic;
     (* The wps_tactic used, normally wps_tac when applicable and no_tac when not. *)
     val wps_tactic : Proof.context -> thm list -> int -> tactic;
     val magic : term;
@@ -741,7 +741,7 @@ fun crunch cfg pre extra stack const' thms =
                   ORELSE
                   assume_tac ctxt''' n
                   ORELSE
-                  Instance.wpc_tactic ctxt'''
+                  Instance.wpc_tactic ctxt''' n
                   ORELSE
                   Instance.wps_tactic ctxt''' (#wps_rules cfg) n
                   ORELSE
