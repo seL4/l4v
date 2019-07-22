@@ -303,47 +303,28 @@ val sep_wandise = Thm.rule_attribute [] ((fn ctxt => (
 
 fun composeOption f g x = case g x of (SOME v, SOME h) => f (v,h) | _ => (NONE , NONE)
 
-fun wp_modifiers extras_ref =
- [Args.add -- Args.colon >> K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; WeakestPre.wp_add att)),
+val wp_modifiers =
+ [Args.add -- Args.colon >> K (I, WeakestPre.wp_add),
   Args.del -- Args.colon >> K (I, WeakestPre.wp_del),
-  Args.$$$ "sep_wp" -- Args.colon >> (K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; wp_add_attrib' sep_wandise_helper att))),
-  Args.$$$ "sep_wand" -- Args.colon >> (K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; wp_add_attrib @{thm strong_sep_impl_sep_wp} att))),
-  Args.$$$ "sep_wandE" -- Args.colon >> (K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; wp_add_attrib @{thm strong_sep_impl_sep_wpE} att ))),
-  Args.$$$ "sep_wand_side" -- Args.colon >> (K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; wp_add_attrib @{thm strong_sep_impl_sep_wp_side} att ))),
-  Args.$$$ "sep_wand_side'" -- Args.colon >> (K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; wp_add_attrib @{thm strong_sep_impl_sep_wp_side} att ))),
-  Args.$$$ "sep_wand_sideE" -- Args.colon >> (K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; wp_add_attrib @{thm strong_sep_impl_sep_wp_sideE} att ))),
-  Args.$$$ "sep_wand_sideE'" -- Args.colon >> (K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; wp_add_attrib @{thm strong_sep_impl_sep_wp_sideE'} att ))),
-  Args.$$$ "comb" -- Args.colon >> K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; WeakestPre.combs_add att)),
-  Args.$$$ "comb" -- Args.add -- Args.colon >> K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; WeakestPre.combs_add att)),
+  Args.$$$ "sep_wp" -- Args.colon >> K (I, wp_add_attrib' sep_wandise_helper),
+  Args.$$$ "sep_wand" -- Args.colon >> K (I, wp_add_attrib @{thm strong_sep_impl_sep_wp}),
+  Args.$$$ "sep_wandE" -- Args.colon >> K (I, wp_add_attrib @{thm strong_sep_impl_sep_wpE}),
+  Args.$$$ "sep_wand_side" -- Args.colon >> K (I, wp_add_attrib @{thm strong_sep_impl_sep_wp_side}),
+  Args.$$$ "sep_wand_side'" -- Args.colon >> K (I, wp_add_attrib @{thm strong_sep_impl_sep_wp_side}),
+  Args.$$$ "sep_wand_sideE" -- Args.colon >> K (I, wp_add_attrib @{thm strong_sep_impl_sep_wp_sideE}),
+  Args.$$$ "sep_wand_sideE'" -- Args.colon >> K (I, wp_add_attrib @{thm strong_sep_impl_sep_wp_sideE'}),
+  Args.$$$ "comb" -- Args.colon >> K (I, WeakestPre.combs_add),
+  Args.$$$ "comb" -- Args.add -- Args.colon >> K (I, WeakestPre.combs_add),
   Args.$$$ "comb" -- Args.del -- Args.colon >> K (I, WeakestPre.combs_del),
   Args.$$$ "only" -- Args.colon
-    >> K (Context.proof_map (WeakestPre.WPData.map WeakestPre.clear_rules), fn att =>
-                               (WeakestPre.add_extra_rule (#2 att) extras_ref; WeakestPre.wp_add att))];
+    >> K (Context.proof_map (WeakestPre.WPData.map WeakestPre.clear_rules), (WeakestPre.wp_add))];
 
-fun apply_rules_args trace xs =
-  let val extras_ref = Unsynchronized.ref [] : thm list Unsynchronized.ref;
+fun apply_wp_args xs =
+  let fun apply_tac once = if once then WeakestPre.apply_once_tac else WeakestPre.apply_rules_tac;
   in
-    WeakestPre.if_colon
-    (WeakestPre.sections (wp_modifiers extras_ref) >>
-      K (fn ctxt => SIMPLE_METHOD (WeakestPre.apply_rules_tac trace ctxt [] extras_ref)))
-    (Attrib.thms >> curry (fn (extras, ctxt) =>
-      Method.SIMPLE_METHOD (
-        WeakestPre.apply_rules_tac trace ctxt extras extras_ref
-      )
-    ))
-  end xs;
-
-fun apply_once_args trace xs =
-  let val extras_ref = Unsynchronized.ref [] : thm list Unsynchronized.ref;
-  in
-    WeakestPre.if_colon
-    (WeakestPre.sections (wp_modifiers extras_ref) >>
-      K (fn ctxt => SIMPLE_METHOD (WeakestPre.apply_once_tac trace ctxt [] extras_ref)))
-    (Attrib.thms >> curry (fn (extras, ctxt) =>
-      Method.SIMPLE_METHOD (
-        WeakestPre.apply_once_tac trace ctxt extras extras_ref
-      )
-    ))
+    Scan.lift (WeakestPre.modes ["trace", "once"])
+      --| WeakestPre.if_colon (WeakestPre.sections wp_modifiers >> flat) WeakestPre.add_section
+    >> curry (fn ([trace, once], ctxt) => SIMPLE_METHOD (apply_tac once trace ctxt []))
   end xs;
 
 end;
@@ -357,7 +338,7 @@ attribute_setup sep_wand_side_wpE = \<open>Scan.succeed sep_magic_wand_sideE\<cl
 attribute_setup sep_wand_side_wpE' = \<open>Scan.succeed sep_magic_wand_sideE'\<close>
 attribute_setup sep_wandise = \<open>Scan.succeed sep_wandise\<close>
 
-method_setup wp = \<open>apply_rules_args false\<close>
+method_setup wp = \<open>apply_wp_args\<close>
   "applies weakest precondition rules"
 
 lemma boxsolve: "P s \<Longrightarrow> (\<box> \<and>* (\<box> \<longrightarrow>* P)) s"
@@ -373,7 +354,7 @@ ML \<open>
    fun sep_wp thms ctxt  =
    let
      val thms' = map (sep_wandise_helper ctxt |> J) thms;
-     val wp = WeakestPre.apply_rules_tac_n false ctxt thms'  (Unsynchronized.ref [] : thm list Unsynchronized.ref)
+     val wp = WeakestPre.apply_rules_tac_n false ctxt thms'
      val sep_impi = (REPEAT_ALL_NEW  (sep_match_trivial_tac ctxt)) THEN' assume_tac ctxt
      val schemsolve = sep_rule_tac (eresolve0_tac [@{thm boxsolve}]) ctxt
      val hoare_post = (resolve0_tac [(rotate_prems ~1 @{thm hoare_strengthen_post})])
