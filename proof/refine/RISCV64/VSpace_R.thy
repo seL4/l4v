@@ -681,9 +681,10 @@ lemma perform_page_corres:
    apply (rule corres_guard_imp)
      apply (rule corres_split[where r'=dc])
         apply (rule corres_split[OF _ getSlotCap_corres[OF refl]])
+          apply (rule_tac F="is_frame_cap old_cap" in corres_gen_asm)
           apply (rule updateCap_same_master)
-          apply (clarsimp simp: update_map_data_def) subgoal sorry (* FIXME RISCV: aspec should use old cap *)
-         apply wpsimp+
+          apply (clarsimp simp: update_map_data_def is_cap_simps)
+         apply (wpsimp wp: get_cap_wp)+
        apply (rename_tac m)
        apply (rule option_corres[where P=\<top> and P'=\<top>])
         apply (case_tac m; simp add: mdata_map_def)
@@ -691,7 +692,7 @@ lemma perform_page_corres:
        apply datatype_schem
        apply (fold dc_def)[1]
        apply (rule unmap_page_corres; simp)
-      apply wpsimp+
+      apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')+
     apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct)
     apply (clarsimp simp: cte_wp_at_caps_of_state wellformed_pte_def is_arch_diminished_def
                           cap_master_cap_simps is_cap_simps update_map_data_def mdata_map_def
