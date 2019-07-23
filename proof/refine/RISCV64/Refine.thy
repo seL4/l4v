@@ -570,7 +570,7 @@ lemma kernel_corres:
             apply (simp add: when_def)
            apply (rule corres_when, simp)
            apply simp
-           apply (rule handle_interrupt_corres)
+           apply (rule handle_interrupt_corres, simp)
           apply simp
           apply (wp hoare_drop_imps)[1]
          apply simp
