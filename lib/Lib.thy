@@ -23,6 +23,7 @@ imports
   Eval_Bool
   NICTATools
   "HOL-Library.Prefix_Order"
+  "HOL-Word.Word"
 begin
 
 (* FIXME: eliminate *)
@@ -2505,5 +2506,37 @@ lemma rsubst:
 
 lemma ex_impE: "((\<exists>x. P x) \<longrightarrow> Q) \<Longrightarrow> P x \<Longrightarrow> Q"
   by blast
+
+text \<open>Some int bitwise lemmas. Helpers for proofs about \<^file>\<open>NatBitwise.thy\<close>\<close>
+lemma int_2p_eq_shiftl:
+  "(2::int)^x = 1 << x"
+  by (simp add: shiftl_int_def)
+
+lemma nat_int_mul:
+  "nat (int a * b) = a * nat b"
+  by (simp add: nat_mult_distrib)
+
+lemma int_shiftl_less_cancel:
+  "n \<le> m \<Longrightarrow> ((x :: int) << n < y << m) = (x < y << (m - n))"
+  apply (drule le_Suc_ex)
+  apply (clarsimp simp: shiftl_int_def power_add)
+  done
+
+lemma int_shiftl_lt_2p_bits:
+  "0 \<le> (x::int) \<Longrightarrow> x < 1 << n \<Longrightarrow> \<forall>i \<ge> n. \<not> x !! i"
+  apply (clarsimp simp: shiftl_int_def)
+  apply (clarsimp simp: bin_nth_eq_mod even_iff_mod_2_eq_zero)
+  apply (drule_tac z="2^i" in less_le_trans)
+   apply simp
+  apply simp
+  done
+\<comment> \<open>TODO: The converse should be true as well, but seems hard to prove.\<close>
+
+lemma int_eq_test_bit:
+  "((x :: int) = y) = (\<forall>i. test_bit x i = test_bit y i)"
+  apply simp
+  apply (metis bin_eqI)
+  done
+lemmas int_eq_test_bitI = int_eq_test_bit[THEN iffD2, rule_format]
 
 end
