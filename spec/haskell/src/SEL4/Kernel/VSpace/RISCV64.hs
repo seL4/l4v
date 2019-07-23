@@ -394,6 +394,7 @@ decodeRISCVPageTableInvocationMap cte cap vptr attr vspaceCap = do
     (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
     oldPTE <- withoutFailure $ getObject slot
     when (bitsLeft == pageBits || oldPTE /= InvalidPTE) $ throw DeleteFirst
+    unless (vptr .&. mask bitsLeft == 0) $ throw AlignmentError
     let pte = PageTablePTE {
             ptePPN = addrFromPPtr (capPTBasePtr cap) `shiftR` pageBits,
             pteGlobal = False,
