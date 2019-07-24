@@ -2878,7 +2878,7 @@ lemma makeUserPTE_spec:
   Call makeUserPTE_'proc
   \<lbrace> pte_lift \<acute>ret__struct_pte_C = Some (if \<^bsup>s\<^esup>page_size = scast Kernel_C.ARMSmallPage
     then Pte_pte_small
-     \<lparr> address_CL = \<^bsup>s\<^esup>paddr,
+     \<lparr> pte_pte_small_CL.address_CL = \<^bsup>s\<^esup>paddr,
        nG_CL = 1,
        S_CL = shared_bit_from_cacheable \<^bsup>s\<^esup>cacheable,
        APX_CL = 0,
