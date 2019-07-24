@@ -1633,18 +1633,12 @@ definition
       riscv_kernel_vspace = kvspace\<rparr>"
 
 lemma absArchState_correct:
-assumes rel:
-  "(s,s') \<in> state_relation"
-shows
-  "absArchState (ksArchState s') = arch_state s"
-  apply (subgoal_tac "(arch_state s, ksArchState s') \<in> arch_state_relation")
-   prefer 2
-  using rel
+  "(s,s') \<in> state_relation \<Longrightarrow> absArchState (ksArchState s') = arch_state s"
+  apply (prop_tac "(arch_state s, ksArchState s') \<in> arch_state_relation")
    apply (simp add: state_relation_def)
   apply (clarsimp simp add: arch_state_relation_def)
-  sorry (* FIXME RISCV
   by (clarsimp simp add: absArchState_def
-               split: RISCV64_H.kernel_state.splits) *)
+               split: RISCV64_H.kernel_state.splits)
 
 definition absSchedulerAction where
   "absSchedulerAction action \<equiv>
