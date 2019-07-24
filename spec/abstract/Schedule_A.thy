@@ -24,24 +24,7 @@ end
 
 abbreviation
   "idle st \<equiv> st = Structures_A.IdleThreadState"
-(*
-text {* Gets the TCB at an address if the thread can be scheduled. *}
-definition
-  getActiveTCB :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> tcb option"
-where
-  "getActiveTCB tcb_ref s \<equiv>
-   case get_tcb tcb_ref s
-     of None     \<Rightarrow> None  (* FIXME is_schedulable_opt *)
-      | Some tcb \<Rightarrow> if is_schedulable_opt tcb_ref False s = Some True then Some tcb else None"
 
-text {* Gets all schedulable threads in the system. *}
-definition
-  allActiveTCBs :: "(obj_ref set,'z::state_ext) s_monad" where
-  "allActiveTCBs \<equiv> do
-    state \<leftarrow> get;
-    return {x. getActiveTCB x state \<noteq> None}
-   od"
-*)
 text {* Switches the current thread to the specified one. *}
 definition
   switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
@@ -65,7 +48,7 @@ definition
      modify (\<lambda>s. s \<lparr> cur_thread := t \<rparr>)
    od"
 
-text {* Asserts that a thread is schedulable before switching to it. *}
+text {* Asserts that a thread is ready and sufficient before switching to it. *}
 definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "guarded_switch_to thread \<equiv> do
      inq \<leftarrow> gets $ in_release_queue thread;
