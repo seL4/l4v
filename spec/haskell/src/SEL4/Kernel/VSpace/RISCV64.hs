@@ -359,6 +359,7 @@ decodeRISCVFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
         pageMapCTSlot = cte,
         pageMapEntries = (makeUserPTE framePAddr exec vmRights, slot) }
 
+
 decodeRISCVFrameInvocation :: Word -> [Word] -> PPtr CTE ->
                    ArchCapability -> [(Capability, PPtr CTE)] ->
                    KernelF SyscallError ArchInv.Invocation
