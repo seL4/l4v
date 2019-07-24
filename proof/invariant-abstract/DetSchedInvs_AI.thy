@@ -681,8 +681,8 @@ lemmas valid_release_q_def = valid_release_q_except_set_2_def
 lemma valid_release_q_distinct[elim!]: "valid_release_q s \<Longrightarrow> distinct (release_queue s)"
   by (clarsimp simp: valid_release_q_def)
 
-definition schedulable_ep_thread_2 where
-  "schedulable_ep_thread_2 ep t ct it curtime kh =
+definition valid_ep_thread_2 where
+  "valid_ep_thread_2 ep t ct it curtime kh =
        (st_tcb_at_kh (\<lambda>ts. case ep of RecvEP _ \<Rightarrow> \<exists>eptr r_opt. ts = BlockedOnReceive eptr r_opt
                                      | _ \<Rightarrow> \<exists>eptr pl. ts = BlockedOnSend eptr pl) t kh \<and>
           t \<noteq> ct \<and> t \<noteq> it \<and>
@@ -694,28 +694,18 @@ primrec ep_queue :: "endpoint \<Rightarrow> obj_ref list" where
 | "ep_queue (SendEP list) = list"
 | "ep_queue (RecvEP list) = list"
 
-definition schedulable_ep_q_2 where
-  "schedulable_ep_q_2 epptr ct it curtime kh =
-       (case kh epptr of Some (Endpoint ep) \<Rightarrow>
-              (\<forall>t\<in>set (ep_queue ep). schedulable_ep_thread_2 ep t ct it curtime kh)
-           | _ \<Rightarrow> True)"
-
-abbreviation schedulable_ep_q :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "schedulable_ep_q eptr s \<equiv> schedulable_ep_q_2 eptr (cur_thread s) (idle_thread s) (cur_time s) (kheap s)"
-(* do we really want to add this to valid_sched? do we want to talk about all the endpoints? *)
-
 (* does this work? *)
 definition valid_ep_q_2 where
   "valid_ep_q_2  ct it curtime kh =
        (\<forall>p. case kh p of Some (Endpoint ep) \<Rightarrow>
-              (\<forall>t\<in>set (ep_queue ep). schedulable_ep_thread_2 ep t ct it curtime kh)
+              (\<forall>t\<in>set (ep_queue ep). valid_ep_thread_2 ep t ct it curtime kh)
            | _ \<Rightarrow> True)"
 
 abbreviation valid_ep_q :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_ep_q s \<equiv> valid_ep_q_2 (cur_thread s) (idle_thread s) (cur_time s) (kheap s)"
 (* do we really want to add this to valid_sched? do we want to talk about all the endpointers? *)
 
-lemmas valid_ep_q_def = valid_ep_q_2_def[simplified schedulable_ep_thread_2_def]
+lemmas valid_ep_q_def = valid_ep_q_2_def[simplified valid_ep_thread_2_def]
 
 (* FIXME: improve this abstraction using ep_at_pred *) (* move *)
 definition in_ep_q where
@@ -1811,8 +1801,9 @@ lemma rollback_safe_lift:
       wp hoare_vcg_all_lift |
       wps B)+
 
-abbreviation ct_schedulable where
-  "ct_schedulable s \<equiv> active_sc_tcb_at (cur_thread s) s
+(* This predicate declares that the current thread is Active, Ready, and Sufficient *)
+abbreviation ct_ARS where
+  "ct_ARS s \<equiv> active_sc_tcb_at (cur_thread s) s
       \<and> budget_ready (cur_thread s) s
       \<and> budget_sufficient (cur_thread s) s"
 
