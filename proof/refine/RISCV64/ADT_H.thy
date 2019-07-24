@@ -11,9 +11,9 @@
 chapter \<open>Abstract datatype for the executable specification\<close>
 
 theory ADT_H
-imports
-  "AInvs.ADT_AI"
-  Syscall_R
+  imports
+    "AInvs.ADT_AI"
+    Syscall_R
 begin
 
 text \<open>
@@ -39,32 +39,23 @@ text \<open>
   for the executable specification largely follows
   the one for the abstract specification.
 \<close>
-definition
-  Init_H :: "kernel_state global_state set"
-  where
+definition Init_H :: "kernel_state global_state set" where
   "Init_H \<equiv>
-   ({empty_context} \<times> snd `
-      fst (initKernel (VPtr initEntry) (PPtr initOffset) (map PPtr initFrames)
-                      (map PPtr initKernelFrames) initBootFrames
-                      (newKernelState initDataStart))) \<times>
-    {UserMode} \<times> {None}"
+    ({empty_context} \<times> snd `
+       fst (initKernel (VPtr initEntry) (PPtr initOffset) (map PPtr initFrames)
+                       (map PPtr initKernelFrames) initBootFrames
+                       (newKernelState initDataStart))) \<times>
+     {UserMode} \<times> {None}"
 
 definition
   "user_mem' s \<equiv> \<lambda>p.
-  if (pointerInUserData p s)
-  then Some (underlying_memory (ksMachineState s) p)
-  else None"
+     if pointerInUserData p s then Some (underlying_memory (ksMachineState s) p) else None"
 
 definition
   "device_mem' s \<equiv> \<lambda>p.
-  if (pointerInDeviceData p s)
-  then Some p
-  else None"
+     if pointerInDeviceData p s then Some p else None"
 
-
-definition
-  vm_rights_of :: "vmrights \<Rightarrow> rights set"
-  where
+definition vm_rights_of :: "vmrights \<Rightarrow> rights set" where
   "vm_rights_of x \<equiv> case x of VMKernelOnly \<Rightarrow> vm_kernel_only
                     | VMReadOnly \<Rightarrow> vm_read_only
                     | VMReadWrite \<Rightarrow> vm_read_write"
@@ -74,12 +65,10 @@ lemma vm_rights_of_vmrights_map_id[simp]:
   by (auto simp: vm_rights_of_def vmrights_map_def valid_vm_rights_def
                  vm_read_write_def vm_read_only_def vm_kernel_only_def)
 
-definition
-  absPageTable :: "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
-                  9 word \<Rightarrow> RISCV64_A.pte"
-  where
-  "absPageTable h a \<equiv> %offs.
-   case (h (a + (ucast offs << 3))) of
+definition absPageTable ::
+  "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow> pt_index \<Rightarrow> RISCV64_A.pte" where
+  "absPageTable h a \<equiv> \<lambda>offs.
+   case (h (a + (ucast offs << pte_bits))) of
      Some (KOArch (KOPTE (InvalidPTE))) \<Rightarrow> RISCV64_A.InvalidPTE
    | Some (KOArch (KOPTE (PagePTE p g u e rights))) \<Rightarrow>
        RISCV64_A.PagePTE (ucast p) {x. g \<and> x=Global \<or> u \<and> x = User \<or> e \<and> x = Execute}
@@ -92,7 +81,7 @@ definition
   absHeapArch :: "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> machine_word
                  \<Rightarrow> arch_kernel_object \<rightharpoonup> arch_kernel_obj"
   where
-  "absHeapArch h a \<equiv> %ako.
+  "absHeapArch h a \<equiv> \<lambda>ako.
    (case ako of
      KOASIDPool (RISCV64_H.ASIDPool ap) \<Rightarrow>
        Some (RISCV64_A.ASIDPool (\<lambda>w. ap (ucast w)))
@@ -104,8 +93,8 @@ lemma
   assumes ptes:
     "\<forall>x. (\<exists>pte. ksPSpace \<sigma> x = Some (KOArch (KOPTE pte))) \<longrightarrow>
          is_aligned x pt_bits \<longrightarrow>
-         (\<forall>y::9 word. \<exists>pte'. ksPSpace \<sigma> (x + (ucast y << 3)) =
-                           Some (KOArch (KOPTE pte')))"
+         (\<forall>y::pt_index. \<exists>pte'. ksPSpace \<sigma> (x + (ucast y << pte_bits)) =
+                               Some (KOArch (KOPTE pte')))"
 
   assumes fst_pte:
     "\<forall>x. (\<exists>pte. ksPSpace \<sigma> x = Some (KOArch (KOPTE pte))) \<longrightarrow>
@@ -116,11 +105,11 @@ lemma
 
   shows
     "pspace_relation
-     (%x. case ksPSpace \<sigma> x of
+     (\<lambda>x. case ksPSpace \<sigma> x of
             Some (KOArch ako) \<Rightarrow>
               map_option ArchObj (absHeapArch (ksPSpace \<sigma>) x ako)
           | _ \<Rightarrow> None)
-     (%x. case ksPSpace \<sigma> x of Some (KOArch _) \<Rightarrow> ksPSpace \<sigma> x | _ \<Rightarrow> None)"
+     (\<lambda>x. case ksPSpace \<sigma> x of Some (KOArch _) \<Rightarrow> ksPSpace \<sigma> x | _ \<Rightarrow> None)"
   supply image_cong_simp [cong del]
   apply (clarsimp simp add: pspace_relation_def dom_def)
   apply (rule conjI)
@@ -177,7 +166,7 @@ lemma
   apply simp
   apply (erule_tac x=y in allE)
   apply (clarsimp simp: bit_simps)
-  apply (simp add: absPageTable_def  split: option.splits RISCV64_H.pte.splits)
+  apply (simp add: absPageTable_def bit_simps split: option.splits RISCV64_H.pte.splits)
   apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
              vm_kernel_only_def vm_read_only_def vm_read_write_def
            split: vmrights.splits)
@@ -205,9 +194,7 @@ lemma mdata_map'_inv[simp]:
   "mdata_map' (mdata_map m) = m"
   by (cases m; simp add: mdata_map_def mdata_map'_def split_def ucast_down_ucast_id is_down)
 
-fun
-  CapabilityMap :: "capability \<Rightarrow> cap"
- where
+fun CapabilityMap :: "capability \<Rightarrow> cap" where
   "CapabilityMap capability.NullCap = cap.NullCap"
 | "CapabilityMap (capability.UntypedCap d ref n idx) = cap.UntypedCap d ref n idx"
 | "CapabilityMap (capability.EndpointCap ref b sr rr gr grr) =
@@ -255,9 +242,7 @@ lemma cap_relation_imp_CapabilityMap:
   apply (simp add: ucast_down_ucast_id is_down)
   done
 
-primrec
-  ThStateMap :: "Structures_H.thread_state \<Rightarrow> Structures_A.thread_state"
-where
+primrec ThStateMap :: "Structures_H.thread_state \<Rightarrow> Structures_A.thread_state" where
   "ThStateMap Structures_H.thread_state.Running =
               Structures_A.thread_state.Running"
 | "ThStateMap Structures_H.thread_state.Restart =
@@ -281,7 +266,7 @@ where
 
 lemma thread_state_relation_imp_ThStateMap:
   "thread_state_relation ts ts' \<Longrightarrow> ThStateMap ts' = ts"
-by (cases ts) simp_all
+  by (cases ts) simp_all
 
 definition
   "LookupFailureMap \<equiv> \<lambda>lf. case lf of
@@ -302,15 +287,11 @@ lemma LookupFailureMap_lookup_failure_map:
                simp del: bin_to_bl_def
                split: ExceptionTypes_A.lookup_failure.splits)
 
-primrec
-  ArchFaultMap :: "Fault_H.arch_fault \<Rightarrow> ExceptionTypes_A.arch_fault"
-where
-  "ArchFaultMap (ArchFault_H.RISCV64_H.arch_fault.VMFault p m) = Machine_A.RISCV64_A.arch_fault.VMFault p m"
+primrec ArchFaultMap :: "Fault_H.arch_fault \<Rightarrow> ExceptionTypes_A.arch_fault" where
+  "ArchFaultMap (ArchFault_H.RISCV64_H.arch_fault.VMFault p m) =
+     Machine_A.RISCV64_A.arch_fault.VMFault p m"
 
-
-primrec
-  FaultMap :: "Fault_H.fault \<Rightarrow> ExceptionTypes_A.fault"
-where
+primrec FaultMap :: "Fault_H.fault \<Rightarrow> ExceptionTypes_A.fault" where
   "FaultMap (Fault_H.fault.CapFault ref b failure) =
      ExceptionTypes_A.fault.CapFault ref b (LookupFailureMap failure)"
 | "FaultMap (Fault_H.fault.ArchFault fault) =
@@ -331,8 +312,7 @@ lemma FaultMap_fault_map[simp]:
   done
 
 definition
-  "ArchTcbMap atcb \<equiv>
-    \<lparr> tcb_context =  atcbContext atcb \<rparr>"
+  "ArchTcbMap atcb \<equiv> \<lparr> tcb_context =  atcbContext atcb \<rparr>"
 
 lemma arch_tcb_relation_imp_ArchTcnMap:
   "\<lbrakk> arch_tcb_relation atcb atcb'\<rbrakk> \<Longrightarrow> ArchTcbMap atcb' = atcb"
@@ -354,16 +334,15 @@ definition
       tcb_arch = ArchTcbMap (tcbArch tcb)\<rparr>"
 
 definition
- "absCNode sz h a \<equiv> CNode sz (%bl.
-  if length bl = sz
+ "absCNode sz h a \<equiv> CNode sz (\<lambda>bl.
+    if length bl = sz
     then Some (CapabilityMap (case (h (a + of_bl bl * 2^cteSizeBits)) of
                                 Some (KOCTE cte) \<Rightarrow> cteCap cte))
-  else None)"
+    else None)"
 
-definition
-  absHeap :: "(machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow>
-              (machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> Structures_A.kheap"
-  where
+definition absHeap ::
+  "(machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow>
+     (machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> Structures_A.kheap" where
   "absHeap ups cns h \<equiv> \<lambda>x.
      case h x of
        Some (KOEndpoint ep) \<Rightarrow> Some (Endpoint (EndpointMap ep))
@@ -372,7 +351,7 @@ definition
      | Some KOUserData \<Rightarrow> map_option (ArchObj \<circ> DataPage False) (ups x)
      | Some KOUserDataDevice \<Rightarrow> map_option (ArchObj \<circ> DataPage True) (ups x)
      | Some (KOTCB tcb) \<Rightarrow> Some (TCB (TcbMap tcb))
-     | Some (KOCTE cte) \<Rightarrow> map_option (%sz. absCNode sz h x) (cns x)
+     | Some (KOCTE cte) \<Rightarrow> map_option (\<lambda>sz. absCNode sz h x) (cns x)
      | Some (KOArch ako) \<Rightarrow> map_option ArchObj (absHeapArch h x ako)
      | None \<Rightarrow> None"
 
@@ -407,14 +386,12 @@ lemma unaligned_helper:
 
 lemma pspace_aligned_distinct_None:
   (* NOTE: life would be easier if pspace_aligned and pspace_distinct were defined on PSpace instead of the whole kernel state. *)
-assumes pspace_aligned:
-  "\<forall>x\<in>dom ha. is_aligned (x :: machine_word) (obj_bits (the (ha x)))"
-assumes pspace_distinct:
-  "\<forall>x y ko ko'.
-   ha x = Some ko \<and> ha y = Some ko' \<and> x \<noteq> y \<longrightarrow>
-   {x..x + (2 ^ obj_bits ko - 1)} \<inter> {y..y + (2 ^ obj_bits ko' - 1)} = {}"
-shows
-  "\<lbrakk>ha x = Some ko; y \<in> {0<..<2^(obj_bits ko)}\<rbrakk> \<Longrightarrow> ha (x+y) = None"
+  assumes pspace_aligned: "\<forall>x\<in>dom ha. is_aligned (x :: machine_word) (obj_bits (the (ha x)))"
+  assumes pspace_distinct:
+    "\<forall>x y ko ko'.
+       ha x = Some ko \<and> ha y = Some ko' \<and> x \<noteq> y \<longrightarrow>
+       {x..x + (2 ^ obj_bits ko - 1)} \<inter> {y..y + (2 ^ obj_bits ko' - 1)} = {}"
+  shows "\<lbrakk>ha x = Some ko; y \<in> {0<..<2^(obj_bits ko)}\<rbrakk> \<Longrightarrow> ha (x+y) = None"
   using pspace_aligned[simplified dom_def, simplified]
   apply (erule_tac x=x in allE)
   apply (rule ccontr)
@@ -477,8 +454,7 @@ shows
 lemma pspace_aligned_distinct_None':
   assumes pspace_aligned: "pspace_aligned s"
   assumes pspace_distinct: "pspace_distinct s"
-  shows
-  "\<lbrakk>kheap s x = Some ko; y \<in> {0<..<2^(obj_bits ko)}\<rbrakk> \<Longrightarrow> kheap s (x+y) = None"
+  shows "\<lbrakk>kheap s x = Some ko; y \<in> {0<..<2^(obj_bits ko)}\<rbrakk> \<Longrightarrow> kheap s (x+y) = None"
   apply (rule pspace_aligned_distinct_None)
      apply (rule pspace_aligned[simplified pspace_aligned_def])
     apply (rule pspace_distinct[simplified pspace_distinct_def])
@@ -491,8 +467,7 @@ lemma absHeap_correct:
   assumes valid_objs:      "valid_objs s"
   assumes pspace_relation: "pspace_relation (kheap s) (ksPSpace s')"
   assumes ghost_relation:  "ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
-shows
-  "absHeap (gsUserPages s') (gsCNodes s') (ksPSpace s') = kheap s"
+  shows "absHeap (gsUserPages s') (gsCNodes s') (ksPSpace s') = kheap s"
 proof -
   from ghost_relation
   have gsUserPages:
@@ -616,7 +591,7 @@ proof -
          apply simp
          apply (rule conjI, clarsimp simp add: word_gt_0)
          apply (simp add: is_aligned_mask)
-         apply (clarsimp simp add: pageBits_def mask_def bit_simps)
+         apply (clarsimp simp add: mask_def bit_simps)
         apply (case_tac vmpage_size; simp add: bit_simps)
           apply ((frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+)[2] defer defer
        apply (erule pspace_dom_relatedE[OF _ pspace_relation])
@@ -820,20 +795,18 @@ definition
       time_slice = tcbTimeSlice tcb,
       tcb_domain = tcbDomain tcb\<rparr>"
 
-definition
-  absEkheap :: "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow> etcb option"
-  where
+definition absEkheap ::
+  "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow> etcb option" where
   "absEkheap h \<equiv> \<lambda>x.
      case h x of
        Some (KOTCB tcb) \<Rightarrow> Some (EtcbMap tcb)
      | _ \<Rightarrow> None"
 
 lemma absEkheap_correct:
-assumes pspace_relation: "pspace_relation (kheap s) (ksPSpace s')"
-assumes ekheap_relation: "ekheap_relation (ekheap s) (ksPSpace s')"
-assumes vetcbs: "valid_etcbs s"
-shows
-  "absEkheap (ksPSpace s') = ekheap s"
+  assumes pspace_relation: "pspace_relation (kheap s) (ksPSpace s')"
+  assumes ekheap_relation: "ekheap_relation (ekheap s) (ksPSpace s')"
+  assumes vetcbs: "valid_etcbs s"
+  shows "absEkheap (ksPSpace s') = ekheap s"
   apply (rule ext)
   apply (clarsimp simp: absEkheap_def split: option.splits Structures_H.kernel_object.splits)
   apply (subgoal_tac "\<forall>x. (\<exists>tcb. kheap s x = Some (TCB tcb)) =
@@ -858,21 +831,22 @@ shows
   apply (clarsimp simp: obj_at'_def)
   apply (erule(1) pspace_dom_relatedE)
   apply (erule(1) obj_relation_cutsE)
-  apply (clarsimp simp: other_obj_relation_def
-                 split: Structures_A.kernel_object.split_asm  if_split_asm
-                        RISCV64_A.arch_kernel_obj.split_asm)+
+     apply (clarsimp simp: other_obj_relation_def
+                    split: Structures_A.kernel_object.split_asm  if_split_asm
+                           RISCV64_A.arch_kernel_obj.split_asm)+
   done
 
 text \<open>The following function can be used to reverse cte_map.\<close>
 definition
   "cteMap cns \<equiv> \<lambda>p.
-   let P = (%(a,bl). cte_map (a,bl) = p \<and> cns a = Some (length bl))
-   in if \<exists>x. P x then (SOME x. P x)
-      else (p && ~~ mask tcbBlockSizeBits, bin_to_bl 3 (uint (p >> cte_level_bits)))"
+     let P = (\<lambda>(a,bl). cte_map (a,bl) = p \<and> cns a = Some (length bl))
+     in if \<exists>x. P x
+        then (SOME x. P x)
+        else (p && ~~ mask tcbBlockSizeBits, bin_to_bl 3 (uint (p >> cte_level_bits)))"
 
 lemma tcb_cap_cases_length:
   "tcb_cap_cases b = Some x \<Longrightarrow> length b = 3"
-by (simp add: tcb_cap_cases_def tcb_cnode_index_def split: if_split_asm)
+  by (simp add: tcb_cap_cases_def tcb_cnode_index_def split: if_split_asm)
 
 lemma TCB_implies_KOTCB:
   "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); kheap s a = Some (TCB tcb)\<rbrakk>
@@ -890,12 +864,11 @@ lemma TCB_implies_KOTCB:
 lemma cte_at_CNodeI:
   "\<lbrakk>kheap s a = Some (CNode (length b) cs); well_formed_cnode_n (length b) cs\<rbrakk>
    \<Longrightarrow> cte_at (a,b) s"
-apply (subgoal_tac "\<exists>y. cs b = Some y")
- apply clarsimp
- apply (rule_tac cte=y in cte_wp_at_cteI[of s _ "length b" cs],
-        simp_all)
-apply (simp add: well_formed_cnode_n_def dom_def Collect_eq)
-done
+  apply (subgoal_tac "\<exists>y. cs b = Some y")
+   apply clarsimp
+   apply (rule_tac cte=y in cte_wp_at_cteI[of s _ "length b" cs]; simp)
+  apply (simp add: well_formed_cnode_n_def dom_def Collect_eq)
+  done
 
 lemma cteMap_correct:
   assumes rel:              "(s,s') \<in> state_relation"
@@ -950,7 +923,7 @@ proof -
    apply (frule_tac b=b and c=cte_level_bits in bin_to_bl_of_bl_eq)
      apply (fastforce simp: cte_level_bits_def objBits_defs shiftl_t2n mult_ac)+
   apply (case_tac "b = [False, False, False]")
-   apply (simp add: is_aligned_neg_mask_eq)
+   apply simp
   apply (frule_tac b=b and c=cte_level_bits in bin_to_bl_of_bl_eq)
     apply (fastforce simp: tcb_cap_cases_length cte_level_bits_def objBits_defs)+
   apply (subgoal_tac "ksPSpace s' (cte_map (a, b)) = None")
@@ -1002,23 +975,21 @@ proof -
 qed
 
 definition (* NOTE: cnp maps addresses to CNode, offset pairs *)
-  "absIsOriginalCap cnp h \<equiv>
-   %(oref,cref).
-   cnp (cte_map (oref, cref)) = (oref, cref) \<and>
-   cte_map (oref,cref) : dom (map_to_ctes h) \<and>
-   (\<exists>cte. map_to_ctes h (cte_map (oref,cref)) = Some cte \<and>
-          (cteCap cte \<noteq> capability.NullCap) \<and> mdbRevocable (cteMDBNode cte))"
+  "absIsOriginalCap cnp h \<equiv> \<lambda>(oref,cref).
+     cnp (cte_map (oref, cref)) = (oref, cref) \<and>
+     cte_map (oref,cref) : dom (map_to_ctes h) \<and>
+     (\<exists>cte. map_to_ctes h (cte_map (oref,cref)) = Some cte \<and>
+            (cteCap cte \<noteq> capability.NullCap) \<and> mdbRevocable (cteMDBNode cte))"
 
 lemma absIsOriginalCap_correct:
-assumes valid_ioc: "valid_ioc s"
-assumes valid_objs: "valid_objs s"
-assumes rel: "(s,s') \<in> state_relation"
-assumes pspace_aligned: "pspace_aligned s"
-assumes pspace_distinct: "pspace_distinct s"
-assumes pspace_aligned': "pspace_aligned' s'"
-assumes pspace_distinct': "pspace_distinct' s'"
-shows
-  "absIsOriginalCap (cteMap (gsCNodes s')) (ksPSpace s') = is_original_cap s"
+  assumes valid_ioc: "valid_ioc s"
+  assumes valid_objs: "valid_objs s"
+  assumes rel: "(s,s') \<in> state_relation"
+  assumes pspace_aligned: "pspace_aligned s"
+  assumes pspace_distinct: "pspace_distinct s"
+  assumes pspace_aligned': "pspace_aligned' s'"
+  assumes pspace_distinct': "pspace_distinct' s'"
+  shows "absIsOriginalCap (cteMap (gsCNodes s')) (ksPSpace s') = is_original_cap s"
 proof -
   from valid_ioc
   have no_cap_not_orig:
@@ -1088,51 +1059,43 @@ text \<open>
   in the same format as @{term "cdt s"}.
 \<close>
 definition
-  "parent_of' ds \<equiv> %x.
-   if \<forall>p. \<not> ds p x then None
-   else Some (THE p. ds p x \<and> (\<forall>q. ds p q \<and> ds q x \<longrightarrow> p = q))"
+  "parent_of' ds \<equiv> \<lambda>x.
+     if \<forall>p. \<not> ds p x
+     then None
+     else Some (THE p. ds p x \<and> (\<forall>q. ds p q \<and> ds q x \<longrightarrow> p = q))"
 
 definition
-  "absCDT cnp h \<equiv>
-   \<lambda>(oref,cref).
-   if cnp (cte_map (oref, cref)) = (oref, cref)
+  "absCDT cnp h \<equiv> \<lambda>(oref,cref).
+     if cnp (cte_map (oref, cref)) = (oref, cref)
      then map_option cnp (parent_of' (subtree h) (cte_map (oref, cref)))
-   else None"
+     else None"
 
 lemma valid_mdb_mdb_cte_at:
-  "valid_mdb s
-   \<Longrightarrow> mdb_cte_at (\<lambda>p. \<exists>c. caps_of_state s p = Some c \<and> cap.NullCap \<noteq> c)
-      (cdt s)"
+  "valid_mdb s \<Longrightarrow> mdb_cte_at (\<lambda>p. \<exists>c. caps_of_state s p = Some c \<and> cap.NullCap \<noteq> c) (cdt s)"
   by (simp add: valid_mdb_def2)
 
-lemma ctes_of_cte_wp_atD:
-  "ctes_of s p = Some cte \<Longrightarrow> cte_wp_at' ((=) cte) p s"
-by (simp add: KHeap_R.cte_wp_at_ctes_of)
-
-
 lemma absCDT_correct':
-assumes pspace_aligned: "pspace_aligned s"
-assumes pspace_distinct: "pspace_distinct s"
-assumes pspace_aligned': "pspace_aligned' s'"
-assumes pspace_distinct': "pspace_distinct' s'"
-assumes valid_objs: "valid_objs s"
-assumes valid_mdb:  "valid_mdb s"
-assumes rel:  "(s,s') \<in> state_relation"
-shows
-  "absCDT (cteMap (gsCNodes s')) (ctes_of s') = cdt s" (is ?P)
-  "(case (cdt s x) of None \<Rightarrow> caps_of_state s x \<noteq> None \<longrightarrow> (\<forall>q. \<not>(ctes_of s' \<turnstile> q \<rightarrow> cte_map x)) |
+  assumes pspace_aligned: "pspace_aligned s"
+  assumes pspace_distinct: "pspace_distinct s"
+  assumes pspace_aligned': "pspace_aligned' s'"
+  assumes pspace_distinct': "pspace_distinct' s'"
+  assumes valid_objs: "valid_objs s"
+  assumes valid_mdb:  "valid_mdb s"
+  assumes rel:  "(s,s') \<in> state_relation"
+  shows
+    "absCDT (cteMap (gsCNodes s')) (ctes_of s') = cdt s" (is ?P)
+    "(case (cdt s x) of None \<Rightarrow> caps_of_state s x \<noteq> None \<longrightarrow> (\<forall>q. \<not>(ctes_of s' \<turnstile> q \<rightarrow> cte_map x)) |
              Some p \<Rightarrow>
              ctes_of s' \<turnstile> cte_map p \<rightarrow> cte_map x \<and>
                    (\<forall>q. ctes_of s' \<turnstile> cte_map p \<rightarrow> q \<and>
                         ctes_of s' \<turnstile> q \<rightarrow> cte_map x \<longrightarrow>
                         cte_map p = q))" (is ?Q)
 proof -
-
   have cnp:
-  "\<forall>a b. caps_of_state s (a, b) \<noteq> None \<longrightarrow>
+    "\<forall>a b. caps_of_state s (a, b) \<noteq> None \<longrightarrow>
          (cteMap (gsCNodes s')) (cte_map (a, b)) = (a, b)"
     using cteMap_correct[OF rel valid_objs pspace_aligned pspace_distinct
-                            pspace_aligned' pspace_distinct']
+          pspace_aligned' pspace_distinct']
     by (clarsimp simp: dom_def)
 
   from rel
@@ -1149,13 +1112,11 @@ proof -
     by (clarsimp simp add: state_relation_def)
 
   note cdt_has_caps = mdb_cte_atD[OF _ valid_mdb_mdb_cte_at[OF valid_mdb]]
-  note descendants_of_simps =
-    descendants_of_def cdt_parent_rel_def is_cdt_parent_def
+  note descendants_of_simps = descendants_of_def cdt_parent_rel_def is_cdt_parent_def
 
   have descendants_implies:
     "\<And>p p'. p' \<in> descendants_of p (cdt s) \<Longrightarrow>
-            \<exists>cap cap'. caps_of_state s p = Some cap \<and>
-                       caps_of_state s p' = Some cap'"
+            \<exists>cap cap'. caps_of_state s p = Some cap \<and> caps_of_state s p' = Some cap'"
     apply (clarsimp simp: descendants_of_simps)
     apply (frule tranclD2, drule tranclD)
     apply (auto dest: cdt_has_caps)
@@ -1163,7 +1124,7 @@ proof -
 
   let ?cnp = "cteMap (gsCNodes s')"
   have subtree_implies:
-  "\<And>p p'. subtree (ctes_of s') p p' \<Longrightarrow>
+    "\<And>p p'. subtree (ctes_of s') p p' \<Longrightarrow>
            \<exists>cap cap'. ?cnp p' \<in> descendants_of (?cnp p) (cdt s) \<and>
                       caps_of_state s (?cnp p) = Some cap \<and>
                       caps_of_state s (?cnp p') = Some cap' \<and>
@@ -1172,8 +1133,7 @@ proof -
      prefer 2
      apply (erule subtree.cases, simp+)
     apply (clarsimp simp add: parentOf_def)
-    apply (frule_tac x=p in
-      pspace_relation_cte_wp_atI[OF pspace_relation _ valid_objs])
+    apply (frule_tac x=p in pspace_relation_cte_wp_atI[OF pspace_relation _ valid_objs])
     apply clarsimp
     apply (frule descs_eq[rule_format, OF cte_wp_at_weakenE], simp)
     apply (simp add: descendants_of'_def Collect_eq)
@@ -1183,7 +1143,7 @@ proof -
     apply (clarsimp simp: cnp)
     done
   have is_parent:
-  "\<And>a b p cap cap' a' b' c.
+    "\<And>a b p cap cap' a' b' c.
        \<lbrakk>cdt s (a, b) = Some (a', b')\<rbrakk>
        \<Longrightarrow> ctes_of s' \<turnstile> cte_map (a', b') \<rightarrow> cte_map (a, b) \<and>
           (\<forall>q. ctes_of s' \<turnstile> cte_map (a', b') \<rightarrow> q \<and>
@@ -1192,19 +1152,19 @@ proof -
     apply (frule cdt_has_caps)
     using descs_eq pspace_relation
     apply (frule_tac x=a' in spec, erule_tac x=b' in allE)
-     apply (simp add: cte_wp_at_caps_of_state Collect_eq descendants_of_simps
-                      descendants_of'_def)
-     apply (rule conjI)
-      apply fastforce
-     apply clarsimp
-     apply (drule subtree_implies)+
-     apply (clarsimp simp: cnp)
-     using valid_mdb
-     apply (clarsimp simp: cnp descendants_of_simps valid_mdb_def no_mloop_def)
-     apply (drule_tac x="?cnp q" and y="(a, b)" in tranclD2)
-     apply clarsimp
-     apply (fastforce intro: trancl_rtrancl_trancl)
-     done
+    apply (simp add: cte_wp_at_caps_of_state Collect_eq descendants_of_simps
+                     descendants_of'_def)
+    apply (rule conjI)
+     apply fastforce
+    apply clarsimp
+    apply (drule subtree_implies)+
+    apply (clarsimp simp: cnp)
+    using valid_mdb
+    apply (clarsimp simp: cnp descendants_of_simps valid_mdb_def no_mloop_def)
+    apply (drule_tac x="?cnp q" and y="(a, b)" in tranclD2)
+    apply clarsimp
+    apply (fastforce intro: trancl_rtrancl_trancl)
+    done
 
 
   show ?P
@@ -1215,7 +1175,7 @@ proof -
      apply clarsimp
      apply (rule sym, rule ccontr, clarsimp)
      apply (frule cdt_has_caps)
-     using cnp
+    using cnp
      apply fastforce
     apply clarsimp
 
@@ -1245,14 +1205,14 @@ proof -
      apply (rule cnp[rule_format], simp)
     apply (rule arg_cong[where f="?cnp"])
     apply (rule the_equality)
-    apply (rule is_parent,assumption)
+     apply (rule is_parent,assumption)
     apply clarsimp
     apply (rule ccontr)
     apply (drule_tac x="cte_map (a', b')" in spec, drule mp)
      apply simp_all
     apply (drule subtree_implies)
     apply clarsimp
-    apply (drule_tac p=pa in ctes_of_cte_wp_atD)
+    apply (drule_tac p=pa in ctes_of_cte_wpD)
     apply (drule pspace_relation_cte_wp_atI'[OF pspace_relation _ valid_objs])
     apply (clarsimp simp add: cte_wp_at_caps_of_state cnp)
     apply (thin_tac "(a, b) \<in> descendants_of (?cnp p) (cdt s)",
@@ -1275,7 +1235,7 @@ proof -
     apply (drule_tac x="(aa,ba)" and y="(a, b)" in tranclD2)
     apply clarsimp
     apply (drule rtranclD, erule disjE, simp_all)[1]
-     done
+    done
   thus ?Q
     apply (case_tac x)
     apply (case_tac "cdt s (a, b)")
@@ -1302,12 +1262,16 @@ lemmas cdt_simple_rel =  absCDT_correct'(2)
    equivalent. *)
 
 definition sort_cdt_list where
-"sort_cdt_list cd m = (\<lambda>p. (THE xs. set xs = {c. cd c = Some p} \<and> partial_sort.psorted (\<lambda>x y. m \<turnstile> cte_map x \<leadsto>\<^sup>* cte_map y) xs \<and> distinct xs))"
+  "sort_cdt_list cd m =
+     (\<lambda>p. THE xs. set xs = {c. cd c = Some p} \<and>
+                  partial_sort.psorted (\<lambda>x y. m \<turnstile> cte_map x \<leadsto>\<^sup>* cte_map y) xs \<and> distinct xs)"
 
 end
 
-locale partial_sort_cdt = partial_sort "\<lambda> x y.  m' \<turnstile> cte_map x \<leadsto>\<^sup>* cte_map y"
-                                       "\<lambda> x y. cte_at x (s::det_state) \<and> cte_at y s \<and> (\<exists>p. m' \<turnstile> p \<rightarrow> cte_map x \<and> m' \<turnstile> p \<rightarrow> cte_map y)" for m' s +
+locale partial_sort_cdt =
+  partial_sort "\<lambda> x y.  m' \<turnstile> cte_map x \<leadsto>\<^sup>* cte_map y"
+               "\<lambda> x y. cte_at x (s::det_state) \<and> cte_at y s \<and>
+                       (\<exists>p. m' \<turnstile> p \<rightarrow> cte_map x \<and> m' \<turnstile> p \<rightarrow> cte_map y)" for m' s +
   fixes s'::"kernel_state"
   fixes m t
   defines "m \<equiv> (cdt s)"
@@ -1317,22 +1281,20 @@ locale partial_sort_cdt = partial_sort "\<lambda> x y.  m' \<turnstile> cte_map 
   assumes valid_mdb: "valid_mdb s"
   assumes assms' : "pspace_aligned s" "pspace_distinct s" "pspace_aligned' s'"
                    "pspace_distinct' s'" "valid_objs s" "valid_mdb s" "valid_list s"
-
 begin
 
 interpretation Arch . (*FIXME: arch_split*)
 
 lemma valid_list_2 : "valid_list_2 t m"
-    apply (insert assms')
-    apply (simp add: t_def m_def)
-    done
+  apply (insert assms')
+  apply (simp add: t_def m_def)
+  done
 
 lemma has_next_not_child_is_descendant:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
-  shows
-  "next_not_child slot t m = Some slot2 \<Longrightarrow> (\<exists>p. slot \<in> descendants_of p m)"
+  shows "next_not_child slot t m = Some slot2 \<Longrightarrow> (\<exists>p. slot \<in> descendants_of p m)"
   apply (drule next_not_childD)
-  apply (simp add: m_def finite_depth assms')+
+    apply (simp add: m_def finite_depth assms')+
    using assms'
    apply (simp add: valid_mdb_def)
   apply (elim disjE)
@@ -1345,38 +1307,32 @@ lemma has_next_not_child_is_descendant:
   apply force
   done
 
-
 lemma has_next_slot_is_descendant :
-    notes split_paired_All[simp del] split_paired_Ex[simp del]
-  shows
-    "next_slot slot t m = Some slot2 \<Longrightarrow> m slot2 = Some slot \<or> (\<exists>p. slot \<in> descendants_of p m)"
-    apply (insert valid_list_2)
-    apply (simp add: next_slot_def next_child_def split: if_split_asm)
-     apply (case_tac "t slot",simp+)
-     apply (simp add: valid_list_2_def)
-     apply (rule disjI1)
-     apply force
-    apply (rule disjI2)
-    apply (erule has_next_not_child_is_descendant)
-    done
+  notes split_paired_All[simp del] split_paired_Ex[simp del]
+  shows "next_slot slot t m = Some slot2 \<Longrightarrow> m slot2 = Some slot \<or> (\<exists>p. slot \<in> descendants_of p m)"
+  apply (insert valid_list_2)
+  apply (simp add: next_slot_def next_child_def split: if_split_asm)
+   apply (case_tac "t slot",simp+)
+   apply (simp add: valid_list_2_def)
+   apply (rule disjI1)
+   apply force
+  apply (rule disjI2)
+  apply (erule has_next_not_child_is_descendant)
+  done
 
 lemma descendant_has_parent:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
-    shows
-  "slot \<in> descendants_of p m \<Longrightarrow> \<exists>q. m slot = Some q"
+  shows "slot \<in> descendants_of p m \<Longrightarrow> \<exists>q. m slot = Some q"
   apply (simp add: descendants_of_def)
   apply (drule tranclD2)
   apply (simp add: cdt_parent_of_def)
   apply force
   done
 
-
-
 lemma next_slot_cte_at:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
-  shows
-  "next_slot slot t m = Some slot2 \<Longrightarrow> cte_at slot s"
-   apply (cut_tac valid_mdb_mdb_cte_at)
+  shows "next_slot slot t m = Some slot2 \<Longrightarrow> cte_at slot s"
+  apply (cut_tac valid_mdb_mdb_cte_at)
    prefer 2
    apply (cut_tac assms')
    apply simp
@@ -1391,90 +1347,87 @@ lemma next_slot_cte_at:
   apply force
   done
 
-lemma cte_at_has_cap: "cte_at slot s \<Longrightarrow> \<exists>c. cte_wp_at ((=) c) slot s"
+lemma cte_at_has_cap:
+  "cte_at slot s \<Longrightarrow> \<exists>c. cte_wp_at ((=) c) slot s"
   apply (drule cte_at_get_cap_wp)
   apply force
   done
 
-
-  lemma next_slot_mdb_next:
+lemma next_slot_mdb_next:
   notes split_paired_All[simp del]
-  shows
- "next_slot slot t m = Some slot2 \<Longrightarrow> m' \<turnstile> (cte_map slot) \<leadsto> (cte_map slot2)"
-    apply (frule cte_at_has_cap[OF next_slot_cte_at])
-    apply (elim exE)
-    apply (cut_tac s=s and s'=s' in pspace_relation_ctes_ofI)
-        apply (fold m'_def)
-        using rel
-        apply (simp add: state_relation_def)
-       apply simp
-      using assms'
-      apply simp
-     using assms'
+  shows "next_slot slot t m = Some slot2 \<Longrightarrow> m' \<turnstile> (cte_map slot) \<leadsto> (cte_map slot2)"
+  apply (frule cte_at_has_cap[OF next_slot_cte_at])
+  apply (elim exE)
+  apply (cut_tac s=s and s'=s' in pspace_relation_ctes_ofI)
+      apply (fold m'_def)
+      using rel
+      apply (simp add: state_relation_def)
      apply simp
-    apply (subgoal_tac "cdt_list_relation t m m'")
-     apply (simp add: cdt_list_relation_def)
-     apply (elim exE)
-     apply (case_tac cte)
-     apply (simp add: mdb_next_rel_def mdb_next_def)
-     apply force
-    using rel
-    apply (simp add: state_relation_def m_def t_def m'_def)
-    done
+    using assms'
+    apply simp
+   using assms'
+   apply simp
+  apply (subgoal_tac "cdt_list_relation t m m'")
+   apply (simp add: cdt_list_relation_def)
+   apply (elim exE)
+   apply (case_tac cte)
+   apply (simp add: mdb_next_rel_def mdb_next_def)
+   apply force
+  using rel
+  apply (simp add: state_relation_def m_def t_def m'_def)
+  done
 
-
-  lemma next_sib_2_reachable: "next_sib_2 slot p s = Some slot2  \<Longrightarrow> m' \<turnstile> (cte_map slot) \<leadsto>\<^sup>* (cte_map slot2)"
-    apply (induct slot rule: next_sib_2_pinduct[where s=s and p=p])
-    apply (cut_tac slot=slot and s=s and p=p in next_sib_2.psimps[OF next_sib_2_termination], (simp add: assms')+)
+lemma next_sib_2_reachable:
+  "next_sib_2 slot p s = Some slot2  \<Longrightarrow> m' \<turnstile> (cte_map slot) \<leadsto>\<^sup>* (cte_map slot2)"
+  apply (induct slot rule: next_sib_2_pinduct[where s=s and p=p])
+    apply (cut_tac slot=slot and s=s and p=p in next_sib_2.psimps[OF next_sib_2_termination];
+             simp add: assms')
     apply (fold m_def t_def)
-      apply (simp split: if_split_asm)
-      apply (case_tac "next_slot slot t m")
-       apply simp
-      apply (simp split: if_split_asm)
-       apply (rule r_into_rtrancl)
-       apply (erule next_slot_mdb_next)
-      apply (drule_tac x="a" in meta_spec)
-      apply simp
-      apply (rule trans)
-       apply (rule r_into_rtrancl)
-       apply (rule next_slot_mdb_next)
-       apply (simp add: assms' valid_list_2)+
-    done
+    apply (simp split: if_split_asm)
+    apply (case_tac "next_slot slot t m")
+     apply simp
+    apply (simp split: if_split_asm)
+     apply (rule r_into_rtrancl)
+     apply (erule next_slot_mdb_next)
+    apply (drule_tac x="a" in meta_spec)
+    apply simp
+    apply (rule trans)
+     apply (rule r_into_rtrancl)
+     apply (rule next_slot_mdb_next)
+     apply (simp add: assms' valid_list_2)+
+  done
 
-
-lemma next_sib_reachable: "next_sib slot t m = Some slot2 \<Longrightarrow> m slot = Some p \<Longrightarrow>
-                             m' \<turnstile> (cte_map slot) \<leadsto>\<^sup>* (cte_map slot2)"
-    apply (rule next_sib_2_reachable)
-    apply (insert assms')
-    apply (simp add: t_def m_def)
-    apply (subst next_sib_def2,simp+)
-    done
+lemma next_sib_reachable:
+  "next_sib slot t m = Some slot2 \<Longrightarrow> m slot = Some p \<Longrightarrow> m' \<turnstile> (cte_map slot) \<leadsto>\<^sup>* (cte_map slot2)"
+  apply (rule next_sib_2_reachable)
+  apply (insert assms')
+  apply (simp add: t_def m_def)
+  apply (subst next_sib_def2,simp+)
+  done
 
 lemma after_in_list_next_reachable:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
-  shows
-  "after_in_list (t p) slot = Some slot2 \<Longrightarrow> m' \<turnstile> (cte_map slot) \<leadsto>\<^sup>* (cte_map slot2)"
-    apply (subgoal_tac "m slot = Some p")
+  shows "after_in_list (t p) slot = Some slot2 \<Longrightarrow> m' \<turnstile> (cte_map slot) \<leadsto>\<^sup>* (cte_map slot2)"
+  apply (subgoal_tac "m slot = Some p")
    apply (rule next_sib_reachable)
     apply (simp add: next_sib_def)+
   apply (drule after_in_list_in_list')
   apply (insert valid_list_2)
   apply (simp add: valid_list_2_def)
-    done
+  done
 
 lemma sorted_lists:
-   "psorted (t p)"
-    apply (rule after_order_sorted)
-     apply (rule after_in_list_next_reachable)
-     apply simp
-    apply (insert assms')
-    apply (simp add: valid_list_def t_def del: split_paired_All)
-    done
+  "psorted (t p)"
+  apply (rule after_order_sorted)
+   apply (rule after_in_list_next_reachable)
+   apply simp
+  apply (insert assms')
+  apply (simp add: valid_list_def t_def del: split_paired_All)
+  done
 
 lemma finite_children:
-notes split_paired_All[simp del]
-shows
-"finite {c. m c = Some p}"
+  notes split_paired_All[simp del]
+  shows "finite {c. m c = Some p}"
   apply (insert assms')
   apply(subgoal_tac "{x. x \<in> descendants_of p (cdt s)} \<subseteq> {x. cte_wp_at (\<lambda>_. True) x s}")
    prefer 2
@@ -1489,10 +1442,8 @@ shows
   apply (simp add: m_def child_descendant)
   done
 
-
-lemma ex1_sorted_cdt: "\<exists>!xs. set xs = {c. m c = Some p} \<and>
-           psorted xs \<and>
-           distinct xs"
+lemma ex1_sorted_cdt:
+  "\<exists>!xs. set xs = {c. m c = Some p} \<and> psorted xs \<and> distinct xs"
   apply (rule psorted_set[OF finite_children])
   apply (simp add: R_set_def)
   apply (intro impI conjI allI)
@@ -1522,7 +1473,7 @@ end
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition absCDTList where
-"absCDTList cnp h \<equiv> sort_cdt_list (absCDT cnp h) h"
+  "absCDTList cnp h \<equiv> sort_cdt_list (absCDT cnp h) h"
 
 lemma no_loops_sym_eq: "no_loops m \<Longrightarrow> m \<turnstile> a \<leadsto>\<^sup>* b \<Longrightarrow> m \<turnstile> b \<leadsto>\<^sup>* a \<Longrightarrow> a = b"
   apply (rule ccontr)
@@ -1551,20 +1502,18 @@ lemma valid_mdb'_no_loops: "valid_mdb' s \<Longrightarrow> no_loops (ctes_of s)"
   apply (simp add: valid_mdb'_def valid_mdb_ctes_def)+
   done
 
-
 lemma absCDTList_correct:
-notes split_paired_All[simp del] split_paired_Ex[simp del]
-assumes valid_mdb:  "valid_mdb s"
-assumes valid_mdb': "valid_mdb' s'"
-assumes valid_list: "valid_list s"
-assumes valid_objs: "valid_objs s"
-assumes pspace_aligned: "pspace_aligned s"
-assumes pspace_aligned': "pspace_aligned' s'"
-assumes pspace_distinct: "pspace_distinct s"
-assumes pspace_distinct': "pspace_distinct' s'"
-assumes rel:  "(s,s') \<in> state_relation"
-shows
-  "absCDTList (cteMap (gsCNodes s')) (ctes_of s') = cdt_list s"
+  notes split_paired_All[simp del] split_paired_Ex[simp del]
+  assumes valid_mdb:  "valid_mdb s"
+  assumes valid_mdb': "valid_mdb' s'"
+  assumes valid_list: "valid_list s"
+  assumes valid_objs: "valid_objs s"
+  assumes pspace_aligned: "pspace_aligned s"
+  assumes pspace_aligned': "pspace_aligned' s'"
+  assumes pspace_distinct: "pspace_distinct s"
+  assumes pspace_distinct': "pspace_distinct' s'"
+  assumes rel:  "(s,s') \<in> state_relation"
+  shows "absCDTList (cteMap (gsCNodes s')) (ctes_of s') = cdt_list s"
   apply (simp add: absCDTList_def)
   apply (subst absCDT_correct[where s=s])
          apply (simp add: assms)+
@@ -1585,8 +1534,8 @@ shows
 
 definition
   "absInterruptIRQNode is' \<equiv> \<lambda>irq.
-   case is' of InterruptState node irqs' \<Rightarrow>
-   node + (ucast irq << cte_level_bits)"
+     case is' of InterruptState node irqs' \<Rightarrow>
+     node + (ucast irq << cte_level_bits)"
 
 definition
   "irq_state_map s \<equiv> case s of
@@ -1603,27 +1552,22 @@ definition
    | irqstate.IRQReserved \<Rightarrow> irq_state.IRQReserved"
 
 definition
-  "absInterruptStates is' \<equiv>
-   case is' of InterruptState node m \<Rightarrow>
- IRQStateMap \<circ> m"
+  "absInterruptStates is' \<equiv> case is' of InterruptState node m \<Rightarrow> IRQStateMap \<circ> m"
 
 lemma absInterruptIRQNode_correct:
-  "interrupt_state_relation (interrupt_irq_node s) (interrupt_states s)
-      (ksInterruptState s') \<Longrightarrow>
+  "interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s') \<Longrightarrow>
    absInterruptIRQNode (ksInterruptState s') = interrupt_irq_node s"
-   by (rule ext) (clarsimp simp add: absInterruptIRQNode_def
-                                     interrupt_state_relation_def)
+   by (rule ext) (clarsimp simp add: absInterruptIRQNode_def interrupt_state_relation_def)
 
 lemma absInterruptStates_correct:
-  "interrupt_state_relation (interrupt_irq_node s) (interrupt_states s)
-      (ksInterruptState s') \<Longrightarrow>
+  "interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s') \<Longrightarrow>
    absInterruptStates (ksInterruptState s') = interrupt_states s"
-apply (rule ext)
-apply (clarsimp simp add: absInterruptStates_def IRQStateMap_def
-         interrupt_state_relation_def irq_state_relation_def)
-apply (erule_tac x=x in allE)+
-apply (clarsimp split: irq_state.splits irqstate.splits)
-done
+  apply (rule ext)
+  apply (clarsimp simp : absInterruptStates_def IRQStateMap_def interrupt_state_relation_def
+                         irq_state_relation_def)
+  apply (erule_tac x=x in allE)+
+  apply (clarsimp split: irq_state.splits irqstate.splits)
+  done
 
 definition
   "absArchState s' \<equiv>
@@ -1647,10 +1591,8 @@ definition absSchedulerAction where
                  | ChooseNewThread \<Rightarrow> choose_new_thread"
 
 lemma absSchedulerAction_correct:
-  assumes act_rel: "sched_act_relation action action'"
-  shows " absSchedulerAction action' = action"
-  using act_rel
-  by (cases action, simp_all add: absSchedulerAction_def)
+  "sched_act_relation action action' \<Longrightarrow> absSchedulerAction action' = action"
+  by (cases action; simp add: absSchedulerAction_def)
 
 definition
   "absExst s \<equiv>
@@ -1690,28 +1632,23 @@ definition
     arch_state = absArchState (ksArchState s),
     exst = absExst s\<rparr>"
 
-(* TODO: move *)
+(* FIXME: move *)
 lemma invs_valid_ioc[elim!]: "invs s \<Longrightarrow> valid_ioc s"
   by (clarsimp simp add: invs_def valid_state_def)
 
 
-
-definition
-  checkActiveIRQ :: "(kernel_state, bool) nondet_monad"
-  where
+definition checkActiveIRQ :: "(kernel_state, bool) nondet_monad" where
   "checkActiveIRQ \<equiv>
    do irq \<leftarrow> doMachineOp (getActiveIRQ False);
       return (irq \<noteq> None)
    od"
 
-definition
-  check_active_irq_H :: "((user_context \<times> kernel_state) \<times> bool \<times> (user_context \<times> kernel_state)) set"
-  where
+definition check_active_irq_H ::
+  "((user_context \<times> kernel_state) \<times> bool \<times> (user_context \<times> kernel_state)) set" where
   "check_active_irq_H \<equiv> {((tc, s), irq, (tc, s')). (irq, s') \<in> fst (checkActiveIRQ s)}"
 
-definition
-  doUserOp :: "user_transition \<Rightarrow> user_context \<Rightarrow>
-               (kernel_state, event option \<times> user_context) nondet_monad"
+definition doUserOp ::
+  "user_transition \<Rightarrow> user_context \<Rightarrow> (kernel_state, event option \<times> user_context) nondet_monad"
   where
   "doUserOp uop tc \<equiv>
    do t \<leftarrow> getCurThread;
@@ -1739,36 +1676,34 @@ definition
       return (e, tc')
    od"
 
-definition
-  do_user_op_H
-    :: "user_transition \<Rightarrow>
-        ((user_context \<times> kernel_state) \<times> (event option \<times> user_context \<times> kernel_state)) set"
-  where
+definition do_user_op_H ::
+  "user_transition \<Rightarrow>
+     ((user_context \<times> kernel_state) \<times> (event option \<times> user_context \<times> kernel_state)) set" where
   "do_user_op_H uop \<equiv> monad_to_transition (doUserOp uop)"
 
 definition
   "kernelEntry e tc \<equiv> do
-    t \<leftarrow> getCurThread;
-    threadSet (\<lambda>tcb. tcb \<lparr> tcbArch := atcbContextSet tc (tcbArch tcb) \<rparr>) t;
-    callKernel e;
-    t' \<leftarrow> getCurThread;
-    threadGet (atcbContextGet o tcbArch) t'
-  od"
+     t \<leftarrow> getCurThread;
+     threadSet (\<lambda>tcb. tcb \<lparr> tcbArch := atcbContextSet tc (tcbArch tcb) \<rparr>) t;
+     callKernel e;
+     t' \<leftarrow> getCurThread;
+     threadGet (atcbContextGet o tcbArch) t'
+   od"
 
 definition kernel_call_H ::
   "event \<Rightarrow> ((user_context \<times> kernel_state) \<times> mode \<times> (user_context \<times> kernel_state)) set"
   where
   "kernel_call_H e \<equiv>
-      {(s, m, s'). s' \<in> fst (split (kernelEntry e) s) \<and>
-                   m = (if ct_running' (snd s') then UserMode else IdleMode)}"
+     {(s, m, s'). s' \<in> fst (split (kernelEntry e) s) \<and>
+                  m = (if ct_running' (snd s') then UserMode else IdleMode)}"
 
 definition ADT_H ::
   "user_transition \<Rightarrow> (kernel_state global_state, det_ext observable, unit) data_type"
   where
   "ADT_H uop \<equiv>
-   \<lparr>Init = \<lambda>s. Init_H,
-    Fin = \<lambda>((tc,s),m,e). ((tc, absKState s),m,e),
-    Step = (\<lambda>u. global_automaton check_active_irq_H (do_user_op_H uop) kernel_call_H)\<rparr>"
+     \<lparr>Init = \<lambda>s. Init_H,
+      Fin = \<lambda>((tc,s),m,e). ((tc, absKState s),m,e),
+      Step = (\<lambda>u. global_automaton check_active_irq_H (do_user_op_H uop) kernel_call_H)\<rparr>"
 
 end
 
