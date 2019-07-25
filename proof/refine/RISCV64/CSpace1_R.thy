@@ -243,7 +243,7 @@ lemma pspace_relation_cte_wp_at:
   apply (drule(2) aligned_distinct_obj_atI'[where 'a=tcb])
    apply simp
   apply (drule tcb_cases_related)
-  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
+  apply (clarsimp simp: obj_at'_def objBits_simps)
   apply (erule(2) cte_wp_at_tcbI')
    apply fastforce
   apply simp
@@ -546,7 +546,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
   proof (cases "isCNodeCap c'")
     case True
     with "1.prems"
-    obtain ptr guard' guard cbits where caps:
+    obtain ptr guard cbits where caps:
       "cap = cap.CNodeCap ptr cbits guard"
       "c' = CNodeCap ptr cbits (of_bl guard) (length guard)"
       apply (cases cap, simp_all add: isCap_defs)
@@ -585,7 +585,6 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
       hence [simp]: "((cbits + length guard = 0) = False) \<and>
                      ((cbits = 0 \<and> guard = []) = False) \<and>
                     (0 < cbits \<or> guard \<noteq> []) " by simp
-      note if_split [split del]
       from "1.prems"
       have ?thesis
         apply -
@@ -722,10 +721,10 @@ lemma lookup_slot_corres:
         (lookup_slot_for_thread t (to_bl cptr))
         (lookupSlotForThread t cptr)"
   apply (unfold lookup_slot_for_thread_def lookupSlotForThread_def)
-  apply (simp add: returnOk_bindE const_def)
+  apply (simp add: const_def)
   apply (simp add: getThreadCSpaceRoot)
   apply (fold returnOk_liftE)
-  apply (simp add: returnOk_bindE)
+  apply simp
   apply (rule corres_initial_splitE)
      apply (subst corres_liftE_rel_sum)
      apply (rule corres_guard_imp)
@@ -800,8 +799,7 @@ lemma setObject_cte_obj_at_tcb':
   \<lbrace>\<lambda>_ s. P' (obj_at' P p s)\<rbrace>"
   apply (clarsimp simp: setObject_def in_monad split_def
                         valid_def lookupAround2_char1
-                        obj_at'_def ps_clear_upd' projectKOs
-             split del: if_split)
+                        obj_at'_def ps_clear_upd')
   apply (clarsimp elim!: rsubst[where P=P'])
   apply (clarsimp simp: updateObject_cte in_monad objBits_simps
                         tcbCTableSlot_def tcbVTableSlot_def x
@@ -1995,7 +1993,7 @@ proof -
   have irq: "cap_irqs c = cap_irqs c'" using reg fm fm'
     by (simp add: final_matters_def split: cap.split_asm)
   have arch_ref: "arch_gen_refs c = arch_gen_refs c'" using fm reg
-    by (clarsimp simp: final_matters_def is_cap_simps arch_gen_obj_refs_def
+    by (clarsimp simp: final_matters_def is_cap_simps
                    split: cap.split_asm arch_cap.split_asm)
 
   from final have refs_non_empty: "obj_refs c \<noteq> {} \<or> cap_irqs c \<noteq> {} \<or> arch_gen_refs c \<noteq> {}"
@@ -2340,14 +2338,14 @@ lemma ctes_of_valid:
   apply (erule disjE)
    apply (subgoal_tac "ko_at' cte p s")
     apply (drule (1) ko_at_valid_objs')
-     apply (simp add: projectKOs)
+     apply simp
     apply (simp add: valid_obj'_def valid_cte'_def)
-   apply (simp add: obj_at'_def projectKOs cte_level_bits_def objBits_simps)
+   apply (simp add: obj_at'_def cte_level_bits_def objBits_simps)
   apply clarsimp
   apply (drule obj_at_ko_at')
   apply clarsimp
   apply (drule (1) ko_at_valid_objs')
-   apply (simp add: projectKOs)
+   apply simp
   apply (simp add: valid_obj'_def valid_tcb'_def)
   apply (fastforce)
   done
