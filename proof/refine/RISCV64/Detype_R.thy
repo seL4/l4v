@@ -11,6 +11,19 @@
 theory Detype_R
 imports Retype_R
 begin
+
+(* FIXME RISCV: move to Word *)
+lemma mask_mono:
+  "sz' \<le> sz \<Longrightarrow> mask sz' \<le> (mask sz :: 'a::len word)"
+  apply (cases "sz < LENGTH('a)")
+   apply (simp only: mask_def shiftl_1)
+   apply (rule word_le_minus_mono_left)
+    apply (erule (1) two_power_increasing)
+   apply (rule word_1_le_power)
+   apply simp
+  apply (simp add: not_less mask_over_length)
+  done
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 text \<open>Establishing that the invariants are maintained
@@ -4027,42 +4040,31 @@ lemma copyGlobalMappings_pspace_no_overlap':
   apply clarsimp
   done
 
-(* FIXME RISCV: move to Word. Can sz assumption be lifted? *)
-lemma mask_mono:
-  "\<lbrakk> sz' \<le> sz; sz < LENGTH('a) \<rbrakk> \<Longrightarrow> mask sz' \<le> (mask sz :: 'a::len word)"
-  apply (simp only: mask_def shiftl_1)
-  apply (rule word_le_minus_mono_left)
-   apply (erule (1) two_power_increasing)
-  apply (rule word_1_le_power)
-  apply simp
-  done
-
 lemma pspace_no_overlap'_le:
   assumes psp: "pspace_no_overlap' ptr sz s" "sz'\<le> sz"
   assumes b: "sz < word_bits"
   shows "pspace_no_overlap' ptr sz' s"
-  proof -
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
-                        atLeastatMost_subset_iff atLeastLessThan_iff
-                        Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+proof -
+  note no_simps [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+                             atLeastatMost_subset_iff atLeastLessThan_iff
+                             Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   have diff_cancel: "\<And>a b c. (a::machine_word) + b - c = b + (a - c)"
-   by simp
+    by simp
   have bound: "(ptr && ~~ mask sz') - (ptr && ~~ mask sz) \<le> mask sz - mask sz'"
     using neg_mask_diff_bound[OF psp(2)]
     by (simp add: mask_def)
   show ?thesis
-  using psp
+    using psp
     apply (clarsimp simp:pspace_no_overlap'_def)
     apply (drule_tac x = x in spec)
     apply clarsimp
     apply (erule disjoint_subset2[rotated])
-    apply (clarsimp simp:blah)
+    apply (clarsimp simp: no_simps)
     apply (rule word_plus_mcs[OF _  is_aligned_no_overflow_mask])
      apply (simp add:diff_cancel p_assoc_help)
      apply (rule le_plus)
       apply (rule bound)
      apply (erule mask_mono)
-     using b apply (simp add: word_bits_def)
     apply simp
     done
 qed

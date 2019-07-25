@@ -114,17 +114,17 @@ lemma of_bl_max:
 
 (* FIXME RISCV: move to Word *)
 lemma mask_over_length:
-  "LENGTH('a) < n \<Longrightarrow> mask n = (-1::'a::len word)"
+  "LENGTH('a) \<le> n \<Longrightarrow> mask n = (-1::'a::len word)"
   by (simp add: mask_def)
 
 (* FIXME RISCV: move to Word *)
 lemma is_aligned_over_length:
-  "\<lbrakk> is_aligned p n; LENGTH('a) < n \<rbrakk> \<Longrightarrow> (p::'a::len word) = 0"
+  "\<lbrakk> is_aligned p n; LENGTH('a) \<le> n \<rbrakk> \<Longrightarrow> (p::'a::len word) = 0"
   by (simp add: is_aligned_mask mask_over_length)
 
 (* FIXME RISCV: move to Word *)
 lemma Suc_2p_unat_mask:
-  "n \<le> LENGTH('a) \<Longrightarrow> Suc (2 ^ n * k + unat (mask n :: 'a::len word)) = 2 ^ n * (k+1)"
+  "n < LENGTH('a) \<Longrightarrow> Suc (2 ^ n * k + unat (mask n :: 'a::len word)) = 2 ^ n * (k+1)"
   by (simp add: unat_mask)
 
 (* FIXME RISCV: move to Word *)
@@ -132,7 +132,7 @@ lemma is_aligned_add_step_le:
   "\<lbrakk> is_aligned (a::'a::len word) n; is_aligned b n; a < b; b \<le> a + mask n \<rbrakk> \<Longrightarrow> False"
   apply (simp flip: not_le)
   apply (erule notE)
-  apply (cases "LENGTH('a) < n")
+  apply (cases "LENGTH('a) \<le> n")
    apply (drule (1) is_aligned_over_length)+
    apply (drule mask_over_length)
    apply clarsimp
@@ -160,11 +160,11 @@ lemma power_2_mult_step_le:
 lemma aligned_mask_step:
   "\<lbrakk> n' \<le> n; p' \<le> p + mask n; is_aligned p n; is_aligned p' n' \<rbrakk> \<Longrightarrow>
    (p'::'a::len word) + mask n' \<le> p + mask n"
-  apply (cases "LENGTH('a) < n")
+  apply (cases "LENGTH('a) \<le> n")
    apply (frule (1) is_aligned_over_length)
    apply (drule mask_over_length)
    apply clarsimp
-  apply (simp add: not_less)
+  apply (simp add: not_le)
   apply (simp add: word_le_nat_alt unat_plus_simple)
   apply (subst unat_plus_simple[THEN iffD1], erule is_aligned_no_overflow_mask)+
   apply (subst (asm) unat_plus_simple[THEN iffD1], erule is_aligned_no_overflow_mask)
