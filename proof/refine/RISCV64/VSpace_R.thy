@@ -15,33 +15,31 @@
 theory VSpace_R
 imports TcbAcc_R
 begin
+
+(* FIXME RISCV: move to corres *)
+lemma corres_assert_gen_asm_l:
+  "\<lbrakk> F \<Longrightarrow> corres_underlying sr nf nf' r P Q (f ()) g \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r (P and (\<lambda>_. F)) Q (assert F >>= f) g"
+  by (simp add: corres_gen_asm)
+
 context Arch begin global_naming RISCV64 (*FIXME: arch_split*)
 
+(* FIXME RISCV: move to AInvs *)
 lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
+
+(* FIXME RISCV: move to AInvs *)
+lemma valid_arch_state_asid_table:
+  "valid_arch_state s \<Longrightarrow> valid_asid_table s"
+  by (simp add: valid_arch_state_def)
+
+(* FIXME RISCV: move to AInvs *)
+lemma valid_arch_state_global_arch_objs:
+  "valid_arch_state s \<Longrightarrow> valid_global_arch_objs s"
+  by (simp add: valid_arch_state_def)
 
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-
-(* FIXME RISCV: move to ArchAcc *)
-crunch_ignore (add: lookupPTFromLevel)
-declare lookupPTFromLevel.simps[simp del]
-
-(* FIXME RISCV: move to ArchAcc *)
-declare lookupPTSlotFromLevel_inv[wp]
-
-(* FIXME RISCV: move to ArchAcc *)
-lemma lookupPTFromLevel_inv[wp]:
-  "lookupPTFromLevel level pt vptr target_pt \<lbrace>P\<rbrace>"
-proof (induct level arbitrary: pt)
-  case 0 show ?case
-    by (subst lookupPTFromLevel.simps, simp, wp)
-next
-  case (Suc level)
-  show ?case
-    by (subst lookupPTFromLevel.simps, simp)
-       (wpsimp wp: Suc getPTE_wp simp: pteAtIndex_def)
-qed
 
 crunch_ignore (add: throw_on_false)
 
@@ -213,16 +211,6 @@ lemma no_fail_hwAIDFlush[intro!, wp, simp]:
 lemma hwASIDFlush_corres[corres]:
   "corres dc \<top> \<top> (do_machine_op (hwASIDFlush x)) (doMachineOp (hwASIDFlush x))"
   by (corressimp corres: corres_machine_op)
-
-(* FIXME RISCV: move to AInvs *)
-lemma valid_arch_state_asid_table:
-  "valid_arch_state s \<Longrightarrow> valid_asid_table s"
-  by (simp add: valid_arch_state_def)
-
-(* FIXME RISCV: move to AInvs *)
-lemma valid_arch_state_global_arch_objs:
-  "valid_arch_state s \<Longrightarrow> valid_global_arch_objs s"
-  by (simp add: valid_arch_state_def)
 
 lemma delete_asid_corres [corres]:
   assumes "asid' = ucast asid" "pm' = pm"
@@ -454,6 +442,8 @@ lemma no_fail_sfence[intro!,simp,wp]:
   "no_fail \<top> sfence"
   by (simp add: sfence_def)
 
+declare lookupPTFromLevel.simps[simp del]
+
 lemma unmap_page_table_corres:
   assumes "asid' = ucast asid" "vptr' = vptr" "pt' = pt"
   shows "corres dc
@@ -585,13 +575,6 @@ definition
 
 crunch ctes [wp]: unmapPage "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps simp: crunch_simps ignore: getObject)
-
-(*
-lemma updateCap_valid_slots'[wp]: FIXME RISCV
-  "\<lbrace>valid_slots' x2\<rbrace> updateCap cte cte' \<lbrace>\<lambda>_ s. valid_slots' x2 s \<rbrace>"
-  apply (case_tac x2, case_tac a)
-    by (wpsimp simp: valid_slots'_def wp: hoare_vcg_ball_lift)+
-*)
 
 lemma message_info_to_data_eqv:
   "wordFromMessageInfo (message_info_map mi) = message_info_to_data mi"
@@ -833,12 +816,6 @@ definition
   "valid_apinv' ap \<equiv>
     case ap of Assign asid p slot \<Rightarrow>
       cte_wp_at' (isArchCap isPageTableCap o cteCap) slot and K (0 < asid \<and> asid_wf asid)"
-
-(* FIXME RISCV: move to corres *)
-lemma corres_assert_gen_asm_l:
-  "\<lbrakk> F \<Longrightarrow> corres_underlying sr nf nf' r P Q (f ()) g \<rbrakk>
-   \<Longrightarrow> corres_underlying sr nf nf' r (P and (\<lambda>_. F)) Q (assert F >>= f) g"
-  by (simp add: corres_gen_asm)
 
 crunches copy_global_mappings
   for aligned[wp]: pspace_aligned
