@@ -1064,11 +1064,6 @@ proof -
   done
 qed
 
-(* FIXME RISCV: put close to def of ptr_range *)
-lemma add_mask_fold:
-  "x + 2 ^ n - 1 = x + mask n"
-  by (simp add: mask_def)
-
 lemma retype_aligned_distinct':
   assumes vs': "pspace_aligned' s'" "pspace_distinct' s'"
       and pn': "pspace_no_overlap' ptr sz s'"

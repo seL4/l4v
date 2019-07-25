@@ -20,6 +20,11 @@ begin
 abbreviation ptr_range :: "obj_ref \<Rightarrow> nat \<Rightarrow> machine_word set" where
   "ptr_range p n \<equiv> {p .. p + mask n}"
 
+(* FIXME RISCV: move up with ptr_range *)
+lemma add_mask_fold:
+  "x + 2 ^ n - 1 = x + mask n"  by (simp add: mask_def)
+
+
 (* global data and code of the kernel, not covered by any cap *)
 axiomatization
   kernel_data_refs :: "word64 set"
