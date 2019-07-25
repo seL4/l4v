@@ -11,7 +11,9 @@
 theory LevityCatch
 imports
   Include
+  "Lib.AddUpdSimps"
   "Lib.LemmaBucket"
+  "Lib.SimpStrategy"
 begin
 
 no_notation bind_drop (infixl ">>" 60)

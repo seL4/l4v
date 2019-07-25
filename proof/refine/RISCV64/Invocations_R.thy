@@ -9,7 +9,7 @@
  *)
 
 theory Invocations_R
-imports Invariants_H
+imports Bits_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

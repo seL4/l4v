@@ -796,8 +796,7 @@ lemma decode_page_table_inv_corres:
             apply (rule corres_trivial, simp add: returnOk_def archinv_relation_def
                                                   page_table_invocation_map_def)
            apply (cases opt, clarsimp simp: mdata_map_def)
-           apply (clarsimp simp: bindE_assoc)
-           apply (simp add: liftE_bindE)
+           apply (clarsimp simp: bind_bindE_assoc)
            apply (rule corres_split)
               prefer 2
               apply datatype_schem
@@ -1323,8 +1322,8 @@ lemma decode_page_inv_wf[wp]:
   apply (simp add: decodeRISCVFrameInvocation_def Let_def isCap_simps
              cong: if_cong split del: if_split)
   apply (wpsimp simp: decodeRISCVFrameInvocationMap_def decodeRISCVFrameInvocationRemap_def
-                      valid_arch_inv'_def valid_page_inv'_def checkSlot_def
-                wp: getPTE_wp hoare_vcg_all_lift lookupPTSlot_inv hoare_vcg_if_lift2
+                      valid_arch_inv'_def valid_page_inv'_def checkSlot_def if_apply_def2
+                wp: getPTE_wp hoare_vcg_all_lift lookupPTSlot_inv
          | wp (once) hoare_drop_imps)+
   apply ((rule conjI; clarsimp)+;
           (clarsimp simp: cte_wp_at_ctes_of,
@@ -1471,6 +1470,8 @@ crunch nosch [wp]: performRISCVMMUInvocation "\<lambda>s. P (ksSchedulerAction s
    wp: crunch_wps getObject_cte_inv getASID_wp)
 
 lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
+
+declare lookupPTFromLevel.simps[simp del] (* FIXME RISCV: do this early enough *)
 
 crunch st_tcb_at': performPageTableInvocation,
                    performPageInvocation,

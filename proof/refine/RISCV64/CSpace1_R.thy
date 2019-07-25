@@ -15,7 +15,6 @@
 theory CSpace1_R
 imports
   CSpace_I
-  "AInvs.ArchDetSchedSchedule_AI"
 begin
 
 context Arch begin global_naming RISCV64_A (*FIXME: arch_split*)

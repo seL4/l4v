@@ -2682,7 +2682,8 @@ lemma unbindMaybeNotification_obj_at'_bound:
 crunch isFinal[wp]: unbindNotification, unbindMaybeNotification "\<lambda>s. isFinal cap slot (cteCaps_of s)"
   (wp: sts_bound_tcb_at' threadSet_cteCaps_of crunch_wps getObject_inv
        loadObject_default_inv
-   ignore: getObject setObject threadSet)
+   ignore: getObject setObject threadSet
+   simp: setBoundNotification_def)
 
 crunch bound_tcb_at'[wp]: cancelSignal, cancelAllIPC "bound_tcb_at' P t"
   (wp: sts_bound_tcb_at' threadSet_cteCaps_of crunch_wps getObject_inv
@@ -2967,10 +2968,16 @@ lemma cteDeleteOne_reply_pred_tcb_at:
   apply (intro impI conjI, (wp | simp)+)
   done
 
+lemmas setNotification_typ_at'[wp] = typ_at_lifts[OF setNotification_typ_at']
+
+crunches setBoundNotification, setNotification
+  for sch_act_simple[wp]: sch_act_simple
+  (wp: sch_act_simple_lift)
+
 crunch sch_act_simple[wp]: cteDeleteOne, unbindNotification sch_act_simple
   (wp: crunch_wps ssa_sch_act_simple sts_sch_act_simple getObject_inv
        loadObject_default_inv
-   simp: crunch_simps unless_def
+   simp: crunch_simps
    rule: sch_act_simple_lift
    ignore: getObject)
 
@@ -3292,9 +3299,6 @@ lemma deletingIRQHandler_invs' [wp]:
   apply simp
   done
 
-crunches unbindNotification, unbindMaybeNotification
-  for it[wp]: "\<lambda>s. P (ksIdleThread s)"
-
 lemma finaliseCap_invs:
   "\<lbrace>invs' and sch_act_simple and valid_cap' cap
          and cte_wp_at' (\<lambda>cte. cteCap cte = cap) sl\<rbrace>
@@ -3503,7 +3507,7 @@ lemma unbind_notification_corres:
          apply (wp gbn_wp' gbn_wp)+
    apply (clarsimp elim!: obj_at_valid_objsE
                    dest!: bound_tcb_at_state_refs_ofD invs_valid_objs
-                    simp: valid_obj_def is_tcb tcb_ntfn_is_bound_def
+                    simp: valid_obj_def is_tcb tcb_ntfn_is_bound_def obj_at_def
                           valid_tcb_def valid_bound_ntfn_def invs_psp_aligned invs_distinct
                    split: option.splits)
   apply (clarsimp dest!: obj_at_valid_objs' bound_tcb_at_state_refs_ofD' invs_valid_objs'
@@ -3522,7 +3526,6 @@ lemma unbind_maybe_notification_corres:
       apply (rule corres_option_split)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
        apply (rule corres_return_trivial)
-      apply simp
       apply (rule corres_split[OF _ set_ntfn_corres])
          apply (rule sbn_corres)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)

@@ -11,7 +11,6 @@
 theory IpcCancel_R
 imports
   Schedule_R
-  "Lib.SimpStrategy"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

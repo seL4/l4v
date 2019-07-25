@@ -11,9 +11,7 @@
 theory Invariants_H
 imports
   LevityCatch
-  "AInvs.Deterministic_AI"
-  "AInvs.AInvs"
-  "Lib.AddUpdSimps"
+  "AInvs.ArchDetSchedSchedule_AI"
 begin
 
 (* FIXME RISCV: move up, use everywhere *)

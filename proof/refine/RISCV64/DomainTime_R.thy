@@ -43,6 +43,8 @@ crunch ksDomSchedule_inv[wp]: setDomain "\<lambda>s. P (ksDomSchedule s)"
 crunch ksDomSchedule_inv[wp]: sendSignal "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps simp: crunch_simps simp: unless_def o_def)
 
+declare lookupPTFromLevel.simps[simp del]
+
 crunch ksDomSchedule_inv[wp]: finaliseCap "\<lambda>s. P (ksDomSchedule s)"
   (simp: crunch_simps assertE_def unless_def pteAtIndex_def
  ignore: getObject setObject forM ignoreFailure
@@ -139,7 +141,7 @@ crunch ksDomainTime_inv[wp]: setDomain "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps simp: if_apply_def2)
 
 crunch ksDomainTime_inv[wp]: sendSignal "\<lambda>s. P (ksDomainTime s)"
-  (wp: crunch_wps simp: crunch_simps simp: unless_def o_def)
+  (wp: crunch_wps simp: crunch_simps simp: unless_def o_def setBoundNotification_def)
 
 crunch ksDomainTime_inv[wp]: deleteASID "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only getObject_inv loadObject_default_inv
@@ -218,6 +220,7 @@ crunch ksDomainTime_inv[wp]: doUserOp "(\<lambda>s. P (ksDomainTime s))"
   (wp: select_wp)
 
 crunch ksDomainTime_inv[wp]: getIRQState, chooseThread, handleYield "(\<lambda>s. P (ksDomainTime s))"
+  (wp: crunch_wps)
 
 crunch ksDomainTime_inv[wp]: handleCall, handleSend, handleReply "(\<lambda>s. P (ksDomainTime s))"
   (wp: syscall_valid' crunch_wps simp: crunch_simps ignore: syscall)

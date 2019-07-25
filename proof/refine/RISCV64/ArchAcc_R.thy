@@ -237,6 +237,9 @@ qed
 
 declare if_cong[cong] (* FIXME: if_cong *)
 
+crunch_ignore (add: lookupPTFromLevel)
+declare lookupPTFromLevel.simps[simp del]
+
 lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (RISCV64_A.ASIDPool pool)) p s"
   by (clarsimp simp: asid_pools_at_eq obj_at_def)
@@ -438,7 +441,6 @@ lemma get_asid_pool_corres:
    apply simp
    apply (clarsimp simp add: objBits_simps
                       split: option.split)
-  apply clarsimp
   apply (clarsimp simp: in_monad loadObject_default_def)
   apply (simp add: bind_assoc exec_gets)
   apply (drule asid_pool_at_ko)
@@ -739,6 +741,20 @@ lemma lookupPTSlotFromLevel_inv:
   apply (wpsimp simp: pteAtIndex_def wp: getPTE_wp|assumption)+
   done
 
+declare lookupPTSlotFromLevel_inv[wp]
+
+lemma lookupPTFromLevel_inv[wp]:
+  "lookupPTFromLevel level pt vptr target_pt \<lbrace>P\<rbrace>"
+proof (induct level arbitrary: pt)
+  case 0 show ?case
+    by (subst lookupPTFromLevel.simps, simp, wp)
+next
+  case (Suc level)
+  show ?case
+    by (subst lookupPTFromLevel.simps, simp)
+       (wpsimp wp: Suc getPTE_wp simp: pteAtIndex_def)
+qed
+
 lemma size_maxPTLevel[simp]:
   "size max_pt_level = maxPTLevel"
   by (simp add: maxPTLevel_def level_defs)
@@ -883,8 +899,6 @@ lemma lookup_pt_slot_corres:
           (gets_the (pt_lookup_slot pt vptr \<circ> ptes_of)) (lookupPTSlot pt vptr)"
   unfolding lookupPTSlot_def pt_lookup_slot_def
   by (corressimp corres: lookup_pt_slot_from_level_corres)
-
-declare lookupPTFromLevel.simps[simp del]
 
 lemma pt_lookup_from_level_corres:
   "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>

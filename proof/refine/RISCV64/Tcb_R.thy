@@ -515,9 +515,10 @@ lemma copyreg_invs'':
      invokeTCB (tcbinvocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace>\<lambda>rv. invs' and tcb_at' dest\<rbrace>"
   apply (simp add: invokeTCB_def performTransfer_def if_apply_def2)
-  apply (wp mapM_x_wp' restart_invs' | simp)+
-   apply (rule conjI)
-    apply (wp | clarsimp)+
+  apply (wpsimp wp: mapM_x_wp' restart_invs' hoare_drop_imps
+                split_del: if_split
+                simp: if_apply_def2 invs_cur' cur_tcb'_def[symmetric]
+                cong: rev_conj_cong)
   by (fastforce simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
 
 lemma copyreg_invs':
@@ -940,7 +941,7 @@ lemma checked_insert_tcb_invs'[wp]:
   apply (clarsimp split: option.splits)
   apply (rule conjI)
    apply (clarsimp simp: sameObjectAs_def3)
-  apply (clarsimp simp: tree_cte_cteCap_eq
+  apply (clarsimp simp: tree_cte_cteCap_eq[unfolded o_def]
                         is_derived'_def untyped_derived_eq_from_sameObjectAs
                         ex_cte_cap_to'_cteCap)
   apply (erule sameObjectAsE)+

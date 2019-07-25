@@ -13,7 +13,7 @@
 *)
 
 theory Retype_R
-imports TcbAcc_R VSpace_R
+imports VSpace_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -2801,7 +2801,7 @@ where
 lemma obj_range'_subset:
   "\<lbrakk>range_cover ptr sz (objBitsKO val) n; ptr' \<in> set (new_cap_addrs n ptr val)\<rbrakk>
    \<Longrightarrow> obj_range' ptr' val \<subseteq> {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"
-  unfolding obj_range'_def thm new_range_subset
+  unfolding obj_range'_def
   by (rule new_range_subset, auto)
 
 lemma obj_range'_subset_strong:
@@ -4287,7 +4287,8 @@ lemma createNewCaps_vms:
    \<lbrace>\<lambda>archCaps. valid_machine_state'\<rbrace>"
   apply (clarsimp simp: valid_machine_state'_def pointerInDeviceData_def
                         Arch_createNewCaps_def createNewCaps_def pointerInUserData_def
-                        typ_at'_def createObjects_def doMachineOp_return_foo)
+                        typ_at'_def createObjects_def doMachineOp_return_foo
+                  split del: if_split)
   apply (rule hoare_pre)
    apply (wpc
          | wp hoare_vcg_const_Ball_lift hoare_vcg_disj_lift

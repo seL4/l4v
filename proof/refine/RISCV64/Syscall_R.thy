@@ -1185,11 +1185,10 @@ lemma lec_derived'[wp]:
 
 lemma get_mrs_length_rv[wp]:
   "\<lbrace>\<lambda>s. \<forall>n. n \<le> msg_max_length \<longrightarrow> P n\<rbrace> get_mrs thread buf mi \<lbrace>\<lambda>rv s. P (length rv)\<rbrace>"
+  supply if_split[split del]
   apply (simp add: get_mrs_def)
-  apply (rule hoare_pre)
-   apply (wp mapM_length | wpc | simp del: upt.simps)+
-  apply (clarsimp simp: msgRegisters_unfold
-                        msg_max_length_def)
+  apply (wp mapM_length | wpc | simp del: upt.simps)+
+  apply (clarsimp simp: msgRegisters_unfold msg_max_length_def)
   done
 
 lemma st_tcb_at_idle_thread':
