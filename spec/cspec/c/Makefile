@@ -15,7 +15,12 @@ PATH:=${PARSERPATH}:${PATH}
 export PATH
 SHELL=bash
 BUILDROOT=${PWD}/build/${L4V_ARCH}
-CONFIG=${L4V_ARCH}_verified.cmake
+
+ifneq (${L4V_FEATURES},)
+    L4V_FEATURES:=_${L4V_FEATURES}
+endif
+
+CONFIG=${L4V_ARCH}${L4V_FEATURES}_verified.cmake
 UMM_TYPES=${BUILDROOT}/umm_types.txt
 
 CONFIG_DOMAIN_SCHEDULE=${PWD}/config_sched.c
