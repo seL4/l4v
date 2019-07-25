@@ -16,41 +16,31 @@ theory ArchAcc_R
 imports SubMonad_R
 begin
 
-(* RISCV FIXME: move to Lib.More_Numeral_Type *)
-context mod_size_order
-begin
-
-lemma size_minus[simp]:
-  "y \<le> (x::'a) \<Longrightarrow> size (x - y) = size x - size y"
-  unfolding definitions Rep_Abs_mod
-  using Rep size0
-  by (simp flip: nat_diff_distrib add: eq_nat_nat_iff pos_mod_sign mod_sub_if_z split: if_split_asm)
-
-lemma size_minus_one[simp]:
-  "0 < (x::'a) \<Longrightarrow> size (x - 1) = size x - Suc 0"
+(* FIXME RISCV: move to NondetMonad *)
+lemma gets_the_if_distrib:
+  "gets_the (if P then f else g) = (if P then gets_the f else gets_the g)"
   by simp
 
-end
+(* FIXME RISCV: move to Corres *)
+lemma corres_if3:
+ "\<lbrakk> G = G'; G \<Longrightarrow> corres r P P' a c; \<not> G' \<Longrightarrow> corres r Q Q' b d \<rbrakk>
+    \<Longrightarrow> corres r (if G then P else Q) (if G' then P' else Q') (if G then a else b) (if G' then c else d)"
+  by simp
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+(* FIXME RISCV: move to NondetMonad *)
+lemma gets_the_oapply_comp[simp]:
+  "gets_the (oapply x \<circ> f) = gets_map f x"
+  by (fastforce simp: gets_map_def gets_the_def o_def exec_gets)
 
-declare if_cong[cong] (* FIXME: if_cong *)
+(* FIXME RISCV: move to NondetMonad *)
+lemma gets_the_Some[simp]:
+  "gets_the (\<lambda>_. Some x) = return x"
+  by (simp add: gets_the_def)
 
-lemma asid_pool_at_ko:
-  "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (RISCV64_A.ASIDPool pool)) p s"
-  by (clarsimp simp: asid_pools_at_eq obj_at_def)
-
-lemma corres_gets_asid:
-  "corres (\<lambda>a c. a = c o ucast) \<top> \<top> (gets (riscv_asid_table \<circ> arch_state)) (gets (riscvKSASIDTable \<circ> ksArchState))"
-  by (simp add: state_relation_def arch_state_relation_def)
-
-lemma asid_low_bits [simp]:
-  "asidLowBits = asid_low_bits"
-  by (simp add: asid_low_bits_def asidLowBits_def)
-
-lemma pteBits_pte_bits[simp]:
-  "pteBits = pte_bits"
-  by (simp add: bit_simps pteBits_def)
+(* FIXME RISCV: move to NondedMonad *)
+lemma fst_assert_opt:
+  "fst (assert_opt opt s) = (if opt = None then {} else {(the opt,s)})"
+  by (clarsimp simp: assert_opt_def fail_def return_def split: option.split)
 
 (* FIXME RISCV: move up *)
 lemma pspace_distinctD:
@@ -122,9 +112,149 @@ lemma of_bl_max:
   apply simp
   done
 
+(* FIXME RISCV: move to Word *)
+lemma mask_over_length:
+  "LENGTH('a) < n \<Longrightarrow> mask n = (-1::'a::len word)"
+  by (simp add: mask_def)
+
+(* FIXME RISCV: move to Word *)
+lemma is_aligned_over_length:
+  "\<lbrakk> is_aligned p n; LENGTH('a) < n \<rbrakk> \<Longrightarrow> (p::'a::len word) = 0"
+  by (simp add: is_aligned_mask mask_over_length)
+
+(* FIXME RISCV: move to Word *)
+lemma Suc_2p_unat_mask:
+  "n \<le> LENGTH('a) \<Longrightarrow> Suc (2 ^ n * k + unat (mask n :: 'a::len word)) = 2 ^ n * (k+1)"
+  by (simp add: unat_mask)
+
+(* FIXME RISCV: move to Word *)
+lemma is_aligned_add_step_le:
+  "\<lbrakk> is_aligned (a::'a::len word) n; is_aligned b n; a < b; b \<le> a + mask n \<rbrakk> \<Longrightarrow> False"
+  apply (simp flip: not_le)
+  apply (erule notE)
+  apply (cases "LENGTH('a) < n")
+   apply (drule (1) is_aligned_over_length)+
+   apply (drule mask_over_length)
+   apply clarsimp
+  apply (clarsimp simp: word_le_nat_alt not_less)
+  apply (subst (asm) unat_plus_simple[THEN iffD1], erule is_aligned_no_overflow_mask)
+  apply (clarsimp simp: is_aligned_def dvd_def word_le_nat_alt)
+  apply (drule le_imp_less_Suc)
+  apply (simp add: Suc_2p_unat_mask)
+  by (metis Groups.mult_ac(2) Suc_leI linorder_not_less mult_le_mono order_refl times_nat.simps(2))
+
+(* FIXME RISCV: move to Word *)
+lemma power_2_mult_step_le:
+  "\<lbrakk>n' \<le> n; 2 ^ n' * k' < 2 ^ n * k\<rbrakk> \<Longrightarrow> 2 ^ n' * (k' + 1) \<le> 2 ^ n * (k::nat)"
+  apply (cases "n'=n", simp)
+   apply (metis Suc_leI le_refl mult_Suc_right mult_le_mono semiring_normalization_rules(7))
+  apply (drule (1) le_neq_trans)
+  apply clarsimp
+  apply (subgoal_tac "\<exists>m. n = n' + m")
+   prefer 2
+   apply (simp add: le_Suc_ex)
+  apply (clarsimp simp: power_add)
+  by (metis Suc_leI mult.assoc mult_Suc_right nat_mult_le_cancel_disj)
+
+(* FIXME RISCV: move to Word *)
+lemma aligned_mask_step:
+  "\<lbrakk> n' \<le> n; p' \<le> p + mask n; is_aligned p n; is_aligned p' n' \<rbrakk> \<Longrightarrow>
+   (p'::'a::len word) + mask n' \<le> p + mask n"
+  apply (cases "LENGTH('a) < n")
+   apply (frule (1) is_aligned_over_length)
+   apply (drule mask_over_length)
+   apply clarsimp
+  apply (simp add: not_less)
+  apply (simp add: word_le_nat_alt unat_plus_simple)
+  apply (subst unat_plus_simple[THEN iffD1], erule is_aligned_no_overflow_mask)+
+  apply (subst (asm) unat_plus_simple[THEN iffD1], erule is_aligned_no_overflow_mask)
+  apply (clarsimp simp: is_aligned_def dvd_def)
+  apply (rename_tac k k')
+  apply (thin_tac "unat p = x" for p x)+
+  apply (subst Suc_le_mono[symmetric])
+  apply (simp only: Suc_2p_unat_mask)
+  apply (drule le_imp_less_Suc, subst (asm) Suc_2p_unat_mask, assumption)
+  apply (erule (1) power_2_mult_step_le)
+  done
+
+(* FIXME RISCV: move to Invariants_H, maybe further up *)
+lemma ptr_range_subsetD:
+  "\<lbrakk> p' \<in> ptr_range p n; x' \<in> ptr_range p' n'; n' \<le> n; is_aligned p n; is_aligned p' n' \<rbrakk> \<Longrightarrow>
+   x' \<in> ptr_range p n"
+  apply clarsimp
+  apply (rule conjI)
+   apply (erule (1) order_trans)
+  apply (rule order_trans, assumption)
+  apply (erule (3) aligned_mask_step)
+  done
+
+(* FIXME RISCV: move to objBits_simps *)
+lemma objBitsKO_Data:
+  "objBitsKO (if dev then KOUserDataDevice else KOUserData) = pageBits"
+  by (simp add: objBits_simps)
+
+(* FIXME RISCV: move to Corres, keep existing guard *)
+lemmas corres_cross_over_guard = corres_move_asm[rotated]
+
+(* RISCV FIXME: move to Lib.More_Numeral_Type *)
+context mod_size_order
+begin
+
+lemma size_minus[simp]:
+  "y \<le> (x::'a) \<Longrightarrow> size (x - y) = size x - size y"
+  unfolding definitions Rep_Abs_mod
+  using Rep size0
+  by (simp flip: nat_diff_distrib add: eq_nat_nat_iff pos_mod_sign mod_sub_if_z split: if_split_asm)
+
+lemma size_minus_one[simp]:
+  "0 < (x::'a) \<Longrightarrow> size (x - 1) = size x - Suc 0"
+  by simp
+
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
+(* FIXME RISCV: replace vref_for_level_pt_index_idem in ArchAcc_AI *)
+lemma vref_for_level_pt_index_idem:
+  assumes "level' \<le> max_pt_level" and "level'' \<le> level'"
+  shows "vref_for_level
+           (vref_for_level vref (level'' + 1) || (pt_index level vref' << pt_bits_left level''))
+           (level' + 1)
+         = vref_for_level vref (level' + 1)"
+proof -
+  have dist_zero_right':
+    "\<And>w x y. \<lbrakk> (w::('a::len) word) = y; x = 0\<rbrakk> \<Longrightarrow> w || x = y"
+    by auto
+  show ?thesis using assms
+    unfolding vref_for_level_def pt_index_def
+    apply (subst word_ao_dist)
+    apply (rule dist_zero_right')
+    apply (subst mask_lower_twice)
+   apply (rule pt_bits_left_mono, erule (1) vm_level_le_plus_1_mono, rule refl)
+  apply (simp add: mask_shifl_overlap_zero pt_bits_left_def)
+  done
+qed
+
+declare if_cong[cong] (* FIXME: if_cong *)
+
+lemma asid_pool_at_ko:
+  "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (RISCV64_A.ASIDPool pool)) p s"
+  by (clarsimp simp: asid_pools_at_eq obj_at_def)
+
+lemma corres_gets_asid:
+  "corres (\<lambda>a c. a = c o ucast) \<top> \<top> (gets (riscv_asid_table \<circ> arch_state)) (gets (riscvKSASIDTable \<circ> ksArchState))"
+  by (simp add: state_relation_def arch_state_relation_def)
+
+lemma asid_low_bits [simp]:
+  "asidLowBits = asid_low_bits"
+  by (simp add: asid_low_bits_def asidLowBits_def)
+
+lemma pteBits_pte_bits[simp]:
+  "pteBits = pte_bits"
+  by (simp add: bit_simps pteBits_def)
+
 lemma cte_map_in_cnode1:
-  "\<lbrakk> x \<le> x + 2 ^ (cte_level_bits + length y) - 1 \<rbrakk> \<Longrightarrow>
-   x \<le> cte_map (x, y)"
+  "\<lbrakk> x \<le> x + 2 ^ (cte_level_bits + length y) - 1 \<rbrakk> \<Longrightarrow> x \<le> cte_map (x, y)"
   apply (simp add: cte_map_def)
   apply (rule word_plus_mono_right2[where b="mask (cte_level_bits + length y)"])
    apply (simp add: mask_def add_diff_eq)
@@ -163,42 +293,6 @@ lemma pspace_aligned_cross:
   apply (erule is_aligned_weaken)
   apply (simp add: bit_simps)
   done
-
-lemma Suc_2p_unat_mask:
-  "n \<le> LENGTH('a) \<Longrightarrow> Suc (2 ^ n * k + unat (mask n :: 'a::len word)) = 2 ^ n * (k+1)"
-  by (simp add: unat_mask)
-
-(* FIXME RISCV: move to Word *)
-lemma mask_over_length:
-  "LENGTH('a) < n \<Longrightarrow> mask n = (-1::'a::len word)"
-  by (simp add: mask_def)
-
-(* FIXME RISCV: move to Word *)
-lemma is_aligned_over_length:
-  "\<lbrakk> is_aligned p n; LENGTH('a) < n \<rbrakk> \<Longrightarrow> (p::'a::len word) = 0"
-  by (simp add: is_aligned_mask mask_over_length)
-
-lemma is_aligned_add_step_le:
-  "\<lbrakk> is_aligned (a::'a::len word) n; is_aligned b n; a < b; b \<le> a + mask n \<rbrakk> \<Longrightarrow> False"
-  apply (simp flip: not_le)
-  apply (erule notE)
-  apply (cases "LENGTH('a) < n")
-   apply (drule (1) is_aligned_over_length)+
-   apply (drule mask_over_length)
-   apply clarsimp
-  apply (clarsimp simp: word_le_nat_alt not_less)
-  apply (subst (asm) unat_plus_simple[THEN iffD1], erule is_aligned_no_overflow_mask)
-  apply (clarsimp simp: is_aligned_def dvd_def word_le_nat_alt)
-  apply (drule le_imp_less_Suc)
-  apply (simp add: Suc_2p_unat_mask)
-  by (metis Groups.mult_ac(2) Suc_leI linorder_not_less mult_le_mono order_refl times_nat.simps(2))
-
-lemmas is_aligned_add_step_le' = is_aligned_add_step_le[simplified mask_2pm1 add_diff_eq]
-
-(* FIXME RISCV: move to objBits_simps *)
-lemma objBitsKO_Data:
-  "objBitsKO (if dev then KOUserDataDevice else KOUserData) = pageBits"
-  by (simp add: objBits_simps)
 
 lemma of_bl_shift_cte_level_bits:
   "(of_bl z :: machine_word) << cte_level_bits \<le> mask (cte_level_bits + length z)"
@@ -245,48 +339,7 @@ lemma obj_relation_cuts_obj_bits:
   apply (rename_tac ako', case_tac ako'; clarsimp simp: archObjSize_def)
   done
 
-lemma power_2_mult_step_le:
-  "\<lbrakk>n' \<le> n; 2 ^ n' * k' < 2 ^ n * k\<rbrakk> \<Longrightarrow> 2 ^ n' * (k' + 1) \<le> 2 ^ n * (k::nat)"
-  apply (cases "n'=n", simp)
-   apply (metis Suc_leI le_refl mult_Suc_right mult_le_mono semiring_normalization_rules(7))
-  apply (drule (1) le_neq_trans)
-  apply clarsimp
-  apply (subgoal_tac "\<exists>m. n = n' + m")
-   prefer 2
-   apply (simp add: le_Suc_ex)
-  apply (clarsimp simp: power_add)
-  by (metis Suc_leI mult.assoc mult_Suc_right nat_mult_le_cancel_disj)
-
-(* FIXME RISCV: move to Word *)
-lemma aligned_mask_step:
-  "\<lbrakk> n' \<le> n; p' \<le> p + mask n; is_aligned p n; is_aligned p' n' \<rbrakk> \<Longrightarrow>
-   (p'::'a::len word) + mask n' \<le> p + mask n"
-  apply (cases "LENGTH('a) < n")
-   apply (frule (1) is_aligned_over_length)
-   apply (drule mask_over_length)
-   apply clarsimp
-  apply (simp add: not_less)
-  apply (simp add: word_le_nat_alt unat_plus_simple)
-  apply (subst unat_plus_simple[THEN iffD1], erule is_aligned_no_overflow_mask)+
-  apply (subst (asm) unat_plus_simple[THEN iffD1], erule is_aligned_no_overflow_mask)
-  apply (clarsimp simp: is_aligned_def dvd_def)
-  apply (rename_tac k k')
-  apply (thin_tac "unat p = x" for p x)+
-  apply (subst Suc_le_mono[symmetric])
-  apply (simp only: Suc_2p_unat_mask)
-  apply (drule le_imp_less_Suc, subst (asm) Suc_2p_unat_mask, assumption)
-  apply (erule (1) power_2_mult_step_le)
-  done
-
-lemma ptr_range_subsetD:
-  "\<lbrakk> p' \<in> ptr_range p n; x' \<in> ptr_range p' n'; n' \<le> n; is_aligned p n; is_aligned p' n' \<rbrakk> \<Longrightarrow>
-   x' \<in> ptr_range p n"
-  apply clarsimp
-  apply (rule conjI)
-   apply (erule (1) order_trans)
-  apply (rule order_trans, assumption)
-  apply (erule (3) aligned_mask_step)
-  done
+lemmas is_aligned_add_step_le' = is_aligned_add_step_le[simplified mask_2pm1 add_diff_eq]
 
 lemma pspace_distinct_cross:
   "\<lbrakk> pspace_distinct s; pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow>
@@ -354,9 +407,6 @@ lemma asid_pool_at_cross:
   apply (simp add: objBits_simps)
   done
 
-(* FIXME RISCV: move *)
-lemmas corres_cross_over_guard = corres_move_asm[rotated]
-
 lemma corres_cross_over_asid_pool_at:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> asid_pool_at p s \<and> pspace_distinct s \<and> pspace_aligned s;
      corres r P (Q and asid_pool_at' p) f g \<rbrakk> \<Longrightarrow>
@@ -401,48 +451,13 @@ lemma get_asid_pool_corres:
   apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
   done
 
-(* FIXME RISCV check at end: used? *)
 lemma aligned_distinct_obj_atI':
-  "\<lbrakk> ksPSpace s x = Some ko; pspace_aligned' s;
-      pspace_distinct' s; ko = injectKO v \<rbrakk>
+  "\<lbrakk> ksPSpace s x = Some ko; pspace_aligned' s; pspace_distinct' s; ko = injectKO v \<rbrakk>
       \<Longrightarrow> ko_at' v x s"
   apply (simp add: obj_at'_def project_inject pspace_distinct'_def pspace_aligned'_def)
   apply (drule bspec, erule domI)+
   apply simp
   done
-
-(* FIXME RISCV check at end: used? *)
-lemmas aligned_distinct_asid_pool_atI'
-    = aligned_distinct_obj_atI'[where 'a=asidpool,
-                                simplified, OF _ _ _ refl]
-
-(* FIXME RISCV: prefer aligned/distinct on abstract *)
-lemma aligned_distinct_relation_asid_pool_atI':
-  "\<lbrakk> asid_pool_at p s; pspace_relation (kheap s) (ksPSpace s');
-     pspace_aligned' s'; pspace_distinct' s' \<rbrakk>
-        \<Longrightarrow> asid_pool_at' p s'"
-  apply (drule asid_pool_at_ko)
-  apply (clarsimp simp add: obj_at_def)
-  apply (drule(1) pspace_relation_absD)
-  apply (clarsimp simp: other_obj_relation_def)
-  apply (simp split: Structures_H.kernel_object.split_asm
-                     arch_kernel_object.split_asm)
-  apply (drule(2) aligned_distinct_asid_pool_atI')
-  apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def)
-  done
-
-(* FIXME RISCV check at end: used? *)
-lemma get_asid_pool_corres':
-  assumes "p' = p"
-  shows "corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
-                (asid_pool_at p) (pspace_aligned' and pspace_distinct')
-                (get_asid_pool p) (getObject p')"
-  oops (*
-  apply (simp add: assms)
-  apply (rule stronger_corres_guard_imp,
-         rule get_asid_pool_corres)
-   apply auto
-  done *)
 
 lemma storePTE_cte_wp_at'[wp]:
   "storePTE ptr val \<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>"
@@ -496,16 +511,6 @@ lemma set_asid_pool_corres:
   apply (simp add: typ_at_to_obj_at_arches)
   done
 
-(* FIXME RISCV: prefer abstract version *)
-lemma set_asid_pool_corres':
-  "a = inv ASIDPool a' o ucast \<Longrightarrow>
-  corres dc (asid_pool_at p and valid_etcbs) (pspace_aligned' and pspace_distinct')
-            (set_asid_pool p a) (setObject p a')"
-  apply (rule stronger_corres_guard_imp,
-         erule set_asid_pool_corres)
-   apply auto
-  oops
-
 lemma p_le_table_base:
   "is_aligned p pte_bits \<Longrightarrow> p + mask pte_bits \<le> table_base p + mask table_size"
   apply (simp add: is_aligned_mask bit_simps word_bool_alg.conj_ac word_plus_and_or_coroll)
@@ -549,11 +554,6 @@ lemma corres_cross_over_pte_at:
   apply assumption
   done
 
-(* FIXME RISCV: move *)
-lemma fst_assert_opt:
-  "fst (assert_opt opt s) = (if opt = None then {} else {(the opt,s)})"
-  by (clarsimp simp: assert_opt_def fail_def return_def split: option.split)
-
 lemma get_pte_corres:
   "corres pte_relation' (pte_at p and pspace_aligned and pspace_distinct) \<top>
           (get_pte p) (getObject p)"
@@ -587,57 +587,10 @@ lemmas aligned_distinct_pte_atI'
     = aligned_distinct_obj_atI'[where 'a=pte,
                                 simplified, OF _ _ _ refl]
 
-(* FIXME RISCV: prefer pte_at_cross *)
-lemma aligned_distinct_relation_pte_atI':
-  "\<lbrakk> pte_at p s; pspace_relation (kheap s) (ksPSpace s');
-     pspace_aligned' s'; pspace_distinct' s' \<rbrakk>
-        \<Longrightarrow> pte_at' p s'"
-  apply (clarsimp simp add: pte_at_def obj_at_def a_type_def)
-  apply (simp split: Structures_A.kernel_object.split_asm
-                     if_split_asm arch_kernel_obj.split_asm)
-  apply (drule(1) pspace_relation_absD)
-  apply (clarsimp simp: other_obj_relation_def)
-  apply (drule_tac x="ucast ((p && mask pt_bits) >> word_size_bits)"
-                in spec)
-  apply (subst(asm) ucast_ucast_len)
-   apply (rule shiftr_less_t2n)
-   apply (rule less_le_trans, rule and_mask_less_size)
-    apply (simp add: word_size bit_simps)
-   apply (simp add: bit_simps)
-  apply clarsimp
-  oops (*
-  apply (simp add: shiftr_shiftl1)
-  apply (subst(asm) is_aligned_neg_mask_eq[where n=word_size_bits])
-   apply (simp add: bit_simps; erule is_aligned_andI1)
-  apply (subst(asm) add.commute,
-         subst(asm) word_plus_and_or_coroll2)
-  apply (clarsimp simp: pte_relation_def)
-  apply (drule(2) aligned_distinct_pte_atI')
-  apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def
-                        projectKOs)
-  done *)
-
-lemma get_pte_corres': (* FIXME RISCV: prefer get_pte_corres *)
-  "corres (pte_relation') (pte_at p)
-     (pspace_aligned' and pspace_distinct')
-     (get_pte p) (getObject p)"
-  apply (rule stronger_corres_guard_imp,
-         rule get_pte_corres)
-   apply auto[1]
-  oops (*
-  apply clarsimp
-  apply (rule aligned_distinct_relation_pte_atI')
-   apply (simp add:state_relation_def)+
-  done *)
-
-(* FIXME: move *)
 lemma pt_bits_slot_eq:
-  " table_base p + (ucast x << pte_bits) = p \<Longrightarrow>
-    (x::pt_index) = ucast (p && mask table_size >> pte_bits)"
-  apply (clarsimp simp: bit_simps mask_def)
-  apply word_bitwise
-  apply clarsimp
-  done
+  "table_base p + (ucast x << pte_bits) = p \<Longrightarrow> x = ucast (p && mask table_size >> pte_bits)"
+  for x :: pt_index
+  unfolding bit_simps mask_def by word_bitwise clarsimp
 
 lemma one_less_2p_pte_bits[simp]:
   "(1::machine_word) < 2 ^ pte_bits"
@@ -731,16 +684,6 @@ lemma store_pte_corres:
   apply (wpsimp simp: obj_at_def in_omonad)
   done
 
-lemma store_pte_corres': (* FIXME RISCV: prefer store_pte_corres *)
-  "pte_relation' pte pte' \<Longrightarrow>
-  corres dc (pte_at p and pspace_aligned and valid_etcbs)
-            (pspace_aligned' and pspace_distinct')
-            (store_pte p pte) (storePTE p pte')"
-  apply (rule stronger_corres_guard_imp,
-         erule store_pte_corres)
-   apply auto
-  oops
-
 lemmas tableBitSimps[simplified bit_simps pteBits_pte_bits, simplified] = ptBits_def
 lemmas bitSimps = tableBitSimps
 
@@ -804,11 +747,6 @@ lemma ptBitsLeft_0[simp]:
   "ptBitsLeft 0 = pageBits"
   by (simp add: ptBitsLeft_def)
 
-(* FIXME RISCV: move to NondetMonad *)
-lemma gets_the_Some[simp]:
-  "gets_the (\<lambda>_. Some x) = return x"
-  by (simp add: gets_the_def)
-
 lemma ptBitsLeft_eq[simp]:
   "ptBitsLeft (size level) = pt_bits_left level"
   by (simp add: ptBitsLeft_def pt_bits_left_def)
@@ -823,11 +761,6 @@ lemma ptSlotIndex_eq[simp]:
 
 lemmas ptSlotIndex_0[simp] = ptSlotIndex_eq[where level=0, simplified]
 
-(* FIXME RISCV: move to NondetMonad *)
-lemma gets_the_oapply_comp[simp]:
-  "gets_the (oapply x \<circ> f) = gets_map f x"
-  by (fastforce simp: gets_map_def gets_the_def o_def exec_gets)
-
 lemma pteAtIndex_corres:
   "level' = size level \<Longrightarrow>
    corres pte_relation'
@@ -837,41 +770,10 @@ lemma pteAtIndex_corres:
      (pteAtIndex level' pt vptr)"
   by (simp add: pteAtIndex_def) (rule get_pte_corres)
 
-(* FIXME RISCV: move to NondetMonad *)
-lemma gets_the_if_distrib:
-  "gets_the (if P then f else g) = (if P then gets_the f else gets_the g)"
-  by simp
-
-(* FIXME RISCV: move to Corres *)
-lemma corres_if3:
- "\<lbrakk> G = G'; G \<Longrightarrow> corres r P P' a c; \<not> G' \<Longrightarrow> corres r Q Q' b d \<rbrakk>
-    \<Longrightarrow> corres r (if G then P else Q) (if G' then P' else Q') (if G then a else b) (if G' then c else d)"
-  by simp
-
 lemma user_region_or:
   "\<lbrakk> vref \<in> user_region; vref' \<in> user_region \<rbrakk> \<Longrightarrow> vref || vref' \<in> user_region"
   by (simp add: user_region_def canonical_user_def le_mask_high_bits word_size)
 
-(* FIXME RISCV: replace vref_for_level_pt_index_idem in ArchAcc_AI *)
-lemma vref_for_level_pt_index_idem:
-  assumes "level' \<le> max_pt_level" and "level'' \<le> level'"
-  shows "vref_for_level
-           (vref_for_level vref (level'' + 1) || (pt_index level vref' << pt_bits_left level''))
-           (level' + 1)
-         = vref_for_level vref (level' + 1)"
-proof -
-  have dist_zero_right':
-    "\<And>w x y. \<lbrakk> (w::('a::len) word) = y; x = 0\<rbrakk> \<Longrightarrow> w || x = y"
-    by auto
-  show ?thesis using assms
-    unfolding vref_for_level_def pt_index_def
-    apply (subst word_ao_dist)
-    apply (rule dist_zero_right')
-    apply (subst mask_lower_twice)
-   apply (rule pt_bits_left_mono, erule (1) vm_level_le_plus_1_mono, rule refl)
-  apply (simp add: mask_shifl_overlap_zero pt_bits_left_def)
-  done
-qed
 
 lemma lookup_pt_slot_from_level_corres:
   "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>
@@ -1196,24 +1098,12 @@ lemma pte_relation'_Invalid_inv [simp]:
   "pte_relation' x RISCV64_H.pte.InvalidPTE = (x = RISCV64_A.pte.InvalidPTE)"
   by (cases x) auto
 
-(*
-definition
-  "valid_slots' m \<equiv> case m of --- FIXME RISCV
-    (VMPTE pte, p) \<Rightarrow> \<lambda>s. valid_pte' pte s
-  | (VMPDE pde, p) \<Rightarrow> \<lambda>s. valid_pde' pde s
-  | (VMPDPTE pdpte, p) \<Rightarrow> \<lambda>s. valid_pdpte' pdpte s"
-*)
-
 lemma asidHighBitsOf [simp]:
   "asidHighBitsOf asid = ucast (asid_high_bits_of (ucast asid))"
   apply (simp add: asidHighBitsOf_def asid_high_bits_of_def asidHighBits_def asid_low_bits_def)
   apply (rule word_eqI)
   apply (simp add: word_eqI_solve_simps)
   done
-
-(* FIXME: move to invariants? *)
-definition
-  "vspace_at_asid_ex asid \<equiv> \<lambda>s. vspace_for_asid asid s \<noteq> None"
 
 lemma le_mask_asidBits_asid_wf:
   "asid_wf asid \<longleftrightarrow> asid \<le> mask asidBits"
