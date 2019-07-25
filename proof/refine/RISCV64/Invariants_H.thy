@@ -16,6 +16,10 @@ imports
   "Lib.AddUpdSimps"
 begin
 
+(* FIXME RISCV: move up, use everywhere *)
+abbreviation ptr_range :: "obj_ref \<Rightarrow> nat \<Rightarrow> machine_word set" where
+  "ptr_range p n \<equiv> {p .. p + mask n}"
+
 (* global data and code of the kernel, not covered by any cap *)
 axiomatization
   kernel_data_refs :: "word64 set"
@@ -45,10 +49,6 @@ end
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 
 section "Invariants on Executable Spec"
-
-(* FIXME RISCV: move up, use everywhere *)
-abbreviation ptr_range :: "obj_ref \<Rightarrow> nat \<Rightarrow> machine_word set" where
-  "ptr_range p n \<equiv> {p .. p + mask n}"
 
 context begin interpretation Arch .
 
@@ -426,32 +426,6 @@ definition valid_ntfn' :: "Structures_H.notification \<Rightarrow> kernel_state 
 
 definition valid_mapping' :: "machine_word \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_mapping' x sz s \<equiv> is_aligned x (pageBitsForSize sz) \<and> ptrFromPAddr x \<noteq> 0"
-
-(* FIXME RISCV: double check, might not even need alignment, might also want the full version instead *)
-primrec valid_pte' :: "pte \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_pte' (InvalidPTE) = \<top>"
-| "valid_pte' (PagePTE ptr _ _ _ _) = \<top>"
-| "valid_pte' (PageTablePTE ptr _ _) = (\<lambda>_. is_aligned ptr ptBits)"
-
-(* FIXME RISCV: double check, might want to add the same in abstract *)
-primrec valid_asid_pool' :: "asidpool \<Rightarrow> kernel_state \<Rightarrow> bool" where
- "valid_asid_pool' (ASIDPool pool) =
-    (\<lambda>s. dom pool \<subseteq> {0 .. 2^asid_low_bits - 1} \<and>
-         0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x ptBits))"
-
-primrec
-  valid_arch_obj' :: "arch_kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool"
-where
-  "valid_arch_obj' (KOASIDPool pool) = valid_asid_pool' pool"
-| "valid_arch_obj' (KOPTE pte) = valid_pte' pte"
-
-definition arch_obj'_fun_lift :: "(arch_kernel_object \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> kernel_object \<Rightarrow> 'a" where
-  "arch_obj'_fun_lift P F obj \<equiv> case obj of KOArch ao \<Rightarrow> P ao | _ \<Rightarrow> F"
-
-lemmas arch_obj'_fun_lift_simps[simp] = arch_obj'_fun_lift_def[split_simps kernel_object.split]
-
-definition valid_aobj' :: "kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_aobj' \<equiv> arch_obj'_fun_lift valid_arch_obj' \<top>"
 
 definition
   valid_obj' :: "Structures_H.kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -1602,22 +1576,13 @@ lemma valid_cap'_pspaceI:
             simp: vspace_table_at'_defs valid_arch_cap'_def valid_arch_cap_ref'_def
            split: arch_capability.split zombie_type.split option.splits)
 
-lemma valid_arch_obj'_pspaceI:
-  "valid_arch_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_arch_obj' obj s'"
-  apply (cases obj; simp)
-   apply (rename_tac asidpool)
-   apply (case_tac asidpool,
-          auto intro: typ_at'_pspaceI[rotated])[1]
-  apply (rename_tac pte)
-  apply (case_tac pte; simp add: valid_mapping'_def)
-  done
 
 lemma valid_obj'_pspaceI:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
   unfolding valid_obj'_def
   by (cases obj)
      (auto simp: valid_ep'_def valid_ntfn'_def valid_tcb'_def valid_cte'_def
-                 valid_tcb_state'_def valid_arch_obj'_pspaceI valid_bound_tcb'_def
+                 valid_tcb_state'_def valid_bound_tcb'_def
                  valid_bound_ntfn'_def
            split: Structures_H.endpoint.splits Structures_H.notification.splits
                   Structures_H.thread_state.splits ntfn.splits option.splits
@@ -2243,16 +2208,6 @@ lemma typ_at_lift_valid_irq_node':
   apply (wp hoare_vcg_all_lift P typ_at_lift_cte')
   done
 
-lemma valid_pte_lift':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_pte' pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte' pte s\<rbrace>"
-  by (cases pte) (simp add: valid_mapping'_def|wp x)+
-
-lemma valid_asid_pool_lift':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_asid_pool' ap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_asid_pool' ap s\<rbrace>"
-  by (cases ap) (simp|wp x typ_at_lift_page_table_at' hoare_vcg_const_Ball_lift)+
-
 lemma valid_bound_tcb_lift:
   "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow>
   \<lbrace>valid_bound_tcb' tcb\<rbrace> f \<lbrace>\<lambda>_. valid_bound_tcb' tcb\<rbrace>"
@@ -2265,8 +2220,6 @@ lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       typ_at_lift_asid_at'
                       typ_at_lift_valid_untyped'
                       typ_at_lift_valid_cap'
-                      valid_pte_lift'
-                      valid_asid_pool_lift'
                       valid_bound_tcb_lift
 
 lemma mdb_next_unfold:
