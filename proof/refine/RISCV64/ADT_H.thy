@@ -14,6 +14,24 @@ theory ADT_H
   imports Syscall_R
 begin
 
+(* FIXME RISCV: move to Word *)
+lemma distinct_word_add_ucast_shift_inj:
+  "\<lbrakk> p + (UCAST('a::len \<rightarrow> 'b::len) off << n) = p' + (ucast off' << n);
+     is_aligned p n'; is_aligned p' n'; n' = n + LENGTH('a); n' < LENGTH('b) \<rbrakk>
+   \<Longrightarrow> p' = p \<and> off' = off"
+  apply (simp add: word_and_or_mask_aligned le_mask_shiftl_le_mask[where n="LENGTH('a)"]
+                   ucast_leq_mask)
+  apply (simp add: is_aligned_nth)
+  apply (rule conjI)
+   apply (rule word_eqI, clarsimp simp: bang_eq word_eqI_solve_simps)
+   apply (metis add_le_cancel_left bang_conj_lt diff_add_inverse le_Suc_ex nat_less_le)
+  apply (rule word_eqI, clarsimp simp: bang_eq word_eqI_solve_simps)
+  apply (rename_tac i)
+  apply (erule_tac x="i+n" in allE)
+  apply simp
+  done
+
+
 text \<open>
   The general refinement calculus (see theory Simulation) requires
   the definition of a so-called ``abstract datatype'' for each refinement layer.
@@ -31,6 +49,10 @@ consts
   initDataStart :: machine_word
 
 context begin interpretation Arch . (*FIXME: arch_split*)
+
+(* RISCV FIXME: move to Arch_Structs_A *)
+definition ppn_len :: nat where
+  "ppn_len \<equiv> LENGTH(pte_ppn_len)"
 
 text \<open>
   The construction of the abstract data type
@@ -62,9 +84,6 @@ lemma vm_rights_of_vmrights_map_id[simp]:
   "rs \<in> valid_vm_rights \<Longrightarrow> vm_rights_of (vmrights_map rs)= rs"
   by (auto simp: vm_rights_of_def vmrights_map_def valid_vm_rights_def
                  vm_read_write_def vm_read_only_def vm_kernel_only_def)
-
-definition ppn_len :: nat where
-  "ppn_len \<equiv> 52"
 
 definition absPageTable0 ::
   "(obj_ref \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow> pt_index \<rightharpoonup> RISCV64_A.pte" where
@@ -395,22 +414,12 @@ lemma n_less_2p_pageBitsForSize:
   apply (erule shiftl_less_t2n)
   using pbfs_less_wb' by (simp add: word_bits_def)
 
-(* FIXME RISCV: generalise *)
-lemma distinct_word_add_inj_ptes:
-  "\<lbrakk> p + (UCAST(9 \<rightarrow> 64) off << 3) = p' + (UCAST(9 \<rightarrow> 64) off' << 3);
-     is_aligned p 12; is_aligned p' 12 \<rbrakk>
-   \<Longrightarrow> p'=p \<and> off' = off"
-  apply (simp add: word_and_or_mask_aligned le_mask_shiftl_le_mask[where n=9] ucast_leq_mask)
-  apply (simp add: is_aligned_nth)
-  apply word_bitwise
-  apply clarsimp
-  done
-
 lemma pte_offset_in_datapage:
   "\<lbrakk> n < 2 ^ (pageBitsForSize sz - pageBits); n \<noteq> 0 \<rbrakk> \<Longrightarrow>
-   (n << pageBits) - (ucast off << 3) < 2 ^ pageBitsForSize sz"
+   (n << pageBits) - (ucast off << pte_bits) < 2 ^ pageBitsForSize sz"
   for n::machine_word and off::pt_index
   apply (frule n_less_2p_pageBitsForSize)
+  apply (simp only: bit_simps)
   apply (subst shiftl_t2n)
   apply (rule order_le_less_trans[rotated], assumption)
   apply (rule word_le_imp_diff_le)
@@ -425,6 +434,12 @@ lemma pte_offset_in_datapage:
   apply (clarsimp simp: nth_w2p pageBits_def rev_bl_order_simps)
   apply (cases sz; simp add: pageBits_def ptTranslationBits_def)
   done
+
+lemma distinct_word_add_inj_ptes:
+  "\<lbrakk> p + (ucast off << pte_bits) = p' + (ucast off' << pte_bits);
+     is_aligned p pt_bits; is_aligned p' pt_bits \<rbrakk>
+   \<Longrightarrow> p' = p \<and> off' = off" for off :: pt_index and p :: machine_word
+  by (erule (2) distinct_word_add_ucast_shift_inj; simp add: bit_simps)
 
 lemma absHeap_correct:
   fixes s' :: kernel_state
@@ -534,12 +549,12 @@ proof -
        apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
         apply (clarsimp simp add: pte_relation_def)
        apply (rename_tac vmpage_size)
-       apply (cut_tac a1=y and sz1=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
+       apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
        apply (case_tac "n=0", simp)
        apply (case_tac "kheap s (y + n * 2 ^ pageBits)")
         apply (rule ccontr)
         apply (clarsimp simp: shiftl_t2n mult_ac dest!: gsUserPages[symmetric, THEN iffD1])
-    using pspace_aligned
+       using pspace_aligned
        apply (simp add: pspace_aligned_def dom_def)
        apply (erule_tac x=y in allE)
        apply (case_tac "n=0",simp+)
@@ -566,12 +581,11 @@ proof -
       apply (subgoal_tac "map_option FaultMap (tcbFault tcb) = tcb_fault")
        prefer 2
        apply (simp add: fault_rel_optionation_def)
-    using valid_objs[simplified valid_objs_def dom_def fun_app_def,
-        simplified]
+       using valid_objs[simplified valid_objs_def dom_def fun_app_def, simplified]
        apply (erule_tac x=y in allE)
        apply (clarsimp simp: valid_obj_def valid_tcb_def
                        split: option.splits)
-    using valid_objs[simplified valid_objs_def Ball_def dom_def fun_app_def]
+      using valid_objs[simplified valid_objs_def Ball_def dom_def fun_app_def]
       apply (erule_tac x=y in allE)
       apply (clarsimp simp add: cap_relation_imp_CapabilityMap valid_obj_def
                                 valid_tcb_def ran_tcb_cap_cases valid_cap_def2
@@ -639,7 +653,7 @@ proof -
       apply (drule_tac a="2::nat" in power_strict_increasing, simp+)
      apply (simp add: shiftl_t2n mult_ac)
      apply (rule ccontr, clarsimp)
-     apply (cut_tac a1="y + of_bl ya * 2^cte_level_bits" and n1=yc in gsCNodes)
+     apply (cut_tac a="y + of_bl ya * 2^cte_level_bits" and n=yc in gsCNodes)
      apply clarsimp
 
     (* mapping architecture-specific objects *)
@@ -690,7 +704,7 @@ proof -
     using pspace_aligned[simplified pspace_aligned_def Ball_def dom_def]
        apply (erule_tac x=y in allE)
        apply (clarsimp simp: bit_simps)
-       apply (drule (2) distinct_word_add_inj_ptes)
+       apply (drule (2) distinct_word_add_inj_ptes[unfolded bit_simps])
        apply clarsimp
        apply (rename_tac pt)
        apply (case_tac "pt off"; simp add: ppn_len_def ucast_leq_mask)
@@ -709,7 +723,7 @@ proof -
       apply (clarsimp simp: bit_simps)
       apply (rule conjI)
        apply (rule neq_le_trans; clarsimp)
-      apply (erule (1) pte_offset_in_datapage[unfolded pageBits_def])
+      apply (erule (1) pte_offset_in_datapage[unfolded bit_simps])
      apply clarsimp
      apply (subgoal_tac "ucast ya << 3 = 0")
       prefer 2
