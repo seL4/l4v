@@ -238,8 +238,6 @@ lemma decode_invocation_corres:
 
 declare mapME_Nil [simp]
 
-crunch inv' [wp]: lookupCapAndSlot P
-
 lemma hinv_corres_assist:
   "\<lbrakk> info' = message_info_map info \<rbrakk>
        \<Longrightarrow> corres (fr \<oplus> (\<lambda>(p, cap, extracaps, buffer) (p', capa, extracapsa, buffera).
@@ -691,7 +689,6 @@ lemma active_ex_cap'[elim]:
      \<Longrightarrow> ex_nonz_cap_to' (ksCurThread s) s"
   by (fastforce simp: ct_in_state'_def elim!: st_tcb_ex_cap'')
 
-crunch st_tcb'[wp]: handleFaultReply "st_tcb_at' P t"
 crunch it[wp]: handleFaultReply "\<lambda>s. P (ksIdleThread s)"
 
 lemma handleFaultReply_invs[wp]:
@@ -1014,7 +1011,7 @@ lemma setDomain_invs':
   setDomain ptr domain \<lbrace>\<lambda>y. invs'\<rbrace>"
   apply (simp add:setDomain_def )
   apply (wp add: hoare_when_wp static_imp_wp static_imp_conj_wp rescheduleRequired_all_invs_but_extra
-    tcbSchedEnqueue_valid_action hoare_vcg_if_lift2)
+                 tcbSchedEnqueue_valid_action hoare_vcg_if_lift2)
      apply (rule_tac Q = "\<lambda>r s. all_invs_but_sch_extra s \<and> curThread = ksCurThread s
       \<and> (ptr \<noteq> curThread \<longrightarrow> ct_not_inQ s \<and> sch_act_wf (ksSchedulerAction s) s \<and> ct_idle_or_in_cur_domain' s)"
       in hoare_strengthen_post[rotated])
@@ -1324,7 +1321,7 @@ lemma gts_imp':
   apply (simp only: imp_conv_disj)
   apply (erule hoare_vcg_disj_lift[rotated])
   apply (rule hoare_strengthen_post [OF gts_sp'])
-  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   done
 
 crunch st_tcb_at'[wp]: replyFromKernel "st_tcb_at' P t"
@@ -1406,7 +1403,7 @@ lemma getThreadCallerSlot_map:
 
 lemma tcb_at_cte_at_map:
   "\<lbrakk> tcb_at' t s; offs \<in> dom tcb_cap_cases \<rbrakk> \<Longrightarrow> cte_at' (cte_map (t, offs)) s"
-  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
+  apply (clarsimp simp: obj_at'_def objBits_simps)
   apply (drule tcb_cases_related)
   apply (auto elim: cte_wp_at_tcbI')
   done
@@ -1633,7 +1630,7 @@ lemma hw_invs'[wp]:
               and E="\<lambda>_ _. True"
            in hoare_post_impErr[rotated])
         apply (clarsimp simp: isCap_simps ct_in_state'_def pred_tcb_at' invs_valid_objs'
-                              sch_act_sane_not obj_at'_def projectKOs pred_tcb_at'_def)
+                              sch_act_sane_not obj_at'_def pred_tcb_at'_def)
       apply (assumption)
      apply (wp)+
   apply (clarsimp)
@@ -1765,10 +1762,6 @@ lemma hr_invs'[wp]:
   apply (simp add: invs'_def cur_tcb'_def)
   done
 
-crunch ksCurThread[wp]: cteDeleteOne "\<lambda>s. P (ksCurThread s)"
-  (wp: crunch_wps setObject_ep_ct setObject_ntfn_ct
-       simp: crunch_simps unless_def ignore: setObject)
-
 crunch ksCurThread[wp]: handleReply "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
        setObject_ntfn_ct
@@ -1844,9 +1837,6 @@ lemma cteInsert_sane[wp]:
   apply (wp hoare_vcg_all_lift
             hoare_convert_imp [OF cteInsert_nosch cteInsert_ct])
   done
-
-crunch sane [wp]: cteInsert sch_act_sane
-  (wp: crunch_wps simp: crunch_simps)
 
 crunch sane [wp]: setExtraBadge sch_act_sane
 
@@ -1969,7 +1959,6 @@ lemma handleReply_ct_not_ksQ:
   apply (clarsimp)
   done
 
-crunch valid_etcbs[wp]: possible_switch_to  "valid_etcbs"
 crunch valid_etcbs[wp]: handle_recv "valid_etcbs"
   (wp: crunch_wps simp: crunch_simps)
 
