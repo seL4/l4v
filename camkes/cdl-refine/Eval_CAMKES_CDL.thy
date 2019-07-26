@@ -17,6 +17,7 @@ imports
   "Lib.FastMap"
   "Lib.RangeMap"
   "Lib.FP_Eval"
+  "Lib.GenericTag"
 begin
 
 text \<open>
@@ -244,14 +245,16 @@ lemma helper_pcs_refined_policy__eval:
                        \<forall>auth \<in> cdl_cap_auth_conferred cap.
                          \<forall>oref \<in> cdl_obj_refs cap.
                             (case label_spec oref of
-                               Some orefl \<Rightarrow> (pl, auth, orefl) \<in> policy_spec
+                               Some orefl \<Rightarrow> generic_tag ''obj policy'' (p, cap, cdl_obj_refs cap)
+                                                 ((pl, auth, orefl) \<in> policy_spec)
                              | _ \<Rightarrow> False)
                 | _ \<Rightarrow> False)"
   shows "auth_graph_map (pasObjectAbs aag) (cdl_state_objs_to_policy s) \<subseteq> (pasPolicy aag)"
   apply (rule helper_pcs_refined_policyI)
     apply (blast intro: cdt_policy)
    apply (blast intro: delete_derived_policy)
-  apply (fastforce intro: subsetD[OF policy_spec]
+  apply (fastforce simp: remove_generic_tag
+                   intro: subsetD[OF policy_spec]
                    dest: label_spec obj_policy[simplified graph_of_def, simplified, rule_format]
                    split: option.splits)
   done
@@ -398,13 +401,14 @@ lemma cdl_state_irqs_to_policy__eval:
                  \<forall>(p_idx, cap) \<in> graph_of (object_slots p_obj).
                    \<forall>irq \<in> cdl_cap_irqs_controlled cap.
                       (case irq_label_spec irq of
-                           Some irql \<Rightarrow> (pl, Control, irql) \<in> policy_spec
+                           Some irql \<Rightarrow> generic_tag ''irq policy'' (p, cap, irq)
+                                            ((pl, Control, irql) \<in> policy_spec)
                          | _ \<Rightarrow> False)
             | _ \<Rightarrow> False)
          \<Longrightarrow> cdl_state_irqs_to_policy aag s \<subseteq> pasPolicy aag"
   apply clarsimp
   apply (erule cdl_state_irqs_to_policy_aux.cases)
-  apply (fastforce simp: opt_cap_def slots_of_def graph_of_def
+  apply (fastforce simp: opt_cap_def slots_of_def graph_of_def remove_generic_tag
                    split: option.splits
                    dest: obj_label_spec irq_label_spec
                    intro: subsetD[OF policy_spec])
@@ -422,7 +426,8 @@ lemma cdl_state_asids_to_policy__eval:
                      \<forall>(p_idx, cap) \<in> graph_of (object_slots p_obj).
                        \<forall>asid \<in> asid_high_bits_of ` cdl_cap_asid' cap.
                           (case asid_label_spec asid of
-                               Some irql \<Rightarrow> (pl, Control, irql) \<in> policy_spec
+                               Some asidl \<Rightarrow> generic_tag ''asid policy'' (p, cap, asid)
+                                                 ((pl, Control, asidl) \<in> policy_spec)
                              | _ \<Rightarrow> False)
                 | _ \<Rightarrow> False)"
       and asid_table_lookups:
@@ -435,29 +440,31 @@ lemma cdl_state_asids_to_policy__eval:
                            \<forall>(asid_low, pd_cap) \<in> graph_of (object_slots asid_pool).
                              if is_null_cap pd_cap then True else
                                 (case obj_label_spec (cap_object pd_cap) of
-                                     Some pdl \<Rightarrow> (asidl, Control, pdl) \<in> policy_spec
+                                     Some pdl \<Rightarrow> generic_tag ''asid PD policy'' (asid_high, pd_cap)
+                                                     ((asidl, Control, pdl) \<in> policy_spec)
                                    | _ \<Rightarrow> False)
                       | _ \<Rightarrow> False)
                      \<and> (case obj_label_spec (cap_object asid_pool_cap) of
                            Some asid_pool_l \<Rightarrow>
-                             (asid_pool_l, ASIDPoolMapsASID, asidl) \<in> policy_spec
+                             generic_tag ''asid pool policy'' (asid_high, asid_pool_cap)
+                                 ((asid_pool_l, ASIDPoolMapsASID, asidl) \<in> policy_spec)
                          | _ \<Rightarrow> False)
                 | _ \<Rightarrow> False)"
 
   shows "cdl_state_asids_to_policy aag s \<subseteq> pasPolicy aag"
   apply clarsimp
   apply (erule cdl_state_asids_to_policy_aux.cases)
-    using cap_asids
+    using cap_asids[unfolded remove_generic_tag]
     apply (fastforce simp: opt_cap_def slots_of_def graph_of_def
                      dest: obj_label_spec asid_label_spec
                      intro: subsetD[OF policy_spec]
                      split: option.splits)
-   using asid_table_lookups
+   using asid_table_lookups[unfolded remove_generic_tag]
    apply (fastforce simp: opt_cap_def slots_of_def graph_of_def transform_asid_def
                     dest: obj_label_spec asid_label_spec
                     intro: subsetD[OF policy_spec]
                     split: option.splits)
-  using asid_table_lookups
+  using asid_table_lookups[unfolded remove_generic_tag]
   apply (fastforce simp: opt_cap_def slots_of_def graph_of_def transform_asid_def
                    dest: obj_label_spec asid_label_spec
                    intro: subsetD[OF policy_spec]
