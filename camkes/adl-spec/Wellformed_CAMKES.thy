@@ -12,7 +12,10 @@ chapter \<open>Wellformedness of Specifications\<close>
 
 (*<*)
 theory Wellformed_CAMKES
-imports Types_CAMKES Helpers_CAMKES
+imports
+  Types_CAMKES
+  Helpers_CAMKES
+  Lib.GenericTag
 begin
 (*>*)
 
@@ -86,16 +89,16 @@ definition
 where
   "wellformed_component c \<equiv>
      \<comment> \<open>No symbol collisions\<close>
-    (distinct (map fst (requires c) @ map fst (provides c) @ map fst (dataports c) @
-     map fst (emits c) @ map fst (consumes c)) \<and>
+    distinct (map fst (requires c) @ map fst (provides c) @ map fst (dataports c) @
+              map fst (emits c) @ map fst (consumes c)) \<and>
      \<comment> \<open>No C symbol collisions.\<close>
     (\<forall>x \<in> set (requires c). wellformed_procedure (snd x)) \<and>
     (\<forall>x \<in> set (provides c). wellformed_procedure (snd x)) \<and>
-     \<comment> \<open>Events valid.\<close>
+    \<comment> \<open>Events valid.\<close>
     (\<forall>x \<in> set (emits c). wellformed_event (snd x)) \<and>
     (\<forall>x \<in> set (consumes c). wellformed_event (snd x)) \<and>
      \<comment> \<open>Dataports valid.\<close>
-    (\<forall>x \<in> set (dataports c). wellformed_dataport (snd x)))"
+    (\<forall>x \<in> set (dataports c). wellformed_dataport (snd x))"
 
 subsection \<open>\label{subsec:wconnectors}Connectors\<close>
 text \<open>
@@ -258,32 +261,182 @@ where
 
 (*<*)
 text \<open>
-  Automation for proving wellformedness properties.
-  We want the simplifier to try known wellformedness facts first
-  before unfolding these. Hence we artificially lift the definitions
-  into simp backtracking.
+  These are alternative definitions that have annotations, to help debug
+  assemblies that are processed by the CAmkES proof toolchain.
 \<close>
+
+abbreviation "check_wellformed entity P \<equiv> generic_tag ''Wellformed_CAMKES'' entity P"
+
+lemma wellformed_method_ann:
+  "wellformed_method m =
+    check_wellformed (wellformed_method, m)
+      (m_name m \<notin> set (map p_name (m_parameters m)) \<and>
+       distinct (map p_name (m_parameters m)))"
+  by (simp only: wellformed_method_def remove_generic_tag simp_thms)
+
+lemma wellformed_procedure_ann:
+  "wellformed_procedure i =
+     check_wellformed (wellformed_procedure, i)
+       ((\<forall>x \<in> set i. wellformed_method x) \<and>
+        distinct (map m_name i))"
+  by (simp only: wellformed_procedure_def remove_generic_tag simp_thms)
+
+lemma wellformed_event_ann:
+  "wellformed_event e =
+     check_wellformed (wellformed_event, e) (e < 32)"
+  by (simp only: wellformed_event_def remove_generic_tag simp_thms)
+
+lemma wellformed_component_ann:
+  "wellformed_component c = check_wellformed (wellformed_component, c) (
+    \<comment> \<open>No symbol collisions\<close>
+    (let names = map fst (requires c) @ map fst (provides c) @ map fst (dataports c) @
+                 map fst (emits c) @ map fst (consumes c)
+     in check_wellformed (wellformed_component, ''distinct'', names) (distinct names)) \<and>
+    \<comment> \<open>No C symbol collisions.\<close>
+    (\<forall>x \<in> set (requires c). wellformed_procedure (snd x)) \<and>
+    (\<forall>x \<in> set (provides c). wellformed_procedure (snd x)) \<and>
+    \<comment> \<open>Events valid.\<close>
+    (\<forall>x \<in> set (emits c). wellformed_event (snd x)) \<and>
+    (\<forall>x \<in> set (consumes c). wellformed_event (snd x)) \<and>
+    \<comment> \<open>Dataports valid.\<close>
+    (\<forall>x \<in> set (dataports c). wellformed_dataport (snd x))
+   )"
+  by (simp only: wellformed_component_def remove_generic_tag simp_thms Let_def)
+
+lemma refs_valid_procedures_ann:
+  "refs_valid_procedures component_instance procedures conns =
+     (\<forall>(name, proc) \<in> set procedures.
+      check_wellformed (refs_valid_procedures, name)
+        (proc \<noteq> [] \<longrightarrow> (\<exists>1 y \<in> conns. \<exists>1 z \<in> conn_from (snd y). z = (component_instance, name))))"
+  by (simp only: refs_valid_procedures_def remove_generic_tag simp_thms split_def)
+
+text \<open>
+  For events and dataports, an interface can be left unconnected in a system with no
+  adverse effects.
+\<close>
+lemma refs_valid_components_ann:
+  "refs_valid_components comps conns =
+    (\<forall>x \<in> set comps. check_wellformed (refs_valid_components, fst x)
+                         (refs_valid_procedures (fst x) (requires (snd x)) conns))"
+  by (simp only: refs_valid_components_def remove_generic_tag simp_thms)
+
+text \<open>
+  Each connection must be connecting interfaces of the same underlying type.
+\<close>
+
+lemma refs_valid_connection_ann:
+  "refs_valid_connection conn component_list =
+      (wellformed_connector (conn_type conn) \<and>
+       (\<comment> \<open>Every to- and from-end of the component must exist.\<close>
+        \<forall>(from_name, from_interface) \<in> set (conn_from conn).
+          \<exists>1from \<in> component_list.
+            fst from = from_name \<and>
+            (\<forall>(to_name, to_interface) \<in> set (conn_to conn).
+               \<exists>1to \<in> component_list.
+                 fst to = to_name \<and>
+                 \<comment> \<open>The following checks that the component interfaces have the correct type.\<close>
+                 check_wellformed ((refs_valid_connection, ''interface''), (from_name, to_name))
+                   (case connector_interface (conn_type conn) of
+                       RPCInterface \<Rightarrow>      from_interface \<in> fst ` set (requires (snd from)) \<and>
+                                            to_interface \<in> fst ` set (provides (snd to))
+                     | EventInterface \<Rightarrow>    from_interface \<in> fst ` set (emits (snd from)) \<and>
+                                            to_interface \<in> fst ` set (consumes (snd to))
+                     \<comment> \<open>TODO: the check for memory connectors could be optimised; we don't need to
+                               check all pairs of from- and to- for dataports with many subscribers.\<close>
+                     | DataportInterface \<Rightarrow> from_interface \<in> fst ` set (dataports (snd from)) \<and>
+                                            to_interface \<in> fst ` set (dataports (snd to))
+                   )
+                 \<and>
+                 \<comment> \<open>Next, we check that the kind of components being connected are appropriate.\<close>
+                 check_wellformed ((refs_valid_connection, ''component''), (from_name, to_name))
+                   (case connector_type (conn_type conn) of
+                       \<comment> \<open>Both endpoints must be regular components.\<close>
+                       NativeConnector \<Rightarrow>  \<not> hardware (snd from) \<and> \<not> hardware (snd to)
+                       \<comment> \<open>At least one endpoint must be a hardware component.
+                           FIXME: might not be quite what we want.\<close>
+                     | HardwareConnector \<Rightarrow> hardware (snd from) \<or> hardware (snd to)
+                     | ExportConnector \<Rightarrow> undefined ''compound components not supported yet''
+                   )
+            )
+     ))"
+  by (simp only: refs_valid_connection_def remove_generic_tag simp_thms)
+
+lemma refs_valid_connections_ann:
+  "refs_valid_connections conns comps =
+     (\<forall>x \<in> set conns. check_wellformed (refs_valid_connections, (fst x))
+                          (refs_valid_connection (snd x) comps))"
+  by (simp only: refs_valid_connections_def remove_generic_tag simp_thms)
+
+lemma wellformed_composition_ann:
+  "wellformed_composition c = (
+     \<comment> \<open>This system contains @{text \<open>\<ge> 1\<close>} active component.\<close>
+    check_wellformed (wellformed_composition, ''control'', map fst (components c))
+                     (\<exists>x \<in> set (components c). control (snd x)) \<and>
+     \<comment> \<open>All references resolve.\<close>
+    refs_valid_composition c \<and>
+     \<comment> \<open>All connectors and components have distinct names.
+        These names will correspond to integrity policy labels.\<close>
+    check_wellformed (wellformed_composition, ''distinct'', map fst (components c) @ map fst (connections c))
+                     (distinct (map fst (components c) @ map fst (connections c))) \<and>
+     \<comment> \<open>All components are valid.\<close>
+    (\<forall>x \<in> set (components c). check_wellformed (wellformed_composition, ''component'', fst x)
+                                               (wellformed_component (snd x))) \<and>
+     \<comment> \<open>All connections are valid.\<close>
+    (\<forall>x \<in> set (connections c). check_wellformed (wellformed_composition, ''connection'', fst x)
+                                                (wellformed_connection (snd x)))
+   )"
+  by (simp only: wellformed_composition_def remove_generic_tag simp_thms)
+(*>*)
+
+(*<*)
+text \<open>Automation for proving wellformedness properties.\<close>
 named_theorems wellformed_CAMKES_simps
 
-lemmas [simplified atomize_eq, THEN iffD2, wellformed_CAMKES_simps] =
+lemmas [simplified, wellformed_CAMKES_simps] =
+  wellformed_composition_ann
+  wellformed_component_ann
+  wellformed_procedure_ann
+  wellformed_method_ann
+  wellformed_event_ann
+  refs_valid_connections_ann
+  refs_valid_connection_ann
+  refs_valid_procedures_ann
+  refs_valid_components_ann
+
+text \<open>These currently have trivial definitions and don't need annotations.\<close>
+lemmas [wellformed_CAMKES_simps] =
   wellformed_assembly_def
-  wellformed_composition_def
   wellformed_configuration_def
   wellformed_connector_def
   wellformed_connection_def
-  wellformed_component_def
-  wellformed_procedure_def
-  wellformed_method_def
   wellformed_dataport_def
-  wellformed_event_def
   refs_valid_composition_def
-  refs_valid_components_def
-  refs_valid_connections_def
-  refs_valid_connection_def
-  refs_valid_procedures_def
 
 lemmas [wellformed_CAMKES_simps] =
   ex_one_def
+  generic_tag_True
+
+text \<open>Helper to visualise nested check failures.\<close>
+datatype ('a, 'b) check_wellformed_conds = check_wellformed_conds 'a 'b
+
+(* clagged from HOL.Product_Type *)
+nonterminal check_wellformed_args
+syntax
+  "_check_wellformed_conds" ::
+      "'a \<Rightarrow> check_wellformed_args \<Rightarrow> ('a, 'b) check_wellformed_conds" ("(1\<langle>_ \<rightarrow>/ _\<rangle>)")
+  "_check_wellformed_arg"   :: "'a \<Rightarrow> check_wellformed_args" ("_")
+  "_check_wellformed_args"  :: "'a \<Rightarrow> check_wellformed_args \<Rightarrow> check_wellformed_args" ("_ \<rightarrow> _")
+translations
+  "\<langle>x \<rightarrow> y\<rangle>" \<rightleftharpoons> "CONST check_wellformed_conds x y"
+  "_check_wellformed_conds x (_check_wellformed_args y z)" \<rightleftharpoons>
+    "_check_wellformed_conds x (_check_wellformed_arg (_check_wellformed_conds y z))"
+
+lemma check_wellformed_merge[wellformed_CAMKES_simps]:
+  "check_wellformed x (check_wellformed y P) = check_wellformed (\<langle>x \<rightarrow> y\<rangle>) P"
+  by (simp add: remove_generic_tag)
+
+(* example *)
+term "check_wellformed \<langle>x \<rightarrow> y \<rightarrow> z\<rangle> P"
 
 end
 (*>*)
