@@ -673,18 +673,18 @@ where
   od"
 
 definition
-  charge_budget :: "ticks \<Rightarrow> ticks \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  charge_budget :: "ticks \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "charge_budget capacity consumed canTimeout = do
+  "charge_budget consumed canTimeout = do
     csc_ptr \<leftarrow> gets cur_sc;
+    csc \<leftarrow> get_sched_context csc_ptr;
     robin \<leftarrow> is_round_robin csc_ptr;
     if robin then do
       refills \<leftarrow> get_refills csc_ptr;
-      let rfhd = hd refills; rftl = last refills; rf_body = butlast (tl refills) in
-        set_refills csc_ptr
-          (rfhd \<lparr> r_amount := r_amount rfhd + r_amount rftl \<rparr> # rf_body @ [rftl \<lparr> r_amount := 0 \<rparr>])
+      let rfhd = hd refills in
+        set_refills csc_ptr [rfhd \<lparr> r_time := r_time rfhd + consumed, r_amount := sc_budget csc \<rparr>]
     od
-    else refill_budget_check consumed capacity;
+    else refill_budget_check consumed;
     update_sched_context csc_ptr (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);
     modify $ consumed_time_update (K 0);
     ct \<leftarrow> gets cur_thread;
@@ -724,7 +724,7 @@ where
     od
     else do
       consumed \<leftarrow> gets consumed_time;
-      charge_budget capacity consumed True;
+      charge_budget consumed True;
       return False
     od
   od"

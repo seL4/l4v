@@ -455,6 +455,7 @@ record refill =
 
 record sched_context =
   sc_period     :: ticks
+  sc_budget     :: ticks
   sc_consumed   :: ticks
   sc_tcb        :: "obj_ref option"
   sc_ntfn       :: "obj_ref option"
@@ -481,6 +482,7 @@ definition
   default_sched_context :: sched_context where
   "default_sched_context \<equiv> \<lparr>
     sc_period     = 0,
+    sc_budget     = 0,
     sc_consumed     = 0,
     sc_tcb        = None,
     sc_ntfn       = None,

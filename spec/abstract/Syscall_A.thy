@@ -276,7 +276,7 @@ definition
      sc \<leftarrow> get_sched_context cur_sc;
      sc_consumed \<leftarrow> return (sc_consumed sc);
      refills \<leftarrow> get_refills cur_sc;
-     charge_budget 0 (r_amount (hd refills)) False;
+     charge_budget (r_amount (hd refills)) False;
      set_sc_obj_ref sc_consumed_update cur_sc sc_consumed
  od"
 
@@ -449,7 +449,7 @@ definition
                       when (0 < sc_refill_max sc) $ do
                         consumed \<leftarrow> gets consumed_time;
                         capacity \<leftarrow> refill_capacity csc consumed;
-                        charge_budget capacity consumed True
+                        charge_budget consumed False
                       od
                     od;
                     handle_interrupt (the irq)

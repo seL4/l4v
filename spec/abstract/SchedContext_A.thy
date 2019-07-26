@@ -132,18 +132,6 @@ where
   od"
 
 definition
-  maybe_add_empty_tail :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "maybe_add_empty_tail sc_ptr = do
-     robin \<leftarrow> is_round_robin sc_ptr;
-     when robin $ do
-       cur_time \<leftarrow> gets cur_time;
-       refill_add_tail sc_ptr \<lparr> r_time = cur_time, r_amount = 0 \<rparr>
-     od
-   od"
-
-
-definition
   refill_new :: "obj_ref \<Rightarrow> nat \<Rightarrow> ticks \<Rightarrow> ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "refill_new sc_ptr max_refills budget period = do
@@ -151,39 +139,35 @@ where
     cur_time \<leftarrow> gets cur_time;
     refill \<leftarrow> return \<lparr> r_time = cur_time, r_amount = budget \<rparr>;
     update_sched_context sc_ptr
-            (\<lambda>sc. sc\<lparr> sc_period := period, sc_refills := [refill], sc_refill_max := max_refills \<rparr>);
-    maybe_add_empty_tail sc_ptr
+            (\<lambda>sc. sc\<lparr> sc_period := period, sc_refills := [refill], sc_refill_max := max_refills,
+                      sc_budget := budget \<rparr>)
   od"
 
-(*definition   (* see the non-monad version *)
+(* definition
   schedule_used :: "obj_ref \<Rightarrow> refill \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "schedule_used sc_ptr new = do
-    rfls \<leftarrow> get_refills sc_ptr;
-    tl \<leftarrow> return $ last rfls;
-    single \<leftarrow> refill_single sc_ptr;
-    if (r_amount new < MIN_BUDGET \<and> \<not> single) then
-      let newtl = tl \<lparr> r_amount := r_amount tl + r_amount new, r_time := max (r_time new) (r_time tl) \<rparr> in
-      set_refills sc_ptr ((butlast rfls) @ [newtl])
-    else if (r_time new \<le> r_time tl) then
-      let newtl = tl \<lparr> r_amount := r_amount tl + r_amount new \<rparr> in
-      set_refills sc_ptr ((butlast rfls) @ [newtl])
+    refills \<leftarrow> get_refills sc_ptr;
+    tl \<leftarrow> return $ last refills;
+    full \<leftarrow> refill_full sc_ptr;
+    if (r_amount new < MIN_BUDGET \<or> full)
+    then let new_tl = tl\<lparr>r_time := r_time new - r_amount tl,
+                         r_amount := r_amount tl + r_amount new\<rparr> in
+         set_refills sc_ptr ( (butlast refills) @ [new_tl] )
     else refill_add_tail sc_ptr new
   od" *)
 
 fun
-  schedule_used :: "refill list \<Rightarrow> refill \<Rightarrow> refill list"
+  schedule_used :: "bool \<Rightarrow> refill list \<Rightarrow> refill \<Rightarrow> refill list"
 where
-  "schedule_used [] new = [new]"
-| "schedule_used (x#rs) new =
-    (let r_tl = last (x#rs) in
-      if (r_amount new < MIN_BUDGET \<and> \<not> (rs = [])) then
-      let newtl = r_tl \<lparr> r_amount := r_amount r_tl + r_amount new, r_time := max (r_time new) (r_time r_tl) \<rparr> in
-      ((butlast (x#rs)) @ [newtl])
-    else if (r_time new \<le> r_time r_tl) then
-      let newtl = r_tl \<lparr> r_amount := r_amount r_tl + r_amount new \<rparr> in
-      ((butlast (x#rs)) @ [newtl])
-    else (x#rs) @ [new])"
+  "schedule_used full [] new = [new]"
+| "schedule_used full (x#rs) new = (
+      if (r_amount new < MIN_BUDGET \<or> full)
+      then let tl = last (x#rs);
+               new_tl = tl\<lparr> r_time := r_time new - r_amount tl,
+                            r_amount := r_amount tl + r_amount new \<rparr> in
+           (butlast (x#rs)) @ [new_tl]
+      else (x#rs) @ [new])"
 
 definition
   merge_refill :: "refill \<Rightarrow> refill \<Rightarrow> refill"
@@ -212,10 +196,9 @@ where
       ct \<leftarrow> gets cur_time;
       modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
       refills \<leftarrow> get_refills sc_ptr;
-      ready \<leftarrow> return $ (r_time (hd refills)) \<le> ct + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr\<close>
+      ready \<leftarrow> refill_ready sc_ptr;
       when ready $ do
         refills' \<leftarrow> return $ refills_merge_prefix ((hd refills)\<lparr>r_time := ct\<rparr> # tl refills);
-        assert (sufficient_refills 0 refills'); \<comment> \<open>do we need this assert?\<close>
         set_refills sc_ptr refills'
       od
     od
@@ -232,7 +215,7 @@ where
                               because the refills size decreases by 1 in each call *)
 
 definition
-  refill_split_check :: "time \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  refill_split_check :: "time \<Rightarrow> (ticks, 'z::state_ext) s_monad"
 where
   "refill_split_check usage = do
     sc_ptr \<leftarrow> gets cur_sc;
@@ -240,74 +223,51 @@ where
     sc \<leftarrow> get_sched_context sc_ptr;
     refills \<leftarrow> return (sc_refills sc);
     rfhd \<leftarrow> return $ hd refills;
-    assert (0 < usage \<and> usage \<le> r_amount rfhd);
-    assert (r_time rfhd \<le> ct);
+    assert (0 < usage \<and> usage < r_amount rfhd);
+    ready \<leftarrow> refill_ready sc_ptr;
+    assert ready;
+    robin \<leftarrow> is_round_robin sc_ptr;
+    assert (\<not>robin);
 
-    remaining \<leftarrow> return $ r_amount rfhd - usage;
-    new \<leftarrow> return \<lparr> r_time = r_time rfhd + sc_period sc, r_amount = usage \<rparr>;
+    remnant \<leftarrow> return $ r_amount rfhd - usage;
 
-    if size refills = sc_refill_max sc \<or> remaining < MIN_BUDGET
-    then if size refills = 1
-      then set_refills sc_ptr [new \<lparr> r_amount := r_amount new + remaining \<rparr>]
-      else
-        let r2 = hd (tl refills); rs = tl (tl refills) in
-        set_refills sc_ptr (min_budget_merge (size refills = sc_refill_max sc)(schedule_used (r2 \<lparr>r_amount := r_amount r2 + remaining\<rparr> # rs) new))
-    else
-      set_refills sc_ptr (schedule_used (rfhd\<lparr>r_amount := remaining\<rparr> # tl refills) new)
-  od"
-
-function
-  refills_budget_check :: "ticks \<Rightarrow> ticks \<Rightarrow> refill list \<Rightarrow> ticks \<times> refill list"
-where
-  "refills_budget_check period usage [] = (usage, [])"
-| "refills_budget_check period usage (r#rs) = (if r_amount r \<le> usage \<and> 0 < r_amount r
-     then refills_budget_check period (usage - r_amount r)
-                                         (schedule_used rs (r\<lparr>r_time := r_time r + period\<rparr>))
-     else (usage, r#rs))"
-  by pat_completeness auto
-
-termination refills_budget_check
-  apply (relation "measure (\<lambda>(p,u,rs). unat u)")
-   apply clarsimp
-  apply unat_arith
-  done
+    if (remnant < MIN_BUDGET)
+    then do refill_pop_head sc_ptr;
+            return remnant
+         od
+    else do set_refills sc_ptr (rfhd\<lparr>r_time := r_time rfhd + usage\<rparr> # (tl refills));
+            return 0
+         od
+    od"
 
 definition
-  refill_budget_check :: "ticks \<Rightarrow> ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  refill_budget_check :: "ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "refill_budget_check usage capacity = do
+  "refill_budget_check usage = do
     sc_ptr \<leftarrow> gets cur_sc;
     sc \<leftarrow> get_sched_context sc_ptr;
-    full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc); \<comment> \<open>= refill_full sc_ptr\<close>
-    assert (capacity < MIN_BUDGET \<or> full);
+    ready \<leftarrow> refill_ready sc_ptr;
     period \<leftarrow> return $ sc_period sc;
-    assert (period > 0); \<comment> \<open>not round robin\<close>
+    robin \<leftarrow> is_round_robin sc_ptr;
+    assert (\<not>robin);
     refills \<leftarrow> return (sc_refills sc);
 
-    (usage', refills') \<leftarrow> return (if (capacity = 0) then
-       refills_budget_check period usage refills
-       else (usage, refills));
+    last_entry \<leftarrow> return $ r_time (hd refills);
 
-    refills'' \<leftarrow> return (if capacity = 0 \<and> 0 < usage' then
-      let r1 = hd refills';
-          r1' = r1 \<lparr>r_time := r_time r1 + usage\<rparr>;
-          rs = tl refills'
-      in if rs \<noteq> [] \<and> can_merge_refill r1' (hd rs)
-         then merge_refill r1' (hd rs) # tl rs
-         else r1'#rs
-    else refills');
+    used \<leftarrow> return $ \<lparr>r_time = last_entry + period, r_amount = usage\<rparr>;
 
-    set_refills sc_ptr refills'';
-
-    capacity \<leftarrow> return $ refills_capacity usage' refills''; \<comment> \<open>= refill_capacity sc_ptr usage'\<close>
-
-    cur_time \<leftarrow> gets cur_time;  \<comment> \<open>refill_ready sc_ptr\<close>
-    ready \<leftarrow> return $ (r_time (hd refills'')) \<le> cur_time + kernelWCET_ticks;
-
-    when (capacity > 0 \<and> ready) $ refill_split_check usage';
-    full \<leftarrow> refill_full sc_ptr;
-    update_sched_context sc_ptr (sc_refills_update (\<lambda>rs. min_budget_merge full rs))
-  od"
+    if (\<not>ready \<or> r_amount (hd refills) < usage)
+    then set_refills sc_ptr [used\<lparr>r_time := r_time used + usage, r_amount := sc_budget sc\<rparr>]
+    else if (usage = r_amount (hd refills))
+         then set_refills sc_ptr (schedule_used False (tl refills) used)
+                \<comment> \<open>if refills has length at most sc_refills_max sc, then popping the head
+                    will ensure the refills are not full, so we may use False here\<close>
+         else do remnant \<leftarrow> refill_split_check usage;
+                 full \<leftarrow> refill_full sc_ptr;
+                 set_refills sc_ptr (schedule_used full (sc_refills sc)
+                      (used\<lparr>r_time := r_time used - remnant, r_amount := r_amount used + remnant \<rparr>))
+              od
+   od"
 
 definition
   refill_update :: "obj_ref \<Rightarrow> ticks \<Rightarrow> ticks \<Rightarrow> nat \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -317,20 +277,28 @@ where
      refill_hd \<leftarrow> return $ hd (sc_refills sc);
 
      cur_time \<leftarrow> gets cur_time;
-     ready \<leftarrow> return $ (r_time refill_hd) \<le> cur_time + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr;\<close>
+     ready \<leftarrow> refill_ready sc_ptr;
 
      new_time \<leftarrow> return $ if ready then cur_time else (r_time refill_hd);
      if (r_amount refill_hd \<ge> new_budget)
-     then do
-       update_sched_context sc_ptr (\<lambda>_. sc\<lparr>sc_period := new_period, sc_refill_max := new_max_refills,
-                                           sc_refills:=[\<lparr> r_time = new_time, r_amount = new_budget\<rparr>]\<rparr>);
-       maybe_add_empty_tail sc_ptr
-    od
-    else
-      update_sched_context sc_ptr (\<lambda>_. sc\<lparr>sc_period := new_period, sc_refill_max := new_max_refills,
-         sc_refills:=[\<lparr> r_time = new_time, r_amount = r_amount refill_hd\<rparr>,
-               \<lparr>r_time = new_time + new_period, r_amount = new_budget - (r_amount refill_hd)\<rparr>]\<rparr>)
-od"
+     then update_sched_context sc_ptr (\<lambda>_. sc\<lparr>sc_period := new_period,
+                                       sc_refill_max := new_max_refills,
+                                       sc_refills := [\<lparr> r_time = new_time,
+                                                        r_amount = new_budget\<rparr>],
+                                       sc_budget := new_budget\<rparr>)
+     else do
+            unused \<leftarrow> return $ (new_budget - r_amount refill_hd);
+            new \<leftarrow> return $ \<lparr>r_time = r_time refill_hd + new_period - unused, r_amount = unused \<rparr>;
+            new_refills \<leftarrow> return $ (schedule_used False [refill_hd] new);
+                 \<comment> \<open>since the length of refill_hd is 1 and MAX_REFILLS is at least
+                      @{term MIN_REFILLS} = 2, we will have that [refill_hd] is not full, and so
+                      we may use False here\<close>
+            update_sched_context sc_ptr (\<lambda>_. sc\<lparr>sc_period := new_period,
+                                         sc_refill_max := new_max_refills,
+                                         sc_refills := new_refills,
+                                         sc_budget := new_budget\<rparr>)
+          od
+    od"
 
 definition
   postpone :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -523,12 +491,12 @@ where
         ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr\<close>
         assert sufficient;
         assert ready;   \<comment> \<open>asserting ready & sufficient\<close>
-        robin \<leftarrow> return (sc_period sc = 0); \<comment> \<open>is_round_robin csc\<close>
+        robin \<leftarrow> is_round_robin csc;
         if robin then
-        let new_hd = ((refill_hd sc) \<lparr> r_amount := r_amount (refill_hd sc) - consumed \<rparr>);
-            new_tl = ((refill_tl sc) \<lparr> r_amount := r_amount (refill_tl sc) + consumed \<rparr>) in
-        set_refills csc (new_hd # [new_tl])
-      else refill_split_check consumed;
+        let new = ((refill_hd sc) \<lparr> r_time := r_time (refill_hd sc) + consumed,
+                                    r_amount := sc_budget sc \<rparr>) in
+        set_refills csc [new]
+      else refill_budget_check consumed;
         sc2 \<leftarrow> get_sched_context csc;
         curtime2 \<leftarrow> gets cur_time;
         sufficient2 \<leftarrow> return $ sufficient_refills consumed (sc_refills sc2); \<comment> \<open>refill_sufficient sc_ptr 0\<close>
