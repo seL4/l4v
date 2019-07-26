@@ -154,9 +154,7 @@ lemma whenE_rangeCheck_eq:
       (throwError (RangeError (fromIntegral y) (fromIntegral z))))"
   by (simp add: rangeCheck_def unlessE_whenE ucast_id linorder_not_le[symmetric])
 
-lemmas irq_const_defs =
-  maxIRQ_def minIRQ_def
-  (* FIXME RISCV: RISCV64.maxUserIRQ_def RISCV64.minUserIRQ_def RISCV64_H.maxUserIRQ_def RISCV64_H.minUserIRQ_def *)
+lemmas irq_const_defs = maxIRQ_def minIRQ_def
 
 lemma arch_decode_irq_control_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
@@ -368,41 +366,7 @@ lemma arch_invoke_irq_control_corres:
           (Arch.performIRQControl ivk')"
   apply (cases x2; simp add: RISCV64_H.performIRQControl_def arch_invoke_irq_control_def)
   apply (simp add: arch_irq_control_inv_valid_def corres_underlying_def)
-  done (* FIXME RISCV: after IRQControl is introduced
-   apply (rule corres_guard_imp)
-     apply (rule corres_split_nor)
-        apply (rule corres_split_nor)
-           apply (rule corres_split_nor [OF _ set_irq_state_corres])
-              apply (rule cins_corres_simple)
-                apply (wp | simp add: irq_state_relation_def
-                                      IRQHandler_valid IRQHandler_valid')+
-          apply (do_machine_op_corres | wpsimp simp: IRQ_def | wps)+
-    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
-                            is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
-                            safe_parent_for_def)
-   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def IRQHandler_valid
-                      IRQHandler_valid' is_simple_cap'_def isCap_simps IRQ_def)
-   apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
-   apply (case_tac ctea)
-   apply (clarsimp simp: isCap_simps sameRegionAs_def3)
-   apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
-  apply (rule corres_guard_imp)
-     apply (rule corres_split_nor)
-       apply (rule corres_split_nor [OF _ set_irq_state_corres])
-        apply (rule cins_corres_simple)
-            apply (wp | simp add: irq_state_relation_def
-                                IRQHandler_valid IRQHandler_valid')+
-      apply (do_machine_op_corres  | wpsimp simp: IRQ_def | wps)+
-   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
-                            is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
-                            safe_parent_for_def)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def IRQHandler_valid
-                      IRQHandler_valid' is_simple_cap'_def isCap_simps IRQ_def)
-  apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
-  apply (case_tac ctea)
-  apply (clarsimp simp: isCap_simps sameRegionAs_def3)
-  apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
-  done *)
+  done
 
 lemma invoke_irq_control_corres:
   "irq_control_inv_relation i i' \<Longrightarrow>
@@ -449,24 +413,6 @@ lemma setIRQState_issued[wp]:
 lemma arch_invoke_irq_control_invs'[wp]:
   "\<lbrace>invs' and arch_irq_control_inv_valid' i\<rbrace> RISCV64_H.performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   by (simp add: arch_irq_control_inv_valid'_def)
-  (* FIXME RISCV: IRQControl
-  apply (simp add: RISCV64_H.performIRQControl_def)
-  apply (rule hoare_pre)
-   apply (wp cteInsert_simple_invs
-            | simp add: cte_wp_at_ctes_of isCap_simps
-            | wpc)+
-  apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid'
-                        is_simple_cap'_def isCap_simps
-                        safe_parent_for'_def sameRegionAs_def3)
-  apply (rule conjI, clarsimp simp: cte_wp_at_ctes_of)
-   apply (case_tac ctea)
-   apply (auto dest: valid_irq_handlers_ctes_ofD
-               simp: invs'_def valid_state'_def IRQ_def)[1]
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (case_tac ctea)
-  apply (auto dest: valid_irq_handlers_ctes_ofD
-              simp: invs'_def valid_state'_def IRQ_def)[1]
-  done *)
 
 lemma invoke_irq_control_invs'[wp]:
   "\<lbrace>invs' and irq_control_inv_valid' i\<rbrace> performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -714,19 +660,11 @@ lemma updateTimeSlice_valid_queues[wp]:
   apply (clarsimp simp:obj_at'_def inQ_def)
   done
 
-
-(* catch up tcbSchedAppend to tcbSchedEnqueue, which has these from crunches on possibleSwitchTo *)
-crunch ifunsafe[wp]: tcbSchedAppend if_unsafe_then_cap'
-crunch irq_handlers'[wp]: tcbSchedAppend valid_irq_handlers'
-  (simp: unless_def tcb_cte_cases_def cteSizeBits_def wp: crunch_wps)
-crunch irq_states'[wp]: tcbSchedAppend valid_irq_states'
-crunch irqs_masked'[wp]: tcbSchedAppend irqs_masked'
-  (simp: unless_def wp: crunch_wps)
-crunch ct[wp]: tcbSchedAppend cur_tcb'
-  (wp: cur_tcb_lift crunch_wps)
-
-crunch cur_tcb'[wp]: tcbSchedAppend cur_tcb'
-  (simp: unless_def wp: crunch_wps)
+crunches tcbSchedAppend
+  for irq_handlers'[wp]: valid_irq_handlers'
+  and irqs_masked'[wp]: irqs_masked'
+  and ct[wp]: cur_tcb'
+  (simp: unless_def tcb_cte_cases_def cteSizeBits_def wp: crunch_wps cur_tcb_lift)
 
 lemma timerTick_invs'[wp]:
   "\<lbrace>invs'\<rbrace> timerTick \<lbrace>\<lambda>rv. invs'\<rbrace>"
