@@ -215,32 +215,6 @@ where
                               because the refills size decreases by 1 in each call *)
 
 definition
-  refill_split_check :: "time \<Rightarrow> (ticks, 'z::state_ext) s_monad"
-where
-  "refill_split_check usage = do
-    sc_ptr \<leftarrow> gets cur_sc;
-    ct \<leftarrow> gets cur_time;
-    sc \<leftarrow> get_sched_context sc_ptr;
-    refills \<leftarrow> return (sc_refills sc);
-    rfhd \<leftarrow> return $ hd refills;
-    assert (0 < usage \<and> usage < r_amount rfhd);
-    ready \<leftarrow> refill_ready sc_ptr;
-    assert ready;
-    robin \<leftarrow> is_round_robin sc_ptr;
-    assert (\<not>robin);
-
-    remnant \<leftarrow> return $ r_amount rfhd - usage;
-
-    if (remnant < MIN_BUDGET)
-    then do refill_pop_head sc_ptr;
-            return remnant
-         od
-    else do set_refills sc_ptr (rfhd\<lparr>r_time := r_time rfhd + usage\<rparr> # (tl refills));
-            return 0
-         od
-    od"
-
-definition
   refill_budget_check :: "ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "refill_budget_check usage = do
@@ -262,10 +236,18 @@ where
          then set_refills sc_ptr (schedule_used False (tl refills) used)
                 \<comment> \<open>if refills has length at most sc_refills_max sc, then popping the head
                     will ensure the refills are not full, so we may use False here\<close>
-         else do remnant \<leftarrow> refill_split_check usage;
-                 full \<leftarrow> refill_full sc_ptr;
-                 set_refills sc_ptr (schedule_used full (sc_refills sc)
-                      (used\<lparr>r_time := r_time used - remnant, r_amount := r_amount used + remnant \<rparr>))
+         else do remnant \<leftarrow> return $ (r_amount (hd refills) - usage);
+                 if (remnant < MIN_BUDGET)
+                 then do snd \<leftarrow> return $ hd (tl refills);
+                         new_snd \<leftarrow> return $ (snd\<lparr>r_time := r_time snd - remnant,
+                                                  r_amount := r_amount snd + remnant\<rparr>);
+                         set_refills sc_ptr (schedule_used False (new_snd # tl (tl refills)) used)
+                      od
+                 else do full \<leftarrow> refill_full sc_ptr;
+                         rfhd \<leftarrow> return $ (hd refills);
+                         new_head \<leftarrow> return $ (rfhd\<lparr>r_time := r_time rfhd + usage, r_amount := remnant\<rparr>);
+                         set_refills sc_ptr (schedule_used full (new_head # (tl refills)) used)
+                      od
               od
    od"
 
