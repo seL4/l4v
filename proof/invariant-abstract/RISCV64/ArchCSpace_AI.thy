@@ -24,43 +24,10 @@ lemma unique_table_refs_upd_eqD:
   "\<lbrakk>ms a = Some b; obj_refs b = obj_refs b'; table_cap_ref b = table_cap_ref b'\<rbrakk>
    \<Longrightarrow> unique_table_refs_2 (ms (a \<mapsto> b')) = unique_table_refs_2 ms"
   unfolding unique_table_refs_def
-  apply (rule iffI)
-   apply (intro allI impI)
-   apply (case_tac "p=p'")
-    apply simp
-   apply (case_tac "a=p")
-    apply (erule_tac x=p in allE)
-    apply (erule_tac x=p' in allE)
-    apply (erule_tac x=b' in allE)
-    apply simp
-   apply (case_tac "a=p'")
-    apply (erule_tac x=p in allE)
-    apply (erule_tac x=p' in allE)
-    apply (erule_tac x=cap in allE)
-    apply simp
-   apply (erule_tac x=p in allE)
-   apply (erule_tac x=p' in allE)
-   apply (erule_tac x=cap in allE)
-   apply simp
-  apply (intro allI impI)
-  apply (case_tac "p=p'")
-   apply (thin_tac " \<forall>p. P p" for P)
-   apply simp
-  apply (case_tac "a=p")
-   apply (erule_tac x=p in allE)
-   apply (erule_tac x=p' in allE)
-   apply (erule_tac x=b in allE)
-   apply simp
-  apply (case_tac "a=p'")
-   apply (erule_tac x=p in allE)
-   apply (erule_tac x=p' in allE)
-   apply (erule_tac x=cap in allE)
-   apply simp
-  apply (erule_tac x=p in allE)
-  apply (erule_tac x=p' in allE)
-  apply (erule_tac x=cap in allE)
-  apply simp
-  done
+  (* match up p and p' on both sides of equality *)
+  apply (rule all_cong[where Q=\<top>, simplified])
+  apply (rule all_cong[where Q=\<top>, simplified])
+  by auto
 
 lemma cte_at_length_limit:
   "\<lbrakk> cte_at p s; valid_objs s \<rbrakk> \<Longrightarrow> length (snd p) < word_bits - cte_level_bits"
