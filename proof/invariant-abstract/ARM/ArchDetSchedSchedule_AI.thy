@@ -18,10 +18,10 @@ named_theorems DetSchedSchedule_AI_assms
 
 crunch valid_ready_qs [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers valid_ready_qs
-  (simp: whenE_def ignore: set_tcb_queue tcb_sched_action clearExMonitor wp: hoare_drop_imp tcb_sched_action_dequeue_valid_ready_qs)
+  (simp: whenE_def ignore: set_tcb_queue tcb_sched_action clearExMonitor wp: hoare_drop_imp tcb_sched_dequeue_valid_ready_qs)
 
 crunch valid_release_q [wp, DetSchedSchedule_AI_assms]:
-  switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers valid_release_q
+  switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers "valid_release_q:: det_state \<Rightarrow> _"
   (simp: whenE_def ignore: set_tcb_queue tcb_sched_action clearExMonitor wp: hoare_drop_imp)
 
 crunch weak_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
@@ -135,9 +135,6 @@ lemma arch_switch_to_thread_valid_blocked [wp, DetSchedSchedule_AI_assms]:
    apply (rule do_machine_op_valid_blocked)
   apply wp
   done
-
-lemma ct_in_q_release: "in_release_queue (cur_thread s) s \<Longrightarrow> ct_in_q s"
-   by (clarsimp simp: ct_in_q_def in_release_queue_def)
 
 crunch not_queued[wp]: set_vm_root "not_queued t"
   (simp: crunch_simps)
@@ -271,14 +268,7 @@ and simple_sched_action [wp, DetSchedSchedule_AI_assms]: simple_sched_action
 lemma set_thread_state_cur_thread_valid_blocked:
   "\<lbrace>valid_blocked and (\<lambda>s. ref = cur_thread s)\<rbrace> set_thread_state ref ts
   \<lbrace>\<lambda>_. valid_blocked :: det_state \<Rightarrow> _\<rbrace>"
-  unfolding set_thread_state_def
-  apply (wpsimp wp: set_object_wp)
-  apply (clarsimp simp: valid_blocked_def
-                 dest!: get_tcb_SomeD)
-  apply (drule_tac x=t in spec,
-         clarsimp simp: get_tcb_rev active_sc_tcb_at_defs st_tcb_at_kh_if_split
-                 split: option.splits if_splits)
-  done
+  by (wp set_thread_state_valid_blocked_inv | wps)+ clarsimp
 
 lemma set_thread_state_cur_thread_runnable_valid_sched:
   "\<lbrace>valid_sched and (\<lambda>s. ref = cur_thread s) and K (runnable ts)\<rbrace>
@@ -316,24 +306,14 @@ lemma arch_perform_invocation_valid_sched [wp, DetSchedSchedule_AI_assms]:
                       wp: perform_asid_control_invocation_valid_sched)+
   done
 
-crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
-  handle_arch_fault_reply, handle_vm_fault "valid_sched::det_state \<Rightarrow> _"
-  (ignore: getFAR getDFSR getIFSR wp: valid_sched_lift)
-
-crunch not_queued [wp, DetSchedSchedule_AI_assms]:
-  handle_vm_fault, handle_arch_fault_reply "not_queued t"
-  (ignore: getFAR getDFSR getIFSR)
-
-crunch not_in_release_q [wp, DetSchedSchedule_AI_assms]:
-  handle_vm_fault, handle_arch_fault_reply "not_in_release_q t"
+crunches handle_arch_fault_reply, handle_vm_fault
+for valid_sched [wp, DetSchedSchedule_AI_assms]: "valid_sched::det_state \<Rightarrow> _"
+and not_queued [wp, DetSchedSchedule_AI_assms]: "not_queued t"
+and not_in_release_q [wp, DetSchedSchedule_AI_assms]: "not_in_release_q t"
+and sched_act_not [wp, DetSchedSchedule_AI_assms]: "scheduler_act_not t"
+and simple_sched_action [wp, DetSchedSchedule_AI_assms]: simple_sched_action
+and ct[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
   (ignore: getFAR getDFSR getIFSR simp: not_in_release_q_def)
-
-crunch sched_act_not [wp, DetSchedSchedule_AI_assms]:
-  handle_arch_fault_reply, handle_vm_fault "scheduler_act_not t"
-  (ignore: getFAR getDFSR getIFSR)
-
-crunches handle_arch_fault_reply
- for simple_sched_action [wp, DetSchedSchedule_AI_assms]: simple_sched_action
 
 crunches handle_arch_fault_reply, arch_get_sanitise_register_info
  for valid_ep_q [wp, DetSchedSchedule_AI_assms]: valid_ep_q
@@ -353,8 +333,13 @@ lemma handle_vm_fault_st_tcb_cur_thread [wp, DetSchedSchedule_AI_assms]:
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
   arch_invoke_irq_control "valid_sched :: det_ext state \<Rightarrow> bool"
 
-crunch valid_list [wp, DetSchedSchedule_AI_assms]:
-  arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread "valid_list"
+crunches arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread
+for valid_list [wp, DetSchedSchedule_AI_assms]: "valid_list"
+and not_queued [wp, DetSchedSchedule_AI_assms]: "not_queued t"
+and not_in_release_q [wp, DetSchedSchedule_AI_assms]: "not_in_release_q t"
+and sc_not_queued [wp, DetSchedSchedule_AI_assms]: "sc_not_in_ready_q t"
+and sc_not_in_release_q [wp, DetSchedSchedule_AI_assms]: "sc_not_in_release_q t"
+
 
 crunch cur_tcb [wp, DetSchedSchedule_AI_assms]: handle_arch_fault_reply, handle_vm_fault, arch_get_sanitise_register_info, arch_post_modify_registers cur_tcb
 
@@ -381,15 +366,32 @@ crunches arch_post_cap_deletion
   and simple_sched_action[wp, DetSchedSchedule_AI_assms]: simple_sched_action
   and not_cur_thread[wp, DetSchedSchedule_AI_assms]: "not_cur_thread t"
   and not_queued[wp, DetSchedSchedule_AI_assms]: "not_queued t"
-  and not_in_release_q[wp, DetSchedSchedule_AI_assms]: "not_in_release_q t"
   and sched_act_not[wp, DetSchedSchedule_AI_assms]: "scheduler_act_not t"
   and weak_valid_sched_action[wp, DetSchedSchedule_AI_assms]: weak_valid_sched_action
+
+lemma switch_to_idle_thread_ct_not_in_release_q[wp, DetSchedSchedule_AI_assms]:
+    "\<lbrace>valid_release_q and valid_idle\<rbrace>
+      switch_to_idle_thread
+     \<lbrace>\<lambda>rv s::det_state. ct_not_in_release_q s\<rbrace>"
+  apply (clarsimp simp: switch_to_idle_thread_def)
+  apply wpsimp
+  by (fastforce simp: valid_release_q_def not_in_release_q_def dest!: not_idle_thread')
+
+lemma sc_at_period_machine_state_update[simp]:
+  "sc_at_period P p (s\<lparr>machine_state := b\<rparr>) = sc_at_period P p s"
+  by (clarsimp simp: sc_at_period_def)
 
 crunches arch_switch_to_thread, arch_switch_to_idle_thread
   for etcbs[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
   and cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
   and not_in_release_q[wp, DetSchedSchedule_AI_assms]: "not_in_release_q t"
+  and sc_at_period[wp, DetSchedSchedule_AI_assms]: "sc_at_period P p::det_state \<Rightarrow> _"
+  and cur_sc_in_release_q_imp_zero_consumed[wp, DetSchedSchedule_AI_assms]: cur_sc_in_release_q_imp_zero_consumed
+  and cur_sc_valid_refills_consumed[wp, DetSchedSchedule_AI_assms]: "cur_sc_valid_refills_consumed budget"
+  and cur_sc[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_sc s)"
+  and cur_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
   (simp: crunch_simps)
+
 
 lemma handle_vm_fault_valid_machine_time[DetSchedSchedule_AI_assms]:
   "handle_vm_fault a b \<lbrace>valid_machine_time\<rbrace>"
@@ -406,7 +408,7 @@ crunches setHardwareASID, set_current_pd, invalidateLocalTLB_ASID, cleanByVA, in
   invalidateL2Range, cleanInvalByVA, cleanInvalidateL2Range, isb, branchFlush, invalidateByVA_I,
   cleanByVA_PoU, cleanL2Range, cleanCacheRange_PoC, branchFlushRange, invalidateCacheRange_I,
   cleanCacheRange_PoU, cleanInvalidateCacheRange_RAM, cleanInvalidateCacheRange_RAM,
-  invalidateCacheRange_RAM, cleanCacheRange_RAM, setIRQTrigger, maskInterrupt,
+  invalidateCacheRange_RAM, cleanCacheRange_RAM, setIRQTrigger, maskInterrupt, clearExMonitor,
   invalidateLocalTLB_VAASID, do_flush, storeWord, freeMemory, ackDeadlineIRQ, clearMemory
   for last_machine_time[wp]: "\<lambda>a. P (last_machine_time a)"
   (simp: isb_def writeTTBR0_def wp: crunch_wps)
@@ -414,6 +416,7 @@ crunches setHardwareASID, set_current_pd, invalidateLocalTLB_ASID, cleanByVA, in
 lemma misc_dmo_valid_machine_time[wp]:
   "do_machine_op cleanCaches_PoU \<lbrace>valid_machine_time\<rbrace>"
   "do_machine_op ackDeadlineIRQ  \<lbrace>valid_machine_time\<rbrace>"
+  "do_machine_op clearExMonitor \<lbrace>valid_machine_time\<rbrace>"
   "\<And>a. do_machine_op (set_current_pd a) \<lbrace>valid_machine_time\<rbrace>"
   "\<And>a. do_machine_op (invalidateLocalTLB_ASID a) \<lbrace>valid_machine_time\<rbrace>"
   "\<And>a. do_machine_op (invalidateLocalTLB_VAASID a) \<lbrace>valid_machine_time\<rbrace>"
@@ -440,8 +443,8 @@ lemma arm_context_switch_valid_machine_time[wp]:
   unfolding arm_context_switch_def
   by (wpsimp wp: valid_machine_time_lift do_machine_op_machine_state simp: )
 
-crunches arch_invoke_irq_control
-  for valid_machine_time[wp]: "valid_machine_time:: det_state \<Rightarrow> _"
+crunches arch_invoke_irq_control, set_vm_root, arch_switch_to_thread, arch_switch_to_idle_thread
+  for valid_machine_time[wp, DetSchedSchedule_AI_assms]: "valid_machine_time:: det_state \<Rightarrow> _"
   (wp: crunch_wps ignore: do_machine_op simp: crunch_simps)
 
 crunches delete_asid, delete_asid_pool, unmap_page_table, unmap_page
@@ -576,8 +579,25 @@ global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
   interpret Arch .
   case 1 show ?case
     apply (unfold_locales)
-    by ((fact DetSchedSchedule_AI_assms)+ | wpsimp | rule ct_in_q_release)+
+    by ((fact DetSchedSchedule_AI_assms)+ | wpsimp)+
   qed
+
+(* 1. \<lbrace>valid_blocked\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. valid_blocked\<rbrace>
+ 2. \<lbrace>ct_in_q\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. ct_in_q\<rbrace>
+ 3. \<lbrace>\<lambda>s. in_release_q (cur_thread s) s\<rbrace> arch_switch_to_idle_thread 
+    \<lbrace>\<lambda>_ s. in_release_q (cur_thread s) s\<rbrace>
+ 4. \<And>t. \<lbrace>valid_release_q\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. valid_release_q\<rbrace>
+ 5. \<And>t t'.
+       \<lbrace>not_in_release_q t'\<rbrace> arch_switch_to_thread t 
+       \<lbrace>\<lambda>_. not_in_release_q t'\<rbrace>
+ 6. \<lbrace>weak_valid_sched_action\<rbrace> arch_switch_to_idle_thread 
+    \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>
+ 7. \<And>t. \<lbrace>weak_valid_sched_action\<rbrace> arch_switch_to_thread t 
+         \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>
+ 8. \<lbrace>valid_ready_qs and valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>
+ 9. \<lbrace>valid_sched_action and valid_idle\<rbrace> switch_to_idle_thread 
+    \<lbrace>\<lambda>_. valid_sched_action\<rbrace>
+ 10. \<lbrace>\<lambda>_. True\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>*)
 
 context Arch begin global_naming ARM
 

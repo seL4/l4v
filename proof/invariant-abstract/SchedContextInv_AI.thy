@@ -711,6 +711,11 @@ lemma valid_refills_kheap_tcb_update[iff]:
   "tcb_at t s \<Longrightarrow> valid_refills p b (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = valid_refills p b s"
   by (clarsimp simp: valid_refills_def obj_at_def is_tcb)
 
+(* FIXME move *)
+lemmas MIN_BUDGET_nonzero = MIN_BUDGET_pos[simplified word_neq_0_conv[symmetric]]
+
+lemmas sufficient_refills_defs = sufficient_refills_def refills_capacity_def
+
 crunch valid_refills[wp]: tcb_sched_action,set_scheduler_action,refill_capacity,refill_sufficient
    "valid_refills scp budget"
 crunch valid_refills[wp]: tcb_release_enqueue,tcb_release_remove,refill_ready "valid_refills scp budget"
