@@ -26,7 +26,7 @@ definition
 where
   "is_round_robin sc_ptr = do
     sc \<leftarrow> get_sched_context sc_ptr;
-    return (sc_period sc = 0)
+    return (sc_period sc = sc_budget sc)
   od"
 
 definition
