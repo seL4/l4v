@@ -2507,6 +2507,10 @@ lemma rsubst:
 lemma ex_impE: "((\<exists>x. P x) \<longrightarrow> Q) \<Longrightarrow> P x \<Longrightarrow> Q"
   by blast
 
+lemma option_Some_value_independent:
+  "\<lbrakk> f x = Some v; \<And>v'. f x = Some v' \<Longrightarrow> f y = Some v' \<rbrakk> \<Longrightarrow> f y = Some v"
+  by blast
+
 text \<open>Some int bitwise lemmas. Helpers for proofs about \<^file>\<open>NatBitwise.thy\<close>\<close>
 lemma int_2p_eq_shiftl:
   "(2::int)^x = 1 << x"
