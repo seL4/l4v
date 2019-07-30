@@ -1801,7 +1801,8 @@ lemma rollback_safe_lift:
       wp hoare_vcg_all_lift |
       wps B)+
 
-(* This predicate declares that the current thread is Active, Ready, and Sufficient *)
+(* This predicate declares that the current thread has a scheduling context that is
+    active, ready and sufficient. *)
 abbreviation ct_ARS where
   "ct_ARS s \<equiv> active_sc_tcb_at (cur_thread s) s
       \<and> budget_ready (cur_thread s) s

@@ -48,7 +48,7 @@ definition
      modify (\<lambda>s. s \<lparr> cur_thread := t \<rparr>)
    od"
 
-text {* Asserts that a thread is ready and sufficient before switching to it. *}
+text {* Asserts that a thread is schedulable, ready and sufficient before switching to it. *}
 definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "guarded_switch_to thread \<equiv> do
      inq \<leftarrow> gets $ in_release_queue thread;
