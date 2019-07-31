@@ -759,9 +759,6 @@ where
         when result $ commit_time
       od;
 
-      (period,mrefills) \<leftarrow> return (if budget = period then (0,MIN_REFILLS) else (period,mrefills));
-      \<comment> \<open> true in the above means we have round robin \<close>
-
       st \<leftarrow> get_thread_state tcb_ptr;
       if 0 < sc_refill_max sc \<and> (runnable st) then
         refill_update sc_ptr period budget mrefills

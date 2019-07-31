@@ -346,6 +346,15 @@ where
     return $ sc_time \<le> cur_time + kernelWCET_ticks
   od"
 
+definition
+  sc_refill_ready :: "sched_context \<Rightarrow> (bool, 'z::state_ext) s_monad"
+where
+  "sc_refill_ready sc = do
+    cur_time \<leftarrow> gets cur_time;
+    sc_time \<leftarrow> return $ r_time (refill_hd sc);
+    return $ sc_time \<le> cur_time + kernelWCET_ticks
+  od"
+
 (* end refill checks *)
 
 definition
