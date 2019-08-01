@@ -92,11 +92,11 @@ where
     distinct (map fst (requires c) @ map fst (provides c) @ map fst (dataports c) @
               map fst (emits c) @ map fst (consumes c)) \<and>
      \<comment> \<open>No C symbol collisions.\<close>
-    (\<forall>x \<in> set (requires c). wellformed_procedure (snd x)) \<and>
+    (\<forall>x \<in> set (requires c). wellformed_procedure (snd (snd x))) \<and>
     (\<forall>x \<in> set (provides c). wellformed_procedure (snd x)) \<and>
     \<comment> \<open>Events valid.\<close>
     (\<forall>x \<in> set (emits c). wellformed_event (snd x)) \<and>
-    (\<forall>x \<in> set (consumes c). wellformed_event (snd x)) \<and>
+    (\<forall>x \<in> set (consumes c). wellformed_event (snd (snd x))) \<and>
      \<comment> \<open>Dataports valid.\<close>
     (\<forall>x \<in> set (dataports c). wellformed_dataport (snd x))"
 
@@ -145,12 +145,13 @@ text \<open>
 
 definition
   refs_valid_procedures ::
-    "adl_symbol \<Rightarrow> (adl_symbol \<times> procedure) list \<Rightarrow>
+    "adl_symbol \<Rightarrow> (adl_symbol \<times> (InterfaceRequired \<times> procedure)) list \<Rightarrow>
      (adl_symbol \<times> connection) list \<Rightarrow> bool"
 where
   "refs_valid_procedures component_instance procedures conns \<equiv>
-    \<forall>x \<in> set procedures.
-      snd x \<noteq> [] \<longrightarrow> (\<exists>1 y \<in> conns. \<exists>1 z \<in> conn_from (snd y). z = (component_instance, fst x))"
+    \<forall>(name, (req, proc)) \<in> set procedures.
+      req = InterfaceRequired \<longrightarrow> proc \<noteq> [] \<longrightarrow>
+      (\<exists>1 y \<in> conns. \<exists>1 z \<in> conn_from (snd y). z = (component_instance, name))"
 
 text \<open>
   For events and dataports, an interface can be left unconnected in a system with no
@@ -293,11 +294,11 @@ lemma wellformed_component_ann:
                  map fst (emits c) @ map fst (consumes c)
      in check_wellformed (wellformed_component, ''distinct'', names) (distinct names)) \<and>
     \<comment> \<open>No C symbol collisions.\<close>
-    (\<forall>x \<in> set (requires c). wellformed_procedure (snd x)) \<and>
+    (\<forall>x \<in> set (requires c). wellformed_procedure (snd (snd x))) \<and>
     (\<forall>x \<in> set (provides c). wellformed_procedure (snd x)) \<and>
     \<comment> \<open>Events valid.\<close>
     (\<forall>x \<in> set (emits c). wellformed_event (snd x)) \<and>
-    (\<forall>x \<in> set (consumes c). wellformed_event (snd x)) \<and>
+    (\<forall>x \<in> set (consumes c). wellformed_event (snd (snd x))) \<and>
     \<comment> \<open>Dataports valid.\<close>
     (\<forall>x \<in> set (dataports c). wellformed_dataport (snd x))
    )"
@@ -305,10 +306,11 @@ lemma wellformed_component_ann:
 
 lemma refs_valid_procedures_ann:
   "refs_valid_procedures component_instance procedures conns =
-     (\<forall>(name, proc) \<in> set procedures.
+     (\<forall>(name, (req, proc)) \<in> set procedures.
+      req = InterfaceRequired \<longrightarrow>
       check_wellformed (refs_valid_procedures, name)
         (proc \<noteq> [] \<longrightarrow> (\<exists>1 y \<in> conns. \<exists>1 z \<in> conn_from (snd y). z = (component_instance, name))))"
-  by (simp only: refs_valid_procedures_def remove_generic_tag simp_thms split_def)
+  by (simp only: refs_valid_procedures_def remove_generic_tag simp_thms)
 
 text \<open>
   For events and dataports, an interface can be left unconnected in a system with no

@@ -283,14 +283,16 @@ text \<open>
       two @{text dataports}.
   \end{enumerate}
 \<close>
+datatype InterfaceRequired = InterfaceRequired | InterfaceOptional
+
 record component =
   control     :: bool
   hardware    :: bool
-  requires    :: "(adl_symbol \<times> procedure) list"
+  requires    :: "(adl_symbol \<times> (InterfaceRequired \<times> procedure)) list"
   provides    :: "(adl_symbol \<times> procedure) list"
   dataports   :: "(adl_symbol \<times> dataport) list"
   emits       :: "(adl_symbol \<times> event) list"
-  consumes    :: "(adl_symbol \<times> event) list"
+  consumes    :: "(adl_symbol \<times> (InterfaceRequired \<times> event)) list"
   attributes  :: "(adl_symbol \<times> param_type) list"
 
 subsection \<open>\label{subsec:assembling}Assembling a System\<close>

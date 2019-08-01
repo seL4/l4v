@@ -102,7 +102,7 @@ where
   "client \<equiv> \<lparr>
     control = True,
     hardware = False,
-    requires = [(''s'', simple)],
+    requires = [(''s'', (InterfaceRequired, simple))],
     provides = [],
     dataports = [],
     emits = [],
@@ -222,7 +222,7 @@ where
     provides = [],
     dataports = [],
     emits = [],
-    consumes = [(''event'', signal)],
+    consumes = [(''event'', (InterfaceRequired, signal))],
     attributes = []
   \<rparr>"
 
@@ -387,7 +387,7 @@ where
   "terminal_client \<equiv> \<lparr>
     control = True,
     hardware = False,
-    requires = [(''d'', display)],
+    requires = [(''d'', (InterfaceRequired, display))],
     provides = [],
     dataports = [],
     emits = [],
@@ -467,7 +467,7 @@ where
   "x \<equiv> \<lparr>
     control = undefined,
     hardware = undefined,
-    requires = [(undefined, [undefined])], \<comment> \<open>1 required interface...\<close>
+    requires = [(undefined, (InterfaceRequired, [undefined]))], \<comment> \<open>1 required interface...\<close>
     provides = undefined,
     dataports = undefined,
     emits = undefined,
@@ -544,7 +544,7 @@ lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
     components = [(''foo'', \<lparr>
       control = undefined,
       hardware = undefined,
-      requires = [(''bar'', [undefined])],
+      requires = [(''bar'', (InterfaceRequired, [undefined]))],
       provides = undefined,
       dataports = undefined,
       emits = undefined,
