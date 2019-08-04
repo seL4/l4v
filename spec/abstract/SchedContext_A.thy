@@ -130,8 +130,8 @@ where
 | "schedule_used full (x#rs) new = (
       if (r_amount new < MIN_BUDGET \<or> full)
       then let tl = last (x#rs);
-               new_tl = tl\<lparr> r_time := r_time new - r_amount tl,
-                            r_amount := r_amount tl + r_amount new \<rparr> in
+               new_tl = \<lparr> r_time = r_time new - r_amount tl,
+                            r_amount = r_amount tl + r_amount new \<rparr> in
            (butlast (x#rs)) @ [new_tl]
       else (x#rs) @ [new])"
 
@@ -195,13 +195,13 @@ where
          else do remnant \<leftarrow> return $ (r_amount (hd refills) - usage);
                  if (remnant < MIN_BUDGET)
                  then do new_snd \<leftarrow> return $
-                               (hd (tl refills)\<lparr>r_time := r_time (hd (tl refills)) - remnant,
-                                                r_amount := r_amount (hd (tl refills)) + remnant\<rparr>);
+                                       (\<lparr> r_time = r_time (hd (tl refills)) - remnant,
+                                          r_amount = r_amount (hd (tl refills)) + remnant \<rparr>);
                           set_refills sc_ptr (schedule_used False (new_snd # tl (tl refills)) used)
                       od
                  else do full \<leftarrow> refill_full sc_ptr;
                          rfhd \<leftarrow> return $ (hd refills);
-                         new_head \<leftarrow> return $ (rfhd\<lparr>r_time := r_time rfhd + usage, r_amount := remnant\<rparr>);
+                         new_head \<leftarrow> return $ (\<lparr>r_time = r_time rfhd + usage, r_amount = remnant\<rparr>);
                          set_refills sc_ptr (schedule_used full (new_head # (tl refills)) used)
                       od
               od
@@ -264,7 +264,6 @@ where
      when sched $ do
        ts \<leftarrow> thread_get tcb_state tptr;
 
-       cur_time \<leftarrow> gets cur_time;
        ready \<leftarrow> refill_ready sc_ptr;
 
        sufficient \<leftarrow> refill_sufficient sc_ptr 0;
@@ -424,21 +423,19 @@ where
     sc \<leftarrow> get_sched_context csc;
     when (0 < sc_refill_max sc) $ do
       when (0 < consumed) $ do
-        curtime \<leftarrow> gets cur_time;
         sufficient \<leftarrow> return $ sufficient_refills consumed (sc_refills sc);
         ready \<leftarrow> sc_refill_ready sc;
         assert sufficient;
         assert ready;   \<comment> \<open>asserting ready & sufficient\<close>
         robin \<leftarrow> is_round_robin csc;
         if robin then
-        let new = ((refill_hd sc) \<lparr> r_time := r_time (refill_hd sc) + consumed,
-                                    r_amount := sc_budget sc \<rparr>) in
+        let new = \<lparr> r_time = r_time (refill_hd sc) + consumed,
+                                    r_amount = sc_budget sc \<rparr> in
         set_refills csc [new]
       else refill_budget_check consumed;
         sc2 \<leftarrow> get_sched_context csc;
-        curtime2 \<leftarrow> gets cur_time;
         sufficient2 \<leftarrow> return $ sufficient_refills 0 (sc_refills sc2);
-        ready2 \<leftarrow> sc_refill_ready sc;
+        ready2 \<leftarrow> sc_refill_ready sc2;
         assert sufficient2;
         assert ready2  \<comment> \<open>asserting ready & sufficient again\<close>
       od;
