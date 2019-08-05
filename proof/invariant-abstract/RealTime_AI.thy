@@ -1087,7 +1087,7 @@ lemma postpone_typ_at[wp]:
 lemma refill_unblock_check_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> refill_unblock_check param_a \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   by (wpsimp simp: refill_unblock_check_def set_refills_def get_refills_def is_round_robin_def
-                   get_sched_context_def
+                   get_sched_context_def refill_ready_def
                wp: hoare_drop_imp get_object_wp)
 
 lemma schedule_tcb_is_original_cap[wp]:
