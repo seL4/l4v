@@ -34,6 +34,7 @@ you will need to install the following packages:
 ```bash
 sudo apt-get install \
     haskell-stack python python-pip python-dev \
+    python3 python3-pip python3-dev \
     mlton-compiler gcc-arm-none-eabi \
     build-essential libxml2-utils ccache ncurses-dev librsvg2-bin \
     device-tree-compiler cmake ninja-build curl zlib1g-dev \
@@ -43,6 +44,8 @@ sudo apt-get install \
 ```bash
 sudo pip install --upgrade pip
 sudo pip install sel4-deps
+sudo pip3 install --upgrade pip
+sudo pip3 install sel4-deps
 ```
 
 On **Debian Stretch**, install the above packages as well as:
