@@ -1116,6 +1116,14 @@ lemma decode_frame_invocation_wf[wp]:
                    valid_unmap_def wellformed_mapdata_def vmsz_aligned_def
             split: option.split)
 
+lemma neg_mask_user_region:
+  "p \<in> user_region \<Longrightarrow> p && ~~mask n \<in> user_region"
+  apply (simp add: user_region_def canonical_user_def word_bool_alg.conj_ac
+              flip: and_mask_0_iff_le_mask)
+  apply (subst word_bool_alg.conj_assoc[symmetric])
+  apply simp
+  done
+
 lemma decode_pt_inv_map_wf[wp]:
   "arch_cap = PageTableCap pt_ptr pt_map_data \<Longrightarrow>
    \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
@@ -1130,7 +1138,8 @@ lemma decode_pt_inv_map_wf[wp]:
   apply (rename_tac level p)
   apply (prop_tac "args!0 \<in> user_region")
    apply (simp add: wellformed_mapdata_def user_region_def user_vtop_canonical_user)
-  apply (rule conjI, clarsimp simp: valid_arch_cap_def wellformed_mapdata_def vspace_for_asid_def)
+  apply (rule conjI, clarsimp simp: valid_arch_cap_def wellformed_mapdata_def vspace_for_asid_def
+                                    neg_mask_user_region)
   apply (rule conjI, clarsimp simp: is_arch_update_def is_cap_simps cap_master_cap_simps)
   apply (simp add: ptrFromPAddr_addr_from_ppn cap_aligned_def)
   apply (drule (1) pt_lookup_slot_vs_lookup_slotI)

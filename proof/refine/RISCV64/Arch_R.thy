@@ -755,21 +755,15 @@ lemma decode_page_table_inv_corres:
                 apply (case_tac old_pte; simp)
                apply (rule corres_trivial, simp)
               apply simp
-             apply (rule corres_splitEE[where r'=dc])
-                prefer 2
-                apply (rule corres_whenE)
-                  apply (simp add: is_aligned_mask)
-                 apply (rule corres_trivial, simp)
-                apply simp
-               apply (rule corres_trivial, rule corres_returnOk)
-               apply (clarsimp simp: archinv_relation_def page_table_invocation_map_def
-                                     ucast_ucast_mask)
-               apply (subst word_le_mask_eq; simp?)
-               apply (rule leq_mask_shift)
-               apply (simp add: bit_simps le_mask_high_bits word_size)
-              apply ((clarsimp cong: if_cong
-                       | wp hoare_whenE_wp hoare_vcg_all_lift_R getPTE_wp get_pte_wp
-                       | wp (once) hoare_drop_imps)+)
+             apply (rule corres_trivial, rule corres_returnOk)
+             apply (clarsimp simp: archinv_relation_def page_table_invocation_map_def
+                                   ucast_ucast_mask)
+             apply (subst word_le_mask_eq; simp?)
+             apply (rule leq_mask_shift)
+             apply (simp add: bit_simps le_mask_high_bits word_size)
+            apply ((clarsimp cong: if_cong
+                     | wp hoare_whenE_wp hoare_vcg_all_lift_R getPTE_wp get_pte_wp
+                     | wp (once) hoare_drop_imps)+)
     apply (clarsimp simp: invs_vspace_objs invs_valid_asid_table invs_psp_aligned invs_distinct)
     apply (clarsimp simp: valid_cap_def wellformed_mapdata_def not_le below_user_vtop_in_user_region)
     apply (rule conjI)
@@ -1370,7 +1364,7 @@ lemma decode_page_table_inv_wf[wp]:
   apply (rule conjI; clarsimp)
   apply (drule ctes_of_valid', fastforce)+
   apply (clarsimp simp: valid_cap'_def)
-  apply (simp add: wellformed_mapdata'_def below_pptrUserTop_in_user_region)
+  apply (simp add: wellformed_mapdata'_def below_pptrUserTop_in_user_region neg_mask_user_region)
   done
 
 lemma capMaster_isPageTableCap:
