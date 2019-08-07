@@ -286,12 +286,6 @@ primrec valid_pte :: "vm_level \<Rightarrow> pte \<Rightarrow> 'z::state_ext sta
 | "valid_pte level (PageTablePTE ppn _) =
      (\<lambda>s. typ_at (AArch APageTable) (ptrFromPAddr (addr_from_ppn ppn)) s \<and> 0 < level)"
 
-(* Kernel mappings go from pptr base to top of virtual memory. This definition encompasses
-   the kernel window, kernel ELF window, and kernel device window.
-   These indices identify the relevant top level table slots. *)
-definition kernel_mapping_slots :: "pt_index set" where
-  "kernel_mapping_slots \<equiv> {i. i \<ge> ucast (pptr_base >> pt_bits_left max_pt_level)}"
-
 primrec valid_vspace_obj :: "vm_level \<Rightarrow> arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_vspace_obj _ (ASIDPool pool) =
    (\<lambda>s. \<forall>x \<in> ran pool. typ_at (AArch APageTable) x s)"
