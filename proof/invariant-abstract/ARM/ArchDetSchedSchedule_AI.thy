@@ -307,13 +307,13 @@ lemma arch_perform_invocation_valid_sched [wp, DetSchedSchedule_AI_assms]:
   done
 
 crunches handle_arch_fault_reply, handle_vm_fault
-for valid_sched [wp, DetSchedSchedule_AI_assms]: "valid_sched::det_state \<Rightarrow> _"
-and not_queued [wp, DetSchedSchedule_AI_assms]: "not_queued t"
-and not_in_release_q [wp, DetSchedSchedule_AI_assms]: "not_in_release_q t"
-and sched_act_not [wp, DetSchedSchedule_AI_assms]: "scheduler_act_not t"
-and simple_sched_action [wp, DetSchedSchedule_AI_assms]: simple_sched_action
-and ct[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
-  (ignore: getFAR getDFSR getIFSR simp: not_in_release_q_def)
+  for valid_sched [wp, DetSchedSchedule_AI_assms]: "valid_sched::det_state \<Rightarrow> _"
+  and not_queued [wp, DetSchedSchedule_AI_assms]: "not_queued t"
+  and not_in_release_q [wp, DetSchedSchedule_AI_assms]: "not_in_release_q t"
+  and sched_act_not [wp, DetSchedSchedule_AI_assms]: "scheduler_act_not t"
+  and simple_sched_action [wp, DetSchedSchedule_AI_assms]: simple_sched_action
+  and ct[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
+    (ignore: getFAR getDFSR getIFSR simp: not_in_release_q_def)
 
 crunches handle_arch_fault_reply, arch_get_sanitise_register_info
  for valid_ep_q [wp, DetSchedSchedule_AI_assms]: valid_ep_q
@@ -334,12 +334,11 @@ crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
   arch_invoke_irq_control "valid_sched :: det_ext state \<Rightarrow> bool"
 
 crunches arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread
-for valid_list [wp, DetSchedSchedule_AI_assms]: "valid_list"
-and not_queued [wp, DetSchedSchedule_AI_assms]: "not_queued t"
-and not_in_release_q [wp, DetSchedSchedule_AI_assms]: "not_in_release_q t"
-and sc_not_queued [wp, DetSchedSchedule_AI_assms]: "sc_not_in_ready_q t"
-and sc_not_in_release_q [wp, DetSchedSchedule_AI_assms]: "sc_not_in_release_q t"
-
+  for valid_list [wp, DetSchedSchedule_AI_assms]: "valid_list"
+  and not_queued [wp, DetSchedSchedule_AI_assms]: "not_queued t"
+  and not_in_release_q [wp, DetSchedSchedule_AI_assms]: "not_in_release_q t"
+  and sc_not_queued [wp, DetSchedSchedule_AI_assms]: "sc_not_in_ready_q t"
+  and sc_not_in_release_q [wp, DetSchedSchedule_AI_assms]: "sc_not_in_release_q t"
 
 crunch cur_tcb [wp, DetSchedSchedule_AI_assms]: handle_arch_fault_reply, handle_vm_fault, arch_get_sanitise_register_info, arch_post_modify_registers cur_tcb
 
@@ -392,7 +391,6 @@ crunches arch_switch_to_thread, arch_switch_to_idle_thread
   and cur_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
   and rollback_safe[wp, DetSchedSchedule_AI_assms]: rollback_safe
   (simp: crunch_simps)
-
 
 lemma handle_vm_fault_valid_machine_time[DetSchedSchedule_AI_assms]:
   "handle_vm_fault a b \<lbrace>valid_machine_time\<rbrace>"

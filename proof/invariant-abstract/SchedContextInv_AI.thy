@@ -13,6 +13,9 @@ theory SchedContextInv_AI
 
 begin
 
+lemmas MIN_BUDGET_nonzero = MIN_BUDGET_pos[simplified word_neq_0_conv[symmetric]]
+
+lemmas sufficient_refills_defs = sufficient_refills_def refills_capacity_def
 
 lemma tcb_yield_to_noncap: "tcb_at p s \<Longrightarrow>
   obj_at (same_caps (TCB (tcb_yield_to_update (\<lambda>y. new) (the (get_tcb p s))))) p s"
@@ -628,8 +631,7 @@ where
   | "valid_sched_context_inv (InvokeSchedContextYieldTo scptr args)
      = (\<lambda>s. ex_nonz_cap_to scptr s
             \<and> bound_yt_tcb_at ((=) None) (cur_thread s) s
-            \<and> sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scptr s
-(*            \<and> (\<forall>t\<in>set (release_queue s). bound_sc_tcb_at (\<lambda>p. p \<noteq> Some scptr) t s)*))"
+            \<and> sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scptr s)"
 
 definition
   valid_refills_number :: "nat \<Rightarrow> nat \<Rightarrow> bool"
@@ -711,10 +713,10 @@ lemma valid_refills_kheap_tcb_update[iff]:
   "tcb_at t s \<Longrightarrow> valid_refills p b (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = valid_refills p b s"
   by (clarsimp simp: valid_refills_def obj_at_def is_tcb)
 
-(* FIXME move *)
-lemmas MIN_BUDGET_nonzero = MIN_BUDGET_pos[simplified word_neq_0_conv[symmetric]]
-
-lemmas sufficient_refills_defs = sufficient_refills_def refills_capacity_def
+crunches tcb_sched_action,set_scheduler_action, refill_capacity, refill_sufficient,
+tcb_release_enqueue, tcb_release_remove, refill_ready, reschedule_required, possible_switch_to
+  for valid_refills[wp]: "valid_refills scp budget"
+  (wp: dxo_wp_weak hoare_vcg_if_lift2 crunch_wps)
 
 crunch valid_refills[wp]: tcb_sched_action,set_scheduler_action,refill_capacity,refill_sufficient
    "valid_refills scp budget"
@@ -1786,7 +1788,6 @@ crunches set_thread_state_act
   and bound_yt_tcb_at_ct[wp]: "\<lambda>s. bound_yt_tcb_at P (cur_thread s) s"
   and sc_tcb_sc_at_ct[wp]: "\<lambda>s. sc_tcb_sc_at (P (cur_thread s)) t s"
   and release_queue[wp]: "\<lambda>s. P (release_queue s)"
-  and not_linked[wp]: "\<lambda>s. \<forall>t\<in> set (release_queue s). bound_sc_tcb_at P t s"
 
 context begin
 

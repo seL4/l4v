@@ -170,25 +170,25 @@ abbreviation
   weak_budget_ready :: "obj_ref \<Rightarrow> time \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "weak_budget_ready thread u \<equiv>
-    (\<lambda>s. bound_sc_tcb_at (\<lambda>ko. \<exists>scp. ko = Some scp \<and> is_refill_ready scp u s) thread s)"
+    (\<lambda>s. bound_sc_tcb_at (\<lambda>p. \<exists>scp. p = Some scp \<and> is_refill_ready scp u s) thread s)"
 
 abbreviation
   budget_ready :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "budget_ready thread \<equiv>
-    (\<lambda>s. bound_sc_tcb_at (\<lambda>ko. \<exists>scp. ko = Some scp \<and> is_refill_ready scp 0 s) thread s)"
+    (\<lambda>s. bound_sc_tcb_at (\<lambda>p. \<exists>scp. p = Some scp \<and> is_refill_ready scp 0 s) thread s)"
 
 abbreviation
   budget_sufficient :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "budget_sufficient thread \<equiv>
-    (\<lambda>s. bound_sc_tcb_at (\<lambda>ko. \<exists>scp. ko = Some scp \<and> is_refill_sufficient scp 0 s) thread s)"
+    (\<lambda>s. bound_sc_tcb_at (\<lambda>p. \<exists>scp. p = Some scp \<and> is_refill_sufficient scp 0 s) thread s)"
 
 definition refill_ready_kh :: "time \<Rightarrow> obj_ref \<Rightarrow> time \<Rightarrow> (32 word \<Rightarrow> kernel_object option) \<Rightarrow> bool"
 where
-  "refill_ready_kh curtime scp constime kh \<equiv>
+  "refill_ready_kh curtime scp consumed kh \<equiv>
      case kh scp of
-      Some (SchedContext sc _) \<Rightarrow> (r_time (refill_hd sc)) \<le> curtime - constime + kernelWCET_ticks
+      Some (SchedContext sc _) \<Rightarrow> (r_time (refill_hd sc)) \<le> curtime - consumed + kernelWCET_ticks
     | _ \<Rightarrow> False"
 
 abbreviation
@@ -210,9 +210,9 @@ lemma budget_ready_kh_simp[simp]:
 abbreviation
   weak_budget_ready_kh :: "time \<Rightarrow> obj_ref \<Rightarrow> time \<Rightarrow> (32 word \<Rightarrow> kernel_object option) \<Rightarrow> bool"
 where
-  "weak_budget_ready_kh curtime t constime kh \<equiv>
+  "weak_budget_ready_kh curtime t consumed kh \<equiv>
     bound_sc_tcb_at_kh (\<lambda>ko. \<exists>scp. ko = Some scp
-                                \<and> refill_ready_kh curtime scp constime kh) t kh"
+                                \<and> refill_ready_kh curtime scp consumed kh) t kh"
 
 lemma weak_budget_ready_kh_simp[simp]:
   "weak_budget_ready_kh (cur_time s) tptr u (kheap s) = weak_budget_ready tptr u s"
@@ -561,11 +561,6 @@ lemma refill_ready_tcb_simp3:
                  get_tcb_rev refill_prop_defs
           split: option.splits)
 
-(* tentatively, should be included in valid_release_q
-definition sorted_release_q:: "'z::state_ext state \<Rightarrow> bool"
-where "sorted_release_q \<equiv> (\<lambda>s.  sorted_wrt (\<lambda>t t'. tcb_ready_time t s \<le> tcb_ready_time t' s) (release_queue s))"
-*)
-
 definition tcb_ready_time_kh :: "obj_ref \<Rightarrow> (32 word \<Rightarrow> kernel_object option) \<Rightarrow> time"
 where
   "tcb_ready_time_kh t kh \<equiv>
@@ -710,7 +705,7 @@ definition schedulable_ep_q_2 where
 
 abbreviation schedulable_ep_q :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "schedulable_ep_q eptr s \<equiv> schedulable_ep_q_2 eptr (cur_thread s) (idle_thread s) (cur_time s) (kheap s)"
-(* do we really want to add this to valid_sched? do we want to talk about all the endpointers? *)
+(* do we really want to add this to valid_sched? do we want to talk about all the endpoints? *)
 
 (* does this work? *)
 definition valid_ep_q_2 where
@@ -828,9 +823,9 @@ definition weak_valid_sched_action_2' where
 definition weak_valid_sched_action_2 where
   "weak_valid_sched_action_2 sa kh curtime release_q\<equiv>
     \<forall>t. sa = switch_thread t \<longrightarrow>
-    st_tcb_at_kh runnable t kh
-                           \<and> budget_sufficient_kh t kh \<and> budget_ready_kh curtime t kh \<and>
-    active_sc_tcb_at_kh t kh \<and> \<not> t \<in> set release_q"
+              st_tcb_at_kh runnable t kh \<and>
+              budget_sufficient_kh t kh \<and> budget_ready_kh curtime t kh \<and>
+              active_sc_tcb_at_kh t kh \<and> \<not> t \<in> set release_q"
 
 abbreviation weak_valid_sched_action:: "'z state \<Rightarrow> bool" where
   "weak_valid_sched_action s \<equiv> weak_valid_sched_action_2 (scheduler_action s) (kheap s) (cur_time s)(release_queue s)"
@@ -847,13 +842,11 @@ abbreviation switch_in_cur_domain:: "'z state \<Rightarrow> bool" where
 lemmas switch_in_cur_domain_def = switch_in_cur_domain_2_def
 
 definition rollback_safe_2 where
-  "rollback_safe_2 reprogt curtime constime kh readyqs schedact \<equiv> (\<not> reprogt \<longrightarrow>
+  "rollback_safe_2 reprogt curtime consumed kh readyqs schedact \<equiv> (\<not> reprogt \<longrightarrow>
                         (\<forall>t. (\<exists>d p. in_queue_2 (readyqs d p) t) \<or>
-                             (schedact = switch_thread t)(*\<or>
-                             (\<exists>epptr ep. kh epptr = Some (Endpoint ep) \<and> t \<in> set (ep_queue ep) \<and>
-                                         bound_sc_tcb_at_kh bound t kh) *)\<longrightarrow>
-                             weak_budget_ready_kh curtime t constime kh))
-                         \<and> (constime \<le> curtime)"
+                             (schedact = switch_thread t) \<longrightarrow>
+                             weak_budget_ready_kh curtime t consumed kh))
+                         \<and> (consumed \<le> curtime)"
 
 abbreviation rollback_safe where
   "rollback_safe s \<equiv> rollback_safe_2 (reprogram_timer s) (cur_time s) (consumed_time s) (kheap s)
@@ -950,7 +943,7 @@ abbreviation valid_sched_except_blocked_except_wk_sched_action :: "det_ext state
 definition weak_valid_sched_action_except_2 where
   "weak_valid_sched_action_except_2 thread sa kh curtime release_q\<equiv>
     \<forall>t. t \<noteq> thread \<longrightarrow> sa = switch_thread t \<longrightarrow>
-    st_tcb_at_kh runnable t kh \<and> (*bound_sc_tcb_at_kh bound t kh*)
+    st_tcb_at_kh runnable t kh \<and>
     budget_ready_kh curtime t kh \<and> budget_sufficient_kh t kh \<and>
     active_sc_tcb_at_kh t kh \<and> \<not> t \<in> set release_q"
 
@@ -1007,18 +1000,12 @@ definition valid_reply_scs where
                          (\<forall>scptr r. reply_sc_reply_at (\<lambda>scopt. scopt = Some scptr) r s
                                \<longrightarrow> test_sc_refill_max scptr s)"
 
-(* ct_in_q, runnable then in a ready_queue *)
-(* FIXME rename *)
+(* ct_in_q, if ct is schedulable then in a ready_queue *)
 definition ct_in_q where
   "ct_in_q s \<equiv>
        (st_tcb_at runnable (cur_thread s) s
          \<and> active_sc_tcb_at (cur_thread s) s \<and> not_in_release_q (cur_thread s) s)
               \<longrightarrow> (\<exists>d p. cur_thread s \<in> set (ready_queues s d p))"
-
-(* ct_in_q', either in a ready_queue or the release_queue *)
-definition ct_in_q' where
-  "ct_in_q' s \<equiv> st_tcb_at runnable (cur_thread s) s
-     \<longrightarrow> (\<exists>d p. cur_thread s \<in> set (ready_queues s d p) \<or> cur_thread s \<in> set (release_queue s))"
 
 (* next_thread *)
 definition next_thread where
@@ -1088,11 +1075,6 @@ where
   "sc_not_in_release_q scp s \<equiv> sc_with_tcb_prop scp not_in_release_q s"
 
 abbreviation
-  sc_not_in_release_q'
-where
-  "sc_not_in_release_q' scp P s \<equiv> sc_with_tcb_prop scp (\<lambda>t s. not_in_release_q t s \<longrightarrow> P t s)"
-
-abbreviation
   release_q_not_linked
 where
   "release_q_not_linked scp s \<equiv>
@@ -1108,32 +1090,30 @@ where
   "sc_not_in_ready_q scp s \<equiv> sc_with_tcb_prop scp not_queued s"
 
 abbreviation
-  sc_not_in_ready_q'
-where
-  "sc_not_in_ready_q' scp P s \<equiv> sc_with_tcb_prop scp (\<lambda>t s. not_queued t s \<longrightarrow> P t s)"
-
-abbreviation
   sc_scheduler_act_not
 where
   "sc_scheduler_act_not scp s \<equiv> sc_with_tcb_prop scp scheduler_act_not s"
-
-abbreviation
-  sc_scheduler_act_not'
-where
-  "sc_scheduler_act_not' scp P s \<equiv> sc_with_tcb_prop scp (\<lambda>t s. scheduler_act_not t s \<longrightarrow> P t s)"
 
 abbreviation
   sc_not_in_ep_q
 where
   "sc_not_in_ep_q scp s \<equiv> sc_with_tcb_prop scp (\<lambda>tp s. \<not> in_ep_q tp s) s"
 
-abbreviation
-  sc_not_in_ep_q'
-where
-  "sc_not_in_ep_q' scp P s \<equiv> sc_with_tcb_prop scp (\<lambda>t s. \<not> in_ep_q t s \<longrightarrow> P t s)"
-
-
 (*********)
+
+lemma sc_with_tcb_prop_rev:
+   "\<lbrakk>ko_at (SchedContext sc n) scp s; sc_tcb sc = Some tp; sc_with_tcb_prop scp P s; invs s\<rbrakk>
+  \<Longrightarrow> P tp s"
+   by (fastforce simp: pred_tcb_at_def obj_at_def dest!: invs_sym_refs sym_ref_sc_tcb)
+
+
+lemma sc_with_tcb_prop_rev':
+   "\<lbrakk>sc_tcb_sc_at ((=) (Some tp)) scp s; sc_with_tcb_prop scp P s; invs s\<rbrakk>
+  \<Longrightarrow> P tp s"
+  apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
+  apply (drule sym[where t="sc_tcb _"])
+  by (rule sc_with_tcb_prop_rev, clarsimp simp: pred_tcb_at_def obj_at_def)
+
 (* FIXME move maybe *)
 lemma tcb_ready_time_scheduler_action_update[simp]:
   "tcb_ready_time t (s\<lparr>scheduler_action := param_a\<rparr>) = tcb_ready_time t s"
@@ -1262,6 +1242,49 @@ lemma tcb_ready_time_thread_ipcframe_update[simp]:
   by (fastforce simp: tcb_ready_time_def active_sc_tcb_at_defs get_tcb_rev get_tcb_def
                   split: option.splits if_splits kernel_object.splits)
 
+lemma tcb_ready_time_kh_thread_state_update[simp]:
+  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
+     tcb_ready_time_kh x
+            (kheap s(tp \<mapsto> TCB (tcb\<lparr>tcb_state := ts\<rparr>)))
+        = tcb_ready_time_kh x (kheap s)"
+  by (fastforce simp: tcb_ready_time_kh_def active_sc_tcb_at_defs split: option.splits)
+
+lemma tcb_ready_time_kh_tcb_bn_update[simp]:
+  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
+     tcb_ready_time_kh x
+            (kheap s(tp \<mapsto> TCB (tcb\<lparr>tcb_bound_notification := ntfn\<rparr>)))
+        = tcb_ready_time_kh x (kheap s)"
+  by (fastforce simp: tcb_ready_time_kh_def active_sc_tcb_at_defs split: option.splits)
+
+lemma tcb_ready_time_kh_tcb_arch_update[simp]:
+  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
+     tcb_ready_time_kh x
+            (kheap s(tp \<mapsto> TCB (tcb\<lparr>tcb_arch := ntfn\<rparr>)))
+        = tcb_ready_time_kh x (kheap s)"
+  by (fastforce simp: tcb_ready_time_kh_def active_sc_tcb_at_defs split: option.splits)
+
+lemma tcb_ready_time_kh_tcb_sc_update:
+  "\<lbrakk>kheap s tp = Some (TCB tcb);
+    tcb_sched_context tcb = Some scp; kheap s scp = Some (SchedContext sc n);
+    scopt = Some scp'; kheap s scp' = Some (SchedContext sc' n');
+    r_time (refill_hd sc) = r_time (refill_hd sc') \<rbrakk> \<Longrightarrow>
+     tcb_ready_time_kh x
+            (kheap s(tp \<mapsto> TCB (tcb\<lparr>tcb_sched_context := scopt\<rparr>)))
+        = tcb_ready_time_kh x (kheap s)"
+  by (fastforce simp: tcb_ready_time_kh_def active_sc_tcb_at_defs split: option.splits kernel_object.splits)
+
+lemma tcb_ready_time_kh_tcb_yt_update[simp]:
+  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
+     tcb_ready_time_kh x
+            (kheap s(tp \<mapsto> TCB (tcb\<lparr>tcb_yield_to := ntfn\<rparr>)))
+        = tcb_ready_time_kh x (kheap s)"
+  by (fastforce simp: tcb_ready_time_kh_def active_sc_tcb_at_defs split: option.splits)
+
+lemmas tcb_ready_time_kh_update' = tcb_ready_time_kh_thread_state_update[simplified fun_upd_def]
+                                   tcb_ready_time_kh_tcb_bn_update[simplified fun_upd_def]
+                                   tcb_ready_time_kh_tcb_yt_update[simplified fun_upd_def]
+                                   tcb_ready_time_kh_tcb_arch_update[simplified fun_upd_def]
+declare tcb_ready_time_kh_update'[simp]
 
 (* FIXME move maybe *)
 lemma sorted_release_q_scheduler_action_update[simp]:
@@ -1448,10 +1471,10 @@ lemma test_sc_refill_max_kh_if_split:
      (rename_tac ko; case_tac ko; clarsimp)
 
 lemma refill_ready_kh_if_split:
-  "refill_ready_kh curtime ptr constime (\<lambda>p. if p = ref then x else kh p)
+  "refill_ready_kh curtime ptr consumed (\<lambda>p. if p = ref then x else kh p)
      = (if ptr = ref then (\<exists>sc n. x = Some (SchedContext sc n)
-              \<and> (r_time (refill_hd sc)) \<le> curtime - constime + kernelWCET_ticks)
-        else refill_ready_kh curtime ptr constime kh)"
+              \<and> (r_time (refill_hd sc)) \<le> curtime - consumed + kernelWCET_ticks)
+        else refill_ready_kh curtime ptr consumed kh)"
   by (clarsimp simp: refill_ready_kh_def split: option.splits)
      (rename_tac ko; case_tac ko; clarsimp)
 
@@ -1729,11 +1752,11 @@ lemma valid_sched_action_lift_pre_conj:
 lemmas valid_sched_action_lift = valid_sched_action_lift_pre_conj[where R = \<top>, simplified]
 
 lemma valid_idle_etcb_lift_pre_conj:
-  assumes d: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
+  assumes d: "\<And>P t. \<lbrace>\<lambda>s. etcb_at P t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. etcb_at P t s\<rbrace>"
     shows "\<lbrace>\<lambda>s. valid_idle_etcb s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_idle_etcb\<rbrace>"
-  by (wpsimp wp: d)
+  by (wpsimp wp: d simp: valid_idle_etcb_def)
 
-lemmas valid_idle_etcb_lift = valid_idle_etcb_lift_pre_conj[where R = \<top>, simplified]
+lemmas valid_idle_etcb_lift[wp] = valid_idle_etcb_lift_pre_conj[where R = \<top>, simplified]
 
 lemma valid_sched_lift_pre_conj:
   assumes a: "\<And>Q t. \<lbrace>\<lambda>s. (st_tcb_at Q t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. (st_tcb_at Q t s)\<rbrace>"

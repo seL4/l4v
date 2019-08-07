@@ -3671,6 +3671,11 @@ lemma not_pred_tcb:
   apply (auto split: kernel_object.splits)
   done
 
+lemma st_tcb_at_not:
+  "st_tcb_at (\<lambda>st. \<not> P st) t s = (\<not> st_tcb_at P t s \<and> tcb_at t s)"
+  apply (clarsimp simp: not_pred_tcb)
+  apply (fastforce simp: st_tcb_at_tcb_at)
+  done
 
 lemma only_idle_arch [iff]:
   "only_idle (arch_state_update f s) = only_idle s"
@@ -4452,6 +4457,11 @@ lemma not_BlockedOnReply_not_in_replies_blocked:
 lemma runnable_eq:
   "runnable st = (st = Running \<or> st = Restart)"
   by (cases st) auto
+
+lemma runnable_eq_active: "runnable = active"
+  apply (rule ext)
+  apply (case_tac st, simp_all)
+  done
 
 lemma sc_atD1:
   "sc_at t s \<Longrightarrow> (\<exists>sc n. kheap s t = Some (SchedContext sc n))"

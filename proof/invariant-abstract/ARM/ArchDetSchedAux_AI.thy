@@ -893,7 +893,6 @@ and release_queue[wp]: "\<lambda>s :: det_ext state. P (release_queue s)"
  (wp: crunch_wps simp: crunch_simps detype_def wrap_ext_det_ext_ext_def cap_insert_ext_def
   ignore: freeMemory)
 
-(* FIXME: move *)
 lemma tcb_ready_time_def2:
   "(\<lambda>s. P (tcb_ready_time t s) \<and> active_sc_tcb_at t s) = (\<lambda>s.
           (\<exists>scp. bound_sc_tcb_at (\<lambda>sc. sc = Some scp) t s
@@ -1091,9 +1090,9 @@ lemma perform_asid_control_invocation_valid_sched:
   done
 
 crunches init_arch_objects
-for valid_ready_qs[wp]: "valid_ready_qs :: det_ext state \<Rightarrow> _"
-and valid_release_q[wp]: "valid_release_q :: det_ext state \<Rightarrow> _"
-  (wp: valid_ready_qs_lift valid_release_q_lift crunch_wps)
+  for valid_ready_qs[wp]: "valid_ready_qs :: det_ext state \<Rightarrow> _"
+  and valid_release_q[wp]: "valid_release_q :: det_ext state \<Rightarrow> _"
+    (wp: valid_ready_qs_lift valid_release_q_lift crunch_wps)
 
 (* FIXME remove duplication *)
 lemma set_pt_active_sc_tcb_at[wp]:

@@ -136,8 +136,7 @@ lemma (in Schedule_AI) stt_activatable:
      apply (rule hoare_post_imp [OF _ arch_stt_runnable])
      apply (clarsimp elim!: pred_tcb_weakenE)
     apply (rule assert_inv)
-   apply (wp hoare_drop_imp)+
-  apply assumption
+   apply (wpsimp wp: hoare_drop_imp)+
   done
 
 (* FIXME move *)

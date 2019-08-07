@@ -1474,7 +1474,7 @@ crunches check_budget_restart
    simp: crunch_simps)
 
 crunches
-  possible_switch_to, do_ipc_transfer, maybe_donate_sc, handle_fault_reply,postpone
+  possible_switch_to, do_ipc_transfer, maybe_donate_sc, handle_fault_reply, postpone
   for ct_in_state[wp]: "ct_in_state P :: 'state_ext state \<Rightarrow> _"
   (rule: ct_in_state_thread_state_lift wp: crunch_wps simp: crunch_simps)
 

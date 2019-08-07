@@ -467,7 +467,6 @@ and active_sc_tcb_at'[wp]: "\<lambda>s. P (active_sc_tcb_at t s)"
 and sorted_release_q[wp]: sorted_release_q
 and valid_release_q[wp]: valid_release_q
 
-
 crunch valid_blocked[wp]: create_cap, cap_insert, set_cap "valid_blocked::det_state \<Rightarrow> _"
   (wp: crunch_wps valid_blocked_lift set_cap_typ_at hoare_drop_imps simp: crunch_simps)
 
@@ -573,8 +572,6 @@ lemma valid_sched_tcb_state_preservation:
   assumes bound_sc: "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
   assumes budget_s: "\<And>t. \<lbrace>\<lambda>s. (budget_sufficient t s)\<rbrace> f \<lbrace>\<lambda>rv s. (budget_sufficient t s)\<rbrace>"
   assumes budget_r: "\<And>t. \<lbrace>\<lambda>s. (budget_ready t s)\<rbrace> f \<lbrace>\<lambda>rv s. (budget_ready t s)\<rbrace>"
-      and time': "\<And>P t t'. \<lbrace>\<lambda>a. P (tcb_ready_time t a)(tcb_ready_time t' a) \<rbrace> f
-                  \<lbrace>\<lambda>rv a. P (tcb_ready_time t a)(tcb_ready_time t' a)\<rbrace>"
       and time: "\<And>P t. \<lbrace>\<lambda>a. P (tcb_ready_time t a)\<rbrace> f
                   \<lbrace>\<lambda>rv a. P (tcb_ready_time t a)\<rbrace>"
   assumes cur_thread: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
@@ -817,13 +814,6 @@ proof -
     done
 qed
 
-lemma valid_idle_etcb_lift:
-  assumes "\<And>P t. \<lbrace>\<lambda>s. etcb_at P t s\<rbrace> f \<lbrace>\<lambda>r s. etcb_at P t s\<rbrace>"
-  shows "\<lbrace>valid_idle_etcb\<rbrace> f \<lbrace>\<lambda>r. valid_idle_etcb\<rbrace>"
-  apply(simp add: valid_idle_etcb_def)
-  apply(wp assms)
-  done
-
 (* sorted_release_q lemmas *)
 crunches set_thread_state_act
 for sorted_release_q[wp]: "sorted_release_q::det_state \<Rightarrow> _"
@@ -859,54 +849,6 @@ lemma set_sc_replies_sorted_release_q[wp]:
   apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def set_object_def
                   wp: get_object_wp simp_del: fun_upd_apply)
   by (clarsimp simp: valid_release_q_def obj_at_def) solve_sorted_release_q
-
-(* FIXME move *)
-lemma tcb_ready_time_kh_thread_state_update[simp]:
-  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
-     tcb_ready_time_kh x
-            (kheap s(tp \<mapsto> TCB (tcb\<lparr>tcb_state := ts\<rparr>)))
-        = tcb_ready_time_kh x (kheap s)"
-  by (fastforce simp: tcb_ready_time_kh_def active_sc_tcb_at_defs split: option.splits)
-
-(* FIXME move *)
-lemma tcb_ready_time_kh_tcb_bn_update[simp]:
-  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
-     tcb_ready_time_kh x
-            (kheap s(tp \<mapsto> TCB (tcb\<lparr>tcb_bound_notification := ntfn\<rparr>)))
-        = tcb_ready_time_kh x (kheap s)"
-  by (fastforce simp: tcb_ready_time_kh_def active_sc_tcb_at_defs split: option.splits)
-
-(* FIXME move *)
-lemma tcb_ready_time_kh_tcb_arch_update[simp]:
-  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
-     tcb_ready_time_kh x
-            (kheap s(tp \<mapsto> TCB (tcb\<lparr>tcb_arch := ntfn\<rparr>)))
-        = tcb_ready_time_kh x (kheap s)"
-  by (fastforce simp: tcb_ready_time_kh_def active_sc_tcb_at_defs split: option.splits)
-
-(* FIXME move *)
-lemma tcb_ready_time_kh_tcb_sc_update:
-  "\<lbrakk>kheap s tp = Some (TCB tcb);
-    tcb_sched_context tcb = Some scp; kheap s scp = Some (SchedContext sc n);
-    scopt = Some scp'; kheap s scp' = Some (SchedContext sc' n');
-    r_time (refill_hd sc) = r_time (refill_hd sc') \<rbrakk> \<Longrightarrow>
-     tcb_ready_time_kh x
-            (kheap s(tp \<mapsto> TCB (tcb\<lparr>tcb_sched_context := scopt\<rparr>)))
-        = tcb_ready_time_kh x (kheap s)"
-  by (fastforce simp: tcb_ready_time_kh_def active_sc_tcb_at_defs split: option.splits kernel_object.splits)
-
-lemma tcb_ready_time_kh_tcb_yt_update[simp]:
-  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
-     tcb_ready_time_kh x
-            (kheap s(tp \<mapsto> TCB (tcb\<lparr>tcb_yield_to := ntfn\<rparr>)))
-        = tcb_ready_time_kh x (kheap s)"
-  by (fastforce simp: tcb_ready_time_kh_def active_sc_tcb_at_defs split: option.splits)
-
-lemmas tcb_ready_time_kh_update' = tcb_ready_time_kh_thread_state_update[simplified fun_upd_def]
-                                   tcb_ready_time_kh_tcb_bn_update[simplified fun_upd_def]
-                                   tcb_ready_time_kh_tcb_yt_update[simplified fun_upd_def]
-                                   tcb_ready_time_kh_tcb_arch_update[simplified fun_upd_def]
-declare tcb_ready_time_kh_update'[simp]
 
 lemma sc_replies_update_tcb_ready_time_inv'[wp]:
   "\<lbrace>\<lambda>s. P (tcb_ready_time t s)\<rbrace>
@@ -981,10 +923,10 @@ for tcb_ready_time_inv'[wp]: "\<lambda>s::det_state. P (tcb_ready_time t s)"
   (wp: crunch_wps simp: crunch_simps)
 
 crunches create_cap, update_cdt
-for tcb_ready_time_inv'[wp]: "\<lambda>s::det_state. P (tcb_ready_time t s)"
-and sorted_release_q[wp]: "\<lambda>s::det_state. sorted_release_q s"
-and valid_release_q[wp]: "\<lambda>s::det_state. valid_release_q s"
-  (wp: crunch_wps simp: crunch_simps)
+  for tcb_ready_time_inv'[wp]: "\<lambda>s::det_state. P (tcb_ready_time t s)"
+  and sorted_release_q[wp]: "\<lambda>s::det_state. sorted_release_q s"
+  and valid_release_q[wp]: "\<lambda>s::det_state. valid_release_q s"
+    (wp: crunch_wps simp: crunch_simps)
 
 crunches set_untyped_cap_as_full
 for valid_release_q[wp]: valid_release_q
@@ -994,10 +936,6 @@ lemma cap_insert_valid_release_q[wp]:
    cap_insert new_cap src_slot dest_slot \<lbrace>\<lambda>_ . valid_release_q::det_state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: cap_insert_def update_sched_context_def set_object_def
                   wp: get_object_wp hoare_drop_imp simp_del: fun_upd_apply)
-
-
-lemma valid_release_imp_sorted: "valid_release_q s \<Longrightarrow> sorted_release_q s"
-  by (clarsimp simp: valid_release_q_def)
 
 context DetSchedAux_AI_det_ext begin
 
@@ -1030,9 +968,9 @@ lemma invoke_untyped_valid_sched:
 end
 
 crunches create_cap,cap_insert
-for valid_sched_action[wp]: "valid_sched_action :: det_ext state \<Rightarrow> bool"
-  (wp: crunch_wps valid_release_q_lift sorted_release_q_lift valid_sched_action_lift
-   ignore: create_cap_ext simp: crunch_simps)
+  for valid_sched_action[wp]: "valid_sched_action :: det_ext state \<Rightarrow> bool"
+    (wp: crunch_wps valid_release_q_lift sorted_release_q_lift valid_sched_action_lift
+     ignore: create_cap_ext simp: crunch_simps)
 
 crunch valid_sched[wp]: create_cap,cap_insert "valid_sched :: det_ext state \<Rightarrow> bool"
   (wp: valid_sched_lift simp: )
@@ -1119,13 +1057,6 @@ lemma etcb_of_eq[simp]:
 lemmas thread_get_prio_wp[wp] = thread_get_wp' [where f=tcb_priority]
 lemmas thread_get_dom_wp[wp] = thread_get_wp' [where f=tcb_domain]
 
-(* Move? *)
-lemma get_tcb_st_tcb_at:
-  "get_tcb t s = Some y \<Longrightarrow> st_tcb_at \<top> t s"
-  apply (simp add: get_tcb_def pred_tcb_at_def obj_at_def is_tcb
-              split: option.splits kernel_object.splits)
-  done
-
 lemma etcbs_of_update_unrelated:
   "\<lbrakk> kh ref = Some (TCB tcb); etcb_of tcb = etcb_of tcb' \<rbrakk> \<Longrightarrow>
   etcbs_of' (\<lambda>r. if r = ref then Some (TCB tcb') else kh r) = etcbs_of' kh"
@@ -1135,19 +1066,6 @@ lemma etcbs_of_update_state[simp]:
   "get_tcb ref s = Some tcb \<Longrightarrow>
   etcbs_of' (\<lambda>r. if r = ref then Some (TCB (tcb_state_update f tcb)) else kheap s r) = etcbs_of' (kheap s)"
   by (auto simp: etcbs_of_update_unrelated dest!: get_tcb_SomeD)
-
-(* FIXME move *)
-lemma runnable_eq_active: "runnable = active"
-  apply (rule ext)
-  apply (case_tac st, simp_all)
-  done
-
-(* FIXME move *)
-lemma st_tcb_at_not:
-  "st_tcb_at (\<lambda>st. \<not> P st) t s = (\<not> st_tcb_at P t s \<and> tcb_at t s)"
-  apply (clarsimp simp: not_pred_tcb)
-  apply (fastforce simp: st_tcb_at_tcb_at)
-  done
 
 lemma etcbs_of_arch_state[simp]:
   "get_tcb ref s = Some tcb \<Longrightarrow>
@@ -1232,11 +1150,6 @@ lemma ct_not_in_q_def2:
   "ct_not_in_q_2 queues sa ct = (sa = resume_cur_thread \<longrightarrow> (\<forall>d p. ct \<notin> set (queues d p)))"
   by (fastforce simp add: ct_not_in_q_def not_queued_def)
 
-(* FIXME move *)
-lemma hd_last_length_2: "length ls = 2 \<Longrightarrow> [hd ls, last ls] = ls"
-  apply (cases ls; clarsimp)
-  by (case_tac list; clarsimp)
-
 lemma ball_mapM_scheme:  (* maybe move? is this generic enough? *)
   assumes x: "\<And>t t'. \<lbrace> \<lambda>s. Q t' s \<and> t' \<noteq> t \<rbrace> f t \<lbrace> \<lambda>_. Q t' \<rbrace>"
   and y:  "\<And>t. \<lbrace> Q t and P \<rbrace> f t \<lbrace>\<lambda>_. P \<rbrace>"
@@ -1253,10 +1166,11 @@ lemma ball_mapM_x_scheme:
   shows "distinct xs \<Longrightarrow> \<lbrace> (\<lambda>s. \<forall>t\<in>set xs. Q t s) and P\<rbrace> mapM_x (\<lambda>t. f t) xs \<lbrace>\<lambda>_. P\<rbrace>"
   by (subst mapM_x_mapM) (wp ball_mapM_scheme x y)
 
-(* FIXME: Move *)
-lemma set_object_obj:
-  "\<lbrace>obj_at P ptr and K (x \<noteq> ptr)\<rbrace> set_object x ko \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
-  by (clarsimp simp add: valid_def set_object_def in_monad obj_at_def)
+lemma ball_filterM_scheme:
+  assumes x: "\<And>t t'. \<lbrace> \<lambda>s. Q t' s \<and> t' \<noteq> t \<rbrace> f t \<lbrace> \<lambda>_. Q t' \<rbrace>"
+  and y:  "\<And>t. \<lbrace> Q t and P \<rbrace> f t \<lbrace>\<lambda>_. P \<rbrace>"
+  shows "distinct xs \<Longrightarrow> \<lbrace> (\<lambda>s. \<forall>t\<in>set xs. Q t s) and P\<rbrace> filterM f xs \<lbrace>\<lambda>_. P\<rbrace>"
+  by (subst filterM_mapM) (wpsimp wp: ball_mapM_scheme[where Q=Q] x y)
 
 (* FIXME: Move *)
 lemma st_tcb_reply_state_refs:
@@ -1286,16 +1200,6 @@ lemma mapM_wp_inv_length:
   done
 
 (* FIXME move *)
-lemma sorted_eq_original_as_set:
-  "length qs = length ps \<Longrightarrow>
-       set (map fst (filter (\<lambda>(p, t'). t' \<le> time) (zip qs ps)) @
-                map fst (filter (\<lambda>(p, t'). \<not> t' \<le> time) (zip qs ps)))
-       = set qs"
-  apply (simp only: map_append[symmetric] set_map set_filter_all split_def)
-  apply (simp only: set_map[symmetric] map_fst_zip)
-  done
-
-(* FIXME move *)
 lemma length_eq_pair_in_set_zip:
   "length qs = length r \<Longrightarrow> x \<in> set qs \<Longrightarrow> \<exists>b. (x, b) \<in> set (zip qs r)"
   apply (induct qs arbitrary: r; simp)
@@ -1305,13 +1209,6 @@ lemma length_eq_pair_in_set_zip:
 lemma in_release_queue_in_release_q:
   "in_release_queue t = in_release_q t"
   by (clarsimp simp: in_release_queue_def in_release_q_def)
-
-(* FIXME maybe move *)
-lemma fun_of_m_imp: "f s = ({(b, s')}, False) \<Longrightarrow> (fun_of_m f s = Some b)"
-  by (clarsimp simp: fun_of_m_def the_equality)
-
-lemma fun_of_m_iff: "(\<exists>s'. f s = ({(b, s')}, False)) \<longleftrightarrow> (fun_of_m f s = Some b)"
-  by (fastforce simp: fun_of_m_def the_equality split: if_split_asm)+
 
 (* FIXME: Move *)
 lemma distinct_takeWhle:
@@ -1330,10 +1227,10 @@ lemma distinct_not_in_takeWhile:
   apply (subst dropWhile_eq_drop[symmetric])
   apply (subgoal_tac "distinct ((takeWhile P ls) @ (dropWhile P ls))")
    apply (simp only: distinct_append, elim conjE)
-  apply (subgoal_tac "set ls = set (takeWhile P ls) \<union> set (dropWhile P ls)")
-  apply fastforce
-apply (subst takeWhile_dropWhile_id[symmetric, of _ P])
-apply (subst set_append, auto)
+   apply (subgoal_tac "set ls = set (takeWhile P ls) \<union> set (dropWhile P ls)")
+    apply fastforce
+   apply (subst takeWhile_dropWhile_id[symmetric, of _ P])
+   apply (subst set_append, auto)
   done
 
 (* FIXME: Move *)
@@ -1349,11 +1246,6 @@ lemma dropWhile_dropped_P:
   "\<lbrakk>x \<in> set queue; x \<notin> set (dropWhile P queue)\<rbrakk> \<Longrightarrow> P x"
   by (induction queue arbitrary: x; fastforce split: if_split_asm)
 
-(* FIXME: Move *)
-lemma takeWhile_taken_P:
-  "x \<in> set (takeWhile P queue) \<Longrightarrow> P x"
-  by (induction queue arbitrary: x; fastforce split: if_split_asm)
-
 lemma is_etcb_at_etcbs_of_tcb_at:
   "is_etcb_at' x (etcbs_of s) = tcb_at x s"
   apply (clarsimp simp: is_etcb_at'_def etcbs_of'_def tcb_at_def iff_conv_conj_imp get_tcb_def
@@ -1366,12 +1258,6 @@ lemma hoare_vcg_imp_lift'':
   "\<lbrakk> \<lbrace>\<lambda>s. \<not> P' s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. P' s \<longrightarrow> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>"
   apply (simp only: imp_conv_disj)
   by (wp hoare_vcg_disj_lift)
-
-(* FIXME: Move *)
-definition
-  ntfn_sc_ntfn_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "ntfn_sc_ntfn_at P \<equiv> obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> P (ntfn_sc ntfn))"
 
 (* FIXME: move *)
 lemma valid_objs_SendEP_distinct:
@@ -1419,7 +1305,6 @@ lemma valid_blocked_except_set_no_active_sc_sum:
   done
 
 lemma not_not_in_eq_in: "\<not> not_in_release_q t s \<longleftrightarrow> in_release_queue t s"
-  (* this shouldn't be set to iff globally *)
   by (clarsimp simp: in_release_queue_def not_in_release_q_def)
 
 lemma valid_blocked_except_set_in_release_queue_sum:
