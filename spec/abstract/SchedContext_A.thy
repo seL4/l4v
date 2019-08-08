@@ -194,11 +194,14 @@ where
                     will ensure the refills are not full, so we may use False here\<close>
          else do remnant \<leftarrow> return $ (r_amount (hd refills) - usage);
                  if (remnant < MIN_BUDGET)
-                 then do new_snd \<leftarrow> return $
-                                       (\<lparr> r_time = r_time (hd (tl refills)) - remnant,
-                                          r_amount = r_amount (hd (tl refills)) + remnant \<rparr>);
-                          set_refills sc_ptr (schedule_used False (new_snd # tl (tl refills)) used)
-                      od
+                 then if (tl refills = [])
+                         then set_refills sc_ptr [\<lparr>r_time = last_entry + period - remnant,
+                                                   r_amount = r_amount (hd refills)\<rparr>]
+                         else do new_snd \<leftarrow> return $
+                                             (\<lparr> r_time = r_time (hd (tl refills)) - remnant,
+                                                r_amount = r_amount (hd (tl refills)) + remnant \<rparr>);
+                           set_refills sc_ptr (schedule_used False (new_snd # tl (tl refills)) used)
+                              od
                  else do full \<leftarrow> refill_full sc_ptr;
                          rfhd \<leftarrow> return $ (hd refills);
                          new_head \<leftarrow> return $ (\<lparr>r_time = r_time rfhd + usage, r_amount = remnant\<rparr>);
