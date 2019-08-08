@@ -568,7 +568,7 @@ crunch domain_time_inv[wp]:
   (wp: crunch_wps check_cap_inv mapM_wp' maybeM_inv simp: Let_def zipWithM_x_mapM)
 
 lemma charge_budget_domain_time_consumed_time:
-   "\<lbrace>\<lambda>s::det_state. P (domain_time s) 0 \<rbrace> charge_budget capacity consumed canTimeout
+   "\<lbrace>\<lambda>s::det_state. P (domain_time s) 0 \<rbrace> charge_budget consumed canTimeout
             \<lbrace>\<lambda>_ s. P (domain_time s) (consumed_time s)\<rbrace> "
   by (wpsimp simp: charge_budget_def Let_def wp: assert_inv)
 
@@ -590,7 +590,7 @@ lemma commit_domain_time_domain_time_left:
 
 lemma commit_time_domain_time_left[wp]:
   "\<lbrace> valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace> commit_time \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
-  by (wpsimp simp: commit_time_def Let_def
+  by (wpsimp simp: commit_time_def Let_def sc_refill_ready_def
            wp: commit_domain_time_domain_time_left get_sched_context_wp hoare_vcg_all_lift
                hoare_drop_imp)
 

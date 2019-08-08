@@ -2129,7 +2129,7 @@ lemma set_refills_wp:
 lemma valid_irq_node_refill_unblock_check[wp]:
   "refill_unblock_check sc_ptr \<lbrace>valid_irq_node\<rbrace>"
   unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp simp: is_round_robin_def)
+  apply (wpsimp wp: set_refills_wp get_refills_wp simp: is_round_robin_def refill_ready_def)
   apply (clarsimp simp: valid_irq_node_def obj_at_def is_cap_table_def)
   apply (drule_tac x=irq in spec)
   apply (clarsimp simp: )

@@ -4122,16 +4122,13 @@ lemma postpone_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> postpone r \<lbrace>\<lambda>_.valid_list\<rbrace>"
    by (wpsimp simp: postpone_def wp: hoare_drop_imp)
 
-lemma refill_split_check_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> refill_split_check usage \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: refill_split_check_def set_refills_def Let_def wp: hoare_drop_imp cong: if_cong)
-
 crunch valid_list: set_refills,refill_full,refill_ready,refill_capacity,refill_size valid_list
 
 lemma refill_budget_check_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> refill_budget_check usage capacity \<lbrace>\<lambda>_.valid_list\<rbrace>"
-   by (wpsimp simp: refill_budget_check_def set_refills_def refill_full_def refill_size_def
+  "\<lbrace>valid_list\<rbrace> refill_budget_check usage \<lbrace>\<lambda>_.valid_list\<rbrace>"
+   apply (wpsimp simp: refill_budget_check_def set_refills_def refill_full_def refill_size_def
          wp: hoare_vcg_if_lift2 hoare_drop_imp)
+  sorry
 
 context Deterministic_AI_1 begin
 
@@ -4140,8 +4137,8 @@ lemma end_timeslice_valid_list[wp]:
    by (wpsimp simp: end_timeslice_def wp: hoare_vcg_if_lift2 hoare_drop_imp)
 
 lemma charge_budget_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> charge_budget  capacity consumed canTimeout \<lbrace>\<lambda>_.valid_list\<rbrace>"
-   by (wpsimp simp: charge_budget_def Let_def set_refills_def wp: assert_inv)
+  "\<lbrace>valid_list\<rbrace> charge_budget consumed canTimeout \<lbrace>\<lambda>_.valid_list\<rbrace>"
+   by (wpsimp simp: charge_budget_def Let_def set_refills_def is_round_robin_def wp: assert_inv)
 
 lemma check_budget_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> check_budget \<lbrace>\<lambda>_.valid_list\<rbrace>"

@@ -42,6 +42,7 @@ lemma replies_blocked_kh_update_tcb:
 
 lemmas replies_with_sc_safe_kheap_updates[simp] =
        replies_with_sc_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_period := v\<rparr>", simplified]
+       replies_with_sc_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_budget := v\<rparr>", simplified]
        replies_with_sc_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_refill_max := v\<rparr>", simplified]
        replies_with_sc_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_refills := v\<rparr>", simplified]
        replies_with_sc_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_badge := v\<rparr>", simplified]
@@ -50,6 +51,7 @@ lemmas replies_with_sc_safe_kheap_updates[simp] =
 
 lemmas replies_blocked_safe_kheap_updates[simp] =
        replies_blocked_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_period := v\<rparr>"]
+       replies_blocked_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_budget := v\<rparr>"]
        replies_blocked_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_refill_max := v\<rparr>"]
        replies_blocked_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_refills := v\<rparr>"]
        replies_blocked_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_badge := v\<rparr>"]

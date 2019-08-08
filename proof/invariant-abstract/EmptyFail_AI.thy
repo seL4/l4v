@@ -484,7 +484,7 @@ locale EmptyFail_AI_call_kernel = EmptyFail_AI_schedule state_ext_t
   assumes check_budget_empty_fail[wp]:
     "empty_fail (check_budget :: (bool, 'state_ext) s_monad)"
    assumes charge_budget_empty_fail[wp]:
-    "\<And>a b c. empty_fail (charge_budget a b c :: (unit, 'state_ext) s_monad)"
+    "\<And>a b. empty_fail (charge_budget a b :: (unit, 'state_ext) s_monad)"
   assumes update_time_stamp_empty_fail[wp]:
     "empty_fail (update_time_stamp :: (unit, 'state_ext) s_monad)"
    assumes refill_capacity_empty_fail[wp]:

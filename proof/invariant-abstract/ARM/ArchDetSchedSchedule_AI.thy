@@ -336,12 +336,21 @@ lemma handle_vm_fault_st_tcb_cur_thread [wp, DetSchedSchedule_AI_assms]:
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
   arch_invoke_irq_control "valid_sched :: det_ext state \<Rightarrow> bool"
 
+lemma sc_is_round_robin_arch_state_update[simp]:
+  "sc_is_round_robin scp (s\<lparr>arch_state := param_a\<rparr>) = sc_is_round_robin scp s"
+  by (fastforce simp: sc_is_round_robin_def)
+
+lemma sc_is_round_robin_machine_state_update[simp]:
+  "sc_is_round_robin scp (s\<lparr>machine_state := param_a\<rparr>) = sc_is_round_robin scp s"
+  by (fastforce simp: sc_is_round_robin_def)
+
 crunches arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread
   for valid_list [wp, DetSchedSchedule_AI_assms]: "valid_list"
   and not_queued [wp, DetSchedSchedule_AI_assms]: "not_queued t"
   and not_in_release_q [wp, DetSchedSchedule_AI_assms]: "not_in_release_q t"
-  and sc_not_queued [wp, DetSchedSchedule_AI_assms]: "sc_not_in_ready_q t"
-  and sc_not_in_release_q [wp, DetSchedSchedule_AI_assms]: "sc_not_in_release_q t"
+  and sc_not_queued [wp, DetSchedSchedule_AI_assms]: "sc_not_in_ready_q scp"
+  and sc_not_in_release_q [wp, DetSchedSchedule_AI_assms]: "sc_not_in_release_q scp"
+  and sc_is_round_robin [wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (sc_is_round_robin scp s)"
 
 crunch cur_tcb [wp, DetSchedSchedule_AI_assms]: handle_arch_fault_reply, handle_vm_fault, arch_get_sanitise_register_info, arch_post_modify_registers cur_tcb
 

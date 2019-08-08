@@ -1518,7 +1518,8 @@ lemma set_sc_others_cur_sc_tcb:
   "\<lbrace>cur_sc_tcb and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
    update_sched_context p (\<lambda>_. sc\<lparr>sc_period := period,
                            sc_refill_max := max_refills,
-                           sc_refills := r # refills\<rparr>)
+                           sc_refills := refills,
+                           sc_budget := budget\<rparr>)
    \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
   by (wpsimp simp: update_sched_context_def set_object_def get_object_def cur_sc_tcb_def
                    sc_tcb_sc_at_def obj_at_def)
@@ -1528,7 +1529,8 @@ lemma set_sc_others_invs:
       update_sched_context p
           (\<lambda>_. sc\<lparr>sc_period := period,
               sc_refill_max := max_refills,
-              sc_refills := r#refills\<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
+              sc_refills := r#refills,
+              sc_budget := budget\<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
                   wp: update_sched_context_valid_idle update_sched_context_valid_replies
                       set_sc_others_cur_sc_tcb
@@ -1546,7 +1548,8 @@ lemma update_sc_others_cur_sc_tcb:
   "\<lbrace>cur_sc_tcb\<rbrace> update_sched_context p
                   (\<lambda>sc. sc\<lparr>sc_period := period,
                            sc_refills := r # refills,
-                           sc_refill_max := max_refills\<rparr>) \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
+                           sc_refill_max := max_refills,
+                           sc_budget := budget\<rparr>) \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
   by (wpsimp wp: update_sched_context_cur_sc_tcb_no_change)
 
 lemma update_sc_others_invs:
@@ -1554,7 +1557,8 @@ lemma update_sc_others_invs:
       update_sched_context p
           (\<lambda>sc. sc\<lparr>sc_period := period,
               sc_refills := r#refills,
-              sc_refill_max := max_refills\<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
+              sc_refill_max := max_refills,
+              sc_budget := budget\<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
                   wp: update_sched_context_valid_objs_same valid_irq_node_typ
                       update_sched_context_iflive_implies
@@ -1667,7 +1671,7 @@ lemma refill_unblock_check_tcb_at_ct[wp]:
     "\<lbrace>\<lambda>s. tcb_at (cur_thread s) s\<rbrace> refill_unblock_check scp
        \<lbrace>\<lambda>rv s. tcb_at (cur_thread s) s\<rbrace>"
   by (wpsimp simp: refill_unblock_check_def set_refills_def is_tcb
-      update_sched_context_def is_round_robin_def pred_tcb_at_def obj_at_def
+      update_sched_context_def is_round_robin_def pred_tcb_at_def obj_at_def refill_ready_def
        wp: hoare_vcg_if_lift2 set_object_wp get_object_wp get_sched_context_wp
            hoare_vcg_all_lift get_refills_wp)
 
@@ -1683,7 +1687,7 @@ lemma refill_unblock_check_sc_tcb_at_ct:
     "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) None) (cur_thread s) s\<rbrace> refill_unblock_check scp
        \<lbrace>\<lambda>rv s. bound_sc_tcb_at ((=) None) (cur_thread s) s\<rbrace>"
   by (wpsimp simp: refill_unblock_check_def set_refills_def
-      update_sched_context_def is_round_robin_def pred_tcb_at_def obj_at_def
+      update_sched_context_def is_round_robin_def pred_tcb_at_def obj_at_def refill_ready_def
        wp: hoare_vcg_if_lift2 set_object_wp get_object_wp get_sched_context_wp
            hoare_vcg_all_lift get_refills_wp)
 
@@ -1708,7 +1712,7 @@ lemma refill_unblock_check_state_refs_of_ct[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of s) (cur_thread s)\<rbrace>
      refill_unblock_check scp \<lbrace>\<lambda>_ s. P (state_refs_of s) (cur_thread s)\<rbrace>"
   apply (wpsimp simp: refill_unblock_check_def is_round_robin_def set_refills_def
-            update_sched_context_def set_object_def
+            update_sched_context_def set_object_def refill_ready_def
         wp: get_refills_wp hoare_vcg_if_lift2 get_object_wp get_sched_context_wp)
   by (clarsimp simp: state_refs_of_def get_refs_def2 obj_at_def
             elim!: rsubst[where P="\<lambda>x. P x (cur_thread s)" for s] intro!: ext)
@@ -1717,7 +1721,7 @@ lemma refill_unblock_check_it_ct[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s) (cur_thread s)\<rbrace>
     refill_unblock_check scp \<lbrace>\<lambda>_ s. P (idle_thread s) (cur_thread s)\<rbrace>"
   by (wpsimp simp: refill_unblock_check_def is_round_robin_def set_refills_def
-            update_sched_context_def set_object_def
+            update_sched_context_def set_object_def refill_ready_def
         wp: get_refills_wp hoare_vcg_if_lift2 get_object_wp get_sched_context_wp)
 
 lemma refill_capacity_sp:
