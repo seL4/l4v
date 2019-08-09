@@ -33,13 +33,14 @@ On **Ubuntu 18.04**, to run all the tests against the **ARMv7-A** architecture
 you will need to install the following packages:
 ```bash
 sudo apt-get install \
-    haskell-stack python python-pip python-dev \
+    python python-pip python-dev \
     python3 python3-pip python3-dev \
-    mlton-compiler gcc-arm-none-eabi \
+    haskell-stack gcc-arm-none-eabi \
     build-essential libxml2-utils ccache ncurses-dev librsvg2-bin \
     device-tree-compiler cmake ninja-build curl zlib1g-dev \
     texlive-fonts-recommended texlive-latex-extra \
-    texlive-metapost texlive-bibtex-extra
+    texlive-metapost texlive-bibtex-extra \
+    mlton-compiler
 ```
 ```bash
 sudo pip install --upgrade pip
@@ -48,11 +49,14 @@ sudo pip3 install --upgrade pip
 sudo pip3 install sel4-deps
 ```
 
-On **Debian Stretch**, install the above packages as well as:
+On **Debian Buster**, install the above packages except for `mlton-compiler`,
+then install the following:
 ```bash
 sudo apt-get install \
     rsync
 ```
+There is no package for `mlton-compiler` on Buster, so you will need to
+install it from the [mlton website](http://www.mlton.org).
 
 ### Haskell Stack
 L4V requires [haskell-stack](https://docs.haskellstack.org/en/stable/README).
