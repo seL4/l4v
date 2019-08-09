@@ -334,10 +334,9 @@ where
     tcb_ptr \<leftarrow> assert_opt sc_tcb_opt;
 
     sched_context_resume (Some sc_ptr);
-    flag \<leftarrow> return True;
     in_release_q <- gets $ in_release_queue tcb_ptr;
     schedulable <- is_schedulable tcb_ptr in_release_q;
-    when (schedulable) $ do
+    if schedulable then do
       refill_unblock_check sc_ptr;
       sc \<leftarrow> get_sched_context sc_ptr;
       cur_time \<leftarrow> gets cur_time;
@@ -350,10 +349,10 @@ where
       if (prios < ct_prios)
       then do
         tcb_sched_action tcb_sched_dequeue tcb_ptr;
-        tcb_sched_action tcb_sched_enqueue tcb_ptr \<comment> \<open> schedulable & dequeud & sufficient & ready \<close>
+        tcb_sched_action tcb_sched_enqueue tcb_ptr; \<comment> \<open> schedulable & dequeud & sufficient & ready \<close>
+        set_consumed sc_ptr args
       od
       else do
-        flag \<leftarrow> return False;
         set_sc_obj_ref sc_yield_from_update sc_ptr (Some ct_ptr);
         set_tcb_obj_ref tcb_yield_to_update ct_ptr (Some sc_ptr);
         tcb_sched_action tcb_sched_dequeue tcb_ptr;
@@ -361,8 +360,8 @@ where
         tcb_sched_action tcb_sched_enqueue ct_ptr;
         reschedule_required
       od
-    od;
-    when flag $ set_consumed sc_ptr args
+    od
+    else set_consumed sc_ptr args
   od"
 
 
