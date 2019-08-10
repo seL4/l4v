@@ -13607,30 +13607,35 @@ lemma sched_context_yield_to_valid_sched_helper2:
                 \<longrightarrow> budget_ready tcb_ptr s \<and> budget_sufficient tcb_ptr s) \<rbrace>
    do in_release_q <- gets (in_release_queue tcb_ptr);
       schedulable <- is_schedulable tcb_ptr in_release_q;
-      y <-
-      when schedulable
-       (do y <- refill_unblock_check sc_ptr;
-           sc <- get_sched_context sc_ptr;
-           cur_time <- gets cur_time;
-           y <-
-           assert
-            (sufficient_refills 0 (sc_refills sc) \<and>
-             r_time (refill_hd sc) \<le> cur_time + kernelWCET_ticks);
-           ct_ptr <- gets cur_thread;
-           prios <- thread_get tcb_priority tcb_ptr;
-           ct_prios <- thread_get tcb_priority ct_ptr;
-           if prios < ct_prios then do y <- tcb_sched_action tcb_sched_dequeue tcb_ptr;
-                                       tcb_sched_action tcb_sched_enqueue tcb_ptr
-                                    od
-           else do y <- set_sc_obj_ref sc_yield_from_update sc_ptr (Some ct_ptr);
-                   y <- set_tcb_obj_ref tcb_yield_to_update ct_ptr (Some sc_ptr);
-                   y <- tcb_sched_action tcb_sched_dequeue tcb_ptr;
-                   y <- tcb_sched_action tcb_sched_enqueue tcb_ptr;
-                   y <- tcb_sched_action tcb_sched_enqueue ct_ptr;
-                   reschedule_required
-                od
-        od);
-      set_consumed sc_ptr args
+      if schedulable
+      then do y <- refill_unblock_check sc_ptr;
+              sc <- get_sched_context sc_ptr;
+              cur_time <- gets cur_time;
+              y <-
+              assert
+               (sufficient_refills 0 (sc_refills sc) \<and>
+                r_time (refill_hd sc) \<le> cur_time + kernelWCET_ticks);
+              ct_ptr <- gets cur_thread;
+              prios <- thread_get tcb_priority tcb_ptr;
+              ct_prios <- thread_get tcb_priority ct_ptr;
+              if prios < ct_prios
+              then do y <- tcb_sched_action tcb_sched_dequeue tcb_ptr;
+                      y <- tcb_sched_action tcb_sched_enqueue tcb_ptr;
+                      set_consumed sc_ptr args
+                   od
+              else do y <-
+                      set_sc_obj_ref sc_yield_from_update sc_ptr
+                       (Some ct_ptr);
+                      y <-
+                      set_tcb_obj_ref tcb_yield_to_update ct_ptr
+                       (Some sc_ptr);
+                      y <- tcb_sched_action tcb_sched_dequeue tcb_ptr;
+                      y <- tcb_sched_action tcb_sched_enqueue tcb_ptr;
+                      y <- tcb_sched_action tcb_sched_enqueue ct_ptr;
+                      reschedule_required
+                   od
+           od
+      else set_consumed sc_ptr args
     od
   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (rule hoare_seq_ext[OF _ gets_sp])
