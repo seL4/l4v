@@ -91,6 +91,43 @@ lemma Collect_graph_cong_helper:
   by simp
 
 text \<open>
+  VER-1030 forces us to create a huge number of (mostly spurious)
+  DeleteDerived rights in @{const policy_of}. In fact, it forms a
+  complete graph. We use that fact to help prove transitivity more
+  efficiently.
+\<close>
+lemma proj_Collect_prod:
+  "fst ` {(a, b). f a b} = {a. \<exists>b. f a b}"
+  "snd ` {(a, b). f a b} = {b. \<exists>a. f a b}"
+  by force+
+
+lemma complete_graph_is_transitive[rotated 1, consumes 2]:
+  "\<lbrakk> let edges = {(v, u). G v e u};
+         verts = fst ` edges \<union> snd ` edges
+     in \<forall>u \<in> verts. \<forall>v \<in> verts. G v e u;
+     G u e v; G v e w \<rbrakk>
+   \<Longrightarrow> G u e w"
+  apply (simp (no_asm_use) add: proj_Collect_prod flip: Collect_disj_eq)
+  by blast
+
+(* version without self edges *)
+lemma complete_graph_is_transitive'[rotated 1, consumes 2]:
+  "\<lbrakk> let edges = {(v, u). G v e u};
+         verts = fst ` edges \<union> snd ` edges
+     in \<forall>u \<in> verts. \<forall>v \<in> verts. u \<noteq> v \<longrightarrow> G v e u;
+     G u e v; G v e w; u \<noteq> v; v \<noteq> w; u \<noteq> w \<rbrakk>
+   \<Longrightarrow> G u e w"
+  apply (simp (no_asm_use) add: proj_Collect_prod flip: Collect_disj_eq)
+  by blast
+
+lemma Collect_case_prod_dnf:
+  "{(a, b). a = x \<and> b = y} = {(x, y)}"
+  "{(a, b). a = x \<and> b = y \<or> P a b} = insert (x, y) {(a, b). P a b}"
+  "{(a, b). b = y \<and> a = x} = set [(x, y)]"
+  "{(a, b). b = y \<and> a = x \<or> P a b} = insert (x, y) {(a, b). P a b}"
+  by auto
+
+text \<open>
   Simplified, automation-friendl(ier) intro for policy_wellformed, assuming that
   CAmkES never provides Grant auth across components, and we ignore components
   indirectly triggering interrupts.
@@ -109,8 +146,9 @@ lemma camkes_policy_wellformedI:
       and "\<And>s r. (s, Reply, r) \<in> aag \<Longrightarrow> (r, DeleteDerived, s) \<in> aag"
       and "\<And>s r ep. (s, Call, ep) \<in> aag \<Longrightarrow> s \<noteq> ep \<Longrightarrow> (r, Receive, ep) \<in> aag
                      \<Longrightarrow> (r, Reply, s) \<in> aag"
-      and "\<And>l1 l2 l3. (l1, DeleteDerived, l2) \<in> aag \<Longrightarrow> l1 \<noteq> l2 \<Longrightarrow> (l2, DeleteDerived, l3) \<in> aag
-                       \<Longrightarrow> (l1, DeleteDerived, l3) \<in> aag"
+      and "\<And>l1 l2 l3. (l1, DeleteDerived, l2) \<in> aag \<Longrightarrow> l1 \<noteq> l2 \<Longrightarrow>
+                       (l2, DeleteDerived, l3) \<in> aag \<Longrightarrow> l1 \<noteq> l3 \<Longrightarrow> l2 \<noteq> l3 \<Longrightarrow>
+                       (l1, DeleteDerived, l3) \<in> aag"
   shows "policy_wellformed aag maySendIrqs irqSet agent"
   unfolding policy_wellformed_def
   apply (insert assms)
