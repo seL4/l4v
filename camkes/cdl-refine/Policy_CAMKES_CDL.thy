@@ -94,7 +94,9 @@ where
              subj \<in> get_group_label (composition spec) `fst ` set (conn_to conn) \<and>
              obj = get_group_label (composition spec) conn_name \<and>
              auth \<in> access_to_conn (connector_access (conn_type conn))
-    }
-  "
+    } \<union>
+    (\<lambda>(subj, auth, obj). (get_group_label (composition spec) subj, auth,
+                          get_group_label (composition spec) obj)) `
+      policy_extra spec"
 
 end

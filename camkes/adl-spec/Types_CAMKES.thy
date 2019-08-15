@@ -352,6 +352,8 @@ text \<open>
 record assembly =
   composition   :: "composition"
   configuration :: "configuration option"
+  \<comment> \<open>This lets us shove extra policy edges into the generated integrity policy\<close>
+  policy_extra  :: "(adl_symbol \<times> auth \<times> adl_symbol) set"
 
 subsection \<open>\label{subsec:future}Future Work\<close>
 subsubsection \<open>\label{subsubsec:composites}Component Hierarchy\<close>

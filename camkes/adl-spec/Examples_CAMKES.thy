@@ -156,7 +156,8 @@ where
       \<rparr>)],
       group_labels = []
     \<rparr>,
-    configuration = None
+    configuration = None,
+    policy_extra = {}
   \<rparr>"
 
 text \<open>
@@ -245,7 +246,8 @@ where
       \<rparr>)],
       group_labels = []
     \<rparr>,
-    configuration = None
+    configuration = None,
+    policy_extra = {}
   \<rparr>"
 
 text \<open>
@@ -309,7 +311,8 @@ where
       \<rparr>)],
       group_labels = []
     \<rparr>,
-    configuration = None
+    configuration = None,
+    policy_extra = {}
   \<rparr>"
 
 text \<open>The data port example is wellformed:\<close>
@@ -446,7 +449,8 @@ definition
 where
   "terminal \<equiv> \<lparr>
     composition = comp,
-    configuration = Some conf
+    configuration = Some conf,
+    policy_extra = {}
   \<rparr>"
 
 text \<open>
@@ -486,7 +490,8 @@ where
     components = [(undefined, x)],
     connections = [], \<comment> \<open>... that is unsatisfied.\<close>
     group_labels = undefined
-  \<rparr>, configuration = undefined\<rparr>"
+  \<rparr>, configuration = undefined,
+     policy_extra = undefined\<rparr>"
 
 lemma "\<not> wellformed_assembly broken_assembly"
   apply (unfold wellformed_assembly_def)
@@ -514,7 +519,8 @@ where
     components = [],
     connections = undefined,
     group_labels = undefined
-  \<rparr>, configuration = undefined \<rparr>"
+  \<rparr>, configuration = undefined,
+     policy_extra = {} \<rparr>"
 
 lemma "\<not>wellformed_assembly broken_assembly"
   apply (unfold wellformed_assembly_def)
@@ -531,21 +537,24 @@ lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
     components = [(''foo'', undefined), (''foo'', undefined)],
     connections = undefined,
     group_labels = undefined
-  \<rparr>, configuration = undefined \<rparr>"
+  \<rparr>, configuration = undefined,
+     policy_extra = {} \<rparr>"
   by (simp add:wellformed_assembly_def wellformed_composition_def)
 
 lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
     components = undefined,
     connections = [(''foo'', undefined), (''foo'', undefined)],
     group_labels = undefined
-  \<rparr>, configuration = undefined \<rparr>"
+  \<rparr>, configuration = undefined,
+     policy_extra = {} \<rparr>"
   by (simp add:wellformed_assembly_def wellformed_composition_def)
 
 lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
     components = [(''foo'', undefined)],
     connections = [(''foo'', undefined)],
     group_labels = undefined
-  \<rparr>, configuration = undefined \<rparr>"
+  \<rparr>, configuration = undefined,
+     policy_extra = {} \<rparr>"
   by (simp add:wellformed_assembly_def wellformed_composition_def)
 
 (* Catch previous issue (\<exists>! x \<in> xs::set \<noteq> \<exists>1 x \<in> xs::list) *)
@@ -569,7 +578,8 @@ lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
         conn_from = [(''foo'', ''bar'')],
         conn_to = undefined \<rparr>)],
     group_labels = undefined
-  \<rparr>, configuration = undefined \<rparr>"
+  \<rparr>, configuration = undefined,
+     policy_extra = {} \<rparr>"
   by (simp add: wellformed_assembly_def wellformed_composition_def refs_valid_components_def
                 refs_valid_composition_def refs_valid_procedures_def
                 ex_one_def
