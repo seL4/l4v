@@ -25,6 +25,8 @@ where [wellformed_CAMKES_simps]:
         connector_access =
           \<lparr> access_from_to   = {DeleteDerived},
             access_to_from   = {Reply},
+            access_from_from = {},
+            access_to_to     = {},
             access_from_conn = {Reset, SyncSend, Call},
             access_to_conn   = {Reset, Receive} \<rparr> \<rparr>"
 lemma[wellformed_CAMKES_simps]: "wellformed_connector seL4RPC"
@@ -39,6 +41,8 @@ where [wellformed_CAMKES_simps]:
         connector_access =
           \<lparr> access_from_to   = {},
             access_to_from   = {},
+            access_from_from = {},
+            access_to_to     = {},
             access_from_conn = {Reset, Notify},
             access_to_conn   = {Reset, Receive} \<rparr> \<rparr>"
 lemma[wellformed_CAMKES_simps]: "wellformed_connector seL4Notification"
@@ -53,6 +57,8 @@ where [wellformed_CAMKES_simps]:
         connector_access =
           \<lparr> access_from_to   = {},
             access_to_from   = {},
+            access_from_from = {},
+            access_to_to     = {},
             \<comment> \<open>Here, we hardcode that both sides have Read and Write because
                 the default dataport implementation uses in-line signalling.\<close>
             access_from_conn = {Read, Write},
@@ -69,6 +75,8 @@ where [wellformed_CAMKES_simps]:
         connector_access =
           \<lparr> access_from_to   = {},
             access_to_from   = {},
+            access_from_from = {},
+            access_to_to     = {},
             \<comment> \<open>NB: hardware components usually share the label of the software driver,
                     so the following are usually redundant\<close>
             access_from_conn = {Reset, Notify},
@@ -85,6 +93,8 @@ where [wellformed_CAMKES_simps]:
         connector_access =
           \<lparr> access_from_to   = {},
             access_to_from   = {},
+            access_from_from = {},
+            access_to_to     = {},
             \<comment> \<open>NB: hardware components usually share the label of the software driver,
                     so the following are usually redundant\<close>
             access_from_conn = {Read, Write},

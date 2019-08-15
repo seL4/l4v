@@ -67,6 +67,20 @@ where
              auth \<in> access_to_from (connector_access (conn_type conn))
     } \<union>
     {(subj, auth, obj).
+           \<exists>conn \<in> snd ` set (connections (composition spec)).
+             subj \<in> fst ` set (conn_from conn) \<and>
+             obj \<in> fst ` set (conn_from conn) \<and>
+             subj \<noteq> obj \<and>
+             auth \<in> access_from_from (connector_access (conn_type conn))
+    } \<union>
+    {(subj, auth, obj).
+           \<exists>conn \<in> snd ` set (connections (composition spec)).
+             subj \<in> fst ` set (conn_to conn) \<and>
+             obj \<in> fst ` set (conn_to conn) \<and>
+             subj \<noteq> obj \<and>
+             auth \<in> access_to_to (connector_access (conn_type conn))
+    } \<union>
+    {(subj, auth, obj).
            \<exists>(conn_name, conn) \<in> set (connections (composition spec)).
              subj \<in> fst ` set (conn_from conn) \<and>
              obj = conn_name \<and>

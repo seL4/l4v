@@ -235,9 +235,9 @@ text \<open>
   each nominal direction of the connector.
 
   Note that we will model connections to have separate access-control
-  labels from components'. Hence we need \emph{four} sets: two for
+  labels from components'. Hence we need \emph{six} sets: two for
   component rights to the connection objects (e.g. endpoints), and
-  two for component rights to each other's objects.
+  four for component rights to each other's objects.
 \<close>
 record connector_access =
     \<comment> \<open>@{text access_foo_bar} means access from the "@{text foo}" label to
@@ -245,10 +245,19 @@ record connector_access =
         to-components, or the connection itself\<close>
     access_from_to :: "auth set"
     access_to_from :: "auth set"
-    access_from_conn :: "auth set"
-    access_to_conn :: "auth set"
+
+    \<comment> \<open>It might seem that components on the same side of a connection
+        should not need access rights to each other.
+        However, these auths are needed in more complicated systems,
+        to work around bugs like VER-1108 and to express non-standard
+        connector semantics such as VirtQueues.\<close>
+    access_from_from :: "auth set"
+    access_to_to :: "auth set"
+
     \<comment> \<open>we assume connections are passive labels, so they do not
         need access rights of their own\<close>
+    access_from_conn :: "auth set"
+    access_to_conn :: "auth set"
 
 record connector =
     connector_type :: connector_type
