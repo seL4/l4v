@@ -268,7 +268,7 @@ and simple_sched_action [wp, DetSchedSchedule_AI_assms]: simple_sched_action
 lemma set_thread_state_cur_thread_valid_blocked:
   "\<lbrace>valid_blocked and (\<lambda>s. ref = cur_thread s)\<rbrace> set_thread_state ref ts
   \<lbrace>\<lambda>_. valid_blocked :: det_state \<Rightarrow> _\<rbrace>"
-  by (wp set_thread_state_valid_blocked_inv | wps)+ clarsimp
+  by (wp set_thread_state_valid_blocked_const | wps)+ clarsimp
 
 lemma set_thread_state_cur_thread_runnable_valid_sched:
   "\<lbrace>valid_sched and (\<lambda>s. ref = cur_thread s) and K (runnable ts)\<rbrace>

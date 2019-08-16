@@ -1031,7 +1031,7 @@ lemma valid_blocked_except_set_subset:
    valid_blocked_except_set S s"
   by (fastforce simp: valid_blocked_except_set_def)
 
-lemma valid_blocked_except_set_weaken[simp]:
+lemma valid_blocked_except_set_weaken[elim!]:
   "valid_blocked s \<Longrightarrow>
    valid_blocked_except_set S s"
   by (rule valid_blocked_except_set_subset[where T="{}"]; clarsimp)
