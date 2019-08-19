@@ -709,7 +709,7 @@ where
 
      full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc); \<comment> \<open>= refill_full csc\<close>
 
-     robin \<leftarrow> return (sc_period sc = 0); \<comment> \<open>is_round_robin csc;\<close>
+     robin \<leftarrow> return (sc_period sc = sc_budget sc); \<comment> \<open>is_round_robin csc;\<close>
 
      if (capacity \<ge> MIN_BUDGET \<and> (robin \<or> \<not>full)) then do
        dom_exp \<leftarrow> gets is_cur_domain_expired;
