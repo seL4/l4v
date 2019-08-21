@@ -59,6 +59,42 @@ lemma "\<lbrakk> \<forall>x. Q x \<longrightarrow> R x; \<forall>x. P x \<longri
          (trace_schematic_insts "try assumption" \<open>assumption\<close>)+; fail)
   done
 
+text \<open>Interactive example\<close>
+ML \<open>
+  fun trace_resolve_tac ctxt =
+      Trace_Schematic_Insts.trace_schematic_insts_tac ctxt
+        (Trace_Schematic_Insts.default_rule_report ctxt "demo title")
+        (fn t => resolve_tac ctxt [t])
+\<close>
+lemma
+  assumes Pf: "\<And>f (x :: nat). Q f \<Longrightarrow> P x \<Longrightarrow> P (f x)"
+  assumes Q: "Q ((*) 2)"
+  assumes P: "P a"
+  shows "\<exists>x. P (x + a + a)"
+  apply (tactic \<open>trace_resolve_tac @{context} @{thm exI} 1\<close>)
+  apply (trace_schematic_insts \<open>subst add_0\<close>)
+
+  \<comment>\<open>
+    This picks *some* instantiation of `f` in @{thm Pf}. The first one is
+    @{term "\<lambda>a. a"}, which isn't what we want.
+  \<close>
+  apply (tactic \<open>trace_resolve_tac @{context} @{thm Pf} 1\<close>)
+   \<comment>\<open>
+     This picks the *next* instantiation of `f`, in this case @{term "\<lambda>a. a + a"}
+     Notice that the reporting callback gets called with the new instantiations!
+   \<close>
+   back
+
+   apply (tactic \<open>
+     Trace_Schematic_Insts.trace_schematic_insts_tac
+       @{context}
+       (Trace_Schematic_Insts.default_rule_report @{context} "demo title")
+       (fn t => EqSubst.eqsubst_tac @{context} [0] [t])
+       @{thm mult_2[symmetric]} 1
+   \<close>)
+   apply (tactic \<open>trace_resolve_tac @{context} @{thm Q} 1\<close>)
+  apply (tactic \<open>trace_resolve_tac @{context} @{thm P} 1\<close>)
+  done
 
 section \<open>Tests\<close>
 
@@ -72,7 +108,7 @@ fun trace_schematic_assert ctxt test_name tac expected_vars expected_tvars =
               Seq.succeed st
           | _ => tac st
 
-    fun check var_insts tvar_insts =
+    fun check (var_insts, tvar_insts) =
       if expected_vars = var_insts andalso expected_tvars = tvar_insts then () else
         error ("Trace_Schematic_Insts failed test: " ^ test_name)
 
@@ -87,7 +123,7 @@ lemma "\<lbrakk> \<forall>x. P x \<rbrakk> \<Longrightarrow> P x"
   apply (drule spec)
   apply (tactic \<open>let
       val alpha = TFree ("'a", @{sort type})
-      val expected_vars = [(Var (("x", 0), alpha), Free ("x", alpha))]
+      val expected_vars = [(Var (("x", 0), alpha), (0, Free ("x", alpha)))]
       val expected_tvars = []
       in trace_schematic_assert @{context}
             "basic Var test" (assume_tac @{context} 1)
@@ -107,6 +143,103 @@ lemma "foo x \<Longrightarrow> foo y"
             (eresolve_tac @{context} @{thms fooI2'} 1)
             expected_vars expected_tvars
       end\<close>)
+  done
+
+
+ML \<open>
+fun trace_schematic_resolve_tac_assert ctxt test_name thm expected_rule_insts expected_proof_insts =
+  let
+    fun check rule_insts proof_insts =
+        if expected_rule_insts = rule_insts andalso expected_proof_insts = proof_insts
+        then ()
+        else
+          let
+            val _ = tracing (@{make_string} (rule_insts, proof_insts))
+          in error ("Trace_Schematic_Insts failed test: " ^ test_name) end
+    fun tactic thm = resolve_tac ctxt [thm]
+  in HEADGOAL (Trace_Schematic_Insts.trace_schematic_insts_tac ctxt check tactic thm)
+  end
+\<close>
+
+text \<open>Simultaneous rule and goal instantiations\<close>
+lemma "\<exists>a. foo (a :: nat)"
+  apply (rule exI)
+  apply (tactic \<open>
+    let
+      val a' = TVar (("'a", 0), @{sort type})
+      val b' = TVar (("'b", 0), @{sort zero})
+      val a'' = TVar (("'a", 2), @{sort type})
+      val expected_rule_vars = [
+        (Var (("x", 0), a'), (0, Var(("x", 2), a'')))
+      ]
+      val expected_rule_tvars = [
+        (a', a''),
+        (b', @{typ nat})
+      ]
+      val expected_goal_vars = [
+        (Var (("a", 0), @{typ nat}), (0, @{term "0 :: nat"}))
+      ]
+    in
+      trace_schematic_resolve_tac_assert
+        @{context}
+        "basic rule tracing"
+        @{thm fooI2}
+        (expected_rule_vars, expected_rule_tvars)
+        (expected_goal_vars, [])
+    end
+  \<close>)
+  by (simp add: foo_def)
+
+text \<open>Rule instantiations with bound variables\<close>
+lemma "\<And>X. X \<and> Y \<Longrightarrow> Y \<and> X"
+  apply (tactic \<open>
+    let
+      val expected_rule_vars = [
+        (Var (("P", 0), @{typ bool}), (1, @{term "\<lambda>X :: bool. Y :: bool"})),
+        (Var (("Q", 0), @{typ bool}), (1, @{term "\<lambda>X :: bool. X :: bool"}))
+      ]
+    in
+      trace_schematic_resolve_tac_assert
+        @{context}
+        "rule tracing with bound variables"
+        @{thm conjI}
+        (expected_rule_vars, [])
+        ([], [])
+    end
+  \<close>)
+  by simp+
+
+text \<open>Rule instantiations with function terms\<close>
+lemma "\<exists>f. \<forall>x. f x = x"
+  apply (intro exI allI)
+  apply (rule fun_cong)
+  apply (tactic \<open>
+    let
+      val a' = TVar (("'a", 0), @{sort type})
+      \<comment>\<open>
+        New lambda abstraction gets an anonymous variable name. Usually rendered as
+        @{term "\<lambda>x a. a"}.
+      \<close>
+      val lambda = Abs ("x", @{typ 'a}, Abs ("", @{typ 'a}, Bound 0))
+
+      val expected_rule_vars = [
+        (Var (("t", 0), a'), (1, lambda))
+      ]
+      val expected_rule_types = [
+        (a', @{typ "'a \<Rightarrow> 'a \<Rightarrow> 'a"})
+      ]
+      val expected_goal_vars = [
+        (Var (("f", 2), @{typ "'a \<Rightarrow> 'a \<Rightarrow> 'a"}), (0, lambda))
+      ]
+    in
+      trace_schematic_resolve_tac_assert
+        @{context}
+        "rule tracing with function term instantiations"
+        @{thm refl}
+        (expected_rule_vars, expected_rule_types)
+        (expected_goal_vars, [])
+    end
+  \<close>)
   done
 
 end

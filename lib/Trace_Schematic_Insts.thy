@@ -11,21 +11,26 @@
 theory Trace_Schematic_Insts
 imports
   Main
+  "ml-helpers/MLUtils"
+  "ml-helpers/TermPatternAntiquote"
 begin
 
 text \<open>
   See Trace_Schematic_Insts_Test for tests and examples.
 \<close>
 
-text \<open>
-  We use this to stash a list of the schematics in the conclusion of
-  the proof state. After running a method, we can read off the
-  schematic instantiations (if any) from this list, then restore the
-  original conclusion. Schematic types are added as "undefined :: ?'a"
-  (for now, we don't worry about types that don't have sort "type").
+locale data_stash
+begin
 
-  TODO: there ought to be some standard way of stashing things into
-  the proof state. Find out what that is and refactor
+text \<open>
+  We use this to stash a list of the schematics in the conclusion of the proof
+  state. After running a method, we can read off the schematic instantiations
+  (if any) from this list, then restore the original conclusion. Schematic
+  types are added as "undefined :: ?'a" (for now, we don't worry about types
+  that don't have sort "type").
+
+  TODO: there ought to be some standard way of stashing things into the proof
+  state. Find out what that is and refactor
 \<close>
 definition container :: "'a \<Rightarrow> bool \<Rightarrow> bool"
   where
@@ -84,15 +89,15 @@ structure Trace_Schematic_Insts: TRACE_SCHEMATIC_INSTS = struct
 \<comment>\<open>
   Each pair is a (schematic, instantiation) pair.
 
-  The int in the term instantiations is the number of binders which are
-  due to subgoal bounds.
+  The int in the term instantiations is the number of binders which are due to
+  subgoal bounds.
 
-  An explanation: if we instantiate some schematic `?P` within
-  a subgoal like @{term "\<And>x y. Q"}, it might be instantiated to @{term "\<lambda>a. R a x"}.
-  We need to capture `x` when reporting the instantiation, so we report that `?P`
-  has been instantiated to @{term "\<lambda>x y a. R a x"}. In order to distinguish between
-  the bound `x`, `y`, and `a`, we record that the two outermost binders are
-  actually due to the subgoal bounds.
+  An explanation: if we instantiate some schematic `?P` within a subgoal like
+  @{term "\<And>x y. Q"}, it might be instantiated to @{term "\<lambda>a. R a
+  x"}.  We need to capture `x` when reporting the instantiation, so we report
+  that `?P` has been instantiated to @{term "\<lambda>x y a. R a x"}. In order
+  to distinguish between the bound `x`, `y`, and `a`, we record that the two
+  outermost binders are actually due to the subgoal bounds.
 \<close>
 type instantiations = (term * (int * term)) list * (typ * typ) list
 
@@ -138,7 +143,7 @@ fun type_vars_of_term t =
 \<close>
 fun make_term_container ts =
       fold (fn t => fn container =>
-              Const (@{const_name proof_state_term__container},
+              Const (@{const_name container},
                     fastype_of t --> @{typ "bool \<Rightarrow> bool"}) $
                 t $ container)
         (rev ts) @{term "True"}
@@ -147,7 +152,7 @@ fun make_term_container ts =
   Retrieve annotation list
 \<close>
 fun dest_term_container
-      (Const (@{const_name proof_state_term__container}, _) $ x $ list) =
+      (Const (@{const_name container}, _) $ x $ list) =
           x :: dest_term_container list
   | dest_term_container _ = []
 
@@ -178,7 +183,7 @@ fun detach_proof_annotations ctxt st =
     val ccontainer =
           ccontainer'
           |> Thm.dest_arg (* strip Trueprop *)
-          |> Thm.dest_arg (* strip outer "p_s_t__c True" *)
+          |> Thm.dest_arg \<comment>\<open>strip outer @{term "container True"}\<close>
     val terms =
           ccontainer
           |> Thm.term_of
@@ -188,40 +193,123 @@ fun detach_proof_annotations ctxt st =
             ([],
              [((("P", 0), @{typ prop}), real_concl),
               ((("xs", 0), @{typ bool}), ccontainer)])
-            @{thm proof_state_term__container_remove}
+            @{thm proof_state_remove}
   in
-    (terms, rewrite_state_concl remove_eqn st)
+    (map (pair 0) terms, rewrite_state_concl remove_eqn st)
   end
 
-(* ML interface, calls the supplied function with schematic unifications
-   (will be given all variables, including those that haven't been instantiated) *)
-fun trace_schematic_insts method callback
-  = fn facts => fn (ctxt, st) =>
-    let val tvars = map TVar (type_vars_of_term (Thm.prop_of st))
-        val tvar_carriers = map (fn tvar => Const (@{const_name undefined}, tvar)) tvars
-        val vars = map Var (vars_of_term (Thm.prop_of st))
-        val annotated_st = attach_proof_annotations ctxt (vars @ tvar_carriers) st
-    in (* Run the method *)
-      method facts (ctxt, annotated_st)
-      |> Seq.map_result (fn (ctxt', annotated_st') => let
-            (* Retrieve the stashed list, now with unifications *)
-            val (annotations, st') = detach_proof_annotations ctxt' annotated_st'
-            val (var_annotations, tvar_annotations) = chop (length vars) annotations
-            (* Report the list *)
-            (* TODO: provide attached Bounds as well? *)
-            val _ = callback (vars ~~ var_annotations) (tvars ~~ map fastype_of tvar_annotations)
-         in (ctxt', st') end)
+\<comment> \<open>
+  Attaches the given terms to the given thm by stashing them as a new @{term
+  "container"} premise, *after* all the existing premises (this minimises
+  disruption when the rule is used with things like `erule`).
+\<close>
+fun attach_rule_annotations ctxt terms thm =
+  let
+    val container = make_term_container terms
+    (* FIXME: this might affect thm's maxidx *)
+    val add_eqn =
+          Thm.instantiate
+            ([],
+             [((("P", 0), @{typ prop}), Thm.cconcl_of thm),
+              ((("xs", 0), @{typ bool}), Thm.cterm_of ctxt container)])
+            @{thm rule_add}
+  in
+    rewrite_state_concl add_eqn thm
+  end
+
+\<comment> \<open>
+  Finds all the variables and type variables in the given thm,
+  then uses `attach` to stash them in a @{const "container"} within
+  the thm.
+
+  Returns a tuple containing the variables and type variables which were attached this way.
+\<close>
+fun annotate_with_vars_using (attach: Proof.context -> term list -> thm -> thm) ctxt thm =
+  let
+    val tvars = type_vars_of_term (Thm.prop_of thm) |> map TVar
+    val tvar_carriers = map (fn tvar => Const (@{const_name undefined}, tvar)) tvars
+    val vars = vars_of_term (Thm.prop_of thm) |> map Var
+    val annotated_rule = attach ctxt (vars @ tvar_carriers) thm
+  in ((vars, tvars), annotated_rule) end
+
+val annotate_rule = annotate_with_vars_using attach_rule_annotations
+val annotate_proof_state = annotate_with_vars_using attach_proof_annotations
+
+fun split_and_zip_instantiations (vars, tvars) insts =
+    let val (var_insts, tvar_insts) = chop (length vars) insts
+    in (vars ~~ var_insts, tvars ~~ map (snd #> fastype_of) tvar_insts) end
+
+\<comment> \<open>
+  Term version of @{ML "Thm.dest_arg"}.
+\<close>
+val dest_arg = Term.dest_comb #> snd
+
+\<comment> \<open>
+  Cousin of @{ML "Term.strip_abs"}.
+\<close>
+fun strip_all t = (Term.strip_all_vars t, Term.strip_all_body t)
+
+\<comment>\<open>
+  Matches subgoals of the form:
+
+  @{term "\<And>A B C. X \<Longrightarrow> Y \<Longrightarrow> Z \<Longrightarrow> container True data"}
+
+  Extracts the instantiation variables from `?data`, and re-applies the surrounding
+  meta abstractions (in this case `\<And>A B C`).
+\<close>
+fun dest_instantiation_container_subgoal t =
+    let
+      val (vars, goal) = t |> strip_all
+      val goal = goal |> Logic.strip_imp_concl
+    in
+      case goal of
+        @{term_pat "Trueprop (container True ?data)"} =>
+            dest_term_container data
+            |> map (fn t => (length vars, Logic.rlist_abs (rev vars, t))) (* reapply variables *)
+            |> SOME
+      | _ => NONE
     end
 
-(* Default callback. Prints nontrivial instantiations to tracing output
-   with the given title line *)
-fun default_report ctxt title var_insts tvar_insts =
+\<comment>\<open>
+  Finds the first subgoal with a @{term container} conclusion. Extracts the data from
+  the container and removes the subgoal.
+\<close>
+fun detach_rule_result_annotations ctxt st =
+  let
+    val (idx, data) =
+        st
+        |> Thm.prems_of
+        |> Library.get_index dest_instantiation_container_subgoal
+        |> OptionExtras.get_or_else (fn () => error "No container subgoal!")
+    val st' =
+        st
+        |> resolve_tac ctxt @{thms elim} (idx + 1)
+        |> Seq.hd
+  in
+    (data, st')
+  end
+
+\<comment>\<open>
+  `abs_all n t` wraps the first `n` lambda abstractions in `t` with interleaved
+  @{term Pure.all} constructors. For example, `abs_all 2 @{term "\<lambda>a b c. P"}` becomes
+  "\<And>a b. \<lambda>c. P". The resulting term is usually not well-typed.
+
+  Used to disambiguate schematic instantiations where the instantiation is a lambda.
+\<close>
+fun abs_all 0 t = t
+  | abs_all n (t as (Abs (v, typ, body))) =
+      if n < 0 then error "Number of lambdas to wrap should be positive." else
+      Const (@{const_name Pure.all}, dummyT)
+        $ Abs (v, typ, abs_all (n - 1) body)
+  | abs_all n _ = error ("Expected at least " ^ Int.toString n ^ " more lambdas.")
+
+fun filtered_instantiation_lines ctxt (var_insts, tvar_insts) =
   let
     val vars_lines =
-        map (fn (var, inst) =>
+        map (fn (var, (abs, inst)) =>
           if var = inst then "" (* don't show unchanged *) else
               "  " ^ Syntax.string_of_term ctxt var ^ "  =>  " ^
-              Syntax.string_of_term ctxt inst ^ "\n")
+              Syntax.string_of_term ctxt (abs_all abs inst) ^ "\n")
         var_insts
     val tvars_lines =
         map (fn (tvar, inst) =>
@@ -229,13 +317,94 @@ fun default_report ctxt title var_insts tvar_insts =
               "  " ^ Syntax.string_of_typ ctxt tvar ^ "  =>  " ^
               Syntax.string_of_typ ctxt inst ^ "\n")
         tvar_insts
-    val all_insts = String.concat (vars_lines @ tvars_lines)
+  in
+    vars_lines @ tvars_lines
+  end
+
+\<comment>\<open>
+  Default callback for black-box method tracing. Prints nontrivial instantiations to tracing output
+  with the given title line.
+\<close>
+fun default_report ctxt title insts =
+  let
+    val all_insts = String.concat (filtered_instantiation_lines ctxt insts)
   (* TODO: add a quiet flag, to suppress output when nothing was instantiated *)
   in title ^ "\n" ^ (if all_insts = "" then "  (no instantiations)\n" else all_insts)
      |> tracing
   end
+
+\<comment> \<open>
+  Default callback for tracing rule applications. Prints nontrivial
+  instantiations to tracing output with the given title line. Separates
+  instantiations of rule variables and goal variables.
+\<close>
+fun default_rule_report ctxt title rule_insts proof_insts =
+  let
+    val rule_lines = String.concat (filtered_instantiation_lines ctxt rule_insts)
+    val rule_lines =
+        if rule_lines = ""
+        then "(no rule instantiations)\n"
+        else "rule instantiations:\n" ^ rule_lines;
+    val proof_lines = String.concat (filtered_instantiation_lines ctxt proof_insts)
+    val proof_lines =
+        if proof_lines = ""
+        then "(no goal instantiations)\n"
+        else "goal instantiations:\n" ^ proof_lines;
+  in title ^ "\n" ^ rule_lines ^ "\n" ^ proof_lines |> tracing  end
+
+\<comment> \<open>
+  `trace_schematic_insts_tac ctxt callback tactic thm idx` does the following:
+
+  - Produce a @{term container}-annotated version of `thm`.
+  - Runs `tactic` on subgoal `idx`, using the annotated version of `thm`.
+  - If the tactic succeeds, call `callback` with the rule instantiations and the goal
+    instantiations, in that order.
+\<close>
+fun trace_schematic_insts_tac
+    ctxt
+    (callback: instantiations -> instantiations -> unit)
+    (tactic: thm -> int -> tactic)
+    thm idx st =
+  let
+    val (rule_vars, annotated_rule) = annotate_rule ctxt thm
+    val (proof_vars, annotated_proof_state) = annotate_proof_state ctxt st
+    val st = tactic annotated_rule idx annotated_proof_state
+  in
+    st |> Seq.map (fn st =>
+      let
+        val (rule_terms, st) = detach_rule_result_annotations ctxt st
+        val (proof_terms, st) = detach_proof_annotations ctxt st
+        val rule_insts = split_and_zip_instantiations rule_vars rule_terms
+        val proof_insts = split_and_zip_instantiations proof_vars proof_terms
+        val () = callback rule_insts proof_insts
+      in
+        st
+      end
+    )
+  end
+
+\<comment>\<open>
+  ML interface, calls the supplied function with schematic unifications
+  (will be given all variables, including those that haven't been instantiated).
+\<close>
+fun trace_schematic_insts (method: Method.method) callback
+  = fn facts => fn (ctxt, st) =>
+    let
+      val (vars, annotated_st) = annotate_proof_state ctxt st
+    in (* Run the method *)
+      method facts (ctxt, annotated_st)
+      |> Seq.map_result (fn (ctxt', annotated_st') => let
+            (* Retrieve the stashed list, now with unifications *)
+            val (annotations, st') = detach_proof_annotations ctxt' annotated_st'
+            val insts = split_and_zip_instantiations vars annotations
+            (* Report the list *)
+            val _ = callback insts
+         in (ctxt', st') end)
+    end
+
 end
 \<close>
+end
 
 method_setup trace_schematic_insts = \<open>
   let
