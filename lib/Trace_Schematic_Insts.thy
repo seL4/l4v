@@ -27,35 +27,78 @@ text \<open>
   TODO: there ought to be some standard way of stashing things into
   the proof state. Find out what that is and refactor
 \<close>
-definition proof_state_term__container :: "'a \<Rightarrow> bool \<Rightarrow> bool"
+definition container :: "'a \<Rightarrow> bool \<Rightarrow> bool"
   where
-  "proof_state_term__container a b \<equiv> True"
+  "container a b \<equiv> True"
 
-lemma proof_state_term__container_add:
-  "Pure.prop PROP P \<equiv> PROP Pure.prop (proof_state_term__container True xs \<Longrightarrow> PROP P)"
-  by (simp add: proof_state_term__container_def)
+lemma proof_state_add:
+  "Pure.prop PROP P \<equiv> PROP Pure.prop (container True xs \<Longrightarrow> PROP P)"
+  by (simp add: container_def)
 
-lemma proof_state_term__container_remove:
-  "PROP Pure.prop (proof_state_term__container True xs \<Longrightarrow> PROP P) \<equiv> Pure.prop (PROP P)"
-  by (simp add: proof_state_term__container_def)
+lemma proof_state_remove:
+  "PROP Pure.prop (container True xs \<Longrightarrow> PROP P) \<equiv> Pure.prop (PROP P)"
+  by (simp add: container_def)
+
+lemma rule_add:
+  "PROP P \<equiv> (container True xs \<Longrightarrow> PROP P)"
+  by (simp add: container_def)
+
+lemma rule_remove:
+  "(container True xs \<Longrightarrow> PROP P) \<equiv> PROP P"
+  by (simp add: container_def)
+
+lemma elim:
+  "container a b"
+  by (simp add: container_def)
 
 ML \<open>
 signature TRACE_SCHEMATIC_INSTS = sig
+  type instantiations = (term * (int * term)) list * (typ * typ) list
+
   val trace_schematic_insts:
-        Method.method -> ((term * term) list -> (typ * typ) list -> unit) -> Method.method
+        Method.method -> (instantiations -> unit) -> Method.method
   val default_report:
-        Proof.context -> string -> (term * term) list -> (typ * typ) list -> unit
+        Proof.context -> string -> instantiations -> unit
+
+  val trace_schematic_insts_tac:
+        Proof.context ->
+        (instantiations -> instantiations -> unit) ->
+        (thm -> int -> tactic) ->
+        thm -> int -> tactic
+  val default_rule_report:
+        Proof.context -> string -> instantiations -> instantiations -> unit
 
   val skip_dummy_state: Method.method -> Method.method
   val make_term_container: term list -> term
   val dest_term_container: term -> term list
+
   val attach_proof_annotations: Proof.context -> term list -> thm -> thm
-  val detach_proof_annotations: Proof.context -> thm -> term list * thm
+  val detach_proof_annotations: Proof.context -> thm -> (int * term) list * thm
+
+  val attach_rule_annotations: Proof.context -> term list -> thm -> thm
+  val detach_rule_result_annotations: Proof.context -> thm -> (int * term) list * thm
 end
 
 structure Trace_Schematic_Insts: TRACE_SCHEMATIC_INSTS = struct
 
-(* Work around Isabelle running every apply method on a dummy proof state *)
+\<comment>\<open>
+  Each pair is a (schematic, instantiation) pair.
+
+  The int in the term instantiations is the number of binders which are
+  due to subgoal bounds.
+
+  An explanation: if we instantiate some schematic `?P` within
+  a subgoal like @{term "\<And>x y. Q"}, it might be instantiated to @{term "\<lambda>a. R a x"}.
+  We need to capture `x` when reporting the instantiation, so we report that `?P`
+  has been instantiated to @{term "\<lambda>x y a. R a x"}. In order to distinguish between
+  the bound `x`, `y`, and `a`, we record that the two outermost binders are
+  actually due to the subgoal bounds.
+\<close>
+type instantiations = (term * (int * term)) list * (typ * typ) list
+
+\<comment>\<open>
+  Work around Isabelle running every apply method on a dummy proof state
+\<close>
 fun skip_dummy_state method =
   fn facts => fn (ctxt, st) =>
     case Thm.prop_of st of
@@ -64,11 +107,15 @@ fun skip_dummy_state method =
           Seq.succeed (Seq.Result (ctxt, st))
       | _ => method facts (ctxt, st);
 
-(* Utils *)
+\<comment>\<open>
+  Utils
+\<close>
 fun rewrite_state_concl eqn st =
   Conv.fconv_rule (Conv.concl_conv (Thm.nprems_of st) (K eqn)) st
 
-(* Strip the @{term Prop.prop} that wraps proof state conclusions *)
+\<comment>\<open>
+  Strip the @{term Pure.prop} that wraps proof state conclusions
+\<close>
 fun strip_prop ct =
       case Thm.term_of ct of
         Const (@{const_name "Pure.prop"}, @{typ "prop \<Rightarrow> prop"}) $ _ => Thm.dest_arg ct
@@ -86,7 +133,9 @@ fun type_vars_of_term t =
   Term.add_tvars t []
   |> sort_distinct Term_Ord.tvar_ord
 
-(* Create annotation list *)
+\<comment>\<open>
+  Create annotation list
+\<close>
 fun make_term_container ts =
       fold (fn t => fn container =>
               Const (@{const_name proof_state_term__container},
@@ -94,13 +143,17 @@ fun make_term_container ts =
                 t $ container)
         (rev ts) @{term "True"}
 
-(* Retrieve annotation list *)
+\<comment>\<open>
+  Retrieve annotation list
+\<close>
 fun dest_term_container
       (Const (@{const_name proof_state_term__container}, _) $ x $ list) =
           x :: dest_term_container list
   | dest_term_container _ = []
 
-(* Attach some terms to a proof state *)
+\<comment>\<open>
+  Attach some terms to a proof state, by "hiding" them in the protected goal.
+\<close>
 fun attach_proof_annotations ctxt terms st =
   let
     val container = make_term_container terms
@@ -110,12 +163,14 @@ fun attach_proof_annotations ctxt terms st =
             ([],
              [((("P", 0), @{typ prop}), cconcl_of st),
               ((("xs", 0), @{typ bool}), Thm.cterm_of ctxt container)])
-            @{thm proof_state_term__container_add}
+            @{thm proof_state_add}
   in
     rewrite_state_concl add_eqn st
   end
 
-(* Retrieve attached terms from a proof state *)
+\<comment>\<open>
+  Retrieve attached terms from a proof state
+\<close>
 fun detach_proof_annotations ctxt st =
   let
     val st_concl = cconcl_of st
