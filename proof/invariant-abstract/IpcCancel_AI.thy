@@ -831,7 +831,7 @@ lemma reply_unlink_sc_sym_refs:
   apply (rename_tac replies reply)
   apply (case_tac "hd replies \<noteq> rp"; clarsimp)
    apply (wpsimp wp: update_sched_context_state_refs_of)
-   apply (clarsimp simp: sc_at_pred_def obj_at_def)
+   apply (clarsimp simp: sc_at_ppred_def obj_at_def)
    apply (case_tac "sc_replies sc"; simp)
   apply (rule hoare_seq_ext[OF _ assert_sp])
   apply (rule_tac S="\<exists>replies'. replies = rp # replies'" in hoare_gen_asm'')

@@ -263,36 +263,44 @@ lemma st_tcb_at_def: "st_tcb_at test \<equiv> obj_at (\<lambda>ko. \<exists>tcb.
 definition sc_at_pred_n ::
   "(nat \<Rightarrow> bool) \<Rightarrow> (sched_context \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
   where
-  "sc_at_pred_n N proj P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> N n \<and> P (proj sc))"
+  "sc_at_pred_n N proj P p s \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> N n \<and> P (proj sc)) p s"
 
 (* for compatibility with existing sc_*_sc_at predicates *)
-abbreviation "sc_at_pred \<equiv> sc_at_pred_n (\<lambda>_. True)"
+abbreviation "sc_at_ppred \<equiv> sc_at_pred_n (\<lambda>_. True)"
 
-abbreviation "sc_ntfn_sc_at \<equiv> sc_at_pred sc_ntfn"
-abbreviation "sc_tcb_sc_at \<equiv> sc_at_pred sc_tcb"
-abbreviation "sc_yf_sc_at \<equiv> sc_at_pred sc_yield_from"
-abbreviation "sc_replies_sc_at \<equiv> sc_at_pred sc_replies"
-abbreviation "sc_refills_sc_at \<equiv> sc_at_pred sc_refills"
+abbreviation "sc_at_pred \<equiv> sc_at_ppred (\<lambda>sc. sc)"
+abbreviation "sc_ntfn_sc_at \<equiv> sc_at_ppred sc_ntfn"
+abbreviation "sc_tcb_sc_at \<equiv> sc_at_ppred sc_tcb"
+abbreviation "sc_yf_sc_at \<equiv> sc_at_ppred sc_yield_from"
+abbreviation "sc_replies_sc_at \<equiv> sc_at_ppred sc_replies"
+abbreviation "sc_refills_sc_at \<equiv> sc_at_ppred sc_refills"
+abbreviation "sc_refill_max_sc_at \<equiv> sc_at_ppred sc_refill_max"
+abbreviation "sc_period_sc_at \<equiv> sc_at_ppred sc_period"
 
-lemma sc_at_pred_def:
-  "sc_at_pred proj P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (proj sc))"
+lemma sc_at_ppred_def:
+  "sc_at_ppred proj P p s \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (proj sc)) p s"
   by (simp add: sc_at_pred_n_def)
 
-lemmas sc_ntfn_sc_at_def = sc_at_pred_def[of sc_ntfn]
-lemmas sc_tcb_sc_at_def = sc_at_pred_def[of sc_tcb]
-lemmas sc_yf_sc_at_def = sc_at_pred_def[of sc_yield_from]
-lemmas sc_replies_sc_at_def = sc_at_pred_def[of sc_replies]
-lemmas sc_refills_sc_at_def = sc_at_pred_def[of sc_refills]
+lemmas sc_at_pred_def = sc_at_ppred_def[of "\<lambda>sc. sc"]
+lemmas sc_ntfn_sc_at_def = sc_at_ppred_def[of sc_ntfn]
+lemmas sc_tcb_sc_at_def = sc_at_ppred_def[of sc_tcb]
+lemmas sc_yf_sc_at_def = sc_at_ppred_def[of sc_yield_from]
+lemmas sc_replies_sc_at_def = sc_at_ppred_def[of sc_replies]
+lemmas sc_refills_sc_at_def = sc_at_ppred_def[of sc_refills]
+lemmas sc_refill_max_sc_at_def = sc_at_ppred_def[of sc_refill_max]
+lemmas sc_period_sc_at_def = sc_at_ppred_def[of sc_period]
 
 lemma sc_at_pred_ko_atI:
   "ko_at (SchedContext sc nb) ptr s \<Longrightarrow> P (proj sc)
-    \<Longrightarrow> sc_at_pred proj P ptr s"
-  by (simp add: sc_at_pred_def obj_at_def)
+    \<Longrightarrow> sc_at_ppred proj P ptr s"
+  by (simp add: sc_at_ppred_def obj_at_def)
 
 lemmas sc_ntfn_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=sc_ntfn]
 lemmas sc_tcb_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=sc_tcb]
 lemmas sc_yf_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=sc_yield_from]
 lemmas sc_replies_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=sc_replies]
+lemmas sc_refills_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=sc_refills]
+lemmas sc_refill_max_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=sc_refill_max]
 
 (* for compatibility with existing sc_at predicate *)
 abbreviation "sc_at_pred_v \<equiv> sc_at_pred_n valid_sched_context_size"
@@ -301,6 +309,8 @@ abbreviation "sc_ntfn_sc_at_v \<equiv> sc_at_pred_v sc_ntfn"
 abbreviation "sc_tcb_sc_at_v \<equiv> sc_at_pred_v sc_tcb"
 abbreviation "sc_yf_sc_at_v \<equiv> sc_at_pred_v sc_yield_from"
 abbreviation "sc_replies_sc_at_v \<equiv> sc_at_pred_v sc_replies"
+abbreviation "sc_refills_sc_at_v \<equiv> sc_at_pred_v sc_refills"
+abbreviation "sc_refill_max_sc_at_v \<equiv> sc_at_pred_v sc_refill_max"
 
 lemmas sc_at_pred_v_def = sc_at_pred_n_def[of valid_sched_context_size]
 
@@ -308,6 +318,8 @@ lemmas sc_ntfn_sc_at_v_def = sc_at_pred_v_def[of sc_ntfn]
 lemmas sc_tcb_sc_at_v_def = sc_at_pred_v_def[of sc_tcb]
 lemmas sc_yf_sc_at_v_def = sc_at_pred_v_def[of sc_yield_from]
 lemmas sc_replies_sc_at_v_def = sc_at_pred_v_def[of sc_replies]
+lemmas sc_refills_sc_at_v_def = sc_at_pred_v_def[of sc_refills]
+lemmas sc_refill_max_sc_at_v_def = sc_at_pred_v_def[of sc_refill_max]
 
 (* Simple kernel object with projected property at p *)
 definition sk_obj_at_pred ::
@@ -343,6 +355,12 @@ lemma simple_obj_at_id:
 lemma simple_obj_at_ko_at:
   "simple_obj_at C ((=) obj) = ko_at (C obj)"
   by (intro ext; simp add: simple_obj_at_def obj_at_def)
+
+abbreviation "ntfn_at_ppred \<equiv> sk_obj_at_pred Notification"
+abbreviation "ep_at_ppred \<equiv> sk_obj_at_pred Endpoint"
+
+lemmas ntfn_at_ppred_def = sk_obj_at_pred_def[of Notification]
+lemmas ep_at_ppred_def = sk_obj_at_pred_def[of Endpoint]
 
 abbreviation "reply_at_pred \<equiv> simple_obj_at Reply"
 abbreviation "ntfn_at_pred \<equiv> simple_obj_at Notification"
@@ -1249,12 +1267,11 @@ definition
        (\<lambda>t. scheduler_action s = resume_cur_thread \<longrightarrow> t = Some (cur_thread s))
        (cur_sc s) s"
 
-definition valid_machine_time_2 where
-   "valid_machine_time_2 ct ms \<equiv> last_machine_time ms \<le> - kernelWCET_ticks - 1 \<and>
-                               ct \<le> last_machine_time ms"
+definition valid_machine_time_2 :: "time \<Rightarrow> time \<Rightarrow> bool" where
+   "valid_machine_time_2 ct lmt \<equiv> lmt \<le> - kernelWCET_ticks - 1 \<and> ct \<le> lmt"
 
 abbreviation valid_machine_time :: "'z state \<Rightarrow> bool" where
- "valid_machine_time s \<equiv> valid_machine_time_2 (cur_time s) (machine_state s)"
+ "valid_machine_time s \<equiv> valid_machine_time_2 (cur_time s) (last_machine_time (machine_state s))"
 
 lemmas valid_machine_time_def = valid_machine_time_2_def
 
@@ -4419,7 +4436,7 @@ lemma invs_reply_tcb_None_reply_sc_None:
                    split: option.splits)+
   apply (rule ccontr, clarsimp)
   apply (frule(3) reply_sc_refs)
-  apply (fastforce simp: sc_at_pred_def obj_at_def image_def)
+  apply (fastforce simp: sc_at_ppred_def obj_at_def image_def)
   done
 
 lemma the_pred_option_None_iff:

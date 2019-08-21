@@ -45,16 +45,6 @@ crunch ct_not_in_q[wp]: set_vm_root "ct_not_in_q"
 crunch ct_not_in_q'[wp]: set_vm_root "\<lambda>s. ct_not_in_q_2 (ready_queues s) (scheduler_action s) t"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma switch_to_idle_thread_ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
-  "\<lbrace>valid_ready_qs and valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
-  apply (simp add: switch_to_idle_thread_def)
-  apply wp
-   apply (simp add: arch_switch_to_idle_thread_def)
-   apply wp+
-  apply (fastforce simp: valid_ready_qs_def ct_not_in_q_def not_queued_def
-                         valid_idle_def pred_tcb_at_def obj_at_def)
-  done
-
 crunches arch_switch_to_idle_thread
   for release_queue[wp]: "\<lambda>s. P (release_queue s)"
 

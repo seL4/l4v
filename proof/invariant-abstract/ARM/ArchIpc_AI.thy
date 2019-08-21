@@ -420,7 +420,7 @@ lemma cap_insert_valid_vso_at[wp]:
   apply (clarsimp simp: valid_vso_at_def)
   by (wpsimp wp: sts_obj_at_impossible sts_typ_ats hoare_vcg_ex_lift)
 
-crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "P (typ_at T p s)"
+crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (typ_at T p s)"
 
 lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
   "\<lbrace>valid_vspace_objs\<rbrace>

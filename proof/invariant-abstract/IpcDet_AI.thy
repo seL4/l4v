@@ -235,10 +235,9 @@ crunches receive_ipc_preamble
   and caps_of_state: "\<lambda>s. P (caps_of_state s)"
 
 lemma receive_ipc_preamble_st_tcb_at:
-  "\<lbrace>invs and st_tcb_at st t\<rbrace> receive_ipc_preamble reply t \<lbrace>\<lambda>rv. st_tcb_at st t\<rbrace>"
+  "\<lbrace>\<lambda>s. P (st_tcb_at P' t s)\<rbrace> receive_ipc_preamble reply t \<lbrace>\<lambda>rv s. P (st_tcb_at P' t s)\<rbrace>"
   by (wpsimp simp: receive_ipc_preamble_def
-               wp: cancel_ipc_st_tcb_at_different_thread hoare_vcg_if_lift2 get_sk_obj_ref_inv
-      | wp_once hoare_drop_imps)+
+               wp: cancel_ipc_st_tcb_at hoare_vcg_if_lift2 get_sk_obj_ref_wp)
 
 global_interpretation set_tcb_obj_ref: non_reply_op "set_tcb_obj_ref f ref new"
   apply unfold_locales
@@ -448,6 +447,9 @@ lemma receive_ipc_blocked_invs':
        apply (all \<open>clarsimp simp: invs_def valid_state_def valid_pspace_def st_tcb_at_tcb_at
                                   valid_tcb_state_def not_idle_thread
                                   ko_at_Endpoint_ep_at reply_tcb_reply_at\<close>)
+       apply (all \<open>apply_conjunct \<open>rule replies_blocked_upd_tcb_st_valid_replies_not_blocked\<close>
+                                   , assumption
+                                   , fastforce simp: replies_blocked_def st_tcb_at_def obj_at_def\<close>)
        apply (all \<open>rule revcut_rl[where V="ep_ptr \<noteq> t"], fastforce simp: obj_at_def pred_tcb_at_def\<close>)
        apply (all \<open>(match premises in \<open>reply = ReplyCap r_ptr\<close> for r_ptr \<Rightarrow>
                      \<open>rule revcut_rl[where V="r_ptr \<notin> {t, ep_ptr}"]\<close>
@@ -455,17 +457,11 @@ lemma receive_ipc_blocked_invs':
        apply (all \<open>frule obj_at_state_refs_ofD; clarsimp simp: ep_queue\<close>)
        apply (all \<open>frule(1) fault_tcbs_valid_states_active\<close>)
        apply (all \<open>drule active_st_tcb_at_state_refs_ofD; drule st_tcb_at_ko_atD\<close>)
-       apply (all \<open>clarsimp simp: tcb_non_st_state_refs_of_state_refs_of set_difference_not_P
+       apply (all \<open>clarsimp simp: tcb_non_st_state_refs_of_state_refs_of
                             cong: if_cong\<close>)
-       apply safe
-         apply (erule delta_sym_refs; clarsimp split: if_splits; safe, clarsimp)
-        apply (rule replies_blocked_upd_tcb_st_valid_replies_not_blocked;
-               clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def)
-       apply (erule delta_sym_refs;
-              fastforce dest: reply_tcb_reply_at_ReplyTCB_in_state_refs_of
-                       split: if_splits)
-      apply (rule replies_blocked_upd_tcb_st_valid_replies_not_blocked;
-             clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def)
+       apply (all \<open>erule delta_sym_refs
+                   ; fastforce dest: reply_tcb_reply_at_ReplyTCB_in_state_refs_of
+                              split: if_splits\<close>)
       done
   qed
 
@@ -893,8 +889,8 @@ lemma valid_objs_distinct_sc_replies:
   done
 
 lemma sc_at_pred_id_top_weaken:
-  "sc_at_pred proj P sc s \<Longrightarrow> sc_at_pred id \<top> sc s"
-  by (clarsimp simp: sc_at_pred_def obj_at_def)
+  "sc_at_ppred proj P sc s \<Longrightarrow> sc_at_ppred id \<top> sc s"
+  by (clarsimp simp: sc_at_ppred_def obj_at_def)
 
 lemma SCReply_ref_fst_replies_with_sc:
   "(reply_ptr, SCReply) \<in> state_refs_of s y \<Longrightarrow> reply_ptr \<in> fst ` replies_with_sc s"

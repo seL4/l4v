@@ -96,6 +96,21 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
 crunches handle_send, handle_hypervisor_fault
   for valid_list[wp, Deterministic_AI_assms]: valid_list
 
+named_theorems machine_ops_last_machine_time'
+named_theorems arch_machine_ops_last_machine_time'
+
+\<comment> \<open>crunch these separately so they don't appear in machine_ops_last_machine_time\<close>
+crunches cleanByVA_PoU, cleanCacheRange_PoU
+  for last_machine_time[wp, arch_machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms)"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunches storeWord, clearMemory, freeMemory, ackDeadlineIRQ, ackInterrupt, maskInterrupt, setDeadline
+  for last_machine_time[wp, machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms)"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemmas machine_ops_last_machine_time = machine_ops_last_machine_time'
+lemmas arch_machine_ops_last_machine_time = arch_machine_ops_last_machine_time'
+
 end
 
 global_interpretation Deterministic_AI_2?: Deterministic_AI_2

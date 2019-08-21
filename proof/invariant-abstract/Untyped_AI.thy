@@ -304,6 +304,19 @@ locale Untyped_AI_arch =
     \<Longrightarrow> case ui of
         Retype slot reset ptr_base ptr tp us slots dev
         \<Rightarrow> obj_is_device tp dev = dev"
+  (* FIXME: not needed? *)
+  assumes init_arch_objects_obj_at_other:
+  "\<And>ptrs ty us p ptr n N P.
+    \<lbrakk>\<forall>ptr\<in>set ptrs. is_aligned ptr (obj_bits_api ty us); p \<notin> set ptrs\<rbrakk>
+    \<Longrightarrow> init_arch_objects ty ptr n us ptrs \<lbrace>\<lambda>s::'state_ext state. N (obj_at P p s)\<rbrace>"
+  assumes init_arch_objects_obj_at_live:
+  "\<And>ptrs ty us p ptr n N P.
+    \<forall>ko. P ko \<longrightarrow> live ko
+    \<Longrightarrow> init_arch_objects ty ptr n us ptrs \<lbrace>\<lambda>s::'state_ext state. N (obj_at P p s)\<rbrace>"
+  assumes init_arch_objects_obj_at_non_arch:
+  "\<And>ptrs ty us p ptr n N P.
+    \<forall>ko. P ko \<longrightarrow> non_arch_obj ko
+    \<Longrightarrow> init_arch_objects ty ptr n us ptrs \<lbrace>\<lambda>s::'state_ext state. N (obj_at P p s)\<rbrace>"
 
 lemmas is_aligned_triv2 = Aligned.is_aligned_triv
 
@@ -2337,8 +2350,6 @@ lemmas aligned_after_mask =
 lemma detype_clear_um_simps[simp]:
  "caps_no_overlap ptr sz (clear_um H s)
   = caps_no_overlap ptr sz s"
- "pspace_no_overlap S (clear_um H s)
-  = pspace_no_overlap S s"
  "descendants_range_in S p (clear_um H s)
   = descendants_range_in S p s"
   apply (clarsimp simp: caps_no_overlap_def pspace_no_overlap_def
@@ -2798,31 +2809,33 @@ lemma get_cap_prop_known:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
 
-lemma reset_untyped_cap_st_tcb_at:
-  "\<lbrace>invs and st_tcb_at P t and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot\<rbrace>
-    reset_untyped_cap slot
-  \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>, \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
-  apply (simp add: reset_untyped_cap_def)
-  apply (rule hoare_pre)
-   apply (wp mapME_x_inv_wp preemption_point_inv | simp add: unless_def)+
-    apply (simp add: delete_objects_def)
-    apply (wp get_cap_wp hoare_vcg_const_imp_lift | simp)+
-  apply (auto simp: cte_wp_at_caps_of_state cap_range_def
-                        bits_of_def is_cap_simps)
-  done
+lemma reset_untyped_cap_obj_at:
+  assumes "cspace_agnostic_pred P'"
+  shows "\<lbrace>\<lambda>s. P (obj_at P' p s) \<and> cte_wp_at (\<lambda>cp. p \<notin> cap_range cp \<and> is_untyped_cap cp) slot s\<rbrace>
+         reset_untyped_cap slot
+         \<lbrace>\<lambda>_ s. P (obj_at P' p s)\<rbrace>"
+  apply (wpsimp wp: set_cap.cspace_agnostic_obj_at[OF assms] mapME_x_inv_wp
+                    preemption_point_inv get_cap_wp
+              simp: reset_untyped_cap_def delete_objects_def)
+  by (case_tac cap; fastforce simp: cte_wp_at_caps_of_state bits_of_def)
 
-lemma reset_untyped_cap_bound_sc_tcb_at:
-  "\<lbrace>invs and (\<lambda>s. Q (bound_sc_tcb_at P t s)) and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot\<rbrace>
-    reset_untyped_cap slot
-  \<lbrace>\<lambda>_ s. Q (bound_sc_tcb_at P t s)\<rbrace>, \<lbrace>\<lambda>_ s. Q (bound_sc_tcb_at P t s)\<rbrace>"
-  apply (simp add: reset_untyped_cap_def)
-  apply (rule hoare_pre)
-   apply (wp mapME_x_inv_wp preemption_point_inv | simp add: unless_def)+
-    apply (simp add: delete_objects_def)
-    apply (wp get_cap_wp hoare_vcg_const_imp_lift | simp)+
-  apply (auto simp: cte_wp_at_caps_of_state cap_range_def
-                        bits_of_def is_cap_simps)
-  done
+lemma reset_untyped_cap_pred_tcb_at:
+  "\<lbrace>\<lambda>s. P (pred_tcb_at proj P' t s) \<and> cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot s\<rbrace>
+   reset_untyped_cap slot
+   \<lbrace>\<lambda>_ s. P (pred_tcb_at proj P' t s)\<rbrace>"
+  by (auto simp: pred_tcb_at_def cspace_agnostic_pred_def tcb_to_itcb_def
+          intro: reset_untyped_cap_obj_at)
+
+(* FIXME: remove *)
+lemmas reset_untyped_cap_st_tcb_at = reset_untyped_cap_pred_tcb_at[where proj=itcb_state]
+lemmas reset_untyped_cap_bound_sc_tcb_at = reset_untyped_cap_pred_tcb_at[where proj=itcb_sched_context]
+
+lemma reset_untyped_cap_sc_at_pred_n:
+  "\<lbrace>\<lambda>s. P (sc_at_pred_n N proj P' p s) \<and> cte_wp_at (\<lambda>cp. p \<notin> cap_range cp \<and> is_untyped_cap cp) slot s\<rbrace>
+   reset_untyped_cap slot
+   \<lbrace>\<lambda>_ s. P (sc_at_pred_n N proj P' p s)\<rbrace>"
+  by (auto simp: sc_at_pred_n_def cspace_agnostic_pred_def tcb_to_itcb_def
+          intro: reset_untyped_cap_obj_at)
 
 lemma create_cap_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap
@@ -3559,6 +3572,11 @@ lemma retype_region_ranges_obj_bits_api:
    apply (clarsimp simp: is_cap_simps word_and_le2 del: subsetI)
    done
 
+(* FIXME: move *)
+lemma runnable_nonz_cap_to:
+  "st_tcb_at runnable t s \<Longrightarrow> if_live_then_nonz_cap s \<Longrightarrow> ex_nonz_cap_to t s"
+  by (fastforce elim: st_tcb_ex_cap split: thread_state.splits)
+
 context Untyped_AI begin
 
 lemma invoke_untyp_invs':
@@ -3571,13 +3589,13 @@ lemma invoke_untyp_invs':
             and K (cref \<in> set slots \<and> oref \<in> set (retype_addrs ptr tp (length slots) us))
             and K (range_cover ptr sz (obj_bits_api tp us) (length slots))\<rbrace>
          create_cap tp us slot dev (cref,oref) \<lbrace>\<lambda>_. Q\<rbrace>"
- assumes init_arch_Q: "\<And>tp slot reset sz slots ptr n us refs dev.
+ assumes init_arch_Q: "\<And>tp slot reset sz slots ptr us refs dev.
    ui = Invocations_A.Retype slot reset (ptr && ~~ mask sz) ptr tp us slots dev
     \<Longrightarrow> \<lbrace>Q and post_retype_invs tp refs
        and cte_wp_at (\<lambda>c. \<exists>idx. c = cap.UntypedCap dev (ptr && ~~ mask sz) sz idx) slot
-       and K (refs = retype_addrs ptr tp n us
-         \<and> range_cover ptr sz (obj_bits_api tp us) n)\<rbrace>
-     init_arch_objects tp ptr n us refs \<lbrace>\<lambda>_. Q\<rbrace>"
+       and K (refs = retype_addrs ptr tp (length slots) us
+         \<and> range_cover ptr sz (obj_bits_api tp us) (length slots))\<rbrace>
+     init_arch_objects tp ptr (length slots) us refs \<lbrace>\<lambda>_. Q\<rbrace>"
  assumes retype_region_Q: "\<And>ptr us tp slot reset sz slots dev.
     ui = Invocations_A.Retype slot reset (ptr && ~~ mask sz) ptr tp us slots dev
     \<Longrightarrow> \<lbrace>\<lambda>s. invs s \<and> Q s
@@ -3810,24 +3828,29 @@ lemmas invoke_untyp_invs[wp] =
 lemmas invoke_untyped_Q
     = invoke_untyp_invs'[THEN validE_valid, THEN hoare_conjD2[unfolded pred_conj_def]]
 
+(* FIXME: move? *)
+lemma descendants_of_empty_untyped_range:
+  assumes desc: "descendants_of slot (cdt s) = {}"
+  assumes cap: "caps_of_state s slot = Some cap"
+  assumes invs: "invs s"
+  assumes untyped: "is_untyped_cap cap"
+  assumes cap_to: "ex_nonz_cap_to p s"
+  shows "p \<notin> untyped_range cap"
+  by (rule ex_nonz_cap_to_overlap[where p=slot, OF cap_to _ untyped invs]
+      ; simp add: cap cte_wp_at_caps_of_state descendants_range_def2
+                  empty_descendants_range_in[OF desc])
+
 lemma invoke_untyped_st_tcb_at[wp]:
-  "\<lbrace>invs and st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t
+  "\<lbrace>invs and pred_tcb_at proj P t and ex_nonz_cap_to t
          and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_untyped_inv ui\<rbrace>
      invoke_untyped ui
-   \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. st_tcb_at P t s\<rbrace>"
-  apply (rule hoare_pre, rule invoke_untyped_Q,
-    (wp init_arch_objects_wps | simp)+)
-     apply (rule hoare_name_pre_state, clarsimp)
-     apply (wp retype_region_st_tcb_at, auto)[1]
-    apply (wp reset_untyped_cap_st_tcb_at | simp)+
-  apply (cases ui, clarsimp)
-  apply (strengthen st_tcb_weakenE[mk_strg I E], clarsimp)
-  apply (frule(1) st_tcb_ex_cap[OF _ invs_iflive])
-   apply (clarsimp split: Structures_A.thread_state.splits)
-  apply (drule ex_nonz_cap_to_overlap,
-    ((simp add:cte_wp_at_caps_of_state
-            is_cap_simps descendants_range_def2
-            empty_descendants_range_in)+))
+   \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. pred_tcb_at proj P t s\<rbrace>"
+  apply (rule hoare_weaken_pre[OF invoke_untyped_Q[OF _ _ _ _ reset_untyped_cap_pred_tcb_at]]
+         ; wpsimp wp: init_arch_objects_wps retype_region_st_tcb_at)
+   apply fastforce
+  apply (cases ui, rename_tac slot reset ptr_base ptr ty us slots dev)
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
+  apply (frule (2) descendants_of_empty_untyped_range[where p=t]; clarsimp)
   done
 
 lemma invoked_untyp_tcb[wp]:
@@ -3836,9 +3859,7 @@ lemma invoked_untyp_tcb[wp]:
      invoke_untyped ui \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. tcb_at tptr s\<rbrace>"
   apply (simp add: tcb_at_st_tcb_at)
   apply (rule hoare_pre, wp invoke_untyped_st_tcb_at)
-  apply (clarsimp elim!: pred_tcb_weakenE)
-  apply fastforce
-  done
+  by (fastforce simp: pred_tcb_weakenE elim: runnable_nonz_cap_to[unfolded runnable_eq])
 
 end
 

@@ -628,6 +628,78 @@ lemma create_cap_ioports[wp, Untyped_AI_assms]:
   "\<lbrace>valid_ioports and cte_wp_at (\<lambda>_. True) cref\<rbrace> create_cap tp sz p dev (cref,oref) \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
   by wpsimp
 
+(* FIXME: move *)
+lemma get_pd_sp:
+  "\<lbrace>P\<rbrace> get_pd p \<lbrace>\<lambda>pd s. ako_at (PageDirectory pd) p s \<and> P s\<rbrace>"
+  by wpsimp
+
+(* FIXME: move *)
+lemma set_object_obj_at_other:
+  assumes "ptr \<noteq> p"
+  shows "set_object ptr ko \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+  apply (wpsimp wp: set_object_wp)
+  apply (erule rsubst[of N])
+  using assms by (clarsimp simp: obj_at_def)
+
+lemma copy_global_mappings_obj_at_other:
+  assumes ptr: "ptr \<noteq> p"
+  assumes aligned: "is_aligned ptr pd_bits"
+  shows "copy_global_mappings ptr \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+proof -
+  have bits:
+    "\<And>i. i \<le> 2 ^ (pd_bits - 2) - 1 \<Longrightarrow> ptr + (i << 2) && ~~ mask pd_bits = ptr"
+    using aligned apply -
+    apply (subgoal_tac "of_nat (unat (i << 2)) && ~~ mask pd_bits = (0::obj_ref)"
+           , fastforce simp: is_aligned_mask_out_add_eq)
+    apply (rule mask_out_eq_0[OF unat_shiftl_less_t2n])
+    apply (subst (asm) word_less_sub_le)
+    by (auto simp: word_less_nat_alt pd_bits)
+  show ?thesis
+    by (wpsimp simp: copy_global_mappings_def store_pde_def set_pd_def bits
+                 wp: mapM_x_wp' set_object_obj_at_other[OF ptr]
+                     get_object_wp)
+qed
+
+lemma init_arch_objects_obj_at_other[Untyped_AI_assms]:
+  "\<lbrakk>\<forall>ptr\<in>set ptrs. is_aligned ptr (obj_bits_api ty us); p \<notin> set ptrs\<rbrakk>
+    \<Longrightarrow> init_arch_objects ty ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+  by (wpsimp simp: init_arch_objects_def obj_bits_api_def default_arch_object_def
+                   pd_bits_def pageBits_def
+               wp: mapM_x_wp' copy_global_mappings_obj_at_other)
+
+lemma copy_global_mappings_obj_at_non_pd:
+  assumes non_pd: "\<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageDirectory pd))"
+  shows "copy_global_mappings ptr \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+  apply (clarsimp simp: copy_global_mappings_def)
+  apply (rule hoare_seq_ext[OF _ gets_inv])
+  apply (rule mapM_x_wp')
+  apply (rule hoare_seq_ext[OF _ get_pde_inv])
+  apply (wpsimp simp: store_pde_def set_pd_def wp: set_object_wp get_object_wp)
+  apply (clarsimp simp: obj_at_def elim!: rsubst[of N])
+  apply (rule iffI; drule spec[OF non_pd, THEN mp]; simp)
+  done
+
+lemma init_arch_objects_obj_at_non_pd:
+  assumes non_pd: "\<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageDirectory pd))"
+  shows "init_arch_objects ty ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+  by (wpsimp simp: init_arch_objects_def obj_bits_api_def default_arch_object_def
+                   pd_bits_def pageBits_def
+               wp: mapM_x_wp' copy_global_mappings_obj_at_non_pd[OF non_pd])
+
+lemma non_arch_non_pd:
+  "\<forall>ko. P ko \<longrightarrow> non_arch_obj ko \<Longrightarrow> \<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageDirectory pd))"
+  by (auto simp: non_arch_obj_def)
+
+lemma live_non_pd:
+  "\<forall>ko. P ko \<longrightarrow> live ko \<Longrightarrow> \<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageDirectory pd))"
+  by (auto simp: live_def hyp_live_def)
+
+lemmas init_arch_objects_obj_at_non_arch[Untyped_AI_assms] =
+  init_arch_objects_obj_at_non_pd[OF non_arch_non_pd]
+
+lemmas init_arch_objects_obj_at_live[Untyped_AI_assms] =
+  init_arch_objects_obj_at_non_pd[OF live_non_pd]
+
 end
 
 global_interpretation Untyped_AI? : Untyped_AI

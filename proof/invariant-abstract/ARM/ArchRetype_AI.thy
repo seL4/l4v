@@ -1339,7 +1339,7 @@ lemma caps_region_kernel_window_imp:
   done
 
 crunches init_arch_objects
-  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
+  for pred_tcb_at[wp]: "\<lambda>s. N (pred_tcb_at proj P t s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   and ct_in_state[wp]: "ct_in_state P"

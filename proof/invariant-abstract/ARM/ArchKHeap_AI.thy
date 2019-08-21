@@ -719,8 +719,8 @@ lemma valid_table_caps_ptD:
   apply (clarsimp simp: obj_at_def empty_table_def)
   done
 
-lemma store_pde_pred_tcb_at:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> store_pde ptr val \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+lemma store_pde_pred_tcb_at[wp]:
+  "store_pde ptr val \<lbrace>\<lambda>s. N (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: store_pde_def set_pd_def set_object_def
                    get_pd_def bind_assoc)
   apply (rule hoare_seq_ext [OF _ get_object_sp])

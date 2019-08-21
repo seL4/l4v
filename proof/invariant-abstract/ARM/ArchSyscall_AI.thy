@@ -22,7 +22,7 @@ context Arch begin global_naming ARM
 named_theorems Syscall_AI_assms
 
 declare arch_get_sanitise_register_info_invs[Syscall_AI_assms]
-crunch pred_tcb_at[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "pred_tcb_at proj P t"
+crunch pred_tcb_at[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. N (pred_tcb_at proj P t s)"
 crunch invs[wp,Syscall_AI_assms]: handle_arch_fault_reply "invs"
 crunch cap_to[wp,Syscall_AI_assms]: handle_arch_fault_reply  "ex_nonz_cap_to c"
 crunch it[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (idle_thread s)"
@@ -79,11 +79,9 @@ lemma handle_vm_fault_valid_fault[wp, Syscall_AI_assms]:
    apply (wp no_irq_getDFSR no_irq_getIFSR| simp add: valid_fault_def)+
   done
 
-lemma hvmf_active [Syscall_AI_assms]:
-  "\<lbrace>st_tcb_at active t\<rbrace> handle_vm_fault t w \<lbrace>\<lambda>rv. st_tcb_at active t\<rbrace>"
-  apply (cases w, simp_all)
-   apply (wp | simp)+
-  done
+lemma hvmf_st_tcb_at[wp, Syscall_AI_assms]:
+  "handle_vm_fault t w \<lbrace>\<lambda>s. N (st_tcb_at P t' s)\<rbrace>"
+  by (cases w; wpsimp)
 
 lemma hvmf_ex_cap[wp, Syscall_AI_assms]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> handle_vm_fault t b \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"

@@ -1165,7 +1165,7 @@ lemma retype_region_obj_at:
 
 lemma retype_region_obj_at_other:
   assumes ptrv: "ptr \<notin> set (retype_addrs ptr' ty n us)"
-  shows "\<lbrace>obj_at P ptr\<rbrace> retype_region ptr' n us ty dev \<lbrace>\<lambda>r. obj_at P ptr\<rbrace>"
+  shows "\<lbrace>\<lambda>s. N (obj_at P ptr s)\<rbrace> retype_region ptr' n us ty dev \<lbrace>\<lambda>r s. N (obj_at P ptr s)\<rbrace>"
   using ptrv unfolding retype_region_def retype_addrs_def
   apply (simp only: foldr_upd_app_if fun_app_def K_bind_def)
   apply (wpsimp simp: obj_at_def)
@@ -1174,14 +1174,14 @@ lemma retype_region_obj_at_other:
 
 lemma retype_region_obj_at_other2:
   "\<lbrace>\<lambda>s. ptr \<notin> set (retype_addrs ptr' ty n us)
-       \<and> obj_at P ptr s\<rbrace> retype_region ptr' n us ty dev \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
+       \<and> N (obj_at P ptr s)\<rbrace> retype_region ptr' n us ty dev \<lbrace>\<lambda>rv s. N (obj_at P ptr s)\<rbrace>"
   by (rule hoare_assume_pre) (wpsimp wp: retype_region_obj_at_other)
 
 
-lemma retype_region_obj_at_other3:
-  "\<lbrace>\<lambda>s. pspace_no_overlap_range_cover ptr sz s \<and> obj_at P p s \<and> range_cover ptr sz (obj_bits_api ty us) n
-           \<and> valid_objs s \<and> pspace_aligned s\<rbrace>
-     retype_region ptr n us ty dev
+lemma retype_region_obj_at_other3_ex:
+  "\<lbrace>\<lambda>s. obj_at P p s \<and> valid_objs s \<and> pspace_aligned s
+        \<and> (\<exists>sz. pspace_no_overlap_range_cover ptr sz s \<and> range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
+   retype_region ptr n us ty dev
    \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
   apply (rule hoare_pre)
    apply (rule retype_region_obj_at_other2)
@@ -1192,12 +1192,26 @@ lemma retype_region_obj_at_other3:
   apply (simp add: field_simps)
   done
 
-lemma retype_region_st_tcb_at:
-  "\<lbrace>\<lambda>(s::'state_ext::state_ext state). pspace_no_overlap_range_cover ptr' sz s \<and> pred_tcb_at proj P t s \<and> range_cover ptr' sz (obj_bits_api ty us) n
-          \<and> valid_objs s \<and> pspace_aligned s\<rbrace>
-     retype_region ptr' n us ty dev \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
-  by (simp add: retype_region_obj_at_other3 pred_tcb_at_def)
+lemma retype_region_obj_at_other3:
+  "\<lbrace>\<lambda>s. obj_at P p s \<and> valid_objs s \<and> pspace_aligned s
+        \<and> pspace_no_overlap_range_cover ptr sz s \<and> range_cover ptr sz (obj_bits_api ty us) n\<rbrace>
+   retype_region ptr n us ty dev
+   \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
+  by (wp retype_region_obj_at_other3_ex, fastforce)
 
+lemma retype_region_st_tcb_at_ex:
+  "\<lbrace>\<lambda>s. pred_tcb_at proj P t s \<and> valid_objs s \<and> pspace_aligned s
+        \<and> (\<exists>sz. pspace_no_overlap_range_cover ptr sz s \<and> range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
+   retype_region ptr n us ty dev
+   \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+  by (simp add: retype_region_obj_at_other3_ex pred_tcb_at_def)
+
+lemma retype_region_st_tcb_at:
+  "\<lbrace>\<lambda>s. pred_tcb_at proj P t s \<and> valid_objs s \<and> pspace_aligned s
+        \<and> pspace_no_overlap_range_cover ptr sz s \<and> range_cover ptr sz (obj_bits_api ty us) n\<rbrace>
+   retype_region ptr n us ty dev
+   \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+  by (wp retype_region_st_tcb_at_ex, fastforce)
 
 lemma retype_region_cur_tcb[wp]:
   "\<lbrace>pspace_no_overlap_range_cover ptr sz and cur_tcb and K (range_cover ptr sz (obj_bits_api ty us) n)
@@ -1734,7 +1748,7 @@ lemma zombies: "zombies_final s'"
 lemma replies_with_sc_subset:
   "replies_with_sc s' \<subseteq> replies_with_sc s"
   unfolding s'_def ps_def
-  by (auto simp: replies_with_sc_def sc_at_pred_def obj_at_def
+  by (auto simp: replies_with_sc_def sc_at_ppred_def obj_at_def
                  default_object_def tyunt default_sched_context_def
           split: apiobject_type.splits)
 

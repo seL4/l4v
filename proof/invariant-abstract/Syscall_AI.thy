@@ -541,9 +541,9 @@ locale Syscall_AI = Systemcall_AI_Pre:Systemcall_AI_Pre _ state_ext_t
   assumes handle_vm_fault_valid_fault[wp]:
     "\<And>thread ft.
       \<lbrace>\<top>::'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
-  assumes hvmf_active:
-    "\<And>t w.
-      \<lbrace>st_tcb_at active t::'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault t w \<lbrace>\<lambda>rv. st_tcb_at active t\<rbrace>"
+  assumes hvmf_st_tcb_at[wp]:
+    "\<And>t w N P t'.
+      handle_vm_fault t w \<lbrace>\<lambda>s::'state_ext state. N (st_tcb_at P t' s)\<rbrace>"
   assumes hvmf_ex_cap[wp]:
     "\<And>p t b.
       \<lbrace>ex_nonz_cap_to p::'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault t b \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
@@ -1671,7 +1671,7 @@ lemma he_invs[wp]:
   apply (case_tac e, simp_all)
        apply (rename_tac syscall)
        apply (case_tac syscall, simp_all)
-                 by (wpsimp wp: hvmf_active hoare_vcg_imp_conj_lift' check_budget_restart_true
+                 by (wpsimp wp: hoare_vcg_imp_conj_lift' check_budget_restart_true
                           comb: hoare_drop_imps hoare_drop_imp_conj'
                           simp: if_apply_def2 valid_fault_def
                      | wps

@@ -45,7 +45,7 @@ where
 section "TCBs"
 
 definition
-  get_tcb :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> tcb option"
+  get_tcb :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> tcb option"
 where
   "get_tcb tcb_ref state \<equiv>
    case kheap state tcb_ref of

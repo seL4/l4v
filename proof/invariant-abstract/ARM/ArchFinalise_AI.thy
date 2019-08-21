@@ -620,7 +620,7 @@ lemma sc_with_reply_None_no_reply_sc:
   apply (rule ccontr, clarsimp simp: obj_at_def)
   apply (drule(3) reply_sc_refs[OF _ invs_valid_objs invs_sym_refs])
   apply (drule_tac sc=y in valid_replies_sc_with_reply_None[OF _ invs_valid_replies])
-   apply (clarsimp simp: sc_at_pred_def obj_at_def)+
+   apply (clarsimp simp: sc_at_ppred_def obj_at_def)+
   done
 
 lemma reply_remove_unlive:

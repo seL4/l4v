@@ -3115,10 +3115,15 @@ assumes rewrite: "\<And>s. Q s \<Longrightarrow> f s = t s"
   apply (metis rewrite use_valid[OF _ hold])
   done
 
-
 lemma commute_grab_asm:
   "(F \<Longrightarrow> monad_commute P f g) \<Longrightarrow> (monad_commute (P and (K F)) f g)"
   by (clarsimp simp: monad_commute_def)
+
+lemma use_valid_inv:
+  assumes step: "(r, s') \<in> fst (f s)"
+  assumes pres: "\<And>N. \<lbrace>\<lambda>s. N (P s) \<and> E s\<rbrace> f \<lbrace>\<lambda>rv s. N (P s)\<rbrace>"
+  shows "E s \<Longrightarrow> P s = P s'"
+  using use_valid[where f=f, OF step pres[where N="\<lambda>p. p = P s"]] by simp
 
 text \<open>If a function contains an @{term assert}, or equivalent, then it might be
       possible to strengthen the precondition of an already-proven hoare triple
@@ -3127,19 +3132,23 @@ text \<open>If a function contains an @{term assert}, or equivalent, then it mig
       by this theorem allows the precondition to assume that the condition is
       satisfied.\<close>
 lemma hoare_strengthen_pre_via_assert_forward:
-  assumes neg: "\<lbrace> Not \<circ> E \<rbrace> f \<lbrace> \<bottom>\<bottom> \<rbrace>"
   assumes pos: "\<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
-  shows "\<lbrace> \<lambda>s. E s \<longrightarrow> P s \<rbrace> f \<lbrace> Q \<rbrace>"
-  using neg use_valid[OF _ pos] by (fastforce simp: valid_def)
+  assumes rel: "\<And>s. S s \<longrightarrow> P s \<or> N s"
+  assumes neg: "\<lbrace> N \<rbrace> f \<lbrace> \<bottom>\<bottom> \<rbrace>"
+  shows "\<lbrace> S \<rbrace> f \<lbrace> Q \<rbrace>"
+  apply (rule hoare_weaken_pre)
+   apply (rule hoare_strengthen_post)
+    apply (rule hoare_vcg_disj_lift[OF pos neg])
+   by (auto simp: rel)
 
 text \<open>Like @{thm hoare_strengthen_pre_via_assert_forward}, strengthen a precondition
       by proving a side condition that the negation of that condition would cause
       failure. This version is intended for backward reasoning. Apply it to a goal to
       obtain a stronger precondition after proving the side condition.\<close>
 lemma hoare_strengthen_pre_via_assert_backward:
-  assumes "\<lbrace> Not \<circ> E \<rbrace> f \<lbrace> \<bottom>\<bottom> \<rbrace>"
-  assumes "\<lbrace> P and E \<rbrace> f \<lbrace> Q \<rbrace>"
+  assumes neg: "\<lbrace> Not \<circ> E \<rbrace> f \<lbrace> \<bottom>\<bottom> \<rbrace>"
+  assumes pos: "\<lbrace> P and E \<rbrace> f \<lbrace> Q \<rbrace>"
   shows "\<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
-  by (wp_pre, rule hoare_strengthen_pre_via_assert_forward[OF assms], simp)
+  by (rule hoare_strengthen_pre_via_assert_forward[OF pos _ neg], simp)
 
 end

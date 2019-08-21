@@ -1253,6 +1253,14 @@ locale non_sc_replies_op =
   fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
   assumes sc_replies_obj_at[wp]: "\<And>P N P' p. f \<lbrace>\<lambda>s. P (sc_at_pred_n N sc_replies P' p s)\<rbrace>"
 
+locale non_sc_refills_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes sc_refills_obj_at[wp]: "\<And>P N P' p. f \<lbrace>\<lambda>s. P (sc_at_pred_n N sc_refills P' p s)\<rbrace>"
+
+locale non_sc_refill_max_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes sc_refill_max_obj_at[wp]: "\<And>P N P' p. f \<lbrace>\<lambda>s. P (sc_at_pred_n N sc_refill_max P' p s)\<rbrace>"
+
 locale sc_obj_at_pres =
   fixes f  :: "('state_ext::state_ext state, 'a) nondet_monad"
   assumes sc_obj_at_pres[wp]: "\<And>P n p. f \<lbrace>\<lambda>s. P (sc_obj_at n p s)\<rbrace>"
@@ -1270,14 +1278,18 @@ lemma is_sc_obj:
   by (cases ko) (auto simp add: is_sc_obj_def)
 
 lemma sk_obj_at_pred_id_lift:
-  assumes h: "\<And>P Q. f \<lbrace>\<lambda>s. P (sk_obj_at_pred C (\<lambda>obj. obj) Q p s)\<rbrace>"
+  assumes h: "f \<lbrace>\<lambda>s. P (sk_obj_at_pred C (\<lambda>obj. obj) (Q \<circ> proj) p s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (sk_obj_at_pred C proj Q p s)\<rbrace>"
-  using h[where P=P and Q="Q \<circ> proj"] by (simp add: sk_obj_at_pred_def)
+  using h by (simp add: sk_obj_at_pred_def)
 
 lemma sc_at_pred_lift:
-  assumes h: "\<And>P Q. f \<lbrace>\<lambda>s. P (sc_at_pred_n N (\<lambda>sc. sc) Q p s)\<rbrace>"
+  assumes h: "f \<lbrace>\<lambda>s. P (sc_at_pred_n N (\<lambda>sc. sc) (Q \<circ> proj) p s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (sc_at_pred_n N proj Q p s)\<rbrace>"
-  using h[where P=P and Q="Q \<circ> proj"] by (simp add: sc_at_pred_n_def)
+  using h by (simp add: sc_at_pred_n_def)
+
+lemma (in non_sc_op) sc_at_pred_n[wp]:
+  "f \<lbrace>\<lambda>s. P (sc_at_pred_n N proj Q p s)\<rbrace>"
+  by (rule sc_at_pred_lift[OF sc_obj_at])
 
 lemma reply_at_ppred_lift:
   assumes "f \<lbrace>\<lambda>s. P (reply_at_ppred proj \<top> p s)\<rbrace>"
@@ -1361,6 +1373,12 @@ sublocale non_sc_op < non_sc_yield_from_op
 sublocale non_sc_op < non_sc_replies_op
   by unfold_locales (rule sc_at_pred_lift[OF sc_obj_at])
 
+sublocale non_sc_op < non_sc_refills_op
+  by unfold_locales (rule sc_at_pred_lift[OF sc_obj_at])
+
+sublocale non_sc_op < non_sc_refill_max_op
+  by unfold_locales (rule sc_at_pred_lift[OF sc_obj_at])
+
 sublocale non_sc_ntfn_op < sc_obj_at_pres
   by unfold_locales (rule sc_obj_at_pred_v_lift[OF sc_ntfn_obj_at])
 
@@ -1372,6 +1390,12 @@ sublocale non_sc_yield_from_op < sc_obj_at_pres
 
 sublocale non_sc_replies_op < sc_obj_at_pres
   by unfold_locales (rule sc_obj_at_pred_v_lift[OF sc_replies_obj_at])
+
+sublocale non_sc_refills_op < sc_obj_at_pres
+  by unfold_locales (rule sc_obj_at_pred_v_lift[OF sc_refills_obj_at])
+
+sublocale non_sc_refill_max_op < sc_obj_at_pres
+  by unfold_locales (rule sc_obj_at_pred_v_lift[OF sc_refill_max_obj_at])
 
 sublocale sc_obj_at_pres < sc_at_pres
   apply unfold_locales

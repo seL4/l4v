@@ -84,7 +84,7 @@ lemma state_refs_of_detype:
   by (rule ext, simp add: state_refs_of_def detype_def)
 
 lemma sc_at_pred_n_detype[simp]:
-  "sc_at_pred_n N proj P p (detype S s) = (sc_at_pred_n N proj P p s \<and> p \<notin> S)"
+  "sc_at_pred_n N proj (P s) p (detype S s) = (sc_at_pred_n N proj (P s) p s \<and> p \<notin> S)"
   by (fastforce simp: sc_at_pred_n_def)
 
 

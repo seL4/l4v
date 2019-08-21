@@ -1648,13 +1648,6 @@ lemma thread_set_priority_pred_tcb_at[wp]:
   apply (clarsimp simp: obj_at_def tcb_to_itcb_def dest!: get_tcb_SomeD)
   done
 
-lemma thread_set_priority_sc_tcb_sc_at[wp]:
-  "thread_set_priority t p \<lbrace>sc_tcb_sc_at P t'\<rbrace>"
-  apply (simp add: sc_tcb_sc_at_def thread_set_priority_def thread_set_def)
-  apply (wpsimp wp: set_object_wp)
-  apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
-  done
-
 crunches set_priority
   for valid_cap[wp]: "valid_cap cap"
   and ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
