@@ -389,7 +389,6 @@ crunches arch_switch_to_thread, arch_switch_to_idle_thread
   and cur_sc_valid_refills_consumed[wp, DetSchedSchedule_AI_assms]: "cur_sc_valid_refills_consumed budget"
   and cur_sc[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_sc s)"
   and cur_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
-  and rollback_safe[wp, DetSchedSchedule_AI_assms]: rollback_safe
   (simp: crunch_simps)
 
 lemma handle_vm_fault_valid_machine_time[DetSchedSchedule_AI_assms]:

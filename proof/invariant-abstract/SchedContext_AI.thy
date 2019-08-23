@@ -68,18 +68,6 @@ crunches refill_unblock_check
   and cur_sc_cur_thread[wp]: "\<lambda>s. P (cur_sc s) (cur_thread s)"
   (wp: crunch_wps hoare_vcg_if_lift2)
 
-lemma rollback_time_consumed_time[wp]:
-  "\<lbrace>\<lambda>s. \<forall>b. P b\<rbrace> rollback_time \<lbrace>\<lambda>_ s. P (consumed_time s)\<rbrace>"
-  by (wpsimp simp: rollback_time_def)
-
-lemma cur_time_consumed_time[wp]:
-  "\<lbrace>\<lambda>s. \<forall>b. P b\<rbrace> rollback_time \<lbrace>\<lambda>_ s. P (cur_time s)\<rbrace>"
-  by (wpsimp simp: rollback_time_def)
-
-lemma rollback_time_cur_time[wp]:
-  "\<lbrace>\<lambda>s. \<forall>a b. P a b\<rbrace> rollback_time \<lbrace>\<lambda>_ s. P (cur_time s) (consumed_time s)\<rbrace>"
-  by (wpsimp simp: rollback_time_def wp: hoare_drop_imp)
-
 lemma commit_time_consumed_time[wp]:
   "\<lbrace>\<lambda>s. \<forall>b. P b\<rbrace> commit_time \<lbrace>\<lambda>_ s. P (consumed_time s)\<rbrace>"
   by (wpsimp simp: commit_time_def)
@@ -773,14 +761,6 @@ lemma commit_time_bound_sc_tcb_at [wp]:
    \<lbrace>\<lambda>_ s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>"
   by (wpsimp simp: commit_time_def sc_consumed_update_eq[symmetric] wp: hoare_drop_imps)
 
-crunches rollback_time
-  for invs [wp]: invs
-  and valid_state [wp]: valid_state
-  and cur_tcb [wp]: cur_tcb
-  and fault_tcbs_valid_states [wp]: fault_tcbs_valid_states
-  and bound_sc_tcb_at [wp]: "\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s"
-  (simp: rollback_time_def valid_state_def)
-
 lemma refill_unblock_check_bound_sc_tcb_at [wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>
    refill_unblock_check sc_ptr
@@ -881,10 +861,6 @@ lemma ct_in_state_domain_time_update[simp]:
 
 crunch ct_in_state[wp]: commit_time "ct_in_state t"
   (simp: crunch_simps wp: crunch_wps)
-
-lemma rollback_time_ct_in_state[wp]:
-  "\<lbrace> ct_in_state t \<rbrace> rollback_time \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
-  by (wpsimp simp: rollback_time_def)
 
 lemma refill_unblock_check_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> refill_unblock_check csc \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"

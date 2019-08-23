@@ -720,7 +720,7 @@ context DetSchedDomainTime_AI begin
 lemma switch_sched_context_domain_time_left[wp]:
   "\<lbrace> valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace>
      switch_sched_context \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
-  apply (wpsimp simp: switch_sched_context_def rollback_time_def refill_unblock_check_def
+  apply (wpsimp simp: switch_sched_context_def refill_unblock_check_def
            wp: hoare_vcg_if_lift2 hoare_drop_imp split_del: if_split)
   apply (clarsimp simp: word_gt_0)
   done

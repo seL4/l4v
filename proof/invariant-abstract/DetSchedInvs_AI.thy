@@ -167,12 +167,6 @@ where
           \<and> (r_time (refill_hd sc)) \<le> (cur_time s) - time + kernelWCET_ticks) scp s)"
 
 abbreviation
-  weak_budget_ready :: "obj_ref \<Rightarrow> time \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "weak_budget_ready thread u \<equiv>
-    (\<lambda>s. bound_sc_tcb_at (\<lambda>p. \<exists>scp. p = Some scp \<and> is_refill_ready scp u s) thread s)"
-
-abbreviation
   budget_ready :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "budget_ready thread \<equiv>
@@ -205,17 +199,6 @@ lemma refill_ready_kh_simp[simp]:
 
 lemma budget_ready_kh_simp[simp]:
   "budget_ready_kh (cur_time s) tptr (kheap s) = budget_ready tptr s"
-  by clarsimp
-
-abbreviation
-  weak_budget_ready_kh :: "time \<Rightarrow> obj_ref \<Rightarrow> time \<Rightarrow> (32 word \<Rightarrow> kernel_object option) \<Rightarrow> bool"
-where
-  "weak_budget_ready_kh curtime t consumed kh \<equiv>
-    bound_sc_tcb_at_kh (\<lambda>ko. \<exists>scp. ko = Some scp
-                                \<and> refill_ready_kh curtime scp consumed kh) t kh"
-
-lemma weak_budget_ready_kh_simp[simp]:
-  "weak_budget_ready_kh (cur_time s) tptr u (kheap s) = weak_budget_ready tptr u s"
   by clarsimp
 
 definition refill_sufficient_kh :: "obj_ref \<Rightarrow> (32 word \<Rightarrow> kernel_object option) \<Rightarrow> bool"
@@ -816,19 +799,6 @@ abbreviation switch_in_cur_domain:: "'z state \<Rightarrow> bool" where
   "switch_in_cur_domain s \<equiv> switch_in_cur_domain_2 (scheduler_action s) (etcbs_of s) (cur_domain s)"
 
 lemmas switch_in_cur_domain_def = switch_in_cur_domain_2_def
-
-definition rollback_safe_2 where
-  "rollback_safe_2 reprogt curtime consumed kh readyqs schedact \<equiv> (\<not> reprogt \<longrightarrow>
-                        (\<forall>t. (\<exists>d p. in_queue_2 (readyqs d p) t) \<or>
-                             (schedact = switch_thread t) \<longrightarrow>
-                             weak_budget_ready_kh curtime t consumed kh))
-                         \<and> (consumed \<le> curtime)"
-
-abbreviation rollback_safe where
-  "rollback_safe s \<equiv> rollback_safe_2 (reprogram_timer s) (cur_time s) (consumed_time s) (kheap s)
-                                     (ready_queues s) (scheduler_action s)"
-
-lemmas rollback_safe_def = rollback_safe_2_def
 
 definition valid_sched_action_2 where
   "valid_sched_action_2 sa kh ct cdom curtime rq\<equiv>
@@ -1787,19 +1757,6 @@ lemma valid_reply_scs_lift:
   shows "f \<lbrace>valid_reply_scs\<rbrace>"
   unfolding valid_reply_scs_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_disj_lift A B C D E)
-
-lemma rollback_safe_lift:
-  assumes A: "f \<lbrace>\<lambda>s. (reprogram_timer s)\<rbrace>"
-  assumes B: "\<And>P. f \<lbrace>\<lambda>s. P (consumed_time s)\<rbrace>"
-  assumes C: "\<And>t. f \<lbrace>\<lambda>s. \<not> in_ready_q t s\<rbrace>"
-  assumes E: "\<And>t. f \<lbrace>\<lambda>s. scheduler_act_not t s\<rbrace>"
-  assumes D: "\<And>t u. f \<lbrace>\<lambda>s. weak_budget_ready t u s\<rbrace>"
-  assumes F: "\<And>P k. f \<lbrace>\<lambda>s. (k \<le> cur_time s)\<rbrace>"
-  shows "f \<lbrace>rollback_safe\<rbrace>"
-  unfolding rollback_safe_def
-  by (wpsimp wp: hoare_vcg_imp_lift' A C D E[simplified scheduler_act_not_def] F |
-      wp hoare_vcg_all_lift |
-      wps B)+
 
 (* This predicate declares that the current thread has a scheduling context that is
     active, ready and sufficient. *)
