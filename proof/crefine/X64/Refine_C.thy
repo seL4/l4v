@@ -10,8 +10,6 @@
 
 chapter "Toplevel Refinement Statement"
 
-(* In progress c refinement *)
-
 theory Refine_C
 imports
   Init_C

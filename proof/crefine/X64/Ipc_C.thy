@@ -4583,6 +4583,7 @@ proof -
                             cfault_rel_def seL4_Fault_lift_def Let_def
                      split: if_split_asm option.split)
      apply ceqv
+    apply csymbr
     apply wpc
      apply (clarsimp simp: ccorres_cond_iffs split del: if_split)
      apply (fold dc_def)[1]
@@ -4610,7 +4611,6 @@ proof -
                split del: if_split)
     apply (rule ccorres_rhs_assoc)+
     apply (fold dc_def)[1]
-    apply csymbr
     apply (rule ccorres_symb_exec_r)
       apply (ctac (no_vcg) add: cteDeleteOne_ccorres[where w="scast cap_reply_cap"])
        apply (rule_tac A'=UNIV in stronger_ccorres_guard_imp)
@@ -5397,7 +5397,7 @@ lemma sendIPC_ccorres [corres]:
        apply (rule ccorres_cond_false)
        apply (rule ccorres_cond_true)
        apply (intro ccorres_rhs_assoc)
-       apply (csymbr, csymbr, csymbr)
+       apply (csymbr, csymbr)
        apply wpc
         apply (simp only: haskell_fail_def)
         apply (rule ccorres_fail)
