@@ -544,18 +544,6 @@ where
 
 section "Global time"
 
-definition
-  rollback_time :: "(unit, 'z::state_ext) s_monad"
-where
-  "rollback_time = do
-    consumed \<leftarrow> gets consumed_time;
-    reprogram \<leftarrow> gets reprogram_timer;
-    assert (\<not> reprogram \<or> consumed = 0);
-    modify (\<lambda>s. s\<lparr>cur_time := cur_time s - consumed \<rparr>);
-    modify (\<lambda>s. s\<lparr>consumed_time := 0\<rparr> )
-  od"
-
-
 text \<open>Update current and consumed time.\<close>
 definition
   update_time_stamp :: "(unit, 'z::state_ext) s_monad"

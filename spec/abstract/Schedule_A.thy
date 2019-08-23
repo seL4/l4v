@@ -145,11 +145,7 @@ where
      od;
 
     reprogram \<leftarrow> gets reprogram_timer;
-    if reprogram
-    then
-      commit_time
-    else
-      rollback_time;
+    when reprogram $ commit_time;
 
     modify (\<lambda>s. s\<lparr> cur_sc:= scp \<rparr>)
   od"
