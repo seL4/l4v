@@ -1604,12 +1604,12 @@ lemma set_notification_obj_at_impossible:
   done
 
 lemma reorder_ntfn_sc_tcb_sc_at[wp]:
-  "\<lbrace>sc_tcb_sc_at P t\<rbrace> reorder_ntfn a \<lbrace>\<lambda>rv. sc_tcb_sc_at P t\<rbrace>"
+  "reorder_ntfn a \<lbrace>\<lambda>s. Q (sc_tcb_sc_at P t s)\<rbrace>"
   by (wpsimp simp: reorder_ntfn_def sc_tcb_sc_at_def
                wp: set_notification_obj_at_impossible get_simple_ko_wp)
 
 lemma reorder_ep_sc_tcb_sc_at[wp]:
-  "\<lbrace>sc_tcb_sc_at P t\<rbrace> reorder_ep a \<lbrace>\<lambda>rv. sc_tcb_sc_at P t\<rbrace>"
+  "reorder_ep a \<lbrace>\<lambda>s. Q (sc_tcb_sc_at P t s)\<rbrace>"
   by (wpsimp simp: reorder_ep_def sc_tcb_sc_at_def
                wp: set_endpoint_obj_at_impossible get_simple_ko_wp)
 
@@ -1636,7 +1636,7 @@ crunches set_priority
   and ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
   and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   and pred_tcb_at[wp]: "pred_tcb_at proj P t"
-  and sc_tcb_sc_at[wp]: "sc_tcb_sc_at P t"
+  and sc_tcb_sc_at[wp]: "\<lambda>s. Q (sc_tcb_sc_at P t s)"
   (wp: valid_cap_typ crunch_wps no_cap_to_obj_with_diff_ref_lift reschedule_required_pred_tcb_at
    simp: crunch_simps cte_wp_at_caps_of_state ignore: set_simple_ko
    wp_del: sort_queue_rv_wf')
