@@ -216,8 +216,8 @@ where
          ThreadCap tcb_ptr \<Rightarrow> returnOk tcb_ptr
        | _ \<Rightarrow> throwError (InvalidCapability 1);
      check_prio (args ! 0) auth_tcb;
-     returnOk (ThreadControl (obj_ref_of cap) slot None None None
-                             (Some (prio, auth_tcb)) None None None None)
+     returnOk (ThreadControlSched (obj_ref_of cap) slot None None
+                             (Some (prio, auth_tcb)) None)
      odE"
 
 
@@ -231,8 +231,8 @@ where
          ThreadCap tcb_ptr \<Rightarrow> returnOk tcb_ptr
        | _ \<Rightarrow> throwError (InvalidCapability 1);
      check_prio (args ! 0) auth_tcb;
-     returnOk (ThreadControl (obj_ref_of cap) slot None None (Some (new_mcp, auth_tcb))
-                             None None None None None)
+     returnOk (ThreadControlSched (obj_ref_of cap) slot None (Some (new_mcp, auth_tcb))
+                             None None)
      odE"
 
 
@@ -252,7 +252,7 @@ where
       returnOk $ Some (buffer_cap, bslot)
     odE;
   returnOk $
-    ThreadControl (obj_ref_of cap) slot None None None None None None (Some (buffer, newbuf)) None
+    ThreadControlCaps (obj_ref_of cap) slot None None None None (Some (buffer, newbuf))
 odE"
 
 definition
@@ -303,8 +303,8 @@ where
    unlessE (is_valid_vtable_root vroot_cap') $ throwError IllegalOperation;
    vroot \<leftarrow> returnOk (vroot_cap', vroot_slot);
 
-   returnOk $ ThreadControl (obj_ref_of cap) slot None None
-                            None None (Some croot) (Some vroot) None None
+   returnOk $ ThreadControlCaps (obj_ref_of cap) slot None None
+                            (Some croot) (Some vroot) None
  odE"
 
 
@@ -317,8 +317,8 @@ where
     space \<leftarrow> decode_cv_space (take 2 args) cap slot (take 2 excaps);
     fh_arg  \<leftarrow> returnOk $ excaps ! 2;
     fault_handler \<leftarrow> check_handler_ep 3 fh_arg;
-    returnOk $ ThreadControl (obj_ref_of cap) slot (Some fault_handler) None
-                            None None (tc_new_croot space) (tc_new_vroot space) None None
+    returnOk $ ThreadControlCaps (obj_ref_of cap) slot (Some fault_handler) None
+                            (tc_new_croot space) (tc_new_vroot space) None
  odE"
 
 
@@ -330,7 +330,7 @@ where
       tcb_ptr \<leftarrow> returnOk $ obj_ref_of cap;
       ct_ptr \<leftarrow> liftE $ gets cur_thread;
       whenE (tcb_ptr = ct_ptr) $ throwError IllegalOperation;
-      returnOk $ ThreadControl (obj_ref_of cap) slot None None None None None None None (Some None)
+      returnOk $ ThreadControlSched (obj_ref_of cap) slot None None None (Some None)
   odE
     else doE
       tcb_ptr \<leftarrow> returnOk $ obj_ref_of cap;
@@ -340,7 +340,7 @@ where
       whenE (sc_ptr' \<noteq> None) $ throwError IllegalOperation;
       sc \<leftarrow> liftE $ get_sched_context sc_ptr;
       whenE (sc_tcb sc \<noteq> None) $ throwError IllegalOperation;
-      returnOk $ ThreadControl tcb_ptr slot None None None None None None None (Some (Some sc_ptr))
+      returnOk $ ThreadControlSched tcb_ptr slot None None None (Some (Some sc_ptr))
     odE"
 
 definition
@@ -354,10 +354,10 @@ where
      buffer_cap \<leftarrow> returnOk $ extra_caps ! 2;
      set_params \<leftarrow> decode_set_ipc_buffer [buffer] cap slot [buffer_cap];
      set_space \<leftarrow> decode_cv_space (take 2 args) cap slot (take 2 extra_caps);
-     returnOk $ ThreadControl (obj_ref_of cap) slot
-                              None None None None
+     returnOk $ ThreadControlCaps (obj_ref_of cap) slot
+                              None None
                               (tc_new_croot set_space) (tc_new_vroot set_space)
-                              (tc_new_buffer set_params) None
+                              (tc_new_buffer set_params)
    odE"
 
 definition
@@ -368,9 +368,8 @@ where
      whenE (length extra_caps < 1) $ throwError TruncatedMessage;
      th_arg \<leftarrow> returnOk $ extra_caps ! 0;
      handler \<leftarrow> check_handler_ep 1 th_arg;
-     returnOk $ ThreadControl (obj_ref_of cap) slot
-                              None (Some handler) None None
-                              None None None None
+     returnOk $ ThreadControlCaps (obj_ref_of cap) slot
+                              None (Some handler) None None None
    odE"
 
 definition
@@ -437,9 +436,9 @@ where
      check_prio (args ! 1) auth_tcb;
      sc \<leftarrow> decode_update_sc cap slot sc_cap;
      fh \<leftarrow> check_handler_ep 3 fh_arg;
-     returnOk $ ThreadControl (obj_ref_of cap) slot (Some fh) None
+     returnOk $ ThreadControlSched (obj_ref_of cap) slot (Some fh)
                               (Some (new_mcp, auth_tcb)) (Some (new_prio, auth_tcb))
-                              None None None (tc_new_sc sc)
+                              (tc_new_sc sc)
      odE"
 
 definition

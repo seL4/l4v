@@ -155,15 +155,8 @@ where
   "invoke_tcb (Suspend thread) = liftE (do suspend thread; return [] od)"
 | "invoke_tcb (Resume thread) = liftE (do restart thread; return [] od)"
 
-| "invoke_tcb (ThreadControl target slot fault_handler timeout_handler mcp priority croot vroot buffer sc)
+| "invoke_tcb (ThreadControlCaps target slot fault_handler timeout_handler croot vroot buffer)
    = doE
-    liftE $  case mcp of None \<Rightarrow> return()
-     | Some (newmcp, _) \<Rightarrow> set_mcpriority target newmcp;
-    liftE $ case priority of None \<Rightarrow> return()
-     | Some (prio, _) \<Rightarrow> set_priority target prio;
-    liftE $ case sc of None \<Rightarrow> return ()
-     | Some None \<Rightarrow> maybe_sched_context_unbind_tcb target
-     | Some (Some sc_ptr) \<Rightarrow> maybe_sched_context_bind_tcb sc_ptr target;
     install_tcb_cap target slot 3 fault_handler;
     install_tcb_cap target slot 4 timeout_handler;
     install_tcb_cap target slot 0 croot;
@@ -181,6 +174,19 @@ where
       cur \<leftarrow> liftE $ gets cur_thread;
       liftE $ when (target = cur) reschedule_required
     odE);
+    returnOk []
+  odE"
+
+| "invoke_tcb (ThreadControlSched target slot fault_handler mcp priority sc)
+   = doE
+    liftE $  case mcp of None \<Rightarrow> return()
+     | Some (newmcp, _) \<Rightarrow> set_mcpriority target newmcp;
+    liftE $ case priority of None \<Rightarrow> return()
+     | Some (prio, _) \<Rightarrow> set_priority target prio;
+    liftE $ case sc of None \<Rightarrow> return ()
+     | Some None \<Rightarrow> maybe_sched_context_unbind_tcb target
+     | Some (Some sc_ptr) \<Rightarrow> maybe_sched_context_bind_tcb sc_ptr target;
+    install_tcb_cap target slot 3 fault_handler;
     returnOk []
   odE"
 
