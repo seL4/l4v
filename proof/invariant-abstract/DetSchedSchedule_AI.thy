@@ -7312,13 +7312,13 @@ lemma set_mcpriority_budget_sufficient[wp]:
   apply (safe; rule_tac x=scp in exI; fastforce)
   done
 
-lemma tc_valid_sched:
+lemma tcc_valid_sched:
   "\<lbrace>valid_sched and invs and simple_sched_action
     and (\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s)
-    and tcb_inv_wf (ThreadControl target slot fault_handler timeout_handler
-                                  mcp priority croot vroot buffer sc)
+    and tcb_inv_wf (ThreadControlCaps target slot fault_handler timeout_handler
+                                      croot vroot buffer)
     and ct_active and ct_ARS\<rbrace>
-     invoke_tcb (ThreadControl target slot fault_handler timeout_handler mcp priority croot vroot buffer sc)
+     invoke_tcb (ThreadControlCaps target slot fault_handler timeout_handler croot vroot buffer)
    \<lbrace>\<lambda>rv. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: split_def cong: option.case_cong)
   apply (simp only: simp_thms
@@ -7328,9 +7328,41 @@ lemma tc_valid_sched:
                 hoare_vcg_const_imp_lift_R hoare_vcg_R_conj
          | wp case_option_wpE check_cap_inv cap_delete_deletes
               hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_all_lift
-              reschedule_valid_sched_const maybe_sched_context_bind_tcb_valid_sched
-              thread_set_not_state_valid_sched maybe_sched_context_unbind_tcb_valid_sched
-              install_tcb_cap_invs set_priority_valid_sched
+              reschedule_valid_sched_const
+              thread_set_not_state_valid_sched
+              install_tcb_cap_invs
+              thread_set_valid_cap gbn_wp
+              static_imp_wp static_imp_conj_wp
+         | simp add: not_pred_tcb
+         | wpc | wps
+         | strengthen tcb_cap_always_valid_strg tcb_cap_valid_ep_strgs
+         | wp cap_delete_ep install_tcb_cap_cte_wp_at_ep)+
+  apply (clarsimp cong: conj_cong)
+  apply (intro conjI impI;
+         clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
+                 dest!: valid_vtable_root_is_arch_cap)
+     apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state\<close>)
+    apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
+    by auto
+
+lemma tcs_valid_sched:
+  "\<lbrace>valid_sched and invs and simple_sched_action
+    and (\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s)
+    and tcb_inv_wf (ThreadControlSched target slot fault_handler mcp priority sc)
+    and ct_active and ct_ARS\<rbrace>
+     invoke_tcb (ThreadControlSched target slot fault_handler mcp priority sc)
+   \<lbrace>\<lambda>rv. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+  apply (simp add: split_def cong: option.case_cong)
+  apply (simp only: simp_thms
+         | (simp add: conj_comms del: hoare_True_E_R,
+            strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
+         | rule hoare_vcg_E_elim hoare_vcg_imp_lift'
+                hoare_vcg_const_imp_lift_R hoare_vcg_R_conj
+         | wp case_option_wpE check_cap_inv cap_delete_deletes
+              hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_all_lift
+              maybe_sched_context_bind_tcb_valid_sched
+              maybe_sched_context_unbind_tcb_valid_sched
+              set_priority_valid_sched
               set_mcpriority_budget_ready[simplified conj_comms]
               set_mcpriority_budget_sufficient[simplified conj_comms]
               thread_set_valid_cap gbn_wp
@@ -7340,18 +7372,14 @@ lemma tc_valid_sched:
          | rule maybe_sched_context_unbind_tcb_lift maybe_sched_context_bind_tcb_lift
          | simp add: not_pred_tcb
          | wpc | wps
-         | strengthen tcb_cap_always_valid_strg tcb_cap_valid_ep_strgs
-         | wp cap_delete_ep install_tcb_cap_cte_wp_at_ep)+
+         | strengthen tcb_cap_always_valid_strg tcb_cap_valid_ep_strgs)+
   apply (clarsimp cong: conj_cong)
   apply (intro conjI impI;
          clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
                  dest!: valid_vtable_root_is_arch_cap)
-      apply (fastforce simp: invs_def valid_state_def valid_pspace_def sc_at_pred_n_def
-                             obj_at_def valid_idle_def sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at
-                      dest!: idle_no_ex_cap)
-     apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state\<close>)
-    apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
-    by auto
+  by (fastforce simp: invs_def valid_state_def valid_pspace_def sc_at_pred_n_def
+                         obj_at_def valid_idle_def sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at
+                  dest!: idle_no_ex_cap)
 
 end
 
@@ -8815,29 +8843,31 @@ lemma invoke_tcb_valid_sched:
      invoke_tcb ti
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (cases ti, simp_all only:)
-         apply (wpsimp wp: restart_valid_sched reschedule_valid_sched_const)
-             apply (intro impI conjI)
-              apply wpsimp+
-              apply (rule_tac Q="\<lambda>rv s. invs s \<and> simple_sched_action s" in hoare_strengthen_post[rotated])
-               apply fastforce
-              apply (wpsimp wp: suspend_invs)+
-         apply (clarsimp simp: invs_valid_objs invs_valid_global_refs idle_no_ex_cap)
-        apply (wpsimp wp: suspend_valid_sched;
-               clarsimp simp: invs_valid_objs invs_valid_global_refs)
-       apply ((wp mapM_x_wp suspend_valid_sched restart_valid_sched reschedule_valid_sched_const
-              | simp
-              | rule subset_refl
-              | intro impI conjI)+)[1]
-         apply (rule_tac Q="\<lambda>rv s. invs s \<and> simple_sched_action s" in hoare_strengthen_post[rotated])
-          apply fastforce
-         apply (wpsimp wp: suspend_invs suspend_valid_sched)+
-       apply (fastforce simp: invs_def valid_state_def valid_idle_def dest!: idle_no_ex_cap)
-      apply (wp tc_valid_sched)
+          apply (wpsimp wp: restart_valid_sched reschedule_valid_sched_const)
+              apply (intro impI conjI)
+               apply wpsimp+
+               apply (rule_tac Q="\<lambda>rv s. invs s \<and> simple_sched_action s" in hoare_strengthen_post[rotated])
+                apply fastforce
+               apply (wpsimp wp: suspend_invs)+
+          apply (clarsimp simp: invs_valid_objs invs_valid_global_refs idle_no_ex_cap)
+         apply (wpsimp wp: suspend_valid_sched;
+                clarsimp simp: invs_valid_objs invs_valid_global_refs)
+        apply ((wp mapM_x_wp suspend_valid_sched restart_valid_sched reschedule_valid_sched_const
+               | simp
+               | rule subset_refl
+               | intro impI conjI)+)[1]
+          apply (rule_tac Q="\<lambda>rv s. invs s \<and> simple_sched_action s" in hoare_strengthen_post[rotated])
+           apply fastforce
+          apply (wpsimp wp: suspend_invs suspend_valid_sched)+
+        apply (fastforce simp: invs_def valid_state_def valid_idle_def dest!: idle_no_ex_cap)
+       apply (wp tcc_valid_sched)
+       apply (rename_tac sc_opt_opt s, case_tac sc_opt_opt; simp)
+      apply (wp tcs_valid_sched)
       apply (rename_tac sc_opt_opt s, case_tac sc_opt_opt; simp)
-      apply (rename_tac sc_opt, case_tac sc_opt; simp)
+     apply (rename_tac sc_opt, case_tac sc_opt; simp)
      apply (wpsimp wp: suspend_valid_sched ;
             clarsimp simp: invs_valid_objs invs_valid_global_refs)
-    apply (wpsimp wp: mapM_x_wp suspend_valid_sched tc_valid_sched restart_valid_sched;
+    apply (wpsimp wp: mapM_x_wp suspend_valid_sched restart_valid_sched;
            intro conjI;
            clarsimp simp: invs_valid_objs invs_valid_global_refs idle_no_ex_cap)
    apply (rename_tac option, case_tac option; wpsimp)

@@ -478,7 +478,7 @@ where
              = (tcb_at t and ex_nonz_cap_to t)"
 | "tcb_inv_wf' (tcb_invocation.Resume t)
              = (tcb_at t and ex_nonz_cap_to t)"
-| "tcb_inv_wf' (tcb_invocation.ThreadControl t sl fh th mcp pr croot vroot buf sc)
+| "tcb_inv_wf' (tcb_invocation.ThreadControlCaps t sl fh th croot vroot buf)
              = (tcb_at t and case_option \<top> (valid_cap \<circ> fst) croot
                         and K (case_option True (is_cnode_cap \<circ> fst) croot)
                         and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) croot
@@ -508,6 +508,14 @@ where
                         and (case_option \<top> (case_option \<top> ((cte_at And ex_cte_cap_to) o snd) o snd) buf)
                         and (\<lambda>s. {croot, vroot, option_map undefined buf} \<noteq> {None}
                                     \<longrightarrow> cte_at sl s \<and> ex_cte_cap_to sl s)
+                        and ex_nonz_cap_to t)"
+| "tcb_inv_wf' (tcb_invocation.ThreadControlSched t sl fh mcp pr sc)
+             = (tcb_at t
+                        and case_option \<top> (valid_cap \<circ> fst) fh
+                        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) fh)
+                        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
+                        and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) fh
+                        and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) fh
                         and (case_option \<top> (case_option (\<lambda>s. t \<noteq> cur_thread s) (\<lambda>sc. bound_sc_tcb_at ((=) None) t and ex_nonz_cap_to sc
                                                              and sc_tcb_sc_at ((=) None) sc)) sc)
                         and ex_nonz_cap_to t)"
@@ -532,8 +540,8 @@ where
 fun
   tcb_inv_wf  :: "tcb_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "tcb_inv_wf (tcb_invocation.ThreadControl t sl fh th mcp pr croot vroot buf sc)
-             = (tcb_inv_wf' (tcb_invocation.ThreadControl t sl fh th mcp pr croot vroot buf sc)
+  "tcb_inv_wf (tcb_invocation.ThreadControlSched t sl fh mcp pr sc)
+             = (tcb_inv_wf' (tcb_invocation.ThreadControlSched t sl fh mcp pr sc)
                         \<comment> \<open>NOTE: The auth TCB does not really belong in the tcb_invocation
                         type, and is only included so that we can assert here that the
                         priority we are setting is bounded by the MCP of some auth TCB.
@@ -567,11 +575,17 @@ locale Tcb_AI = Tcb_AI_1 state_ext_t is_cnode_or_valid_arch
                            \<longrightarrow> no_cap_to_obj_dr_emp new_cap s)\<rbrace>
     install_tcb_cap target slot n slot_opt
     \<lbrace>\<lambda>_. no_cap_to_obj_dr_emp cap\<rbrace>"
-  assumes tc_invs:
+  assumes tcc_invs:
   "\<And>t croot vroot buf fh th mcp sl pr sc.
     \<lbrace>(invs::'state_ext state \<Rightarrow> bool)
-      and tcb_inv_wf (ThreadControl t sl fh th mcp pr croot vroot buf sc)\<rbrace>
-      invoke_tcb (ThreadControl t sl fh th mcp pr croot vroot buf sc)
+      and tcb_inv_wf (ThreadControlCaps t sl fh th croot vroot buf )\<rbrace>
+      invoke_tcb (ThreadControlCaps t sl fh th croot vroot buf )
+    \<lbrace>\<lambda>rv. invs\<rbrace>"  (* need more on sc, fh and th *)
+  assumes tcs_invs:
+  "\<And>t croot vroot buf fh th mcp sl pr sc.
+    \<lbrace>(invs::'state_ext state \<Rightarrow> bool)
+      and tcb_inv_wf (ThreadControlSched t sl fh mcp pr sc)\<rbrace>
+      invoke_tcb (ThreadControlSched t sl fh mcp pr sc)
     \<lbrace>\<lambda>rv. invs\<rbrace>"  (* need more on sc, fh and th *)
   assumes decode_set_ipc_inv[wp]:
   "\<And>P args cap slot excaps.
@@ -949,12 +963,12 @@ lemma (in Tcb_AI) tcbinv_invs:
      invoke_tcb ti
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac ti, simp_all only:)
-         apply ((wp writereg_invs readreg_invs copyreg_invs tc_invs suspend_invs
+         apply ((wp writereg_invs readreg_invs copyreg_invs tcc_invs tcs_invs suspend_invs
                 | simp add: valid_idle_def
                 | clarsimp simp: invs_def valid_state_def valid_pspace_def
                           dest!: idle_no_ex_cap
                           split: option.split
-                | rule conjI)+)[6]
+                | rule conjI)+)[7]
    apply (rename_tac option)
    apply (case_tac option, simp_all)
     apply (rule hoare_pre)
@@ -1144,29 +1158,36 @@ lemma decode_set_sched_params_wf[wp]:
 end
 
 definition
-  is_thread_control :: "tcb_invocation \<Rightarrow> bool"
+  is_thread_control_caps :: "tcb_invocation \<Rightarrow> bool"
 where
- "is_thread_control tinv \<equiv> case tinv of tcb_invocation.ThreadControl a b c d e f g h i j\<Rightarrow> True | _ \<Rightarrow> False"
+ "is_thread_control_caps tinv \<equiv> case tinv of tcb_invocation.ThreadControlCaps a b c d e f g \<Rightarrow> True
+ | _ \<Rightarrow> False"
 
+definition
+  is_thread_control_sched :: "tcb_invocation \<Rightarrow> bool"
+where
+ "is_thread_control_sched tinv \<equiv> case tinv of tcb_invocation.ThreadControlSched _ _ _ _ _ _ \<Rightarrow> True
+ | _ \<Rightarrow> False"
 
 primrec (nonexhaustive)
   thread_control_target :: "tcb_invocation \<Rightarrow> machine_word"
 where
- "thread_control_target (tcb_invocation.ThreadControl a b c d e f g h i j) = a"
+  "thread_control_target (tcb_invocation.ThreadControlCaps a _ _ _ _ _ _) = a"
+| "thread_control_target (tcb_invocation.ThreadControlSched a _ _ _ _ _) = a"
 
 lemma is_thread_control_true[simp]:
-  "is_thread_control (tcb_invocation.ThreadControl a b c d e f g h i j)"
-  by (simp add: is_thread_control_def)
+  "is_thread_control_caps (tcb_invocation.ThreadControlCaps a b c d e f g)"
+  by (simp add: is_thread_control_caps_def)
 
-lemma is_thread_control_def2:
-  "is_thread_control tinv =
+lemma is_thread_control_caps_def2:
+  "is_thread_control_caps tinv =
     (\<exists>target slot fh th prio mcp croot vroot buffer sc.
-        tinv = tcb_invocation.ThreadControl target slot fh th prio mcp croot vroot buffer sc)"
-  by (cases tinv, simp_all add: is_thread_control_def)
+        tinv = tcb_invocation.ThreadControlCaps target slot fh th croot vroot buffer)"
+  by (cases tinv, simp_all add: is_thread_control_caps_def)
 
 lemma decode_set_priority_is_tc[wp]:
-  "\<lbrace>\<top>\<rbrace> decode_set_priority args cap slot excs \<lbrace>\<lambda>rv s. is_thread_control rv\<rbrace>,-"
-  by (wpsimp simp: decode_set_priority_def)
+  "\<lbrace>\<top>\<rbrace> decode_set_priority args cap slot excs \<lbrace>\<lambda>rv s. is_thread_control_sched rv\<rbrace>,-"
+   by (wpsimp simp: decode_set_priority_def is_thread_control_sched_def)
 
 lemma decode_set_priority_inv[wp]:
   "\<lbrace>P\<rbrace> decode_set_priority args cap slot excs \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -1208,7 +1229,7 @@ lemma (in Tcb_AI) decode_set_ipc_wf[wp]:
   done
 
 lemma decode_set_ipc_is_tc[wp]:
-  "\<lbrace>\<top>\<rbrace> decode_set_ipc_buffer args cap slot excaps \<lbrace>\<lambda>rv s. is_thread_control rv\<rbrace>,-"
+  "\<lbrace>\<top>\<rbrace> decode_set_ipc_buffer args cap slot excaps \<lbrace>\<lambda>rv s. is_thread_control_caps rv\<rbrace>,-"
   supply if_weak_cong[cong del]
   apply (rule hoare_pre)
   apply (simp    add: decode_set_ipc_buffer_def split_def
@@ -1216,7 +1237,6 @@ lemma decode_set_ipc_is_tc[wp]:
             | wp)+
   apply fastforce?
   done
-
 
 lemma slot_long_running_inv[wp]:
   "\<lbrace>P\<rbrace> slot_cap_long_running_delete ptr \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -1258,7 +1278,7 @@ lemma decode_cv_space_inv[wp]:
   done
 
 lemma decode_cv_space_is_tc[wp]:
-  "\<lbrace>\<top>\<rbrace> decode_cv_space args cap slot excs \<lbrace>\<lambda>rv s. is_thread_control rv\<rbrace>,-"
+  "\<lbrace>\<top>\<rbrace> decode_cv_space args cap slot excs \<lbrace>\<lambda>rv s. is_thread_control_caps rv\<rbrace>,-"
   by (wpsimp simp: decode_cv_space_def simp_del: hoare_True_E_R split_del: if_split)
 
 context Tcb_AI
@@ -1285,10 +1305,10 @@ lemma (in Tcb_AI) decode_cv_space_wf[wp]:
   done
 
 lemma tcb_inv_set_space_strg:
-  "\<lbrakk> tcb_inv_wf rv s; is_thread_control rv; cte_at slot s; ex_cte_cap_to slot s;
-     tcb_inv_wf (ThreadControl t slot fh None None None None None None None) s \<rbrakk> \<Longrightarrow>
-  tcb_inv_wf (ThreadControl t slot fh None None None (tc_new_croot rv) (tc_new_vroot rv) None None) s"
-  by (cases rv; simp add: is_thread_control_def)
+  "\<lbrakk> tcb_inv_wf rv s; is_thread_control_caps rv; cte_at slot s; ex_cte_cap_to slot s;
+     tcb_inv_wf (ThreadControlCaps t slot fh None None None None) s \<rbrakk> \<Longrightarrow>
+  tcb_inv_wf (ThreadControlCaps t slot fh None (tc_new_croot rv) (tc_new_vroot rv) None ) s"
+  by (cases rv; simp add: is_thread_control_caps_def)
 
 lemma decode_set_space_wf[wp]:
   "\<lbrace>(invs::'state_ext state\<Rightarrow>bool)
@@ -1316,15 +1336,15 @@ lemma decode_set_space_inv[wp]:
   by (wpsimp wp: hoare_drop_imps)
 
 lemma decode_set_space_is_tc[wp]:
-  "\<lbrace>\<top>\<rbrace> decode_set_space args cap slot extras \<lbrace>\<lambda>rv s. is_thread_control rv\<rbrace>,-"
+  "\<lbrace>\<top>\<rbrace> decode_set_space args cap slot extras \<lbrace>\<lambda>rv s. is_thread_control_caps rv\<rbrace>,-"
   apply (simp add: decode_set_space_def)
   apply (wp | simp only: is_thread_control_true)+
   apply simp
   done
 
 lemma decode_set_mcpriority_is_tc[wp]:
-  "\<lbrace>\<top>\<rbrace> decode_set_mcpriority args cap slot excs \<lbrace>\<lambda>rv s. is_thread_control rv\<rbrace>,-"
-  by (wpsimp simp: decode_set_mcpriority_def)
+  "\<lbrace>\<top>\<rbrace> decode_set_mcpriority args cap slot excs \<lbrace>\<lambda>rv s. is_thread_control_sched rv\<rbrace>,-"
+   by (wpsimp simp: decode_set_mcpriority_def is_thread_control_sched_def)
 
 lemma decode_set_space_target[wp]:
   "\<lbrace>\<lambda>s. P (obj_ref_of cap)\<rbrace> decode_set_space args cap slot extras \<lbrace>\<lambda>rv s. P (thread_control_target rv)\<rbrace>,-"
@@ -1357,12 +1377,16 @@ lemma decode_tcb_conf_wf[wp]:
    \<lbrace>tcb_inv_wf\<rbrace>,-"
   apply (clarsimp simp add: decode_tcb_configure_def)
   apply wp
-  apply (rule_tac Q'="\<lambda>set_space s. tcb_inv_wf set_space s \<and> tcb_inv_wf set_params s
-                               \<and> is_thread_control set_space \<and> is_thread_control set_params
-                               \<and> thread_control_target set_space = t
-                               \<and> cte_at slot s \<and> ex_cte_cap_to slot s"
-                  in hoare_post_imp_R)
-       apply (wpsimp simp: is_thread_control_def2 real_cte_at_cte)+
+      apply (rule_tac Q'="\<lambda>set_space s. tcb_inv_wf set_space s \<and> tcb_inv_wf set_params s
+                                   \<and> is_thread_control_caps set_space \<and> is_thread_control_caps set_params
+                                   \<and> thread_control_target set_space = t
+                                   \<and> cte_at slot s \<and> ex_cte_cap_to slot s"
+                      in hoare_post_imp_R)
+       apply wpsimp
+      apply (subst (asm) is_thread_control_caps_def2)
+      apply (subst (asm) is_thread_control_caps_def2)
+      apply clarsimp
+     apply (wpsimp simp: real_cte_at_cte)+
   done
 
 lemma decode_tcb_conf_inv[wp]:

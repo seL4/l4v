@@ -289,12 +289,12 @@ lemma valid_vtable_root_is_arch_cap:
   "is_valid_vtable_root cap \<Longrightarrow> is_arch_cap cap"
   by (auto simp: ARM_A.is_valid_vtable_root_def is_cap_simps)
 
-lemma tc_invs[Tcb_AI_asms]:
-  "\<lbrace>invs and tcb_inv_wf (ThreadControl t sl fh th mcp pr croot vroot buf sc)\<rbrace>
-      invoke_tcb (ThreadControl t sl fh th mcp pr croot vroot buf sc)
+lemma tcc_invs[Tcb_AI_asms]:
+  "\<lbrace>invs and tcb_inv_wf (ThreadControlCaps t sl fh th croot vroot buf)\<rbrace>
+      invoke_tcb (ThreadControlCaps t sl fh th croot vroot buf)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply if_cong[cong]
-  apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
+  apply (simp add: split_def cong: option.case_cong)
   apply (simp only: simp_thms
          | (simp add: conj_comms del: hoare_True_E_R,
             strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
@@ -310,7 +310,6 @@ lemma tc_invs[Tcb_AI_asms]:
               checked_insert_tcb_invs[where ref="tcb_cnode_index 2"]
               thread_set_ipc_tcb_cap_valid gbn_wp
               static_imp_wp static_imp_conj_wp
-         | rule maybe_sched_context_unbind_tcb_lift maybe_sched_context_bind_tcb_lift
          | simp add: not_pred_tcb
          | wpc
          | strengthen use_no_cap_to_obj_asid_strg
@@ -320,12 +319,44 @@ lemma tc_invs[Tcb_AI_asms]:
   apply (intro conjI impI;
          clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
                  dest!: valid_vtable_root_is_arch_cap)
-       apply (fastforce simp: invs_def valid_state_def valid_pspace_def sc_at_pred_n_def
-                              obj_at_def valid_idle_def sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at
-                       dest!: idle_no_ex_cap)
       apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state\<close>)
      apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
-     by (auto simp: valid_ipc_buffer_cap)
+  by (auto simp: valid_ipc_buffer_cap)
+
+lemma set_mcpriority_bound_sc_tcb_at[wp]:
+  "set_mcpriority ref mcp \<lbrace>bound_sc_tcb_at P t\<rbrace>"
+  unfolding set_mcpriority_def
+  apply (wpsimp wp: thread_set_wp)
+  by (clarsimp simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
+
+lemma tc_invs[Tcb_AI_asms]:
+  "\<lbrace>invs and tcb_inv_wf (ThreadControlSched t sl fh mcp pr sc)\<rbrace>
+      invoke_tcb (ThreadControlSched t sl fh  mcp pr sc)
+   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  supply if_cong[cong]
+  apply (simp add: split_def cong: option.case_cong)
+  apply wp
+      apply (simp only: simp_thms
+             | (simp add: conj_comms del: hoare_True_E_R,
+                strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
+             | rule hoare_vcg_E_elim hoare_vcg_imp_lift'
+             | wp hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_all_lift
+                  install_tcb_cap_invs gbn_wp
+                  static_imp_wp static_imp_conj_wp
+             | rule maybe_sched_context_unbind_tcb_lift maybe_sched_context_bind_tcb_lift
+             | simp add: not_pred_tcb
+             | wpc
+             | strengthen use_no_cap_to_obj_asid_strg
+                          tcb_cap_always_valid_strg tcb_cap_valid_ep_strgs
+             )+
+  apply (clarsimp cong: conj_cong)
+  apply (intro conjI impI;
+         clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
+                 dest!: valid_vtable_root_is_arch_cap)
+   apply (fastforce simp: invs_def valid_state_def valid_pspace_def sc_at_pred_n_def
+                          obj_at_def valid_idle_def sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at
+                   dest!: idle_no_ex_cap)
+  by (clarsimp simp: is_cap_simps cte_wp_at_caps_of_state)
 
 lemma check_valid_ipc_buffer_inv:
   "\<lbrace>P\<rbrace> check_valid_ipc_buffer vptr cap \<lbrace>\<lambda>rv. P\<rbrace>"
