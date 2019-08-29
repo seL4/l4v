@@ -275,7 +275,7 @@ crunch domain_list_inv[wp]: invoke_untyped "\<lambda>s::det_state. P (domain_lis
     simp: crunch_simps mapM_x_defsym)
 
 crunch domain_list_inv[wp]: invoke_tcb "\<lambda>s::det_state. P (domain_list s)"
- (wp: maybeM_inv hoare_drop_imp check_cap_inv mapM_x_wp')
+ (wp: hoare_drop_imp check_cap_inv mapM_x_wp')
 
 crunch domain_list_inv[wp]:
   invoke_domain, invoke_irq_control, invoke_irq_handler
@@ -524,7 +524,7 @@ crunch domain_time_inv[wp]: invoke_untyped "\<lambda>s::det_state. P (domain_tim
     simp: crunch_simps mapM_x_defsym)
 
 crunch domain_time_inv[wp]: invoke_tcb "\<lambda>s::det_state. P (domain_time s)"
-  (wp: crunch_wps check_cap_inv maybeM_inv
+  (wp: crunch_wps check_cap_inv
     simp: crunch_simps)
 
 crunch domain_time_inv[wp]:

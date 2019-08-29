@@ -4220,7 +4220,7 @@ end
 context Deterministic_AI_1 begin
 
 crunch valid_list[wp]: invoke_tcb "valid_list"
- (wp: maybeM_inv hoare_drop_imp check_cap_inv mapM_x_wp')
+ (wp: hoare_drop_imp check_cap_inv mapM_x_wp')
 
 lemma invoke_sched_control_configure_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> invoke_sched_control_configure i \<lbrace>\<lambda>_. valid_list\<rbrace>"

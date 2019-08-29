@@ -570,6 +570,15 @@ lemma update_time_stamp_valid_machine_time[wp]:
   apply (fastforce simp: getCurrentTime_def elim: valid_machine_time_getCurrentTime)
   done
 
+crunches arch_finalise_cap, prepare_thread_delete
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunches arch_post_cap_deletion
+  for active_sc_tcb_at[wp]: "\<lambda>s. Q (active_sc_tcb_at t s)"
+  and budget_ready[wp]: "\<lambda>s. Q (budget_ready t s)"
+  and budget_sufficient[wp]: "\<lambda>s. Q (budget_sufficient t s)"
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI

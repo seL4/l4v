@@ -2158,6 +2158,8 @@ locale DetSchedSchedule_AI =
     "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s::det_state. P (release_queue s)\<rbrace>"
   assumes arch_finalise_cap_ct_not_in_q'[wp]:
     "\<And>acap final. \<lbrace>ct_not_in_q\<rbrace> arch_finalise_cap acap final \<lbrace>\<lambda>_. ct_not_in_q::det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_finalise_cap_cur_thread[wp]:
+    "\<And>acap final P. arch_finalise_cap acap final \<lbrace>(\<lambda>s. P (cur_thread s))::det_state \<Rightarrow> _\<rbrace>"
   assumes arch_finalise_cap_simple_sched_action'[wp]:
     "\<And>acap final. \<lbrace>simple_sched_action\<rbrace> arch_finalise_cap acap final \<lbrace>\<lambda>_. simple_sched_action::det_state \<Rightarrow> _\<rbrace>"
   assumes arch_finalise_cap_valid_sched'[wp]:
@@ -2251,8 +2253,10 @@ locale DetSchedSchedule_AI =
     "\<And>t. \<lbrace>valid_machine_time\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. valid_machine_time::det_state \<Rightarrow> _\<rbrace>"
   assumes prepare_thread_delete_ct_not_in_q'[wp]:
     "\<And>t. \<lbrace>ct_not_in_q\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. ct_not_in_q::det_state \<Rightarrow> _\<rbrace>"
+  assumes prepare_thread_delete_cur_thread[wp]:
+    "\<And>t P. prepare_thread_delete t \<lbrace>(\<lambda>s. P (cur_thread s))::det_state \<Rightarrow> _\<rbrace>"
   assumes prepare_thread_delete_release_queue[wp]:
-    "\<And>t. prepare_thread_delete t \<lbrace>(\<lambda>s. P (release_queue s))::det_state \<Rightarrow> _\<rbrace>"
+    "\<And>t P. prepare_thread_delete t \<lbrace>(\<lambda>s. P (release_queue s))::det_state \<Rightarrow> _\<rbrace>"
   assumes prepare_thread_delete_simple_sched_action'[wp]:
     "\<And>t. \<lbrace>simple_sched_action\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. simple_sched_action::det_state \<Rightarrow> _\<rbrace>"
   assumes prepare_thread_delete_valid_machine_time[wp]:
@@ -2347,6 +2351,12 @@ locale DetSchedSchedule_AI =
     "\<And>c. arch_post_cap_deletion c \<lbrace>ct_not_in_q::det_state \<Rightarrow> _\<rbrace>"
   assumes arch_post_cap_deletion_simple_sched_action[wp] :
     "\<And>c. arch_post_cap_deletion c \<lbrace>simple_sched_action::det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_post_cap_deletion_active_sc_tcb_at[wp] :
+    "\<And>c Q t. arch_post_cap_deletion c \<lbrace>(\<lambda>s. Q (active_sc_tcb_at t s)):: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_post_cap_deletion_budget_ready[wp] :
+    "\<And>c Q t. arch_post_cap_deletion c \<lbrace>(\<lambda>s. Q (budget_ready t s)):: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_post_cap_deletion_budget_sufficient[wp] :
+    "\<And>c Q t. arch_post_cap_deletion c \<lbrace>(\<lambda>s. Q (budget_sufficient t s)):: det_state \<Rightarrow> _\<rbrace>"
   assumes arch_post_cap_deletion_not_cur_thread[wp] :
     "\<And>c t. arch_post_cap_deletion c \<lbrace>not_cur_thread t::det_state \<Rightarrow> _\<rbrace>"
   assumes arch_post_cap_deletion_sched_act_not[wp] :
@@ -7320,7 +7330,7 @@ lemma tcc_valid_sched:
     and ct_active and ct_ARS\<rbrace>
      invoke_tcb (ThreadControlCaps target slot fault_handler timeout_handler croot vroot buffer)
    \<lbrace>\<lambda>rv. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  apply (simp add: split_def cong: option.case_cong)
+  apply (simp add: split_def install_tcb_frame_cap_def cong: option.case_cong)
   apply (simp only: simp_thms
          | (simp add: conj_comms del: hoare_True_E_R,
             strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
@@ -7345,6 +7355,118 @@ lemma tcc_valid_sched:
     apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
     by auto
 
+lemma set_irq_state_budget_conditions[wp]:
+  "set_irq_state w x \<lbrace>(\<lambda>s. P (active_sc_tcb_at t s)):: det_state \<Rightarrow> _\<rbrace>"
+  "set_irq_state w x \<lbrace>(\<lambda>s. P (budget_ready t s)):: det_state \<Rightarrow> _\<rbrace>"
+  "set_irq_state w x \<lbrace>(\<lambda>s. P (budget_sufficient t s)):: det_state \<Rightarrow> _\<rbrace>"
+  apply (wpsimp simp: set_irq_state_def)
+  apply (erule rsubst[where P=P])
+  apply (clarsimp simp: active_sc_tcb_at_defs)
+  apply (wpsimp simp: set_irq_state_def)
+  apply (erule rsubst[where P=P])
+  apply (clarsimp simp: budget_ready_defs)
+  apply (wpsimp simp: set_irq_state_def)
+  apply (erule rsubst[where P=P])
+  apply (clarsimp simp: budget_sufficient_defs)
+  done
+
+crunches empty_slot_ext, empty_slot
+  for active_sc_tcb_at[wp]: "(\<lambda>s. P (active_sc_tcb_at t s)):: det_state \<Rightarrow> _"
+  and budget_ready[wp]: "(\<lambda>s. P (budget_ready t s)):: det_state \<Rightarrow> _"
+  and budget_sufficient[wp]: "(\<lambda>s. P (budget_sufficient t s)):: det_state \<Rightarrow> _"
+  (wp:  ignore: set_irq_state)
+
+crunches cancel_all_ipc
+  for active_sc_tcb_at[wp]: "(\<lambda>s. (active_sc_tcb_at t s)):: det_state \<Rightarrow> _"
+  and budget_ready[wp]: "(\<lambda>s. P (budget_ready t s)):: det_state \<Rightarrow> _"
+  and budget_sufficient[wp]: "(\<lambda>s. P (budget_sufficient t s)):: det_state \<Rightarrow> _"
+  (wp: crunch_wps)
+
+lemma restart_thread_if_no_fault_ct_in_state_neq:
+  "\<lbrace>ct_in_state P and (\<lambda>s. t \<noteq> cur_thread s)\<rbrace>
+   restart_thread_if_no_fault t
+  \<lbrace>\<lambda>_. ct_in_state P :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding restart_thread_if_no_fault_def
+  by (wpsimp wp: sts_ctis_neq)
+
+lemma reply_unlink_tcb_ct_in_state_neq:
+  "\<lbrace>ct_in_state P and (\<lambda>s. t \<noteq> cur_thread s)\<rbrace>
+   reply_unlink_tcb t r
+  \<lbrace>\<lambda>_. ct_in_state P :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding reply_unlink_tcb_def
+  by (wpsimp wp: sts_ctis_neq gts_wp get_simple_ko_wp)
+
+lemma cancel_all_ipc_ct_in_state[wp]:
+  "\<lbrace>ct_active and valid_ep_q\<rbrace>
+   cancel_all_ipc epptr
+  \<lbrace>\<lambda>_. ct_active :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding cancel_all_ipc_def
+  apply wpsimp
+       apply (rule_tac I="ct_active and (\<lambda>s. \<forall>x. x \<in> set queue \<longrightarrow> x \<noteq> cur_thread s)" in mapM_x_inv_wp)
+         apply clarsimp
+        prefer 2
+        apply (assumption)
+       apply (wpsimp wp: restart_thread_if_no_fault_ct_in_state_neq gts_wp)
+      apply (wpsimp wp: restart_thread_if_no_fault_ct_in_state_neq gts_wp)
+     apply (wpsimp wp: get_ep_queue_wp)
+    apply wpsimp
+      apply (rule_tac I="ct_active and (\<lambda>s. \<forall>x. x \<in> set queue \<longrightarrow> x \<noteq> cur_thread s)" in mapM_x_inv_wp)
+        apply clarsimp
+       prefer 2
+       apply (assumption)
+      apply (wpsimp wp: restart_thread_if_no_fault_ct_in_state_neq gts_wp)
+     apply (wpsimp wp: restart_thread_if_no_fault_ct_in_state_neq gts_wp)
+    apply (wpsimp wp: get_ep_queue_wp)
+   apply (wpsimp wp: get_simple_ko_wp)
+  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: valid_ep_q_def)
+  apply (drule_tac x=epptr in spec)
+  apply (fastforce)
+  done
+
+lemma install_tcb_cap_active_sc_tcb_at[wp]:
+  "\<lbrace>invs and tcb_at target  and active_sc_tcb_at t \<rbrace>
+   install_tcb_cap target slot 3 slot_opt
+  \<lbrace>\<lambda>_. active_sc_tcb_at t :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding install_tcb_cap_def
+  by (wpsimp wp: check_cap_inv ARM.cap_delete_fh_lift)
+
+lemma install_tcb_cap_budget_ready[wp]:
+  "\<lbrace>invs and tcb_at target and budget_ready t \<rbrace>
+   install_tcb_cap target slot 3 slot_opt
+  \<lbrace>\<lambda>_. budget_ready t :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding install_tcb_cap_def
+  by (wpsimp wp: check_cap_inv ARM.cap_delete_fh_lift)
+
+lemma install_tcb_cap_budget_sufficient[wp]:
+  "\<lbrace>invs and tcb_at target and budget_sufficient t \<rbrace>
+   install_tcb_cap target slot 3 slot_opt
+  \<lbrace>\<lambda>_. budget_sufficient t :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding install_tcb_cap_def
+  by (wpsimp wp: check_cap_inv ARM.cap_delete_fh_lift)
+
+lemma install_tcb_cap_ct_active[wp]:
+  "\<lbrace>invs and tcb_at target and ct_active and valid_ep_q\<rbrace>
+   install_tcb_cap target slot 3 slot_opt
+  \<lbrace>\<lambda>_. ct_active :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding install_tcb_cap_def
+  apply wpsimp
+  apply (wpsimp wp: check_cap_inv )
+  apply (simp)
+  apply (rule valid_validE, rule ARM.cap_delete_fh_lift)
+  apply wpsimp+
+  apply assumption
+  by clarsimp
+
+crunches install_tcb_cap
+  for cur_thread[wp]: "(\<lambda>s. P (cur_thread s)) :: det_state \<Rightarrow> _"
+  (wp: crunch_wps preemption_point_inv check_cap_inv dxo_wp_weak)
+
+lemma budget_RS_rewrite_helper:
+  "bound_sc_tcb_at (\<lambda>p. \<exists>scp. is_refill_ready scp 0 s' \<and> p = Some scp) t s' = budget_ready t s'"
+  "bound_sc_tcb_at (\<lambda>p. \<exists>scp. is_refill_sufficient scp 0 s' \<and> p = Some scp) t s' = budget_sufficient t s'"
+  by (fastforce simp: budget_ready_defs)+
+
 lemma tcs_valid_sched:
   "\<lbrace>valid_sched and invs and simple_sched_action
     and (\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s)
@@ -7353,33 +7475,42 @@ lemma tcs_valid_sched:
      invoke_tcb (ThreadControlSched target slot fault_handler mcp priority sc)
    \<lbrace>\<lambda>rv. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: split_def cong: option.case_cong)
-  apply (simp only: simp_thms
-         | (simp add: conj_comms del: hoare_True_E_R,
-            strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
-         | rule hoare_vcg_E_elim hoare_vcg_imp_lift'
-                hoare_vcg_const_imp_lift_R hoare_vcg_R_conj
-         | wp case_option_wpE check_cap_inv cap_delete_deletes
-              hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_all_lift
-              maybe_sched_context_bind_tcb_valid_sched
-              maybe_sched_context_unbind_tcb_valid_sched
-              set_priority_valid_sched
-              set_mcpriority_budget_ready[simplified conj_comms]
-              set_mcpriority_budget_sufficient[simplified conj_comms]
-              thread_set_valid_cap gbn_wp
-              static_imp_wp static_imp_conj_wp
-              maybe_sched_context_unbind_tcb_lift[where P="simple_sched_action"]
-              maybe_sched_context_bind_tcb_lift[where P="simple_sched_action"]
-         | rule maybe_sched_context_unbind_tcb_lift maybe_sched_context_bind_tcb_lift
-         | simp add: not_pred_tcb
-         | wpc | wps
-         | strengthen tcb_cap_always_valid_strg tcb_cap_valid_ep_strgs)+
+  apply (wp ARM.maybeM_wp_drop_None)
+      apply (wpsimp wp: maybe_sched_context_bind_tcb_valid_sched
+                        maybe_sched_context_unbind_tcb_valid_sched, assumption)
+     apply (clarsimp cong: conj_cong)
+     apply (rule hoare_post_add[where R="\<lambda>_.valid_sched and simple_sched_action"])
+     apply (clarsimp cong: conj_cong)
+     apply (wpsimp wp: ARM.maybeM_wp_drop_None set_priority_valid_sched hoare_vcg_all_lift hoare_vcg_imp_lift)
+      apply (wps, wpsimp)
+    apply (clarsimp, assumption)
+    apply (wpsimp wp: ARM.maybeM_wp_drop_None)
+     apply ((wpsimp wp: set_priority_valid_sched hoare_vcg_all_lift hoare_vcg_imp_lift
+                        set_mcpriority_budget_ready[simplified conj_comms]
+                        set_mcpriority_budget_sufficient[simplified conj_comms] hoare_vcg_disj_lift
+             | wps)+)[1]
+    apply (clarsimp, assumption)
+   apply (rule hoare_vcg_E_elim)
+    apply wpsimp
+   apply (rule valid_validE_R)
+   apply ((wpsimp simp: budget_RS_rewrite_helper wp: case_option_wpE  hoare_vcg_disj_lift
+               hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_all_lift
+               ARM.install_tcb_cap_bound_sc_tcb_at hoare_vcg_conj_lift
+               set_mcpriority_budget_ready[simplified conj_comms]
+               set_mcpriority_budget_sufficient[simplified conj_comms]
+                gbn_wp
+               static_imp_wp static_imp_conj_wp |
+          rule valid_validE, wps, wpsimp wp: ARM.install_tcb_cap_bound_sc_tcb_at)+)[1]
   apply (clarsimp cong: conj_cong)
   apply (intro conjI impI;
          clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
                  dest!: valid_vtable_root_is_arch_cap)
-  by (fastforce simp: invs_def valid_state_def valid_pspace_def sc_at_pred_n_def
-                         obj_at_def valid_idle_def sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at
-                  dest!: idle_no_ex_cap)
+     apply (erule valid_sched_implies_valid_ipc_qs)
+    apply (case_tac x; simp)
+   apply (case_tac x; simp)
+  apply (case_tac priority; simp)
+  apply (drule valid_sched_implies_valid_ipc_qs(1), simp)
+  done
 
 end
 
