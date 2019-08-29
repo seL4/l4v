@@ -179,6 +179,7 @@ where
 
 | "invoke_tcb (ThreadControlSched target slot fault_handler mcp priority sc)
    = doE
+    install_tcb_cap target slot 3 fault_handler;
     liftE $  case mcp of None \<Rightarrow> return()
      | Some (newmcp, _) \<Rightarrow> set_mcpriority target newmcp;
     liftE $ case priority of None \<Rightarrow> return()
@@ -186,7 +187,6 @@ where
     liftE $ case sc of None \<Rightarrow> return ()
      | Some None \<Rightarrow> maybe_sched_context_unbind_tcb target
      | Some (Some sc_ptr) \<Rightarrow> maybe_sched_context_bind_tcb sc_ptr target;
-    install_tcb_cap target slot 3 fault_handler;
     returnOk []
   odE"
 
