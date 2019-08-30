@@ -732,24 +732,24 @@ fun crunch cfg pre extra stack const' thms =
               THEN ALLGOALS (fn n =>
                 TRY (resolve_tac ctxt''' Instance.pre_thms n)
                 THEN
-                REPEAT_DETERM (
-                  WPFix.tac ctxt n
-                  ORELSE
-                  wp' goals' n
-                  ORELSE
-                  CHANGED (clarsimp_tac ctxt''' n)
-                  ORELSE
-                  assume_tac ctxt''' n
-                  ORELSE
-                  Instance.wpc_tactic ctxt''' n
-                  ORELSE
-                  Instance.wps_tactic ctxt''' (#wps_rules cfg) n
-                  ORELSE
-                  safe_tac ctxt'''
-                  ORELSE
-                  CHANGED (simp_tac ctxt''' n)
-                  ORELSE
-                  (fn t => (warn_helper_thms ctxt''' n t; no_tac t)))
+                REPEAT_DETERM ((
+                  WPFix.tac ctxt
+                  ORELSE'
+                  wp' goals'
+                  ORELSE'
+                  CHANGED_GOAL (clarsimp_tac ctxt''')
+                  ORELSE'
+                  assume_tac ctxt'''
+                  ORELSE'
+                  Instance.wpc_tactic ctxt'''
+                  ORELSE'
+                  Instance.wps_tactic ctxt''' (#wps_rules cfg)
+                  ORELSE'
+                  SELECT_GOAL (safe_tac ctxt''')
+                  ORELSE'
+                  CHANGED_GOAL (simp_tac ctxt''')
+                  ORELSE'
+                  (fn n => fn t => (warn_helper_thms ctxt''' n t; no_tac t))) n)
               ))) |> singleton (Proof_Context.export ctxt''' ctxt)
               handle e =>
                      (writeln "Crunch call stack:";
