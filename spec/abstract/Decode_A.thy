@@ -574,9 +574,9 @@ where
     target_cap \<leftarrow> returnOk $ hd excaps;
     whenE (\<not>is_sched_context_cap target_cap) $ throwError (InvalidCapability 1);
     sc_ptr \<leftarrow> returnOk $ obj_ref_of target_cap;
-    whenE (budget_\<mu>s > maxTimer_us \<or> budget_\<mu>s < MIN_BUDGET_US \<or> budget_\<mu>s > MAX_BUDGET_US) $
+    whenE (budget_\<mu>s > maxTimer_us \<or> budget_\<mu>s < MIN_SC_BUDGET_US \<or> budget_\<mu>s > MAX_BUDGET_US) $
       throwError (RangeError (ucast MIN_BUDGET_US) (MAX_BUDGET_US));
-    whenE (period_\<mu>s > maxTimer_us \<or> period_\<mu>s < MIN_BUDGET_US \<or> period_\<mu>s > MAX_BUDGET_US) $
+    whenE (period_\<mu>s > maxTimer_us \<or> period_\<mu>s < MIN_SC_BUDGET_US \<or> period_\<mu>s > MAX_BUDGET_US) $
       throwError (RangeError (ucast MIN_BUDGET_US) (MAX_BUDGET_US));
     whenE (period_\<mu>s < budget_\<mu>s) $
       throwError (RangeError (ucast MIN_BUDGET_US) (ucast period_\<mu>s));

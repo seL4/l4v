@@ -128,12 +128,16 @@ fun
 where
   "schedule_used full [] new = [new]"
 | "schedule_used full (x#rs) new = (
-      if (r_amount new < MIN_BUDGET \<or> full)
-      then let tl = last (x#rs);
-               new_tl = \<lparr> r_time = r_time new - r_amount tl,
-                            r_amount = r_amount tl + r_amount new \<rparr> in
-           (butlast (x#rs)) @ [new_tl]
-      else (x#rs) @ [new])"
+      if (r_amount new < MIN_BUDGET \<and> \<not>full \<and> 2 * MIN_BUDGET \<le> r_amount (last (x#rs)) + r_amount new)
+      then let remainder = (MIN_BUDGET - r_amount new) in
+            butlast (x#rs) @ [last(x#rs)\<lparr>r_amount := r_amount (last (x#rs)) - remainder\<rparr>]
+                           @ [\<lparr>r_time = r_time new - remainder, r_amount = r_amount new + remainder\<rparr>]
+      else if (r_amount new < MIN_BUDGET \<or> full)
+           then let tl = last (x#rs);
+                new_tl = \<lparr> r_time = r_time new - r_amount tl,
+                           r_amount = r_amount tl + r_amount new \<rparr> in
+             (butlast (x#rs)) @ [new_tl]
+           else (x#rs) @ [new])"
 
 definition
   merge_refill :: "refill \<Rightarrow> refill \<Rightarrow> refill"
