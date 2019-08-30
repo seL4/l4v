@@ -119,7 +119,7 @@ lemma refill_unblock_check_valid_objs[wp]:
   apply (auto simp: refills_merge_valid[simplified])
   done
 
-lemma schedule_used:
+lemma schedule_used_non_nil:
   "1 \<le> length (schedule_used b ls u)"
   by (induction ls;
       clarsimp simp: Let_def)
@@ -128,8 +128,9 @@ lemma refill_budget_check_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> refill_budget_check usage \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   unfolding refill_budget_check_def
   apply (wpsimp wp: set_refills_valid_objs hoare_vcg_imp_lift' get_refills_wp hoare_vcg_all_lift
-              simp: Let_def refill_full_def is_round_robin_def refill_ready_def)
-  using schedule_used by clarsimp
+              simp: Let_def refill_full_def is_round_robin_def refill_ready_def
+         | intro conjI)+
+  using schedule_used_non_nil by clarsimp
 
 (* move to KHeap_AI *)
 crunch valid_irq_states[wp]: update_sched_context,update_sched_context "valid_irq_states"
@@ -461,7 +462,7 @@ lemma refill_budget_check_invs[wp]:
   "\<lbrace>invs\<rbrace> refill_budget_check u \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: refill_budget_check_def Let_def refill_full_def split_del: if_split
                   wp: hoare_drop_imp get_sched_context_wp get_refills_wp)
-   using schedule_used by (clarsimp simp: Let_def)
+   using schedule_used_non_nil by (clarsimp simp: Let_def)
 
 lemma refill_budget_check_valid_sc[wp]:
    "\<lbrace>valid_sched_context sc\<rbrace> refill_budget_check u \<lbrace>\<lambda>rv. valid_sched_context sc\<rbrace>"

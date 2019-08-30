@@ -645,8 +645,8 @@ where
     "valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)
      = (obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> valid_refills_number mrefills n) scptr
         and ex_nonz_cap_to scptr and K (MIN_REFILLS \<le> mrefills) \<comment> \<open>mrefills = MIN_REFILLS + extra_refills\<close>
-        and K (budget \<le> us_to_ticks maxTimer_us \<and> budget \<ge> MIN_BUDGET)
-        and K (period \<le> us_to_ticks maxTimer_us \<and> budget \<ge> MIN_BUDGET)
+        and K (budget \<le> us_to_ticks maxTimer_us \<and> budget \<ge> MIN_SC_BUDGET)
+        and K (period \<le> us_to_ticks maxTimer_us \<and> budget \<ge> MIN_SC_BUDGET)
         and K (budget \<le> period))"
 
 
@@ -823,14 +823,14 @@ lemma schedule_used_length':
   "length (schedule_used full x new) = length x \<or> length (schedule_used full x new) = length x + 1"
   by (induct x; clarsimp simp: Let_def)
 
-lemma schedule_used_length:
+(* lemma schedule_used_length:
   "length (schedule_used full x new) =
    (if ((r_amount new < MIN_BUDGET \<or> full) \<and> x \<noteq> [])
     then length x else length x + 1)"
   apply (induct x)
    apply simp
   apply (clarsimp simp: Let_def length_greater_0_conv[symmetric] simp del: length_greater_0_conv)
-  done
+  done *)
 
 lemma schedule_used_length_max:
   "length (schedule_used full x new) \<le> length x + 1"
@@ -937,7 +937,7 @@ lemma refill_budget_check_valid_refills[wp]:
      apply blast
     using schedule_used_non_nil apply fast
    apply (case_tac "tl (sc_refills xa) = []")
-    apply (simp add: schedule_used_length)
+    apply (simp add: schedule_used_length_max)
     apply (subgoal_tac "length (tl (sc_refills xa)) = length (sc_refills xa) - 1")
     using schedule_used_length_max apply (metis Nat.le_imp_diff_is_add Suc_eq_plus1 nat_le_linear
           not_less_eq_eq plus_1_eq_Suc schedule_used_length' semiring_norm(51))
@@ -966,14 +966,26 @@ lemma refill_budget_check_valid_refills[wp]:
                    wp: get_object_wp set_object_wp
                 split: if_split)
 apply (subgoal_tac "sc_refills xa = [refill_hd xa, hd (tl (sc_refills xa))]")
+apply (intro conjI)
   apply (metis Groups.add_ac(2) olen_add_eqv refills_sum_cons refills_sum_nil word_diff_ls'(2)
                word_le_less_eq word_not_simps(1) word_zero_le)
+  apply (simp add: MIN_REFILLS_def)
   apply (metis Nil_tl list.exhaust_sel)
 
    apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
                        get_object_def obj_at_def Let_def
                    wp: get_object_wp set_object_wp
                 split: if_split)
+apply (subgoal_tac "sc_refills xa = [refill_hd xa, hd (tl (sc_refills xa))]")
+  apply (metis Groups.add_ac(2) olen_add_eqv refills_sum_cons refills_sum_nil word_diff_ls'(2)
+               word_le_less_eq word_not_simps(1) word_zero_le)
+  apply (simp add: MIN_REFILLS_def)
+  apply (metis Nil_tl list.exhaust_sel)
+   apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
+                       get_object_def obj_at_def Let_def
+                   wp: get_object_wp set_object_wp
+                split: if_split)
+
     apply (intro conjI impI allI)
 apply (simp add: refills_sum_def)
 apply (subgoal_tac "sc_refills xa = refill_hd xa # (hd (tl (sc_refills xa))) # (tl (tl (sc_refills xa)))")
@@ -986,8 +998,24 @@ apply (subgoal_tac "Suc (Suc (Suc 0)) \<le> length (sc_refills xa)")
 apply (subgoal_tac "Suc 0 \<le> length (tl (tl (sc_refills xa)))")
   apply fastforce
 using non_empty_tail_length apply (metis Nitpick.size_list_simp(2) diff_is_0_eq diff_self_eq_0)
+   apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
+                       get_object_def obj_at_def Let_def
+                   wp: get_object_wp set_object_wp
+                split: if_split)
+apply (intro conjI)
+apply (simp add: add_ac)
+apply (subgoal_tac "sc_refills xa = [refill_hd xa] @ [(hd (tl (sc_refills xa)))]
+                    @ butlast (tl (tl (sc_refills xa))) @ [last (tl (tl (sc_refills xa)))]")
+  apply (metis (no_types, hide_lams) arith_extra_simps(6) refills_sum_append refills_sum_cons refills_sum_nil)
+  apply (simp add: neq_Nil_lengthI)
+apply (subgoal_tac "Suc (Suc (length (sc_refills xa) - Suc (Suc (Suc 0)))) = length (sc_refills xa) - Suc 0")
+  apply linarith
+apply (subgoal_tac "Suc (Suc (Suc 0)) \<le> length (sc_refills xa)")
+  apply linarith
+apply (subgoal_tac "Suc 0 \<le> length (tl (tl (sc_refills xa)))")
+  apply fastforce
+  using Suc_le_eq apply blast
 
-apply clarsimp
 apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
                        get_object_def obj_at_def Let_def
                    wp: get_object_wp set_object_wp
@@ -1030,7 +1058,6 @@ apply (simp add: refills_sum_def)
   apply (metis add.comm_neutral list.simps(8) list.simps(9) sum_list.Cons sum_list.Nil)
   apply (metis list.exhaust_sel neq_Nil_lengthI)
 
-
 apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
                        get_object_def obj_at_def Let_def
                    wp: get_object_wp set_object_wp
@@ -1050,7 +1077,7 @@ apply (subgoal_tac "sc_refills xa = refill_hd xa # tl (sc_refills xa)")
   apply (metis refills_sum_cons refills_sum_def)
   apply (metis list.exhaust_sel list.sel(2))
 apply (subgoal_tac "Suc (Suc (length (sc_refills xa) - Suc (Suc 0))) = length (sc_refills xa)")
-  apply argo
+  apply linarith
 apply (subgoal_tac "Suc (Suc 0) \<le> length (sc_refills xa)")
   apply linarith
   apply (metis One_nat_def diff_self_eq_0 le_def le_less_Suc_eq length_tl list_exhaust_size_eq0)
@@ -1075,6 +1102,97 @@ apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def s
                    wp: get_object_wp set_object_wp
                 split: if_split)
 apply (intro conjI impI allI)
+apply (subgoal_tac "sc_refills xa = [refill_hd xa] @ butlast (tl (sc_refills xa)) @ [last (tl (sc_refills xa))]")
+  apply (metis arith_extra_simps(6) refills_sum_append refills_sum_cons refills_sum_nil)
+  apply (simp add: neq_Nil_lengthI)
+  apply (simp add: MIN_REFILLS_def)
+
+apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
+                       get_object_def obj_at_def Let_def
+                   wp: get_object_wp set_object_wp
+                split: if_split)
+apply (subgoal_tac "sc_refills xa = [refill_hd xa]")
+  apply (metis add_cancel_right_right add_right_imp_eq hd_Cons_tl not_Cons_self2 refills_sum_cons refills_sum_nil)
+  apply (metis Nitpick.size_list_simp(2) Suc_n_not_le_n list.exhaust_sel)
+
+apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
+                       get_object_def obj_at_def Let_def
+                   wp: get_object_wp set_object_wp
+                split: if_split)
+apply (intro conjI)
+apply (subgoal_tac "sc_refills xa = [refill_hd xa] @ butlast (tl (sc_refills xa)) @ [last (tl (sc_refills xa))]")
+  apply (metis arith_extra_simps(6) refills_sum_append refills_sum_cons refills_sum_nil)
+  apply (simp add: neq_Nil_lengthI)
+  apply (simp add: MIN_REFILLS_def)
+
+apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
+                       get_object_def obj_at_def Let_def
+                   wp: get_object_wp set_object_wp
+                split: if_split)
+apply (subgoal_tac "sc_refills xa = [refill_hd xa]")
+  apply (metis add_cancel_right_right add_right_imp_eq hd_Cons_tl not_Cons_self2 refills_sum_cons refills_sum_nil)
+  apply (metis Nitpick.size_list_simp(2) Suc_n_not_le_n list.exhaust_sel)
+
+apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
+                       get_object_def obj_at_def Let_def
+                   wp: get_object_wp set_object_wp
+                split: if_split)
+apply (subgoal_tac "sc_refills xa = [refill_hd xa]")
+  apply (metis add_cancel_right_right add_right_imp_eq hd_Cons_tl not_Cons_self2 refills_sum_cons refills_sum_nil)
+  apply (metis Nitpick.size_list_simp(2) Suc_n_not_le_n list.exhaust_sel)
+
+apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
+                       get_object_def obj_at_def Let_def
+                   wp: get_object_wp set_object_wp
+                split: if_split)
+apply (intro conjI)
+apply (subgoal_tac "sc_refills xa = [refill_hd xa] @ butlast (tl (sc_refills xa)) @ [last (tl (sc_refills xa))]")
+  apply (metis arith_extra_simps(6) refills_sum_append refills_sum_cons refills_sum_nil)
+  apply (simp add: neq_Nil_lengthI)
+  apply (simp add: MIN_REFILLS_def)
+
+apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
+                       get_object_def obj_at_def Let_def
+                   wp: get_object_wp set_object_wp
+                split: if_split)
+apply (intro conjI)
+apply (subgoal_tac "sc_refills xa = [refill_hd xa] @ butlast (tl (sc_refills xa)) @ [last (tl (sc_refills xa))]")
+  apply (metis arith_extra_simps(6) refills_sum_append refills_sum_cons refills_sum_nil)
+  apply (simp add: neq_Nil_lengthI)
+  apply (simp add: MIN_REFILLS_def)
+
+apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
+                       get_object_def obj_at_def Let_def
+                   wp: get_object_wp set_object_wp
+                split: if_split)
+apply (subgoal_tac "sc_refills xa = [refill_hd xa]")
+  apply (metis add_cancel_right_right add_right_imp_eq hd_Cons_tl not_Cons_self2 refills_sum_cons refills_sum_nil)
+  apply (metis Nitpick.size_list_simp(2) Suc_n_not_le_n list.exhaust_sel)
+
+apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
+                       get_object_def obj_at_def Let_def
+                   wp: get_object_wp set_object_wp
+                split: if_split)
+apply (intro conjI)
+apply (subgoal_tac "sc_refills xa = [refill_hd xa] @ butlast (tl (sc_refills xa)) @ [last (tl (sc_refills xa))]")
+  apply (metis arith_extra_simps(6) refills_sum_append refills_sum_cons refills_sum_nil)
+  apply (simp add: neq_Nil_lengthI)
+  apply (simp add: MIN_REFILLS_def)
+
+apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
+                       get_object_def obj_at_def Let_def
+                   wp: get_object_wp set_object_wp
+                split: if_split)
+apply (subgoal_tac "sc_refills xa = [refill_hd xa]")
+  apply (metis add_cancel_right_right add_right_imp_eq hd_Cons_tl not_Cons_self2 refills_sum_cons refills_sum_nil)
+  apply (metis Nitpick.size_list_simp(2) Suc_n_not_le_n list.exhaust_sel)
+
+apply (wpsimp simp: valid_refills_def set_refills_def update_sched_context_def set_object_def
+                       get_object_def obj_at_def Let_def
+                   wp: get_object_wp set_object_wp
+                split: if_split)
+apply (intro conjI)
+apply (simp add: refills_sum_def)
 apply (subgoal_tac "sc_refills xa = refill_hd xa # tl (sc_refills xa)")
   apply (metis refills_sum_cons refills_sum_def)
   apply (metis list.exhaust_sel list.sel(2))
@@ -1867,8 +1985,9 @@ lemma decode_sched_control_inv_wf:
   apply (clarsimp simp add: valid_cap_def obj_at_def is_sc_obj_def split: cap.split_asm)
   apply (case_tac ko; simp)
   apply (clarsimp simp: valid_refills_number_def refill_absolute_max_def MIN_REFILLS_def
-                        us_to_ticks_mono[simplified mono_def] MIN_BUDGET_def
-                        MIN_BUDGET_US_def ARM.kernelWCET_ticks_def)
+                        us_to_ticks_mono[simplified mono_def] MIN_SC_BUDGET_def
+                        MIN_SC_BUDGET_US_def MIN_BUDGET_def MIN_BUDGET_US_def
+                        ARM.kernelWCET_ticks_def)
   done
 
 end

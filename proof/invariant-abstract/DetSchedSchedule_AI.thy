@@ -15568,6 +15568,13 @@ lemma refill_update_test_sc_refill_max[wp]:
   unfolding refill_update_def
   by (wpsimp simp: set_refills_def wp: update_sched_context_wp refill_ready_wp)
      (clarsimp simp: sc_tcb_sc_at_def obj_at_def test_sc_refill_max_def)
+(*  apply (wpsimp simp: set_refills_def wp: update_sched_context_wp)
+  apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def test_sc_refill_max_def refill_ready_def)
+  apply (intro conjI)
+  apply wpsimp+
+       apply (intro conjI)
+  apply (wpsimp simp: set_refills_def wp: update_sched_context_wp)+
+  done*)
 
 lemma refill_new_test_sc_refill_max:
   "\<lbrace>K (P (x1 > 0))\<rbrace>
