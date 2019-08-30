@@ -155,6 +155,19 @@ lemma is_schedulable_opt_Some:
 
 (* refill_ready & refill sufficient *)
 
+definition cur_sc_offset_ready_2
+where
+  "cur_sc_offset_ready_2 usage curtime cursc kh \<equiv>
+   (case kh cursc of
+          Some (SchedContext sc _) \<Rightarrow> (r_time (refill_hd sc)) + usage \<le> curtime + kernelWCET_ticks
+         | _ \<Rightarrow> False)"
+
+abbreviation cur_sc_offset_ready :: "time \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "cur_sc_offset_ready usage s \<equiv>
+      cur_sc_offset_ready_2 usage (cur_time s) (cur_sc s) (kheap s)"
+
+lemmas cur_sc_offset_ready_def = cur_sc_offset_ready_2_def
 definition is_refill_sufficient :: "obj_ref \<Rightarrow> time \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "is_refill_sufficient scp usage \<equiv>

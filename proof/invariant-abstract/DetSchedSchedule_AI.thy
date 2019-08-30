@@ -9225,7 +9225,8 @@ lemma refill_budget_check_valid_ready_qs_not_queued:
 
 (* this is for the call from commit_time, with the assert *)
 lemma refill_budget_check_valid_ready_qs:
-  "\<lbrace>valid_ready_qs and (\<lambda>s. is_refill_sufficient (cur_sc s) usage s) \<rbrace>
+  "\<lbrace>valid_ready_qs and (\<lambda>s. is_refill_sufficient (cur_sc s) usage s)
+         and (\<lambda>s. cur_sc_offset_ready usage s) \<rbrace>
    refill_budget_check usage
    \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
   unfolding refill_budget_check_def
@@ -9238,9 +9239,9 @@ split: if_split_asm  split del: if_split)
          clarsimp simp: valid_ready_qs_def in_queue_2_def pred_tcb_at_def obj_at_def;
          drule_tac x=d and y=p in spec2; clarsimp; drule_tac x=tcb_ptr in bspec, simp;
          clarsimp simp: refill_prop_defs sufficient_refills_defs obj_at_def MIN_REFILLS_def;
-         fastforce?; (clarsimp simp: MIN_BUDGET_nonzero not_less)?)
+         fastforce?; (clarsimp simp: MIN_BUDGET_nonzero not_less cur_sc_offset_ready_def)?)
   apply (intro conjI impI allI; clarsimp?)
-  sorry (* waiting for the spec update; will need more preconditions *)
+  sorry (* two cases, do we have usage \<ge> MIN_BUDGET? *)
 
 lemma refill_budget_check_valid_release_q_not_in_release_q:
   "\<lbrace>valid_release_q and (\<lambda>s. sc_not_in_release_q (cur_sc s) s)\<rbrace>
@@ -9252,17 +9253,16 @@ lemma refill_budget_check_valid_release_q_not_in_release_q:
                  refill_ready_wp is_round_robin_wp refill_full_wp
            simp: Let_def)
 
-(* if the new refill_budget_check always leaves one refill only that is ready and sufficient,
- then both valid_release_q and valid_ready_qs should be preserved *)
 lemma refill_budget_check_valid_release_q:
-  "\<lbrace>valid_release_q\<rbrace>
+  "\<lbrace>valid_release_q and cur_sc_in_release_q_imp_zero_consumed\<rbrace>
    refill_budget_check usage
    \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
   unfolding refill_budget_check_def
-(*  by (wpsimp wp: set_refills_valid_release_q
+  apply  (wpsimp wp: set_object_wp hoare_vcg_all_lift get_object_wp
                     refill_ready_wp is_round_robin_wp refill_full_wp
- simp: Let_def split_del: if_split)
-     (intro conjI impI allI; clarsimp simp: pred_tcb_at_def obj_at_def) *) sorry
+ simp: Let_def set_refills_def update_sched_context_def split_del: if_split)
+    apply (intro conjI impI allI; clarsimp simp: pred_tcb_at_def obj_at_def)
+  sorry (* waiting for the spec update *)
 
 lemma update_sched_context_ko_at_Endpoint[wp]:
     "update_sched_context ptr f
@@ -9316,7 +9316,7 @@ lemma commit_time_valid_ready_qs:
                      set_refills_valid_ready_qs refill_budget_check_valid_ready_qs)
     apply (clarsimp simp: obj_at_def sufficient_refills_defs MIN_BUDGET_nonzero split: if_split_asm)
 (*   by (fastforce simp: active_sc_tcb_at_defs valid_ready_qs_def refill_prop_defs in_queue_2_def obj_at_def)*)
-sorry
+sorry  (* waiting for the spec update *)
 
 lemma commit_time_valid_sched_action:
   "\<lbrace>valid_sched_action and simple_sched_action\<rbrace>
