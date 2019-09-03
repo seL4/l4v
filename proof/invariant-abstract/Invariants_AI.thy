@@ -272,12 +272,12 @@ where
   (if f < 2^n  then {p+of_nat f .. p + 2 ^ n - 1} else {})"
 
 definition
-  "obj_range p obj \<equiv> {p .. p + 2^obj_bits obj - 1}"
+  "obj_range p obj \<equiv> {p .. p + 2^obj_bits obj - 1}" (* FIXME mask_range *)
 
 definition
   "pspace_no_overlap S \<equiv>
            \<lambda>s. \<forall>x ko. kheap s x = Some ko \<longrightarrow>
-                {x .. x + (2 ^ obj_bits ko - 1)} \<inter> S = {}"
+                {x .. x + (2 ^ obj_bits ko - 1)} \<inter> S = {}" (* FIXME obj_range *)
 
 definition
   "valid_untyped c \<equiv> \<lambda>s.
@@ -1056,7 +1056,7 @@ definition
   | AArch T' \<Rightarrow> arch_obj_bits_type T'"
 
 definition
-  "typ_range p T \<equiv> {p .. p + 2^obj_bits_type T - 1}"
+  "typ_range p T \<equiv> {p .. p + 2^obj_bits_type T - 1}" (* FIXME mask_range *)
 
 abbreviation
   "active st \<equiv> st = Running \<or> st = Restart"
@@ -1286,10 +1286,6 @@ lemma valid_objsE [elim]:
 lemma obj_at_ko_at:
   "obj_at P p s \<Longrightarrow> \<exists>ko. ko_at ko p s \<and> P ko"
   by (auto simp add: obj_at_def)
-
-lemma symreftype_inverse[simp]:
-  "symreftype (symreftype t) = t"
-  by (cases t, simp+)
 
 lemma tcb_st_refs_of_simps[simp]: (* ARMHYP add TCBHypRef? *)
  "tcb_st_refs_of (Running)               = {}"
@@ -1769,7 +1765,7 @@ lemma gen_obj_refs_Int:
             \<and> cap_irqs cap \<inter> cap_irqs cap' = {}
             \<and> arch_gen_refs cap \<inter> arch_gen_refs cap' = {})"
   by (simp add: gen_obj_refs_def Int_Un_distrib Int_Un_distrib2
-                image_Int[symmetric] Int_image_empty image_Int[symmetric])
+                image_Int[symmetric] Int_image_empty)
 
 lemma is_final_cap'_def2:
   "is_final_cap' cap =

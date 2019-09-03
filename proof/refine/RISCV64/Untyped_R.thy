@@ -3910,7 +3910,7 @@ lemma idx_cases:
   by (clarsimp simp: cte_wp_at_ctes_of)
 
 lemma desc_range:
-  "reset \<longrightarrow> descendants_range_in' (ptr_range ptr sz) (cref) (ctes_of s)"
+  "reset \<longrightarrow> descendants_range_in' (mask_range ptr sz) (cref) (ctes_of s)"
   using vui by (clarsimp simp: empty_descendants_range_in')
 
 abbreviation(input)

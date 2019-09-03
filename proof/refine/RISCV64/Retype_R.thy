@@ -1015,7 +1015,7 @@ lemma new_range_subset:
   assumes
         cover: "range_cover ptr sz (objBitsKO ko) n"
     and addr: "x \<in> set (new_cap_addrs n ptr ko)"
-  shows       "ptr_range x (objBitsKO ko) \<subseteq> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}"
+  shows       "mask_range x (objBitsKO ko) \<subseteq> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}"
   (is "?lhs \<subseteq> ?rhs")
 proof -
   have base_in: "x \<in> {ptr..ptr_add (ptr && ~~ mask sz) (2 ^ sz - 1)}"
@@ -4319,7 +4319,7 @@ lemma createObjects_pspace_domain_valid':
   apply (simp add: pspace_domain_valid_def foldr_upd_app_if
                    fun_upd_def[symmetric])
   apply (subgoal_tac " \<forall>x \<in> set (new_cap_addrs (unat (of_nat n << gbits)) ptr val).
-                         ptr_range x (objBitsKO val) \<subseteq> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}")
+                         mask_range x (objBitsKO val) \<subseteq> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}")
    apply blast
 
   apply (rule ballI)

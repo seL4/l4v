@@ -2141,7 +2141,7 @@ lemma performASIDControlInvocation_no_orphans [wp]:
     apply simp
     done
 
-  have exclude: "cref \<notin> ptr_range ptr_base pageBits"
+  have exclude: "cref \<notin> mask_range ptr_base pageBits"
     apply (rule descendants_range_ex_cte'[where cte = "ut_cte"])
         apply (rule empty_descendants_range_in'[OF desc])
        apply (rule if_unsafe_then_capD'[where P = "\<lambda>c. c = ut_cte"])

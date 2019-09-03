@@ -14,15 +14,6 @@ imports
   "AInvs.ArchDetSchedSchedule_AI"
 begin
 
-(* FIXME RISCV: move up, use everywhere *)
-abbreviation ptr_range :: "obj_ref \<Rightarrow> nat \<Rightarrow> machine_word set" where
-  "ptr_range p n \<equiv> {p .. p + mask n}"
-
-(* FIXME RISCV: move up with ptr_range *)
-lemma add_mask_fold:
-  "x + 2 ^ n - 1 = x + mask n"  by (simp add: mask_def)
-
-
 (* global data and code of the kernel, not covered by any cap *)
 axiomatization
   kernel_data_refs :: "word64 set"
@@ -56,12 +47,12 @@ section "Invariants on Executable Spec"
 context begin interpretation Arch .
 
 definition ps_clear :: "obj_ref \<Rightarrow> nat \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "ps_clear p n s \<equiv> (ptr_range p n - {p}) \<inter> dom (ksPSpace s) = {}"
+  "ps_clear p n s \<equiv> (mask_range p n - {p}) \<inter> dom (ksPSpace s) = {}"
 
 definition pspace_no_overlap' :: "obj_ref \<Rightarrow> nat \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "pspace_no_overlap' ptr bits \<equiv>
      \<lambda>s. \<forall>x ko. ksPSpace s x = Some ko \<longrightarrow>
-                (ptr_range x (objBitsKO ko)) \<inter> {ptr .. (ptr && ~~ mask bits) + mask bits} = {}"
+                (mask_range x (objBitsKO ko)) \<inter> {ptr .. (ptr && ~~ mask bits) + mask bits} = {}"
 
 definition ko_wp_at' :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "ko_wp_at' P p s \<equiv> \<exists>ko. ksPSpace s p = Some ko \<and> is_aligned p (objBitsKO ko) \<and> P ko \<and>
@@ -275,14 +266,14 @@ definition capAligned :: "capability \<Rightarrow> bool" where
   "capAligned c \<equiv> is_aligned (capUntypedPtr c) (capBits c) \<and> capBits c < word_bits"
 
 definition obj_range' :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> machine_word set" where
-  "obj_range' p ko \<equiv> ptr_range p (objBitsKO ko)"
+  "obj_range' p ko \<equiv> mask_range p (objBitsKO ko)"
 
 primrec (nonexhaustive) usableUntypedRange :: "capability \<Rightarrow> machine_word set" where
  "usableUntypedRange (UntypedCap _ p n f) = (if f < 2^n then {p+of_nat f .. p + mask n} else {})"
 
 definition valid_untyped' :: "bool \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_untyped' d ptr bits idx s \<equiv>
-     \<forall>ptr'. \<not> ko_wp_at' (\<lambda>ko. ptr_range ptr bits \<subset> obj_range' ptr' ko
+     \<forall>ptr'. \<not> ko_wp_at' (\<lambda>ko. mask_range ptr bits \<subset> obj_range' ptr' ko
                               \<or> obj_range' ptr' ko \<inter>
                                   usableUntypedRange (UntypedCap d ptr bits idx) \<noteq> {}) ptr' s"
 
@@ -869,7 +860,7 @@ definition valid_refs' :: "machine_word set \<Rightarrow> cte_heap \<Rightarrow>
   "valid_refs' R \<equiv> \<lambda>m. \<forall>c \<in> ran m. R \<inter> capRange (cteCap c) = {}"
 
 definition table_refs' :: "machine_word \<Rightarrow> machine_word set" where
-  "table_refs' x \<equiv> (\<lambda>y. x + (y << pte_bits)) ` ptr_range 0 ptTranslationBits"
+  "table_refs' x \<equiv> (\<lambda>y. x + (y << pte_bits)) ` mask_range 0 ptTranslationBits"
 
 definition
   global_refs' :: "kernel_state \<Rightarrow> obj_ref set"
@@ -890,10 +881,10 @@ definition valid_global_refs' :: "kernel_state \<Rightarrow> bool" where
 
 definition pspace_domain_valid :: "kernel_state \<Rightarrow> bool" where
   "pspace_domain_valid \<equiv> \<lambda>s.
-     \<forall>x ko. ksPSpace s x = Some ko \<longrightarrow> ptr_range x (objBitsKO ko) \<inter> kernel_data_refs = {}"
+     \<forall>x ko. ksPSpace s x = Some ko \<longrightarrow> mask_range x (objBitsKO ko) \<inter> kernel_data_refs = {}"
 
 definition valid_asid_table' :: "(asid \<rightharpoonup> machine_word) \<Rightarrow> bool" where
-  "valid_asid_table' table \<equiv> dom table \<subseteq> ptr_range 0 asid_high_bits \<and> 0 \<notin> ran table"
+  "valid_asid_table' table \<equiv> dom table \<subseteq> mask_range 0 asid_high_bits \<and> 0 \<notin> ran table"
 
 definition valid_global_pts' :: "machine_word list \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_global_pts' pts \<equiv> \<lambda>s. \<forall>p \<in> set pts. page_table_at' p s"

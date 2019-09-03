@@ -105,7 +105,7 @@ lemma createObject_typ_at':
   apply (unfold pspace_no_overlap'_def)
   apply (erule allE)+
   apply (erule(1) impE)
-  apply (subgoal_tac "x \<in> ptr_range x (objBitsKO y)")
+  apply (subgoal_tac "x \<in> mask_range x (objBitsKO y)")
    apply (fastforce simp: is_aligned_neg_mask_eq)
   apply (drule(1) pspace_alignedD')
   apply (clarsimp simp: is_aligned_no_overflow_mask)
@@ -1545,7 +1545,7 @@ lemma ex_cte_not_in_untyped_range:
   "\<lbrakk>(ctes_of s) cref = Some (CTE (capability.UntypedCap d ptr bits idx) mnode);
     descendants_of' cref (ctes_of s) = {}; invs' s;
     ex_cte_cap_wp_to' (\<lambda>_. True) x s; valid_global_refs' s\<rbrakk>
-   \<Longrightarrow> x \<notin> ptr_range ptr bits"
+   \<Longrightarrow> x \<notin> mask_range ptr bits"
   apply clarsimp
   apply (drule(1) cte_cap_in_untyped_range)
    apply (fastforce simp:cte_wp_at_ctes_of)+

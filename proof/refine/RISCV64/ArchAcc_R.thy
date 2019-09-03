@@ -42,12 +42,6 @@ lemma fst_assert_opt:
   "fst (assert_opt opt s) = (if opt = None then {} else {(the opt,s)})"
   by (clarsimp simp: assert_opt_def fail_def return_def split: option.split)
 
-(* FIXME RISCV: move up *)
-lemma pspace_distinctD:
-  "\<lbrakk> kheap s x = Some ko; kheap s y = Some ko'; x \<noteq> y; pspace_distinct s \<rbrakk>
-   \<Longrightarrow> ptr_range x (obj_bits ko) \<inter> ptr_range y (obj_bits ko') = {}"
-  by (simp add: pspace_distinct_def mask_def)
-
 (* FIXME RISCV: move to Word *)
 lemma mask_Suc:
   "mask (Suc n) = 2^n + mask n"
@@ -178,9 +172,9 @@ lemma aligned_mask_step:
   done
 
 (* FIXME RISCV: move to Invariants_H, maybe further up *)
-lemma ptr_range_subsetD:
-  "\<lbrakk> p' \<in> ptr_range p n; x' \<in> ptr_range p' n'; n' \<le> n; is_aligned p n; is_aligned p' n' \<rbrakk> \<Longrightarrow>
-   x' \<in> ptr_range p n"
+lemma mask_range_subsetD:
+  "\<lbrakk> p' \<in> mask_range p n; x' \<in> mask_range p' n'; n' \<le> n; is_aligned p n; is_aligned p' n' \<rbrakk> \<Longrightarrow>
+   x' \<in> mask_range p n"
   apply clarsimp
   apply (rule conjI)
    apply (erule (1) order_trans)
@@ -321,9 +315,9 @@ lemma obj_relation_cuts_range_limit:
   apply fastforce
   done
 
-lemma obj_relation_cuts_range_ptr_range:
+lemma obj_relation_cuts_range_mask_range:
   "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko'; is_aligned p (obj_bits ko) \<rbrakk>
-   \<Longrightarrow> p' \<in> ptr_range p (obj_bits ko)"
+   \<Longrightarrow> p' \<in> mask_range p (obj_bits ko)"
   apply (drule (1) obj_relation_cuts_range_limit, clarsimp)
   apply (rule conjI)
    apply (rule word_plus_mono_right2; assumption?)
@@ -380,10 +374,10 @@ lemma pspace_distinct_cross:
    apply (case_tac ko; simp split: if_split_asm add: is_other_obj_relation_type_CapTable)
    apply (rename_tac ako, case_tac ako; simp add: is_other_obj_relation_type_def split: if_split_asm)
   apply (frule (1) obj_relation_cuts_obj_bits)
-  apply (drule (2) obj_relation_cuts_range_ptr_range)+
-  apply (prop_tac "x' \<in> ptr_range p' (objBitsKO ko')", simp add: mask_def add_diff_eq)
+  apply (drule (2) obj_relation_cuts_range_mask_range)+
+  apply (prop_tac "x' \<in> mask_range p' (objBitsKO ko')", simp add: mask_def add_diff_eq)
   apply (frule_tac x=p and y=x in pspace_distinctD; assumption?)
-  apply (drule (4) ptr_range_subsetD)
+  apply (drule (4) mask_range_subsetD)
   apply (erule (2) in_empty_interE)
   done
 

@@ -116,8 +116,8 @@ lemma descendants_range'_def2:
 defs deletionIsSafe_def:
   "deletionIsSafe \<equiv> \<lambda>ptr bits s. \<forall>p t m r.
        (cte_wp_at' (\<lambda>cte. cteCap cte = capability.ReplyCap t m r) p s \<longrightarrow>
-       t \<notin> ptr_range ptr bits) \<and>
-       (\<forall>ko. ksPSpace s p = Some (KOArch ko) \<and> p \<in> ptr_range ptr bits \<longrightarrow> 6 \<le> bits)"
+       t \<notin> mask_range ptr bits) \<and>
+       (\<forall>ko. ksPSpace s p = Some (KOArch ko) \<and> p \<in> mask_range ptr bits \<longrightarrow> 6 \<le> bits)"
 
 defs ksASIDMapSafe_def:
   "ksASIDMapSafe \<equiv> \<lambda>s. True"
@@ -126,12 +126,12 @@ defs cNodePartialOverlap_def:
   "cNodePartialOverlap \<equiv> \<lambda>cns inRange. \<exists>p n. cns p = Some n
     \<and> (\<not> is_aligned p (cte_level_bits + n)
       \<or> cte_level_bits + n \<ge> word_bits
-      \<or> (\<not> ptr_range p (cte_level_bits + n) \<subseteq> {p. inRange p}
-        \<and> \<not> ptr_range p (cte_level_bits + n) \<subseteq> {p. \<not> inRange p}))"
+      \<or> (\<not> mask_range p (cte_level_bits + n) \<subseteq> {p. inRange p}
+        \<and> \<not> mask_range p (cte_level_bits + n) \<subseteq> {p. \<not> inRange p}))"
 
 (* FIXME RISCV move: *)
 lemma mask_in_range':
-  "is_aligned ptr bits \<Longrightarrow> (ptr' && (~~ mask bits) = ptr) = (ptr' \<in> ptr_range ptr bits)"
+  "is_aligned ptr bits \<Longrightarrow> (ptr' && (~~ mask bits) = ptr) = (ptr' \<in> mask_range ptr bits)"
   by (drule mask_in_range[where ptr'=ptr']) (simp add: mask_def add_diff_eq)
 
 
@@ -141,12 +141,12 @@ lemma deleteObjects_def2:
    deleteObjects ptr bits = do
      stateAssert (deletionIsSafe ptr bits) [];
      doMachineOp (freeMemory ptr bits);
-     stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> ptr_range ptr bits)) [];
-     modify (\<lambda>s. s \<lparr> ksPSpace := \<lambda>x. if x \<in> ptr_range ptr bits
+     stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> mask_range ptr bits)) [];
+     modify (\<lambda>s. s \<lparr> ksPSpace := \<lambda>x. if x \<in> mask_range ptr bits
                                         then None else ksPSpace s x,
-                     gsUserPages := \<lambda>x. if x \<in> ptr_range ptr bits
+                     gsUserPages := \<lambda>x. if x \<in> mask_range ptr bits
                                            then None else gsUserPages s x,
-                     gsCNodes := \<lambda>x. if x \<in> ptr_range ptr bits
+                     gsCNodes := \<lambda>x. if x \<in> mask_range ptr bits
                                         then None else gsCNodes s x \<rparr>);
      stateAssert ksASIDMapSafe []
    od"
@@ -174,12 +174,12 @@ lemma deleteObjects_def3:
      assert (is_aligned ptr bits);
      stateAssert (deletionIsSafe ptr bits) [];
      doMachineOp (freeMemory ptr bits);
-     stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> ptr_range ptr bits)) [];
-     modify (\<lambda>s. s \<lparr> ksPSpace := \<lambda>x. if x \<in> ptr_range ptr bits
+     stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> mask_range ptr bits)) [];
+     modify (\<lambda>s. s \<lparr> ksPSpace := \<lambda>x. if x \<in> mask_range ptr bits
                                               then None else ksPSpace s x,
-                     gsUserPages := \<lambda>x. if x \<in> ptr_range ptr bits
+                     gsUserPages := \<lambda>x. if x \<in> mask_range ptr bits
                                            then None else gsUserPages s x,
-                     gsCNodes := \<lambda>x. if x \<in> ptr_range ptr bits
+                     gsCNodes := \<lambda>x. if x \<in> mask_range ptr bits
                                         then None else gsCNodes s x \<rparr>);
      stateAssert ksASIDMapSafe []
    od"
@@ -243,7 +243,7 @@ lemma obj_relation_cuts_eqv_base_in_detype_range:
   "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; kheap s x = Some ko;
       valid_objs s; pspace_aligned s;
       valid_untyped (cap.UntypedCap d base bits idx) s \<rbrakk>
-    \<Longrightarrow> (x \<in> ptr_range base bits) = (y \<in> ptr_range base bits)"
+    \<Longrightarrow> (x \<in> mask_range base bits) = (y \<in> mask_range base bits)"
   apply (simp add: valid_untyped_def mask_def add_diff_eq del: atLeastAtMost_iff)
   apply (subgoal_tac "x \<in> obj_range x ko")
    apply (subgoal_tac "y \<in> obj_range x ko")
@@ -260,11 +260,11 @@ lemma detype_pspace_relation:
   and      al: "is_aligned base bits"
   and      vs: "valid_pspace s"
   and      vu: "valid_untyped (cap.UntypedCap d base bits idx) s"
-  shows        "pspace_relation (kheap (detype (ptr_range base bits) s))
-                 (\<lambda>x. if x \<in> ptr_range base bits then None else ksPSpace s' x)"
+  shows        "pspace_relation (kheap (detype (mask_range base bits) s))
+                 (\<lambda>x. if x \<in> mask_range base bits then None else ksPSpace s' x)"
   (is "pspace_relation ?ps ?ps'")
 proof -
-  let ?range = "ptr_range base bits"
+  let ?range = "mask_range base bits"
   let ?ps'' = "(kheap s |` (-?range))"
 
   have pa: "pspace_aligned s" and vo: "valid_objs s"
@@ -385,8 +385,8 @@ lemma cte_wp_at_delete':
     = (\<not> (base \<le> p \<and> p \<le> base + mask magnitude) \<and> cte_wp_at' P p s)"
   apply (simp add: cte_wp_at_obj_cases' obj_at_delete')
   apply (subgoal_tac "\<forall>Q n. obj_at' Q (p - n) s \<and> tcb_cte_cases n \<noteq> None \<longrightarrow>
-                             ((p - n) \<in> ptr_range base magnitude)
-                              = (p \<in> ptr_range base magnitude)")
+                             ((p - n) \<in> mask_range base magnitude)
+                              = (p \<in> mask_range base magnitude)")
    apply auto[1]
   apply (clarsimp simp: obj_at'_real_def valid_cap'_def
                         valid_untyped'_def
@@ -472,15 +472,15 @@ proof -
   note [simp del] = atLeastatMost_subset_iff atLeastLessThan_iff atLeastAtMost_iff
                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   have "\<And>t m r. \<exists>ptr. cte_wp_at ((=) (cap.ReplyCap t m r)) ptr s
-        \<Longrightarrow> t \<notin> ptr_range base magnitude"
+        \<Longrightarrow> t \<notin> mask_range base magnitude"
     by (fastforce dest!: valid_cap2 simp: cap obj_reply_refs_def mask_def add_diff_eq)
   hence "\<forall>ptr t m r. cte_wp_at ((=) (cap.ReplyCap t m r)) ptr s
-         \<longrightarrow> t \<notin> ptr_range base magnitude"
+         \<longrightarrow> t \<notin> mask_range base magnitude"
     by (fastforce simp del: split_paired_All)
-  hence "\<forall>t. t \<in> ptr_range base magnitude \<longrightarrow>
+  hence "\<forall>t. t \<in> mask_range base magnitude \<longrightarrow>
           (\<forall>ptr m r. \<not> cte_wp_at ((=) (cap.ReplyCap t m r)) ptr s)"
     by fastforce
-  hence cte: "\<forall>t. t \<in> ptr_range base magnitude \<longrightarrow>
+  hence cte: "\<forall>t. t \<in> mask_range base magnitude \<longrightarrow>
           (\<forall>ptr m r. \<not> cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m r) ptr s')"
     unfolding deletionIsSafe_def
     apply -
@@ -501,7 +501,7 @@ proof -
     done
 
   have arch:
-    "\<And> ko p. \<lbrakk> ksPSpace s' p = Some (KOArch ko); p \<in> ptr_range base magnitude \<rbrakk> \<Longrightarrow> 6 \<le> magnitude"
+    "\<And> ko p. \<lbrakk> ksPSpace s' p = Some (KOArch ko); p \<in> mask_range base magnitude \<rbrakk> \<Longrightarrow> 6 \<le> magnitude"
     using sr vs vu
     apply (clarsimp simp: state_relation_def)
     apply (erule(1) pspace_dom_relatedE)
@@ -790,7 +790,7 @@ lemma valid_objs: "valid_objs' s"
                     valid_mdb'_def valid_mdb_ctes_def)
 
 abbreviation
-  "base_bits \<equiv> ptr_range base bits"
+  "base_bits \<equiv> mask_range base bits"
 
 abbreviation
   "state' \<equiv> (s \<lparr> ksPSpace := \<lambda>x. if base \<le> x \<and> x \<le> base + mask bits then None else ksPSpace s x \<rparr>)"
@@ -847,16 +847,16 @@ lemma valid_cap_ctes_pre:
 
 lemma replycap_argument:
   "\<And>p t m r. cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m r) p s
-   \<Longrightarrow> t \<notin> ptr_range base bits"
+   \<Longrightarrow> t \<notin> mask_range base bits"
   using safe
   by (force simp: deletionIsSafe_def cte_wp_at_ctes_of)
 
 lemma valid_cap':
     "\<And>p c. \<lbrakk> s \<turnstile>' c; cte_wp_at' (\<lambda>cte. cteCap cte = c) p s;
-             capRange c \<inter> ptr_range base bits = {} \<rbrakk> \<Longrightarrow> state' \<turnstile>' c"
+             capRange c \<inter> mask_range base bits = {} \<rbrakk> \<Longrightarrow> state' \<turnstile>' c"
   apply (subgoal_tac "capClass c = PhysicalClass \<longrightarrow> capUntypedPtr c \<in> capRange c")
    apply (subgoal_tac "capClass c = PhysicalClass \<longrightarrow>
-                        capUntypedPtr c \<notin> ptr_range base bits")
+                        capUntypedPtr c \<notin> mask_range base bits")
     apply (frule valid_cap_ctes_pre)
     apply (case_tac c, simp_all add: valid_cap'_def replycap_argument
                                 del: atLeastAtMost_iff
@@ -1648,7 +1648,7 @@ lemma deleteObjects_cap_to':
 
 lemma valid_untyped_no_overlap:
   "\<lbrakk> valid_untyped' d ptr bits idx s; is_aligned ptr bits; valid_pspace' s \<rbrakk>
-  \<Longrightarrow> pspace_no_overlap' ptr bits (s\<lparr>ksPSpace := ksPSpace s |` (- ptr_range ptr bits)\<rparr>)"
+  \<Longrightarrow> pspace_no_overlap' ptr bits (s\<lparr>ksPSpace := ksPSpace s |` (- mask_range ptr bits)\<rparr>)"
   apply (clarsimp simp del: atLeastAtMost_iff
             simp: pspace_no_overlap'_def valid_cap'_def valid_untyped'_def)
   apply (drule_tac x=x in spec)
@@ -1662,7 +1662,7 @@ lemma valid_untyped_no_overlap:
   apply (drule (1) aligned_ranges_subset_or_disjoint)
   apply (clarsimp simp del: Int_atLeastAtMost atLeastAtMost_iff atLeastatMost_subset_iff)
   apply (elim disjE)
-    apply (subgoal_tac "ptr \<in> ptr_range x (objBitsKO ko)")
+    apply (subgoal_tac "ptr \<in> mask_range x (objBitsKO ko)")
      apply (clarsimp simp:p_assoc_help mask_def)
     apply (clarsimp simp:p_assoc_help mask_def)
    apply (fastforce simp: mask_def add_diff_eq)+
@@ -1694,14 +1694,14 @@ lemma deleteObject_no_overlap[wp]:
         ksPSpace := \<lambda>x. if ptr \<le> x \<and> x \<le> ptr + mask bits then None
                         else ksPSpace s x\<rparr> =
       ksMachineState_update (\<lambda>_. b)
-      (s\<lparr>ksPSpace := ksPSpace s |` (- ptr_range ptr bits)\<rparr>)", simp)
+      (s\<lparr>ksPSpace := ksPSpace s |` (- mask_range ptr bits)\<rparr>)", simp)
   apply (case_tac s, simp)
   apply (rule ext)
   apply simp
   done
 
 lemma deleteObjects_cte_wp_at':
-  "\<lbrace>\<lambda>s. cte_wp_at' P p s \<and> p \<notin> ptr_range ptr bits
+  "\<lbrace>\<lambda>s. cte_wp_at' P p s \<and> p \<notin> mask_range ptr bits
          \<and> s \<turnstile>' (UntypedCap d ptr bits idx) \<and> valid_pspace' s\<rbrace>
      deleteObjects ptr bits
    \<lbrace>\<lambda>rv s. cte_wp_at' P p s\<rbrace>"
@@ -1764,7 +1764,7 @@ lemma createObjects'_wp_subst:
 
 definition pspace_no_overlap_cell' where
   "pspace_no_overlap_cell' p \<equiv> \<lambda>kh.
-     \<forall>x ko. kh x = Some ko \<longrightarrow> p \<notin> ptr_range x (objBitsKO ko)"
+     \<forall>x ko. kh x = Some ko \<longrightarrow> p \<notin> mask_range x (objBitsKO ko)"
 
 lemma pspace_no_overlap'_lift:
   assumes typ_at:"\<And>slot P Q. \<lbrace>\<lambda>s. P (typ_at' Q slot s)\<rbrace> f \<lbrace>\<lambda>r s. P (typ_at' Q slot s) \<rbrace>"
@@ -1970,7 +1970,7 @@ lemma neq_out_intv:
 
 lemma rule_out_intv:
   "\<lbrakk> ksPSpace s a = Some obj; ksPSpace s b = Some obj'; pspace_distinct' s; a\<noteq>b \<rbrakk>
-   \<Longrightarrow> b \<notin> ptr_range a (objBitsKO obj)"
+   \<Longrightarrow> b \<notin> mask_range a (objBitsKO obj)"
   apply (drule(1) pspace_distinctD')
   apply (subst (asm) ps_clear_def)
   apply (drule_tac x = b in orthD2)

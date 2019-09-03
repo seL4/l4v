@@ -120,6 +120,13 @@ lemma pspace_alignedD [intro?]:
   "\<lbrakk> kheap s p = Some ko; pspace_aligned s \<rbrakk> \<Longrightarrow> is_aligned p (obj_bits ko)"
   unfolding pspace_aligned_def by (drule bspec, blast, simp)
 
+(* FIXME: use in more places *)
+abbreviation mask_range :: "'a::len word \<Rightarrow> nat \<Rightarrow> 'a word set" where
+  "mask_range p n \<equiv> {p .. p + mask n}"
+
+lemma add_mask_fold:
+  "x + 2 ^ n - 1 = x + mask n"  by (simp add: mask_def)
+
 text "objects don't overlap"
 definition
   pspace_distinct :: "'z::state_ext state \<Rightarrow> bool"
@@ -129,6 +136,10 @@ where
          {x .. x + (2 ^ obj_bits ko - 1)} \<inter>
          {y .. y + (2 ^ obj_bits ko' - 1)} = {}"
 
+lemma pspace_distinctD:
+  "\<lbrakk> kheap s x = Some ko; kheap s y = Some ko'; x \<noteq> y; pspace_distinct s \<rbrakk>
+   \<Longrightarrow> mask_range x (obj_bits ko) \<inter> mask_range y (obj_bits ko') = {}"
+  by (simp add: pspace_distinct_def mask_def)
 
 definition
   caps_of_state :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap option"
