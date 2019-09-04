@@ -176,8 +176,7 @@ where
      sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
      sc_ptr \<leftarrow> assert_opt sc_opt;
      ready \<leftarrow> refill_ready sc_ptr;
-     sufficient \<leftarrow> refill_sufficient sc_ptr 0;
-     return (ready \<and> sufficient)
+     return ready
    od"
 
 definition
@@ -190,7 +189,11 @@ where
     rq2 \<leftarrow> return $ drop (length rq1) rq;
     modify $ release_queue_update (K rq2);
     mapM_x (\<lambda>t. do
-      \<comment> \<open>the C code asserts refill_sufficient here \<rightarrow> we guarantee this inside refill_ready_tcb for now\<close>
+      consumed \<leftarrow> gets consumed_time;
+      sc_opt \<leftarrow> thread_get tcb_sched_context t;
+      scp \<leftarrow> assert_opt sc_opt;
+      sufficient \<leftarrow> refill_sufficient scp consumed;
+      assert sufficient;
       possible_switch_to t;
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>)
     od) rq1
