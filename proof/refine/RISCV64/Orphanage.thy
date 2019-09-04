@@ -1756,8 +1756,6 @@ lemma storePTE_no_orphans [wp]:
 crunch no_orphans [wp]: unmapPage "no_orphans"
 (wp: crunch_wps ignore: getObject)
 
-declare lookupPTFromLevel.simps [simp del] (* FIXME RISCV *)
-
 crunch no_orphans [wp]: unmapPageTable, prepareThreadDelete "no_orphans"
   (wp: lookupPTSlotFromLevel_inv)
 

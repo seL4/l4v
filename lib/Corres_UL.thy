@@ -360,6 +360,15 @@ lemma corres_if_r:
                                      (a) (if G' then c  else d)"
   by (simp)
 
+lemma corres_if3:
+ "\<lbrakk> G = G';
+    G \<Longrightarrow> corres_underlying sr nf nf' r P P' a c;
+    \<not> G' \<Longrightarrow> corres_underlying sr nf nf' r Q Q' b d \<rbrakk>
+  \<Longrightarrow> corres_underlying sr nf nf' r (if G then P else Q) (if G' then P' else Q')
+                                    (if G then a else b) (if G' then c else d)"
+  by simp
+
+
 text \<open>Some equivalences about liftM and other useful simps\<close>
 
 lemma snd_liftM [simp]:
@@ -996,6 +1005,8 @@ lemma corres_move_asm:
     \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
   by (fastforce simp: corres_underlying_def)
 
+lemmas corres_cross_over_guard = corres_move_asm[rotated]
+
 lemma corres_weak_cong:
   "\<lbrakk>\<And>s. P s \<Longrightarrow> f s = f' s; \<And>s. Q s \<Longrightarrow> g s = g' s\<rbrakk>
   \<Longrightarrow> corres_underlying sr nf nf' r P Q f g = corres_underlying sr nf nf' r P Q f' g'"
@@ -1038,12 +1049,18 @@ lemma corres_either_alternate2:
   done
 
 lemma option_corres:
-  assumes "x = None \<Longrightarrow> corres_underlying sr nf nf' r P P' (A None) (C None)"
-  assumes "\<And>z. x = Some z \<Longrightarrow> corres_underlying sr nf nf' r (Q z) (Q' z) (A (Some z)) (C (Some z))"
+  assumes None: "\<lbrakk> x = None; x' = None \<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r P P' (A None) (C None)"
+  assumes Some: "\<And>z z'. \<lbrakk> x = Some z; x' = Some z' \<rbrakk> \<Longrightarrow>
+             corres_underlying sr nf nf' r (Q z) (Q' z') (A (Some z)) (C (Some z'))"
+  assumes None_eq: "(x = None) = (x' = None)"
   shows "corres_underlying sr nf nf' r (\<lambda>s. (x = None \<longrightarrow> P s) \<and> (\<forall>z. x = Some z \<longrightarrow> Q z s))
-                  (\<lambda>s. (x = None \<longrightarrow> P' s) \<and> (\<forall>z. x = Some z \<longrightarrow> Q' z s))
-                  (A x) (C x)"
-  by (cases x) (auto simp: assms)
+                  (\<lambda>s. (x' = None \<longrightarrow> P' s) \<and> (\<forall>z. x' = Some z \<longrightarrow> Q' z s))
+                  (A x) (C x')"
+  apply (cases x; cases x'; simp add: assms)
+   apply (simp add: None flip: None_eq)
+  apply (simp flip: None_eq)
+  done
+
 
 lemma corres_bind_return:
  "corres_underlying sr nf nf' r P P' (f >>= return) g \<Longrightarrow>
@@ -1127,9 +1144,19 @@ lemma corres_assert_gen_asm:
    \<Longrightarrow> corres_underlying sr nf nf' r (P and (\<lambda>_. F)) Q f (assert F >>= g)"
   by (simp add: corres_gen_asm)
 
+lemma corres_assert_gen_asm_l:
+  "\<lbrakk> F \<Longrightarrow> corres_underlying sr nf nf' r P Q (f ()) g \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r (P and (\<lambda>_. F)) Q (assert F >>= f) g"
+  by (simp add: corres_gen_asm)
+
 lemma corres_assert_gen_asm2:
   "\<lbrakk> F \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g ()) \<rbrakk>
    \<Longrightarrow> corres_underlying sr nf nf' r P (Q and (\<lambda>_. F)) f (assert F >>= g)"
+  by (simp add: corres_gen_asm2)
+
+lemma corres_assert_gen_asm_l2:
+  "\<lbrakk> F \<Longrightarrow> corres_underlying sr nf nf' r P Q (f ()) g \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P (Q and (\<lambda>_. F)) (assert F >>= f) g"
   by (simp add: corres_gen_asm2)
 
 lemma corres_add_guard:
@@ -1205,6 +1232,5 @@ next
        apply (wp y | simp)+
     done
 qed
-
 
 end

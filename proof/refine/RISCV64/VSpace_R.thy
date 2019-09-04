@@ -16,29 +16,6 @@ theory VSpace_R
 imports TcbAcc_R
 begin
 
-(* FIXME RISCV: move to corres *)
-lemma corres_assert_gen_asm_l:
-  "\<lbrakk> F \<Longrightarrow> corres_underlying sr nf nf' r P Q (f ()) g \<rbrakk>
-   \<Longrightarrow> corres_underlying sr nf nf' r (P and (\<lambda>_. F)) Q (assert F >>= f) g"
-  by (simp add: corres_gen_asm)
-
-context Arch begin global_naming RISCV64 (*FIXME: arch_split*)
-
-(* FIXME RISCV: move to AInvs *)
-lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
-
-(* FIXME RISCV: move to AInvs *)
-lemma valid_arch_state_asid_table:
-  "valid_arch_state s \<Longrightarrow> valid_asid_table s"
-  by (simp add: valid_arch_state_def)
-
-(* FIXME RISCV: move to AInvs *)
-lemma valid_arch_state_global_arch_objs:
-  "valid_arch_state s \<Longrightarrow> valid_global_arch_objs s"
-  by (simp add: valid_arch_state_def)
-
-end
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch_ignore (add: throw_on_false)
@@ -423,26 +400,23 @@ lemma zip_map_rel:
   shows "f x = g y"
   using assms by (induct xs arbitrary: x y ys; cases ys) auto
 
-crunch aligned'[wp]: unmapPageTable "pspace_aligned'"
+crunches unmapPageTable, unmapPage
+  for aligned'[wp]: "pspace_aligned'"
+  and distinct'[wp]: "pspace_distinct'"
+  and ctes [wp]: "\<lambda>s. P (ctes_of s)"
+  and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (ignore: getObject simp: crunch_simps
        wp: crunch_wps getObject_inv loadObject_default_inv)
-crunch distinct'[wp]: unmapPageTable "pspace_distinct'"
-  (ignore: getObject simp: crunch_simps
-       wp: crunch_wps getObject_inv loadObject_default_inv)
 
-crunch no_0_obj'[wp]: storePTE no_0_obj'
-
-crunch valid_arch'[wp]: storePTE valid_arch_state'
-(ignore: setObject)
-
-crunch cur_tcb'[wp]: storePTE cur_tcb'
-(ignore: setObject)
+crunches storePTE
+  for no_0_obj'[wp]: no_0_obj'
+  and valid_arch'[wp]: valid_arch_state'
+  and cur_tcb'[wp]: cur_tcb'
+  (ignore: setObject)
 
 lemma no_fail_sfence[intro!,simp,wp]:
   "no_fail \<top> sfence"
   by (simp add: sfence_def)
-
-declare lookupPTFromLevel.simps[simp del]
 
 lemma unmap_page_table_corres:
   assumes "asid' = ucast asid" "vptr' = vptr" "pt' = pt"
@@ -469,12 +443,6 @@ lemma unmap_page_table_corres:
    apply (simp add: vspace_for_asid_vs_lookup)
   apply simp
   done
-
-crunch aligned' [wp]: unmapPage pspace_aligned'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
-
-crunch distinct' [wp]: unmapPage pspace_distinct'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
 
 lemma corres_split_strengthen_ftE:
   "\<lbrakk> corres (ftr \<oplus> r') P P' f j;
@@ -573,9 +541,6 @@ definition
       cte_wp_at' (is_arch_update' (ArchObjectCap cap)) ptr and valid_cap' (ArchObjectCap cap)
   | PageGetAddr ptr \<Rightarrow> \<top>"
 
-crunch ctes [wp]: unmapPage "\<lambda>s. P (ctes_of s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
-
 lemma message_info_to_data_eqv:
   "wordFromMessageInfo (message_info_map mi) = message_info_to_data mi"
   apply (cases mi)
@@ -670,8 +635,10 @@ lemma perform_page_corres:
          apply (wpsimp wp: get_cap_wp)+
        apply (rename_tac m)
        apply (rule option_corres[where P=\<top> and P'=\<top>])
-        apply (case_tac m; simp add: mdata_map_def)
-       apply (case_tac m; clarsimp)
+         prefer 3
+         apply (case_tac m; simp add: mdata_map_def)
+        apply clarsimp
+       apply clarsimp
        apply datatype_schem
        apply (fold dc_def)[1]
        apply (rule unmap_page_corres; simp)
@@ -712,6 +679,9 @@ definition
        cte_wp_at' (is_arch_update' (ArchObjectCap cap)) slot and valid_cap' (ArchObjectCap cap)
          and K (isPageTableCap cap)"
 
+(* extend with arch rules *)
+lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
+
 lemma clear_page_table_corres:
   "corres dc (pspace_aligned and pspace_distinct and pt_at p)
              \<top>
@@ -741,9 +711,6 @@ lemma clear_page_table_corres:
    apply (simp add: bit_simps word_less_nat_alt word_le_nat_alt unat_of_nat)
   apply simp
   done
-
-crunch typ_at'[wp]: unmapPageTable "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps hoare_vcg_all_lift_R ignore: getObject)
 
 lemmas unmapPageTable_typ_ats[wp] = typ_at_lifts[OF unmapPageTable_typ_at']
 
@@ -1114,19 +1081,15 @@ lemma setObject_pte_ksDomScheduleIdx [wp]:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject p (pte::pte) \<lbrace>\<lambda>_. \<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
   by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
 
-crunch ksDomScheduleIdx[wp]: storePTE "\<lambda>s. P (ksDomScheduleIdx s)"
-  (ignore: getObject setObject)
-
-crunch gsMaxObjectSize[wp]: storePTE "\<lambda>s. P (gsMaxObjectSize s)"
+crunches storePTE
+  for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+  and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
 
-crunch gsUntypedZeroRanges[wp]: storePTE "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
-
-crunch pspace_canonical'[wp]: storePTE "pspace_canonical'"
-  (ignore: getObject setObject)
-
-crunch pspace_in_kernel_mappings'[wp]: storePTE "pspace_in_kernel_mappings'"
+crunches storePTE
+  for pspace_canonical'[wp]: "pspace_canonical'"
+  and pspace_in_kernel_mappings'[wp]: "pspace_in_kernel_mappings'"
   (ignore: getObject setObject)
 
 lemma storePTE_valid_objs[wp]:

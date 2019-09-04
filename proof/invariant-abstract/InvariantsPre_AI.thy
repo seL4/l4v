@@ -127,6 +127,16 @@ abbreviation mask_range :: "'a::len word \<Rightarrow> nat \<Rightarrow> 'a word
 lemma add_mask_fold:
   "x + 2 ^ n - 1 = x + mask n"  by (simp add: mask_def)
 
+lemma mask_range_subsetD:
+  "\<lbrakk> p' \<in> mask_range p n; x' \<in> mask_range p' n'; n' \<le> n; is_aligned p n; is_aligned p' n' \<rbrakk> \<Longrightarrow>
+   x' \<in> mask_range p n"
+  apply clarsimp
+  apply (rule conjI)
+   apply (erule (1) order_trans)
+  apply (rule order_trans, assumption)
+  apply (erule (3) aligned_mask_step)
+  done
+
 text "objects don't overlap"
 definition
   pspace_distinct :: "'z::state_ext state \<Rightarrow> bool"

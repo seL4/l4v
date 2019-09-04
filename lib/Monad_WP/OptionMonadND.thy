@@ -107,10 +107,28 @@ lemma gets_the_assert:
   "gets_the (oassert P) = assert P"
   by (simp add: oassert_def assert_def gets_the_fail gets_the_return)
 
+lemma gets_the_if_distrib:
+  "gets_the (if P then f else g) = (if P then gets_the f else gets_the g)"
+  by simp
+
+lemma gets_the_oapply_comp:
+  "gets_the (oapply x \<circ> f) = gets_map f x"
+  by (fastforce simp: gets_map_def gets_the_def o_def gets_def)
+
+lemma gets_the_Some:
+  "gets_the (\<lambda>_. Some x) = return x"
+  by (simp add: gets_the_def assert_opt_Some)
+
+lemma fst_assert_opt:
+  "fst (assert_opt opt s) = (if opt = None then {} else {(the opt,s)})"
+  by (clarsimp simp: assert_opt_def fail_def return_def split: option.split)
+
+
 lemmas omonad_simps [simp] =
   gets_the_opt_map assert_opt_Some gets_the_obind
   gets_the_return gets_the_fail gets_the_returnOk
-  gets_the_throwError gets_the_assert
+  gets_the_throwError gets_the_assert gets_the_Some
+  gets_the_oapply_comp
 
 lemmas in_omonad = bind_eq_Some_conv in_obind_eq in_opt_map_eq Let_def
 

@@ -21,6 +21,7 @@ axiomatization
 context Arch begin
 
 declare lookupPTSlotFromLevel.simps[simp del]
+declare lookupPTFromLevel.simps[simp del]
 
 lemmas haskell_crunch_def [crunch_def] =
   deriveCap_def finaliseCap_def
@@ -1131,6 +1132,10 @@ lemma valid_bound_tcb'_None[simp]:
 lemma valid_bound_tcb'_Some[simp]:
   "valid_bound_tcb' (Some x) = tcb_at' x"
   by (auto simp: valid_bound_tcb'_def)
+
+lemma objBitsKO_Data:
+  "objBitsKO (if dev then KOUserDataDevice else KOUserData) = pageBits"
+  by (simp add: objBits_def objBitsKO_def word_size_def)
 
 lemmas objBits_defs = tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
 lemmas untypedBits_defs = minUntypedSizeBits_def maxUntypedSizeBits_def
@@ -3026,6 +3031,15 @@ lemma invs_valid_global'[elim!]:
 lemma invs'_invs_no_cicd:
   "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
   by (simp add: invs'_to_invs_no_cicd'_def)
+
+lemma invs_valid_queues'_strg:
+  "invs' s \<longrightarrow> valid_queues' s"
+  by (clarsimp simp: invs'_def valid_state'_def)
+
+lemmas invs_valid_queues'[elim!] = invs_valid_queues'_strg[rule_format]
+
+lemma einvs_valid_etcbs: "einvs s \<longrightarrow> valid_etcbs s"
+  by (clarsimp simp: valid_sched_def)
 
 lemma invs'_bitmapQ_no_L1_orphans:
   "invs' s \<Longrightarrow> bitmapQ_no_L1_orphans s"

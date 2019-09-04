@@ -179,8 +179,6 @@ lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   "empty_fail (ThreadDecls_H.restart target)"
   by (simp add:restart_def)
 
-declare lookupPTFromLevel.simps[simp del]
-
 lemma empty_fail_lookupPTFromLevel[intro!, wp, simp]:
   "empty_fail (lookupPTFromLevel level ptPtr vPtr target)"
   by (induct level arbitrary: ptPtr; subst lookupPTFromLevel.simps; simp; wpsimp)

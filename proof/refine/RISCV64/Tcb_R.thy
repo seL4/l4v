@@ -14,18 +14,6 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-(* FIXME RISCV: move to Invariants_H *)
-lemma invs_valid_queues'_strg:
-  "invs' s \<longrightarrow> valid_queues' s"
-  by (clarsimp simp: invs'_def valid_state'_def)
-
-(* FIXME RISCV: move to Invariants_H *)
-lemmas invs_valid_queues'[elim!] = invs_valid_queues'_strg[rule_format]
-
-(* FIXME RISCV: move to Invariants_H *)
-lemma einvs_valid_etcbs: "einvs s \<longrightarrow> valid_etcbs s"
-  by (clarsimp simp: valid_sched_def)
-
 lemma setNextPCs_corres:
   "corres dc (tcb_at t and invs) (tcb_at' t and invs')
              (as_user t (setNextPC v)) (asUser t (setNextPC v))"
@@ -1813,7 +1801,7 @@ lemma tcbinv_corres:
           apply (rule TcbAcc_R.rescheduleRequired_corres)
          apply (wpsimp wp: hoare_drop_imp)+
    apply (clarsimp simp: valid_sched_weak_strg einvs_valid_etcbs invs_distinct)
-  apply (clarsimp simp: Tcb_R.invs_valid_queues' Invariants_H.invs_queues)
+  apply (clarsimp simp: invs_valid_queues' invs_queues)
   done
 
 lemma tcbBoundNotification_caps_safe[simp]:

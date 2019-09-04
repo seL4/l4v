@@ -170,8 +170,6 @@ where
     | (ArchObj (RISCV64_A.ASIDPool ap), KOArch (KOASIDPool ap')) \<Rightarrow> asid_pool_relation ap ap'
     | _ \<Rightarrow> False)"
 
-(* FIXME RISCV: page_only_attrs in aspec unused and looks wrong *)
-
 primrec pte_relation' :: "RISCV64_A.pte \<Rightarrow> RISCV64_H.pte \<Rightarrow> bool" where
   "pte_relation' RISCV64_A.InvalidPTE x =
      (x = RISCV64_H.InvalidPTE)"

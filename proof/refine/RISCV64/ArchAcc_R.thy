@@ -16,94 +16,10 @@ theory ArchAcc_R
 imports SubMonad_R
 begin
 
-(* FIXME RISCV: move to NondetMonad *)
-lemma gets_the_if_distrib:
-  "gets_the (if P then f else g) = (if P then gets_the f else gets_the g)"
-  by simp
-
-(* FIXME RISCV: move to Corres *)
-lemma corres_if3:
- "\<lbrakk> G = G'; G \<Longrightarrow> corres r P P' a c; \<not> G' \<Longrightarrow> corres r Q Q' b d \<rbrakk>
-    \<Longrightarrow> corres r (if G then P else Q) (if G' then P' else Q') (if G then a else b) (if G' then c else d)"
-  by simp
-
-(* FIXME RISCV: move to NondetMonad *)
-lemma gets_the_oapply_comp[simp]:
-  "gets_the (oapply x \<circ> f) = gets_map f x"
-  by (fastforce simp: gets_map_def gets_the_def o_def exec_gets)
-
-(* FIXME RISCV: move to NondetMonad *)
-lemma gets_the_Some[simp]:
-  "gets_the (\<lambda>_. Some x) = return x"
-  by (simp add: gets_the_def)
-
-(* FIXME RISCV: move to NondedMonad *)
-lemma fst_assert_opt:
-  "fst (assert_opt opt s) = (if opt = None then {} else {(the opt,s)})"
-  by (clarsimp simp: assert_opt_def fail_def return_def split: option.split)
-
-(* FIXME RISCV: move to Invariants_H, maybe further up *)
-lemma mask_range_subsetD:
-  "\<lbrakk> p' \<in> mask_range p n; x' \<in> mask_range p' n'; n' \<le> n; is_aligned p n; is_aligned p' n' \<rbrakk> \<Longrightarrow>
-   x' \<in> mask_range p n"
-  apply clarsimp
-  apply (rule conjI)
-   apply (erule (1) order_trans)
-  apply (rule order_trans, assumption)
-  apply (erule (3) aligned_mask_step)
-  done
-
-(* FIXME RISCV: move to objBits_simps *)
-lemma objBitsKO_Data:
-  "objBitsKO (if dev then KOUserDataDevice else KOUserData) = pageBits"
-  by (simp add: objBits_simps)
-
-(* FIXME RISCV: move to Corres, keep existing guard *)
-lemmas corres_cross_over_guard = corres_move_asm[rotated]
-
-(* RISCV FIXME: move to Lib.More_Numeral_Type *)
-context mod_size_order
-begin
-
-lemma size_minus[simp]:
-  "y \<le> (x::'a) \<Longrightarrow> size (x - y) = size x - size y"
-  unfolding definitions Rep_Abs_mod
-  using Rep size0
-  by (simp flip: nat_diff_distrib add: eq_nat_nat_iff pos_mod_sign mod_sub_if_z split: if_split_asm)
-
-lemma size_minus_one[simp]:
-  "0 < (x::'a) \<Longrightarrow> size (x - 1) = size x - Suc 0"
-  by simp
-
-end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-(* FIXME RISCV: replace vref_for_level_pt_index_idem in ArchAcc_AI *)
-lemma vref_for_level_pt_index_idem:
-  assumes "level' \<le> max_pt_level" and "level'' \<le> level'"
-  shows "vref_for_level
-           (vref_for_level vref (level'' + 1) || (pt_index level vref' << pt_bits_left level''))
-           (level' + 1)
-         = vref_for_level vref (level' + 1)"
-proof -
-  have dist_zero_right':
-    "\<And>w x y. \<lbrakk> (w::('a::len) word) = y; x = 0\<rbrakk> \<Longrightarrow> w || x = y"
-    by auto
-  show ?thesis using assms
-    unfolding vref_for_level_def pt_index_def
-    apply (subst word_ao_dist)
-    apply (rule dist_zero_right')
-    apply (subst mask_lower_twice)
-   apply (rule pt_bits_left_mono, erule (1) vm_level_le_plus_1_mono, rule refl)
-  apply (simp add: mask_shifl_overlap_zero pt_bits_left_def)
-  done
-qed
-
 declare if_cong[cong] (* FIXME: if_cong *)
-
-crunch_ignore (add: lookupPTFromLevel)
-declare lookupPTFromLevel.simps[simp del]
 
 lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (RISCV64_A.ASIDPool pool)) p s"
@@ -783,7 +699,7 @@ proof (induct level arbitrary: level' pt pt')
 next
   case (minus level)
 
-  (* FIXME RISCV: unfortunate duplication from lookup_pt_slot_from_level_corres *)
+  (* FIXME: unfortunate duplication from lookup_pt_slot_from_level_corres *)
   from `0 < level`
   obtain nlevel where nlevel: "level = nlevel + 1" by (auto intro: that[of "level-1"])
   with `0 < level`
@@ -829,6 +745,7 @@ next
              dest!: max_pt_level_enum
              intro!: word_eqI)
 
+  note bit0.size_minus_one[simp]
   from minus.prems
   show ?case
     apply (subst lookupPTFromLevel.simps, subst pt_lookup_from_level_simps)

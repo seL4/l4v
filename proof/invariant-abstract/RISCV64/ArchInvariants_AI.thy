@@ -2602,6 +2602,22 @@ lemma vs_lookup_table_stopped:
   apply (fastforce dest: pt_walk_stopped)
   done
 
+lemma valid_arch_state_asid_table:
+  "valid_arch_state s \<Longrightarrow> valid_asid_table s"
+  by (simp add: valid_arch_state_def)
+
+lemma valid_arch_state_global_arch_objs:
+  "valid_arch_state s \<Longrightarrow> valid_global_arch_objs s"
+  by (simp add: valid_arch_state_def)
+
+lemma kernel_mappings_canonical:
+  "p \<in> kernel_mappings \<Longrightarrow> canonical_address p"
+  apply (simp add: kernel_mappings_def pptr_base_def RISCV64.pptrBase_def canonical_bit_def
+                   canonical_address_def canonical_address_of_def)
+  apply word_bitwise
+  apply simp
+  done
+
 end
 
 context Arch_pspace_update_eq begin

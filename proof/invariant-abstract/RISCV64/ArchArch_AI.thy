@@ -74,10 +74,25 @@ lemma p2_low_bits_max:
   "(2 ^ asid_low_bits - 1) = (max_word :: asid_low_index)"
   by (simp add: asid_low_bits_def max_word_def)
 
+lemma ucast_ucast_mask2:
+  "is_down (UCAST ('a \<rightarrow> 'b)) \<Longrightarrow>
+   UCAST ('b::len \<rightarrow> 'c::len) (UCAST ('a::len \<rightarrow> 'b::len) x) = UCAST ('a \<rightarrow> 'c) (x && mask LENGTH('b))"
+   by (rule word_eqI) (auto simp: word_eqI_solve_simps is_down)
+
+(* FIXME RISCV: move to Word_Lib *)
+lemma ucast_NOT:
+  "ucast (~~x) = ~~ucast x && mask (LENGTH('a))" for x::"'a::len0 word"
+  by (rule word_eqI) (fastforce simp: word_eqI_simps)
+
+(* FIXME RISCV: move to Word_Lib *)
+lemma ucast_NOT_down:
+  "is_down UCAST('a::len \<rightarrow> 'b::len) \<Longrightarrow> UCAST('a \<rightarrow> 'b) (~~x) = ~~UCAST('a \<rightarrow> 'b) x"
+  by (rule word_eqI) (clarsimp simp: word_eqI_simps is_down)
 
 lemma dom_ucast_eq:
-  "(- dom (\<lambda>a::asid_low_index. p (ucast a::machine_word)) \<inter> {x. ucast x + y \<noteq> 0} = {}) =
-   (- dom p \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> x + y \<noteq> 0} = {})"
+  "is_aligned y asid_low_bits \<Longrightarrow>
+   (- dom (\<lambda>a::asid_low_index. p (ucast a :: machine_word)) \<inter> {x. ucast x + (y::RISCV64_A.asid) \<noteq> 0} = {}) =
+   (- dom p \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> x + ucast y \<noteq> 0} = {})"
   apply safe
    apply clarsimp
    apply (rule ccontr)
@@ -90,22 +105,32 @@ lemma dom_ucast_eq:
       apply (simp add: word_bits_def)
      apply (simp add: asid_low_bits_def)
     apply simp
-   apply (clarsimp simp: ucast_ucast_mask)
-   apply (subst (asm) less_mask_eq)
-   apply (rule word_less_sub_le [THEN iffD1])
-     apply (simp add: word_bits_def)
-    apply (simp add: asid_low_bits_def)
-   apply simp
+   apply (clarsimp simp: mask_2pm1[symmetric] ucast_ucast_mask2 is_down is_aligned_mask)
+   apply (frule and_mask_eq_iff_le_mask[THEN iffD2])
+   apply (simp add: asid_low_bits_def)
+   apply (erule notE)
+   apply (subst word_plus_and_or_coroll)
+    apply (word_bitwise, clarsimp simp: word_size)
+   apply (subst (asm) word_plus_and_or_coroll; word_bitwise, clarsimp simp: word_size)
   apply (clarsimp simp: p2_low_bits_max)
   apply (rule ccontr)
   apply simp
   apply (erule_tac x="ucast x" in in_emptyE)
   apply clarsimp
   apply (rule conjI, blast)
-  apply (rule word_less_sub_1)
-  apply (rule order_less_le_trans)
-  apply (rule ucast_less, simp)
-  apply (simp add: asid_low_bits_def)
+  apply (rule conjI)
+   apply (rule word_less_sub_1)
+   apply (rule order_less_le_trans)
+    apply (rule ucast_less, simp)
+   apply (simp add: asid_low_bits_def)
+  apply clarsimp
+  apply (erule notE)
+  apply (simp add: is_aligned_mask asid_low_bits_def)
+  apply (subst word_plus_and_or_coroll)
+   apply (word_bitwise, clarsimp simp: word_size)
+  apply (subst (asm) word_plus_and_or_coroll)
+   apply (word_bitwise, clarsimp simp: word_size)
+  apply (word_bitwise)
   done
 
 
@@ -142,28 +167,63 @@ lemma dom_ucast_eq_8:
 
 
 lemma ucast_fst_hd_assocs:
-  "- dom (\<lambda>x. pool (ucast (x::asid_low_index)::machine_word)) \<inter> {x. ucast x + (w::machine_word) \<noteq> 0} \<noteq> {}
-  \<Longrightarrow>
-  fst (hd [(x, y)\<leftarrow>assocs pool . x \<le> 2 ^ asid_low_bits - 1 \<and> x + w \<noteq> 0 \<and> y = None]) =
-  ucast (fst (hd [(x, y)\<leftarrow>assocs (\<lambda>a::asid_low_index. pool (ucast a)) .
-                          x \<le> 2 ^ asid_low_bits - 1 \<and>
-                          ucast x + w \<noteq> 0 \<and> y = None]))"
-  apply (simp add: ucast_assocs[unfolded o_def])
-  apply (simp add: filter_map split_def)
-  apply (simp cong: conj_cong add: ucast_ucast_len)
-  apply (simp add: asid_low_bits_def minus_one_norm)
-  apply (simp add: ord_le_eq_trans [OF word_n1_ge])
-  apply (simp add: word_le_make_less)
-  apply (subgoal_tac "P" for P)  (* cut_tac but more awesome *)
-   apply (subst hd_map, assumption)
-   apply simp
-   apply (rule sym, rule ucast_ucast_len)
-   apply (drule hd_in_set)
-   apply simp
-  apply (simp add: assocs_empty_dom_comp null_def split_def)
-  apply (simp add: ucast_assocs[unfolded o_def] filter_map split_def)
-  apply (simp cong: conj_cong add: ucast_ucast_len)
-  done
+  assumes "- dom (\<lambda>x::asid_low_index. pool (ucast x)) \<inter> {x. ucast x + (a::RISCV64_A.asid) \<noteq> 0} \<noteq> {}"
+  assumes "is_aligned a asid_low_bits"
+  shows
+    "fst (hd [(x, y) \<leftarrow> assocs pool. x \<le> 2 ^ asid_low_bits - 1 \<and> x + ucast a \<noteq> 0 \<and> y = None]) +
+           (ucast a :: machine_word) =
+       ucast (UCAST(asid_low_len \<rightarrow> asid_len)
+         (fst (hd [(x, y) \<leftarrow> assocs (\<lambda>a. pool (ucast a)). ucast x + a \<noteq> 0 \<and> y = None])) + a)"
+proof -
+  have [unfolded word_bits_def, simplified, simp]: "asid_low_bits < word_bits"
+    by (simp add: asid_low_bits_def word_bits_def)
+  have [unfolded asid_low_bits_def, simplified, simp]:
+    "x && mask asid_low_bits = x"
+    if "x < 2^asid_low_bits" for x::machine_word
+    using that by (simp add: le_mask_iff_lt_2n[THEN iffD1, symmetric] word_le_mask_eq)
+  have [unfolded asid_bits_def asid_low_bits_def, simplified, simp]:
+    "x && mask asid_bits = x"
+    if "x < 2^asid_low_bits" for x::machine_word
+  proof -
+    have "mask asid_low_bits \<le> (mask asid_bits :: machine_word)"
+      by (simp add: mask_def asid_low_bits_def asid_bits_def)
+    with that show ?thesis
+      by (simp add: le_mask_iff_lt_2n[THEN iffD1, symmetric] word_le_mask_eq)
+  qed
+  have [unfolded asid_bits_def asid_low_bits_def, simplified, simp]:
+    "(x + ucast a \<noteq> 0) = (ucast x + a \<noteq> 0)"
+    if "x < 2^asid_low_bits" for x::machine_word
+  proof -
+    from that have "x \<le> mask asid_low_bits" by (simp add: le_mask_iff_lt_2n[THEN iffD1, symmetric])
+    with `is_aligned a asid_low_bits`
+    show ?thesis
+      apply (subst word_and_or_mask_aligned2; simp add: is_aligned_ucastI)
+      apply (subst word_and_or_mask_aligned2, assumption, erule ucast_le_maskI)
+      apply (simp add: asid_low_bits_def)
+      apply word_bitwise
+      apply simp
+      done
+  qed
+
+  from assms show ?thesis
+    apply (simp add: ucast_assocs[unfolded o_def])
+    apply (simp add: filter_map split_def)
+    apply (simp cong: conj_cong add: ucast_ucast_mask2 is_down)
+    apply (simp add: asid_low_bits_def minus_one_norm)
+    apply (subgoal_tac "P" for P)  (* cut_tac but more awesome *)
+     apply (subst hd_map, assumption)
+     apply (simp add: ucast_ucast_mask2 is_down)
+     apply (drule hd_in_set)
+     apply clarsimp
+     apply (subst ucast_add_mask_aligned; assumption?)
+      apply (rule ucast_le_maskI)
+      apply (simp add: mask_def word_le_make_less)
+     apply (simp add: ucast_ucast_mask cong: conj_cong)
+    apply (simp add: assocs_empty_dom_comp null_def split_def)
+    apply (simp add: ucast_assocs[unfolded o_def] filter_map split_def)
+    apply (simp cong: conj_cong add: ucast_ucast_mask2 is_down)
+    done
+qed
 
 
 crunch typ_at [wp]:

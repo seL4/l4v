@@ -16,20 +16,6 @@ theory Arch_R
 imports Untyped_R Finalise_R
 begin
 
-(* FIXME RISCV: move to Corres, replace option_corres *)
-lemma option_corres:
-  assumes None: "\<lbrakk> x = None; x' = None \<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r P P' (A None) (C None)"
-  assumes Some: "\<And>z z'. \<lbrakk> x = Some z; x' = Some z' \<rbrakk> \<Longrightarrow>
-             corres_underlying sr nf nf' r (Q z) (Q' z') (A (Some z)) (C (Some z'))"
-  assumes None_eq: "(x = None) = (x' = None)"
-  shows "corres_underlying sr nf nf' r (\<lambda>s. (x = None \<longrightarrow> P s) \<and> (\<forall>z. x = Some z \<longrightarrow> Q z s))
-                  (\<lambda>s. (x' = None \<longrightarrow> P' s) \<and> (\<forall>z. x' = Some z \<longrightarrow> Q' z s))
-                  (A x) (C x')"
-  apply (cases x; cases x'; simp add: assms)
-   apply (simp add: None flip: None_eq)
-  apply (simp flip: None_eq)
-  done
-
 lemmas [datatype_schematic] = cap.sel list.sel(1) list.sel(3)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -495,8 +481,9 @@ lemma vmrights_map_VMKernelOnly:
   by (auto simp: vmrights_map_def mask_vm_rights_def validate_vm_rights_def vm_read_write_def
                  vm_read_only_def split: if_splits)
 
-lemma machine_word_len_pageBits_shift[simp]: (* 52 = machine_word_len - pageBits *)
-  "UCAST(52 \<rightarrow> machine_word_len) (UCAST(machine_word_len \<rightarrow> 52) (p >> pageBits)) = p >> pageBits"
+lemma machine_word_len_pageBits_shift[simp]:
+  "UCAST(pte_ppn_len \<rightarrow> machine_word_len) (UCAST(machine_word_len \<rightarrow> pte_ppn_len) (p >> pageBits))
+   = p >> pageBits"
   apply (simp add: ucast_ucast_mask pageBits_def)
   apply word_bitwise
   apply (simp add: word_size)
@@ -816,119 +803,6 @@ lemma decode_page_table_inv_corres:
   apply (simp add: isCap_simps split del: if_split)
   by (clarsimp split: invocation_label.splits arch_invocation_label.splits)
 
-lemma ucast_ucast_mask2:
-  "is_down (UCAST ('a \<rightarrow> 'b)) \<Longrightarrow>
-   UCAST ('b::len \<rightarrow> 'c::len) (UCAST ('a::len \<rightarrow> 'b::len) x) = UCAST ('a \<rightarrow> 'c) (x && mask LENGTH('b))"
-   by (rule word_eqI) (auto simp: word_eqI_solve_simps is_down)
-
-lemma ucast_NOT:
-  "is_down UCAST('a \<rightarrow> 'b) \<Longrightarrow> ucast (~~x) = (~~ ucast (x::'a::len word)::'b::len word)"
-  by (rule word_eqI) (clarsimp simp: word_eqI_solve_simps is_down)
-
-(* FIXME RISCV: replace in ArchArch_AI *)
-lemma dom_ucast_eq:
-  "is_aligned y asid_low_bits \<Longrightarrow>
-   (- dom (\<lambda>a::asid_low_index. p (ucast a :: machine_word)) \<inter> {x. ucast x + (y::RISCV64_A.asid) \<noteq> 0} = {}) =
-   (- dom p \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> x + ucast y \<noteq> 0} = {})"
-  apply safe
-   apply clarsimp
-   apply (rule ccontr)
-   apply (erule_tac x="ucast x" in in_emptyE)
-   apply (clarsimp simp: p2_low_bits_max)
-   apply (rule conjI)
-    apply (clarsimp simp: ucast_ucast_mask)
-    apply (subst (asm) less_mask_eq)
-    apply (rule word_less_sub_le [THEN iffD1])
-      apply (simp add: word_bits_def)
-     apply (simp add: asid_low_bits_def)
-    apply simp
-   apply (clarsimp simp: mask_2pm1[symmetric] ucast_ucast_mask2 is_down is_aligned_mask)
-   apply (frule and_mask_eq_iff_le_mask[THEN iffD2])
-   apply (simp add: asid_low_bits_def)
-   apply (erule notE)
-   apply (subst word_plus_and_or_coroll)
-    apply (word_bitwise, clarsimp simp: word_size)
-   apply (subst (asm) word_plus_and_or_coroll; word_bitwise, clarsimp simp: word_size)
-  apply (clarsimp simp: p2_low_bits_max)
-  apply (rule ccontr)
-  apply simp
-  apply (erule_tac x="ucast x" in in_emptyE)
-  apply clarsimp
-  apply (rule conjI, blast)
-  apply (rule conjI)
-   apply (rule word_less_sub_1)
-   apply (rule order_less_le_trans)
-    apply (rule ucast_less, simp)
-   apply (simp add: asid_low_bits_def)
-  apply clarsimp
-  apply (erule notE)
-  apply (simp add: is_aligned_mask asid_low_bits_def)
-  apply (subst word_plus_and_or_coroll)
-   apply (word_bitwise, clarsimp simp: word_size)
-  apply (subst (asm) word_plus_and_or_coroll)
-   apply (word_bitwise, clarsimp simp: word_size)
-  apply (word_bitwise)
-  done
-
-(* FIXME RISCV: replace in ArchArch_AI *)
-lemma ucast_fst_hd_assocs:
-  assumes "- dom (\<lambda>x::asid_low_index. pool (ucast x)) \<inter> {x. ucast x + (a::RISCV64_A.asid) \<noteq> 0} \<noteq> {}"
-  assumes "is_aligned a asid_low_bits"
-  shows
-    "fst (hd [(x, y) \<leftarrow> assocs pool. x \<le> 2 ^ asid_low_bits - 1 \<and> x + ucast a \<noteq> 0 \<and> y = None]) +
-           (ucast a :: machine_word) =
-       ucast (UCAST(asid_low_len \<rightarrow> asid_len)
-         (fst (hd [(x, y) \<leftarrow> assocs (\<lambda>a. pool (ucast a)). ucast x + a \<noteq> 0 \<and> y = None])) + a)"
-proof -
-  have [unfolded word_bits_def, simplified, simp]: "asid_low_bits < word_bits"
-    by (simp add: asid_low_bits_def word_bits_def)
-  have [unfolded asid_low_bits_def, simplified, simp]:
-    "x && mask asid_low_bits = x"
-    if "x < 2^asid_low_bits" for x::machine_word
-    using that by (simp add: le_mask_iff_lt_2n[THEN iffD1, symmetric] word_le_mask_eq)
-  have [unfolded asid_bits_def asid_low_bits_def, simplified, simp]:
-    "x && mask asid_bits = x"
-    if "x < 2^asid_low_bits" for x::machine_word
-  proof -
-    have "mask asid_low_bits \<le> (mask asid_bits :: machine_word)"
-      by (simp add: mask_def asid_low_bits_def asid_bits_def)
-    with that show ?thesis
-      by (simp add: le_mask_iff_lt_2n[THEN iffD1, symmetric] word_le_mask_eq)
-  qed
-  have [unfolded asid_bits_def asid_low_bits_def, simplified, simp]:
-    "(x + ucast a \<noteq> 0) = (ucast x + a \<noteq> 0)"
-    if "x < 2^asid_low_bits" for x::machine_word
-  proof -
-    from that have "x \<le> mask asid_low_bits" by (simp add: le_mask_iff_lt_2n[THEN iffD1, symmetric])
-    with `is_aligned a asid_low_bits`
-    show ?thesis
-      apply (subst word_and_or_mask_aligned2; simp add: is_aligned_ucastI)
-      apply (subst word_and_or_mask_aligned2, assumption, erule ucast_le_maskI)
-      apply (simp add: asid_low_bits_def)
-      apply word_bitwise
-      apply simp
-      done
-  qed
-
-  from assms show ?thesis
-    apply (simp add: ucast_assocs[unfolded o_def])
-    apply (simp add: filter_map split_def)
-    apply (simp cong: conj_cong add: ucast_ucast_mask2 is_down)
-    apply (simp add: asid_low_bits_def minus_one_norm)
-    apply (subgoal_tac "P" for P)  (* cut_tac but more awesome *)
-     apply (subst hd_map, assumption)
-     apply (simp add: ucast_ucast_mask2 is_down)
-     apply (drule hd_in_set)
-     apply clarsimp
-     apply (subst ucast_add_mask_aligned; assumption?)
-      apply (rule ucast_le_maskI)
-      apply (simp add: mask_def word_le_make_less)
-     apply (simp add: ucast_ucast_mask cong: conj_cong)
-    apply (simp add: assocs_empty_dom_comp null_def split_def)
-    apply (simp add: ucast_assocs[unfolded o_def] filter_map split_def)
-    apply (simp cong: conj_cong add: ucast_ucast_mask2 is_down)
-    done
-qed
 
 lemma dec_arch_inv_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp]
@@ -1415,8 +1289,6 @@ crunch nosch [wp]: performRISCVMMUInvocation "\<lambda>s. P (ksSchedulerAction s
    wp: crunch_wps getObject_cte_inv getASID_wp)
 
 lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
-
-declare lookupPTFromLevel.simps[simp del] (* FIXME RISCV: do this early enough *)
 
 crunch st_tcb_at': performPageTableInvocation,
                    performPageInvocation,

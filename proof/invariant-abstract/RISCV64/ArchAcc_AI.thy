@@ -199,7 +199,7 @@ lemma unique_vs_lookup_table:
 lemma vref_for_level_pt_index_idem:
   assumes "level' \<le> max_pt_level" and "level'' \<le> level'"
   shows "vref_for_level
-           (vref_for_level vref (level'' + 1) || (pt_index level vref << pt_bits_left level''))
+           (vref_for_level vref (level'' + 1) || (pt_index level vref' << pt_bits_left level''))
            (level' + 1)
          = vref_for_level vref (level' + 1)"
 proof -

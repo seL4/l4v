@@ -16,15 +16,6 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-(* FIXME RISCV: move to AInvs *)
-lemma kernel_mappings_canonical:
-  "p \<in> kernel_mappings \<Longrightarrow> canonical_address p"
-  apply (simp add: kernel_mappings_def pptr_base_def RISCV64.pptrBase_def canonical_bit_def
-                   canonical_address_def canonical_address_of_def)
-  apply word_bitwise
-  apply simp
-  done
-
 primrec
   untypinv_relation :: "Invocations_A.untyped_invocation \<Rightarrow>
                         Invocations_H.untyped_invocation \<Rightarrow> bool"

@@ -6527,8 +6527,6 @@ lemma cteDelete_sch_act_simple:
     apply simp+
   done
 
-declare lookupPTFromLevel.simps[simp del] (* FIXME RISCV *)
-
 crunch st_tcb_at'[wp]: "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete "st_tcb_at' P t"
   (ignore: getObject setObject simp: crunch_simps pteAtIndex_def
    wp: crunch_wps getObject_inv loadObject_default_inv)
@@ -6637,8 +6635,6 @@ lemmas threadSet_ctesCaps_of = cteCaps_of_ctes_of_lift[OF threadSet_ctes_of]
 lemmas storePTE_cteCaps_of[wp] = cteCaps_of_ctes_of_lift [OF storePTE_ctes]
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-
-declare lookupPTFromLevel.simps[simp del] (* FIXME RISCV *)
 
 crunch rvk_prog': finaliseCap
     "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
@@ -8921,8 +8917,6 @@ lemma no_irq_setVSpaceRoot:
 lemma no_irq_hwASIDFlush:
   "no_irq (hwASIDFlush r)"
   unfolding hwASIDFlush_def by wpsimp
-
-declare lookupPTFromLevel.simps[simp del] (* FIXME RISCV *)
 
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq_setVSpaceRoot no_irq_hwASIDFlush

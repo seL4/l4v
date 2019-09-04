@@ -331,6 +331,16 @@ lemma minus_leq_less: "\<lbrakk> (x::'a) \<le> y; 0 < z; z \<le> x \<rbrakk> \<L
 lemma minus_one_leq_less: "\<lbrakk> (x::'a) \<le> y; 0 < x \<rbrakk> \<Longrightarrow> x - 1 < y"
   using pred by fastforce
 
+lemma size_minus:
+  "y \<le> (x::'a) \<Longrightarrow> size (x - y) = size x - size y"
+  unfolding definitions Rep_Abs_mod
+  using Rep size0
+  by (simp flip: nat_diff_distrib add: eq_nat_nat_iff pos_mod_sign mod_sub_if_z split: if_split_asm)
+
+lemma size_minus_one:
+  "0 < (x::'a) \<Longrightarrow> size (x - 1) = size x - Suc 0"
+  by (simp add: size_minus)
+
 end
 
 interpretation bit0:

@@ -45,11 +45,14 @@ crunch_ignore (add: unifyFailure ignoreFailure)
 crunch_ignore (add: empty_on_failure)
 crunch_ignore (add: emptyOnFailure)
 
-crunch_ignore (add: RISCV64_H.lookupPTSlotFromLevel)
+context Arch
+begin
+
+crunch_ignore (add: lookupPTSlotFromLevel lookupPTFromLevel)
+
+end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-
-crunch_ignore (add: lookupPTSlotFromLevel)
 
 lemma throwE_R: "\<lbrace>\<top>\<rbrace> throw f \<lbrace>P\<rbrace>,-"
   by (simp add: validE_R_def) wp

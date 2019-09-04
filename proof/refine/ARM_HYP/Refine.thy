@@ -602,7 +602,7 @@ lemma kernel_corres:
            apply simp
            apply (rule handle_interrupt_corres)
           apply simp
-          apply (wp hoare_drop_imps)[1]
+          apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
          apply simp
          apply (rule_tac Q="\<lambda>irq s. irq \<notin> Some ` non_kernel_IRQs \<and> invs' s \<and>
                               (\<forall>irq'. irq = Some irq' \<longrightarrow>

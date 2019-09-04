@@ -43,8 +43,6 @@ crunch ksDomSchedule_inv[wp]: setDomain "\<lambda>s. P (ksDomSchedule s)"
 crunch ksDomSchedule_inv[wp]: sendSignal "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps simp: crunch_simps simp: unless_def o_def)
 
-declare lookupPTFromLevel.simps[simp del]
-
 crunch ksDomSchedule_inv[wp]: finaliseCap "\<lambda>s. P (ksDomSchedule s)"
   (simp: crunch_simps assertE_def unless_def pteAtIndex_def
  ignore: getObject setObject forM ignoreFailure
