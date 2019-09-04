@@ -1619,6 +1619,54 @@ lemma scast_ucast_mask_compare:
   apply (rename_tac i j; case_tac "i = len_of TYPE('b) - 1"; case_tac "j = len_of TYPE('b) - 1")
   by auto
 
+lemma ucast_less_shiftl_helper':
+  "\<lbrakk> len_of TYPE('b) + (a::nat) < len_of TYPE('a); 2 ^ (len_of TYPE('b) + a) \<le> n\<rbrakk>
+   \<Longrightarrow> (ucast (x :: 'b::len word) << a) < (n :: 'a::len word)"
+  apply (erule order_less_le_trans[rotated])
+  using ucast_less[where x=x and 'a='a]
+  apply (simp only: shiftl_t2n field_simps)
+  apply (rule word_less_power_trans2; simp)
+  done
+
 end
+
+lemma of_bl_mult_and_not_mask_eq:
+  "\<lbrakk>is_aligned (a :: 'a::len word) n; length b + m \<le> n\<rbrakk>
+   \<Longrightarrow> a + of_bl b * (2^m) && ~~ mask n = a"
+  apply (simp add: shiftl_t2n[simplified mult.commute, symmetric])
+  apply (simp add: mask_out_add_aligned[where q="of_bl b << m", symmetric])
+  apply (case_tac "n < size a")
+   prefer 2
+   apply (simp add: not_less power_overflow mask_def word_size)
+  apply (simp add: mask_eq_x_eq_0[symmetric] word_size)
+  apply (rule less_mask_eq)
+  apply (rule shiftl_less_t2n, simp_all)
+  apply (cut_tac 'a='a and xs=b in of_bl_length, simp)
+  apply (drule nat_move_sub_le)
+  apply (drule two_power_increasing[where 'a='a], simp)
+  apply (drule (2) less_le_trans)
+  done
+
+lemma bin_to_bl_of_bl_eq:
+  "\<lbrakk>is_aligned (a::'a::len word) n; length b + c \<le> n; length b + c < LENGTH('a)\<rbrakk>
+  \<Longrightarrow> bin_to_bl (length b) (uint ((a + of_bl b * 2^c) >> c)) = b"
+  apply (subst word_plus_and_or_coroll)
+   apply (erule is_aligned_get_word_bits)
+    apply (rule is_aligned_AND_less_0)
+     apply (simp add: is_aligned_mask)
+    apply (rule order_less_le_trans)
+     apply (rule of_bl_length2)
+     apply simp
+    apply (simp add: two_power_increasing)
+   apply simp
+  apply (rule nth_equalityI)
+   apply (simp only: len_bin_to_bl)
+  apply (clarsimp simp only: len_bin_to_bl nth_bin_to_bl word_test_bit_def[symmetric])
+  apply (simp add: nth_shiftr nth_shiftl
+                   shiftl_t2n[where n=c, simplified mult.commute, simplified, symmetric])
+  apply (simp add: is_aligned_nth[THEN iffD1, rule_format] test_bit_of_bl nth_rev)
+  apply (case_tac "b ! i", simp_all)
+  apply arith
+  done
 
 end

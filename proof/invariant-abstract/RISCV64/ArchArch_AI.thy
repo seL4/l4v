@@ -12,19 +12,6 @@ theory ArchArch_AI
 imports "../Arch_AI"
 begin
 
-(* FIXME: move to Word *)
-lemma aligned_add_mask_lessD:
-  "\<lbrakk> x + mask n < y; is_aligned x n \<rbrakk> \<Longrightarrow> x < (y::'a::len word)"
-  by (metis is_aligned_no_overflow' mask_2pm1 order_le_less_trans)
-
-(* FIXME: move to Word *)
-lemma aligned_add_mask_less_eq:
-  "\<lbrakk> is_aligned x n; is_aligned y n;  n < LENGTH('a) \<rbrakk> \<Longrightarrow> (x + mask n < y) = (x < (y::'a::len word))"
-  apply (rule iffI, erule (1) aligned_add_mask_lessD)
-  apply (drule (3) gap_between_aligned)
-  apply (simp add: mask_def)
-  done
-
 context Arch begin global_naming RISCV64
 
 definition

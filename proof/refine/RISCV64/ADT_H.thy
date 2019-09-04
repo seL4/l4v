@@ -14,24 +14,6 @@ theory ADT_H
   imports Syscall_R
 begin
 
-(* FIXME RISCV: move to Word *)
-lemma distinct_word_add_ucast_shift_inj:
-  "\<lbrakk> p + (UCAST('a::len \<rightarrow> 'b::len) off << n) = p' + (ucast off' << n);
-     is_aligned p n'; is_aligned p' n'; n' = n + LENGTH('a); n' < LENGTH('b) \<rbrakk>
-   \<Longrightarrow> p' = p \<and> off' = off"
-  apply (simp add: word_and_or_mask_aligned le_mask_shiftl_le_mask[where n="LENGTH('a)"]
-                   ucast_leq_mask)
-  apply (simp add: is_aligned_nth)
-  apply (rule conjI)
-   apply (rule word_eqI, clarsimp simp: bang_eq word_eqI_solve_simps)
-   apply (metis add_le_cancel_left bang_conj_lt diff_add_inverse le_Suc_ex nat_less_le)
-  apply (rule word_eqI, clarsimp simp: bang_eq word_eqI_solve_simps)
-  apply (rename_tac i)
-  apply (erule_tac x="i+n" in allE)
-  apply simp
-  done
-
-
 text \<open>
   The general refinement calculus (see theory Simulation) requires
   the definition of a so-called ``abstract datatype'' for each refinement layer.

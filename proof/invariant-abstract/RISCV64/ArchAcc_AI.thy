@@ -16,32 +16,6 @@ theory ArchAcc_AI
 imports "../SubMonad_AI" "Lib.Crunch_Instances_NonDet"
 begin
 
-(* FIXME: move to Word and replace nth_ucast, possibly breaks things.. *)
-lemma nth_ucast':
-  "(ucast (w::'a::len0 word)::'b::len0 word) !! n =
-   (w !! n \<and> n < min (len_of TYPE('a)) (len_of TYPE('b)))"
-  by (simp add: ucast_def test_bit_bin word_ubin.eq_norm nth_bintr word_size)
-     (fast elim!: bin_nth_uint_imp)
-
-(* FIXME: move to Word *)
-lemma ucast_leq_mask:
-  "LENGTH('a) \<le> n \<Longrightarrow> ucast (x::'a::len0 word) \<le> mask n"
-  by (clarsimp simp: le_mask_high_bits word_size nth_ucast')
-
-(* FIXME: move to Word *)
-lemma shiftl_inj:
-  "\<lbrakk> x << n = y << n; x \<le> mask (LENGTH('a)-n); y \<le> mask (LENGTH('a)-n) \<rbrakk> \<Longrightarrow>
-   x = (y :: 'a :: len word)"
-  apply (rule word_eqI)
-  apply (clarsimp simp: bang_eq le_mask_high_bits word_eqI_solve_simps)
-  apply (rename_tac n')
-  apply (case_tac "LENGTH('a) - n \<le> n'", simp)
-  apply (simp add: not_le)
-  apply (erule_tac x="n'+n" in allE)
-  apply (subgoal_tac "n' + n < LENGTH('a)", simp)
-  apply arith
-  done
-
 context non_vspace_op
 begin
 

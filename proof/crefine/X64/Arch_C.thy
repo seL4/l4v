@@ -4904,17 +4904,19 @@ lemma word_minus_1_shiftr:
   apply fastforce
   done
 
+(* FIXME: move to Word *)
 lemma ucast_shiftr:
   "UCAST('a::len \<rightarrow> 'b::len) w >> n = UCAST('a \<rightarrow> 'b) ((w && mask LENGTH('b)) >> n)"
   apply (rule word_eqI[rule_format]; rule iffI; clarsimp simp: nth_ucast nth_shiftr word_size)
-  apply (drule test_bit_size; simp add: word_size)
   done
 
+(* FIXME: move to Word *)
 lemma mask_eq_ucast_shiftr:
   assumes mask: "w && mask LENGTH('b) = w"
   shows "UCAST('a::len \<rightarrow> 'b::len) w >> n = UCAST('a \<rightarrow> 'b) (w >> n)"
   by (rule ucast_shiftr[where 'a='a and 'b='b, of w n, simplified mask])
 
+(* FIXME: move to Word *)
 lemma mask_eq_ucast_shiftl:
   assumes "w && mask (LENGTH('a) - n) = w"
   shows "UCAST('a::len \<rightarrow> 'b::len) w << n = UCAST('a \<rightarrow> 'b) (w << n)"
@@ -4924,11 +4926,13 @@ lemma mask_eq_ucast_shiftl:
          drule test_bit_size; simp add: word_size)
   done
 
+(* FIXME: replace by mask_mono *)
 lemma mask_le_mono:
   "m \<le> n \<Longrightarrow> mask m \<le> mask n"
   apply (subst and_mask_eq_iff_le_mask[symmetric])
   by (auto intro: word_eqI simp: word_size)
 
+(* FIXME: move to Word *)
 lemma word_and_mask_eq_le_mono:
   "w && mask m = w \<Longrightarrow> m \<le> n \<Longrightarrow> w && mask n = w"
   apply (simp add: and_mask_eq_iff_le_mask)

@@ -870,50 +870,6 @@ lemma dom_ucast_eq:
   apply (word_bitwise)
   done
 
-(* FIXME RISCV: replace in WordLib (generalised) *)
-lemma aligned_mask_disjoint:
-  "\<lbrakk> is_aligned (a :: 'a :: len word) n; b \<le> mask n \<rbrakk> \<Longrightarrow> a && b = 0"
-  apply (rule word_eqI)
-  apply (clarsimp simp: is_aligned_nth word_size mask_def simp del: word_less_sub_le)
-  apply (frule le2p_bits_unset)
-  apply (case_tac "na < n")
-   apply simp
-  apply simp
-  done
-
-(* FIXME RISCV: move to WordLib! *)
-lemma word_and_or_mask_aligned:
-  "\<lbrakk> is_aligned a n; b \<le> mask n \<rbrakk> \<Longrightarrow> a + b = a || b"
-  apply (rule word_plus_and_or_coroll)
-  apply (erule (1) aligned_mask_disjoint)
-  done
-
-(* FIXME RISCV: move to WordLib! *)
-lemmas word_and_or_mask_aligned2 =
-  word_and_or_mask_aligned[where a=b and b=a for a b,
-                           simplified add.commute word_bool_alg.disj.commute]
-
-(* FIXME RISCV: move to WordLib *)
-lemma is_aligned_ucastI:
-  "is_aligned w n \<Longrightarrow> is_aligned (ucast w) n"
-  by (clarsimp simp: word_eqI_solve_simps)
-
-(* FIXME RISCV: move to WordLib *)
-lemma ucast_le_maskI:
-  "a \<le> mask n \<Longrightarrow> UCAST('a::len \<rightarrow> 'b::len) a \<le> mask n"
-  apply (clarsimp simp: le_mask_high_bits word_eqI_solve_simps)
-  apply (frule test_bit_size)
-  apply (simp add: word_size)
-  done
-
-(* FIXME RISCV: move to WordLib *)
-lemma ucast_add_mask_aligned:
-  "\<lbrakk> a \<le> mask n; is_aligned b n \<rbrakk> \<Longrightarrow> UCAST ('a::len \<rightarrow> 'b::len) (a + b) = ucast a + ucast b"
-  apply (simp add: word_and_or_mask_aligned2)
-  apply (subst word_and_or_mask_aligned2, erule is_aligned_ucastI, erule ucast_le_maskI)
-  apply word_eqI_solve
-  done
-
 (* FIXME RISCV: replace in ArchArch_AI *)
 lemma ucast_fst_hd_assocs:
   assumes "- dom (\<lambda>x::asid_low_index. pool (ucast x)) \<inter> {x. ucast x + (a::RISCV64_A.asid) \<noteq> 0} \<noteq> {}"
@@ -973,11 +929,6 @@ proof -
     apply (simp cong: conj_cong add: ucast_ucast_mask2 is_down)
     done
 qed
-
-(* FIXME RISCV: move to WordLib *)
-lemma ucast_shiftl:
-  "LENGTH('b) \<le> LENGTH ('a) \<Longrightarrow> UCAST ('a::len \<rightarrow> 'b::len) x << n = ucast (x << n)"
-  by word_eqI_solve
 
 lemma dec_arch_inv_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp]

@@ -12,18 +12,6 @@ theory Detype_R
 imports Retype_R
 begin
 
-(* FIXME RISCV: move to Word *)
-lemma mask_mono:
-  "sz' \<le> sz \<Longrightarrow> mask sz' \<le> (mask sz :: 'a::len word)"
-  apply (cases "sz < LENGTH('a)")
-   apply (simp only: mask_def shiftl_1)
-   apply (rule word_le_minus_mono_left)
-    apply (erule (1) two_power_increasing)
-   apply (rule word_1_le_power)
-   apply simp
-  apply (simp add: not_less mask_over_length)
-  done
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 text \<open>Establishing that the invariants are maintained
@@ -187,16 +175,6 @@ lemma deleteObjects_def3:
    apply (simp add: deleteObjects_def2)
   apply (simp add: deleteObjects_def is_aligned_mask
                    unless_def alignError_def)
-  done
-
-(* FIXME: move to Word_Lib *)
-lemma ucast_less_shiftl_helper':
-  "\<lbrakk> len_of TYPE('b) + (a::nat) < len_of TYPE('a); 2 ^ (len_of TYPE('b) + a) \<le> n\<rbrakk>
-    \<Longrightarrow> (ucast (x :: 'b::len word) << a) < (n :: 'a::len word)"
-  apply (erule order_less_le_trans[rotated])
-  using ucast_less[where x=x and 'a='a]
-  apply (simp only: shiftl_t2n field_simps)
-  apply (rule word_less_power_trans2; simp)
   done
 
 lemma obj_relation_cuts_in_obj_range:
