@@ -1511,7 +1511,7 @@ lemma refill_update_valid_refills[wp]:
        \<comment> \<open>no_overflow\<close>
        apply (simp add: no_overflow_def)
        apply clarsimp
-        apply (rename_tac sc n na)
+       apply (rename_tac sc n na)
        apply (case_tac "na=0")
         apply clarsimp
         apply (subgoal_tac "MIN_BUDGET \<le> new_budget")
@@ -1568,6 +1568,7 @@ lemma refill_update_valid_refills[wp]:
      \<comment> \<open>ordered_disjoint\<close>
      apply (simp add: ordered_disjoint_def)
      apply clarsimp
+     apply (rename_tac sc n)
      apply (frule order.strict_implies_order)
      apply (frule (2) refill_word_proof_helper[where larger=new_budget
               and head_time="r_time (refill_hd sc)"
@@ -3536,6 +3537,27 @@ crunches commit_domain_time, get_sched_context
   and ko_sc_at'[wp]: "\<lambda>s. ko_at (SchedContext sc n) p s"
   (wp: crunch_wps simp: crunch_simps)
 
+lemma refill_budget_check_sc_at_unfolded:
+  "\<lbrace>\<lambda>s. \<exists>sc n. ko_at (SchedContext sc n) p s\<rbrace>
+    refill_budget_check usage
+   \<lbrace>\<lambda>_ s. \<exists>sc n. ko_at (SchedContext sc n) p s\<rbrace>"
+  unfolding refill_budget_check_def refill_ready_def is_round_robin_def bind_assoc refill_full_def
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (clarsimp split del: if_split)
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+
+  apply (wpsimp simp: update_sched_context_def set_object_def set_refills_def
+ wp: get_object_wp hoare_vcg_ex_lift
+         hoare_drop_imp hoare_vcg_all_lift get_sched_context_wp
+ split_del: if_split)
+apply (clarsimp simp: obj_at_def Let_def)
+apply (intro conjI impI; clarsimp?; fastforce?)
+  sorry
+
 lemma invoke_sched_control_configure_valid_refills:
   "\<lbrace>
 (\<lambda>s. obj_at
@@ -3549,6 +3571,25 @@ and
    \<lbrace>\<lambda>_. valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (clarsimp simp: invoke_sched_control_configure_def)
 sorry
+(*
+lemma
+  "\<lbrace>(\<lambda>s. kheap s scptr = Some (SchedContext sc n)
+          \<and> unat (r_time (refill_hd sc)) + 2 * unat (sc_period sc) + unat consumed
+                     \<le> unat (max_word :: time)
+          \<and> MIN_SC_BUDGET \<le> sc_budget sc \<and> sc_budget sc \<le> sc_period sc)
+     and valid_refills scptr and
+   valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)\<rbrace>
+   invoke_sched_control_configure (InvokeSchedControlConfigure scptr budget period mrefills badge)
+   \<lbrace>\<lambda>_. valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  apply (clarsimp simp: invoke_sched_control_configure_def)
+apply (rule validE_valid)
+apply (rule liftE_wp)
+apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+apply (clarsimp simp: when_def)
+apply (intro conjI impI)
+defer
+apply (wpsimp wp: update_sched_context_valid_refills_badge)
+*)
 
 end
 
