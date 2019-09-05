@@ -13,7 +13,7 @@ imports Main
 keywords "supply_local_method" :: prf_script % "proof"
 begin
 
-text \<open>See documentation in @{file Local_Method_Tests.thy}.\<close>
+text \<open>See documentation in @{path Local_Method_Tests.thy}.\<close>
 
 ML {*
   structure MethodData = Proof_Data(
