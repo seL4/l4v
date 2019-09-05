@@ -305,7 +305,7 @@ end
         print("Generating C parser grammar files...")
         subprocess.check_call(['make', 'c-parser-deps'], cwd=os.path.join(c_parser_working_dir, "src", "c-parser"))
         shutil.move(os.path.join(c_parser_working_dir, "src", "c-parser"), os.path.join(target_dir, "c-parser"))
-        shutil.move(os.path.join(c_parser_working_dir, "README"), os.path.join(target_dir, "c-parser", "README"))
+        shutil.move(os.path.join(c_parser_working_dir, "README.md"), os.path.join(target_dir, "c-parser", "README.md"))
         shutil.move(os.path.join(c_parser_working_dir, "doc", "ctranslation.pdf"), os.path.join(target_dir, "c-parser", "doc", "ctranslation.pdf"))
 
     # Double-check our theory dependencies.
