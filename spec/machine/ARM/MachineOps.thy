@@ -120,6 +120,8 @@ where
   kernelWCET_us_pos: "0 < kernelWCET_us"
 and
   kernelWCET_us_pos2: "0 < 2 * kernelWCET_us"
+and
+  kernelWCET_us_no_overflow: "4 * unat kernelWCET_us \<le> unat max_word"
 
 axiomatization
   us_to_ticks :: "64 word \<Rightarrow> 64 word"

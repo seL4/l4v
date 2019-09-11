@@ -775,9 +775,10 @@ lemma sc_consumed_update_valid_state [wp]:
 
 lemma refill_split_check_valid_idle:
   "\<lbrace>valid_idle\<rbrace> refill_budget_check usage \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-  unfolding refill_budget_check_def refill_full_def
-            get_refills_def is_round_robin_def refill_ready_def
-  by wpsimp
+  unfolding refill_budget_check_def
+  by (wpsimp simp: refill_full_def refill_ready_def
+                   is_round_robin_def
+               wp: get_refills_wp )
 
 lemma refill_split_check_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> refill_budget_check usage \<lbrace>\<lambda>_. valid_state\<rbrace>"
