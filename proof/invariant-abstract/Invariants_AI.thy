@@ -3456,4 +3456,30 @@ lemma max_ipc_length_unfold:
   "max_ipc_length = 128"
   by (simp add: max_ipc_length_def cap_transfer_data_size_def msg_max_length_def msg_max_extra_caps_def)
 
+lemmas invs_implies =
+  invs_equal_kernel_mappings
+  invs_arch_state
+  invs_valid_asid_map
+  invs_valid_global_objs
+  invs_valid_ioports
+  invs_vspace_objs
+  invs_psp_aligned
+  invs_distinct
+  invs_cur
+  invs_iflive
+  invs_ifunsafe
+  invs_valid_global_refs
+  invs_valid_idle
+  invs_valid_irq_node
+  invs_mdb
+  invs_valid_objs
+  invs_valid_pspace
+  invs_valid_reply_caps
+  invs_valid_reply_masters
+  invs_valid_stateI
+  invs_zombies
+  invs_hyp_sym_refs
+  invs_sym_refs
+  tcb_at_invs
+
 end
