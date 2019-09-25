@@ -48,9 +48,6 @@ datatype page_invocation
          (page_map_cap: cap)
          (page_map_ct_slot: cslot_ptr)
          (page_map_entries: "pte \<times> (obj_ref list) + pde \<times> (obj_ref list)")
-     | PageRemap
-         (page_remap_asid: asid)
-         (page_remap_entries: "pte \<times> (obj_ref list) + pde \<times> (obj_ref list)")
      | PageUnmap
          (page_unmap_cap: arch_cap)
          (page_unmap_cap_slot: cslot_ptr)
