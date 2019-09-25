@@ -48,10 +48,6 @@ datatype page_invocation
          (page_map_ct_slot: cslot_ptr)
          (page_map_entries: "vm_page_entry \<times> obj_ref")
          (page_map_vspace: obj_ref)
-     | PageRemap
-         (page_remap_entries: "vm_page_entry \<times> obj_ref")
-         (page_remap_asid: asid)
-         (page_remap_vspace: obj_ref)
      | PageUnmap
          (page_unmap_cap: arch_cap)
          (page_unmap_cap_slot: cslot_ptr)

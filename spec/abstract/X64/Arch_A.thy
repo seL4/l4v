@@ -135,9 +135,7 @@ where
       | _ \<Rightarrow> fail)"
 
 text \<open>The Page capability confers the authority to map, unmap and flush the
-memory page. The remap system call is a convenience operation that ensures the
-page is mapped in the same location as this cap was previously used to map it
-in.\<close>
+  memory page.\<close>
 definition
 perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "perform_page_invocation iv \<equiv> case iv of
@@ -150,13 +148,6 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
       asid \<leftarrow> case cap of
                   ArchObjectCap (PageCap _ _ _ _ _ (Some (as, _))) \<Rightarrow> return as
                 | _ \<Rightarrow> fail;
-      invalidate_page_structure_cache_asid (addrFromPPtr vspace) asid
-    od
-  | PageRemap entries asid vspace \<Rightarrow> do
-      case entries of
-          (VMPTE pte, slot) \<Rightarrow> store_pte slot pte
-        | (VMPDE pde, slot) \<Rightarrow> store_pde slot pde
-        | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte;
       invalidate_page_structure_cache_asid (addrFromPPtr vspace) asid
     od
   | PageUnmap cap ct_slot \<Rightarrow>
