@@ -75,7 +75,6 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
            attr = args ! 2;
            vspace_cap = fst (extra_caps ! 0)
          in doE
-           whenE (mapped_address \<noteq> None) $ throwError $ InvalidCapability 0;
            (pt, asid) \<leftarrow> case vspace_cap of
                            ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow> returnOk (pt, asid)
                          | _ \<Rightarrow> throwError $ InvalidCapability 1;
@@ -88,7 +87,13 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
            unlessE (pt_bits_left level = pg_bits) $
              throwError $ FailedLookup False $ MissingCapability $ pt_bits_left level;
-           check_slot slot ((=) InvalidPTE);
+           case mapped_address of
+             Some (asid', vaddr') \<Rightarrow> doE
+               whenE (asid' \<noteq> asid) (throwError $ InvalidCapability 1);
+               whenE (vaddr' \<noteq> vaddr) (throwError $ InvalidArgument 0);
+               check_slot slot (Not \<circ> is_PageTablePTE)
+             odE
+           | None \<Rightarrow> check_slot slot ((=) InvalidPTE);
            vm_rights \<leftarrow> returnOk $ mask_vm_rights R (data_to_rights rights_mask);
            attribs \<leftarrow> returnOk $ attribs_from_word attr;
            pte \<leftarrow> returnOk $ make_user_pte (addrFromPPtr p) attribs vm_rights;
@@ -97,43 +102,11 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
        else throwError TruncatedMessage
      | _ \<Rightarrow> fail"
 
-definition decode_fr_inv_remap :: "'z::state_ext arch_decoder"
-  where
-  "decode_fr_inv_remap label args cte cap extra_caps \<equiv> case cap of
-     FrameCap p R pgsz dev mapped_address \<Rightarrow>
-       if length args > 1 \<and> length extra_caps > 0
-       then let
-           rights_mask = args ! 0;
-           attr = args ! 1;
-           vspace_cap = fst (extra_caps ! 0)
-       in doE
-         (pt,asid) \<leftarrow> case vspace_cap of
-                        ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow> returnOk (pt, asid)
-                      | _ \<Rightarrow> throwError $ InvalidCapability 1;
-         (asid',vaddr) \<leftarrow> case mapped_address of
-                            Some a \<Rightarrow> returnOk a
-                          | _ \<Rightarrow> throwError $ InvalidCapability 0;
-         pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid';
-         whenE (pt' \<noteq> pt \<or> asid \<noteq> asid') $ throwError $ InvalidCapability 1;
-         check_vp_alignment pgsz vaddr;
-         (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
-         unlessE (pt_bits_left level = pageBitsForSize pgsz) $
-           throwError $ FailedLookup False $ MissingCapability $ pt_bits_left level;
-         check_slot slot (Not \<circ> is_PageTablePTE);
-         vm_rights \<leftarrow> returnOk $ mask_vm_rights R $ data_to_rights rights_mask;
-         pte \<leftarrow> returnOk $ make_user_pte (addrFromPPtr p) (attribs_from_word attr) vm_rights;
-         returnOk $ InvokePage $ PageRemap (pte, slot)
-       odE
-       else throwError TruncatedMessage
-     | _ \<Rightarrow> fail"
-
 definition decode_frame_invocation :: "'z::state_ext arch_decoder"
   where
   "decode_frame_invocation label args cte cap extra_caps \<equiv>
      if invocation_type label = ArchInvocationLabel RISCVPageMap
      then decode_fr_inv_map label args cte cap extra_caps
-     else if invocation_type label = ArchInvocationLabel RISCVPageRemap
-     then decode_fr_inv_remap label args cte cap extra_caps
      else if invocation_type label = ArchInvocationLabel RISCVPageUnmap
      then returnOk $ InvokePage $ PageUnmap cap cte
      else if invocation_type label = ArchInvocationLabel RISCVPageGetAddress

@@ -105,13 +105,6 @@ definition perform_pg_inv_map :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow>
      do_machine_op sfence
    od"
 
-definition perform_pg_inv_remap :: "pte \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-  where
-  "perform_pg_inv_remap pte slot \<equiv> do
-     store_pte slot pte;
-     do_machine_op sfence
-   od"
-
 definition perform_pg_inv_get_addr :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "perform_pg_inv_get_addr ptr \<equiv> do
@@ -122,12 +115,11 @@ definition perform_pg_inv_get_addr :: "obj_ref \<Rightarrow> (unit,'z::state_ext
      set_message_info ct msg_info
    od"
 
-text \<open>The Frame capability confers the authority to map, remap, and unmap memory.\<close>
+text \<open>The Frame capability confers the authority to map and unmap memory.\<close>
 definition perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "perform_page_invocation iv \<equiv> case iv of
      PageMap cap ct_slot (pte,slot) \<Rightarrow> perform_pg_inv_map cap ct_slot pte slot
-   | PageRemap (pte,slot) \<Rightarrow> perform_pg_inv_remap pte slot
    | PageUnmap cap ct_slot \<Rightarrow> perform_pg_inv_unmap cap ct_slot
    | PageGetAddr ptr \<Rightarrow> perform_pg_inv_get_addr ptr"
 

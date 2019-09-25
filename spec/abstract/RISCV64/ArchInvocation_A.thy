@@ -39,8 +39,6 @@ datatype page_invocation =
       (pg_inv_cap : arch_cap)
       (pg_inv_cslot : cslot_ptr)
       (pg_inv_entries : "pte \<times> obj_ref")
-  | PageRemap
-      (pg_inv_entries : "pte \<times> obj_ref")
   | PageUnmap
       (pg_inv_cap : arch_cap)
       (pg_inv_cslot : cslot_ptr)
