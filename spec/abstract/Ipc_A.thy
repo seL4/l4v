@@ -679,9 +679,7 @@ where
     csc_ptr \<leftarrow> gets cur_sc;
     csc \<leftarrow> get_sched_context csc_ptr;
     robin \<leftarrow> is_round_robin csc_ptr;
-    if robin then
-      let rfhd = hd (sc_refills csc) in
-        set_refills csc_ptr [rfhd \<lparr> r_time := r_time rfhd + consumed, r_amount := sc_budget csc \<rparr>]
+    if robin then refill_budget_check_round_robin consumed
     else refill_budget_check consumed;
     update_sched_context csc_ptr (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);
     modify $ consumed_time_update (K 0);

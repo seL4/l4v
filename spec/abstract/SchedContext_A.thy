@@ -162,17 +162,52 @@ definition
 where
   "refill_unblock_check sc_ptr = do
     robin \<leftarrow> is_round_robin sc_ptr;
-    when (\<not> robin ) $ do
-      ct \<leftarrow> gets cur_time;
-      modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
-      refills \<leftarrow> get_refills sc_ptr;
-      ready \<leftarrow> refill_ready sc_ptr;
-      when ready $ do
-        refills' \<leftarrow> return $ refills_merge_prefix ((hd refills)\<lparr>r_time := ct\<rparr> # tl refills);
-        set_refills sc_ptr refills'
-      od
-    od
+    ct \<leftarrow> gets cur_time;
+    refills \<leftarrow> get_refills sc_ptr;
+
+    if robin
+    then if (length refills = 1)
+         then set_refills sc_ptr [(hd refills)\<lparr>r_time := ct + kernelWCET_ticks\<rparr>]
+         else do assert (length refills = 2);
+                 set_refills sc_ptr [(hd refills)\<lparr>r_time := ct + kernelWCET_ticks\<rparr>,
+                                     (hd (tl refills))\<lparr>r_time := r_amount (hd refills) + ct + kernelWCET_ticks\<rparr>]
+              od
+    else do modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
+            ready \<leftarrow> refill_ready sc_ptr;
+            when ready $ do
+                refills' \<leftarrow> return $ refills_merge_prefix ((hd refills)\<lparr>r_time := ct\<rparr> # tl refills);
+                set_refills sc_ptr refills'
+                od
+         od
   od"
+
+definition
+  refill_budget_check_round_robin :: "ticks \<Rightarrow> (unit, 'z:: state_ext) s_monad"
+where
+  "refill_budget_check_round_robin usage = do
+    sc_ptr \<leftarrow> gets cur_sc;
+    sc \<leftarrow> get_sched_context sc_ptr;
+    refills \<leftarrow> return (sc_refills sc);
+    robin \<leftarrow> is_round_robin sc_ptr;
+    cur_time \<leftarrow> gets cur_time;
+
+    assert robin;
+
+    usage2 \<leftarrow> return $ if (usage < MIN_BUDGET \<and> length refills = 1) then MIN_BUDGET else usage;
+
+    if (usage2 + MIN_BUDGET \<le> r_amount (hd refills))
+    then if (length refills = 1)
+         then set_refills sc_ptr (\<lparr>r_time = cur_time, r_amount = r_amount (hd refills) - usage2\<rparr>
+                                  # [\<lparr>r_time = cur_time + r_amount (hd refills) - usage2,
+                                      r_amount = usage2\<rparr>])
+         else do assert (length refills = 2);
+                 new_tl \<leftarrow> return $ \<lparr>r_time = cur_time + r_amount (hd refills) - usage2,
+                                     r_amount = r_amount (hd (tl refills)) + usage2\<rparr>;
+                 set_refills sc_ptr (\<lparr>r_time = cur_time, r_amount = r_amount (hd refills) - usage2\<rparr>
+                                     # [new_tl])
+              od
+    else set_refills sc_ptr [\<lparr>r_time = cur_time, r_amount = sc_budget sc\<rparr>]
+   od"
 
 definition
   refill_budget_check :: "ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -435,10 +470,7 @@ where
         assert sufficient;
         assert ready;   \<comment> \<open>asserting ready & sufficient\<close>
         robin \<leftarrow> is_round_robin csc;
-        if robin then
-        let new = \<lparr> r_time = r_time (refill_hd sc) + consumed,
-                                    r_amount = sc_budget sc \<rparr> in
-        set_refills csc [new]
+        if robin then refill_budget_check_round_robin consumed
       else refill_budget_check consumed;
         sc2 \<leftarrow> get_sched_context csc;
         sufficient2 \<leftarrow> return $ sufficient_refills 0 (sc_refills sc2);
