@@ -101,12 +101,12 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply (case_tac alabel; simp)
   apply (find_goal \<open>succeeds \<open>erule arch_decode_RISCVASIDControlMakePool_empty_fail\<close>\<close>)
   apply (find_goal \<open>succeeds \<open>erule arch_decode_RISCVASIDPoolAssign_empty_fail\<close>\<close>)
-  apply ((simp add: arch_decode_RISCVASIDControlMakePool_empty_fail arch_decode_RISCVASIDPoolAssign_empty_fail)+)[2]
+  apply ((simp add: arch_decode_RISCVASIDControlMakePool_empty_fail
+                    arch_decode_RISCVASIDPoolAssign_empty_fail)+)[2]
   by (all \<open>(wpsimp simp: arch_decode_invocation_def decode_asid_pool_invocation_def
                          decode_asid_control_invocation_def decode_frame_invocation_def
                          decode_page_table_invocation_def decode_pt_inv_map_def
-                         decode_fr_inv_map_def decode_fr_inv_remap_def
-                         Let_def)\<close>) (* takes some time *)
+                         decode_fr_inv_map_def Let_def)\<close>) (* 15s *)
 
 end
 

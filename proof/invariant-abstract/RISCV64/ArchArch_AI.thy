@@ -931,9 +931,8 @@ lemma sts_same_ref[wp]:
 lemma sts_valid_page_inv[wp]:
   "set_thread_state t st \<lbrace>valid_page_inv page_invocation\<rbrace>"
   unfolding valid_page_inv_def
-  apply (cases page_invocation; wpsimp wp: sts_typ_ats hoare_vcg_ex_lift)
-   apply (wps, wp)
-  apply simp
+  apply (cases page_invocation)
+    apply (wpsimp wp: sts_typ_ats hoare_vcg_ex_lift hoare_vcg_disj_lift | wps)+
   done
 
 crunch global_refs_inv[wp]: set_thread_state "\<lambda>s. P (global_refs s)"
@@ -1060,9 +1059,9 @@ lemma decode_fr_inv_map_wf[wp]:
    decode_fr_inv_map label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
   unfolding decode_fr_inv_map_def Let_def
-  apply (wpsimp wp: check_vp_wpR)
-  apply (rename_tac pt_ptr asid vref level pt_slot)
+  apply (wpsimp wp: check_vp_wpR split_del: if_split)
   apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def neq_Nil_conv)
+  apply (rename_tac s pt_ptr asid vref ab ba ys level pt_slot)
   apply (prop_tac "args!0 \<in> user_region")
    apply (clarsimp simp: user_region_def not_le)
    apply (rule user_vtop_canonical_user)
@@ -1071,14 +1070,15 @@ lemma decode_fr_inv_map_wf[wp]:
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def is_cap_simps cap_master_cap_simps)
   apply (thin_tac "Ball S P" for S P)
   apply (frule (1) pt_lookup_slot_vs_lookup_slotI, clarsimp)
-  apply (clarsimp simp: valid_arch_cap_def valid_cap_def cap_aligned_def)
+  apply (clarsimp simp: valid_arch_cap_def valid_cap_def cap_aligned_def wellformed_mapdata_def)
   apply (frule is_aligned_pageBitsForSize_table_size)
-  apply (rule conjI)
-   apply (clarsimp simp: same_ref_def make_user_pte_def ptrFromPAddr_addr_from_ppn)
+  apply (frule (3) vs_lookup_slot_table_base)
+  apply (clarsimp simp: same_ref_def make_user_pte_def ptrFromPAddr_addr_from_ppn)
+  apply (rule strengthen_imp_same_first_conj[OF conjI])
    apply (rule_tac x=level in exI)
    apply (rule_tac x="args!0" in exI)
-   apply (simp add: vmsz_aligned_vref_for_level)
-  apply (rule conjI)
+   apply (fastforce simp: vmsz_aligned_vref_for_level)
+  apply (rule strengthen_imp_same_first_conj[OF conjI])
    apply (clarsimp simp: valid_slots_def make_user_pte_def wellformed_pte_def
                          ptrFromPAddr_addr_from_ppn)
    apply (rename_tac level' asid' vref')
@@ -1090,73 +1090,17 @@ lemma decode_fr_inv_map_wf[wp]:
     apply (clarsimp simp: in_omonad)
    apply (drule (1) vs_lookup_table_unique_level; clarsimp)
    apply (simp add: vs_lookup_slot_pte_at data_at_def vmpage_size_of_level_pt_bits_left
-               split: if_split_asm)
-  apply (rule conjI)
+             split: if_split_asm)
+  apply (rule strengthen_imp_same_first_conj[OF conjI])
    apply (clarsimp simp: wellformed_mapdata_def vspace_for_asid_def)
-  apply (rule conjI)
-   apply (clarsimp simp: make_user_pte_def)
   apply (clarsimp simp: parent_for_refs_def)
   apply (frule (3) vs_lookup_slot_table_base)
   apply (frule (2) valid_vspace_objs_strongD[rotated]; clarsimp)
   apply (drule (1) vs_lookup_table_target)
-  apply (drule valid_vs_lookupD)
-    apply (simp add: vmsz_aligned_vref_for_level)
-   apply clarsimp
-  apply clarsimp
-  apply (frule (1) cap_to_pt_is_pt_cap; (clarsimp intro!: valid_objs_caps)?)
-  apply (fastforce simp: is_cap_simps)
-  done
-
-lemma decode_fr_inv_remap_wf[wp]:
-  "arch_cap = FrameCap p rights vmpage_size dev option \<Longrightarrow>
-   \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
-    cte_wp_at (diminished (ArchObjectCap arch_cap)) slot and
-    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s)\<rbrace>
-   decode_fr_inv_remap label args slot arch_cap excaps
-   \<lbrace>valid_arch_inv\<rbrace>,-"
-  unfolding decode_fr_inv_remap_def Let_def
-  apply (wpsimp wp: check_vp_wpR)
-  apply (rename_tac pt_ptr asid vptr vref level pt_slot)
-  apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def neq_Nil_conv)
-  apply (clarsimp simp: cte_wp_at_caps_of_state)
-  apply (thin_tac "Ball S P" for S P)
-  apply (frule (1) pt_lookup_slot_vs_lookup_slotI, clarsimp)
-  apply (clarsimp simp: valid_arch_cap_def valid_cap_def cap_aligned_def wellformed_mapdata_def)
-  apply (frule is_aligned_pageBitsForSize_table_size)
-  apply (rule conjI)
-   apply (clarsimp simp: valid_slots_def make_user_pte_def wellformed_pte_def
-                         ptrFromPAddr_addr_from_ppn)
-   apply (rename_tac level' asid' vref')
-   apply (frule (3) vs_lookup_slot_table_base)
-   apply (prop_tac "level' \<le> max_pt_level")
-    apply (drule_tac level=level in valid_vspace_objs_strongD[rotated]; clarsimp)
-    apply (rule ccontr, clarsimp simp: not_le)
-    apply (drule vs_lookup_asid_pool; clarsimp)
-    apply (clarsimp simp: in_omonad)
-   apply (drule (1) vs_lookup_table_unique_level; clarsimp)
-   apply (simp add: vs_lookup_slot_pte_at data_at_def vmpage_size_of_level_pt_bits_left
-               split: if_split_asm)
-  apply (rule conjI)
-   apply (clarsimp simp: make_user_pte_def)
-  apply (rule conjI)
-   apply (clarsimp simp: parent_for_refs_def)
-   apply (frule (3) vs_lookup_slot_table_base)
-   apply (frule (2) valid_vspace_objs_strongD[rotated]; clarsimp)
-   apply (drule (1) vs_lookup_table_target)
-   apply (drule valid_vs_lookupD)
-     apply (simp add: vmsz_aligned_vref_for_level)
-    apply clarsimp
-   apply clarsimp
-   apply (frule (1) cap_to_pt_is_pt_cap; (clarsimp intro!: valid_objs_caps)?)
-   apply (fastforce simp: is_cap_simps)
-  apply (cases slot, clarsimp, rename_tac cslot_ptr cslot_idx)
-  apply (rule_tac x=cslot_ptr in exI)
-  apply (rule exI)+
-  apply (rule conjI, assumption)
-  apply (clarsimp simp: same_ref_def make_user_pte_def ptrFromPAddr_addr_from_ppn)
-  apply (rule_tac x=level in exI)
-  apply (rule_tac x="vref" in exI)
-  apply (simp add: vmsz_aligned_vref_for_level)
+  apply (drule valid_vs_lookupD; clarsimp simp: vmsz_aligned_vref_for_level)
+  apply (subgoal_tac "is_pt_cap cap")
+   apply (force simp: is_cap_simps)
+  apply (fastforce dest: cap_to_pt_is_pt_cap intro: valid_objs_caps)
   done
 
 lemma decode_frame_invocation_wf[wp]:
@@ -1167,14 +1111,10 @@ lemma decode_frame_invocation_wf[wp]:
    decode_frame_invocation label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
   unfolding decode_frame_invocation_def
-  apply wpsimp
-  apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def)
-  (* Unmap *)
-  apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_diminished_def is_cap_simps
-                        valid_arch_cap_def valid_cap_def valid_unmap_def wellformed_mapdata_def
-                        vmsz_aligned_def
-                  split: option.split)
-  done
+  by (wpsimp simp: valid_arch_inv_def valid_page_inv_def cte_wp_at_caps_of_state
+                   is_arch_diminished_def is_cap_simps valid_arch_cap_def valid_cap_def
+                   valid_unmap_def wellformed_mapdata_def vmsz_aligned_def
+            split: option.split)
 
 lemma decode_pt_inv_map_wf[wp]:
   "arch_cap = PageTableCap pt_ptr pt_map_data \<Longrightarrow>

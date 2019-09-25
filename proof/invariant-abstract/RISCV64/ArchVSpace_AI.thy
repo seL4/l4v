@@ -254,17 +254,14 @@ definition
 definition
   "valid_page_inv pg_inv \<equiv> case pg_inv of
     PageMap acap ptr m \<Rightarrow>
-      cte_wp_at (is_arch_update (ArchObjectCap acap) and ((=) None \<circ> vs_cap_ref)) ptr
+      cte_wp_at (is_arch_update (ArchObjectCap acap)) ptr
+      and (cte_wp_at (\<lambda>c. vs_cap_ref c = None) ptr or (\<lambda>s. cte_wp_at (\<lambda>c. same_ref m c s) ptr s))
       and cte_wp_at is_frame_cap ptr
       and same_ref m (ArchObjectCap acap)
       and valid_slots m
       and valid_arch_cap acap
       and K (is_PagePTE (fst m))
       and (\<lambda>s. \<exists>slot. cte_wp_at (parent_for_refs m) slot s)
-  | PageRemap m \<Rightarrow>
-      valid_slots m and K (is_PagePTE (fst m))
-      and (\<lambda>s. \<exists>slot. cte_wp_at (parent_for_refs m) slot s)
-      and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>cap. same_ref m cap s) slot s)
   | PageUnmap acap cslot \<Rightarrow>
      \<lambda>s. \<exists>dev r R sz m.
             acap = FrameCap r R sz dev m \<and>
@@ -1504,16 +1501,14 @@ lemma perform_pg_inv_map_invs[wp]:
   apply (frule caps_of_state_valid, clarsimp)
   apply (prop_tac "is_FrameCap cap")
    apply (cases cap; simp add: cap_master_cap_simps)
-  apply (rule conjI)
-   apply (clarsimp simp: is_FrameCap_def cap_master_cap_simps valid_cap_def cap_aligned_def
-                         valid_arch_cap_def)
-  apply (rule conjI, clarsimp)
-   apply (drule_tac ptr="(cref,cidx)" in valid_global_refsD2, clarsimp)
-   apply (simp add: cap_range_def)
-  apply (rule conjI, clarsimp simp: is_PagePTE_def)
-  apply (rule conjI, clarsimp simp: is_FrameCap_def)
-   apply (drule (1) unique_table_refsD[rotated], solves \<open>simp\<close>; clarsimp)
-  apply (rule conjI, clarsimp)
+  apply (intro conjI)
+  using vs_lookup_slot_unique_level apply blast
+       apply (clarsimp simp: is_FrameCap_def cap_master_cap_simps valid_cap_def cap_aligned_def
+                             valid_arch_cap_def)
+  using reachable_page_table_not_global vs_lookup_slot_table_unfold apply blast
+     apply (clarsimp simp: is_PagePTE_def)
+    apply (clarsimp simp: is_FrameCap_def)
+    apply (drule (1) unique_table_refsD[rotated], solves \<open>simp\<close>; clarsimp)
    apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
    apply (rename_tac pt_ptr)
    apply (frule vs_lookup_table_is_aligned; clarsimp)
@@ -1522,7 +1517,7 @@ lemma perform_pg_inv_map_invs[wp]:
    apply (drule (1) table_index_max_level_slots, simp)
   apply clarsimp
   apply (rule conjI, clarsimp simp: is_PagePTE_def)
-  apply (rule conjI, clarsimp)
+  apply (rule conjI)
    apply (erule allE, erule impE, fastforce)
    apply (clarsimp simp: is_PagePTE_def)
    apply (drule_tac p="(cref,cidx)" in caps_of_state_valid, clarsimp)
@@ -1539,48 +1534,6 @@ lemma perform_pg_inv_map_invs[wp]:
   apply (drule (1) vs_lookup_table_unique_level; clarsimp)
   apply (drule (1) pt_slot_offset_vref_for_level; simp)
   apply (cases ct_slot)
-  apply fastforce
-  done
-
-lemma perform_pg_inv_remap_invs[wp]:
-  "\<lbrace>invs and valid_page_inv (PageRemap (pte, slot))\<rbrace>
-   perform_pg_inv_remap pte slot
-   \<lbrace>\<lambda>_. invs\<rbrace>"
-  unfolding perform_pg_inv_remap_def
-  apply (wpsimp wp: store_pte_invs)
-  apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state valid_slots_def same_ref_def
-                        parent_for_refs_def)
-  apply (rule conjI)
-   apply (drule valid_global_refsD2, clarsimp)
-   apply (simp add: cap_range_def)
-  apply (rule conjI, clarsimp simp: is_PagePTE_def)
-  apply (rule conjI, clarsimp)
-   apply (drule (1) unique_table_refsD[rotated], solves \<open>simp\<close>; clarsimp)
-  apply (rule conjI, clarsimp)
-   apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
-   apply (rename_tac pt_ptr)
-   apply (frule vs_lookup_table_is_aligned; clarsimp)
-   apply (drule vspace_for_asid_vs_lookup)
-   apply (drule (1) vs_lookup_table_unique_level; clarsimp)
-   apply (drule (1) table_index_max_level_slots, simp)
-  apply clarsimp
-  apply (rule conjI, clarsimp simp: is_PagePTE_def)
-  apply (rule conjI, clarsimp)
-   apply (erule allE, erule impE, fastforce)
-   apply (clarsimp simp: is_PagePTE_def)
-   apply (drule caps_of_state_valid, clarsimp)
-   apply (clarsimp simp: valid_cap_def obj_at_def data_at_def)
-  apply (rename_tac level' asid' vref')
-  apply (prop_tac "level' \<le> max_pt_level")
-   apply (clarsimp simp flip: asid_pool_level_neq simp: pool_for_asid_vs_lookup)
-   apply (drule pool_for_asid_validD, clarsimp)
-   apply (drule caps_of_state_valid, clarsimp)
-   apply (clarsimp simp: valid_cap_def obj_at_def in_omonad)
-  apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
-  apply (rename_tac pt_ptr)
-  apply (frule_tac bot_level=level in vs_lookup_table_is_aligned; clarsimp)
-  apply (drule (1) vs_lookup_table_unique_level; clarsimp)
-  apply (drule (1) pt_slot_offset_vref_for_level; simp)
   apply fastforce
   done
 

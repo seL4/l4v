@@ -253,22 +253,20 @@ lemma pte_range_interD:
 lemma perform_page_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and valid_page_inv pinv\<rbrace>
         perform_page_invocation pinv \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (simp add: perform_page_invocation_def )
+  apply (simp add: perform_page_invocation_def)
   apply (cases pinv,
          simp_all add: mapM_discarded
-            split: sum.split arch_cap.split option.split,
+                split: sum.split arch_cap.split option.split,
          safe intro!: hoare_gen_asm hoare_gen_asm[unfolded K_def],
          simp_all add: mapM_x_Nil mapM_x_Cons mapM_x_map)
-            apply (wp store_pte_valid_vspace_objs'
-                      hoare_vcg_imp_lift[OF set_cap_arch_obj_neg] hoare_vcg_all_lift
-                 | clarsimp simp: cte_wp_at_weakenE[OF _ TrueI] obj_at_def
-                                  swp_def valid_page_inv_def
-                                  valid_slots_def perform_pg_inv_map_def
-                                  perform_pg_inv_remap_def perform_pg_inv_unmap_def
-                                  perform_pg_inv_get_addr_def
-                           split: pte.splits
-                 | wpc
-                 | wp_once hoare_drop_imps)+
+    apply (wp store_pte_valid_vspace_objs' hoare_vcg_imp_lift[OF set_cap_arch_obj_neg]
+              hoare_vcg_all_lift
+           | clarsimp simp: cte_wp_at_weakenE[OF _ TrueI] obj_at_def swp_def valid_page_inv_def
+                            valid_slots_def perform_pg_inv_map_def perform_pg_inv_unmap_def
+                            perform_pg_inv_get_addr_def
+                     split: pte.splits
+           | wpc
+           | wp_once hoare_drop_imps)+
   done
 
 lemma perform_page_table_valid_vspace_objs'[wp]:
