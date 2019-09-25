@@ -899,11 +899,10 @@ lemma sts_valid_slots_inv[wp]:
 
 lemma sts_valid_page_inv[wp]:
 "\<lbrace>valid_page_inv page_invocation\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_page_inv page_invocation\<rbrace>"
-  by (cases page_invocation,
-       (wp hoare_vcg_const_Ball_lift hoare_vcg_ex_lift hoare_vcg_imp_lift sts_typ_ats
-        | clarsimp simp: valid_page_inv_def same_refs_def
-        | wps)+)
-
+  apply (cases page_invocation)
+  by (wpsimp wp: hoare_vcg_ex_lift sts_typ_ats hoare_vcg_disj_lift
+           simp: valid_page_inv_def same_refs_def
+      | wps)+
 
 lemma sts_valid_pdi_inv[wp]:
   "\<lbrace>valid_pdi page_directory_invocation\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_pdi page_directory_invocation\<rbrace>"
@@ -1384,65 +1383,43 @@ lemma arch_decode_inv_wf[wp]:
      apply (drule (1) caps_of_state_valid[rotated])+
      apply (drule (1) diminished_is_update)+
      apply (clarsimp simp: cap_rights_update_def)
-    apply (clarsimp simp:diminished_def)
-    apply (simp add: arch_decode_invocation_def Let_def split_def
-                cong: if_cong split del: if_split)
-
+    \<comment> \<open>PageCap\<close>
+    apply (clarsimp simp: diminished_def)
+    apply (simp add: arch_decode_invocation_def Let_def split_def cong: if_cong split del: if_split)
     supply if_split[split del]
     apply (cases "invocation_type label = ArchInvocationLabel ARMPageMap")
      apply (rename_tac dev word rights vmpage_size option)
      apply (rule hoare_pre)
-      apply ((wp whenE_throwError_wp check_vp_wpR hoare_vcg_const_imp_lift_R
-                 create_mapping_entries_parent_for_refs find_pd_for_asid_pd_at_asid
-                 create_mapping_entries_valid_slots create_mapping_entries_same_refs_ex
-                 find_pd_for_asid_lookup_pd_wp
+      apply (wp whenE_throwError_wp check_vp_wpR hoare_vcg_const_imp_lift_R
+                create_mapping_entries_parent_for_refs find_pd_for_asid_pd_at_asid
+                create_mapping_entries_valid_slots create_mapping_entries_same_refs_ex
+                find_pd_for_asid_lookup_pd_wp hoare_vcg_disj_lift_R
+                hoare_vcg_ex_lift_R
+                (* these two lift rules must go last, list has overlapping rules *)
              | wpc
-             | simp add: valid_arch_inv_def valid_page_inv_def is_pg_cap_def))+
+             | simp add: valid_arch_inv_def valid_page_inv_def is_pg_cap_def
+                         cte_wp_at_caps_of_state[where P="\<lambda>c. same_refs rv c s" for rv s])+
      apply (clarsimp simp: neq_Nil_conv invs_vspace_objs)
      apply (frule diminished_cte_wp_at_valid_cap[where p="(a, b)" for a b], clarsimp)
      apply (frule diminished_cte_wp_at_valid_cap[where p=slot], clarsimp)
-     apply (clarsimp simp: cte_wp_at_caps_of_state mask_cap_def conj_ac
+     apply (clarsimp simp: cte_wp_at_caps_of_state mask_cap_def
                            diminished_def[where cap="ArchObjectCap (PageCap d x y z w)" for d x y z w]
-                           linorder_not_le aligned_sum_less_kernel_base
                     dest!: diminished_pd_capD)
      apply (clarsimp simp: cap_rights_update_def acap_rights_update_def
                     split: cap.splits arch_cap.splits bool.splits)
-     apply (auto, auto simp: cte_wp_at_caps_of_state invs_def valid_state_def
-                             valid_cap_simps is_arch_update_def
-                             is_arch_cap_def cap_master_cap_simps
-                             vmsz_aligned_def vs_cap_ref_def
-                             cap_aligned_def data_at_def
-                             le_mask_iff_lt_2n[where 'a=32, folded word_bits_def, THEN iffD1]
-                             ord_eq_le_trans[OF pd_bits_14]
-                       elim: is_aligned_weaken split: vmpage_size.split
-                      split: if_splits
-                     intro!: is_aligned_addrFromPPtr is_aligned_addrFromPPtr_n
-                             pbfs_atleast_pageBits;
-            fastforce intro: diminished_pd_self)[1]
-
-    apply (cases "invocation_type label = ArchInvocationLabel ARMPageRemap")
-     apply (rename_tac word rights vmpage_size option)
-     apply (rule hoare_pre)
-      apply ((wp whenE_throwError_wp check_vp_wpR hoare_vcg_const_imp_lift_R
-                 create_mapping_entries_parent_for_refs
-                 find_pd_for_asid_lookup_pd_wp
-            | wpc
-            | simp add: valid_arch_inv_def valid_page_inv_def
-            | (simp add: cte_wp_at_caps_of_state,
-                wp create_mapping_entries_same_refs_ex hoare_vcg_ex_lift_R))+)[1]
-     apply (clarsimp simp: valid_cap_def cap_aligned_def neq_Nil_conv)
-     apply (frule diminished_cte_wp_at_valid_cap[where p="(a, b)" for a b], clarsimp)
-     apply (clarsimp simp: cte_wp_at_caps_of_state mask_cap_def
-                           diminished_def[where cap="ArchObjectCap (PageCap d x y z w)" for d x y z w])
-     apply (clarsimp simp: cap_rights_update_def acap_rights_update_def
-                    split: cap.splits arch_cap.splits bool.splits)
-     apply (cases slot, fastforce simp: vmsz_aligned_def mask_def
-                       valid_arch_caps_def cte_wp_at_caps_of_state
-                       neq_Nil_conv invs_def valid_state_def data_at_def
-                       valid_cap_def cap_aligned_def ord_eq_le_trans[OF pd_bits_14]
-                 elim: is_aligned_weaken
-                split: if_splits
-               intro!: is_aligned_addrFromPPtr is_aligned_addrFromPPtr_n pbfs_atleast_pageBits)
+     apply (rule conjI[rotated]; clarsimp split: if_splits simp: invs_vspace_objs)
+      apply (auto, auto simp: cte_wp_at_caps_of_state invs_def valid_state_def
+                              valid_cap_simps is_arch_update_def
+                              is_arch_cap_def cap_master_cap_simps
+                              vmsz_aligned_def vs_cap_ref_def
+                              cap_aligned_def data_at_def
+                              le_mask_iff_lt_2n[where 'a=32, folded word_bits_def, THEN iffD1]
+                              ord_eq_le_trans[OF pd_bits_14]
+                              linorder_not_le aligned_sum_less_kernel_base
+                        elim: is_aligned_weaken split: vmpage_size.split
+                       split: if_splits
+                      intro!: is_aligned_addrFromPPtr is_aligned_addrFromPPtr_n
+                              pbfs_atleast_pageBits)[2]
     apply (cases "invocation_type label = ArchInvocationLabel ARMPageUnmap")
      apply simp
      apply (rule hoare_pre, wp)
@@ -1474,13 +1451,11 @@ lemma arch_decode_inv_wf[wp]:
                cong: if_cong)
    apply (rename_tac word option)
    apply (rule hoare_pre)
-    apply ((wp whenE_throwError_wp check_vp_wpR get_master_pde_wp hoare_vcg_all_lift_R|
-            wpc|
-            simp add: valid_arch_inv_def valid_pti_def unlessE_whenE vs_cap_ref_def split: if_splits|
-
-            rule_tac x="fst p" in hoare_imp_eq_substR|
-            wp_once hoare_vcg_ex_lift_R)+)[1]
-
+    apply ((wp whenE_throwError_wp check_vp_wpR get_master_pde_wp hoare_vcg_all_lift_R
+            | wpc
+            | simp add: valid_arch_inv_def valid_pti_def unlessE_whenE vs_cap_ref_def split: if_splits
+            | rule_tac x="fst p" in hoare_imp_eq_substR
+            | wp_once hoare_vcg_ex_lift_R)+)[1]
          apply (rule_tac Q'="\<lambda>a b. ko_at (ArchObj (PageDirectory pd))
                                     (a + (args ! 0 >> 20 << 2) && ~~ mask pd_bits) b \<longrightarrow>
                                     pd (ucast (a + (args ! 0 >> 20 << 2) && mask pd_bits >> 2)) =
@@ -1489,16 +1464,16 @@ lemma arch_decode_inv_wf[wp]:
           apply (erule impE)
            apply clarsimp
           apply (erule impE)
-           apply (clarsimp split:pde.splits)
+           apply (clarsimp split: pde.splits)
           apply assumption
          apply ((wp whenE_throwError_wp hoare_vcg_all_lift_R
                     find_pd_for_asid_lookup_slot [unfolded lookup_pd_slot_def Let_def]
                     find_pd_for_asid_ref_offset_voodoo find_pd_for_asid_shifting_voodoo
-                    find_pd_for_asid_inv|
-                 wpc|
-                 simp add: valid_arch_inv_def valid_pti_def unlessE_whenE empty_pde_atI
-                           vs_cap_ref_def if_apply_def2|
-                 wp_once hoare_drop_imps hoare_vcg_ex_lift_R)+)[6]
+                    find_pd_for_asid_inv
+                 | wpc
+                 | simp add: valid_arch_inv_def valid_pti_def unlessE_whenE empty_pde_atI
+                             vs_cap_ref_def if_apply_def2
+                 | wp_once hoare_drop_imps hoare_vcg_ex_lift_R)+)[6]
    apply (clarsimp simp: is_cap_simps if_apply_def2)
    apply (rule conjI)
     apply clarsimp
@@ -1515,9 +1490,7 @@ lemma arch_decode_inv_wf[wp]:
      apply (drule cte_wp_at_norm, clarsimp, drule cte_wp_valid_cap, fastforce)+
      apply (drule (1) diminished_is_update[rotated])+
      apply (clarsimp simp add: cap_rights_update_def acap_rights_update_def)
-     apply (clarsimp simp: valid_cap_def cap_aligned_def
-                           pt_bits_def pageBits_def
-                           linorder_not_le
+     apply (clarsimp simp: valid_cap_def cap_aligned_def pt_bits_def pageBits_def linorder_not_le
                            order_le_less_trans[OF word_and_le2])
     apply (rule conjI)
      apply (clarsimp simp add: cte_wp_at_caps_of_state)
@@ -1547,16 +1520,13 @@ lemma arch_decode_inv_wf[wp]:
   apply (cases "isPDFlushLabel (invocation_type label)")
    apply simp
    apply (rule hoare_pre)
-    apply (wp whenE_throwError_wp static_imp_wp hoare_drop_imp | wpc | simp)+
-          apply (simp add: resolve_vaddr_def)
-          apply (wp get_master_pte_wp get_master_pde_wp whenE_throwError_wp | wpc | simp)+
-        apply (clarsimp simp: valid_arch_inv_def valid_pdi_def)+
-        apply (rule_tac Q'="\<lambda>pd' s. vspace_at_asid x2 pd' s \<and> x2 \<le> mask asid_bits \<and> x2 \<noteq> 0" in hoare_post_imp_R)
-         apply wp
-        apply clarsimp
-       apply (wp | wpc)+
-   apply (clarsimp simp: valid_cap_def mask_def)
-  apply (clarsimp, wp throwError_validE_R)
+    apply (wpsimp wp: whenE_throwError_wp static_imp_wp hoare_drop_imp get_master_pte_wp
+                      get_master_pde_wp whenE_throwError_wp
+                simp: resolve_vaddr_def valid_arch_inv_def valid_pdi_def)
+        apply (rule_tac Q'="\<lambda>pd' s. vspace_at_asid x2 pd' s \<and> x2 \<le> mask asid_bits \<and> x2 \<noteq> 0"
+                 in hoare_post_imp_R)
+         apply wpsimp+
+   apply (wpsimp wp: throwError_validE_R simp: valid_cap_def mask_def)+
   done
 
 

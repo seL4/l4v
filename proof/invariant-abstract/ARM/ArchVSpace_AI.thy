@@ -1450,18 +1450,14 @@ definition
 definition
   "valid_page_inv pg_inv \<equiv> case pg_inv of
     PageMap asid cap ptr m \<Rightarrow>
-      cte_wp_at (is_arch_update cap and ((=) None \<circ> vs_cap_ref)) ptr
+      cte_wp_at (is_arch_update cap) ptr
+      and (cte_wp_at (\<lambda>c. vs_cap_ref c = None) ptr or (\<lambda>s. cte_wp_at (\<lambda>c. same_refs m c s) ptr s))
       and cte_wp_at is_pg_cap ptr
       and (\<lambda>s. same_refs m cap s)
       and valid_slots m
       and valid_cap cap
       and K (is_pg_cap cap \<and> empty_refs m \<and> asid \<le> mask asid_bits \<and> asid \<noteq> 0)
       and (\<lambda>s. \<exists>slot. cte_wp_at (parent_for_refs m) slot s)
-      and (\<lambda>s. \<exists>pd. vspace_at_asid asid pd s)
-  | PageRemap asid m \<Rightarrow>
-      valid_slots m and K (empty_refs m \<and> asid \<le> mask asid_bits \<and> asid \<noteq> 0)
-      and (\<lambda>s. \<exists>slot. cte_wp_at (parent_for_refs m) slot s)
-      and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>cap. same_refs m cap s) slot s)
       and (\<lambda>s. \<exists>pd. vspace_at_asid asid pd s)
   | PageUnmap cap ptr \<Rightarrow>
      \<lambda>s. \<exists>dev r R sz m. cap = PageCap dev r R sz m \<and>
@@ -4547,10 +4543,10 @@ lemma perform_page_invs [wp]:
      apply (rename_tac asid cap cslot_ptr sum)
      apply clarsimp
      apply (rule hoare_pre)
-      apply (wp get_master_pte_wp get_master_pde_wp mapM_swp_store_pde_invs_unmap store_pde_invs_unmap' hoare_vcg_const_imp_lift hoare_vcg_all_lift set_cap_arch_obj arch_update_cap_invs_map
-             | wpc
-             | simp add: pte_check_if_mapped_def pde_check_if_mapped_def del: fun_upd_apply
-             | subst cte_wp_at_caps_of_state)+
+      apply (wpsimp wp: get_master_pte_wp get_master_pde_wp mapM_swp_store_pde_invs_unmap
+                        store_pde_invs_unmap' hoare_vcg_const_imp_lift hoare_vcg_all_lift
+                        set_cap_arch_obj arch_update_cap_invs_map
+                  simp: pte_check_if_mapped_def pde_check_if_mapped_def cte_wp_at_caps_of_state)
        apply (wp_once hoare_drop_imp)
        apply (wp arch_update_cap_invs_map)
        apply (rule hoare_vcg_conj_lift)
@@ -4558,30 +4554,23 @@ lemma perform_page_invs [wp]:
         apply (rule_tac f="valid_pte xa" in hoare_lift_Pf[OF _ set_cap_valid_pte_stronger])
         apply wp
        apply (rule hoare_lift_Pf2[where f=vs_lookup, OF _ set_cap.vs_lookup])
-       apply ((wp dmo_ccr_invs arch_update_cap_invs_map
-                 hoare_vcg_const_Ball_lift
-                 hoare_vcg_const_imp_lift hoare_vcg_all_lift set_cap_typ_at
-                 hoare_vcg_ex_lift hoare_vcg_ball_lift set_cap_arch_obj
-                 set_cap.vs_lookup
-              | wpc | simp add: same_refs_def del: fun_upd_apply split del: if_split
-              | subst cte_wp_at_caps_of_state)+)
+       apply (wpsimp wp: dmo_ccr_invs arch_update_cap_invs_map hoare_vcg_const_Ball_lift
+                         hoare_vcg_const_imp_lift hoare_vcg_all_lift set_cap_typ_at
+                         hoare_vcg_ex_lift hoare_vcg_ball_lift set_cap_arch_obj set_cap.vs_lookup
+              | simp add: same_refs_def del: fun_upd_apply)+
       apply (wp_once hoare_drop_imp)
       apply (wp arch_update_cap_invs_map hoare_vcg_ex_lift set_cap_arch_obj)
      apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state neq_Nil_conv
                            valid_slots_def empty_refs_def parent_for_refs_def
-                 simp del: fun_upd_apply del: exE
-                    split: sum.splits)
+                 simp del: fun_upd_apply del: exE split: sum.splits)
       apply (rule conjI)
-       apply (clarsimp simp: is_cap_simps is_arch_update_def
-                             cap_master_cap_simps
-                      dest!: cap_master_cap_eqDs)
+       apply (fastforce simp: same_refs_def)
       apply clarsimp
       apply (rule conjI)
        apply (rule_tac x=aa in exI, rule_tac x=ba in exI)
        apply (rule conjI)
-        apply (clarsimp simp: is_arch_update_def is_pt_cap_def is_pg_cap_def
-                              cap_master_cap_def image_def
-                        split: Structures_A.cap.splits arch_cap.splits)
+        apply (clarsimp simp: is_arch_update_def is_pt_cap_def is_pg_cap_def cap_master_cap_def image_def
+                       split: Structures_A.cap.splits arch_cap.splits)
        apply (clarsimp simp: is_pt_cap_def cap_asid_def image_def neq_Nil_conv Collect_disj_eq
                       split: Structures_A.cap.splits arch_cap.splits option.splits)
       apply (rule conjI)
@@ -4589,17 +4578,15 @@ lemma perform_page_invs [wp]:
        apply clarsimp
        apply fastforce
       apply (rule_tac x=aa in exI, rule_tac x=ba in exI)
-      apply (clarsimp simp: is_arch_update_def
-                            cap_master_cap_def is_cap_simps
+      apply (clarsimp simp: is_arch_update_def cap_master_cap_def is_cap_simps
                      split: Structures_A.cap.splits arch_cap.splits)
      apply (rule conjI)
       apply (erule exEI)
-      apply clarsimp
+      apply (clarsimp simp: same_refs_def)
      apply (rule conjI)
       apply clarsimp
       apply (rule_tac x=aa in exI, rule_tac x=ba in exI)
-      apply (clarsimp simp: is_arch_update_def
-                            cap_master_cap_def is_cap_simps
+      apply (clarsimp simp: is_arch_update_def cap_master_cap_def is_cap_simps
                      split: Structures_A.cap.splits arch_cap.splits)
      apply (rule conjI)
       apply (rule_tac x=a in exI, rule_tac x=b in exI, rule_tac x=cap in exI)
@@ -4625,97 +4612,45 @@ lemma perform_page_invs [wp]:
      apply (drule_tac x=sl in imageI[where f="\<lambda>x. x && ~~ mask pd_bits"])
      apply (drule (1) subsetD)
      apply (clarsimp simp: cap_range_def)
-   \<comment> \<open>PageRemap\<close>
-    apply (rule hoare_pre)
-     apply (wp get_master_pte_wp get_master_pde_wp hoare_vcg_ex_lift mapM_x_swp_store_pde_invs_unmap
-              | wpc | simp add: pte_check_if_mapped_def pde_check_if_mapped_def
-              | (rule hoare_vcg_conj_lift, rule_tac slots=x2a in store_pde_invs_unmap'))+
-    apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state
-                          valid_slots_def empty_refs_def neq_Nil_conv
-                    split: sum.splits)
-     apply (clarsimp simp: parent_for_refs_def same_refs_def is_cap_simps cap_asid_def split: option.splits)
-     apply (rule conjI, fastforce)
-     apply (rule conjI)
-      apply clarsimp
-      apply (rule_tac x=ac in exI, rule_tac x=bc in exI, rule_tac x=capa in exI)
-      apply clarsimp
-      apply (erule (2) ref_is_unique[OF _ _ reachable_page_table_not_global])
-              apply ((simp add: invs_def valid_state_def valid_arch_state_def
-                                   valid_arch_caps_def valid_pspace_def valid_objs_caps)+)[9]
-      apply fastforce
-     apply( frule valid_global_refsD2)
-      apply (clarsimp simp: cap_range_def parent_for_refs_def)+
-    apply (rule conjI, rule impI)
-     apply (rule exI, rule exI, rule exI)
-     apply (erule conjI)
-     apply clarsimp
-    apply (rule conjI, rule impI)
-     apply (rule_tac x=ac in exI, rule_tac x=bc in exI, rule_tac x=capa in exI)
-     apply (clarsimp simp: same_refs_def pde_ref_def pde_ref_pages_def
-                valid_pde_def invs_def valid_state_def valid_pspace_def)
-     apply (drule valid_objs_caps)
-     apply (clarsimp simp: valid_caps_def)
-     apply (drule spec, drule spec, drule_tac x=capa in spec, drule (1) mp)
-     apply (case_tac aa, (clarsimp simp add: data_at_pg_cap)+)[1]
-    apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
-
-    apply (rule conjI)
-     apply clarsimp
-     apply (drule_tac ptr="(ab,bb)" in
-            valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
-       apply simp+
-     apply force
-    apply (erule ballEI)
-    apply clarsimp
-    apply (drule_tac ptr="(ab,bb)" in
-            valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
-      apply simp+
-    apply force
 
    \<comment> \<open>PageUnmap\<close>
-   apply (rename_tac arch_cap cslot_ptr)
-   apply (rule hoare_pre)
-    apply (wp dmo_invs arch_update_cap_invs_unmap_page get_cap_wp
-              hoare_vcg_const_imp_lift | wpc | simp)+
-      apply (rule_tac Q="\<lambda>_ s. invs s \<and>
-                               cte_wp_at (\<lambda>c. is_pg_cap c \<and>
-                                 (\<forall>ref. vs_cap_ref c = Some ref \<longrightarrow>
-                                        \<not> (ref \<unrhd> obj_ref_of c) s)) cslot_ptr s"
-                   in hoare_strengthen_post)
-       prefer 2
-       apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps
-                             update_map_data_def
-                             is_arch_update_def cap_master_cap_simps)
-       apply (drule caps_of_state_valid, fastforce)
-       apply (clarsimp simp: valid_cap_def cap_aligned_def vs_cap_ref_def
-                      split: option.splits vmpage_size.splits cap.splits)
-      apply (simp add: cte_wp_at_caps_of_state)
-      apply (wp unmap_page_invs hoare_vcg_ex_lift hoare_vcg_all_lift
-                hoare_vcg_imp_lift unmap_page_unmapped)+
-   apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state)
-   apply (clarsimp simp: is_arch_diminished_def)
-   apply (drule (2) diminished_is_update')
-   apply (clarsimp simp: is_cap_simps cap_master_cap_simps is_arch_update_def
-                         update_map_data_def cap_rights_update_def
-                         acap_rights_update_def)
-   using valid_validate_vm_rights[simplified valid_vm_rights_def]
-   apply (auto simp: valid_cap_def cap_aligned_def mask_def vs_cap_ref_def data_at_def
-                   split: vmpage_size.splits option.splits if_splits)[1]
+    apply (rename_tac arch_cap cslot_ptr)
+    apply (rule hoare_pre)
+     apply (wp dmo_invs arch_update_cap_invs_unmap_page get_cap_wp
+               hoare_vcg_const_imp_lift | wpc | simp)+
+       apply (rule_tac Q="\<lambda>_ s. invs s \<and>
+                                cte_wp_at (\<lambda>c. is_pg_cap c \<and>
+                                  (\<forall>ref. vs_cap_ref c = Some ref \<longrightarrow>
+                                         \<not> (ref \<unrhd> obj_ref_of c) s)) cslot_ptr s"
+                    in hoare_strengthen_post)
+        prefer 2
+        apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps update_map_data_def
+                              is_arch_update_def cap_master_cap_simps)
+        apply (drule caps_of_state_valid, fastforce)
+        apply (clarsimp simp: valid_cap_def cap_aligned_def vs_cap_ref_def
+                       split: option.splits vmpage_size.splits cap.splits)
+       apply (simp add: cte_wp_at_caps_of_state)
+       apply (wp unmap_page_invs hoare_vcg_ex_lift hoare_vcg_all_lift
+                 hoare_vcg_imp_lift unmap_page_unmapped)+
+    apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state is_arch_diminished_def)
+    apply (drule (2) diminished_is_update')
+    apply (clarsimp simp: is_cap_simps cap_master_cap_simps is_arch_update_def update_map_data_def
+                          cap_rights_update_def acap_rights_update_def)
+  using valid_validate_vm_rights[simplified valid_vm_rights_def]
+    apply (auto simp: valid_cap_def cap_aligned_def mask_def vs_cap_ref_def data_at_def
+                    split: vmpage_size.splits option.splits if_splits)[1]
 
-  \<comment> \<open>PageFlush\<close>
-  apply (rule hoare_pre)
-   apply (wp dmo_invs set_vm_root_for_flush_invs
-             hoare_vcg_const_imp_lift hoare_vcg_all_lift
-          | simp)+
-    apply (rule hoare_pre_imp[of _ \<top>], assumption)
-    apply (clarsimp simp: valid_def)
-    apply (thin_tac "p \<in> fst (set_vm_root_for_flush a b s)" for p a b)
-    apply(safe)
-     apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-            in use_valid)
-       apply ((clarsimp | wp)+)[3]
-    apply(erule use_valid, wp no_irq_do_flush no_irq, assumption)
-   apply(wp set_vm_root_for_flush_invs | simp add: valid_page_inv_def tcb_at_invs)+
+   \<comment> \<open>PageFlush\<close>
+   apply (rule hoare_pre)
+    apply (wpsimp wp: dmo_invs set_vm_root_for_flush_invs hoare_vcg_const_imp_lift hoare_vcg_all_lift)
+     apply (rule hoare_pre_imp[of _ \<top>], assumption)
+     apply (clarsimp simp: valid_def)
+     apply (thin_tac "p \<in> fst (set_vm_root_for_flush a b s)" for p a b)
+     apply (safe)
+      apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid)
+        apply (wpsimp+)[3]
+     apply (erule use_valid, wp no_irq_do_flush no_irq, assumption)
+    apply (wp set_vm_root_for_flush_invs | simp add: valid_page_inv_def tcb_at_invs)+
   done
 
 end
