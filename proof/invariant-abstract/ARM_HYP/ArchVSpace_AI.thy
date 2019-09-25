@@ -1871,20 +1871,16 @@ definition
 
 
 definition
-  "valid_page_inv pinv \<equiv> case pinv of
+  "valid_page_inv pg_inv \<equiv> case pg_inv of
     PageMap asid cap ptr m \<Rightarrow>
-      cte_wp_at (is_arch_update cap and ((=) None \<circ> vs_cap_ref)) ptr
+      cte_wp_at (is_arch_update cap) ptr
+      and (cte_wp_at (\<lambda>c. vs_cap_ref c = None) ptr or (\<lambda>s. cte_wp_at (\<lambda>c. same_refs m c s) ptr s))
       and cte_wp_at is_pg_cap ptr
       and (\<lambda>s. same_refs m cap s)
       and valid_slots m
       and valid_cap cap
       and K (is_pg_cap cap \<and> empty_refs m \<and> asid \<le> mask asid_bits \<and> asid \<noteq> 0)
       and (\<lambda>s. \<exists>slot. cte_wp_at (parent_for_refs m) slot s)
-      and (\<lambda>s. \<exists>pd. vspace_at_asid asid pd s)
-  | PageRemap asid m \<Rightarrow>
-      valid_slots m and K (empty_refs m \<and> asid \<le> mask asid_bits \<and> asid \<noteq> 0)
-      and (\<lambda>s. \<exists>slot. cte_wp_at (parent_for_refs m) slot s)
-      and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>cap. same_refs m cap s) slot s)
       and (\<lambda>s. \<exists>pd. vspace_at_asid asid pd s)
   | PageUnmap cap ptr \<Rightarrow>
      \<lambda>s. \<exists>dev r R sz m. cap = PageCap dev r R sz m \<and>
@@ -5694,6 +5690,7 @@ lemma perform_page_invs [wp]:
        apply (clarsimp simp: is_cap_simps is_arch_update_def
                              cap_master_cap_simps
                       dest!: cap_master_cap_eqDs)
+       apply (clarsimp simp: same_refs_def)
       apply clarsimp
       apply (rule conjI)
        apply (rule_tac x=aa in exI, rule_tac x=ba in exI)
@@ -5713,7 +5710,7 @@ lemma perform_page_invs [wp]:
                      split: Structures_A.cap.splits arch_cap.splits)
      apply (rule conjI)
       apply (erule exEI)
-      apply clarsimp
+      apply (clarsimp simp: same_refs_def)
      apply (rule conjI)
       apply clarsimp
       apply (rule_tac x=aa in exI, rule_tac x=ba in exI)
@@ -5744,65 +5741,6 @@ lemma perform_page_invs [wp]:
      apply (drule_tac x=sl in imageI[where f="\<lambda>x. x && ~~ mask pd_bits"])
      apply (drule (1) subsetD)
      apply (clarsimp simp: cap_range_def)
-   \<comment> \<open>PageRemap\<close>
-    apply (rule hoare_pre)
-     apply (wp get_master_pte_wp get_master_pde_wp hoare_vcg_ex_lift mapM_x_swp_store_pde_invs_unmap
-              | wpc | simp add: pte_check_if_mapped_def pde_check_if_mapped_def
-              | (rule hoare_vcg_conj_lift, rule_tac slots=x2a in store_pde_invs_unmap'))+
-    apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state
-                          valid_slots_def empty_refs_def neq_Nil_conv
-                    split: sum.splits)
-     apply (clarsimp simp: parent_for_refs_def same_refs_def is_cap_simps cap_asid_def split:option.splits)
-     apply (rule conjI, fastforce)
-     apply (rule conjI)
-      apply clarsimp
-      apply (rule_tac x=ac in exI, rule_tac x=bc in exI, rule_tac x=capa in exI)
-      apply (clarsimp simp: vspace_bits_defs)
-      apply (erule (2) ref_is_unique[OF _ _ reachable_page_table_not_global])
-              apply ((simp add: invs_def valid_state_def valid_arch_state_def
-                                   valid_arch_caps_def valid_pspace_def valid_objs_caps)+)[9]
-      apply fastforce
-     apply( frule valid_global_refsD2)
-      apply (clarsimp simp: cap_range_def parent_for_refs_def simp del: cap_asid_simps)+
-(*
-              apply (simp_all add: invs_def valid_state_def valid_arch_state_def
-                                   valid_arch_caps_def valid_pspace_def valid_objs_caps)[9]
-     apply fastforce
-    apply( frule valid_global_refsD2)
-     apply (clarsimp simp: cap_range_def parent_for_refs_def)+ *)
-    apply (rule conjI, rule impI)
-     apply (rule exI, rule exI, rule exI)
-     apply (erule conjI)
-     apply clarsimp
-    apply (rule conjI, rule impI)
-     apply (rule_tac x=ac in exI, rule_tac x=bc in exI, rule_tac x=capa in exI)
-     apply (clarsimp simp: same_refs_def pde_ref_def pde_ref_pages_def
-                valid_pde_def invs_def valid_state_def valid_pspace_def)
-     apply (drule valid_objs_caps)
-     apply (clarsimp simp: valid_caps_def)
-     apply (drule spec, drule spec, drule_tac x=capa in spec, drule (1) mp)
-     apply (case_tac aa, (clarsimp simp add: data_at_pg_cap)+)[1]
-(*     subgoal for _ _ aa by ((cases aa, simp_all);
-           ((clarsimp simp: valid_cap_def obj_at_def a_type_def is_ep_def
-                             is_ntfn_def is_cap_table_def is_tcb_def
-                             is_pg_cap_def vspace_bits_defs
-                     split: cap.splits Structures_A.kernel_object.splits
-                            if_split_asm
-                            arch_kernel_obj.splits option.splits
-                            arch_cap.splits))) *)
-    apply (clarsimp simp: pde_at_def obj_at_def a_type_def simp del: cap_asid_simps)
-    apply (rule conjI)
-     apply clarsimp
-     apply (drule_tac ptr="(ab,bb)" in
-            valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
-       apply simp+
-     apply force
-    apply (erule ballEI)
-    apply (clarsimp simp del: cap_asid_simps)
-(*    apply (drule_tac ptr="(ab,bb)" in
-            valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD]) *)
-      apply simp+
-    apply force
    \<comment> \<open>PageUnmap\<close>
    apply (rename_tac arch_cap cslot_ptr)
    apply (rule hoare_pre)
