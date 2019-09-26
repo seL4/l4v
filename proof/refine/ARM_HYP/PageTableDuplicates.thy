@@ -1816,60 +1816,6 @@ lemma performPageInvocation_valid_duplicates'[wp]:
   \<comment> \<open>PageFlush\<close>
      apply (simp_all add:performPageInvocation_def pteCheckIfMapped_def pdeCheckIfMapped_def)
      apply ((wp|simp|wpc)+)[2]
-    \<comment> \<open>PageRemap\<close>
-    apply (rename_tac word sum)
-    apply (case_tac sum)
-     apply (case_tac a)
-     apply (case_tac aa)
-       apply (clarsimp simp:valid_arch_inv'_def
-          valid_page_inv'_def valid_slots'_def
-          valid_slots_duplicated'_def mapM_singleton)
-       apply (wp PageTableDuplicates.storePTE_no_duplicates' getPTE_wp | simp)+
-       apply (clarsimp simp: nondup_obj_def)
-      apply (subst mapM_discarded)
-      apply (clarsimp simp: valid_arch_inv'_def valid_page_inv'_def valid_slots'_def
-                           valid_slots_duplicated'_def)
-      apply (rule hoare_seq_ext[OF _ getObject_pte_sp])
-      apply (wp|simp)+
-       apply (rule_tac p=p in mapM_x_largePagePTEOffsets)
-      apply (simp add:invs_pspace_aligned' vspace_bits_defs)
-     apply (subst mapM_discarded)
-     apply (clarsimp simp:valid_arch_inv'_def
-          valid_page_inv'_def valid_slots'_def
-          valid_slots_duplicated'_def mapM_x_singleton)
-     apply (rule hoare_seq_ext[OF _ getObject_pte_sp])
-     apply (wp PageTableDuplicates.storePTE_no_duplicates' | simp)+
-     apply (simp add:nondup_obj_def)
-    apply (subst mapM_discarded)+
-    apply (case_tac b)
-    apply (case_tac a)
-       apply (clarsimp simp:valid_arch_inv'_def
-          valid_page_inv'_def valid_slots'_def
-          valid_slots_duplicated'_def mapM_x_singleton)
-       apply (rule hoare_seq_ext[OF _ getObject_pde_sp])
-       apply (wp PageTableDuplicates.storePDE_no_duplicates' | simp add: when_def)+
-       apply (simp add: nondup_obj_def)+
-      apply (rule hoare_seq_ext[OF _ getObject_pde_sp])
-      apply (clarsimp simp:valid_arch_inv'_def
-          valid_page_inv'_def valid_slots'_def
-          valid_slots_duplicated'_def mapM_x_singleton)
-      apply (wp|wpc|simp add:nondup_obj_def)+
-      apply ((wp PageTableDuplicates.storePDE_no_duplicates' | wpc | simp)+)[1]
-      apply (simp add: nondup_obj_def)+
-     apply (rule hoare_seq_ext[OF _ getObject_pde_sp])
-     apply (clarsimp simp:valid_arch_inv'_def
-          valid_page_inv'_def valid_slots'_def
-          valid_slots_duplicated'_def mapM_x_singleton)
-     apply (wp|wpc|simp add:)+
-     apply (wp PageTableDuplicates.storePDE_no_duplicates')
-     apply (simp add: nondup_obj_def)+
-    apply (rule hoare_seq_ext[OF _ getObject_pde_sp])
-    apply (clarsimp simp:valid_arch_inv'_def
-          valid_page_inv'_def valid_slots'_def
-          valid_slots_duplicated'_def mapM_x_singleton)
-    apply (wp|wpc|simp add:vs_entry_align_def)+
-     apply (rule_tac p=p in mapM_x_superSectionPDEOffsets)
-    apply clarsimp
    \<comment> \<open>PageMap\<close>
    apply (clarsimp simp: pteCheckIfMapped_def pdeCheckIfMapped_def)
    apply (clarsimp simp:valid_pde_slots'_def valid_page_inv'_def
