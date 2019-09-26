@@ -1894,9 +1894,7 @@ lemma cte_wp_parent_not_global_pd: "valid_global_refs s \<Longrightarrow> cte_wp
 
 definition authorised_for_globals_page_inv :: "page_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
   where "authorised_for_globals_page_inv pgi \<equiv>
-    \<lambda>s. case pgi of PageMap asid cap ptr m \<Rightarrow>
-  \<exists>slot. cte_wp_at (parent_for_refs m) slot s | PageRemap asid m \<Rightarrow>
-  \<exists>slot. cte_wp_at (parent_for_refs m) slot s | _ \<Rightarrow> True"
+    \<lambda>s. case pgi of PageMap asid cap ptr m \<Rightarrow> \<exists>slot. cte_wp_at (parent_for_refs m) slot s | _ \<Rightarrow> True"
 
 lemma set_cap_valid_ko_at_arm[wp]:
   "\<lbrace>valid_ko_at_arm\<rbrace> set_cap cap p \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
@@ -2253,7 +2251,6 @@ lemma decode_arch_invocation_authorised_for_globals:
             apply(insert pbfs_less_wb)
             apply(clarsimp)
            apply(fastforce simp: x_power_minus_1)
-          \<comment> \<open>Remap\<close>
           apply(clarsimp)
           apply(fastforce dest: diminished_cte_wp_at_valid_cap simp: invs_def valid_state_def valid_cap_def)
          \<comment> \<open>Unmap\<close>
