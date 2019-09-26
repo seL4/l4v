@@ -155,14 +155,6 @@ datatype cdl_page_table_intent =
 datatype cdl_page_intent =
     (* Map: (target), (pd), vaddr, rights, attr *)
     PageMapIntent word32 "cdl_right set" cdl_raw_vmattrs
-    (*
-     * Remap: (target), (pd), rights, attr
-     *
-     * Note that Remap differs from the abstract spec. This is to
-     * prevent Remap() from taking place after all rights to the PD
-     * are long-gone.
-     *)
- |  PageRemapIntent"cdl_right set" cdl_raw_vmattrs
     (* Unmap: (target) *)
  |  PageUnmapIntent
     (* FlushCaches: (target) *)

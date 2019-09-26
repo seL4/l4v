@@ -43,7 +43,7 @@ where
     \<comment> \<open>
       Map the given PageTable into the given PageDirectory at the given
       virtual address.
-     
+
       The concrete implementation only allows a PageTable to be mapped
       once at any point in time, but we don't enforce that here.
      \<close>
@@ -95,7 +95,7 @@ where
       \<comment> \<open>
         Map the given Page into the given PageDirectory or PageTable at
         the given virtual address.
-       
+
         The concrete implementation only allows a Page to be mapped
         once at any point in time, but we don't enforce that here.
        \<close>
@@ -109,7 +109,7 @@ where
               | _ \<Rightarrow> throw;
 
           \<comment> \<open>Collect mapping from target cap.\<close>
-          (frame, sz,dev) \<leftarrow> returnOk $ (case target of FrameCap dev p R sz m mp \<Rightarrow> (p,sz,dev));
+          (frame,sz,dev) \<leftarrow> returnOk $ (case target of FrameCap dev p R sz m mp \<Rightarrow> (p,sz,dev));
 
           target_slots \<leftarrow> cdl_page_mapping_entries vaddr sz pd_object_id;
 
@@ -128,31 +128,6 @@ where
         | _ \<Rightarrow> throw);
       (returnOk $ PageUnmap asid frame target_ref sz) \<sqinter> throw
       odE
-
-    \<comment> \<open>Change the rights on a given mapping.\<close>
-    | PageRemapIntent rights attrs \<Rightarrow>
-        doE
-          \<comment> \<open>Ensure user has a right to the PD.\<close>
-          pd \<leftarrow> throw_on_none $ get_index caps 0;
-          pd_object_id \<leftarrow>
-            case (fst pd) of
-                PageDirectoryCap x _ _ \<Rightarrow> returnOk x
-              | _ \<Rightarrow> throw;
-
-          pd_object \<leftarrow> liftE $ get_object pd_object_id;
-
-          \<comment> \<open>Find all of our children caps.\<close>
-          pd_slots \<leftarrow> liftE $ gets $ all_pd_pt_slots pd_object pd_object_id;
-          target_slots \<leftarrow> liftE $ select {M. set M \<subseteq> pd_slots \<and> distinct M};
-
-          \<comment> \<open>Calculate rights.\<close>
-          new_rights \<leftarrow> returnOk $ validate_vm_rights $ cap_rights target \<inter> rights;
-
-          \<comment> \<open>Collect mapping from target cap.\<close>
-          (frame, sz, dev) \<leftarrow> returnOk $ (case target of FrameCap dev p R sz m mp \<Rightarrow> (p,sz,dev));
-
-          returnOk $ PageRemap (FrameCap False frame new_rights sz Fake None) target_slots
-        odE \<sqinter> throw
 
     \<comment> \<open>Flush the caches associated with this page.\<close>
     | PageFlushCachesIntent \<Rightarrow>
@@ -220,10 +195,6 @@ where
         cap \<leftarrow> get_cap frame_cap_ref;
         set_cap frame_cap_ref (reset_mem_mapping cap)
       od
-
-
-    | PageRemap pseudo_frame_cap target_slots \<Rightarrow>
-          mapM_x (swp set_cap pseudo_frame_cap) target_slots
 
     | PageFlushCaches flush \<Rightarrow> return ()
 

@@ -250,7 +250,6 @@ text \<open>
 
   Should only be used on bounded revokes.
    * PageTableUnmap pt_cap_ref
-   * PageRemap _ frame_cap_ref _
    * PageUnmap frame_cap_ref \<Rightarrow>
    * revoke_cap_simple (target_tcb, tcb_replycap_slot)
 \<close>
