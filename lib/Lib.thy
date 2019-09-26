@@ -2551,4 +2551,12 @@ lemma int_eq_test_bit:
   done
 lemmas int_eq_test_bitI = int_eq_test_bit[THEN iffD2, rule_format]
 
+lemma le_nat_shrink_left:
+  "y \<le> z \<Longrightarrow> y = Suc x \<Longrightarrow> x < z"
+  by simp
+
+lemma length_ge_split:
+  "n < length xs \<Longrightarrow> \<exists>x xs'. xs = x # xs' \<and> n \<le> length xs'"
+  by (cases xs) auto
+
 end

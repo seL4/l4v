@@ -5744,4 +5744,8 @@ lemma word_ctz_not_minus_1:
 
 lemmas word_ctz_not_minus_1_32 = word_ctz_not_minus_1[where 'a=32, simplified]
 
+lemma word_aligned_add_no_wrap_bounded:
+  "\<lbrakk> w + 2^n \<le> x; w + 2^n \<noteq> 0; is_aligned w n \<rbrakk> \<Longrightarrow> (w::'a::len word) < x"
+  by (blast dest: is_aligned_no_overflow le_less_trans minus_one_helper)
+
 end
