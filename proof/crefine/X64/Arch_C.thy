@@ -1714,96 +1714,6 @@ lemma performPageInvocationMapPDE_ccorres:
   apply clarsimp
   done
 
-lemma performPageInvocationRemapPDE_ccorres:
-  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and (\<lambda>s. 7 \<le> gsMaxObjectSize s)
-           and (\<lambda>_. asid \<le> mask asid_bits \<and> page_entry_map_corres mapping))
-       (UNIV \<inter> {s. cpde_relation (thePDE (fst mapping)) (pde_' s)}
-             \<inter> {s. pdSlot_' s = pde_Ptr (thePDEPtr (snd mapping))}
-             \<inter> {s. asid_' s = asid}
-             \<inter> {s. vspace_' s = pml4e_Ptr vspace}
-             \<inter> {s. isVMPDE mapping}) []
-       (liftE (performPageInvocation (PageRemap mapping asid vspace)))
-       (Call performX86PageInvocationRemapPDE_'proc)"
-  supply pageBitsForSize_le_64 [simp]
-  apply (rule ccorres_gen_asm2)
-  apply (rule ccorres_gen_asm)
-  apply (simp only: liftE_liftM ccorres_liftM_simp)
-  apply (cinit lift:  pde_' pdSlot_' asid_' vspace_')
-   apply (clarsimp simp: page_entry_map_corres_def isVMPDE_def)
-   (* FIXME x64: UGLY HACK *)
-   apply (rule ccorres_seq_skip[THEN iffD1],
-             rule ccorres_add_return,
-              ctac (no_vcg) add: ccorres_return_Skip)
-     apply (rule ccorres_split_nothrow)
-         apply (rule storePDE_Basic_ccorres'')
-        apply ceqv
-       apply csymbr
-       apply (rule ccorres_add_return2)
-       apply (rule ccorres_split_nothrow)
-           apply (rule ccorres_call[where xf'=xfdc])
-              apply (ctac add: invalidatePageStructureCacheASID_ccorres)
-             apply clarsimp
-            apply clarsimp
-           apply clarsimp
-          apply ceqv
-         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-         apply (rule allI, rule conseqPre, vcg)
-         apply (clarsimp simp: return_def)
-        apply wp
-       apply (vcg exspec=invalidatePageStructureCacheASID_modifies)
-      apply wp
-     apply vcg
-    apply wp
-   apply (clarsimp simp: isCap_simps dest!: cap_get_tag_isCap_unfolded_H_cap)
-  apply clarsimp
-  done
-
-lemma performPageInvocationRemapPTE_ccorres:
-  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and (\<lambda>s. 7 \<le> gsMaxObjectSize s)
-           and (\<lambda>_. asid \<le> mask asid_bits \<and> page_entry_map_corres mapping))
-       (UNIV \<inter> {s. cpte_relation (thePTE (fst mapping)) (pte_' s)}
-             \<inter> {s. ptSlot_' s = pte_Ptr (thePTEPtr (snd mapping))}
-             \<inter> {s. asid_' s = asid}
-             \<inter> {s. vspace_' s = pml4e_Ptr vspace}
-             \<inter> {s. isVMPTE mapping}) []
-       (liftE (performPageInvocation (PageRemap mapping asid vspace)))
-       (Call performX86PageInvocationRemapPTE_'proc)"
-  supply pageBitsForSize_le_64 [simp]
-  apply (rule ccorres_gen_asm2)
-  apply (rule ccorres_gen_asm)
-  apply (simp only: liftE_liftM ccorres_liftM_simp)
-  apply (cinit lift:  pte_' ptSlot_' asid_' vspace_')
-   apply (clarsimp simp: page_entry_map_corres_def isVMPTE_def)
-   (* FIXME x64: UGLY HACK *)
-   apply (rule ccorres_seq_skip[THEN iffD1],
-             rule ccorres_add_return,
-              ctac (no_vcg) add: ccorres_return_Skip)
-     apply (rule ccorres_split_nothrow)
-         apply (rule storePTE_Basic_ccorres'')
-        apply ceqv
-       apply csymbr
-       apply (rule ccorres_add_return2)
-       apply (rule ccorres_split_nothrow)
-           apply (rule ccorres_call[where xf'=xfdc])
-              apply (ctac add: invalidatePageStructureCacheASID_ccorres)
-             apply clarsimp
-            apply clarsimp
-           apply clarsimp
-          apply ceqv
-         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-         apply (rule allI, rule conseqPre, vcg)
-         apply (clarsimp simp: return_def)
-        apply wp
-       apply (vcg exspec=invalidatePageStructureCacheASID_modifies)
-      apply wp
-     apply vcg
-    apply wp
-   apply (clarsimp simp: isCap_simps dest!: cap_get_tag_isCap_unfolded_H_cap)
-  apply clarsimp
-  done
-
 definition
   "isVMPDPTE entry \<equiv> \<exists>x y. entry = (VMPDPTE x, VMPDPTEPtr y)"
 
@@ -1864,40 +1774,6 @@ lemma updatePDPTE_ccorres:
      apply (vcg exspec=invalidatePageStructureCacheASID_modifies)
     apply wp
    apply vcg
-  apply clarsimp
-  done
-
-lemma performPageInvocationRemapPDPTE_ccorres:
-  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       ((\<lambda>s. page_entry_map_corres mapping))
-       (UNIV \<inter> {s. cpdpte_relation (thePDPTE (fst mapping)) (pdpte_' s)}
-             \<inter> {s. pdptSlot_' s = pdpte_Ptr (thePDPTEPtr (snd mapping))}
-             \<inter> {s. asid_' s = asid}
-             \<inter> {s. vspace_' s = pml4e_Ptr vspace}
-             \<inter> {s. isVMPDPTE mapping}) hs
-       (liftE (performPageInvocation (PageRemap mapping asid vspace)))
-       (Call performX64ModeRemap_'proc)"
-  supply pageBitsForSize_le_64 [simp]
-  apply (rule ccorres_gen_asm2)
-  apply (simp add: performPageInvocation_def bind_liftE_distrib)
-  apply (cinit' lift:  pdpte_' pdptSlot_' asid_' vspace_')
-   apply (clarsimp simp: page_entry_map_corres_def isVMPDPTE_def)
-   (* FIXME x64: UGLY HACK *)
-   apply (rule ccorres_seq_skip[THEN iffD1],
-             rule ccorres_add_return,
-              ctac (no_vcg) add: ccorres_return_Skip)
-     apply (rule ccorres_add_returnOk)
-     apply (ctac add: updatePDPTE_ccorres)
-        apply (rule ccorres_return_CE)
-          apply clarsimp
-         apply clarsimp
-        apply clarsimp
-       apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
-       apply clarsimp
-      apply wp
-     apply vcg
-    apply wp
-   apply clarsimp
   apply clarsimp
   done
 
@@ -2074,6 +1950,12 @@ lemma ptrFromPAddr_add_left:
 lemma at_least_3_args:
   "\<not>  length args < 3 \<Longrightarrow> \<exists>a b c d. args = a#b#c#d"
   apply (case_tac args; simp)
+  apply (rename_tac list, case_tac list; simp)+
+  done
+
+lemma list_3_collapse:
+  "\<lbrakk> length xs \<ge> 3; a = xs ! 0; b = xs ! 1; c = xs ! 2; d = drop 3 xs \<rbrakk> \<Longrightarrow> a # b # c # d = xs"
+  apply (case_tac xs; simp)
   apply (rename_tac list, case_tac list; simp)+
   done
 
@@ -2287,63 +2169,6 @@ lemma createSafeMappingEntries_PDPTE_ccorres:
                 split: pdpte.splits)
   done
 
-lemma decodeX86ModeRemapPage_ccorres:
-  "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-            (invs' and page_map_l4_at' pml4 and (\<lambda>s. thread = ksCurThread s)
-                   and K (vmsz_aligned' base vsz \<and> base \<in> kernel_mappings \<and> vsz = X64HugePage
-                          \<and> isPageCap cap \<and> (\<exists>addr. capVPMappedAddress cap = Some (asid, addr))
-                          \<and> capVPBasePtr cap = base))
-            (UNIV \<inter> \<lbrace>\<acute>label___unsigned_long = scast X86PageRemap\<rbrace>
-                  \<inter> \<lbrace>\<acute>page_size = framesize_from_H vsz\<rbrace>
-                  \<inter> \<lbrace>\<acute>vroot = pml4e_Ptr pml4\<rbrace>
-                  \<inter> \<lbrace>ccap_relation (ArchObjectCap cap) \<acute>cap\<rbrace>
-                  \<inter> \<lbrace>\<acute>paddr = addrFromPPtr base\<rbrace>
-                  \<inter> \<lbrace>vmrights_to_H \<acute>vm_rights = rights \<and> \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0\<rbrace>
-                  \<inter> \<lbrace>vm_attribs_relation attribs \<acute>vm_attr\<rbrace>
-                  \<inter> \<lbrace>\<acute>vaddr___unsigned_long = vaddr\<rbrace>)
-            hs
-            (doE x <- injection_handler Inl
-                  (createSafeMappingEntries (addrFromPPtr base) vaddr vsz rights attribs pml4);
-                 invocationCatch thread isBlocking isCall Invocations_H.invocation.InvokeArchObject
-                    (Inr (invocation.InvokePage (PageRemap x asid pml4)))
-             odE)
-            (Call decodeX86ModeMapRemapPage_'proc)"
-  supply if_cong[cong] tl_drop_1[simp] Collect_const[simp del] dc_simp[simp del]
-  apply (simp add: K_def)
-  apply (rule ccorres_gen_asm)
-  apply (cinit' lift: label___unsigned_long_' page_size_' vroot_' cap_' paddr_' vm_rights_' vm_attr_'
-                      vaddr___unsigned_long_'
-                simp: bindE_assoc injection_handler_bindE)
-   apply (simp cong: StateSpace.state.fold_congs globals.fold_congs)
-   apply (clarsimp simp: framesize_from_H_simps, ccorres_rewrite)
-   apply (rule ccorres_rhs_assoc)+
-   apply csymbr
-   apply (ctac add: ccorres_injection_handler_csum1 [OF createSafeMappingEntries_PDPTE_ccorres])
-      apply (simp add: Collect_False performX64MMUInvocations bindE_assoc bind_assoc)
-      apply (ctac add: setThreadState_ccorres)
-        apply (rule ccorres_cond_false)
-        apply (rule ccorres_rhs_assoc)+
-        apply csymbr
-        apply (ctac(no_vcg) add: performPageInvocationRemapPDPTE_ccorres)
-          apply (rule ccorres_alternative2)
-          apply (rule ccorres_return_CE, simp+)[1]
-         apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-        apply wp
-       apply (wp sts_invs_minor')
-      apply simp
-      apply (vcg exspec=setThreadState_modifies)
-     apply (simp, ccorres_rewrite)
-     apply (rule ccorres_return_C_errorE, simp+)[1]
-    apply (simp add: createSafeMappingEntries_def)
-    apply (wp injection_wp[OF refl] createMappingEntries_wf)
-   apply (simp add: all_ex_eq_helper)
-   apply (vcg exspec=createSafeMappingEntries_PDPTE_modifies)
-  apply (clarsimp simp: invs_valid_objs' tcb_at_invs' vmsz_aligned_addrFromPPtr' invs_queues
-                        valid_tcb_state'_def invs_sch_act_wf' ThreadState_Restart_def rf_sr_ksCurThread
-                        arch_invocation_label_defs mask_def isCap_simps)
-  apply (frule cap_get_tag_isCap_unfolded_H_cap)
-  by (clarsimp dest!: ccap_relation_PageCap_MappedASID)
-
 lemma ccap_relation_PML4Cap_BasePtr:
   "ccap_relation (ArchObjectCap (PML4Cap p r)) ccap
     \<Longrightarrow> capPML4BasePtr_CL (cap_pml4_cap_lift ccap) = p"
@@ -2371,7 +2196,7 @@ lemma decodeX86ModeMapPage_ccorres:
                  invocationCatch thread isBlocking isCall Invocations_H.invocation.InvokeArchObject
                     (Inr (invocation.InvokePage (PageMap (ArchObjectCap cap) slot x pml4)))
              odE)
-            (Call decodeX86ModeMapRemapPage_'proc)"
+            (Call decodeX86ModeMapPage_'proc)"
   supply if_cong[cong] tl_drop_1[simp] Collect_const[simp del] dc_simp[simp del]
   apply (simp add: K_def)
   apply (rule ccorres_gen_asm)
@@ -2447,8 +2272,93 @@ lemma framesize_to_from_H:
            split: if_split vmpage_size.splits)
   by (word_bitwise, auto)
 
+lemma cap_get_tag_PDPTCap:
+  "ccap_relation cap cap' \<Longrightarrow>
+     (cap_get_tag cap' = SCAST(32 signed \<rightarrow> 64) cap_pdpt_cap) =
+     (cap = ArchObjectCap
+        (PDPointerTableCap (capPDPTBasePtr_CL (cap_pdpt_cap_lift cap'))
+                           (if to_bool (capPDPTIsMapped_CL (cap_pdpt_cap_lift cap'))
+                            then Some (capPDPTMappedASID_CL (cap_pdpt_cap_lift cap'),
+                                       capPDPTMappedAddress_CL (cap_pdpt_cap_lift cap'))
+                            else None)))"
+  apply (rule iffI)
+   apply (erule ccap_relationE)
+   apply (clarsimp simp: cap_lifts cap_to_H_def)
+  apply (simp add: cap_get_tag_isCap_unfolded_H_cap)
+  done
+
+lemma cap_get_tag_PML4Cap:
+  "ccap_relation cap cap' \<Longrightarrow>
+     (cap_get_tag cap' = SCAST(32 signed \<rightarrow> 64) cap_pml4_cap) =
+     (cap = ArchObjectCap
+        (PML4Cap (capPML4BasePtr_CL (cap_pml4_cap_lift cap'))
+                          (if to_bool (capPML4IsMapped_CL (cap_pml4_cap_lift cap'))
+                           then Some (capPML4MappedASID_CL (cap_pml4_cap_lift cap'))
+                           else None)))"
+  apply (rule iffI)
+   apply (erule ccap_relationE)
+   apply (clarsimp simp: cap_lifts cap_to_H_def)
+  apply (simp add: cap_get_tag_isCap_unfolded_H_cap)
+  done
+
+lemma ccap_relation_capPML4MappedASID_liftE:
+  "\<lbrakk> ccap_relation c c'; cap_get_tag c' = SCAST(32 signed \<rightarrow> 64) cap_pml4_cap;
+     capPML4MappedASID (capCap c) = Some y \<rbrakk>
+    \<Longrightarrow> capPML4MappedASID_CL (cap_pml4_cap_lift c') = the (capPML4MappedASID (capCap c))"
+  by (simp add: cap_get_tag_PML4Cap split: if_splits)
+
+lemma ccap_relation_PageCap_generics:
+  "ccap_relation (ArchObjectCap (PageCap word vmrights mt vmpage_size d map_data)) cap'
+    \<Longrightarrow> (map_data \<noteq> None \<longrightarrow>
+           capFMappedAddress_CL (cap_frame_cap_lift cap')
+                    = snd (the map_data)
+         \<and> capFMappedASID_CL (cap_frame_cap_lift cap')
+                    = fst (the map_data))
+      \<and> ((capFMappedASID_CL (cap_frame_cap_lift cap') = 0)
+                    = (map_data = None))
+      \<and> vmrights_to_H (capFVMRights_CL (cap_frame_cap_lift cap')) = vmrights
+      \<and> framesize_to_H (capFSize_CL (cap_frame_cap_lift cap')) = vmpage_size
+      \<and> capFBasePtr_CL (cap_frame_cap_lift cap') = word
+      \<and> to_bool (capFIsDevice_CL (cap_frame_cap_lift cap')) = d
+      \<and> capFSize_CL (cap_frame_cap_lift cap') < 3
+      \<and> capFMapType_CL (cap_frame_cap_lift cap') < 2
+      \<and> capFVMRights_CL (cap_frame_cap_lift cap') < 4
+      \<and> capFVMRights_CL (cap_frame_cap_lift cap') \<noteq> 0"
+  apply (frule cap_get_tag_isCap_unfolded_H_cap)
+  apply (frule cap_get_tag_PageCap_frame)
+  apply (frule ccap_relation_c_valid_cap)
+  apply (clarsimp simp: cap_frame_cap_lift c_valid_cap_def cl_valid_cap_def split: if_split_asm)
+  done
+
+lemma throwError_invocationCatch:
+  "throwError a >>= invocationCatch b c d e = throwError (Inl a)"
+  by (simp add: invocationCatch_def throwError_bind)
+
+(* FIXME: get rid of vmsz_aligned' *)
+lemma vmsz_aligned'_eq:
+  "vmsz_aligned' = vmsz_aligned"
+  by (fastforce simp: vmsz_aligned'_def vmsz_aligned_def)
+
+lemma canonical_address_cap_frame_cap:
+  "cap_get_tag cap = SCAST(32 signed \<rightarrow> 64) cap_frame_cap \<Longrightarrow>
+     canonical_address (capFMappedAddress_CL (cap_frame_cap_lift cap))"
+  apply (frule_tac cap_lift_frame_cap)
+  apply (subst(asm) cap_frame_cap_lift)
+  apply clarsimp
+  apply (drule_tac t="cap_frame_cap_lift cap" in sym)
+  apply (rule sign_extend_canonical_address[THEN iffD1])
+  apply (fastforce simp: sign_extend_sign_extend_eq)
+  done
+
 lemma decodeX64FrameInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp] Collect_const[simp del]
+  defines "does_not_throw args extraCaps maptype pg_sz mapdata \<equiv>
+           (mapdata = None \<longrightarrow> \<not> (unat user_vtop < unat (hd args)
+                                  \<or> unat user_vtop < unat (hd args + 2 ^ pageBitsForSize pg_sz)))
+           \<and> (mapdata \<noteq> None \<longrightarrow>
+                (fst (the mapdata) = (the (capPML4MappedASID (capCap (fst (extraCaps ! 0)))))
+                 \<and> maptype = VMVSpaceMap
+                 \<and> snd (the mapdata) = hd args))"
   shows
   "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps;
           isPageCap cp \<rbrakk>
@@ -2468,7 +2378,7 @@ lemma decodeX64FrameInvocation_ccorres:
        (decodeX64MMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeX86FrameInvocation_'proc)"
-  apply (clarsimp simp only: isCap_simps) using [[goals_limit=30]]
+  apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' excaps_' cap_' buffer_'
                 simp: decodeX64MMUInvocation_def )
    apply (simp add: Let_def isCap_simps invocation_eq_use_types split_def decodeX64FrameInvocation_def
@@ -2476,524 +2386,410 @@ lemma decodeX64FrameInvocation_ccorres:
               cong: StateSpace.state.fold_congs globals.fold_congs
                     if_cong invocation_label.case_cong arch_invocation_label.case_cong list.case_cong)
    apply (rule ccorres_Cond_rhs[rotated])+
-         apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
-        apply (rule ccorres_equals_throwError)
-         apply (fastforce simp: throwError_bind invocationCatch_def
-                        split: invocation_label.split arch_invocation_label.split)
-        apply (rule syscall_error_throwError_ccorres_n)
-        apply (simp add: syscall_error_to_H_cases)
-       (* PageGetAddress *)
-       apply (simp add: returnOk_bind bindE_assoc performX64MMUInvocations)
-       apply (rule ccorres_rhs_assoc)+
-       apply (ctac add: setThreadState_ccorres)
-         apply csymbr
-         apply (ctac(no_vcg) add: performPageGetAddress_ccorres)
-           apply (rule ccorres_alternative2)
-           apply (rule ccorres_return_CE, simp+)[1]
-          apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-         apply wp+
-       apply (vcg exspec=setThreadState_modifies)
-      apply (rule ccorres_rhs_assoc)+
+      apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+      apply (rule ccorres_equals_throwError)
+       apply (fastforce simp: throwError_bind invocationCatch_def
+                       split: invocation_label.split arch_invocation_label.split)
+      apply (rule syscall_error_throwError_ccorres_n)
+      apply (simp add: syscall_error_to_H_cases)
 
-(* X64PageUnmap *)
-     apply (simp add: returnOk_bind bindE_assoc
-                      performX64MMUInvocations)
+     \<comment> \<open>PageGetAddress\<close>
+     apply (simp add: returnOk_bind bindE_assoc performX64MMUInvocations)
+     apply (rule ccorres_rhs_assoc)+
      apply (ctac add: setThreadState_ccorres)
-       apply (ctac(no_vcg) add: performPageInvocationUnmap_ccorres)
+       apply csymbr
+       apply (ctac(no_vcg) add: performPageGetAddress_ccorres)
          apply (rule ccorres_alternative2)
          apply (rule ccorres_return_CE, simp+)[1]
         apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-       apply wp
-      apply (wp sts_invs_minor')
-     apply simp
+       apply wp+
      apply (vcg exspec=setThreadState_modifies)
-(* Remap*)
     apply (rule ccorres_rhs_assoc)+
-    apply csymbr+
-    apply (simp add: if_1_0_0 word_less_nat_alt del: Collect_const)
-    apply (rule ccorres_Cond_rhs_Seq)
-     apply (rule ccorres_equals_throwError)
-      apply (fastforce simp: throwError_bind invocationCatch_def
-                     split: list.split)
-     apply (simp del: Collect_const)
-     apply (rule ccorres_cond_true_seq)
-     apply (rule syscall_error_throwError_ccorres_n)
-     apply (simp add: syscall_error_to_H_cases)
-    apply csymbr
-    apply (simp add: if_1_0_0 interpret_excaps_test_null
-                     excaps_map_def del: Collect_const)
-    apply (rule ccorres_Cond_rhs_Seq)
-     apply (rule ccorres_equals_throwError)
-      apply (fastforce simp: throwError_bind invocationCatch_def
-                     split: list.split)
-     apply (rule syscall_error_throwError_ccorres_n)
-     apply (simp add: syscall_error_to_H_cases)
-    apply (clarsimp simp: list_case_If2 dest!: at_least_2_args)
-    apply csymbr
-    apply (frule ccap_relation_PageCap_MapType)
-    apply clarsimp
-    apply (rule ccorres_Cond_rhs_Seq)
-     apply ccorres_rewrite
-     apply (clarsimp simp: maptype_from_H_def throwError_bind invocationCatch_def
-                    split: vmmap_type.split_asm)
-     apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def dc_def])
-     apply (clarsimp simp: syscall_error_to_H_cases)
-    apply (clarsimp simp: maptype_from_H_def vm_page_map_type_defs
-                   split: vmmap_type.split_asm)
-    apply (rule ccorres_add_return)
-    apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
-      apply (rule ccorres_add_return)
-      apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=1 and buffer=buffer])
-        apply csymbr
-        apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
-        apply (rule ccorres_move_c_guard_cte)
-        apply (rule_tac r'="\<lambda>rv rv'. ((cap_get_tag rv' = scast cap_pml4_cap)
-                                             = (isArchObjectCap rv \<and> isPML4Cap (capCap rv)))
-                                     \<and> (ccap_relation rv rv')"
-                   and xf'=vspaceCap_' in ccorres_split_nothrow[where F=UNIV])
-            apply (simp add: getSlotCap_def del: Collect_const)
-            apply (rule ccorres_symb_exec_l[OF _ getCTE_inv getCTE_sp[where P=\<top>]
-                        empty_fail_getCTE])
-            apply (rule ccorres_from_vcg[where P'=UNIV])
-            apply (rule allI, rule conseqPre, vcg)
-            apply (clarsimp simp: return_def cte_wp_at_ctes_of)
-            apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
-            apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
-            apply (clarsimp simp: typ_heap_simps' mask_def split_def
-                                  cap_get_tag_isCap_ArchObject2
-                                  word_sless_def word_sle_def
-                           dest!: ccte_relation_ccap_relation)
-           apply (simp add:sless_positive)
-           apply ceqv
-          apply (rule ccorres_assert2)
-          apply csymbr+
-          apply (clarsimp simp: split_def cap_case_PML4Cap2 if_1_0_0)
-          apply (rule ccorres_Cond_rhs_Seq)
-           apply (rule ccorres_equals_throwError)
-            apply (fastforce simp: invocationCatch_def throwError_bind
-                                   hd_conv_nth from_bool_0
-                             cong: conj_cong)
-           apply ccorres_rewrite
-           apply (rule syscall_error_throwError_ccorres_n)
-           apply (clarsimp simp: syscall_error_to_H_cases)
-          apply (clarsimp simp: hd_conv_nth)
-          apply csymbr+
-          apply (clarsimp simp add: case_option_If2 if_to_top_of_bind if_to_top_of_bindE
-                           hd_conv_nth cong: conj_cong)
-          apply (rule ccorres_if_cond_throws2[rotated -1, where Q=\<top> and Q'=\<top>])
-             apply vcg
-            apply (clarsimp simp: if_1_0_0)
-            apply (frule ccap_relation_mapped_asid_0, clarsimp simp: asidInvalid_def)
-            apply (erule_tac ccap_relationE,
-                     clarsimp simp: cap_to_H_def Let_def split: cap_CL.split_asm if_split_asm)
-           apply (simp add: throwError_bind invocationCatch_def)
-           apply (rule syscall_error_throwError_ccorres_n)
-           apply (simp add: syscall_error_to_H_cases)
-          apply csymbr
-          apply csymbr
-          apply csymbr
-          apply csymbr
-          apply (simp add: createSafeMappingEntries_fold)
-          apply (simp add: whenE_bindE_throwError_to_if
-                           invocationCatch_use_injection_handler
-                           injection_bindE[OF refl refl] bindE_assoc
-                           injection_handler_returnOk
-                           injection_handler_If if_to_top_of_bindE
-                           lookupError_injection)
-          apply (ctac add: ccorres_injection_handler_csum1
-                                [OF ccorres_injection_handler_csum1,
-                                 OF findVSpaceForASID_ccorres])
-             apply (simp add: Collect_False del: Collect_const)
-             apply (rule ccorres_Cond_rhs_Seq)
-              apply (clarsimp simp: isCap_simps ccap_relation_PageCap_MappedASID)
-              apply (clarsimp simp: cap_pml4_cap_lift get_capMappedASID_CL_def get_capPtr_CL_def)
-              apply (erule_tac v=rv' in ccap_relationE,
-                        clarsimp simp: cap_to_H_def Let_def split: cap_CL.split_asm if_split_asm)
-              apply (clarsimp simp: invocationCatch_def throwError_bind
-                                    injection_handler_throwError)
-              apply (rule syscall_error_throwError_ccorres_n)
-              apply (simp add: syscall_error_to_H_cases)
-             apply (clarsimp simp: isCap_simps ccap_relation_PageCap_MappedASID)
-             apply (clarsimp simp: cap_pml4_cap_lift get_capMappedASID_CL_def get_capPtr_CL_def)
-             apply (erule_tac v=rv' in ccap_relationE,
-                      clarsimp simp: cap_to_H_def Let_def split: cap_CL.split_asm if_split_asm)
-             apply csymbr
-             apply csymbr
-             apply csymbr
-             apply csymbr
-             apply csymbr
-             apply csymbr
-             apply csymbr
-             apply csymbr
-             apply csymbr
-             apply (rule ccorres_symb_exec_r)
-               apply csymbr
-               apply (clarsimp simp: checkVPAlignment_def unlessE_def
-                                     injection_handler_If if_to_top_of_bindE)
-               apply wpfix
-               apply (rule ccorres_if_cond_throws2[rotated -1, where Q=\<top> and Q'=\<top>])
-                  apply vcg
-                 apply (clarsimp simp: from_bool_0 vmsz_aligned'_def is_aligned_mask)
-                 apply (frule cap_get_tag_isCap_unfolded_H_cap(18) (* PageCap *))
-                 apply (drule cap_get_tag_PageCap_frame)
-                 apply (clarsimp split: if_split_asm)
-                apply (simp add: injection_handler_throwError throwError_bind
-                                 invocationCatch_def)
-                apply (rule syscall_error_throwError_ccorres_n)
-                apply (simp add: syscall_error_to_H_cases)
-               apply (rule ccorres_Cond_rhs)
-                apply (simp add: injection_handler_returnOk)
-                apply (rule ccorres_rhs_assoc)+
-                apply csymbr
-                apply (ctac add: ccorres_injection_handler_csum1[OF createSafeMappingEntries_PTE_ccorres])
-                   apply (simp add: Collect_False performX64MMUInvocations bindE_assoc)
-                   apply (rule_tac P="\<lambda>s. thread = ksCurThread s" in ccorres_cross_over_guard)
-                   apply (ctac add: setThreadState_ccorres)
-                     apply (ctac(no_vcg) add: performPageInvocationRemapPTE_ccorres)
-                      apply (rule ccorres_alternative2)
-                      apply (rule ccorres_return_CE, simp+)[1]
-                      apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-                     apply wp
-                    apply (wp sts_invs_minor')
-                   apply simp
-                   apply (vcg exspec=setThreadState_modifies)
-                  apply (simp, ccorres_rewrite)
-                  apply (rule ccorres_return_C_errorE, simp+)[1]
-                 apply (simp add: createSafeMappingEntries_def)
-                 apply (wp injection_wp[OF refl] createMappingEntries_wf)
-                apply (simp add: all_ex_eq_helper)
-                apply (rule_tac Q'=UNIV and A'="{}" in conseqPost)
-                  apply (vcg exspec=createSafeMappingEntries_PTE_modifies)
-                 apply (clarsimp simp: ThreadState_Restart_def mask_def rf_sr_ksCurThread)
-                apply clarsimp
-               apply (simp add: injection_handler_returnOk)
-               apply (rule ccorres_Cond_rhs)
-                apply (rule ccorres_rhs_assoc)+
-                apply csymbr
-                apply (ctac add: ccorres_injection_handler_csum1[OF createSafeMappingEntries_PDE_ccorres])
-                   apply (simp add: performX64MMUInvocations bindE_assoc)
-                   apply ccorres_rewrite
-                   apply (rule_tac P="\<lambda>s. thread = ksCurThread s" in ccorres_cross_over_guard)
-                   apply (ctac add: setThreadState_ccorres)
-                     apply (ctac(no_vcg) add: performPageInvocationRemapPDE_ccorres)
-                      apply (rule ccorres_alternative2)
-                      apply (rule ccorres_return_CE, simp+)[1]
-                      apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-                     apply wp
-                    apply (wp sts_invs_minor')
-                   apply simp
-                  apply (vcg exspec=setThreadState_modifies)
-                 apply (simp, ccorres_rewrite)
-                  apply (rule ccorres_return_C_errorE, simp+)[1]
-                apply (simp add: createSafeMappingEntries_def)
-                apply (wp injection_wp[OF refl] createMappingEntries_wf)
-               apply (simp add: all_ex_eq_helper)
-                apply (rule_tac Q'=UNIV and A'="{}" in conseqPost)
-                  apply (vcg exspec=createSafeMappingEntries_PDE_modifies)
-                 apply (clarsimp simp: ThreadState_Restart_def mask_def rf_sr_ksCurThread)
-                apply clarsimp
-               apply (rule ccorres_add_returnOk)
-               apply (ctac add: decodeX86ModeRemapPage_ccorres[where cap=cp])
-                  apply (rule ccorres_return_CE, simp+)[1]
-                 apply (rule ccorres_return_C_errorE, simp+)[1]
-                apply wpsimp
-               apply clarsimp
-               apply (vcg exspec=decodeX86ModeMapRemapPage_modifies)
-              apply clarsimp
-              apply (rule_tac Q' = "{x. vmrights_to_H (vmRights_' x) = maskVMRights v1 (rightsFromWord a)
-                                    \<and> vmRights_' x < 4 \<and> vmRights_' x \<noteq> 0}"
-                          and A' = "{}"
-                          in conseqPost[rotated])
-                apply (clarsimp simp: Collect_const)
-                apply (frule cap_get_tag_isCap_unfolded_H_cap)
-                apply (rule conjI, clarsimp)
-                 apply (clarsimp simp: ccap_relation_PageCap_BasePtr ccap_relation_PageCap_MappedAddress
-                                       ccap_relation_PageCap_Size attribsFromWord_def
-                                       vm_attribs_relation_def invocation_eq_use_types
-                                       of_bool_nth[simplified of_bool_from_bool])
-                apply (clarsimp dest!: ccap_relation_c_valid_cap
-                                 simp: c_valid_cap_def cl_valid_cap_def cap_frame_cap_lift)
-               apply clarsimp
-              apply vcg
-             apply (rule conseqPre, vcg, clarsimp)
-            apply ccorres_rewrite
-            apply (rule_tac P'="{s. find_ret = errstate s}" in ccorres_from_vcg_throws[where P=\<top>])
-            apply (rule allI, rule conseqPre, vcg)
-            apply (clarsimp simp: fst_throwError_returnOk exception_defs
-                                  syscall_error_rel_def syscall_error_to_H_cases
-                                  false_def)
-            apply (erule lookup_failure_rel_fault_lift[rotated])
-            apply (simp add: exception_defs)
-           apply (frule ccap_relation_PageCap_Size, clarsimp simp: framesize_from_H_eqs)
-           apply ((wp injection_wp[OF refl] static_imp_wp hoare_vcg_const_imp_lift_R
-                       | simp | wp_once hoare_drop_imps)+)[1]
-          apply simp
-          apply (vcg exspec=findVSpaceForASID_modifies)
-         apply (wp getSlotCap_wp)
-        apply simp
-        apply (vcg exspec=getSyscallArg_modifies)
-       apply simp
-       apply wp
-      apply simp
-      apply (vcg exspec=getSyscallArg_modifies)
-     apply simp
-     apply (rule_tac s=args in ssubst, simp)
-     apply wp
+
+    \<comment> \<open>PageUnmap\<close>
+    apply (simp add: returnOk_bind bindE_assoc
+                     performX64MMUInvocations)
+    apply (ctac add: setThreadState_ccorres)
+      apply (ctac(no_vcg) add: performPageInvocationUnmap_ccorres)
+        apply (rule ccorres_alternative2)
+        apply (rule ccorres_return_CE, simp+)[1]
+       apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+      apply wp
+     apply (wp sts_invs_minor')
     apply simp
-    apply (rule_tac t=a and s="hd args" in ssubst, fastforce)
-    apply (rule_tac t=b and s="hd (tl args)" in ssubst, fastforce)
-    apply (vcg exspec=getSyscallArg_modifies)
+    apply (vcg exspec=setThreadState_modifies)
+
    \<comment> \<open>PageMap\<close>
+   supply Collect_const[simp del]
+   apply (rename_tac word rghts maptype pg_sz mapdata buffera cap excaps cte length___unsigned_long
+                     invLabel)
+   apply simp
    apply (rule ccorres_rhs_assoc)+
    apply csymbr+
-   apply (simp add: if_1_0_0 word_less_nat_alt del: Collect_const)
+   apply (simp add: word_less_nat_alt)
+   (* throw on length < 3 *)
    apply (rule ccorres_Cond_rhs_Seq)
+    apply simp
     apply (rule ccorres_equals_throwError)
-     apply (fastforce simp: throwError_bind invocationCatch_def
-                    split: list.split)
-    apply (simp del: Collect_const)
+     apply (fastforce simp: throwError_bind invocationCatch_def split: list.split)
     apply (rule ccorres_cond_true_seq)
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
    apply csymbr
-   apply (simp add: if_1_0_0 interpret_excaps_test_null
-                    excaps_map_def del: Collect_const)
-   apply (rule ccorres_Cond_rhs_Seq)
-    apply (rule ccorres_equals_throwError)
-     apply (fastforce simp: throwError_bind invocationCatch_def
-                    split: list.split)
-    apply (rule syscall_error_throwError_ccorres_n)
-    apply (simp add: syscall_error_to_H_cases)
-   apply (clarsimp simp: list_case_If2 dest!: at_least_3_args)
-   apply csymbr
-   apply csymbr
-   apply (rule ccorres_add_return)
-   apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
+   apply (simp add: interpret_excaps_test_null excaps_map_def)
+   (* throw if no excaps *)
+   apply (clarsimp dest!: at_least_3_args)
+   apply (rule ccorres_guard_imp)
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (rule ccorres_equals_throwError)
+       apply (fastforce simp: throwError_bind invocationCatch_def split: list.split)
+      apply (rule syscall_error_throwError_ccorres_n)
+      apply (simp add: syscall_error_to_H_cases)
+     apply (clarsimp simp: list_case_If2)
+     apply csymbr
+     apply csymbr
      apply (rule ccorres_add_return)
-     apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=1 and buffer=buffer])
+     apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
        apply (rule ccorres_add_return)
-       apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=2 and buffer=buffer])
-         apply csymbr
-         apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
-         apply (rule ccorres_move_c_guard_cte)
-         apply (rule_tac r'="\<lambda>rv rv'. ((cap_get_tag rv' = scast cap_pml4_cap)
-                                              = (isArchObjectCap rv \<and> isPML4Cap (capCap rv)))
-                                      \<and> (ccap_relation rv rv')"
-                    and xf'=vspaceCap_' in ccorres_split_nothrow[where F=UNIV])
-             apply (simp add: getSlotCap_def del: Collect_const)
-             apply (rule ccorres_symb_exec_l[OF _ getCTE_inv getCTE_sp[where P=\<top>]
-                         empty_fail_getCTE])
-             apply (rule ccorres_from_vcg[where P'=UNIV])
-             apply (rule allI, rule conseqPre, vcg)
-             apply (clarsimp simp: return_def cte_wp_at_ctes_of)
-             apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
-             apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
-             apply (clarsimp simp: typ_heap_simps' mask_def split_def
-                                   cap_get_tag_isCap_ArchObject2
-                                   word_sle_def word_sless_def
-                            dest!: ccte_relation_ccap_relation)
-            apply (simp add:sless_positive)
-            apply ceqv
-           apply (rule ccorres_assert2)
-           apply csymbr+
-           apply (simp add: if_1_0_0 whenE_bindE_throwError_to_if if_to_top_of_bind)
-           apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
-              apply vcg
-             apply (drule ccap_relation_mapped_asid_0)
-             apply (fastforce simp: asidInvalid_def)
-            apply (simp add: throwError_bind invocationCatch_def)
-            apply (rule syscall_error_throwError_ccorres_n)
-            apply (simp add: syscall_error_to_H_cases)
-           apply csymbr+
-           apply (clarsimp simp add: split_def cap_case_PML4Cap2 if_1_0_0)
-           apply (rule ccorres_Cond_rhs_Seq)
-            apply (rule ccorres_equals_throwError)
-             apply (fastforce simp: invocationCatch_def throwError_bind
-                                    hd_conv_nth from_bool_0
+       apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=1 and buffer=buffer])
+         apply (rule ccorres_add_return)
+         apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=2 and buffer=buffer])
+           apply csymbr
+           apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
+           apply (rule ccorres_move_c_guard_cte)
+           apply (rule_tac r'="\<lambda>rv rv'. ((cap_get_tag rv' = scast cap_pml4_cap)
+                                            = (isArchObjectCap rv \<and> isPML4Cap (capCap rv)))
+                                        \<and> (ccap_relation rv rv')"
+                      and xf'=vspaceCap_' in ccorres_split_nothrow[where F=UNIV])
+               apply (simp add: getSlotCap_def)
+               apply (rule ccorres_symb_exec_l[OF _ getCTE_inv getCTE_sp[where P=\<top>] empty_fail_getCTE])
+               apply (rule ccorres_from_vcg[where P'=UNIV])
+               apply (rule allI, rule conseqPre, vcg)
+               apply (clarsimp simp: return_def cte_wp_at_ctes_of)
+               apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
+               apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
+               apply (clarsimp simp: typ_heap_simps' mask_def split_def
+                                     cap_get_tag_isCap_ArchObject2
+                                     word_sle_def word_sless_def
+                              dest!: ccte_relation_ccap_relation)
+              apply (simp add: sless_positive)
+              apply ceqv
+             apply (rule ccorres_assert2)
+             apply csymbr+
+             apply (clarsimp simp add: split_def cap_case_PML4Cap2)
+             apply (simp add: word_less_nat_alt length_ineq_not_Nil)
+             apply (rule ccorres_Cond_rhs_Seq)
+              apply (rule ccorres_equals_throwError)
+               apply (simp add: unfold_checkMapping_return)
+               apply (fastforce simp: invocationCatch_def throwError_bind hd_conv_nth from_bool_0
+                                cong: conj_cong)
+              apply ccorres_rewrite
+              apply (rule syscall_error_throwError_ccorres_n)
+              apply (clarsimp simp: syscall_error_to_H_cases)
+             apply (clarsimp simp: hd_conv_nth)
+             apply csymbr
+             apply csymbr
+             apply csymbr
+             apply csymbr
+             apply (clarsimp simp: whenE_def)
+             apply (drule_tac t="Some y" in sym)
+             (* There are two paths through the cap mapping eligibility check (target asid/address
+                for mapped cap, target address for not mapped case) which do not throw;
+                pull the non-throwing cases together *)
+             apply (rule_tac P="does_not_throw args extraCaps maptype pg_sz mapdata" in ccorres_cases[rotated])
+              (* Always throws case *)
+              apply (clarsimp simp: if_to_top_of_bind if_to_top_of_bindE case_option_If2 hd_conv_nth
                               cong: conj_cong)
-            apply ccorres_rewrite
-            apply (rule syscall_error_throwError_ccorres_n)
-            apply (clarsimp simp: syscall_error_to_H_cases)
-           apply (clarsimp simp: hd_conv_nth)
-           apply csymbr
-           apply csymbr
-           apply csymbr
-           apply csymbr
-           apply (simp add: createSafeMappingEntries_fold)
-           apply (simp add: lookupError_injection invocationCatch_use_injection_handler
-                            injection_bindE[OF refl refl] injection_handler_returnOk
-                            injection_handler_If injection_handler_throwError bindE_assoc)
-           apply (rule_tac t = y
-                       and s = "the (capPML4MappedASID (capCap (fst (extraCaps ! 0)))) "
-                       in ssubst, fastforce)
-           apply (ctac add: ccorres_injection_handler_csum1
-                                  [OF ccorres_injection_handler_csum1,
-                                   OF findVSpaceForASID_ccorres])
-              apply (simp add: Collect_False if_to_top_of_bindE)
-              apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
-                 apply vcg
-                apply (clarsimp simp: cap_lift_pml4_cap cap_to_H_def get_capPtr_CL_def
-                                      to_bool_def cap_pml4_cap_lift_def
-                               elim!: ccap_relationE split: if_split)
-               apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def dc_def])
-               apply (simp add: syscall_error_to_H_cases)
-              apply csymbr+
-              apply (rule ccorres_Guard_Seq)
-              apply csymbr
-              apply (simp add: if_to_top_of_bindE)
-              apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
-                 apply vcg
-                apply (frule ccap_relation_PageCap_Size)
-                apply (clarsimp simp: word_less_nat_alt framesize_from_to_H user_vtop_def
-                                      X64.pptrUserTop_def)
-               apply (simp add: throwError_bind invocationCatch_def)?
-               apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def dc_def])
-               apply (simp add: syscall_error_to_H_cases)
-              apply csymbr
-              apply (rule ccorres_symb_exec_r)
-                apply csymbr
-                apply (simp add: bindE_assoc checkVPAlignment_def unlessE_def
-                                 injection_handler_If if_to_top_of_bindE)
-                apply (rule ccorres_if_cond_throws2[rotated -1, where Q=\<top> and Q'=\<top>])
-                   apply vcg
-                  apply (clarsimp simp add: from_bool_0 vmsz_aligned'_def is_aligned_mask)
-                  apply (drule ccap_relation_PageCap_Size)
-                  apply (clarsimp simp: framesize_from_to_H user_vtop_def X64.pptrUserTop_def)
-                 apply (simp add: injection_handler_throwError throwError_bind
-                                  invocationCatch_def)
-                 apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def dc_def])
-                 apply (simp add: syscall_error_to_H_cases)
-                apply csymbr
-                apply csymbr
-                apply csymbr
-                apply csymbr
-                apply csymbr
-                apply (simp add: injection_handler_returnOk bindE_assoc)
-                apply (rule ccorres_Cond_rhs)
-                 apply (rule ccorres_rhs_assoc)+
-                 apply csymbr
-                 apply (ctac add: ccorres_injection_handler_csum1[OF createSafeMappingEntries_PTE_ccorres])
-                    apply (simp add: performX64MMUInvocations bindE_assoc)
-                    apply ccorres_rewrite
-                    apply (rule_tac P="\<lambda>s. thread = ksCurThread s" in ccorres_cross_over_guard)
-                    apply (ctac add: setThreadState_ccorres)
-                      apply (ctac(no_vcg) add: performPageInvocationMapPTE_ccorres)
-                      apply (rule ccorres_alternative2)
-                      apply (rule ccorres_return_CE, simp+)[1]
-                      apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-                      apply (wp sts_invs_minor')+
-                    apply simp
-                    apply (vcg exspec=setThreadState_modifies)
-                   apply (simp, ccorres_rewrite)
-                   apply (rule ccorres_return_C_errorE, simp+)[1]
-                  apply (simp add: createSafeMappingEntries_def)
-                  apply (wp injection_wp[OF refl] createMappingEntries_wf)
-                 apply (simp add: all_ex_eq_helper)
-                apply (rule_tac Q' = "{s. ccap_relation (ArchObjectCap
-                                            (PageCap v0 v1 VMVSpaceMap v3 d
-                                                          (Some (y, a)))) cap}"
-                            and A' = "{}" in conseqPost)
-                  apply (vcg exspec=createSafeMappingEntries_PTE_modifies)
-                 apply (clarsimp simp: ThreadState_Restart_def mask_def rf_sr_ksCurThread
-                                       isCap_simps cap_pml4_cap_lift
-                                       get_capPtr_CL_def ccap_relation_PML4Cap_BasePtr)
-                apply clarsimp
-                apply (rule ccorres_Cond_rhs)
-                 apply (rule ccorres_rhs_assoc)+
-                 apply csymbr
-                 apply (ctac add: ccorres_injection_handler_csum1
-                                    [OF createSafeMappingEntries_PDE_ccorres])
-                    apply (simp add: performX64MMUInvocations bindE_assoc)
-                    apply ccorres_rewrite
-                    apply (rule_tac P="\<lambda>s. thread = ksCurThread s" in ccorres_cross_over_guard)
-                    apply (ctac add: setThreadState_ccorres)
-                      apply (ctac(no_vcg) add: performPageInvocationMapPDE_ccorres)
-                      apply (rule ccorres_alternative2)
-                      apply (rule ccorres_return_CE, simp+)[1]
-                      apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-                      apply wp
-                     apply (wp sts_invs_minor')
-                    apply simp
-                    apply (vcg exspec=setThreadState_modifies)
-                   apply (simp add: Collect_const)
-                   apply (rule ccorres_split_throws)
-                    apply (rule ccorres_return_C_errorE, simp+)[1]
-                   apply vcg
-                  apply (simp add: createSafeMappingEntries_def)
-                  apply (wp injection_wp[OF refl] createMappingEntries_wf)
-                 apply (simp add: all_ex_eq_helper)
-                apply (rule_tac Q' = "{s. ccap_relation (ArchObjectCap
-                                            (PageCap v0 v1 VMVSpaceMap v3 d
-                                                          (Some (y, a)))) cap}"
-                            and A' = "{}" in conseqPost)
-                  apply (vcg exspec=createSafeMappingEntries_PDE_modifies)
-                 apply (clarsimp simp: ThreadState_Restart_def mask_def rf_sr_ksCurThread
-                                       isCap_simps cap_pml4_cap_lift
-                                       get_capPtr_CL_def ccap_relation_PML4Cap_BasePtr)
-                apply clarsimp
-                apply (rule ccorres_add_returnOk)
-                apply (ctac add: decodeX86ModeMapPage_ccorres)
-                  apply (rule ccorres_return_CE, simp+)[1]
-                 apply (rule ccorres_return_C_errorE, simp+)[1]
-                apply wpsimp
-               apply clarsimp
-               apply (vcg exspec=decodeX86ModeMapRemapPage_modifies)
-               apply clarsimp
+              apply (rule ccorres_split_throws[rotated])
                apply vcg
-              apply (rule conseqPre, vcg, clarsimp)
-             apply simp
-             apply (rule_tac P'="{s. find_ret = errstate s}"
-                      in ccorres_from_vcg_split_throws[where P=\<top>])
-              apply vcg
-             apply (rule conseqPre, vcg)
-             apply (clarsimp simp: fst_throwError_returnOk exception_defs
-                                   syscall_error_rel_def syscall_error_to_H_cases
-                                   false_def)
-             apply (erule lookup_failure_rel_fault_lift[rotated])
-             apply (simp add: exception_defs)
-            apply (simp add: isCap_simps)
-            apply (wp injection_wp[OF refl]
-                        | wp_once hoare_drop_imps)+
-           apply (simp add: all_ex_eq_helper)
-           apply (rule_tac t = y and
-                           s = "the (capPML4MappedASID (capCap (fst (extraCaps ! 0))))"
-                     in ssubst, fastforce)
-           apply (vcg exspec=findVSpaceForASID_modifies)
-          apply (wp getSlotCap_wp)
-         apply (simp add: if_1_0_0 del: Collect_const)
-         apply vcg
-        apply simp
+              apply (clarsimp simp: does_not_throw_def)
+              (* is the frame cap mapped? *)
+              apply (rule ccorres_Cond_rhs)
+               (* frame cap is mapped: remap case *)
+               apply (prop_tac "mapdata \<noteq> None", simp add: asidInvalid_def ccap_relation_mapped_asid_0)
+               apply clarsimp
+               apply (rule ccorres_rhs_assoc)+
+               apply csymbr
+               apply clarsimp
+               apply (frule_tac c'=rv' in ccap_relation_capPML4MappedASID_liftE[OF _ _ sym], assumption+)
+               apply (simp add: get_capMappedASID_CL_def cap_pml4_cap_lift)
+               apply (prop_tac "args \<noteq> []", blast)
+               apply (simp add: whenE_bindE_throwError_to_if if_to_top_of_bind)
+               (* throw on mismatched ASID *)
+               apply (rule ccorres_Cond_rhs_Seq)
+                apply (frule ccap_relation_PageCap_generics)
+                apply (drule sym[where s="Some _"])
+                apply clarsimp
+                apply (rule ccorres_equals_throwError[OF throwError_invocationCatch])
+                apply (rule syscall_error_throwError_ccorres_n)
+                apply (simp add: syscall_error_to_H_cases)
+               (* throw on mismatched mapping type *)
+               apply simp
+               apply csymbr
+               apply (frule ccap_relation_PageCap_MapType)
+               apply (frule ccap_relation_PageCap_generics)
+               apply ccorres_rewrite
+               apply (drule sym[where s="Some _"])
+               apply clarsimp
+               apply (rule ccorres_Cond_rhs_Seq)
+                apply (clarsimp simp: maptype_from_H_def throwError_bind invocationCatch_def
+                               split: vmmap_type.split_asm)
+                apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def dc_def])
+                apply (clarsimp simp: syscall_error_to_H_cases)
+               (* throw on mismatched vaddr *)
+               apply simp
+               apply csymbr
+               apply (frule ccap_relation_PageCap_generics)
+               apply (clarsimp simp: hd_conv_nth length_ineq_not_Nil)
+               apply ccorres_rewrite
+               apply (clarsimp simp: maptype_from_H_def throwError_bind invocationCatch_def
+                              split: vmmap_type.split_asm)
+                apply (clarsimp simp: X86_MappingNone_def X86_MappingVSpace_def)
+               apply ccorres_rewrite
+               apply (fold dc_def id_def)
+               apply (rule syscall_error_throwError_ccorres_n)
+               apply (simp add: syscall_error_to_H_cases)
+              (* frame cap not mapped, check mapping *)
+              (* disallow mappings above kernelBase *)
+              apply clarsimp
+              apply (prop_tac "mapdata = None")
+               apply (simp add: asidInvalid_def ccap_relation_mapped_asid_0)
+              apply clarsimp
+              apply (rule ccorres_rhs_assoc)+
+              apply csymbr
+              apply (simp add: word_less_nat_alt)
+              apply (rule ccorres_equals_throwError[OF throwError_invocationCatch])
+              apply (frule ccap_relation_PageCap_generics)
+              apply clarsimp
+              apply ccorres_rewrite
+              apply csymbr
+              apply (simp add: user_vtop_def X64.pptrUserTop_def hd_conv_nth length_ineq_not_Nil)
+              apply ccorres_rewrite
+              apply (rule syscall_error_throwError_ccorres_n[unfolded id_def dc_def])
+              apply (simp add: syscall_error_to_H_cases)
+             (* Doesn't throw case *)
+             apply (drule_tac s="Some y" in sym,
+                    clarsimp simp: does_not_throw_def case_option_If2 cong: if_cong)
+             apply (rule ccorres_add_return)
+             (* split off map/remap check, show it's equivalent to SKIP *)
+             apply (rule_tac P=\<top> and P'=UNIV in ccorres_split_nothrow)
+                 apply (rule ccorres_guard_imp)
+                   apply (frule ccap_relation_PageCap_generics)
+                   apply (rule ccorres_Cond_rhs)
+                    apply (clarsimp simp: asidInvalid_def)
+                    apply (rule ccorres_rhs_assoc)+
+                    apply csymbr
+                    apply clarsimp
+                    apply (prop_tac "capFMappedASID_CL (cap_frame_cap_lift cap)
+                                     = get_capMappedASID_CL (cap_lift rv')")
+                     apply (drule (2) ccap_relation_capPML4MappedASID_liftE)
+                     apply (clarsimp simp: cap_lift_pml4_cap get_capMappedASID_CL_def
+                                           cap_pml4_cap_lift_def)
+                    apply (clarsimp, ccorres_rewrite)
+                    apply (csymbr, clarsimp simp: hd_conv_nth length_ineq_not_Nil, ccorres_rewrite)
+                    apply (frule ccap_relation_PageCap_MapType)
+                    apply (clarsimp simp: maptype_from_H_def)
+                    apply ccorres_rewrite
+                    apply csymbr
+                    apply (clarsimp simp: hd_conv_nth length_ineq_not_Nil)
+                    apply ccorres_rewrite
+                    apply (rule ccorres_return_Skip)
+                   apply (rule ccorres_rhs_assoc)+
+                   apply (csymbr, clarsimp, ccorres_rewrite)
+                   apply csymbr
+                   apply (simp add: asidInvalid_def)
+                   apply (simp add: word_less_nat_alt user_vtop_def X64.pptrUserTop_def hd_conv_nth
+                                    length_ineq_not_Nil)
+                   apply (ccorres_rewrite)
+                   apply (fold dc_def)
+                   apply (rule ccorres_return_Skip)
+                  apply clarsimp
+                 apply (clarsimp simp: asidInvalid_def)
+                 apply (subgoal_tac "cap_get_tag cap = SCAST(32 signed \<rightarrow> 64) cap_frame_cap")
+                  apply (frule ccap_relation_PageCap_generics)
+                  apply clarsimp
+                 apply (erule ccap_relation_frame_tags)
+                apply ceqv
+               apply csymbr
+               apply (simp add: createSafeMappingEntries_fold lookupError_injection
+                                invocationCatch_use_injection_handler injection_bindE[OF refl refl]
+                                injection_handler_returnOk injection_handler_If
+                                injection_handler_throwError bindE_assoc
+                           cong: if_cong)
+               apply (rule_tac t=y and s="the (capPML4MappedASID (capCap (fst (extraCaps ! 0))))"
+                        in ssubst,
+                      fastforce)
+               apply (ctac add: ccorres_injection_handler_csum1[OF ccorres_injection_handler_csum1,
+                                                                OF findVSpaceForASID_ccorres])
+                  apply (simp add: Collect_False if_to_top_of_bindE)
+                  apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+                     apply vcg
+                    apply (clarsimp simp: cap_lift_pml4_cap cap_to_H_def get_capPtr_CL_def to_bool_def
+                                          cap_pml4_cap_lift_def
+                                   elim!: ccap_relationE split: if_split)
+                   apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def dc_def])
+                   apply (simp add: syscall_error_to_H_cases)
+                  apply csymbr
+                  apply (rule ccorres_symb_exec_r)
+                    apply csymbr
+                    apply (simp add: bindE_assoc checkVPAlignment_def unlessE_def
+                                     injection_handler_If if_to_top_of_bindE)
+                    apply (rule ccorres_if_cond_throws2[rotated -1, where Q=\<top> and Q'=\<top>])
+                       apply vcg
+                      apply (clarsimp simp add: from_bool_0 vmsz_aligned'_def is_aligned_mask)
+                      apply (drule ccap_relation_PageCap_Size)
+                      apply (clarsimp simp: framesize_from_to_H user_vtop_def X64.pptrUserTop_def)
+                     apply (simp add: injection_handler_throwError throwError_bind
+                                      invocationCatch_def)
+                     apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def dc_def])
+                     apply (simp add: syscall_error_to_H_cases)
+                    apply csymbr
+                    apply csymbr
+                    apply csymbr
+                    apply csymbr
+                    apply csymbr
+                    apply (simp add: injection_handler_returnOk bindE_assoc)
+                    apply (rule ccorres_Cond_rhs)
+                     apply (rule ccorres_rhs_assoc)+
+                     apply csymbr
+                     apply (ctac add: ccorres_injection_handler_csum1[
+                                        OF createSafeMappingEntries_PTE_ccorres])
+                        apply (simp add: performX64MMUInvocations bindE_assoc)
+                        apply ccorres_rewrite
+                        apply (rule_tac P="\<lambda>s. thread = ksCurThread s" in ccorres_cross_over_guard)
+                        apply (ctac add: setThreadState_ccorres)
+                          apply (ctac(no_vcg) add: performPageInvocationMapPTE_ccorres)
+                            apply (rule ccorres_alternative2)
+                            apply (rule ccorres_return_CE, simp+)[1]
+                           apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+                          apply (wp sts_invs_minor')+
+                        apply simp
+                        apply (vcg exspec=setThreadState_modifies)
+                       apply (simp, ccorres_rewrite)
+                       apply (rule ccorres_return_C_errorE, simp+)[1]
+                      apply (simp add: createSafeMappingEntries_def)
+                      apply (wp injection_wp[OF refl] createMappingEntries_wf)
+                     apply (simp add: all_ex_eq_helper)
+                     apply (rule_tac Q' = "{s. ccap_relation (ArchObjectCap
+                                                                (PageCap word rghts VMVSpaceMap pg_sz d
+                                                                         (Some (y, a)))) cap}"
+                                 and A' = "{}" in conseqPost)
+                       apply (vcg exspec=createSafeMappingEntries_PTE_modifies)
+                      apply (clarsimp simp: ThreadState_Restart_def mask_def rf_sr_ksCurThread
+                                            isCap_simps cap_pml4_cap_lift
+                                            get_capPtr_CL_def ccap_relation_PML4Cap_BasePtr)
+                     apply clarsimp
+                    apply (rule ccorres_Cond_rhs)
+                     apply (rule ccorres_rhs_assoc)+
+                     apply csymbr
+                     apply (ctac add: ccorres_injection_handler_csum1
+                                        [OF createSafeMappingEntries_PDE_ccorres])
+                        apply (simp add: performX64MMUInvocations bindE_assoc)
+                        apply ccorres_rewrite
+                        apply (rule_tac P="\<lambda>s. thread = ksCurThread s" in ccorres_cross_over_guard)
+                        apply (ctac add: setThreadState_ccorres)
+                          apply (ctac(no_vcg) add: performPageInvocationMapPDE_ccorres)
+                            apply (rule ccorres_alternative2)
+                            apply (rule ccorres_return_CE, simp+)[1]
+                           apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+                          apply wp
+                         apply (wp sts_invs_minor')
+                        apply simp
+                        apply (vcg exspec=setThreadState_modifies)
+                       apply (simp add: Collect_const)
+                       apply (rule ccorres_split_throws)
+                        apply (rule ccorres_return_C_errorE, simp+)[1]
+                       apply vcg
+                      apply (simp add: createSafeMappingEntries_def)
+                      apply (wp injection_wp[OF refl] createMappingEntries_wf)
+                     apply (simp add: all_ex_eq_helper)
+                     apply (rule_tac Q' = "{s. ccap_relation (ArchObjectCap
+                                                                 (PageCap word rghts VMVSpaceMap pg_sz d
+                                                                               (Some (y, a)))) cap}"
+                                                 and A' = "{}" in conseqPost)
+                       apply (vcg exspec=createSafeMappingEntries_PDE_modifies)
+                      apply (clarsimp simp: ThreadState_Restart_def mask_def rf_sr_ksCurThread
+                                            isCap_simps cap_pml4_cap_lift
+                                            get_capPtr_CL_def ccap_relation_PML4Cap_BasePtr)
+                     apply clarsimp
+                    apply (rule ccorres_add_returnOk)
+                    apply (ctac add: decodeX86ModeMapPage_ccorres)
+                       apply (rule ccorres_return_CE, simp+)[1]
+                      apply (rule ccorres_return_C_errorE, simp+)[1]
+                     apply wpsimp
+                    apply clarsimp
+                    apply (vcg exspec=decodeX86ModeMapPage_modifies)
+                   apply clarsimp
+                   apply vcg
+                  apply (rule conseqPre, vcg, clarsimp)
+                 apply simp
+                 apply (rule_tac P'="{s. find_ret = errstate s}"
+                                       in ccorres_from_vcg_split_throws[where P=\<top>])
+                  apply vcg
+                 apply (rule conseqPre, vcg)
+                 apply (clarsimp simp: fst_throwError_returnOk exception_defs
+                                       syscall_error_rel_def syscall_error_to_H_cases
+                                       false_def)
+                 apply (erule lookup_failure_rel_fault_lift[rotated])
+                 apply (simp add: exception_defs)
+                apply (simp add: isCap_simps)
+                apply (wp injection_wp[OF refl]
+                       | wp_once hoare_drop_imps)+
+               apply (simp add: all_ex_eq_helper)
+               apply (rule_tac t=y and s="the (capPML4MappedASID (capCap (fst (extraCaps ! 0))))"
+                        in ssubst, fastforce)
+               apply (vcg exspec=findVSpaceForASID_modifies)
+              apply (rule_tac t=y and s="the (capPML4MappedASID (capCap (fst (extraCaps ! 0))))"
+                                    in ssubst, fastforce)
+              apply wp
+             apply (rule_tac t=y and s="the (capPML4MappedASID (capCap (fst (extraCaps ! 0))))"
+                          in ssubst, fastforce)
+             apply vcg
+            apply clarsimp
+            apply (wp getSlotCap_wp)
+           apply clarsimp
+           apply (vcg exspec=getSyscallArg_modifies)
+          apply clarsimp
+          apply wp
+         apply clarsimp
+         apply (vcg exspec=getSyscallArg_modifies)
+        apply clarsimp
         apply wp
-       apply simp
+       apply clarsimp
        apply (vcg exspec=getSyscallArg_modifies)
-      apply simp
       apply wp
-     apply simp
-     apply (vcg exspec=getSyscallArg_modifies)
-    apply simp
-    apply (rule_tac s=args in ssubst, simp)
-    apply (rule_tac t=a and s="hd args" in ssubst, fastforce)
-    apply wp
-   apply clarsimp
-   apply (rule_tac t=a and s="hd args" in ssubst, fastforce)
-   apply (rule_tac t=b and s="hd (tl args)" in ssubst, fastforce)
-   apply (rule_tac t=c and s="hd (tl (tl args))" in ssubst, fastforce)
-   apply (vcg exspec=getSyscallArg_modifies)
+      apply (clarsimp, assumption)
+     apply vcg
+    (* rewrite to args *)
+    apply (rule_tac t="a # b # c # da" and s=args in subst, simp)
+    apply (rule_tac t=a and s="hd args" in ssubst, simp)
+    apply (rule_tac t=b and s="hd (tl args)" in ssubst, simp)
+    apply (rule_tac t=c and s="hd (tl (tl args))" in ssubst, simp)
+    apply (rule_tac t=da and s="tl (tl (tl args))" in ssubst, simp)
+    apply assumption
+   apply (rule_tac t="a # b # c # da" and s=args in subst, simp)
+   apply (rule_tac t=a and s="hd args" in ssubst, simp)
+   apply (rule_tac t=b and s="hd (tl args)" in ssubst, simp)
+   apply (rule_tac t=c and s="hd (tl (tl args))" in ssubst, simp)
+   apply (rule_tac t=da and s="tl (tl (tl args))" in ssubst, simp)
+   apply assumption
+  apply (rename_tac word rghts maptype pg_sz mapdata buffera cap excaps cte length___unsigned_long
+                    invLabel s s')
   apply (rule conjI)
    apply clarsimp
    apply (frule cte_wp_at_diminished_gsMaxObjectSize, clarsimp)
-   apply (clarsimp simp: cte_wp_at_ctes_of
-                         is_aligned_mask[symmetric] vmsz_aligned'_def
+   apply (clarsimp simp: cte_wp_at_ctes_of is_aligned_mask[symmetric] vmsz_aligned'_def
                          vmsz_aligned_addrFromPPtr)
    apply (frule ctes_of_valid', clarsimp+)
    apply (simp add: diminished_valid'[symmetric])
    apply (frule valid_cap'_PageCap_kernel_mappings[OF invs_pspace_in_kernel_mappings', where cap=cp],
-             (fastforce simp: isCap_simps)+)[1]
-   apply (clarsimp simp: valid_cap'_def capAligned_def
-                         mask_def[where n=asid_bits]
-                         linorder_not_le simp del: less_1_simp)
+          fastforce simp: isCap_simps, fastforce)
    apply (subgoal_tac "extraCaps \<noteq> [] \<longrightarrow> (s \<turnstile>' fst (extraCaps ! 0))")
-    subgoal by (timeit \<open>(
+    apply (prop_tac "is_aligned word (pageBitsForSize pg_sz)", simp add: valid_cap'_def capAligned_def)
+
+  (* Haskell side *)
+  subgoal
+    by (timeit \<open>(
              (clarsimp simp: ct_in_state'_def vmsz_aligned'_def isCap_simps
                              valid_cap'_def page_map_l4_at'_def tcb_at_invs'
                              sysargs_rel_to_n linorder_not_less framesize_from_H_eqs
@@ -3003,88 +2799,65 @@ lemma decodeX64FrameInvocation_ccorres:
                    simp del: less_1_simp
            | rule conjI | erule pred_tcb'_weakenE disjE
            | (erule order_trans[where x=7, rotated], fastforce simp: bit_simps)
-           | (frule ccap_relation_capFMappedASID_CL_0 ccap_relation_PageCap_MappedASID, drule ccap_relation_PageCap_Size)
+           | ((frule ccap_relation_PageCap_MappedASID)?, drule ccap_relation_PageCap_Size)
            | drule interpret_excaps_eq st_tcb_at_idle_thread'
            | solves \<open>clarsimp simp: framesize_from_H_def asid_wf_def split: vmpage_size.splits\<close>
-       )+)[1]\<close>) (* 55 secs *)
+       )+)[1]\<close>) (* 30s *)
    apply (clarsimp simp: neq_Nil_conv excaps_in_mem_def slotcap_in_mem_def
                          linorder_not_le)
    apply (erule ctes_of_valid', clarsimp)
-  apply (clarsimp simp: if_1_0_0 rf_sr_ksCurThread "StrictC'_thread_state_defs"
-                        mask_eq_iff_w2p word_size word_less_nat_alt
-                        from_bool_0 excaps_map_def cte_wp_at_ctes_of)
-  apply (frule ctes_of_valid', clarsimp)
-  apply (simp only: diminished_valid'[symmetric])
-  apply (clarsimp simp: valid_cap'_def capAligned_def word_sless_def word_sle_def)
+
+  (* C side *)
+  apply (clarsimp simp: rf_sr_ksCurThread "StrictC'_thread_state_defs" mask_eq_iff_w2p
+                        word_size word_less_nat_alt from_bool_0 excaps_map_def cte_wp_at_ctes_of
+                        n_msgRegisters_def)
+  apply (frule(1) ctes_of_valid')
+  apply (clarsimp simp: diminished_valid'[symmetric] valid_cap'_def capAligned_def word_sless_def
+                        word_sle_def)
+  apply (frule ccap_relation_PageCap_generics)
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   apply clarsimp
   apply (frule cap_get_tag_PageCap_frame)
- apply (clarsimp simp: asidInvalid_def)
-  apply (clarsimp simp: word_less_nat_alt vm_attribs_relation_def
-                        attribsFromWord_def framesize_from_H_eqs
-                        of_bool_nth[simplified of_bool_from_bool]
-                        vm_page_size_defs neq_Nil_conv excaps_in_mem_def
-                        hd_conv_nth numeral_2_eq_2)
-  apply (rule conjI, clarsimp)
-   apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
-   apply (frule(1) slotcap_in_mem_PML4)
-   apply (clarsimp simp: mask_def[where n=4] typ_heap_simps')
-   apply (clarsimp simp: isCap_simps)
-   apply (frule slotcap_in_mem_valid, (clarsimp simp: get_capMappedASID_CL_def)+)
-   apply (erule_tac c="ArchObjectCap (PML4Cap a b)" for a b in ccap_relationE)
-   apply (clarsimp simp: cap_lift_pml4_cap to_bool_def
-                         cap_pml4_cap_lift_def framesize_from_to_H
-                         cap_to_H_def[split_simps cap_CL.split]
-                         valid_cap'_def user_vtop_def X64.pptrUserTop_def)
-   apply (subgoal_tac "(cap_C.words_C (cte_C.cap_C vb).[0] >> 58) && 1 \<noteq> 0")
-    prefer 2 apply (fastforce split: if_splits)
-   apply (clarsimp simp: hd_conv_nth cap_lift_frame_cap bit_simps
-                         to_bool_def cap_frame_cap_lift
-                         typ_heap_simps' shiftl_t2n[where n=3] field_simps
-                  elim!: ccap_relationE)
-   apply (clarsimp simp: neq_Nil_conv[where xs=extraCaps]
-                         excaps_in_mem_def slotcap_in_mem_def
-                  dest!: sym[where s="ArchObjectCap cp" for cp])
-   apply (cut_tac p="snd (hd extraCaps)" in ctes_of_valid', simp, clarsimp)
-   apply (rule conjI[rotated], clarsimp simp: cap_tag_defs)
-   apply (clarsimp simp: valid_cap_simps' rf_sr_ksCurThread)
-   subgoal by (timeit \<open>((clarsimp simp: invocation_eq_use_types framesize_from_to_H
-              | rule conjI
-              | solves \<open>clarsimp dest!: ccap_relation_c_valid_cap
-                           simp: word_less_nat_alt c_valid_cap_def cl_valid_cap_def cap_frame_cap_lift
-                                 \<close>
-              | solves \<open>(rule_tac cp=cp in ccap_relation_PageCap_MappedAddress_update;
-                    fastforce simp: vm_page_map_type_defs mask_def
-                              le_user_vtop_canonical_address
-                                            [simplified word_le_not_less user_vtop_def
-                                                        X64.pptrUserTop_def word_less_nat_alt,
-                                             simplified])\<close>
-              | (rule framesize_to_from_H framesize_to_from_H[symmetric], fastforce simp: c_valid_cap_def cl_valid_cap_def)
-         )+)[1]\<close>) (* 83 sec *)
-  (* bit of duplicated stuff from previous subgoal here *)
-  apply clarsimp
+  apply (clarsimp simp: word_less_nat_alt vm_attribs_relation_def attribsFromWord_def
+                        framesize_from_H_eqs of_bool_nth[simplified of_bool_from_bool]
+                        vm_page_size_defs neq_Nil_conv excaps_in_mem_def hd_conv_nth
+                        numeral_2_eq_2 does_not_throw_def asidInvalid_def)
   apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
   apply (frule(1) slotcap_in_mem_PML4)
-  apply (clarsimp simp: mask_def[where n=4] typ_heap_simps')
-  apply (clarsimp simp: isCap_simps)
-  apply (frule slotcap_in_mem_valid, (clarsimp simp: get_capMappedASID_CL_def)+)
+  apply (clarsimp simp: mask_def[where n=4] typ_heap_simps' isCap_simps)
+  apply (frule(1) slotcap_in_mem_valid)
+  apply (rename_tac pml4_cap b ys pml4_slot)
+  apply (frule ccap_relation_PageCap_MapType)
   apply (erule_tac c="ArchObjectCap (PML4Cap a b)" for a b in ccap_relationE)
-  apply (clarsimp simp: cap_lift_pml4_cap to_bool_def
-                        cap_pml4_cap_lift_def framesize_from_to_H
-                        cap_to_H_def[split_simps cap_CL.split]
-                        valid_cap'_def user_vtop_def X64.pptrUserTop_def)
-  apply (subgoal_tac "(cap_C.words_C (cte_C.cap_C vb).[0] >> 58) && 1 \<noteq> 0")
-   prefer 2 apply (fastforce split: if_splits)
-  apply (clarsimp simp: hd_conv_nth cap_lift_frame_cap bit_simps
-                        to_bool_def cap_frame_cap_lift
-                        typ_heap_simps' shiftl_t2n[where n=3] field_simps
+  apply (clarsimp simp: cap_lift_pml4_cap to_bool_def cap_pml4_cap_lift_def framesize_from_to_H
+                           cap_to_H_def[split_simps cap_CL.split]
+                           valid_cap'_def user_vtop_def X64.pptrUserTop_def)
+  apply (prop_tac "(cap_C.words_C (cte_C.cap_C pml4_slot).[0] >> 58) && 1 \<noteq> 0")
+   apply (fastforce split: if_splits)
+  apply (clarsimp simp: bit_simps to_bool_def cap_frame_cap_lift typ_heap_simps' shiftl_t2n[where n=3]
                  elim!: ccap_relationE)
-  by (timeit \<open>((clarsimp simp: cap_tag_defs
-       | rule conjI
-       | solves \<open>clarsimp dest!: ccap_relation_PageCap_MappedASID\<close>
-       | solves \<open>clarsimp dest!: ccap_relation_c_valid_cap
-                           simp: word_less_nat_alt c_valid_cap_def cl_valid_cap_def cap_frame_cap_lift
-                                 \<close>)+)[1]\<close> (* 7 sec *))
+  apply (clarsimp simp: neq_Nil_conv[where xs=extraCaps] excaps_in_mem_def slotcap_in_mem_def
+                 dest!: sym[where s="ArchObjectCap cp" for cp])
+  apply (clarsimp simp: valid_cap_simps' rf_sr_ksCurThread get_capMappedASID_CL_def cap_tag_defs
+                        maptype_from_H_def)
+  apply (case_tac mapdata; clarsimp; prop_tac "canonical_address (args ! 0)")
+     apply (rule le_user_vtop_canonical_address)
+     apply (frule aligned_sum_le_user_vtop[simplified vmsz_aligned'_eq[symmetric] word_le_nat_alt])
+     apply (simp add: word_le_nat_alt not_less user_vtop_def X64.pptrUserTop_def)
+    prefer 2
+    apply (frule(1) cap_to_H_PageCap_tag)
+    apply (frule canonical_address_cap_frame_cap)
+    apply metis
+   apply ((intro conjI impI,
+          (rule_tac cp=cp in ccap_relation_PageCap_MappedAddress_update
+           ; force simp: vm_page_map_type_defs mask_def),
+          (rule_tac cp=cp in ccap_relation_PageCap_MappedAddress_update
+           ; force simp: vm_page_map_type_defs mask_def),
+          meson invocation_eq_use_types,
+          (rule framesize_to_from_H[symmetric], fastforce simp: c_valid_cap_def cl_valid_cap_def),
+          (rule_tac cp=cp in ccap_relation_PageCap_MappedAddress_update
+           ; force simp: vm_page_map_type_defs mask_def))+)[2] (* 70s *)
+  done
 
 (* FIXME x64: find out some handy ones for X64 *)
 lemma asidHighBits_handy_convs:
@@ -3131,10 +2904,6 @@ lemma injection_handler_liftE:
 lemma liftE_case_sum:
   "liftE f >>= case_sum (throwError \<circ> Inr) g = f >>= g"
   by (simp add:liftE_def)
-
-lemma throwError_invocationCatch:
-  "throwError a >>= invocationCatch b c d e = throwError (Inl a)"
-  by (simp add:throwError_def invocationCatch_def)
 
 lemma framesize_from_H_mask2:
   "framesize_from_H a && mask 2 = framesize_from_H a"
