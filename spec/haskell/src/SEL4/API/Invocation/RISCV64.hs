@@ -45,8 +45,6 @@ data PageTableInvocation
 data PageInvocation
     = PageGetAddr {
         pageGetBasePtr :: PPtr Word }
-    | PageRemap {
-        pageRemapEntries :: (PTE, PPtr PTE) }
     | PageMap {
         pageMapCap :: Capability,
         pageMapCTSlot :: PPtr CTE,

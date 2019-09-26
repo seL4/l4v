@@ -328,7 +328,6 @@ checkSlot slot test = do
 decodeRISCVFrameInvocationMap :: PPtr CTE -> ArchCapability -> VPtr -> Word ->
     Word -> Capability -> KernelF SyscallError ArchInv.Invocation
 decodeRISCVFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
-    when (isJust $ capFMappedAddress cap) $ throw $ InvalidCapability 0
     (vspace,asid) <- case vspaceCap of
         ArchObjectCap (PageTableCap {
                 capPTMappedAddress = Just (asid, _),
@@ -344,7 +343,12 @@ decodeRISCVFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
     (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
     unless (bitsLeft == pgBits) $ throw $
         FailedLookup False $ MissingCapability bitsLeft
-    checkSlot slot (\pte ->  pte == InvalidPTE)
+    case capFMappedAddress cap of
+        Just (asid', vaddr') -> do
+            when (asid' /= asid) $ throw $ InvalidCapability 1
+            when (vaddr' /= vptr) $ throw $ InvalidArgument 0
+            checkSlot slot (not . isPageTablePTE)
+        Nothing -> checkSlot slot (\pte ->  pte == InvalidPTE)
     let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
     let framePAddr = addrFromPPtr (capFBasePtr cap)
     let exec = not $ riscvExecuteNever (attribsFromWord attr)
@@ -352,33 +356,6 @@ decodeRISCVFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
         pageMapCap = ArchObjectCap $ cap { capFMappedAddress = Just (asid,vptr) },
         pageMapCTSlot = cte,
         pageMapEntries = (makeUserPTE framePAddr exec vmRights, slot) }
-
-decodeRISCVFrameInvocationRemap :: PPtr CTE -> ArchCapability -> Word ->
-    Word -> Capability -> KernelF SyscallError ArchInv.Invocation
-decodeRISCVFrameInvocationRemap cte cap rightsMask attr vspaceCap = do
-    (vspace,asid) <- case vspaceCap of
-        ArchObjectCap (PageTableCap {
-                capPTMappedAddress = Just (asid, _),
-                capPTBasePtr = vspace })
-            -> return (vspace, asid)
-        _ -> throw $ InvalidCapability 1
-    (asid',vaddr) <- case capFMappedAddress cap of
-        Just v -> return v
-        _ -> throw $ InvalidCapability 0
-    vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
-    when (vspaceCheck /= vspace || asid /= asid') $ throw $ InvalidCapability 1
-    checkVPAlignment (capFSize cap) vaddr
-    (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vaddr
-    let pgBits = pageBitsForSize $ capFSize cap
-    unless (bitsLeft == pgBits) $ throw $
-        FailedLookup False $ MissingCapability bitsLeft
-    checkSlot slot (not . isPageTablePTE)
-    let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
-    let framePAddr = addrFromPPtr (capFBasePtr cap)
-    let exec = not $ riscvExecuteNever (attribsFromWord attr)
-    return $ InvokePage $ PageRemap {
-        pageRemapEntries = (makeUserPTE framePAddr exec vmRights, slot) }
-
 
 decodeRISCVFrameInvocation :: Word -> [Word] -> PPtr CTE ->
                    ArchCapability -> [(Capability, PPtr CTE)] ->
@@ -389,9 +366,6 @@ decodeRISCVFrameInvocation label args cte (cap@FrameCap {}) extraCaps =
         (ArchInvocationLabel RISCVPageMap, vaddr:rightsMask:attr:_, (vspaceCap,_):_) -> do
             decodeRISCVFrameInvocationMap cte cap (VPtr vaddr) rightsMask attr vspaceCap
         (ArchInvocationLabel RISCVPageMap, _, _) -> throw TruncatedMessage
-        (ArchInvocationLabel RISCVPageRemap, rightsMask:attr:_, (vspaceCap,_):_) -> do
-            decodeRISCVFrameInvocationRemap cte cap rightsMask attr vspaceCap
-        (ArchInvocationLabel RISCVPageRemap, _, _) -> throw TruncatedMessage
         (ArchInvocationLabel RISCVPageUnmap, _, _) ->
             return $ InvokePage $ PageUnmap {
                 pageUnmapCap = cap,
@@ -544,10 +518,6 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
 performPageInvocation :: PageInvocation -> Kernel ()
 performPageInvocation (PageMap cap ctSlot (pte,slot)) = do
     updateCap ctSlot cap
-    storePTE slot pte
-    doMachineOp sfence
-
-performPageInvocation (PageRemap (pte,slot)) = do
     storePTE slot pte
     doMachineOp sfence
 
