@@ -3311,6 +3311,18 @@ lemma valid_bitmap_valid_bitmapQ_exceptI[intro]:
   unfolding valid_bitmapQ_except_def valid_bitmapQ_def
   by simp
 
+lemma pdBits_eq: "pdBits = pd_bits"
+  by (simp add: pd_bits_def pdBits_def pdeBits_def pageBits_def)
+
+lemma ptBits_eq: "ptBits = pt_bits"
+  by (simp add: pt_bits_def ptBits_def pteBits_def pageBits_def)
+
+lemma largePagePTE_offset_eq:  "largePagePTE_offsets = largePagePTEOffsets"
+  by (simp add: largePagePTE_offsets_def largePagePTEOffsets_def pteBits_def)
+
+lemma superSectionPDE_offsets_eq:  "superSectionPDE_offsets = superSectionPDEOffsets"
+  by (simp add: superSectionPDE_offsets_def superSectionPDEOffsets_def pdeBits_def)
+
 lemma mask_wordRadix_less_wordBits:
   assumes sz: "wordRadix \<le> size w"
   shows "unat ((w::'a::len word) && mask wordRadix) < wordBits"
