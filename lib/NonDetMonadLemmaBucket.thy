@@ -1494,6 +1494,13 @@ lemma hoare_vcg_const_imp_lift_R:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. F \<longrightarrow> P s\<rbrace> f \<lbrace>\<lambda>rv s. F \<longrightarrow> Q rv s\<rbrace>,-"
   by (cases F, simp_all)
 
+lemma hoare_vcg_disj_lift_R:
+  assumes x: "\<lbrace>P\<rbrace>  f \<lbrace>Q\<rbrace>,-"
+  assumes y: "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>,-"
+  shows      "\<lbrace>\<lambda>s. P s \<or> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<or> Q' rv s\<rbrace>,-"
+  using assms
+  by (fastforce simp: validE_R_def validE_def valid_def split: sum.splits)
+
 lemmas throwError_validE_R = throwError_wp [where E="\<top>\<top>", folded validE_R_def]
 
 lemma valid_case_option_post_wp:
