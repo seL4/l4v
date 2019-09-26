@@ -257,14 +257,6 @@ where
     | _ \<Rightarrow> Nothing)"
 
 definition
-  transform_intent_page_remap :: "word32 list \<Rightarrow> cdl_page_intent option"
-where
-  "transform_intent_page_remap args =
-    (case args of
-      rightsW#attr#_ \<Rightarrow> Some (PageRemapIntent (data_to_rights rightsW) attr)
-    | _ \<Rightarrow> Nothing)"
-
-definition
   transform_intent_domain :: "word32 list \<Rightarrow> cdl_domain_intent option"
 where
   "transform_intent_domain args =
@@ -362,9 +354,6 @@ definition
     | ArchInvocationLabel ARMPageMap \<Rightarrow>
                           map_option PageIntent
                                    (transform_intent_page_map args)
-    | ArchInvocationLabel ARMPageRemap \<Rightarrow>
-                          map_option PageIntent
-                                   (transform_intent_page_remap args)
     | ArchInvocationLabel ARMPageUnmap \<Rightarrow> Some (PageIntent PageUnmapIntent)
     | ArchInvocationLabel ARMPageClean_Data \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
     | ArchInvocationLabel ARMPageInvalidate_Data  \<Rightarrow> Some (PageIntent PageFlushCachesIntent )

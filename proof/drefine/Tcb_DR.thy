@@ -410,9 +410,6 @@ lemma decode_tcb_corres:
     apply (rule corres_alternate1[OF dcorres_returnOk])
     apply (simp add: translate_tcb_invocation_def)
 
-   (* ARMPageMap *)
-   apply (clarsimp simp: transform_intent_def)
-
   (* ARMASIDPoolAssign *)
   apply (clarsimp simp: transform_intent_def)
 
