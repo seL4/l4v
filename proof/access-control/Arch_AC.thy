@@ -288,7 +288,6 @@ where
   "authorised_page_inv aag pgi \<equiv> case pgi of
      PageMap asid cap ptr slots \<Rightarrow>
        pas_cap_cur_auth aag cap \<and> is_subject aag (fst ptr) \<and> authorised_slots aag slots
-   | PageRemap asid slots \<Rightarrow> authorised_slots aag slots
    | PageUnmap cap ptr \<Rightarrow> pas_cap_cur_auth aag (Structures_A.ArchObjectCap cap) \<and> is_subject aag (fst ptr)
    | PageFlush typ start end pstart pd asid \<Rightarrow> True
    | PageGetAddr ptr \<Rightarrow> True"
@@ -1184,33 +1183,27 @@ lemma decode_arch_invocation_authorised:
      apply (rename_tac archlabel)
      apply (case_tac archlabel; (solves \<open>simp\<close>)?)
        \<comment> \<open>Map\<close>
-       apply (find_goal \<open>match premises in "_ = ARMPageMap" \<Rightarrow> succeed\<close>)
-       subgoal
-         apply (clarsimp simp: cap_auth_conferred_def is_cap_simps is_page_cap_def
-                               pas_refined_all_auth_is_owns)
-         apply (rule conjI)
-          apply (clarsimp simp: cap_auth_conferred_def is_page_cap_def pas_refined_all_auth_is_owns
-                                aag_cap_auth_def cli_no_irqs cap_links_asid_slot_def)
-         apply (simp only: linorder_not_le kernel_base_less_observation
-                           vmsz_aligned_t2n_neg_mask simp_thms)
-         apply (clarsimp simp: cap_auth_conferred_def vspace_cap_rights_to_auth_def
-                               mask_vm_rights_def validate_vm_rights_def vm_read_only_def
-                               vm_kernel_only_def)
-         done
-      \<comment> \<open>Remap\<close>
-      apply (find_goal \<open>match premises in "_ = ARMPageRemap" \<Rightarrow> succeed\<close>)
+      apply (find_goal \<open>match premises in "_ = ARMPageMap" \<Rightarrow> succeed\<close>)
       subgoal
-        apply (clarsimp simp: cap_auth_conferred_def
-                              is_page_cap_def pas_refined_all_auth_is_owns)
-        apply (drule (1) bspec)
-        apply (erule bspec)
-        apply (clarsimp simp: vspace_cap_rights_to_auth_def
+       apply (clarsimp simp: cap_auth_conferred_def is_cap_simps is_page_cap_def
+                             pas_refined_all_auth_is_owns)
+       apply (rule conjI)
+        apply (clarsimp simp: cap_auth_conferred_def is_page_cap_def pas_refined_all_auth_is_owns
+                              aag_cap_auth_def cli_no_irqs cap_links_asid_slot_def)
+        apply (simp only: linorder_not_le kernel_base_less_observation
+                          vmsz_aligned_t2n_neg_mask simp_thms)
+        apply (clarsimp simp: cap_auth_conferred_def vspace_cap_rights_to_auth_def
                               mask_vm_rights_def validate_vm_rights_def vm_read_only_def
                               vm_kernel_only_def)
-        apply (simp only: auth.distinct rights.distinct empty_iff insert_iff simp_thms
-                    split: if_split_asm)
-        done
-     apply (find_goal \<open>match premises in "_ = ARMPageUnmap" \<Rightarrow> succeed\<close>)
+       apply (clarsimp simp: cap_auth_conferred_def is_cap_simps is_page_cap_def
+                             pas_refined_all_auth_is_owns)
+       apply (rule conjI)
+        apply (clarsimp simp: cap_auth_conferred_def is_page_cap_def pas_refined_all_auth_is_owns
+                              aag_cap_auth_def cli_no_irqs cap_links_asid_slot_def)
+       apply (clarsimp simp: cap_auth_conferred_def vspace_cap_rights_to_auth_def
+                             mask_vm_rights_def validate_vm_rights_def vm_read_only_def
+                             vm_kernel_only_def)
+       done
      \<comment> \<open>Unmap\<close>
      subgoal by (simp add: aag_cap_auth_def cli_no_irqs)
      done
