@@ -3060,10 +3060,208 @@ lemma valid_refills_domain_time_update[simp]:
 crunches commit_domain_time
   for valid_refills[wp]: "valid_refills sc"
 
+lemma refill_budget_check_round_robin_valid_refills[wp]:
+   "\<lbrace>(\<lambda>s. kheap s p = Some (SchedContext sc n)
+          \<and> unat (cur_time s) + 2 * unat (sc_budget sc) \<le> unat (max_word::time)
+          \<and> unat usage + unat (sc_budget sc) \<le> unat (max_word::time)
+          \<and> MIN_SC_BUDGET \<le> sc_budget sc
+          \<and> MIN_REFILLS \<le> sc_refill_max sc)
+     and valid_refills p\<rbrace>
+    refill_budget_check_round_robin usage
+    \<lbrace>\<lambda>_. valid_refills p\<rbrace>"
+  supply if_split[split del]
+  apply (clarsimp simp: refill_budget_check_round_robin_def is_round_robin_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+
+  apply (case_tac "usage < MIN_BUDGET \<and> length (sc_refills sca) = Suc 0")
+  apply (wpsimp simp: set_refills_def update_sched_context_def set_object_def get_object_def
+                      valid_refills_def sc_valid_refills_def obj_at_def)
+
+   \<comment> \<open>we introduce some useful facts\<close>
+   apply (frule_tac unat_sum_list_equals_budget
+          ; (simp add: refills_sum_def)?)
+     using MIN_BUDGET_pos word_le_nat_alt unat_gt_0 apply fastforce
+    using MIN_BUDGET_le_MIN_SC_BUDGET apply force
+
+   apply (subgoal_tac "unat (r_amount (refill_hd sc)) \<le> unat (sc_budget sc)")
+    prefer 2
+    apply (erule_tac s="sum_list (map (unat \<circ> r_amount) (sc_refills sc))"
+                 and t="unat (sc_budget sc)"
+                  in subst)
+    apply (rule member_le_sum_list, simp)
+
+   apply (subgoal_tac "MIN_BUDGET \<le> r_amount (refill_hd sc)")
+    prefer 2
+    apply (simp add: hd_conv_nth)
+
+   apply (subgoal_tac "unat (cur_time s + r_amount (refill_hd sc) - MIN_BUDGET)
+                       = unat (cur_time s) + unat (r_amount (refill_hd sc)) - unat MIN_BUDGET")
+    prefer 2
+    apply (subgoal_tac "unat (cur_time s + r_amount (refill_hd sc) - MIN_BUDGET)
+                        = unat (cur_time s) + unat (r_amount (refill_hd sc) - MIN_BUDGET)")
+     apply clarsimp
+     apply (subgoal_tac "unat (cur_time s) + unat (r_amount (refill_hd sc)) - unat MIN_BUDGET
+                         = unat (cur_time s) + (unat (r_amount (refill_hd sc)) - unat MIN_BUDGET)")
+      prefer 2
+      apply (simp add: unat_arith_simps(1))
+     apply (simp add: unat_sub)
+    apply (subgoal_tac "cur_time s + r_amount (refill_hd sc) - MIN_BUDGET
+                        = cur_time s + (r_amount (refill_hd sc) - MIN_BUDGET)")
+     prefer 2
+     apply fastforce
+    apply (erule_tac s="cur_time s + (r_amount (refill_hd sc) - MIN_BUDGET)"
+                 and t="cur_time s + r_amount (refill_hd sc) - MIN_BUDGET"
+                  in ssubst)
+    apply (rule unat_add_lem', simp add: unat_sub max_word_def)
+   \<comment> \<open>end of the proofs of the useful facts\<close>
+
+   apply (clarsimp split: if_splits)
+   apply (intro conjI impI
+          ; (clarsimp simp: ordered_disjoint_def no_overflow_def period_window_def)?)
+         apply (cases "sc_refills sc", blast, fastforce)
+        apply (simp add: unat_arith_simps(1) unat_sub)
+       apply (case_tac "na=0")
+        apply (simp add: unat_sub)
+       apply clarsimp
+       apply (subgoal_tac "unat (cur_time s) + unat (r_amount (refill_hd sc)) - unat MIN_BUDGET + unat MIN_BUDGET
+                           = unat (cur_time s) + unat (r_amount (refill_hd sc))")
+        prefer 2
+        apply (metis (no_types, hide_lams) eq_diff_iff le_trans nat_iffs(2) nat_simps(1)
+                                           word_le_nat_alt)
+       apply linarith
+      apply (case_tac "na=0")
+       apply (simp add: word_le_nat_alt unat_sub)
+       apply (rule nat_move_sub_le)
+       using unat_MIN_BUDGET_MIN_SC_BUDGET apply (simp add: MIN_SC_BUDGET_def)
+      apply clarsimp
+     apply (subgoal_tac "unat (cur_time s) + unat (r_amount (refill_hd sc)) - unat MIN_BUDGET + unat MIN_BUDGET
+                         = unat (cur_time s) + unat (r_amount (refill_hd sc))")
+      prefer 2
+      apply (metis (no_types, hide_lams) eq_diff_iff le_trans nat_iffs(2) nat_simps(1) word_le_nat_alt)
+     apply clarsimp
+    apply (simp add: MIN_REFILLS_def)
+   using MIN_BUDGET_le_MIN_SC_BUDGET apply force
+
+  \<comment> \<open>\<not> (usage < MIN_BUDGET \<and> length (sc_refills sca) = Suc 0)\<close>
+  \<comment> \<open>outer else branch\<close>
+  apply (case_tac "\<not>(usage + MIN_BUDGET \<le> r_amount (refill_hd sc))")
+   apply (wpsimp simp: set_refills_def update_sched_context_def set_object_def get_object_def
+                       valid_refills_def sc_valid_refills_def obj_at_def
+                split: if_splits)
+   apply (intro conjI impI
+          ; (clarsimp simp: ordered_disjoint_def no_overflow_def period_window_def)?)
+    using MIN_BUDGET_le_MIN_SC_BUDGET apply simp
+   apply (simp add: MIN_REFILLS_def)
+
+  \<comment> \<open>final branch\<close>
+  apply (wpsimp simp: set_refills_def update_sched_context_def set_object_def get_object_def
+                      valid_refills_def sc_valid_refills_def obj_at_def
+               split: if_splits)
+
+  \<comment> \<open>some useful facts\<close>
+  apply (frule unat_sum_list_equals_budget; (simp add: refills_sum_def)?)
+    using MIN_BUDGET_pos word_le_nat_alt unat_gt_0 apply fastforce
+   using MIN_BUDGET_le_MIN_SC_BUDGET apply force
+
+  apply (subgoal_tac "unat (r_amount (refill_hd sc)) \<le> unat (sc_budget sc)")
+   prefer 2
+   apply (cases "sc_refills sc", fast, case_tac list, force, force)
+
+  apply (subgoal_tac "length (sc_refills sc) \<noteq> Suc 0
+                      \<longrightarrow> unat (r_amount (hd (tl (sc_refills sc)))) \<le> unat (sc_budget sc)")
+   prefer 2
+   apply (cases "sc_refills sc", fast, case_tac list, simp, force)
+
+  apply (subgoal_tac "MIN_BUDGET \<le> sc_budget sc")
+   prefer 2
+   using MIN_BUDGET_le_MIN_SC_BUDGET apply force
+
+  apply (subgoal_tac "usage \<le> r_amount (refill_hd sc)")
+   prefer 2
+   apply (simp add: word_le_nat_alt)
+   apply (subgoal_tac "unat (usage + MIN_BUDGET) = unat usage + unat MIN_BUDGET")
+    apply clarsimp
+   apply (rule unat_add_lem', simp add: max_word_def)
+
+  apply (subgoal_tac "unat (cur_time s + r_amount (refill_hd sc) - usage)
+                      = unat (cur_time s) + unat (r_amount (refill_hd sc)) - unat usage")
+   prefer 2
+   apply (subgoal_tac "unat (cur_time s + r_amount (refill_hd sc) - usage)
+                       = unat (cur_time s) + unat (r_amount (refill_hd sc) - usage)")
+    apply clarsimp
+    apply (simp add: unat_sub word_le_nat_alt)
+   apply (subgoal_tac "cur_time s + r_amount (refill_hd sc) - usage
+                       = cur_time s + (r_amount (refill_hd sc) - usage)")
+    prefer 2
+    apply fastforce
+   apply (erule_tac s="cur_time s + (r_amount (refill_hd sc) - usage)"
+                and t="cur_time s + r_amount (refill_hd sc) - usage"
+                 in ssubst)
+   apply (rule unat_add_lem', simp add: unat_sub max_word_def)
+
+  apply (subgoal_tac "unat (usage + MIN_BUDGET) = unat usage + unat MIN_BUDGET")
+   prefer 2
+   apply (rule unat_add_lem', simp add: max_word_def word_le_nat_alt)
+
+  apply (subgoal_tac "length (sc_refills sc) \<noteq> Suc 0
+                      \<longrightarrow> unat (r_amount (hd (tl (sc_refills sc))) + usage)
+                          = unat (r_amount (hd (tl (sc_refills sc)))) + unat usage")
+   prefer 2
+   apply (intro impI)
+   apply (rule unat_add_lem', simp add: max_word_def)
+
+  apply (subgoal_tac "length (sc_refills sc) \<noteq> Suc 0
+                      \<longrightarrow> unat (r_amount (hd (sc_refills sc))) + unat (r_amount (hd (tl (sc_refills sc))))
+                           \<le> unat (sc_budget sc)")
+   prefer 2
+   apply (intro impI)
+   apply (cases "sc_refills sc", simp, case_tac list, simp, force)
+  \<comment> \<open>end of the proof of the useful facts\<close>
+
+  apply (intro conjI impI
+         ; (clarsimp simp: ordered_disjoint_def no_overflow_def period_window_def)?)
+            apply (cases "sc_refills sc", blast, fastforce)
+           apply (simp add: unat_arith_simps(1) unat_sub)
+          apply (case_tac "na=0")
+           apply (simp add: unat_sub)
+          apply clarsimp
+          apply linarith
+         apply (case_tac "na=0")
+          apply (simp add: word_le_nat_alt unat_sub)
+         apply simp
+        apply (subgoal_tac "unat (cur_time s) + unat (r_amount (refill_hd sc)) - unat usage + unat usage
+                            = unat (cur_time s) + unat (r_amount (refill_hd sc))")
+         prefer 2
+         apply (meson eq_diff_iff le_trans nat_iffs(2) nat_simps(1) unat_arith_simps(1))
+        apply linarith
+       apply (simp add: MIN_REFILLS_def)
+      apply (cases "sc_refills sc", simp, case_tac list, fastforce, fastforce)
+     apply (simp add: unat_sub word_le_nat_alt)
+    apply (case_tac "na=0")
+     apply (simp add: unat_sub)
+    apply (simp add: word_le_nat_alt)
+   apply (case_tac "na=0")
+    apply (simp add: word_le_nat_alt unat_sub)
+   apply (simp add: word_le_nat_alt)
+   apply (drule_tac x=1 and P="\<lambda>n. n < 2 \<longrightarrow> unat MIN_BUDGET \<le> unat (r_amount (sc_refills sc ! n))"
+                 in spec)
+   apply clarsimp
+   apply (metis Nitpick.size_list_simp(2) hd_conv_nth
+                list.exhaust_sel n_not_Suc_n nth_Cons_Suc numeral_2_eq_2 unat_arith_simps(1)
+                unat_plus_simple word_le_plus_either)
+  apply (simp add: word_le_nat_alt)
+  done
+
 lemma commit_time_valid_refills[wp]:
   "\<lbrace>(\<lambda>s. kheap s ptr = Some (SchedContext sc n)
           \<and> unat (r_time (refill_hd sc)) + 2 * unat (sc_period sc) + unat (consumed_time s)
                      \<le> unat (max_word :: time)
+          \<and> unat (cur_time s) + 2 * unat (sc_budget sc) \<le> unat (max_word :: time)
+          \<and> MIN_REFILLS \<le> sc_refill_max sc
           \<and> MIN_SC_BUDGET \<le> sc_budget sc \<and> sc_budget sc \<le> sc_period sc) and
     (\<lambda>s. valid_refills ptr s)\<rbrace> commit_time \<lbrace>\<lambda>_ s. valid_refills ptr s\<rbrace>"
   apply (clarsimp simp: commit_time_def is_round_robin_def)
@@ -3086,20 +3284,10 @@ lemma commit_time_valid_refills[wp]:
      apply (wpsimp simp: set_object_def sc_valid_refills_def period_window_def
                      wp: get_object_wp update_sc_consumed_valid_refills
                          update_sched_context_valid_refills_no_budget_update sc_refill_ready_def
+                         refill_budget_check_round_robin_valid_refills[where n=n and sc=sc]
+                         hoare_drop_imps
                simp_del: fun_upd_apply)
-      apply (wpsimp simp: set_refills_def set_object_def update_sched_context_def
-                          sc_refill_ready_def
-                      wp: get_object_wp get_sched_context_wp )
-     apply (intro conjI impI allI; fastforce?)
-      apply (clarsimp simp: valid_refills_def sc_valid_refills_def period_window_def obj_at_def)
-      apply (intro conjI)
-         apply (simp add: ordered_disjoint_def)
-        apply (simp add: no_overflow_def)
-        apply (subgoal_tac "unat (r_time (refill_hd sc) + consumed_time s)
-                            = unat (r_time (refill_hd sc)) + unat (consumed_time s)")
-         apply clarsimp
-        apply (rule unat_add_lem', simp add: max_word_def)
-       using MIN_BUDGET_le_MIN_SC_BUDGET apply simp
+      apply (simp add: word_le_nat_alt)
 
     \<comment> \<open>\<not>is_round_robin, and remaining cases\<close>
     by (wpsimp simp: set_object_def sc_valid_refills_def period_window_def
@@ -3268,9 +3456,12 @@ lemma charge_budget_valid_refills[wp]:
   "\<lbrace>(\<lambda>s. kheap s scptr = Some (SchedContext sc n)
           \<and> unat (r_time (refill_hd sc)) + 2 * unat (sc_period sc) + unat consumed
                      \<le> unat (max_word :: time)
+          \<and> unat (cur_time s) + 2 * unat (sc_budget sc) \<le> unat (max_word::time)
+          \<and> MIN_REFILLS \<le> sc_refill_max sc
           \<and> MIN_SC_BUDGET \<le> sc_budget sc \<and> sc_budget sc \<le> sc_period sc)
      and (valid_refills scptr :: 'state_ext state \<Rightarrow> bool)\<rbrace>
-     charge_budget consumed canTimeout \<lbrace>\<lambda>_ s. valid_refills scptr s\<rbrace>"
+     charge_budget consumed canTimeout
+    \<lbrace>\<lambda>_. valid_refills scptr\<rbrace>"
   apply (clarsimp simp: charge_budget_def is_round_robin_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
@@ -3279,18 +3470,10 @@ lemma charge_budget_valid_refills[wp]:
   apply (intro conjI impI)
 
    \<comment> \<open>round robin\<close>
-   apply (clarsimp simp: Let_def set_refills_def update_sched_context_def bind_assoc)
-   apply (wpsimp wp: get_object_wp hoare_drop_imp set_object_wp)
-   apply (clarsimp simp: valid_refills_def sc_valid_refills_def period_window_def obj_at_def)
-   apply (intro conjI)
-      apply (simp add: ordered_disjoint_def)
-     apply (simp add: no_overflow_def)
-     apply (subgoal_tac "unat (r_time (refill_hd sc) + consumed)
-                         = unat (r_time (refill_hd sc)) + unat consumed")
-      apply clarsimp
-     apply (rule unat_add_lem', simp add: max_word_def)
-    using MIN_BUDGET_le_MIN_SC_BUDGET apply simp
-   apply (meson le_simps(2) length_greater_0_conv less_trans_Suc)
+    apply (wpsimp wp: get_object_wp hoare_drop_imp set_object_wp hoare_drop_imps hoare_vcg_all_lift
+                      update_sched_context_valid_refills_no_budget_update
+                      refill_budget_check_round_robin_valid_refills[where sc=sc and n=n])
+   apply (clarsimp simp: sc_valid_refills_def period_window_def word_le_nat_alt)
 
   \<comment> \<open>not round robin\<close>
   apply (wpsimp simp: set_object_def sc_valid_refills_def period_window_def
@@ -3307,6 +3490,8 @@ lemma check_budget_valid_refills[wp]:
   "\<lbrace>(\<lambda>s. kheap s scptr = Some (SchedContext sc n)
           \<and> unat (r_time (refill_hd sc)) + 2 * unat (sc_period sc) + unat (consumed_time s)
                      \<le> unat (max_word :: time)
+          \<and> unat (cur_time s) + 2 * unat (sc_budget sc) \<le> unat (max_word::time)
+          \<and> MIN_REFILLS \<le> sc_refill_max sc
           \<and> MIN_SC_BUDGET \<le> sc_budget sc \<and> sc_budget sc \<le> sc_period sc) and
      valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace>
      check_budget
