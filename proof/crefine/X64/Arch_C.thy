@@ -1320,7 +1320,7 @@ lemma decodeX64PageTableInvocation_ccorres:
    apply (rule conjI[rotated])
     apply (fastforce dest!: cap_lift_page_table_cap
                      intro!: is_aligned_addrFromPPtr[simplified bit_simps, simplified]
-                     simp: vmsz_aligned'_def cap_to_H_simps cap_page_table_cap_lift_def bit_simps capAligned_def)
+                     simp: vmsz_aligned_def cap_to_H_simps cap_page_table_cap_lift_def bit_simps capAligned_def)
    apply clarsimp
    apply (rule conjI, clarsimp simp: ThreadState_Restart_def mask_def)
    apply (rule conjI)
@@ -1371,18 +1371,18 @@ lemma decodeX64PageTableInvocation_ccorres:
                     dest!: cap_to_H_PML4Cap_tag cap_lift_pml4_cap)
   apply (fastforce dest!: cap_lift_page_table_cap
                    intro!: is_aligned_addrFromPPtr[simplified bit_simps, simplified]
-                   simp: vmsz_aligned'_def cap_to_H_simps cap_page_table_cap_lift_def bit_simps capAligned_def)
+                   simp: vmsz_aligned_def cap_to_H_simps cap_page_table_cap_lift_def bit_simps capAligned_def)
   done
 
 lemma checkVPAlignment_spec:
   "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. \<acute>sz < 3\<rbrace> Call checkVPAlignment_'proc
           {t. ret__unsigned_long_' t = from_bool
-               (vmsz_aligned' (w_' s) (framesize_to_H (sz_' s)))}"
+               (vmsz_aligned (w_' s) (framesize_to_H (sz_' s)))}"
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: mask_eq_iff_w2p word_size)
   apply (rule conjI)
    apply (simp add: pageBitsForSize_def bit_simps split: vmpage_size.split)
-  apply (simp add: from_bool_def vmsz_aligned'_def is_aligned_mask
+  apply (simp add: from_bool_def vmsz_aligned_def is_aligned_mask
                    mask_def split: if_split)
   done
 
@@ -1822,9 +1822,9 @@ lemma performPageInvocationMapPDPTE_ccorres:
   done
 
 lemma vmsz_aligned_addrFromPPtr':
-  "vmsz_aligned' (addrFromPPtr p) sz
-       = vmsz_aligned' p sz"
-  apply (simp add: vmsz_aligned'_def addrFromPPtr_def
+  "vmsz_aligned (addrFromPPtr p) sz
+       = vmsz_aligned p sz"
+  apply (simp add: vmsz_aligned_def addrFromPPtr_def
                    X64.addrFromPPtr_def)
   apply (subgoal_tac "is_aligned X64.pptrBase (pageBitsForSize sz)")
    apply (rule iffI)
@@ -1840,8 +1840,8 @@ lemma vmsz_aligned_addrFromPPtr':
 lemmas vmsz_aligned_addrFromPPtr
     = vmsz_aligned_addrFromPPtr'
       vmsz_aligned_addrFromPPtr'[unfolded addrFromPPtr_def]
-      vmsz_aligned_addrFromPPtr'[unfolded vmsz_aligned'_def]
-      vmsz_aligned_addrFromPPtr'[unfolded addrFromPPtr_def vmsz_aligned'_def]
+      vmsz_aligned_addrFromPPtr'[unfolded vmsz_aligned_def]
+      vmsz_aligned_addrFromPPtr'[unfolded addrFromPPtr_def vmsz_aligned_def]
 
 lemmas framesize_from_H_simps
     = framesize_from_H_def[split_simps vmpage_size.split]
@@ -1967,7 +1967,7 @@ lemma createSafeMappingEntries_PTE_ccorres:
                    create_mapping_pte_return_C.ptSlot_C v))
              ret__struct_create_mapping_pte_return_C_')
      (valid_objs' and page_map_l4_at' pml4 and
-         (\<lambda>_. vsz = X64SmallPage \<and> vmsz_aligned' (addrFromPPtr base) vsz
+         (\<lambda>_. vsz = X64SmallPage \<and> vmsz_aligned (addrFromPPtr base) vsz
               \<and> base \<in> kernel_mappings))
      (UNIV \<inter> {s. base_' s = (addrFromPPtr base)} \<inter> {s. vaddr___unsigned_long_' s = vaddr}
            \<inter> {s. vmrights_to_H (vmRights_' s) = vrights \<and> vmRights_' s < 4 \<and> vmRights_' s \<noteq> 0}
@@ -2039,7 +2039,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
                    create_mapping_pde_return_C.pdSlot_C v))
              ret__struct_create_mapping_pde_return_C_')
      (valid_objs' and page_map_l4_at' pml4 and
-         (\<lambda>_. vsz = X64LargePage \<and> vmsz_aligned' (addrFromPPtr base) vsz
+         (\<lambda>_. vsz = X64LargePage \<and> vmsz_aligned (addrFromPPtr base) vsz
               \<and> base \<in> kernel_mappings))
      (UNIV \<inter> {s. base_' s = (addrFromPPtr base)} \<inter> {s. vaddr___unsigned_long_' s = vaddr}
            \<inter> {s. vmrights_to_H (vmRights_' s) = vrights \<and> vmRights_' s < 4 \<and> vmRights_' s \<noteq> 0}
@@ -2093,7 +2093,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
    apply (vcg exspec=lookupPDSlot_modifies)
   apply (clarsimp simp: vm_attribs_relation_def typ_heap_simps from_bool_eq_if'
                         is_aligned_addrFromPPtr_pageBitsForSize[where sz=X64LargePage, simplified]
-                        vmsz_aligned'_def
+                        vmsz_aligned_def
                   dest!: addrFromPPtr_mask_middle_shiftBits[where sz=X64LargePage, simplified])
   apply (clarsimp simp: bit_simps cpde_relation_def Let_def true_def false_def
                         isPageTablePDE_def of_bool_from_bool
@@ -2108,7 +2108,7 @@ lemma createSafeMappingEntries_PDPTE_ccorres:
                    create_mapping_pdpte_return_C.pdptSlot_C v))
              ret__struct_create_mapping_pdpte_return_C_')
      (valid_objs' and page_map_l4_at' pml4 and
-         (\<lambda>_. vsz = X64HugePage \<and> vmsz_aligned' (addrFromPPtr base) vsz
+         (\<lambda>_. vsz = X64HugePage \<and> vmsz_aligned (addrFromPPtr base) vsz
               \<and> base \<in> kernel_mappings))
      (UNIV \<inter> {s. base_' s = (addrFromPPtr base)} \<inter> {s. vaddr___unsigned_long_' s = vaddr}
            \<inter> {s. vmrights_to_H (vmRights_' s) = vrights \<and> vmRights_' s < 4 \<and> vmRights_' s \<noteq> 0}
@@ -2162,7 +2162,7 @@ lemma createSafeMappingEntries_PDPTE_ccorres:
    apply (vcg exspec=lookupPDPTSlot_modifies)
   apply (clarsimp simp: vm_attribs_relation_def typ_heap_simps from_bool_eq_if'
                         is_aligned_addrFromPPtr_pageBitsForSize[where sz=X64HugePage, simplified]
-                        vmsz_aligned'_def
+                        vmsz_aligned_def
                   dest!: addrFromPPtr_mask_middle_shiftBits[where sz=X64HugePage, simplified])
   apply (clarsimp simp: bit_simps cpdpte_relation_def Let_def true_def false_def
                         isPageDirectoryPDPTE_def of_bool_from_bool
@@ -2179,7 +2179,7 @@ lemma decodeX86ModeMapPage_ccorres:
   "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
             (invs' and page_map_l4_at' pml4
                    and cte_wp_at' \<top> slot and (\<lambda>s. thread = ksCurThread s)
-                   and K (vmsz_aligned' base vsz \<and> base \<in> kernel_mappings \<and> vsz = X64HugePage
+                   and K (vmsz_aligned base vsz \<and> base \<in> kernel_mappings \<and> vsz = X64HugePage
                           \<and> isPageCap cap \<and> capVPBasePtr cap = base \<and> capVPMappedAddress cap \<noteq> None))
             (UNIV \<inter> \<lbrace>\<acute>label___unsigned_long = scast X86PageMap\<rbrace>
                   \<inter> \<lbrace>\<acute>page_size = framesize_from_H vsz\<rbrace>
@@ -2333,11 +2333,6 @@ lemma ccap_relation_PageCap_generics:
 lemma throwError_invocationCatch:
   "throwError a >>= invocationCatch b c d e = throwError (Inl a)"
   by (simp add: invocationCatch_def throwError_bind)
-
-(* FIXME: get rid of vmsz_aligned' *)
-lemma vmsz_aligned'_eq:
-  "vmsz_aligned' = vmsz_aligned"
-  by (fastforce simp: vmsz_aligned'_def vmsz_aligned_def)
 
 lemma canonical_address_cap_frame_cap:
   "cap_get_tag cap = SCAST(32 signed \<rightarrow> 64) cap_frame_cap \<Longrightarrow>
@@ -2636,7 +2631,7 @@ lemma decodeX64FrameInvocation_ccorres:
                                      injection_handler_If if_to_top_of_bindE)
                     apply (rule ccorres_if_cond_throws2[rotated -1, where Q=\<top> and Q'=\<top>])
                        apply vcg
-                      apply (clarsimp simp add: from_bool_0 vmsz_aligned'_def is_aligned_mask)
+                      apply (clarsimp simp add: from_bool_0 vmsz_aligned_def is_aligned_mask)
                       apply (drule ccap_relation_PageCap_Size)
                       apply (clarsimp simp: framesize_from_to_H user_vtop_def X64.pptrUserTop_def)
                      apply (simp add: injection_handler_throwError throwError_bind
@@ -2778,7 +2773,7 @@ lemma decodeX64FrameInvocation_ccorres:
   apply (rule conjI)
    apply clarsimp
    apply (frule cte_wp_at_diminished_gsMaxObjectSize, clarsimp)
-   apply (clarsimp simp: cte_wp_at_ctes_of is_aligned_mask[symmetric] vmsz_aligned'_def
+   apply (clarsimp simp: cte_wp_at_ctes_of is_aligned_mask[symmetric] vmsz_aligned_def
                          vmsz_aligned_addrFromPPtr)
    apply (frule ctes_of_valid', clarsimp+)
    apply (simp add: diminished_valid'[symmetric])
@@ -2790,7 +2785,7 @@ lemma decodeX64FrameInvocation_ccorres:
   (* Haskell side *)
   subgoal
     by (timeit \<open>(
-             (clarsimp simp: ct_in_state'_def vmsz_aligned'_def isCap_simps
+             (clarsimp simp: ct_in_state'_def vmsz_aligned_def isCap_simps
                              valid_cap'_def page_map_l4_at'_def tcb_at_invs'
                              sysargs_rel_to_n linorder_not_less framesize_from_H_eqs
                              excaps_map_def valid_tcb_state'_def split_def is_aligned_addrFromPPtr
@@ -2842,7 +2837,7 @@ lemma decodeX64FrameInvocation_ccorres:
                         maptype_from_H_def)
   apply (case_tac mapdata; clarsimp; prop_tac "canonical_address (args ! 0)")
      apply (rule le_user_vtop_canonical_address)
-     apply (frule aligned_sum_le_user_vtop[simplified vmsz_aligned'_eq[symmetric] word_le_nat_alt])
+     apply (frule aligned_sum_le_user_vtop[simplified word_le_nat_alt])
      apply (simp add: word_le_nat_alt not_less user_vtop_def X64.pptrUserTop_def)
     prefer 2
     apply (frule(1) cap_to_H_PageCap_tag)
@@ -2934,7 +2929,7 @@ lemma is_aligned_ptrFromPAddr_pageBitsForSize:
 
 lemma makeUserPDPTEPageDirectory_spec:
   "\<forall>s. \<Gamma> \<turnstile>
-  \<lbrace>s. vmsz_aligned' (\<acute>paddr) X64SmallPage\<rbrace>
+  \<lbrace>s. vmsz_aligned (\<acute>paddr) X64SmallPage\<rbrace>
   Call makeUserPDPTEPageDirectory_'proc
   \<lbrace> pdpte_lift \<acute>ret__struct_pdpte_C = Some (Pdpte_pdpte_pd \<lparr>
        pdpte_pdpte_pd_CL.xd_CL = 0,
@@ -3304,7 +3299,7 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
    apply (rule conjI[rotated])
     apply (fastforce dest!: cap_lift_page_directory_cap
                      intro!: is_aligned_addrFromPPtr[simplified bit_simps, simplified]
-                     simp: vmsz_aligned'_def cap_to_H_simps cap_page_directory_cap_lift_def bit_simps capAligned_def)
+                     simp: vmsz_aligned_def cap_to_H_simps cap_page_directory_cap_lift_def bit_simps capAligned_def)
    apply clarsimp
    apply (rule conjI, clarsimp simp: ThreadState_Restart_def mask_def)
    (* ccap_relation *)
@@ -3361,7 +3356,7 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
                dest!: cap_to_H_PML4Cap_tag cap_lift_pml4_cap)[1]
   apply (fastforce dest!: cap_lift_page_directory_cap
                    intro!: is_aligned_addrFromPPtr[simplified bit_simps, simplified]
-                   simp: vmsz_aligned'_def cap_to_H_simps cap_page_directory_cap_lift_def bit_simps capAligned_def)
+                   simp: vmsz_aligned_def cap_to_H_simps cap_page_directory_cap_lift_def bit_simps capAligned_def)
   done
 
 lemma makeUserPML4E_spec:

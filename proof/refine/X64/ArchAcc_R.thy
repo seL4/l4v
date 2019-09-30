@@ -1604,15 +1604,12 @@ definition
 
 lemma createMappingEntries_valid_slots' [wp]:
   "\<lbrace>valid_objs' and
-    K (vmsz_aligned' base sz \<and> vmsz_aligned' vptr sz \<and> ptrFromPAddr base \<noteq> 0) \<rbrace>
+    K (vmsz_aligned base sz \<and> vmsz_aligned vptr sz \<and> ptrFromPAddr base \<noteq> 0) \<rbrace>
   createMappingEntries base vptr sz vm_rights attrib pd
   \<lbrace>\<lambda>m. valid_slots' m\<rbrace>, -"
   apply (simp add: createMappingEntries_def)
-  apply (rule hoare_pre)
-   apply (wp|wpc|simp add: valid_slots'_def valid_mapping'_def)+
-  apply (simp add: vmsz_aligned'_def)
-  apply auto
-  done
+  apply (wpsimp simp: valid_slots'_def valid_mapping'_def vmsz_aligned_def)
+  by fastforce
 
 lemma mapping_map_pte: "\<lbrakk>mapping_map (vm_page_entry.VMPTE p, x) m'; page_entry_map_corres m'\<rbrakk> \<Longrightarrow> \<exists>p'. m' = (VMPTE p', VMPTEPtr x)"
   by (cases m'; clarsimp simp : mapping_map_def page_entry_map_def page_entry_ptr_map_def page_entry_map_corres_def)

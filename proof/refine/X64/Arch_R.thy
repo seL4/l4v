@@ -455,13 +455,10 @@ lemma check_vp_corres:
   done
 
 lemma checkVP_wpR [wp]:
-  "\<lbrace>\<lambda>s. vmsz_aligned' w sz \<longrightarrow> P () s\<rbrace>
+  "\<lbrace>\<lambda>s. vmsz_aligned w sz \<longrightarrow> P () s\<rbrace>
   checkVPAlignment sz w \<lbrace>P\<rbrace>, -"
-  apply (simp add: checkVPAlignment_def unlessE_whenE cong: vmpage_size.case_cong)
-  apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp|wpc)+
-  apply (simp add: is_aligned_mask vmsz_aligned'_def)
-  done
+  apply (simp add: checkVPAlignment_def)
+  by (wpsimp wp: hoare_whenE_wp simp: is_aligned_mask vmsz_aligned_def)
 
 lemma asidHighBits [simp]:
   "asidHighBits = asid_high_bits"
@@ -1703,7 +1700,7 @@ lemma decode_page_inv_wf[wp]:
    apply (clarsimp simp: diminished_valid' [symmetric])
    apply (clarsimp simp: valid_cap'_def ptBits_def pageBits_def)
    apply (clarsimp simp: is_arch_update'_def isCap_simps capAligned_def
-                           vmsz_aligned'_def
+                           vmsz_aligned_def
                     dest!: diminished_capMaster)
    apply (rule conjI)
     apply (clarsimp simp: valid_cap_simps)

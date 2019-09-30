@@ -1869,7 +1869,7 @@ lemmas ccorres_name_ksCurThread = ccorres_pre_getCurThread[where f="\<lambda>_. 
 
 lemma unmapPage_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
-                          and (\<lambda>_. asid_wf asid \<and> vmsz_aligned' vptr sz
+                          and (\<lambda>_. asid_wf asid \<and> vmsz_aligned vptr sz
                                            \<and> vptr < pptrBase))
       (UNIV \<inter> {s. framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 3}
             \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
@@ -1995,7 +1995,7 @@ lemma unmapPage_ccorres:
     apply wpsimp
    apply (simp add: Collect_const_mem)
    apply (vcg exspec=findVSpaceForASID_modifies)
-  by (auto simp: invs_arch_state' invs_no_0_obj' invs_valid_objs' vmsz_aligned'_def
+  by (auto simp: invs_arch_state' invs_no_0_obj' invs_valid_objs' vmsz_aligned_def
                  is_aligned_weaken[OF _ pbfs_atleast_pageBits] pageBitsForSize_def
                  Collect_const_mem vm_page_size_defs word_sle_def
                  ccHoarePost_def typ_heap_simps bit_simps
@@ -2105,8 +2105,8 @@ lemma getSlotCap_wp':
   done
 
 lemma vmsz_aligned_aligned_pageBits:
-  "vmsz_aligned' ptr sz \<Longrightarrow> is_aligned ptr pageBits"
-  apply (simp add: vmsz_aligned'_def)
+  "vmsz_aligned ptr sz \<Longrightarrow> is_aligned ptr pageBits"
+  apply (simp add: vmsz_aligned_def)
   apply (erule is_aligned_weaken)
   apply (simp add: pageBits_def pageBitsForSize_def
             split: vmpage_size.split)
@@ -2326,7 +2326,7 @@ lemma makeUserPDELargePage_spec:
 
 lemma makeUserPDEPageTable_spec:
   "\<forall>s. \<Gamma> \<turnstile>
-  \<lbrace>s. vmsz_aligned' (\<acute>paddr) X64SmallPage\<rbrace>
+  \<lbrace>s. vmsz_aligned (\<acute>paddr) X64SmallPage\<rbrace>
   Call makeUserPDEPageTable_'proc
   \<lbrace> pde_lift \<acute>ret__struct_pde_C = Some (Pde_pde_pt \<lparr>
        pde_pde_pt_CL.xd_CL = 0,
@@ -2345,7 +2345,7 @@ lemma makeUserPDEPageTable_spec:
 
 lemma makeUserPDPTEHugePage_spec:
   "\<forall>s. \<Gamma> \<turnstile>
-  \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0 \<and> vmsz_aligned' (\<acute>paddr) X64HugePage \<rbrace>
+  \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0 \<and> vmsz_aligned (\<acute>paddr) X64HugePage \<rbrace>
   Call makeUserPDPTEHugePage_'proc
   \<lbrace> pdpte_lift \<acute>ret__struct_pdpte_C = Some (Pdpte_pdpte_1g \<lparr>
        pdpte_pdpte_1g_CL.xd_CL = 0,

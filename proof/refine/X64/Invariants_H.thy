@@ -401,10 +401,6 @@ lemmas vspace_table_at'_defs
 abbreviation
   "asid_pool_at' \<equiv> typ_at' (ArchT ASIDPoolT)"
 
-(* FIXME: duplicated with vmsz_aligned *)
-definition
-  "vmsz_aligned' ref sz \<equiv> is_aligned ref (pageBitsForSize sz)"
-
 primrec
   zombieCTEs :: "zombie_type \<Rightarrow> nat"
 where
@@ -443,7 +439,7 @@ where valid_cap'_def:
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' (if d then UserDataDeviceT else UserDataT)
     (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> (t=VMNoMap) | Some (asid, ref) \<Rightarrow>
-            (t = VMVSpaceMap) \<and> 0 < asid \<and> asid_wf asid \<and> vmsz_aligned' ref sz \<and> ref < pptrBase)
+            (t = VMVSpaceMap) \<and> 0 < asid \<and> asid_wf asid \<and> vmsz_aligned ref sz \<and> ref < pptrBase)
   | PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
