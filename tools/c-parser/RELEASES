@@ -110,3 +110,6 @@
 - added syntax for displaying pointer types (PTR and PTR_COERCE)
 - always emit long (type-wrangled) variable names,
   provide short names as abbreviation
+
+1.16.1
+- Correct license for shorten_names.ML. No code changes.
