@@ -522,8 +522,6 @@ definition
       \<exists>c' m'. pgi' = PageMap c' (cte_map slot) m' \<and>
               cap_relation (Structures_A.ArchObjectCap c) c' \<and>
               mapping_map m m'
-  | RISCV64_A.PageRemap m \<Rightarrow>
-      \<exists>m'. pgi' = PageRemap m' \<and> mapping_map m m'
   | RISCV64_A.PageUnmap c ptr \<Rightarrow>
       \<exists>c'. pgi' = PageUnmap c' (cte_map ptr) \<and>
       acap_relation c c'
@@ -535,7 +533,6 @@ definition
   case pgi of
     PageMap cap ptr m \<Rightarrow>
       cte_wp_at' (is_arch_update' cap) ptr and valid_cap' cap
-  | PageRemap m \<Rightarrow> \<top>
   | PageUnmap cap ptr \<Rightarrow>
       K (isFrameCap cap) and
       cte_wp_at' (is_arch_update' (ArchObjectCap cap)) ptr and valid_cap' (ArchObjectCap cap)
@@ -614,14 +611,6 @@ lemma perform_page_corres:
       apply (clarsimp simp: same_ref_def)
       apply (erule (3) vs_lookup_slot_pte_at)
      apply (clarsimp simp: valid_page_inv'_def cte_wp_at_ctes_of)
-    apply (simp add: perform_pg_inv_remap_def)
-    apply (rule corres_guard_imp)
-      apply (rule corres_split[OF _ store_pte_corres])
-         apply (rule corres_machine_op, rule corres_Id; simp)
-        apply assumption
-       apply wpsimp+
-     apply (fastforce simp: cte_wp_at_caps_of_state same_ref_def intro: vs_lookup_slot_pte_at)
-    apply simp
    apply (clarsimp simp: perform_pg_inv_unmap_def liftM_def)
    apply (rename_tac cap a b cap')
    apply (rule_tac F="is_FrameCap cap" in corres_req; clarsimp)
@@ -1330,8 +1319,6 @@ lemma perform_page_invs [wp]:
                        arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp
                   simp: valid_page_inv'_def is_arch_update'_def
              | (auto simp: is_arch_update'_def)[1])+)[3]
-  apply (wpsimp wp: arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp
-                    unmapPage_cte_wp_at' hoare_vcg_ex_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of valid_page_inv'_def)
   apply (clarsimp simp: is_arch_update'_def isCap_simps valid_cap'_def capAligned_def
                   split: option.splits)

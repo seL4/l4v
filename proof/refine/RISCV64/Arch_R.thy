@@ -524,7 +524,7 @@ lemma decode_page_inv_corres:
             (decode_frame_invocation l args slot cap excaps)
             (decodeRISCVFrameInvocation l args (cte_map slot) cap' excaps')"
   apply (simp add: decode_frame_invocation_def decodeRISCVFrameInvocation_def Let_def isCap_simps
-                   split del: if_split)
+        split del: if_split)
   apply (cases "invocation_type l = ArchInvocationLabel RISCVPageMap")
    apply (case_tac "\<not>(2 < length args \<and> excaps \<noteq> [])")
     apply (auto simp: decode_fr_inv_map_def split: list.split)[1]
@@ -532,9 +532,6 @@ lemma decode_page_inv_corres:
    apply (elim exE conjE)
    apply (simp split: list.split, intro conjI impI allI, simp_all)[1]
    apply (simp add: decodeRISCVFrameInvocationMap_def)
-   apply (rule whenE_throwError_corres_initial)
-     apply simp
-    apply (fastforce simp: mdata_map_def)
    apply (simp split: cap.split, intro conjI impI allI, simp_all)[1]
    apply (rename_tac arch_capa)
    apply (case_tac arch_capa, simp_all)[1]
@@ -570,8 +567,21 @@ lemma decode_page_inv_corres:
                 apply simp
                apply (rule corres_splitEE[where r'=dc])
                   prefer 2
-                  apply (rule check_slot_corres)
-                  apply auto[1]
+                  apply (cases opt; clarsimp)
+                   apply (fold ser_def)
+                   apply (rule check_slot_corres)
+                   apply fastforce
+                  apply (rule corres_guard_imp)
+                    apply (rule whenE_throwError_corres)
+                      apply fastforce
+                     apply (rule up_ucast_inj_eq[THEN arg_cong_Not, symmetric], simp)
+                    apply (rule whenE_throwError_corres)
+                      apply fastforce
+                     apply presburger
+                    apply (rule check_slot_corres)
+                    apply (case_tac pte; simp add: is_PageTablePTE_def RISCV64_H.isPageTablePTE_def)
+                   apply blast
+                  apply blast
                  apply (rule corres_trivial, rule corres_returnOk)
                  apply (clarsimp simp: archinv_relation_def page_invocation_map_def mapping_map_def)
                 apply (wpsimp simp: if_apply_def2
@@ -589,64 +599,6 @@ lemma decode_page_inv_corres:
     apply (drule (1) pt_lookup_slot_vs_lookup_slotI, clarsimp)
     apply (erule vs_lookup_slot_pte_at; assumption?)
     apply (simp add: not_le vmsz_aligned_user_region[unfolded pptrUserTop_def] mask_def user_vtop_def)
-   apply fastforce
-  \<comment> \<open>PageRemap\<close>
-  apply (cases "invocation_type l = ArchInvocationLabel RISCVPageRemap")
-   apply (case_tac "\<not>(1 < length args \<and> excaps \<noteq> [])")
-  subgoal by (auto simp: decode_fr_inv_remap_def split: list.split)
-   apply (simp add: Let_def split: list.split)
-   apply (case_tac args, simp)
-   apply (clarsimp simp: split_def)
-   apply (rename_tac w1 w2 w3)
-   apply (case_tac excaps', simp)
-   apply (clarsimp simp: decode_fr_inv_remap_def decodeRISCVFrameInvocationRemap_def)
-   apply (clarsimp simp: list_all2_Cons2)
-   apply (case_tac "fst (hd excaps)"; simp)
-   apply clarsimp
-   apply (rename_tac arch_capa arch_capb)
-   apply (case_tac arch_capa; simp)
-   apply (rename_tac opt')
-   apply (case_tac opt'; simp)
-   apply (rename_tac av, case_tac av, simp)
-   apply (cases opt; clarsimp simp: mdata_map_def)
-   apply (rule corres_guard_imp)
-     apply (rule corres_splitEE)
-        prefer 2
-        apply (rule corres_lookup_error)
-        apply (rule find_vspace_for_asid_corres[OF refl])
-       apply (rule whenE_throwError_corres, clarsimp)
-        apply (clarsimp simp: up_ucast_inj_eq)
-       apply (rule corres_splitEE)
-          prefer 2
-          apply (rule check_vp_corres)
-         apply (rule corres_splitEE)
-            prefer 2
-            apply simp
-            apply (rule lookup_pt_slot_corres)
-           apply (clarsimp simp: unlessE_whenE)
-           apply datatype_schem
-           apply (rule whenE_throwError_corres, simp add: lookup_failure_map_def)
-            apply simp
-           apply (rule corres_splitEE)
-              prefer 2
-              apply (rule check_slot_corres)
-              apply (case_tac pte; simp add: is_PageTablePTE_def RISCV64_H.isPageTablePTE_def)
-             apply (rule corres_trivial, rule corres_returnOk, simp)
-             apply (clarsimp simp: archinv_relation_def page_invocation_map_def mapping_map_def)
-            apply wpsimp+
-    apply (clarsimp simp: invs_psp_aligned invs_distinct invs_vspace_objs invs_valid_asid_table
-                          cte_wp_at_caps_of_state is_arch_diminished_def is_cap_simps)
-    apply (rule conjI; clarsimp?)
-     apply (clarsimp simp: valid_cap_def wellformed_mapdata_def)
-    apply (rule conjI)
-     apply (rule exI)+
-     apply (rule conjI, erule vspace_for_asid_vs_lookup, simp)
-    apply (rule conjI)
-     apply (clarsimp simp: valid_cap_def wellformed_mapdata_def)
-    apply clarsimp
-    apply (drule (1) pt_lookup_slot_vs_lookup_slotI, clarsimp)
-    apply (erule vs_lookup_slot_pte_at; assumption?)
-    apply (simp add: valid_cap_def wellformed_mapdata_def)
    apply fastforce
   \<comment> \<open>PageUnmap\<close>
   apply (simp split del: if_split)
@@ -1140,16 +1092,16 @@ lemma decode_page_inv_wf[wp]:
        \<lbrace>valid_arch_inv'\<rbrace>, -"
   apply (simp add: decodeRISCVFrameInvocation_def Let_def isCap_simps
              cong: if_cong split del: if_split)
-  apply (wpsimp simp: decodeRISCVFrameInvocationMap_def decodeRISCVFrameInvocationRemap_def
-                      valid_arch_inv'_def valid_page_inv'_def checkSlot_def if_apply_def2
-                wp: getPTE_wp hoare_vcg_all_lift lookupPTSlot_inv
+  apply (wpsimp simp: decodeRISCVFrameInvocationMap_def valid_arch_inv'_def valid_page_inv'_def
+                      checkSlot_def if_apply_def2
+                  wp: getPTE_wp hoare_vcg_all_lift lookupPTSlot_inv
          | wp (once) hoare_drop_imps)+
   apply ((rule conjI; clarsimp)+;
-          (clarsimp simp: cte_wp_at_ctes_of,
-           (drule ctes_of_valid', fastforce)+,
-           clarsimp simp: diminished_valid' [symmetric] valid_cap'_def ptBits_def pageBits_def
-                          is_arch_update'_def isCap_simps capAligned_def wellformed_mapdata'_def
-                          vmsz_aligned_user_region not_le
+           (clarsimp simp: cte_wp_at_ctes_of,
+            (drule ctes_of_valid', fastforce)+,
+            clarsimp simp: diminished_valid' [symmetric] valid_cap'_def ptBits_def pageBits_def
+                           is_arch_update'_def isCap_simps capAligned_def wellformed_mapdata'_def
+                           vmsz_aligned_user_region not_le
                     dest!: diminished_capMaster))
   done
 
