@@ -2422,12 +2422,12 @@ lemma valid_blocked_except_set_2_subset[elim]:
    valid_blocked_except_set_2 S queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs"
   by (fastforce simp: valid_blocked_defs)
 
-lemmas valid_blocked_except_set_2_subset_safe[elim!] =
+lemmas valid_blocked_except_set_2_subset_safe[elim!, simp] =
   valid_blocked_except_set_2_subset[where T="{}", simplified]
   valid_blocked_except_set_2_subset[OF _ subset_insertI]
 
 lemma valid_blocked_except_set_cur_thread[simp]:
-  "valid_blocked_except_set {cur_thread s} s = valid_blocked s"
+  "valid_blocked_except_set (insert (cur_thread s) S) s = valid_blocked_except_set S s"
    by (auto simp: valid_blocked_defs)
 
 lemma valid_blocked_except_set_not_runnable:
