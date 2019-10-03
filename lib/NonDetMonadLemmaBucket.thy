@@ -1146,6 +1146,22 @@ lemma case_options_weak_wp:
    apply simp+
   done
 
+lemma case_option_wp_None_return:
+  assumes [wp]: "\<And>x. \<lbrace>P' x\<rbrace> f x \<lbrace>\<lambda>_. Q\<rbrace>"
+  shows "\<lbrakk>\<And>x s. (Q and P x) s \<Longrightarrow> P' x s \<rbrakk>
+         \<Longrightarrow> \<lbrace>Q and (\<lambda>s. opt \<noteq> None \<longrightarrow> P (the opt) s)\<rbrace>
+             (case opt of None \<Rightarrow> return () | Some x \<Rightarrow> f x)
+             \<lbrace>\<lambda>_. Q\<rbrace>"
+  by (cases opt; wpsimp)
+
+lemma case_option_wp_None_returnOk:
+  assumes [wp]: "\<And>x. \<lbrace>P' x\<rbrace> f x \<lbrace>\<lambda>_. Q\<rbrace>,\<lbrace>E\<rbrace>"
+  shows "\<lbrakk>\<And>x s. (Q and P x) s \<Longrightarrow> P' x s \<rbrakk>
+         \<Longrightarrow> \<lbrace>Q and (\<lambda>s. opt \<noteq> None \<longrightarrow> P (the opt) s)\<rbrace>
+             (case opt of None \<Rightarrow> returnOk () | Some x \<Rightarrow> f x)
+             \<lbrace>\<lambda>_. Q\<rbrace>,\<lbrace>E\<rbrace>"
+  by (cases opt; wpsimp)
+
 lemma list_cases_weak_wp:
   assumes "\<lbrace>P_A\<rbrace> a \<lbrace>Q\<rbrace>"
   assumes "\<And>x xs. \<lbrace>P_B\<rbrace> b x xs \<lbrace>Q\<rbrace>"
@@ -1452,6 +1468,10 @@ lemma select_singleton:
 lemma static_imp_wp:
   "\<lbrace>Q\<rbrace> m \<lbrace>R\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> Q s\<rbrace> m \<lbrace>\<lambda>rv s. P \<longrightarrow> R rv s\<rbrace>"
   by (cases P, simp_all add: valid_def)
+
+lemma static_imp_wpE :
+  "\<lbrace>Q\<rbrace> m \<lbrace>R\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> Q s\<rbrace> m \<lbrace>\<lambda>rv s. P \<longrightarrow> R rv s\<rbrace>,-"
+  by (cases P, simp_all)
 
 lemma static_imp_conj_wp:
   "\<lbrakk> \<lbrace>Q\<rbrace> m \<lbrace>Q'\<rbrace>; \<lbrace>R\<rbrace> m \<lbrace>R'\<rbrace> \<rbrakk>

@@ -216,6 +216,10 @@ lemma pred_and_false[simp]: "(P and \<bottom>) = \<bottom>"
 lemma pred_and_false_var[simp]: "(\<bottom> and P) = \<bottom>"
   by(simp add:pred_conj_def)
 
+lemma pred_conj_assoc:
+  "(P and Q and R) = (P and (Q and R))"
+  unfolding pred_conj_def by simp
+
 subsection "Hoare Logic Rules"
 
 lemma validE_def2:
