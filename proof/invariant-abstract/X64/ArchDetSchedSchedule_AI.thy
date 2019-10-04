@@ -16,6 +16,9 @@ context Arch begin global_naming X64
 
 named_theorems DetSchedSchedule_AI_assms
 
+crunch prepare_thread_delete_idel_thread[wp, DetSchedSchedule_AI_assms]:
+  prepare_thread_delete "\<lambda>(s:: det_ext state). P (idle_thread s)"
+
 crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread, arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_etcbs
   (simp: crunch_simps ignore: )
@@ -353,6 +356,21 @@ crunches arch_post_cap_deletion
   and not_queued[wp, DetSchedSchedule_AI_assms]: "not_queued t"
   and sched_act_not[wp, DetSchedSchedule_AI_assms]: "scheduler_act_not t"
   and weak_valid_sched_action[wp, DetSchedSchedule_AI_assms]: weak_valid_sched_action
+  and valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
+
+lemma flush_table_idle_thread[wp, DetSchedSchedule_AI_assms]:
+  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> flush_table param_a param_b param_c param_d \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
+  unfolding flush_table_def
+  apply (wpsimp wp: mapM_x_wp')
+  done
+
+crunch delete_asid_pool[wp]:
+  delete_asid_pool, unmap_page "\<lambda>(s:: det_ext state). P (idle_thread s)"
+  (wp: crunch_wps simp: if_apply_def2)
+
+crunch idle_thread[wp, DetSchedSchedule_AI_assms]:
+  arch_finalise_cap "\<lambda> (s:: det_ext state). P (idle_thread s)"
+  (wp: crunch_wps crunch_simps)
 
 declare make_arch_fault_msg_invs[DetSchedSchedule_AI_assms]
 

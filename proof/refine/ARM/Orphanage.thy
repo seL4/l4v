@@ -2010,20 +2010,26 @@ lemma almost_no_orphans_no_orphans:
   "\<lbrakk> almost_no_orphans t s; \<not> is_active_tcb_ptr t s \<rbrakk> \<Longrightarrow> no_orphans s"
   by (auto simp: almost_no_orphans_def no_orphans_def all_active_tcb_ptrs_def)
 
+lemma almost_no_orphans_no_orphans':
+  "\<lbrakk> almost_no_orphans t s; ksCurThread s = t\<rbrakk> \<Longrightarrow> no_orphans s"
+  by (auto simp: almost_no_orphans_def no_orphans_def all_active_tcb_ptrs_def)
+
 lemma setPriority_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> tcb_at' tptr s \<rbrace>
    setPriority tptr prio
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding setPriority_def
-  apply (wp add: hoare_drop_imps del: tcbSchedEnqueue_no_orphans | clarsimp)+
-      apply (wp hoare_drop_imps tcbSchedEnqueue_almost_no_orphans)+
-   apply (rule_tac Q="\<lambda>rv s. almost_no_orphans tptr s \<and> valid_queues' s" in hoare_post_imp)
-    apply (fastforce simp: is_active_tcb_ptr_runnable' pred_tcb_at'_def obj_at'_def
-                          almost_no_orphans_no_orphans)
-   apply (wp threadSet_almost_no_orphans threadSet_valid_queues' | clarsimp simp: inQ_def)+
-  apply (rule_tac Q="\<lambda>rv. obj_at' (Not \<circ> tcbQueued) tptr and invs'" in hoare_post_imp)
-   apply (clarsimp simp: obj_at'_def)
-  apply (wp tcbSchedDequeue_not_queued | clarsimp)+
+  apply wpsimp
+    apply (rule_tac Q="\<lambda>rv s. almost_no_orphans tptr s \<and> valid_queues' s \<and> weak_sch_act_wf (ksSchedulerAction s) s" in hoare_post_imp)
+     apply clarsimp
+     apply (clarsimp simp: is_active_tcb_ptr_runnable' pred_tcb_at'_def obj_at'_def
+                           almost_no_orphans_no_orphans elim!: almost_no_orphans_no_orphans')
+    apply (wp threadSet_almost_no_orphans threadSet_valid_queues' | clarsimp simp: inQ_def)+
+    apply (wpsimp wp: threadSet_weak_sch_act_wf)
+   apply (wp tcbSchedDequeue_almost_no_orphans| clarsimp)+
+   apply (rule_tac Q="\<lambda>rv. obj_at' (Not \<circ> tcbQueued) tptr and invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)" in hoare_post_imp)
+    apply (clarsimp simp: obj_at'_def inQ_def)
+   apply (wp tcbSchedDequeue_not_queued | clarsimp)+
   done
 
 lemma setMCPriority_no_orphans[wp]:
@@ -2058,34 +2064,28 @@ lemma tc_no_orphans:
   apply (rule hoare_gen_asm)
   apply (simp add: invokeTCB_def getThreadCSpaceRoot getThreadVSpaceRoot
                    getThreadBufferSlot_def split_def)
+  apply (simp only: eq_commute[where a="a"])
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp threadSet_no_orphans threadSet_invs_trivial
                threadSet_cap_to' hoare_vcg_all_lift static_imp_wp | clarsimp simp: inQ_def)+)[2]
   apply (rule hoare_walk_assmsE)
     apply (cases mcp; clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
-    apply ((wp case_option_wp threadSet_no_orphans threadSet_invs_trivial setMCPriority_invs'
-              typ_at_lifts[OF setMCPriority_typ_at']
-               threadSet_cap_to' hoare_vcg_all_lift static_imp_wp | clarsimp simp: inQ_def)+)[3]
-  apply (rule hoare_walk_assmsE)
-    apply (cases d; clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
-     apply ((wp case_option_wp hoare_vcg_all_lift static_imp_wp setP_invs' | clarsimp)+)[3]
-  apply (rule hoare_pre)
-   apply ((simp only: simp_thms cong: conj_cong
-         | wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
-              checkCap_inv[where P="valid_cap' c" for c]
-              checkCap_inv[where P=sch_act_simple]
-              checkCap_inv[where P=no_orphans]
-              checkCap_inv[where P="tcb_at' a"]
-              threadSet_cte_wp_at'
-              hoare_vcg_all_lift_R hoare_vcg_all_lift
-              threadSet_no_orphans hoare_vcg_const_imp_lift_R
-              static_imp_wp hoare_drop_imp threadSet_ipcbuffer_invs
-         | strengthen invs_valid_queues'
-         | (simp add: locateSlotTCB_def locateSlotBasic_def objBits_def
-                      objBitsKO_def tcbIPCBufferSlot_def tcb_cte_cases_def,
-             wp hoare_return_sp)
-         | wpc | clarsimp)+)
+     apply ((wp case_option_wp threadSet_no_orphans threadSet_invs_trivial setMCPriority_invs'
+                typ_at_lifts[OF setMCPriority_typ_at']
+                threadSet_cap_to' hoare_vcg_all_lift static_imp_wp | clarsimp simp: inQ_def)+)[3]
+  apply ((simp only: simp_thms cong: conj_cong
+          | wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
+               case_option_wp[where m'="return ()", OF setPriority_no_orphans return_inv,simplified]
+               checkCap_inv[where P="valid_cap' c" for c] checkCap_inv[where P=sch_act_simple]
+               checkCap_inv[where P=no_orphans] checkCap_inv[where P="tcb_at' a"]
+               threadSet_cte_wp_at' hoare_vcg_all_lift_R hoare_vcg_all_lift threadSet_no_orphans
+               hoare_vcg_const_imp_lift_R static_imp_wp hoare_drop_imp threadSet_ipcbuffer_invs
+          | strengthen invs_valid_queues'
+          | (simp add: locateSlotTCB_def locateSlotBasic_def objBits_def
+                     objBitsKO_def tcbIPCBufferSlot_def tcb_cte_cases_def,
+           wp hoare_return_sp)
+          | wpc | clarsimp)+)
   apply (fastforce simp: objBits_defs isCap_simps dest!: isValidVTableRootD)
   done
 

@@ -1173,11 +1173,7 @@ lemma preemption_point_idle_thread[wp]:
   by (wpsimp wp: OR_choiceE_weak_wp simp: irq_state_independent_def)
 
 (* following idle_thread and cur_domain proofs clagged from infoflow/PasUpdates.thy *)
-crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cancel_badged_sends
-  "\<lambda>s. P (idle_thread s)"
-  ( wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp dxo_wp_weak
-    simp: crunch_simps check_cap_at_def filterM_mapM unless_def
-    ignore: without_preemption filterM rec_del check_cap_at cap_revoke )
+crunch idle_thread'[wp]: cap_delete "\<lambda>s. P (idle_thread s)"
 
 lemma cap_revoke_idle_thread[wp]:"\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> cap_revoke a \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   by (rule cap_revoke_preservation2; wp)
@@ -1194,7 +1190,7 @@ crunch idle_thread[wp]: handle_event "\<lambda>s::det_state. P (idle_thread s)"
    ignore: check_cap_at syscall)
 
 crunch cur_domain[wp]:
-  transfer_caps_loop, ethread_set, thread_set_priority, set_priority,
+  transfer_caps_loop, ethread_set, possible_switch_to, thread_set_priority, set_priority,
   set_domain, invoke_domain, cap_move_ext, timer_tick,
   cap_move, cancel_badged_sends, possible_switch_to
   "\<lambda>s. P (cur_domain s)"

@@ -160,8 +160,6 @@ where
     liftE $ option_update_thread target (tcb_fault_handler_update o K) faultep;
     liftE $  case mcp of None \<Rightarrow> return()
      | Some (newmcp, _) \<Rightarrow> set_mcpriority target newmcp;
-    liftE $ case priority of None \<Rightarrow> return()
-     | Some (prio, _) \<Rightarrow> do_extended_op (set_priority target prio);
     (case croot of None \<Rightarrow> returnOk ()
      | Some (new_cap, src_slot) \<Rightarrow> doE
       cap_delete (target, tcb_cnode_index 0);
@@ -188,6 +186,9 @@ where
       cur \<leftarrow> liftE $ gets cur_thread;
       liftE $ when (target = cur) (do_extended_op reschedule_required)
     odE);
+    liftE $ case priority
+              of None \<Rightarrow> return()
+               | Some (prio, _) \<Rightarrow> do_extended_op (set_priority target prio);
     returnOk []
   odE"
 

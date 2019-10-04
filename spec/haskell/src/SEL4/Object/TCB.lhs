@@ -412,7 +412,6 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 >             (\ep -> threadSet (\t -> t {tcbFaultHandler = ep}) target)
 >             faultep
 >         withoutPreemption $ maybe (return ()) (setMCPriority target) (mapMaybe fst mcp)
->         withoutPreemption $ maybe (return ()) (setPriority target) (mapMaybe fst priority)
 >         maybe (return ()) (\(newCap, srcSlot) -> do
 >             rootSlot <- withoutPreemption $ getThreadCSpaceRoot target
 >             cteDelete rootSlot True
@@ -447,6 +446,7 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 >                 thread <- withoutPreemption $ getCurThread
 >                 withoutPreemption $ when (target == thread) $ rescheduleRequired)
 >             buffer
+>         withoutPreemption $ maybe (return ()) (setPriority target) (mapMaybe fst priority)
 >         return []
 
 \subsubsection{Register State}

@@ -55,8 +55,8 @@ lemma invoke_cnode_domain_fields[wp]: "\<lbrace>domain_fields P\<rbrace> invoke_
       | rule conjI)+
 
 crunch domain_fields[wp]:
-  set_domain,set_priority,set_extra_badge,
-  possible_switch_to,handle_send,handle_recv,handle_reply
+  set_domain,possible_switch_to,set_priority,set_extra_badge,
+  handle_send,handle_recv,handle_reply
   "domain_fields P"
   (wp: syscall_valid crunch_wps mapME_x_inv_wp
    simp: crunch_simps check_cap_at_def detype_def detype_ext_def mapM_x_defsym

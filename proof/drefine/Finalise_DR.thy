@@ -1977,12 +1977,6 @@ crunch valid_idle[wp]: flush_table "valid_idle"
 crunch valid_idle[wp]: page_table_mapped "valid_idle"
   (wp: crunch_wps simp:crunch_simps)
 
-crunch valid_idle[wp]: invalidate_asid_entry "valid_idle"
-  (wp: crunch_wps simp:crunch_simps)
-
-crunch valid_idle[wp]: flush_space "valid_idle"
-  (wp: crunch_wps simp:crunch_simps)
-
 lemma page_table_mapped_stable[wp]:
   "\<lbrace>(=) s\<rbrace> page_table_mapped a b w \<lbrace>\<lambda>r. (=) s\<rbrace>"
   apply (simp add:page_table_mapped_def)
@@ -3265,12 +3259,6 @@ lemma invs_valid_idle_strg:
 lemma cutMon_validE_R_drop:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> cutMon R f \<lbrace>Q\<rbrace>,-"
   by (simp add: validE_R_def validE_def cutMon_valid_drop)
-
-crunch idle_thread [wp]: cap_swap_for_delete "\<lambda>s::'a::state_ext state. P (idle_thread s)"
-  (wp: dxo_wp_weak)
-
-crunch idle_thread [wp]: finalise_cap "\<lambda>s. P (idle_thread s)"
- (wp: crunch_wps simp: crunch_simps)
 
 lemma preemption_point_idle_thread[wp]: "\<lbrace> \<lambda>s. P (idle_thread s) \<rbrace> preemption_point \<lbrace> \<lambda>_ s. P (idle_thread s) \<rbrace>"
   apply (simp add: preemption_point_def OR_choiceE_def)

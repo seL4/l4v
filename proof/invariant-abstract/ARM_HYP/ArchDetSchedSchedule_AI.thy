@@ -16,7 +16,12 @@ context Arch begin global_naming ARM_HYP
 
 named_theorems DetSchedSchedule_AI_assms
 
+crunch prepare_thread_delete_idle_thread[wp, DetSchedSchedule_AI_assms]:
+  prepare_thread_delete "\<lambda>(s:: det_ext state). P (idle_thread s)"
+  (wp: crunch_wps)
+
 crunch exst[wp]: set_vcpu "\<lambda>s. P (exst s)" (wp: crunch_wps)
+
 crunch exst[wp]: vcpu_disable,vcpu_restore,vcpu_save "\<lambda>s. P (exst s)"
   (wp: crunch_wps)
 
@@ -440,6 +445,18 @@ crunches arch_post_cap_deletion
   and not_queued[wp, DetSchedSchedule_AI_assms]: "not_queued t"
   and sched_act_not[wp, DetSchedSchedule_AI_assms]: "scheduler_act_not t"
   and weak_valid_sched_action[wp, DetSchedSchedule_AI_assms]: weak_valid_sched_action
+  and valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
+
+crunches flush_space, invalidate_asid_entry, get_asid_pool
+  for flush_space_valid_idle[wp]: "\<lambda>(s:: det_ext state). P (idle_thread s)"
+
+crunch delete_asid_pool[wp]:
+  delete_asid_pool "\<lambda>(s:: det_ext state). P (idle_thread s)"
+  (wp: crunch_wps simp: if_apply_def2)
+
+crunch idle_thread[wp, DetSchedSchedule_AI_assms]:
+  arch_finalise_cap "\<lambda> (s:: det_ext state). P (idle_thread s)"
+  (wp: crunch_wps)
 
 end
 

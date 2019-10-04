@@ -480,8 +480,10 @@ to choose a new thread.
 
 >         runnable <- isRunnable tptr
 >         when runnable $ do
->             tcbSchedEnqueue tptr
->             rescheduleRequired
+>             curThread <- getCurThread
+>             if (tptr == curThread)
+>               then rescheduleRequired
+>               else possibleSwitchTo tptr
 
 \subsubsection{Switching to Woken Threads}
 

@@ -129,8 +129,8 @@ definition
      thread_set_priority tptr prio;
      ts \<leftarrow> get_thread_state tptr;
      when (runnable ts) $ do
-       tcb_sched_action tcb_sched_enqueue tptr;
-       reschedule_required
+       cur \<leftarrow> gets cur_thread;
+       if tptr = cur then reschedule_required else possible_switch_to tptr
      od
    od"
 

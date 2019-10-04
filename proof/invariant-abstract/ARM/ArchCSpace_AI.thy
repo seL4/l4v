@@ -602,6 +602,7 @@ crunches arch_post_cap_deletion
   and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   and mdb_inv[wp]: "\<lambda>s. P (cdt s)"
   and valid_list[wp]: valid_list
+  and valid_idle[wp]: valid_idle
 
 definition
   "arch_post_cap_delete_pre \<equiv> \<lambda>_ _. True"

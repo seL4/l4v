@@ -2049,13 +2049,9 @@ lemma tc_valid_duplicates':
     apply ((wp case_option_wp  setMCPriority_invs' static_imp_wp
                typ_at_lifts[OF setMCPriority_typ_at']
                hoare_vcg_all_lift threadSet_cap_to' | simp add: inQ_def  | fastforce)+)[2]
-  apply (rule hoare_walk_assmsE)
-    apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
-    apply ((wp case_option_wp threadSet_invs_trivial setP_invs' static_imp_wp
-               hoare_vcg_all_lift threadSet_cap_to' | simp add: inQ_def | fastforce)+)[2]
-  apply (rule hoare_pre)
    apply ((simp only: simp_thms cases_simp cong: conj_cong
          | (wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
+               case_option_wp[where m'="return ()", OF setPriority_valid_duplicates' return_inv,simplified]
                threadSet_ipcbuffer_trivial
                checkCap_inv[where P="tcb_at' t" for t]
                checkCap_inv[where P="valid_cap' c" for c]

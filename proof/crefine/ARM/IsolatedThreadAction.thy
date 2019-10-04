@@ -987,6 +987,8 @@ crunch obj_at_prio[wp]: cteDeleteOne "obj_at' (\<lambda>tcb. P (tcbPriority tcb)
        setThreadState_obj_at_unchanged setNotification_tcb setBoundNotification_obj_at_unchanged
         simp: crunch_simps unless_def)
 
+crunch obj_at_dom[wp]: rescheduleRequired "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
+
 context kernel_m begin
 
 lemma setThreadState_no_sch_change:

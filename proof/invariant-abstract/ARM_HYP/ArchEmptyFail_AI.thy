@@ -181,6 +181,8 @@ lemma vgic_maintenance_empty_fail[wp]: "empty_fail vgic_maintenance"
                    get_gic_vcpu_ctrl_misr_def
                    vgic_maintenance_def)
 
+crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: possible_switch_to
+
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_thread
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits

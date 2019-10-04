@@ -2153,47 +2153,34 @@ lemma tc_valid_duplicates':
   apply (simp add: split_def invokeTCB_def getThreadCSpaceRoot getThreadVSpaceRoot
                    getThreadBufferSlot_def locateSlot_conv
              cong: option.case_cong)
+  apply (simp only: eq_commute[where a="a"])
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
-    apply ((wp case_option_wp threadSet_invs_trivial
-               hoare_vcg_all_lift threadSet_cap_to' static_imp_wp | simp add: inQ_def | fastforce)+)[2]
+    apply ((wp case_option_wp threadSet_invs_trivial static_imp_wp
+               hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
-    apply ((wp case_option_wp  setMCPriority_invs' static_imp_wp
+    apply ((wp case_option_wp threadSet_invs_trivial static_imp_wp setMCPriority_invs'
                typ_at_lifts[OF setMCPriority_typ_at']
-               hoare_vcg_all_lift threadSet_cap_to' | simp add: inQ_def  | fastforce)+)[2]
-  apply (rule hoare_walk_assmsE)
-    apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
-    apply ((wp case_option_wp threadSet_invs_trivial setP_invs' static_imp_wp
-               hoare_vcg_all_lift threadSet_cap_to' | simp add: inQ_def | fastforce)+)[2]
-  apply (rule hoare_pre)
-   apply ((simp only: simp_thms cases_simp cong: conj_cong
-         | (wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
-               threadSet_ipcbuffer_trivial
-               checkCap_inv[where P="tcb_at' t" for t]
-               checkCap_inv[where P="valid_cap' c" for c]
-               checkCap_inv[where P="\<lambda>s. P (ksReadyQueues s)" for P]
-               checkCap_inv[where P="\<lambda>s. vs_valid_duplicates' (ksPSpace s)"]
-               checkCap_inv[where P=sch_act_simple]
-               cteDelete_valid_duplicates'
-               hoare_vcg_const_imp_lift_R
-               typ_at_lifts [OF setPriority_typ_at']
-               assertDerived_wp
-               threadSet_cte_wp_at'
-               hoare_vcg_all_lift_R
-               hoare_vcg_all_lift
-               static_imp_wp
-               )[1]
-         | wpc
-         | simp add: inQ_def
-         | wp hoare_vcg_conj_liftE1 cteDelete_invs' cteDelete_deletes
-              hoare_vcg_const_imp_lift
-         )+)
+               hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
+  apply ((simp only: simp_thms cases_simp cong: conj_cong
+          | (wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
+              threadSet_ipcbuffer_trivial
+              (* setPriority has no effect on vs_duplicates *)
+              case_option_wp[where m'="return ()", OF setPriority_valid_duplicates' return_inv,simplified]
+              checkCap_inv[where P="tcb_at' t" for t]
+              checkCap_inv[where P="valid_cap' c" for c]
+              checkCap_inv[where P="\<lambda>s. P (ksReadyQueues s)" for P]
+              checkCap_inv[where P="\<lambda>s. vs_valid_duplicates' (ksPSpace s)"]
+              checkCap_inv[where P=sch_act_simple] cteDelete_valid_duplicates' hoare_vcg_const_imp_lift_R
+              typ_at_lifts[OF setPriority_typ_at'] assertDerived_wp threadSet_cte_wp_at'
+              hoare_vcg_all_lift_R hoare_vcg_all_lift static_imp_wp)[1]
+          | wpc
+          | simp add: inQ_def
+          | wp hoare_vcg_conj_liftE1 cteDelete_invs' cteDelete_deletes hoare_vcg_const_imp_lift)+)
   apply (clarsimp simp: tcb_cte_cases_def cte_level_bits_def objBits_defs
                         tcbIPCBufferSlot_def)
-  apply (auto dest!: isCapDs isValidVTableRootD
-               simp: isCap_simps)
-  done
+  by (auto dest!: isCapDs isReplyCapD isValidVTableRootD simp: isCap_simps)
 
 crunch valid_duplicates' [wp]: performTransfer, unbindNotification, bindNotification "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (ignore: getObject threadSet wp: setObject_ksInterrupt updateObject_default_inv
