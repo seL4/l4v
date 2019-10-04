@@ -5761,9 +5761,12 @@ lemma fast_finalise_valid_sched:
    apply (clarsimp simp: pred_tcb_at_def obj_at_def ipc_queued_thread_state_def)
   apply (wpsimp wp: set_sc_refill_max_valid_sched_unbound_sc hoare_vcg_all_lift
                           sched_context_unbind_all_tcbs_valid_sched)
-   apply (rule_tac Q="\<lambda>ya. invs and sc_tcb_sc_at (\<lambda>x. x = None) x91"
+  apply (rename_tac sc n tp)
+   apply (rule_tac Q="\<lambda>ya. invs and sc_tcb_sc_at (\<lambda>x. x = None) sc"
                           in hoare_strengthen_post[rotated])
-  subgoal sorry (* Michael: this is just sym_refs *)
+    apply (clarsimp simp: tcb_at_kh_simps[symmetric] pred_tcb_at_eq_commute)
+    apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl], clarsimp)
+    apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
    apply ((wpsimp wp: sched_context_unbind_yield_from_invs))
   apply (clarsimp split: if_splits)
   apply (fastforce simp: invs_def valid_state_def cap_range_def dest!: valid_global_refsD)
