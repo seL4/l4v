@@ -2037,7 +2037,7 @@ lemma cte_wp_at_top:
   apply (case_tac b,simp_all)
        apply ((simp add: typeError_def fail_def cte_check_def
                   split: Structures_H.kernel_object.splits)+)[5]
-    apply_trace (simp add:loadObject_cte cte_check_def
+    apply (simp add:loadObject_cte cte_check_def
       tcbIPCBufferSlot_def tcbCallerSlot_def
       tcbReplySlot_def tcbCTableSlot_def
       tcbVTableSlot_def objBits_simps cteSizeBits_def)

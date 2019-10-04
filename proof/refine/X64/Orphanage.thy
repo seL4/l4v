@@ -2078,12 +2078,9 @@ lemma tc_no_orphans:
   apply (rule hoare_pre)
    apply (simp only: simp_thms cong: conj_cong
           | wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
-               checkCap_inv[where P="valid_cap' c" for c]
-               checkCap_inv[where P=sch_act_simple]
-               checkCap_inv[where P=no_orphans]
-               hoare_vcg_all_lift_R hoare_vcg_all_lift
-               threadSet_no_orphans hoare_vcg_const_imp_lift_R
-               static_imp_wp
+               checkCap_inv[where P="valid_cap' c" for c] checkCap_inv[where P=sch_act_simple]
+               checkCap_inv[where P=no_orphans] hoare_vcg_all_lift_R hoare_vcg_all_lift
+               threadSet_no_orphans hoare_vcg_const_imp_lift_R static_imp_wp
           | wpc | clarsimp)+
   by (auto simp: isCap_simps dest!: isValidVTableRootD)
 

@@ -547,19 +547,6 @@ lemma cteInsert_cap_to'2:
   apply auto
   done
 
-lemma why_oh_why:"  (if \<exists>a b. snd (the buf) = Some (a, b)
-         then P (snd (the buf)) else Q) =
-    (case the buf of (ptr, None) \<Rightarrow> Q | (ptr, Some (cap, slot)) \<Rightarrow> P (Some (cap, slot)))"
-  by (clarsimp simp: split_def case_option_If2)
-
-lemma shouldnt_need_this: "(case buf of None \<Rightarrow> Q
-                       | Some (ptr, None) \<Rightarrow> Q
-                       | Some (ptr, Some (cap, slot)) \<Rightarrow> P cap slot) =
-             (if \<exists>a b. buf = Some (a, b) then case the buf of (ptr, None) \<Rightarrow> Q
-              | (ptr, Some (cap, slot)) \<Rightarrow> P cap slot
-         else Q)"
-  by (simp add: case_option_If2)
-
 lemma threadSet_ipcbuffer_invs:
   "is_aligned a msg_align_bits \<Longrightarrow>
   \<lbrace>invs' and tcb_at' t\<rbrace> threadSet (tcbIPCBuffer_update (\<lambda>_. a)) t \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -594,7 +581,7 @@ lemma invokeTCB_ThreadControl_ccorres:
    (invokeTCB (ThreadControl target slot faultep mcp priority cRoot vRoot buf))
    (Call invokeTCB_ThreadControl_'proc)"
   (is "ccorres ?rvr ?xf (?P and (\<lambda>_. ?P')) ?Q [] ?af ?cf")
-  apply (rule ccorres_gen_asm) using [[goals_limit=1]]
+  apply (rule ccorres_gen_asm)
   apply (cinit lift: target_' slot_' faultep_' mcp_' priority_' cRoot_newCap_' cRoot_srcSlot_'
                      vRoot_newCap_' vRoot_srcSlot_' bufferAddr_' bufferSrcSlot_' bufferCap_'
                      updateFlags_')
@@ -602,7 +589,7 @@ lemma invokeTCB_ThreadControl_ccorres:
    apply (simp add: liftE_bindE case_option_If2 thread_control_flag_defs
                     word_ao_dist if_and_helper if_n_0_0
                     tcb_cnode_index_defs[THEN ptr_add_assertion_positive[OF ptr_add_assertion_positive_helper]]
-               del: Collect_const cong add: call_ignore_cong if_cong)
+               del: Collect_const cong: call_ignore_cong if_cong)
    apply (rule_tac P="ptr_val (tcb_ptr_to_ctcb_ptr target) && ~~ mask 4
                           = ptr_val (tcb_ptr_to_ctcb_ptr target)
                         \<and> ptr_val (tcb_ptr_to_ctcb_ptr target) && 0xFFFFFE00 = target"

@@ -167,13 +167,13 @@ lemma set_priority_integrity_autarch[wp]:
   by (simp add: set_priority_def | wp)+
 
 lemma set_priority_pas_refined[wp]:
- "\<lbrace>pas_refined aag\<rbrace>
+  "\<lbrace>pas_refined aag\<rbrace>
     set_priority tptr prio \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: set_priority_def thread_set_priority_def ethread_set_def set_eobject_def get_etcb_def
          | wp hoare_vcg_imp_lift')+
    apply (simp add: tcb_sched_action_def | wp)+
   apply (clarsimp simp: etcb_at_def pas_refined_def tcb_domain_map_wellformed_aux_def
-          split: option.splits)
+                 split: option.splits)
   apply (erule_tac x="(a, b)" in ballE)
    apply simp
   apply (erule domains_of_state_aux.cases)

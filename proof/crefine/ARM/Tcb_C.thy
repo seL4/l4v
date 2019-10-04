@@ -536,7 +536,7 @@ lemma invokeTCB_ThreadControl_ccorres:
           apply (fastforce intro: typ_heap_simps)
          apply simp
         apply (erule(1) rf_sr_tcb_update_no_queue2,
-               (simp add: typ_heap_simps)+)
+                (simp add: typ_heap_simps)+)
          apply (rule ball_tcb_cte_casesI, simp+)
         apply (clarsimp simp: ctcb_relation_def option_to_0_def)
        apply (rule ccorres_return_Skip)

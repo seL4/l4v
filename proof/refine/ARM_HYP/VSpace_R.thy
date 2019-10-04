@@ -4849,7 +4849,7 @@ lemma setObject_ap_ksDomScheduleIdx [wp]:
 lemma setASIDPool_invs [wp]:
   "\<lbrace>invs' and valid_asid_pool' ap\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
-  apply_trace (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
+  apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
             valid_irq_node_lift
             cur_tcb_lift valid_irq_handlers_lift''
             untyped_ranges_zero_lift

@@ -2092,7 +2092,7 @@ lemma tc_no_orphans:
     apply ((wp case_option_wp hoare_vcg_all_lift static_imp_wp setP_invs' | clarsimp)+)[3]
    apply (rule hoare_pre)
     apply ((simp only: simp_thms cong: conj_cong
-          | wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
+            | wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
                checkCap_inv[where P="valid_cap' c" for c]
                checkCap_inv[where P=sch_act_simple]
                checkCap_inv[where P=no_orphans]
@@ -2101,11 +2101,11 @@ lemma tc_no_orphans:
                hoare_vcg_all_lift_R hoare_vcg_all_lift
                threadSet_no_orphans hoare_vcg_const_imp_lift_R
                static_imp_wp hoare_drop_imp threadSet_ipcbuffer_invs
-          | strengthen invs_valid_queues'
-          | (simp add: locateSlotTCB_def locateSlotBasic_def objBits_def
+            | strengthen invs_valid_queues'
+            | (simp add: locateSlotTCB_def locateSlotBasic_def objBits_def
                        objBitsKO_def tcbIPCBufferSlot_def tcb_cte_cases_def,
               wp hoare_return_sp)
-          | wpc | clarsimp)+)
+            | wpc | clarsimp)+)
   apply (fastforce simp: isCap_simps dest!: isValidVTableRootD)
   done
 

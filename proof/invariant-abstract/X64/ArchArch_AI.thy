@@ -528,7 +528,7 @@ lemma cap_insert_simple_arch_caps_ap:
        apply (wp hoare_vcg_imp_lift hoare_vcg_ball_lift set_free_index_final_cap
                  hoare_vcg_disj_lift set_cap_reachable_pg_cap set_cap.vs_lookup_pages
               | clarsimp)+
-      apply_trace (wp set_cap_arch_obj set_cap_valid_table_caps hoare_vcg_ball_lift
+      apply (wp set_cap_arch_obj set_cap_valid_table_caps hoare_vcg_ball_lift
                 get_cap_wp static_imp_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
   apply (rule conjI)

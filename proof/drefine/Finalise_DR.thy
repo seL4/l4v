@@ -3267,7 +3267,7 @@ lemma preemption_point_idle_thread[wp]: "\<lbrace> \<lambda>s. P (idle_thread s)
 
 lemma rec_del_idle_thread[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> rec_del args \<lbrace>\<lambda>rv s::'a::state_ext state. P (idle_thread s)\<rbrace>"
-  by (wp rec_del_preservation | simp)+
+  by (wp rec_del_preservation)+
 
 lemmas gets_constant = gets_to_return
 

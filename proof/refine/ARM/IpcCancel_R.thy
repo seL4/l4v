@@ -534,7 +534,7 @@ lemma (in delete_one) reply_cancel_ipc_corres:
   proof -
   interpret Arch . (*FIXME: arch_split*)
   show ?thesis
-  apply_trace (simp add: reply_cancel_ipc_def getThreadReplySlot_def
+  apply (simp add: reply_cancel_ipc_def getThreadReplySlot_def
                    locateSlot_conv liftM_def tcbReplySlot_def
               del: split_paired_Ex)
   apply (rule_tac Q="\<lambda>_. invs and valid_list and valid_sched and st_tcb_at awaiting_reply t"

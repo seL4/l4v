@@ -944,7 +944,7 @@ lemma set_other_obj_corres:
   apply (rule conjI[rotated])
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x=ptr in allE)+
-   apply_trace (clarsimp simp: obj_at_def a_type_def
+   apply (clarsimp simp: obj_at_def a_type_def
                    split: Structures_A.kernel_object.splits if_split_asm)
    apply (simp split: arch_kernel_obj.splits if_splits)
   apply (fold fun_upd_def)

@@ -1063,7 +1063,7 @@ apply (clarsimp simp: pde_relation_def)
        apply (erule_tac x=offs in allE)
        apply (rename_tac pdpte')
        apply (case_tac pdpte', simp_all add:)[1]
-        apply_trace (clarsimp split: X64_A.pdpte.splits)
+        apply (clarsimp split: X64_A.pdpte.splits)
         apply (rule set_eqI, clarsimp)
         apply (case_tac x, simp_all)[1]
        apply (clarsimp split: X64_A.pdpte.splits)

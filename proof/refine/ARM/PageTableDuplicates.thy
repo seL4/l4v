@@ -1899,7 +1899,7 @@ lemma performPageInvocation_valid_duplicates'[wp]:
   apply (case_tac page_invocation)
   \<comment> \<open>PageFlush\<close>
      apply (simp_all add:performPageInvocation_def pteCheckIfMapped_def pdeCheckIfMapped_def)
-     apply_trace ((wp|simp|wpc)+)[2]
+     apply ((wp|simp|wpc)+)[2]
     \<comment> \<open>PageRemap\<close>
     apply (rename_tac word sum)
     apply (case_tac sum)
@@ -2126,14 +2126,14 @@ lemma performArchInvocation_valid_duplicates':
   apply (wp | simp)+
   done
 
-crunch valid_duplicates' [wp]: restart "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+crunch valid_duplicates'[wp]: restart "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (wp: crunch_wps)
 
-crunch valid_duplicates' [wp]: setPriority, setMCPriority "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+crunch valid_duplicates'[wp]: setPriority, setMCPriority "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (ignore: getObject threadSet wp: setObject_ksInterrupt updateObject_default_inv
     simp:crunch_simps)
 
-crunch inv [wp]: getThreadBufferSlot P
+crunch inv[wp]: getThreadBufferSlot P
   (wp: crunch_wps)
 
 lemma tc_valid_duplicates':
