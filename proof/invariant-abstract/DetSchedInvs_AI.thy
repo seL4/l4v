@@ -1900,18 +1900,24 @@ definition valid_ep_thread_2 where
 
 
 \<comment> \<open>Schedulability of threads in notification and endpoint queues\<close>
-
-definition ipc_queued_thread_state where
-  "ipc_queued_thread_state st \<equiv>
-     case st of BlockedOnNotification _ \<Rightarrow> True
-              | BlockedOnSend _ _ \<Rightarrow> True
-              | BlockedOnReceive _ _ \<Rightarrow> True
-              | BlockedOnReply _ \<Rightarrow> True
-              | _ \<Rightarrow> False"
+primrec
+  ipc_queued_thread_state :: "thread_state \<Rightarrow> bool"
+where
+  "ipc_queued_thread_state (Running)               = False"
+| "ipc_queued_thread_state (Inactive)              = False"
+| "ipc_queued_thread_state (Restart)               = False"
+| "ipc_queued_thread_state (BlockedOnReceive _ _)  = True"
+| "ipc_queued_thread_state (BlockedOnSend _ _)     = True"
+| "ipc_queued_thread_state (BlockedOnNotification _) = True"
+| "ipc_queued_thread_state (IdleThreadState)       = False"
+| "ipc_queued_thread_state (BlockedOnReply _)        = True"
 
 abbreviation schedulable_if_bound_sc_thread_2 where
   "schedulable_if_bound_sc_thread_2 t curtime tcb_scps sc_refill_cfgs \<equiv>
     pred_map_eq None tcb_scps t \<or> schedulable_sc_tcb_at_pred curtime tcb_scps sc_refill_cfgs t"
+
+abbreviation schedulable_if_bound_sc_thread :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "schedulable_if_bound_sc_thread t s \<equiv> schedulable_if_bound_sc_thread_2 t (cur_time s) (tcb_scps_of s) (sc_refill_cfgs_of s)"
 
 definition schedulable_ipc_queued_thread_2 ::
   "obj_ref \<Rightarrow> time \<Rightarrow> (obj_ref \<rightharpoonup> thread_state) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool"
