@@ -5799,10 +5799,13 @@ lemma finalise_cap_valid_sched[wp]:
     apply (clarsimp simp: valid_cap_def split: if_splits)
    apply (rename_tac scptr x)
    apply (wpsimp wp: set_sc_refill_max_valid_sched_unbound_sc hoare_vcg_all_lift)
-       apply (rule_tac Q="\<lambda>ya. invs and sc_tcb_sc_at (\<lambda>x. x = None) scptr"
-                       in hoare_strengthen_post[rotated])
-        subgoal sorry (* Michael: this is just sym_refs *)
-       apply (wpsimp wp: sched_context_unbind_yield_from_invs)
+    apply (rule_tac Q="\<lambda>ya. invs and sc_tcb_sc_at (\<lambda>x. x = None) scptr"
+                 in hoare_strengthen_post[rotated])
+     apply (clarsimp simp: tcb_at_kh_simps(3)[symmetric] pred_tcb_at_eq_commute)
+     apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl])
+      apply clarsimp
+     apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+    apply (wpsimp wp: sched_context_unbind_yield_from_invs)
    apply (clarsimp split: if_splits)
    apply (fastforce simp: invs_def valid_state_def cap_range_def dest!: valid_global_refsD)
   apply (wpsimp wp: deleting_irq_handler_valid_sched)
@@ -7027,8 +7030,8 @@ crunches reorder_ntfn, reorder_ep
 
 lemma thread_set_priority_valid_sched_pred_strong[wp]:
   "thread_set_priority p t \<lbrace>valid_sched_pred_strong P\<rbrace>"
-  apply (wpsimp simp: thread_set_priority_def wp: thread_set_wp)
-  sorry (* Michael: This should be straight forward, is there a nice way to do this? *)
+  apply (wpsimp simp: thread_set_priority_def  wp: thread_set_wp)
+  sorry (* Mitch: This should be straight forward, is there a nice way to do this? *)
         (* oops, this is not quite true, priority is present in etcbs, but something similar
            to this should be true. See tcb_release_enqueue_valid_sched_misc. *)
 
@@ -7065,8 +7068,12 @@ lemma set_priority_valid_sched:
   apply (clarsimp simp: valid_sched_def obj_at_def pred_tcb_at_eq_commute)
   apply (subst (asm) pred_tcb_at_def, clarsimp simp: obj_at_def)
   apply (intro conjI; intro allI impI)
-apply (clarsimp simp: valid_blocked_thread_def)
- sorry (* Michael: this should be straight forward *)
+   apply (clarsimp simp: valid_blocked_thread_def)
+   apply (frule_tac tcb_ptr=tptr in valid_ready_qs_in_ready_qD, fastforce simp: in_queues_2_def)
+   apply (simp add: valid_sched_action_weak_valid_sched_action)
+  apply (simp add: st_tcb_at_def obj_at_def valid_sched_action_weak_valid_sched_action
+                   valid_blocked_thread_def)
+  done
 
 lemma set_mcpriority_valid_sched_pred_strong[wp]:
   "set_mcpriority tptr prio \<lbrace>valid_sched_pred_strong P\<rbrace>"
@@ -7137,14 +7144,10 @@ lemma sched_context_resume_cond_budget_ready_sufficient:
                 apply (clarsimp simp: in_release_queue_def not_in_release_q_def)
                apply (wpsimp simp: in_release_queue_in_release_q
                                wp: postpone_in_release_q get_tcb_queue_wp)+
-       apply (wpsimp simp: thread_get_def wp: is_schedulable_wp)+
-  apply (intro conjI; intro impI allI)
-   apply (intro conjI; intro impI allI)
-    apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def
-                   dest!: is_schedulable_opt_Some get_tcb_SomeD)
-  subgoal sorry (* Michael: should be straight forward *)
-  subgoal sorry (* Michael: should be straight forward (contradiction in premises) *)
-  subgoal sorry (* Michael: should be straight forward *)
+       apply (wpsimp wp: thread_get_wp' is_schedulable_wp')+
+  apply (fastforce simp: sc_at_pred_n_eq_commute sc_tcb_sc_at_def obj_at_def obj_at_kh_kheap_simps
+                         vs_all_heap_simps refill_max_pos_def sufficient_refills_def
+                         refills_ready_def)
   done
 
 lemma sc_tcb_update_sc_tcb_sc_at:
@@ -7178,7 +7181,7 @@ lemma sched_context_bind_tcb_valid_sched:
             intro impI;
             clarsimp simp: valid_sched_def dest!: is_schedulable_opt_Some)
    apply (erule valid_blocked_divided2, clarsimp simp: valid_blocked_thread_def)
-   subgoal sorry (* Michael: should be easy *)
+  apply (fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps)
      apply (wpsimp wp: sched_context_resume_valid_sched_except_blocked
                        sched_context_resume_valid_blocked_except_set
                        sched_context_resume_cond_budget_ready_sufficient)
@@ -7191,7 +7194,7 @@ lemma sched_context_bind_tcb_valid_sched:
                            bound_sc_tcb_at (\<lambda>a. a = Some scptr) tcbptr"
                     in hoare_strengthen_post[rotated])
      apply (clarsimp simp: sc_at_pred_n_eq_commute )
-   subgoal sorry (* Michael: should be easy *)
+     apply (clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps sc_tcb_sc_at_def)
     apply (wpsimp wp: set_tcb_sched_context_valid_ready_qs_not_queued
                       set_tcb_sched_context_valid_release_q_not_queued
                       set_tcb_sched_context_simple_valid_sched_action
@@ -7203,8 +7206,12 @@ lemma sched_context_bind_tcb_valid_sched:
    apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_disj_lift sc_tcb_update_sc_tcb_sc_at simp: pred_neg_def)
   apply (clarsimp simp: valid_sched_def cong: conj_cong)
   apply (intro conjI)
-   subgoal sorry (* Michael: should be easy, use valid_ready_qs *)
-   subgoal sorry (* Michael: should be easy, use valid_release_q *)
+    apply (simp add: valid_ready_qs_def not_queued_def schedulable_sc_tcb_at_def pred_tcb_at_def
+                     obj_at_def vs_all_heap_simps
+           , fastforce)
+   apply (simp add: valid_release_q_def not_in_release_q_def pred_tcb_at_def obj_at_def
+                    vs_all_heap_simps
+          , fastforce)
   subgoal sorry (* this is actually unclear, need to see where this lemma is used.
                    It is used in ThreadControl, so there is some danger that it is a bug. *)
   done
@@ -7250,7 +7257,8 @@ find_theorems thread_set_priority name: valid_sched
 lemma set_priority_valid_sched_misc[wp]:
   "set_priority a b \<lbrace>\<lambda>s. P (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
            (release_queue s) (last_machine_time_of s) \<rbrace>"
-   sorry (* Michael: This should be very possible *)
+  by (wpsimp wp: thread_get_wp gts_wp
+           simp: get_tcb_queue_def obj_at_def st_tcb_at_def is_tcb_def set_priority_def)
 
 lemma set_priority_bound_sc_tcb_at_cur_thread[wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
@@ -7507,6 +7515,15 @@ lemma dropWhile_takeWhile_distinct:
   apply (subst (asm) distinct_append)
   by fastforce
 
+lemma sorted_wrt_sublist:
+  "\<lbrakk>sorted_wrt P ls; sublist xs ls\<rbrakk> \<Longrightarrow> sorted_wrt P xs"
+  apply (subst sorted_wrt_iff_nth_less)
+  by (clarsimp simp: sorted_wrt_append sorted_wrt_nth_less sublist_def)
+
+lemma dropWhile_sublist:
+  "sublist (dropWhile P xs) xs"
+  by (induct xs rule: list.induct; simp add: sublist_Cons_right)+
+
 lemma valid_release_q_2_dropWhile:
   "valid_release_q_2 rq1 states scps refills
    \<Longrightarrow> valid_release_q_2 (dropWhile P rq1) states scps refills"
@@ -7514,7 +7531,9 @@ lemma valid_release_q_2_dropWhile:
   apply simp
   apply (intro conjI)
   apply (clarsimp dest!: set_dropWhileD)
-  sorry (* Michael\Matt: This should be clear? *)
+  apply (simp add: sorted_release_q_def)
+  apply (elim conjE)
+  using sorted_wrt_sublist dropWhile_sublist by fast
 
 lemma valid_sched_action_2_subset_eq:
   "set (rlq') \<subseteq> set (rlq)
