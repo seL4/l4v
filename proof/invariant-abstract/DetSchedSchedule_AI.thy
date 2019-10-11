@@ -5774,7 +5774,7 @@ lemma finalise_cap_valid_sched[wp]:
     and (\<lambda>s. cap \<noteq> ThreadCap idle_thread_ptr)\<rbrace>
    finalise_cap cap param_b
    \<lbrace>\<lambda>_. (valid_sched :: 'state_ext state \<Rightarrow> _)\<rbrace>"
-  supply if_splits [split del]
+  supply if_split[split del]
   apply (case_tac cap; (solves \<open>wpsimp\<close>)?; simp)
        apply (wpsimp wp: cancel_all_ipc_valid_sched cancel_ipc_valid_sched get_simple_ko_wp
                    simp: invs_valid_objs
