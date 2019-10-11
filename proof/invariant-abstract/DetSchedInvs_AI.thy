@@ -1826,6 +1826,19 @@ abbreviation valid_sched_valid_ready_qs where
                          tcb_scps sc_refill_cfgs \<equiv>
     valid_ready_qs_2 rq ctime etcbs tcb_sts tcb_scps sc_refill_cfgs"
 
+lemma valid_ready_qsE:
+  assumes v: "valid_ready_qs_2 qs ctime etcbs sts scps cfgs"
+  assumes t: "\<And>d p. (distinct (qs d p) \<longrightarrow> distinct (qs' d p))
+                     \<and> (\<forall>t \<in> set (qs' d p).
+                           (t \<in> set (qs d p) \<longrightarrow> valid_ready_queued_thread_2 ctime' etcbs' sts' scps' cfgs' t d p
+                                                  = valid_ready_queued_thread_2 ctime etcbs sts scps cfgs t d p)
+                           \<and> (t \<notin> set (qs d p) \<longrightarrow> valid_ready_queued_thread_2 ctime' etcbs' sts' scps' cfgs' t d p))"
+  shows "valid_ready_qs_2 qs' ctime' etcbs' sts' scps' cfgs'"
+  using v
+  apply (simp add: valid_ready_qs_2_def t)
+  apply (elim allEI conjE, rule ballI)
+  by (case_tac "t \<in> set (qs d p)"; simp add: t)
+
 fun opt_ord where
   "opt_ord (Some x) (Some y) = (x \<le> y)"
 | "opt_ord x y = (y = None \<longrightarrow> x = None)"
