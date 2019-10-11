@@ -5043,44 +5043,105 @@ lemma distinct_zip_snd_unique:
   apply (erule disjE, fastforce dest!: in_set_zipE, clarsimp)
   done
 
-lemma in_insort_filter:
-  "x \<in> set (insort_filter f x xs)"
-  by (simp add: insort_filter_def)
+lemma set_insort_filter_insert:
+  "set (insort_filter P x xs) = insert x (set xs)"
+  by (auto simp: insort_filter_def)
+
+lemma set_tcb_release_enqueue_upd_insert:
+  "set (tcb_release_enqueue_upd ready_times t queue) = insert t (set queue)"
+  by (simp add: tcb_release_enqueue_upd_def set_insort_filter_insert)
+
+lemma distinct_filter_iff:
+  "distinct xs \<longleftrightarrow> distinct (filter P xs) \<and> distinct (filter (Not \<circ> P) xs)"
+proof (induct xs)
+  case (Cons x xs) show ?case
+    apply (cases "x \<in> set xs"; simp)
+    by (rule Cons[simplified comp_def])
+qed auto
+
+lemma distinct_insort_filter:
+  "distinct (insort_filter P x xs) \<longleftrightarrow> x \<notin> set xs \<and> distinct xs"
+  by (auto simp: insort_filter_def distinct_filter_iff[where xs=xs and P=P, simplified comp_def]
+           simp del: distinct_filter)
+
+lemma distinct_tcb_release_enqueue_upd:
+  "distinct (tcb_release_enqueue_upd ready_times t queue) \<longleftrightarrow> \<not> in_queue_2 queue t \<and> distinct queue"
+  by (simp add: tcb_release_enqueue_upd_def distinct_insort_filter in_queue_2_def)
 
 lemma tcb_release_enqueue_in_release_q:
   "\<lbrace>\<top>\<rbrace> tcb_release_enqueue tcbptr \<lbrace>\<lambda>ya. in_release_q tcbptr\<rbrace>"
-  by (wpsimp wp: valid_sched_wp simp: in_queue_2_def tcb_release_enqueue_upd_def in_insort_filter)
+  by (wpsimp wp: valid_sched_wp simp: in_queue_2_def set_tcb_release_enqueue_upd_insert)
 
 (* FIXME move *)
 lemma valid_release_q_active_sc:
   "valid_release_q s \<Longrightarrow> t \<in> set (release_queue s) \<Longrightarrow> active_sc_tcb_at t s"
   by (clarsimp simp: valid_release_q_def)
 
+lemma insort_filter_cong:
+  assumes xs: "x = y" "xs = ys"
+  assumes P: "\<And>x. x \<in> set ys \<Longrightarrow> P x \<longleftrightarrow> Q x"
+  shows "insort_filter P x xs = insort_filter Q y ys"
+  unfolding insort_filter_def
+  apply (intro arg_cong2[where f=append] arg_cong2[where f=Cons] filter_cong xs)
+  by (auto simp: P)
+
+lemma tcb_release_enqueue_upd_def2:
+  assumes "\<forall>x \<in> set (t # queue). \<exists>y. hp x = Some y"
+  shows "tcb_release_enqueue_upd hp t queue = insort_filter (\<lambda>t'. img_ord hp opt_ord t' t) t queue"
+  using assms by (auto simp: tcb_release_enqueue_upd_def img_ord_def intro!: insort_filter_cong)
+
+lemma sc_ready_times_2_Some:
+  "hp t = Some scrc \<Longrightarrow> sc_ready_times_2 hp t = Some (sc_ready_time scrc)"
+  by (simp add: sc_ready_times_2_def map_project_simps)
+
+lemma transp_img_ord:
+  "transp cmp \<Longrightarrow> transp (img_ord f cmp)"
+  unfolding transp_def img_ord_def by blast
+
+lemma transp_opt_ord:
+  "transp (opt_ord :: ('a::preorder) option \<Rightarrow> 'a option \<Rightarrow> bool)"
+  apply (clarsimp simp: transp_def)
+  by (case_tac x; case_tac y; case_tac z; clarsimp elim!: order_trans)
+
+lemma reflp_img_ord:
+  "reflp cmp \<Longrightarrow> reflp (img_ord f cmp)"
+  unfolding reflp_def img_ord_def by blast
+
+lemma reflp_opt_ord:
+  "reflp (opt_ord :: ('a::preorder) option \<Rightarrow> 'a option \<Rightarrow> bool)"
+  apply (clarsimp simp: reflp_def)
+  by (case_tac x; clarsimp)
+
+lemma total_img_ord:
+  "\<lbrakk>total {(x,y). cmp x y}; reflp cmp\<rbrakk> \<Longrightarrow> total {(x,y). img_ord f cmp x y}"
+  apply (clarsimp simp: total_on_def reflp_def img_ord_def)
+  by (drule_tac x="f x" in spec; drule_tac x="f y" in spec; fastforce)
+
+lemma total_opt_ord:
+  "total {(x :: ('a::linorder) option, y). opt_ord x y}"
+  apply (clarsimp simp: total_on_def)
+  apply (case_tac x; case_tac y)
+  by (auto simp: linear)
+
+lemma sorted_tcb_release_enqueue_upd:
+  assumes "sorted_release_q_2 hp queue"
+  assumes "\<forall>x \<in> set (t # queue). \<exists>y. hp x = Some y"
+  shows "sorted_release_q_2 hp (tcb_release_enqueue_upd (sc_ready_times_2 hp) t queue)"
+  using assms
+  apply (clarsimp simp add: sorted_release_q_2_def)
+  apply (subst tcb_release_enqueue_upd_def2, fastforce simp add: sc_ready_times_2_Some)
+  by (erule sorted_insort_filter[where cmp="img_ord (sc_ready_times_2 hp) opt_ord" and xs=queue, rotated 3]
+      ; intro transp_img_ord reflp_img_ord total_img_ord transp_opt_ord reflp_opt_ord total_opt_ord)
+
 lemma tcb_release_enqueue_valid_release_q[wp]:
   "\<lbrace>\<lambda>s. valid_release_q s \<and> active_sc_tcb_at t s \<and> pred_map runnable (tcb_sts_of s) t \<and> not_in_release_q t s\<rbrace>
    tcb_release_enqueue t
    \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
-  apply (wpsimp wp: valid_sched_wp)
-  apply (clarsimp simp: valid_release_q_def)
-  sorry (* Gerwin/Mitch: tcb_release_enqueue_valid_release_q *)
-(*
-  apply (unfold tcb_release_enqueue_def pred_conj_def)
-  apply (rule hoare_seq_ext[OF _ get_sc_time_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ mapM_get_sc_time_sp])
-  apply wp
-  apply (elim conjE)
-  apply (simp only: split_def valid_release_q_def)
-  apply (simp del: set_map)
-  apply (subst filter_zip_split)+
-  apply (intro conjI; (fastforce simp: not_in_release_q_def)?)
-  apply (simp only: sorted_release_q_def)
-  apply (clarsimp simp: sorted_append sorted_map[symmetric] sorted_filter)
-  apply (intro conjI impI allI; clarsimp)
-  by (drule_tac x=x in bspec, simp;
-      fastforce simp: pred_tcb_at_def obj_at_def tcb_ready_time_def get_tcb_def
-                split: option.splits dest!: get_tcb_SomeD)+
-*)
+  apply (wpsimp wp: valid_sched_wp
+              simp: valid_release_q_def set_tcb_release_enqueue_upd_insert
+                    distinct_tcb_release_enqueue_upd)
+  apply (erule sorted_tcb_release_enqueue_upd)
+  by (auto simp: tcb_sc_refill_cfgs_2_def opt_map_simps map_join_simps vs_all_heap_simps)
 
 lemma tcb_release_enqueue_valid_sched_action[wp]:
   "\<lbrace>\<lambda>s. valid_sched_action s \<and> scheduler_act_not thread s\<rbrace>
