@@ -8985,7 +8985,11 @@ lemma awaken_cur_thread_not_in_rlq:
   apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift hoare_vcg_conj_lift)
   apply (clarsimp simp: dropWhile_eq_drop[symmetric])
   apply (drule (1) dropWhile_dropped_P[rotated])
-  sorry (* Michael: this should be clear from definitions *)
+  apply (simp add: refill_ready_tcb_simp2)
+  apply (frule budget_sufficient_has_ready_time, clarsimp)
+  apply (clarsimp simp: vs_all_heap_simps refills_ready_def tcb_ready_times_defs
+                        map_join_simps map_project_simps)
+  done
 
 lemma possible_switch_to_not_queued:
   "\<lbrace>not_queued t and K (t \<noteq> thread) and scheduler_act_not t\<rbrace>
