@@ -9032,10 +9032,12 @@ lemma awaken_ct_not_queued:
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (wpsimp wp: awaken_ct_not_queued_helper)
   apply (drule set_takeWhileD)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def sc_at_pred_n_def split: option.splits)
-  apply (subst (asm) refill_ready_tcb_simp3, assumption, assumption, assumption)
-  apply (clarsimp simp: in_release_q_def vs_all_heap_simps refills_ready_def sc_ready_times_2_def)
-  sorry (* Matt: I don't know how to wrangle your new predicates.*)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def sc_at_pred_n_def)
+  apply (clarsimp simp: refill_ready_tcb_simp3 in_queue_2_def)
+  apply (clarsimp simp: vs_all_heap_simps refills_ready_def tcb_ready_times_defs)
+  apply (simp add: opt_map_def tcb_scps_of_tcbs_def tcbs_of_kh_def map_join_def
+                   map_project_def tcb_of_def sc_refill_cfgs_of_scs_def scs_of_kh_def sc_of_def)
+  done
 
 crunches awaken
   for sc_is_round_robin[wp]: "\<lambda>s::det_state. P (sc_is_round_robin p s)"
@@ -9094,9 +9096,12 @@ lemma takeWhile_release_queue:
      t \<in> set (takeWhile (\<lambda>t. the (fun_of_m (refill_ready_tcb t) s)) (release_queue s))\<rbrakk>
      \<Longrightarrow> budget_ready t s"
   apply (drule set_takeWhileD)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def sc_at_pred_n_def split: option.splits)
-  apply (subst (asm) refill_ready_tcb_simp3, assumption, assumption, assumption)
-  sorry (* Matt: I don't know how to wrangle your new predicates.*)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def sc_at_pred_n_def)
+  apply (simp add: refill_ready_tcb_simp3)
+  apply (clarsimp simp: vs_all_heap_simps refills_ready_def tcb_ready_times_defs)
+  apply (simp add: opt_map_def tcb_scps_of_tcbs_def tcbs_of_kh_def map_join_def
+                   map_project_def tcb_of_def sc_refill_cfgs_of_scs_def scs_of_kh_def sc_of_def)
+  done
 
 (* FIXME move *)
 lemma notdropWhile_takeWhile:
@@ -9117,11 +9122,13 @@ lemma awaken_ct_nrq_wbr:
   unfolding awaken_def
   apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift')
   apply (clarsimp simp: dropWhile_eq_drop[symmetric] in_queue_2_def)
-  apply (drule (1) notdropWhile_takeWhile)
-  apply (drule takeWhile_release_queue[rotated, rotated], simp)
-  defer
-  apply simp
-  sorry (* Matt: I don't know how to wrangle your new predicates.*)
+  apply (drule (1) notdropWhile_takeWhile[rotated])
+  apply (drule set_takeWhileD, clarsimp)
+  apply (simp add: refill_ready_tcb_simp2)
+  apply (frule budget_sufficient_has_ready_time, clarsimp)
+  apply (clarsimp simp: vs_all_heap_simps refills_ready_def tcb_ready_times_defs
+                        map_join_simps map_project_simps)
+  done
 
 (* ct_schedulable \<longrightarrow> ready & sufficient
 lemma schedule_valid_sched':
