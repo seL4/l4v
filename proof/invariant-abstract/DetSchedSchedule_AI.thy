@@ -10677,15 +10677,13 @@ lemma send_fault_ipc_scheduler_act_not:
 
 lemma reply_push_valid_sched_no_donation:
   "\<lbrace> valid_sched_except_blocked and valid_blocked_except thread and not_in_release_q thread and
-     scheduler_act_not thread and not_queued thread\<rbrace>
-   reply_push thread dest ya False
+     scheduler_act_not thread and not_queued thread and schedulable_if_bound_sc_thread thread\<rbrace>
+   reply_push thread dest reply False
    \<lbrace>\<lambda>rv. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding reply_push_def
   apply clarsimp
-  apply (wpsimp wp: set_thread_state_valid_sched hoare_drop_imps
-                 update_sk_obj_ref_lift)
-  apply (clarsimp simp: valid_sched_def)
-  sorry (* reply_push_valid_sched_no_donation *)
+  by (wpsimp wp: set_thread_state_valid_sched update_sk_obj_ref_lift
+                 get_simple_ko_wp get_tcb_obj_ref_wp hoare_drop_imps)
 
 lemma reply_push_weak_valid_sched_action_no_donation:
   "\<lbrace> weak_valid_sched_action and
@@ -10869,6 +10867,7 @@ lemma send_ipc_valid_sched_for_handle_timeout:
                                valid_blocked_except_set {thread}) and fault_tcb_at bound thread
                                and not_in_release_q thread and
                                scheduler_act_not thread and not_queued thread and
+                               schedulable_if_bound_sc_thread thread and
                                schedulable_if_bound_sc_thread dest and
                                (\<lambda>s. dest \<noteq> idle_thread s)"
                                in hoare_strengthen_post[rotated])
@@ -10879,6 +10878,7 @@ lemma send_ipc_valid_sched_for_handle_timeout:
                               valid_blocked_except_set {thread}) and fault_tcb_at bound thread and
                               (\<lambda>s. not_in_release_q thread s \<and> scheduler_act_not thread s \<and> not_queued thread s) and
                               (\<lambda>s. \<forall>x. reply = Some x \<longrightarrow> reply_tcb_reply_at (\<lambda>x. x = Some dest) x s) and
+                              schedulable_if_bound_sc_thread thread and
                               schedulable_if_bound_sc_thread dest and
                               (\<lambda>s. not_cur_thread dest s \<and> dest \<noteq> idle_thread s)"
                               in hoare_strengthen_post[rotated])
@@ -10890,7 +10890,8 @@ lemma send_ipc_valid_sched_for_handle_timeout:
    apply (rule_tac Q="\<lambda>r. (valid_sched_except_blocked and
                            valid_blocked_except_set {thread}) and fault_tcb_at bound thread and
                            (\<lambda>s. not_in_release_q thread s \<and>
-              scheduler_act_not thread s \<and> not_queued thread s) and
+                           scheduler_act_not thread s \<and> not_queued thread s) and
+                           schedulable_if_bound_sc_thread thread and
                            (\<lambda>s. \<forall>a x. st_tcb_at ((=) (BlockedOnReceive a (Some x))) dest s
                                       \<longrightarrow> reply_tcb_reply_at (\<lambda>x. x = Some dest) x s) and
                             schedulable_if_bound_sc_thread dest and
