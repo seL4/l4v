@@ -69,6 +69,7 @@ lemma valid_sc_valid_refills:
          \<Longrightarrow> length (sc_refills sc) \<ge> 1"
   by (fastforce simp: valid_objs_def valid_obj_def valid_sched_context_def)
 
+(* FIXME: rename to is_round_robin_inv *)
 lemma round_robin_inv[wp]: "\<lbrace>\<lambda>s. P s\<rbrace> is_round_robin x \<lbrace> \<lambda>_ s. P s\<rbrace>"
   by (wpsimp simp: is_round_robin_def)
 
