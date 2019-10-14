@@ -72,7 +72,6 @@ EXCLUDE["RISCV64"]=[
     "CBaseRefine",
     "CamkesDarpaReport",
     "CamkesGlueProofs",
-    "RefineOrphanage",
     "SimplExportAndRefine",
     "AsmRefine"
 ]
