@@ -60,7 +60,6 @@ EXCLUDE["RISCV64"]=[
     "AutoCorresSEL4",
     "DSpec",
     "DBaseRefine",
-    "CBaseRefine",
     "CamkesDarpaReport",
     "CamkesGlueProofs",
     "AsmRefine"
