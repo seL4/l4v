@@ -2368,9 +2368,13 @@ abbreviation simple_sched_action :: "'z state \<Rightarrow> bool" where
 
 lemmas simple_sched_action_def = simple_sched_action_2_def
 
+definition schact_is_rct_2 :: "scheduler_action \<Rightarrow> bool" where
+  "schact_is_rct_2 schact \<equiv> schact = resume_cur_thread"
 
-definition schact_is_rct :: "'z state \<Rightarrow> bool" where
-  "schact_is_rct s \<equiv> scheduler_action s = resume_cur_thread"
+abbreviation schact_is_rct :: "'z state \<Rightarrow> bool" where
+  "schact_is_rct s \<equiv> schact_is_rct_2 (scheduler_action s)"
+
+lemmas schact_is_rct_def = schact_is_rct_2_def
 
 lemma schact_is_rct[elim!]: "schact_is_rct s \<Longrightarrow> scheduler_action s = resume_cur_thread"
   apply (simp add: schact_is_rct_def)
