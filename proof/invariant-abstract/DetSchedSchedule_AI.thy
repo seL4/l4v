@@ -7670,10 +7670,13 @@ lemma awaken_valid_sched:
         apply (clarsimp)
        apply (erule valid_sched_action_2_subset_eq[rotated], clarsimp dest!: set_dropWhileD)
       apply (clarsimp)
-     apply (rule set_takeWhileD_contrap) subgoal sorry (* Michael: use valid_idle and valid_ready_qs *)
+     apply (rule set_takeWhileD_contrap)
+     apply (clarsimp simp: not_in_release_q_def valid_release_q_def)
+     apply (drule_tac x="idle_thread s" in bspec, simp, clarsimp)
+     apply (drule st_tcb_at_idle_thread[simplified tcb_at_kh_simps], simp, simp)
     apply (rule valid_blocked_dropWhile_rlq; clarsimp)
    apply (clarsimp dest!: set_takeWhileD)
-  subgoal sorry (* Michael: use budget_ready and not_budget_ready *)
+   apply (clarsimp simp: fun_of_m_refill_ready_tcb opt_map_def map_project_def pred_map_simps)
   apply (intro allI ballI)
   apply (clarsimp simp: valid_release_q_def)
   apply (drule_tac x=target in bspec)
@@ -7860,16 +7863,16 @@ lemma commit_time_valid_ready_qs:
   "\<lbrace>valid_ready_qs and cur_sc_valid_refills_consumed\<rbrace>
    commit_time
    \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
-   unfolding commit_time_def sc_refill_ready_def
-   apply (rule hoare_seq_ext[OF _ gets_sp])
-   apply (rule hoare_seq_ext[OF _ gets_sp])
-   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-   apply (wpsimp wp: sc_consumed_update_sc_tcb_sc_at hoare_vcg_all_lift hoare_drop_imp
-                     set_refills_valid_ready_qs refill_budget_check_valid_ready_qs_not_queued
-               simp: refill_budget_check_round_robin_def split_del: if_split)
-   apply (clarsimp simp: cur_sc_offset_ready_def obj_at_def pred_tcb_at_def not_queued_2_def
-                      cur_sc_offset_sufficient_def cur_sc_budget_sufficient_def)
-   done
+  unfolding commit_time_def
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (wpsimp wp: sc_consumed_update_sc_tcb_sc_at hoare_vcg_all_lift hoare_drop_imp
+                    set_refills_valid_ready_qs refill_split_check_valid_ready_qs)
+  apply (clarsimp simp: obj_at_def sufficient_refills_defs MIN_BUDGET_nonzero split: if_split_asm)
+  apply (clarsimp simp:  valid_ready_qs_def in_ready_q_def in_queue_2_def refills_ready_def)
+  apply (fastforce simp: vs_all_heap_simps)
+  done
 lemma commit_time_schedulable_ipc_queues:
   "\<lbrace>schedulable_ipc_queues and cur_sc_valid_refills_consumed\<rbrace>
    commit_time
@@ -7882,8 +7885,8 @@ lemma commit_time_schedulable_ipc_queues:
                      set_refills_schedulable_ipc_queues refill_split_check_schedulable_ipc_queues)
     apply (clarsimp simp: obj_at_def sufficient_refills_defs MIN_BUDGET_nonzero split: if_split_asm)
    apply (clarsimp simp:  valid_ready_qs_def in_ready_q_def in_queue_2_def refills_ready_def)
-    apply (intro conjI)
-  sorry (* Matt\Michael: using valid_ready_qs *)
+  apply (fastforce simp: vs_all_heap_simps schedulable_ipc_queues_defs refills_ready_def)
+  done
 
 lemma commit_time_valid_sched_action:
   "\<lbrace>valid_sched_action and simple_sched_action\<rbrace>
@@ -9060,23 +9063,79 @@ crunches awaken
 lemma valid_release_q_sorted: "valid_release_q s \<Longrightarrow> sorted_release_q s"
   by (clarsimp simp: valid_release_q_def)
 
+(* FIXME: move up to replace sorted_wrt_img_ord_eq_lift *)
+lemma sorted_wrt_cong:
+  assumes "xs=ys"
+  and "\<And>x y. \<lbrakk>x \<in> set ys; y \<in> set ys\<rbrakk> \<Longrightarrow> cmp x y = cmp' x y"
+  shows "sorted_wrt cmp xs = sorted_wrt cmp' ys"
+  using assms by (induct xs; metis sorted_wrt_mono_rel)
+
+lemma in_release_q_has_ready_time:
+  fixes s :: "'z state"
+  assumes "valid_release_q s"
+  assumes "t \<in> set (release_queue s)"
+  shows "\<exists>rt. tcb_ready_times_of s t = Some rt"
+  using assms valid_release_q_active_sc[OF assms]
+  by (auto simp: tcb_ready_times_defs map_project_simps opt_map_simps map_join_simps vs_all_heap_simps)
+
+lemma in_release_q_opt_ord_conv:
+  fixes s :: "'z state"
+  assumes vrq: "valid_release_q s"
+  assumes t: "t \<in> set (release_queue s)"
+  assumes t': "t' \<in> set (release_queue s)"
+  shows "opt_ord (tcb_ready_times_of s t) (tcb_ready_times_of s t') \<longleftrightarrow> tcb_ready_time t s \<le> tcb_ready_time t' s"
+  using in_release_q_has_ready_time[OF vrq t] in_release_q_has_ready_time[OF vrq t']
+  by auto
+
+lemma budget_ready_def2:
+  "active_sc_tcb_at t s
+   \<Longrightarrow> budget_ready t s \<longleftrightarrow> tcb_ready_time t s \<le> cur_time s + kernelWCET_ticks"
+  by (auto simp: vs_all_heap_simps refills_ready_def tcb_ready_times_defs
+                    opt_map_def map_project_def map_join_def pred_map_simps
+                    tcb_scps_of_tcbs_def tcbs_of_kh_def
+                    sc_refill_cfgs_of_scs_def scs_of_kh_def
+             split: option.split)
+
 lemma dropWhile_release_queue:
-"\<lbrakk> valid_release_q s; budget_sufficient t s;
+ "\<lbrakk> valid_release_q s; \<forall>t. in_release_q t s \<longrightarrow> budget_sufficient t s;
    t \<in> set (dropWhile (\<lambda>t. the (fun_of_m (refill_ready_tcb t) s)) (release_queue s))\<rbrakk>
    \<Longrightarrow> \<not>budget_ready t s"
   apply (frule set_dropWhileD)
-  sorry (* Michael: this should be clear once you look into the definitions *)
+  apply (frule (1) valid_release_q_active_sc)
+  apply (frule valid_release_q_sorted)
+  apply (subgoal_tac
+      "(dropWhile (\<lambda>t. the (fun_of_m (refill_ready_tcb t) s))
+                (release_queue s)) =
+           (dropWhile (\<lambda>t. tcb_ready_time t s \<le> (cur_time s) + kernelWCET_ticks)
+                (release_queue s))")
+   prefer 2
+   apply (rule dropWhile_cong, clarsimp)
+   apply (clarsimp simp:  simp: valid_release_q_def)
+   apply (drule_tac x=x in bspec, simp)
+   apply (drule_tac x=x in spec, clarsimp simp: in_release_q_def)
+   apply (subst refill_ready_tcb_simp2, simp+)
+  apply (thin_tac "(dropWhile _ _)=  _")
+  apply (frule sorted_wrt_dropWhile_mono[rotated, where f="\<lambda>t. tcb_ready_time t s"])
+    apply (fastforce)
+  apply (fastforce simp: sorted_release_q_def img_ord_def in_release_q_opt_ord_conv
+                elim!: sorted_wrt_cong[THEN iffD2, rotated -1])
+  apply (simp add: budget_ready_def2)
+  done
 
 lemma awaken_cur_thread_in_rlq:
-  "\<lbrace> \<lambda>s. cur_tcb s \<and> (in_release_q (cur_thread s) s \<longrightarrow> budget_sufficient (cur_thread s) s)
+  "\<lbrace> \<lambda>s. cur_tcb s
     \<and> active_sc_tcb_at (cur_thread s) s
-    \<and> budget_sufficient (cur_thread s) s
+    \<and> (\<forall>t. in_release_q t s \<longrightarrow> budget_sufficient t s)
     \<and> valid_release_q s \<rbrace>
       awaken
    \<lbrace>\<lambda>rv s. in_release_q (cur_thread s) s \<longrightarrow> \<not> budget_ready (cur_thread s) s\<rbrace>"
   apply (clarsimp simp: awaken_def)
   apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift)
-  by (fastforce simp: dropWhile_eq_drop[symmetric] in_release_q_def in_queue_2_def dest!: dropWhile_release_queue)
+  apply (simp add: dropWhile_eq_drop[symmetric] in_release_q_def in_queue_2_def)
+  apply (frule dropWhile_release_queue)
+    apply (simp add: in_release_q_def)
+   apply fast
+  by blast
 
 lemma awaken_cur_thread_not_in_rlq:
   "\<lbrace> \<lambda>s. cur_tcb s \<and> valid_release_q s
@@ -10793,9 +10852,12 @@ lemma possible_switch_to_valid_blocked:
                     reschedule_required_valid_blocked
                     set_scheduler_action_valid_blocked_remove
                 simp: thread_get_def)
+   apply (clarsimp simp: valid_blocked_defs)
   apply safe
-    apply (clarsimp simp: valid_blocked_defs, fastforce)
-   sorry (* Michael: this should be clear somehow *)
+    apply fastforce
+   apply (drule_tac x=t in spec, clarsimp simp: pred_tcb_at_def obj_at_def vs_all_heap_simps)
+  apply (drule_tac x=t in spec, clarsimp)
+  done
 
 (* FIXME Move *)
 lemma set_thread_state_runnable_valid_blocked_except_set_inc:
