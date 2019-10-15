@@ -5676,7 +5676,8 @@ lemma maybe_sched_context_unbind_tcb_valid_sched:
    \<lbrace>\<lambda>y. valid_sched\<rbrace>"
   unfolding maybe_sched_context_unbind_tcb_def
   apply (wpsimp wp: sched_context_unbind_tcb_valid_sched get_tcb_obj_ref_wp)
-  sorry (* Micheal: this is just using sym_refs *)
+  by (fastforce simp: sc_tcb_sc_at_def obj_at_def sym_refs_def state_refs_of_def get_refs_def2
+                split: option.splits)
 
 lemma sched_context_unbind_all_tcbs_valid_sched[wp]:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace>
@@ -9339,14 +9340,17 @@ lemma schedule_valid_sched:
      and (\<lambda>s. cur_sc_budget_sufficient s) and cur_sc_chargeable
  and valid_machine_time and invs\<rbrace>
    schedule
-  \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+  \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding schedule_def
-  apply (wpsimp wp: schedule_valid_sched_helper awaken_valid_sched
+   apply (wpsimp wp: schedule_valid_sched_helper awaken_valid_sched
                     awaken_cur_thread_not_in_rlq awaken_ct_not_queued awaken_ct_nrq_wbr
-                    hoare_vcg_ball_lift hoare_vcg_conj_lift awaken_cur_thread_in_rlq
-              simp: cur_tcb_def is_tcb get_tcb_rev is_schedulable_bool_def
-             split: option.splits)
- *)  sorry (* schedule_valid_sched *)
+                    hoare_vcg_ball_lift hoare_vcg_conj_lift awaken_cur_thread_in_rlq)
+  apply (rule conjI, clarsimp simp: in_queue_2_def)
+  apply (clarsimp simp: is_schedulable_bool_def cur_tcb_def get_tcb_rev obj_at_def is_tcb)
+  apply (clarsimp simp: active_sc_tcb_at_unfold pred_tcb_at_def obj_at_def sc_at_pred_n_def)
+  apply (drule (1) invs_valid_refills[unfolded obj_at_def, simplified, rotated])+
+  apply simp
+  done
 
 crunches cancel_ipc
 for not_cur_thread[wp]: "not_cur_thread thread"
