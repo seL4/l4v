@@ -196,6 +196,9 @@ fun crunch_ignore_del thms thy =
 fun crunch_ignore_add_del adds dels =
   crunch_ignore_add adds #> crunch_ignore_del dels
 
+fun crunch_ignores cfg ctxt =
+  subtract (op =) (#ig_dels cfg) (#igs cfg @ CrunchIgnore.get (Proof_Context.theory_of ctxt))
+
 val def_sfx = "_def";
 val induct_sfx = ".induct";
 val simps_sfx = ".simps";
@@ -609,11 +612,9 @@ fun crunch_rule cfg const goal extra thms =
   let
     (* first option: produce a trivial rule as constant is being ignored *)
     val ctxt = #ctxt cfg
-    val crunch_ignores =
-      subtract (op =) (#ig_dels cfg) (#igs cfg @ CrunchIgnore.get (Proof_Context.theory_of ctxt))
     val goal_prop = goal |> HOLogic.mk_Trueprop
     val ignore_seq =
-      if member (op =) crunch_ignores const
+      if member (op =) (crunch_ignores cfg ctxt) const
       then goal_prop |> Thm.cterm_of ctxt |> Thm.trivial |> Seq.single |> Seq.map (pair NONE)
       else Seq.empty
 
@@ -668,15 +669,25 @@ fun crunch_rule cfg const goal extra thms =
         | NONE => Thm.prems_of thm |> maps (monads_of ctxt)
   in (ms, thm) end
 
-fun warn_helper_thms ctxt n t =
+fun warn_helper_thms wp ctxt n t =
   let val simp_thms = maybe_thms ctxt "crunch_simps"
       val ctxt' = ctxt addsimps simp_thms
       val wp_thms = maybe_thms ctxt "crunch_wps"
       val can_simp = (is_some o SINGLE (CHANGED (clarsimp_tac ctxt' n))) t
-      val can_wp = (is_some o SINGLE (CHANGED (wp ctxt' wp_thms n))) t
+      val can_wp = (is_some o SINGLE (CHANGED (wp wp_thms n))) t
   in if can_simp orelse can_wp
      then warning "Using crunch_simps and crunch_wps makes more progress"
      else () end;
+
+fun warn_const_ignored const cfg ctxt =
+  if member (op =) (crunch_ignores cfg ctxt) const
+  then warning ("constant " ^ const ^ " is being ignored")
+  else ();
+
+fun proof_failed_warnings const cfg wp ctxt n t =
+  if Thm.no_prems t
+  then no_tac t
+  else (warn_const_ignored const cfg ctxt; warn_helper_thms wp ctxt n t; no_tac t)
 
 fun crunch cfg pre extra stack const' thms =
   let
@@ -693,14 +704,12 @@ fun crunch cfg pre extra stack const' thms =
       case crunch_known_rule cfg const thms goal
         of SOME thm => (SOME thm, [])
           | NONE => let (* not already known, find a crunch rule. *)
-          val crunch_ignores =
-            subtract (op =) (#ig_dels cfg) (#igs cfg @ CrunchIgnore.get (Proof_Context.theory_of ctxt))
           val (ms, rule) = crunch_rule cfg const goal extra thms
             (* and now crunch *)
           val ctxt' = Variable.auto_fixes goal ctxt;
           val ms = ms
             |> map (fn t => (real_const_from_name (fst (dest_Const (head_of t))) (#nmspce cfg) ctxt', t))
-            |> subtract (fn (a, b) => a = (fst b)) crunch_ignores
+            |> subtract (fn (a, b) => a = (fst b)) (crunch_ignores cfg ctxt)
             |> filter_out (fn (s, _) => s = const');
           val stack' = const :: stack;
           val _ = if (length stack' > 20) then
@@ -722,7 +731,7 @@ fun crunch cfg pre extra stack const' thms =
           val ctxt''' = ctxt'' |> Variable.auto_fixes goal_prop2
           val _ = writeln ("attempting: " ^ Syntax.string_of_term ctxt''' goal_prop2);
 
-          fun wp' wp_rules = wp ctxt (map snd (thms @ #wp_rules cfg) @ wp_rules)
+          fun wp' wp_rules = wp ctxt (map snd (thms @ #wp_rules cfg) @ goals' @ wp_rules)
 
           val thm = Goal.prove_future ctxt''' [] [] goal_prop2
               ( (*DupSkip.goal_prove_wrapper *) (fn _ =>
@@ -735,7 +744,7 @@ fun crunch cfg pre extra stack const' thms =
                 REPEAT_DETERM ((
                   WPFix.tac ctxt
                   ORELSE'
-                  wp' goals'
+                  wp' []
                   ORELSE'
                   CHANGED_GOAL (clarsimp_tac ctxt''')
                   ORELSE'
@@ -749,7 +758,8 @@ fun crunch cfg pre extra stack const' thms =
                   ORELSE'
                   CHANGED_GOAL (simp_tac ctxt''')
                   ORELSE'
-                  (fn n => fn t => (warn_helper_thms ctxt''' n t; no_tac t))) n)
+                  proof_failed_warnings const cfg wp' ctxt'''
+                ) n)
               ))) |> singleton (Proof_Context.export ctxt''' ctxt)
               handle e =>
                      (writeln "Crunch call stack:";
