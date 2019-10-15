@@ -8454,21 +8454,15 @@ all threads in the release queue are either not sufficient or ready
 the current thread can be in the release queue
 *)
 
+(* FIXME: remove.
+   Currently only mentioned by commented out schedule_valid_sched_helper.
+   And if rephrased using heap projections, it's just a specialisation of existing [wp] rules. *)
 lemma schedule_tcb_sched_enqueue_helper:
-  "\<lbrace>\<lambda>s. bound_sc_tcb_at
-            (\<lambda>p. \<exists>scp. p = Some scp \<and>
-                        is_refill_ready scp s \<and>
-                        is_refill_sufficient 0 scp s)
-            candidate s\<rbrace>
-      tcb_sched_action tcb_sched_enqueue ct
-       \<lbrace>\<lambda>rv s.
-           bound_sc_tcb_at
-            (\<lambda>p. \<exists>scp. p = Some scp \<and>
-                        is_refill_ready scp s \<and>
-                        is_refill_sufficient 0 scp s)
-            candidate s\<rbrace>"
-  apply (wpsimp simp: tcb_sched_action_def)
-  sorry (* schedule_tcb_sched_enqueue_helper. *)
+  "tcb_sched_action tcb_sched_enqueue ct
+   \<lbrace>\<lambda>s. bound_sc_tcb_at (\<lambda>p. \<exists>scp. p = Some scp \<and> is_refill_ready scp s
+                                                \<and> is_refill_sufficient 0 scp s)
+                        candidate s\<rbrace>"
+  by (wpsimp simp: obj_at_kh_kheap_simps)
 
 (* FIXME: this should be expressed more elegantly *)
 lemma enqueue_thread_queued_ct:
