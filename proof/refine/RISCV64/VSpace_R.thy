@@ -65,7 +65,7 @@ lemma no_fail_read_sbadaddr[intro!,simp]:
 lemma hv_corres:
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
-  apply (simp add: RISCV64_H.handleVMFault_def)
+  apply (simp add: RISCV64_H.handleVMFault_def handle_vm_fault_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqrE)
        apply (cases fault; simp)

@@ -64,7 +64,7 @@ definition find_vspace_for_asid :: "asid \<Rightarrow> (obj_ref,'z::state_ext) l
 text \<open>
   Format a VM fault message to be passed to a thread's supervisor after it encounters a page fault.
 \<close>
-fun handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit,'z::state_ext) f_monad"
+definition handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit,'z::state_ext) f_monad"
   where
   "handle_vm_fault thread fault_type = doE
     addr \<leftarrow> liftE $ do_machine_op read_sbadaddr;

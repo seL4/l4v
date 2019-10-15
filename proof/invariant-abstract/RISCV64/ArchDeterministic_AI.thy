@@ -64,7 +64,7 @@ crunch valid_list[wp, Deterministic_AI_assms]: handle_recv, handle_yield, handle
 
 lemma handle_vm_fault_valid_list[wp, Deterministic_AI_assms]:
   "handle_vm_fault thread fault \<lbrace>valid_list\<rbrace>"
-  by (cases fault; wpsimp)
+  unfolding handle_vm_fault_def by (cases fault; wpsimp)
 
 lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
   "\<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"

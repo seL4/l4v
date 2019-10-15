@@ -321,8 +321,7 @@ crunch valid_vspace_objs'[wp]: activate_thread,switch_to_thread, handle_hypervis
 
 lemma handle_event_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and invs and ct_active\<rbrace> handle_event e \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (case_tac e; simp)
-   by (wpsimp simp: Let_def | wp (once) hoare_drop_imps)+
+  by (case_tac e; simp) (wpsimp simp: Let_def handle_vm_fault_def | wp (once) hoare_drop_imps)+
 
 lemma schedule_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
@@ -337,7 +336,7 @@ lemma call_kernel_valid_vspace_objs'[wp]:
    \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def)
       apply (rule hoare_pre)
-       apply (wp | simp add: Let_def | wpc
+       apply (wp | simp add: Let_def handle_vm_fault_def | wpc
                  | rule conjI | clarsimp simp: ct_in_state_def
                  | erule pred_tcb_weakenE
                  | wp (once) hoare_drop_imps)+

@@ -129,14 +129,13 @@ crunch (bcorres) bcorres[wp]: handle_invocation truncate_state
 crunch (bcorres)bcorres[wp]: receive_ipc,receive_signal,delete_caller_cap truncate_state
 
 lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fault a b)"
-  by (cases b; wpsimp)
+  unfolding handle_vm_fault_def by (cases b; wpsimp)
 
 lemma handle_hypervisor_fault_bcorres[wp]: "bcorres (handle_hypervisor_fault a b) (handle_hypervisor_fault a b)"
   by (cases b) wpsimp
 
 
 lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"
-  supply handle_vm_fault.simps[simp del]
   apply (cases e)
   apply (simp add: handle_send_def handle_call_def handle_recv_def handle_reply_def handle_yield_def
                    handle_interrupt_def Let_def handle_reserved_irq_def | intro impI conjI allI | wp | wpc)+
