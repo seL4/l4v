@@ -134,7 +134,7 @@ find_vspace_for_asid_assert :: "asid \<Rightarrow> (obj_ref,'z::state_ext) s_mon
 
 text \<open>Format a VM fault message to be passed to a thread's supervisor after
 it encounters a page fault.\<close>
-fun
+definition
 handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit,'z::state_ext) f_monad"
 where
 "handle_vm_fault thread fault_type = doE

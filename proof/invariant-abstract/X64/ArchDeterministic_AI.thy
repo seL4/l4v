@@ -103,6 +103,7 @@ crunch valid_list[wp, Deterministic_AI_assms]: handle_recv, handle_yield, handle
 
 lemma handle_vm_fault_valid_list[wp, Deterministic_AI_assms]:
 "\<lbrace>valid_list\<rbrace> handle_vm_fault thread fault \<lbrace>\<lambda>_.valid_list\<rbrace>"
+  unfolding handle_vm_fault_def
   apply (cases fault,simp_all)
   apply (wp|simp)+
   done

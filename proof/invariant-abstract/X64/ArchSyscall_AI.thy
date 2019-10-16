@@ -58,6 +58,7 @@ lemma getFaultAddress_invs[wp]:
   by (simp add: getFaultAddress_def do_machine_op_def split_def select_f_returns | wp)+
 
 lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
+  unfolding handle_vm_fault_def
   apply (cases flt, simp_all)
   apply (wp|simp)+
   done
@@ -67,6 +68,7 @@ crunch inv[wp]: getFaultAddress, getRegister "P"
 
 lemma hv_inv_ex [Syscall_AI_assms]:
   "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding handle_vm_fault_def
   apply (cases vp, simp_all)
   apply (wp dmo_inv getFaultAddress_inv getRestartPC_inv
             det_getRestartPC as_user_inv
@@ -78,18 +80,21 @@ lemma no_irq_getFaultAddress: "no_irq getFaultAddress"
 
 lemma handle_vm_fault_valid_fault[wp, Syscall_AI_assms]:
   "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
+  unfolding handle_vm_fault_def
   apply (cases ft, simp_all)
    apply (wp no_irq_getFaultAddress | simp add: valid_fault_def)+
   done
 
 lemma hvmf_active [Syscall_AI_assms]:
   "\<lbrace>st_tcb_at active t\<rbrace> handle_vm_fault t w \<lbrace>\<lambda>rv. st_tcb_at active t\<rbrace>"
+  unfolding handle_vm_fault_def
   apply (cases w, simp_all)
    apply (wp | simp)+
   done
 
 lemma hvmf_ex_cap[wp, Syscall_AI_assms]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> handle_vm_fault t b \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
+  unfolding handle_vm_fault_def
   apply (cases b, simp_all)
    apply (wp | simp)+
   done

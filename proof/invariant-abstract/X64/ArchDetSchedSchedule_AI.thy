@@ -316,14 +316,13 @@ crunch sched_act_not [wp, DetSchedSchedule_AI_assms]:
 
 lemma hvmf_st_tcb_at [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>st_tcb_at P t' \<rbrace> handle_vm_fault t w \<lbrace>\<lambda>rv. st_tcb_at P t' \<rbrace>"
-  by (cases w, simp_all) ((wp | simp)+)
+  unfolding handle_vm_fault_def by (cases w, simp_all) ((wp | simp)+)
 
 lemma handle_vm_fault_st_tcb_cur_thread [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace> \<lambda>s. st_tcb_at P (cur_thread s) s \<rbrace> handle_vm_fault t f \<lbrace>\<lambda>_ s. st_tcb_at P (cur_thread s) s \<rbrace>"
+  unfolding handle_vm_fault_def
   apply (fold ct_in_state_def)
-  apply (rule ct_in_state_thread_state_lift)
-   apply (cases f)
-    apply (wp|simp)+
+  apply (rule ct_in_state_thread_state_lift; cases f; wpsimp)
   done
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]: arch_invoke_irq_control "valid_sched"

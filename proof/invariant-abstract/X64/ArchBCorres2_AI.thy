@@ -136,6 +136,7 @@ crunch (bcorres) bcorres[wp]: handle_invocation truncate_state
 crunch (bcorres)bcorres[wp]: receive_ipc,receive_signal,delete_caller_cap truncate_state
 
 lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fault a b)"
+  unfolding handle_vm_fault_def
   apply (cases b)
   apply (simp | wp)+
   done

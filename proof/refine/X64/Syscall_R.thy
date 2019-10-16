@@ -2026,7 +2026,7 @@ proof -
     done
     show ?thesis
       apply (case_tac event)
-          apply (simp_all add: handleEvent_def del: handle_vm_fault.simps)
+          apply (simp_all add: handleEvent_def)
 
           apply (rename_tac syscall)
           apply (case_tac syscall)
@@ -2081,7 +2081,7 @@ proof -
        apply simp
        apply (simp add: invs'_def valid_state'_def)
       apply (rule_tac corres_split')
-         apply (rule corres_guard_imp, rule gct_corres, (simp del: handle_vm_fault.simps)+)
+         apply (rule corres_guard_imp, rule gct_corres, simp+)
         apply (rule corres_split_catch)
            apply (erule hf_corres)
           apply (rule hv_corres)

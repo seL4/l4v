@@ -168,7 +168,7 @@ lemma no_fail_getFaultAddress[wp]: "no_fail \<top> getFaultAddress"
 lemma hv_corres:
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
-  apply (simp add: X64_H.handleVMFault_def)
+  apply (simp add: X64_H.handleVMFault_def handle_vm_fault_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqrE)
        apply (rule corres_split_eqrE)
