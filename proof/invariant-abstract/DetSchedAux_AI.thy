@@ -1379,4 +1379,8 @@ lemma pred_map_etcbs_of_detype[simp]:
 
 declare clear_um.pspace[iff]
 
+lemma ct_runnable_ct_not_blocked[elim!]:
+  "ct_active s \<Longrightarrow> ct_not_blocked s"
+  by (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def split: thread_state.splits)
+
 end
