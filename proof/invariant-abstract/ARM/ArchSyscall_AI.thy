@@ -97,6 +97,10 @@ lemma hh_invs[wp, Syscall_AI_assms]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (cases fault; wpsimp simp: valid_fault_def)
 
+lemma hv_inv_ex:
+  "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
+  by (cases vp; wpsimp wp: dmo_inv getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv)
+
 end
 
 global_interpretation Syscall_AI?: Syscall_AI

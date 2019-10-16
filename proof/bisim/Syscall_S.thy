@@ -689,16 +689,7 @@ lemma handle_event_bisim:
       apply (rule bisim_split_catch_req)
         apply (rule bisim_reflE)
        apply (rule handle_fault_bisim)
-      apply wp
-      apply (case_tac vmfault_type, simp_all)[1]
-       apply (wp separate_state_pres)
-         apply (rule hoare_pre, wps, wp, simp)
-        apply wp
-         apply (rule hoare_pre, wps, wp, simp)
-        apply simp
-
-       apply (wp separate_state_pres)+
-         apply (rule hoare_pre, wps, wp+, simp)
+      apply (wpsimp wp: hv_inv_ex)
         apply wpsimp+
    apply (simp add: cur_tcb_def)
 
