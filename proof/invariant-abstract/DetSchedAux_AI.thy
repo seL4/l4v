@@ -617,6 +617,7 @@ lemma valid_sched_tcb_state_preservation_gen:
   assumes idle_thread: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   assumes valid_blocked: "\<lbrace>valid_blocked\<rbrace> f \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   assumes valid_idle: "\<lbrace>I\<rbrace> f \<lbrace>\<lambda>_. valid_idle\<rbrace>"
+  assumes machine_time: "\<And>P. f \<lbrace>\<lambda>s. P (last_machine_time_of s)\<rbrace>"
   assumes valid_others:
     "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) (ready_queues s) (cur_domain s) (release_queue s)\<rbrace>
           f \<lbrace>\<lambda>r s. P (scheduler_action s) (ready_queues s) (cur_domain s) (release_queue s)\<rbrace>"
@@ -631,6 +632,7 @@ lemma valid_sched_tcb_state_preservation_gen:
   apply (frule use_valid, rule_tac P="\<lambda>ct. ct = cur_time s" in cur_time, simp)
   apply (frule use_valid, rule_tac P="\<lambda>ct. ct = cur_thread s" in cur_thread, simp)
   apply (frule use_valid, rule_tac P="\<lambda>it. it = idle_thread s" in idle_thread, simp)
+  apply (frule use_valid, rule_tac P="\<lambda>mt. mt = last_machine_time_of s" in machine_time, simp)
   apply (frule use_valid[OF _ valid_blocked], assumption)
   apply (frule use_valid[OF _ valid_idle], assumption)
   apply (rule_tac V="valid_ready_qs s'" in revcut_rl)
@@ -995,17 +997,18 @@ lemma (in DetSchedAux_AI) invoke_untyped_valid_sched:
    apply (rule_tac I="invs and ct_active and valid_untyped_inv ui and
                       (\<lambda>s. scheduler_action s = resume_cur_thread)"
             in valid_sched_tcb_state_preservation_gen)
-              apply simp
-             apply (wpsimp wp: invoke_untyped_st_tcb_at)
-            apply (wpsimp wp: invoke_untyped_pred_tcb_at_live simp: ipc_queued_thread_state_live)
-           apply (wpsimp wp: invoke_untyped_etcb_at)
-          apply wpsimp
-         apply (wpsimp wp: invoke_untyped_sc_at_pred_n)
+               apply simp
+              apply (wpsimp wp: invoke_untyped_st_tcb_at)
+             apply (wpsimp wp: invoke_untyped_pred_tcb_at_live simp: ipc_queued_thread_state_live)
+            apply (wpsimp wp: invoke_untyped_etcb_at)
+           apply wpsimp
+          apply (wpsimp wp: invoke_untyped_sc_at_pred_n)
+         apply wp
         apply wp
        apply wp
       apply wp
-     apply wp
-    apply (wp invoke_untyped_valid_idle)
+     apply (wp invoke_untyped_valid_idle)
+    apply wp
    apply (rule hoare_lift_Pf[where f=scheduler_action, OF _ invoke_untyped_valid_sched_pred_misc])
    apply (rule hoare_lift_Pf[where f=ready_queues, OF _ invoke_untyped_valid_sched_pred_misc])
    apply (rule hoare_lift_Pf[where f=cur_domain, OF _ invoke_untyped_valid_sched_pred_misc])

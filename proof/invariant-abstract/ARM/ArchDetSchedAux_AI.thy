@@ -166,6 +166,9 @@ lemma perform_asid_control_invocation_valid_idle:
    \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   by (strengthen invs_valid_idle) wpsimp
 
+crunches perform_asid_control_invocation
+  for lmt[wp]: "\<lambda>s. P (last_machine_time_of s)"
+
 lemma perform_asid_control_invocation_valid_sched:
   "\<lbrace>ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci and
     valid_sched and valid_idle\<rbrace>
@@ -175,17 +178,18 @@ lemma perform_asid_control_invocation_valid_sched:
    apply (rule_tac I="invs and ct_active and
                       (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_aci aci"
           in valid_sched_tcb_state_preservation_gen)
-              apply simp
-             apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at)
-            apply (wpsimp wp: perform_asid_control_invocation_pred_tcb_at_live simp: ipc_queued_thread_state_live)
-           apply (wpsimp wp: perform_asid_control_etcb_at)
-          apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at)
-         apply (wpsimp wp: perform_asid_control_invocation_sc_at_pred_n)
+               apply simp
+              apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at)
+             apply (wpsimp wp: perform_asid_control_invocation_pred_tcb_at_live simp: ipc_queued_thread_state_live)
+            apply (wpsimp wp: perform_asid_control_etcb_at)
+           apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at)
+          apply (wpsimp wp: perform_asid_control_invocation_sc_at_pred_n)
+         apply wp
         apply wp
        apply wp
       apply wp
-     apply wp
-    apply (wpsimp wp: perform_asid_control_invocation_valid_idle)
+     apply (wpsimp wp: perform_asid_control_invocation_valid_idle)
+    apply wp
    apply (rule hoare_lift_Pf[where f=scheduler_action, OF _ perform_asid_control_invocation_schedact])
    apply (rule hoare_lift_Pf[where f=ready_queues, OF _ perform_asid_control_invocation_rqueues])
    apply (rule hoare_lift_Pf[where f=cur_domain, OF _ perform_asid_control_invocation_cur_domain])

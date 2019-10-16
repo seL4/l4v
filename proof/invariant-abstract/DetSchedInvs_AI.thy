@@ -2304,7 +2304,8 @@ definition valid_sched_2 where
     \<and> ct_in_cur_domain_2 ct it sa cdom etcbs
     \<and> (vbl \<longrightarrow> valid_blocked_2 queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs)
     \<and> valid_idle_etcb_2 etcbs
-    \<and> schedulable_ipc_queues_2 ctime tcb_sts tcb_scps sc_refill_cfgs"
+    \<and> schedulable_ipc_queues_2 ctime tcb_sts tcb_scps sc_refill_cfgs
+    \<and> valid_machine_time_2 ctime lmt"
 
 abbreviation valid_sched :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_sched \<equiv> valid_sched_pred (valid_sched_2 True True)"
@@ -2790,6 +2791,7 @@ lemma valid_sched_lift_pre_conj:
   assumes "\<And>P. \<lbrace>\<lambda>s. P (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (tcb_ready_times_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (tcb_ready_times_of s)\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. bound_sc_tcb_at (\<lambda>sc. sc = None) t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. bound_sc_tcb_at (\<lambda>sc. sc = None) t\<rbrace>"
+  assumes "\<lbrace>\<lambda>s. valid_machine_time s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. valid_machine_time s\<rbrace>"
     shows "\<lbrace>\<lambda>s. valid_sched s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   by (wpsimp simp: valid_sched_def
                wp: valid_ready_qs_lift_pre_conj ct_not_in_q_lift_pre_conj
