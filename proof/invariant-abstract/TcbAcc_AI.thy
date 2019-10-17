@@ -2207,12 +2207,6 @@ lemma ct_in_state_set:
   apply (simp add: set_thread_state_def set_object_def)
   by (wp|simp add: ct_in_state_def pred_tcb_at_def obj_at_def)+
 
-lemma sts_ctis_neq:
-  "\<lbrace>\<lambda>s. cur_thread s \<noteq> t \<and> ct_in_state P s\<rbrace> set_thread_state t st \<lbrace>\<lambda>_. ct_in_state P\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def)
-  apply (wp|simp add: pred_tcb_at_def obj_at_def ct_in_state_def)+
-  done
-
 lemma ct_in_state_weaken:
   "\<lbrakk> ct_in_state Q s; \<And>st. Q st \<Longrightarrow> P st \<rbrakk> \<Longrightarrow> ct_in_state P s"
   by (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
@@ -2226,14 +2220,15 @@ lemma set_thread_state_ct_st:
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
+lemma sts_ctis_neq:
+  "\<lbrace>\<lambda>s. (cur_thread s \<noteq> t \<or> P st) \<and> ct_in_state P s\<rbrace> set_thread_state t st \<lbrace>\<lambda>_. ct_in_state P\<rbrace>"
+  by (wpsimp wp: set_thread_state_ct_st)
+
 lemma set_thread_state_ct_in_state:
   "\<lbrace>\<lambda>s. ct_in_state P s \<and> P st\<rbrace>
      set_thread_state thread st
    \<lbrace>\<lambda>rv. ct_in_state P\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def)
-  apply (wp|simp)+
-  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-  done
+  by (wpsimp wp: set_thread_state_ct_st)
 
 lemma valid_running [simp]:
   "valid_tcb_state Structures_A.Running = \<top>"

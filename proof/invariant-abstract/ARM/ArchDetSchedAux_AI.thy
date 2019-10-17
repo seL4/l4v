@@ -205,55 +205,5 @@ lemma kernelWCET_ticks_non_zero:
   using kernelWCET_us_non_zero us_to_ticks_nonzero
   by (fastforce simp: kernelWCET_ticks_def)
 
-crunches retype_region, delete_objects
-  for cur_sc[wp]: "\<lambda>(s:: det_ext state). P (cur_sc s)"
-  (simp: detype_def)
-
-lemma cur_sc_tcb_only_sym_bound_lift_pre_conj:
-  assumes A: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
-  assumes B: "\<And>P. \<lbrace>\<lambda>s. P (cur_sc s)\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_sc s)\<rbrace>"
-  assumes C: "\<And>P t. \<lbrace>\<lambda>s. \<not> (bound_sc_tcb_at P t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. \<not> (bound_sc_tcb_at P t s)\<rbrace>"
-  shows "\<lbrace>cur_sc_tcb_only_sym_bound and R\<rbrace> f \<lbrace>\<lambda>_. cur_sc_tcb_only_sym_bound\<rbrace>"
-  unfolding cur_sc_tcb_only_sym_bound_def
-  by (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift C hoare_vcg_disj_lift | wps A B)+
-
-lemmas cur_sc_tcb_only_sym_bound_lift = cur_sc_tcb_only_sym_bound_lift_pre_conj[where R=\<top>, simplified]
-
-lemma reset_untyped_cap_cur_sc[wp]:
-  "reset_untyped_cap slot \<lbrace>(\<lambda>s. P (cur_sc s)) :: det_ext state \<Rightarrow> _\<rbrace>"
-  unfolding reset_untyped_cap_def
-  by (wpsimp wp: mapME_x_wp_inv preemption_point_inv get_cap_wp)
-
-lemma delete_objects_not_bound_sc_tcb_at[wp]:
-  "delete_objects d f \<lbrace>\<lambda>s. \<not> bound_sc_tcb_at P t s\<rbrace>"
-  unfolding delete_objects_def
-  by (wpsimp wp: )
-
-lemma reset_untyped_not_bound_sc_tcb_at[wp]:
-  "reset_untyped_cap slot \<lbrace>\<lambda>s. \<not> bound_sc_tcb_at P t s\<rbrace>"
-  unfolding reset_untyped_cap_def
-  by (wpsimp wp: mapME_x_wp_inv preemption_point_inv hoare_drop_imp)
-
-lemma cur_sc_chargeable_invoke_untypedE_R[DetSchedAux_AI_assms]:
-  "\<lbrace>cur_sc_tcb_only_sym_bound\<rbrace>
-   invoke_untyped i
-   -, \<lbrace>\<lambda>rv. cur_sc_tcb_only_sym_bound :: det_ext state \<Rightarrow> _\<rbrace>"
-  unfolding invoke_untyped_def
-  apply wpsimp
-    apply (rule valid_validE_E)
-    apply (clarsimp simp: cur_sc_tcb_only_sym_bound_def)
-    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
-      apply (rule valid_validE, wps)
-      apply (wpsimp wp: reset_untyped_cap_bound_sc_tcb_at)
-     apply wpsimp
-    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
-     apply (rule valid_validE, wps)
-     apply (wpsimp wp:  reset_untyped_cap_bound_sc_tcb_at)
-    apply wpsimp
-   apply wpsimp
-  apply (clarsimp)
-  apply (simp only: cur_sc_tcb_only_sym_bound_def)
-  done
-
 end
 end

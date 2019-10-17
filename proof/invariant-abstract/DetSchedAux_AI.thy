@@ -181,7 +181,7 @@ lemma invoke_untyped_etcb_at:
    \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
   apply (cases ui)
   apply (simp add: invoke_untyped_def whenE_def flip: mapM_x_def split del: if_split)
-  apply (wpsimp wp: mapM_x_wp' 
+  apply (wpsimp wp: mapM_x_wp'
             create_cap.cspace_pred_tcb_at[where P=Not]
             hoare_convert_imp[OF create_cap.cspace_pred_tcb_at[where P=Not]]
             hoare_convert_imp[OF _ init_arch_objects_valid_sched_pred]
@@ -415,10 +415,6 @@ lemma retype_region_obj_at_other3_cur_time:
   apply (simp add: field_simps)
   done
 
-  assumes  invoke_untyped_cur_sc_chargeable[wp]:
-    "\<And>i. \<lbrace>cur_sc_tcb_only_sym_bound\<rbrace>
-         invoke_untyped i
-         -, \<lbrace>\<lambda>rv. cur_sc_tcb_only_sym_bound:: det_state \<Rightarrow> _\<rbrace>"
 crunches update_cdt_list, set_cdt
   for st_tcb_at[wp]: "\<lambda>s. P (st_tcb_at t ts s)"
   and typ_at[wp]: "\<lambda>s. P (typ_at T t s)"
@@ -430,91 +426,10 @@ lemma set_cap_ko_at_Endpoint[wp]:
   apply (fastforce simp: obj_at_def)
   done
 
-(* FIXME start: Mitch: these should be removed when the valid_ipc_q invariants are improved *)
-lemma set_cap_ko_at_Notification[wp]:
-  "set_cap cap slot \<lbrace>\<lambda>s. Q (ko_at (Notification ntfn) p s)\<rbrace>"
-  unfolding set_cap_def
-  apply (wpsimp wp: set_object_wp get_object_wp)
-  apply (fastforce simp: obj_at_def)
-  done
-
-lemma set_cap_ko_at_Notification_at[wp]:
-  "\<lbrace>\<lambda>s. Q (ko_at (Notification ep) p s)\<rbrace>
-    set_cap param_a param_b
-   \<lbrace>\<lambda>_ s. Q (ko_at (Notification ep) p s)\<rbrace>"
-  unfolding set_cap_def
-  apply (wpsimp wp: set_object_wp get_object_wp)
-  apply (fastforce simp: obj_at_def)
-  done
-
 lemma set_cdt_list_wp:
   "\<lbrace>\<lambda>s. P (cdt_list_update (\<lambda>_. cdtl) s)\<rbrace> set_cdt_list cdtl \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding set_cdt_list_def
   by wpsimp
-
-crunches create_cap_ext, cap_insert_ext
-  for ko_at_Endpoint[wp]: "\<lambda>s. Q (ko_at (Endpoint ep) p s)"
-  and ko_at_Notification[wp]: "\<lambda>s. Q (ko_at (Notification ntfn) p s)"
-lemma create_cap_ext_ko_at_Notification_at[wp]:
-  "\<lbrace>\<lambda>s. Q (ko_at (Notification ep) p s)\<rbrace>
-    create_cap_ext a b c
-   \<lbrace>\<lambda>_ s::det_state. Q (ko_at (Notification ep) p s)\<rbrace>"
-  unfolding create_cap_ext_def update_cdt_list_def
-  by (wpsimp wp: set_cdt_list_wp)
-
-
-crunches create_cap
-  for ko_at_Endpoint[wp]: "\<lambda>s::'z::state_ext state. Q (ko_at (Endpoint ep) p s)"
-  and ko_at_Notification[wp]: "\<lambda>s::'z::state_ext state. Q (ko_at (Notification ntfn) p s)"
-  (wp: dxo_wp_weak)
-lemma cap_insert_ext_ko_at_Notification_at[wp]:
-  "\<lbrace>\<lambda>s. Q (ko_at (Notification ep) p s)\<rbrace>
-    cap_insert_ext src_parent src_slot dest_slot src_p dest_p
-   \<lbrace>\<lambda>_ s::det_state. Q (ko_at (Notification ep) p s)\<rbrace>"
-  unfolding cap_insert_ext_def update_cdt_list_def
-  by (wpsimp wp: set_cdt_list_wp)
-
-
-lemma create_cap_ko_at_Notification_at[wp]:
-  "\<lbrace>\<lambda>s. Q (ko_at (Notification ep) p s)\<rbrace>
-    create_cap type bits untyped is_device param_b
-   \<lbrace>\<lambda>_ s::det_state. Q (ko_at (Notification ep) p s)\<rbrace>"
-  unfolding create_cap_def
-  by wpsimp
-
-lemma cap_insert_ko_at_Endpoint_at[wp]:
-  "cap_insert new_cap src_slot dest_slot \<lbrace>\<lambda>s::'z::state_ext state. Q (ko_at (Endpoint ep) p s)\<rbrace>"
-  by (wpsimp wp: hoare_vcg_if_lift2 get_cap_wp dxo_wp_weak
-           simp: cap_insert_def set_untyped_cap_as_full_def
-      split_del: if_split)
-
-lemma cap_insert_ko_at_Notification_at[wp]:
-  "cap_insert new_cap src_slot dest_slot \<lbrace>\<lambda>s::'z::state_ext state. Q (ko_at (Notification ntfn) p s)\<rbrace>"
-  by (wpsimp wp: hoare_vcg_if_lift2 get_cap_wp dxo_wp_weak
-           simp: cap_insert_def set_untyped_cap_as_full_def
-      split_del: if_split)
-
-(* FIXME: move *)
-lemma ko_at_sk_obj_at_pred_inv_pre_conj:
-  "\<lbrace>\<lambda>s. Q (ko_at (Notification ep) p s)\<rbrace>
-    cap_insert new_cap src_slot dest_slot
-   \<lbrace>\<lambda>_ s::det_state. Q (ko_at (Notification ep) p s)\<rbrace>"
-  unfolding cap_insert_def
-  by (wpsimp wp: hoare_vcg_if_lift2 get_cap_wp simp: set_untyped_cap_as_full_def | safe)+
-(* FIXME end: Mitch: these should be removed when the valid_ipc_q invariants are improved *)
-
-  assumes "\<And>obj. \<lbrace>\<lambda>s. Q (ko_at (C obj) p s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. Q (ko_at (C obj) p s)\<rbrace>"
-  shows "\<lbrace>\<lambda>s. Q (sk_obj_at_pred C proj P p s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. Q (sk_obj_at_pred C proj P p s)\<rbrace>"
-  and valid_ntfn_q[wp]: "valid_ntfn_q::det_state \<Rightarrow> _"
-  (wp: valid_ep_q_lift valid_ntfn_q_lift crunch_wps hoare_vcg_disj_lift simp: crunch_simps)
-  apply (simp add: sk_obj_at_pred_def obj_at_def)
-  apply (rule hoare_vcg_ex_lift_N_pre_conj[of Q])
-  apply (case_tac "\<exists>obj. ko = C obj"; wpsimp)
-  apply (rule hoare_vcg_conj_lift_N_pre_conj[of Q, OF _ hoare_vcg_prop_pre_conj])
-  apply (rule rsubst[where P="\<lambda>t. \<lbrace>\<lambda>s. Q (t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. Q (t s)\<rbrace>"], rule_tac obj=obj in assms)
-  by (simp add: obj_at_def)
-
-lemmas ko_at_sk_obj_at_pred_inv = ko_at_sk_obj_at_pred_inv_pre_conj[where R=\<top>, simplified]
 
 global_interpretation set_cdt: schedulable_ipc_queues_pred_locale _ "set_cdt f"
   by unfold_locales (rule schedulable_ipc_queues_pred_lift'; wpsimp simp: sc_at_ppred_def)
@@ -547,11 +462,51 @@ lemma delete_objects_valid_blocked[wp]:
   "\<lbrace>valid_blocked\<rbrace> delete_objects a b \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: delete_objects_def)
   apply (wpsimp simp: detype_def wrap_ext_det_ext_ext_def do_machine_op_def)
-  by (fastforce simp: valid_blocked_defs pred_map_simps opt_map_simps map_join_simps vs_heap_simps 
+  by (fastforce simp: valid_blocked_defs pred_map_simps opt_map_simps map_join_simps vs_heap_simps
                split: option.splits)
 
 crunch valid_blocked[wp]: reset_untyped_cap "valid_blocked::'z::state_ext state \<Rightarrow> _"
   (wp: preemption_point_inv mapME_x_inv_wp crunch_wps simp: unless_def)
+
+crunches retype_region, delete_objects
+  for cur_sc[wp]: "\<lambda>(s). P (cur_sc s)"
+  (simp: detype_def)
+
+lemma reset_untyped_cap_cur_sc[wp]:
+  "reset_untyped_cap slot \<lbrace>(\<lambda>s. P (cur_sc s))\<rbrace>"
+  unfolding reset_untyped_cap_def
+  by (wpsimp wp: mapME_x_wp_inv preemption_point_inv get_cap_wp)
+
+lemma delete_objects_not_bound_sc_tcb_at[wp]:
+  "delete_objects d f \<lbrace>\<lambda>s. \<not> bound_sc_tcb_at P t s\<rbrace>"
+  unfolding delete_objects_def
+  by (wpsimp wp: )
+
+lemma reset_untyped_not_bound_sc_tcb_at[wp]:
+  "reset_untyped_cap slot \<lbrace>\<lambda>s. \<not> bound_sc_tcb_at P t s\<rbrace>"
+  unfolding reset_untyped_cap_def
+  by (wpsimp wp: mapME_x_wp_inv preemption_point_inv hoare_drop_imp)
+
+lemma cur_sc_chargeable_invoke_untypedE_R:
+  "\<lbrace>cur_sc_tcb_only_sym_bound\<rbrace>
+   invoke_untyped i
+   -, \<lbrace>\<lambda>rv. cur_sc_tcb_only_sym_bound\<rbrace>"
+  unfolding invoke_untyped_def
+  apply wpsimp
+    apply (rule valid_validE_E)
+    apply (clarsimp simp: cur_sc_tcb_only_sym_bound_def tcb_at_kh_simps[symmetric])
+    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
+      apply (rule valid_validE, wps)
+      apply wpsimp
+     apply wpsimp
+    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
+     apply (rule valid_validE, wps)
+     apply wpsimp
+    apply wpsimp
+   apply wpsimp
+  apply clarsimp
+  apply (simp only: cur_sc_tcb_only_sym_bound_def tcb_at_kh_simps[symmetric])
+  done
 
 context DetSchedAux_AI begin
 lemma invoke_untyped_valid_blocked[wp]:
@@ -707,7 +662,7 @@ lemma valid_sched_tcb_state_preservation_gen:
    subgoal for s rv s'
    apply (clarsimp simp: valid_idle_etcb_def)
    apply (frule use_valid[OF _ etcb_at], fastforce, erule mp)
-   by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def) 
+   by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
   apply (rule_tac V="schedulable_ipc_queues s'" in revcut_rl)
    subgoal for s rv s'
    apply (simp add: schedulable_ipc_queues_defs

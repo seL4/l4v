@@ -1327,12 +1327,6 @@ abbreviation
                  idle st \<or> awaiting_reply st"
 
 abbreviation
-  "not_blocked st \<equiv> inactive st \<or>
-                 st = Running \<or>
-                 st = Restart \<or>
-                 idle st"
-
-abbreviation
   "ct_active \<equiv> ct_in_state active"
 
 abbreviation
@@ -1340,9 +1334,6 @@ abbreviation
 
 abbreviation
   "ct_idle \<equiv> ct_in_state idle"
-
-abbreviation
-  "ct_not_blocked \<equiv> ct_in_state not_blocked"
 
 abbreviation (input)
  "all_invs_but_sym_refs_and_fault_tcbs

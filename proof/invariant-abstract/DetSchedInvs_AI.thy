@@ -1903,14 +1903,6 @@ abbreviation ready_queued_threads_2 :: "(domain \<Rightarrow> priority \<Rightar
 \<comment> \<open>Set of all threads in all ready queues\<close>
 abbreviation ready_queued_threads :: "'z state \<Rightarrow> obj_ref set" where
   "ready_queued_threads s \<equiv> ready_queued_threads_2 (ready_queues s)"
-definition valid_ep_thread_2 where
-  "valid_ep_thread_2 ep t ct it curtime kh =
-       (st_tcb_at_kh (\<lambda>ts. (\<exists>eptr r_opt. ts = BlockedOnReceive eptr r_opt) \<or>
-                           (\<exists>eptr pl. ts = BlockedOnSend eptr pl)) t kh \<and>
-          t \<noteq> ct \<and> t \<noteq> it \<and>
-         (bound_sc_tcb_at_kh ((=) None) t kh \<or>
-        active_sc_tcb_at_kh t kh \<and> budget_sufficient_kh t kh \<and> budget_ready_kh curtime t kh))"
-
 
 \<comment> \<open>Schedulability of threads in notification and endpoint queues\<close>
 primrec
@@ -2129,18 +2121,6 @@ definition ntfn_queue :: "notification \<Rightarrow> obj_ref list" where
                     IdleNtfn \<Rightarrow> []
                   | WaitingNtfn list \<Rightarrow> list
                   | ActiveNtfn _ \<Rightarrow> []"
-
-definition valid_ntfn_q_2 where
-  "valid_ntfn_q_2 ct it curtime kh =
-   (\<forall>p. case kh p of
-        Some (Notification n) \<Rightarrow> (\<forall>t \<in> set (ntfn_queue n).
-t \<noteq> ct \<and> t \<noteq> it \<and> has_budget_kh t curtime kh \<and> (st_tcb_at_kh (\<lambda>ts. ts = BlockedOnNotification p) t kh))
-        | _ \<Rightarrow> True)"
-
-abbreviation valid_ntfn_q :: "'z state \<Rightarrow> bool" where
-  "valid_ntfn_q s \<equiv> valid_ntfn_q_2 (cur_thread s) (idle_thread s) (cur_time s) (kheap s)"
-
-lemmas valid_ntfn_q_def = valid_ntfn_q_2_def
 
 definition in_ntfn_q where
   "in_ntfn_q t s \<equiv> \<exists>ptr. ntfn_at_pred (\<lambda>n. t \<in> set (ntfn_queue n)) ptr s"
@@ -2801,19 +2781,6 @@ lemma valid_sched_lift_pre_conj:
 
 lemmas valid_sched_lift = valid_sched_lift_pre_conj[where R = \<top>, simplified]
 
-lemma valid_ntfn_q_lift_pre_conj:
-  assumes A: "\<And>x2 p. \<lbrace>\<lambda>s. ~ ko_at (Notification x2) p s \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. ~ ko_at (Notification x2) p s\<rbrace>"
-  assumes B: "\<And>P t. \<lbrace>\<lambda>s. st_tcb_at P t s \<and> R s\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
-  assumes C: "\<And>t. \<lbrace>\<lambda>s. t \<noteq> cur_thread s \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. t \<noteq> cur_thread s\<rbrace>"
-  assumes D: "\<And>t. \<lbrace>\<lambda>s. t \<noteq> idle_thread s \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
-  assumes E: "\<And>t. \<lbrace>\<lambda>s. (bound_sc_tcb_at ((=) None) t s \<or>
-                         active_sc_tcb_at t s \<and> budget_sufficient t s \<and> budget_ready t s) \<and> R s\<rbrace>
-                   f
-                   \<lbrace>\<lambda>s s. (bound_sc_tcb_at ((=) None) t s \<or>
-  shows " \<lbrace>\<lambda>s. valid_ntfn_q s \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. valid_ntfn_q s\<rbrace>"
-   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_ball_lift A B C D E)
-lemmas valid_ntfn_q_lift = valid_ntfn_q_lift_pre_conj[where R = \<top>, simplified]
-
 lemma valid_reply_scs_lift:
   assumes A: "\<And>b c. f \<lbrace>\<lambda>s. \<not> reply_at_ppred reply_tcb b c s\<rbrace>"
   assumes D: "\<And>b c. f \<lbrace>\<lambda>s. \<not> reply_at_ppred reply_sc b c s\<rbrace>"
@@ -2853,22 +2820,32 @@ lemma invs_cur_sc_tcb_symref:
   apply (simp add: invs_def cur_sc_tcb_def sc_at_pred_n_def obj_at_def schact_is_rct_def)
   done
 
+lemma sym_refs_pred_map_eq_iff_sc_tcb_sc_at:
+  assumes pre: "\<And>sc_opt. P sc_opt \<longleftrightarrow> sc_opt = Some sc"
+               "\<And>t_opt. Q t_opt \<longleftrightarrow> t_opt = Some t"
+  assumes sym: "sym_refs (state_refs_of s)"
+  shows "pred_map P (tcb_scps_of s) t \<longleftrightarrow> sc_tcb_sc_at Q sc s"
+  using sym by (fastforce simp: pred_tcb_at_def sc_tcb_sc_at_def obj_at_def pre tcb_at_kh_simps[symmetric]
+                                sym_refs_def state_refs_of_def get_refs_def2 refs_of_rev
+                         split: option.splits)
+
 (*** cur_sc_chargeable ***)
 
 definition cur_sc_chargeable_2 where
-  "cur_sc_chargeable_2 cursc curthread kh \<equiv>
-    (\<forall>scp. bound_sc_tcb_at_kh (\<lambda>x. x = Some scp) (curthread) kh \<longrightarrow> scp = cursc) \<and>
-    (\<forall>tp. bound_sc_tcb_at_kh (\<lambda>x. x = Some cursc) (tp) kh \<longrightarrow> tp = curthread \<or> st_tcb_at_kh inactive tp kh)"
+  "cur_sc_chargeable_2 cursc curthread tcb_sts tcb_scps \<equiv>
+    (\<forall>scp. pred_map_eq (Some scp) tcb_scps (curthread) \<longrightarrow> scp = cursc) \<and>
+    (\<forall>tp. pred_map_eq (Some cursc) tcb_scps tp \<longrightarrow> tp = curthread \<or> pred_map inactive tcb_sts tp)"
 
 abbreviation cur_sc_chargeable :: "'z state \<Rightarrow> bool" where
-"cur_sc_chargeable s \<equiv> cur_sc_chargeable_2 (cur_sc s) (cur_thread s) (kheap s)"
+"cur_sc_chargeable s \<equiv> cur_sc_chargeable_2 (cur_sc s) (cur_thread s) (tcb_sts_of s) (tcb_scps_of s) "
 
 lemmas cur_sc_chargeable_def = cur_sc_chargeable_2_def
 
 lemma cur_sc_chargeable_def2:
-  "cur_sc_chargeable s \<equiv> (\<forall>scp. bound_sc_tcb_at (\<lambda>x. x = Some scp) (cur_thread s) s \<longrightarrow> scp = cur_sc s) \<and>
- (\<forall>x. bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) x s \<longrightarrow> (x = cur_thread s \<or> st_tcb_at inactive x s))"
-  by (clarsimp simp: cur_sc_chargeable_def pred_tcb_at_def obj_at_def sc_at_pred_def)
+  "cur_sc_chargeable s
+   \<equiv> (\<forall>scp. bound_sc_tcb_at (\<lambda>x. x = Some scp) (cur_thread s) s \<longrightarrow> scp = cur_sc s) \<and>
+     (\<forall>x. bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) x s \<longrightarrow> (x = cur_thread s \<or> st_tcb_at inactive x s))"
+  by (clarsimp simp: cur_sc_chargeable_def tcb_at_kh_simps vs_all_heap_simps)
 
 lemma cur_sc_chargeable_lift_pre_conj:
   assumes A: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
@@ -2881,16 +2858,17 @@ lemma cur_sc_chargeable_lift_pre_conj:
 
 lemmas cur_sc_chargeable_lift = cur_sc_chargeable_lift_pre_conj[where R=\<top>, simplified]
 
+thm sym_refs_pred_map_eq_iff_sc_tcb_sc_at[OF eq_commute refl invs_sym_refs]
 lemma invs_cur_sc_chargeableE:
   "invs s \<Longrightarrow> schact_is_rct s \<Longrightarrow> cur_sc_chargeable s"
-  apply (subgoal_tac "sc_tcb_sc_at (\<lambda>t_opt. t_opt = Some (cur_thread s)) (cur_sc s) s")
+  apply (subgoal_tac "sc_tcb_sc_at (\<lambda>x. x = Some (cur_thread s)) (cur_sc s) s")
    apply (subgoal_tac "bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) (cur_thread s) s")
     apply (clarsimp simp: cur_sc_chargeable_def)
     apply (intro conjI)
-     apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-    apply (clarsimp)
-    apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl invs_sym_refs], simp)+
-    apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+     apply (clarsimp simp: tcb_at_kh_simps vs_all_heap_simps)
+    apply (clarsimp simp: pred_map_eq_def)
+     apply (subst (asm) sym_refs_pred_map_eq_iff_sc_tcb_sc_at[OF eq_commute refl invs_sym_refs], simp)+
+     apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
    apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl invs_sym_refs]; simp)
   apply (simp add: invs_def cur_sc_tcb_def sc_at_pred_n_def obj_at_def schact_is_rct_def)
   done
@@ -2900,37 +2878,68 @@ lemma schact_is_rct_sane[elim!]: "schact_is_rct s \<Longrightarrow> scheduler_ac
   done
 
 \<comment> \<open>The current thread and current sc are bound (assuming sym_refs))\<close>
-definition cur_sc_tcb_are_bound :: "det_state \<Rightarrow> bool" where
-  "cur_sc_tcb_are_bound s \<equiv> bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) (cur_thread s) s"
+
+definition cur_sc_tcb_are_bound_2 where
+  "cur_sc_tcb_are_bound_2 cursc curthread tcb_scps \<equiv>
+    (pred_map_eq (Some cursc) tcb_scps (curthread))"
+
+abbreviation cur_sc_tcb_are_bound :: "'z state \<Rightarrow> bool" where
+"cur_sc_tcb_are_bound s \<equiv> cur_sc_tcb_are_bound_2 (cur_sc s) (cur_thread s) (tcb_scps_of s) "
+
+lemmas cur_sc_tcb_are_bound_def = cur_sc_tcb_are_bound_2_def
+
+lemma set_scheduler_action_valid_sched_misc[wp]:
+  "set_scheduler_action x
+   \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+          (ready_queues s) (release_queue s) (last_machine_time_of s)
+          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>"
+   unfolding set_scheduler_action_def
+   by (wpsimp)
 
 lemma set_thread_state_cur_sc_tcb_are_bound[wp]:
-  "\<lbrace>cur_sc_tcb_are_bound\<rbrace>
-   set_thread_state a b
-   \<lbrace>\<lambda>_. cur_sc_tcb_are_bound\<rbrace>"
-   unfolding cur_sc_tcb_are_bound_def
-   by (rule hoare_weaken_pre, wps, wpsimp, simp)
+  "set_thread_state a b
+   \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+          (ready_queues s) (release_queue s) (last_machine_time_of s)
+          (etcbs_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>"
+   unfolding set_thread_state_def set_thread_state_act_def
+   apply (wpsimp wp: set_object_wp)
+   by (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps)
 
 lemma invs_strengthen_cur_sc_chargeable:
   "cur_sc_tcb_are_bound s \<and> invs s \<Longrightarrow> cur_sc_chargeable s"
-  unfolding cur_sc_chargeable_def2 cur_sc_tcb_are_bound_def
-  apply clarsimp
+  unfolding cur_sc_chargeable_def cur_sc_tcb_are_bound_def
+  apply (clarsimp simp: pred_map_eq_def)
   apply (intro conjI; intro allI impI)
-   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+   apply (clarsimp simp: pred_map_simps)
   apply (rule disjI1)
-  apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl], clarsimp)
-  apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl], clarsimp)
+  apply (subst (asm) sym_refs_pred_map_eq_iff_sc_tcb_sc_at[OF eq_commute refl], clarsimp)
+  apply (subst (asm) sym_refs_pred_map_eq_iff_sc_tcb_sc_at[OF eq_commute refl], clarsimp)
   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
   done
 
+abbreviation ct_not_blocked where
+  "ct_not_blocked s \<equiv> ct_in_state (\<lambda>x. \<not>ipc_queued_thread_state x) s"
+
+lemma ct_in_state_kh_simp:
+  "ct_in_state P s = pred_map P (tcb_sts_of s) (cur_thread s)"
+  unfolding ct_in_state_def
+  by (clarsimp simp: tcb_at_kh_simps)
+
 \<comment> \<open>The current thread and current sc can only be bound to each other, symmetrically\<close>
-definition cur_sc_tcb_only_sym_bound :: "det_state \<Rightarrow> bool" where
-"cur_sc_tcb_only_sym_bound s \<equiv>
-   (\<forall>scp. bound_sc_tcb_at (\<lambda>x. x = Some scp) (cur_thread s) s \<longrightarrow> scp = cur_sc s)
-   \<and> (\<forall>x. bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) x s \<longrightarrow> (x = cur_thread s))"
+
+definition cur_sc_tcb_only_sym_bound_2 where
+  "cur_sc_tcb_only_sym_bound_2 cursc curthread tcb_scps \<equiv>
+    (\<forall>scp. pred_map_eq (Some scp) tcb_scps (curthread) \<longrightarrow> scp = cursc) \<and>
+    (\<forall>tp. pred_map_eq (Some cursc) tcb_scps tp \<longrightarrow> tp = curthread)"
+
+abbreviation cur_sc_tcb_only_sym_bound :: "'z state \<Rightarrow> bool" where
+  "cur_sc_tcb_only_sym_bound s \<equiv> cur_sc_tcb_only_sym_bound_2 (cur_sc s) (cur_thread s) (tcb_scps_of s) "
+
+lemmas cur_sc_tcb_only_sym_bound_def = cur_sc_tcb_only_sym_bound_2_def
 
 lemma strengthen_cur_sc_chargeable:
   "cur_sc_tcb_only_sym_bound s \<Longrightarrow> cur_sc_chargeable s"
-  unfolding cur_sc_chargeable_def2 cur_sc_tcb_only_sym_bound_def
+  unfolding cur_sc_chargeable_def cur_sc_tcb_only_sym_bound_def
   apply (intro conjI; intro allI impI)
    apply (drule conjunct1, clarsimp)
   apply (drule conjunct2, clarsimp)
@@ -2939,7 +2948,20 @@ lemma strengthen_cur_sc_chargeable:
 lemma cur_sc_chargeableD:
   "bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) x s \<Longrightarrow>
    cur_sc_chargeable s \<Longrightarrow> (x = cur_thread s \<or> st_tcb_at inactive x s)"
-  by (clarsimp simp: cur_sc_chargeable_def)
+   by (clarsimp simp: cur_sc_chargeable_def tcb_at_kh_simps pred_map_simps)
+
+lemma cur_sc_tcb_only_sym_bound_lift_pre_conj:
+  assumes A: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  assumes B: "\<And>P. \<lbrace>\<lambda>s. P (cur_sc s)\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_sc s)\<rbrace>"
+  assumes C: "\<And>P t. \<lbrace>\<lambda>s. \<not> (bound_sc_tcb_at P t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. \<not> (bound_sc_tcb_at P t s)\<rbrace>"
+  shows "\<lbrace>cur_sc_tcb_only_sym_bound and R\<rbrace> f \<lbrace>\<lambda>_. cur_sc_tcb_only_sym_bound\<rbrace>"
+  unfolding cur_sc_tcb_only_sym_bound_def
+  by (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift C hoare_vcg_disj_lift
+           simp: tcb_at_kh_simps[symmetric]
+      | wps A B)+
+
+lemmas cur_sc_tcb_only_sym_bound_lift = cur_sc_tcb_only_sym_bound_lift_pre_conj[where R=\<top>, simplified]
+
 \<comment> \<open>Locales that generate various traditional obj_at lemmas from valid_sched_pred etc.\<close>
 
 locale schedulable_ipc_queues_pred_pre_conj_locale =
