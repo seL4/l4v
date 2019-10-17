@@ -1364,6 +1364,52 @@ lemma validE_valid: "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. Q\<rbrace>,\<lb
   apply (case_tac r, simp_all)
   done
 
+lemma hoare_lift_Pf_E_R:
+  assumes P: "\<And>x. \<lbrace>P x\<rbrace> m \<lbrace>\<lambda>_. P x\<rbrace>, -"
+  assumes f: "\<And>P. \<lbrace>\<lambda>s. P (f s)\<rbrace> m \<lbrace>\<lambda>_ s. P (f s)\<rbrace>, -"
+  shows "\<lbrace>\<lambda>s. P (f s) s\<rbrace> m \<lbrace>\<lambda>_ s. P (f s) s\<rbrace>, -"
+  using P f
+  apply (clarsimp simp: validE_R_def validE_def valid_def)
+  apply (rename_tac r s', case_tac r; simp)
+  apply fastforce
+  done
+
+lemma hoare_lift_Pf_E_E:
+  assumes P: "\<And>x. \<lbrace>P x\<rbrace> m -, \<lbrace>\<lambda>_. P x\<rbrace>"
+  assumes f: "\<And>P. \<lbrace>\<lambda>s. P (f s)\<rbrace> m -, \<lbrace>\<lambda>_ s. P (f s)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. P (f s) s\<rbrace> m -, \<lbrace>\<lambda>_ s. P (f s) s\<rbrace>"
+  using P f
+  apply (clarsimp simp: validE_E_def validE_def valid_def)
+  apply (rename_tac r s', case_tac r; simp)
+  apply fastforce
+  done
+
+lemma hoare_vcg_const_Ball_lift_E_E:
+ "\<lbrakk> \<And>x. x \<in> S \<Longrightarrow> \<lbrace>P x\<rbrace> f -,\<lbrace>Q x\<rbrace> \<rbrakk> \<Longrightarrow>
+   \<lbrace>\<lambda>s. \<forall>x \<in> S. P x s\<rbrace> f -,\<lbrace>\<lambda>rv s. \<forall>x \<in> S. Q x rv s\<rbrace>"
+  apply (simp add: validE_E_def validE_def)
+  apply (rule hoare_strengthen_post)
+   apply (erule hoare_vcg_const_Ball_lift)
+  apply (simp split: sum.splits)
+  done
+
+lemma hoare_vcg_all_liftE_E:
+  "(\<And>x. \<lbrace>P x\<rbrace> f -, \<lbrace>Q x\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x. P x s\<rbrace> f -,\<lbrace>\<lambda>rv s. \<forall>x. Q x rv s\<rbrace>"
+  by (rule hoare_vcg_const_Ball_lift_E_E[where S=UNIV, simplified])
+
+lemma hoare_vcg_imp_liftE_E:
+  "\<lbrakk>\<lbrace>P'\<rbrace> f -, \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>; \<lbrace>Q'\<rbrace> f -, \<lbrace>Q\<rbrace>\<rbrakk> \<Longrightarrow>
+   \<lbrace>\<lambda>s. \<not> P' s \<longrightarrow> Q' s\<rbrace> f -, \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>"
+  by (auto simp add: valid_def validE_E_def validE_def split_def split: sum.splits)
+
+lemma hoare_vcg_ex_liftE:
+  "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<exists>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<exists>x. Q x rv s\<rbrace>,\<lbrace>E\<rbrace>"
+  by (fastforce simp: validE_def valid_def split: sum.splits)
+
+lemma hoare_vcg_ex_liftE_E:
+  "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f -,\<lbrace>E x\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<exists>x. P x s\<rbrace> f -,\<lbrace>\<lambda>rv s. \<exists>x. E x rv s\<rbrace>"
+  by (fastforce simp: validE_E_def validE_def valid_def split: sum.splits)
+
 lemma valid_validE_R:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. Q\<rbrace>,-"
   by (simp add: validE_R_def hoare_post_impErr [OF valid_validE])
