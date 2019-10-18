@@ -172,12 +172,13 @@ where
                  set_refills sc_ptr [(hd refills)\<lparr>r_time := ct + kernelWCET_ticks\<rparr>,
                                      (hd (tl refills))\<lparr>r_time := r_amount (hd refills) + ct + kernelWCET_ticks\<rparr>]
               od
-    else do modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
-            ready \<leftarrow> refill_ready sc_ptr;
+    else do ready \<leftarrow> refill_ready sc_ptr;
             when ready $ do
-                refills' \<leftarrow> return $ refills_merge_prefix ((hd refills)\<lparr>r_time := ct\<rparr> # tl refills);
-                set_refills sc_ptr refills'
-                od
+                 modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
+                 refills' \<leftarrow> return $ refills_merge_prefix ((hd refills)\<lparr>r_time := ct + kernelWCET_ticks\<rparr>
+                                                            # tl refills);
+                 set_refills sc_ptr refills'
+                 od
          od
   od"
 
