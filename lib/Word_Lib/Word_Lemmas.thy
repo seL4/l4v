@@ -13,7 +13,7 @@ section "Lemmas with Generic Word Length"
 theory Word_Lemmas
   imports
     Complex_Main
-    Word_Next
+    Word_EqI
     Word_Enum
     "HOL-Library.Sublist"
 begin
@@ -71,63 +71,6 @@ lemma word_plus_mono_left:
   fixes x :: "'a :: len word"
   shows "\<lbrakk>y \<le> z; x \<le> x + z\<rbrakk> \<Longrightarrow> y + x \<le> z + x"
   by unat_arith
-
-lemma word_2p_mult_inc:
-  assumes x: "2 * 2 ^ n < (2::'a::len word) * 2 ^ m"
-  assumes suc_n: "Suc n < LENGTH('a::len)"
-  assumes suc_m: "Suc m < LENGTH('a::len)"
-  assumes 2: "unat (2::'a::len word) = 2"
-  shows "2^n < (2::'a::len word)^m"
-proof -
-  from suc_n
-  have "(2::nat) * 2 ^ n mod 2 ^ LENGTH('a::len) = 2 * 2^n"
-    apply (subst mod_less)
-     apply (subst power_Suc[symmetric])
-     apply (rule power_strict_increasing)
-      apply simp
-     apply simp
-    apply simp
-    done
-  moreover
-  from suc_m
-  have "(2::nat) * 2 ^ m mod 2 ^ LENGTH('a::len) = 2 * 2^m"
-    apply (subst mod_less)
-     apply (subst power_Suc[symmetric])
-     apply (rule power_strict_increasing)
-      apply simp
-     apply simp
-    apply simp
-    done
-  ultimately
-  have "2 * 2 ^ n < (2::nat) * 2 ^ m" using x
-    apply (unfold word_less_nat_alt)
-    apply simp
-    apply (subst (asm) unat_word_ariths(2))+
-    apply (subst (asm) 2)+
-    apply (subst (asm) word_unat_power, subst (asm) unat_of_nat)+
-    apply (simp add: mod_mult_right_eq)
-    done
-  with suc_n suc_m
-  show ?thesis
-    unfolding word_less_nat_alt
-    apply (subst word_unat_power, subst unat_of_nat)+
-    apply simp
-    done
-qed
-
-lemma word_power_increasing:
-  assumes x: "2 ^ x < (2 ^ y::'a::len word)" "x < LENGTH('a::len)" "y < LENGTH('a::len)"
-  assumes 2: "unat (2::'a::len word) = 2"
-  shows "x < y" using x
-  apply (induct x arbitrary: y)
-   apply (case_tac y; simp)
-  apply (case_tac y; clarsimp)
-   apply (subst (asm) power_Suc [symmetric])
-   apply (subst (asm) p2_eq_0)
-   apply simp
-  apply (drule (2) word_2p_mult_inc, rule 2)
-  apply simp
-  done
 
 lemma word_shiftl_add_distrib:
   fixes x :: "'a :: len word"
@@ -273,31 +216,14 @@ lemma word_less_power_trans:
   apply simp
   done
 
-lemma word_less_sub_le[simp]:
-  fixes x :: "'a :: len word"
-  assumes nv: "n < LENGTH('a)"
-  shows "(x \<le> 2 ^ n - 1) = (x < 2 ^ n)"
-proof -
-  have "Suc (unat ((2::'a word) ^ n - 1)) = unat ((2::'a word) ^ n)" using nv
-    by (metis Suc_pred' power_2_ge_iff unat_gt_0 unat_minus_one word_not_simps(1))
-
-  then show ?thesis using nv
-    apply -
-    apply (subst word_le_nat_alt)
-    apply (subst less_Suc_eq_le [symmetric])
-    apply (erule ssubst)
-    apply (subst word_less_nat_alt)
-    apply (rule refl)
-    done
-qed
-
 lemma Suc_unat_diff_1:
   fixes x :: "'a :: len word"
   assumes lt: "1 \<le> x"
   shows "Suc (unat (x - 1)) = unat x"
 proof -
   have "0 < unat x"
-    by (rule order_less_le_trans [where y = 1], simp, subst unat_1 [symmetric], rule iffD1 [OF word_le_nat_alt lt])
+    by (rule order_less_le_trans [where y = 1], simp, subst unat_1 [symmetric],
+        rule iffD1 [OF word_le_nat_alt lt])
 
   then show ?thesis
     by ((subst unat_sub [OF lt])+, simp only:  unat_1)
@@ -630,12 +556,7 @@ lemma word_add_le_dest:
 
 lemma mask_shift:
   "(x && ~~ mask y) >> y = x >> y"
-  apply (rule word_eqI)
-  apply (simp add: nth_shiftr word_size)
-  apply safe
-  apply (drule test_bit.Rep[simplified, rule_format])
-  apply (simp add: word_size word_ops_nth_size)
-  done
+  by word_eqI
 
 lemma word_add_le_mono1:
   fixes i :: "'a :: len word"
@@ -1309,25 +1230,16 @@ lemma nth_ucast:
 lemma ucast_less:
   "LENGTH('b) < LENGTH('a) \<Longrightarrow>
    (ucast (x :: 'b :: len word) :: ('a :: len word)) < 2 ^ LENGTH('b)"
-  apply (subst mask_eq_iff_w2p[symmetric])
-   apply (simp add: word_size)
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast)
-  done
+  by (meson Word.nth_ucast bang_conj_lt le_def upper_bits_unset_is_l2p)
 
 lemma ucast_range_less:
   "LENGTH('a :: len) < LENGTH('b :: len) \<Longrightarrow>
-   range (ucast :: 'a word \<Rightarrow> 'b word)
-       = {x. x < 2 ^ len_of TYPE ('a)}"
+   range (ucast :: 'a word \<Rightarrow> 'b word) = {x. x < 2 ^ len_of TYPE ('a)}"
   apply safe
    apply (erule ucast_less)
   apply (simp add: image_def)
   apply (rule_tac x="ucast x" in exI)
-  apply (drule less_mask_eq)
-  apply (rule word_eqI)
-  apply (drule_tac x=n in word_eqD)
-  apply (clarsimp simp: word_size nth_ucast)
-  done
+  by word_eqI_solve
 
 lemma word_power_less_diff:
   "\<lbrakk>2 ^ n * q < (2::'a::len word) ^ m; q < 2 ^ (LENGTH('a) - n)\<rbrakk> \<Longrightarrow> q < 2 ^ (m - n)"
@@ -1532,14 +1444,6 @@ lemma of_nat_0:
   "\<lbrakk>of_nat n = (0::('a::len) word); n < 2 ^ len_of (TYPE('a))\<rbrakk> \<Longrightarrow> n = 0"
   by (drule unat_of_nat_eq, simp)
 
-lemma minus_one_helper3:
-  "x < y \<Longrightarrow> x \<le> (y :: 'a :: len word) - 1"
-  apply (simp add: word_less_nat_alt word_le_nat_alt)
-  apply (subst unat_minus_one)
-   apply clarsimp
-  apply arith
-  done
-
 lemma minus_one_helper:
   "\<lbrakk> x \<le> y; x \<noteq> 0 \<rbrakk> \<Longrightarrow> x - 1 < (y :: 'a :: len word)"
   apply (simp add: word_less_nat_alt word_le_nat_alt)
@@ -1548,29 +1452,6 @@ lemma minus_one_helper:
   apply (cases "unat x")
    apply (simp add: unat_eq_zero)
   apply arith
-  done
-
-lemma minus_one_helper5:
-  fixes x :: "'a::len word"
-  shows "\<lbrakk>y \<noteq> 0; x \<le> y - 1 \<rbrakk> \<Longrightarrow> x < y"
-  using le_m1_iff_lt word_neq_0_conv by blast
-
-lemma not_greatest_aligned:
-  "\<lbrakk> x < y; is_aligned x n; is_aligned y n \<rbrakk>
-      \<Longrightarrow> x + 2 ^ n \<noteq> 0"
-  apply (rule notI)
-  apply (erule is_aligned_get_word_bits[where p=y])
-   apply (simp add: eq_diff_eq[symmetric])
-   apply (frule minus_one_helper3)
-   apply (drule le_minus'[where a="x" and c="y - x" and b="- 1" for x y, simplified])
-   apply (simp add: field_simps)
-   apply (frule is_aligned_less_sz[where a=y])
-     apply clarsimp
-   apply (erule notE)
-   apply (rule minus_one_helper5)
-    apply simp
-   apply (metis is_aligned_no_overflow minus_one_helper3 order_le_less_trans)
-  apply simp
   done
 
 lemma of_nat_inj:
@@ -1696,20 +1577,15 @@ lemma upto_enum_step_subset:
   done
 
 lemma shiftr_less_t2n':
-  fixes x :: "'a :: len word"
-  shows "\<lbrakk> x && mask (n + m) = x; m < LENGTH('a) \<rbrakk>
-              \<Longrightarrow> (x >> n) < 2 ^ m"
-  apply (subst mask_eq_iff_w2p[symmetric])
-   apply (simp add: word_size)
-  apply (rule word_eqI)
-  apply (drule_tac x="na + n" in word_eqD)
-  apply (simp add: nth_shiftr word_size)
-  apply safe
+  "\<lbrakk> x && mask (n + m) = x; m < LENGTH('a) \<rbrakk> \<Longrightarrow> x >> n < 2 ^ m" for x :: "'a :: len word"
+  apply (simp add: word_size mask_eq_iff_w2p[symmetric])
+  apply word_eqI
+  apply (erule_tac x="na + n" in allE)
+  apply fastforce
   done
 
 lemma shiftr_less_t2n:
-  fixes x :: "'a :: len word"
-  shows "x < 2 ^ (n + m) \<Longrightarrow> (x >> n) < 2 ^ m"
+  "x < 2 ^ (n + m) \<Longrightarrow> x >> n < 2 ^ m" for x :: "'a :: len word"
   apply (rule shiftr_less_t2n')
    apply (erule less_mask_eq)
   apply (rule ccontr)
@@ -1738,16 +1614,10 @@ lemma shiftr_not_mask_0:
 lemma shiftl_less_t2n:
   fixes x :: "'a :: len word"
   shows "\<lbrakk> x < (2 ^ (m - n)); m < LENGTH('a) \<rbrakk> \<Longrightarrow> (x << n) < 2 ^ m"
-  apply (subst mask_eq_iff_w2p[symmetric])
-   apply (simp add: word_size)
-  apply (drule less_mask_eq)
-  apply (rule word_eqI)
-  apply (drule_tac x="na - n" in word_eqD)
-  apply (simp add: nth_shiftl word_size)
-  apply (cases "n \<le> m")
-   apply safe
-   apply simp
-  apply simp
+  apply (simp add: word_size mask_eq_iff_w2p[symmetric])
+  apply word_eqI
+  apply (erule_tac x="na - n" in allE)
+  apply auto
   done
 
 lemma shiftl_less_t2n':
@@ -1756,9 +1626,7 @@ lemma shiftl_less_t2n':
 
 lemma ucast_ucast_mask:
   "(ucast :: 'a :: len word \<Rightarrow> 'b :: len word) (ucast x) = x && mask (len_of TYPE ('a))"
-  apply (rule word_eqI)
-  apply (simp add: nth_ucast word_size)
-  done
+  by word_eqI
 
 lemma ucast_ucast_len:
   "\<lbrakk> x < 2 ^ LENGTH('b) \<rbrakk> \<Longrightarrow> ucast (ucast x::'b::len word) = (x::'a::len word)"
@@ -1835,13 +1703,7 @@ lemma nth_bounded:
 
 lemma is_aligned_add_or:
   "\<lbrakk>is_aligned p n; d < 2 ^ n\<rbrakk> \<Longrightarrow> p + d = p || d"
-  apply (rule word_plus_and_or_coroll)
-  apply (erule is_aligned_get_word_bits)
-   apply (rule word_eqI)
-   apply (clarsimp simp add: is_aligned_nth)
-   apply (frule(1) nth_bounded)
-    apply simp+
-  done
+  by (rule word_plus_and_or_coroll, word_eqI) blast
 
 lemma two_power_increasing:
   "\<lbrakk> n \<le> m; m < LENGTH('a) \<rbrakk> \<Longrightarrow> (2 :: 'a :: len word) ^ n \<le> 2 ^ m"
@@ -2038,7 +1900,7 @@ lemma eq_eqI:
 
 lemma mask_and_mask:
   "mask a && mask b = mask (min a b)"
-  by (rule word_eqI) (simp add: word_size)
+  by word_eqI
 
 lemma mask_eq_0_eq_x:
   "(x && w = 0) = (x && ~~ w = x)"
@@ -2094,10 +1956,7 @@ lemmas limited_and_simps = limited_and_simps1
 
 lemma split_word_eq_on_mask:
   "(x = y) = (x && m = y && m \<and> x && ~~ m = y && ~~ m)"
-  apply safe
-  apply (rule word_eqI)
-  apply (drule_tac x=n in word_eqD)+
-  by (auto simp: word_size word_ops_nth_size)
+  by safe word_eqI_solve
 
 lemma map2_Cons_2_3:
   "(map2 f xs (y # ys) = (z # zs)) = (\<exists>x xs'. xs = x # xs' \<and> f x y = z \<and> map2 f xs' ys = zs)"
@@ -2105,25 +1964,13 @@ lemma map2_Cons_2_3:
 
 lemma map2_xor_replicate_False:
   "map2 (\<lambda>x y. x \<longleftrightarrow> \<not> y) xs (replicate n False) = take n xs"
-  apply (induct xs arbitrary: n)
-   apply simp
-  apply (case_tac n)
-   apply simp_all
-  done
-
-lemma word_or_zero:
-  "(a || b = 0) = (a = 0 \<and> b = 0)"
-  apply (safe, simp_all)
-   apply (rule word_eqI, drule_tac x=n in word_eqD, simp)+
+  apply (induct xs arbitrary: n, simp)
+  apply (case_tac n; simp)
   done
 
 lemma word_and_1_shiftl:
-  fixes x :: "'a :: len word" shows
-  "x && (1 << n) = (if x !! n then (1 << n) else 0)"
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_shiftl del: shiftl_1)
-  apply auto
-  done
+  "x && (1 << n) = (if x !! n then (1 << n) else 0)" for x :: "'a :: len word"
+  by word_eqI_solve
 
 lemmas word_and_1_shiftls'
     = word_and_1_shiftl[where n=0]
@@ -2134,10 +1981,7 @@ lemmas word_and_1_shiftls = word_and_1_shiftls' [simplified]
 
 lemma word_and_mask_shiftl:
   "x && (mask n << m) = ((x >> m) && mask n) << m"
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_shiftl nth_shiftr)
-  apply auto
-  done
+  by word_eqI_solve
 
 lemma plus_Collect_helper:
   "(+) x ` {xa. P (xa :: 'a :: len word)} = {xa. P (xa - x)}"
@@ -2180,6 +2024,11 @@ lemma word_to_1_set:
 lemma range_subset_eq2:
   "{a :: 'a :: len word .. b} \<noteq> {} \<Longrightarrow> ({a .. b} \<subseteq> {c .. d}) = (c \<le> a \<and> b \<le> d)"
   by simp
+
+lemma minus_one_helper5:
+  fixes x :: "'a::len word"
+  shows "\<lbrakk>y \<noteq> 0; x \<le> y - 1 \<rbrakk> \<Longrightarrow> x < y"
+  using le_m1_iff_lt word_neq_0_conv by blast
 
 lemma word_count_from_top:
   "n \<noteq> 0 \<Longrightarrow> {0 ..< n :: 'a :: len word} = {0 ..< n - 1} \<union> {n - 1}"
@@ -2567,9 +2416,7 @@ lemma enum_word_div:
 
 lemma of_bool_nth:
   "of_bool (x !! v) = (x >> v) && 1"
-  apply (rule word_eqI)
-  apply (simp add: nth_shiftr cong: rev_conj_cong)
-  done
+  by (word_eqI cong: rev_conj_cong)
 
 lemma unat_1_0:
   "1 \<le> (x::'a::len word) = (0 < unat x)"
@@ -2624,32 +2471,12 @@ lemma of_nat_mono_maybe':
   done
 
 lemma shiftr_mask_eq:
-  fixes x :: "'a :: len word"
-  shows "(x >> n) && mask (size x - n) = x >> n"
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_shiftr)
-  apply (rule iffI)
-   apply clarsimp
-  apply (clarsimp)
-  apply (drule test_bit_size)
-  apply (simp add: word_size)
-  done
+  "(x >> n) && mask (size x - n) = x >> n" for x :: "'a :: len word"
+  by word_eqI_solve
 
 lemma shiftr_mask_eq':
-  fixes x :: "'a :: len word"
-  shows "m = (size x - n) \<Longrightarrow> (x >> n) && mask m = x >> n"
+  "m = (size x - n) \<Longrightarrow> (x >> n) && mask m = x >> n" for x :: "'a :: len word"
   by (simp add: shiftr_mask_eq)
-
-lemma bang_big: "n \<ge> size (x::'a::len0 word) \<Longrightarrow> (x !! n) = False"
-  by (simp add: test_bit_bl word_size)
-
-lemma bang_conj_lt:
-  fixes x :: "'a :: len word"
-  shows "(x !! m \<and> m < LENGTH('a)) = x !! m"
-  apply (cases "m < LENGTH('a)")
-   apply simp
-  apply (simp add: not_less bang_big  word_size)
-  done
 
 lemma dom_if:
   "dom (\<lambda>a. if a \<in> addrs then Some (f a) else g a)  = addrs \<union> dom g"
@@ -2672,28 +2499,13 @@ lemma of_nat_mono_maybe_le:
   apply (simp add: word_unat.norm_eq_iff [symmetric])
   done
 
-lemma neg_mask_bang:
-  "(~~ mask n :: 'a :: len word) !! m = (n \<le> m \<and> m < LENGTH('a))"
-  apply (cases "m < LENGTH('a)")
-   apply (simp add: word_ops_nth_size word_size not_less)
-  apply (simp add: not_less bang_big  word_size)
-  done
-
 lemma mask_AND_NOT_mask:
   "(w && ~~ mask n) && mask n = 0"
-by (rule word_eqI) (clarsimp simp add: word_size neg_mask_bang)
+  by word_eqI
 
 lemma AND_NOT_mask_plus_AND_mask_eq:
   "(w && ~~ mask n) + (w && mask n) = w"
-apply (rule word_eqI)
-apply (rename_tac m)
-apply (simp add: word_size)
-apply (cut_tac word_plus_and_or_coroll[of "w && ~~ mask n" "w && mask n"])
- apply (simp add: word_ao_dist2[symmetric] word_size neg_mask_bang)
-apply (rule word_eqI)
-apply (rename_tac m)
-apply (simp add: word_size neg_mask_bang)
-done
+  by (subst word_plus_and_or_coroll; word_eqI_solve)
 
 lemma mask_eqI:
   fixes x :: "'a :: len word"
@@ -2782,8 +2594,7 @@ lemma and_eq_0_is_nth:
    apply (drule_tac u="(x && (1 << n))" and x=n in word_eqD)
    apply (simp add: nth_w2p)
    apply (simp add: test_bit_bin)
-  apply (rule word_eqI)
-  apply (simp add: nth_w2p)
+  apply word_eqI
   done
 
 lemmas arg_cong_Not = arg_cong [where f=Not]
@@ -2817,46 +2628,6 @@ lemma word_shift_zero:
   apply (drule (2) word_shift_nonzero)
   apply simp
   done
-
-lemma neg_mask_mono_le:
-  "(x :: 'a :: len word) \<le> y \<Longrightarrow> x && ~~ mask n \<le> y && ~~ mask n"
-proof (rule ccontr, simp add: linorder_not_le, cases "n < LENGTH('a)")
-  case False
-  show "y && ~~ mask n < x && ~~ mask n \<Longrightarrow> False"
-    using False
-    by (simp add: mask_def linorder_not_less
-                  power_overflow)
-next
-  case True
-  assume a: "x \<le> y" and b: "y && ~~ mask n < x && ~~ mask n"
-  have word_bits:
-    "n < LENGTH('a)"
-    using True by assumption
-  have "y \<le> (y && ~~ mask n) + (y && mask n)"
-    by (simp add: word_plus_and_or_coroll2 add.commute)
-  also have "\<dots> \<le> (y && ~~ mask n) + 2 ^ n"
-    apply (rule word_plus_mono_right)
-     apply (rule order_less_imp_le, rule and_mask_less_size)
-     apply (simp add: word_size word_bits)
-    apply (rule is_aligned_no_overflow'',
-           simp_all add: is_aligned_neg_mask word_bits)
-    apply (rule not_greatest_aligned, rule b)
-     apply (simp_all add: is_aligned_neg_mask)
-    done
-  also have "\<dots> \<le> x && ~~ mask n"
-    using b
-    apply -
-    apply (subst add.commute, rule le_plus)
-     apply (rule aligned_at_least_t2n_diff,
-            simp_all add: is_aligned_neg_mask)
-    apply (rule ccontr, simp add: linorder_not_le)
-    apply (drule aligned_small_is_0[rotated], simp_all add: is_aligned_neg_mask)
-    done
-  also have "\<dots> \<le> x" by (rule word_and_le2)
-  also have "x \<le> y" by fact
-  finally
-  show "False" using b by simp
-qed
 
 lemma bool_mask':
   fixes x :: "'a :: len word"
@@ -3756,9 +3527,8 @@ lemma to_bool_and_1:
   "to_bool (x && 1) = (x !! 0)"
   apply (simp add: to_bool_def)
   apply (rule iffI)
-   apply (rule classical, erule notE, rule word_eqI)
-   apply clarsimp
-   apply (case_tac n, simp_all)[1]
+   apply (rule classical, erule notE, word_eqI)
+   apply (case_tac n; simp)
   apply (rule notI, drule word_eqD[where x=0])
   apply simp
   done
@@ -3828,57 +3598,17 @@ lemma word_rsplit_upt:
 lemma aligned_shift:
   "\<lbrakk>x < 2 ^ n; is_aligned (y :: 'a :: len word) n;n \<le> LENGTH('a)\<rbrakk>
    \<Longrightarrow> x + y >> n = y >> n"
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: is_aligned_nth)
-   apply (drule(1) nth_bounded)
-    apply simp
-   apply simp
-  apply (rule word_eqI)
-  apply (simp add: nth_shiftr)
-  apply safe
-  apply (drule(1) nth_bounded)
-  apply simp+
-  done
+  by (subst word_plus_and_or_coroll; word_eqI, blast)
 
 lemma aligned_shift':
   "\<lbrakk>x < 2 ^ n; is_aligned (y :: 'a :: len word) n;n \<le> LENGTH('a)\<rbrakk>
    \<Longrightarrow> y + x >> n = y >> n"
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: is_aligned_nth)
-   apply (drule(1) nth_bounded)
-    apply simp
-   apply simp
-  apply (rule word_eqI)
-  apply (simp add: nth_shiftr)
-  apply safe
-  apply (drule(1) nth_bounded)
-  apply simp+
-  done
+  by (subst word_plus_and_or_coroll; word_eqI, blast)
 
 lemma neg_mask_add_mask:
   "((x:: 'a :: len word) && ~~ mask n) + (2 ^ n - 1) = x || mask n"
-  apply (simp add:mask_2pm1[symmetric])
-  apply (rule word_eqI[rule_format])
-  apply (rule iffI)
-    apply (clarsimp simp:word_size not_less)
-    apply (cut_tac w = "((x && ~~ mask n) + mask n)" and
-      m = n and n = "na - n" in nth_shiftr[symmetric])
-    apply clarsimp
-    apply (subst (asm) aligned_shift')
-  apply (simp add:mask_lt_2pn nth_shiftr is_aligned_neg_mask word_size)+
-  apply (case_tac "na<n")
-    apply clarsimp
-    apply (subst word_plus_and_or_coroll)
-    apply (rule iffD1[OF is_aligned_mask])
-    apply (simp add:is_aligned_neg_mask word_size not_less)+
-  apply (cut_tac w = "((x && ~~ mask n) + mask n)" and
-      m = n and n = "na - n" in nth_shiftr[symmetric])
-  apply clarsimp
-  apply (subst (asm) aligned_shift')
-  apply (simp add:mask_lt_2pn is_aligned_neg_mask nth_shiftr neg_mask_bang)+
-done
+  unfolding mask_2pm1[symmetric]
+  by (subst word_plus_and_or_coroll; word_eqI_solve)
 
 lemma subtract_mask:
   "p - (p && mask n) = (p && ~~ mask n)"
@@ -3937,21 +3667,9 @@ lemma aligned_add_offset_less:
 lemma is_aligned_add_helper:
   "\<lbrakk> is_aligned p n; d < 2 ^ n \<rbrakk>
      \<Longrightarrow> (p + d && mask n = d) \<and> (p + d && (~~ mask n) = p)"
-  apply (subst(asm) is_aligned_mask)
-  apply (drule less_mask_eq)
   apply (rule context_conjI)
-   apply (subst word_plus_and_or_coroll)
-    apply (rule word_eqI)
-    apply (drule_tac x=na in word_eqD)+
-    apply (simp add: word_size)
-    apply blast
-   apply (rule word_eqI)
-   apply (drule_tac x=na in word_eqD)+
-   apply (simp add: word_ops_nth_size word_size)
-   apply blast
-  apply (insert word_plus_and_or_coroll2[where x="p + d" and w="mask n"])
-  apply simp
-  done
+   apply (subst word_plus_and_or_coroll; word_eqI; blast)
+  using word_plus_and_or_coroll2[where x="p + d" and w="mask n"] by simp
 
 lemma is_aligned_sub_helper:
   "\<lbrakk> is_aligned (p - d) n; d < 2 ^ n \<rbrakk>
@@ -3960,9 +3678,7 @@ lemma is_aligned_sub_helper:
 
 lemma mask_twice:
   "(x && mask n) && mask m = x && mask (min m n)"
-  apply (rule word_eqI)
-  apply (simp add: word_size conj_comms)
-  done
+  by word_eqI_solve
 
 lemma is_aligned_after_mask:
   "\<lbrakk>is_aligned k m;m\<le> n\<rbrakk> \<Longrightarrow> is_aligned (k && mask n) m"
@@ -4679,36 +4395,6 @@ lemma word_shift_by_2:
   "x * 4 = (x::'a::len word) << 2"
   by (simp add: shiftl_t2n)
 
-(* simp normal form would be "nat (bintrunc (LENGTH('a)) 2) = 2" *)
-lemma word_len_min_2:
-  "Suc 0 < LENGTH('a) \<Longrightarrow> unat (2::'a::len word) = 2"
-  by (metis less_trans_Suc n_less_equal_power_2 numeral_2_eq_2 of_nat_numeral unat_of_nat_len)
-
-lemma upper_bits_unset_is_l2p:
-  "n < LENGTH('a) \<Longrightarrow>
-  (\<forall>n' \<ge> n. n' < LENGTH('a) \<longrightarrow> \<not> p !! n') = ((p::'a::len word) < 2 ^ n)"
-  apply (cases "Suc 0 < LENGTH('a)")
-   prefer 2
-   apply (subgoal_tac "LENGTH('a) = 1", auto simp: word_eq_iff)[1]
-  apply (rule iffI)
-   apply (subst mask_eq_iff_w2p [symmetric])
-    apply (clarsimp simp: word_size)
-   apply (rule word_eqI, rename_tac n')
-   apply (case_tac "n' < n"; simp add: word_size)
-  apply clarify
-  apply (drule bang_is_le)
-  apply (drule_tac y=p in order_le_less_trans, assumption)
-  apply (drule word_power_increasing; simp add: word_len_min_2[simplified])
-  done
-
-lemma less_2p_is_upper_bits_unset:
-  "((p::'a::len word) < 2 ^ n)
-    = (n < LENGTH('a) \<and> (\<forall>n' \<ge> n. n' < LENGTH('a) \<longrightarrow> \<not> p !! n'))"
-  apply (cases "n < LENGTH('a)")
-   apply (simp add: upper_bits_unset_is_l2p)
-  apply (simp add: power_overflow)
-  done
-
 lemma le_2p_upper_bits:
   "\<lbrakk> (p::'a::len word) \<le> 2^n - 1; n < LENGTH('a) \<rbrakk> \<Longrightarrow>
   \<forall>n'\<ge>n. n' < LENGTH('a) \<longrightarrow> \<not> p !! n'"
@@ -5348,22 +5034,6 @@ lemma ucast_le_ucast_eq:
   apply (erule ucast_mono_le[OF _ y[unfolded n]])
   done
 
-(* High bits w.r.t. mask operations. *)
-
-lemma and_neg_mask_eq_iff_not_mask_le:
-  "w && ~~ mask n = ~~ mask n \<longleftrightarrow> ~~ mask n \<le> w"
-  by (metis (full_types) dual_order.antisym neg_mask_mono_le word_and_le1 word_and_le2
-                         word_bool_alg.conj_absorb)
-
-lemma le_mask_high_bits:
-  shows "w \<le> mask n \<longleftrightarrow> (\<forall> i \<in> {n ..< size w}. \<not> w !! i)"
-  by (auto simp: word_size and_mask_eq_iff_le_mask[symmetric] word_eq_iff)
-
-lemma neg_mask_le_high_bits:
-  shows "~~ mask n \<le> w \<longleftrightarrow> (\<forall> i \<in> {n ..< size w}. w !! i)"
-  by (auto simp: word_size and_neg_mask_eq_iff_not_mask_le[symmetric]
-                 word_eq_iff neg_mask_bang)
-
 lemma word_le_not_less:
   "((b::'a::len word) \<le> a) = (\<not>(a < b))"
   by fastforce
@@ -5512,7 +5182,7 @@ lemma sign_extend_bitwise_cases:
   "i < size w \<Longrightarrow> sign_extend e w !! i \<longleftrightarrow> (i \<le> e \<longrightarrow> w !! i) \<and> (e \<le> i \<longrightarrow> w !! e)"
   by (auto simp: sign_extend_bitwise_if)
 
-lemmas sign_extend_bitwise_if' = sign_extend_bitwise_if[simplified word_size]
+lemmas sign_extend_bitwise_if'[word_eqI_simps] = sign_extend_bitwise_if[simplified word_size]
 lemmas sign_extend_bitwise_disj' = sign_extend_bitwise_disj[simplified word_size]
 lemmas sign_extend_bitwise_cases' = sign_extend_bitwise_cases[simplified word_size]
 
@@ -5520,8 +5190,7 @@ lemmas sign_extend_bitwise_cases' = sign_extend_bitwise_cases[simplified word_si
    the bit which determines which mask operation to apply. *)
 lemma sign_extend_def':
   "sign_extend n w = (if w !! n then w || ~~ mask (Suc n) else w && mask (Suc n))"
-  by (rule word_eqI[rule_format])
-     (auto simp: sign_extend_bitwise_if' word_size word_ops_nth_size dest: less_antisym)
+  by word_eqI (auto dest: less_antisym)
 
 lemma sign_extended_sign_extend:
   "sign_extended n (sign_extend n w)"
@@ -5530,8 +5199,8 @@ lemma sign_extended_sign_extend:
 lemma sign_extended_iff_sign_extend:
   "sign_extended n w \<longleftrightarrow> sign_extend n w = w"
   apply (rule iffI)
-   apply (rule word_eqI[rule_format], rename_tac i)
-   apply (case_tac "n < i"; simp add: sign_extended_def word_size sign_extend_bitwise_if')
+   apply (word_eqI, rename_tac i)
+   apply (case_tac "n < i"; simp add: sign_extended_def word_size)
   apply (erule subst, rule sign_extended_sign_extend)
   done
 
@@ -5541,7 +5210,7 @@ lemma sign_extended_weaken:
 
 lemma sign_extend_sign_extend_eq:
   "sign_extend m (sign_extend n w) = sign_extend (min m n) w"
-  by (cases "m < n") (auto intro!: word_eqI simp: word_size sign_extend_bitwise_cases')
+  by word_eqI
 
 lemma sign_extended_high_bits:
   "\<lbrakk> sign_extended e p; j < size p; e \<le> i; i < j \<rbrakk> \<Longrightarrow> p !! i = p !! j"
@@ -5549,8 +5218,7 @@ lemma sign_extended_high_bits:
 
 lemma sign_extend_eq:
   "w && mask (Suc n) = v && mask (Suc n) \<Longrightarrow> sign_extend n w = sign_extend n v"
-  by (rule word_eqI, fastforce dest: word_eqD simp: sign_extend_bitwise_if' word_size)
-
+  by word_eqI_solve
 
 lemma sign_extended_add:
   assumes p: "is_aligned p n"
@@ -5763,25 +5431,13 @@ proof cases
     by (auto elim: is_alignedE)
 
   from offv szv have offv': "unat off < 2 ^ sz"
-    apply (simp add: unat_mask word_le_nat_alt)
-    apply (erule order_le_less_trans)
-    apply simp
-    done
+    by (simp add: mask_2pm1 unat_less_power)
 
   show ?thesis using szv
-    apply (subst xv)
-    apply (subst unat_mult_power_lem[OF kl])
-    apply (subst mult.commute, rule nat_add_offset_less)
-      apply (rule less_le_trans[OF offv'], simp)
-     apply (rule kl)
-    apply simp
-   done
+    using al is_aligned_no_wrap''' offv' by blast
 next
   assume "\<not> sz < LENGTH('a)"
-  with al have "x = 0"
-    apply (simp add: is_aligned_nth not_less)
-    apply (rule word_eqI, clarsimp simp: word_size)
-    done
+  with al have "x = 0" by - word_eqI
   thus ?thesis by simp
 qed
 
@@ -5863,50 +5519,19 @@ lemma aligned_mask_step:
 
 lemma mask_mono:
   "sz' \<le> sz \<Longrightarrow> mask sz' \<le> (mask sz :: 'a::len word)"
-  apply (cases "sz < LENGTH('a)")
-   apply (simp only: mask_def shiftl_1)
-   apply (rule word_le_minus_mono_left)
-    apply (erule (1) two_power_increasing)
-   apply (rule word_1_le_power)
-   apply simp
-  apply (simp add: not_less mask_over_length)
-  done
+  by (simp add: le_mask_iff shiftr_mask_le)
 
 lemma aligned_mask_disjoint:
   "\<lbrakk> is_aligned (a :: 'a :: len word) n; b \<le> mask n \<rbrakk> \<Longrightarrow> a && b = 0"
-  apply (rule word_eqI)
-  apply (clarsimp simp: is_aligned_nth word_size mask_def simp del: word_less_sub_le)
-  apply (frule le2p_bits_unset)
-  apply (case_tac "na < n")
-   apply simp
-  apply simp
-  done
+  by word_eqI_solve
 
 lemma word_and_or_mask_aligned:
   "\<lbrakk> is_aligned a n; b \<le> mask n \<rbrakk> \<Longrightarrow> a + b = a || b"
-  apply (rule word_plus_and_or_coroll)
-  apply (erule (1) aligned_mask_disjoint)
-  done
+  by (simp add: aligned_mask_disjoint word_plus_and_or_coroll)
 
 lemmas word_and_or_mask_aligned2 =
   word_and_or_mask_aligned[where a=b and b=a for a b,
                            simplified add.commute word_bool_alg.disj.commute]
-
-named_theorems word_eqI_simps
-
-lemmas [word_eqI_simps] =
-  word_ops_nth_size
-  word_size
-  word_or_zero
-  neg_mask_bang
-  nth_ucast
-  is_aligned_nth
-  nth_w2p nth_shiftl
-  nth_shiftr
-  less_2p_is_upper_bits_unset
-  le_mask_high_bits
-  neg_mask_le_high_bits
-  bang_eq
 
 lemma is_aligned_ucastI:
   "is_aligned w n \<Longrightarrow> is_aligned (ucast w) n"
@@ -5914,20 +5539,15 @@ lemma is_aligned_ucastI:
 
 lemma ucast_le_maskI:
   "a \<le> mask n \<Longrightarrow> UCAST('a::len \<rightarrow> 'b::len) a \<le> mask n"
-  apply (clarsimp simp: word_eqI_simps)
-  done
+  by (metis and_mask_eq_iff_le_mask ucast_and_mask)
 
 lemma ucast_add_mask_aligned:
   "\<lbrakk> a \<le> mask n; is_aligned b n \<rbrakk> \<Longrightarrow> UCAST ('a::len \<rightarrow> 'b::len) (a + b) = ucast a + ucast b"
-  apply (simp add: word_and_or_mask_aligned2)
-  apply (subst word_and_or_mask_aligned2, erule is_aligned_ucastI, erule ucast_le_maskI)
-  apply (rule word_eqI)
-  apply (fastforce simp: word_eqI_simps)
-  done
+  by (metis is_aligned_ucastI ucast_le_maskI ucast_or_distrib word_and_or_mask_aligned2)
 
 lemma ucast_shiftl:
   "LENGTH('b) \<le> LENGTH ('a) \<Longrightarrow> UCAST ('a::len \<rightarrow> 'b::len) x << n = ucast (x << n)"
-  by (rule word_eqI) (fastforce simp: word_eqI_simps)
+  by word_eqI_solve
 
 lemma ucast_leq_mask:
   "LENGTH('a) \<le> n \<Longrightarrow> ucast (x::'a::len0 word) \<le> mask n"

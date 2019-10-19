@@ -14,6 +14,7 @@ session Word_Lib (lib) = "HOL-Word" +
   options [timeout = 150]
   sessions
     "HOL-Library"
+    "HOL-Eisbach"
   theories
     "Word_Lemmas_32"
     "Word_Lemmas_64"
