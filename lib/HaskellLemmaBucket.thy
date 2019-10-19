@@ -307,26 +307,8 @@ lemma findM_is_mapME:
   apply (simp add: liftE_bindE bind_assoc throwError_bind)
   done
 
-text \<open>Some word equalities can be solved by considering the
-problem bitwise.
 
-This is proven for all n < len_of TYPE ('a), which is different to
-running word_bitwise and expanding into an explicit list of bits.
-\<close>
-
-(* FIXME: replace with the version in Word_Lemmas *)
-lemmas word_eqI_solve_simps = word_and_le1 word_or_zero le_word_or2
-  shiftL_nat word_FF_is_mask word_1FF_is_mask neg_mask_bang nth_ucast
-  linorder_not_less word_size minus_one_norm word_ops_nth_size
-  is_aligned_nth nth_w2p nth_shiftl nth_shiftr conj_comms
-  less_2p_is_upper_bits_unset
-
-method word_eqI_solve = solves \<open>rule word_eqI;
-  clarsimp simp: word_eqI_solve_simps;
-  (eval_int_nat; clarsimp simp: word_eqI_solve_simps)?;
-  fastforce simp: mask_def
-\<close>
-
+(* FIXME word_eqI: move up *)
 add_try_method word_eqI_solve
 
 end
