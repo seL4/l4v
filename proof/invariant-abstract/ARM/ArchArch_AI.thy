@@ -1511,7 +1511,7 @@ lemma arch_decode_inv_wf[wp]:
     apply (drule (2) valid_table_caps_ptD)
     apply (rule conjI, fastforce simp:)+
     apply (clarsimp simp: kernel_vsrefs_def)
-    apply (simp add: linorder_not_le, drule minus_one_helper3)
+    apply (simp add: linorder_not_le, drule word_le_minus_one_leq)
     apply (drule le_shiftr[where n=20], drule(1) order_trans)
     apply (simp add: kernel_base_def)
    apply (simp add: valid_arch_inv_def valid_pti_def)

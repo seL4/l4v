@@ -43,7 +43,7 @@ lemma cte_map_in_cnode1:
   apply (rule word_plus_mono_right2[where b="mask (cte_level_bits + length y)"])
    apply (simp add: mask_def add_diff_eq)
   apply (rule leq_high_bits_shiftr_low_bits_leq_bits)
-  apply (rule of_bl_max[unfolded mask_def add_diff_eq, simplified])
+  apply (rule of_bl_max)
   done
 
 lemma pspace_aligned_cross:
@@ -618,15 +618,15 @@ next
     using nlevel1 nlevel
     by (auto intro!: user_region_or vref_for_level_user_region
              simp: pt_bits_left_def bit_simps canonical_bit_def user_region_def
-                   pt_index_def canonical_user_def le_mask_high_bits word_eqI_solve_simps
+                   pt_index_def canonical_user_def word_eqI_simps
              dest!: max_pt_level_enum)
 
   have pt_slot_offset_step[simp]:
     "\<lbrakk> is_aligned pt pt_bits; vref \<in> user_region \<rbrakk> \<Longrightarrow>
     pt_slot_offset level pt (vref_step vref) = pt_slot_offset level pt vptr" for vref
     unfolding vref_step_def using nlevel1 nlevel
-    by (auto simp: pt_slot_offset_or_def user_region_def canonical_user_def le_mask_high_bits
-                   canonical_bit_def word_eqI_solve_simps pt_index_def bit_simps pt_bits_left_def
+    by (auto simp: pt_slot_offset_or_def user_region_def canonical_user_def canonical_bit_def
+                   word_eqI_simps pt_index_def bit_simps pt_bits_left_def
              dest!: max_pt_level_enum
              intro!: word_eqI)
 
@@ -733,15 +733,15 @@ next
     using nlevel1 nlevel
     by (auto intro!: user_region_or vref_for_level_user_region
              simp: pt_bits_left_def bit_simps canonical_bit_def user_region_def
-                   pt_index_def canonical_user_def le_mask_high_bits word_eqI_solve_simps
+                   pt_index_def canonical_user_def word_eqI_simps
              dest!: max_pt_level_enum)
 
   have pt_slot_offset_step[simp]:
     "\<lbrakk> is_aligned pt pt_bits; vref \<in> user_region \<rbrakk> \<Longrightarrow>
     pt_slot_offset level pt (vref_step vref) = pt_slot_offset level pt vptr" for vref
     unfolding vref_step_def using nlevel1 nlevel
-    by (auto simp: pt_slot_offset_or_def user_region_def canonical_user_def le_mask_high_bits
-                   canonical_bit_def word_eqI_solve_simps pt_index_def bit_simps pt_bits_left_def
+    by (auto simp: pt_slot_offset_or_def user_region_def canonical_user_def canonical_bit_def
+                   word_eqI_simps pt_index_def bit_simps pt_bits_left_def
              dest!: max_pt_level_enum
              intro!: word_eqI)
 
@@ -896,10 +896,7 @@ lemma pte_relation'_Invalid_inv [simp]:
 
 lemma asidHighBitsOf [simp]:
   "asidHighBitsOf asid = ucast (asid_high_bits_of (ucast asid))"
-  apply (simp add: asidHighBitsOf_def asid_high_bits_of_def asidHighBits_def asid_low_bits_def)
-  apply (rule word_eqI)
-  apply (simp add: word_eqI_solve_simps)
-  done
+  by (word_eqI simp: asidHighBitsOf_def asid_high_bits_of_def asidHighBits_def asid_low_bits_def)
 
 lemma le_mask_asidBits_asid_wf:
   "asid_wf asid \<longleftrightarrow> asid \<le> mask asidBits"

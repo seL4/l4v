@@ -1937,7 +1937,7 @@ lemma ps_clearI:
   apply (subgoal_tac "p \<le> p + 1")
    apply (simp add: ps_clear_def2)
    apply (rule ccontr, erule nonemptyE, clarsimp)
-   apply (drule minus_one_helper[where x="z + 1" for z])
+   apply (drule word_leq_le_minus_one[where x="z + 1" for z])
     apply clarsimp
    apply simp
   apply (erule is_aligned_get_word_bits)
@@ -1976,7 +1976,7 @@ lemma ps_clear_lookupAround2:
          drule word_l_diffs(2),
          fastforce simp only: field_simps)
   apply (rule ccontr, simp add: linorder_not_le)
-  apply (drule minus_one_helper3, fastforce)
+  apply (drule word_le_minus_one_leq, fastforce)
   done
 
 lemma in_magnitude_check:
@@ -1991,7 +1991,7 @@ lemma in_magnitude_check:
     apply simp
    apply (erule(1) ps_clearI)
    apply (simp add: linorder_not_less)
-   apply (drule minus_one_helper[where x="2 ^ n"])
+   apply (drule word_leq_le_minus_one[where x="2 ^ n"])
     apply (clarsimp simp: power_overflow)
    apply (drule word_l_diffs)
     apply simp
@@ -2023,14 +2023,14 @@ lemma in_magnitude_check3:
     apply (drule(1) range_convergence2)
     apply (erule(1) ps_clearI)
     apply (simp add: linorder_not_less)
-    apply (drule minus_one_helper[where x="2 ^ n" for n], simp)
+    apply (drule word_leq_le_minus_one[where x="2 ^ n" for n], simp)
     apply (drule word_l_diffs, simp)
     apply (simp add: field_simps)
    apply (simp add: power_overflow)
   apply (clarsimp split: if_split_asm)
   apply (erule(1) ps_clear_lookupAround2)
     apply simp
-   apply (drule minus_one_helper3[where x="y - x"])
+   apply (drule word_le_minus_one_leq[where x="y - x"])
    apply (drule word_plus_mono_right[where x=x and y="y - x"])
     apply (erule is_aligned_get_word_bits)
      apply (simp add: field_simps is_aligned_no_overflow)
@@ -2063,7 +2063,7 @@ lemma tcb_space_clear:
    apply (frule(1) is_aligned_no_wrap'[rotated, rotated])
    apply (simp add: word_bits_conv objBits_defs)
    apply (erule notE, subst field_simps, rule word_plus_mono_right)
-    apply (drule minus_one_helper3,simp,erule is_aligned_no_wrap')
+    apply (drule word_le_minus_one_leq,simp,erule is_aligned_no_wrap')
    apply (simp add: word_bits_conv)
   apply (simp add: objBits_defs)
   apply (rule_tac x="y - x" in exI)

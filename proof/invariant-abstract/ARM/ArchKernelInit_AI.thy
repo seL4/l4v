@@ -134,7 +134,7 @@ proof -
                 \<le> init_irq_node_ptr + 2 ^ 14 - 1"
     apply (simp only: add_diff_eq[symmetric])
     apply (rule word_add_le_mono2)
-     apply (rule minus_one_helper3, rule shiftl_less_t2n[OF P])
+     apply (rule word_le_minus_one_leq, rule shiftl_less_t2n[OF P])
      apply simp
     apply (simp add: kernel_base_def
       cte_level_bits_def word_bits_def init_irq_node_ptr_def)

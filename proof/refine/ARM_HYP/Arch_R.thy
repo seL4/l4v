@@ -1551,7 +1551,7 @@ lemma less_kernelBase_valid_pde_offset':
   apply (clarsimp simp: ARM_HYP.kernelBase_def kernelBase_def pdBits_def pageBits_def
                         valid_pde_mapping_offset'_def pd_asid_slot_def pt_index_bits_def
                         vspace_bits_defs)
-  apply (drule minus_one_helper3, simp)
+  apply (drule word_le_minus_one_leq, simp)
   apply (drule le_shiftr[where u=vptr and n=21])
   apply (subst(asm) iffD2[OF mask_eq_iff_w2p])
     apply (simp add: word_size)

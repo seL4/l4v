@@ -2309,7 +2309,7 @@ lemma usable_range_disjoint:
    "unat ((ptr && mask sz) + (of_nat (length slots) * (2::machine_word) ^ obj_bits_api tp us)) < 2 ^ sz
     \<Longrightarrow> ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us - 1
     < ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us"
-  apply (rule minus_one_helper,simp)
+  apply (rule word_leq_le_minus_one,simp)
   apply (rule neq_0_no_wrap)
   apply (rule machine_word_plus_mono_right_split)
   apply (simp add:shiftl_t2n range_cover_unat[OF cover] field_simps)

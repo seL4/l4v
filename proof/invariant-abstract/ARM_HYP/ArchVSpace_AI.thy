@@ -4728,7 +4728,7 @@ lemma perform_page_table_invocation_invs[wp]:
    apply (simp add: vspace_bits_defs)
   apply (simp only: word_shift_by_3)
   apply (rule shiftl_less_t2n)
-   apply (rule minus_one_helper5)
+   apply (rule word_leq_minus_one_le)
     apply (simp add: vspace_bits_defs)+
 done
 

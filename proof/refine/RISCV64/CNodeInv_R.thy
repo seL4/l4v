@@ -5701,7 +5701,7 @@ lemma shrink_zombie_invs':
    apply (clarsimp simp: valid_cap'_def capAligned_def)
   apply clarsimp
   apply (rule ccontr, erule notE, rule imageI)
-  apply (drule minus_one_helper3)
+  apply (drule word_le_minus_one_leq)
   apply (rule ccontr, simp add: linorder_not_less mult.commute mult.left_commute shiftl_t2n)
   done
 
@@ -6192,9 +6192,9 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
   have R: "\<And>n. n \<noteq> 0 \<Longrightarrow> {0 .. n - 1} = {0 ..< n :: machine_word}"
     apply safe
      apply simp
-     apply (erule(1) minus_one_helper5)
+     apply (erule(1) word_leq_minus_one_le)
     apply simp
-    apply (erule minus_one_helper3)
+    apply (erule word_le_minus_one_leq)
     done
   have final_IRQHandler_no_copy:
     "\<And>irq sl sl' s. \<lbrakk> isFinal (IRQHandlerCap irq) sl (cteCaps_of s); sl \<noteq> sl' \<rbrakk> \<Longrightarrow> cteCaps_of s sl' \<noteq> Some (IRQHandlerCap irq)"

@@ -4200,7 +4200,7 @@ lemma pspace_no_overlap'_modify:
     "\<not> ptr + (1 + of_nat n << us + objBitsKO val) \<le> ptr + (1 + of_nat n << us) * 2 ^ objBitsKO val - 1")
    apply (clarsimp simp:blah field_simps)
   apply (clarsimp simp: not_le)
-  apply (rule minus_one_helper)
+  apply (rule word_leq_le_minus_one)
    apply (clarsimp simp: power_add[symmetric] shiftl_t2n field_simps objSize_eq_capBits )
   apply (rule neq_0_no_wrap)
    apply (clarsimp simp: power_add[symmetric] shiftl_t2n field_simps objSize_eq_capBits )

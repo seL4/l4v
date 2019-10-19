@@ -74,21 +74,6 @@ lemma p2_low_bits_max:
   "(2 ^ asid_low_bits - 1) = (max_word :: asid_low_index)"
   by (simp add: asid_low_bits_def max_word_def)
 
-lemma ucast_ucast_mask2:
-  "is_down (UCAST ('a \<rightarrow> 'b)) \<Longrightarrow>
-   UCAST ('b::len \<rightarrow> 'c::len) (UCAST ('a::len \<rightarrow> 'b::len) x) = UCAST ('a \<rightarrow> 'c) (x && mask LENGTH('b))"
-   by (rule word_eqI) (auto simp: word_eqI_solve_simps is_down)
-
-(* FIXME RISCV: move to Word_Lib *)
-lemma ucast_NOT:
-  "ucast (~~x) = ~~ucast x && mask (LENGTH('a))" for x::"'a::len0 word"
-  by (rule word_eqI) (fastforce simp: word_eqI_simps)
-
-(* FIXME RISCV: move to Word_Lib *)
-lemma ucast_NOT_down:
-  "is_down UCAST('a::len \<rightarrow> 'b::len) \<Longrightarrow> UCAST('a \<rightarrow> 'b) (~~x) = ~~UCAST('a \<rightarrow> 'b) x"
-  by (rule word_eqI) (clarsimp simp: word_eqI_simps is_down)
-
 lemma dom_ucast_eq:
   "is_aligned y asid_low_bits \<Longrightarrow>
    (- dom (\<lambda>a::asid_low_index. p (ucast a :: machine_word)) \<inter> {x. ucast x + (y::RISCV64_A.asid) \<noteq> 0} = {}) =

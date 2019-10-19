@@ -1492,7 +1492,7 @@ lemma cte_at_cte_map_in_obj_bits:
      apply assumption
     apply (subst add_diff_eq[symmetric])
     apply (rule word_plus_mono_right)
-     apply (erule minus_one_helper3)
+     apply (erule word_le_minus_one_leq)
     apply (erule is_aligned_no_wrap')
     apply (rule word_power_less_1)
     apply (simp add: cte_level_bits_def word_bits_def)
@@ -1512,7 +1512,7 @@ lemma cte_at_cte_map_in_obj_bits:
     apply (erule is_aligned_no_wrap')
     apply (simp add: word_bits_conv)
    apply (rule word_plus_mono_right)
-    apply (drule minus_one_helper3)
+    apply (drule word_le_minus_one_leq)
     apply simp
    apply (erule is_aligned_no_wrap')
    apply simp

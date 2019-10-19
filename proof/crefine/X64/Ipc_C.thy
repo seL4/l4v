@@ -3305,7 +3305,7 @@ lemma transferCaps_ccorres [corres]:
         apply (simp add: guard_is_UNIV_def)
         apply (clarsimp simp: message_info_to_H_def split: if_split)
         apply (erule notE, (rule sym)?, rule less_mask_eq)
-        apply (simp add: minus_one_helper5)
+        apply (simp add: word_leq_minus_one_le)
        apply (subgoal_tac "rv \<noteq> [0]")
         apply simp
         apply vcg

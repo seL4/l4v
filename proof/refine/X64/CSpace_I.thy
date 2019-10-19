@@ -1205,9 +1205,9 @@ lemma cte_refs_capRange:
     apply (intro conjI)
      apply (erule(1) is_aligned_no_wrap')
     apply (rule word_plus_mono_right[where z="2^tcbBlockSizeBits - 1", simplified field_simps])
-     apply (drule minus_one_helper3, simp)
+     apply (drule word_le_minus_one_leq, simp)
     apply (erule is_aligned_no_wrap'[where off="2^tcbBlockSizeBits - 1", simplified field_simps])
-    apply (drule minus_one_helper3)
+    apply (drule word_le_minus_one_leq)
     apply simp
    defer
    \<comment> \<open>CNodeCap\<close>

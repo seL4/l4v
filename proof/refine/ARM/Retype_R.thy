@@ -1998,7 +1998,7 @@ proof -
          apply (clarsimp simp:range_cover_def)
         apply (simp add:field_simps)
         apply (rule unat_le_helper[OF inc_le])
-        apply (simp add:minus_one_helper5)
+        apply (simp add:word_leq_minus_one_le)
        apply (simp add:word_bits_def)
       apply (rule no_plus_overflow_neg)
       apply (rule less_le_trans[where y = "of_nat n"])
@@ -2311,7 +2311,7 @@ proof -
         apply (intro ballI)
         apply (clarsimp simp: image_def upto_enum_red' valid_cap'_def capAligned_def
                        split: capability.splits)
-        apply (drule minus_one_helper5[rotated])
+        apply (drule word_leq_minus_one_le[rotated])
        apply (rule range_cover_not_zero[OF not_0 cover])
       apply (intro conjI)
          apply (rule is_aligned_add_multI[OF _ le_refl refl])

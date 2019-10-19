@@ -402,7 +402,7 @@ lemma pde_at_aligned_vptr:  (* ARMHYP *) (* 0x3C \<rightarrow> 0x78?, 24 \<right
       apply (simp add: pd_bits_def)
      apply (clarsimp simp: pd_bits_def pde_bits_def upto_enum_step_def word_shift_by_n[of _ 3, simplified])
      apply (rule shiftl_less_t2n[where m=7, simplified])
-      apply (rule minus_one_helper5)
+      apply (rule word_leq_minus_one_le)
        apply simp+
     apply (rule sym, rule add_mask_lower_bits)
      apply (simp add: vspace_bits_defs)
@@ -2692,39 +2692,31 @@ lemma lookup_pd_slot_add_eq:
     proof -
     have H: "(0xF::word32) < 2 ^ 4"  by simp
     from prems show ?thesis
-    apply (subst (asm) word_plus_and_or_coroll)
-     apply (rule word_eqI)
-     apply (thin_tac "is_aligned pd _")
-     apply (clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth)
-     subgoal for n
-       apply (spec "18 + n")
-       apply (frule test_bit_size[where n="18 + n"])
-       apply (simp add: word_size)
+      apply (subst (asm) word_plus_and_or_coroll)
+       apply (rule word_eqI)
+       apply (thin_tac "is_aligned pd _")
+       apply (clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth)
+       subgoal for n
+         apply (spec "18 + n")
+         apply (frule test_bit_size[where n="18 + n"])
+         apply (simp add: word_size)
+         apply (insert H)[1]
+         apply (drule (1) order_le_less_trans)
+         apply (drule bang_is_le)
+         apply (drule_tac z="2 ^ 4" in order_le_less_trans, assumption)
+         by (drule word_power_increasing; simp?)
+      apply simp
+      apply (clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth)
+      apply (erule disjE)
        apply (insert H)[1]
        apply (drule (1) order_le_less_trans)
        apply (drule bang_is_le)
        apply (drule_tac z="2 ^ 4" in order_le_less_trans, assumption)
-       apply (drule word_power_increasing)
-          apply simp
-         apply simp
-        apply simp
-       by arith
-    apply simp
-    apply (clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth)
-    apply (erule disjE)
-     apply (insert H)[1]
-     apply (drule (1) order_le_less_trans)
-     apply (drule bang_is_le)
-     apply (drule_tac z="2 ^ 4" in order_le_less_trans, assumption)
-     apply (drule word_power_increasing)
-        apply simp
-       apply simp
-      apply simp
-     apply arith
-    apply (spec "18 + n'")
-    apply (frule test_bit_size[where n="18 + n'"])
-    by (simp add: word_size)
-    qed
+       apply (drule word_power_increasing; simp?)
+      apply (spec "18 + n'")
+      apply (frule test_bit_size[where n="18 + n'"])
+      by (simp add: word_size)
+  qed
 done
 
 

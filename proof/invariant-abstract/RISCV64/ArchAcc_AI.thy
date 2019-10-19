@@ -226,8 +226,8 @@ lemma pt_slot_offset_vref_for_level_idem:
   apply (rule arg_cong[where f="\<lambda>x. x << pte_bits"])
   apply (simp add: pt_index_def pt_bits_left_def)
   apply (drule max_pt_level_enum)
-  apply (rule word_eqI)
-  apply (auto simp: bit_simps word_eqI_solve_simps pt_bits_left_def)
+  apply word_eqI
+  apply (auto simp: bit_simps pt_bits_left_def)
   done
 
 lemma pt_walk_loop_last_level_ptpte_helper:
@@ -515,10 +515,8 @@ lemma pt_slot_offset_vref_for_level:
      is_aligned p pt_bits; level \<le> max_pt_level \<rbrakk>
     \<Longrightarrow> vref_for_level vref' level = vref_for_level vref level"
   apply (clarsimp simp: pt_slot_offset_def vref_for_level_def pt_index_def)
-  apply (drule shiftl_inj; (clarsimp simp: le_mask_iff,
-                            rule word_eqI, simp add: word_eqI_solve_simps bit_simps)?)
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_eqI_solve_simps bang_eq)
+  apply (drule shiftl_inj; (clarsimp simp: le_mask_iff, word_eqI, simp add: bit_simps)?)
+  apply word_eqI
   apply (case_tac "pt_bits_left level \<le> n"; simp)
   apply (case_tac "pt_bits_left (level + 1) \<le> n", fastforce)
   apply (clarsimp simp: not_le pt_bits_left_plus1)
@@ -661,29 +659,24 @@ definition
 
 lemma ucast_mask_asid_low_bits [simp]:
   "ucast ((asid::machine_word) && mask asid_low_bits) = (ucast asid :: asid_low_index)"
-  by word_eqI_solve
-
+  by (word_eqI simp: asid_low_bits_def)
 
 lemma ucast_ucast_asid_high_bits [simp]:
   "ucast (ucast (asid_high_bits_of asid)::machine_word) = asid_high_bits_of asid"
   by word_eqI_solve
 
-
 lemma mask_asid_low_bits_ucast_ucast:
   "((asid::machine_word) && mask asid_low_bits) = ucast (ucast asid :: asid_low_index)"
-  by word_eqI_solve
-
+  by (word_eqI simp: asid_low_bits_def)
 
 lemma set_asid_pool_cur [wp]:
   "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
   unfolding set_asid_pool_def by (wpsimp wp: get_object_wp)
 
-
 lemma set_asid_pool_cur_tcb [wp]:
   "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
   unfolding cur_tcb_def
   by (rule hoare_lift_Pf [where f=cur_thread]; wp)
-
 
 crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
   (wp: get_object_wp)

@@ -1093,7 +1093,7 @@ lemma word32_ucast_enumerates_word8:
    apply (simp add: word_shift_by_2)
   apply (clarsimp simp: pt_bits_def pageBits_def)
   apply (rule order_trans)
-   apply (rule minus_one_helper3)
+   apply (rule word_le_minus_one_leq)
    apply (rule ucast_less)
    apply simp+
   done

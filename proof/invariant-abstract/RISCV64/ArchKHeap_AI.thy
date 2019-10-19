@@ -309,7 +309,7 @@ lemma pte_ptr_eq:
   apply (case_tac "n < pte_bits", simp)
   apply (drule_tac x="n-pte_bits" in word_eqD)
   apply (drule_tac x="n" in word_eqD)
-  apply (simp add: word_size neg_mask_bang nth_shiftr not_less)
+  apply (simp add: word_size neg_mask_test_bit nth_shiftr not_less)
   apply (case_tac "pt_bits \<le> n", simp)
   by (fastforce simp: not_le bit_simps)
 

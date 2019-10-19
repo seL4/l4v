@@ -4951,7 +4951,7 @@ lemma first_last_highbits_eq_port_set:
     apply (frule word_exists_nth[OF word_neq_0_conv[THEN iffD2], OF unat_less_impl_less, simplified],
                 clarsimp simp: word_size)
   apply (rule_tac x="(l && ~~ mask 6) + of_nat i" in exI)
-  apply (clarsimp simp: neg_mask_bang mask_def[where n=6, simplified, symmetric])
+  apply (clarsimp simp: neg_mask_test_bit mask_def[where n=6, simplified, symmetric])
   apply (frule test_bit_size, clarsimp simp: word_size less_Suc_eq_le)
   apply (frule_tac n=i in word_of_nat_less[where x=64 and 'a=16, simplified])
   apply (rule conjI)
@@ -5002,7 +5002,7 @@ lemma port_set_in_first_word:
   apply (frule word_exists_nth[OF word_neq_0_conv[THEN iffD2], OF unat_less_impl_less, simplified],
                 clarsimp simp: word_size)
   apply (rule_tac x="(f && ~~ mask 6) + of_nat i" in exI)
-  apply (clarsimp simp: neg_mask_bang mask_def[where n=6, simplified, symmetric])
+  apply (clarsimp simp: neg_mask_test_bit mask_def[where n=6, simplified, symmetric])
   apply (frule test_bit_size, clarsimp simp: word_size)
   apply (frule_tac n=i in word_of_nat_less[where x=64 and 'a=16, simplified])
   apply (rule conjI)
@@ -5060,7 +5060,7 @@ lemma bitmap_word_zero_no_bits_set1:
   apply (frule_tac v1=port in word_le_split_mask[where n=6, THEN iffD1, OF word_le_nat_alt[THEN iffD2]])
   apply (frule_tac w1=port in word_le_split_mask[where n=6, THEN iffD1, OF word_le_nat_alt[THEN iffD2]])
   apply (subgoal_tac "port >> 6 = l >> 6")
-   apply (clarsimp simp: word_size neg_mask_bang not_less not_le)
+   apply (clarsimp simp: word_size neg_mask_test_bit not_less not_le)
    apply (clarsimp simp: word_unat.Rep_inject word_le_nat_alt mask_def)
   apply (erule disjE; clarsimp simp:word_less_nat_alt)
   done
@@ -5108,7 +5108,7 @@ lemma bitmap_word_zero_no_bits_set2:
   apply (erule disjE; clarsimp)
   apply (drule word_not_exists_nth)
   apply (cut_tac w=port in unat_and_mask_less_2p[of 6]; simp)
-  apply (drule_tac x="unat (port && mask 6)" in spec, clarsimp simp: neg_mask_bang not_le word_le_nat_alt)
+  apply (drule_tac x="unat (port && mask 6)" in spec, clarsimp simp: neg_mask_test_bit not_le word_le_nat_alt)
   done
 
 lemma word_eq_cast_unsigned:

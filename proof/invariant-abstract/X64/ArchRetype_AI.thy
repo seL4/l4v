@@ -306,7 +306,7 @@ lemma copy_global_equal_kernel_mappings_restricted:
    apply (clarsimp simp: kernel_mapping_slots_def get_pml4_index_def)
    apply (rule conjI)
     apply (simp add: pptr_base_shift_cast_le)
-   apply (rule minus_one_helper3)
+   apply (rule word_le_minus_one_leq)
    apply (rule order_less_le_trans, rule ucast_less)
     apply simp
    apply (simp add: ptTranslationBits_def)
@@ -435,7 +435,7 @@ lemma copy_global_invs_mappings_restricted:
    apply (rule ccontr)
    apply (drule_tac x = "(ucast x)" in spec)
    apply (clarsimp split: option.split_asm if_split_asm)+
-  apply (drule minus_one_helper5[rotated])
+  apply (drule word_leq_minus_one_le[rotated])
   apply (auto simp: pml4_bits_def simple_bit_simps)
   done
 

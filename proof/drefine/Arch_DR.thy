@@ -451,7 +451,7 @@ proof -
               apply (rule is_aligned_andI1)
               apply (rule is_aligned_shiftr)
               apply (simp add: vmsz_aligned_def)
-             apply (simp add: minus_one_helper5)
+             apply (simp add: word_leq_minus_one_le)
             apply simp
            apply (rule order_le_less_trans, rule word_and_le1, simp)
           apply simp
@@ -650,7 +650,7 @@ proof (induct x)
            apply (erule impE)
             apply (rule arg_cong[where f=ucast])
             apply (subst shiftr_irrelevant)
-              apply (rule minus_one_helper5)
+              apply (rule word_leq_minus_one_le)
                apply (simp add: asid_low_bits_def)
               apply (subst ucast_le_migrate)
                 apply (simp add: asid_low_bits_def word_size)

@@ -2045,7 +2045,7 @@ lemma pptr_base_mask:
 
 lemma pptr_base_nth[simp]:
   "pptr_base !! n = (canonical_bit \<le> n \<and> n < word_bits)"
-  by (simp add: pptr_base_mask neg_mask_bang word_bits_def)
+  by (simp add: pptr_base_mask neg_mask_test_bit word_bits_def)
 
 lemma pt_bits_left_bound:
   "pt_bits_left level \<le> canonical_bit + 1"
@@ -2395,10 +2395,10 @@ lemma table_index_pt_slot_offset:
   apply (simp add: pt_slot_offset_def pt_index_def vref_for_level_def)
   apply (subst word_plus_and_or_coroll)
    apply (rule word_eqI)
-   apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bit_simps neg_mask_bang)
+   apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bit_simps neg_mask_test_bit)
    apply (clarsimp simp: pt_bits_left_def bit_simps is_aligned_nth)
   apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bit_simps neg_mask_bang)
+  apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bit_simps neg_mask_test_bit)
   apply (clarsimp simp: bit_simps is_aligned_nth canonical_bit_def pt_bits_left_def)
   done
 
@@ -2417,17 +2417,12 @@ lemma vref_for_level_idx[simp]:
    vref_for_level (vref_for_level_idx vref idx level) (level + 1) =
    vref_for_level vref (level + 1)"
   apply (simp add: vref_for_level_def pt_bits_left_def)
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_eqI_solve_simps bit_simps)
-  apply (rule iffI; clarsimp)
-  apply (drule test_bit_size)
-  apply (clarsimp simp: word_size)
-  apply (simp flip: bit0.size_less_eq)
+  apply (word_eqI_solve simp: bit_simps flip: bit0.size_less_eq)
   done
 
 lemma vref_for_level_nth[simp]:
   "vref_for_level vref level !! n = (vref !! n \<and> pt_bits_left level \<le> n \<and> n < size vref)"
-  by (simp add: vref_for_level_def word_eqI_solve_simps)
+  by (auto simp: vref_for_level_def word_eqI_simps)
 
 lemma pt_bits_left_max:
   "pt_bits_left max_pt_level = canonical_bit - (LENGTH(pt_index_len)-1)"
@@ -2456,12 +2451,12 @@ lemma vref_for_level_idx_canonical_user:
   apply (simp add: canonical_user_def le_mask_high_bits)
   apply (clarsimp simp: word_size)
   apply (cases "level < max_pt_level")
-   apply (clarsimp simp: word_eqI_solve_simps canonical_bit_def)
+   apply (clarsimp simp: word_eqI_simps canonical_bit_def)
    apply (simp add: pt_bits_left_def bit_simps)
    apply (frule test_bit_size)
    apply (simp add: word_size level_defs flip: bit0.size_less)
   apply (simp add: not_less)
-  apply (clarsimp simp: word_eqI_solve_simps canonical_bit_def kernel_mapping_slots_top_bit)
+  apply (clarsimp simp: word_eqI_simps canonical_bit_def kernel_mapping_slots_top_bit)
   apply (simp add: pt_bits_left_def bit_simps level_defs)
   apply (frule test_bit_size)
   apply (simp add: word_size)

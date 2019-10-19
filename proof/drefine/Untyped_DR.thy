@@ -1162,7 +1162,7 @@ lemma free_range_of_untyped_pick_retype_addrs:
   apply (subst AND_NOT_mask_plus_AND_mask_eq[symmetric,where n = sz])
   apply (subst add.commute[where a = "(ptr && mask sz)"])
   apply (rule word_plus_strict_mono_right)
-   apply (rule minus_one_helper)
+   apply (rule word_leq_le_minus_one)
     apply simp
    apply (simp add:shiftl_t2n field_simps)
    apply (subst add.assoc)

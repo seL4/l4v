@@ -296,7 +296,7 @@ crunch inv[wp]: get_master_pde P
 
 lemma ucast_mask_asid_low_bits [simp]:
   "ucast ((asid::word32) && mask asid_low_bits) = (ucast asid :: 10 word)"
-  by word_eqI_solve
+  by (word_eqI_solve simp: asid_low_bits_def)
 
 
 lemma ucast_ucast_asid_high_bits [simp]:
@@ -306,7 +306,7 @@ lemma ucast_ucast_asid_high_bits [simp]:
 
 lemma mask_asid_low_bits_ucast_ucast:
   "((asid::word32) && mask asid_low_bits) = ucast (ucast asid :: 10 word)"
-  by word_eqI_solve
+  by (word_eqI_solve simp: asid_low_bits_def)
 
 
 lemma set_asid_pool_cur [wp]:
@@ -367,7 +367,7 @@ lemma pde_at_aligned_vptr:
       apply simp
      apply (clarsimp simp: upto_enum_step_def word_shift_by_2)
      apply (rule shiftl_less_t2n[where m=6, simplified])
-      apply (rule minus_one_helper5)
+      apply (rule word_leq_minus_one_le)
        apply simp+
     apply (rule sym, rule add_mask_lower_bits)
      apply (simp add: pd_bits_def pageBits_def)
@@ -2572,7 +2572,7 @@ lemma create_mapping_entries_valid_slots [wp]:
   apply (rule conjI, simp add: upto_enum_def)
   apply (intro allI impI)
   apply (subst less_kernel_base_mapping_slots_both,assumption+)
-   apply (simp add: minus_one_helper5)
+   apply (simp add: word_leq_minus_one_le)
   apply (simp add: pd_bits vmsz_aligned_def)
   apply (frule (1) is_aligned_lookup_pd_slot
                    [OF _ is_aligned_weaken[of _ 14 6, simplified]])
@@ -2733,11 +2733,7 @@ lemma lookup_pd_slot_add_eq:
         apply (drule (1) order_le_less_trans)
         apply (drule bang_is_le)
         apply (drule_tac z="2 ^ 4" in order_le_less_trans, assumption)
-        apply (drule word_power_increasing)
-           apply simp
-          apply simp
-         apply simp
-        by arith
+        by (drule word_power_increasing; simp?)
     apply simp
     apply (clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth)
     apply (erule disjE)
@@ -2745,11 +2741,7 @@ lemma lookup_pd_slot_add_eq:
       apply (drule (1) order_le_less_trans)
       apply (drule bang_is_le)
       apply (drule_tac z="2 ^ 4" in order_le_less_trans, assumption)
-      apply (drule word_power_increasing)
-         apply simp
-        apply simp
-       apply simp
-      apply arith
+      apply (drule word_power_increasing; simp?)
      apply (spec "18 + n'")
      apply (frule test_bit_size[where n="18 + n'"])
     by (simp add: word_size)

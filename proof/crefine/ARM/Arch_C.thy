@@ -3823,7 +3823,7 @@ lemma Arch_decodeInvocation_ccorres:
      apply (rule unat_less_helper)
      apply (clarsimp simp: asid_low_bits_def)
      apply (rule shiftl_less_t2n)
-      apply (simp add: asid_bits_def minus_one_helper5)+
+      apply (simp add: asid_bits_def word_leq_minus_one_le)+
     apply (simp add: is_aligned_shiftl_self)
    apply (intro conjI impI)
      apply clarsimp

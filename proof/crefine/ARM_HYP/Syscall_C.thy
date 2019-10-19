@@ -788,7 +788,7 @@ lemma getMessageInfo_less_4:
   apply (rule hoare_strengthen_post, rule hoare_vcg_prop)
   apply (simp add: messageInfoFromWord_def Let_def
                    Types_H.msgExtraCapBits_def)
-  apply (rule minus_one_helper5, simp)
+  apply (rule word_leq_minus_one_le, simp)
   apply simp
   apply (rule word_and_le1)
   done

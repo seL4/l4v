@@ -220,7 +220,7 @@ lemma memzero_spec:
             apply (auto intro!: intvlI)[1]
           apply (subst c_guard_machine_word, simp_all)[1]
           apply (clarsimp simp: field_simps)
-          apply (metis le_minus' minus_one_helper5 olen_add_eqv diff_self word_le_0_iff word_le_less_eq)
+          apply (metis le_minus' word_leq_minus_one_le olen_add_eqv diff_self word_le_0_iff word_le_less_eq)
          apply (clarsimp simp: field_simps)
         apply (frule is_aligned_and_not_zero)
          apply clarsimp
@@ -1016,7 +1016,7 @@ proof -
      apply (cases y, clarsimp simp: and_not_mask shiftl_t2n)
     apply (simp add: shiftr_div_2n')
     apply (rule Misc_Arithmetic.td_gal_lt[THEN iffD1], simp)
-    apply (drule minus_one_helper5[OF yuck])
+    apply (drule word_leq_minus_one_le[OF yuck])
     apply (rule unat_less_helper, simp)
     done
 qed
@@ -8334,7 +8334,7 @@ lemma offset_intvl_first_chunk_subsets_unat:
    apply (frule(1) offset_intvl_first_chunk_subsets)
    apply simp
   apply (intro conjI unat_sub)
-   apply (rule minus_one_helper2, simp)
+   apply (rule word_minus_one_le_leq, simp)
    apply (simp add: word_less_nat_alt unat_of_nat)
   apply (simp add: word_le_nat_alt word_less_nat_alt unat_of_nat)
   done
@@ -8566,7 +8566,7 @@ shows  "ccorres dc xfdc
             in ccorres_zipWithM_x_while_genQ[where j=1, OF _ _ _ _ _ i_xf_for_sequence, simplified])
           apply clarsimp
           apply (subst upt_enum_offset_trivial)
-            apply (rule minus_one_helper)
+            apply (rule word_leq_le_minus_one)
              apply (rule word_of_nat_le)
              apply (drule range_cover.range_cover_n_less)
              apply (simp add:word_bits_def minus_one_norm)
@@ -8746,7 +8746,7 @@ shows  "ccorres dc xfdc
          invs_pspace_distinct')+
        apply (frule range_cover.range_cover_n_less)
        apply (subst upt_enum_offset_trivial)
-         apply (rule minus_one_helper[OF word_of_nat_le])
+         apply (rule word_leq_le_minus_one[OF word_of_nat_le])
           apply (fold_subgoals (prefix))[3]
           subgoal premises prems using prems
                     by (simp add:word_bits_conv minus_one_norm range_cover_not_zero[rotated])+

@@ -142,7 +142,7 @@ lemma copy_global_mappings_index_subset:
   apply (subst shiftl_shiftr1, simp)
   apply (simp add: word_size)
   apply (rule sym, rule less_mask_eq)
-  apply (simp add: minus_one_helper5 pd_bits_def pageBits_def)
+  apply (simp add: word_leq_minus_one_le pd_bits_def pageBits_def)
   done
 
 lemma copy_global_mappings_integrity:
@@ -891,7 +891,7 @@ lemma retype_region_ranges'':
     apply(rule is_aligned_add)
      apply(fastforce simp: range_cover_def)
     apply(simp add: is_aligned_mult_triv2)
-   apply(rule minus_one_helper, simp)
+   apply(rule word_leq_le_minus_one, simp)
    apply(rule power_not_zero)
    apply(simp add: range_cover_def)
   apply simp
@@ -1176,7 +1176,7 @@ lemma usable_range_disjoint:
        "unat ((ptr && mask sz) + (of_nat (length slots) * (2::word32) ^ obj_bits_api tp us)) < 2 ^ sz
         \<Longrightarrow> ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us - 1
         < ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us"
-      apply (rule minus_one_helper,simp)
+      apply (rule word_leq_le_minus_one,simp)
       apply (rule neq_0_no_wrap)
       apply (rule machine_word_plus_mono_right_split)
       apply (simp add:shiftl_t2n range_cover_unat[OF cover] field_simps)

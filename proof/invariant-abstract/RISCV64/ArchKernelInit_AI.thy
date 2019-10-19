@@ -94,7 +94,7 @@ proof -
                 \<le> init_irq_node_ptr + mask 8"
     apply (simp only: add_diff_eq[symmetric] mask_def mult_1 shiftl_t2n mult.commute)
     apply (rule word_add_le_mono2)
-     apply (rule minus_one_helper3)
+     apply (rule word_le_minus_one_leq)
      apply (rule shiftl_less_t2n[OF P, simplified shiftl_t2n mult.commute])
      apply simp
     apply (simp add: cte_level_bits_def init_irq_node_ptr_def pptr_base_num)

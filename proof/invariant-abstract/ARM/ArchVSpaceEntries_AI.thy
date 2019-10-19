@@ -107,7 +107,7 @@ lemma shift_0x3C_set:
   apply (subst image_cong[where N="{x. x < 2 ^ 4}"])
     apply (safe, simp_all)[1]
      apply (drule plus_one_helper2, simp_all)[1]
-    apply (drule minus_one_helper3, simp_all)[1]
+    apply (drule word_le_minus_one_leq, simp_all)[1]
    apply (rule_tac f="\<lambda>x. ucast (x && mask bits >> 2)" in arg_cong)
    apply (rule trans[OF add.commute is_aligned_add_or], assumption)
    apply (rule shiftl_less_t2n, simp_all)[1]
@@ -116,7 +116,7 @@ lemma shift_0x3C_set:
     apply (simp add: word_bits_conv)
    apply (rule word_eqI)
    apply (simp add: word_ops_nth_size word_size nth_ucast nth_shiftr
-                    nth_shiftl neg_mask_bang
+                    nth_shiftl neg_mask_test_bit
                     word_bits_conv)
    apply (safe, simp_all add: is_aligned_nth)[1]
    apply (drule_tac x="Suc (Suc n)" in spec)

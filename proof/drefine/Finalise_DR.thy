@@ -1385,7 +1385,7 @@ lemma test_bits_neg_mask:
   "\<lbrakk>x && ~~ mask l = y && ~~ mask l;na < size x; size x = size y\<rbrakk>
   \<Longrightarrow> l\<le> na \<longrightarrow> x !! na = y !! na"
   apply (drule word_eqD)
-  apply (auto simp:word_size neg_mask_bang)
+  apply (auto simp:word_size neg_mask_test_bit)
 done
 
 lemma mask_compare_imply:
@@ -1513,7 +1513,7 @@ lemma is_aligned_less_kernel_base_helper:
   apply (simp add: word_le_nat_alt shiftr_20_unat_ucast
                    unat_ucast_pd_bits_shift)
   apply (fold word_le_nat_alt, unfold linorder_not_le)
-  apply (drule minus_one_helper3[where x=x])
+  apply (drule word_le_minus_one_leq[where x=x])
   apply (subst add.commute, subst is_aligned_add_or, assumption)
    apply (erule order_le_less_trans, simp)
   apply (simp add: word_ao_dist shiftr_over_or_dist)

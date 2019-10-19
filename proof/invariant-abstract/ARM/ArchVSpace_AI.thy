@@ -3654,7 +3654,7 @@ lemma perform_page_table_invocation_invs[wp]:
    apply (simp add: pt_bits_def pageBits_def)
   apply (simp only: word_shift_by_2)
   apply (rule shiftl_less_t2n)
-   apply (rule minus_one_helper5)
+   apply (rule word_leq_minus_one_le)
     apply (simp add: pt_bits_def pageBits_def)+
   done
 
@@ -3921,7 +3921,7 @@ lemma lookup_pd_slot_kernel_mappings_set_strg:
    (\<forall>x\<in>set [0 , 4 .e. 0x3C]. ucast (x + lookup_pd_slot pd vptr && mask pd_bits >> 2)
             \<notin> kernel_mapping_slots)"
   apply (clarsimp simp: upto_enum_step_def word_shift_by_2)
-  apply (simp add: less_kernel_base_mapping_slots_both minus_one_helper5)
+  apply (simp add: less_kernel_base_mapping_slots_both word_leq_minus_one_le)
   done
 
 lemma lookup_pt_slot_cap_to2:

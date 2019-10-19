@@ -1822,7 +1822,7 @@ lemma word32_ucast_enumerates_word8:
    apply (simp add: word_shift_by_3 vspace_bits_defs)
   apply (clarsimp simp: vspace_bits_defs)
   apply (rule order_trans)
-   apply (rule minus_one_helper3)
+   apply (rule word_le_minus_one_leq)
    apply (rule ucast_less)
    apply simp+
   done

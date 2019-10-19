@@ -389,7 +389,7 @@ next
                                      cap_table_at_gsCNodes bits_of_def
                                      linorder_not_less)
                apply (erule order_le_less_trans)
-               apply (rule minus_one_helper)
+               apply (rule word_leq_le_minus_one)
                 apply (simp add: word_le_nat_alt)
                apply (simp add: unat_arith_simps)
               apply wp+
@@ -4059,7 +4059,7 @@ lemma caps_no_overlap'[simp]: "caps_no_overlap'' ptr sz s"
        "unat ((ptr && mask sz) + (of_nat (length slots) * (2::word32) ^ APIType_capBits tp us)) < 2 ^ sz
         \<Longrightarrow> ptr + of_nat (length slots) * 2 ^ APIType_capBits tp us - 1
         < ptr + of_nat (length slots) * 2 ^ APIType_capBits tp us"
-      apply (rule minus_one_helper,simp)
+      apply (rule word_leq_le_minus_one,simp)
       apply (rule neq_0_no_wrap)
       apply (rule machine_word_plus_mono_right_split)
       apply (simp add: shiftl_t2n range_cover_unat[OF cover] field_simps)
@@ -4844,7 +4844,7 @@ lemma inv_untyped_corres':
        "unat ((ptr && mask sz) + (of_nat (length slots) * (2::word32) ^ obj_bits_api (APIType_map2 (Inr ao')) us)) < 2 ^ sz
         \<Longrightarrow> ptr + of_nat (length slots) * 2 ^ obj_bits_api (APIType_map2 (Inr ao')) us - 1
         < ptr + of_nat (length slots) * 2 ^ obj_bits_api (APIType_map2 (Inr ao')) us"
-      apply (rule minus_one_helper,simp)
+      apply (rule word_leq_le_minus_one,simp)
       apply (rule neq_0_no_wrap)
       apply (rule machine_word_plus_mono_right_split)
       apply (simp add:shiftl_t2n range_cover_unat[OF cover] field_simps)
@@ -4858,7 +4858,7 @@ lemma inv_untyped_corres':
        ptr && ~~ mask sz = ptr\<rbrakk>
       \<Longrightarrow> ptr + of_nat (length slots) * 2 ^ obj_bits_api (APIType_map2 (Inr ao')) us - 1
       < ptr + of_nat (length slots) * 2 ^ obj_bits_api (APIType_map2 (Inr ao')) us "
-      apply (rule minus_one_helper,simp)
+      apply (rule word_leq_le_minus_one,simp)
       apply (simp add:is_aligned_neg_mask_eq'[symmetric])
       apply (rule neq_0_no_wrap)
       apply (rule machine_word_plus_mono_right_split[where sz = sz])
@@ -5542,7 +5542,7 @@ lemma invokeUntyped_invs'':
        apply (rule le_less_trans)
        apply (rule word_and_le1)
        apply (simp add:mask_def)
-       apply (rule minus_one_helper)
+       apply (rule word_leq_le_minus_one)
         apply simp
        apply (clarsimp simp:range_cover_def)
        done

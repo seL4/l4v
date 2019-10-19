@@ -1554,7 +1554,7 @@ lemma cte_at_cte_map_in_obj_bits:
     apply simp
    apply (rule word_plus_mono_right)
     apply (simp add: shiftl_t2n mult_ac)
-    apply (drule minus_one_helper3)
+    apply (drule word_le_minus_one_leq)
     apply simp
    apply (erule is_aligned_no_wrap')
    apply simp

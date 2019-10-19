@@ -88,13 +88,13 @@ lemma ucast_neg_mask:
   "len_of TYPE('a) \<le> len_of TYPE ('b)
    \<Longrightarrow> ((ucast ptr && ~~ mask n)::('a :: len) word) = ucast ((ptr::('b :: len) word) && ~~ mask n)"
   apply (rule word_eqI)
-  apply (auto simp:nth_ucast neg_mask_bang word_size)
+  apply (auto simp:nth_ucast neg_mask_test_bit word_size)
   done
 
 lemma shiftr_eq_neg_mask_eq:
   "a >> b = c >> b \<Longrightarrow> a && ~~ mask b = c && ~~ mask b"
   apply (rule word_eqI[rule_format])
-   apply (simp add:neg_mask_bang)
+   apply (simp add:neg_mask_test_bit)
   apply (drule_tac f = "\<lambda>x. x !! (n - b)" in arg_cong)
   apply (simp add:nth_shiftr)
   apply (rule iffI)

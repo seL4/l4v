@@ -95,7 +95,7 @@ lemma arch_decode_irq_control_valid[wp]:
           | wp hoare_vcg_imp_lift_R[where P="\<lambda>rv s. \<not> x64_num_ioapics (arch_state s) - 1 < args ! 2"]
           | wp hoare_vcg_imp_lift_R[where P="\<lambda>rv s. x64_num_ioapics (arch_state s) \<noteq> 0"]
           | wp (once) hoare_drop_imps)+
-  apply (safe; clarsimp simp: word_le_not_less[symmetric] minus_one_helper5
+  apply (safe; clarsimp simp: word_le_not_less[symmetric] word_leq_minus_one_le
                               ucast_id irq_plus_min_ge_min irq_plus_min_le_max
                | cap_hammer
                | word_hammer)+

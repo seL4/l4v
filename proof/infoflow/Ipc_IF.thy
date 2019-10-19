@@ -1269,7 +1269,7 @@ lemma captransfer_in_ipc_buffer:
   apply(simp add: image_def msg_max_length_def msg_max_extra_caps_def)
   apply(rule_tac x="(125::nat) + unat x"  in bexI)
    apply simp+
-  apply(fastforce intro: unat_less_helper minus_one_helper5)
+  apply(fastforce intro: unat_less_helper word_leq_minus_one_le)
   done
 
 lemma aag_has_auth_to_read_captransfer:

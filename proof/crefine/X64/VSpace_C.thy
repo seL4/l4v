@@ -158,7 +158,7 @@ lemma getKSASIDTable_ccorres_stuff:
   apply (drule rf_asidTable [where idx=idx])
     apply fastforce
    apply (simp add: mask_def)
-   apply (simp add: minus_one_helper3)
+   apply (simp add: word_le_minus_one_leq)
   apply (clarsimp split: option.splits)
   done
 

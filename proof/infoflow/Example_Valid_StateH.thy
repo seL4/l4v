@@ -1429,7 +1429,7 @@ lemma map_to_ctes_kh0H:
            subst(asm) mask_out_add_aligned[symmetric],
             simp add: is_aligned_shiftl,
            simp add: mask_def,
-           drule minus_one_helper,
+           drule word_leq_le_minus_one,
             subst add.commute,
             rule neq_0_no_wrap,
              erule word_plus_mono_right2[rotated],
@@ -1466,7 +1466,7 @@ lemma map_to_ctes_kh0H:
            subst(asm) mask_out_add_aligned[symmetric],
             simp add: is_aligned_mult_triv2[where n=4, simplified],
            simp add: mask_def,
-           drule minus_one_helper,
+           drule word_leq_le_minus_one,
             subst add.commute,
             rule neq_0_no_wrap,
              erule word_plus_mono_right2[rotated],
@@ -2244,7 +2244,7 @@ lemma ucast_shiftr_13E:
    apply simp
    apply (rule shiftr_less_t2n[where m=10, simplified])
    apply simp
-   apply (rule minus_one_helper5)
+   apply (rule word_leq_minus_one_le)
     apply simp
    apply simp
    apply (rule word_diff_ls')
@@ -2269,7 +2269,7 @@ lemma ucast_shiftr_3:
    apply simp
    apply (rule shiftr_less_t2n[where m=10, simplified])
    apply simp
-   apply (rule minus_one_helper5)
+   apply (rule word_leq_minus_one_le)
     apply simp
    apply simp
    apply (rule word_diff_ls')
@@ -2294,7 +2294,7 @@ lemma ucast_shiftr_2:
    apply simp
    apply (rule shiftr_less_t2n[where m=10, simplified])
    apply simp
-   apply (rule minus_one_helper5)
+   apply (rule word_leq_minus_one_le)
     apply simp
    apply simp
    apply (rule word_diff_ls')
@@ -2319,7 +2319,7 @@ lemma ucast_shiftr_1:
    apply simp
    apply (rule shiftr_less_t2n[where m=10, simplified])
    apply simp
-   apply (rule minus_one_helper5)
+   apply (rule word_leq_minus_one_le)
     apply simp
    apply simp
    apply (rule word_diff_ls')

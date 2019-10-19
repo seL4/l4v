@@ -418,7 +418,7 @@ lemma copy_global_equal_kernel_mappings_restricted:
      apply (rule order_less_le_trans, rule unat_lt2p)
      apply simp
     apply simp
-   apply (rule minus_one_helper3)
+   apply (rule word_le_minus_one_leq)
    apply (rule order_less_le_trans, rule ucast_less)
     apply simp
    apply (simp add: pd_bits_def pageBits_def)
@@ -486,7 +486,7 @@ lemma copy_global_invs_mappings_restricted:
     apply (drule spec, erule impE, fastforce, clarsimp)
    apply (clarsimp simp: obj_at_def empty_table_def kernel_vsrefs_def second_level_tables_def)
   apply clarsimp
-  apply (erule minus_one_helper5[rotated])
+  apply (erule word_leq_minus_one_le[rotated])
   apply (simp add: pd_bits_def pageBits_def)
   done
 
