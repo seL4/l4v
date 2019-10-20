@@ -522,19 +522,6 @@ lemma word_and_max_word:
 lemmas word_and_max_simps[simplified max_word_def, simplified] =
   word_and_max[where 'a=8] word_and_max[where 'a=16] word_and_max[where 'a=32] word_and_max[where 'a=64]
 
-lemma word_and_1:
-  fixes x::"'a::len word"
-  shows "(x AND 1) = (if x!!0 then 1 else 0)"
-  apply(rule word_eqI)
-  apply(simp add:word_ao_nth)
-  apply(rule conjI)
-   apply(auto)[1]
-  apply clarsimp
-  apply (case_tac n)
-   apply simp
-  apply simp
-  done
-
 lemma word_and_1_bl:
   fixes x::"'a::len word"
   shows "(x AND 1) = of_bl [x !! 0]"

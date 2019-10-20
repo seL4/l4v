@@ -794,8 +794,7 @@ lemma is_aligned_neg_mask:
   by (metis and_not_mask is_aligned_shift is_aligned_weaken)
 
 lemma unat_minus:
-  "unat (- (x :: ('a :: len) word))
-    = (if x = 0 then 0 else (2 ^ size x) - unat x)"
+  "unat (- (x :: 'a :: len word)) = (if x = 0 then 0 else 2 ^ size x - unat x)"
   using unat_sub_if_size[where x="2 ^ size x" and y=x]
   by (simp add: unat_eq_0 word_size)
 
@@ -861,5 +860,39 @@ lemma aligned_shiftr_mask_shiftl:
   apply (frule test_bit_size)
   apply (simp add: word_size)
   done
+
+lemma mask_zero:
+  "is_aligned x a \<Longrightarrow> x && mask a = 0"
+  by (metis is_aligned_mask)
+
+lemma is_aligned_neg_mask_eq_concrete:
+  "\<lbrakk> is_aligned p n; msk && ~~ mask n = ~~ mask n \<rbrakk>
+   \<Longrightarrow> p && msk = p"
+  by (metis word_bw_assocs(1) word_bw_comms(1) is_aligned_neg_mask_eq)
+
+lemma is_aligned_and_not_zero:
+  "\<lbrakk> is_aligned n k; n \<noteq> 0 \<rbrakk> \<Longrightarrow> 2 ^ k \<le> n"
+  using is_aligned_less_sz leI by blast
+
+lemma is_aligned_and_2_to_k:
+  "(n && 2 ^ k - 1) = 0 \<Longrightarrow> is_aligned (n :: 'a :: len word) k"
+  by (simp add: is_aligned_mask mask_def)
+
+lemma is_aligned_power2:
+  "b \<le> a \<Longrightarrow> is_aligned (2 ^ a) b"
+  by (metis is_aligned_triv is_aligned_weaken)
+
+lemma aligned_sub_aligned':
+  "\<lbrakk> is_aligned (a :: 'a :: len word) n; is_aligned b n; n < LENGTH('a) \<rbrakk>
+   \<Longrightarrow> is_aligned (a - b) n"
+  by (simp add: aligned_sub_aligned)
+
+lemma is_aligned_neg_mask_weaken:
+  "\<lbrakk> is_aligned p n; m \<le> n \<rbrakk> \<Longrightarrow> p && ~~ mask m = p"
+   using is_aligned_neg_mask_eq is_aligned_weaken by blast
+
+lemma is_aligned_neg_mask2[simp]:
+  "is_aligned (a && ~~ mask n) n"
+  by (simp add: and_not_mask is_aligned_shift)
 
 end
