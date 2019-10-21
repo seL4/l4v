@@ -11197,8 +11197,8 @@ and not_cur_thread[wp]: "not_cur_thread t"
 
 lemma reply_push_valid_sched_helper:
   "\<lbrace> st_tcb_at ((=) Inactive) callee and valid_sched
-     and bound_sc_tcb_at ((=) None) callee \<rbrace>
-    when donate (do
+     and bound_sc_tcb_at ((=) sc_callee) callee \<rbrace>
+    when (sc_callee = None \<and> donate) (do
       sc_replies <- liftM sc_replies (get_sched_context sc_ptr);
       y <- case sc_replies of [] \<Rightarrow> assert True
               | r # x \<Rightarrow> do reply <- get_reply r;
@@ -11228,23 +11228,19 @@ lemma reply_push_valid_sched:
   supply if_weak_cong[cong del]
   apply (simp add: reply_push_def)
   apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ grt_sp])
   apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (case_tac sc_caller; simp)
    apply (wpsimp wp: set_thread_state_not_queued_valid_sched
-                     hoare_drop_imp)+
-   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (intro conjI)
-   apply (wpsimp wp: reply_push_valid_sched_helper)
+                     hoare_drop_imp)
+  apply (wpsimp wp: reply_push_valid_sched_helper)
         apply (wpsimp wp: sts_st_tcb_at_other)
         apply (wpsimp wp: reply_push_valid_sched_helper
                           set_thread_state_not_queued_valid_sched
                           set_thread_state_bound_sc_tcb_at)
        apply (wpsimp wp: hoare_drop_imp)+
-   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (wpsimp wp: set_thread_state_not_queued_valid_sched
-                    hoare_drop_imp)+
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
 lemma set_tcb_sc_update_active_sc_tcb_at': (* this is more usable *)
@@ -11458,9 +11454,9 @@ lemma reply_push_active_sc_tcb_at:
   supply if_weak_cong[cong del]
   apply (simp add: reply_push_def)
   apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ grt_sp])
   apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
   apply (rule hoare_seq_ext[OF _ assert_inv])
   apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
@@ -11468,16 +11464,16 @@ lemma reply_push_active_sc_tcb_at:
   apply (case_tac sc_caller; simp)
    apply (wpsimp wp: set_thread_state_not_queued_valid_sched
                      hoare_vcg_disj_lift set_thread_state_bound_sc_tcb_at hoare_drop_imps)
-  apply (rule conjI[rotated]; rule impI)
-   apply (wpsimp wp: sts_st_tcb_at_other hoare_vcg_disj_lift
-                     set_thread_state_bound_sc_tcb_at hoare_drop_imps)
-  apply (rule_tac Q="\<lambda>_ s. ((\<not>can_donate \<longrightarrow> bound_sc_tcb_at ((=) None) callee s) \<and>
-                             (can_donate \<longrightarrow> active_sc_tcb_at callee s \<and>
-                                 budget_ready callee s \<and> budget_sufficient callee s))"
-            in hoare_strengthen_post[rotated], fastforce)
-  apply (wpsimp wp: reply_push_active_sc_tcb_at_helper)
-  apply (wpsimp wp: hoare_vcg_imp_lift')+
-  apply (fastforce simp: pred_tcb_at_def obj_at_def active_sc_tcb_at_def)
+  apply (case_tac sc_callee; simp)
+   apply (rule_tac Q="\<lambda>_ s. ((\<not>can_donate \<longrightarrow> bound_sc_tcb_at ((=) None) callee s) \<and>
+                              (can_donate \<longrightarrow> active_sc_tcb_at callee s \<and>
+                                  budget_ready callee s \<and> budget_sufficient callee s))"
+             in hoare_strengthen_post[rotated], fastforce)
+   apply (wpsimp wp: reply_push_active_sc_tcb_at_helper)
+     apply (wpsimp wp: hoare_vcg_imp_lift')+
+   apply (fastforce simp: pred_tcb_at_def obj_at_def active_sc_tcb_at_def)
+  apply (wpsimp wp: sts_st_tcb_at_other hoare_vcg_disj_lift
+                    set_thread_state_bound_sc_tcb_at hoare_drop_imps)
   done
 
 lemma reply_push_has_budget_no_donation:
@@ -11489,9 +11485,9 @@ lemma reply_push_has_budget_no_donation:
   supply if_weak_cong[cong del]
   apply (simp add: reply_push_def)
   apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ grt_sp])
   apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
   apply (rule hoare_seq_ext[OF _ assert_inv])
   apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
@@ -11510,9 +11506,9 @@ lemma reply_push_active_sc_tcb_at_no_donation:
   supply if_weak_cong[cong del]
   apply (simp add: reply_push_def)
   apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ grt_sp])
   apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
   apply (rule hoare_seq_ext[OF _ assert_inv])
   apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
