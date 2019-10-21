@@ -1485,11 +1485,8 @@ lemma sint_of_nat_ge_zero:
 lemma sint_of_nat_le:
   "\<lbrakk> b < 2 ^ (LENGTH('a) - 1); a \<le> b \<rbrakk>
    \<Longrightarrow> sint (of_nat a :: 'a :: len word) \<le> sint (of_nat b :: 'a :: len word)"
-  apply (subst sint_eq_uint) defer
-   apply (subst sint_eq_uint) defer
-    apply (meson le_less_trans nat_power_minus_less of_nat_mono_maybe_le word_le_def)
-   apply (simp add: Word_Lemmas.of_nat_power not_msb_from_less)+
-  done
+  by (smt Word_Lemmas.of_nat_power diff_less le_less_trans len_gt_0 len_of_numeral_defs(2)
+          nat_power_minus_less of_nat_le_iff sint_eq_uint_2pl uint_nat unat_of_nat_len)
 
 lemma int_eq_sint:
   "\<lbrakk> x < 2 ^ (LENGTH('a) - 1) \<rbrakk>
