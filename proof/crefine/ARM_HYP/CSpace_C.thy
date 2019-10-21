@@ -618,7 +618,7 @@ lemma cteInsert_ccorres_mdb_helper:
   apply (rule allI)
   apply (rule conseqPre)
   apply vcg
-  apply (clarsimp simp: return_def mask_1_eq_1[simplified])
+  apply (clarsimp simp: return_def mask_Suc_0)
   apply (simp add: cmdbnode_relation_def)
   done
 

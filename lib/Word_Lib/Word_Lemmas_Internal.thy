@@ -348,8 +348,6 @@ lemma two_bits_cases:
   apply (frule and_mask_cases[where n=2 and x=x, simplified mask_def])
   using upt_conv_Cons by auto[1]
 
-lemmas mask_1_eq_1 = mask_1
-
 lemma zero_OR_eq:
   "y = 0 \<Longrightarrow> (x || y) = x"
   by simp
