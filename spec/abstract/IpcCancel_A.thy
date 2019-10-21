@@ -246,12 +246,10 @@ definition
 where
   "reply_push caller callee reply_ptr can_donate = do
     sc_caller \<leftarrow> get_tcb_obj_ref tcb_sched_context caller;
+    sc_callee \<leftarrow> get_tcb_obj_ref tcb_sched_context callee;
 
     reply_tcb_opt \<leftarrow> get_reply_tcb reply_ptr;
     assert (reply_tcb_opt = None);
-
-    sc_callee \<leftarrow> get_tcb_obj_ref tcb_sched_context callee;
-    can_donate' \<leftarrow> return (if (sc_callee = None) then can_donate else False);
 
     \<comment> \<open>The caller thread is either active (if we came via send_ipc),
         or was BlockedOnSend (if we came via receive_ipc).
@@ -269,8 +267,7 @@ where
     set_reply_obj_ref reply_tcb_update reply_ptr (Some caller);
     set_thread_state caller (BlockedOnReply reply_ptr);
 
-    when (sc_caller \<noteq> None \<and> can_donate') $ do
-      assert (sc_callee = None);
+    when (sc_caller \<noteq> None \<and> sc_callee = None \<and> can_donate) $ do
       \<comment> \<open>FIXME: maybe define a function to add a reply to the queue?\<close>
       sc_replies \<leftarrow> liftM sc_replies $ get_sched_context (the sc_caller);
       case sc_replies of
