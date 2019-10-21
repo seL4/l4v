@@ -1442,7 +1442,8 @@ lemma sorted_wrt_last_append:
   by (drule_tac x="last ls" in bspec, simp) fastforce
 
 lemma refill_new_valid_refills[wp]:
-  "\<lbrace>(\<lambda>s. unat (cur_time s) + unat period \<le> unat (max_word :: time)) and valid_refills scptr
+  "\<lbrace>(\<lambda>s. unat (cur_time s) + unat period \<le> unat (max_word :: time))
+       and (\<lambda>s. if scptr \<noteq> p then valid_refills scptr s else \<exists>sc n. ko_at (SchedContext sc n) p s)
        and K (MIN_REFILLS \<le> max_refills \<and> budget \<le> period \<and> MIN_SC_BUDGET \<le> budget)\<rbrace>
      refill_new p max_refills budget period
     \<lbrace>\<lambda>_. valid_refills scptr\<rbrace>"
@@ -1473,11 +1474,11 @@ lemma refill_word_proof_helper:
 
 lemma refill_update_valid_refills[wp]:
   "\<lbrace>(\<lambda>s. unat (cur_time s) + 2 * unat new_period \<le> unat (max_word::time))
-    and (\<lambda>s. kheap s p = Some (SchedContext sc n)
-                \<and> unat (r_time (refill_hd sc)) + 2 * unat new_period \<le> unat (max_word :: time))
+    and (\<lambda>s. \<exists>sc n. obj_at (\<lambda>ko. ko = SchedContext sc n
+                \<and> unat (r_time (refill_hd sc)) + 2 * unat new_period \<le> unat (max_word :: time)) p s)
     and valid_refills scptr
     and K (MIN_REFILLS \<le> new_max_refills \<and> MIN_SC_BUDGET \<le> new_budget
-           \<and> new_budget \<le> MAX_BUDGET_US \<and> new_budget \<le> new_period)\<rbrace>
+           \<and> new_budget \<le> new_period)\<rbrace>
     refill_update p new_period new_budget new_max_refills
    \<lbrace>\<lambda>_. valid_refills scptr\<rbrace>"
   apply (unfold refill_update_def)
@@ -1510,6 +1511,7 @@ lemma refill_update_valid_refills[wp]:
 
         \<comment> \<open>ordered_disjoint\<close>
         apply (simp add: ordered_disjoint_def)
+        apply (rename_tac sc n)
         apply (subgoal_tac "unat (r_time (refill_hd sc) + (new_period - MIN_BUDGET))
                             = unat (r_time (refill_hd sc)) + unat (new_period - MIN_BUDGET)")
          apply clarsimp
@@ -1531,6 +1533,7 @@ lemma refill_update_valid_refills[wp]:
        \<comment> \<open>no_overflow\<close>
        apply (simp add: no_overflow_def)
        apply clarsimp
+        apply (rename_tac sc n na)
        apply (case_tac "na=0")
         apply clarsimp
         apply (subgoal_tac "MIN_BUDGET \<le> new_budget")
@@ -1550,6 +1553,7 @@ lemma refill_update_valid_refills[wp]:
 
       \<comment> \<open>MIN_BUDGET\<close>
       apply clarsimp
+      apply (rename_tac sc n na)
       apply (case_tac "na=0")
        apply clarsimp
        apply (simp add: word_le_nat_alt)
@@ -1564,6 +1568,7 @@ lemma refill_update_valid_refills[wp]:
 
      \<comment> \<open>period_window\<close>
      apply (simp add: period_window_def)
+     apply (rename_tac sc n)
      apply (subgoal_tac "unat (r_time (refill_hd sc) + (new_period - MIN_BUDGET))
                         = unat (r_time (refill_hd sc)) + unat (new_period - MIN_BUDGET)")
       apply clarsimp
@@ -1588,12 +1593,13 @@ lemma refill_update_valid_refills[wp]:
      apply (frule order.strict_implies_order)
      apply (frule (2) refill_word_proof_helper[where larger=new_budget
               and head_time="r_time (refill_hd sc)"
-              and smaller="r_amount (refill_hd sc)"])
+              and smaller="r_amount (refill_hd sc)" for sc])
      apply clarsimp
      apply (metis Nat.add_diff_assoc add_leE le_eq_less_or_eq unat_arith_simps(1))
 
     \<comment> \<open>no_overflow\<close>
     apply (clarsimp simp: no_overflow_def)
+    apply (rename_tac sc n na)
     apply (case_tac "na=0")
      apply (drule_tac x=0 and P="\<lambda>n. n < length (sc_refills sc)
                                        \<longrightarrow> unat (r_time (sc_refills sc ! n)) + unat (r_amount (sc_refills sc ! n))
@@ -1603,7 +1609,7 @@ lemma refill_update_valid_refills[wp]:
     apply (frule order.strict_implies_order)
     apply (frule (2) refill_word_proof_helper[where larger=new_budget
                  and head_time="r_time (refill_hd sc)"
-                 and smaller="r_amount (refill_hd sc)"])
+                 and smaller="r_amount (refill_hd sc)" for sc])
     apply (clarsimp simp: unat_sub word_le_nat_alt)
 
    \<comment> \<open>MIN_BUDGET\<close>
@@ -1618,6 +1624,7 @@ lemma refill_update_valid_refills[wp]:
   apply (subst no_overflow_period_window)
      apply simp
     apply (clarsimp simp: no_overflow_def)
+    apply (rename_tac sc n na)
     apply (case_tac "na=0")
      apply (drule_tac x=0 and P="\<lambda>n. n < length (sc_refills sc)
                                         \<longrightarrow> unat (r_time (sc_refills sc ! n)) + unat (r_amount (sc_refills sc ! n))
@@ -1627,7 +1634,7 @@ lemma refill_update_valid_refills[wp]:
     apply (frule order.strict_implies_order)
     apply (frule (2) refill_word_proof_helper[where larger=new_budget
                  and head_time="r_time (refill_hd sc)"
-                 and smaller="r_amount (refill_hd sc)"])
+                 and smaller="r_amount (refill_hd sc)" for sc])
     by (clarsimp simp: unat_sub word_le_nat_alt)+
 
 lemma schedule_used_sum [simp]:
@@ -3510,127 +3517,65 @@ lemma update_sched_context_valid_refills_badge:
   apply (clarsimp simp: valid_refills_def sc_valid_refills_def obj_at_def period_window_def)
   done
 
-lemma
-  "\<lbrace>(\<lambda>s. kheap s scptr = Some (SchedContext sc n)
-          \<and> unat (r_time (refill_hd sc)) + 2 * unat (sc_period sc) + unat consumed
+lemma invoke_sched_control_configure_valid_refills_helper':
+"\<lbrace> valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)
+and valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace> do
+              sc <- get_sched_context scptr;
+              when (0 < sc_refill_max sc)
+               (do y <- sched_context_resume (Some scptr);
+                   ct <- gets cur_thread;
+                   if tcb_ptr = ct then reschedule_required
+                   else when (runnable st) $ possible_switch_to tcb_ptr
+                od)
+od
+\<lbrace>\<lambda>_. valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+by (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift hoare_vcg_if_lift2
+ simp: obj_at_def split_del: if_split)
+
+lemma invoke_sched_control_configure_valid_refills_helper:
+"\<lbrace>(\<lambda>s. unat (cur_time s) + 2 * unat period \<le> unat (max_word::time))
+and (\<lambda>s. \<exists>sc n. ko_at (SchedContext sc n) scptr s
+          \<and> unat (r_time (refill_hd sc)) + 2 * unat period
                      \<le> unat (max_word :: time)
           \<and> MIN_SC_BUDGET \<le> sc_budget sc \<and> sc_budget sc \<le> sc_period sc)
-     and valid_refills scptr and
+and valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)
+and (\<lambda>s. \<exists>n. ko_at (SchedContext sc n) scptr s)
+and valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace> do
+              st <- get_thread_state tcb_ptr;
+              y \<leftarrow> if 0 < sc_refill_max sc \<and> runnable st
+              then refill_update scptr period budget mrefills
+              else refill_new scptr mrefills budget period;
+              sc <- get_sched_context scptr;
+              when (0 < sc_refill_max sc)
+               (do y <- sched_context_resume (Some scptr);
+                   ct <- gets cur_thread;
+                   if tcb_ptr = ct then reschedule_required
+                   else when (runnable st) $ possible_switch_to tcb_ptr
+                od)
+od
+\<lbrace>\<lambda>_. valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+by (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift hoare_vcg_if_lift2
+ simp: obj_at_def split_del: if_split)
+
+crunches commit_domain_time, get_sched_context
+  for sc_at[wp]: "sc_at p"
+  and ko_sc_at[wp]: "\<lambda>s. \<exists>sc n. ko_at (SchedContext sc n) p s"
+  and ko_sc_at'[wp]: "\<lambda>s. ko_at (SchedContext sc n) p s"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma invoke_sched_control_configure_valid_refills:
+  "\<lbrace>
+(\<lambda>s. obj_at
+       (\<lambda>ko. \<forall>sc n. ko = SchedContext sc n \<and>
+       (case sc_tcb sc of Some tp \<Rightarrow> st_tcb_at runnable tp s \<and> 0 < sc_refill_max sc \<longrightarrow> sc_valid_refills sc
+           | _ \<Rightarrow> sc_valid_refills sc))
+       scptr s)
+and 
    valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)\<rbrace>
    invoke_sched_control_configure (InvokeSchedControlConfigure scptr budget period mrefills badge)
    \<lbrace>\<lambda>_. valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (clarsimp simp: invoke_sched_control_configure_def)
-apply (rule validE_valid)
-apply (rule liftE_wp)
-apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-apply (clarsimp simp: when_def)
-apply (intro conjI impI)
-defer
-apply (wpsimp wp: update_sched_context_valid_refills_badge)
-
-thm hoare_seq_ext
-apply (rule hoare_seq_ext[OF _ update_sched_context_valid_refills_badge])
-(*thm hoare_seq_ext
-
-
-
-apply (rule hoare_seq_ext[OF _ update_sched_context_valid_refills_badge])
-apply (clarsimp simp: when_def)
-apply wpsimp
-apply (intro conjI impI)
-apply wpsimp
-apply (rule hoare_seq_ext[OF _ update_sched_context_valid_refills_badge])
- *)
-find_theorems "if _ then ?P else ?Q"
-apply (wp hoare_drop_imps)
-apply (clarsimp simp: if_cancel)
-apply wpsimp
-apply (wpsimp wp: hoare_drop_imps)
-apply (rule_tac Q="\<lambda>_. valid_refills scptr" in hoare_strengthen_post[rotated])
-apply clarsimp
-apply (wpsimp wp: get_sched_context_wp)
-apply (wpsimp wp: refill_update_valid_refills[where sc=sc and n=n] hoare_drop_imps)
-apply (wpsimp wp: gts_wp)
-apply (wpsimp wp: hoare_vcg_all_lift)
-apply (clarsimp cong: conj_cong imp_cong)
-thm commit_time_valid_refills
-apply (wpsimp wp: hoare_drop_imps refill_update_valid_refills[where sc=sc and n=n])
-apply wpsimp
-apply wpsimp
-apply (wpsimp wp: hoare_drop_imps)
-apply (wpsimp wp: hoare_drop_imps)
-apply (wpsimp wp: hoare_drop_imps)
-apply (wpsimp wp: hoare_drop_imps)
-apply (clarsimp simp: when_def)
-apply (intro conjI impI)
-apply wpsimp
-apply (wpsimp wp: hoare_drop_imps hoare_vcg_conj_lift)
-
-
-
-
-apply (wpsimp wp: update_sched_context_valid_refills_badge hoare_drop_imps hoare_vcg_conj_lift hoare_allI)
-apply (wpsimp wp: update_sched_context_valid_refills_badge hoare_drop_imps hoare_vcg_conj_lift hoare_allI)
-apply (wpsimp wp: update_sched_context_valid_refills_badge hoare_drop_imps hoare_vcg_conj_lift hoare_allI)
-apply (wpsimp wp: update_sched_context_valid_refills_badge hoare_drop_imps hoare_vcg_conj_lift hoare_allI)
-apply (intro conjI impI)
-apply wpsimp
-apply wpsimp
-apply (wpsimp wp: hoare_drop_imps hoare_vcg_conj_lift hoare_allI)
-
-apply (intro conjI impI)
-apply wpsimp
-apply wpsimp
-apply (wpsimp wp: hoare_drop_imps hoare_vcg_conj_lift hoare_allI)
-apply (clarsimp simp: when_def)
-apply (intro conjI impI)
-apply (wpsimp wp: hoare_drop_imps hoare_vcg_conj_lift hoare_allI)
-
-apply (rule hoare_seq_ext)
-
-find_theorems update_sched_context valid_refills
-apply (wpsimp wp: update_sched_context_valid_refills_no_budget_update_const split: if_splits)
-
-
-
-
-
-
-thm liftE_validE[THEN iffD1]
-apply (rule liftE_validE[THEN iffD2])
- apply (simp add: bindE_assoc)
-apply (rule liftE_validE)
-apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-apply (clarsimp simp: bind_assoc when_def split: if_splits)
-apply (wpsimp wp: update_sched_context_valid_refills_no_budget_update_const split: if_splits)
-find_theorems liftE validE
-apply (intro conjI)
-
-apply clarsimp
-
-thm update_sched_context_valid_refills_no_budget_update_const
-
-apply (clarsimp simp: bind_assoc split: if_splits)+
-find_theorems valid_refills return
-apply (wpsimp split: if_splits simp: return_def bind_assoc)
-apply (rule hoare_vcg_seqE)
-find_theorems name: seq name: hoare
-apply (rule hoare_seq_ext)
-find_theorems assert_opt
-apply (rule hoare_seq_ext)
-apply wp
-apply wp
-apply (wp update_sched_context_valid_refills_no_budget_update_const)
-find_theorems update_sched_context valid_refills *)
-
-thm invoke_sched_control_configure_def
-  apply_trace (wpsimp simp: invoke_sched_control_configure_def split_def
-                  wp: hoare_vcg_if_lift2 get_sched_context_wp commit_time_valid_refills
-                      hoare_gets_sp hoare_drop_imp
-                      update_sched_context_valid_refills_no_budget_update hoare_when_wp
-                      hoare_vcg_all_lift refill_new_valid_refills refill_update_valid_refills
-                cong: if_cong conj_cong split_del: if_split)
-  sorry
+sorry
 
 end
 

@@ -515,7 +515,7 @@ crunch domain_consumed_time_inv[wp]: postpone,reply_push
 context DetSchedDomainTime_AI begin
 
 crunch domain_time_inv[wp]:
-  refill_budget_check,charge_budget
+  refill_budget_check,charge_budget,refill_budget_check_round_robin
   "\<lambda>s::det_state. P (domain_time s)"
   (wp: crunch_wps check_cap_inv maybeM_inv simp: Let_def)
 
@@ -545,7 +545,7 @@ lemma commit_domain_time_domain_time:
 crunch consumed_time_inv[wp]: set_thread_state,store_word_offs "\<lambda>s::det_state. P (consumed_time s)"
   (wp: crunch_wps dxo_wp_weak)
 
-crunch domain_time_consumed_time[wp]: refill_budget_check
+crunch domain_time_consumed_time[wp]: refill_budget_check, refill_budget_check_round_robin
   "\<lambda>s::det_state. P (domain_time s)(consumed_time s)"
   (wp: crunch_wps check_cap_inv maybeM_inv dxo_wp_weak simp: zipWithM_x_mapM Let_def)
 

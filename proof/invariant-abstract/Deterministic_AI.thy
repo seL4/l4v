@@ -4126,9 +4126,13 @@ crunch valid_list: set_refills,refill_full,refill_ready,refill_capacity,refill_s
 
 lemma refill_budget_check_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> refill_budget_check usage \<lbrace>\<lambda>_.valid_list\<rbrace>"
-   apply (wpsimp simp: refill_budget_check_def set_refills_def refill_full_def refill_size_def
-         wp: hoare_vcg_if_lift2 hoare_drop_imp)
-  sorry
+  unfolding refill_budget_check_def
+  by (wpsimp wp: set_refills_valid_list simp: refill_full_def is_round_robin_def refill_ready_def)
+
+lemma refill_budget_check_round_robin_valid_list[wp]:
+  "\<lbrace>valid_list\<rbrace> refill_budget_check_round_robin usage \<lbrace>\<lambda>_.valid_list\<rbrace>"
+  unfolding refill_budget_check_round_robin_def
+  by (wpsimp wp: set_refills_valid_list hoare_drop_imps)
 
 context Deterministic_AI_1 begin
 

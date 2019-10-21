@@ -45,14 +45,15 @@ lemma refill_list_sum_hd_middle_last:
   by clarsimp
 
 lemma rt_assumptions:
-  "valid_refills t k s \<Longrightarrow>
-       (\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) t s \<longrightarrow>
-                   (refill_list_sum (sc_refills sc) \<le> unat k)) s "
-  "valid_refills scp k s \<Longrightarrow> MIN_BUDGET \<le> k"
+  "valid_refills scp s \<Longrightarrow>
+       (\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) scp s \<longrightarrow>
+                   (refill_list_sum (sc_refills sc) = unat (sc_budget sc))
+                   \<and> MIN_BUDGET \<le> sc_budget sc) s "
   sorry (* Assumption pending an update *)
-
+(*
 lemmas budgets_bounded_above = rt_assumptions(1)
 lemmas budgets_bounded_below = rt_assumptions(2)
+*)
 
 lemma valid_machine_time_detype[simp]:
   "valid_machine_time (detype S s) = valid_machine_time s"
@@ -9258,6 +9259,17 @@ lemma refill_budget_check_valid_release_q:
    refill_budget_check usage
    \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
   unfolding refill_budget_check_def
+  apply  (wpsimp wp: set_object_wp hoare_vcg_all_lift get_object_wp
+                    refill_ready_wp is_round_robin_wp refill_full_wp
+ simp: Let_def set_refills_def update_sched_context_def split_del: if_split)
+    apply (intro conjI impI allI; clarsimp simp: pred_tcb_at_def obj_at_def)
+  sorry (* waiting for the spec update *)
+
+lemma refill_budget_check_round_robin_valid_release_q:
+  "\<lbrace>valid_release_q and cur_sc_in_release_q_imp_zero_consumed\<rbrace>
+   refill_budget_check_round_robin usage
+   \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
+  unfolding refill_budget_check_round_robin_def
   apply  (wpsimp wp: set_object_wp hoare_vcg_all_lift get_object_wp
                     refill_ready_wp is_round_robin_wp refill_full_wp
  simp: Let_def set_refills_def update_sched_context_def split_del: if_split)
