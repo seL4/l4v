@@ -398,7 +398,7 @@ crunches arch_switch_to_thread, arch_switch_to_idle_thread
   and not_in_release_q[wp, DetSchedSchedule_AI_assms]: "not_in_release_q t"
   and sc_at_period[wp, DetSchedSchedule_AI_assms]: "sc_at_period P p::det_state \<Rightarrow> _"
   and cur_sc_in_release_q_imp_zero_consumed[wp, DetSchedSchedule_AI_assms]: cur_sc_in_release_q_imp_zero_consumed
-  and cur_sc_valid_refills_consumed[wp, DetSchedSchedule_AI_assms]: "cur_sc_valid_refills_consumed budget"
+(*  and cur_sc_valid_refills_consumed[wp, DetSchedSchedule_AI_assms]: "cur_sc_valid_refills_consumed budget"*)
   and cur_sc[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_sc s)"
   and cur_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
   (simp: crunch_simps)

@@ -590,7 +590,7 @@ lemma commit_domain_time_domain_time_left:
 
 lemma commit_time_domain_time_left[wp]:
   "\<lbrace> valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace> commit_time \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
-  by (wpsimp simp: commit_time_def Let_def sc_refill_ready_def
+  by (wpsimp simp: commit_time_def Let_def sc_refill_ready_def refill_budget_check_round_robin_def
            wp: commit_domain_time_domain_time_left get_sched_context_wp hoare_vcg_all_lift
                hoare_drop_imp)
 

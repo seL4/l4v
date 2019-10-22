@@ -763,7 +763,7 @@ lemma refill_unblock_check_bound_sc_tcb_at [wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>
    refill_unblock_check sc_ptr
    \<lbrace>\<lambda>_ s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>"
-  by (wpsimp simp: refill_unblock_check_def get_refills_def is_round_robin_def)
+  by (wpsimp simp: refill_unblock_check_def get_refills_def is_round_robin_def refill_ready_def)
 
 lemma set_next_interrupt_invs[wp]: "\<lbrace>invs\<rbrace> set_next_interrupt \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp wp: hoare_drop_imp get_sched_context_wp set_next_timer_interrupt_invs
@@ -867,7 +867,8 @@ crunch ct_in_state[wp]: commit_time "ct_in_state t"
 lemma refill_unblock_check_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> refill_unblock_check csc \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
   by (wpsimp wp: get_refills_wp get_sched_context_wp
-       simp: refill_unblock_check_def is_round_robin_def refills_merge_valid[simplified])
+           simp: refill_unblock_check_def is_round_robin_def refills_merge_valid[simplified]
+                 refill_ready_def)
 
 lemma switch_sched_context_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> switch_sched_context \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
@@ -1710,8 +1711,8 @@ lemma ex_nonz_cap_to_reprogram_timer_update_ct:
 lemma refill_unblock_check_ex_nonz_cap_to_ct[wp]:
     "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> refill_unblock_check scp
        \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
-  by (wpsimp simp: refill_unblock_check_def set_refills_def is_round_robin_def
-      wp: get_sched_context_wp get_refills_wp)
+  by (wpsimp simp: refill_unblock_check_def set_refills_def is_round_robin_def refill_ready_def
+               wp: get_sched_context_wp get_refills_wp)
 
 lemma refill_unblock_check_zombies[wp]:
   "\<lbrace>zombies_final\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>_. zombies_final\<rbrace>"
