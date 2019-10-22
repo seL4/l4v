@@ -3710,7 +3710,7 @@ lemma le_step_down_nat:"\<lbrakk>(i::nat) \<le> n; i = n \<longrightarrow> P; i 
 lemma le_step_down_int:"\<lbrakk>(i::int) \<le> n; i = n \<longrightarrow> P; i \<le> n - 1 \<longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by arith
 
-lemma mask_1[simp]: "(\<exists>x. mask x = 1)"
+lemma ex_mask_1[simp]: "(\<exists>x. mask x = 1)"
   apply (rule_tac x=1 in exI)
   apply (simp add:mask_def)
   done
