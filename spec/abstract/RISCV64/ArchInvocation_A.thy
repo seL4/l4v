@@ -59,7 +59,7 @@ definition ArchDefaultExtraRegisters :: arch_copy_register_sets
   "ArchDefaultExtraRegisters = RISCVNoExtraRegisters"
 
 datatype arch_irq_control_invocation =
-    RISCVNoIRQControlInvocation
+    RISCVIRQControlInvocation irq cslot_ptr cslot_ptr bool
 
 end
 end

@@ -20,9 +20,14 @@ definition page_bits :: nat
   where
   "page_bits \<equiv> pageBits"
 
-definition arch_invoke_irq_control :: "arch_irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
+fun arch_invoke_irq_control :: "arch_irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
   where
-  "arch_invoke_irq_control aic \<equiv> returnOk ()"
+  "arch_invoke_irq_control (RISCVIRQControlInvocation irq handler_slot control_slot trigger) =
+     without_preemption (do
+       do_machine_op $ setIRQTrigger irq trigger;
+       set_irq_state IRQSignal (irq);
+       cap_insert (IRQHandlerCap (irq)) control_slot handler_slot
+  od)"
 
 definition arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where

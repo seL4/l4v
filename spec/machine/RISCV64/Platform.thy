@@ -149,6 +149,11 @@ definition maxIRQ :: "irq"
   where
   "maxIRQ \<equiv> 5"
 
+(* Reserved by C to represent "not an IRQ" *)
+definition irqInvalid :: "irq"
+  where
+  "irqInvalid \<equiv> 0"
+
 definition pageColourBits :: nat
   where
   "pageColourBits \<equiv> undefined" \<comment> \<open>not implemented on this platform\<close>

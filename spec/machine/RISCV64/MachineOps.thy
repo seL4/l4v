@@ -104,6 +104,19 @@ definition debugPrint :: "unit list \<Rightarrow> unit machine_monad"
 
 subsection \<open>Interrupt Controller\<close>
 
+definition
+  IRQ :: "irq \<Rightarrow> irq"
+where "IRQ \<equiv> id"
+
+consts'
+  setIRQTrigger_impl :: "irq \<Rightarrow> bool \<Rightarrow> unit machine_rest_monad"
+
+definition
+  setIRQTrigger :: "irq \<Rightarrow> bool \<Rightarrow> unit machine_monad"
+where
+  "setIRQTrigger irq trigger \<equiv> machine_op_lift (setIRQTrigger_impl irq trigger)"
+
+
 text \<open>Interrupts that cannot occur while the kernel is running (e.g. at preemption points), but
 that can occur from user mode. Empty on RISCV64.\<close>
 definition non_kernel_IRQs :: "irq set"
