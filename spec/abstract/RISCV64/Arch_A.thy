@@ -26,11 +26,7 @@ definition arch_invoke_irq_control :: "arch_irq_control_invocation \<Rightarrow>
 
 definition arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
-  "arch_switch_to_thread t \<equiv> do
-    set_vm_root t;
-    buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer t;
-    as_user t $ setRegister TP buffer_ptr
-  od"
+  "arch_switch_to_thread t \<equiv> set_vm_root t"
 
 definition arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad"
   where
