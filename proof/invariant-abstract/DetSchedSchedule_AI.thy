@@ -826,16 +826,14 @@ lemma reschedule_required_valid_sched_except_blocked:
 
 lemma reschedule_required_valid_sched':
   "\<lbrace>valid_release_q and valid_ready_qs
-                    and weak_valid_sched_action
                     and valid_blocked
                     and valid_idle_etcb
                     and schedulable_ipc_queues
                     and valid_machine_time\<rbrace>
    reschedule_required
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  by (wpsimp wp: reschedule_required_valid_blocked
-                 reschedule_required_valid_sched_except_blocked
-           simp: valid_sched_valid_sched_except_blocked)
+  unfolding valid_sched_def
+  by (wpsimp wp: reschedule_required_valid_blocked)
 
 lemma reschedule_required_switch_ct_not_in_q[wp]:
   "\<lbrace>\<top>\<rbrace> reschedule_required \<lbrace>\<lambda>_. not_cur_thread t\<rbrace>"
@@ -2304,30 +2302,14 @@ locale DetSchedSchedule_AI =
     "arch_switch_to_idle_thread \<lbrace>\<lambda>s::det_state. cur_sc_chargeable s\<rbrace>"
   assumes arch_switch_to_thread_cur_sc_chargeable[wp]:
     "\<And>t. arch_switch_to_thread t \<lbrace>\<lambda>s::det_state. cur_sc_chargeable s\<rbrace>"
-  assumes arch_finalise_cap_release_queue[wp]:
-    "\<And>acap final P. arch_finalise_cap acap final \<lbrace>(\<lambda>s. P (release_queue s))::det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_finalise_cap_ready_queues[wp]:
-    "\<And>acap final P. arch_finalise_cap acap final \<lbrace>(\<lambda>s. P (ready_queues s))::det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_finalise_cap_cur_thread[wp]:
-    "\<And>acap final P. arch_finalise_cap acap final \<lbrace>(\<lambda>s. P (cur_thread s))::det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_finalise_cap_scheduler_action[wp]:
-    "\<And>acap final P. arch_finalise_cap acap final \<lbrace>(\<lambda>s. P (scheduler_action s))::det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_finalise_cap_cur_sc_chargeable[wp]:
-    "\<And>acap final. arch_finalise_cap acap final \<lbrace>cur_sc_chargeable ::det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_finalise_cap_ct_in_state[wp]:
-    "\<And>c x P. arch_finalise_cap c x \<lbrace>ct_in_state P ::det_state \<Rightarrow> _\<rbrace>"
   assumes arch_perform_invocation_valid_sched[wp]:
     "\<And>i. \<lbrace>invs and valid_sched and ct_active and valid_arch_inv i and
             (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
           arch_perform_invocation i
           \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  (* FIXME: slim down these preconditions if possible, current preconditions are an estimate *)
-  assumes arch_perform_invocation_cur_sc_chargeable[wp]:
-    "\<And>i. \<lbrace>invs and cur_sc_chargeable and valid_arch_inv i\<rbrace>
-          arch_perform_invocation i
-          \<lbrace>\<lambda>_. cur_sc_chargeable :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  (* FIXME: Might not be necessary *)
-  assumes arch_perform_invocation_misc[wp]:
+  assumes arch_perform_invocation_cur_sc_tcb_only_sym_bound:
+    "\<And>i. arch_perform_invocation i \<lbrace>cur_sc_tcb_only_sym_bound :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  assumes arch_perform_invocation_valid_sched_misc[wp]:
     "\<And>i P. arch_perform_invocation i
             \<lbrace>\<lambda>s::'state_ext state. P (consumed_time s) (cur_time s) (cur_domain s) (cur_thread s)
                                      (cur_sc s) (idle_thread s)
@@ -2342,40 +2324,12 @@ locale DetSchedSchedule_AI =
     "\<And>ft P. arch_get_sanitise_register_info ft \<lbrace>P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_post_cap_deletion_valid_sched_pred[wp] :
     "\<And>c P. arch_post_cap_deletion c \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  assumes arch_invoke_irq_control_scheduler_action[wp]:
-    "\<And>i P. arch_invoke_irq_control i \<lbrace>(\<lambda>s. P (scheduler_action s))::det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_invoke_irq_control_release_queue[wp]:
-    "\<And>i P. arch_invoke_irq_control i \<lbrace>(\<lambda>s. P (release_queue s))::det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_invoke_irq_control_ready_queues[wp]:
-    "\<And>i P. arch_invoke_irq_control i \<lbrace>(\<lambda>s. P (ready_queues s))::det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_invoke_irq_control_cur_sc_chargeable[wp]:
-    "\<And>i. arch_invoke_irq_control i \<lbrace>cur_sc_chargeable::det_state \<Rightarrow> _\<rbrace>"
   assumes arch_switch_to_idle_thread_sc_is_round_robin[wp]:
     "\<And>P t. \<lbrace>\<lambda>s. P (sc_is_round_robin t s)\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_ s::det_state. P (sc_is_round_robin t s)\<rbrace>"
   assumes arch_switch_to_thread_sc_is_round_robin[wp]:
     "\<And>P t' t. \<lbrace>\<lambda>s. P (sc_is_round_robin t s)\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_ s::det_state. P (sc_is_round_robin t s)\<rbrace>"
-    "\<And>t P. prepare_thread_delete t \<lbrace>(\<lambda>s. P (release_queue s))::det_state \<Rightarrow> _\<rbrace>"
-  assumes prepare_thread_delete_ready_queues[wp]:
-    "\<And>t P. prepare_thread_delete t \<lbrace>(\<lambda>s. P (ready_queues s))::det_state \<Rightarrow> _\<rbrace>"
-  assumes prepare_thread_delete_cur_thread[wp]:
-    "\<And>t P. prepare_thread_delete t \<lbrace>(\<lambda>s. P (cur_thread s))::det_state \<Rightarrow> _\<rbrace>"
   assumes prepare_thread_delete_ct_in_state[wp]:
     "\<And>t P. prepare_thread_delete t \<lbrace>ct_in_state P ::det_state \<Rightarrow> _\<rbrace>"
-  assumes prepare_thread_delete_scheduler_action[wp]:
-    "\<And>t P. prepare_thread_delete t \<lbrace>(\<lambda>s. P (scheduler_action s))::det_state \<Rightarrow> _\<rbrace>"
-  assumes prepare_thread_delete_cur_sc_chargeable[wp]:
-    "\<And>t. prepare_thread_delete t \<lbrace>cur_sc_chargeable ::det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_cur_sc_chargeable[wp] :
-    "\<And>c. arch_post_cap_deletion c \<lbrace>cur_sc_chargeable ::det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_active_sc_tcb_at[wp] :
-    "\<And>c Q t. arch_post_cap_deletion c \<lbrace>(\<lambda>s. Q (active_sc_tcb_at t s)):: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_budget_ready[wp] :
-    "\<And>c Q t. arch_post_cap_deletion c \<lbrace>(\<lambda>s. Q (budget_ready t s)):: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_budget_sufficient[wp] :
-    "\<And>c Q t. arch_post_cap_deletion c \<lbrace>(\<lambda>s. Q (budget_sufficient t s)):: det_state \<Rightarrow> _\<rbrace>"
-    "\<And>P c. arch_post_cap_deletion c \<lbrace>(\<lambda>s. P (release_queue s))::det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_cur_thread[wp] :
-    "\<And>P c. arch_post_cap_deletion c \<lbrace>(\<lambda>s. P (cur_thread s))::det_state \<Rightarrow> _\<rbrace>"
   assumes update_time_stamp_valid_machine_time[wp]:
     "update_time_stamp \<lbrace>valid_machine_time:: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes dmo_getCurrentTime_vmt_sp:
@@ -4930,9 +4884,9 @@ lemma sched_context_unbind_tcb_simple_sched_action[wp]:
   "sched_context_unbind_tcb sc_ptr \<lbrace>scheduler_act_sane\<rbrace>"
   by (wpsimp simp: sched_context_unbind_tcb_def wp: get_sched_context_wp)+
 
-crunches unbind_from_sc,sched_context_unbind_all_tcbs
- for simple[wp]:  simple_sched_action
- and scheduler_act_sane[wp]:  scheduler_act_sane
+crunches unbind_from_sc, sched_context_unbind_all_tcbs
+  for simple[wp]: simple_sched_action
+  and scheduler_act_sane[wp]: scheduler_act_sane
   (wp: maybeM_wp crunch_wps hoare_vcg_all_lift)
 
 crunch scheduler_act_not[wp]: unbind_from_sc "scheduler_act_not t"
@@ -5657,37 +5611,25 @@ lemma finalise_cap_valid_sched[wp]:
 
 lemma cancel_all_ipc_simple_sched_action[wp]:
   "cancel_all_ipc ep \<lbrace>simple_sched_action :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  by (wpsimp wp: get_simple_ko_wp simp: cancel_all_ipc_def)
+
+lemma cancel_all_ipc_scheduler_act_sane[wp]:
   "cancel_all_ipc ep \<lbrace>scheduler_act_sane :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  by (wpsimp wp: get_simple_ko_wp simp: cancel_all_ipc_def)+
+  by (wpsimp wp: get_simple_ko_wp simp: cancel_all_ipc_def)
 
 lemma cancel_all_signals_simple_sched_action[wp]:
   "cancel_all_signals ntfn \<lbrace>simple_sched_action :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  by (wpsimp wp: get_simple_ko_wp simp: cancel_all_signals_def)
+
+lemma cancel_all_signals_scheduler_act_sane[wp]:
   "cancel_all_signals ntfn \<lbrace>scheduler_act_sane :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  by (wpsimp wp: get_simple_ko_wp simp: cancel_all_signals_def)+
+  by (wpsimp wp: get_simple_ko_wp simp: cancel_all_signals_def)
 
-lemma fast_finalise_simple_sched_action[wp]:
-  "fast_finalise cap final \<lbrace>simple_sched_action :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  "fast_finalise cap final \<lbrace>scheduler_act_sane :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  by (cases cap; wpsimp wp: gts_wp get_simple_ko_wp)+
-
-lemma cap_delete_one_simple_sched_action[wp]:
-  "cap_delete_one slot \<lbrace>simple_sched_action :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  "cap_delete_one slot \<lbrace>scheduler_act_sane :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  by (wpsimp wp: get_simple_ko_wp simp: cap_delete_one_def)+
-
-lemma deleting_irq_handler_simple_sched_action[wp]:
-  "deleting_irq_handler irq \<lbrace>simple_sched_action :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  "deleting_irq_handler irq \<lbrace>scheduler_act_sane :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  by (wpsimp wp: get_simple_ko_wp simp: deleting_irq_handler_def)+
-
-crunches cancel_ipc, suspend, sched_context_unbind_all_tcbs
-  for scheduler_act_sane[wp]: "scheduler_act_sane :: 'state_ext state \<Rightarrow> _"
+crunches fast_finalise, cap_delete_one, deleting_irq_handler, cancel_ipc, suspend,
+         sched_context_unbind_all_tcbs, finalise_cap
+  for simple[wp]: "simple_sched_action :: 'state_ext state \<Rightarrow> _"
+  and scheduler_act_sane[wp]: "scheduler_act_sane :: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps )
-
-lemma finalise_cap_simple_sched_action[wp]:
-  "finalise_cap cap final \<lbrace>simple_sched_action :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  "finalise_cap cap final \<lbrace>scheduler_act_sane :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  by (cases cap; wpsimp wp: gts_wp get_simple_ko_wp)+
 
 end
 
@@ -5721,7 +5663,7 @@ lemma rec_del_valid_sched:
 
 lemma rec_del_simple_sched_action[wp]:
   "\<lbrace>simple_sched_action\<rbrace> rec_del call \<lbrace>\<lambda>rv. simple_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-   by (wpsimp wp: rec_del_preservation preemption_point_inv' finalise_cap_simple_sched_action)
+   by (wpsimp wp: rec_del_preservation preemption_point_inv')
 
 end
 
@@ -10888,14 +10830,6 @@ lemma st_in_waitingntfn':
                split: thread_state.splits if_splits)
   done
 
-lemma sched_context_resume_valid_sched_misc[wp]:
-  "sched_context_resume scp_opt
-   \<lbrace> \<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
-           (cur_thread s) (idle_thread s) (scheduler_action s)
-           (last_machine_time_of s) (kheap s)\<rbrace>"
-  unfolding sched_context_resume_def
-  by (wpsimp wp: hoare_drop_imp)
-
 lemma maybe_donate_sc_valid_sched_misc[wp]:
   "maybe_donate_sc tcb_ptr ntfnptr
    \<lbrace> \<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
@@ -11041,23 +10975,7 @@ lemma send_signal_WaitingNtfn_helper:
        split: option.splits list.splits if_splits)
   done
 
-lemma set_thread_state_not_runnable':
-  "\<lbrace>st_tcb_at (\<lambda>ts. \<not> runnable ts) tcbptr1\<rbrace>
-     set_thread_state tcbptr2 Inactive
-   \<lbrace>\<lambda>rv. st_tcb_at (\<lambda>ts. \<not> runnable ts) tcbptr1\<rbrace>"
-  apply (wpsimp simp: set_thread_state_def
-                  wp: set_object_wp)
-  apply (clarsimp simp: st_tcb_at_def obj_at_def)
-  done
-
-lemma set_thread_state_not_runnable[wp]:
-  "\<lbrace>tcb_at tcbptr and K (P st)\<rbrace>
-     set_thread_state tcbptr st
-   \<lbrace>\<lambda>rv. st_tcb_at P tcbptr\<rbrace>"
-  apply (wpsimp simp: set_thread_state_def
-                  wp: set_object_wp)
-  apply (clarsimp simp: st_tcb_at_def obj_at_def)
-  done
+declare sts_st_tcb_at' [wp]
 
 lemma cancel_signal_valid_sched:
   "\<lbrace>valid_sched and st_tcb_at (Not \<circ> runnable) tcbptr\<rbrace>
@@ -12186,15 +12104,6 @@ lemma valid_sched_action_switch_thread_is_schedulable:
   by (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def
        is_schedulable_opt_def pred_tcb_at_def  obj_at_def get_tcb_rev
        in_release_queue_def schedulable_sc_tcb_at_def vs_all_heap_simps test_sc_refill_max_kh_simp)
-
-(* FIXME: replace weak versions of this lemma with this stronger version. *)
-lemma reschedule_valid_sched:
-  "\<lbrace>valid_ready_qs and valid_release_q and valid_blocked and valid_idle_etcb
-    and schedulable_ipc_queues and valid_machine_time\<rbrace>
-     reschedule_required
-   \<lbrace>\<lambda>rv. valid_sched \<rbrace>"
-  unfolding valid_sched_def
-  by (wpsimp wp: reschedule_required_valid_blocked)
 
 lemma thread_set_domain_is_schedulable_opt[wp]:
   "\<lbrace>\<lambda>s. Q (is_schedulable_opt t (in_release_queue t s) s)\<rbrace>
@@ -13451,8 +13360,10 @@ lemma perform_invocation_cur_thread_on_preemption:
     apply (wpsimp wp: invoke_irq_control_cur_thread_on_preemption)+
     apply (fastforce intro: invs_strengthen_cur_sc_chargeable simp: cur_thread_on_preemption_def)
    apply wpsimp
-  apply (wpsimp wp: hoare_vcg_E_conj hoare_elim_pred_conjE2 simp: cur_thread_on_preemption_def)
-  apply (fastforce intro: invs_strengthen_cur_sc_tcb_only_sym_bound strengthen_cur_sc_chargeable)
+   apply (simp add: cur_thread_on_preemption_def pred_conj_def, rule valid_validE_E)
+     apply (strengthen strengthen_cur_sc_chargeable)
+  apply (wpsimp wp: arch_perform_invocation_cur_sc_tcb_only_sym_bound)
+  apply (fastforce intro: invs_strengthen_cur_sc_tcb_only_sym_bound)
   done
 
 lemma handle_invocation_cur_thread_on_preemption:

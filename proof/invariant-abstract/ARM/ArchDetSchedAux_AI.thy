@@ -173,7 +173,7 @@ lemma perform_asid_control_invocation_valid_sched:
   "\<lbrace>ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci and
     valid_sched and valid_idle\<rbrace>
      perform_asid_control_invocation aci
-   \<lbrace>\<lambda>_. valid_sched::det_ext state \<Rightarrow> _\<rbrace>"
+   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (rule hoare_pre)
    apply (rule_tac I="invs and ct_active and
                       (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_aci aci"
