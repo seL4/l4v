@@ -97,13 +97,10 @@ lemma arch_switch_thread_corres:
              (arch_switch_to_thread t) (Arch.switchToThread t)"
   apply (simp add: arch_switch_to_thread_def RISCV64_H.switchToThread_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split', rule set_vm_root_corres[OF refl])
-      apply (rule corres_split', rule threadget_corres[where r="(=)"])
-         apply (simp add: tcb_relation_def)
-        apply simp
-        apply (rule user_setreg_corres)
-       apply (wpsimp simp: st_tcb_at_tcb_at valid_arch_state_asid_table
-                           valid_arch_state_global_arch_objs)+
+    apply (rule set_vm_root_corres[OF refl])
+   apply (clarsimp simp: st_tcb_at_tcb_at valid_arch_state_asid_table
+                         valid_arch_state_global_arch_objs)
+  apply simp
   done
 
 lemma schedule_choose_new_thread_sched_act_rct[wp]:

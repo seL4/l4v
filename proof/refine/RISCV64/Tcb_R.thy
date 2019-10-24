@@ -1000,13 +1000,6 @@ definition valid_tcb_invocation :: "tcbinvocation \<Rightarrow> bool" where
         ThreadControl _ _ _ mcp p _ _ _ \<Rightarrow> valid_option_prio p \<and> valid_option_prio mcp
       | _                           \<Rightarrow> True"
 
-lemma arch_tcb_set_ipc_buffer_corres:
-  "corres dc (tcb_at target and pspace_aligned and pspace_distinct) \<top>
-          (arch_tcb_set_ipc_buffer target ptr) (asUser target $ setTCBIPCBuffer ptr)"
-  apply (simp add: setTCBIPCBuffer_def)
-  apply (rule user_setreg_corres)
-  done
-
 lemma thread_set_ipc_weak_valid_sched_action:
   "\<lbrace> einvs and simple_sched_action\<rbrace>
    thread_set (tcb_ipc_buffer_update f) a
@@ -1053,12 +1046,6 @@ lemma threadcontrol_corres_helper4:
   by (case_tac ac;
       clarsimp simp: capBadge_def isCap_simps tcb_cnode_index_def cte_map_def cte_wp_at'_def
                      cte_level_bits_def)
-
-crunches arch_tcb_set_ipc_buffer
-  for weak_valid_sched_action[wp]: weak_valid_sched_action
-  and valid_etcbs[wp]: valid_etcbs
-  and pspace_alinged[wp]: pspace_aligned
-  and pspace_distinct[wp]: pspace_distinct
 
 crunches cap_delete
   for pspace_alinged[wp]: "pspace_aligned :: det_ext state \<Rightarrow> _"
@@ -1204,7 +1191,6 @@ lemma tc_corres:
                        | Some (vptr, g'') \<Rightarrow> \<exists>g'''. g' = Some (vptr, g''')
                               \<and> newroot_rel g'' g''')"
      and u: "{e, f, option_map undefined g} \<noteq> {None} \<longrightarrow> sl' = cte_map slot"
-  notes arch_tcb_set_ipc_buffer_def[simp del]
   shows
   "corres (intr \<oplus> (=))
     (einvs and simple_sched_action and tcb_at a and
