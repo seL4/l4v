@@ -55,13 +55,14 @@ lemma transfer_caps_loop_bcorres[wp]:
 
 lemma invoke_irq_control_bcorres[wp]: "bcorres (invoke_irq_control a) (invoke_irq_control a)"
   apply (cases a)
-  apply (wp | simp add: arch_invoke_irq_control_def | wpc)+
+   apply wpsimp
+  apply (rename_tac acap)
+  apply (case_tac acap)
+  apply wpsimp
   done
 
 lemma invoke_irq_handler_bcorres[wp]: "bcorres (invoke_irq_handler a) (invoke_irq_handler a)"
-  apply (cases a)
-  apply (wp | simp)+
-  done
+  by (cases a; wpsimp)
 
 lemma make_arch_fault_msg_bcorres[wp,BCorres2_AI_assms]:
   "bcorres (make_arch_fault_msg a b) (make_arch_fault_msg a b)"

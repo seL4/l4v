@@ -17,7 +17,12 @@ context Arch begin global_naming RISCV64
 primrec arch_irq_control_inv_valid_real ::
   "arch_irq_control_invocation \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
   where
-  "arch_irq_control_inv_valid_real RISCVNoIRQControlInvocation = (\<lambda>s. False)"
+  "arch_irq_control_inv_valid_real (RISCVIRQControlInvocation irq dest_slot src_slot trigger) =
+     (cte_wp_at ((=) cap.NullCap) dest_slot and
+      cte_wp_at ((=) cap.IRQControlCap) src_slot and
+      ex_cte_cap_wp_to is_cnode_cap dest_slot and
+      real_cte_at dest_slot and
+      K (irq \<le> maxIRQ \<and> irq \<noteq> irqInvalid))"
 
 defs arch_irq_control_inv_valid_def:
   "arch_irq_control_inv_valid \<equiv> arch_irq_control_inv_valid_real"
@@ -43,7 +48,14 @@ lemma decode_irq_control_valid [Interrupt_AI_asms]:
                    arch_decode_irq_control_invocation_def
                  split del: if_split cong: if_cong)
   apply (wpsimp wp: ensure_empty_stronger simp: cte_wp_at_eq_simp arch_irq_control_inv_valid_def
-        | wp (once) hoare_drop_imps)+
+         | wp (once) hoare_drop_imps)+
+  apply (clarsimp simp: linorder_not_less word_le_nat_alt unat_ucast maxIRQ_def)
+  apply (cases caps; clarsimp simp: cte_wp_at_eq_simp)
+  apply (intro conjI impI; clarsimp)
+  apply (drule ucast_ucast_mask_eq)
+   apply (subst and_mask_eq_iff_le_mask)
+   apply (simp add: mask_def word_le_nat_alt)
+  apply fast
   done
 
 lemma get_irq_slot_different_ARCH[Interrupt_AI_asms]:
@@ -162,6 +174,12 @@ lemma (* invoke_irq_control_invs *) [Interrupt_AI_asms]:
                          ex_cte_cap_to_cnode_always_appropriate_strg)
   apply (rename_tac irq_control, case_tac irq_control)
   apply (simp add: arch_irq_control_inv_valid_def)
+  apply (wp cap_insert_simple_invs
+         | simp add: IRQHandler_valid is_cap_simps  no_cap_to_obj_with_diff_IRQHandler_ARCH
+         | strengthen real_cte_tcb_valid)+
+  apply (clarsimp simp: cte_wp_at_caps_of_state is_simple_cap_def is_simple_cap_arch_def
+                        is_cap_simps is_pt_cap_def safe_parent_for_def
+                        ex_cte_cap_to_cnode_always_appropriate_strg)
   done
 
 
@@ -233,6 +251,7 @@ lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_asms]:
    \<lbrace>\<lambda>rv. arch_irq_control_inv_valid i\<rbrace>"
   apply (simp add: arch_irq_control_inv_valid_def)
   apply (cases i, simp)
+  apply (wpsimp wp: ex_cte_cap_to_pres simp: cap_table_at_typ)
   done
 
 end

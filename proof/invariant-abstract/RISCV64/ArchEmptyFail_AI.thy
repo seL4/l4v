@@ -18,7 +18,7 @@ named_theorems EmptyFail_AI_assms
 
 crunch_ignore (empty_fail)
   (add: setVSpaceRoot_impl sfence_impl hwASIDFlush_impl read_sbadaddr resetTimer_impl sbadaddr_val
-        pt_lookup_from_level)
+        pt_lookup_from_level setIRQTrigger_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
   loadWord, load_word_offs, storeWord, getRestartPC, get_mrs
