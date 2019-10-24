@@ -25,15 +25,35 @@ import {-# SOURCE #-} SEL4.Object.CNode
 import {-# SOURCE #-} SEL4.Kernel.CSpace
 import {-# SOURCE #-} SEL4.Object.Interrupt
 import qualified SEL4.Machine.Hardware.RISCV64 as Arch
+import SEL4.Machine.Hardware.RISCV64.PLATFORM (irqInvalid)
 
--- at this time, interrupts don't really exist on the target platform
 decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
         KernelF SyscallError ArchInv.IRQControlInvocation
 decodeIRQControlInvocation label args srcSlot extraCaps =
-    throw IllegalOperation
+    case (invocationType label, args, extraCaps) of
+        (ArchInvocationLabel ArchLabels.RISCVIRQIssueIRQHandler,
+            irqW:triggerW:index:depth:_, cnode:_) -> do
+            checkIRQ irqW
+            let irq = toEnum (fromIntegral irqW) :: IRQ
+            irqActive <- withoutFailure $ isIRQActive irq
+            when irqActive $ throw RevokeFirst
+            destSlot <- lookupTargetSlot cnode
+                (CPtr index) (fromIntegral depth)
+            ensureEmptySlot destSlot
+            return $
+                ArchInv.IssueIRQHandler irq destSlot srcSlot (triggerW /= 0)
+        (ArchInvocationLabel ArchLabels.RISCVIRQIssueIRQHandler,_,_) ->
+            throw TruncatedMessage
+        _ -> throw IllegalOperation
 
 performIRQControl :: ArchInv.IRQControlInvocation -> KernelP ()
-performIRQControl _ = fail "Unreachable due to no IRQControl decode on this arch."
+performIRQControl (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger)
+    = withoutPreemption $ do
+    doMachineOp $ Arch.setIRQTrigger irq trigger
+    -- do same thing as generic path in performIRQControl in Interrupt.lhs
+    setIRQState IRQSignal (IRQ irq)
+    cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot
+    return ()
 
 handleReservedIRQ :: IRQ -> Kernel ()
 handleReservedIRQ _ = return ()
@@ -42,4 +62,6 @@ initInterruptController :: Kernel ()
 initInterruptController = error "Unimplemented. Init code."
 
 checkIRQ :: Word -> KernelF SyscallError ()
-checkIRQ irq = throw IllegalOperation
+checkIRQ irqW = when (irqW > fromIntegral (fromEnum maxIRQ) ||
+                      irqW == fromIntegral (fromEnum irqInvalid)) $
+    throw $ RangeError 1 (fromIntegral (fromEnum maxIRQ))

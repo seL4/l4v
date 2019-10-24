@@ -49,6 +49,9 @@ addrFromKPPtr (PPtr ptr) = PAddr $ ptr - kernelBaseOffset
 pageColourBits :: Int
 pageColourBits = error "unused on this architecture"
 
+irqInvalid :: IRQ
+irqInvalid = IRQ 0
+
 {- stubs -}
 
 pptrBase :: VPtr

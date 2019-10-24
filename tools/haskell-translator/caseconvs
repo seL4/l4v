@@ -2016,3 +2016,10 @@ case \x of EndpointCap { capEPCanSend = True, capEPCanGrant = canGrant, capEPCan
 case \x of 0 -> level ->  ---> case \x of
     0 => \1
   | Suc level' => (%level. \2) (Suc level')
+
+case \x of (ArchInvocationLabel ArchLabels.RISCVIRQIssueIRQHandler, irqW:triggerW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.RISCVIRQIssueIRQHandler,_,_) -> _ ->  ---> let (label, args, extraCaps) = \x in
+    case (label, args, extraCaps) of
+      (ArchInvocationLabel RISCVIRQIssueIRQHandler,
+        irqW#triggerW#index#depth#_, cnode#_) => ->1
+    | (ArchInvocationLabel RISCVIRQIssueIRQHandler, _, _) => ->2
+    | _ => ->3

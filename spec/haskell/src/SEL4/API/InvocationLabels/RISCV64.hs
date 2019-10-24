@@ -20,4 +20,5 @@ data ArchInvocationLabel
         | RISCVPageGetAddress
         | RISCVASIDControlMakePool
         | RISCVASIDPoolAssign
+        | RISCVIRQIssueIRQHandler
         deriving (Show, Eq, Enum, Bounded)

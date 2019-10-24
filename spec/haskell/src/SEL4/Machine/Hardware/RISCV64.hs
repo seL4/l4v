@@ -126,6 +126,12 @@ resetTimer = do
     cbptr <- ask
     liftIO $ Platform.resetTimer cbptr
 
+initIRQController :: MachineMonad ()
+initIRQController = error "Unimplemented - boot code"
+
+setIRQTrigger :: IRQ -> Bool -> MachineMonad ()
+setIRQTrigger irq trigger = error "Unimplemented - machine op"
+
 getRestartPC = getRegister (Register RISCV64.FaultIP)
 setNextPC = setRegister (Register RISCV64.NextIP)
 
@@ -301,9 +307,6 @@ maskInterrupt maskI irq = do
 
 debugPrint :: String -> MachineMonad ()
 debugPrint str = liftIO $ putStrLn str
-
-initIRQController :: MachineMonad ()
-initIRQController = error "Unimplemented - boot code"
 
 read_sbadaddr :: MachineMonad Word
 read_sbadaddr = error "Unimplemented - machine op"
