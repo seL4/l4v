@@ -6040,4 +6040,8 @@ proof -
   show ?thesis by auto
 qed
 
+lemma of_nat_unat_le_mask_ucast:
+  "\<lbrakk>of_nat (unat t) = w; t \<le> mask LENGTH('a)\<rbrakk> \<Longrightarrow> t = UCAST('a::len \<rightarrow> 'b::len) w"
+  by (clarsimp simp: ucast_nat_def ucast_ucast_mask simp flip: and_mask_eq_iff_le_mask)
+
 end
