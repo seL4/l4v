@@ -285,7 +285,7 @@ lemma translate_address_kernel_elf_window:
   apply (simp add: elf_window_1M is_aligned_pt_slot_offset_pte)
   apply (simp add: bit_simps addr_from_ppn_def shiftl_shiftl)
   apply (simp add: ptrFromPAddr_def addrFromPPtr_def)
-  apply (simp add: addrFromKPPtr_def kernelBaseOffset_def paddrLoad_def kernelBase_def)
+  apply (simp add: addrFromKPPtr_def kernelBaseOffset_def paddrLoad_def kernelELFBase_def)
   apply (simp add: pt_bits_left_def bit_simps level_defs)
   apply (rule conjI)
    apply (simp add: pptrBase_def baseOffset_def pAddr_base_def canonical_bit_def is_aligned_def)
