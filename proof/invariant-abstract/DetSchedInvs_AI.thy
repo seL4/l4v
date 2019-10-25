@@ -2292,24 +2292,6 @@ abbreviation valid_sched :: "'z::state_ext state \<Rightarrow> bool" where
 
 lemmas valid_sched_def = valid_sched_2_def
 
-lemma valid_sched_valid_blocked:
-  "valid_sched s \<Longrightarrow> valid_blocked s" by (clarsimp simp: valid_sched_def)
-
-lemma valid_sched_valid_ready_qs:
-  "valid_sched s \<Longrightarrow> valid_ready_qs s" by (clarsimp simp: valid_sched_def)
-
-lemma valid_sched_valid_release_q:
-  "valid_sched s \<Longrightarrow> valid_release_q s" by (clarsimp simp: valid_sched_def)
-
-lemma valid_sched_valid_sched_action:
-  "valid_sched s \<Longrightarrow> valid_sched_action s" by (simp add: valid_sched_def)
-
-lemma valid_sched_weak_valid_sched_action:
-  "valid_sched s \<Longrightarrow> weak_valid_sched_action s" by (simp add: valid_sched_def valid_sched_action_def)
-
-lemma valid_sched_ct_in_cur_domain:
-  "valid_sched s \<Longrightarrow> ct_in_cur_domain s" by (simp add: valid_sched_def)
-
 abbreviation "valid_sched_except_blocked_2 \<equiv> valid_sched_2 True False"
 
 abbreviation valid_sched_except_blocked :: "'z::state_ext state \<Rightarrow> bool" where
@@ -2439,6 +2421,32 @@ lemma valid_blocked_except_set_not_runnable:
   unfolding valid_blocked_defs obj_at_kh_kheap_simps runnable_eq
   by (erule allEI; rename_tac t'; case_tac "t' = t"; clarsimp simp: pred_map_simps)
 
+lemma valid_sched_valid_blocked:
+  "valid_sched s \<Longrightarrow> valid_blocked_except_set TS s" by (clarsimp simp: valid_sched_def)
+
+lemma valid_sched_valid_ready_qs:
+  "valid_sched s \<Longrightarrow> valid_ready_qs s" by (clarsimp simp: valid_sched_def)
+
+lemma valid_sched_valid_release_q:
+  "valid_sched s \<Longrightarrow> valid_release_q s" by (clarsimp simp: valid_sched_def)
+
+lemma valid_sched_valid_sched_action:
+  "valid_sched s \<Longrightarrow> valid_sched_action s" by (simp add: valid_sched_def)
+
+lemma valid_sched_weak_valid_sched_action:
+  "valid_sched s \<Longrightarrow> weak_valid_sched_action s" by (simp add: valid_sched_def valid_sched_action_def)
+
+lemma valid_sched_ct_in_cur_domain:
+  "valid_sched s \<Longrightarrow> ct_in_cur_domain s" by (simp add: valid_sched_def)
+
+lemma valid_sched_schedulable_ipc_queues:
+  "valid_sched s \<Longrightarrow> schedulable_ipc_queues s"
+  by (clarsimp simp: valid_sched_def)
+
+lemma valid_sched_imp_except_blocked:
+  "valid_sched s \<Longrightarrow> valid_sched_except_blocked s"
+  by (clarsimp simp: valid_sched_def)
+
 (* sched_context and other thread properties *)
 abbreviation sc_with_tcb_prop ::
   "obj_ref \<Rightarrow> (obj_ref \<Rightarrow> 'z state \<Rightarrow> bool) \<Rightarrow> 'z state \<Rightarrow> bool"
@@ -2463,6 +2471,10 @@ abbreviation sc_scheduler_act_not :: "obj_ref \<Rightarrow> 'z state \<Rightarro
 
 abbreviation ipc_queued_thread :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "ipc_queued_thread t s \<equiv> pred_map ipc_queued_thread_state (tcb_sts_of s) t"
+
+lemma schedulable_ipc_queuesE1:
+  "schedulable_ipc_queues s \<Longrightarrow> ipc_queued_thread t s \<Longrightarrow> schedulable_if_bound_sc_thread t s"
+  by (clarsimp simp: schedulable_ipc_queues_defs)
 
 abbreviation not_ipc_queued_thread :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "not_ipc_queued_thread t s \<equiv> \<not> ipc_queued_thread t s"

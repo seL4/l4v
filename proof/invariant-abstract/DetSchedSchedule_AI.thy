@@ -3996,9 +3996,9 @@ lemma cancel_all_ipc_valid_sched:
   apply (erule (1) valid_objs_RecvEP_distinct[rotated])
   done
 
-lemma cancel_all_signals_loop_body_valid_sched:
-  "\<lbrace>(\<lambda>s. ipc_queued_thread t s \<and> t \<noteq> idle_thread s) and valid_sched\<rbrace>
-   do y <- set_thread_state t Restart;
+lemma set_thread_state_possible_switch_to_valid_sched:
+  "\<lbrace>(\<lambda>s. ipc_queued_thread t s \<and> t \<noteq> idle_thread s) and (valid_sched and K (active ts))\<rbrace>
+   do y <- set_thread_state t ts;
       possible_switch_to t
    od
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
@@ -4015,8 +4015,8 @@ lemma cancel_all_signals_loop_valid_sched:
                 possible_switch_to t
              od) queue
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (rule hoare_gen_asm, rule ball_mapM_x_scheme[OF _ cancel_all_signals_loop_body_valid_sched])
-  by (wpsimp wp: set_thread_state_pred_map_tcb_sts_of)
+  apply (rule hoare_gen_asm, rule ball_mapM_x_scheme)
+    by (wpsimp wp: set_thread_state_pred_map_tcb_sts_of set_thread_state_possible_switch_to_valid_sched)+
 
 lemma cancel_all_signals_valid_sched[wp]:
   "\<lbrace>\<lambda>s. valid_sched s \<and> valid_objs s \<and>  valid_idle s \<and> sym_refs (state_refs_of s)\<rbrace>
@@ -4453,9 +4453,6 @@ lemma valid_sched_blocked_imp:
    "\<lbrakk>valid_sched s; not_queued t s; not_in_release_q t s; scheduler_act_not t s; t \<noteq> cur_thread s\<rbrakk> \<Longrightarrow>
              \<not> (pred_map runnable (tcb_sts_of s) t \<and> active_sc_tcb_at t s)"
   by (auto simp: valid_sched_def valid_blocked_defs scheduler_act_not_def runnable_eq_active)
-
-lemma valid_sched_imp_except_blocked: "valid_sched s \<Longrightarrow> valid_sched_except_blocked s"
-  by (clarsimp simp: valid_sched_def)
 
 lemma reschedule_cnt[wp]:
   "\<lbrace>\<top>\<rbrace> reschedule_required \<lbrace>\<lambda>_ s. scheduler_action s = choose_new_thread\<rbrace>"
@@ -9884,14 +9881,6 @@ lemma set_simple_ko_pred_tcb_at_state:
          clarsimp split: option.splits simp: pred_tcb_at_def obj_at_def fun_upd_def)
   done
 
-lemma valid_sched_schedulable_ipc_queues:
-  "valid_sched s \<Longrightarrow> schedulable_ipc_queues s"
-  by (clarsimp simp: valid_sched_def)
-
-lemma schedulable_ipc_queuesE1:
-  "schedulable_ipc_queues s \<Longrightarrow> ipc_queued_thread t s \<Longrightarrow> schedulable_if_bound_sc_thread t s"
-  by (clarsimp simp: schedulable_ipc_queues_defs)
-
 lemma RecvEP_queued_ipc_queued_thread:
   "\<lbrakk>kheap s epptr = Some (Endpoint (RecvEP (dest # queue_tail)));
     sym_refs (state_refs_of s)\<rbrakk>
@@ -11268,18 +11257,6 @@ lemma cancel_ipc_invs_st_tcb_at:
   by (wpsimp simp: invs_def valid_state_def valid_pspace_def
                wp: cancel_ipc_simple_except_awaiting_reply)
 
-(* FIXME: move *)
-lemma valid_sched_valid_blocked:
-  "valid_sched s \<Longrightarrow> valid_blocked s" by (clarsimp simp: valid_sched_def)
-
-(* FIXME: move *)
-lemma valid_sched_valid_ready_qs:
-  "valid_sched s \<Longrightarrow> valid_ready_qs s" by (clarsimp simp: valid_sched_def)
-
-(* FIXME: move *)
-lemma valid_sched_valid_release_q:
-  "valid_sched s \<Longrightarrow> valid_release_q s" by (clarsimp simp: valid_sched_def)
-
 lemma send_signal_BOR_helper:
   notes not_not_in_eq_in[iff] shows
   "ntfn_obj ntfn = IdleNtfn
@@ -11418,12 +11395,16 @@ crunches receive_ipc_preamble
   and scheduler_act_not[wp]: "scheduler_act_not thread"
   (wp: hoare_drop_imps)
 
+crunches receive_ipc_preamble
+  for schedulable_if_bound[wp]: "schedulable_if_bound_sc_thread t"
+  (ignore: thread_set update_sched_context wp: crunch_wps)
+
 crunches complete_signal, do_nbrecv_failed_transfer
   for valid_sched[wp]: "valid_sched"
 
 (* Preconditions for the guts of receive_ipc, after the reply preamble *)
 abbreviation (input) receive_ipc_valid_sched_preconds ::
-  "obj_ref \<Rightarrow> obj_ref \<Rightarrow> cap \<Rightarrow> obj_ref option \<Rightarrow> endpoint \<Rightarrow> (det_state \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> bool"
+  "obj_ref \<Rightarrow> obj_ref \<Rightarrow> cap \<Rightarrow> obj_ref option \<Rightarrow> endpoint \<Rightarrow> ('state_ext state \<Rightarrow> bool) \<Rightarrow> 'state_ext state \<Rightarrow> bool"
   where
   "receive_ipc_valid_sched_preconds t ep_ptr reply reply_opt ep ex_invs \<equiv>
     \<lambda>s. valid_sched s
@@ -11462,17 +11443,67 @@ lemmas receive_ipc_blocked_valid_sched =
   receive_ipc_blocked_valid_sched'[where ep="RecvEP queue" and queue=queue for queue, simplified]
   receive_ipc_idle_valid_sched
 
+lemma reply_push_sender_sc_Some_valid_sched:
+  "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) sender_sc) sender s \<and>
+        st_tcb_at active thread s \<and>
+        receive_ipc_preamble_rv reply (Some reply_ptr) s \<and>
+        st_tcb_at ((=) (BlockedOnSend ep_ptr sender_data)) sender s \<and>
+        sender \<noteq> idle_thread s \<and> thread = cur_thread s \<and> valid_sched s\<rbrace>
+   reply_push sender thread reply_ptr (\<exists>y. sender_sc = Some y)
+   \<lbrace>\<lambda>r. valid_sched\<rbrace>"
+  apply (clarsimp simp: reply_push_def)
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule hoare_seq_ext[OF _ liftM_wp[where P=P and Q="\<lambda>r. P" for P, simplified,
+                                          OF get_simple_ko_inv]])
+  apply (rule hoare_seq_ext[OF _ assert_inv])
+  apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
+  apply (rule hoare_seq_ext[OF _ assert_inv])
+  apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
+  apply (rule hoare_seq_ext[OF _ assert_inv])
+  apply (rule_tac S="sender_sc = sc_caller \<and> sender \<noteq> thread \<and> sender \<noteq> reply_ptr \<and> thread \<noteq> reply_ptr"
+           in hoare_gen_asm'', fastforce simp: sk_obj_at_pred_def pred_tcb_at_def obj_at_def)
+  apply (rule subst[of "do _ <- do _ <- a; b od; c od"
+                       "do _ <- a; _ <- b; c od"
+                       "\<lambda>c. \<lbrace>P\<rbrace> c \<lbrace>Q\<rbrace>"
+                    for a b c P Q]
+         , simp add: bind_assoc)
+  apply (rule_tac B="\<lambda>_ s. st_tcb_at ((=) (BlockedOnReply reply_ptr)) sender s
+                           \<and> bound_sc_tcb_at ((=) sc_callee) thread s
+                           \<and> bound_sc_tcb_at ((=) sc_caller) sender s
+                           \<and> st_tcb_at active thread s
+                           \<and> sender \<noteq> idle_thread s \<and> thread = cur_thread s
+                           \<and> valid_sched s"
+           in hoare_seq_ext[rotated])
+   apply (wpsimp wp: sts_st_tcb_at_cases set_thread_state_valid_sched)
+   apply (intro conjI;
+          clarsimp simp: pred_tcb_at_eq_commute st_tcb_at_def obj_at_def
+                 intro!: valid_sched_valid_blocked
+                         valid_sched_imp_except_blocked
+                         valid_sched_scheduler_act_not_better
+                  elim!: valid_ready_qs_not_queued_not_runnable[OF valid_sched_valid_ready_qs]
+                         valid_release_q_not_in_release_q_not_runnable[OF valid_sched_valid_release_q]
+                         schedulable_ipc_queuesE1[OF valid_sched_schedulable_ipc_queues])
+   apply (clarsimp simp: ipc_queued_thread_state_def vs_all_heap_simps)
+  apply (rule hoare_when_cases; clarsimp split: if_splits)
+  apply (rename_tac sc_caller)
+  apply (rule hoare_seq_ext[OF _ gscrpls_sp[simplified]])
+  apply (wpsimp wp: sched_context_donate_valid_sched get_simple_ko_wp)
+  apply (fastforce simp: tcb_at_kh_simps vs_all_heap_simps)
+  done
+
 lemma receive_ipc_valid_sched:
   "\<lbrace>\<lambda>s. valid_sched s
         \<and> st_tcb_at active thread s
-        \<and> cur_thread s = thread
+        \<and> thread = cur_thread s
         \<and> not_queued thread s
         \<and> not_in_release_q thread s
         \<and> scheduler_act_not thread s
+        \<and> schedulable_if_bound_sc_thread thread s
         \<and> invs s\<rbrace>
     receive_ipc thread ep_cap is_blocking reply_cap
    \<lbrace>\<lambda>rv. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>" (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
-  supply if_split[split del](*
+  supply if_split[split del]
   apply (cases ep_cap
          ; simp add: receive_ipc_def split_def receive_ipc_preamble_def[symmetric]
                      receive_ipc_blocked_def[symmetric] receive_ipc_idle_def[symmetric]
@@ -11527,9 +11558,7 @@ lemma receive_ipc_valid_sched:
   \<comment> \<open>do_ipc_transfer, and stash some knowledge for later\<close>
   apply (rule_tac B="\<lambda>r. receive_ipc_valid_sched_preconds thread ep_ptr reply_cap reply_opt
                            (mk_ep SendEP queue)
-                           (\<lambda>s. sym_refs (\<lambda>p. if p = sender then tcb_non_st_state_refs_of s sender
-                                                            else state_refs_of s p)
-                                \<and> st_tcb_at ((=) (BlockedOnSend ep_ptr sender_data)) sender s
+                           (\<lambda>s. st_tcb_at ((=) (BlockedOnSend ep_ptr sender_data)) sender s
                                 \<and> state_refs_of s ep_ptr = set queue \<times> {EPSend}
                                 \<and> all_invs_but_sym_refs s)"
            in hoare_seq_ext[rotated])
@@ -11539,64 +11568,31 @@ lemma receive_ipc_valid_sched:
              ; fastforce simp: in_state_refs_of_iff refs_of_rev pred_tcb_at_def obj_at_def)
           , clarsimp)
    apply (frule ko_at_state_refs_ofD, simp)
-   apply (erule sym_refs_insert_delete'[where t=EPSend]
-          ; simp add: st_tcb_at_tcb_non_st_state_refs_of)
   \<comment> \<open>thread_get tcb_fault\<close>
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
-  \<comment> \<open>if not call and no fault: sender \<rightarrow> Running\<close>
   apply (rule hoare_if[rotated])
-   apply (wpsimp)
-
-
-
-  apply (simp add: receive_ipc_def)
-  including no_pre
-  apply (wp | wpc | simp add: get_sk_obj_ref_def update_sk_obj_ref_def)+
-       apply (wp set_thread_state_Inactive_simple_sched_action_not_runnable | wpc)+
-                 apply ((wp set_thread_state_Inactive_simple_sched_action_not_runnable
-                        | simp add: do_nbrecv_failed_transfer_def)+)[2]
-              apply ((wp possible_switch_to_valid_sched_weak sts_st_tcb_at' hoare_drop_imps
-                          set_thread_state_valid_ready_qs
-                          set_thread_state_valid_sched_action
-                          set_thread_state_valid_blocked_except | simp | wpc)+)[3]
-             apply simp
-             apply (rule_tac Q="\<lambda>_. valid_sched and scheduler_act_not (sender) and not_queued (sender) and not_cur_thread (sender) and (\<lambda>s. sender \<noteq> idle_thread s)" in hoare_strengthen_post)
-              apply wp
-             apply (simp add: valid_sched_def)
-            apply ((wp | wpc)+)[1]
-           apply (simp | wp gts_wp hoare_vcg_all_lift)+
-          apply (wp hoare_vcg_imp_lift)
-           apply ((simp add: set_simple_ko_def set_object_def |
-                   wp hoare_drop_imps | wpc)+)[1]
-          apply (wp hoare_vcg_imp_lift get_object_wp
-                    set_thread_state_Inactive_simple_sched_action_not_runnable gbn_wp
-               | simp add: get_simple_ko_def do_nbrecv_failed_transfer_def a_type_def
-                    split: kernel_object.splits
-               | wpc
-               | wp_once hoare_vcg_all_lift hoare_vcg_ex_lift)+
-  apply (subst st_tcb_at_kh_simp[symmetric])+
-  apply (clarsimp simp: st_tcb_at_kh_if_split default_notification_def default_ntfn_def isActive_def)
-  apply (rename_tac xh xi xj)
-  apply (drule_tac t="hd xh" and P'="\<lambda>ts. \<not> active ts" in st_tcb_weakenE)
-   apply clarsimp
-  apply (simp only: st_tcb_at_not)
-  apply (subgoal_tac "hd xh \<noteq> idle_thread s")
-   apply (fastforce simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def valid_ready_qs_def st_tcb_at_not ct_in_state_def not_cur_thread_def runnable_eq_active not_queued_def scheduler_act_not_def split: scheduler_action.splits)
-(* clag from send_signal_valid_sched *)
-  apply clarsimp
-  apply (frule invs_valid_idle)
-  apply (drule_tac ptr=xc in idle_not_queued)
-    apply (clarsimp simp: invs_sym_refs)
-   apply (simp add: state_refs_of_def obj_at_def)
-  apply (frule invs_valid_objs)
-  apply (simp add: valid_objs_def obj_at_def)
-  apply (drule_tac x = xc in bspec)
-   apply (simp add: dom_def)
-  apply (clarsimp simp: valid_obj_def valid_ntfn_def)
-  apply (drule hd_in_set)
-  apply simp
-  done*)
-sorry (* receive_ipc_valid_sched *)
+   \<comment> \<open>if not call and no fault: sender \<rightarrow> Running\<close>
+   apply (wpsimp wp: set_thread_state_possible_switch_to_valid_sched)
+   apply (intro conjI)
+    apply (clarsimp simp: ipc_queued_thread_state_def tcb_at_kh_simps pred_map_simps)
+   apply (erule (1) not_idle_thread', clarsimp)
+  apply (rule hoare_if[rotated])
+   \<comment> \<open>if not grant or no reply: sender \<longrightarrow> Inactive\<close>
+   apply (wpsimp wp: set_thread_state_Inactive_not_queued_valid_sched cong: if_cong)
+   apply (intro conjI;
+          clarsimp simp: pred_tcb_at_eq_commute st_tcb_at_def obj_at_def
+                 intro!: valid_sched_valid_blocked
+                         valid_sched_imp_except_blocked
+                         valid_sched_scheduler_act_not_better
+                  elim!: valid_ready_qs_not_queued_not_runnable[OF valid_sched_valid_ready_qs]
+                         valid_release_q_not_in_release_q_not_runnable[OF valid_sched_valid_release_q])
+  \<comment> \<open>otherwise (grant and reply and (call or fault)): reply_push\<close>
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (clarsimp)
+  apply (wpsimp wp: reply_push_sender_sc_Some_valid_sched)
+  apply (intro conjI; assumption?)
+  apply (erule (1) not_idle_thread', clarsimp)
+  done
 
 end
 
