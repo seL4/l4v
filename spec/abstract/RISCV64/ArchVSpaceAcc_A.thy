@@ -212,7 +212,7 @@ definition pt_lookup_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (ob
 fun pt_lookup_from_level ::
   "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (machine_word, 'z::state_ext) lf_monad"
   where
-  "pt_lookup_from_level level pt_ptr vptr target_pt_ptr = doE
+  "pt_lookup_from_level level pt_ptr vptr target_pt_ptr s = (doE
      unlessE (0 < level) $ throwError InvalidRoot;
      slot <- returnOk $ pt_slot_offset level pt_ptr vptr;
      pte <- liftE $ gets_the $ oapply slot o ptes_of;
@@ -221,9 +221,22 @@ fun pt_lookup_from_level ::
      if ptr = target_pt_ptr
        then returnOk slot
        else pt_lookup_from_level (level - 1) ptr vptr target_pt_ptr
-   odE"
+   odE) s"
+(* We apply "s" to avoid a type variable warning, and increase in global freeindex counter,
+   which we would get without the application *)
 
 declare pt_lookup_from_level.simps[simp del]
+
+(* Recover simp rule without state applied: *)
+schematic_goal pt_lookup_from_level_simps:
+  "pt_lookup_from_level level pt_ptr vptr target_pt_ptr = ?rhs"
+  by (rule ext, rule pt_lookup_from_level.simps)
+
+(* Kernel mappings go from pptr base to top of virtual memory. This definition encompasses
+   the kernel window, kernel ELF window, and kernel device window.
+   These indices identify the relevant top level table slots. *)
+definition kernel_mapping_slots :: "pt_index set" where
+  "kernel_mapping_slots \<equiv> {i. i \<ge> ucast (pptr_base >> pt_bits_left max_pt_level)}"
 
 end
 end

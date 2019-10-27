@@ -2902,7 +2902,7 @@ lemma pspace_respects_device_region_dmo:
   shows "do_machine_op f \<lbrace>pspace_respects_device_region\<rbrace>"
   apply (clarsimp simp: do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
                         get_def return_def)
-  apply (drule_tac P2 = "(=) (device_state (machine_state s))" in use_valid[OF _ valid_f])
+  apply (drule_tac P1 = "(=) (device_state (machine_state s))" in use_valid[OF _ valid_f])
   apply auto
   done
 
@@ -2911,7 +2911,7 @@ lemma cap_refs_respects_device_region_dmo:
   shows "do_machine_op f \<lbrace>cap_refs_respects_device_region\<rbrace>"
   apply (clarsimp simp: do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
                         get_def return_def)
-  apply (drule_tac P2 = "(=) (device_state (machine_state s))" in use_valid[OF _ valid_f])
+  apply (drule_tac P1 = "(=) (device_state (machine_state s))" in use_valid[OF _ valid_f])
   apply auto
   done
 

@@ -313,11 +313,11 @@ lemma pt_lookup_from_level_inv[wp]:
   "\<lbrace>Q and E\<rbrace> pt_lookup_from_level level pt_ptr vptr target_pt_ptr \<lbrace>\<lambda>_. Q\<rbrace>,\<lbrace>\<lambda>_. E\<rbrace>"
 proof (induct level arbitrary: pt_ptr)
   case 0
-  then show ?case by (wpsimp simp: pt_lookup_from_level.simps)
+  then show ?case by (wpsimp simp: pt_lookup_from_level_simps)
 next
   case (minus level)
   note IH = minus(1)
-  from \<open>0 < level\<close>  show ?case by (subst pt_lookup_from_level.simps) (wpsimp wp: IH)
+  from \<open>0 < level\<close>  show ?case by (subst pt_lookup_from_level_simps) (wpsimp wp: IH)
 qed
 
 crunches unmap_page_table
@@ -702,13 +702,13 @@ lemma pt_lookup_from_level_wp:
 proof (induct top_level arbitrary: top_level_pt)
   case 0
   then show ?case
-    by (wpsimp simp: pt_lookup_from_level.simps)
+    by (wpsimp simp: pt_lookup_from_level_simps)
 next
   case (minus top_level)
   note IH=minus(1)
   from \<open>0 < top_level\<close>
   show ?case
-    apply (subst pt_lookup_from_level.simps)
+    apply (subst pt_lookup_from_level_simps)
     apply (wpsimp wp: IH)
     apply (rule conjI; clarsimp)
      prefer 2

@@ -121,8 +121,8 @@ context Arch begin global_naming RISCV64
 lemma empty_fail_pt_lookup_from_level[wp]:
   "empty_fail (pt_lookup_from_level level pt_ptr vptr target_pt_ptr)"
   apply (induct level arbitrary: pt_ptr)
-   apply (subst pt_lookup_from_level.simps, simp)
-  apply (subst pt_lookup_from_level.simps)
+   apply (subst pt_lookup_from_level_simps, simp)
+  apply (subst pt_lookup_from_level_simps)
   apply wpsimp
   done
 

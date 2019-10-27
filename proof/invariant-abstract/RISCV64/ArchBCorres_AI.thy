@@ -34,7 +34,7 @@ lemma vs_lookup_slot_truncate[simp]:
 
 lemma pt_lookup_from_level_bcorres[wp]:
   "bcorres (pt_lookup_from_level l r b c) (pt_lookup_from_level l r b c)"
-  by (induct l arbitrary: r b c rule: bit0.minus_induct; wpsimp simp: pt_lookup_from_level.simps)
+  by (induct l arbitrary: r b c rule: bit0.minus_induct; wpsimp simp: pt_lookup_from_level_simps)
 
 crunch (bcorres) bcorres[wp]: arch_finalise_cap truncate_state
 crunch (bcorres) bcorres[wp]: prepare_thread_delete truncate_state
