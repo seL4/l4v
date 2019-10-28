@@ -108,7 +108,7 @@ lemma switch_to_idle_thread_ct_not_queued [wp, DetSchedSchedule_AI_assms]:
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def
                    tcb_sched_action_def | wp)+
   apply (clarsimp simp: valid_sched_def valid_ready_qs_def valid_idle_def
-                         pred_tcb_at_def obj_at_def not_queued_def pred_map_simps vs_all_heap_simps
+                        pred_tcb_at_def obj_at_def not_queued_def pred_map_simps vs_all_heap_simps
          , fastforce)
   done
 

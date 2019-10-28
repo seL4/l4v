@@ -9380,7 +9380,8 @@ lemma reply_push_schedulable_ipc_queues[wp]:
 lemma reply_push_valid_release_q[wp]:
   "\<lbrace>valid_release_q and not_in_release_q caller and not_in_release_q callee
     and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at ((=) None) callee s)\<rbrace>
-     reply_push caller callee reply_ptr can_donate \<lbrace>\<lambda>rv. valid_release_q\<rbrace>"
+   reply_push caller callee reply_ptr can_donate
+   \<lbrace>\<lambda>rv. valid_release_q\<rbrace>"
   apply (clarsimp simp: reply_push_def)
   apply (case_tac can_donate; simp)
   by (wpsimp wp: hoare_drop_imp get_sched_context_wp hoare_vcg_if_lift2 hoare_vcg_all_lift
@@ -10426,13 +10427,7 @@ lemma handle_timeout_valid_sched:
   unfolding handle_timeout_def
   by (wpsimp wp: send_fault_ipc_valid_sched_for_handle_timeout assert_wp)
 
-(* FIXME: unneeded? *)
-lemma refill_unblock_check_ko_at_Endpoint:
-  "refill_unblock_check param_a \<lbrace>\<lambda>s. Q (ko_at (Endpoint x) p s)\<rbrace>"
-  unfolding refill_unblock_check_def
   apply (wpsimp simp: wp: set_refills_wp get_refills_wp is_round_robin_wp refill_ready_wp)
-  by  (clarsimp simp: obj_at_def)
-
   apply (wpsimp wp: valid_ep_q_lift_pre_conj[where R=valid_machine_time] hoare_vcg_disj_lift)
    apply (frule active_implies_valid_refills_tcb_at)
    apply (simp add: pred_tcb_at_def obj_at_def valid_refills_def sc_at_pred_n_def)
@@ -10443,51 +10438,6 @@ for active_sc_tcb_at[wp]: "\<lambda>s :: ('state_ext state). active_sc_tcb_at a 
 and not_in_release_q[wp]: "\<lambda>s::('state_ext state). not_in_release_q x s"
 and simple_sched_action[wp]: "\<lambda>s::('state_ext state). simple_sched_action s"
   (wp: crunch_wps maybeM_wp transfer_caps_loop_pres )
-
-(* FIXME: unneeded? *)
-lemma set_reply_Endpoint_ko_at:
-  "\<lbrace>\<lambda>s. Q (ko_at (Endpoint ep) pa s)\<rbrace> set_reply p r \<lbrace>\<lambda>_ s. Q (ko_at (Endpoint ep) pa s)\<rbrace>"
-  by (set_simple_ko_method wp_thm: set_object_wp get_object_wp)
-
-(* FIXME: unneeded? *)
-lemma set_sc_obj_ref_ko_at_Endpoint:
-  "\<lbrace>\<lambda>s. Q (ko_at (Endpoint ep) p s)\<rbrace>
-    set_sc_obj_ref f scp replies
-   \<lbrace>\<lambda>_ s. Q (ko_at (Endpoint ep) p s)\<rbrace>"
-  unfolding set_sc_obj_ref_def
-  apply (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
-  done
-
-(* FIXME: unneeded? *)
-lemma update_sk_obj_ref_Reply_ko_at_Endpoint[wp]:
-  "\<lbrace>\<lambda>s. Q (ko_at (Endpoint ep) p s)\<rbrace>
-   update_sk_obj_ref Reply update ref new
-   \<lbrace>\<lambda>a s. Q (ko_at (Endpoint ep) p s)\<rbrace>"
-  by (wpsimp simp: update_sk_obj_ref_def wp: set_reply_Endpoint_ko_at)
-
-(* FIXME: unneeded? *)
-lemma tcb_sched_context_update_ko_at_Endpoint:
-  "\<lbrace>\<lambda>s. Q (ko_at (Endpoint ep) p s)\<rbrace>
-     set_tcb_obj_ref tcb_sched_context_update from_tptr sc_opt
-   \<lbrace>\<lambda>rv s. Q (ko_at (Endpoint ep) p s)\<rbrace>"
-  unfolding set_tcb_obj_ref_def
-  apply (wpsimp wp: set_object_wp get_object_wp
-              simp: )
-  apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
-  done
-
-(* FIXME: unneeded? *)
-(* crunch ko_at_Endpoint[wp]: tcb_release_remove "\<lambda>s. Q (ko_at (Endpoint ep) p s)"
- *)
-
-(* FIXME: unneeded? *)
-lemma reply_unlink_sc_no_ep_update:
-  "reply_unlink_sc sp rp \<lbrace>\<lambda>s. Q (ko_at (Endpoint ep) t s)\<rbrace>"
-  apply (simp add: reply_unlink_sc_def)
-  apply (wpsimp simp: set_sc_obj_ref_def
-                  wp: hoare_vcg_imp_lift get_simple_ko_wp update_sched_context_wp
-                      update_sk_obj_ref_wps set_simple_ko_wp)
-  by (fastforce simp: obj_at_def split: if_splits)
 
 crunch not_in_release_q[wp]: reply_remove "\<lambda>s::('state_ext state). not_in_release_q a s"
   (wp: crunch_wps tcb_release_remove_not_in_release_q')
@@ -11519,7 +11469,7 @@ lemma receive_ipc_preamble_lift:
   by (wpsimp simp: receive_ipc_preamble_def wp: assms)
 
 crunches receive_ipc_preamble
-  for cur_thread[wp]: "(\<lambda>s. P (cur_thread s)) :: det_state \<Rightarrow> _"
+  for cur_thread[wp]: "(\<lambda>s. P (cur_thread s))"
   and not_queued[wp]: "not_queued thread "
   and not_in_release_q[wp]: "not_in_release_q thread"
   and scheduler_act_not[wp]: "scheduler_act_not thread"
