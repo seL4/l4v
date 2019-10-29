@@ -642,6 +642,23 @@ lemma arch_finalise_cap_ct_in_state[DetSchedSchedule_AI_assms]:
   apply (case_tac c; case_tac x; simp add: arch_finalise_cap_def)
   by (wpsimp wp: ct_in_state_thread_state_lift)+
 
+crunches arch_switch_to_thread, arch_switch_to_idle_thread
+  for cur_sc_offset_ready[wp]: "(\<lambda>s. P (cur_sc_offset_ready usage s)) :: det_state \<Rightarrow> _"
+  and cur_sc_offset_sufficient[wp]: "(\<lambda>s. P (cur_sc_offset_sufficient usage s)) :: det_state \<Rightarrow> _"
+  and cur_sc_offset_ready'[wp]: "(\<lambda>s. P (cur_sc_offset_ready (consumed_time s) s)) :: det_state \<Rightarrow> _"
+  and cur_sc_offset_sufficient'[wp]: "(\<lambda>s. P (cur_sc_offset_sufficient (consumed_time s) s)) :: det_state \<Rightarrow> _"
+  and cur_sc_budget_sufficient[wp]: "(\<lambda>s. P (cur_sc_budget_sufficient s)) :: det_state \<Rightarrow> _"
+  and cur_sc_chargeable[wp]: "cur_sc_chargeable :: det_state \<Rightarrow> _"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunches arch_switch_to_thread, arch_switch_to_idle_thread
+  for valid_sched_misc[wp]:  "(\<lambda>s. P (ready_queues s) (release_queue s)) :: det_state \<Rightarrow> _"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunches arch_switch_to_thread, arch_switch_to_idle_thread
+  for ready_or_released[wp]: "ready_or_released :: det_state \<Rightarrow> _"
+  (wp: crunch_wps simp: ready_or_released_def)
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI

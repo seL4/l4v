@@ -746,6 +746,8 @@ lemma period_window_single:
    \<Longrightarrow> window refills period = (unat (r_amount a) \<le> unat period)"
   unfolding window_def by fastforce
 
+\<comment> \<open> FIXME: it would be nice to phrase the fourth conjunct as
+            \<forall>refill \<in> set (sc_refills sc). MIN_BUDGET <= r_amount refill\<close>
 definition sc_valid_refills :: "sched_context \<Rightarrow> bool"
 where
   "sc_valid_refills sc =
@@ -790,19 +792,19 @@ lemma refills_sum_nil[simp]: "refills_sum [] = 0" by (clarsimp simp: refills_sum
 (***** FIXME maybe move? *****)
 (* unat addition *)
 lemma sum_list_bounded_eq:
-  "sum_list (map unat (ls:: time list)) = unat (budget:: time) \<Longrightarrow> sum_list (map unat ls) = unat (sum_list ls)"
+  "sum_list (map unat (ls :: time list)) = unat (budget :: time) \<Longrightarrow> sum_list (map unat ls) = unat (sum_list ls)"
   apply (induct ls arbitrary: budget, simp)
   apply clarsimp
   by (metis (no_types, hide_lams) le_add2 le_unat_uoi of_nat_add word_unat.Rep_inverse)
 
 lemma sum_list_bounded_lt:
-  "sum_list (map unat (ls:: time list)) < unat (budget:: time) \<Longrightarrow>sum_list (map unat ls) = unat (sum_list ls)"
+  "sum_list (map unat (ls :: time list)) < unat (budget :: time) \<Longrightarrow>sum_list (map unat ls) = unat (sum_list ls)"
   apply (induct ls arbitrary: budget, simp)
   apply clarsimp
   by (metis (mono_tags) add.commute add_lessD1 le_unat_uoi nat_less_le word_arith_nat_add)
 
 lemma sum_list_bounded_le:
-  "sum_list (map unat (ls:: time list)) \<le> unat (budget:: time) \<Longrightarrow>sum_list (map unat ls) = unat (sum_list ls)"
+  "sum_list (map unat (ls :: time list)) \<le> unat (budget :: time) \<Longrightarrow>sum_list (map unat ls) = unat (sum_list ls)"
   apply (induct ls arbitrary: budget, simp)
   apply clarsimp
   by (metis add_leE le_unat_uoi word_arith_nat_add)
@@ -812,7 +814,8 @@ oops
 
 (** end unat **)
 
-(* FIXME maybe move *)
+(* FIXME: maybe move *)
+(* FIXME: remove because unused? *)
 lemma remove1_nth_rewrite:
   "(j::nat) < length ls \<Longrightarrow>
         set (remove1 (ls!j) ls)
@@ -840,6 +843,7 @@ next
     by (simp add: Cons_nth_drop_Suc a2)
 qed
 
+(* FIXME: remove because unused? *)
 lemma sum_list_elements_unat_sum':
   "\<lbrakk>Suc (Suc 0) \<le> length (ls::time list); sum_list (map unat ls) = unat (sum_list ls)\<rbrakk>
     \<Longrightarrow> \<forall>j < length ls. \<forall>i < j. unat (ls!i) + unat (ls!j) = unat (ls!i + ls!j)"
@@ -877,6 +881,7 @@ proof safe
     by fastforce
 qed
 
+(* FIXME: remove because unused? *)
 lemmas sum_list_elements_unat_sum = sum_list_elements_unat_sum'[rule_format]
 
 (***)
@@ -895,12 +900,11 @@ lemma replicate_no_overflow:
   using sum_list_bounded_le[symmetric] sum_list_replicate
   by (metis (mono_tags, hide_lams) Num.of_nat_simps(5) word_of_nat word_unat.Rep_inverse)
 
-lemma kernelWCET_ticks_no_overflow: "4 * unat (us_to_ticks kernelWCET_us) \<le> unat max_word"
-  sorry
-
 lemma unat_MIN_BUDGET_MIN_SC_BUDGET:
   "unat MIN_BUDGET + unat MIN_BUDGET = unat MIN_SC_BUDGET"
-  sorry
+  unfolding MIN_SC_BUDGET_def
+  sorry (* unat_MIN_BUDGET_MIN_SC_BUDGET *)
+  (* sorried until we have a principled approach to bounds on kernelWCET_ticks and us_to_ticks *)
 
 lemma MIN_BUDGET_le_MIN_SC_BUDGET:
   "MIN_BUDGET \<le> MIN_SC_BUDGET"
@@ -2182,6 +2186,7 @@ lemma tail_nonempty_length:
   "tl list \<noteq> [] \<Longrightarrow> Suc 0 < length list"
   by (cases list, simp, simp)
 
+(* FIXME: develop strategy to shorten this proof *)
 lemma refill_budget_check_valid_refills[wp]:
    "\<lbrace>(\<lambda>s. kheap s p = Some (SchedContext sc n)
           \<and> unat (r_time (refill_hd sc)) + 2 * unat (sc_period sc) + unat usage
@@ -3071,8 +3076,8 @@ lemma refill_budget_check_round_robin_valid_refills[wp]:
    apply (subgoal_tac "unat (r_amount (refill_hd sc)) \<le> unat (sc_budget sc)")
     prefer 2
     apply (erule_tac s="sum_list (map (unat \<circ> r_amount) (sc_refills sc))"
-                 and t="unat (sc_budget sc)"
-                  in subst)
+                     and t="unat (sc_budget sc)"
+           in subst)
     apply (rule member_le_sum_list, simp)
 
    apply (subgoal_tac "MIN_BUDGET \<le> r_amount (refill_hd sc)")
@@ -3491,105 +3496,11 @@ lemma update_sched_context_valid_refills_badge:
   apply (clarsimp simp: valid_refills_def sc_valid_refills_def obj_at_def window_def)
   done
 
-lemma invoke_sched_control_configure_valid_refills_helper':
-"\<lbrace> valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)
-and valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace> do
-              sc <- get_sched_context scptr;
-              when (0 < sc_refill_max sc)
-               (do y <- sched_context_resume (Some scptr);
-                   ct <- gets cur_thread;
-                   if tcb_ptr = ct then reschedule_required
-                   else when (runnable st) $ possible_switch_to tcb_ptr
-                od)
-od
-\<lbrace>\<lambda>_. valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-by (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift hoare_vcg_if_lift2
- simp: obj_at_def split_del: if_split)
-
-lemma invoke_sched_control_configure_valid_refills_helper:
-"\<lbrace>(\<lambda>s. unat (cur_time s) + 2 * unat period \<le> unat (max_word::time))
-and (\<lambda>s. \<exists>sc n. ko_at (SchedContext sc n) scptr s
-          \<and> unat (r_time (refill_hd sc)) + 2 * unat period
-                     \<le> unat (max_word :: time)
-          \<and> MIN_SC_BUDGET \<le> sc_budget sc \<and> sc_budget sc \<le> sc_period sc)
-and valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)
-and (\<lambda>s. \<exists>n. ko_at (SchedContext sc n) scptr s)
-and valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace> do
-              st <- get_thread_state tcb_ptr;
-              y \<leftarrow> if 0 < sc_refill_max sc \<and> runnable st
-              then refill_update scptr period budget mrefills
-              else refill_new scptr mrefills budget period;
-              sc <- get_sched_context scptr;
-              when (0 < sc_refill_max sc)
-               (do y <- sched_context_resume (Some scptr);
-                   ct <- gets cur_thread;
-                   if tcb_ptr = ct then reschedule_required
-                   else when (runnable st) $ possible_switch_to tcb_ptr
-                od)
-od
-\<lbrace>\<lambda>_. valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-by (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift hoare_vcg_if_lift2
- simp: obj_at_def split_del: if_split)
-
 crunches commit_domain_time, get_sched_context
   for sc_at[wp]: "sc_at p"
   and ko_sc_at[wp]: "\<lambda>s. \<exists>sc n. ko_at (SchedContext sc n) p s"
   and ko_sc_at'[wp]: "\<lambda>s. ko_at (SchedContext sc n) p s"
   (wp: crunch_wps simp: crunch_simps)
-
-lemma refill_budget_check_sc_at_unfolded:
-  "\<lbrace>\<lambda>s. \<exists>sc n. ko_at (SchedContext sc n) p s\<rbrace>
-    refill_budget_check usage
-   \<lbrace>\<lambda>_ s. \<exists>sc n. ko_at (SchedContext sc n) p s\<rbrace>"
-  unfolding refill_budget_check_def refill_ready_def is_round_robin_def bind_assoc refill_full_def
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (clarsimp split del: if_split)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp])
-
-  apply (wpsimp simp: update_sched_context_def set_object_def set_refills_def
- wp: get_object_wp hoare_vcg_ex_lift
-         hoare_drop_imp hoare_vcg_all_lift get_sched_context_wp
- split_del: if_split)
-apply (clarsimp simp: obj_at_def Let_def)
-apply (intro conjI impI; clarsimp?; fastforce?)
-  sorry
-
-lemma invoke_sched_control_configure_valid_refills:
-  "\<lbrace>
-(\<lambda>s. obj_at
-       (\<lambda>ko. \<forall>sc n. ko = SchedContext sc n \<and>
-       (case sc_tcb sc of Some tp \<Rightarrow> st_tcb_at runnable tp s \<and> 0 < sc_refill_max sc \<longrightarrow> sc_valid_refills sc
-           | _ \<Rightarrow> sc_valid_refills sc))
-       scptr s)
-and 
-   valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)\<rbrace>
-   invoke_sched_control_configure (InvokeSchedControlConfigure scptr budget period mrefills badge)
-   \<lbrace>\<lambda>_. valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  apply (clarsimp simp: invoke_sched_control_configure_def)
-sorry
-(*
-lemma
-  "\<lbrace>(\<lambda>s. kheap s scptr = Some (SchedContext sc n)
-          \<and> unat (r_time (refill_hd sc)) + 2 * unat (sc_period sc) + unat consumed
-                     \<le> unat (max_word :: time)
-          \<and> MIN_SC_BUDGET \<le> sc_budget sc \<and> sc_budget sc \<le> sc_period sc)
-     and valid_refills scptr and
-   valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)\<rbrace>
-   invoke_sched_control_configure (InvokeSchedControlConfigure scptr budget period mrefills badge)
-   \<lbrace>\<lambda>_. valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  apply (clarsimp simp: invoke_sched_control_configure_def)
-apply (rule validE_valid)
-apply (rule liftE_wp)
-apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-apply (clarsimp simp: when_def)
-apply (intro conjI impI)
-defer
-apply (wpsimp wp: update_sched_context_valid_refills_badge)
-*)
 
 end
 
@@ -3803,8 +3714,7 @@ lemma invs_valid_refills:
 lemma sched_context_nonref_update_invs:
   "\<lbrace>\<lambda>s. invs s \<and> scp \<noteq> idle_sc_ptr \<and> (\<exists>n. ko_at (SchedContext sc n) scp s)\<rbrace>
    update_sched_context scp (\<lambda>_. sc\<lparr> sc_period := period, sc_refill_max := m, sc_refills := r0#rs,
-                              sc_budget := budget
-                    \<rparr>)
+                              sc_budget := budget\<rparr>)
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def simp_del: refs_of_defs
                   wp: valid_ioports_lift update_sc_refills_period_refill_max_valid_replies
@@ -3819,8 +3729,7 @@ lemma sched_context_nonref_update_invs_non_zero_length:
   "new_refills \<noteq> [] \<Longrightarrow>
    \<lbrace>\<lambda>s. invs s \<and> scp \<noteq> idle_sc_ptr \<and> (\<exists>n. ko_at (SchedContext sc n) scp s)\<rbrace>
    update_sched_context scp (\<lambda>_. sc\<lparr> sc_period := period, sc_refill_max := m, sc_refills := new_refills,
-                              sc_budget := budget
-                    \<rparr>)
+                              sc_budget := budget\<rparr>)
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def simp_del: refs_of_defs
                   wp: valid_ioports_lift update_sc_refills_period_refill_max_valid_replies

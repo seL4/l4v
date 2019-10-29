@@ -168,6 +168,7 @@ where
       cur_sc_offset_ready_2 usage (cur_time s) (cur_sc s) (kheap s)"
 
 lemmas cur_sc_offset_ready_def = cur_sc_offset_ready_2_def
+
 definition is_refill_sufficient :: "obj_ref \<Rightarrow> time \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "is_refill_sufficient scp usage \<equiv>

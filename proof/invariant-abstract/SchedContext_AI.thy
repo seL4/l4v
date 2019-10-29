@@ -57,25 +57,12 @@ crunches commit_domain_time,set_next_interrupt,set_refills,refill_budget_check
 crunch reprogram_timer[wp]: commit_time "\<lambda>s. P (reprogram_timer s)"
   (wp: crunch_wps hoare_vcg_if_lift2 ignore: commit_domain_time)
 
-lemma refill_unblock_check_reprogram_timer[wp]:
-  "\<lbrace>\<lambda>s. \<forall>b. P b\<rbrace> refill_unblock_check param_a \<lbrace>\<lambda>_ s. P (reprogram_timer s)\<rbrace>"
-  by (wpsimp simp: refill_unblock_check_def is_round_robin_def wp: crunch_wps hoare_vcg_if_lift2)
-
 crunches refill_unblock_check
   for consumed_time[wp]: "\<lambda>s. P (consumed_time s)"
   and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
   and cur_time[wp]: "\<lambda>s. P (cur_time s)"
   and cur_sc_cur_thread[wp]: "\<lambda>s. P (cur_sc s) (cur_thread s)"
   (wp: crunch_wps hoare_vcg_if_lift2)
-
-lemma commit_time_consumed_time[wp]:
-  "\<lbrace>\<lambda>s. \<forall>b. P b\<rbrace> commit_time \<lbrace>\<lambda>_ s. P (consumed_time s)\<rbrace>"
-  by (wpsimp simp: commit_time_def)
-
-crunches sc_and_timer
-  for consumed_time[wp]: "\<lambda>s. P (consumed_time s)"
-  and reprogram_timer[wp]: "\<lambda>s. P (reprogram_timer s)"
-  (wp: crunch_wps hoare_vcg_if_lift2 ignore: set_next_interrupt)
 
 lemma valid_sc_valid_refills:
    "\<lbrakk>valid_objs s; kheap s sc_ptr = Some (SchedContext sc n) \<rbrakk>
@@ -698,9 +685,7 @@ lemma commit_time_invs:
   done
 
 crunches switch_sched_context
-  for consumed_time[wp]: "\<lambda>s. P (consumed_time s)"
-  and reprogram_timer[wp]: "\<lambda>s. P (reprogram_timer s)"
-  and cur_time[wp]: "\<lambda>s. P (cur_time s)"
+  for cur_time[wp]: "\<lambda>s. P (cur_time s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps hoare_vcg_if_lift2 simp: Let_def ignore: commit_domain_time)
 
@@ -742,7 +727,7 @@ lemma set_refills_bound_sc_tcb_at [wp]:
   by (wpsimp simp: set_refills_def update_sched_context_def set_object_def get_object_def
                    pred_tcb_at_def obj_at_def)
 
-lemma refill_split_check_bound_sc_tcb_at [wp]:
+lemma refill_budget_check_bound_sc_tcb_at [wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>
    refill_budget_check usage
    \<lbrace>\<lambda>_ s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>"
@@ -778,17 +763,17 @@ lemma sc_consumed_update_valid_state [wp]:
   by (wpsimp simp: valid_state_def valid_pspace_def
                wp: update_sched_context_valid_objs_same valid_irq_node_typ)
 
-lemma refill_split_check_valid_idle:
+lemma refill_budget_check_valid_idle:
   "\<lbrace>valid_idle\<rbrace> refill_budget_check usage \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   unfolding refill_budget_check_def
   by (wpsimp simp: refill_full_def refill_ready_def
                    is_round_robin_def
                wp: get_refills_wp )
 
-lemma refill_split_check_valid_state [wp]:
+lemma refill_budget_check_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> refill_budget_check usage \<lbrace>\<lambda>_. valid_state\<rbrace>"
   by (wpsimp simp: valid_state_def valid_pspace_def
-               wp: valid_irq_node_typ valid_ioports_lift refill_split_check_valid_idle)
+               wp: valid_irq_node_typ valid_ioports_lift refill_budget_check_valid_idle)
 
 lemma commit_time_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> commit_time \<lbrace>\<lambda>_. valid_state\<rbrace>"
@@ -850,7 +835,7 @@ lemma set_refills_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> set_refills p r \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
   by (wpsimp simp: set_refills_def wp: get_sched_context_wp)
 
-lemma refill_split_check_ct_in_state[wp]:
+lemma refill_budget_check_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> refill_budget_check consumed \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
   by (wpsimp simp: refill_budget_check_def refill_full_def is_round_robin_def refill_ready_def
         split_del: if_split
