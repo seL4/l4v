@@ -15212,17 +15212,11 @@ lemma call_kernel_valid_sched_charge_budget_helper:
    apply (clarsimp simp: valid_sched_implies_valid_ipc_qs)
    done
 
-end
-
 lemma valid_refills_ignores_machine_state[simp]:
   "valid_refills x (s\<lparr>machine_state := j\<rparr>) = valid_refills x s"
   by (clarsimp simp: valid_refills_def)
 
-
-context DetSchedSchedule_AI begin
-
-crunches handle_fault, reply_from_kernel, check_budget_restart, lookup_reply,
-         lookup_cap, handle_reserved_irq
+crunches handle_fault, reply_from_kernel, check_budget_restart, lookup_reply, lookup_cap
   for valid_machine_time[wp]: "\<lambda>s::'state_ext state. P (cur_time s) (last_machine_time_of s)"
 
 crunches receive_ipc, receive_signal, send_signal
@@ -15281,9 +15275,8 @@ lemma handle_event_valid_machine_time[wp]:
                                   handle_yield_def
                               wp: hoare_drop_imps)+
     done
-     (* apply wpsimp+
-  done *)
-  sorry (* handle_event_valid_machine_time *)
+      apply wpsimp+
+  done
 
 lemma update_time_stamp_valid_refills[wp]:
   "update_time_stamp \<lbrace>\<lambda>s. valid_refills t s\<rbrace>"
