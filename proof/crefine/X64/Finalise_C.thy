@@ -177,7 +177,7 @@ lemma tcbSchedEnqueue_cslift_precond_discharge:
     apply (simp add: maxDom_to_H maxPrio_to_H)+
   apply (simp add: cready_queues_index_to_C_def2 numPriorities_def)
   apply (clarsimp simp: ctcb_relation_def)
-  apply (frule arg_cong[where f=unat], subst(asm) unat_ucast_8_64)
+  apply (frule arg_cong[where f=unat], subst(asm) unat_ucast_up_simp, simp)
   apply (frule tcb_queue'_head_end_NULL)
    apply (erule conjunct1[OF valid_queues_valid_q])
   apply (frule(1) tcb_queue_relation_qhead_valid')

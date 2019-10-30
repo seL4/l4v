@@ -609,7 +609,6 @@ lemma tcbQueued_not_in_queues:
   apply (clarsimp simp: inQ_def)
   done
 
-declare unat_ucast_8_64[simp]
 
 lemma rf_sr_sched_queue_relation:
   "\<lbrakk> (s, s') \<in> rf_sr; d \<le> ucast maxDom; p \<le> ucast maxPrio \<rbrakk>
@@ -907,7 +906,7 @@ lemma unat_ucast_prio_shiftr_simp[simp]:
 
 lemma unat_ucast_prio_mask_simp[simp]:
   "unat (ucast (p::priority) && mask m :: machine_word) = unat (p && mask m)"
-  by (metis ucast_and_mask unat_ucast_8_64)
+  by (simp add: ucast_and_mask)
 
 lemma unat_ucast_prio_L1_cmask_simp:
   "unat (ucast (p::priority) && 0x3F :: machine_word) = unat (p && 0x3F)"
