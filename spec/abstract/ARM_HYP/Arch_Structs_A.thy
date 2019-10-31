@@ -23,23 +23,23 @@ begin
 
 context Arch begin global_naming ARM_A
 
-text {*
+text \<open>
 This theory provides architecture-specific definitions and datatypes
 including architecture-specific capabilities and objects.
-*}
+\<close>
 
-section {* Architecture-specific virtual memory *}
+section \<open>Architecture-specific virtual memory\<close>
 
-text {* An ASID is simply a word. *}
+text \<open>An ASID is simply a word.\<close>
 type_synonym asid = "word32"
 
 datatype vm_attribute = PageCacheable | XNever
 type_synonym vm_attributes = "vm_attribute set"
 
-section {* Architecture-specific capabilities *}
+section \<open>Architecture-specific capabilities\<close>
 
-text {*  The ARM kernel supports capabilities for ASID pools and an ASID controller capability,
-along with capabilities for page directories, page tables, and page mappings. *}
+text \<open>The ARM kernel supports capabilities for ASID pools and an ASID controller capability,
+along with capabilities for page directories, page tables, and page mappings.\<close>
 
 datatype arch_cap =
    ASIDPoolCap obj_ref asid
@@ -70,9 +70,9 @@ definition
   asid_bits :: nat where
   "asid_bits \<equiv> 17 :: nat"
 
-section {* Architecture-specific objects *}
+section \<open>Architecture-specific objects\<close>
 
-text {* This section gives the types and auxiliary definitions for the
+text \<open>This section gives the types and auxiliary definitions for the
 architecture-specific objects: a page directory entry (@{text "pde"})
 contains either an invalid entry, a page table reference, a section
 reference, or a super-section reference; a page table entry contains
@@ -80,16 +80,16 @@ either an invalid entry, a large page, or a small page mapping;
 finally, an architecture-specific object is either an ASID pool, a
 page table, a page directory, or a data page used to model user
 memory.
-*}
+\<close>
 
-text {*
+text \<open>
 Hypervisor extensions use long page table descriptors (64-bit) for the stage 2
 translation (host-to-hypervisor). This is a three-level table system, but the
 hardware can be configured to omit the first level entirely if all second
 levels are stored contiguously. We use this configuration to preserve the usual
 page table/directory nomenclature.
 seL4 does not use hardware domains or parity on ARM hypervisor systems.
-*}
+\<close>
 datatype pde =
    InvalidPDE
  | PageTablePDE obj_ref
@@ -104,8 +104,8 @@ datatype pte =
 type_synonym hyper_reg_context = machine_word
 
 
-text {*With hypervisor extensions enabled, page table and page directory entries occupy
-8 bytes. Page directories occupy four frames, and page tables occupy a frame. *}
+text \<open>With hypervisor extensions enabled, page table and page directory entries occupy
+8 bytes. Page directories occupy four frames, and page tables occupy a frame.\<close>
 
 definition
   pde_bits :: "nat" where
@@ -128,7 +128,7 @@ definition
   "vcpu_bits \<equiv> pageBits"
 
 
-text {*  vcpu *}
+text \<open>vcpu\<close>
 
 type_synonym virq = machine_word
 
@@ -172,11 +172,11 @@ definition
                              , VCPURegACTLR := actlrDefault) \<rparr>"
 
 
-text {*
+text \<open>
   ASID pools translate 10 bits, VCPUs store a potential association to a TCB as well as
   an extended register context. Page tables have 512 entries (cf B3.6.5, pg 1348). For data pages,
   we record their size.
-*}
+\<close>
 
 datatype arch_kernel_obj =
    ASIDPool "10 word \<rightharpoonup> obj_ref"
@@ -261,7 +261,7 @@ definition
     PageCap dev x rs' sz as \<Rightarrow> PageCap dev x (validate_vm_rights rs) sz as
   | _                   \<Rightarrow> ac"
 
-section {* Architecture-specific object types and default objects *}
+section \<open>Architecture-specific object types and default objects\<close>
 
 datatype
   aobject_type =
@@ -312,9 +312,9 @@ type_synonym hw_asid = word8
 type_synonym arm_vspace_region_uses = "vspace_ref \<Rightarrow> arm_vspace_region_use"
 
 
-section {* Architecture-specific state *}
+section \<open>Architecture-specific state\<close>
 
-text {* The architecture-specific state for the ARM model
+text \<open>The architecture-specific state for the ARM model
 consists of a reference to the globals page (@{text "arm_globals_frame"}),
 the first level of the ASID table (@{text "arm_asid_table"}), a
 map from hardware ASIDs to seL4 ASIDs (@{text "arm_hwasid_table"}),
@@ -328,13 +328,13 @@ of this space (@{text "arm_global_pd"}, @{text "arm_global_pts"}, and
 Hardware ASIDs are only ever associated with seL4 ASIDs that have a
 currently active page directory. The second component of
 @{text "arm_asid_map"} values is the address of that page directory.
-*}
+\<close>
 
 end
 
 qualify ARM_A (in Arch)
 
-text {* arch\_state *}
+text \<open>arch\_state\<close>
 
 record arch_state =
   arm_asid_table    :: "7 word \<rightharpoonup> obj_ref"
@@ -370,7 +370,7 @@ where
          | ASIDPool f               \<Rightarrow> AASIDPool
          | VCPU v                   \<Rightarrow> AVCPU)"
 
-text {* For implementation reasons the badge word has differing amounts of bits *}
+text \<open>For implementation reasons the badge word has differing amounts of bits\<close>
 definition
   badge_bits :: nat where
   badge_bits_def [simp]: "badge_bits \<equiv> 28"
@@ -397,7 +397,7 @@ definition
       tcb_context    = new_context,
       tcb_vcpu       = None \<rparr>"
 
-text {* accesors for @{text "tcb_context"} inside @{text "arch_tcb"} *}
+text \<open>accesors for @{text "tcb_context"} inside @{text "arch_tcb"}\<close>
 definition
   arch_tcb_context_set :: "user_context \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
 where

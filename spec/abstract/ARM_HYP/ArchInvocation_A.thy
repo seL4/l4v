@@ -20,9 +20,9 @@ begin
 
 context Arch begin global_naming ARM_A
 
-text {* These datatypes encode the arguments to the various possible
+text \<open>These datatypes encode the arguments to the various possible
 ARM-specific system calls. Selectors are defined for various fields
-for convenience elsewhere. *}
+for convenience elsewhere.\<close>
 
 datatype flush_type = Clean | Invalidate | CleanInvalidate | Unify
 

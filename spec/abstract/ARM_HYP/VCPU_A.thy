@@ -12,7 +12,7 @@
 Functions to access kernel memory.
 *)
 
-chapter {* VCPU *}
+chapter \<open>VCPU\<close>
 
 theory VCPU_A
 imports
@@ -22,10 +22,10 @@ imports
 begin
 
 
-text {*
+text \<open>
   Some parts of some registers cannot be written by the user.
   Bits set in the mask will be preserved (used in vcpu\_write\_register).
-*}
+\<close>
 consts
   register_mask :: "machine_word option" (* no need for option? *)
 
@@ -44,10 +44,10 @@ where "decode_vcpu_set_tcb cap extras \<equiv> case (cap, extras) of
  |(VCPUCap v, _) \<Rightarrow> throwError TruncatedMessage
  | _ \<Rightarrow> throwError IllegalOperation"
 
-text {* VCPU objects can be associated with and dissociated from TCBs. *}
-text {*It is not possible to dissociate a VCPU and a TCB by using SetTCB.
+text \<open>VCPU objects can be associated with and dissociated from TCBs.\<close>
+text \<open>It is not possible to dissociate a VCPU and a TCB by using SetTCB.
 Final outcome has to be an associated TCB and VCPU.
-The only way to get lasting dissociation is to delete the TCB or the VCPU. See ArchVSpace\_A. *}
+The only way to get lasting dissociation is to delete the TCB or the VCPU. See ArchVSpace\_A.\<close>
 
 
 subsection "VCPU: Read/Write Registers"
@@ -114,7 +114,7 @@ definition
 where
   "invoke_vcpu_write_register v reg val \<equiv>  write_vcpu_register v reg val"
 
-text {* VCPU : inject IRQ *}
+text \<open>VCPU : inject IRQ\<close>
 
 (* This following function does not correspond to exactly what the C does, but
 it is the value that is stored inside of lr in the vgic  *)
@@ -163,7 +163,7 @@ where
     else vgic_update_lr vr index virq
    od"
 
-text {* VCPU perform and decode main functions *}
+text \<open>VCPU perform and decode main functions\<close>
 
 
 definition

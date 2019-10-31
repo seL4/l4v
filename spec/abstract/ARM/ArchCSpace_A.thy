@@ -29,7 +29,7 @@ definition cnode_padding_bits :: "nat"
 where
   cnode_padding_bits_def [simp]: "cnode_padding_bits \<equiv> 3"
 
-text {* On a user request to modify a cnode capability, extract new guard bits and guard. *}
+text \<open>On a user request to modify a cnode capability, extract new guard bits and guard.\<close>
 definition
   update_cnode_cap_data :: "data \<Rightarrow> nat \<times> data" where
  "update_cnode_cap_data w \<equiv>
@@ -39,14 +39,14 @@ definition
       guard'' = (w >> (cnode_padding_bits + cnode_guard_size_bits)) && mask guard_bits
     in (guard_size', guard'')"
 
-text {* For some purposes capabilities to physical objects are treated
-differently to others. *}
+text \<open>For some purposes capabilities to physical objects are treated
+differently to others.\<close>
 definition
   arch_is_physical :: "arch_cap \<Rightarrow> bool" where
   "arch_is_physical cap \<equiv> case cap of ASIDControlCap \<Rightarrow> False | _ \<Rightarrow> True"
 
-text {* Check whether the second capability is to the same object or an object
-contained in the region of the first one. *}
+text \<open>Check whether the second capability is to the same object or an object
+contained in the region of the first one.\<close>
 fun
   arch_same_region_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
 where
@@ -62,7 +62,7 @@ where
 | "arch_same_region_as _ _ = False"
 
 
-text {* Check whether two arch capabilities are to the same object. *}
+text \<open>Check whether two arch capabilities are to the same object.\<close>
 definition
   same_aobject_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool" where
  "same_aobject_as cp cp' \<equiv>

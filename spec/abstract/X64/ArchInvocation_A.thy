@@ -20,9 +20,9 @@ begin
 
 context Arch begin global_naming X64_A
 
-text {* These datatypes encode the arguments to the various possible
+text \<open>These datatypes encode the arguments to the various possible
 x64-specific system calls. Selectors are defined for various fields
-for convenience elsewhere. *}
+for convenience elsewhere.\<close>
 
 datatype pdpt_invocation =
     PDPTMap cap cslot_ptr pml4e obj_ref obj_ref

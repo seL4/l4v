@@ -32,7 +32,7 @@ where
     cap_insert (IRQHandlerCap (irq)) control_slot handler_slot
   od)"
 
-text {* Switch to a thread's virtual address space context. Clear the load-exclusive monitor. *}
+text \<open>Switch to a thread's virtual address space context. Clear the load-exclusive monitor.\<close>
 definition
   arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_switch_to_thread t \<equiv> do
@@ -40,7 +40,7 @@ definition
      do_machine_op $ clearExMonitor
    od"
 
-text {* The idle thread does not need to be handled specially on ARM. *}
+text \<open>The idle thread does not need to be handled specially on ARM.\<close>
 definition
    arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad" where
    "arch_switch_to_idle_thread \<equiv> do
@@ -53,9 +53,9 @@ definition
   arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_activate_idle_thread t \<equiv> return ()"
 
-text {* The ASIDControl capability confers the authority to create a new ASID
+text \<open>The ASIDControl capability confers the authority to create a new ASID
 pool object. This operation creates the new ASID pool, provides a capability
-to it and connects it to the global virtual ASID table. *}
+to it and connects it to the global virtual ASID table.\<close>
 definition
 perform_asid_control_invocation :: "asid_control_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "perform_asid_control_invocation iv \<equiv> case iv of
@@ -71,8 +71,8 @@ perform_asid_control_invocation :: "asid_control_invocation \<Rightarrow> (unit,
     modify (\<lambda>s. s \<lparr>arch_state := (arch_state s) \<lparr>arm_asid_table := asid_table'\<rparr>\<rparr>)
 od"
 
-text {* The ASIDPool capability confers the authority to assign a virtual ASID
-to a page directory. *}
+text \<open>The ASIDPool capability confers the authority to assign a virtual ASID
+to a page directory.\<close>
 definition
 perform_asid_pool_invocation :: "asid_pool_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "perform_asid_pool_invocation iv \<equiv> case iv of Assign asid pool_ptr ct_slot \<Rightarrow>
@@ -88,8 +88,8 @@ do
     | _ \<Rightarrow> fail
 od"
 
-text {* The PageDirectory capability confers the authority to flush cache entries
-associated with that PD *}
+text \<open>The PageDirectory capability confers the authority to flush cache entries
+associated with that PD\<close>
 definition
   perform_page_directory_invocation :: "page_directory_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -122,10 +122,10 @@ where
   od"
 
 
-text {* The Page capability confers the authority to map, unmap and flush the
+text \<open>The Page capability confers the authority to map, unmap and flush the
 memory page. The remap system call is a convenience operation that ensures the
 page is mapped in the same location as this cap was previously used to map it
-in. *}
+in.\<close>
 definition
 perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "perform_page_invocation iv \<equiv> case iv of
@@ -190,8 +190,8 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
     set_message_info ct $ MI n_msg 0 0 0
   od"
 
-text {* PageTable capabilities confer the authority to map and unmap page
-tables. *}
+text \<open>PageTable capabilities confer the authority to map and unmap page
+tables.\<close>
 definition
 perform_page_table_invocation :: "page_table_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "perform_page_table_invocation iv \<equiv>
@@ -214,7 +214,7 @@ case iv of PageTableMap cap ct_slot pde pd_slot \<Rightarrow> do
   | _ \<Rightarrow> fail"
 
 
-text {* Top level system call despatcher for all ARM-specific system calls. *}
+text \<open>Top level system call despatcher for all ARM-specific system calls.\<close>
 definition
   arch_perform_invocation :: "arch_invocation \<Rightarrow> (data list,'z::state_ext) p_monad" where
   "arch_perform_invocation i \<equiv> liftE $

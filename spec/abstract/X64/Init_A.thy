@@ -20,11 +20,11 @@ begin
 
 context Arch begin global_naming X64_A
 
-text {*
+text \<open>
   This is not a specification of true kernel
   initialisation. This theory describes a dummy initial state only, to
   show that the invariants and refinement relation are consistent.
-*}
+\<close>
 
 (* 8KiB *)
 definition

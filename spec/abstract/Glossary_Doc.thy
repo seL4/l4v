@@ -45,7 +45,7 @@ imports Syscall_A
 begin
 
 (*>*)
-text {*
+text \<open>
 \newcommand{\glossaryentry}[4][\null]
     {\begin{list}{\null}{\setlength{\leftmargin}{0pt}
                          \setlength{\rightmargin}{0pt}
@@ -247,7 +247,7 @@ text {*
   user. It stores continuation information for the preemtable
   capability delete operation.}
   {}
-*}
+\<close>
 
 (*<*)
 end

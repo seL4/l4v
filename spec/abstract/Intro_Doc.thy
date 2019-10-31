@@ -19,7 +19,7 @@ theory Intro_Doc
 imports Main
 begin
 (*>*)
-text {*
+text \<open>
 
 The seL4 microkernel is an operating system kernel designed to be a
 secure, safe, and reliable foundation for systems in a wide variety of
@@ -642,7 +642,7 @@ is defined in \autoref{c:monads}.
 
 \centerline{\includegraphics[height=0.8\textheight]{session_graph}}
 
-*}
+\<close>
 (*<*)
 end
 (*>*)

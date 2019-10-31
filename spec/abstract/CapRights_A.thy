@@ -18,8 +18,8 @@ theory CapRights_A
 imports Main
 begin
 
-text {* The possible access-control rights that exist in the system.
-        Note that some rights are synonyms for others. *}
+text \<open>The possible access-control rights that exist in the system.
+        Note that some rights are synonyms for others.\<close>
 datatype rights = AllowRead | AllowWrite | AllowGrant
 
 definition
@@ -29,10 +29,10 @@ definition
 definition
   "CanModify \<equiv> AllowWrite"
 
-text {* Cap rights are just a set of access rights *}
+text \<open>Cap rights are just a set of access rights\<close>
 type_synonym cap_rights = "rights set"
 
-text {* The set of all rights: *}
+text \<open>The set of all rights:\<close>
 definition
   all_rights :: cap_rights
 where

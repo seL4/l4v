@@ -12,7 +12,7 @@
 Functions for fault handling.
 *)
 
-chapter {* arch fault related functions *}
+chapter \<open>arch fault related functions\<close>
 
 theory ArchFault_A
 imports "../Structures_A" "../Tcb_A"

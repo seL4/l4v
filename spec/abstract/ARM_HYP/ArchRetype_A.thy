@@ -22,13 +22,13 @@ begin
 
 context Arch begin global_naming ARM_A
 
-text {* This is a placeholder function. We may wish to extend the specification
-  with explicitly tagging kernel data regions in memory. *}
+text \<open>This is a placeholder function. We may wish to extend the specification
+  with explicitly tagging kernel data regions in memory.\<close>
 definition
   reserve_region :: "obj_ref \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "reserve_region ptr byteLength is_kernel \<equiv> return ()"
 
-text {* Initialise architecture-specific objects. *}
+text \<open>Initialise architecture-specific objects.\<close>
 
 definition
   init_arch_objects :: "apiobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> obj_ref list \<Rightarrow> (unit,'z::state_ext) s_monad"

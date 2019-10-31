@@ -27,7 +27,7 @@ requalify_types
 
 end
 
-text {* These datatypes encode the arguments to the available system calls. *}
+text \<open>These datatypes encode the arguments to the available system calls.\<close>
 
 datatype cnode_invocation =
     InsertCall cap cslot_ptr cslot_ptr

@@ -31,7 +31,7 @@ requalify_types
 
 end
 
-text {* Scheduling context accessors. *}
+text \<open>Scheduling context accessors.\<close>
 definition
   sched_context_bind_ntfn :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -40,9 +40,9 @@ where
     set_sc_obj_ref sc_ntfn_update sc (Some ntfn)
   od"
 
-text {* Remove the binding between a notification and a scheduling context.
+text \<open>Remove the binding between a notification and a scheduling context.
         This is avoids double reads when calling sched_context_unbind_ntfn
-        from sched_context_maybe_unbind_ntfn (which has infoflow repercussions) *}
+        from sched_context_maybe_unbind_ntfn (which has infoflow repercussions)\<close>
 abbreviation
   do_unbind_ntfn_sc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -148,17 +148,17 @@ where
      reply \<leftarrow> get_reply reply_ptr;
 
      if (hd sc_replies = reply_ptr)
-     then do  (* if it is the head *)
-       assert (reply_sc reply = Some sc_ptr); (* only the head of the list should point to the sc *)
-       set_reply reply_ptr (reply_sc_update (K None) reply); (* set reply_sc to None *)
+     then do  \<comment> \<open>if it is the head\<close>
+       assert (reply_sc reply = Some sc_ptr); \<comment> \<open>only the head of the list should point to the sc\<close>
+       set_reply reply_ptr (reply_sc_update (K None) reply); \<comment> \<open>set reply_sc to None\<close>
        (case (tl sc_replies) of [] \<Rightarrow> return ()
-         | r'#_ \<Rightarrow> set_reply_obj_ref reply_sc_update r' (Some sc_ptr)); (* fix up the refs *)
-       set_sc_obj_ref sc_replies_update sc_ptr (tl sc_replies) (* pop the head *)
+         | r'#_ \<Rightarrow> set_reply_obj_ref reply_sc_update r' (Some sc_ptr)); \<comment> \<open>fix up the refs\<close>
+       set_sc_obj_ref sc_replies_update sc_ptr (tl sc_replies) \<comment> \<open>pop the head\<close>
      od
      else do
-       assert (reply_sc reply = None); (* only the head of the list should point to the sc *)
+       assert (reply_sc reply = None); \<comment> \<open>only the head of the list should point to the sc\<close>
        update_sched_context sc_ptr (sc_replies_update (takeWhile (\<lambda>r. r \<noteq> reply_ptr)))
-                                     (* take until the (first and only) occurrence of reply_ptr *)
+                                     \<comment> \<open>take until the (first and only) occurrence of reply_ptr\<close>
      od
   od"
 
@@ -174,7 +174,7 @@ definition reply_unlink_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (uni
      set_thread_state t Inactive
    od"
 
-text {* Remove a reply object from the call stack. *}
+text \<open>Remove a reply object from the call stack.\<close>
 
 definition sc_with_reply :: "obj_ref \<Rightarrow> 'z::state_ext state => obj_ref option"
   where
@@ -203,8 +203,8 @@ where (* reply_tcb/caller must be in BlockedOnReply *)
     reply_unlink_tcb caller r
    od" (* the r.caller is in Inactive on return *)
 
-text {* Remove a specific thread, and the reply it is blocking on, from the call stack.
-        The thread must be BlockedOnReply. *}
+text \<open>Remove a specific thread, and the reply it is blocking on, from the call stack.
+        The thread must be BlockedOnReply.\<close>
 definition
   reply_remove_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -240,7 +240,7 @@ where
                | _ \<Rightarrow> return True
   od"
 
-text {* Push a reply object to the call stack. *}
+text \<open>Push a reply object to the call stack.\<close>
 definition
   reply_push :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -284,7 +284,7 @@ where
     od
   od"
 
-text {* Getting and setting endpoint queues. *}
+text \<open>Getting and setting endpoint queues.\<close>
 definition
   get_ep_queue :: "endpoint \<Rightarrow> (obj_ref list,'z::state_ext) s_monad"
 where
@@ -299,7 +299,7 @@ where
 | "update_ep_queue (SendEP q) q' = SendEP q'"
 
 
-text {* The endpoint a TCB is blocked on *}
+text \<open>The endpoint a TCB is blocked on\<close>
 definition
   ep_blocked :: "thread_state \<Rightarrow> obj_ref option"
 where
@@ -308,7 +308,7 @@ where
    | BlockedOnSend r _ \<Rightarrow> Some r
    | _ \<Rightarrow> None"
 
-text {* The notification a TCB is blocked on *}
+text \<open>The notification a TCB is blocked on\<close>
 definition
   ntfn_blocked :: "thread_state \<Rightarrow> obj_ref option"
 where
@@ -316,20 +316,20 @@ where
     BlockedOnNotification r \<Rightarrow> Some r
   | _ \<Rightarrow> None"
 
-text {*
+text \<open>
   Sort a list of TCB refs by priority, otherwise keeping order stable.
   In the implementation, there will only ever be one element out of order
   or be inserted. Here, we just require a sorted result.
-*}
+\<close>
 definition
   sort_queue :: "obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad"
 where
   "sort_queue qs = do
      prios \<leftarrow> mapM (thread_get tcb_priority) qs;
-     return $ map snd $ sort_key (\<lambda>x.255 - (fst x)) (zip prios qs) (* 0 \<le> priority < 256 *)
+     return $ map snd $ sort_key (\<lambda>x.255 - (fst x)) (zip prios qs) \<comment> \<open>0 \<le> priority < 256\<close>
    od"
 
-text {* Bring endpoint queue back into priority order *}
+text \<open>Bring endpoint queue back into priority order\<close>
 definition
   reorder_ep :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -340,7 +340,7 @@ where
     set_endpoint ep_ptr (update_ep_queue ep qs')
   od"
 
-text {* Extract list of TCBs waiting on this notification *}
+text \<open>Extract list of TCBs waiting on this notification\<close>
 definition
   ntfn_queue :: "notification \<Rightarrow> obj_ref list option"
 where
@@ -348,7 +348,7 @@ where
      WaitingNtfn qs \<Rightarrow> Some qs
    | _ \<Rightarrow> None"
 
-text {* Bring notification queue back into priority order *}
+text \<open>Bring notification queue back into priority order\<close>
 definition
   reorder_ntfn :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -359,7 +359,7 @@ where
     set_notification ntfn_ptr (ntfn \<lparr> ntfn_obj := WaitingNtfn qs' \<rparr>)
   od"
 
-text {* Set new priority for a TCB *}
+text \<open>Set new priority for a TCB\<close>
 definition
   set_priority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "set_priority tptr prio \<equiv> do
@@ -394,9 +394,9 @@ definition
      cur_dom \<leftarrow> gets cur_domain;
      target_dom \<leftarrow> thread_get tcb_domain target;
      action \<leftarrow> gets scheduler_action;
-     (* not in release queue & active_sc *)
+     \<comment> \<open>not in release queue & active_sc\<close>
      if (target_dom \<noteq> cur_dom) then
-       tcb_sched_action tcb_sched_enqueue target (* not in cur_domain *)
+       tcb_sched_action tcb_sched_enqueue target \<comment> \<open>not in cur_domain\<close>
      else if (action \<noteq> resume_cur_thread) then
        do
          reschedule_required;
@@ -420,10 +420,10 @@ where
      else set_thread_state t Inactive
    od"
 
-text {* Cancel all message operations on threads currently queued within this
+text \<open>Cancel all message operations on threads currently queued within this
 synchronous message endpoint. Threads so queued are placed in the Restart state.
 Once scheduled they will reattempt the operation that previously caused them
-to be queued here. *}
+to be queued here.\<close>
 definition
   cancel_all_ipc :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -444,14 +444,14 @@ where
       od
    od"
 
-text {* The badge stored by thread waiting on a message send operation. *}
+text \<open>The badge stored by thread waiting on a message send operation.\<close>
 primrec (nonexhaustive)
   blocking_ipc_badge :: "thread_state \<Rightarrow> badge"
 where
   "blocking_ipc_badge (BlockedOnSend t payload) = sender_badge payload"
 
-text {* Cancel all message send operations on threads queued in this endpoint
-and using a particular badge. *}
+text \<open>Cancel all message send operations on threads queued in this endpoint
+and using a particular badge.\<close>
 definition
   cancel_badged_sends :: "obj_ref \<Rightarrow> badge \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -478,9 +478,9 @@ where
         od
   od"
 
-text {* Remove the binding between a notification and a TCB. This is avoids double reads
+text \<open>Remove the binding between a notification and a TCB. This is avoids double reads
         when calling unbind_notification from unbind_maybe_notification (which has infoflow
-        repercussions *}
+        repercussions\<close>
 abbreviation
   do_unbind_notification :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -490,7 +490,7 @@ where
     od"
 
 
-text {* Remove bound notification from a TCB in bound state. *}
+text \<open>Remove bound notification from a TCB in bound state.\<close>
 definition
   unbind_notification :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -499,7 +499,7 @@ where
      maybeM (\<lambda>nptr. do_unbind_notification nptr tcb) ntfnptr
    od"
 
-text {* Remove bound notification from a TCB if such notification exists. *}
+text \<open>Remove bound notification from a TCB if such notification exists.\<close>
 definition
   unbind_maybe_notification :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -509,7 +509,7 @@ where
    od"
 
 
-text {* Cancel all message operations on threads queued in a notification endpoint. *}
+text \<open>Cancel all message operations on threads queued in a notification endpoint.\<close>
 
 definition
   cancel_all_signals :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -525,15 +525,15 @@ where
                | _ \<Rightarrow> return ()
    od"
 
-text {* The endpoint pointer stored by a thread waiting for a message to be
-transferred in either direction. *}
+text \<open>The endpoint pointer stored by a thread waiting for a message to be
+transferred in either direction.\<close>
 definition
   get_blocking_object :: "thread_state \<Rightarrow> (obj_ref,'z::state_ext) s_monad"
 where
  "get_blocking_object state \<equiv> assert_opt $ ep_blocked state"
 
 
-text {* Cancel whatever IPC operation a thread is engaged in. *}
+text \<open>Cancel whatever IPC operation a thread is engaged in.\<close>
 definition blocked_cancel_ipc ::
   "thread_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
   where
@@ -564,8 +564,8 @@ where
     when (sc_tcb sc \<noteq> None \<and> sc_ptr \<noteq> idle_sc_ptr) $ sched_context_unbind_tcb sc_ptr
   od"
 
-text {* The optional IRQ stored in a capability, presented either as an optional
-value or a set. *}
+text \<open>The optional IRQ stored in a capability, presented either as an optional
+value or a set.\<close>
 definition
   cap_irq_opt :: "cap \<Rightarrow> irq option" where
  "cap_irq_opt cap \<equiv> case cap of IRQHandlerCap irq \<Rightarrow> Some irq | _ \<Rightarrow> None"
@@ -574,9 +574,9 @@ definition
   cap_irqs :: "cap \<Rightarrow> irq set" where
  "cap_irqs cap \<equiv> set_option (cap_irq_opt cap)"
 
-text {* A generic reference to an object. Used for the purposes of finalisation,
+text \<open>A generic reference to an object. Used for the purposes of finalisation,
 where we want to be able to compare caps to decide if they refer to the "same object",
-which can be determined in several ways *}
+which can be determined in several ways\<close>
 datatype gen_obj_ref =
     ObjRef obj_ref
   | IRQRef irq
@@ -610,9 +610,9 @@ where
     | _ \<Rightarrow> NullCap"
 
 
-text {* Detect whether a capability is the final capability to a given object
+text \<open>Detect whether a capability is the final capability to a given object
 remaining in the system. Finalisation actions need to be taken when the final
-capability to the object is deleted. *}
+capability to the object is deleted.\<close>
 definition
   is_final_cap' :: "cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
  "is_final_cap' cap s \<equiv>
@@ -624,13 +624,13 @@ definition
   is_final_cap :: "cap \<Rightarrow> (bool,'z::state_ext) s_monad" where
   "is_final_cap cap \<equiv> gets (is_final_cap' cap)"
 
-text {* Actions to be taken after an IRQ handler capability is deleted. *}
+text \<open>Actions to be taken after an IRQ handler capability is deleted.\<close>
 definition
   deleted_irq_handler :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
  "deleted_irq_handler irq \<equiv> set_irq_state IRQInactive irq"
 
-text {* Actions to be taken after a cap is deleted *}
+text \<open>Actions to be taken after a cap is deleted\<close>
 definition
   post_cap_deletion :: "cap \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -639,8 +639,8 @@ where
      | ArchObjectCap acap \<Rightarrow> arch_post_cap_deletion acap
      | _ \<Rightarrow> return ()"
 
-text {* Empty a capability slot assuming that the capability in it has been
-finalised already. *}
+text \<open>Empty a capability slot assuming that the capability in it has been
+finalised already.\<close>
 
 definition
   empty_slot :: "cslot_ptr \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) s_monad"
@@ -664,8 +664,8 @@ where
       od
   od"
 
-text {* Cancel the message receive operation of a thread queued in an
-notification object. *}
+text \<open>Cancel the message receive operation of a thread queued in an
+notification object.\<close>
 definition
   cancel_signal :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -680,7 +680,7 @@ where
      set_thread_state threadptr Inactive
    od"
 
-text {* Cancel any message operations a given thread is waiting on. *}
+text \<open>Cancel any message operations a given thread is waiting on.\<close>
 definition
   cancel_ipc :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where

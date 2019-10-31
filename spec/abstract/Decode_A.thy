@@ -35,7 +35,7 @@ requalify_consts
 end
 
 
-text {*
+text \<open>
   This theory includes definitions describing how user arguments are
 decoded into invocation structures; these structures are then used
 to perform the actual system call (see @{text "perform_invocation"}).
@@ -44,12 +44,12 @@ throwing an error if given an invalid request.
 
   As such, this theory describes the binary interface between the
 user and the kernel, along with the preconditions on each argument.
-*}
+\<close>
 
 
 section "CNode"
 
-text {* This definition decodes CNode invocations. *}
+text \<open>This definition decodes CNode invocations.\<close>
 
 definition
   decode_cnode_invocation ::
@@ -144,7 +144,7 @@ odE"
 
 section "Threads"
 
-text {* The definitions in this section decode invocations on TCBs. *}
+text \<open>The definitions in this section decode invocations on TCBs.\<close>
 
 definition
   decode_read_registers :: "data list \<Rightarrow> cap \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
@@ -485,8 +485,8 @@ where
 
 section "Scheduling Contexts"
 
-text {* The following definitions decode system calls related to scheduling contexts
-and scheduling control. *}
+text \<open>The following definitions decode system calls related to scheduling contexts
+and scheduling control.\<close>
 
 definition
   decode_sched_context_invocation ::
@@ -546,7 +546,7 @@ where
           ct_mcp \<leftarrow> liftE $ thread_get tcb_mcpriority ct_ptr;
           whenE (prios > ct_mcp) $ throwError IllegalOperation
       odE;
-(*      whenE (sc_yield_from sc \<noteq> None) $ throwError IllegalOperation; *)
+\<comment> \<open>     whenE (sc_yield_from sc \<noteq> None) $ throwError IllegalOperation;\<close>
       ct_ptr \<leftarrow> liftE $ gets cur_thread;
       yt_ptr \<leftarrow> liftE $ thread_get tcb_yield_to ct_ptr;
       whenE (yt_ptr \<noteq> None) $ throwError IllegalOperation;
@@ -590,8 +590,8 @@ where
 
 section "IRQ"
 
-text {* The following two definitions decode system calls for the
-interrupt controller and interrupt handlers *}
+text \<open>The following two definitions decode system calls for the
+interrupt controller and interrupt handlers\<close>
 
 definition
   decode_irq_control_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list
@@ -637,9 +637,9 @@ definition
 
 section "Untyped"
 
-text {* The definitions in this section deal with decoding invocations
+text \<open>The definitions in this section deal with decoding invocations
 of untyped memory capabilities.
-*}
+\<close>
 
 definition
   data_to_obj_type :: "data \<Rightarrow> (apiobject_type,'z::state_ext) se_monad" where
@@ -679,7 +679,7 @@ where
     $ throwError (InvalidArgument 1);
   whenE (new_type = Untyped \<and> user_obj_size < untyped_min_bits)
     $ throwError (InvalidArgument 1);
-  whenE (new_type = SchedContextObject \<and> user_obj_size < 8) (* seL4_MfsinSchedContextBits *)
+  whenE (new_type = SchedContextObject \<and> user_obj_size < 8) \<comment> \<open>seL4_MfsinSchedContextBits\<close>
     $ throwError (InvalidArgument 1);
   node_index \<leftarrow> returnOk $ data_to_cptr (args!2);
   node_depth \<leftarrow> returnOk $ data_to_nat (args!3);
@@ -741,10 +741,10 @@ odE"
 
 section "Toplevel invocation decode."
 
-text {* This definition is the toplevel decoding definition; it dispatches
+text \<open>This definition is the toplevel decoding definition; it dispatches
 to the above definitions, after checking, in some cases, whether the
 invocation is allowed.
-*}
+\<close>
 
 definition
   decode_invocation ::

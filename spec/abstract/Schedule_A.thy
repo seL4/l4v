@@ -25,7 +25,7 @@ end
 abbreviation
   "idle st \<equiv> st = Structures_A.IdleThreadState"
 
-text {* Switches the current thread to the specified one. *}
+text \<open>Switches the current thread to the specified one.\<close>
 definition
   switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "switch_to_thread t \<equiv> do
@@ -33,22 +33,22 @@ definition
      assert (get_tcb t state \<noteq> None);
 
      sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
-     scp \<leftarrow> assert_opt sc_opt; (* must have an sc *)
+     scp \<leftarrow> assert_opt sc_opt; \<comment> \<open>must have an sc\<close>
      inq \<leftarrow> gets $ in_release_queue t;
-     assert (\<not> inq);  (* not in release q *)
+     assert (\<not> inq);  \<comment> \<open>not in release q\<close>
      sc \<leftarrow> get_sched_context scp;
      curtime \<leftarrow> gets cur_time;
-     sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
-     ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; (* refill_ready sc_ptr *)
+     sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); \<comment> \<open>refill_sufficient sc_ptr 0\<close>
+     ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr\<close>
      assert sufficient;
-     assert ready;   (* asserting ready & sufficient *)
+     assert ready;   \<comment> \<open>asserting ready & sufficient\<close>
 
      arch_switch_to_thread t;
      tcb_sched_action (tcb_sched_dequeue) t;
      modify (\<lambda>s. s \<lparr> cur_thread := t \<rparr>)
    od"
 
-text {* Asserts that a thread is schedulable, ready and sufficient before switching to it. *}
+text \<open>Asserts that a thread is schedulable, ready and sufficient before switching to it.\<close>
 definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "guarded_switch_to thread \<equiv> do
      inq \<leftarrow> gets $ in_release_queue thread;
@@ -58,14 +58,14 @@ definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_m
      assert sched;
      sc \<leftarrow> get_sched_context scp;
      curtime \<leftarrow> gets cur_time;
-     sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
-     ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; (* refill_ready sc_ptr *)
+     sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); \<comment> \<open>refill_sufficient sc_ptr 0\<close>
+     ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr\<close>
      assert sufficient;
-     assert ready;   (* asserting ready & sufficient *)
+     assert ready;   \<comment> \<open>asserting ready & sufficient\<close>
      switch_to_thread thread
    od"
 
-text {* Switches to the idle thread. *}
+text \<open>Switches to the idle thread.\<close>
 definition
   switch_to_idle_thread :: "(unit,'z::state_ext) s_monad" where
   "switch_to_idle_thread \<equiv> do
@@ -138,10 +138,10 @@ where
       refill_unblock_check scp;
       sc \<leftarrow> get_sched_context scp;
       curtime \<leftarrow> gets cur_time;
-      sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
-      ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; (* refill_ready sc_ptr *)
+      sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); \<comment> \<open>refill_sufficient sc_ptr 0\<close>
+      ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr\<close>
       assert sufficient;
-      assert ready   (* asserting ready & sufficient *)
+      assert ready   \<comment> \<open>asserting ready & sufficient\<close>
      od;
 
     reprogram \<leftarrow> gets reprogram_timer;
@@ -190,7 +190,7 @@ where
     rq2 \<leftarrow> return $ drop (length rq1) rq;
     modify $ release_queue_update (K rq2);
     mapM_x (\<lambda>t. do
-      (* the C code asserts refill_sufficient here \<rightarrow> we guarantee this inside refill_ready_tcb for now *)
+      \<comment> \<open>the C code asserts refill_sufficient here \<rightarrow> we guarantee this inside refill_ready_tcb for now\<close>
       possible_switch_to t;
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>)
     od) rq1
@@ -208,9 +208,9 @@ definition choose_thread :: "(unit, 'z::state_ext) s_monad" where
         else (guarded_switch_to (hd (max_non_empty_queue queues)))
       od"
 
-text {*
+text \<open>
   Determine whether given priority is highest among queued ready threads in given domain.
-  Trivially true if no threads are ready. *}
+  Trivially true if no threads are ready.\<close>
 definition
   is_highest_prio :: "domain \<Rightarrow> priority \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -246,11 +246,11 @@ definition
             return ()
          od
        | choose_new_thread \<Rightarrow> do
-           when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct); (* schedulable *)
+           when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct); \<comment> \<open>schedulable\<close>
            schedule_choose_new_thread
          od
        | switch_thread candidate \<Rightarrow> do
-           when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct); (* schedulable *)
+           when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct); \<comment> \<open>schedulable\<close>
 
            it \<leftarrow> gets idle_thread;
            target_prio \<leftarrow> thread_get tcb_priority candidate;
@@ -289,7 +289,7 @@ definition
    od"
 
 
-text {* Scheduling context invocation function *}
+text \<open>Scheduling context invocation function\<close>
 
 text \<open> User-level scheduling context invocations. \<close>
 

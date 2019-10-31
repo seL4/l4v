@@ -58,9 +58,9 @@ requalify_consts
   msg_label_bits
 end
 
-text {*
+text \<open>
   User mode can request these objects to be created by retype:
-*}
+\<close>
 datatype apiobject_type =
     Untyped
   | TCBObject
@@ -79,22 +79,22 @@ where
       | _ \<Rightarrow> False"
 
 
-text {* These allow more informative type signatures for IPC operations. *}
+text \<open>These allow more informative type signatures for IPC operations.\<close>
 type_synonym badge = data
 type_synonym msg_label = data
 type_synonym message = data
 
 
-text {* This type models refences to capability slots. The first element
+text \<open>This type models refences to capability slots. The first element
   of the tuple points to the object the capability is contained in. The second
   element is the index of the slot inside a slot-containing object. The default
   slot-containing object is a cnode, thus the name @{text cnode_index}.
-*}
+\<close>
 type_synonym cnode_index = "bool list"
 type_synonym cslot_ptr = "obj_ref \<times> cnode_index"
 
 
-text {* Capabilities. Capabilities represent explicit authority to perform some
+text \<open>Capabilities. Capabilities represent explicit authority to perform some
 action and are required for all system calls. Capabilities to Endpoint,
 Notification, Thread and CNode objects allow manipulation of standard kernel
 objects. Untyped capabilities allow the creation and removal of kernel objects
@@ -106,7 +106,7 @@ Null capabilities are the contents of empty capability slots; they confer no
 authority and can be freely replaced. Zombie capabilities are stored when
 the deletion of CNode and Thread objects is partially completed; they confer no
 authority but cannot be replaced until the deletion is finished.
-*}
+\<close>
 
 datatype cap
          = NullCap
@@ -134,14 +134,14 @@ lemmas cap_cases_asm =
 cap.induct[where cap=cap and P="\<lambda>cap'. cap = cap' \<longrightarrow> P cap' \<longrightarrow> R" for P R cap,
   simplified, rule_format, rotated -1]
 
-text {* The CNode object is an array of capability slots. The domain of the
+text \<open>The CNode object is an array of capability slots. The domain of the
 function will always be the set of boolean lists of some specific length.
 Empty slots contain a Null capability.
-*}
+\<close>
 type_synonym cnode_contents = "cnode_index \<Rightarrow> cap option"
 
-text {* Various access functions for the cap type are defined for
-convenience. *}
+text \<open>Various access functions for the cap type are defined for
+convenience.\<close>
 definition
   the_cnode_cap :: "cap \<Rightarrow> obj_ref \<times> nat \<times> bool list" where
   "the_cnode_cap cap \<equiv>
@@ -233,8 +233,8 @@ where
 | "cap_rights (ArchObjectCap acap) = acap_rights acap"
 end
 
-text {* Various update functions for cap data common to various kinds of
-cap are defined here. *}
+text \<open>Various update functions for cap data common to various kinds of
+cap are defined here.\<close>
 definition
   cap_rights_update :: "cap_rights \<Rightarrow> cap \<Rightarrow> cap" where
   "cap_rights_update cr' cap \<equiv>
@@ -258,9 +258,9 @@ definition
   mask_cap :: "cap_rights \<Rightarrow> cap \<Rightarrow> cap" where
   "mask_cap rights cap \<equiv> cap_rights_update (cap_rights cap \<inter> rights) cap"
 
-section {* Message Info *}
+section \<open>Message Info\<close>
 
-text {* The message info is the first thing interpreted on a user system call
+text \<open>The message info is the first thing interpreted on a user system call
 and determines the structure of the message the user thread is sending either to
 another user or to a system service. It is also passed to user threads receiving
 a message to indicate the structure of the message they have received. The
@@ -270,7 +270,7 @@ together with the message. The @{text mi_caps_unwrapped} parameter is a bitmask
 allowing threads receiving a message to determine how extra capabilities were
 transferred. The @{text mi_label} parameter is transferred directly from sender
 to receiver as part of the message.
-*}
+\<close>
 
 datatype message_info =
   MI (mi_length: length_type)
@@ -278,7 +278,7 @@ datatype message_info =
      (mi_caps_unwrapped: data)
      (mi_label: msg_label)
 
-text {* Message infos are encoded to or decoded from a data word. *}
+text \<open>Message infos are encoded to or decoded from a data word.\<close>
 primrec
   message_info_to_data :: "message_info \<Rightarrow> data"
 where
@@ -299,22 +299,22 @@ where
       ((w >> 9) && mask 3)
       ((w >> 12) && mask msg_label_bits)"
 
-section {* Kernel Objects *}
+section \<open>Kernel Objects\<close>
 
-text {* Endpoints are synchronous points of communication for threads. At any
+text \<open>Endpoints are synchronous points of communication for threads. At any
 time an endpoint may contain a queue of threads waiting to send, a queue of
 threads waiting to receive or be idle. Whenever threads would be waiting to
 send and receive simultaneously messages are transferred immediately.
-*}
+\<close>
 
 datatype endpoint
            = IdleEP
            | SendEP "obj_ref list"
            | RecvEP "obj_ref list"
 
-text {* Notifications are sets of binary semaphores (stored in the
+text \<open>Notifications are sets of binary semaphores (stored in the
 \emph{badge word}). Unlike endpoints, threads may choose to block waiting to
-receive, but not to send. *}
+receive, but not to send.\<close>
 
 datatype ntfn
            = IdleNtfn
@@ -343,7 +343,7 @@ definition
      ntfn_sc = None \<rparr>"
 
 
-text {* Thread Control Blocks are the in-kernel representation of a thread.
+text \<open>Thread Control Blocks are the in-kernel representation of a thread.
 
 Threads which can execute are either in the Running state for normal execution,
 in the Restart state if their last operation has not completed yet or in the
@@ -363,7 +363,7 @@ supervisor the fault is stored in @{text tcb_fault}. The user register file is
 stored in @{text tcb_context}, the pointer to the cap in the IPCFrame slot in
 @{text tcb_ipc_buffer} and the identity of the Endpoint cap through which faults
 are to be sent in @{text tcb_fault_handler}.
-*}
+\<close>
 
 record sender_payload =
  sender_badge     :: badge
@@ -401,7 +401,7 @@ record tcb =
  tcb_domain        :: domain
  tcb_arch          :: arch_tcb
 
-text {* Determines whether a thread in a given state may be scheduled. *}
+text \<open>Determines whether a thread in a given state may be scheduled.\<close>
 primrec
   runnable :: "Structures_A.thread_state \<Rightarrow> bool"
 where
@@ -496,10 +496,10 @@ record reply =
 definition
   "default_reply = \<lparr> reply_tcb = None,  reply_sc = None \<rparr>"
 
-text {*
+text \<open>
 All kernel objects are CNodes, TCBs, Endpoints, Notifications or architecture
 specific.
-*}
+\<close>
 datatype kernel_object
          = CNode nat cnode_contents \<comment> \<open>size in bits, and contents\<close>
          | TCB tcb
@@ -520,13 +520,13 @@ definition aobj_of :: "kernel_object \<Rightarrow> arch_kernel_obj option"
   where
   "aobj_of ko \<equiv> case ko of ArchObj aobj \<Rightarrow> Some aobj | _ \<Rightarrow> None"
 
-text {* Checks whether a cnode's contents are well-formed. *}
+text \<open>Checks whether a cnode's contents are well-formed.\<close>
 
 definition
   well_formed_cnode_n :: "nat \<Rightarrow> cnode_contents \<Rightarrow> bool" where
  "well_formed_cnode_n n \<equiv> \<lambda>cs. dom cs = {x. length x = n}"
 
-text {* checks for the scheduling context size *}
+text \<open>checks for the scheduling context size\<close>
 
 definition valid_sched_context_size :: "nat \<Rightarrow> bool" where
   "valid_sched_context_size n \<equiv> min_sched_context_bits \<le> n \<and> n \<le> untyped_max_bits"
@@ -559,7 +559,7 @@ where
 | "obj_size (ArchObjectCap a) = 1 << arch_obj_size a"
 
 
-text {* Object types: *}
+text \<open>Object types:\<close>
 
 datatype a_type =
     ATCB
@@ -586,19 +586,19 @@ where
          | ArchObj ao                \<Rightarrow> AArch (aa_type ao)"
 
 
-section {* Kernel State *}
+section \<open>Kernel State\<close>
 
-text {* The kernel's heap is a partial function containing kernel objects. *}
+text \<open>The kernel's heap is a partial function containing kernel objects.\<close>
 type_synonym kheap = "obj_ref \<Rightarrow> kernel_object option"
 
-text {*
+text \<open>
 Capabilities are created either by cloning an existing capability or by creating
 a subordinate capability from it. This results in a capability derivation tree
 or CDT. The kernel provides a Revoke operation which deletes all capabilities
 derived from one particular capability. To support this, the kernel stores the
 CDT explicitly. It is here stored as a tree, a partial mapping from
 capability slots to parent capability slots.
-*}
+\<close>
 type_synonym cdt = "cslot_ptr \<Rightarrow> cslot_ptr option"
 
 datatype irq_state =
@@ -607,7 +607,7 @@ datatype irq_state =
  | IRQTimer
  | IRQReserved
 
-text {* The current scheduler action *}
+text \<open>The current scheduler action\<close>
 datatype scheduler_action =
     resume_cur_thread
   | switch_thread obj_ref
@@ -616,7 +616,7 @@ datatype scheduler_action =
 type_synonym ready_queue = "obj_ref list"
 type_synonym release_queue = "obj_ref list"
 
-text {* The kernel state includes a heap, a capability derivation tree
+text \<open>The kernel state includes a heap, a capability derivation tree
 (CDT), a bitmap used to determine if a capability is the original
 capability to that object, a pointer to the current thread, a pointer
 to the system idle thread, the state of the underlying machine,
@@ -630,7 +630,7 @@ can contain the notification cap through which interrupts are delivered. In
 C, this all lives in a single array. In the abstract spec though, to prove
 security, we can't have a single object accessible by everyone. Hence the need
 to separate irq handlers.
-*}
+\<close>
 record abstract_state =
   kheap              :: kheap
   cdt                :: cdt
@@ -653,19 +653,19 @@ record abstract_state =
   interrupt_states   :: "irq \<Rightarrow> irq_state"
   arch_state         :: arch_state
 
-text {* The following record extends the abstract kernel state with extra
+text \<open>The following record extends the abstract kernel state with extra
 state of type @{typ "'a"}. The specification operates over states of
 this extended type. By choosing an appropriate concrete type for @{typ "'a"}
 we may obtain different \emph{instantiations} of the kernel specifications
 at differing levels of abstraction. See \autoref{c:ext-spec} for further
 information.
-*}
+\<close>
 record 'a state = abstract_state + exst :: 'a
 
 section \<open>Helper functions\<close>
 
-text {* This wrapper lifts monadic operations on the underlying machine state to
-monadic operations on the kernel state. *}
+text \<open>This wrapper lifts monadic operations on the underlying machine state to
+monadic operations on the kernel state.\<close>
 definition
   do_machine_op :: "(machine_state, 'a) nondet_monad \<Rightarrow> ('z state, 'a) nondet_monad"
 where
@@ -676,17 +676,17 @@ where
     return r
   od"
 
-text {* This function generates the cnode indices used when addressing the
+text \<open>This function generates the cnode indices used when addressing the
 capability slots within a TCB.
-*}
+\<close>
 definition
   tcb_cnode_index :: "nat \<Rightarrow> cnode_index" where
   "tcb_cnode_index n \<equiv> to_bl (of_nat n :: 3 word)"
 
-text {* Zombie capabilities store the bit size of the CNode cap they were
+text \<open>Zombie capabilities store the bit size of the CNode cap they were
 created from or None if they were created from a TCB cap. This function
 decodes the bit-length of cnode indices into the relevant kernel objects.
-*}
+\<close>
 definition
   zombie_cte_bits :: "nat option \<Rightarrow> nat" where
  "zombie_cte_bits N \<equiv> case N of Some n \<Rightarrow> n | None \<Rightarrow> 3"
@@ -696,7 +696,7 @@ lemma zombie_cte_bits_simps[simp]:
  "zombie_cte_bits None     = 3"
   by (simp add: zombie_cte_bits_def)+
 
-text {* The first capability slot of the relevant kernel object. *}
+text \<open>The first capability slot of the relevant kernel object.\<close>
 primrec (nonexhaustive)
   first_cslot_of :: "cap \<Rightarrow> cslot_ptr"
 where
@@ -704,7 +704,7 @@ where
 | "first_cslot_of (CNodeCap oref bits g) = (oref, replicate bits False)"
 | "first_cslot_of (Zombie oref bits n) = (oref, replicate (zombie_cte_bits bits) False)"
 
-text {* The set of all objects referenced by a capability. *}
+text \<open>The set of all objects referenced by a capability.\<close>
 primrec
   obj_refs :: "cap \<Rightarrow> obj_ref set"
 where
@@ -723,11 +723,11 @@ where
 | "obj_refs (Zombie ptr b n) = {ptr}"
 | "obj_refs (ArchObjectCap x) = set_option (aobj_ref x)"
 
-text {*
+text \<open>
   The partial definition below is sometimes easier to work with.
   It also provides a result for UntypedCap which does not contain
   a true object reference in the sense of the other caps.
-*}
+\<close>
 primrec (nonexhaustive)
   obj_ref_of :: "cap \<Rightarrow> obj_ref"
 where
@@ -767,7 +767,7 @@ definition cap_of :: "kernel_object \<Rightarrow> cnode_index \<Rightarrow> cap 
   where
   "cap_of kobj \<equiv> case kobj of CNode _ cs \<Rightarrow> cs | TCB tcb \<Rightarrow> tcb_cnode_map tcb | _ \<Rightarrow> Map.empty"
 
-text {* The set of all caps contained in a kernel object. *}
+text \<open>The set of all caps contained in a kernel object.\<close>
 
 definition
   caps_of :: "kernel_object \<Rightarrow> cap set" where
@@ -780,9 +780,9 @@ record captransfer =
   ct_receive_index :: cap_ref
   ct_receive_depth :: data
 
-text {* A thread's IPC buffer capability must be to a page that is capable of
+text \<open>A thread's IPC buffer capability must be to a page that is capable of
 containing the IPC buffer without the end of the buffer spilling into another
-page. *}
+page.\<close>
 definition cap_transfer_data_size :: nat
   where
   "cap_transfer_data_size \<equiv> 3"

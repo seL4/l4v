@@ -12,7 +12,7 @@
 Arch Functions for cancelling IPC.
 *)
 
-chapter {* Arch IPC Cancelling *}
+chapter \<open>Arch IPC Cancelling\<close>
 
 
 theory ArchIpcCancel_A
@@ -35,7 +35,7 @@ definition
 where
   "free_ioport_range f l \<equiv> set_ioport_mask f l False"
 
-text {* Actions to be taken after a cap is deleted *}
+text \<open>Actions to be taken after a cap is deleted\<close>
 definition
   arch_post_cap_deletion :: "arch_cap \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -43,7 +43,7 @@ where
        IOPortCap f l \<Rightarrow> free_ioport_range f l
      | _ \<Rightarrow> return ()"
 
-text {* Arch specific generic object references not covered by generic references *}
+text \<open>Arch specific generic object references not covered by generic references\<close>
 datatype arch_gen_obj_ref = IOPortRef io_port
 
 definition

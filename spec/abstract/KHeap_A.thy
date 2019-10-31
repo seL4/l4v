@@ -12,14 +12,14 @@
 Functions to access kernel memory.
 *)
 
-chapter {* Accessing the Kernel Heap *}
+chapter \<open>Accessing the Kernel Heap\<close>
 
 theory KHeap_A
 imports Exceptions_A
 begin
 
-text {* This theory gives auxiliary getter and setter methods
-for kernel objects. *}
+text \<open>This theory gives auxiliary getter and setter methods
+for kernel objects.\<close>
 
 section "General Object Access"
 
@@ -151,7 +151,7 @@ where
    od"
 
 
-section {* Synchronous and Asyncronous Endpoints *}
+section \<open>Synchronous and Asyncronous Endpoints\<close>
 
 
 abbreviation
@@ -180,7 +180,7 @@ abbreviation
 
 
 
-section {* IRQ State and Slot *}
+section \<open>IRQ State and Slot\<close>
 
 definition
   get_irq_state :: "irq \<Rightarrow> (irq_state,'z::state_ext) s_monad" where
@@ -197,7 +197,7 @@ definition
   get_irq_slot :: "irq \<Rightarrow> (cslot_ptr,'z::state_ext) s_monad" where
  "get_irq_slot irq \<equiv> gets (\<lambda>st. (interrupt_irq_node st irq, []))"
 
-section {* Reply Objects *}
+section \<open>Reply Objects\<close>
 
 abbreviation
   get_reply :: "obj_ref \<Rightarrow> (reply,'z::state_ext) s_monad" where
@@ -218,7 +218,7 @@ abbreviation
   "get_reply_callee r \<equiv> liftM reply_callee (get_reply r)"
 *)
 
-section {* Scheduling Contexts *}
+section \<open>Scheduling Contexts\<close>
 
 definition
   get_sched_context :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) s_monad"
@@ -429,8 +429,8 @@ definition reschedule_required :: "(unit, 'z::state_ext) s_monad" where
            scp \<leftarrow> assert_opt sc_opt;
            sc \<leftarrow> get_sched_context scp;
            curtime \<leftarrow> gets cur_time;
-           sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
-           ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; (* refill_ready sc_ptr *)
+           sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); \<comment> \<open>refill_sufficient sc_ptr 0\<close>
+           ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; \<comment> \<open> refill_ready sc_ptr\<close>
            assert (sufficient & ready);
            tcb_sched_action (tcb_sched_enqueue) t
          od
@@ -478,7 +478,7 @@ definition
   "set_mcpriority ref mcp \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_mcpriority:=mcp\<rparr>) ref "
 
 
-text{* obj\_ref field accessor for notification, sched\_context, and reply *}
+text\<open>obj\_ref field accessor for notification, sched\_context, and reply\<close>
 
 
 definition
@@ -521,10 +521,10 @@ where
 
 section "User Context"
 
-text {*
+text \<open>
   Changes user context of specified thread by running
   specified user monad.
-*}
+\<close>
 definition
   as_user :: "obj_ref \<Rightarrow> 'a user_monad \<Rightarrow> ('a,'z::state_ext) s_monad"
 where
@@ -537,7 +537,7 @@ where
     return a
   od"
 
-text {* Raise an exception if a property does not hold. *}
+text \<open>Raise an exception if a property does not hold.\<close>
 definition
 throw_on_false :: "'e \<Rightarrow> (bool,'z::state_ext) s_monad \<Rightarrow> ('e + unit,'z::state_ext) s_monad" where
 "throw_on_false ex f \<equiv> doE v \<leftarrow> liftE f; unlessE v $ throwError ex odE"

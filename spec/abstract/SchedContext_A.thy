@@ -212,10 +212,10 @@ where
       ct \<leftarrow> gets cur_time;
       modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
       refills \<leftarrow> get_refills sc_ptr;
-      ready \<leftarrow> return $ (r_time (hd refills)) \<le> ct + kernelWCET_ticks; (* refill_ready sc_ptr *)
+      ready \<leftarrow> return $ (r_time (hd refills)) \<le> ct + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr\<close>
       when ready $ do
         refills' \<leftarrow> return $ refills_merge_prefix ((hd refills)\<lparr>r_time := ct\<rparr> # tl refills);
-        assert (sufficient_refills 0 refills'); (* do we need this assert? *)
+        assert (sufficient_refills 0 refills'); \<comment> \<open>do we need this assert?\<close>
         set_refills sc_ptr refills'
       od
     od
@@ -278,10 +278,10 @@ where
   "refill_budget_check usage capacity = do
     sc_ptr \<leftarrow> gets cur_sc;
     sc \<leftarrow> get_sched_context sc_ptr;
-    full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc); (* = refill_full sc_ptr *)
+    full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc); \<comment> \<open>= refill_full sc_ptr\<close>
     assert (capacity < MIN_BUDGET \<or> full);
     period \<leftarrow> return $ sc_period sc;
-    assert (period > 0); (* not round robin *)
+    assert (period > 0); \<comment> \<open>not round robin\<close>
     refills \<leftarrow> return (sc_refills sc);
 
     (usage', refills') \<leftarrow> return (if (capacity = 0) then
@@ -299,9 +299,9 @@ where
 
     set_refills sc_ptr refills'';
 
-    capacity \<leftarrow> return $ refills_capacity usage' refills''; (* = refill_capacity sc_ptr usage'*)
+    capacity \<leftarrow> return $ refills_capacity usage' refills''; \<comment> \<open>= refill_capacity sc_ptr usage'\<close>
 
-    cur_time \<leftarrow> gets cur_time;  (* refill_ready sc_ptr *)
+    cur_time \<leftarrow> gets cur_time;  \<comment> \<open>refill_ready sc_ptr\<close>
     ready \<leftarrow> return $ (r_time (hd refills'')) \<le> cur_time + kernelWCET_ticks;
 
     when (capacity > 0 \<and> ready) $ refill_split_check usage';
@@ -317,7 +317,7 @@ where
      refill_hd \<leftarrow> return $ hd (sc_refills sc);
 
      cur_time \<leftarrow> gets cur_time;
-     ready \<leftarrow> return $ (r_time refill_hd) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr; *)
+     ready \<leftarrow> return $ (r_time refill_hd) \<le> cur_time + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr;\<close>
 
      new_time \<leftarrow> return $ if ready then cur_time else (r_time refill_hd);
      if (r_amount refill_hd \<ge> new_budget)
@@ -376,7 +376,7 @@ where
    od) sc_opt"
 
 
-text {* consumed related functions *}
+text \<open>consumed related functions\<close>
 
 definition
   sched_context_update_consumed :: "obj_ref \<Rightarrow> (time,'z::state_ext) s_monad" where
@@ -394,10 +394,10 @@ where
       ct \<leftarrow> gets cur_thread;
       buffer \<leftarrow> return $ data_to_oref $ args ! 0;
       sent \<leftarrow> set_mrs ct (Some buffer) ((ucast consumed) # [ucast (consumed >> 32)]);
-      set_message_info ct $ MI sent 0 0 0 (* RT: is this correct? *)
+      set_message_info ct $ MI sent 0 0 0 \<comment> \<open>RT: is this correct?\<close>
     od"
 
-text {* yield\_to related functions *}
+text \<open>yield\_to related functions\<close>
 term maybeM
 definition
   complete_yield_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -519,11 +519,11 @@ where
     when (0 < sc_refill_max sc) $ do
       when (0 < consumed) $ do
         curtime \<leftarrow> gets cur_time;
-        sufficient \<leftarrow> return $ sufficient_refills consumed (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
-        ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; (* refill_ready sc_ptr *)
+        sufficient \<leftarrow> return $ sufficient_refills consumed (sc_refills sc); \<comment> \<open>refill_sufficient sc_ptr 0\<close>
+        ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr\<close>
         assert sufficient;
-        assert ready;   (* asserting ready & sufficient *)
-        robin \<leftarrow> return (sc_period sc = 0); (* is_round_robin csc;*)
+        assert ready;   \<comment> \<open>asserting ready & sufficient\<close>
+        robin \<leftarrow> return (sc_period sc = 0); \<comment> \<open>is_round_robin csc\<close>
         if robin then
         let new_hd = ((refill_hd sc) \<lparr> r_amount := r_amount (refill_hd sc) - consumed \<rparr>);
             new_tl = ((refill_tl sc) \<lparr> r_amount := r_amount (refill_tl sc) + consumed \<rparr>) in
@@ -531,10 +531,10 @@ where
       else refill_split_check consumed;
         sc2 \<leftarrow> get_sched_context csc;
         curtime2 \<leftarrow> gets cur_time;
-        sufficient2 \<leftarrow> return $ sufficient_refills consumed (sc_refills sc2); (* refill_sufficient sc_ptr 0 *)
-        ready2 \<leftarrow> return $ (r_time (refill_hd sc2)) \<le> curtime2 + kernelWCET_ticks; (* refill_ready sc_ptr *)
+        sufficient2 \<leftarrow> return $ sufficient_refills consumed (sc_refills sc2); \<comment> \<open>refill_sufficient sc_ptr 0\<close>
+        ready2 \<leftarrow> return $ (r_time (refill_hd sc2)) \<le> curtime2 + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr\<close>
         assert sufficient2;
-        assert ready2  (* asserting ready & sufficient again *)
+        assert ready2  \<comment> \<open>asserting ready & sufficient again\<close>
       od;
       update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>)
     od;
@@ -555,8 +555,8 @@ where
     modify (\<lambda>s. s\<lparr> consumed_time := consumed_time s + cur_time' - prev_time \<rparr>)
   od"
 
-text {* Suspend a thread, cancelling any pending operations and preventing it
-from further execution by setting it to the Inactive state. *}
+text \<open>Suspend a thread, cancelling any pending operations and preventing it
+from further execution by setting it to the Inactive state.\<close>
 definition
   suspend :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where

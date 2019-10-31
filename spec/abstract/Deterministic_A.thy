@@ -17,7 +17,7 @@ imports
 
 begin
 
-text {*
+text \<open>
 \label{c:ext-spec}
 
 The kernel specification operates over states of type @{typ "'a state"}, which
@@ -42,11 +42,11 @@ a \emph{revoke} system call both become completely nondeterministic.
 We call this second instantiation the
 \emph{nondeterministic abstract specification} and it is defined below in
 \autoref{s:nondet-spec}.
-*}
+\<close>
 
-text {* Translate a state of type @{typ "'a state"} to one of type @{typ "'b state"}
+text \<open>Translate a state of type @{typ "'a state"} to one of type @{typ "'b state"}
   via a function @{term t} from @{typ "'a"} to @{typ "'b"}.
-*}
+\<close>
 definition trans_state :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a state \<Rightarrow> 'b state"
 where
   "trans_state t s = abstract_state.extend (abstract_state.truncate s) (state.fields (t (exst s)))"
@@ -109,41 +109,41 @@ lemma trans_state_update''[simp]:
   by simp
 (*>*)
 
-text {* Truncate an extended state of type @{typ "'a state"}
+text \<open>Truncate an extended state of type @{typ "'a state"}
   by effectively throwing away all the @{typ "'a"} information.
-*}
+\<close>
 abbreviation "truncate_state \<equiv> trans_state (\<lambda>_. ())"
 
 section "Deterministic Abstract Specification"
 
-text {* \label{s:det-spec}
+text \<open>\label{s:det-spec}
   The deterministic abstract specification tracks
-  ordering information about sibling nodes in the CDT. *}
+  ordering information about sibling nodes in the CDT.\<close>
 
-text {*
+text \<open>
   For each entry in the CDT, we record an ordered list of its children.
   This encodes the order of sibling nodes in the CDT.
-*}
+\<close>
 type_synonym cdt_list = "cslot_ptr \<Rightarrow> cslot_ptr list"
 
 definition work_units_limit :: "machine_word" where
   "work_units_limit = 0x64"
-text {*
+text \<open>
   The extended state of the deterministic abstract specification.
-*}
+\<close>
 record det_ext =
    work_units_completed_internal :: "machine_word"
    cdt_list_internal :: cdt_list
 
-text {*
+text \<open>
   The state of the deterministic abstract specification extends the
   abstract state with the @{typ det_ext} record.
-*}
+\<close>
 type_synonym det_state = "det_ext state"
 
-text {* Accessor and update functions for the extended state of the
+text \<open>Accessor and update functions for the extended state of the
   deterministic abstract specification.
-*}
+\<close>
 abbreviation
   "work_units_completed (s::det_state) \<equiv> work_units_completed_internal (exst s)"
 
@@ -161,12 +161,12 @@ type_synonym 'a det_ext_monad = "(det_state,'a) nondet_monad"
 
 section \<open>Type Class\<close>
 
-text {*
+text \<open>
   A type class for all instantiations of the abstract specification. In
   practice, this is restricted to basically allow only two sensible
   implementations at present: the deterministic abstract specification and
   the nondeterministic one.
-*}
+\<close>
 class state_ext =
  fixes unwrap_ext :: "'a state \<Rightarrow> det_ext state"
  fixes wrap_ext :: "(det_ext \<Rightarrow> det_ext) \<Rightarrow> ('a \<Rightarrow> 'a)"
@@ -208,10 +208,10 @@ end
 
 subsection "Nondeterministic Abstract Specification"
 
-text {* \label{s:nondet-spec}
+text \<open>\label{s:nondet-spec}
 The nondeterministic abstract specification instantiates the extended state
 with the unit type -- i.e. it doesn't have any meaningful extended state.
-*}
+\<close>
 
 instantiation unit :: state_ext
 begin
@@ -253,10 +253,10 @@ where
   od"
 
 
-text {* The CDT in the implementation is stored in prefix traversal order.
+text \<open>The CDT in the implementation is stored in prefix traversal order.
   The following functions traverse its abstract representation here to
   yield corresponding information.
-*}
+\<close>
 definition next_child :: "cslot_ptr \<Rightarrow> cdt_list \<Rightarrow> cslot_ptr option" where
   "next_child slot t \<equiv> case (t slot) of [] \<Rightarrow> None |
                                         x # xs \<Rightarrow> Some x"
@@ -286,7 +286,7 @@ definition next_slot :: "cslot_ptr \<Rightarrow> cdt_list \<Rightarrow> cdt \<Ri
                         else next_not_child slot t m"
 
 
-text {* \emph{Extended operations} for the deterministic abstract specification. *}
+text \<open>\emph{Extended operations} for the deterministic abstract specification.\<close>
 
 definition cap_swap_ext where
 "cap_swap_ext \<equiv> (\<lambda> slot1 slot2 slot1_op slot2_op.
@@ -392,10 +392,10 @@ definition work_units_limit_reached where
    od"
 
 
-text {* Run an extended operation over the extended state without
+text \<open>Run an extended operation over the extended state without
   modifying it and use the return value to choose between two computations
   to run.
-*}
+\<close>
 lemmas ext_init_def = ext_init_det_ext_ext_def ext_init_unit_def
 
 definition OR_choice :: "bool det_ext_monad \<Rightarrow> ('z::state_ext state,'a) nondet_monad \<Rightarrow> ('z state,'a) nondet_monad \<Rightarrow> ('z state,'a) nondet_monad" where
@@ -414,10 +414,10 @@ definition OR_choiceE :: "bool det_ext_monad \<Rightarrow> ('z::state_ext state,
     if rv then f else g
   odE"
 
-text {* Run an extended operation over the extended state to update the
+text \<open>Run an extended operation over the extended state to update the
   extended state, ignoring any return value that the extended operation might
   yield.
-*}
+\<close>
 
 definition do_extended_op :: "unit det_ext_monad \<Rightarrow> ('z::state_ext state,unit) nondet_monad" where
  "do_extended_op eop \<equiv> do
@@ -426,10 +426,10 @@ definition do_extended_op :: "unit det_ext_monad \<Rightarrow> ('z::state_ext st
                          modify (\<lambda> state. state\<lparr>exst := (exst es')\<rparr>)
                         od"
 
-text {*
+text \<open>
   Use the extended state to choose a value from a bounding set @{term S} when
   @{term select_switch} is true. Otherwise just select from @{term S}.
-*}
+\<close>
 definition select_ext :: "(det_ext state \<Rightarrow> 'd) \<Rightarrow> ('d set) \<Rightarrow> ('a::state_ext state,'d) nondet_monad" where
   "select_ext a S \<equiv> do
                       s \<leftarrow> get;

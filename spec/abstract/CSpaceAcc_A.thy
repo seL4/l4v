@@ -18,17 +18,17 @@ theory CSpaceAcc_A
 imports KHeap_A
 begin
 
-text {*
+text \<open>
 This theory contains basic definitions for manipulating capabilities and
 CDTs.
-*}
+\<close>
 
-section {* Capability access *}
+section \<open>Capability access\<close>
 
-text {*
+text \<open>
  Recall that a capability may reside in either a CNode, or inside a TCB;
 the following definitions allow the kernel model to retrieve and update
-capabilities in a uniform fashion.*}
+capabilities in a uniform fashion.\<close>
 definition
   get_cap :: "cslot_ptr \<Rightarrow> (cap,'z::state_ext) s_monad"
 where
@@ -70,7 +70,7 @@ where
      set_object oref obj'
   od"
 
-text {* Ensure a capability slot is empty. *}
+text \<open>Ensure a capability slot is empty.\<close>
 definition
   ensure_empty :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) se_monad"
 where
@@ -79,9 +79,9 @@ where
     whenE (cap \<noteq> NullCap) (throwError DeleteFirst)
   odE"
 
-section {* Accessing the capability derivation tree *}
+section \<open>Accessing the capability derivation tree\<close>
 
-text {* Set the capability derivation tree. *}
+text \<open>Set the capability derivation tree.\<close>
 definition
   set_cdt :: "cdt \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
@@ -90,7 +90,7 @@ definition
     put $ s\<lparr> cdt := t \<rparr>
   od"
 
-text {* Update the capability derivation tree. *}
+text \<open>Update the capability derivation tree.\<close>
 definition
   update_cdt :: "(cdt \<Rightarrow> cdt) \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -99,7 +99,7 @@ where
      set_cdt (f t)
   od"
 
-text {* Set the original flag for a given cap slot. *}
+text \<open>Set the original flag for a given cap slot.\<close>
 definition
   set_original :: "cslot_ptr \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -108,7 +108,7 @@ where
      modify (\<lambda>s. s \<lparr> is_original_cap := r (slot := v) \<rparr>)
   od"
 
-text {* Definitions and syntax for predicates on capability derivation. *}
+text \<open>Definitions and syntax for predicates on capability derivation.\<close>
 definition
   is_cdt_parent :: "cdt \<Rightarrow> cslot_ptr \<Rightarrow> cslot_ptr \<Rightarrow> bool" where
   "is_cdt_parent t p c \<equiv> t c = Some p"
@@ -141,7 +141,7 @@ notation
 and
   parent_of_trancl ("_ \<Turnstile> _ \<rightarrow> _" [60,0,60] 60)
 
-text {* The set of descendants of a particular slot in the CDT. *}
+text \<open>The set of descendants of a particular slot in the CDT.\<close>
 definition
   descendants_of :: "cslot_ptr \<Rightarrow> cdt \<Rightarrow> cslot_ptr set" where
   "descendants_of p t \<equiv> {q. (p,q) \<in> (cdt_parent_rel t)\<^sup>+}"
