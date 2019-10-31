@@ -2083,7 +2083,7 @@ crunch valid_ioc[wp]: do_machine_op valid_ioc
 
 crunch inv[wp]: get_irq_slot "P"
 
-text {* some invariants on sched_context *}
+text \<open>some invariants on sched_context\<close>
 
 crunch irq_node[wp]: update_sched_context "\<lambda>s. P (interrupt_irq_node s)"
 

@@ -3133,7 +3133,7 @@ lemma vs_refs_pdptI:
   apply (rule ccontr, auto)
   done
 
-text {* arch specific symrefs *} (* hyp_ref stubs : for compatibility with arm-hyp *)
+text \<open>arch specific symrefs\<close> (* hyp_ref stubs : for compatibility with arm-hyp *)
 
 definition
   tcb_hyp_refs :: "arch_tcb \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -3377,7 +3377,7 @@ lemmas asid_low_bits_of_p2m1_eq =
 
 end
 
-setup {* Add_Locale_Code_Defs.setup "X64" *}
-setup {* Add_Locale_Code_Defs.setup "X64_A" *}
+setup \<open>Add_Locale_Code_Defs.setup "X64"\<close>
+setup \<open>Add_Locale_Code_Defs.setup "X64_A"\<close>
 
 end

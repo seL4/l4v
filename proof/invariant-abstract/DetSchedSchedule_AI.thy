@@ -228,7 +228,7 @@ lemma valid_blocked_except_set_less:
      (case_tac st; fastforce simp: runnable_eq_active active_sc_tcb_at_defs split: option.splits)
 
 lemma tcb_sched_enqueue_valid_blocked_except_set:
-  "\<lbrace>valid_blocked_except_set (insert thread S)\<rbrace> (* not_queued thread \<longrightarrow> in_ready_q thread *)
+  "\<lbrace>valid_blocked_except_set (insert thread S)\<rbrace> \<comment> \<open>not_queued thread \<longrightarrow> in_ready_q thread\<close>
     tcb_sched_action tcb_sched_enqueue thread
    \<lbrace>\<lambda>_. valid_blocked_except_set S\<rbrace>"
   apply (wpsimp simp: thread_get_def tcb_sched_action_def)
@@ -246,7 +246,7 @@ lemmas tcb_sched_enqueue_valid_blocked_enqueue =
 
 (* the same as the case of tcb_sched_enqueue *)
 lemma tcb_sched_append_valid_blocked_except_set:
-  "\<lbrace>valid_blocked_except_set (insert thread S)\<rbrace> (* not_queued thread \<longrightarrow> in_ready_q thread *)
+  "\<lbrace>valid_blocked_except_set (insert thread S)\<rbrace> \<comment> \<open>not_queued thread \<longrightarrow> in_ready_q thread\<close>
     tcb_sched_action tcb_sched_append thread
    \<lbrace>\<lambda>_. valid_blocked_except_set S\<rbrace>"
   apply (wpsimp simp: thread_get_def tcb_sched_action_def)
@@ -1270,7 +1270,7 @@ lemma set_thread_state_sched_act_not_valid_sched:
 
 lemma set_thread_state_not_queued_valid_sched:
   "\<lbrace>valid_sched
-    and (*simple_sched_action and*) not_in_release_q thread
+    and \<comment> \<open>simple_sched_action and\<close> not_in_release_q thread
     and scheduler_act_not thread and not_queued thread
     and K (\<not>runnable ts)\<rbrace>
      set_thread_state thread ts
@@ -1285,7 +1285,7 @@ lemma set_thread_state_not_queued_valid_sched:
 
 lemma set_thread_state_not_queued_valid_sched_strong:
   "\<lbrace>valid_sched_except_blocked and valid_blocked_except thread
-    and (*simple_sched_action and*) not_in_release_q thread
+    and \<comment> \<open>simple_sched_action and\<close> not_in_release_q thread
     and scheduler_act_not thread and not_queued thread
     and K (\<not>runnable ts)\<rbrace>
      set_thread_state thread ts
@@ -3977,8 +3977,8 @@ lemma possible_switch_to_valid_ready_qs:
   done
 
 lemma possible_switch_to_valid_ready_qs':
-  "\<lbrace>valid_ready_qs (*and st_tcb_at runnable target and active_sc_tcb_at target
-    and budget_ready target and budget_sufficient target*)
+  "\<lbrace>valid_ready_qs \<comment> \<open>and st_tcb_at runnable target and active_sc_tcb_at target
+    and budget_ready target and budget_sufficient target\<close>
       and (\<lambda>s. \<forall>tcb. ko_at (TCB tcb) target s \<and>
     tcb_domain tcb \<noteq> cur_domain s \<or>
     (tcb_domain tcb = cur_domain s \<and> scheduler_action s \<noteq> resume_cur_thread)
@@ -5517,7 +5517,7 @@ lemma sts_tcb_ko_at':
   apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
   done
 
-text {* The reply a TCB is waiting on *}
+text \<open>The reply a TCB is waiting on\<close>
 definition
   reply_blocked :: "thread_state \<Rightarrow> obj_ref option"
 where
@@ -5529,7 +5529,7 @@ where
 lemma reply_remove_active_sc_tcb_at:
   "\<lbrace>active_sc_tcb_at t and valid_objs and (\<lambda>s. sym_refs (state_refs_of s))
     and (\<lambda>s. reply_sc_reply_at (\<lambda>p. \<forall>scp. p = Some scp
-             \<longrightarrow> sc_tcb_sc_at (\<lambda>x. x \<noteq> Some t) scp s) rptr s) (* callee *)\<rbrace>
+             \<longrightarrow> sc_tcb_sc_at (\<lambda>x. x \<noteq> Some t) scp s) rptr s) \<comment> \<open>callee\<close>\<rbrace>
      reply_remove tptr rptr
    \<lbrace>\<lambda>_. active_sc_tcb_at t::det_state \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: reply_remove_def)
@@ -10277,7 +10277,7 @@ lemma schedule_valid_sched:
     (\<lambda>s. budget_sufficient (cur_thread s) s) and
     (\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_q (cur_thread s) s) s \<longrightarrow>
               budget_ready (cur_thread s) s \<and> budget_sufficient (cur_thread s) s) and
-    (*(\<lambda>s. cur_thread s \<notin> set (release_queue s) \<longrightarrow> budget_ready (cur_thread s) s) and*)
+    \<comment> \<open>(\<lambda>s. cur_thread s \<notin> set (release_queue s) \<longrightarrow> budget_ready (cur_thread s) s) and\<close>
    (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and (\<lambda>s. sc_at_period (\<lambda>a. a \<noteq> 0) (cur_sc s) s)
      and cur_tcb and valid_sched and valid_idle and scheduler_act_sane and ct_not_queued
      and cur_sc_in_release_q_imp_zero_consumed and valid_machine_time
@@ -17562,7 +17562,7 @@ context begin
 lemma handle_event_valid_sched:
   "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
       and (\<lambda>s. scheduler_action s = resume_cur_thread)
-      and (\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s) (*and simple_sched_action*)\<rbrace>
+      and (\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s) \<comment> \<open>and simple_sched_action\<close>\<rbrace>
    handle_event e
    \<lbrace>\<lambda>rv. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   apply (cases e, simp_all)
@@ -17735,11 +17735,11 @@ lemma call_kernel_valid_sched_helper:
          (\<lambda>s. the irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)) s \<and>
         invs s \<and> valid_machine_time s \<and> ct_not_in_release_q s \<and> ct_not_queued s \<and> valid_refills (cur_sc s) (- 1) s \<and>
          schact_is_rct s \<and> cur_sc_chargeable s\<rbrace>
-(*
+\<comment> \<open>
          (\<lambda>s. the irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s
                           \<and> ct_not_in_release_q s)) s \<and>
         invs s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
-*)
+\<close>
    check_budget
    \<lbrace>\<lambda>_ s::det_state.
            valid_sched s \<and>

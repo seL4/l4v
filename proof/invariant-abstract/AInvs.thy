@@ -38,7 +38,7 @@ lemma thread_set_tcb_arch_is_schedulable_bool[wp]:
                   split: option.splits )
   done
 
-text {* The top-level invariance *}
+text \<open>The top-level invariance\<close>
 
 lemma akernel_invs:
   "\<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and>

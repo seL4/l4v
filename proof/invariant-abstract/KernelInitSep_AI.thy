@@ -17,7 +17,7 @@ begin
 
 (* UNFINISHED; paused project *)
 
-text {* Migration candidates *}
+text \<open>Migration candidates\<close>
 
 lemma hoare_gen_asmE':
   (* XXX: this should be the non-' version really, which is misnamed *)
@@ -65,9 +65,9 @@ lemma insert_same_length_id:
   by auto
 
 
-text {*
+text \<open>
   Recursive sequence of length n along a ring, starting at p.
-  Wrapping permitted. *}
+  Wrapping permitted.\<close>
 primrec
   len_seq :: "'a::ring_1 \<Rightarrow> nat \<Rightarrow> 'a list"
 where
@@ -125,35 +125,35 @@ proof (rule ccontr, simp)
 qed
 
 
-section {* Definitions *}
+section \<open>Definitions\<close>
 
-subsection {* Partial Validity of Kernel Objects (i.e. cnodes) *}
+subsection \<open>Partial Validity of Kernel Objects (i.e. cnodes)\<close>
 
-text {* Same as @{term "well_formed_cnode_n"}, but allow gaps. *}
+text \<open>Same as @{term "well_formed_cnode_n"}, but allow gaps.\<close>
 definition
   bounded_cnode_n :: "nat \<Rightarrow> cnode_contents \<Rightarrow> bool" where
   "bounded_cnode_n n \<equiv> \<lambda>cs. \<forall>x \<in> dom cs. length x = n"
 
-text {* Same as @{term "valid_cs_size"}, but allowing gaps *}
+text \<open>Same as @{term "valid_cs_size"}, but allowing gaps\<close>
 definition
   bounded_cs_size :: "nat \<Rightarrow> cnode_contents \<Rightarrow> bool" where
   "bounded_cs_size sz cs \<equiv> sz < word_bits - cte_level_bits
                            \<and> bounded_cnode_n sz cs"
 
-text {*
+text \<open>
   Kernel object respects bounds set by its own size. This is only a problem
   for cnodes.
-*}
+\<close>
 definition
   bounded_ko :: "kernel_object \<Rightarrow> bool" where
   "bounded_ko ko = (case ko of CNode sz cs \<Rightarrow> bounded_cs_size sz cs
                              | _ \<Rightarrow> True)"
 
-subsection {*
+subsection \<open>
   Types and sizes of abstract kernel objects without checking any
-  well-formedness. *}
+  well-formedness.\<close>
 
-text {* Like @{term "a_type"}, but don't check wellformed on cnodes *}
+text \<open>Like @{term "a_type"}, but don't check wellformed on cnodes\<close>
 definition
   a_base_type :: "Structures_A.kernel_object \<Rightarrow> a_type" where
  "a_base_type ko \<equiv> case ko of
@@ -170,13 +170,13 @@ definition
 lemmas a_base_type_simps [simp] =
   a_base_type_def [split_simps kernel_object.split arch_kernel_obj.split]
 
-text {*
+text \<open>
   These correspond to @{term "arch_kobj_size"} and @{term "obj_bits"}, but
   since we can derive all the information necessary from the type, we use the
   type.
   We provide abbreviations for convenience;
   @{text "a_base_type_bits (a_base_type ...)"} is rather verbose.
-*}
+\<close>
 
 definition
   aa_base_type_bits :: "aa_type \<Rightarrow> nat" where
@@ -206,10 +206,10 @@ abbreviation
 
 lemmas t_obj_bits_def = a_base_type_bits_def
 
-text {*
+text \<open>
   Whether an index is a valid cnode index for the given type, i.e.\ can we set
   that cap to something and end up with a bounded object.
-  *}
+\<close>
 
 definition
   abt_valid_cnode_index :: "a_type \<Rightarrow> cnode_index \<Rightarrow> bool" where
@@ -224,17 +224,17 @@ abbreviation
 lemmas valid_cnode_index_def = abt_valid_cnode_index_def
 
 
-subsection {* Component structure of objects *}
+subsection \<open>Component structure of objects\<close>
 
-text {*
+text \<open>
   Components available for given object types.
-*}
+\<close>
 
-text {*
+text \<open>
   What components are available for a given kernel object
   (we should see a subset of these in the ghost state).
   Note that [] is the ``fields'' component, containing unsplittable information for a
-  given object, such as non-cap fields of a tcb or all fields of an endpoint. *}
+  given object, such as non-cap fields of a tcb or all fields of an endpoint.\<close>
 
 primrec
   aa_base_type_components :: "aa_type \<Rightarrow> component set" where
@@ -255,7 +255,7 @@ primrec
 abbreviation
   "ko_components ko \<equiv> a_base_type_components (a_base_type ko)"
 
-text {* Relationship between caps and components. *}
+text \<open>Relationship between caps and components.\<close>
 
 (* XXX: see @{text "nat_to_cref"} *)
 definition
@@ -267,13 +267,13 @@ abbreviation
   "cmp_of ko \<equiv> a_base_type_cmp_of (a_base_type ko)"
 
 
-subsection {* Component-wise Combining of Kernel Objects *}
+subsection \<open>Component-wise Combining of Kernel Objects\<close>
 
-text {*
+text \<open>
   Combining objects of the same type (strictly speaking it's a right override,
   although realistically it only makes sense if the first object's components
   are disjoint from those of the second). Crucially, NOT DEFINED for two
-  objects of different types, as that makes no sense whatsoever. *}
+  objects of different types, as that makes no sense whatsoever.\<close>
 
 definition
   ao_override :: "arch_kernel_obj \<Rightarrow> arch_kernel_obj \<Rightarrow> component set
@@ -328,7 +328,7 @@ definition
          | ArchObj ao1 \<Rightarrow>
            (case obj2 of ArchObj ao2 \<Rightarrow> ArchObj (ao_override ao1 ao2 cmps)))"
 
-text {*
+text \<open>
   Object ``cleaning'', i.e. getting the components we don't have into a known
   state. Otherwise if we combine @{text "(cnode1,{to_bl 2, to_bl 3})"} and
   @{text "(cnode2,{to_bl 4, to_bl 5})"} we don't
@@ -336,7 +336,7 @@ text {*
 
   Using undefined everywhere, as expected, except for CNodes where
   CNode undefined is not necessarily well-formed, which affects its type.
-  *}
+\<close>
 
 definition
   ao_clean :: "arch_kernel_obj \<Rightarrow> component set \<Rightarrow> arch_kernel_obj" where
@@ -359,7 +359,7 @@ definition
         | ArchObj obj \<Rightarrow> ArchObj (ao_clean obj cmps))"
 
 
-text {* Combining objects *}
+text \<open>Combining objects\<close>
 
 definition
   ko_combine :: "(kernel_object \<times> component set)
@@ -370,15 +370,15 @@ definition
     (ko_override (ko_clean o1 cs1) (ko_clean o2 cs2) cs2, cs1 \<union> cs2)))"
 
 
-text {* Updating a cap in a specific kernel object *}
+text \<open>Updating a cap in a specific kernel object\<close>
 
-text {*
+text \<open>
   This is the non-monadic counterpart to @{term set_cap_local}.
   We use silent failure here, since we want generic lemmas to hold, such
   as that @{term set_ko_cap} preserves the kernel object type. If we returned
   undefined, we can't prove those without the extra assumption everywhere that
   @{term "cap_of ko i = Some c"}.
-*}
+\<close>
 
 definition (* non-monadic counterpart to set_cap(_local) *)
   set_ko_cap :: "kernel_object \<Rightarrow> cnode_index \<Rightarrow> cap \<Rightarrow> kernel_object" where
@@ -400,9 +400,9 @@ definition (* non-monadic counterpart to set_cap(_local) *)
               | _ \<Rightarrow> ko)"
 
 
-subsection {* Object-component Maps *}
+subsection \<open>Object-component Maps\<close>
 
-text {*
+text \<open>
   When we annotate the abstract kernel heap with the components of kernel
   objects we are allowed to access at each address, we get an
   object-component map. This map is the core of the separation logic, since
@@ -412,7 +412,7 @@ text {*
   disjoint components.
 
   In lemmas, ``object-component map'' is typically abbreviated to ``ocm''.
-*}
+\<close>
 
 type_synonym
   obj_comp_map = "paddr \<rightharpoonup> (kernel_object \<times> component set)"
@@ -436,7 +436,7 @@ definition
                                | None \<Rightarrow> Some oc1)
               | None \<Rightarrow> h2 p))"
 
-text {*
+text \<open>
   Disjunction (per address):
   If it's in one heap but not the other (or in neither),
   consider the object maps disjoint.
@@ -461,7 +461,7 @@ text {*
   components or ficticious components (they convey no information except the
   object type at that address). This also means no magical cnodes where a
   cnode of size 2 can suddenly develop a entry over 9000.
-*}
+\<close>
 
 definition
   "sane_components ko cmps \<equiv> bounded_ko ko \<and> cmps \<noteq> {}
@@ -481,9 +481,9 @@ definition
              | _ \<Rightarrow> True)"
 
 
-subsection {*
+subsection \<open>
   State used for separation algebra; encompasses the object-component map, as well as free and available memory.
-*}
+\<close>
 
 datatype sep_state = SepState obj_comp_map "obj_ref set" "obj_ref set"
                            (* comp. map    free mem      avail mem *)
@@ -494,7 +494,7 @@ type_synonym
 translations
   (type) "sep_assert" <= (type) "sep_state \<Rightarrow> bool"
 
-text {* SepState accessors *}
+text \<open>SepState accessors\<close>
 
 definition
   sep_state_ocm :: "sep_state \<Rightarrow> obj_comp_map" where
@@ -522,9 +522,9 @@ definition
                  (ki_free_mem ki)
                  (ki_available_mem ki)"
 
-text {*
+text \<open>
   Lifting a kernel state @{text "s"} onto an existing kernel init state
-  @{text "kis"}. *}
+  @{text "kis"}.\<close>
 abbreviation
   "kis_lift kis s \<equiv> lift_sep_state (kis\<lparr>ki_kernel_state := s\<rparr>)"
 
@@ -536,7 +536,7 @@ definition
 definition
   "kheap_shadows kh \<equiv> \<Union>(kheap_shadow kh ` dom kh)"
 
-text {* Addresses used up by objects in the kernel heap *}
+text \<open>Addresses used up by objects in the kernel heap\<close>
 definition
   kheap_dom :: "(obj_comp_map) \<Rightarrow> paddr set" where
   "kheap_dom kh \<equiv> dom kh \<union> kheap_shadows kh"
@@ -574,9 +574,9 @@ definition
   "sep_empty = SepState empty {} {}"
 
 
-subsection {* Maps-to Predicates *}
+subsection \<open>Maps-to Predicates\<close>
 
-text {* pretty raw function to talk about a single object's components at a given address *}
+text \<open>pretty raw function to talk about a single object's components at a given address\<close>
 definition
   sep_map_base :: "paddr \<Rightarrow> kernel_object \<Rightarrow> component set \<Rightarrow> sep_assert" where
   "sep_map_base p ko cmps s \<equiv> (case s of SepState ocm free avail \<Rightarrow>
@@ -588,15 +588,15 @@ definition
         avail = {})"
   (* XXX: can this be the same as the empty assertion when cmps = {}? *)
 
-text {* same thing, but talking about the entire object at an address *}
+text \<open>same thing, but talking about the entire object at an address\<close>
 definition
   sep_map_ko :: "paddr \<Rightarrow> kernel_object \<Rightarrow> sep_assert" where
   "sep_map_ko p ko \<equiv> sep_map_base p ko (ko_components ko)"
 
-text {*
+text \<open>
   An object of the specified type with a set cap. We need to specify the type
   in order to be able to reassemble cnodes, and also to not have to prove
-  things such as that @{const set_cap} doesn't change the object's type. *}
+  things such as that @{const set_cap} doesn't change the object's type.\<close>
 definition
   sep_map_cap :: "a_type \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> sep_assert" where
   "sep_map_cap atyp cptr cap \<equiv> case cptr of (p,i) \<Rightarrow>
@@ -604,26 +604,26 @@ definition
                a_base_type ko = atyp \<and>
                cap_of ko i = Some cap)"
 
-text {* declaring a region of memory is free (unallocated) *}
+text \<open>declaring a region of memory is free (unallocated)\<close>
 definition
   sep_free :: "paddr \<Rightarrow> nat \<Rightarrow> sep_assert" where
   "sep_free p sz s = (case s of SepState ocm free avail \<Rightarrow>
      (dom ocm = {} \<and> free = set (len_seq p sz) \<and> avail = {}))"
 
-text {* declaring a region of memory is available (allocated but untyped) *}
+text \<open>declaring a region of memory is available (allocated but untyped)\<close>
 definition
   sep_available :: "paddr \<Rightarrow> nat \<Rightarrow> sep_assert" where
   "sep_available p sz s = (case s of SepState ocm free avail \<Rightarrow>
      (dom ocm = {} \<and> free = {} \<and> avail = set (len_seq p sz)))"
 
 
-subsection {* Cap-level Updates of the Kernel Init State *}
+subsection \<open>Cap-level Updates of the Kernel Init State\<close>
 
-text {*
+text \<open>
   The @{term sep_update_cap} function is equivalent to what
   @{term set_cap_local} does at the monadic kernel state level, but phrased
   non-monadically and more conveniently for the separation state level.
-*}
+\<close>
 
 definition
   sep_update_cap :: "cslot_ptr \<Rightarrow> cap \<Rightarrow> sep_state \<Rightarrow> sep_state" where
@@ -634,9 +634,9 @@ definition
 
 
 
-section {* Proofs *} (* ------------------------------------------------- *)
+section \<open>Proofs\<close> (* ------------------------------------------------- *)
 
-subsection {* Component structure of objects *}
+subsection \<open>Component structure of objects\<close>
 
 lemma bounded_ko_t_obj_bits:
   "bounded_ko ko \<Longrightarrow> t_obj_bits ko < word_bits"
@@ -670,7 +670,7 @@ lemma tcb_cnode_index_Nil_False [simp]:
   by (auto simp: tcb_cnode_index_not_Nil tcb_cnode_index_not_Nil[symmetric])
 
 
-subsection {* Component-wise Combining of Kernel Objects *}
+subsection \<open>Component-wise Combining of Kernel Objects\<close>
 
 lemma tcb_override_index_simps:
   "tcb_override tcb tcb' {tcb_cnode_index 0}
@@ -739,10 +739,10 @@ lemma tcb_override_index_sub_cmps_simps:
    = tcb_override ko ko' cmps \<lparr> tcb_ipcframe := cap \<rparr>"
   by (simp_all add: tcb_override_def)
 
-text {*
+text \<open>
   Unfolding @{text tcb_override_def} the index is known is a really bad idea
   in terms of simplifier performance in actual lemmas. These rules help avoid
-  that scenario. *}
+  that scenario.\<close>
 lemmas tcb_override_index_assist = tcb_override_index_simps
          tcb_override_index_cmps_simps tcb_override_index_sub_cmps_simps
          tcb_field_cmp_right_simps
@@ -1009,8 +1009,8 @@ lemma ko_combine_commute:
      (auto intro!: ext simp: ao_override_def split: if_split_asm)
 
 
-subsection {*
-  Check on Kernel Object and Components for Considering Disjunction *}
+subsection \<open>
+  Check on Kernel Object and Components for Considering Disjunction\<close>
 
 lemma check_components_id:
   "\<lbrakk> bounded_ko ko ; cmps \<subseteq> ko_components ko ; cmps \<noteq> {} \<rbrakk>
@@ -1050,7 +1050,7 @@ proof -
 qed
 
 
-subsection {* Updating a cap in a specific kernel object *}
+subsection \<open>Updating a cap in a specific kernel object\<close>
 
 lemma a_base_type_set_ko_cap [simp]:
   "a_base_type (set_ko_cap ko i cap) = a_base_type ko"
@@ -1187,7 +1187,7 @@ lemma abt_valid_cnode_index_in_components:
                split: a_type.splits)
 
 
-subsection {* Object-component Maps *}
+subsection \<open>Object-component Maps\<close>
 
 lemma ocm_disj_empty [simp]:
   "obj_comp_map_disj cmps Map.empty"
@@ -1271,7 +1271,7 @@ lemma ocm_has_cap_disj_add:
   done
 
 
-subsection {* Instantiation to a Separation Algebra. *}
+subsection \<open>Instantiation to a Separation Algebra.\<close>
 
 lemma kheap_dom_alt_def:
   "kheap_dom kh \<equiv> \<Union> ((\<lambda>p . set (len_seq p
@@ -1367,10 +1367,10 @@ lemma kheap_dom_ocm_add:
    \<Longrightarrow> kheap_dom (obj_comp_map_add kh1 kh2) = (kheap_dom kh1 \<union> kheap_dom kh2)"
   by (simp add: kheap_dom_def kheap_shadows_ocm_add Un_ac)
 
-text {*
+text \<open>
   I use these to hand-hold tools through the next proof; automated tactics
   just choke.
-*}
+\<close>
 
 lemma empty_Inter_UnD:
   "A \<inter> (B \<union> C) = {} \<Longrightarrow> A \<inter> B = {} \<and> A \<inter> C = {}"
@@ -1441,9 +1441,9 @@ lemma sep_disj_ocmD:
   by (clarsimp simp: sep_disj_defs sep_state_ocm_def split: sep_state.splits)
 
 
-subsection {* Properties of maps-to predicates *}
+subsection \<open>Properties of maps-to predicates\<close>
 
-subsubsection {* Properties of @{term sep_map_base} *}
+subsubsection \<open>Properties of @{term sep_map_base}\<close>
 
 lemma sep_map_baseI:
   "\<lbrakk> sep_state_ocm s p = Some (ko_clean ko cmps, cmps) ;
@@ -1606,7 +1606,7 @@ lemma sep_map_base_set_ko_cap_implode:
   done
 
 
-subsubsection {* Properties of @{term sep_map_cap} *}
+subsubsection \<open>Properties of @{term sep_map_cap}\<close>
 
 lemma sep_map_base_sep_map_capI:
   "\<lbrakk> sep_map_base p ko {cmp} s ; cmp = cmp_of ko i ; cap_of ko i = Some cap \<rbrakk>
@@ -1736,7 +1736,7 @@ lemma sep_map_base_set_ko_cap_sep_map_cap_explode:
   done
 
 
-subsection {* Cap-level Updates of the Kernel Init State *}
+subsection \<open>Cap-level Updates of the Kernel Init State\<close>
 
 lemma sep_map_cap_update_cap:
   "(sep_map_cap atyp p old_cap) s \<Longrightarrow> (sep_map_cap atyp p cap) (sep_update_cap p cap s)"
@@ -1860,13 +1860,13 @@ proof -
 qed
 
 
-subsection {* Properties of Lifting Kernel States into Init *}
+subsection \<open>Properties of Lifting Kernel States into Init\<close>
 
-text {*
+text \<open>
   This style of lift-reasoning is used for low-level interaction with other
   wp rules and establishing a link between kernel state operations and
   kernel init state predicates.
-*}
+\<close>
 
 lemma dom_ocm_dom_kheap_kis_lift:
   "dom (sep_state_ocm (kis_lift kis s)) = dom (kheap s)"

@@ -39,7 +39,7 @@ lemma set_consumed_iflive[wp]:
   by (wpsimp simp: set_consumed_def)
 
 lemma set_consumed_refs_of:
-  "\<lbrace>(*(\<lambda>s. kheap s tptr = Some (TCB tcb) \<and> tcb_yield_to tcb = Some scp) and*) (\<lambda>s. P (state_refs_of s))\<rbrace>
+  "\<lbrace>\<comment> \<open>(\<lambda>s. kheap s tptr = Some (TCB tcb) \<and> tcb_yield_to tcb = Some scp) and\<close> (\<lambda>s. P (state_refs_of s))\<rbrace>
         set_consumed scptr args \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   by (wpsimp simp: set_consumed_def)
 
@@ -605,7 +605,7 @@ lemma sched_context_yield_to_invs:
   apply (clarsimp dest!: idle_sc_no_ex_cap)
   done
 
-text {* valid invocation definitions *}
+text \<open>valid invocation definitions\<close>
 primrec
   valid_sched_context_inv :: "sched_context_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -644,13 +644,13 @@ primrec
 where
     "valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)
      = (obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> valid_refills_number mrefills n) scptr
-        and ex_nonz_cap_to scptr and K (MIN_REFILLS \<le> mrefills) (* mrefills = MIN_REFILLS + extra_refills *)
+        and ex_nonz_cap_to scptr and K (MIN_REFILLS \<le> mrefills) \<comment> \<open>mrefills = MIN_REFILLS + extra_refills\<close>
         and K (budget \<le> us_to_ticks maxTimer_us \<and> budget \<ge> MIN_BUDGET)
         and K (period \<le> us_to_ticks maxTimer_us \<and> budget \<ge> MIN_BUDGET)
         and K (budget \<le> period))"
 
 
-text {* refill invariant proofs *}  (* FIXME move? Sporadic_AI? *)
+text \<open>refill invariant proofs\<close>  \<comment> \<open>FIXME move? Sporadic_AI?\<close>
 
 definition valid_refill_amount :: "obj_ref \<Rightarrow> time \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -1355,7 +1355,7 @@ lemma
 
 end
 
-text {* invocation related lemmas *}
+text \<open>invocation related lemmas\<close>
 
 lemma sched_context_bind_tcb_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
@@ -1781,7 +1781,7 @@ lemma invoke_sched_control_configure_invs[wp]:
   apply (auto simp: invs_def valid_state_def valid_pspace_def idle_sc_no_ex_cap)
   done
 
-text {* set_thread_state and schedcontext/schedcontrol invocations *}
+text \<open>set_thread_state and schedcontext/schedcontrol invocations\<close>
 
 crunches set_thread_state_act
   for st_tcb_at_tc[wp]: "\<lambda>s. st_tcb_at P (cur_thread s) s"

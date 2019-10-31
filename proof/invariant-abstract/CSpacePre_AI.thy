@@ -192,7 +192,7 @@ definition
   copy_of :: "cap \<Rightarrow> cap \<Rightarrow> bool"
 where
   "copy_of cap' cap \<equiv>
-  if (is_untyped_cap cap (*\<or> is_reply_cap cap \<or> is_master_reply_cap cap*))
+  if (is_untyped_cap cap \<comment> \<open>\<or> is_reply_cap cap \<or> is_master_reply_cap cap\<close>)
      then cap = cap' else same_object_as cap cap'"
 
 definition

@@ -358,7 +358,7 @@ where
  | cap.CNodeCap ref bits gd \<Rightarrow> cap.CNodeCap ref bits []
  | cap.ThreadCap ref \<Rightarrow> cap.ThreadCap ref
  | cap.DomainCap \<Rightarrow> cap.DomainCap
- | cap.SchedContextCap ref n \<Rightarrow> cap.SchedContextCap ref n (*? *)
+ | cap.SchedContextCap ref n \<Rightarrow> cap.SchedContextCap ref n \<comment> \<open>?\<close>
  | cap.ReplyCap ref \<Rightarrow> cap.ReplyCap ref
  | cap.UntypedCap dev ref n f \<Rightarrow> cap.UntypedCap dev ref n 0
  | cap.ArchObjectCap acap \<Rightarrow> cap.ArchObjectCap (cap_master_arch_cap acap)
@@ -1097,7 +1097,7 @@ where
       \<and> (gen_obj_refs newcap \<subseteq> gen_obj_refs cap)
       \<and> (newcap \<noteq> cap.NullCap \<longrightarrow> cap_range newcap = cap_range cap)
       \<and> (is_reply_cap cap \<longrightarrow> newcap = cap.NullCap)
-      \<and> (tcb_cap_valid cap sl s \<longrightarrow> tcb_cap_valid newcap sl s) (* ? *)
+      \<and> (tcb_cap_valid cap sl s \<longrightarrow> tcb_cap_valid newcap sl s) \<comment> \<open>?\<close>
       \<and> \<not> is_untyped_cap newcap
       \<and> \<not> is_reply_cap newcap
       \<and> newcap \<noteq> cap.IRQControlCap

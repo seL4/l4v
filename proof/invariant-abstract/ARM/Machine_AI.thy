@@ -26,7 +26,7 @@ lemma wpc_helper_no_irq:
 
 wpc_setup "\<lambda>m. no_irq m" wpc_helper_no_irq
 
-ML {*
+ML \<open>
 structure CrunchNoIrqInstance : CrunchInstance =
 struct
   val name = "no_irq";
@@ -51,11 +51,11 @@ struct
 end;
 
 structure CrunchNoIrq : CRUNCH = Crunch(CrunchNoIrqInstance);
-*}
+\<close>
 
-setup {*
+setup \<open>
   add_crunch_instance "no_irq" (CrunchNoIrq.crunch_x, CrunchNoIrq.crunch_ignore_add_del)
-*}
+\<close>
 
 crunch_ignore (no_irq) (add:
   NonDetMonad.bind return "when" get gets fail

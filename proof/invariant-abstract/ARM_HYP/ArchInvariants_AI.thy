@@ -2212,7 +2212,7 @@ lemma valid_vspace_obj_default':
   by (cases aobject_type; simp)
 
 
-text {* arch specific symrefs *}
+text \<open>arch specific symrefs\<close>
 
 definition
   tcb_vcpu_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -2551,7 +2551,7 @@ lemma valid_arch_mdb_eqI:
 
 end
 
-setup {* Add_Locale_Code_Defs.setup "ARM" *}
-setup {* Add_Locale_Code_Defs.setup "ARM_A" *}
+setup \<open>Add_Locale_Code_Defs.setup "ARM"\<close>
+setup \<open>Add_Locale_Code_Defs.setup "ARM_A"\<close>
 
 end

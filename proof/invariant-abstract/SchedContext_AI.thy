@@ -985,7 +985,7 @@ lemma zombies_kheap_update:
   done
 
 
-text {* bind/unbind invs lemmas *}
+text \<open>bind/unbind invs lemmas\<close>
 
 global_interpretation set_sc_obj_ref: non_reply_op "set_sc_obj_ref f ref new"
   by (simp add: set_sc_obj_ref_def) unfold_locales
@@ -1514,7 +1514,7 @@ lemma sched_context_unbind_reply_invs[wp]:
   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
-text {* more invs rules *}
+text \<open>more invs rules\<close>
 
 crunches postpone
   for valid_irq_node[wp]: valid_irq_node

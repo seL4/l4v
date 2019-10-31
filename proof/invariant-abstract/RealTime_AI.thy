@@ -17,7 +17,7 @@ lemma invs_exst [iff]:
   "invs (trans_state f s) = invs s"
   by (simp add: invs_def valid_state_def)
 
-text {* update\_sched\_context *}
+text \<open>update\_sched\_context\<close>
 
 lemma update_sched_context_idle_thread[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> update_sched_context ref f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
@@ -72,7 +72,7 @@ lemma refs_in_get_refs:
 crunch irq_node[wp]: set_reply "\<lambda>s. P (interrupt_irq_node s)"
   (simp: get_object_def)
 
-text {* set_sc_obj_ref/get_sc_obj_ref *}
+text \<open>set_sc_obj_ref/get_sc_obj_ref\<close>
 
 lemma get_sc_obj_ref_inv[simp, wp]:
   "\<lbrace>P\<rbrace> get_sc_obj_ref f t \<lbrace>\<lambda>r. P\<rbrace>"
@@ -272,7 +272,7 @@ lemma update_sched_context_state_refs_of:
                elim!: rsubst[of P])
   by (rule ext; simp)
 
-text {* set_reply_obj_ref *}
+text \<open>set_reply_obj_ref\<close>
 
 crunches update_sk_obj_ref
  for aligned[wp]: pspace_aligned
@@ -404,7 +404,7 @@ lemma gscrpls_sp:
   by (wpsimp simp: sc_replies_sc_at_def obj_at_def wp: get_sched_context_wp)
 
 
-text {* set_tcb_obj_ref/get_tcb_obj_ref *}
+text \<open>set_tcb_obj_ref/get_tcb_obj_ref\<close>
 
 crunches set_tcb_obj_ref,get_tcb_obj_ref
  for aligned[wp]: pspace_aligned
@@ -514,7 +514,7 @@ crunches set_thread_state_act
  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
 
 
-text {* possible_switch_to invariants *}
+text \<open>possible_switch_to invariants\<close>
 
 lemma valid_irq_states_ready_queues_update[simp]:
   "valid_irq_states (ready_queues_update f s) = valid_irq_states s"
@@ -633,7 +633,7 @@ crunches tcb_sched_action,reschedule_required,possible_switch_to,tcb_release_enq
 
 
 
-text {* sched\_context\_donate and others *}
+text \<open>sched\_context\_donate and others\<close>
 
 lemma sched_context_donate_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> sched_context_donate scp tcbp \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
@@ -801,7 +801,7 @@ lemma sched_context_donate_valid_ioc[wp]:
                    test_reschedule_def
                wp: hoare_drop_imp)
 
-text {* reply\_remove and others *}
+text \<open>reply\_remove and others\<close>
 
 lemma reply_remove_irq_node[wp]:
  "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace>
@@ -1047,7 +1047,7 @@ lemma reply_remove_valid_ioc[wp]:
                wp: hoare_drop_imps hoare_vcg_if_lift2 hoare_vcg_all_lift split_del: if_split)
 
 
-text {* invs *} (* most of these below will probably require a bunch more of lemmas *)
+text \<open>invs\<close> (* most of these below will probably require a bunch more of lemmas *)
 
 lemma set_refills_empty_fail [simp]: (* move it elsewhere? *)
   "empty_fail (set_refills sc_ptr refills)"

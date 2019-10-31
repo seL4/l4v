@@ -1671,7 +1671,7 @@ global_naming Arch
 crunch invs[wp]: prepare_thread_delete invs
 
 lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
-  shows "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv (s(*::det_ext state*)). invs s\<rbrace>"
+  shows "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv (s\<comment> \<open>::det_ext state\<close>). invs s\<rbrace>"
   apply (cases cap, simp_all split del: if_split)
                prefer 7
                apply (wpsimp wp: suspend_invs unbind_notification_invs)

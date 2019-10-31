@@ -20,9 +20,9 @@ begin
 
 context Arch begin global_naming ARM (*FIXME: arch_split*)
 
-text {*
+text \<open>
   Showing that there is a state that satisfies the abstract invariants.
-*}
+\<close>
 
 lemma [simp]: "is_aligned (0x1000 :: word32) 9" by (simp add: is_aligned_def)
 lemma [simp]: "is_aligned (0x2000 :: word32) 9" by (simp add: is_aligned_def)

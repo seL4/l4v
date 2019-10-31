@@ -369,7 +369,7 @@ lemma sc_at_pred_sc_at:
   done
 
 
-text {* cte with property at *}
+text \<open>cte with property at\<close>
 definition
   cte_wp_at :: "(cap \<Rightarrow> bool) \<Rightarrow> cslot_ptr \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -454,7 +454,7 @@ definition
    is_aligned (obj_ref_of c) (cap_bits c) \<and> cap_bits c < word_bits"
 
 
-text {*
+text \<open>
   Below, we define several predicates for capabilities on the abstract specification.
   Please note that we distinguish between well-formedness predicates,
   which merely refine the basic type and are independent of the kernel state,
@@ -462,7 +462,7 @@ text {*
   which necessarily depends on the current kernel state.
 
   Eventually, we will combine all predicates into @{text valid_cap}.
-*}
+\<close>
 
 
 definition
@@ -474,7 +474,7 @@ where
   | NotificationCap r badge rights \<Rightarrow> AllowGrant \<notin> rights
   | CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
-  | Zombie r b n \<Rightarrow> (case b of None \<Rightarrow> n \<le> 5 (* RT? *)
+  | Zombie r b n \<Rightarrow> (case b of None \<Rightarrow> n \<le> 5 \<comment> \<open>RT?\<close>
                                           | Some b \<Rightarrow> n \<le> 2 ^ b \<and> b \<noteq> 0)
   | ArchObjectCap ac \<Rightarrow> wellformed_acap ac
   | SchedContextCap scp n \<Rightarrow> valid_sched_context_size n
@@ -520,7 +520,7 @@ where
   | IRQControlCap \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
   | Zombie r b n \<Rightarrow>
-         (case b of None \<Rightarrow> tcb_at r s \<and> n \<le> 5 (* RT check *)
+         (case b of None \<Rightarrow> tcb_at r s \<and> n \<le> 5 \<comment> \<open>RT check\<close>
                   | Some b \<Rightarrow> cap_table_at b r s \<and> n \<le> 2 ^ b \<and> b \<noteq> 0)
   | ArchObjectCap ac \<Rightarrow> valid_arch_cap ac s)"
 
@@ -674,14 +674,14 @@ where
 definition
   valid_sched_context :: "sched_context \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_sched_context sc s \<equiv> (* RT FIXME: any conditions for period consumed refills refill_max? *)
+  "valid_sched_context sc s \<equiv> \<comment> \<open>RT FIXME: any conditions for period consumed refills refill_max?\<close>
      valid_bound_ntfn (sc_ntfn sc) s
      \<and> valid_bound_tcb (sc_tcb sc) s
      \<and> valid_bound_tcb (sc_yield_from sc) s
      \<and> list_all (\<lambda>r. reply_at r s) (sc_replies sc)
      \<and> distinct (sc_replies sc)
      \<and> length (sc_refills sc) \<ge> 1
-     (* \<and> length (sc_replies sc) \<le> sc_refill_max sc *)"
+     \<comment> \<open>\<and> length (sc_replies sc) \<le> sc_refill_max sc \<close>"
 
 definition
   valid_reply :: "reply \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -707,7 +707,7 @@ definition
 where
   "valid_objs s \<equiv> \<forall>ptr \<in> dom $ kheap s. \<exists>obj. kheap s ptr = Some obj \<and> valid_obj ptr obj s"
 
-text {* simple kernel objects *}
+text \<open>simple kernel objects\<close>
 
 lemma obj_at_eq_helper:
   "\<lbrakk> \<And>obj. P obj = P' obj \<rbrakk> \<Longrightarrow> obj_at P = obj_at P'"
@@ -778,7 +778,7 @@ abbreviation
 
 lemmas is_simple_ko_defs = is_ep_def is_ntfn_def is_reply_def
 
-text {* symref related definitions *}
+text \<open>symref related definitions\<close>
 
 definition
   tcb_st_refs_of :: "thread_state  \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -938,11 +938,11 @@ definition
 where
  "ex_nonz_cap_to ref \<equiv> (\<lambda>s. \<exists>cref. cte_wp_at (\<lambda>c. ref \<in> zobj_refs c) cref s)"
 
-text {* All live objects have caps. The contrapositive
+text \<open>All live objects have caps. The contrapositive
         of this is significant in establishing invariants
         over retype. The exception are objects that are
         not in the scope of any untyped capability, as
-        these can never be retyped. *}
+        these can never be retyped.\<close>
 definition
   if_live_then_nonz_cap :: "'z::state_ext state \<Rightarrow> bool"
 where
@@ -999,7 +999,7 @@ where
                          \<longrightarrow> cap \<noteq> NullCap
                         \<longrightarrow> ex_cte_cap_wp_to (appropriate_cte_cap cap) cref s"
 
-text {* All zombies are final. *}
+text \<open>All zombies are final.\<close>
 definition
   zombies_final :: "'z::state_ext state \<Rightarrow> bool"
 where
@@ -2260,7 +2260,7 @@ lemma test:
   apply (clarsimp simp: is_obj_defs)
   done
 
-text {* Lemmas about well-formed states *}
+text \<open>Lemmas about well-formed states\<close>
 
 lemma valid_pspaceI [intro]:
   "\<lbrakk> valid_objs s; pspace_aligned s; sym_refs (state_refs_of s); sym_refs (state_hyp_refs_of s);
@@ -2659,7 +2659,7 @@ lemma not_obj_at_strengthen:
   "obj_at (Not \<circ> P) p s \<Longrightarrow> \<not> obj_at P p s"
   by (clarsimp simp: obj_at_def)
 
-text {* using typ_at triples to prove other triples *}
+text \<open>using typ_at triples to prove other triples\<close>
 
 lemma cte_at_typ:
   "cte_at p = (\<lambda>s. typ_at (ACapTable (length (snd p))) (fst p) s

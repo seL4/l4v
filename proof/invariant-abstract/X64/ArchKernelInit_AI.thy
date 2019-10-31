@@ -20,9 +20,9 @@ begin
 
 context Arch begin global_naming X64 (*FIXME: arch_split*)
 
-text {*
+text \<open>
   Showing that there is a state that satisfies the abstract invariants.
-*}
+\<close>
 
 lemmas ptr_defs = idle_thread_ptr_def init_irq_node_ptr_def
                   init_global_pml4_def init_global_pdpt_def init_global_pd_def

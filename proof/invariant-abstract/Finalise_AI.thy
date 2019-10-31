@@ -143,7 +143,7 @@ locale Finalise_AI_1 =
   assumes prepare_thread_delete_caps_of_state:
     "\<And>P t. \<lbrace>\<lambda>(s :: 'a state). P (caps_of_state s)\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
 
-text {* Properties about empty_slot *}
+text \<open>Properties about empty_slot\<close>
 
 definition
  "halted_if_tcb \<equiv> \<lambda>t s. tcb_at t s \<longrightarrow> st_tcb_at halted t s"
@@ -774,7 +774,7 @@ lemma sched_context_maybe_unbind_ntfn_invs[wp]:
   done
 
 lemma (in Finalise_AI_1) sched_context_unbind_yield_from_invs:
-  "\<lbrace>invs (*and (\<lambda>s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = (Some tp) \<and> st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) scptr s)*)\<rbrace>
+  "\<lbrace>invs \<comment> \<open>and (\<lambda>s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = (Some tp) \<and> st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) scptr s)\<close>\<rbrace>
       sched_context_unbind_yield_from scptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: sched_context_unbind_yield_from_def maybeM_def)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])

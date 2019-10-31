@@ -784,7 +784,7 @@ lemma thread_not_idle_implies_sc_not_idle_helper:
 
 lemma thread_not_idle_implies_sc_not_idle:
   "kheap s tp = Some (TCB tcb) \<Longrightarrow>
-   tp \<noteq> idle_thread_ptr \<Longrightarrow> (* idle_thread s *)
+   tp \<noteq> idle_thread_ptr \<Longrightarrow> \<comment> \<open>idle_thread s\<close>
    sym_refs (state_refs_of s) \<Longrightarrow>
    valid_global_refs s \<Longrightarrow>
    valid_objs s \<Longrightarrow>
