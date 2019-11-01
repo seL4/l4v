@@ -1985,6 +1985,11 @@ lemma schedule_used_no_overflow:
    apply (drule_tac x=0 in spec)
   by (fastforce simp: nth_append)+
 
+(* FIXME remove *)
+abbreviation "sc_at_period \<equiv> sc_period_sc_at"
+
+lemmas sc_at_period_def = sc_period_sc_at_def
+
 lemma schedule_used_MIN_BUDGET:
   "\<lbrakk>unat MIN_SC_BUDGET \<le> sum_list (map unat (map r_amount (list @ [new])));
     sum_list (map unat (map r_amount (list @ [new]))) \<le> unat (max_word :: time);
@@ -1998,10 +2003,6 @@ lemma schedule_used_MIN_BUDGET:
   apply (rename_tac a lista)
 
   \<comment> \<open>first branch of schedule_used\<close>
-
-(* FIXME: remove *)
-abbreviation "sc_at_period \<equiv> sc_period_sc_at"
-lemmas sc_at_period_def = sc_period_sc_at_def
   apply (case_tac "r_amount new < MIN_BUDGET \<and> \<not>full
                    \<and> 2 * MIN_BUDGET \<le> r_amount (last list) + r_amount new")
    apply simp
@@ -2105,10 +2106,6 @@ lemmas sc_at_period_def = sc_period_sc_at_def
   apply (case_tac "r_amount new < MIN_BUDGET \<or> full")
    apply simp
    apply (intro conjI impI)
-definition
-  sc_at_period :: "(time \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "sc_at_period P  = obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_period sc))"
 
       \<comment> \<open>list of length one\<close>
       apply (clarsimp simp: Let_def split: if_splits)
@@ -2994,11 +2991,6 @@ lemma valid_refills_sc_update:
   "(valid_refills p (s\<lparr>kheap := kheap s(p \<mapsto> SchedContext sc n)\<rparr>))
        = sc_valid_refills sc"
   by (clarsimp simp: valid_refills_def obj_at_def sc_valid_refills_def)
-
-definition
-  sc_at_period :: "(time \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "sc_at_period P  = obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_period sc))"
 
 definition
   round_robin :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"

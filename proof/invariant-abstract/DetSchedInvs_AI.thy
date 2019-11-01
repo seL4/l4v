@@ -1116,9 +1116,6 @@ lemma is_schedulable_opt_Some:
                      pred_map_simps opt_map_simps map_join_simps vs_heap_simps
               split: option.splits)
 
-\<comment> \<open>A predicate over all the components of state that determine scheduler validity.
-    Many operations will preserve all of these.\<close>
-
 definition cur_sc_offset_ready_2
 where
   "cur_sc_offset_ready_2 usage curtime cursc kh \<equiv>
@@ -1133,6 +1130,11 @@ where
 
 lemmas cur_sc_offset_ready_def = cur_sc_offset_ready_2_def
 
+\<comment> \<open>A predicate over all the components of state that determine scheduler validity.
+    Many operations will preserve all of these.\<close>
+
+abbreviation last_machine_time_of :: "'z state \<Rightarrow> time" where
+  "last_machine_time_of s \<equiv> last_machine_time (machine_state s)"
 
 abbreviation valid_sched_pred ::
   "(time
