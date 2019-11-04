@@ -12456,19 +12456,22 @@ lemma sched_context_yield_to_valid_sched_helper2:
    apply (clarsimp simp: is_schedulable_bool_def ct_in_state_def obj_at_def pred_tcb_at_def
                          valid_sched_def sc_tcb_sc_at_def not_cur_thread_def runnable_eq_active
                   split: option.splits dest!: get_tcb_SomeD cong: conj_cong)
-   apply (intro conjI impI allI)
-    apply (subgoal_tac "t = tcb_ptr", clarsimp)
-    apply (subst (asm) tcb_at_kh_simps[symmetric])
-    apply (rule bound_sc_tcb_at_eq_inj[OF invs_sym_refs], assumption, assumption)
-    apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF eq_commute, OF eq_commute, OF invs_sym_refs], assumption)
-    apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-   apply (clarsimp simp: vs_all_heap_simps test_sc_refill_max_kh_simp)
-     apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-    apply (clarsimp simp: test_sc_refill_max_def)
-(*    apply (clarsimp simp: test_sc_refill_max_def)
+   apply (intro conjI)
+      apply (intro allI impI)
+      apply (subgoal_tac "t = tcb_ptr", clarsimp)
+      apply (subst (asm) tcb_at_kh_simps[symmetric])
+      apply (rule bound_sc_tcb_at_eq_inj[OF invs_sym_refs], assumption, assumption)
+      apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF eq_commute, OF eq_commute, OF invs_sym_refs], assumption)
+      apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+     apply (clarsimp simp: vs_all_heap_simps test_sc_refill_max_kh_simp)
+    apply (intro allI impI)
+    apply (drule active_implies_valid_refills)
+    apply (clarsimp simp: valid_refills_def obj_at_def sc_at_pred_n_def test_sc_refill_max_def)
+   apply (intro allI impI)
+   apply (drule active_implies_valid_refills_tcb_at)
+   apply (clarsimp simp: valid_refills_def obj_at_def sc_at_pred_n_def test_sc_refill_max_def pred_tcb_at_def obj_at_def)
   apply wpsimp
-  done *)
-  sorry (* rebase *)
+  done
 
 (* end *)
 
@@ -14844,26 +14847,19 @@ lemma call_kernel_valid_sched_charge_budget_helper:
          (\<lambda>s. the irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)) s \<and>
         invs s \<and> ct_not_in_release_q s \<and> ct_not_queued s \<and> valid_refills (cur_sc s) s \<and>
         valid_machine_time s \<and> (cur_sc_chargeable s) \<and>
-        scheduler_act_sane s)
-\<comment> \<open>    and (\<lambda>s. sc_not_in_release_q (cur_sc s) s)
-    and (\<lambda>s. cur_sc_budget_sufficient s)
-    and (\<lambda>s. cur_sc_offset_ready consumed s)
-    and (\<lambda>s. cur_sc_offset_sufficient consumed s)\<close>
-\<rbrace>
-   charge_budget consumed False
- \<lbrace>\<lambda>_ s.
+        scheduler_act_sane s)\<rbrace>
+  charge_budget consumed False
+  \<lbrace>\<lambda>_ s:: 'state_ext state.
            valid_sched s \<and>
            invs s \<and>
            valid_machine_time s \<and>
            (the irq \<in> non_kernel_IRQs \<longrightarrow>
             scheduler_act_sane s \<and> ct_not_queued s) \<and>
-           invs s\<rbrace>"
-   apply (clarsimp simp: check_budget_def ARM.non_kernel_IRQs_def) (* FIXME RT *)
+           invs s \<rbrace>"
+   apply (clarsimp simp: check_budget_def ARM.non_kernel_IRQs_def)
    apply (wpsimp wp: hoare_vcg_conj_lift reschedule_valid_sched_const get_sched_context_wp
                      hoare_drop_imps hoare_vcg_all_lift charge_budget_invs charge_budget_valid_sched)
-(*    apply (clarsimp simp: valid_sched_implies_valid_ipc_qs)
-   done *)
-  sorry (* rebase *)
+   done
 
 lemma valid_refills_ignores_machine_state[simp]:
   "valid_refills x (s\<lparr>machine_state := j\<rparr>) = valid_refills x s"
