@@ -45,7 +45,7 @@ definition init_vspace_uses :: "vspace_ref \<Rightarrow> riscvvspace_region_use"
   where
   "init_vspace_uses p \<equiv>
      if p \<in> {pptr_base ..< pptr_base + (1 << 30)} then RISCVVSpaceKernelWindow
-     else if p \<in> {kernel_base ..< kernel_base + (1 << 20)} then RISCVVSpaceKernelELFWindow
+     else if p \<in> {kernel_elf_base ..< kernel_elf_base + (1 << 20)} then RISCVVSpaceKernelELFWindow
      else if p \<le> canonical_user then RISCVVSpaceUserRegion
      else RISCVVSpaceInvalidRegion"
 
@@ -59,7 +59,7 @@ definition init_arch_state :: arch_state
 
 
 (* {pptr_base ..< pptr_base + (1 << 30)} is pt index 0x100 at max_pt_level,
-   {kernel_base ..< kernel_base + (1 << 20)} comes out to pt index 0x1FE.
+   {kernel_elf_base ..< kernel_elf_base + (1 << 20)} comes out to pt index 0x1FE.
    The rest is constructed such that the translation lines up with what the invariants want. *)
 definition global_pte :: "pt_index \<Rightarrow> pte"
   where

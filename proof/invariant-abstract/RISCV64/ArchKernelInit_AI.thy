@@ -120,14 +120,14 @@ lemma init_irq_ptrs_eq:
 lemma pspace_aligned_init_A:
   "pspace_aligned init_A_st"
   apply (clarsimp simp: pspace_aligned_def state_defs wf_obj_bits [OF wf_empty_bits]
-                        dom_if_Some cte_level_bits_def bit_simps pptr_base_num kernel_base_def)
+                        dom_if_Some cte_level_bits_def bit_simps pptr_base_num kernel_elf_base_def)
   apply (safe intro!: aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl],
            simp_all add: is_aligned_def word_bits_def)[1]
   done
 
 lemma pspace_distinct_init_A: "pspace_distinct init_A_st"
   unfolding pspace_distinct_def
-  apply (clarsimp simp: state_defs bit_simps empty_cnode_bits kernel_base_def
+  apply (clarsimp simp: state_defs bit_simps empty_cnode_bits kernel_elf_base_def
                         cte_level_bits_def linorder_not_le cong: if_cong)
   apply (safe; simp add: pptr_base_num init_irq_ptrs_all_ineqs[simplified pptr_base_num mask_def, simplified])
   apply (cut_tac x="init_irq_node_ptr + (ucast irq << cte_level_bits)"
@@ -263,10 +263,10 @@ lemma translate_address_kernel_window:
   done
 
 lemma elf_window_1M:
-  "\<lbrakk> kernel_base \<le> vref; vref < kernel_base + (1 << 20) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> kernel_elf_base \<le> vref; vref < kernel_elf_base + (1 << 20) \<rbrakk> \<Longrightarrow>
     table_index (pt_slot_offset max_pt_level riscv_global_pt_ptr vref) = 0x1FE"
   apply (simp add: table_index_riscv_global_pt_ptr)
-  apply (simp add: bit_simps kernel_base_def)
+  apply (simp add: bit_simps kernel_elf_base_def)
   apply word_bitwise
   apply (clarsimp simp: word_size)
   done
@@ -277,7 +277,7 @@ lemma kernel_mapping_slots_0x1FE[simp]:
                 pptrBase_def canonical_bit_def)
 
 lemma translate_address_kernel_elf_window:
-  "\<lbrakk> kernel_base \<le> vref; vref < kernel_base + (1 << 20) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> kernel_elf_base \<le> vref; vref < kernel_elf_base + (1 << 20) \<rbrakk> \<Longrightarrow>
    translate_address riscv_global_pt_ptr vref (ptes_of init_A_st) = Some (addrFromKPPtr vref)"
   apply (clarsimp simp: translate_address_def in_omonad pt_lookup_target_def
                         pt_lookup_slot_from_level_def)
@@ -289,7 +289,7 @@ lemma translate_address_kernel_elf_window:
   apply (simp add: pt_bits_left_def bit_simps level_defs)
   apply (rule conjI)
    apply (simp add: pptrBase_def baseOffset_def pAddr_base_def canonical_bit_def is_aligned_def)
-  apply (simp add: kernel_base_def)
+  apply (simp add: kernel_elf_base_def)
   apply (subst word_plus_and_or_coroll)
    apply (simp add: canonical_bit_def word_size mask_def)
    apply word_bitwise
@@ -303,8 +303,8 @@ lemma kernel_window_init_st:
   by (auto simp: state_defs kernel_window_def)
 
 lemma kernel_elf_window_init_st:
-  "kernel_elf_window init_A_st = { kernel_base ..< kernel_base + (1 << 20) }"
-  apply (clarsimp simp: state_defs kernel_elf_window_def kernel_base_def pptr_base_def
+  "kernel_elf_window init_A_st = { kernel_elf_base ..< kernel_elf_base + (1 << 20) }"
+  apply (clarsimp simp: state_defs kernel_elf_window_def kernel_elf_base_def pptr_base_def
                         pptrBase_def canonical_bit_def)
   apply (rule set_eqI, clarsimp)
   apply (rule iffI)
@@ -328,16 +328,16 @@ proof -
   have [simp]: "p \<le> canonical_user \<Longrightarrow> \<not> pptr_base \<le> p" for p
     by (rule notI, drule (1) order_trans)
        (simp add: canonical_user_def mask_def pptr_base_def pptrBase_def)
-  have [simp]: "p \<le> canonical_user \<Longrightarrow> \<not> kernel_base \<le> p" for p
+  have [simp]: "p \<le> canonical_user \<Longrightarrow> \<not> kernel_elf_base \<le> p" for p
     by (rule notI, drule (1) order_trans)
-       (simp add: canonical_user_def mask_def kernel_base_def)
-  have [simp]: "kernel_base \<le> p \<Longrightarrow> \<not> p < pptr_base + 0x40000000" for p
+       (simp add: canonical_user_def mask_def kernel_elf_base_def)
+  have [simp]: "kernel_elf_base \<le> p \<Longrightarrow> \<not> p < pptr_base + 0x40000000" for p
     by (rule notI, drule (1) order_le_less_trans)
-       (simp add: kernel_base_def pptr_base_def pptrBase_def)
-  have "pptr_base + 0x40000000 < kernel_base + 0x100000"
-    by (simp add: kernel_base_def pptr_base_def pptrBase_def)
+       (simp add: kernel_elf_base_def pptr_base_def pptrBase_def)
+  have "pptr_base + 0x40000000 < kernel_elf_base + 0x100000"
+    by (simp add: kernel_elf_base_def pptr_base_def pptrBase_def)
   thus ?thesis
-    using canonical_user_pptr_base pptr_base_kernel_base
+    using canonical_user_pptr_base pptr_base_kernel_elf_base
     unfolding valid_uses_2_def init_vspace_uses_def window_defs
     by (auto simp: canonical_user_canonical above_pptr_base_canonical)
 qed
@@ -372,21 +372,21 @@ lemma valid_vspace_objs_init_A_st[simp]:
 lemma global_pt_kernel_window_init_arch_state[simp]:
   "obj_addrs init_global_pt riscv_global_pt_ptr \<subseteq>
      kernel_window_2 (riscv_kernel_vspace init_arch_state)"
-  apply (clarsimp simp: state_defs pptr_base_num bit_simps kernel_window_def kernel_base_def)
+  apply (clarsimp simp: state_defs pptr_base_num bit_simps kernel_window_def kernel_elf_base_def)
   apply (rule conjI; unat_arith)
   done
 
 lemma idle_thread_in_kernel_window_init_arch_state[simp]:
   "{idle_thread_ptr..0x7FF + idle_thread_ptr} \<subseteq>
      kernel_window_2 (riscv_kernel_vspace init_arch_state)"
-  apply (clarsimp simp: state_defs pptr_base_num bit_simps kernel_window_def kernel_base_def)
+  apply (clarsimp simp: state_defs pptr_base_num bit_simps kernel_window_def kernel_elf_base_def)
   apply (rule conjI; unat_arith)
   done
 
-lemma irq_node_pptr_base_kernel_base:
+lemma irq_node_pptr_base_kernel_elf_base:
   "\<lbrakk>x \<le> pptr_base + (m + (mask cte_level_bits + 0x3000)); m \<le> mask (size irq) << cte_level_bits \<rbrakk>
-   \<Longrightarrow> \<not> kernel_base \<le> x" for irq::irq
-  apply (simp add: word_size cte_level_bits_def mask_def pptr_base_def kernel_base_def pptrBase_def
+   \<Longrightarrow> \<not> kernel_elf_base \<le> x" for irq::irq
+  apply (simp add: word_size cte_level_bits_def mask_def pptr_base_def kernel_elf_base_def pptrBase_def
                    canonical_bit_def not_le)
   apply unat_arith
   done
@@ -404,11 +404,11 @@ lemma irq_node_in_kernel_window_init_arch_state':
                                       and off="0x3000 + m"
                                       and sz=canonical_bit, simplified])
      apply (simp add: add_ac)
-     apply (auto simp: pptr_base_kernel_base irq_node_pptr_base_kernel_base)[1]
+     apply (auto simp: pptr_base_kernel_elf_base irq_node_pptr_base_kernel_elf_base)[1]
     apply (simp add: pptr_base_num canonical_bit_def is_aligned_def)
    apply (simp add: pptr_base_num cte_level_bits_def canonical_bit_def mask_def word_size)
    apply unat_arith
-  apply (simp add: kernel_base_def cte_level_bits_def canonical_bit_def mask_def
+  apply (simp add: kernel_elf_base_def cte_level_bits_def canonical_bit_def mask_def
                    init_irq_node_ptr_def pptr_base_num word_size)
   apply unat_arith
   apply clarsimp
@@ -429,7 +429,7 @@ lemma invs_A:
   "invs init_A_st" (is "invs ?st")
   supply is_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD2, simp]
   supply image_cong_simp [cong del]
-  supply pptr_base_num[simp] kernel_base_def[simp]
+  supply pptr_base_num[simp] kernel_elf_base_def[simp]
   apply (simp add: invs_def)
   apply (rule conjI)
    prefer 2

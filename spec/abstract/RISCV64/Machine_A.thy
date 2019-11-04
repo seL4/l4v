@@ -127,9 +127,9 @@ definition user_vtop :: "machine_word"
 text \<open>
   The virtual address the kernel code is mapped.
 \<close>
-definition kernel_base :: "vspace_ref"
+definition kernel_elf_base :: "vspace_ref"
   where
-  "kernel_base \<equiv> 0xFFFFFFFF84000000" \<comment> \<open>for Spike platform\<close>
+  "kernel_elf_base \<equiv> 0xFFFFFFFF84000000" \<comment> \<open>for HiFive platform\<close>
 
 text \<open>
   Currently an arbitrary aligned address for the idle thread.
