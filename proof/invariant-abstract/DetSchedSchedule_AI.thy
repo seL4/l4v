@@ -2159,6 +2159,7 @@ lemma sched_context_donate_valid_sched_misc[wp]:
   by wpsimp
 
 (* FIXME move to DetSchedInvs_AI *)
+(* Do we really need this? Surely the cur_sc can be round_robin or not? *)
 definition
   sc_is_round_robin :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -12217,15 +12218,12 @@ lemma refill_unblock_check_budget_ready_ct[wp]:
   by (rule hoare_lift_Pf_pre_conj[where f=cur_thread]) wpsimp+
 
 lemma refill_unblock_check_budget_sufficient_ct[wp]:
-  "\<lbrace>\<lambda>s. budget_sufficient (cur_thread s) s \<and> (\<forall>sc_ptr. bound_sc_tcb_at ((=) (Some sc_ptr)) (cur_thread s) s
-                           \<longrightarrow> valid_refills sc_ptr s \<and> sc_at_ppred sc_budget (\<lambda>x. MIN_BUDGET \<le> x) sc_ptr s)\<rbrace>
+  "\<lbrace>\<lambda>s. budget_sufficient (cur_thread s) s \<and> active_sc_tcb_at (cur_thread s) s\<rbrace>
    refill_unblock_check sc_ptr
    \<lbrace>\<lambda>xc s. budget_sufficient (cur_thread s) s\<rbrace>"
-  apply (rule_tac Q="\<lambda>_ s. \<forall>t. t = cur_thread s \<longrightarrow> budget_sufficient t s" in hoare_strengthen_post[rotated])
-  apply (clarsimp)
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
-  apply (clarsimp simp: valid_refills_def obj_at_def sc_at_pred_n_def)
-  by fastforce
+  apply (rule_tac Q="\<lambda>_ s. \<forall>t. t = cur_thread s \<longrightarrow> budget_sufficient t s" in hoare_strengthen_post[rotated],
+         clarsimp)
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
 
 lemma refill_unblock_check_active_sc_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. active_sc_tcb_at (cur_thread s) s\<rbrace>
@@ -12428,19 +12426,13 @@ lemma sched_context_yield_to_valid_sched_helper2:
                          valid_sched_def sc_tcb_sc_at_def not_cur_thread_def runnable_eq_active
                   split: option.splits dest!: get_tcb_SomeD cong: conj_cong)
    apply (intro conjI)
-      apply (intro allI impI)
-      apply (subgoal_tac "t = tcb_ptr", clarsimp)
-      apply (subst (asm) tcb_at_kh_simps[symmetric])
-      apply (rule bound_sc_tcb_at_eq_inj[OF invs_sym_refs], assumption, assumption)
-      apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF eq_commute, OF eq_commute, OF invs_sym_refs], assumption)
-      apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-     apply (clarsimp simp: vs_all_heap_simps test_sc_refill_max_kh_simp)
     apply (intro allI impI)
-    apply (drule active_implies_valid_refills)
-    apply (clarsimp simp: valid_refills_def obj_at_def sc_at_pred_n_def test_sc_refill_max_def)
-   apply (intro allI impI)
-   apply (drule active_implies_valid_refills_tcb_at)
-   apply (clarsimp simp: valid_refills_def obj_at_def sc_at_pred_n_def test_sc_refill_max_def pred_tcb_at_def obj_at_def)
+    apply (subgoal_tac "t = tcb_ptr", clarsimp)
+    apply (subst (asm) tcb_at_kh_simps[symmetric])
+    apply (rule bound_sc_tcb_at_eq_inj[OF invs_sym_refs], assumption, assumption)
+    apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF eq_commute, OF eq_commute, OF invs_sym_refs], assumption)
+    apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+   apply (clarsimp simp: vs_all_heap_simps test_sc_refill_max_kh_simp)
   apply wpsimp
   done
 
