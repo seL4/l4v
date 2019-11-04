@@ -5194,14 +5194,10 @@ lemma sched_context_resume_valid_release_q:
    \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
   unfolding sched_context_resume_def
   apply (wpsimp wp: postpone_valid_release_q is_schedulable_wp get_tcb_queue_wp
-                    simp: thread_get_def)
-  apply (subgoal_tac "y = tp")
-   apply (clarsimp simp: valid_release_q_def sc_tcb_sc_at_def is_schedulable_opt_def vs_all_heap_simps obj_at_def
-                         test_sc_refill_max_kh_simp
-                  dest!: get_tcb_SomeD split: option.splits)
-(*   apply (clarsimp simp: sc_at_pred_n_def obj_at_def elim!: sc_tcb_sc_at_eq_inj)
-  done *)
-  sorry (* rebase *)
+              simp: thread_get_def refill_sufficient_def get_refills_def refill_ready_def)
+  by (clarsimp simp: sc_tcb_sc_at_def is_schedulable_opt_def obj_at_def
+                     test_sc_refill_max_kh_simp vs_all_heap_simps
+              dest!: get_tcb_SomeD split: option.splits)
 
 lemma tcb_release_enqueue_weak_valid_sched_action:
   "\<lbrace>weak_valid_sched_action and scheduler_act_not tcb_ptr\<rbrace>
@@ -5253,11 +5249,11 @@ lemma sched_context_resume_valid_sched_action:
    sched_context_resume (Some sc_ptr)
    \<lbrace>\<lambda>_. valid_sched_action\<rbrace> "
   unfolding sched_context_resume_def
-(*   by (wpsimp wp: postpone_valid_sched_action thread_get_wp is_schedulable_wp
-                 refill_ready_wp refill_sufficient_wp)
-     (fastforce simp: obj_at_def is_schedulable_opt_def is_tcb
-               dest!: get_tcb_SomeD split: option.splits) *)
-  sorry (* rebase *)
+  apply (wpsimp wp: postpone_valid_sched_action thread_get_wp is_schedulable_wp
+                    refill_ready_wp refill_sufficient_wp
+              simp: get_tcb_queue_def)
+  by (fastforce simp: obj_at_def is_schedulable_opt_def is_tcb
+               dest!: get_tcb_SomeD split: option.splits)
 
 lemma postpone_weak_valid_sched_action_with_invs:
   "\<lbrace>weak_valid_sched_action and sc_scheduler_act_not sc_ptr and invs\<rbrace>
@@ -5280,13 +5276,12 @@ lemma sched_context_resume_valid_sched_action_with_invs:
    sched_context_resume (Some sc_ptr)
    \<lbrace>\<lambda>_. valid_sched_action\<rbrace> "
   unfolding sched_context_resume_def
-  apply (wpsimp wp: postpone_valid_sched_action_with_invs thread_get_wp is_schedulable_wp get_tcb_queue_wp)
-(*                     refill_sufficient_wp refill_ready_wp)
-  apply (frule (3) sc_with_tcb_prop_rev[rotated])
+  apply (wpsimp wp: postpone_valid_sched_action_with_invs thread_get_wp is_schedulable_wp
+                    get_tcb_queue_wp
+              simp: refill_sufficient_def get_refills_def refill_ready_def)
   apply (fastforce simp: obj_at_def is_schedulable_opt_def is_tcb
                   dest!: get_tcb_SomeD split: option.splits)
   done
- *)  sorry (* rebase *)
 
 lemma weak_valid_sched_action_contrap:
   "weak_valid_sched_action s \<Longrightarrow> (simple_sched_action s \<or>
@@ -5306,14 +5301,13 @@ lemma sched_context_resume_valid_sched:
    sched_context_resume (Some sc_ptr)
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (wpsimp wp: postpone_valid_sched is_schedulable_wp' get_tcb_queue_wp thread_get_wp'
-              simp: sched_context_resume_def)
-  apply (clarsimp simp: valid_sched_def sc_at_pred_n_def get_tcb_ko_at obj_at_def)
+              simp: sched_context_resume_def refill_sufficient_def get_refills_def refill_ready_def)
+  apply (clarsimp simp: valid_sched_def sc_at_pred_n_def get_tcb_ko_at obj_at_def )
   apply (rename_tac t tcb)
-(*   apply (rule_tac V="\<not> schedulable_sc_tcb_at t s" in revcut_rl
+  apply (rule_tac V="\<not> schedulable_sc_tcb_at t s" in revcut_rl
          , clarsimp simp: vs_all_heap_simps refills_ready_def)
   by (auto elim!: weak_valid_sched_action_contrap[OF valid_sched_action_weak_valid_sched_action]
-                  valid_ready_qs_contrap) *)
-  sorry (* rebase *)
+                  valid_ready_qs_contrap)
 
 lemma sched_context_resume_valid_sched_sym_refs:
   "\<lbrace>\<lambda>s. valid_sched s \<and> sym_refs (state_refs_of s)\<rbrace>
@@ -5335,13 +5329,12 @@ lemma sched_context_resume_valid_sched_except_blocked: (* we could use invs *)
    sched_context_resume sc_opt
    \<lbrace>\<lambda>_. valid_sched_except_blocked\<rbrace>"
   apply (wpsimp wp: postpone_valid_sched_except_blocked is_schedulable_wp' get_tcb_queue_wp thread_get_wp'
-              simp: sched_context_resume_def)
+              simp: sched_context_resume_def refill_sufficient_def get_refills_def refill_ready_def)
   apply (clarsimp simp: valid_sched_def sc_at_pred_n_def get_tcb_ko_at obj_at_def)
   apply (rule_tac V="\<not> schedulable_sc_tcb_at tp s" in revcut_rl
          , clarsimp simp: vs_all_heap_simps refills_ready_def)
-(*   by (auto elim!: weak_valid_sched_action_contrap[OF valid_sched_action_weak_valid_sched_action]
-                  valid_ready_qs_contrap) *)
-  sorry (* rebase *)
+  by (auto elim!: weak_valid_sched_action_contrap[OF valid_sched_action_weak_valid_sched_action]
+                  valid_ready_qs_contrap)
 
 lemma postpone_valid_blocked_except_set:
   "\<lbrace>\<lambda>s. valid_blocked_except_set S s\<rbrace>
@@ -5361,9 +5354,9 @@ lemma sched_context_resume_valid_blocked_except_set:
    sched_context_resume sc_opt
    \<lbrace>\<lambda>_. valid_blocked_except_set S\<rbrace>"
   unfolding sched_context_resume_def
-(*   by (wpsimp wp: postpone_valid_blocked_except_set is_schedulable_wp get_tcb_queue_wp
-           simp: thread_get_def split: if_splits) *)
-  sorry (* rebase *)
+  by (wpsimp wp: postpone_valid_blocked_except_set is_schedulable_wp get_tcb_queue_wp
+           simp: thread_get_def refill_sufficient_def get_refills_def refill_ready_def
+          split: if_splits)
 
 lemmas sched_context_resume_valid_blocked = sched_context_resume_valid_blocked_except_set
              [of "{}", simplified]
@@ -6503,16 +6496,16 @@ lemma sched_context_resume_cond_budget_ready_sufficient:
            budget_ready tcbptr s \<and> budget_sufficient tcbptr s\<rbrace>"
   unfolding sched_context_resume_def
   apply wpsimp
-               apply (rule_tac Q="\<lambda>r. in_release_queue tcbptr" in hoare_strengthen_post[rotated])
-                apply (clarsimp simp: in_release_queue_def not_in_release_q_def)
-               apply (wpsimp simp: in_release_queue_in_release_q
+              apply (rule_tac Q="\<lambda>r. in_release_queue tcbptr" in hoare_strengthen_post[rotated])
+               apply (clarsimp simp: in_release_queue_def not_in_release_q_def)
+              apply (wpsimp simp: in_release_queue_in_release_q
                                wp: postpone_in_release_q get_tcb_queue_wp)+
-       apply (wpsimp wp: thread_get_wp' is_schedulable_wp')+
-(*   apply (fastforce simp: sc_at_pred_n_eq_commute sc_tcb_sc_at_def obj_at_def obj_at_kh_kheap_simps
+           apply (wpsimp wp: thread_get_wp' is_schedulable_wp'
+                   simp: refill_sufficient_def get_refills_def refill_ready_def)+
+  apply (fastforce simp: sc_at_pred_n_eq_commute sc_tcb_sc_at_def obj_at_def obj_at_kh_kheap_simps
                          vs_all_heap_simps refill_max_pos_def sufficient_refills_def
                          refills_ready_def)
-  done *)
-  sorry (* rebase *)
+  done
 
 lemma sc_tcb_update_sc_tcb_sc_at:
   "\<lbrace>K (P t)\<rbrace> set_sc_obj_ref sc_tcb_update sc t \<lbrace>\<lambda>rv. sc_tcb_sc_at P sc\<rbrace>"
@@ -7116,14 +7109,33 @@ lemma commit_time_valid_ready_qs:
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-(*   apply (wpsimp wp: sc_consumed_update_sc_tcb_sc_at hoare_vcg_all_lift hoare_drop_imp
-                    set_refills_valid_ready_qs refill_split_check_valid_ready_qs)
+  apply (wpsimp wp: sc_consumed_update_sc_tcb_sc_at hoare_vcg_all_lift hoare_drop_imp
+                    set_refills_valid_ready_qs simp: sc_refill_ready_def refill_budget_check_round_robin_def)
+apply (intro conjI)
+apply_trace (wpsimp wp: sc_consumed_update_sc_tcb_sc_at hoare_vcg_all_lift refill_budget_check_valid_ready_qs_not_queued
+                    set_refills_valid_ready_qs simp: sc_refill_ready_def refill_budget_check_round_robin_def is_round_robin_def)+
+find_theorems refill_budget_check valid_ready_qs
   apply (clarsimp simp: obj_at_def sufficient_refills_defs MIN_BUDGET_nonzero split: if_split_asm)
   apply (clarsimp simp:  valid_ready_qs_def in_ready_q_def in_queue_2_def refills_ready_def)
-  apply (fastforce simp: vs_all_heap_simps)
-  done
- *)
-  sorry (* rebase *)
+  apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+apply (intro conjI impI)
+apply (intro conjI impI allI)
+find_theorems cur_time kernelWCET_ticks
+apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+subgoal sorry (* valid_machine_time ? *)
+subgoal sorry
+subgoal sorry
+
+apply (intro conjI impI allI)
+apply (subgoal_tac "MIN_BUDGET \<le> r_amount (refill_hd sc)")
+apply (rule le_minus')
+  apply force
+
+subgoal sorry (* kernelWCET_ticks lemmas *)
+subgoal sorry (* valid_refills for active scs *)
+sorry
+
+
 
 lemma commit_time_schedulable_ipc_queues:
   "\<lbrace>schedulable_ipc_queues and cur_sc_valid_refills_consumed\<rbrace>
@@ -7584,43 +7596,9 @@ lemma refill_unblock_check_valid_blocked_except_set[wp]:
   unfolding refill_unblock_check_def
   apply (wpsimp wp: set_refills_wp get_refills_wp is_round_robin_wp refill_ready_wp)
   apply (clarsimp simp: vs_all_heap_simps valid_blocked_except_set_2_def valid_blocked_thread_def)
-  \<comment> \<open>FIXME Michael: reduce duplication\<close>
-  apply (intro conjI impI allI)
-    apply (drule_tac x=t in spec, clarsimp simp: obj_at_def)
-    apply (subgoal_tac "st \<noteq> Running \<and> st \<noteq> Restart \<or> \<not> active_sc_tcb_at t s")
-     apply (erule_tac Q="\<not> active_sc_tcb_at t s" in disjE)
-      apply (clarsimp simp: )(*
-     apply (clarsimp simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def
-                           active_sc_tcb_at_kh_def bound_sc_tcb_at_kh_def obj_at_kh_def
-                           test_sc_refill_max_kh_def test_sc_refill_max_def
-                     split: if_splits)
-    apply (drule_tac x=st in spec, clarsimp)
-    apply (clarsimp simp: st_tcb_at_def obj_at_def st_tcb_at_kh_def obj_at_kh_def
-                   split: if_splits)
-   apply (drule_tac x=t in spec, clarsimp simp: obj_at_def)
-   apply (subgoal_tac "st \<noteq> Running \<and> st \<noteq> Restart \<or> \<not> active_sc_tcb_at t s")
-    apply (erule_tac Q="\<not> active_sc_tcb_at t s" in disjE)
-     apply (clarsimp simp: )
-    apply (clarsimp simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def
-                          active_sc_tcb_at_kh_def bound_sc_tcb_at_kh_def obj_at_kh_def
-                          test_sc_refill_max_kh_def test_sc_refill_max_def
-                    split: if_splits)
-   apply (drule_tac x=st in spec, clarsimp)
-   apply (clarsimp simp: st_tcb_at_def obj_at_def st_tcb_at_kh_def obj_at_kh_def
-                  split: if_splits)
-  apply (drule_tac x=t in spec, clarsimp simp: obj_at_def)
-  apply (subgoal_tac "st \<noteq> Running \<and> st \<noteq> Restart \<or> \<not> active_sc_tcb_at t s")
-   apply (erule_tac Q="\<not> active_sc_tcb_at t s" in disjE)
-    apply (clarsimp simp: )
-   (* apply (clarsimp simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def
-                         active_sc_tcb_at_kh_def bound_sc_tcb_at_kh_def obj_at_kh_def
-                         test_sc_refill_max_kh_def test_sc_refill_max_def
-                   split: if_splits)
-  apply (drule_tac x=st in spec, clarsimp)
-  apply (clarsimp simp: st_tcb_at_def obj_at_def st_tcb_at_kh_def obj_at_kh_def
-                 split: if_splits)
-  done *) *)
-  sorry (* wait for new refill logic *)
+  apply (intro conjI impI allI
+         ; drule_tac x=t in spec, fastforce simp: obj_at_def refill_max_pos_def)
+  done
 
 lemmas refill_unblock_check_valid_blocked[wp] =
        refill_unblock_check_valid_blocked_except_set[where S="{}"]
