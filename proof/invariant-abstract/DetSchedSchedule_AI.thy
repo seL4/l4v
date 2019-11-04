@@ -7513,7 +7513,7 @@ lemma refill_unblock_check_budget_ready[wp]:
   apply (clarsimp simp: r_time_hd_refills_merge_prefix)
   done
  *)
-  sorry (* wait for new refill logic *)
+  sorry (* refill_unblock_check_budget_ready *)
 
 lemma refill_unblock_check_budget_sufficient[wp]:
   "\<lbrace>budget_sufficient tcb_ptr
@@ -7543,7 +7543,7 @@ lemma refill_unblock_check_budget_sufficient[wp]:
    apply blast
   apply clarsimp
   using word_le_nat_alt by fastforce *)
-  sorry (* rebase *)
+  sorry (* refill_unblock_check_budget_sufficient *)
 
 lemma refill_unblock_check_active_sc_tcb_at[wp]:
   "\<lbrace> active_sc_tcb_at x\<rbrace>
@@ -7553,7 +7553,7 @@ lemma refill_unblock_check_active_sc_tcb_at[wp]:
   apply (wpsimp wp: set_refills_wp get_refills_wp is_round_robin_wp)(*
   by (fastforce simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def
                         test_sc_refill_max_def) *)
-  sorry (* wait for new refill logic *)
+  sorry (* refill_unblock_check_active_sc_tcb_at *)
 
 lemma refill_unblock_check_schedulable_sc_tcb_at[wp]:
   "\<lbrace> schedulable_sc_tcb_at x and valid_machine_time\<rbrace>
@@ -7582,7 +7582,6 @@ lemma refill_unblock_check_valid_ready_qs[wp]:
   apply (frule active_implies_valid_refills_tcb_at)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_refills_def sc_valid_refills_def sc_at_pred_n_def)
   done
-
 
 lemma refill_unblock_check_valid_release_q:
   "\<lbrace>valid_release_q and sc_not_in_release_q sc_ptr\<rbrace>
@@ -7689,7 +7688,7 @@ lemma ready_or_release_updates[simp]:
 
 lemma refill_unblock_check_cur_sc_valid_refills_consumed:
   "refill_unblock_check sc_ptr \<lbrace>cur_sc_valid_refills_consumed\<rbrace>"
-  sorry
+  sorry (* refill_unblock_check_cur_sc_valid_refills_consumed *)
 
 context DetSchedSchedule_AI begin
 
@@ -7733,7 +7732,7 @@ apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps)
 find_theorems cur_sc -valid
 
 apply (simp add: valid_sched_def) *)
-  sorry
+  sorry (* switch_sched_context_valid_sched *)
 
 lemma sc_and_timer_valid_sched:
   "\<lbrace>valid_sched and simple_sched_action and ct_not_in_release_q and ct_not_queued
@@ -9346,7 +9345,7 @@ lemma reply_push_schedulable_ipc_queues[wp]:
                  sched_context_donate_schedulable_sc_schedulable_ipc_queues get_tcb_obj_ref_wp
              split_del: if_split cong: conj_cong)
 (*   by (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps) *)
-  sorry (* mitch *)
+  sorry (* reply_push_schedulable_ipc_queues *)
 
 lemma reply_push_valid_release_q[wp]:
   "\<lbrace>valid_release_q and not_in_release_q caller and not_in_release_q callee
@@ -12706,7 +12705,7 @@ lemma refill_update_valid_ready_qs:
   supply if_split [split del]
   unfolding refill_update_def valid_ready_qs_def schedulable_sc_tcb_at_def
   apply wpsimp
-  sorry (* wait for new refill logic *)
+  sorry (* refill_update_valid_ready_qs *)
 
 lemma refill_update_valid_release_q:
   "\<lbrace>valid_release_q and (\<lambda>s.\<forall>t\<in>set (release_queue s). bound_sc_tcb_at (\<lambda>p. p = Some sc_ptr) t s \<longrightarrow> 0 < mrefills)\<rbrace>
@@ -12715,7 +12714,7 @@ lemma refill_update_valid_release_q:
   unfolding refill_update_def valid_release_q_def
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift'
                     update_sched_context_active_sc_tcb_at simp: Ball_def)
-  sorry (* wait for new refill logic *)
+  sorry (* refill_update_valid_release_q *)
 
 lemma refill_update_valid_sched_action:
   "\<lbrace>valid_sched_action and simple_sched_action\<rbrace>
@@ -13657,7 +13656,8 @@ lemma charge_budget_valid_sched:
                      \<Rightarrow> \<open>fastforce dest!: invs_sym_refs[THEN cur_sc_chargeableD_ct] valid_ep_q_in_ep_qD\<close>\<close>)+
   by (fastforce dest!: invs_sym_refs[THEN cur_sc_chargeableD_ct]
   simp: scheduler_act_sane_def)+*)
-*)sorry (* charge_budget_valid_sched *)
+*)
+sorry (* charge_budget_valid_sched *)
 
 lemma check_budget_valid_sched:
   "\<lbrace>valid_sched and invs and ct_not_in_release_q and ct_not_queued
@@ -15054,7 +15054,9 @@ apply (wpsimp wp: handle_interrupt_valid_sched)
     done
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
-*)*) sorry (* call_kernel_valid_sched *)
+*)*)
+sorry (* call_kernel_valid_sched *)
+
 end
 
 end
