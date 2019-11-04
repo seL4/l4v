@@ -7004,6 +7004,15 @@ lemma refill_budget_check_valid_ready_qs_not_queued:
                  refill_ready_wp is_round_robin_wp refill_full_wp
            simp: Let_def split_del: if_split)
 
+lemma refill_budget_check_round_robin_valid_ready_qs_not_queued:
+  "\<lbrace>valid_ready_qs and (\<lambda>s. sc_not_in_ready_q (cur_sc s) s)\<rbrace>
+   refill_budget_check_round_robin usage
+   \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
+  unfolding refill_budget_check_round_robin_def
+  by (wpsimp wp: set_refills_valid_ready_qs
+                 refill_ready_wp is_round_robin_wp refill_full_wp
+           simp: Let_def split_del: if_split)
+
 (* FIXME: Move *)
 lemma precondition_cases:
   "\<lbrace>P and Q\<rbrace> f \<lbrace> R \<rbrace> \<Longrightarrow> \<lbrace>(\<lambda>s. \<not>P s) and Q\<rbrace> f \<lbrace> R \<rbrace> \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace> R \<rbrace>"
@@ -7094,78 +7103,74 @@ lemma commit_time_valid_release_q:
     apply (rule_tac Q="valid_release_q and (\<lambda>s. consumed_time s = consumed)
                        and K (consumed = 0)"
                     in hoare_weaken_pre[rotated])
-(*      apply (fastforce simp: obj_at_def pred_tcb_at_def)
+     apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps)
     apply (rule hoare_gen_asm)
     apply clarsimp
     apply (wpsimp simp: update_sched_context_def set_object_def wp: get_object_wp)
-    apply solve_valid_release_q
+    apply (clarsimp simp: vs_all_heap_simps valid_release_q_def obj_at_def)
    apply (rule_tac Q="valid_release_q and (\<lambda>s. \<exists>tp. bound_sc_tcb_at ((=) (Some (cur_sc s))) tp s)
                       and (\<lambda>s. sc_not_in_release_q (cur_sc s) s) and (\<lambda>s. cur_sc s = csc)"
                    in hoare_weaken_pre[rotated])
     apply (clarsimp, rule conjI, fastforce)
-    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-    apply (drule valid_state_sym_refs)
-    apply (drule ARM.sym_ref_tcb_sc[rotated], drule sym[where s="Some (cur_sc _)"], simp+)+
+    apply (clarsimp simp: obj_at_def)
+    apply (subgoal_tac "t = ta", clarsimp)
+    apply (rule_tac z="cur_sc s" in sym_refs_bound_sc_tcb_at_inj)
+      apply (clarsimp simp: valid_state_def valid_pspace_def, assumption)
+     apply (clarsimp simp: pred_tcb_at_eq_commute[symmetric] tcb_at_kh_simps pred_map_eq_def)
+    apply (clarsimp simp: pred_tcb_at_eq_commute[symmetric] tcb_at_kh_simps pred_map_eq_def)
   by (wpsimp wp: sc_consumed_update_sc_tcb_sc_at hoare_vcg_all_lift hoare_drop_imps
-                 set_refills_valid_release_q_not_in_release_q
-                 refill_budget_check_valid_release_q_not_in_release_q
+                 set_refills_valid_release_q
+                 refill_budget_check_valid_release_q
            simp: refill_budget_check_round_robin_def | rule conjI)+
-    apply (clarsimp)
-   apply (drule_tac x=t in spec, clarsimp simp: pred_map_simps tcb_at_kh_simps)
-  done *)
-  sorry (* rebase *)
 
 lemma commit_time_valid_ready_qs:
-  "\<lbrace>valid_ready_qs and cur_sc_valid_refills_consumed\<rbrace>
+  "\<lbrace>valid_ready_qs and (\<lambda>s. sc_not_in_ready_q (cur_sc s) s)\<rbrace>
    commit_time
    \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
-  unfolding commit_time_def
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (wpsimp wp: sc_consumed_update_sc_tcb_sc_at hoare_vcg_all_lift hoare_drop_imp
-                    set_refills_valid_ready_qs simp: sc_refill_ready_def refill_budget_check_round_robin_def)
-apply (intro conjI)
-apply_trace (wpsimp wp: sc_consumed_update_sc_tcb_sc_at hoare_vcg_all_lift refill_budget_check_valid_ready_qs_not_queued
-                    set_refills_valid_ready_qs simp: sc_refill_ready_def refill_budget_check_round_robin_def is_round_robin_def)+
-find_theorems refill_budget_check valid_ready_qs
-  apply (clarsimp simp: obj_at_def sufficient_refills_defs MIN_BUDGET_nonzero split: if_split_asm)
-  apply (clarsimp simp:  valid_ready_qs_def in_ready_q_def in_queue_2_def refills_ready_def)
-  apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps)
-apply (intro conjI impI)
-apply (intro conjI impI allI)
-find_theorems cur_time kernelWCET_ticks
-apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps)
-subgoal sorry (* valid_machine_time ? *)
-subgoal sorry
-subgoal sorry
+   unfolding commit_time_def sc_refill_ready_def
+   apply (rule hoare_seq_ext[OF _ gets_sp])
+   apply (rule hoare_seq_ext[OF _ gets_sp])
+   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+   apply (wpsimp wp: sc_consumed_update_sc_tcb_sc_at hoare_vcg_all_lift hoare_drop_imp
+                     set_refills_valid_ready_qs refill_budget_check_valid_ready_qs_not_queued
+                     refill_budget_check_round_robin_valid_ready_qs_not_queued
+               simp:  split_del: if_split)
+   apply (clarsimp simp: cur_sc_offset_ready_def obj_at_def pred_tcb_at_def not_queued_2_def
+                      cur_sc_offset_sufficient_def cur_sc_budget_sufficient_def)
+   done
 
-apply (intro conjI impI allI)
-apply (subgoal_tac "MIN_BUDGET \<le> r_amount (refill_hd sc)")
-apply (rule le_minus')
-  apply force
+lemma refill_budget_check_schedulable_ipc_queues:
+  "\<lbrace>schedulable_ipc_queues\<rbrace>
+   refill_budget_check usage
+   \<lbrace>\<lambda>_. schedulable_ipc_queues\<rbrace>"
+  supply if_split[split del]
+  unfolding refill_budget_check_def
+  apply (wpsimp wp: set_refills_schedulable_ipc_queues refill_full_wp is_round_robin_wp refill_ready_wp)
+  sorry (* refill_budget_check_schedulable_ipc_queues *)
 
-subgoal sorry (* kernelWCET_ticks lemmas *)
-subgoal sorry (* valid_refills for active scs *)
-sorry
+lemma refill_budget_check_round_robin_schedulable_ipc_queues:
+  "\<lbrace>schedulable_ipc_queues\<rbrace>
+   refill_budget_check_round_robin usage
+   \<lbrace>\<lambda>_. schedulable_ipc_queues\<rbrace>"
+  supply if_split[split del]
+  unfolding refill_budget_check_round_robin_def
+  apply (wpsimp wp: set_refills_schedulable_ipc_queues refill_full_wp is_round_robin_wp refill_ready_wp)
+  sorry (* refill_budget_check_round_robin_schedulable_ipc_queues *)
 
-
-
+(* This is based on vastly simplified versions of
+   refill_budget_check_round_robin_schedulable_ipc_queues etc. *)
 lemma commit_time_schedulable_ipc_queues:
-  "\<lbrace>schedulable_ipc_queues and cur_sc_valid_refills_consumed\<rbrace>
+  "\<lbrace>schedulable_ipc_queues\<rbrace>
    commit_time
    \<lbrace>\<lambda>_. schedulable_ipc_queues\<rbrace>"
    unfolding commit_time_def
    apply (rule hoare_seq_ext[OF _ gets_sp])
    apply (rule hoare_seq_ext[OF _ gets_sp])
    apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-(*    apply (wpsimp wp: sc_consumed_update_sc_tcb_sc_at hoare_vcg_all_lift hoare_drop_imp
-                     set_refills_schedulable_ipc_queues refill_split_check_schedulable_ipc_queues)
-    apply (clarsimp simp: obj_at_def sufficient_refills_defs MIN_BUDGET_nonzero split: if_split_asm)
-   apply (clarsimp simp:  valid_ready_qs_def in_ready_q_def in_queue_2_def refills_ready_def)
-  apply (fastforce simp: vs_all_heap_simps schedulable_ipc_queues_defs refills_ready_def)
-  done *)
-  sorry (* rebase *)
+    apply (wpsimp wp: sc_consumed_update_sc_tcb_sc_at hoare_vcg_all_lift hoare_drop_imp
+                      set_refills_schedulable_ipc_queues refill_budget_check_schedulable_ipc_queues
+                      refill_budget_check_round_robin_schedulable_ipc_queues)
+  done
 
 lemma commit_time_valid_sched_action:
   "\<lbrace>valid_sched_action and simple_sched_action\<rbrace>
@@ -7189,7 +7194,7 @@ lemma commit_time_valid_sched:
   "\<lbrace>valid_sched
     and simple_sched_action
     and cur_sc_in_release_q_imp_zero_consumed
-    and cur_sc_valid_refills_consumed
+    and (\<lambda>s. sc_not_in_ready_q (cur_sc s) s)
     and valid_state\<rbrace>
    commit_time
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
@@ -7680,15 +7685,7 @@ lemma sc_is_round_robin_reprogram_timer_update[simp]:
 
 lemma ready_or_release_updates[simp]:
   "ready_or_release (trans_state a s) = ready_or_release s"
-  "ready_or_release (s\<lparr>domain_index := b\<rparr>) = ready_or_release s"
-  "ready_or_release (s\<lparr>domain_time := t\<rparr>) = ready_or_release s"
-  "ready_or_release (s\<lparr>cur_domain := x\<rparr>) = ready_or_release s"
-  "ready_or_release (s\<lparr>cur_thread := cur\<rparr>) = ready_or_release s"
-  "ready_or_release (s\<lparr>scheduler_action := sa\<rparr>) = ready_or_release s"
   by (simp add: ready_or_release_def)+
-
-crunches set_scheduler_action
-  for ready_or_release[wp]: "ready_or_release::det_state \<Rightarrow> _"
 
 lemma refill_unblock_check_cur_sc_valid_refills_consumed:
   "refill_unblock_check sc_ptr \<lbrace>cur_sc_valid_refills_consumed\<rbrace>"
@@ -7723,10 +7720,7 @@ lemma switch_sched_context_valid_sched:
    apply (frule_tac tp=t in sym_ref_tcb_sc, simp, simp)
    apply (clarsimp simp: valid_state_def valid_pspace_def)
 
-
-
-
-
+(*
    apply (drule valid_state_sym_refs)
    apply (drule sym[where s="Some _" and t="tcb_sched_context _"])
    apply (frule (1) sym_ref_tcb_sc, simp, clarsimp simp: sufficient_refills_def)
@@ -7738,11 +7732,8 @@ apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps)
 
 find_theorems cur_sc -valid
 
-apply (simp add: valid_sched_def)
-
-
-
-
+apply (simp add: valid_sched_def) *)
+  sorry
 
 lemma sc_and_timer_valid_sched:
   "\<lbrace>valid_sched and simple_sched_action and ct_not_in_release_q and ct_not_queued
@@ -12994,15 +12985,6 @@ lemma refill_budget_check_weak_valid_sched_action:
   by (wpsimp wp: set_refills_weak_valid_sched_action_act_not
                  is_round_robin_wp refill_ready_wp refill_full_wp
            simp: Let_def)
-
-lemma refill_budget_check_schedulable_ipc_queues:
-  "\<lbrace>schedulable_ipc_queues\<rbrace>
-   refill_budget_check usage
-   \<lbrace>\<lambda>_. schedulable_ipc_queues\<rbrace>"
-  supply if_split[split del]
-  unfolding refill_budget_check_def
-  apply (wpsimp wp: set_refills_schedulable_ipc_queues refill_full_wp is_round_robin_wp refill_ready_wp)
-  sorry (* refill_budget_check_schedulable_ipc_queues *)
 
 lemma refill_budget_check_cur_sc_tcb[wp]:
   "refill_budget_check usage \<lbrace>cur_sc_tcb\<rbrace>"
