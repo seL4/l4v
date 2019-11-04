@@ -64,7 +64,7 @@ build-x64: sandbox $(BOOT_FILES)
 	$(CABAL_BUILD) --builddir="dist/x64"
 
 build-riscv: sandbox $(BOOT_FILES)
-	$(CABAL_CONFIGURE) --configure-option="riscv-spike" \
+	$(CABAL_CONFIGURE) --configure-option="riscv-hifive" \
 	    --flags="ArchRiscV -FFI" \
 	    --builddir="dist/riscv"
 	$(CABAL_BUILD) --builddir="dist/riscv"

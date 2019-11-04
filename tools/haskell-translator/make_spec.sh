@@ -80,7 +80,7 @@ function cpp_opts () {
             L4CPP="-DPLATFORM=TK1 -DPLATFORM_TK1 -DTARGET=ARM -DTARGET_ARM -DCONFIG_ARM_HYPERVISOR_SUPPORT"
             ;;
         RISCV64)
-            L4CPP="-DPLATFORM=Spike -DPLATFORM_Spike -DTARGET=RISCV64 -DTARGET_RISCV64"
+            L4CPP="-DPLATFORM=HiFive -DPLATFORM_HiFive -DTARGET=RISCV64 -DTARGET_RISCV64"
             ;;
         *)
             echo "Warning: No CPP configuration for achitecture ${1}"

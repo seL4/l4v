@@ -147,7 +147,7 @@ definition minIRQ :: "irq"
 
 definition maxIRQ :: "irq"
   where
-  "maxIRQ \<equiv> 5"
+  "maxIRQ \<equiv> 53"
 
 (* Reserved by C to represent "not an IRQ" *)
 definition irqInvalid :: "irq"
