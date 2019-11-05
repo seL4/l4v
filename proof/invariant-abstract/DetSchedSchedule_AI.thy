@@ -7572,11 +7572,35 @@ lemma refill_unblock_check_valid_ready_qs[wp]:
                       refill_unblock_check_active_sc_tcb_at)
   done
 
+lemmas hoare_seq_ext_skip
+  = hoare_seq_ext[where B="\<lambda>_. A" and A=A for A, rotated]
+
+lemma update_sched_context_tcb_ready_times_idem:
+  assumes "Q t"
+  assumes "\<And>sc. sc_refill_cfg_of (f sc) = g (sc_refill_cfg_of sc)"
+  shows "\<lbrace>\<lambda>s. P (tcb_ready_times_of s t) \<and> sc_with_tcb_prop sc_ptr (\<lambda>t s. \<not> Q t) s\<rbrace>
+         update_sched_context sc_ptr f
+         \<lbrace>\<lambda>_ s. P (tcb_ready_times_of s t)\<rbrace>"
+  apply (wpsimp wp: update_sched_context_valid_sched_pred'[where g=g and f=f, OF assms(2), THEN hoare_drop_assertion])
+  using assms
+  by (fastforce simp: heap_upd_def tcb_ready_times_defs
+                      map_project_simps opt_map_simps map_join_simps vs_all_heap_simps
+               split: if_splits
+               elim!: rsubst[of P]
+              intro!: option_eqI[where opt'="map_project _ _ _"])
+
 lemma refill_unblock_check_sorted_release_q:
-  "\<lbrace>sorted_release_q and sc_not_in_release_q sc_ptr\<rbrace>
+  "\<lbrace>\<lambda>s. sorted_release_q s \<and> sc_not_in_release_q sc_ptr s\<rbrace>
    refill_unblock_check sc_ptr
    \<lbrace>\<lambda>rv. sorted_release_q\<rbrace>"
-  sorry (* refill_unblock_check_sorted_release_q *)
+  supply if_split[split del]
+  apply (rule hoare_lift_Pf2[where f=release_queue, rotated], wpsimp)
+  apply (rule sorted_release_q_2_valid_lift)
+  apply (simp add: refill_unblock_check_def)
+  apply (intro hoare_seq_ext_skip hoare_if hoare_when_cases; (solves \<open>wpsimp wp:\<close>)?)
+    unfolding set_refills_def
+    apply (rule update_sched_context_tcb_ready_times_idem; simp add: in_queue_2_def)+
+  done
 
 lemma refill_unblock_check_valid_release_q:
   "\<lbrace>valid_release_q and sc_not_in_release_q sc_ptr\<rbrace>
@@ -12681,10 +12705,16 @@ lemma refill_update_valid_ready_qs:
            simp: Ball_def not_queued_def)
 
 lemma refill_update_sorted_release_q:
-  "\<lbrace>sorted_release_q and sc_not_in_release_q sc_ptr\<rbrace>
+  "\<lbrace>\<lambda>s. sorted_release_q s \<and> sc_not_in_release_q sc_ptr s\<rbrace>
    refill_update sc_ptr period budget mrefills
    \<lbrace>\<lambda>rv. sorted_release_q\<rbrace>"
-  sorry (* refill_update_sorted_release_q *)
+  supply if_split[split del]
+  apply (rule hoare_lift_Pf2[where f=release_queue, rotated], wpsimp)
+  apply (rule sorted_release_q_2_valid_lift)
+  apply (simp add: refill_update_def)
+  apply (intro hoare_seq_ext_skip hoare_if; (solves \<open>wpsimp\<close>)?)
+  apply (rule update_sched_context_tcb_ready_times_idem; simp add: in_queue_2_def)+
+  done
 
 lemma refill_update_valid_release_q:
   "\<lbrace>valid_release_q and sc_not_in_release_q sc_ptr\<rbrace>
@@ -12758,10 +12788,16 @@ lemma refill_new_active_sc_tcb_at:
   by (fastforce split: if_splits)
 
 lemma refill_new_sorted_release_q:
-  "\<lbrace>sorted_release_q and sc_not_in_release_q sc_ptr\<rbrace>
-   refill_new sc_ptr mrefills budget period
-   \<lbrace>\<lambda>_. sorted_release_q\<rbrace>"
-  sorry (* refill_new_sorted_release_q *)
+  "\<lbrace>\<lambda>s. sorted_release_q s \<and> sc_not_in_release_q sc_ptr s\<rbrace>
+   refill_new sc_ptr period budget mrefills
+   \<lbrace>\<lambda>rv. sorted_release_q\<rbrace>"
+  supply if_split[split del]
+  apply (rule hoare_lift_Pf2[where f=release_queue, rotated], wpsimp)
+  apply (rule sorted_release_q_2_valid_lift)
+  apply (simp add: refill_new_def)
+  apply (intro hoare_seq_ext_skip; (solves \<open>wpsimp\<close>)?)
+  apply (rule update_sched_context_tcb_ready_times_idem; simp add: in_queue_2_def sc_refill_cfg_of_def)
+  done
 
 lemma refill_new_valid_release_q:
   "\<lbrace>valid_release_q and sc_not_in_release_q sc_ptr\<rbrace>
