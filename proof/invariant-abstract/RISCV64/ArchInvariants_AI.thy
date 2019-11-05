@@ -574,9 +574,8 @@ definition valid_uses_2 :: "(obj_ref \<Rightarrow> riscvvspace_region_use) \<Rig
           \<and> (p \<in> {pptr_base ..< kernel_elf_base}
              \<longrightarrow> uses p \<in> {RISCVVSpaceKernelWindow, RISCVVSpaceInvalidRegion})
           \<and> (uses p = RISCVVSpaceKernelWindow \<longrightarrow> p \<in> {pptr_base ..< kernel_elf_base})
-          \<comment> \<open>Ordinarily there would be another region on top of the RISCVVSpaceKernelELFWindow
-             for devices, but Spike does not have any.\<close>
-          \<and> (kernel_elf_base \<le> p \<longrightarrow> uses p \<in> {RISCVVSpaceKernelELFWindow, RISCVVSpaceInvalidRegion})
+          \<and> (p \<in> {kernel_elf_base ..< kdev_base} \<longrightarrow> uses p \<in> {RISCVVSpaceKernelELFWindow, RISCVVSpaceInvalidRegion})
+          \<and> (kdev_base \<le> p \<longrightarrow> uses p \<in> {RISCVVSpaceDeviceWindow, RISCVVSpaceInvalidRegion})
           \<comment> \<open>We allow precisely all virtual addresses up to canonical_user as the user window:\<close>
           \<and> (user_region = user_window_2 uses)
       \<comment> \<open>We want the kernel window to be non-empty, and to contain at least @{const pptr_base}\<close>

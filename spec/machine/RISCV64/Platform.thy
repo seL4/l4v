@@ -45,7 +45,7 @@ alignment.
 
                   +-----------------------------+ 2^64
                   |        Kernel Devices       |
-               -> +-------------------PPTR_KDEV-+ 2^64 - 1GiB
+               -> +-------------------KDEV_BASE-+ 2^64 - 1GiB
                |  |         Kernel ELF          |
            ----|  +-------------KERNEL_ELF_BASE-+ --+ 2^64 - 2GiB + (PADDR_LOAD % 1GiB)
            |   |  |                             |
@@ -73,7 +73,7 @@ table entry|      |           PSpace            |   |
                   |            User             |        |      |  |                         |
                   |                             |        |      |  |                         |
                   |                             |        +------+  +-------------------------+  PADDR_HIGH_TOP =
-                  |                             |     kernel    |  |        Kernel ELF       |    (PPTR_KDEV - KERNEL_ELF_BASE + PADDR_LOAD)
+                  |                             |     kernel    |  |        Kernel ELF       |    (KDEV_BASE - KERNEL_ELF_BASE + PADDR_LOAD)
                   |                             |   addressable |  +-------------------------+  PADDR_LOAD
                   |                             |               |  |                         |
                   |                             |               |  |                         |
@@ -91,6 +91,13 @@ c = one less than number of bits the page tables can translate
 definition canonical_bit :: nat
   where
   "canonical_bit = 38"
+
+definition kdevBase :: word64
+  where
+  "kdevBase = - (1 << 30)" (* 2^64 - 1 GiB *)
+
+lemma "kdevBase = 0xFFFFFFFFC0000000" (* Sanity check with C *)
+  by (simp add: kdevBase_def)
 
 definition kernelELFBase :: word64
   where

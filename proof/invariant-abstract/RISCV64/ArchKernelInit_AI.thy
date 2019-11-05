@@ -331,9 +331,15 @@ proof -
   have [simp]: "p \<le> canonical_user \<Longrightarrow> \<not> kernel_elf_base \<le> p" for p
     by (rule notI, drule (1) order_trans)
        (simp add: canonical_user_def mask_def kernel_elf_base_def kernelELFBase_def)
+  have [simp]: "p \<le> canonical_user \<Longrightarrow> \<not> kdev_base \<le> p" for p
+    by (rule notI, drule (1) order_trans)
+       (simp add: canonical_user_def mask_def kdev_base_def kdevBase_def)
   have [simp]: "kernel_elf_base \<le> p \<Longrightarrow> \<not> p < pptr_base + 0x40000000" for p
     by (rule notI, drule (1) order_le_less_trans)
        (simp add: kernel_elf_base_def kernelELFBase_def pptr_base_def pptrBase_def)
+  have [simp]: "kdev_base \<le> p \<Longrightarrow> \<not> p < kernel_elf_base + 0x100000" for p
+    by (rule notI, drule (1) order_le_less_trans)
+       (simp add: kernel_elf_base_def kernelELFBase_def kdev_base_def kdevBase_def)
   have "pptr_base + 0x40000000 < kernel_elf_base + 0x100000"
     by (simp add: kernel_elf_base_def kernelELFBase_def pptr_base_def pptrBase_def)
   thus ?thesis

@@ -125,6 +125,13 @@ definition user_vtop :: "machine_word"
   "user_vtop = Platform.RISCV64.pptrUserTop"
 
 text \<open>
+  Virtual address for start of kernel device mapping region in highest 1GiB of memory.
+\<close>
+definition kdev_base :: "machine_word"
+  where
+  "kdev_base = Platform.RISCV64.kdevBase"
+
+text \<open>
   The virtual address the kernel code is mapped.
 \<close>
 definition kernel_elf_base :: "vspace_ref"
