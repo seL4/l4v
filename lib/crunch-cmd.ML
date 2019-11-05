@@ -599,8 +599,7 @@ val mism_term_trace = Unsynchronized.ref []
 
 fun seq_try_apply f x = Seq.map_filter (try f) (Seq.single x)
 
-fun wp ctxt rules =
-  WeakestPre.apply_rules_tac_n false ctxt rules
+fun wp ctxt rules = WeakestPre.apply_rules_tac_n false ctxt rules
 
 fun wpsimp ctxt wp_rules simp_rules =
   let val ctxt' = Config.put Method.old_section_parser true ctxt

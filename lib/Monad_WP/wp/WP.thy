@@ -37,7 +37,7 @@ lemma conj_TrueI2: "P \<Longrightarrow> P \<and> True" by simp
 
 ML_file "WP-method.ML"
 
-declare [[wp_trace = false]]
+declare [[wp_trace = false, wp_trace_instantiation = false]]
 
 setup WeakestPre.setup
 

@@ -87,4 +87,8 @@ val _ = Try.tool_setup ("unused_meta_forall",
 lemma test_unused_meta_forall: "\<And>x. y \<or> \<not> y"
   oops
 
+(* Hide rules used by Trace_Schematic_Insts from apply_trace. *)
+lemmas [no_trace] =
+  data_stash.elim data_stash.proof_state_add data_stash.proof_state_remove data_stash.rule_add
+
 end

@@ -11,6 +11,7 @@
 theory WP_Pre
 imports
   Main
+  "../../Trace_Schematic_Insts"
   "HOL-Eisbach.Eisbach_Tools"
 begin
 
@@ -19,14 +20,33 @@ named_theorems wp_pre
 ML \<open>
 structure WP_Pre = struct
 
-fun append_used_thm thm used_thms = used_thms := !used_thms @ [thm]
+val wp_trace = Attrib.setup_config_bool @{binding wp_trace} (K false);
+val wp_trace_instantiation =
+  Attrib.setup_config_bool @{binding wp_trace_instantiation} (K false);
 
-fun pre_tac ctxt pre_rules used_ref_option i t = let
-    fun append_thm used_thm thm =
-      if Option.isSome used_ref_option
-      then Seq.map (fn thm => (append_used_thm used_thm (Option.valOf used_ref_option); thm)) thm
-      else thm;
-    fun apply_rule t thm = append_thm t (resolve_tac ctxt [t] i thm)
+fun append_used_rule ctxt used_thms_ref tag used_thm insts =
+  let
+    val name = Thm.get_name_hint used_thm
+    val inst_term =
+      if Config.get ctxt wp_trace_instantiation
+      then Trace_Schematic_Insts.instantiate_thm ctxt used_thm insts
+      else Thm.prop_of used_thm
+  in used_thms_ref := !used_thms_ref @ [(name, tag, inst_term)] end
+
+fun trace_rule' trace ctxt callback tac rule =
+  if trace
+  then Trace_Schematic_Insts.trace_schematic_insts_tac ctxt callback tac rule
+  else tac rule;
+
+fun trace_rule trace ctxt used_thms_ref tag tac rule =
+  trace_rule' trace ctxt
+    (fn rule_insts => fn _ => append_used_rule ctxt used_thms_ref tag rule rule_insts)
+    tac rule;
+
+fun rtac ctxt rule = resolve_tac ctxt [rule]
+
+fun pre_tac trace ctxt pre_rules used_thms_ref i t = let
+    fun apply_rule t = trace_rule trace ctxt used_thms_ref "wp_pre" (rtac ctxt) t i
     val t2 = FIRST (map apply_rule pre_rules) t |> Seq.hd
     val etac = TRY o eresolve_tac ctxt [@{thm FalseE}]
     fun dummy_t2 _ _ = Seq.single t2
@@ -35,12 +55,17 @@ fun pre_tac ctxt pre_rules used_ref_option i t = let
     then Seq.empty else Seq.single t2 end
     handle Option => Seq.empty
 
-fun tac used_ref_option ctxt = let
+fun tac trace used_thms_ref ctxt = let
     val pres = Named_Theorems.get ctxt @{named_theorems wp_pre}
-  in pre_tac ctxt pres used_ref_option end
+  in pre_tac trace ctxt pres used_thms_ref end
 
-val method
-    = Args.context >> (fn _ => fn ctxt => Method.SIMPLE_METHOD' (tac NONE ctxt));
+val method =
+  let
+    val used_thms_ref = Unsynchronized.ref [] : (string * string * term) list Unsynchronized.ref
+  in
+    Args.context >> (fn _ => fn ctxt =>
+      Method.SIMPLE_METHOD' (tac (Config.get ctxt wp_trace) used_thms_ref ctxt))
+  end
 end
 \<close>
 

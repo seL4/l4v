@@ -18,6 +18,8 @@ sig
   val adjust_found_thm : adjusted_name -> thm -> adjusted_name
   val fact_ref_to_name : Facts.ref * thm -> adjusted_name
   val adjust_thm_name : Proof.context -> string * int option -> term -> adjusted_name
+  val pretty_adjusted_name : Proof.context -> adjusted_name -> Pretty.T
+  val pretty_adjusted_fact : Proof.context -> adjusted_name -> Pretty.T
   val pretty_fact : bool -> Proof.context -> adjusted_name -> Pretty.T
 
   val pretty_thm : bool -> Proof.context -> thm -> Pretty.T
@@ -36,8 +38,8 @@ fun adjust_found_thm (FoundName (name, _)) thm = FoundName (name, thm)
   | adjust_found_thm adjusted_name _ = adjusted_name
 
 fun fact_ref_to_name ((Facts.Named ((nm,_), (SOME [Facts.Single i]))),thm) = FoundName ((nm,SOME i),thm)
-    | fact_ref_to_name ((Facts.Named ((nm,_), (NONE))),thm) = FoundName ((nm,NONE),thm)
-    | fact_ref_to_name (_,thm) = UnknownName ("",Thm.prop_of thm)
+  | fact_ref_to_name ((Facts.Named ((nm,_), (NONE))),thm) = FoundName ((nm,NONE),thm)
+  | fact_ref_to_name (_,thm) = UnknownName ("",Thm.prop_of thm)
 
 (* Parse the index of a theorem name in the form "x_1". *)
 fun parse_thm_index name =
@@ -78,31 +80,40 @@ in
     | _ => UnknownName (name, term)
 end
 
+fun pretty_adjusted_name ctxt (FoundName ((name, idx), _)) =
+    Pretty.block
+      [Pretty.mark_str (Facts.markup_extern ctxt (Proof_Context.facts_of ctxt) name),
+       case idx of
+           SOME n => Pretty.str ("(" ^ string_of_int (n + 1) ^ ")")
+         | NONE => Pretty.str ""]
+  | pretty_adjusted_name _ (UnknownName (name, _)) =
+    Pretty.block [Pretty.str name, Pretty.str "(?)"]
+
+fun pretty_adjusted_fact ctxt (FoundName (_, thm)) =
+    Thm.pretty_thm ctxt thm
+  | pretty_adjusted_fact ctxt (UnknownName (_, prop)) =
+    Syntax.unparse_term ctxt prop
+
 (* Render the given fact, using the given adjusted name. *)
-fun pretty_fact only_names ctxt (FoundName ((name, idx), thm)) =
+fun pretty_fact only_names ctxt adjusted_name =
       Pretty.block
-        ([Pretty.mark_str (Facts.markup_extern ctxt (Proof_Context.facts_of ctxt) name),
-          case idx of
-            SOME n => Pretty.str ("(" ^ string_of_int (n + 1) ^ ")")
-          | NONE => Pretty.str ""] @
+        (pretty_adjusted_name ctxt adjusted_name ::
           (if only_names then []
-          else [Pretty.str ":",Pretty.brk 1, Thm.pretty_thm ctxt thm]))
-  | pretty_fact _ ctxt (UnknownName (name, prop)) =
-      Pretty.block
-        [Pretty.str name, Pretty.str "(?) :", Pretty.brk 1,
-          Syntax.unparse_term ctxt prop]
+          else [Pretty.str ":",Pretty.brk 1, pretty_adjusted_fact ctxt adjusted_name]))
 
 (* Render the given fact. *)
 fun pretty_thm only_names ctxt thm =
-let
-  val name = Thm.get_name_hint thm
-  val adjusted_name = adjust_thm_name ctxt (name, NONE) (Thm.prop_of thm)
-in pretty_fact only_names ctxt adjusted_name end
+  let
+    val name = Thm.get_name_hint thm
+    val adjusted_name = adjust_thm_name ctxt (name, NONE) (Thm.prop_of thm)
+  in pretty_fact only_names ctxt adjusted_name
+  end
 
 (* Render the given fact, using the given name. The name and fact do not have to match. *)
 fun pretty_specific_thm ctxt name thm =
-let val adjusted_name = adjust_thm_name ctxt (name, NONE) (Thm.prop_of thm)
-in pretty_fact false ctxt (adjust_found_thm adjusted_name thm) end
+  let val adjusted_name = adjust_thm_name ctxt (name, NONE) (Thm.prop_of thm)
+  in pretty_fact false ctxt (adjust_found_thm adjusted_name thm)
+  end
 
 (* Render the given name, with markup if it matches a known fact. *)
 fun pretty_fact_name ctxt name =
