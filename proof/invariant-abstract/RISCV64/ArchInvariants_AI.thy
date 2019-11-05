@@ -1291,7 +1291,7 @@ lemma canonical_user_pptr_base:
 
 lemma pptr_base_kernel_elf_base:
   "pptr_base < kernel_elf_base"
-  by (simp add: pptr_base_def pptrBase_def canonical_bit_def kernel_elf_base_def)
+  by (simp add: pptr_base_def pptrBase_def canonical_bit_def kernel_elf_base_def kernelELFBase_def)
 
 lemma above_pptr_base_canonical:
   "pptr_base \<le> p \<Longrightarrow> canonical_address p"

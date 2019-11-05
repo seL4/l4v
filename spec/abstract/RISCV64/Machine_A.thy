@@ -129,7 +129,7 @@ text \<open>
 \<close>
 definition kernel_elf_base :: "vspace_ref"
   where
-  "kernel_elf_base \<equiv> 0xFFFFFFFF84000000" \<comment> \<open>for HiFive platform\<close>
+  "kernel_elf_base \<equiv> Platform.RISCV64.kernelELFBase"
 
 text \<open>
   Currently an arbitrary aligned address for the idle thread.
