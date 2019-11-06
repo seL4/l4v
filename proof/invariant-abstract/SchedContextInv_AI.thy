@@ -900,20 +900,34 @@ lemma replicate_no_overflow:
   using sum_list_bounded_le[symmetric] sum_list_replicate
   by (metis (mono_tags, hide_lams) Num.of_nat_simps(5) word_of_nat word_unat.Rep_inverse)
 
+lemma MIN_BUDGET_no_overflow:
+  "unat MIN_BUDGET = 2 * unat kernelWCET_ticks"
+  apply (simp add: MIN_BUDGET_def kernelWCET_ticks_def)
+  apply (rule replicate_no_overflow[where a="us_to_ticks kernelWCET_us" and n=2
+                                      and upper_bound=max_word, simplified])
+  using kernelWCET_ticks_no_overflow max_word_def by simp
+
 lemma unat_MIN_BUDGET_MIN_SC_BUDGET:
   "unat MIN_BUDGET + unat MIN_BUDGET = unat MIN_SC_BUDGET"
-  unfolding MIN_SC_BUDGET_def
-  sorry (* unat_MIN_BUDGET_MIN_SC_BUDGET *)
-  (* sorried until we have a principled approach to bounds on kernelWCET_ticks and us_to_ticks *)
+  supply us_to_ticks_mult[simp del]
+  apply (simp add: MIN_BUDGET_def MIN_SC_BUDGET_def kernelWCET_ticks_def)
+  apply (subgoal_tac "4 * us_to_ticks kernelWCET_us
+                      = 2 * us_to_ticks kernelWCET_us + 2 * us_to_ticks kernelWCET_us")
+   prefer 2
+   apply simp
+  apply (erule_tac s="2 * us_to_ticks kernelWCET_us + 2 * us_to_ticks kernelWCET_us"
+               and t="4 * us_to_ticks kernelWCET_us"
+         in ssubst)
+  apply (rule unat_add_lem'[symmetric])
+   using kernelWCET_ticks_no_overflow apply (simp add: max_word_def)
+  using MIN_BUDGET_no_overflow[symmetric] MIN_BUDGET_def kernelWCET_ticks_def by simp
 
 lemma MIN_BUDGET_le_MIN_SC_BUDGET:
   "MIN_BUDGET \<le> MIN_SC_BUDGET"
-  apply (simp add: MIN_BUDGET_def MIN_SC_BUDGET_def ARM.kernelWCET_ticks_def)
-  apply (rule us_to_ticks_mono[simplified mono_def, rule_format])
-  apply (simp add: word_le_nat_alt)
-  using ARM.kernelWCET_us_no_overflow replicate_no_overflow
-  by (metis mult_le_mono1 nat_le_linear numeral_le_iff of_nat_numeral rel_simps(2) rel_simps(4)
-            word_of_nat)
+  apply (simp add: MIN_BUDGET_def MIN_SC_BUDGET_def kernelWCET_ticks_def word_le_nat_alt)
+  using unat_MIN_BUDGET_MIN_SC_BUDGET[simplified MIN_BUDGET_def MIN_SC_BUDGET_def
+                                                 kernelWCET_ticks_def]
+  by simp
 
 \<comment> \<open>Function definitions and lemmas for showing that the unat sum of the r_amounts of a refill list
     does not overflow, and is equal to the budget of the scheduling context\<close>
@@ -4062,6 +4076,7 @@ lemma decode_sched_control_inv_wf:
                         us_to_ticks_mono[simplified mono_def] MIN_SC_BUDGET_def
                         MIN_SC_BUDGET_US_def MIN_BUDGET_def MIN_BUDGET_US_def
                         ARM.kernelWCET_ticks_def)
+  apply simp
   done
 
 end
