@@ -120,8 +120,6 @@ where
   kernelWCET_us_pos: "0 < kernelWCET_us"
 and
   kernelWCET_us_pos2: "0 < 2 * kernelWCET_us"
-and
-  kernelWCET_us_no_overflow: "4 * unat kernelWCET_us \<le> unat max_word"
 
 axiomatization
   us_to_ticks :: "64 word \<Rightarrow> 64 word"
@@ -133,6 +131,8 @@ and
   us_to_ticks_zero[iff]: "us_to_ticks 0 = 0"
 and
   us_to_ticks_nonzero: "y \<noteq> 0 \<Longrightarrow> us_to_ticks y \<noteq> 0"
+and
+  kernelWCET_ticks_no_overflow: "4 * unat (us_to_ticks (kernelWCET_us)) \<le> unat (max_word :: 64 word)"
 
 axiomatization
   ticks_to_us :: "64 word \<Rightarrow> 64 word"

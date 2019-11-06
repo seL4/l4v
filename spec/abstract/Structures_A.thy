@@ -470,8 +470,6 @@ definition "MIN_BUDGET = 2 * kernelWCET_ticks"
 definition "MIN_SC_BUDGET = 2 * MIN_BUDGET"
 definition "MIN_BUDGET_US = 2 * kernelWCET_us"
 definition "MIN_SC_BUDGET_US = 2 * MIN_BUDGET_US"
-definition "MAX_BUDGET_US = (60 * 60 * 1000 * 1000)"
-    \<comment> \<open>originally 60 * 60 * MS_IN_S * US_IN_MS in the C code \<close>
 
 lemma MIN_BUDGET_pos: "0 < MIN_BUDGET" using MIN_BUDGET_def ARM.kernelWCET_ticks_pos2 by clarsimp
 
