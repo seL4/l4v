@@ -53,7 +53,7 @@ lemma next_domain_scheduler_action[wp]:
 
 lemma awaken_invs[wp]:
   "awaken \<lbrace> invs \<rbrace>"
-  unfolding awaken_def by (wpsimp wp: mapM_x_wp')
+  unfolding awaken_def by (wpsimp wp: mapM_x_wp' hoare_drop_imp)
 
 lemma set_scheduler_action_valid_state_cur_tcb [wp]:
   "\<lbrace>invs\<rbrace> set_scheduler_action action \<lbrace>\<lambda>_ s. valid_state s \<and> cur_tcb s\<rbrace>"

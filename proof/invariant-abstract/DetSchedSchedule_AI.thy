@@ -6818,14 +6818,19 @@ lemma awaken_valid_sched_helper:
    and (\<lambda>s. \<forall>target \<in> set queue. ((st_tcb_at runnable target
                 and active_sc_tcb_at target and not_in_release_q target and
                 budget_ready target and budget_sufficient target) s ))\<rbrace>
-         mapM_x (\<lambda>t. do possible_switch_to t;
-                        modify (reprogram_timer_update (\<lambda>_. True))
-                     od) queue
+                      mapM_x (\<lambda>t. do consumed <- gets consumed_time;
+                             sc_opt <- thread_get tcb_sched_context t;
+                             scp <- assert_opt sc_opt;
+                             sufficient <- refill_sufficient scp consumed;
+                             assert sufficient;
+                             possible_switch_to t;
+                             modify (reprogram_timer_update (\<lambda>_. True))
+                          od) queue
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (induct queue; clarsimp simp: mapM_append_single mapM_x_Nil mapM_x_Cons bind_assoc)
    apply (wpsimp simp: valid_sched_def)
-  apply (wpsimp simp: valid_sched_def
-                  wp: possible_switch_to_valid_ready_qs
+  apply (wpsimp simp: valid_sched_def thread_get_def
+                  wp: possible_switch_to_valid_ready_qs assert_inv
                       possible_switch_to_valid_sched_except_blocked_inc
                       hoare_vcg_ball_lift)
   apply (clarsimp simp: valid_sched_def schedulable_sc_tcb_at_def)
@@ -6892,6 +6897,12 @@ lemma active_implies_valid_refills_tcb_at:
   apply (clarsimp simp: test_sc_refill_max_def refill_max_pos_def)
   done
 
+lemma active_sc_tcb_at_def2:
+  "active_sc_tcb_at t s = ((\<exists>scp. bound_sc_tcb_at (\<lambda>p. p = Some scp) t s \<and> test_sc_refill_max scp s))"
+  by (intro iffI;
+      fastforce simp: vs_all_heap_simps tcb_at_kh_simps test_sc_refill_max_def refill_max_pos_def
+               split: option.splits kernel_object.splits)
+
 lemma active_sc_tcb_at_bound_valid_refills:
   "active_sc_tcb_at t s
    \<Longrightarrow> (\<forall>scp. bound_sc_tcb_at (\<lambda>p. p = Some scp) t s \<longrightarrow> valid_refills scp s)"
@@ -6906,11 +6917,10 @@ lemma set_takeWhileD_contrap:
 
 lemma strong_refill_ready_tcb_helper:
   " active_sc_tcb_at target s \<Longrightarrow>
-    the (fun_of_m (refill_ready_tcb target) s) = (budget_ready target s \<and> budget_sufficient target s)"
+    the (fun_of_m (refill_ready_tcb target) s) = (budget_ready target s)"
   apply (frule active_sc_tcb_at_bound_valid_refills)
   apply (clarsimp simp: valid_refills_def sc_valid_refills_def obj_at_def obj_at_kh_kheap_simps
                         vs_all_heap_simps refill_ready_tcb_simp3)
-  apply (rule conj_left_cong)
   apply (clarsimp simp: refills_ready_def sc_ready_times_2_def tcb_sc_refill_cfgs_2_def
                         sc_refill_cfgs_of_scs_def
                         tcb_scps_of_tcbs_def sc_refill_cfg_of_def opt_map_def map_join_def
@@ -6919,9 +6929,24 @@ lemma strong_refill_ready_tcb_helper:
   (* FIXME: is there a better way to do this? *)
   done
 
+lemma valid_refills_refill_sufficient:
+  "valid_refills scp s \<Longrightarrow> is_refill_sufficient 0 scp s"
+  apply (clarsimp simp: valid_refills_def sc_valid_refills_def vs_all_heap_simps obj_at_def sufficient_refills_def
+                        refills_capacity_def)
+  apply (case_tac "sc_refills sc"; simp)
+  by fastforce
+
+lemma budget_sufficient_def2:
+  "budget_sufficient t s = ((\<exists>scp. bound_sc_tcb_at (\<lambda>p. p = Some scp) t s \<and> is_refill_sufficient 0 scp (s)))"
+  by (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
+
+lemma active_sc_tcb_at_budget_sufficient:
+  "(active_sc_tcb_at t s) \<Longrightarrow> (budget_sufficient t (s :: 'z :: state_ext state))"
+  by (fastforce simp: budget_sufficient_def2 active_sc_tcb_at_def2
+                dest: valid_refills_refill_sufficient active_implies_valid_refills)
+
 lemma awaken_valid_sched:
   "\<lbrace>valid_sched
-    and cur_tcb
     and valid_idle
     and (\<lambda>s. active_sc_tcb_at (cur_thread s) s)
     and (\<lambda>s. cur_thread s \<in> set (release_queue s) \<longrightarrow> \<not> budget_ready (cur_thread s) s)\<rbrace>
@@ -6954,8 +6979,7 @@ lemma awaken_valid_sched:
     apply (fastforce dest: dropWhile_takeWhile_distinct)
    apply (clarsimp dest!: set_takeWhileD)
    apply (subst (asm) strong_refill_ready_tcb_helper; clarsimp simp: tcb_at_kh_simps vs_all_heap_simps)
-  apply (clarsimp dest!: set_takeWhileD)
-  apply (subst (asm) strong_refill_ready_tcb_helper; clarsimp simp: tcb_at_kh_simps vs_all_heap_simps)
+  apply (clarsimp elim!: active_sc_tcb_at_budget_sufficient)
   done
 
 crunches awaken
@@ -8262,14 +8286,13 @@ crunches awaken
 
 lemma refill_ready_tcb_sp:
   "\<lbrace> P \<rbrace> refill_ready_tcb t
-      \<lbrace> \<lambda>rv s. P s \<and> (rv \<longrightarrow> budget_ready t s \<and> budget_sufficient t s) \<rbrace>"
+      \<lbrace> \<lambda>rv s. P s \<and> (rv \<longrightarrow> budget_ready t s) \<rbrace>"
   apply (clarsimp simp: refill_ready_tcb_def refill_ready_def refill_sufficient_def bind_assoc)
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (case_tac sc_opt; clarsimp simp: assert_opt_def)
   apply (rename_tac scp)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (rule hoare_seq_ext[OF _ get_refills_sp])
   apply (simp add: valid_def return_def)
   apply (clarsimp simp: pred_tcb_at_eq_commute)
   apply (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps obj_at_def)
@@ -8279,17 +8302,11 @@ lemma refill_ready_tcb_sp:
 lemma awaken_valid_sched_misc[wp]:
   "awaken \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
                  (cur_thread s) (idle_thread s) (last_machine_time_of s) (kheap s) \<rbrace>"
-  by (wpsimp simp: awaken_def wp: mapM_x_wp_inv)
+  by (wpsimp simp: awaken_def wp: mapM_x_wp_inv hoare_drop_imp)
 
 crunches awaken
   for sc_at_period[wp]: "sc_at_period P p :: 'state_ext state \<Rightarrow> _"
   and sc_at_period_cur[wp]: "\<lambda>s. sc_at_period P (cur_sc s) s"
-  and cur_sc_offset_ready[wp]: "\<lambda>s::det_state. P (cur_sc_offset_ready usage s)"
-  and cur_sc_offset_sufficient[wp]: "\<lambda>s::det_state. P (cur_sc_offset_sufficient usage s)"
-  and cur_sc_offset_ready_consumed[wp]: "\<lambda>s::det_state. P (cur_sc_offset_ready (consumed_time s) s)"
-  and cur_sc_offset_sufficient_consumed[wp]: "\<lambda>s::det_state. P (cur_sc_offset_sufficient (consumed_time s) s)"
-  and cur_sc_budget_sufficient[wp]: "\<lambda>s::det_state. P (cur_sc_budget_sufficient s)"
-  and cur_sc_chargeable[wp]: cur_sc_chargeable
     (simp: crunch_simps wp: crunch_wps)
 
 (* FIXME move *)
@@ -8363,7 +8380,7 @@ lemma awaken_cur_thread_in_rlq:
       awaken
    \<lbrace>\<lambda>rv s. in_release_q (cur_thread s) s \<longrightarrow> \<not> budget_ready (cur_thread s) s\<rbrace>"
   apply (clarsimp simp: awaken_def)
-  apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift)
+  apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift refill_sufficient_wp simp: thread_get_def)
   apply (simp add: dropWhile_eq_drop[symmetric] in_release_q_def in_queue_2_def)
   apply (frule dropWhile_release_queue)
     apply (simp add: in_release_q_def)
@@ -8378,7 +8395,7 @@ lemma awaken_cur_thread_not_in_rlq:
       awaken
     \<lbrace>\<lambda>rv s. ct_not_in_release_q s \<longrightarrow> budget_ready (cur_thread s) s\<rbrace>"
   apply (clarsimp simp: awaken_def not_in_release_q_def)
-  apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift hoare_vcg_conj_lift)
+  apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift hoare_vcg_conj_lift refill_sufficient_wp simp: thread_get_def)
   apply (clarsimp simp: dropWhile_eq_drop[symmetric])
   apply (drule (1) dropWhile_dropped_P[rotated])
   apply (simp add: refill_ready_tcb_simp2)
@@ -8411,13 +8428,18 @@ lemma possible_switch_to_scheduler_act_sane'':
 
 lemma awaken_ct_not_queued_helper:
   "\<lbrace>ct_not_queued and (\<lambda>s. cur_thread s \<notin> set queue) and scheduler_act_sane\<rbrace>
-     mapM_x (\<lambda>t. do y <- possible_switch_to t;
-               modify (reprogram_timer_update (\<lambda>_. True))
-             od) queue
+     mapM_x (\<lambda>t. do consumed <- gets consumed_time;
+                       tcb <- gets_the (get_tcb t);
+                       scp <- assert_opt (tcb_sched_context tcb);
+                       sufficient <- refill_sufficient scp consumed;
+                       y <- assert sufficient;
+                       y <- possible_switch_to t;
+                       modify (reprogram_timer_update (\<lambda>_. True))
+                    od) queue
    \<lbrace>\<lambda>_. ct_not_queued\<rbrace>"
   apply (induction queue, wpsimp simp: mapM_x_Nil)
   apply (clarsimp simp: mapM_x_Cons)
-  by (wpsimp wp: possible_switch_to_ct_not_queued possible_switch_to_scheduler_act_sane'')
+  by (wpsimp wp: possible_switch_to_ct_not_queued possible_switch_to_scheduler_act_sane'' hoare_drop_imp)
 
 lemma awaken_ct_not_queued:
   "\<lbrace>ct_not_queued and scheduler_act_sane and
@@ -8426,7 +8448,7 @@ lemma awaken_ct_not_queued:
      awaken \<lbrace>\<lambda>_. ct_not_queued\<rbrace>"
   apply (clarsimp simp: awaken_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (wpsimp wp: awaken_ct_not_queued_helper)
+  apply (wpsimp wp: awaken_ct_not_queued_helper refill_sufficient_wp simp: thread_get_def)
   apply (drule set_takeWhileD)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def sc_at_pred_n_def)
   apply (clarsimp simp: refill_ready_tcb_simp3 in_queue_2_def)
@@ -8443,7 +8465,7 @@ crunches awaken
 lemma awaken_ct_cur_sc_in_release_q_imp_zero_consumed[wp]:
   "\<lbrace>cur_sc_in_release_q_imp_zero_consumed\<rbrace>
      awaken \<lbrace>\<lambda>_. cur_sc_in_release_q_imp_zero_consumed::det_state \<Rightarrow> _\<rbrace>"
-  apply (wpsimp simp: awaken_def wp: mapM_x_wp')
+  apply (wpsimp simp: awaken_def wp: mapM_x_wp' hoare_drop_imp)
   apply (drule_tac x=t in spec, clarsimp simp: not_in_release_q_def)
   apply (clarsimp simp: in_queue_2_def dropWhile_eq_drop[symmetric] pred_tcb_at_def obj_at_def)
   apply (drule set_dropWhileD, clarsimp)
@@ -8465,11 +8487,16 @@ lemma possible_switch_to_ready_or_release[wp]:
 
 lemma awaken_ready_or_release_helper:
   "\<lbrace>(\<lambda>s. \<forall>t\<in>set queue. tcb_at t s) and ready_or_release and K (distinct queue)\<rbrace>
-       mapM_x (\<lambda>t. do possible_switch_to t;
+       mapM_x (\<lambda>t. do consumed <- gets consumed_time;
+                       sc_opt <- thread_get tcb_sched_context t;
+                       scp <- assert_opt sc_opt;
+                       sufficient <- refill_sufficient scp consumed;
+                       y <- assert sufficient;
+                       y <- possible_switch_to t;
                        modify (reprogram_timer_update (\<lambda>_. True))
                     od) queue
    \<lbrace>\<lambda>_. ready_or_release::det_state \<Rightarrow> _\<rbrace>"
-  by (rule hoare_gen_asm, rule ball_mapM_x_scheme, wpsimp+)
+  by (rule hoare_gen_asm, rule ball_mapM_x_scheme, (wpsimp wp: hoare_drop_imp)+)
 
 lemma awaken_ready_or_release[wp]:
   "\<lbrace>\<lambda>s::det_state. ready_or_release s \<and> valid_release_q s\<rbrace>
@@ -8485,7 +8512,7 @@ lemma awaken_ready_or_release[wp]:
 lemma awaken_it_not_in_release_q[wp]:
   "\<lbrace>\<lambda>s. not_in_release_q (idle_thread s) s\<rbrace>
      awaken \<lbrace>\<lambda>_. \<lambda>s. not_in_release_q (idle_thread s) s\<rbrace>"
-  apply (wpsimp simp: awaken_def wp: mapM_x_wp')
+  apply (wpsimp simp: awaken_def wp: mapM_x_wp' hoare_drop_imp)
   apply (clarsimp simp: not_in_release_q_def in_queue_2_def dropWhile_eq_drop[symmetric])
   by (drule set_dropWhileD, clarsimp)
 
@@ -8518,7 +8545,7 @@ lemma awaken_ct_nrq_wbr:
     awaken
    \<lbrace>\<lambda>_ s. ct_not_in_release_q s \<longrightarrow> budget_ready (cur_thread s) s\<rbrace>"
   unfolding awaken_def
-  apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift')
+  apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift' refill_sufficient_wp simp: thread_get_def)
   apply (clarsimp simp: dropWhile_eq_drop[symmetric] in_queue_2_def)
   apply (drule (1) notdropWhile_takeWhile[rotated])
   apply (drule set_takeWhileD, clarsimp)

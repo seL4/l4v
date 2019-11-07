@@ -1590,13 +1590,13 @@ lemma refill_sufficient_gets_the:
 
 lemma refill_ready_tcb_gets_the:
   "refill_ready_tcb t
-   = gets_the (\<lambda>s. map_project (\<lambda>sc. sc_refills_ready (cur_time s) sc \<and> sc_sufficient_refills 0 sc)
-                               (map_join (tcb_scps_of s) |> sc_refill_cfgs_of s) t)"
+   = gets_the (\<lambda>s. map_project (\<lambda>sc. sc_refills_ready (cur_time s) sc) (map_join (tcb_scps_of s) |> sc_refill_cfgs_of s) t)"
+  apply (simp add: refill_ready_tcb_def)
   apply (simp add: refill_ready_tcb_def get_tcb_obj_ref_gets_the assert_opt_gets_the_K
-                   refill_ready_gets_the refill_sufficient_gets_the gets_the_bind_collapse)
-  apply (simp add: gets_the_map_project[symmetric])
+                   refill_ready_gets_the
+             flip: gets_the_obind)
   apply (intro arg_cong[where f=gets_the] ext)
-  by (auto simp: obind_pair_def obind_def map_project_def opt_map_def map_join_def
+  by (auto simp: obind_def map_project_def opt_map_def map_join_def
                  vs_all_heap_simps obj_at_kh_kheap_simps sc_refill_cfgs_of_scs_def scs_of_kh_def
           split: option.splits kernel_object.splits)
 
@@ -1608,7 +1608,7 @@ lemma fun_of_m_gets_the:
 
 lemma fun_of_m_refill_ready_tcb:
   "fun_of_m (refill_ready_tcb t) s
-   = map_project (\<lambda>sc. sc_refills_ready (cur_time s) sc \<and> sc_sufficient_refills 0 sc)
+   = map_project (\<lambda>sc. sc_refills_ready (cur_time s) sc)
                  (map_join (tcb_scps_of s) |> sc_refill_cfgs_of s) t"
   by (simp add: refill_ready_tcb_gets_the fun_of_m_gets_the)
 
@@ -1648,8 +1648,7 @@ lemma option_eqI:
 lemma refill_ready_tcb_tcb_ready_times_of':
   assumes "bound_sc_obj_tcb_at P t s"
   shows "fun_of_m (refill_ready_tcb t) s
-         = map_option (\<lambda>ready_time. ready_time \<le> cur_time s + kernelWCET_ticks
-                                    \<and> budget_sufficient t s)
+         = map_option (\<lambda>ready_time. ready_time \<le> cur_time s + kernelWCET_ticks)
                       (tcb_ready_times_of s t)"
   using assms
   by (auto intro: option_eqI
@@ -1659,8 +1658,7 @@ lemma refill_ready_tcb_tcb_ready_times_of':
 lemma refill_ready_tcb_tcb_ready_times_of_eq':
   assumes "bound_sc_obj_tcb_at ((=) sc) t s"
   shows "fun_of_m (refill_ready_tcb t) s
-         = map_option (\<lambda>ready_time. ready_time \<le> cur_time s + kernelWCET_ticks
-                                    \<and> sc_sufficient_refills 0 sc)
+         = map_option (\<lambda>ready_time. ready_time \<le> cur_time s + kernelWCET_ticks)
                       (tcb_ready_times_of s t)"
   unfolding refill_ready_tcb_tcb_ready_times_of'[OF assms] using assms
   by (auto simp: vs_all_heap_simps)
@@ -1697,7 +1695,7 @@ lemma refill_ready_tcb_simp3:
           "tcb_sched_context tcb = Some scp"
           "kheap s scp = Some (SchedContext sc n)"
   shows "the (fun_of_m (refill_ready_tcb t) s)
-         = (tcb_ready_time t s \<le> cur_time s + kernelWCET_ticks \<and> sufficient_refills 0 (sc_refills sc))"
+         = (tcb_ready_time t s \<le> cur_time s + kernelWCET_ticks)"
   unfolding refill_ready_tcb_tcb_ready_times_of_eq'[OF bound_sc_obj_tcb_at_eqI[OF assms]]
   using budget_sufficient_has_ready_time[OF bound_sc_obj_tcb_at_eqI[OF assms]]
   by auto
