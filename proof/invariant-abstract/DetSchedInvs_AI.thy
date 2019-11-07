@@ -2340,7 +2340,7 @@ lemma schact_is_rct[elim!]: "schact_is_rct s \<Longrightarrow> scheduler_action 
   apply (simp add: schact_is_rct_def)
   done
 
-lemma schact_is_rct_simple[elim]: "schact_is_rct s \<Longrightarrow> simple_sched_action s"
+lemma schact_is_rct_simple[elim!]: "schact_is_rct s \<Longrightarrow> simple_sched_action s"
   apply (simp add: simple_sched_action_def schact_is_rct_def)
   done
 
@@ -2932,6 +2932,23 @@ lemma invs_strengthen_cur_sc_chargeable:
 
 abbreviation ct_not_blocked where
   "ct_not_blocked s \<equiv> ct_in_state (\<lambda>x. \<not>ipc_queued_thread_state x) s"
+
+(* FIXME: move or tidy up *)
+\<comment> \<open>Schedulability of threads in notification and endpoint queues\<close>
+primrec
+  BlockedOnNot :: "thread_state \<Rightarrow> bool"
+where
+  "BlockedOnNot (Running)               = False"
+| "BlockedOnNot (Inactive)              = False"
+| "BlockedOnNot (Restart)               = False"
+| "BlockedOnNot (BlockedOnReceive _ _)  = False"
+| "BlockedOnNot (BlockedOnSend _ _)     = False"
+| "BlockedOnNot (BlockedOnNotification _) = True"
+| "BlockedOnNot (IdleThreadState)       = False"
+| "BlockedOnNot (BlockedOnReply _)        = False"
+
+abbreviation ct_not_BlockedOnNot where
+  "ct_not_BlockedOnNot s \<equiv> ct_in_state (\<lambda>x. \<not>BlockedOnNot x) s"
 
 lemma ct_in_state_kh_simp:
   "ct_in_state P s = ct_in_state' P s"
