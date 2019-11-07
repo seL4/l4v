@@ -7185,37 +7185,72 @@ lemma commit_time_valid_ready_qs:
                       cur_sc_offset_sufficient_def cur_sc_budget_sufficient_def)
    done
 
-lemma refill_budget_check_schedulable_ipc_queues:
-  "\<lbrace>schedulable_ipc_queues\<rbrace>
+lemmas hoare_seq_ext_skip
+  = hoare_seq_ext[where B="\<lambda>_. A" and A=A for A, rotated]
+
+lemma refill_budget_check_sc_refills_update_unspecified:
+  "\<lbrace>\<lambda>s. \<forall>f. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+              (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
+              (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s)
+              (heap_upd (scrc_refills_update f) (cur_sc s) (sc_refill_cfgs_of s))\<rbrace>
    refill_budget_check usage
-   \<lbrace>\<lambda>_. schedulable_ipc_queues\<rbrace>"
-  supply if_split[split del]
+   \<lbrace>\<lambda>_. valid_sched_pred_strong P\<rbrace>"
   unfolding refill_budget_check_def
-  apply (wpsimp wp: set_refills_schedulable_ipc_queues refill_full_wp is_round_robin_wp refill_ready_wp)
-  sorry (* refill_budget_check_schedulable_ipc_queues *)
-
-lemma refill_budget_check_round_robin_schedulable_ipc_queues:
-  "\<lbrace>schedulable_ipc_queues\<rbrace>
-   refill_budget_check_round_robin usage
-   \<lbrace>\<lambda>_. schedulable_ipc_queues\<rbrace>"
   supply if_split[split del]
-  unfolding refill_budget_check_round_robin_def
-  apply (wpsimp wp: set_refills_schedulable_ipc_queues refill_full_wp is_round_robin_wp refill_ready_wp)
-  sorry (* refill_budget_check_round_robin_schedulable_ipc_queues *)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)+
+  apply (intro hoare_if hoare_seq_ext_skip[where f="refill_full _"]
+         ; wpsimp wp: set_refills_valid_sched_pred)
+  done
 
-(* This is based on vastly simplified versions of
-   refill_budget_check_round_robin_schedulable_ipc_queues etc. *)
+lemma refill_budget_check_round_robin_sc_refills_update_unspecified:
+  "\<lbrace>\<lambda>s. \<forall>f. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+              (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
+              (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s)
+              (heap_upd (scrc_refills_update f) (cur_sc s) (sc_refill_cfgs_of s))\<rbrace>
+   refill_budget_check_round_robin usage
+   \<lbrace>\<lambda>_. valid_sched_pred_strong P\<rbrace>"
+  unfolding refill_budget_check_round_robin_def
+  supply if_split[split del]
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)+
+  apply (intro hoare_if hoare_seq_ext_skip[where f="refill_full _"]
+         ; wpsimp wp: set_refills_valid_sched_pred)
+  done
+
+lemma sc_refill_ready_wp:
+  "\<lbrace>\<lambda>s. P (sc_refills_ready (cur_time s) (sc_refill_cfg_of sc)) s\<rbrace> sc_refill_ready sc \<lbrace>P\<rbrace>"
+  by (wpsimp simp: sc_refill_ready_def refills_ready_def)
+
 lemma commit_time_schedulable_ipc_queues:
   "\<lbrace>schedulable_ipc_queues\<rbrace>
    commit_time
    \<lbrace>\<lambda>_. schedulable_ipc_queues\<rbrace>"
-   unfolding commit_time_def
-   apply (rule hoare_seq_ext[OF _ gets_sp])
-   apply (rule hoare_seq_ext[OF _ gets_sp])
-   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-    apply (wpsimp wp: sc_consumed_update_sc_tcb_sc_at hoare_vcg_all_lift hoare_drop_imp
-                      set_refills_schedulable_ipc_queues refill_budget_check_schedulable_ipc_queues
-                      refill_budget_check_round_robin_schedulable_ipc_queues)
+  supply if_split[split del]
+  apply (simp add: commit_time_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule hoare_seq_ext[where B="\<lambda>_. schedulable_ipc_queues"], wpsimp)
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext[where B="\<lambda>_. schedulable_ipc_queues"], wpsimp)
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)+
+  apply (rule_tac B="\<lambda>_ s. pred_map sc_active (sc_refill_cfgs_of s) csc
+                           \<and> (\<forall>t. ipc_queued_thread t s
+                                   \<longrightarrow> pred_map_eq (Some csc) (tcb_scps_of s) t
+                                       \<or> schedulable_if_bound_sc_tcb_at t s)"
+           in hoare_seq_ext)
+   apply (wpsimp wp: sc_refill_ready_wp)
+   apply (simp add: schedulable_ipc_queues_defs)
+   apply (erule allEI, fastforce simp: obj_at_def vs_all_heap_simps refill_max_pos_def)
+  apply (wpsimp wp: refill_budget_check_sc_refills_update_unspecified
+                    refill_budget_check_round_robin_sc_refills_update_unspecified)
+  apply (rule conjI)
+   apply (clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps refill_max_pos_def)
+  apply (simp add: schedulable_ipc_queues_defs)
+  apply (erule allEI, rule impI, simp)
+  apply (clarsimp simp: heap_upd_def vs_all_heap_simps)
   done
 
 lemma commit_time_valid_sched_action:
@@ -7241,7 +7276,8 @@ lemma commit_time_valid_sched:
     and simple_sched_action
     and cur_sc_in_release_q_imp_zero_consumed
     and (\<lambda>s. sc_not_in_ready_q (cur_sc s) s)
-    and valid_state\<rbrace>
+    and valid_state
+    and (\<lambda>s. (unat MIN_BUDGET + unat (consumed_time s) \<le> unat (max_word :: ticks)))\<rbrace>
    commit_time
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
    unfolding valid_sched_def
@@ -7609,9 +7645,6 @@ lemma refill_unblock_check_valid_ready_qs[wp]:
                       refill_unblock_check_active_sc_tcb_at)
   done
 
-lemmas hoare_seq_ext_skip
-  = hoare_seq_ext[where B="\<lambda>_. A" and A=A for A, rotated]
-
 lemma update_sched_context_tcb_ready_times_idem:
   assumes "Q t"
   assumes "\<And>sc. sc_refill_cfg_of (f sc) = g (sc_refill_cfg_of sc)"
@@ -7749,7 +7782,8 @@ lemma switch_sched_context_valid_sched:
      and cur_sc_in_release_q_imp_zero_consumed
      and (\<lambda>s. sc_not_in_release_q (cur_sc s) s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
      and (\<lambda>s. sc_not_in_ready_q (cur_sc s) s)
-     and valid_machine_time\<rbrace>
+     and valid_machine_time
+     and (\<lambda>s. (unat MIN_BUDGET + unat (consumed_time s) \<le> unat (max_word :: ticks)))\<rbrace>
    switch_sched_context
    \<lbrace>\<lambda>_. valid_sched :: ('state_ext state) \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: switch_sched_context_def assert_opt_def)
@@ -7778,7 +7812,8 @@ lemma sc_and_timer_valid_sched:
      and cur_sc_in_release_q_imp_zero_consumed
      and (\<lambda>s. sc_not_in_release_q (cur_sc s) s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
      and (\<lambda>s. sc_not_in_ready_q (cur_sc s) s)
-     and valid_machine_time\<rbrace>
+     and valid_machine_time
+     and (\<lambda>s. (unat MIN_BUDGET + unat (consumed_time s) \<le> unat (max_word :: ticks)))\<rbrace>
    sc_and_timer
    \<lbrace>\<lambda>_. valid_sched :: ('state_ext state) \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: sc_and_timer_def)
