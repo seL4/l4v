@@ -757,7 +757,9 @@ where
       \<and> (\<forall>n < length (sc_refills sc). MIN_BUDGET \<le> r_amount ((sc_refills sc) ! n))
       \<and> window (sc_refills sc) (sc_period sc)
       \<and> 0 < length (sc_refills sc)
-      \<and> length (sc_refills sc) \<le> sc_refill_max sc)"
+      \<and> length (sc_refills sc) \<le> sc_refill_max sc
+      \<and> MIN_SC_BUDGET \<le> sc_budget sc
+      \<and> sc_budget sc \<le> sc_period sc)"
 
 definition valid_refills :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
