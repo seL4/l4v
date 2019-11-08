@@ -1032,13 +1032,6 @@ lemma valid_mask_vm_rights[simp]:
   "mask_vm_rights V R \<in> valid_vm_rights"
   by (simp add: mask_vm_rights_def)
 
-lemma cte_wp_at_page_cap_weaken:
-  "cte_wp_at (diminished (ArchObjectCap (FrameCap word seta vmpage_size dev None))) slot s \<Longrightarrow>
-   cte_wp_at (\<lambda>a. \<exists>p R sz dev m. a = ArchObjectCap (FrameCap p R sz dev m)) slot s"
-  apply (clarsimp simp: cte_wp_at_def diminished_def mask_cap_def cap_rights_update_def)
-  apply (clarsimp simp: acap_rights_update_def split: cap.splits arch_cap.splits)
-  done
-
 lemma le_user_vtop_less_pptr_base[simp]:
   "x \<le> user_vtop \<Longrightarrow> x < pptr_base"
   using dual_order.strict_trans2 by blast
@@ -1086,8 +1079,8 @@ lemma vmpage_size_of_level_pt_bits_left:
 lemma decode_fr_inv_map_wf[wp]:
   "arch_cap = FrameCap p rights vmpage_size dev option \<Longrightarrow>
    \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
-    cte_wp_at (diminished (ArchObjectCap arch_cap)) slot and
-    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s)\<rbrace>
+    cte_wp_at ((=) (ArchObjectCap arch_cap)) slot and
+    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s)\<rbrace>
    decode_fr_inv_map label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
   unfolding decode_fr_inv_map_def Let_def
@@ -1138,13 +1131,13 @@ lemma decode_fr_inv_map_wf[wp]:
 lemma decode_frame_invocation_wf[wp]:
   "arch_cap = FrameCap word rights vmpage_size dev option \<Longrightarrow>
    \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
-    cte_wp_at (diminished (ArchObjectCap arch_cap)) slot and
-    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s)\<rbrace>
+    cte_wp_at ((=) (ArchObjectCap arch_cap)) slot and
+    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s)\<rbrace>
    decode_frame_invocation label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
   unfolding decode_frame_invocation_def
   by (wpsimp simp: valid_arch_inv_def valid_page_inv_def cte_wp_at_caps_of_state
-                   is_arch_diminished_def is_cap_simps valid_arch_cap_def valid_cap_def
+                   is_cap_simps valid_arch_cap_def valid_cap_def
                    valid_unmap_def wellformed_mapdata_def vmsz_aligned_def
             split: option.split)
 
@@ -1159,8 +1152,8 @@ lemma neg_mask_user_region:
 lemma decode_pt_inv_map_wf[wp]:
   "arch_cap = PageTableCap pt_ptr pt_map_data \<Longrightarrow>
    \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
-    cte_wp_at (diminished (ArchObjectCap arch_cap)) slot and
-    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s)\<rbrace>
+    cte_wp_at ((=) (ArchObjectCap arch_cap)) slot and
+    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s)\<rbrace>
     decode_pt_inv_map label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
   unfolding decode_pt_inv_map_def Let_def
@@ -1187,13 +1180,13 @@ lemma decode_pt_inv_map_wf[wp]:
 lemma decode_page_table_invocation_wf[wp]:
   "arch_cap = PageTableCap pt_ptr pt_map_data \<Longrightarrow>
    \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
-    cte_wp_at (diminished (ArchObjectCap arch_cap)) slot and real_cte_at slot and
-    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s)\<rbrace>
+    cte_wp_at ((=) (ArchObjectCap arch_cap)) slot and real_cte_at slot and
+    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s)\<rbrace>
     decode_page_table_invocation label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
   unfolding decode_page_table_invocation_def is_final_cap_def
   apply (wpsimp simp: valid_arch_inv_def valid_pti_def valid_arch_cap_def valid_cap_def
-                      cte_wp_at_caps_of_state is_arch_diminished_def is_cap_simps)
+                      cte_wp_at_caps_of_state is_cap_simps)
   apply (rule conjI; clarsimp)
   done
 
@@ -1211,8 +1204,8 @@ lemma asid_low_hi_cast:
 lemma decode_asid_pool_invocation_wf[wp]:
   "arch_cap = ASIDPoolCap ap asid \<Longrightarrow>
    \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
-    cte_wp_at (diminished (ArchObjectCap arch_cap)) slot and
-    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s) and
+    cte_wp_at ((=) (ArchObjectCap arch_cap)) slot and
+    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s) and
     (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> (fst x))\<rbrace>
    decode_asid_pool_invocation label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>, -"
@@ -1227,8 +1220,8 @@ lemma decode_asid_pool_invocation_wf[wp]:
 lemma decode_asid_control_invocation_wf[wp]:
   "arch_cap = ASIDControlCap \<Longrightarrow>
    \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
-    cte_wp_at (diminished (ArchObjectCap arch_cap)) slot and
-    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s) and
+    cte_wp_at ((=) (ArchObjectCap arch_cap)) slot and
+    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s) and
     (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> (fst x))\<rbrace>
    decode_asid_control_invocation label args slot ASIDControlCap excaps
    \<lbrace>valid_arch_inv\<rbrace>, -"
@@ -1256,19 +1249,13 @@ lemma decode_asid_control_invocation_wf[wp]:
    apply (rule_tac x=ac in exI)
    apply (rule_tac x=ba in exI)
    apply (clarsimp simp add: cte_wp_at_caps_of_state)
-   apply (drule (1) caps_of_state_valid[rotated])+
-   apply (drule (1) diminished_is_update)+
-   apply (clarsimp simp: is_cap_simps cap_rights_update_def)
   apply (clarsimp simp add: cte_wp_at_caps_of_state)
-  apply (drule (1) caps_of_state_valid[rotated])+
-  apply (drule (1) diminished_is_update)+
-  apply (clarsimp simp: cap_rights_update_def)
   done
 
 lemma arch_decode_inv_wf[wp]:
   "\<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
-    cte_wp_at (diminished (ArchObjectCap arch_cap)) slot and real_cte_at slot and
-    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s) and
+    cte_wp_at ((=) (ArchObjectCap arch_cap)) slot and real_cte_at slot and
+    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s) and
     (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> (fst x))\<rbrace>
      arch_decode_invocation label args x_slot slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
@@ -1290,15 +1277,6 @@ lemma arch_pinv_st_tcb_at:
   apply (wp perform_asid_control_invocation_st_tcb_at; fastforce elim!: pred_tcb_weakenE)+
   done
 
-lemma get_cap_diminished:
-  "\<lbrace>valid_objs\<rbrace> get_cap slot \<lbrace>\<lambda>cap. cte_wp_at (diminished cap) slot\<rbrace>"
-  apply (wp get_cap_wp)
-  apply (clarsimp simp: cte_wp_at_caps_of_state diminished_def mask_cap_def)
-  apply (frule (1) caps_of_state_valid_cap)
-  apply (rule exI[of _ "UNIV"])
-  apply simp
-  done
-
 end
 
 
@@ -1313,7 +1291,6 @@ requalify_facts
   sts_valid_arch_inv
   arch_decode_inv_wf
   arch_pinv_st_tcb_at
-  get_cap_diminished
 
 end
 

@@ -96,7 +96,7 @@ lemma decode_invocation_untypedcap_corres:
     dcorres (dc \<oplus> cdl_invocation_relation) \<top>
         (invs and cte_wp_at ((=) invoked_cap') invoked_cap_ref'
                  and (\<lambda>s. \<forall>x \<in> set (map fst excaps'). s \<turnstile> x)
-                 and (\<lambda>s. \<forall>x \<in> set excaps'. cte_wp_at (diminished (fst x)) (snd x) s)
+                 and (\<lambda>s. \<forall>x \<in> set excaps'. cte_wp_at ((=) (fst x)) (snd x) s)
                  and valid_etcbs)
         (Decode_D.decode_invocation invoked_cap invoked_cap_ref excaps intent)
         (Decode_A.decode_invocation label' args' cap_index' invoked_cap_ref' invoked_cap' excaps')"
@@ -151,7 +151,8 @@ lemma decode_invocation_replycap_corres:
      invoked_cap = transform_cap invoked_cap';
      excaps = transform_cap_list excaps';
      invoked_cap' = cap.ReplyCap a b c \<rbrakk> \<Longrightarrow>
-    dcorres (dc \<oplus> cdl_invocation_relation) \<top> (cte_wp_at (Not\<circ> is_master_reply_cap) invoked_cap_ref' and cte_wp_at (diminished invoked_cap') invoked_cap_ref')
+    dcorres (dc \<oplus> cdl_invocation_relation) \<top> (cte_wp_at (Not\<circ> is_master_reply_cap) invoked_cap_ref' and
+                                               cte_wp_at ((=) invoked_cap') invoked_cap_ref')
         (Decode_D.decode_invocation invoked_cap invoked_cap_ref excaps intent)
         (Decode_A.decode_invocation label' args' cap_index' invoked_cap_ref' invoked_cap' excaps')"
   apply (clarsimp simp: Decode_A.decode_invocation_def Decode_D.decode_invocation_def )
@@ -564,8 +565,8 @@ lemma decode_invocation_corres:
      dcorres (dc \<oplus> cdl_invocation_relation) \<top>
       (invs and valid_cap cap and (\<lambda>s. \<forall>e\<in>set excaps'. valid_cap (fst e) s)
             and (cte_wp_at (Not \<circ> is_master_reply_cap) slot
-            and cte_wp_at (diminished cap) slot)
-            and (\<lambda>s. \<forall>x\<in>set excaps'. cte_wp_at (diminished (fst x)) (snd x) s)
+            and cte_wp_at ((=) cap) slot)
+            and (\<lambda>s. \<forall>x\<in>set excaps'. cte_wp_at ((=) (fst x)) (snd x) s)
             and valid_etcbs)
       (Decode_D.decode_invocation invoked_cap invoked_cap_ref excaps intent)
       (Decode_A.decode_invocation label args cap_index slot cap excaps')"
@@ -1020,8 +1021,8 @@ lemma decode_invocation_corres':
   \<Longrightarrow> dcorres (dc \<oplus> cdl_invocation_relation) \<top>
     ((=) s and (\<lambda>(slot,cap,excaps,buffer) s. \<not> is_master_reply_cap (cap) \<and> valid_cap cap s \<and> valid_etcbs s
     \<and> evalMonad (lookup_ipc_buffer False (cur_thread s)) s = Some buffer
-    \<and> (\<forall>e\<in> set excaps. s \<turnstile> fst e) \<and> cte_wp_at (Not \<circ> is_master_reply_cap) slot s \<and> cte_wp_at (diminished cap) slot s
-    \<and> (\<forall>e\<in> set excaps. cte_wp_at (diminished (fst e)) (snd e) s)) rv')
+    \<and> (\<forall>e\<in> set excaps. s \<turnstile> fst e) \<and> cte_wp_at (Not \<circ> is_master_reply_cap) slot s \<and> cte_wp_at ((=) cap) slot s
+    \<and> (\<forall>e\<in> set excaps. cte_wp_at ((=) (fst e)) (snd e) s)) rv')
      ((\<lambda>(cap, cap_ref, extra_caps).
           case_option (if ep_related_cap cap then Decode_D.decode_invocation cap cap_ref extra_caps undefined else Monads_D.throw)
           (Decode_D.decode_invocation cap cap_ref extra_caps)
@@ -1226,14 +1227,10 @@ lemma not_master_reply_cap_lcs[wp]:
 lemma not_master_reply_cap_lcs'[wp]:
   "\<lbrace>valid_reply_masters and valid_objs\<rbrace> CSpace_A.lookup_cap_and_slot t ptr
             \<lbrace>\<lambda>rv s. cte_wp_at (Not \<circ> is_master_reply_cap) (snd rv) s\<rbrace>,-"
-  apply (rule_tac Q' = "\<lambda>rv s. \<not> is_master_reply_cap (fst rv) \<and> cte_wp_at (diminished (fst rv)) (snd rv) s" in hoare_post_imp_R)
+  apply (rule_tac Q' = "\<lambda>rv s. \<not> is_master_reply_cap (fst rv) \<and> cte_wp_at ((=) (fst rv)) (snd rv) s"
+           in hoare_post_imp_R)
    apply (rule hoare_pre,wp,simp)
   apply (clarsimp simp:cte_wp_at_def)
-  apply (case_tac cap)
-             apply (simp_all add:is_master_reply_cap_def)
-  apply clarsimp
-  apply (case_tac a)
-             apply (simp_all add:diminished_def mask_cap_def cap_rights_update_def)
   done
 
 lemma set_thread_state_ct_active:
@@ -1335,7 +1332,7 @@ lemma handle_invocation_corres:
       apply (rule_tac Q="\<lambda>r s. s = s'a \<and>
                                evalMonad (lookup_ipc_buffer False (cur_thread s'a)) s'a = Some r \<and>
                                cte_wp_at (Not \<circ> is_master_reply_cap) (snd x) s \<and>
-                               cte_wp_at (diminished (fst x)) (snd x) s \<and>
+                               cte_wp_at ((=) (fst x)) (snd x) s \<and>
                                real_cte_at (snd x) s \<and>
                                s \<turnstile> fst x \<and>
                                ex_cte_cap_wp_to (\<lambda>_. True) (snd x) s \<and>

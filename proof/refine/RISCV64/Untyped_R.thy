@@ -641,22 +641,19 @@ lemma ensureNoChildren_sp:
   "\<lbrace>P\<rbrace> ensureNoChildren sl \<lbrace>\<lambda>rv s. P s \<and> descendants_of' sl (ctes_of s) = {}\<rbrace>,-"
   by (wp ensureNoChildren_wp, simp)
 
-declare diminished_Untyped' [simp]
-
 lemma dui_sp_helper':
   "\<lbrace>P\<rbrace> if Q then returnOk root_cap
        else doE slot \<leftarrow>
                   lookupTargetSlot root_cap cref dpth;
                   liftE (getSlotCap slot)
-            odE \<lbrace>\<lambda>rv s. (rv = root_cap \<or> (\<exists>slot. cte_wp_at' (diminished' rv o cteCap) slot s)) \<and> P s\<rbrace>, -"
+            odE \<lbrace>\<lambda>rv s. (rv = root_cap \<or> (\<exists>slot. cte_wp_at' ((=) rv o cteCap) slot s)) \<and> P s\<rbrace>, -"
   apply (cases Q, simp_all add: lookupTargetSlot_def)
    apply (wp, simp)
   apply (simp add: getSlotCap_def split_def)
   apply wp
     apply (rule hoare_strengthen_post [OF getCTE_sp[where P=P]])
-    apply (clarsimp simp: cte_wp_at_ctes_of diminished'_def)
+    apply (clarsimp simp: cte_wp_at_ctes_of)
     apply (elim allE, drule(1) mp)
-    apply (erule allE, subst(asm) maskCapRights_allRights)
     apply simp
    apply wpsimp
   apply simp
@@ -778,7 +775,6 @@ lemma decodeUntyped_wf[wp]:
    apply (case_tac cte)
    apply clarsimp
    apply (drule(1) ctes_of_valid_cap'[OF _ invs_valid_objs'])+
-   apply (drule diminished_valid')
    apply simp
   apply (clarsimp simp: toEnum_of_nat [OF less_Suc_unat_less_bound] ucast_id)
   apply (subgoal_tac "args ! 4 \<le> 2 ^ capCNodeBits nodeCap")
@@ -848,7 +844,7 @@ lemma decodeUntyped_wf[wp]:
    apply (clarsimp simp:ex_cte_cap_wp_to'_def)
    apply (rule_tac x = nodeSlot in exI)
    apply (case_tac cte)
-   apply (clarsimp simp: cte_wp_at_ctes_of diminished_cte_refs'[symmetric] isCap_simps image_def
+   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps image_def
                          shiftl_t2n)
    apply (rule_tac x = x in bexI,simp)
    apply (simp add: mask_def)

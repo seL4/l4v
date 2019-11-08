@@ -47,11 +47,6 @@ lemma maskCapRights_allRights [simp]:
             ARM_HYP_H.maskCapRights_def maskVMRights_def
   by (cases c) (simp_all add: Let_def split: arch_capability.split vmrights.split)
 
-lemma diminished_refl'[simp]:
-  "diminished' cap cap"
-  unfolding diminished'_def
-  by (rule exI[where x=allRights], simp)
-
 lemma getCTE_inv [wp]: "\<lbrace>P\<rbrace> getCTE addr \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: getCTE_def) wp
 
@@ -2069,10 +2064,6 @@ crunch idle[wp]: get_object "valid_idle"
   (wp: crunch_wps simp: crunch_simps)
 
 end
-
-lemma diminished_capMaster:
-  "diminished' cap cap' \<Longrightarrow> capMasterCap cap' = capMasterCap cap"
-  by (clarsimp simp: diminished'_def)
 
 
 end (* of theory *)

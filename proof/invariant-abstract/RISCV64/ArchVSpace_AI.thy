@@ -183,7 +183,7 @@ definition
      \<lambda>s. \<exists>dev r R sz m.
             acap = FrameCap r R sz dev m \<and>
             case_option True (valid_unmap sz) m \<and>
-            cte_wp_at (is_arch_diminished (ArchObjectCap acap)) cslot s \<and>
+            cte_wp_at ((=) (ArchObjectCap acap)) cslot s \<and>
             valid_arch_cap acap s
   | PageGetAddr ptr \<Rightarrow> \<top>"
 
@@ -204,7 +204,7 @@ definition
                 \<and> vref \<in> user_region) and
        K (is_PageTableCap acap \<and> cap_asid_arch acap \<noteq> None)
    | PageTableUnmap acap cslot \<Rightarrow>
-       cte_wp_at (\<lambda>c. is_arch_diminished (ArchObjectCap acap) c) cslot
+       cte_wp_at ((=) (ArchObjectCap acap)) cslot
        and real_cte_at cslot
        and valid_arch_cap acap
        and is_final_cap' (ArchObjectCap acap)
@@ -1065,21 +1065,6 @@ lemma mapM_x_typ_at[wp]:
   "mapM_x (swp store_pte InvalidPTE) slots \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
   by (wpsimp wp: mapM_x_wp')
 
-lemma diminished_FrameCap[simp]:
-  "diminished (ArchObjectCap (FrameCap p rights sz dev m)) cap =
-  (\<exists>R R'. cap = ArchObjectCap (FrameCap p R sz dev m) \<and> rights = validate_vm_rights (R \<inter> R'))"
-  apply (cases cap; simp add: diminished_def mask_cap_def cap_rights_update_def)
-  apply (rename_tac acap, case_tac acap; simp add: acap_rights_update_def)
-  apply auto
-  done
-
-lemma diminished_pt_cap[simp]:
-  "diminished (ArchObjectCap (PageTableCap p m)) cap = (cap = ArchObjectCap (PageTableCap p m))"
-  apply (cases cap; simp add: diminished_def mask_cap_def cap_rights_update_def)
-  apply (rename_tac acap, case_tac acap; simp add: acap_rights_update_def)
-  apply auto
-  done
-
 crunches unmap_page_table
   for global_refs[wp]: "\<lambda>s. P (global_refs s)"
   and vspace_for_asid[wp]: "\<lambda>s. P (vspace_for_asid asid s)"
@@ -1099,17 +1084,14 @@ lemma perform_pt_inv_unmap_invs[wp]:
                     unmap_page_table_not_target real_cte_at_typ_valid
                 simp: cte_wp_at_caps_of_state)
   apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state)
-  apply (rename_tac cap' cap'')
-  apply (prop_tac "cap'' = cap'", fastforce)
-  apply (clarsimp simp: is_arch_update_def is_cap_simps
-                        cap_master_cap_simps is_arch_diminished_def is_PageTableCap_def
+  apply (clarsimp simp: is_arch_update_def is_cap_simps is_PageTableCap_def
                         update_map_data_def valid_cap_def valid_arch_cap_def cap_aligned_def)
   apply (frule caps_of_state_valid_cap, clarsimp)
   apply (rule conjI; clarsimp)
    apply (simp add: valid_cap_def cap_aligned_def)
    apply (erule valid_table_caps_pdD, fastforce)
   apply (rename_tac p asid vref)
-  apply (clarsimp simp: wellformed_mapdata_def valid_cap_def cap_aligned_def)
+  apply (clarsimp simp: wellformed_mapdata_def valid_cap_def cap_aligned_def cap_master_cap_simps)
   apply (rule conjI)
    apply clarsimp
    apply (prop_tac "is_aligned p pt_bits", simp add: bit_simps)
@@ -1424,8 +1406,8 @@ lemma perform_pg_inv_unmap[wp]:
                     hoare_vcg_all_lift hoare_vcg_const_imp_lift get_cap_wp unmap_page_cte_wp_at
                     hoare_vcg_imp_lift'
                     unmap_page_not_target unmap_page_invs)
-  apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state is_arch_diminished_def
-                        is_cap_simps is_arch_update_def update_map_data_def cap_master_cap_simps)
+  apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state is_cap_simps is_arch_update_def
+                        update_map_data_def cap_master_cap_simps)
   apply (frule caps_of_state_valid, clarsimp)
   apply (case_tac m; simp)
    apply (clarsimp simp: valid_cap_def valid_arch_cap_def cap_aligned_def cap_master_cap_simps)

@@ -449,41 +449,11 @@ lemma pas_cap_cur_auth_ASIDControlCap:
     apply(rule pas_refined_Control_into_is_subject_asid, blast+)
   done
 
-lemma cte_wp_at_diminished_cnode_cap:
-  "\<lbrakk>cte_wp_at (diminished cap) slot s; is_cnode_cap cap\<rbrakk> \<Longrightarrow>
-    cte_wp_at ((=) cap) slot s"
-  apply (case_tac cap, simp_all)
-  apply (clarsimp simp: cte_wp_at_def diminished_def mask_cap_def)
-  apply (case_tac capa)
-  by (clarsimp simp: cap_rights_update_def split: bool.splits)+
-
 lemma owns_cnode_owns_obj_ref_of_child_cnodes:
   "\<lbrakk>pas_refined aag s; is_subject aag (fst slot);
-        cte_wp_at (diminished cap) slot s; is_cnode_cap cap\<rbrakk>
+        cte_wp_at ((=) cap) slot s; is_cnode_cap cap\<rbrakk>
        \<Longrightarrow> is_subject aag (obj_ref_of cap)"
-  apply(drule (1) cte_wp_at_diminished_cnode_cap)
-  apply(blast intro: owns_cnode_owns_obj_ref_of_child_cnodes_threads_and_zombies)
-  done
-
-lemma cte_wp_at_diminished_PageDirectoryCap:
-  "\<lbrakk>cte_wp_at (diminished cap) slot s; cap = ArchObjectCap (PageDirectoryCap x y)\<rbrakk> \<Longrightarrow>
-   cte_wp_at ((=) cap) slot s"
-  apply(clarsimp simp: cte_wp_at_def diminished_def mask_cap_def)
-  apply(case_tac capa)
-  apply(clarsimp simp: cap_rights_update_def split: bool.splits)+
-  apply(rename_tac arch_cap)
-  apply(case_tac arch_cap, simp_all add: acap_rights_update_def split: bool.splits)
-  done
-
-lemma cte_wp_at_diminished_PageTableCap:
-  "\<lbrakk>cte_wp_at (diminished cap) slot s; cap = ArchObjectCap (PageTableCap x y)\<rbrakk> \<Longrightarrow>
-   cte_wp_at ((=) cap) slot s"
-  apply(clarsimp simp: cte_wp_at_def diminished_def mask_cap_def)
-  apply(case_tac capa)
-  apply(clarsimp simp: cap_rights_update_def split: bool.splits)+
-  apply(rename_tac arch_cap)
-  apply(case_tac arch_cap, simp_all add: acap_rights_update_def split: bool.splits)
-  done
+  by (blast intro: owns_cnode_owns_obj_ref_of_child_cnodes_threads_and_zombies)
 
 lemma vspace_cap_rights_to_auth_mono:
   "R \<subseteq> S \<Longrightarrow> vspace_cap_rights_to_auth R \<subseteq> vspace_cap_rights_to_auth S"
@@ -567,8 +537,8 @@ lemma arch_decode_invocation_reads_respects_f:
   notes hoare_whenE_wps[wp_split del]
   shows
   "reads_respects_f aag l (silc_inv aag st and invs and pas_refined aag
-        and cte_wp_at (diminished (cap.ArchObjectCap cap)) slot
-        and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at (diminished cap) slot s)
+        and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
+        and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
         and K (\<forall>(cap, slot) \<in> {(cap.ArchObjectCap cap, slot)} \<union> set excaps.
                       aag_cap_auth aag (pasObjectAbs aag (fst slot)) cap \<and> is_subject aag (fst slot)
                    \<and> (\<forall>v \<in> cap_asid' cap. is_subject_asid aag v)))
@@ -620,9 +590,7 @@ lemma arch_decode_invocation_reads_respects_f:
                           apply(rule_tac cap="fst (excaps ! Suc 0)" and p="snd (excaps ! Suc 0)"
                                       in caps_of_state_pasObjectAbs_eq)
                               apply(rule cte_wp_at_caps_of_state)
-                              apply(rule cte_wp_at_diminished_cnode_cap)
-                               apply fastforce
-                              apply assumption
+                              apply fastforce
                              apply(erule cap_auth_conferred_cnode_cap)
                             apply fastforce
                            apply assumption
@@ -634,14 +602,14 @@ lemma arch_decode_invocation_reads_respects_f:
                        apply(simp add: lookup_pd_slot_def)
                        apply(subgoal_tac "excaps ! 0 \<in> set excaps")
                         apply(subst vaddr_segment_nonsense)
-                         apply(fastforce dest: diminished_cte_wp_at_valid_cap cap_aligned_valid
+                         apply(fastforce dest: cte_wp_valid_cap cap_aligned_valid
                                          simp: obj_ref_of_def cap_aligned_def cap_bits_def)
                         apply(fastforce dest: aag_cap_auth_PageDirectoryCap)
                        apply fastforce
                       apply(simp add: lookup_pd_slot_def)
                       apply(subgoal_tac "excaps ! 0 \<in> set excaps")
                        apply(subst vaddr_segment_nonsense)
-                        apply(fastforce dest: diminished_cte_wp_at_valid_cap cap_aligned_valid
+                        apply(fastforce dest: cte_wp_valid_cap cap_aligned_valid
                                         simp: obj_ref_of_def cap_aligned_def cap_bits_def)
                        apply(fastforce dest: aag_cap_auth_PageDirectoryCap)
                       apply fastforce
@@ -666,14 +634,14 @@ lemma arch_decode_invocation_reads_respects_f:
                 apply(simp add: lookup_pd_slot_def)
                 apply(subgoal_tac "excaps ! 0 \<in> set excaps")
                  apply(subst vaddr_segment_nonsense)
-                  apply(fastforce dest: diminished_cte_wp_at_valid_cap cap_aligned_valid
+                  apply(fastforce dest: cte_wp_valid_cap cap_aligned_valid
                                   simp: obj_ref_of_def cap_aligned_def cap_bits_def)
                  apply(fastforce dest: aag_cap_auth_PageDirectoryCap)
                 apply fastforce
                apply(simp add: lookup_pd_slot_def)
                apply(subgoal_tac "excaps ! 0 \<in> set excaps")
                 apply(subst vaddr_segment_nonsense)
-                 apply(fastforce dest: diminished_cte_wp_at_valid_cap cap_aligned_valid
+                 apply(fastforce dest: cte_wp_valid_cap cap_aligned_valid
                                  simp: obj_ref_of_def cap_aligned_def cap_bits_def)
                 apply(fastforce dest: aag_cap_auth_PageDirectoryCap)
                apply fastforce
@@ -682,7 +650,7 @@ lemma arch_decode_invocation_reads_respects_f:
               apply(fastforce dest: aag_cap_auth_PageDirectoryCap)
              apply fastforce
             apply fastforce
-           apply(fastforce dest: diminished_cte_wp_at_valid_cap simp: valid_cap_simps)
+           apply(fastforce dest: cte_wp_valid_cap simp: valid_cap_simps)
           apply(rule ball_subset[OF _ vspace_cap_rights_to_auth_mask_vm_rights])
           apply(fastforce simp: aag_cap_auth_def cap_auth_conferred_def)
          apply(subgoal_tac "excaps ! 0 \<in> set excaps")
@@ -690,26 +658,26 @@ lemma arch_decode_invocation_reads_respects_f:
          apply fastforce
         apply(subgoal_tac "excaps ! 0 \<in> set excaps")
          apply(subst vaddr_segment_nonsense)
-          apply(fastforce dest: diminished_cte_wp_at_valid_cap cap_aligned_valid
+          apply(fastforce dest: cte_wp_valid_cap cap_aligned_valid
                           simp: obj_ref_of_def cap_aligned_def cap_bits_def)
          apply(fastforce dest: aag_cap_auth_PageDirectoryCap)
         apply fastforce
        apply blast
-      apply(blast intro: cte_wp_at_diminished_PageTableCap)
+      apply blast
      apply (blast dest:aag_can_read_self)
     apply (force dest:silc_inv_not_subject)
    apply(simp add: lookup_pd_slot_def)
    apply(subst vaddr_segment_nonsense)
-    apply(fastforce dest: diminished_cte_wp_at_valid_cap cap_aligned_valid
+    apply(fastforce dest: cte_wp_valid_cap cap_aligned_valid
                     simp: obj_ref_of_def cap_aligned_def cap_bits_def)
    apply(fastforce dest: aag_cap_auth_PageDirectoryCap)
   apply(clarsimp simp: lookup_pd_slot_def
                 split: option.splits kernel_object.splits arch_kernel_obj.splits pde.splits)
   apply(subst(asm) vaddr_segment_nonsense)
-   apply(fastforce dest: diminished_cte_wp_at_valid_cap cap_aligned_valid
+   apply(fastforce dest: cte_wp_valid_cap cap_aligned_valid
                    simp: obj_ref_of_def cap_aligned_def cap_bits_def)
   apply(subst(asm) vaddr_segment_nonsense2)
-   apply(fastforce dest: diminished_cte_wp_at_valid_cap cap_aligned_valid
+   apply(fastforce dest: cte_wp_valid_cap cap_aligned_valid
                    simp: obj_ref_of_def cap_aligned_def cap_bits_def)
   apply (rule_tac pd=x and s=s in lookup_pt_slot_no_fail_is_subject)
           apply (erule exI)
@@ -717,7 +685,7 @@ lemma arch_decode_invocation_reads_respects_f:
         apply (simp add: invs_def valid_state_def valid_pspace_def)
        apply assumption
       apply (erule(1) aag_cap_auth_PageDirectoryCap)
-     apply(fastforce dest: diminished_cte_wp_at_valid_cap cap_aligned_valid simp: obj_ref_of_def cap_aligned_def cap_bits_def pd_bits)
+     apply(fastforce dest: cte_wp_valid_cap cap_aligned_valid simp: obj_ref_of_def cap_aligned_def cap_bits_def pd_bits)
     apply simp
    apply assumption
   apply assumption
@@ -731,14 +699,14 @@ done
 
 lemma decode_invocation_reads_respects_f:
   "reads_respects_f aag l
-  (silc_inv aag st and pas_refined aag and valid_cap cap and invs and ct_active and cte_wp_at (diminished cap) slot
+  (silc_inv aag st and pas_refined aag and valid_cap cap and invs and ct_active and cte_wp_at ((=) cap) slot
            and ex_cte_cap_to slot
            and (\<lambda>s. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)
            and (\<lambda>s. \<forall>r\<in>cte_refs cap (interrupt_irq_node s). ex_cte_cap_to r s)
            and (\<lambda>s. \<forall>cap \<in> set excaps. \<forall>r\<in>cte_refs (fst cap) (interrupt_irq_node s). ex_cte_cap_to r s)
            and (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> (fst x))
            and (\<lambda>s. \<forall>x \<in> set excaps. \<forall>r\<in>zobj_refs (fst x). ex_nonz_cap_to r s)
-           and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s)
+           and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s)
            and (\<lambda>s. \<forall>x \<in> set excaps. real_cte_at (snd x) s)
            and (\<lambda>s. \<forall>x \<in> set excaps. ex_cte_cap_wp_to is_cnode_cap (snd x) s)
            and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (interrupt_derived (fst x)) (snd x) s)
@@ -768,11 +736,11 @@ lemma decode_invocation_reads_respects_f:
            | rule conjI | (subst split_paired_Ex[symmetric], erule exI)
            | erule cte_wp_at_weakenE
            | drule(1) bspec
-           | erule diminished_no_cap_to_obj_with_diff_ref
+           | erule eq_no_cap_to_obj_with_diff_ref
            | assumption)+)[1]
    apply (rule conjI, assumption)
    apply (rule impI, erule subst, rule pas_refined_sita_mem [OF sita_controlled], auto
-          simp: cte_wp_at_caps_of_state diminshed_IRQControlCap_eq)[1]
+          simp: cte_wp_at_caps_of_state)[1]
   apply (rename_tac arch_cap)
   apply (subgoal_tac "(\<forall>x\<in>cap_asid' (ArchObjectCap arch_cap). is_subject_asid aag x) \<and>
           (\<forall>x\<in>set excaps. \<forall>v\<in>cap_asid' (fst x). is_subject_asid aag v)")

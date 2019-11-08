@@ -113,18 +113,6 @@ lemma perform_invocation_respects:
 
 declare AllowSend_def[simp] AllowRecv_def[simp]
 
-lemma diminshed_IRQControlCap_eq:
-  "diminished IRQControlCap = ((=) IRQControlCap)"
-  apply (rule ext)
-  apply (case_tac x, auto simp: diminished_def mask_cap_def cap_rights_update_def split:bool.splits)
-  done
-
-lemma diminished_DomainCap_eq:
-  "diminished DomainCap = ((=) DomainCap)"
-  apply (rule ext)
-  apply (case_tac x, auto simp: diminished_def mask_cap_def cap_rights_update_def split:bool.splits)
-  done
-
 lemma hoare_conjunct1_R:
   "\<lbrace> P \<rbrace> f \<lbrace> \<lambda> r s. Q r s \<and> Q' r s\<rbrace>,- \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>,-"
   apply(auto intro: hoare_post_imp_R)
@@ -136,14 +124,14 @@ lemma hoare_conjunct2_R:
   done
 
 lemma decode_invocation_authorised:
-  "\<lbrace>pas_refined aag and valid_cap cap and invs and ct_active and cte_wp_at (diminished cap) slot
+  "\<lbrace>pas_refined aag and valid_cap cap and invs and ct_active and cte_wp_at ((=) cap) slot
            and ex_cte_cap_to slot
            and (\<lambda>s. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)
            and (\<lambda>s. \<forall>r\<in>cte_refs cap (interrupt_irq_node s). ex_cte_cap_to r s)
            and (\<lambda>s. \<forall>cap \<in> set excaps. \<forall>r\<in>cte_refs (fst cap) (interrupt_irq_node s). ex_cte_cap_to r s)
            and (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> (fst x))
            and (\<lambda>s. \<forall>x \<in> set excaps. \<forall>r\<in>zobj_refs (fst x). ex_nonz_cap_to r s)
-           and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s)
+           and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s)
            and (\<lambda>s. \<forall>x \<in> set excaps. real_cte_at (snd x) s)
            and (\<lambda>s. \<forall>x \<in> set excaps. ex_cte_cap_wp_to is_cnode_cap (snd x) s)
            and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (interrupt_derived (fst x)) (snd x) s)
@@ -161,7 +149,7 @@ lemma decode_invocation_authorised:
               decode_cnode_inv_authorised
               decode_tcb_invocation_authorised decode_tcb_inv_wf
               decode_arch_invocation_authorised
-              | strengthen cnode_diminished_strg
+              | strengthen cnode_eq_strg
               | wpc | simp add: comp_def authorised_invocation_def decode_invocation_def
                         split del: if_split del: hoare_True_E_R
               | wp (once) hoare_FalseE_R)+
@@ -178,17 +166,16 @@ lemma decode_invocation_authorised:
        apply (clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def
                              pas_refined_Control[symmetric] reply_cap_rights_to_auth_def)
 
-      apply ((clarsimp simp: valid_cap_def cte_wp_at_eq_simp
-                            is_cap_simps pas_refined_all_auth_is_owns
+      apply ((clarsimp simp: valid_cap_def is_cap_simps pas_refined_all_auth_is_owns
                             ex_cte_cap_wp_to_weakenE[OF _ TrueI]
                             cap_auth_conferred_def cap_rights_to_auth_def
                | rule conjI | (subst split_paired_Ex[symmetric], erule exI)
                | erule cte_wp_at_weakenE
                | drule(1) bspec
-               | erule diminished_no_cap_to_obj_with_diff_ref)+)[1]
-     apply (simp only: domain_sep_inv_def diminished_DomainCap_eq)
+               | erule eq_no_cap_to_obj_with_diff_ref)+)[1]
+     apply (simp only: domain_sep_inv_def)
     apply (rule impI, erule subst, rule pas_refined_sita_mem [OF sita_controlled],
-           auto simp: cte_wp_at_caps_of_state diminshed_IRQControlCap_eq)[1]
+           auto simp: cte_wp_at_caps_of_state)[1]
 
    apply (clarsimp simp add: cap_links_irq_def )
    apply (drule (1) pas_refined_Control, simp)

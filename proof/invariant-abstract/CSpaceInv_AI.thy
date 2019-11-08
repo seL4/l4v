@@ -2100,17 +2100,4 @@ lemma cap_rights_update_id [intro!, simp]:
   by (cases c; fastforce simp: valid_cap_def split: bool.splits)
 
 
-lemma diminished_is_update:
-  "valid_cap c' s \<Longrightarrow> diminished c c' \<Longrightarrow> \<exists>R. c' = cap_rights_update R c"
-  apply (clarsimp simp: diminished_def mask_cap_def)
-  apply (rule exI)
-  apply (rule sym)
-  apply (frule (1) cap_rights_update_id)
-  done
-
-
-lemmas diminished_is_update' =
-  diminished_is_update[OF caps_of_state_valid_cap[OF _ invs_valid_objs]]
-
-
 end

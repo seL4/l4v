@@ -2932,8 +2932,7 @@ proof -
          apply (rule updateCap_same_master)
          apply (clarsimp simp: is_page_cap_def update_map_data_def)
         apply (wp get_cap_wp getSlotCap_wp)+
-      apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_diminished_def)
-      apply (drule (2) diminished_is_update')+
+      apply (clarsimp simp: cte_wp_at_caps_of_state)
       apply (clarsimp simp: cap_rights_update_def acap_rights_update_def update_map_data_def is_cap_simps)
       apply auto[1]
      apply (auto simp: cte_wp_at_ctes_of)[1]
@@ -2957,9 +2956,8 @@ proof -
        apply wp
       apply (simp add: cte_wp_at_ctes_of)
       apply wp
-     apply (clarsimp simp: valid_unmap_def cte_wp_at_caps_of_state is_arch_diminished_def is_cap_simps
+     apply (clarsimp simp: valid_unmap_def cte_wp_at_caps_of_state is_cap_simps
                     split: cap.splits arch_cap.splits)
-     apply (drule (2) diminished_is_update')+
      apply (clarsimp simp: cap_rights_update_def is_page_cap_def cap_master_cap_simps
                            update_map_data_def acap_rights_update_def valid_cap_def mask_def)
      apply auto[1]
@@ -3112,12 +3110,10 @@ lemma perform_page_table_corres:
       apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
                 mapM_x_wp' | simp split del: if_split)+
    apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state
-                         is_arch_diminished_def
                          cap_master_cap_simps
                          update_map_data_def is_cap_simps
                          cap_rights_update_def acap_rights_update_def
                   dest!: cap_master_cap_eqDs)
-   apply (frule (2) diminished_is_update')
    apply (auto simp: valid_cap_def mask_def cap_master_cap_def
                      cap_rights_update_def acap_rights_update_def
               split: option.split_asm)[1]
@@ -5079,18 +5075,6 @@ lemma isPDCap_PD :
   "isPDCap (ArchObjectCap (PageDirectoryCap r m))"
   by (simp add: isPDCap_def)
 
-
-lemma diminished_valid':
-  "diminished' cap cap' \<Longrightarrow> valid_cap' cap = valid_cap' cap'"
-  apply (clarsimp simp add: diminished'_def)
-  apply (rule ext)
-  apply (simp add: maskCapRights_def Let_def split del: if_split)
-  apply (cases cap'; simp add: isCap_simps valid_cap'_def capAligned_def split del: if_split)
-  by (simp add: ARM_HYP_H.maskCapRights_def isPageCap_def Let_def split del: if_split split: arch_capability.splits)
-
-lemma diminished_isPDCap:
-  "diminished' cap cap' \<Longrightarrow> isPDCap cap' = isPDCap cap"
-  by (blast dest: diminished_capMaster capMaster_isPDCap)
 
 end
 

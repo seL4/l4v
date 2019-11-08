@@ -1745,7 +1745,7 @@ lemma decode_untyped_corres:
    dcorres (dc \<oplus> (\<lambda>x y. x = translate_untyped_invocation y))
        \<top> (cte_wp_at ((=) cap') slot' and invs
            and (\<lambda>s. \<forall>x \<in> set (map fst excaps'). s \<turnstile> x)
-           and (\<lambda>s. \<forall>x \<in> set excaps'. cte_wp_at (diminished (fst x)) (snd x) s) and valid_etcbs)
+           and (\<lambda>s. \<forall>x \<in> set excaps'. cte_wp_at ((=) (fst x)) (snd x) s) and valid_etcbs)
      (Untyped_D.decode_untyped_invocation cap slot excaps ui)
      (Decode_A.decode_untyped_invocation label' args' slot' cap' (map fst excaps'))"
   apply (simp add: transform_intent_def map_option_Some_eq2

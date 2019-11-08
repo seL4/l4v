@@ -517,7 +517,7 @@ lemma decode_page_inv_corres:
     list_all2 (\<lambda>s s'. s' = cte_map s) (map snd excaps) (map snd excaps') \<rbrakk> \<Longrightarrow>
      corres (ser \<oplus> archinv_relation)
             (invs and valid_cap (cap.ArchObjectCap cap) and
-             cte_wp_at (is_arch_diminished (cap.ArchObjectCap cap)) slot and
+             cte_wp_at ((=) (cap.ArchObjectCap cap)) slot and
              (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> fst x \<and> cte_wp_at (\<lambda>_. True) (snd x) s))
             (invs' and valid_cap' (capability.ArchObjectCap cap') and
              (\<lambda>s. \<forall>x\<in>set excaps'. valid_cap' (fst x) s \<and> cte_wp_at' (\<lambda>_. True) (snd x) s))
@@ -587,7 +587,7 @@ lemma decode_page_inv_corres:
                 apply (wpsimp simp: if_apply_def2
                               wp: validE_validE_R[OF find_vspace_for_asid_wp, simplified])+
     apply (clarsimp simp: invs_psp_aligned invs_distinct invs_vspace_objs invs_valid_asid_table
-                          cte_wp_at_caps_of_state is_arch_diminished_def is_cap_simps)
+                          cte_wp_at_caps_of_state is_cap_simps)
     apply (rule conjI; clarsimp?)
      apply (clarsimp simp: valid_cap_def wellformed_mapdata_def)
     apply (rule conjI)
@@ -651,7 +651,7 @@ lemma decode_page_table_inv_corres:
     list_all2 (\<lambda>s s'. s' = cte_map s) (map snd excaps) (map snd excaps') \<rbrakk> \<Longrightarrow>
      corres (ser \<oplus> archinv_relation)
             (invs and valid_cap (cap.ArchObjectCap cap) and
-             cte_wp_at (is_arch_diminished (cap.ArchObjectCap cap)) slot and
+             cte_wp_at ((=) (cap.ArchObjectCap cap)) slot and
              (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> fst x \<and> cte_wp_at (\<lambda>_. True) (snd x) s))
             (invs' and valid_cap' (capability.ArchObjectCap cap') and
              (\<lambda>s. \<forall>x\<in>set excaps'. valid_cap' (fst x) s \<and> cte_wp_at' (\<lambda>_. True) (snd x) s))
@@ -743,11 +743,10 @@ lemma decode_page_table_inv_corres:
       apply (clarsimp)
      apply (rule no_fail_pre, rule no_fail_getCTE)
      apply (erule conjunct2)
-    apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_diminished_def invs_vspace_objs
+    apply (clarsimp simp: cte_wp_at_caps_of_state invs_vspace_objs
                           invs_valid_asid_table invs_psp_aligned invs_distinct)
     apply (clarsimp simp: valid_cap_def wellformed_mapdata_def)
-   apply (clarsimp simp: cte_wp_at_ctes_of is_arch_diminished_def
-                         cap_rights_update_def acap_rights_update_def
+   apply (clarsimp simp: cte_wp_at_ctes_of cap_rights_update_def acap_rights_update_def
                          cte_wp_at_caps_of_state)
    apply (drule pspace_relation_ctes_ofI[OF _ caps_of_state_cteD, rotated],
                 erule invs_pspace_aligned', clarsimp+)
@@ -767,7 +766,7 @@ shows
    corres
    (ser \<oplus> archinv_relation)
    (invs and valid_cap (cap.ArchObjectCap arch_cap) and
-        cte_wp_at (is_arch_diminished (cap.ArchObjectCap arch_cap)) slot and
+        cte_wp_at ((=) (cap.ArchObjectCap arch_cap)) slot and
      (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> fst x \<and> cte_at (snd x) s))
    (invs' and valid_cap' (capability.ArchObjectCap arch_cap') and
      (\<lambda>s. \<forall>x\<in>set excaps'. s \<turnstile>' fst x \<and> cte_at' (snd x) s))
@@ -1077,16 +1076,15 @@ lemma inv_ASIDPool: "inv ASIDPool = (\<lambda>v. case v of ASIDPool a \<Rightarr
   apply simp
   done
 
-lemma diminished_arch_update':
-  "diminished' (ArchObjectCap cp) (cteCap cte) \<Longrightarrow> is_arch_update' (ArchObjectCap cp) cte"
-  by (clarsimp simp: is_arch_update'_def isCap_simps
-                     diminished'_def)
+lemma eq_arch_update':
+  "ArchObjectCap cp = cteCap cte \<Longrightarrow> is_arch_update' (ArchObjectCap cp) cte"
+  by (clarsimp simp: is_arch_update'_def isCap_simps)
 
 lemma decode_page_inv_wf[wp]:
   "cap = (arch_capability.FrameCap word vmrights vmpage_size d option) \<Longrightarrow>
       \<lbrace>invs' and valid_cap' (capability.ArchObjectCap cap ) and
-        cte_wp_at' (diminished' (capability.ArchObjectCap cap) \<circ> cteCap) slot and
-        (\<lambda>s. \<forall>x\<in>set excaps. cte_wp_at' (diminished' (fst x) \<circ> cteCap) (snd x) s) and
+        cte_wp_at' ((=) (capability.ArchObjectCap cap) \<circ> cteCap) slot and
+        (\<lambda>s. \<forall>x\<in>set excaps. cte_wp_at' ((=) (fst x) \<circ> cteCap) (snd x) s) and
         sch_act_simple\<rbrace>
        decodeRISCVFrameInvocation label args slot cap excaps
        \<lbrace>valid_arch_inv'\<rbrace>, -"
@@ -1098,19 +1096,11 @@ lemma decode_page_inv_wf[wp]:
          | wp (once) hoare_drop_imps)+
   apply ((rule conjI; clarsimp)+;
            (clarsimp simp: cte_wp_at_ctes_of,
+            (drule_tac t="cteCap _" in sym)+,
             (drule ctes_of_valid', fastforce)+,
-            clarsimp simp: diminished_valid' [symmetric] valid_cap'_def ptBits_def pageBits_def
+            clarsimp simp: valid_cap'_def ptBits_def pageBits_def
                            is_arch_update'_def isCap_simps capAligned_def wellformed_mapdata'_def
-                           vmsz_aligned_user_region not_le
-                    dest!: diminished_capMaster))
-  done
-
-lemma diminished'_PT:
-  "(diminished' (ArchObjectCap (PageTableCap r m)) cap) =
-   (cap = ArchObjectCap (PageTableCap r m))"
-  apply (cases cap; clarsimp simp: diminished'_def maskCapRights_def isCap_simps)
-  apply (rename_tac acap, case_tac acap; simp add: RISCV64_H.maskCapRights_def isCap_simps)
-  apply auto
+                           vmsz_aligned_user_region not_le))
   done
 
 lemma below_pptrUserTop_in_user_region:
@@ -1122,23 +1112,25 @@ lemma below_pptrUserTop_in_user_region:
 lemma decode_page_table_inv_wf[wp]:
   "arch_cap = PageTableCap word option \<Longrightarrow>
        \<lbrace>invs' and valid_cap' (capability.ArchObjectCap arch_cap) and
-        cte_wp_at' (diminished' (capability.ArchObjectCap arch_cap) \<circ> cteCap) slot and
-        (\<lambda>s. \<forall>x\<in>set excaps. cte_wp_at' (diminished' (fst x) \<circ> cteCap) (snd x) s) and
+        cte_wp_at' ((=) (capability.ArchObjectCap arch_cap) \<circ> cteCap) slot and
+        (\<lambda>s. \<forall>x\<in>set excaps. cte_wp_at' ((=) (fst x) \<circ> cteCap) (snd x) s) and
         sch_act_simple\<rbrace>
        decodeRISCVPageTableInvocation label args slot arch_cap excaps
        \<lbrace>valid_arch_inv'\<rbrace>, - "
-  supply if_cong[cong] if_split [split del] diminished'_PT[simp]
+  supply if_cong[cong] if_split [split del]
   apply (clarsimp simp: decodeRISCVPageTableInvocation_def Let_def isCap_simps)
   apply (wpsimp simp: decodeRISCVPageTableInvocationMap_def valid_arch_inv'_def valid_pti'_def
                       maybeVSpaceForASID_def o_def if_apply_def2
                 wp: getPTE_wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
                     lookupPTSlot_inv isFinalCapability_inv
          | wp (once) hoare_drop_imps)+
-  apply (clarsimp simp: not_le isCap_simps cte_wp_at_ctes_of diminished_arch_update')
+  apply (clarsimp simp: not_le isCap_simps cte_wp_at_ctes_of eq_arch_update')
+  apply (drule_tac t="cteCap cte" in sym)
   apply (simp add: valid_cap'_def capAligned_def)
   apply (clarsimp simp: is_arch_update'_def isCap_simps
                   split: if_split)
   apply (rule conjI; clarsimp)
+  apply (drule_tac t="cteCap ctea" in sym)
   apply (drule ctes_of_valid', fastforce)+
   apply (clarsimp simp: valid_cap'_def)
   apply (simp add: wellformed_mapdata'_def below_pptrUserTop_in_user_region neg_mask_user_region)
@@ -1150,14 +1142,10 @@ lemma capMaster_isPageTableCap:
   by (simp add: capMasterCap_def isArchCap_def isPageTableCap_def
            split: capability.splits arch_capability.splits)
 
-lemma diminished_isPageTableCap:
-  "diminished' cap cap' \<Longrightarrow> isArchCap isPageTableCap cap' = isArchCap isPageTableCap cap"
-  by (drule diminished_capMaster) (erule capMaster_isPageTableCap)
-
 lemma arch_decodeInvocation_wf[wp]:
   shows "\<lbrace>invs' and valid_cap' (ArchObjectCap arch_cap) and
-    cte_wp_at' (diminished' (ArchObjectCap arch_cap) o cteCap) slot and
-    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' (diminished' (fst x) o cteCap) (snd x) s) and
+    cte_wp_at' ((=) (ArchObjectCap arch_cap) o cteCap) slot and
+    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' ((=) (fst x) o cteCap) (snd x) s) and
     (\<lambda>s. \<forall>x \<in> set excaps. \<forall>r \<in> cte_refs' (fst x) (irq_node' s). ex_cte_cap_to' r s) and
     (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile>' fst x) and
     sch_act_simple\<rbrace>
@@ -1203,12 +1191,12 @@ lemma arch_decodeInvocation_wf[wp]:
     \<comment> \<open>ASIDPool cap\<close>
     apply (simp add: decodeRISCVMMUInvocation_def RISCV64_H.decodeInvocation_def
                      Let_def split_def isCap_simps decodeRISCVASIDPoolInvocation_def
-                cong: if_cong split del: if_split)
+               cong: if_cong split del: if_split)
     apply (wpsimp simp: valid_arch_inv'_def valid_apinv'_def wp: getASID_wp cong: if_cong)
     apply (clarsimp simp: word_neq_0_conv valid_cap'_def valid_arch_inv'_def valid_apinv'_def)
     apply (rule conjI)
      apply (erule cte_wp_at_weakenE')
-     apply (clarsimp simp: diminished_isPageTableCap isCap_simps)
+     apply (simp, drule_tac t="cteCap c" in sym, simp add: isCap_simps)
     apply (subst (asm) conj_assoc [symmetric])
     apply (subst (asm) assocs_empty_dom_comp [symmetric])
     apply (drule dom_hd_assocsD)

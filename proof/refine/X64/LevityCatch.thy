@@ -29,8 +29,6 @@ lemmas makeObject_simps =
   makeObject_tcb makeObject_user_data makeObject_pde makeObject_pte
   makeObject_asidpool makeObject_pdpte makeObject_pml4e
 end
-definition
-  "diminished' cap cap' \<equiv> \<exists>R. cap = maskCapRights R cap'"
 
 lemma projectKO_inv : "\<lbrace>P\<rbrace> projectKO ko \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: projectKO_def fail_def valid_def return_def

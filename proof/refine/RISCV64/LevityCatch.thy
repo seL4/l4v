@@ -18,9 +18,6 @@ begin
 
 no_notation bind_drop (infixl ">>" 60)
 
-definition diminished' :: "capability \<Rightarrow> capability \<Rightarrow> bool" where
-  "diminished' cap cap' \<equiv> \<exists>R. cap = maskCapRights R cap'"
-
 lemma magnitudeCheck_assert:
   "magnitudeCheck x y n = assert (case y of None \<Rightarrow> True | Some z \<Rightarrow> 1 << n \<le> z - x)"
   by (fastforce simp: magnitudeCheck_def assert_def when_def

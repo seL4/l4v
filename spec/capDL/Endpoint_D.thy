@@ -120,7 +120,6 @@ where
         transfer_caps_loop ep receiver caps dest
       od
       else if dest \<noteq> None then doE
-        \<comment> \<open>Possibly diminish rights (if diminish flag was set on endpoint)\<close>
         new_cap \<leftarrow> returnOk (update_cap_rights (cap_rights cap - {Write}) cap) \<sqinter>
                   returnOk cap;
 
@@ -154,8 +153,6 @@ where
  *
  *   - Caps may not send, but still allow later caps to
  *     use the receive slot (Unwrapped endpoints);
- *
- *   - Caps may send with the rights diminished;
  *
  *   - Cap sending may stop half way (cap lookup faults);
  *

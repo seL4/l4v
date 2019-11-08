@@ -124,7 +124,7 @@ lemma decodeInvocation_ccorres:
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
               and valid_cap' cp and (\<lambda>s. \<forall>x \<in> zobj_refs' cp. ex_nonz_cap_to' x s)
               and (excaps_in_mem extraCaps \<circ> ctes_of)
-              and cte_wp_at' (diminished' cp \<circ> cteCap) slot
+              and cte_wp_at' ((=) cp \<circ> cteCap) slot
               and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
               and (\<lambda>s. \<forall>v \<in> set extraCaps. s \<turnstile>' fst v \<and> cte_at' (snd v) s)
               and (\<lambda>s. \<forall>v \<in> set extraCaps. \<forall>y \<in> zobj_refs' (fst v). ex_nonz_cap_to' y s)
@@ -316,10 +316,8 @@ lemma decodeInvocation_ccorres:
                          simple_sane_strg)
    apply (clarsimp simp: cte_wp_at_ctes_of valid_cap'_def isCap_simps
                          unat_eq_0 sysargs_rel_n_def n_msgRegisters_def valid_tcb_state'_def
-             | rule conjI | erule pred_tcb'_weakenE disjE
-             | drule st_tcb_at_idle_thread')+
-     apply (fastforce dest: diminished_ReplyCap')
-    apply (fastforce dest!: diminished_ReplyCap')
+          | rule conjI | erule pred_tcb'_weakenE disjE
+          | drule st_tcb_at_idle_thread')+
    apply fastforce
   apply (simp add: cap_lift_capEPBadge_mask_eq)
   apply (clarsimp simp: rf_sr_ksCurThread Collect_const_mem
@@ -998,7 +996,7 @@ lemma handleInvocation_ccorres:
           apply vcg
          apply (rule conseqPre, vcg)
          apply clarsimp
-        apply (simp, wp lcs_diminished'[unfolded o_def])
+        apply (simp, wp lcs_eq[unfolded o_def])
        apply clarsimp
        apply (vcg exspec= lookupCapAndSlot_modifies)
       apply simp

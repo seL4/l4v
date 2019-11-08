@@ -253,20 +253,13 @@ lemma dui_sp_helper:
        else doE node_slot \<leftarrow>
                   lookup_target_slot root_cap (to_bl (args ! 2)) (unat (args ! 3));
                   liftE $ get_cap node_slot
-            odE \<lbrace>\<lambda>rv s. (rv = root_cap \<or> (\<exists>slot. cte_wp_at (diminished rv) slot s)) \<and> P s\<rbrace>, -"
+            odE \<lbrace>\<lambda>rv s. (rv = root_cap \<or> (\<exists>slot. cte_wp_at ((=) rv) slot s)) \<and> P s\<rbrace>, -"
   apply (simp add: split_def lookup_target_slot_def)
   apply (intro impI conjI)
    apply wpsimp
   apply (wp get_cap_wp)
-   apply (rule hoare_post_imp_R [where Q'="\<lambda>rv. valid_objs and P"])
-    apply wp
-   apply simp
-   apply (clarsimp simp: cte_wp_at_caps_of_state)
-   apply (simp add: diminished_def)
-   apply (elim allE, drule(1) mp)
-   apply (elim allE, subst(asm) cap_mask_UNIV)
-    apply (frule caps_of_state_valid_cap, simp, simp add: valid_cap_def2)
-   apply simp
+   apply (rule hoare_post_imp_R [where Q'="\<lambda>rv. valid_objs and P"]
+          ; wpsimp simp: cte_wp_at_caps_of_state)
   apply simp
   done
 

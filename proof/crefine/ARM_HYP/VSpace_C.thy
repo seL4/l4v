@@ -3491,17 +3491,6 @@ lemma updateCap_frame_mapped_addr_ccorres:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
-(* FIXME: move *)
-lemma diminished_PageCap:
-  "diminished' (ArchObjectCap (PageCap d p R sz a)) cap \<Longrightarrow>
-  \<exists>R'. cap = ArchObjectCap (PageCap d p R' sz a)"
-  apply (clarsimp simp: diminished'_def)
-  apply (clarsimp simp: maskCapRights_def Let_def)
-  apply (cases cap, simp_all add: isCap_simps)
-  apply (simp add: ARM_HYP_H.maskCapRights_def)
-  apply (simp add: isPageCap_def split: arch_capability.splits)
-  done
-
 
 (* FIXME: move *)
 lemma ccap_relation_mapped_asid_0:
@@ -3622,7 +3611,7 @@ lemma ccap_relation_PageCap_generics:
 
 lemma performPageInvocationUnmap_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and cte_wp_at' (diminished' (ArchObjectCap cap) o cteCap) ctSlot and K (isPageCap cap))
+       (invs' and cte_wp_at' ((=) (ArchObjectCap cap) o cteCap) ctSlot and K (isPageCap cap))
        (UNIV \<inter> \<lbrace>ccap_relation (ArchObjectCap cap) \<acute>cap\<rbrace> \<inter> \<lbrace>\<acute>ctSlot = Ptr ctSlot\<rbrace>)
        []
        (liftE (performPageInvocation (PageUnmap cap ctSlot)))
@@ -3632,7 +3621,7 @@ lemma performPageInvocationUnmap_ccorres:
    apply csymbr
    apply (rule ccorres_guard_imp [where A=
                "invs'
-                and cte_wp_at' (diminished' (ArchObjectCap cap) o cteCap) ctSlot
+                and cte_wp_at' ((=) (ArchObjectCap cap) o cteCap) ctSlot
                 and K (isPageCap cap)"])
      apply wpc
       apply (rule_tac P=" ret__unsigned_long = 0" in ccorres_gen_asm)
@@ -3680,7 +3669,7 @@ lemma performPageInvocationUnmap_ccorres:
      apply (simp add: cte_wp_at_ctes_of)
      apply wp
     apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps split: if_split)
-    apply (drule diminished_PageCap)
+    apply (drule_tac t="cteCap cte" in sym)
     apply clarsimp
     apply (drule ccap_relation_mapped_asid_0)
     apply (frule ctes_of_valid', clarsimp)
@@ -3689,7 +3678,7 @@ lemma performPageInvocationUnmap_ccorres:
                            vmsz_aligned_aligned_pageBits)
    apply assumption
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps split: if_split)
-  apply (drule diminished_PageCap)
+  apply (drule_tac t="cteCap cte" in sym)
   apply clarsimp
   apply (frule (1) rf_sr_ctes_of_clift)
   apply (clarsimp simp: typ_heap_simps')

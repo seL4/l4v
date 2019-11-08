@@ -267,8 +267,7 @@ lemma perform_page_table_invocation_pas_refined [wp]:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (frule (1) cap_cur_auth_caps_of_state)
    apply simp
-  apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state
-                        is_arch_diminished_def diminished_def mask_PTCap_eq)
+  apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state mask_PTCap_eq)
   apply (clarsimp simp: cap_auth_conferred_def update_map_data_def is_page_cap_def
                         cap_links_asid_slot_def cap_links_irq_def aag_cap_auth_def)
   done
@@ -478,13 +477,6 @@ lemma kernel_base_aligned_20:
   apply(simp add: kernel_base_def is_aligned_def)
   done
 
-lemma diminished_PageCapD:
-  "diminished (ArchObjectCap (PageCap dev p R sz m)) cap
-   \<Longrightarrow> \<exists>R'. cap = ArchObjectCap (PageCap dev p R' sz m)"
-  apply (clarsimp simp: diminished_def mask_cap_def cap_rights_update_def)
-  apply (fastforce simp: acap_rights_update_def split: cap.splits arch_cap.splits bool.splits)
-  done
-
 (* FIXME: CLAG *)
 lemmas do_machine_op_bind =
     submonad_bind [OF submonad_do_machine_op submonad_do_machine_op
@@ -669,11 +661,10 @@ proof -
              | elim conjE hd_valid_slots[THEN bspec[rotated]]
              | clarsimp dest!:set_tl_subset_mp
              | wpc )+
-   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_diminished_def
-              cap_auth_conferred_def cap_rights_update_def
-              acap_rights_update_def update_map_data_def is_pg_cap_def
-              valid_page_inv_def valid_cap_simps
-            dest!: diminished_PageCapD cap_master_cap_eqDs)
+   apply (clarsimp simp: cte_wp_at_caps_of_state cap_auth_conferred_def cap_rights_update_def
+                         acap_rights_update_def update_map_data_def is_pg_cap_def
+                         valid_page_inv_def valid_cap_simps
+                  dest!: cap_master_cap_eqDs)
    apply (drule (1) clas_caps_of_state)
    apply (simp add: cap_links_asid_slot_def label_owns_asid_slot_def)
    apply (auto dest: pas_refined_Control)[1]
@@ -710,9 +701,7 @@ lemma perform_page_invocation_pas_refined [wp]:
                           pde_ref2_def auth_graph_map_mem pas_refined_refl
                    split: sum.splits)+)[2]
     apply (clarsimp simp: cte_wp_at_caps_of_state is_transferable_is_arch_update[symmetric]
-                          is_arch_diminished_def pte_ref_def pde_ref2_def
-                          is_cap_simps is_pg_cap_def cap_auth_conferred_def
-                   dest!: diminished_PageCapD)
+                          pte_ref_def pde_ref2_def is_cap_simps is_pg_cap_def cap_auth_conferred_def)
     apply (frule(1) cap_cur_auth_caps_of_state, simp)
     apply (intro impI conjI;
            clarsimp; (* NB: for speed *)
@@ -1134,8 +1123,8 @@ lemmas vmsz_aligned_t2n_neg_mask
 
 lemma decode_arch_invocation_authorised:
   "\<lbrace>invs and pas_refined aag
-        and cte_wp_at (diminished (cap.ArchObjectCap cap)) slot
-        and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at (diminished cap) slot s)
+        and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
+        and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
         and K (\<forall>(cap, slot) \<in> {(cap.ArchObjectCap cap, slot)} \<union> set excaps.
                       aag_cap_auth aag (pasObjectAbs aag (fst slot)) cap \<and> is_subject aag (fst slot)
                    \<and> (\<forall>v \<in> cap_asid' cap. is_subject_asid aag v))\<rbrace>
@@ -1155,7 +1144,7 @@ lemma decode_arch_invocation_authorised:
                   split del: if_split)+
   apply (clarsimp simp: authorised_asid_pool_inv_def authorised_page_table_inv_def
                         neq_Nil_conv invs_psp_aligned invs_vspace_objs cli_no_irqs)
-  apply (drule diminished_cte_wp_at_valid_cap, clarsimp+)
+  apply (drule cte_wp_valid_cap, clarsimp+)
   apply (cases cap; simp)
       \<comment> \<open>asid pool\<close>
      apply (find_goal \<open>match premises in "cap = ASIDPoolCap _ _" \<Rightarrow> succeed\<close>)

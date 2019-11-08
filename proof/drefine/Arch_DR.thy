@@ -606,7 +606,7 @@ lemma decode_invocation_archcap_corres:
                        \<and> arch_invocation_relation rv ai))
          \<top> (invs and valid_etcbs and valid_cap invoked_cap'
                  and (\<lambda>s. \<forall>x \<in> set (map fst excaps'). s \<turnstile> x)
-                 and (\<lambda>s. \<forall>x \<in> set excaps'. cte_wp_at (diminished (fst x)) (snd x) s))
+                 and (\<lambda>s. \<forall>x \<in> set excaps'. cte_wp_at ((=) (fst x)) (snd x) s))
         (Decode_D.decode_invocation invoked_cap invoked_cap_ref excaps intent)
         (Decode_A.decode_invocation label' args' cap_index' invoked_cap_ref' invoked_cap' excaps')"
   apply (rule_tac F="\<forall>x \<in> set (map fst excaps'). cap_aligned x" in corres_req)
@@ -1151,15 +1151,6 @@ shows "dcorres dc \<top>
   apply (auto simp add: rules)
   done
 
-lemma diminished_PageTable [simp]:
-  "diminished (cap.ArchObjectCap (arch_cap.PageTableCap x mp)) = (\<lambda>c. c = cap.ArchObjectCap (arch_cap.PageTableCap x mp))"
-  apply (rule ext)
-  apply (case_tac c,
-         simp_all add: diminished_def cap_rights_update_def acap_rights_update_def mask_cap_def)
-  apply (rename_tac arch_cap)
-  apply (case_tac arch_cap, auto)
-  done
-
 lemma invoke_page_table_corres:
   "transform_page_table_inv ptinv' = Some ptinv \<Longrightarrow>
    dcorres dc \<top> (valid_pti ptinv' and invs and valid_etcbs)
@@ -1209,9 +1200,9 @@ lemma invoke_page_table_corres:
        apply (rule_tac P="\<lambda>y s. cte_wp_at ((=) x) (a,b) s \<and> s = s'" in set_cap_corres_stronger)
         apply clarsimp
         apply (drule cte_wp_at_eqD2, simp)
-        apply (clarsimp simp:is_arch_diminished_def transform_mapping_def update_map_data_def)
+        apply (clarsimp simp: transform_mapping_def update_map_data_def)
        apply (wp get_cap_cte_wp_at_rv | clarsimp)+
-   apply (clarsimp simp:cte_wp_at_def is_arch_diminished_def is_arch_cap_def is_pt_cap_def)
+   apply (clarsimp simp:cte_wp_at_def is_arch_cap_def is_pt_cap_def)
    apply (clarsimp simp:invs_def valid_state_def not_idle_thread_def)
    apply (frule valid_idle_has_null_cap,simp+)
     apply (rule sym)
@@ -1226,7 +1217,7 @@ lemma invoke_page_table_corres:
                 apply (rule_tac P="\<lambda>y s. cte_wp_at ((=) xb) (a,b) s \<and>
                                     caps_of_state s' = caps_of_state s" in set_cap_corres_stronger)
                  apply (clarsimp simp:cte_wp_at_caps_of_state)
-                 apply (clarsimp simp:is_arch_diminished_def transform_mapping_def update_map_data_def)
+                 apply (clarsimp simp: transform_mapping_def update_map_data_def)
                 apply (wp get_cap_cte_wp_at_rv | clarsimp)+
             apply (wp do_machine_op_wp | clarsimp simp:not_idle_thread_def)+
          apply (wp mapM_x_wp)
@@ -1242,8 +1233,7 @@ lemma invoke_page_table_corres:
    apply simp
   apply (simp add:valid_cap_def vmsz_aligned_def mask_2pm1)
   apply (simp add:cte_wp_at_def transform_cap_def update_map_data_def transform_mapping_def
-                  is_arch_diminished_def is_arch_cap_def diminished_def
-                  mask_cap_def cap_rights_update_def is_pt_cap_def cap_aligned_def)
+                  is_arch_cap_def mask_cap_def cap_rights_update_def is_pt_cap_def cap_aligned_def)
   apply (rule ccontr,clarsimp simp:invs_def valid_state_def)
   apply (drule valid_idle_has_null_cap,simp+)
    apply (clarsimp simp:get_cap_caps_of_state)
@@ -1266,15 +1256,6 @@ lemma set_vm_root_for_flush_dwp[wp]:
      apply (wpc|wp)+
     apply (rule_tac Q="\<lambda>rv s. transform s = cs" in hoare_strengthen_post)
      apply (wp|clarsimp)+
-  done
-
-lemma diminished_page_is_page:
-  "diminished (cap.ArchObjectCap (arch_cap.PageCap dev x rs sz mp)) c
-  \<Longrightarrow> \<exists>rs'. c = cap.ArchObjectCap (arch_cap.PageCap dev x rs' sz mp)"
-  apply (case_tac c,
-         simp_all add:diminished_def cap_rights_update_def acap_rights_update_def mask_cap_def)
-  apply (rename_tac arch_cap)
-  apply (case_tac arch_cap, (clarsimp simp:validate_vm_rights_def)+)
   done
 
 lemma ucast_add:
@@ -1560,11 +1541,9 @@ lemma invoke_page_corres:
          apply (rule_tac P="\<lambda>y s. cte_wp_at ((=) x) (a,b) s \<and> s = s'" in set_cap_corres_stronger)
           apply clarsimp
           apply (drule cte_wp_at_eqD2, simp)
-          apply (clarsimp simp:is_arch_diminished_def transform_mapping_def update_map_data_def
-                            dest!:diminished_page_is_page)
+          apply (clarsimp simp: transform_mapping_def update_map_data_def)
          apply (wp get_cap_cte_wp_at_rv | clarsimp)+
-    apply (clarsimp simp:cte_wp_at_def is_arch_diminished_def is_arch_cap_def is_pt_cap_def
-                    dest!:diminished_page_is_page)
+    apply (clarsimp simp:cte_wp_at_def is_arch_cap_def is_pt_cap_def)
     apply (clarsimp simp:invs_def valid_state_def not_idle_thread_def)
     apply (frule valid_idle_has_null_cap,simp+)
      apply (rule sym)
@@ -1576,8 +1555,7 @@ lemma invoke_page_corres:
                                     caps_of_state s' = caps_of_state s"
             in set_cap_corres_stronger)
            apply (clarsimp simp:cte_wp_at_caps_of_state)
-           apply (clarsimp simp:is_arch_diminished_def transform_mapping_def update_map_data_def
-                           dest!:diminished_page_is_page)
+           apply (clarsimp simp: transform_mapping_def update_map_data_def)
           apply (wp get_cap_cte_wp_at_rv unmap_page_pred_tcb_at |
                  clarsimp simp:valid_idle_def not_idle_thread_def)+
      apply (rule_tac Q="\<lambda>rv s. valid_etcbs s \<and>
@@ -1587,8 +1565,7 @@ lemma invoke_page_corres:
                                caps_of_state s' = caps_of_state s" in hoare_strengthen_post)
       apply (wps, wp unmap_page_pred_tcb_at, clarsimp simp: invs_def valid_state_def valid_idle_def)
     apply simp
-   apply (clarsimp simp:cte_wp_at_def is_arch_diminished_def is_arch_cap_def is_pt_cap_def
-                    dest!:diminished_page_is_page)
+   apply (clarsimp simp: cte_wp_at_def is_arch_cap_def is_pt_cap_def)
    apply (rule conjI, simp)
    apply (rule conjI, simp add:invs_def valid_state_def valid_idle_def)
     apply (clarsimp simp:invs_def valid_state_def not_idle_thread_def)

@@ -177,7 +177,7 @@ If the sent message is a fault IPC, the stored fault is transferred.
 >             Just _ -> do
 >                 doFaultTransfer badge sender receiver receiveBuffer
 
-Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IPC replies, or fault replies. In the former case, the transfer is the same as for an IPC send, but there is never a fault, capability grants are always allowed, the badge is always 0, and capabilities are never received with diminished rights (diminished rights are now removed).
+Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IPC replies, or fault replies. In the former case, the transfer is the same as for an IPC send, but there is never a fault, capability grants are always allowed, and the badge is always 0.
 
 > doReplyTransfer :: PPtr TCB -> PPtr TCB -> PPtr CTE -> Bool -> Kernel ()
 > doReplyTransfer sender receiver slot grant = do

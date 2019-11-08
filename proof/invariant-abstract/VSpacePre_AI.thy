@@ -38,10 +38,6 @@ definition
   "is_arch_update cap cap' \<equiv> is_arch_cap cap \<and> cap_master_cap cap = cap_master_cap cap'"
 
 
-definition
-  "is_arch_diminished cap cap' \<equiv> is_arch_cap cap \<and> diminished cap cap'"
-
-
 lemma dmo_asid_map [wp]:
   "\<lbrace>valid_asid_map\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
   apply (simp add: do_machine_op_def split_def)

@@ -366,7 +366,7 @@ crunch irq_masks[wp]: reply_from_kernel "\<lambda>s. P (irq_masks_of_state s)"
 
 
 lemma decode_invocation_IRQHandlerCap:
-  "\<lbrace> cte_wp_at (diminished cap) slot \<rbrace>
+  "\<lbrace> cte_wp_at ((=) cap) slot \<rbrace>
    decode_invocation label args cap_index slot cap blah
        \<lbrace>\<lambda>rv s.
            (\<forall>x. rv = InvokeIRQHandler x \<longrightarrow>

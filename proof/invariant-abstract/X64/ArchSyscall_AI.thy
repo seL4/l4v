@@ -44,13 +44,12 @@ lemma table_cap_ref_mask_cap [Syscall_AI_assms]:
   by (clarsimp simp add:mask_cap_def table_cap_ref_def acap_rights_update_def
     cap_rights_update_def split:cap.splits arch_cap.splits)
 
-lemma diminished_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
-  "\<lbrakk> cte_wp_at (diminished cap) p s; valid_arch_caps s \<rbrakk>
+lemma eq_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
+  "\<lbrakk> cte_wp_at ((=) cap) p s; valid_arch_caps s \<rbrakk>
       \<Longrightarrow> no_cap_to_obj_with_diff_ref cap S s"
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_arch_caps_def)
   apply (frule(1) unique_table_refs_no_cap_asidD)
-  apply (clarsimp simp add: no_cap_to_obj_with_diff_ref_def
-    table_cap_ref_mask_cap diminished_def Ball_def)
+  apply (clarsimp simp add: no_cap_to_obj_with_diff_ref_def table_cap_ref_mask_cap Ball_def)
   done
 
 lemma getFaultAddress_invs[wp]:

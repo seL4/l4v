@@ -81,15 +81,15 @@ proof -
     unat (args ! 5) \<le> 2 ^ bits_of node_cap - unat (args ! 4);valid_cap node_cap s\<rbrakk> \<Longrightarrow>
     inj_on (Pair (obj_ref_of node_cap) \<circ> nat_to_cref (bits_of node_cap))
                       {unat (args ! 4)..<unat (args ! 4) + unat (args ! 5)}"
-    apply (simp add:comp_def)
+    apply (simp add: comp_def)
     apply (rule inj_on_split)
     apply (rule subset_inj_on [OF inj_on_nat_to_cref])
      apply (clarsimp simp: is_cap_simps bits_of_def valid_cap_def
-       word_bits_def cap_aligned_def)
-     apply clarsimp
-     apply (rule less_le_trans)
-      apply assumption
-     apply (simp add:le_diff_conv2)
+                           word_bits_def cap_aligned_def)
+    apply clarsimp
+    apply (rule less_le_trans)
+     apply assumption
+    apply (simp add: le_diff_conv2)
     done
   have nasty_strengthen:
     "\<And>S a f s. (\<forall>x\<in>S. cte_wp_at ((=) cap.NullCap) (a, f x) s)
@@ -97,63 +97,59 @@ proof -
     \<longrightarrow> slot \<notin> (Pair a \<circ> f) ` S"
     by (auto simp:cte_wp_at_caps_of_state)
   show ?thesis
-  apply (simp add: decode_untyped_invocation_def unlessE_def[symmetric]
-                   unlessE_whenE
-           split del: if_split)
-  apply (rule validE_R_sp[OF whenE_throwError_sp]
-              validE_R_sp[OF data_to_obj_type_sp]
-              validE_R_sp[OF dui_sp_helper] validE_R_sp[OF map_ensure_empty])+
-  apply clarsimp
-  apply (rule hoare_pre)
-  apply (wp whenE_throwError_wp[THEN validE_validE_R] check_children_wp
-            map_ensure_empty_wp)
-  apply (clarsimp simp: distinct_map cases_imp_eq)
-  apply (subgoal_tac "s \<turnstile> node_cap")
-   prefer 2
-   apply (erule disjE)
-    apply (drule bspec [where x = "cs ! 0"],clarsimp)+
-    apply fastforce
-   apply clarsimp
-   apply (clarsimp simp:cte_wp_at_caps_of_state)
-   apply (drule(1) caps_of_state_valid[rotated])+
-   apply (clarsimp simp: is_cap_simps diminished_def mask_cap_def
-                         cap_rights_update_def,
-             simp split: cap.splits bool.splits)
-  apply (subgoal_tac "\<forall>r\<in>cte_refs node_cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s")
-   apply (clarsimp simp:cte_wp_at_caps_of_state)
-   apply (frule(1) caps_of_state_valid[rotated])
-   apply (clarsimp simp:not_less)
-   apply (frule(2) inj)
-   apply (clarsimp simp:comp_def)
-   apply (frule(1) caps_of_state_valid)
-   apply (simp add: nasty_strengthen[unfolded o_def] cte_wp_at_caps_of_state)
-   apply (intro conjI)
-    apply (intro impI)
-    apply (frule range_cover_stuff[where w=w and rv = 0 and sz = sz], simp_all)[1]
-      apply (clarsimp simp: valid_cap_simps cap_aligned_def)+
-    apply (frule alignUp_idem[OF is_aligned_weaken,where a = w])
-      apply (erule range_cover.sz)
-     apply (simp add:range_cover_def)
-    apply (clarsimp simp:get_free_ref_def is_aligned_neg_mask_eq empty_descendants_range_in)
-    apply (rule conjI[rotated], blast, clarsimp)
-    apply (drule_tac x = "(obj_ref_of node_cap,nat_to_cref (bits_of node_cap) slota)" in bspec)
-     apply (clarsimp simp:is_cap_simps nat_to_cref_def word_bits_def
-       bits_of_def valid_cap_simps cap_aligned_def)+
-   apply (simp add: free_index_of_def)
-   apply (frule(1) range_cover_stuff[where sz = sz])
-     apply (clarsimp dest!:valid_cap_aligned simp:cap_aligned_def word_bits_def)+
-    apply simp+
-   apply (clarsimp simp:get_free_ref_def)
-   apply (erule disjE)
-    apply (drule_tac x= "cs!0" in bspec)
-     subgoal by clarsimp
+    apply (simp add: decode_untyped_invocation_def unlessE_def[symmetric]
+                     unlessE_whenE
+             split del: if_split)
+    apply (rule validE_R_sp[OF whenE_throwError_sp]
+                validE_R_sp[OF data_to_obj_type_sp]
+                validE_R_sp[OF dui_sp_helper] validE_R_sp[OF map_ensure_empty])+
+     apply clarsimp
+    apply (rule hoare_pre)
+     apply (wp whenE_throwError_wp[THEN validE_validE_R] check_children_wp
+               map_ensure_empty_wp)
+    apply (clarsimp simp: distinct_map cases_imp_eq)
+    apply (subgoal_tac "s \<turnstile> node_cap")
+     prefer 2
+     apply (erule disjE)
+      apply (drule bspec [where x = "cs ! 0"],clarsimp)+
+      apply fastforce
+     apply clarsimp
+     apply (clarsimp simp: cte_wp_at_caps_of_state)
+     apply (drule(1) caps_of_state_valid[rotated])+
+     apply assumption
+    apply (subgoal_tac "\<forall>r\<in>cte_refs node_cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s")
+     apply (clarsimp simp: cte_wp_at_caps_of_state)
+     apply (frule(1) caps_of_state_valid[rotated])
+     apply (clarsimp simp: not_less)
+     apply (frule(2) inj)
+     apply (clarsimp simp: comp_def)
+     apply (frule(1) caps_of_state_valid)
+     apply (simp add: nasty_strengthen[unfolded o_def] cte_wp_at_caps_of_state)
+     apply (intro conjI)
+      apply (intro impI)
+      apply (frule range_cover_stuff[where w=w and rv = 0 and sz = sz], simp_all)[1]
+        apply (clarsimp simp: valid_cap_simps cap_aligned_def)+
+      apply (frule alignUp_idem[OF is_aligned_weaken,where a = w])
+        apply (erule range_cover.sz)
+       apply (simp add: range_cover_def)
+      apply (clarsimp simp: get_free_ref_def empty_descendants_range_in)
+      apply (rule conjI[rotated], blast, clarsimp)
+      apply (drule_tac x = "(obj_ref_of node_cap,nat_to_cref (bits_of node_cap) slota)" in bspec)
+       apply (clarsimp simp: is_cap_simps nat_to_cref_def word_bits_def
+         bits_of_def valid_cap_simps cap_aligned_def)+
+     apply (simp add: free_index_of_def)
+     apply (frule(1) range_cover_stuff[where sz = sz])
+        apply (clarsimp dest!: valid_cap_aligned simp: cap_aligned_def word_bits_def)+
+      apply simp+
+     apply (clarsimp simp: get_free_ref_def)
+    apply (erule disjE)
+     apply (drule_tac x= "cs!0" in bspec)
+    subgoal by clarsimp
     subgoal by simp
-   apply (clarsimp simp: cte_wp_at_caps_of_state ex_cte_cap_wp_to_def)
-   apply (rule_tac x=aa in exI,rule exI,rule exI)
-   apply (rule conjI, assumption)
-    apply (clarsimp simp: diminished_def is_cap_simps mask_cap_def
-                          cap_rights_update_def,
-              simp split: cap.splits bool.splits)
+    apply (clarsimp simp: cte_wp_at_caps_of_state ex_cte_cap_wp_to_def)
+    apply (rule_tac x=aa in exI,rule exI,rule exI)
+    apply (rule conjI, assumption)
+    apply simp
    done
 qed
 

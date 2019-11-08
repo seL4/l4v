@@ -2066,17 +2066,6 @@ lemma updateCap_frame_mapped_addr_ccorres:
                         X86_MappingNone_def asidInvalid_def)
   done
 
-(* FIXME: move *)
-lemma diminished_PageCap:
-  "diminished' (ArchObjectCap (PageCap p R mt sz d a)) cap \<Longrightarrow>
-  \<exists>R'. cap = ArchObjectCap (PageCap p R' mt sz d a)"
-  apply (clarsimp simp: diminished'_def)
-  apply (clarsimp simp: maskCapRights_def Let_def)
-  apply (cases cap, simp_all add: isCap_simps)
-  apply (simp add: X64_H.maskCapRights_def)
-  apply (simp add: isPageCap_def split: arch_capability.splits)
-  done
-
 lemma ccap_relation_mapped_asid_0:
   "\<lbrakk>ccap_relation (ArchObjectCap (PageCap d v0 v1 v2 v3 v4)) cap\<rbrakk>
   \<Longrightarrow> (capFMappedASID_CL (cap_frame_cap_lift cap) \<noteq> 0 \<longrightarrow> v4 \<noteq> None) \<and>
@@ -2109,7 +2098,7 @@ lemma framesize_from_H_bounded:
 
 lemma performPageInvocationUnmap_ccorres':
   "ccorres (\<lambda>rv rv'. rv' = scast EXCEPTION_NONE) ret__unsigned_long_'
-       (invs' and cte_wp_at' (diminished' (ArchObjectCap cap) o cteCap) ctSlot and K (isPageCap cap))
+       (invs' and cte_wp_at' ((=) (ArchObjectCap cap) o cteCap) ctSlot and K (isPageCap cap))
        (UNIV \<inter> \<lbrace>ccap_relation (ArchObjectCap cap) \<acute>cap\<rbrace> \<inter> \<lbrace>\<acute>ctSlot = Ptr ctSlot\<rbrace>)
        hs
        (performPageInvocationUnmap cap ctSlot)
@@ -2117,7 +2106,7 @@ lemma performPageInvocationUnmap_ccorres':
   apply (cinit lift: cap_' ctSlot_')
    apply csymbr
    apply (rule ccorres_guard_imp
-                 [where A="invs' and cte_wp_at' (diminished' (ArchObjectCap cap) o cteCap) ctSlot
+                 [where A="invs' and cte_wp_at' ((=) (ArchObjectCap cap) o cteCap) ctSlot
                                  and K (isPageCap cap)"])
      apply wpc
       apply (rule_tac P="ret__unsigned_longlong = 0" in ccorres_gen_asm)
@@ -2163,15 +2152,16 @@ lemma performPageInvocationUnmap_ccorres':
      apply (simp add: cte_wp_at_ctes_of)
      apply wp
     apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps split: if_split)
-    apply (drule diminished_PageCap)
+    apply (drule_tac t="cteCap cte" in sym)
     apply clarsimp
     apply (frule ccap_relation_mapped_asid_0)
-     apply (frule ctes_of_valid', clarsimp)
-     apply (drule valid_global_refsD_with_objSize, clarsimp)
-     apply (fastforce simp: mask_def valid_cap'_def
-                            vmsz_aligned_aligned_pageBits)
+    apply (frule ctes_of_valid', clarsimp)
+    apply (drule valid_global_refsD_with_objSize, clarsimp)
+    apply (fastforce simp: mask_def valid_cap'_def
+                           vmsz_aligned_aligned_pageBits)
    apply assumption
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps split: if_split)
+  apply (drule_tac t="cteCap cte" in sym)
   apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap
                         framesize_from_H_bounded framesize_from_to_H
                         ccap_relation_PageCap_BasePtr ccap_relation_PageCap_Size
@@ -2204,7 +2194,7 @@ lemma performPageInvocationUnmap_ccorres:
   notes Collect_const[simp del]
   shows
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and cte_wp_at' (diminished' (ArchObjectCap cap) o cteCap) ctSlot  and K (isPageCap cap))
+       (invs' and cte_wp_at' ((=) (ArchObjectCap cap) o cteCap) ctSlot  and K (isPageCap cap))
        (UNIV \<inter> \<lbrace>ccap_relation (ArchObjectCap cap) \<acute>cap\<rbrace> \<inter> \<lbrace>\<acute>cte = Ptr ctSlot\<rbrace>)
        hs
        (liftE (performPageInvocation (PageUnmap cap ctSlot)))
@@ -2226,7 +2216,7 @@ lemma performPageInvocationUnmap_ccorres:
      apply (rule ccorres_rhs_assoc)
      apply (drule_tac s=cap in sym, simp) (* schematic ugliness *)
      apply ccorres_rewrite
-     apply (rule ccorres_add_return2) thm ccorres_add_returnOk
+     apply (rule ccorres_add_return2)
      apply (ctac add: performPageInvocationUnmap_ccorres'[simplified K_def, simplified])
        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
        apply (rule allI, rule conseqPre, vcg)

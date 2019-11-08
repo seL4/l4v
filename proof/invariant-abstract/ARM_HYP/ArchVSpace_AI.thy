@@ -1880,7 +1880,7 @@ definition
   | PageUnmap cap ptr \<Rightarrow>
      \<lambda>s. \<exists>dev r R sz m. cap = PageCap dev r R sz m \<and>
          case_option True (valid_unmap sz) m \<and>
-         cte_wp_at (is_arch_diminished (cap.ArchObjectCap cap)) ptr s \<and>
+         cte_wp_at ((=) (cap.ArchObjectCap cap)) ptr s \<and>
          s \<turnstile> (cap.ArchObjectCap cap)
   | PageFlush typ start end pstart pd asid \<Rightarrow>
       vspace_at_asid asid pd and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
@@ -1957,7 +1957,7 @@ definition
            \<comment> \<open>\<and> hd (the (vs_cap_ref cap)) \<notin> kernel_vsrefs\<close>) and
      K (is_pt_cap cap \<and> cap_asid cap \<noteq> None)
    | PageTableUnmap cap ptr \<Rightarrow>
-     cte_wp_at (\<lambda>c. is_arch_diminished cap c) ptr and valid_cap cap
+     cte_wp_at ((=) cap) ptr and valid_cap cap
        and is_final_cap' cap
        and K (is_pt_cap cap)"
 
@@ -4684,13 +4684,10 @@ lemma perform_page_table_invocation_invs[wp]:
               | wp (once) hoare_vcg_conj_lift
               | wp (once) mapM_x_wp'
               | simp)+
-  apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state
-                        is_arch_diminished_def is_cap_simps
+  apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state is_cap_simps
                         is_arch_update_def cap_rights_update_def
                         acap_rights_update_def cap_master_cap_simps
                         update_map_data_def)
-  apply (frule (2) diminished_is_update')
-  apply (simp add: cap_rights_update_def acap_rights_update_def)
   apply (rule conjI)
    apply (clarsimp simp: vs_cap_ref_def)
    apply (drule invs_pd_caps)
@@ -4706,7 +4703,6 @@ lemma perform_page_table_invocation_invs[wp]:
   apply (subgoal_tac "(\<forall>x\<in>set [word , word + 8 .e. word + 2 ^ pt_bits - 1].
                              x && ~~ mask pt_bits = word)")
    apply (intro conjI)
-      apply (simp add: cap_master_cap_def)
      apply (fastforce simp: vspace_bits_defs)
     apply (clarsimp simp: image_def vspace_bits_defs)
     apply (subgoal_tac "word + (ucast x << 3)
@@ -4730,7 +4726,7 @@ lemma perform_page_table_invocation_invs[wp]:
   apply (rule shiftl_less_t2n)
    apply (rule word_leq_minus_one_le)
     apply (simp add: vspace_bits_defs)+
-done
+  done
 
 crunch cte_wp_at [wp]: unmap_page "\<lambda>s. P (cte_wp_at P' p s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -5733,8 +5729,6 @@ lemma perform_page_invs [wp]:
       apply (wp unmap_page_invs hoare_vcg_ex_lift hoare_vcg_all_lift
                 hoare_vcg_imp_lift unmap_page_unmapped)+
    apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state)
-   apply (clarsimp simp: is_arch_diminished_def)
-   apply (drule (2) diminished_is_update')
    apply (clarsimp simp: is_cap_simps cap_master_cap_simps is_arch_update_def
                          update_map_data_def cap_rights_update_def
                          acap_rights_update_def)

@@ -170,7 +170,7 @@ lemma decode_invocation_corres:
     \<Longrightarrow>
     corres (ser \<oplus> inv_relation)
            (invs and valid_sched and valid_list
-                 and valid_cap cap and cte_at slot and cte_wp_at (diminished cap) slot
+                 and valid_cap cap and cte_at slot and cte_wp_at ((=) cap) slot
                  and (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> fst x \<and> cte_at (snd x) s)
                  and (\<lambda>s. length args < 2 ^ word_bits))
            (invs' and valid_cap' cap' and cte_at' slot'
@@ -187,7 +187,7 @@ lemma decode_invocation_corres:
             \<comment> \<open>Untyped\<close>
             apply (simp add: isCap_defs Let_def o_def split del: if_split)
             apply (rule corres_guard_imp, rule dec_untyped_inv_corres)
-              apply ((clarsimp simp:cte_wp_at_caps_of_state diminished_def)+)[3]
+              apply ((clarsimp simp:cte_wp_at_caps_of_state)+)[3]
            \<comment> \<open>(Async)Endpoint\<close>
            apply (simp add: isCap_defs returnOk_def)
           apply (simp add: isCap_defs)
@@ -233,8 +233,6 @@ lemma decode_invocation_corres:
   apply (clarsimp simp add: isCap_defs Let_def o_def)
   apply (rule corres_guard_imp [OF dec_arch_inv_corres])
       apply (simp_all add: list_all2_map2 list_all2_map1)+
-  apply (clarsimp simp: is_arch_diminished_def cte_wp_at_caps_of_state
-                        is_cap_simps)
   done
 
 declare mapME_Nil [simp]
@@ -604,22 +602,6 @@ lemma decode_inv_inv'[wp]:
           clarsimp split: capability.split_asm simp: isCap_defs)+
   done
 
-lemma diminished_IRQHandler' [simp]:
-  "diminished' (IRQHandlerCap h) cap = (cap = IRQHandlerCap h)"
-  apply (rule iffI)
-   apply (drule diminished_capMaster)
-   apply clarsimp
-  apply (simp add: diminished'_def maskCapRights_def isCap_simps Let_def)
-  done
-
-lemma diminished_IRQControlCap' [simp]:
-  "diminished' IRQControlCap cap = (cap = IRQControlCap)"
-  apply (rule iffI)
-   apply (drule diminished_capMaster)
-   apply clarsimp
-  apply (simp add: diminished'_def maskCapRights_def isCap_simps Let_def)
-  done
-
 (* FIXME: move to TCB *)
 lemma dec_dom_inv_wf[wp]:
   "\<lbrace>invs' and (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile>' fst x)\<rbrace>
@@ -638,36 +620,29 @@ lemma dec_dom_inv_wf[wp]:
   apply (simp add:numDomains_def maxDomain_def)
   done
 
-lemma diminished_ReplyCap':
-  "diminished' (capability.ReplyCap t False r) cap
-    \<Longrightarrow> \<exists>gr. cap = capability.ReplyCap t False gr"
-  apply (clarsimp simp: diminished'_def maskCapRights_def Let_def split del: if_split)
-  apply (cases cap, simp_all add: isCap_simps)[1]
-  apply (simp add: ARM_H.maskCapRights_def isPageCap_def split: arch_capability.splits)
-  done
-
 lemma decode_inv_wf'[wp]:
   "\<lbrace>valid_cap' cap and invs' and sch_act_simple
-          and cte_wp_at' (diminished' cap \<circ> cteCap) slot and real_cte_at' slot
+          and cte_wp_at' ((=) cap \<circ> cteCap) slot and real_cte_at' slot
           and (\<lambda>s. \<forall>r\<in>zobj_refs' cap. ex_nonz_cap_to' r s)
           and (\<lambda>s. \<forall>r\<in>cte_refs' cap (irq_node' s). ex_cte_cap_to' r s)
           and (\<lambda>s. \<forall>cap \<in> set excaps. \<forall>r\<in>cte_refs' (fst cap) (irq_node' s). ex_cte_cap_to' r s)
           and (\<lambda>s. \<forall>cap \<in> set excaps. \<forall>r\<in>zobj_refs' (fst cap). ex_nonz_cap_to' r s)
-          and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' (diminished' (fst x) o cteCap) (snd x) s)
+          and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' ((=) (fst x) \<circ> cteCap) (snd x) s)
           and (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile>' fst x)
           and (\<lambda>s. \<forall>x \<in> set excaps. real_cte_at' (snd x) s)
           and (\<lambda>s. \<forall>x \<in> set excaps. ex_cte_cap_wp_to' isCNodeCap (snd x) s)
-          and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' (badge_derived' (fst x) o cteCap) (snd x) s)
+          and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' (badge_derived' (fst x) \<circ> cteCap) (snd x) s)
           and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
      decodeInvocation label args cap_index slot cap excaps
    \<lbrace>valid_invocation'\<rbrace>,-"
-  apply (case_tac cap, simp_all add: decodeInvocation_def Let_def isCap_defs uncurry_def split_def
-              split del: if_split
-              cong: if_cong)
+  apply (case_tac cap,
+         simp_all add: decodeInvocation_def Let_def isCap_defs uncurry_def split_def
+            split del: if_split
+                 cong: if_cong)
              apply ((rule hoare_pre,
-                    ((wp decodeTCBInv_wf | simp add: o_def)+)[1],
-                     clarsimp simp: valid_cap'_def cte_wp_at_ctes_of diminished_ReplyCap'
-                    | (rule exI, rule exI, erule (1) conjI))+)
+                     ((wpsimp wp: decodeTCBInv_wf simp: o_def)+)[1],
+                     clarsimp simp: valid_cap'_def cte_wp_at_ctes_of)
+                    | intro exI conjI | simp)+
   done
 
 lemma ct_active_imp_simple'[elim!]:
@@ -1099,29 +1074,19 @@ lemma lec_ex_nonz_cap_to' [wp]:
   done
 
 (* FIXME: move *)
-lemma getSlotCap_diminished' [wp]:
+lemma getSlotCap_eq [wp]:
   "\<lbrace>\<top>\<rbrace> getSlotCap slot
-  \<lbrace>\<lambda>cap. cte_wp_at' (diminished' cap \<circ> cteCap) slot\<rbrace>"
-  apply (simp add: getSlotCap_def)
-  apply (wp getCTE_wp')
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  done
+  \<lbrace>\<lambda>cap. cte_wp_at' ((=) cap \<circ> cteCap) slot\<rbrace>"
+  by (wpsimp wp: getCTE_wp' simp: getSlotCap_def cte_wp_at_ctes_of)
 
-lemma lcs_diminished' [wp]:
-  "\<lbrace>\<top>\<rbrace> lookupCapAndSlot t cptr \<lbrace>\<lambda>rv. cte_wp_at' (diminished' (fst rv) o cteCap) (snd rv)\<rbrace>,-"
-  unfolding lookupCapAndSlot_def
-  apply (rule hoare_pre)
-   apply (wp | simp add: split_def)+
-  done
+lemma lcs_eq [wp]:
+  "\<lbrace>\<top>\<rbrace> lookupCapAndSlot t cptr \<lbrace>\<lambda>rv. cte_wp_at' ((=) (fst rv) \<circ> cteCap) (snd rv)\<rbrace>,-"
+  by (wpsimp simp: lookupCapAndSlot_def)
 
 lemma lec_dimished'[wp]:
-  "\<lbrace>\<top>\<rbrace>
-     lookupExtraCaps t buffer info
-   \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. cte_wp_at' (diminished' (fst x) o cteCap) (snd x) s)\<rbrace>,-"
-  apply (simp add: lookupExtraCaps_def split del: if_split)
-  apply (rule hoare_pre)
-   apply (wp mapME_set|simp)+
-  done
+  "\<lbrace>\<top>\<rbrace> lookupExtraCaps t buffer info
+   \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. cte_wp_at' ((=) (fst x) \<circ> cteCap) (snd x) s)\<rbrace>,-"
+  by (wpsimp wp: mapME_set simp: lookupExtraCaps_def)
 
 lemma lookupExtras_real_ctes[wp]:
   "\<lbrace>valid_objs'\<rbrace> lookupExtraCaps t xs info \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. real_cte_at' (snd x) s\<rbrace>,-"
@@ -1319,10 +1284,10 @@ lemma hinv_corres:
                apply (clarsimp)
               apply (wp setThreadState_nonqueued_state_update
                         setThreadState_st_tcb setThreadState_rct)[1]
-             apply (wp lec_caps_to get_cap_diminished lsft_ex_cte_cap_to
-                     | simp add: split_def liftE_bindE[symmetric]
-                                 ct_in_state'_def ball_conj_distrib
-                     | rule hoare_vcg_E_elim)+
+             apply (wp lec_caps_to lsft_ex_cte_cap_to
+                    | simp add: split_def liftE_bindE[symmetric]
+                                ct_in_state'_def ball_conj_distrib
+                    | rule hoare_vcg_E_elim)+
    apply (clarsimp simp: tcb_at_invs invs_valid_objs
                          valid_tcb_state_def ct_in_state_def
                          simple_from_active invs_mdb)

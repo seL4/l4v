@@ -6061,22 +6061,6 @@ lemma updateCap_same_master:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
-lemma diminished_cte_refs':
-  "diminished' cap cap' \<Longrightarrow> cte_refs' cap n = cte_refs' cap' n"
-  by (clarsimp simp: diminished'_def)
-
-lemma diminished_Untyped' :
-  "diminished' (UntypedCap d r n x) cap = (cap = UntypedCap d r n x)"
-  apply (rule iffI)
-   apply (case_tac cap)
-    apply (clarsimp simp:isCap_simps maskCapRights_def diminished'_def split:if_split_asm)+
-   (* 6 subgoals *)
-   apply (rename_tac arch_capability R)
-   apply (case_tac arch_capability)
-    apply (clarsimp simp: isCap_simps RISCV64_H.maskCapRights_def maskCapRights_def
-                          diminished'_def Let_def)+
-done
-
 lemma updateCapFreeIndex_valid_mdb_ctes:
   assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
   and     coin  :"\<And>m cte. \<lbrakk>m src = Some cte\<rbrakk> \<Longrightarrow> (\<exists>cte'. (Q m) src = Some cte' \<and> cteCap cte = cteCap cte')"

@@ -558,15 +558,15 @@ lemma authorised_for_globals_triv:
   done
 
 lemma decode_invocation_authorised_globals_inv:
-  "\<lbrace>cte_wp_at (diminished cap) slot and invs and
+  "\<lbrace>cte_wp_at ((=) cap) slot and invs and
     (\<lambda>s. \<forall>x\<in>set excaps.
-           cte_wp_at (diminished (fst x)) (snd x) s)\<rbrace>
+           cte_wp_at ((=) (fst x)) (snd x) s)\<rbrace>
     decode_invocation info_label args ptr slot cap excaps
    \<lbrace>\<lambda>rv. authorised_for_globals_inv rv\<rbrace>, -"
   unfolding decode_invocation_def
   apply (rule hoare_pre)
-  apply wpc
-             apply((wp authorised_for_globals_triv | wpc | simp add: uncurry_def)+)[11]
+   apply wpc
+              apply((wp authorised_for_globals_triv | wpc | simp add: uncurry_def)+)[11]
    apply (simp add: authorised_for_globals_inv_def)
    apply wp
    apply (unfold comp_def)
@@ -574,8 +574,8 @@ lemma decode_invocation_authorised_globals_inv:
    apply (wp decode_arch_invocation_authorised_for_globals)
   apply (intro impI conjI allI | clarsimp simp add: authorised_for_globals_inv_def)+
   apply (erule_tac x="(a, aa, b)" in ballE)
-  apply simp+
-done
+   apply simp+
+  done
 
 lemma set_thread_state_reads_respects_g:
   assumes domains_distinct: "pas_domains_distinct aag"

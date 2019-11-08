@@ -633,7 +633,7 @@ lemma perform_page_corres:
        apply (rule unmap_page_corres; simp)
       apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')+
     apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct)
-    apply (clarsimp simp: cte_wp_at_caps_of_state wellformed_pte_def is_arch_diminished_def
+    apply (clarsimp simp: cte_wp_at_caps_of_state wellformed_pte_def
                           cap_master_cap_simps is_cap_simps update_map_data_def mdata_map_def
                           wellformed_mapdata_def valid_arch_cap_def)
    apply (clarsimp simp: valid_page_inv'_def cte_wp_at_ctes_of)
@@ -758,7 +758,7 @@ lemma perform_page_table_corres:
      apply (wpsimp wp: mapM_x_wp' hoare_vcg_all_lift hoare_vcg_imp_lift'
                    simp: wellformed_pte_def)+
    apply (clarsimp simp: valid_pti_def valid_arch_cap_def cte_wp_at_caps_of_state
-                         invs_valid_objs invs_psp_aligned invs_distinct is_arch_diminished_def
+                         invs_valid_objs invs_psp_aligned invs_distinct
                          cap_master_cap_simps is_cap_simps update_map_data_def
                          wellformed_mapdata_def)
   apply (clarsimp simp: valid_pti'_def cte_wp_at_ctes_of)
@@ -1372,10 +1372,6 @@ lemma perform_aci_invs [wp]:
   apply (clarsimp simp: valid_cap'_def capAligned_def is_arch_update'_def isCap_simps
                         wellformed_mapdata'_def)
   done
-
-lemma diminished_valid':
-  "diminished' cap cap' \<Longrightarrow> valid_cap' cap = valid_cap' cap'"
-  by (rule ext) (clarsimp simp add: diminished'_def)
 
 end
 

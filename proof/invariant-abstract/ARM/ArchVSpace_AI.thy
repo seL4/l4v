@@ -1457,7 +1457,7 @@ definition
   | PageUnmap cap ptr \<Rightarrow>
      \<lambda>s. \<exists>dev r R sz m. cap = PageCap dev r R sz m \<and>
          case_option True (valid_unmap sz) m \<and>
-         cte_wp_at (is_arch_diminished (cap.ArchObjectCap cap)) ptr s \<and>
+         cte_wp_at ((=) (cap.ArchObjectCap cap)) ptr s \<and>
          s \<turnstile> (cap.ArchObjectCap cap)
   | PageFlush typ start end pstart pd asid \<Rightarrow>
       vspace_at_asid asid pd and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
@@ -1523,7 +1523,7 @@ definition
               \<and> hd (the (vs_cap_ref cap)) \<notin> kernel_vsrefs) and
      K (is_pt_cap cap \<and> cap_asid cap \<noteq> None)
    | PageTableUnmap cap ptr \<Rightarrow>
-     cte_wp_at (\<lambda>c. is_arch_diminished cap c) ptr and valid_cap cap
+     cte_wp_at ((=) cap) ptr and valid_cap cap
        and is_final_cap' cap
        and K (is_pt_cap cap)"
 
@@ -3547,10 +3547,10 @@ lemma perform_page_table_invocation_invs[wp]:
    apply (wp dmo_invs)
     apply (rule_tac Q="\<lambda>_. invs" in hoare_post_imp)
      apply safe
-     apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p =
-                                underlying_memory m p" in use_valid)
-       apply ((clarsimp simp: machine_op_lift_def
-                             machine_rest_lift_def split_def | wp)+)[3]
+      apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p =
+                                 underlying_memory m p" in use_valid)
+        apply ((clarsimp simp: machine_op_lift_def
+                              machine_rest_lift_def split_def | wp)+)[3]
      apply(erule use_valid, wp no_irq_cleanByVA_PoU no_irq, assumption)
     apply (wp store_pde_map_invs)[1]
    apply simp
@@ -3598,8 +3598,8 @@ lemma perform_page_table_invocation_invs[wp]:
         apply safe[1]
          apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p =
                                     underlying_memory m p" in use_valid)
-         apply ((clarsimp | wp)+)[3]
-               apply(erule use_valid, wp no_irq_cleanCacheRange_PoU, assumption)
+           apply ((clarsimp | wp)+)[3]
+        apply(erule use_valid, wp no_irq_cleanCacheRange_PoU, assumption)
        apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
                  valid_cap_typ[OF do_machine_op_obj_at]
                  mapM_x_swp_store_pte_invs[unfolded cte_wp_at_caps_of_state]
@@ -3610,12 +3610,10 @@ lemma perform_page_table_invocation_invs[wp]:
               | wp (once) mapM_x_wp'
               | simp)+
   apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state
-                        is_arch_diminished_def is_cap_simps
+                        is_cap_simps
                         is_arch_update_def cap_rights_update_def
                         acap_rights_update_def cap_master_cap_simps
                         update_map_data_def)
-  apply (frule (2) diminished_is_update')
-  apply (simp add: cap_rights_update_def acap_rights_update_def)
   apply (rule conjI)
    apply (clarsimp simp: vs_cap_ref_def)
    apply (drule invs_pd_caps)
@@ -3633,7 +3631,7 @@ lemma perform_page_table_invocation_invs[wp]:
   apply (subgoal_tac "(\<forall>x\<in>set [word , word + 4 .e. word + 2 ^ pt_bits - 1].
                              x && ~~ mask pt_bits = word)")
    apply (intro conjI)
-      apply (simp add: cap_master_cap_def)
+     apply (simp add: cap_master_cap_def)
      apply fastforce
     apply (clarsimp simp: image_def)
     apply (subgoal_tac "word + (ucast x << 2)
@@ -4629,8 +4627,7 @@ lemma perform_page_invs [wp]:
        apply (simp add: cte_wp_at_caps_of_state)
        apply (wp unmap_page_invs hoare_vcg_ex_lift hoare_vcg_all_lift
                  hoare_vcg_imp_lift unmap_page_unmapped)+
-    apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state is_arch_diminished_def)
-    apply (drule (2) diminished_is_update')
+    apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state)
     apply (clarsimp simp: is_cap_simps cap_master_cap_simps is_arch_update_def update_map_data_def
                           cap_rights_update_def acap_rights_update_def)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]

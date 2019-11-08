@@ -1052,12 +1052,10 @@ lemma perform_page_invocation_reads_respects:
                 set_mrs_reads_respects set_message_info_reads_respects
             | simp add: cleanByVA_PoU_def pte_check_if_mapped_def pde_check_if_mapped_def  | wpc | wp (once) hoare_drop_imps[where R="\<lambda> r s. r"])+
   apply(clarsimp simp: authorised_page_inv_def valid_page_inv_def)
-  apply (auto simp: cte_wp_at_caps_of_state is_arch_diminished_def valid_slots_def
-                    cap_auth_conferred_def cap_rights_update_def acap_rights_update_def
+  apply (auto simp: cte_wp_at_caps_of_state valid_slots_def cap_auth_conferred_def
                     update_map_data_def is_page_cap_def authorised_slots_def
                     valid_page_inv_def valid_cap_simps
-             dest!: diminished_PageCapD bspec[OF _ rev_subsetD[OF _ tl_subseteq]]
-
+             dest!: bspec[OF _ rev_subsetD[OF _ tl_subseteq]]
        | auto dest!: clas_caps_of_state
                simp: cap_links_asid_slot_def label_owns_asid_slot_def
               dest!: pas_refined_Control
@@ -2175,13 +2173,6 @@ definition
   InvokePage oper \<Rightarrow> authorised_for_globals_page_inv oper |
   _ \<Rightarrow> \<top>"
 
-lemma diminished_PageDirectoryCapD:
-  "diminished (ArchObjectCap (PageDirectoryCap p x)) cap \<Longrightarrow>
-  cap = ArchObjectCap (PageDirectoryCap p x)"
-  apply(cases cap, auto simp: diminished_def mask_cap_def cap_rights_update_def)
-  apply(auto simp: acap_rights_update_def split: arch_cap.splits bool.splits)
-  done
-
 lemma arch_perform_invocation_globals_equiv:
   "\<lbrace>globals_equiv s and invs and ct_active and valid_arch_inv ai and authorised_for_globals_arch_inv ai\<rbrace>
   arch_perform_invocation ai \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
@@ -2210,8 +2201,8 @@ lemma find_pd_for_asid_authority3:
   done
 
 lemma decode_arch_invocation_authorised_for_globals:
-  "\<lbrace>invs and cte_wp_at (diminished (cap.ArchObjectCap cap)) slot
-        and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at (diminished cap) slot s)\<rbrace>
+  "\<lbrace>invs and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
+        and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)\<rbrace>
   arch_decode_invocation label msg x_slot slot cap excaps
   \<lbrace>\<lambda>rv. authorised_for_globals_arch_inv rv\<rbrace>, -"
   unfolding arch_decode_invocation_def authorised_for_globals_arch_inv_def
@@ -2235,7 +2226,7 @@ lemma decode_arch_invocation_authorised_for_globals:
      apply((wp hoare_TrueI hoare_vcg_all_lift hoare_drop_imps | wpc | simp)+)[3]
   apply (clarsimp simp: authorised_asid_pool_inv_def authorised_page_table_inv_def
                         neq_Nil_conv invs_psp_aligned invs_vspace_objs cli_no_irqs)
-  apply (drule diminished_cte_wp_at_valid_cap, clarsimp+)
+  apply (drule cte_wp_valid_cap, clarsimp+)
   apply (cases cap, simp_all)
     \<comment> \<open>PageCap\<close>
     apply (clarsimp simp: valid_cap_simps cli_no_irqs)
@@ -2243,7 +2234,7 @@ lemma decode_arch_invocation_authorised_for_globals:
            \<comment> \<open>Map\<close>
            apply (rename_tac word cap_rights vmpage_size option arch)
            apply(clarsimp simp: isPageFlushLabel_def isPDFlushLabel_def | rule conjI)+
-            apply(drule diminished_cte_wp_at_valid_cap)
+            apply(drule cte_wp_valid_cap)
              apply(clarsimp simp: invs_def valid_state_def)
             apply(simp add: valid_cap_def)
            apply(simp add: vmsz_aligned_def)
@@ -2252,7 +2243,7 @@ lemma decode_arch_invocation_authorised_for_globals:
             apply(clarsimp)
            apply(fastforce simp: x_power_minus_1)
           apply(clarsimp)
-          apply(fastforce dest: diminished_cte_wp_at_valid_cap simp: invs_def valid_state_def valid_cap_def)
+          apply(fastforce dest: cte_wp_valid_cap simp: invs_def valid_state_def valid_cap_def)
          \<comment> \<open>Unmap\<close>
          apply(simp add: authorised_for_globals_page_inv_def)+
    apply(clarsimp)
@@ -2270,7 +2261,6 @@ lemma decode_arch_invocation_authorised_for_globals:
                   set (arm_global_pts (arch_state s))) \<inter>
                  cap_range c \<noteq>
                  {}" in cte_wp_at_weakenE)
-    apply(drule diminished_PageDirectoryCapD)
     apply(clarsimp simp: cap_range_def)
    apply(simp)
   by(fastforce)

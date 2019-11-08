@@ -2299,31 +2299,17 @@ lemma mapM_x_swp_store_pte_silc_inv[wp]:
   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   by (wp mapM_x_wp[OF _ subset_refl] | simp add: swp_def)+
 
-lemma is_arch_diminished_pt_is_pt_or_pg_cap:
-  "cte_wp_at (is_arch_diminished (ArchObjectCap (PageTableCap xa xb))) slot s
+lemma is_arch_eq_pt_is_pt_or_pg_cap:
+  "cte_wp_at ((=) (ArchObjectCap (PageTableCap xa xb))) slot s
        \<Longrightarrow> cte_wp_at (\<lambda>a. is_pt_cap a \<or> is_pg_cap a) slot s"
   apply (erule cte_wp_at_weakenE)
-  apply (clarsimp simp: is_arch_diminished_def diminished_def mask_cap_def cap_rights_update_def
-                 split: cap.splits arch_cap.splits
-                  simp: acap_rights_update_def acap_rights_def)
-  apply (case_tac c;simp)
-  apply (rename_tac arch_cap)
-  apply (drule_tac x=arch_cap in spec)
-  apply (case_tac arch_cap, simp_all add: is_pt_cap_def)[1]
-  done
+  by (clarsimp simp: is_pg_cap_def is_pt_cap_def)
 
-lemma is_arch_diminished_pg_is_pt_or_pg_cap:
-  "cte_wp_at (is_arch_diminished (ArchObjectCap (PageCap dev x xa xb xc))) slot s
+lemma is_arch_eq_pg_is_pt_or_pg_cap:
+  "cte_wp_at ((=) (ArchObjectCap (PageCap dev x xa xb xc))) slot s
        \<Longrightarrow> cte_wp_at (\<lambda>a. is_pt_cap a \<or> is_pg_cap a) slot s"
   apply (erule cte_wp_at_weakenE)
-  apply (clarsimp simp: is_arch_diminished_def diminished_def mask_cap_def cap_rights_update_def
-                 split: cap.splits arch_cap.splits
-                  simp: acap_rights_update_def acap_rights_def)
-  apply (case_tac c;simp)
-  apply (rename_tac arch_cap)
-  apply (drule_tac x=arch_cap in spec)
-  apply (case_tac arch_cap, simp_all add: is_pg_cap_def)[1]
-  done
+  by (clarsimp simp: is_pg_cap_def is_pt_cap_def)
 
 
 lemma is_arch_update_overlaps:
@@ -2354,7 +2340,7 @@ lemma perform_page_table_invocation_silc_inv:
     apply(clarsimp)
     defer
     apply(fastforce simp: silc_inv_def)
-   apply(fastforce dest: is_arch_diminished_pt_is_pt_or_pg_cap simp: silc_inv_def)
+   apply(fastforce dest: is_arch_eq_pt_is_pt_or_pg_cap simp: silc_inv_def)
   apply(drule_tac slot="(aa,ba)" in overlapping_slots_have_labelled_overlapping_caps[rotated])
     apply(fastforce)
    apply(fastforce elim: is_arch_update_overlaps[rotated] cte_wp_at_weakenE)
@@ -2460,7 +2446,7 @@ lemma perform_page_invocation_silc_inv:
      apply(fastforce elim: is_arch_update_overlaps[rotated] cte_wp_at_weakenE)
     apply fastforce
    apply(fastforce simp: silc_inv_def)
-  apply(fastforce dest: is_arch_diminished_pg_is_pt_or_pg_cap simp: silc_inv_def)
+  apply(fastforce dest: is_arch_eq_pg_is_pt_or_pg_cap simp: silc_inv_def)
   done
 
 lemma cap_insert_silc_inv':

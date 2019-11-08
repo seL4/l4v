@@ -46,11 +46,6 @@ lemma maskCapRights_allRights [simp]:
             RISCV64_H.maskCapRights_def maskVMRights_def
   by (cases c) (simp_all add: Let_def split: arch_capability.split vmrights.split)
 
-lemma diminished_refl'[simp]:
-  "diminished' cap cap"
-  unfolding diminished'_def
-  by (rule exI[where x=allRights], simp)
-
 lemma getCTE_inv [wp]: "\<lbrace>P\<rbrace> getCTE addr \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: getCTE_def) wp
 
@@ -2035,10 +2030,5 @@ crunch pspace_in_kernel_mappings'[wp]: setCTE "pspace_in_kernel_mappings'"
 declare mresults_fail[simp]
 
 end
-
-lemma diminished_capMaster:
-  "diminished' cap cap' \<Longrightarrow> capMasterCap cap' = capMasterCap cap"
-  by (clarsimp simp: diminished'_def)
-
 
 end (* of theory *)

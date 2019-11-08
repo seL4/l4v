@@ -1149,8 +1149,7 @@ proof -
      apply (simp add: cte_wp_at_ctes_of)
      apply wp
     apply (clarsimp simp: valid_unmap_def cte_wp_at_caps_of_state)
-    apply (clarsimp simp: is_arch_diminished_def is_cap_simps split: cap.splits arch_cap.splits)
-    apply (drule (2) diminished_is_update')+
+    apply (clarsimp simp: is_cap_simps split: cap.splits arch_cap.splits)
     apply (clarsimp simp: cap_rights_update_def is_page_cap_def cap_master_cap_simps
                           update_map_data_def acap_rights_update_def)
     apply (clarsimp simp add: wellformed_mapdata_def valid_cap_def mask_def)
@@ -1354,12 +1353,10 @@ lemma perform_page_table_corres:
       apply ((wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
                 mapM_x_wp' | simp split del: if_split)+)
    apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state
-                         is_arch_diminished_def
                          cap_master_cap_simps
                          update_map_data_def is_cap_simps
                          cap_rights_update_def acap_rights_update_def
                   dest!: cap_master_cap_eqDs)
-   apply (frule (2) diminished_is_update')
    apply (auto simp: valid_cap_def mask_def cap_master_cap_def
                      cap_rights_update_def acap_rights_update_def
                      wellformed_mapdata_def
@@ -1486,12 +1483,10 @@ lemma perform_page_directory_corres:
       apply ((wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
                 mapM_x_wp' | simp split del: if_split)+)
    apply (clarsimp simp: valid_pdi_def cte_wp_at_caps_of_state
-                         is_arch_diminished_def
                          cap_master_cap_simps
                          update_map_data_def is_cap_simps
                          cap_rights_update_def acap_rights_update_def
                   dest!: cap_master_cap_eqDs)
-   apply (frule (2) diminished_is_update')
    apply (auto simp: valid_cap_def mask_def cap_master_cap_def
                      cap_rights_update_def acap_rights_update_def
                      wellformed_mapdata_def vmsz_aligned_def
@@ -1615,12 +1610,10 @@ lemma perform_pdpt_corres:
       apply ((wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
                 mapM_x_wp' | simp split del: if_split)+)
    apply (clarsimp simp: valid_pdpti_def cte_wp_at_caps_of_state
-                         is_arch_diminished_def
                          cap_master_cap_simps
                          update_map_data_def is_cap_simps
                          cap_rights_update_def acap_rights_update_def
                   dest!: cap_master_cap_eqDs)
-   apply (frule (2) diminished_is_update')
    apply (auto simp: valid_cap_def mask_def cap_master_cap_def
                      cap_rights_update_def acap_rights_update_def
                      wellformed_mapdata_def vmsz_aligned_def
@@ -2870,14 +2863,6 @@ lemma isPML4Cap'_PML4 :
   "isPML4Cap' (ArchObjectCap (PML4Cap r m))"
   by (simp add: isPML4Cap'_def)
 
-
-lemma diminished_valid':
-  "diminished' cap cap' \<Longrightarrow> valid_cap' cap = valid_cap' cap'"
-  by (rule ext) (clarsimp simp add: diminished'_def)
-
-lemma diminished_isPML4Cap':
-  "diminished' cap cap' \<Longrightarrow> isPML4Cap' cap' = isPML4Cap' cap"
-  by (blast dest: diminished_capMaster capMaster_isPML4Cap')
 
 end
 
