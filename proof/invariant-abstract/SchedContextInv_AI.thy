@@ -759,7 +759,8 @@ where
       \<and> 0 < length (sc_refills sc)
       \<and> length (sc_refills sc) \<le> sc_refill_max sc
       \<and> MIN_SC_BUDGET \<le> sc_budget sc
-      \<and> sc_budget sc \<le> sc_period sc)"
+      \<and> sc_budget sc \<le> sc_period sc
+      \<and> MIN_REFILLS \<le> sc_refill_max sc)"
 
 definition valid_refills :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -1491,14 +1492,14 @@ lemma refill_update_valid_refills[wp]:
 
       \<comment> \<open>new_budget \<le> r_amount (refill_hd sc) and scptr is refill_ready\<close>
        apply (clarsimp simp: sc_valid_refills_def valid_refills_def ordered_disjoint_def
-                             no_overflow_def window_def word_le_nat_alt)
+                             no_overflow_def window_def word_le_nat_alt MIN_REFILLS_def)
         apply (rule order_trans[where y="unat MIN_SC_BUDGET"])
          using MIN_BUDGET_le_MIN_SC_BUDGET word_le_nat_alt apply fast
         apply (simp add: word_le_nat_alt)
 
     \<comment> \<open>new_budget \<le> r_amount (refill_hd sc) and scptr is not refill_ready\<close>
        apply (clarsimp simp: sc_valid_refills_def valid_refills_def ordered_disjoint_def
-                             no_overflow_def window_def word_le_nat_alt)
+                             no_overflow_def window_def word_le_nat_alt MIN_REFILLS_def)
         apply (rule order_trans[where y="unat MIN_SC_BUDGET"])
          using MIN_BUDGET_le_MIN_SC_BUDGET word_le_nat_alt apply fast
         apply (simp add: word_le_nat_alt)
@@ -1581,6 +1582,9 @@ lemma refill_update_valid_refills[wp]:
     apply (find_goal \<open>match premises in "new_budget < 2 * MIN_BUDGET" \<Rightarrow> \<open>-\<close>\<close>
            , force simp: MIN_SC_BUDGET_def)+
 
+   \<comment> \<open>MIN_REFILLS\<close>
+   apply (simp add: MIN_REFILLS_def)
+
   \<comment> \<open>r_amount (refill_hd sc) < new_budget and MIN_BUDGET \<le> unused\<close>
   apply (simp add: sc_valid_refills_def valid_refills_def)
   apply (intro conjI)
@@ -1629,6 +1633,9 @@ lemma refill_update_valid_refills[wp]:
    apply blast
   apply clarsimp
   apply (simp add: unat_sub word_le_nat_alt)
+
+  \<comment> \<open>MIN_REFILLS\<close>
+  apply (simp add: MIN_REFILLS_def)
   done
 
 lemma schedule_used_sum [simp]:
