@@ -70,6 +70,9 @@ definition page_only_attrs :: "vm_attributes"
 type_synonym pte_ppn_len = 52 (* machine_word_len - pt_bits *)
 type_synonym pte_ppn = "pte_ppn_len word"
 
+definition ppn_len :: nat where
+  "ppn_len \<equiv> LENGTH(pte_ppn_len)"
+
 datatype pte =
     InvalidPTE
   | PagePTE (pte_ppn : pte_ppn) (pte_attr : vm_attributes) (pte_rights : vm_rights)
