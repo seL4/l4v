@@ -847,6 +847,13 @@ fun debug_tac csenv ctxt = let
          | SOME t' => ((fn _ => fn _ => all_tac t') THEN_ALL_NEW wrap_tacs tacs) i t
   in wrap_tacs tacs end
 
+fun debug_step_tac csenv ctxt step = let
+    val tac = nth (graph_refine_proof_tacs csenv ctxt) (step - 1)
+    fun wrap_tac (nms, tac) i t = case try (tac i #> Seq.hd) t
+        of NONE => (warning ("step failed: " ^ commas nms); all_tac t)
+         | SOME t' => all_tac t'
+  in wrap_tac tac end
+
 fun simpl_to_graph_thm funs csenv ctxt nm = let
     val hints = SimplToGraphProof.mk_hints funs ctxt nm
     val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm
@@ -870,29 +877,76 @@ fun test_graph_refine_proof funs csenv ctxt nm = case
   in (succ ^ nm, res_thm) end handle TERM (s, ts) => raise TERM ("test_graph_refine_proof: " ^ nm
         ^ ": " ^ s, ts)
 
+\<comment>\<open>
+  Utility for configuring SimplToGraphProof with debugging failures.
+\<close>
+type debug = {
+  \<comment>\<open> Functions with these names won't be tested. \<close>
+  skips: string list,
+  \<comment>\<open> If non-empty, *only* functions with these names will be tested. \<close>
+  only: string list,
 
-fun test_graph_refine_proof_with_def funs csenv ctxt nm = case
-    Symtab.lookup funs nm of SOME (_, _, NONE) => "skipped " ^ nm
-  | _ => let
-    val ctxt = define_graph_fun_short funs nm ctxt
-    val (time, _) = Timing.timing (simpl_to_graph_thm funs csenv ctxt) nm
-  in "success on " ^ nm ^ "  [" ^ Timing.message time ^ "]" end
+  \<comment>\<open>
+    Logs the names of functions when they pass or fail tests, or are
+    skipped because they don't have a definition.
+  \<close>
+  new_skips: (string list) Unsynchronized.ref,
+  successes: (string list) Unsynchronized.ref,
+  failures: (string list) Unsynchronized.ref
+}
 
-fun test_all_graph_refine_proofs_after funs csenv ctxt nm = let
+fun new_debug skips only: debug = {
+  skips = skips,
+  only = only,
+  new_skips = Unsynchronized.ref [],
+  successes = Unsynchronized.ref [],
+  failures = Unsynchronized.ref []
+}
+
+fun insert (dbg: debug) field x = change (field dbg) (curry (op ::) x)
+
+fun filter_fns (dbg: debug) =
+    (if null (#only dbg) then I else filter (member (op =) (#only dbg))) #>
+    (if null (#skips dbg) then I else filter_out (member (op =) (#skips dbg)))
+
+fun has_failures (dbg: debug) = not (null (! (#failures dbg)))
+
+fun print (dbg: debug) field = (writeln "failures:"; map writeln (! (field dbg)))
+
+fun test_graph_refine_proof_with_def funs csenv ctxt dbg nm =
+  case Symtab.lookup funs nm of
+      SOME (_, _, NONE) => (insert dbg #new_skips nm; "skipped " ^ nm)
+    | _ =>
+      let
+        val ctxt = define_graph_fun_short funs nm ctxt
+        fun try_proof nm =
+            (simpl_to_graph_thm funs csenv ctxt nm; insert dbg #successes nm)
+            handle TERM (message, data) =>
+              (insert dbg #failures nm; raise TERM ("failure for " ^ nm ^ ": " ^ message, data));
+        val (time, _) = Timing.timing try_proof nm
+      in "success on " ^ nm ^ "  [" ^ Timing.message time ^ "]" end
+
+fun test_all_graph_refine_proofs_after funs csenv ctxt dbg nm = let
     val ss = Symtab.keys funs
     val n = case nm of NONE => ~1 | SOME nm' => find_index (fn s => s = nm') ss
     val ss = if n = ~1 then ss else drop (n + 1) ss
     val err = prefix "ERROR for: " #> error
     val _ = map (fn s => (writeln ("testing: " ^ s);
-        writeln (test_graph_refine_proof_with_def funs csenv ctxt s))
+        writeln (test_graph_refine_proof_with_def funs csenv ctxt dbg s))
       handle TERM _ => err s | TYPE _ => err s | THM _ => err s) ss
   in "success" end
 
-fun test_all_graph_refine_proofs_parallel funs csenv ctxt = let
-    val ss = Symtab.keys funs
-    val _ = Par_List.map (test_graph_refine_proof_with_def funs csenv ctxt
-      #> writeln) ss
-  in "success" end
+fun test_all_graph_refine_proofs_parallel funs csenv ctxt dbg = let
+    val ss = Symtab.keys funs |> filter_fns dbg
+    fun test_and_log nm =
+        (test_graph_refine_proof_with_def funs csenv ctxt dbg nm |> writeln)
+        handle TERM (msg, _) => warning msg
+    val _ = Par_List.map test_and_log ss
+  in
+    if has_failures dbg
+    then error "Failures! Check the ProveSimplToGraphGoals.failures variable."
+    else "success!"
+  end
 
 end
 \<close>

@@ -63,28 +63,6 @@ lemma snd_snd_gs_new_frames_new_cnodes[simp]:
   "snd (snd ((if P then f else g) gs)) = (if P then snd (snd (f gs)) else snd (snd (g gs)))"
   by (simp_all add: gs_new_frames_def gs_new_cnodes_def gs_clear_region_def)
 
-(* ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_after
-    funs (csenv ()) @{context} NONE  *} *)
-
-ML \<open>val nm = "Kernel_C.idle_thread"\<close>
-
-local_setup \<open>define_graph_fun_short funs nm\<close>
-
-ML \<open>
-val hints = SimplToGraphProof.mk_hints funs @{context} nm
-\<close>
-
-ML \<open>
-val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm
-    @{context}
-\<close>
-
-declare [[show_types]]
-
-ML \<open>
-ProveSimplToGraphGoals.simpl_to_graph_thm funs (csenv ()) @{context} nm;
-\<close>
-
 ML \<open>
 val tacs = ProveSimplToGraphGoals.graph_refine_proof_tacs (csenv ())
     #> map snd
@@ -94,12 +72,70 @@ val full_goal_tac = ProveSimplToGraphGoals.graph_refine_proof_full_goal_tac
     (csenv ())
 val debug_tac = ProveSimplToGraphGoals.debug_tac
     (csenv ())
+val debug_step_tac = ProveSimplToGraphGoals.debug_step_tac
+    (csenv ())
 \<close>
 
+\<comment>\<open> Name of the C function to investigate. \<close>
+ML \<open>
+val nm = "Kernel_C.merge_regions"
+\<close>
+
+local_setup \<open>define_graph_fun_short funs nm\<close>
+
+ML \<open>
+val hints = SimplToGraphProof.mk_hints funs @{context} nm
+val init_thm =
+    SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm @{context}
+\<close>
+
+declare [[show_types]]
+declare [[goals_limit = 100]]
+
+\<comment>\<open>
+  Investigate the failure.
+\<close>
 schematic_goal "PROP ?P"
   apply (tactic \<open>resolve_tac @{context} [init_thm] 1\<close>)
 
-  apply (tactic \<open>ALLGOALS (debug_tac @{context})\<close>)
+  \<comment>\<open>
+    Apply the "all steps" debug tactic to every goal, but restore any
+    unproven goals.
+  \<close>
+  apply (all \<open>(solves \<open>tactic \<open>HEADGOAL (debug_tac @{context})\<close>\<close>)?\<close>)
+
+  \<comment>\<open> Lets us edit the next lines without re-running the above line. \<close>
+  apply (tactic \<open>all_tac\<close>)
+
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 1)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 2)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 3)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 4)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 5)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 6)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 7)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 8)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 9)\<close>)
+  oops
+
+\<comment>\<open>
+  Extract a "working" part of the proof, to get a feel for what each step does.
+\<close>
+schematic_goal "PROP ?P"
+  apply (tactic \<open>resolve_tac @{context} [init_thm] 1\<close>)
+
+  \<comment>\<open> `Goal.restrict x 1` selects subgoal `x`. \<close>
+  apply (tactic \<open>PRIMITIVE (Goal.restrict 43 1)\<close>)
+
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 1)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 2)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 3)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 4)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 5)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 6)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 7)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 8)\<close>)
+  apply (tactic \<open>HEADGOAL (debug_step_tac @{context} 9)\<close>)
   oops
 
 end

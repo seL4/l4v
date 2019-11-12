@@ -68,8 +68,17 @@ lemma snd_snd_gs_new_frames_new_cnodes[simp]:
 (* If this fails, it can be debugged with the assistance of the
    script in TestGraphRefine.thy *)
 
-ML \<open>ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
-    funs (csenv ()) @{context}\<close>
+ML \<open>
+val dbg = ProveSimplToGraphGoals.new_debug [] [];
+
+ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
+    funs (csenv ()) @{context} dbg;
+\<close>
+
+ML \<open>
+ProveSimplToGraphGoals.print dbg #failures
+\<close>
+
 
 end
 
