@@ -27,21 +27,41 @@ repo](https://github.com/seL4/verification-manifest).
 
   [5]: http://source.android.com/source/downloading.html#installing-repo     "google repo installation"
 
-### Software dependencies
-
-On **Ubuntu 18.04**, to run all the tests against the **ARMv7-A** architecture
-you will need to install the following packages:
+### Linux Packages - Debian
+On **Buster** or **Bullseye**, to run all the tests against the
+**ARMv7-A** architecture you will need to install the following packages:
 ```bash
 sudo apt-get install \
-    python python-pip python-dev \
-    python3 python3-pip python3-dev \
-    haskell-stack gcc-arm-none-eabi \
-    build-essential libxml2-utils ccache ncurses-dev librsvg2-bin \
-    device-tree-compiler cmake ninja-build curl zlib1g-dev \
-    texlive-fonts-recommended texlive-latex-extra \
-    texlive-metapost texlive-bibtex-extra \
-    mlton-compiler
+    python python-pip python-dev python3 python3-pip python3-dev \
+    gcc-arm-none-eabi build-essential libxml2-utils ccache \
+    ncurses-dev librsvg2-bin device-tree-compiler cmake \
+    ninja-build curl zlib1g-dev texlive-fonts-recommended \
+    texlive-latex-extra texlive-metapost texlive-bibtex-extra \
+    rsync
 ```
+
+There is no package for the MLton compiler on Buster or Bullseye, so you will
+need to install it from the [MLton website](http://www.mlton.org).
+
+The Haskell Stack package is unavailable on Bullseye and out-of-date on Buster,
+so you will need to install it from the [Haskell Stack
+website](https://docs.haskellstack.org/en/stable/README).
+
+### Linux Packages - Ubuntu
+On **Ubuntu 18.04**, to run all the tests against the **ARMv7-A**
+architecture you will need to install the following packages:
+```bash
+sudo apt-get install \
+    python python-pip python-dev python3 python3-pip python3-dev \
+    gcc-arm-none-eabi build-essential libxml2-utils ccache \
+    ncurses-dev librsvg2-bin device-tree-compiler cmake \
+    ninja-build curl zlib1g-dev texlive-fonts-recommended \
+    texlive-latex-extra texlive-metapost texlive-bibtex-extra \
+    mlton-compiler haskell-stack
+```
+
+### Python
+The build system for the seL4 kernel requires several python packages:
 ```bash
 sudo pip install --upgrade pip
 sudo pip install sel4-deps
@@ -49,19 +69,11 @@ sudo pip3 install --upgrade pip
 sudo pip3 install sel4-deps
 ```
 
-On **Debian Buster**, install the above packages except for `mlton-compiler`,
-then install the following:
-```bash
-sudo apt-get install \
-    rsync
-```
-There is no package for `mlton-compiler` on Buster, so you will need to
-install it from the [mlton website](http://www.mlton.org).
-
 ### Haskell Stack
-L4V requires [haskell-stack](https://docs.haskellstack.org/en/stable/README).
-Make sure you've adjusted your `PATH` to include `$HOME/.local/bin`, and that
-you're running an up-to-date version:
+After installing
+[haskell-stack](https://docs.haskellstack.org/en/stable/README), make sure
+you've adjusted your `PATH` to include `$HOME/.local/bin`, and that you're
+running an up-to-date version:
 ```bash
 stack upgrade --binary-only
 which stack # should be $HOME/.local/bin/stack
