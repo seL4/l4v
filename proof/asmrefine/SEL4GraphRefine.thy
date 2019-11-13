@@ -69,7 +69,10 @@ lemma snd_snd_gs_new_frames_new_cnodes[simp]:
    script in TestGraphRefine.thy *)
 
 ML \<open>
-val dbg = ProveSimplToGraphGoals.new_debug [] [];
+\<comment>\<open> VER-1166 \<close>
+val blacklist = ["Kernel_C.reserve_region", "Kernel_C.merge_regions"]
+
+val dbg = ProveSimplToGraphGoals.new_debug blacklist [];
 
 ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
     funs (csenv ()) @{context} dbg;
