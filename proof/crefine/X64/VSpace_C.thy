@@ -1971,22 +1971,12 @@ lemma unmapPage_ccorres:
         apply (rule ccorres_name_ksCurThread)
         apply (rule_tac val="tcb_ptr_to_ctcb_ptr rv" and xf'="\<lambda>s. ksCurThread_' (globals s)"
                         in ccorres_abstract_known, ceqv)
-        apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_move_c_guard_tcb_ctes)+
-        apply (rule ccorres_symb_exec_r)
-          apply (rule ccorres_rhs_assoc2)
-          apply (rule ccorres_symb_exec_r_known_rv[where R=\<top> and R'=UNIV and xf'=ret__int_' and val=1])
-             apply vcg
-             apply clarsimp
-            apply ceqv
-           apply ccorres_rewrite
-           apply (clarsimp simp: liftE_liftM)
-           apply (ctac add: invalidateTranslationSingleASID_ccorres[simplified dc_def])
-          apply vcg
-         apply clarsimp
-         apply vcg
-        apply (rule conseqPre, vcg)
         apply clarsimp
-       apply (wpsimp simp: cur_tcb'_def[symmetric])
+        apply ccorres_rewrite
+        apply (clarsimp simp: liftE_liftM)
+        apply (ctac add: invalidateTranslationSingleASID_ccorres[simplified dc_def])
+       apply clarsimp
+      apply clarsimp
       apply (clarsimp simp: guard_is_UNIV_def conj_comms tcb_cnode_index_defs)
      apply (simp add: throwError_def)
      apply (rule ccorres_split_throws)
