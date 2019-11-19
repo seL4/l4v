@@ -2360,6 +2360,10 @@ abbreviation scheduler_act_sane :: "'z state \<Rightarrow> bool" where
 lemmas scheduler_act_sane_def = scheduler_act_not_2_def
 lemmas scheduler_act_not_def = scheduler_act_not_2_def
 
+(* ct_in_state' *)
+abbreviation ct_in_state' :: "_ \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "ct_in_state' P s \<equiv> pred_map P (tcb_sts_of s) (cur_thread s)"
+
 definition valid_reply_scs where
   "valid_reply_scs \<equiv> \<lambda>s. (\<forall>a r. reply_tcb_reply_at (\<lambda>ropt. ropt = Some a) r s
                                \<longrightarrow> (bound_sc_tcb_at (\<lambda>a. a = None) a s \<or> active_sc_tcb_at a s)) \<and>
@@ -2933,7 +2937,7 @@ abbreviation ct_not_blocked where
   "ct_not_blocked s \<equiv> ct_in_state (\<lambda>x. \<not>ipc_queued_thread_state x) s"
 
 lemma ct_in_state_kh_simp:
-  "ct_in_state P s = pred_map P (tcb_sts_of s) (cur_thread s)"
+  "ct_in_state P s = ct_in_state' P s"
   unfolding ct_in_state_def
   by (clarsimp simp: tcb_at_kh_simps)
 

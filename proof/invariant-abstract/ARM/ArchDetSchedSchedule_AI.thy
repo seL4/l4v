@@ -341,7 +341,6 @@ crunches arch_switch_to_thread, arch_switch_to_idle_thread
   and cur_sc_budget_sufficient[wp]: "(\<lambda>s. P (cur_sc_budget_sufficient s)) :: det_state \<Rightarrow> _"
   (wp: crunch_wps simp: crunch_simps)
 
-
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
@@ -356,7 +355,7 @@ context Arch begin global_naming ARM
 
 lemma handle_hyp_fault_valid_sched[wp]:
   "\<lbrace>valid_sched and invs and st_tcb_at active t and not_queued t and scheduler_act_not t
-      and (ct_active or ct_idle)\<rbrace>
+      and ct_in_state activatable\<rbrace>
     handle_hypervisor_fault t fault \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   by (cases fault; wpsimp wp: handle_fault_valid_sched simp: valid_fault_def)
 
