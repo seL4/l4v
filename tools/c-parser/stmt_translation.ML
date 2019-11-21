@@ -656,6 +656,8 @@ in
     end
   | AsmStmt st =>
     (let
+      (* FIXME: is this correct for all arches? *)
+      val reg_cty = Unsigned ImplementationNumbers.ptr_t;
       val (nm, vol, ret, args) = ProgramAnalysis.split_asm_stmt (AsmStmt st)
       val _ = if ASM_Ignore_Hooks.ignore_thy (nm, vol, ret, args) sg
         then raise Fail "hook fired" else ()
@@ -666,9 +668,8 @@ in
                 ^ ") without l-value used as asm stmt lval specifier.")
       val x = Free ("x", addr_ty)
       val ret = mk_abs (x, mk_abs (svar, ret x svar))
-      val reg_ty = Unsigned Int (* FIXME: not true in 64-bit world. *)
       fun conv_arg arg = mk_abs (svar, rval_of (typecast
-            (sg, reg_ty, expr_term arg)) svar)
+            (sg, reg_cty, expr_term arg)) svar)
         handle Option => error ("Value (" ^ expr_string arg
                 ^ ") without r-value used as asm stmt rval specifier.")
       val args = map conv_arg args
