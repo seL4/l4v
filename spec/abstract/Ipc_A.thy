@@ -753,14 +753,21 @@ where
       when (cur_sc = sc_ptr) $ do
         result \<leftarrow> check_budget;
         when result $ commit_time
-      od;
+      od
+    od;
 
+    if (0 < sc_refill_max sc \<and> (\<exists>y. sc_tcb sc = Some y))
+    then do tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
+            st \<leftarrow>get_thread_state tcb_ptr;
+            if runnable st
+            then refill_update sc_ptr period budget mrefills
+            else refill_new sc_ptr mrefills budget period
+         od
+    else refill_new sc_ptr mrefills budget period;
+
+    when (sc_tcb sc \<noteq> None) $ do
+      tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
       st \<leftarrow> get_thread_state tcb_ptr;
-      if 0 < sc_refill_max sc \<and> (runnable st) then
-        refill_update sc_ptr period budget mrefills
-      else
-        refill_new sc_ptr mrefills budget period;
-
       sc \<leftarrow> get_sched_context sc_ptr;
       when (0 < sc_refill_max sc) $ do
         sched_context_resume (Some sc_ptr);
