@@ -1660,7 +1660,7 @@ fun split_asm_stmt (AsmStmt dets) = let
   fun str_so NONE = "NONE" | str_so (SOME s) = "SOME (" ^ s ^ ")"
   fun str_trio (so, s, _) = "(" ^ str_so so ^ ", " ^ s ^ ")"
   val _ = List.app (K () o (fn (so, s, ex) =>
-    (so = NONE andalso (s = "=r" orelse s = "=&r"))
+    (s = "=r" orelse s = "=&r")
     orelse raise Fail ("Can not handle asm lval specifier: "
             ^ str_trio (so, s, ex)))) rets
   fun str_trios [] = ""
@@ -1672,7 +1672,9 @@ fun split_asm_stmt (AsmStmt dets) = let
   val ret = case rets of [] => NONE | [(_, _, r)] => SOME r
     | _ => NONE
   val args = #mod2 (#asmblock dets)
-  val _ = List.app (K () o (fn (so, s, ex) => (so = NONE andalso s = "r")
+  val _ = List.app (K () o (fn (so, s, ex) =>
+    (* FIXME: have different asm specifier whitelists per arch. *)
+    (s = "r" orelse s = "i" orelse s = "rK")
     orelse raise Fail ("Can not handle asm rval specifier: "
             ^ str_trio (so, s, ex)))) args
   val args = map #3 args
