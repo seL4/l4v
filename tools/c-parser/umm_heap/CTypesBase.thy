@@ -26,6 +26,10 @@ section "Type setup"
 
 type_synonym byte = "8 word"
 
+type_synonym memory = "addr \<Rightarrow> byte"
+type_synonym 'a mem_upd = "addr \<Rightarrow> 'a \<Rightarrow> memory \<Rightarrow> memory"
+type_synonym 'a mem_read = "addr \<Rightarrow> memory \<Rightarrow> 'a"
+
 class unit_class =
   assumes there_is_only_one: "x = y"
 
