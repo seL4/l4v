@@ -172,6 +172,11 @@ crunch domain_list_inv[wp]: awaken "\<lambda>s. P (domain_list s)"
 crunch domain_list_inv[wp]: commit_time "\<lambda>s. P (domain_list s)"
   (simp: Let_def wp: get_sched_context_wp get_refills_wp wp: crunch_wps)
 
+crunch domain_list_inv[wp]: refill_new "\<lambda>s. P (domain_list s)"
+  (simp: Let_def wp: get_sched_context_wp get_refills_wp wp: crunch_wps)
+
+crunch domain_list_inv[wp]: refill_update "\<lambda>s. P (domain_list s)"
+  (simp: Let_def wp: get_sched_context_wp get_refills_wp wp: crunch_wps)
 
 crunch domain_list_inv[wp]: set_next_interrupt, switch_sched_context
   "\<lambda>s::det_state. P (domain_list s)"
@@ -266,7 +271,7 @@ crunch domain_list_inv[wp]: sched_context_yield_to "\<lambda>s. P (domain_list s
 context DetSchedDomainTime_AI begin
 
 crunch domain_list_inv[wp]:
-  refill_budget_check,charge_budget
+  refill_budget_check,charge_budget, check_budget
   "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps check_cap_inv maybeM_inv simp: Let_def)
 
@@ -282,8 +287,11 @@ crunch domain_list_inv[wp]:
   "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps check_cap_inv maybeM_inv)
 
-crunch domain_list_inv[wp]: invoke_sched_control_configure "\<lambda>s::det_state. P (domain_list s)"
-  (wp: hoare_drop_imp)
+lemma invoke_sched_control_configure_domain_list[wp]:
+ "\<lbrace>(\<lambda>s :: det_state. P (domain_list s))\<rbrace> invoke_sched_control_configure iv \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
+  apply (wpsimp wp: hoare_drop_imps simp: invoke_sched_control_configure_def)
+      apply (intro conjI impI)
+       by (wpsimp wp: hoare_drop_imps)+
 
 lemma invoke_sched_context_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> invoke_sched_context i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
