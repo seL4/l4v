@@ -769,13 +769,10 @@ where
       tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
       st \<leftarrow> get_thread_state tcb_ptr;
       sc \<leftarrow> get_sched_context sc_ptr;
-      when (0 < sc_refill_max sc) $ do
-        sched_context_resume (Some sc_ptr);
-        ct \<leftarrow> gets cur_thread;
-        if (tcb_ptr = ct) then reschedule_required
-        else when (runnable st) $ possible_switch_to tcb_ptr
-      od
-
+      sched_context_resume (Some sc_ptr);
+      ct \<leftarrow> gets cur_thread;
+      if (tcb_ptr = ct) then reschedule_required
+      else when (runnable st) $ possible_switch_to tcb_ptr
     od
   od"
 
