@@ -4228,10 +4228,8 @@ crunch valid_list[wp]: invoke_tcb "valid_list"
 
 lemma invoke_sched_control_configure_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> invoke_sched_control_configure i \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  apply (cases i; wpsimp simp: invoke_sched_control_configure_def
+  by (cases i; wpsimp simp: invoke_sched_control_configure_def
                            wp: hoare_drop_imp)
-      apply (intro conjI impI)
-       by (wpsimp wp: hoare_drop_imp)+
 
 end
 

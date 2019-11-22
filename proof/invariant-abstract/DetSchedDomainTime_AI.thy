@@ -289,9 +289,7 @@ crunch domain_list_inv[wp]:
 
 lemma invoke_sched_control_configure_domain_list[wp]:
  "\<lbrace>(\<lambda>s :: det_state. P (domain_list s))\<rbrace> invoke_sched_control_configure iv \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
-  apply (wpsimp wp: hoare_drop_imps simp: invoke_sched_control_configure_def)
-      apply (intro conjI impI)
-       by (wpsimp wp: hoare_drop_imps)+
+  by (wpsimp wp: hoare_drop_imps simp: invoke_sched_control_configure_def)
 
 lemma invoke_sched_context_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> invoke_sched_context i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
