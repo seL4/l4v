@@ -34,7 +34,7 @@ crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<l
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects, arch_tcb_set_ipc_buffer,
-  arch_invoke_irq_control, handle_vm_fault, arch_get_sanitise_register_info,
+  arch_invoke_irq_control, handle_vm_fault,
   prepare_thread_delete, handle_hypervisor_fault,
   arch_post_modify_registers, arch_post_cap_deletion
   "\<lambda>s::det_state. P (domain_time s)"
@@ -42,9 +42,7 @@ crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
 
 declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
         make_arch_fault_msg_inv[DetSchedDomainTime_AI_assms]
-
-crunch domain_consumed_time_inv [wp, DetSchedDomainTime_AI_assms]: make_arch_fault_msg
-  "\<lambda>s. P (domain_time s)(consumed_time s)"
+        arch_get_sanitise_register_info_inv[DetSchedDomainTime_AI_assms]
 
 crunch domain_consumed_time_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_switch_to_idle_thread,arch_switch_to_thread "\<lambda>s. P (domain_time s)(consumed_time s)"

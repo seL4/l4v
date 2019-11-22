@@ -335,10 +335,7 @@ lemma arch_finalise_cap_ct_in_state[DetSchedSchedule_AI_assms]:
 
 crunches arch_switch_to_thread, arch_switch_to_idle_thread
   for cur_sc_offset_ready[wp]: "(\<lambda>s. P (cur_sc_offset_ready usage s)) :: det_state \<Rightarrow> _"
-  and cur_sc_offset_sufficient[wp]: "(\<lambda>s. P (cur_sc_offset_sufficient usage s)) :: det_state \<Rightarrow> _"
   and cur_sc_offset_ready'[wp]: "(\<lambda>s. P (cur_sc_offset_ready (consumed_time s) s)) :: det_state \<Rightarrow> _"
-  and cur_sc_offset_sufficient'[wp]: "(\<lambda>s. P (cur_sc_offset_sufficient (consumed_time s) s)) :: det_state \<Rightarrow> _"
-  and cur_sc_budget_sufficient[wp]: "(\<lambda>s. P (cur_sc_budget_sufficient s)) :: det_state \<Rightarrow> _"
   (wp: crunch_wps simp: crunch_simps)
 
 end

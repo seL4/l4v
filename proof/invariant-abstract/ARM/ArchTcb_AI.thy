@@ -160,11 +160,14 @@ lemma checked_insert_tcb_invs': (* arch specific *)
   apply (wpsimp wp: checked_insert_tcb_invs)
   by (auto simp: is_cap_simps is_cnode_or_valid_arch_def)
 
-crunches arch_get_sanitise_register_info, arch_post_modify_registers
+crunches arch_post_modify_registers
   for tcb_at[wp, Tcb_AI_asms]: "tcb_at a"
   and invs[wp, Tcb_AI_asms]: invs
   and ex_nonz_cap_to[wp, Tcb_AI_asms]: "ex_nonz_cap_to a"
   and fault_tcb_at[wp, Tcb_AI_asms]: "fault_tcb_at P a"
+
+crunches arch_get_sanitise_register_info
+  for inv[wp, Tcb_AI_asms]: "P"
 
 lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
   assumes x: "P cap.NullCap"

@@ -31,18 +31,8 @@ locale Tcb_AI_1 =
   assumes same_object_obj_refs:
   "\<And>cap cap'. \<lbrakk> same_object_as cap cap' \<rbrakk>
      \<Longrightarrow> obj_refs cap = obj_refs cap'"
-  assumes arch_get_sanitise_register_info_invs[wp]:
-  "\<And>t. \<lbrace>\<lambda>(s::'state_ext state). invs s\<rbrace> arch_get_sanitise_register_info t
-       \<lbrace>\<lambda>b s. invs s\<rbrace>"
-  assumes arch_get_sanitise_register_info_tcb_at[wp]:
-  "\<And>t a. \<lbrace>\<lambda>(s::'state_ext state). tcb_at a s\<rbrace> arch_get_sanitise_register_info t
-       \<lbrace>\<lambda>b s. tcb_at a s\<rbrace>"
-  assumes arch_get_sanitise_register_info_ex_nonz_cap_to[wp]:
-  "\<And>t a. \<lbrace>\<lambda>(s::'state_ext state). ex_nonz_cap_to a s\<rbrace> arch_get_sanitise_register_info t
-       \<lbrace>\<lambda>b s. ex_nonz_cap_to a s\<rbrace>"
-  assumes arch_get_sanitise_register_info_fault_tcb_at[wp]:
-  "\<And>t P a. \<lbrace>\<lambda>(s::'state_ext state). fault_tcb_at P a s\<rbrace> arch_get_sanitise_register_info t
-       \<lbrace>\<lambda>b s. fault_tcb_at P a s\<rbrace>"
+  assumes arch_get_sanitise_register_info_inv[wp]:
+    "\<And>ft P. arch_get_sanitise_register_info ft \<lbrace>P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_post_modify_registers_invs[wp]:
   "\<And>c t. \<lbrace>\<lambda>(s::'state_ext state). invs s\<rbrace> arch_post_modify_registers c t
        \<lbrace>\<lambda>b s. invs s\<rbrace>"

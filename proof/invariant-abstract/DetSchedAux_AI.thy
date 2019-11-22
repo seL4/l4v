@@ -1383,4 +1383,24 @@ lemma ct_runnable_ct_not_blocked[elim!]:
   "ct_active s \<Longrightarrow> ct_not_blocked s"
   by (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def split: thread_state.splits)
 
+lemma ready_or_release_machine_state_update[simp]:
+  "ready_or_release (s\<lparr>machine_state := param_a\<rparr>) = ready_or_release s"
+  by (clarsimp simp: ready_or_release_def)
+
+lemma valid_reply_scs_machine_state_update[simp]:
+  "valid_reply_scs (s\<lparr>machine_state := param_a\<rparr>) = valid_reply_scs s"
+  by (clarsimp simp: valid_reply_scs_def)
+
+lemma valid_refills_ignores_machine_state[simp]:
+  "valid_refills x (s\<lparr>machine_state := j\<rparr>) = valid_refills x s"
+  by (clarsimp simp: valid_refills_def)
+
+lemma sc_refill_ready_inv[wp]:
+  "sc_refill_ready sc \<lbrace>P\<rbrace>"
+  by (wpsimp simp: sc_refill_ready_def)
+
+lemma refill_full_inv[wp]:
+  "refill_full scp \<lbrace>P\<rbrace>"
+  by (wpsimp simp: refill_full_def)
+
 end

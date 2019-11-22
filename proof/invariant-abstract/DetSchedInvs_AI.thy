@@ -1889,7 +1889,6 @@ lemmas valid_release_q_def = valid_release_q_except_set_2_def
 lemma valid_release_q_distinct[elim!]: "valid_release_q s \<Longrightarrow> distinct (release_queue s)"
   by (clarsimp simp: valid_release_q_def)
 
-(*** valid_ep_q ***)
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation valid_sched_valid_release_q where
   "valid_sched_valid_release_q S ctime cdom ct it rq rlq sa lmt etcbs tcb_sts
@@ -2113,8 +2112,6 @@ abbreviation valid_blocked_thread_of where
    \<equiv> valid_blocked_thread nq nr except
                           (ready_queues s) (release_queue s) (scheduler_action s) (cur_thread s)
                           (tcb_sts_of s) (tcb_scps_of s) (sc_refill_cfgs_of s) t"
-
-(*** valid_ntfn_q ***)
 
 definition ntfn_queue :: "notification \<Rightarrow> obj_ref list" where
   "ntfn_queue n \<equiv> case (ntfn_obj n) of
