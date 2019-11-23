@@ -273,7 +273,7 @@ context EmptyFail_AI_derive_cap begin
 
 lemma decode_cnode_invocation_empty_fail[wp]:
   "\<And>a b c d. empty_fail (decode_cnode_invocation a b c d :: (cnode_invocation, 'state_ext) se_monad)"
-  by (simp add: decode_cnode_invocation_def split: invocation_label.splits list.splits | wp | intro impI conjI allI)+
+  by (simp add: decode_cnode_invocation_def split: invocation_label.splits list.splits | wp | wpc | intro impI conjI allI)+
 
 end
 

@@ -51,7 +51,7 @@ crunch (empty_fail) empty_fail[wp]:
 
 lemma decode_tcb_invocation_empty_fail[wp]:
   "empty_fail (decode_tcb_invocation a b (ThreadCap p) d e)"
-  by (simp add: decode_tcb_invocation_def split: invocation_label.splits | wp | intro conjI impI)+
+  by (simp add: decode_tcb_invocation_def split: invocation_label.splits | wp | wpc | intro conjI impI)+
 
 crunch (empty_fail) empty_fail[wp]: find_pd_for_asid, get_master_pde, check_vp_alignment,
                    create_mapping_entries, ensure_safe_mapping, get_asid_pool, resolve_vaddr
