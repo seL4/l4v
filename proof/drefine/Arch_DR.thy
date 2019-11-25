@@ -595,7 +595,8 @@ lemma corres_select_ret_or_throw:
  *)
 
 lemma decode_invocation_archcap_corres:
-  notes label_split_asm = invocation_label.split_asm arch_invocation_label.split_asm
+  notes label_split_asm = invocation_label.split_asm gen_invocation_labels.split_asm
+                          arch_invocation_label.split_asm
   shows
   "\<lbrakk> Some intent = transform_intent (invocation_type label') args';
      invoked_cap_ref = transform_cslot_ptr invoked_cap_ref';
