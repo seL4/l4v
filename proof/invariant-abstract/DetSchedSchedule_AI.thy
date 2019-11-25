@@ -5202,9 +5202,6 @@ lemma postpone_valid_blocked_except_set:
   apply (rename_tac tptr)
   by (wpsimp wp: tcb_release_enqueue_valid_blocked_except_set tcb_sched_dequeue_valid_blocked_except_set)
 
-(* FIXME: is there any need for these anymore? *)
-lemmas postpone_valid_blocked = postpone_valid_blocked_except_set[of "{}", simplified]
-
 crunches sched_context_resume
   for not_cur_thread[wp]: "not_cur_thread t"
   and budget_ready: "\<lambda>s. P (budget_ready t s)"
@@ -9930,9 +9927,9 @@ lemma reply_push_valid_blocked_no_donation:
                  update_sk_obj_ref_lift)
 
 lemma reply_push_valid_blocked_no_donation':
-  "\<lbrace> valid_blocked\<rbrace>
+  "\<lbrace> valid_blocked_except_set S\<rbrace>
    reply_push thread dest ya False
-   \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
+   \<lbrace>\<lambda>rv. valid_blocked_except_set S\<rbrace>"
   unfolding reply_push_def
   apply clarsimp
   by (wpsimp wp: set_thread_state_not_runnable_valid_blocked_remove hoare_drop_imps
@@ -10013,9 +10010,9 @@ lemma send_ipc_valid_release_q_for_handle_timeout:
   done
 
 lemma send_ipc_valid_blocked_for_handle_timeout:
-  "\<lbrace>valid_blocked\<rbrace>
+  "\<lbrace>valid_blocked_except_set S\<rbrace>
    send_ipc True False badge True False thread epptr
-   \<lbrace>\<lambda>rv. valid_blocked ::'state_ext state \<Rightarrow> _\<rbrace>"
+   \<lbrace>\<lambda>rv. valid_blocked_except_set S ::'state_ext state \<Rightarrow> _\<rbrace>"
   supply if_weak_cong[cong del]
   apply (simp add: send_ipc_def)
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
@@ -10032,7 +10029,7 @@ lemma send_ipc_valid_blocked_for_handle_timeout:
              apply (wpsimp wp: assert_inv)
             apply (wpsimp wp: refill_ready_wp refill_sufficient_wp)
            apply (wpsimp wp: get_tcb_obj_ref_wp)
-          apply (rule_tac Q="\<lambda>_. valid_blocked" in hoare_strengthen_post[rotated])
+          apply (rule_tac Q="\<lambda>_. valid_blocked_except_set S" in hoare_strengthen_post[rotated])
            apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def schedulable_sc_tcb_at_def vs_all_heap_simps)
           apply wpsimp
             apply (wpsimp wp: reply_push_valid_blocked_no_donation')
@@ -10040,16 +10037,16 @@ lemma send_ipc_valid_blocked_for_handle_timeout:
           apply wpsimp
          apply (wpsimp simp: thread_get_def)
         apply (wpsimp wp: get_tcb_obj_ref_wp)
-       apply (rule_tac Q="\<lambda>r. valid_blocked" in hoare_strengthen_post[rotated])
+       apply (rule_tac Q="\<lambda>r. valid_blocked_except_set S" in hoare_strengthen_post[rotated])
         apply clarsimp
        apply (wpsimp wp: reply_unlink_tcb_valid_blocked_except_set)
-      apply (rule_tac Q="\<lambda>r. valid_blocked" in hoare_strengthen_post[rotated])
+      apply (rule_tac Q="\<lambda>r. valid_blocked_except_set S" in hoare_strengthen_post[rotated])
        apply (clarsimp simp: obj_at_def pred_tcb_at_def is_tcb)
       apply (wpsimp wp: hoare_vcg_disj_lift reply_unlink_tcb_valid_release_q)
      apply wpsimp
     apply (wpsimp wp: gts_wp)
    apply clarsimp
-   apply (rule_tac Q="\<lambda>r. valid_blocked" in hoare_strengthen_post[rotated])
+   apply (rule_tac Q="\<lambda>r. valid_blocked_except_set S" in hoare_strengthen_post[rotated])
     apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def)
    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_disj_lift)
   apply (clarsimp simp: obj_at_def)
@@ -12831,14 +12828,14 @@ crunches end_timeslice
 
 
 lemma end_timeslice_valid_blocked[wp]:
-  "\<lbrace>valid_blocked\<rbrace>
+  "\<lbrace>valid_blocked_except_set S\<rbrace>
    end_timeslice canTimeout
-   \<lbrace>\<lambda>_. valid_blocked ::'state_ext state \<Rightarrow> _\<rbrace>"
+   \<lbrace>\<lambda>_. valid_blocked_except_set S ::'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding end_timeslice_def handle_timeout_def send_fault_ipc_def
   by (wpsimp wp: send_ipc_valid_sched_subset_for_handle_timeout
                  tcb_sched_append_valid_blocked_except_set_const
                  get_tcb_queue_wp
-                 postpone_valid_blocked gts_wp
+                 postpone_valid_blocked_except_set gts_wp
            simp: thread_get_def)
 
 lemma end_timeslice_schedulable_ipc_queues:
@@ -13423,29 +13420,125 @@ lemma refill_budget_check_schedulable_ipc_queues:
   apply (fastforce simp: vs_all_heap_simps)
   done
 
-(* The remaining subgoal seems to want the current thread to be schedulable.
-   it's not clear if this is a reasonable assumption. *)
-lemma charge_budget_valid_sched:
-  "\<lbrace>valid_sched and invs and ct_not_in_release_q and ct_not_queued and scheduler_act_sane
-    and cur_sc_chargeable and (\<lambda>s. valid_refills (cur_sc s) s) and cur_sc_blocked_is_offset consumed
-   \<rbrace>
+lemma charge_budget_valid_blocked[wp]:
+  "\<lbrace>valid_blocked_except_set S\<rbrace>
    charge_budget consumed canTimeout
-   \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
+   \<lbrace>\<lambda>_. valid_blocked_except_set S:: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding charge_budget_def
+  by (wpsimp wp: reschedule_required_valid_blocked end_timeslice_valid_sched_subset
+                 assert_inv gts_wp is_schedulable_wp')
+
+lemma charge_budget_valid_release_q:
+  "\<lbrace>valid_release_q and invs and ct_not_in_release_q and cur_sc_chargeable \<rbrace>
+   charge_budget consumed canTimeout
+   \<lbrace>\<lambda>_. valid_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
   apply (clarsimp simp: charge_budget_def)
   apply wpsimp
-               apply (wpsimp wp: reschedule_required_valid_sched')
+              apply (wpsimp wp: end_timeslice_valid_sched_subset)
+             apply (wpsimp wp: assert_inv)
+            apply (wpsimp wp: gts_wp is_schedulable_wp')+
+       apply (rule_tac Q="\<lambda>ya s. valid_release_q s \<and>
+                      cur_sc_chargeable s \<and>
+                      invs s" in hoare_strengthen_post[rotated])
+        apply (clarsimp simp: tcb_at_kh_simps ct_in_state_def runnable_eq_active
+                       split: if_splits)
+       apply (wpsimp wp:  sc_consumed_add_invs)
+      apply (wpsimp wp: refill_budget_check_round_robin_valid_release_q
+                        refill_budget_check_valid_release_q)+
+  apply (subgoal_tac "sc_not_in_release_q (cur_sc s) s ", simp)
+  apply (intro conjI impI allI)
+  apply (clarsimp simp: cur_sc_chargeable_def)
+  apply (subgoal_tac "pred_map runnable (tcb_sts_of s) t")
+   apply (drule_tac x=t in spec)+
+   apply (clarsimp simp: pred_map_simps, fastforce)
+  apply (clarsimp simp: valid_release_q_def in_queue_2_def)
+  done
+
+lemma charge_budget_valid_sched_action:
+  "\<lbrace>valid_sched_action and scheduler_act_sane and cur_sc_chargeable \<rbrace>
+   charge_budget consumed canTimeout
+   \<lbrace>\<lambda>_. valid_sched_action :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  supply if_split [split del]
+  apply (clarsimp simp: charge_budget_def)
+  apply wpsimp
+            apply (wpsimp wp: gts_wp is_schedulable_wp')+
+       apply (rule_tac Q="\<lambda>ya s.
+                (if (pred_map runnable (tcb_sts_of s) (cur_thread s) \<and> ct_not_in_release_q s \<and> active_sc_tcb_at (cur_thread s) s)
+                 then True
+                 else valid_sched_action s)" in hoare_strengthen_post[rotated])
+        apply (clarsimp simp: tcb_at_kh_simps ct_in_state_def runnable_eq_active
+                       split: if_splits)
+       apply (wpsimp wp: hoare_vcg_if_lift_strong sc_consumed_add_invs)
+      apply (wpsimp wp: hoare_vcg_if_lift_strong)
+          apply (rule_tac hoare_strengthen_post[rotated], erule ct_active_sc_helper)
+          apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+         apply wpsimp
+         apply (rule_tac hoare_strengthen_post[rotated], erule ct_active_sc_helper)
+         apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+        apply (wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift')
+          apply (rule_tac hoare_strengthen_post[rotated], erule ct_active_sc_helper)
+          apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+         apply (wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift')
+         apply (rule_tac hoare_strengthen_post[rotated], erule ct_active_sc_helper)
+         apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+        apply clarsimp
+       apply wpsimp
+      apply (wpsimp wp: refill_budget_check_round_robin_valid_sched_action_act_not
+                        refill_budget_check_valid_sched_action_act_not)
+     apply (wpsimp wp: is_round_robin_wp)+
+  apply (clarsimp simp: valid_sched_def valid_sched_action_def)
+  apply (subgoal_tac "sc_scheduler_act_not (cur_sc s) s", simp)
+  apply (intro conjI impI allI)
+  apply (clarsimp simp: cur_sc_chargeable_def scheduler_act_sane_def)
+  apply (subgoal_tac "pred_map runnable (tcb_sts_of s) t")
+  apply (drule_tac x=t in spec)+
+  apply (fastforce simp: pred_map_simps)
+  apply (clarsimp simp:  weak_valid_sched_action_def in_queue_2_def)
+  done
+
+(* FIXME: why are these three not crunchable? *)
+lemma charge_budget_ct_in_cur_domain[wp]:
+  "\<lbrace>ct_in_cur_domain \<rbrace>
+   charge_budget consumed canTimeout
+   \<lbrace>\<lambda>_. ct_in_cur_domain :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding charge_budget_def
+  by (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2)
+
+lemma charge_budget_valid_idle_etcb[wp]:
+  "\<lbrace>valid_idle_etcb\<rbrace>
+   charge_budget consumed canTimeout
+   \<lbrace>\<lambda>_. valid_idle_etcb :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding charge_budget_def
+  by (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2)
+
+lemma charge_budget_ct_not_in_q[wp]:
+  "\<lbrace>ct_not_in_q \<rbrace>
+   charge_budget consumed canTimeout
+   \<lbrace>\<lambda>_. ct_not_in_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding charge_budget_def
+  by (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp)
+
+crunches charge_budget
+  for valid_machine_time[wp]: "valid_machine_time :: 'state_ext state \<Rightarrow> _"
+  (wp: crunch_wps)
+
+(* The remaining subgoal seems to want the current thread to be schedulable.
+   it's not clear if this is a reasonable assumption. *)
+lemma charge_budget_schedulable_ipc_queues:
+  "\<lbrace>schedulable_ipc_queues and valid_machine_time and cur_sc_blocked_is_offset consumed\<rbrace>
+   charge_budget consumed canTimeout
+   \<lbrace>\<lambda>_. schedulable_ipc_queues :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  supply if_split [split del]
+  apply (clarsimp simp: charge_budget_def)
+  apply (wpsimp)
               apply (wpsimp wp: end_timeslice_valid_sched_subset)
              apply (wpsimp wp: assert_inv)
             apply (wpsimp wp: gts_wp is_schedulable_wp')+
        apply (rule_tac Q="\<lambda>ya s.
                 (if (pred_map runnable (tcb_sts_of s) (cur_thread s) \<and> ct_not_in_release_q s \<and> active_sc_tcb_at (cur_thread s) s)
-                 then valid_release_q s \<and>
-                      ct_not_queued s \<and>
-                      scheduler_act_sane s \<and> cur_sc_chargeable s \<and>
-                      valid_ready_qs s \<and> schedulable_ipc_queues s \<and>
-                      weak_valid_sched_action s \<and> valid_blocked s \<and> valid_idle_etcb s \<and> invs s
-                 else valid_sched s)" in hoare_strengthen_post[rotated])
+                 then schedulable_ipc_queues s
+                 else schedulable_ipc_queues s)" in hoare_strengthen_post[rotated])
         apply (clarsimp simp: tcb_at_kh_simps ct_in_state_def runnable_eq_active
                        split: if_splits)
   subgoal sorry (* charge_budget subgoal: charge_budget can block the thread *)
@@ -13463,33 +13556,44 @@ lemma charge_budget_valid_sched:
          apply (rule_tac hoare_strengthen_post[rotated], erule ct_active_sc_helper)
          apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
         apply clarsimp
-       apply (wpsimp wp: refill_budget_check_round_robin_valid_release_q
-                         refill_budget_check_round_robin_valid_ready_qs_not_queued
-                         refill_budget_check_round_robin_schedulable_ipc_queues
-                         refill_budget_check_round_robin_weak_valid_sched_action
-                         refill_budget_check_valid_release_q
-                         refill_budget_check_valid_ready_qs_not_queued
+       apply (wpsimp wp: refill_budget_check_round_robin_schedulable_ipc_queues
                          refill_budget_check_schedulable_ipc_queues
-                         refill_budget_check_weak_valid_sched_action)
-      apply (wpsimp wp: refill_budget_check_round_robin_valid_release_q
-                        refill_budget_check_round_robin_valid_ready_qs_not_queued
+                         is_round_robin_wp)+
+  done
+
+lemma charge_budget_valid_ready_qs:
+  "\<lbrace>valid_ready_qs
+    and schedulable_ipc_queues
+    and valid_machine_time
+    and  weak_valid_sched_action and invs
+    and ct_not_queued and scheduler_act_sane
+    and cur_sc_chargeable
+    and cur_sc_blocked_is_offset consumed\<rbrace>
+   charge_budget consumed canTimeout
+   \<lbrace>\<lambda>_. valid_ready_qs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  supply if_split [split del]
+  apply (clarsimp simp: charge_budget_def)
+  apply wpsimp
+              apply (wpsimp wp: end_timeslice_valid_sched_subset)
+             apply (wpsimp wp: assert_inv)
+            apply (wpsimp wp: gts_wp is_schedulable_wp')+
+       apply (rule_tac Q="\<lambda>ya s. ct_not_queued s \<and>
+                                 cur_sc_chargeable s \<and>
+                                 valid_ready_qs s \<and>
+                                 schedulable_ipc_queues s \<and>
+                                 weak_valid_sched_action s" in hoare_strengthen_post[rotated])
+        apply (clarsimp simp: tcb_at_kh_simps ct_in_state_def runnable_eq_active
+                       split: if_splits)
+       apply wpsimp
+      apply (wpsimp wp: refill_budget_check_round_robin_valid_ready_qs_not_queued
                         refill_budget_check_round_robin_schedulable_ipc_queues
-                        refill_budget_check_round_robin_valid_sched_action_act_not
-                        refill_budget_check_valid_release_q
+                        refill_budget_check_round_robin_weak_valid_sched_action
                         refill_budget_check_valid_ready_qs_not_queued
                         refill_budget_check_schedulable_ipc_queues
-                        refill_budget_check_valid_sched_action_act_not
-                  simp: valid_sched_def)
+                        refill_budget_check_weak_valid_sched_action)
      apply (wpsimp wp: is_round_robin_wp)+
-  apply (clarsimp simp: valid_sched_def valid_sched_action_def)
-  apply (subgoal_tac "sc_not_in_release_q (cur_sc s) s \<and>
-                 sc_not_in_ready_q (cur_sc s) s \<and> sc_scheduler_act_not (cur_sc s) s", simp)
+  apply (subgoal_tac "sc_not_in_ready_q (cur_sc s) s \<and> sc_scheduler_act_not (cur_sc s) s", simp)
   apply (intro conjI impI allI)
-    apply (clarsimp simp: cur_sc_chargeable_def)
-    apply (subgoal_tac "pred_map runnable (tcb_sts_of s) t")
-     apply (drule_tac x=t in spec)+
-     apply (clarsimp simp: pred_map_simps, fastforce)
-    apply (clarsimp simp: valid_release_q_def in_queue_2_def)
    apply (clarsimp simp: cur_sc_chargeable_def)
    apply (subgoal_tac "pred_map runnable (tcb_sts_of s) t")
     apply (drule_tac x=t in spec)+
@@ -13497,29 +13601,84 @@ lemma charge_budget_valid_sched:
    apply (clarsimp simp: valid_ready_qs_def in_queue_2_def in_ready_q_def)
   apply (clarsimp simp: cur_sc_chargeable_def scheduler_act_sane_def)
   apply (subgoal_tac "pred_map runnable (tcb_sts_of s) t")
-  apply (drule_tac x=t in spec)+
-  apply (fastforce simp: pred_map_simps)
+   apply (drule_tac x=t in spec)+
+   apply (fastforce simp: pred_map_simps)
   apply (clarsimp simp:  weak_valid_sched_action_def in_queue_2_def)
   done
 
-(* The condition on ipc_queues is required because of the schedulable_ipc_queues.
-   We need to know that a current thread that becomes blocked can still be charged
-   for its budget. It comes from charge_budget_valid_sched and then from
-   refill_budget_check_schedulable_ipc_queues.
-*)
+lemma charge_budget_valid_sched:
+  "\<lbrace>valid_sched and invs and ct_not_in_release_q and ct_not_queued and scheduler_act_sane
+    and cur_sc_chargeable and cur_sc_blocked_is_offset consumed\<rbrace>
+   charge_budget consumed canTimeout
+   \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding valid_sched_def
+  by (wpsimp wp: charge_budget_valid_ready_qs
+                    charge_budget_valid_release_q
+                    charge_budget_valid_sched_action
+                    charge_budget_schedulable_ipc_queues
+      , clarsimp simp: valid_sched_action_def)
+
+lemma check_budget_valid_ready_qs:
+  "\<lbrace>valid_ready_qs and schedulable_ipc_queues and valid_machine_time and weak_valid_sched_action
+    and invs
+    and ct_not_queued
+    and scheduler_act_sane and cur_sc_chargeable
+    and (\<lambda>s. cur_sc_blocked_is_offset (consumed_time s) s)\<rbrace>
+   check_budget
+   \<lbrace>\<lambda>_. valid_ready_qs::'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding check_budget_def
+  by (wpsimp wp: get_sched_context_wp charge_budget_valid_ready_qs
+                 hoare_vcg_if_lift2 hoare_drop_imp hoare_vcg_all_lift)
+
+lemma check_budget_valid_release_q:
+  "\<lbrace>valid_release_q
+    and invs
+    and ct_not_in_release_q
+    and cur_sc_chargeable\<rbrace>
+   check_budget
+   \<lbrace>\<lambda>_. valid_release_q::'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding check_budget_def
+  by (wpsimp wp: get_sched_context_wp charge_budget_valid_release_q
+                 hoare_vcg_if_lift2 hoare_drop_imp hoare_vcg_all_lift)
+
+lemma check_budget_schedulable_ipc_queues:
+  "\<lbrace>schedulable_ipc_queues and valid_machine_time and (\<lambda>s. cur_sc_blocked_is_offset (consumed_time s) s)\<rbrace>
+   check_budget
+   \<lbrace>\<lambda>_. schedulable_ipc_queues::'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding check_budget_def
+  by (wpsimp wp: get_sched_context_wp charge_budget_schedulable_ipc_queues
+                 hoare_vcg_if_lift2 hoare_drop_imp hoare_vcg_all_lift)
+
+crunches check_budget
+  for ct_not_in_q[wp]: "ct_not_in_q ::'state_ext state \<Rightarrow> _"
+  and ct_in_cur_domain[wp]: "ct_in_cur_domain ::'state_ext state \<Rightarrow> _"
+  and valid_blocked[wp]: "valid_blocked_except_set S ::'state_ext state \<Rightarrow> _"
+  and valid_idle_etcb[wp]: "valid_idle_etcb ::'state_ext state \<Rightarrow> _"
+  and valid_machine_time[wp]: "valid_machine_time ::'state_ext state \<Rightarrow> _"
+  (wp: crunch_wps)
+
+lemma check_budget_valid_sched_action:
+  "\<lbrace>valid_sched_action and scheduler_act_sane and cur_sc_chargeable\<rbrace>
+   check_budget
+   \<lbrace>\<lambda>_. valid_sched_action::'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding check_budget_def
+  by (wpsimp wp: get_sched_context_wp charge_budget_valid_sched_action
+                 hoare_vcg_if_lift2 hoare_drop_imp hoare_vcg_all_lift)
+
 lemma check_budget_valid_sched:
   "\<lbrace>valid_sched
     and invs
     and ct_not_in_release_q and ct_not_queued
     and scheduler_act_sane and cur_sc_chargeable
-    and (\<lambda>s. cur_sc_blocked_is_offset (consumed_time s) s)
-    and (\<lambda>s. valid_refills (cur_sc s) s)\<rbrace>
+    and (\<lambda>s. cur_sc_blocked_is_offset (consumed_time s) s)\<rbrace>
    check_budget
    \<lbrace>\<lambda>_. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
-  apply (clarsimp simp: check_budget_def)
-  apply (wpsimp wp: get_sched_context_wp charge_budget_valid_sched
-                    reschedule_valid_sched_const
-                    hoare_vcg_if_lift2 hoare_drop_imp hoare_vcg_all_lift)
+  apply (clarsimp simp: valid_sched_def)
+  apply (wpsimp wp: check_budget_valid_ready_qs
+                    check_budget_valid_release_q
+                    check_budget_valid_sched_action
+                    check_budget_schedulable_ipc_queues)
+  apply (clarsimp simp: valid_sched_action_def)
   done
 
 lemma tcb_sched_dequeue_valid_blocked_except_set:
