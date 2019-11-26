@@ -4267,7 +4267,7 @@ context Deterministic_AI_2 begin
 
 lemma handle_event_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> handle_event e \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (case_tac e; wpsimp simp: wp: hoare_drop_imps whenE_inv)
+  by (case_tac e; wpsimp simp: wp: hoare_drop_imps whenE_inv hoare_vcg_if_lift2)
 
 end
 (**)

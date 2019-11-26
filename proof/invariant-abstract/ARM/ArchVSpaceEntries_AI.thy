@@ -1780,7 +1780,7 @@ lemma call_kernel_valid_pdpt[wp]:
        apply (wpsimp wp: check_budget_restart_true)
       apply (wpsimp+)[2]
     (***)
-    apply wpsimp
+    apply (wpsimp wp: hoare_vcg_if_lift2)
     (***)
    apply (rule_tac B="\<lambda>_. (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in hoare_seq_ext[rotated])
     apply (rule validE_valid)

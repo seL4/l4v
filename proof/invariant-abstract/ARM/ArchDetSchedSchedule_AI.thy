@@ -338,6 +338,8 @@ crunches arch_switch_to_thread, arch_switch_to_idle_thread
   and cur_sc_offset_ready'[wp]: "(\<lambda>s. P (cur_sc_offset_ready (consumed_time s) s)) :: det_state \<Rightarrow> _"
   (wp: crunch_wps simp: crunch_simps)
 
+declare non_kernel_IRQs_def [simp]
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
@@ -359,7 +361,7 @@ lemma handle_hyp_fault_valid_sched[wp]:
 lemma handle_reserved_irq_valid_sched:
   "\<lbrace>valid_sched and invs and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow>  scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
   handle_reserved_irq irq \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  unfolding handle_reserved_irq_def by (wpsimp simp: non_kernel_IRQs_def)
+  unfolding handle_reserved_irq_def by (wpsimp)
 
 end
 

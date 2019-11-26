@@ -2180,6 +2180,8 @@ abbreviation cur_sc_in_release_q_imp_zero_consumed :: "'z state \<Rightarrow> bo
 
 locale DetSchedSchedule_AI =
   fixes state_ext_t :: "'state_ext::state_ext itself"
+  assumes kernel_irq_timer_is_kernel_IRQ[simp]:
+    "kernel_irq_timer \<notin> non_kernel_IRQs"
   assumes arch_switch_to_thread_valid_sched_pred[wp]:
     "\<And>t P. arch_switch_to_thread t \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_switch_to_idle_thread_valid_sched_pred[wp]:
@@ -9861,7 +9863,7 @@ lemma transfer_caps_scheduler_act_not:
   done
 
 lemma send_fault_ipc_not_queued:
-  "\<lbrace>invs and not_queued t and st_tcb_at (Not \<circ> ipc_queued_thread_state) t and scheduler_act_not t\<rbrace>
+  "\<lbrace>invs and not_queued t and st_tcb_at (not ipc_queued_thread_state) t and scheduler_act_not t\<rbrace>
    send_fault_ipc tptr handler_cap fault can_donate
    \<lbrace>\<lambda>rv. not_queued t::'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding send_fault_ipc_def
@@ -10561,7 +10563,7 @@ lemma handle_fault_valid_sched:
   apply (wpsimp wp: handle_no_fault_valid_sched send_fault_ipc_valid_sched hoare_vcg_if_lift2
                     send_fault_ipc_not_queued send_fault_ipc_not_in_release_q
                     send_fault_ipc_scheduler_act_not hoare_drop_imps hoare_vcg_conj_lift)
-  by (fastforce simp: schedulable_sc_tcb_at_def tcb_at_kh_simps vs_all_heap_simps)
+  by (fastforce simp: schedulable_sc_tcb_at_def tcb_at_kh_simps vs_all_heap_simps pred_neg_def)
 
 end
 
@@ -10737,7 +10739,7 @@ lemma send_signal_WaitingNtfn_helper:
   "ntfn_obj ntfn = WaitingNtfn wnlist \<Longrightarrow>
    \<lbrace>ko_at (Notification ntfn) ntfnptr and
     st_tcb_at ((=) (BlockedOnNotification ntfnptr)) (hd wnlist) and
-    valid_sched and invs and ct_not_BlockedOnNot\<rbrace>
+    valid_sched and invs and ct_not_BlockedOnNtfn\<rbrace>
    update_waiting_ntfn ntfnptr wnlist (ntfn_bound_tcb ntfn) (ntfn_sc ntfn) badge
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   unfolding update_waiting_ntfn_def
@@ -11189,7 +11191,7 @@ lemma send_signal_BOR_helper:
 
 (* what can we say about ntfn_bound_tcb? can we say it is not equal to idle_thread or cur_thread? *)
 lemma send_signal_valid_sched:
-  "\<lbrace> valid_sched and invs and ct_not_BlockedOnNot\<rbrace>
+  "\<lbrace> valid_sched and invs and ct_not_BlockedOnNtfn\<rbrace>
      send_signal ntfnptr badge
    \<lbrace> \<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding send_signal_def
@@ -13048,7 +13050,6 @@ lemma restart_scheduler_act_sane[wp]:
    \<lbrace>\<lambda>rv. scheduler_act_sane:: det_state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
   unfolding restart_def
-find_theorems set_thread_state st_tcb_at
   apply (wpsimp wp: test_possible_switch_to_scheduler_act_sane'  gts_wp sts_st_tcb_at_pred_False
                    hoare_vcg_if_lift2 hoare_vcg_all_lift hoare_vcg_imp_lift)
   by (clarsimp simp: ct_in_state_def tcb_at_kh_simps pred_map_eq_normalise vs_all_heap_simps)
@@ -13063,7 +13064,7 @@ lemma reply_unlink_tcb_ct_in_state:
   unfolding reply_unlink_tcb_def
   by (wpsimp wp: sts_ctis_neq gts_wp get_simple_ko_wp)
 
-lemma blocked_cancel_ipc_ct_activatable:
+lemma blocked_cancel_ipc_ct_in_state:
   "\<lbrace>ct_in_state P and (\<lambda>s. x \<noteq> cur_thread s \<or> P Inactive)\<rbrace>
    blocked_cancel_ipc a x c
    \<lbrace>\<lambda>rv. ct_in_state P:: det_state \<Rightarrow> _\<rbrace>"
@@ -13074,8 +13075,7 @@ lemma blocked_cancel_ipc_ct_activatable:
                     hoare_vcg_disj_lift hoare_vcg_all_lift)
   by auto
 
-
-lemma reply_remove_tcb_ct_activatable:
+lemma reply_remove_tcb_ct_in_state:
   "\<lbrace>ct_in_state P and (\<lambda>s. x \<noteq> cur_thread s \<or> P Inactive)\<rbrace>
    reply_remove_tcb x y
    \<lbrace>\<lambda>rv. ct_in_state P:: det_state \<Rightarrow> _\<rbrace>"
@@ -13085,7 +13085,7 @@ lemma reply_remove_tcb_ct_activatable:
                     reply_unlink_tcb_ct_in_state get_ep_queue_wp get_blocking_object_wp
                     hoare_vcg_disj_lift hoare_vcg_all_lift get_sk_obj_ref_wp gts_wp)
 
-lemma cancel_signal_ct_activatable:
+lemma cancel_signal_ct_in_state:
   "\<lbrace>ct_in_state P and (\<lambda>s. x \<noteq> cur_thread s \<or> P Inactive)\<rbrace>
    cancel_signal x ntfnptr
    \<lbrace>\<lambda>rv. ct_in_state P:: det_state \<Rightarrow> _\<rbrace>"
@@ -13095,13 +13095,13 @@ lemma cancel_signal_ct_activatable:
                     reply_unlink_tcb_ct_in_state get_ep_queue_wp get_blocking_object_wp
                     hoare_vcg_disj_lift hoare_vcg_all_lift get_sk_obj_ref_wp gts_wp)
 
-lemma cancel_ipc_ct_activatable:
+lemma cancel_ipc_ct_in_state:
   "\<lbrace> ct_in_state P and (\<lambda>s. ipc_queued_thread x s \<longrightarrow> x = cur_thread s \<longrightarrow> P Inactive)\<rbrace>
    cancel_ipc x
    \<lbrace>\<lambda>rv. ct_in_state P:: det_state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
   unfolding cancel_ipc_def
-  apply (wpsimp wp: blocked_cancel_ipc_ct_activatable reply_remove_tcb_ct_activatable cancel_signal_ct_activatable
+  apply (wpsimp wp: blocked_cancel_ipc_ct_in_state reply_remove_tcb_ct_in_state cancel_signal_ct_in_state
                      hoare_vcg_imp_lift' thread_set_ct_in_state gts_wp)
   by (auto simp: tcb_at_kh_simps pred_map_eq_normalise vs_all_heap_simps)
 
@@ -13119,7 +13119,7 @@ lemma suspend_ct_in_state:
          in hoare_strengthen_post[rotated])
   apply (clarsimp simp: split: if_splits)
   apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift set_thread_state_ct_st
-                    set_tcb_obj_ref_ct_in_state get_tcb_obj_ref_wp cancel_ipc_ct_activatable)
+                    set_tcb_obj_ref_ct_in_state get_tcb_obj_ref_wp cancel_ipc_ct_in_state)
   apply (clarsimp simp: split: if_splits)
   done
 
@@ -13276,20 +13276,11 @@ lemma invoke_cnode_cur_thread_on_preemption:
   apply (wpsimp wp: cap_delete_cur_thread_on_preemption)+
   done
 
-lemma cancel_badged_sends_scheduler_act_sane:
-  "\<lbrace>scheduler_act_sane \<rbrace>
-   cancel_badged_sends x31 x32
-   \<lbrace>\<lambda>rv. scheduler_act_sane :: det_state \<Rightarrow> _\<rbrace>"
-  supply if_split [split del]
-  by (wpsimp simp: cancel_badged_sends_def wp: hoare_drop_imp)
+crunches cancel_badged_sends
+  for scheduler_act_sane[wp]: scheduler_act_sane
 
-lemma invoke_cnode_scheduler_act_sane:
-  "\<lbrace>simple_sched_action\<rbrace>
-   invoke_cnode x
-   \<lbrace>\<lambda>rv. scheduler_act_sane :: det_state \<Rightarrow> _\<rbrace>"
-  supply if_split [split del]
-  by (wpsimp wp: cap_revoke_scheduler_act_sane cancel_badged_sends_scheduler_act_sane
-              simp: invoke_cnode_def)
+crunches invoke_cnode
+  for scheduler_act_sane[wp]: "scheduler_act_sane :: det_state \<Rightarrow> _"
 
 lemma invoke_irq_control_cur_thread_on_preemption:
   "\<lbrace>cur_thread_on_preemption and scheduler_act_sane\<rbrace>
@@ -14436,7 +14427,7 @@ locale DetSchedSchedule_AI_handle_hypervisor_fault_det_ext =
 context DetSchedSchedule_AI_handle_hypervisor_fault begin
 
 lemma handle_interrupt_valid_sched:
-  "\<lbrace>valid_sched and invs and ct_not_BlockedOnNot and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
+  "\<lbrace>valid_sched and invs and ct_not_BlockedOnNtfn and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
   handle_interrupt irq \<lbrace>\<lambda>rv. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding handle_interrupt_def
   apply (wpsimp wp: get_cap_wp hoare_drop_imps hoare_vcg_all_lift send_signal_valid_sched
@@ -14676,10 +14667,6 @@ lemma check_budget_restart_valid_sched:
   apply (intro conjI)
    apply clarsimp
   apply (fastforce intro: invs_cur_sc_chargeableE)
-    apply (subgoal_tac "cur_sc_tcb_are_bound s")
-     apply (rule active_implies_valid_refills)
-     apply (clarsimp simp: cur_sc_tcb_are_bound_def vs_all_heap_simps test_sc_refill_max_def refill_max_pos_def)
-    apply (fastforce intro: invs_strengthen_cur_sc_tcb_are_bound)
   done
 
 lemma handle_yield_valid_sched:
@@ -14822,22 +14809,18 @@ lemma sc_and_timer_valid_list[wp]:
 
 context DetSchedSchedule_AI_det_ext begin
 
-lemma hhhh[simp]:
-  "valid_refills sc (s\<lparr>machine_state := b\<rparr>) = valid_refills sc s"
-  by (clarsimp simp: valid_refills_def)
-
-lemma hhhh'[simp]:
+lemma valid_refills_cur_time[simp]:
   "valid_refills sc (s\<lparr>cur_time := b\<rparr>) = valid_refills sc s"
   by (clarsimp simp: valid_refills_def)
 
 crunches update_time_stamp
   for valid_refills_cur_sc[wp]: "\<lambda>s. valid_refills (cur_sc s) s"
 
-lemma hhhjjj[elim!]:
+lemma valid_sched_valid_machine_time[elim!]:
   "valid_sched s \<Longrightarrow> valid_machine_time s"
   by (simp add: valid_sched_def)
 
-lemma fhhhfhfhh[simp]:
+lemma schedulable_sc_tcb_at_cur_thread[simp]:
   "schedulable_sc_tcb_at (cur_thread s) s = ct_schedulable s"
   by (clarsimp simp: schedulable_sc_tcb_at_def)
 
@@ -14933,7 +14916,6 @@ lemma do_reply_transfer_scheduler_act_sane[wp]:
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_eq_commute)
   by (clarsimp simp: tcb_at_kh_simps vs_all_heap_simps)
 
-
 lemma invoke_domain_valid_sched_misc[wp]:
   "invoke_domain thread domain
    \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s)
@@ -14962,7 +14944,7 @@ lemma sched_context_yield_to_scheduler_act_sane[wp]:
 lemma invoke_sched_context_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane\<rbrace>
    invoke_sched_context x7
-   \<lbrace>\<lambda>_. scheduler_act_sane ::det_state \<Rightarrow> _\<rbrace>"
+   \<lbrace>\<lambda>_. scheduler_act_sane :: det_state \<Rightarrow> _\<rbrace>"
   unfolding invoke_sched_context_def
   apply (case_tac x7; simp)
   by (wpsimp simp:  wp: hoare_vcg_if_lift2)+
@@ -14970,22 +14952,16 @@ lemma invoke_sched_context_scheduler_act_sane[wp]:
 lemma invoke_sched_control_configure_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane\<rbrace>
    invoke_sched_control_configure x8
-   \<lbrace>\<lambda>_. scheduler_act_sane ::det_state \<Rightarrow> _\<rbrace>"
+   \<lbrace>\<lambda>_. scheduler_act_sane :: det_state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
   unfolding invoke_sched_control_configure_def
-  apply (wpsimp)
-            apply (wpsimp wp: possible_switch_to_scheduler_act_sane' )
-           apply (wpsimp wp:  hoare_vcg_if_lift2 hoare_vcg_imp_lift' )
-          apply (wpsimp wp:  hoare_vcg_if_lift2 hoare_vcg_imp_lift' )
-         apply (wpsimp wp:  hoare_vcg_if_lift2 hoare_vcg_imp_lift' )
-        apply (wpsimp wp:  hoare_vcg_if_lift2 hoare_vcg_imp_lift' gts_wp)
-       apply (wpsimp wp:  hoare_vcg_if_lift2 hoare_vcg_imp_lift' )
-      apply (rule_tac Q="\<lambda>_ s. scheduler_act_sane s" in hoare_strengthen_post[rotated])
-       apply (clarsimp split: if_split)
-      apply (wpsimp wp:  hoare_vcg_if_lift2 hoare_vcg_imp_lift' gts_wp)
-     apply (rule_tac Q="\<lambda>_ s. scheduler_act_sane s" in hoare_strengthen_post[rotated])
-      apply (clarsimp split: if_split)
-  by (wpsimp wp:  hoare_vcg_if_lift2 gts_wp)+
+  apply wpsimp
+               apply (wpsimp wp: possible_switch_to_scheduler_act_sane' )
+              apply (wpsimp wp:  hoare_vcg_if_lift2 hoare_vcg_imp_lift' )
+             apply (wpsimp wp:  hoare_vcg_if_lift2 hoare_vcg_imp_lift' )
+            apply (rule_tac Q="\<lambda>_ s. scheduler_act_sane s" in hoare_strengthen_post[rotated])
+             apply (clarsimp split: if_split)
+  by (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp)+
 
 crunches invoke_irq_control
   for scheduler_act_sane[wp]: "scheduler_act_sane::det_state \<Rightarrow> _"
@@ -14993,7 +14969,7 @@ crunches invoke_irq_control
 crunches invoke_irq_handler
   for scheduler_act_sane[wp]: "scheduler_act_sane::det_state \<Rightarrow> _"
 
-lemma sdfsdfsdf[elim!]:
+lemma ct_activatable_ct_not_blocked[elim!]:
   "ct_in_state activatable s \<Longrightarrow> ct_not_blocked s"
   apply (erule ct_in_state_weaken)
   apply (fastforce dest: ipc_queued_thread_state_not_runnable)
@@ -15007,7 +14983,7 @@ lemma perform_invocation_scheduler_act_sane[wp]:
   by (wpsimp wp: hoare_drop_imp invoke_cnode_scheduler_act_sane send_signal_scheduler_act_sane
                  invoke_tcb_scheduler_act_sane)+
 
-lemma fjfjfjfjk:
+lemma postpone_ct_not_in_release_q:
   "\<lbrace>ct_not_in_release_q and (\<lambda>s. \<forall>t. sc_tcb_sc_at ((=) (Some t)) scp s \<longrightarrow> t\<noteq>cur_thread s)\<rbrace>
    postpone scp
    \<lbrace>\<lambda>_. ct_not_in_release_q\<rbrace>"
@@ -15015,13 +14991,13 @@ lemma fjfjfjfjk:
   apply (wpsimp wp: tcb_release_enqueue_ct_not_in_release_q get_sc_obj_ref_wp)
   by (fastforce simp: sc_at_pred_n_def obj_at_def)
 
-lemma aadad34dddad:
+lemma sched_context_resume_ct_not_in_release_q:
   "\<lbrace>ct_not_in_release_q
     and (\<lambda>s. \<forall>x. d = (Some x) \<longrightarrow> (\<forall>t. sc_tcb_sc_at ((=) (Some t)) x s \<longrightarrow> t\<noteq>cur_thread s))\<rbrace>
    sched_context_resume d
    \<lbrace>\<lambda>_. ct_not_in_release_q :: det_state \<Rightarrow> _\<rbrace>"
   unfolding sched_context_resume_def
-  apply (wpsimp wp: fjfjfjfjk get_tcb_queue_wp refill_sufficient_wp refill_ready_wp
+  apply (wpsimp wp: postpone_ct_not_in_release_q get_tcb_queue_wp refill_sufficient_wp refill_ready_wp
                     is_schedulable_wp
               simp: thread_get_def)
   by (fastforce simp: obj_at_def)
@@ -15030,7 +15006,7 @@ crunches refill_unblock_check
   for sc_tcb_sc_at[wp]: "\<lambda>s. Q (sc_tcb_sc_at P t s)"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma fhjsfsjkfh:
+lemma sched_context_donate_bound_not_cur_thread:
   "\<lbrace>\<lambda>s. x2 \<noteq> cur_thread s\<rbrace>
    sched_context_donate xa x2
    \<lbrace>\<lambda>rv s. \<forall>x. sc_tcb_sc_at ((=) (Some x)) xa s \<longrightarrow> x \<noteq> cur_thread s\<rbrace>"
@@ -15042,27 +15018,27 @@ lemma fhjsfsjkfh:
   apply (clarsimp simp: obj_at_def sc_at_pred_n_def)
   by wpsimp
 
-lemma aadaddddsfad[wp]:
+lemma maybe_donate_sc_ct_not_in_release_q[wp]:
   "\<lbrace>ct_not_in_release_q and (\<lambda>s. x2 \<noteq> cur_thread s):: det_state \<Rightarrow> _\<rbrace>
    maybe_donate_sc x2 x31
    \<lbrace>\<lambda>_. ct_not_in_release_q :: det_state \<Rightarrow> _\<rbrace>"
   unfolding maybe_donate_sc_def
   apply (wpsimp wp: )
-        apply (wpsimp wp: aadad34dddad hoare_vcg_all_lift hoare_vcg_imp_lift')
-       apply (wpsimp wp: aadad34dddad hoare_vcg_all_lift hoare_vcg_imp_lift')
+        apply (wpsimp wp: sched_context_resume_ct_not_in_release_q hoare_vcg_all_lift hoare_vcg_imp_lift')
+       apply (wpsimp wp: sched_context_resume_ct_not_in_release_q hoare_vcg_all_lift hoare_vcg_imp_lift')
       apply simp
-      apply (wpsimp wp: fhjsfsjkfh)
+      apply (wpsimp wp: sched_context_donate_bound_not_cur_thread)
      apply (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp)+
   done
 
-lemma aadadddd2424sfad[wp]:
+lemma update_waiting_ntfn_ct_not_in_release_q[wp]:
   "\<lbrace>ct_not_in_release_q and (\<lambda>s. a \<noteq> [] \<longrightarrow> hd a \<noteq> cur_thread s):: det_state \<Rightarrow> _\<rbrace>
    update_waiting_ntfn x31 a s d x32
    \<lbrace>\<lambda>_. ct_not_in_release_q :: det_state \<Rightarrow> _\<rbrace>"
   unfolding update_waiting_ntfn_def
   by (wpsimp wp: )
 
-lemma aadaddddad[wp]:
+lemma send_signal_ct_not_in_release_q[wp]:
   "\<lbrace>ct_not_in_release_q and ct_not_blocked and invs\<rbrace>
    send_signal x31 x32
    \<lbrace>\<lambda>_. ct_not_in_release_q :: det_state \<Rightarrow> _\<rbrace>"
@@ -15077,13 +15053,13 @@ lemma aadaddddad[wp]:
   apply (fastforce dest: hd_in_set simp: state_refs_of_def get_refs_def split: option.splits)
   done
 
-lemma aadaddd1414dad[wp]:
+lemma do_reply_transfer_ct_not_in_release_q[wp]:
   "\<lbrace>ct_not_in_release_q and ct_not_blocked and invs\<rbrace>
    do_reply_transfer sender x4
    \<lbrace>\<lambda>_. ct_not_in_release_q :: det_state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
   unfolding do_reply_transfer_def
-  apply (wpsimp wp: fjfjfjfjk)
+  apply (wpsimp wp: postpone_ct_not_in_release_q)
               apply (rule_tac Q="\<lambda>_ s. ct_not_in_release_q s \<and>
                               (\<forall>t. sc_tcb_sc_at ((=) (Some t)) sc_ptr s \<longrightarrow> t \<noteq> cur_thread s)" in hoare_strengthen_post[rotated])
                apply (clarsimp )
@@ -15139,11 +15115,6 @@ lemma handle_invocation_scheduler_act_sane[wp]:
   apply (clarsimp simp: ct_in_state_def intro!: fault_tcbs_valid_states_active)
   done
 
-lemma check_budget_ct_not_queued[wp]:
-  "check_budget \<lbrace>ct_not_queued :: det_state \<Rightarrow> _\<rbrace>"
-  unfolding check_budget_def
-  sorry (* WARNING: This is not true, we need it to cover for a bug right now. *)
-
 lemma reply_push_ct_in_state_const:
   "\<forall>y. P (BlockedOnReply y)
   \<Longrightarrow> reply_push thread x21 y can_donate
@@ -15169,23 +15140,23 @@ lemma send_ipc_ct_in_state_const:
                  reply_unlink_tcb_ct_in_state_const reply_push_ct_in_state_const
                  hoare_vcg_all_lift)
 
-lemma handle_timeout_ct_not_BlockedOnNot[wp]:
-  "handle_timeout ct tt \<lbrace>ct_not_BlockedOnNot :: det_state \<Rightarrow> _\<rbrace>"
+lemma handle_timeout_ct_not_BlockedOnNtfn[wp]:
+  "handle_timeout ct tt \<lbrace>ct_not_BlockedOnNtfn :: det_state \<Rightarrow> _\<rbrace>"
   unfolding handle_timeout_def
   by (wpsimp wp: send_ipc_ct_in_state_const thread_set_ct_in_state simp: send_fault_ipc_def)
 
-lemma end_timeslice_ct_not_BlockedOnNot[wp]:
-  "end_timeslice t \<lbrace>ct_not_BlockedOnNot :: det_state \<Rightarrow> _\<rbrace>"
+lemma end_timeslice_ct_not_BlockedOnNtfn[wp]:
+  "end_timeslice t \<lbrace>ct_not_BlockedOnNtfn :: det_state \<Rightarrow> _\<rbrace>"
   unfolding end_timeslice_def
   by (wpsimp wp: hoare_drop_imp)
 
-lemma charge_budget_ct_not_BlockedOnNot[wp]:
-  "charge_budget consumeda t \<lbrace>ct_not_BlockedOnNot :: det_state \<Rightarrow> _\<rbrace>"
+lemma charge_budget_ct_not_BlockedOnNtfn[wp]:
+  "charge_budget consumeda t \<lbrace>ct_not_BlockedOnNtfn :: det_state \<Rightarrow> _\<rbrace>"
   unfolding charge_budget_def
   by (wpsimp wp: hoare_drop_imp)
 
-lemma check_budget_ct_not_BlockedOnNot[wp]:
-  "check_budget \<lbrace>ct_not_BlockedOnNot :: det_state \<Rightarrow> _\<rbrace>"
+lemma check_budget_ct_not_BlockedOnNtfn[wp]:
+  "check_budget \<lbrace>ct_not_BlockedOnNtfn :: det_state \<Rightarrow> _\<rbrace>"
   unfolding check_budget_def
   by (wpsimp wp: hoare_drop_imp)
 
@@ -15193,23 +15164,27 @@ lemma valid_sched_ct_not_queued:
   "\<lbrakk>valid_sched s; schact_is_rct s\<rbrakk> \<Longrightarrow> ct_not_queued s"
   by (fastforce simp: valid_sched_def ct_not_in_q_def schact_is_rct_def)
 
-lemma sdfshfjk:
+lemma ct_not_blocked_cur_sc_blocked_is_offset_trivial:
   "cur_sc_tcb_only_sym_bound s \<and> ct_not_blocked s \<Longrightarrow> cur_sc_blocked_is_offset t s"
   apply (clarsimp simp: cur_sc_tcb_only_sym_bound_def tcb_at_kh_simps ct_in_state_def)
   apply (drule_tac x=ta in spec)+
   by (clarsimp simp: pred_map_simps)
 
-lemma fhfhfhfh:
+lemma update_time_stamp_cur_sc_blocked_is_offset_helper:
   "\<lbrace>schact_is_rct and invs and ct_active\<rbrace>
    update_time_stamp
    \<lbrace>\<lambda>rv s. cur_sc_blocked_is_offset (consumed_time s) s\<rbrace>"
   apply (wpsimp wp: handle_invocation_valid_sched check_budget_restart_valid_sched |
-         strengthen sdfshfjk)+
+         strengthen ct_not_blocked_cur_sc_blocked_is_offset_trivial)+
   apply (fastforce elim!: valid_sched_ct_not_queued
                    intro: invs_strengthen_cur_sc_tcb_are_bound
                           invs_strengthen_cur_sc_tcb_only_sym_bound)
   done
 
+(* These need to be resolved before we can say that we have solved handle_event_valid_sched.
+   I believe that the first two statements are provable, but perhaps not the third. In either
+   case, we need to prove these lemmas, or delete them and solve handle_event_valid_sched
+   another way. *)
 lemma handle_invocation_ct_conditions_temp[wp]:
   "handle_invocation False False True True reply_cptr
    \<lbrace>ct_not_in_release_q :: det_state \<Rightarrow> _\<rbrace>"
@@ -15236,7 +15211,7 @@ lemma handle_event_valid_sched:
    handle_event e
    \<lbrace>\<lambda>rv. valid_sched:: det_state \<Rightarrow> _\<rbrace>"
   supply check_budget_restart_true [wp]
-     and fhfhfhfh [wp]
+     and update_time_stamp_cur_sc_blocked_is_offset_helper [wp]
   apply (cases e, simp_all)
   (* SyscallEvent *)
        subgoal for syscall
@@ -15278,10 +15253,16 @@ lemma handle_event_valid_sched:
      apply (fastforce elim!: valid_sched_ct_not_queued ct_in_state_weaken simp: ct_in_state_def valid_fault_def)
     (* Interrupt *)
     subgoal
-      apply (wpsimp wp: handle_interrupt_valid_sched check_budget_restart_valid_sched)
-         apply (wpsimp wp: check_budget_valid_sched hoare_vcg_all_lift hoare_drop_imp)
-         apply wpsimp+
-       apply (clarsimp simp: ct_in_state_def)
+      apply wpsimp
+         apply (wpsimp wp: handle_interrupt_valid_sched check_budget_restart_valid_sched)
+        apply wpsimp
+         apply (wpsimp wp: check_budget_valid_sched hoare_vcg_all_lift)
+        apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift')
+       apply(rule_tac Q="\<lambda>_. valid_sched and invs and ct_not_in_release_q and
+                         ct_not_BlockedOnNtfn and cur_sc_chargeable and ct_active and
+                         schact_is_rct and ct_not_queued and (\<lambda>s. valid_refills (cur_sc s) s)" in hoare_strengthen_post[rotated])
+        apply (fastforce)
+       apply (wpsimp, clarsimp simp: ct_in_state_def)
       apply (fastforce elim!: valid_sched_ct_not_queued elim: invs_cur_sc_chargeableE ct_in_state_weaken)
     done
    (* VMFaultEvent *)

@@ -2936,19 +2936,19 @@ abbreviation ct_not_blocked where
 (* FIXME: move or tidy up *)
 \<comment> \<open>Schedulability of threads in notification and endpoint queues\<close>
 primrec
-  BlockedOnNot :: "thread_state \<Rightarrow> bool"
+  BlockedOnNtfn :: "thread_state \<Rightarrow> bool"
 where
-  "BlockedOnNot (Running)               = False"
-| "BlockedOnNot (Inactive)              = False"
-| "BlockedOnNot (Restart)               = False"
-| "BlockedOnNot (BlockedOnReceive _ _)  = False"
-| "BlockedOnNot (BlockedOnSend _ _)     = False"
-| "BlockedOnNot (BlockedOnNotification _) = True"
-| "BlockedOnNot (IdleThreadState)       = False"
-| "BlockedOnNot (BlockedOnReply _)        = False"
+  "BlockedOnNtfn (Running)               = False"
+| "BlockedOnNtfn (Inactive)              = False"
+| "BlockedOnNtfn (Restart)               = False"
+| "BlockedOnNtfn (BlockedOnReceive _ _)  = False"
+| "BlockedOnNtfn (BlockedOnSend _ _)     = False"
+| "BlockedOnNtfn (BlockedOnNotification _) = True"
+| "BlockedOnNtfn (IdleThreadState)       = False"
+| "BlockedOnNtfn (BlockedOnReply _)        = False"
 
-abbreviation ct_not_BlockedOnNot where
-  "ct_not_BlockedOnNot s \<equiv> ct_in_state (\<lambda>x. \<not>BlockedOnNot x) s"
+abbreviation ct_not_BlockedOnNtfn where
+  "ct_not_BlockedOnNtfn s \<equiv> ct_in_state (\<lambda>x. \<not>BlockedOnNtfn x) s"
 
 lemma ct_in_state_kh_simp:
   "ct_in_state P s = ct_in_state' P s"
