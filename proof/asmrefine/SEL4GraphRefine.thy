@@ -38,7 +38,11 @@ val csenv = let
 consts
   encode_machine_state :: "machine_state \<Rightarrow> unit \<times> nat"
 
-local_setup \<open>add_field_h_val_rewrites #> add_field_to_bytes_rewrites\<close>
+local_setup \<open>
+  add_field_h_val_rewrites
+  #> add_field_to_bytes_rewrites
+  #> add_field_offset_rewrites
+\<close>
 
 context graph_refine_locale begin
 

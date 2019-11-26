@@ -264,12 +264,27 @@ fun add_field_h_val_rewrites lthy =
 \<close>
 
 ML \<open>
+fun get_field_lookup_Somes lthy =
+    Global_Theory.facts_of (Proof_Context.theory_of lthy)
+    |> Facts.dest_static false []
+    |> filter (fn (s, _) => String.isSuffix "_fl_Some" s)
+    |> maps snd
+    |> map (Thm.transfer (Proof_Context.theory_of lthy))
+
+local
+fun and_THEN thm thm' = thm' RS thm
+in
+fun get_field_offset_rewrites lthy =
+    get_field_lookup_Somes lthy
+    |> map (and_THEN @{thm meta_eq_to_obj_eq} #> and_THEN @{thm field_lookup_offset_eq})
+end
+
+fun add_field_offset_rewrites lthy =
+    Local_Theory.note ((@{binding field_offset_rewrites}, []),
+      get_field_offset_rewrites lthy) lthy |> snd
+
 fun get_field_to_bytes_rewrites lthy = let
-    val fl_thms = Global_Theory.facts_of (Proof_Context.theory_of lthy)
-        |> Facts.dest_static false []
-        |> filter (fn (s, _) => String.isSuffix "_fl_Some" s)
-        |> maps snd
-        |> map (Thm.transfer (Proof_Context.theory_of lthy))
+    val fl_thms = get_field_lookup_Somes lthy
     val init1 = @{thm field_lookup_to_bytes_split_init}
     val step = @{thm field_lookup_to_bytes_split_step}
     val init = (fl_thms RL [init1 RS step])

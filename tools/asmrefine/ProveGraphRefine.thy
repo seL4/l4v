@@ -498,6 +498,11 @@ fun get_field_h_val_rewrites ctxt =
         handle ERROR _ => raise THM
             ("run add_field_h_val_rewrites on ctxt", 1, [])
 
+fun get_field_offset_rewrites ctxt =
+    Proof_Context.get_thms ctxt "field_offset_rewrites"
+        handle ERROR _ => raise THM
+            ("run add_field_offset_rewrites on ctxt", 1, [])
+
 fun get_globals_rewrites ctxt = let
     val gsr = Proof_Context.get_thms ctxt "globals_swap_rewrites"
     val cgr = Proof_Context.get_thms ctxt "const_globals_rewrites_with_swap"
