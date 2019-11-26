@@ -158,6 +158,19 @@ lemma perform_asid_control_invocation_pred_tcb_at_live:
   unfolding pred_tcb_at_def using live
   by (auto intro!: perform_asid_control_invocation_obj_at_live simp: cspace_agnostic_pred_def tcb_to_itcb_def)
 
+lemma perform_asid_control_invocation_sc_at_pred_n_live:
+  assumes live: "\<forall>sc. P (proj sc) \<longrightarrow> live_sc sc"
+  shows
+  "\<lbrace>\<lambda>s. Q (sc_at_pred_n N proj P p s)
+        \<and> invs s
+        \<and> ct_active s
+        \<and> valid_aci aci s
+        \<and> scheduler_action s = resume_cur_thread\<rbrace>
+   perform_asid_control_invocation aci
+   \<lbrace>\<lambda>rv s. Q (sc_at_pred_n N proj P p s)\<rbrace>"
+  unfolding sc_at_pred_n_def using live
+  by (auto intro!: perform_asid_control_invocation_obj_at_live simp: cspace_agnostic_pred_def live_def)
+
 lemma perform_asid_control_invocation_valid_idle:
   "\<lbrace>invs and ct_active
          and valid_aci aci
@@ -185,9 +198,10 @@ lemma perform_asid_control_invocation_valid_sched:
    apply (rule_tac I="invs and ct_active and
                       (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_aci aci"
           in valid_sched_tcb_state_preservation_gen)
-                apply simp
-               apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at)
-              apply (wpsimp wp: perform_asid_control_invocation_pred_tcb_at_live simp: ipc_queued_thread_state_live)
+                 apply simp
+                apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at)
+               apply (wpsimp wp: perform_asid_control_invocation_pred_tcb_at_live simp: ipc_queued_thread_state_live)
+              apply (wpsimp wp: perform_asid_control_invocation_sc_at_pred_n_live simp: live_sc_def)
              apply (wpsimp wp: perform_asid_control_etcb_at)
             apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at)
            apply (wpsimp wp: perform_asid_control_invocation_sc_at_pred_n)

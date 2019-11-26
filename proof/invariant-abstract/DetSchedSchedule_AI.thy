@@ -71,6 +71,12 @@ lemma is_round_robin_wp:
     is_round_robin scp
    \<lbrace>Q\<rbrace>" by (wpsimp simp: is_round_robin_def)
 
+(* FIXME RT: replace is_round_robin_wp with this version. *)
+lemma is_round_robin_wp':
+  "\<lbrace>\<lambda>s. \<forall>scrc. pred_map_eq scrc (sc_refill_cfgs_of s) scp \<longrightarrow> Q (scrc_period scrc = scrc_budget scrc) s\<rbrace>
+    is_round_robin scp
+   \<lbrace>Q\<rbrace>" by (wpsimp wp: is_round_robin_wp simp: obj_at_kh_kheap_simps vs_all_heap_simps)
+
 (* FIXME: move *)
 lemma update_sk_obj_ref_lift:
   "(\<And>sc. \<lbrace>P\<rbrace> set_simple_ko C ref (f (K new) sc) \<lbrace>\<lambda>rv. P\<rbrace>) \<Longrightarrow>
@@ -181,7 +187,6 @@ lemma tcb_sched_append_in_ready_q[wp]:
   by (wpsimp wp: tcb_sched_action_wp)
      (auto simp: vs_all_heap_simps in_queues_2_def tcb_sched_append_def)
 
-(* FIXME: redundant? remove? *)
 (* this is not safe! *)
 (* if in_ready_q thread then this will break valid_blocked  *)
 lemma tcb_sched_dequeue_valid_ready_qs:
@@ -230,21 +235,18 @@ lemma tcb_sched_action_ct_not_in_q_simps[valid_sched_wpsimps]:
     "ct_not_in_q_2 (tcb_sched_ready_q_update domain prio (tcb_sched_dequeue thread) queues) sa ct"
   using assms by (auto simp: ct_not_in_q_2_def not_cur_thread_2_def valid_sched_wpsimps not_queued_2_def)
 
-(* FIXME: redundant? remove? *)
 lemma tcb_sched_enqueue_ct_not_in_q[wp]:
   "\<lbrace>ct_not_in_q and not_cur_thread thread\<rbrace>
      tcb_sched_action tcb_sched_enqueue thread
      \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
   by (wpsimp wp: valid_sched_wp simp: valid_sched_wpsimps)
 
-(* FIXME: redundant? remove? *)
 lemma tcb_sched_append_ct_not_in_q[wp]:
   "\<lbrace>ct_not_in_q and not_cur_thread thread\<rbrace>
      tcb_sched_action tcb_sched_append thread
      \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
   by (wpsimp wp: valid_sched_wp simp: valid_sched_wpsimps)
 
-(* FIXME: redundant? remove? *)
 lemma tcb_sched_dequeue_ct_not_in_q[wp]:
   "\<lbrace>ct_not_in_q\<rbrace> tcb_sched_action tcb_sched_dequeue thread
    \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
@@ -441,7 +443,6 @@ lemma tcb_release_remove_weak_valid_sched_action[wp]:
    \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
   by (wpsimp wp: valid_sched_wp simp: valid_sched_wpsimps)
 
-(* FIXME: redundant? remove? *)
 lemma tcb_release_remove_valid_sched_action[wp]:
   "\<lbrace>valid_sched_action\<rbrace>
      tcb_release_remove thread
@@ -498,7 +499,7 @@ lemma set_scheduler_action_wp[valid_sched_wp]:
   by (wpsimp simp: set_scheduler_action_def)
 
 lemma set_scheduler_action_valid_sched_misc[wp]:
-  "set_scheduler_action a \<lbrace>\<lambda>s. P (consumed_time s) (cur_time s) (cur_domain s) (cur_thread s) (cur_sc s)
+  "set_scheduler_action a \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s)
                                  (idle_thread s) (ready_queues s) (release_queue s) (last_machine_time_of s)
                                  (kheap s)\<rbrace>"
   by (wpsimp wp: set_scheduler_action_wp)
@@ -510,24 +511,20 @@ lemma simple_sched_action_def2[valid_sched_wpsimps]:
 lemmas [valid_sched_wpsimps] =
   ct_not_in_q_def is_activatable_def valid_sched_action_def ct_in_cur_domain_def
 
-(* FIXME: redundant? remove? *)
 lemma set_scheduler_action_rct_ct_not_in_q:
   "\<lbrace>ct_not_queued\<rbrace> set_scheduler_action resume_cur_thread \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
   by (wpsimp wp: valid_sched_wp simp: valid_sched_wpsimps)
 
-(* FIXME: redundant? remove? *)
 lemma set_scheduler_action_rct_is_activatable:
   "\<lbrace>st_tcb_at activatable t\<rbrace>
      set_scheduler_action resume_cur_thread
    \<lbrace>\<lambda>_. is_activatable t\<rbrace>"
   by (wpsimp wp: valid_sched_wp simp: valid_sched_wpsimps)
 
-(* FIXME: redundant? remove? *)
 lemma set_scheduler_action_rct_weak_valid_sched_action[wp]:
   "\<lbrace>\<top>\<rbrace> set_scheduler_action resume_cur_thread \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
   by (wpsimp wp: valid_sched_wp)
 
-(* FIXME: redundant? remove? *)
 lemma set_scheduler_action_rct_valid_sched_action:
   "\<lbrace>\<lambda>s. st_tcb_at activatable (cur_thread s) s\<rbrace>
      set_scheduler_action resume_cur_thread
@@ -613,7 +610,6 @@ lemma set_scheduler_action_cnt_weak_valid_sched:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace> set_scheduler_action choose_new_thread \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   by (wpsimp wp: valid_sched_wp) (auto elim!: valid_blockedE' simp: valid_sched_wpsimps)
 
-(* FIXME: redundant? remove? *)
 lemma set_scheduler_action_simple_sched_action:
   "\<lbrace>K $ simple_sched_action_2 action\<rbrace>
     set_scheduler_action action
@@ -632,7 +628,7 @@ lemma set_sched_action_st_not_cur_thread[wp]:
 
 \<comment> \<open>schedule_tcb\<close>
 
-(* FIXME: simplify the spec for schedule_tcb? *)
+(* FIXME RT: simplify the spec for schedule_tcb? *)
 lemma reschedule_required_resume_cur_thread_choose_new_thread_rewrite:
   "monadic_rewrite False True (\<lambda>s. scheduler_action s = resume_cur_thread)
                    reschedule_required (set_scheduler_action choose_new_thread)"
@@ -640,7 +636,7 @@ lemma reschedule_required_resume_cur_thread_choose_new_thread_rewrite:
   apply (rule monadic_rewrite_trans[where Q=\<top>, OF monadic_rewrite_gets_known[where rv=resume_cur_thread], simplified])
   by (simp add: monadic_rewrite_refl)
 
-(* FIXME: simplify the spec for schedule_tcb? *)
+(* FIXME RT: simplify the spec for schedule_tcb? *)
 lemma schedule_tcb_choose_new_thread_rewrite:
   "monadic_rewrite False True \<top> (schedule_tcb t)
                    (do cur \<leftarrow> gets cur_thread;
@@ -664,7 +660,7 @@ lemma schedule_tcb_choose_new_thread_rewrite:
 
 lemmas schedule_tcb_def2 = monadic_rewrite_to_eq[OF schedule_tcb_choose_new_thread_rewrite]
 
-(* FIXME: move near is_schedulable_wp *)
+(* FIXME RT: move near is_schedulable_wp *)
 lemma is_schedulable_wp':
   "\<lbrace>\<lambda>s. P (pred_map runnable (tcb_sts_of s) t \<and> active_sc_tcb_at t s \<and> \<not> in_q) s\<rbrace>
    is_schedulable t in_q
@@ -691,7 +687,7 @@ lemma schedule_tcb_valid_sched_pred[valid_sched_wp]:
               \<and> (pred_map runnable (tcb_sts_of s) t \<and> active_sc_tcb_at t s \<longrightarrow> in_release_q t s)
            then choose_new_thread else (scheduler_action s))
           (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)
-          (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>
+          (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    schedule_tcb t
    \<lbrace>\<lambda>_. valid_sched_pred P\<rbrace>"
   by (wpsimp wp: schedule_tcb_wp split: if_splits)
@@ -738,7 +734,6 @@ lemma reschedule_required_valid_sched_misc[wp]:
                               (idle_thread s) (release_queue s) (last_machine_time_of s) (kheap s)\<rbrace>"
   by (wpsimp wp: reschedule_required_wp)
 
-(* FIXME: remove? redundant? *)
 lemma reschedule_required_valid_ready_qs[wp]:
   "reschedule_required \<lbrace>valid_ready_qs\<rbrace>"
   by (wpsimp wp: valid_sched_wp simp: valid_sched_wpsimps released_sc_tcb_at_def)
@@ -784,6 +779,7 @@ lemma reschedule_required_valid_sched_except_blocked:
                     and weak_valid_sched_action
                     and valid_idle_etcb
                     and released_ipc_queues
+                    and active_reply_scs
                     and valid_machine_time
                     and active_sc_valid_refills\<rbrace>
    reschedule_required
@@ -797,6 +793,7 @@ lemma reschedule_required_valid_sched':
                     and valid_blocked
                     and valid_idle_etcb
                     and released_ipc_queues
+                    and active_reply_scs
                     and valid_machine_time
                     and active_sc_valid_refills\<rbrace>
    reschedule_required
@@ -905,16 +902,16 @@ lemma set_thread_state_only_valid_sched_except_tcb_st[wp]:
                                      (cur_thread s) (idle_thread s)
                                      (ready_queues s) (release_queue s) (scheduler_action s)
                                      (last_machine_time_of s) (etcbs_of s)
-                                     (tcb_scps_of s) (scs_of s)\<rbrace>"
+                                     (tcb_scps_of s) (tcb_faults_of s) (scs_of s)\<rbrace>"
   by (wpsimp simp: set_thread_state_only_def vs_all_heap_simps obj_at_kh_kheap_simps sc_heap.all_simps
                wp: gets_the_wp' set_object_wp)
 
-lemma set_thread_state_valid_sched_except_tcb_st_and_sched_act[wp]:
+lemma set_thread_state_valid_sched_misc[wp]:
   "set_thread_state t st \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
                                 (cur_thread s) (idle_thread s)
                                 (ready_queues s) (release_queue s)
                                 (last_machine_time_of s) (etcbs_of s)
-                                (tcb_scps_of s) (scs_of s)\<rbrace>"
+                                (tcb_scps_of s) (tcb_faults_of s) (scs_of s)\<rbrace>"
   by (wpsimp simp: set_thread_state_def2)
 
 lemma set_thread_state_act_wp[valid_sched_wp]:
@@ -937,10 +934,10 @@ lemma set_thread_state_only_wp:
 lemma set_thread_state_only_tcb_st_heap:
   "\<lbrace>\<lambda>s. pred_map \<top> (tcbs_of s) t \<longrightarrow>
         P (tcb_sts_of s(t \<mapsto> st))
-          (tcb_scps_of s) (scs_of s)
+          (tcb_scps_of s) (tcb_faults_of s) (scs_of s)
           (cur_thread s) (scheduler_action s) (release_queue s)\<rbrace>
    set_thread_state_only t st
-   \<lbrace>\<lambda>rv s. P (tcb_sts_of s) (tcb_scps_of s) (scs_of s)
+   \<lbrace>\<lambda>rv s. P (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (scs_of s)
              (cur_thread s) (scheduler_action s) (release_queue s)\<rbrace>"
   by (wpsimp wp: set_thread_state_only_wp simp: fun_upd_def vs_all_heap_simps sc_heap.all_simps)
 
@@ -951,16 +948,17 @@ lemma set_thread_state_scheduler_action_tcb_st_heap:
               \<and> scheduler_action s = resume_cur_thread
               \<and> (runnable st \<longrightarrow> active_sc_tcb_at t s \<longrightarrow> in_release_q t s)
            then choose_new_thread else scheduler_action s)
-          (cur_thread s) (release_queue s) (tcb_scps_of s) (scs_of s)\<rbrace>
+          (cur_thread s) (release_queue s) (tcb_scps_of s) (tcb_faults_of s) (scs_of s)\<rbrace>
    set_thread_state t st
    \<lbrace>\<lambda>rv s. P (tcb_sts_of s) (scheduler_action s) (cur_thread s) (release_queue s)
-             (tcb_scps_of s) (scs_of s)\<rbrace>"
+             (tcb_scps_of s) (tcb_faults_of s) (scs_of s)\<rbrace>"
   apply (wpsimp simp: set_thread_state_def2 wp: set_thread_state_act_wp set_thread_state_only_tcb_st_heap)
   by (auto simp: fun_upd_def obj_at_kh_kheap_simps vs_all_heap_simps split: if_splits)
 
 lemma set_thread_state_valid_sched_pred_strong':
   "\<lbrace>\<lambda>s. pred_map \<top> (tcbs_of s) t \<longrightarrow>
-        P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+        P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+          (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
           (ready_queues s) (release_queue s)
           (if t = cur_thread s
               \<and> scheduler_action s = resume_cur_thread
@@ -968,7 +966,7 @@ lemma set_thread_state_valid_sched_pred_strong':
            then choose_new_thread else scheduler_action s)
           (last_machine_time_of s) (etcbs_of s)
           (tcb_sts_of s(t \<mapsto> st))
-          (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>
+          (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    set_thread_state t st
    \<lbrace>\<lambda>rv. valid_sched_pred_strong P\<rbrace>"
   apply (rule hoare_lift_Pf2[where f=consumed_time, rotated], wpsimp)
@@ -985,17 +983,7 @@ lemmas set_thread_state_valid_sched_pred_strong[valid_sched_wp]
   = set_thread_state_valid_sched_pred_strong'[THEN hoare_drop_assertion]
 
 lemmas set_thread_state_valid_sched_pred
-  = set_thread_state_valid_sched_pred_strong[where P="\<lambda>_ _. P" for P]
-
-(* FIXME: remove; use vs_all_heap_simps instead *)
-lemma bound_sc_obj_tcb_at_kh_tcb_updateE:
-  assumes tcb: "bound_sc_obj_tcb_at_kh P kh t"
-  assumes ref: "kh ref = Some (TCB tcb)"
-  assumes upd: "\<And>p. kh' p = (if p = ref then Some (TCB tcb') else kh p)"
-  assumes scf:"tcb_sched_context tcb' = tcb_sched_context tcb"
-  shows "bound_sc_obj_tcb_at_kh P kh' t"
-  using tcb
-  by (auto simp: pred_map2'_pred_maps vs_all_heap_simps upd ref scf cong: conj_cong)
+  = set_thread_state_valid_sched_pred_strong[where P="\<lambda>_ _ _. P :: valid_sched_t" for P]
 
 lemma set_thread_state_valid_ready_qs:
   "\<lbrace>valid_ready_qs and (\<lambda>s. \<not> runnable ts \<longrightarrow> not_queued thread s)\<rbrace>
@@ -1077,8 +1065,6 @@ lemma sts_obj_at_impossible'':
   apply (drule_tac st="tcb_state tcb" in assms, simp)
   done
 
-(* FIXME: redundant? remove? It's a bit slow without the intermediate lemmas. *)
-(* While it may be redundant, it is convenient to use in some places. *)
 lemma set_thread_state_runnable_valid_sched_except_blocked:
   "\<lbrace>valid_sched_except_blocked and (\<lambda>s. runnable ts)\<rbrace>
    set_thread_state ref ts
@@ -1110,7 +1096,7 @@ lemma set_thread_state_valid_blocked:
   apply (intro conjI impI; clarsimp simp: vs_all_heap_simps valid_blocked_defs split: if_splits)
   by auto
 
-(* FIXME: remove, use set_thread_state_valid_blocked instead. *)
+(* FIXME RT: remove, use set_thread_state_valid_blocked instead. *)
 lemma set_thread_state_valid_blocked_const:
   "\<lbrace>valid_blocked_except_set S and
       (\<lambda>s. t \<in> S \<or> in_ready_q t s \<or> in_release_q t s \<or> t = cur_thread s
@@ -1120,7 +1106,7 @@ lemma set_thread_state_valid_blocked_const:
    \<lbrace>\<lambda>_. valid_blocked_except_set S\<rbrace>"
   by (wpsimp wp: set_thread_state_valid_blocked)
 
-(* FIXME: remove, use set_thread_state_valid_blocked instead. *)
+(* FIXME RT: remove, use set_thread_state_valid_blocked instead. *)
 lemma set_thread_state_not_runnable_valid_blocked_remove:
   "\<lbrace>valid_blocked_except_set (insert ref S) and K (\<not> runnable ts)\<rbrace>
       set_thread_state ref ts
@@ -1182,43 +1168,49 @@ lemma set_thread_state_not_runnable_valid_release_q:
   apply (simp add: valid_release_q_def, elim conjE ballEI)
   by (clarsimp simp add: vs_all_heap_simps)
 
-lemma set_thread_state_Inactive_not_queued_valid_sched_except_blocked:
-  "\<lbrace>\<lambda>s. valid_sched_except_blocked s \<and> scheduler_act_not ref s \<and> not_queued ref s \<and> not_in_release_q ref s\<rbrace>
-     set_thread_state ref Inactive
+lemma set_thread_state_valid_sched_except_blocked:
+  "\<lbrace>\<lambda>s. valid_sched_except_blocked s
+         \<and> (in_ready_q t s \<or> in_release_q t s \<or> scheduler_action s = switch_thread t \<longrightarrow> runnable st)
+         \<and> (ipc_queued_thread_state st \<longrightarrow> released_if_bound_sc_tcb_at t s)\<rbrace>
+   set_thread_state t st
    \<lbrace>\<lambda>_. valid_sched_except_blocked\<rbrace>"
-  apply (wpsimp wp: set_thread_state_valid_sched_action
-                    set_thread_state_ct_not_in_q
-                    set_thread_state_cur_ct_in_cur_domain
-                    set_thread_state_valid_sched_pred[where P=valid_sched_valid_ready_qs]
-                    set_thread_state_valid_sched_pred[where P=valid_sched_ipc_queues]
-                    set_thread_state_valid_sched_pred[where P="valid_sched_valid_release_q {}"]
-                    set_thread_state_valid_sched_pred[where P="valid_sched_valid_blocked {}"]
-              simp: valid_sched_def obj_at_kh_kheap_simps fun_upd_def)
-  by (auto simp: valid_ready_qs_def valid_release_q_def released_ipc_queues_defs
-                 scheduler_act_not_def vs_all_heap_simps not_queued_def not_in_release_q_def)
+  apply (wpsimp wp: valid_sched_wp simp: valid_sched_def split_del: if_split)
+  apply (intro conjI)
+       apply (clarsimp simp: valid_ready_qs_def vs_all_heap_simps in_queues_2_def)
+      apply (clarsimp simp: valid_release_q_def vs_all_heap_simps in_queue_2_def)
+     apply clarsimp
+    apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_def is_activatable_def
+                          vs_all_heap_simps)
+   apply clarsimp
+  apply (clarsimp simp: released_ipc_queues_defs vs_all_heap_simps)
+  done
 
-lemma set_thread_state_Inactive_not_runnable_valid_sched_except_blocked:
-  "\<lbrace>\<lambda>s. valid_sched_except_blocked s \<and> \<not> pred_map runnable (tcb_sts_of s) ref\<rbrace>
-   set_thread_state ref Inactive
+(* FIXME RT: see if it's possible to use set_thread_state_valid_sched_except_blocked instead. *)
+lemma set_thread_state_not_runnable_valid_sched_except_blocked:
+  "\<lbrace>\<lambda>s. valid_sched_except_blocked s
+         \<and> \<not> pred_map runnable (tcb_sts_of s) t
+         \<and> (ipc_queued_thread_state st \<longrightarrow> released_if_bound_sc_tcb_at t s)\<rbrace>
+   set_thread_state t st
    \<lbrace>\<lambda>_. valid_sched_except_blocked\<rbrace>"
-  apply (rule hoare_strengthen_pre_via_assert_backward[where E="\<lambda>s. pred_map \<top> (tcb_sts_of s) ref"])
-   apply (simp add: set_thread_state_def)
-   apply (rule hoare_seq_ext[OF hoare_pre_cont])
-   apply (wpsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps)
-  apply (wpsimp wp: set_thread_state_Inactive_not_queued_valid_sched_except_blocked)
-  by (fastforce simp: valid_sched_def valid_ready_qs_def valid_release_q_def
-                      in_ready_q_def in_release_q_def obj_at_kh_kheap_simps vs_all_heap_simps
-                      scheduler_act_not_def valid_sched_action_def weak_valid_sched_action_def
-                      runnable_eq_active)
+  apply (wpsimp wp: set_thread_state_valid_sched_except_blocked simp: valid_sched_def)
+  apply (intro conjI; clarsimp)
+    apply (fastforce simp: valid_ready_qs_def in_queues_2_def vs_all_heap_simps)
+   apply (fastforce simp: valid_release_q_def in_queue_2_def vs_all_heap_simps)
+  apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_def)
+  done
+
+(* FIXME RT: see if it's possible to use set_thread_state_valid_sched_except_blocked instead. *)
+lemmas set_thread_state_Inactive_not_runnable_valid_sched_except_blocked
+  = set_thread_state_not_runnable_valid_sched_except_blocked[where st=Inactive, simplified]
 
 lemma set_thread_state_Inactive_not_queued_valid_sched:
   "\<lbrace>\<lambda>s. valid_sched_except_blocked s \<and> valid_blocked_except ref s
         \<and> scheduler_act_not ref s \<and> not_queued ref s \<and> not_in_release_q ref s\<rbrace>
    set_thread_state ref Inactive
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  by (wpsimp wp: set_thread_state_Inactive_not_queued_valid_sched_except_blocked
+  by (wpsimp wp: set_thread_state_valid_sched_except_blocked
                  set_thread_state_valid_blocked
-           simp: valid_sched_valid_sched_except_blocked)
+           simp: valid_sched_valid_sched_except_blocked scheduler_act_not_def)
 
 lemma set_thread_state_Inactive_not_runnable_valid_sched:
   "\<lbrace>\<lambda>s. valid_sched_except_blocked s \<and> valid_blocked_except ref s
@@ -1286,16 +1278,6 @@ crunches schedule_tcb
 lemmas set_thread_state_active_valid_sched_except_blocked =
   set_thread_state_runnable_valid_sched_except_blocked[simplified runnable_eq_active]
 
-(* FIXME: move to DetSchedInvs_AI *)
-lemma released_ipc_queuesE:
-  assumes "released_ipc_queues_2 curtime tcb_sts tcb_scps sc_refill_cfgs"
-  assumes "\<And>t. pred_map ipc_queued_thread_state tcb_sts' t
-                \<longrightarrow> (pred_map ipc_queued_thread_state tcb_sts t
-                     \<longrightarrow> pred_map_eq None tcb_scps t \<or> released_sc_tcb_at_pred curtime tcb_scps sc_refill_cfgs t)
-                \<longrightarrow> pred_map_eq None tcb_scps' t \<or> released_sc_tcb_at_pred curtime' tcb_scps' sc_refill_cfgs' t"
-  shows "released_ipc_queues_2 curtime' tcb_sts' tcb_scps' sc_refill_cfgs'"
-  using assms by (auto simp: released_ipc_queues_defs)
-
 lemma set_thread_state_released_ipc_queues:
   "\<lbrace>released_ipc_queues
     and (\<lambda>s. ipc_queued_thread_state ts \<longrightarrow>
@@ -1354,7 +1336,8 @@ lemma set_tcb_obj_ref_is_refill_ready[wp]:
   by (wpsimp wp: set_tcb_obj_ref_wp simp: obj_at_kh_kheap_simps vs_all_heap_simps)
 
 lemma set_tcb_obj_ref_valid_sched_except_tcb_heap[wp]:
-  "set_tcb_obj_ref f ref v \<lbrace>\<lambda>s. P (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+  "set_tcb_obj_ref f ref v \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s)
+                                  (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
                                   (ready_queues s) (release_queue s) (scheduler_action s)
                                   (last_machine_time_of s) (scs_of s)\<rbrace>"
   by (wpsimp wp: set_tcb_obj_ref_wp
@@ -1362,17 +1345,20 @@ lemma set_tcb_obj_ref_valid_sched_except_tcb_heap[wp]:
 
 lemma set_tcb_obj_ref_valid_sched_except_tcb_scp_heap:
   assumes "\<And>tcb. tcb_state (f (\<lambda>_. v) tcb) = tcb_state tcb"
+  assumes "\<And>tcb. tcb_fault (f (\<lambda>_. v) tcb) = tcb_fault tcb"
   assumes "\<And>tcb. etcb_of (f (\<lambda>_. v) tcb) = etcb_of tcb"
-  shows "set_tcb_obj_ref f ref v \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+  shows "set_tcb_obj_ref f ref v \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s) (sc_replies_of s)
+                                        (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
                                         (ready_queues s) (release_queue s) (scheduler_action s)
                                         (last_machine_time_of s) (etcbs_of s)
-                                        (tcb_sts_of s) (scs_of s)\<rbrace>"
+                                        (tcb_sts_of s) (tcb_faults_of s) (scs_of s)\<rbrace>"
   by (wpsimp wp: set_tcb_obj_ref_wp
            simp: fun_upd_def obj_at_kh_kheap_simps vs_all_heap_simps sc_heap.all_simps assms)
 
 lemma set_tcb_obj_ref_valid_sched_pred:
   assumes "\<And>tcb. tcb_state (f (\<lambda>_. v) tcb) = tcb_state tcb"
   assumes "\<And>tcb. tcb_sched_context (f (\<lambda>_. v) tcb) = tcb_sched_context tcb"
+  assumes "\<And>tcb. tcb_fault (f (\<lambda>_. v) tcb) = tcb_fault tcb"
   assumes "\<And>tcb. etcb_of (f (\<lambda>_. v) tcb) = etcb_of tcb"
   shows "set_tcb_obj_ref f ref v \<lbrace>valid_sched_pred_strong P\<rbrace>"
   by (wpsimp wp: set_tcb_obj_ref_wp simp: fun_upd_def obj_at_kh_kheap_simps vs_all_heap_simps assms)
@@ -1388,11 +1374,12 @@ lemmas set_tcb_sched_context_valid_sched_except_tcb_scp_heap[wp] =
 
 lemma set_tcb_sched_context_valid_sched_pred':
   "\<lbrace>\<lambda>s. pred_map \<top> (tcb_sts_of s) ref
-        \<longrightarrow> P (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s) (ready_queues s) (release_queue s)
+        \<longrightarrow> P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+              (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s) (ready_queues s) (release_queue s)
               (scheduler_action s) (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)
-              (tcb_scps_of s(ref \<mapsto> scpo)) (sc_refill_cfgs_of s)\<rbrace>
+              (tcb_scps_of s(ref \<mapsto> scpo)) (tcb_faults_of s) (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    set_tcb_obj_ref tcb_sched_context_update ref scpo
-   \<lbrace>\<lambda>rv. valid_sched_pred P\<rbrace>"
+   \<lbrace>\<lambda>rv. valid_sched_pred_strong P\<rbrace>"
   by (wpsimp wp: set_tcb_obj_ref_wp simp: fun_upd_def obj_at_kh_kheap_simps vs_all_heap_simps)
 
 \<comment> \<open>The implication in the set_tcb_sched_context_valid_sched_pred' precondition
@@ -1698,24 +1685,27 @@ lemma set_tcb_sched_context_valid_sched_Some:
                       set_tcb_sched_context_valid_release_q_Some
                       set_tcb_sched_context_valid_sched_action_Some
                       set_tcb_sched_context_valid_blocked_Some
-                      set_tcb_sched_context_valid_sched_pred[where P=valid_sched_ipc_queues])
+                      set_tcb_sched_context_valid_sched_pred[where P="valid_sched_pred_strengthen valid_sched_ipc_queues"])
   by (intro conjI impI; clarsimp simp: vs_all_heap_simps fun_upd_def released_ipc_queues_defs)
 
 \<comment> \<open>update_sched_context, set_refills\<close>
 
-(* FIXME: move *)
+(* FIXME RT: move *)
 definition heap_upd :: "('v \<Rightarrow> 'v) \<Rightarrow> 'a \<Rightarrow> ('a \<rightharpoonup> 'v) \<Rightarrow> 'a \<rightharpoonup> 'v" where
   "heap_upd f ref heap \<equiv> \<lambda>x. if x = ref then map_option f (heap ref) else heap x"
 
+(* FIXME RT: move *)
 lemma heap_upd_id[simp]:
   "heap_upd id ref = id"
   by (fastforce simp: heap_upd_def map_option.id)
 
-(* FIXME: figure out a systematic way to generate rules like these. *)
-lemma sc_refill_cfg_heap_known_sc:
+(* FIXME RT: figure out a systematic way to generate rules like these. *)
+lemma sc_heap_proj_known_sc:
   assumes "kh scp = Some (SchedContext sc n)"
   shows "P (sc_refill_cfgs_of_kh kh scp) = P (Some (sc_refill_cfg_of sc))"
-  by (rule arg_cong[where f=P], simp add: vs_all_heap_simps assms)
+    and "Q (sc_tcbs_of_kh kh scp) = Q (Some (sc_tcb sc))"
+    and "R (sc_replies_of_kh kh scp) = R (Some (sc_replies sc))"
+  by (rule arg_cong[where f=P] arg_cong[where f=Q] arg_cong[where f=R], simp add: vs_all_heap_simps assms)+
 
 lemma update_sched_context_sc_heap:
   "\<lbrace>\<lambda>s. \<forall>sc. scs_of s scp = Some sc \<longrightarrow> P (scs_of s(scp \<mapsto> f sc))\<rbrace>
@@ -1726,62 +1716,91 @@ lemma update_sched_context_sc_heap:
 
 lemma update_sched_context_valid_sched_pred':
   assumes "\<And>sc. sc_refill_cfg_of (f sc) = g (sc_refill_cfg_of sc)"
+  assumes "\<And>sc. sc_tcb (f sc) = h (sc_tcb sc)"
+  assumes "\<And>sc. sc_replies (f sc) = k (sc_replies sc)"
   shows "\<lbrace>\<lambda>s. pred_map \<top> (scs_of s) scp
-              \<longrightarrow> P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+              \<longrightarrow> P (consumed_time s) (cur_sc s)
+                    (heap_upd h scp (sc_tcbs_of s))
+                    (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
                     (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
-                    (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s)
-                    (heap_upd g scp (sc_refill_cfgs_of s))\<rbrace>
+                    (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
+                    (heap_upd g scp (sc_refill_cfgs_of s)) (heap_upd k scp (sc_replies_of s))\<rbrace>
          update_sched_context scp f
          \<lbrace>\<lambda>rv. valid_sched_pred_strong P\<rbrace>"
   by (wpsimp wp: update_sched_context_wp
            simp: fun_upd_def heap_upd_def obj_at_kh_kheap_simps vs_all_heap_simps
-                 sc_refill_cfg_heap_known_sc assms)
+                 sc_heap_proj_known_sc assms)
 
 lemmas update_sched_context_valid_sched_pred =
   update_sched_context_valid_sched_pred'[THEN hoare_drop_assertion]
 
 lemmas update_sched_context_valid_sched_pred_inv =
-  update_sched_context_valid_sched_pred[where g=id and f="\<lambda>sc. upd (f sc) sc" for upd f g
+  update_sched_context_valid_sched_pred[where g=id and h=id and k=id and f="\<lambda>sc. upd (f sc) sc" for upd f
                                         , simplified]
 
 lemmas update_sched_context_valid_sched_pred_invs[wp] =
   update_sched_context_valid_sched_pred_inv[where upd=sc_consumed_update, simplified]
-  update_sched_context_valid_sched_pred_inv[where upd=sc_tcb_update, simplified]
   update_sched_context_valid_sched_pred_inv[where upd=sc_ntfn_update, simplified]
   update_sched_context_valid_sched_pred_inv[where upd=sc_badge_update, simplified]
   update_sched_context_valid_sched_pred_inv[where upd=sc_yield_from_update, simplified]
-  update_sched_context_valid_sched_pred_inv[where upd=sc_replies_update, simplified]
 
 lemmas update_sc_refills_valid_sched_pred[valid_sched_wp] =
   update_sched_context_valid_sched_pred
-    [where f="sc_refills_update f" and g="scrc_refills_update f" for f, simplified]
+    [where f="sc_refills_update f" and g="scrc_refills_update f" and h=id and k=id for f, simplified]
 
 lemmas update_sc_refill_max_valid_sched_pred[valid_sched_wp] =
   update_sched_context_valid_sched_pred
-    [where f="sc_refill_max_update f" and g="scrc_refill_max_update f" for f, simplified]
+    [where f="sc_refill_max_update f" and g="scrc_refill_max_update f" and h=id and k=id for f, simplified]
 
 lemmas update_sc_period_valid_sched_pred[valid_sched_wp] =
   update_sched_context_valid_sched_pred
-    [where f="sc_period_update f" and g="scrc_period_update f" for f, simplified]
+    [where f="sc_period_update f" and g="scrc_period_update f" and h=id and k=id for f, simplified]
 
-\<comment> \<open>Intended to match the usage in refill_new. Obviously fragile.\<close>
-lemmas update_sc_refill_cfg_misc_valid_sched_pred[valid_sched_wp] =
+lemmas update_sc_budget_valid_sched_pred[valid_sched_wp] =
   update_sched_context_valid_sched_pred
-    [where f="\<lambda>sc. sc_refill_max_update f (sc_refills_update g (sc_period_update h sc))"
-       and g="\<lambda>sc. scrc_refill_max_update f (scrc_refills_update g (scrc_period_update h sc))"
-       for f g h, simplified]
+    [where f="sc_budget_update f" and g="scrc_budget_update f" and h=id and k=id for f, simplified]
+
+lemmas update_sc_refill_cfg_valid_sched_misc =
+  update_sched_context_valid_sched_pred
+    [where h=id and k=id
+       and P="\<lambda>cons csc sc_tcbs ctime cdom ct it rqs rlq sa lmt etcbs sts scps faults _ repl.
+                P cons csc sc_tcbs ctime cdom ct it rqs rlq sa lmt etcbs sts scps faults repl :: bool" for P
+     , simplified]
+
+lemmas update_sc_refill_cfg_valid_sched_miscs[wp] =
+  update_sc_refill_cfg_valid_sched_misc[where f="sc_refills_update f" and g="scrc_refills_update f" for f, simplified]
+  update_sc_refill_cfg_valid_sched_misc[where f="sc_refill_max_update f" and g="scrc_refill_max_update f" for f, simplified]
+  update_sc_refill_cfg_valid_sched_misc[where f="sc_period_update f" and g="scrc_period_update f" for f, simplified]
+  update_sc_refill_cfg_valid_sched_misc[where f="sc_budget_update f" and g="scrc_budget_update f" for f, simplified]
+
+lemmas update_sc_tcb_valid_sched_pred[valid_sched_wp] =
+  update_sched_context_valid_sched_pred
+    [where f="sc_tcb_update f" and g=id and h=f and k=id for f, simplified]
+
+lemmas update_sc_tcb_valid_sched_misc[wp] =
+  update_sc_tcb_valid_sched_pred[where P="\<lambda>cons csc _. P cons csc :: valid_sched_t" for P]
+
+lemmas update_sc_replies_valid_sched_pred[valid_sched_wp] =
+  update_sched_context_valid_sched_pred
+    [where f="sc_replies_update f" and g=id and h=id and k=f for f, simplified]
+
+lemmas update_sc_replies_valid_sched_misc[wp] =
+  update_sc_replies_valid_sched_pred[where P="\<lambda>cons csc sc_tcbs ctime cdom ct it rqs rlq sa lmt etcbs sts scps faults rcs _.
+                                             P cons csc sc_tcbs ctime cdom ct it rqs rlq sa lmt etcbs sts scps faults rcs :: bool" for P]
 
 lemma set_refills_valid_sched_pred':
   "\<lbrace>\<lambda>s. pred_map \<top> (scs_of s) scp
-        \<longrightarrow> P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+        \<longrightarrow> P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+              (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
               (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
-              (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s)
-              (heap_upd (scrc_refills_update (\<lambda>_. refills)) scp (sc_refill_cfgs_of s))\<rbrace>
+              (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
+              (heap_upd (scrc_refills_update (\<lambda>_. refills)) scp (sc_refill_cfgs_of s))
+              (sc_replies_of s)\<rbrace>
    set_refills scp refills
    \<lbrace>\<lambda>rv. valid_sched_pred_strong P\<rbrace>"
-  by (wpsimp simp: set_refills_def fun_upd_def heap_upd_def vs_all_heap_simps sc_refill_cfg_heap_known_sc
+  by (wpsimp simp: set_refills_def fun_upd_def heap_upd_def vs_all_heap_simps sc_heap_proj_known_sc
                wp: update_sched_context_valid_sched_pred'
-                     [where f="sc_refills_update f" and g="scrc_refills_update f" for f, simplified])
+                     [where f="sc_refills_update f" and g="scrc_refills_update f" and h=id and k=id for f, simplified])
 
 lemmas set_refills_valid_sched_pred[valid_sched_wp] =
   set_refills_valid_sched_pred'[THEN hoare_drop_assertion]
@@ -1794,9 +1813,12 @@ lemma update_sched_context_valid_sched_misc[wp]:
            simp: fun_upd_def obj_at_kh_kheap_simps vs_all_heap_simps tcb_heap.all_simps)
 
 lemma set_refills_valid_sched_misc[wp]:
-  "set_refills scp refills \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+  "set_refills scp refills \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s) (sc_replies_of s)
+                                  (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
                                   (ready_queues s) (release_queue s) (scheduler_action s)
                                   (last_machine_time_of s) (tcbs_of s)\<rbrace>"
+  apply (rule hoare_lift_Pf[where f=sc_tcbs_of, rotated], wp valid_sched_wp)
+  apply (rule hoare_lift_Pf[where f=sc_replies_of, rotated], wp valid_sched_wp)
   by (wpsimp simp: set_refills_def)
 
 lemma update_sched_context_is_sc_active_indep:
@@ -1856,7 +1878,7 @@ lemma set_refills_valid_ready_qs_not_queued:
    \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
   by (wpsimp wp: set_refills_valid_ready_qs simp: obj_at_kh_kheap_simps in_queues_2_def)
 
-(* FIXME: find a nicer calculus for dealing with sorted_release_q *)
+(* FIXME RT: find a nicer calculus for dealing with sorted_release_q *)
 lemma set_refills_valid_release_q:
   "\<lbrace>\<lambda>s. valid_release_q s
         \<and> (\<forall>t. pred_map_eq (Some sc_ptr) (tcb_scps_of s) t
@@ -1953,6 +1975,11 @@ lemma set_refills_active_sc_valid_refills:
   apply (wpsimp wp: valid_sched_wp)
   by (clarsimp simp: active_sc_valid_refills_def vs_all_heap_simps heap_upd_def)
 
+lemma set_refills_active_reply_scs[wp]:
+  "set_refills scp refills \<lbrace>active_reply_scs\<rbrace>"
+  apply (wpsimp wp: valid_sched_wp)
+  by (auto elim!: active_reply_scsE simp: heap_upd_def vs_all_heap_simps)
+
 lemma set_refills_valid_sched:
   "\<lbrace>\<lambda>s. valid_sched s
         \<and> (\<forall>t. pred_map_eq (Some scp) (tcb_scps_of s) t
@@ -2001,15 +2028,23 @@ lemma sched_context_donate_tcb_st_heap[wp]:
   "sched_context_donate scp t \<lbrace>\<lambda>s. P (tcb_sts_of s)\<rbrace>"
   by (wpsimp simp: sched_context_donate_def wp: tcb_release_remove_wp)
 
+lemma sched_context_donate_tcb_fault_heap[wp]:
+  "sched_context_donate scp t \<lbrace>\<lambda>s. P (tcb_faults_of s)\<rbrace>"
+  by (wpsimp simp: sched_context_donate_def wp: tcb_release_remove_wp)
+
 lemma sched_context_donate_sc_refill_cfg_heap[wp]:
   "sched_context_donate scp t \<lbrace>\<lambda>s. P (sc_refill_cfgs_of s)\<rbrace>"
   by (wpsimp simp: sched_context_donate_def wp: tcb_release_remove_wp)
 
+lemma sched_context_donate_sc_replies_heap[wp]:
+  "sched_context_donate scp t \<lbrace>\<lambda>s. P (sc_replies_of s)\<rbrace>"
+  by (wpsimp simp: sched_context_donate_def wp: tcb_release_remove_wp)
+
 lemma sched_context_donate_valid_sched_misc[wp]:
-  "sched_context_donate scp t \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
-                                     (cur_thread s) (idle_thread s)
-                                     (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)
-                                     (sc_refill_cfgs_of s)\<rbrace>"
+  "sched_context_donate scp t \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s)
+                                     (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+                                     (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s) (tcb_faults_of s)
+                                     (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>"
   apply (rule hoare_lift_Pf[where f=consumed_time, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=cur_sc, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=cur_time, rotated], wpsimp)
@@ -2019,10 +2054,11 @@ lemma sched_context_donate_valid_sched_misc[wp]:
   apply (rule hoare_lift_Pf[where f=last_machine_time_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=etcbs_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=tcb_sts_of, rotated], wpsimp)
+  apply (rule hoare_lift_Pf[where f=tcb_faults_of, rotated], wpsimp)
   apply (rule hoare_lift_Pf[where f=sc_refill_cfgs_of, rotated], wpsimp)
   by wpsimp
 
-(* FIXME move to DetSchedInvs_AI *)
+(* FIXME RT: move to DetSchedInvs_AI *)
 definition
   sc_is_round_robin :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -2032,7 +2068,7 @@ crunches sched_context_donate
   for simple[wp]: simple_sched_action
   (simp: crunch_simps)
 
-(* FIXME: this naming is inconsistent *)
+(* FIXME RT: this naming is inconsistent *)
 abbreviation cur_sc_offset_sufficient :: "time \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "cur_sc_offset_sufficient usage s \<equiv>
@@ -2045,9 +2081,9 @@ where
 
 abbreviation cur_sc_blocked_is_offset :: "time \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "cur_sc_blocked_is_offset consumed s \<equiv>
-      (\<forall>t. bound_sc_tcb_at ((=) (Some (cur_sc s))) t s
-           \<longrightarrow> ipc_queued_thread t s
-           \<longrightarrow> cur_sc_offset_sufficient consumed s \<and> cur_sc_offset_ready consumed s)"
+      \<forall>t. pred_map_eq (Some (cur_sc s)) (tcb_scps_of s) t
+          \<longrightarrow> ipc_queued_thread t s
+          \<longrightarrow> cur_sc_offset_sufficient consumed s \<and> cur_sc_offset_ready consumed s"
 
 lemma as_user_tcb_arch_inv:
   assumes "\<And>s tcb upd. \<lbrakk> kheap s t = Some (TCB tcb); P s \<rbrakk>
@@ -2089,7 +2125,7 @@ lemma complete_yield_to_valid_sched_pred[wp]:
   "complete_yield_to t \<lbrace>valid_sched_pred_strong P\<rbrace>"
   by (wpsimp simp: complete_yield_to_def wp: hoare_drop_imps)
 
-(* FIXME: move to DetSchedInvs_AI *)
+(* FIXME RT: move to DetSchedInvs_AI *)
 \<comment> \<open>This version composes with valid_sched_pred rules\<close>
 lemma gts_wp':
   "\<lbrace>\<lambda>s. \<forall>st. pred_map_eq st (tcb_sts_of s) t \<longrightarrow> P st s\<rbrace> get_thread_state t \<lbrace>P\<rbrace>"
@@ -2113,24 +2149,6 @@ locale DetSchedSchedule_AI =
     "\<And>t P. arch_switch_to_thread t \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_switch_to_idle_thread_valid_sched_pred[wp]:
     "\<And>P. arch_switch_to_idle_thread \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_idle_thread_cur_sc_offset_ready[wp]:
-    "\<And>P usage. \<lbrace>\<lambda>s::det_state. P (cur_sc_offset_ready usage s)\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (cur_sc_offset_ready usage s)\<rbrace>"
-  assumes arch_switch_to_thread_cur_sc_offset_sufficient[wp]:
-    "\<And>P usage t. \<lbrace>\<lambda>s::det_state. P (cur_sc_offset_sufficient usage s)\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_ s. P (cur_sc_offset_sufficient usage s)\<rbrace>"
-  assumes arch_switch_to_idle_thread_cur_sc_offset_sufficient[wp]:
-    "\<And>P usage. \<lbrace>\<lambda>s::det_state. P (cur_sc_offset_sufficient usage s)\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (cur_sc_offset_sufficient usage s)\<rbrace>"
-  assumes arch_switch_to_thread_cur_sc_offset_ready_consumed[wp]:
-    "\<And>P t. \<lbrace>\<lambda>s::det_state. P (cur_sc_offset_ready (consumed_time s) s)\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_ s. P (cur_sc_offset_ready (consumed_time s) s)\<rbrace>"
-  assumes arch_switch_to_idle_thread_cur_sc_offset_ready_consumed[wp]:
-    "\<And>P. \<lbrace>\<lambda>s::det_state. P (cur_sc_offset_ready (consumed_time s) s)\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (cur_sc_offset_ready (consumed_time s) s)\<rbrace>"
-  assumes arch_switch_to_thread_cur_sc_offset_sufficient_consumed[wp]:
-    "\<And>P t. \<lbrace>\<lambda>s::det_state. P (cur_sc_offset_sufficient (consumed_time s) s)\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_ s. P (cur_sc_offset_sufficient (consumed_time s) s)\<rbrace>"
-  assumes arch_switch_to_idle_thread_cur_sc_offset_sufficient_consumed[wp]:
-    "\<And>P. \<lbrace>\<lambda>s::det_state. P (cur_sc_offset_sufficient (consumed_time s) s)\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (cur_sc_offset_sufficient (consumed_time s) s)\<rbrace>"
-  assumes arch_switch_to_thread_cur_sc_budget_sufficient[wp]:
-    "\<And>P t. \<lbrace>\<lambda>s::det_state. P (cur_sc_budget_sufficient s)\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_ s. P (cur_sc_budget_sufficient s)\<rbrace>"
-  assumes arch_switch_to_idle_thread_cur_sc_budget_sufficient[wp]:
-    "\<And>P. \<lbrace>\<lambda>s::det_state. P (cur_sc_budget_sufficient s)\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (cur_sc_budget_sufficient s)\<rbrace>"
   assumes arch_switch_to_idle_thread_valid_idle[wp]:
     "arch_switch_to_idle_thread \<lbrace>valid_idle::'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_finalise_cap_valid_sched_pred[wp]:
@@ -2149,20 +2167,12 @@ locale DetSchedSchedule_AI =
     "\<And>t P. arch_activate_idle_thread t \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   \<comment> \<open>Due to delete_objects in perform_asid_control_invocation,
       arch_perform_invocation doesn't preserve valid_sched_pred\<close>
-  assumes arch_switch_to_idle_thread_ready_or_release[wp]:
-    "arch_switch_to_idle_thread \<lbrace>\<lambda>s::det_state. ready_or_release s\<rbrace>"
-  assumes arch_switch_to_thread_ready_or_release[wp]:
-    "\<And>t. arch_switch_to_thread t \<lbrace>\<lambda>s::det_state. ready_or_release s\<rbrace>"
-  assumes arch_switch_to_idle_thread_cur_sc_chargeable[wp]:
-    "arch_switch_to_idle_thread \<lbrace>\<lambda>s::det_state. cur_sc_chargeable s\<rbrace>"
-  assumes arch_switch_to_thread_cur_sc_chargeable[wp]:
-    "\<And>t. arch_switch_to_thread t \<lbrace>\<lambda>s::det_state. cur_sc_chargeable s\<rbrace>"
   assumes arch_perform_invocation_valid_sched[wp]:
     "\<And>i. \<lbrace>invs and valid_sched and ct_active and valid_arch_inv i and
             (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
           arch_perform_invocation i
           \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  assumes arch_perform_invocation_cur_sc_tcb_only_sym_bound:
+  assumes arch_perform_invocation_cur_sc_tcb_only_sym_bound[wp]:
     "\<And>i. arch_perform_invocation i \<lbrace>cur_sc_tcb_only_sym_bound :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_perform_invocation_valid_sched_misc[wp]:
     "\<And>i P. arch_perform_invocation i
@@ -2176,10 +2186,11 @@ locale DetSchedSchedule_AI =
     "\<And>t P. prepare_thread_delete t \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_post_cap_deletion_valid_sched_pred[wp] :
     "\<And>c P. arch_post_cap_deletion c \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  (* FIXME RT: Reframe sc_is_round_robin using heap projections, then the next 2 assumptions are redundant. *)
   assumes arch_switch_to_idle_thread_sc_is_round_robin[wp]:
-    "\<And>P t. \<lbrace>\<lambda>s. P (sc_is_round_robin t s)\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_ s::det_state. P (sc_is_round_robin t s)\<rbrace>"
+    "\<And>P t. arch_switch_to_idle_thread \<lbrace>\<lambda>s::'state_ext state. P (sc_is_round_robin t s)\<rbrace>"
   assumes arch_switch_to_thread_sc_is_round_robin[wp]:
-    "\<And>P t' t. \<lbrace>\<lambda>s. P (sc_is_round_robin t s)\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_ s::det_state. P (sc_is_round_robin t s)\<rbrace>"
+    "\<And>P t' t. arch_switch_to_thread t' \<lbrace>\<lambda>s::'state_ext state. P (sc_is_round_robin t s)\<rbrace>"
   assumes prepare_thread_delete_ct_in_state[wp]:
     "\<And>t P. prepare_thread_delete t \<lbrace>ct_in_state P ::det_state \<Rightarrow> _\<rbrace>"
   assumes update_time_stamp_valid_machine_time[wp]:
@@ -2216,18 +2227,18 @@ sublocale arch_get_sanitise_register_info: valid_sched_pred_locale state_ext_t "
 sublocale arch_post_cap_deletion: valid_sched_pred_locale state_ext_t "arch_post_cap_deletion c" by unfold_locales wp
 
 lemma switch_to_idle_thread_valid_sched_pred[valid_sched_wp]:
-  "\<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s)
+  "\<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
           (cur_time s) (cur_domain s) (idle_thread s) (idle_thread s)
           (ready_queues s) (release_queue s) (scheduler_action s)
           (last_machine_time_of s) (etcbs_of s)
-          (tcb_sts_of s) (tcb_scps_of s)
-          (sc_refill_cfgs_of s)\<rbrace>
+          (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
+          (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    switch_to_idle_thread
    \<lbrace>\<lambda>rv. valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: switch_to_idle_thread_def)
 
 lemmas switch_to_idle_thread_valid_sched_misc[wp] =
-  switch_to_idle_thread_valid_sched_pred[where P="\<lambda>cont csc ctime cdom ct. P cont csc ctime cdom" for P]
+  switch_to_idle_thread_valid_sched_pred[where P="\<lambda>cont csc sc_tcbs sc_replies ctime cdom ct. P cont csc sc_tcbs sc_replies ctime cdom" for P]
 
 lemma switch_to_idle_thread_ct_not_in_q[wp]:
   "\<lbrace>valid_ready_qs and valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_not_in_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
@@ -2264,9 +2275,11 @@ lemma stit_activatable':
   by (auto simp: valid_idle_def pred_tcb_at_def obj_at_def vs_all_heap_simps)
 
 lemma activate_thread_valid_sched_pred_misc[wp]:
-  "activate_thread \<lbrace>\<lambda>s::'state_ext state. P (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
-                                            (ready_queues s) (release_queue s) (last_machine_time_of s)
-                                            (etcbs_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>"
+  "activate_thread
+   \<lbrace>\<lambda>s::'state_ext state. P (cur_time s) (cur_domain s) (sc_tcbs_of s) (sc_replies_of s)
+                            (cur_thread s) (idle_thread s) (ready_queues s) (release_queue s)
+                            (last_machine_time_of s) (etcbs_of s) (tcb_scps_of s) (tcb_faults_of s)
+                            (sc_refill_cfgs_of s)\<rbrace>"
   by (wpsimp wp: valid_sched_wp gts_wp' simp: activate_thread_def)
 
 lemma activate_thread_valid_ready_qs[wp]:
@@ -2309,10 +2322,12 @@ lemma activate_thread_valid_sched[wp]:
 \<comment> \<open>We can't write a wp-style rule, because we don't know how some arch functions update arch state.\<close>
 lemma switch_to_thread_valid_sched_pred[valid_sched_wp]:
   "\<lbrace>\<lambda>s. \<forall>d p. etcb_eq p d t s \<and> t \<notin> set (release_queue s) \<and> budget_ready t s \<and> budget_sufficient t s
-               \<longrightarrow> P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) t (idle_thread s)
+               \<longrightarrow> P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+                     (cur_time s) (cur_domain s) t (idle_thread s)
                      (tcb_sched_ready_q_update d p (tcb_sched_dequeue t) (ready_queues s))
                      (release_queue s) (scheduler_action s) (last_machine_time_of s)
-                     (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>
+                     (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
+                     (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    switch_to_thread t
    \<lbrace>\<lambda>rv. valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (wpsimp simp: switch_to_thread_def
@@ -2321,27 +2336,31 @@ lemma switch_to_thread_valid_sched_pred[valid_sched_wp]:
 
 lemma guarded_switch_to_valid_sched_pred[valid_sched_wp]:
   "\<lbrace>\<lambda>s. \<forall>d p. etcb_eq p d t s \<and> t \<notin> set (release_queue s) \<and> released_sc_tcb_at t s
-               \<longrightarrow> P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) t (idle_thread s)
+               \<longrightarrow> P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+                     (cur_time s) (cur_domain s) t (idle_thread s)
                      (tcb_sched_ready_q_update d p (tcb_sched_dequeue t) (ready_queues s))
                      (release_queue s) (scheduler_action s) (last_machine_time_of s)
-                     (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>
+                     (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
+                     (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    guarded_switch_to t
    \<lbrace>\<lambda>rv. valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: guarded_switch_to_def released_sc_tcb_at_def
                wp: valid_sched_wp thread_get_wp' is_schedulable_wp')
 
 lemma switch_to_thread_valid_sched_misc[wp]:
-  "switch_to_thread t \<lbrace>\<lambda>s::'state_ext state. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
-                                               (idle_thread s) (release_queue s) (scheduler_action s)
-                                               (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)
-                                               (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>"
+  "switch_to_thread t
+   \<lbrace>\<lambda>s::'state_ext state. P (consumed_time s) (cur_sc s) (sc_tcbs_of s) (sc_replies_of s)
+                            (cur_time s) (cur_domain s) (idle_thread s) (release_queue s)
+                            (scheduler_action s) (last_machine_time_of s) (etcbs_of s)
+                            (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>"
   by (wpsimp wp: valid_sched_wp)
 
 lemma guarded_switch_to_valid_sched_misc[wp]:
-  "guarded_switch_to t \<lbrace>\<lambda>s::'state_ext state. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
-                                                (idle_thread s) (release_queue s) (scheduler_action s)
-                                                (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)
-                                                (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>"
+  "guarded_switch_to t
+   \<lbrace>\<lambda>s::'state_ext state. P (consumed_time s) (cur_sc s) (sc_tcbs_of s) (sc_replies_of s)
+                            (cur_time s) (cur_domain s) (idle_thread s) (release_queue s)
+                            (scheduler_action s) (last_machine_time_of s) (etcbs_of s)
+                            (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>"
   by (wpsimp wp: valid_sched_wp)
 
 crunches switch_to_thread
@@ -2435,11 +2454,11 @@ lemma switch_to_thread_valid_blocked[wp]:
                elim!: valid_blockedE')
 
 lemma switch_to_thread_valid_sched:
-  "\<lbrace>is_activatable t and in_cur_domain t and valid_sched_action and valid_ready_qs and valid_release_q and
-    valid_blocked and valid_idle_etcb and released_ipc_queues and valid_machine_time
-    and active_sc_valid_refills and (\<lambda>s. (active_sc_tcb_at (cur_thread s) s \<and> ct_not_in_release_q s)
-             \<longrightarrow> ct_in_q s)\<rbrace>
-    switch_to_thread t
+  "\<lbrace>is_activatable t and in_cur_domain t and valid_sched_action and valid_ready_qs
+      and valid_release_q and valid_blocked and valid_idle_etcb and released_ipc_queues
+      and valid_machine_time and active_reply_scs and active_sc_valid_refills
+      and (\<lambda>s. active_sc_tcb_at (cur_thread s) s \<and> ct_not_in_release_q s \<longrightarrow> ct_in_q s)\<rbrace>
+   switch_to_thread t
    \<lbrace>\<lambda>_. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: valid_sched_def, simp add: ct_in_cur_domain_def)
 
@@ -2470,9 +2489,9 @@ context DetSchedSchedule_AI begin
 
 lemma switch_to_idle_thread_valid_sched:
   "\<lbrace>valid_sched_action and valid_idle and valid_ready_qs and valid_release_q
-    and valid_blocked and ct_in_q and valid_idle_etcb and released_ipc_queues and valid_machine_time
-    and active_sc_valid_refills\<rbrace>
-     switch_to_idle_thread
+      and valid_blocked and ct_in_q and valid_idle_etcb and released_ipc_queues
+      and active_reply_scs and valid_machine_time and active_sc_valid_refills\<rbrace>
+   switch_to_idle_thread
    \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: valid_sched_def)
 
@@ -2481,9 +2500,9 @@ crunch etcb_at[wp]: choose_thread "etcb_at P t :: 'state_ext state \<Rightarrow>
 
 lemma choose_thread_valid_sched[wp]:
   "\<lbrace>valid_sched_action and valid_idle and valid_ready_qs and valid_release_q
-     and valid_blocked and ct_in_q and valid_idle_etcb and released_ipc_queues and valid_machine_time
-     and active_sc_valid_refills\<rbrace>
-     choose_thread
+      and valid_blocked and ct_in_q and valid_idle_etcb and released_ipc_queues
+      and active_reply_scs and valid_machine_time and active_sc_valid_refills\<rbrace>
+   choose_thread
    \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (wpsimp simp: choose_thread_def
                   wp: switch_to_idle_thread_valid_sched guarded_switch_to_lift
@@ -2501,15 +2520,18 @@ lemma do_extended_op_valid_sched_pred[wp]:
 \<comment> \<open>We leave the resulting cur_domain unspecified, since we can't specify it in terms of state
     projections that are part of valid_sched_pred\<close>
 lemma next_domain_valid_sched_pred[valid_sched_wp]:
-  "\<lbrace>\<lambda>s. \<forall>cdom'. P (consumed_time s) (cur_sc s) (cur_time s) cdom' (cur_thread s) (idle_thread s)
-                  (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
-                  (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>
+  "\<lbrace>\<lambda>s. \<forall>cdom'. P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+                  (cur_time s) cdom' (cur_thread s) (idle_thread s) (ready_queues s) (release_queue s)
+                  (scheduler_action s) (last_machine_time_of s)
+                  (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
+                  (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    next_domain
    \<lbrace>\<lambda>rv. valid_sched_pred_strong P\<rbrace>"
   by (wpsimp simp: next_domain_def Let_def)
 
 crunches next_domain
-  for valid_sched_misc[wp]: "\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_thread s) (idle_thread s)
+  for valid_sched_misc[wp]: "\<lambda>s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s) (sc_replies_of s)
+                                   (cur_time s) (cur_thread s) (idle_thread s)
                                    (ready_queues s) (release_queue s) (scheduler_action s)
                                    (last_machine_time_of s) (kheap s)"
   (simp: Let_def wp: dxo_wp_weak)
@@ -2585,9 +2607,17 @@ lemma possible_switch_to_wp:
   apply (simp add: tcb_scps.pred_map_simps in_queue_2_def)
   by (case_tac "tcb_sched_context tcb = None \<or> t \<in> set (release_queue s)", fastforce, clarsimp)
 
-lemma possible_switch_to_ct_not_in_q[wp]:
+lemma possible_switch_to_ct_not_in_q:
   "\<lbrace>ct_not_in_q and (\<lambda>s. t \<noteq> cur_thread s)\<rbrace> possible_switch_to t \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
   by (wpsimp wp: possible_switch_to_wp simp: ct_not_in_q_def not_queued_def tcb_sched_enqueue_def)
+
+lemma possible_switch_to_not_it_ct_not_in_q:
+  "\<lbrace>\<lambda>s. ct_not_in_q s \<and> ct_in_cur_domain s \<and> t \<noteq> idle_thread s\<rbrace>
+   possible_switch_to t
+   \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
+  by (wpsimp wp: possible_switch_to_wp
+           simp: ct_not_in_q_def in_queues_2_def tcb_sched_enqueue_def ct_in_cur_domain_def
+                 vs_all_heap_simps in_cur_domain_def etcb_at_def)
 
 crunch ct_not_in_q[wp]: test_reschedule ct_not_in_q
   (wp: crunch_wps hoare_drop_imps hoare_vcg_if_lift2)
@@ -2649,9 +2679,10 @@ context DetSchedSchedule_AI begin
 
 lemma choose_thread_valid_sched_pred[valid_sched_wp]:
   "\<lbrace>\<lambda>s. \<forall>ct' qs'. choose_thread_spec s ct' qs'
-                  \<longrightarrow> P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) ct' (idle_thread s) qs' (release_queue s)
+                  \<longrightarrow> P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+                        (cur_time s) (cur_domain s) ct' (idle_thread s) qs' (release_queue s)
                         (scheduler_action s) (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)
-                        (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>
+                        (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    choose_thread
    \<lbrace>\<lambda>rv. valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (wpsimp simp: choose_thread_def wp: valid_sched_wp)
@@ -2659,10 +2690,11 @@ lemma choose_thread_valid_sched_pred[valid_sched_wp]:
           split: option.splits list.splits if_splits)
 
 lemma choose_thread_valid_sched_misc[wp]:
-  "choose_thread \<lbrace>\<lambda>s::'state_ext state. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
-                                          (idle_thread s) (release_queue s) (scheduler_action s)
-                                          (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)
-                                          (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>"
+  "choose_thread
+   \<lbrace>\<lambda>s::'state_ext state. P (consumed_time s) (cur_sc s) (sc_tcbs_of s) (sc_replies_of s)
+                            (cur_time s) (cur_domain s) (idle_thread s) (release_queue s)
+                            (scheduler_action s) (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)
+                            (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>"
   by (wpsimp wp: valid_sched_wp)
 
 lemma choose_thread_ct_not_queued:
@@ -2700,15 +2732,15 @@ lemmas choose_thread_ct_activatable' =
   choose_thread_ct_activatable[folded obj_at_kh_kheap_simps]
 
 lemma schedule_choose_new_thread_valid_sched_misc[wp]:
-  "\<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s)
+  "\<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s) (cur_time s)
           (idle_thread s) (release_queue s) resume_cur_thread
           (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)
-          (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>
+          (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    schedule_choose_new_thread
-   \<lbrace>\<lambda>_ s::'state_ext state. P (consumed_time s) (cur_sc s) (cur_time s)
+   \<lbrace>\<lambda>_ s::'state_ext state. P (consumed_time s) (cur_sc s) (sc_tcbs_of s) (cur_time s)
                               (idle_thread s) (release_queue s) (scheduler_action s)
                               (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)
-                              (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>"
+                              (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>"
   unfolding schedule_choose_new_thread_def
   by (wpsimp wp: set_scheduler_action_wp)
 
@@ -2842,9 +2874,11 @@ context DetSchedSchedule_AI begin
 
 lemma schedule_choose_new_thread_valid_sched_except_domain[valid_sched_wp]:
   "\<lbrace>\<lambda>s. \<forall>cdom' ct' qs'. schedule_choose_new_thread_spec s cdom' ct' qs'
-                        \<longrightarrow> P (consumed_time s) (cur_sc s) (cur_time s) cdom' ct' (idle_thread s) qs'
-                              (release_queue s) resume_cur_thread (last_machine_time_of s)
-                              (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>
+                        \<longrightarrow> P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+                              (cur_time s) cdom' ct' (idle_thread s) qs' (release_queue s)
+                              resume_cur_thread (last_machine_time_of s)
+                              (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
+                              (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    schedule_choose_new_thread
    \<lbrace>\<lambda>rv. valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: schedule_choose_new_thread_def wp: valid_sched_wp)
@@ -2857,7 +2891,7 @@ lemma schedule_choose_new_thread_valid_sched:
   "\<lbrace> valid_idle and valid_idle_etcb and valid_ready_qs and valid_release_q and valid_blocked
      and (\<lambda>s. scheduler_action s = choose_new_thread)
      and (\<lambda>s. active_sc_tcb_at (cur_thread s) s \<and> ct_not_in_release_q s \<longrightarrow> ct_in_q s)
-     and released_ipc_queues
+     and released_ipc_queues and active_reply_scs
      and valid_machine_time
      and active_sc_valid_refills\<rbrace>
    schedule_choose_new_thread
@@ -3128,13 +3162,21 @@ crunches awaken
   and in_cur_domain[wp]: "in_cur_domain t"
   (wp: hoare_drop_imps mapM_x_wp')
 
+(* FIXME RT: replace possible_switch_to_valid_ready_qs with this. *)
+lemma possible_switch_to_valid_ready_qs'':
+  "\<lbrace>\<lambda>s. valid_ready_qs s \<and> pred_map runnable (tcb_sts_of s) target \<and> released_if_bound_sc_tcb_at target s\<rbrace>
+   possible_switch_to target
+   \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
+  by (wpsimp simp: possible_switch_to_def obj_at_kh_kheap_simps vs_all_heap_simps
+               wp: thread_get_wp' get_tcb_obj_ref_wp)
+
 lemma possible_switch_to_valid_ready_qs:
   "\<lbrace>valid_ready_qs and st_tcb_at runnable target and
     ((bound_sc_tcb_at (\<lambda>sc. sc = None) target) or
      (active_sc_tcb_at target and budget_ready target and budget_sufficient target))\<rbrace>
     possible_switch_to target \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
-  by (wpsimp simp: possible_switch_to_def obj_at_kh_kheap_simps vs_all_heap_simps
-               wp: thread_get_wp' get_tcb_obj_ref_wp)
+  apply (wpsimp wp: possible_switch_to_valid_ready_qs'')
+  by (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise vs_all_heap_simps)
 
 lemma possible_switch_to_valid_ready_qs':
   "\<lbrace>valid_ready_qs
@@ -3163,12 +3205,12 @@ lemma set_simple_ko_valid_sched_pred[wp]:
           split: option.splits kernel_object.splits)
 
 lemma possible_switch_to_weak_valid_sched_action[wp]:
-  "\<lbrace>weak_valid_sched_action and st_tcb_at runnable target
-    and (bound_sc_tcb_at (\<lambda>sc. sc = None) target or released_sc_tcb_at target)\<rbrace>
+  "\<lbrace>\<lambda>s. weak_valid_sched_action s
+        \<and> (pred_map bound (tcb_scps_of s) target \<and> not_in_release_q target s
+            \<longrightarrow> pred_map runnable (tcb_sts_of s) target \<and> released_sc_tcb_at target s)\<rbrace>
    possible_switch_to target
    \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
-  apply (wpsimp simp: possible_switch_to_def obj_at_kh_kheap_simps
-                  wp: set_scheduler_action_wp thread_get_wp' get_tcb_obj_ref_wp)
+  apply (wpsimp wp: possible_switch_to_wp)
   by (clarsimp simp: weak_valid_sched_action_def vs_all_heap_simps in_release_q_def)
 
 lemma possible_switch_to_activatable[wp]:
@@ -3192,20 +3234,20 @@ lemma possible_switch_to_switch_in_cur_domain[wp]:
                      in_cur_domain_def etcb_at_def)
 
 lemma possible_switch_to_valid_sched_action[wp]:
-  "\<lbrace>valid_sched_action and st_tcb_at runnable target and released_sc_tcb_at target\<rbrace>
-    possible_switch_to target \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
+  "\<lbrace>\<lambda>s. valid_sched_action s
+        \<and> (pred_map bound (tcb_scps_of s) target \<and> not_in_release_q target s
+            \<longrightarrow> pred_map runnable (tcb_sts_of s) target \<and> released_sc_tcb_at target s)\<rbrace>
+   possible_switch_to target
+   \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
   by (wpsimp simp: valid_sched_action_def)
 
-lemma valid_sched_pred_strong_elim:
-  assumes "P cons csc ctime cdom ct it rqs rlq sa lmt etcbs tcb_sts tcb_scps sc_refill_cfgs"
-  assumes "cons' = cons" "csc' = csc" "ctime' = ctime" "cdom' = cdom" "ct' = ct" "it' = it"
-          "rqs' = rqs" "rlq' = rlq" "sa' = sa" "lmt' = lmt" "etcbs' = etcbs" "tcb_sts' = tcb_sts"
-          "tcb_scps' = tcb_scps" "sc_refill_cfgs' = sc_refill_cfgs"
-  shows "P cons' csc' ctime' cdom' ct' it' rqs' rlq' sa' lmt' etcbs' tcb_sts' tcb_scps' sc_refill_cfgs'"
-  using assms by simp
-
-lemma reply_unlink_sc_valid_sched_pred[wp]:
-  "reply_unlink_sc sc_ptr reply_ptr \<lbrace>valid_sched_pred_strong P\<rbrace>"
+lemma reply_unlink_sc_valid_sched_misc[wp]:
+  "reply_unlink_sc sc_ptr reply_ptr
+   \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+          (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+          (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
+          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
+          (sc_refill_cfgs_of s)\<rbrace>"
   apply (wpsimp simp: reply_unlink_sc_def
                   wp: update_sk_obj_ref_wps set_simple_ko_wps get_simple_ko_wp)
   by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps pred_map_simps fun_upd_def)
@@ -3224,18 +3266,22 @@ lemma reply_unlink_tcb_valid_sched_pred_lift:
 
 lemma reply_unlink_tcb_valid_sched_pred[valid_sched_wp]:
   "\<lbrace>\<lambda>s. pred_map (\<lambda>st. st = BlockedOnReply r \<or> (\<exists>ep. st = BlockedOnReceive ep (Some r))) (tcb_sts_of s) t \<longrightarrow>
-        P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s) (ready_queues s) (release_queue s)
+        P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+          (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s) (ready_queues s) (release_queue s)
           (if t = cur_thread s \<and> scheduler_action s = resume_cur_thread then choose_new_thread else scheduler_action s)
-          (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s(t \<mapsto> Inactive)) (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>
+          (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s(t \<mapsto> Inactive)) (tcb_scps_of s) (tcb_faults_of s)
+          (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    reply_unlink_tcb t r
    \<lbrace>\<lambda>rv. valid_sched_pred_strong P\<rbrace>"
   apply (rule reply_unlink_tcb_valid_sched_pred_lift)
   by (wpsimp wp: set_thread_state_valid_sched_pred_strong)
 
-lemmas reply_unlink_tcb_valid_sched_pred_misc[wp]
-  = reply_unlink_tcb_valid_sched_pred[where P="\<lambda>cons csc ctime cdom ct it rqs rlq _ lmt etcbs _.
-                                               P cons csc ctime cdom ct it rqs rlq lmt etcbs" for P
-                                      , THEN hoare_drop_assertion]
+lemma reply_unlink_tcb_valid_sched_misc[wp]:
+  "reply_unlink_tcb t r
+   \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s) (sc_replies_of s) (cur_time s) (cur_domain s)
+          (cur_thread s) (idle_thread s) (ready_queues s) (release_queue s) (last_machine_time_of s)
+          (etcbs_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>"
+  by (wpsimp wp: reply_unlink_tcb_valid_sched_pred)
 
 lemma valid_sched_scheduler_act_not:
   "valid_sched s \<Longrightarrow> st_tcb_at ((=) k) y s \<Longrightarrow> \<not> runnable k \<Longrightarrow> scheduler_act_not y s"
@@ -3322,25 +3368,20 @@ lemma set_scheduler_action_swt_valid_sched_except_blocked:
                  simple_sched_action_def vs_all_heap_simps obj_at_kh_kheap_simps
           split: scheduler_action.splits)
 
+\<comment> \<open>This is actually entirely equivalent to possible_switch_to_valid_sched_strong\<close>
 lemma possible_switch_to_valid_sched_weak:
   "\<lbrace>\<lambda>s. valid_sched_except_blocked s \<and> valid_blocked_except target s
-         \<and> target \<noteq> idle_thread s
          \<and> (pred_map bound (tcb_scps_of s) target \<and> not_in_release_q target s
-             \<longrightarrow> pred_map runnable (tcb_sts_of s) target \<and> released_sc_tcb_at target s)\<rbrace>
+             \<longrightarrow> pred_map runnable (tcb_sts_of s) target \<and> released_sc_tcb_at target s
+                 \<and> target \<noteq> idle_thread s)\<rbrace>
    possible_switch_to target
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  apply (wp possible_switch_to_valid_sched_strong)
-  apply (clarsimp simp: valid_sched_def)
-  apply (clarsimp simp: valid_blocked_defs)
-  apply (case_tac "t=target", simp)
-   apply (clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps)
+  apply (wpsimp wp: possible_switch_to_valid_sched_strong simp: valid_sched_def valid_blocked_defs)
+  apply (case_tac "t=target", clarsimp simp: vs_all_heap_simps)
   by fastforce
 
-lemma possible_switch_to_valid_sched_except_blocked_inc:
-  "\<lbrace>\<lambda>s. valid_blocked_except_set (insert target S) s
-         \<and> target \<noteq> idle_thread s \<and> target \<notin> S
-         \<and> (pred_map bound (tcb_scps_of s) target \<and> not_in_release_q target s
-             \<longrightarrow> pred_map runnable (tcb_sts_of s) target \<and> released_sc_tcb_at target s)\<rbrace>
+lemma possible_switch_to_valid_blocked:
+  "\<lbrace>\<lambda>s. valid_blocked_except_set (insert target S) s\<rbrace>
    possible_switch_to target
    \<lbrace>\<lambda>rv s. valid_blocked_except_set S s\<rbrace>"
   unfolding possible_switch_to_def
@@ -3352,10 +3393,6 @@ lemma possible_switch_to_valid_sched_except_blocked_inc:
   apply (wpsimp wp: tcb_sched_enqueue_valid_blocked_except_set reschedule_required_valid_blocked
                     set_scheduler_action_valid_blocked_remove thread_get_wp')
   by (auto elim!: valid_blockedE')
-
-crunches reply_unlink_tcb
-  for not_cur_thread[wp]: "not_cur_thread t"
-  (wp: crunch_wps)
 
 lemma reply_unlink_tcb_scheduler_act_not[wp]:
   "\<lbrace>scheduler_act_not t'\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. scheduler_act_not t'\<rbrace>"
@@ -3600,8 +3637,20 @@ lemma cancel_all_ipc_valid_sched:
   apply (erule (1) valid_objs_RecvEP_distinct[rotated])
   done
 
-lemma set_thread_state_possible_switch_to_valid_sched:
-  "\<lbrace>(\<lambda>s. ipc_queued_thread t s \<and> t \<noteq> idle_thread s) and (valid_sched and K (active ts))\<rbrace>
+lemma set_thread_state_possible_switch_to_valid_sched_strong:
+  "\<lbrace>\<lambda>s. valid_ready_qs s
+        \<and> valid_release_q s
+        \<and> ct_not_in_q s
+        \<and> valid_sched_action s
+        \<and> ct_in_cur_domain s
+        \<and> valid_blocked_except t s
+        \<and> valid_idle_etcb s
+        \<and> released_ipc_queues_2 (cur_time s) (tcb_sts_of s(t \<mapsto> st)) (tcb_scps_of s) (tcb_faults_of s)
+                                   (sc_refill_cfgs_of s)
+        \<and> active_reply_scs s
+        \<and> valid_machine_time s
+        \<and> active_sc_valid_refills s
+        \<and> released_if_bound_sc_tcb_at t s \<and> t \<noteq> idle_thread s \<and> active ts\<rbrace>
    do y <- set_thread_state t ts;
       possible_switch_to t
    od
@@ -3609,8 +3658,19 @@ lemma set_thread_state_possible_switch_to_valid_sched:
   apply (wpsimp wp: possible_switch_to_valid_sched_weak
                     set_thread_state_runnable_valid_sched_except_blocked
                     set_thread_state_valid_blocked_const[where S="{t}"]
-                    hoare_vcg_imp_lift' set_thread_state_pred_map_tcb_sts_of)
-  by (auto simp: valid_sched_def released_ipc_queues_defs vs_all_heap_simps)
+                    hoare_vcg_imp_lift' set_thread_state_pred_map_tcb_sts_of
+              simp: runnable_eq_active)
+  by (intro conjI; clarsimp simp: valid_sched_def vs_all_heap_simps fun_upd_def
+                           split: if_splits elim!: released_ipc_queuesE)
+
+lemma set_thread_state_possible_switch_to_valid_sched:
+  "\<lbrace>\<lambda>s. valid_sched s \<and> released_if_bound_sc_tcb_at t s \<and> t \<noteq> idle_thread s \<and> active ts\<rbrace>
+   do y <- set_thread_state t ts;
+      possible_switch_to t
+   od
+   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  apply (wpsimp wp: set_thread_state_possible_switch_to_valid_sched_strong)
+  by (auto simp: valid_sched_def fun_upd_def vs_all_heap_simps split: if_splits elim!: released_ipc_queuesE)
 
 lemma cancel_all_signals_loop_valid_sched:
   "\<lbrace>(\<lambda>s. \<forall>t\<in>set queue. ipc_queued_thread t s \<and> t \<noteq> idle_thread s) and valid_sched and K (distinct queue)\<rbrace>
@@ -3620,7 +3680,8 @@ lemma cancel_all_signals_loop_valid_sched:
              od) queue
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (rule hoare_gen_asm, rule ball_mapM_x_scheme)
-    by (wpsimp wp: set_thread_state_pred_map_tcb_sts_of set_thread_state_possible_switch_to_valid_sched)+
+    apply (wpsimp wp: set_thread_state_pred_map_tcb_sts_of set_thread_state_possible_switch_to_valid_sched)+
+   by (auto simp: valid_sched_def released_ipc_queues_defs)
 
 lemma cancel_all_signals_valid_sched[wp]:
   "\<lbrace>\<lambda>s. valid_sched s \<and> valid_objs s \<and>  valid_idle s \<and> sym_refs (state_refs_of s)\<rbrace>
@@ -3671,6 +3732,7 @@ lemma thread_set_weak_valid_sched_action:
 lemma thread_set_not_state_valid_sched:
   "(\<And>x. tcb_state (f x) = tcb_state x) \<Longrightarrow>
    (\<And>x. tcb_sched_context (f x) = tcb_sched_context x) \<Longrightarrow>
+   (\<And>x. tcb_fault (f x) = tcb_fault x) \<Longrightarrow>
    (\<And>x. tcb_priority (f x) = tcb_priority x) \<Longrightarrow>
    (\<And>x. tcb_domain (f x) = tcb_domain x) \<Longrightarrow>
    thread_set f tptr \<lbrace>valid_sched_pred_strong P\<rbrace>"
@@ -3683,14 +3745,14 @@ lemma unbind_notification_valid_sched[wp]:
 lemma sched_context_unbind_tcb_valid_sched_misc[wp]:
   "sched_context_unbind_tcb sc_ptr
    \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
-          (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s) \<rbrace>"
+          (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>"
   by (wpsimp simp: sched_context_unbind_tcb_def
                wp: hoare_drop_imp hoare_vcg_all_lift set_tcb_sched_context_valid_sched_except_tcb_scp_heap)
 
 lemma unbind_from_sc_valid_sched_misc[wp]:
   "unbind_from_sc tcb_ptr
    \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
-          (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s) \<rbrace>"
+          (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>"
   by (wpsimp simp: unbind_from_sc_def wp: hoare_drop_imp hoare_vcg_all_lift)
 
 crunches test_reschedule
@@ -3757,7 +3819,10 @@ lemma set_tcb_sched_context_set[wp]:
    \<lbrace>\<lambda>rv s. pred_map_eq v (tcb_scps_of s) t'\<rbrace>"
   by (wpsimp wp: valid_sched_wp simp: vs_all_heap_simps)
 
-lemma sched_context_donate_valid_ready_qs[wp]:
+\<comment> \<open>sched_context_donate should never be called on a thread that is already queued to run,
+    i.e. in either the ready or release queues, or the target of the scheduler_action.
+    However, we only need a subset of those preconditions for this lemma.\<close>
+lemma sched_context_donate_valid_ready_qs':
   "\<lbrace>valid_ready_qs and not_queued tptr and scheduler_act_not tptr\<rbrace>
    sched_context_donate scptr tptr
    \<lbrace>\<lambda>rv. valid_ready_qs\<rbrace>"
@@ -3767,9 +3832,12 @@ lemma sched_context_donate_valid_ready_qs[wp]:
                  get_sc_obj_ref_wp
            simp: sched_context_donate_def)
 
-lemma valid_and_no_sc_imp_not_in_release_q:
-  "\<lbrakk>valid_release_q s; pred_map_eq None (tcb_scps_of s) tptr\<rbrakk> \<Longrightarrow> not_in_release_q tptr s"
-  by (auto simp: valid_release_q_def vs_all_heap_simps not_in_release_q_def)
+\<comment> \<open>might be more useful in practice\<close>
+lemma sched_context_donate_valid_ready_qs[wp]:
+  "\<lbrace>\<lambda>s. valid_ready_qs s \<and> pred_map_eq None (tcb_scps_of s) tptr \<and> scheduler_act_not tptr s\<rbrace>
+   sched_context_donate scptr tptr
+   \<lbrace>\<lambda>rv. valid_ready_qs\<rbrace>"
+  by (wpsimp wp: sched_context_donate_valid_ready_qs' simp: valid_ready_qs_no_sc_not_queued)
 
 lemma sched_context_donate_valid_release_q[wp]:
   "\<lbrace>valid_release_q and not_in_release_q tptr\<rbrace>
@@ -3792,7 +3860,7 @@ lemma test_reschedule_sched_act_not_same[wp]:
   "\<lbrace>\<top>\<rbrace> test_reschedule t \<lbrace>\<lambda>rv. scheduler_act_not t\<rbrace>"
   by (wpsimp wp: valid_sched_wp simp: scheduler_act_not_def)
 
-(* FIXME: brutal proof *)
+(* FIXME RT: brutal proof *)
 lemma sched_context_donate_valid_sched_action:
   "\<lbrace>valid_sched_action and scheduler_act_not tcb_ptr\<rbrace>
    sched_context_donate sc_ptr tcb_ptr
@@ -3829,19 +3897,20 @@ lemma sorted_release_q_sc_refill_cfg_update_irrelevant:
                                             opt_map_simps map_join_simps assms)
 
 lemma set_sc_refill_max_valid_sched_unbound_sc:
-  "\<lbrace>\<lambda>s. valid_sched s \<and> (\<nexists>t. pred_map_eq (Some ref) (tcb_scps_of s) t)\<rbrace>
+  "\<lbrace>\<lambda>s. valid_sched s \<and> (\<nexists>t. pred_map_eq (Some ref) (tcb_scps_of s) t) \<and> \<not> non_empty_sc_replies_at ref s\<rbrace>
    set_sc_obj_ref sc_refill_max_update ref 0
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  supply if_split[split del] if_bool_simps[simp]
   apply (wpsimp wp: valid_sched_wp simp: valid_sched_def)
   apply (intro conjI)
-       apply (clarsimp simp: valid_ready_qs_def vs_all_heap_simps in_queues_2_def heap_upd_def)
-       apply (drule spec, drule spec, elim conjE, drule (1) bspec, fastforce)
-      apply (clarsimp simp: valid_release_q_def sorted_release_q_sc_refill_cfg_update_irrelevant)
-      apply (fastforce simp: vs_all_heap_simps in_queue_2_def heap_upd_def)
-     apply (fastforce simp: valid_sched_action_def weak_valid_sched_action_def heap_upd_def vs_all_heap_simps)
-    apply (fastforce elim!: valid_blockedE' simp: heap_upd_def vs_all_heap_simps active_sc_def split: if_splits)
-   apply (fastforce simp: released_ipc_queues_defs heap_upd_def vs_all_heap_simps)
-  by (clarsimp simp: active_sc_valid_refills_def heap_upd_def vs_all_heap_simps active_sc_def)
+        apply (clarsimp simp: valid_ready_queued_thread_2_def vs_all_heap_simps heap_upd_def elim!: valid_ready_qsE)
+       apply (clarsimp simp: sorted_release_q_sc_refill_cfg_update_irrelevant elim!: valid_release_qE)
+       apply (clarsimp simp: vs_all_heap_simps heap_upd_def)
+      apply (fastforce simp: valid_sched_action_def weak_valid_sched_action_def heap_upd_def vs_all_heap_simps)
+     apply (clarsimp elim!: valid_blockedE' simp: heap_upd_def vs_all_heap_simps active_sc_def split: if_splits)
+    apply (clarsimp elim!: released_ipc_queuesE simp: heap_upd_def vs_all_heap_simps cong: conj_cong split: if_splits)
+   apply (clarsimp elim!: active_reply_scsE simp: heap_upd_def vs_all_heap_simps)
+  by (clarsimp simp: active_sc_valid_refills_def heap_upd_def vs_all_heap_simps active_sc_def split: if_splits)
 
 lemma tcb_release_remove_valid_sched_not_runnable:
   "\<lbrace>\<lambda>s. valid_sched s \<and> (\<not> pred_map active (tcb_sts_of s) thread \<or> \<not> active_sc_tcb_at thread s)\<rbrace>
@@ -3971,30 +4040,33 @@ lemma valid_blocked_thread_except:
   "t \<in> except \<Longrightarrow> valid_blocked_thread nq nr except queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs t"
   by (simp add: valid_blocked_thread_def)
 
+\<comment> \<open>When a passive server performs a ReplyRecv, it will first donate its scheduling context back
+    to the previous caller during the Reply phase. If there is another caller waiting, it will
+    receive another scheduling context via donating, even though it is running.
+    Note that sched_context_donate is never called when t_ptr is in the ready or release queues or
+    the target of switch_thread, so we don't mention those possibilities in the precondition.\<close>
 lemma sched_context_donate_valid_blocked:
-  "\<lbrace>\<lambda>s. valid_blocked_except_set (insert t S) s
-         \<and> (pred_map runnable (tcb_sts_of s) t \<and> is_active_sc scp s
-             \<longrightarrow> t \<in> S \<or> t = cur_thread s)\<rbrace>
-   sched_context_donate scp t
+  "\<lbrace>\<lambda>s. valid_blocked_except_set (insert t_ptr S) s
+         \<and> (pred_map runnable (tcb_sts_of s) t_ptr \<and> is_active_sc scp s
+             \<longrightarrow> t_ptr \<in> S \<or> t_ptr = cur_thread s)\<rbrace>
+   sched_context_donate scp t_ptr
    \<lbrace>\<lambda>rv. valid_blocked_except_set S\<rbrace>"
+  unfolding sched_context_donate_def
   by (wpsimp wp: set_tcb_sched_context_valid_blocked_Some_not_queued
                  set_tcb_sched_context_None_valid_blocked_except_set
                  tcb_release_remove_valid_blocked
                  tcb_sched_dequeue_valid_blocked_except_set_const
                  get_sc_obj_ref_wp
-           simp: sched_context_donate_def valid_blocked_thread_except)
+           simp: valid_blocked_thread_except)
 
 \<comment> \<open>When sched_context_donate is called from reply_remove, we are not always able to ensure that
     tcb_ptr satisfies released_ipc_queued_thread, but that's ok because the thread will
-    subsequently be made Inactive in reply_unlink_tcb. This should be adequate for reply finalisation.
-    Note, however, that when reply_remove is called from do_reply_transfer, the thread might
-    immediately be restarted, so we'll need to separately show that do_reply_transfer reestablishes
-    released_ipc_queued_thread in that context.\<close>
+    subsequently be made Inactive in reply_unlink_tcb.\<close>
 lemma reply_remove_sched_context_donate_released_ipc_queues:
   "\<lbrace>released_ipc_queues\<rbrace>
    sched_context_donate scp t
    \<lbrace>\<lambda>rv s. released_ipc_queues_2 (cur_time s) (tcb_sts_of s(t \<mapsto> Inactive))
-                                    (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>"
+                                    (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>"
   apply (wpsimp wp: set_tcb_sched_context_valid_sched_pred get_sc_obj_ref_wp
               simp: sched_context_donate_def)
   by (auto simp: pred_map_simps opt_map_simps map_join_simps ipc_queued_thread_state_def
@@ -4017,12 +4089,23 @@ lemma valid_sched_action_no_sc_sched_act_not:
   "\<lbrakk>valid_sched_action s; pred_map_eq None (tcb_scps_of s) ref\<rbrakk> \<Longrightarrow> scheduler_act_not ref s"
   by (auto simp: valid_sched_action_def weak_valid_sched_action_no_sc_sched_act_not)
 
-lemma sched_context_donate_valid_sched:
-  "\<lbrace>\<lambda>s. valid_sched s \<and> pred_map_eq None (tcb_scps_of s) t
-         \<and> (pred_map runnable (tcb_sts_of s) t \<and> is_active_sc scp s \<longrightarrow> t = cur_thread s)
+lemma in_ready_q_runnable:
+  "valid_ready_qs_2 qs ctime etcbs sts scps scs \<Longrightarrow> in_queues_2 qs t \<longrightarrow> pred_map runnable sts t"
+  by (auto simp: valid_ready_qs_def in_queues_2_def)
+
+lemma in_release_q_runnable:
+  "valid_release_q_2 q sts scps scs \<Longrightarrow> in_queue_2 q t \<longrightarrow> pred_map runnable sts t"
+  by (auto simp: valid_release_q_def in_queue_2_def)
+
+lemma switch_to_runnable:
+  "valid_sched_action_2 True {} ctime sa ct cdom rlq etcbs sts scps scs \<Longrightarrow> sa = switch_thread t \<longrightarrow> pred_map runnable sts t"
+  by (auto simp: valid_sched_action_def weak_valid_sched_action_def)
+
+lemma sched_context_donate_valid_sched_except_blocked:
+  "\<lbrace>\<lambda>s. valid_sched_except_blocked s \<and> pred_map_eq None (tcb_scps_of s) t
          \<and> (ipc_queued_thread t s \<longrightarrow> released_sc_at scp s)\<rbrace>
    sched_context_donate scp t
-   \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+   \<lbrace>\<lambda>rv. valid_sched_except_blocked\<rbrace>"
   by (wpsimp wp: sched_context_donate_valid_sched_action
                  sched_context_donate_valid_blocked
                  sched_context_donate_released_sc_released_ipc_queues
@@ -4030,6 +4113,16 @@ lemma sched_context_donate_valid_sched:
                  valid_ready_qs_no_sc_not_queued
                  valid_release_q_no_sc_not_in_release_q
                  valid_sched_action_no_sc_sched_act_not)
+
+lemma sched_context_donate_valid_sched:
+  "\<lbrace>\<lambda>s. valid_sched s \<and> pred_map_eq None (tcb_scps_of s) t
+         \<and> (pred_map runnable (tcb_sts_of s) t \<and> is_active_sc scp s \<longrightarrow> t = cur_thread s)
+         \<and> (ipc_queued_thread t s \<longrightarrow> released_sc_at scp s)\<rbrace>
+   sched_context_donate scp t
+   \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  by (wpsimp wp: sched_context_donate_valid_sched_except_blocked
+                 sched_context_donate_valid_blocked
+           simp: valid_sched_valid_sched_except_blocked)
 
 lemma valid_sched_blocked_imp:
    "\<lbrakk>valid_sched s; not_queued t s; not_in_release_q t s; scheduler_act_not t s; t \<noteq> cur_thread s\<rbrakk> \<Longrightarrow>
@@ -4092,8 +4185,8 @@ lemma set_tcb_sc_update_active_sc_tcb_at_None[wp]:
   by (wpsimp wp: valid_sched_wp simp: vs_all_heap_simps)
 
 lemma released_ipc_queues_set_scp_None:
-  assumes "released_ipc_queues_2 ctime tcb_sts tcb_scps sc_refill_cfgs"
-  shows "released_ipc_queues_2 ctime tcb_sts (tcb_scps(ref \<mapsto> None)) sc_refill_cfgs"
+  assumes "released_ipc_queues_2 ctime tcb_sts tcb_scps tcb_faults sc_refill_cfgs"
+  shows "released_ipc_queues_2 ctime tcb_sts (tcb_scps(ref \<mapsto> None)) tcb_faults sc_refill_cfgs"
   apply (rule released_ipc_queuesE[OF assms])
   by (auto simp: pred_map_simps opt_map_simps map_join_simps)
 
@@ -4307,64 +4400,223 @@ lemma valid_sched_not_schedulable_sc_not_queued:
 
 lemma reply_unlink_tcb_released_ipc_queues:
   "\<lbrace>\<lambda>s. released_ipc_queues_2 (cur_time s) (tcb_sts_of s(t \<mapsto> Inactive))
-     (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>
+                              (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>
    reply_unlink_tcb t rptr
    \<lbrace>\<lambda>_. released_ipc_queues\<rbrace>"
    unfolding reply_unlink_tcb_def
    by (wpsimp wp: set_thread_state_valid_sched_pred hoare_drop_imps)
 
 lemma released_ipc_queues_except_strengthen:
-  "released_ipc_queues_2 ctime sts scps refill_cfgs
-   \<Longrightarrow> released_ipc_queues_2 ctime (sts(tp \<mapsto> Inactive)) scps refill_cfgs"
+  "released_ipc_queues_2 ctime sts scps faults refill_cfgs
+   \<Longrightarrow> released_ipc_queues_2 ctime (sts(tp \<mapsto> Inactive)) scps faults refill_cfgs"
   apply (erule released_ipc_queuesE)
   by (clarsimp simp: pred_map_simps ipc_queued_thread_state_def)
+
+lemma reply_unlink_sc_active_reply_scs[wp]:
+  "reply_unlink_sc sc_ptr reply_ptr \<lbrace>active_reply_scs\<rbrace>"
+  unfolding reply_unlink_sc_def
+  apply (rule hoare_seq_ext[OF _ gscrpls_sp])
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_if
+         ; (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)+
+         ; wpsimp wp: update_sc_replies_valid_sched_pred)
+  by (auto simp: obj_at_kh_kheap_simps heap_upd_def vs_all_heap_simps
+          split: if_splits elim!: active_reply_scsE)
+
+lemma reply_unlink_sc_valid_sched[wp]:
+  "reply_unlink_sc sc_ptr reply_ptr \<lbrace>valid_sched\<rbrace>"
+  by (wpsimp simp: valid_sched_def)
+
+lemma released_ipc_queues_update_state_trivial:
+  assumes st: "\<not> ipc_queued_thread_state st"
+  assumes sc: "released_ipc_queues_2 ctime sts scps faults scrcs"
+  shows "released_ipc_queues_2 ctime (sts(t \<mapsto> st)) scps faults scrcs"
+  using assms by (auto elim!: released_ipc_queuesE simp: pred_map_simps split: if_splits)
+
+lemmas released_ipc_queues_upd_Inactive[simp, elim!]
+  = released_ipc_queues_update_state_trivial[where st=Inactive, simplified]
 
 lemma reply_remove_valid_sched:
   "\<lbrace>\<lambda>s. valid_sched s \<and> ipc_queued_thread tp s\<rbrace>
      reply_remove tp rp
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  unfolding reply_remove_def
   supply if_split[split del]
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (case_tac "reply_tcb reply"; clarsimp simp: assert_opt_def)
-  apply (simp add: valid_sched_def)
-  apply wp
-      apply (wpsimp wp: reply_unlink_tcb_valid_ready_qs reply_unlink_tcb_valid_release_q
-                        reply_unlink_tcb_valid_sched_action reply_unlink_tcb_ct_in_cur_domain
-                        reply_unlink_tcb_valid_blocked_except_set reply_unlink_tcb_released_ipc_queues)
-     apply (wpsimp wp: sched_context_donate_valid_sched_action sched_context_donate_valid_blocked
-                       reply_remove_sched_context_donate_released_ipc_queues)
-       apply (rule_tac Q= "\<lambda>_. valid_sched and ipc_queued_thread tp" in hoare_strengthen_post[rotated])
-        apply (clarsimp simp: split: if_splits)
-        apply (strengthen valid_sched_not_runnable_not_queued valid_sched_scheduler_act_not_better
-                          valid_sched_not_runnable_not_in_release_q released_ipc_queues_except_strengthen)
-        apply (clarsimp simp: valid_sched_def)
-        apply (fastforce dest: ipc_queued_thread_state_not_runnable simp: pred_map_simps tcb_at_kh_simps)
-       apply wpsimp+
-  apply (clarsimp simp: valid_sched_def elim!: released_ipc_queues_except_strengthen)
-  done
+  apply (simp add: reply_remove_def valid_sched_def)
+  apply (repeat 3 \<open>rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?\<close>)
+  apply (rule_tac hoare_seq_ext
+         , wpsimp wp: reply_unlink_tcb_valid_ready_qs reply_unlink_tcb_valid_release_q
+                      reply_unlink_tcb_valid_sched_action reply_unlink_tcb_ct_in_cur_domain
+                      reply_unlink_tcb_valid_blocked_except_set reply_unlink_tcb_released_ipc_queues)
+  apply (case_tac r_sc_opt, wpsimp, clarsimp)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_when_cases; clarsimp)
+  apply (wpsimp wp: sched_context_donate_valid_sched_action sched_context_donate_valid_blocked
+                    reply_remove_sched_context_donate_released_ipc_queues)
+  apply (strengthen valid_sched_not_runnable_not_queued valid_sched_scheduler_act_not_better
+                    valid_sched_not_runnable_not_in_release_q released_ipc_queues_except_strengthen)
+  by (auto dest: ipc_queued_thread_state_not_runnable simp: valid_sched_def pred_map_simps tcb_at_kh_simps)
 
-lemma reply_remove_tcb_valid_sched:
-  "\<lbrace>valid_sched\<rbrace>
-     reply_remove_tcb tp rp
-   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (simp add: reply_remove_tcb_def)
+\<comment> \<open>The operations that make up cancel_ipc affect valid_sched_pred in similar ways.\<close>
+locale set_thread_state_Inactive_valid_sched_pred_equiv =
+  fixes f :: "obj_ref \<Rightarrow> ('state_ext::state_ext state, 'a) nondet_monad"
+  fixes tptr :: obj_ref
+  \<comment> \<open>We can't put sc_replies in here, because we want to use this locale for functions
+      that modify that field.\<close>
+  assumes valid_sched_pred:
+    "\<And>P. \<lbrace>\<lambda>s::'state_ext state.
+             P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+               (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s) (ready_queues s) (release_queue s)
+               (if tptr = cur_thread s \<and> scheduler_action s = resume_cur_thread then choose_new_thread else scheduler_action s)
+               (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s(tptr \<mapsto> Inactive)) (tcb_scps_of s)
+               (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>
+          f tptr
+          \<lbrace>\<lambda>rv s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+                    (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s) (ready_queues s) (release_queue s)
+                    (scheduler_action s) (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s)
+                    (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>"
+  assumes non_empty_sc_replies_at[wp]:
+    "\<And>scp. f tptr \<lbrace>\<lambda>s::'state_ext state. \<not> non_empty_sc_replies_at scp s\<rbrace>"
+
+context set_thread_state_Inactive_valid_sched_pred_equiv begin
+
+lemmas valid_sched_misc[wp]
+  = valid_sched_pred[where P="\<lambda>cons csc tcbs ctime cdom ct it rq rlq _ lmt etcbs _ scps faults scrcs.
+                               P cons csc tcbs ctime cdom ct it rq rlq lmt etcbs scps faults scrcs :: bool" for P]
+
+lemma valid_ready_qs:
+  "\<lbrace>\<lambda>s::'state_ext state. valid_ready_qs s \<and> \<not> pred_map runnable (tcb_sts_of s) tptr\<rbrace>
+   f tptr
+   \<lbrace>\<lambda>rv. valid_ready_qs\<rbrace>"
+  apply (wpsimp wp: valid_sched_pred)
+  by (clarsimp simp: valid_ready_queued_thread_2_def vs_all_heap_simps
+              elim!: valid_ready_qsE split: if_splits)
+
+lemma valid_release_q:
+  "\<lbrace>\<lambda>s::'state_ext state. valid_release_q s \<and> \<not> pred_map runnable (tcb_sts_of s) tptr\<rbrace>
+   f tptr
+   \<lbrace>\<lambda>rv. valid_release_q\<rbrace>"
+  apply (wpsimp wp: valid_sched_pred)
+  by (fastforce simp: valid_release_q_def vs_all_heap_simps split: if_splits)
+
+lemma ct_not_in_q[wp]:
+  "f tptr \<lbrace>ct_not_in_q::'state_ext state \<Rightarrow> _\<rbrace>"
+  by (wpsimp wp: valid_sched_pred)
+
+lemma valid_sched_action:
+  "\<lbrace>\<lambda>s::'state_ext state. valid_sched_action s \<and> \<not> pred_map runnable (tcb_sts_of s) tptr\<rbrace>
+   f tptr
+   \<lbrace>\<lambda>rv. valid_sched_action\<rbrace>"
+  apply (wpsimp wp: valid_sched_pred)
+  by (fastforce simp: valid_sched_action_def weak_valid_sched_action_def vs_all_heap_simps
+                      is_activatable_def
+               split: if_splits)
+
+lemma ct_in_cur_domain[wp]:
+  "f tptr \<lbrace>ct_in_cur_domain::'state_ext state \<Rightarrow> _\<rbrace>"
+  by (wpsimp wp: valid_sched_pred)
+
+lemma valid_blocked_tcb_at[wp]:
+  "\<lbrace>\<lambda>s::'state_ext state. t' \<noteq> tptr \<longrightarrow> valid_blocked_tcb_at t' s\<rbrace>
+   f tptr
+   \<lbrace>\<lambda>_. valid_blocked_tcb_at t'\<rbrace>"
+  apply (wpsimp wp: valid_sched_pred)
+  by (clarsimp simp: valid_blocked_thread_def vs_all_heap_simps)
+
+lemma valid_blocked[wp]:
+  "\<lbrace>valid_blocked_except_set (insert tptr S)::'state_ext state \<Rightarrow> _\<rbrace>
+   f tptr
+   \<lbrace>\<lambda>_. valid_blocked_except_set S::'state_ext state \<Rightarrow> _\<rbrace>"
+  supply if_split[split del]
+  apply (wpsimp wp: valid_sched_pred)
+  by (erule valid_blockedE'; case_tac "t=tptr"; clarsimp simp: vs_all_heap_simps)
+
+lemma active_reply_scs[wp]:
+  "f tptr \<lbrace>active_reply_scs::'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding active_reply_scs_defs
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+
+lemmas valid_sched_lemmas
+  = valid_ready_qs valid_release_q valid_sched_action
+    valid_sched_pred[where P="\<lambda>cons csc tcbs ctime cdom ct it rq rlq sa lmt etcbs sts scps faults scrcs.
+                                released_ipc_queues_2 ctime sts scps faults scrcs"]
+
+lemma valid_sched:
+  "\<lbrace>\<lambda>s::'state_ext state.
+        valid_ready_qs s
+        \<and> valid_release_q s
+        \<and> ct_not_in_q s
+        \<and> valid_sched_action s
+        \<and> ct_in_cur_domain s
+        \<and> valid_blocked_except tptr s
+        \<and> valid_idle_etcb s
+        \<and> released_ipc_queues_2 (cur_time s) (tcb_sts_of s(tptr \<mapsto> Inactive)) (tcb_scps_of s)
+                                   (tcb_faults_of s) (sc_refill_cfgs_of s)
+        \<and> active_reply_scs s
+        \<and> valid_machine_time s
+        \<and> active_sc_valid_refills s
+        \<and> \<not> pred_map runnable (tcb_sts_of s) tptr\<rbrace>
+   f tptr
+   \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  by (wpsimp wp: valid_sched_lemmas simp: valid_sched_def)
+
+lemma valid_sched_except_blocked:
+  "\<lbrace>\<lambda>s::'state_ext state.
+        valid_ready_qs s
+        \<and> valid_release_q s
+        \<and> ct_not_in_q s
+        \<and> valid_sched_action s
+        \<and> ct_in_cur_domain s
+        \<and> valid_idle_etcb s
+        \<and> released_ipc_queues_2 (cur_time s) (tcb_sts_of s(tptr \<mapsto> Inactive)) (tcb_scps_of s)
+                                   (tcb_faults_of s) (sc_refill_cfgs_of s)
+        \<and> active_reply_scs s
+        \<and> valid_machine_time s
+        \<and> active_sc_valid_refills s
+        \<and> \<not> pred_map runnable (tcb_sts_of s) tptr\<rbrace>
+   f tptr
+   \<lbrace>\<lambda>rv. valid_sched_except_blocked\<rbrace>"
+  by (wpsimp wp: valid_sched_lemmas simp: valid_sched_def)
+
+end
+
+global_interpretation set_thread_state_Inactive:
+  set_thread_state_Inactive_valid_sched_pred_equiv "\<lambda>t. set_thread_state t Inactive"
+  by unfold_locales (wpsimp wp: set_thread_state_valid_sched_pred_strong simp: fun_upd_def)+
+
+global_interpretation reply_unlink_tcb: set_thread_state_Inactive_valid_sched_pred_equiv "\<lambda>t. reply_unlink_tcb t r"
+  by unfold_locales (wpsimp wp: reply_unlink_tcb_valid_sched_pred simp: fun_upd_def)+
+
+lemma reply_remove_tcb_non_empty_sc_replies_at[wp]:
+  "reply_remove_tcb t r \<lbrace>\<lambda>s. \<not> non_empty_sc_replies_at scp s\<rbrace>"
+  unfolding reply_remove_tcb_def
+  apply (wpsimp wp: update_sc_replies_valid_sched_pred get_sk_obj_ref_wp gts_wp)
+  by (auto simp: heap_upd_def vs_all_heap_simps)
+
+global_interpretation reply_remove_tcb: set_thread_state_Inactive_valid_sched_pred_equiv "\<lambda>t. reply_remove_tcb t r"
+  apply unfold_locales
+   prefer 2 subgoal by wp
+  unfolding reply_remove_tcb_def
+  supply if_split[split del]
   apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp, OF hoare_gen_asm_conj], clarsimp)
-  apply (wpsimp wp: reply_unlink_tcb_valid_sched get_sk_obj_ref_wp)
-  done
+  apply (rule hoare_seq_ext[OF _ assert_sp], rule hoare_gen_asm_conj)
+  apply (clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule hoare_seq_ext_skip
+         , solves \<open>wpsimp wp: hoare_drop_imps
+                        simp: obj_at_kh_kheap_simps vs_all_heap_simps fun_upd_def\<close>)+
+  by (wpsimp wp: reply_unlink_tcb_valid_sched_pred simp: fun_upd_def)
 
 lemma unbind_maybe_notification_valid_sched[wp]:
   "unbind_maybe_notification ptr \<lbrace>valid_sched_pred_strong P\<rbrace>"
   by (wpsimp wp: get_sk_obj_ref_wp simp: unbind_maybe_notification_def)
 
-lemma cancel_signal_valid_sched[wp]:
-  "\<lbrace>\<lambda>s. valid_sched s \<and> \<not> pred_map runnable (tcb_sts_of s) tptr\<rbrace>
-     cancel_signal tptr ntfnptr
-   \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  apply (wpsimp wp: set_thread_state_Inactive_not_runnable_valid_sched get_simple_ko_wp
-              simp: cancel_signal_def)
-  by (auto simp: valid_sched_def)
+global_interpretation cancel_signal: set_thread_state_Inactive_valid_sched_pred_equiv "\<lambda>t. cancel_signal t ntfn"
+  apply unfold_locales
+  unfolding cancel_signal_def
+  supply if_split[split del]
+  apply (rule hoare_seq_ext_skip, solves wpsimp, simp?)+
+  by (wpsimp wp: set_thread_state_Inactive.valid_sched_pred get_simple_ko_wp simp: fun_upd_def)+
 
 crunch st_tcb_at_not_runnable[wp]: reply_remove_tcb "st_tcb_at (\<lambda>st. \<not>runnable st) t"
   (wp: crunch_wps select_wp sts_st_tcb_at_cases thread_set_no_change_tcb_state maybeM_inv
@@ -4374,16 +4626,35 @@ lemma reply_remove_tcb_not_runnable[wp]:
   "reply_unlink_tcb t r \<lbrace>\<lambda>s. \<not> pred_map runnable (tcb_sts_of s) t\<rbrace>"
   by (wpsimp wp: reply_unlink_tcb_valid_sched_pred simp: vs_all_heap_simps)
 
-lemma blocked_cancel_ipc_valid_sched:
-  "\<lbrace>\<lambda>s. valid_sched s \<and> \<not> pred_map runnable (tcb_sts_of s) tptr\<rbrace>
-     blocked_cancel_ipc state tptr reply_opt
-   \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  apply (wpsimp wp: set_thread_state_Inactive_not_runnable_valid_sched
-                    reply_unlink_tcb_valid_sched_except_blocked
-                    reply_unlink_tcb_valid_blocked_except_set
-                    hoare_drop_imps
-              simp: blocked_cancel_ipc_def)
-  by (auto simp: valid_sched_def)
+global_interpretation blocked_cancel_ipc:
+  set_thread_state_Inactive_valid_sched_pred_equiv "\<lambda>t. blocked_cancel_ipc st t r"
+  apply unfold_locales
+  unfolding blocked_cancel_ipc_def
+  subgoal for P
+    supply if_split[split del]
+    apply (rule hoare_seq_ext_skip, solves wpsimp, simp?)+
+    apply (cases r; simp add: bind_assoc; thin_tac _)
+     apply (wpsimp wp: set_thread_state_valid_sched_pred_strong simp: fun_upd_def)
+    apply (rule hoare_seq_ext_skip, solves wpsimp, simp?)+
+    apply (wpsimp wp: set_thread_state_valid_sched_pred_strong
+                      reply_unlink_tcb_valid_sched_pred_lift[THEN hoare_drop_assertion])
+    apply (clarsimp simp: fun_upd_def split: if_splits)
+    done
+  apply (wpsimp wp: hoare_drop_imp simp: blocked_cancel_ipc_def)
+  done
+
+lemmas cancel_ipc_valid_sched_lemmas
+  = reply_remove_tcb.valid_sched
+    cancel_signal.valid_sched
+    blocked_cancel_ipc.valid_sched
+
+lemma exec_set_object:
+  "(set_object p ko >>= m) s = m () (kheap_update (\<lambda>kh. kh(p \<mapsto> ko)) s)"
+  by (simp add: set_object_def bind_assoc exec_get exec_put cong: abstract_state.fold_congs)
+
+lemma get_tcb_after_put[simp]:
+  "get_tcb t (kheap_update (\<lambda>kh. kh(t \<mapsto> TCB tcb)) s) = Some tcb"
+  by (simp add: get_tcb_def)
 
 crunches sched_context_unbind_yield_from
   for valid_sched[wp]: "valid_sched_pred_strong P"
@@ -4411,16 +4682,51 @@ lemma sym_ref_tcb_reply_Receive:
   apply (case_tac koa; clarsimp simp: get_refs_def2)
   done
 
-lemma thread_set_fault_valid_sched_pred[wp]:
-  "thread_set (tcb_fault_update f) tptr \<lbrace>valid_sched_pred_strong P\<rbrace>"
-  by (wpsimp wp: thread_set_wp simp: fun_upd_def obj_at_kh_kheap_simps vs_all_heap_simps)
+lemma thread_set_fault_valid_sched_pred:
+  "\<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+          (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+          (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
+          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (heap_upd f tptr (tcb_faults_of s))
+          (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
+   thread_set (tcb_fault_update f) tptr
+   \<lbrace>\<lambda>rv. valid_sched_pred_strong P\<rbrace>"
+  apply (wpsimp wp: thread_set_wp)
+  by (auto simp: heap_upd_def fun_upd_def obj_at_kh_kheap_simps vs_all_heap_simps
+          elim!: rsubst[of "\<lambda>t::obj_ref \<rightharpoonup> fault option. P _ _ _ _ _ _ _ _ _ _ _ _ _ _ t _ _ :: bool"]
+          split: if_splits)
+
+lemmas thread_set_fault_valid_sched_misc[wp]
+  = thread_set_fault_valid_sched_pred[where P="\<lambda>cons csc tcbs ctime cdom ct it qs rq sa lmt etcbs sts scps _ scrcs reps.
+                                                P cons csc tcbs ctime cdom ct it qs rq sa lmt etcbs sts scps scrcs reps :: bool" for P]
 
 lemma cancel_ipc_valid_sched[wp]:
   "cancel_ipc tptr \<lbrace>valid_sched\<rbrace>"
-  apply (wpsimp wp: blocked_cancel_ipc_valid_sched reply_remove_tcb_valid_sched
-                    hoare_vcg_const_imp_lift gts_wp
-              simp: cancel_ipc_def)
-  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps)
+  unfolding cancel_ipc_def
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule_tac B="\<lambda>rv s. pred_map_eq state (tcb_sts_of s) tptr
+                            \<and> valid_ready_qs s
+                            \<and> valid_release_q s
+                            \<and> ct_not_in_q s
+                            \<and> valid_sched_action s
+                            \<and> ct_in_cur_domain s
+                            \<and> valid_blocked s
+                            \<and> valid_idle_etcb s
+                            \<and> released_ipc_queues_2 (cur_time s) (tcb_sts_of s(tptr \<mapsto> Inactive)) (tcb_scps_of s)
+                                                       (tcb_faults_of s) (sc_refill_cfgs_of s)
+                            \<and> active_reply_scs s
+                            \<and> active_sc_valid_refills s
+                            \<and> valid_machine_time s" in hoare_seq_ext)
+   apply (wpsimp wp: cancel_ipc_valid_sched_lemmas)
+   apply (prop_tac "\<not> ipc_queued_thread_state state \<Longrightarrow> valid_sched s")
+    apply (clarsimp simp: valid_sched_def vs_all_heap_simps runnable_eq fun_upd_def
+                   split: if_splits elim!: released_ipc_queuesE)
+   apply (prop_tac "ipc_queued_thread_state state \<Longrightarrow> \<not> pred_map runnable (tcb_sts_of s) tptr")
+    apply (rule ccontr; fastforce simp: vs_all_heap_simps runnable_eq)
+   apply fastforce
+  apply (wpsimp wp: thread_set_fault_valid_sched_pred simp: valid_sched_def)
+  apply (clarsimp simp: vs_all_heap_simps split: if_splits elim!: released_ipc_queuesE)
+  done
 
 lemma possible_switch_to_ct_in_cur_domain[wp]:
   "possible_switch_to target \<lbrace>ct_in_cur_domain\<rbrace>"
@@ -4453,11 +4759,6 @@ for simple_sched_action[wp]: simple_sched_action
 and scheduler_act_sane[wp]: scheduler_act_sane
 and scheduler_act_not[wp]: "scheduler_act_not t"
   (wp: maybeM_wp hoare_drop_imps)
-
-crunches blocked_cancel_ipc, cancel_signal
-  for not_queued[wp]: "not_queued t"
-  and not_in_release_q[wp]: "not_in_release_q t"
-  (wp: hoare_drop_imp)
 
 lemma cancel_ipc_not_queued[wp]:
   "\<lbrace>not_queued t\<rbrace> cancel_ipc tptr \<lbrace>\<lambda>_. not_queued t\<rbrace>"
@@ -4634,7 +4935,6 @@ lemma tcb_release_enqueue_valid_sched_except_blocked:
 lemma tcb_release_enqueue_valid_sched:
   "\<lbrace>\<lambda>s. valid_sched_except_blocked s
         \<and> valid_blocked_except thread s
-        \<and> not_queued thread s
         \<and> not_in_release_q thread s
         \<and> scheduler_act_not thread s
         \<and> pred_map runnable (tcb_sts_of s) thread
@@ -4643,14 +4943,28 @@ lemma tcb_release_enqueue_valid_sched:
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   by (wpsimp wp: tcb_release_enqueue_valid_blocked_except_set simp: valid_sched_def)
 
-lemma valid_blocked_divided':
-  "valid_blocked s \<longleftrightarrow> valid_blocked_except_set S s \<and> valid_blocked_except_set (-S) s"
-  by (auto simp: valid_blocked_defs)
+lemma valid_blocked_thread_lift_except:
+  "valid_blocked_thread nq nr S qs rq sa ct sts scps cfgs t
+   \<longleftrightarrow> (t \<notin> S \<longrightarrow> valid_blocked_thread nq nr {} qs rq sa ct sts scps cfgs t)"
+  by (auto simp: valid_blocked_thread_def)
 
-lemmas valid_blocked_divided
-  = valid_blocked_divided'[simplified valid_blocked_except_set_2_def[where except="-S" for S]]
+lemma valid_blocked_divided_except_set:
+  "valid_blocked_except_set_2 except queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs
+   \<longleftrightarrow> valid_blocked_except_set_2 (S \<union> except) queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs
+       \<and> valid_blocked_except_set_2 (- S \<union> except) queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs"
+  by (auto simp add: valid_blocked_defs)
 
-lemmas valid_blocked_divided2 = valid_blocked_divided[THEN iffD2, OF conjI]
+lemma valid_blocked_divided_threadsE:
+  assumes "valid_blocked_except_set_2 (I \<union> S) queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs"
+  assumes " \<forall>t \<in> I. valid_blocked_thread id id {} queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs t"
+  shows "valid_blocked_except_set_2 S queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs"
+  apply (rule valid_blocked_divided_except_set[THEN iffD2], rule conjI, rule assms)
+  by (clarsimp simp: valid_blocked_except_set_2_def[where except="-I \<union> S"]
+                     valid_blocked_thread_lift_except[where S="-I \<union> S"]
+                     assms)
+
+lemmas valid_blocked_divided_threadE
+  = valid_blocked_divided_threadsE[where I="{t}", simplified] for t
 
 lemma test_possible_switch_to_valid_sched:
   "\<lbrace>\<lambda>s. if pred_map runnable (tcb_sts_of s) target \<and> active_sc_tcb_at target s \<and> not_in_release_q target s
@@ -4663,45 +4977,27 @@ lemma test_possible_switch_to_valid_sched:
               simp: test_possible_switch_to_def)
   by (auto simp: vs_all_heap_simps)
 
-(* FIXME: Add thread pointer as parameter to postpone function,
-          to make it easier to state properties about postpone. *)
-lemma postpone_valid_sched: (* sc_ptr is linked to a thread that is not in any queue *)
+(* sc_ptr is linked to a thread that is not in any queue *)
+lemma postpone_valid_sched:
   "\<lbrace>\<lambda>s. valid_sched_except_blocked s
-        \<and> (\<forall>tp. sc_tcb_sc_at ((=) (Some tp)) sc_ptr s
-                \<longrightarrow> valid_blocked_except tp s \<and> pred_map runnable (tcb_sts_of s) tp \<and> scheduler_act_not tp s
-                     \<and> not_in_release_q tp s \<and> not_queued tp s \<and> active_sc_tcb_at tp s)\<rbrace>
+        \<and> (\<forall>tp. pred_map_eq (Some tp) (sc_tcbs_of s) sc_ptr
+                \<longrightarrow> valid_blocked_except tp s \<and> pred_map runnable (tcb_sts_of s) tp
+                    \<and> scheduler_act_not tp s \<and> not_in_release_q tp s
+                    \<and> active_sc_tcb_at tp s)\<rbrace>
    postpone sc_ptr
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (unfold postpone_def assert_opt_def)
-  apply (rule hoare_seq_ext[OF _ gsct_sp])
+  unfolding postpone_def
   apply (wpsimp wp: tcb_release_enqueue_valid_sched
-            tcb_sched_dequeue_not_queued_inv
-            tcb_sched_dequeue_valid_ready_qs)
-  done
-
-lemma postpone_valid_sched_invs: (* sc_ptr is linked to a thread that is not in any queue *)
-  "\<lbrace>valid_sched_except_blocked and invs and
-      sc_with_tcb_prop sc_ptr
-           (\<lambda>tp s. pred_map runnable (tcb_sts_of s) tp \<and> scheduler_act_not tp s
-           \<and> not_in_release_q tp s \<and> active_sc_tcb_at tp s
-           \<and> valid_blocked_except tp s)\<rbrace>
-   postpone sc_ptr
-   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (unfold postpone_def assert_opt_def)
-  apply (rule hoare_seq_ext[OF _ gsct_sp])
-  apply (wpsimp wp: tcb_release_enqueue_valid_sched
-                    tcb_dequeue_not_queued
-                    tcb_sched_dequeue_valid_ready_qs
-                    tcb_sched_dequeue_valid_blocked_except_set_const
-                    tcb_sched_dequeue_valid_sched_except_blocked)
-  apply (frule (2) sc_with_tcb_prop_rev')
-  by (clarsimp simp: valid_sched_def valid_blocked_thread_def)
+                    tcb_sched_dequeue_valid_sched_except_blocked
+                    tcb_sched_dequeue_valid_blocked_except_set
+                    get_sc_obj_ref_wp)
+  by (clarsimp simp: valid_sched_def sc_tcb_sc_at_def obj_at_def vs_all_heap_simps)
 
 lemma postpone_valid_sched_except_blocked:
   "\<lbrace>\<lambda>s. valid_sched_except_blocked s
-         \<and> (\<forall>tp. sc_tcb_sc_at (\<lambda>p. p = Some tp) sc_ptr s
-                 \<longrightarrow> pred_map runnable (tcb_sts_of s) tp \<and> scheduler_act_not tp s
-                     \<and> not_in_release_q tp s \<and> active_sc_tcb_at tp s)\<rbrace>
+        \<and> (\<forall>tp. pred_map_eq (Some tp) (sc_tcbs_of s) sc_ptr
+                \<longrightarrow> pred_map runnable (tcb_sts_of s) tp \<and> scheduler_act_not tp s
+                    \<and> not_in_release_q tp s \<and> active_sc_tcb_at tp s)\<rbrace>
     postpone sc_ptr
    \<lbrace>\<lambda>_. valid_sched_except_blocked\<rbrace>"
   apply (unfold postpone_def assert_opt_def)
@@ -4711,7 +5007,7 @@ lemma postpone_valid_sched_except_blocked:
             tcb_dequeue_not_queued
             tcb_sched_dequeue_valid_ready_qs
             tcb_sched_dequeue_valid_sched_except_blocked)
-  by (clarsimp simp: valid_sched_def sc_at_pred_n_eq_commute)
+  by (clarsimp simp: valid_sched_def obj_at_kh_kheap_simps pred_map_eq_normalise)
 
 lemma postpone_valid_ready_qs:
   "\<lbrace>valid_ready_qs \<rbrace>
@@ -4735,13 +5031,6 @@ crunches sched_context_resume
   for valid_ready_qs[wp]: valid_ready_qs
   and released_ipc_queues[wp]: released_ipc_queues
   (wp: crunch_wps)
-
-lemma sc_tcb_sc_at_eq_inj:
-  "sc_tcb_sc_at ((=) (Some a)) x s
-   \<Longrightarrow> sc_tcb_sc_at ((=) (Some b)) x s
-   \<Longrightarrow> a=b"
-  unfolding sc_at_pred_n_eq_commute
-  by (clarsimp simp: sc_at_pred_n_def obj_at_def)
 
 lemma sched_context_resume_valid_release_q[wp]:
   "\<lbrace>valid_release_q\<rbrace>
@@ -4857,47 +5146,29 @@ lemma valid_ready_qs_contrap:
    \<Longrightarrow> (\<not> pred_map runnable (tcb_sts_of s) ref \<or> \<not> released_sc_tcb_at ref s) \<Longrightarrow> not_queued ref s"
   by (clarsimp simp: valid_ready_qs_def in_ready_q_def)
 
-lemma sched_context_resume_valid_sched:
-  "\<lbrace>valid_sched and
-    (\<lambda>s. \<forall>tp. sc_tcb_sc_at ((=) (Some tp)) sc_ptr s
-              \<longrightarrow> pred_map_eq (Some sc_ptr) (tcb_scps_of s) tp)\<rbrace>
-   sched_context_resume sc_ptr
-   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (wpsimp wp: postpone_valid_sched is_schedulable_wp' thread_get_wp'
-              simp: sched_context_resume_def)
-  apply (clarsimp simp: valid_sched_def sc_at_pred_n_def get_tcb_ko_at obj_at_def )
-  apply (rename_tac t tcb)
-  apply (rule_tac V="\<not> released_sc_tcb_at t s" in revcut_rl
-         , clarsimp simp: vs_all_heap_simps)
-  by (auto elim!: weak_valid_sched_action_contrap[OF valid_sched_action_weak_valid_sched_action]
-                  valid_ready_qs_contrap)
-
-lemma sched_context_resume_valid_sched_sym_refs:
-  "\<lbrace>\<lambda>s. valid_sched s \<and> sym_refs (state_refs_of s)\<rbrace>
-   sched_context_resume sc_ptr
-   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (wpsimp wp: sched_context_resume_valid_sched)
-  apply (clarsimp simp: sc_at_pred_n_eq_commute sc_at_pred_n_def obj_at_def vs_all_heap_simps)
-  by (frule_tac x=sc_ptr and y=tp and tp=TCBSchedContext in sym_refsE
-      ; clarsimp simp add: in_state_refs_of_iff refs_of_rev)
-
-lemma sched_context_resume_valid_sched_invs:
-  "\<lbrace>valid_sched and invs\<rbrace> sched_context_resume sc_ptr \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  by (wpsimp wp: sched_context_resume_valid_sched_sym_refs)
-
-lemma sched_context_resume_valid_sched_except_blocked: (* we could use invs *)
-  "\<lbrace>\<lambda>s. valid_sched_except_blocked s
-        \<and> (\<forall>tp. sc_tcb_sc_at ((=) (Some tp)) sc_ptr s
-                     \<longrightarrow> pred_map_eq (Some sc_ptr) (tcb_scps_of s) tp)\<rbrace>
-   sched_context_resume sc_ptr
+lemma sched_context_resume_valid_sched_except_blocked:
+  "\<lbrace>\<lambda>s. valid_sched_except_blocked s \<and> heap_refs_retract_at (sc_tcbs_of s) (tcb_scps_of s) scp\<rbrace>
+   sched_context_resume scp
    \<lbrace>\<lambda>_. valid_sched_except_blocked\<rbrace>"
-  apply (wpsimp wp: postpone_valid_sched_except_blocked is_schedulable_wp' thread_get_wp'
-              simp: sched_context_resume_def)
+  apply (wpsimp wp: postpone_valid_sched_except_blocked is_schedulable_wp' get_tcb_queue_wp thread_get_wp'
+              simp: sched_context_resume_def refill_sufficient_def get_refills_def refill_ready_def)
   apply (clarsimp simp: valid_sched_def sc_at_pred_n_def get_tcb_ko_at obj_at_def)
-  apply (rule_tac V="\<not> released_sc_tcb_at tp s" in revcut_rl
-         , clarsimp simp: vs_all_heap_simps)
-  by (auto elim!: weak_valid_sched_action_contrap[OF valid_sched_action_weak_valid_sched_action]
-                  valid_ready_qs_contrap)
+  apply (frule (1) heap_refs_retract_atD, clarsimp simp: vs_all_heap_simps)
+  apply (prop_tac "\<not> released_sc_tcb_at tp s", clarsimp simp: vs_all_heap_simps refill_ready_def refill_sufficient_def)
+  by (auto elim!: weak_valid_sched_action_contrap[OF valid_sched_action_weak_valid_sched_action])
+
+(* FIXME RT: duplicates proof in sched_context_resume_valid_sched_except_blocked,
+             because we're missing proofs about sched_context_resume and valid_blocked. *)
+lemma sched_context_resume_valid_sched:
+  "\<lbrace>\<lambda>s. valid_sched s \<and> heap_refs_retract_at (sc_tcbs_of s) (tcb_scps_of s) scp\<rbrace>
+   sched_context_resume scp
+   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  apply (wpsimp wp: postpone_valid_sched is_schedulable_wp' get_tcb_queue_wp thread_get_wp'
+              simp: sched_context_resume_def refill_sufficient_def get_refills_def refill_ready_def)
+  apply (clarsimp simp: valid_sched_def sc_at_pred_n_def get_tcb_ko_at obj_at_def)
+  apply (frule (1) heap_refs_retract_atD, clarsimp simp: vs_all_heap_simps)
+  apply (prop_tac "\<not> released_sc_tcb_at tp s", clarsimp simp: vs_all_heap_simps refill_ready_def refill_sufficient_def)
+  by (auto elim!: weak_valid_sched_action_contrap[OF valid_sched_action_weak_valid_sched_action])
 
 lemma postpone_valid_blocked_except_set:
   "postpone sc_ptr \<lbrace>valid_blocked_except_set S\<rbrace>"
@@ -5009,10 +5280,36 @@ lemma sched_context_unbind_all_tcbs_valid_sched[wp]:
   unfolding sched_context_unbind_all_tcbs_def
   by (wpsimp wp: sched_context_unbind_tcb_valid_sched)
 
-lemma sched_context_unbind_reply_valid_sched_pred[wp]:
-  "sched_context_unbind_reply sc_ptr \<lbrace>valid_sched_pred_strong P\<rbrace>"
+lemma sched_context_unbind_reply_valid_sched_misc[wp]:
+  "sched_context_unbind_reply sc_ptr
+   \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+          (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+          (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
+          (tcbs_of s) (sc_refill_cfgs_of s)\<rbrace>"
   unfolding sched_context_unbind_reply_def
-  by wpsimp
+  by (wpsimp wp: get_sched_context_wp update_sched_context_wp update_sk_obj_ref_wp
+           simp: obj_at_def vs_all_heap_simps fun_upd_def tcb_heap.all_simps)
+
+lemma sched_context_unbind_reply_non_empty_sc_replies_at[wp]:
+  "\<lbrace>\<lambda>s. scp' \<noteq> scp \<longrightarrow> \<not> non_empty_sc_replies_at scp' s\<rbrace>
+   sched_context_unbind_reply scp
+   \<lbrace>\<lambda>rv s. \<not> non_empty_sc_replies_at scp' s\<rbrace>"
+  unfolding sched_context_unbind_reply_def
+  by (wpsimp wp: update_sc_replies_valid_sched_pred simp: heap_upd_def vs_all_heap_simps obj_at_kh_kheap_simps)
+
+lemma active_reply_sc_at_lift_pre_conj:
+  assumes "\<lbrace>\<lambda>s. \<not> non_empty_sc_replies_at scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> non_empty_sc_replies_at scp s\<rbrace>"
+  assumes "\<lbrace>\<lambda>s. pred_map active_scrc (sc_refill_cfgs_of s) scp \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. pred_map active_scrc (sc_refill_cfgs_of s) scp\<rbrace>"
+  shows "\<lbrace>\<lambda>s. active_if_reply_sc_at scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_if_reply_sc_at scp s\<rbrace>"
+  unfolding active_if_reply_sc_at_2_def by (intro hoare_vcg_imp_lift_N_pre_conj assms)
+
+lemma sched_context_unbind_reply_active_reply_scs[wp]:
+  "sched_context_unbind_reply sc_ptr \<lbrace>active_reply_scs\<rbrace>"
+  by (wpsimp wp: active_reply_scs_lift_pre_conj active_reply_sc_at_lift_pre_conj)
+
+lemma sched_context_unbind_reply_valid_sched[wp]:
+  "sched_context_unbind_reply scp \<lbrace>valid_sched\<rbrace>"
+  by (wpsimp simp: valid_sched_def)
 
 lemma fast_finalise_valid_sched:
   "\<lbrace>valid_sched and invs and simple_sched_action and (\<lambda>s. \<exists>slot. cte_wp_at ((=) cap) slot s)\<rbrace>
@@ -5134,7 +5431,8 @@ end
 lemma update_time_stamp_valid_sched_misc[wp]:
   "update_time_stamp \<lbrace>\<lambda>s. P (cur_sc s) (cur_domain s) (cur_thread s) (idle_thread s)
           (ready_queues s) (release_queue s) (scheduler_action s)
-          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>"
+          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
+          (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>"
   unfolding update_time_stamp_def
   by wpsimp
 
@@ -5825,7 +6123,7 @@ lemma thread_set_priority_valid_sched_misc[wp]:
   "thread_set_priority p t
    \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
           (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
-          (tcb_sts_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>"
+          (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>"
   apply (wpsimp simp: thread_set_priority_def  wp: thread_set_wp)
   by (clarsimp simp: obj_at_kh_kheap_simps fun_upd_def vs_all_heap_simps)
 
@@ -5833,7 +6131,7 @@ lemma thread_set_domain_valid_sched_misc[wp]:
   "thread_set_domain t d
    \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
           (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
-          (tcb_sts_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>"
+          (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>"
   apply (wpsimp simp: thread_set_domain_def  wp: thread_set_wp)
   by (clarsimp simp: obj_at_kh_kheap_simps fun_upd_def vs_all_heap_simps)
 
@@ -5992,7 +6290,7 @@ lemma sched_context_bind_tcb_valid_sched:
       apply (intro allI conjI;
              intro impI;
              clarsimp simp: valid_sched_def is_schedulable_bool_def2)
-      apply (erule valid_blocked_divided2, clarsimp simp: valid_blocked_thread_def)
+      apply (erule valid_blocked_divided_threadE, clarsimp simp: valid_blocked_thread_def)
       apply (fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps)
      apply (wpsimp wp: sched_context_resume_valid_sched_except_blocked
                        sched_context_resume_cond_budget_ready_sufficient)
@@ -6005,7 +6303,7 @@ lemma sched_context_bind_tcb_valid_sched:
                            bound_sc_tcb_at (\<lambda>a. a = Some scptr) tcbptr"
                     in hoare_strengthen_post[rotated])
      apply (clarsimp simp: sc_at_pred_n_eq_commute)
-     apply (clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps sc_tcb_sc_at_def)
+     apply (clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps heap_refs_retract_at_def)
     apply (wpsimp wp: set_tcb_sched_context_valid_ready_qs_not_queued
                       set_tcb_sched_context_valid_release_q_not_queued
                       set_tcb_sched_context_simple_valid_sched_action
@@ -6294,11 +6592,12 @@ lemma awaken_valid_sched_helper:
                              modify (reprogram_timer_update (\<lambda>_. True))
                           od) queue
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  supply possible_switch_to_ct_not_in_q[wp]
   apply (induct queue; clarsimp simp: mapM_append_single mapM_x_Nil mapM_x_Cons bind_assoc)
    apply (wpsimp simp: valid_sched_def)
   apply (wpsimp simp: valid_sched_def thread_get_def
                   wp: possible_switch_to_valid_ready_qs assert_inv
-                      possible_switch_to_valid_sched_except_blocked_inc
+                      possible_switch_to_valid_blocked
                       hoare_vcg_ball_lift)
   apply (clarsimp simp: valid_sched_def released_sc_tcb_at_def)
   apply (clarsimp simp: tcb_at_kh_simps(2))
@@ -7893,7 +8192,7 @@ lemma thread_set_valid_sched_misc[wp]:
 lemma reply_push_valid_sched_misc[wp]:
   "reply_push caller callee reply_ptr can_donate
    \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
-          (last_machine_time_of s) (etcbs_of s) (sc_refill_cfgs_of s)\<rbrace>"
+          (last_machine_time_of s) (etcbs_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>"
   by (wpsimp wp: get_simple_ko_wp hoare_vcg_if_lift2 hoare_drop_imps hoare_vcg_all_lift
            simp: reply_push_def)
 
@@ -7920,9 +8219,10 @@ crunches copy_mrs, make_fault_msg, do_ipc_transfer
   (wp: mapM_wp')
 
 crunches send_ipc
-  for valid_sched_misc[wp]: "(\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
-                                    (cur_thread s) (idle_thread s) (last_machine_time_of s)
-                                    (sc_refill_cfgs_of s) (etcbs_of s)) :: 'state_ext state \<Rightarrow> _"
+  for valid_sched_misc[wp]:
+    "\<lambda>s :: 'state_ext state. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
+                               (cur_thread s) (idle_thread s) (last_machine_time_of s)
+                               (etcbs_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)"
   (wp: crunch_wps)
 
 crunch valid_refills[wp]: handle_timeout "valid_refills scp :: 'state_ext state \<Rightarrow> bool"
@@ -8116,23 +8416,26 @@ lemma valid_state_sym_refs[dest]: "valid_state s \<Longrightarrow> sym_refs (sta
   by (clarsimp simp: valid_state_def valid_pspace_def)
 
 lemma refill_budget_check_round_robin_valid_sched_misc[wp]:
-  "refill_budget_check_round_robin consumed  \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+  "refill_budget_check_round_robin consumed
+   \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
           (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
-          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) \<rbrace>"
+          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_replies_of s)\<rbrace>"
   unfolding refill_budget_check_round_robin_def
   by (wpsimp wp: hoare_drop_imp)
 
 lemma refill_budget_check_valid_sched_misc[wp]:
-  "refill_budget_check consumed  \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+  "refill_budget_check consumed
+   \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
           (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
-          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) \<rbrace>"
+          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_replies_of s)\<rbrace>"
   unfolding refill_budget_check_def
   by (wpsimp wp: hoare_drop_imp)
 
 lemma commit_time_valid_sched_misc[wp]:
-  "commit_time \<lbrace>\<lambda>s. P (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+  "commit_time
+   \<lbrace>\<lambda>s. P (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
           (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
-          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s)\<rbrace>"
+          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_replies_of s)\<rbrace>"
   unfolding commit_time_def
   by (wpsimp wp: hoare_drop_imp)
 
@@ -8195,14 +8498,12 @@ lemma commit_time_valid_release_q_cur_sc_not_in_release_q:
          split_del: if_split)
   by clarsimp
 
-lemmas hoare_seq_ext_skip
-  = hoare_seq_ext[where B="\<lambda>_. A" and A=A for A, rotated]
-
 lemma refill_budget_check_sc_refills_update_unspecified:
-  "\<lbrace>\<lambda>s. \<forall>f. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+  "\<lbrace>\<lambda>s. \<forall>f. P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+              (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
               (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
-              (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s)
-              (heap_upd (scrc_refills_update f) (cur_sc s) (sc_refill_cfgs_of s))\<rbrace>
+              (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
+              (heap_upd (scrc_refills_update f) (cur_sc s) (sc_refill_cfgs_of s)) (sc_replies_of s)\<rbrace>
    refill_budget_check usage
    \<lbrace>\<lambda>_. valid_sched_pred_strong P\<rbrace>"
   unfolding refill_budget_check_def
@@ -8213,10 +8514,11 @@ lemma refill_budget_check_sc_refills_update_unspecified:
   done
 
 lemma refill_budget_check_round_robin_sc_refills_update_unspecified:
-  "\<lbrace>\<lambda>s. \<forall>f. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+  "\<lbrace>\<lambda>s. \<forall>f. P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+              (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
               (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
-              (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s)
-              (heap_upd (scrc_refills_update f) (cur_sc s) (sc_refill_cfgs_of s))\<rbrace>
+              (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
+              (heap_upd (scrc_refills_update f) (cur_sc s) (sc_refill_cfgs_of s)) (sc_replies_of s)\<rbrace>
    refill_budget_check_round_robin usage
    \<lbrace>\<lambda>_. valid_sched_pred_strong P\<rbrace>"
   unfolding refill_budget_check_round_robin_def
@@ -8322,7 +8624,7 @@ lemma refill_budget_check_bounded_release_time:
     and valid_refills scp\<rbrace>
    refill_budget_check consumed
    \<lbrace>\<lambda>_. bounded_release_time scp\<rbrace>"
-  supply if_splits [split del]
+  supply if_split[split del]
   supply schedule_used.simps [simp del]
   unfolding refill_budget_check_def
   apply (wpsimp wp: is_round_robin_wp set_refills_bounded_release_time)
@@ -8332,7 +8634,6 @@ lemma refill_budget_check_bounded_release_time:
       apply (clarsimp simp: cur_sc_offset_ready_def obj_at_def bounded_release_time_def current_time_bounded_def)
       apply (rule_tac y="(unat (r_time (refill_hd sc)) + unat consumed) + unat (sc_period sc)"
              in order_trans[rotated])
-       apply (erule add_mono)
        apply (clarsimp simp: valid_refills_def vs_all_heap_simps unat_le_mono)
       apply (rule order_trans, rule unat_plus_gt)
       apply (rule order_trans, rule add_le_mono1, rule unat_plus_gt)
@@ -8524,8 +8825,22 @@ lemma commit_time_active_sc_valid_refills:
 
 lemma commit_time_valid_blocked_except_set[wp]:
   "commit_time \<lbrace>valid_blocked_except_set S\<rbrace>"
-   unfolding commit_time_def
-   by (wpsimp wp: hoare_drop_imps)
+  unfolding commit_time_def
+  by (wpsimp wp: hoare_drop_imps)
+
+lemma refill_budget_check_active_reply_scs[wp]:
+  "refill_budget_check usage \<lbrace>active_reply_scs\<rbrace>"
+  by (wpsimp wp: refill_budget_check_sc_refills_update_unspecified
+           simp: active_reply_scs_defs)
+
+lemma refill_budget_check_round_robin_active_reply_scs[wp]:
+  "refill_budget_check_round_robin usage \<lbrace>active_reply_scs\<rbrace>"
+  by (wpsimp wp: refill_budget_check_round_robin_sc_refills_update_unspecified
+           simp: active_reply_scs_defs)
+
+lemma commit_time_active_reply_scs[wp]:
+  "commit_time \<lbrace>active_reply_scs\<rbrace>"
+  unfolding commit_time_def by (wpsimp wp: hoare_drop_imps)
 
 lemma commit_time_valid_sched:
   "\<lbrace>valid_sched
@@ -8554,9 +8869,10 @@ lemma r_time_hd_refills_merge_prefix:
 
 lemma refill_unblock_check_valid_sched_misc[wp]:
   "refill_unblock_check scptr
-   \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+   \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+          (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
           (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
-          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s)\<rbrace>"
+          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_replies_of s)\<rbrace>"
   unfolding refill_unblock_check_def
   by (wpsimp wp: hoare_drop_imp)
 
@@ -8900,10 +9216,13 @@ lemma refill_unblock_check_valid_ready_qs[wp]:
 lemma update_sched_context_tcb_ready_times_idem:
   assumes "Q t"
   assumes "\<And>sc. sc_refill_cfg_of (f sc) = g (sc_refill_cfg_of sc)"
+  assumes "\<And>sc. sc_tcb (f sc) = h (sc_tcb sc)"
+  assumes "\<And>sc. sc_replies (f sc) = k (sc_replies sc)"
   shows "\<lbrace>\<lambda>s. P (tcb_ready_times_of s t) \<and> sc_with_tcb_prop sc_ptr (\<lambda>t s. \<not> Q t) s\<rbrace>
          update_sched_context sc_ptr f
          \<lbrace>\<lambda>_ s. P (tcb_ready_times_of s t)\<rbrace>"
-  apply (wpsimp wp: update_sched_context_valid_sched_pred'[where g=g and f=f, OF assms(2), THEN hoare_drop_assertion])
+  apply (wpsimp wp: update_sched_context_valid_sched_pred'
+                    [where g=g and f=f and h=h and k=k, OF assms(2-4), THEN hoare_drop_assertion])
   using assms
   by (fastforce simp: heap_upd_def tcb_ready_times_defs
                       map_project_simps opt_map_simps map_join_simps vs_all_heap_simps
@@ -9031,11 +9350,21 @@ lemma refill_unblock_check_released_ipc_queues[wp]:
                     refill_unblock_check_st_tcb_at hoare_vcg_disj_lift)
   by fastforce
 
+lemma refill_unblock_check_active_reply_scs[wp]:
+  "refill_unblock_check scp \<lbrace>active_reply_scs\<rbrace>"
+  unfolding refill_unblock_check_def by (wpsimp wp: hoare_drop_imps)
+
+lemma refill_unblock_check_valid_sched_except_blocked:
+  "\<lbrace>valid_sched_except_blocked and sc_not_in_release_q sc_ptr and current_time_bounded 1\<rbrace>
+    refill_unblock_check sc_ptr
+   \<lbrace>\<lambda>_. valid_sched_except_blocked\<rbrace>"
+  unfolding valid_sched_def
+  by (wpsimp wp: refill_unblock_check_valid_ready_qs refill_unblock_check_valid_release_q
+                 refill_unblock_check_valid_sched_action refill_unblock_check_active_sc_valid_refills)
+
 lemma refill_unblock_check_valid_sched:
-  "\<lbrace>valid_sched
-    and sc_not_in_release_q scp
-    and current_time_bounded 1\<rbrace>
-    refill_unblock_check scp
+  "\<lbrace>valid_sched and sc_not_in_release_q sc_ptr and current_time_bounded 1\<rbrace>
+   refill_unblock_check sc_ptr
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   unfolding valid_sched_def
   by (wpsimp wp: refill_unblock_check_valid_ready_qs
@@ -9070,13 +9399,13 @@ lemma ready_or_release_updates[simp]:
 
 context DetSchedSchedule_AI begin
 
-lemma ruc_cur_sc_offset_ready_2:
-  "\<lbrace>(\<lambda>s'. cur_sc_offset_ready_2 a b c (kheap s')) and (\<lambda>s. x \<noteq> c)\<rbrace>
-   refill_unblock_check x
-   \<lbrace>\<lambda>_ s. cur_sc_offset_ready_2 a b c (kheap s)\<rbrace>"
+lemma ruc_refill_ready_no_overflow_sc:
+  "\<lbrace>\<lambda>s. pred_map (refill_ready_no_overflow_sc usage curtime) (sc_refill_cfgs_of s) sc' \<and> sc' \<noteq> sc\<rbrace>
+   refill_unblock_check sc
+   \<lbrace>\<lambda>_ s. pred_map (refill_ready_no_overflow_sc usage curtime) (sc_refill_cfgs_of s) sc'\<rbrace>"
   unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp hoare_drop_imp hoare_vcg_if_lift2 get_refills_wp)
-  by (clarsimp simp: cur_sc_offset_ready_2_def)
+  apply (wpsimp wp: set_refills_wp get_refills_wp hoare_drop_imp hoare_vcg_all_lift)
+  by (clarsimp simp: vs_all_heap_simps)
 
 lemma ruc_cur_sc_offset_ready_indep[wp]:
   "\<lbrace>(\<lambda>s. a \<noteq> cur_sc s)
@@ -9085,7 +9414,7 @@ lemma ruc_cur_sc_offset_ready_indep[wp]:
    refill_unblock_check a
    \<lbrace>\<lambda>_ s. (sc_not_in_release_q (cur_sc s) s \<longrightarrow>
                  cur_sc_offset_ready (consumed_time s) s)\<rbrace>"
-  by (wpsimp wp: hoare_vcg_imp_lift' ruc_cur_sc_offset_ready_2 | wps)+
+  by (wpsimp wp: hoare_vcg_imp_lift' ruc_refill_ready_no_overflow_sc | wps)+
 
 lemma refill_unblock_check_cur_sc_active[wp]:
   "refill_unblock_check a \<lbrace>cur_sc_active\<rbrace>"
@@ -9221,12 +9550,7 @@ crunches schedule_choose_new_thread, switch_to_thread, set_scheduler_action, tcb
     (wp: valid_sched_pred_heap_proj_lowers[where R=\<top>, simplified])
 
 crunches switch_to_idle_thread
-  for ready_or_release[wp]: "ready_or_release::det_state \<Rightarrow> _"
-  and sc_is_round_robin[wp]: "\<lambda>s::det_state. P (sc_is_round_robin p s)"
-  and cur_sc_offset_ready[wp]: "\<lambda>s::det_state. P (cur_sc_offset_ready usage s)"
-  and cur_sc_offset_sufficient[wp]: "\<lambda>s::det_state. P (cur_sc_offset_sufficient usage s)"
-  and cur_sc_offset_ready_consumed[wp]: "\<lambda>s::det_state. P (cur_sc_offset_ready (consumed_time s) s)"
-  and cur_sc_offset_sufficient_consumed[wp]: "\<lambda>s::det_state. P (cur_sc_offset_sufficient (consumed_time s) s)"
+  for sc_is_round_robin[wp]: "\<lambda>s::'state_ext state. P (sc_is_round_robin p s)"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps Let_def)
 
 lemma tcb_sched_dequeue_ready_or_release[wp]:
@@ -9238,7 +9562,7 @@ lemma tcb_sched_dequeue_ready_or_release[wp]:
 lemma tcb_sched_enqueue_ready_or_release[wp]:
   "\<lbrace>ready_or_release and not_in_release_q t\<rbrace>
     tcb_sched_action tcb_sched_enqueue t
-   \<lbrace>\<lambda>_. ready_or_release :: 'state_ext state \<Rightarrow> _\<rbrace>"
+   \<lbrace>\<lambda>_. ready_or_release\<rbrace>"
   apply (wpsimp simp: tcb_sched_action_def thread_get_def wp: set_tcb_queue_wp)
   apply (clarsimp simp: tcb_sched_enqueue_def ready_or_release_2_def in_queues_2_def)
   by (fastforce)
@@ -9992,12 +10316,11 @@ lemma restart_valid_sched:
         apply (intro allI conjI;
                intro impI;
                clarsimp simp: valid_sched_def tcb_at_kh_simps dest!: is_schedulable_opt_Some)
-        apply (clarsimp elim!: valid_blocked_divided2
+        apply (clarsimp elim!: valid_blocked_divided_threadE
                         simp: valid_blocked_thread_def runnable_eq_active)
        apply (wpsimp wp: sched_context_resume_valid_sched_except_blocked
                          sched_context_resume_valid_blocked_except_set
                          sched_context_resume_cond_budget_ready_sufficient)
-      apply wpsimp
       apply (rule_tac Q="\<lambda>r. (valid_sched_except_blocked and
                              valid_blocked_except_set {thread}) and
                              scheduler_act_not thread and
@@ -10007,8 +10330,7 @@ lemma restart_valid_sched:
                                            \<longrightarrow> sc_tcb_sc_at ((=) (Some thread)) sc_ptr s) and
                              bound_sc_tcb_at (\<lambda>a. a = sc_opt) thread"
                       in hoare_strengthen_post[rotated])
-       apply (clarsimp simp: sc_at_pred_n_eq_commute sc_tcb_sc_at_def obj_at_kh_kheap_simps
-                             vs_all_heap_simps)
+       apply (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise heap_refs_retract_at_def vs_all_heap_simps)
       apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift set_thread_state_break_valid_sched)
      apply clarsimp
      apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift cancel_ipc_valid_sched)
@@ -10142,17 +10464,15 @@ crunches sched_context_donate
   (wp: crunch_wps)
 
 lemma maybe_donate_sc_valid_ready_qs:
-  "\<lbrace> valid_machine_time and active_sc_valid_refills and valid_ready_qs and scheduler_act_not tcb_ptr and not_queued tcb_ptr \<rbrace>
-     maybe_donate_sc tcb_ptr ntfnptr
-   \<lbrace> \<lambda>_. valid_ready_qs \<rbrace>"
+  "\<lbrace>valid_ready_qs and scheduler_act_not tcb_ptr and valid_machine_time and active_sc_valid_refills\<rbrace>
+   maybe_donate_sc tcb_ptr ntfnptr
+   \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
   apply (clarsimp simp: maybe_donate_sc_def)
   apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (case_tac sc_opt; clarsimp)
-   apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
-   apply (wpsimp wp: sched_context_resume_valid_ready_qs refill_unblock_check_valid_ready_qs
-      hoare_vcg_if_lift2 maybeM_wp valid_machine_time_lift simp: get_sc_obj_ref_def obj_at_def)
-   apply wpsimp
-  done
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
+  apply (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise)
+  by (wpsimp wp: get_sc_obj_ref_wp)
 
 lemma maybe_donate_sc_released_ipc_queues:
   "\<lbrace> released_ipc_queues and valid_machine_time and active_sc_valid_refills
@@ -10235,7 +10555,7 @@ lemma maybe_donate_sc_valid_release_q_helper':
   apply (rule_tac Q="valid_release_q and not_in_release_q tcb_ptr and valid_objs
                       and (\<lambda>s. sym_refs (state_refs_of s)) and bound_sc_tcb_at ((=) None) tcb_ptr"
            in hoare_weaken_pre[rotated])
-   apply (clarsimp dest!: valid_and_no_sc_imp_not_in_release_q[rotated] simp: tcb_at_kh_simps(3))
+   apply (clarsimp dest!: valid_release_q_no_sc_not_in_release_q[rotated] simp: tcb_at_kh_simps(3))
   apply (rule_tac Q="\<lambda>_ . sc_tcb_sc_at ((=) (Some tcb_ptr)) scp
                     and bound_sc_tcb_at ((=) (Some scp)) tcb_ptr and not_in_release_q tcb_ptr
                     and (\<lambda>s. sym_refs (state_refs_of s)) and valid_objs and valid_release_q"
@@ -10498,10 +10818,6 @@ lemma cap_revoke_simple_sched_action[wp]:
 
 end
 
-crunches set_extra_badge
-  for valid_sched_pred_strong[wp]: "valid_sched_pred_strong P"
-  (wp: crunch_wps)
-
 lemma thread_set_state_eq_ct_in_cur_domain:
   "\<lbrakk> \<And>x. tcb_state (f x) = ts; \<And>x. etcb_of (f x) = etcb_of x \<rbrakk> \<Longrightarrow>
    \<lbrace>ct_in_cur_domain and st_tcb_at ((=) ts) tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. ct_in_cur_domain\<rbrace>"
@@ -10591,8 +10907,7 @@ crunch scheduler_act[wp]: do_ipc_transfer "(\<lambda>s. P (scheduler_action s)) 
   (wp: crunch_wps transfer_caps_loop_pres ignore: const_on_failure)
 
 crunches do_ipc_transfer, handle_fault_reply
-for valid_sched[wp]: "valid_sched :: 'state_ext state \<Rightarrow> _"
-and not_queued[wp]: "not_queued t :: 'state_ext state \<Rightarrow> _"
+  for valid_sched_pred[wp]: "valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps maybeM_wp transfer_caps_loop_pres )
 
 lemma send_ipc_not_queued_for_timeout:
@@ -10613,12 +10928,6 @@ lemma update_sk_obj_ref_sc_tcb_sc_at[wp]:
   apply (clarsimp simp: partial_inv_def sc_tcb_sc_at_def obj_at_def)
   by (case_tac "C ntfn"; clarsimp simp: a_type_def)
 
-(* FIXME: move up *)
-context DetSchedSchedule_AI begin
-crunch ready_queues[wp]: do_ipc_transfer "\<lambda>s :: ('state_ext state). P (ready_queues s)"
-  (wp: crunch_wps transfer_caps_loop_pres ignore: const_on_failure)
-end
-
 lemma sts_obj_at_neq:
   "\<lbrace>obj_at P t and K (t\<noteq>t')\<rbrace> set_thread_state t' st \<lbrace>\<lambda>_. obj_at P t\<rbrace>"
   apply (simp add: set_thread_state_def set_object_def)
@@ -10628,140 +10937,141 @@ lemma sts_obj_at_neq:
   apply (simp add: pred_tcb_at_def obj_at_def)
   done
 
-lemma sched_context_donate_active_sc_tcb_at_donate_helper:
-  "sc_tcb sc = Some a \<Longrightarrow>
-  \<lbrace>\<lambda>s. bound_sc_tcb_at ((=) None) tcb_ptr s \<and>
-            is_sc_active sc_ptr s \<and> (\<exists>n. ko_at (SchedContext sc n) sc_ptr s)\<rbrace>
-     do y <- tcb_sched_action tcb_sched_dequeue a;
-        y <- tcb_release_remove a;
-        y <- set_tcb_obj_ref tcb_sched_context_update a None;
-        test_reschedule a
-     od
-  \<lbrace>\<lambda>_.  bound_sc_tcb_at ((=) None) tcb_ptr and is_sc_active sc_ptr\<rbrace>"
-  by (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_disj_lift
-                 ssc_bound_tcb_at_cases)
+lemma set_tcb_sched_context_Some_bound_sc_obj_tcb_at:
+  "\<lbrace>\<lambda>s. if t' = t
+        then N (pred_map (P (cur_time s)) (sc_refill_cfgs_of s) scp)
+        else N (bound_sc_obj_tcb_at (P (cur_time s)) t' s)\<rbrace>
+   set_tcb_obj_ref tcb_sched_context_update t (Some scp)
+   \<lbrace>\<lambda>_ s. N (bound_sc_obj_tcb_at (P (cur_time s)) t' s)\<rbrace>"
+  apply (wpsimp wp: set_tcb_obj_ref_wp)
+  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps
+          elim!: rsubst[of N] cong: conj_cong)
 
-lemma sched_context_donate_active_sc_tcb_at_donate:
-  "\<lbrace> bound_sc_tcb_at ((=) None) tcb_ptr and is_sc_active sc_ptr\<rbrace>
-      sched_context_donate sc_ptr tcb_ptr \<lbrace>\<lambda>_. active_sc_tcb_at tcb_ptr\<rbrace>"
-  apply (clarsimp simp: sched_context_donate_def get_sc_obj_ref_def assert_opt_def)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (rule_tac B="\<lambda>_. bound_sc_tcb_at ((=) None) tcb_ptr and is_sc_active sc_ptr" in hoare_seq_ext)
-   apply (wpsimp simp: set_tcb_obj_ref_def set_object_def
-                       update_sched_context_def
-                   wp: get_object_wp hoare_drop_imp)
-   apply (clarsimp simp: is_sc_active_kh_simp tcb_at_kh_simps obj_at_def vs_all_heap_simps)
-  apply (case_tac "sc_tcb sc"; clarsimp)
-   apply wpsimp
-  apply (wpsimp wp: sched_context_donate_active_sc_tcb_at_donate_helper)
-  done
+lemma sched_context_donate_bound_sc_obj_tcb_at:
+  "\<lbrace>\<lambda>s. N (pred_map (P (cur_time s)) (sc_refill_cfgs_of s) scp)\<rbrace>
+   sched_context_donate scp t
+   \<lbrace>\<lambda>_ s. N (bound_sc_obj_tcb_at (P (cur_time s)) t s)\<rbrace>"
+  by (wpsimp wp: set_tcb_sched_context_Some_bound_sc_obj_tcb_at
+           simp: sched_context_donate_def)
 
-(* FIXME: it might be possible to generalise this and the one above to bound_sc_obj_tcb_at *)
-lemma sched_context_donate_released_sc_tcb_at:
-  "\<lbrace> tcb_at tcb_ptr
-     and is_sc_active sc_ptr
-     and is_refill_ready sc_ptr
-     and is_refill_sufficient 0 sc_ptr\<rbrace>
-      sched_context_donate sc_ptr tcb_ptr
-   \<lbrace>\<lambda>_. released_sc_tcb_at tcb_ptr\<rbrace>"
-  apply (clarsimp simp: sched_context_donate_def get_sc_obj_ref_def assert_opt_def)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (rule_tac B="\<lambda>_. tcb_at tcb_ptr and is_sc_active sc_ptr and is_refill_ready sc_ptr
-     and is_refill_sufficient 0 sc_ptr" in hoare_seq_ext)
-   apply (wpsimp simp: set_tcb_obj_ref_def set_object_def
-                       update_sched_context_def
-                   wp: get_object_wp hoare_drop_imp)
-   apply (clarsimp simp: is_sc_active_kh_simp tcb_at_kh_simps obj_at_def vs_all_heap_simps is_tcb)
-  apply (case_tac "sc_tcb sc"; wpsimp)
-  done
+crunches reply_push
+  for ct_not_in_q[wp]: "ct_not_in_q"
+  and ct_in_cur_domain[wp]: "ct_in_cur_domain"
+  and not_cur_thread[wp]: "not_cur_thread t"
+  (wp: crunch_wps hoare_vcg_if_lift ignore: set_thread_state test_reschedule)
+
+lemma set_thread_state_released_if_bound_sc_valid_sched_except_blocked:
+  "\<lbrace>valid_sched_except_blocked
+      and released_if_bound_sc_tcb_at t
+      and scheduler_act_not t
+      and not_queued t
+      and not_in_release_q t\<rbrace>
+   set_thread_state t st
+   \<lbrace>\<lambda>rv. valid_sched_except_blocked\<rbrace>"
+  by (wpsimp wp: set_thread_state_valid_sched_except_blocked simp: scheduler_act_not_2_def)
+
+lemmas set_thread_state_ipc_queued_valid_blocked_except_set
+  = set_thread_state_valid_blocked[where ts="BlockedOnReceive ep r_opt" for ep r_opt, simplified]
+    set_thread_state_valid_blocked[where ts="BlockedOnSend ep data" for ep data, simplified]
+    set_thread_state_valid_blocked[where ts="BlockedOnNotification ntfn" for ntfn, simplified]
+    set_thread_state_valid_blocked[where ts="BlockedOnReply r" for r, simplified]
+
+lemma set_sc_replies_active_reply_scs:
+  "\<lbrace>\<lambda>s. active_reply_scs s \<and> (replies \<noteq> [] \<longrightarrow> pred_map active_scrc (sc_refill_cfgs_of s) scp)\<rbrace>
+   set_sc_obj_ref sc_replies_update scp replies
+   \<lbrace>\<lambda>rv. active_reply_scs\<rbrace>"
+  apply (wpsimp wp: update_sched_context_valid_sched_pred)
+  by (auto simp: heap_upd_def vs_all_heap_simps split: if_splits elim!: active_reply_scsE)
+
+lemma set_sc_replies_valid_sched:
+  "\<lbrace>\<lambda>s. valid_sched s \<and> (replies \<noteq> [] \<longrightarrow> pred_map active_scrc (sc_refill_cfgs_of s) scp)\<rbrace>
+   set_sc_obj_ref sc_replies_update scp replies
+   \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  by (wpsimp wp: set_sc_replies_active_reply_scs simp: valid_sched_def)
+
+method reply_push_begin_valid_sched_proof
+  = (simp add: reply_push_def
+     , intro hoare_seq_ext[OF _ gsc_sp]
+     , simp add: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
 
 lemma reply_push_valid_ready_qs[wp]:
-  "\<lbrace>valid_ready_qs and not_queued caller and not_queued callee and scheduler_act_not callee\<rbrace>
-     reply_push caller callee reply_ptr can_donate \<lbrace>\<lambda>rv. valid_ready_qs\<rbrace>"
-  apply (clarsimp simp: reply_push_def)
-  by (wpsimp wp: hoare_drop_imp get_sched_context_wp hoare_vcg_if_lift2 hoare_vcg_all_lift
-                 get_simple_ko_wp set_thread_state_valid_ready_qs update_sk_obj_ref_lift
-             split_del: if_split cong: conj_cong)+
+  "\<lbrace>valid_ready_qs and valid_sched_action and not_queued caller and scheduler_act_not caller\<rbrace>
+   reply_push caller callee reply_ptr can_donate
+   \<lbrace>\<lambda>rv. valid_ready_qs\<rbrace>"
+  apply reply_push_begin_valid_sched_proof
+  apply (intro hoare_seq_ext_skip hoare_when_cases
+         ; wpsimp wp: set_thread_state_valid_ready_qs set_thread_state_pred_map_tcb_sts_of
+                      get_simple_ko_wp set_thread_state_valid_sched_action)
+  by (clarsimp simp: valid_sched_action_no_sc_sched_act_not)
+
+lemma reply_push_valid_release_q[wp]:
+  "\<lbrace>valid_release_q and not_in_release_q caller\<rbrace>
+   reply_push caller callee reply_ptr can_donate
+   \<lbrace>\<lambda>rv. valid_release_q\<rbrace>"
+  apply reply_push_begin_valid_sched_proof
+  by (intro hoare_seq_ext_skip hoare_when_cases
+      ; wpsimp wp: set_thread_state_valid_release_q get_simple_ko_wp
+             simp: valid_release_q_no_sc_not_in_release_q)
+
+lemma reply_push_valid_sched_action[wp]:
+  "\<lbrace>valid_sched_action and scheduler_act_not caller\<rbrace>
+   reply_push caller callee reply_ptr can_donate
+   \<lbrace>\<lambda>rv. valid_sched_action\<rbrace>"
+  apply reply_push_begin_valid_sched_proof
+  by (intro hoare_seq_ext_skip hoare_when_cases
+      ; wpsimp wp: set_thread_state_valid_sched_action sched_context_donate_valid_sched_action
+                   get_simple_ko_wp
+             simp: valid_sched_action_no_sc_sched_act_not)
+
+lemma reply_push_valid_blocked[wp]:
+  "\<lbrace>\<lambda>s. valid_blocked_except_set (insert caller S) s
+         \<and> (pred_map runnable (tcb_sts_of s) callee \<longrightarrow> callee \<in> S \<or> callee = cur_thread s)\<rbrace>
+   reply_push caller callee reply_ptr can_donate
+   \<lbrace>\<lambda>rv. valid_blocked_except_set S\<rbrace>"
+  apply reply_push_begin_valid_sched_proof
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)+
+  apply (rule_tac B="\<lambda>rv s. pred_map_eq sc_callee (tcb_scps_of s) callee
+                            \<and> pred_map_eq sc_caller (tcb_scps_of s) caller
+                            \<and> valid_blocked_except_set S s
+                            \<and> (pred_map runnable (tcb_sts_of s) callee \<longrightarrow> callee \<in> S \<or> callee = cur_thread s)"
+           in hoare_seq_ext[rotated])
+   apply (wpsimp wp: set_thread_state_ipc_queued_valid_blocked_except_set
+                     hoare_vcg_imp_lift' set_thread_state_pred_map_tcb_sts_of)
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: get_simple_ko_wp\<close>, simp?)+
+  by (wpsimp wp: sched_context_donate_valid_blocked set_sc_replies_valid_sched)
 
 lemma reply_push_released_ipc_queues[wp]:
   "\<lbrace>released_ipc_queues and released_if_bound_sc_tcb_at caller\<rbrace>
    reply_push caller callee reply_ptr can_donate
    \<lbrace>\<lambda>rv. released_ipc_queues\<rbrace>"
-  supply if_split [split del]
-  unfolding reply_push_def
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (wpsimp wp: sched_context_donate_released_sc_released_ipc_queues get_simple_ko_wp)
-          apply (rule_tac Q="\<lambda>_. released_ipc_queues and released_if_bound_sc_tcb_at caller
-                                 and bound_sc_tcb_at ((=) (sc_caller)) caller"
-                 in hoare_strengthen_post[rotated])
-           apply (clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps split: if_splits)
-  by (wpsimp wp: set_thread_state_released_ipc_queues hoare_drop_imp)+
+  apply reply_push_begin_valid_sched_proof
+  apply (intro hoare_seq_ext_skip hoare_when_cases
+         ; wpsimp wp: set_thread_state_released_ipc_queues get_simple_ko_wp
+                      sched_context_donate_released_sc_released_ipc_queues)
+  by (clarsimp simp: vs_all_heap_simps released_ipc_queuesE1)
 
-lemma reply_push_valid_release_q[wp]:
-  "\<lbrace>valid_release_q and not_in_release_q caller and not_in_release_q callee
-    and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at ((=) None) callee s)\<rbrace>
+lemma reply_push_active_reply_scs[wp]:
+  "\<lbrace>active_reply_scs and active_if_bound_sc_tcb_at caller\<rbrace>
    reply_push caller callee reply_ptr can_donate
-   \<lbrace>\<lambda>rv. valid_release_q\<rbrace>"
-  apply (clarsimp simp: reply_push_def)
-  apply (case_tac can_donate; simp)
-  by (wpsimp wp: hoare_drop_imp get_sched_context_wp hoare_vcg_if_lift2 hoare_vcg_all_lift
-                 get_simple_ko_wp sched_context_donate_valid_release_q
-                 set_thread_state_valid_release_q update_sk_obj_ref_lift
-             split_del: if_split cong: conj_cong)+
+   \<lbrace>\<lambda>rv. active_reply_scs\<rbrace>"
+  apply reply_push_begin_valid_sched_proof
+  apply (intro hoare_seq_ext_skip hoare_when_cases
+         ; wpsimp wp: get_simple_ko_wp set_sc_replies_active_reply_scs)
+  by (clarsimp simp: vs_all_heap_simps)
 
-crunches reply_push
-for ct_not_in_q[wp]: "ct_not_in_q"
-and not_cur_thread[wp]: "not_cur_thread t"
-  (wp: crunch_wps hoare_vcg_if_lift ignore: set_thread_state test_reschedule)
-
-lemma reply_push_valid_sched_helper:
-  "\<lbrace> st_tcb_at ((=) Inactive) callee and valid_sched
-     and bound_sc_tcb_at ((=) sc_callee) callee \<rbrace>
-    when (sc_callee = None \<and> donate) (do
-      sc_replies <- liftM sc_replies (get_sched_context sc_ptr);
-      y <- case sc_replies of [] \<Rightarrow> assert True
-              | r # x \<Rightarrow> do reply <- get_reply r;
-                            assert (reply_sc reply = sc_caller);
-                            set_reply_obj_ref reply_sc_update r None
-                         od;
-      y <- set_sc_obj_ref sc_replies_update sc_ptr (reply_ptr # sc_replies);
-      y <- set_reply_obj_ref reply_sc_update reply_ptr (Some sc_ptr);
-      sched_context_donate sc_ptr callee
-    od)
-   \<lbrace> \<lambda>rv. valid_sched \<rbrace>"
-  supply if_weak_cong[cong del] if_split[split del]
-  apply (rule hoare_when_cases, simp)
-  apply (rule hoare_seq_ext[OF _ gscrpls_sp[unfolded fun_app_def, simplified]])
-  apply (rename_tac sc_replies')
-  apply (case_tac sc_replies'; simp add: bind_assoc)
-   apply (wpsimp wp: sched_context_donate_valid_sched)
-   apply (clarsimp simp: tcb_at_kh_simps pred_map_simps ipc_queued_thread_state_def)
-  apply (wpsimp wp: sched_context_donate_valid_sched get_simple_ko_wp)
-  apply (clarsimp simp: tcb_at_kh_simps pred_map_simps ipc_queued_thread_state_def)
-  done
-
-lemma reply_push_valid_sched:
-  "\<lbrace>st_tcb_at ((=) Inactive) callee and valid_sched and st_tcb_at active caller
-    and ((\<lambda>s. pred_map ((=) None) (tcb_scps_of s) caller) or
-                 released_sc_tcb_at caller)
-    and scheduler_act_not caller and not_queued caller and not_in_release_q caller\<rbrace>
-   reply_push caller callee reply_ptr can_donate \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  supply if_weak_cong[cong del]
-  apply (simp add: reply_push_def)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ grt_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (case_tac sc_caller; simp)
-   apply (wpsimp wp: set_thread_state_valid_sched hoare_drop_imp)
-   apply (clarsimp simp: valid_sched_def tcb_at_kh_simps pred_map_eq_def)
-  apply (wpsimp wp: reply_push_valid_sched_helper)
-        apply (wpsimp wp: sts_st_tcb_at_other set_thread_state_valid_sched)
-       apply simp
-       apply (wpsimp wp: hoare_drop_imp)+
-  apply (clarsimp simp: tcb_at_kh_simps pred_map_def valid_sched_def)
-  done
+lemma reply_push_valid_sched[wp]:
+  "\<lbrace>\<lambda>s. valid_sched_except_blocked s
+         \<and> valid_blocked_except caller s
+         \<and> released_if_bound_sc_tcb_at caller s
+         \<and> scheduler_act_not caller s
+         \<and> not_queued caller s
+         \<and> not_in_release_q caller s
+         \<and> (pred_map runnable (tcb_sts_of s) callee \<longrightarrow> callee = cur_thread s)\<rbrace>
+   reply_push caller callee reply_ptr can_donate
+   \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  apply (wpsimp simp: valid_sched_def)
+  by (clarsimp simp: vs_all_heap_simps)
 
 lemma set_tcb_sc_update_active_sc_tcb_at': (* this is more usable *)
   "\<lbrace>active_sc_tcb_at t and (is_sc_active scp)\<rbrace>
@@ -10829,33 +11139,6 @@ lemma sched_context_donate_weak_budget_conditions:
 
 context DetSchedSchedule_AI begin
 
-lemma send_ipc_valid_sched_helper0:
-  "\<lbrace>valid_sched
-    and released_if_bound_sc_tcb_at dest
-    and (\<lambda>s. dest \<noteq> idle_thread s)\<rbrace>
-   do new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
-      test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
-              | Some scp \<Rightarrow> do sufficient <- get_sc_refill_sufficient scp 0;
-                               ready <- get_sc_refill_ready scp;
-                               return (sufficient \<and> ready)
-                            od;
-     y <- assert test;
-     y <- set_thread_state dest Running;
-     possible_switch_to dest
-   od
-  \<lbrace>\<lambda>r. valid_sched\<rbrace>"
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (wpsimp wp: possible_switch_to_valid_sched_weak set_thread_state_break_valid_sched
-                    hoare_vcg_imp_lift sts_st_tcb_at' set_thread_state_runnable_valid_sched_except_blocked
-                    set_thread_state_valid_blocked set_thread_state_pred_map_tcb_sts_of assert_inv)
-  apply (clarsimp simp: tcb_at_kh_simps)
-  apply (case_tac "new_sc_opt")
-   apply (clarsimp simp: valid_sched_def pred_map_simps)
-  apply (erule disjE)
-   apply (clarsimp simp: pred_map_simps)
-  apply (clarsimp simp: valid_sched_def released_sc_tcb_at_def)
-  done
-
 lemma sched_context_donate_bound_sc_tcb_at_None:
   "\<lbrace>\<lambda>s. pred_map_eq None (tcb_scps_of s) dest \<and> caller_tcb \<noteq> dest\<rbrace>
           sched_context_donate sc_ptr caller_tcb
@@ -10865,149 +11148,6 @@ lemma sched_context_donate_bound_sc_tcb_at_None:
   apply (wpsimp simp: sched_context_donate_def wp: ssc_bound_tcb_at_cases hoare_vcg_imp_lift')
   done
 
-lemma send_ipc_valid_sched_helper_no_reply:
-  "\<lbrace>valid_sched and ipc_queued_thread dest and st_tcb_at active tptr
-    and (\<lambda>s. not_in_release_q tptr s \<and> scheduler_act_not tptr s \<and> not_queued tptr s)
-    and released_if_bound_sc_tcb_at dest
-    and released_if_bound_sc_tcb_at tptr
-    and (\<lambda>s. dest \<noteq> idle_thread s)
-    and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at bound tptr s)\<rbrace>
-   do
-     sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
-     fault <- thread_get tcb_fault tptr;
-     y <- if call \<or> (\<exists>y. fault = Some y)
-          then set_thread_state tptr Inactive
-          else when (can_donate \<and> sc_opt = None)
-                 (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
-                     sched_context_donate (the caller_sc_opt) dest
-                  od);
-     new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
-     test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
-              | Some scp \<Rightarrow> do sufficient <- get_sc_refill_sufficient scp 0;
-                               ready <- get_sc_refill_ready scp;
-                               return (sufficient \<and> ready)
-                            od;
-     y <- assert test;
-     y <- set_thread_state dest Running;
-     possible_switch_to dest
-  od
-  \<lbrace>\<lambda>r. valid_sched\<rbrace>"
-  apply (subst bind_assoc[symmetric])
-  apply (subst bind_assoc[symmetric])
-  apply (rule hoare_seq_ext)
-  apply (rule send_ipc_valid_sched_helper0)
-  apply (clarsimp simp: when_def)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ thread_get_sp])
-  apply (case_tac "call \<or> (\<exists>y. fault = Some y)"; simp split del: if_split)
-   apply (wpsimp wp: set_thread_state_valid_sched hoare_vcg_disj_lift)
-   apply (clarsimp simp: valid_sched_def)
-  apply (wpsimp wp: sched_context_donate_valid_sched sched_context_donate_bound_sc_tcb_at_None
-                    sched_context_donate_released_sc_tcb_at hoare_vcg_disj_lift
-                    get_tcb_obj_ref_wp)
-  apply (clarsimp simp: tcb_at_kh_simps obj_at_def vs_all_heap_simps is_sc_active_kh_simp is_tcb)
-  by (case_tac "tcb_state y"; simp)
-
-lemma reply_push_active_sc_tcb_at_helper:
-  "\<lbrace> (\<lambda>s. donate \<longrightarrow> (is_sc_active sc_ptr and is_refill_ready sc_ptr and is_refill_sufficient 0 sc_ptr) s)
-     and bound_sc_tcb_at ((=) None) callee\<rbrace>
-    when donate (do
-      sc_replies <- liftM sc_replies (get_sched_context sc_ptr);
-      y <- case sc_replies of [] \<Rightarrow> assert True
-              | r # x \<Rightarrow> do reply <- get_reply r;
-                            assert (reply_sc reply = sc_caller);
-                            set_reply_obj_ref reply_sc_update r None
-                         od;
-      y <- set_sc_obj_ref sc_replies_update sc_ptr (reply_ptr # sc_replies);
-      y <- set_reply_obj_ref reply_sc_update reply_ptr (Some sc_ptr);
-      sched_context_donate sc_ptr callee
-    od)
-   \<lbrace> \<lambda>rv s.
-           ((\<not>donate \<longrightarrow> bound_sc_tcb_at ((=) None) callee s) \<and>
-            (donate \<longrightarrow> active_sc_tcb_at callee s \<and>
-                budget_ready callee s \<and> budget_sufficient callee s)) \<rbrace>"
-  supply if_weak_cong[cong del] if_split[split del]
-  apply (rule hoare_when_cases, simp)
-  apply (rule hoare_seq_ext[OF _ gscrpls_sp[unfolded fun_app_def, simplified]])
-  apply (rename_tac sc_replies')
-  apply (case_tac sc_replies'; simp add: bind_assoc)
-   by (wpsimp wp: sched_context_donate_active_sc_tcb_at_donate hoare_drop_imp
-                     sched_context_donate_weak_budget_conditions)+
-
-lemma reply_push_active_sc_tcb_at:
-  "\<lbrace> st_tcb_at ((=) Inactive) callee and
-    (\<lambda>s. can_donate \<longrightarrow>
-             ( active_sc_tcb_at caller and budget_ready caller and budget_sufficient caller) s)
-     and (\<lambda>s. bound_sc_tcb_at ((=) None) callee s \<or>
-         active_sc_tcb_at callee s \<and> budget_ready callee s \<and> budget_sufficient callee s)\<rbrace>
-     reply_push caller callee reply_ptr can_donate
-   \<lbrace>\<lambda>rv s. (bound_sc_tcb_at ((=) None) callee s \<or>
-         active_sc_tcb_at callee s \<and> budget_ready callee s \<and> budget_sufficient callee s)\<rbrace>"
-  supply if_weak_cong[cong del]
-  apply (simp add: reply_push_def)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ grt_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
-  apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
-  apply (case_tac sc_caller; simp)
-   apply (wpsimp wp: set_thread_state_valid_sched
-                     hoare_vcg_disj_lift set_thread_state_bound_sc_tcb_at hoare_drop_imps)
-  apply (case_tac sc_callee; simp)
-   apply (rule_tac Q="\<lambda>_ s. ((\<not>can_donate \<longrightarrow> bound_sc_tcb_at ((=) None) callee s) \<and>
-                              (can_donate \<longrightarrow> active_sc_tcb_at callee s \<and>
-                                  budget_ready callee s \<and> budget_sufficient callee s))"
-             in hoare_strengthen_post[rotated], fastforce)
-   apply (wpsimp wp: reply_push_active_sc_tcb_at_helper)
-   apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps)
-  apply (wpsimp wp: sts_st_tcb_at_other hoare_vcg_disj_lift
-                    set_thread_state_bound_sc_tcb_at hoare_drop_imps)
-  done
-
-lemma reply_push_released_if_bound_sc_tcb_at_no_donation:
-  "reply_push caller callee' reply_ptr False
-   \<lbrace>released_if_bound_sc_tcb_at callee\<rbrace>"
-  supply if_weak_cong[cong del]
-  apply (simp add: reply_push_def)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ grt_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
-  apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
-  apply (case_tac sc_caller; simp)
-   apply (wpsimp wp: set_thread_state_valid_sched
-                      hoare_vcg_disj_lift set_thread_state_bound_sc_tcb_at hoare_drop_imps)
-   apply (wpsimp wp: sts_st_tcb_at_other hoare_vcg_disj_lift
-                     set_thread_state_bound_sc_tcb_at hoare_drop_imps)
-  done
-
-lemma reply_push_active_sc_tcb_at_no_donation:
-  "\<lbrace>active_sc_tcb_at callee\<rbrace>
-     reply_push caller callee reply_ptr False
-   \<lbrace>\<lambda>rv. active_sc_tcb_at callee\<rbrace>"
-  supply if_weak_cong[cong del]
-  apply (simp add: reply_push_def)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ grt_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
-  apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
-  apply (case_tac sc_caller; simp)
-   apply (wpsimp wp: set_thread_state_valid_sched
-                      hoare_vcg_disj_lift set_thread_state_bound_sc_tcb_at hoare_drop_imps)
-   apply (wpsimp wp: sts_st_tcb_at_other hoare_vcg_disj_lift
-                     set_thread_state_bound_sc_tcb_at hoare_drop_imps)
-  done
-
 lemma sched_context_donate_released_if_bound:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) None) callee s \<and> is_sc_active y s \<and> is_refill_ready y s
         \<and> is_refill_sufficient 0 y s\<rbrace>
@@ -11015,137 +11155,23 @@ lemma sched_context_donate_released_if_bound:
    \<lbrace>\<lambda>r. released_if_bound_sc_tcb_at callee\<rbrace>"
   apply (clarsimp simp: released_sc_tcb_at_def)
   apply (wpsimp wp: hoare_vcg_disj_lift sched_context_donate_bound_sc_tcb_at_None
-                    sched_context_donate_active_sc_tcb_at_donate
+                    sched_context_donate_bound_sc_obj_tcb_at
                     sched_context_donate_weak_budget_conditions)
-  done
+  by (clarsimp simp: obj_at_kh_kheap_simps)
 
 lemma reply_push_released_if_bound:
-  "\<lbrace>released_if_bound_sc_tcb_at callee and released_if_bound_sc_tcb_at caller\<rbrace>
+  "\<lbrace>\<lambda>s. released_if_bound_sc_tcb_at callee s
+        \<and> (can_donate \<longrightarrow> released_if_bound_sc_tcb_at caller s)\<rbrace>
    reply_push caller callee reply_ptr can_donate
    \<lbrace>\<lambda>r. released_if_bound_sc_tcb_at callee\<rbrace>"
   supply if_split[split del]
   apply (simp add: reply_push_def)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ grt_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
-  apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
-  apply wpsimp
-          apply (wpsimp wp: sched_context_donate_released_if_bound)
-         apply ((wpsimp wp: hoare_drop_imp assert_inv)+)[5]
-    apply (rule_tac Q= "\<lambda>_. bound_sc_tcb_at ((=) sc_callee) callee and bound_sc_tcb_at ((=) sc_caller) caller
-                            and released_if_bound_sc_tcb_at callee and released_if_bound_sc_tcb_at caller"
-           in hoare_strengthen_post[rotated])
-     apply (clarsimp simp: obj_at_def pred_tcb_at_eq_commute split: if_split)
-     apply (intro conjI; clarsimp simp: tcb_at_kh_simps vs_all_heap_simps is_sc_active_kh_simp)
-    apply wpsimp+
-  done
-
-(* FIXME follow up here too *)
-lemma send_ipc_valid_sched_helper_some_reply:
-  "\<lbrace>(\<lambda>s. \<exists>rptr. st_tcb_at ((=) Inactive) dest s \<and> reply = Some rptr) and valid_sched
-       and scheduler_act_not tptr and not_queued tptr and not_in_release_q tptr
-       and st_tcb_at active tptr
-       and released_if_bound_sc_tcb_at dest
-       and released_if_bound_sc_tcb_at tptr
-       and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at bound tptr s)
-       and (\<lambda>s. dest \<noteq> idle_thread s)\<rbrace>
-  do sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
-     fault <- thread_get tcb_fault tptr;
-     y <- if call \<or> (\<exists>y. fault = Some y)
-          then if cg \<and> (\<exists>y. reply = Some y)
-               then reply_push tptr dest (the reply) can_donate
-               else set_thread_state tptr Inactive
-          else when (can_donate \<and> sc_opt = None)
-                  (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
-                      sched_context_donate (the caller_sc_opt) dest
-                   od);
-     new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
-     test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
-              | Some scp \<Rightarrow> do sufficient <- get_sc_refill_sufficient scp 0;
-                               ready <- get_sc_refill_ready scp;
-                               return (sufficient \<and> ready)
-                            od;
-     y <- assert test;
-     y <- set_thread_state dest Running;
-     possible_switch_to dest
-   od
-   \<lbrace>\<lambda>r. valid_sched\<rbrace>"
-  apply (subst bind_assoc[symmetric])
-  apply (subst bind_assoc[symmetric])
-  apply (rule hoare_seq_ext)
-  apply (rule send_ipc_valid_sched_helper0)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ thread_get_sp])
-  apply (case_tac "call \<or> (\<exists>y. fault = Some y)"; simp split del: if_split)
-   apply wpsimp
-     apply (wpsimp wp: reply_push_valid_sched reply_push_released_if_bound)
-    apply wpsimp
-    apply (wpsimp wp: set_thread_state_valid_sched )
-   apply (clarsimp simp: valid_sched_def pred_map_eq_def)
-  apply (wpsimp wp: sched_context_donate_valid_sched hoare_vcg_disj_lift
-                    sched_context_donate_bound_sc_tcb_at_None sched_context_donate_released_sc_tcb_at
-                    get_tcb_obj_ref_wp)
-  by (clarsimp simp: tcb_at_kh_simps obj_at_def vs_all_heap_simps is_sc_active_kh_simp is_tcb)
-
-crunches do_ipc_transfer
-  for valid_sched_pred_strong[wp]: "\<lambda>s:: 'state_ext state. valid_sched_pred_strong P s"
-  (wp: crunch_wps)
-
-(* follow up *)
-lemma send_ipc_valid_sched_helper:
-  "\<lbrace>valid_sched and scheduler_act_not tptr
-    and not_queued tptr
-    and not_in_release_q tptr and st_tcb_at active tptr
-    and released_if_bound_sc_tcb_at tptr
-    and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at bound tptr s)
-    and released_if_bound_sc_tcb_at dest
-    and (\<lambda>s. dest \<noteq> idle_thread s)
-    and (\<lambda>s. \<forall>rp. st_tcb_at (\<lambda>st. \<exists>epptr. st = BlockedOnReceive epptr (Some rp)) dest s
-                  \<longrightarrow> reply_tcb_reply_at (\<lambda>a. a = Some dest) rp s)\<rbrace>
-   do recv_state <- get_thread_state dest;
-      reply <- case recv_state of BlockedOnReceive x reply \<Rightarrow>
-                         return reply
-               | _ \<Rightarrow> fail;
-      y \<leftarrow> do_ipc_transfer tptr (Some epptr) ba cg dest;
-      y \<leftarrow> maybeM (reply_unlink_tcb dest)     reply;
-      sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
-      fault <- thread_get tcb_fault tptr;
-      y <- if call \<or> (\<exists>y. fault = Some y)
-           then if (cg \<and> (\<exists>y. reply = Some y))
-                    then reply_push tptr dest (the reply) can_donate
-                    else set_thread_state tptr Inactive
-           else when (can_donate \<and> sc_opt = None)
-                  (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
-                      sched_context_donate (the caller_sc_opt) dest
-                   od);
-      new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
-      test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
-              | Some scp \<Rightarrow> do sufficient <- get_sc_refill_sufficient scp 0;
-                               ready <- get_sc_refill_ready scp;
-                               return (sufficient \<and> ready)
-                            od;
-      y <- assert test;
-      y <- set_thread_state dest Running;
-      possible_switch_to dest
-   od
-   \<lbrace>\<lambda>rv. valid_sched::('state_ext state) \<Rightarrow> _\<rbrace>"
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (case_tac recv_state; simp split del: if_split)
-  apply (rename_tac r)
-  apply (case_tac r, simp)
-   apply (wpsimp wp: send_ipc_valid_sched_helper_no_reply hoare_vcg_imp_lift')
-   apply (clarsimp simp: pred_tcb_at_eq_commute tcb_at_kh_simps pred_map_simps)
-  apply (wpsimp wp: send_ipc_valid_sched_helper_some_reply wp_del: maybeM_wp)
-    apply (wpsimp wp: reply_unlink_tcb_valid_sched hoare_vcg_imp_lift'
-                      reply_unlink_runnable[simplified runnable_eq_active]
-                      hoare_vcg_disj_lift reply_unlink_tcb_bound_sc_tcb_at )
-   apply (wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift')
-  apply (clarsimp simp: reply_tcb_reply_at_def pred_tcb_at_def obj_at_def)
-  done
+  apply (rule hoare_seq_ext[OF _ gsc_sp])+
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>)+
+  apply (rule hoare_when_cases; clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: hoare_drop_imps\<close>)+
+  apply (wpsimp wp: sched_context_donate_released_if_bound)
+  by (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise vs_all_heap_simps)
 
 lemma set_simple_ko_pred_tcb_at_state:
   "\<lbrace> \<lambda>s. P (pred_tcb_at proj (f s) t s) \<and> (\<forall>new. f s = f (s\<lparr>kheap := kheap s(ep \<mapsto> new)\<rparr>))\<rbrace>
@@ -11168,96 +11194,558 @@ lemma RecvEP_queued_ipc_queued_thread:
    apply (clarsimp simp: state_refs_of_def )
    done
 
-lemma send_ipc_valid_sched:
-  "\<lbrace>valid_sched and scheduler_act_not thread and not_queued thread
-    and not_in_release_q thread and st_tcb_at active thread and invs
-    and released_if_bound_sc_tcb_at thread
-    and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at bound thread s)\<rbrace>
-   send_ipc block call badge can_grant can_donate thread epptr
-   \<lbrace>\<lambda>rv. valid_sched::('state_ext state) \<Rightarrow> _\<rbrace>"
-  supply if_weak_cong[cong del]
-  apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-  apply (case_tac ep; simp)
-    apply (cases block; simp)
-     apply (wpsimp wp: set_thread_state_valid_sched simp: valid_sched_def)
-    apply (wpsimp)
-    apply (cases block; simp)
-    apply (wpsimp wp: set_thread_state_valid_sched simp: valid_sched_def)
-   apply (wpsimp)
-  apply (rename_tac list)
-  apply (case_tac list; simp)
-  apply (rename_tac dest tail)
-  apply (wpsimp wp: send_ipc_valid_sched_helper hoare_vcg_all_lift hoare_vcg_imp_lift')
-  apply (subgoal_tac "ipc_queued_thread dest s")
-  apply (intro conjI allI impI)
-   apply (erule (1) released_ipc_queuesE1[OF valid_sched_released_ipc_queues])
-  apply (erule ipc_queued_thread_not_idle_thread, clarsimp)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (rule BlockedOnReceive_reply_tcb_reply_at[rotated], clarsimp, clarsimp)
-  apply (fastforce simp: pred_tcb_at_def obj_at_def)
-  apply (simp add: obj_at_def, erule RecvEP_queued_ipc_queued_thread, clarsimp)
-  done
+\<comment> \<open>The following proofs unbundle valid_sched for send_ipc.
+    These lemmas are to support existing unbundled proofs for charge_budget.
+    The bundled lemma is preserved below.
+    FIXME RT: Find a way to avoid duplication of the structure of the following proofs.
+    Alternatively, rework charge_budget proofs to bundle valid_sched invariants.\<close>
+lemma send_ipc_valid_ready_qs:
+  "\<lbrace>\<lambda>s. valid_ready_qs s \<and> released_ipc_queues s \<and> valid_sched_action s
+        \<and> released_if_bound_sc_tcb_at t s \<and> not_queued t s \<and> scheduler_act_not t s
+        \<and> (can_donate \<longrightarrow> pred_map bound (tcb_scps_of s) t)\<rbrace>
+   send_ipc block call badge can_grant can_donate t epptr
+   \<lbrace>\<lambda>rv. valid_ready_qs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_ipc_def
+  supply if_split[split del]
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
+  apply (case_tac "\<forall>dest queue. ep \<noteq> RecvEP (dest # queue)"; clarsimp)
+   apply (case_tac "\<exists>q. ep = RecvEP q", elim exE, (case_tac q; simp))
+   apply (case_tac ep; simp; wpsimp wp: set_thread_state_valid_ready_qs)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext[OF _ gts_sp], simp add: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply ((case_tac recv_state; clarsimp), rename_tac ep_ptr reply_opt)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule_tac B="\<lambda>_ s. valid_ready_qs s \<and> released_ipc_queues s \<and> valid_sched_action s
+                           \<and> released_if_bound_sc_tcb_at t s \<and> released_if_bound_sc_tcb_at dest s
+                           \<and> (can_donate \<longrightarrow> pred_map bound (tcb_scps_of s) t)
+                           \<and> not_queued t s \<and> scheduler_act_not t s
+                           \<and> \<not> pred_map runnable (tcb_sts_of s) dest"
+         in hoare_seq_ext[rotated])
+   apply (wpsimp wp: reply_unlink_tcb.valid_sched_lemmas)
+   apply (prop_tac "\<not> pred_map runnable (tcb_sts_of s) dest \<and> released_if_bound_sc_tcb_at dest s"
+          ; clarsimp simp: tcb_sts.pred_map_simps elim!: released_ipc_queuesE1)
+  apply (rule hoare_seq_ext[OF _ gsc_sp], simp add: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule hoare_seq_ext[OF _ thread_get_sp])
+  apply (rule_tac B="\<lambda>_ s. valid_ready_qs s \<and> released_if_bound_sc_tcb_at dest s" in hoare_seq_ext)
+   apply (rule hoare_seq_ext[OF _ gbn_inv])
+   apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (rule hoare_seq_ext[OF _ assert_inv])
+   apply (wpsimp wp: possible_switch_to_valid_ready_qs'' set_thread_state_valid_ready_qs
+                     set_thread_state_pred_map_tcb_sts_of)
+  apply (simp add: pred_conj_def obj_at_def)
+  apply (intro hoare_if[rotated] hoare_when_cases)
+     apply clarsimp
+    apply (wpsimp wp: sched_context_donate_released_if_bound get_tcb_obj_ref_wp
+                simp: valid_sched_action_no_sc_sched_act_not)
+    apply (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise vs_all_heap_simps)
+   apply (wpsimp wp: set_thread_state_valid_ready_qs)
+  by (wpsimp wp: reply_push_released_if_bound)
 
-lemma send_ipc_valid_sched_fault:
-  "\<lbrace>all_invs_but_fault_tcbs and fault_tcbs_valid_states_except_set {thread}
-    and valid_sched and scheduler_act_not thread and not_queued thread
-    and not_in_release_q thread and st_tcb_at active thread
-    and released_if_bound_sc_tcb_at thread
-    and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at bound thread s)\<rbrace>
-   send_ipc block call badge can_grant can_donate thread epptr
-   \<lbrace>\<lambda>rv. valid_sched::('state_ext state) \<Rightarrow> _\<rbrace>"
-  supply if_weak_cong[cong del]
-  apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-  apply (case_tac ep, simp_all)
-    apply (cases block, simp_all)[1]
-     apply (wpsimp wp: set_thread_state_valid_sched simp: valid_sched_def)
-    apply (wpsimp)
-   apply (cases block, simp_all)[1]
-    apply (wpsimp wp: set_thread_state_valid_sched simp: valid_sched_def)
-   apply (wpsimp)
-  apply (rename_tac list)
-  apply (case_tac list; simp)
-  apply (rename_tac dest tail)
-  apply (wpsimp wp: send_ipc_valid_sched_helper hoare_vcg_all_lift hoare_vcg_imp_lift')
-  apply (subgoal_tac "ipc_queued_thread dest s")
-  apply (intro conjI allI impI)
-   apply (erule (1) released_ipc_queuesE1[OF valid_sched_released_ipc_queues])
-  apply (erule ipc_queued_thread_not_idle_thread, clarsimp)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (rule BlockedOnReceive_reply_tcb_reply_at[rotated], clarsimp, clarsimp)
-  apply (fastforce simp: pred_tcb_at_def obj_at_def)
-  apply (simp add: obj_at_def, erule RecvEP_queued_ipc_queued_thread, clarsimp)
-  done
+lemma send_ipc_valid_release_q:
+  "\<lbrace>\<lambda>s. valid_release_q s \<and> not_in_release_q t s\<rbrace>
+   send_ipc block call badge can_grant can_donate t epptr
+   \<lbrace>\<lambda>rv. valid_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_ipc_def
+  supply if_split[split del]
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
+  apply (case_tac "\<forall>dest queue. ep \<noteq> RecvEP (dest # queue)"; clarsimp)
+   apply (case_tac "\<exists>q. ep = RecvEP q", elim exE, (case_tac q; simp))
+   apply (case_tac ep; simp; wpsimp wp: set_thread_state_valid_release_q)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext[OF _ gts_sp], simp add: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply ((case_tac recv_state; clarsimp), rename_tac ep_ptr reply_opt)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule_tac B="\<lambda>_ s. valid_release_q s \<and> not_in_release_q t s \<and> \<not> pred_map runnable (tcb_sts_of s) dest"
+           in hoare_seq_ext[rotated])
+   apply (wpsimp wp: reply_unlink_tcb.valid_sched_lemmas simp: tcb_sts.pred_map_simps)
+  apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule hoare_seq_ext[OF _ thread_get_sp])
+  apply (rule_tac B="\<lambda>_ s. valid_release_q s" in hoare_seq_ext)
+   apply (rule hoare_seq_ext[OF _ gbn_inv])
+   apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (rule hoare_seq_ext[OF _ assert_inv])
+   apply (wpsimp wp: set_thread_state_valid_release_q)
+  apply (simp add: pred_conj_def obj_at_def)
+  by (wpsimp wp: set_thread_state_valid_release_q simp: in_release_q_runnable split: if_splits)
+
+lemma send_ipc_ct_not_in_q:
+  "\<lbrace>\<lambda>s. ct_not_in_q s \<and> ct_in_cur_domain s \<and> idle_thread_is_idle s\<rbrace>
+   send_ipc block call badge can_grant can_donate t epptr
+   \<lbrace>\<lambda>rv. ct_not_in_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_ipc_def
+  supply if_split[split del]
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
+  apply (case_tac "\<forall>dest queue. ep \<noteq> RecvEP (dest # queue)"; clarsimp)
+   apply (case_tac "\<exists>q. ep = RecvEP q", elim exE, (case_tac q; simp))
+   apply (case_tac ep; simp; wpsimp)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext[OF _ gts_sp], simp add: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply ((case_tac recv_state; clarsimp), rename_tac ep_ptr reply_opt)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule_tac B="\<lambda>_ s. ct_not_in_q s \<and> ct_in_cur_domain s
+                           \<and> \<not> pred_map runnable (tcb_sts_of s) dest \<and> dest \<noteq> idle_thread s"
+         in hoare_seq_ext[rotated])
+   apply (wpsimp wp: reply_unlink_tcb.valid_sched_lemmas)
+   apply (prop_tac "\<not> pred_map runnable (tcb_sts_of s) dest \<and> dest \<noteq> idle_thread s"
+          ; clarsimp simp: tcb_sts.pred_map_simps)
+  apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule hoare_seq_ext[OF _ thread_get_sp])
+  apply (rule_tac B="\<lambda>_ s. ct_not_in_q s \<and> ct_in_cur_domain s \<and> dest \<noteq> idle_thread s" in hoare_seq_ext)
+   apply (rule hoare_seq_ext[OF _ gbn_inv])
+   apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (rule hoare_seq_ext[OF _ assert_inv])
+   apply (wpsimp wp: possible_switch_to_not_it_ct_not_in_q)
+  by wpsimp
+
+lemma send_ipc_valid_sched_action:
+  "\<lbrace>\<lambda>s. valid_sched_action s \<and> released_ipc_queues s \<and> scheduler_act_not t s
+         \<and> released_if_bound_sc_tcb_at t s
+         \<and> (can_donate \<longrightarrow> pred_map bound (tcb_scps_of s) t)\<rbrace>
+   send_ipc block call badge can_grant can_donate t epptr
+   \<lbrace>\<lambda>rv. valid_sched_action :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_ipc_def
+  supply if_split[split del]
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
+  apply (case_tac "\<forall>dest queue. ep \<noteq> RecvEP (dest # queue)"; clarsimp)
+   apply (case_tac "\<exists>q. ep = RecvEP q", elim exE, (case_tac q; simp))
+   apply (case_tac ep; simp; wpsimp wp: set_thread_state_valid_sched_action)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext[OF _ gts_sp], simp add: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply ((case_tac recv_state; clarsimp), rename_tac ep_ptr reply_opt)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule_tac B="\<lambda>_ s. valid_sched_action s \<and> scheduler_act_not t s
+                           \<and> released_if_bound_sc_tcb_at t s
+                           \<and> released_if_bound_sc_tcb_at dest s
+                           \<and> (can_donate \<longrightarrow> pred_map bound (tcb_scps_of s) t)"
+           in hoare_seq_ext[rotated])
+   apply (wpsimp wp: reply_unlink_tcb.valid_sched_lemmas)
+   apply (prop_tac "released_if_bound_sc_tcb_at dest s"
+          ; clarsimp simp: tcb_sts.pred_map_simps elim!: released_ipc_queuesE1)
+  apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule hoare_seq_ext[OF _ thread_get_sp])
+  apply (rule_tac B="\<lambda>_. valid_sched_action and released_if_bound_sc_tcb_at dest" in hoare_seq_ext)
+   apply (rule hoare_seq_ext[OF _ gbn_inv])
+   apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (rule hoare_seq_ext[OF _ assert_inv])
+   apply (wpsimp wp: set_thread_state_valid_sched_action set_thread_state_pred_map_tcb_sts_of
+                     hoare_vcg_imp_lift'
+               simp: vs_all_heap_simps)
+  apply (simp add: pred_conj_def obj_at_def)
+  apply (intro hoare_if[rotated] hoare_when_cases)
+     apply clarsimp
+    apply (wpsimp wp: sched_context_donate_valid_sched_action sched_context_donate_released_if_bound
+                      get_tcb_obj_ref_wp
+                simp: valid_sched_action_no_sc_sched_act_not)
+    apply (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise vs_all_heap_simps)
+   apply (wpsimp wp: set_thread_state_valid_sched_action)
+  by (wpsimp wp: reply_push_released_if_bound)
+
+lemma send_ipc_ct_in_cur_domain:
+  "send_ipc block call badge can_grant can_donate t epptr \<lbrace>ct_in_cur_domain :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_ipc_def
+  supply if_split[split del]
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
+  apply (case_tac "\<forall>dest queue. ep \<noteq> RecvEP (dest # queue)"; clarsimp)
+   apply (case_tac "\<exists>q. ep = RecvEP q", elim exE, (case_tac q; simp))
+   apply (case_tac ep; simp; wpsimp)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext[OF _ gts_sp], simp add: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply ((case_tac recv_state; clarsimp), rename_tac ep_ptr reply_opt)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule_tac B="\<lambda>_ s. ct_in_cur_domain s \<and> \<not> pred_map runnable (tcb_sts_of s) dest"
+         in hoare_seq_ext[rotated])
+   apply (wpsimp wp: reply_unlink_tcb.valid_sched_lemmas hoare_vcg_disj_lift simp: valid_sched_def)
+   apply (prop_tac "\<not> pred_map runnable (tcb_sts_of s) dest"; clarsimp simp: tcb_sts.pred_map_simps)
+  apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule hoare_seq_ext[OF _ thread_get_sp])
+  apply (rule_tac B="\<lambda>_ s. ct_in_cur_domain s" in hoare_seq_ext)
+   apply (rule hoare_seq_ext[OF _ gbn_inv])
+   apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (rule hoare_seq_ext[OF _ assert_inv])
+   apply wpsimp
+  by wpsimp
+
+lemma send_ipc_valid_blocked:
+  "\<lbrace>\<lambda>s. \<comment> \<open>In do_reply_transfer, valid_blocked might be broken for handle_timeout\<close>
+        valid_blocked_except_set (insert t S) s
+         \<comment> \<open>Timeout faults can come from threads other than the current thread
+             ; see handle_timeout in do_reply_transfer\<close>
+         \<and> (valid_blocked_tcb_at t s \<or> block \<and> pred_map bound (tcb_faults_of s) t)\<rbrace>
+   send_ipc block call badge can_grant can_donate t epptr
+   \<lbrace>\<lambda>rv. valid_blocked_except_set S :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_ipc_def
+  supply if_split[split del]
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
+  apply (case_tac "\<forall>dest queue. ep \<noteq> RecvEP (dest # queue)"; clarsimp)
+   apply (case_tac "\<exists>q. ep = RecvEP q", elim exE, (case_tac q; simp))
+   apply (case_tac ep; simp
+          ; wpsimp wp: set_thread_state_ipc_queued_valid_blocked_except_set
+          ; clarsimp elim!: valid_blocked_divided_threadE)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext[OF _ gts_sp], simp add: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply ((case_tac recv_state; clarsimp), rename_tac ep_ptr reply_opt)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule_tac B="\<lambda>_ s. valid_blocked_except_set (insert t S) s
+                           \<and> (valid_blocked_tcb_at t s \<or> block \<and> pred_map bound (tcb_faults_of s) t)
+                           \<and>  \<not> pred_map runnable (tcb_sts_of s) dest"
+           in hoare_seq_ext[rotated])
+   apply (wpsimp wp: reply_unlink_tcb.valid_sched_lemmas hoare_vcg_disj_lift)
+   apply (prop_tac "\<not> pred_map runnable (tcb_sts_of s) dest"; clarsimp simp: tcb_sts.pred_map_simps)
+  apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule hoare_seq_ext[OF _ thread_get_sp])
+  apply (rule_tac B="\<lambda>_ s. valid_blocked_except_set S s" in hoare_seq_ext)
+   apply (rule hoare_seq_ext[OF _ gbn_inv])
+   apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (rule hoare_seq_ext[OF _ assert_inv])
+   apply (wpsimp wp: possible_switch_to_valid_blocked set_thread_state_valid_blocked)
+  apply (simp add: pred_conj_def obj_at_def)
+  apply (intro hoare_if[rotated] hoare_when_cases)
+     apply (clarsimp simp: vs_all_heap_simps elim!: valid_blocked_divided_threadE)
+    apply (wpsimp wp: sched_context_donate_valid_blocked get_tcb_obj_ref_wp)
+    apply (clarsimp simp: vs_all_heap_simps valid_blocked_thread_def elim!: valid_blockedE')
+   apply wpsimp
+  by wpsimp
+
+lemma send_ipc_released_ipc_queues:
+  "\<lbrace>\<lambda>s. released_ipc_queues s
+         \<and> (can_donate \<longrightarrow> pred_map bound (tcb_scps_of s) t)
+         \<and> released_if_bound_sc_tcb_at t s\<rbrace>
+   send_ipc block call badge can_grant can_donate t epptr
+   \<lbrace>\<lambda>rv. released_ipc_queues :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_ipc_def
+  supply if_split[split del]
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
+  apply (case_tac "\<forall>dest queue. ep \<noteq> RecvEP (dest # queue)"; clarsimp)
+   apply (case_tac "\<exists>q. ep = RecvEP q", elim exE, (case_tac q; simp))
+   apply (case_tac ep; simp; wpsimp wp: set_thread_state_released_ipc_queues)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext[OF _ gts_sp], simp add: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply ((case_tac recv_state; clarsimp), rename_tac ep_ptr reply_opt)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule_tac B="\<lambda>_ s. released_ipc_queues s
+                            \<and> (can_donate \<longrightarrow> pred_map bound (tcb_scps_of s) t)
+                            \<and> released_if_bound_sc_tcb_at t s"
+           in hoare_seq_ext[rotated])
+   apply (wpsimp wp: reply_unlink_tcb.valid_sched_lemmas)
+  apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule hoare_seq_ext[OF _ thread_get_sp])
+  apply (rule_tac B="\<lambda>_. released_ipc_queues" in hoare_seq_ext)
+   apply (rule hoare_seq_ext[OF _ gbn_inv])
+   apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (rule hoare_seq_ext[OF _ assert_inv])
+   apply (wpsimp wp: set_thread_state_released_ipc_queues)
+  apply (simp add: pred_conj_def obj_at_def)
+  apply (intro hoare_if[rotated] hoare_when_cases)
+     apply clarsimp
+    apply (wpsimp wp: sched_context_donate_released_sc_released_ipc_queues get_tcb_obj_ref_wp)
+    apply (clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps)
+   apply (wpsimp wp: set_thread_state_released_ipc_queues)
+  by wpsimp
+
+lemma send_ipc_active_reply_scs:
+  "\<lbrace>\<lambda>s. active_reply_scs s \<and> active_if_bound_sc_tcb_at t s\<rbrace>
+   send_ipc block call badge can_grant can_donate t epptr
+   \<lbrace>\<lambda>_. active_reply_scs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_ipc_def
+  supply if_split[split del]
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
+  apply (case_tac "\<forall>dest queue. ep \<noteq> RecvEP (dest # queue)"; clarsimp)
+   apply (case_tac "\<exists>q. ep = RecvEP q", elim exE, (case_tac q; simp))
+   apply (case_tac ep; simp; wpsimp)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext[OF _ gts_sp], simp add: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply ((case_tac recv_state; clarsimp), rename_tac ep_ptr reply_opt)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule_tac B="\<lambda>_ s. active_reply_scs s \<and> active_if_bound_sc_tcb_at t s"
+           in hoare_seq_ext[rotated])
+   apply (wpsimp wp: reply_unlink_tcb.valid_sched_lemmas)
+  apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule hoare_seq_ext[OF _ thread_get_sp])
+  apply (rule_tac B="\<lambda>_ s. active_reply_scs s" in hoare_seq_ext)
+   apply (rule hoare_seq_ext[OF _ gbn_inv])
+   apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (rule hoare_seq_ext[OF _ assert_inv])
+   apply wpsimp
+  by wpsimp
+
+lemmas send_ipc_valid_sched_unbundled
+  = send_ipc_valid_ready_qs send_ipc_valid_release_q send_ipc_ct_not_in_q
+    send_ipc_valid_sched_action send_ipc_ct_in_cur_domain send_ipc_valid_blocked
+    send_ipc_released_ipc_queues send_ipc_active_reply_scs
+
+lemma send_ipc_valid_sched:
+  "\<lbrace>\<lambda>s. valid_sched_except_blocked s
+         \<and> idle_thread_is_idle s
+         \<comment> \<open>In do_reply_transfer, valid_blocked might be broken for handle_timeout\<close>
+         \<and> valid_blocked_except t s
+         \<comment> \<open>Timeout faults can come from threads other than the current thread
+             ; see handle_timeout in do_reply_transfer\<close>
+         \<and> (valid_blocked_tcb_at t s \<or> block \<and> pred_map bound (tcb_faults_of s) t)
+         \<comment> \<open>If the sender offers to donate, it must have a sched context to donate\<close>
+         \<and> (can_donate \<longrightarrow> pred_map bound (tcb_scps_of s) t)
+         \<and> released_if_bound_sc_tcb_at t s
+         \<and> scheduler_act_not t s
+         \<and> not_queued t s
+         \<and> not_in_release_q t s\<rbrace>
+   send_ipc block call badge can_grant can_donate t epptr
+   \<lbrace>\<lambda>rv. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  \<comment> \<open>We can prove this lemma two different ways.\<close>
+  apply (rule conj_absorb[THEN iffD1, OF conjI])
+  \<comment> \<open>Firstly, we simply use the lemmas above, which unbundle valid_sched for send_ipc.\<close>
+   apply (wpsimp wp: send_ipc_valid_sched_unbundled simp: valid_sched_def)
+   apply (clarsimp simp: vs_all_heap_simps)
+  \<comment> \<open>Secondly, we can independently perform a bundled proof. Although this is redundant, this
+      might be preferable to the unbundled proofs, since it avoids duplication of proof structure,
+      and checks faster than the collection of unbundled proofs. However, it is currently not
+      possible to drop the unbundled lemmas, since they are needed for existing unbundled
+      charge_budget lemmas.\<close>
+  unfolding send_ipc_def
+  supply if_split[split del]
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
+  apply (case_tac "\<forall>dest queue. ep \<noteq> RecvEP (dest # queue)"; clarsimp)
+   apply (case_tac "\<exists>q. ep = RecvEP q", elim exE, (case_tac q; simp))
+   apply (case_tac ep; simp
+          ; wpsimp wp: set_thread_state_ipc_queued_valid_blocked_except_set
+                       set_thread_state_released_if_bound_sc_valid_sched_except_blocked
+                 simp: valid_sched_valid_sched_except_blocked
+          ; clarsimp elim!: valid_blocked_divided_threadE)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext[OF _ gts_sp], simp add: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply ((case_tac recv_state; clarsimp), rename_tac ep_ptr reply_opt)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule_tac B="\<lambda>_ s. valid_sched_except_blocked s \<and> valid_blocked_except t s
+                           \<and> released_if_bound_sc_tcb_at dest s
+                           \<and> (valid_blocked_tcb_at t s \<or> block \<and> pred_map bound (tcb_faults_of s) t)
+                           \<and> (can_donate \<longrightarrow> pred_map bound (tcb_scps_of s) t)
+                           \<and> released_if_bound_sc_tcb_at t s
+                           \<and> scheduler_act_not t s \<and> not_queued t s \<and> not_in_release_q t s
+                           \<and> dest \<noteq> idle_thread s
+                           \<and> \<not> pred_map runnable (tcb_sts_of s) dest"
+           in hoare_seq_ext[rotated])
+   apply (wpsimp wp: reply_unlink_tcb.valid_sched_lemmas hoare_vcg_disj_lift simp: valid_sched_def)
+   apply (simp flip: id_def)? \<comment> \<open>Unifier did something weird here\<close>
+   apply (prop_tac "\<not> pred_map runnable (tcb_sts_of s) dest \<and> released_if_bound_sc_tcb_at dest s"
+          , clarsimp simp: tcb_sts.pred_map_simps elim!: released_ipc_queuesE1)
+   apply (prop_tac "dest \<noteq> idle_thread s", clarsimp simp: vs_all_heap_simps)
+   apply (clarsimp elim!: released_ipc_queuesE)
+   apply (clarsimp simp: vs_all_heap_simps split: if_splits)
+  apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule hoare_seq_ext[OF _ thread_get_sp])
+  apply (rule_tac B="\<lambda>_ s. valid_sched s \<and> released_if_bound_sc_tcb_at dest s \<and> dest \<noteq> idle_thread s" in hoare_seq_ext)
+   apply (rule hoare_seq_ext[OF _ gbn_inv])
+   apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (rule hoare_seq_ext[OF _ assert_inv])
+   apply (wpsimp wp: set_thread_state_possible_switch_to_valid_sched)
+  apply (simp add: pred_conj_def obj_at_def valid_blocked_thread_def)
+  apply (intro hoare_if[rotated] hoare_when_cases)
+     apply (clarsimp simp: valid_sched_valid_sched_except_blocked vs_all_heap_simps
+                    elim!: valid_blockedE')
+    apply (wpsimp wp: sched_context_donate_valid_sched sched_context_donate_released_if_bound
+                      get_tcb_obj_ref_wp)
+    apply (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise vs_all_heap_simps
+                          valid_sched_valid_sched_except_blocked
+                   elim!: valid_blockedE')
+   apply (wpsimp wp: set_thread_state_Inactive_not_queued_valid_sched simp: valid_sched_def)
+  by (wpsimp wp: reply_push_valid_sched reply_push_released_if_bound)
+
+lemma send_fault_ipc_valid_sched_misc[wp]:
+  "send_fault_ipc t handler_cap fault can_donate
+   \<lbrace>\<lambda>s::'state_ext state. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s)
+                            (idle_thread s) (last_machine_time_of s) (etcbs_of s) (sc_refill_cfgs_of s)\<rbrace>"
+  unfolding send_fault_ipc_def by wpsimp
+
+(* FIXME RT: This will not be true when released_ipc_queues actually depends on faults.
+             For now, it's a convenience to avoid breaking existing proofs until we know what
+             updates we need to make to released_ipc_queues. *)
+lemma thread_set_fault_released_ipc_queues:
+  "thread_set (tcb_fault_update f) t \<lbrace>released_ipc_queues\<rbrace>"
+  apply (wpsimp wp: thread_set_fault_valid_sched_pred)
+  by (clarsimp simp: heap_upd_def elim!: released_ipc_queuesE)
+
+\<comment> \<open>Unbundled valid_sched for send_fault_ipc, again to support existing unbundled lemmas for charge_budget.\<close>
+lemma send_fault_ipc_valid_ready_qs:
+  "\<lbrace>\<lambda>s. valid_ready_qs s \<and> released_ipc_queues s \<and> valid_sched_action s
+         \<and> released_if_bound_sc_tcb_at t s
+         \<and> not_queued t s \<and> scheduler_act_not t s
+         \<and> (can_donate \<longrightarrow> pred_map bound (tcb_scps_of s) t)\<rbrace>
+   send_fault_ipc t handler_cap fault can_donate
+   \<lbrace>\<lambda>rv. valid_ready_qs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_fault_ipc_def by (wpsimp wp: send_ipc_valid_ready_qs thread_set_fault_released_ipc_queues)
+
+lemma send_fault_ipc_valid_release_q:
+  "\<lbrace>valid_release_q and not_in_release_q t\<rbrace>
+   send_fault_ipc t handler_cap fault can_donate
+   \<lbrace>\<lambda>rv. valid_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_fault_ipc_def by (wpsimp wp: send_ipc_valid_release_q)
+
+lemma send_fault_ipc_ct_not_in_q:
+  "\<lbrace>ct_not_in_q and ct_in_cur_domain and idle_thread_is_idle\<rbrace>
+   send_fault_ipc t handler_cap fault can_donate
+   \<lbrace>\<lambda>rv. ct_not_in_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_fault_ipc_def by (wpsimp wp: send_ipc_ct_not_in_q)
+
+lemma send_fault_ipc_valid_sched_action:
+  "\<lbrace>\<lambda>s. valid_sched_action s \<and> released_ipc_queues s \<and> scheduler_act_not t s
+         \<and> released_if_bound_sc_tcb_at t s
+         \<and> (can_donate \<longrightarrow> pred_map bound (tcb_scps_of s) t)\<rbrace>
+   send_fault_ipc t handler_cap fault can_donate
+   \<lbrace>\<lambda>rv. valid_sched_action :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_fault_ipc_def by (wpsimp wp: send_ipc_valid_sched_action thread_set_fault_released_ipc_queues)
+
+lemma send_fault_ipc_ct_in_cur_domain:
+  "send_fault_ipc t handler_cap fault can_donate \<lbrace>ct_in_cur_domain :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_fault_ipc_def by (wpsimp wp: send_ipc_ct_in_cur_domain)
+
+lemma send_fault_ipc_valid_blocked:
+  "\<lbrace>\<lambda>s. \<comment> \<open>In do_reply_transfer, valid_blocked might be broken for handle_timeout\<close>
+        valid_blocked_except_set (insert t S) s
+         \<comment> \<open>Timeout faults can come from threads other than the current thread
+             ; see handle_timeout in do_reply_transfer\<close>
+         \<and> (valid_blocked_tcb_at t s \<or> is_ep_cap handler_cap)\<rbrace>
+   send_fault_ipc t handler_cap fault can_donate
+   \<lbrace>\<lambda>rv. valid_blocked_except_set S :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_fault_ipc_def
+  apply (wpsimp wp: send_ipc_valid_blocked thread_set_fault_valid_sched_pred)
+  apply (intro conjI allI impI
+         ; clarsimp simp: heap_upd_def elim!: valid_blocked_divided_threadE)
+  by (auto simp: vs_all_heap_simps valid_blocked_thread_def)
+
+lemma send_fault_ipc_released_ipc_queues:
+  "\<lbrace>\<lambda>s. released_ipc_queues s
+         \<and> (can_donate \<longrightarrow> pred_map bound (tcb_scps_of s) t)
+         \<and> released_if_bound_sc_tcb_at t s\<rbrace>
+   send_fault_ipc t handler_cap fault can_donate
+   \<lbrace>\<lambda>rv. released_ipc_queues :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_fault_ipc_def by (wpsimp wp: send_ipc_released_ipc_queues thread_set_fault_released_ipc_queues)
+
+lemma send_fault_ipc_active_reply_scs:
+  "\<lbrace>\<lambda>s. active_reply_scs s \<and> active_if_bound_sc_tcb_at t s\<rbrace>
+   send_fault_ipc t handler_cap fault can_donate
+   \<lbrace>\<lambda>_. active_reply_scs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_fault_ipc_def by (wpsimp wp: send_ipc_active_reply_scs thread_set_fault_released_ipc_queues)
+
+lemmas send_fault_ipc_valid_sched_unbundled
+  = send_fault_ipc_valid_ready_qs send_fault_ipc_valid_release_q send_fault_ipc_ct_not_in_q
+    send_fault_ipc_valid_sched_action send_fault_ipc_ct_in_cur_domain
+    send_fault_ipc_valid_blocked send_fault_ipc_released_ipc_queues send_fault_ipc_active_reply_scs
+
+lemma send_fault_ipc_valid_sched:
+  "\<lbrace>\<lambda>s. valid_sched_except_blocked s
+         \<and> idle_thread_is_idle s
+         \<comment> \<open>In do_reply_transfer, valid_blocked might be broken for handle_timeout\<close>
+         \<and> valid_blocked_except t s
+         \<comment> \<open>Timeout faults can come from threads other than the current thread
+             ; see handle_timeout in do_reply_transfer\<close>
+         \<and> (valid_blocked_tcb_at t s \<or> is_ep_cap handler_cap)
+         \<comment> \<open>If the sender offers to donate, it must have a sched context to donate\<close>
+         \<and> (can_donate \<longrightarrow> pred_map bound (tcb_scps_of s) t)
+         \<and> released_if_bound_sc_tcb_at t s
+         \<and> scheduler_act_not t s
+         \<and> not_queued t s
+         \<and> not_in_release_q t s\<rbrace>
+   send_fault_ipc t handler_cap fault can_donate
+   \<lbrace>\<lambda>rv. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_fault_ipc_def
+  apply (wpsimp wp: send_ipc_valid_sched thread_set_fault_valid_sched_pred)
+  apply (intro conjI allI impI
+         ; clarsimp simp: valid_sched_def heap_upd_def
+                   elim!: released_ipc_queuesE valid_blocked_divided_threadE)
+  by (auto simp: vs_all_heap_simps)
+
+\<comment> \<open>handle_timeout is typically called on a thread that is not ready, but with current
+    invariants, send_fault_ipc requires a released thread. Fixing this requires a kernel
+    change. In the meantime, this lemma effectively adds an assertion to handle_timeout
+    (which cannot be satisfied) that the faulting thread is released if it is active.
+    FIXME RT: Don't try to prove this directly! Instead, weaken released_ipc_queues, and the
+    corresponding preconditions to send_ipc.\<close>
+lemma handle_timeout_released_if_active:
+  assumes "\<lbrace>\<lambda>s. P s \<and> (active_sc_tcb_at t s \<longrightarrow> released_sc_tcb_at t s)\<rbrace>
+           handle_timeout t timeout
+           \<lbrace>Q :: _ \<Rightarrow> 'state_ext state \<Rightarrow> _\<rbrace>"
+  shows "\<lbrace>P\<rbrace> handle_timeout t timeout \<lbrace>Q\<rbrace>"
+  sorry (* handle_timeout_released_if_active: requires kernel change *)
+
+lemma handle_timeout_valid_sched_misc[wp]:
+  "handle_timeout t timeout
+   \<lbrace>\<lambda>s::'state_ext state. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s)
+                            (idle_thread s) (last_machine_time_of s) (etcbs_of s) (sc_refill_cfgs_of s)\<rbrace>"
+  unfolding handle_timeout_def by wpsimp
+
+lemma handle_timeout_valid_ready_qs:
+  "\<lbrace>\<lambda>s. valid_ready_qs s \<and> released_ipc_queues s \<and> valid_sched_action s
+         \<and> active_if_bound_sc_tcb_at t s
+         \<and> not_queued t s \<and> scheduler_act_not t s\<rbrace>
+   handle_timeout t timeout
+   \<lbrace>\<lambda>rv. valid_ready_qs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (rule handle_timeout_released_if_active)
+  unfolding handle_timeout_def by (wpsimp wp: send_fault_ipc_valid_ready_qs)
+
+lemma handle_timeout_valid_release_q:
+  "\<lbrace>valid_release_q and not_in_release_q t\<rbrace>
+   handle_timeout t timeout
+   \<lbrace>\<lambda>rv. valid_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding handle_timeout_def by (wpsimp wp: send_fault_ipc_valid_release_q)
+
+lemma handle_timeout_ct_not_in_q:
+  "\<lbrace>ct_not_in_q and ct_in_cur_domain and idle_thread_is_idle\<rbrace>
+   handle_timeout t timeout
+   \<lbrace>\<lambda>rv. ct_not_in_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding handle_timeout_def by (wpsimp wp: send_fault_ipc_ct_not_in_q)
+
+lemma handle_timeout_valid_sched_action:
+  "\<lbrace>\<lambda>s. valid_sched_action s \<and> released_ipc_queues s \<and> scheduler_act_not t s \<and> active_if_bound_sc_tcb_at t s\<rbrace>
+   handle_timeout t timeout
+   \<lbrace>\<lambda>rv. valid_sched_action :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (rule handle_timeout_released_if_active)
+  unfolding handle_timeout_def by (wpsimp wp: send_fault_ipc_valid_sched_action)
+
+lemma handle_timeout_ct_in_cur_domain:
+  "handle_timeout t timeout \<lbrace>ct_in_cur_domain :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding handle_timeout_def by (wpsimp wp: send_fault_ipc_ct_in_cur_domain)
+
+lemma handle_timeout_valid_blocked:
+  "\<lbrace>\<lambda>s. valid_blocked_except_set (insert t S) s\<rbrace>
+   handle_timeout t timeout
+   \<lbrace>\<lambda>rv. valid_blocked_except_set S :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding handle_timeout_def by (wpsimp wp: send_fault_ipc_valid_blocked)
+
+lemma handle_timeout_released_ipc_queues:
+  "\<lbrace>\<lambda>s. released_ipc_queues s \<and> active_if_bound_sc_tcb_at t s\<rbrace>
+   handle_timeout t timeout
+   \<lbrace>\<lambda>rv. released_ipc_queues :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (rule handle_timeout_released_if_active)
+  unfolding handle_timeout_def by (wpsimp wp: send_fault_ipc_released_ipc_queues)
+
+lemma handle_timeout_active_reply_scs:
+  "\<lbrace>\<lambda>s. active_reply_scs s \<and> active_if_bound_sc_tcb_at t s\<rbrace>
+   handle_timeout t timeout
+   \<lbrace>\<lambda>_. active_reply_scs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (rule handle_timeout_released_if_active)
+  unfolding handle_timeout_def by (wpsimp wp: send_fault_ipc_active_reply_scs)
+
+lemmas handle_timeout_valid_sched_bundled
+  = handle_timeout_valid_ready_qs handle_timeout_valid_release_q handle_timeout_ct_not_in_q
+    handle_timeout_valid_sched_action handle_timeout_ct_in_cur_domain handle_timeout_valid_blocked
+    handle_timeout_released_ipc_queues handle_timeout_active_reply_scs
+
+lemma handle_timeout_valid_sched:
+  "\<lbrace>\<lambda>s. valid_sched_except_blocked s
+         \<and> idle_thread_is_idle s
+         \<and> valid_blocked_except t s
+         \<and> active_if_bound_sc_tcb_at t s
+         \<and> scheduler_act_not t s
+         \<and> not_queued t s
+         \<and> not_in_release_q t s\<rbrace>
+   handle_timeout t timeout
+   \<lbrace>\<lambda>rv. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (rule handle_timeout_released_if_active)
+  unfolding handle_timeout_def by (wpsimp wp: send_fault_ipc_valid_sched)
 
 end
 
 lemma thread_set_is_sc_active[wp]:
   "thread_set f t \<lbrace>\<lambda>s. Q (is_sc_active scp s)\<rbrace>"
   by (wpsimp wp: thread_set_wp, clarsimp simp: is_sc_active_def dest!: get_tcb_SomeD)
-
-context DetSchedSchedule_AI begin
-
-lemma send_fault_ipc_valid_sched[wp]:
-  "\<lbrace>valid_sched and st_tcb_at active tptr and scheduler_act_not tptr
-     and not_queued tptr and ct_in_state activatable and invs and (\<lambda>_. valid_fault fault)
-     and not_in_release_q tptr
-     and released_if_bound_sc_tcb_at tptr
-     and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at bound tptr s)\<rbrace>
-    send_fault_ipc tptr handler_cap fault can_donate
-     \<lbrace>\<lambda>_. valid_sched::('state_ext state) \<Rightarrow> _\<rbrace>"
-  apply (cases "valid_fault fault"; simp)
-  apply (simp add: send_fault_ipc_def Let_def)
-  apply (case_tac handler_cap; simp)
-   by (wpsimp wp: send_ipc_valid_sched_fault
-                  thread_set_not_state_valid_sched
-                  thread_set_no_change_tcb_state
-                  thread_set_invs_but_fault_tcbs
-                  thread_set_no_change_tcb_sched_context
-                  hoare_vcg_imp_lift)+
-
-end
 
 lemma send_fault_ipc_error_sched_act_not[wp]:
   "\<lbrace>scheduler_act_not t\<rbrace> send_fault_ipc tptr handler_cap fault can_donate -, \<lbrace>\<lambda>rv. scheduler_act_not t\<rbrace>"
@@ -11270,7 +11758,7 @@ lemma send_fault_ipc_error_cur_thread[wp]:
       (wp hoare_drop_imps hoare_vcg_all_lift_R)+ | wpc)+
 
 lemma send_fault_ipc_error_not_queued[wp]:
-  "\<lbrace>not_queued t\<rbrace> send_fault_ipc tptr handler_cap fault can_donate -, \<lbrace>\<lambda>rv. not_queued t::det_state \<Rightarrow> _\<rbrace>"
+  "\<lbrace>not_queued t\<rbrace> send_fault_ipc tptr handler_cap fault can_donate -, \<lbrace>\<lambda>rv. not_queued t\<rbrace>"
   by (simp add: send_fault_ipc_def Let_def |
       (wp hoare_drop_imps hoare_vcg_all_lift_R)+ | wpc)+
 
@@ -11288,7 +11776,6 @@ lemma send_ipc_not_queued:
 
 crunches reply_push
   for not_in_release_q'[wp]: "\<lambda>s. not_in_release_q t s"
-  and etcb_at[wp]: "etcb_at P t"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma send_ipc_not_in_release_q:
@@ -11364,16 +11851,6 @@ lemma send_fault_ipc_scheduler_act_not:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def pred_neg_def split: if_splits)
   done
 
-lemma reply_push_valid_sched_no_donation:
-  "\<lbrace> valid_sched_except_blocked and valid_blocked_except thread and not_in_release_q thread and
-     scheduler_act_not thread and not_queued thread and released_if_bound_sc_tcb_at thread\<rbrace>
-   reply_push thread dest reply False
-   \<lbrace>\<lambda>rv. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding reply_push_def
-  apply clarsimp
-  by (wpsimp wp: set_thread_state_valid_sched update_sk_obj_ref_lift
-                 get_simple_ko_wp get_tcb_obj_ref_wp hoare_drop_imps)
-
 lemma reply_push_weak_valid_sched_action_no_donation:
   "\<lbrace> weak_valid_sched_action and
      scheduler_act_not thread\<rbrace>
@@ -11402,7 +11879,6 @@ lemma reply_push_valid_blocked_no_donation':
   by (wpsimp wp: set_thread_state_not_runnable_valid_blocked_remove hoare_drop_imps
                  update_sk_obj_ref_lift)
 
-
 lemma weak_valid_sched_action_scheduler_action_not:
   "weak_valid_sched_action s \<Longrightarrow> st_tcb_at (Not \<circ> runnable) t s \<Longrightarrow> scheduler_act_not t s"
   by (clarsimp simp: weak_valid_sched_action_def scheduler_act_not_def tcb_at_kh_simps pred_map_def)
@@ -11414,325 +11890,6 @@ lemma valid_release_q_not_in_release_q_not_runnable:
 lemma valid_ready_qs_not_queued_not_runnable:
   "valid_ready_qs s \<Longrightarrow> st_tcb_at (Not \<circ> runnable) t s \<Longrightarrow> not_queued t s"
   by (clarsimp simp: valid_ready_qs_def not_queued_def tcb_at_kh_simps pred_map_def, fastforce)
-
-lemma possible_switch_to_valid_blocked:
-  "\<lbrace>valid_blocked_except_set (insert target S)\<rbrace> possible_switch_to target \<lbrace>\<lambda>_. valid_blocked_except_set S\<rbrace>"
-  unfolding possible_switch_to_def
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (wpsimp wp: tcb_sched_enqueue_valid_blocked_except_set
-                    reschedule_required_valid_blocked
-                    set_scheduler_action_valid_blocked_remove
-                simp: thread_get_def)
-   apply (clarsimp simp: valid_blocked_defs)
-  apply safe
-    apply fastforce
-   apply (drule_tac x=t in spec, clarsimp simp: pred_tcb_at_def obj_at_def vs_all_heap_simps)
-  apply (drule_tac x=t in spec, clarsimp)
-  done
-
-(* FIXME Move *)
-lemma set_thread_state_runnable_valid_blocked_except_set_inc:
-  "\<lbrace>valid_blocked_except_set S and (\<lambda>s. runnable ts) and (\<lambda>s. st_tcb_at (not runnable) ref s) and
-      (\<lambda>s. \<not> (ref \<in> S \<or> in_ready_q ref s \<or> in_release_q ref s \<or> ref = cur_thread s
-                  \<or> scheduler_action s = switch_thread ref \<or> (\<not> active_sc_tcb_at ref s)))\<rbrace>
-    set_thread_state ref ts
-   \<lbrace>\<lambda>_. valid_blocked_except_set (insert ref S)\<rbrace>"
-  by (wpsimp wp: set_thread_state_valid_blocked)
-
-(* FIXME move *)
-lemma valid_ready_qs_not_runnable_not_inq:
-  "\<lbrakk>valid_ready_qs s; st_tcb_at (Not \<circ> runnable) tptr s\<rbrakk> \<Longrightarrow> not_queued tptr s"
-  apply (clarsimp simp: valid_ready_qs_def not_queued_def tcb_at_kh_simps)
-  by (fastforce simp: pred_map_def)
-
-(* FIXME move *)
-lemma valid_release_q_not_runnable_not_inq:
-  "\<lbrakk>valid_release_q s; st_tcb_at (Not \<circ> runnable) tptr s\<rbrakk> \<Longrightarrow> not_in_release_q tptr s"
-  apply (clarsimp simp: valid_release_q_def not_in_release_q_def tcb_at_kh_simps)
-  by (fastforce simp: pred_map_def)
-lemma send_ipc_valid_release_q_for_handle_timeout:
-  "\<lbrace>valid_release_q and not_in_release_q thread\<rbrace>
-   send_ipc True False badge True False thread epptr
-   \<lbrace>\<lambda>rv. (valid_release_q ) ::'state_ext state \<Rightarrow> _\<rbrace>"
-  supply if_weak_cong[cong del] if_split[split del]
-  apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-  apply (case_tac ep, simp_all)
-    apply (wpsimp wp: set_thread_state_valid_release_q)
-   apply (wpsimp wp: set_thread_state_valid_release_q)
-  apply (rename_tac list)
-  apply (case_tac list; simp)
-  apply (rename_tac dest tail)
-  apply (wpsimp wp: set_thread_state_valid_release_q)
-           apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift set_thread_state_valid_release_q)+
-          apply (clarsimp cong: conj_cong)
-       apply (wpsimp wp: maybeM_inv reply_unlink_tcb_valid_release_q)
-      apply (wpsimp)+
-    apply (wpsimp wp: gts_wp)
-   apply (rule_tac Q="\<lambda>r. valid_release_q and not_in_release_q thread"
-          in hoare_strengthen_post[rotated])
-    apply (clarsimp simp: valid_release_q_def in_release_q_def tcb_at_kh_simps pred_map_simps, fastforce)
-   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-  apply clarsimp
-  done
-
-lemma send_ipc_valid_blocked_for_handle_timeout:
-  "\<lbrace>valid_blocked_except_set S\<rbrace>
-   send_ipc True False badge True False thread epptr
-   \<lbrace>\<lambda>rv. valid_blocked_except_set S ::'state_ext state \<Rightarrow> _\<rbrace>"
-  supply if_weak_cong[cong del]
-  apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-  apply (case_tac ep, simp_all)
-    apply (wpsimp wp: set_thread_state_valid_blocked)
-   apply (wpsimp wp: set_thread_state_valid_blocked)
-   (* RecvEP *)
-  apply (rename_tac list)
-  apply (case_tac list; simp)
-  apply (rename_tac dest tail)
-  apply wpsimp
-               apply (wpsimp wp: possible_switch_to_valid_blocked)
-              apply (wpsimp wp: set_thread_state_valid_blocked_const)
-             apply (wpsimp wp: assert_inv)
-            apply wpsimp
-           apply (wpsimp wp: get_tcb_obj_ref_wp)
-          apply (rule_tac Q="\<lambda>_. valid_blocked_except_set S" in hoare_strengthen_post[rotated])
-           apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def released_sc_tcb_at_def vs_all_heap_simps)
-          apply wpsimp
-            apply (wpsimp wp: reply_push_valid_blocked_no_donation')
-           apply (wpsimp wp: set_thread_state_valid_blocked)
-          apply wpsimp
-         apply (wpsimp simp: thread_get_def)
-        apply (wpsimp wp: get_tcb_obj_ref_wp)
-       apply (rule_tac Q="\<lambda>r. valid_blocked_except_set S" in hoare_strengthen_post[rotated])
-        apply clarsimp
-       apply (wpsimp wp: reply_unlink_tcb_valid_blocked_except_set)
-      apply (rule_tac Q="\<lambda>r. valid_blocked_except_set S" in hoare_strengthen_post[rotated])
-       apply (clarsimp simp: obj_at_def pred_tcb_at_def is_tcb)
-      apply (wpsimp wp: hoare_vcg_disj_lift reply_unlink_tcb_valid_release_q)
-     apply wpsimp
-    apply (wpsimp wp: gts_wp)
-   apply clarsimp
-   apply (rule_tac Q="\<lambda>r. valid_blocked_except_set S" in hoare_strengthen_post[rotated])
-    apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def)
-   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_disj_lift)
-  apply (clarsimp simp: obj_at_def)
-  done
-
-crunches send_ipc
-  for valid_sched_misc[wp]: "(\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
-                                    (cur_thread s) (idle_thread s) (last_machine_time_of s)
-                                    (sc_refill_cfgs_of s) (etcbs_of s)) :: 'state_ext state \<Rightarrow> _"
-  (wp: crunch_wps)
-
-lemma send_ipc_valid_ready_qs_for_handle_timeout:
-  "\<lbrace>valid_ready_qs and weak_valid_sched_action and released_ipc_queues and not_queued thread\<rbrace>
-   send_ipc True False badge True False thread epptr
-   \<lbrace>\<lambda>rv. valid_ready_qs ::'state_ext state \<Rightarrow> _\<rbrace>"
-  supply if_weak_cong[cong del]
-  apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-  apply (case_tac ep, simp_all)
-    apply (wpsimp wp: set_thread_state_valid_ready_qs)
-   apply (wpsimp wp: set_thread_state_valid_ready_qs)
-  apply (rename_tac list)
-  apply (case_tac list; simp)
-  apply (rename_tac dest tail)
-  apply wpsimp
-               apply (wpsimp wp: possible_switch_to_valid_ready_qs)
-              apply (wpsimp wp: sts_st_tcb_at' hoare_vcg_disj_lift
-                                set_thread_state_valid_ready_qs
-                                 )
-             apply wpsimp
-            apply wpsimp
-           apply (wpsimp wp: get_tcb_obj_ref_wp)
-          apply (rule_tac Q="\<lambda>_. valid_ready_qs and released_if_bound_sc_tcb_at dest"
-                 in hoare_strengthen_post[rotated])
-           apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def released_sc_tcb_at_def vs_all_heap_simps)
-          apply wpsimp
-            apply (wpsimp wp: reply_push_typ_at tcb_at_typ_at reply_push_released_if_bound_sc_tcb_at_no_donation)
-           apply (wpsimp wp: set_thread_state_valid_ready_qs hoare_vcg_disj_lift)
-          apply wpsimp
-         apply (wpsimp simp: thread_get_def)
-        apply (wpsimp wp: get_tcb_obj_ref_wp)
-       apply (rule_tac Q="\<lambda>r. valid_ready_qs and not_queued thread and not_queued dest and
-                              scheduler_act_not dest and released_if_bound_sc_tcb_at dest"
-              in hoare_strengthen_post[rotated])
-        apply clarsimp
-       apply (wpsimp wp: reply_unlink_tcb_valid_ready_qs)
-      apply (rule_tac Q="\<lambda>r. valid_ready_qs and not_queued thread and not_queued dest and
-                             scheduler_act_not dest and released_if_bound_sc_tcb_at dest"
-             in hoare_strengthen_post[rotated])
-       apply (clarsimp simp: obj_at_def pred_tcb_at_def is_tcb)
-      apply (wpsimp wp: hoare_vcg_disj_lift reply_unlink_tcb_valid_release_q)
-     apply (wpsimp wp: )
-    apply (wpsimp wp: gts_wp)
-   apply clarsimp
-   apply (rule_tac Q="\<lambda>r. valid_ready_qs and weak_valid_sched_action and released_ipc_queues and not_queued thread"
-          in hoare_strengthen_post[rotated])
-    apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def)
-    apply (intro conjI)
-      apply (erule valid_ready_qs_not_queued_not_runnable; (clarsimp simp: pred_tcb_at_def obj_at_def pred_neg_def)?)
-     apply (erule weak_valid_sched_action_scheduler_action_not; (clarsimp simp: pred_tcb_at_def obj_at_def pred_neg_def)?)
-    apply (subgoal_tac "ipc_queued_thread dest s")
-     apply (clarsimp simp: released_ipc_queues_defs)
-    apply (clarsimp simp: vs_all_heap_simps)
-   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_disj_lift)
-  apply (clarsimp simp: obj_at_def)
-  done
-
-lemma send_ipc_released_ipc_queues_for_handle_timeout:
-  "\<lbrace>released_ipc_queues and released_if_bound_sc_tcb_at thread\<rbrace>
-   send_ipc True False badge True False thread epptr
-   \<lbrace>\<lambda>rv. released_ipc_queues ::'state_ext state \<Rightarrow> _\<rbrace>"
-  supply if_weak_cong[cong del]
-  apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-  apply (case_tac ep, simp_all)
-    apply (wpsimp wp: set_thread_state_released_ipc_queues)
-   apply (wpsimp wp: set_thread_state_released_ipc_queues)
-  apply (rename_tac list)
-  apply (case_tac list; simp)
-  apply (rename_tac dest tail)
-  apply (wpsimp wp: set_thread_state_released_ipc_queues)
-           apply (wpsimp wp: get_tcb_obj_ref_wp)
-          apply (rule_tac Q="\<lambda>_. released_ipc_queues"
-                 in hoare_strengthen_post[rotated])
-           apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def released_sc_tcb_at_def vs_all_heap_simps)
-          apply wpsimp
-           apply (wpsimp wp: set_thread_state_released_ipc_queues)
-          apply wpsimp
-         apply (wpsimp simp: thread_get_def)
-        apply (wpsimp wp: get_tcb_obj_ref_wp)
-       apply (rule_tac Q="\<lambda>r. released_ipc_queues and released_if_bound_sc_tcb_at dest
-                              and released_if_bound_sc_tcb_at thread"
-              in hoare_strengthen_post[rotated])
-        apply clarsimp
-       apply (wpsimp wp: reply_unlink_tcb_released_ipc_queues)
-      apply (wpsimp wp: )
-     apply (wpsimp wp: )
-    apply (wpsimp wp: gts_wp)
-   apply clarsimp
-   apply (rule_tac Q="\<lambda>r. released_ipc_queues and released_if_bound_sc_tcb_at thread"
-          in hoare_strengthen_post[rotated])
-    apply (clarsimp simp: )
-    apply (subgoal_tac "released_if_bound_sc_tcb_at dest s")
-     apply (clarsimp simp: )
-     apply (clarsimp simp: released_ipc_queues_defs pred_map_simps)
-    apply (erule released_ipc_queuesE1)
-    apply (clarsimp simp: tcb_at_kh_simps pred_map_def)
-   apply (wpsimp wp: hoare_vcg_disj_lift)
-  apply (clarsimp)
-  done
-
-lemmas send_ipc_valid_sched_subset_for_handle_timeout = send_ipc_valid_ready_qs_for_handle_timeout
-                                                        send_ipc_valid_blocked_for_handle_timeout
-                                                        send_ipc_valid_release_q_for_handle_timeout
-                                                        send_ipc_released_ipc_queues_for_handle_timeout
-
-\<comment> \<open>The precondition "(\<lambda>s. \<not> ipc_queued_thread (cur_thread s) s)" is probably true. If there are
-    problems supplying it here, remove this precondition and find another way forward.\<close>
-lemma send_ipc_valid_sched_for_handle_timeout:
-  "\<lbrace>all_invs_but_fault_tcbs and fault_tcbs_valid_states_except_set {thread}
-    and valid_sched_except_blocked and valid_blocked_except thread
-    and fault_tcb_at bound thread
-    and released_if_bound_sc_tcb_at thread
-    and (\<lambda>s. not_in_release_q thread s \<and>  scheduler_act_not thread s \<and> not_queued thread s)
-    and (\<lambda>s. \<not> ipc_queued_thread (cur_thread s) s) \<rbrace>
-   send_ipc True False badge True False thread epptr
-   \<lbrace>\<lambda>rv. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  supply if_weak_cong[cong del]
-  apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-  apply (case_tac ep, simp_all)
-    apply (wpsimp wp: set_thread_state_valid_sched)
-   apply (wpsimp wp: set_thread_state_valid_sched)
-  apply (rename_tac list)
-  apply (case_tac list; simp)
-  apply (rename_tac dest tail)
-  apply (wpsimp wp: send_ipc_valid_sched_helper0)
-            apply (wpsimp wp: reply_push_valid_sched_no_donation reply_push_released_if_bound_sc_tcb_at_no_donation)
-           apply (wpsimp wp: set_thread_state_valid_sched)
-           apply (wpsimp wp: hoare_vcg_disj_lift)
-          apply (wpsimp wp: thread_get_wp)+
-       apply (rule_tac Q="\<lambda>r. (valid_sched_except_blocked and
-                               valid_blocked_except_set {thread}) and fault_tcb_at bound thread
-                               and not_in_release_q thread and
-                               scheduler_act_not thread and not_queued thread and
-                               released_if_bound_sc_tcb_at thread and
-                               released_if_bound_sc_tcb_at dest and
-                               (\<lambda>s. dest \<noteq> idle_thread s)"
-                               in hoare_strengthen_post[rotated])
-        apply (clarsimp simp: obj_at_def pred_tcb_at_def)
-       apply (wpsimp wp: reply_unlink_tcb_valid_sched_except_blocked reply_unlink_tcb_valid_blocked_except_set
-                         hoare_vcg_disj_lift)
-      apply (rule_tac Q="\<lambda>r. (valid_sched_except_blocked and
-                              valid_blocked_except_set {thread}) and fault_tcb_at bound thread and
-                              (\<lambda>s. not_in_release_q thread s \<and> scheduler_act_not thread s \<and> not_queued thread s) and
-                              (\<lambda>s. \<forall>x. reply = Some x \<longrightarrow> reply_tcb_reply_at (\<lambda>x. x = Some dest) x s) and
-                              released_if_bound_sc_tcb_at thread and
-                              released_if_bound_sc_tcb_at dest and
-                              (\<lambda>s. not_cur_thread dest s \<and> dest \<noteq> idle_thread s)"
-                              in hoare_strengthen_post[rotated])
-       apply (clarsimp simp: obj_at_def pred_tcb_at_def)
-      apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift)
-     apply (wpsimp wp: )
-    apply (wpsimp wp: gts_wp)
-   apply clarsimp
-   apply (rule_tac Q="\<lambda>r. (valid_sched_except_blocked and
-                           valid_blocked_except_set {thread}) and fault_tcb_at bound thread and
-                           (\<lambda>s. not_in_release_q thread s \<and>
-                           scheduler_act_not thread s \<and> not_queued thread s) and
-                           released_if_bound_sc_tcb_at thread and
-                           (\<lambda>s. \<forall>a x. st_tcb_at ((=) (BlockedOnReceive a (Some x))) dest s
-                                      \<longrightarrow> reply_tcb_reply_at (\<lambda>x. x = Some dest) x s) and
-                            released_if_bound_sc_tcb_at dest and
-                           (\<lambda>s. not_cur_thread dest s \<and> dest \<noteq> idle_thread s)"
-                           in hoare_strengthen_post[rotated])
-    apply (clarsimp simp: obj_at_def )
-   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_disj_lift)
-  apply (clarsimp simp: obj_at_def)
-  apply (subgoal_tac "ipc_queued_thread dest s")
-   apply (intro conjI allI impI)
-      apply (rule BlockedOnReceive_reply_tcb_reply_at[rotated], clarsimp, clarsimp)
-      apply (fastforce simp: pred_tcb_at_def obj_at_def)
-     apply (clarsimp simp: valid_sched_def released_ipc_queues_defs)
-    apply (clarsimp simp: not_cur_thread_def)
-   apply (erule ipc_queued_thread_not_idle_thread, clarsimp)
-  apply (erule RecvEP_queued_ipc_queued_thread, clarsimp)
-  done
-
-lemma send_fault_ipc_valid_sched_for_handle_timeout:
-  "\<lbrace>valid_sched_except_blocked and valid_blocked_except tptr and scheduler_act_not tptr
-    and not_queued tptr and not_in_release_q tptr and invs and K (valid_fault fault)
-    and (\<lambda>s. not_ipc_queued_thread (cur_thread s) s)
-    and released_if_bound_sc_tcb_at tptr
-    and K (is_ep_cap handler_cap)\<rbrace>
-     send_fault_ipc tptr handler_cap fault False
-   \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  apply (cases "valid_fault fault"; simp)
-  apply (simp add: send_fault_ipc_def Let_def)
-  apply (case_tac handler_cap; simp)
-  by (wpsimp wp: send_ipc_valid_sched_for_handle_timeout
-                 thread_set_invs_but_fault_tcbs
-                 thread_set_pred_tcb_at_sets_true)+
-
-lemma handle_timeout_valid_sched:
-  "\<lbrace>valid_sched_except_blocked and valid_blocked_except tptr
-     and scheduler_act_not tptr and K (valid_fault ex)
-     and (\<lambda>s. not_ipc_queued_thread (cur_thread s) s)
-     and released_if_bound_sc_tcb_at tptr
-     and not_in_release_q tptr and not_queued tptr and invs\<rbrace>
-     handle_timeout tptr ex
-   \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def
-  by (wpsimp wp: send_fault_ipc_valid_sched_for_handle_timeout assert_wp)
-
-crunches handle_fault_reply
-for active_sc_tcb_at[wp]: "\<lambda>s :: ('state_ext state). active_sc_tcb_at a s"
-and not_in_release_q[wp]: "\<lambda>s::('state_ext state). not_in_release_q x s"
-and simple_sched_action[wp]: "\<lambda>s::('state_ext state). simple_sched_action s"
-  (wp: crunch_wps maybeM_wp transfer_caps_loop_pres )
 
 crunch not_in_release_q[wp]: reply_remove "\<lambda>s::('state_ext state). not_in_release_q a s"
   (wp: crunch_wps tcb_release_remove_not_in_release_q')
@@ -11763,250 +11920,152 @@ lemma reply_remove_ct_in_state:
   apply (auto simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
-lemma reply_remove_unbound_or_active_sc_tcb_at:
-  "\<lbrace>(\<lambda>s. sym_refs (state_refs_of s))
-    and tcb_at a
-    and reply_tcb_reply_at (\<lambda>recv_opt. recv_opt = Some a) reply
-    and valid_reply_scs\<rbrace>
-   reply_remove caller reply
-   \<lbrace>\<lambda>r s::('state_ext state). bound_sc_tcb_at (\<lambda>a. a = None) a s \<or> active_sc_tcb_at a s\<rbrace>"
-  unfolding reply_remove_def
-  apply clarsimp
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule_tac Q="(\<lambda>s. sym_refs (state_refs_of s)) and tcb_at a and reply_tcb_reply_at (\<lambda>recv_opt. recv_opt = Some a) reply and
-                valid_reply_scs and (\<lambda>s. sc_with_reply reply s = r_sc_opt) and K(caller = a)" in hoare_weaken_pre[rotated])
-   apply (clarsimp simp: reply_at_ppred_def obj_at_def)
-  apply (rule hoare_gen_asm)
-  apply clarsimp
-  apply (case_tac "r_sc_opt"; simp)(*
-   apply (wpsimp wp: reply_unlink_tcb_bound_sc_tcb_at reply_unlink_tcb_active_sc_tcb_at
-                     hoare_vcg_disj_lift)
-   apply (fastforce simp: valid_reply_scs_def )
-  apply (clarsimp simp: bind_assoc)
-  apply (wpsimp)
-       apply (wpsimp wp: reply_unlink_tcb_bound_sc_tcb_at reply_unlink_tcb_active_sc_tcb_at
-                         hoare_vcg_disj_lift)
-      apply wpsimp
-      apply (rule_tac Q="\<lambda>r. active_sc_tcb_at a" in hoare_strengthen_post[rotated], clarsimp)
-      apply (wpsimp wp: sched_context_donate_active_sc_tcb_at_donate)
-     apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift' hoare_vcg_disj_lift)
-    apply (wpsimp wp: gbn_wp)+
-  apply (clarsimp simp: obj_at_def valid_reply_scs_def sc_with_reply_def reply_at_ppred_def is_tcb
-                 dest!: the_pred_option_SomeD )
-  apply (case_tac "tcb_sched_context tcb"; simp)
-   apply (intro conjI impI)
-     apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-    apply (subgoal_tac "reply_sc_reply_at (\<lambda>x. x = (Some aa)) reply s")
-     apply (fastforce simp: obj_at_def reply_at_ppred_def )
-    apply (erule_tac list = "tl (sc_replies sc)" in  sym_refs_reply_sc_reply_at)
-     apply (clarsimp simp: obj_at_def is_reply)
-    apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-    apply (fastforce intro: list.collapse)
-   apply (intro disjI1)
-   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (intro disjI2)
-  apply (drule_tac x = a in spec)
-  apply (fastforce simp: pred_tcb_at_def obj_at_def)
-  done *)
-  sorry (* reply_remove_unbound_or_active_sc_tcb_at *)
-
 lemma reply_at_ppred_eq_commute:
   "reply_at_ppred proj ((=) v) = reply_at_ppred proj (\<lambda>x. x = v)"
   by (intro ext) (auto simp: reply_at_ppred_def obj_at_def)
 
-crunches thread_set, handle_fault_reply
-  for valid_machine_time[wp]: "\<lambda>s::'state_ext state. P (cur_time s) (last_machine_time_of s)"
-  (wp: crunch_wps simp: crunch_simps)
+lemmas reply_unlink_tcb_inactive'[wp]
+  = reply_unlink_tcb_inactive[unfolded pred_map_eq_normalise obj_at_kh_kheap_simps]
+
+lemma reply_remove_inactive[wp]:
+  "\<lbrace>\<top>\<rbrace> reply_remove t r \<lbrace>\<lambda>_. st_tcb_at ((=) Inactive) t\<rbrace>"
+  by (wpsimp simp: reply_remove_def)
+
+lemmas reply_remove_inactive'[wp]
+  = reply_remove_inactive[unfolded pred_map_eq_normalise obj_at_kh_kheap_simps]
+
+(* FIXME RT: move *)
+lemma gets_the_sp:
+  "\<lbrace>P\<rbrace> gets_the f \<lbrace>\<lambda>rv s. f s = Some rv \<and> P s\<rbrace>"
+  by wpsimp
+
+lemma sched_context_donate_tcb_scps_of_retract:
+  "\<lbrace>\<lambda>s. heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s) \<and> pred_map_eq None (tcb_scps_of s) t\<rbrace>
+   sched_context_donate scp t
+   \<lbrace>\<lambda>rv s. heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s)\<rbrace>"
+  apply (wpsimp wp: set_tcb_sched_context_valid_sched_pred update_sc_tcb_valid_sched_pred get_sc_obj_ref_wp
+              simp: sched_context_donate_def obj_at_def heap_upd_def)
+  by (auto simp: vs_all_heap_simps pred_map_simps elim!: heap_refs_retractE split: if_splits)
+
+lemma reply_remove_tcb_scps_of_retract:
+  "\<lbrace>\<lambda>s. heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s)\<rbrace>
+   reply_remove caller reply
+   \<lbrace>\<lambda>rv s. heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s)\<rbrace>"
+  unfolding reply_remove_def
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, (simp only: K_bind_def)?)+
+  apply (rule hoare_seq_ext_skip[rotated], wpsimp)
+  apply (case_tac r_sc_opt, wpsimp, simp)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  by (wpsimp wp: sched_context_donate_tcb_scps_of_retract)
+
+lemma reply_remove_active_if_bound_sc_tcb_at:
+  "\<lbrace>\<lambda>s. active_if_bound_sc_tcb_at t s \<and> active_reply_scs s\<rbrace>
+   reply_remove t r
+   \<lbrace>\<lambda>rv s. active_if_bound_sc_tcb_at t s\<rbrace>"
+  unfolding reply_remove_def
+  apply (wpsimp wp: sched_context_donate_bound_sc_obj_tcb_at
+                    hoare_vcg_if_lift2 hoare_vcg_const_imp_lift
+                    hoare_vcg_disj_lift sched_context_donate_bound_sc_tcb_at_None
+                    get_tcb_obj_ref_wp get_simple_ko_wp
+              simp: reply_remove_def)
+  by (elim disjE; clarsimp simp: obj_at_def cong: conj_cong
+      ; fastforce dest!: sc_with_reply_SomeD simp: active_reply_scs_defs vs_all_heap_simps)
+
+lemma set_thread_state_idle_thread_is_idle[wp]:
+  "\<lbrace>\<lambda>s. if t = idle_thread s then idle st else idle_thread_is_idle s\<rbrace>
+   set_thread_state t st
+   \<lbrace>\<lambda>rv s. idle_thread_is_idle s\<rbrace>"
+  apply (wpsimp wp: set_thread_state_valid_sched_pred)
+  by (auto simp: vs_all_heap_simps)
+
+lemma reply_remove_idle_thread_is_idle[wp]:
+  "\<lbrace>\<lambda>s.  idle_thread_is_idle s \<and> t \<noteq> idle_thread s\<rbrace> reply_remove t reply \<lbrace>\<lambda>rv s. idle_thread_is_idle s\<rbrace>"
+  unfolding reply_remove_def reply_unlink_tcb_def
+  by (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)+ wpsimp
+
+abbreviation (input)
+  "do_reply_transfer_pred receiver s
+   \<equiv> not_in_release_q receiver s \<and> not_queued receiver s \<and> scheduler_act_not receiver s
+      \<and> valid_blocked_except receiver s \<and> valid_sched_except_blocked s
+      \<and> heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s)
+      \<and> idle_thread_is_idle s
+      \<and> receiver \<noteq> idle_thread s
+      \<and> active_if_bound_sc_tcb_at receiver s
+      \<and> current_time_bounded 1 s"
+
+lemma valid_sched_active_reply_scs[simp,elim!]:
+  "valid_sched_2 wk_vsa vbl ctime cdom ct it queues rlq sa lmt etcbs tcb_sts tcb_scps tcb_faults sc_refill_cfgs sc_repls
+   \<Longrightarrow> active_reply_scs_2 sc_repls sc_refill_cfgs"
+  by (simp add: valid_sched_def)
 
 lemma do_reply_transfer_valid_sched:
-  "\<lbrace>valid_sched and valid_reply_scs and
-                invs and
-                simple_sched_action and ct_in_state activatable and tcb_at sender\<rbrace>
-     do_reply_transfer sender reply
-   \<lbrace>\<lambda>rv. valid_sched::('state_ext state) \<Rightarrow> _\<rbrace>"
+  "\<lbrace>\<lambda>s. valid_sched s \<and> valid_objs s \<and> valid_replies s \<and> valid_idle s \<and> sym_refs (state_refs_of s)
+         \<and> current_time_bounded 1 s\<rbrace>
+   do_reply_transfer sender reply
+   \<lbrace>\<lambda>rv. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: do_reply_transfer_def maybeM_def)
   apply (rule hoare_seq_ext[OF _ grt_sp])
-  apply (case_tac recv_opt; clarsimp)
-   apply wpsimp
+  apply (case_tac recv_opt, wpsimp, clarsimp)
   apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (rename_tac state)
-  apply (case_tac state; clarsimp; (solves \<open>wpsimp\<close>)?)
-  apply (wpsimp wp: possible_switch_to_valid_sched_strong)
-               apply (wpsimp wp: handle_timeout_valid_sched)
-              apply (wpsimp wp: postpone_valid_sched)
-             apply (wpsimp)+
-          apply (rule_tac Q="\<lambda>r. invs
-                                 and st_tcb_at runnable a
-                                 and bound_sc_tcb_at ((=) (Some sc_ptr)) a and active_sc_tcb_at a
-                                 and scheduler_act_not a and not_queued a
-                                 and not_in_release_q a and ct_in_state activatable
-                                 and valid_sched_except_blocked and  valid_blocked_except_set {a}"
-                          in hoare_strengthen_post[rotated])
-           apply (clarsimp simp: valid_sched_def pred_tcb_at_eq_commute cong: conj_cong)
-           apply (subgoal_tac "sc_tcb_sc_at (\<lambda>p. p = Some a) sc_ptr s")
-            apply (subgoal_tac "a \<noteq> idle_thread s")
-             apply (case_tac fault; simp)
-              apply (clarsimp, intro conjI impI; simp?)
-               apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_ready_def is_refill_sufficient_def)
-               apply (clarsimp simp: valid_fault_def)
-               apply (clarsimp simp: sc_at_pred_n_def obj_at_def)(*
-              apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_ready_def is_refill_sufficient_def)
-             apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_ready_def is_refill_sufficient_def)
-             apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-             apply (clarsimp simp: valid_fault_def)
-            apply (fastforce dest!: st_tcb_at_idle_thread)
-           apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[symmetric], simp, simp; clarsimp)
-          apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
-                            refill_unblock_check_valid_ready_qs
-                            refill_unblock_check_valid_release_q
-                            refill_unblock_check_valid_sched_action
-                            refill_unblock_check_ct_in_cur_domain
-                            refill_unblock_check_st_tcb_at refill_unblock_check_invs
-                            hoare_vcg_all_lift refill_unblock_check_active_sc_tcb_at
-                            refill_unblock_check_valid_blocked_except_set
-                            refill_unblock_check_invs refill_unblock_check_ct_in_state)
-         apply wpsimp
-        apply (wpsimp simp: get_tcb_obj_ref_def wp: thread_get_wp )
-       apply (wpsimp wp: gts_wp)
-    (* key transition point *)
-      apply (rule_tac Q="\<lambda>r. valid_sched_except_blocked and
-                 (\<lambda>s. if (st_tcb_at runnable a s \<and> bound_sc_tcb_at bound a s) then
-                         (invs s \<and> not_cur_thread a s \<and>
-                 active_sc_tcb_at a s \<and>
-                 scheduler_act_not a s \<and>
-                 not_queued a s \<and>
-                 not_in_release_q a s \<and> ct_in_state activatable s \<and>
-                 valid_blocked_except_set {a} s )
-                 else valid_blocked s)"
-                      in hoare_strengthen_post[rotated])
-       apply (clarsimp simp: valid_sched_def obj_at_def pred_tcb_at_def cong: conj_cong)
-       apply (rule_tac x=tcb in exI)
-       apply (clarsimp simp: valid_sched_def obj_at_def pred_tcb_at_def cong: conj_cong)
-       apply (clarsimp simp: active_sc_tcb_at_defs split: option.splits)
-       apply (rename_tac ko; case_tac ko; clarsimp)
-       apply (frule invs_sym_refs)
-       apply (frule_tac tp=a in ARM.sym_ref_tcb_sc, simp+)
-       apply (drule_tac tp=tp in ARM.sym_ref_tcb_sc)
-         apply (simp+)[3]
-      apply wpsimp+
-        apply (wpsimp wp: hoare_vcg_imp_lift' sts_st_tcb_at_pred_False)
-         apply (rule_tac Q="\<lambda>rv. (valid_sched_except_blocked and valid_blocked_except a)
-               and (\<lambda>s.
-                  invs s \<and>
-                  not_cur_thread a s \<and>
-                  active_sc_tcb_at a s \<and>
-                  scheduler_act_not a s \<and>
-                  not_queued a s \<and>
-                  not_in_release_q a s \<and>
-                  ct_in_state activatable s)"
-                         in hoare_strengthen_post[rotated])
-          apply clarsimp
-         apply (wpsimp wp: set_thread_state_break_valid_sched
-                           sts_invs_minor2 sts_ctis_neq hoare_vcg_disj_lift )
-        apply (wpsimp wp: hoare_vcg_imp_lift' set_thread_state_bound_sc_tcb_at sts_st_tcb_at')
-        apply (rule_tac Q="\<lambda>rv. valid_sched"
-                        in hoare_strengthen_post[rotated])
-         apply (clarsimp simp: valid_sched_def)
-        apply (wpsimp wp: set_thread_state_runnable_valid_sched2)
-       apply (wpsimp wp: hoare_vcg_imp_lift' do_ipc_transfer_cur_thread hoare_vcg_disj_lift
-                         ct_in_state_thread_state_lift)
-      apply (wpsimp wp: )
-           apply (intro conjI impI)
-            apply (wpsimp wp: hoare_vcg_imp_lift' sts_st_tcb_at_pred_False)
-             apply (rule_tac Q="\<lambda>rv. (valid_sched_except_blocked and valid_blocked_except x)
-                   and (\<lambda>s.
-                      invs s \<and>
-                      not_cur_thread x s \<and>
-                      active_sc_tcb_at x s \<and>
-                      scheduler_act_not x s \<and>
-                      not_queued x s \<and>
-                      not_in_release_q x s \<and>
-                      ct_in_state activatable s)"
-                             in hoare_strengthen_post[rotated])
-              apply clarsimp
-             apply (wpsimp wp: set_thread_state_break_valid_sched
-                               sts_invs_minor2 sts_ctis_neq hoare_vcg_disj_lift )
-            apply (wpsimp wp: hoare_vcg_imp_lift' sts_st_tcb_at')
-            apply (rule_tac Q="\<lambda>rv. (valid_sched)"
-                            in hoare_strengthen_post[rotated])
-             apply (clarsimp simp: valid_sched_def)
-            apply (wpsimp wp: set_thread_state_runnable_valid_sched2)
-           apply (wpsimp wp: hoare_vcg_imp_lift' sts_st_tcb_at_pred_False)
-            apply (rule_tac Q="\<lambda>rv. (valid_sched)
-                  and (\<lambda>s.
-                     invs s \<and>
-                     not_cur_thread x s \<and>
-                     active_sc_tcb_at x s \<and>
-                     scheduler_act_not x s \<and>
-                     not_queued x s \<and>
-                     not_in_release_q x s \<and>
-                     ct_in_state activatable s)"
-                            in hoare_strengthen_post[rotated])
-             apply (clarsimp simp: valid_sched_def)
-            apply (wpsimp wp: set_thread_state_Inactive_simple_sched_action_not_runnable
-                              sts_invs_minor2 sts_ctis_neq hoare_vcg_disj_lift )
-           apply (wpsimp wp: hoare_vcg_imp_lift' sts_st_tcb_at')
-           apply (rule_tac Q="\<lambda>rv. (valid_sched)"
-                           in hoare_strengthen_post[rotated])
-            apply (clarsimp simp: valid_sched_def)
-           apply (wpsimp wp: set_thread_state_Inactive_simple_sched_action_not_runnable)
-          apply clarsimp
-          apply (rule_tac Q="\<lambda>rv. (valid_sched)
-                and (invs and simple_sched_action and
-                   st_tcb_at (\<lambda>st. st = Inactive) x and
-                   not_queued x and not_in_release_q x and (\<lambda>s. cur_thread s \<noteq> x) and
-                   ex_nonz_cap_to x and (\<lambda>s. x \<noteq> idle_thread s) and
-                   fault_tcb_at ((=) None) x and
-                   (\<lambda>s. bound_sc_tcb_at (\<lambda>a. a = None) x s \<or> active_sc_tcb_at x s) and
-                   ct_in_state activatable)"
-                          in hoare_strengthen_post[rotated])
-           apply (clarsimp simp: valid_sched_def)
-           apply (intro conjI)
-             apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-            apply (clarsimp simp: pred_tcb_at_def obj_at_def not_cur_thread_def)
-           apply (clarsimp simp: bound_sc_tcb_at_def active_sc_tcb_at_def obj_at_def)
-          apply (wpsimp wp: thread_set_not_state_valid_sched thread_set_no_change_tcb_state
-                            thread_set_cap_to)
-           apply (clarsimp simp: ran_def tcb_cap_cases_def split: if_splits)
-          apply (wpsimp wp: hoare_vcg_disj_lift thread_set_no_change_tcb_sched_context
-                            thread_set_active_sc_tcb_at thread_set_ct_in_state
-                            thread_set_pred_tcb_at_sets_true)
-         apply (wpsimp wp: handle_fault_reply_valid_sched hoare_vcg_disj_lift
-                           ct_in_state_thread_state_lift)
-        apply (wpsimp wp: thread_get_wp)+
-    apply (rule_tac Q="\<lambda>rv. (valid_sched)  and invs and simple_sched_action and
-                            (\<lambda>s. st_tcb_at inactive a s \<and>
-                           not_queued a s \<and> ct_in_state activatable s \<and>
-                           not_in_release_q a s \<and>
-                           cur_thread s \<noteq> a \<and> tcb_at sender s \<and>
-                           ex_nonz_cap_to a s \<and>
-                           a \<noteq> idle_thread s \<and> ((bound_sc_tcb_at (\<lambda>a. a = None) a s \<or>
-                          active_sc_tcb_at a s)))"
-                    in hoare_strengthen_post[rotated])
-     apply (clarsimp simp: valid_sched_def obj_at_def pred_tcb_at_def is_tcb)
-     apply (safe;
-            clarsimp simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def not_cur_thread_def)
-    apply (wpsimp wp: reply_remove_valid_sched reply_remove_invs
-                      reply_remove_unbound_or_active_sc_tcb_at)
-   apply wpsimp
-  apply (clarsimp simp: pred_tcb_at_eq_commute reply_at_ppred_eq_commute)
-  apply (subgoal_tac "cur_thread s \<noteq> a")
-   apply (intro conjI impI)
-              apply (clarsimp simp: reply_at_ppred_def obj_at_def pred_tcb_at_def)
-             apply (clarsimp simp: reply_at_ppred_def obj_at_def pred_tcb_at_def)
-            apply fastforce
-           apply (fastforce dest!: valid_sched_not_runnable_not_inq simp: pred_tcb_at_def obj_at_def)
-          apply clarsimp
-         apply (clarsimp simp: reply_at_ppred_def obj_at_def pred_tcb_at_def)
-        apply (fastforce dest!: valid_sched_not_runnable_not_inq simp: pred_tcb_at_def obj_at_def)
-       apply clarsimp
-      apply (clarsimp elim!: st_tcb_ex_cap')
-     apply (fastforce dest!: st_tcb_at_idle_thread)
-    apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def is_tcb)+
-  done *)
-  sorry (* do_reply_transfer_valid_sched *)
+  apply (rename_tac receiver state)
+  apply (case_tac "\<forall>r'. state \<noteq> BlockedOnReply r'", solves \<open>wpsimp\<close>, clarsimp)
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule_tac S="r'=reply" in hoare_gen_asm''; clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule_tac B="\<lambda>_ s. valid_sched s
+                            \<and> pred_map_eq Inactive (tcb_sts_of s) receiver
+                            \<and> heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s)
+                            \<and> idle_thread_is_idle s
+                            \<and> receiver \<noteq> idle_thread s
+                            \<and> active_if_bound_sc_tcb_at receiver s
+                            \<and> current_time_bounded 1 s"
+           in hoare_seq_ext[rotated])
+   apply (wpsimp wp: reply_remove_valid_sched reply_remove_tcb_scps_of_retract
+                     reply_remove_active_if_bound_sc_tcb_at
+                     reply_remove_tcb_scps_of_retract)
+   apply (frule_tac t=receiver in pred_map_eq_pred_mapE[where P=ipc_queued_thread_state]; simp)
+   apply (frule (1) released_ipc_queuesE1[OF valid_sched_released_ipc_queues])
+   apply (fastforce simp: vs_all_heap_simps valid_idle_def pred_tcb_at_def obj_at_def)
+  apply (rule hoare_seq_ext[OF _ thread_get_inv])
+  \<comment> \<open>valid_blocked might be broken here for receiver\<close>
+  apply (rule_tac B="\<lambda>_ s. do_reply_transfer_pred receiver s" in hoare_seq_ext[rotated])
+   apply (wpsimp wp: set_thread_state_not_runnable_valid_sched_except_blocked
+                     set_thread_state_valid_blocked_const
+                     thread_set_fault_valid_sched_pred
+               simp: if_distrib)
+   apply (prop_tac "\<not> pred_map runnable (tcb_sts_of s) receiver", clarsimp simp: vs_all_heap_simps)
+   apply (prop_tac "not_queued receiver s"
+          , erule valid_ready_qs_contrap[OF valid_sched_valid_ready_qs], simp)
+   apply (prop_tac "not_in_release_q receiver s"
+          , clarsimp simp: valid_release_q_def in_release_q_def dest!: valid_sched_valid_release_q)
+   apply (prop_tac "scheduler_act_not receiver s", clarsimp simp: valid_sched_not_runnable_scheduler_act_not)
+   apply (clarsimp simp: valid_sched_def elim!: released_ipc_queuesE)
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (case_tac "runnable state \<longrightarrow> sc_opt = None"
+         ; clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+   apply (wpsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise valid_sched_def)
+   apply (fastforce elim!: valid_blockedE' simp: vs_all_heap_simps)
+  apply (rename_tac scp)
+  apply (rule_tac B="\<lambda>_ s. pred_map_eq (Some scp) (tcb_scps_of s) receiver
+                           \<and> pred_map runnable (tcb_sts_of s) receiver
+                           \<and> do_reply_transfer_pred receiver s"
+           in hoare_seq_ext[rotated])
+   apply (wpsimp wp: refill_unblock_check_valid_sched_except_blocked hoare_vcg_disj_lift)
+   apply (clarsimp simp: pred_map_eq_pred_mapE)
+   apply (drule (1) heap_refs_retractD[rotated])+
+   apply (clarsimp simp: sc_tcbs.pred_map_simps)
+  apply (intro hoare_seq_ext[OF _ get_sched_context_sp]
+               hoare_seq_ext[OF _ gets_sp]
+               hoare_seq_ext[OF _ gets_the_sp]
+               hoare_if)
+    apply (wpsimp wp: possible_switch_to_valid_sched_strong)
+    apply (clarsimp simp: valid_sched_valid_sched_except_blocked vs_all_heap_simps refill_ready_def obj_at_def)
+   apply (wpsimp wp: handle_timeout_valid_sched)
+  apply (wpsimp wp: postpone_valid_sched)
+  apply (prop_tac "tp = receiver", frule (1) heap_refs_retractD, clarsimp simp: sc_tcbs.pred_map_simps)
+  by (clarsimp simp: active_bound_sc_tcb_at)
 
 lemma handle_no_fault_valid_sched:
   "\<lbrace>valid_sched and not_queued thread and not_in_release_q thread and scheduler_act_not thread \<rbrace>
@@ -12016,20 +12075,22 @@ lemma handle_no_fault_valid_sched:
   by (wpsimp wp: set_thread_state_valid_sched, simp add: valid_sched_def)
 
 lemma handle_fault_valid_sched:
-  "\<lbrace>valid_sched and st_tcb_at active thread and not_queued thread and not_in_release_q thread
-    and scheduler_act_not thread and invs and (\<lambda>_. valid_fault ex)
-    and ct_in_state activatable and released_if_bound_sc_tcb_at thread\<rbrace>
+  "\<lbrace>valid_sched and invs and st_tcb_at active thread and scheduler_act_not thread
+      and not_queued thread and not_in_release_q thread and released_if_bound_sc_tcb_at thread\<rbrace>
    handle_fault thread ex
-   \<lbrace>\<lambda>rv. valid_sched::('state_ext state) \<Rightarrow> _\<rbrace>"
-  unfolding handle_fault_def unless_def
-  apply wpsimp
-      apply (wpsimp wp: handle_no_fault_valid_sched)
-     apply (wpsimp wp: handle_no_fault_valid_sched send_fault_ipc_valid_sched hoare_vcg_if_lift2
-                       send_fault_ipc_not_queued send_fault_ipc_not_in_release_q
-                       send_fault_ipc_scheduler_act_not hoare_drop_imps hoare_vcg_conj_lift)
-    apply (wpsimp wp: get_tcb_obj_ref_wp)+
-  by (fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps pred_neg_def)
-
+   \<lbrace>\<lambda>rv. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (clarsimp simp: handle_fault_def unless_def)
+  apply (rule hoare_seq_ext[OF _ gets_the_sp])
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule_tac B="\<lambda>_. valid_sched and not_queued thread and not_in_release_q thread and scheduler_act_not thread" in hoare_seq_ext
+         , wpsimp wp: handle_no_fault_valid_sched)
+  apply (wpsimp wp: send_fault_ipc_valid_sched
+                    send_fault_ipc_not_queued send_fault_ipc_not_in_release_q
+                    send_fault_ipc_scheduler_act_not
+              simp: valid_idle_idle_thread_is_idle[OF invs_valid_idle]
+              cong: conj_cong)
+  by (auto simp: valid_sched_valid_sched_except_blocked obj_at_kh_kheap_simps vs_all_heap_simps
+                 pred_neg_def valid_blockedD)
 end
 
 lemma idle_not_queued'':
@@ -12069,16 +12130,6 @@ lemma send_ipc_active_sc_tcb_at[wp]:
   apply (case_tac queue; clarsimp)
   apply wpsimp
 *)
-
-lemma reply_remove_tcb_active_sc_tcb_at:
-  "\<lbrace>active_sc_tcb_at t \<rbrace>
-     reply_remove_tcb tptr rptr
-   \<lbrace>\<lambda>_. active_sc_tcb_at t::('state_ext state) \<Rightarrow> _\<rbrace>"
-  apply (clarsimp simp: reply_remove_tcb_def)
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp, OF hoare_gen_asm_conj], clarsimp)
-  apply (wpsimp wp: get_sk_obj_ref_wp)
-  done
 
 crunches cancel_ipc
   for active_sc_tcb_at: "active_sc_tcb_at t::('state_ext state) \<Rightarrow> _"
@@ -12132,7 +12183,8 @@ lemma st_in_waitingntfn':
 lemma maybe_donate_sc_valid_sched_misc[wp]:
   "maybe_donate_sc tcb_ptr ntfnptr
    \<lbrace> \<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
-           (cur_thread s) (idle_thread s) (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)\<rbrace>"
+           (cur_thread s) (idle_thread s) (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)
+           (sc_replies_of s)\<rbrace>"
   unfolding maybe_donate_sc_def
   by (wpsimp wp: hoare_drop_imp)
 
@@ -12192,6 +12244,11 @@ lemma maybe_donate_sc_active_sc_valid_refills[wp]:
 
 context DetSchedSchedule_AI begin
 
+lemma maybe_donate_sc_active_reply_scs[wp]:
+  "maybe_donate_sc t n \<lbrace>active_reply_scs\<rbrace>"
+  unfolding maybe_donate_sc_def
+  by (wpsimp wp: get_sk_obj_ref_wp get_tcb_obj_ref_wp)
+
 lemma send_signal_WaitingNtfn_helper:
   notes not_not_in_eq_in[iff] shows
   "ntfn_obj ntfn = WaitingNtfn wnlist \<Longrightarrow>
@@ -12215,10 +12272,10 @@ lemma send_signal_WaitingNtfn_helper:
          apply (intro conjI; intro allI impI)
           apply (intro conjI; intro allI impI)
            apply (clarsimp simp: not_in_release_q_def pred_map_eq_def is_schedulable_bool_def2)
-          apply (erule valid_blocked_divided2)
+          apply (erule valid_blocked_divided_threadE)
           apply (clarsimp simp: valid_blocked_thread_def tcb_at_kh_simps is_schedulable_bool_def2)
          apply (subgoal_tac "valid_blocked s", clarsimp)
-         apply (erule valid_blocked_divided2)
+         apply (erule valid_blocked_divided_threadE)
          apply (clarsimp simp: valid_blocked_thread_def vs_all_heap_simps)
         apply (wpsimp wp: maybe_donate_sc_valid_ready_qs maybe_donate_sc_valid_release_q
                           maybe_donate_sc_valid_sched_action
@@ -12308,7 +12365,7 @@ lemma blocked_cancel_ipc_BOR_valid_sched':
             apply (intro conjI)
              apply (erule valid_ready_qs_not_queued_not_runnable)
              apply (clarsimp simp: st_tcb_at_def obj_at_def)
-            apply (erule valid_release_q_not_runnable_not_inq)
+            apply (erule valid_release_q_not_in_release_q_not_runnable)
             apply (simp add: vs_all_heap_simps obj_at_kh_kheap_simps)
            apply (wpsimp simp: get_blocking_object_def
                            wp: get_simple_ko_wp reply_unlink_tcb_valid_sched)+
@@ -12319,25 +12376,10 @@ lemma blocked_cancel_ipc_BOR_valid_sched':
   apply (intro conjI impI)
      apply (erule valid_ready_qs_not_queued_not_runnable)
      apply (clarsimp simp: st_tcb_at_def obj_at_def)
-    apply (erule valid_release_q_not_runnable_not_inq)
+    apply (erule valid_release_q_not_in_release_q_not_runnable)
     apply (simp add: vs_all_heap_simps obj_at_kh_kheap_simps)
    apply (clarsimp simp: scheduler_act_not_def valid_sched_def valid_sched_action_def
                          weak_valid_sched_action_2_def st_tcb_at_def obj_at_def vs_all_heap_simps)+
-  done
-
-lemma cancel_ipc_BOR_valid_sched:
-  "\<lbrace>(st_tcb_at ((=) (BlockedOnReceive tptr reply)) tcbptr) and valid_sched\<rbrace>
-      cancel_ipc tcbptr
-   \<lbrace>\<lambda>rv s. valid_sched (s :: ('state_ext state))\<rbrace>"
-  unfolding cancel_ipc_def
-  apply (rule hoare_seq_ext [OF _ gts_sp])
-  apply (case_tac state; clarsimp)
-         apply ((wpsimp wp: thread_set_not_state_valid_sched)+)[3]
-      apply (wpsimp wp: blocked_cancel_ipc_BOR_valid_sched' thread_set_not_state_valid_sched
-                        thread_set_no_change_tcb_pred)
-     apply (clarsimp simp: st_tcb_at_def obj_at_def
-            | rule_tac Q="\<bottom>" in hoare_weaken_pre
-            | case_tac "tcb_state tcb")+
   done
 
 lemma blocked_cancel_ipc_BOR_st_tcb_at_not_runnable[wp]:
@@ -12390,129 +12432,6 @@ lemma valid_objs_ep_update:
    apply assumption
   apply (clarsimp simp add: a_type_def is_ep)
   done
-
-lemma valid_ep_valid_objs:
-  "\<lbrakk>valid_objs s; kheap s ptr = Some (Endpoint k)\<rbrakk> \<Longrightarrow> valid_ep k s"
-  by (clarsimp simp: valid_objs_def valid_obj_def; force)
-
-lemma reply_unlink_tcb_weak_budget_conditions[wp]:
-  "\<lbrace>(\<lambda>s::('state_ext state). (not_in_release_q tcbptr s \<longrightarrow> budget_ready tcbptr s \<and> budget_sufficient tcbptr s)) and valid_objs \<rbrace>
-   reply_unlink_tcb t r
-   \<lbrace>\<lambda>rv s::('state_ext state). (not_in_release_q tcbptr s \<longrightarrow> budget_ready tcbptr s \<and> budget_sufficient tcbptr s)\<rbrace>"
-  unfolding reply_unlink_tcb_def
-  apply (wpsimp simp: get_thread_state_def update_sk_obj_ref_def
-                  wp: thread_get_wp get_simple_ko_wp set_simple_ko_wp)
-  apply (clarsimp simp: is_sc_active_def obj_at_def reply_at_pred_def
-                 split: option.splits)
-  apply (erule (1) pspace_valid_objsE,
-         clarsimp simp: valid_obj_def valid_reply_def tcb_at_def is_tcb
-                 dest!: get_tcb_SomeD)
- done
-
-lemma budget_sufficient_update_kheap:
-  "t \<noteq> p \<Longrightarrow> obj_at (Not \<circ> is_SchedContext) p s \<Longrightarrow> budget_sufficient t s \<Longrightarrow> budget_sufficient t (s\<lparr>kheap := kheap s(p \<mapsto> ko)\<rparr>)"
-  by (fastforce simp: obj_at_def vs_all_heap_simps)
-
-lemma budget_ready_update_kheap:
-  "t \<noteq> p \<Longrightarrow> obj_at (Not \<circ> is_SchedContext) p s \<Longrightarrow> budget_ready t s \<Longrightarrow> budget_ready t (s\<lparr>kheap := kheap s(p \<mapsto> ko)\<rparr>)"
-  by (fastforce simp: obj_at_def vs_all_heap_simps)
-
-(* FIXME: is_TCB etc. now provided by datatype package - get rid of all is_tcb and similar *)
-lemma is_tcb_is_TCB:
-  "is_tcb = is_TCB"
-  by (rule ext, clarsimp simp: is_tcb_def split: kernel_object.split)
-
-lemma blocked_cancel_ipc_BOR_weak_budget_conditions:
-  "\<lbrace>budget_sufficient tcbptr and valid_objs\<rbrace>
-   blocked_cancel_ipc (BlockedOnReceive ep r) tcbptr r
-   \<lbrace>\<lambda>rv s::('state_ext state). (budget_sufficient tcbptr s)\<rbrace>"
-  unfolding blocked_cancel_ipc_def
-  apply (wpsimp simp: get_thread_state_def
-                  wp: thread_get_wp get_simple_ko_wp set_simple_ko_wp
-                      get_ep_queue_wp get_blocking_object_wp)
-  by (clarsimp simp: vs_all_heap_simps obj_at_def)
-
-lemma blocked_cancel_ipc_BOR_weak_budget_conditions':
-  "\<lbrace>(\<lambda>s. budget_ready tcbptr s) and valid_objs\<rbrace>
-      blocked_cancel_ipc (BlockedOnReceive ep r) tcbptr r
-   \<lbrace>\<lambda>rv s::('state_ext state). (budget_ready tcbptr s)\<rbrace>"
-  unfolding blocked_cancel_ipc_def
-  apply (wpsimp simp: get_thread_state_def
-                  wp: thread_get_wp get_simple_ko_wp set_simple_ko_wp
-                      get_ep_queue_wp get_blocking_object_wp)
-  by (clarsimp simp: vs_all_heap_simps obj_at_def)
-
-lemma blocked_cancel_ipc_BOR_active_sc_tcb_at:
-  "\<lbrace>(\<lambda>s. active_sc_tcb_at tcbptr s) and valid_objs\<rbrace>
-   blocked_cancel_ipc (BlockedOnReceive ep r) tcbptr r
-   \<lbrace>\<lambda>rv s::('state_ext state). (active_sc_tcb_at tcbptr s)\<rbrace>"
-  unfolding blocked_cancel_ipc_def
-  apply (wpsimp simp: get_thread_state_def
-                  wp: thread_get_wp get_simple_ko_wp set_simple_ko_wp
-                      get_ep_queue_wp get_blocking_object_wp)
-  by (clarsimp simp: vs_all_heap_simps obj_at_def)
-
-lemma blocked_cancel_ipc_BOR_released_sc_tcb_at:
-  "\<lbrace>(\<lambda>s. released_sc_tcb_at tcbptr s) and valid_objs\<rbrace>
-   blocked_cancel_ipc (BlockedOnReceive ep r) tcbptr r
-   \<lbrace>\<lambda>rv s::('state_ext state). (released_sc_tcb_at tcbptr s)\<rbrace>"
-  unfolding blocked_cancel_ipc_def
-  apply (wpsimp simp: get_thread_state_def
-                  wp: thread_get_wp get_simple_ko_wp set_simple_ko_wp
-                      get_ep_queue_wp get_blocking_object_wp)
-  apply (clarsimp simp: vs_all_heap_simps obj_at_def)
-  done
-
-lemma blocked_cancel_ipc_BOR_None:
-  "\<lbrace>(\<lambda>s. pred_map_eq None (tcb_scps_of s) tcbptr) and valid_objs\<rbrace>
-   blocked_cancel_ipc (BlockedOnReceive ep r) tcbptr r
-   \<lbrace>\<lambda>rv s::('state_ext state). pred_map_eq None (tcb_scps_of s) tcbptr\<rbrace>"
-  unfolding blocked_cancel_ipc_def
-  apply (wpsimp simp: get_thread_state_def
-                  wp: thread_get_wp get_simple_ko_wp set_simple_ko_wp
-                      get_ep_queue_wp get_blocking_object_wp)
-  apply (clarsimp simp: vs_all_heap_simps obj_at_def)
-  done
-
-lemma cancel_ipc_BOR_other:
-  "\<lbrace>(st_tcb_at ((=) (BlockedOnReceive tptr reply)) tcbptr) and invs and
-        (\<lambda>s. released_if_bound_sc_tcb_at tcbptr s)\<rbrace>
-      cancel_ipc tcbptr
-   \<lbrace>\<lambda>rv s::('state_ext state). released_if_bound_sc_tcb_at tcbptr s\<rbrace>"
-  unfolding cancel_ipc_def
-  apply (rule hoare_seq_ext [OF _ gts_sp])
-  apply (case_tac state; clarsimp)
-         prefer 4
-         apply (wpsimp wp: thread_set_valid_objs
-                     simp: valid_tcb_def ran_tcb_cap_cases)
-           apply (rule hoare_vcg_disj_lift)
-            apply (wpsimp wp: blocked_cancel_ipc_BOR_None)
-           apply (wpsimp wp: blocked_cancel_ipc_BOR_released_sc_tcb_at)
-          apply (rule hoare_vcg_disj_lift
-                 ; wpsimp wp: thread_set_valid_objs
-                        simp: valid_tcb_def ran_tcb_cap_cases vs_all_heap_simps
-                              obj_at_kh_kheap_simps)
-         apply (case_tac "pred_map_eq None (tcb_scps_of s) tcbptr"
-                ; simp add: invs_valid_objs2 valid_tcb_def ran_tcb_cap_cases)
-         apply (rule hoare_weaken_pre,
-               rule hoare_pre_cont
-               | clarsimp simp: st_tcb_at_def obj_at_def
-               | case_tac "tcb_state tcb")+
-  done
-
-lemma reply_remove_tcb_valid_sched_misc[wp]:
-  "reply_remove_tcb t r
-   \<lbrace>\<lambda>s::'state_ext state. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s)
-                            (idle_thread s) (ready_queues s) (release_queue s) (last_machine_time_of s)
-                            (etcbs_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>"
-  by (wpsimp wp: get_sk_obj_ref_wp gts_wp' simp: reply_remove_tcb_def)
-
-crunches blocked_cancel_ipc, cancel_signal, reply_remove_tcb
-  for valid_sched_misc[wp]:
-  "\<lambda>s::'state_ext state. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s)
-                           (idle_thread s) (ready_queues s) (release_queue s) (last_machine_time_of s)
-                           (etcbs_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)"
-  (wp: crunch_wps)
 
 lemma cancel_ipc_valid_sched_misc[wp]:
   "cancel_ipc t
@@ -12626,11 +12545,11 @@ lemma send_signal_BOR_helper:
      apply (intro conjI allI impI)
        apply (clarsimp simp: not_in_release_q_def vs_all_heap_simps obj_at_kh_kheap_simps
                              pred_tcb_at_def obj_at_def)
-      apply (erule valid_blocked_divided2)
+      apply (erule valid_blocked_divided_threadE)
       apply (clarsimp simp: pred_tcb_at_def obj_at_def in_release_queue_def not_in_release_q_def
                             vs_all_heap_simps obj_at_kh_kheap_simps runnable_eq_active
                             valid_blocked_defs)
-     apply (erule valid_blocked_divided2)
+     apply (erule valid_blocked_divided_threadE)
      apply (clarsimp simp: pred_tcb_at_def obj_at_def in_release_queue_def not_in_release_q_def
                            vs_all_heap_simps obj_at_kh_kheap_simps runnable_eq_active
                            valid_blocked_defs)
@@ -12764,55 +12683,6 @@ lemmas receive_ipc_blocked_valid_sched =
   receive_ipc_blocked_valid_sched'[where ep="RecvEP queue" and queue=queue for queue, simplified]
   receive_ipc_idle_valid_sched
 
-lemma reply_push_sender_sc_Some_valid_sched:
-  "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) sender_sc) sender s \<and>
-        st_tcb_at active thread s \<and>
-        receive_ipc_preamble_rv reply (Some reply_ptr) s \<and>
-        st_tcb_at ((=) (BlockedOnSend ep_ptr sender_data)) sender s \<and>
-        sender \<noteq> idle_thread s \<and> thread = cur_thread s \<and> valid_sched s\<rbrace>
-   reply_push sender thread reply_ptr (\<exists>y. sender_sc = Some y)
-   \<lbrace>\<lambda>r. valid_sched\<rbrace>"
-  apply (clarsimp simp: reply_push_def)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ liftM_wp[where P=P and Q="\<lambda>r. P" for P, simplified,
-                                          OF get_simple_ko_inv]])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
-  apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
-  apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
-  apply (rule_tac S="sender_sc = sc_caller \<and> sender \<noteq> thread \<and> sender \<noteq> reply_ptr \<and> thread \<noteq> reply_ptr"
-           in hoare_gen_asm'', fastforce simp: sk_obj_at_pred_def pred_tcb_at_def obj_at_def)
-  apply (rule subst[of "do _ <- do _ <- a; b od; c od"
-                       "do _ <- a; _ <- b; c od"
-                       "\<lambda>c. \<lbrace>P\<rbrace> c \<lbrace>Q\<rbrace>"
-                    for a b c P Q]
-         , simp add: bind_assoc)
-  apply (rule_tac B="\<lambda>_ s. st_tcb_at ((=) (BlockedOnReply reply_ptr)) sender s
-                           \<and> bound_sc_tcb_at ((=) sc_callee) thread s
-                           \<and> bound_sc_tcb_at ((=) sc_caller) sender s
-                           \<and> st_tcb_at active thread s
-                           \<and> sender \<noteq> idle_thread s \<and> thread = cur_thread s
-                           \<and> valid_sched s"
-           in hoare_seq_ext[rotated])
-   apply (wpsimp wp: sts_st_tcb_at_cases set_thread_state_valid_sched)
-   apply (intro conjI;
-          clarsimp simp: pred_tcb_at_eq_commute st_tcb_at_def obj_at_def
-                 intro!: valid_sched_valid_blocked
-                         valid_sched_imp_except_blocked
-                         valid_sched_scheduler_act_not_better
-                  elim!: valid_ready_qs_not_queued_not_runnable[OF valid_sched_valid_ready_qs]
-                         valid_release_q_not_in_release_q_not_runnable[OF valid_sched_valid_release_q]
-                         released_ipc_queuesE1[OF valid_sched_released_ipc_queues])
-   apply (clarsimp simp: ipc_queued_thread_state_def vs_all_heap_simps)
-  apply (rule hoare_when_cases; clarsimp split: if_splits)
-  apply (rename_tac sc_caller)
-  apply (rule hoare_seq_ext[OF _ gscrpls_sp[simplified]])
-  apply (wpsimp wp: sched_context_donate_valid_sched get_simple_ko_wp)
-  apply (fastforce simp: tcb_at_kh_simps vs_all_heap_simps)
-  done
-
 lemma receive_ipc_valid_sched:
   "\<lbrace>\<lambda>s. valid_sched s
         \<and> st_tcb_at active thread s
@@ -12895,7 +12765,9 @@ lemma receive_ipc_valid_sched:
    \<comment> \<open>if not call and no fault: sender \<rightarrow> Running\<close>
    apply (wpsimp wp: set_thread_state_possible_switch_to_valid_sched)
    apply (intro conjI)
-    apply (clarsimp simp: ipc_queued_thread_state_def tcb_at_kh_simps pred_map_simps)
+    apply (frule valid_sched_released_ipc_queues)
+    apply (simp add: released_ipc_queues_defs tcb_at_kh_simps pred_map_eq_normalise)
+    apply (drule spec, erule mp, clarsimp simp: vs_all_heap_simps)
    apply (erule (1) not_idle_thread', clarsimp)
   apply (rule hoare_if[rotated])
    \<comment> \<open>if not grant or no reply: sender \<longrightarrow> Inactive\<close>
@@ -12909,11 +12781,15 @@ lemma receive_ipc_valid_sched:
                          valid_release_q_not_in_release_q_not_runnable[OF valid_sched_valid_release_q])
   \<comment> \<open>otherwise (grant and reply and (call or fault)): reply_push\<close>
   apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (clarsimp)
-  apply (wpsimp wp: reply_push_sender_sc_Some_valid_sched)
-  apply (intro conjI; assumption?)
-  apply (erule (1) not_idle_thread', clarsimp)
-  done
+  apply (wpsimp wp: reply_push_valid_sched)
+  apply (clarsimp simp: valid_sched_valid_sched_except_blocked[THEN iffD1]
+                        obj_at_kh_kheap_simps pred_map_eq_normalise)
+  by (intro conjI
+      ; erule released_ipc_queuesD[OF valid_sched_released_ipc_queues]
+              valid_sched_not_runnable_scheduler_act_not
+              valid_sched_not_runnable_not_queued
+              valid_sched_not_runnable_not_in_release_q
+      ; clarsimp simp: tcb_sts.pred_map_simps)
 
 end
 
@@ -12998,6 +12874,11 @@ lemma maybe_donate_sc_valid_blocked:
   by (wpsimp wp: sched_context_donate_valid_blocked
                  get_sc_obj_ref_wp get_sk_obj_ref_wp get_tcb_obj_ref_wp)
 
+lemma maybe_donate_sc_active_reply_scs:
+  "maybe_donate_sc tcb_ptr ntfnptr \<lbrace>active_reply_scs\<rbrace>"
+  apply (clarsimp simp: maybe_donate_sc_def)
+  by (wpsimp wp: get_sk_obj_ref_wp get_tcb_obj_ref_wp)
+
 lemma maybe_donate_sc_valid_sched:
   "\<lbrace>valid_sched and valid_objs and (\<lambda>s. sym_refs (state_refs_of s)) and not_queued tcb_ptr
     and scheduler_act_not tcb_ptr and current_time_bounded 1
@@ -13009,6 +12890,7 @@ lemma maybe_donate_sc_valid_sched:
                  maybe_donate_sc_valid_sched_action
                  maybe_donate_sc_ct_in_cur_domain maybe_donate_sc_valid_blocked
                  maybe_donate_sc_released_ipc_queues'
+                 maybe_donate_sc_active_reply_scs
            simp: valid_sched_def tcb_at_kh_simps vs_all_heap_simps
                  ipc_queued_thread_state_not_runnable)
 
@@ -13194,25 +13076,6 @@ lemma cap_insert_check_cap_ext_valid[wp]:"
   apply (wp get_cap_wp | simp)+
   done
 
-lemma opt_update_thread_valid_sched[wp]:
-  "(\<And>x a. tcb_state (fn a x) = tcb_state x) \<Longrightarrow>
-   (\<And>x a. tcb_sched_context (fn a x) = tcb_sched_context x) \<Longrightarrow>
-   (\<And>x a. etcb_of (fn a x) = etcb_of x) \<Longrightarrow>
-    \<lbrace>valid_sched\<rbrace> option_update_thread t fn v \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (rule hoare_pre)
-   apply (simp add: option_update_thread_def)
-   apply (wp thread_set_not_state_valid_sched | wpc | simp add: etcb_of_def)+
-  done
-
-lemma opt_update_thread_simple_sched_action[wp]:
-  "\<lbrace>simple_sched_action\<rbrace>
-    option_update_thread t fn v
-   \<lbrace>\<lambda>_. simple_sched_action\<rbrace>"
-  apply (rule hoare_pre)
-   apply (simp add: option_update_thread_def)
-   apply (wp | wpc | simp)+
-  done
-
 crunches lookup_cap, lookup_reply
   for valid_sched[wp]: "valid_sched_pred P"
   and ct_in_state[wp]: "ct_in_state P"
@@ -13233,23 +13096,15 @@ lemma handle_recv_valid_sched:
     and (\<lambda>s. released_if_bound_sc_tcb_at (cur_thread s) s)\<rbrace>
    handle_recv is_blocking can_reply
    \<lbrace>\<lambda>rv. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  supply if_split[split del]
   apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper
-             cong: if_cong split del: if_split)
-  apply (wpsimp wp: get_simple_ko_wp handle_fault_valid_sched lookup_reply_valid_sched
-                    receive_ipc_valid_sched receive_signal_valid_sched
-              simp: whenE_def get_sk_obj_ref_def
-         split_del: if_split)+
-     apply (rule hoare_vcg_E_elim)
-      apply (wpsimp simp: lookup_cap_def lookup_slot_for_thread_def)
-       apply (wp resolve_address_bits_valid_fault2)+
-     apply (simp add: valid_fault_def)
-     apply (wp hoare_drop_imps hoare_vcg_all_lift_R)
-    apply (wpsimp cong: conj_cong | strengthen invs_valid_tcb_ctable_strengthen)+
-  apply (auto simp: ct_in_state_def tcb_at_invs objs_valid_tcb_ctable invs_valid_objs
-                    released_sc_tcb_at_def
-              elim: st_tcb_at_strengthen_pred
-              dest: budget_sufficient_bound_sc)
-  done
+             cong: if_cong)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (intro hoare_seq_ext_skip hoare_seq_ext_skipE
+               catch_wp[OF handle_fault_valid_sched]
+               weaker_hoare_ifE[where P=P and P'=P for P, simplified pred_conj_def, simplified]
+         ; wpsimp wp: receive_ipc_valid_sched receive_signal_valid_sched simp: ct_in_state_def)
+  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps)
 
 crunch valid_sched[wp]: reply_from_kernel "valid_sched::det_state \<Rightarrow> _"
 
@@ -13268,8 +13123,6 @@ lemma invoke_irq_handler_valid_sched[wp]:
 end
 
 declare valid_idle_etcb_lift[wp del]
-
-
 
 (*
 lemma thread_set_domain_not_activatable_valid_idle_etcb:
@@ -13404,10 +13257,8 @@ lemma thread_set_domain_is_schedulable_opt[wp]:
    \<lbrace>\<lambda>rv s. Q (is_schedulable_opt t (in_release_queue t s) s)\<rbrace>"
   unfolding thread_set_domain_def
   apply (wpsimp wp: thread_set_wp)
-  apply (clarsimp simp: is_schedulable_opt_def get_tcb_def
-is_sc_active_def in_release_queue_def
- split: option.splits kernel_object.splits cong: conj_cong | safe)+
-  done
+  by (auto simp: is_schedulable_opt_def get_tcb_def is_sc_active_def in_release_queue_def
+          split: option.splits kernel_object.splits cong: conj_cong)
 
 lemma tcb_sched_dequeue_is_schedulable_opt[wp]:
   "\<lbrace>\<lambda>s. Q (is_schedulable_opt t (in_release_queue t s) s)\<rbrace>
@@ -13452,7 +13303,7 @@ lemma invoke_domain_valid_sched:
       apply (wpsimp wp: is_schedulable_wp)+
     apply (rule_tac Q="\<lambda>_. valid_release_q and weak_valid_sched_action and valid_blocked
                            and released_ipc_queues and valid_machine_time and active_sc_valid_refills
-                           and valid_idle_etcb and valid_ready_qs
+                           and valid_idle_etcb and valid_ready_qs and active_reply_scs
                            and budget_ready t" in hoare_strengthen_post[rotated])
      apply (clarsimp split: if_splits simp: is_schedulable_bool_def2 vs_all_heap_simps)
      apply (subgoal_tac "is_refill_sufficient 0 ref'a s", clarsimp simp: vs_all_heap_simps)
@@ -13623,26 +13474,6 @@ lemma schedulable_not_in_release_q:
   by (clarsimp simp: is_schedulable_bool_def not_in_release_q_def
                split: option.splits)
 
-lemma bound_sc_tcb_at_eq_inj:
-  "sym_refs (state_refs_of s)
-   \<Longrightarrow> bound_sc_tcb_at ((=) (Some x)) a s
-   \<Longrightarrow> bound_sc_tcb_at ((=) (Some x)) b s
-   \<Longrightarrow> a=b"
-  apply (rule sc_tcb_sc_at_eq_inj[where x=x and s=s])
-  apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF eq_commute, OF eq_commute, symmetric]; simp)
-  apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF eq_commute, OF eq_commute, symmetric]; simp)
-  done
-
-lemma bound_sc_tcb_at_eq_inj':
-  "sym_refs (state_refs_of s)
-   \<Longrightarrow> bound_sc_tcb_at ((=) (Some x)) a s
-   \<Longrightarrow> sc_tcb_sc_at ((=) (Some b)) x s
-   \<Longrightarrow> a=b"
-  apply (rule sc_tcb_sc_at_eq_inj[where x=x and s=s])
-  apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF eq_commute, OF eq_commute, symmetric]; simp)
-  apply simp
-  done
-
 lemma refill_unblock_check_ct_released:
   "\<lbrace>ct_released and valid_machine_time and active_sc_valid_refills\<rbrace>
    refill_unblock_check sc_ptr
@@ -13727,10 +13558,8 @@ lemma sched_context_yield_to_valid_sched_helper2:
    apply (intro conjI)
      apply (intro allI impI)
      apply (subgoal_tac "t = tcb_ptr", clarsimp)
-     apply (subst (asm) tcb_at_kh_simps[symmetric])
-     apply (rule bound_sc_tcb_at_eq_inj[OF invs_sym_refs], assumption, assumption)
-     apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF eq_commute, OF eq_commute, OF invs_sym_refs], assumption)
-     apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+     apply (erule (1) heap_refs_retract_eq[OF invs_retract_tcb_scps, THEN sym])
+     apply (clarsimp simp: vs_all_heap_simps)
     apply (clarsimp simp: vs_all_heap_simps is_sc_active_kh_simp)
    apply (clarsimp simp: vs_all_heap_simps is_sc_active_kh_simp)
   apply wpsimp
@@ -13768,13 +13597,8 @@ lemma sched_context_yield_to_valid_sched:
                     sched_context_resume_valid_sched hoare_vcg_conj_lift
                     sched_context_resume_ct_in_state[simplified ct_in_state_def]
         | wps)+
-  apply (simp add: tcb_at_kh_simps[symmetric])
-  apply (simp add: pred_tcb_at_eq_commute sc_at_pred_n_eq_commute)
-  apply (intro conjI)
-    apply (intro allI impI)
-    apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl]; clarsimp)
-   apply clarsimp
-  apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl]; clarsimp)
+  apply (frule invs_sym_refs, frule sym_refs_retract_sc_tcbs, drule_tac p=sc_ptr in heap_refs_retract_heap_refs_retract_at)
+  apply (clarsimp simp add: heap_refs_retract_at_def obj_at_kh_kheap_simps pred_map_eq_normalise)
   done
 
 lemma invoke_sched_context_valid_sched:
@@ -13793,17 +13617,98 @@ lemma invoke_sched_context_valid_sched:
                     sched_context_unbind_tcb_valid_sched sched_context_yield_to_valid_sched)+
   done
 
-lemma refill_update_valid_sched_misc[wp]:
-  "refill_update sc_ptr period budget mrefills \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
-          (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
-          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s)\<rbrace>"
-  unfolding refill_update_def by wpsimp
+(* FIXME RT: move *)
+lemma update_sched_context_known_sc:
+  assumes "kheap s sc_ptr = Some (SchedContext sc n)"
+  shows "update_sched_context sc_ptr (\<lambda>_. f sc) s = update_sched_context sc_ptr f s"
+  using assms
+  by (auto simp: obj_at_def update_sched_context_def get_object_def set_object_def
+                 gets_def get_def assert_def return_def put_def fail_def bind_def)
+
+(* FIXME RT: move *)
+\<comment> \<open>For expanding a batch field update into individual field updates, you typically want to expand
+    all but the last update. To do this safely in simplification, it is necessary to fix both
+    f and g. For that purpose, the "ext2" version below is probably the lemma you want.\<close>
+lemma update_sched_context_decompose:
+  "update_sched_context scp (\<lambda>sc. f (g sc))
+   = do update_sched_context scp g; update_sched_context scp f od"
+  apply (rule ext, rename_tac s)
+  by (clarsimp simp: update_sched_context_def get_object_def set_object_def
+                     gets_def get_def put_def return_def fail_def assert_def bind_def
+              split: kernel_object.splits)
+
+(* FIXME RT: move *)
+lemmas update_sched_context_decompose_ext = update_sched_context_decompose[where f="f x" and g="g y" for f g x y]
+lemmas update_sched_context_decompose2 = update_sched_context_decompose[where g="\<lambda>sc. g (h sc)" for g h]
+lemmas update_sched_context_decompose_ext2 = update_sched_context_decompose2[where f="f x" and g="g y" for f g x y]
+
+(* FIXME RT: make this the definition, since individual field updates work better with heap projection machinery. *)
+lemma refill_new_def2:
+  "refill_new sc_ptr max_refills budget period \<equiv> do
+       assert (MIN_BUDGET < budget);
+       cur_time <- gets cur_time;
+       set_sc_obj_ref sc_period_update sc_ptr period;
+       set_sc_obj_ref sc_refills_update sc_ptr [\<lparr>r_time = cur_time, r_amount = budget\<rparr>];
+       set_sc_obj_ref sc_refill_max_update sc_ptr max_refills;
+       set_sc_obj_ref sc_budget_update sc_ptr budget
+     od"
+  unfolding refill_new_def
+  unfolding update_sched_context_decompose_ext2[where f=sc_budget_update and g=sc_refill_max_update]
+            update_sched_context_decompose_ext2[where f=sc_refill_max_update and g=sc_refills_update]
+            update_sched_context_decompose_ext2[where f=sc_refills_update and g=sc_period_update]
+  by (simp add: bind_assoc)
+
+(* FIXME RT: make this the definition, since individual field updates work better with heap projection machinery. *)
+lemma refill_update_def2:
+  "refill_update sc_ptr new_period new_budget new_max_refills \<equiv> do
+       sc <- get_sched_context sc_ptr;
+       refill_hd <- return $ refill_hd sc;
+       cur_time <- gets cur_time;
+       ready <- get_sc_refill_ready sc_ptr;
+       new_time <- return $ if ready then cur_time else r_time refill_hd;
+       if new_budget \<le> r_amount refill_hd then do set_sc_obj_ref sc_period_update sc_ptr new_period;
+                                                   set_sc_obj_ref sc_refill_max_update sc_ptr new_max_refills;
+                                                   set_sc_obj_ref sc_refills_update sc_ptr [\<lparr>r_time = new_time, r_amount = new_budget\<rparr>];
+                                                   set_sc_obj_ref sc_budget_update sc_ptr new_budget
+                                                od
+       else do unused <- return $ new_budget - r_amount refill_hd;
+               new <- return $ \<lparr>r_time = r_time refill_hd + new_period - unused, r_amount = unused\<rparr>;
+               new_refills <- return $ schedule_used False [refill_hd] new;
+               set_sc_obj_ref sc_period_update sc_ptr new_period;
+               set_sc_obj_ref sc_refill_max_update sc_ptr new_max_refills;
+               set_sc_obj_ref sc_refills_update sc_ptr new_refills;
+               set_sc_obj_ref sc_budget_update sc_ptr new_budget
+            od
+    od"
+  unfolding refill_update_def atomize_eq
+  unfolding update_sched_context_decompose_ext2[where f=sc_budget_update and g=sc_refills_update]
+            update_sched_context_decompose_ext2[where f=sc_refills_update and g=sc_refill_max_update]
+            update_sched_context_decompose_ext2[where f=sc_refill_max_update and g=sc_period_update]
+  apply (simp add: bind_assoc)
+  supply if_split[split del]
+  apply (rule monadic_rewrite_to_eq)
+  apply (rule monadic_rewrite_bind_tail[OF _ get_sched_context_sp], simp)
+  apply (rule monadic_rewrite_bind_tail[OF _ gets_inv])
+  apply (rule monadic_rewrite_bind_tail[OF _ get_sc_refill_ready_inv])
+  apply (rule monadic_rewrite_if[where Q=R and R=R for R, simplified]
+         ; rule monadic_rewrite_bind_head[OF monadic_rewrite_refl3])
+  by (auto simp: obj_at_def update_sched_context_known_sc)
 
 lemma refill_new_valid_sched_misc[wp]:
-  "refill_new sc_ptr max_refills budget period \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+  "refill_new sc_ptr max_refills budget period
+   \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+          (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
           (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
-          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s)\<rbrace>"
-  unfolding refill_new_def by wpsimp
+          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_replies_of s)\<rbrace>"
+  unfolding refill_new_def2 by wpsimp
+
+lemma refill_update_valid_sched_misc[wp]:
+  "refill_update sc_ptr period budget mrefills
+   \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
+          (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+          (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
+          (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_replies_of s)\<rbrace>"
+  unfolding refill_update_def2 by wpsimp
 
 crunches set_refills, refill_update, refill_new
   for st_tcb_at[wp]: "\<lambda>s. P (st_tcb_at Q t s)"
@@ -13818,8 +13723,8 @@ lemma sc_ready_times_cong:
 lemma refill_update_sc_tcb_sc_at[wp]:
   "refill_update sc_ptr mrefills budget period \<lbrace>sc_tcb_sc_at P sc_ptr\<rbrace>"
   unfolding refill_update_def
-  by (wpsimp wp: update_sched_context_wp)
-     (fastforce simp: sc_tcb_sc_at_def obj_at_def)
+  apply (wpsimp wp: update_sched_context_wp)
+  by (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
 
 lemma refill_new_sc_tcb_sc_at[wp]:
   "\<lbrace>sc_tcb_sc_at P sc_ptr\<rbrace>
@@ -14323,49 +14228,33 @@ lemma tcb_fault_update_sym_refs:
   by (clarsimp simp: state_refs_of_def dest!: get_tcb_SomeD)
 
 crunches end_timeslice
-  for valid_sched_misc[wp]: "(\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
-                                    (cur_thread s) (idle_thread s) (etcbs_of s)
-                                    (last_machine_time_of s) (sc_refill_cfgs_of s)) :: 'state_ext state \<Rightarrow> _"
+  for valid_sched_misc[wp]:
+    "\<lambda>s::'state_ext state. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
+                             (cur_thread s) (idle_thread s) (etcbs_of s)
+                             (last_machine_time_of s) (sc_refill_cfgs_of s)"
   (wp: crunch_wps ignore: thread_set)
 
 lemma end_timeslice_valid_release_q:
-  "\<lbrace>valid_release_q and
-    ct_not_in_release_q and invs and ct_active
-    and cur_sc_chargeable
-    and (\<lambda>s. active_sc_tcb_at (cur_thread s) s)\<rbrace>
+  "\<lbrace>\<lambda>s. valid_release_q s \<and> ct_not_in_release_q s \<and> ct_active s \<and> cur_sc_chargeable s
+         \<and> heap_refs_retract_at (tcb_scps_of s) (sc_tcbs_of s) (cur_thread s)
+         \<and> active_sc_tcb_at (cur_thread s) s\<rbrace>
    end_timeslice canTimeout
    \<lbrace>\<lambda>_. (valid_release_q)::'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding end_timeslice_def handle_timeout_def send_fault_ipc_def
-  apply wpsimp
-                          apply (wpsimp wp: send_ipc_valid_sched_subset_for_handle_timeout)
-                         apply (wpsimp wp: tcb_fault_update_sym_refs
-                                     simp: thread_get_def)+
-          apply (wpsimp wp: postpone_valid_release_q gts_wp)+
-  apply (subgoal_tac "bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) (cur_thread s) s")
-   apply (clarsimp dest!: get_tcb_SomeD
-                    simp: obj_at_kh_kheap_simps vs_all_heap_simps pred_map_simps
-                          ct_in_state_def runnable_eq_active)
-   apply (subgoal_tac "sc_tcb_sc_at (\<lambda>x. x = Some (cur_thread s)) (cur_sc s) s")
-    apply (clarsimp simp: sc_at_pred_n_def obj_at_def is_tcb)
-    apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl, symmetric], clarsimp)
-   apply (clarsimp simp: cur_sc_chargeable_def pred_tcb_at_def obj_at_def)
-  apply (clarsimp simp: cur_sc_chargeable_def vs_all_heap_simps tcb_at_kh_simps
-                 dest!: get_tcb_SomeD)
-  done
+  unfolding end_timeslice_def
+  apply (wpsimp wp: handle_timeout_valid_release_q thread_get_wp' postpone_valid_release_q)
+  apply (prop_tac "cur_sc_tcb_are_bound s", clarsimp simp: cur_sc_chargeable_def vs_all_heap_simps)
+  apply (frule (1) heap_refs_retract_atD)
+  by (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise ct_in_state_kh_simp vs_all_heap_simps runnable_eq)
 
 lemma end_timeslice_valid_ready_qs:
-  "\<lbrace>valid_ready_qs and weak_valid_sched_action and released_ipc_queues and
-    ct_not_queued and ct_active
+  "\<lbrace>valid_ready_qs and valid_sched_action and released_ipc_queues and
+    ct_not_queued and ct_active and scheduler_act_sane
     and cur_sc_chargeable
     and (\<lambda>s. active_sc_tcb_at (cur_thread s) s)\<rbrace>
    end_timeslice canTimeout
    \<lbrace>\<lambda>_. valid_ready_qs ::'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding end_timeslice_def handle_timeout_def send_fault_ipc_def
-  apply wpsimp
-                          apply (wpsimp wp: send_ipc_valid_sched_subset_for_handle_timeout)
-                         apply (wpsimp wp: tcb_sched_append_valid_blocked_except_set_const tcb_fault_update_sym_refs
-                                     simp: thread_get_def)+
-          apply (wpsimp wp: postpone_valid_ready_qs gts_wp)+
+  unfolding end_timeslice_def
+  apply (wpsimp wp: handle_timeout_valid_ready_qs thread_get_wp' postpone_valid_ready_qs)
   apply (subgoal_tac "bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) (cur_thread s) s")
    apply (clarsimp dest!: get_tcb_SomeD
                     simp: obj_at_kh_kheap_simps vs_all_heap_simps pred_map_simps
@@ -14375,29 +14264,18 @@ lemma end_timeslice_valid_ready_qs:
   done
 
 lemma end_timeslice_valid_blocked[wp]:
-  "\<lbrace>valid_blocked_except_set S\<rbrace>
-   end_timeslice canTimeout
-   \<lbrace>\<lambda>_. valid_blocked_except_set S ::'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding end_timeslice_def handle_timeout_def send_fault_ipc_def
-  by (wpsimp wp: send_ipc_valid_sched_subset_for_handle_timeout
+  "end_timeslice canTimeout \<lbrace>valid_blocked_except_set S ::'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding end_timeslice_def
+  by (wpsimp wp: handle_timeout_valid_blocked thread_get_wp'
                  tcb_sched_append_valid_blocked_except_set_const
-                 get_tcb_queue_wp
-                 postpone_valid_blocked_except_set gts_wp
-           simp: thread_get_def)
+                 postpone_valid_blocked_except_set)
 
 lemma end_timeslice_released_ipc_queues:
-  "\<lbrace>released_ipc_queues
-    and ct_released\<rbrace>
+  "\<lbrace>\<lambda>s. released_ipc_queues s \<and> active_sc_tcb_at (cur_thread s) s\<rbrace>
    end_timeslice canTimeout
    \<lbrace>\<lambda>_. released_ipc_queues ::'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding end_timeslice_def handle_timeout_def send_fault_ipc_def
-  by (wpsimp wp: send_ipc_valid_sched_subset_for_handle_timeout
-                 tcb_sched_append_valid_blocked_except_set_const
-           simp: thread_get_def released_sc_tcb_at_def)
-
-lemmas end_timeslice_valid_sched_subset = end_timeslice_valid_release_q
-                                          end_timeslice_valid_ready_qs
-                                          end_timeslice_released_ipc_queues
+  unfolding end_timeslice_def
+  by (wpsimp wp: handle_timeout_released_ipc_queues thread_get_wp')
 
 lemma refill_budget_check_weak_valid_sched_action:
   "\<lbrace>weak_valid_sched_action and (\<lambda>s. sc_scheduler_act_not (cur_sc s) s)\<rbrace>
@@ -14423,10 +14301,26 @@ lemma refill_budget_check_active_sc_tcb_at[wp]:
   unfolding refill_budget_check_def
   by (wpsimp wp: hoare_drop_imp)
 
+lemma refill_budget_check_active_sc_tcb_at':
+  assumes "\<And>P. refill_budget_check usage \<lbrace>\<lambda>s. P (t s)\<rbrace>"
+  shows "refill_budget_check usage \<lbrace>\<lambda>s. P (active_sc_tcb_at (t s) s)\<rbrace>"
+  by (rule hoare_lift_Pf[where f=t, OF _ assms]) wp
+
+lemmas refill_budget_check_active_sc_tcb_at_ct[wp]
+  = refill_budget_check_active_sc_tcb_at'[where t=cur_thread, OF refill_budget_check_valid_sched_misc]
+
 lemma refill_budget_check_round_robin_active_sc_tcb_at[wp]:
   "refill_budget_check_round_robin usage \<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace>"
   unfolding refill_budget_check_round_robin_def
   by (wpsimp wp: hoare_drop_imp)
+
+lemma refill_budget_check_round_robin_active_sc_tcb_at':
+  assumes "\<And>P. refill_budget_check_round_robin usage \<lbrace>\<lambda>s. P (t s)\<rbrace>"
+  shows "refill_budget_check_round_robin usage \<lbrace>\<lambda>s. P (active_sc_tcb_at (t s) s)\<rbrace>"
+  by (rule hoare_lift_Pf[where f=t, OF _ assms]) wp
+
+lemmas refill_budget_check_round_robin_active_sc_tcb_at_ct[wp]
+  = refill_budget_check_round_robin_active_sc_tcb_at'[where t=cur_thread, OF refill_budget_check_round_robin_valid_sched_misc]
 
 lemma invoke_untyped_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane\<rbrace>
@@ -14776,7 +14670,6 @@ lemma reply_push_scheduler_act_sane[wp]:
 
 end
 
-
 context DetSchedSchedule_AI_det_ext begin
 
 lemma invoke_tcb_cur_sc_chargeable:
@@ -14828,7 +14721,7 @@ lemma invoke_irq_control_cur_sc_chargeable:
 
 lemma invs_strengthen_cur_sc_tcb_only_sym_bound:
   "cur_sc_tcb_are_bound s \<and> invs s \<Longrightarrow> cur_sc_tcb_only_sym_bound s"
-  unfolding cur_sc_tcb_only_sym_bound_def cur_sc_tcb_are_bound_def
+  unfolding cur_sc_tcb_only_sym_bound_def
   apply (clarsimp simp: tcb_at_kh_simps[symmetric] pred_tcb_at_eq_commute)
   apply (intro conjI; intro allI impI)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
@@ -14856,11 +14749,9 @@ lemma perform_invocation_cur_sc_chargeable:
     apply (wpsimp wp: invoke_irq_control_cur_sc_chargeable)+
     apply (fastforce intro: invs_strengthen_cur_sc_chargeable simp:)
    apply wpsimp
-   apply (simp add: pred_conj_def, rule valid_validE_E)
-     apply (strengthen strengthen_cur_sc_chargeable)
-  apply (wpsimp wp: arch_perform_invocation_cur_sc_tcb_only_sym_bound)
-  apply (fastforce intro: invs_strengthen_cur_sc_tcb_only_sym_bound)
-  done
+  apply (strengthen strengthen_cur_sc_chargeable)
+  apply wpsimp
+  by (fastforce intro: invs_strengthen_cur_sc_tcb_only_sym_bound)
 
 (* FIXME: move *)
 lemma active_activatable:
@@ -14975,7 +14866,7 @@ lemma refill_budget_check_round_robin_released_ipc_queues:
   "\<lbrace>released_ipc_queues
     and valid_machine_time
     and active_sc_valid_refills
-    and (\<lambda>s. \<forall>t. bound_sc_tcb_at ((=) (Some (cur_sc s))) t s
+    and (\<lambda>s. \<forall>t. pred_map_eq (Some (cur_sc s)) (tcb_scps_of s) t
                  \<longrightarrow> ipc_queued_thread t s
                  \<longrightarrow> cur_sc_offset_sufficient usage s)\<rbrace>
    refill_budget_check_round_robin usage
@@ -15066,7 +14957,7 @@ lemma refill_budget_check_released_ipc_queues:
       apply (subgoal_tac "sc_budget sc = r_amount (refill_hd sc)", simp)
       apply (subgoal_tac "sc_budget sc = refills_sum (sc_refills sc)", simp)
        apply (case_tac "sc_refills sc"; simp)
-      apply (clarsimp simp: valid_refills_def obj_at_def vs_all_heap_simps sc_valid_refills_def)
+      apply (clarsimp simp: valid_refills_def obj_at_def vs_all_heap_simps)
      apply (case_tac "sc_refills sc"; simp)
     apply (simp add: word_le_nat_alt)
     apply (rule order_trans[OF unat_plus_gt])
@@ -15089,25 +14980,26 @@ lemma charge_budget_valid_blocked[wp]:
    charge_budget consumed canTimeout
    \<lbrace>\<lambda>_. valid_blocked_except_set S:: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding charge_budget_def
-  by (wpsimp wp: reschedule_required_valid_blocked end_timeslice_valid_sched_subset
+  by (wpsimp wp: reschedule_required_valid_blocked end_timeslice_valid_blocked
                  assert_inv gts_wp is_schedulable_wp')
 
 lemma charge_budget_valid_release_q:
-  "\<lbrace>valid_release_q and invs and ct_not_in_release_q and cur_sc_chargeable \<rbrace>
+  "\<lbrace>\<lambda>s. valid_release_q s \<and> ct_not_in_release_q s \<and> cur_sc_chargeable s
+        \<and> heap_refs_retract_at (tcb_scps_of s) (sc_tcbs_of s) (cur_thread s)\<rbrace>
    charge_budget consumed canTimeout
    \<lbrace>\<lambda>_. valid_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
   apply (clarsimp simp: charge_budget_def)
   apply wpsimp
-              apply (wpsimp wp: end_timeslice_valid_sched_subset)
+              apply (wpsimp wp: end_timeslice_valid_release_q)
              apply (wpsimp wp: assert_inv)
             apply (wpsimp wp: gts_wp is_schedulable_wp')+
-       apply (rule_tac Q="\<lambda>ya s. valid_release_q s \<and>
-                      cur_sc_chargeable s \<and>
-                      invs s" in hoare_strengthen_post[rotated])
+       apply (rule_tac Q="\<lambda>_ s. valid_release_q s \<and> cur_sc_chargeable s
+                                 \<and> heap_refs_retract_at (tcb_scps_of s) (sc_tcbs_of s) (cur_thread s)"
+              in hoare_strengthen_post[rotated])
         apply (clarsimp simp: tcb_at_kh_simps ct_in_state_def runnable_eq_active
                        split: if_splits)
-       apply (wpsimp wp:  sc_consumed_add_invs)
+       apply (wpsimp wp: sc_consumed_add_invs)
       apply (wpsimp wp: refill_budget_check_round_robin_valid_release_q
                         refill_budget_check_valid_release_q)+
   apply (subgoal_tac "sc_not_in_release_q (cur_sc s) s ", simp)
@@ -15120,7 +15012,7 @@ lemma charge_budget_valid_release_q:
   done
 
 lemma charge_budget_valid_sched_action:
-  "\<lbrace>valid_sched_action and scheduler_act_sane and cur_sc_chargeable \<rbrace>
+  "\<lbrace>valid_sched_action and scheduler_act_sane and cur_sc_chargeable\<rbrace>
    charge_budget consumed canTimeout
    \<lbrace>\<lambda>_. valid_sched_action :: 'state_ext state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
@@ -15137,16 +15029,13 @@ lemma charge_budget_valid_sched_action:
       apply (wpsimp wp: hoare_vcg_if_lift_strong)
           apply (rule_tac hoare_strengthen_post[rotated], erule ct_active_sc_helper)
           apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-         apply wpsimp
          apply (rule_tac hoare_strengthen_post[rotated], erule ct_active_sc_helper)
          apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
         apply (wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift')
           apply (rule_tac hoare_strengthen_post[rotated], erule ct_active_sc_helper)
           apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
          apply (wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift')
-         apply (rule_tac hoare_strengthen_post[rotated], erule ct_active_sc_helper)
          apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-        apply clarsimp
        apply wpsimp
       apply (wpsimp wp: refill_budget_check_round_robin_valid_sched_action_act_not
                         refill_budget_check_valid_sched_action_act_not)
@@ -15187,8 +15076,6 @@ crunches charge_budget
   for valid_machine_time[wp]: "valid_machine_time :: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps)
 
-(* The remaining subgoal seems to want the current thread to be released.
-   it's not clear if this is a reasonable assumption. *)
 lemma charge_budget_released_ipc_queues:
   "\<lbrace>released_ipc_queues
     and valid_machine_time
@@ -15198,34 +15085,12 @@ lemma charge_budget_released_ipc_queues:
    \<lbrace>\<lambda>_. released_ipc_queues :: 'state_ext state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
   apply (clarsimp simp: charge_budget_def)
-  apply (wpsimp)
-              apply (wpsimp wp: end_timeslice_valid_sched_subset)
-             apply (wpsimp wp: assert_inv)
-            apply (wpsimp wp: gts_wp is_schedulable_wp')+
-       apply (rule_tac Q="\<lambda>ya s.
-                (if (pred_map runnable (tcb_sts_of s) (cur_thread s) \<and> ct_not_in_release_q s \<and> active_sc_tcb_at (cur_thread s) s)
-                 then released_ipc_queues s
-                 else released_ipc_queues s)" in hoare_strengthen_post[rotated])
-        apply (clarsimp simp: tcb_at_kh_simps ct_in_state_def runnable_eq_active
-                       split: if_splits)
-  subgoal sorry (* charge_budget subgoal: charge_budget can block the thread *)
-       apply (wpsimp wp: hoare_vcg_if_lift_strong sc_consumed_add_invs)
-      apply (wpsimp wp: hoare_vcg_if_lift_strong)
-          apply (rule_tac hoare_strengthen_post[rotated], erule ct_active_sc_helper)
-          apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-         apply wpsimp
-         apply (rule_tac hoare_strengthen_post[rotated], erule ct_active_sc_helper)
-         apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-        apply (wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift')
-          apply (rule_tac hoare_strengthen_post[rotated], erule ct_active_sc_helper)
-          apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-         apply (wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift')
-         apply (rule_tac hoare_strengthen_post[rotated], erule ct_active_sc_helper)
-         apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-        apply clarsimp
+  apply (wpsimp wp: end_timeslice_released_ipc_queues assert_inv gts_wp is_schedulable_wp')
+       apply (rule_tac Q="\<lambda>_. released_ipc_queues" in hoare_strengthen_post[rotated]
+              , clarsimp simp: tcb_at_kh_simps ct_in_state_def runnable_eq_active split: if_splits)
        apply (wpsimp wp: refill_budget_check_round_robin_released_ipc_queues
                          refill_budget_check_released_ipc_queues
-                         is_round_robin_wp)+
+                         is_round_robin_wp' get_sched_context_wp gets_wp)+
   done
 
 lemma charge_budget_valid_ready_qs:
@@ -15233,7 +15098,8 @@ lemma charge_budget_valid_ready_qs:
     and released_ipc_queues
     and valid_machine_time
     and active_sc_valid_refills
-    and weak_valid_sched_action and invs
+    and valid_sched_action
+    and scheduler_act_sane
     and ct_not_queued and scheduler_act_sane
     and cur_sc_chargeable
     and cur_sc_blocked_is_offset consumed\<rbrace>
@@ -15242,23 +15108,21 @@ lemma charge_budget_valid_ready_qs:
   supply if_split [split del]
   apply (clarsimp simp: charge_budget_def)
   apply wpsimp
-              apply (wpsimp wp: end_timeslice_valid_sched_subset)
+              apply (wpsimp wp: end_timeslice_valid_ready_qs)
              apply (wpsimp wp: assert_inv)
             apply (wpsimp wp: gts_wp is_schedulable_wp')+
-       apply (rule_tac Q="\<lambda>ya s. ct_not_queued s \<and>
-                                 cur_sc_chargeable s \<and>
-                                 valid_ready_qs s \<and>
-                                 released_ipc_queues s \<and>
-                                 weak_valid_sched_action s" in hoare_strengthen_post[rotated])
+       apply (rule_tac Q="\<lambda>_ s. ct_not_queued s \<and> cur_sc_chargeable s \<and> valid_ready_qs s
+                                 \<and> released_ipc_queues s \<and> valid_sched_action s \<and> scheduler_act_sane s"
+              in hoare_strengthen_post[rotated])
         apply (clarsimp simp: tcb_at_kh_simps ct_in_state_def runnable_eq_active
                        split: if_splits)
        apply wpsimp
       apply (wpsimp wp: refill_budget_check_round_robin_valid_ready_qs_not_queued
                         refill_budget_check_round_robin_released_ipc_queues
-                        refill_budget_check_round_robin_weak_valid_sched_action
+                        refill_budget_check_round_robin_valid_sched_action_act_not
                         refill_budget_check_valid_ready_qs_not_queued
                         refill_budget_check_released_ipc_queues
-                        refill_budget_check_weak_valid_sched_action)
+                        refill_budget_check_valid_sched_action_act_not)
      apply (wpsimp wp: is_round_robin_wp)+
   apply (subgoal_tac "sc_not_in_ready_q (cur_sc s) s \<and> sc_scheduler_act_not (cur_sc s) s", simp)
   apply (intro conjI impI allI)
@@ -15271,7 +15135,7 @@ lemma charge_budget_valid_ready_qs:
   apply (subgoal_tac "pred_map runnable (tcb_sts_of s) t")
    apply (drule_tac x=t in spec)+
    apply (fastforce simp: pred_map_simps)
-  apply (clarsimp simp:  weak_valid_sched_action_def in_queue_2_def)
+  apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_def)
   done
 
 lemma charge_budget_active_sc_valid_refills:
@@ -15287,15 +15151,47 @@ lemma charge_budget_active_sc_valid_refills:
    \<lbrace>\<lambda>_. active_sc_valid_refills :: 'state_ext state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
   apply (clarsimp simp: charge_budget_def)
-  apply (wpsimp wp: end_timeslice_valid_sched_subset hoare_drop_imp
-                 refill_budget_check_round_robin_active_sc_valid_refills
-                 refill_budget_check_active_sc_valid_refills)
-   apply (erule current_time_bounded_strengthen, simp)
+  apply (wpsimp wp: hoare_drop_imp
+                    refill_budget_check_round_robin_active_sc_valid_refills
+                    refill_budget_check_active_sc_valid_refills)
+  apply (erule current_time_bounded_strengthen, simp)
   done
+
+lemma end_timeslice_active_reply_scs:
+  "\<lbrace>\<lambda>s. active_reply_scs s \<and> (can_timeout \<longrightarrow> active_if_bound_sc_tcb_at (cur_thread s) s)\<rbrace>
+   end_timeslice can_timeout
+   \<lbrace>\<lambda>_. active_reply_scs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding end_timeslice_def by (wpsimp wp: handle_timeout_active_reply_scs thread_get_wp')
+
+lemma refill_budget_check_round_robin_cur_sc_active[wp]:
+  "refill_budget_check_round_robin consumed \<lbrace>cur_sc_active\<rbrace>"
+  by (wpsimp wp: refill_budget_check_round_robin_sc_refills_update_unspecified
+           simp: active_reply_scs_defs)
+
+lemma refill_budget_check_cur_sc_active[wp]:
+  "refill_budget_check consumed \<lbrace>cur_sc_active\<rbrace>"
+  by (wpsimp wp: refill_budget_check_sc_refills_update_unspecified
+           simp: active_reply_scs_defs)
+
+lemma charge_budget_active_reply_scs:
+  "\<lbrace>\<lambda>s. active_reply_scs s \<and> (can_timeout \<longrightarrow> cur_sc_tcb_are_bound s \<longrightarrow> cur_sc_active s)\<rbrace>
+   charge_budget consumed can_timeout
+   \<lbrace>\<lambda>_. active_reply_scs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding charge_budget_def
+  supply if_split[split del]
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (repeat 5 \<open>rule hoare_seq_ext_skip, solves \<open>wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_disj_lift\<close>, simp?\<close>)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (wpsimp wp: end_timeslice_active_reply_scs)
+  by (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise vs_all_heap_simps)
 
 lemma charge_budget_valid_sched:
   "\<lbrace>valid_sched
-    and invs
+    and (\<lambda>s. heap_refs_retract_at (tcb_scps_of s) (sc_tcbs_of s) (cur_thread s))
     and ct_not_in_release_q
     and ct_not_queued
     and scheduler_act_sane
@@ -15311,15 +15207,15 @@ lemma charge_budget_valid_sched:
    charge_budget consumed canTimeout
    \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding valid_sched_def
-  by (wpsimp wp: charge_budget_valid_ready_qs charge_budget_active_sc_valid_refills
+  by (wpsimp wp: charge_budget_valid_ready_qs
+                 charge_budget_active_sc_valid_refills
                  charge_budget_valid_release_q
                  charge_budget_valid_sched_action
                  charge_budget_released_ipc_queues
-      , clarsimp simp: valid_sched_action_def)
+                 charge_budget_active_reply_scs)
 
 lemma check_budget_valid_ready_qs:
-  "\<lbrace>valid_ready_qs and released_ipc_queues and valid_machine_time and weak_valid_sched_action
-    and invs
+  "\<lbrace>valid_ready_qs and released_ipc_queues and valid_machine_time and valid_sched_action
     and ct_not_queued
     and active_sc_valid_refills
     and scheduler_act_sane and cur_sc_chargeable
@@ -15332,7 +15228,7 @@ lemma check_budget_valid_ready_qs:
 
 lemma check_budget_valid_release_q:
   "\<lbrace>valid_release_q
-    and invs
+    and (\<lambda>s. heap_refs_retract_at (tcb_scps_of s) (sc_tcbs_of s) (cur_thread s))
     and ct_not_in_release_q
     and cur_sc_chargeable\<rbrace>
    check_budget
@@ -15382,9 +15278,15 @@ lemma check_budget_valid_sched_action:
   by (wpsimp wp: get_sched_context_wp charge_budget_valid_sched_action
                  hoare_vcg_if_lift2 hoare_drop_imp hoare_vcg_all_lift)
 
+lemma check_budget_active_reply_scs:
+  "\<lbrace>\<lambda>s. active_reply_scs s \<and> (cur_sc_tcb_are_bound s \<longrightarrow> cur_sc_active s)\<rbrace>
+   check_budget
+   \<lbrace>\<lambda>_. active_reply_scs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding check_budget_def by (wpsimp wp: charge_budget_active_reply_scs)
+
 lemma check_budget_valid_sched:
   "\<lbrace>valid_sched
-    and invs
+    and (\<lambda>s. heap_refs_retract_at (tcb_scps_of s) (sc_tcbs_of s) (cur_thread s))
     and ct_not_in_release_q and ct_not_queued
     and scheduler_act_sane and cur_sc_chargeable
     and (\<lambda>s. cur_sc_blocked_is_offset (consumed_time s) s)
@@ -15395,12 +15297,11 @@ lemma check_budget_valid_sched:
    check_budget
    \<lbrace>\<lambda>_. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: valid_sched_def)
-  apply (wpsimp wp: check_budget_valid_ready_qs check_budget_active_sc_valid_refills
-                    check_budget_valid_release_q
-                    check_budget_valid_sched_action
-                    check_budget_released_ipc_queues)
-  apply (clarsimp simp: valid_sched_action_def)
-  done
+  by (wpsimp wp: check_budget_valid_ready_qs check_budget_active_sc_valid_refills
+                 check_budget_valid_release_q
+                 check_budget_valid_sched_action
+                 check_budget_released_ipc_queues
+                 check_budget_active_reply_scs)
 
 lemma tcb_sched_dequeue_valid_blocked_except_set:
   "\<lbrace>\<lambda>s. if not_queued tcb_ptr s then valid_blocked_except_set {tcb_ptr} s else valid_blocked s\<rbrace>
@@ -15463,19 +15364,6 @@ lemma active_sc_tcb_at_update_sched_context_no_change:
   apply (erule_tac P=P in back_subst, force)
   done
 
-lemma update_sched_context_valid_sched_no_change:
-  "\<forall>sc. sc_refill_cfg_of (f sc) = sc_refill_cfg_of sc \<Longrightarrow>
-   \<lbrace>valid_sched\<rbrace>
-   update_sched_context sc_ptr f
-   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (wpsimp wp: valid_sched_lift active_sc_tcb_at_update_sched_context_no_change
-                    update_sched_context_tcb_ready_time set_object_wp get_object_wp
-                    budget_ready_update_sched_context_no_change
-                    budget_sufficient_update_sched_context_no_change
-              simp: vs_all_heap_simps obj_at_kh_kheap_simps update_sched_context_def
-                    sc_refill_cfg_of_def)
-  done
-
 lemma update_sched_context_valid_refills_indep:
   "\<forall>sc. sc_refill_cfg_of (f sc) = sc_refill_cfg_of sc \<Longrightarrow>
    update_sched_context sc_ptr f \<lbrace>valid_refills t\<rbrace>"
@@ -15508,7 +15396,7 @@ lemma pst_vs_for_invoke_sched_control_configure:
   apply (clarsimp simp: valid_sched_def )
   apply (intro conjI; intro allI impI)
    apply (clarsimp simp:  released_sc_tcb_at_def tcb_at_kh_simps pred_map_simps)
-  apply (erule valid_blocked_divided2, clarsimp)
+  apply (erule valid_blockedE', clarsimp)
   apply (clarsimp simp: in_release_queue_def not_in_release_q_def valid_blocked_thread_def
                         vs_all_heap_simps)
   done
@@ -15587,9 +15475,7 @@ lemma pred_next_time_irq_state_independent_Aff[simp]:
 
 lemma cur_sc_offset_ready_weaken_zero[elim!]:
   "cur_sc_offset_ready k s \<Longrightarrow> cur_sc_offset_ready 0 s"
-  apply (clarsimp simp: cur_sc_offset_ready_def split: option.splits)
-  apply (case_tac x2; simp)
-  done
+  by (clarsimp simp: cur_sc_offset_ready_def pred_map_simps)
 
 (* FIXME: move *)
 abbreviation next_time_bounded where
@@ -15641,11 +15527,9 @@ lemmas next_time_bounded_weaken2 = next_time_bounded_current_time_bounded[THEN c
 lemma ct_not_blocked_cur_sc_blocked_is_offset:
   "invs s \<Longrightarrow> schact_is_rct s \<Longrightarrow> ct_not_blocked s \<Longrightarrow> cur_sc_blocked_is_offset cons s"
   apply (prop_tac "cur_sc_tcb s", clarsimp simp: invs_def)
-  apply (clarsimp simp: cur_sc_tcb_def schact_is_rct_def)
-  apply (prop_tac "t = cur_thread s")
-  apply (rule bound_sc_tcb_at_eq_inj'; fastforce simp: sc_at_pred_n_eq_commute)
-  apply (clarsimp simp: ct_in_state_def vs_all_heap_simps tcb_at_kh_simps)
-  done
+  apply (clarsimp simp: cur_sc_tcb_def schact_is_rct_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (subgoal_tac "t = cur_thread s", clarsimp simp: ct_in_state_def vs_all_heap_simps tcb_at_kh_simps)
+  by (erule (2) heap_refs_retract_eq[OF invs_retract_tcb_scps, THEN sym])
 
 lemma current_time_bounded1_drop_WCET:
   "current_time_bounded 1 s \<Longrightarrow> unat (cur_time s) + unat MAX_SC_PERIOD \<le> unat max_time"
@@ -15685,10 +15569,8 @@ lemma tcb_release_remove_cur_sc_in_release_q_imp_zero_consumed[wp_unsafe]:
 lemma ct_not_in_release_q_cur_sc_in_release_q_imp_zero_consumed:
   "schact_is_rct s \<Longrightarrow> invs s \<Longrightarrow> ct_not_in_release_q s \<Longrightarrow> cur_sc_in_release_q_imp_zero_consumed s"
   apply (frule invs_cur_sc_tcb)
-  apply (clarsimp simp: schact_is_rct_def cur_sc_tcb_def )
-  apply (subgoal_tac "t = cur_thread s", clarsimp)
-  apply (erule bound_sc_tcb_at_eq_inj'[rotated, rotated, simplified sc_at_pred_n_eq_commute], clarsimp)
-  apply (clarsimp simp: tcb_at_kh_simps pred_map_eq_normalise)
+  apply (clarsimp simp: schact_is_rct_def cur_sc_tcb_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (frule (2) heap_refs_retract_eq[OF invs_retract_tcb_scps], clarsimp)
   done
 
 lemma refill_budget_check_round_robin_is_active_sc[wp]:
@@ -15709,6 +15591,24 @@ lemma commit_time_is_active_sc[wp]:
 lemma commit_time_cur_sc_active[wp]:
   "commit_time \<lbrace>cur_sc_active\<rbrace>"
   by (rule cur_sc_active_lift; wpsimp)
+
+lemma refill_new_active_reply_scs[wp]:
+  "\<lbrace>\<lambda>s. active_reply_scs s \<and> active_sc max_refills\<rbrace>
+   refill_new sc_ptr max_refills budget period
+   \<lbrace>\<lambda>_. active_reply_scs\<rbrace>"
+  apply (rule active_reply_scs_lift_pre_conj, rule active_reply_sc_at_lift_pre_conj, wpsimp)
+  unfolding refill_new_def2
+  apply (wpsimp wp: valid_sched_wp)
+  by (clarsimp simp: heap_upd_def vs_all_heap_simps)
+
+lemma refill_update_active_reply_scs[wp]:
+  "\<lbrace>\<lambda>s. active_reply_scs s \<and> active_sc new_max_refills\<rbrace>
+   refill_update sc_ptr new_period new_budget new_max_refills
+   \<lbrace>\<lambda>_. active_reply_scs\<rbrace>"
+  apply (rule active_reply_scs_lift_pre_conj, rule active_reply_sc_at_lift_pre_conj, wpsimp)
+  unfolding refill_update_def2
+  apply (wpsimp wp: valid_sched_wp)
+  by (clarsimp simp: heap_upd_def vs_all_heap_simps)
 
 lemma invoke_sched_control_configure_valid_sched:
   "\<lbrace>valid_sched
@@ -15755,11 +15655,11 @@ lemma invoke_sched_control_configure_valid_sched:
     apply (frule invs_valid_objs)
     using idle_sc_no_ex_cap apply blast
    apply (intro conjI impI allI)
+      apply (simp add: sc_at_pred_n_def obj_at_def)
      apply (simp add: sc_at_pred_n_def obj_at_def)
-    apply (simp add: sc_at_pred_n_def obj_at_def)
-   apply (simp add: sc_at_pred_n_def obj_at_def cur_sc_offset_ready_def
-             split: option.splits if_split)
-   apply (case_tac x2; fastforce)
+    apply (clarsimp simp: cur_sc_offset_ready_def obj_at_kh_kheap_simps pred_map_eq_normalise
+                          vs_all_heap_simps
+                   split: if_splits)
    apply (subgoal_tac "cur_sc_in_release_q_imp_zero_consumed s")
    apply (clarsimp simp: vs_all_heap_simps split: if_splits)
    apply (erule ct_not_in_release_q_cur_sc_in_release_q_imp_zero_consumed; clarsimp)
@@ -15770,21 +15670,19 @@ lemma invoke_sched_control_configure_valid_sched:
                      refill_new_schedulable_ipc_queues refill_new_valid_sched_action
                      refill_new_valid_blocked_no_sc_tcb refill_new_active_sc_valid_refills)
    apply (frule invs_sym_refs)
+   apply (clarsimp simp: active_sc_def cong: conj_cong)
    apply (intro conjI)
-          using MIN_BUDGET_le_MIN_SC_BUDGET apply simp
-         apply (simp add: MIN_REFILLS_def active_sc_def)
-        apply (clarsimp simp: vs_all_heap_simps obj_at_def)
-        apply (rename_tac sc tcb_ptr n tcb)
-        apply (clarsimp simp add: sc_at_pred_n_def obj_at_def)
-        apply (frule_tac tp=tcb_ptr and tcb=tcb in sym_ref_tcb_sc; blast?)
-        apply simp
-       apply (clarsimp simp: schact_is_rct_simple)
-      apply (simp add: MIN_REFILLS_def)
+         using MIN_BUDGET_le_MIN_SC_BUDGET apply simp
+        apply (simp add: MIN_REFILLS_def)
+       apply (clarsimp simp: vs_all_heap_simps obj_at_def)
+       apply (rename_tac sc tcb_ptr n tcb)
+       apply (clarsimp simp add: sc_at_pred_n_def obj_at_def)
+       apply (frule_tac tp=tcb_ptr and tcb=tcb in sym_ref_tcb_sc; blast?)
+       apply simp
+      apply (clarsimp simp: schact_is_rct_simple)
      apply (clarsimp simp add: sc_at_pred_n_def obj_at_def)
-    apply (simp add: vs_all_heap_simps)
-   apply (simp add: MIN_REFILLS_def)
-  apply (clarsimp simp: current_time_bounded_def)
-  apply (clarsimp simp: sc_at_pred_n_def obj_at_def split: if_splits)
+    apply (clarsimp simp: current_time_bounded_def)
+   apply (clarsimp simp: sc_at_pred_n_def obj_at_def split: if_splits)
 
   \<comment> \<open>\<exists>y. sc_tcb sc = Some y\<close>
   apply (clarsimp simp: bind_assoc)
@@ -15902,15 +15800,10 @@ lemma invoke_sched_control_configure_valid_sched:
    apply (wpsimp wp: possible_switch_to_valid_sched_weak[simplified valid_sched_def, simplified])
    apply (clarsimp split: if_split)
    apply (intro conjI impI)
-     apply (simp add: sc_at_pred_n_def obj_at_def pred_tcb_at_def)
-     apply (frule invs_valid_global_refs)
-     apply (frule invs_sym_refs)
-     apply (frule invs_valid_objs)
-     apply (frule invs_iflive)
-     using sc_tcb_not_idle_thread apply blast
-    apply (clarsimp simp: vs_all_heap_simps pred_tcb_at_def obj_at_def)
-   apply (rule valid_blocked_except_set_not_runnable; blast?)
-   apply (clarsimp simp: pred_map_eq_def pred_map_def obj_at_kh_kheap_simps)
+     apply (erule (1) pred_map_eq_pred_mapE)
+    apply (frule invs_valid_idle)
+    apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def vs_all_heap_simps)
+   apply (clarsimp simp: vs_all_heap_simps runnable_eq_active elim!: valid_blockedE')
 
   apply (clarsimp split: if_split)
   apply (intro conjI impI)
@@ -15926,107 +15819,37 @@ lemma invoke_sched_control_configure_valid_sched:
                       refill_update_sc_tcb_sc_at refill_update_active_sc_tcb_at
                       refill_update_released_sc_tcb_at_indep
                       refill_update_active_sc_valid_refills)
-    apply (drule invs_sym_refs)
-    apply (prop_tac "\<forall>t. pred_map_eq (Some sc_ptr) (tcb_scps_of s) t \<longrightarrow> t = tcb_ptr")
-     apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps sc_at_pred_n_def obj_at_def)
-     apply (rename_tac tcb') \<comment> \<open>this is the TCB associated with the green variable t\<close>
-     apply (frule_tac scp=sc_ptr and sc=sca in sym_ref_sc_tcb; blast?)
-     apply (frule_tac tp=t and tcb=tcb' in sym_ref_tcb_sc; blast?)
-     apply simp
-    apply (simp add: active_sc_valid_refills_def)
-    apply (intro conjI impI allI)
-                 apply (simp add: pred_tcb_at_def obj_at_def pred_map_eq_def pred_map_def
-                                  vs_all_heap_simps)
-                 apply (fastforce dest: ipc_queued_thread_state_not_runnable
-                                  simp: obj_at_def pred_tcb_at_def sc_at_pred_n_def vs_all_heap_simps)
-                apply fast
-               apply (erule schact_is_rct_simple)
-              apply (fastforce dest: ipc_queued_thread_state_not_runnable
-                               simp: obj_at_def pred_tcb_at_def sc_at_pred_n_def vs_all_heap_simps)
-         apply (clarsimp simp: obj_at_def pred_map_eq_def vs_all_heap_simps sc_at_pred_n_def active_sc_def)
-          apply (simp add: pred_tcb_at_def obj_at_def pred_map_eq_def pred_map_def vs_all_heap_simps)
-          apply metis
-         apply (clarsimp simp: obj_at_def pred_map_eq_def vs_all_heap_simps sc_at_pred_n_def)
-         apply (frule_tac scp=sc_ptr and sc=sca in sym_ref_sc_tcb; simp?)
-         apply fastforce
-        apply (clarsimp simp: vs_all_heap_simps obj_at_def sc_at_pred_n_def)
-        apply (frule_tac scp=sc_ptr and sc=sca in sym_ref_sc_tcb; simp?)
-     using active_sc_def apply metis
-    apply (simp add: MIN_REFILLS_def active_sc_def)
+    apply (simp add: active_sc_valid_refills_def obj_at_kh_kheap_simps pred_map_eq_normalise schact_is_rct_simple)
+    apply (frule (1) heap_refs_retractD[OF invs_retract_sc_tcbs])
+    apply (clarsimp simp: heap_refs_inj_prop[OF invs_inj_tcb_scps] runnable_eq)
+    apply (clarsimp simp: active_sc_def MIN_REFILLS_def vs_all_heap_simps)
+    apply (elim disjE; simp)
 
    \<comment> \<open>the remaining subgoals are handled very similarly, and have almost exactly the same proof\<close>
    apply (wpsimp wp: refill_new_valid_ready_qs refill_new_valid_release_q refill_new_invs
                      refill_new_valid_sched_action refill_new_schedulable_ipc_queues
                      refill_new_valid_blocked_except_set refill_new_active_sc_tcb_at
                      refill_new_released_sc_tcb_at refill_new_active_sc_valid_refills)
-   apply (drule invs_sym_refs)
-   apply (intro conjI impI)
-          using MIN_BUDGET_le_MIN_SC_BUDGET apply simp
-         apply (simp add: MIN_REFILLS_def active_sc_def)
-        apply (simp add: pred_map_eq_def pred_map_def, intro allI impI)
-        apply (subgoal_tac "t=tcb_ptr")
-         apply force
-        apply (clarsimp simp: vs_all_heap_simps  obj_at_def sc_at_pred_n_def)
-        apply (frule_tac scp=sc_ptr and sc=sca in sym_ref_sc_tcb; fastforce?)
-        apply (frule_tac tp=t and tcb=b in sym_ref_tcb_sc; blast?)
-        apply fastforce
-       apply (erule schact_is_rct_simple)
-      apply (clarsimp simp: MIN_REFILLS_def)
-       apply (erule current_time_bounded1_drop_WCET[OF current_time_bounded_strengthen], simp)
-     apply (clarsimp simp: obj_at_def sc_at_pred_n_def)
-     apply (clarsimp simp: vs_all_heap_simps released_ipc_queues_defs pred_tcb_at_def obj_at_def
-                           sc_at_pred_n_def)
-     apply (frule_tac scp=sc_ptr and sc=sca in sym_ref_sc_tcb; fastforce?)
-     apply (frule_tac tp=tcb_ptra and tcb=tcba in sym_ref_tcb_sc; simp?)
-     apply simp
-    apply (clarsimp simp: pred_map_eq_def pred_map_def vs_all_heap_simps pred_tcb_at_def
-                          obj_at_def sc_at_pred_n_def)
-    apply (frule_tac scp=sc_ptr and sc=sca in sym_ref_sc_tcb; fastforce?)
-    apply simp
-   apply (clarsimp simp: pred_map_eq_def pred_map_def vs_all_heap_simps pred_tcb_at_def obj_at_def
-                         sc_at_pred_n_def
-                  split: if_splits)
-   apply (intro conjI impI; clarsimp?)
-    apply (simp add: MIN_REFILLS_def)
-   apply (simp add: vs_all_heap_simps active_sc_def)
-   apply (frule_tac scp=sc_ptr and sc=sca in sym_ref_sc_tcb; fastforce?)
-   apply fastforce
+   apply (simp add: active_sc_valid_refills_def obj_at_kh_kheap_simps pred_map_eq_normalise schact_is_rct_simple)
+   apply (frule (1) heap_refs_retractD[OF invs_retract_sc_tcbs])
+   apply (clarsimp simp: heap_refs_inj_prop[OF invs_inj_tcb_scps]
+                         runnable_eq MIN_REFILLS_def active_sc_def
+                         order_trans[OF MIN_BUDGET_le_MIN_SC_BUDGET]
+                         current_time_bounded1_drop_WCET[OF current_time_bounded_strengthen])
+   apply (clarsimp simp: vs_all_heap_simps)
 
   apply (clarsimp simp: valid_sched_def)
-   apply (wpsimp wp: refill_new_valid_ready_qs refill_new_valid_release_q refill_new_invs
-                     refill_new_valid_sched_action refill_new_schedulable_ipc_queues
-                     refill_new_valid_blocked_except_set refill_new_active_sc_tcb_at
-                     refill_new_released_sc_tcb_at refill_new_active_sc_valid_refills)
-   apply (drule invs_sym_refs)
-   apply (intro conjI impI)
-          using MIN_BUDGET_le_MIN_SC_BUDGET apply simp
-         apply (simp add: MIN_REFILLS_def active_sc_def)
-        apply (simp add: pred_map_eq_def pred_map_def, intro allI impI)
-        apply (subgoal_tac "t=tcb_ptr")
-         apply force
-        apply (clarsimp simp: vs_all_heap_simps  obj_at_def sc_at_pred_n_def)
-        apply (frule_tac scp=sc_ptr and sc=sca in sym_ref_sc_tcb; fastforce?)
-        apply (frule_tac tp=t and tcb=b in sym_ref_tcb_sc; blast?)
-        apply fastforce
-       apply (erule schact_is_rct_simple)
-      apply (clarsimp simp: MIN_REFILLS_def)
-       apply (erule current_time_bounded1_drop_WCET[OF current_time_bounded_strengthen], simp)
-     apply (clarsimp simp: obj_at_def sc_at_pred_n_def)
-     apply (clarsimp simp: vs_all_heap_simps released_ipc_queues_defs pred_tcb_at_def obj_at_def
-                           sc_at_pred_n_def)
-     apply (frule_tac scp=sc_ptr and sc=sca in sym_ref_sc_tcb; fastforce?)
-     apply (frule_tac tp=tcb_ptra and tcb=tcb in sym_ref_tcb_sc; simp?)
-     apply simp
-    apply (clarsimp simp: pred_map_eq_def pred_map_def vs_all_heap_simps pred_tcb_at_def
-                          obj_at_def sc_at_pred_n_def)
-    apply (frule_tac scp=sc_ptr and sc=sca in sym_ref_sc_tcb; fastforce?)
-   apply (clarsimp simp: pred_map_eq_def pred_map_def vs_all_heap_simps pred_tcb_at_def obj_at_def
-                         sc_at_pred_n_def
-                  split: if_splits)
-   apply (intro conjI impI; clarsimp?)
-    apply (simp add: MIN_REFILLS_def)
-   apply (simp add: vs_all_heap_simps active_sc_def)
-   apply (frule_tac scp=sc_ptr and sc=sca in sym_ref_sc_tcb; fastforce)
+  apply (wpsimp wp: refill_new_valid_ready_qs refill_new_valid_release_q refill_new_invs
+                    refill_new_valid_sched_action refill_new_schedulable_ipc_queues
+                    refill_new_valid_blocked_except_set refill_new_active_sc_tcb_at
+                    refill_new_released_sc_tcb_at refill_new_active_sc_valid_refills)
+  apply (simp add: active_sc_valid_refills_def obj_at_kh_kheap_simps pred_map_eq_normalise schact_is_rct_simple)
+  apply (frule (1) heap_refs_retractD[OF invs_retract_sc_tcbs])
+  apply (clarsimp simp: heap_refs_inj_prop[OF invs_inj_tcb_scps]
+                        runnable_eq MIN_REFILLS_def active_sc_def
+                        order_trans[OF MIN_BUDGET_le_MIN_SC_BUDGET]
+                        current_time_bounded1_drop_WCET[OF current_time_bounded_strengthen])
+  apply (clarsimp simp: vs_all_heap_simps)
   done
 
 end
@@ -16044,11 +15867,13 @@ lemma perform_invocation_valid_sched:
   apply (cases i; simp)
              apply (wpsimp wp: invoke_untyped_valid_sched)
             apply (wpsimp wp: send_ipc_valid_sched)
-            apply (clarsimp simp: ct_in_state_def released_sc_tcb_at_def tcb_at_kh_simps vs_all_heap_simps)
+            apply (clarsimp simp: valid_sched_valid_sched_except_blocked valid_blockedD
+                                  valid_idle_idle_thread_is_idle[OF invs_valid_idle])
+            apply (clarsimp simp: vs_all_heap_simps)
            apply (wpsimp wp: send_signal_valid_sched)
            apply (fastforce elim!: ct_in_state_weaken current_time_bounded_strengthen)
           apply (wpsimp wp: do_reply_transfer_valid_sched)
-          apply (fastforce elim: ct_in_state_weaken)
+          apply (fastforce elim: current_time_bounded_strengthen)
          apply (wpsimp wp: invoke_tcb_valid_sched)
          apply (clarsimp simp: tcb_at_kh_simps vs_all_heap_simps)
         apply (wpsimp wp: invoke_domain_valid_sched)
@@ -16072,12 +15897,6 @@ lemma set_thread_state_valid_reply_scs[wp]:
   by (wpsimp wp: valid_reply_scs_lift)
 
 context DetSchedSchedule_AI_det_ext begin
-
-lemma set_thread_state_cur_sc_offset_ready[wp]:
-  "set_thread_state ref ts \<lbrace>\<lambda>s. cur_sc_offset_ready (consumed_time s) s\<rbrace>"
-  unfolding set_thread_state_def set_thread_state_act_def
-  apply (wpsimp wp: set_object_wp)
-  by (clarsimp simp: cur_sc_offset_ready_def dest!: get_tcb_SomeD split: option.splits)
 
 lemma handle_invocation_valid_sched:
   "\<lbrace>invs
@@ -16121,8 +15940,6 @@ lemma valid_sched_ct_not_queued:
 
 
 context DetSchedSchedule_AI begin
-
-crunch sched_act_not[wp]: handle_fault_reply "scheduler_act_not t::'state_ext state \<Rightarrow> _"
 
 crunch cur[wp]: handle_fault_reply "cur_tcb :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
@@ -16239,8 +16056,6 @@ apply (rule hoare_seq_ext)
   apply (wpsimp wp: sched_context_donate_ct_not_queued)
 *)
 
-crunch ct_not_queued[wp]: do_ipc_transfer,handle_fault_reply "ct_not_queued::'state_ext state \<Rightarrow> _"
-  (wp: mapM_wp' simp: zipWithM_x_mapM)
 (*
 lemma do_reply_transfer_ct_not_queued:
   "\<lbrace>ct_not_queued and invs and ct_active and scheduler_act_sane\<rbrace>
@@ -16520,7 +16335,7 @@ lemma check_budget_ct_active_sc_tcb_at[wp]:
 
 lemma invs_strengthen_cur_sc_tcb_are_bound:
   "schact_is_rct s \<and> invs s \<Longrightarrow> cur_sc_tcb_are_bound s"
-  by (fastforce simp: cur_sc_tcb_are_bound_def tcb_at_kh_simps[symmetric]
+  by (fastforce simp: tcb_at_kh_simps[symmetric]
                intro: cur_sc_tcb_rev)
 
 lemma check_budget_restart_valid_sched:
@@ -16542,7 +16357,7 @@ lemma check_budget_restart_valid_sched:
    apply (rule_tac Q="\<lambda>r s. valid_sched s \<and> (\<not>r \<longrightarrow> active_sc_tcb_at (cur_thread s) s)" in hoare_strengthen_post[rotated])
     apply (clarsimp simp: ct_in_state_def runnable_eq_active tcb_at_kh_simps vs_all_heap_simps)
    apply (wpsimp wp: hoare_vcg_if_lift2 check_budget_valid_sched hoare_drop_imp)
-  apply (simp)
+  apply (simp add: invs_retract_tcb_scps[THEN heap_refs_retract_heap_refs_retract_at])
   apply (intro conjI)
     apply clarsimp
    apply (fastforce intro: invs_cur_sc_chargeableE)
@@ -16563,7 +16378,8 @@ lemma handle_yield_valid_sched:
    handle_yield
    \<lbrace>\<lambda>rv. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding handle_yield_def
-  apply (wpsimp wp: charge_budget_valid_sched get_refills_wp)
+  apply (wpsimp wp: charge_budget_valid_sched get_refills_wp
+              simp: invs_retract_tcb_scps[THEN heap_refs_retract_heap_refs_retract_at])
   apply (intro conjI)
      apply (clarsimp)
     apply (erule ct_not_blocked_cur_sc_blocked_is_offset; simp)
@@ -16579,7 +16395,7 @@ lemma handle_yield_valid_sched:
   apply (simp add: unat_le_mono)
   apply (subst (asm) unat_add_lem', overflow_hammer)
    apply (clarsimp simp: current_time_bounded_def)
-  apply clarsimp
+  apply (clarsimp simp: vs_all_heap_simps)
   done
 
 (*
@@ -16683,9 +16499,7 @@ lemma update_time_stamp_cur_sc_offset_ready[wp]:
                 in hoare_weaken_pre[rotated]; clarsimp)
   apply (rule hoare_seq_ext[OF _ dmo_getCurrentTime_sp])
    apply wpsimp
-   apply (clarsimp simp: cur_sc_offset_ready_def  split: option.splits)
-   apply (rename_tac ko; case_tac ko; clarsimp)
-  apply (simp add: unat_arith_simps(1))
+   apply (clarsimp simp: cur_sc_offset_ready_def vs_all_heap_simps unat_arith_simps(1) split: option.splits)
   by wpsimp
 
 end
@@ -16781,11 +16595,6 @@ lemma send_signal_scheduler_act_sane:
   apply (clarsimp)
   apply (drule TCBSignal_in_state_refs_of)
   by (clarsimp simp: tcb_at_kh_simps ct_in_state_def pred_map_eq_normalise vs_all_heap_simps)
-
-lemma handle_fault_reply_valid_sched_pred_strong[wp]:
-  "handle_fault_reply x2 x d mrs
-   \<lbrace>(valid_sched_pred_strong P) ::det_state \<Rightarrow> _\<rbrace>"
-  by (case_tac x2; wpsimp)
 
 lemma do_reply_transfer_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane and ct_not_blocked\<rbrace>
@@ -16938,47 +16747,39 @@ lemma send_signal_ct_not_in_release_q[wp]:
 
 lemma do_reply_transfer_ct_not_in_release_q[wp]:
   "\<lbrace>ct_not_in_release_q and ct_not_blocked and invs\<rbrace>
-   do_reply_transfer sender x4
+   do_reply_transfer sender reply
    \<lbrace>\<lambda>_. ct_not_in_release_q :: det_state \<Rightarrow> _\<rbrace>"
-  supply if_split [split del]
-  unfolding do_reply_transfer_def
+  apply (simp add: do_reply_transfer_def maybeM_def)
+  apply (rule hoare_seq_ext[OF _ grt_sp])
+  apply (case_tac recv_opt, wpsimp, clarsimp)
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rename_tac receiver state)
+  apply (case_tac "\<forall>r'. state \<noteq> BlockedOnReply r'", solves \<open>wpsimp\<close>, clarsimp)
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule_tac S="r'=reply" in hoare_gen_asm''; clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise)
+  apply (rule_tac B="\<lambda>_ s. ct_not_in_release_q s \<and> receiver \<noteq> cur_thread s
+                            \<and> heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s)"
+           in hoare_seq_ext[rotated])
+   apply (wpsimp wp: reply_remove_tcb_scps_of_retract)
+   apply (clarsimp simp: invs_retract_tcb_scps vs_all_heap_simps ct_in_state_kh_simp)
+  apply (rule hoare_seq_ext[OF _ thread_get_inv])
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (case_tac "runnable state \<longrightarrow> sc_opt = None"
+         ; clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
+   apply wpsimp
+  apply (rename_tac scp)
+  apply (rule_tac B="\<lambda>_ s. pred_map_eq (Some scp) (tcb_scps_of s) receiver
+                           \<and> pred_map runnable (tcb_sts_of s) receiver
+                           \<and> ct_not_in_release_q s \<and> receiver \<noteq> cur_thread s
+                            \<and> heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s)"
+           in hoare_seq_ext[rotated])
+   apply (wpsimp wp: refill_unblock_check_valid_sched_except_blocked hoare_vcg_disj_lift)
+   apply (clarsimp simp: pred_map_eq_pred_mapE)
   apply (wpsimp wp: postpone_ct_not_in_release_q)
-              apply (rule_tac Q="\<lambda>_ s. ct_not_in_release_q s \<and>
-                              (\<forall>t. sc_tcb_sc_at ((=) (Some t)) sc_ptr s \<longrightarrow> t \<noteq> cur_thread s)" in hoare_strengthen_post[rotated])
-               apply (clarsimp )
-              apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-             apply (wpsimp wp: assert_inv)
-            apply (wpsimp wp: get_tcb_obj_ref_wp gts_wp)+
-            apply (rule_tac Q="\<lambda>_ s. ct_not_in_release_q s \<and>
-                            (\<forall>scp. bound_sc_tcb_at ((=) (Some scp)) x s \<longrightarrow> (\<forall>t. sc_tcb_sc_at ((=) (Some t)) scp s \<longrightarrow> t \<noteq> cur_thread s))" in hoare_strengthen_post[rotated])
-             apply (clarsimp simp: obj_at_def pred_tcb_at_def sc_at_pred_n_def split: if_split, fastforce)
-            apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-           apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-          apply (rule_tac Q="\<lambda>_ s. ct_not_in_release_q s \<and>
-                          (\<forall>scp. bound_sc_tcb_at ((=) (Some scp)) x s \<longrightarrow> (\<forall>t. sc_tcb_sc_at ((=) (Some t)) scp s \<longrightarrow> t \<noteq> cur_thread s))" in hoare_strengthen_post[rotated])
-           apply (clarsimp simp: obj_at_def pred_tcb_at_def sc_at_pred_n_def split: if_split, fastforce)
-          apply (wpsimp)
-               apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' thread_set_no_change_tcb_sched_context_converse
-                           simp: tcb_at_kh_simps)
-              apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' thread_set_no_change_tcb_sched_context_converse
-                          simp: tcb_at_kh_simps)
-             apply (rule_tac Q="\<lambda>_ s. ct_not_in_release_q s \<and>
-                             (invs s \<and> x \<noteq> cur_thread s)" in hoare_strengthen_post[rotated])
-              apply clarsimp
-              apply (subgoal_tac "x = cur_thread s", simp)
-              apply (erule bound_sc_tcb_at_eq_inj'[rotated 2], clarsimp)
-              apply (clarsimp simp: tcb_at_kh_simps pred_map_eq_normalise)
-             apply (wpsimp simp: thread_get_def wp: hoare_drop_imp)+
-        apply (rule_tac Q="\<lambda>_ s. ct_not_in_release_q s \<and>
-                        (invs s \<and> x \<noteq> cur_thread s)" in hoare_strengthen_post[rotated])
-         apply clarsimp
-         apply (subgoal_tac "x = cur_thread s", simp)
-         apply (erule bound_sc_tcb_at_eq_inj'[rotated]; clarsimp)
-        apply (wpsimp simp: thread_get_def wp: reply_remove_invs get_simple_ko_wp gts_wp)+
-  apply (intro conjI)
-   apply (fastforce)
-  apply (clarsimp simp: ct_in_state_def tcb_at_kh_simps vs_all_heap_simps pred_map_eq_normalise)
-  done
+  apply (frule (1) heap_refs_retractD)
+  by (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise vs_all_heap_simps)
 
 lemma handle_invocation_scheduler_act_sane[wp]:
   "\<lbrace>schact_is_rct and invs and ct_active:: det_state \<Rightarrow> _\<rbrace>
@@ -17131,9 +16932,10 @@ lemma valid_sched_ct_not_queued:
 
 lemma ct_not_blocked_cur_sc_blocked_is_offset_trivial:
   "cur_sc_tcb_only_sym_bound s \<and> ct_not_blocked s \<Longrightarrow> cur_sc_blocked_is_offset t s"
-  apply (clarsimp simp: cur_sc_tcb_only_sym_bound_def tcb_at_kh_simps ct_in_state_def)
-  apply (drule_tac x=ta in spec)+
-  by (clarsimp simp: pred_map_simps)
+  unfolding cur_sc_tcb_only_sym_bound_def
+  apply (erule conjE, drule conjunct2)
+  apply (erule allEI, erule (1) imp_forward2)
+  by (clarsimp simp: ct_in_state_kh_simp vs_all_heap_simps)
 
 lemma update_time_stamp_cur_sc_blocked_is_offset_helper:
   "\<lbrace>schact_is_rct and invs and ct_active\<rbrace>
@@ -17158,24 +16960,6 @@ lemma handle_invocation_ct_conditions_temp[wp]:
 end
 
 context DetSchedSchedule_AI begin
-
-lemma refill_bounded_helper2:
-  "valid_refills (cur_sc s) s \<Longrightarrow>
-   cur_sc_offset_ready (consumed_time s) s \<Longrightarrow>
-   unat (cur_time s) + unat kernelWCET_ticks + 2 * unat MAX_SC_PERIOD \<le> unat max_time \<Longrightarrow>
-kheap s (cur_sc s) = Some (SchedContext sc n) \<Longrightarrow>
-                  unat (r_time (refill_hd sc)) + 2 * unat (sc_period sc) +
-                  unat (consumed_time s)
-                  \<le> unat max_time"
-  unfolding cur_sc_offset_ready_def
-  apply clarsimp
-  apply (subgoal_tac "unat (sc_period sc) \<le> unat MAX_SC_PERIOD")
-  apply (erule_tac order_trans[rotated])
-  apply (rule_tac y="unat (r_time (refill_hd sc)) + unat (consumed_time s) + 2 * unat (sc_period sc)" in order_trans, simp)
-  apply (rule_tac y="unat (r_time (refill_hd sc)) + unat (consumed_time s) + 2 * unat (sc_period sc)" in order_trans, simp)
-  apply (erule add_mono, simp)
-  apply (clarsimp simp: valid_refills_def vs_all_heap_simps, overflow_hammer)
-  done
 
 lemma refill_bounded_helper:
   "valid_refills (cur_sc s) s
@@ -17292,11 +17076,11 @@ lemma update_time_stamp_cur_sc_offset_ready_cs[wp]:
   unfolding update_time_stamp_def
   apply (rule_tac hoare_seq_ext[OF _ gets_sp])
   apply wpsimp
-   apply (rule_tac P="(\<lambda>s. cur_sc_offset_ready (consumed_time s) s) and (\<lambda>s. cur_time s = prev_time)"
+   apply (rule_tac P="\<lambda>s. cur_sc_offset_ready (consumed_time s) s \<and> cur_time s = prev_time"
           in dmo_getCurrentTime_wp)
-    apply (clarsimp simp: cur_sc_offset_ready_2_def split: option.splits)
-    apply (case_tac x2; simp)
-    apply (rule_tac y="unat (r_time (refill_hd x51)) + unat (consumed_time s) + unat (rv - cur_time s)" in order_trans)
+    apply (clarsimp simp: vs_all_heap_simps refill_ready_no_overflow_def)
+    apply (rename_tac sc n)
+    apply (rule_tac y="unat (r_time (refill_hd sc)) + unat (consumed_time s) + unat (rv - cur_time s)" in order_trans)
      apply clarsimp
      apply (subst add_diff_eq[symmetric])
      apply (rule unat_plus_gt)
@@ -17350,8 +17134,7 @@ lemma check_budget_valid_sched_weaker:
     and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)\<rbrace>
    check_budget
    \<lbrace>\<lambda>_. valid_sched::det_ext state \<Rightarrow> _\<rbrace>"
-  apply (wpsimp wp: check_budget_valid_sched)
-  done
+  by (wpsimp wp: check_budget_valid_sched simp: invs_retract_tcb_scps[THEN heap_refs_retract_heap_refs_retract_at])
 
 lemma handle_event_valid_sched:
   "\<lbrace>invs
@@ -17428,17 +17211,15 @@ lemma handle_event_valid_sched:
       (* UnknownSyscall *)
       apply (wpsimp wp: handle_fault_valid_sched check_budget_restart_valid_sched_weaker
                         hoare_vcg_if_lift2 hoare_vcg_disj_lift)
-     apply (frule active_from_running, clarsimp)
-     apply (clarsimp simp: valid_fault_def ct_in_state_def2[symmetric])
-     apply (strengthen valid_sched_valid_machine_time schact_is_rct_sane valid_sched_ct_not_queued, simp)
-     apply (erule ct_in_state_weaken, clarsimp)
+      apply (frule active_from_running, clarsimp)
+      apply (clarsimp simp: valid_fault_def ct_in_state_def2[symmetric])
+      apply (strengthen valid_sched_valid_machine_time schact_is_rct_sane valid_sched_ct_not_queued, simp)
      (* UserLevelFault *)
      apply (wpsimp wp: handle_fault_valid_sched check_budget_restart_valid_sched_weaker
                        hoare_vcg_if_lift2 hoare_vcg_disj_lift)
      apply (frule active_from_running, clarsimp)
      apply (clarsimp simp: valid_fault_def ct_in_state_def2[symmetric])
      apply (strengthen valid_sched_valid_machine_time schact_is_rct_sane valid_sched_ct_not_queued, simp)
-     apply (erule ct_in_state_weaken, clarsimp)
     (* Interrupt *)
     subgoal
       apply wpsimp
@@ -17468,23 +17249,18 @@ lemma handle_event_valid_sched:
        apply (wpsimp, clarsimp simp: ct_in_state_def)
       apply (fastforce elim!: valid_sched_ct_not_queued elim: invs_cur_sc_chargeableE ct_in_state_weaken
                        intro!: next_time_bounded_current_time_bounded)
-  done
+      done
   (* VMFaultEvent *)
-  subgoal
    apply (wpsimp wp: handle_fault_valid_sched check_budget_restart_valid_sched_weaker
                      hoare_vcg_if_lift2 hoare_vcg_disj_lift)
-     apply (frule active_from_running, clarsimp)
-     apply (clarsimp simp: valid_fault_def ct_in_state_def2[symmetric])
-     apply (strengthen valid_sched_valid_machine_time schact_is_rct_sane valid_sched_ct_not_queued, simp)
-     apply (erule ct_in_state_weaken, clarsimp)
-  done
+   apply (frule active_from_running, clarsimp)
+   apply (clarsimp simp: valid_fault_def ct_in_state_def2[symmetric])
+   apply (strengthen valid_sched_valid_machine_time schact_is_rct_sane valid_sched_ct_not_queued, simp)
   (* HypervisorEvent *)
-  subgoal
-   apply (wpsimp wp: handle_hyp_fault_valid_sched check_budget_restart_valid_sched_weaker
-                     hoare_vcg_if_lift2 hoare_vcg_disj_lift)
-   apply (frule active_from_running)
-   apply (fastforce elim!: valid_sched_ct_not_queued ct_in_state_weaken simp: ct_in_state_def valid_fault_def)
-  done
+  apply (wpsimp wp: handle_hyp_fault_valid_sched check_budget_restart_valid_sched_weaker
+                    hoare_vcg_if_lift2 hoare_vcg_disj_lift)
+  apply (frule active_from_running)
+  apply (fastforce elim!: valid_sched_ct_not_queued ct_in_state_weaken simp: ct_in_state_def valid_fault_def)
   done
 
 crunches activate_thread, schedule_choose_new_thread, awaken
@@ -17565,6 +17341,7 @@ lemma call_kernel_valid_sched_check_budget_helper:
   apply (clarsimp simp: check_budget_def ARM.non_kernel_IRQs_def) (* FIXME RT *)
   apply (wpsimp wp: hoare_vcg_conj_lift reschedule_valid_sched_const get_sched_context_wp
                     hoare_drop_imps hoare_vcg_all_lift charge_budget_invs charge_budget_valid_sched)
+  apply (clarsimp simp: invs_retract_tcb_scps[THEN heap_refs_retract_heap_refs_retract_at])
   apply (fastforce elim: current_time_bounded_strengthen intro: consumed_time_bounded_helper)
   done
 
@@ -17593,9 +17370,10 @@ lemma call_kernel_valid_sched_charge_budget_helper:
            (the irq \<in> non_kernel_IRQs \<longrightarrow>
             scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>"
    apply (clarsimp simp: check_budget_def ARM.non_kernel_IRQs_def)
-   apply (wpsimp wp: hoare_vcg_conj_lift reschedule_valid_sched_const get_sched_context_wp
-                     hoare_drop_imps hoare_vcg_all_lift charge_budget_invs charge_budget_valid_sched)
-   done
+   by (wpsimp wp: hoare_vcg_conj_lift reschedule_valid_sched_const get_sched_context_wp
+                  hoare_drop_imps hoare_vcg_all_lift charge_budget_invs charge_budget_valid_sched
+            simp: invs_retract_tcb_scps[THEN heap_refs_retract_heap_refs_retract_at]
+                  obj_at_kh_kheap_simps pred_map_eq_normalise)
 
 lemma preemption_point_valid_sched_pred[wp]:
   "preemption_point \<lbrace>valid_sched_pred_strong P\<rbrace>"

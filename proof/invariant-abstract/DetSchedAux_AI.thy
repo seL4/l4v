@@ -586,6 +586,13 @@ lemma tcb_ready_times_of_eq_bound_sc_obj_tcb_at_lift:
   apply (rule_tac rt=rt in assms)
   by fastforce
 
+lemma non_empty_sc_replies_nonz_cap:
+  assumes "if_live_then_nonz_cap s"
+  assumes "sc_replies_sc_at (\<lambda>rs. rs \<noteq> []) scp s"
+  shows "ex_nonz_cap_to scp s"
+  by (rule if_live_then_nonz_capD[OF assms(1) assms(2)[unfolded sc_at_pred_n_def]]
+      ; clarsimp simp: live_def live_sc_def)
+
 \<comment> \<open>Used for retyping Untyped memory, including ASID pool creation. Retyping may destroy objects
     if the Untyped memory is reset. But under the invariants, destruction can only occur for objects
     which are not referenced by any caps.\<close>
@@ -594,6 +601,8 @@ lemma valid_sched_tcb_state_preservation_gen:
   assumes st_tcb: "\<And>P t. \<lbrace>st_tcb_at P t and ex_nonz_cap_to t and I\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
   assumes not_ipc_queued: "\<And>t. \<lbrace>\<lambda>s. \<not> st_tcb_at ipc_queued_thread_state t s \<and> I s\<rbrace>
                                 f \<lbrace>\<lambda>_ s. \<not> st_tcb_at ipc_queued_thread_state t s\<rbrace>"
+  assumes non_empty_sc_replies: "\<And>scp. \<lbrace>\<lambda>s. \<not> sc_replies_sc_at (\<lambda>rs. rs \<noteq> []) scp s \<and> I s\<rbrace>
+                                        f \<lbrace>\<lambda>_ s. \<not> sc_replies_sc_at (\<lambda>rs. rs \<noteq> []) scp s\<rbrace>"
   assumes etcb_at:
     "\<And>P t. \<lbrace>etcb_at P t and I\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
   assumes bound_sc:
@@ -626,7 +635,7 @@ lemma valid_sched_tcb_state_preservation_gen:
   apply (frule use_valid, rule_tac P="\<lambda>mt. mt = last_machine_time_of s" in machine_time, simp)
   apply (frule use_valid[OF _ valid_blocked], assumption)
   apply (frule use_valid[OF _ valid_idle], assumption)
-  apply (rule_tac V="valid_ready_qs s'" in revcut_rl)
+  apply (prop_tac "valid_ready_qs s'")
    subgoal for s rv s'
    apply (clarsimp simp: valid_ready_qs_def
                          pred_map2'_pred_maps obj_at_kh_kheap_simps[symmetric] pred_tcb_at_eq_commute)
@@ -641,7 +650,7 @@ lemma valid_sched_tcb_state_preservation_gen:
    apply (frule (3) ex_nonz_cap_to_tcb_implies_ex_nonz_cap_to_sc)
    apply (frule use_valid, rule_tac p=scp in sc_refill_cfg, simp)
    by simp
-  apply (rule_tac V="valid_release_q s'" in revcut_rl)
+  apply (prop_tac "valid_release_q s'")
    subgoal for s rv s'
    apply (clarsimp simp: valid_release_q_def)
    apply (clarsimp simp: valid_release_q_def pred_map2'_pred_maps obj_at_kh_kheap_simps[symmetric]
@@ -657,7 +666,7 @@ lemma valid_sched_tcb_state_preservation_gen:
     apply simp
    apply (erule sorted_release_q_2_eq_lift[THEN iffD1, rotated])
    apply (drule (1) bspec, clarsimp)
-   apply (rule_tac V="\<exists>rt. bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt) t s" in revcut_rl
+   apply (prop_tac "\<exists>rt. bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt) t s"
           , fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps, clarsimp)
    apply (frule (1) runnable_nonz_cap_to)
    apply (frule use_valid,
@@ -665,7 +674,7 @@ lemma valid_sched_tcb_state_preservation_gen:
            ; simp add: I bound_sc sc_refill_cfg), simp)
    apply (rule tcb_ready_times_of_eq_bound_sc_obj_tcb_at_lift)
    by (auto simp: vs_all_heap_simps)
-  apply (rule_tac V="valid_sched_action s'" in revcut_rl)
+  apply (prop_tac "valid_sched_action s'")
    subgoal for s rv s'
    apply (clarsimp simp: valid_sched_action_def is_activatable_def weak_valid_sched_action_def
                          switch_in_cur_domain_def in_cur_domain_def
@@ -685,7 +694,7 @@ lemma valid_sched_tcb_state_preservation_gen:
    apply (frule (1) runnable_nonz_cap_to[unfolded runnable_eq])
    apply (frule use_valid[OF _ st_tcb], fastforce)
    by (elim pred_tcb_weakenE disjE; fastforce)
-  apply (rule_tac V="ct_in_cur_domain s'" in revcut_rl)
+  apply (prop_tac "ct_in_cur_domain s'")
    subgoal for s rv s'
    apply (clarsimp simp: ct_in_cur_domain_def in_cur_domain_def)
    apply (simp add: ct_in_state_def)
@@ -694,17 +703,17 @@ lemma valid_sched_tcb_state_preservation_gen:
    apply (frule use_valid[OF _ etcb_at], fastforce)
    apply (frule_tac s=s' and P'="Not \<circ> inactive" in st_tcb_weakenE, fastforce)
    by simp
-  apply (rule_tac V="valid_idle_etcb s'" in revcut_rl)
+  apply (prop_tac "valid_idle_etcb s'")
    subgoal for s rv s'
    apply (clarsimp simp: valid_idle_etcb_def)
    apply (frule use_valid[OF _ etcb_at], fastforce, erule mp)
    by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
-  apply (rule_tac V="released_ipc_queues s'" in revcut_rl)
+  apply (prop_tac "released_ipc_queues s'")
    subgoal for s rv s'
    apply (simp add: released_ipc_queues_defs
                     pred_map2'_pred_maps obj_at_kh_kheap_simps[symmetric] pred_tcb_at_eq_commute)
    apply (erule allEI, rule impI)
-   apply ((rule_tac V="st_tcb_at ipc_queued_thread_state t s" in revcut_rl, rule ccontr
+   apply ((prop_tac "st_tcb_at ipc_queued_thread_state t s", rule ccontr
            , frule use_valid, rule_tac t=t in not_ipc_queued); simp)
    apply (frule (1) st_tcb_ex_cap, (case_tac st; clarsimp simp: ipc_queued_thread_state_def))
    apply (erule disjEI, (frule use_valid[OF _ bound_sc]; fastforce))
@@ -714,13 +723,24 @@ lemma valid_sched_tcb_state_preservation_gen:
    apply (frule (3) ex_nonz_cap_to_tcb_implies_ex_nonz_cap_to_sc)
    apply (frule use_valid, rule_tac p=p in sc_refill_cfg, simp)
    by simp
-  apply (rule_tac V="active_sc_valid_refills s'" in revcut_rl)
+  apply (prop_tac "active_sc_valid_refills s'")
    subgoal for s rv s'
    unfolding active_sc_valid_refills_def
    apply (frule use_valid[OF _ sc_refill_cfg2[where P="cfg_valid_refills and cfg_bounded_release_time (cur_time s)"]], intro conjI)
      apply (clarsimp simp: pred_map_pred_conj)
     apply simp
    by (clarsimp simp: pred_map_pred_conj)
+  apply (prop_tac "active_reply_scs s'")
+   subgoal for s r s'
+   apply (simp add: active_reply_scs_2_def active_if_reply_sc_at_2_def)
+   apply (erule allEI, rule impI)
+   apply (simp add: sc_at_kh_simps[symmetric])
+   apply (prop_tac "sc_replies_sc_at (\<lambda>rs. rs \<noteq> []) scp s"
+          , rule ccontr, frule use_valid, rule_tac scp=scp in non_empty_sc_replies
+          , erule (1) conjI, erule (1) notE, drule (1) mp)
+   apply (frule (1) non_empty_sc_replies_nonz_cap)
+   apply (rule use_valid, assumption, rule sc_refill_cfg)
+   by (intro conjI; assumption)
   by simp
 
 lemma invoke_untyped_valid_idle:
@@ -752,7 +772,7 @@ lemma live_default_object:
   using pre[where dev=dev and us=us and dm=dm, OF assms]
   by (simp only: live_def split: kernel_object.splits; simp)
 
-(* FIXME: move to Untyped_AI *)
+(* FIXME RT: move to Untyped_AI *)
 lemma retype_region_obj_at_live_ex:
   assumes live: "\<forall>ko. P ko \<longrightarrow> live ko"
   shows "\<lbrace>\<lambda>s. N (obj_at P p s)
@@ -797,7 +817,7 @@ lemma is_untyped_cap_UntypedCap:
   "is_untyped_cap (UntypedCap dev base sz free)"
   by simp
 
-(* FIXME: move to Untyped_AI *)
+(* FIXME RT: move to Untyped_AI *)
 lemma reset_untyped_cap_obj_at_live:
   assumes csp: "cspace_agnostic_pred P"
   assumes live: "\<forall>ko. P ko \<longrightarrow> live ko"
@@ -819,7 +839,7 @@ lemma reset_untyped_cap_obj_at_live:
   apply (frule (3) descendants_of_empty_untyped_range[OF _ _ _ is_untyped_cap_UntypedCap])
   by simp
 
-(* FIXME: move to Untyped_AI *)
+(* FIXME RT: move to Untyped_AI *)
 lemma invoke_untyped_obj_at_live:
   assumes csp: "cspace_agnostic_pred P"
   assumes live: "\<forall>ko. P ko \<longrightarrow> live ko"
@@ -841,7 +861,7 @@ lemma invoke_untyped_obj_at_live:
           split: untyped_invocation.splits
       | fastforce)+
 
-(* FIXME: move to Untyped_AI *)
+(* FIXME RT: move to Untyped_AI *)
 lemma invoke_untyped_pred_tcb_at_live:
   assumes live: "\<forall>tcb. P (proj (tcb_to_itcb tcb)) \<longrightarrow> live (TCB tcb)"
   shows
@@ -854,6 +874,20 @@ lemma invoke_untyped_pred_tcb_at_live:
    \<lbrace>\<lambda>rv s. N (pred_tcb_at proj P p s)\<rbrace>"
   unfolding pred_tcb_at_def using live
   by (auto intro!: invoke_untyped_obj_at_live simp: cspace_agnostic_pred_def tcb_to_itcb_def)
+
+(* FIXME RT: move to Untyped_AI *)
+lemma invoke_untyped_sc_at_pred_n_live:
+  assumes live: "\<forall>sc. P (proj sc) \<longrightarrow> live_sc sc"
+  shows
+  "\<lbrace>\<lambda>s. Q (sc_at_pred_n N proj P p s)
+        \<and> invs s
+        \<and> ct_active s
+        \<and> valid_untyped_inv ui s
+        \<and> scheduler_action s = resume_cur_thread\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>rv s. Q (sc_at_pred_n N proj P p s)\<rbrace>"
+  unfolding sc_at_pred_n_def using live
+  by (auto intro!: invoke_untyped_obj_at_live simp: cspace_agnostic_pred_def live_def)
 
 lemma ipc_queued_thread_state_live:
   "ipc_queued_thread_state (tcb_state tcb) \<Longrightarrow> live (TCB tcb)"
@@ -868,9 +902,10 @@ lemma (in DetSchedAux_AI) invoke_untyped_valid_sched:
    apply (rule_tac I="invs and ct_active and valid_untyped_inv ui and valid_sched and
                       (\<lambda>s. scheduler_action s = resume_cur_thread)"
             in valid_sched_tcb_state_preservation_gen)
-                apply simp
-               apply (wpsimp wp: invoke_untyped_st_tcb_at)
-              apply (wpsimp wp: invoke_untyped_pred_tcb_at_live simp: ipc_queued_thread_state_live)
+                 apply simp
+                apply (wpsimp wp: invoke_untyped_st_tcb_at)
+               apply (wpsimp wp: invoke_untyped_pred_tcb_at_live simp: ipc_queued_thread_state_live)
+              apply (wpsimp wp: invoke_untyped_sc_at_pred_n_live simp: live_sc_def)
              apply (wpsimp wp: invoke_untyped_etcb_at)
             apply wpsimp
            apply (wpsimp wp: invoke_untyped_sc_at_pred_n)
@@ -967,19 +1002,19 @@ lemma etcb_of_eq:
 lemmas thread_get_prio_wp = thread_get_wp' [where f=tcb_priority]
 lemmas thread_get_dom_wp = thread_get_wp' [where f=tcb_domain]
 
-(* FIXME: remove, since now redundant with vs_all_heap_simps *)
+(* FIXME RT: remove, since now redundant with vs_all_heap_simps *)
 lemma etcbs_of_update_unrelated:
   "\<lbrakk> kh ref = Some (TCB tcb); etcb_of tcb = etcb_of tcb' \<rbrakk> \<Longrightarrow>
   etcbs_of_kh (\<lambda>r. if r = ref then Some (TCB tcb') else kh r) = etcbs_of_kh kh"
   by (auto simp: vs_all_heap_simps)
 
-(* FIXME: remove, since now redundant with vs_all_heap_simps *)
+(* FIXME RT: remove, since now redundant with vs_all_heap_simps *)
 lemma etcbs_of_update_state:
   "get_tcb ref s = Some tcb \<Longrightarrow>
   etcbs_of_kh (\<lambda>r. if r = ref then Some (TCB (tcb_state_update f tcb)) else kheap s r) = etcbs_of_kh (kheap s)"
   by (auto simp: vs_all_heap_simps obj_at_kh_kheap_simps)
 
-(* FIXME: remove, since now redundant with vs_all_heap_simps *)
+(* FIXME RT: remove, since now redundant with vs_all_heap_simps *)
 lemma etcbs_of_arch_state:
   "get_tcb ref s = Some tcb \<Longrightarrow>
   etcbs_of_kh (\<lambda>r. if r = ref then Some (TCB (tcb_arch_update f tcb)) else kheap s r) = etcbs_of_kh (kheap s)"
