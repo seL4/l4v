@@ -64,7 +64,7 @@ crunches refill_unblock_check
   and cur_sc_cur_thread[wp]: "\<lambda>s. P (cur_sc s) (cur_thread s)"
   (wp: crunch_wps hoare_vcg_if_lift2)
 
-lemma valid_sc_valid_refills:
+lemma valid_sc_non_empty_refills:
    "\<lbrakk>valid_objs s; kheap s sc_ptr = Some (SchedContext sc n) \<rbrakk>
          \<Longrightarrow> length (sc_refills sc) \<ge> 1"
   by (fastforce simp: valid_objs_def valid_obj_def valid_sched_context_def)
@@ -101,7 +101,7 @@ lemma refill_unblock_check_valid_objs[wp]:
       hoare_vcg_conj_lift hoare_drop_imp hoare_vcg_if_lift2
       simp: pred_conj_def refill_unblock_check_def obj_at_def is_round_robin_def
       split: kernel_object.splits)
-  apply (frule_tac sc=sc in valid_sc_valid_refills[rotated], simp)
+  apply (frule_tac sc=sc in valid_sc_non_empty_refills[rotated], simp)
   apply (case_tac "sc_refills sc")
   apply (auto simp: refills_merge_valid[simplified])
   done

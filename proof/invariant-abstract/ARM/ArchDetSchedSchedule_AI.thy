@@ -219,7 +219,7 @@ crunches arch_switch_to_thread, arch_switch_to_idle_thread
   (simp: crunch_simps)
 
 lemma machine_state_detype[simp]:
-  "machine_state (detype S s) = machine_state (s)"
+  "machine_state (detype S s) = machine_state s"
   by (clarsimp simp: valid_machine_time_def detype_def)
 
 crunches handle_hypervisor_fault, handle_reserved_irq

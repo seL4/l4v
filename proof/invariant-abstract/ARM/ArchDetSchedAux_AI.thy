@@ -169,6 +169,13 @@ lemma perform_asid_control_invocation_valid_idle:
 crunches perform_asid_control_invocation
   for lmt[wp]: "\<lambda>s. P (last_machine_time_of s)"
 
+lemma perform_asid_control_invocation_pred_map_sc_refill_cfgs_of:
+  "perform_asid_control_invocation aci
+   \<lbrace>\<lambda>s. \<forall>p. pred_map cfg_active (sc_refill_cfgs_of s) p
+            \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
+  unfolding perform_asid_control_invocation_def
+  by (wpsimp wp: hoare_drop_imp delete_objects_pred_map_sc_refill_cfgs_of)
+
 lemma perform_asid_control_invocation_valid_sched:
   "\<lbrace>ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci and
     valid_sched and valid_idle\<rbrace>
@@ -178,12 +185,13 @@ lemma perform_asid_control_invocation_valid_sched:
    apply (rule_tac I="invs and ct_active and
                       (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_aci aci"
           in valid_sched_tcb_state_preservation_gen)
-               apply simp
-              apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at)
-             apply (wpsimp wp: perform_asid_control_invocation_pred_tcb_at_live simp: ipc_queued_thread_state_live)
-            apply (wpsimp wp: perform_asid_control_etcb_at)
-           apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at)
-          apply (wpsimp wp: perform_asid_control_invocation_sc_at_pred_n)
+                apply simp
+               apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at)
+              apply (wpsimp wp: perform_asid_control_invocation_pred_tcb_at_live simp: ipc_queued_thread_state_live)
+             apply (wpsimp wp: perform_asid_control_etcb_at)
+            apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at)
+           apply (wpsimp wp: perform_asid_control_invocation_sc_at_pred_n)
+          apply (wpsimp wp: perform_asid_control_invocation_pred_map_sc_refill_cfgs_of)
          apply wp
         apply wp
        apply wp

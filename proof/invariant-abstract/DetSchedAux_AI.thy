@@ -233,6 +233,39 @@ lemma invoke_untyped_sc_at_pred_n:
    \<lbrace>\<lambda>rv s. sc_at_pred_n N proj P scp s\<rbrace>"
   by (auto intro!: invoke_untyped_non_cspace_obj_at simp: sc_at_pred_n_def cspace_agnostic_pred_def)
 
+lemma retype_region_active_sc_props[wp]:
+  "retype_region x4 l x6 x5 x8
+   \<lbrace>\<lambda>s. \<forall>p. pred_map cfg_active (sc_refill_cfgs_of s) p \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
+  unfolding retype_region_def
+  apply wp
+  apply (clarsimp simp del: fun_upd_apply simp add: vs_all_heap_simps foldr_fun_upd_value)
+  apply (case_tac x5; simp add: default_object_def)
+  apply (clarsimp simp: active_sc_def default_sched_context_def)
+  done
+
+lemma delete_objects_pred_map_sc_refill_cfgs_of:
+  shows "delete_objects base sz
+         \<lbrace>\<lambda>s. \<forall>p. pred_map cfg_active (sc_refill_cfgs_of s) p
+                  \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
+  unfolding delete_objects_def2
+  apply wpsimp
+  by (clarsimp simp: detype_def vs_all_heap_simps split: if_splits)
+
+lemma reset_untyped_cap_pred_map_sc_refill_cfgs_of:
+  shows "reset_untyped_cap slot
+         \<lbrace>\<lambda>s. \<forall>p. pred_map cfg_active (sc_refill_cfgs_of s) p
+                  \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
+  unfolding reset_untyped_cap_def
+  by (wpsimp wp: mapME_x_wp_inv preemption_point_inv hoare_drop_imp
+                 delete_objects_pred_map_sc_refill_cfgs_of)
+
+lemma invoke_untyped_pred_map_sc_refill_cfgs_of:
+  "invoke_untyped ui
+   \<lbrace>\<lambda>s. \<forall>p. pred_map cfg_active (sc_refill_cfgs_of s) p
+            \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
+  unfolding invoke_untyped_def
+  by (wpsimp wp: mapM_x_wp_inv reset_untyped_cap_pred_map_sc_refill_cfgs_of)
+
 lemma cur_time_detype[simp]:
   "cur_time (detype r s) = cur_time s"
   by (simp add: detype_def)
@@ -567,6 +600,9 @@ lemma valid_sched_tcb_state_preservation_gen:
     "\<And>P t. \<lbrace>\<lambda>s. bound_sc_tcb_at P t s \<and> ex_nonz_cap_to t s \<and> I s\<rbrace> f \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
   assumes sc_refill_cfg:
     "\<And>P p. \<lbrace>\<lambda>s. sc_refill_cfg_sc_at P p s \<and> ex_nonz_cap_to p s \<and> I s\<rbrace> f \<lbrace>\<lambda>rv. sc_refill_cfg_sc_at P p\<rbrace>"
+  assumes sc_refill_cfg2:
+    "\<And>P p. \<lbrace>\<lambda>s. (\<forall>p. pred_map cfg_active (sc_refill_cfgs_of s) p \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p) \<and> I s\<rbrace>
+            f \<lbrace>\<lambda>rv s. \<forall>p. pred_map cfg_active (sc_refill_cfgs_of s) p \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
   assumes cur_time: "\<And>P. \<lbrace>\<lambda>s. P (cur_time s)\<rbrace> f \<lbrace>\<lambda>r s. P (cur_time s)\<rbrace>"
   assumes cur_thread: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   assumes idle_thread: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
@@ -677,6 +713,12 @@ lemma valid_sched_tcb_state_preservation_gen:
    apply (clarsimp simp: pred_tcb_at_def[unfolded obj_at_def])
    apply (frule (3) ex_nonz_cap_to_tcb_implies_ex_nonz_cap_to_sc)
    apply (frule use_valid, rule_tac p=p in sc_refill_cfg, simp)
+   by simp
+  apply (rule_tac V="active_sc_valid_refills s'" in revcut_rl)
+   subgoal for s rv s'
+   unfolding active_sc_valid_refills_def
+   apply (frule use_valid[OF _ sc_refill_cfg2], intro conjI)
+   apply (assumption, simp)
    by simp
   by simp
 
@@ -949,20 +991,21 @@ lemma (in DetSchedAux_AI) invoke_untyped_valid_sched:
    invoke_untyped ui
    \<lbrace>\<lambda>rv . valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply wp_pre
-   apply (rule_tac I="invs and ct_active and valid_untyped_inv ui and
+   apply (rule_tac I="invs and ct_active and valid_untyped_inv ui and valid_sched and
                       (\<lambda>s. scheduler_action s = resume_cur_thread)"
             in valid_sched_tcb_state_preservation_gen)
-               apply simp
-              apply (wpsimp wp: invoke_untyped_st_tcb_at)
-             apply (wpsimp wp: invoke_untyped_pred_tcb_at_live simp: ipc_queued_thread_state_live)
-            apply (wpsimp wp: invoke_untyped_etcb_at)
-           apply wpsimp
-          apply (wpsimp wp: invoke_untyped_sc_at_pred_n)
+                apply simp
+               apply (wpsimp wp: invoke_untyped_st_tcb_at)
+              apply (wpsimp wp: invoke_untyped_pred_tcb_at_live simp: ipc_queued_thread_state_live)
+             apply (wpsimp wp: invoke_untyped_etcb_at)
+            apply wpsimp
+           apply (wpsimp wp: invoke_untyped_sc_at_pred_n)
+          apply (wpsimp wp: invoke_untyped_pred_map_sc_refill_cfgs_of)
          apply wp
         apply wp
        apply wp
       apply wp
-     apply (wp invoke_untyped_valid_idle)
+     apply (wpsimp wp: invoke_untyped_valid_idle)
     apply wp
    apply (rule hoare_lift_Pf[where f=scheduler_action, OF _ invoke_untyped_valid_sched_pred_misc])
    apply (rule hoare_lift_Pf[where f=ready_queues, OF _ invoke_untyped_valid_sched_pred_misc])
@@ -1387,8 +1430,5 @@ lemma valid_reply_scs_machine_state_update[simp]:
   "valid_reply_scs (s\<lparr>machine_state := param_a\<rparr>) = valid_reply_scs s"
   by (clarsimp simp: valid_reply_scs_def)
 
-lemma valid_refills_ignores_machine_state[simp]:
-  "valid_refills x (s\<lparr>machine_state := j\<rparr>) = valid_refills x s"
-  by (clarsimp simp: valid_refills_def)
 
 end

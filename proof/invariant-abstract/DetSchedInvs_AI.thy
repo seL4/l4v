@@ -698,6 +698,7 @@ record sc_refill_cfg =
   scrc_refills :: "refill list"
   scrc_refill_max :: nat
   scrc_period :: ticks
+  scrc_budget :: ticks
 
 abbreviation
   "scrc_refill_hd scrc \<equiv> hd (scrc_refills scrc)"
@@ -705,7 +706,8 @@ abbreviation
 definition sc_refill_cfg_of :: "sched_context \<Rightarrow> sc_refill_cfg" where
   "sc_refill_cfg_of sc = \<lparr> scrc_refills = sc_refills sc,
                            scrc_refill_max = sc_refill_max sc,
-                           scrc_period = sc_period sc \<rparr>"
+                           scrc_period = sc_period sc,
+                           scrc_budget = sc_budget sc\<rparr>"
 
 definition sc_refill_cfgs_of_scs :: "('obj_ref \<rightharpoonup> sched_context) \<Rightarrow> 'obj_ref \<rightharpoonup> sc_refill_cfg" where
   "sc_refill_cfgs_of_scs \<equiv> map_project sc_refill_cfg_of"
@@ -722,6 +724,7 @@ lemma sc_refill_cfg_of_simps[iff]:
   "scrc_refill_max (sc_refill_cfg_of sc) = sc_refill_max sc"
   "scrc_period (sc_refill_cfg_of sc) = sc_period sc"
   "scrc_refill_hd (sc_refill_cfg_of sc) = refill_hd sc"
+  "scrc_budget (sc_refill_cfg_of sc) = sc_budget sc"
   by (auto simp: sc_refill_cfg_of_def)
 
 \<comment> \<open>These might not be necessary, since they're already solved by auto\<close>
@@ -1065,6 +1068,47 @@ lemmas is_refill_ready_def =
 lemmas is_refill_ready_lift =
   sc_at_ppred_lift_s[where proj=refill_hd and P=refill_ready and f=cur_time]
 
+definition
+  window :: "refill list \<Rightarrow> ticks \<Rightarrow> bool"
+where
+  "window refills period \<equiv>
+      unat (r_time (last refills)) + unat (r_amount (last refills))
+       \<le> unat (r_time (hd refills)) + unat period"
+
+lemma period_window_single:
+  "\<lbrakk>refills = [a]\<rbrakk>
+   \<Longrightarrow> window refills period = (unat (r_amount a) \<le> unat period)"
+  unfolding window_def by fastforce
+
+definition MAX_SC_PERIOD where "MAX_SC_PERIOD = ((2 ^ 32) :: time)"
+
+\<comment> \<open> FIXME: it would be nice to phrase the fourth conjunct as
+            \<forall>refill \<in> set (sc_refills sc). MIN_BUDGET <= r_amount refill\<close>
+definition cfg_valid_refills :: "sc_refill_cfg \<Rightarrow> bool" where
+  "cfg_valid_refills cfg \<equiv>
+      (refills_sum (scrc_refills cfg) = scrc_budget cfg
+      \<and> ordered_disjoint (scrc_refills cfg)
+      \<and> no_overflow (scrc_refills cfg)
+      \<and> (\<forall>n < length (scrc_refills cfg). MIN_BUDGET \<le> r_amount ((scrc_refills cfg) ! n))
+      \<and> window (scrc_refills cfg) (scrc_period cfg)
+      \<and> 0 < length (scrc_refills cfg)
+      \<and> length (scrc_refills cfg) \<le> scrc_refill_max cfg
+      \<and> MIN_SC_BUDGET \<le> scrc_budget cfg
+      \<and> scrc_budget cfg \<le> scrc_period cfg
+      \<and> MIN_REFILLS \<le> scrc_refill_max cfg
+      \<and> scrc_period cfg \<le> MAX_SC_PERIOD)"
+abbreviation valid_refills_pred :: "(obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> obj_ref \<Rightarrow> bool" where
+  "valid_refills_pred \<equiv> pred_map cfg_valid_refills"
+abbreviation valid_refills :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "valid_refills scp s \<equiv> valid_refills_pred (sc_refill_cfgs_of s) scp"
+
+abbreviation sc_valid_refills :: "sched_context \<Rightarrow> bool"
+where
+  "sc_valid_refills sc \<equiv> cfg_valid_refills (sc_refill_cfg_of sc)"
+
+lemmas sc_valid_refills_def = cfg_valid_refills_def
+lemmas valid_refills_def = cfg_valid_refills_def
+
 \<comment> \<open>Predicates about scheduling contexts bound to threads, concerning schedulability\<close>
 
 abbreviation active_sc_tcb_at_pred :: "(obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> obj_ref \<Rightarrow> bool" where
@@ -1145,7 +1189,7 @@ definition cur_sc_offset_ready_2
 where
   "cur_sc_offset_ready_2 usage curtime cursc kh \<equiv>
    (case kh cursc of
-          Some (SchedContext sc _) \<Rightarrow> refill_ready' usage curtime (refill_hd sc)
+          Some (SchedContext sc _) \<Rightarrow> unat (r_time (refill_hd sc)) + unat usage \<le> unat curtime + unat kernelWCET_ticks
          | _ \<Rightarrow> False)"
 
 abbreviation cur_sc_offset_ready :: "time \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -1154,6 +1198,25 @@ where
       cur_sc_offset_ready_2 usage (cur_time s) (cur_sc s) (kheap s)"
 
 lemmas cur_sc_offset_ready_def = cur_sc_offset_ready_2_def
+
+definition consumed_time_bounded_2 where
+  "consumed_time_bounded_2 constime curtime \<equiv> (unat constime \<le> unat curtime)"
+
+abbreviation consumed_time_bounded :: "'z::state_ext state \<Rightarrow> bool" where
+  "consumed_time_bounded s \<equiv> consumed_time_bounded_2 (consumed_time s) (cur_time s)"
+
+lemmas consumed_time_bounded_def = consumed_time_bounded_2_def
+
+definition current_time_bounded_2 where
+  "current_time_bounded_2 k curtime \<equiv>
+   unat curtime + unat kernelWCET_ticks + k * unat MAX_SC_PERIOD \<le> unat (max_word :: time)"
+
+abbreviation current_time_bounded :: "nat \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "current_time_bounded k s \<equiv> current_time_bounded_2 k (cur_time s)"
+
+lemmas current_time_bounded_def = current_time_bounded_2_def
+
+(* unat (cur_time s) + unat kernelWCET_ticks + 2 * unat MAX_SC_PERIOD \<le> unat (max_word :: time)) *)
 
 \<comment> \<open>A predicate over all the components of state that determine scheduler validity.
     Many operations will preserve all of these.\<close>
@@ -1852,6 +1915,34 @@ abbreviation valid_ready_qs :: "'z state \<Rightarrow> bool" where
 
 lemmas valid_ready_qs_def = valid_ready_qs_2_def valid_ready_queued_thread_2_def
 
+
+
+\<comment> \<open>active_sc_valid_refills\<close>
+
+abbreviation
+  cfg_active :: "sc_refill_cfg \<Rightarrow> bool"
+where
+  "cfg_active cfg \<equiv> active_sc (scrc_refill_max cfg)"
+
+definition active_sc_valid_refills_2 ::
+  "(obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool" where
+  "active_sc_valid_refills_2 sc_refill_cfgs \<equiv>
+   \<forall>scp. pred_map cfg_active sc_refill_cfgs scp \<longrightarrow> pred_map cfg_valid_refills sc_refill_cfgs scp"
+
+abbreviation active_sc_valid_refills :: "'z state \<Rightarrow> bool" where
+  "active_sc_valid_refills s \<equiv> active_sc_valid_refills_2 (sc_refill_cfgs_of s)"
+
+lemmas active_sc_valid_refills_def = active_sc_valid_refills_2_def
+
+lemma active_sc_valid_refills_lift_pre_conj:
+  assumes a: "\<And>t. \<lbrace>\<lambda>s. \<not> pred_map cfg_active (sc_refill_cfgs_of s) t \<and> R s\<rbrace>
+                  f
+                  \<lbrace>\<lambda>rv s. \<not> pred_map cfg_active (sc_refill_cfgs_of s) t\<rbrace>"
+  assumes b: "\<And>t. \<lbrace>\<lambda>s. valid_refills t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. valid_refills t s\<rbrace>"
+    shows "\<lbrace>\<lambda>s. active_sc_valid_refills s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. active_sc_valid_refills\<rbrace>"
+  apply (simp add: active_sc_valid_refills_def)
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' a b)
+
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation valid_sched_valid_ready_qs where
   "valid_sched_valid_ready_qs ctime cdom ct it rq rlq sa lmt etcbs tcb_sts
@@ -2301,7 +2392,8 @@ definition valid_sched_2 where
     \<and> (vbl \<longrightarrow> valid_blocked_2 queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs)
     \<and> valid_idle_etcb_2 etcbs
     \<and> released_ipc_queues_2 ctime tcb_sts tcb_scps sc_refill_cfgs
-    \<and> valid_machine_time_2 ctime lmt"
+    \<and> valid_machine_time_2 ctime lmt
+    \<and> active_sc_valid_refills_2 sc_refill_cfgs"
 
 abbreviation valid_sched :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_sched \<equiv> valid_sched_pred (valid_sched_2 True True)"
@@ -2442,7 +2534,7 @@ lemma valid_blocked_except_set_not_runnable:
   by (erule allEI; rename_tac t'; case_tac "t' = t"; clarsimp simp: pred_map_simps)
 
 lemma valid_sched_valid_blocked:
-  "valid_sched s \<Longrightarrow> valid_blocked_except_set TS s" by (clarsimp simp: valid_sched_def)
+  "valid_sched s \<Longrightarrow> valid_blocked_except_set S s" by (clarsimp simp: valid_sched_def)
 
 lemma valid_sched_valid_ready_qs:
   "valid_sched s \<Longrightarrow> valid_ready_qs s" by (clarsimp simp: valid_sched_def)
@@ -2462,6 +2554,9 @@ lemma valid_sched_ct_in_cur_domain:
 lemma valid_sched_released_ipc_queues:
   "valid_sched s \<Longrightarrow> released_ipc_queues s"
   by (clarsimp simp: valid_sched_def)
+
+lemma valid_sched_active_sc_valid_refills:
+  "valid_sched s \<Longrightarrow> active_sc_valid_refills s" by (simp add: valid_sched_def)
 
 lemma valid_sched_imp_except_blocked:
   "valid_sched s \<Longrightarrow> valid_sched_except_blocked s"
@@ -2792,6 +2887,9 @@ lemmas valid_idle_etcb_lift[wp] = valid_idle_etcb_lift_pre_conj[where R = \<top>
 lemma valid_sched_lift_pre_conj:
   assumes "\<And>N P t. \<lbrace>\<lambda>s. N (st_tcb_at P t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (st_tcb_at P t s)\<rbrace>"
   assumes "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
+  assumes "\<And>t. \<lbrace>\<lambda>s. \<not> pred_map cfg_active (sc_refill_cfgs_of s) t \<and> R s\<rbrace>
+               f \<lbrace>\<lambda>rv s. \<not> pred_map cfg_active (sc_refill_cfgs_of s) t\<rbrace>"
+  assumes "\<And>P t. \<lbrace>\<lambda>s. (valid_refills t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. (valid_refills t s)\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. budget_ready t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_ready t s\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. budget_sufficient t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_sufficient t s\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
@@ -2809,7 +2907,7 @@ lemma valid_sched_lift_pre_conj:
                wp: valid_ready_qs_lift_pre_conj ct_not_in_q_lift_pre_conj
                    ct_in_cur_domain_lift_pre_conj valid_release_q_lift_pre_conj
                    valid_sched_action_lift_pre_conj valid_blocked_lift_pre_conj assms
-                   released_ipc_queues_lift_pre_conj)
+                   released_ipc_queues_lift_pre_conj active_sc_valid_refills_lift_pre_conj)
 
 lemmas valid_sched_lift = valid_sched_lift_pre_conj[where R = \<top>, simplified]
 
