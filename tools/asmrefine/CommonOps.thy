@@ -12,7 +12,7 @@ theory CommonOps
 
 imports "CLib.CTranslationNICTA"
   "GlobalsSwap"
-
+  "$L4V_ARCH/ArchSetup"
 begin
 
 text \<open>Additional constants needed to make conversion to and from the graph lang easy\<close>
