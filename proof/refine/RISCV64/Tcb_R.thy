@@ -2603,7 +2603,7 @@ lemma decode_tcb_inv_corres:
    apply (drule obj_at_aligned', simp_all add: objBits_simps')
   apply (clarsimp simp: decode_tcb_invocation_def
                         decodeTCBInvocation_def
-             split del: if_split split: invocation_label.split)
+             split del: if_split split: gen_invocation_labels.split)
   apply (simp add: returnOk_def)
   apply (intro conjI impI
              corres_guard_imp[OF decode_readreg_corres]
@@ -2675,7 +2675,7 @@ lemma decodeTCBInv_wf:
      decodeTCBInvocation label args (capability.ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
   apply (simp add: decodeTCBInvocation_def Let_def
-              cong: if_cong invocation_label.case_cong split del: if_split)
+              cong: if_cong gen_invocation_labels.case_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wpc, (wp decodeTCBConf_wf decodeReadReg_wf decodeWriteReg_wf decodeSetTLSBase_wf
              decodeCopyReg_wf decodeBindNotification_wf decodeUnbindNotification_wf)+)

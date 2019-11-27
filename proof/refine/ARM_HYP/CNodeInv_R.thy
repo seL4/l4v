@@ -149,7 +149,7 @@ lemma cnode_invok_case_cleanup:
         \<Longrightarrow> (case i of CNodeRevoke \<Rightarrow> P | CNodeDelete \<Rightarrow> Q | CNodeCancelBadgedSends \<Rightarrow> R
                  | CNodeRotate \<Rightarrow> S | CNodeSaveCaller \<Rightarrow> T
                  | _ \<Rightarrow> U) = U"
-  by (simp split: invocation_label.split)
+  by (simp split: gen_invocation_labels.split)
 
 lemma cancelSendRightsEq:
   "cap_relation cap cap' \<Longrightarrow> hasCancelSendRights cap' = has_cancel_send_rights cap"
@@ -189,12 +189,12 @@ lemma dec_cnode_inv_corres:
                         apply auto[1]
                        apply (rule_tac r'="\<lambda>a b. fst b = rights_mask_map (fst a)
                                                \<and> snd b = fst (snd a)
-                                               \<and> snd (snd a) = (invocation_type (mi_label mi)
+                                               \<and> snd (snd a) = (gen_invocation_type (mi_label mi)
                                                      \<in> {CNodeMove, CNodeMutate})"
                                   in corres_splitEE)
                            prefer 2
                            apply (rule corres_trivial)
-                           subgoal by (auto split: list.split invocation_label.split,
+                           subgoal by (auto split: list.split gen_invocation_labels.split,
                                        auto simp: returnOk_def all_rights_def
                                                   rightsFromWord_correspondence)
                           apply (rule_tac r'=cap_relation in corres_splitEE)

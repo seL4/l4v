@@ -153,8 +153,7 @@ lemma dec_untyped_inv_corres:
         (decode_untyped_invocation label args slot (cap.UntypedCap d w n idx) cs)
         (decodeUntypedInvocation label args (cte_map slot)
           (UntypedCap d w n idx) cs')"
-proof (cases "6 \<le> length args \<and> cs \<noteq> []
-                \<and> invocation_type label = UntypedRetype")
+proof (cases "6 \<le> length args \<and> cs \<noteq> [] \<and> gen_invocation_type label = UntypedRetype")
   case False
   show ?thesis using False cap_rel
     apply (clarsimp simp: decode_untyped_invocation_def
@@ -179,7 +178,7 @@ next
     using True cap_rel
     by (clarsimp simp: neq_Nil_conv list_all2_Cons1 val_le_length_Cons)
 
-  have il: "invocation_type label = UntypedRetype"
+  have il: "gen_invocation_type label = UntypedRetype"
     using True by simp
 
   have word_unat_power2:
@@ -429,8 +428,6 @@ next
                         cte_wp_at_caps_of_state cte_wp_at_ctes_of )
   done
 qed
-
-crunch inv[wp]: ensureEmptySlot "P"
 
 lemma decodeUntyped_inv[wp]:
   "\<lbrace>P\<rbrace> decodeUntypedInvocation label args slot
