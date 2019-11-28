@@ -4607,7 +4607,7 @@ lemma decodeTCBInvocation_ccorres:
             >>= invocationCatch thread isBlocking isCall InvokeTCB)
      (Call decodeTCBInvocation_'proc)"
   apply (cinit' lift: invLabel_' cap_' length___unsigned_long_' slot_' excaps_' call_' buffer_')
-   apply (simp add: decodeTCBInvocation_def invocation_eq_use_types
+   apply (simp add: decodeTCBInvocation_def invocation_eq_use_types gen_invocation_type_eq
                del: Collect_const)
    apply (rule ccorres_Cond_rhs)
     apply simp
@@ -4706,14 +4706,14 @@ lemma decodeTCBInvocation_ccorres:
      apply (rule ccorres_return_C_errorE, simp+)[1]
     apply wp
    apply (rule ccorres_Cond_rhs)
-    apply simp
+    apply (simp add: gen_invocation_type_eq)
     apply (rule ccorres_add_returnOk, ctac(no_vcg) add: decodeSetTLSBase_ccorres)
       apply (rule ccorres_return_CE, simp+)[1]
      apply (rule ccorres_return_C_errorE, simp+)[1]
     apply wp
    apply (rule ccorres_equals_throwError)
     apply (fastforce simp: throwError_bind invocationCatch_def
-                   split: invocation_label.split)
+                   split: invocation_label.split gen_invocation_labels.split)
    apply (simp add: ccorres_cond_iffs
               cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule syscall_error_throwError_ccorres_n)

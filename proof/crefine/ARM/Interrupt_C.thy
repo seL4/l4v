@@ -133,7 +133,7 @@ lemma ntfn_case_can_send:
   by (cases cap, simp_all add: isCap_simps)
 
 lemma decodeIRQHandlerInvocation_ccorres:
-  notes if_cong[cong]
+  notes if_cong[cong] gen_invocation_type_eq[simp]
   shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -245,7 +245,8 @@ lemma decodeIRQHandlerInvocation_ccorres:
       apply (rule ccorres_return_CE, simp+)[1]
      apply (wp sts_invs_minor')+
     apply (rule ccorres_equals_throwError)
-     apply (fastforce simp: invocationCatch_def throwError_bind split: invocation_label.split)
+     apply (fastforce simp: invocationCatch_def throwError_bind
+                      split: gen_invocation_labels.split)
     apply (simp add: ccorres_cond_iffs cong: StateSpace.state.fold_congs globals.fold_congs)
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
@@ -406,9 +407,9 @@ lemma maxIRQ_ucast_scast [simp]:
   "ucast (scast Kernel_C.maxIRQ :: 10 word) = scast Kernel_C.maxIRQ"
   by (clarsimp simp: Kernel_C.maxIRQ_def)
 
-lemma decodeIRQ_arch_helper: "x \<noteq> invocation_label.IRQIssueIRQHandler \<Longrightarrow>
-         (case x of invocation_label.IRQIssueIRQHandler \<Rightarrow> f | _ \<Rightarrow> g) = g"
-  by (clarsimp split: invocation_label.splits)
+lemma decodeIRQ_arch_helper: "x \<noteq> IRQIssueIRQHandler \<Longrightarrow>
+         (case x of IRQIssueIRQHandler \<Rightarrow> f | _ \<Rightarrow> g) = g"
+  by (clarsimp split: gen_invocation_labels.splits)
 
 lemma decodeIRQ_arch_helper': "x \<noteq> ArchInvocationLabel ARMIRQIssueIRQHandler \<Longrightarrow>
          (case x of ArchInvocationLabel ARMIRQIssueIRQHandler \<Rightarrow> f | _ \<Rightarrow> g) = g"
@@ -634,6 +635,7 @@ lemma decodeIRQControlInvocation_ccorres:
      (decodeIRQControlInvocation label args slot (map fst extraCaps)
             >>= invocationCatch thread isBlocking isCall InvokeIRQControl)
      (Call decodeIRQControlInvocation_'proc)"
+  supply gen_invocation_type_eq[simp]
   apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' excaps_' buffer_')
    apply (simp add: decodeIRQControlInvocation_def invocation_eq_use_types
                del: Collect_const
