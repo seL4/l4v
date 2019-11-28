@@ -50,6 +50,7 @@ in handleVMFault?
 #endif
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > makeArchFaultMessage (VCPUFault hsr) thread = return (7, [hsr])
+> makeArchFaultMessage (VPPIEvent irq) thread = return (8, [fromIntegral $ fromEnum $ irq])
 > makeArchFaultMessage (VGICMaintenance archData) thread = do
 >     let msg = (case archData of
 >                    Nothing -> [-1]
@@ -61,6 +62,7 @@ in handleVMFault?
 > handleArchFaultReply (VMFault {}) _ _ _ = return True
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > handleArchFaultReply (VCPUFault {}) _ _ _ = return True
+> handleArchFaultReply (VPPIEvent {}) _ _ _ = return True
 > handleArchFaultReply (VGICMaintenance {}) _ _ _ = return True
 #endif
 

@@ -16,15 +16,14 @@ theory ArchHypervisor_H
 imports
   "../CNode_H"
   "../FaultHandlerDecls_H"
-(*  "../KI_Decls_H"
-  ArchVSpaceDecls_H *)
+  "../InterruptDecls_H"
 begin
 context Arch begin global_naming ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/Object/VCPU/ARM.lhs CONTEXT ARM_HYP_H decls_only ONLY countTrailingZeros
-#INCLUDE_HASKELL SEL4/Object/VCPU/ARM.lhs CONTEXT ARM_HYP_H bodies_only ONLY countTrailingZeros
+#INCLUDE_HASKELL SEL4/Object/VCPU/ARM.lhs CONTEXT ARM_HYP_H decls_only ONLY countTrailingZeros irqVPPIEventIndex
+#INCLUDE_HASKELL SEL4/Object/VCPU/ARM.lhs CONTEXT ARM_HYP_H bodies_only ONLY countTrailingZeros irqVPPIEventIndex
 
-#INCLUDE_HASKELL SEL4/Object/VCPU/ARM.lhs CONTEXT ARM_HYP_H ArchInv=Arch ONLY vcpuUpdate vgicUpdate vgicUpdateLR vcpuSaveReg vcpuRestoreReg vcpuSaveRegRange vcpuRestoreRegRange vcpuDisable vcpuEnable vcpuRestore vcpuSave vcpuSwitch vcpuInvalidateActive vcpuCleanInvalidateActive virqSetEOIIRQEN vgicMaintenance
+#INCLUDE_HASKELL SEL4/Object/VCPU/ARM.lhs CONTEXT ARM_HYP_H ArchInv=Arch ONLY vcpuUpdate vgicUpdate vgicUpdateLR vcpuSaveReg vcpuRestoreReg vcpuSaveRegRange vcpuRestoreRegRange vcpuWriteReg vcpuReadReg saveVirtTimer restoreVirtTimer vcpuDisable vcpuEnable vcpuRestore armvVCPUSave vcpuSave vcpuSwitch vcpuInvalidateActive vcpuCleanInvalidateActive virqSetEOIIRQEN vgicMaintenance vppiEvent
 
 #INCLUDE_HASKELL SEL4/Kernel/Hypervisor/ARM.lhs Arch= CONTEXT ARM_HYP_H decls_only
 #INCLUDE_HASKELL SEL4/Kernel/Hypervisor/ARM.lhs Arch= CONTEXT ARM_HYP_H bodies_only

@@ -298,6 +298,33 @@ assumes get_gic_vcpu_ctrl_lr_ccorres:
   "ccorres (\<lambda>v virq. virq = virq_C (FCP (\<lambda>_. v))) ret__struct_virq_C_' \<top> (\<lbrace>\<acute>num = scast n \<rbrace>) hs
            (doMachineOp (get_gic_vcpu_ctrl_lr n)) (Call get_gic_vcpu_ctrl_lr_'proc)"
 
+(* ARM Virtual Timer *)
+
+assumes set_cntv_cval_64_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val___unsigned_longlong = val\<rbrace>) []
+           (doMachineOp (set_cntv_cval_64 val))
+           (Call set_cntv_cval_64_'proc)"
+
+assumes set_cntv_off_64_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val___unsigned_longlong = val\<rbrace>) []
+           (doMachineOp (set_cntv_off_64 val))
+           (Call set_cntv_off_64_'proc)"
+
+assumes read_cntpct_ccorres:
+  "ccorres (=) ret__unsigned_longlong_' \<top> UNIV []
+           (doMachineOp read_cntpct)
+           (Call read_cntpct_'proc)"
+
+assumes get_cntv_cval_64_ccorres:
+  "ccorres (=) ret__unsigned_longlong_' \<top> UNIV []
+           (doMachineOp get_cntv_cval_64)
+           (Call get_cntv_cval_64_'proc)"
+
+assumes get_cntv_off_64_ccorres:
+  "ccorres (=) ret__unsigned_longlong_' \<top> UNIV []
+           (doMachineOp get_cntv_off_64)
+           (Call get_cntv_off_64_'proc)"
+
 (* The following are fastpath specific assumptions.
    We might want to move them somewhere else. *)
 

@@ -26,11 +26,6 @@ requalify_consts
 end
 
 
-text \<open>Tests whether an IRQ identifier is in use.\<close>
-definition
-  is_irq_active :: "irq \<Rightarrow> (bool,'z::state_ext) s_monad" where
- "is_irq_active irq \<equiv> liftM (\<lambda>st. st \<noteq> IRQInactive) $ get_irq_state irq"
-
 text \<open>The IRQControl capability can be used to create a new IRQHandler
 capability as well as to perform whatever architecture specific interrupt
 actions are available.\<close>

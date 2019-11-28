@@ -136,10 +136,12 @@ definition
    | KOPDE _ \<Rightarrow>
        if is_aligned a pd_bits then Some (PageDirectory (absPageDirectory h a))
        else None
-   | KOVCPU (VCPUObj tcb vgic regs) \<Rightarrow>
+   | KOVCPU (VCPUObj tcb vgic regs vppimask vtimer) \<Rightarrow>
        Some (VCPU \<lparr> vcpu_tcb    = tcb,
                     vcpu_vgic   = absVGIC vgic,
-                    vcpu_regs   = regs \<rparr>))"
+                    vcpu_regs   = regs,
+                    vcpu_vppi_masked = vppimask,
+                    vcpu_vtimer = vtimer \<rparr>))"
 
 definition
   "EndpointMap ep \<equiv> case ep of
@@ -263,6 +265,7 @@ where
   "ArchFaultMap (ArchFault_H.ARM_HYP_H.arch_fault.VMFault p m) = Machine_A.ARM_A.arch_fault.VMFault p m"
 | "ArchFaultMap (ArchFault_H.ARM_HYP_H.arch_fault.VCPUFault w) = Machine_A.ARM_A.arch_fault.VCPUFault w"
 | "ArchFaultMap (ArchFault_H.ARM_HYP_H.arch_fault.VGICMaintenance m) = Machine_A.ARM_A.arch_fault.VGICMaintenance m"
+| "ArchFaultMap (ArchFault_H.ARM_HYP_H.arch_fault.VPPIEvent irq) = Machine_A.ARM_A.arch_fault.VPPIEvent irq"
 
 
 primrec

@@ -19,8 +19,8 @@ context Arch begin global_naming ARM_HYP_H
 #INCLUDE_SETTINGS keep_constructor=asidpool
 #INCLUDE_SETTINGS keep_constructor=arch_tcb
 
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP_H decls_only
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP_H instanceproofs
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP_H decls_only NOT VPPIEventIRQ VirtTimer
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP_H instanceproofs NOT VPPIEventIRQ VirtTimer
 #INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP_H bodies_only NOT makeVCPUObject
 
 (* we define makeVCPUObject_def manually because we want a total function vgicLR *)
@@ -36,6 +36,8 @@ defs makeVCPUObject_def:
                         \<rparr>
         , vcpuRegs= funArray (const 0)  aLU  [(VCPURegSCTLR, sctlrDefault)
                                              ,(VCPURegACTLR, actlrDefault)]
+        , vcpuVPPIMasked= (\<lambda>_. False)
+        , vcpuVTimer= VirtTimer 0
         \<rparr>"
 
 datatype arch_kernel_object_type =

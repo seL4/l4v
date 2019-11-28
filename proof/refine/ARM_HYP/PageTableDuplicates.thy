@@ -2087,6 +2087,10 @@ lemma vgicMaintenance_valid_duplicates'[wp]:
   "vgicMaintenance \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   unfolding vgicMaintenance_def Let_def by (wpsimp wp: hoare_drop_imps)
 
+lemma vppiEvent_valid_duplicates'[wp]:
+  "vppiEvent irq \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  unfolding vppiEvent_def Let_def by (wpsimp wp: hoare_drop_imps)
+
 lemma handleInterrupt_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
   handleInterrupt irq \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"

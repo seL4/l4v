@@ -1461,6 +1461,8 @@ ASID pool capabilities are used to allocate unique address space identifiers for
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >         let start' = start + fromPPtr vaddr'
 >         let end' = end + fromPPtr vaddr'
+>         when (pstart < physBase || ((end' - start') + fromPAddr pstart > fromPAddr paddrTop)) $
+>             throw IllegalOperation
 #else
 >         let start' = start + fromVPtr vaddr
 >         let end' = end + fromVPtr vaddr

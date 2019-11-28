@@ -23,11 +23,11 @@ We use the C preprocessor to select a target architecture.
 >     performIRQControl, invokeIRQHandler,
 >     deletingIRQHandler, deletedIRQHandler,
 >     initInterruptController, handleInterrupt,
->     setIRQState, isIRQActive
+>     setIRQState, getIRQState, isIRQActive
 >   ) where
 
 > {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures #-}
-> {-# BOOT-EXPORTS: setIRQState isIRQActive #-}
+> {-# BOOT-EXPORTS: setIRQState isIRQActive getIRQState #-}
 
 > import Prelude hiding (Word)
 

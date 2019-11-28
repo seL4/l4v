@@ -342,6 +342,8 @@ where
           = Some (ArchFault (VGICMaintenance (if seL4_Fault_VGICMaintenance_CL.idxValid_CL vf = 1
                                               then Some (seL4_Fault_VGICMaintenance_CL.idx_CL vf)
                                               else None)))"
+  | "fault_to_H (SeL4_Fault_VPPIEvent irq) lf
+          = Some (ArchFault (VPPIEvent (ucast (seL4_Fault_VPPIEvent_CL.irq_w_CL irq))))"
 
 definition
   cfault_rel :: "Fault_H.fault option \<Rightarrow> seL4_Fault_CL option \<Rightarrow> lookup_fault_CL option \<Rightarrow> bool"
@@ -499,6 +501,11 @@ where
   "cvcpu_regs_relation vcpu cvcpu \<equiv>
     \<forall>r. regs_C cvcpu.[fromEnum r] = vcpuRegs vcpu r"
 
+definition cvcpu_vppi_masked_relation :: "vcpu \<Rightarrow> vcpu_C \<Rightarrow> bool" where
+  "cvcpu_vppi_masked_relation vcpu cvcpu \<equiv>
+     \<forall>vppi. (vppi_masked_C cvcpu).[fromEnum vppi]
+            = from_bool (vcpuVPPIMasked vcpu vppi)"
+
 definition
   virq_to_H :: "virq_C \<Rightarrow> virq"
 where
@@ -521,7 +528,9 @@ where
   "cvcpu_relation vcpu cvcpu \<equiv>
      vcpuTCB_C cvcpu = option_to_ctcb_ptr (vcpuTCBPtr vcpu)
      \<and> cvcpu_regs_relation vcpu cvcpu
-     \<and> cvgic_relation (vcpuVGIC vcpu) (vgic_C cvcpu)"
+     \<and> cvgic_relation (vcpuVGIC vcpu) (vgic_C cvcpu)
+     \<and> cvcpu_vppi_masked_relation vcpu cvcpu
+     \<and> last_pcount_C (virtTimer_C cvcpu) = vtimerLastPCount (vcpuVTimer vcpu)"
 
 definition
   cuser_user_data_relation :: "(10 word \<Rightarrow> word32) \<Rightarrow> user_data_C \<Rightarrow> bool"
@@ -791,6 +800,7 @@ fun
   "arch_fault_to_fault_tag (VMFault a b) = scast seL4_Fault_VMFault"
 | "arch_fault_to_fault_tag (VCPUFault a) = scast seL4_Fault_VCPUFault"
 | "arch_fault_to_fault_tag (VGICMaintenance a) = scast seL4_Fault_VGICMaintenance"
+| "arch_fault_to_fault_tag (VPPIEvent a) = scast seL4_Fault_VPPIEvent"
 end
 
 fun
@@ -808,6 +818,7 @@ lemmas seL4_Faults = seL4_Fault_UserException_def
 lemmas seL4_Arch_Faults = seL4_Fault_VMFault_def
                           seL4_Fault_VCPUFault_def
                           seL4_Fault_VGICMaintenance_def
+                          seL4_Fault_VPPIEvent_def
 
 (* Return relations *)
 

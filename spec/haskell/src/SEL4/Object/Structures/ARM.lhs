@@ -27,7 +27,7 @@ This module makes use of the GHC extension allowing declaration of types with no
 > import SEL4.Machine.Hardware.ARM
 > import Data.Array
 > import Data.Helpers
-> import Data.Word(Word32,Word16)
+> import Data.Word(Word64,Word32,Word16)
 > import Data.Bits
 > import {-# SOURCE #-} SEL4.Object.Structures
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
@@ -186,10 +186,18 @@ ASIDs are mapped to address space roots by a global two-level table. The actual 
 >                        }
 >     deriving Show
 
+> data VirtTimer = VirtTimer { vtimerLastPCount :: Word64 }
+>     deriving Show
+
+> data VPPIEventIRQ = VPPIEventIRQ_VTimer
+>     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
+
 > data VCPU = VCPUObj {
 >                 vcpuTCBPtr :: Maybe (PPtr TCB)
 >                 ,vcpuVGIC :: GICVCPUInterface
 >                 ,vcpuRegs :: Array VCPUReg Word
+>                 ,vcpuVPPIMasked :: Array VPPIEventIRQ Bool
+>                 ,vcpuVTimer :: VirtTimer
 >                 }
 >     deriving Show
 
@@ -210,6 +218,8 @@ makeObject specialised to VCPUs.
 >                         }
 >         , vcpuRegs = funArray (const 0) // [(VCPURegSCTLR, sctlrDefault)
 >                                            ,(VCPURegACTLR, actlrDefault)]
+>         , vcpuVPPIMasked = funArray (const False)
+>         , vcpuVTimer = VirtTimer 0
 >         }
 
 #endif

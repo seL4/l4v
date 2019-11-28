@@ -280,7 +280,7 @@ crunch (empty_fail) empty_fail: decodeVCPUInjectIRQ, decodeVCPUWriteReg, decodeV
   (simp: Let_def)
 
 crunch (empty_fail) empty_fail: callKernel
-  (wp: empty_fail_catch)
+  (wp: empty_fail_catch simp: Let_def)
 
 theorem call_kernel_serial:
   "\<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and

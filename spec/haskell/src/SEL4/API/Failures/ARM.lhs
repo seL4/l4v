@@ -32,6 +32,8 @@ This module defines the encoding of arch-specific faults.
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >     | VCPUFault {
 >             vcpuHSR :: Word }
+>     | VPPIEvent {
+>             vppiIRQ :: IRQ }
 >     | VGICMaintenance { vgicMaintenanceData :: Maybe Word }
 #endif
 >     deriving Show

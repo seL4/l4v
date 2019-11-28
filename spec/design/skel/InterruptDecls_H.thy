@@ -11,8 +11,6 @@
 theory InterruptDecls_H
 imports
   RetypeDecls_H
-  Notification_H
-  CNode_H
   KI_Decls_H
 begin
 

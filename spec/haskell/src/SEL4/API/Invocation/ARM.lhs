@@ -132,6 +132,7 @@ FIXME ARMHYP move HyperReg definition (to Hardware?)
 >     | VCPUInjectIRQ (PPtr VCPU) Int VIRQ
 >     | VCPUReadRegister (PPtr VCPU) HyperReg
 >     | VCPUWriteRegister (PPtr VCPU) HyperReg HyperRegVal
+>     | VCPUAckVPPI (PPtr VCPU) VPPIEventIRQ
 >     deriving (Show, Eq)
 
 #endif

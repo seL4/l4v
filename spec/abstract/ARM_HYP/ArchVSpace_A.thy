@@ -377,6 +377,49 @@ where
   "vcpu_write_reg vr reg val \<equiv>
     vcpu_update vr (\<lambda>vcpu. vcpu \<lparr> vcpu_regs := (vcpu_regs vcpu)(reg := val) \<rparr> )"
 
+definition save_virt_timer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "save_virt_timer vcpu_ptr \<equiv> do
+     vcpu_save_reg vcpu_ptr VCPURegCNTV_CTL;
+     do_machine_op $ writeVCPUHardwareReg VCPURegCNTV_CTL 0;
+     cval \<leftarrow> do_machine_op get_cntv_cval_64;
+     cntvoff \<leftarrow> do_machine_op get_cntv_off_64;
+     vcpu_write_reg vcpu_ptr VCPURegCNTV_CVALhigh (ucast (cval >> 32));
+     vcpu_write_reg vcpu_ptr VCPURegCNTV_CVALlow (ucast cval);
+     vcpu_write_reg vcpu_ptr VCPURegCNTVOFFhigh (ucast (cntvoff >> 32));
+     vcpu_write_reg vcpu_ptr VCPURegCNTVOFFlow (ucast cntvoff);
+     cntpct \<leftarrow> do_machine_op read_cntpct;
+     vcpu_update vcpu_ptr (\<lambda>vcpu. vcpu\<lparr>vcpu_vtimer := VirtTimer cntpct \<rparr>)
+   od"
+
+definition irq_vppi_event_index :: "irq \<rightharpoonup> vppievent_irq" where
+  "irq_vppi_event_index irq \<equiv>
+     if irq = irqVTimerEvent
+     then Some VPPIEventIRQ_VTimer
+     else None"
+
+definition restore_virt_timer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "restore_virt_timer vcpu_ptr \<equiv> do
+     cval_high \<leftarrow> vcpu_read_reg vcpu_ptr VCPURegCNTV_CVALhigh;
+     cval_low \<leftarrow> vcpu_read_reg vcpu_ptr VCPURegCNTV_CVALlow;
+     (cval :: 64 word) \<leftarrow> return $ ((ucast cval_high) << 32) || ucast cval_low;
+     do_machine_op $ set_cntv_cval_64 cval;
+     current_cntpct \<leftarrow> do_machine_op read_cntpct;
+     vcpu \<leftarrow> get_vcpu vcpu_ptr;
+     last_pcount \<leftarrow> return $ vtimerLastPCount $ vcpu_vtimer vcpu;
+     delta \<leftarrow> return $ current_cntpct - last_pcount;
+     offs_high \<leftarrow> vcpu_read_reg vcpu_ptr VCPURegCNTVOFFhigh;
+     offs_low \<leftarrow> vcpu_read_reg vcpu_ptr VCPURegCNTVOFFlow;
+     (offset :: 64 word) \<leftarrow> return $ (((ucast offs_high) << 32) || ucast offs_low) + delta;
+     vcpu_write_reg vcpu_ptr VCPURegCNTVOFFhigh (ucast (offset >> 32));
+     vcpu_write_reg vcpu_ptr VCPURegCNTVOFFlow (ucast offset);
+     do_machine_op $ set_cntv_off_64 offset;
+     masked \<leftarrow> return $ (vcpu_vppi_masked vcpu (the $ irq_vppi_event_index irqVTimerEvent));
+     \<comment> \<open>we do not know here that irqVTimerEvent is IRQReserved, therefore not IRQInactive,
+        so the only way to prove we don't unmask an inactive interrupt is to check\<close>
+     safe_to_unmask \<leftarrow> is_irq_active irqVTimerEvent;
+     when safe_to_unmask $ do_machine_op $ maskInterrupt masked irqVTimerEvent;
+     vcpu_restore_reg vcpu_ptr VCPURegCNTV_CTL
+   od"
 
 text \<open>Turn VPCU mode off on the hardware level.\<close>
 definition
@@ -400,7 +443,13 @@ where
         setSCTLR sctlrDefault; \<comment> \<open>turn SI MMU off\<close>
         setHCR hcrNative;
         isb
-      od
+      od;
+    case vo of
+      Some vr \<Rightarrow> do
+          save_virt_timer vr;
+          do_machine_op $ maskInterrupt True irqVTimerEvent
+        od
+      | _ \<Rightarrow> return ()
     od"
 
 text \<open>Turn VCPU mode on, on the hardware level.\<close>
@@ -415,7 +464,8 @@ where
         setHCR hcrVCPU;
         isb;
         set_gic_vcpu_ctrl_hcr (vgic_hcr $ vcpu_vgic vcpu)
-     od
+     od;
+     restore_virt_timer vr
    od"
 
 text \<open>
@@ -480,7 +530,8 @@ where
           when active $ do
             vcpu_save_reg vr VCPURegSCTLR;
             hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
-            vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>)
+            vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>);
+            save_virt_timer vr
           od;
 
           vmcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_vmcr;

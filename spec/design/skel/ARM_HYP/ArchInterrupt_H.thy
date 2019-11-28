@@ -9,7 +9,12 @@
  *)
 
 theory ArchInterrupt_H
-imports "../RetypeDecls_H" "../CNode_H" "../InterruptDecls_H" ArchInterruptDecls_H
+imports
+  "../RetypeDecls_H"
+  "../CNode_H"
+  "../InterruptDecls_H"
+  ArchInterruptDecls_H
+  ArchHypervisor_H
 begin
 context Arch begin global_naming ARM_HYP_H
 

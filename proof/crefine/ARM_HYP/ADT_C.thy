@@ -1157,19 +1157,26 @@ lemma cpspace_vcpu_relation_unique:
   assumes "\<forall>x \<in> ran (map_to_vcpus ah'). is_aligned_opt (vcpuTCBPtr x) tcbBlockSizeBits"
   shows   "map_to_vcpus ah' = map_to_vcpus ah"
   apply (rule cmap_relation_unique' [OF inj_Ptr _ assms])
-  apply (simp add: cvcpu_relation_def Let_def cvgic_relation_def split: vcpu.splits)
+  apply (simp add: cvcpu_relation_def Let_def cvgic_relation_def cvcpu_vppi_masked_relation_def
+              split: vcpu.splits)
   apply (case_tac x, case_tac y)
+  apply (rename_tac t vgic regs vppimask vtimer
+                     t' vgic' regs' vppimask' vtimer')
   apply (clarsimp simp: cvcpu_regs_relation_def vcpuSCTLR_def option_to_ctcb_ptr_inj)
-  apply (rename_tac vgic regs p vgic' regs')
   apply (rule conjI)
    apply (case_tac vgic, case_tac vgic')
    apply clarsimp
    apply (rule ext)
    apply (rename_tac r)
    apply (case_tac "64 \<le> r"; simp)
-  apply (rule ext)
-  apply (rename_tac r)
-  by (case_tac r; simp)
+  apply (rule conjI)
+   apply (rule ext, blast)
+  apply (rule conjI)
+   apply (rule ext, rename_tac vppi)
+   apply (rule from_bool_eqI, blast)
+  apply (case_tac vtimer, case_tac vtimer')
+  apply clarsimp
+  done
 
 (* FIXME: move *)
 lemma Collect_mono2: "Collect P \<subseteq> Collect Q \<longleftrightarrow> (\<forall>x. P x \<longrightarrow> Q x)" by auto

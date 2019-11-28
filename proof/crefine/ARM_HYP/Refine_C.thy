@@ -540,7 +540,6 @@ lemma no_fail_callKernel:
   apply metis
   done
 
-
 lemma handleVCPUFault_ccorres:
   "ccorres dc xfdc
      (invs' and ct_running' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
@@ -550,14 +549,19 @@ lemma handleVCPUFault_ccorres:
    apply (simp add: callKernel_def handleEvent_def handleHypervisorFault_def)
    apply (simp add: liftE_def bind_assoc)
    apply (rule ccorres_pre_getCurThread, rename_tac curThread)
+   (* armv_handleVCPUFault returns false on this platform, doing nothing else *)
+   apply (rule ccorres_symb_exec_r)
+   apply (rule ccorres_cond_false_seq, simp)
    apply (rule ccorres_symb_exec_r)
      apply (ctac (no_vcg) add: handleFault_ccorres)
       apply (ctac (no_vcg) add: schedule_ccorres)
        apply (ctac (no_vcg) add: activateThread_ccorres[simplified dc_def])
       apply (wp schedule_sch_act_wf schedule_invs'|strengthen invs_queues invs_valid_objs')+
+      apply vcg
+     apply (clarsimp, rule conseqPre, vcg)
+     apply clarsimp
     apply vcg
-   apply clarsimp
-   apply (rule conseqPre, vcg)
+   apply (clarsimp, rule conseqPre, vcg)
    apply clarsimp
   apply (clarsimp simp: ct_not_ksQ ct_running_imp_simple')
   apply (rule conjI, rule active_ex_cap', erule active_from_running', fastforce)

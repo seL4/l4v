@@ -1564,7 +1564,7 @@ lemma make_arch_fault_msg_corres:
   "corres (=) (tcb_at t) (tcb_at' t)
   (make_arch_fault_msg f t)
   (makeArchFaultMessage (arch_fault_map f) t)"
-  apply (cases f; clarsimp simp: makeArchFaultMessage_def split: arch_fault.split)
+  apply (cases f; clarsimp simp: makeArchFaultMessage_def ucast_nat_def split: arch_fault.split)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr[OF _ getRestartPCs_corres])
       apply (rule corres_split_eqr[OF _ corres_machine_op])

@@ -178,7 +178,8 @@ case cap of
     else if isPageFlushLabel (invocation_type label) then
         if length args > 1
         then let start = args ! 0;
-                 end = args ! 1
+                 end = args ! 1;
+                 pstart = start + addrFromPPtr p
         in doE
             (asid, _) \<leftarrow> (case mapped_address of
                 Some a \<Rightarrow> returnOk a
@@ -187,9 +188,10 @@ case cap of
             whenE (end \<le> start) $ throwError $ InvalidArgument 1;
             page_size \<leftarrow> returnOk $ 1 << pageBitsForSize pgsz;
             whenE (start \<ge> page_size \<or> end > page_size) $ throwError $ InvalidArgument 0;
+            whenE (pstart < physBase \<or> ((end - start) + pstart) > paddrTop) $ throwError IllegalOperation;
             returnOk $ InvokePage $ PageFlush
                 (label_to_flush_type (invocation_type label)) (start + p) \<comment> \<open>check\<close>
-                (end + p - 1) (addrFromPPtr p + start) pd asid
+                (end + p - 1) pstart pd asid
     odE
     else throwError TruncatedMessage
     else if invocation_type label = ArchInvocationLabel ARMPageGetAddress
@@ -269,11 +271,6 @@ definition
   else if n = 5 then Some PageDirectoryObj
   else if n = 6 then Some VCPUObj
   else None"
-
-definition
-  arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
-where
-  "arch_check_irq irq \<equiv> whenE (irq > ucast maxIRQ) $ throwError (RangeError 0 (ucast maxIRQ))"
 
 definition arch_decode_irq_control_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list \<Rightarrow> (arch_irq_control_invocation,'z::state_ext) se_monad"

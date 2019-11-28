@@ -353,7 +353,7 @@ text \<open>
   but that can occur from user mode.
 \<close>
 definition
-  "non_kernel_IRQs = {irqVGICMaintenance}"
+  "non_kernel_IRQs = {irqVGICMaintenance, irqVTimerEvent}"
 
 text \<open>
   @{term getActiveIRQ} is now derministic.
@@ -667,6 +667,43 @@ definition
   set_gic_vcpu_ctrl_lr :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
 where
   "set_gic_vcpu_ctrl_lr n w  \<equiv> machine_op_lift (set_gic_vcpu_ctrl_lr_impl n w)"
+
+subsection "Virtual Timer"
+
+consts'
+  cntv_cval_64_val :: "machine_state \<Rightarrow> 64 word"
+definition
+  get_cntv_cval_64 :: "64 word machine_monad"
+where
+  "get_cntv_cval_64 \<equiv> gets cntv_cval_64_val"
+
+consts'
+  set_cntv_cval_64_impl :: "64 word \<Rightarrow> unit machine_rest_monad"
+definition
+  set_cntv_cval_64 :: "64 word \<Rightarrow> unit machine_monad"
+where
+  "set_cntv_cval_64 w \<equiv> machine_op_lift (set_cntv_cval_64_impl w)"
+
+consts'
+  cntv_off_64_val :: "machine_state \<Rightarrow> 64 word"
+definition
+  get_cntv_off_64 :: "64 word machine_monad"
+where
+  "get_cntv_off_64 \<equiv> gets cntv_off_64_val"
+
+consts'
+  set_cntv_off_64_impl :: "64 word \<Rightarrow> unit machine_rest_monad"
+definition
+  set_cntv_off_64 :: "64 word \<Rightarrow> unit machine_monad"
+where
+  "set_cntv_off_64 w \<equiv> machine_op_lift (set_cntv_off_64_impl w)"
+
+consts'
+  read_cntpct_val :: "machine_state \<Rightarrow> 64 word"
+definition
+  read_cntpct :: "64 word machine_monad"
+where
+  "read_cntpct \<equiv> gets read_cntpct_val"
 
 subsection "Hypervisor Banked Registers"
 

@@ -25,7 +25,7 @@ This module defines the low-level ARM hardware interface.
 
 > import Control.Monad.Reader
 > import Data.Bits
-> import Data.Word(Word8, Word32)
+> import Data.Word(Word8, Word32, Word64)
 > import Data.Ix
 
 \end{impdetails}
@@ -833,6 +833,21 @@ FIXME ARMHYP consider moving to platform code?
 > set_gic_vcpu_ctrl_lr :: Word -> Word -> MachineMonad ()
 > set_gic_vcpu_ctrl_lr = error "FIXME ARMHYP Unimplemented callback"
 
+\subsection{Virtual timer interface}
+
+> get_cntv_cval_64 :: MachineMonad Word64
+> get_cntv_cval_64 = error "FIXME ARMHYP Unimplemented callback"
+> set_cntv_cval_64 :: Word64 -> MachineMonad ()
+> set_cntv_cval_64 = error "FIXME ARMHYP Unimplemented callback"
+
+> get_cntv_off_64 :: MachineMonad Word64
+> get_cntv_off_64 = error "FIXME ARMHYP Unimplemented callback"
+> set_cntv_off_64 :: Word64 -> MachineMonad ()
+> set_cntv_off_64 = error "FIXME ARMHYP Unimplemented callback"
+
+> read_cntpct :: MachineMonad Word64
+> read_cntpct = error "FIXME ARMHYP Unimplemented callback"
+
 #endif
 
 \subsection{Constants}
@@ -844,6 +859,9 @@ FIXME ARMHYP consider moving to platform code?
 > kernelBase = Platform.kernelBase
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+> paddrTop :: PAddr
+> paddrTop = toPAddr Platform.paddrTop
 
 > hcrVCPU =  (0x87039 :: Word) -- HCR_VCPU
 > hcrNative = (0xfe8703b :: Word) -- HCR_NATIVE

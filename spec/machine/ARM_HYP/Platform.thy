@@ -59,6 +59,14 @@ definition
   "physBase \<equiv> 0x80000000"
 
 definition
+  pptrTop :: "32 word" where
+  "pptrTop \<equiv> 0xfff00000"
+
+definition
+  paddrTop :: "32 word" where
+  "paddrTop \<equiv> pptrTop - (kernelBase - physBase)"
+
+definition
   physMappingOffset :: word32 where
   "physMappingOffset \<equiv> kernelBase_addr - physBase"
 
@@ -80,6 +88,9 @@ definition
 
 definition irqVGICMaintenance :: "irq"
   where "irqVGICMaintenance \<equiv> 25"
+
+definition irqVTimerEvent :: "irq"
+  where "irqVTimerEvent  \<equiv> 27"
 
 end
 

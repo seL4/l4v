@@ -8969,17 +8969,39 @@ lemma setVCPU_valid_irq_states' [wp]:
   "setObject p (vcpu::vcpu) \<lbrace>valid_irq_states'\<rbrace>"
   by (wp valid_irq_states_lift')
 
+crunches writeVCPUHardwareReg, readVCPUHardwareReg
+  for irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
+
+crunches vcpuUpdate, vcpuWriteReg, vcpuSaveReg, vcpuRestoreReg, vcpuReadReg
+  for irq_states'[wp]: valid_irq_states'
+  and ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
+  (ignore: getObject setObject)
+
+lemma saveVirtTimer_irq_states'[wp]:
+  "saveVirtTimer vcpu_ptr \<lbrace>valid_irq_states'\<rbrace>"
+  unfolding saveVirtTimer_def
+  by (wpsimp simp: read_cntpct_def get_cntv_off_64_def get_cntv_cval_64_def
+             wp: doMachineOp_irq_states')
+
+lemma restoreVirtTimer_irq_states'[wp]:
+  "restoreVirtTimer vcpu_ptr \<lbrace>valid_irq_states'\<rbrace>"
+  unfolding restoreVirtTimer_def isIRQActive_def
+  by (simp add: liftM_bind)
+     (wpsimp wp: maskInterrupt_irq_states' getIRQState_wp hoare_vcg_imp_lift' doMachineOp_irq_states'
+             simp: if_apply_def2 set_cntv_off_64_def read_cntpct_def set_cntv_cval_64_def)
+
 crunches
   vcpuDisable, vcpuEnable, vcpuRestore, vcpuRestoreReg, vcpuSaveReg,
   vcpuUpdate, vgicUpdateLR, vcpuSave
   for irq_states' [wp]: valid_irq_states'
-  (wp: crunch_wps no_irq no_irq_mapM_x
+  (wp: crunch_wps maskInterrupt_irq_states'[where b=True, simplified] no_irq no_irq_mapM_x
    simp: crunch_simps
          set_gic_vcpu_ctrl_hcr_def setSCTLR_def setHCR_def get_gic_vcpu_ctrl_hcr_def
          getSCTLR_def get_gic_vcpu_ctrl_lr_def get_gic_vcpu_ctrl_apr_def
          get_gic_vcpu_ctrl_vmcr_def
          set_gic_vcpu_ctrl_vmcr_def set_gic_vcpu_ctrl_apr_def uncurry_def
-         set_gic_vcpu_ctrl_lr_def)
+         set_gic_vcpu_ctrl_lr_def
+   ignore: saveVirtTimer)
 
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq

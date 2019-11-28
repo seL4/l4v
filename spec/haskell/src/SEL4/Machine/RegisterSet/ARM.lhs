@@ -71,8 +71,6 @@ This module defines the ARM register set.
 >     | VCPURegTPIDRPRW
 >     | VCPURegTPIDRURO
 >     | VCPURegFPEXC
->     | VCPURegCNTVTVAL
->     | VCPURegCNTVCTL
 >     | VCPURegLRsvc
 >     | VCPURegSPsvc
 >     | VCPURegLRabt
@@ -93,6 +91,11 @@ This module defines the ARM register set.
 >     | VCPURegSPSRund
 >     | VCPURegSPSRirq
 >     | VCPURegSPSRfiq
+>     | VCPURegCNTV_CTL
+>     | VCPURegCNTV_CVALhigh
+>     | VCPURegCNTV_CVALlow
+>     | VCPURegCNTVOFFhigh
+>     | VCPURegCNTVOFFlow
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
 > vcpuRegNum :: Int

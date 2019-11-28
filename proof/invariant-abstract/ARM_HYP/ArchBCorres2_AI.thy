@@ -147,6 +147,11 @@ lemma vgic_maintenance_bcorres[wp]:
   unfolding vgic_maintenance_def
   by (wpsimp simp: vgic_update_lr_bcorres)
 
+lemma vppi_event_bcorres[wp]:
+  "bcorres (vppi_event irq) (vppi_event irq)"
+  unfolding vppi_event_def
+  by wpsimp
+
 lemma handle_reserved_irq_bcorres[wp]: "bcorres (handle_reserved_irq a) (handle_reserved_irq a)"
   unfolding handle_reserved_irq_def by wpsimp
 

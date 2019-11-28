@@ -734,6 +734,22 @@ lemma vgicUpdateLR_isolatable:
   "thread_actions_isolatable idx (vgicUpdateLR p i virq)"
   by (clarsimp simp: vgicUpdateLR_def vgicUpdate_isolatable)
 
+lemma vcpuWriteReg_isolatable:
+  "thread_actions_isolatable idx (vcpuWriteReg v p val)"
+  apply (clarsimp simp: vcpuWriteReg_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               vcpuUpdate_isolatable doMachineOp_isolatable
+         | wpsimp)+
+  done
+
+lemma vcpuReadReg_isolatable:
+  "thread_actions_isolatable idx (vcpuReadReg v p)"
+  apply (clarsimp simp: vcpuReadReg_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               vcpuUpdate_isolatable getVCPU_isolatable thread_actions_isolatable_return
+         | wpsimp)+
+  done
+
 lemma vcpuSaveReg_isolatable:
   "thread_actions_isolatable idx (vcpuSaveReg p v)"
   apply (clarsimp simp: vcpuSaveReg_def)
@@ -774,14 +790,47 @@ lemma vcpuRestoreRegRange_isolatable:
          | wpsimp)+
   done
 
+lemma saveVirtTimer_isolatable:
+  "thread_actions_isolatable idx (saveVirtTimer v)"
+  apply (clarsimp simp: saveVirtTimer_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               thread_actions_isolatable_if thread_actions_isolatable_returns
+               thread_actions_isolatable_fail
+               gets_isolatable doMachineOp_isolatable vcpuSaveReg_isolatable
+               vcpuWriteReg_isolatable vcpuUpdate_isolatable
+         | wpsimp | fastforce)+
+  done
+
+lemma getIRQState_isolatable:
+  "thread_actions_isolatable idx (getIRQState irq)"
+  apply (clarsimp simp: getIRQState_def liftM_def getInterruptState_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+                thread_actions_isolatable_returns gets_isolatable
+         | wpsimp | fastforce)+
+  done
+
+lemma restoreVirtTimer_isolatable:
+  "thread_actions_isolatable idx (restoreVirtTimer v)"
+  apply (clarsimp simp: restoreVirtTimer_def when_def isIRQActive_def liftM_bind)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               thread_actions_isolatable_if thread_actions_isolatable_returns
+               thread_actions_isolatable_fail
+               gets_isolatable doMachineOp_isolatable vcpuSaveReg_isolatable
+               vcpuReadReg_isolatable vcpuWriteReg_isolatable vcpuUpdate_isolatable
+               getVCPU_isolatable getIRQState_isolatable vcpuRestoreReg_isolatable
+         | wpsimp | fastforce)+
+  done
+
 lemma vcpuSave_isolatable:
   "thread_actions_isolatable idx (vcpuSave v)"
-  apply (clarsimp simp: vcpuSave_def thread_actions_isolatable_fail when_def split: option.splits)
+  apply (clarsimp simp: vcpuSave_def armvVCPUSave_def thread_actions_isolatable_fail when_def
+                  split: option.splits)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
                gets_isolatable doMachineOp_isolatable vcpuSaveReg_isolatable
                vgicUpdateLR_isolatable vgicUpdate_isolatable vcpuSaveRegRange_isolatable
+               saveVirtTimer_isolatable
                thread_actions_isolatable_mapM_x
          | wpsimp wp: mapM_x_wp|fastforce)+
   done
@@ -791,6 +840,7 @@ lemma vcpuEnable_isolatable:
   apply (clarsimp simp: vcpuEnable_def)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                vcpuRestoreReg_isolatable doMachineOp_isolatable getVCPU_isolatable
+               restoreVirtTimer_isolatable
          | wpsimp)+
   done
 
@@ -808,7 +858,7 @@ lemma vcpuDisable_isolatable:
   apply (clarsimp simp: vcpuDisable_def split: option.splits, intro conjI)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                doMachineOp_isolatable vcpuEnable_isolatable
-               vgicUpdate_isolatable vcpuSaveReg_isolatable
+               vgicUpdate_isolatable vcpuSaveReg_isolatable saveVirtTimer_isolatable
          | wpsimp)+
   done
 
@@ -1125,11 +1175,17 @@ lemma oblivious_modifyArchState_schact[simp]:
 lemmas oblivious_getObject_ksPSpace_vcpu[simp]
   = oblivious_getObject_ksPSpace_default [OF _ loadObject_vcpu]
 
+lemma oblivious_getIRQState_schact:
+  "oblivious (ksSchedulerAction_update f) (getIRQState irq)"
+  by (simp add: getIRQState_def liftM_def getInterruptState_def)
+     (safe intro!: oblivious_bind oblivious_bindE; simp)
+
 lemma oblivious_setVMRoot_schact:
   "oblivious (ksSchedulerAction_update f) (setVMRoot t)"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def locateSlot_conv
                    getSlotCap_def getCTE_def armv_contextSwitch_def)
   by (safe intro!: oblivious_bind oblivious_bindE oblivious_catch oblivious_mapM_x
+                   oblivious_getIRQState_schact
              | simp_all add: liftE_def getHWASID_def
                              findPDForASID_def liftME_def loadHWASID_def
                              findPDForASIDAssert_def checkPDAt_def
@@ -1149,6 +1205,9 @@ lemma oblivious_vcpuSwitch_schact:
                          vcpuUpdate_def vgicUpdate_def vgicUpdateLR_def
                          vcpuSaveReg_def vcpuSaveRegRange_def
                          vcpuRestoreReg_def vcpuRestoreRegRange_def
+                         saveVirtTimer_def vcpuWriteReg_def restoreVirtTimer_def vcpuReadReg_def
+                         armvVCPUSave_def isIRQActive_def liftM_bind getIRQState_def
+                         getInterruptState_def
                   split: if_split option.split)+
   done
 

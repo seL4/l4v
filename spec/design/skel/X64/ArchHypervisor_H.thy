@@ -16,6 +16,7 @@ theory ArchHypervisor_H
 imports
   "../CNode_H"
   "../KI_Decls_H"
+  "../InterruptDecls_H"
 begin
 context Arch begin global_naming X64_H
 

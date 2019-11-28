@@ -66,6 +66,7 @@ datatype vcpu_invocation =
      | VCPUInjectIRQ obj_ref nat virq
      | VCPUReadRegister obj_ref vcpureg
      | VCPUWriteRegister obj_ref vcpureg machine_word
+     | VCPUAckVPPI obj_ref (* vcpu *) vppievent_irq
 
 datatype arch_invocation
      = InvokePageTable page_table_invocation

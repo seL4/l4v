@@ -161,7 +161,7 @@ crunch pred_tcb_at'[wp]: readVCPUReg "\<lambda>s. P (pred_tcb_at' a b p s)"
 crunch ksCurThread[wp]: readVCPUReg "\<lambda>s. P (ksCurThread s)"
 
 lemma fromEnum_maxBound_vcpureg_def:
-  "fromEnum (maxBound :: vcpureg) = 39"
+  "fromEnum (maxBound :: vcpureg) = 42"
   by (clarsimp simp: fromEnum_def maxBound_def enum_vcpureg)
 
 lemma unat_of_nat_mword_fromEnum_vcpureg[simp]:
@@ -178,6 +178,9 @@ lemma unat_of_nat_mword_length_upto_vcpureg[simp]:
   apply (simp add: fromEnum_maxBound_vcpureg_def)
   done
 
+lemma fromEnum_maxBound_vppievent_irq_def:
+  "fromEnum (maxBound :: vppievent_irq) = 0"
+  by (clarsimp simp: fromEnum_def maxBound_def enum_vppievent_irq)
 
 (* when creating a new object, the entire slot including starting address should be free *)
 (* FIXME move *)

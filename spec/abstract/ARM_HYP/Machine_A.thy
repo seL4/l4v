@@ -165,6 +165,7 @@ datatype arch_fault =
     VMFault vspace_ref "machine_word list"
   | VGICMaintenance "data option" (* idx *)
   | VCPUFault data (* hsr *)
+  | VPPIEvent irq (* vppi IRQ *)
 
 
 end

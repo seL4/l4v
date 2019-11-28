@@ -38,6 +38,7 @@ primrec
 where
   "arch_fault_map (Machine_A.ARM_A.VMFault ptr msg) = ArchFault_H.ARM_HYP_H.VMFault ptr msg"
 | "arch_fault_map (Machine_A.ARM_A.VGICMaintenance datalist) = VGICMaintenance datalist "
+| "arch_fault_map (Machine_A.ARM_A.VPPIEvent irq) = VPPIEvent irq"
 | "arch_fault_map (Machine_A.ARM_A.VCPUFault data) = VCPUFault data"
 
 primrec
@@ -144,7 +145,9 @@ definition
 where
   "vcpu_relation \<equiv> \<lambda>v v'. vcpu_tcb v = vcpuTCBPtr v' \<and>
                            vgic_map (vcpu_vgic v) = vcpuVGIC v' \<and>
-                           vcpu_regs v = vcpuRegs v'"
+                           vcpu_regs v = vcpuRegs v' \<and>
+                           vcpu_vppi_masked v = vcpuVPPIMasked v' \<and>
+                           vcpu_vtimer v = vcpuVTimer v'"
 
 definition
   ntfn_relation :: "Structures_A.notification \<Rightarrow> Structures_H.notification \<Rightarrow> bool"

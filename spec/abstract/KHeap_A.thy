@@ -234,6 +234,10 @@ definition
   get_irq_slot :: "irq \<Rightarrow> (cslot_ptr,'z::state_ext) s_monad" where
  "get_irq_slot irq \<equiv> gets (\<lambda>st. (interrupt_irq_node st irq, []))"
 
+text \<open>Tests whether an IRQ identifier is in use.\<close>
+definition
+  is_irq_active :: "irq \<Rightarrow> (bool,'z::state_ext) s_monad" where
+ "is_irq_active irq \<equiv> liftM (\<lambda>st. st \<noteq> IRQInactive) $ get_irq_state irq"
 
 section "User Context"
 

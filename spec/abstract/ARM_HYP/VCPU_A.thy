@@ -21,6 +21,15 @@ imports
   "../InvocationLabels_A"
 begin
 
+text \<open>
+  This is used by some decode functions. VCPU decode functions are the first that need to bounds
+  check IRQs from the user.
+  \<close>
+
+definition
+  arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
+where
+  "arch_check_irq irq \<equiv> whenE (irq > ucast maxIRQ) $ throwError (RangeError 0 (ucast maxIRQ))"
 
 text \<open>
   Some parts of some registers cannot be written by the user.
@@ -163,6 +172,27 @@ where
     else vgic_update_lr vr index virq
    od"
 
+text \<open>VCPU : acknowledge VPPI\<close>
+
+definition decode_vcpu_ack_vppi ::
+  "obj_ref list \<Rightarrow> arch_cap \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
+  where
+  "decode_vcpu_ack_vppi mrs cap \<equiv>
+     case (mrs, cap)
+       of (mr0 # _, VCPUCap vcpu_ptr) \<Rightarrow> doE
+           arch_check_irq mr0;
+           (case irq_vppi_event_index (ucast mr0)
+            of None \<Rightarrow> throwError $ InvalidArgument 0
+             | Some vppi \<Rightarrow> returnOk $ InvokeVCPU $ VCPUAckVPPI vcpu_ptr vppi)
+         odE
+       | _ \<Rightarrow> throwError TruncatedMessage"
+
+definition invoke_vcpu_ack_vppi :: "obj_ref \<Rightarrow> vppievent_irq \<Rightarrow> (unit,'z::state_ext) s_monad"
+  where
+  "invoke_vcpu_ack_vppi vcpu_ptr vppi =
+     vcpu_update vcpu_ptr
+                 (\<lambda>vcpu. vcpu\<lparr> vcpu_vppi_masked := (vcpu_vppi_masked vcpu)(vppi := False) \<rparr>)"
+
 text \<open>VCPU perform and decode main functions\<close>
 
 
@@ -172,7 +202,8 @@ perform_vcpu_invocation :: "vcpu_invocation \<Rightarrow> (data list,'z::state_e
     VCPUSetTCB vcpu tcb \<Rightarrow> do associate_vcpu_tcb vcpu tcb; return [] od
   | VCPUReadRegister vcpu reg \<Rightarrow> invoke_vcpu_read_register vcpu reg
   | VCPUWriteRegister vcpu reg val \<Rightarrow> do invoke_vcpu_write_register vcpu reg val; return [] od
-  | VCPUInjectIRQ vcpu index vir \<Rightarrow> do invoke_vcpu_inject_irq vcpu index vir; return [] od"
+  | VCPUInjectIRQ vcpu index vir \<Rightarrow> do invoke_vcpu_inject_irq vcpu index vir; return [] od
+  | VCPUAckVPPI vcpu vppi \<Rightarrow> do invoke_vcpu_ack_vppi vcpu vppi; return [] od"
 
 
 definition decode_vcpu_invocation ::
@@ -183,7 +214,8 @@ VCPUCap _ \<Rightarrow> (case invocation_type label of
     ArchInvocationLabel ARMVCPUSetTCB \<Rightarrow> decode_vcpu_set_tcb cap extras
   | ArchInvocationLabel ARMVCPUReadReg \<Rightarrow> decode_vcpu_read_register args cap
   | ArchInvocationLabel ARMVCPUWriteReg \<Rightarrow> decode_vcpu_write_register args cap
-  | ArchInvocationLabel ARMVCPUInjectIRQ \<Rightarrow> decode_vcpu_inject_irq args cap \<comment> \<open>ARMHYP\<close>
+  | ArchInvocationLabel ARMVCPUInjectIRQ \<Rightarrow> decode_vcpu_inject_irq args cap
+  | ArchInvocationLabel ARMVCPUAckVPPI \<Rightarrow> decode_vcpu_ack_vppi args cap
   |  _ \<Rightarrow> throwError IllegalOperation)
 | _ \<Rightarrow> throwError IllegalOperation"
 
