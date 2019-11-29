@@ -2309,13 +2309,13 @@ lemma assert_get_tcb_ko':
 
 (* is_schedulable lemmas *)
 lemma is_schedulable_wp:
-  "\<lbrace>\<lambda>s. P (the (is_schedulable_opt x inq s)) s\<rbrace> is_schedulable x inq \<lbrace> \<lambda>rv. P rv\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>t. is_schedulable_bool x inq s = t \<longrightarrow> P t s\<rbrace> is_schedulable x inq \<lbrace>P\<rbrace>"
   apply (clarsimp simp: is_schedulable_def)
   apply (rule hoare_seq_ext[OF _ assert_get_tcb_ko'])
   apply (case_tac "tcb_sched_context tcb"; clarsimp)
-   apply (wpsimp simp: is_schedulable_opt_def obj_at_def get_tcb_rev)
-  by (wpsimp simp: is_schedulable_opt_def obj_at_def get_tcb_rev test_sc_refill_max_def
-           wp: get_sched_context_wp)
+   apply (wpsimp simp: is_schedulable_bool_def obj_at_def get_tcb_rev)
+  by (wpsimp simp: is_schedulable_bool_def obj_at_def get_tcb_rev is_sc_active_def
+               wp: get_sched_context_wp)
 
 lemma is_schedulable_sp:
   "\<lbrace>P\<rbrace> is_schedulable tp b \<lbrace>\<lambda>rv. (\<lambda>s. rv = the (is_schedulable_opt tp b s)) and P\<rbrace>"
@@ -2324,7 +2324,7 @@ lemma is_schedulable_sp:
   apply (wpsimp simp: hoare_vcg_if_lift2 obj_at_def is_tcb wp: get_sched_context_wp)
   apply(rule conjI)
    apply (clarsimp simp: Option.is_none_def is_schedulable_opt_def get_tcb_def)
-  by (clarsimp simp: is_schedulable_opt_def get_tcb_def test_sc_refill_max_def split: option.splits)
+  by (clarsimp simp: is_schedulable_opt_def get_tcb_def is_sc_active_def split: option.splits)
 
 lemma is_schedulable_sp':
   "\<lbrace>P\<rbrace> is_schedulable tp b \<lbrace>\<lambda>rv. (\<lambda>s. rv = is_schedulable_bool tp b s) and P\<rbrace>"
@@ -2333,15 +2333,15 @@ lemma is_schedulable_sp':
   apply (wpsimp simp: hoare_vcg_if_lift2 obj_at_def is_tcb wp: get_sched_context_wp)
   apply(rule conjI)
    apply (clarsimp simp: Option.is_none_def is_schedulable_bool_def get_tcb_def)
-  by (clarsimp simp: is_schedulable_bool_def get_tcb_def test_sc_refill_max_def
+  by (clarsimp simp: is_schedulable_bool_def get_tcb_def is_sc_active_def
               split: option.splits)
 
 lemma schedulable_unfold: "tcb_at tp s \<Longrightarrow> (the (is_schedulable_opt tp b s))
   = (st_tcb_at runnable tp s \<and>
-     bound_sc_tcb_at (\<lambda>spo. \<exists>sp. spo = Some sp \<and> test_sc_refill_max sp s) tp s \<and> \<not>b)"
+     bound_sc_tcb_at (\<lambda>spo. \<exists>sp. spo = Some sp \<and> is_sc_active sp s) tp s \<and> \<not>b)"
   by (clarsimp simp: is_schedulable_opt_def get_tcb_rev is_tcb pred_tcb_at_def obj_at_def split: option.splits)
 
-lemma in_q_not_schedualble[simp]: "tcb_at tp s \<Longrightarrow> is_schedulable_opt tp True s = (Some False)"
+lemma in_q_not_schedulable[simp]: "tcb_at tp s \<Longrightarrow> is_schedulable_opt tp True s = (Some False)"
   by (clarsimp simp: is_schedulable_opt_def get_tcb_ko_at obj_at_def is_tcb split: option.splits)
 
 lemma update_sched_context_obj_at_impossible:

@@ -276,6 +276,7 @@ abbreviation "sc_replies_sc_at \<equiv> sc_at_ppred sc_replies"
 abbreviation "sc_refills_sc_at \<equiv> sc_at_ppred sc_refills"
 abbreviation "sc_refill_max_sc_at \<equiv> sc_at_ppred sc_refill_max"
 abbreviation "sc_period_sc_at \<equiv> sc_at_ppred sc_period"
+abbreviation "sc_refill_hd_sc_at \<equiv> sc_at_ppred refill_hd"
 
 lemma sc_at_ppred_def:
   "sc_at_ppred proj P p s \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (proj sc)) p s"
@@ -289,6 +290,7 @@ lemmas sc_replies_sc_at_def = sc_at_ppred_def[of sc_replies]
 lemmas sc_refills_sc_at_def = sc_at_ppred_def[of sc_refills]
 lemmas sc_refill_max_sc_at_def = sc_at_ppred_def[of sc_refill_max]
 lemmas sc_period_sc_at_def = sc_at_ppred_def[of sc_period]
+lemmas sc_refill_hd_sc_at_def = sc_at_ppred_def[of refill_hd]
 
 lemma sc_at_pred_ko_atI:
   "ko_at (SchedContext sc nb) ptr s \<Longrightarrow> P (proj sc)
@@ -301,6 +303,7 @@ lemmas sc_yf_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=sc_yield_from]
 lemmas sc_replies_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=sc_replies]
 lemmas sc_refills_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=sc_refills]
 lemmas sc_refill_max_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=sc_refill_max]
+lemmas sc_refill_hd_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=refill_hd]
 
 (* for compatibility with existing sc_at predicate *)
 abbreviation "sc_at_pred_v \<equiv> sc_at_pred_n valid_sched_context_size"
@@ -311,6 +314,7 @@ abbreviation "sc_yf_sc_at_v \<equiv> sc_at_pred_v sc_yield_from"
 abbreviation "sc_replies_sc_at_v \<equiv> sc_at_pred_v sc_replies"
 abbreviation "sc_refills_sc_at_v \<equiv> sc_at_pred_v sc_refills"
 abbreviation "sc_refill_max_sc_at_v \<equiv> sc_at_pred_v sc_refill_max"
+abbreviation "sc_refill_hd_sc_at_v \<equiv> sc_at_pred_v refill_hd"
 
 lemmas sc_at_pred_v_def = sc_at_pred_n_def[of valid_sched_context_size]
 
@@ -4288,8 +4292,8 @@ lemma
   by (auto simp: obj_at_def)
 
 lemma not_pred_tcb_at_strengthen:
-  "pred_tcb_at proj (Not \<circ> P) p s \<Longrightarrow> \<not> pred_tcb_at proj P p s"
-  by (clarsimp simp: pred_tcb_at_def obj_at_def)
+  "pred_tcb_at proj (not P) p s \<Longrightarrow> \<not> pred_tcb_at proj P p s"
+  by (clarsimp simp: pred_tcb_at_def obj_at_def pred_neg_def)
 
 lemma sc_obj_at_sc_at[simp]:
   "sc_obj_at n ptr s \<Longrightarrow> sc_at ptr s"

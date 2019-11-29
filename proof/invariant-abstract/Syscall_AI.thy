@@ -110,16 +110,6 @@ lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> Schedule_A.schedule \<lbrace>\<
          | wpc)+
   done
 
-(* FIXME: replace the one in KHeap_AI! *)
-lemma is_schedulable_wp:
-  "\<lbrace>\<lambda>s. \<forall>t. is_schedulable_opt x inq s = Some t \<longrightarrow> P t s\<rbrace> is_schedulable x inq \<lbrace>P\<rbrace>"
-  apply (clarsimp simp: is_schedulable_def)
-  apply (rule hoare_seq_ext[OF _ assert_get_tcb_ko'])
-  apply (case_tac "tcb_sched_context tcb"; clarsimp)
-   apply (wpsimp simp: is_schedulable_opt_def obj_at_def get_tcb_rev)
-  by (wpsimp simp: is_schedulable_opt_def obj_at_def get_tcb_rev test_sc_refill_max_def
-               wp: get_sched_context_wp)
-
 lemma invs_domain_time_update[simp]:
   "invs (domain_time_update f s) = invs s"
   by (simp add: invs_def valid_state_def cur_sc_tcb_def)
@@ -147,7 +137,7 @@ proof -
           apply (wpsimp simp: thread_get_def)+
         apply (wpsimp wp: is_schedulable_wp)
        apply (wpsimp wp: hoare_vcg_all_lift)+
-    apply (clarsimp simp: is_schedulable_opt_def pred_tcb_at_def obj_at_def
+    apply (clarsimp simp: is_schedulable_bool_def pred_tcb_at_def obj_at_def
         dest!: get_tcb_SomeD split: option.splits)
     done
 qed
@@ -161,7 +151,7 @@ lemma guarded_switch_to_ct_in_state_activatable[wp]:
   unfolding guarded_switch_to_def
   apply (wpsimp wp: hoare_vcg_imp_lift gts_wp is_schedulable_wp stt_activatable assert_wp
              simp: thread_get_def)
-  apply (clarsimp simp: is_schedulable_opt_def get_tcb_ko_at st_tcb_at_def obj_at_def
+  apply (clarsimp simp: is_schedulable_bool_def get_tcb_ko_at st_tcb_at_def obj_at_def
                  split: option.splits)
   done
 
@@ -187,7 +177,7 @@ lemma schedule_ct_activateable[wp]:
    apply clarsimp
    apply (frule invs_valid_idle)
    apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def valid_idle_def
-                         is_schedulable_opt_def get_tcb_ko_at
+                         is_schedulable_bool_def get_tcb_ko_at
                   split: option.splits if_split)
   apply assumption
   done
@@ -630,12 +620,8 @@ lemma sts_mcpriority_tcb_at[wp]:
 
 lemma sts_mcpriority_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. mcpriority_tcb_at P (cur_thread s) s\<rbrace> set_thread_state p ts \<lbrace>\<lambda>rv s. mcpriority_tcb_at P (cur_thread s) s\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def set_thread_state_act_def set_scheduler_action_def)
-  apply (wp is_schedulable_wp | simp)+
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (drule get_tcb_SomeD)
-  apply clarsimp
-  done
+  apply wp_pre
+  by (wpsimp | wps)+
 
 lemma option_None_True: "case_option (\<lambda>_. True) f x = (\<lambda>s. \<forall>y. x = Some y \<longrightarrow> f y s)"
   by (cases x; simp)
@@ -649,23 +635,33 @@ lemma hoare_case_option_lift:
    \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv. case_option (P rv) (\<lambda>rv'. Q rv rv') (E rv)\<rbrace>"
   by (fastforce simp: valid_def split: option.splits)
 
+crunches set_thread_state
+  for cur_time[wp]: "\<lambda>s. P (cur_time s)"
+
 lemma sts_tcb_inv_wf [wp]:
-  "\<lbrace>tcb_inv_wf i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. tcb_inv_wf i\<rbrace>"
+  "\<lbrace>tcb_inv_wf i and K (\<not> ipc_queued_thread_state st)\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. tcb_inv_wf i\<rbrace>"
   apply (case_tac i)
-  apply (wpsimp wp: set_thread_state_bound_sc_tcb_at
-                 set_thread_state_valid_cap hoare_vcg_all_lift hoare_vcg_const_imp_lift
-             simp: option_None_True option_None_True_const
+  apply (wpsimp wp: set_thread_state_bound_sc_tcb_at sts_st_tcb_at_cases
+                    set_thread_state_valid_cap hoare_vcg_all_lift
+                    hoare_vcg_const_imp_lift sts_st_tcb_at_cases_strong
+              simp: option_None_True option_None_True_const
          | wp sts_obj_at_impossible
-         | wp hoare_case_option_lift
-         | clarsimp split: option.splits)+
+         | wp hoare_case_option_lift hoare_vcg_imp_lift
+         | wps
+         | clarsimp simp: pred_conj_def split: option.splits)+
   done
 
 lemma sts_valid_sched_context_inv[wp]:
-  "\<lbrace>valid_sched_context_inv i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_sched_context_inv i\<rbrace>"
+  "\<lbrace>valid_sched_context_inv i and K (\<not> ipc_queued_thread_state st)\<rbrace>
+   set_thread_state t st
+   \<lbrace>\<lambda>rv. valid_sched_context_inv i\<rbrace>"
   by (cases i
       ; wpsimp split: cap.splits
       ; intro conjI
-      ; wpsimp wp: sts_obj_at_impossible set_thread_state_bound_sc_tcb_at)
+      ; (wpsimp wp: sts_obj_at_impossible set_thread_state_bound_sc_tcb_at hoare_vcg_imp_lift
+                    sts_st_tcb_at_cases_strong
+              simp: pred_conj_def
+         | wps)+)
 
 lemma sts_valid_cnode_inv[wp]:
   "\<lbrace>valid_cnode_inv i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_cnode_inv i\<rbrace>"
@@ -686,7 +682,7 @@ lemma sts_irq_handler_inv_valid[wp]:
 declare sts_valid_arch_inv[wp]
 
 lemma sts_valid_inv[wp]:
-  "\<lbrace>valid_invocation i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_invocation i\<rbrace>"
+  "\<lbrace>valid_invocation i and K (\<not> ipc_queued_thread_state st)\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_invocation i\<rbrace>"
   by (cases i; wpsimp)
 
 
@@ -1104,7 +1100,7 @@ lemma sts_schedulable_scheduler_action:
    set_thread_state thread Restart
   \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   apply (wpsimp wp: stsa_schedulable_scheduler_action simp: set_thread_state_def set_object_def)
-  apply (fastforce simp: is_schedulable_bool_def test_sc_refill_max_def get_tcb_def
+  apply (fastforce simp: is_schedulable_bool_def is_sc_active_def get_tcb_def
                          in_release_queue_def
                   split: option.splits kernel_object.splits)
   done
@@ -1428,7 +1424,7 @@ lemma update_time_stamp_is_schedulable_bool [wp]:
      update_time_stamp
    \<lbrace>\<lambda>rv s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>"
   by (wpsimp simp: update_time_stamp_def do_machine_op_def is_schedulable_bool_def
-                   test_sc_refill_max_def get_tcb_def in_release_queue_def
+                   is_sc_active_def get_tcb_def in_release_queue_def
             split: option.splits)
 
 lemma getCurrentTime_invs[wp]:

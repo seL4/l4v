@@ -506,8 +506,15 @@ where
                         and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) fh
                         and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) fh
-                        and (case_option \<top> (case_option (\<lambda>s. t \<noteq> cur_thread s) (\<lambda>sc. bound_sc_tcb_at ((=) None) t and ex_nonz_cap_to sc
-                                                             and sc_tcb_sc_at ((=) None) sc)) sc)
+                        and case_option \<top>
+                              (case_option
+                                (\<lambda>s. t \<noteq> cur_thread s)
+                                (\<lambda>scptr. bound_sc_tcb_at ((=) None) t and ex_nonz_cap_to scptr
+                                         and sc_tcb_sc_at ((=) None) scptr
+                                         and (\<lambda>s. st_tcb_at (ipc_queued_thread_state) t s
+                                                  \<longrightarrow> sc_at_pred (sc_released (cur_time s))
+                                                                 scptr s)))
+                              sc
                         and ex_nonz_cap_to t)"
 | "tcb_inv_wf' (tcb_invocation.ReadRegisters src susp n arch)
              = (tcb_at src and ex_nonz_cap_to src)"
@@ -1129,14 +1136,16 @@ lemma decode_set_sched_params_wf[wp]:
                           \<and> (\<forall>y \<in> zobj_refs (fst x). ex_nonz_cap_to y s)
                           \<and> ex_cte_cap_to (snd x) s
                           \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
-        decode_set_sched_params args (ThreadCap t) slot excaps \<lbrace>tcb_inv_wf\<rbrace>, -"
+   decode_set_sched_params args (ThreadCap t) slot excaps
+   \<lbrace>tcb_inv_wf\<rbrace>, -"
   unfolding decode_set_sched_params_def decode_update_sc_def
   apply (wpsimp simp: get_tcb_obj_ref_def
-                wp: check_prio_wp_weak whenE_throwError_wp thread_get_wp
+                wp: check_prio_wp_weak whenE_throwError_wp thread_get_wp gts_wp
                 split_del: if_split)
   apply (clarsimp simp: valid_fault_handler split_paired_Ball)
   apply (rule conjI; clarsimp)
-  apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def is_cap_simps sc_tcb_sc_at_def)
+  apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def is_cap_simps sc_tcb_sc_at_def
+                        sc_at_ppred_def)
   apply (rule conjI, fastforce)
   apply (subgoal_tac "excaps ! Suc 0 \<in> set excaps")
    prefer 2
@@ -1798,6 +1807,14 @@ lemma install_tcb_cap_bound_sc_tcb_at[wp]:
   unfolding install_tcb_cap_def
   by (wpsimp wp: check_cap_inv cap_delete_fh_lift)
 
+lemma install_tcb_cap_not_ipc_queued_thread[wp]:
+  "\<lbrace>st_tcb_at (not ipc_queued_thread_state) target and invs\<rbrace>
+   install_tcb_cap target slot 3 slot_opt
+   \<lbrace>\<lambda>_. st_tcb_at (not ipc_queued_thread_state) target\<rbrace>"
+  unfolding install_tcb_cap_def
+  by (wpsimp wp: check_cap_inv cap_delete_fh_lift cancel_all_ipc_st_tcb_at
+           simp: pred_neg_def st_tcb_at_tcb_at)
+
 lemma set_simple_ko_sc_at_pred_n[wp]:
   "set_simple_ko g ep v \<lbrace> \<lambda>s. P (sc_at_pred_n N proj f t s) \<rbrace>"
   unfolding set_simple_ko_def
@@ -1890,24 +1907,13 @@ lemma cte_wp_at_strengthen:
   by (auto simp add: cte_wp_at_cases)
 
 (* FIXME: move *)
-lemma sym_refs_bound_sc_tcb_at_eq:
-  "sym_refs (state_refs_of s)
-   \<Longrightarrow> bound_sc_tcb_at (\<lambda>a. a = Some t) x s
-   \<Longrightarrow> bound_sc_tcb_at (\<lambda>a. a = Some t) y s
-   \<Longrightarrow> x = y"
-  apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl], assumption)
-  apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl], assumption)
-  apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-  done
-
-(* FIXME: move *)
 lemma bound_sc_tcb_at_idle_sc_idle_thread:
   "sym_refs (state_refs_of s)
    \<Longrightarrow> valid_idle s
    \<Longrightarrow> bound_sc_tcb_at (\<lambda>a. a = Some idle_sc_ptr) t s
    \<Longrightarrow> t = idle_thread_ptr"
   apply (subgoal_tac "bound_sc_tcb_at (\<lambda>a. a = Some idle_sc_ptr) idle_thread_ptr s")
-  apply (erule sym_refs_bound_sc_tcb_at_eq[rotated], assumption, assumption)
+  apply (erule sym_refs_bound_sc_tcb_at_inj[rotated], assumption, assumption)
   apply (clarsimp simp: invs_def valid_state_def valid_idle_def pred_tcb_at_def obj_at_def)
   done
 

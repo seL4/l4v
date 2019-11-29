@@ -38,9 +38,9 @@ crunches update_cdt_list
   for valid_sched_pred[wp]: "valid_sched_pred_strong P"
   (wp: dxo_wp_weak crunch_wps)
 
-lemma (in pspace_update_eq) test_sc_refill_max_eq[iff]:
-  "test_sc_refill_max t (f s) = test_sc_refill_max t s"
-  using pspace by (simp add: test_sc_refill_max_def)
+lemma (in pspace_update_eq) is_sc_active_eq[iff]:
+  "is_sc_active t (f s) = is_sc_active t s"
+  using pspace by (simp add: is_sc_active_def)
 
 lemma store_word_offs_valid_sched_pred[wp]:
   "store_word_offs ptr offs v \<lbrace>valid_sched_pred_strong P\<rbrace>"
@@ -54,11 +54,11 @@ lemma set_mrs_valid_sched_pred[wp]:
 global_interpretation set_mrs: valid_sched_pred_locale _ "set_mrs r t mrs"
   by unfold_locales wp
 
-lemma set_cap_test_sc_refill_max[wp]:
- "\<lbrace>test_sc_refill_max t\<rbrace> set_cap c p \<lbrace>\<lambda>rv. test_sc_refill_max t\<rbrace>"
+lemma set_cap_is_sc_active[wp]:
+ "\<lbrace>is_sc_active t\<rbrace> set_cap c p \<lbrace>\<lambda>rv. is_sc_active t\<rbrace>"
   apply (simp add: set_cap_def set_object_def split_def)
   apply (wp get_object_wp | wpc)+
-  apply (clarsimp simp: test_sc_refill_max_def obj_at_def
+  apply (clarsimp simp: is_sc_active_def obj_at_def
        | intro impI conjI | rule_tac x=scp in exI)+
   done
 
@@ -431,8 +431,8 @@ lemma set_cdt_list_wp:
   unfolding set_cdt_list_def
   by wpsimp
 
-global_interpretation set_cdt: schedulable_ipc_queues_pred_locale _ "set_cdt f"
-  by unfold_locales (rule schedulable_ipc_queues_pred_lift'; wpsimp simp: sc_at_ppred_def)
+global_interpretation set_cdt: released_ipc_queues_pred_locale _ "set_cdt f"
+  by unfold_locales (rule released_ipc_queues_pred_lift'; wpsimp simp: sc_at_ppred_def)
 
 lemma valid_blocked_thread_default_object_update:
   assumes v: "valid_blocked_thread_kh except nq nr queues rlq sa ct kh t"
@@ -442,7 +442,7 @@ lemma valid_blocked_thread_default_object_update:
   by (cases type)
      (auto simp: t valid_blocked_thread_def
                  pred_map_simps opt_map_simps map_join_simps vs_heap_simps
-                 default_object_def default_sched_context_def sc_active_def)
+                 default_object_def default_sched_context_def active_sc_def)
 
 lemma valid_blocked_fold_update:
   "\<lbrakk> valid_blocked_except_set_kh S queues rlq sa ct kh; type \<noteq> Untyped \<rbrakk> \<Longrightarrow>
@@ -663,9 +663,9 @@ lemma valid_sched_tcb_state_preservation_gen:
    apply (clarsimp simp: valid_idle_etcb_def)
    apply (frule use_valid[OF _ etcb_at], fastforce, erule mp)
    by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
-  apply (rule_tac V="schedulable_ipc_queues s'" in revcut_rl)
+  apply (rule_tac V="released_ipc_queues s'" in revcut_rl)
    subgoal for s rv s'
-   apply (simp add: schedulable_ipc_queues_defs
+   apply (simp add: released_ipc_queues_defs
                     pred_map2'_pred_maps obj_at_kh_kheap_simps[symmetric] pred_tcb_at_eq_commute)
    apply (erule allEI, rule impI)
    apply ((rule_tac V="st_tcb_at ipc_queued_thread_state t s" in revcut_rl, rule ccontr
@@ -999,12 +999,8 @@ lemma set_tcb_queue_wp:
    \<lbrace>\<lambda>_. P\<rbrace>"
   by (wpsimp simp: set_tcb_queue_def) (auto elim!: rsubst[of P])
 
-lemma get_tcb_queue_wp: "\<lbrace>\<lambda>s. P (ready_queues s t p) s\<rbrace> get_tcb_queue t p \<lbrace>P\<rbrace>"
+lemma get_tcb_queue_wp[wp]: "\<lbrace>\<lambda>s. P (ready_queues s t p) s\<rbrace> get_tcb_queue t p \<lbrace>P\<rbrace>"
   by (wpsimp simp: get_tcb_queue_def)
-
-lemma get_tcb_queue_inv[wp]:
-  "get_tcb_queue t p \<lbrace>\<lambda>_. P\<rbrace>"
-  by (wpsimp wp: get_tcb_queue_wp)
 
 lemma enqueue_distinct[intro!]: "distinct queue \<Longrightarrow> distinct (tcb_sched_enqueue thread queue)"
   by (simp add: tcb_sched_enqueue_def)
@@ -1300,10 +1296,10 @@ lemma schedulable_unfold2:
   by (clarsimp simp: is_schedulable_opt_def obj_at_kh_kheap_simps vs_all_heap_simps
               split: option.splits)
 
-lemma test_sc_refill_max_detype[simp]:
-  "(test_sc_refill_max t (detype S s))
-    = (test_sc_refill_max t s \<and> t \<notin> S)"
-  by (clarsimp simp add: test_sc_refill_max_def detype_def)
+lemma is_sc_active_detype[simp]:
+  "(is_sc_active t (detype S s))
+    = (is_sc_active t s \<and> t \<notin> S)"
+  by (clarsimp simp add: is_sc_active_def detype_def)
 
 lemma bound_sc_obj_tcb_at_detype:
   "bound_sc_obj_tcb_at (P s) t (detype S s)
@@ -1394,13 +1390,5 @@ lemma valid_reply_scs_machine_state_update[simp]:
 lemma valid_refills_ignores_machine_state[simp]:
   "valid_refills x (s\<lparr>machine_state := j\<rparr>) = valid_refills x s"
   by (clarsimp simp: valid_refills_def)
-
-lemma sc_refill_ready_inv[wp]:
-  "sc_refill_ready sc \<lbrace>P\<rbrace>"
-  by (wpsimp simp: sc_refill_ready_def)
-
-lemma refill_full_inv[wp]:
-  "refill_full scp \<lbrace>P\<rbrace>"
-  by (wpsimp simp: refill_full_def)
 
 end

@@ -574,31 +574,35 @@ crunch domain_time_inv[wp]:
   (wp: crunch_wps check_cap_inv mapM_wp' maybeM_inv simp: Let_def zipWithM_x_mapM)
 
 lemma charge_budget_domain_time_consumed_time:
-   "\<lbrace>\<lambda>s::det_state. P (domain_time s) 0 \<rbrace> charge_budget consumed canTimeout
-            \<lbrace>\<lambda>_ s. P (domain_time s) (consumed_time s)\<rbrace> "
-  by (wpsimp simp: charge_budget_def Let_def wp: assert_inv)
+   "\<lbrace>\<lambda>s::det_state. P (domain_time s) 0 \<rbrace>
+    charge_budget consumed canTimeout
+    \<lbrace>\<lambda>_ s. P (domain_time s) (consumed_time s)\<rbrace> "
+  by (wpsimp simp: charge_budget_def wp: assert_inv)
 
 lemma check_budget_domain_time_left[wp]:
-  "\<lbrace> valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace> check_budget
+  "\<lbrace> valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace>
+   check_budget
    \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
-  by (wpsimp simp: check_budget_def Let_def refill_capacity_def word_gt_0
-       wp: charge_budget_domain_time_consumed_time get_sched_context_wp get_refills_wp)
+  by (wpsimp simp: check_budget_def word_gt_0)
 
 lemma check_budget_domain_consumed_time_gt[wp]:
   "\<lbrace>\<lambda>s::det_state. consumed_time s < domain_time s\<rbrace> check_budget \<lbrace>\<lambda>_ s. consumed_time s  < domain_time s \<rbrace>"
-  by (wpsimp simp: check_budget_def Let_def refill_capacity_def word_gt_0
-       wp: charge_budget_domain_time_consumed_time get_sched_context_wp get_refills_wp)
+  by (wpsimp simp: check_budget_def word_gt_0
+               wp: charge_budget_domain_time_consumed_time)
 
 lemma commit_domain_time_domain_time_left:
-  "\<lbrace> valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace> commit_domain_time \<lbrace>\<lambda>_ s. 0 < domain_time s \<rbrace>"
+  "\<lbrace> valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace>
+   commit_domain_time
+   \<lbrace>\<lambda>_ s. 0 < domain_time s \<rbrace>"
   apply (wpsimp simp: commit_domain_time_def Let_def)
   using word_gt_0 by fastforce
 
 lemma commit_time_domain_time_left[wp]:
-  "\<lbrace> valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace> commit_time \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
-  by (wpsimp simp: commit_time_def Let_def sc_refill_ready_def refill_budget_check_round_robin_def
-           wp: commit_domain_time_domain_time_left get_sched_context_wp hoare_vcg_all_lift
-               hoare_drop_imp)
+  "\<lbrace> valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace>
+   commit_time
+   \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
+  by (wpsimp simp: commit_time_def
+               wp: commit_domain_time_domain_time_left hoare_drop_imp)
 
 lemma invoke_sched_control_configure_domain_time_inv[wp]:
   "\<lbrace>valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace>

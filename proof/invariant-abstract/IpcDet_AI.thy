@@ -1608,8 +1608,8 @@ lemma si_invs'_helper_no_reply:
                   od);
      new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
      test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
-              | Some scp \<Rightarrow> do sufficient <- refill_sufficient scp 0;
-                               ready <- refill_ready scp;
+              | Some scp \<Rightarrow> do sufficient <- get_sc_refill_sufficient scp 0;
+                               ready <- get_sc_refill_ready scp;
                                return (sufficient \<and> ready)
               od;
      y <- assert test;
@@ -1737,8 +1737,8 @@ lemma si_invs'_helper_some_reply:
                    od);
       new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
       test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
-              | Some scp \<Rightarrow> do sufficient <- refill_sufficient scp 0;
-                               ready <- refill_ready scp;
+              | Some scp \<Rightarrow> do sufficient <- get_sc_refill_sufficient scp 0;
+                               ready <- get_sc_refill_ready scp;
                                return (sufficient \<and> ready)
                             od;
       y <- assert test;
@@ -1870,8 +1870,8 @@ lemma si_invs'_helper_fault:
                    od);
       new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
       test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
-              | Some scp \<Rightarrow> do sufficient <- refill_sufficient scp 0;
-                               ready <- refill_ready scp;
+              | Some scp \<Rightarrow> do sufficient <- get_sc_refill_sufficient scp 0;
+                               ready <- get_sc_refill_ready scp;
                                return (sufficient \<and> ready)
                             od;
       y <- assert test;
@@ -1991,8 +1991,8 @@ lemma si_invs'_helper:
                    od);
       new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
       test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
-              | Some scp \<Rightarrow> do sufficient <- refill_sufficient scp 0;
-                               ready <- refill_ready scp;
+              | Some scp \<Rightarrow> do sufficient <- get_sc_refill_sufficient scp 0;
+                               ready <- get_sc_refill_ready scp;
                                return (sufficient \<and> ready)
                             od;
       y <- assert test;

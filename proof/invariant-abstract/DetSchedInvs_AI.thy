@@ -699,6 +699,9 @@ record sc_refill_cfg =
   scrc_refill_max :: nat
   scrc_period :: ticks
 
+abbreviation
+  "scrc_refill_hd scrc \<equiv> hd (scrc_refills scrc)"
+
 definition sc_refill_cfg_of :: "sched_context \<Rightarrow> sc_refill_cfg" where
   "sc_refill_cfg_of sc = \<lparr> scrc_refills = sc_refills sc,
                            scrc_refill_max = sc_refill_max sc,
@@ -718,6 +721,7 @@ lemma sc_refill_cfg_of_simps[iff]:
   "scrc_refills (sc_refill_cfg_of sc) = sc_refills sc"
   "scrc_refill_max (sc_refill_cfg_of sc) = sc_refill_max sc"
   "scrc_period (sc_refill_cfg_of sc) = sc_period sc"
+  "scrc_refill_hd (sc_refill_cfg_of sc) = refill_hd sc"
   by (auto simp: sc_refill_cfg_of_def)
 
 \<comment> \<open>These might not be necessary, since they're already solved by auto\<close>
@@ -841,6 +845,9 @@ lemma sc_at_ppred_to_pred_map_sc_refill_cfgs_of:
 
 lemmas sc_at_kh_simps[obj_at_kh_kheap_simps] =
   sc_at_ppred_to_pred_map_sc_refill_cfgs_of[where scrc_f=id and sc_f=sc_refill_cfg_of, simplified]
+  sc_at_ppred_to_pred_map_sc_refill_cfgs_of[where scrc_f=scrc_refills and sc_f=sc_refills, simplified]
+  sc_at_ppred_to_pred_map_sc_refill_cfgs_of[where scrc_f=scrc_refill_max and sc_f=sc_refill_max, simplified]
+  sc_at_ppred_to_pred_map_sc_refill_cfgs_of[where scrc_f=scrc_period and sc_f=sc_period, simplified]
 
 \<comment> \<open>Lifting rules for generic heap projections\<close>
 
@@ -1000,108 +1007,122 @@ lemmas valid_sched_heap_proj_lifts =
 
 \<comment> \<open>Schedulability condition: sc_refill_max must be positive\<close>
 
-definition refill_max_pos :: "nat \<Rightarrow> bool" where
-  "refill_max_pos rm \<equiv> 0 < rm"
+abbreviation active_scrc :: "sc_refill_cfg \<Rightarrow> bool" where
+  "active_scrc cfg \<equiv> active_sc (scrc_refill_max cfg)"
 
-abbreviation sc_active :: "sc_refill_cfg \<Rightarrow> bool" where
-  "sc_active cfg \<equiv> refill_max_pos (scrc_refill_max cfg)"
+lemmas active_scrc_def = active_sc_def
 
-lemmas sc_active_def = refill_max_pos_def
-
-lemma test_sc_refill_max_kh_simp[obj_at_kh_kheap_simps]:
-  "test_sc_refill_max scp s = pred_map sc_active (sc_refill_cfgs_of s) scp"
-  by (auto simp: test_sc_refill_max_def vs_all_heap_simps sc_active_def
+lemma is_sc_active_kh_simp[obj_at_kh_kheap_simps]:
+  "is_sc_active scp s = pred_map active_scrc (sc_refill_cfgs_of s) scp"
+  by (auto simp: is_sc_active_def vs_all_heap_simps
           split: option.splits kernel_object.splits)
+
+abbreviation is_active_sc :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "is_active_sc scp s \<equiv> pred_map active_scrc (sc_refill_cfgs_of s) scp"
+
+lemmas is_active_sc_def =
+  sc_at_ppred_to_pred_map_sc_refill_cfgs_of[where scrc_f=scrc_refill_max
+                                              and sc_f=sc_refill_max
+                                              and P="active_sc"
+                                            , simplified, symmetric]
 
 \<comment> \<open>Schedulability condition: head of sc_refills must have sufficient budget for usage\<close>
 
-abbreviation sc_sufficient_refills :: "time \<Rightarrow> sc_refill_cfg \<Rightarrow> bool" where
-  "sc_sufficient_refills usage cfg \<equiv> sufficient_refills usage (scrc_refills cfg)"
+abbreviation refill_sufficient_sc :: "time \<Rightarrow> sc_refill_cfg \<Rightarrow> bool" where
+  "refill_sufficient_sc usage cfg \<equiv> refill_sufficient usage (scrc_refill_hd cfg)"
 
-lemmas sc_sufficient_refills_def
-  = sufficient_refills_def[where refills="scrc_refills cfg" for cfg :: sc_refill_cfg]
+lemmas refill_sufficient_sc_def
+  = refill_sufficient_def[where refill="scrc_refill_hd cfg" for cfg :: sc_refill_cfg]
 
 abbreviation is_refill_sufficient :: "time \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "is_refill_sufficient usage scp s \<equiv> pred_map (sc_sufficient_refills usage) (sc_refill_cfgs_of s) scp"
+  "is_refill_sufficient usage scp s \<equiv> pred_map (refill_sufficient_sc usage) (sc_refill_cfgs_of s) scp"
 
 lemmas is_refill_sufficient_def =
-  sc_at_ppred_to_pred_map_sc_refill_cfgs_of[where scrc_f=scrc_refills
-                                              and sc_f=sc_refills
-                                              and P="sufficient_refills usage"
+  sc_at_ppred_to_pred_map_sc_refill_cfgs_of[where scrc_f="scrc_refill_hd"
+                                              and sc_f="refill_hd"
+                                              and P="refill_sufficient usage"
                                               for usage
                                             , simplified, symmetric]
 
 \<comment> \<open>Schedulability condition: head of sc_refills must not be too far in the future\<close>
 
-definition refills_ready :: "time \<Rightarrow> refill list \<Rightarrow> bool" where
-  "refills_ready curtime refills \<equiv> r_time (hd refills) \<le> curtime + kernelWCET_ticks"
+abbreviation refill_ready_sc :: "time \<Rightarrow> sc_refill_cfg \<Rightarrow> bool" where
+  "refill_ready_sc curtime cfg \<equiv> refill_ready curtime (scrc_refill_hd cfg)"
 
-abbreviation sc_refills_ready :: "time \<Rightarrow> sc_refill_cfg \<Rightarrow> bool" where
-  "sc_refills_ready curtime cfg \<equiv> refills_ready curtime (scrc_refills cfg)"
-
-lemmas sc_refills_ready_def
-  = refills_ready_def[where refills="scrc_refills cfg" for cfg :: sc_refill_cfg]
+lemmas refill_ready_sc_def
+  = refill_ready_def[where refill="scrc_refill_hd cfg" for cfg :: sc_refill_cfg]
 
 abbreviation is_refill_ready :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "is_refill_ready scp s \<equiv> pred_map (sc_refills_ready (cur_time s)) (sc_refill_cfgs_of s) scp"
+  "is_refill_ready scp s \<equiv> pred_map (refill_ready_sc (cur_time s)) (sc_refill_cfgs_of s) scp"
 
 lemmas is_refill_ready_def =
-  sc_at_ppred_to_pred_map_sc_refill_cfgs_of[where scrc_f=scrc_refills
-                                              and sc_f=sc_refills
-                                              and P="refills_ready (cur_time s)"
+  sc_at_ppred_to_pred_map_sc_refill_cfgs_of[where scrc_f=scrc_refill_hd
+                                              and sc_f=refill_hd
+                                              and P="refill_ready (cur_time s)"
                                               and s=s for s
                                             , simplified, symmetric]
 
 lemmas is_refill_ready_lift =
-  sc_at_ppred_lift_s[where proj=sc_refills and P=refills_ready and f=cur_time]
+  sc_at_ppred_lift_s[where proj=refill_hd and P=refill_ready and f=cur_time]
 
 \<comment> \<open>Predicates about scheduling contexts bound to threads, concerning schedulability\<close>
 
 abbreviation active_sc_tcb_at_pred :: "(obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> obj_ref \<Rightarrow> bool" where
-  "active_sc_tcb_at_pred \<equiv> pred_map2' sc_active"
+  "active_sc_tcb_at_pred \<equiv> pred_map2' active_scrc"
 abbreviation active_sc_tcb_at_kh :: "(obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> bool" where
   "active_sc_tcb_at_kh kh \<equiv> active_sc_tcb_at_pred (tcb_scps_of_kh kh) (sc_refill_cfgs_of_kh kh)"
 abbreviation active_sc_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "active_sc_tcb_at t s \<equiv> active_sc_tcb_at_pred (tcb_scps_of s) (sc_refill_cfgs_of s) t"
 
 abbreviation budget_ready_pred :: "time \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> obj_ref \<Rightarrow> bool" where
-  "budget_ready_pred curtime \<equiv> pred_map2' (sc_refills_ready curtime)"
+  "budget_ready_pred curtime \<equiv> pred_map2' (refill_ready_sc curtime)"
 abbreviation budget_ready_kh :: "time \<Rightarrow> (obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> bool" where
   "budget_ready_kh curtime kh \<equiv> budget_ready_pred curtime (tcb_scps_of_kh kh) (sc_refill_cfgs_of_kh kh)"
 abbreviation budget_ready :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "budget_ready t s \<equiv> budget_ready_pred (cur_time s) (tcb_scps_of s) (sc_refill_cfgs_of s) t"
 
 abbreviation budget_sufficient_pred  :: "(obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup>sc_refill_cfg) \<Rightarrow> obj_ref \<Rightarrow> bool" where
-  "budget_sufficient_pred \<equiv> pred_map2' (sc_sufficient_refills 0)"
+  "budget_sufficient_pred \<equiv> pred_map2' (refill_sufficient_sc 0)"
 abbreviation budget_sufficient_kh :: "(obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> bool" where
   "budget_sufficient_kh kh \<equiv> budget_sufficient_pred (tcb_scps_of_kh kh) (sc_refill_cfgs_of_kh kh)"
 abbreviation budget_sufficient :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "budget_sufficient t s \<equiv> budget_sufficient_pred (tcb_scps_of s) (sc_refill_cfgs_of s) t"
 
-\<comment> \<open>Threads with scheduling contexts ready for immediate scheduling: all three conditions at once\<close>
-abbreviation schedulable_sc :: "time \<Rightarrow> sc_refill_cfg \<Rightarrow> bool" where
-  "schedulable_sc curtime sc \<equiv> sc_active sc \<and> sc_refills_ready curtime sc \<and> sc_sufficient_refills 0 sc"
-abbreviation schedulable_sc_tcb_at_pred :: "time \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> obj_ref \<Rightarrow> bool" where
-  "schedulable_sc_tcb_at_pred curtime \<equiv> pred_map2' (schedulable_sc curtime)"
-abbreviation schedulable_sc_tcb_at_kh :: "time \<Rightarrow> (obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> bool" where
-  "schedulable_sc_tcb_at_kh curtime kh \<equiv> schedulable_sc_tcb_at_pred curtime (tcb_scps_of_kh kh) (sc_refill_cfgs_of_kh kh)"
-abbreviation schedulable_sc_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
-  "schedulable_sc_tcb_at t s \<equiv> schedulable_sc_tcb_at_pred (cur_time s) (tcb_scps_of s) (sc_refill_cfgs_of s) t"
+\<comment> \<open>Threads with scheduling contexts that have been released: all three conditions at once\<close>
+abbreviation released_sc :: "time \<Rightarrow> sc_refill_cfg \<Rightarrow> bool" where
+  "released_sc curtime sc \<equiv> active_scrc sc \<and> refill_ready_sc curtime sc \<and> refill_sufficient_sc 0 sc"
+abbreviation released_sc_tcb_at_pred :: "time \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> obj_ref \<Rightarrow> bool" where
+  "released_sc_tcb_at_pred curtime \<equiv> pred_map2' (released_sc curtime)"
+abbreviation released_sc_tcb_at_kh :: "time \<Rightarrow> (obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> bool" where
+  "released_sc_tcb_at_kh curtime kh \<equiv> released_sc_tcb_at_pred curtime (tcb_scps_of_kh kh) (sc_refill_cfgs_of_kh kh)"
+abbreviation released_sc_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "released_sc_tcb_at t s \<equiv> released_sc_tcb_at_pred (cur_time s) (tcb_scps_of s) (sc_refill_cfgs_of s) t"
 
-lemma schedulable_sc_tcb_at_def:
-  "schedulable_sc_tcb_at_pred curtime tcb_scps sc_refill_cfgs t
+lemma released_sc_tcb_at_def:
+  "released_sc_tcb_at_pred curtime tcb_scps sc_refill_cfgs t
     \<longleftrightarrow> active_sc_tcb_at_pred tcb_scps sc_refill_cfgs t
         \<and> budget_ready_pred curtime tcb_scps sc_refill_cfgs t
         \<and> budget_sufficient_pred tcb_scps sc_refill_cfgs t"
   by (simp add: pred_map2_conj)
 
-lemma schedulable_sc_tcb_at_lift:
+lemma released_sc_tcb_at_lift:
   assumes "\<lbrace>\<lambda>s. active_sc_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
   assumes "\<lbrace>\<lambda>s. budget_ready t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_ready t s\<rbrace>"
   assumes "\<lbrace>\<lambda>s. budget_sufficient t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_sufficient t s\<rbrace>"
-  shows "\<lbrace>\<lambda>s. schedulable_sc_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. schedulable_sc_tcb_at t s\<rbrace>"
-  unfolding schedulable_sc_tcb_at_def
+  shows "\<lbrace>\<lambda>s. released_sc_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. released_sc_tcb_at t s\<rbrace>"
+  unfolding released_sc_tcb_at_def
   by (intro hoare_vcg_conj_lift_N_pre_conj[where N="\<lambda>P. P"] assms)
+
+abbreviation released_sc_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "released_sc_at scptr s \<equiv> pred_map (released_sc (cur_time s)) (sc_refill_cfgs_of s) scptr"
+
+lemma sc_at_pred_to_pred_map_sc_refill_cfgs_of:
+  assumes "\<And>sc. P sc = P' (sc_refill_cfg_of sc)"
+  shows "sc_at_pred P scp s = pred_map P' (sc_refill_cfgs_of s) scp"
+  by (auto simp: sc_at_pred_def obj_at_def vs_all_heap_simps assms)
+
+lemmas sc_at_released_kh_simps[obj_at_kh_kheap_simps] =
+  sc_at_pred_to_pred_map_sc_refill_cfgs_of[where P="sc_released curtime" and P'="released_sc curtime" for curtime, simplified sc_released_def, simplified]
 
 \<comment> \<open>Sometimes, it will be useful to work with a generalisation of all 4 of the preceding predicates\<close>
 abbreviation bound_sc_obj_tcb_at_kh :: "(sc_refill_cfg \<Rightarrow> bool) \<Rightarrow> (obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> bool" where
@@ -1112,15 +1133,19 @@ abbreviation bound_sc_obj_tcb_at :: "(sc_refill_cfg \<Rightarrow> bool) \<Righta
 lemma is_schedulable_opt_Some:
   "is_schedulable_opt t in_q s = Some X \<Longrightarrow>
           st_tcb_at runnable t s \<and> active_sc_tcb_at t s \<and> \<not> in_q \<longleftrightarrow> X"
-  by (clarsimp simp: is_schedulable_opt_def obj_at_kh_kheap_simps
-                     pred_map_simps opt_map_simps map_join_simps vs_heap_simps
+  by (clarsimp simp: is_schedulable_opt_def vs_all_heap_simps obj_at_kh_kheap_simps
+              split: option.splits)
+
+lemma is_schedulable_bool_def2:
+  "is_schedulable_bool t a s = (st_tcb_at runnable t s \<and> active_sc_tcb_at t s \<and> \<not> a)"
+  by (clarsimp simp: is_schedulable_bool_def vs_all_heap_simps obj_at_kh_kheap_simps
               split: option.splits)
 
 definition cur_sc_offset_ready_2
 where
   "cur_sc_offset_ready_2 usage curtime cursc kh \<equiv>
    (case kh cursc of
-          Some (SchedContext sc _) \<Rightarrow> (r_time (refill_hd sc)) + usage \<le> curtime + kernelWCET_ticks
+          Some (SchedContext sc _) \<Rightarrow> refill_ready' usage curtime (refill_hd sc)
          | _ \<Rightarrow> False)"
 
 abbreviation cur_sc_offset_ready :: "time \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -1389,19 +1414,19 @@ lemmas bound_sc_obj_tcb_at_set_object_TCB_cur_time =
   bound_sc_obj_tcb_at_set_object_no_change_tcb'[where g=cur_time, OF _ thread_set_cur_time]
 
 lemmas budget_ready_set_object_no_change_tcb =
-  bound_sc_obj_tcb_at_set_object_TCB_cur_time[where P=sc_refills_ready]
+  bound_sc_obj_tcb_at_set_object_TCB_cur_time[where P=refill_ready_sc]
 
 lemmas budget_sufficient_set_object_no_change_tcb =
-  bound_sc_obj_tcb_at_set_object_no_change_tcb[where P="sc_sufficient_refills 0"]
+  bound_sc_obj_tcb_at_set_object_no_change_tcb[where P="refill_sufficient_sc 0"]
 
 lemmas bound_sc_obj_tcb_at_set_object_SC_cur_time =
   bound_sc_obj_tcb_at_set_object_no_change_sc'[where g=cur_time, OF _ update_sched_context_cur_time]
 
 lemmas budget_ready_set_object_no_change_sc =
-  bound_sc_obj_tcb_at_set_object_SC_cur_time[where P=sc_refills_ready, simplified]
+  bound_sc_obj_tcb_at_set_object_SC_cur_time[where P=refill_ready_sc, simplified]
 
 lemmas budget_sufficient_set_object_no_change_sc =
-  bound_sc_obj_tcb_at_set_object_no_change_sc[where P="sc_sufficient_refills 0", simplified]
+  bound_sc_obj_tcb_at_set_object_no_change_sc[where P="refill_sufficient_sc 0", simplified]
 
 lemma update_sched_context_sc_at_pred_inv':
   assumes "\<And>x sc. P x (proj (f sc)) = P x (proj sc)"
@@ -1417,25 +1442,25 @@ lemmas update_sched_context_sc_at_pred_inv =
 
 lemmas is_refill_ready_update_sched_context_no_change =
   update_sched_context_sc_at_pred_inv'
-    [where proj=sc_refills and P=refills_ready and g=cur_time
+    [where proj=refill_hd and P=refill_ready and g=cur_time
      , OF _ update_sched_context_cur_time, folded is_refill_ready_def]
 
 lemmas is_refill_sufficient_update_sched_context_no_change =
   update_sched_context_sc_at_pred_inv
-    [where proj=sc_refills and P="sufficient_refills usage" for usage, folded is_refill_sufficient_def]
+    [where proj=refill_hd and P="refill_sufficient usage" for usage, folded is_refill_sufficient_def]
 
 lemmas budget_ready_thread_set_no_change =
-  bound_sc_obj_tcb_at_thread_set_no_change'[where g=cur_time and P=sc_refills_ready, OF _ thread_set_cur_time]
+  bound_sc_obj_tcb_at_thread_set_no_change'[where g=cur_time and P=refill_ready_sc, OF _ thread_set_cur_time]
 
 lemmas budget_sufficient_thread_set_no_change =
-  bound_sc_obj_tcb_at_thread_set_no_change[where P="sc_sufficient_refills 0"]
+  bound_sc_obj_tcb_at_thread_set_no_change[where P="refill_sufficient_sc 0"]
 
 lemmas budget_sufficient_update_sched_context_no_change =
-  bound_sc_obj_tcb_at_update_sched_context_no_change[where P="sc_sufficient_refills 0", simplified]
+  bound_sc_obj_tcb_at_update_sched_context_no_change[where P="refill_sufficient_sc 0", simplified]
 
 lemmas budget_ready_update_sched_context_no_change =
   bound_sc_obj_tcb_at_update_sched_context_no_change'
-    [where P=sc_refills_ready and g=cur_time, OF _ update_sched_context_cur_time, simplified]
+    [where P=refill_ready_sc and g=cur_time, OF _ update_sched_context_cur_time, simplified]
 
 \<comment> \<open>Misc valid_sched-related predicates\<close>
 
@@ -1573,27 +1598,28 @@ lemma gets_the_bind_collapse:
                       obind_pair_def obind_def return_def fail_def
                split: option.splits)
 
-lemma refill_ready_gets_the:
-  "refill_ready scp = gets_the (\<lambda>s. map_project (sc_refills_ready (cur_time s)) (sc_refill_cfgs_of s) scp)"
-  apply (simp add: refill_ready_def gets_gets_the get_sched_context_gets_the gets_the_bind_collapse)
+lemma get_sc_refill_ready_gets_the:
+  "get_sc_refill_ready scp = gets_the (\<lambda>s. map_project (refill_ready_sc (cur_time s)) (sc_refill_cfgs_of s) scp)"
+  apply (simp add: get_sc_refill_ready_def refill_ready_def gets_gets_the
+                   get_sched_context_gets_the gets_the_bind_collapse)
   apply (simp add: gets_the_map_project[symmetric])
   by (auto intro!: arg_cong[where f=gets_the] map_eqI
              simp: map_project_simps obind_pair_def obind_def sc_heap.all_simps
-                   sc_refill_cfgs.all_simps sc_refills_ready_def
+                   sc_refill_cfgs.all_simps
             split: option.splits)
 
-lemma refill_sufficient_gets_the:
-  "refill_sufficient scp usage = gets_the (\<lambda>s. map_project (sc_sufficient_refills usage) (sc_refill_cfgs_of s) scp)"
-  apply (simp add: refill_sufficient_def get_refills_def get_sched_context_gets_the
+lemma get_sc_refill_sufficient_gets_the:
+  "get_sc_refill_sufficient scp usage = gets_the (\<lambda>s. map_project (refill_sufficient_sc usage) (sc_refill_cfgs_of s) scp)"
+  apply (simp add: get_sc_refill_sufficient_def get_sched_context_gets_the
                    gets_the_map_project[symmetric])
   by (auto intro!: arg_cong[where f=gets_the] map_eqI simp: map_project_simps vs_all_heap_simps)
 
-lemma refill_ready_tcb_gets_the:
-  "refill_ready_tcb t
-   = gets_the (\<lambda>s. map_project (\<lambda>sc. sc_refills_ready (cur_time s) sc) (map_join (tcb_scps_of s) |> sc_refill_cfgs_of s) t)"
-  apply (simp add: refill_ready_tcb_def)
-  apply (simp add: refill_ready_tcb_def get_tcb_obj_ref_gets_the assert_opt_gets_the_K
-                   refill_ready_gets_the
+lemma get_tcb_refill_ready_gets_the:
+  "get_tcb_refill_ready t
+   = gets_the (\<lambda>s. map_project (\<lambda>sc. refill_ready_sc (cur_time s) sc) (map_join (tcb_scps_of s) |> sc_refill_cfgs_of s) t)"
+  apply (simp add: get_tcb_refill_ready_def)
+  apply (simp add: get_tcb_obj_ref_gets_the assert_opt_gets_the_K
+                   get_sc_refill_ready_gets_the
              flip: gets_the_obind)
   apply (intro arg_cong[where f=gets_the] ext)
   by (auto simp: obind_def map_project_def opt_map_def map_join_def
@@ -1606,11 +1632,17 @@ lemma fun_of_m_gets_the:
                  assert_opt_def fail_def
           split: option.splits)
 
-lemma fun_of_m_refill_ready_tcb:
-  "fun_of_m (refill_ready_tcb t) s
-   = map_project (\<lambda>sc. sc_refills_ready (cur_time s) sc)
+lemma fun_of_m_get_tcb_refill_ready:
+  "fun_of_m (get_tcb_refill_ready t) s
+   = map_project (\<lambda>sc. refill_ready_sc (cur_time s) sc)
                  (map_join (tcb_scps_of s) |> sc_refill_cfgs_of s) t"
-  by (simp add: refill_ready_tcb_gets_the fun_of_m_gets_the)
+  by (simp add: get_tcb_refill_ready_gets_the fun_of_m_gets_the)
+
+lemma fun_of_m_get_tcb_refill_budget_ready:
+  "\<exists>sc. bound_sc_obj_tcb_at ((=) sc) target s \<Longrightarrow>
+   fun_of_m (get_tcb_refill_ready target) s = Some (budget_ready target s)"
+  by (clarsimp simp: fun_of_m_get_tcb_refill_ready vs_all_heap_simps
+                     map_project_simps map_join_simps opt_map_simps)
 
 (* FIXME: Move up. Perhaps use more widely, to get rid of pred_map2? *)
 definition tcb_sc_refill_cfgs_2 ::
@@ -1645,29 +1677,29 @@ lemma option_eqI:
   shows "opt = opt'"
   by (cases opt; simp add: assms)
 
-lemma refill_ready_tcb_tcb_ready_times_of':
+lemma get_tcb_refill_ready_tcb_ready_times_of':
   assumes "bound_sc_obj_tcb_at P t s"
-  shows "fun_of_m (refill_ready_tcb t) s
+  shows "fun_of_m (get_tcb_refill_ready t) s
          = map_option (\<lambda>ready_time. ready_time \<le> cur_time s + kernelWCET_ticks)
                       (tcb_ready_times_of s t)"
   using assms
   by (auto intro: option_eqI
-            simp: fun_of_m_refill_ready_tcb vs_all_heap_simps refills_ready_def tcb_ready_times_defs
+            simp: fun_of_m_get_tcb_refill_ready vs_all_heap_simps refill_ready_def tcb_ready_times_defs
                   map_project_simps map_join_simps opt_map_simps)
 
-lemma refill_ready_tcb_tcb_ready_times_of_eq':
+lemma get_tcb_refill_ready_tcb_ready_times_of_eq':
   assumes "bound_sc_obj_tcb_at ((=) sc) t s"
-  shows "fun_of_m (refill_ready_tcb t) s
+  shows "fun_of_m (get_tcb_refill_ready t) s
          = map_option (\<lambda>ready_time. ready_time \<le> cur_time s + kernelWCET_ticks)
                       (tcb_ready_times_of s t)"
-  unfolding refill_ready_tcb_tcb_ready_times_of'[OF assms] using assms
+  unfolding get_tcb_refill_ready_tcb_ready_times_of'[OF assms] using assms
   by (auto simp: vs_all_heap_simps)
 
-lemma refill_ready_tcb_tcb_ready_times_of:
+lemma get_tcb_refill_ready_tcb_ready_times_of:
   assumes "budget_sufficient t s"
-  shows "fun_of_m (refill_ready_tcb t) s
+  shows "fun_of_m (get_tcb_refill_ready t) s
          = map_option (\<lambda>ready_time. ready_time \<le> cur_time s + kernelWCET_ticks) (tcb_ready_times_of s t)"
-  unfolding refill_ready_tcb_tcb_ready_times_of'[OF assms] using assms by simp
+  unfolding get_tcb_refill_ready_tcb_ready_times_of'[OF assms] using assms by simp
 
 lemma bound_sc_obj_tcb_at_eqI:
   assumes "kheap s t = Some (TCB tcb)"
@@ -1682,21 +1714,21 @@ lemma budget_sufficient_has_ready_time:
   using assms
   by (auto simp: opt_map_simps map_join_simps map_project_simps pred_map_simps tcb_ready_times_defs)
 
-lemma refill_ready_tcb_simp2:
+lemma get_tcb_refill_ready_simp2:
   assumes "budget_sufficient t s"
-  shows "the (fun_of_m (refill_ready_tcb t) s)
+  shows "the (fun_of_m (get_tcb_refill_ready t) s)
          = (tcb_ready_time t s \<le> cur_time s + kernelWCET_ticks)"
-  unfolding refill_ready_tcb_tcb_ready_times_of[OF assms]
+  unfolding get_tcb_refill_ready_tcb_ready_times_of[OF assms]
   using budget_sufficient_has_ready_time[OF assms]
   by auto
 
-lemma refill_ready_tcb_simp3:
+lemma get_tcb_refill_ready_simp3:
   assumes "kheap s t = Some (TCB tcb)"
           "tcb_sched_context tcb = Some scp"
           "kheap s scp = Some (SchedContext sc n)"
-  shows "the (fun_of_m (refill_ready_tcb t) s)
+  shows "the (fun_of_m (get_tcb_refill_ready t) s)
          = (tcb_ready_time t s \<le> cur_time s + kernelWCET_ticks)"
-  unfolding refill_ready_tcb_tcb_ready_times_of_eq'[OF bound_sc_obj_tcb_at_eqI[OF assms]]
+  unfolding get_tcb_refill_ready_tcb_ready_times_of_eq'[OF bound_sc_obj_tcb_at_eqI[OF assms]]
   using budget_sufficient_has_ready_time[OF bound_sc_obj_tcb_at_eqI[OF assms]]
   by auto
 
@@ -1787,7 +1819,7 @@ definition valid_ready_queued_thread_2 where
   "valid_ready_queued_thread_2 curtime etcbs tcb_sts tcb_scps sc_refill_cfgs t d p \<equiv>
     pred_map (\<lambda>t. etcb_priority t = p \<and> etcb_domain t = d) etcbs t
     \<and> pred_map runnable tcb_sts t
-    \<and> schedulable_sc_tcb_at_pred curtime tcb_scps sc_refill_cfgs t"
+    \<and> released_sc_tcb_at_pred curtime tcb_scps sc_refill_cfgs t"
 
 definition valid_ready_qs_2 ::
   "(domain \<Rightarrow> priority \<Rightarrow> obj_ref list) \<Rightarrow>
@@ -1903,40 +1935,27 @@ abbreviation ready_queued_threads_2 :: "(domain \<Rightarrow> priority \<Rightar
 abbreviation ready_queued_threads :: "'z state \<Rightarrow> obj_ref set" where
   "ready_queued_threads s \<equiv> ready_queued_threads_2 (ready_queues s)"
 
-\<comment> \<open>Schedulability of threads in notification and endpoint queues\<close>
-primrec
-  ipc_queued_thread_state :: "thread_state \<Rightarrow> bool"
-where
-  "ipc_queued_thread_state (Running)               = False"
-| "ipc_queued_thread_state (Inactive)              = False"
-| "ipc_queued_thread_state (Restart)               = False"
-| "ipc_queued_thread_state (BlockedOnReceive _ _)  = True"
-| "ipc_queued_thread_state (BlockedOnSend _ _)     = True"
-| "ipc_queued_thread_state (BlockedOnNotification _) = True"
-| "ipc_queued_thread_state (IdleThreadState)       = False"
-| "ipc_queued_thread_state (BlockedOnReply _)        = True"
+abbreviation released_if_bound_sc_thread_2 where
+  "released_if_bound_sc_thread_2 t curtime tcb_scps sc_refill_cfgs \<equiv>
+    pred_map_eq None tcb_scps t \<or> released_sc_tcb_at_pred curtime tcb_scps sc_refill_cfgs t"
 
-abbreviation schedulable_if_bound_sc_thread_2 where
-  "schedulable_if_bound_sc_thread_2 t curtime tcb_scps sc_refill_cfgs \<equiv>
-    pred_map_eq None tcb_scps t \<or> schedulable_sc_tcb_at_pred curtime tcb_scps sc_refill_cfgs t"
+abbreviation released_if_bound_sc_thread :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "released_if_bound_sc_thread t s \<equiv> released_if_bound_sc_thread_2 t (cur_time s) (tcb_scps_of s) (sc_refill_cfgs_of s)"
 
-abbreviation schedulable_if_bound_sc_thread :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
-  "schedulable_if_bound_sc_thread t s \<equiv> schedulable_if_bound_sc_thread_2 t (cur_time s) (tcb_scps_of s) (sc_refill_cfgs_of s)"
-
-definition schedulable_ipc_queued_thread_2 ::
+definition released_ipc_queued_thread_2 ::
   "obj_ref \<Rightarrow> time \<Rightarrow> (obj_ref \<rightharpoonup> thread_state) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool"
   where
-  "schedulable_ipc_queued_thread_2 t curtime tcb_sts tcb_scps sc_refill_cfgs \<equiv>
+  "released_ipc_queued_thread_2 t curtime tcb_sts tcb_scps sc_refill_cfgs \<equiv>
     pred_map ipc_queued_thread_state tcb_sts t
-    \<longrightarrow> schedulable_if_bound_sc_thread_2 t curtime tcb_scps sc_refill_cfgs"
+    \<longrightarrow> released_if_bound_sc_thread_2 t curtime tcb_scps sc_refill_cfgs"
 
-definition schedulable_ipc_queues_2 ::
+definition released_ipc_queues_2 ::
   "time \<Rightarrow> (obj_ref \<rightharpoonup> thread_state) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool"
   where
-  "schedulable_ipc_queues_2 curtime tcb_sts tcb_scps sc_refill_cfgs \<equiv>
-    \<forall>t. schedulable_ipc_queued_thread_2 t curtime tcb_sts tcb_scps sc_refill_cfgs"
+  "released_ipc_queues_2 curtime tcb_sts tcb_scps sc_refill_cfgs \<equiv>
+    \<forall>t. released_ipc_queued_thread_2 t curtime tcb_sts tcb_scps sc_refill_cfgs"
 
-abbreviation schedulable_ipc_queues_pred ::
+abbreviation released_ipc_queues_pred ::
   "(time \<Rightarrow>
     (obj_ref \<rightharpoonup> thread_state) \<Rightarrow>
     (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow>
@@ -1945,24 +1964,24 @@ abbreviation schedulable_ipc_queues_pred ::
    'z::state_ext state \<Rightarrow>
    bool"
   where
-  "schedulable_ipc_queues_pred P \<equiv>
+  "released_ipc_queues_pred P \<equiv>
     \<lambda>s. P (cur_time s) (tcb_sts_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)"
-abbreviation schedulable_if_bound_sc_tcb_at where
-  "schedulable_if_bound_sc_tcb_at t s \<equiv>
-    schedulable_if_bound_sc_thread_2 t (cur_time s) (tcb_scps_of s) (sc_refill_cfgs_of s)"
-abbreviation schedulable_ipc_queued_thread :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "schedulable_ipc_queued_thread t \<equiv> schedulable_ipc_queues_pred (schedulable_ipc_queued_thread_2 t)"
-abbreviation schedulable_ipc_queues :: "'z::state_ext state \<Rightarrow> bool" where
-  "schedulable_ipc_queues \<equiv> schedulable_ipc_queues_pred schedulable_ipc_queues_2"
+abbreviation released_if_bound_sc_tcb_at where
+  "released_if_bound_sc_tcb_at t s \<equiv>
+    released_if_bound_sc_thread_2 t (cur_time s) (tcb_scps_of s) (sc_refill_cfgs_of s)"
+abbreviation released_ipc_queued_thread :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "released_ipc_queued_thread t \<equiv> released_ipc_queues_pred (released_ipc_queued_thread_2 t)"
+abbreviation released_ipc_queues :: "'z::state_ext state \<Rightarrow> bool" where
+  "released_ipc_queues \<equiv> released_ipc_queues_pred released_ipc_queues_2"
 
-lemmas schedulable_ipc_queues_defs = schedulable_ipc_queued_thread_2_def schedulable_ipc_queues_2_def
+lemmas released_ipc_queues_defs = released_ipc_queued_thread_2_def released_ipc_queues_2_def
 
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation valid_sched_ipc_queues where
-  "valid_sched_ipc_queues ctime cdom ct it rq rlq sa lmt etcbs \<equiv> schedulable_ipc_queues_2 ctime"
+  "valid_sched_ipc_queues ctime cdom ct it rq rlq sa lmt etcbs \<equiv> released_ipc_queues_2 ctime"
 
 \<comment> \<open>Lifting rules for IPC queue schedulability.\<close>
-lemma schedulable_ipc_queue_lift_pre_conj:
+lemma released_ipc_queue_lift_pre_conj:
   assumes "\<lbrace>\<lambda>s. \<not> P (st_tcb_at ipc_queued_thread_state t s) \<and> R s\<rbrace>
            f \<lbrace>\<lambda>rv s. \<not> P (st_tcb_at ipc_queued_thread_state t s)\<rbrace>"
   assumes "\<lbrace>\<lambda>s. P (bound_sc_tcb_at (\<lambda>sc. sc = None) t s) \<and> R s\<rbrace>
@@ -1973,16 +1992,16 @@ lemma schedulable_ipc_queue_lift_pre_conj:
            f \<lbrace>\<lambda>rv s. P (budget_ready t s)\<rbrace>"
   assumes "\<lbrace>\<lambda>s. P (budget_sufficient t s) \<and> R s\<rbrace>
            f \<lbrace>\<lambda>rv s. P (budget_sufficient t s)\<rbrace>"
-  shows "\<lbrace>\<lambda>s. P (schedulable_ipc_queued_thread t s) \<and> R s\<rbrace>
-         f \<lbrace>\<lambda>rf s. P (schedulable_ipc_queued_thread t s)\<rbrace>"
-  unfolding schedulable_ipc_queued_thread_2_def schedulable_sc_tcb_at_def
+  shows "\<lbrace>\<lambda>s. P (released_ipc_queued_thread t s) \<and> R s\<rbrace>
+         f \<lbrace>\<lambda>rf s. P (released_ipc_queued_thread t s)\<rbrace>"
+  unfolding released_ipc_queued_thread_2_def released_sc_tcb_at_def
   by (intro hoare_vcg_imp_lift_N_pre_conj hoare_vcg_disj_lift_N_pre_conj hoare_vcg_conj_lift_N_pre_conj
             assms[unfolded obj_at_kh_kheap_simps pred_map_eq_normalise])
 
-lemmas schedulable_ipc_queue_lift =
-  schedulable_ipc_queue_lift_pre_conj[where R=\<top>, simplified]
+lemmas released_ipc_queue_lift =
+  released_ipc_queue_lift_pre_conj[where R=\<top>, simplified]
 
-lemma schedulable_ipc_queues_lift_pre_conj:
+lemma released_ipc_queues_lift_pre_conj:
   assumes "\<And>t. \<lbrace>\<lambda>s. \<not> P (st_tcb_at ipc_queued_thread_state t s) \<and> R s\<rbrace>
                 f \<lbrace>\<lambda>rv s. \<not> P (st_tcb_at ipc_queued_thread_state t s)\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. P (bound_sc_tcb_at (\<lambda>sc. sc = None) t s) \<and> R s\<rbrace>
@@ -1993,15 +2012,15 @@ lemma schedulable_ipc_queues_lift_pre_conj:
                 f \<lbrace>\<lambda>rv s. P (budget_ready t s)\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. P (budget_sufficient t s) \<and> R s\<rbrace>
                 f \<lbrace>\<lambda>rv s. P (budget_sufficient t s)\<rbrace>"
-  shows "\<lbrace>\<lambda>s. P (schedulable_ipc_queues s) \<and> R s\<rbrace>
-         f \<lbrace>\<lambda>rf s. P (schedulable_ipc_queues s)\<rbrace>"
-  unfolding schedulable_ipc_queues_2_def
-  by (intro hoare_vcg_all_lift_N_pre_conj schedulable_ipc_queue_lift_pre_conj assms)
+  shows "\<lbrace>\<lambda>s. P (released_ipc_queues s) \<and> R s\<rbrace>
+         f \<lbrace>\<lambda>rf s. P (released_ipc_queues s)\<rbrace>"
+  unfolding released_ipc_queues_2_def
+  by (intro hoare_vcg_all_lift_N_pre_conj released_ipc_queue_lift_pre_conj assms)
 
-lemmas schedulable_ipc_queues_lift =
-  schedulable_ipc_queues_lift_pre_conj[where R=\<top>, simplified]
+lemmas released_ipc_queues_lift =
+  released_ipc_queues_lift_pre_conj[where R=\<top>, simplified]
 
-lemma schedulable_ipc_queues_pred_lift_f:
+lemma released_ipc_queues_pred_lift_f:
   assumes a: "\<And>P. \<lbrace>\<lambda>s. P (a (cur_time s)) \<and> R s\<rbrace> m \<lbrace>\<lambda>rv s. P (cur_time s)\<rbrace>"
   assumes b: "\<And>P. \<lbrace>\<lambda>s. P (b (tcb_sts_of s)) \<and> R s\<rbrace> m \<lbrace>\<lambda>rv s. P (tcb_sts_of s)\<rbrace>"
   assumes c: "\<And>P. \<lbrace>\<lambda>s. P (c (tcb_scps_of s)) \<and> R s\<rbrace> m \<lbrace>\<lambda>rv s. P (tcb_scps_of s)\<rbrace>"
@@ -2011,7 +2030,7 @@ lemma schedulable_ipc_queues_pred_lift_f:
                 (c (tcb_scps_of s))
                 (d (sc_refill_cfgs_of s))
               \<and> R s\<rbrace>
-         m \<lbrace>\<lambda>rv. schedulable_ipc_queues_pred P\<rbrace>"
+         m \<lbrace>\<lambda>rv. released_ipc_queues_pred P\<rbrace>"
   apply (rule validI, clarsimp)
   apply (drule refl[THEN iffD1, where P="P _ _ _ _"])
   apply (frule use_valid, rule_tac P="\<lambda>a. P a _ _ _" in a, erule (1) conjI, thin_tac "P _ _ _ _")
@@ -2020,19 +2039,19 @@ lemma schedulable_ipc_queues_pred_lift_f:
   apply (frule use_valid, rule_tac P="\<lambda>d. P _ _ _ d" in d, erule (1) conjI, thin_tac "P _ _ _ _")
   by assumption
 
-lemmas schedulable_ipc_queues_pred_lift_f' =
-  schedulable_ipc_queues_pred_lift_f[where R=\<top>, simplified]
+lemmas released_ipc_queues_pred_lift_f' =
+  released_ipc_queues_pred_lift_f[where R=\<top>, simplified]
 
-lemma schedulable_ipc_queues_pred_lift:
+lemma released_ipc_queues_pred_lift:
   assumes "\<And>P. \<lbrace>\<lambda>s. P (cur_time s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_time s)\<rbrace>"
   assumes "\<And>N P t. \<lbrace>\<lambda>s. N (st_tcb_at P t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (st_tcb_at P t s)\<rbrace>"
   assumes "\<And>N P t. \<lbrace>\<lambda>s. N (bound_sc_tcb_at P t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (bound_sc_tcb_at P t s)\<rbrace>"
   assumes "\<And>N P scp. \<lbrace>\<lambda>s. N (sc_refill_cfg_sc_at P scp s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (sc_refill_cfg_sc_at P scp s)\<rbrace>"
-  shows "\<lbrace>\<lambda>s. schedulable_ipc_queues_pred P s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. schedulable_ipc_queues_pred P\<rbrace>"
-  by (rule schedulable_ipc_queues_pred_lift_f; intro assms valid_sched_heap_proj_lifts)
+  shows "\<lbrace>\<lambda>s. released_ipc_queues_pred P s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. released_ipc_queues_pred P\<rbrace>"
+  by (rule released_ipc_queues_pred_lift_f; intro assms valid_sched_heap_proj_lifts)
 
-lemmas schedulable_ipc_queues_pred_lift' =
-  schedulable_ipc_queues_pred_lift[where R=\<top>, simplified]
+lemmas released_ipc_queues_pred_lift' =
+  released_ipc_queues_pred_lift[where R=\<top>, simplified]
 
 lemma bound_sc_obj_tcb_at_kh_lift_strong:
   assumes curtime:
@@ -2210,7 +2229,7 @@ definition weak_valid_sched_action_2 where
   "weak_valid_sched_action_2 except curtime sa release_q tcb_sts tcb_scps sc_refill_cfgs \<equiv>
     \<forall>t. sa = switch_thread t \<and> t \<notin> except
         \<longrightarrow> pred_map runnable tcb_sts t
-            \<and> schedulable_sc_tcb_at_pred curtime tcb_scps sc_refill_cfgs t
+            \<and> released_sc_tcb_at_pred curtime tcb_scps sc_refill_cfgs t
             \<and> \<not> t \<in> set release_q"
 
 abbreviation weak_valid_sched_action:: "'z state \<Rightarrow> bool" where
@@ -2281,7 +2300,7 @@ definition valid_sched_2 where
     \<and> ct_in_cur_domain_2 ct it sa cdom etcbs
     \<and> (vbl \<longrightarrow> valid_blocked_2 queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs)
     \<and> valid_idle_etcb_2 etcbs
-    \<and> schedulable_ipc_queues_2 ctime tcb_sts tcb_scps sc_refill_cfgs
+    \<and> released_ipc_queues_2 ctime tcb_sts tcb_scps sc_refill_cfgs
     \<and> valid_machine_time_2 ctime lmt"
 
 abbreviation valid_sched :: "'z::state_ext state \<Rightarrow> bool" where
@@ -2365,7 +2384,7 @@ definition valid_reply_scs where
   "valid_reply_scs \<equiv> \<lambda>s. (\<forall>a r. reply_tcb_reply_at (\<lambda>ropt. ropt = Some a) r s
                                \<longrightarrow> (bound_sc_tcb_at (\<lambda>a. a = None) a s \<or> active_sc_tcb_at a s)) \<and>
                          (\<forall>scptr r. reply_sc_reply_at (\<lambda>scopt. scopt = Some scptr) r s
-                               \<longrightarrow> test_sc_refill_max scptr s)"
+                               \<longrightarrow> is_sc_active scptr s)"
 
 (* next_thread *)
 definition next_thread where
@@ -2440,8 +2459,8 @@ lemma valid_sched_weak_valid_sched_action:
 lemma valid_sched_ct_in_cur_domain:
   "valid_sched s \<Longrightarrow> ct_in_cur_domain s" by (simp add: valid_sched_def)
 
-lemma valid_sched_schedulable_ipc_queues:
-  "valid_sched s \<Longrightarrow> schedulable_ipc_queues s"
+lemma valid_sched_released_ipc_queues:
+  "valid_sched s \<Longrightarrow> released_ipc_queues s"
   by (clarsimp simp: valid_sched_def)
 
 lemma valid_sched_imp_except_blocked:
@@ -2473,9 +2492,9 @@ abbreviation sc_scheduler_act_not :: "obj_ref \<Rightarrow> 'z state \<Rightarro
 abbreviation ipc_queued_thread :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "ipc_queued_thread t s \<equiv> pred_map ipc_queued_thread_state (tcb_sts_of s) t"
 
-lemma schedulable_ipc_queuesE1:
-  "schedulable_ipc_queues s \<Longrightarrow> ipc_queued_thread t s \<Longrightarrow> schedulable_if_bound_sc_thread t s"
-  by (clarsimp simp: schedulable_ipc_queues_defs)
+lemma released_ipc_queuesE1:
+  "released_ipc_queues s \<Longrightarrow> ipc_queued_thread t s \<Longrightarrow> released_if_bound_sc_thread t s"
+  by (clarsimp simp: released_ipc_queues_defs)
 
 abbreviation not_ipc_queued_thread :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "not_ipc_queued_thread t s \<equiv> \<not> ipc_queued_thread t s"
@@ -2602,7 +2621,7 @@ lemma valid_ready_qs_lift_pre_conj:
   apply (rule hoare_lift_Pf_pre_conj[where f=ready_queues, OF _ r])
   by (wpsimp wp: hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift
                  valid_sched_pred_heap_proj_lifts[where N="\<lambda>P. P"]
-                 schedulable_sc_tcb_at_lift a b c d e)
+                 released_sc_tcb_at_lift a b c d e)
 
 lemmas valid_ready_qs_lift = valid_ready_qs_lift_pre_conj[where R = \<top>, simplified]
 
@@ -2727,7 +2746,7 @@ lemma weak_valid_sched_action_lift_pre_conj:
             hoare_vcg_imp_lift_N_pre_conj[where N="\<lambda>P. P"]
             hoare_vcg_conj_lift_N_pre_conj[where N="\<lambda>P. P"]
             valid_sched_pred_heap_proj_lifts[where N="\<lambda>P. P"]
-            schedulable_sc_tcb_at_lift ts hoare_vcg_prop_pre_conj)
+            released_sc_tcb_at_lift ts hoare_vcg_prop_pre_conj)
 
 lemmas weak_valid_sched_action_lift = weak_valid_sched_action_lift_pre_conj[where R = \<top>, simplified]
 
@@ -2790,7 +2809,7 @@ lemma valid_sched_lift_pre_conj:
                wp: valid_ready_qs_lift_pre_conj ct_not_in_q_lift_pre_conj
                    ct_in_cur_domain_lift_pre_conj valid_release_q_lift_pre_conj
                    valid_sched_action_lift_pre_conj valid_blocked_lift_pre_conj assms
-                   schedulable_ipc_queues_lift_pre_conj)
+                   released_ipc_queues_lift_pre_conj)
 
 lemmas valid_sched_lift = valid_sched_lift_pre_conj[where R = \<top>, simplified]
 
@@ -2799,17 +2818,15 @@ lemma valid_reply_scs_lift:
   assumes D: "\<And>b c. f \<lbrace>\<lambda>s. \<not> reply_at_ppred reply_sc b c s\<rbrace>"
   assumes B: "\<And>P t. f \<lbrace>bound_sc_tcb_at P t\<rbrace>"
   assumes C: "\<And>t. f \<lbrace>active_sc_tcb_at t\<rbrace>"
-  assumes E: "\<And>c. f \<lbrace>\<lambda>s. test_sc_refill_max c s\<rbrace>"
+  assumes E: "\<And>c. f \<lbrace>\<lambda>s. is_sc_active c s\<rbrace>"
   shows "f \<lbrace>valid_reply_scs\<rbrace>"
   unfolding valid_reply_scs_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_disj_lift A B C D E)
 
 (* This predicate declares that the current thread has a scheduling context that is
     active, ready and sufficient. *)
-abbreviation ct_schedulable where
-  "ct_schedulable s \<equiv> active_sc_tcb_at (cur_thread s) s
-      \<and> budget_ready (cur_thread s) s
-      \<and> budget_sufficient (cur_thread s) s"
+abbreviation ct_released where
+  "ct_released s \<equiv> released_sc_tcb_at (cur_thread s) s"
 
 lemma scheduler_act_sane_lift:
   assumes A: "\<And>P. f \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>"
@@ -2824,7 +2841,7 @@ lemma valid_ready_qs_in_ready_qD:
    active_sc_tcb_at tcb_ptr s \<and>
    budget_sufficient tcb_ptr s \<and>
    budget_ready tcb_ptr s"
-  by (clarsimp simp: schedulable_sc_tcb_at_def valid_ready_qs_def in_ready_q_def
+  by (clarsimp simp: released_sc_tcb_at_def valid_ready_qs_def in_ready_q_def
                      obj_at_kh_kheap_simps)
 
 lemma invs_cur_sc_tcb_symref:
@@ -2994,43 +3011,43 @@ lemmas cur_sc_tcb_only_sym_bound_lift = cur_sc_tcb_only_sym_bound_lift_pre_conj[
 
 \<comment> \<open>Locales that generate various traditional obj_at lemmas from valid_sched_pred etc.\<close>
 
-locale schedulable_ipc_queues_pred_pre_conj_locale =
+locale released_ipc_queues_pred_pre_conj_locale =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   fixes f :: "('state_ext state, 'return_t) nondet_monad"
   fixes R :: "'state_ext state \<Rightarrow> bool"
-  assumes schedulable_ipc_queues_pred:
-    "\<And>P. \<lbrace>\<lambda>s. schedulable_ipc_queues_pred P s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. schedulable_ipc_queues_pred P\<rbrace>"
+  assumes released_ipc_queues_pred:
+    "\<And>P. \<lbrace>\<lambda>s. released_ipc_queues_pred P s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. released_ipc_queues_pred P\<rbrace>"
 begin
 
 lemma st_tcb_at_cur_time:
   "\<lbrace>\<lambda>s. N (st_tcb_at (P (cur_time s)) t' s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (st_tcb_at (P (cur_time s)) t' s)\<rbrace>"
   by (rule hoare_lift_Pf_pre_conj[where f=cur_time]
-      ; intro valid_sched_pred_heap_proj_lowers schedulable_ipc_queues_pred)
+      ; intro valid_sched_pred_heap_proj_lowers released_ipc_queues_pred)
 
 lemma bound_sc_tcb_at_cur_time:
   "\<lbrace>\<lambda>s. N (bound_sc_tcb_at (P (cur_time s)) t' s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (bound_sc_tcb_at (P (cur_time s)) t' s)\<rbrace>"
   by (rule hoare_lift_Pf_pre_conj[where f=cur_time]
-      ; intro valid_sched_pred_heap_proj_lowers schedulable_ipc_queues_pred)
+      ; intro valid_sched_pred_heap_proj_lowers released_ipc_queues_pred)
 
 lemma sc_refill_cfg_sc_at_cur_time:
   "\<lbrace>\<lambda>s. N (sc_refill_cfg_sc_at (P (cur_time s)) scp s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (sc_refill_cfg_sc_at (P (cur_time s)) scp s)\<rbrace>"
   by (rule hoare_lift_Pf_pre_conj[where f=cur_time]
-      ; intro valid_sched_pred_heap_proj_lowers schedulable_ipc_queues_pred)
+      ; intro valid_sched_pred_heap_proj_lowers released_ipc_queues_pred)
 
 lemma sc_refills_sc_at_cur_time:
   "\<lbrace>\<lambda>s. N (sc_refills_sc_at (P (cur_time s)) scp s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (sc_refills_sc_at (P (cur_time s)) scp s)\<rbrace>"
   by (rule hoare_lift_Pf_pre_conj[where f=cur_time]
-      ; intro valid_sched_pred_heap_proj_lowers schedulable_ipc_queues_pred)
+      ; intro valid_sched_pred_heap_proj_lowers released_ipc_queues_pred)
 
 end
 
-locale schedulable_ipc_queues_pred_locale =
+locale released_ipc_queues_pred_locale =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   fixes f :: "('state_ext state, 'return_t) nondet_monad"
-  assumes schedulable_ipc_queues_pred[wp]: "\<And>P. f \<lbrace>schedulable_ipc_queues_pred P\<rbrace>"
+  assumes released_ipc_queues_pred[wp]: "\<And>P. f \<lbrace>released_ipc_queues_pred P\<rbrace>"
 begin
-  interpretation pre_conj: schedulable_ipc_queues_pred_pre_conj_locale state_ext_t f \<top>
-    by (unfold_locales; wpsimp wp: schedulable_ipc_queues_pred)
+  interpretation pre_conj: released_ipc_queues_pred_pre_conj_locale state_ext_t f \<top>
+    by (unfold_locales; wpsimp wp: released_ipc_queues_pred)
   lemmas st_tcb_at_cur_time           [wp] = pre_conj.st_tcb_at_cur_time           [simplified]
   lemmas bound_sc_tcb_at_cur_time     [wp] = pre_conj.bound_sc_tcb_at_cur_time     [simplified]
   lemmas sc_refill_cfg_sc_at_cur_time [wp] = pre_conj.sc_refill_cfg_sc_at_cur_time [simplified]
@@ -3053,7 +3070,7 @@ locale valid_sched_pred_pre_conj_locale =
   assumes valid_sched_pred: "\<And>P. \<lbrace>\<lambda>s. valid_sched_pred P s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_sched_pred P\<rbrace>"
 begin
 
-sublocale schedulable_ipc_queues_pred_pre_conj_locale state_ext_t f R
+sublocale released_ipc_queues_pred_pre_conj_locale state_ext_t f R
   by unfold_locales (rule valid_sched_pred)
 
 lemma st_tcb_at_cur_thread:
@@ -3081,7 +3098,7 @@ locale valid_sched_pred_locale =
 begin
   interpretation pre_conj: valid_sched_pred_pre_conj_locale state_ext_t f \<top>
     by (unfold_locales; wpsimp wp: valid_sched_pred)
-  sublocale schedulable_ipc_queues_pred_locale state_ext_t f
+  sublocale released_ipc_queues_pred_locale state_ext_t f
     by unfold_locales (rule valid_sched_pred)
   lemmas st_tcb_at_cur_thread       [wp] = pre_conj.st_tcb_at_cur_thread       [simplified]
   lemmas ct_in_state                [wp] = pre_conj.ct_in_state                [simplified]

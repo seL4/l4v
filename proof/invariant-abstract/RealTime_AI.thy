@@ -12,6 +12,10 @@ theory RealTime_AI
 imports VSpace_AI
 begin
 
+lemmas MIN_BUDGET_nonzero = MIN_BUDGET_pos[simplified word_neq_0_conv[symmetric]]
+
+lemmas refill_sufficient_defs = refill_sufficient_def refill_capacity_def
+
 (* FIXME - Move Invariants_AI *)
 lemma invs_exst [iff]:
   "invs (trans_state f s) = invs s"
@@ -1060,35 +1064,64 @@ lemma do_extended_op_empty_fail [simp]: (* move it elsewhere? *)
   by (fastforce simp: do_extended_op_def empty_fail_get mk_ef_def
                intro: empty_fail_bind empty_fail_select_f)
 
-crunch typ_at[wp]: sched_context_unbind_yield_from, sched_context_unbind_tcb "\<lambda>s. P (typ_at T p s)"
-  (wp: maybeM_inv crunch_wps ignore: get_ntfn_obj_ref)
+lemma get_sc_active_wp[wp]:
+  "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) scp s \<longrightarrow> Q (sc_active sc) s\<rbrace>
+   get_sc_active scp
+   \<lbrace>Q\<rbrace>"
+ by (wpsimp simp: get_sc_active_def)
 
-crunch typ_at[wp]: unbind_from_sc, sched_context_maybe_unbind_ntfn, reply_unlink_sc,
- sched_context_unbind_yield_from, sched_context_unbind_reply
- "\<lambda>s. P (typ_at T p s)"
-  (wp: maybeM_inv crunch_wps simp: get_tcb_obj_ref_def ignore: get_ntfn_obj_ref)
+lemma get_sc_refill_capacity_wp[wp]:
+  "\<lbrace>\<lambda>s. \<forall> sc n. ko_at (SchedContext sc n) scp s \<longrightarrow>
+         Q (sc_refill_capacity usage sc) s\<rbrace>
+   get_sc_refill_capacity scp usage
+   \<lbrace>Q\<rbrace>"
+ by (wpsimp simp: get_sc_refill_capacity_def)
 
-lemma schedule_tcb_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: schedule_tcb_def)
+lemma get_sc_refill_sufficient_wp[wp]:
+  "\<lbrace>\<lambda>s. \<forall> sc n. ko_at (SchedContext sc n) scp s \<longrightarrow>
+         Q (sc_refill_sufficient usage sc) s\<rbrace>
+   get_sc_refill_sufficient scp usage
+   \<lbrace>Q\<rbrace>"
+ by (wpsimp simp: get_sc_refill_sufficient_def)
 
-lemma sched_context_unbind_all_tcbs_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> sched_context_unbind_all_tcbs scref \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: sched_context_unbind_all_tcbs_def)
+lemma get_sc_refill_ready_wp[wp]:
+  "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) scp s \<longrightarrow>
+         Q (sc_refill_ready (cur_time s) sc) s\<rbrace>
+   get_sc_refill_ready scp
+   \<lbrace>Q\<rbrace>"
+ by (wpsimp simp: get_sc_refill_ready_def)
+
+lemma get_sc_released_wp[wp]:
+  "\<lbrace>\<lambda>s. \<forall> sc n. ko_at (SchedContext sc n) scp s \<longrightarrow>
+         Q (sc_released (cur_time s) sc) s\<rbrace>
+   get_sc_released scp
+   \<lbrace>Q\<rbrace>"
+ by (wpsimp simp: get_sc_released_def)
+
+lemma refill_full_wp[wp]:
+  "\<lbrace>\<lambda>s. \<forall> sc n. ko_at (SchedContext sc n) scp s \<longrightarrow>
+         Q (length (sc_refills sc) = sc_refill_max sc) s\<rbrace>
+   refill_full scp
+   \<lbrace>Q\<rbrace>"
+ by (wpsimp simp: refill_full_def)
+
+crunches
+  get_sc_active, get_sc_refill_capacity, get_sc_refill_sufficient, get_sc_refill_ready,
+  get_sc_released, get_refills, refill_full
+  for inv[wp]: P
+  (wp_del: get_sc_active_wp get_sc_refill_ready_wp get_sc_refill_sufficient_wp
+           get_sc_released_wp refill_full_wp)
+
+crunches
+  sched_context_unbind_yield_from, sched_context_unbind_all_tcbs, postpone,
+  refill_unblock_check, unbind_from_sc, sched_context_maybe_unbind_ntfn, reply_unlink_sc,
+  sched_context_unbind_reply, schedule_tcb
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  (wp: maybeM_inv crunch_wps simp: crunch_simps)
 
 lemma sched_context_update_consumed_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> sched_context_update_consumed param_a \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace> "
   by (wpsimp simp: sched_context_update_consumed_def get_sched_context_def get_object_def)
-
-lemma postpone_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> postpone param_a \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: postpone_def wp: hoare_drop_imp)
-
-lemma refill_unblock_check_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> refill_unblock_check param_a \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: refill_unblock_check_def set_refills_def get_refills_def is_round_robin_def
-                   get_sched_context_def refill_ready_def
-               wp: hoare_drop_imp get_object_wp)
 
 lemma schedule_tcb_is_original_cap[wp]:
   "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_ s. P (is_original_cap s)\<rbrace>"
@@ -1108,9 +1141,6 @@ lemma end_timeslice_inv[wp]:
                wp: hoare_drop_imp
       | (drule_tac x = "s\<lparr>reprogram_timer := T\<rparr>" in meta_spec, simp))+
 *)
-
-lemma get_refills_inv[wp]: "\<lbrace>P\<rbrace> get_refills sc_ptr \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (wpsimp simp: get_refills_def)
 
 
 (* can we say this? what about charge_budget?
@@ -1166,8 +1196,6 @@ crunches
   set_tcb_queue, set_irq_state, set_simple_ko, update_sk_obj_ref, do_machine_op
   for ct_in_state[wp]: "ct_in_state P"
   (wp: ct_in_state_thread_state_lift)
-
-crunch inv[wp]: refill_capacity,refill_sufficient,refill_ready "\<lambda>s. P s"
 
 lemma check_budget_true:
   "\<lbrace>P\<rbrace> check_budget \<lbrace>\<lambda>rv s. rv \<longrightarrow> P s\<rbrace>"
