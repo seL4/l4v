@@ -9202,13 +9202,17 @@ lemma reply_push_schedulable_ipc_queues[wp]:
   "\<lbrace>schedulable_ipc_queues and schedulable_if_bound_sc_thread caller\<rbrace>
    reply_push caller callee reply_ptr can_donate
    \<lbrace>\<lambda>rv. schedulable_ipc_queues\<rbrace>"
-  apply (clarsimp simp: reply_push_def)
-  apply (wpsimp wp: hoare_drop_imp get_sched_context_wp hoare_vcg_if_lift2 hoare_vcg_all_lift
-                 get_simple_ko_wp set_thread_state_schedulable_ipc_queues
-                 sched_context_donate_schedulable_sc_schedulable_ipc_queues get_tcb_obj_ref_wp
-             split_del: if_split cong: conj_cong)
-(*   by (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps) *)
-  sorry (* reply_push_schedulable_ipc_queues *)
+  supply if_split [split del]
+  unfolding reply_push_def
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply wpsimp
+  apply (wpsimp wp: sched_context_donate_schedulable_sc_schedulable_ipc_queues)
+  apply (wpsimp wp: get_simple_ko_wp)+
+  apply (rule_tac Q="\<lambda>_. schedulable_ipc_queues and schedulable_if_bound_sc_thread caller
+                         and bound_sc_tcb_at ((=) (sc_caller)) caller" in hoare_strengthen_post[rotated])
+  apply (clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps split: if_splits)
+  by (wpsimp wp: set_thread_state_schedulable_ipc_queues hoare_drop_imp)+
 
 lemma reply_push_valid_release_q[wp]:
   "\<lbrace>valid_release_q and not_in_release_q caller and not_in_release_q callee
