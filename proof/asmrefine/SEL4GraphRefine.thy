@@ -73,7 +73,9 @@ ML \<open>
 val blacklist = ["Kernel_C.reserve_region", "Kernel_C.merge_regions"]
 
 val dbg = ProveSimplToGraphGoals.new_debug blacklist [];
+\<close>
 
+ML \<open>
 ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
     funs (csenv ()) @{context} dbg;
 \<close>
