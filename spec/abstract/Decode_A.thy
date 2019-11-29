@@ -321,7 +321,6 @@ where
                             (tc_new_croot space) (tc_new_vroot space) None
  odE"
 
-
 definition
   decode_update_sc :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
@@ -340,6 +339,10 @@ where
       whenE (sc_ptr' \<noteq> None) $ throwError IllegalOperation;
       sc \<leftarrow> liftE $ get_sched_context sc_ptr;
       whenE (sc_tcb sc \<noteq> None) $ throwError IllegalOperation;
+      st \<leftarrow> liftE $ get_thread_state tcb_ptr;
+      released \<leftarrow> liftE $ get_sc_released sc_ptr;
+      whenE (ipc_queued_thread_state st \<and> \<not>released) $
+        throwError IllegalOperation;
       returnOk $ ThreadControlSched tcb_ptr slot None None None (Some (Some sc_ptr))
     odE"
 
@@ -503,7 +506,11 @@ where
       case cap of
         ThreadCap tcb_ptr \<Rightarrow> doE
           sc_ptr_opt \<leftarrow> liftE $ get_tcb_obj_ref tcb_sched_context tcb_ptr;
-          whenE (sc_ptr_opt \<noteq> None) $ throwError IllegalOperation
+          whenE (sc_ptr_opt \<noteq> None) $ throwError IllegalOperation;
+          st \<leftarrow> liftE $ get_thread_state tcb_ptr;
+          released \<leftarrow> liftE $ get_sc_released sc_ptr;
+          whenE (ipc_queued_thread_state st \<and> \<not>released) $
+            throwError IllegalOperation
         odE
       | NotificationCap ntfn_ptr _ _ \<Rightarrow> doE
           sc_ptr_opt \<leftarrow> liftE $ get_ntfn_obj_ref ntfn_sc ntfn_ptr;

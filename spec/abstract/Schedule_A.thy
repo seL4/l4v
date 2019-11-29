@@ -38,10 +38,8 @@ definition
      assert (\<not> inq);  \<comment> \<open>not in release q\<close>
      sc \<leftarrow> get_sched_context scp;
      curtime \<leftarrow> gets cur_time;
-     sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); \<comment> \<open>refill_sufficient sc_ptr 0\<close>
-     ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr\<close>
-     assert sufficient;
-     assert ready;   \<comment> \<open>asserting ready & sufficient\<close>
+     assert $ sc_refill_sufficient 0 sc;
+     assert $ sc_refill_ready curtime sc;   \<comment> \<open>asserting ready & sufficient\<close>
 
      arch_switch_to_thread t;
      tcb_sched_action (tcb_sched_dequeue) t;
@@ -58,10 +56,8 @@ definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_m
      assert sched;
      sc \<leftarrow> get_sched_context scp;
      curtime \<leftarrow> gets cur_time;
-     sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); \<comment> \<open>refill_sufficient sc_ptr 0\<close>
-     ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr\<close>
-     assert sufficient;
-     assert ready;   \<comment> \<open>asserting ready & sufficient\<close>
+     assert $ sc_refill_sufficient 0 sc;
+     assert $ sc_refill_ready curtime sc;   \<comment> \<open>asserting ready & sufficient\<close>
      switch_to_thread thread
    od"
 
@@ -138,10 +134,8 @@ where
       refill_unblock_check scp;
       sc \<leftarrow> get_sched_context scp;
       curtime \<leftarrow> gets cur_time;
-      sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); \<comment> \<open>refill_sufficient sc_ptr 0\<close>
-      ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr\<close>
-      assert sufficient;
-      assert ready   \<comment> \<open>asserting ready & sufficient\<close>
+      assert $ sc_refill_sufficient 0 sc;
+      assert $ sc_refill_ready curtime sc   \<comment> \<open>asserting ready & sufficient\<close>
      od;
 
     reprogram \<leftarrow> gets reprogram_timer;
@@ -170,12 +164,12 @@ where
                     else None"
 
 definition
-  refill_ready_tcb :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad"
+  get_tcb_refill_ready :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad"
 where
-  "refill_ready_tcb t = do
+  "get_tcb_refill_ready t = do
      sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
      sc_ptr \<leftarrow> assert_opt sc_opt;
-     ready \<leftarrow> refill_ready sc_ptr;
+     ready \<leftarrow> get_sc_refill_ready sc_ptr;
      return ready
    od"
 
@@ -185,14 +179,14 @@ where
   "awaken \<equiv> do
     rq \<leftarrow> gets release_queue;
     s \<leftarrow> get;
-    rq1 \<leftarrow> return $ takeWhile (\<lambda>t. the (fun_of_m (refill_ready_tcb t) s)) rq;
+    rq1 \<leftarrow> return $ takeWhile (\<lambda>t. the (fun_of_m (get_tcb_refill_ready t) s)) rq;
     rq2 \<leftarrow> return $ drop (length rq1) rq;
     modify $ release_queue_update (K rq2);
     mapM_x (\<lambda>t. do
       consumed \<leftarrow> gets consumed_time;
       sc_opt \<leftarrow> thread_get tcb_sched_context t;
       scp \<leftarrow> assert_opt sc_opt;
-      sufficient \<leftarrow> refill_sufficient scp consumed;
+      sufficient \<leftarrow> get_sc_refill_sufficient scp consumed;
       assert sufficient;
       possible_switch_to t;
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>)
@@ -321,17 +315,15 @@ where
     if schedulable then do
       refill_unblock_check sc_ptr;
       sc \<leftarrow> get_sched_context sc_ptr;
-      cur_time \<leftarrow> gets cur_time;
-      ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; \<comment> \<open> refill_ready sc_ptr \<close>
-      sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); \<comment> \<open> refill_sufficient sc_ptr 0 \<close>
-      assert (sufficient \<and> ready);
+      curtime \<leftarrow> gets cur_time;
+      assert (sc_refill_ready curtime sc \<and> sc_refill_sufficient 0 sc);
       ct_ptr \<leftarrow> gets cur_thread;
       prios \<leftarrow> thread_get tcb_priority tcb_ptr;
       ct_prios \<leftarrow> thread_get tcb_priority ct_ptr;
       if (prios < ct_prios)
       then do
         tcb_sched_action tcb_sched_dequeue tcb_ptr;
-        tcb_sched_action tcb_sched_enqueue tcb_ptr; \<comment> \<open> schedulable & dequeud & sufficient & ready \<close>
+        tcb_sched_action tcb_sched_enqueue tcb_ptr; \<comment> \<open> schedulable & dequeued & sufficient & ready \<close>
         set_consumed sc_ptr args
       od
       else do

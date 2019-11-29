@@ -310,8 +310,8 @@ where
                 od;
                 new_sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
                 test \<leftarrow> case new_sc_opt of Some scp \<Rightarrow> do
-                            sufficient \<leftarrow> refill_sufficient scp 0;
-                            ready \<leftarrow> refill_ready scp;
+                            sufficient \<leftarrow> get_sc_refill_sufficient scp 0;
+                            ready \<leftarrow> get_sc_refill_ready scp;
                             return (sufficient \<and> ready)
                         od
                         | _ \<Rightarrow> return True; \<comment> \<open>why does C allow dest to have no sc?\<close>
@@ -612,10 +612,8 @@ where
             sc_ptr \<leftarrow> assert_opt sc_opt;
             refill_unblock_check sc_ptr;
             sc \<leftarrow> get_sched_context sc_ptr;
-            cur_time \<leftarrow> gets cur_time;
-            ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; \<comment> \<open> refill_ready sc_ptr \<close>
-            sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); \<comment> \<open> refill_sufficient sc_ptr 0 \<close>
-            if ready \<and> sufficient
+            curtime \<leftarrow> gets cur_time;
+            if sc_refill_ready curtime sc \<and> sc_refill_sufficient 0 sc
             then possible_switch_to receiver
             else do
               tcb \<leftarrow> gets_the $ get_tcb receiver;
@@ -653,14 +651,12 @@ where
      ct \<leftarrow> gets cur_thread;
      sc_ptr \<leftarrow> gets cur_sc;
      csc \<leftarrow> get_sched_context sc_ptr;
-     cur_time \<leftarrow> gets cur_time;
-     ready \<leftarrow> return $ (r_time (refill_hd csc)) \<le> cur_time + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr\<close>
-     sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills csc); \<comment> \<open>refill_sufficient sc_ptr 0\<close>
+     curtime \<leftarrow> gets cur_time;
      tcb \<leftarrow> gets_the $ get_tcb ct;
 
      if canTimeout \<and> (is_ep_cap (tcb_timeout_handler tcb)) then
        handle_timeout ct (Timeout (sc_badge csc))
-     else if ready \<and> sufficient then do
+     else if sc_refill_ready curtime csc \<and> sc_refill_sufficient 0 csc then do
      \<comment> \<open>C code assets cur_thread not to be in ready q at this point\<close>
        d \<leftarrow> thread_get tcb_domain ct;
        prio \<leftarrow> thread_get tcb_priority ct;
@@ -703,7 +699,7 @@ where
      consumed \<leftarrow> gets consumed_time;
      sc \<leftarrow> get_sched_context csc;
     \<comment> \<open>maybe assert refill_ready?\<close>
-     capacity \<leftarrow> refill_capacity csc consumed;
+     capacity \<leftarrow> get_sc_refill_capacity csc consumed;
 
      full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc); \<comment> \<open>= refill_full csc\<close>
 

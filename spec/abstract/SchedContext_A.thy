@@ -172,7 +172,7 @@ where
                  set_refills sc_ptr [(hd refills)\<lparr>r_time := ct + kernelWCET_ticks\<rparr>,
                                      (hd (tl refills))\<lparr>r_time := r_amount (hd refills) + ct + kernelWCET_ticks\<rparr>]
               od
-    else do ready \<leftarrow> refill_ready sc_ptr;
+    else do ready \<leftarrow> get_sc_refill_ready sc_ptr;
             when ready $ do
                  modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
                  refills' \<leftarrow> return $ refills_merge_prefix ((hd refills)\<lparr>r_time := ct + kernelWCET_ticks\<rparr>
@@ -216,7 +216,7 @@ where
   "refill_budget_check usage = do
     sc_ptr \<leftarrow> gets cur_sc;
     sc \<leftarrow> get_sched_context sc_ptr;
-    ready \<leftarrow> refill_ready sc_ptr;
+    ready \<leftarrow> get_sc_refill_ready sc_ptr;
     period \<leftarrow> return $ sc_period sc;
     robin \<leftarrow> is_round_robin sc_ptr;
     assert (\<not>robin);
@@ -255,10 +255,10 @@ definition
 where
   "refill_update sc_ptr new_period new_budget new_max_refills = do
      sc \<leftarrow> get_sched_context sc_ptr;
-     refill_hd \<leftarrow> return $ hd (sc_refills sc);
+     refill_hd \<leftarrow> return $ refill_hd sc;
 
      cur_time \<leftarrow> gets cur_time;
-     ready \<leftarrow> refill_ready sc_ptr;
+     ready \<leftarrow> get_sc_refill_ready sc_ptr;
 
      new_time \<leftarrow> return $ if ready then cur_time else (r_time refill_hd);
      if (r_amount refill_hd \<ge> new_budget)
@@ -306,11 +306,9 @@ where
      sched \<leftarrow> is_schedulable tptr in_release_q;
      when sched $ do
        ts \<leftarrow> thread_get tcb_state tptr;
-
-       ready \<leftarrow> refill_ready sc_ptr;
-
-       sufficient \<leftarrow> refill_sufficient sc_ptr 0;
-       when (runnable ts \<and> 0 < sc_refill_max sc \<and> \<not>(ready \<and> sufficient)) $ do
+       ready \<leftarrow> get_sc_refill_ready sc_ptr;
+       sufficient \<leftarrow> get_sc_refill_sufficient sc_ptr 0;
+       when (runnable ts \<and> sc_active sc \<and> \<not>(ready \<and> sufficient)) $ do
 
          \<comment> \<open>C code also asserts that tptr is not in ready q\<close>
          d \<leftarrow> thread_get tcb_domain tptr;
@@ -464,20 +462,19 @@ where
     consumed \<leftarrow> gets consumed_time;
     csc \<leftarrow> gets cur_sc;
     sc \<leftarrow> get_sched_context csc;
-    when (0 < sc_refill_max sc) $ do
+    when (sc_active sc) $ do
       when (0 < consumed) $ do
-        sufficient \<leftarrow> return $ sufficient_refills consumed (sc_refills sc);
-        ready \<leftarrow> sc_refill_ready sc;
-        assert sufficient;
-        assert ready;   \<comment> \<open>asserting ready & sufficient\<close>
+        curtime \<leftarrow> gets cur_time;
+        assert $ sc_refill_sufficient consumed sc;
+        assert $ sc_refill_ready curtime sc;   \<comment> \<open>asserting ready & sufficient\<close>
         robin \<leftarrow> is_round_robin csc;
-        if robin then refill_budget_check_round_robin consumed
-      else refill_budget_check consumed;
+        if robin
+        then refill_budget_check_round_robin consumed
+        else refill_budget_check consumed;
         sc2 \<leftarrow> get_sched_context csc;
-        sufficient2 \<leftarrow> return $ sufficient_refills 0 (sc_refills sc2);
-        ready2 \<leftarrow> sc_refill_ready sc2;
-        assert sufficient2;
-        assert ready2  \<comment> \<open>asserting ready & sufficient again\<close>
+        curtime2 \<leftarrow> gets cur_time;
+        assert $ sc_refill_sufficient 0 sc2;
+        assert $ sc_refill_ready curtime2 sc2  \<comment> \<open>asserting ready & sufficient again\<close>
       od;
       update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>)
     od;

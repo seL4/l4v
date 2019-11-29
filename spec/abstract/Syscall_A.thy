@@ -452,7 +452,7 @@ definition
                         sc \<leftarrow> get_sched_context csc;
                         when (0 < sc_refill_max sc) $ do
                           consumed \<leftarrow> gets consumed_time;
-                          capacity \<leftarrow> refill_capacity csc consumed;
+                          capacity \<leftarrow> get_sc_refill_capacity csc consumed;
                           charge_budget consumed False;
                           return ()
                         od

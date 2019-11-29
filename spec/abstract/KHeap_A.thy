@@ -251,6 +251,24 @@ where
   "set_sc_obj_ref f ref new \<equiv> update_sched_context ref (f (K new))"
 
 definition
+  active_sc :: "nat \<Rightarrow> bool"
+where
+  "active_sc refill_max \<equiv> 0 < refill_max"
+
+abbreviation
+  sc_active :: "sched_context \<Rightarrow> bool"
+where
+  "sc_active sc \<equiv> active_sc (sc_refill_max sc)"
+
+definition
+  get_sc_active :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad"
+where
+  "get_sc_active sc_ptr = do
+    sc \<leftarrow> get_sched_context sc_ptr;
+    return $ sc_active sc
+  od"
+
+definition
   is_schedulable :: "obj_ref \<Rightarrow> bool \<Rightarrow> ('z::state_ext state, bool) nondet_monad"
 where
   "is_schedulable tcb_ptr in_release_q \<equiv> do
@@ -259,28 +277,28 @@ where
     then return False
     else do
       sc \<leftarrow> get_sched_context $ the $ tcb_sched_context tcb;
-      return (runnable (tcb_state tcb)
-              \<and> sc_refill_max sc > 0 \<and> \<not>in_release_q)
+      return (runnable (tcb_state tcb) \<and> sc_active sc \<and> \<not>in_release_q)
     od
   od"
 
 definition
-  test_sc_refill_max :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  is_sc_active :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "test_sc_refill_max sp \<equiv> (\<lambda>s.
+  "is_sc_active sp \<equiv> (\<lambda>s.
      case kheap s sp of
-       Some (SchedContext sc _) \<Rightarrow> (sc_refill_max sc > 0)
+       Some (SchedContext sc _) \<Rightarrow> sc_active sc
      | _ \<Rightarrow> False)"
 
 definition
   is_schedulable_opt :: "obj_ref \<Rightarrow> bool \<Rightarrow> 'z::state_ext state \<Rightarrow> bool option"
 where
   "is_schedulable_opt tcb_ptr in_release_q \<equiv> \<lambda>s.
-    case get_tcb tcb_ptr s of None \<Rightarrow> None | Some tcb \<Rightarrow>
-      (case tcb_sched_context tcb of None => Some False
-       | Some sc_ptr =>
-           Some (runnable (tcb_state tcb) \<and> (test_sc_refill_max sc_ptr s)
-           \<and> \<not>in_release_q))"
+     case get_tcb tcb_ptr s of None \<Rightarrow> None
+     | Some tcb \<Rightarrow>
+       (case tcb_sched_context tcb of None => Some False
+        | Some sc_ptr =>
+            Some (runnable (tcb_state tcb) \<and> (is_sc_active sc_ptr s)
+            \<and> \<not>in_release_q))"
 
 definition
   is_schedulable_bool :: "obj_ref \<Rightarrow> bool \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -289,8 +307,8 @@ where
      case get_tcb tcb_ptr s of None \<Rightarrow> False
      | Some tcb \<Rightarrow>
        (case tcb_sched_context tcb of None => False
-         | Some sc_ptr =>
-            (runnable (tcb_state tcb) \<and> (test_sc_refill_max sc_ptr s)
+        | Some sc_ptr =>
+            (runnable (tcb_state tcb) \<and> (is_sc_active sc_ptr s)
               \<and> \<not>in_release_q))"
 
 (* refill checks *)
@@ -302,12 +320,6 @@ abbreviation
   "refill_tl sc \<equiv> last (sc_refills sc)" (** condition? **)
 
 definition
-  refills_capacity :: "time \<Rightarrow> refill list \<Rightarrow> time"
-where
-  "refills_capacity usage refills \<equiv>
-  if r_amount (hd refills) < usage then 0 else r_amount (hd refills) - usage"
-
-definition
   get_refills :: "obj_ref \<Rightarrow> (refill list, 'z::state_ext) s_monad"
 where
   "get_refills sc_ptr = do
@@ -316,46 +328,78 @@ where
   od"
 
 definition
-  refill_capacity :: "obj_ref \<Rightarrow> time \<Rightarrow> (time, 'z::state_ext) s_monad"
+  refill_capacity :: "time \<Rightarrow> refill \<Rightarrow> time"
 where
-  "refill_capacity sc_ptr usage = do
-    refills \<leftarrow> get_refills sc_ptr;
-    return $ refills_capacity usage refills
-  od"
+  "refill_capacity usage refill \<equiv>
+    if r_amount refill < usage then 0 else r_amount refill - usage"
+
+abbreviation
+  sc_refill_capacity :: "time \<Rightarrow> sched_context \<Rightarrow> time"
+where
+  "sc_refill_capacity usage sc \<equiv> refill_capacity usage (refill_hd sc)"
 
 definition
-  sufficient_refills :: "time \<Rightarrow> refill list \<Rightarrow> bool"
+  get_sc_refill_capacity :: "obj_ref \<Rightarrow> time \<Rightarrow> (time, 'z::state_ext) s_monad"
 where
-  "sufficient_refills usage refills = (MIN_BUDGET \<le> refills_capacity usage refills)"
-
-definition
-  refill_sufficient :: "obj_ref \<Rightarrow> time \<Rightarrow> (bool, 'z::state_ext) s_monad"
-where
-  "refill_sufficient sc_ptr usage = do
-    refills \<leftarrow> get_refills sc_ptr;
-    return $ sufficient_refills usage refills
-  od"
-
-definition
-  refill_ready :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad"
-where
-  "refill_ready sc_ptr = do
-    cur_time \<leftarrow> gets cur_time;
+  "get_sc_refill_capacity sc_ptr usage = do
     sc \<leftarrow> get_sched_context sc_ptr;
-    sc_time \<leftarrow> return $ r_time (refill_hd sc);
-    return $ sc_time \<le> cur_time + kernelWCET_ticks
+    return $ sc_refill_capacity usage sc
   od"
 
 definition
-  sc_refill_ready :: "sched_context \<Rightarrow> (bool, 'z::state_ext) s_monad"
+  refill_sufficient :: "time \<Rightarrow> refill \<Rightarrow> bool"
 where
-  "sc_refill_ready sc = do
+  "refill_sufficient usage refill \<equiv> (MIN_BUDGET \<le> refill_capacity usage refill)"
+
+abbreviation
+  sc_refill_sufficient :: "time \<Rightarrow> sched_context \<Rightarrow> bool"
+where
+  "sc_refill_sufficient usage sc \<equiv> refill_sufficient usage (refill_hd sc)"
+
+definition
+  get_sc_refill_sufficient :: "obj_ref \<Rightarrow> time \<Rightarrow> (bool, 'z::state_ext) s_monad"
+where
+  "get_sc_refill_sufficient sc_ptr usage = do
+    sc \<leftarrow> get_sched_context sc_ptr;
+    return $ sc_refill_sufficient usage sc
+  od"
+
+definition refill_ready' :: "time \<Rightarrow> time \<Rightarrow> refill \<Rightarrow> bool" where
+  "refill_ready' usage curtime refill \<equiv>
+    r_time refill + usage \<le> curtime + kernelWCET_ticks"
+
+abbreviation refill_ready :: "time \<Rightarrow> refill \<Rightarrow> bool" where
+  "refill_ready \<equiv> refill_ready' 0"
+lemmas refill_ready_def = refill_ready'_def
+
+abbreviation sc_refill_ready :: "time \<Rightarrow> sched_context \<Rightarrow> bool" where
+  "sc_refill_ready curtime sc \<equiv> refill_ready curtime (refill_hd sc)"
+
+definition
+  get_sc_refill_ready :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad"
+where
+  "get_sc_refill_ready sc_ptr = do
+    sc \<leftarrow> get_sched_context sc_ptr;
     cur_time \<leftarrow> gets cur_time;
-    sc_time \<leftarrow> return $ r_time (refill_hd sc);
-    return $ sc_time \<le> cur_time + kernelWCET_ticks
+    return $ sc_refill_ready cur_time sc
   od"
 
 (* end refill checks *)
+
+definition
+  sc_released :: "time \<Rightarrow> sched_context \<Rightarrow> bool"
+where
+  "sc_released curtime sc \<equiv>
+    sc_active sc \<and> sc_refill_ready curtime sc \<and> sc_refill_sufficient 0 sc"
+
+definition
+  get_sc_released :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad"
+where
+  "get_sc_released sc_ptr  \<equiv> do
+    sc \<leftarrow> get_sched_context sc_ptr;
+    cur_time \<leftarrow> gets cur_time;
+    return $ sc_released cur_time sc
+  od"
 
 definition
   get_tcb_queue :: "domain \<Rightarrow> priority \<Rightarrow> (ready_queue, 'z::state_ext) s_monad" where
@@ -436,10 +480,8 @@ definition reschedule_required :: "(unit, 'z::state_ext) s_monad" where
          when sched $ do
            sc_opt \<leftarrow> thread_get tcb_sched_context t;
            scp \<leftarrow> assert_opt sc_opt;
-           sc \<leftarrow> get_sched_context scp;
-           curtime \<leftarrow> gets cur_time;
-           sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); \<comment> \<open>refill_sufficient sc_ptr 0\<close>
-           ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; \<comment> \<open> refill_ready sc_ptr\<close>
+           sufficient \<leftarrow> get_sc_refill_sufficient scp 0; \<comment> \<open>refill_sufficient sc_ptr 0\<close>
+           ready \<leftarrow> get_sc_refill_ready scp; \<comment> \<open>refill_ready sc_ptr\<close>
            assert (sufficient & ready);
            tcb_sched_action (tcb_sched_enqueue) t
          od

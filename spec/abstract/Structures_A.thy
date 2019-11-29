@@ -402,18 +402,26 @@ record tcb =
  tcb_arch          :: arch_tcb
 
 text \<open>Determines whether a thread in a given state may be scheduled.\<close>
-primrec
-  runnable :: "Structures_A.thread_state \<Rightarrow> bool"
-where
-  "runnable (Running)               = True"
-| "runnable (Inactive)              = False"
-| "runnable (Restart)               = True"
-(*| "runnable (YieldTo _)             = True"*)
-| "runnable (BlockedOnReceive _ _)  = False"
-| "runnable (BlockedOnSend x y)     = False"
+primrec runnable :: "Structures_A.thread_state \<Rightarrow> bool" where
+  "runnable (Running)                 = True"
+| "runnable (Inactive)                = False"
+| "runnable (Restart)                 = True"
+| "runnable (BlockedOnReceive _ _)    = False"
+| "runnable (BlockedOnSend x y)       = False"
 | "runnable (BlockedOnNotification x) = False"
-| "runnable (IdleThreadState)       = False"
+| "runnable (IdleThreadState)         = False"
 | "runnable (BlockedOnReply _)        = False"
+
+\<comment> \<open>Determines whether a thread is in a notification or endpoint queue\<close>
+primrec ipc_queued_thread_state :: "thread_state \<Rightarrow> bool" where
+  "ipc_queued_thread_state (Running)                 = False"
+| "ipc_queued_thread_state (Inactive)                = False"
+| "ipc_queued_thread_state (Restart)                 = False"
+| "ipc_queued_thread_state (BlockedOnReceive _ _)    = True"
+| "ipc_queued_thread_state (BlockedOnSend _ _)       = True"
+| "ipc_queued_thread_state (BlockedOnNotification _) = True"
+| "ipc_queued_thread_state (IdleThreadState)         = False"
+| "ipc_queued_thread_state (BlockedOnReply _)        = True"
 
 definition num_domains :: nat
 where
