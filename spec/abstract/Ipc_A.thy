@@ -746,10 +746,12 @@ where
       tcb_release_remove tcb_ptr;
       tcb_sched_action tcb_sched_dequeue tcb_ptr;
       cur_sc \<leftarrow> gets cur_sc;
-      when (cur_sc = sc_ptr) $ do
-        result \<leftarrow> check_budget;
-        when result $ commit_time
-      od
+      when (cur_sc = sc_ptr) $ commit_time
+           \<comment> \<open>The C code here includes an assert saying that check_budget returns True.
+               However, we can call invoke_sched_control_configure only if the call to
+               check_budget_restart at the beginning of handle_event returns True, so we
+               know that check_budget would return True if called here.\<close>
+
     od;
 
     if (0 < sc_refill_max sc \<and> (\<exists>y. sc_tcb sc = Some y))
@@ -764,7 +766,6 @@ where
     when (sc_tcb sc \<noteq> None) $ do
       tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
       st \<leftarrow> get_thread_state tcb_ptr;
-      sc \<leftarrow> get_sched_context sc_ptr;
       sched_context_resume (Some sc_ptr);
       ct \<leftarrow> gets cur_thread;
       if (tcb_ptr = ct) then reschedule_required
