@@ -1178,7 +1178,9 @@ crunch valid_pdpt_objs[wp]: invoke_sched_context "valid_pdpt_objs::det_state \<R
 crunch valid_pdpt_objs[wp]: commit_domain_time "valid_pdpt_objs"
 crunch valid_pdpt_objs[wp]: end_timeslice "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: crunch_wps hoare_drop_imps hoare_vcg_if_lift2)
-crunch valid_pdpt_objs[wp]: invoke_sched_control_configure "valid_pdpt_objs::det_state \<Rightarrow> _"
+
+crunches check_budget_restart, invoke_sched_control_configure
+  for valid_pdpt_objs[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_drop_imps hoare_vcg_if_lift2
   simp: Let_def ignore: commit_domain_time tcb_release_remove)
 
@@ -1700,7 +1702,7 @@ lemma handle_invocation_valid_pdpt[wp]:
                  intro!: st_tcb_ex_cap)
   done
 
-crunch valid_pdpt[wp]: check_budget_restart,update_time_stamp "valid_pdpt_objs::det_state \<Rightarrow> _"
+crunch valid_pdpt[wp]: update_time_stamp "valid_pdpt_objs::det_state \<Rightarrow> _"
 
 crunch valid_pdpt[wp]: sc_and_timer "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_drop_imps hoare_vcg_if_lift2)
