@@ -1231,10 +1231,17 @@ def num_instance_proofs(header, canonical, d):
 num_instance_proofs.order = 2
 
 def enum_instance_proofs (header, canonical, d):
+    def singular_canonical():
+        if len(canonical) == 1:
+            [(_, (_, n))] = canonical
+            return n == 1
+        else:
+            return False
+
     lines = ['(*<*)']
-    if len(canonical) == 1:
+    if singular_canonical():
         [(_, (cons, n))] = canonical
-        assert n == 1
+        # special case for datatypes with single constructor with one argument
         lines.append('instantiation %s :: enum begin' % header)
         if call.current_context:
             lines.append('interpretation Arch .')
@@ -1283,7 +1290,7 @@ def enum_instance_proofs (header, canonical, d):
     lines.append('   apply (safe, simp)')
     lines.append('   apply (case_tac x)')
     if len(canonical) == 1:
-        lines.append('  apply (simp_all add: enum_%s enum_all_%s_def enum_ex_%s_def' \
+        lines.append('  apply (auto simp: enum_%s enum_all_%s_def enum_ex_%s_def' \
                 % (header, header, header))
         lines.append('    distinct_map_enum)')
         lines.append('  done')
