@@ -15325,14 +15325,16 @@ lemma handle_event_valid_sched:
     (* Interrupt *)
     subgoal
       apply wpsimp
-         apply (wpsimp wp: handle_interrupt_valid_sched check_budget_restart_valid_sched)
+          apply (wpsimp wp: handle_interrupt_valid_sched check_budget_restart_valid_sched)
+         apply wpsimp
+         apply (wpsimp wp: check_budget_valid_sched hoare_vcg_all_lift hoare_vcg_if_lift2)
+        apply(rule_tac Q="\<lambda>_. valid_sched and invs and ct_not_in_release_q
+                         and cur_sc_chargeable and ct_active and
+                         schact_is_rct and ct_not_queued and
+                         (\<lambda>s. cur_sc_blocked_is_offset (consumed_time s) s)" in hoare_strengthen_post[rotated])
+         apply (clarsimp simp: schact_is_rct_def split: if_split)
+         apply (fastforce elim!: ct_in_state_weaken)
         apply wpsimp
-         apply (wpsimp wp: check_budget_valid_sched hoare_vcg_all_lift)
-        apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift')
-       apply(rule_tac Q="\<lambda>_. valid_sched and invs and ct_not_in_release_q and
-                         ct_not_BlockedOnNtfn and cur_sc_chargeable and ct_active and
-                         schact_is_rct and ct_not_queued and (\<lambda>s. valid_refills (cur_sc s) s)" in hoare_strengthen_post[rotated])
-        apply (fastforce)
        apply (wpsimp, clarsimp simp: ct_in_state_def)
       apply (fastforce elim!: valid_sched_ct_not_queued elim: invs_cur_sc_chargeableE ct_in_state_weaken)
     done
