@@ -398,8 +398,8 @@ where
 
 | "handle_event Interrupt = (without_preemption $ do
     active \<leftarrow> do_machine_op $ getActiveIRQ False;
+    update_time_stamp;
     when (active = Some (kernel_irq_timer)) $ do
-      update_time_stamp;
       check_budget;
       return ()
     od;
@@ -438,8 +438,8 @@ definition
            (\<lambda>_. without_preemption $ do
                   irq \<leftarrow> do_machine_op $ getActiveIRQ True;
                   when (irq \<noteq> None) $ do
+                    update_time_stamp;
                     when (irq = Some (kernel_irq_timer)) $ do
-                      update_time_stamp;
                       ct \<leftarrow> gets cur_thread;
                       in_release_q <- gets $ in_release_queue ct;
                       schedulable <- is_schedulable ct in_release_q;
