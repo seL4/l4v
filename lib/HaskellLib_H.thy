@@ -433,13 +433,6 @@ lemma finite_inv_card_less:
    "(card (UNIV - insert (a :: ('a :: finite)) s) < card (UNIV - s)) = (a \<notin> s)"
   by (simp add: finite_inv_card_less')
 
-text \<open>Support for defining enumerations on datatypes derived from enumerations\<close>
-lemma distinct_map_enum: "\<lbrakk> (\<forall> x y. (F x = F y \<longrightarrow> x = y )) \<rbrakk> \<Longrightarrow> distinct (map F (enum :: 'a :: enum list))"
-  apply (simp add: distinct_map)
-  apply (rule inj_onI)
-  apply simp
-  done
-
 definition
   "minimum ls \<equiv> Min (set ls)"
 definition

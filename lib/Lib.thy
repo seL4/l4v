@@ -2559,4 +2559,10 @@ lemma length_ge_split:
   "n < length xs \<Longrightarrow> \<exists>x xs'. xs = x # xs' \<and> n \<le> length xs'"
   by (cases xs) auto
 
+text \<open>Support for defining enumerations on datatypes derived from enumerations\<close>
+lemma distinct_map_enum:
+  "\<lbrakk> (\<forall> x y. (F x = F y \<longrightarrow> x = y )) \<rbrakk>
+   \<Longrightarrow> distinct (map F (enum_class.enum :: 'a :: enum list))"
+  by (simp add: distinct_map enum_distinct inj_onI)
+
 end
