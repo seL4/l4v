@@ -1436,6 +1436,13 @@ lemma unat_less_helper:
   apply (simp add: unat_of_nat)
   done
 
+lemma nat_uint_less_helper:
+  "nat (uint y) = z \<Longrightarrow> x < y \<Longrightarrow> nat (uint x) < z"
+  apply (erule subst)
+  apply (subst unat_def [symmetric])
+  apply (subst unat_def [symmetric])
+  by (simp add: unat_mono)
+
 lemma of_nat_0:
   "\<lbrakk>of_nat n = (0::'a::len word); n < 2 ^ LENGTH('a)\<rbrakk> \<Longrightarrow> n = 0"
   by (drule unat_of_nat_eq, simp)
@@ -3432,6 +3439,39 @@ lemma ucast_mono_le':
   "\<lbrakk> unat y < 2 ^ LENGTH('b); LENGTH('b::len) < LENGTH('a::len); x \<le> y \<rbrakk>
    \<Longrightarrow> UCAST('a \<rightarrow> 'b) x \<le> UCAST('a \<rightarrow> 'b) y"
   by (auto simp: word_less_nat_alt intro: ucast_mono_le)
+
+lemma ucast_up_mono: 
+  "LENGTH('a :: len) \<le> LENGTH('b :: len) \<Longrightarrow> x < y \<Longrightarrow> UCAST('a \<rightarrow> 'b) x < UCAST('a \<rightarrow> 'b) y"
+  apply (simp add: ucast_nat_def [symmetric])
+  apply (rule of_nat_mono_maybe)
+   apply (subgoal_tac "unat y < 2 ^ LENGTH('a)")
+    apply (subgoal_tac "2 ^ LENGTH('a) \<le> 2 ^ LENGTH('b)")
+     apply (erule order_class.order.strict_trans2)
+     apply assumption
+    apply (erule power_increasing, simp)
+   apply (rule unat_lt2p)
+  apply (erule unat_mono)
+  done
+
+lemma ucast_up_mono_le: 
+  "LENGTH('a :: len) \<le> LENGTH('b :: len) \<Longrightarrow> x \<le> y \<Longrightarrow> UCAST('a \<rightarrow> 'b) x \<le> UCAST('a \<rightarrow> 'b) y"
+  apply (simp add: ucast_nat_def [symmetric])
+  apply (subst of_nat_mono_maybe_le[symmetric])
+   apply (subgoal_tac "unat y < 2 ^ LENGTH('a)")
+    apply (subgoal_tac "2 ^ LENGTH('a) \<le> 2 ^ LENGTH('b)")
+     apply (erule order_class.order.strict_trans2)
+     apply assumption
+    apply (erule power_increasing, simp)
+   apply (rule unat_lt2p)
+   apply (subgoal_tac "unat x < 2 ^ LENGTH('a)")
+    apply (subgoal_tac "2 ^ LENGTH('a) \<le> 2 ^ LENGTH('b)")
+     apply (erule order_class.order.strict_trans2)
+     apply assumption
+    apply (erule power_increasing, simp)
+   apply (rule unat_lt2p)
+  apply (subst word_le_nat_alt[symmetric])
+  apply assumption
+  done
 
 lemma zero_sle_ucast_up:
   "\<not> is_down (ucast :: 'a word \<Rightarrow> 'b signed word) \<Longrightarrow>
