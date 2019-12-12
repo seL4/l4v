@@ -9348,13 +9348,11 @@ lemma valid_refills_r_amount_bounded_max_sc_period:
   done
 
 lemma refill_unblock_check_active_sc_valid_refills:
-  "\<lbrace>active_sc_valid_refills
-    and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat (MAX_SC_PERIOD)
-             \<le> unat (max_word :: time))\<rbrace>
+  "\<lbrace>active_sc_valid_refills and current_time_bounded 1\<rbrace>
     refill_unblock_check sc_ptr
    \<lbrace>\<lambda>rv. active_sc_valid_refills\<rbrace>"
-  unfolding active_sc_valid_refills_def
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift'
+  unfolding active_sc_valid_refills_def current_time_bounded_def
+  apply_trace (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift'
            simp: Ball_def)
   apply (intro conjI)
    apply (erule_tac order_trans[rotated])
@@ -9429,11 +9427,12 @@ lemma refill_unblock_check_released_ipc_queues[wp]:
 lemma refill_unblock_check_valid_sched:
   "\<lbrace>valid_sched
     and sc_not_in_release_q scp
-    and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time))\<rbrace>
+    and current_time_bounded 1\<rbrace>
     refill_unblock_check scp
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   unfolding valid_sched_def
-  by (wpsimp wp: refill_unblock_check_valid_ready_qs refill_unblock_check_valid_release_q
+  by (wpsimp wp: refill_unblock_check_valid_ready_qs
+                 refill_unblock_check_valid_release_q
                  refill_unblock_check_valid_sched_action
                  refill_unblock_check_active_sc_valid_refills)
 
@@ -9487,10 +9486,10 @@ lemma switch_sched_context_valid_sched:
      and cur_sc_in_release_q_imp_zero_consumed
      and (\<lambda>s. sc_not_in_release_q (cur_sc s) s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
      and (\<lambda>s. sc_not_in_ready_q (cur_sc s) s)
+     and current_time_bounded 1
      and (\<lambda>s. unat (cur_time s) + 2 * unat (MAX_SC_PERIOD) + unat kernelWCET_ticks \<le> unat (max_word::time))
      and (\<lambda>s. unat (cur_time s) + unat (MAX_SC_PERIOD) \<le> unat (max_word :: time)
-         \<and> unat (consumed_time s) + unat (MAX_SC_PERIOD) \<le> unat (max_word :: time)
-         \<and> unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time))\<rbrace>
+         \<and> unat (consumed_time s) + unat (MAX_SC_PERIOD) \<le> unat (max_word :: time))\<rbrace>
    switch_sched_context
    \<lbrace>\<lambda>_. valid_sched :: ('state_ext state) \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: switch_sched_context_def assert_opt_def)
@@ -9519,10 +9518,10 @@ lemma sc_and_timer_valid_sched:
      and cur_sc_in_release_q_imp_zero_consumed
      and (\<lambda>s. sc_not_in_release_q (cur_sc s) s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
      and (\<lambda>s. sc_not_in_ready_q (cur_sc s) s)
-and (\<lambda>s. unat (cur_time s) + 2 * unat (MAX_SC_PERIOD) + unat kernelWCET_ticks \<le> unat (max_word::time))
+     and current_time_bounded 1
+     and (\<lambda>s. unat (cur_time s) + 2 * unat (MAX_SC_PERIOD) + unat kernelWCET_ticks \<le> unat (max_word::time))
      and (\<lambda>s. unat (cur_time s) + unat (MAX_SC_PERIOD) \<le> unat (max_word :: time)
-       \<and> unat (consumed_time s) + unat (MAX_SC_PERIOD) \<le> unat (max_word :: time)
-       \<and> unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time) )\<rbrace>
+       \<and> unat (consumed_time s) + unat (MAX_SC_PERIOD) \<le> unat (max_word :: time))\<rbrace>
    sc_and_timer
    \<lbrace>\<lambda>_. valid_sched :: ('state_ext state) \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: sc_and_timer_def)
@@ -12585,7 +12584,7 @@ lemma maybe_donate_sc_cond_released_if_bound_sc_tcb_at:
 
 lemma maybe_donate_sc_active_sc_valid_refills[wp]:
   "\<lbrace>active_sc_valid_refills
-    and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time))\<rbrace>
+    and current_time_bounded 1\<rbrace>
    maybe_donate_sc tcbptr ntfnptr
    \<lbrace>\<lambda>rv s. active_sc_valid_refills s\<rbrace>"
   unfolding maybe_donate_sc_def
@@ -12598,7 +12597,7 @@ lemma send_signal_WaitingNtfn_helper:
    \<lbrace>ko_at (Notification ntfn) ntfnptr and
     st_tcb_at ((=) (BlockedOnNotification ntfnptr)) (hd wnlist) and
     valid_sched and invs and ct_not_BlockedOnNtfn and
-    (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time))\<rbrace>
+    current_time_bounded 1\<rbrace>
    update_waiting_ntfn ntfnptr wnlist (ntfn_bound_tcb ntfn) (ntfn_sc ntfn) badge
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   unfolding update_waiting_ntfn_def
@@ -12630,8 +12629,7 @@ lemma send_signal_WaitingNtfn_helper:
                          \<and> not_queued x1 s \<and>
                   x1 \<noteq> idle_thread s \<and>
                   sym_refs (state_refs_of s) \<and>
-                  not_cur_thread x1 s \<and> valid_objs s
-              \<and> unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time) \<and>
+                  not_cur_thread x1 s \<and> valid_objs s \<and> current_time_bounded 1 s \<and>
                    pred_map runnable (tcb_sts_of s) x1 \<and> valid_machine_time s \<and> scheduler_act_not x1 s \<and> not_in_release_q x1 s \<and>
                   released_if_bound_sc_thread x1 s"
                       in hoare_strengthen_post[rotated])
@@ -12969,7 +12967,7 @@ lemma send_signal_BOR_helper:
    \<Longrightarrow> ntfn_bound_tcb ntfn = Some tcbptr
    \<Longrightarrow> \<lbrace>st_tcb_at ((=) (BlockedOnReceive ep r_opt)) tcbptr and
         valid_sched and (\<lambda>s. tcbptr \<noteq> idle_thread s) and invs
-        and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time))\<rbrace>
+        and current_time_bounded 1\<rbrace>
          do y <- cancel_ipc tcbptr;
             y <- set_thread_state tcbptr Running;
             y <- as_user tcbptr (setRegister badge_register badge);
@@ -12987,7 +12985,7 @@ lemma send_signal_BOR_helper:
                           and (\<lambda>s. tcbptr \<noteq> idle_thread s)
                           and st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = {}) tcbptr
                           and invs
-and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time))"
+and current_time_bounded 1"
            in hoare_seq_ext[rotated])
    apply (wpsimp wp: hoare_vcg_ex_lift cancel_ipc_no_refs)
    apply (clarsimp simp: valid_sched_def invs_sym_refs invs_valid_objs)
@@ -13015,7 +13013,7 @@ and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD 
                           and (\<lambda>s. tcbptr \<noteq> idle_thread s)
                           and valid_objs and (\<lambda>s. sym_refs (state_refs_of s))
                           and (\<lambda>s. pred_map_eq Running (tcb_sts_of s) tcbptr)
-and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time))"
+and current_time_bounded 1"
            in hoare_seq_ext[rotated])
    apply (wpsimp wp: set_thread_state_runnable_valid_sched_except_blocked
                      set_thread_state_valid_blocked)
@@ -13042,20 +13040,20 @@ and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD 
      apply (clarsimp simp: pred_tcb_at_def obj_at_def in_release_queue_def not_in_release_q_def
                            vs_all_heap_simps obj_at_kh_kheap_simps runnable_eq_active
                            valid_blocked_defs)
-      apply (wpsimp wp: maybe_donate_sc_valid_ready_qs maybe_donate_sc_valid_release_q
+      apply_trace (wpsimp wp: maybe_donate_sc_valid_ready_qs maybe_donate_sc_valid_release_q
                         maybe_donate_sc_valid_sched_action maybe_donate_sc_ct_not_in_q2
                         maybe_donate_sc_ct_in_cur_domain maybe_donate_sc_valid_blocked_except_set
                         maybe_donate_sc_cond_released_if_bound_sc_tcb_at
                         maybe_donate_sc_released_ipc_queues
                   simp: valid_sched_def)
    apply (wpsimp cong: conj_cong simp: obj_at_kh_kheap_simps)
-  apply (clarsimp simp: valid_sched_def obj_at_kh_kheap_simps vs_all_heap_simps)
+  apply (clarsimp simp: valid_sched_def obj_at_kh_kheap_simps vs_all_heap_simps current_time_bounded_def)
   done
 
 (* what can we say about ntfn_bound_tcb? can we say it is not equal to idle_thread or cur_thread? *)
 lemma send_signal_valid_sched:
   "\<lbrace> valid_sched and invs and ct_not_BlockedOnNtfn
-     and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time))\<rbrace>
+     and current_time_bounded 1\<rbrace>
      send_signal ntfnptr badge
    \<lbrace> \<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding send_signal_def
@@ -13934,7 +13932,8 @@ lemma sched_context_yield_to_valid_sched_helper:
   "\<lbrace>sc_yf_sc_at ((=) sc_yf_opt) sc_ptr and
        (valid_sched and simple_sched_action and
         (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) sc_ptr s) and
-        ct_active and ct_released and invs and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time)))\<rbrace>
+        ct_active and ct_released and invs
+        and current_time_bounded 1)\<rbrace>
      when (sc_yf_opt \<noteq> None) $
        do complete_yield_to (the sc_yf_opt);
           sc_yf_opt <- get_sc_obj_ref sc_yield_from sc_ptr;
@@ -13942,7 +13941,7 @@ lemma sched_context_yield_to_valid_sched_helper:
        od
    \<lbrace>\<lambda>_. valid_sched and simple_sched_action and
      (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) sc_ptr s) and
-     ct_active and ct_released and invs and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time))\<rbrace>"
+     ct_active and ct_released and invs and current_time_bounded 1\<rbrace>"
   by (wpsimp wp: get_sc_obj_ref_wp complete_yield_to_invs
                  hoare_vcg_all_lift hoare_drop_imp is_schedulable_wp)
 
@@ -14071,7 +14070,7 @@ lemma sched_context_yield_to_valid_sched_helper2:
            invs) and
            (\<lambda>s. is_schedulable_bool tcb_ptr (in_release_q tcb_ptr s) s
                 \<longrightarrow> budget_ready tcb_ptr s \<and> budget_sufficient tcb_ptr s)
-       and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time)) \<rbrace>
+       and current_time_bounded 1\<rbrace>
    do in_release_q <- gets (in_release_queue tcb_ptr);
       schedulable <- is_schedulable tcb_ptr in_release_q;
       if schedulable
@@ -14160,7 +14159,7 @@ lemma sched_context_yield_to_valid_sched:
   "\<lbrace>valid_sched and simple_sched_action
     and (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) sc_ptr s)
     and ct_active and ct_released and invs
-    and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time))\<rbrace>
+    and current_time_bounded 1\<rbrace>
    sched_context_yield_to sc_ptr args
    \<lbrace>\<lambda>y. valid_sched\<rbrace>"
   supply if_split[split del]
@@ -14189,7 +14188,7 @@ lemma invoke_sched_context_valid_sched:
   "\<lbrace>invs and valid_sched and valid_sched_context_inv iv and invs and simple_sched_action
     and (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s)
       and ct_active and ct_released
-      and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time))\<rbrace>
+      and current_time_bounded 1\<rbrace>
    invoke_sched_context iv
    \<lbrace>\<lambda>_. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
   apply (cases iv; simp)
@@ -16027,7 +16026,6 @@ lemma invoke_sched_control_configure_valid_sched:
    apply (intro conjI impI allI)
     apply (simp add: sc_at_pred_n_def obj_at_def)
    apply (simp add: sc_at_pred_n_def obj_at_def)
-  subgoal sorry
 
   apply (case_tac "sc_tcb sc = None")
    apply (clarsimp simp: bind_assoc valid_sched_def)
@@ -16313,7 +16311,7 @@ lemma perform_invocation_valid_sched:
   "\<lbrace>invs and valid_invocation i and ct_active and scheduler_act_sane and valid_sched
         and ready_or_release and valid_reply_scs and (\<lambda>s. valid_refills (cur_sc s) s)
         and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_not_queued and ct_not_in_release_q and ct_released
-        and (\<lambda>s. unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD \<le> unat (max_word :: time))\<rbrace>
+        and current_time_bounded 1\<rbrace>
    perform_invocation block call can_donate i
    \<lbrace>\<lambda>rv. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   apply (cases i; simp)

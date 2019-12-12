@@ -644,8 +644,8 @@ where
     "valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)
      = (obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> valid_refills_number mrefills n) scptr
         and ex_nonz_cap_to scptr and K (MIN_REFILLS \<le> mrefills) \<comment> \<open>mrefills = MIN_REFILLS + extra_refills\<close>
-        and K (budget \<le> us_to_ticks maxTimer_us \<and> budget \<ge> MIN_SC_BUDGET)
-        and K (period \<le> us_to_ticks maxTimer_us \<and> budget \<ge> MIN_SC_BUDGET)
+        and K (budget \<le> MAX_SC_PERIOD \<and> budget \<ge> MIN_SC_BUDGET)
+        and K (period \<le> MAX_SC_PERIOD \<and> budget \<ge> MIN_SC_BUDGET)
         and K (budget \<le> period))"
 
 
@@ -2378,8 +2378,7 @@ lemma decode_sched_control_inv_wf:
                         us_to_ticks_mono[simplified mono_def] MIN_SC_BUDGET_def
                         MIN_SC_BUDGET_US_def MIN_BUDGET_def MIN_BUDGET_US_def
                         ARM.kernelWCET_ticks_def)
-  apply simp
-  done
+  by fastforce
 
 end
 

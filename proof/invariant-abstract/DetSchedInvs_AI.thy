@@ -1080,8 +1080,6 @@ lemma period_window_single:
    \<Longrightarrow> window refills period = (unat (r_amount a) \<le> unat period)"
   unfolding window_def by fastforce
 
-definition MAX_SC_PERIOD where "MAX_SC_PERIOD = ((2 ^ 32) :: time)"
-
 \<comment> \<open> FIXME: it would be nice to phrase the fourth conjunct as
             \<forall>refill \<in> set (sc_refills sc). MIN_BUDGET <= r_amount refill\<close>
 definition cfg_valid_refills :: "sc_refill_cfg \<Rightarrow> bool" where
