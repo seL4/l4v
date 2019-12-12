@@ -325,6 +325,13 @@ definition
 where
   "arch_tcb_get_registers \<equiv> arch_tcb_context_get"
 
+\<comment> \<open>This matches 60 * 60 * MS_IN_S because it should be in micro-seconds\<close>
+\<comment> \<open>Rename this to MAX_BUDGET_US to match source\<close>
+definition
+  MAX_SC_PERIOD :: "64 word"
+where
+  "MAX_SC_PERIOD \<equiv> 60 * 60 * 1000"
+
 end
 
 end

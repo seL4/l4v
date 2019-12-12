@@ -56,6 +56,7 @@ requalify_consts
   untyped_min_bits
   untyped_max_bits
   msg_label_bits
+  MAX_SC_PERIOD
 end
 
 text \<open>
