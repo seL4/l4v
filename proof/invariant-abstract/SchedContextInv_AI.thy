@@ -1867,7 +1867,6 @@ where
   "round_robin ptr s \<equiv> \<exists>ko sc n. kheap s ptr = Some ko \<and> ko = SchedContext sc n
                          \<and> sc_budget sc = sc_period sc"
 
-crunch inv[wp]: refill_full "P"
 lemma set_refills_sc_at_period[wp]:
   "\<lbrace>sc_at_period P p\<rbrace> set_refills sc_ptr refills \<lbrace>\<lambda>_. sc_at_period P p\<rbrace>"
   apply (wpsimp simp: set_refills_def update_sched_context_def set_object_def

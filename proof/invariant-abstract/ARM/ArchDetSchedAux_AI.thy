@@ -171,7 +171,7 @@ crunches perform_asid_control_invocation
 
 lemma perform_asid_control_invocation_pred_map_sc_refill_cfgs_of:
   "perform_asid_control_invocation aci
-   \<lbrace>\<lambda>s. \<forall>p. pred_map cfg_active (sc_refill_cfgs_of s) p
+   \<lbrace>\<lambda>s. \<forall>p. pred_map active_scrc (sc_refill_cfgs_of s) p
             \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding perform_asid_control_invocation_def
   by (wpsimp wp: hoare_drop_imp delete_objects_pred_map_sc_refill_cfgs_of)

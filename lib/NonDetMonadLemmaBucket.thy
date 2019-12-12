@@ -107,6 +107,10 @@ lemmas hoare_lift_Pf3 = hoare_lift_Pf_pre_conj[where R=\<top> and f=f and g=f fo
 lemmas hoare_lift_Pf2 = hoare_lift_Pf3[where P="\<lambda>f _. P f" for P]
 lemmas hoare_lift_Pf = hoare_lift_Pf2[where Q=P and P=P for P]
 
+lemmas hoare_lift_Pf3_pre_conj = hoare_lift_Pf_pre_conj[where f=f and g=f for f, simplified]
+lemmas hoare_lift_Pf2_pre_conj = hoare_lift_Pf3_pre_conj[where P="\<lambda>f _. P f" for P]
+lemmas hoare_lift_Pf_pre_conj' = hoare_lift_Pf2_pre_conj[where Q=P and P=P for P]
+
 lemma no_fail_select_f [wp]:
   "no_fail (\<lambda>s. \<not>snd S) (select_f S)"
   by (simp add: select_f_def no_fail_def)

@@ -5737,4 +5737,8 @@ lemma no_plus_overflow_unat_size2:
   by (metis One_nat_def diff_less le_less_trans lessI nat_zero_less_power_iff no_olen_add_nat
             no_plus_overflow_unat_size semiring_norm(118))
 
+lemma power_two_max_word_fold:
+  "2 ^ LENGTH('a::len) = Suc (unat (max_word :: 'a word))"
+  by (clarsimp simp: max_word_minus unat_minus_one_word)
+
 end

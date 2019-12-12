@@ -693,7 +693,6 @@ global_interpretation sc_heap: opt_map_cons2_def_locale _ sc_of scs_of_kh SchedC
     Why project at all? This allows us to ignore changes to other fields,
     most notably sc_tcb and sc_replies.\<close>
 
-(* FIXME: add field corresponding to sc_budget after rebasing *)
 record sc_refill_cfg =
   scrc_refills :: "refill list"
   scrc_refill_max :: nat
@@ -1100,8 +1099,7 @@ abbreviation valid_refills_pred :: "(obj_ref \<rightharpoonup> sc_refill_cfg) \<
 abbreviation valid_refills :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "valid_refills scp s \<equiv> valid_refills_pred (sc_refill_cfgs_of s) scp"
 
-abbreviation sc_valid_refills :: "sched_context \<Rightarrow> bool"
-where
+abbreviation sc_valid_refills :: "sched_context \<Rightarrow> bool" where
   "sc_valid_refills sc \<equiv> cfg_valid_refills (sc_refill_cfg_of sc)"
 
 lemmas sc_valid_refills_def = cfg_valid_refills_def
@@ -1913,19 +1911,12 @@ abbreviation valid_ready_qs :: "'z state \<Rightarrow> bool" where
 
 lemmas valid_ready_qs_def = valid_ready_qs_2_def valid_ready_queued_thread_2_def
 
-
-
 \<comment> \<open>active_sc_valid_refills\<close>
-
-abbreviation
-  cfg_active :: "sc_refill_cfg \<Rightarrow> bool"
-where
-  "cfg_active cfg \<equiv> active_sc (scrc_refill_max cfg)"
 
 definition active_sc_valid_refills_2 ::
   "(obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool" where
   "active_sc_valid_refills_2 sc_refill_cfgs \<equiv>
-   \<forall>scp. pred_map cfg_active sc_refill_cfgs scp \<longrightarrow> pred_map cfg_valid_refills sc_refill_cfgs scp"
+   \<forall>scp. pred_map active_scrc sc_refill_cfgs scp \<longrightarrow> pred_map cfg_valid_refills sc_refill_cfgs scp"
 
 abbreviation active_sc_valid_refills :: "'z state \<Rightarrow> bool" where
   "active_sc_valid_refills s \<equiv> active_sc_valid_refills_2 (sc_refill_cfgs_of s)"
@@ -1933,9 +1924,9 @@ abbreviation active_sc_valid_refills :: "'z state \<Rightarrow> bool" where
 lemmas active_sc_valid_refills_def = active_sc_valid_refills_2_def
 
 lemma active_sc_valid_refills_lift_pre_conj:
-  assumes a: "\<And>t. \<lbrace>\<lambda>s. \<not> pred_map cfg_active (sc_refill_cfgs_of s) t \<and> R s\<rbrace>
+  assumes a: "\<And>t. \<lbrace>\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) t \<and> R s\<rbrace>
                   f
-                  \<lbrace>\<lambda>rv s. \<not> pred_map cfg_active (sc_refill_cfgs_of s) t\<rbrace>"
+                  \<lbrace>\<lambda>rv s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) t\<rbrace>"
   assumes b: "\<And>t. \<lbrace>\<lambda>s. valid_refills t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. valid_refills t s\<rbrace>"
     shows "\<lbrace>\<lambda>s. active_sc_valid_refills s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. active_sc_valid_refills\<rbrace>"
   apply (simp add: active_sc_valid_refills_def)
@@ -2885,8 +2876,8 @@ lemmas valid_idle_etcb_lift[wp] = valid_idle_etcb_lift_pre_conj[where R = \<top>
 lemma valid_sched_lift_pre_conj:
   assumes "\<And>N P t. \<lbrace>\<lambda>s. N (st_tcb_at P t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (st_tcb_at P t s)\<rbrace>"
   assumes "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
-  assumes "\<And>t. \<lbrace>\<lambda>s. \<not> pred_map cfg_active (sc_refill_cfgs_of s) t \<and> R s\<rbrace>
-               f \<lbrace>\<lambda>rv s. \<not> pred_map cfg_active (sc_refill_cfgs_of s) t\<rbrace>"
+  assumes "\<And>t. \<lbrace>\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) t \<and> R s\<rbrace>
+               f \<lbrace>\<lambda>rv s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) t\<rbrace>"
   assumes "\<And>P t. \<lbrace>\<lambda>s. (valid_refills t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. (valid_refills t s)\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. budget_ready t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_ready t s\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. budget_sufficient t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_sufficient t s\<rbrace>"
