@@ -58,7 +58,12 @@ lemma elim:
 
 ML \<open>
 signature TRACE_SCHEMATIC_INSTS = sig
-  type instantiations = (term * (int * term)) list * (typ * typ) list
+  type instantiations = {
+    bounds: (string * typ) list,
+    terms: (term * term) list,
+    typs: (typ * typ) list
+  }
+  val empty_instantiations: instantiations
 
   val trace_schematic_insts:
         Method.method -> (instantiations -> unit) -> Method.method
@@ -78,10 +83,11 @@ signature TRACE_SCHEMATIC_INSTS = sig
   val dest_term_container: term -> term list
 
   val attach_proof_annotations: Proof.context -> term list -> thm -> thm
-  val detach_proof_annotations: Proof.context -> thm -> (int * term) list * thm
+  val detach_proof_annotations: Proof.context -> thm -> term list * thm
 
   val attach_rule_annotations: Proof.context -> term list -> thm -> thm
-  val detach_rule_result_annotations: Proof.context -> thm -> (int * term) list * thm
+  val detach_rule_result_annotations:
+        Proof.context -> thm -> ((string * typ) list * term list) * thm
 end
 
 structure Trace_Schematic_Insts: TRACE_SCHEMATIC_INSTS = struct
@@ -96,10 +102,16 @@ structure Trace_Schematic_Insts: TRACE_SCHEMATIC_INSTS = struct
   @{term "\<And>x y. Q"}, it might be instantiated to @{term "\<lambda>a. R a
   x"}.  We need to capture `x` when reporting the instantiation, so we report
   that `?P` has been instantiated to @{term "\<lambda>x y a. R a x"}. In order
-  to distinguish between the bound `x`, `y`, and `a`, we record that the two
-  outermost binders are actually due to the subgoal bounds.
+  to distinguish between the bound `x`, `y`, and `a`, we record the bound
+  variables from the subgoal so that we can handle them as necessary.
 \<close>
-type instantiations = (term * (int * term)) list * (typ * typ) list
+type instantiations = {
+  bounds: (string * typ) list,
+  terms: (term * term) list,
+  typs: (typ * typ) list
+}
+
+val empty_instantiations = {bounds = [], terms = [], typs = []}
 
 \<comment>\<open>
   Work around Isabelle running every apply method on a dummy proof state
@@ -195,7 +207,7 @@ fun detach_proof_annotations ctxt st =
               ((("xs", 0), @{typ bool}), ccontainer)])
             @{thm proof_state_remove}
   in
-    (map (pair 0) terms, rewrite_state_concl remove_eqn st)
+    (terms, rewrite_state_concl remove_eqn st)
   end
 
 \<comment> \<open>
@@ -235,9 +247,15 @@ fun annotate_with_vars_using (attach: Proof.context -> term list -> thm -> thm) 
 val annotate_rule = annotate_with_vars_using attach_rule_annotations
 val annotate_proof_state = annotate_with_vars_using attach_proof_annotations
 
-fun split_and_zip_instantiations (vars, tvars) insts =
-    let val (var_insts, tvar_insts) = chop (length vars) insts
-    in (vars ~~ var_insts, tvars ~~ map (snd #> fastype_of) tvar_insts) end
+fun split_and_zip_instantiations (vars, tvars) (bounds, insts): instantiations =
+  let
+    val (var_insts, tvar_insts) = chop (length vars) insts
+    val tvar_insts' = map (TermExtras.drop_binders (length bounds) o fastype_of) tvar_insts
+  in {
+    bounds = bounds,
+    terms = vars ~~ var_insts,
+    typs = tvars ~~ tvar_insts'
+  } end
 
 \<comment> \<open>
   Term version of @{ML "Thm.dest_arg"}.
@@ -265,7 +283,8 @@ fun dest_instantiation_container_subgoal t =
       case goal of
         @{term_pat "Trueprop (container True ?data)"} =>
             dest_term_container data
-            |> map (fn t => (length vars, Logic.rlist_abs (rev vars, t))) (* reapply variables *)
+            |> map (fn t => Logic.rlist_abs (rev vars, t)) (* reapply variables *)
+            |> pair vars
             |> SOME
       | _ => NONE
     end
@@ -303,20 +322,20 @@ fun abs_all 0 t = t
         $ Abs (v, typ, abs_all (n - 1) body)
   | abs_all n _ = error ("Expected at least " ^ Int.toString n ^ " more lambdas.")
 
-fun filtered_instantiation_lines ctxt (var_insts, tvar_insts) =
+fun filtered_instantiation_lines ctxt {bounds, terms, typs} =
   let
     val vars_lines =
-        map (fn (var, (abs, inst)) =>
+        map (fn (var, inst) =>
           if var = inst then "" (* don't show unchanged *) else
               "  " ^ Syntax.string_of_term ctxt var ^ "  =>  " ^
-              Syntax.string_of_term ctxt (abs_all abs inst) ^ "\n")
-        var_insts
+              Syntax.string_of_term ctxt (abs_all (length bounds) inst) ^ "\n")
+        terms
     val tvars_lines =
         map (fn (tvar, inst) =>
           if tvar = inst then "" (* don't show unchanged *) else
               "  " ^ Syntax.string_of_typ ctxt tvar ^ "  =>  " ^
               Syntax.string_of_typ ctxt inst ^ "\n")
-        tvar_insts
+        typs
   in
     vars_lines @ tvars_lines
   end
@@ -375,7 +394,7 @@ fun trace_schematic_insts_tac
         val (rule_terms, st) = detach_rule_result_annotations ctxt st
         val (proof_terms, st) = detach_proof_annotations ctxt st
         val rule_insts = split_and_zip_instantiations rule_vars rule_terms
-        val proof_insts = split_and_zip_instantiations proof_vars proof_terms
+        val proof_insts = split_and_zip_instantiations proof_vars ([], proof_terms)
         val () = callback rule_insts proof_insts
       in
         st
@@ -396,7 +415,7 @@ fun trace_schematic_insts (method: Method.method) callback
       |> Seq.map_result (fn (ctxt', annotated_st') => let
             (* Retrieve the stashed list, now with unifications *)
             val (annotations, st') = detach_proof_annotations ctxt' annotated_st'
-            val insts = split_and_zip_instantiations vars annotations
+            val insts = split_and_zip_instantiations vars ([], annotations)
             (* Report the list *)
             val _ = callback insts
          in (ctxt', st') end)

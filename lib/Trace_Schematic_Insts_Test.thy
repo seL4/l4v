@@ -108,8 +108,8 @@ fun trace_schematic_assert ctxt test_name tac expected_vars expected_tvars =
               Seq.succeed st
           | _ => tac st
 
-    fun check (var_insts, tvar_insts) =
-      if expected_vars = var_insts andalso expected_tvars = tvar_insts then () else
+    fun check insts =
+      if expected_vars = #terms insts andalso expected_tvars = #typs insts then () else
         error ("Trace_Schematic_Insts failed test: " ^ test_name)
 
   in Method.NO_CONTEXT_TACTIC ctxt
@@ -123,7 +123,7 @@ lemma "\<lbrakk> \<forall>x. P x \<rbrakk> \<Longrightarrow> P x"
   apply (drule spec)
   apply (tactic \<open>let
       val alpha = TFree ("'a", @{sort type})
-      val expected_vars = [(Var (("x", 0), alpha), (0, Free ("x", alpha)))]
+      val expected_vars = [(Var (("x", 0), alpha), Free ("x", alpha))]
       val expected_tvars = []
       in trace_schematic_assert @{context}
             "basic Var test" (assume_tac @{context} 1)
@@ -170,22 +170,22 @@ lemma "\<exists>a. foo (a :: nat)"
       val b' = TVar (("'b", 0), @{sort zero})
       val a'' = TVar (("'a", 2), @{sort type})
       val expected_rule_vars = [
-        (Var (("x", 0), a'), (0, Var(("x", 2), a'')))
+        (Var (("x", 0), a'), Var(("x", 2), a''))
       ]
       val expected_rule_tvars = [
         (a', a''),
         (b', @{typ nat})
       ]
       val expected_goal_vars = [
-        (Var (("a", 0), @{typ nat}), (0, @{term "0 :: nat"}))
+        (Var (("a", 0), @{typ nat}), @{term "0 :: nat"})
       ]
     in
       trace_schematic_resolve_tac_assert
         @{context}
         "basic rule tracing"
         @{thm fooI2}
-        (expected_rule_vars, expected_rule_tvars)
-        (expected_goal_vars, [])
+        {bounds = [], terms = expected_rule_vars, typs = expected_rule_tvars}
+        {bounds = [], terms = expected_goal_vars, typs = []}
     end
   \<close>)
   by (simp add: foo_def)
@@ -194,17 +194,18 @@ text \<open>Rule instantiations with bound variables\<close>
 lemma "\<And>X. X \<and> Y \<Longrightarrow> Y \<and> X"
   apply (tactic \<open>
     let
+      val expected_rule_bounds = [("X", @{typ bool})]
       val expected_rule_vars = [
-        (Var (("P", 0), @{typ bool}), (1, @{term "\<lambda>X :: bool. Y :: bool"})),
-        (Var (("Q", 0), @{typ bool}), (1, @{term "\<lambda>X :: bool. X :: bool"}))
+        (Var (("P", 0), @{typ bool}), @{term "\<lambda>X :: bool. Y :: bool"}),
+        (Var (("Q", 0), @{typ bool}), @{term "\<lambda>X :: bool. X :: bool"})
       ]
     in
       trace_schematic_resolve_tac_assert
         @{context}
         "rule tracing with bound variables"
         @{thm conjI}
-        (expected_rule_vars, [])
-        ([], [])
+        {bounds = expected_rule_bounds, terms = expected_rule_vars, typs = []}
+        {bounds = [], terms = [], typs = []}
     end
   \<close>)
   by simp+
@@ -222,22 +223,23 @@ lemma "\<exists>f. \<forall>x. f x = x"
       \<close>
       val lambda = Abs ("x", @{typ 'a}, Abs ("", @{typ 'a}, Bound 0))
 
+      val expected_rule_bounds = [("x", @{typ 'a})]
       val expected_rule_vars = [
-        (Var (("t", 0), a'), (1, lambda))
+        (Var (("t", 0), a'), lambda)
       ]
-      val expected_rule_types = [
-        (a', @{typ "'a \<Rightarrow> 'a \<Rightarrow> 'a"})
+      val expected_rule_typs = [
+        (a', @{typ "'a \<Rightarrow> 'a"})
       ]
       val expected_goal_vars = [
-        (Var (("f", 2), @{typ "'a \<Rightarrow> 'a \<Rightarrow> 'a"}), (0, lambda))
+        (Var (("f", 2), @{typ "'a \<Rightarrow> 'a \<Rightarrow> 'a"}), lambda)
       ]
     in
       trace_schematic_resolve_tac_assert
         @{context}
         "rule tracing with function term instantiations"
         @{thm refl}
-        (expected_rule_vars, expected_rule_types)
-        (expected_goal_vars, [])
+        {bounds = expected_rule_bounds, terms = expected_rule_vars, typs = expected_rule_typs}
+        {bounds = [], terms = expected_goal_vars, typs = []}
     end
   \<close>)
   done
