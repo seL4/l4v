@@ -14480,10 +14480,12 @@ locale DetSchedSchedule_AI_handle_hypervisor_fault =
           and ct_in_state activatable\<rbrace>
         handle_hypervisor_fault t fault
       \<lbrace>\<lambda>_. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
+  (* commented predicate apparently not needed in ARM_HYP case. This is not verified and
+     assumed for the ARM case. *)
   assumes handle_reserved_irq_valid_sched' [wp]:
     "\<And>irq.
       \<lbrace>valid_sched and invs and
-         (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
+         (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<comment>\<open>\<and> ct_not_queued s\<close> )\<rbrace>
         handle_reserved_irq irq
       \<lbrace>\<lambda>rv. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
   assumes handle_hyp_fault_valid_machine_time[wp]:
@@ -14498,7 +14500,7 @@ locale DetSchedSchedule_AI_handle_hypervisor_fault_det_ext =
 context DetSchedSchedule_AI_handle_hypervisor_fault begin
 
 lemma handle_interrupt_valid_sched:
-  "\<lbrace>valid_sched and invs and ct_not_BlockedOnNtfn and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
+  "\<lbrace>valid_sched and invs and ct_not_BlockedOnNtfn and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s)\<rbrace>
   handle_interrupt irq \<lbrace>\<lambda>rv. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding handle_interrupt_def
   apply (wpsimp wp: get_cap_wp hoare_drop_imps hoare_vcg_all_lift send_signal_valid_sched
@@ -15325,9 +15327,8 @@ lemma handle_event_valid_sched:
     (* Interrupt *)
     subgoal
       apply wpsimp
-          apply (wpsimp wp: handle_interrupt_valid_sched check_budget_restart_valid_sched)
-         apply wpsimp
-         apply (wpsimp wp: check_budget_valid_sched hoare_vcg_all_lift hoare_vcg_if_lift2)
+          apply (wpsimp wp: handle_interrupt_valid_sched)
+         apply (wpsimp wp: check_budget_valid_sched hoare_vcg_all_lift hoare_vcg_if_lift2 hoare_vcg_imp_lift')
         apply(rule_tac Q="\<lambda>_. valid_sched and invs and ct_not_in_release_q
                          and cur_sc_chargeable and ct_active and
                          schact_is_rct and ct_not_queued and

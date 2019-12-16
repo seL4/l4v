@@ -359,7 +359,7 @@ lemma handle_hyp_fault_valid_sched[wp]:
   by (cases fault; wpsimp wp: handle_fault_valid_sched simp: valid_fault_def)
 
 lemma handle_reserved_irq_valid_sched:
-  "\<lbrace>valid_sched and invs and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow>  scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
+  "\<lbrace>valid_sched and invs and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow>  scheduler_act_sane s \<comment>\<open>\<and> ct_not_queued s\<close>)\<rbrace>
   handle_reserved_irq irq \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   unfolding handle_reserved_irq_def by (wpsimp)
 
