@@ -38,17 +38,13 @@ val csenv = let
 consts
   encode_machine_state :: "machine_state \<Rightarrow> unit \<times> nat"
 
+context graph_refine_locale begin
+
 local_setup \<open>
   add_field_h_val_rewrites
   #> add_field_to_bytes_rewrites
   #> add_field_offset_rewrites
-\<close>
-
-context graph_refine_locale begin
-
-
-local_setup \<open>
-  add_globals_swap_rewrites @{thms kernel_all_global_addresses.global_data_mems}
+  #> add_globals_swap_rewrites @{thms kernel_all_global_addresses.global_data_mems}
 \<close>
 
 definition
@@ -84,9 +80,12 @@ ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
 \<close>
 
 ML \<open>
-ProveSimplToGraphGoals.print dbg #failures
+val _ = ProveSimplToGraphGoals.print dbg "failures:" #failures;
 \<close>
 
+ML \<open>
+val _ = ProveSimplToGraphGoals.print dbg "successes:" #successes;
+\<close>
 
 end
 
