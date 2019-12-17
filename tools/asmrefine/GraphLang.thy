@@ -744,6 +744,10 @@ fun filename_relative thy name =
     Path.append (Resources.master_directory thy) (Path.explode name)
     |> File.standard_path
 
+fun mkdir_relative thy name =
+    Path.append (Resources.master_directory thy) (Path.explode name)
+    |> Isabelle_System.mkdirs
+
 fun openIn_relative thy = filename_relative thy #> TextIO.openIn
 
 fun get_funs thy file = let

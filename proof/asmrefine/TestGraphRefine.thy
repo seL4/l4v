@@ -16,8 +16,10 @@ imports
   "SEL4SimplExport"
 begin
 
+\<comment>\<open> Double-check we're reading the right graphlang file. \<close>
 ML \<open>
-val funs = ParseGraph.funs @{theory} "CFunDump.txt"
+writeln CFunDump_filename;
+val funs = ParseGraph.funs @{theory} CFunDump_filename
 \<close>
 
 ML \<open>

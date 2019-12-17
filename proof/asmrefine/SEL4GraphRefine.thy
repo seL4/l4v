@@ -19,7 +19,7 @@ begin
 declare ptr_add_assertion_uint [simp del]
 
 ML \<open>
-val funs = ParseGraph.funs @{theory} "CFunDump.txt"
+val funs = ParseGraph.funs @{theory} CFunDump_filename
 \<close>
 
 ML \<open>

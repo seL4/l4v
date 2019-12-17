@@ -39,7 +39,9 @@ lemma clzl_body_refines:
 declare ctcb_offset_defs[simp]
 
 ML \<open>
-  emit_C_everything_relative @{context} (csenv ()) "CFunDump.txt";
+  ParseGraph.mkdir_relative @{theory} (getenv "L4V_ARCH");
+  val CFunDump_filename = getenv "L4V_ARCH" ^ "/" ^ "CFunDump.txt";
+  emit_C_everything_relative @{context} (csenv ()) CFunDump_filename;
 \<close>
 
 end
