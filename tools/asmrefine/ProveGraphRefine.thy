@@ -935,7 +935,11 @@ fun filter_fns (dbg: debug) =
 
 fun has_failures (dbg: debug) = not (null (! (#failures dbg)))
 
-fun print (dbg: debug) field = (writeln "failures:"; map writeln (! (field dbg)))
+fun print (dbg: debug) msg field =
+  let
+    val data = !(field dbg);
+    val _ = writeln msg;
+  in if null (data) then writeln "(None)" else app writeln data end
 
 fun test_graph_refine_proof_with_def funs csenv ctxt dbg nm =
   case Symtab.lookup funs nm of
