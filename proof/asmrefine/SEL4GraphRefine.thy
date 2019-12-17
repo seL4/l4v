@@ -46,10 +46,6 @@ local_setup \<open>
 
 context graph_refine_locale begin
 
-ML \<open>
-  SimplToGraphProof.globals_swap
-    := (fn t => @{term "globals_swap t_hrs_' t_hrs_'_update symbol_table globals_list"} $ t)
-\<close>
 
 local_setup \<open>
   add_globals_swap_rewrites @{thms kernel_all_global_addresses.global_data_mems}

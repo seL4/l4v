@@ -123,10 +123,6 @@ local_setup \<open>add_field_h_val_rewrites #> add_field_to_bytes_rewrites\<clos
 
 context graph_refine begin
 
-ML \<open>SimplToGraphProof.globals_swap
- := (fn t => @{term "globals_swap t_hrs_' t_hrs_'_update symbol_table globals_list"} $ t)
-\<close>
-
 local_setup \<open>add_globals_swap_rewrites @{thms global_array_swap_global_addresses.global_data_mems}\<close>
 
 definition

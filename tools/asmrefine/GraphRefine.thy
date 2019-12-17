@@ -1799,8 +1799,6 @@ structure SimplToGraphProof = struct
 fun mk_ptr_val_app p =
     Const (@{const_name ptr_val}, fastype_of p --> @{typ word32}) $ p
 
-val globals_swap = ref (fn (x : term) => x)
-
 fun mk_arr_idx arr i = let
     val arrT = fastype_of arr
     val elT = case arrT of Type (@{type_name "array"}, [elT, _])
@@ -1815,13 +1813,24 @@ val gammaT_to_stateT = strip_type #> snd
 
 fun mk_simpl_acc ctxt sT nm = let
     val sst = Free ("sst", sT)
-    val globals_sst = Syntax.read_term ctxt "globals :: globals myvars \<Rightarrow> _"
-        $ sst
+    val symbol_table = Free ("symbol_table", @{typ "string => machine_word"})
+
+    val [globals, globals_swap, t_hrs, t_hrs_update, globals_list, pms, pms_encode] =
+        map (Syntax.read_term ctxt) [
+          "globals :: globals myvars \<Rightarrow> _",
+          "globals_swap :: (globals \<Rightarrow> _) \<Rightarrow> _",
+          "t_hrs_' :: globals \<Rightarrow> _",
+          "t_hrs_'_update :: _ \<Rightarrow> globals \<Rightarrow> globals",
+          "globals_list",
+          "phantom_machine_state_' :: globals \<Rightarrow> _",
+          "encode_machine_state"
+        ];
+
+    val globals_sst = globals $ sst
     val _ = type_of globals_sst (* does type checking *)
 
-    val t_hrs = Syntax.read_term ctxt "t_hrs_' :: globals \<Rightarrow> _"
-    val pms = Syntax.read_term ctxt "phantom_machine_state_' :: globals \<Rightarrow> _"
-    val pms_encode = Syntax.read_term ctxt "encode_machine_state"
+    val globals_swap = globals_swap $ t_hrs $ t_hrs_update $ symbol_table $ globals_list
+
     fun do_pms_encode t = case pms_encode of Const _ => pms_encode $ t
       | _ => raise TERM ("mk_simpl_acc: requires `encode_machine_state :: machine_state => unit \<times> nat'", [t])
 
@@ -1829,7 +1838,7 @@ fun mk_simpl_acc ctxt sT nm = let
     fun get_ghost_assns_fetch () = case head_of ghost_assns_fetch of Const _ => ghost_assns_fetch
       | _ => raise TERM ("mk_simpl_acc: requires `ghost_assns_from_globals :: globals => word64 => word32", [])
 
-    fun mk_sst_acc "Mem" = @{term hrs_mem} $ (t_hrs $ ((! globals_swap) globals_sst))
+    fun mk_sst_acc "Mem" = @{term hrs_mem} $ (t_hrs $ (globals_swap $ globals_sst))
       | mk_sst_acc "HTD" = @{term hrs_htd} $ (t_hrs $ globals_sst)
       | mk_sst_acc "PMS" = do_pms_encode (pms $ globals_sst)
       | mk_sst_acc "GhostAssertions" = get_ghost_assns_fetch () $ globals_sst
