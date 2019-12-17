@@ -133,20 +133,18 @@ where
         \<and> htd_safe domain (hrs_htd (t_hrs_' (globals s)))}"
 
 abbreviation(input) "ghost_assns_from_globals
-    \<equiv> (K (K 0 :: word64 \<Rightarrow> word32) o ghost'state_' :: globals \<Rightarrow> _)"
-
-
+    \<equiv> (K (K 0 :: ghost_assertions) o ghost'state_' :: globals \<Rightarrow> _)"
 
 text \<open>Test everything.\<close>
-ML \<open>ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
+ML \<open>
+val dbg = ProveSimplToGraphGoals.new_debug [] [];
+
+ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
     funs
     (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
-    @{context}\<close>
-
-
-
-
-
+    @{context}
+    dbg
+\<close>
 
 text \<open>The remainder is debug code for when things fail.\<close>
 
@@ -168,6 +166,7 @@ ProveSimplToGraphGoals.simpl_to_graph_thm funs
   (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
   @{context} nm;
 \<close>
+
 ML \<open>
 val tacs = ProveSimplToGraphGoals.graph_refine_proof_tacs
   (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
