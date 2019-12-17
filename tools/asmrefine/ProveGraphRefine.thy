@@ -574,35 +574,45 @@ val heap_update_id_nonsense
     = Thm.trivial (Thm.cterm_of @{context} (Proof_Context.read_term_pattern @{context}
         "Trueprop (heap_update ?p (h_val ?hp' ?p) (hrs_mem ?hrs) = hrs_mem ?hrs)"))
 
-fun prove_mem_equality ctxt = DETERM o let
-    val init_simpset = ctxt
-        addsimps @{thms hrs_mem_update heap_update_Array_update
-               heap_access_Array_element'
-               o_def
-        } @ get_field_h_val_rewrites ctxt
-    val unpack_simpset = ctxt
-        addsimps @{thms heap_update_def to_bytes_array
-               heap_update_list_append heap_list_update_ptr heap_list_update_word32
-               h_val_word8 h_val_sword8 heap_list_update_word8 to_bytes_sword
-               field_lvalue_offset_eq ptr_add_def
-               array_ptr_index_def
-               h_val_word32 h_val_ptr h_val_sword32
-               take_heap_list_min drop_heap_list_general
-               ucast_nat_def of_int_sint_scast
-        } @ Proof_Context.get_thms ctxt "field_to_bytes_rewrites"
-        addsimprocs [Word_Bitwise_Tac.expand_upt_simproc]
-      handle ERROR _ => raise THM
-        ("prove_mem_equality: run add_field_to_bytes_rewrites on ctxt", 1, [])
+fun prove_mem_equality_init_simpset ctxt =
+    ctxt addsimps
+      @{thms hrs_mem_update heap_update_Array_update heap_access_Array_element' o_def}
+        @ get_field_h_val_rewrites ctxt
 
+fun prove_mem_equality_unpack_simpset ctxt =
+    ctxt addsimps
+      @{thms heap_update_def to_bytes_array
+             heap_update_list_append
+             h_val_word_simps
+             heap_update_word_simps
+             heap_list_update_word_simps
+             to_bytes_sword
+             drop_sign_isomorphism
+             field_lvalue_offset_eq ptr_add_def
+             array_ptr_index_def
+             take_heap_list_min drop_heap_list_general
+             ucast_nat_def of_int_sint_scast of_int_uint_ucast
+             heap_access_Array_element field_lvalue_def}
+        @ Proof_Context.get_thms ctxt "field_to_bytes_rewrites"
+        @ (get_field_h_val_rewrites ctxt)
+      addsimprocs [Word_Bitwise_Tac.expand_upt_simproc]
+      delsimps @{thms One_nat_def}
+      addsimps @{thms One_nat_def[symmetric]}
+    handle ERROR _ => raise THM
+      ("prove_mem_equality: run add_field_to_bytes_rewrites on ctxt", 1, [])
+
+fun prove_mem_equality_unchecked ctxt = let
     fun heap_update_id_proofs ctxt =
         REPEAT_ALL_NEW (eqsubst_wrap_tac ctxt [heap_update_id_nonsense]
             THEN' prove_heap_update_id ctxt)
 
-  in simp_tac init_simpset
+  in
+    (trace_tac ctxt "prove_mem_equality: initial state")
+    THEN_ALL_NEW (simp_tac (prove_mem_equality_init_simpset ctxt))
     THEN_ALL_NEW warn_schem_tac "prove_mem_equality: before subst" ctxt (K all_tac)
     THEN_ALL_NEW (TRY o REPEAT_ALL_NEW ((eqsubst_wrap_tac ctxt
             @{thms heap_access_Array_element' heap_update_Array_update})
-        THEN_ALL_NEW simp_tac init_simpset))
+        THEN_ALL_NEW simp_tac (prove_mem_equality_init_simpset ctxt)))
     THEN_ALL_NEW TRY o heap_update_id_proofs ctxt
     THEN_ALL_NEW SUBGOAL (fn (t, i) => if
         exists_Const (fn (s, T) => s = @{const_name heap_update}
@@ -613,19 +623,21 @@ fun prove_mem_equality ctxt = DETERM o let
     (* need to normalise_mem_accs first as it operates on typed pointer ops
        and won't function after we unpack them *)
     THEN_ALL_NEW normalise_mem_accs "prove_mem_equality" ctxt
-    THEN_ALL_NEW simp_tac unpack_simpset
-    THEN_ALL_NEW simp_tac (ctxt addsimps @{thms store_word32s_equality_fold
-        store_word32s_equality_final add.commute mult.commute add_mult_comms ucast_id})
-    THEN_ALL_NEW simp_tac (ctxt addsimprocs [store_word32s_equality_simproc]
-        addsimps @{thms store_word32s_equality_final add.commute
-            mult.commute add_mult_comms ucast_id})
-    THEN_ALL_NEW SUBGOAL (fn (t, i) => if exists_Const
-            (fn (s, _) => s = @{const_name store_word32}
-                orelse s = @{const_name heap_update}
-                orelse s = @{const_name heap_update_list}) t
-        then except_tac ctxt "prove_mem_equality: remaining mem upds" i
-        else all_tac)
+    THEN_ALL_NEW asm_lr_simp_tac (prove_mem_equality_unpack_simpset ctxt)
+    THEN_ALL_NEW simp_tac (ctxt addsimps @{thms add_ac mult_ac add_mult_comms ucast_id})
   end
+
+fun prove_mem_equality ctxt = DETERM o
+    (prove_mem_equality_unchecked ctxt
+    THEN_ALL_NEW SUBGOAL (fn (t, i) =>
+      if exists_Const (fn (s, _) =>
+                 s = @{const_name store_word8}
+          orelse s = @{const_name store_word32}
+          orelse s = @{const_name store_word64}
+          orelse s = @{const_name heap_update}
+          orelse s = @{const_name heap_update_list}) t
+      then except_tac ctxt "prove_mem_equality: remaining mem upds" i
+      else all_tac))
 
 fun prove_global_equality ctxt
     = simp_tac (ctxt addsimps (#1 (get_globals_rewrites ctxt)))
@@ -664,8 +676,8 @@ fun heap_upd_kind (Const (@{const_name heap_update}, _) $ _ $ _ $ _)
   end
   | heap_upd_kind t = raise TERM ("heap_upd_kind: unknown", [t])
 
-fun decompose_mem_goals trace ctxt = warn_schem_tac "decompose_mem_goals" ctxt
-  (SUBGOAL (fn (t, i) =>
+fun decompose_mem_goals_init post trace ctxt = warn_schem_tac "decompose_mem_goals" ctxt
+  (trace_tac ctxt "decompose_mem_goals: init" THEN' SUBGOAL (fn (t, i) =>
   (case Envir.beta_eta_contract (Logic.strip_assums_concl t) of
     @{term Trueprop} $ (Const (@{const_name const_globals_in_memory}, _) $ _ $ _ $ _)
         => let val thm = res_from_ctxt "decompose_mem_goals"
@@ -675,21 +687,25 @@ fun decompose_mem_goals trace ctxt = warn_schem_tac "decompose_mem_goals" ctxt
             ORELSE' except_tac ctxt "decompose_mem_goals: const globals"
         end
     | @{term Trueprop} $ (Const (@{const_name pglobal_valid}, _) $ _ $ _ $ _)
-        => asm_simp_tac (ctxt addsimps @{thms pglobal_valid_def}
-            addsimps #3 (get_globals_rewrites ctxt))
+        => asm_full_simp_tac (ctxt addsimps @{thms pglobal_valid_def}
+              addsimps #3 (get_globals_rewrites ctxt))
     | @{term Trueprop} $ (@{term "(=) :: heap_mem \<Rightarrow> _"} $ x $ y) => let
         val query = (heap_upd_kind x, heap_upd_kind y)
         val _ = if trace then writeln ("decompose_mem_goals: " ^ @{make_string} query)
             else ()
       in case (heap_upd_kind x, heap_upd_kind y) of
-          ("HeapUpd", "HeapUpd") => prove_mem_equality ctxt
+          ("HeapUpd", "HeapUpd") => post ctxt
         | ("HeapUpdWithSwap", "HeapUpd")
-            => clean_heap_upd_swap ctxt THEN' prove_mem_equality ctxt
+            => clean_heap_upd_swap ctxt THEN' post ctxt
         | ("HeapUpd", "HeapUpdWithSwap") =>
             resolve_tac ctxt [@{thm sym}]
-              THEN' clean_heap_upd_swap ctxt THEN' prove_mem_equality ctxt
-        | ("HeapUpd", "GlobalUpd") => prove_global_equality ctxt
-        | ("GlobalUpd", "HeapUpd") => prove_global_equality ctxt
+              THEN' clean_heap_upd_swap ctxt THEN' post ctxt
+        | ("HeapUpd", "GlobalUpd") =>
+            simp_tac (ctxt addsimps (#1 (get_globals_rewrites ctxt)))
+              THEN_ALL_NEW (post ctxt)
+        | ("GlobalUpd", "HeapUpd") =>
+            simp_tac (ctxt addsimps (#1 (get_globals_rewrites ctxt)))
+              THEN_ALL_NEW (post ctxt)
         | ("HTDUpdateWithSwap", _)
             => clean_htd_upd_swap ctxt
         | (_, "HTDUpdateWithSwap")
@@ -698,7 +714,10 @@ fun decompose_mem_goals trace ctxt = warn_schem_tac "decompose_mem_goals" ctxt
             ^ heap_upd_kind x ^ "," ^ heap_upd_kind y, [x, y])
       end THEN_ALL_NEW warn_schem_tac "decompose_mem_goals: after"
         ctxt (K all_tac)
-    | _ => K all_tac) i))
+    | _ => K all_tac) i)
+    THEN' trace_tac ctxt "decompose_mem_goals: end")
+
+val decompose_mem_goals = decompose_mem_goals_init prove_mem_equality
 
 fun unat_mono_tac ctxt = resolve_tac ctxt @{thms unat_mono_intro}
     THEN' ((((TRY o REPEAT_ALL_NEW (resolve_tac ctxt @{thms unat_mono_thms}))
