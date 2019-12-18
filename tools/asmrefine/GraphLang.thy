@@ -26,9 +26,9 @@ datatype variable =
   | VarWord16 word16
   | VarWord32 word32
   | VarWord64 word64
-  | VarMem "word32 \<Rightarrow> word8"
-  | VarDom "word32 set"
-  | VarWordArray64_32 "word64 \<Rightarrow> word32"
+  | VarMem "machine_word \<Rightarrow> word8"
+  | VarDom "machine_word set"
+  | VarGhostState "ghost_assertions"
   | VarHTD "heap_typ_desc"
   | VarMS "unit \<times> nat"
   | VarBool bool
@@ -60,8 +60,8 @@ definition
     VarWord64 w \<Rightarrow> w | _ \<Rightarrow> 0)"
 
 definition
-  "var_wordarray_64_32 nm st = (case var_acc nm st of
-    VarWordArray64_32 arr \<Rightarrow> arr | _ \<Rightarrow> (\<lambda>_. 0))"
+  "var_ghoststate nm st = (case var_acc nm st of
+    VarGhostState arr \<Rightarrow> arr | _ \<Rightarrow> (\<lambda>_. 0))"
 
 definition
   "var_mem nm st = (case var_acc nm st of
@@ -518,12 +518,17 @@ fun parse_n p (n :: ss) = let
 
 fun mk_binT sz = Word_Lib.mk_wordT sz |> dest_Type |> snd |> hd
 
+val ptr_size_str =
+    case @{typ machine_word} of
+      @{typ word32} => "32"
+    | @{typ word64} => "64"
+
 fun parse_typ ("Word" :: n :: ss) = let
     val n = parse_int n
   in (Word_Lib.mk_wordT n, ss) end
   | parse_typ ("Bool" :: ss) = (@{typ bool}, ss)
-  | parse_typ ("Mem" :: ss) = (@{typ "word32 \<Rightarrow> word8"}, ss)
-  | parse_typ ("Dom" :: ss) = (@{typ "word32 set"}, ss)
+  | parse_typ ("Mem" :: ss) = (@{typ "machine_word \<Rightarrow> word8"}, ss)
+  | parse_typ ("Dom" :: ss) = (@{typ "machine_word set"}, ss)
   | parse_typ ("HTD" :: ss) = (@{typ heap_typ_desc}, ss)
   | parse_typ ("PMS" :: ss) = (@{typ nat}, ss)
   | parse_typ ("UNIT" :: ss) = (@{typ unit}, ss)
@@ -532,7 +537,10 @@ fun parse_typ ("Word" :: n :: ss) = let
     val (n, ss) = case ss of (n :: ss) => (parse_int n, ss)
         | [] => raise PARSEGRAPH ["parse_typ: array index"]
   in (Type (@{type_name array}, [el_typ, mk_binT n]), ss) end
-  | parse_typ ("WordArray" :: "64" :: "32" :: ss) = (@{typ "64 word \<Rightarrow> 32 word"}, ss)
+  | parse_typ (bad as ("WordArray" :: "50" :: element_size :: ss)) =
+      (if element_size = ptr_size_str
+      then (@{typ "ghost_assertions"}, ss)
+      else raise PARSEGRAPH ("parse_typ: bad ghost assertion codomain" :: bad))
   | parse_typ ("Struct" :: nm :: ss) = (Type (nm, []), ss)
   | parse_typ ("Ptr" :: ss) = let
     val (obj_typ, ss) = parse_typ ss
@@ -593,13 +601,16 @@ fun mk_acc nm typ st = (case typ of
       | @{typ word16} => @{term var_word16}
       | @{typ word32} => @{term var_word32}
       | @{typ word64} => @{term var_word64}
-      | @{typ "word32 \<Rightarrow> word8"} => @{term var_mem}
-      | @{typ "word32 set"} => @{term var_dom}
-      | @{typ "word64 \<Rightarrow> word32"} => @{term var_wordarray_64_32}
+      | @{typ "machine_word \<Rightarrow> word8"} => @{term var_mem}
+      | @{typ "machine_word set"} => @{term var_dom}
+      | @{typ "ghost_assertions"} => @{term var_ghoststate}
       | @{typ "heap_typ_desc"} => @{term var_htd}
       | @{typ "nat"} => @{term var_ms}
       | @{typ bool} => @{term var_bool}
-      | Type (@{type_name ptr}, [_]) => @{term var_word32}
+      | Type (@{type_name ptr}, [_]) =>
+          (case @{typ "machine_word"} of
+            @{typ word32} => @{term var_word32}
+          | @{typ word64} => @{term var_word64})
       | _ => raise PARSEGRAPH ["mk_acc", nm, fst (dest_Type typ)])
     $ HOLogic.mk_string nm $ st
 
@@ -641,9 +652,9 @@ fun mk_var_typ T = (case T of
       | Type (@{type_name word}, [Type (@{type_name signed}, [T2])])
         => let val uT = Type (@{type_name word}, [T2])
         in Abs ("t", T, mk_var_typ uT $ (Const (@{const_name ucast}, T --> uT) $ Bound 0)) end
-      | @{typ "word32 \<Rightarrow> word8"} => @{term VarMem}
-      | @{typ "word64 \<Rightarrow> word32"} => @{term VarWordArray64_32}
-      | @{typ "word32 set"} => @{term VarDom}
+      | @{typ "machine_word \<Rightarrow> word8"} => @{term VarMem}
+      | @{typ "ghost_assertions"} => @{term VarGhostState}
+      | @{typ "machine_word set"} => @{term VarDom}
       | @{typ "heap_typ_desc"} => @{term VarHTD}
       | @{typ "unit \<times> nat"} => @{term VarMS}
       | @{typ bool} => @{term VarBool}

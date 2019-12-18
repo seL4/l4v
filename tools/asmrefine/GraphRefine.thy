@@ -1232,32 +1232,92 @@ lemma simpl_to_graph_lvar_nondet_init:
   apply simp
   done
 
+lemmas load_word_defs = load_word32_def load_word64_def
+lemmas store_word_defs = store_word32_def store_word64_def
+
 lemma c_guard_ptr_val_gt_0:
   "c_guard (p :: ('a :: mem_type) ptr) \<Longrightarrow> ptr_val p > 0"
   apply (simp only: word_neq_0_conv[symmetric], rule notI)
   apply (cases p, simp)
   done
 
-lemma h_val_ptr:
-  "h_val hp (p :: ('a :: c_type) ptr ptr) = Ptr (load_word32 (ptr_val p) hp)"
-  by (simp add: h_val_def load_word32_def from_bytes_def typ_info_ptr)
-
-lemma heap_update_ptr:
-  "heap_update (p :: ('a :: c_type) ptr ptr) p' hp = store_word32 (ptr_val p) (ptr_val p') hp"
-  by (simp add: heap_update_def to_bytes_def typ_info_ptr store_word32_def)
+lemma h_val_word8:
+  "h_val hp p = load_word8 (ptr_val p) hp"
+  by (simp add: h_val_def load_word8_def from_bytes_def typ_info_word
+                word_rcat_bl)
 
 lemma h_val_word32:
   "h_val hp p = load_word32 (ptr_val p) hp"
   by (simp add: h_val_def load_word32_def from_bytes_def typ_info_word)
 
+lemma h_val_word64:
+  "h_val hp p = load_word64 (ptr_val p) hp"
+  by (simp add: h_val_def load_word64_def from_bytes_def typ_info_word)
+
+lemma h_val_ptr:
+  "h_val hp (p :: ('a :: c_type) ptr ptr) = Ptr (load_machine_word (ptr_val p) hp)"
+  by (simp add: h_val_def load_word_defs from_bytes_def typ_info_ptr word_size_def)
+
+(* FIXME: should this go into Word.word_ubin near norm_Rep? *)
+lemma bintrunc_len_eq_signed:
+  "bintrunc LENGTH('a) (uint (x :: 'a :: len signed word)) = uint x"
+  by (metis (full_types) len_signed word_of_int_uint word_ubin.eq_norm)
+
+lemma uint_word_of_int_uint_signed_unsigned:
+  "uint (word_of_int (uint (x :: 'a :: len signed word)) :: 'a word) = uint x"
+  by (simp add: bintrunc_len_eq_signed word_ubin.eq_norm)
+
+(*FIXME: move to lib *)
+lemma is_up_is_down_remove_sign[simp]:
+  "is_up (UCAST('a :: len0 signed \<rightarrow> 'a))"
+  "is_down (UCAST('a signed \<rightarrow> 'a))"
+  unfolding is_up_def is_down_def source_size target_size by simp_all
+
+(*FIXME: move to lib *)
+lemma to_bytes_remove_sign:
+  "to_bytes (w :: 'a :: len8 signed word) = to_bytes (UCAST('a signed \<rightarrow> 'a) w)"
+  by (simp add: to_bytes_def typ_info_word word_rsplit_def uint_up_ucast)
+
+(*FIXME: move to lib *)
+lemma size_of_remove_sign:
+  "size_of TYPE('a :: len8 signed word) = size_of TYPE('a word)"
+  by (simp add: size_of_def typ_info_word)
+
+(*FIXME: move to lib *)
+lemma heap_update_remove_sign:
+  "heap_update p (w :: 'a :: len8 signed word) hp =
+    heap_update (PTR_COERCE('a signed word \<rightarrow> 'a word) p) (ucast w) hp"
+  by (simp add: heap_update_def to_bytes_remove_sign size_of_remove_sign)
+
+lemma heap_update_word8:
+  "heap_update p (w :: 8 word) hp = store_word8 (ptr_val p) w hp"
+  by (simp add: heap_update_def to_bytes_def typ_info_word store_word8_def word_rsplit_same)
+
+lemma heap_update_sword8:
+  "heap_update p (w :: 8 signed word) hp = store_word8 (ptr_val p) (ucast w) hp"
+  by (simp add: heap_update_def store_word8_def to_bytes_remove_sign to_bytes_word8)
+
 lemma heap_update_word32:
   "heap_update p w hp = store_word32 (ptr_val p) w hp"
   by (simp add: heap_update_def to_bytes_def typ_info_word store_word32_def)
 
-lemma h_val_word8:
-  "h_val hp p = load_word8 (ptr_val p) hp"
-  by (simp add: h_val_def load_word8_def from_bytes_def typ_info_word
-                word_rcat_bl)
+lemma heap_update_sword32:
+  "heap_update p (w :: 32 signed word) hp = store_word32 (ptr_val p) (ucast w) hp"
+  by (simp add: heap_update_def to_bytes_def typ_info_word store_word32_def word_rsplit_same
+                ucast_def uint_word_of_int_uint_signed_unsigned word_rsplit_def)
+
+lemma heap_update_word64:
+  "heap_update p w hp = store_word64 (ptr_val p) w hp"
+  by (simp add: heap_update_def to_bytes_def typ_info_word store_word64_def)
+
+lemma heap_update_sword64:
+  "heap_update p (w :: 64 signed word) hp = store_word64 (ptr_val p) (ucast w) hp"
+  by (simp add: heap_update_def to_bytes_def typ_info_word store_word64_def word_rsplit_same
+                ucast_def uint_word_of_int_uint_signed_unsigned word_rsplit_def)
+
+lemma heap_update_ptr:
+  "heap_update (p :: ('a :: c_type) ptr ptr) p' hp = store_machine_word (ptr_val p) (ptr_val p') hp"
+  by (simp add: heap_update_def to_bytes_def typ_info_ptr store_word_defs)
 
 lemma from_bytes_ucast_isom[OF refl refl]:
   "x = from_bytes xs \<Longrightarrow> y = from_bytes xs
@@ -1277,10 +1337,9 @@ lemma h_val_sword32:
   "(h_val hp p :: 32 signed word) = ucast (h_val hp (ptr_coerce p) :: 32 word)"
   by (simp add: h_val_def from_bytes_ucast_isom word_size)
 
-lemma heap_update_word8:
-  "heap_update p w hp = store_word8 (ptr_val p) w hp"
-  by (simp add: heap_update_def store_word8_def to_bytes_def typ_info_word
-                word_rsplit_same)
+lemma h_val_sword64:
+  "(h_val hp p :: 64 signed word) = ucast (h_val hp (ptr_coerce p) :: 64 word)"
+  by (simp add: h_val_def from_bytes_ucast_isom word_size)
 
 lemma to_bytes_ucast_isom[OF refl]:
   "y = ucast x
@@ -1303,16 +1362,6 @@ lemma to_bytes_sword:
     = to_bytes (ucast w :: 'a word)"
   by (simp add: to_bytes_ucast_isom word_size len8_dv8)
 
-lemma heap_list_update_word32:
-  "heap_update_list addr (to_bytes w (heap_list hp' 4 addr')) hp
-    = store_word32 addr w hp"
-  by (simp add: to_bytes_def store_word32_def typ_info_word)
-
-lemma heap_list_update_ptr:
-  "heap_update_list addr (to_bytes p (heap_list hp' 4 addr')) hp
-    = store_word32 addr (ptr_val (p :: ('a :: c_type) ptr)) hp"
-  by (simp add: to_bytes_def store_word32_def typ_info_ptr)
-
 lemma heap_list_update_word8:
   "heap_update_list addr (to_bytes w (heap_list hp' 1 addr')) hp
     = store_word8 addr w hp"
@@ -1320,12 +1369,45 @@ lemma heap_list_update_word8:
     = store_word8 addr w hp"
   by (simp_all add: to_bytes_def store_word8_def typ_info_word word_rsplit_same)
 
+lemma heap_list_update_word32:
+  "heap_update_list addr (to_bytes w (heap_list hp' 4 addr')) hp
+    = store_word32 addr w hp"
+  by (simp add: to_bytes_def store_word32_def typ_info_word)
+
+lemma heap_list_update_word64:
+  "heap_update_list addr (to_bytes w (heap_list hp' 8 addr')) hp
+    = store_word64 addr w hp"
+  by (simp add: to_bytes_def store_word64_def typ_info_word)
+
+lemma heap_list_update_ptr:
+  "heap_update_list addr (to_bytes p (heap_list hp' word_size addr')) hp
+    = store_machine_word addr (ptr_val (p :: ('a :: c_type) ptr)) hp"
+  by (simp add: to_bytes_def store_word_defs typ_info_ptr)
+
 lemma field_lvalue_offset_eq:
   "field_lookup (typ_info_t TYPE('a :: c_type)) f 0 = Some v
         \<Longrightarrow> field_lvalue (ptr :: 'a ptr) f = ptr_val ptr + of_nat (snd v)"
   apply (cases v, simp, drule field_lookup_offset_eq)
   apply (simp add: field_lvalue_def)
   done
+
+lemmas h_val_word_simps =
+  h_val_word8 h_val_sword8
+  h_val_word32 h_val_sword32
+  h_val_word64 h_val_sword64
+  h_val_ptr
+
+lemmas heap_update_word_simps =
+  heap_update_word8 heap_update_sword8
+  heap_update_word32 heap_update_sword32
+  heap_update_word64 heap_update_sword64
+  heap_update_ptr
+
+lemmas heap_list_update_word_simps =
+  heap_list_update_word8
+  heap_list_update_word32
+  heap_list_update_word64
+  heap_list_update_ptr[unfolded word_size_def]
 
 lemma image_fst_cart_UNIV_subset:
   "S \<subseteq> (fst ` S) \<times> UNIV"
@@ -1351,13 +1433,15 @@ lemma simpl_to_graph_impossible:
   apply (drule(1) eq_implD, simp+)
   done
 
+definition[simp]: "VarMachineWord = arch_machine_word_constructor VarWord32 VarWord64"
+
 definition
   "asm_args_to_list enc xs m_ms
-    = map VarWord32 xs @ [VarMem (fst m_ms), VarMS (enc (snd m_ms))]"
+    = map VarMachineWord xs @ [VarMem (fst m_ms), VarMS (enc (snd m_ms))]"
 
 definition
   "asm_rets_to_list ret enc v mem_vs
-    = (if ret then [VarWord32 v] else []) @ [VarMem (fst mem_vs), VarMS (enc (snd mem_vs))]"
+    = (if ret then [VarMachineWord v] else []) @ [VarMem (fst mem_vs), VarMS (enc (snd mem_vs))]"
 
 definition
   asm_fun_refines
@@ -1497,7 +1581,7 @@ ML \<open>
 structure SimplToGraphProof = struct
 
 fun mk_ptr_val_app p =
-    Const (@{const_name ptr_val}, fastype_of p --> @{typ word32}) $ p
+    Const (@{const_name ptr_val}, fastype_of p --> @{typ machine_word}) $ p
 
 fun mk_arr_idx arr i = let
     val arrT = fastype_of arr
@@ -1536,7 +1620,7 @@ fun mk_simpl_acc ctxt sT nm = let
 
     val ghost_assns_fetch = Syntax.read_term ctxt "ghost_assns_from_globals"
     fun get_ghost_assns_fetch () = case head_of ghost_assns_fetch of Const _ => ghost_assns_fetch
-      | _ => raise TERM ("mk_simpl_acc: requires `ghost_assns_from_globals :: globals => word64 => word32", [])
+      | _ => raise TERM ("mk_simpl_acc: requires `ghost_assns_from_globals :: globals => ghost_assertions", [])
 
     fun mk_sst_acc "Mem" = @{term hrs_mem} $ (t_hrs $ (globals_swap $ globals_sst))
       | mk_sst_acc "HTD" = @{term hrs_htd} $ (t_hrs $ globals_sst)

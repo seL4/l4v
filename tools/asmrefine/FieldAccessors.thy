@@ -57,19 +57,19 @@ lemma heap_update_rotate:
                 heap_update_list_rotate)
 
 lemma c_guard_align_of:
-  "\<lbrakk> align_of TYPE('a :: c_type) + size_of TYPE('a) < 2 ^ 32;
+  "\<lbrakk> align_of TYPE('a :: c_type) + size_of TYPE('a) < 2 ^ word_bits;
            align_of TYPE('a) \<noteq> 0 \<rbrakk> \<Longrightarrow>
        c_guard (Ptr (of_nat (align_of TYPE('a))) :: 'a ptr)"
   unfolding c_guard_def
   apply (simp add: ptr_aligned_def unat_of_nat c_null_guard_def)
-  apply (clarsimp simp: intvl_def)
+  apply (clarsimp simp: intvl_def word_bits_conv)
   apply (drule trans[rotated], rule sym, rule Abs_fnat_hom_add)
   apply (subst(asm) of_nat_neq_0, simp_all)
   done
 
 lemma heap_update_field2:
   "\<lbrakk> field_ti TYPE('a :: packed_type) f = Some t;
-     align_of TYPE('a) + size_of TYPE('a) < 2 ^ 32; align_of TYPE('a) \<noteq> 0;
+     align_of TYPE('a) + size_of TYPE('a) < 2 ^ word_bits; align_of TYPE('a) \<noteq> 0;
      export_uinfo t = export_uinfo (typ_info_t TYPE('b :: packed_type))\<rbrakk>
    \<Longrightarrow> heap_update (Ptr &(p\<rightarrow>f)) (v :: 'b) hp =
        heap_update p (update_ti t (to_bytes_p v) (h_val hp p)) hp"
@@ -240,7 +240,7 @@ lemma heap_update_mono_to_field_rewrite:
         \<equiv> field_lookup (adjust_ti (typ_info_t TYPE('b)) f upds) [] n;
       export_uinfo (adjust_ti (typ_info_t TYPE('b)) f upds)
         = export_uinfo (typ_info_t TYPE('b));
-      align_of TYPE('a) + size_of TYPE('a) < 2 ^ 32; align_of TYPE('a) \<noteq> 0 \<rbrakk>
+      align_of TYPE('a) + size_of TYPE('a) < 2 ^ word_bits; align_of TYPE('a) \<noteq> 0 \<rbrakk>
     \<Longrightarrow> heap_update (p::'a::packed_type ptr)
            (update_ti_t (adjust_ti (typ_info_t TYPE('b)) f upds) (to_bytes_p v)
                str) hp
@@ -254,8 +254,8 @@ fun get_field_h_val_rewrites lthy =
   (simpset_of lthy |> dest_ss |> #simps |> map snd
     |> map (Thm.transfer (Proof_Context.theory_of lthy))
                RL @{thms h_val_mono_to_field_rewrite
-                         heap_update_mono_to_field_rewrite
-                             [unfolded align_of_def size_of_def] })
+                         heap_update_mono_to_field_rewrite[
+                            unfolded align_of_def size_of_def word_bits_conv] })
     |> map (asm_full_simplify lthy);
 
 fun add_field_h_val_rewrites lthy =
