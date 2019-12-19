@@ -488,4 +488,18 @@ lemma foldl_conj_list_all:
   apply (simp add: foldl_conj_Cons del: foldl_Cons)+
   done
 
+lemmas unat_add_lem'_sym = unat_add_lem'[symmetric]
+
+lemma add_left_mono_trans:
+  "a + y \<le> b \<Longrightarrow> x \<le> y \<Longrightarrow> a + x \<le> (b::nat)"
+    apply (erule order.trans[rotated])
+    apply (erule add_left_mono)
+   done
+
+lemma add_right_mono_trans:
+  "y + a \<le> b \<Longrightarrow> x \<le> y \<Longrightarrow> x + a \<le> (b::nat)"
+    apply (erule order.trans[rotated])
+    apply (erule add_right_mono)
+   done
+
 end

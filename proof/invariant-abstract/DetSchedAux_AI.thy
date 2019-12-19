@@ -601,7 +601,7 @@ lemma valid_sched_tcb_state_preservation_gen:
   assumes sc_refill_cfg:
     "\<And>P p. \<lbrace>\<lambda>s. sc_refill_cfg_sc_at P p s \<and> ex_nonz_cap_to p s \<and> I s\<rbrace> f \<lbrace>\<lambda>rv. sc_refill_cfg_sc_at P p\<rbrace>"
   assumes sc_refill_cfg2:
-    "\<And>P p. \<lbrace>\<lambda>s. (\<forall>p. pred_map active_scrc (sc_refill_cfgs_of s) p \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p) \<and> I s\<rbrace>
+    "\<And>P. \<lbrace>\<lambda>s. (\<forall>p. pred_map active_scrc (sc_refill_cfgs_of s) p \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p) \<and> I s\<rbrace>
             f \<lbrace>\<lambda>rv s. \<forall>p. pred_map active_scrc (sc_refill_cfgs_of s) p \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
   assumes cur_time: "\<And>P. \<lbrace>\<lambda>s. P (cur_time s)\<rbrace> f \<lbrace>\<lambda>r s. P (cur_time s)\<rbrace>"
   assumes cur_thread: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
@@ -717,9 +717,10 @@ lemma valid_sched_tcb_state_preservation_gen:
   apply (rule_tac V="active_sc_valid_refills s'" in revcut_rl)
    subgoal for s rv s'
    unfolding active_sc_valid_refills_def
-   apply (frule use_valid[OF _ sc_refill_cfg2], intro conjI)
-   apply (assumption, simp)
-   by simp
+   apply (frule use_valid[OF _ sc_refill_cfg2[where P="cfg_valid_refills and cfg_bounded_release_time (cur_time s)"]], intro conjI)
+     apply (clarsimp simp: pred_map_pred_conj)
+    apply simp
+   by (clarsimp simp: pred_map_pred_conj)
   by simp
 
 (* sorted_release_q lemmas *)

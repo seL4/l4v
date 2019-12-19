@@ -651,6 +651,8 @@ where
 
 text \<open>refill invariant proofs\<close>  \<comment> \<open>FIXME move? Sporadic_AI?\<close>
 
+(* FIXME: move refills material into DetSched files, as much as is possible *)
+
 definition valid_refill_amount :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_refill_amount scptr =
@@ -1283,7 +1285,7 @@ lemma sorted_wrt_last_append:
   by (drule_tac x="last ls" in bspec, simp) fastforce
 
 lemma refill_word_proof_helper:
-  "\<lbrakk>unat (head_time :: time) + 2 * unat period \<le> unat (max_word :: time);
+  "\<lbrakk>unat (head_time :: time) + unat period \<le> unat (max_word :: time);
     larger \<le> period;
     smaller \<le> larger\<rbrakk>
     \<Longrightarrow> unat (head_time + period - (larger - smaller))

@@ -26,6 +26,9 @@ lemmas [wp] =
 global_interpretation do_machine_op: non_heap_op "do_machine_op m"
   by unfold_locales wp
 
+abbreviation max_time :: time where
+  "max_time \<equiv> max_word"
+
 \<comment> \<open>Various lifting rules\<close>
 
 lemma hoare_liftP_ext_pre_conj:
@@ -205,6 +208,10 @@ lemma pred_map_map_eqI:
    apply (cut_tac x=x and P=\<top> in assms, drule arg_cong_Not, clarsimp simp: pred_map_simps)
   apply (cut_tac x=x and P="(=) y" in assms, clarsimp simp: pred_map_simps)
   done
+
+lemma pred_map_pred_conj:
+  "pred_map (P and Q) h s = (pred_map P h s \<and> pred_map Q h s)"
+  by (clarsimp simp: pred_map_simps, fastforce)
 
 lemma map_project_id:
   "map_project (\<lambda>x. x) m = m"
@@ -1205,14 +1212,14 @@ lemmas consumed_time_bounded_def = consumed_time_bounded_2_def
 
 definition current_time_bounded_2 where
   "current_time_bounded_2 k curtime \<equiv>
-   unat curtime + unat kernelWCET_ticks + k * unat MAX_SC_PERIOD \<le> unat (max_word :: time)"
+   unat curtime + unat kernelWCET_ticks + k * unat MAX_SC_PERIOD \<le> unat max_time"
 
 abbreviation current_time_bounded :: "nat \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "current_time_bounded k s \<equiv> current_time_bounded_2 k (cur_time s)"
 
 lemmas current_time_bounded_def = current_time_bounded_2_def
 
-(* unat (cur_time s) + unat kernelWCET_ticks + 2 * unat MAX_SC_PERIOD \<le> unat (max_word :: time)) *)
+(* unat (cur_time s) + unat kernelWCET_ticks + 2 * unat MAX_SC_PERIOD \<le> unat max_time) *)
 
 \<comment> \<open>A predicate over all the components of state that determine scheduler validity.
     Many operations will preserve all of these.\<close>
@@ -1911,26 +1918,43 @@ abbreviation valid_ready_qs :: "'z state \<Rightarrow> bool" where
 
 lemmas valid_ready_qs_def = valid_ready_qs_2_def valid_ready_queued_thread_2_def
 
+definition bounded_release_time_2 :: "time \<Rightarrow> time \<Rightarrow> bool" where
+  "bounded_release_time_2 curtime reltime \<equiv>
+     unat reltime \<le> unat curtime + unat kernelWCET_ticks + unat MAX_SC_PERIOD"
+
+abbreviation cfg_bounded_release_time :: "time \<Rightarrow> sc_refill_cfg \<Rightarrow> bool" where
+  "cfg_bounded_release_time t cfg \<equiv>
+     bounded_release_time_2 t (r_time (hd (scrc_refills cfg)))"
+
+abbreviation bounded_release_time :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "bounded_release_time scp s \<equiv>
+     pred_map (cfg_bounded_release_time (cur_time s)) (sc_refill_cfgs_of s) scp"
+
+lemmas cfg_bounded_release_time_def = bounded_release_time_2_def
+lemmas bounded_release_time_def = bounded_release_time_2_def
+
 \<comment> \<open>active_sc_valid_refills\<close>
 
-definition active_sc_valid_refills_2 ::
-  "(obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool" where
-  "active_sc_valid_refills_2 sc_refill_cfgs \<equiv>
-   \<forall>scp. pred_map active_scrc sc_refill_cfgs scp \<longrightarrow> pred_map cfg_valid_refills sc_refill_cfgs scp"
+definition active_sc_valid_refills_2 :: "time \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool" where
+  "active_sc_valid_refills_2 curtime sc_refill_cfgs \<equiv>
+   \<forall>scp. pred_map active_scrc sc_refill_cfgs scp
+         \<longrightarrow> pred_map cfg_valid_refills sc_refill_cfgs scp
+             \<and> pred_map (cfg_bounded_release_time curtime) sc_refill_cfgs scp"
 
 abbreviation active_sc_valid_refills :: "'z state \<Rightarrow> bool" where
-  "active_sc_valid_refills s \<equiv> active_sc_valid_refills_2 (sc_refill_cfgs_of s)"
+  "active_sc_valid_refills s \<equiv> active_sc_valid_refills_2 (cur_time s) (sc_refill_cfgs_of s)"
 
 lemmas active_sc_valid_refills_def = active_sc_valid_refills_2_def
 
 lemma active_sc_valid_refills_lift_pre_conj:
-  assumes a: "\<And>t. \<lbrace>\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) t \<and> R s\<rbrace>
+  assumes a: "\<And>scp. \<lbrace>\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
                   f
-                  \<lbrace>\<lambda>rv s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) t\<rbrace>"
-  assumes b: "\<And>t. \<lbrace>\<lambda>s. valid_refills t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. valid_refills t s\<rbrace>"
+                  \<lbrace>\<lambda>rv s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp\<rbrace>"
+  assumes b: "\<And>scp. \<lbrace>\<lambda>s. valid_refills scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. valid_refills scp s\<rbrace>"
+  assumes c: "\<And>scp. \<lbrace>\<lambda>s. bounded_release_time scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. bounded_release_time scp s\<rbrace>"
     shows "\<lbrace>\<lambda>s. active_sc_valid_refills s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. active_sc_valid_refills\<rbrace>"
   apply (simp add: active_sc_valid_refills_def)
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' a b)
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' a b c)
 
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation valid_sched_valid_ready_qs where
@@ -2382,7 +2406,7 @@ definition valid_sched_2 where
     \<and> valid_idle_etcb_2 etcbs
     \<and> released_ipc_queues_2 ctime tcb_sts tcb_scps sc_refill_cfgs
     \<and> valid_machine_time_2 ctime lmt
-    \<and> active_sc_valid_refills_2 sc_refill_cfgs"
+    \<and> active_sc_valid_refills_2 ctime sc_refill_cfgs"
 
 abbreviation valid_sched :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_sched \<equiv> valid_sched_pred (valid_sched_2 True True)"
@@ -2878,7 +2902,8 @@ lemma valid_sched_lift_pre_conj:
   assumes "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) t \<and> R s\<rbrace>
                f \<lbrace>\<lambda>rv s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) t\<rbrace>"
-  assumes "\<And>P t. \<lbrace>\<lambda>s. (valid_refills t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. (valid_refills t s)\<rbrace>"
+  assumes "\<And>t. \<lbrace>\<lambda>s. (valid_refills t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. (valid_refills t s)\<rbrace>"
+  assumes "\<And>scp. \<lbrace>\<lambda>s. bounded_release_time scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. bounded_release_time scp s\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. budget_ready t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_ready t s\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. budget_sufficient t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_sufficient t s\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
@@ -3176,6 +3201,14 @@ lemma bound_sc_tcb_at_cur_thread:
   by (rule hoare_lift_Pf_pre_conj[where f=cur_thread] ; rule bound_sc_tcb_at_cur_time valid_sched_pred)
 
 end
+
+abbreviation cur_sc_active
+where "cur_sc_active s \<equiv> is_active_sc (cur_sc s) s"
+
+lemmas cur_sc_active_lift = hoare_lift_Pf[where f=cur_sc and P=is_active_sc and m=f for f, rotated]
+
+abbreviation sc_bounded_release_time :: "time \<Rightarrow> sched_context \<Rightarrow> bool" where
+  "sc_bounded_release_time ct sc \<equiv> cfg_bounded_release_time ct (sc_refill_cfg_of sc)"
 
 locale valid_sched_pred_locale =
   fixes state_ext_t :: "'state_ext::state_ext itself"
