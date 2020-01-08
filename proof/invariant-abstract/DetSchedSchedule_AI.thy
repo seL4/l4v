@@ -8610,7 +8610,7 @@ lemma refill_budget_check_round_robin_active_sc_valid_refills:
    refill_budget_check_round_robin consumed
    \<lbrace>\<lambda>_. active_sc_valid_refills\<rbrace>"
   unfolding active_sc_valid_refills_def
-  apply_trace (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
   done
 
 lemma refill_budget_check_active_sc_valid_refills:
@@ -9149,7 +9149,7 @@ lemma refill_unblock_check_active_sc_valid_refills:
     refill_unblock_check sc_ptr
    \<lbrace>\<lambda>rv. active_sc_valid_refills\<rbrace>"
   unfolding active_sc_valid_refills_def current_time_bounded_def
-  apply_trace (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift'
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift'
            simp: Ball_def)
   apply (intro conjI)
    apply (erule_tac order_trans[rotated])
@@ -9424,7 +9424,7 @@ lemma tcb_sched_dequeue_ready_or_release[wp]:
 lemma tcb_sched_enqueue_ready_or_release[wp]:
   "\<lbrace>ready_or_release and not_in_release_q t\<rbrace>
     tcb_sched_action tcb_sched_enqueue t
-   \<lbrace>\<lambda>_ s::det_state. ready_or_release s\<rbrace>"
+   \<lbrace>\<lambda>_. ready_or_release :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (wpsimp simp: tcb_sched_action_def thread_get_def wp: set_tcb_queue_wp)
   apply (clarsimp simp: tcb_sched_enqueue_def ready_or_release_2_def in_queues_2_def)
   by (fastforce)
@@ -9438,13 +9438,13 @@ lemma tcb_sched_append_ready_or_release[wp]:
   by (fastforce)
 
 lemma switch_to_thread_ready_or_release[wp]:
-  "switch_to_thread t \<lbrace>\<lambda>s::det_state. ready_or_release s\<rbrace>"
+  "switch_to_thread t \<lbrace>ready_or_release:: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding switch_to_thread_def
   apply (wpsimp simp: get_tcb_obj_ref_def wp: thread_get_wp)
   by (clarsimp simp: is_tcb dest!: get_tcb_SomeD)
 
 crunches schedule_choose_new_thread
-  for ready_or_release[wp]: "ready_or_release::det_state \<Rightarrow> _"
+  for ready_or_release[wp]: "ready_or_release :: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps Let_def cur_sc_chargeable_def)
 
 lemma schedule_choose_new_thread_sc_at_period_cur[wp]:
@@ -9468,17 +9468,15 @@ lemma not_schedulable_in_release_q_case:
   by (clarsimp simp: is_schedulable_bool_def2 ct_in_state_def tcb_at_kh_simps runnable_eq_active)
 
 lemma schedule_valid_sched_helper:
-  "\<lbrace> valid_sched and ct_active and ready_or_release
+  "\<lbrace> valid_sched and invs and ct_active and ready_or_release
      and (\<lambda>s. active_sc_tcb_at (cur_thread s) s)
      and (\<lambda>s. in_release_q (cur_thread s) s \<longrightarrow> (\<not> budget_ready (cur_thread s) s))
      and (\<lambda>s. ct_not_in_release_q s \<longrightarrow> budget_ready (cur_thread s) s)
      and (\<lambda>s. budget_sufficient (cur_thread s) s) and ct_not_queued
      and cur_sc_in_release_q_imp_zero_consumed
-     and (\<lambda>s.  \<not> sc_is_round_robin (cur_sc s) s)
      and (\<lambda>s. sc_not_in_release_q (cur_sc s) s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
      and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s)
-     and (\<lambda>s. cur_sc_budget_sufficient s) and cur_sc_chargeable
-     and invs\<rbrace>
+     and (\<lambda>s. cur_sc_budget_sufficient s) and cur_sc_chargeable\<rbrace>
    do ct <- gets cur_thread;
       inq <- gets $ in_release_queue ct;
       ct_schedulable <- is_schedulable ct inq;
@@ -9943,28 +9941,30 @@ lemma awaken_ct_not_queued_helper:
   by (wpsimp wp: possible_switch_to_ct_not_queued possible_switch_to_scheduler_act_sane'' hoare_drop_imp)
 
 lemma awaken_ct_not_queued:
-  "\<lbrace>\<lambda>s. ct_not_queued s \<and> scheduler_act_sane s \<and>
-    (\<exists>scp. bound_sc_tcb_at (\<lambda>x. x = (Some scp)) (cur_thread s) s \<and> sc_refills_sc_at (\<lambda>x. x\<noteq>[]) scp s) \<and>
-    (in_release_q (cur_thread s) s \<longrightarrow> \<not> budget_ready (cur_thread s) s)\<rbrace>
+  "\<lbrace>ct_not_queued
+    and scheduler_act_sane
+    and valid_release_q
+    and (\<lambda>s. (in_release_q (cur_thread s) s \<longrightarrow> \<not> budget_ready (cur_thread s) s))\<rbrace>
    awaken
    \<lbrace>\<lambda>_. ct_not_queued\<rbrace>"
   apply (clarsimp simp: awaken_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (wpsimp wp: awaken_ct_not_queued_helper simp: thread_get_def)
   apply (drule set_takeWhileD)
-  apply (clarsimp simp: fun_of_m_get_tcb_refill_budget_ready vs_all_heap_simps
-                        obj_at_kh_kheap_simps)
-  apply (clarsimp simp: in_queue_2_def)
+  apply (clarsimp simp: in_queue_2_def valid_release_q_def)
+  apply (subst (asm) fun_of_m_get_tcb_refill_budget_ready)
+  apply (clarsimp simp: vs_all_heap_simps, fastforce)
+  apply (clarsimp)
   done
 
+(* unused? *)
 crunches awaken
   for sc_is_round_robin[wp]: "\<lambda>s::det_state. P (sc_is_round_robin p s)"
   and sc_is_round_robin_cur[wp]: "\<lambda>s::det_state. P (sc_is_round_robin (cur_sc s) s)"
     (wp: crunch_wps simp: crunch_simps)
 
 lemma awaken_ct_cur_sc_in_release_q_imp_zero_consumed[wp]:
-  "\<lbrace>cur_sc_in_release_q_imp_zero_consumed\<rbrace>
-     awaken \<lbrace>\<lambda>_. cur_sc_in_release_q_imp_zero_consumed::det_state \<Rightarrow> _\<rbrace>"
+  "awaken \<lbrace>cur_sc_in_release_q_imp_zero_consumed ::'state_ext state \<Rightarrow> _\<rbrace>"
   apply (wpsimp simp: awaken_def wp: mapM_x_wp' hoare_drop_imp)
   apply (drule_tac x=t in spec, clarsimp simp: not_in_release_q_def)
   apply (clarsimp simp: in_queue_2_def dropWhile_eq_drop[symmetric] pred_tcb_at_def obj_at_def)
@@ -9972,16 +9972,15 @@ lemma awaken_ct_cur_sc_in_release_q_imp_zero_consumed[wp]:
   done
 
 lemma reschedule_required_ready_or_release[wp]:
-  "\<lbrace>\<lambda>s::det_state. ready_or_release s\<rbrace>
-   reschedule_required
-   \<lbrace>\<lambda>_. ready_or_release\<rbrace>"
+  "reschedule_required \<lbrace>ready_or_release ::'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding reschedule_required_def
   apply (wpsimp wp: thread_get_wp is_schedulable_wp)
   by (clarsimp simp: obj_at_def is_schedulable_bool_def split: option.splits dest!: get_tcb_SomeD)
 
 lemma possible_switch_to_ready_or_release[wp]:
-  "\<lbrace>\<lambda>s::det_state. ready_or_release s \<and> tcb_at thread s\<rbrace>
-     possible_switch_to thread \<lbrace>\<lambda>_. ready_or_release\<rbrace>"
+  "\<lbrace>\<lambda>s. ready_or_release s \<and> tcb_at thread s\<rbrace>
+     possible_switch_to thread
+   \<lbrace>\<lambda>_. ready_or_release :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding possible_switch_to_def
   apply (wpsimp wp: gbn_wp thread_get_wp)
   by (fastforce simp: obj_at_def ready_or_release_def is_tcb)
@@ -9996,12 +9995,13 @@ lemma awaken_ready_or_release_helper:
                        y <- possible_switch_to t;
                        modify (reprogram_timer_update (\<lambda>_. True))
                     od) queue
-   \<lbrace>\<lambda>_. ready_or_release::det_state \<Rightarrow> _\<rbrace>"
+   \<lbrace>\<lambda>_. ready_or_release :: 'state_ext state \<Rightarrow> _\<rbrace>"
   by (rule hoare_gen_asm, rule ball_mapM_x_scheme, (wpsimp wp: hoare_drop_imp)+)
 
 lemma awaken_ready_or_release[wp]:
-  "\<lbrace>\<lambda>s::det_state. ready_or_release s \<and> valid_release_q s\<rbrace>
-     awaken \<lbrace>\<lambda>_. ready_or_release\<rbrace>"
+  "\<lbrace>\<lambda>s. ready_or_release s \<and> valid_release_q s\<rbrace>
+   awaken
+   \<lbrace>\<lambda>_. ready_or_release :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding awaken_def
   apply (wpsimp simp: awaken_def wp: awaken_ready_or_release_helper)
   apply (clarsimp simp: ready_or_release_2_def valid_release_q_def dropWhile_eq_drop[symmetric])
@@ -10077,8 +10077,51 @@ lemma schedule_valid_sched':
                 simp: not_in_release_q_def valid_release_q_def in_release_q_def active_sc_tcb_at_defs
                       ct_in_state_def runnable_eq)
 *)
+
+lemma awaken_in_release_q:
+  "\<lbrace>in_release_q t
+    and valid_release_q
+    and (\<lambda>s. bound_sc_tcb_at (\<lambda>scpo. scpo \<noteq> None \<longrightarrow> (\<not>is_refill_ready (the scpo) s)) t s)\<rbrace>
+   awaken
+   \<lbrace>\<lambda>rv s. in_release_q t s\<rbrace>"
+  supply takeWhile_dropWhile_id [simp del]
+  apply (wpsimp simp: awaken_def wp: mapM_x_wp' hoare_drop_imp)
+  apply (clarsimp simp: not_in_release_q_def in_queue_2_def dropWhile_eq_drop[symmetric])
+  apply (subst (asm) takeWhile_dropWhile_id[symmetric])
+  apply clarsimp
+  apply (erule disjE)
+   defer
+   apply (assumption)
+  apply (drule set_takeWhileD, clarsimp)
+  apply (subst (asm) fun_of_m_get_tcb_refill_budget_ready)
+   apply (clarsimp simp: valid_release_q_def)
+   apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps, fastforce)
+  apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+  done
+
+lemma awaken_cur_sc_not_in_rlq_offset_ready:
+  "\<lbrace>(\<lambda>s. sc_not_in_release_q (cur_sc s) s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
+    and cur_sc_chargeable
+    and valid_release_q
+    and (\<lambda>s. in_release_q (cur_thread s) s \<longrightarrow> \<not> budget_ready (cur_thread s) s)\<rbrace>
+   awaken
+   \<lbrace>\<lambda>rv s. sc_not_in_release_q (cur_sc s) s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s\<rbrace>"
+  apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_ex_lift awaken_in_release_q)
+  apply (drule_tac x=t in spec, clarsimp)
+  apply (subgoal_tac "pred_map runnable (tcb_sts_of s) t")
+   apply (subgoal_tac "t = cur_thread s")
+    apply (clarsimp)
+    apply (clarsimp simp: pred_tcb_at_def obj_at_def vs_all_heap_simps)
+   apply (clarsimp simp: cur_sc_chargeable_def)
+   apply (drule_tac x=t in spec, clarsimp)
+   apply (clarsimp simp: vs_all_heap_simps)
+  apply (clarsimp simp: valid_release_q_def in_release_q_def)
+  done
+
 lemma schedule_valid_sched:
-  "\<lbrace> ct_active and ready_or_release and
+  "\<lbrace> valid_sched
+     and invs
+     and ct_active and ready_or_release and
     (\<lambda>s. ct_not_in_release_q s \<longrightarrow> budget_ready (cur_thread s) s) and
     (\<lambda>s. \<forall>t. in_release_q t s \<longrightarrow> budget_sufficient t s) and
     (\<lambda>s. in_release_q (cur_thread s) s \<longrightarrow> \<not> budget_ready (cur_thread s) s) and
@@ -10086,27 +10129,25 @@ lemma schedule_valid_sched:
     (\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_q (cur_thread s) s) s \<longrightarrow>
               budget_ready (cur_thread s) s \<and> budget_sufficient (cur_thread s) s) and
     \<comment> \<open>(\<lambda>s. cur_thread s \<notin> set (release_queue s) \<longrightarrow> budget_ready (cur_thread s) s) and\<close>
-   (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and (\<lambda>s.  \<not> sc_is_round_robin (cur_sc s) s)
-     and valid_sched and scheduler_act_sane and ct_not_queued
+   (\<lambda>s. active_sc_tcb_at (cur_thread s) s)
+     and scheduler_act_sane and ct_not_queued
      and cur_sc_in_release_q_imp_zero_consumed
      and (\<lambda>s.  \<not> sc_is_round_robin (cur_sc s) s)
      and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
      and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s)
-     and (\<lambda>s. cur_sc_budget_sufficient s) and cur_sc_chargeable
-     and invs\<rbrace>
+     and (\<lambda>s. cur_sc_budget_sufficient s) and cur_sc_chargeable\<rbrace>
    schedule
   \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding schedule_def
-   apply (wpsimp wp: schedule_valid_sched_helper awaken_valid_sched
-                    awaken_cur_thread_not_in_rlq awaken_ct_not_queued awaken_ct_nrq_wbr
-                    hoare_vcg_ball_lift hoare_vcg_conj_lift awaken_cur_thread_in_rlq)
-(*   apply (rule conjI, clarsimp simp: in_queue_2_def)
-  apply (clarsimp simp: is_schedulable_bool_def cur_tcb_def get_tcb_rev obj_at_def is_tcb)
-  apply (clarsimp simp: active_sc_tcb_at_unfold pred_tcb_at_def obj_at_def sc_at_pred_n_def)
-  apply (drule (1) invs_non_empty_refills[unfolded obj_at_def, simplified, rotated])+
-  apply simp
-  done *)
-  sorry (* schedule_valid_sched *)
+   apply (wpsimp wp: schedule_valid_sched_helper)
+   apply (wpsimp wp: awaken_valid_sched
+                     awaken_ready_or_release
+                     awaken_cur_thread_in_rlq
+                     awaken_cur_thread_not_in_rlq
+                     awaken_ct_not_queued
+                     awaken_cur_sc_not_in_rlq_offset_ready)
+   apply (clarsimp simp: valid_sched_def in_release_q_def)
+  by (intro conjI; clarsimp)
 
 crunches cancel_ipc
 for not_cur_thread[wp]: "not_cur_thread thread"

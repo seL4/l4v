@@ -2975,7 +2975,6 @@ lemma cur_sc_chargeable_lift_pre_conj:
 
 lemmas cur_sc_chargeable_lift = cur_sc_chargeable_lift_pre_conj[where R=\<top>, simplified]
 
-thm sym_refs_pred_map_eq_iff_sc_tcb_sc_at[OF eq_commute refl invs_sym_refs]
 lemma invs_cur_sc_chargeableE:
   "invs s \<Longrightarrow> schact_is_rct s \<Longrightarrow> cur_sc_chargeable s"
   apply (subgoal_tac "sc_tcb_sc_at (\<lambda>x. x = Some (cur_thread s)) (cur_sc s) s")
