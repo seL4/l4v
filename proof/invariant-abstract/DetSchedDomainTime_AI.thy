@@ -245,28 +245,15 @@ crunch domain_list_inv[wp]:
   (wp: hoare_drop_imps maybeM_inv dxo_wp_weak mapM_wp)
 end
 
-crunch domain_list_inv[wp]: delete_objects "\<lambda>s :: det_state. P (domain_list s)"
-  (wp: crunch_wps
-   simp: detype_def wrap_ext_det_ext_ext_def cap_insert_ext_def
-   ignore: freeMemory)
+crunches delete_objects, preemption_point, reset_untyped_cap
+  for domain_list_inv[wp]: "\<lambda>s :: det_state. P (domain_list s)"
+  (wp: crunch_wps mapME_x_inv_wp OR_choiceE_weak_wp simp: detype_def)
 
-crunch domain_list_inv[wp]: update_work_units "\<lambda>s. P (domain_list s)"
-
-crunch domain_list_inv[wp]: preemption_point "\<lambda>s::det_state. P (domain_list s)"
-  (wp: select_inv OR_choiceE_weak_wp ignore: OR_choiceE)
-
-crunch domain_list_inv[wp]: reset_untyped_cap "\<lambda>s::det_state. P (domain_list s)"
-  (wp: crunch_wps hoare_unless_wp mapME_x_inv_wp select_inv
-   simp: crunch_simps)
-
-crunch domain_list_inv[wp]: set_priority "\<lambda>s. P (domain_list s)" (wp: maybeM_inv hoare_drop_imps)
-crunch domain_list_inv[wp]: restart "\<lambda>s. P (domain_list s)" (wp: hoare_drop_imps)
-crunch domain_list_inv[wp]: sched_context_bind_tcb,sched_context_bind_ntfn "\<lambda>s. P (domain_list s)" (wp: hoare_drop_imps)
-crunch domain_list_inv[wp]: sched_context_unbind_reply "\<lambda>s. P (domain_list s)"
- (wp: hoare_drop_imps mapM_x_wp')
-crunch domain_list_inv[wp]: sched_context_yield_to "\<lambda>s. P (domain_list s)"
-  (wp: hoare_drop_imps mapM_wp' maybeM_inv simp: crunch_simps zipWithM_x_mapM)
-
+crunches
+  set_priority, restart, sched_context_bind_tcb,sched_context_bind_ntfn,
+  sched_context_unbind_reply, sched_context_yield_to
+  for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
+  (wp: hoare_drop_imps mapM_wp' maybeM_inv simp: crunch_simps)
 
 context DetSchedDomainTime_AI begin
 
@@ -485,8 +472,6 @@ crunch domain_time_inv[wp]: delete_objects "\<lambda>s :: det_state. P (domain_t
    simp: detype_def wrap_ext_det_ext_ext_def cap_insert_ext_def
    ignore: freeMemory)
 
-crunch domain_time_inv[wp]: update_work_units "\<lambda>s. P (domain_time s)"
-
 crunch domain_time_inv[wp]: preemption_point "\<lambda>s::det_state. P (domain_time s)"
   (wp: select_inv OR_choiceE_weak_wp ignore: OR_choiceE)
 
@@ -494,29 +479,20 @@ crunch domain_time_inv[wp]: reset_untyped_cap "\<lambda>s::det_state. P (domain_
   (wp: crunch_wps hoare_unless_wp mapME_x_inv_wp select_inv
    simp: crunch_simps)
 
-crunch domain_time_inv[wp]: sched_context_bind_tcb "\<lambda>s::det_state. P (domain_time s)"
-  (wp: hoare_drop_imp)
+crunches sched_context_bind_tcb, restart
+  for domain_time_inv[wp]: "\<lambda>s::det_state. P (domain_time s)"
+  (wp: hoare_drop_imp maybeM_inv)
 
-crunch domain_time_inv[wp]: restart "\<lambda>s::det_state. P (domain_time s)" (wp: hoare_drop_imp)
+crunches refill_update,refill_new
+  for domain_time_inv[wp]: "\<lambda>s. P (domain_time s)"
 
-crunch domain_time_inv[wp]: refill_update,refill_new "\<lambda>s. P (domain_time s)" (wp: hoare_drop_imp)
-
-crunch domain_consumed_time_inv[wp]: cap_insert "\<lambda>s::det_state. P (domain_time s)(consumed_time s)"
-  (wp: hoare_drop_imps)
-
-crunch domain_consumed_time_inv[wp]: set_extra_badge "\<lambda>s. P (domain_time s)(consumed_time s)"
-
-crunch domain_consumed_time_inv[wp]: schedule_tcb "(\<lambda>s. P (domain_time s)(consumed_time s))"
+crunches set_extra_badge, schedule_tcb
+  for domain_consumed_time_inv[wp]: "\<lambda>s. P (domain_time s)(consumed_time s)"
   (wp: crunch_wps)
 
-crunch domain_consumed_time_inv[wp]: set_thread_state,store_word_offs
-  "\<lambda>s::det_state. P (domain_time s)(consumed_time s)"
-  (wp: crunch_wps dxo_wp_weak)
-
-crunch domain_consumed_time_inv[wp]: postpone,reply_push
-  "\<lambda>s::det_state. P (domain_time s)(consumed_time s)"
-  (wp: hoare_drop_imp mapM_wp' hoare_vcg_if_lift)
-
+crunches cap_insert, set_thread_state, postpone, reply_push
+  for domain_consumed_time_inv[wp]: "\<lambda>s::det_state. P (domain_time s)(consumed_time s)"
+  (wp: hoare_drop_imps mapM_wp' hoare_vcg_if_lift)
 
 context DetSchedDomainTime_AI begin
 

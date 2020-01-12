@@ -4188,12 +4188,9 @@ lemma fast_finalise_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> fast_finalise c b \<lbrace>\<lambda>_. valid_list\<rbrace>"
   by (cases c; wpsimp wp: gts_wp get_simple_ko_wp)
 
-lemma cap_delete_one_valid_list[wp]: "\<lbrace>valid_list\<rbrace> cap_delete_one a \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  unfolding cap_delete_one_def by (wpsimp simp: unless_def)
-
-lemma restart_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> restart t \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: restart_def wp: hoare_drop_imp)
+crunches cap_delete_one, restart
+  for valid_list[wp]: "valid_list"
+  (wp: hoare_drop_imps maybeM_inv)
 
 context notes if_cong[cong] begin
 
