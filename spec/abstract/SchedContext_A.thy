@@ -297,9 +297,9 @@ text \<open>
   is runnable and add it to the scheduling queue if required
 \<close>
 definition
-  sched_context_resume :: "obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  sched_context_resume :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "sched_context_resume sc_opt \<equiv> maybeM (\<lambda>sc_ptr. do
+  "sched_context_resume sc_ptr \<equiv> do
      sc \<leftarrow> get_sched_context sc_ptr;
      tptr \<leftarrow> assert_opt $ sc_tcb sc;
      in_release_q \<leftarrow> gets $ in_release_queue tptr;
@@ -319,7 +319,7 @@ where
          postpone sc_ptr
        od
      od
-   od) sc_opt"
+   od"
 
 
 text \<open>consumed related functions\<close>
@@ -384,7 +384,7 @@ where
   "sched_context_bind_tcb sc_ptr tcb_ptr = do
     set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
     set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr);
-    sched_context_resume (Some sc_ptr);
+    sched_context_resume sc_ptr;
     inq <- gets $ in_release_queue tcb_ptr;
     sched <- is_schedulable tcb_ptr inq;
     when sched $ do
@@ -425,7 +425,7 @@ where
          when (sc_tcb = None) $ do
            sched_context_donate sc_ptr tcb_ptr;
            refill_unblock_check (sc_ptr);
-           sched_context_resume (Some sc_ptr)
+           sched_context_resume sc_ptr
          od
        od)
    od"
