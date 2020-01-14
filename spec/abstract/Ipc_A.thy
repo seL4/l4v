@@ -739,7 +739,7 @@ where
   "invoke_sched_control_configure iv \<equiv>
   case iv of InvokeSchedControlConfigure sc_ptr budget period mrefills badge \<Rightarrow> liftE $ do
     sc \<leftarrow> get_sched_context sc_ptr;
-    update_sched_context sc_ptr (\<lambda>sc. sc\<lparr>sc_badge:= badge\<rparr>);
+    set_sc_obj_ref sc_badge_update sc_ptr badge;
 
     when (sc_tcb sc \<noteq> None) $ do
       tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;

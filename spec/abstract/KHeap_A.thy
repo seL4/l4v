@@ -245,10 +245,10 @@ where
      case obj of SchedContext sc n \<Rightarrow> set_object ptr (SchedContext (f sc) n) | _ \<Rightarrow> fail
    od"
 
-definition
+abbreviation
   set_sc_obj_ref :: "(('a \<Rightarrow> 'a) \<Rightarrow> sched_context \<Rightarrow> sched_context) \<Rightarrow> obj_ref \<Rightarrow> 'a \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "set_sc_obj_ref f ref new \<equiv> update_sched_context ref (f (K new))"
+  "set_sc_obj_ref f ref new \<equiv> update_sched_context ref (f (\<lambda>_. new))"
 
 definition
   active_sc :: "nat \<Rightarrow> bool"

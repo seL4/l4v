@@ -109,7 +109,7 @@ where
 definition
   set_refills :: "obj_ref \<Rightarrow> refill list \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "set_refills sc_ptr refills = update_sched_context sc_ptr (\<lambda>sc. sc\<lparr>sc_refills:= refills\<rparr>)"
+  "set_refills sc_ptr refills = set_sc_obj_ref sc_refills_update sc_ptr refills"
 
 definition
   refill_new :: "obj_ref \<Rightarrow> nat \<Rightarrow> ticks \<Rightarrow> ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -328,7 +328,7 @@ definition
   sched_context_update_consumed :: "obj_ref \<Rightarrow> (time,'z::state_ext) s_monad" where
   "sched_context_update_consumed sc_ptr \<equiv> do
     sc \<leftarrow> get_sched_context sc_ptr;
-    update_sched_context sc_ptr (\<lambda>_. sc\<lparr>sc_consumed := 0 \<rparr>);
+    set_sc_obj_ref sc_consumed_update sc_ptr 0;
     return (sc_consumed sc)
    od"
 
