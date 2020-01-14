@@ -752,7 +752,7 @@ lemma sched_context_maybe_unbind_ntfn_invs[wp]:
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def update_sk_obj_ref_def
                       sched_context_maybe_unbind_ntfn_def maybeM_def get_sk_obj_ref_def
                   wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp
-                      get_sched_context_wp valid_ioports_lift)
+                      get_sched_context_wp valid_ioports_lift update_sched_context_valid_idle)
   apply (clarsimp simp: obj_at_def)
   apply (rule valid_objsE, assumption+, clarsimp simp: valid_obj_def)
   apply (clarsimp simp: valid_ntfn_def obj_at_def dest!: is_sc_objD)
@@ -795,7 +795,7 @@ lemma  sched_context_clear_ntfn_sc_yf_helper[wp]:
   apply (clarsimp simp: sched_context_unbind_ntfn_def get_sc_obj_ref_def)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (wpsimp wp: hoare_drop_imp get_object_wp get_simple_ko_wp
-              simp: set_sc_obj_ref_def update_sk_obj_ref_def set_simple_ko_def
+              simp: update_sk_obj_ref_def set_simple_ko_def
                     update_sched_context_def set_object_def)
   apply (clarsimp simp: sc_yf_sc_at_def obj_at_def pred_tcb_at_def split: if_split_asm split del: if_split)
   by (case_tac "p=scptr"; fastforce)
@@ -803,11 +803,12 @@ lemma  sched_context_clear_ntfn_sc_yf_helper[wp]:
 lemma  tcb_sched_context_sc_yf_helper[wp]:
   "\<lbrace>\<lambda>s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
                             st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>
-      set_tcb_obj_ref tcb_sched_context_update tptr new \<lbrace>\<lambda>rv s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
+   set_tcb_obj_ref tcb_sched_context_update tptr new
+   \<lbrace>\<lambda>rv s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
                             st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>"
   apply (clarsimp simp: set_tcb_obj_ref_def)
   apply (wpsimp wp: hoare_drop_imp get_object_wp get_simple_ko_wp
-      simp: set_sc_obj_ref_def update_sk_obj_ref_def set_simple_ko_def update_sched_context_def set_object_def)
+              simp: update_sk_obj_ref_def set_simple_ko_def update_sched_context_def set_object_def)
   apply (clarsimp simp: sc_yf_sc_at_def obj_at_def pred_tcb_at_def dest!: get_tcb_SomeD
                   split: if_split_asm split del: if_split)
   by (case_tac "p=tptr"; clarsimp simp: get_tcb_def)
@@ -815,11 +816,12 @@ lemma  tcb_sched_context_sc_yf_helper[wp]:
 lemma  sc_tcb_update_sc_yf_helper[wp]:
   "\<lbrace>\<lambda>s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
                             st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>
-      set_sc_obj_ref sc_tcb_update tptr new \<lbrace>\<lambda>rv s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
+   set_sc_obj_ref sc_tcb_update tptr new
+   \<lbrace>\<lambda>rv s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
                             st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>"
-  apply (clarsimp simp: set_sc_obj_ref_def)
-  apply (wpsimp wp: hoare_drop_imp get_object_wp get_simple_ko_wp
-      simp: set_sc_obj_ref_def update_sk_obj_ref_def set_simple_ko_def update_sched_context_def set_object_def)
+  apply (simp add: update_sched_context_def)
+  apply (wpsimp wp: hoare_drop_imp get_object_wp get_simple_ko_wp set_object_wp
+              simp: update_sk_obj_ref_def set_simple_ko_def)
   apply (clarsimp simp: sc_yf_sc_at_def obj_at_def pred_tcb_at_def dest!: get_tcb_SomeD
                   split: if_split_asm split del: if_split)
   by (case_tac "p=tptr"; clarsimp simp: get_tcb_def)
@@ -859,25 +861,14 @@ lemma sched_context_unbind_all_tcbs_sc_yf_helper[wp]:
                             st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>"
   apply (clarsimp simp: sched_context_unbind_all_tcbs_def get_sc_obj_ref_def)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (wpsimp wp: hoare_drop_imp get_object_wp get_simple_ko_wp
-      simp: set_sc_obj_ref_def update_sk_obj_ref_def set_simple_ko_def
-      update_sched_context_def set_object_def)
-  done
-
-lemma set_sc_rm_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> set_sc_obj_ref sc_refill_max_update a b \<lbrace>\<lambda>_. valid_objs\<rbrace>"
-  apply (wpsimp wp: set_object_valid_objs get_object_wp
-          simp: set_sc_obj_ref_def obj_at_def update_sched_context_def
-          split: option.splits kernel_object.splits)
-  apply (erule (1) valid_objsE)
-  apply (auto simp: valid_obj_def valid_sched_context_def a_type_def)
+  apply (wpsimp wp: hoare_drop_imp get_object_wp get_simple_ko_wp)
   done
 
 lemma set_sc_rm_iflive[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
      set_sc_obj_ref sc_refill_max_update t tcb
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def wp: get_object_wp)
+  apply (wpsimp simp: update_sched_context_def wp: get_object_wp)
   apply (clarsimp simp: if_live_then_nonz_cap_def, drule_tac x=t in spec)
   apply (fastforce simp: obj_at_def live_def live_sc_def)
   done
@@ -886,7 +877,7 @@ lemma set_sc_rm_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>
    set_sc_obj_ref sc_refill_max_update t tcb
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: set_sc_obj_ref_def set_object_def update_sched_context_def
+  apply (wpsimp simp: set_object_def update_sched_context_def
                 wp: get_object_wp)
   by (fastforce elim!: rsubst[where P=P]
                  simp: state_refs_of_def obj_at_def Un_def split_def  Collect_eq get_refs_def2
@@ -895,14 +886,14 @@ lemma set_sc_rm_refs_of[wp]:
 lemma sc_refill_max_update_cur_sc_tcb[wp]:
   "set_sc_obj_ref sc_refill_max_update b c \<lbrace>cur_sc_tcb\<rbrace>"
   unfolding cur_sc_tcb_def
-  apply (wpsimp simp: set_sc_obj_ref_def wp: update_sched_context_wp)
+  apply (wpsimp wp: update_sched_context_wp)
   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
   done
 
 lemma set_sc_obj_ref_invs[wp]:
     "\<lbrace>invs and K (b \<noteq> idle_sc_ptr)\<rbrace> set_sc_obj_ref sc_refill_max_update b c \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
-  by wpsimp
+  by (wpsimp wp: update_sched_context_valid_idle)
 
 lemma (in Finalise_AI_1) fast_finalise_invs:
   "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -1279,7 +1270,7 @@ lemma (in Finalise_AI_3) finalise_cap_cte_cap_to[wp]:
                  deleting_irq_handler_cte_preserved_irqn
                  reply_unlink_sc_cte_preserved_irqn
                  cancel_ipc_cte_preserved_irqn
-                 reply_remove_cte_preserved_irqn set_sc_obj_ref_cte_wp_at
+                 reply_remove_cte_preserved_irqn
                  | simp
                  | clarsimp simp: can_fast_finalise_def
                            split: cap.split_asm | wpc | wps)+

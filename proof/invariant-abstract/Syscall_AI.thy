@@ -1325,14 +1325,6 @@ lemma sts_st_tcb_at_pred:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
-lemma sts_st_tcb_at_pred_True:
-  "\<lbrace>K (t = t' \<and> P st)\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. st_tcb_at P t'\<rbrace>"
-  by (rule sts_st_tcb_at_pred)
-
-lemma sts_st_tcb_at_pred_False:
-  "\<lbrace>K (t = t' \<and> ~ P ts) \<rbrace> set_thread_state t ts \<lbrace>\<lambda>rv s. ~ st_tcb_at P t' s\<rbrace>"
-  by (rule sts_st_tcb_at_pred)
-
 lemma null_cap_on_failure_wp[wp]:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv. Q cap.NullCap\<rbrace>"
   shows      "\<lbrace>P\<rbrace> null_cap_on_failure f \<lbrace>Q\<rbrace>"
@@ -1343,8 +1335,7 @@ crunch_ignore (add:null_cap_on_failure)
 
 lemma hy_invs[wp]: "handle_yield \<lbrace>invs\<rbrace>"
   apply (simp add: handle_yield_def)
-  apply (wpsimp wp: charge_budget_invs update_sched_context_sc_consumed_update_invs
-              simp: set_sc_obj_ref_def)
+  apply (wpsimp wp: charge_budget_invs)
   done
 
 declare hoare_seq_ext[wp] hoare_vcg_precond_imp [wp_comb]

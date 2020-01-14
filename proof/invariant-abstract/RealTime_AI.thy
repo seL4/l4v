@@ -60,6 +60,14 @@ lemma update_sched_context_valid_objs_same:
   apply (auto simp: valid_obj_def valid_sched_context_def a_type_def obj_at_def)
   done
 
+lemmas sc_consumed_update_valid_objs[wp]
+  = update_sched_context_valid_objs_same[where f="sc_consumed_update f" for f,
+                                         simplified valid_sched_context_def, simplified]
+
+lemmas sc_refill_max_update_valid_objs[wp]
+  = update_sched_context_valid_objs_same[where f="sc_refill_max_update f" for f,
+                                         simplified valid_sched_context_def, simplified]
+
 lemma update_sched_context_valid_objs_update:
   "\<lbrace>\<lambda>s. valid_objs s
      \<and> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n
@@ -73,158 +81,74 @@ lemma refs_in_get_refs:
   "(x, ref) \<in> get_refs REF ntfn \<Longrightarrow> ref = REF"
   by (auto simp: get_refs_def split: option.splits)
 
-crunch irq_node[wp]: set_reply "\<lambda>s. P (interrupt_irq_node s)"
-  (simp: get_object_def)
-
-text \<open>set_sc_obj_ref/get_sc_obj_ref\<close>
+text \<open>update_sched_context/get_sc_obj_ref\<close>
 
 lemma get_sc_obj_ref_inv[simp, wp]:
   "\<lbrace>P\<rbrace> get_sc_obj_ref f t \<lbrace>\<lambda>r. P\<rbrace>"
   by (wpsimp simp: get_sc_obj_ref_def get_sched_context_def get_object_def)
 
-
-crunches set_sc_obj_ref,get_sc_obj_ref
- for aligned[wp]: pspace_aligned
- and distinct[wp]: pspace_distinct
- and sc_at[wp]: "sc_at sc_ptr"
- and tcb_at[wp]: "tcb_at t"
- and cte_wp_at[wp]: "cte_wp_at P c"
- and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
- and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
- and no_cdt[wp]: "\<lambda>s. P (cdt s)"
- and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
- and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
- and valid_global_objs[wp]: "valid_global_objs"
- and valid_global_vspace_mappings[wp]: "valid_global_vspace_mappings"
- and valid_arch_caps[wp]: "valid_arch_caps"
- and only_idle[wp]: "only_idle"
- and ifunsafe[wp]: "if_unsafe_then_cap"
- and valid_arch[wp]: "valid_arch_state"
- and valid_irq_states[wp]: "valid_irq_states"
- and vms[wp]: "valid_machine_state"
- and valid_vspace_objs[wp]: "valid_vspace_objs"
- and valid_global_refs[wp]: "valid_global_refs"
- and v_ker_map[wp]: "valid_kernel_mappings"
- and equal_mappings[wp]: "equal_kernel_mappings"
- and valid_asid_map[wp]: "valid_asid_map"
- and pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
- and cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
- and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
- and pspace_respects_device_region[wp]: "pspace_respects_device_region"
- and cur_tcb[wp]: "cur_tcb"
- and ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
- and valid_ioc[wp]: "valid_ioc"
- and it[wp]: "\<lambda>s. P (idle_thread s)"
- and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
- and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
- and valid_irq_handlers[wp]: "valid_irq_handlers"
- and valid_mdb[wp]: valid_mdb
- and valid_idle[wp]: valid_idle
- and zombies[wp]: zombies_final
- and fault_tcbs_valid_states[wp]: "fault_tcbs_valid_states"
-  (simp: Let_def wp: hoare_drop_imps)
-
-lemma set_sc_ntfn_iflive[wp]:
-  "\<lbrace>\<lambda>s. (bound ntfn \<longrightarrow> ex_nonz_cap_to scp s)
-         \<and> if_live_then_nonz_cap s\<rbrace>
-     set_sc_obj_ref sc_ntfn_update scp ntfn
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
-           wp: get_object_wp)
-  apply (clarsimp simp: if_live_then_nonz_cap_def, drule_tac x=scp in spec)
-  apply (clarsimp simp: obj_at_def live_def live_sc_def)
-  done
-
-lemma set_sc_tcb_iflive[wp]:
-  "\<lbrace>\<lambda>s. (bound tcb \<longrightarrow> ex_nonz_cap_to t s)
-         \<and> if_live_then_nonz_cap s\<rbrace>
-     set_sc_obj_ref sc_tcb_update t tcb
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def wp: get_object_wp)
-  apply (clarsimp simp: if_live_then_nonz_cap_def, drule_tac x=t in spec)
-  apply (fastforce simp: obj_at_def live_def live_sc_def)
-  done
-
-lemma set_sc_yf_iflive[wp]:
-  "\<lbrace>\<lambda>s. (bound tcb \<longrightarrow> ex_nonz_cap_to t s)
-         \<and> if_live_then_nonz_cap s\<rbrace>
-     set_sc_obj_ref sc_yield_from_update t tcb
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def wp: get_object_wp)
-  apply (clarsimp simp: if_live_then_nonz_cap_def, drule_tac x=t in spec)
-  apply (fastforce simp: obj_at_def live_def live_sc_def)
-  done
-
-lemma set_sc_replies_iflive[wp]:
-  "\<lbrace>\<lambda>s. (replies\<noteq>[] \<longrightarrow> ex_nonz_cap_to t s)
-         \<and> if_live_then_nonz_cap s\<rbrace>
-     set_sc_obj_ref sc_replies_update t replies
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def wp: get_object_wp)
-  apply (clarsimp simp: if_live_then_nonz_cap_def, drule_tac x=t in spec)
-  apply (fastforce simp: obj_at_def live_def live_sc_def)
-  done
+crunches update_sched_context
+  for no_cdt[wp]: "\<lambda>s. P (cdt s)"
+  and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
 
 lemma set_sc_ntfn_valid_objs[wp]:
-  "\<lbrace>valid_objs and valid_bound_ntfn ntfn\<rbrace> set_sc_obj_ref sc_ntfn_update t ntfn \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  "\<lbrace>valid_objs and valid_bound_ntfn ntfn\<rbrace>
+   set_sc_obj_ref sc_ntfn_update t ntfn
+   \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (wpsimp wp: set_object_valid_objs get_object_wp
-          simp: set_sc_obj_ref_def update_sched_context_def obj_at_def
+          simp: update_sched_context_def obj_at_def
           split: option.splits kernel_object.splits)
   apply (erule (1) valid_objsE)
   apply (auto simp: valid_obj_def valid_sched_context_def a_type_def)
   done
 
 lemma set_sc_tcb_valid_objs[wp]:
-  "\<lbrace>valid_objs and valid_bound_tcb ntfn\<rbrace> set_sc_obj_ref sc_tcb_update t ntfn \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  "\<lbrace>valid_objs and valid_bound_tcb ntfn\<rbrace>
+   set_sc_obj_ref sc_tcb_update t ntfn
+   \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (wpsimp wp: set_object_valid_objs get_object_wp
-          simp: set_sc_obj_ref_def obj_at_def update_sched_context_def
+          simp: obj_at_def update_sched_context_def
           split: option.splits kernel_object.splits)
   apply (erule (1) valid_objsE)
   apply (auto simp: valid_obj_def valid_sched_context_def a_type_def)
   done
 
 lemma set_sc_yf_valid_objs[wp]:
-  "\<lbrace>valid_objs and valid_bound_tcb ntfn\<rbrace> set_sc_obj_ref sc_yield_from_update t ntfn \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  "\<lbrace>valid_objs and valid_bound_tcb ntfn\<rbrace>
+   set_sc_obj_ref sc_yield_from_update t ntfn
+   \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (wpsimp wp: set_object_valid_objs get_object_wp
-          simp: set_sc_obj_ref_def obj_at_def update_sched_context_def
+          simp: obj_at_def update_sched_context_def
           split: option.splits kernel_object.splits)
   apply (erule (1) valid_objsE)
   apply (auto simp: valid_obj_def valid_sched_context_def a_type_def)
-  done
-
-lemma set_sc_replies_valid_objs[wp]:
-  "\<lbrace>valid_objs and (\<lambda>s. list_all (\<lambda>rp. reply_at rp s) replies) and K (distinct replies)\<rbrace>
-       set_sc_obj_ref sc_replies_update t replies \<lbrace>\<lambda>_. valid_objs\<rbrace>"
-  apply (wpsimp wp: set_object_valid_objs get_object_wp
-          simp: set_sc_obj_ref_def obj_at_def update_sched_context_def
-          split: option.splits kernel_object.splits)
-  apply (erule (1) valid_objsE)
-  apply (auto simp: valid_obj_def valid_sched_context_def obj_at_def a_type_def)
   done
 
 lemma update_sched_context_sc_replies_update_valid_objs[wp]:
   "\<lbrace>valid_objs and
     (\<lambda>s. \<forall>x. list_all (\<lambda>rp. reply_at rp s) x \<longrightarrow> list_all (\<lambda>rp. reply_at rp s) (f x)) and
     K (\<forall>x. distinct x \<longrightarrow> distinct (f x))\<rbrace>
-       update_sched_context t (sc_replies_update f)
+   update_sched_context t (sc_replies_update f)
    \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (wpsimp wp: set_object_valid_objs get_object_wp
-          simp: set_sc_obj_ref_def obj_at_def update_sched_context_def
+          simp: obj_at_def update_sched_context_def
           split: option.splits kernel_object.splits)
   apply (erule (1) valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_sched_context_def obj_at_def a_type_def)
   done
 
-lemma set_sc_obj_ref_tcb'[wp]:
-  "set_sc_obj_ref f t' sc \<lbrace>\<lambda>s. P (tcb_at t s)\<rbrace>"
-  by (simp add: tcb_at_typ, wp)
+lemma set_sc_replies_valid_objs[wp]:
+  "\<lbrace>valid_objs and (\<lambda>s. list_all (\<lambda>rp. reply_at rp s) replies) and K (distinct replies)\<rbrace>
+   set_sc_obj_ref sc_replies_update t replies
+   \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  by wpsimp
 
 lemma set_sc_ntfn_refs_of[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= (case ntfn of None \<Rightarrow> {} | Some new \<Rightarrow> {(new, SCNtfn)}) \<union>
           (state_refs_of s t - {x \<in> state_refs_of s t. snd x = SCNtfn})))\<rbrace>
    set_sc_obj_ref sc_ntfn_update t ntfn
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def set_object_def
+  apply (wpsimp simp: update_sched_context_def set_object_def
                  wp: get_object_wp)
   by (fastforce elim!: rsubst[where P=P]
                  simp: state_refs_of_def obj_at_def Un_def split_def Collect_eq get_refs_def2
@@ -235,7 +159,7 @@ lemma set_sc_tcb_refs_of[wp]:
           (state_refs_of s t - {x \<in> state_refs_of s t. snd x = SCTcb})))\<rbrace>
    set_sc_obj_ref sc_tcb_update t tcb
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: set_sc_obj_ref_def set_object_def update_sched_context_def wp: get_object_wp)
+  apply (wpsimp simp: set_object_def update_sched_context_def wp: get_object_wp)
   by (fastforce elim!: rsubst[where P=P]
                  simp: state_refs_of_def obj_at_def Un_def split_def  Collect_eq get_refs_def2
                 split: option.splits if_splits)
@@ -245,7 +169,7 @@ lemma set_sc_yf_refs_of[wp]:
           (state_refs_of s t - {x \<in> state_refs_of s t. snd x = SCYieldFrom})))\<rbrace>
    set_sc_obj_ref sc_yield_from_update t tcb
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: set_sc_obj_ref_def set_object_def update_sched_context_def
+  apply (wpsimp simp: set_object_def update_sched_context_def
                 wp: get_object_wp)
   by (fastforce elim!: rsubst[where P=P]
                  simp: state_refs_of_def obj_at_def Un_def split_def  Collect_eq get_refs_def2
@@ -257,7 +181,7 @@ lemma set_sc_replies_refs_of[wp]:
                                          else p \<in> state_refs_of s sc}))\<rbrace>
     set_sc_obj_ref sc_replies_update sc replies
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: set_sc_obj_ref_def set_object_def update_sched_context_def
+  apply (wpsimp simp: set_object_def update_sched_context_def
                   wp: get_object_wp
             simp_del: fun_upd_apply)
   by (fastforce simp: obj_at_def state_refs_of_def get_refs_def2
@@ -268,7 +192,7 @@ lemma update_sched_context_state_refs_of:
   "\<lbrace>\<lambda>s. P (state_refs_of s) \<and> sc_replies_sc_at (\<lambda>x. hd_opt (f x) = hd_opt x) sc s\<rbrace>
     update_sched_context sc (sc_replies_update f)
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: set_sc_obj_ref_def set_object_def update_sched_context_def
+  apply (wpsimp simp: set_object_def update_sched_context_def
                   wp: get_object_wp
             simp_del: fun_upd_apply)
   apply (clarsimp simp: obj_at_def state_refs_of_def get_refs_def2 sc_at_pred_n_def
@@ -1004,18 +928,18 @@ lemma reply_unlink_sc_iflive[wp]:
   apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_disj_lift
                     hoare_vcg_all_lift get_simple_ko_wp)
   apply (safe; (drule(1) ko_at_obj_congD; clarsimp)+)
-      apply (fastforce simp: live_def live_sc_def obj_at_def
-                      dest!: if_live_then_nonz_capD2)
-     apply (fastforce simp: live_def obj_at_def live_reply_def
+     apply (fastforce simp: live_def live_sc_def obj_at_def
                      dest!: if_live_then_nonz_capD2 valid_objs_ko_at)
-    apply (subgoal_tac "xa \<in> set (sc_replies scb)")
-     apply (fastforce simp: obj_at_def
-                     dest!: if_live_then_nonz_capD2 valid_sched_object_reply_at
-                            valid_replies_in_replies_sc_live
-                     intro: sc_replies_sc_at_ko_atI)
-    apply (fastforce intro: list.set_sel)
-   apply (fastforce simp: live_def live_reply_def obj_at_def
-                   dest!: if_live_then_nonz_capD2 valid_objs_ko_at)
+    apply (fastforce simp: live_def obj_at_def live_reply_def
+                    dest!: if_live_then_nonz_capD2 valid_objs_ko_at)
+   apply (subgoal_tac "xa \<in> set (sc_replies scb)")
+    apply (fastforce simp: obj_at_def
+                    dest!: if_live_then_nonz_capD2 valid_sched_object_reply_at
+                           valid_replies_in_replies_sc_live
+                    intro: sc_replies_sc_at_ko_atI)
+   apply (fastforce intro: list.set_sel)
+  apply (fastforce simp: live_def live_reply_def obj_at_def
+                  dest!: if_live_then_nonz_capD2 valid_objs_ko_at)
   done
 
 lemma reply_unlink_tcb_iflive[wp]:
@@ -1174,7 +1098,7 @@ lemma reply_push_st_tcb_at[wp]:
   "\<lbrace>st_tcb_at P t and K (t \<noteq> caller) and K (t \<noteq> callee)\<rbrace>
      reply_push caller callee reply_ptr can_donate
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
-  by (wpsimp simp: reply_push_def update_sk_obj_ref_def set_sc_obj_ref_def get_thread_state_def
+  by (wpsimp simp: reply_push_def update_sk_obj_ref_def get_thread_state_def
                    thread_get_def no_reply_in_ts_def comp_def
                wp: weak_if_wp sts_st_tcb_at_cases hoare_vcg_all_lift hoare_vcg_const_imp_lift
          | wp_once hoare_drop_imp)+

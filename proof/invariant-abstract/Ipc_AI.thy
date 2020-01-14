@@ -1622,12 +1622,9 @@ crunch iflive[wp]: do_ipc_transfer "if_live_then_nonz_cap :: 'state_ext state \<
 (* Move to Realtime_AI *)
 lemma sched_context_update_consumed_if_live[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>
-     sched_context_update_consumed param_a \<lbrace>\<lambda>_ s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: sched_context_update_consumed_def
-     simp_del: refs_of_defs fun_upd_apply
-     wp: get_sched_context_wp get_object_wp)
-  by (clarsimp simp: refs_of_def fun_upd_idem
-       dest!: ko_at_state_refs_ofD simp del: refs_of_defs refs_of_simps)
+   sched_context_update_consumed param_a
+   \<lbrace>\<lambda>_ s. P (state_refs_of s)\<rbrace>"
+  by (wpsimp simp: sched_context_update_consumed_def)
 
 crunch state_refs_of[wp]: do_ipc_transfer "\<lambda>s::'state_ext state. P (state_refs_of s)"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop set_object)
@@ -1795,8 +1792,7 @@ crunch cap_refs_in_kernel_window[wp]: do_ipc_transfer "cap_refs_in_kernel_window
 
 lemma sched_context_update_consumed_valid_objs[wp]:
  "\<lbrace>valid_objs\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>_. valid_objs\<rbrace>"
-  apply (wpsimp simp: sched_context_update_consumed_def wp: get_sched_context_wp)
-  by (drule valid_sched_context_objsI, simp add: obj_at_def)
+  by (wpsimp simp: sched_context_update_consumed_def)
 
 crunch valid_objs[wp]: do_ipc_transfer "valid_objs :: 'state_ext state \<Rightarrow> bool"
   (wp: hoare_vcg_const_Ball_lift simp:ball_conj_distrib )
@@ -2896,7 +2892,7 @@ lemma schedule_tcb_pred_tcb_at:
 lemma maybe_return_sc_pred_tcb_at:
   "\<lbrace>pred_tcb_at proj P tcb_ptr' and K (tcb_ptr \<noteq> tcb_ptr')\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr
    \<lbrace>\<lambda>rv. pred_tcb_at proj P tcb_ptr'\<rbrace>"
-  apply (wpsimp simp: maybe_return_sc_def set_sc_obj_ref_def set_tcb_obj_ref_def set_object_def
+  apply (wpsimp simp: maybe_return_sc_def set_tcb_obj_ref_def set_object_def
                       get_tcb_obj_ref_def thread_get_def get_sk_obj_ref_def get_simple_ko_def
                       get_object_def)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
@@ -2919,7 +2915,7 @@ lemma maybe_donate_sc_pred_tcb_at:
    apply (rename_tac sc_tcb_opt)
    apply (case_tac sc_tcb_opt; simp)
     apply (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def set_object_def tcb_release_remove_def
-                        set_sc_obj_ref_def update_sched_context_def get_object_def get_tcb_def
+                        update_sched_context_def get_object_def get_tcb_def
                         pred_tcb_at_def obj_at_def get_sc_obj_ref_def get_sched_context_def
                     wp: hoare_vcg_imp_lift hoare_vcg_all_lift)
     apply (fastforce simp: sc_tcb_sc_at_def obj_at_def)

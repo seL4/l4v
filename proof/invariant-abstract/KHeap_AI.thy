@@ -262,25 +262,31 @@ lemma set_tcb_obj_ref_reply_at_inv[wp]:
   apply (clarsimp simp: obj_at_def is_reply is_tcb get_tcb_def)
   done
 
-lemma set_sc_obj_ref_ep_at_inv[wp]:
-  "\<lbrace> ep_at ep \<rbrace> set_sc_obj_ref f t ntfn \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
-                   set_object_def get_sched_context_def obj_at_def is_ep)
+lemma update_sched_context_typ_at_inv[wp]:
+  "update_sched_context ptr f \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def get_object_def wp: set_object_typ_at)
+  apply (simp add: obj_at_def a_type_def)
+  done
 
-lemma set_sc_obj_ref_ntfn_at_inv[wp]:
-  "\<lbrace> ntfn_at ep \<rbrace> set_sc_obj_ref f t ntfn \<lbrace> \<lambda>rv. ntfn_at ep \<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
-                   set_object_def get_sched_context_def obj_at_def is_ntfn)
+lemma update_sched_context_ep_at_inv[wp]:
+  "update_sched_context ptr f \<lbrace>\<lambda>s. P (ep_at p s)\<rbrace>"
+  by (wpsimp simp: ep_at_typ)
 
-lemma set_sc_obj_ref_sc_at_inv[wp]:
-  "\<lbrace> sc_at ep \<rbrace> set_sc_obj_ref f t ntfn \<lbrace> \<lambda>rv. sc_at ep \<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
-                   set_object_def get_sched_context_def obj_at_def is_sc_obj_def)
+lemma update_sched_context_ntfn_at_inv[wp]:
+  "update_sched_context ptr f \<lbrace>\<lambda>s. P (ntfn_at p s)\<rbrace>"
+  by (wpsimp simp: ntfn_at_typ)
 
-lemma set_sc_obj_ref_reply_at_inv[wp]:
-  "\<lbrace> reply_at ep \<rbrace> set_sc_obj_ref f t ntfn \<lbrace> \<lambda>rv. reply_at ep \<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
-                   set_object_def get_sched_context_def obj_at_def is_reply)
+lemma update_sched_context_sc_at_inv[wp]:
+  "update_sched_context ptr f \<lbrace>\<lambda>s. P (sc_at p s)\<rbrace>"
+  by (wpsimp simp: update_sched_context_def set_object_def obj_at_def is_sc_obj_def)
+
+lemma update_sched_context_reply_at_inv[wp]:
+  "update_sched_context ptr f \<lbrace>\<lambda>s. P (reply_at p s)\<rbrace>"
+  by (wpsimp simp: reply_at_typ)
+
+lemma update_sched_context_tcb_at_inv [wp]:
+  "update_sched_context ptr f \<lbrace>\<lambda>s. P (tcb_at p s)\<rbrace>"
+  by (wpsimp simp: tcb_at_typ)
 
 lemma prefix_to_eq:
   "\<lbrakk> take n xs \<le> ys; length xs = length ys; drop n xs = drop n ys \<rbrakk>
@@ -1578,23 +1584,17 @@ lemma shows
   apply (all \<open>(wp | wpc | simp)+ ; clarsimp, erule rsubst[where P=P], rule cte_wp_caps_of_lift\<close>)
   by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def dest!: get_tcb_SomeD)
 
-lemma
-  store_word_offs_caps_of_state[wp]:
-   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> store_word_offs a b c \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+lemma store_word_offs_caps_of_state[wp]:
+  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> store_word_offs a b c \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   unfolding store_word_offs_def do_machine_op_def[abs_def]
   by wpsimp
 
-lemma
-  set_mrs_caps_of_state[wp]:
-   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+lemma set_mrs_caps_of_state[wp]:
+  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   unfolding set_mrs_def set_object_def[abs_def]
   apply (wp mapM_x_inv_wp | wpc | simp add: zipWithM_x_mapM_x split del: if_split | clarsimp)+
   apply (safe; erule rsubst[where P=P], rule cte_wp_caps_of_lift)
   by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def dest!: get_tcb_SomeD)
-
-lemma set_sc_obj_ref_caps_of_state [wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_sc_obj_ref f ptr val \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def get_sched_context_def get_object_def set_object_def)
 
 crunch obj_at[wp]: set_thread_state_act "\<lambda>s. P (obj_at P' p' s)"
 crunch arch_state[wp]: set_thread_state "\<lambda>s. P (arch_state s)"
@@ -1626,7 +1626,7 @@ interpretation
   update_sched_context: non_aobj_non_cap_non_mem_op "update_sched_context p update" +
   set_tcb_yt: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_yield_to_update p sc"
   apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
-  unfolding set_simple_ko_def set_thread_state_def set_sc_obj_ref_def
+  unfolding set_simple_ko_def set_thread_state_def
             set_tcb_obj_ref_def thread_set_def set_cap_def[simplified split_def]
             as_user_def set_mrs_def update_sched_context_def update_sched_context_def
   apply -
@@ -1636,19 +1636,6 @@ interpretation
                split: Structures_A.kernel_object.splits)[1]
   by ((fastforce simp: obj_at_def[abs_def] a_type_def
                split: Structures_A.kernel_object.splits option.splits)+)
-
-interpretation
-  set_sc_yf: non_aobj_non_cap_non_mem_op "set_sc_obj_ref sc_yield_from_update sc p"
-  apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
-  unfolding set_simple_ko_def set_thread_state_def set_sc_obj_ref_def
-            set_tcb_obj_ref_def thread_set_def set_cap_def[simplified split_def]
-            as_user_def set_mrs_def update_sched_context_def update_sched_context_def
-  apply -
-  supply validNF_prop[wp_unsafe del]
-  apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp split del: if_split)+\<close>)
-  apply (auto simp: obj_at_def[abs_def] partial_inv_def the_equality
-               split: Structures_A.kernel_object.splits)[1]
-  done
 
 lemma cnode_agnostic_predE:
   assumes P: "P (CNode bits ct)"
@@ -1714,20 +1701,6 @@ global_interpretation set_cap: cspace_non_astate_non_mem_op "set_cap cap p'"
            elim: cnode_agnostic_predE' tcb_cnode_agnostic_predE)
 
 lemmas set_cap_arch[wp] = set_cap.arch_state
-
-interpretation
-  set_sc_tcb: non_aobj_non_cap_non_mem_op "set_sc_obj_ref sc_tcb_update p sco" +
-  set_sc_ntfn: non_aobj_non_cap_non_mem_op "set_sc_obj_ref sc_ntfn_update p sco" +
-  set_sc_replies: non_aobj_non_cap_non_mem_op "set_sc_obj_ref sc_replies_update p scos" +
-  set_sc_yf: non_aobj_non_cap_non_mem_op "set_sc_obj_ref sc_yield_from_update p sco"
-  apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
-  unfolding set_simple_ko_def set_thread_state_def set_sc_obj_ref_def
-            set_tcb_obj_ref_def thread_set_def set_cap_def[simplified split_def]
-            as_user_def set_mrs_def update_sched_context_def get_sched_context_def
-  apply -
-  apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp split del: if_split)+\<close>)
-  by ((fastforce simp: obj_at_def[abs_def] a_type_def
-               split: Structures_A.kernel_object.splits option.splits)+)
 
 interpretation
   store_word_offs: non_aobj_non_cap_op "store_word_offs a b c"
@@ -1874,8 +1847,8 @@ lemma valid_irq_states_scheduler_action[simp]:
   "valid_irq_states (s\<lparr>scheduler_action := x\<rparr>) = valid_irq_states s"
   by (simp add: valid_irq_states_def)
 
-crunch valid_irq_states[wp]: set_thread_state, set_tcb_obj_ref, set_sc_obj_ref, set_reply
-  "valid_irq_states"
+crunches set_thread_state, set_tcb_obj_ref, update_sched_context, set_reply
+  for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
 global_interpretation set_notification: non_reply_op "set_notification ptr val"
@@ -2116,12 +2089,6 @@ lemma update_sched_context_aligned [wp]:
   by (wpsimp simp: update_sched_context_def get_object_def obj_at_def a_type_def
                wp: set_object_aligned)
 
-lemma update_sched_context_typ_at [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> update_sched_context ptr f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  apply (wpsimp simp: update_sched_context_def get_object_def wp: set_object_typ_at)
-  apply (simp add: obj_at_def a_type_def)
-  done
-
 lemma update_sched_context_cte_wp_at [wp]:
   "\<lbrace>cte_wp_at P p\<rbrace> update_sched_context ptr f \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
   by (wpsimp simp: update_sched_context_def set_object_def cte_wp_at_cases get_object_def)
@@ -2212,19 +2179,9 @@ lemma update_sched_context_zombies[wp]:
   "\<lbrace>zombies_final\<rbrace> update_sched_context ptr f \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   by (wpsimp simp: update_sched_context_def get_object_def obj_at_def)
 
-lemma update_sched_context_tcb [wp]:
-  "\<lbrace> tcb_at t \<rbrace>
-   update_sched_context ptr f
-   \<lbrace> \<lambda>rv. tcb_at t \<rbrace>"
-  by (simp add: tcb_at_typ) wp
-
 lemma update_sched_context_pred_tcb_at [wp]:
   "update_sched_context ptr update \<lbrace> \<lambda>s. P (pred_tcb_at proj f t s) \<rbrace>"
   by (wpsimp simp: update_sched_context_def set_object_def get_object_def pred_tcb_at_def obj_at_def)
-
-lemma update_sc_sc_at [wp]:
-  "\<lbrace>sc_at ptr'\<rbrace> update_sched_context ptr f \<lbrace>\<lambda>rv. sc_at ptr'\<rbrace>"
-  by (wpsimp simp: update_sched_context_def set_object_def get_object_def obj_at_def is_sc_obj_def)
 
 lemma update_sched_context_ex_cap [wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> update_sched_context ptr f \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
@@ -2256,41 +2213,63 @@ lemma update_sched_context_valid_ioc [wp]:
   by (wpsimp simp: update_sched_context_def obj_at_def a_type_def is_tcb is_cap_table
                wp: set_object_valid_ioc_no_caps get_object_wp)
 
-lemma sc_consumed_set_iflive [wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (live_sc sc \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
-     update_sched_context ptr (\<lambda>_. sc_consumed_update f sc) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def)
-
-lemma sc_refills_st_iflive [wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (live_sc sc \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
-     update_sched_context ptr (\<lambda>_. sc_refills_update f sc) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def)
-
-lemma sc_badge_set_iflive [wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (live_sc sc \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
-     update_sched_context ptr (\<lambda>_. sc_badge_update f sc) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def)
-
 lemma sc_consumed_update_iflive [wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
-     update_sched_context ptr (sc_consumed_update f) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  "update_sched_context ptr (sc_consumed_update f) \<lbrace>if_live_then_nonz_cap\<rbrace>"
   by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_implies)
 
 lemma sc_refills_update_iflive [wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
-     update_sched_context ptr (sc_refills_update f) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  "update_sched_context ptr (sc_refills_update f) \<lbrace>if_live_then_nonz_cap\<rbrace>"
+  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_implies)
+
+lemma sc_badge_update_iflive [wp]:
+  "update_sched_context ptr (sc_badge_update f) \<lbrace>if_live_then_nonz_cap\<rbrace>"
   by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_implies)
 
 lemma sc_replies_update_iflive [wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (\<forall>x. ((f x)\<noteq>[]) \<longrightarrow> (x\<noteq>[]))\<rbrace>
-     update_sched_context ptr (sc_replies_update f) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  apply (wpsimp simp: live_sc_def wp: update_sched_context_iflive_implies)
-  by fastforce
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> ((\<forall>x. ((f x)\<noteq>[]) \<longrightarrow> (x\<noteq>[])) \<or> ex_nonz_cap_to ptr s)\<rbrace>
+   update_sched_context ptr (sc_replies_update f)
+   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  apply (wpsimp simp:  update_sched_context_def wp: get_object_wp)
+  apply (clarsimp simp: if_live_then_nonz_cap_def, drule_tac x=ptr in spec)
+  by (fastforce simp: obj_at_def live_def live_sc_def)
 
-lemma sc_badge_update_iflive [wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
-     update_sched_context ptr (sc_badge_update f) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_implies)
+lemma set_sc_ntfn_iflive[wp]:
+  "\<lbrace>\<lambda>s. (bound ntfn \<longrightarrow> ex_nonz_cap_to scp s)
+         \<and> if_live_then_nonz_cap s\<rbrace>
+   set_sc_obj_ref sc_ntfn_update scp ntfn
+   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def
+                wp: get_object_wp)
+  apply (clarsimp simp: if_live_then_nonz_cap_def, drule_tac x=scp in spec)
+  apply (clarsimp simp: obj_at_def live_def live_sc_def)
+  done
+
+lemma set_sc_tcb_iflive[wp]:
+  "\<lbrace>\<lambda>s. (bound tcb \<longrightarrow> ex_nonz_cap_to t s)
+         \<and> if_live_then_nonz_cap s\<rbrace>
+   set_sc_obj_ref sc_tcb_update t tcb
+   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def wp: get_object_wp)
+  apply (clarsimp simp: if_live_then_nonz_cap_def, drule_tac x=t in spec)
+  apply (fastforce simp: obj_at_def live_def live_sc_def)
+  done
+
+lemma set_sc_yf_iflive[wp]:
+  "\<lbrace>\<lambda>s. (bound tcb \<longrightarrow> ex_nonz_cap_to t s)
+         \<and> if_live_then_nonz_cap s\<rbrace>
+   set_sc_obj_ref sc_yield_from_update t tcb
+   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def wp: get_object_wp)
+  apply (clarsimp simp: if_live_then_nonz_cap_def, drule_tac x=t in spec)
+  apply (fastforce simp: obj_at_def live_def live_sc_def)
+  done
+
+lemma set_sc_replies_iflive[wp]:
+  "\<lbrace>\<lambda>s. (replies\<noteq>[] \<longrightarrow> ex_nonz_cap_to t s)
+         \<and> if_live_then_nonz_cap s\<rbrace>
+     set_sc_obj_ref sc_replies_update t replies
+   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  by wpsimp
 
 lemma get_sched_context_sp:
   "\<lbrace>P\<rbrace> get_sched_context sc_ptr
@@ -2354,14 +2333,6 @@ lemma update_sched_context_obj_at_impossible:
   apply (clarsimp simp: obj_at_def)
   done
 
-lemma set_sc_obj_ref_obj_at_impossible:
-  "(\<And>np n. \<not> P (SchedContext np n)) \<Longrightarrow>
-    \<lbrace>\<lambda>s. Q (obj_at P p s)\<rbrace>
-      set_sc_obj_ref f t ntfn
-    \<lbrace>\<lambda>rv s. Q (obj_at P p s)\<rbrace>"
-  unfolding set_sc_obj_ref_def
-  by (wp update_sched_context_obj_at_impossible, simp)
-
 lemma set_endpoint_obj_at_impossible:
   "\<forall>ep. \<not> (P (Endpoint ep)) \<Longrightarrow>
     \<lbrace>\<lambda>s. Q (obj_at P p s)\<rbrace> set_endpoint ptr endp \<lbrace>\<lambda>rv s. Q (obj_at P p s)\<rbrace>"
@@ -2416,21 +2387,34 @@ lemma get_sc_obj_ref_wp:
    \<lbrace> P \<rbrace>"
   by (wpsimp simp: get_sc_obj_ref_def)
 
-lemma set_sc_obj_ref_obj_at_trivial:
+lemma update_sched_context_wp:
+  "\<lbrace> \<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) sc_ptr s
+                \<longrightarrow> Q (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext (f sc) n)\<rparr>) \<rbrace>
+   update_sched_context sc_ptr f
+   \<lbrace> \<lambda>rv. Q \<rbrace>"
+  by (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
+
+lemma update_sched_context_obj_at_trivial:
   "\<lbrace>obj_at P t' and
-    K (\<forall>sc n. P (SchedContext sc n) \<longrightarrow> P (SchedContext (f (K new) sc) n))\<rbrace>
-     set_sc_obj_ref f t new
+    K (\<forall>sc n. P (SchedContext sc n) \<longrightarrow> P (SchedContext (f sc) n))\<rbrace>
+   update_sched_context sc_ptr f
    \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
-                   set_object_def get_sched_context_def obj_at_def
-               wp: get_object_wp)
+  by (wpsimp wp: update_sched_context_wp simp: obj_at_def)
+
+lemma set_tcb_obj_ref_wp:
+  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at (TCB tcb) t s
+                \<longrightarrow> Q (s\<lparr>kheap := kheap s(t \<mapsto> TCB (f (K v) tcb))\<rparr>)\<rbrace>
+    set_tcb_obj_ref f t v
+   \<lbrace>\<lambda>rv. Q\<rbrace>"
+  by (wpsimp simp: set_tcb_obj_ref_def wp: set_object_wp)
+     (clarsimp simp: get_tcb_ko_at)
 
 lemma set_tcb_obj_ref_obj_at_trivial:
   "\<lbrace>obj_at P t' and
     K (\<forall>tcb. P (TCB tcb) \<longrightarrow> P (TCB (f (K new) tcb)))\<rbrace>
      set_tcb_obj_ref f t new
    \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
-  by (wpsimp simp: set_tcb_obj_ref_def set_object_def obj_at_def get_tcb_SomeD)
+  by (wpsimp wp: set_tcb_obj_ref_wp simp: obj_at_def)
 
 lemma sched_context_update_consumed_obj_at_trivial:
   "\<lbrace>obj_at P t' and
@@ -2464,13 +2448,6 @@ lemma as_user_obj_at_trivial:
 crunch obj_at_trivial: set_consumed "obj_at P t"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma update_sched_context_wp:
-  "\<lbrace> \<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) sc_ptr s
-                \<longrightarrow> Q (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext (f sc) n)\<rparr>) \<rbrace>
-    update_sched_context sc_ptr f
-   \<lbrace> \<lambda>rv. Q \<rbrace>"
-  by (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
-
 lemma set_simple_ko_obj_at_disjoint:
   "\<lbrace>obj_at P p and K (p \<noteq> p')\<rbrace>
      set_simple_ko f p' v
@@ -2482,7 +2459,7 @@ global_interpretation set_reply_sc: non_reply_tcb_op "set_reply_obj_ref reply_sc
   apply (wpsimp wp: update_sk_obj_ref_wp)
   by (clarsimp simp: reply_tcb_reply_at_def obj_at_def)
 
-crunches set_sc_obj_ref, update_sk_obj_ref
+crunches update_sk_obj_ref
   for pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj P' t s)"
 
 lemma set_ntfn_obj_ref_sc_at_pred_n[wp]:
@@ -2495,20 +2472,5 @@ global_interpretation set_reply_obj_ref: non_sc_op "set_reply_obj_ref f r v"
   apply (erule_tac P=P in rsubst)
   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
   done
-
-lemma set_sc_obj_ref_wp:
-  "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) sc_ptr s
-                \<longrightarrow> Q (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext (f (K v) sc) n)\<rparr>)\<rbrace>
-    set_sc_obj_ref f sc_ptr v
-   \<lbrace>\<lambda>rv. Q\<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def wp: update_sched_context_wp)
-
-lemma set_tcb_obj_ref_wp:
-  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at (TCB tcb) t s
-                \<longrightarrow> Q (s\<lparr>kheap := kheap s(t \<mapsto> TCB (f (K v) tcb))\<rparr>)\<rbrace>
-    set_tcb_obj_ref f t v
-   \<lbrace>\<lambda>rv. Q\<rbrace>"
-  by (wpsimp simp: set_tcb_obj_ref_def wp: set_object_wp)
-     (clarsimp simp: get_tcb_ko_at)
 
 end

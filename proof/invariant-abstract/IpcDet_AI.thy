@@ -516,10 +516,6 @@ global_interpretation do_normal_transfer:
                                   set_message_info.tcb_cspace_agnostic_obj_at
                                   copy_mrs.tcb_cspace_agnostic_obj_at)
 
-global_interpretation update_sched_context: non_reply_op "update_sched_context ptr sc"
-  by unfold_locales (wpsimp simp: update_sched_context_def reply_at_ppred_def obj_at_def
-                              wp: set_object_wp get_object_wp)
-
 global_interpretation get_sched_context: non_reply_op "get_sched_context ptr"
   by unfold_locales wpsimp
 
@@ -800,8 +796,7 @@ lemma set_mrs_valid_replies[wp]:
 lemma sched_context_update_consumed_valid_replies[wp]:
   "sched_context_update_consumed p \<lbrace> valid_replies_pred P \<rbrace>"
   unfolding sched_context_update_consumed_def
-  by (wpsimp wp: update_sched_context_wp,
-      fastforce dest: ko_at_obj_congD)
+  by (wpsimp wp: update_sched_context_wp)
 
 crunch valid_replies[wp]: do_ipc_transfer "valid_replies_pred P"
   (simp: crunch_simps wp: crunch_wps ARM.make_arch_fault_msg_inv)
@@ -976,7 +971,7 @@ lemma reply_push_sender_sc_Some_invs:
   apply (rule hoare_seq_ext[OF _ gscrpls_sp[simplified]])
   apply (wpsimp wp: sched_context_donate_invs reply_sc_update_Some_invs
                     sc_replies_update_valid_replies_cons valid_sc_typ_list_all_reply
-                    valid_ioports_lift get_simple_ko_wp)
+                    valid_ioports_lift get_simple_ko_wp update_sched_context_valid_idle)
   apply (rule conjI, clarsimp simp: invs_def valid_state_def valid_pspace_def)
     (* sc_caller has empty sc_replies *)
    apply (rule conjI, clarsimp simp: reply_sc_reply_at_def obj_at_def is_reply_def)
@@ -1285,7 +1280,7 @@ lemma reply_push_st_tcb_at_Inactive:
   "\<lbrace>st_tcb_at ((=) Inactive) callee and K (callee \<noteq> caller)\<rbrace>
    reply_push caller callee reply_ptr can_donate
    \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) callee\<rbrace>"
-  unfolding reply_push_def update_sk_obj_ref_def set_sc_obj_ref_def comp_def
+  unfolding reply_push_def update_sk_obj_ref_def comp_def
   by (wpsimp wp: get_simple_ko_wp get_tcb_obj_ref_wp hoare_vcg_if_lift hoare_vcg_all_lift
                  sts_st_tcb_at_cases
      | wp_once hoare_drop_imp)+
@@ -1339,7 +1334,7 @@ lemma reply_push_invs_helper:
      apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                      wp: valid_irq_node_typ set_reply_sc_valid_replies_already_BlockedOnReply
                          valid_ioports_lift)
-    apply (wpsimp wp: set_sc_replies_valid_replies)
+    apply (wpsimp wp: set_sc_replies_valid_replies update_sched_context_valid_idle)
    apply clarsimp
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                           reply_sc_reply_at_def obj_at_def state_refs_of_def get_refs_def2
@@ -1365,7 +1360,7 @@ lemma reply_push_invs_helper:
      apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                      wp: valid_irq_node_typ set_reply_sc_valid_replies_already_BlockedOnReply
                          valid_ioports_lift valid_sc_typ_list_all_reply)
-    apply (wpsimp wp: set_sc_replies_valid_replies)
+    apply (wpsimp wp: set_sc_replies_valid_replies update_sched_context_valid_idle)
    apply (wpsimp simp: get_simple_ko_def get_object_def
                    wp: valid_sc_typ_list_all_reply valid_ioports_lift)
   apply (clarsimp split: if_splits, intro conjI impI)
@@ -2304,7 +2299,8 @@ lemma maybe_return_sc_valid_idle[wp]:
    maybe_return_sc ntfn_ptr tcb_ptr
    \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (wpsimp simp: maybe_return_sc_def get_tcb_obj_ref_def thread_get_def get_sk_obj_ref_def
-                      get_simple_ko_def get_object_def)
+                      get_simple_ko_def get_object_def
+                  wp: update_sched_context_valid_idle)
   apply (intro conjI)
     apply clarsimp
    apply (clarsimp simp: sym_refs_def)
@@ -2484,26 +2480,18 @@ lemma schedule_tcb_invs':
   apply wpsimp
   done
 
-lemma set_sc_obj_ref_cur_thread [wp]:
-  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_sc_obj_ref f ref new \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def)
-
-lemma set_sc_obj_ref_scheduler_action [wp]:
-  "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> set_sc_obj_ref f ref new \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def update_sched_context_def set_object_def get_object_def)
-
 lemma set_sc_obj_ref_bound_sc_tcb_at_cur_thread [wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
    set_sc_obj_ref f ref new
    \<lbrace>\<lambda>rv s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def update_sched_context_def set_object_def get_object_def
+  by (wpsimp simp: update_sched_context_def set_object_def get_object_def
                    pred_tcb_at_def obj_at_def)
 
 lemma set_sc_tcb_cur_sc [wp]:
   "\<lbrace>\<lambda>s. sc_ptr = cur_sc s\<rbrace>
    set_sc_obj_ref sc_tcb_update sc_ptr tcb_ptr
    \<lbrace>\<lambda>rv s. sc_tcb_sc_at ((=) tcb_ptr) (cur_sc s) s\<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def update_sched_context_def set_object_def get_object_def
+  by (wpsimp simp: update_sched_context_def set_object_def get_object_def
                    sc_tcb_sc_at_def obj_at_def)
 
 lemma set_tcb_sc_cur_thread [wp]:
@@ -2525,7 +2513,8 @@ lemma maybe_return_sc_schedule_tcb_helper1:
           scheduler_action s = resume_cur_thread \<and>
           bound_sc_tcb_at ((=) None) (cur_thread s) s \<and>
           sc_tcb_sc_at ((=) None) (cur_sc s) s\<rbrace>"
-  apply (wpsimp simp: valid_state_def valid_pspace_def)
+  apply (wpsimp simp: valid_state_def valid_pspace_def
+                  wp: update_sched_context_valid_idle)
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
   apply (rule conjI)
    apply (rule delta_sym_refs, simp)
@@ -2556,7 +2545,7 @@ lemma maybe_return_sc_schedule_tcb_helper2:
   \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
             simp_del: disj_not1
-                  wp: set_sc_tcb_cur_sc_tcb hoare_vcg_disj_lift)
+                  wp: update_sched_context_valid_idle sc_tcb_update_cur_sc_tcb hoare_vcg_disj_lift)
   apply (rule conjI)
    apply (rule delta_sym_refs, simp)
     apply (clarsimp split: if_splits)
