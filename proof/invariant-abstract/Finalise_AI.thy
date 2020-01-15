@@ -95,6 +95,8 @@ locale Finalise_AI_1 =
   assumes prepare_thread_delete_typ_at[wp]:
     "\<And> P T p a.
       \<lbrace>\<lambda>(s :: 'a state). P (typ_at T p s)\<rbrace> prepare_thread_delete a \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+  assumes prepare_thread_delete_cur_thread[wp]:
+    "\<And> P a. prepare_thread_delete a \<lbrace>\<lambda>s :: 'a state. P (cur_thread s)\<rbrace>"
   assumes finalise_cap_new_valid_cap[wp]:
     "\<And> cap x. \<lbrace>valid_cap cap :: 'a state \<Rightarrow> bool\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>"
   assumes arch_finalise_cap_invs[wp]:
@@ -134,6 +136,8 @@ locale Finalise_AI_1 =
     \<Longrightarrow> \<lbrace>cte_wp_at P p\<rbrace>
           deleting_irq_handler irq :: 'a state \<Rightarrow> (unit \<times> 'a state) set \<times> bool
         \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
+  assumes arch_finalise_cap_cur_thread[wp]:
+    "\<And> P a b. arch_finalise_cap a b \<lbrace>\<lambda>s :: 'a state. P (cur_thread s)\<rbrace>"
   assumes arch_finalise_cap_cte_wp_at[wp]:
     "\<And> P P' p a b.
     \<lbrace>\<lambda>(s :: 'a state). P (cte_wp_at P' p s)\<rbrace> arch_finalise_cap a b \<lbrace>\<lambda>_ s. P (cte_wp_at P' p s)\<rbrace>"

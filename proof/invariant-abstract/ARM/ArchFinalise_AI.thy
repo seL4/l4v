@@ -993,10 +993,9 @@ lemma (* deleting_irq_handler_cte_preserved *)[Finalise_AI_asms]:
   done
 
 
-crunch cte_wp_at[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (cte_wp_at P' p s)"
-  (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at)
-
-crunch cte_wp_at[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (cte_wp_at P' p s)"
+crunches arch_finalise_cap, prepare_thread_delete
+  for cte_wp_at[wp,Finalise_AI_asms]: "\<lambda>s. P (cte_wp_at P' p s)"
+  and cur_thread[wp,Finalise_AI_asms]: "\<lambda>s. P (cur_thread s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at)
 
 end

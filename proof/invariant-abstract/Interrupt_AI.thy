@@ -112,6 +112,8 @@ locale Interrupt_AI =
     "\<And> i. \<lbrace>ct_active and fault_tcbs_valid_states\<rbrace> invoke_irq_handler i \<lbrace>\<lambda>rv. ct_active :: 'a state \<Rightarrow> bool\<rbrace>"
   assumes invoke_irq_control_invs[wp]:
     "\<And> i. \<lbrace>invs and irq_control_inv_valid i\<rbrace> invoke_irq_control i \<lbrace>\<lambda>rv. invs :: 'a state \<Rightarrow> bool\<rbrace>"
+  assumes invoke_irq_control_cur_thread[wp]:
+    "\<And> i P. invoke_irq_control i \<lbrace>\<lambda>s :: 'a state. P (cur_thread s)\<rbrace>"
   assumes invoke_irq_control_ct_in_state[wp]:
     "\<And> i P. \<lbrace>ct_in_state P\<rbrace> invoke_irq_control i \<lbrace>\<lambda>rv. ct_in_state P :: 'a state \<Rightarrow> bool\<rbrace>"
   assumes resetTimer_invs[wp]:

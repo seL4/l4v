@@ -852,7 +852,8 @@ crunches install_tcb_cap
   for valid_cap[wp]: "valid_cap cap"
   and cte_at[wp]: "cte_at p"
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-  (wp: check_cap_inv)
+  and cur_thread[wp]: "(\<lambda>s. P (cur_thread s))"
+  (wp: crunch_wps preemption_point_inv check_cap_inv simp: crunch_simps)
 
 crunch typ_at[wp]: reorder_ntfn, reorder_ep, set_priority "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps)

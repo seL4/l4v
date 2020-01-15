@@ -226,12 +226,9 @@ lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_asms]:
   done
 
 crunches invoke_irq_control
-  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  for cur_thread[wp, Interrupt_AI_asms]: "\<lambda>s. P (cur_thread s)"
+  and ct_in_state[wp, Interrupt_AI_asms]: "ct_in_state P"
   (wp: crunch_wps simp: crunch_simps)
-
-crunches invoke_irq_control
-  for ct_in_state[wp, Interrupt_AI_asms]: "ct_in_state P"
-  (wp: ct_in_state_thread_state_lift)
 
 crunches invoke_irq_handler
   for ct_active[wp, Interrupt_AI_asms]: "ct_active"
