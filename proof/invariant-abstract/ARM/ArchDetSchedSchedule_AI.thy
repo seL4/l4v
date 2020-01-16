@@ -352,24 +352,21 @@ global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
 
 context Arch begin global_naming ARM
 
-lemma handle_hyp_fault_valid_sched[wp]:
-  "\<lbrace>valid_sched and invs and st_tcb_at active t and not_queued t and scheduler_act_not t
-      and ct_in_state activatable\<rbrace>
-    handle_hypervisor_fault t fault \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  by (cases fault; wpsimp wp: handle_fault_valid_sched simp: valid_fault_def)
+lemma handle_hyp_fault_trivial[wp]:
+  "\<lbrace>Q ()\<rbrace> handle_hypervisor_fault t fault \<lbrace>Q\<rbrace>"
+  by (cases fault; wpsimp)
 
-lemma handle_reserved_irq_valid_sched:
-  "\<lbrace>valid_sched and invs and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow>  scheduler_act_sane s \<comment>\<open>\<and> ct_not_queued s\<close>)\<rbrace>
-  handle_reserved_irq irq \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  unfolding handle_reserved_irq_def by (wpsimp)
+lemma handle_reserved_irq_trivial[wp]:
+  "\<lbrace>Q ()\<rbrace> handle_reserved_irq irq \<lbrace>Q\<rbrace>"
+  unfolding handle_reserved_irq_def
+  by (wpsimp)
 
 end
 
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault?: DetSchedSchedule_AI_handle_hypervisor_fault
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact handle_hyp_fault_valid_sched handle_reserved_irq_valid_sched
-                                              handle_hypervisor_fault_valid_machine_time handle_reserved_irq_valid_machine_time)?)
+  case 1 show ?case by (unfold_locales; wpsimp)
   qed
 
 end

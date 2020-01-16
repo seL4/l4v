@@ -2428,7 +2428,11 @@ lemma switch_to_thread_ct_in_cur_domain[wp]:
   by (wpsimp wp: valid_sched_wp)
 
 lemma switch_to_thread_valid_blocked[wp]:
-  "\<lbrace>valid_blocked and ct_in_q\<rbrace> switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked::'state_ext state \<Rightarrow> _\<rbrace>"
+  "\<lbrace>valid_blocked
+    and (\<lambda>s. active_sc_tcb_at (cur_thread s) s \<and> ct_not_in_release_q s
+             \<longrightarrow> ct_in_q s)\<rbrace>
+   switch_to_thread thread
+   \<lbrace>\<lambda>_. valid_blocked::'state_ext state \<Rightarrow> _\<rbrace>"
   supply if_split[split del]
   apply (wpsimp wp: valid_sched_wp)
   by (fastforce simp: valid_sched_wpsimps in_ready_q_def ct_in_q_def runnable_eq_active
@@ -2436,8 +2440,9 @@ lemma switch_to_thread_valid_blocked[wp]:
 
 lemma switch_to_thread_valid_sched:
   "\<lbrace>is_activatable t and in_cur_domain t and valid_sched_action and valid_ready_qs and valid_release_q and
-    valid_blocked and ct_in_q and valid_idle_etcb and released_ipc_queues and valid_machine_time
-    and active_sc_valid_refills\<rbrace>
+    valid_blocked and valid_idle_etcb and released_ipc_queues and valid_machine_time
+    and active_sc_valid_refills and (\<lambda>s. (active_sc_tcb_at (cur_thread s) s \<and> ct_not_in_release_q s)
+             \<longrightarrow> ct_in_q s)\<rbrace>
     switch_to_thread t
    \<lbrace>\<lambda>_. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: valid_sched_def, simp add: ct_in_cur_domain_def)
@@ -2805,7 +2810,8 @@ lemma not_queued_dequeue_but_was_queued_eq:
 lemma choose_thread_spec_valid_blocked[valid_sched_wpsimps]:
   assumes "valid_blocked_2 qs rlq choose_new_thread ct tcb_sts tcb_scps sc_refill_cfgs"
   assumes "choose_thread_spec_2 cdom ctime it qs rlq etcbs tcb_scps sc_refill_cfgs ct' qs'"
-  assumes "ct_in_q_2 ct qs tcb_sts"
+  assumes "active_sc_tcb_at_pred tcb_scps sc_refill_cfgs ct \<and> not_in_release_q_2 rlq ct
+           \<Longrightarrow> ct_in_q_2 ct qs tcb_sts"
   shows "valid_blocked_2 qs' rlq resume_cur_thread ct' tcb_sts tcb_scps sc_refill_cfgs"
   using assms
   by (fastforce simp: choose_thread_spec_def Let_def not_queued_dequeue_but_was_queued_eq
@@ -2849,7 +2855,10 @@ lemma schedule_choose_new_thread_valid_ready_qs[wp]:
 lemma schedule_choose_new_thread_valid_sched:
   "\<lbrace> valid_idle and valid_idle_etcb and valid_ready_qs and valid_release_q and valid_blocked
      and (\<lambda>s. scheduler_action s = choose_new_thread)
-     and ct_in_q and released_ipc_queues and valid_machine_time and active_sc_valid_refills\<rbrace>
+     and (\<lambda>s. active_sc_tcb_at (cur_thread s) s \<and> ct_not_in_release_q s \<longrightarrow> ct_in_q s)
+     and released_ipc_queues
+     and valid_machine_time
+     and active_sc_valid_refills\<rbrace>
    schedule_choose_new_thread
    \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: valid_sched_wpsimps wp: valid_sched_wp)
@@ -8022,7 +8031,6 @@ lemma active_sc_tcb_at_budget_sufficient:
 lemma awaken_valid_sched:
   "\<lbrace>valid_sched
     and valid_idle
-    and (\<lambda>s. active_sc_tcb_at (cur_thread s) s)
     and (\<lambda>s. cur_thread s \<in> set (release_queue s) \<longrightarrow> \<not> budget_ready (cur_thread s) s)\<rbrace>
    awaken
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
@@ -8041,6 +8049,7 @@ lemma awaken_valid_sched:
      apply (drule st_tcb_at_idle_thread[simplified tcb_at_kh_simps], simp, simp)
     apply (rule valid_blocked_dropWhile_rlq; clarsimp)
    apply (clarsimp dest!: set_takeWhileD)
+   apply (frule valid_release_q_active_sc, simp)
    apply (clarsimp simp: fun_of_m_get_tcb_refill_ready opt_map_def map_project_def pred_map_simps)
   apply (intro allI ballI)
   apply (clarsimp simp: valid_release_q_def)
@@ -9695,23 +9704,22 @@ lemma budget_ready_def2:
              split: option.split)
 
 lemma dropWhile_release_queue:
- "\<lbrakk> valid_release_q s; \<forall>t. in_release_q t s \<longrightarrow> budget_sufficient t s;
+ "\<lbrakk> valid_release_q s; active_sc_valid_refills s;
    t \<in> set (dropWhile (\<lambda>t. the (fun_of_m (get_tcb_refill_ready t) s)) (release_queue s))\<rbrakk>
    \<Longrightarrow> \<not>budget_ready t s"
   apply (frule set_dropWhileD)
   apply (frule (1) valid_release_q_active_sc)
   apply (frule valid_release_q_sorted)
-  apply (subgoal_tac
+  apply (prop_tac
       "(dropWhile (\<lambda>t. the (fun_of_m (get_tcb_refill_ready t) s))
                 (release_queue s)) =
            (dropWhile (\<lambda>t. tcb_ready_time t s \<le> (cur_time s) + kernelWCET_ticks)
                 (release_queue s))")
-   prefer 2
+
    apply (rule dropWhile_cong, clarsimp)
-   apply (clarsimp simp:  simp: valid_release_q_def)
-   apply (drule_tac x=x in bspec, simp)
-   apply (drule_tac x=x in spec, clarsimp simp: in_release_q_def)
-   apply (subst get_tcb_refill_ready_simp2, simp+)
+   apply (subst get_tcb_refill_ready_simp2)
+   apply (erule (2) active_sc_tcb_at_budget_sufficient[OF valid_release_q_active_sc])
+  apply simp+
   apply (thin_tac "(dropWhile _ _)=  _")
   apply (frule sorted_wrt_dropWhile_mono[rotated, where f="\<lambda>t. tcb_ready_time t s"])
     apply (fastforce)
@@ -9721,31 +9729,28 @@ lemma dropWhile_release_queue:
   done
 
 lemma awaken_cur_thread_in_rlq:
-  "\<lbrace> \<lambda>s. cur_tcb s
-    \<and> active_sc_tcb_at (cur_thread s) s
-    \<and> (\<forall>t. in_release_q t s \<longrightarrow> budget_sufficient t s)
-    \<and> valid_release_q s \<rbrace>
+  "\<lbrace>active_sc_valid_refills
+    and cur_tcb
+    and valid_release_q \<rbrace>
       awaken
    \<lbrace>\<lambda>rv s. in_release_q (cur_thread s) s \<longrightarrow> \<not> budget_ready (cur_thread s) s\<rbrace>"
   apply (clarsimp simp: awaken_def)
   apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift simp: thread_get_def)
   apply (simp add: dropWhile_eq_drop[symmetric] in_release_q_def in_queue_2_def)
-  apply (frule dropWhile_release_queue)
-    apply (simp add: in_release_q_def)
-   apply fast
-  by blast
+  apply (frule (2) dropWhile_release_queue)
+  by simp
 
 lemma awaken_cur_thread_not_in_rlq:
-  "\<lbrace> \<lambda>s. cur_tcb s \<and> valid_release_q s
-       \<and> budget_sufficient (cur_thread s) s \<and>
-        (not_in_release_q (cur_thread s) s \<longrightarrow>
-        budget_ready (cur_thread s) s) \<rbrace>
+  "\<lbrace>(\<lambda>s. not_in_release_q (cur_thread s) s \<longrightarrow> budget_ready (cur_thread s) s)
+    and cur_tcb
+    and valid_release_q\<rbrace>
       awaken
     \<lbrace>\<lambda>rv s. ct_not_in_release_q s \<longrightarrow> budget_ready (cur_thread s) s\<rbrace>"
   apply (clarsimp simp: awaken_def not_in_release_q_def)
   apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift hoare_vcg_conj_lift simp: thread_get_def)
   apply (clarsimp simp: dropWhile_eq_drop[symmetric])
   apply (drule (1) dropWhile_dropped_P[rotated])
+  apply (frule (1) valid_release_q_active_sc)
   apply (clarsimp simp: fun_of_m_get_tcb_refill_budget_ready vs_all_heap_simps)
   done
 
