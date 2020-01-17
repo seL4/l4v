@@ -36,6 +36,8 @@ text \<open>Switch to a thread's virtual address space context. Clear the load-e
 definition
   arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_switch_to_thread t \<equiv> do
+     t' \<leftarrow> gets_the $ get_tcb t;
+     vcpu_switch $ tcb_vcpu $ tcb_arch t';
      set_vm_root t;
      do_machine_op $ clearExMonitor
    od"

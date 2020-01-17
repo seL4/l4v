@@ -1018,15 +1018,17 @@ crunches
   vcpuUpdate for vcpu_at'[wp]: "\<lambda>s. P (vcpu_at' p s)"
 
 lemma vcpuSwitch_corres:
+  assumes "vcpu' = vcpu"
+  shows
   "corres dc (\<lambda>s. (vcpu \<noteq> None \<longrightarrow> vcpu_at  (the vcpu) s) \<and>
                   ((arm_current_vcpu \<circ> arch_state) s \<noteq> None
                     \<longrightarrow> vcpu_at ((fst \<circ> the \<circ> arm_current_vcpu \<circ> arch_state) s) s))
-             (\<lambda>s. (vcpu \<noteq> None \<longrightarrow> vcpu_at'  (the vcpu) s) \<and>
+             (\<lambda>s. (vcpu' \<noteq> None \<longrightarrow> vcpu_at'  (the vcpu') s) \<and>
                   ((armHSCurVCPU \<circ> ksArchState) s \<noteq> None
                     \<longrightarrow> vcpu_at' ((fst \<circ> the \<circ> armHSCurVCPU \<circ> ksArchState) s) s) \<and>
                   no_0_obj' s)
              (vcpu_switch vcpu)
-             (vcpuSwitch vcpu)"
+             (vcpuSwitch vcpu')"
   proof -
     have modify_current_vcpu:
       "\<And>a b. corres dc \<top> \<top> (modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := Some (a, b)\<rparr>\<rparr>))
@@ -1041,7 +1043,7 @@ lemma vcpuSwitch_corres:
              simp add: state_relation_def arch_state_relation_def)
       done
     show ?thesis
-      apply (simp add: vcpu_switch_def vcpuSwitch_def)
+      apply (simp add: vcpu_switch_def vcpuSwitch_def assms)
       apply (cases vcpu)
          apply (all \<open>simp, rule corres_split'[OF  _ _ gets_sp gets_sp],
                            rule corres_guard_imp[OF get_current_vcpu TrueI TrueI],
@@ -1075,20 +1077,23 @@ lemma aligned_distinct_relation_vcpu_atI'[elim]:
   done
 
 lemma vcpuSwitch_corres':
+  assumes "vcpu' = vcpu"
+  shows
   "corres dc (\<lambda>s. (vcpu \<noteq> None \<longrightarrow> vcpu_at  (the vcpu) s) \<and>
                   ((arm_current_vcpu \<circ> arch_state) s \<noteq> None
                     \<longrightarrow> vcpu_at ((fst \<circ> the \<circ> arm_current_vcpu \<circ> arch_state) s) s))
              (pspace_aligned' and pspace_distinct' and no_0_obj')
              (vcpu_switch vcpu)
-             (vcpuSwitch vcpu)"
+             (vcpuSwitch vcpu')"
   apply (rule stronger_corres_guard_imp,
-         rule vcpuSwitch_corres)
-       apply simp
+         rule vcpuSwitch_corres[OF assms])
+   apply simp
+  apply (simp add: assms)
   apply (rule conjI)
    apply clarsimp
-    apply (rule aligned_distinct_relation_vcpu_atI' ; clarsimp simp add: state_relation_def, assumption?)
-    apply (clarsimp simp add: state_relation_def arch_state_relation_def)
-    apply (rule aligned_distinct_relation_vcpu_atI'; assumption)
+   apply (rule aligned_distinct_relation_vcpu_atI' ; clarsimp simp add: state_relation_def, assumption?)
+  apply (clarsimp simp add: state_relation_def arch_state_relation_def)
+  apply (rule aligned_distinct_relation_vcpu_atI'; assumption)
   done
 
 lemma no_fail_setCurrentPDPL2: "no_fail \<top> (setCurrentPDPL2 w)"
@@ -1207,25 +1212,16 @@ proof -
                 apply (erule notE, rule_tac a=x in ranI)
                 apply simp
                apply (rule corres_split_eqrE [OF _ find_pd_for_asid_corres])
-                 apply (rule whenE_throwError_corres)
-                   apply (simp add: lookup_failure_map_def)
+                  apply (rule whenE_throwError_corres)
+                    apply (simp add: lookup_failure_map_def)
+                   apply simp
                   apply simp
+                  apply (rule arm_context_switch_corres)
                  apply simp
-                 apply (rule corres_split[OF _ arm_context_switch_corres])
-                   apply (rule corres_split[OF _ get_tcb_corres])
-                     apply (subgoal_tac "tcb_vcpu (tcb_arch rv) = atcbVCPUPtr (tcbArch rv')")
-                      apply simp
-                      apply (rule_tac P="valid_arch_state and valid_objs and ko_at (TCB rv) t" and
-                                      P'="pspace_aligned' and pspace_distinct' and no_0_obj'"
-                                      in corres_guard_imp)
-                        apply (rule vcpuSwitch_corres'[simplified dc_def])
-                       apply (fastforce intro: valid_tcb_vcpu[OF valid_objs_valid_tcb] valid_arch_state_curr_vcpu)
-                      apply (assumption)
-                     apply (clarsimp simp add: tcb_relation_def arch_tcb_relation_def)
-                 apply (wpsimp simp: armv_contextSwitch_def if_apply_def2 wp: assert_get_tcb_ko')+
-            apply ((wp find_pd_for_asid_pd_at_asid_again
-                  | simp add: if_apply_def2 | wp (once) hoare_drop_imps)+)
-
+                apply simp
+                apply (wpsimp simp: armv_contextSwitch_def if_apply_def2 wp: assert_get_tcb_ko')+
+                apply ((wp find_pd_for_asid_pd_at_asid_again
+                        | simp add: if_apply_def2 | wp (once) hoare_drop_imps)+)
             apply clarsimp
             apply (frule page_directory_cap_pd_at_uniq, simp+)
             apply (frule(1) cte_wp_at_valid_objs_valid_cap)
@@ -4032,11 +4028,33 @@ lemma setVMRoot_valid_arch_state'[wp]:
   apply ((wpsimp wp: hoare_vcg_ex_lift hoare_drop_imps
                     getObject_tcb_wp valid_case_option_post_wp'
                simp: if_apply_def2
-    | wp hoare_vcg_all_lift)+)
-  apply (fastforce cong: option.case_cong)
+          | wp hoare_vcg_all_lift)+)
   done
 
-lemma getObject_tcb_hyp_invs': "\<lbrace>invs'\<rbrace> getObject p
+lemma modifyArchState_hyp[wp]:
+  "modifyArchState x \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  by (wpsimp simp: modifyArchState_def wp: | subst doMachineOp_bind)+
+
+lemma vcpuSwitch_hyp[wp]:
+  "vcpuSwitch x \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  apply (simp add: vcpuSwitch_def)
+  apply wpc
+    apply wpsimp
+   apply wpsimp
+  apply (clarsimp simp: ko_wp_at'_def)
+  done
+
+lemma switchToThread_valid_arch_state[wp]:
+  "\<lbrace>valid_arch_state' and live_vcpu_at_tcb p\<rbrace> ARM_HYP_H.switchToThread p \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  apply (simp add: ARM_HYP_H.switchToThread_def)
+  by (wpsimp wp: hoare_vcg_ex_lift getObject_tcb_wp valid_case_option_post_wp')+
+
+crunches switchToThread
+  for valid_arch_state'[wp]: valid_arch_state'
+  (ignore: loadObject getObject wp: hoare_vcg_ex_lift)
+
+lemma getObject_tcb_hyp_sym_refs:
+      "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of' s)\<rbrace> getObject p
        \<lbrace>\<lambda>rv. case atcbVCPUPtr (tcbArch rv) of None \<Rightarrow> \<lambda>_. True
              | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x\<rbrace>"
   apply (wpsimp wp: getObject_tcb_wp)
@@ -4046,7 +4064,6 @@ lemma getObject_tcb_hyp_invs': "\<lbrace>invs'\<rbrace> getObject p
   apply (rename_tac tcb)
   apply (rule_tac x=tcb in exI; rule conjI, clarsimp simp: obj_at'_def projectKOs)
   apply (clarsimp, rule context_conjI, clarsimp simp: obj_at'_def projectKOs)
-  apply (frule invs_sym_hyp')
   apply (drule ko_at_state_hyp_refs_ofD')
   apply (simp add: hyp_refs_of'_def sym_refs_def)
   apply (erule_tac x=p in allE, simp)
@@ -4058,39 +4075,16 @@ lemma getObject_tcb_hyp_invs': "\<lbrace>invs'\<rbrace> getObject p
 
 lemma setVMRoot_invs'[wp]:
   "\<lbrace>invs'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  using [[goals_limit=12]]
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
-   apply (wp hoare_drop_imps getObject_tcb_hyp_invs'
+   apply (wp hoare_drop_imps getObject_tcb_hyp_sym_refs
           | wpcw
           | simp add: if_apply_def2 checkPDNotInASIDMap_def split del: if_split)+
-  done
-
-lemma getObject_tcb_hyp_invs_no_cicd': "\<lbrace>invs_no_cicd'\<rbrace> getObject p
-       \<lbrace>\<lambda>rv. case atcbVCPUPtr (tcbArch rv) of None \<Rightarrow> \<lambda>_. True
-             | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x\<rbrace>"
-  apply (wpsimp wp: getObject_tcb_wp)
-  apply (clarsimp simp: typ_at_tcb'[symmetric] typ_at'_def ko_wp_at'_def[of _ p]
-                split: option.splits)
-  apply (case_tac ko; simp)
-  apply (rename_tac tcb)
-  apply (rule_tac x=tcb in exI; rule conjI, clarsimp simp: obj_at'_def projectKOs)
-  apply (clarsimp, rule context_conjI, clarsimp simp: obj_at'_def projectKOs)
-  apply (subgoal_tac "sym_refs (state_hyp_refs_of' s)")
-   prefer 2
-   apply (simp add: invs_no_cicd'_def)
-  apply (drule ko_at_state_hyp_refs_ofD')
-  apply (simp add: hyp_refs_of'_def sym_refs_def)
-  apply (erule_tac x=p in allE, simp)
-  apply (drule state_hyp_refs_of'_elemD)
-  apply (clarsimp simp: hyp_refs_of_rev')
-  apply (simp add: ko_wp_at'_def, erule exE,
-         clarsimp simp: is_vcpu'_def hyp_live'_def arch_live'_def)
   done
 
 lemma setVMRoot_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
-   apply (wp hoare_drop_imps getObject_tcb_hyp_invs_no_cicd'
+   apply (wp hoare_drop_imps getObject_tcb_hyp_sym_refs
              armv_contextSwitch_invs_no_cicd' getHWASID_invs_no_cicd'
              dmo_setCurrentPD_invs_no_cicd'
           | wpcw

@@ -96,7 +96,8 @@ crunch ksDomSchedule_inv[wp]: performInvocation "\<lambda>s. P (ksDomSchedule s)
    ignore: getObject setObject)
 
 crunch ksDomSchedule_inv[wp]: schedule "\<lambda>s. P (ksDomSchedule s)"
-  (ignore: setNextPC threadSet simp:crunch_simps bitmap_fun_defs wp:findM_inv hoare_drop_imps)
+  (ignore: setNextPC loadObject getObject threadSet simp:crunch_simps bitmap_fun_defs
+       wp: findM_inv hoare_drop_imps)
 
 crunch ksDomSchedule_inv[wp]: activateThread "\<lambda>s. P (ksDomSchedule s)"
 
@@ -224,6 +225,7 @@ crunch ksDomainTime_inv[wp]: doUserOp "(\<lambda>s. P (ksDomainTime s))"
   (wp: select_wp)
 
 crunch ksDomainTime_inv[wp]: getIRQState, chooseThread, handleYield "(\<lambda>s. P (ksDomainTime s))"
+  (ignore: loadObject getObject wp: crunch_wps)
 
 crunch ksDomainTime_inv[wp]: handleSend, handleReply "(\<lambda>s. P (ksDomainTime s))"
   (wp: hoare_drop_imps syscall_valid'

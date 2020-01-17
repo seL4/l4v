@@ -2301,6 +2301,10 @@ where
  "state_hyp_refs_of s \<equiv> \<lambda>x. case (kheap s x) of Some ko \<Rightarrow> hyp_refs_of ko | None \<Rightarrow> {}"
 
 
+lemma in_state_hyp_refs_of:
+  "ref \<in> state_hyp_refs_of s p \<longleftrightarrow> (\<exists>ko. kheap s p = Some ko \<and> ref \<in> hyp_refs_of ko)"
+  by (simp add: state_hyp_refs_of_def split: option.split)
+
 definition
   state_refs_of_a :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set"
 where

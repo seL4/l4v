@@ -2120,7 +2120,8 @@ lemma handleInterrupt_valid_duplicates'[wp]:
 
 crunch valid_duplicates' [wp]:
   schedule "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
-  (ignore: setNextPC clearExMonitor threadSet simp:crunch_simps wp:findM_inv hoare_drop_imps)
+  (ignore: setNextPC clearExMonitor threadSet loadObject getObject
+     simp: crunch_simps wp:findM_inv hoare_drop_imps)
 
 lemma activate_sch_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. ct_in_state' activatable' s \<and> vs_valid_duplicates' (ksPSpace s)\<rbrace>

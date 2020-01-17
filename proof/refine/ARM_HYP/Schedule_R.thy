@@ -85,23 +85,106 @@ lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_order.order.refl]
 (* Levity: added (20090721 10:56:29) *)
 declare objBitsT_koTypeOf [simp]
 
+crunches vcpu_switch
+  for valid_asid_map[wp]: valid_asid_map
+  and pspace_aligned[wp]: pspace_aligned
+  and pspace_distinct[wp]: pspace_distinct
+  and valid_vspace_objs[wp]: valid_vspace_objs
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma vs_refs_pages_vcpu:
+  "vs_refs_pages (ArchObj (VCPU vcpu)) = {}"
+  by (simp add: vs_refs_pages_def)
+
+lemma vs_lookup_pages1_vcpu_update:
+  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> vs_lookup_pages1 (s\<lparr>kheap := kheap s(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
+                                      = vs_lookup_pages1 s"
+  by (clarsimp intro!: set_eqI simp: vs_lookup_pages1_def vs_refs_pages_vcpu obj_at_def)
+
+lemma vs_lookup_pages_vcpu_update:
+  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> vs_lookup_pages (s\<lparr>kheap := kheap s(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
+                                      = vs_lookup_pages s"
+  by (clarsimp simp: vs_lookup_pages_def vs_lookup_pages1_vcpu_update)
+
+lemma valid_vs_lookup_vcpu_update:
+  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> valid_vs_lookup (s\<lparr>kheap := kheap s(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
+                                      = valid_vs_lookup s"
+  apply (clarsimp simp: valid_vs_lookup_def caps_of_state_VCPU_update)
+  apply (rule all_cong1)
+  apply (rule all_cong1)
+  apply (rule imp_cong)
+   apply (simp add: vs_lookup_pages_vcpu_update)
+  apply simp
+  done
+
+lemma set_vpcu_valid_vs_lookup[wp]:
+  "set_vcpu vcpuPtr vcpu \<lbrace>\<lambda>s. P (valid_vs_lookup s)\<rbrace>"
+  apply (rule hoare_pre, rule set_vcpu_wp)
+  apply (simp add: valid_vs_lookup_vcpu_update)
+  done
+
+lemma vs_lookup_pages1_current_vcpu:
+  "vs_lookup_pages1 (s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := Some x\<rparr>\<rparr>)
+   = vs_lookup_pages1 s"
+  by (clarsimp simp: vs_lookup_pages1_def)
+
+lemma vs_lookup_pages_current_vcpu:
+  "vs_lookup_pages (s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := Some x\<rparr>\<rparr>)
+   = vs_lookup_pages s"
+  by (clarsimp simp: vs_lookup_pages_def vs_lookup_pages1_current_vcpu)
+
+lemma valid_vs_lookup_current_vcpu:
+  "valid_vs_lookup (s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := Some x\<rparr>\<rparr>)
+   = valid_vs_lookup s"
+  apply (clarsimp simp: valid_vs_lookup_def caps_of_state_VCPU_update)
+  apply (rule all_cong1)
+  apply (rule all_cong1)
+  apply (rule imp_cong)
+   apply (simp add: vs_lookup_pages_current_vcpu)
+  apply simp
+  done
+
+crunches vcpu_switch
+  for valid_vs_lookup[wp]: "\<lambda>s. P (valid_vs_lookup s)"
+  (simp: crunch_simps valid_vs_lookup_current_vcpu wp: crunch_wps)
+
 lemma arch_switch_thread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
               and valid_vspace_objs and pspace_aligned and pspace_distinct
               and valid_vs_lookup and valid_global_objs
               and unique_table_refs o caps_of_state
-              and st_tcb_at runnable t)
-             (valid_arch_state' and valid_pspace' and st_tcb_at' runnable' t)
+              and st_tcb_at runnable t and (\<lambda>s. sym_refs (state_hyp_refs_of s)))
+             (valid_arch_state' and valid_pspace' and st_tcb_at' runnable' t
+              and (\<lambda>s. sym_refs (state_hyp_refs_of' s)))
              (arch_switch_to_thread t) (Arch.switchToThread t)"
   apply (simp add: arch_switch_to_thread_def ARM_HYP_H.switchToThread_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split' [OF set_vm_root_corres])
-      apply (rule corres_machine_op[OF corres_rel_imp])
-      apply (rule corres_underlying_trivial)
-       apply (simp add: ARM_HYP.clearExMonitor_def | wp)+
-   apply clarsimp
-   apply (erule st_tcb_at_tcb_at)
-  apply (clarsimp simp: valid_pspace'_def)
+    apply (rule corres_split[OF _ get_tcb_corres])
+      apply (rule corres_split[OF _ vcpuSwitch_corres'])
+         apply (simp add: tcb_relation_def arch_tcb_relation_def)
+         apply (rule corres_split[OF _ set_vm_root_corres])
+           apply (rule corres_machine_op[OF corres_rel_imp])
+            apply (rule corres_underlying_trivial)
+            apply wpsimp
+            apply (clarsimp simp: ARM_HYP.clearExMonitor_def)+
+          apply wpsimp
+         apply wpsimp
+        apply (clarsimp simp: tcb_relation_def arch_tcb_relation_def)
+       apply (wpsimp wp: tcb_at_typ_at simp:)
+      apply (wpsimp simp: ARM_HYP.clearExMonitor_def wp: tcb_at_typ_at)+
+    apply (wp getObject_tcb_hyp_sym_refs)
+   apply (clarsimp simp: st_tcb_at_tcb_at)
+   apply (clarsimp simp: get_tcb_ko_at[unfolded obj_at_def])
+   apply (rule conjI)
+    apply (erule (1) pspace_valid_objsE)
+    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_arch_tcb_def)
+   apply (rule conjI)
+    apply (clarsimp simp: valid_arch_state_def obj_at_def is_vcpu_def)
+   apply (clarsimp simp: )
+   apply (rename_tac tcb vcpuPtr)
+   apply (drule_tac y=vcpuPtr and x=t and tp=HypTCBRef in sym_refsE
+          ; clarsimp simp: in_state_hyp_refs_of hyp_refs_of_rev obj_at_def hyp_live_def arch_live_def)
+  apply fastforce
   done
 
 lemma schedule_choose_new_thread_sched_act_rct[wp]:
@@ -682,35 +765,34 @@ lemma cur_thread_update_corres:
 lemma arch_switch_thread_tcb_at' [wp]: "\<lbrace>tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
   by (unfold ARM_HYP_H.switchToThread_def, wp typ_at_lift_tcb')
 
-crunch typ_at'[wp]: "switchToThread" "\<lambda>s. P (typ_at' T p s)"
-  (ignore: clearExMonitor)
+crunches switchToThread, Arch.switchToThread
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  (ignore: getObject)
 
 lemma Arch_switchToThread_pred_tcb'[wp]:
   "\<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>
    Arch.switchToThread t \<lbrace>\<lambda>rv s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
 proof -
   have pos: "\<And>P t t'. \<lbrace>pred_tcb_at' proj P t'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. pred_tcb_at' proj P t'\<rbrace>"
-    apply (simp add:  pred_tcb_at'_def ARM_HYP_H.switchToThread_def)
-    apply (rule hoare_seq_ext)+
-       apply (rule doMachineOp_obj_at)
-     apply (rule setVMRoot_obj_at'_no_vcpu)
-    done
+    apply (simp add: pred_tcb_at'_def ARM_HYP_H.switchToThread_def)
+    by wpsimp
   show ?thesis
     apply (rule P_bool_lift [OF pos])
     by (rule lift_neg_pred_tcb_at' [OF ArchThreadDecls_H_ARM_HYP_H_switchToThread_typ_at' pos])
 qed
 
-crunch valid_queues[wp]: "Arch.switchToThread" "Invariants_H.valid_queues"
-(wp: crunch_wps simp: crunch_simps ignore: clearExMonitor ignore: getObject updateObject)
+crunches Arch.switchToThread
+  for valid_queues[wp]: Invariants_H.valid_queues
+  (wp: crunch_wps simp: crunch_simps ignore: clearExMonitor ignore: getObject updateObject)
 
 lemma switch_thread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
                 and valid_vspace_objs and pspace_aligned and pspace_distinct
                 and valid_vs_lookup and valid_global_objs
                 and unique_table_refs o caps_of_state
-                and st_tcb_at runnable t and valid_etcbs)
+                and st_tcb_at runnable t and valid_etcbs and (\<lambda>s. sym_refs (state_hyp_refs_of s)))
              (valid_arch_state' and valid_pspace' and Invariants_H.valid_queues
-                and st_tcb_at' runnable' t and cur_tcb')
+                and st_tcb_at' runnable' t and cur_tcb' and (\<lambda>s. sym_refs (state_hyp_refs_of' s)))
              (switch_to_thread t) (switchToThread t)"
   (is "corres _ ?PA ?PH _ _")
 
@@ -727,7 +809,7 @@ proof -
     apply (rule corres_guard_imp)
       apply (rule corres_split [OF _ arch_switch_thread_corres])
         apply (rule corres_split[OF cur_thread_update_corres tcbSchedDequeue_corres])
-         apply (wp|clarsimp simp: tcb_at_is_etcb_at st_tcb_at_tcb_at)+
+         apply (wpsimp simp: tcb_at_is_etcb_at st_tcb_at_tcb_at)+
     done
 
   show ?thesis
@@ -735,10 +817,10 @@ proof -
     apply (simp add: switch_to_thread_def Thread_H.switchToThread_def)
     apply (rule corres_symb_exec_l [where Q = "\<lambda> s rv. (?PA and (=) rv) s",
                                     OF corres_symb_exec_l [OF mainpart]])
-    apply (auto intro: no_fail_pre [OF no_fail_assert]
-                      no_fail_pre [OF no_fail_get]
-                dest: st_tcb_at_tcb_at [THEN get_tcb_at] |
-           simp add: assert_def | wp)+
+         apply (auto intro: no_fail_pre [OF no_fail_assert]
+                            no_fail_pre [OF no_fail_get]
+                      dest: st_tcb_at_tcb_at [THEN get_tcb_at]
+                | simp add: assert_def | wp)+
     done
 qed
 
@@ -750,17 +832,14 @@ lemma tcb_at_idle_thread_lift:
   apply (rule hoare_lift_Pf[where f=idle_thread])
   by (wpsimp wp: T I)+
 
-crunch valid_asid_map[wp]: vcpu_update, vgic_update, vcpu_disable, vcpu_restore, vcpu_enable "valid_asid_map"
+crunches vcpu_update, vgic_update, vcpu_disable, vcpu_restore, vcpu_enable
+  for valid_asid_map[wp]: valid_asid_map
   (simp: crunch_simps wp: crunch_wps)
-
-lemma vcpu_switch_valid_asid_map[wp]:
-  "\<lbrace>valid_asid_map\<rbrace> vcpu_switch v \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
-  by (wpsimp simp: vcpu_switch_def)
 
 lemma valid_vs_lookup_arm_current_vcpu_inv[simp]: "valid_vs_lookup (s\<lparr>arch_state := arch_state s \<lparr>arm_current_vcpu := X\<rparr>\<rparr>) = valid_vs_lookup s"
   by (clarsimp simp: valid_vs_lookup_def vs_lookup_pages_def vs_lookup_pages1_def)
 
-lemma vs_lookup_pages1_vcpu_update:
+lemma vs_lookup_pages1_vcpu_update':
   "kheap s p = Some (ArchObj (VCPU x)) \<Longrightarrow>
     vs_lookup_pages1 (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (VCPU x'))\<rparr>) = vs_lookup_pages1 s"
   by (clarsimp simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def intro!: set_eqI)
@@ -768,24 +847,7 @@ lemma vs_lookup_pages1_vcpu_update:
 lemma vs_lookup_pages_vcpu_update':
   "kheap s y = Some (ArchObj (VCPU x)) \<Longrightarrow>
     (ref \<unrhd> p) s = (ref \<unrhd> p) (s\<lparr>kheap := kheap s(y \<mapsto> ArchObj (VCPU x'))\<rparr>)"
-  by (clarsimp simp: vs_lookup_pages_def vs_lookup_pages1_vcpu_update)
-
-lemma set_vcpu_valid_vs_lookup[wp]:
-  "\<lbrace>valid_vs_lookup\<rbrace> set_vcpu x v \<lbrace>\<lambda>rv. valid_vs_lookup\<rbrace>"
-  apply (wpsimp wp: set_object_wp_strong simp: set_vcpu_def obj_at_def)
-  apply (case_tac ko; clarsimp simp: a_type_def split: if_splits)
-  apply (case_tac x5; clarsimp split: if_splits)
-  apply (erule valid_vs_lookupE)
-  apply (subst vs_lookup_pages_vcpu_update', assumption, assumption)
-  apply simp
-  by (rule caps_of_state_VCPU_update[symmetric], simp add: obj_at_def)
-
-crunch valid_vs_lookup[wp]: vcpu_restore, vcpu_disable, vcpu_save "valid_vs_lookup"
-  (wp: crunch_wps)
-
-lemma vcpu_switch_valid_vs_lookup[wp]:
-  "\<lbrace>valid_vs_lookup\<rbrace> vcpu_switch v \<lbrace>\<lambda>rv. valid_vs_lookup\<rbrace>"
-  by (wpsimp simp: vcpu_switch_def)
+  by (clarsimp simp: vs_lookup_pages_def vs_lookup_pages1_vcpu_update')
 
 lemma tcb_at'_ksIdleThread_lift:
   assumes T: "\<And>T' t. \<lbrace>typ_at' T' t\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T' t\<rbrace>"
@@ -995,9 +1057,7 @@ lemma clearExMonitor_invs'[wp]:
 
 lemma Arch_switchToThread_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: ARM_HYP_H.switchToThread_def)
-  apply (wp; auto)
-  done
+  by (wpsimp simp: ARM_HYP_H.switchToThread_def wp: getObject_tcb_hyp_sym_refs)
 
 crunch ksCurDomain[wp]: "Arch.switchToThread" "\<lambda>s. P (ksCurDomain s)"
 (simp: crunch_simps ignore: getObject updateObject)
@@ -1042,10 +1102,11 @@ lemma Arch_switchToThread_obj_at[wp]:
   "\<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>
    Arch.switchToThread t
    \<lbrace>\<lambda>rv. obj_at' (P \<circ> tcbState) t\<rbrace>"
-  apply (simp add: ARM_HYP_H.switchToThread_def )
+  apply (simp add: ARM_HYP_H.switchToThread_def)
   apply (rule hoare_seq_ext)+
-   apply (rule doMachineOp_obj_at)
-  apply (rule setVMRoot_obj_at'_no_vcpu)
+     apply (rule doMachineOp_obj_at)
+    apply (rule setVMRoot_obj_at'_no_vcpu)
+   apply wpsimp+
   done
 
 declare doMachineOp_obj_at[wp]
@@ -1142,8 +1203,8 @@ lemma asUser_utr[wp]:
 
 lemma Arch_switchToThread_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (simp add: ARM_HYP_H.switchToThread_def)
-  by (wp|rule setVMRoot_invs_no_cicd')+
+  apply (wpsimp wp: getObject_tcb_hyp_sym_refs simp: ARM_HYP_H.switchToThread_def)
+  by (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
 
 
 lemma tcbSchedDequeue_invs_no_cicd'[wp]:
@@ -1689,9 +1750,9 @@ lemma guarded_switch_to_corres:
                 and valid_vspace_objs and pspace_aligned and pspace_distinct
                 and valid_vs_lookup
                 and unique_table_refs o caps_of_state
-                and st_tcb_at runnable t and valid_etcbs)
+                and st_tcb_at runnable t and valid_etcbs and (\<lambda>s. sym_refs (state_hyp_refs_of s)))
              (valid_arch_state' and valid_pspace' and Invariants_H.valid_queues
-                and st_tcb_at' runnable' t and cur_tcb')
+                and st_tcb_at' runnable' t and cur_tcb' and (\<lambda>s. sym_refs (state_hyp_refs_of' s)))
              (guarded_switch_to t) (switchToThread t)"
   apply (simp add: guarded_switch_to_def)
   apply (rule corres_guard_imp)
@@ -1700,8 +1761,8 @@ lemma guarded_switch_to_corres:
       apply (rule switch_thread_corres)
      apply (force simp: st_tcb_at_tcb_at)
     apply (wp gts_st_tcb_at)
-    apply (force simp: st_tcb_at_tcb_at valid_global_objs_def)+
-    done
+   apply (force simp: st_tcb_at_tcb_at valid_global_objs_def)+
+  done
 
 abbreviation "enumPrio \<equiv> [0.e.maxPriority]"
 
@@ -2067,6 +2128,10 @@ lemma ethread_get_when_corres:
   apply wpsimp+
   done
 
+lemma tcb_sched_action_sym_refs_state_hyp_refs_of[wp]:
+  "tcb_sched_action a b \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  by (wpsimp simp: tcb_sched_action_def)
+
 lemma schedule_corres:
   "corres dc (invs and valid_sched and valid_list) invs' (Schedule_A.schedule) ThreadDecls_H.schedule"
   supply ethread_get_wp[wp del]
@@ -2081,22 +2146,22 @@ lemma schedule_corres:
   apply (subst schact_bind_inside)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ gct_corres[THEN corres_rel_imp[where r="\<lambda>x y. y = x"],simplified]])
-        apply (rule corres_split[OF _ get_sa_corres])
-          apply (rule corres_split_sched_act,assumption)
-            apply (rule_tac P="tcb_at ct" in corres_symb_exec_l')
-              apply (rule_tac corres_symb_exec_l)
-                apply simp
-                apply (rule corres_assert_ret)
-               apply ((wpsimp wp: thread_get_wp' gets_exs_valid)+)
+      apply (rule corres_split[OF _ get_sa_corres])
+        apply (rule corres_split_sched_act,assumption)
+          apply (rule_tac P="tcb_at ct" in corres_symb_exec_l')
+            apply (rule_tac corres_symb_exec_l)
+               apply simp
+               apply (rule corres_assert_ret)
+              apply ((wpsimp wp: thread_get_wp' gets_exs_valid)+)
          prefer 2
          (* choose thread *)
          apply clarsimp
-          apply (rule corres_split[OF _ thread_get_isRunnable_corres])
-            apply (rule corres_split[OF _ corres_when])
-             apply (rule scheduleChooseNewThread_corres, simp)
-              apply (rule tcbSchedEnqueue_corres, simp)
-           apply (wp thread_get_wp' tcbSchedEnqueue_invs' hoare_vcg_conj_lift hoare_drop_imps
-                  | clarsimp)+
+         apply (rule corres_split[OF _ thread_get_isRunnable_corres])
+           apply (rule corres_split[OF _ corres_when])
+               apply (rule scheduleChooseNewThread_corres, simp)
+             apply (rule tcbSchedEnqueue_corres, simp)
+            apply (wp thread_get_wp' tcbSchedEnqueue_invs' hoare_vcg_conj_lift hoare_drop_imps
+                   | clarsimp)+
         (* switch to thread *)
         apply (rule corres_split[OF _ thread_get_isRunnable_corres],
                 rename_tac was_running wasRunning)
@@ -2150,7 +2215,7 @@ lemma schedule_corres:
                              apply ((wp (once) hoare_drop_imp)+)[1]
 
                             apply (simp add: if_apply_def2)
-                             apply ((wp (once) hoare_drop_imp)+)[1]
+                            apply ((wp (once) hoare_drop_imp)+)[1]
                            apply wpsimp+
                      apply (wpsimp simp: etcb_relation_def)+
             apply (rule tcbSchedEnqueue_corres)
@@ -2181,10 +2246,10 @@ lemma schedule_corres:
      apply (rule conjI, clarsimp)
       subgoal for candidate
         apply (clarsimp simp: valid_sched_def invs_def valid_state_def cur_tcb_def
-                               valid_arch_caps_def valid_sched_action_def
-                               weak_valid_sched_action_def tcb_at_is_etcb_at
-                               tcb_at_is_etcb_at[OF st_tcb_at_tcb_at[rotated]]
-                               valid_blocked_except_def valid_blocked_def)
+                              valid_arch_caps_def valid_sched_action_def
+                              weak_valid_sched_action_def tcb_at_is_etcb_at
+                              tcb_at_is_etcb_at[OF st_tcb_at_tcb_at[rotated]]
+                              valid_blocked_except_def valid_blocked_def invs_hyp_sym_refs)
         apply (clarsimp simp add: pred_tcb_at_def obj_at_def is_tcb valid_idle_def)
         done
      (* choose new thread case *)
