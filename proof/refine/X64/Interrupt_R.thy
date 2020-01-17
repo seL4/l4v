@@ -176,6 +176,30 @@ lemma unat_ucast_ucast_shenanigans[simp]:
   apply (simp add: ucast_ucast_mask mask_def)
    by (word_bitwise, auto)
 
+lemma toEnum_unat_ucast_helper_64_8:
+  "unat yf \<le> 107 \<Longrightarrow> toEnum (unat (UCAST(64 \<rightarrow> 8) yf) + 16) = UCAST(64 \<rightarrow> 8) yf + 16"
+  apply (subgoal_tac "unat (UCAST (64 \<rightarrow> 8) yf) = unat yf")
+  apply (subst unat_ucast)
+  apply (simp add: ucast_nat_def)
+  apply (subst unat_ucast)
+  apply simp
+  done
+
+lemma toEnum_unat_ucast'_helper_64_8:
+  "unat yf \<le> 107 \<Longrightarrow> toEnum (16 + unat (UCAST(64 \<rightarrow> 8) yf)) = 16 + UCAST(64 \<rightarrow> 8) yf"
+  apply (subst add.commute)
+  apply (subst add.commute[where a="0x10"])
+  using toEnum_unat_ucast_helper_64_8
+  apply simp
+  done
+
+lemma unat_add_ucast_helper:
+  "unat xm \<le> 107 \<Longrightarrow> unat (0x10 + UCAST(64 \<rightarrow> 8) xm) \<le> 125"
+  apply (subgoal_tac "unat (UCAST(64 \<rightarrow> 8) xm) = unat xm")
+   apply (rule le_trans, rule unat_plus_gt, simp)
+  apply (simp add: unat_ucast)
+  done
+
 lemmas irq_const_defs =
   maxIRQ_def minIRQ_def
   X64.maxUserIRQ_def X64.minUserIRQ_def X64_H.maxUserIRQ_def X64_H.minUserIRQ_def
@@ -207,7 +231,7 @@ lemma arch_decode_irq_control_corres:
     apply (simp add: irq_const_defs)
    apply (simp add: linorder_not_less )
    apply (simp add: irq_const_defs word_le_nat_alt ucast_id)
-   apply (simp add: ucast_nat_def Groups.ab_semigroup_add_class.add.commute)
+   apply (simp add: ucast_nat_def Groups.ab_semigroup_add_class.add.commute toEnum_unat_ucast_helper_64_8)
    apply (rule corres_split_eqr[OF _ is_irq_active_corres])
      apply (rule whenE_throwError_corres, simp, simp)
      apply (rule corres_splitEE[OF _ lsfc_corres])
@@ -226,7 +250,7 @@ lemma arch_decode_irq_control_corres:
     apply (simp add: irq_const_defs)
    apply (simp add: linorder_not_less )
    apply (simp add: irq_const_defs word_le_nat_alt ucast_id)
-   apply (simp add: ucast_nat_def add.commute)
+   apply (simp add: ucast_nat_def add.commute toEnum_unat_ucast_helper_64_8)
    apply (rule corres_split_eqr[OF _ is_irq_active_corres])
      apply (rule whenE_throwError_corres, simp, simp)
      apply (rule corres_splitEE[OF _ lsfc_corres])
@@ -303,7 +327,8 @@ lemma arch_decode_irq_control_valid'[wp]:
           | wp whenE_throwError_wp isIRQActive_wp ensureEmptySlot_stronger
           | wpc
           | wp (once) hoare_drop_imps)+
-  apply (fastforce simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt)
+  apply (clarsimp simp add: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt toEnum_unat_ucast_helper_64_8)
+  apply (fastforce simp add: toEnum_unat_ucast'_helper_64_8 unat_add_ucast_helper)+
   done
 
 lemma decode_irq_control_valid'[wp]:

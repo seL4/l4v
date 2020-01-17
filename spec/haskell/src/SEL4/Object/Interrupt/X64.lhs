@@ -49,8 +49,8 @@ This module defines the machine-specific interrupt handling routines for x64.
 >         (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerIOAPIC,
 >                  index:depth:ioapic:pin:level:polarity:irqW:_, cnode:_) -> do
 >
+>             rangeCheck irqW 0 (fromEnum Arch.maxUserIRQ - fromEnum Arch.minUserIRQ)
 >             let preIrq = fromIntegral irqW :: Word8
->             rangeCheck preIrq 0 (fromEnum Arch.maxUserIRQ - fromEnum Arch.minUserIRQ)
 >             let irq = toEnum (fromEnum Arch.minUserIRQ + fromIntegral preIrq) :: IRQ
 >
 >             irqActive <- withoutFailure $ isIRQActive irq
@@ -78,8 +78,8 @@ This module defines the machine-specific interrupt handling routines for x64.
 >         (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerMSI,
 >                  index:depth:pciBus:pciDev:pciFunc:handle:irqW:_, cnode:_) -> do
 >
+>             rangeCheck irqW 0 (fromEnum Arch.maxUserIRQ - fromEnum Arch.minUserIRQ)
 >             let preIrq = fromIntegral irqW :: Word8
->             rangeCheck preIrq 0 (fromEnum Arch.maxUserIRQ - fromEnum Arch.minUserIRQ)
 >             let irq = toEnum (fromEnum Arch.minUserIRQ + fromIntegral preIrq) :: IRQ
 >
 >             irqActive <- withoutFailure $ isIRQActive irq

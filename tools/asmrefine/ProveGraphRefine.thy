@@ -477,16 +477,18 @@ fun warn_schem_tac msg ctxt tac = SUBGOAL (fn (t, i) => let
 fun prove_ptr_safe reason ctxt = DETERM o
     warn_schem_tac "prove_ptr_safe" ctxt
     (TRY o REPEAT_ALL_NEW (eqsubst_either_wrap_tac ctxt
-                @{thms array_ptr_index_coerce}
+                @{thms array_ptr_index_coerce nat_uint_less_helper}
             )
         THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps
             @{thms ptr_safe_ptr_add_array_ptr_index
-                   word_sle_msb_le word_sless_msb_less})
+                   word_sle_msb_le word_sless_msb_less
+                   nat_uint_less_helper})
         THEN_ALL_NEW asm_simp_tac (ctxt addsimps
             @{thms ptr_safe_field[unfolded typ_uinfo_t_def]
                    ptr_safe_Array_element unat_less_helper unat_def[symmetric]
                    ptr_safe_Array_element_0
-                   h_t_valid_Array_element' h_t_valid_field})
+                   h_t_valid_Array_element' h_t_valid_field
+                   nat_uint_less_helper})
         THEN_ALL_NEW except_tac ctxt
             ("prove_ptr_safe: failed for " ^ reason)
     )
@@ -558,7 +560,7 @@ fun normalise_mem_accs reason ctxt = DETERM o let
                        o_def fupdate_def
                        pointer_inverse_safe_sign
                        ptr_safe_ptr_add_array_ptr_index
-                       unat_less_helper
+                       unat_less_helper nat_uint_less_helper
             } @ get_field_h_val_rewrites ctxt
         @ #1 gr @ #2 gr
     val h_val = get_disjoint_h_val_globals_swap ctxt
@@ -583,7 +585,7 @@ fun normalise_mem_accs reason ctxt = DETERM o let
             | @{term Trueprop} $ (Const (@{const_name ptr_safe}, _) $ _ $ _)
               => prove_ptr_safe msg' ctxt i
             | _ => all_tac)
-    THEN_ALL_NEW full_simp_tac (ctxt addsimps @{thms h_val_word_simps})
+    THEN_ALL_NEW full_simp_tac (ctxt addsimps @{thms h_val_word_simps nat_uint_less_helper})
   end
 
 val heap_update_id_nonsense

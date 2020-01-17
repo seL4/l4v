@@ -57,7 +57,7 @@ definition
  "arch_decode_irq_control_invocation label args src_slot cps \<equiv>
   (if invocation_type label = ArchInvocationLabel X64IRQIssueIRQHandlerIOAPIC
     then (if length args \<ge> 7 \<and> length cps \<ge> 1
-      then let pre_irq = UCAST (64 \<rightarrow> 8) (args ! 6); index = args ! 0; depth = args ! 1;
+      then let pre_irq = args ! 6; index = args ! 0; depth = args ! 1;
                cnode = cps ! 0;
                irqv = ucast pre_irq + minUserIRQ;
                ioapic = args ! 2;
@@ -89,7 +89,7 @@ definition
     else throwError TruncatedMessage)
   else (if invocation_type label = ArchInvocationLabel X64IRQIssueIRQHandlerMSI
     then (if length args \<ge> 7 \<and> length cps \<ge> 1
-      then let pre_irq = UCAST (64 \<rightarrow> 8) (args ! 6); index = args ! 0; depth = args ! 1;
+      then let pre_irq = args ! 6; index = args ! 0; depth = args ! 1;
                cnode = cps ! 0; irqv = ucast pre_irq + minUserIRQ;
                bus = args ! 2; dev = args ! 3; func = args ! 4; handle = args ! 5
         in doE
