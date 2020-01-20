@@ -20,12 +20,12 @@ begin
 
 context Arch begin global_naming ARM
 
-text {*
+text \<open>
   This theory lists platform-specific types and basic constants, in particular
   the types of interrupts and physical addresses, constants for the
   kernel location, the offsets between physical and virtual kernel
   addresses, as well as the range of IRQs on the platform.
-*}
+\<close>
 
 type_synonym irq = "10 word"
 type_synonym paddr = word32

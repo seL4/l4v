@@ -68,26 +68,6 @@ lemma [intro?]:
   using no_0 src dest
   by (auto simp: no_0_def)
 
-lemma src_prev:
-  "mdbPrev src_node \<noteq> dest"
-proof (cases "mdbPrev src_node = 0")
-  case True thus ?thesis using dest_0 by simp
-next
-  case False
-  with src dlist
-  obtain cte' where
-    "m (mdbPrev src_node) = Some cte'"
-    "mdbNext (cteMDBNode cte') = src"
-    by (auto elim: valid_dlistE)
-  with dest nxt src_0
-  show ?thesis
-    apply -
-    apply (rule notI)
-    apply hypsubst
-    apply simp
-    done
-qed
-
 lemma src_neq_next:
   "src \<noteq> mdbNext src_node"
   by simp
@@ -137,38 +117,6 @@ lemma prev_neq_dest [simp]:
 
 lemmas next_neq_dest2 [simp] = next_neq_dest [symmetric]
 lemmas prev_neq_dest2 [simp] = prev_neq_dest [symmetric]
-
-lemma prev_next_0:
-  "(mdbPrev src_node = mdbNext src_node) =
-   (mdbPrev src_node = 0 \<and> mdbNext src_node = 0)"
-proof -
-  { assume "mdbPrev src_node = mdbNext src_node"
-    moreover
-    assume "mdbNext src_node \<noteq> 0"
-    ultimately
-    obtain cte where
-      "m (mdbNext src_node) = Some cte"
-      "mdbNext (cteMDBNode cte) = src"
-      using src dlist
-      by (fastforce simp add: valid_dlist_def Let_def)
-    hence "m \<turnstile> src \<leadsto>\<^sup>+ src" using src
-      apply -
-      apply (rule trancl_trans)
-       apply (rule r_into_trancl)
-       apply (simp add: next_unfold')
-      apply (rule r_into_trancl)
-      apply (simp add: next_unfold')
-      done
-    with no_loops
-    have False by (simp add: no_loops_def)
-  }
-  thus ?thesis by auto
-qed
-
-lemma next_prev_0:
-  "(mdbNext src_node = mdbPrev src_node) =
-   (mdbPrev src_node = 0 \<and> mdbNext src_node = 0)"
-  by auto
 
 lemma dlist':
   "valid_dlist m'"
@@ -231,7 +179,7 @@ lemma dlist':
     subgoal by fastforce
    subgoal by fastforce
   apply (rule conjI)
-   apply (clarsimp simp: next_prev_0)
+   apply clarsimp
    apply fastforce
   apply clarsimp
   apply (rule conjI, fastforce)
@@ -285,87 +233,6 @@ lemma dest_no_target [iff]:
   "m \<turnstile> p \<leadsto> dest = False"
   using dlist no_0 prev dest
   by (fastforce simp: valid_dlist_def Let_def no_0_def next_unfold')
-
-lemma no_src_subtree_m_n:
-  assumes no_src: "\<not> m \<turnstile> p \<rightarrow> src" "p \<noteq> src"
-  assumes px: "m \<turnstile> p \<rightarrow> x"
-  assumes xs: "x \<noteq> src"
-  shows "n \<turnstile> p \<rightarrow> x" using px xs
-proof induct
-  case (direct_parent c)
-  thus ?case using neq no_src no_loops
-    apply -
-    apply (rule subtree.direct_parent)
-      apply (clarsimp simp add: n mdb_next_update simp del: fun_upd_apply)
-      apply (cases "m (mdbPrev src_node)")
-       apply (subst modify_map_None)
-        apply simp
-       apply (clarsimp simp add: mdb_next_update simp del: fun_upd_apply)
-      apply (subst modify_map_apply)
-       apply simp
-      apply (clarsimp simp add: mdb_next_update simp del: fun_upd_apply)
-      apply (rule conjI)
-       apply clarsimp
-      apply (clarsimp)
-      apply (drule prev_leadstoD)
-         apply (rule src)
-        apply (rule dlist)
-       apply (rule no_0)
-      apply simp
-     apply assumption
-    apply (simp add: n)
-    apply (cases "m (mdbPrev src_node)")
-     apply (subst modify_map_None)
-      apply simp
-     apply (clarsimp simp add: parentOf_def n)
-     apply (rule conjI)
-      apply clarsimp
-     apply (fastforce simp add: parentOf_def n)
-    apply (subst modify_map_apply)
-     apply simp
-    apply (fastforce simp add: parentOf_def n)
-    done
-next
-  case (trans_parent c c')
-  thus ?case using no_src
-    apply (cases "c = src")
-     apply simp
-    apply clarsimp
-    apply (erule subtree.trans_parent)
-      apply (simp add: n)
-      apply (cases "m (mdbPrev src_node)")
-       apply (subst modify_map_None)
-        apply simp
-       apply (clarsimp simp add: n mdb_next_update)
-      apply (subst modify_map_apply)
-       apply simp
-      apply (clarsimp simp add: n mdb_next_update)
-      apply (rule conjI, fastforce)
-      apply clarsimp
-      apply (drule prev_leadstoD)
-         apply (rule src)
-        apply (rule dlist)
-       apply (rule no_0)
-      apply simp
-     apply assumption
-    apply (simp add: n)
-    apply (cases "m (mdbPrev src_node)")
-     apply (subst modify_map_None)
-      apply simp
-     apply (clarsimp simp: parentOf_def n)
-     apply (rule conjI)
-      apply clarsimp
-     apply (clarsimp simp: dest)
-    apply (subst modify_map_apply)
-     apply simp
-    apply (fastforce simp: parentOf_def n)
-    done
-qed
-
-lemma capMaster_isReply_eq:
-  "capMasterCap c = capMasterCap c' \<Longrightarrow>
-   isReplyCap c = isReplyCap c'"
-  by (clarsimp simp: capMasterCap_def isCap_simps split: capability.split_asm)
 
 lemma parent_preserved:
   "isMDBParentOf cte' (CTE cap' src_node) =
@@ -580,10 +447,6 @@ qed
 
 lemmas neq_sym [simp] = neq [symmetric]
 
-lemma sub_tree_loop [simp]:
-  "m \<turnstile> x \<rightarrow> x = False"
-  by (clarsimp dest!: subtree_mdb_next)
-
 lemmas src_prev_loop [simp] =
   subtree_prev_loop [OF src no_loops dlist no_0]
 
@@ -699,7 +562,7 @@ lemma subtree_dest_src:
     apply assumption
    apply (simp add: n)
    apply (simp add: modify_map_def parentOf_def)
-   apply (clarsimp simp: next_prev_0 src children_preserved)
+   apply (clarsimp simp: src children_preserved)
   apply (subgoal_tac "c' \<noteq> dest")
    prefer 2
    apply clarsimp
@@ -829,14 +692,6 @@ end
 context mdb_move
 begin
 
-lemma descendants_dest:
-  "descendants_of' dest m = {}"
-  by (simp add: descendants_of'_def)
-
-lemma dest_descendants:
-  "dest \<notin> descendants_of' x m"
-  by (simp add: descendants_of'_def)
-
 end
 
 lemma updateCap_dynamic_duo:
@@ -855,8 +710,6 @@ lemma next_slot_eq2:
     \<Longrightarrow> next_slot p t m = x"
   apply(simp split: option.splits)
   done
-
-abbreviation "einvs \<equiv> (invs and valid_list and valid_sched)"
 
 lemma set_cap_not_quite_corres':
   assumes cr:
@@ -2158,13 +2011,6 @@ lemma capMaster_capClass:
   "capMasterCap c = capMasterCap c' \<Longrightarrow> capClass c = capClass c'"
   by (simp add: capMasterCap_def split: capability.splits arch_capability.splits)
 
-lemma valid_dlist_no_0_prev:
-  "\<lbrakk> m p = Some (CTE c n); m (mdbNext n) = Some (CTE c' (MDB x 0 b1 b2)); valid_dlist m; no_0 m \<rbrakk> \<Longrightarrow> False"
-  apply (erule (1) valid_dlistE)
-   apply clarsimp
-  apply clarsimp
-  done
-
 lemma distinct_zombies_nonCTE_modify_map:
   "\<And>m x f. \<lbrakk> \<And>cte. cteCap (f cte) = cteCap cte \<rbrakk>
      \<Longrightarrow> distinct_zombies (modify_map m x f) = distinct_zombies m"
@@ -2174,46 +2020,6 @@ lemma distinct_zombies_nonCTE_modify_map:
   apply simp
   apply (simp add: map_option.compositionality o_def)
   done
-
-lemma setUntypedCapAsFull_ctes_of_no_0':
-  "\<lbrace>\<lambda>s. no_0 (ctes_of s) \<and> cte_wp_at' ((=) srcCTE) src s\<rbrace>
-   setUntypedCapAsFull (cteCap srcCTE) cap src
-   \<lbrace>\<lambda>r s. no_0 (ctes_of s)\<rbrace>"
-  apply (clarsimp simp:no_0_def split:if_splits)
-  apply (wp hoare_vcg_imp_lift setUntypedCapAsFull_ctes_of[where dest = 0])
-    apply (auto simp:cte_wp_at_ctes_of)
-done
-
-(* FIXME: move *)
-lemma mdb_inv_preserve_update_cap_same:
-  "mdb_inv_preserve m m'
-   \<Longrightarrow> mdb_inv_preserve (modify_map m dest (cteCap_update (\<lambda>_. cap)))
-                        (modify_map m' dest (cteCap_update (\<lambda>_. cap)))"
-  apply (simp (no_asm) add:mdb_inv_preserve_def)
-  apply (intro conjI allI)
-     apply (drule mdb_inv_preserve.dom)
-     apply (simp add:modify_map_dom)
-    apply (clarsimp simp:modify_map_def split del:if_splits split:if_split_asm)
-    apply (drule(2) mdb_inv_preserve.misc,simp)+
-   apply (clarsimp simp:mdb_inv_preserve.sameRegion
-     modify_map_def split:if_splits)+
- apply (case_tac "p = dest")
-   apply (clarsimp simp:mdb_next_def option_map_def split:option.splits )
-   apply (intro conjI allI impI)
-     apply (rule ccontr,clarify)
-     apply (fastforce dest!:iffD2[OF mdb_inv_preserve.dom,OF _ domI])
-     apply (rule ccontr,simp)
-     apply (fastforce dest!:iffD1[OF mdb_inv_preserve.dom,OF _ domI])
-   apply (drule mdb_inv_preserve.mdb_next[where p = dest])
-   apply (clarsimp simp:mdb_next_def option_map_def split:option.splits)+
- apply (intro conjI allI impI)
-  apply (rule ccontr,clarify)
-  apply (fastforce dest!:iffD2[OF mdb_inv_preserve.dom,OF _ domI])
-  apply (rule ccontr,simp)
-  apply (fastforce dest!:iffD1[OF mdb_inv_preserve.dom,OF _ domI])
- apply (drule_tac p = p in mdb_inv_preserve.mdb_next)
- apply (clarsimp simp:mdb_next_def option_map_def split:option.splits)
-done
 
 lemma updateCapFreeIndex_dlist:
   assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
@@ -3418,10 +3224,6 @@ lemma restrict_map_is_map_comp:
   "restrict_map m S = m \<circ>\<^sub>m (\<lambda>x. if x \<in> S then Some x else None)"
   by (simp add: restrict_map_def map_comp_def fun_eq_iff)
 
-lemma map_comp_assoc:
-  "a \<circ>\<^sub>m (b \<circ>\<^sub>m c) = a \<circ>\<^sub>m b \<circ>\<^sub>m c"
-  by (simp add: map_comp_def fun_eq_iff split: option.split)
-
 lemma untypedZeroRange_to_usableCapRange:
   "untypedZeroRange c = Some (x, y) \<Longrightarrow> valid_cap' c s
     \<Longrightarrow> isUntypedCap c \<and> usableUntypedRange c = {x .. y}
@@ -3463,7 +3265,7 @@ lemma untyped_ranges_zero_delta:
     apply (clarsimp)
     apply (drule(2) usableUntypedRange_uniq, (simp add: valid_capAligned)+)
    apply (simp add: map_comp_def other)
-  apply (simp add: restrict_map_is_map_comp map_comp_assoc)
+  apply (simp add: restrict_map_is_map_comp)
   done
 
 lemma ran_restrict_map_insert:
@@ -3576,17 +3378,6 @@ lemma capAligned_Null [simp]:
   "capAligned NullCap"
   by (simp add: capAligned_def is_aligned_def word_bits_def)
 
-lemma guarded_lookup_valid_cap':
-  "\<lbrace> valid_objs' \<rbrace> nullCapOnFailure (lookupCap t c) \<lbrace>\<lambda>rv. valid_cap' rv \<rbrace>"
-  apply (simp add: nullCapOnFailure_def)
-  apply (wp lookup_cap_valid')
-  apply (simp add: valid_cap'_def)
-  done
-
-lemma setObject_tcb_tcb':
-  "\<lbrace>tcb_at' p\<rbrace> setObject p (t::tcb) \<lbrace>\<lambda>rv. tcb_at' p\<rbrace>"
-  by (rule setObject_typ_ats)
-
 lemma cte_wp_at'_conjI:
   "\<lbrakk> cte_wp_at' P p s; cte_wp_at' Q p s \<rbrakk> \<Longrightarrow> cte_wp_at' (\<lambda>c. P c \<and> Q c) p s"
   by (auto simp add: cte_wp_at'_def)
@@ -3602,10 +3393,6 @@ lemma lookupSlotForCNodeOp_inv'[wp]:
    apply (wp hoare_drop_imps)
   apply simp
   done
-
-lemma unifyFailure_inv [wp]:
-  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> unifyFailure f \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  by (rule unifyFailure_wp)
 
 (* FIXME: move *)
 lemma loadWordUser_inv [wp]:
@@ -3636,15 +3423,6 @@ lemma maskCapRightsUntyped [simp]:
 lemma maskCapRightsZombie [simp]:
   "maskCapRights R (Zombie p b n) = Zombie p b n"
   by (simp add: maskCapRights_def isCap_defs Let_def)
-
-(* FIXME: move *)
-lemma cap_relation_update_masks:
-  "cap_relation a c'
-   \<Longrightarrow> cap_relation
-         (cap_rights_update (cap_rights a - {AllowWrite}) a)
-         (maskCapRights (capAllowWrite_update (\<lambda>_. False) allRights) c')"
-  apply (drule_tac rmask="UNIV - {AllowWrite}" in cap_relation_masks)
-  by (simp add: rights_mask_map_def allRights_def)
 
 declare if_option_Some[simp]
 
@@ -4041,16 +3819,16 @@ lemma setCTE_work_units_completed[wp]:
   done
 
 lemma create_reply_master_corres:
-  "sl' = cte_map sl \<Longrightarrow>
+  "\<lbrakk> sl' = cte_map sl ; AllowGrant \<in> rights \<rbrakk> \<Longrightarrow>
    corres dc
       (cte_wp_at ((=) cap.NullCap) sl and valid_pspace and valid_mdb and valid_list)
       (cte_wp_at' (\<lambda>c. cteCap c = NullCap \<and> mdbPrev (cteMDBNode c) = 0) sl'
        and valid_mdb' and valid_pspace')
       (do
          y \<leftarrow> set_original sl True;
-         set_cap (cap.ReplyCap thread True) sl
+         set_cap (cap.ReplyCap thread True rights) sl
        od)
-      (setCTE sl' (CTE (capability.ReplyCap thread True) initMDBNode))"
+      (setCTE sl' (CTE (capability.ReplyCap thread True True) initMDBNode))"
   apply clarsimp
   apply (rule corres_caps_decomposition)
                                  defer
@@ -4155,7 +3933,7 @@ lemma valid_nullcaps_next:
   done
 
 defs noReplyCapsFor_def:
-  "noReplyCapsFor \<equiv> \<lambda>t s. \<forall>sl m. \<not> cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m) sl s"
+  "noReplyCapsFor \<equiv> \<lambda>t s. \<forall>sl m r. \<not> cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m r) sl s"
 
 lemma pspace_relation_no_reply_caps:
   assumes pspace: "pspace_relation (kheap s) (ksPSpace s')"
@@ -4182,10 +3960,10 @@ proof -
     apply (clarsimp elim!: cte_wp_at_weakenE simp: m_null)
     done
   have no_reply_caps:
-    "\<forall>sl m. \<not> cte_wp_at (\<lambda>c. c = cap.ReplyCap t m) sl s"
+    "\<forall>sl m r. \<not> cte_wp_at (\<lambda>c. c = cap.ReplyCap t m r) sl s"
     by (rule no_reply_caps_for_thread [OF invs tcb m_cte_null])
   hence noReplyCaps:
-    "\<forall>sl m. \<not> cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m) sl s'"
+    "\<forall>sl m r. \<not> cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m r) sl s'"
     apply (intro allI)
     apply (clarsimp simp: cte_wp_at_neg2 cte_wp_at_ctes_of simp del: split_paired_All)
     apply (frule pspace_relation_cte_wp_atI [OF pspace _ invs_valid_objs [OF invs]])
@@ -4213,8 +3991,7 @@ lemma setup_reply_master_corres:
       apply (rule corres_when)
        apply fastforce
       apply (rule_tac P'="einvs and tcb_at t" in corres_stateAssert_implied)
-       apply (rule create_reply_master_corres)
-       apply simp
+       apply (rule create_reply_master_corres; simp)
       apply (subgoal_tac "\<exists>cte. cte_wp_at' ((=) cte) (cte_map (t, tcb_cnode_index 2)) s'
                               \<and> cteCap cte = capability.NullCap")
        apply (fastforce dest: pspace_relation_no_reply_caps
@@ -4291,7 +4068,7 @@ lemma setupReplyMaster_wps[wp]:
   "\<lbrace>pspace_aligned'\<rbrace> setupReplyMaster t \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   "\<lbrace>pspace_distinct'\<rbrace> setupReplyMaster t \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
   "slot = cte_map (t, tcb_cnode_index 2) \<Longrightarrow>
-   \<lbrace>\<lambda>s. P ((cteCaps_of s)(slot \<mapsto> (capability.ReplyCap t True))) \<and> P (cteCaps_of s)\<rbrace>
+   \<lbrace>\<lambda>s. P ((cteCaps_of s)(slot \<mapsto> (capability.ReplyCap t True True))) \<and> P (cteCaps_of s)\<rbrace>
       setupReplyMaster t
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
     apply (simp_all add: setupReplyMaster_def locateSlot_conv)
@@ -4927,14 +4704,6 @@ end
 
 declare if_split [split del]
 
-lemma safe_parent_for_maskedAsFull[simp]:
-  "safe_parent_for' m p (maskedAsFull src_cap a) = safe_parent_for' m p src_cap"
-  apply (clarsimp simp:safe_parent_for'_def)
-  apply (rule iffI)
-    apply (clarsimp simp:maskedAsFull_def isCap_simps split:if_splits cap.splits
-    cong:sameRegionAs_update_untyped')+
-done
-
 lemma setUntypedCapAsFull_safe_parent_for':
   "\<lbrace>\<lambda>s. safe_parent_for' (ctes_of s) slot a \<and> cte_wp_at' ((=) srcCTE) slot s\<rbrace>
    setUntypedCapAsFull (cteCap srcCTE) c' slot
@@ -4964,9 +4733,6 @@ lemma maskedAsFull_revokable_safe_parent:
      apply (clarsimp simp:isCap_simps is_simple_cap'_def)+
 done
 
-lemma is_simple_cap'_maskedAsFull[simp]:
-  "is_simple_cap' (maskedAsFull src_cap' c') =  is_simple_cap' src_cap'"
-  by (auto simp: is_simple_cap'_def maskedAsFull_def isCap_simps split:if_splits)
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cins_corres_simple:
   assumes "cap_relation c c'" "src' = cte_map src" "dest' = cte_map dest"
@@ -5343,14 +5109,6 @@ lemma chain_n': "mdb_chain_0 n'"
 lemma no_loops_n': "no_loops n'" using chain_n' no_0_n'
   by (rule mdb_chain_0_no_loops)
 
-lemma irrefl_direct_simp_n' [iff]:
-  "n' \<turnstile> x \<leadsto> x = False"
-  using no_loops_n' by (rule no_loops_direct_simp)
-
-lemma irrefl_trancl_simp' [iff]:
-  "n \<turnstile> x \<leadsto>\<^sup>+ x = False"
-  using no_loops_n by (rule no_loops_trancl_simp)
-
 lemma n_direct_eq':
   "n' \<turnstile> p \<leadsto> p' = (if p = src then p' = dest else
                  if p = dest then m \<turnstile> src \<leadsto> p'
@@ -5374,23 +5132,6 @@ lemma dest_no_src_next [iff]:
 lemma n_dest':
   "n' dest = Some new_dest"
   by (simp add: n'_def n modify_map_if new_dest_def)
-
-lemma n_src_dest':
-  "n' \<turnstile> src \<leadsto> dest"
-  by (simp add: n_src_dest n'_def)
-
-lemma dest_chain_0' [simp, intro!]:
-  "n' \<turnstile> dest \<leadsto>\<^sup>+ 0"
-  using chain_n' n_dest'
-  by (simp add: mdb_chain_0_def) blast
-
-lemma n'_trancl_eq':
-  "n' \<turnstile> p \<leadsto>\<^sup>+ p' =
-  (if p' = dest then m \<turnstile> p \<leadsto>\<^sup>* src
-   else if p = dest then m \<turnstile> src \<leadsto>\<^sup>+ p'
-   else m \<turnstile> p \<leadsto>\<^sup>+ p')"
-  unfolding n'_def trancl_prev_update
-  by (simp add: n_trancl_eq')
 
 lemma n'_trancl_eq:
   "n' \<turnstile> p \<leadsto>\<^sup>+ p' =
@@ -5428,10 +5169,6 @@ lemma m_cap':
   apply (cases "p=dest")
    apply (auto simp: src dest)
   done
-
-lemma dest_no_parent_n' [simp]:
-  "n' \<turnstile> dest \<rightarrow> p = False"
-  by (simp add: n'_def dest_no_parent_n)
 
 lemma descendants':
   "descendants_of' p n' =
@@ -5555,10 +5292,6 @@ lemma src_prev [iff]:
   apply (rule dlistEp [where p=p], assumption, clarsimp)
   apply simp
   done
-
-lemma blurg: "(\<forall>c c'. Q c \<longrightarrow> P c') = (\<forall>c. Q c \<longrightarrow> (\<forall>c'. P c'))"
-  apply simp
-done
 
 lemma dlist' [simp]:
   "valid_dlist n'"
@@ -5752,44 +5485,6 @@ lemma sameRegion_src_c':
    apply (clarsimp simp: isCap_simps)
   apply simp
   apply blast
-  done
-
-lemma sameRegion_c_src':
-  "sameRegionAs c' cap \<Longrightarrow> sameRegionAs src_cap cap"
-  using safe_parent simple src capRange_c'
-  apply (simp add: safe_parent_for'_def)
-  apply (erule disjE)
-   apply clarsimp
-   apply (clarsimp simp: sameRegionAs_def2 capRange_def isCap_simps)
-  apply clarsimp
-  apply (simp add: sameRegionAs_def2 isCap_Master capRange_Master)
-  apply (erule disjE)
-   prefer 2
-   apply clarsimp
-   apply (erule disjE, blast)
-   apply (clarsimp simp: isCap_simps)
-   apply (clarsimp simp: capRange_def)
-  apply (elim conjE)
-  apply (drule capMaster_capRange)
-  apply simp
-  done
-
-lemma safe_not_next_region:
-  "\<lbrakk> m \<turnstile> src \<leadsto> p; m p = Some (CTE cap node) \<rbrakk> \<Longrightarrow> \<not> sameRegionAs c' cap"
-  using safe_parent src
-  unfolding safe_parent_for'_def
-  apply clarsimp
-  apply (erule disjE)
-   apply (clarsimp simp: mdb_next_unfold)
-   apply (clarsimp simp: sameRegionAs_def2 isCap_simps)
-  apply (clarsimp simp: descendants_of'_def)
-  apply (erule_tac x=p in allE)
-  apply (erule notE, rule direct_parent, assumption)
-   apply clarsimp
-  apply (simp add: parentOf_def)
-  apply (simp add: isMDBParentOf_def)
-  apply (erule sameRegionAs_trans [rotated])
-  apply (rule sameRegion_src)
   done
 
 lemma irq_c'_new:
@@ -6100,19 +5795,6 @@ lemma updateCapFreeIndex_no_0:
     apply (clarsimp simp:cte_wp_at_ctes_of)+
 done
 
-lemma setUntypedCapAsFull_no_0:
-  assumes preserve:"\<And>m m'. mdb_inv_preserve m m'
-  \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
-  shows
- "\<lbrace>\<lambda>s. P (no_0 (Q (ctes_of s))) \<and> cte_wp_at' (\<lambda>c. c = srcCTE) src s\<rbrace>
-setUntypedCapAsFull (cteCap srcCTE) cap src
- \<lbrace>\<lambda>r s. P (no_0 (Q (ctes_of s)))\<rbrace>"
-  apply (clarsimp simp:setUntypedCapAsFull_def split:if_splits,intro conjI impI)
-   apply (wp updateCapFreeIndex_no_0)
-   apply (clarsimp simp:preserve cte_wp_at_ctes_of)+
-  apply wp
-  apply clarsimp
-done
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cteInsert_simple_mdb':
   "\<lbrace>valid_mdb' and pspace_aligned' and pspace_distinct' and (\<lambda>s. src \<noteq> dest) and K (capAligned cap) and
@@ -6124,7 +5806,7 @@ lemma cteInsert_simple_mdb':
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
    apply (wp updateCap_ctes_of_wp getCTE_wp' setUntypedCapAsFull_ctes
-     mdb_inv_preserve_updateCap mdb_inv_preserve_modify_map mdb_inv_preserve_update_cap_same | clarsimp)+
+     mdb_inv_preserve_updateCap mdb_inv_preserve_modify_map | clarsimp)+
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (rule conjI)
    apply (clarsimp simp: valid_mdb_ctes_def)
@@ -6196,7 +5878,7 @@ lemma lookupSlotForCNodeOp_real_cte_at'[wp]:
   apply (simp add: lookupSlotForCNodeOp_def split_def unlessE_def
                      split del: if_split cong: if_cong)
   apply (rule hoare_pre)
-   apply (wp resolveAddressBits_real_cte_at' | simp | wp_once hoare_drop_imps)+
+   apply (wp resolveAddressBits_real_cte_at' | simp | wp (once) hoare_drop_imps)+
   done
 
 lemma cte_refs_maskCapRights[simp]:
@@ -6206,10 +5888,6 @@ lemma cte_refs_maskCapRights[simp]:
                     ARM_HYP_H.maskCapRights_def
          split del: if_split
              split: arch_capability.split)
-
-lemma capASID_PageCap_None [simp]:
-  "capASID (ArchObjectCap (PageCap d r R page_size None)) = None"
-  by (simp add: capASID_def)
 
 lemma getSlotCap_cap_to'[wp]:
   "\<lbrace>\<top>\<rbrace> getSlotCap cp \<lbrace>\<lambda>rv s. \<forall>r\<in>cte_refs' rv (irq_node' s). ex_cte_cap_to' r s\<rbrace>"
@@ -6257,12 +5935,12 @@ proof (induct arbitrary: s rule: resolveAddressBits.induct)
     apply (simp add: Let_def split_def cap_case_CNodeCap[unfolded isCap_simps]
                split del: if_split cong: if_cong)
     apply (rule hoare_pre_spec_validE)
-     apply ((elim exE | wp_once spec_strengthen_postE[OF "1.hyps"])+,
+     apply ((elim exE | wp (once) spec_strengthen_postE[OF "1.hyps"])+,
               (rule refl conjI | simp add: in_monad split del: if_split del: cte_refs'.simps)+)
             apply (wp getSlotCap_cap_to2
                      | simp    add: assertE_def split_def whenE_def locateSlotCap_def
                         split del: if_split | simp add: imp_conjL[symmetric]
-                     | wp_once hoare_drop_imps)+
+                     | wp (once) hoare_drop_imps)+
     apply (clarsimp simp: P)
   done
 qed
@@ -6440,22 +6118,6 @@ lemma updateCap_same_master:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
-lemma diminished_cte_refs':
-  "diminished' cap cap' \<Longrightarrow> cte_refs' cap n = cte_refs' cap' n"
-  by (clarsimp simp: diminished'_def)
-
-lemma diminished_Untyped' :
-  "diminished' (UntypedCap d r n x) cap = (cap = UntypedCap d r n x)"
-  apply (rule iffI)
-   apply (case_tac cap)
-    apply (clarsimp simp:isCap_simps maskCapRights_def diminished'_def split:if_split_asm)+
-   (* 6 subgoals *)
-   apply (rename_tac arch_capability R)
-   apply (case_tac arch_capability)
-    apply (clarsimp simp: isCap_simps ARM_HYP_H.maskCapRights_def maskCapRights_def
-                          diminished'_def Let_def)+
-done
-
 lemma updateCapFreeIndex_valid_mdb_ctes:
   assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
   and     coin  :"\<And>m cte. \<lbrakk>m src = Some cte\<rbrakk> \<Longrightarrow> (\<exists>cte'. (Q m) src = Some cte' \<and> cteCap cte = cteCap cte')"
@@ -6519,40 +6181,6 @@ lemma usableUntypedRange_mono2:
     \<Longrightarrow> usableUntypedRange cap \<le> usableUntypedRange cap'"
   apply (clarsimp simp only: isCap_simps capPtr.simps capBlockSize.simps del: subsetI)
   apply (rule usableUntypedRange_mono1, auto simp: capAligned_def)
-  done
-
-lemma updateFreeIndex_pspace':
-  "\<lbrace>\<lambda>s. (capFreeIndex cap \<le> idx \<and> idx \<le> 2 ^ capBlockSize cap \<and>
-         is_aligned (of_nat idx :: word32) minUntypedSizeBits \<and> isUntypedCap cap) \<and>
-        valid_pspace' s \<and> cte_wp_at' (\<lambda>c. cteCap c = cap) src s\<rbrace>
-   updateCap src (capFreeIndex_update (\<lambda>_. idx) cap)
-   \<lbrace>\<lambda>r s. valid_pspace' s\<rbrace>"
-   apply (clarsimp simp:valid_pspace'_def)
-   apply (rule hoare_pre)
-    apply (rule hoare_vcg_conj_lift)
-     apply (clarsimp simp:updateCap_def)
-     apply (wp getCTE_wp)
-    apply (clarsimp simp:valid_mdb'_def)
-    apply (wp updateCapFreeIndex_valid_mdb_ctes)
-    apply (simp | wp)+
-  apply (clarsimp simp:cte_wp_at_ctes_of valid_mdb'_def)
-  apply (case_tac cte,simp add:isCap_simps)
-  apply (rename_tac capability mdbnode)
-  apply (drule(1) ctes_of_valid_cap')
-  apply (subgoal_tac "usableUntypedRange (capFreeIndex_update (\<lambda>_. idx) capability)
-          \<subseteq> usableUntypedRange capability")
-   apply (clarsimp simp add: valid_cap'_def capAligned_def valid_untyped'_def untypedBits_defs
-                   simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff usableUntypedRange.simps
-          split del:if_split)
-   apply (drule_tac x = ptr' in spec)
-   apply (clarsimp simp:ko_wp_at'_def
-          simp del:atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff usableUntypedRange.simps
-          split del:if_split)
-   apply blast
-  apply (rule usableUntypedRange_mono2,
-    auto simp add: isCap_simps capAligned_def valid_cap_simps')
   done
 
 lemma ctes_of_cte_wpD:
@@ -6626,7 +6254,7 @@ lemma updateFreeIndex_forward_invs':
       apply (simp add:updateCap_def)
       apply (wp irqs_masked_lift valid_queues_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift
                 hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp
-               | wp_once hoare_use_eq[where f="gsUntypedZeroRanges"]
+               | wp (once) hoare_use_eq[where f="gsUntypedZeroRanges"]
                | simp add: getSlotCap_def)+
   apply (clarsimp simp: cte_wp_at_ctes_of fun_upd_def[symmetric])
   apply (clarsimp simp: isCap_simps valid_pspace'_def)

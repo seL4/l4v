@@ -598,27 +598,29 @@ let
             do_opt trace_opt add_trace (prefix "l2_" o make_function_name)
 
   val skip_heap_abs = !(#skip_heap_abs opt) = SOME true
-  val hl_results =
+  val (hl_results, maybe_heap_info) =
         if skip_heap_abs
-        then l2_results
+        then (l2_results, NONE)
         else let
           val (l2_results', HL_setup) =
                 HeapLift.prepare_heap_lift
                     filename prog_info l2_results lthy all_simpl_info
                     make_lifted_globals_field_name gen_word_heaps heap_abs_syntax;
-          in HeapLift.translate
-                filename prog_info l2_results' existing_l2_info existing_hl_info
-                HL_setup no_heap_abs force_heap_abs
-                heap_abs_syntax keep_going
-                (these (!(#trace_heap_lift opt))) do_opt trace_opt add_trace
-               (prefix "hl_" o make_function_name)
+          in (HeapLift.translate
+                 filename prog_info l2_results' existing_l2_info existing_hl_info
+                 HL_setup no_heap_abs force_heap_abs
+                 heap_abs_syntax keep_going
+                 (these (!(#trace_heap_lift opt))) do_opt trace_opt add_trace
+                (prefix "hl_" o make_function_name),
+              SOME (#heap_info HL_setup))
           end
 
   val wa_results =
         if skip_word_abs
         then hl_results
         else WordAbstract.translate
-               filename prog_info hl_results existing_hl_info existing_wa_info
+               filename prog_info maybe_heap_info
+               hl_results existing_hl_info existing_wa_info
                unsigned_word_abs no_signed_word_abs
                (these (!(#trace_word_abs opt))) do_opt trace_opt add_trace
                (prefix "wa_" o make_function_name)

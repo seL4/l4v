@@ -125,7 +125,7 @@ lemma card_reduce:
 
 lemma isCapDs:
   "isUntypedCap cap \<Longrightarrow> \<exists>dev ptr size freeIndex. cap = UntypedCap dev ptr size freeIndex"
-  "isEndpointCap cap \<Longrightarrow> \<exists>ptr bdg cans canr cang. cap = EndpointCap ptr bdg cans canr cang"
+  "isEndpointCap cap \<Longrightarrow> \<exists>ptr bdg cans canr cang cangr. cap = EndpointCap ptr bdg cans canr cang cangr"
   "isNotificationCap cap \<Longrightarrow> \<exists>ptr bdg cans canr. cap = NotificationCap ptr bdg cans canr"
   "isCNodeCap cap \<Longrightarrow> \<exists>ptr bits grd gsize. cap = CNodeCap ptr bits grd gsize"
   "isThreadCap cap \<Longrightarrow> \<exists>ptr. cap = ThreadCap ptr"

@@ -11,11 +11,13 @@
 (* Backend for tracing apply statements. Useful for doing proof step dependency analysis.
  * Provides an alternate refinement function which takes an additional stateful journaling operation. *)
 theory Apply_Trace
-imports Main
+imports
+  Main
+  "ml-helpers/MLUtils"
 begin
 
 
-ML {*
+ML \<open>
 signature APPLY_TRACE =
 sig
   val apply_results :
@@ -213,68 +215,6 @@ structure Filter_Thms = Named_Thms
   val description = "thms to be ignored from tracing"
 )
 
-datatype adjusted_name =
-  FoundName of ((string * int option) * thm)
-  | UnknownName of (string * term)
-
-
-(* Parse the index of a theorem name in the form "x_1". *)
-fun parse_thm_index name =
-  case (String.tokens (fn c => c = #"_") name |> rev) of
-      (possible_index::xs) =>
-         (case Lexicon.read_nat possible_index of
-            SOME n => (space_implode "_" (rev xs), SOME (n - 1))
-          | NONE => (name, NONE))
-    | _ => (name, NONE)
-
-(*
- * Names stored in proof bodies may have the form "x_1" which can either
- * mean "x(1)" or "x_1". Attempt to determine the correct name for the
- * given theorem. If we can't find the correct theorem, or it is
- * ambiguous, return the original name.
- *)
-fun adjust_thm_name ctxt (name,index) term =
-let
-  val possible_names = case index of NONE => distinct (=) [(name, NONE), parse_thm_index name]
-                                   | SOME i => [(name,SOME i)]
-
-  fun match (n, i) =
-  let
-    val idx = the_default 0 i
-    val thms = Proof_Context.get_fact ctxt (Facts.named n) handle ERROR _ => []
-  in
-    if idx >= 0 andalso length thms > idx then
-      if length thms > 1 then
-        SOME ((n, i), nth thms idx)
-      else
-        SOME ((n,NONE), hd thms)
-    else
-      NONE
-  end
-in
-  case map_filter match possible_names of
-    [x] => FoundName x
-    | _ => UnknownName (name, term)
-end
-
-(* Render the given fact. *)
-fun pretty_fact only_names ctxt (FoundName ((name, idx), thm)) =
-      Pretty.block
-        ([Pretty.mark_str (Facts.markup_extern ctxt (Proof_Context.facts_of ctxt) name),
-          case idx of
-            SOME n => Pretty.str ("(" ^ string_of_int (n + 1) ^ ")")
-          | NONE => Pretty.str ""] @
-          (if only_names then []
-          else [Pretty.str ":",Pretty.brk 1, Thm.pretty_thm ctxt thm]))
-  | pretty_fact _ ctxt (UnknownName (name, prop)) =
-      Pretty.block
-        [Pretty.str name, Pretty.str "(?) :", Pretty.brk 1,
-          Syntax.unparse_term ctxt prop]
-
-fun fact_ref_to_name ((Facts.Named ((nm,_), (SOME [Facts.Single i]))),thm) = FoundName ((nm,SOME i),thm)
-    | fact_ref_to_name ((Facts.Named ((nm,_), (NONE))),thm) = FoundName ((nm,NONE),thm)
-    | fact_ref_to_name (_,thm) = UnknownName ("",Thm.prop_of thm)
-
 (* Print out the found dependencies. *)
 fun pretty_deps only_names query ctxt thm deps =
 let
@@ -282,10 +222,10 @@ let
   val deps = sort_distinct (prod_ord (prod_ord string_ord (option_ord int_ord)) Term_Ord.term_ord) deps
 
   (* Fetch canonical names and theorems. *)
-  val deps = map (fn (ident, term) => adjust_thm_name ctxt ident term) deps
+  val deps = map (fn (ident, term) => ThmExtras.adjust_thm_name ctxt ident term) deps
 
   (* Remove "boring" theorems. *)
-  val deps = subtract (fn (a, FoundName (_, thm)) => Thm.eq_thm (thm, a)
+  val deps = subtract (fn (a, ThmExtras.FoundName (_, thm)) => Thm.eq_thm (thm, a)
                           | _ => false) (Filter_Thms.get ctxt) deps
 
   val deps = case query of SOME (raw_query,pos) =>
@@ -294,11 +234,11 @@ let
       val q = Find_Theorems.read_query pos' raw_query;
       val results = Find_Theorems.find_theorems_cmd ctxt (SOME thm) (SOME 1000000000) false q
                     |> snd
-                    |> map fact_ref_to_name;
+                    |> map ThmExtras.fact_ref_to_name;
 
       (* Only consider theorems from our query. *)
 
-      val deps = inter (fn (FoundName (nmidx,_), FoundName (nmidx',_)) => nmidx = nmidx'
+      val deps = inter (fn (ThmExtras.FoundName (nmidx,_), ThmExtras.FoundName (nmidx',_)) => nmidx = nmidx'
                                     | _ => false) results deps
      in deps end
      | _ => deps
@@ -306,18 +246,18 @@ let
 in
   if only_names then
     Pretty.block
-      (Pretty.separate "" (map ((pretty_fact only_names) ctxt) deps))
+      (Pretty.separate "" (map (ThmExtras.pretty_fact only_names ctxt) deps))
   else
   (* Pretty-print resulting theorems. *)
     Pretty.big_list "used theorems:"
-      (map (Pretty.item o single o (pretty_fact only_names) ctxt) deps)
+      (map (Pretty.item o single o ThmExtras.pretty_fact only_names ctxt) deps)
 
 end
 
 val _ = Context.>> (Context.map_theory Filter_Thms.setup)
 
 end
-*}
+\<close>
 
 end
 

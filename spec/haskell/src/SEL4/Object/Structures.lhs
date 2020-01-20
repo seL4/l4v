@@ -62,7 +62,7 @@ This is the type used to represent a capability.
 >             capEPPtr :: PPtr Endpoint,
 >             capEPBadge :: Word,
 >             capEPCanSend, capEPCanReceive :: Bool,
->             capEPCanGrant :: Bool }
+>             capEPCanGrant, capEPCanGrantReply :: Bool }
 >         | DomainCap
 >         | Zombie {
 >             capZombiePtr :: PPtr CTE,
@@ -71,7 +71,8 @@ This is the type used to represent a capability.
 >         | ArchObjectCap {
 >             capCap :: ArchCapability }
 >         | ReplyCap {
->             capReplyPtr :: PPtr Reply }
+>             capReplyPtr :: PPtr Reply,
+>             capReplyCanGrant :: Bool }
 >         | UntypedCap {
 >             capIsDevice :: Bool,
 >             capPtr :: PPtr (),
@@ -395,7 +396,8 @@ A user thread may be in the following states:
 
 >     = BlockedOnReceive {
 >         blockingObject :: PPtr Endpoint,
->         replyObject :: Maybe (PPtr Reply) }
+>         replyObject :: Maybe (PPtr Reply),
+>         blockingIPCCanGrant :: Bool }
 
 \item blocked waiting for a reply to a previously sent message;
 
@@ -422,6 +424,7 @@ A user thread may be in the following states:
 >         blockingObject :: PPtr Endpoint,
 >         blockingIPCBadge :: Word,
 >         blockingIPCCanGrant :: Bool,
+>         blockingIPCCanGrantReply :: Bool,
 >         blockingIPCIsCall :: Bool }
 
 \item ready to start executing at the current instruction (after a fault, an interrupted system call, or an explicitly set program counter);

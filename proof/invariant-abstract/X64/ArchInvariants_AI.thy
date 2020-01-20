@@ -30,7 +30,13 @@ end_qualify
 section "X64-specific invariant definitions"
 
 qualify X64_A (in Arch)
-type_synonym iarch_tcb = unit
+(* X64 has no interest for iarch_tcb (introduced for ARM_HYP) ,
+    and we consider no non-trivial predicates of iarch_tcb,
+    so an unspecified typedecl seems appropriate.
+   In contrast to using a unit type, this avoids
+    over-simplification of idle_tcb_at predicates,
+    which would make it hard to use facts that talk about idle_tcb_at. *)
+typedecl iarch_tcb
 end_qualify
 
 context Arch begin global_naming X64
@@ -38,7 +44,7 @@ context Arch begin global_naming X64
 definition
   arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb"
 where
-  "arch_tcb_to_iarch_tcb arch_tcb \<equiv> ()"
+  "arch_tcb_to_iarch_tcb arch_tcb \<equiv> undefined"
 
 lemma iarch_tcb_context_set[simp]:
   "arch_tcb_to_iarch_tcb (arch_tcb_context_set p tcb) = arch_tcb_to_iarch_tcb tcb"
@@ -47,7 +53,7 @@ lemma iarch_tcb_context_set[simp]:
 lemma iarch_tcb_set_registers[simp]:
   "arch_tcb_to_iarch_tcb (arch_tcb_set_registers regs arch_tcb)
      = arch_tcb_to_iarch_tcb arch_tcb"
-  by (simp add: arch_tcb_set_registers_def)
+  by (simp add: arch_tcb_to_iarch_tcb_def)
 
 (* These simplifications allows us to keep many arch-specific proofs unchanged. *)
 
@@ -335,6 +341,11 @@ definition
 where
   "valid_arch_tcb \<equiv> \<lambda>a. \<top>"
 
+definition
+  valid_arch_idle :: "iarch_tcb \<Rightarrow> bool"
+where
+  "valid_arch_idle \<equiv> \<top>"
+
 (* Validity of vspace table entries, defined shallowly. *)
 
 primrec
@@ -342,32 +353,32 @@ primrec
 where
   "valid_pte (InvalidPTE) = \<top>"
 | "valid_pte (SmallPagePTE ptr x y) =
-   (\<lambda>s. vmsz_aligned ptr X64SmallPage \<and> data_at X64SmallPage (ptrFromPAddr ptr) s)"
+       data_at X64SmallPage (ptrFromPAddr ptr)"
 
 primrec
   valid_pde :: "pde \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_pde (InvalidPDE) = \<top>"
 | "valid_pde (LargePagePDE ptr x y) =
-   (\<lambda>s. vmsz_aligned ptr X64LargePage \<and> data_at X64LargePage (ptrFromPAddr ptr) s)"
+       data_at X64LargePage (ptrFromPAddr ptr)"
 | "valid_pde (PageTablePDE ptr x z) =
-   (typ_at (AArch APageTable) (ptrFromPAddr ptr))"
+       typ_at (AArch APageTable) (ptrFromPAddr ptr)"
 
 primrec
   valid_pdpte :: "pdpte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_pdpte (InvalidPDPTE) = \<top>"
 | "valid_pdpte (HugePagePDPTE ptr x y) =
-   (\<lambda>s. vmsz_aligned ptr X64HugePage \<and> data_at X64HugePage (ptrFromPAddr ptr) s)"
+       data_at X64HugePage (ptrFromPAddr ptr)"
 | "valid_pdpte (PageDirectoryPDPTE ptr x z) =
-   (typ_at (AArch APageDirectory) (ptrFromPAddr ptr))"
+       typ_at (AArch APageDirectory) (ptrFromPAddr ptr)"
 
 primrec
   valid_pml4e :: "pml4e \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_pml4e (InvalidPML4E) = \<top>"
 | "valid_pml4e (PDPointerTablePML4E ptr x y) =
-   (typ_at (AArch APDPointerTable) (ptrFromPAddr ptr))"
+       typ_at (AArch APDPointerTable) (ptrFromPAddr ptr)"
 
 (* Validity of vspace table entries, defined deeply. *)
 
@@ -376,25 +387,25 @@ primrec
 where
   "valid_pde_rec (InvalidPDE) = \<top>"
 | "valid_pde_rec (LargePagePDE p _ _) =
-   (\<lambda>s. vmsz_aligned p X64LargePage \<and> data_at X64LargePage (ptrFromPAddr p) s)"
+       data_at X64LargePage (ptrFromPAddr p)"
 | "valid_pde_rec (PageTablePDE p _ _) =
-   (\<lambda>s. \<exists>pt. ako_at (PageTable pt) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pte (pt i) s))"
+       (\<lambda>s. \<exists>pt. ako_at (PageTable pt) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pte (pt i) s))"
 
 primrec
   valid_pdpte_rec :: "pdpte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_pdpte_rec (InvalidPDPTE) = \<top>"
 | "valid_pdpte_rec (HugePagePDPTE p _ _) =
-   (\<lambda>s. vmsz_aligned p X64HugePage \<and> data_at X64HugePage (ptrFromPAddr p) s)"
+       data_at X64HugePage (ptrFromPAddr p)"
 | "valid_pdpte_rec (PageDirectoryPDPTE p _ _) =
-   (\<lambda>s. \<exists>pd. ako_at (PageDirectory pd) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pde_rec (pd i) s))"
+       (\<lambda>s. \<exists>pd. ako_at (PageDirectory pd) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pde_rec (pd i) s))"
 
 primrec
   valid_pml4e_rec :: "pml4e \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_pml4e_rec (InvalidPML4E) = \<top>"
 | "valid_pml4e_rec (PDPointerTablePML4E p _ _) =
-   (\<lambda>s. \<exists>pdpt. ako_at (PDPointerTable pdpt) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pdpte_rec (pdpt i) s))"
+       (\<lambda>s. \<exists>pdpt. ako_at (PDPointerTable pdpt) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pdpte_rec (pdpt i) s))"
 
 (* Kernel mappings in x64 go from pptr base to the top of memory
    but weird x64 conventions to do with having only 48 bits
@@ -421,7 +432,7 @@ definition
 where
   "wellformed_pte pte \<equiv> case pte of
    SmallPagePTE p attr r \<Rightarrow>
-       r \<in> valid_vm_rights
+       r \<in> valid_vm_rights \<and> vmsz_aligned p X64SmallPage
    | _ \<Rightarrow> True"
 
 (* FIXME x64: check hardware to see if any bits are forbidden *)
@@ -429,8 +440,8 @@ definition
   wellformed_pde :: "pde \<Rightarrow> bool"
 where
   "wellformed_pde pde \<equiv> case pde of
-   pde.LargePagePDE p attr r \<Rightarrow> r \<in> valid_vm_rights
- | pde.PageTablePDE p attr r \<Rightarrow> r \<in> valid_vm_rights
+   pde.LargePagePDE p attr r \<Rightarrow> r \<in> valid_vm_rights \<and> vmsz_aligned p X64LargePage
+ | pde.PageTablePDE p attr r \<Rightarrow> r \<in> valid_vm_rights \<and> is_aligned p table_size
  | _ \<Rightarrow> True"
 
 (* FIXME x64: check hardware to see if any bits are forbidden *)
@@ -438,8 +449,8 @@ definition
   wellformed_pdpte :: "pdpte \<Rightarrow> bool"
 where
   "wellformed_pdpte pdpte \<equiv> case pdpte of
-   pdpte.HugePagePDPTE p attr r \<Rightarrow> r \<in> valid_vm_rights
- | pdpte.PageDirectoryPDPTE p attr r \<Rightarrow> r \<in> valid_vm_rights
+   pdpte.HugePagePDPTE p attr r \<Rightarrow> r \<in> valid_vm_rights \<and> vmsz_aligned p X64HugePage
+ | pdpte.PageDirectoryPDPTE p attr r \<Rightarrow> r \<in> valid_vm_rights \<and> is_aligned p table_size
  | _ \<Rightarrow> True"
 
 (* FIXME x64: check hardware to see if any bits are forbidden *)
@@ -447,7 +458,7 @@ definition
   wellformed_pml4e :: "pml4e \<Rightarrow> bool"
 where
   "wellformed_pml4e pml4e \<equiv> case pml4e of
-  pml4e.PDPointerTablePML4E p attr r \<Rightarrow> r \<in> valid_vm_rights
+  pml4e.PDPointerTablePML4E p attr r \<Rightarrow> r \<in> valid_vm_rights \<and> is_aligned p table_size
  | _ \<Rightarrow> True"
 
 definition
@@ -3023,46 +3034,6 @@ lemma vs_cap_ref_eq_imp_table_cap_ref_eq:
                   arch_cap_fun_lift_def
           split: cap.splits arch_cap.splits vmpage_size.splits option.splits)
 
-
-lemma valid_validate_vm_rights[simp]:
-  "validate_vm_rights rs \<in> valid_vm_rights"
-and validate_vm_rights_subseteq[simp]:
-  "validate_vm_rights rs \<subseteq> rs"
-and validate_vm_rights_simps[simp]:
-  "validate_vm_rights vm_read_write = vm_read_write"
-  "validate_vm_rights vm_read_only = vm_read_only"
-  "validate_vm_rights vm_kernel_only = vm_kernel_only"
-  by (simp_all add: validate_vm_rights_def valid_vm_rights_def
-                    vm_read_write_def vm_read_only_def vm_kernel_only_def)
-
-lemma validate_vm_rights_inter: (* NOTE: unused *)
-  "validate_vm_rights (validate_vm_rights fun \<inter> msk) =
-   validate_vm_rights (fun \<inter> msk)"
-  by (simp add: validate_vm_rights_def vm_read_write_def vm_read_only_def
-              vm_kernel_only_def)
-
-lemma validate_vm_rights_def':
-  "validate_vm_rights rs =
-   (THE rs'. rs' \<subseteq> rs \<and> rs' : valid_vm_rights \<and>
-     (\<forall>rs''. rs'' \<subseteq> rs \<longrightarrow> rs'' : valid_vm_rights \<longrightarrow> rs'' \<subseteq> rs'))"
-  apply (rule the_equality[symmetric])
-   apply  (auto simp add: validate_vm_rights_def valid_vm_rights_def
-                       vm_read_write_def vm_read_only_def vm_kernel_only_def)[1]
-  apply (simp add: validate_vm_rights_def valid_vm_rights_def
-                 vm_read_write_def vm_read_only_def vm_kernel_only_def)
-  apply safe
-            apply simp+
-       apply (drule_tac x="{AllowRead, AllowWrite}" in spec, simp+)
-    apply (drule_tac x="{AllowRead, AllowWrite}" in spec, simp+)
-   apply (drule_tac x="{AllowRead, AllowWrite}" in spec, simp+)
-  apply (drule_tac x="{AllowRead}" in spec, simp)
-  done
-
-lemma validate_vm_rights_eq[simp]:
-  "rs : valid_vm_rights \<Longrightarrow> validate_vm_rights rs = rs"
-  by (auto simp add: validate_vm_rights_def valid_vm_rights_def
-                     vm_read_write_def vm_read_only_def vm_kernel_only_def)
-
 lemma acap_rights_update_id [intro!, simp]:
   "\<lbrakk>wellformed_acap cap\<rbrakk> \<Longrightarrow> acap_rights_update (acap_rights cap) cap = cap"
   unfolding wellformed_acap_def acap_rights_update_def
@@ -3375,7 +3346,38 @@ lemma asid_low_bits_of_mask_eq:
 lemmas asid_low_bits_of_p2m1_eq =
   asid_low_bits_of_mask_eq[simplified mask_2pm1]
 
+lemma arch_tcb_context_absorbs[simp]:
+  "arch_tcb_context_set uc2 (arch_tcb_context_set uc1 a_tcb) \<equiv> arch_tcb_context_set uc2 a_tcb"
+  apply (simp add: arch_tcb_context_set_def)
+  done
+
+lemma arch_tcb_context_get_set[simp]:
+  "arch_tcb_context_get (arch_tcb_context_set uc a_tcb) = uc"
+  apply (simp add: arch_tcb_context_get_def arch_tcb_context_set_def)
+  done
+
+lemma vs_lookup_trans_sub2:
+  assumes ko: "\<And>ko p. \<lbrakk> ko_at ko p s; vs_refs ko \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s'"
+  shows "vs_lookup_trans s \<subseteq> vs_lookup_trans s'"
+proof -
+  have "vs_lookup1 s \<subseteq> vs_lookup1 s'"
+    by (fastforce dest: ko elim: vs_lookup1_stateI2)
+  thus ?thesis by (rule rtrancl_mono)
+qed
+
+lemma vs_lookup_pages_trans_sub2:
+  assumes ko: "\<And>ko p. \<lbrakk> ko_at ko p s; vs_refs_pages ko \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs_pages ko \<subseteq> vs_refs_pages ko') p s'"
+  shows "vs_lookup_pages_trans s \<subseteq> vs_lookup_pages_trans s'"
+proof -
+  have "vs_lookup_pages1 s \<subseteq> vs_lookup_pages1 s'"
+    by (fastforce dest: ko elim: vs_lookup_pages1_stateI2)
+  thus ?thesis by (rule rtrancl_mono)
+qed
+
 end
+
+declare X64.arch_tcb_context_absorbs[simp]
+declare X64.arch_tcb_context_get_set[simp]
 
 setup \<open>Add_Locale_Code_Defs.setup "X64"\<close>
 setup \<open>Add_Locale_Code_Defs.setup "X64_A"\<close>

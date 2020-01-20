@@ -18,35 +18,34 @@ begin
 
 declare ptr_add_assertion_uint [simp del]
 
-ML {*
-val funs = ParseGraph.funs @{theory} "CFunDump.txt"
-*}
+ML \<open>
+val funs = ParseGraph.funs @{theory} CFunDump_filename
+\<close>
 
-ML {*
+ML \<open>
 fun define_all funs = fold (fn s => let val s' = Long_Name.base_name s
     val _ = tracing ("defining " ^ s) in
   ParseGraph.define_graph_fun funs (s' ^ "_graph") (Binding.name (s' ^ "_graph_fun")) s end)
   (Symtab.dest funs |> filter (fn (_, v) => #3 v <> NONE) |> map fst)
-*}
+\<close>
 
-ML {*
+ML \<open>
 val csenv = let
     val the_csenv = CalculateState.get_csenv @{theory} "../c/build/$L4V_ARCH/kernel_all.c_pp" |> the
   in fn () => the_csenv end
-*}
+\<close>
 
 consts
   encode_machine_state :: "machine_state \<Rightarrow> unit \<times> nat"
 
-local_setup {* add_field_h_val_rewrites #> add_field_to_bytes_rewrites *}
-
 context graph_refine_locale begin
 
-ML {* SimplToGraphProof.globals_swap
- := (fn t => @{term "globals_swap t_hrs_' t_hrs_'_update symbol_table globals_list"} $ t)
-*}
-
-local_setup {* add_globals_swap_rewrites @{thms kernel_all_global_addresses.global_data_mems} *}
+local_setup \<open>
+  add_field_h_val_rewrites
+  #> add_field_to_bytes_rewrites
+  #> add_field_offset_rewrites
+  #> add_globals_swap_rewrites @{thms kernel_all_global_addresses.global_data_mems}
+\<close>
 
 definition
   simpl_invariant :: "globals myvars set"
@@ -68,8 +67,25 @@ lemma snd_snd_gs_new_frames_new_cnodes[simp]:
 (* If this fails, it can be debugged with the assistance of the
    script in TestGraphRefine.thy *)
 
-ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
-    funs (csenv ()) @{context} *}
+ML \<open>
+\<comment>\<open> VER-1166 \<close>
+val blacklist = ["Kernel_C.reserve_region", "Kernel_C.merge_regions"]
+
+val dbg = ProveSimplToGraphGoals.new_debug blacklist [];
+\<close>
+
+ML \<open>
+ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
+    funs (csenv ()) @{context} dbg;
+\<close>
+
+ML \<open>
+val _ = ProveSimplToGraphGoals.print dbg "failures:" #failures;
+\<close>
+
+ML \<open>
+val _ = ProveSimplToGraphGoals.print dbg "successes:" #successes;
+\<close>
 
 end
 

@@ -128,29 +128,28 @@ lemma ogets_to_oreturn [polish]: "ogets (\<lambda>s. P) = oreturn P"
 
 lemma ocondition_ret_ret [polish]:
   "ocondition P (oreturn A) (oreturn B) = ogets (\<lambda>s. if P s then A else B)"
-  by (auto intro!:ext simp: ocondition_def ogets_def)
+  by (auto simp: ocondition_def ogets_def)
 
 lemma ocondition_gets_ret [polish]:
   "ocondition P (ogets A) (oreturn B) = ogets (\<lambda>s. if P s then A s else B)"
-  by (auto intro!:ext simp: ocondition_def ogets_def)
+  by (auto simp: ocondition_def ogets_def)
 
 lemma ocondition_ret_gets [polish]:
   "ocondition P (oreturn A) (ogets B) = ogets (\<lambda>s. if P s then A else B s)"
-  by (auto intro!:ext simp: ocondition_def ogets_def)
+  by (auto simp: ocondition_def ogets_def)
 
 lemma ocondition_gets_gets [polish]:
   "ocondition P (ogets A) (ogets B) = ogets (\<lambda>s. if P s then A s else B s)"
-  by (auto intro!:ext simp: ocondition_def ogets_def)
+  by (auto simp: ocondition_def ogets_def)
 
 lemma bindE_K_bind [polish]: "A >>=E (\<lambda>x :: unit. B) = (A >>=E K_bind B)"
-  apply (clarsimp simp: K_bind_def)
-  done
+  by clarsimp
+
 lemma bind_K_bind [polish]: "A >>= (\<lambda>x :: unit. B) = (A >>= K_bind B)"
-  apply (clarsimp simp: K_bind_def)
-  done
+  by clarsimp
+
 lemma obind_K_bind [polish]: "A |>> (\<lambda>x :: unit. B) = (A  |>> K_bind B)"
-  apply (clarsimp simp: K_bind_def)
-  done
+  by clarsimp
 
 lemma K_bind_apply [polish]:
     "K_bind a b = a"
@@ -280,15 +279,12 @@ lemma returnOk_if_P_1_0_bindE [polish]:
 lemma gets_if_P_1_0_bind [polish]:
     "(gets (\<lambda>s. if P s then 1 else 0) >>= (\<lambda>x. Q x))
         = (gets P >>= (\<lambda>x. Q (if x then 1 else 0)))"
-  apply (auto intro!: monad_eqI simp: in_gets in_bind snd_gets snd_bind Bex_def)
-  done
+  by (auto simp: in_gets in_bind snd_gets snd_bind Bex_def)
 
 lemma getsE_if_P_1_0_bindE [polish]:
     "(getsE (\<lambda>s. if P s then 1 else 0) >>=E (\<lambda>x. Q x))
         = (getsE P >>=E (\<lambda>x. Q (if x then 1 else 0)))"
-  apply (auto intro!: monad_eqI simp: getsE_def in_gets
-        in_liftE in_bindE snd_gets snd_bindE snd_liftE Bex_def)
-  done
+  by (auto simp: getsE_def in_gets in_liftE in_bindE snd_gets snd_bindE snd_liftE Bex_def)
 
 lemma if_P_1_0_neq_0 [polish, simp]:
     "((if P then 1 else (0::('a::{zero_neq_one}))) \<noteq> 0) = P"

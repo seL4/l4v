@@ -16,7 +16,7 @@ theory ArchInterruptAcc_AI
 imports "../InterruptAcc_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems InterruptAcc_AI_assms
 

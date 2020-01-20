@@ -21,7 +21,7 @@ lemma globals_surj: "surj globals"
  * The "full" simpset used internally within AutoCorres during
  * processing.
  *)
-ML {*
+ML \<open>
 
 val AUTOCORRES_SIMPSET =
   @{context} delsimps (
@@ -40,6 +40,6 @@ val AUTOCORRES_SIMPSET =
     )
   |> simpset_of
 
-*}
+\<close>
 
 end

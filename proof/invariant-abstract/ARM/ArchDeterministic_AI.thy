@@ -94,7 +94,7 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
   apply (rule hoare_pre)
    by (wp get_cap_wp  do_machine_op_valid_list
        | wpc | simp add: get_irq_slot_def handle_reserved_irq_def
-       | wp_once hoare_drop_imps)+
+       | wp (once) hoare_drop_imps)+
 
 crunches handle_send, handle_hypervisor_fault
   for valid_list[wp, Deterministic_AI_assms]: valid_list

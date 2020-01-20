@@ -1232,32 +1232,92 @@ lemma simpl_to_graph_lvar_nondet_init:
   apply simp
   done
 
+lemmas load_word_defs = load_word32_def load_word64_def
+lemmas store_word_defs = store_word32_def store_word64_def
+
 lemma c_guard_ptr_val_gt_0:
   "c_guard (p :: ('a :: mem_type) ptr) \<Longrightarrow> ptr_val p > 0"
   apply (simp only: word_neq_0_conv[symmetric], rule notI)
   apply (cases p, simp)
   done
 
-lemma h_val_ptr:
-  "h_val hp (p :: ('a :: c_type) ptr ptr) = Ptr (load_word32 (ptr_val p) hp)"
-  by (simp add: h_val_def load_word32_def from_bytes_def typ_info_ptr)
-
-lemma heap_update_ptr:
-  "heap_update (p :: ('a :: c_type) ptr ptr) p' hp = store_word32 (ptr_val p) (ptr_val p') hp"
-  by (simp add: heap_update_def to_bytes_def typ_info_ptr store_word32_def)
+lemma h_val_word8:
+  "h_val hp p = load_word8 (ptr_val p) hp"
+  by (simp add: h_val_def load_word8_def from_bytes_def typ_info_word
+                word_rcat_bl)
 
 lemma h_val_word32:
   "h_val hp p = load_word32 (ptr_val p) hp"
   by (simp add: h_val_def load_word32_def from_bytes_def typ_info_word)
 
+lemma h_val_word64:
+  "h_val hp p = load_word64 (ptr_val p) hp"
+  by (simp add: h_val_def load_word64_def from_bytes_def typ_info_word)
+
+lemma h_val_ptr:
+  "h_val hp (p :: ('a :: c_type) ptr ptr) = Ptr (load_machine_word (ptr_val p) hp)"
+  by (simp add: h_val_def load_word_defs from_bytes_def typ_info_ptr word_size_def)
+
+(* FIXME: should this go into Word.word_ubin near norm_Rep? *)
+lemma bintrunc_len_eq_signed:
+  "bintrunc LENGTH('a) (uint (x :: 'a :: len signed word)) = uint x"
+  by (metis (full_types) len_signed word_of_int_uint word_ubin.eq_norm)
+
+lemma uint_word_of_int_uint_signed_unsigned:
+  "uint (word_of_int (uint (x :: 'a :: len signed word)) :: 'a word) = uint x"
+  by (simp add: bintrunc_len_eq_signed word_ubin.eq_norm)
+
+(*FIXME: move to lib *)
+lemma is_up_is_down_remove_sign[simp]:
+  "is_up (UCAST('a :: len0 signed \<rightarrow> 'a))"
+  "is_down (UCAST('a signed \<rightarrow> 'a))"
+  unfolding is_up_def is_down_def source_size target_size by simp_all
+
+(*FIXME: move to lib *)
+lemma to_bytes_remove_sign:
+  "to_bytes (w :: 'a :: len8 signed word) = to_bytes (UCAST('a signed \<rightarrow> 'a) w)"
+  by (simp add: to_bytes_def typ_info_word word_rsplit_def uint_up_ucast)
+
+(*FIXME: move to lib *)
+lemma size_of_remove_sign:
+  "size_of TYPE('a :: len8 signed word) = size_of TYPE('a word)"
+  by (simp add: size_of_def typ_info_word)
+
+(*FIXME: move to lib *)
+lemma heap_update_remove_sign:
+  "heap_update p (w :: 'a :: len8 signed word) hp =
+    heap_update (PTR_COERCE('a signed word \<rightarrow> 'a word) p) (ucast w) hp"
+  by (simp add: heap_update_def to_bytes_remove_sign size_of_remove_sign)
+
+lemma heap_update_word8:
+  "heap_update p (w :: 8 word) hp = store_word8 (ptr_val p) w hp"
+  by (simp add: heap_update_def to_bytes_def typ_info_word store_word8_def word_rsplit_same)
+
+lemma heap_update_sword8:
+  "heap_update p (w :: 8 signed word) hp = store_word8 (ptr_val p) (ucast w) hp"
+  by (simp add: heap_update_def store_word8_def to_bytes_remove_sign to_bytes_word8)
+
 lemma heap_update_word32:
   "heap_update p w hp = store_word32 (ptr_val p) w hp"
   by (simp add: heap_update_def to_bytes_def typ_info_word store_word32_def)
 
-lemma h_val_word8:
-  "h_val hp p = load_word8 (ptr_val p) hp"
-  by (simp add: h_val_def load_word8_def from_bytes_def typ_info_word
-                word_rcat_bl)
+lemma heap_update_sword32:
+  "heap_update p (w :: 32 signed word) hp = store_word32 (ptr_val p) (ucast w) hp"
+  by (simp add: heap_update_def to_bytes_def typ_info_word store_word32_def word_rsplit_same
+                ucast_def uint_word_of_int_uint_signed_unsigned word_rsplit_def)
+
+lemma heap_update_word64:
+  "heap_update p w hp = store_word64 (ptr_val p) w hp"
+  by (simp add: heap_update_def to_bytes_def typ_info_word store_word64_def)
+
+lemma heap_update_sword64:
+  "heap_update p (w :: 64 signed word) hp = store_word64 (ptr_val p) (ucast w) hp"
+  by (simp add: heap_update_def to_bytes_def typ_info_word store_word64_def word_rsplit_same
+                ucast_def uint_word_of_int_uint_signed_unsigned word_rsplit_def)
+
+lemma heap_update_ptr:
+  "heap_update (p :: ('a :: c_type) ptr ptr) p' hp = store_machine_word (ptr_val p) (ptr_val p') hp"
+  by (simp add: heap_update_def to_bytes_def typ_info_ptr store_word_defs)
 
 lemma from_bytes_ucast_isom[OF refl refl]:
   "x = from_bytes xs \<Longrightarrow> y = from_bytes xs
@@ -1277,10 +1337,9 @@ lemma h_val_sword32:
   "(h_val hp p :: 32 signed word) = ucast (h_val hp (ptr_coerce p) :: 32 word)"
   by (simp add: h_val_def from_bytes_ucast_isom word_size)
 
-lemma heap_update_word8:
-  "heap_update p w hp = store_word8 (ptr_val p) w hp"
-  by (simp add: heap_update_def store_word8_def to_bytes_def typ_info_word
-                word_rsplit_same)
+lemma h_val_sword64:
+  "(h_val hp p :: 64 signed word) = ucast (h_val hp (ptr_coerce p) :: 64 word)"
+  by (simp add: h_val_def from_bytes_ucast_isom word_size)
 
 lemma to_bytes_ucast_isom[OF refl]:
   "y = ucast x
@@ -1303,16 +1362,6 @@ lemma to_bytes_sword:
     = to_bytes (ucast w :: 'a word)"
   by (simp add: to_bytes_ucast_isom word_size len8_dv8)
 
-lemma heap_list_update_word32:
-  "heap_update_list addr (to_bytes w (heap_list hp' 4 addr')) hp
-    = store_word32 addr w hp"
-  by (simp add: to_bytes_def store_word32_def typ_info_word)
-
-lemma heap_list_update_ptr:
-  "heap_update_list addr (to_bytes p (heap_list hp' 4 addr')) hp
-    = store_word32 addr (ptr_val (p :: ('a :: c_type) ptr)) hp"
-  by (simp add: to_bytes_def store_word32_def typ_info_ptr)
-
 lemma heap_list_update_word8:
   "heap_update_list addr (to_bytes w (heap_list hp' 1 addr')) hp
     = store_word8 addr w hp"
@@ -1320,12 +1369,45 @@ lemma heap_list_update_word8:
     = store_word8 addr w hp"
   by (simp_all add: to_bytes_def store_word8_def typ_info_word word_rsplit_same)
 
+lemma heap_list_update_word32:
+  "heap_update_list addr (to_bytes w (heap_list hp' 4 addr')) hp
+    = store_word32 addr w hp"
+  by (simp add: to_bytes_def store_word32_def typ_info_word)
+
+lemma heap_list_update_word64:
+  "heap_update_list addr (to_bytes w (heap_list hp' 8 addr')) hp
+    = store_word64 addr w hp"
+  by (simp add: to_bytes_def store_word64_def typ_info_word)
+
+lemma heap_list_update_ptr:
+  "heap_update_list addr (to_bytes p (heap_list hp' word_size addr')) hp
+    = store_machine_word addr (ptr_val (p :: ('a :: c_type) ptr)) hp"
+  by (simp add: to_bytes_def store_word_defs typ_info_ptr)
+
 lemma field_lvalue_offset_eq:
   "field_lookup (typ_info_t TYPE('a :: c_type)) f 0 = Some v
         \<Longrightarrow> field_lvalue (ptr :: 'a ptr) f = ptr_val ptr + of_nat (snd v)"
   apply (cases v, simp, drule field_lookup_offset_eq)
   apply (simp add: field_lvalue_def)
   done
+
+lemmas h_val_word_simps =
+  h_val_word8 h_val_sword8
+  h_val_word32 h_val_sword32
+  h_val_word64 h_val_sword64
+  h_val_ptr
+
+lemmas heap_update_word_simps =
+  heap_update_word8 heap_update_sword8
+  heap_update_word32 heap_update_sword32
+  heap_update_word64 heap_update_sword64
+  heap_update_ptr
+
+lemmas heap_list_update_word_simps =
+  heap_list_update_word8
+  heap_list_update_word32
+  heap_list_update_word64
+  heap_list_update_ptr[unfolded word_size_def]
 
 lemma image_fst_cart_UNIV_subset:
   "S \<subseteq> (fst ` S) \<times> UNIV"
@@ -1351,13 +1433,15 @@ lemma simpl_to_graph_impossible:
   apply (drule(1) eq_implD, simp+)
   done
 
+definition[simp]: "VarMachineWord = arch_machine_word_constructor VarWord32 VarWord64"
+
 definition
   "asm_args_to_list enc xs m_ms
-    = map VarWord32 xs @ [VarMem (fst m_ms), VarMS (enc (snd m_ms))]"
+    = map VarMachineWord xs @ [VarMem (fst m_ms), VarMS (enc (snd m_ms))]"
 
 definition
   "asm_rets_to_list ret enc v mem_vs
-    = (if ret then [VarWord32 v] else []) @ [VarMem (fst mem_vs), VarMS (enc (snd mem_vs))]"
+    = (if ret then [VarMachineWord v] else []) @ [VarMem (fst mem_vs), VarMS (enc (snd mem_vs))]"
 
 definition
   asm_fun_refines
@@ -1480,93 +1564,6 @@ lemma heap_update_list_If2:
   apply (simp add: unat_of_nat)
   done
 
-lemma intvl_empty2:
-  "({p ..+ n} = {}) = (n = 0)"
-  by (auto simp add: intvl_def)
-
-lemma heap_list_update_commute:
-  "{p ..+ length xs} \<inter> {q ..+ length ys} = {}
-      \<Longrightarrow> heap_update_list p xs (heap_update_list q ys hp)
-        = heap_update_list q ys (heap_update_list p xs hp)"
-  apply (cases "length xs \<le> addr_card")
-   apply (cases "length ys \<le> addr_card")
-    apply (simp add: heap_update_list_If2)
-    apply (rule ext, simp)
-    apply blast
-   apply (simp_all add: addr_card intvl_overflow intvl_empty2)
-  done
-
-lemma is_aligned_intvl_disjoint:
-  "\<lbrakk> p \<noteq> p'; is_aligned p n; is_aligned p' n \<rbrakk>
-    \<Longrightarrow> {p ..+ 2 ^ n} \<inter> {p' ..+ 2 ^ n} = {}"
-  apply (drule(2) aligned_neq_into_no_overlap)
-  apply (drule upto_intvl_eq)+
-  apply (simp add: field_simps del: Int_atLeastAtMost)
-  done
-
-lemma is_aligned_intvl_disjoint_offset:
-  "\<lbrakk> p \<noteq> p'; is_aligned (p - p') n \<rbrakk>
-    \<Longrightarrow> {p ..+ 2 ^ n} \<inter> {p' ..+ 2 ^ n} = {}"
-  apply (rule intvl_disj_offset[where x="- p'", THEN iffD1])
-  apply (rule is_aligned_intvl_disjoint)
-    apply (simp_all del: word_neq_0_conv add: field_simps)
-  done
-
-lemma store_store_word32_commute:
-  "\<lbrakk> p \<noteq> p'; is_aligned p 2; is_aligned p' 2 \<rbrakk>
-    \<Longrightarrow> store_word32 p w (store_word32 p' w' hp)
-      = store_word32 p' w' (store_word32 p w hp)"
-  apply (clarsimp simp: store_word32_def)
-  apply (rule heap_list_update_commute)
-  apply (drule(2) is_aligned_intvl_disjoint)
-  apply (simp add: length_word_rsplit_even_size[OF refl] word_size
-              del: Int_atLeastAtMost)
-  done
-
-lemma store_store_word32_commute_offset:
-  assumes prems: "(p - p') = n" "n && 3 = 0" "n \<noteq> 0"
-  shows "store_word32 p w (store_word32 p' w' hp)
-      = store_word32 p' w' (store_word32 p w hp)"
-  using prems
-  apply (clarsimp simp: store_word32_def)
-  apply (rule heap_list_update_commute)
-  apply (simp add: length_word_rsplit_even_size[OF refl] word_size)
-  apply (rule is_aligned_intvl_disjoint_offset[where n=2, simplified])
-   apply (simp add: field_simps word_neq_0_conv[symmetric] del: word_neq_0_conv)
-  apply (simp add: field_simps is_aligned_mask mask_def)
-  done
-
-lemma c_guard_to_word_ineq:
-  "c_guard (p :: ('a :: mem_type) ptr)
-     = (ptr_val p && mask (align_td (typ_info_t TYPE('a))) = 0
-        \<and> ptr_val p \<noteq> 0 \<and> ptr_val p \<le> (- of_nat (size_of TYPE('a))))"
-  using max_size[where 'a='a]
-  apply (simp add: c_guard_def ptr_aligned_def align_of_def
-                   is_aligned_def[symmetric] is_aligned_mask
-                   c_null_guard_def intvl_def addr_card_def
-                   card_word)
-  apply safe
-    apply (drule_tac x=0 in spec, simp)
-   apply (rule ccontr)
-   apply (drule_tac x="unat (- ptr_val p)" in spec)
-   apply simp
-   apply (simp add: Aligned.unat_minus word_le_nat_alt
-             split: if_split_asm)
-    apply (drule of_nat_inverse, simp+)
-    apply (cut_tac 'a='a in sz_nzero, simp)
-   apply (simp add: word_size unat_of_nat linorder_not_le
-                    linorder_not_less)
-   apply (cut_tac x="ptr_val p" in unat_lt2p, simp)
-  apply (simp add: word_neq_0_conv[symmetric] del: word_neq_0_conv)
-  apply (subgoal_tac "ptr_val p = (- (of_nat k))")
-   apply simp
-   apply (simp add: word_le_nat_alt Aligned.unat_minus split: if_split_asm)
-    apply (drule of_nat_inverse, simp+)
-    apply (cut_tac 'a='a in sz_nzero, simp)
-   apply (simp add: word_size unat_of_nat)
-  apply (simp add: sign_simps[symmetric])
-  done
-
 lemma word_sless_to_less:
   "\<lbrakk> 0 <=s x; 0 <=s y \<rbrakk> \<Longrightarrow> (x <s y) = (x < y)"
   apply (simp add: word_sless_alt word_sle_def word_less_def)
@@ -1579,227 +1576,12 @@ lemma word_sle_to_le:
   apply (simp add: sint_eq_uint word_msb_sint)
   done
 
-lemma unat_ucast_less_helper:
-  "ucast x < (of_nat n :: word32) \<Longrightarrow> unat (x :: word8) < n"
-  apply (drule unat_less_helper)
-  apply (simp add: unat_ucast_8_32)
-  done
-
-lemma store_load_word32:
-  "store_word32 p (load_word32 p m) m = m"
-  apply (simp add: store_word32_def load_word32_def)
-  apply (rule heap_update_list_id[where n=4])
-  apply (simp add: word_rsplit_rcat_size word_size)
-  done
-
-lemma load_store_word32:
-  "load_word32 p (store_word32 p v m) = v"
-  using heap_list_update[where p=p and h=m and v="rev (word_rsplit v)"]
-  by (simp add: store_word32_def load_word32_def
-                length_word_rsplit_exp_size' word_size addr_card
-                word_rcat_rsplit)
-
-lemma word32_lt_bounds_reduce:
-  "\<lbrakk> n \<noteq> 0; (i \<noteq> (n - 1)) \<rbrakk> \<Longrightarrow> (i < (n :: word32)) = (i < (n - 1))"
-  apply (rule sym, rule trans, rule less_le)
-  apply simp
-  apply (simp add: word_le_def word_less_def uint_sub_if')
-  done
-
-lemma length_Cons: "length (x # xs) = Suc (length xs)"
-  by simp
-
-lemma ucast_eq_0:
-  "(ucast (x :: ('a :: len) word) = (0 :: ('b :: len) word))
-    = (if len_of TYPE('a) <= len_of TYPE('b)
-        then x = 0 else (x && mask (len_of TYPE('b)) = 0))"
-  by (simp, fastforce intro!: word_eqI dest: word_eqD simp: nth_ucast word_size)+
-
-lemmas ucast_eq_0s = ucast_eq_0 ucast_eq_0[THEN arg_cong[where f=Not], simplified]
-
-text {* Proof process for store_word32 equalities. *}
-
-lemma load_store_word32_offset:
-  "(p - p') AND 3 = 0
-    \<Longrightarrow> load_word32 p (store_word32 p' v hp)
-        = (if p = p' then v else load_word32 p hp)"
-  using is_aligned_intvl_disjoint_offset[where p=p and p'=p' and n=2]
-  apply (clarsimp simp: load_store_word32)
-  apply (simp add: load_word32_def store_word32_def)
-  apply (subst heap_list_update_disjoint_same, simp_all)
-  apply (simp add: length_word_rsplit_exp_size' word_size
-                   is_aligned_mask mask_def Int_commute)
-  done
-
-lemma load_word32_offset_represents:
-  assumes eq: "\<forall>x. x AND 3 = 0 \<longrightarrow> load_word32 (p + x) hp = load_word32 (p + x) hp'"
-  shows "hp = hp'"
-proof (rule ext)
-  fix x
-  let ?p = "p + ((x - p) AND ~~ 3)"
-  have X: "\<And>hp v. store_word32 ?p v hp x = rev (word_rsplit v) ! unat ((x - p) AND 3)"
-    apply (simp add: store_word32_def
-                     mask_out_sub_mask[where n=2 and 'a=32, unfolded mask_def, simplified])
-    apply (subst heap_update_mem_same_point, simp_all add: field_simps
-        length_word_rsplit_exp_size' word_size addr_card)
-    apply (simp add: intvl_def)
-    apply (rule_tac x="unat ((x - p) && 3)" in exI)
-    apply (simp add: algebra_simps unat_mask_2_less_4[unfolded mask_def, simplified])
-    done
-  have "hp x = (store_word32 ?p (load_word32 ?p hp) hp) x"
-    by (simp add: store_load_word32)
-  also have "\<dots> = (store_word32 ?p (load_word32 ?p hp') hp') x"
-    by (simp only: X, simp add: eq word_bw_assocs)
-  also have "\<dots> = hp' x"
-    by (simp add: store_load_word32)
-  finally show "hp x = hp' x" .
-qed
-
-definition
- "apply_store_word32 p = (\<lambda>(offs, w) hp. if offs AND 3 = 0
-   then store_word32 (p + offs) w hp else hp)"
-
-definition
-  store_word32s_equality :: "word32 \<Rightarrow> (word32 \<times> word32) list
-    \<Rightarrow> (word32 \<times> word32) list \<Rightarrow> (word32 \<Rightarrow> word8) \<Rightarrow> (word32 \<Rightarrow> word8) \<Rightarrow> bool"
-where
-  "store_word32s_equality p xs ys hp hp' \<equiv>
-    fold (apply_store_word32 p) xs hp = fold (apply_store_word32 p) ys hp'"
-
-lemma store_word32s_equality_fold:
-  "p' - p AND 3 = 0 \<Longrightarrow>
-    (store_word32 p w hp = store_word32 p' w' hp')
-    = store_word32s_equality p [(0, w)] [(p' - p, w')] hp hp'"
-  "p' - p AND 3 = 0 \<Longrightarrow>
-    store_word32s_equality p xs ys (store_word32 p' w' hp) hp'
-        = store_word32s_equality p ((p' - p, w') # xs) ys hp hp'"
-  "p' - p AND 3 = 0 \<Longrightarrow>
-    store_word32s_equality p xs ys hp (store_word32 p' w' hp')
-        = store_word32s_equality p xs ((p' - p, w') # ys) hp hp'"
-  by (simp_all add: store_word32s_equality_def apply_store_word32_def
-                    split_def)
-
-lemma and_3_eq_0_subtract:
-  "x AND 3 = 0 \<Longrightarrow> (y :: ('a :: len) word) AND 3 = 0 \<Longrightarrow> (x - y) AND 3 = 0"
-  apply (rule trans, rule mask_eqs[symmetric, where n=2, unfolded mask_def, simplified])
-  apply simp
-  apply (simp add: mask_eqs[symmetric, where n=2, unfolded mask_def, simplified])
-  done
-
-lemma load_apply_store_word32:
-  "x AND 3 = 0 \<Longrightarrow> load_word32 (p + x) (apply_store_word32 p y hp)
-    = (if x = fst y then snd y else load_word32 (p + x) hp)"
-  apply (simp add: apply_store_word32_def split_def
-                   load_store_word32_offset)
-  apply (simp add: load_store_word32_offset field_simps and_3_eq_0_subtract)
-  apply auto
-  done
-
-lemma load_fold_filter_apply_store_word32:
-  "x AND 3 = 0
-    \<Longrightarrow> load_word32 (p + x) (fold (apply_store_word32 p) (filter (P \<circ> fst) ys) hp)
-        = load_word32 (p + x) (if P x then fold (apply_store_word32 p) ys hp else hp)"
-  apply (induct ys rule: rev_induct)
-   apply simp
-  apply (auto simp add: load_apply_store_word32)
-  done
-
-lemma store_word32s_equality_split:
-  "store_word32s_equality p xs ys hp hp
-    = (store_word32s_equality p (filter (P o fst) xs) (filter (P o fst) ys) hp hp
-        \<and> store_word32s_equality p (filter (Not o P o fst) xs) (filter (Not o P o fst) ys) hp hp)"
-  apply (simp add: store_word32s_equality_def)
-  apply (safe intro!: load_word32_offset_represents[where p=p])
-    apply (simp_all add: load_fold_filter_apply_store_word32)
-  apply (drule_tac f="load_word32 (p + x)" in arg_cong)+
-  apply (simp add: load_fold_filter_apply_store_word32 split: if_split_asm)
-  done
-
-lemma apply_store_word32_over_store:
-  "apply_store_word32 p (x, v') (apply_store_word32 p (x, v) hp)
-      = apply_store_word32 p (x, v') hp"
-  by (clarsimp simp: load_apply_store_word32
-             intro!: load_word32_offset_represents[where p=p])
-
-lemma apply_store_load_word32:
-  "apply_store_word32 p (x, load_word32 (p + x) hp) hp = hp"
-  by (clarsimp simp: load_apply_store_word32
-             intro!: load_word32_offset_represents[where p=p])
-
-lemma store_word32s_equality_final:
-  "store_word32s_equality p ((x, v) # (x, v') # xs) ys hp hp'
-    = store_word32s_equality p ((x, v') # xs) ys hp hp'"
-  "store_word32s_equality p xs ((y, v) # (y, v') # ys) hp hp'
-    = store_word32s_equality p xs ((y, v') # ys) hp hp'"
-  "store_word32s_equality p [(x, v)] [(x, v')] hp hp
-    = (x AND 3 = 0 \<longrightarrow> v = v')"
-  "store_word32s_equality p [(x, v)] [] hp hp
-    = (x AND 3 = 0 \<longrightarrow> v = load_word32 (p + x) hp)"
-  "store_word32s_equality p [] [(x, v')] hp hp
-    = (x AND 3 = 0 \<longrightarrow> v' = load_word32 (p + x) hp)"
-  apply (auto simp add: store_word32s_equality_def
-                        apply_store_word32_over_store
-                        load_apply_store_word32
-                        apply_store_load_word32
-                  dest: arg_cong[where f="load_word32 (p + x)"]
-                 split: if_split_asm simp del: word_neq_0_conv)
-  apply (simp_all add: apply_store_word32_def del: word_neq_0_conv)
-  done
-
-
-
-ML {*
-
-val dest_word = HOLogic.dest_number
-  #> snd #> (fn x => x mod 4294967296)
-
-val trace_store_word32s = ref false
-
-fun store_word32_trace s v = if ! trace_store_word32s
-  then (tracing ("store_word32s: " ^ s); v) else v
-
-val store_word32s_equality_simproc =
-  let
-    val lhss = [@{term "store_word32s_equality p xs ys hp hp"}]
-    fun proc _ ctxt ctm =
-      case Thm.term_of ctm of (Const (@{const_name store_word32s_equality}, _)
-        $ _ $ xs $ ys $ hp $ hp') => (let
-            val _ = (hp aconv hp') orelse raise TERM ("foo", [])
-            val xs = HOLogic.dest_list xs
-              |> map (HOLogic.dest_prod #> fst #> dest_word)
-            val ys = HOLogic.dest_list ys
-              |> map (HOLogic.dest_prod #> fst #> dest_word)
-            val zs = sort int_ord (xs @ ys)
-            val _ = (not (null zs) andalso hd zs < List.last zs)
-              orelse raise TERM ("foo", [])
-            val pivot = nth zs (length zs div 2)
-            val pred = (if pivot = List.last zs
-                    then @{term "(=) :: word32 \<Rightarrow> _"}
-                    else @{term "(\<ge>) :: word32 \<Rightarrow> _"})
-                $ HOLogic.mk_number @{typ word32} pivot
-          in store_word32_trace "success" (SOME (infer_instantiate
-              ctxt [(("P",0), Thm.cterm_of ctxt pred)]
-              @{thm store_word32s_equality_split}
-                  |> mk_meta_eq))
-          end handle TERM _ => store_word32_trace "failed" NONE)
-        | _ => store_word32_trace "mismatch" NONE
-  in
-    Simplifier.make_simproc
-      (Proof_Context.init_global @{theory})
-      "store_word32s_equality_simproc"
-      {lhss = lhss, proc = proc}
-  end
-
-*}
-
-ML {*
+ML \<open>
 
 structure SimplToGraphProof = struct
 
 fun mk_ptr_val_app p =
-    Const (@{const_name ptr_val}, fastype_of p --> @{typ word32}) $ p
-
-val globals_swap = ref (fn (x : term) => x)
+    Const (@{const_name ptr_val}, fastype_of p --> @{typ machine_word}) $ p
 
 fun mk_arr_idx arr i = let
     val arrT = fastype_of arr
@@ -1815,21 +1597,32 @@ val gammaT_to_stateT = strip_type #> snd
 
 fun mk_simpl_acc ctxt sT nm = let
     val sst = Free ("sst", sT)
-    val globals_sst = Syntax.read_term ctxt "globals :: globals myvars \<Rightarrow> _"
-        $ sst
+    val symbol_table = Free ("symbol_table", @{typ "string => machine_word"})
+
+    val [globals, globals_swap, t_hrs, t_hrs_update, globals_list, pms, pms_encode] =
+        map (Syntax.read_term ctxt) [
+          "globals :: globals myvars \<Rightarrow> _",
+          "globals_swap :: (globals \<Rightarrow> _) \<Rightarrow> _",
+          "t_hrs_' :: globals \<Rightarrow> _",
+          "t_hrs_'_update :: _ \<Rightarrow> globals \<Rightarrow> globals",
+          "globals_list",
+          "phantom_machine_state_' :: globals \<Rightarrow> _",
+          "encode_machine_state"
+        ];
+
+    val globals_sst = globals $ sst
     val _ = type_of globals_sst (* does type checking *)
 
-    val t_hrs = Syntax.read_term ctxt "t_hrs_' :: globals \<Rightarrow> _"
-    val pms = Syntax.read_term ctxt "phantom_machine_state_' :: globals \<Rightarrow> _"
-    val pms_encode = Syntax.read_term ctxt "encode_machine_state"
+    val globals_swap = globals_swap $ t_hrs $ t_hrs_update $ symbol_table $ globals_list
+
     fun do_pms_encode t = case pms_encode of Const _ => pms_encode $ t
       | _ => raise TERM ("mk_simpl_acc: requires `encode_machine_state :: machine_state => unit \<times> nat'", [t])
 
     val ghost_assns_fetch = Syntax.read_term ctxt "ghost_assns_from_globals"
     fun get_ghost_assns_fetch () = case head_of ghost_assns_fetch of Const _ => ghost_assns_fetch
-      | _ => raise TERM ("mk_simpl_acc: requires `ghost_assns_from_globals :: globals => word64 => word32", [])
+      | _ => raise TERM ("mk_simpl_acc: requires `ghost_assns_from_globals :: globals => ghost_assertions", [])
 
-    fun mk_sst_acc "Mem" = @{term hrs_mem} $ (t_hrs $ ((! globals_swap) globals_sst))
+    fun mk_sst_acc "Mem" = @{term hrs_mem} $ (t_hrs $ (globals_swap $ globals_sst))
       | mk_sst_acc "HTD" = @{term hrs_htd} $ (t_hrs $ globals_sst)
       | mk_sst_acc "PMS" = do_pms_encode (pms $ globals_sst)
       | mk_sst_acc "GhostAssertions" = get_ghost_assns_fetch () $ globals_sst
@@ -2361,14 +2154,14 @@ fun simpl_to_graph_upto_subgoals funs hints nm ctxt =
 
 end
 
-*}
+\<close>
 
-ML {*
-fun define_graph_fun_short funs s
-    = ParseGraph.define_graph_fun funs (Long_Name.base_name s ^ "_graph")
-        (Binding.name (Long_Name.base_name s ^ "_graph_fun")) s
-        #> Local_Theory.reset
-*}
+ML \<open>
+fun define_graph_fun_short funs s =
+  Local_Theory.subtarget
+    (ParseGraph.define_graph_fun funs (Long_Name.base_name s ^ "_graph")
+                                 (Binding.name (Long_Name.base_name s ^ "_graph_fun")) s)
+\<close>
 
 end
 

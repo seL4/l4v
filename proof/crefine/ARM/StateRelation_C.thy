@@ -20,6 +20,7 @@ definition
 definition
   "array_relation r n a c \<equiv> \<forall>i \<le> n. r (a i) (index c (unat i))"
 
+(* FIXME: this gets unfolded a lot. Consider adding the obvious simp rules. *)
 definition
   "option_to_ptr \<equiv> Ptr o option_to_0"
 
@@ -89,7 +90,7 @@ where
 
 end
 
-text {*
+text \<open>
   Conceptually, the constant armKSKernelVSpace_C resembles ghost state.
   The constant specifies the use of certain address ranges, or ``windows''.
   It is the very nature of these ranges is that they remain fixed
@@ -103,7 +104,7 @@ text {*
   Hence, we can later base definitions for the ADT on it,
   which can subsequently be instantiated for
   @{text kernel_all_global_addresses} as well as @{text kernel_all_substitute}.
-*}
+\<close>
 locale state_rel = Arch + substitute_pre + (*FIXME: arch_split*)
   fixes armKSKernelVSpace_C :: "machine_word \<Rightarrow> arm_vspace_region_use"
 
@@ -112,11 +113,17 @@ locale kernel = kernel_all_substitute + state_rel
 context state_rel
 begin
 
+abbreviation armKSGlobalPD_Ptr :: "(pde_C[4096]) ptr" where
+  "armKSGlobalPD_Ptr \<equiv> pd_Ptr (symbol_table ''armKSGlobalPD'')"
+
+abbreviation armKSGlobalPT_Ptr :: "(pte_C[256]) ptr" where
+  "armKSGlobalPT_Ptr \<equiv> pt_Ptr (symbol_table ''armKSGlobalPT'')"
+
 (* relates fixed adresses *)
 definition
   "carch_globals s \<equiv>
-  (armKSGlobalPD s = symbol_table ''armKSGlobalPD'') \<and>
-  (armKSGlobalPTs s  = [symbol_table ''armKSGlobalPT''])"
+  (armKSGlobalPD s = ptr_val armKSGlobalPD_Ptr) \<and>
+  (armKSGlobalPTs s  = [ptr_val armKSGlobalPT_Ptr])"
 
 definition
   carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
@@ -202,10 +209,6 @@ where
   "ccte_relation acte ccte \<equiv> Some acte = option_map cte_to_H (cte_lift ccte)
                              \<and> c_valid_cte ccte"
 
-lemma ccte_relation_c_valid_cte: "ccte_relation  c c' \<Longrightarrow> c_valid_cte c'"
-  by (simp add: ccte_relation_def)
-
-
 definition
   tcb_queue_relation' :: "(tcb_C \<Rightarrow> tcb_C ptr) \<Rightarrow> (tcb_C \<Rightarrow> tcb_C ptr) \<Rightarrow> (tcb_C ptr \<Rightarrow> tcb_C option) \<Rightarrow> word32 list \<Rightarrow> tcb_C ptr \<Rightarrow> tcb_C ptr \<Rightarrow> bool"
   where
@@ -231,11 +234,10 @@ fun
   | "register_from_H ARM.IP = scast Kernel_C.R12"
   | "register_from_H ARM.SP = scast Kernel_C.SP"
   | "register_from_H ARM.LR = scast Kernel_C.LR"
-  | "register_from_H ARM.LR_svc = scast Kernel_C.LR_svc"
+  | "register_from_H ARM.NextIP = scast Kernel_C.NextIP"
   | "register_from_H ARM.CPSR = scast Kernel_C.CPSR"
-  | "register_from_H ARM.TLS_BASE = scast Kernel_C.TLS_BASE"
   | "register_from_H ARM.TPIDRURW = scast Kernel_C.TPIDRURW"
-  | "register_from_H ARM.FaultInstruction = scast Kernel_C.FaultInstruction"
+  | "register_from_H ARM.FaultIP = scast Kernel_C.FaultIP"
 
 definition
   ccontext_relation :: "(MachineTypes.register \<Rightarrow> word32) \<Rightarrow> user_context_C \<Rightarrow> bool"
@@ -256,14 +258,16 @@ where
      = (tsType_CL (fst ts') = scast ThreadState_IdleThreadState)"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnReply) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReply)"
-| "cthread_state_relation_lifted (Structures_H.BlockedOnReceive oref) ts'
-     = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReceive \<and>
-        oref = blockingObject_CL (fst ts'))"
-| "cthread_state_relation_lifted (Structures_H.BlockedOnSend oref badge cg isc) ts'
+| "cthread_state_relation_lifted (Structures_H.BlockedOnReceive oref cg) ts'
+     = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReceive
+        \<and> oref = blockingObject_CL (fst ts')
+        \<and> cg = to_bool (blockingIPCCanGrant_CL (fst ts')))"
+| "cthread_state_relation_lifted (Structures_H.BlockedOnSend oref badge cg cgr isc) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnSend
         \<and> oref = blockingObject_CL (fst ts')
         \<and> badge = blockingIPCBadge_CL (fst ts')
         \<and> cg    = to_bool (blockingIPCCanGrant_CL (fst ts'))
+        \<and> cgr   = to_bool (blockingIPCCanGrantReply_CL (fst ts'))
         \<and> isc   = to_bool (blockingIPCIsCall_CL (fst ts')))"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnNotification oref) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnNotification
@@ -280,10 +284,6 @@ where
 definition "is_cap_fault cf \<equiv>
   (case cf of (SeL4_Fault_CapFault _) \<Rightarrow> True
   | _ \<Rightarrow> False)"
-
-lemma is_cap_fault_simp: "is_cap_fault cf = (\<exists> x. cf=SeL4_Fault_CapFault x)"
-  by (simp add: is_cap_fault_def split:seL4_Fault_CL.splits)
-
 
 definition
   message_info_to_H :: "seL4_MessageInfo_C \<Rightarrow> Types_H.message_info"
@@ -356,7 +356,7 @@ definition
   cendpoint_relation :: "tcb_C typ_heap \<Rightarrow> Structures_H.endpoint \<Rightarrow> endpoint_C \<Rightarrow> bool"
 where
   "cendpoint_relation h ntfn cep \<equiv>
-     let cstate = state_CL (endpoint_lift cep);
+     let cstate = endpoint_CL.state_CL (endpoint_lift cep);
          chead  = (Ptr o epQueue_head_CL o endpoint_lift) cep;
          cend   = (Ptr o epQueue_tail_CL o endpoint_lift) cep in
        case ntfn of
@@ -483,7 +483,7 @@ where
      \<rparr>)
   | SmallPagePTE frame cacheable global xn rights \<Rightarrow>
     cpte' = Some (Pte_pte_small
-     \<lparr> address_CL = frame,
+     \<lparr> pte_pte_small_CL.address_CL = frame,
        nG_CL = of_bool (~global),
        S_CL = s_from_cacheable cacheable,
        APX_CL = 0,
@@ -494,28 +494,12 @@ where
        XN_CL = of_bool xn
      \<rparr>))"
 
-(* Invalid PTEs map to large PTEs with reserved bit 0 *)
-lemma pte_0:
-  "index (pte_C.words_C cpte) 0 = 0 \<Longrightarrow> pte_lift cpte = Some (Pte_pte_large
-     \<lparr> pte_pte_large_CL.address_CL = 0,
-       XN_CL = 0,
-       TEX_CL = 0,
-       nG_CL = 0,
-       S_CL = 0,
-       APX_CL = 0,
-       AP_CL = 0,
-       C_CL = 0,
-       B_CL = 0,
-       reserved_CL = 0
-     \<rparr>)"
-  by (simp add: pte_lift_def pte_get_tag_def pte_pte_large_def)
-
 definition
   casid_pool_relation :: "asidpool \<Rightarrow> asid_pool_C \<Rightarrow> bool"
 where
   "casid_pool_relation asid_pool casid_pool \<equiv>
   case asid_pool of ASIDPool pool \<Rightarrow>
-  case casid_pool of asid_pool_C cpool \<Rightarrow>
+  case casid_pool of asid_pool_C.asid_pool_C cpool \<Rightarrow>
   array_relation ((=) \<circ> option_to_ptr) (2^asid_low_bits - 1) pool cpool"
 
 definition
@@ -557,15 +541,8 @@ abbreviation
 abbreviation
   "cpspace_device_data_relation ah bh ch \<equiv> cmap_relation (heap_to_device_data ah bh) (clift ch) Ptr cuser_user_data_device_relation"
 
-
-abbreviation
-  pd_Ptr :: "32 word \<Rightarrow> (pde_C[4096]) ptr" where "pd_Ptr == Ptr"
-
 abbreviation
   "cpspace_pde_array_relation ah ch \<equiv> carray_map_relation pdBits (map_to_pdes ah) (h_t_valid (hrs_htd ch) c_guard) pd_Ptr"
-
-abbreviation
-  pt_Ptr :: "32 word \<Rightarrow> (pte_C[256]) ptr" where "pt_Ptr == Ptr"
 
 abbreviation
   "cpspace_pte_array_relation ah ch \<equiv> carray_map_relation ptBits (map_to_ptes ah) (h_t_valid (hrs_htd ch) c_guard) pt_Ptr"
@@ -624,7 +601,7 @@ fun
   | "irqstate_to_C irqstate.IRQReserved = scast Kernel_C.IRQReserved"
 
 definition
-  cinterrupt_relation :: "interrupt_state \<Rightarrow> cte_C ptr \<Rightarrow> (word32[160]) \<Rightarrow> bool"
+  cinterrupt_relation :: "interrupt_state \<Rightarrow> 'a ptr \<Rightarrow> (word32[160]) \<Rightarrow> bool"
 where
   "cinterrupt_relation airqs cnode cirqs \<equiv>
      cnode = Ptr (intStateIRQNode airqs) \<and>
@@ -722,6 +699,18 @@ where
     = (\<forall>(start, end) \<in> rs. region_actually_is_bytes' start (unat ((end + 1) - start)) (hrs_htd hrs)
         \<and> heap_list_is_zero (hrs_mem hrs) start (unat ((end + 1) - start)))"
 
+context state_rel begin
+
+\<comment> \<open>The IRQ node is a global array of CTEs.\<close>
+abbreviation intStateIRQNode_array_Ptr :: "(cte_C[256]) ptr" where
+  "intStateIRQNode_array_Ptr \<equiv> Ptr (symbol_table ''intStateIRQNode'')"
+
+\<comment> \<open>But for compatibility with older proofs (written when the IRQ Node was a global pointer
+    initialised during boot), it is sometimes convenient to treat the IRQ node pointer as
+    a pointer to a CTE.\<close>
+abbreviation intStateIRQNode_Ptr :: "cte_C ptr" where
+  "intStateIRQNode_Ptr \<equiv> Ptr (symbol_table ''intStateIRQNode'')"
+
 definition (in state_rel)
   cstate_relation :: "KernelStateData_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
@@ -737,7 +726,7 @@ where
        cbitmap_L2_relation (ksReadyQueuesL2Bitmap_' cstate) (ksReadyQueuesL2Bitmap astate) \<and>
        ksCurThread_' cstate = (tcb_ptr_to_ctcb_ptr (ksCurThread astate)) \<and>
        ksIdleThread_' cstate = (tcb_ptr_to_ctcb_ptr (ksIdleThread astate)) \<and>
-       cinterrupt_relation (ksInterruptState astate) (intStateIRQNode_' cstate) (intStateIRQTable_' cstate) \<and>
+       cinterrupt_relation (ksInterruptState astate) intStateIRQNode_array_Ptr (intStateIRQTable_' cstate) \<and>
        cscheduler_action_relation (ksSchedulerAction astate)
                                  (ksSchedulerAction_' cstate) \<and>
        carch_state_relation (ksArchState astate) cstate \<and>
@@ -747,12 +736,10 @@ where
        apsnd fst (ghost'state_' cstate) = (gsUserPages astate, gsCNodes astate) \<and>
        ghost_size_rel (ghost'state_' cstate) (gsMaxObjectSize astate) \<and>
        ksWorkUnitsCompleted_' cstate = ksWorkUnitsCompleted astate \<and>
-       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
-         (ptr_coerce (intStateIRQNode_' cstate) :: (cte_C[256]) ptr) \<and>
-       {ptr_val (intStateIRQNode_' cstate) ..+ 2 ^ (8 + cte_level_bits)} \<subseteq> kernel_data_refs \<and>
-       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
-         (pd_Ptr (symbol_table ''armKSGlobalPD'')) \<and>
-       ptr_span (pd_Ptr (symbol_table ''armKSGlobalPD'')) \<subseteq> kernel_data_refs \<and>
+       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard intStateIRQNode_array_Ptr \<and>
+       ptr_span intStateIRQNode_array_Ptr \<subseteq> kernel_data_refs \<and>
+       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard armKSGlobalPD_Ptr \<and>
+       ptr_span armKSGlobalPD_Ptr \<subseteq> kernel_data_refs \<and>
        htd_safe domain (hrs_htd (t_hrs_' cstate)) \<and>
        kernel_data_refs = (- domain) \<and>
        globals_list_distinct (- kernel_data_refs) symbol_table globals_list \<and>
@@ -761,6 +748,8 @@ where
        ksDomScheduleIdx_' cstate = of_nat (ksDomScheduleIdx astate) \<and>
        ksCurDomain_' cstate = ucast (ksCurDomain astate) \<and>
        ksDomainTime_' cstate = ksDomainTime astate"
+
+end
 
 definition
   ccap_relation :: "capability \<Rightarrow> cap_C \<Rightarrow> bool"
@@ -873,32 +862,11 @@ definition
 definition
   "cap_rights_to_H rs \<equiv> CapRights (to_bool (capAllowWrite_CL rs))
                                   (to_bool (capAllowRead_CL rs))
-                                  (to_bool (capAllowGrant_CL rs))"
+                                  (to_bool (capAllowGrant_CL rs))
+                                  (to_bool (capAllowGrantReply_CL rs))"
 
 definition
   "ccap_rights_relation cr cr' \<equiv> cr = cap_rights_to_H (seL4_CapRights_lift cr')"
-
-lemma (in kernel) syscall_error_to_H_cases_rev:
-  "\<And>n. syscall_error_to_H e lf = Some (InvalidArgument n) \<Longrightarrow>
-        type_C e = scast seL4_InvalidArgument"
-  "\<And>n. syscall_error_to_H e lf = Some (InvalidCapability n) \<Longrightarrow>
-        type_C e = scast seL4_InvalidCapability"
-  "syscall_error_to_H e lf = Some IllegalOperation \<Longrightarrow>
-        type_C e = scast seL4_IllegalOperation"
-  "\<And>w1 w2. syscall_error_to_H e lf = Some (RangeError w1 w2) \<Longrightarrow>
-        type_C e = scast seL4_RangeError"
-  "syscall_error_to_H e lf = Some AlignmentError \<Longrightarrow>
-        type_C e = scast seL4_AlignmentError"
-  "\<And>b lf'. syscall_error_to_H e lf = Some (FailedLookup b lf') \<Longrightarrow>
-        type_C e = scast seL4_FailedLookup"
-  "syscall_error_to_H e lf = Some TruncatedMessage \<Longrightarrow>
-        type_C e = scast seL4_TruncatedMessage"
-  "syscall_error_to_H e lf = Some DeleteFirst \<Longrightarrow>
-        type_C e = scast seL4_DeleteFirst"
-  "syscall_error_to_H e lf = Some RevokeFirst \<Longrightarrow>
-        type_C e = scast seL4_RevokeFirst"
-  by (clarsimp simp: syscall_error_to_H_def syscall_error_type_defs
-              split: if_split_asm)+
 
 definition
   syscall_from_H :: "syscall \<Rightarrow> word32"

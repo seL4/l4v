@@ -613,6 +613,18 @@ lemma set_scheduler_action_cnt_valid_sched_action[wp]:
   "\<lbrace>\<top>\<rbrace> set_scheduler_action choose_new_thread \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
   by (wpsimp wp: valid_sched_wp)
 
+lemma set_scheduler_action_cnt_valid_blocked_except:
+  "\<lbrace>valid_blocked_except target and (\<lambda>s. \<forall>t. scheduler_action s = switch_thread t \<longrightarrow>
+      (\<exists>d p. t \<in> set (ready_queues s d p)))\<rbrace>
+   set_scheduler_action choose_new_thread  \<lbrace>\<lambda>_. valid_blocked_except target\<rbrace>"
+  apply (simp add: valid_blocked_except_def, wp set_scheduler_action_wp)
+  apply clarsimp
+  apply (erule_tac x=t in allE)
+  apply (erule impCE)
+   apply force
+  apply (force simp: not_queued_def)
+  done
+
 lemma set_scheduler_action_cnt_weak_valid_sched:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace> set_scheduler_action choose_new_thread \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   by (wpsimp wp: valid_sched_wp) (auto elim!: valid_blockedE' simp: valid_sched_wpsimps)
@@ -766,6 +778,28 @@ lemma reschedule_required_weak_valid_sched_action[wp]:
   "\<lbrace>\<top>\<rbrace> reschedule_required \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
   by (wpsimp wp: valid_sched_wp simp: valid_sched_wpsimps)
 
+
+lemma tcb_sched_action_enqueue_valid_blocked_except:
+  "\<lbrace>valid_blocked_except thread\<rbrace>
+     tcb_sched_action tcb_sched_enqueue thread'
+   \<lbrace>\<lambda>_. valid_blocked_except thread \<rbrace>"
+  apply (simp add: tcb_sched_action_def, wp)
+  apply (clarsimp simp: etcb_at_def tcb_sched_enqueue_def not_queued_def valid_blocked_def valid_blocked_except_def split: option.splits)
+  apply (rule conjI)
+   apply clarsimp
+   apply (case_tac "t=thread")
+    apply force
+   apply (erule_tac x=t in allE)
+   apply clarsimp
+   apply force
+  apply clarsimp
+  apply (case_tac "t=thread")
+   apply force
+  apply (erule_tac x=t in allE)
+  apply clarsimp
+  apply force
+  done
+
 lemma reschedule_required_valid_sched_action[wp]:
   "\<lbrace>\<top>\<rbrace> reschedule_required \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
   by (wpsimp wp: valid_sched_wp simp: valid_sched_wpsimps)
@@ -838,6 +872,22 @@ lemma reschedule_valid_sched_const:
 lemma reschedule_required_simple_sched_action[wp]:
   "\<lbrace>\<top>\<rbrace> reschedule_required  \<lbrace>\<lambda>rv. simple_sched_action\<rbrace>"
   by (wpsimp wp: valid_sched_wp)
+
+(* FIXME RT merge: probably not true in RT *)
+lemma reschedule_required_valid_blocked_except:
+  "\<lbrace>valid_blocked_except target\<rbrace> reschedule_required \<lbrace>\<lambda>_. valid_blocked_except target\<rbrace>"
+  apply (simp add: reschedule_required_def | wp  set_scheduler_action_cnt_valid_blocked_except tcb_sched_action_enqueue_valid_blocked_except hoare_vcg_all_lift | wpc)+
+    apply (simp add: tcb_sched_action_def)
+    apply wp+
+  apply clarsimp
+  apply (rule conjI)
+   apply clarsimp
+  apply (rule conjI)
+   apply (force simp: etcb_at_def tcb_sched_enqueue_def valid_blocked_except_def split: option.splits)
+  apply clarsimp
+  done
+
+crunch etcb_at[wp]: reschedule_required "etcb_at P t"
 
 lemma reschedule_required_not_queued:
   "\<lbrace>not_queued t and scheduler_act_not t\<rbrace>
@@ -3037,6 +3087,9 @@ lemma set_next_timer_interrupt_valid_sched[wp]:
 lemma set_next_interrupt_valid_sched[wp]:
   "set_next_interrupt \<lbrace>valid_sched_pred_strong P\<rbrace>"
   by (wpsimp simp: set_next_interrupt_def wp: hoare_drop_imp)
+
+crunches update_restart_pc
+  for valid_etcbs[wp]: "valid_etcbs"
 
 context DetSchedSchedule_AI begin
 
@@ -16186,7 +16239,7 @@ crunch weak_valid_sched_action[wp]: cap_delete_one weak_valid_sched_action
 lemma do_reply_transfer_not_queued:
   "\<lbrace>not_queued t and invs and st_tcb_at active t and scheduler_act_not t and
     K(receiver \<noteq> t)\<rbrace>
-     do_reply_transfer sender receiver
+     do_reply_transfer sender receiver grant
    \<lbrace>\<lambda>_. not_queued t\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wp hoare_vcg_if_lift | wpc |
@@ -16196,7 +16249,7 @@ lemma do_reply_transfer_not_queued:
 (*
 lemma do_reply_transfer_schedact_not:
   "\<lbrace>scheduler_act_not t and K(receiver \<noteq> t)\<rbrace>
-     do_reply_transfer sender receiver
+     do_reply_transfer sender receiver grant
    \<lbrace>\<lambda>_. scheduler_act_not t\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wp hoare_vcg_if_lift | wpc | clarsimp split del: if_split |
@@ -16210,9 +16263,9 @@ end
 lemma do_reply_transfer_add_assert:
   assumes a: "\<lbrace>(\<lambda>s. reply_tcb_reply_at (\<lambda>p. p = Some receiver \<longrightarrow>
                                        st_tcb_at awaiting_reply receiver s) rptr s) and P\<rbrace>
-               do_reply_transfer sender rptr
+               do_reply_transfer sender rptr grant
               \<lbrace>\<lambda>_. Q\<rbrace>"
-  shows "\<lbrace>P\<rbrace> do_reply_transfer sender rptr \<lbrace>\<lambda>_. Q\<rbrace>"
+  shows "\<lbrace>P\<rbrace> do_reply_transfer sender rptr grant \<lbrace>\<lambda>_. Q\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (case_tac "reply_tcb_reply_at (\<lambda>p. p = Some receiver \<longrightarrow>
                                        st_tcb_at awaiting_reply receiver s) rptr s")
@@ -16287,7 +16340,7 @@ crunch ct_not_queued[wp]: do_ipc_transfer,handle_fault_reply "ct_not_queued::'st
 (*
 lemma do_reply_transfer_ct_not_queued:
   "\<lbrace>ct_not_queued and invs and ct_active and scheduler_act_sane\<rbrace>
-     do_reply_transfer sender receiver
+     do_reply_transfer sender receiver grant
    \<lbrace>\<lambda>_. ct_not_queued\<rbrace>"
   apply (clarsimp simp: do_reply_transfer_def maybeM_def liftM_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
@@ -16309,7 +16362,7 @@ crunch cur_thread[wp]: do_reply_transfer "\<lambda>s. P (cur_thread s)"
 (*
 lemma do_reply_transfer_scheduler_act_sane:
   "\<lbrace>scheduler_act_sane and ct_active\<rbrace>
-     do_reply_transfer sender receiver
+     do_reply_transfer sender receiver grant
    \<lbrace>\<lambda>_. scheduler_act_sane\<rbrace>"
   apply (clarsimp simp: do_reply_transfer_def maybeM_def liftM_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])

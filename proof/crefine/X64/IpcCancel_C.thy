@@ -609,7 +609,6 @@ lemma tcbQueued_not_in_queues:
   apply (clarsimp simp: inQ_def)
   done
 
-declare unat_ucast_8_64[simp]
 
 lemma rf_sr_sched_queue_relation:
   "\<lbrakk> (s, s') \<in> rf_sr; d \<le> ucast maxDom; p \<le> ucast maxPrio \<rbrakk>
@@ -907,7 +906,7 @@ lemma unat_ucast_prio_shiftr_simp[simp]:
 
 lemma unat_ucast_prio_mask_simp[simp]:
   "unat (ucast (p::priority) && mask m :: machine_word) = unat (p && mask m)"
-  by (metis ucast_and_mask unat_ucast_8_64)
+  by (simp add: ucast_and_mask)
 
 lemma unat_ucast_prio_L1_cmask_simp:
   "unat (ucast (p::priority) && 0x3F :: machine_word) = unat (p && 0x3F)"
@@ -3173,14 +3172,14 @@ lemma getThreadState_ccorres_foo:
   done
 
 lemma ep_blocked_in_queueD_recv:
-  "\<lbrakk>st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnReceive x)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isRecvEP ep'"
+  "\<lbrakk>st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnReceive x gr)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isRecvEP ep'"
   apply (frule sym_refs_st_tcb_atD', clarsimp)
   apply (clarsimp simp: refs_of_rev' obj_at'_def ko_wp_at'_def projectKOs)
   apply (cases ep', simp_all add: isSendEP_def isRecvEP_def)[1]
   done
 
 lemma ep_blocked_in_queueD_send:
-  "\<lbrakk>st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnSend x xa xb xc)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isSendEP ep'"
+  "\<lbrakk>st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnSend x xa xb xc xd)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isSendEP ep'"
   apply (frule sym_refs_st_tcb_atD', clarsimp)
   apply (clarsimp simp: refs_of_rev' obj_at'_def ko_wp_at'_def projectKOs)
   apply (cases ep', simp_all add: isSendEP_def isRecvEP_def)[1]

@@ -51,10 +51,6 @@ lemma doMachineOp_mapM_x:
   done
 
 
-lemma submonad_args_ksPSpace:
-  "submonad_args ksPSpace (ksPSpace_update o (\<lambda>x _. x)) \<top>"
-  by (simp add: submonad_args_def)
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 definition
   "asUser_fetch \<equiv> \<lambda>t s. case (ksPSpace s t) of
@@ -138,20 +134,6 @@ end
 global_interpretation submonad_asUser:
   submonad "asUser_fetch t" "asUser_replace t" "tcb_at' t" "asUser t"
   by (rule submonad_asUser)
-
-lemma asUser_doMachineOp_comm:
-  "\<lbrakk> empty_fail m; empty_fail m' \<rbrakk> \<Longrightarrow>
-   do x \<leftarrow> asUser t m; y \<leftarrow> doMachineOp m'; n x y od =
-   do y \<leftarrow> doMachineOp m'; x \<leftarrow> asUser t m; n x y od"
-  apply (rule submonad_comm [OF submonad.axioms(1) [OF submonad_asUser]
-                                submonad.axioms(1) [OF submonad_doMachineOp]])
-        apply (simp add: submonad.fn_is_sm [OF submonad_asUser])
-       apply (simp add: submonad.fn_is_sm [OF submonad_doMachineOp])
-      apply (simp add: asUser_replace_def Let_def)
-     apply simp
-    apply (rule refl)
-   apply assumption+
-  done
 
 lemma doMachineOp_nosch [wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> doMachineOp m \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"

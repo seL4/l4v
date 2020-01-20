@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-chapter {* \label{h:types}Datatypes *}
+chapter \<open>\label{h:types}Datatypes\<close>
 
 (*<*)
 theory Types
@@ -15,7 +15,7 @@ imports CIMP
 begin
 (*>*)
 
-text {*
+text \<open>
 This chapter builds up the basic data types that are necessary to cast
 \camkes glue code in terms of the concurrent imperative language. In particular,
 we define
@@ -24,15 +24,15 @@ of messages that \camkes components send and receive, the local state of
 components, the resulting type of components and finally the partially
 instantiated, but still generic, global state of a component system.
 
-*}
-subsection {* \label{sec:messages}Messages *}
-text {*
+\<close>
+subsection \<open>\label{sec:messages}Messages\<close>
+text \<open>
   Processes communicate via messages, which represent IPC payloads in seL4. The
   only message operations performed in a CAmkES system are initiated by the
   glue code. Variable data contained in messages are represented using the
   following data type. This is conceptually equivalent to @{term param_type}
   from the ADL model, with a value attached.
-*}
+\<close>
 
 datatype variable
   = Boolean bool
@@ -42,7 +42,7 @@ datatype variable
   | String string
   | Array "variable list"
 
-text {*
+text \<open>
   Messages are sent from one process to another as questions and
   acknowledged with answers. Communication with function call semantics
   -- `procedures' in CAmkES terminology -- is represented by a sequence of two
@@ -54,7 +54,7 @@ text {*
 
   Event and shared memory connections are modelled using an intermediate
   component. This is explained in more detail in \autoref{h:connector}.
-*}
+\<close>
 
 datatype question_data
    \<comment> \<open>Inter-component questions\<close>
@@ -83,15 +83,15 @@ record ('channel) answer =
   a_channel :: 'channel
   a_data :: answer_data
 
-text {*
+text \<open>
   Message transmission is accomplished using a matching pair of @{term Request}
   and @{term Response} actions. This correspondence arises from using the same
   channel in a @{term question} and @{term answer}. A channel in this
   representation corresponds to a connection in the implementation.
-*}
+\<close>
 
-subsection {* \label{sec:lstate}Local State *}
-text {*
+subsection \<open>\label{sec:lstate}Local State\<close>
+text \<open>
   In this section we define the local state of components. There are three
   kinds of components: user-defined, event buffers, and shared memory.
 
@@ -116,32 +116,32 @@ text {*
   manipulations of well-defined types. There is no loss of expressiveness here
   as raw byte accesses can be represented by mapping each offset to a
   @{term variable} of subtype @{term Number}.
-*}
+\<close>
 
 datatype 'component_state local_state
   = Component 'component_state
   | Event bool
   | Memory "(nat, variable) map"
 
-subsection {* \label{sec:components}Components *}
-text {*
+subsection \<open>\label{sec:components}Components\<close>
+text \<open>
   We model each component in the system as a process. The type itself
   is only partially instantiated to let the type representing the local state
   of a component be stated more precisely later as described above.
-*}
+\<close>
 
 type_synonym ('channel, 'component_state) comp =
   "('channel answer, 'channel question, 'component_state local_state) com"
 
-subsection {* \label{sec:gstate}Global State *}
-text {*
+subsection \<open>\label{sec:gstate}Global State\<close>
+text \<open>
   The global state of a system is a mapping from component instance identifiers
   to a pair of component (i.e. program text) and local state. The global state
   and local state types are parameterised with general types so they
   can be instantiated to specifically apply to a given system. During
   generation, a global state is derived that covers all component
   instances; that is, the generated global state is total.
-*}
+\<close>
 
 type_synonym ('inst, 'channel, 'component_state) global_state =
   "('inst, ('channel, 'component_state) comp \<times>

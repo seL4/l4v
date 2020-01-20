@@ -14,9 +14,9 @@ theory ArchLabelFuns_H
 imports "../InvocationLabels_H"
 begin
 
-text {*
+text \<open>
   Arch-specific functions on invocation labels
-*}
+\<close>
 
 (* None for x64 *)
 

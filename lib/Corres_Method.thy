@@ -211,7 +211,7 @@ text
  \<open>Based on wpc, corresc examines the split rule for top-level case statements on the left
   and right hand sides, propagating backwards the stateless and left/right preconditions.\<close>
 
-ML {*
+ML \<open>
 
 fun get_split_rule ctxt target =
 let
@@ -242,7 +242,7 @@ let
 in
    SOME split' end
    handle TERM _ => NONE;
-*}
+\<close>
 
 attribute_setup get_split_rule = \<open>Args.term >>
   (fn t => Thm.rule_attribute [] (fn context => fn _ =>

@@ -146,38 +146,6 @@ lemma heap_list_s_heap_list':
   apply (simp add: hrs_htd_def hrs_mem_def heap_list_s_heap_list)
   done
 
-lemma lift_t_typ_clear_region:
-  assumes doms: "\<And>x :: 'a :: mem_type ptr. \<lbrakk> hrs_htd hp,g \<Turnstile>\<^sub>t x; x \<in> - (Ptr ` {ptr ..+2 ^ bits}) \<rbrakk>
-  \<Longrightarrow> {ptr_val x..+size_of TYPE('a)} \<inter> {ptr..+2 ^ bits} = {}"
-  shows "(lift_t g (hrs_htd_update (typ_clear_region ptr bits) hp) :: 'a :: mem_type typ_heap) =
-          lift_t g hp |` (- Ptr ` {ptr ..+2 ^ bits})"
-  apply (rule ext)
-  apply (case_tac "({ptr_val x..+size_of TYPE('a)} \<inter> {ptr..+2 ^ bits} = {} \<and> hrs_htd hp,g \<Turnstile>\<^sub>t x)")
-  apply (clarsimp simp add: lift_t_def lift_typ_heap_if s_valid_def h_t_valid_ptr_clear_region)
-   apply (subgoal_tac "x \<in> - Ptr ` {ptr..+2 ^ bits}")
-   apply clarsimp
-    apply (subst heap_list_s_heap_list')
-     apply (clarsimp simp add: hrs_htd_update h_t_valid_ptr_clear_region)
-     apply (erule h_t_valid_taut)
-    apply (subst heap_list_s_heap_list')
-     apply (clarsimp elim!:  h_t_valid_taut)
-    apply simp
-   apply clarsimp
-   apply (drule (1) orthD2)
-   apply (erule contrapos_np, rule intvl_self)
-   apply (simp add: size_of_def wf_size_desc_gt)
-  apply (simp add: lift_t_def lift_typ_heap_if s_valid_def h_t_valid_ptr_clear_region  del: disj_not1 split del: if_split)
-  apply (subst if_not_P)
-   apply simp
-   apply (case_tac "x \<in> (- Ptr ` {ptr..+2 ^ bits})")
-   apply (simp del: disj_not1)
-   apply (erule contrapos_pn)
-   apply simp
-   apply (erule doms)
-   apply simp
-  apply simp
-  done
-
 lemma image_Ptr:
   "Ptr ` S = {x. ptr_val x \<in> S}"
   apply (safe, simp_all)
@@ -239,40 +207,6 @@ proof (rule rl)
     by (clarsimp elim!: is_aligned_get_word_bits[where 'a=32, folded word_bits_def])
 qed
 (*FIX me: move *)
-
-lemma valid_untyped_pspace_no_overlap':
- assumes vuc: "s \<turnstile>' UntypedCap d ptr bits idx"
-  and    idx: "idx< 2^ bits"
-  and psp_al: "pspace_aligned' s" "pspace_distinct' s"
-  shows  "pspace_no_overlap' (ptr + of_nat idx) bits s"
-
-proof -
-  note blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-
-  from vuc have al: "is_aligned ptr bits" and vu: "valid_untyped' d ptr bits idx s" and p0: "ptr \<noteq> 0"
-    and wb: "bits < word_bits"
-    by (auto elim!: valid_untyped_capE)
-
-  from vuc idx
-   have [simp]: "(ptr + (of_nat idx) && ~~ mask bits) = ptr"
-    apply -
-    apply (rule is_aligned_add_helper[THEN conjunct2])
-     apply (clarsimp simp:valid_cap'_def capAligned_def)+
-    apply (rule word_of_nat_less)
-    apply simp
-    done
-
-  show "pspace_no_overlap' (ptr + of_nat idx) bits s"
-    using vuc idx psp_al
-    apply -
-    apply (clarsimp simp:valid_cap'_def valid_untyped'_def pspace_no_overlap'_def)
-    apply (drule_tac x = x in spec)
-    apply (frule(1) pspace_alignedD')
-    apply (frule(1) pspace_distinctD')
-    apply (clarsimp simp:ko_wp_at'_def obj_range'_def p_assoc_help)
-    done
-  qed
 
 lemma cmap_relation_disjoint:
   fixes  rel :: "'a :: pspace_storable \<Rightarrow> 'b :: mem_type \<Rightarrow> bool" and x :: "'b :: mem_type ptr"
@@ -344,33 +278,10 @@ proof -
   qed
 qed
 
-lemma vut_subseteq:
-notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-shows "\<lbrakk>s \<turnstile>' UntypedCap d ptr bits idx;idx < 2 ^ bits\<rbrakk>
- \<Longrightarrow> Ptr ` {ptr + of_nat idx..ptr + 2 ^ bits - 1} \<subseteq> Ptr ` {ptr ..+ 2^bits}" (is "\<lbrakk>?a1;?a2\<rbrakk> \<Longrightarrow> ?b \<subseteq> ?c")
-  apply (subgoal_tac  "?c =  Ptr ` {ptr ..ptr + 2 ^ bits - 1}")
-   apply (simp add:inj_image_subset_iff)
-   apply (clarsimp simp:blah valid_cap'_def capAligned_def)
-   apply (rule is_aligned_no_wrap')
-     apply simp+
-    apply (rule word_of_nat_less)
-    apply simp
-  apply (rule arg_cong[where f = "\<lambda>x. Ptr ` x"])
-  apply (rule upto_intvl_eq)
-  apply (clarsimp simp:valid_cap'_def capAligned_def)+
-  done
-
 (* CLAG : IpcCancel_C *)
 lemma tcb_ptr_to_ctcb_ptr_imageD:
   "x \<in> tcb_ptr_to_ctcb_ptr ` S \<Longrightarrow> ctcb_ptr_to_tcb_ptr x \<in> S"
   apply (erule imageE)
-  apply simp
-  done
-
-lemma ctcb_ptr_to_tcb_ptr_imageI:
-  "ctcb_ptr_to_tcb_ptr x \<in> S \<Longrightarrow> x \<in> tcb_ptr_to_ctcb_ptr ` S"
-  apply (drule imageI [where f = tcb_ptr_to_ctcb_ptr])
   apply simp
   done
 
@@ -639,17 +550,6 @@ lemma tcb_cte_cases_aligned:
   apply (erule aligned_add_aligned)
    apply (simp add: tcb_cte_cases_def is_aligned_def objBits_simps' split: if_split_asm)
   apply (simp add: objBits_simps')
-  done
-
-lemma tcb_cte_in_range':
-  "\<lbrakk> ksPSpace s p = Some (KOTCB tcb); is_aligned p tcbBlockSizeBits;
-  tcb_cte_cases n = Some (getF, setF) \<rbrakk>
-  \<Longrightarrow> {p + n..+2 ^ objBits (cte :: cte)} \<subseteq> {p ..+ 2 ^ objBits tcb}"
-  apply (subst upto_intvl_eq)
-   apply (erule (1) tcb_cte_cases_aligned)
-  apply (subst upto_intvl_eq)
-   apply (simp add: objBits_simps')
-  apply (erule (2) tcb_cte_in_range)
   done
 
 (* clagged from above :( Were I smarter or if I cared more I could probably factor out more \<dots>*)
@@ -1078,9 +978,6 @@ lemma surj_ctcb_ptr_to_tcb_ptr [simp]:
   "surj ctcb_ptr_to_tcb_ptr"
   by (rule surjI [where f = "tcb_ptr_to_ctcb_ptr"], simp)
 
-lemma bij_ctcb_ptr_to_tcb_ptr [simp]:
-  "bij ctcb_ptr_to_tcb_ptr" by (simp add: bijI)
-
 lemma cmap_relation_restrict_both:
   "\<lbrakk> cmap_relation am cm f rel; bij f\<rbrakk> \<Longrightarrow> cmap_relation (am |` (- S)) (cm |` (- f ` S)) f rel"
   unfolding cmap_relation_def
@@ -1148,7 +1045,6 @@ lemma tcb_ptr_to_ctcb_ptr_to_Ptr:
    apply (subgoal_tac "p + ctcb_offset + of_nat k \<in> {p + ctcb_offset..+b}")
     apply (simp add: field_simps)
    apply (erule intvlI)
-  apply (rule image_mono)
   apply clarsimp
   apply (drule intvlD)
   apply clarsimp
@@ -1449,13 +1345,6 @@ lemma hrs_ghost_update_comm:
   "(t_hrs_'_update f \<circ> ghost'state_'_update g) =
    (ghost'state_'_update g \<circ> t_hrs_'_update f)"
   by (rule ext) simp
-
-lemma htd_safe_typ_clear_region:
-  "htd_safe S htd \<Longrightarrow> htd_safe S (typ_clear_region ptr bits htd)"
-  apply (clarsimp simp: htd_safe_def dom_s_def typ_clear_region_def)
-  apply (simp add: subset_iff)
-  apply blast
-  done
 
 lemma htd_safe_typ_region_bytes:
   "htd_safe S htd \<Longrightarrow> {ptr ..+ 2 ^ bits} \<subseteq> S \<Longrightarrow> htd_safe S (typ_region_bytes ptr bits htd)"
@@ -1836,14 +1725,13 @@ proof -
   }
   moreover
   {
-    assume "s' \<Turnstile>\<^sub>c (Ptr::(32 word \<Rightarrow> (pde_C[4096]) ptr)) (symbol_table ''armKSGlobalPD'')"
+    assume "s' \<Turnstile>\<^sub>c armKSGlobalPD_Ptr"
     moreover
-    from sr ptr_refs have "ptr_span (pd_Ptr (symbol_table ''armKSGlobalPD''))
+    from sr ptr_refs have "ptr_span armKSGlobalPD_Ptr
       \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
       by (fastforce simp: rf_sr_def cstate_relation_def Let_def)
     ultimately
-    have "hrs_htd (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s')))
-      \<Turnstile>\<^sub>t (Ptr::(32 word \<Rightarrow> (pde_C[4096]) ptr)) (symbol_table ''armKSGlobalPD'')"
+    have "hrs_htd (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s'))) \<Turnstile>\<^sub>t armKSGlobalPD_Ptr"
       using al wb
       apply (cases "t_hrs_' (globals s')")
       apply (simp add: hrs_htd_update_def hrs_htd_def h_t_valid_typ_region_bytes upto_intvl_eq)
@@ -2019,7 +1907,7 @@ proof -
 
    moreover from sr have
      "h_t_valid (typ_region_bytes ptr bits (hrs_htd (t_hrs_' (globals s'))))
-       c_guard (ptr_coerce (intStateIRQNode_' (globals s')) :: (cte_C[256]) ptr)"
+       c_guard intStateIRQNode_array_Ptr"
     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
     apply (simp add: h_t_valid_typ_region_bytes)
     apply (simp add: upto_intvl_eq al)

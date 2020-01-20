@@ -12,41 +12,41 @@ theory SimpStrategy
 imports Main
 begin
 
-text {*
+text \<open>
 Support for defining alternative simplifier strategies for some parts of terms
 or some premises of rewrite rules. The "name" parameter to the simp_strategy
 constant is used to identify which simplification strategy should be used on
 this term. Note that, although names have type nat, it is safe for them to all
 be defined as 0. The important thing is that the simplifier doesn't know they're
 equal.
-*}
+\<close>
 
 definition
   simp_strategy :: "nat \<Rightarrow> ('a :: {}) \<Rightarrow> 'a"
 where
   "simp_strategy name x \<equiv> x"
 
-text {*
+text \<open>
 This congruence rule forbids the simplifier from simplifying the arguments of
 simp_strategy normally.
-*}
+\<close>
 
 lemma simp_strategy_cong[cong]:
   "simp_strategy name x = simp_strategy name x"
   by simp
 
-text {*
+text \<open>
 This strategy, or rather lack thereof, can be used to forbid simplification.
-*}
+\<close>
 
 definition
   NoSimp :: nat
 where "NoSimp = 0"
 
-text {*
+text \<open>
 This strategy indicates that a boolean subterm should be simplified only by
 using explicit assumptions of the simpset.
-*}
+\<close>
 
 definition
   ByAssum :: nat
@@ -57,12 +57,12 @@ lemma Eq_TrueI_ByAssum:
   by (simp add: simp_strategy_def)
 
 simproc_setup simp_strategy_ByAssum ("simp_strategy ByAssum b") =
-  {* K (fn ss => fn ct => let
+  \<open>K (fn ss => fn ct => let
       val b = Thm.dest_arg ct
       val t = Thm.instantiate ([],[((("P",0),@{typ bool}), b)])
         @{thm Eq_TrueI_ByAssum}
       val prems = Raw_Simplifier.prems_of ss
-    in get_first (try (fn p => p RS t)) prems end) *}
+    in get_first (try (fn p => p RS t)) prems end)\<close>
 
 lemma ByAssum:
   "simp_strategy ByAssum P \<Longrightarrow> P"
@@ -72,19 +72,19 @@ lemma simp_ByAssum_test:
   "P \<Longrightarrow> simp_strategy ByAssum P"
   by simp
 
-text {*
+text \<open>
 Generic framework for instantiating a simproc which simplifies within a
 simp_strategy with a given simpset.
 
 The boolean determines whether simp_strategy Name True should be rewritten
 to True.
-*}
+\<close>
 
 lemma simp_strategy_Eq_True:
   "simp_strategy name True \<equiv> True"
   by (simp add: simp_strategy_def)
 
-ML {*
+ML \<open>
 fun simp_strategy_True_conv ct = case Thm.term_of ct of
     (Const (@{const_name simp_strategy}, _) $ _ $ @{term True})
       => Thm.instantiate ([], [((("name",0), @{typ nat}), Thm.dest_arg1 ct)])
@@ -106,6 +106,6 @@ let
 in
   ss
 end
-*}
+\<close>
 
 end

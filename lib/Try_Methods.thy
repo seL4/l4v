@@ -18,7 +18,7 @@ keywords "trym" :: diag
 
 begin
 
-text {*
+text \<open>
 A collection of methods that can be "tried" against subgoals (similar
 to try, try0 etc). It is easy to add new methods with "add_try_method",
 although the parser currently supports only single names.
@@ -26,9 +26,9 @@ although the parser currently supports only single names.
 Particular subgoals can be tried with "trym 1" etc. By default all
 subgoals are attempted unless they are coupled to others by shared
 schematic variables.
-*}
+\<close>
 
-ML {*
+ML \<open>
 structure Try_Methods = struct
 
 structure Methods = Theory_Data
@@ -114,7 +114,7 @@ val _ = Outer_Syntax.command @{command_keyword add_try_method}
   (Parse.name >> (Toplevel.local_theory NONE NONE o local_check_add_method))
 
 end
-*}
+\<close>
 
 add_try_method fastforce
 add_try_method blast

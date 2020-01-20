@@ -81,20 +81,20 @@ lemma seL4_CNode_Mint_sep:
      \<guillemotleft>root_tcb_id \<mapsto>f tcb \<and>*
      (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
 
-     (* Root CNode. *)
+     \<comment> \<open>Root CNode.\<close>
      cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*
-     (* Client cnode. *)
+     \<comment> \<open>Client cnode.\<close>
      dest_id \<mapsto>f CNode (empty_cnode dest_size) \<and>*
 
-     (* Cap to the root CNode. *)
+     \<comment> \<open>Cap to the root CNode.\<close>
      (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
-     (* Cap to the client CNode. *)
+     \<comment> \<open>Cap to the client CNode.\<close>
      (cnode_id, dest_root_slot) \<mapsto>c dest_root_cap \<and>*
-     (* Cap that the root task has to it's own CNode. *)
+     \<comment> \<open>Cap that the root task has to its own CNode.\<close>
      (cnode_id, cnode_cap_slot) \<mapsto>c cnode_cap' \<and>*
-     (* Cap to be copied, in the root CNode. *)
+     \<comment> \<open>Cap to be copied, in the root CNode.\<close>
      (cnode_id, src_slot) \<mapsto>c src_cap \<and>*
-     (* Where to copy the cap (in the client CNode). *)
+     \<comment> \<open>Where to copy the cap (in the client CNode).\<close>
      (dest_id, dest_slot) \<mapsto>c NullCap \<and>*
       R\<guillemotright> s \<and>
 
@@ -103,7 +103,7 @@ lemma seL4_CNode_Mint_sep:
      one_lvl_lookup cnode_cap' (unat src_depth) root_size \<and>
      one_lvl_lookup dest_root_cap (unat dest_depth) dest_size \<and>
 
-     (* We need some word invariants *)
+     \<comment> \<open>We need some word invariants\<close>
      unat src_depth \<le> word_bits \<and>
      0 < unat src_depth \<and>
      unat dest_depth \<le> word_bits \<and>
@@ -118,19 +118,19 @@ lemma seL4_CNode_Mint_sep:
      guard_equal cnode_cap dest_root word_bits \<and>
 
 
-     (* Caps point to the right objects. *)
+     \<comment> \<open>Caps point to the right objects.\<close>
      cap_object cnode_cap = cnode_id \<and>
      cap_object cnode_cap' = cnode_id \<and>
      cap_object dest_root_cap = dest_id \<and>
 
-     (* Cap slots match their cptrs. *)
+     \<comment> \<open>Cap slots match their cptrs.\<close>
      dest_root_slot = offset dest_root root_size \<and>
      cnode_cap_slot = offset src_root root_size \<and>
      src_slot = offset src_index root_size \<and>
      dest_slot = offset dest_index dest_size \<and>
 
      cap' = update_cap_data_det data (update_cap_rights (cap_rights src_cap \<inter> rights) src_cap) \<and>
-     (ep_related_cap src_cap \<longrightarrow> cap_badge src_cap = 0) \<and>
+     (is_ep_cap src_cap \<or> is_ntfn_cap src_cap \<longrightarrow> cap_badge src_cap = 0) \<and>
      cap_has_type src_cap \<and> \<not> is_untyped_cap src_cap
   \<rbrace>
   seL4_CNode_Mint dest_root dest_index dest_depth src_root src_index src_depth rights data
@@ -261,20 +261,20 @@ lemma seL4_CNode_Mutate_sep:
      root_tcb_id \<mapsto>f tcb \<and>*
      (root_tcb_id, tcb_pending_op_slot) \<mapsto>c - \<and>*
 
-     (* Root CNode. *)
+     \<comment> \<open>Root CNode.\<close>
      cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*
-     (* Client cnode. *)
+     \<comment> \<open>Client cnode.\<close>
      dest_id \<mapsto>f CNode (empty_cnode dest_size) \<and>*
 
-     (* Cap to the root CNode. *)
+     \<comment> \<open>Cap to the root CNode.\<close>
      (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
-     (* Cap to the client CNode. *)
+     \<comment> \<open>Cap to the client CNode.\<close>
      (cnode_id, dest_root_slot) \<mapsto>c dest_root_cap \<and>*
-     (* Cap that the root task has to it's own CNode. *)
+     \<comment> \<open>Cap that the root task has to its own CNode.\<close>
      (cnode_id, cnode_cap_slot) \<mapsto>c cnode_cap' \<and>*
-     (* Cap to be copied, in the root CNode. *)
+     \<comment> \<open>Cap to be copied, in the root CNode.\<close>
      (cnode_id, src_slot) \<mapsto>c src_cap \<and>*
-     (* Where to copy the cap (in the client CNode). *)
+     \<comment> \<open>Where to copy the cap (in the client CNode).\<close>
      (dest_id, dest_slot) \<mapsto>c NullCap \<and>*
       R\<guillemotright> s \<and>
 
@@ -282,7 +282,7 @@ lemma seL4_CNode_Mutate_sep:
      one_lvl_lookup cnode_cap' (unat src_depth) root_size \<and>
      one_lvl_lookup dest_root_cap (unat dest_depth) dest_size \<and>
 
-     (* We need some word invariants *)
+     \<comment> \<open>We need some word invariants\<close>
      unat src_depth \<le> word_bits \<and>
      0 < unat src_depth \<and>
      unat dest_depth \<le> word_bits \<and>
@@ -297,12 +297,12 @@ lemma seL4_CNode_Mutate_sep:
      guard_equal dest_root_cap dest_index (unat dest_depth ) \<and>
      guard_equal cnode_cap src_root word_bits \<and>
      guard_equal cnode_cap dest_root word_bits \<and>
-     (* Caps point to the right objects. *)
+     \<comment> \<open>Caps point to the right objects.\<close>
      cap_object cnode_cap = cnode_id \<and>
      cap_object cnode_cap' = cnode_id \<and>
      cap_object dest_root_cap = dest_id \<and>
 
-     (* Cap slots match their cptrs. *)
+     \<comment> \<open>Cap slots match their cptrs.\<close>
      dest_root_slot = offset dest_root root_size \<and>
      cnode_cap_slot = offset src_root root_size \<and>
      src_slot = offset src_index root_size \<and>
@@ -426,20 +426,20 @@ lemma seL4_CNode_Move_sep:
      root_tcb_id \<mapsto>f tcb \<and>*
      (root_tcb_id, tcb_pending_op_slot) \<mapsto>c - \<and>*
 
-     (* Root CNode. *)
+     \<comment> \<open>Root CNode.\<close>
      cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*
-     (* Client cnode. *)
+     \<comment> \<open>Client cnode.\<close>
      dest_id \<mapsto>f CNode (empty_cnode dest_size) \<and>*
 
-     (* Cap to the root CNode. *)
+     \<comment> \<open>Cap to the root CNode.\<close>
      (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
-     (* Cap to the client CNode. *)
+     \<comment> \<open>Cap to the client CNode.\<close>
      (cnode_id, dest_root_slot) \<mapsto>c dest_root_cap \<and>*
-     (* Cap that the root task has to it's own CNode. *)
+     \<comment> \<open>Cap that the root task has to its own CNode.\<close>
      (cnode_id, cnode_cap_slot) \<mapsto>c cnode_cap' \<and>*
-     (* Cap to be copied, in the root CNode. *)
+     \<comment> \<open>Cap to be copied, in the root CNode.\<close>
      (cnode_id, src_slot) \<mapsto>c src_cap \<and>*
-     (* Where to copy the cap (in the client CNode). *)
+     \<comment> \<open>Where to copy the cap (in the client CNode).\<close>
      (dest_id, dest_slot) \<mapsto>c NullCap \<and>*
       R\<guillemotright> s \<and>
 
@@ -447,7 +447,7 @@ lemma seL4_CNode_Move_sep:
      one_lvl_lookup cnode_cap' (unat src_depth) root_size \<and>
      one_lvl_lookup dest_root_cap (unat dest_depth) dest_size \<and>
 
-     (* We need some word invariants *)
+     \<comment> \<open>We need some word invariants\<close>
      unat src_depth \<le> word_bits \<and>
      0 < unat src_depth \<and>
      unat dest_depth \<le> word_bits \<and>
@@ -463,12 +463,12 @@ lemma seL4_CNode_Move_sep:
      guard_equal cnode_cap src_root word_bits \<and>
      guard_equal cnode_cap dest_root word_bits \<and>
 
-     (* Caps point to the right objects. *)
+     \<comment> \<open>Caps point to the right objects.\<close>
      cap_object cnode_cap = cnode_id \<and>
      cap_object cnode_cap' = cnode_id \<and>
      cap_object dest_root_cap = dest_id \<and>
 
-     (* Cap slots match their cptrs. *)
+     \<comment> \<open>Cap slots match their cptrs.\<close>
      dest_root_slot = offset dest_root root_size \<and>
      cnode_cap_slot = offset src_root root_size \<and>
      src_slot = offset src_index root_size \<and>

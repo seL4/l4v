@@ -90,7 +90,8 @@ lemma set_object_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and K (obj_valid_vspace obj)\<rbrace>
       set_object ptr obj
    \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (simp add: set_object_def, wp)
+  including unfold_objects
+  apply (wpsimp wp: set_object_wp_strong simp: a_type_def)
   apply (auto simp: fun_upd_def[symmetric] del: ballI elim: ball_ran_updI)
   done
 
@@ -106,7 +107,7 @@ lemma shift_0x3C_set:
   apply (subst image_cong[where N="{x. x < 2 ^ 4}"])
     apply (safe, simp_all)[1]
      apply (drule plus_one_helper2, simp_all)[1]
-    apply (drule minus_one_helper3, simp_all)[1]
+    apply (drule word_le_minus_one_leq, simp_all)[1]
    apply (rule_tac f="\<lambda>x. ucast (x && mask bits >> 2)" in arg_cong)
    apply (rule trans[OF add.commute is_aligned_add_or], assumption)
    apply (rule shiftl_less_t2n, simp_all)[1]
@@ -115,7 +116,7 @@ lemma shift_0x3C_set:
     apply (simp add: word_bits_conv)
    apply (rule word_eqI)
    apply (simp add: word_ops_nth_size word_size nth_ucast nth_shiftr
-                    nth_shiftl neg_mask_bang
+                    nth_shiftl neg_mask_test_bit
                     word_bits_conv)
    apply (safe, simp_all add: is_aligned_nth)[1]
    apply (drule_tac x="Suc (Suc n)" in spec)
@@ -147,7 +148,7 @@ lemma mapM_x_store_pte_updates:
   apply (simp add: mapM_x_Cons)
   apply (rule hoare_seq_ext, assumption)
   apply (thin_tac "valid P f Q" for P f Q)
-  apply (simp add: store_pte_def set_pt_def set_object_def update_object_def word_size_bits_def)
+  apply (simp add: store_pte_def set_pt_def set_object_def word_size_bits_def)
   apply (wp get_pt_wp get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_simps)
   apply (erule rsubst[where P=Q])
@@ -211,7 +212,7 @@ lemma mapM_x_store_pde_updates:
   apply (simp add: mapM_x_Cons)
   apply (rule hoare_seq_ext, assumption)
   apply (thin_tac "valid P f Q" for P f Q)
-  apply (simp add: store_pde_def set_pd_def set_object_def update_object_def word_size_bits_def)
+  apply (simp add: store_pde_def set_pd_def set_object_def word_size_bits_def)
   apply (wp get_pd_wp get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_simps)
   apply (erule rsubst[where P=Q])
@@ -223,42 +224,45 @@ lemma mapM_x_store_pde_updates:
 lemma store_pde_valid_vspace_objs':
   "\<lbrace>valid_vspace_objs'\<rbrace>
        store_pde p pde \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (simp add: store_pde_def set_pd_def update_object_def, wp get_object_wp)
+  apply (simp add: store_pde_def set_pd_def)
+  apply (wpsimp wp: set_object_valid_vspace_objs')
   apply (clarsimp simp: obj_at_def)
-   apply (rule valid_entries_overwrite_0)
-    apply (fastforce simp:ran_def)
-   apply (drule bspec)
-    apply fastforce
-   apply (case_tac "pd pa")
+  apply (rule valid_entries_overwrite_0)
+   apply (fastforce simp:ran_def)
+  apply (drule bspec)
+   apply fastforce
+  apply (case_tac "pd pa")
     apply simp_all
-     apply (case_tac pde,simp_all)
-    apply (case_tac pde,simp_all)
+   apply (case_tac pde,simp_all)
+  apply (case_tac pde,simp_all)
   done
 
 lemma store_pte_valid_vspace_objs':
   "\<lbrace>valid_vspace_objs'\<rbrace>
        store_pte p pte \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (simp add: store_pte_def set_pt_def update_object_def, wp get_object_wp)
+  apply (simp add: store_pte_def set_pt_def)
+  apply (wpsimp wp: set_object_valid_vspace_objs')
   apply (clarsimp simp: obj_at_def)
-   apply (rule valid_entries_overwrite_0)
-    apply (fastforce simp:ran_def)
-   apply (drule bspec)
-    apply fastforce
-   apply (case_tac "pt pa")
-     apply simp
-    apply (case_tac pte,simp_all)
+  apply (rule valid_entries_overwrite_0)
+   apply (fastforce simp:ran_def)
+  apply (drule bspec)
+   apply fastforce
+  apply (case_tac "pt pa")
+   apply simp
+  apply (case_tac pte,simp_all)
   done
 
 lemma store_pdpte_valid_vspace_objs':
   "\<lbrace>valid_vspace_objs'\<rbrace>
        store_pdpte p pdpte \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (simp add: store_pdpte_def set_pdpt_def update_object_def, wp get_object_wp)
+  apply (simp add: store_pdpte_def set_pdpt_def)
+  apply (wpsimp wp: set_object_valid_vspace_objs')
   apply (clarsimp simp: obj_at_def)
-   apply (rule valid_entries_overwrite_0)
-    apply (fastforce simp:ran_def)
-   apply (drule bspec)
-    apply fastforce
-   apply (case_tac "pd pa")
+  apply (rule valid_entries_overwrite_0)
+   apply (fastforce simp:ran_def)
+  apply (drule bspec)
+   apply fastforce
+  apply (case_tac "pd pa")
     apply simp
    apply (case_tac pdpte,simp_all)
   apply (case_tac pdpte,simp_all)
@@ -267,15 +271,16 @@ lemma store_pdpte_valid_vspace_objs':
 lemma store_pml4e_valid_vspace_objs':
   "\<lbrace>valid_vspace_objs'\<rbrace>
        store_pml4e p pml4e \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (simp add: store_pml4e_def set_pml4_def update_object_def, wp get_object_wp)
+  apply (simp add: store_pml4e_def set_pml4_def)
+  apply (wpsimp wp: set_object_valid_vspace_objs')
   apply (clarsimp simp: obj_at_def)
-   apply (rule valid_entries_overwrite_0)
-    apply (fastforce simp:ran_def)
-   apply (drule bspec)
-    apply fastforce
-   apply (case_tac "pm pa")
-    apply simp
-   apply (case_tac pml4e,simp_all)
+  apply (rule valid_entries_overwrite_0)
+   apply (fastforce simp:ran_def)
+  apply (drule bspec)
+   apply fastforce
+  apply (case_tac "pm pa")
+   apply simp
+  apply (case_tac pml4e,simp_all)
   done
 
 lemma unmap_page_valid_vspace_objs'[wp]:
@@ -351,7 +356,7 @@ lemma mapM_x_copy_pml4e_updates:
   apply (simp add: mapM_x_Cons)
   apply wp
    apply (thin_tac "valid P f Q" for P f Q)
-   apply (simp add: store_pml4e_def set_pml4_def set_object_def update_object_def
+   apply (simp add: store_pml4e_def set_pml4_def set_object_def
               cong: bind_cong split del: if_split)
    apply (wp get_object_wp get_pml4e_wp)
   apply (clarsimp simp: obj_at_def a_type_simps mask_out_add_aligned[symmetric] word_size_bits_def
@@ -474,13 +479,6 @@ lemma invoke_cnode_valid_vspace_objs'[wp]:
    apply (wp get_cap_wp | wpc | simp split del: if_split)+
   done
 
-lemma as_user_valid_vspace_objs'[wp]:
-  "\<lbrace>valid_vspace_objs'\<rbrace> as_user t m \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (simp add: as_user_def split_def)
-  apply wp
-  apply simp
-  done
-
 crunch valid_vspace_objs'[wp]: invoke_tcb "valid_vspace_objs'"
   (wp: check_cap_inv crunch_wps simp: crunch_simps
        ignore: check_cap_at)
@@ -560,17 +558,9 @@ lemma invoke_untyped_valid_vspace_objs'[wp]:
     apply (wp | simp)+
   done
 
-lemma update_object_valid_vspace_objs'[wp]:
-  "\<lbrace>valid_vspace_objs' and K (obj_valid_vspace obj)\<rbrace>
-   update_object ptr obj
-  \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (simp add: update_object_def, wp get_object_wp)
-  apply (auto simp: fun_upd_def[symmetric] del: ballI elim: ball_ran_updI)
-  done
-
 crunch valid_vspace_objs'[wp]: perform_asid_pool_invocation,
      perform_asid_control_invocation "valid_vspace_objs'"
-  (ignore: delete_objects update_object
+  (ignore: delete_objects set_object
        wp: static_imp_wp select_wp crunch_wps
      simp: crunch_simps unless_def)
 
@@ -638,7 +628,7 @@ lemma perform_page_valid_vspace_objs'[wp]:
                                   pde_check_if_mapped_def
                            split: pte.splits pde.splits
                  | wpc
-                 | wp_once hoare_drop_imps)+
+                 | wp (once) hoare_drop_imps)+
   done
 
 lemma perform_page_table_valid_vspace_objs'[wp]:
@@ -653,7 +643,7 @@ lemma perform_page_table_valid_vspace_objs'[wp]:
               | wpc
               | simp add: swp_def
               | strengthen all_imp_ko_at_from_ex_strg
-              | wp_once hoare_drop_imps)+
+              | wp (once) hoare_drop_imps)+
   done
 
 lemma perform_page_directory_valid_vspace_objs'[wp]:
@@ -669,7 +659,7 @@ lemma perform_page_directory_valid_vspace_objs'[wp]:
               | wpc
               | simp add: swp_def
               | strengthen all_imp_ko_at_from_ex_strg
-              | wp_once hoare_drop_imps)+
+              | wp (once) hoare_drop_imps)+
   done
 
 lemma perform_pdpt_valid_vspace_objs'[wp]:
@@ -685,7 +675,7 @@ lemma perform_pdpt_valid_vspace_objs'[wp]:
               | wpc
               | simp add: swp_def
               | strengthen all_imp_ko_at_from_ex_strg
-              | wp_once hoare_drop_imps)+
+              | wp (once) hoare_drop_imps)+
   done
 
 crunch valid_vspace_objs'[wp]: perform_io_port_invocation, perform_ioport_control_invocation valid_vspace_objs'
@@ -712,7 +702,7 @@ lemma handle_invocation_valid_vspace_objs'[wp]:
   apply (simp add: handle_invocation_def)
   apply (wp syscall_valid set_thread_state_ct_st
                | simp add: split_def | wpc
-               | wp_once hoare_drop_imps)+
+               | wp (once) hoare_drop_imps)+
   apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
   done
 
@@ -727,7 +717,7 @@ crunch valid_vspace_objs'[wp]: activate_thread,switch_to_thread, handle_hypervis
 lemma handle_event_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and invs and ct_active\<rbrace> handle_event e \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (case_tac e; simp)
-   by (wp | wpc | simp | wp_once hoare_drop_imps)+
+   by (wp | wpc | simp add: handle_vm_fault_def | wp (once) hoare_drop_imps)+
 
 lemma schedule_valid_vspace_objs'[wp]: "\<lbrace>valid_vspace_objs'\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
@@ -741,10 +731,10 @@ lemma call_kernel_valid_vspace_objs'[wp]:
    \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def)
       apply (rule hoare_pre)
-       apply (wp | simp | wpc
+       apply (wp | simp add: handle_vm_fault_def | wpc
                  | rule conjI | clarsimp simp: ct_in_state_def
                  | erule pred_tcb_weakenE
-                 | wp_once hoare_drop_imps)+
+                 | wp (once) hoare_drop_imps)+
   done
 
 end

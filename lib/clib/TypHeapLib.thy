@@ -135,6 +135,14 @@ lemma heap_update_field_hrs:
   apply (simp add: update_ti_t_def hrs_mem_def)
   done
 
+lemma heap_update_field_ext:
+  "\<lbrakk>field_ti TYPE('a :: packed_type) f = Some t; c_guard p;
+  export_uinfo t = export_uinfo (typ_info_t TYPE('b :: packed_type))\<rbrakk>
+  \<Longrightarrow> heap_update (Ptr &(p\<rightarrow>f) :: 'b ptr) =
+  (\<lambda>v hp. heap_update p (update_ti t (to_bytes_p v) (h_val hp p)) hp)"
+  apply (rule ext, rule ext)
+  apply (erule (2) heap_update_field)
+  done
 
 subsection "c_guard"
 
@@ -443,6 +451,64 @@ begin
     apply clarsimp
     done
 end
+
+subsection \<open>Type Combinators and Padding\<close>
+
+lemma ti_typ_pad_combine_empty_ti:
+  fixes tp :: "'b :: c_type itself"
+  shows "ti_typ_pad_combine tp lu upd fld (empty_typ_info n) =
+  TypDesc (TypAggregate [DTPair (adjust_ti (typ_info_t TYPE('b)) lu upd) fld]) n"
+  by (simp add: ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def Let_def)
+
+lemma ti_typ_combine_empty_ti:
+  fixes tp :: "'b :: c_type itself"
+  shows "ti_typ_combine tp lu upd fld (empty_typ_info n) =
+  TypDesc (TypAggregate [DTPair (adjust_ti (typ_info_t TYPE('b)) lu upd) fld]) n"
+  by (simp add: ti_typ_combine_def empty_typ_info_def Let_def)
+
+lemma ti_typ_pad_combine_td:
+  fixes tp :: "'b :: c_type itself"
+  shows "padup (align_of TYPE('b)) (size_td_struct st) = 0 \<Longrightarrow>
+  ti_typ_pad_combine tp lu upd fld (TypDesc st n) =
+  TypDesc (extend_ti_struct st (adjust_ti (typ_info_t TYPE('b)) lu upd) fld) n"
+  by (simp add: ti_typ_pad_combine_def ti_typ_combine_def Let_def)
+
+lemma ti_typ_combine_td:
+  fixes tp :: "'b :: c_type itself"
+  shows "padup (align_of TYPE('b)) (size_td_struct st) = 0 \<Longrightarrow>
+  ti_typ_combine tp lu upd fld (TypDesc st n) =
+  TypDesc (extend_ti_struct st (adjust_ti (typ_info_t TYPE('b)) lu upd) fld) n"
+  by (simp add: ti_typ_combine_def Let_def)
+
+lemma update_ti_t_pad_combine:
+  assumes std: "size_td td' mod 2 ^ align_td (typ_info_t TYPE('a :: c_type)) = 0"
+  shows "update_ti_t (ti_typ_pad_combine TYPE('a :: c_type) lu upd fld td') bs v =
+  update_ti_t (ti_typ_combine TYPE('a :: c_type) lu upd fld td') bs v"
+  using std
+  by (simp add: ti_typ_pad_combine_def size_td_simps Let_def)
+
+subsection \<open>
+  The orphanage: miscellaneous lemmas pulled up to (roughly) where they belong.
+\<close>
+
+lemma uinfo_array_tag_n_m_not_le_typ_name:
+  "typ_name (typ_info_t TYPE('b)) @ ''_array_'' @ nat_to_bin_string m
+      \<notin> td_names (typ_info_t TYPE('a))
+    \<Longrightarrow> \<not> uinfo_array_tag_n_m TYPE('b :: c_type) n m \<le> typ_uinfo_t TYPE('a :: c_type)"
+  apply (clarsimp simp: typ_tag_le_def typ_uinfo_t_def)
+  apply (drule td_set_td_names)
+   apply (clarsimp simp: uinfo_array_tag_n_m_def typ_uinfo_t_def)
+   apply (drule arg_cong[where f="\<lambda>xs. set ''r'' \<subseteq> set xs"], simp)
+  apply (simp add: uinfo_array_tag_n_m_def typ_uinfo_t_def)
+  done
+
+lemma tag_not_le_via_td_name:
+  "typ_name (typ_info_t TYPE('a)) \<notin> td_names (typ_info_t TYPE('b))
+    \<Longrightarrow> typ_name (typ_info_t TYPE('a)) \<noteq> pad_typ_name
+    \<Longrightarrow> \<not> typ_uinfo_t TYPE('a :: c_type) \<le> typ_uinfo_t TYPE ('b :: c_type)"
+  apply (clarsimp simp: typ_tag_le_def typ_uinfo_t_def)
+  apply (drule td_set_td_names, simp+)
+  done
 
 (* Simplifier setup *)
 

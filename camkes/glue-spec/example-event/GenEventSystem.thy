@@ -14,13 +14,13 @@ imports UserEvent
 begin
 (*>*)
 
-subsection {* \label{ssec:eventsys}Generated System Theory *}
+subsection \<open>\label{ssec:eventsys}Generated System Theory\<close>
 
-subsubsection {* \label{sssec:eventsystypes}Types *}
-text {*
+subsubsection \<open>\label{sssec:eventsystypes}Types\<close>
+text \<open>
   Identical types to those presented in \autoref{sssec:procsystypes} are
   generated for a system involving events.
-*}
+\<close>
 
 type_synonym component = "(channel, component_state) comp"
 
@@ -28,12 +28,12 @@ type_synonym lstate = "component_state local_state"
 
 type_synonym gstate = "(inst, channel, component_state) global_state"
 
-subsubsection {* \label{sssec:eventsysuntrusted}Untrusted Components *}
-text {*
+subsubsection \<open>\label{sssec:eventsysuntrusted}Untrusted Components\<close>
+text \<open>
   As before, an untrusted definition is generated for each component type that
   permits any local operation or sending or receiving on any available
   interface.
-*}
+\<close>
 
 definition
   Collector_untrusted :: "(Collector_channel \<Rightarrow> channel) \<Rightarrow> component"
@@ -53,8 +53,8 @@ where
     \<squnion> ArbitraryRequest (ch Emitter_ev)
     \<squnion> ArbitraryResponse (ch Emitter_ev))"
 
-subsubsection {* \label{sssec:eventsysev}Event Components *}
-text {*
+subsubsection \<open>\label{sssec:eventsysev}Event Components\<close>
+text \<open>
   For each connection in the system over which events are transmitted, a
   definition is generated of a component type that models the state of the
   event. The type enumerating the interfaces of this component is expressed as
@@ -63,7 +63,7 @@ text {*
   component. The details of the execution of the component can largely be
   expressed statically, and are captured by the definition, @{term event},
   described in \autoref{ssec:eventcomponents}.
-*}
+\<close>
 
 type_synonym SomethingHappenedEvent_channel = unit
 
@@ -73,8 +73,8 @@ definition
 where
   "SomethingHappenedEvent ch \<equiv> event (ch ())"
 
-subsubsection {* \label{sssec:eventsysinst}Component Instances *}
-text {*
+subsubsection \<open>\label{sssec:eventsysinst}Component Instances\<close>
+text \<open>
   The definitions of untrusted component instances are generated as in
   \autoref{h:procbase}, but a definition is also derived for an instance of the
   introduced component. There is no opportunity for the user to provide a
@@ -82,7 +82,7 @@ text {*
   know exactly what actions this component takes. Being part of the component
   platform itself, we can generate a definition that exactly expresses its
   execution.
-*}
+\<close>
 
 definition
   sink_untrusted :: component
@@ -101,15 +101,15 @@ definition
 where
   "simpleEvent1\<^sub>e_instance \<equiv> SomethingHappenedEvent (\<lambda>_. simpleEvent1)"
 
-subsubsection {* \label{sssec:eventsysgs}Initial State *}
-text {*
+subsubsection \<open>\label{sssec:eventsysgs}Initial State\<close>
+text \<open>
   The generated global state for this system also contains a case for the
   introduced event component, mapping to the instance definition presented
   above and the common initial event state. While this definition of the global
   state makes it possible for the user to override the mapping of
   @{term simpleEvent1\<^sub>e} in @{term trusted}, there is no practical
   reason to do this.
-*}
+\<close>
 
 definition
   gs\<^sub>0 :: gstate

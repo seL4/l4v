@@ -1,11 +1,11 @@
 (*
- * Copyright 2019, Data61
+ * Copyright 2019, Data61, CSIRO
  *
  * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
  *
- * @TAG(DATA61_GPL)
+ * @TAG(DATA61_BSD)
  *)
 
 \<comment>\<open>
@@ -117,6 +117,7 @@ fun find_short_name ctxt (long_name, typ) =
                   then (warn_typ (); SOME short_name)
                   else NONE
                 end
+              | check _ = raise Match
           in
             Option.mapPartial check candidate
           end

@@ -21,14 +21,6 @@ begin
 context Arch begin global_naming X64_A
 
 definition
-  arch_tcb_set_ipc_buffer :: "machine_word \<Rightarrow> vspace_ref \<Rightarrow> (unit, 'a::state_ext) s_monad"
-where
-  "arch_tcb_set_ipc_buffer target ptr \<equiv> return ()"
-
-(* Allow most pre-existing proofs to continue to work. *)
-declare arch_tcb_set_ipc_buffer_def [simp]
-
-definition
   sanitise_or_flags :: machine_word
 where
   "sanitise_or_flags \<equiv> bit 1 || bit 9"
@@ -42,7 +34,7 @@ definition
   sanitise_register :: "bool \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 where
   "sanitise_register t r v \<equiv>
-    let val = (if r = FaultIP \<or> r = NextIP
+    let val = (if r = FaultIP \<or> r = NextIP \<or> r = FS_BASE \<or> r = GS_BASE
                then if v > 0x00007fffffffffff \<and> v < 0xffff800000000000 then 0 else v
                else v)
     in

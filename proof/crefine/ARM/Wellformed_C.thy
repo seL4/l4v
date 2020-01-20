@@ -38,6 +38,10 @@ abbreviation
   pte_Ptr :: "word32 \<Rightarrow> pte_C ptr" where "pte_Ptr == Ptr"
 abbreviation
   pde_Ptr :: "word32 \<Rightarrow> pde_C ptr" where "pde_Ptr == Ptr"
+abbreviation
+  pt_Ptr :: "32 word \<Rightarrow> (pte_C[256]) ptr" where "pt_Ptr == Ptr"
+abbreviation
+  pd_Ptr :: "32 word \<Rightarrow> (pde_C[4096]) ptr" where "pd_Ptr == Ptr"
 
 lemma halt_spec:
   "Gamma \<turnstile> {} Call halt_'proc {}"
@@ -243,9 +247,6 @@ definition
                    | Some cap \<Rightarrow> Some \<lparr> cap_CL = cap,
                                        cteMDBNode_CL = mdb_node_lift (cteMDBNode_C c) \<rparr>"
 
-lemma to_bool_false [simp]: "\<not> to_bool false"
-  by (simp add: to_bool_def false_def)
-
 (* this is slightly weird, but the bitfield generator
    masks everything with the expected bit length.
    So we do that here too. *)
@@ -253,31 +254,11 @@ definition
   to_bool_bf :: "'a::len word \<Rightarrow> bool" where
   "to_bool_bf w \<equiv> (w && mask 1) = 1"
 
-lemma to_bool_bf_mask1 [simp]:
-  "to_bool_bf (mask (Suc 0))"
-  by (simp add: mask_def to_bool_bf_def)
-
 lemma to_bool_bf_0 [simp]: "\<not>to_bool_bf 0"
   by (simp add: to_bool_bf_def)
 
 lemma to_bool_bf_1 [simp]: "to_bool_bf 1"
   by (simp add: to_bool_bf_def mask_def)
-
-lemma to_bool_bf_false [simp]:
-  "\<not>to_bool_bf false"
-  by (simp add: false_def)
-
-lemma to_bool_bf_true [simp]:
-  "to_bool_bf true"
-  by (simp add: true_def)
-
-lemma to_bool_to_bool_bf:
-  "w = false \<or> w = true \<Longrightarrow> to_bool_bf w = to_bool w"
-  by (auto simp: false_def true_def to_bool_def to_bool_bf_def mask_def)
-
-lemma to_bool_bf_mask_1 [simp]:
-  "to_bool_bf (w && mask (Suc 0)) = to_bool_bf w"
-  by (simp add: to_bool_bf_def)
 
 lemma to_bool_bf_and [simp]:
   "to_bool_bf (a && b) = (to_bool_bf a \<and> to_bool_bf (b::word32))"
@@ -332,11 +313,12 @@ where
  | Cap_untyped_cap uc \<Rightarrow> UntypedCap (to_bool(capIsDevice_CL uc)) (capPtr_CL uc) (unat (capBlockSize_CL uc)) (unat (capFreeIndex_CL uc << 4))
  | Cap_endpoint_cap ec \<Rightarrow>
     EndpointCap (capEPPtr_CL ec) (capEPBadge_CL ec) (to_bool(capCanSend_CL ec)) (to_bool(capCanReceive_CL ec))
-                (to_bool(capCanGrant_CL ec))
+                (to_bool(capCanGrant_CL ec)) (to_bool(capCanGrantReply_CL ec))
  | Cap_notification_cap ntfn \<Rightarrow>
     NotificationCap (capNtfnPtr_CL ntfn)(capNtfnBadge_CL ntfn)(to_bool(capNtfnCanSend_CL ntfn))
                      (to_bool(capNtfnCanReceive_CL ntfn))
- | Cap_reply_cap rc \<Rightarrow> ReplyCap (ctcb_ptr_to_tcb_ptr (Ptr (cap_reply_cap_CL.capTCBPtr_CL rc))) (to_bool (capReplyMaster_CL rc))
+ | Cap_reply_cap rc \<Rightarrow> ReplyCap (ctcb_ptr_to_tcb_ptr (Ptr (cap_reply_cap_CL.capTCBPtr_CL rc)))
+                               (to_bool (capReplyMaster_CL rc)) (to_bool (capReplyCanGrant_CL rc))
  | Cap_thread_cap tc \<Rightarrow>  ThreadCap(ctcb_ptr_to_tcb_ptr (Ptr (cap_thread_cap_CL.capTCBPtr_CL tc)))
  | Cap_irq_handler_cap ihc \<Rightarrow> IRQHandlerCap (ucast(capIRQ_CL ihc))
  | Cap_irq_control_cap \<Rightarrow> IRQControlCap

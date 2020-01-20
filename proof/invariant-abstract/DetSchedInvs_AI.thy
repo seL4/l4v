@@ -2436,6 +2436,10 @@ abbreviation valid_sched_except_blocked_except_wk_sched_action :: "'z::state_ext
   "valid_sched_except_blocked_except_wk_sched_action
    \<equiv> valid_sched_pred valid_sched_except_blocked_except_wk_sched_action_2"
 
+abbreviation einvs :: "det_ext state \<Rightarrow> bool" where
+  "einvs \<equiv> invs and valid_list and valid_sched"
+
+
 definition not_cur_thread_2 :: "obj_ref \<Rightarrow> scheduler_action \<Rightarrow> obj_ref \<Rightarrow> bool" where
   "not_cur_thread_2 thread sa ct \<equiv> sa = resume_cur_thread \<longrightarrow> thread \<noteq> ct"
 

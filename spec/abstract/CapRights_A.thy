@@ -20,7 +20,7 @@ begin
 
 text \<open>The possible access-control rights that exist in the system.
         Note that some rights are synonyms for others.\<close>
-datatype rights = AllowRead | AllowWrite | AllowGrant
+datatype rights = AllowRead | AllowWrite | AllowGrant | AllowGrantReply
 
 definition
   "AllowSend \<equiv> AllowWrite"

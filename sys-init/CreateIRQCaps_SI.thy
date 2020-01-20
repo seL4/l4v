@@ -171,6 +171,60 @@ lemma create_irq_cap_sep:
   apply (simp add: offset_slot_si_cnode_size' guard_equal_si_cspace_cap word_bits_def)
   done
 
+lemma word_upto_enum_sorted:
+  "sorted [(x::('a::len) word) .e. y]"
+proof (induct "fromEnumAlt y" arbitrary: x y)
+  case 0
+    then show ?case by (simp add: upto_enum_def)
+  next case (Suc d)
+    have d_prev: "d = fromEnumAlt (y - 1)"
+      using Suc.hyps
+      apply clarsimp
+      apply (subst unat_minus_one; fastforce)
+      done
+    then show ?case
+      using Suc.hyps(1)[where x=x and y="y-1"] Suc.hyps(2)
+      apply (simp only: upto_enum_def)
+      apply (clarsimp simp: sorted_append)
+      by (metis le_def order_le_less_trans order_less_imp_le toEnum_of_nat unat_lt2p
+                word_not_le word_unat_less_le)
+qed
+
+lemma sorted_list_of_set_eq_filter:
+  fixes P::"('a::len) word \<Rightarrow> bool"
+  shows "sorted_list_of_set {x. P x} = filter P [minBound .e. maxBound]"
+        (is "_ = ?rhs")
+proof -
+  have rhs_sorted: "sorted ?rhs"
+    by (intro sorted_imp_sorted_filter word_upto_enum_sorted)
+  moreover have rhs_distinct: "distinct ?rhs"
+    by (intro distinct_filter distinct_enum_upto')
+  moreover have enum_UNIV: "set [(minBound::'a word) .e. maxBound] = UNIV"
+   by (force simp: upto_enum_def minBound_word maxBound_word word_unat.univ unats_def
+                   unat_minus_one_word
+                   atLeastLessThan_def atLeast_def lessThan_def)
+  moreover have rhs_set: "{x. P x} = set ?rhs"
+    by (simp only: set_filter enum_UNIV, blast)
+  ultimately show ?thesis
+    by (metis sorted_list_of_set_already_sorted)
+qed
+
+lemma well_formed_spec_used_irqs_compute:
+  assumes "well_formed spec"
+  shows "used_irq_list_compute spec = used_irq_list spec"
+  using assms
+  unfolding used_irq_list_compute_def used_irq_list_def used_irqs_def
+            sorted_list_of_set_eq_filter minBound_word
+  apply (rule_tac filter_cong[OF refl, OF iffI])
+   apply (clarsimp simp add: Option.is_none_def)
+   apply (frule well_formed_cap_to_irq_object,assumption)
+    apply (simp add: well_formed_cdl_irq_node_irq_nodes)
+   apply (force dest: well_formed_inj_cdl_irq_node[THEN injD]
+                      well_formed_cap_to_irq_object
+                simp add: all_caps_def)
+  apply (clarsimp simp add: Option.is_none_def well_formed_all_caps_cap_irq)
+  done
+
 lemma create_irq_caps_sep_helper:
   "\<lbrace>\<guillemotleft>((\<And>* cptr \<in> set (take (card (used_irqs spec)) free_cptrs).
            ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) \<and>*
@@ -191,7 +245,8 @@ lemma create_irq_caps_sep_helper:
     dom t' = used_irq_nodes spec)\<guillemotright> s\<rbrace>"
   apply clarsimp
   apply (rule hoare_gen_asm_conj)
-  apply (clarsimp simp: create_irq_caps_def si_irq_nodes_def2 sep_conj_exists)
+  apply (clarsimp simp: create_irq_caps_def si_irq_nodes_def2 sep_conj_exists
+                        well_formed_spec_used_irqs_compute)
   apply (rule hoare_grab_exs2)
   apply wp
    apply simp

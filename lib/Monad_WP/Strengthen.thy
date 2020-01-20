@@ -12,8 +12,8 @@ theory Strengthen
 imports Main
 begin
 
-text {* Implementation of the @{text strengthen} tool and the @{text mk_strg}
-attribute. See the theory @{text Strengthen_Demo} for a demonstration. *}
+text \<open>Implementation of the @{text strengthen} tool and the @{text mk_strg}
+attribute. See the theory @{text Strengthen_Demo} for a demonstration.\<close>
 
 locale strengthen_implementation begin
 
@@ -121,7 +121,7 @@ lemma narrow_quant:
   apply assumption
   done
 
-ML {*
+ML \<open>
 structure Make_Strengthen_Rule = struct
 
 fun binop_conv' cv1 cv2 = Conv.combination_conv (Conv.arg_conv cv1) cv2;
@@ -210,14 +210,14 @@ val attr_pars : attribute context_parser
 
 
 end
-*}
+\<close>
 
 end
 
 attribute_setup mk_strg = \<open>Make_Strengthen_Rule.attr_pars\<close>
           "put rule in 'strengthen' form (see theory Strengthen_Demo)"
 
-text {* Quick test. *}
+text \<open>Quick test.\<close>
 
 lemmas foo = nat.induct[mk_strg I O O]
     nat.induct[mk_strg D O]
@@ -234,7 +234,7 @@ lemma intro_oblig:
   "PROP P \<Longrightarrow> PROP oblig (PROP P)"
   by (simp add: oblig_def)
 
-ML {*
+ML \<open>
 
 structure Strengthen = struct
 
@@ -385,22 +385,22 @@ val strengthen_method_args =
 
 end
 
-*}
+\<close>
 
 end
 
 setup "Strengthen.setup"
 
-method_setup strengthen = {* Strengthen.strengthen_args *}
+method_setup strengthen = \<open>Strengthen.strengthen_args\<close>
   "strengthen the goal (see theory Strengthen_Demo)"
 
-method_setup strengthen_asm = {* Strengthen.strengthen_asm_args *}
+method_setup strengthen_asm = \<open>Strengthen.strengthen_asm_args\<close>
   "apply ''strengthen'' to weaken an assumption"
 
-method_setup strengthen_method = {* Strengthen.strengthen_method_args *}
+method_setup strengthen_method = \<open>Strengthen.strengthen_method_args\<close>
   "use an argument method in ''strengthen'' sites"
 
-text {* Important strengthen congruence rules. *}
+text \<open>Important strengthen congruence rules.\<close>
 
 context strengthen_implementation begin
 
@@ -537,7 +537,7 @@ end
 lemma imp_consequent:
   "P \<longrightarrow> Q \<longrightarrow> P" by simp
 
-text {* Test cases. *}
+text \<open>Test cases.\<close>
 
 lemma
   assumes x: "\<And>x. P x \<longrightarrow> Q x"

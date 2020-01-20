@@ -167,7 +167,7 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_t
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
          asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits
          flush_type.splits page_directory_invocation.splits
-   ignore: resetTimer_impl ackInterrupt_impl)
+   ignore: resetTimer_impl ackInterrupt_impl ignore_del: possible_switch_to)
 end
 (*
 global_interpretation EmptyFail_AI_call_kernel_unit?: EmptyFail_AI_call_kernel_unit

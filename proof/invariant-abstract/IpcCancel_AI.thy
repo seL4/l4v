@@ -220,9 +220,23 @@ crunch st_tcb_at[wp]: tcb_release_remove, sched_context_unbind_all_tcbs "\<lambd
 locale IpcCancel_AI =
     fixes state_ext :: "('a::state_ext) itself"
     assumes arch_post_cap_deletion_typ_at[wp]:
-      "\<And>P T p. \<lbrace>\<lambda>(s :: 'a state). P (typ_at T p s)\<rbrace> arch_post_cap_deletion acap \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+      "\<And>P T p acap. \<lbrace>\<lambda>(s :: 'a state). P (typ_at T p s)\<rbrace> arch_post_cap_deletion acap \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
     assumes arch_post_cap_deletion_idle_thread[wp]:
-      "\<And>P. \<lbrace>\<lambda>(s :: 'a state). P (idle_thread s)\<rbrace> arch_post_cap_deletion acap \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
+      "\<And>P acap. \<lbrace>\<lambda>(s :: 'a state). P (idle_thread s)\<rbrace> arch_post_cap_deletion acap \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
+
+crunches update_restart_pc
+  for typ_at[wp]: "\<lambda>s. P (typ_at ty ptr s)"
+  (* NB: Q needed for following has_reply_cap proof *)
+  and cte_wp_at[wp]: "\<lambda>s. Q (cte_wp_at P cte s)"
+  and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  and pred_tcb_at[wp]: "\<lambda>s. pred_tcb_at P proj tcb s"
+  and invs[wp]: "\<lambda>s. invs s"
+
+lemma update_restart_pc_has_reply_cap[wp]:
+  "\<lbrace>\<lambda>s. \<not> has_reply_cap t s\<rbrace> update_restart_pc t \<lbrace>\<lambda>_ s. \<not> has_reply_cap t s\<rbrace>"
+  apply (simp add: has_reply_cap_def)
+  apply (wp hoare_vcg_all_lift)
+  done
 
 crunches reply_remove, reply_remove_tcb
   for st_tcb_at_simple[wp]: "st_tcb_at simple t"
@@ -261,7 +275,7 @@ lemma cancel_ipc_tcb [wp]:
   by (simp add: tcb_at_typ) wp
 
 lemma gbep_ret:
-  "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr r \<or>
+  "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr r d \<or>
      st = Structures_A.BlockedOnSend epPtr p \<rbrakk> \<Longrightarrow>
   get_blocking_object st = return epPtr"
   by (auto simp add: get_blocking_object_def ep_blocked_def assert_opt_def)
@@ -303,7 +317,7 @@ lemma ep_redux_simps2:
 lemma gbi_ep_sp:
   "\<lbrace>P\<rbrace>
      get_blocking_object st
-   \<lbrace>\<lambda>ep. P and K ((\<exists>r. st = Structures_A.BlockedOnReceive ep r)
+   \<lbrace>\<lambda>ep. P and K ((\<exists>r d. st = Structures_A.BlockedOnReceive ep r d)
                     \<or> (\<exists>d. st = Structures_A.BlockedOnSend ep d))\<rbrace>"
   apply (cases st, simp_all add: get_blocking_object_def ep_blocked_def assert_opt_def)
    apply (wp | simp)+
@@ -1552,7 +1566,6 @@ lemma suspend_valid_cap:
   "\<lbrace>valid_cap c\<rbrace> suspend tcb \<lbrace>\<lambda>_. (valid_cap c) :: 'a state \<Rightarrow> bool\<rbrace>"
   by (wp valid_cap_typ)
 
-
 lemma suspend_tcb[wp]:
   "\<lbrace>tcb_at t'\<rbrace> suspend t \<lbrace>\<lambda>rv. (tcb_at t')  :: 'a state \<Rightarrow> bool\<rbrace>"
   by (simp add: tcb_at_typ) wp
@@ -1594,7 +1607,7 @@ crunch pred_tcb_at[wp]: empty_slot "\<lambda>s. Q (pred_tcb_at proj P t s)"
 
 lemma set_thread_state_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
-  unfolding set_thread_state_def set_object_def
+  unfolding set_thread_state_def set_object_def get_object_def
   by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
 
 lemma reply_unlink_tcb_bound_tcb_at[wp]:
@@ -1720,6 +1733,7 @@ lemma obj_at_pred_tcb_at_peel:
 
 crunch obj_at_not_live0[wp]: tcb_release_remove "obj_at (Not \<circ> live0) t"
 
+context IpcCancel_AI begin
 lemma suspend_unlive:
   "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t
     and st_tcb_at (Not \<circ> awaiting_reply) t\<rbrace>
@@ -1735,6 +1749,7 @@ lemma suspend_unlive:
                        thread_set_no_change_tcb_pred hoare_vcg_imp_lift gts_wp)+
   apply (clarsimp simp: st_tcb_at_tcb_at pred_tcb_at_def obj_at_def is_tcb)
   done
+end
 
 definition bound_refs_of_tcb :: "'a state \<Rightarrow> machine_word \<Rightarrow> (machine_word \<times> reftype) set"
 where
@@ -2642,5 +2657,9 @@ lemma cancel_ipc_ct_active[wp]:
   apply (wpsimp wp: gts_wp thread_set_ct_in_state hoare_vcg_imp_lift)
   apply (auto simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
+
+lemma real_cte_emptyable_strg:
+  "real_cte_at p s \<Longrightarrow> emptyable p s"
+  by (clarsimp simp: emptyable_def obj_at_def is_tcb is_cap_table)
 
 end

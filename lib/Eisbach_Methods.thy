@@ -64,7 +64,24 @@ method_setup determ =
      fun tac st' = method_evaluate m ctxt facts st'
 
    in SIMPLE_METHOD (DETERM tac) facts end)
+\<close> \<open>Run the given method, but only yield the first result\<close>
+
+ML \<open>
+fun require_determ (method : Method.method) facts st =
+  case method facts st |> Seq.filter_results |> Seq.pull of
+    NONE => Seq.empty
+  | SOME (r1, rs) =>
+      (case Seq.pull rs of
+         NONE => Seq.single r1 |> Seq.make_results
+       | _ => Method.fail facts st);
+
+fun require_determ_method text ctxt =
+  require_determ (Method.evaluate_runtime text ctxt);
 \<close>
+
+method_setup require_determ =
+  \<open>Method.text_closure >> require_determ_method\<close>
+  \<open>Run the given method, but fail if it returns more than one result\<close>
 
 method_setup changed =
  \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
@@ -157,12 +174,12 @@ text \<open>
   - Fails if \<open>text\<close> can't be applied n times.
 \<close>
 
-ML {*
+ML \<open>
   fun repeat_tac count tactic =
     if count = 0
     then all_tac
     else tactic THEN (repeat_tac (count - 1) tactic)
-*}
+\<close>
 
 method_setup repeat = \<open>
   Scan.lift Parse.nat -- Method.text_closure >> (fn (count, text) => fn ctxt => fn facts =>
@@ -498,6 +515,28 @@ experiment begin
 
 lemma assumes A[simp]:A shows A by (ruleP False | ruleP A)
 lemma assumes A:A shows A by (ruleP "\<And>P. P \<Longrightarrow> P \<Longrightarrow> P", rule A, rule A)
+
+end
+
+context begin
+
+private definition "bool_protect (b::bool) \<equiv> b"
+
+lemma bool_protectD:
+  "bool_protect P \<Longrightarrow> P"
+  unfolding bool_protect_def by simp
+
+lemma bool_protectI:
+  "P \<Longrightarrow> bool_protect P"
+  unfolding bool_protect_def by simp
+
+text \<open>
+  When you want to apply a rule/tactic to transform a potentially complex goal into another
+  one manually, but want to indicate that any fresh emerging goals are solved by a more
+  brutal method.
+  E.g. apply (solves_emerging \<open>frule x=... in my_rule\<close>\<open>fastforce simp: ... intro!: ... \<close>
+\<close>
+method solves_emerging methods m1 m2 = (rule bool_protectD, (m1 ; (rule bool_protectI | (m2; fail))))
 
 end
 

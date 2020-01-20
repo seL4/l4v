@@ -21,8 +21,8 @@ external_file "global_array_swap.c"
 install_C_file "global_array_swap.c"
   [machinety=machine_state, ghostty=cghost_state]
 
-setup {* DefineGlobalsList.define_globals_list_i
-  "global_array_swap.c" @{typ globals} *}
+setup \<open>DefineGlobalsList.define_globals_list_i
+  "global_array_swap.c" @{typ globals}\<close>
 
 locale target
   = global_array_swap_global_addresses

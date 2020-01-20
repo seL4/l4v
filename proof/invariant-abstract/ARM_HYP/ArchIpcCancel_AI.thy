@@ -12,7 +12,7 @@ theory ArchIpcCancel_AI
 imports "../IpcCancel_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems IpcCancel_AI_asms
 

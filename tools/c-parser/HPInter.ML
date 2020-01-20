@@ -412,7 +412,10 @@ let
     fun foldthis (e, lthy) = let
       val _ = Feedback.informStr (0, "Adding body_def for " ^ Binding.name_of (#1 (#1 e)))
     in
-      Local_Theory.reset (#2 (Local_Theory.define e lthy))
+      lthy
+      |> Local_Theory.open_target |> snd
+      |> Local_Theory.define e |> #2
+      |> Local_Theory.close_target
     end
   in
     List.foldl foldthis lthy elems

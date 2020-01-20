@@ -1,3 +1,14 @@
+AutoCorres 1.6.1 (3 October 2019)
+--------------
+	* Correct license for a C parser file. No code changes.
+
+AutoCorres 1.6 (5 September 2019)
+--------------
+
+	* Isabelle2019 edition of both AutoCorres and the C parser.
+
+	* Word abstraction has been extended to C bitwise operators.
+
 AutoCorres 1.5 (10 September 2018)
 --------------
 

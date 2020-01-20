@@ -66,10 +66,6 @@ lemma withoutFailure_wp [wp]:
   "\<lbrace>\<top>\<rbrace> withoutFailure f -,\<lbrace>E\<rbrace>"
   by (auto simp: validE_R_def validE_E_def valid_def)
 
-lemma no_fail_alignError [simp, wp]:
-  "no_fail \<bottom> (alignError x)"
-  by (simp add: alignError_def)
-
 lemma no_fail_typeError [simp, wp]:
   "no_fail \<bottom> (typeError xs ko)"
   by (simp add: typeError_def)
@@ -80,9 +76,9 @@ lemma isCap_simps:
   "isThreadCap v = (\<exists>v0. v = ThreadCap v0)"
   "isCNodeCap v = (\<exists>v0 v1 v2 v3. v = CNodeCap v0 v1 v2 v3)"
   "isNotificationCap v = (\<exists>v0 v1 v2 v3. v = NotificationCap v0 v1 v2 v3)"
-  "isEndpointCap v = (\<exists>v0 v1 v2 v3 v4. v = EndpointCap v0 v1 v2 v3 v4)"
+  "isEndpointCap v = (\<exists>v0 v1 v2 v3 v4 v5. v = EndpointCap v0 v1 v2 v3 v4 v5)"
   "isUntypedCap v = (\<exists>d v0 v1 f. v = UntypedCap d v0 v1 f)"
-  "isReplyCap v = (\<exists>v0 v1. v = ReplyCap v0 v1)"
+  "isReplyCap v = (\<exists>v0 v1 v2. v = ReplyCap v0 v1 v2)"
   "isIRQControlCap v = (v = IRQControlCap)"
   "isIRQHandlerCap v = (\<exists>v0. v = IRQHandlerCap v0)"
   "isNullCap v = (v = NullCap)"
@@ -98,7 +94,7 @@ lemma isCap_simps:
 lemma untyped_not_null [simp]:
   "\<not> isUntypedCap NullCap" by (simp add: isCap_simps)
 
-text {* Miscellaneous facts about low level constructs *}
+text \<open>Miscellaneous facts about low level constructs\<close>
 
 lemma projectKO_tcb:
   "(projectKO_opt ko = Some t) = (ko = KOTCB t)"
@@ -148,7 +144,7 @@ lemmas projectKOs =
   projectKO_eq projectKO_eq2
 
 lemma capAligned_epI:
-  "ep_at' p s \<Longrightarrow> capAligned (EndpointCap p a b c d)"
+  "ep_at' p s \<Longrightarrow> capAligned (EndpointCap p a b c d e)"
   apply (clarsimp simp: obj_at'_real_def capAligned_def
                         objBits_simps word_bits_def)
   apply (drule ko_wp_at_norm)
@@ -174,7 +170,7 @@ lemma capAligned_tcbI:
   done
 
 lemma capAligned_reply_tcbI:
-  "tcb_at' p s \<Longrightarrow> capAligned (ReplyCap p m)"
+  "tcb_at' p s \<Longrightarrow> capAligned (ReplyCap p m r)"
   apply (clarsimp simp: obj_at'_real_def capAligned_def
                         objBits_simps word_bits_def capUntypedPtr_def isCap_simps)
   apply (fastforce dest: ko_wp_at_norm
@@ -227,7 +223,7 @@ lemma git_wp [wp]: "\<lbrace>\<lambda>s. P (ksIdleThread s) s\<rbrace> getIdleTh
 lemma gsa_wp [wp]: "\<lbrace>\<lambda>s. P (ksSchedulerAction s) s\<rbrace> getSchedulerAction \<lbrace>P\<rbrace>"
   by (unfold getSchedulerAction_def, wp)
 
-text {* Shorthand names for the relations between faults, errors and failures *}
+text \<open>Shorthand names for the relations between faults, errors and failures\<close>
 
 definition
   fr :: "ExceptionTypes_A.fault \<Rightarrow> Fault_H.fault \<Rightarrow> bool"
@@ -247,8 +243,8 @@ where
   lfr_def[simp]:
  "lfr x y \<equiv> (y = lookup_failure_map x)"
 
-text {* Correspondence and weakest precondition
-        rules for the "on failure" transformers *}
+text \<open>Correspondence and weakest precondition
+        rules for the "on failure" transformers\<close>
 
 lemma corres_injection:
   assumes x: "t = injection_handler fn"
@@ -267,10 +263,6 @@ lemma corres_injection:
    apply simp
   apply (case_tac v, (clarsimp simp: z)+)
   done
-
-lemma corres_gets_pspace [corres]:
-  "corres pspace_relation \<top> \<top> (gets kheap) (gets ksPSpace)"
-  by (subst corres_gets, clarsimp)
 
 lemma rethrowFailure_injection:
   "rethrowFailure = injection_handler"
@@ -373,25 +365,6 @@ lemma ntfn'_cases_weak_wp:
   apply (simp, rule hoare_weaken_pre, rule assms, simp)+
   done
 
-lemma ko_at_cte_ctable:
-  fixes ko :: tcb
-  shows "\<lbrakk> ko_at' tcb p s \<rbrakk> \<Longrightarrow> cte_wp_at' (\<lambda>x. x = tcbCTable tcb) p s"
-  unfolding obj_at'_def
-  apply (clarsimp simp: projectKOs objBits_simps)
-  apply (erule(2) cte_wp_at_tcbI')
-   apply fastforce
-  apply simp
-  done
-
-lemma ko_at_cte_vtable:
-  fixes ko :: tcb
-  shows "\<lbrakk> ko_at' tcb p s \<rbrakk> \<Longrightarrow> cte_wp_at' (\<lambda>x. x = tcbVTable tcb) (p + 16) s"
-  apply (clarsimp simp: obj_at'_def objBits_simps projectKOs)
-  apply (erule(2) cte_wp_at_tcbI')
-   apply fastforce
-  apply simp
-  done
-
 lemma ko_at_imp_cte_wp_at':
   fixes x :: cte
   shows "\<lbrakk> ko_at' x ptr s \<rbrakk> \<Longrightarrow> cte_wp_at' (\<lambda>cte. cte = x) ptr s"
@@ -468,13 +441,6 @@ lemma modify_map_if:
   apply (auto simp: modify_map_def)
   done
 
-lemma nothingOnFailure_wp [wp]:
-  assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv. Q None\<rbrace>"
-  shows      "\<lbrace>P\<rbrace> nothingOnFailure f \<lbrace>Q\<rbrace>"
-  apply (simp add: nothingOnFailure_def)
-  apply (wp x)
-  done
-
 lemma corres_empty_on_failure:
   "corres ((\<lambda>x y. r [] []) \<oplus> r) P P' m m' \<Longrightarrow>
    corres r P P' (empty_on_failure m) (emptyOnFailure m')"
@@ -510,37 +476,6 @@ lemma ko_at_cte_ipcbuffer:
    apply (fastforce simp add: tcb_cte_cases_def tcbIPCBufferSlot_def)
   apply simp
   done
-
-lemma tcb_at_cte_offset_unique:
-  assumes tat: "tcb_at' t s"
-  and      vo: "valid_objs' s"
-  and     pal: "pspace_aligned' s"
-  and     csx: "x \<in> dom tcb_cte_cases"
-  and     csy: "y \<in> dom tcb_cte_cases"
-  shows "(tcb_at' (t + x - y) s) = (x = y)"
-proof (rule iffI)
-  assume "tcb_at' (t + x - y) s"
-  hence "is_aligned (t + x - y) 9" using pal
-    apply -
-    apply (erule obj_atE')
-    apply (simp add: projectKOs objBits_simps')
-    done
-  moreover from tat pal have "is_aligned t 9"
-    apply -
-    apply (erule obj_atE')
-    apply (simp add: projectKOs objBits_simps')
-    done
-  ultimately show "x = y" using csx csy
-    apply -
-    apply (drule (1) is_aligned_addD1 [where y = "x - y", simplified add_diff_eq])
-    apply (simp add: tcb_cte_cases_def)
-    apply (auto simp: is_aligned_def dvd_def)
-    apply arith+
-    done
-next
-  assume "x = y"
-  thus "tcb_at' (t + x - y) s" using tat by simp
-qed
 
 lemma set_ep_arch':  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setEndpoint ntfn p \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
   apply (simp add: setEndpoint_def setObject_def split_def)

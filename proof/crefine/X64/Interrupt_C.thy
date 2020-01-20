@@ -27,7 +27,7 @@ lemma getIRQSlot_ccorres:
   "ccorres ((=) \<circ> Ptr) irqSlot_'
           \<top> UNIV hs
       (getIRQSlot irq)
-      (\<acute>irqSlot :== CTypesDefs.ptr_add \<acute>intStateIRQNode (sint ((ucast irq) :: 32 signed word)))"
+      (\<acute>irqSlot :== CTypesDefs.ptr_add intStateIRQNode_Ptr (sint ((ucast irq) :: 32 signed word)))"
   apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
@@ -43,11 +43,11 @@ lemma getIRQSlot_ccorres:
 lemma ptr_add_assertion_irq_guard:
 "ccorres dc xfdc P Q hs a
      (Guard F
-       \<lbrace>uint irq = 0 \<or> array_assertion \<acute>intStateIRQNode (nat (uint irq)) (hrs_htd \<acute>t_hrs)\<rbrace>
+       \<lbrace>uint irq = 0 \<or> array_assertion intStateIRQNode_Ptr (nat (uint irq)) (hrs_htd \<acute>t_hrs)\<rbrace>
        c;;m)
   \<Longrightarrow> ccorres dc xfdc P Q hs a
             (Guard F
-              \<lbrace>ptr_add_assertion \<acute>intStateIRQNode
+              \<lbrace>ptr_add_assertion intStateIRQNode_Ptr
                 (sint (ucast (irq :: 8 word)::32 signed word)) False
                 (hrs_htd \<acute>t_hrs)\<rbrace> c ;; m)"
   by (simp add: ptr_add_assertion_def sint_ucast_eq_uint is_down)
@@ -71,10 +71,11 @@ proof -
     by (clarsimp)
   show ?thesis
   apply (cinit lift: irq_' slot_' cap_')
+   apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
    apply (rule ptr_add_assertion_irq_guard)
    apply (rule ccorres_move_array_assertion_irq)
-   apply (simp only:)
-   apply (ctac(no_vcg) add: getIRQSlot_ccorres)
+   apply (simp add: ucast_up_ucast is_up)
+   apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
         apply (ctac(no_vcg) add: cteInsert_ccorres)
@@ -106,10 +107,11 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
       (invokeIRQHandler (ClearIRQHandler irq))
       (Call invokeIRQHandler_ClearIRQHandler_'proc)"
   apply (cinit lift: irq_')
+   apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
    apply (rule ptr_add_assertion_irq_guard)
    apply (rule ccorres_move_array_assertion_irq)
-   apply (simp only: )
-   apply (ctac(no_vcg) add: getIRQSlot_ccorres)
+   apply (simp add: ucast_up_ucast is_up)
+   apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
        apply (ctac add: cteDeleteOne_ccorres[where w="-1"])
       apply vcg
@@ -326,8 +328,9 @@ lemma invokeIRQControl_expanded_ccorres:
    apply (rule le_m1_iff_lt[THEN iffD1,THEN iffD1])
     apply simp
    apply (erule order.trans, simp)
-  apply (rule word_eqI)
-  apply (simp add: nth_ucast word_size)
+  apply simp
+  apply (simp add: mask_def)
+  apply word_bitwise
   done
 
 lemma invokeIRQControl_ccorres:
@@ -1048,7 +1051,7 @@ lemma decodeIRQControlInvocation_ccorres:
              apply (wp injection_wp_E[OF refl] checkIRQ_wp)
             apply (simp add: Collect_const_mem all_ex_eq_helper)
             apply (vcg)
-           apply (wp hoare_vcg_const_imp_lift |wp_once hoare_drop_imps)+
+           apply (wp hoare_vcg_const_imp_lift |wp (once) hoare_drop_imps)+
           apply (simp add: Collect_const_mem all_ex_eq_helper)
           apply vcg
          apply wp

@@ -88,7 +88,11 @@ The rights are:
 
 \item and the right to send capabilities via IPC.
 
->     capAllowGrant :: Bool }
+>     capAllowGrant,
+
+\item and the right to send a reply cap i.e perform a Call via IPC. This is also included in Grant.
+
+>     capAllowGrantReply :: Bool }
 >     deriving (Show, Eq)
 
 \end{itemize}
@@ -96,26 +100,26 @@ The rights are:
 These are the default values for rights and right masks, with all or none of the bits set.
 
 > allRights :: CapRights
-> allRights = CapRights True True True
+> allRights = CapRights True True True True
 
 > noRights :: CapRights
-> noRights = CapRights False False False
+> noRights = CapRights False False False False
 
 The following function finds the intersection of two sets of capability rights.
 
 > andCapRights :: CapRights -> CapRights -> CapRights
-> andCapRights (CapRights a1 a2 a3) (CapRights b1 b2 b3) =
->         CapRights (a1&&b1) (a2&&b2) (a3&&b3)
+> andCapRights (CapRights a1 a2 a3 a4) (CapRights b1 b2 b3 b4) =
+>         CapRights (a1&&b1) (a2&&b2) (a3&&b3) (a4&&b4)
 
 A set of capability rights may be converted to or from a machine word.
 
 > rightsFromWord :: Word -> CapRights
 > rightsFromWord p =
->          CapRights (p `testBit` 0) (p `testBit` 1) (p `testBit` 2)
+>          CapRights (p `testBit` 0) (p `testBit` 1) (p `testBit` 2) (p `testBit` 3)
 
 > wordFromRights :: CapRights -> Word
-> wordFromRights (CapRights r1 r2 r3) =
->         (bitIf r1 0) .|. (bitIf r2 1) .|. (bitIf r3 2)
+> wordFromRights (CapRights r1 r2 r3 r4) =
+>         (bitIf r1 0) .|. (bitIf r2 1) .|. (bitIf r3 2) .|. (bitIf r4 3)
 >         where bitIf b n = if b then bit n else 0
 
 \subsection{Security Domains}

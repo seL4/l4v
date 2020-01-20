@@ -29,7 +29,7 @@ done
 lemma sep_wand_frame_lens: "((P \<longrightarrow>* Q) \<and>* R) s \<Longrightarrow> (\<And>s. T s = R s) ==> ((P \<longrightarrow>* Q) \<and>* T) s"
   by (metis sep_conj_commute sep_conj_impl1)
 
-ML {*
+ML \<open>
   fun sep_wand_frame_drule ctxt =
      let val lens  = dresolve_tac ctxt [@{thm sep_wand_frame_lens}]
          val lens' = dresolve_tac ctxt [@{thm sep_asm_eq}]
@@ -50,8 +50,8 @@ ML {*
    end;
 
    val sep_mp_method = SIMPLE_METHOD' o sep_mp_solver
-*}
+\<close>
 
-method_setup sep_mp = {* Scan.succeed sep_mp_method *}
+method_setup sep_mp = \<open>Scan.succeed sep_mp_method\<close>
 
 end

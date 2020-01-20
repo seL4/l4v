@@ -83,7 +83,7 @@ lemma tcb_decomp':
          simp add: object_type_def)
   apply (subst sep_map_s_sep_map_c_eq,
          rule object_slots_spec2s',
-         fastforce simp: opt_cap_def slots_of_def object_slots_def opt_object_def)+
+         fastforce simp: opt_cap_def slots_of_def object_slots_def)+
   apply (clarsimp simp: sep_conj_ac)
   done
 
@@ -122,7 +122,7 @@ lemma tcb_half_decomp':
   apply (subst sep_map_s_sep_map_c_eq,
          rule object_slots_spec2s',
          simp add: object_slots_tcb_half tcb_slot_defs,
-         fastforce simp: opt_cap_def slots_of_def object_slots_def opt_object_def)+
+         fastforce simp: opt_cap_def slots_of_def object_slots_def)+
   apply (clarsimp simp: sep_conj_ac)
   done
 
@@ -303,8 +303,8 @@ lemma well_formed_cnode_object_size_bits_eq2:
     object_slots spec_obj slot = Some cap\<rbrakk>
   \<Longrightarrow> object_size_bits obj = cnode_cap_size cap"
   apply (erule well_formed_cnode_object_size_bits_eq [where slot="(obj_id,slot)"])
-    apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def split: option.splits)
-   apply (clarsimp simp: opt_object_def split: option.splits)
+    apply (clarsimp simp: opt_cap_def slots_of_def split: option.splits)
+   apply (clarsimp split: option.splits)
   apply assumption
   done
 
@@ -432,11 +432,10 @@ lemma tcb_configure_post:
   apply (clarsimp simp: si_objects_def)
   apply (clarsimp simp: sep_conj_exists sep_conj_assoc)
   apply (clarsimp simp: si_cap_at_def sep_conj_assoc sep_conj_exists)
-  apply (clarsimp simp: object_at_def)
   apply (subst tcb_half_decomp' [where obj_id=obj_id and k_obj_id=k_obj_id],
          (assumption|simp)+)
   apply (subst (asm) sep_map_f_eq_tcb_fault_endpoint, assumption+)
-  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def)
+  apply (clarsimp simp: opt_cap_def slots_of_def)
   apply (frule (2) well_formed_well_formed_cap [where cap=spec_cspace_cap],
          simp add: cap_type_null)
   apply (frule (2) well_formed_well_formed_cap [where cap=spec_vspace_cap],
@@ -455,7 +454,7 @@ lemma tcb_configure_post:
   apply (subst cap_transform_update_cap_object
          [where obj_id="cap_object spec_vspace_cap"],
          (assumption|simp)+)
-  apply (clarsimp simp: cap_at_def opt_cap_def slots_of_def opt_object_def)
+  apply (clarsimp simp: cap_at_def opt_cap_def slots_of_def)
   apply (subst cap_transform_update_cap_object
          [where obj_id="cap_object spec_buffer_frame_cap"],
          (assumption|simp)+)
@@ -803,7 +802,7 @@ lemma init_tcb_sep':
                              [where spec_cspace_cap=cspace_cap and
                                     spec_vspace_cap=vspace_cap and
                                     spec_buffer_frame_cap=tcb_ipcbuffer_cap])
-   apply (fastforce simp: opt_thread_def opt_object_def cap_data_def
+   apply (fastforce simp: opt_thread_def cap_data_def
                           tcb_ipc_buffer_address_non_zero
                           si_cap_at_def sep_conj_exists)
   apply (clarsimp simp: object_at_def is_tcb_def)

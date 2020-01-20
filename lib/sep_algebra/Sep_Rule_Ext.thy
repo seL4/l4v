@@ -17,7 +17,7 @@ imports
 begin
 
 
-ML {*
+ML \<open>
   fun backwardise ctxt thm = SOME (backward ctxt thm) handle THM _  => NONE
   fun sep_curry ctxt thm = SOME (sep_curry_inner ctxt thm) handle THM _ => NONE
 
@@ -53,14 +53,14 @@ ML {*
 
   fun sep_rule_method direct thms ctxt = SIMPLE_METHOD' (make_sep_rule direct thms ctxt)
   fun sep_drule_method direct thms ctxt = SIMPLE_METHOD' (make_sep_drule direct thms ctxt)
-*}
+\<close>
 
-method_setup sep_rule = {*
+method_setup sep_rule = \<open>
   Scan.lift (Args.mode "direct") -- Attrib.thms  >> uncurry sep_rule_method
-*}
+\<close>
 
-method_setup sep_drule = {*
+method_setup sep_drule = \<open>
   Scan.lift (Args.mode "direct") -- Attrib.thms  >> uncurry sep_drule_method
-*}
+\<close>
 
 end

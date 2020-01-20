@@ -25,6 +25,10 @@ no_notation pred_or (infixr "or" 30)
 no_notation pred_not ("not _" [40] 40)
 no_notation pred_imp (infixr "imp" 25)
 
+lemma sep_conj_exists_left[simp]: "((\<lambda>s. \<exists>x. (P x) s) \<and>* R) \<equiv> (EXS x. (P x \<and>* R)) "
+  apply (rule eq_reflection)
+  by (clarsimp simp: sep_conj_def, fastforce)
+
 instantiation "bool" :: stronger_sep_algebra
 begin
  definition "zero_bool \<equiv> True"

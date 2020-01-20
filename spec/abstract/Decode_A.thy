@@ -762,14 +762,14 @@ where
   case cap of
     EndpointCap ptr badge rights \<Rightarrow>
       if AllowSend \<in> rights then
-        returnOk $ InvokeEndpoint ptr badge (AllowGrant \<in> rights)
+        returnOk $ InvokeEndpoint ptr badge (AllowGrant \<in> rights) (AllowGrantReply \<in> rights)
       else throwError $ InvalidCapability 0
   | NotificationCap ptr badge rights \<Rightarrow>
       if AllowSend \<in> rights then
         returnOk $ InvokeNotification ptr badge
       else throwError $ InvalidCapability 0
-  | ReplyCap reply \<Rightarrow>
-      returnOk $ InvokeReply reply
+  | ReplyCap reply rights \<Rightarrow>
+      returnOk $ InvokeReply reply (AllowGrant \<in> rights)
   | IRQControlCap \<Rightarrow>
       liftME InvokeIRQControl
         $ decode_irq_control_invocation label args slot (map fst excaps)

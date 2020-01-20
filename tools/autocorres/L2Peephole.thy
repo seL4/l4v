@@ -140,16 +140,16 @@ lemma L2_condition_fail_lhs [L2opt]:
   "L2_condition C L2_fail A = L2_seq (L2_guard (\<lambda>s. \<not> C s)) (\<lambda>_. A)"
   apply (rule ext)
   apply (clarsimp simp: L2_guard_def L2_fail_def guard_def get_def
-    L2_seq_def bindE_def bind_def fail_def liftE_def2 L2_condition_def
-    return_def split: condition_splits)
+                        L2_seq_def bindE_def bind_def fail_def liftE_def2 L2_condition_def
+                  split: condition_splits)
   done
 
 lemma L2_condition_fail_rhs [L2opt]:
   "L2_condition C A L2_fail = L2_seq (L2_guard (\<lambda>s. C s)) (\<lambda>_. A)"
   apply (rule ext)
   apply (clarsimp simp: L2_guard_def L2_fail_def guard_def get_def
-    L2_seq_def bindE_def bind_def fail_def liftE_def2 L2_condition_def
-    return_def split: condition_splits)
+                        L2_seq_def bindE_def bind_def fail_def liftE_def2 L2_condition_def
+                  split: condition_splits)
   done
 
 lemma L2_catch_fail [L2opt]: "L2_catch L2_fail A = L2_fail"
@@ -178,23 +178,15 @@ lemma L2_returncall_trivial [L2opt]:
  *)
 lemma L2_gets_unused:
   "\<lbrakk> \<And>x y s. B x s = B y s \<rbrakk> \<Longrightarrow> L2_seq (L2_gets A n) B = (B undefined)"
-  apply (clarsimp simp: L2_defs)
-  apply (clarsimp simp: bindE_def simpler_gets_def)
-  apply (clarsimp simp: bind_def lift_def split_def liftE_def2)
-  apply (rule ext)
-  apply simp
-  done
+  by (fastforce simp: L2_defs bindE_def simpler_gets_def bind_def lift_def split_def liftE_def2)
 
 lemma L2_gets_bind:
   "L2_seq (L2_gets (\<lambda>_. x :: 'var_type) n) f = f x"
-  apply (monad_eq simp: L2corres_def corresXF_def L1_defs L2_defs Bex_def)
-  done
+  by (monad_eq simp: L2corres_def corresXF_def L2_defs Bex_def)
 
 lemma split_seq_assoc [L2opt]:
      "(\<lambda>x. L2_seq (case x of (a, b) \<Rightarrow> B a b) (G x)) = (\<lambda>x. case x of (a, b) \<Rightarrow> (L2_seq (B a b) (G x)))"
-  apply (rule ext)
-  apply clarsimp
-  done
+  by (rule ext) clarsimp
 
 lemma L2_while_infinite [L2opt]:
         "L2_while (\<lambda>i s. C s) (\<lambda>x. L2_gets (\<lambda>s. B s x) n') i n
@@ -251,14 +243,11 @@ lemma L2_gets_L2_seq_if_P_1_0 [L2opt]:
  * HOL.conj_cong. We will split them out again during the polish phase. *)
 
 lemma L2_guard_join_simple [L2opt]: "L2_seq (L2_guard A) (\<lambda>_. L2_guard B) = L2_guard (\<lambda>s. A s \<and> B s)"
-  apply (monad_eq simp: L2_defs')
-  done
+  by (monad_eq simp: L2_defs')
 
 lemma L2_guard_join_nested [L2opt]:
       "L2_seq (L2_guard A) (\<lambda>_. L2_seq (L2_guard B) (\<lambda>_. C))
             = L2_seq (L2_guard (\<lambda>s. A s \<and> B s)) (\<lambda>_. C)"
-  apply (monad_eq simp: L2_defs')
-  done
-
+  by (monad_eq simp: L2_defs')
 
 end

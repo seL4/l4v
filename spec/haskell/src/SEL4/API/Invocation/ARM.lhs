@@ -89,9 +89,6 @@ IO pages are invoked using InvokePage (cap contains a bit indicating it is an IO
 >         pageFlushPStart :: PAddr,
 >         pageFlushPD :: PPtr PDE,
 >         pageFlushASID :: ASID }
->     | PageRemap {
->         pageRemapASID :: ASID,
->         pageRemapEntries :: Either (PTE, [PPtr PTE]) (PDE, [PPtr PDE]) }
 >     | PageMap {
 >         pageMapASID :: ASID,
 >         pageMapCap :: Capability,

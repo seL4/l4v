@@ -29,7 +29,7 @@ context Arch begin global_naming ARM_H
 
 end
 
-text {* object\_type instance proofs *}
+text \<open>object\_type instance proofs\<close>
 
 qualify ARM_H (in Arch)
 instantiation ARM_H.object_type :: enum

@@ -62,7 +62,7 @@
 
     <!-- Binary Verification -->
     <sequence depends="CSpec">
-        <test name="SimplExportAndRefine" cpu-timeout="21600">make SimplExportAndRefine</test>
+        <test name="SimplExportAndRefine" cpu-timeout="43200">make SimplExportAndRefine</test>
     </sequence>
 
     <!-- Separation Logic. -->

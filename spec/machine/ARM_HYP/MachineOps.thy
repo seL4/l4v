@@ -17,7 +17,7 @@ begin
 
 section "Wrapping and Lifting Machine Operations"
 
-text {*
+text \<open>
   Most of the machine operations below work on the underspecified
   part of the machine state @{typ machine_state_rest} and cannot fail.
   We could express the latter by type (leaving out the failure flag),
@@ -30,7 +30,7 @@ text {*
   So we explicitly make this (non-existing) case a null operation.
 
   All this is done only to avoid a large number of axioms (2 for each operation).
-*}
+\<close>
 
 context Arch begin global_naming ARM_HYP
 
@@ -99,7 +99,7 @@ lemma loadWord_storeWord_is_return:
   apply (simp add: word_rsplit_rcat_size word_size)
   done
 
-text {* This instruction is required in the simulator, only. *}
+text \<open>This instruction is required in the simulator, only.\<close>
 definition
   storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
   where "storeWordVM w p \<equiv> return ()"
@@ -333,22 +333,34 @@ definition
 where
   "ackInterrupt irq \<equiv> machine_op_lift (ackInterrupt_impl irq)"
 
+consts'
+  TPIDRURO_val :: "machine_state \<Rightarrow> machine_word"
+definition
+  getTPIDRURO :: "machine_word machine_monad"
+where "getTPIDRURO \<equiv> gets TPIDRURO_val"
+
+consts'
+  setTPIDRURO_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+  setTPIDRURO :: "machine_word \<Rightarrow> unit machine_monad"
+where
+  "setTPIDRURO w \<equiv> machine_op_lift (setTPIDRURO_impl w)"
 
 \<comment> \<open>Interrupt controller operations\<close>
 
-text {*
+text \<open>
   Interrupts that cannot occur while the kernel is running (e.g. at preemption points),
   but that can occur from user mode.
-*}
+\<close>
 definition
   "non_kernel_IRQs = {irqVGICMaintenance}"
 
-text {*
+text \<open>
   @{term getActiveIRQ} is now derministic.
   It 'updates' the irq state to the reflect the passage of
   time since last the irq was gotten, then it gets the active
   IRQ (if there is one).
-*}
+\<close>
 definition
   getActiveIRQ :: "bool \<Rightarrow> (irq option) machine_monad"
 where
@@ -372,10 +384,10 @@ definition
 where
   "lineStart addr = (addr >> cacheLineBits) << cacheLineBits"
 
-text {*
+text \<open>
   Performs the given operation on every cache line that intersects the
   supplied range.
-*}
+\<close>
 definition
   cacheRangeOp :: "(machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_monad)
                  \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
@@ -464,7 +476,7 @@ where
 
 section "Memory Clearance"
 
-text {* Clear memory contents to recycle it as user memory *}
+text \<open>Clear memory contents to recycle it as user memory\<close>
 definition
   clearMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
   where
@@ -478,22 +490,22 @@ definition
   where
   "clearMemoryVM ptr bits \<equiv> return ()"
 
-text {*
+text \<open>
   Initialize memory to be used as user memory.
   Note that zeroing out the memory is redundant in the specifications.
   In any case, we cannot abstract from the call to cleanCacheRange,
   which appears in the implementation.
-*}
+\<close>
 abbreviation (input) "initMemory == clearMemory"
 
-text {*
+text \<open>
   Free memory that had been initialized as user memory.
   While freeing memory is a no-(in) the implementation,
   we zero out the underlying memory in the specifications to avoid garbage.
   If we know that there is no garbage,
   we can compute from the implementation state
   what the exact memory content in the specifications is.
-*}
+\<close>
 definition
   freeMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
   where
@@ -689,10 +701,10 @@ where
   "setRegister r v \<equiv> modify (\<lambda>uc. uc (r := v))"
 
 definition
-  "getRestartPC \<equiv> getRegister FaultInstruction"
+  "getRestartPC \<equiv> getRegister FaultIP"
 
 definition
-  "setNextPC \<equiv> setRegister LR_svc"
+  "setNextPC \<equiv> setRegister NextIP"
 
 end
 

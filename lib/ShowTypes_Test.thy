@@ -20,7 +20,12 @@ text \<open>
   hidden polymorphism, so we use l4.verified.
 \<close>
 
-experiment begin
+experiment
+  (* The point of this test is to confirm that the generic 'show types' feature
+     shows enough type information to fully reconstruct a term; the pointer type
+     feature does something similar so we disable it here. *)
+  notes [[show_ptr_types = false]]
+begin
   lemma c_guard_cast_byte: "c_guard (x :: ('a :: {mem_type}) ptr) \<Longrightarrow> c_guard (ptr_coerce x :: 8 word ptr)"
     goal_show_types 0
     using [[show_sorts]]

@@ -46,7 +46,7 @@ lemma aggregate_x_struct_ex_tag [simp]:
 lemma
   "upd_local (x_example_update \<circ> (\<lambda>x _. x))"
 apply(auto simp: upd_local_def )
-apply(tactic {* Record.split_tac @{context} 1 *} )
+apply(tactic \<open>Record.split_tac @{context} 1\<close> )
 apply simp
 done
 

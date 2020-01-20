@@ -52,11 +52,10 @@ next
   have "8 dvd len_of TYPE('a)" by (rule len8_dv8)
   thus "wf_lf (lf_set (typ_info_t TYPE('a word)) [])"
   by (auto simp: typ_info_word word_tag_def wf_lf_def
-    fd_cons_def fd_cons_double_update_def fd_cons_update_access_def
-    word_rcat_rsplit fd_cons_access_update_def fd_cons_length_def
-    length_word_rsplit_exp_size' word_size fd_cons_update_normalise_def
-    fd_cons_desc_def
-    field_norm_def elim: dvdE)
+                 fd_cons_def fd_cons_double_update_def fd_cons_update_access_def
+                 word_rcat_rsplit fd_cons_access_update_def fd_cons_length_def
+                 length_word_rsplit_exp_size' word_size fd_cons_update_normalise_def
+                 fd_cons_desc_def field_norm_def)
 next
   show "size_of TYPE('a word) < addr_card"
     by (simp add: size_of_def typ_info_word word_tag_def)

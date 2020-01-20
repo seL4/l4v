@@ -19,9 +19,9 @@ requalify_types
   arch_invocation_label
 end
 
-text {*
+text \<open>
   An enumeration of all system call labels.
-*}
+\<close>
 
 #INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs ArchLabels= ONLY InvocationLabel
 #INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs instanceproofs

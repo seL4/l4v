@@ -560,7 +560,6 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 >   = do
 >         let tCap = ThreadCap { capTCBPtr = target }
 >         withoutPreemption $ maybe (return ()) (setMCPriority target) (mapMaybe fst mcp)
->         withoutPreemption $ maybe (return ()) (setPriority target) (mapMaybe fst priority)
 >         withoutPreemption $ case sc of
 >             Nothing -> return ()
 >             Just Nothing -> do
@@ -581,7 +580,6 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 >                 cteDelete bufferSlot True
 >                 withoutPreemption $ threadSet
 >                     (\t -> t {tcbIPCBuffer = ptr}) target
->                 withoutPreemption $ asUser target $ Arch.setTCBIPCBuffer ptr
 >                 withoutPreemption $ case frame of
 >                     Just (newCap, srcSlot) ->
 >                         checkCapAt newCap srcSlot
@@ -592,6 +590,7 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 >                 thread <- withoutPreemption $ getCurThread
 >                 withoutPreemption $ when (target == thread) $ rescheduleRequired)
 >             buffer
+>         withoutPreemption $ maybe (return ()) (setPriority target) (mapMaybe fst priority)
 >         return []
 
 \subsubsection{Register State}

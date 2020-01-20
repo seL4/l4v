@@ -18,80 +18,85 @@ begin
 
 text \<open>Defining suitable access policies from CAmkES compositions.\<close>
 
-abbreviation "edge_subject \<equiv> fst"
-abbreviation "edge_auth \<equiv> fst o snd"
-abbreviation "edge_object \<equiv> snd o snd"
-
 type_synonym label = string
 
 
 section \<open>Generic policy definitions\<close>
-text {*
-  Access rights entailed by a given CAmkES component system. We assign
-  each component and connector its own label, which is just its name
-  in the CAmkES assembly.
-*}
+text \<open>
+  Access rights entailed by a given CAmkES component system.
+
+  We assign each component and connector its own label, which is just
+  its name in the CAmkES assembly.
+
+  @{typ connector}s already declare the access rights that they provide,
+  so this is merely a convenience function that puts them all together.
+\<close>
 definition
   policy_of :: "assembly \<Rightarrow> label auth_graph"
 where
   "policy_of spec \<equiv>
-     (* Every label has every authority over itself. *)
-     {edge. edge_subject edge \<in> fst ` set (components (composition spec)) \<and>
-            edge_subject edge = edge_object edge} \<union>
+     let component_groups = get_group_label (composition spec) `
+                            fst ` set (components (composition spec))
+     in
+     \<comment> \<open>First, some global assumptions.\<close>
 
-     (* Senders on seL4RPC connections. *)
-     {edge. \<exists>from. from \<in> fst ` set (components (composition spec)) \<and>
-                   (\<exists>conn \<in> set (connections (composition spec)).
-                      from \<in> set (from_components (snd conn)) \<and>
-                      conn_type (snd conn) = seL4RPC \<and>
-                      edge_object edge = fst conn) \<and>
-                    edge_subject edge = from \<and>
-                    edge_auth edge \<in> {Receive, Reset, SyncSend}} \<union>
+     \<comment> \<open>Every component has every authority over itself.\<close>
+     {(subj, auth, obj).
+           subj \<in> component_groups \<and>
+           subj = obj
+     } \<union>
 
-     (* Receivers on seL4RPC connections. *)
-     {edge. \<exists>to. to \<in> fst ` set (components (composition spec)) \<and>
-                 (\<exists>conn \<in> set (connections (composition spec)).
-                    to \<in> set (to_components (snd conn)) \<and>
-                    conn_type (snd conn) = seL4RPC \<and>
-                    edge_object edge = fst conn) \<and>
-                  edge_subject edge = to \<and>
-                  edge_auth edge \<in> {Receive, Reset, SyncSend}} \<union>
+     \<comment> \<open>FIXME: @{const policy_wellformed} makes DeleteDerived too transitive.
+         For now, we relax it even further and say that reply caps from any component
+         can end up in any other component. (Jira VER-1030)\<close>
+     {(subj, auth, obj).
+           subj \<in> component_groups \<and>
+           obj \<in> component_groups \<and>
+           subj \<noteq> obj \<and>
+           auth = DeleteDerived
+     } \<union>
 
-     (* Senders on seL4Asynch connections. *)
-     {edge. \<exists>from. from \<in> fst ` set (components (composition spec)) \<and>
-                   (\<exists>conn \<in> set (connections (composition spec)).
-                      from \<in> set (from_components (snd conn)) \<and>
-                      conn_type (snd conn) = seL4Asynch \<and>
-                      edge_object edge = fst conn) \<and>
-                    edge_subject edge = from \<and>
-                    edge_auth edge \<in> {Notify, Reset}} \<union>
-
-     (* Receivers on seL4Asynch connections. *)
-     {edge. \<exists>to. to \<in> fst ` set (components (composition spec)) \<and>
-                 (\<exists>conn \<in> set (connections (composition spec)).
-                    to \<in> set (to_components (snd conn)) \<and>
-                    conn_type (snd conn) = seL4Asynch \<and>
-                    edge_object edge = fst conn) \<and>
-                  edge_subject edge = to \<and>
-                  edge_auth edge \<in> {Receive, Reset}} \<union>
-
-     (* Senders and recievers on dataports.
-        Here, we always assume both sides have Read and Write because
-        most of the dataport implementations use in-line signalling. *)
-     {edge. \<exists>from. from \<in> fst ` set (components (composition spec)) \<and>
-                   (\<exists>conn \<in> set (connections (composition spec)).
-                      from \<in> set (from_components (snd conn)) \<and>
-                      conn_type (snd conn) = seL4SharedData \<and>
-                      edge_object edge = fst conn) \<and>
-                    edge_subject edge = from \<and>
-                    edge_auth edge \<in> {Read, Write}} \<union>
-
-     {edge. \<exists>to. to \<in> fst ` set (components (composition spec)) \<and>
-                 (\<exists>conn \<in> set (connections (composition spec)).
-                    to \<in> set (to_components (snd conn)) \<and>
-                    conn_type (snd conn) = seL4SharedData \<and>
-                    edge_object edge = fst conn) \<and>
-                  edge_subject edge = to \<and>
-                  edge_auth edge \<in> {Read, Write}}"
+    \<comment> \<open>Now, just read out the rights implied by each connector.\<close>
+    {(subj, auth, obj).
+           \<exists>conn \<in> snd ` set (connections (composition spec)).
+             subj \<in> get_group_label (composition spec) `fst ` set (conn_from conn) \<and>
+             obj  \<in> get_group_label (composition spec) `fst ` set (conn_to conn) \<and>
+             auth \<in> access_from_to (connector_access (conn_type conn))
+    } \<union>
+    {(subj, auth, obj).
+           \<exists>conn \<in> snd ` set (connections (composition spec)).
+             subj \<in> get_group_label (composition spec) `fst ` set (conn_to conn) \<and>
+             obj  \<in> get_group_label (composition spec) `fst ` set (conn_from conn) \<and>
+             auth \<in> access_to_from (connector_access (conn_type conn))
+    } \<union>
+    {(subj, auth, obj).
+           \<exists>conn \<in> snd ` set (connections (composition spec)).
+             subj \<in> fst ` set (conn_from conn) \<and>
+             obj \<in> fst ` set (conn_from conn) \<and>
+             subj \<noteq> obj \<and>
+             auth \<in> access_from_from (connector_access (conn_type conn))
+    } \<union>
+    {(subj, auth, obj).
+           \<exists>conn \<in> snd ` set (connections (composition spec)).
+             subj \<in> fst ` set (conn_to conn) \<and>
+             obj \<in> fst ` set (conn_to conn) \<and>
+             subj \<noteq> obj \<and>
+             auth \<in> access_to_to (connector_access (conn_type conn))
+    } \<union>
+    {(subj, auth, obj).
+           \<exists>(conn_name, conn) \<in> set (connections (composition spec)).
+             subj \<in> get_group_label (composition spec) `fst ` set (conn_from conn) \<and>
+             obj = get_group_label (composition spec) conn_name \<and>
+             auth \<in> access_from_conn (connector_access (conn_type conn))
+    } \<union>
+    {(subj, auth, obj).
+           \<exists>(conn_name, conn) \<in> set (connections (composition spec)).
+             subj \<in> get_group_label (composition spec) `fst ` set (conn_to conn) \<and>
+             obj = get_group_label (composition spec) conn_name \<and>
+             auth \<in> access_to_conn (connector_access (conn_type conn))
+    } \<union>
+    (\<lambda>(subj, auth, obj). (get_group_label (composition spec) subj, auth,
+                          get_group_label (composition spec) obj)) `
+      policy_extra spec"
 
 end

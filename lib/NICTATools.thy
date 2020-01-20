@@ -24,6 +24,7 @@ imports
   Insulin
   ShowTypes
   AutoLevity_Hooks
+  Locale_Abbrev
 begin
 
 section "Detect unused meta-forall"
@@ -36,7 +37,7 @@ section "Detect unused meta-forall"
  * fact that they have the empty sort "'a::{}", which confuses
  * certain tools, such as "atomize".
  *)
-ML {*
+ML \<open>
 
 (* Return a list of meta-forall variable names that appear
  * to be unused in the input term. *)
@@ -81,7 +82,7 @@ end
 (* Setup the tool, stealing the "auto_solve_direct" option. *)
 val _ = Try.tool_setup ("unused_meta_forall",
     (1, @{system_option auto_solve_direct}, detect_unused_meta_forall))
-*}
+\<close>
 
 lemma test_unused_meta_forall: "\<And>x. y \<or> \<not> y"
   oops

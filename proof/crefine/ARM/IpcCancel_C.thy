@@ -49,34 +49,6 @@ lemma cready_queues_index_to_C_distinct:
   apply (auto simp: cready_queues_index_to_C_inj)
   done
 
-lemma cstate_relation_ksReadyQueues_update:
-  "\<lbrakk> cstate_relation hs cs; arr = ksReadyQueues_' cs;
-     sched_queue_relation' (clift (t_hrs_' cs)) v (head_C v') (end_C v');
-     qdom \<le> ucast maxDom; prio \<le> ucast maxPrio \<rbrakk>
-    \<Longrightarrow> cstate_relation (ksReadyQueues_update (\<lambda>qs. qs ((qdom, prio) := v)) hs)
-                        (ksReadyQueues_'_update (\<lambda>_. Arrays.update arr
-                                                        (cready_queues_index_to_C qdom prio) v') cs)"
-  apply (clarsimp simp: cstate_relation_def Let_def
-                        cmachine_state_relation_def
-                        carch_state_relation_def carch_globals_def
-                        cready_queues_relation_def seL4_MinPrio_def minDom_def)
-  apply (frule cready_queues_index_to_C_in_range, assumption)
-  apply clarsimp
-  apply (frule_tac qdom=qdoma and prio=prioa in cready_queues_index_to_C_in_range, assumption)
-  apply (frule cready_queues_index_to_C_distinct, assumption+)
-  apply clarsimp
-  done
-
-lemma cmap_relation_drop_fun_upd:
-  "\<lbrakk> cm x = Some v; \<And>v''. rel v'' v = rel v'' v' \<rbrakk>
-      \<Longrightarrow> cmap_relation am (cm (x \<mapsto> v')) f rel
-            = cmap_relation am cm f rel"
-  apply (simp add: cmap_relation_def)
-  apply (rule conj_cong[OF refl])
-  apply (rule ball_cong[OF refl])
-  apply (auto split: if_split)
-  done
-
 lemma valid_queuesD':
   "\<lbrakk> obj_at' (inQ d p) t s; valid_queues' s \<rbrakk>
         \<Longrightarrow> t \<in> set (ksReadyQueues s (d, p))"
@@ -362,48 +334,6 @@ lemma threadGet_vcg_corres_P:
 
 lemmas threadGet_vcg_corres = threadGet_vcg_corres_P[where P=\<top>]
 
-lemma threadGet_specs_corres:
-  assumes spec: "\<forall>s. \<Gamma> \<turnstile> {s} Call g {t. xf t = f' s}"
-  and      mod: "modifies_spec g"
-  and       xf: "\<And>f s. xf (globals_update f s) = xf s"
-  shows "ccorres r xf (ko_at' ko thread) {s'. r (f ko) (f' s')} hs (threadGet f thread) (Call g)"
-  apply (rule ccorres_Call_call_for_vcg)
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_add_return2)
-   apply (rule ccorres_pre_threadGet)
-   apply (rule_tac P = "\<lambda>s. ko_at' ko thread s \<and> x = f ko" in ccorres_from_vcg [where P' = "{s'. r (f ko) (f' s')}"])
-   apply (rule allI)
-    apply (rule HoarePartial.ProcModifyReturnNoAbr [where return' = "\<lambda>s t. t\<lparr> globals := globals s \<rparr>"])
-      apply (rule HoarePartial.ProcSpecNoAbrupt [OF _ _ spec])
-      defer
-      apply vcg
-     prefer 2
-     apply (rule mod)
-    apply (clarsimp simp: mex_def meq_def)
-    apply (frule obj_at'_weakenE [OF _ TrueI])
-   apply clarsimp
-   apply (drule (1) ko_at_obj_congD')
-   apply simp
-  apply (clarsimp simp: return_def)
-  apply (rule conjI)
-   apply (erule iffD1 [OF rf_sr_upd, rotated -1], simp_all)[1]
-  apply (simp add: xf)
-  done
-
-lemma ccorres_exI1:
-  assumes rl: "\<And>x. ccorres r xf (Q x) (P' x) hs a c"
-  shows   "ccorres r xf (\<lambda>s. (\<exists>x. P x s) \<and> (\<forall>x. P x s \<longrightarrow> Q x s))
-                        {s'. \<forall>x s. (s, s') \<in> rf_sr \<and> P x s \<longrightarrow> s' \<in> P' x} hs a c"
-  apply (rule ccorresI')
-  apply clarsimp
-  apply (drule spec, drule (1) mp)
-  apply (rule ccorresE [OF rl], assumption+)
-    apply fastforce
-   apply assumption
-   apply assumption
-  apply fastforce
-  done
-
 lemma isBlocked_ccorres [corres]:
   "ccorres (\<lambda>r r'. r = to_bool r') ret__unsigned_long_'
   (tcb_at' thread) (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread})  []
@@ -578,24 +508,6 @@ lemma valid_queues_valid_q:
   apply simp
   done
 
-lemma invs_valid_q:
-  "invs' s \<Longrightarrow> (\<forall>tcb\<in>set (ksReadyQueues s (qdom, prio)). tcb_at' tcb s) \<and> distinct (ksReadyQueues s (qdom, prio))"
-  apply (rule valid_queues_valid_q)
-  apply (clarsimp simp: invs'_def valid_state'_def)
-  done
-
-lemma tcbQueued_not_in_queues:
-  assumes vq: "valid_queues s"
-  and    objat: "obj_at' (Not \<circ> tcbQueued) thread s"
-  shows   "thread \<notin> set (ksReadyQueues s (d, p))"
-  using vq objat
-  apply -
-  apply clarsimp
-  apply (drule (1) valid_queues_obj_at'D)
-  apply (erule obj_atE')+
-  apply (clarsimp simp: inQ_def)
-  done
-
 declare unat_ucast_8_32[simp]
 
 lemma rf_sr_sched_queue_relation:
@@ -607,33 +519,6 @@ lemma rf_sr_sched_queue_relation:
                                                       (cready_queues_index_to_C d p)))"
   unfolding rf_sr_def cstate_relation_def cready_queues_relation_def
   apply (clarsimp simp: Let_def seL4_MinPrio_def minDom_def)
-  done
-
-lemma ready_queue_not_in:
-  assumes  vq: "valid_queues s"
-  and     inq: "t \<in> set (ksReadyQueues s (d, p))"
-  and     neq: "d \<noteq> d' \<or> p \<noteq> p'"
-  shows   "t \<notin> set (ksReadyQueues s (d', p'))"
-proof
-  assume "t \<in> set (ksReadyQueues s (d', p'))"
-  hence "obj_at' (inQ d' p') t s" using vq by (rule valid_queues_obj_at'D)
-  moreover have "obj_at' (inQ d p) t s" using inq vq by (rule valid_queues_obj_at'D)
-  ultimately show False using neq
-    by (clarsimp elim!: obj_atE' simp: inQ_def)
-qed
-
-lemma ctcb_relation_unat_prio_eq:
-  "ctcb_relation tcb tcb' \<Longrightarrow> unat (tcbPriority tcb) = unat (tcbPriority_C tcb')"
-  apply (clarsimp simp: ctcb_relation_def)
-  apply (erule_tac t = "tcbPriority_C tcb'" in subst)
-  apply simp
-  done
-
-lemma ctcb_relation_unat_dom_eq:
-  "ctcb_relation tcb tcb' \<Longrightarrow> unat (tcbDomain tcb) = unat (tcbDomain_C tcb')"
-  apply (clarsimp simp: ctcb_relation_def)
-  apply (erule_tac t = "tcbDomain_C tcb'" in subst)
-  apply simp
   done
 
 lemma threadSet_queued_ccorres [corres]:
@@ -805,24 +690,6 @@ lemma from_bool_vals [simp]:
   "scast true \<noteq> scast false"
   by (auto simp add: from_bool_def true_def false_def)
 
-(* FIXME: move *)
-lemma cmap_relation_no_upd:
-  "\<lbrakk> cmap_relation a c f rel; a p = Some ko; rel ko v; inj f \<rbrakk> \<Longrightarrow> cmap_relation a (c(f p \<mapsto> v)) f rel"
-  apply (clarsimp simp: cmap_relation_def)
-  apply (subgoal_tac "f p \<in> dom c")
-   prefer 2
-   apply (drule_tac t="dom c" in sym)
-   apply fastforce
-  apply clarsimp
-  apply (drule (1) injD)
-  apply simp
-  done
-
-(* FIXME: move *)
-lemma cmap_relation_rel_upd:
-  "\<lbrakk> cmap_relation a c f rel; \<And>v v'. rel v v' \<Longrightarrow> rel' v v' \<rbrakk> \<Longrightarrow> cmap_relation a c f rel'"
-  by (simp add: cmap_relation_def)
-
 declare fun_upd_restrict_conv[simp del]
 
 lemmas queue_in_range = of_nat_mono_maybe[OF _ cready_queues_index_to_C_in_range,
@@ -869,22 +736,6 @@ lemma invert_l1index_spec:
   unfolding l2BitmapSize_def'
   by vcg
      (simp add: word_sle_def sdiv_int_def sdiv_word_def smod_word_def smod_int_def)
-
-lemma cbitmap_L1_relation_update:
-  "\<lbrakk> (\<sigma>, s) \<in> rf_sr ; cbitmap_L1_relation cupd aupd \<rbrakk>
-   \<Longrightarrow> (\<sigma>\<lparr>ksReadyQueuesL1Bitmap := aupd \<rparr>,
-       globals_update (ksReadyQueuesL1Bitmap_'_update (\<lambda>_. cupd)) s)
-      \<in> rf_sr"
-  by (simp add: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                cmachine_state_relation_def)
-
-lemma cbitmap_L2_relation_update:
-  "\<lbrakk> (\<sigma>, s) \<in> rf_sr ; cbitmap_L2_relation cupd aupd \<rbrakk>
-   \<Longrightarrow> (\<sigma>\<lparr>ksReadyQueuesL2Bitmap := aupd \<rparr>,
-       globals_update (ksReadyQueuesL2Bitmap_'_update (\<lambda>_. cupd)) s)
-      \<in> rf_sr"
-  by (simp add: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                cmachine_state_relation_def)
 
 lemma unat_ucast_prio_shiftr_simp[simp]:
   "unat (ucast (p::priority) >> n :: machine_word) = unat (p >> n)"
@@ -1001,39 +852,6 @@ lemma cbitmap_L2_relation_bit_set:
   apply (case_tac "da = d" ; clarsimp)
   done
 
-lemma carch_state_relation_enqueue_simp:
-  "carch_state_relation (ksArchState \<sigma>)
-    (t_hrs_'_update f
-      (globals \<sigma>' \<lparr>ksReadyQueuesL1Bitmap_' := l1upd, ksReadyQueuesL2Bitmap_' := l2upd \<rparr>)
-      \<lparr>ksReadyQueues_' := rqupd \<rparr>) =
-   carch_state_relation (ksArchState \<sigma>) (t_hrs_'_update f (globals \<sigma>'))"
-  unfolding carch_state_relation_def
-  by clarsimp
-
-(* FIXME move to lib/Eisbach_Methods *)
-(* FIXME consider printing error on solve goal apply *)
-context
-begin
-
-private definition "bool_protect (b::bool) \<equiv> b"
-
-lemma bool_protectD:
-  "bool_protect P \<Longrightarrow> P"
-  unfolding bool_protect_def by simp
-
-lemma bool_protectI:
-  "P \<Longrightarrow> bool_protect P"
-  unfolding bool_protect_def by simp
-
-(*
-  When you want to apply a rule/tactic to transform a potentially complex goal into another
-  one manually, but want to indicate that any fresh emerging goals are solved by a more
-  brutal method.
-  E.g. apply (solves_emerging \<open>frule x=... in my_rule\<close>\<open>fastforce simp: ... intro!: ... \<close>  *)
-method solves_emerging methods m1 m2 = (rule bool_protectD, (m1 ; (rule bool_protectI | (m2; fail))))
-
-end
-
 lemma t_hrs_ksReadyQueues_upd_absorb:
   "t_hrs_'_update f (g s) \<lparr>ksReadyQueues_' := rqupd \<rparr> =
    t_hrs_'_update f (g s \<lparr>ksReadyQueues_' := rqupd\<rparr>)"
@@ -1057,15 +875,6 @@ lemma rf_sr_drop_bitmaps_enqueue_helper:
   unfolding rf_sr_def cstate_relation_def Let_def
              carch_state_relation_def cmachine_state_relation_def
   by (clarsimp simp: rf_sr_cbitmap_L1_relation rf_sr_cbitmap_L2_relation)
-
-lemma cmachine_state_relation_enqueue_simp:
-  "cmachine_state_relation (ksMachineState \<sigma>)
-    (t_hrs_'_update f
-      (globals \<sigma>' \<lparr>ksReadyQueuesL1Bitmap_' := l1upd, ksReadyQueuesL2Bitmap_' := l2upd \<rparr>)
-      \<lparr>ksReadyQueues_' := rqupd \<rparr>) =
-   cmachine_state_relation (ksMachineState \<sigma>) (t_hrs_'_update f (globals \<sigma>'))"
-  unfolding cmachine_state_relation_def
-  by clarsimp
 
 lemma tcb_queue_relation'_empty_ksReadyQueues:
   "\<lbrakk> sched_queue_relation' (cslift x) (q s) NULL NULL ; \<forall>t\<in> set (q s). tcb_at' t s  \<rbrakk> \<Longrightarrow> q s = []"
@@ -1412,11 +1221,6 @@ lemma cbitmap_L2_relationD:
 lemma filter_noteq_op:
   "[x \<leftarrow> xs . x \<noteq> y] = filter ((\<noteq>) y) xs"
   by (induct xs) auto
-
-(* FIXME move *)
-lemma all_filter_propI:
-  "\<forall>x\<in>set lst. P x \<Longrightarrow> \<forall>x\<in>set (filter Q lst). P x"
-  by (induct lst, auto)
 
 lemma cbitmap_L2_relation_bit_clear:
   fixes p :: priority
@@ -2003,16 +1807,6 @@ lemma true_eq_from_bool [simp]:
   "(scast true = from_bool P) = P"
   by (simp add: true_def from_bool_def split: bool.splits)
 
-lemma isBlocked_spec:
-  "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter> {s. cslift s (thread_' s) \<noteq> None}) Call isBlocked_'proc
-       {s'. ret__unsigned_long_' s' = from_bool (tsType_CL (thread_state_lift (tcbState_C (the (cslift s (thread_' s))))) \<in>
-                            {scast ThreadState_BlockedOnReply,
-                             scast ThreadState_BlockedOnNotification, scast ThreadState_BlockedOnSend,
-                             scast ThreadState_BlockedOnReceive, scast ThreadState_Inactive}) }"
-  apply vcg
-  apply (clarsimp simp: typ_heap_simps)
-done
-
 lemma isRunnable_spec:
   "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter> {s. cslift s (thread_' s) \<noteq> None}) Call isRunnable_'proc
        {s'. ret__unsigned_long_' s' = from_bool (tsType_CL (thread_state_lift (tcbState_C (the (cslift s (thread_' s))))) \<in>
@@ -2155,47 +1949,17 @@ lemma rf_sr_ksReadyQueuesL1Bitmap_simp:
   apply (simp add: cbitmap_L1_relation_def)
   done
 
-lemma cguard_UNIV:
-  "P s \<Longrightarrow> s \<in> (if P s then UNIV else {})"
-  by fastforce
-
 lemma lookupBitmapPriority_le_maxPriority:
   "\<lbrakk> ksReadyQueuesL1Bitmap s d \<noteq> 0 ; valid_queues s \<rbrakk>
    \<Longrightarrow> lookupBitmapPriority d s \<le> maxPriority"
    unfolding valid_queues_def valid_queues_no_bitmap_def
    by (fastforce dest!: bitmapQ_from_bitmap_lookup bitmapQ_ksReadyQueuesI intro: ccontr)
 
-lemma rf_sr_ksReadyQueuesL1Bitmap_not_zero:
-  "\<lbrakk> (\<sigma>, s') \<in> rf_sr ; d \<le> maxDomain ; ksReadyQueuesL1Bitmap_' (globals s').[unat d] \<noteq> 0 \<rbrakk>
-  \<Longrightarrow> ksReadyQueuesL1Bitmap \<sigma> d \<noteq> 0"
-  apply (drule rf_sr_cbitmap_L1_relation)
-  apply (simp add: cbitmap_L1_relation_def)
-  done
-
 lemma ksReadyQueuesL1Bitmap_word_log2_max:
     "\<lbrakk>valid_queues s; ksReadyQueuesL1Bitmap s d \<noteq> 0\<rbrakk>
     \<Longrightarrow> word_log2 (ksReadyQueuesL1Bitmap s d) < l2BitmapSize"
     unfolding valid_queues_def
     by (fastforce dest: word_log2_nth_same bitmapQ_no_L1_orphansD)
-
-lemma rf_sr_ksReadyQueuesL2Bitmap_simp:
-  "\<lbrakk> (\<sigma>, s') \<in> rf_sr ; d \<le> maxDomain ; valid_queues \<sigma> ; ksReadyQueuesL1Bitmap \<sigma> d \<noteq> 0 \<rbrakk>
-   \<Longrightarrow> ksReadyQueuesL2Bitmap_' (globals s').[unat d].[word_log2 (ksReadyQueuesL1Bitmap \<sigma> d)] =
-      ksReadyQueuesL2Bitmap \<sigma> (d, word_log2 (ksReadyQueuesL1Bitmap \<sigma> d))"
-  apply (frule rf_sr_cbitmap_L2_relation)
-  apply (frule (1) ksReadyQueuesL1Bitmap_word_log2_max)
-  apply (drule (3) cbitmap_L2_relationD)
-  done
-
-lemma ksReadyQueuesL2Bitmap_nonzeroI:
-  "\<lbrakk> d \<le> maxDomain ; valid_queues s ; ksReadyQueuesL1Bitmap s d \<noteq> 0 \<rbrakk>
-   \<Longrightarrow> ksReadyQueuesL2Bitmap s (d, invertL1Index (word_log2 (ksReadyQueuesL1Bitmap s d))) \<noteq> 0"
-   unfolding valid_queues_def
-   apply clarsimp
-   apply (frule bitmapQ_no_L1_orphansD)
-    apply (erule word_log2_nth_same)
-   apply clarsimp
-   done
 
 lemma clzl_spec:
   "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call clzl_'proc
@@ -3218,7 +2982,7 @@ lemma cancelIPC_ccorres_reply_helper:
     apply (rule_tac Q="\<lambda>rv. tcb_at' thread and invs'" in hoare_post_imp)
      apply (clarsimp simp: cte_wp_at_ctes_of capHasProperty_def cap_get_tag_isCap ucast_id)
     apply (wp hoare_vcg_all_lift threadSet_invs_trivial
-               | wp_once hoare_drop_imps | simp)+
+               | wp (once) hoare_drop_imps | simp)+
    apply (clarsimp simp: guard_is_UNIV_def tcbReplySlot_def
                          Kernel_C.tcbReply_def mask_def tcbCNodeEntries_def)
   apply (fastforce simp: pred_tcb_at' inQ_def tcb_aligned'[OF pred_tcb_at'])
@@ -3226,14 +2990,14 @@ lemma cancelIPC_ccorres_reply_helper:
 *)
 
 lemma ep_blocked_in_queueD_recv:
-  "\<lbrakk>st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnReceive x)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isRecvEP ep'"
+  "\<lbrakk>st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnReceive x gr)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isRecvEP ep'"
   apply (frule sym_refs_st_tcb_atD', clarsimp)
   apply (clarsimp simp: refs_of_rev' obj_at'_def ko_wp_at'_def projectKOs)
   apply (cases ep', simp_all add: isSendEP_def isRecvEP_def)[1]
   done
 
 lemma ep_blocked_in_queueD_send:
-  "\<lbrakk>st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnSend x xa xb xc)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isSendEP ep'"
+  "\<lbrakk>st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnSend x xa xb xc xd)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isSendEP ep'"
   apply (frule sym_refs_st_tcb_atD', clarsimp)
   apply (clarsimp simp: refs_of_rev' obj_at'_def ko_wp_at'_def projectKOs)
   apply (cases ep', simp_all add: isSendEP_def isRecvEP_def)[1]

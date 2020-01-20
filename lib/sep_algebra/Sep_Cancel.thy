@@ -30,7 +30,7 @@ lemma sep_wand_lens_simple: "(\<And>s. T s = (Q \<and>* R) s) \<Longrightarrow> 
 
 schematic_goal schem_impAny: " (?C \<and>* B) s \<Longrightarrow> A s" by (erule sep_mp)
 
-ML {*
+ML \<open>
   fun sep_cancel_tactic ctxt concl  =
     let val thms = rev (SepCancel_Rules.get ctxt)
         val tac  = assume_tac ctxt ORELSE'
@@ -60,9 +60,9 @@ ML {*
 
   val sep_cancel_syntax' =
     Scan.lift (Args.mode "concl") -- sep_cancel_syntax
-*}
+\<close>
 
 method_setup sep_cancel =
-  {* sep_cancel_syntax' >> sep_cancel_method *}  {* Simple elimination of conjuncts *}
+  \<open>sep_cancel_syntax' >> sep_cancel_method\<close>  \<open>Simple elimination of conjuncts\<close>
 
 end

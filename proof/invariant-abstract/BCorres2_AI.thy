@@ -261,6 +261,7 @@ crunch all_but_exst[wp]: cap_move_ext "all_but_exst P"
   (simp: Let_def)
 
 crunch (empty_fail) empty_fail[wp]: cap_move_ext
+  (ignore_del: cap_move_ext)
 
 global_interpretation cap_move_ext: is_extended "cap_move_ext a b c d"
   by (unfold_locales; wp)

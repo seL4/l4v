@@ -16,7 +16,7 @@ theory ArchCSpaceInv_AI
 imports "../CSpaceInv_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 definition
    safe_ioport_insert :: "cap \<Rightarrow> cap \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
@@ -35,6 +35,22 @@ lemma set_cap_ioports':
     set_cap cap ptr
   \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
   by wpsimp
+
+lemma unique_table_refs_no_cap_asidE:
+  "\<lbrakk>caps_of_state s p = Some cap;
+    unique_table_refs (caps_of_state s)\<rbrakk>
+   \<Longrightarrow> no_cap_to_obj_with_diff_ref cap S s"
+  apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
+                        cte_wp_at_caps_of_state)
+  apply (unfold unique_table_refs_def)
+  apply (drule_tac x=p in spec, drule_tac x="(a,b)" in spec)
+  apply (drule spec)+
+  apply (erule impE, assumption)+
+  apply (clarsimp simp: is_cap_simps)
+  done
+
+lemmas unique_table_refs_no_cap_asidD
+     = unique_table_refs_no_cap_asidE[where S="{}"]
 
 lemma replace_cap_invs:
   "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s p cap) p s
@@ -102,22 +118,29 @@ lemma replace_cap_invs:
    apply (rule conjI)
     apply (unfold reply_caps_mdb_def)[1]
     apply (erule allEI, erule allEI)
-    apply (fastforce split: if_split_asm simp: is_cap_simps)
+    apply (clarsimp split: if_split simp add: is_cap_simps
+                 simp del: split_paired_Ex split_paired_All)
+    apply (rename_tac ptra ptrb rights')
+    apply (rule_tac x="(ptra,ptrb)" in exI)
+    apply fastforce
    apply (unfold reply_masters_mdb_def)[1]
    apply (erule allEI, erule allEI)
    apply (fastforce split: if_split_asm simp: is_cap_simps)
   apply (rule conjI)
    apply (erule disjE)
-    apply (clarsimp)
+    apply (clarsimp simp add: is_reply_cap_to_def)
     apply (drule caps_of_state_cteD)
-    apply (erule(1) valid_reply_capsD [OF has_reply_cap_cte_wpD])
+    apply (subgoal_tac "cte_wp_at (is_reply_cap_to t) p s")
+     apply (erule(1) valid_reply_capsD [OF has_reply_cap_cte_wpD])
+    apply (erule cte_wp_at_lift)
+    apply(fastforce simp add:is_reply_cap_to_def)
    apply (simp add: is_cap_simps)
   apply (frule(1) valid_global_refsD2)
   apply (frule(1) cap_refs_in_kernel_windowD)
   apply (rule conjI)
    apply (erule disjE)
     apply (clarsimp simp: valid_reply_masters_def cte_wp_at_caps_of_state)
-    apply (cases p, fastforce)
+    apply (cases p,fastforce simp:is_master_reply_cap_to_def)
    apply (simp add: is_cap_simps)
   apply (elim disjE)
    apply simp

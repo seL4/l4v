@@ -17,11 +17,11 @@ keywords "match_abbreviation" :: thy_decl
 
 begin
 
-text {* Splicing components of terms and saving as abbreviations.
+text \<open>Splicing components of terms and saving as abbreviations.
 See the example at the bottom for explanation/documentation.
-*}
+\<close>
 
-ML {*
+ML \<open>
 structure Match_Abbreviation = struct
 
 fun app_cons_dummy cons x y
@@ -206,9 +206,9 @@ val _ =
       >> (fn (((name, rhs), fixes), thms)
             => add_reassoc name rhs fixes thms));
 end
-*}
+\<close>
 
-text {*
+text \<open>
 The match/abbreviate command. There are examples of all elements below,
 and an example involving monadic syntax in the theory Match-Abbreviation-Test.
 
@@ -237,21 +237,21 @@ of different types. The retype adjustment can then be used
 to repair the term by resetting the types of all instances of
 the named constants. This is used below with list constructors,
 to assemble a new list with a different element type.
-*}
+\<close>
 
 experiment begin
 
-text {* Fetching part of the statement of a theorem. *}
+text \<open>Fetching part of the statement of a theorem.\<close>
 match_abbreviation (input) fixp_thm_bit
   in thm_prop fixp_induct_tailrec
   select "X \<equiv> Y" (for X Y)
 
-text {* Ditto conclusion. *}
+text \<open>Ditto conclusion.\<close>
 match_abbreviation (input) rev_simps_bit
   in concl rev.simps(2)
   select "X" (for X)
 
-text {* Selecting some conjuncts and reorienting an equality. *}
+text \<open>Selecting some conjuncts and reorienting an equality.\<close>
 match_abbreviation (input) conjunct_test
   in "(P \<and> Q \<and> P \<and> P \<and> P \<and> ((1 :: nat) = 2) \<and> Q \<and> Q, [Suc 0, 0])"
   select "Q \<and> Z" (for Z)
@@ -259,15 +259,15 @@ match_abbreviation (input) conjunct_test
   and rewrite in "x = y & Z" (for x y Z)
     "A \<and> B" to "A" (for A B)
 
-text {* The relevant reassociate theorem, that rearranges a
-conjunction like the above to group the elements selected. *}
+text \<open>The relevant reassociate theorem, that rearranges a
+conjunction like the above to group the elements selected.\<close>
 reassoc_thm conjunct_test_reassoc
   "conjunct_test P Q \<and> Z" (for P Q Z)
   conj_assoc
 
-text {* Selecting some elements of a list, and then replacing
+text \<open>Selecting some elements of a list, and then replacing
 tuples with equalities, and adjusting the type of the list constructors
-so the new term is type correct. *}
+so the new term is type correct.\<close>
 match_abbreviation (input) list_test
   in "[(Suc 1, Suc 2), (4, 5), (6, 7), (8, 9), (10, 11), (x, y), (6, 7),
     (18, 19), a, a, a, a, a, a, a]"

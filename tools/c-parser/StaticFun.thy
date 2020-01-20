@@ -60,7 +60,7 @@ lemma tree_eq_fun_in_range_split:
   apply fastforce
   done
 
-ML {*
+ML \<open>
 
 structure StaticFun = struct
 
@@ -137,7 +137,7 @@ fun define_tree_and_thms_with_defs name names key_defs opt_values ord ctxt = let
 
 end
 
-*}
+\<close>
 
 (* testing
 

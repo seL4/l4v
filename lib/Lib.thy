@@ -23,6 +23,7 @@ imports
   Eval_Bool
   NICTATools
   "HOL-Library.Prefix_Order"
+  "HOL-Word.Word"
 begin
 
 (* FIXME: eliminate *)
@@ -47,6 +48,11 @@ lemma Collect_eq:
 
 (* FIXME: move next to HOL.iff_allI *)
 lemma iff_impI: "\<lbrakk>P \<Longrightarrow> Q = R\<rbrakk> \<Longrightarrow> (P \<longrightarrow> Q) = (P \<longrightarrow> R)" by blast
+
+(* Long ago, I, fun_app, the verification master of darkness, unleashed an unspeakable evil
+upon the world. But a foolish proof engineer wielding an input abbreviation stepped forth
+to oppose me. Before the final blow was struck, I tore open a hole in a number of refinement
+proofs, and flung him into a broken proof state, where my evil is law. *)
 
 definition
   fun_app :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a \<Rightarrow> 'b" (infixr "$" 10) where
@@ -106,6 +112,9 @@ where
 definition
  "swp f \<equiv> \<lambda>x y. f y x"
 
+lemma swp_apply[simp]: "swp f y x = f x y"
+  by (simp add: swp_def)
+
 primrec (nonexhaustive)
   theRight :: "'a + 'b \<Rightarrow> 'b" where
   "theRight (Inr x) = x"
@@ -150,10 +159,10 @@ lemma linorder_min_same2 [simp]:
   "(min x y = y) = (y \<le> (x::'a::linorder))"
   by (auto simp: min_def linorder_not_le)
 
-text {* A combinator for pairing up well-formed relations.
+text \<open>A combinator for pairing up well-formed relations.
         The divisor function splits the population in halves,
         with the True half greater than the False half, and
-        the supplied relations control the order within the halves. *}
+        the supplied relations control the order within the halves.\<close>
 
 definition
   wf_sum :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<times> 'a) set \<Rightarrow> ('a \<times> 'a) set \<Rightarrow> ('a \<times> 'a) set"
@@ -412,7 +421,7 @@ lemma allEI:
   shows   "\<forall>x. Q x"
   using assms by (rule all_forward)
 
-text {* General lemmas that should be in the library *}
+text \<open>General lemmas that should be in the library\<close>
 
 lemma dom_ran:
   "x \<in> dom f \<Longrightarrow> the (f x) \<in> ran f"
@@ -450,6 +459,10 @@ lemma map_upt_unfold:
   assumes ab: "a < b"
   shows   "map f [a ..< b] = f a # map f [Suc a ..< b]"
   using assms upt_conv_Cons by auto
+
+lemma tl_nat_list_simp:
+  "tl [a..<b] = [a + 1 ..<b]"
+  by (induct b, auto)
 
 lemma image_Collect2:
   "case_prod f ` {x. P (fst x) (snd x)} = {f x y |x y. P x y}"
@@ -644,9 +657,9 @@ lemma trancl_trancl:
   "(R\<^sup>+)\<^sup>+ = R\<^sup>+"
   by auto
 
-text {* Some rules for showing that the reflexive transitive closure of a
+text \<open>Some rules for showing that the reflexive transitive closure of a
 relation/predicate doesn't add much if it was already transitively
-closed. *}
+closed.\<close>
 
 lemma rtrancl_eq_reflc_trans:
   assumes trans: "trans X"
@@ -750,6 +763,11 @@ lemma graph_of_empty :
 
 lemma graph_of_in_ranD: "\<forall>y \<in> ran f. P y \<Longrightarrow> (x,y) \<in> graph_of f \<Longrightarrow> P y"
   by (auto simp: graph_of_def ran_def)
+
+lemma graph_of_SomeD:
+  "\<lbrakk> graph_of f \<subseteq> graph_of g; f x = Some y \<rbrakk> \<Longrightarrow> g x = Some y"
+  unfolding graph_of_def
+  by auto
 
 lemma in_set_zip_refl :
   "(x,y) \<in> set (zip xs xs) = (y = x \<and> x \<in> set xs)"
@@ -2592,5 +2610,49 @@ lemma remove1_hd_is_tl[simp]:
 lemma fst_subset:
   "fst ` A \<subseteq> fst ` B \<Longrightarrow> (r, q) \<in> A \<Longrightarrow> \<exists>t. (r,t) \<in> B"
   by fastforce
+
+lemma option_Some_value_independent:
+  "\<lbrakk> f x = Some v; \<And>v'. f x = Some v' \<Longrightarrow> f y = Some v' \<rbrakk> \<Longrightarrow> f y = Some v"
+  by blast
+
+text \<open>Some int bitwise lemmas. Helpers for proofs about \<^file>\<open>NatBitwise.thy\<close>\<close>
+lemma int_2p_eq_shiftl:
+  "(2::int)^x = 1 << x"
+  by (simp add: shiftl_int_def)
+
+lemma nat_int_mul:
+  "nat (int a * b) = a * nat b"
+  by (simp add: nat_mult_distrib)
+
+lemma int_shiftl_less_cancel:
+  "n \<le> m \<Longrightarrow> ((x :: int) << n < y << m) = (x < y << (m - n))"
+  apply (drule le_Suc_ex)
+  apply (clarsimp simp: shiftl_int_def power_add)
+  done
+
+lemma int_shiftl_lt_2p_bits:
+  "0 \<le> (x::int) \<Longrightarrow> x < 1 << n \<Longrightarrow> \<forall>i \<ge> n. \<not> x !! i"
+  apply (clarsimp simp: shiftl_int_def)
+  apply (clarsimp simp: bin_nth_eq_mod even_iff_mod_2_eq_zero)
+  apply (drule_tac z="2^i" in less_le_trans)
+   apply simp
+  apply simp
+  done
+\<comment> \<open>TODO: The converse should be true as well, but seems hard to prove.\<close>
+
+lemma int_eq_test_bit:
+  "((x :: int) = y) = (\<forall>i. test_bit x i = test_bit y i)"
+  apply simp
+  apply (metis bin_eqI)
+  done
+lemmas int_eq_test_bitI = int_eq_test_bit[THEN iffD2, rule_format]
+
+lemma le_nat_shrink_left:
+  "y \<le> z \<Longrightarrow> y = Suc x \<Longrightarrow> x < z"
+  by simp
+
+lemma length_ge_split:
+  "n < length xs \<Longrightarrow> \<exists>x xs'. xs = x # xs' \<and> n \<le> length xs'"
+  by (cases xs) auto
 
 end

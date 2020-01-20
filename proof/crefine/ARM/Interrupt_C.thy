@@ -27,7 +27,7 @@ lemma getIRQSlot_ccorres:
   "ccorres ((=) \<circ> Ptr) irqSlot_'
           \<top> UNIV hs
       (getIRQSlot irq)
-      (\<acute>irqSlot :== CTypesDefs.ptr_add \<acute>intStateIRQNode (sint (ucast (ucast irq ::word16) :: 32 signed word)))"
+      (\<acute>irqSlot :== CTypesDefs.ptr_add intStateIRQNode_Ptr (sint (ucast (ucast irq ::word16) :: 32 signed word)))"
   apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
@@ -42,11 +42,11 @@ lemma getIRQSlot_ccorres:
 lemma ptr_add_assertion_irq_guard:
 "ccorres dc xfdc P Q hs a
      (Guard F
-       \<lbrace>uint irq = 0 \<or> array_assertion \<acute>intStateIRQNode (nat (uint irq)) (hrs_htd \<acute>t_hrs)\<rbrace>
+       \<lbrace>uint irq = 0 \<or> array_assertion intStateIRQNode_Ptr (nat (uint irq)) (hrs_htd \<acute>t_hrs)\<rbrace>
        c;;m)
   \<Longrightarrow> ccorres dc xfdc P Q hs a
             (Guard F
-              \<lbrace>ptr_add_assertion \<acute>intStateIRQNode
+              \<lbrace>ptr_add_assertion intStateIRQNode_Ptr
                 (sint (ucast (irq :: 16 word)::32 signed word)) False
                 (hrs_htd \<acute>t_hrs)\<rbrace> c ;; m)"
   by (simp add: ptr_add_assertion_def sint_ucast_eq_uint is_down)
@@ -71,10 +71,11 @@ proof -
     by (clarsimp)
   show ?thesis
   apply (cinit lift: irq_' slot_' cap_')
+   apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
    apply (rule ptr_add_assertion_irq_guard)
    apply (rule ccorres_move_array_assertion_irq)
-   apply (simp only:)
-   apply (ctac(no_vcg) add: getIRQSlot_ccorres)
+   apply (simp add: ucast_up_ucast is_up)
+   apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
         apply (ctac(no_vcg) add: cteInsert_ccorres)
@@ -106,10 +107,11 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
       (invokeIRQHandler (ClearIRQHandler irq))
       (Call invokeIRQHandler_ClearIRQHandler_'proc)"
   apply (cinit lift: irq_')
+   apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
    apply (rule ptr_add_assertion_irq_guard)
    apply (rule ccorres_move_array_assertion_irq)
-   apply (simp only: )
-   apply (ctac(no_vcg) add: getIRQSlot_ccorres)
+   apply (simp add: ucast_up_ucast is_up)
+   apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
        apply (ctac add: cteDeleteOne_ccorres[where w="-1"])
       apply vcg
@@ -129,11 +131,6 @@ lemma ntfn_case_can_send:
         | _ \<Rightarrow> v) = (if isNotificationCap cap then f (capNtfnCanSend cap)
                      else v)"
   by (cases cap, simp_all add: isCap_simps)
-
-lemma list_length_geq_helper[simp]:
-  "\<lbrakk>\<not> length args < 2\<rbrakk>
-       \<Longrightarrow> \<exists>y ys. args = y # ys"
-  by (frule length_ineq_not_Nil(3), simp, metis list.exhaust)
 
 lemma decodeIRQHandlerInvocation_ccorres:
   notes if_cong[cong]
@@ -288,11 +285,6 @@ lemma ucast_maxIRQ_le_eq:
   apply simp
   by (clarsimp simp: ucast_up_ucast is_up Kernel_C.maxIRQ_def)
 
-lemma ucast_maxIRQ_le_eq':
-  "UCAST(10 \<rightarrow> 32) irq \<le> SCAST(32 signed \<rightarrow> 32) Kernel_C.maxIRQ \<Longrightarrow> irq \<le> maxIRQ"
-  apply (clarsimp simp: Kernel_C.maxIRQ_def maxIRQ_def)
-  by word_bitwise
-
 lemma invokeIRQControl_expanded_ccorres:
   "ccorres (\<lambda>_ r. r = scast EXCEPTION_NONE) (ret__unsigned_long_')
       (invs' and cte_at' parent and (\<lambda>_. (ucast irq) \<le> (scast Kernel_C.maxIRQ :: machine_word)))
@@ -317,7 +309,7 @@ lemma invokeIRQControl_expanded_ccorres:
   apply (clarsimp simp: is_simple_cap'_def isCap_simps valid_cap_simps' capAligned_def
                         word_bits_def)
   apply (rule conjI)
-   apply (fastforce simp: word_bits_def intro!: ucast_maxIRQ_le_eq ucast_maxIRQ_le_eq')
+   apply (fastforce simp: word_bits_def intro!: ucast_maxIRQ_le_eq)
   apply (simp add: invs_mdb' invs_valid_objs' invs_pspace_aligned')
   apply (rule conjI)
    apply (clarsimp simp: maxIRQ_def Kernel_C.maxIRQ_def)
@@ -372,14 +364,6 @@ lemma Arch_invokeIRQControl_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: return_def)
       apply (wpsimp simp: guard_is_UNIV_def)+
-  done
-
-lemma unat_ucast_16_32:
-  "unat (ucast (x::(16 word))::32 signed word) = unat x"
-  apply (subst unat_ucast)
-  apply (rule Divides.mod_less, simp)
-  apply (rule less_le_trans[OF unat_lt2p])
-  apply simp
   done
 
 lemma isIRQActive_ccorres:
@@ -458,26 +442,6 @@ lemma checkIRQ_ret_good:
   apply (clarsimp simp: checkIRQ_def rangeCheck_def Platform_maxIRQ minIRQ_def)
   apply (rule hoare_pre,wp)
   by (clarsimp simp: Kernel_C.maxIRQ_def split: if_split)
-
-lemma toEnum_of_ucast:
-  "len_of TYPE('b) \<le> len_of TYPE('a) \<Longrightarrow>
-  (toEnum (unat (b::('b :: len word))):: ('a :: len word)) = of_nat (unat b)"
-  apply (subst toEnum_of_nat)
-   apply (rule less_le_trans[OF unat_lt2p])
-   apply (simp add:power2_nat_le_eq_le)
-  apply simp
-  done
-
-lemma unat_ucast_mask:
-  "len_of TYPE('b) \<le> len_of TYPE('a) \<Longrightarrow> (unat (ucast (a :: ('a :: len) word) :: ('b :: len) word)) = unat (a && mask (len_of TYPE('b)))"
-  apply (subst ucast_mask_drop[symmetric])
-   apply (rule le_refl)
-  apply (simp add:unat_ucast)
-  apply (subst nat_mod_eq')
-   apply (rule less_le_trans[OF word_unat_mask_lt le_refl])
-   apply (simp add: word_size)
-  apply simp
-  done
 
 lemma Arch_decodeIRQControlInvocation_ccorres:
   notes if_cong[cong]
@@ -602,7 +566,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
                apply (wp injection_wp_E[OF refl] checkIRQ_ret_good)
               apply (simp add: Collect_const_mem all_ex_eq_helper)
               apply (vcg exspec=Arch_checkIRQ_modifies)
-             apply (wp hoare_vcg_const_imp_lift |wp_once hoare_drop_imps)+
+             apply (wp hoare_vcg_const_imp_lift |wp (once) hoare_drop_imps)+
             apply (simp add: Collect_const_mem all_ex_eq_helper)
             apply vcg
            apply wp
@@ -772,7 +736,7 @@ lemma decodeIRQControlInvocation_ccorres:
              apply (wp injection_wp_E[OF refl] checkIRQ_ret_good)
             apply (simp add: Collect_const_mem all_ex_eq_helper)
             apply (vcg exspec=Arch_checkIRQ_modifies)
-           apply (wp hoare_vcg_const_imp_lift |wp_once hoare_drop_imps)+
+           apply (wp hoare_vcg_const_imp_lift |wp (once) hoare_drop_imps)+
           apply (simp add: Collect_const_mem all_ex_eq_helper)
           apply vcg
          apply wp

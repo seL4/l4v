@@ -386,6 +386,8 @@ where
     do_machine_op dsb;
     (case vo of
       Some vr \<Rightarrow> do
+        vcpu_save_reg vr VCPURegTPIDRURO;
+        do_machine_op $ writeVCPUHardwareReg VCPURegTPIDRURO 0;
         hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
         vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>);
         vcpu_save_reg vr VCPURegSCTLR;
@@ -407,6 +409,7 @@ definition
 where
   "vcpu_enable vr \<equiv> do
      vcpu_restore_reg vr VCPURegSCTLR;
+     vcpu_restore_reg vr VCPURegTPIDRURO;
      vcpu \<leftarrow> get_vcpu vr;
      do_machine_op $ do
         setHCR hcrVCPU;
@@ -498,7 +501,7 @@ where
           vcpu_save_reg_range vr VCPURegACTLR VCPURegSPSRfiq;
           do_machine_op isb
        od
-     | _ \<Rightarrow> fail \<comment> \<open>vcpu_save: no VCPU to save\<close>"
+     | _ \<Rightarrow> fail"
 
 text \<open>Register + context restore for VCPUs\<close>
 definition

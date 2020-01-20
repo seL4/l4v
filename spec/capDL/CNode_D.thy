@@ -42,7 +42,7 @@ where
            returnOk $ InsertCall cap src_slot dest_slot
          odE
 
-     (* Copy a cap to another capslot, possibly modifying the cap. *)
+     \<comment> \<open>Copy a cap to another capslot, possibly modifying the cap.\<close>
      | CNodeMintIntent dest_index dest_depth src_index src_depth rights badge \<Rightarrow>
          doE
            (src_root, _) \<leftarrow> throw_on_none $ get_index caps 0;
@@ -51,7 +51,7 @@ where
            src_slot \<leftarrow> lookup_slot_for_cnode_op src_root src_index (unat src_depth);
            src_cap \<leftarrow> liftE $ get_cap src_slot;
 
-           (* Munge the caps rights/data. *)
+           \<comment> \<open>Munge the caps rights/data.\<close>
            new_cap \<leftarrow> returnOk $ update_cap_rights (cap_rights src_cap \<inter> rights) src_cap;
            new_cap' \<leftarrow> liftE $ update_cap_data False badge new_cap;
 
@@ -61,7 +61,7 @@ where
            returnOk $ InsertCall cap src_slot dest_slot
          odE
 
-     (* Move a cap to another capslot, without modifying the cap. *)
+     \<comment> \<open>Move a cap to another capslot, without modifying the cap.\<close>
      | CNodeMoveIntent dest_index dest_depth src_index src_depth \<Rightarrow>
          doE
            (src_root, _) \<leftarrow> throw_on_none $ get_index caps 0;
@@ -73,7 +73,7 @@ where
            returnOk $ MoveCall src_cap src_slot dest_slot
          odE
 
-     (* Move a cap to another capslot, possibly modifying the cap. *)
+     \<comment> \<open>Move a cap to another capslot, possibly modifying the cap.\<close>
      | CNodeMutateIntent dest_index dest_depth src_index src_depth badge \<Rightarrow>
          doE
            (src_root, _) \<leftarrow> throw_on_none $ get_index caps 0;
@@ -82,28 +82,28 @@ where
            src_slot \<leftarrow> lookup_slot_for_cnode_op src_root src_index (unat src_depth);
            src_cap \<leftarrow> liftE $ get_cap src_slot;
 
-           (* Munge the caps rights/data. *)
+           \<comment> \<open>Munge the caps rights/data.\<close>
            cap \<leftarrow> liftE $ update_cap_data True badge src_cap;
            whenE (cap = NullCap) throw;
 
            returnOk $ MoveCall cap src_slot dest_slot
          odE
 
-     (* Revoke all CDT children of the given cap. *)
+     \<comment> \<open>Revoke all CDT children of the given cap.\<close>
      | CNodeRevokeIntent index depth \<Rightarrow>
          doE
            target_slot \<leftarrow> lookup_slot_for_cnode_op target index (unat depth);
            returnOk $ RevokeCall target_slot
          odE
 
-     (* Delete the given cap, but not its children. *)
+     \<comment> \<open>Delete the given cap, but not its children.\<close>
      | CNodeDeleteIntent index depth \<Rightarrow>
          doE
            target_slot \<leftarrow> lookup_slot_for_cnode_op target index (unat depth);
            returnOk $ DeleteCall target_slot
          odE
 
-     (* Save the current thread's reply cap into the target slot. *)
+     \<comment> \<open>Save the current thread's reply cap into the target slot.\<close>
      | CNodeSaveCallerIntent index depth \<Rightarrow>
          doE
            target_slot \<leftarrow> lookup_slot_for_cnode_op target index (unat depth);
@@ -111,7 +111,7 @@ where
            returnOk $ SaveCall target_slot
          odE
 
-     (* Recycle the target cap. *)
+     \<comment> \<open>Recycle the target cap.\<close>
      | CNodeCancelBadgedSendsIntent index depth \<Rightarrow>
          doE
            target_slot \<leftarrow> lookup_slot_for_cnode_op target index (unat depth);
@@ -120,7 +120,7 @@ where
            returnOk $ CancelBadgedSendsCall cap
          odE
 
-     (* Atomically move several caps. *)
+     \<comment> \<open>Atomically move several caps.\<close>
      | CNodeRotateIntent dest_index dest_depth pivot_index pivot_depth pivot_badge src_index src_depth src_badge \<Rightarrow>
          doE
            pivot_root \<leftarrow> throw_on_none $ get_index caps 0;
@@ -144,7 +144,7 @@ where
            pivot_cap \<leftarrow> liftE $ get_cap pivot_slot;
            whenE (pivot_cap = NullCap) throw;
 
-           (* Munge caps. *)
+           \<comment> \<open>Munge caps.\<close>
            new_src \<leftarrow> liftE $ update_cap_data True src_badge src_cap;
            new_pivot \<leftarrow> liftE $ update_cap_data True pivot_badge pivot_cap;
 
@@ -159,26 +159,26 @@ definition
   invoke_cnode :: "cdl_cnode_invocation \<Rightarrow> unit preempt_monad"
 where
   "invoke_cnode params \<equiv> case params of
-    (* Insert a new cap. *)
+    \<comment> \<open>Insert a new cap.\<close>
       InsertCall cap src_slot dest_slot \<Rightarrow>
         liftE $
           insert_cap_sibling cap src_slot dest_slot
           \<sqinter>
           insert_cap_child cap src_slot dest_slot
 
-    (* Move a cap, possibly modifying it in the process. *)
+    \<comment> \<open>Move a cap, possibly modifying it in the process.\<close>
     | MoveCall cap src_slot dest_slot \<Rightarrow>
         liftE $ move_cap cap src_slot dest_slot
 
-    (* Revoke a cap. *)
+    \<comment> \<open>Revoke a cap.\<close>
     | RevokeCall src_slot \<Rightarrow>
         revoke_cap src_slot
 
-    (* Delete a cap. *)
+    \<comment> \<open>Delete a cap.\<close>
     | DeleteCall src_slot \<Rightarrow>
         delete_cap src_slot
 
-    (* Atomically move two capabilities. *)
+    \<comment> \<open>Atomically move two capabilities.\<close>
     | RotateCall cap1 cap2 slot1 slot2 slot3 \<Rightarrow>
         liftE $ if slot1 = slot3 then
           swap_cap cap1 slot1 cap2 slot2
@@ -188,7 +188,7 @@ where
             move_cap cap1 slot1 slot2
           od
 
-    (* Save a reply cap from the caller's TCB into this CNode. *)
+    \<comment> \<open>Save a reply cap from the caller's TCB into this CNode.\<close>
     | SaveCall dest_slot \<Rightarrow>
         liftE $ do
           current \<leftarrow> gets_the cdl_current_thread;
@@ -197,7 +197,7 @@ where
             $ move_cap replycap (current, tcb_caller_slot) dest_slot
         od
 
-    (* Reset an object into its original state. *)
+    \<comment> \<open>Reset an object into its original state.\<close>
     | CancelBadgedSendsCall (EndpointCap ep b _) \<Rightarrow> liftE $ when (b \<noteq> 0) $ cancel_badged_sends ep b
     | CancelBadgedSendsCall _ \<Rightarrow> fail
   "

@@ -15,7 +15,7 @@ imports
   Lib.Defs
 begin
 
-text {* Test cases for crunch *}
+text \<open>Test cases for crunch\<close>
 
 definition
   "crunch_foo1 (x :: nat) \<equiv> do
@@ -41,12 +41,7 @@ definition
 
 lemma crunch_foo1_at_2:
   "True \<Longrightarrow> \<lbrace>crunch_always_true 3 and crunch_always_true 2\<rbrace>
-      crunch_foo1 x \<lbrace>\<lambda>rv. crunch_always_true 2\<rbrace>"
-  by (simp add: crunch_always_true_def, wp)
-
-lemma crunch_foo1_at_2':
-  "True \<Longrightarrow> \<lbrace>crunch_always_true 3 and crunch_always_true 2\<rbrace>
-      crunch_foo1 x \<lbrace>\<lambda>rv. crunch_always_true 3\<rbrace>"
+      crunch_foo1 x \<lbrace>\<lambda>rv. crunch_always_true 2 and K True\<rbrace>"
   by (simp add: crunch_always_true_def, wp)
 
 lemma crunch_foo1_at_3[wp]:
@@ -61,10 +56,10 @@ lemma crunch_foo1_no_fail:
   done
 
 crunch (no_fail) no_fail: crunch_foo2
-  (ignore: modify bind wp: crunch_foo1_at_2)
+  (ignore: modify bind wp: crunch_foo1_at_2[simplified])
 
-crunch (valid) at_2': crunch_foo2 "crunch_always_true 2"
-  (ignore: modify bind wp: crunch_foo1_at_2)
+crunch (valid) at_2: crunch_foo2 "crunch_always_true 2"
+  (ignore: modify bind wp: crunch_foo1_at_2[simplified])
 
 fun crunch_foo3 :: "nat => nat => 'a => (nat,unit) tmonad" where
   "crunch_foo3 0 x _ = crunch_foo1 x"
@@ -92,14 +87,13 @@ lemma crunch_foo4_alt:
    apply simp+
   done
 
-(* FIXME: breaks, does not find induct_instance, wrong number of params
 crunch gt3: crunch_foo4 "\<lambda>x. x > y"
   (ignore: modify bind)
-*)
+
 crunch (no_fail) no_fail2: crunch_foo4
   (rule: crunch_foo4_alt ignore: modify bind)
 
-crunch gt3: crunch_foo4 "\<lambda>x. x > y"
+crunch gt3': crunch_foo4 "\<lambda>x. x > y"
   (rule: crunch_foo4_alt ignore: modify bind)
 
 crunch gt4: crunch_foo5 "\<lambda>x. x > y"

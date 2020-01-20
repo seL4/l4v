@@ -28,11 +28,11 @@ begin
 lemmas globals_list_def = global_asm_stmt_global_addresses.global_data_list_def
 declare asm_semantics_respects[unfolded Let_def, simp]
 
-ML {*
+ML \<open>
 emit_C_everything_relative @{context}
   (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
   "global_asm_stmt_Cfuns.txt"
-*}
+\<close>
 
 lemma globals_list_valid:
   "globals_list_valid symbol_table t_hrs_' t_hrs_'_update globals_list"
@@ -115,19 +115,15 @@ end
 consts
   encode_machine_state :: "machine_state \<Rightarrow> unit \<times> nat"
 
-ML {*
+ML \<open>
 val funs = ParseGraph.funs @{theory} "global_asm_stmt_Cfuns.txt"
-*}
+\<close>
 
-local_setup {* add_field_h_val_rewrites #> add_field_to_bytes_rewrites *}
+local_setup \<open>add_field_h_val_rewrites #> add_field_to_bytes_rewrites\<close>
 
 context g_asm_graph_refine begin
 
-ML {* SimplToGraphProof.globals_swap
- := (fn t => @{term "globals_swap t_hrs_' t_hrs_'_update symbol_table globals_list"} $ t)
-*}
-
-local_setup {* add_globals_swap_rewrites @{thms global_asm_stmt_global_addresses.global_data_mems} *}
+local_setup \<open>add_globals_swap_rewrites @{thms global_asm_stmt_global_addresses.global_data_mems}\<close>
 
 definition
   simpl_invariant :: "globals myvars set"
@@ -137,42 +133,41 @@ where
         \<and> htd_safe domain (hrs_htd (t_hrs_' (globals s)))}"
 
 abbreviation(input) "ghost_assns_from_globals
-    \<equiv> (K (K 0 :: word64 \<Rightarrow> word32) o ghost'state_' :: globals \<Rightarrow> _)"
+    \<equiv> (K (K 0 :: ghost_assertions) o ghost'state_' :: globals \<Rightarrow> _)"
 
+text \<open>Test everything.\<close>
+ML \<open>
+val dbg = ProveSimplToGraphGoals.new_debug [] [];
 
-
-text {* Test everything. *}
-ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
+ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
     funs
     (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
-    @{context} *}
+    @{context}
+    dbg
+\<close>
 
+text \<open>The remainder is debug code for when things fail.\<close>
 
+ML \<open>val nm = "global_asm_stmt.g"\<close>
 
+local_setup \<open>define_graph_fun_short funs nm\<close>
 
-
-
-text {* The remainder is debug code for when things fail. *}
-
-ML {* val nm = "global_asm_stmt.g" *}
-
-local_setup {* define_graph_fun_short funs nm *}
-
-ML {*
+ML \<open>
 val hints = SimplToGraphProof.mk_hints funs @{context} nm
-*}
+\<close>
 
-ML {*
+ML \<open>
 val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm
     @{context}
-*}
+\<close>
 
-ML {*
+ML \<open>
 ProveSimplToGraphGoals.simpl_to_graph_thm funs
   (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
   @{context} nm;
-*}
-ML {*
+\<close>
+
+ML \<open>
 val tacs = ProveSimplToGraphGoals.graph_refine_proof_tacs
   (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
     #> map snd
@@ -182,11 +177,11 @@ val full_goal_tac = ProveSimplToGraphGoals.graph_refine_proof_full_goal_tac
   (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
 val debug_tac = ProveSimplToGraphGoals.debug_tac
   (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
-*}
+\<close>
 
 schematic_goal "PROP ?P"
-  apply (tactic {* resolve_tac @{context} [init_thm] 1 *})
-  apply (tactic {* ALLGOALS (TRY o (debug_tac @{context} THEN_ALL_NEW K no_tac)) *})
+  apply (tactic \<open>resolve_tac @{context} [init_thm] 1\<close>)
+  apply (tactic \<open>ALLGOALS (TRY o (debug_tac @{context} THEN_ALL_NEW K no_tac))\<close>)
   oops
 
 end

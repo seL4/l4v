@@ -345,7 +345,7 @@ lemma thread_set_time_slice_transform: "\<lbrace>\<lambda>ps. transform ps = cs\
 
 lemma timer_tick_dcorres: "dcorres dc P P' (return ()) timer_tick"
   apply (rule corres_noop)
-   apply (simp add: timer_tick_def reschedule_required_def set_scheduler_action_def etcb_at_def split: option.splits | wp tcb_sched_action_transform dec_domain_time_transform thread_set_time_slice_transform | wpc | wp_once hoare_vcg_all_lift hoare_drop_imps)+
+   apply (simp add: timer_tick_def reschedule_required_def set_scheduler_action_def etcb_at_def split: option.splits | wp tcb_sched_action_transform dec_domain_time_transform thread_set_time_slice_transform | wpc | wp (once) hoare_vcg_all_lift hoare_drop_imps)+
   done
 
 lemma handle_interrupt_corres:
@@ -575,7 +575,7 @@ lemma cte_wp_at_neq_slot_cap_delete_one:
          apply (wp | clarsimp)+
       apply (rule_tac Q = "\<lambda>r s. cte_wp_at P slot s \<and> cte_at slot' s" in hoare_strengthen_post)
        apply (rule hoare_vcg_conj_lift)
-        apply wp_once
+        apply wp
        apply (wp get_cap_cte)
       apply (clarsimp|wp)+
   done

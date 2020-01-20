@@ -14,7 +14,7 @@ begin
 
 context Arch begin
 
-global_naming ARM
+global_naming ARM_HYP
 
 lemma get_pd_of_thread_reachable:
   "get_pd_of_thread (kheap s) (arch_state s) t \<noteq> 0
@@ -80,7 +80,8 @@ lemma some_get_page_info_umapsD:
       apply (drule_tac x = "(ptrFromPAddr b)" in  bspec )
        apply (fastforce simp: obj_at_def)
       apply (clarsimp dest!: is_aligned_ptrFromPAddrD)
-     apply (intro exI conjI, simp_all add: pageBits_def)[1]
+     apply (frule (1) data_at_aligned)
+     apply (intro exI conjI, simp_all add: is_aligned_ptrFromPAddrD)[1]
     apply (simp add: get_pt_info_def get_pt_entry_def)
    apply clarsimp
    apply (frule obj_bits_data_at)
@@ -161,8 +162,8 @@ global_interpretation AInvsPre?: AInvsPre
   qed
 
 requalify_facts
-  ARM.user_mem_dom_cong
-  ARM.device_mem_dom_cong
-  ARM.device_frame_in_device_region
-  ARM.is_aligned_physMappingOffset
+  ARM_HYP.user_mem_dom_cong
+  ARM_HYP.device_mem_dom_cong
+  ARM_HYP.device_frame_in_device_region
+  ARM_HYP.is_aligned_physMappingOffset
 end

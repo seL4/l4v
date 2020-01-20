@@ -527,8 +527,8 @@ lemma ran_array_to_map:
   "ran (array_to_map n c) = {y. \<exists>i\<le>n. index c (unat i) = y}"
   by (auto simp: array_to_map_def ran_def Collect_eq)
 
-text {* Note: Sometimes, @{text array_map_conv} might be more convenient
-              in conjunction with @{const array_relation}. *}
+text \<open>Note: Sometimes, @{text array_map_conv} might be more convenient
+              in conjunction with @{const array_relation}.\<close>
 definition "array_map_conv f n c \<equiv> map_comp f (array_to_map n c)"
 
 lemma array_map_conv_def2:
@@ -553,11 +553,11 @@ lemma ran_array_map_conv:
   by (auto simp add: array_map_conv_def2 ran_def Collect_eq)
 
 (* FIXME: move to somewhere sensible >>> *)
-text {* Map inversion (implicitly assuming injectivity). *}
+text \<open>Map inversion (implicitly assuming injectivity).\<close>
 definition
   "the_inv_map m = (\<lambda>s. if s\<in>ran m then Some (THE x. m x = Some s) else None)"
 
-text {* Map inversion can be expressed by function inversion. *}
+text \<open>Map inversion can be expressed by function inversion.\<close>
 lemma the_inv_map_def2:
   "the_inv_map m = (Some \<circ> the_inv_into (dom m) (the \<circ> m)) |` (ran m)"
   apply (rule ext)
@@ -567,10 +567,10 @@ lemma the_inv_map_def2:
   apply auto
   done
 
-text {* The domain of a function composition with Some is the universal set. *}
+text \<open>The domain of a function composition with Some is the universal set.\<close>
 lemma dom_comp_Some[simp]: "dom (comp Some f) = UNIV" by (simp add: dom_def)
 
-text {* Assuming injectivity, map inversion produces an inversive map. *}
+text \<open>Assuming injectivity, map inversion produces an inversive map.\<close>
 lemma is_inv_the_inv_map:
   "inj_on m (dom m) \<Longrightarrow> is_inv m (the_inv_map m)"
   apply (simp add: is_inv_def)
@@ -1658,7 +1658,7 @@ where
     ksIdleThread = ctcb_ptr_to_tcb_ptr (ksIdleThread_' s),
     ksSchedulerAction = cscheduler_action_to_H (ksSchedulerAction_' s),
     ksInterruptState =
-      cint_state_to_H (intStateIRQNode_' s) (intStateIRQTable_' s),
+      cint_state_to_H intStateIRQNode_array_Ptr (intStateIRQTable_' s),
     ksWorkUnitsCompleted = ksWorkUnitsCompleted_' s,
     ksArchState = carch_state_to_H s,
     ksMachineState = cstate_to_machine_H s\<rparr>"

@@ -41,8 +41,5 @@ sanitiseRegister _ _ v = v
 getSanitiseRegisterInfo :: PPtr TCB -> Kernel Bool
 getSanitiseRegisterInfo _ = return False
 
-setTCBIPCBuffer :: VPtr -> UserMonad ()
-setTCBIPCBuffer ptr = setRegister (RegisterSet.Register TP) $ fromVPtr ptr
-
 postModifyRegisters :: PPtr TCB -> PPtr TCB -> UserMonad ()
 postModifyRegisters _ _ = return ()

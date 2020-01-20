@@ -50,6 +50,9 @@ abbreviation (input) Write::rights
 abbreviation (input) Grant::rights
   where "Grant \<equiv> AllowGrant"
 
+abbreviation (input) GrantReply::rights
+  where "GrantReply \<equiv> AllowGrantReply"
+
 (* Capability data, such as guard information. *)
 type_synonym cdl_raw_capdata = word32
 
@@ -152,14 +155,6 @@ datatype cdl_page_table_intent =
 datatype cdl_page_intent =
     (* Map: (target), (pd), vaddr, rights, attr *)
     PageMapIntent word32 "cdl_right set" cdl_raw_vmattrs
-    (*
-     * Remap: (target), (pd), rights, attr
-     *
-     * Note that Remap differs from the abstract spec. This is to
-     * prevent Remap() from taking place after all rights to the PD
-     * are long-gone.
-     *)
- |  PageRemapIntent"cdl_right set" cdl_raw_vmattrs
     (* Unmap: (target) *)
  |  PageUnmapIntent
     (* FlushCaches: (target) *)
@@ -183,6 +178,7 @@ datatype cdl_asid_pool_intent =
 datatype cdl_notification_intent =
     SendSignalIntent word32
 
+(* Also used with reply caps *)
 datatype cdl_endpoint_intent =
     SendMessageIntent "cdl_cptr list"
 

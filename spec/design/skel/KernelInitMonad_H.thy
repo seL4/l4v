@@ -14,9 +14,9 @@ theory KernelInitMonad_H
 imports KernelStateData_H Types_H Fault_H
 begin
 
-text {* This is a similar way of getting around StateT as with the kernel
+text \<open>This is a similar way of getting around StateT as with the kernel
 state, we add an extra field to the record that Haskell expects to store the
-inner monad state. *}
+inner monad state.\<close>
 
 record init_data =
   initFreeMemory   :: "region list"

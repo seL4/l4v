@@ -18,7 +18,7 @@ imports
   "Lib.LemmaBucket"
 begin
 
-text {*
+text \<open>
   The seL4 kernel, when appropriately restricted, is a separation kernel. Any
   two processes in separate domains should behave the same as if they were
   processes running on two physically separated machines. They should not be
@@ -57,7 +57,7 @@ text {*
   Systems with such a setup satisfy the preconditions of our separate
   non-intereference proof, which shows that information travels only along
   these authorised channels.
-*}
+\<close>
 
 definition
   separate_cap :: "cap \<Rightarrow> bool"

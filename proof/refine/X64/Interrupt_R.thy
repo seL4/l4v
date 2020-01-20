@@ -179,19 +179,6 @@ lemmas irq_const_defs =
   maxIRQ_def minIRQ_def
   X64.maxUserIRQ_def X64.minUserIRQ_def X64_H.maxUserIRQ_def X64_H.minUserIRQ_def
 
-(* FIXME x64: move *)
-lemma whenE_throwError_corresK[corresK]:
-    "\<lbrakk>corres_underlyingK sr nf nf' F (frel \<oplus> rvr) Q Q' m m'\<rbrakk>  \<Longrightarrow>
-          corres_underlyingK sr nf nf' (frel f f' \<and> P = P' \<and> F) (frel \<oplus> rvr) (\<lambda>s. \<not> P \<longrightarrow> Q s) (\<lambda>s. \<not> P' \<longrightarrow> Q' s)
-               (doE _ \<leftarrow> whenE P (throwError f);
-                    m
-                odE)
-               (doE _ \<leftarrow> whenE P' (throwError f');
-                    m'
-                odE)"
-  apply (clarsimp simp add: corres_underlyingK_def)
-  by (rule whenE_throwError_corres; simp)
-
 lemma arch_decode_irq_control_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
    corres (ser \<oplus> arch_irq_control_inv_relation)
@@ -229,7 +216,7 @@ lemma arch_decode_irq_control_corres:
             apply (clarsimp simp: arch_irq_control_inv_relation_def )
            apply ((wpsimp wp: isIRQActive_inv
       simp: invs_valid_objs invs_psp_aligned invs_valid_objs' invs_pspace_aligned' invs_pspace_distinct'
-      | wp_once hoare_drop_imps)+)
+      | wp (once) hoare_drop_imps)+)
     \<comment> \<open>IOAPIC\<close>
   apply (rule conjI, clarsimp)
   apply (rule corres_guard_imp)
@@ -249,7 +236,7 @@ lemma arch_decode_irq_control_corres:
               apply (clarsimp simp: arch_irq_control_inv_relation_def )
              apply ((wpsimp wp: isIRQActive_inv
                           simp: invs_valid_objs invs_psp_aligned invs_valid_objs' invs_pspace_aligned' invs_pspace_distinct'
-                     | wp_once hoare_drop_imps)+)
+                     | wp (once) hoare_drop_imps)+)
   by (auto split: arch_invocation_label.splits invocation_label.splits)
 
 
@@ -296,7 +283,7 @@ lemma lsfco_real_cte_at'[wp]:
   apply (rule hoare_pre)
    apply (wp resolveAddressBits_real_cte_at'
             | simp
-            | wpc | wp_once hoare_drop_imps)+
+            | wpc | wp (once) hoare_drop_imps)+
   done
 
 lemma arch_decode_irq_control_valid'[wp]:
@@ -313,7 +300,7 @@ lemma arch_decode_irq_control_valid'[wp]:
    apply (simp add: rangeCheck_def unlessE_whenE cong: list.case_cong prod.case_cong
           | wp whenE_throwError_wp isIRQActive_wp ensureEmptySlot_stronger
           | wpc
-          | wp_once hoare_drop_imps)+
+          | wp (once) hoare_drop_imps)+
   apply (fastforce simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt)
   done
 
@@ -331,12 +318,8 @@ lemma decode_irq_control_valid'[wp]:
    apply (wp ensureEmptySlot_stronger isIRQActive_wp
              whenE_throwError_wp
                 | simp add: o_def | wpc
-                | wp_once hoare_drop_imps)+
+                | wp (once) hoare_drop_imps)+
   done
-
-lemma irq_nodes_global_refs:
-  "irq_node' s + (ucast (irq:: 8 word)) * 0x20 \<in> global_refs' s"
-  by (simp add: global_refs'_def mult.commute mult.left_commute)
 
 lemma valid_globals_ex_cte_cap_irq:
   "\<lbrakk> ex_cte_cap_wp_to' isCNodeCap ptr s; valid_global_refs' s;
@@ -422,7 +405,7 @@ lemma isnt_irq_handler_strg:
 
 lemma safe_ioport_insert'_ntfn_strg:
   "isNotificationCap cap \<longrightarrow> safe_ioport_insert' cap cap' s"
-  by (clarsimp simp: safe_ioport_insert'_not_ioport isCap_simps)
+  by (clarsimp simp: isCap_simps)
 
 lemma ct_in_current_domain_ksMachineState:
   "ct_idle_or_in_cur_domain' (ksMachineState_update p s) = ct_idle_or_in_cur_domain' s"
@@ -620,7 +603,7 @@ lemma arch_invoke_irq_control_invs'[wp]:
   apply (simp add: X64_H.performIRQControl_def)
   apply (rule hoare_pre)
    apply (wp cteInsert_simple_invs
-            | simp add: cte_wp_at_ctes_of safe_ioport_insert'_not_ioport isCap_simps
+            | simp add: cte_wp_at_ctes_of isCap_simps
             | wpc)+
   apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid'
                         is_simple_cap'_def isCap_simps
@@ -640,7 +623,7 @@ lemma invoke_irq_control_invs'[wp]:
   apply (cases i, simp_all add: performIRQControl_def)
   apply (rule hoare_pre)
    apply (wp cteInsert_simple_invs
-           | simp add: cte_wp_at_ctes_of safe_ioport_insert'_not_ioport isCap_simps)+
+           | simp add: cte_wp_at_ctes_of isCap_simps)+
   apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid'
                         is_simple_cap'_def isCap_simps
                         safe_parent_for'_def sameRegionAs_def3)
@@ -804,7 +787,6 @@ lemma timerTick_corres:
   done
 
 lemmas corres_eq_trivial = corres_Id[where f = h and g = h for h, simplified]
-thm corres_Id
 
 lemma handle_interrupt_corres:
   "corres dc
@@ -856,10 +838,6 @@ apply (rule corres_split)
    apply clarsimp
   done
 
-lemma invs_ChooseNewThread:
-  "invs' s \<Longrightarrow> invs' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
-  by (rule invs'_update_cnt)
-
 lemma ksDomainTime_invs[simp]:
   "invs' (a\<lparr>ksDomainTime := t\<rparr>) = invs' a"
   by (simp add:invs'_def valid_state'_def
@@ -897,13 +875,6 @@ lemma updateTimeSlice_valid_pspace[wp]:
   apply (auto simp:tcb_cte_cases_def)
   done
 
-lemma updateTimeSlice_sch_act_wf[wp]:
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-   \<lbrace>\<lambda>r s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  by (wp threadSet_sch_act,simp)
-
-
 lemma updateTimeSlice_valid_queues[wp]:
   "\<lbrace>\<lambda>s. Invariants_H.valid_queues s \<rbrace>
    threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
@@ -912,131 +883,6 @@ lemma updateTimeSlice_valid_queues[wp]:
   apply (clarsimp simp:obj_at'_def inQ_def)
   done
 
-
-lemma updateTimeSlice_sym_refs[wp]:
-  "\<lbrace>\<lambda>s. sym_refs (state_refs_of' s)\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. sym_refs (state_refs_of' s)\<rbrace>"
-  apply (simp add: threadSet_def setObject_def split_def)
-  apply (wp crunch_wps getObject_tcb_wp
-    | simp add: updateObject_default_def loadObject_default_def
-    | wpc)+
-   apply (clarsimp simp:state_refs_of'_def
-     obj_at'_def lookupAround2_known1)
-  apply (subst lookupAround2_known1)
-   apply simp
-  apply (erule_tac f1 = sym_refs in arg_cong[THEN iffD1,rotated])
-  apply (rule ext)
-  apply (subst option.sel)
-  apply (subst fst_conv)+
-  apply (clarsimp simp:projectKO_eq projectKO_opt_tcb split:Structures_H.kernel_object.splits)
-  apply (simp add:objBits_simps)
-  apply (frule_tac s' = s and
-    v' = "(KOTCB (tcbTimeSlice_update (\<lambda>_. ts') obj))" in ps_clear_updE)
-   apply simp
-  apply (clarsimp simp:fun_upd_def)
-  apply (rule set_eqI)
-  apply (rule iffI)
-   apply (clarsimp split:option.splits if_split_asm)
-   apply (intro conjI impI)
-    apply simp
-   apply clarsimp
-   apply (drule_tac s' = s and y = thread and x = x and
-    v' = "(KOTCB (tcbTimeSlice_update (\<lambda>_. ts') obj))"
-     in ps_clear_updE[rotated])
-    apply simp
-   apply (clarsimp simp:fun_upd_def)
-  apply (clarsimp split:option.splits if_split_asm)
-  apply (intro conjI impI)
-   apply simp
-  apply clarsimp
-   apply (drule_tac y = thread and x = x and s' = s and
-    v' = "KOTCB obj"
-     in ps_clear_updE)
-    apply simp
-  apply (simp add:fun_upd_def[symmetric])
-  apply (subgoal_tac "s\<lparr>ksPSpace := ksPSpace s(thread \<mapsto> KOTCB obj)\<rparr> = s")
-   apply simp
-  apply (case_tac s)
-   apply simp
-  apply (rule ext,simp)
-  done
-
-lemma updateTimeSlice_if_live_then_nonz_cap'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. if_live_then_nonz_cap' s\<rbrace>"
-  apply (wp threadSet_iflive'T)
-   apply (simp add:tcb_cte_cases_def)
-  apply (clarsimp simp:if_live_then_nonz_cap'_def
-   ko_wp_at'_def)
-  apply (intro conjI)
-   apply (clarsimp simp:obj_at'_real_def)+
-  done
-
-lemma updateTimeSlice_if_unsafe_then_cap'[wp]:
-  "\<lbrace>\<lambda>s. if_unsafe_then_cap' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. if_unsafe_then_cap' s\<rbrace>"
-  apply (wp threadSet_ifunsafe'T)
-   apply (simp add:tcb_cte_cases_def)+
-  done
-
-lemma updateTimeSlice_valid_idle'[wp]:
-  "\<lbrace>\<lambda>s. valid_idle' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. valid_idle' s\<rbrace>"
-  apply (wp threadSet_idle'T)
-  apply (simp add:tcb_cte_cases_def)
-  apply (clarsimp simp:valid_idle'_def)
-  done
-
-lemma updateTimeSlice_valid_global_refs'[wp]:
-  "\<lbrace>\<lambda>s. valid_global_refs' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. valid_global_refs' s\<rbrace>"
-  apply (wp threadSet_idle'T)
-  apply (simp add:tcb_cte_cases_def)+
-  done
-
-lemma updateTimeSlice_valid_irq_node'[wp]:
-  "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. valid_irq_node' (irq_node' s) s\<rbrace>"
-  apply (rule hoare_pre)
-  apply wps
-  apply (simp add: valid_irq_node'_def
-    | wp hoare_vcg_all_lift)+
-  done
-
-lemma updateTimeSlice_irq_handlers'[wp]:
-  "\<lbrace>\<lambda>s. valid_irq_handlers' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. valid_irq_handlers' s\<rbrace>"
-  apply (rule hoare_pre)
-  apply (wp threadSet_irq_handlers' |
-   simp add: tcb_cte_cases_def)+
-  done
-
-
-lemma updateTimeSlice_valid_queues'[wp]:
-  "\<lbrace>\<lambda>s. valid_queues' s \<rbrace>
-  threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. valid_queues' s\<rbrace>"
-  apply (wp threadSet_valid_queues')
-  apply (auto simp:inQ_def)
-  done
-
-lemma rescheduleRequired_valid_irq_node'[wp]:
-  "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s\<rbrace> rescheduleRequired
-  \<lbrace>\<lambda>rv s. valid_irq_node' (irq_node' s) s \<rbrace>"
-  apply (simp add:rescheduleRequired_def valid_irq_node'_def)
-  apply (wp hoare_vcg_all_lift | wpc |simp)+
-   apply (simp add:tcbSchedEnqueue_def)
-   apply (wp hoare_unless_wp)
-   apply (wp threadSet_typ_at_lifts | wps)+
-  apply simp
-  done
 
 (* catch up tcbSchedAppend to tcbSchedEnqueue, which has these from crunches on possibleSwitchTo *)
 crunch ifunsafe[wp]: tcbSchedAppend if_unsafe_then_cap'
@@ -1057,7 +903,7 @@ lemma timerTick_invs'[wp]:
   apply (wp threadSet_invs_trivial threadSet_pred_tcb_no_state
             rescheduleRequired_all_invs_but_ct_not_inQ
             tcbSchedAppend_invs_but_ct_not_inQ'
-       | simp add: tcb_cte_cases_def numDomains_def invs_ChooseNewThread
+       | simp add: tcb_cte_cases_def numDomains_def
        | wpc)+
       apply (simp add:decDomainTime_def)
       apply wp
@@ -1119,15 +965,6 @@ lemma hint_invs[wp]:
 
 crunch st_tcb_at'[wp]: timerTick "st_tcb_at' P t"
   (wp: threadSet_pred_tcb_no_state)
-
-lemma handleInterrupt_runnable:
-  "\<lbrace>st_tcb_at' runnable' t\<rbrace> handleInterrupt irq \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
-  apply (simp add: handleInterrupt_def)
-  apply (rule conjI; rule impI)
-   apply (wp sai_st_tcb' hoare_vcg_all_lift hoare_drop_imps
-             threadSet_pred_tcb_no_state getIRQState_inv haskell_fail_wp
-          |wpc|simp add: handleReservedIRQ_def)+
-  done
 
 end
 

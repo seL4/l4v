@@ -37,65 +37,43 @@ translations
 definition lift_hst :: "'a::heap_state_type' \<Rightarrow> heap_state" where
   "lift_hst s \<equiv> lift_state (hst_mem s,hst_htd s)"
 
-definition
-  point_eq_mod :: "('a \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> 'a set \<Rightarrow> bool"
-where
+definition point_eq_mod :: "('a \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> 'a set \<Rightarrow> bool" where
   "point_eq_mod f g X \<equiv> \<forall>x. x \<notin> X \<longrightarrow> f x = g x"
 
-definition
-  exec_fatal :: "('s,'b,'c) com \<Rightarrow> ('s,'b,'c) body \<Rightarrow> 's \<Rightarrow> bool"
-where
-  "exec_fatal C \<Gamma> s \<equiv> (\<exists>f. \<Gamma> \<turnstile> \<langle>C,Normal s\<rangle> \<Rightarrow> Fault f) \<or>
-      (\<Gamma> \<turnstile> \<langle>C,Normal s\<rangle> \<Rightarrow> Stuck)"
+definition exec_fatal :: "('s,'b,'c) com \<Rightarrow> ('s,'b,'c) body \<Rightarrow> 's \<Rightarrow> bool" where
+  "exec_fatal C \<Gamma> s \<equiv> (\<exists>f. \<Gamma> \<turnstile> \<langle>C,Normal s\<rangle> \<Rightarrow> Fault f) \<or> (\<Gamma> \<turnstile> \<langle>C,Normal s\<rangle> \<Rightarrow> Stuck)"
 
-definition
-  restrict_htd :: "'s::heap_state_type' \<Rightarrow> s_addr set \<Rightarrow> 's"
-where
+definition restrict_htd :: "'s::heap_state_type' \<Rightarrow> s_addr set \<Rightarrow> 's" where
   "restrict_htd s X \<equiv> s\<lparr> hst_htd := restrict_s (hst_htd s) X \<rparr>"
 
-definition
-  restrict_safe_OK :: "'s \<Rightarrow> 's \<Rightarrow> ('s \<Rightarrow> ('s,'c) xstate) \<Rightarrow>
-       s_addr set \<Rightarrow> ('s::heap_state_type','b,'c) com \<Rightarrow> ('s,'b,'c) body \<Rightarrow> bool"
-where
+definition restrict_safe_OK ::
+  "'s \<Rightarrow> 's \<Rightarrow> ('s \<Rightarrow> ('s,'c) xstate) \<Rightarrow> s_addr set \<Rightarrow> ('s::heap_state_type','b,'c) com \<Rightarrow>
+     ('s,'b,'c) body \<Rightarrow> bool" where
   "restrict_safe_OK s t f X C \<Gamma> \<equiv>
       \<Gamma> \<turnstile> \<langle>C,(Normal (restrict_htd s X))\<rangle> \<Rightarrow> f (restrict_htd t X) \<and>
-      point_eq_mod (lift_state (hst_mem t,hst_htd t))
-          (lift_state (hst_mem s,hst_htd s)) X"
+      point_eq_mod (lift_state (hst_mem t,hst_htd t)) (lift_state (hst_mem s,hst_htd s)) X"
 
-definition
-  restrict_safe :: "'s \<Rightarrow> ('s,'c) xstate \<Rightarrow>
-       ('s::heap_state_type','b,'c) com \<Rightarrow> ('s,'b,'c) body \<Rightarrow> bool"
-where
-  "restrict_safe s t C \<Gamma> \<equiv> \<forall>X. (case t of
-      Normal t' \<Rightarrow> restrict_safe_OK s t' Normal X C \<Gamma> |
-      Abrupt t' \<Rightarrow> restrict_safe_OK s t' Abrupt X C \<Gamma> |
-      _ \<Rightarrow> False) \<or>
-      exec_fatal C \<Gamma> (restrict_htd s X)"
+definition restrict_safe ::
+  "'s \<Rightarrow> ('s,'c) xstate \<Rightarrow> ('s::heap_state_type','b,'c) com \<Rightarrow> ('s,'b,'c) body \<Rightarrow> bool" where
+  "restrict_safe s t C \<Gamma> \<equiv>
+     \<forall>X. (case t of
+            Normal t' \<Rightarrow> restrict_safe_OK s t' Normal X C \<Gamma>
+          | Abrupt t' \<Rightarrow> restrict_safe_OK s t' Abrupt X C \<Gamma>
+          | _ \<Rightarrow> False) \<or>
+         exec_fatal C \<Gamma> (restrict_htd s X)"
 
-definition
-  mem_safe :: "('s::{heap_state_type',type},'b,'c) com \<Rightarrow>
-               ('s,'b,'c) body \<Rightarrow> bool"
-where
-  "mem_safe C \<Gamma> \<equiv> \<forall>s t. \<Gamma> \<turnstile> \<langle>C,Normal s\<rangle> \<Rightarrow> t \<longrightarrow>
-      restrict_safe s t C \<Gamma>"
+definition mem_safe :: "('s::{heap_state_type',type},'b,'c) com \<Rightarrow> ('s,'b,'c) body \<Rightarrow> bool" where
+  "mem_safe C \<Gamma> \<equiv> \<forall>s t. \<Gamma> \<turnstile> \<langle>C,Normal s\<rangle> \<Rightarrow> t \<longrightarrow> restrict_safe s t C \<Gamma>"
 
-definition
-  point_eq_mod_safe :: "'s::{heap_state_type',type} set \<Rightarrow>
-     ('s \<Rightarrow> 's) \<Rightarrow> ('s \<Rightarrow> s_addr \<Rightarrow> 'c) \<Rightarrow> bool"
-where
-  "point_eq_mod_safe P f g \<equiv> \<forall>s X. restrict_htd s X \<in> P \<longrightarrow>
-      point_eq_mod (g (f s)) (g s) X"
+definition point_eq_mod_safe ::
+  "'s::{heap_state_type',type} set \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> ('s \<Rightarrow> s_addr \<Rightarrow> 'c) \<Rightarrow> bool" where
+  "point_eq_mod_safe P f g \<equiv> \<forall>s X. restrict_htd s X \<in> P \<longrightarrow> point_eq_mod (g (f s)) (g s) X"
 
-definition
-  comm_restrict :: "('s::{heap_state_type',type} \<Rightarrow> 's) \<Rightarrow> 's \<Rightarrow> s_addr set \<Rightarrow> bool"
-where
+definition comm_restrict :: "('s::{heap_state_type',type} \<Rightarrow> 's) \<Rightarrow> 's \<Rightarrow> s_addr set \<Rightarrow> bool" where
   "comm_restrict f s X \<equiv> f (restrict_htd s X) = restrict_htd (f s) X"
 
-definition
-  comm_restrict_safe :: "'s set \<Rightarrow> ('s::{heap_state_type',type} \<Rightarrow> 's) \<Rightarrow> bool"
-where
-  "comm_restrict_safe P f \<equiv> \<forall>s X. restrict_htd s X \<in> P \<longrightarrow>
-      comm_restrict f s X"
+definition comm_restrict_safe :: "'s set \<Rightarrow> ('s::{heap_state_type',type} \<Rightarrow> 's) \<Rightarrow> bool" where
+  "comm_restrict_safe P f \<equiv> \<forall>s X. restrict_htd s X \<in> P \<longrightarrow> comm_restrict f s X"
 
 definition htd_ind :: "('a::{heap_state_type',type} \<Rightarrow> 'b) \<Rightarrow> bool" where
   "htd_ind f \<equiv> \<forall>x s. f s = f (hst_htd_update x s)"
@@ -118,9 +96,8 @@ where
 | "intra_safe (Call p) = True"
 | "intra_safe (DynCom f) = (htd_ind f \<and> (\<forall>s. intra_safe (f s)))"
 | "intra_safe (Guard f P C) = (mono_guard P \<and> (case C of
-      Basic g \<Rightarrow> comm_restrict_safe P g \<and> (*point_eq_mod_safe P g hst_mem \<and> *)
-
-                     point_eq_mod_safe P g (\<lambda>s. lift_state (hst_mem s,hst_htd s))
+      Basic g \<Rightarrow> comm_restrict_safe P g \<and>
+                 point_eq_mod_safe P g (\<lambda>s. lift_state (hst_mem s,hst_htd s))
       | _ \<Rightarrow> intra_safe C))"
 | "intra_safe Throw = True"
 | "intra_safe (Catch C D) = (intra_safe C \<and> intra_safe D)"
@@ -140,9 +117,7 @@ begin
 end
 
 instance state_ext :: (heap_state_type,type) heap_state_type
-  apply intro_classes
-  apply auto
-  done
+  by intro_classes auto
 
 primrec
   intra_deps :: "('s','b,'c) com \<Rightarrow> 'b set"
@@ -168,7 +143,7 @@ where
   "x \<in> intra_deps C \<Longrightarrow> x \<in> proc_deps C \<Gamma>"
 | "\<lbrakk> x \<in> proc_deps C \<Gamma>; \<Gamma> x = Some D; y \<in> intra_deps D \<rbrakk> \<Longrightarrow> y \<in> proc_deps C \<Gamma>"
 
-text {* ---- *}
+text \<open>----\<close>
 
 lemma point_eq_mod_refl [simp]:
   "point_eq_mod f f X"
@@ -224,7 +199,7 @@ lemma lift_state_point_eq_mod:
   "\<lbrakk> point_eq_mod (lift_state (h,d)) (lift_state (h',d')) X \<rbrakk> \<Longrightarrow>
       lift_state (h,d) |` (UNIV - X) =
           lift_state (h',d') |` (UNIV - X)"
-  by (auto simp: point_eq_mod_def restrict_map_def intro: ext)
+  by (auto simp: point_eq_mod_def restrict_map_def)
 
 lemma htd_'_update_ind [simp]:
   "htd_ind f \<Longrightarrow> f (hst_htd_update x s) = f s"
@@ -255,22 +230,19 @@ proof (rule, rule hoare_complete, simp only: valid_def, clarify)
   show "ta \<in> Normal ` {t. (Q (g x t) \<and>\<^sup>* R (h x)) (lift_hst t)}"
   proof (cases ta)
     case (Normal s)
-    moreover with ev safe nofault have ev': "\<Gamma> \<turnstile>
+    moreover from this ev safe nofault have ev': "\<Gamma> \<turnstile>
         \<langle>C,Normal (x\<lparr> hst_htd := (restrict_s (hst_htd x) (dom s\<^sub>0)) \<rparr>)\<rangle> \<Rightarrow>
            Normal (s\<lparr> hst_htd := (restrict_s (hst_htd s) (dom s\<^sub>0)) \<rparr>)" and
         "point_eq_mod (lift_state (hst_mem s,hst_htd s))
             (lift_state (hst_mem x,hst_htd x)) (dom s\<^sub>0)"
       by (auto simp: restrict_htd_def dest: mem_safe_NormalD)
-    moreover with m disj have "s\<^sub>1 = lift_hst s |` (UNIV - dom s\<^sub>0)"
-apply -
-apply(clarsimp simp: lift_hst_def)
-apply(subst lift_state_point_eq_mod)
- apply(drule sym)
- apply clarsimp
- apply fast
-apply(simp add: lift_hst_def lift_state_point_eq_mod map_add_restrict)
-apply(subst restrict_map_subdom, auto dest: map_disjD)
-done
+    moreover from this m disj have "s\<^sub>1 = lift_hst s |` (UNIV - dom s\<^sub>0)"
+      apply(clarsimp simp: lift_hst_def)
+      apply(subst lift_state_point_eq_mod)
+       apply(fastforce dest: sym)
+      apply(simp add: lift_hst_def lift_state_point_eq_mod map_add_restrict)
+      apply(subst restrict_map_subdom, auto dest: map_disjD)
+      done
     ultimately show ?thesis using orig_spec hi_f hi_g hi_g' pre_P pre_R m
       by (force simp: cvalid_def valid_def image_def lift_hst_def
                       map_disj_def
@@ -299,22 +271,22 @@ lemma sep_frame:
       \<forall>s. \<Gamma> \<turnstile> \<lbrace>s. (P (f \<acute>(\<lambda>x. x)) \<and>\<^sup>* R (h \<acute>(\<lambda>x. x))) (lift_state (k \<acute>(\<lambda>x. x)))\<rbrace>
                C
                \<lbrace>(Q (g s \<acute>(\<lambda>x. x)) \<and>\<^sup>* R (h s)) (lift_state (k \<acute>(\<lambda>x. x)))\<rbrace>"
-apply(simp only:)
-apply(fold lift_hst_def)
-apply(erule (4) sep_frame')
-done
+  apply(simp only:)
+  apply(fold lift_hst_def)
+  apply(erule (4) sep_frame')
+  done
 
 
 lemma point_eq_mod_safe [simp]:
   "\<lbrakk> point_eq_mod_safe P f g; restrict_htd s X \<in> P; x \<notin> X \<rbrakk> \<Longrightarrow>
       g (f s) x = (g s) x"
-apply (simp add: point_eq_mod_safe_def point_eq_mod_def)
-apply(case_tac x, force)
-done
+  apply(simp add: point_eq_mod_safe_def point_eq_mod_def)
+  apply(case_tac x, force)
+  done
 
 lemma comm_restrict_safe [simp]:
   "\<lbrakk> comm_restrict_safe P f; restrict_htd s X \<in> P \<rbrakk> \<Longrightarrow>
-      restrict_htd (f s ) X = f (restrict_htd s X)"
+        restrict_htd (f s ) X = f (restrict_htd s X)"
   by (simp add: comm_restrict_safe_def comm_restrict_def)
 
 lemma mono_guardD:
@@ -325,48 +297,51 @@ lemma expr_htd_ind:
   "expr_htd_ind P \<Longrightarrow> restrict_htd s X \<in> P = (s \<in> P)"
   by (simp add: expr_htd_ind_def restrict_htd_def)
 
+(* exec.intros without those already declared as [intro] *)
+lemmas exec_other_intros = exec.intros(1-3) exec.intros(5-14) exec.intros(16-17) exec.intros(19-)
+
 lemma exec_fatal_Seq:
   "exec_fatal C \<Gamma> s \<Longrightarrow> exec_fatal (C;;D) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros)
+  by (force simp: exec_fatal_def intro: exec_other_intros)
 
 lemma exec_fatal_Seq2:
   "\<lbrakk> \<Gamma> \<turnstile> \<langle>C,Normal s\<rangle> \<Rightarrow> Normal t; exec_fatal D \<Gamma> t \<rbrakk> \<Longrightarrow> exec_fatal (C;;D) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros)
+  by (force simp: exec_fatal_def intro: exec_other_intros)
 
 lemma exec_fatal_Cond:
   "exec_fatal (Cond P C D) \<Gamma> s = (if s \<in> P then exec_fatal C \<Gamma> s else
       exec_fatal D \<Gamma> s)"
-  by (force simp: exec_fatal_def intro: exec.intros
+  by (force simp: exec_fatal_def intro: exec_other_intros
             elim: exec_Normal_elim_cases)
 
 lemma exec_fatal_While:
   "\<lbrakk> exec_fatal C \<Gamma> s; s \<in> P \<rbrakk> \<Longrightarrow> exec_fatal (While P C) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros
+  by (force simp: exec_fatal_def intro: exec_other_intros
             elim: exec_Normal_elim_cases)
 
 lemma exec_fatal_While2:
   "\<lbrakk> exec_fatal (While P C) \<Gamma> t; \<Gamma> \<turnstile> \<langle>C,Normal s\<rangle> \<Rightarrow> Normal t; s \<in> P \<rbrakk> \<Longrightarrow>
       exec_fatal (While P C) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros
+  by (force simp: exec_fatal_def intro: exec_other_intros
             elim: exec_Normal_elim_cases)
 
 lemma exec_fatal_Call:
   "\<lbrakk> \<Gamma> p = Some C; exec_fatal C \<Gamma> s \<rbrakk> \<Longrightarrow> exec_fatal (Call p) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros)
+  by (force simp: exec_fatal_def intro: exec_other_intros)
 
 lemma exec_fatal_DynCom:
   "exec_fatal (f s) \<Gamma> s \<Longrightarrow> exec_fatal (DynCom f) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros)
+  by (force simp: exec_fatal_def intro: exec_other_intros)
 
 lemma exec_fatal_Guard:
   "exec_fatal (Guard f P C) \<Gamma> s = (s \<in> P \<longrightarrow> exec_fatal C \<Gamma> s)"
 proof (cases "s \<in> P")
   case True thus ?thesis
-    by (force simp: exec_fatal_def intro: exec.intros
+    by (force simp: exec_fatal_def intro: exec_other_intros
               elim: exec_Normal_elim_cases)
 next
   case False thus ?thesis
-    by (force simp: exec_fatal_def intro: exec.intros)
+    by (force simp: exec_fatal_def intro: exec_other_intros)
 qed
 
 lemma restrict_safe_Guard:
@@ -375,11 +350,11 @@ lemma restrict_safe_Guard:
 proof (cases t)
   case (Normal s) with restrict show ?thesis
     by (force simp: restrict_safe_def restrict_safe_OK_def exec_fatal_Guard
-              intro: exec.intros)
+              intro: exec_other_intros)
 next
   case (Abrupt s) with restrict show ?thesis
     by (force simp: restrict_safe_def restrict_safe_OK_def exec_fatal_Guard
-              intro: exec.intros)
+              intro: exec_other_intros)
 next
   case (Fault f) with restrict show ?thesis
     by (force simp: restrict_safe_def exec_fatal_Guard)
@@ -390,17 +365,17 @@ qed
 
 lemma restrict_safe_Guard2:
   "\<lbrakk> s \<notin> P; mono_guard P \<rbrakk> \<Longrightarrow> restrict_safe s (Fault f) (Guard f P C) \<Gamma>"
-  by (force simp: restrict_safe_def exec_fatal_def intro: exec.intros
+  by (force simp: restrict_safe_def exec_fatal_def intro: exec_other_intros
             dest: mono_guardD)
 
 lemma exec_fatal_Catch:
   "exec_fatal C \<Gamma> s \<Longrightarrow> exec_fatal (TRY C CATCH D END) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros)
+  by (force simp: exec_fatal_def intro: exec_other_intros)
 
 lemma exec_fatal_Catch2:
   "\<lbrakk> \<Gamma> \<turnstile> \<langle>C,Normal s\<rangle> \<Rightarrow> Abrupt t; exec_fatal D \<Gamma> t \<rbrakk> \<Longrightarrow>
       exec_fatal (TRY C CATCH D END) \<Gamma> s"
-  by (force simp: exec_fatal_def intro: exec.intros)
+  by (force simp: exec_fatal_def intro: exec_other_intros)
 
 lemma intra_safe_restrict [rule_format]:
   assumes safe_env: "\<And>n C. \<Gamma> n = Some C \<Longrightarrow> intra_safe C" and
@@ -409,7 +384,7 @@ lemma intra_safe_restrict [rule_format]:
 using exec
 proof induct
   case (Skip s) thus ?case
-    by (force simp: restrict_safe_def restrict_safe_OK_def intro: exec.intros)
+    by (force simp: restrict_safe_def restrict_safe_OK_def intro: exec_other_intros)
 next
   case (Guard s' P C t f) show ?case
   proof (cases "\<exists>g. C = Basic g")
@@ -419,7 +394,7 @@ next
     case True with Guard show ?thesis
       by (cases t) (force simp: restrict_safe_def restrict_safe_OK_def
                                 point_eq_mod_safe_def exec_fatal_Guard
-                          intro: exec.intros
+                          intro: exec_other_intros
                           elim: exec_Normal_elim_cases,
                     (fast elim: exec_Normal_elim_cases)+)
   qed
@@ -431,32 +406,25 @@ next
 next
   case (Basic f s) thus ?case
     by (force simp: restrict_safe_def restrict_safe_OK_def point_eq_mod_safe_def
-              intro: exec.intros)
+              intro: exec_other_intros)
 next
   case (Spec r s t) thus ?case
-    apply (clarsimp simp: mem_safe_def)
-    apply (fastforce intro: exec.Spec)
-    done
+    by (fastforce simp: mem_safe_def intro: exec.Spec)
 next
   case (SpecStuck r s) thus ?case
-    apply clarsimp
-    apply (erule_tac x=\<Gamma> in allE)
-    apply (simp add: mem_safe_def)
-    apply (erule allE, erule allE, erule impE, erule exec.SpecStuck)
-    apply assumption
-    done
+    by (simp add: exec.SpecStuck mem_safe_StuckD restrict_safe_def)
 next
   case (Seq C s sa D ta) show ?case
   proof (cases sa)
     case (Normal s') with Seq show ?thesis
       by (cases ta)
          (clarsimp simp: restrict_safe_def restrict_safe_OK_def,
-          (drule_tac x=X in spec)+, auto intro: exec.intros point_eq_mod_trans
+          (drule_tac x=X in spec)+, auto intro: exec_other_intros point_eq_mod_trans
                                                exec_fatal_Seq exec_fatal_Seq2)+
   next
     case (Abrupt s') with Seq show ?thesis
       by (force simp: restrict_safe_def restrict_safe_OK_def
-                intro: exec.intros dest: exec_fatal_Seq
+                intro: exec_other_intros dest: exec_fatal_Seq
                 elim: exec_Normal_elim_cases)
   next
     case (Fault f) with Seq show ?thesis
@@ -471,24 +439,24 @@ next
   case (CondTrue s P C t D) thus ?case
     by (cases t)
        (auto simp: restrict_safe_def restrict_safe_OK_def exec_fatal_Cond
-             intro: exec.intros dest: expr_htd_ind split: if_split_asm)
+             intro: exec_other_intros dest: expr_htd_ind split: if_split_asm)
 next
   case (CondFalse s P C t D) thus ?case
     by (cases t)
        (auto simp: restrict_safe_def restrict_safe_OK_def exec_fatal_Cond
-             intro: exec.intros dest: expr_htd_ind split: if_split_asm)
+             intro: exec_other_intros dest: expr_htd_ind split: if_split_asm)
 next
   case (WhileTrue P C s s' t) show ?case
   proof (cases s')
     case (Normal sa) with WhileTrue show ?thesis
       by (cases t)
          (clarsimp simp: restrict_safe_def restrict_safe_OK_def,
-          (drule_tac x=X in spec)+, auto simp: expr_htd_ind intro: exec.intros
+          (drule_tac x=X in spec)+, auto simp: expr_htd_ind intro: exec_other_intros
                point_eq_mod_trans exec_fatal_While exec_fatal_While2)+
   next
     case (Abrupt sa) with WhileTrue show ?thesis
       by (force simp: restrict_safe_def restrict_safe_OK_def expr_htd_ind
-                intro: exec.intros exec_fatal_While
+                intro: exec_other_intros exec_fatal_While
                 elim: exec_Normal_elim_cases)
   next
     case (Fault f) with WhileTrue show ?thesis
@@ -500,15 +468,15 @@ next
 next
   case (WhileFalse P C s) thus ?case
     by (force simp: restrict_safe_def restrict_safe_OK_def expr_htd_ind
-              intro: exec.intros)
+              intro: exec_other_intros)
 next
   case (Call C p s t) with safe_env show ?case
     by (cases t)
        (auto simp: restrict_safe_def restrict_safe_OK_def
-             intro: exec_fatal_Call exec.intros)
+             intro: exec_fatal_Call exec_other_intros)
 next
   case (CallUndefined p s) thus ?case
-    by (force simp: restrict_safe_def exec_fatal_def intro: exec.intros)
+    by (force simp: restrict_safe_def exec_fatal_def intro: exec_other_intros)
 
 next
   case (StuckProp C) thus ?case by simp
@@ -517,23 +485,23 @@ next
     by (cases t)
        (auto simp: restrict_safe_def restrict_safe_OK_def
                    restrict_htd_def
-             intro!: exec.intros exec_fatal_DynCom)
+             intro!: exec_other_intros exec_fatal_DynCom)
 next
   case (Throw s) thus ?case
-    by (force simp: restrict_safe_def restrict_safe_OK_def intro: exec.intros)
+    by (force simp: restrict_safe_def restrict_safe_OK_def intro: exec_other_intros)
 next
   case (AbruptProp C s) thus ?case by simp
 next
   case (CatchMatch C D s s' t) thus ?case
     by (cases t)
        (clarsimp simp: restrict_safe_def, drule_tac x=X in spec,
-        auto simp: restrict_safe_OK_def intro: exec.intros point_eq_mod_trans
+        auto simp: restrict_safe_OK_def intro: exec_other_intros point_eq_mod_trans
              dest: exec_fatal_Catch exec_fatal_Catch2)+
 next
   case (CatchMiss C s t D) thus ?case
     by (cases t)
        (clarsimp simp: restrict_safe_def, drule_tac x=X in spec,
-        auto simp: restrict_safe_OK_def intro: exec.intros
+        auto simp: restrict_safe_OK_def intro: exec_other_intros
              dest: exec_fatal_Catch)+
 qed
 
@@ -565,51 +533,40 @@ lemma mono_guard_triv2:
 
 lemma dom_restrict_s:
   "x \<in> dom_s (restrict_s d X) \<Longrightarrow> x \<in> dom_s d \<and> x \<in> X"
-apply(auto simp: restrict_s_def dom_s_def split: if_split_asm)
-done
-
+  by (auto simp: restrict_s_def dom_s_def split: if_split_asm)
 
 lemma mono_guard_ptr_safe:
   "\<lbrakk> \<And>s. d s = hst_htd (s::'a::heap_state_type); htd_ind p \<rbrakk> \<Longrightarrow>
       mono_guard {s. ptr_safe (p s) (d s)}"
-  apply (auto simp: mono_guard_def ptr_safe_def restrict_htd_def )
-apply(drule (1) subsetD)
-apply(drule dom_restrict_s)
-apply simp
-done
+  by (auto simp: mono_guard_def ptr_safe_def restrict_htd_def dest: subsetD dom_restrict_s)
 
 lemma point_eq_mod_safe_ptr_safe_update:
   "\<lbrakk> d = (hst_htd::'a::heap_state_type \<Rightarrow> heap_typ_desc);
       m = (\<lambda>s. hst_mem_update (heap_update (p s) ((v s)::'b::mem_type)) s);
       h = hst_mem; k = (\<lambda>s. lift_state (h s,d s)); htd_ind p \<rbrakk> \<Longrightarrow>
       point_eq_mod_safe {s. ptr_safe (p s) (d s)} m k"
-  apply (auto simp: point_eq_mod_safe_def point_eq_mod_def ptr_safe_def heap_update_def
-                 restrict_htd_def  lift_state_def
-           intro!: heap_update_nmem_same split: s_heap_index.splits)
-apply(subgoal_tac "(a,SIndexVal) \<in> s_footprint (p s)")
- apply(drule (1) subsetD)
- apply(drule dom_restrict_s, clarsimp)
-apply(drule intvlD, clarsimp)
-apply(erule s_footprintI2)
-done
+  apply (clarsimp simp: point_eq_mod_safe_def point_eq_mod_def ptr_safe_def heap_update_def
+                        restrict_htd_def lift_state_def
+                  intro!: heap_update_nmem_same
+                  split: s_heap_index.splits)
+  apply(subgoal_tac "(a,SIndexVal) \<in> s_footprint (p s)")
+   apply(drule (1) subsetD)
+   apply(drule dom_restrict_s, clarsimp)
+  apply(drule intvlD, clarsimp)
+  apply(erule s_footprintI2)
+  done
 
 lemma field_ti_s_sub_typ:
   "field_lookup (export_uinfo (typ_info_t TYPE('b::mem_type))) f 0 = Some (typ_uinfo_t TYPE('a),b) \<Longrightarrow>
       s_footprint ((Ptr &(p\<rightarrow>f))::'a::mem_type ptr) \<subseteq> s_footprint (p::'b ptr)"
-apply(drule field_ti_s_sub)
-apply(simp add: s_footprint_def)
-done
+  by (drule field_ti_s_sub) (simp add: s_footprint_def)
 
 lemma ptr_safe_mono:
   "\<lbrakk> ptr_safe (p::'a::mem_type ptr) d; field_lookup (typ_info_t TYPE('a)) f 0
       = Some (t,n); export_uinfo t = typ_uinfo_t TYPE('b) \<rbrakk> \<Longrightarrow>
       ptr_safe ((Ptr &(p\<rightarrow>f))::'b::mem_type ptr) d"
-apply(simp add: ptr_safe_def)
-apply(drule field_lookup_export_uinfo_Some)
-apply simp
-apply(drule field_ti_s_sub_typ)
-apply(erule (1) subset_trans)
-done
+  unfolding ptr_safe_def
+  by (drule field_lookup_export_uinfo_Some) (auto dest: field_ti_s_sub_typ)
 
 lemma point_eq_mod_safe_ptr_safe_update_fl:
   "\<lbrakk> d = (hst_htd::'a::heap_state_type \<Rightarrow> heap_typ_desc);
@@ -618,168 +575,95 @@ lemma point_eq_mod_safe_ptr_safe_update_fl:
       field_lookup (typ_info_t TYPE('c)) f 0 = Some (t,n);
       export_uinfo t = typ_uinfo_t TYPE('b) \<rbrakk> \<Longrightarrow>
       point_eq_mod_safe {s. ptr_safe ((p::'a \<Rightarrow> 'c::mem_type ptr) s) (d s)} m k"
-apply(drule (3) point_eq_mod_safe_ptr_safe_update)
- apply(simp only: htd_ind_def)
- apply clarify
-apply(clarsimp simp: point_eq_mod_safe_def)
-apply(drule_tac x=s in spec)
-apply(drule_tac x=X in spec)
-apply(erule impE)
- apply(erule (2) ptr_safe_mono)
-apply simp
-done
+  apply(drule (3) point_eq_mod_safe_ptr_safe_update)
+   apply(fastforce simp: htd_ind_def)
+  apply(fastforce simp: point_eq_mod_safe_def intro!: ptr_safe_mono)
+  done
+
+context
+begin
+
+private method m =
+  (clarsimp simp: ptr_retyp_d_eq_snd ptr_retyp_footprint list_map_eq,
+   erule notE,
+   drule intvlD, clarsimp,
+   (rule s_footprintI; assumption?),
+   subst (asm) unat_of_nat,
+   (subst (asm) mod_less; assumption?),
+   subst len_of_addr_card,
+   erule less_trans,
+   simp)
 
 lemma point_eq_mod_safe_ptr_safe_tag:
   "\<lbrakk> d = (hst_htd::'a::heap_state_type \<Rightarrow> heap_typ_desc); h = hst_mem;
-      m = (\<lambda>s. hst_htd_update (ptr_retyp (p s)) s);
-      k = (\<lambda>s. lift_state (h s,d s));
-      htd_ind p \<rbrakk> \<Longrightarrow>
-      point_eq_mod_safe {s. ptr_safe ((p s)::'b::mem_type ptr) (d s)} m k"
-apply(auto simp: point_eq_mod_safe_def point_eq_mod_def ptr_safe_def)
-apply(subgoal_tac "(a,b) \<notin> s_footprint (p (restrict_htd s X))")
- prefer 2
- apply clarsimp
- apply(drule (1) subsetD)
- apply(clarsimp simp: restrict_htd_def)
- apply(drule dom_restrict_s, clarsimp)
- apply(thin_tac "P \<notin> Q" for P Q)
-apply(auto simp: restrict_htd_def  lift_state_def split_def split: s_heap_index.splits split: option.splits)
-     apply(subst (asm) ptr_retyp_d_eq_fst)
-     apply(clarsimp split: if_split_asm)
-     apply(erule notE)
-     apply(drule intvlD, clarsimp)
-     apply(erule s_footprintI2)
-    apply(subst (asm) ptr_retyp_d_eq_fst)
-    apply(clarsimp split: if_split_asm)
-   apply(subst (asm) ptr_retyp_d_eq_snd)
-   apply(clarsimp split: if_split_asm)
-  apply(subst (asm) ptr_retyp_d_eq_snd)
-  apply(clarsimp split: if_split_asm)
-  apply(erule notE)
-  apply(frule intvlD, clarsimp)
-  apply(rule s_footprintI)
-   apply(subst (asm) ptr_retyp_footprint)
-    apply simp
-   apply clarsimp
-   apply(clarsimp simp: list_map_eq split: if_split_asm)
-   apply(subst (asm) unat_of_nat)
-   apply(subst (asm) mod_less)
-    apply(subst len_of_addr_card)
-    apply(erule less_trans)
-    apply simp
-   apply fast
-  apply assumption
- apply(simp add: ptr_retyp_d_eq_snd)
- apply(clarsimp split: if_split_asm)
- apply(simp add: ptr_retyp_footprint)
- apply(clarsimp simp: list_map_eq split: if_split_asm)
- apply(erule notE)
- apply(drule intvlD, clarsimp)
- apply(rule s_footprintI)
-  apply(subst (asm) unat_of_nat)
-  apply(subst (asm) mod_less)
-   apply(subst len_of_addr_card)
-   apply(erule less_trans)
-   apply simp
-  apply assumption+
-apply(simp add: ptr_retyp_d_eq_snd)
-apply(clarsimp split: if_split_asm)
-apply(simp add: ptr_retyp_footprint)
-apply(clarsimp simp: list_map_eq split: if_split_asm)
-apply(erule notE)
-apply(drule intvlD, clarsimp)
-apply(rule s_footprintI)
- apply(subst (asm) unat_of_nat)
- apply(subst (asm) mod_less)
-  apply(subst len_of_addr_card)
-  apply(erule less_trans)
-  apply simp
- apply assumption+
-apply(simp add: ptr_retyp_d_eq_snd)
-apply(clarsimp split: if_split_asm)
-apply(simp add: ptr_retyp_footprint)
-apply(clarsimp simp: list_map_eq split: if_split_asm)
-apply(erule notE)
-apply(drule intvlD, clarsimp)
-apply(rule s_footprintI)
- apply(subst (asm) unat_of_nat)
- apply(subst (asm) mod_less)
-  apply(subst len_of_addr_card)
-  apply(erule less_trans)
-  apply simp
- apply assumption+
-done
+     m = (\<lambda>s. hst_htd_update (ptr_retyp (p s)) s);
+     k = (\<lambda>s. lift_state (h s,d s));
+     htd_ind p \<rbrakk> \<Longrightarrow>
+   point_eq_mod_safe {s. ptr_safe ((p s)::'b::mem_type ptr) (d s)} m k"
+  supply if_split_asm[split]
+  apply(clarsimp simp: point_eq_mod_safe_def point_eq_mod_def ptr_safe_def)
+  apply(subgoal_tac "(a,b) \<notin> s_footprint (p (restrict_htd s X))")
+   prefer 2
+   apply(fastforce simp: restrict_htd_def dest: dom_restrict_s)
+  apply(clarsimp simp: restrict_htd_def  lift_state_def split: s_heap_index.split option.splits)
+  apply (safe; m?)
+    apply(fastforce simp: ptr_retyp_d_eq_fst dest!: intvlD dest: s_footprintI2)
+   apply(fastforce simp: ptr_retyp_d_eq_fst)
+  apply(subst (asm) ptr_retyp_d_eq_snd, clarsimp)
+  done
+
+end
 
 lemma comm_restrict_safe_ptr_safe_tag:
   fixes d::"'a::heap_state_type \<Rightarrow> heap_typ_desc"
-  assumes fun_d: "d = hst_htd" and fun_upd:
-      "m = (\<lambda>s. hst_htd_update (ptr_retyp (p s)) s)" and ind: "htd_ind p" and
-      upd: "\<And>d d' (s::'a). hst_htd_update (d s) (hst_htd_update (d' s) s) =
-                hst_htd_update ((d s) \<circ> (d' s)) s"
-  shows "comm_restrict_safe {s. ptr_safe ((p s)::'b::mem_type ptr) (d s)}
-          m"
+  assumes
+    fun_d: "d = hst_htd" and
+    fun_upd: "m = (\<lambda>s. hst_htd_update (ptr_retyp (p s)) s)" and
+    ind: "htd_ind p" and
+    upd: "\<And>d d' (s::'a).
+               hst_htd_update (d s) (hst_htd_update (d' s) s) = hst_htd_update ((d s) \<circ> (d' s)) s"
+  shows "comm_restrict_safe {s. ptr_safe ((p s)::'b::mem_type ptr) (d s)} m"
 proof (simp only: comm_restrict_safe_def comm_restrict_def, auto)
   fix s X
   assume "ptr_safe (p (restrict_htd s X)) (d (restrict_htd s X))"
-  moreover from ind have p: "p (restrict_htd s X) = p s"
+  moreover from ind
+  have p: "p (restrict_htd s X) = p s"
     by (simp add:  restrict_htd_def)
-  ultimately have "ptr_retyp (p s) (restrict_s (hst_htd s) X) =
-      restrict_s (ptr_retyp (p s) (hst_htd s))  X" using fun_d
-apply -
-apply(rule ext)
-apply(auto simp: point_eq_mod_safe_def point_eq_mod_def ptr_safe_def)
-apply(auto simp: restrict_htd_def )
-apply(case_tac "x \<notin> {ptr_val (p s)..+size_of TYPE('b)}")
- apply(subst ptr_retyp_d)
-  apply clarsimp
- apply(clarsimp simp: restrict_map_def restrict_s_def)
- apply(subst ptr_retyp_d)
-  apply clarsimp
- apply simp
- apply(subst ptr_retyp_d)
-  apply clarsimp
- apply simp
-apply clarsimp
-apply(subst ptr_retyp_footprint)
- apply fast
-apply(clarsimp simp: restrict_map_def restrict_s_def)
-apply(subst ptr_retyp_footprint)
- apply fast
-apply simp
-apply(subst ptr_retyp_footprint)
- apply fast
-apply(rule)
- apply(subgoal_tac "(x,SIndexVal) \<in> s_footprint (p s)")
-  apply(drule (1) subsetD)
-  apply(clarsimp simp: dom_s_def)
- apply(drule intvlD, clarsimp)
- apply(erule s_footprintI2)
-apply(rule ext)
-apply(clarsimp simp: map_add_def list_map_eq)
-apply(subgoal_tac "(x,SIndexTyp y) \<in> s_footprint (p s)")
- apply(drule (1) subsetD)
- apply(clarsimp simp: dom_s_def split: if_split_asm)
-apply(drule intvlD, clarsimp)
-apply(rule s_footprintI)
- apply(subst (asm) unat_simps)
- apply(subst (asm) mod_less)
-  apply(subst len_of_addr_card)
-  apply(erule less_trans)
-  apply simp
- apply assumption+
-done
-  hence "((ptr_retyp (p s) \<circ> (%x _. x) (restrict_s (hst_htd s) X)::heap_typ_desc \<Rightarrow> heap_typ_desc) =
-              (%x _. x) (restrict_s (ptr_retyp (p s) (hst_htd s)) X))"
+  ultimately
+  have "ptr_retyp (p s) (restrict_s (hst_htd s) X) = restrict_s (ptr_retyp (p s) (hst_htd s))  X"
+    using fun_d
+    apply -
+    apply(rule ext)
+    apply(clarsimp simp: point_eq_mod_safe_def point_eq_mod_def ptr_safe_def restrict_htd_def)
+    apply(case_tac "x \<notin> {ptr_val (p s)..+size_of TYPE('b)}")
+     apply(clarsimp simp: ptr_retyp_d restrict_map_def restrict_s_def)
+     apply(subst ptr_retyp_d; simp)
+    apply(clarsimp simp: ptr_retyp_footprint restrict_map_def restrict_s_def)
+    apply(subst ptr_retyp_footprint, simp)
+    apply(rule conjI)
+     apply(subgoal_tac "(x,SIndexVal) \<in> s_footprint (p s)")
+      apply(fastforce simp: dom_s_def)
+     apply(fastforce dest: intvlD elim: s_footprintI2)
+    apply(rule ext)
+    apply(clarsimp simp: map_add_def list_map_eq)
+    apply(subgoal_tac "(x,SIndexTyp y) \<in> s_footprint (p s)")
+     apply(fastforce simp: dom_s_def split: if_split_asm)
+    apply(drule intvlD, clarsimp)
+    apply(rule s_footprintI; assumption?)
+    apply(metis len_of_addr_card less_trans max_size mod_less word_unat.eq_norm)
+    done
+  hence "((ptr_retyp (p s) \<circ> (\<lambda>x _. x) (restrict_s (hst_htd s) X)::heap_typ_desc \<Rightarrow> heap_typ_desc) =
+              (\<lambda>x _. x) (restrict_s (ptr_retyp (p s) (hst_htd s)) X))"
     by - (rule ext, simp)
   moreover from upd have "hst_htd_update (ptr_retyp (p s))
-        (hst_htd_update ((%x _. x) (restrict_s (hst_htd s) X)) s) =
-         hst_htd_update (((ptr_retyp (p s)) \<circ> ((%x _. x) (restrict_s (hst_htd s) X)))) s" .
-  moreover from upd have "hst_htd_update ((%x _. x) (restrict_s (ptr_retyp (p s) (hst_htd s)) X))
-        (hst_htd_update (ptr_retyp (p s)) s) =
-        hst_htd_update (((%x _. x) (restrict_s ((ptr_retyp (p s) (hst_htd s))) X)) \<circ> (ptr_retyp (p s)))
-            s" .
-  ultimately show "m (restrict_htd s X) =
-          restrict_htd (m s) X" using fun_d fun_upd upd p
+        (hst_htd_update ((\<lambda>x _. x) (restrict_s (hst_htd s) X)) s) =
+         hst_htd_update (((ptr_retyp (p s)) \<circ> ((\<lambda>x _. x) (restrict_s (hst_htd s) X)))) s" .
+  moreover from upd
+  have
+    "hst_htd_update ((\<lambda>x _. x) (restrict_s (ptr_retyp (p s) (hst_htd s)) X))
+                    (hst_htd_update (ptr_retyp (p s)) s) =
+     hst_htd_update (((\<lambda>x _. x) (restrict_s ((ptr_retyp (p s) (hst_htd s))) X)) \<circ> (ptr_retyp (p s))) s" .
+  ultimately show "m (restrict_htd s X) = restrict_htd (m s) X" using fun_d fun_upd upd p
     by (simp add: restrict_htd_def o_def)
 qed
 
@@ -818,7 +702,7 @@ lemma proc_deps_Cond [simp]:
   "proc_deps (Cond P C D) \<Gamma> = proc_deps C \<Gamma> \<union> proc_deps D \<Gamma>"
 proof
   show "proc_deps (Cond P C D) \<Gamma> \<subseteq> proc_deps C \<Gamma> \<union> proc_deps D \<Gamma>"
-    by - (rule, erule proc_deps.induct, auto intro: proc_deps.intros)
+    by (rule, erule proc_deps.induct, auto intro: proc_deps.intros)
 next
   show "proc_deps C \<Gamma> \<union> proc_deps D \<Gamma> \<subseteq> proc_deps (Cond P C D) \<Gamma>"
     by auto (erule proc_deps.induct, auto intro: proc_deps.intros)+
@@ -840,7 +724,7 @@ lemma proc_deps_Catch [simp]:
   "proc_deps (Catch  C D) \<Gamma> = proc_deps C \<Gamma> \<union> proc_deps D \<Gamma>"
 proof
   show "proc_deps (Catch C D) \<Gamma> \<subseteq> proc_deps C \<Gamma> \<union> proc_deps D \<Gamma>"
-    by - (rule, erule proc_deps.induct, auto intro: proc_deps.intros)
+    by (rule, erule proc_deps.induct, auto intro: proc_deps.intros)
 next
   show "proc_deps C \<Gamma> \<union> proc_deps D \<Gamma> \<subseteq> proc_deps (Catch C D) \<Gamma>"
     by auto (erule proc_deps.induct, auto intro: proc_deps.intros)+
@@ -850,10 +734,10 @@ lemma proc_deps_Call [simp]:
   "proc_deps (Call p) \<Gamma> = {p} \<union> (case \<Gamma> p of Some C \<Rightarrow>
       proc_deps C (\<Gamma>(p := None)) | _ \<Rightarrow> {})" (is "?X = ?Y \<union> ?Z")
 proof
+  note proc_deps.intros[intro]
   show "?X \<subseteq> ?Y \<union> ?Z"
-    by - (rule, erule proc_deps.induct,
-          auto intro: proc_deps.intros,
-          case_tac "xa = p", auto intro: proc_deps.intros split: option.splits)
+    by (rule subsetI, erule proc_deps.induct, fastforce)
+       (rename_tac x D y, case_tac "x = p"; fastforce split: option.splits)
 next
   show "?Y \<union> ?Z \<subseteq> ?X"
   proof (clarsimp, rule)
@@ -861,19 +745,18 @@ next
   next
     show "?Z \<subseteq> ?X"
       by (split option.splits, rule, force intro: proc_deps.intros)
-         (clarify, erule proc_deps.induct, (force intro: proc_deps.intros
-          split: if_split_asm)+)
+         (clarify, erule proc_deps.induct;
+          force intro: proc_deps.intros split: if_split_asm)
   qed
 qed
 
 lemma proc_deps_DynCom [simp]:
   "proc_deps (DynCom f) \<Gamma> = \<Union>{proc_deps (f s) \<Gamma> | s. True}"
-  by auto (erule proc_deps.induct, force intro: proc_deps.intros,
-           force intro: proc_deps.intros)+
+  by (rule equalityI; clarsimp; erule proc_deps.induct; force intro: proc_deps.intros)
 
 lemma proc_deps_restrict:
   "proc_deps C \<Gamma> \<subseteq> proc_deps C (\<Gamma>(p := None)) \<union> proc_deps (Call p) \<Gamma>"
-proof rule
+proof
   fix xa
   assume mem: "xa \<in> proc_deps C \<Gamma>"
   hence "\<forall>p. xa \<in> proc_deps C (\<Gamma>(p := None)) \<union> proc_deps (Call p) \<Gamma>" (is "?X")
@@ -914,98 +797,23 @@ lemma exec_restrict:
   shows "\<And>\<Gamma> X. \<lbrakk> \<Gamma>' = \<Gamma> |` X; proc_deps C \<Gamma> \<subseteq> X \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<langle>C,s\<rangle> \<Rightarrow> t"
 using exec
 proof induct
-  case Skip thus ?case by (fast intro: exec.intros)
-next
-  case (Guard C f P s' t) thus ?case by (force intro: exec.intros)
-next
-  case (GuardFault C f P s) thus ?case by (fast intro: exec.intros)
-next
-  case (FaultProp C f) thus ?case by simp
-next
-  case (Basic f s) thus ?case by (fast intro: exec.intros)
-next
-  case (Spec r s t) thus ?case by (fast intro: exec.intros)
-next
-  case (SpecStuck r s) thus ?case by (fast intro: exec.intros)
-next
-  case (Seq C D s sa ta) thus ?case by (force intro: exec.intros)
-next
-  case (CondTrue P C D s t) thus ?case by (force intro: exec.intros)
-next
-  case (CondFalse P C D s t) thus ?case by (force intro: exec.intros)
-next
-  case (WhileTrue P C s s' t) thus ?case by (force intro: exec.intros)
-next
-  case (WhileFalse P C s) thus ?case by (force intro: exec.intros)
-next
-  case (Call p C s t) thus ?case
-    by - (insert proc_deps_restrict [of C \<Gamma> p], force intro: exec.intros)
-next
-  case (CallUndefined p s) thus ?case by (force intro: exec.intros)
-next
-  case (StuckProp C) thus ?case by simp
-next
-  case (DynCom f s t) thus ?case by (force intro: exec.intros)
-next
-  case (Throw s) thus ?case by (force intro: exec.intros)
-next
-  case (AbruptProp C s) thus ?case by simp
-next
-  case (CatchMatch C D s s' t) thus ?case by (force intro: exec.intros)
-next
-  case (CatchMiss C D s t) thus ?case by (force intro: exec.intros)
-qed
+  case (Call p C s t)
+  thus ?case
+    using proc_deps_restrict [of C \<Gamma> p] by (force intro: exec_other_intros)
+qed (force intro: exec_other_intros)+
 
 lemma exec_restrict2:
   assumes exec: "\<Gamma> \<turnstile> \<langle>C,s\<rangle> \<Rightarrow> t"
   shows "\<And>X. proc_deps C \<Gamma> \<subseteq> X \<Longrightarrow> \<Gamma> |` X \<turnstile> \<langle>C,s\<rangle> \<Rightarrow> t"
 using exec
 proof induct
-  case Skip thus ?case by (fast intro: exec.intros)
-next
-  case (Guard C f P s' t) thus ?case by (force intro: exec.intros)
-next
-  case (GuardFault C f P s) thus ?case by (fast intro: exec.intros)
-next
-  case (FaultProp C f) thus ?case by simp
-next
-  case (Basic f s) thus ?case by (fast intro: exec.intros)
-next
-  case (Spec r s t) thus ?case by (fast intro: exec.intros)
-next
-  case (SpecStuck r s) thus ?case by (fast intro: exec.intros)
-next
-  case (Seq C D s sa ta) thus ?case by (auto intro: exec.intros)
-next
-  case (CondTrue P C D s t) thus ?case
-    by (force intro: exec.intros)
-next
-  case (CondFalse P C D s t) thus ?case
-    by (force intro: exec.intros)
-next
-  case (WhileTrue P C s s' t) thus ?case by (auto intro: exec.intros)
-next
-  case (WhileFalse P C s) thus ?case by (force intro: exec.intros)
-next
   case (Call p C s t) thus ?case
-    by - (insert proc_deps_restrict [of C \<Gamma> p],
-          auto intro!: exec.intros split: option.splits)
-next
-  case (CallUndefined p s) thus ?case by (force intro: exec.intros)
-next
-  case (StuckProp C) thus ?case by simp
+  using proc_deps_restrict [of C \<Gamma> p]
+    by (auto intro!: exec_other_intros split: option.splits)
 next
   case (DynCom f s t) thus ?case
     by - (rule exec.intros, simp, blast)
-next
-  case (Throw s) thus ?case by (force intro: exec.intros)
-next
-  case (AbruptProp C s) thus ?case by simp
-next
-  case (CatchMatch C D s s' t) thus ?case by (auto intro: exec.intros)
-next
-  case (CatchMiss C D s t) thus ?case by (force intro: exec.intros)
-qed
+qed (auto intro: exec_other_intros)
 
 lemma exec_restrict_eq:
   "\<Gamma> |` proc_deps C \<Gamma> \<turnstile> \<langle>C,s\<rangle> \<Rightarrow> t = \<Gamma> \<turnstile> \<langle>C,s\<rangle> \<Rightarrow> t"

@@ -16,7 +16,7 @@ imports
 
 begin
 
-text {*
+text \<open>
 WPFix handles four issues which are annoying with precondition schematics:
   1. Schematics in obligation (postcondition) positions which remain unset
 after goals are solved. They should be instantiated to True.
@@ -24,7 +24,7 @@ after goals are solved. They should be instantiated to True.
 be instantiated to a conjunction and then separated.
   3/4. Schematics applied to datatype expressions such as @{term True} or
 @{term "Some x"}. See @{theory "Lib.Datatype_Schematic"} for details.
-*}
+\<close>
 
 lemma use_strengthen_prop_intro:
   "PROP P \<Longrightarrow> PROP (strengthen_implementation.st_prop1 (PROP Q) (PROP P))
@@ -61,7 +61,7 @@ lemma strg_target_to_true:
   "strengthen_implementation.st F (\<longrightarrow>) (target_var n True) True"
   by (simp add: target_var_def strengthen_implementation.strengthen_refl)
 
-ML {*
+ML \<open>
 structure WPFix = struct
 
 val st_refl = @{thm strengthen_implementation.strengthen_refl}
@@ -213,13 +213,14 @@ fun tac ctxt = SUBGOAL (fn (t, _) => let
 fun both_tac ctxt = (Datatype_Schematic.tac ctxt THEN' (TRY o tac ctxt))
     ORELSE' tac ctxt
 
-val method
-    = Args.context >> (fn _ => fn ctxt => Method.SIMPLE_METHOD' (both_tac ctxt));
+val method =
+  Method.sections [Datatype_Schematic.add_section] >>
+    (fn _ => fn ctxt => Method.SIMPLE_METHOD' (both_tac ctxt));
 
 end
-*}
+\<close>
 
-method_setup wpfix = {* WPFix.method *}
+method_setup wpfix = \<open>WPFix.method\<close>
 
 lemma demo1:
   "(\<exists>Ia Ib Ic Id Ra.
@@ -258,5 +259,14 @@ lemma demo2:
    apply (rule P)
   apply (simp add: P17)
   done
+
+\<comment> \<open>
+  Shows how to use @{attribute datatype_schematic} rules as "accessors".
+\<close>
+lemma (in datatype_schem_demo) demo3:
+  "\<exists>x. \<forall>a b. x (basic a b) = a"
+  apply (rule exI, (rule allI)+)
+  apply (wpfix add: get_basic_0.simps) \<comment> \<open>Only exposes `a` to the schematic.\<close>
+  by (rule refl)
 
 end

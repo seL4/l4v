@@ -16,7 +16,12 @@ context Arch begin global_naming ARM_HYP
 
 named_theorems DetSchedSchedule_AI_assms
 
+crunch prepare_thread_delete_idle_thread[wp, DetSchedSchedule_AI_assms]:
+  prepare_thread_delete "\<lambda>(s:: det_ext state). P (idle_thread s)"
+  (wp: crunch_wps)
+
 crunch exst[wp]: set_vcpu "\<lambda>s. P (exst s)" (wp: crunch_wps)
+
 crunch exst[wp]: vcpu_disable,vcpu_restore,vcpu_save "\<lambda>s. P (exst s)"
   (wp: crunch_wps)
 
@@ -345,7 +350,7 @@ crunch simple_sched_action [wp, DetSchedSchedule_AI_assms]:
    simp: unless_def if_fun_split)
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
-  arch_tcb_set_ipc_buffer, arch_finalise_cap, prepare_thread_delete valid_sched
+  arch_finalise_cap, prepare_thread_delete valid_sched
   (ignore: set_object wp: crunch_wps subset_refl simp: if_fun_split)
 
 lemma activate_thread_valid_sched [DetSchedSchedule_AI_assms]:
@@ -440,6 +445,18 @@ crunches arch_post_cap_deletion
   and not_queued[wp, DetSchedSchedule_AI_assms]: "not_queued t"
   and sched_act_not[wp, DetSchedSchedule_AI_assms]: "scheduler_act_not t"
   and weak_valid_sched_action[wp, DetSchedSchedule_AI_assms]: weak_valid_sched_action
+  and valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
+
+crunches flush_space, invalidate_asid_entry, get_asid_pool
+  for flush_space_valid_idle[wp]: "\<lambda>(s:: det_ext state). P (idle_thread s)"
+
+crunch delete_asid_pool[wp]:
+  delete_asid_pool "\<lambda>(s:: det_ext state). P (idle_thread s)"
+  (wp: crunch_wps simp: if_apply_def2)
+
+crunch idle_thread[wp, DetSchedSchedule_AI_assms]:
+  arch_finalise_cap "\<lambda> (s:: det_ext state). P (idle_thread s)"
+  (wp: crunch_wps)
 
 end
 
@@ -469,11 +486,11 @@ lemma vgic_maintenance_irq_valid_sched[wp]:
                       get_gic_vcpu_ctrl_eisr0_def
                  wp: thread_get_wp' handle_fault_valid_sched
                      ct_in_state_thread_state_lift ct_not_queued_lift sch_act_sane_lift
-         | wp_once hoare_drop_imp[where f="do_machine_op m" for m]
+         | wp (once) hoare_drop_imp[where f="do_machine_op m" for m]
                    hoare_drop_imp[where f="return $ m" for m]
                    hoare_vcg_disj_lift
          | clarsimp simp: if_apply_def2
-         | wp_once hoare_vcg_imp_lift'
+         | wp (once) hoare_vcg_imp_lift'
          | rule hoare_vcg_conj_lift
                 hoare_lift_Pf[where f=cur_thread and m="vgic_update_lr p i v" for p i v])+
   apply (clarsimp intro!: st_tcb_ex_cap[where P=active]

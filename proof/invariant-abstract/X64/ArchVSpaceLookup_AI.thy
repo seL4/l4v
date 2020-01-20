@@ -983,9 +983,9 @@ theorem khupd_graph_subset:
   qed
 end
 
-abbreviation "vs_lookup_leaf ptr s \<equiv> lookup_leaf ptr (vs_lookup1 s)"
-
 context Arch begin global_naming X64
+
+locale_abbrev "vs_lookup_leaf ptr s \<equiv> lookup_leaf ptr (vs_lookup1 s)"
 
 primrec vsref_of :: "vs_ref \<Rightarrow> word64"
 where

@@ -77,7 +77,7 @@ lemmas simple_simpl_refines_Basic_guarded_spec_body
         simple_simpl_refines_guarded_Basic_guarded_spec_body
         ]
 
-ML {*
+ML \<open>
 structure Get_Body_Refines = struct
 
 fun get ctxt name = let
@@ -92,6 +92,6 @@ fun get ctxt name = let
   end
 
 end
-*}
+\<close>
 
 end

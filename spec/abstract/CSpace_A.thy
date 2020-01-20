@@ -25,6 +25,7 @@ begin
 context begin interpretation Arch .
 
 requalify_consts
+  aobjs_of
   arch_update_cap_data
   arch_derive_cap
   arch_finalise_cap
@@ -63,7 +64,8 @@ definition
     w = data_to_16 data
    in {x. case x of AllowWrite \<Rightarrow> w !! 0
                   | AllowRead \<Rightarrow> w !! 1
-                  | AllowGrant \<Rightarrow> w !! 2}"
+                  | AllowGrant \<Rightarrow> w !! 2
+                  | AllowGrantReply \<Rightarrow> w !! 3}"
 
 text \<open>Check that a capability stored in a slot is not a parent of any other
 capability.\<close>
@@ -482,7 +484,7 @@ fun
 where
   "finalise_cap NullCap                  final = return (NullCap, NullCap)"
 | "finalise_cap (UntypedCap dev r bits f)    final = return (NullCap, NullCap)"
-| "finalise_cap (ReplyCap r)             final =
+| "finalise_cap (ReplyCap r _)           final =
       (liftM (K (NullCap, NullCap)) $ when final $ do
          reply \<leftarrow> get_reply r;
          tptr \<leftarrow> return (reply_tcb reply);
@@ -497,7 +499,7 @@ where
        od)"
 | "finalise_cap (EndpointCap r b R)      final =
       (liftM (K (NullCap, NullCap)) $ when final $ cancel_all_ipc r)"
-| "finalise_cap (NotificationCap r b R) final =
+| "finalise_cap (NotificationCap r b R)  final =
       (liftM (K (NullCap, NullCap)) $ when final $ do
           sched_context_maybe_unbind_ntfn r;
           unbind_maybe_notification r;
@@ -540,7 +542,7 @@ where
 definition
   can_fast_finalise :: "cap \<Rightarrow> bool" where
  "can_fast_finalise cap \<equiv> case cap of
-    ReplyCap r \<Rightarrow> True
+    ReplyCap r R \<Rightarrow> True
   | EndpointCap r b R \<Rightarrow> True
   | NotificationCap r b R \<Rightarrow> True
   | SchedContextCap _ _ \<Rightarrow> True
@@ -638,21 +640,7 @@ where
 |
  "rec_del (ReduceZombieCall cap slot exposed) s =
   fail s"
-  defer
-   apply (simp_all cong: if_cong)[528]
-  apply (case_tac x)
-  apply (case_tac a)
-    apply (auto)[2]
-  apply (rename_tac cap cslot_ptr bool)
-  apply (case_tac cap, safe)
-             apply auto[13]
-   \<comment> \<open>Zombie\<close>
-   apply (rename_tac obj_ref option nat)
-   apply (case_tac bool)
-    apply (case_tac nat, auto)[1]
-   apply (metis (full_types) nat.exhaust)
-  apply simp
-  done
+  by pat_completeness auto
 
 text \<open>Delete a capability by calling the recursive delete operation.\<close>
 definition
@@ -743,7 +731,7 @@ where
     (is_ntfn_cap c' \<and> obj_ref_of c' = r)"
 | "same_region_as (CNodeCap r bits g) c' =
     (is_cnode_cap c' \<and> obj_ref_of c' = r \<and> bits_of c' = bits)"
-| "same_region_as (ReplyCap n) c' = (c' = ReplyCap n)"
+| "same_region_as (ReplyCap n cr) c' = (\<exists>cr'. c' = ReplyCap n cr')"
 | "same_region_as (ThreadCap r) c' =
     (is_thread_cap c' \<and> obj_ref_of c' = r)"
 | "same_region_as (SchedContextCap sc n) c' =

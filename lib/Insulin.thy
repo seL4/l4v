@@ -82,7 +82,7 @@ begin
  * several constants in a term. I don't know any examples of this, though.
  *)
 
-ML {*
+ML \<open>
 structure Insulin = struct
 
 val desugar_random_tag = "dsfjdssdfsd"
@@ -284,26 +284,26 @@ fun desugar_goal ctxt goal n s = let
   end
 
 end
-*}
+\<close>
 
-ML {*
+ML \<open>
 Outer_Syntax.command @{command_keyword "desugar_term"}
   "term str str2... -> desugar str in term"
   (Parse.term -- Scan.repeat1 Parse.string >> (fn (t, s) =>
     Toplevel.keep (fn state => let val ctxt = Toplevel.context_of state in
       Insulin.desugar_term ctxt (Syntax.read_term ctxt t) s
       |> writeln end)))
-*}
+\<close>
 
-ML {*
+ML \<open>
 Outer_Syntax.command @{command_keyword "desugar_thm"}
   "thm str str2... -> desugar str in thm"
   (Parse.thm -- Scan.repeat1 Parse.string >> (fn (t, s) =>
     Toplevel.keep (fn state => let val ctxt = Toplevel.context_of state in
       Insulin.desugar_thm ctxt (Attrib.eval_thms ctxt [t] |> hd) s |> writeln end)))
-*}
+\<close>
 
-ML {*
+ML \<open>
 fun print_subgoals (x::xs) n = (writeln (Int.toString n ^ ". " ^ x); print_subgoals xs (n+1))
   | print_subgoals [] _ = ();
 Outer_Syntax.command @{command_keyword "desugar_goal"}
@@ -314,6 +314,6 @@ Outer_Syntax.command @{command_keyword "desugar_goal"}
       |> (fn xs => case xs of
             [x] => writeln x
             | _ => print_subgoals xs 1) end)))
-*}
+\<close>
 
 end

@@ -496,43 +496,26 @@ lemma array_relation_to_map:
   "array_relation r n a c \<Longrightarrow> \<forall>i\<le>n. r (a i) (the (array_to_map n c i))"
   by (simp add: array_relation_def array_to_map_def)
 
-lemma dom_array_to_map[simp]: "dom (array_to_map n c) = {i. i\<le>n}"
-  by (simp add: array_to_map_def dom_def)
-lemma ran_array_to_map:
-  "ran (array_to_map n c) = {y. \<exists>i\<le>n. index c (unat i) = y}"
-  by (auto simp: array_to_map_def ran_def Collect_eq)
 
-text {* Note: Sometimes, @{text array_map_conv} might be more convenient
-              in conjunction with @{const array_relation}. *}
+text \<open>Note: Sometimes, @{text array_map_conv} might be more convenient
+              in conjunction with @{const array_relation}.\<close>
 definition "array_map_conv f n c \<equiv> map_comp f (array_to_map n c)"
 
 lemma array_map_conv_def2:
   "array_map_conv f n c \<equiv> \<lambda>i. if i\<le>n then f (index c (unat i)) else None"
   by (rule eq_reflection, rule ext) (simp add: array_map_conv_def map_comp_def
                                                array_to_map_def)
-lemma array_relation_map_conv:
-  "array_relation r n a c \<Longrightarrow> \<forall>x y. r y x \<longrightarrow> (f x) = y \<Longrightarrow>
-   \<forall>i>n. a i = None \<Longrightarrow> array_map_conv f n c = a"
-  by (rule ext) (simp add: array_relation_def array_map_conv_def2)
 lemma array_relation_map_conv2:
   "array_relation r n a c \<Longrightarrow> \<forall>x. \<forall>y\<in>range a. r y x \<longrightarrow> (f x) = y \<Longrightarrow>
    \<forall>i>n. a i = None \<Longrightarrow> array_map_conv f n c = a"
   by (rule ext) (simp add: array_relation_def array_map_conv_def2)
-lemma array_map_conv_Some[simp]: "array_map_conv Some n c = array_to_map n c"
-  by (simp add: array_map_conv_def map_comp_def)
-lemma map_comp_array_map_conv_comm:
- "map_comp f (array_map_conv g n c) = array_map_conv (map_comp f g) n c"
-  by (rule ext) (simp add: array_map_conv_def2 map_option_def map_comp_def)
-lemma ran_array_map_conv:
-  "ran (array_map_conv f n c) = {y. \<exists>i\<le>n. f (index c (unat i)) = Some y}"
-  by (auto simp add: array_map_conv_def2 ran_def Collect_eq)
 
 (* FIXME: move to somewhere sensible >>> *)
-text {* Map inversion (implicitly assuming injectivity). *}
+text \<open>Map inversion (implicitly assuming injectivity).\<close>
 definition
   "the_inv_map m = (\<lambda>s. if s\<in>ran m then Some (THE x. m x = Some s) else None)"
 
-text {* Map inversion can be expressed by function inversion. *}
+text \<open>Map inversion can be expressed by function inversion.\<close>
 lemma the_inv_map_def2:
   "the_inv_map m = (Some \<circ> the_inv_into (dom m) (the \<circ> m)) |` (ran m)"
   apply (rule ext)
@@ -542,10 +525,10 @@ lemma the_inv_map_def2:
   apply auto
   done
 
-text {* The domain of a function composition with Some is the universal set. *}
+text \<open>The domain of a function composition with Some is the universal set.\<close>
 lemma dom_comp_Some[simp]: "dom (comp Some f) = UNIV" by (simp add: dom_def)
 
-text {* Assuming injectivity, map inversion produces an inversive map. *}
+text \<open>Assuming injectivity, map inversion produces an inversive map.\<close>
 lemma is_inv_the_inv_map:
   "inj_on m (dom m) \<Longrightarrow> is_inv m (the_inv_map m)"
   apply (simp add: is_inv_def)
@@ -570,8 +553,6 @@ lemma is_inv_unique:
   apply (drule_tac x=x in spec)+
   apply (case_tac "g x", clarsimp+)
   done
-lemma assumes A: "is_inv f g" shows the_inv_map_eq: "the_inv_map f = g"
- by (simp add: is_inv_unique[OF A A[THEN is_inv_inj, THEN is_inv_the_inv_map]])
 (*<<<*)
 
 definition
@@ -585,15 +566,6 @@ definition
                                            pd_pointer_to_asid_slot) hw_asid)))
              (the_inv_map (array_map_conv (\<lambda>x. if x=0 then None else Some x)
                              0xFF hw_asid_table) asid))"
-
-(* FIXME: move *)
-lemma ran_map_comp_subset: "ran (map_comp f g) <= (ran f)"
-  by (fastforce simp: map_comp_def ran_def split: option.splits)
-
-(* FIXME: move *)(* NOTE: unused. *)
-lemma inj_on_option_map:
- "inj_on (map_option f o m) (dom m) \<Longrightarrow> inj_on m (dom m)"
-  by (auto simp add: inj_on_def map_option_def dom_def)
 
 lemma eq_option_to_0_rev:
   "Some 0 ~: A \<Longrightarrow> \<forall>x. \<forall>y\<in>A.
@@ -632,7 +604,7 @@ lemma (in kernel_m)
    apply (cut_tac w=i in word_le_p2m1, simp add: minus_one_norm)
   apply clarsimp
   apply (case_tac "armKSASIDMap (ksArchState astate) x")
-   apply (clarsimp simp: ran_array_map_conv option_to_0_def split:option.splits)
+   apply (clarsimp simp: option_to_0_def split:option.splits)
    apply (fastforce simp: is_inv_def)
   apply clarsimp
   apply (rule conjI)
@@ -1443,11 +1415,6 @@ where
   "mk_gsUntypedZeroRanges s
       = ran (untypedZeroRange \<circ>\<^sub>m (option_map cteCap o map_to_ctes (cstate_to_pspace_H s)))"
 
-lemma cpspace_user_data_relation_user_mem'[simp]:
-  "\<lbrakk>pspace_aligned' as;pspace_distinct' as\<rbrakk> \<Longrightarrow> cpspace_user_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
-  = cpspace_user_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
-  by (simp add: cmap_relation_def)
-
 lemma cpspace_device_data_relation_user_mem'[simp]:
   "cpspace_device_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
   = cpspace_device_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
@@ -1489,14 +1456,11 @@ where
     ksIdleThread = ctcb_ptr_to_tcb_ptr (ksIdleThread_' s),
     ksSchedulerAction = cscheduler_action_to_H (ksSchedulerAction_' s),
     ksInterruptState =
-      cint_state_to_H (intStateIRQNode_' s) (intStateIRQTable_' s),
+      cint_state_to_H intStateIRQNode_array_Ptr (intStateIRQTable_' s),
     ksWorkUnitsCompleted = ksWorkUnitsCompleted_' s,
     ksArchState = carch_state_to_H s,
     ksMachineState = cstate_to_machine_H s\<rparr>"
 
-
-lemma trivial_eq_conj: "B = C \<Longrightarrow> (A \<and> B) = (A \<and> C)"
-  by simp
 
 lemma (in kernel_m) cstate_to_H_correct:
   assumes valid: "valid_state' as"

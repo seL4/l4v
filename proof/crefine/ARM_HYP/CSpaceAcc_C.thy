@@ -276,21 +276,6 @@ lemmas ccorres_updateMDB_cte_at = ccorres_guard_from_wp [OF updateMDB_pre_cte_at
 lemmas ccorres_getSlotCap_cte_at = ccorres_guard_from_wp [OF getSlotCap_pre_cte_at empty_fail_getSlotCap]
   ccorres_guard_from_wp_bind [OF getSlotCap_pre_cte_at empty_fail_getSlotCap]
 
-lemma wordFromRights_spec:
-  defines "crl s \<equiv> (seL4_CapRights_lift \<^bsup>s\<^esup>seL4_CapRights)"
-  shows "\<forall>s. \<Gamma> \<turnstile> {s} \<acute>ret__unsigned_long :== PROC wordFromRights(\<acute>seL4_CapRights)
-  \<lbrace> \<acute>ret__unsigned_long  =
-        ((capAllowGrant_CL (crl s) << 2)
-     || (capAllowRead_CL (crl s) << 1)
-     || capAllowWrite_CL (crl s)) \<rbrace>"
-  unfolding crl_def
-  apply vcg
-  apply (simp add: word_sle_def word_sless_def)
-  apply (simp add: seL4_CapRights_lift_def shiftr_over_and_dist)
-  apply (simp add: mask_shift_simps)
-  apply (simp add: word_ao_dist2[symmetric])
-  done
-
 lemma array_assertion_abs_cnode_ctes:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> (\<exists>n. gsCNodes s p = Some n \<and> n' \<le> 2 ^ n) \<and> True
     \<longrightarrow> (x s' = 0 \<or> array_assertion (cte_Ptr p) n' (hrs_htd (t_hrs_' (globals s'))))"

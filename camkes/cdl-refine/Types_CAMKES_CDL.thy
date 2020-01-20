@@ -17,13 +17,13 @@ begin
 (* placeholder for things to fill in *)
 abbreviation "TODO \<equiv> undefined"
 
-text {* A CAmkES system is completely specified by its top-level assembly definition. *}
+text \<open>A CAmkES system is completely specified by its top-level assembly definition.\<close>
 type_synonym camkes_state = assembly
 
-text {*
+text \<open>
   Symbolic names for capability slots.
   XXX: Move this to DSpec?
-*}
+\<close>
 definition cspace :: cdl_cnode_index
   where "cspace \<equiv> 0"
 definition vspace :: cdl_cnode_index

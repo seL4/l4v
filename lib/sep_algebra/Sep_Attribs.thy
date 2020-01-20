@@ -12,9 +12,9 @@ theory Sep_Attribs
 imports Separation_Algebra Sep_Tactic_Helpers
 begin
 
-text{* Beyond the tactics above, there is also a set of attributes implemented to make proving
+text\<open>Beyond the tactics above, there is also a set of attributes implemented to make proving
        things in separation logic easier. These rules should be considered internals and are not
-       intended for direct use. *}
+       intended for direct use.\<close>
 
 
 lemma sep_curry_atomised: "\<lbrakk>(\<And>s. (P \<and>* Q) s \<longrightarrow> R s); P s \<rbrakk> \<Longrightarrow> (Q \<longrightarrow>* R) s"
@@ -35,7 +35,7 @@ lemma curry: "(P \<longrightarrow> Q \<longrightarrow> R) \<Longrightarrow> (P \
   done
 
 
-ML {*
+ML \<open>
 local
   fun atomize_thm ctxt thm = Conv.fconv_rule (Object_Logic.atomize ctxt) thm
   fun setup_simpset ctxt = put_simpset HOL_basic_ss ctxt addsimps [(sym OF [@{thm sep_conj_assoc}])]
@@ -76,9 +76,9 @@ fun backward' ctxt thm = backward (Context.proof_of ctxt) thm
 val sep_backward = Thm.rule_attribute [] (backward')
 
 end
-*}
+\<close>
 
-attribute_setup sep_curry =  {* Scan.succeed sep_curry *}
-attribute_setup sep_backward =  {* Scan.succeed sep_backward *}
+attribute_setup sep_curry =  \<open>Scan.succeed sep_curry\<close>
+attribute_setup sep_backward =  \<open>Scan.succeed sep_backward\<close>
 
 end

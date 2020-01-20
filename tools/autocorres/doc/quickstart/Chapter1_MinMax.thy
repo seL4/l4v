@@ -16,9 +16,9 @@ begin
 external_file "minmax.c"
 (*>*)
 
-section {* Introduction *}
+section \<open>Introduction\<close>
 
-text {*
+text \<open>
 
   AutoCorres is a tool that attempts to simplify the formal verification of C
   programs in the Isabelle/HOL theorem prover. It allows C code
@@ -40,20 +40,20 @@ text {*
   representation produced by AutoCorres. We will see how this is possible in the
   next chapter.
 
-*}
+\<close>
 
-section  {* A First Proof with AutoCorres *}
+section  \<open>A First Proof with AutoCorres\<close>
 
-text {*
+text \<open>
 
   We will now show how to use these tools to prove correctness of some very
   simple C functions.
 
-*}
+\<close>
 
-subsection {* Two simple functions: \texttt{min} and \texttt{max} *}
+subsection \<open>Two simple functions: \texttt{min} and \texttt{max}\<close>
 
-text {*
+text \<open>
 
   Consider the following two functions, defined in a file \texttt{minmax.c},
   which (we expect) return the minimum and maximum respectively of two unsigned
@@ -65,11 +65,11 @@ text {*
   \texttt{max} is correct. AutoCorres will hopefully allow us to prove these
   claims without too much effort.
 
-*}
+\<close>
 
-subsection {* Invoking the C-parser *}
+subsection \<open>Invoking the C-parser\<close>
 
-text {*
+text \<open>
 
   As mentioned earlier, AutoCorres does not handle C code directly. The first
   step is to apply the
@@ -77,12 +77,12 @@ text {*
   obtain a SIMPL translation. We do this using the \texttt{install-C-file}
   command in Isabelle, as shown.
 
-*}
+\<close>
 
 install_C_file "minmax.c"
 
 (* FIXME: Be consistent with \texttt and \emph *)
-text {*
+text \<open>
 
   For every function in the C source file, the C-Parser generates a
   corresponding Isabelle definition. These definitions are placed in an Isabelle
@@ -102,18 +102,18 @@ text {*
   \emph{max\_body}. We can also see here how our work is wrapped within the
   \emph{minmax} context.
 
-*}
+\<close>
 
 context minmax begin
 
   thm min_body_def
-  text {* @{thm [display] min_body_def} *}
+  text \<open>@{thm [display] min_body_def}\<close>
   thm max_body_def
-  text {* @{thm [display] max_body_def} *}
+  text \<open>@{thm [display] max_body_def}\<close>
 
 end
 
-text {*
+text \<open>
 
   The definitions above show us the SIMPL generated for each of the
   functions; we can see that C-parser has translated \texttt{min} and
@@ -142,32 +142,32 @@ text {*
   translation is sound, it does tend to make formal reasoning an arduous
   task.
 
-*}
+\<close>
 
-subsection {* Invoking AutoCorres *}
+subsection \<open>Invoking AutoCorres\<close>
 
-text {*
+text \<open>
 
   Now let's use AutoCorres to simplify our functions. This is done using
   the \texttt{autocorres} command, in a similar manner to the
   \texttt{install\_C\_file} command:
 
-*}
+\<close>
 
 autocorres "minmax.c"
 
-text {*
+text \<open>
 
   AutoCorres produces a definition in the \texttt{minmax} locale
   for each function body produced by the C parser. For example,
   our \texttt{min} function is defined as follows:
 
-*}
+\<close>
 context minmax begin
 thm min'_def
-text {* @{thm [display] min'_def} *}
+text \<open>@{thm [display] min'_def}\<close>
 
-text {*
+text \<open>
 
   Each function's definition is named identically to its name in
   C, but with a prime mark (\texttt{'}) appended. For example,
@@ -178,12 +178,12 @@ text {*
   but also emits a \emph{correspondence} or \emph{refinement} proof,
   as follows:
 
-*}
+\<close>
 
 (* FIXME *)
 (* thm min_autocorres *)
 
-text {*
+text \<open>
 
   Informally, this theorem states that, assuming the abstract function
   @{term min'} can be proven to not fail for a partciular input, then
@@ -193,11 +193,11 @@ text {*
 
   For more technical details, see~\cite{Greenaway_AK_12} and~\cite{Greenaway_LAK_14}.
 
-*}
+\<close>
 
-subsection {* Verifying \texttt{min} *}
+subsection \<open>Verifying \texttt{min}\<close>
 
-text {*
+text \<open>
 
   In the abstracted version of @{term min'}, we can see that AutoCorres
   has simplified away the local variable reads and writes in the
@@ -207,32 +207,32 @@ text {*
   been simplified to the point that it exactly matches Isabelle's
   built-in function @{term min}:
 
-*}
+\<close>
 thm min_def
-text {* @{thm [display] min_def} *}
+text \<open>@{thm [display] min_def}\<close>
 
-text {*
+text \<open>
   So, verifying @{term min'} (and by extension, the C function
   \texttt{min}) should be easy:
-*}
+\<close>
 lemma min'_is_min: "min' a b = min a b"
   unfolding min_def min'_def
   by (rule refl)
 
-subsection {* Verifying \texttt{max} *}
+subsection \<open>Verifying \texttt{max}\<close>
 
-text {*
+text \<open>
 
   Now we also wish to verify that @{term max'} implements the built-in
   function @{term max}. @{term min'} was nearly too simple to bother
   verifying, but @{term max'} is a bit more complicated. Let's look at
   AutoCorres' output for \texttt{max}:
 
-*}
+\<close>
 thm max'_def
-text {* @{thm [display] max'_def} *}
+text \<open>@{thm [display] max'_def}\<close>
 
-text {*
+text \<open>
 
   At this point, you might still doubt that @{term max'} is indeed
   correct, so perhaps a proof is in order. The basic idea is that
@@ -244,19 +244,19 @@ text {*
   the ordering. To prove it, we convert all words to @{typ int}'s, which
   does not change the meaning of the statement.
 
-  *}
+\<close>
 
   lemma n1_minus_flips_ord:
     "((a :: word32) \<le> b) = ((-1 - a) \<ge> (-1 - b))"
     apply (subst word_le_def)+
     apply (subst word_n1_ge [simplified uint_minus_simple_alt])+
-    txt {* Now that our statement uses @{typ int}, we can apply Isabelle's built-in \texttt{arith} method. *}
+    txt \<open>Now that our statement uses @{typ int}, we can apply Isabelle's built-in \texttt{arith} method.\<close>
     apply arith
     done
 
-text {*
+text \<open>
   And now for the main proof:
-*}
+\<close>
   lemma max'_is_max: "max' a b = max a b"
     unfolding max'_def min'_def max_def
     using n1_minus_flips_ord
@@ -264,10 +264,10 @@ text {*
 
 end
 
-text {*
+text \<open>
   In the next section, we will see how to use AutoCorres to simplify
   larger, more realistic C programs.
-*}
+\<close>
 
 
 (*<*)

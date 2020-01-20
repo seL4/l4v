@@ -132,18 +132,6 @@ lemma less_4_cases:
   apply (drule word_less_cases, erule disjE, simp, simp)+
   done
 
-lemma unat_ucast_8_64:
-  fixes x :: "word8"
-  shows "unat (ucast x :: word64) = unat x"
-  unfolding ucast_def unat_def
-  apply (subst int_word_uint)
-  apply (subst mod_pos_pos_trivial)
-    apply simp
-   apply (rule lt2p_lem)
-   apply simp
-  apply simp
-  done
-
 lemma if_then_1_else_0:
   "((if P then 1 else 0) = (0 :: word64)) = (\<not> P)"
   by simp
@@ -279,6 +267,8 @@ lemma unat_of_int_64:
   apply (subst eq_nat_nat_iff, clarsimp+)
   apply (simp add: word_of_int uint_word_of_int)
   done
+
+lemmas word_ctz_not_minus_1_64 = word_ctz_not_minus_1[where 'a=64, simplified]
 
 (* Helper for packing then unpacking a 64-bit variable. *)
 lemma cast_chunk_assemble_id_64[simp]:

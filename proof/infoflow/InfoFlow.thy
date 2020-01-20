@@ -8,7 +8,7 @@
  * @TAG(NICTA_GPL)
  *)
 
-text {*
+text \<open>
   This file provide the main confidentiality unwinding condition:
   the reads_respects family.
   In order to do that it provides subjectReads, the set of labels a label can observe from
@@ -16,7 +16,7 @@ text {*
   Then we can build read_equiv and affects_equiv which are parts of the unwinding relation.
   reads_respects then states that reads_equiv and affects_equiv are preserved
   through a specific function
-*}
+\<close>
 
 
 theory InfoFlow
@@ -27,9 +27,9 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-section {* Scheduler domain constraint *}
+section \<open>Scheduler domain constraint\<close>
 
-text {*
+text \<open>
   For the information flow theorem, we assume that every domain
   contains threads of exactly one label, so that labels cannot leak
   information through the scheduler.
@@ -38,7 +38,7 @@ text {*
   but this definition is easier to reason about. In practice, we can
   just put all empty domains into some dummy label to satisfy the
   exactly-one requirement. See e.g. the mapping in Example_Valid_State.
-*}
+\<close>
 
 definition pas_domains_distinct :: "('a, 'b) PAS_scheme \<Rightarrow> bool"
   where
@@ -65,17 +65,17 @@ lemma domain_has_the_label:
   done
 
 
-section {* Reading: subjectReads and associated equivalence properties *}
+section \<open>Reading: subjectReads and associated equivalence properties\<close>
 
-subsection {* subjectReads *}
+subsection \<open>subjectReads\<close>
 
-text{* We take the authority graph from the access proofs. We identify each
+text\<open>We take the authority graph from the access proofs. We identify each
    label in that graph with an information flow domain. Our goal is to
    construct an equivalence relation (R l) on states, for each label l of
    the authority graph, that tells us when those two states are equal for
    all state readable by label l -- i.e. all state that falls within l's
    information flow domain. The set of all such state, we denote
-   subjectReads g l, where g is the authority graph. *}
+   subjectReads g l, where g is the authority graph.\<close>
 
 
 (* TODO: consider putting the current subject as a parameter and restricting
@@ -86,7 +86,7 @@ where
   (* clearly, l can read from anything it has Read authority to *)
   reads_read: "(l,Read,l') \<in> g \<Longrightarrow>  l' \<in> subjectReads g l" |
   (* l can read from itself *)
-  reads_lrefl: "l \<in> subjectReads g l" |
+  reads_lrefl[simp,intro!]: "l \<in> subjectReads g l" |
   (* if l has SyncSend or Receive authority to an endpoint, l can read it *)
   reads_ep:
   "\<lbrakk>(l,auth,ep) \<in> g;  auth \<in> {SyncSend,Receive}\<rbrakk> \<Longrightarrow>
@@ -128,6 +128,9 @@ where
   read_sync_ep_read_senders_strong:
   "\<lbrakk>ep \<in> subjectReads g l; (b,SyncSend,ep) \<in> g\<rbrakk> \<Longrightarrow>
    b \<in> subjectReads g l" |
+  read_sync_ep_call_senders_strong:
+  "\<lbrakk>ep \<in> subjectReads g l; (b,Call,ep) \<in> g\<rbrakk> \<Longrightarrow>
+   b \<in> subjectReads g l" |
   (* This rule allows anyone who can read a synchronous endpoint, to also be
      able to read from its receivers. The intuition is that the state of the
      receivers can affect how the endpoint is affected. *)
@@ -147,7 +150,24 @@ where
      this rule does not seem worth it IMO. *)
   read_sync_ep_read_receivers_strong:
   "\<lbrakk>ep \<in> subjectReads g l; (b,Receive,ep) \<in> g\<rbrakk> \<Longrightarrow>
-   b \<in> subjectReads g l"
+   b \<in> subjectReads g l" |
+
+  (* if t can reply to t', then t can send directly information to t' *)
+  read_reply_thread_read_thread:
+  "\<lbrakk>t' \<in> subjectReads g l; (t,Reply,t') \<in> g\<rbrakk> \<Longrightarrow>
+   t \<in> subjectReads g l" |
+  (* This rule is only there for convinience if Reply authorities corresponds to Call authorities*)
+  read_reply_thread_read_thread_rev:
+  "\<lbrakk>t' \<in> subjectReads g l; (t',Reply,t) \<in> g\<rbrakk> \<Longrightarrow>
+   t \<in> subjectReads g l" |
+  (* if t can reply to t', then t can send directly information to t' *)
+  read_delder_thread_read_thread:
+  "\<lbrakk>t' \<in> subjectReads g l; (t,DeleteDerived,t') \<in> g\<rbrakk> \<Longrightarrow>
+   t \<in> subjectReads g l" |
+  (* This rule is only there for convinience if Reply authorities corresponds to Call authorities*)
+  read_delder_thread_read_thread_rev:
+  "\<lbrakk>t' \<in> subjectReads g l; (t',DeleteDerived,t) \<in> g\<rbrakk> \<Longrightarrow>
+   t \<in> subjectReads g l"
 
 
 lemma read_sync_ep_read_senders:
@@ -184,20 +204,17 @@ where
 
 lemma aag_can_read_self:
   "is_subject aag x \<Longrightarrow> aag_can_read aag x"
-  apply(fastforce intro: reads_lrefl)
-  done
+  by simp
 
 lemma aag_can_read_read:
   "aag_has_auth_to aag Read x \<Longrightarrow> aag_can_read aag x"
-  apply(fastforce intro: reads_read)
-  done
+  by (rule reads_read)
 
 lemma aag_can_read_irq_self:
   "is_subject_irq aag x \<Longrightarrow> aag_can_read_irq aag x"
-  apply(fastforce intro: reads_lrefl)
-  done
+  by simp
 
-subsection {* Generic equivalence *}
+subsection \<open>Generic equivalence\<close>
 
 definition equiv_for
 where
@@ -233,14 +250,14 @@ lemma equiv_for_id_update:
    equiv_for P id (c(x := v)) (c'(x := v))"
   by (simp add: equiv_for_def)
 
-subsection {* Machine state equivalence *}
+subsection \<open>Machine state equivalence\<close>
 abbreviation equiv_machine_state
   :: "(word32 \<Rightarrow> bool)  \<Rightarrow> 'a machine_state_scheme \<Rightarrow> 'a machine_state_scheme \<Rightarrow> bool"
 where
   "equiv_machine_state P s s' \<equiv> equiv_for (\<lambda>x. P x) underlying_memory s s' \<and>
                                 equiv_for (\<lambda>x. P x) device_state s s'"
 
-subsection {* ASID equivalence *}
+subsection \<open>ASID equivalence\<close>
 
 definition equiv_asid :: "asid \<Rightarrow> det_ext state \<Rightarrow> det_ext state \<Rightarrow> bool"
 where
@@ -357,16 +374,16 @@ lemma equiv_asids_triv:
   apply(fastforce simp: equiv_asids_def equiv_asid equiv_asid'_def)
   done
 
-subsection {* Generic state equivalence *}
+subsection \<open>Generic state equivalence\<close>
 
-text{* Define state equivalence for a given set of object references, irqs, asids and domains
+text\<open>Define state equivalence for a given set of object references, irqs, asids and domains
 
 The first four parameters are just predicate for those four sets:
   - P : object reference predicate
   - Q : irq predicate
   - R : asid predicate
   - S : domain predicate
-*}
+\<close>
 
 (*FIXME: We're not ancient Romans and don't need to condense the meaning of
          the universe into S P Q R *)
@@ -607,7 +624,7 @@ lemma or_comp_dist:
 
 
 
-subsection {* Idle thread equivalence *}
+subsection \<open>Idle thread equivalence\<close>
 
 definition idle_equiv :: "('z :: state_ext) state \<Rightarrow> ('z :: state_ext) state \<Rightarrow> bool"
 where
@@ -627,13 +644,13 @@ lemma idle_equiv_trans: "idle_equiv s s' \<Longrightarrow> idle_equiv s' s'' \<L
   by (clarsimp simp add: idle_equiv_def tcb_at_def get_tcb_def split: option.splits
                   kernel_object.splits)
 
-subsection {* Exclusive machine state equivalence *}
+subsection \<open>Exclusive machine state equivalence\<close>
 abbreviation exclusive_state_equiv
 where
   "exclusive_state_equiv s s' \<equiv>
      exclusive_state (machine_state s) = exclusive_state (machine_state s')"
 
-subsection {* Global (Kernel) VSpace equivalence *}
+subsection \<open>Global (Kernel) VSpace equivalence\<close>
 (* globals_equiv should be maintained by everything except the scheduler, since
    nothing else touches the globals frame *)
 
@@ -647,7 +664,7 @@ definition globals_equiv :: "('z :: state_ext) state \<Rightarrow> ('z :: state_
       cur_thread s = cur_thread s' \<and>
       (cur_thread s \<noteq> idle_thread s \<longrightarrow> exclusive_state_equiv s s')"
 
-subsection {* read_equiv *}
+subsection \<open>read_equiv\<close>
 (* Basically defines the domain of the current thread, excluding globals.
    This also includes the things that are in the scheduler's domain, which
    the current domain is always allowed to read. *)
@@ -795,9 +812,9 @@ lemma reads_equiv_work_units_completed_update':
 
 
 
-section {* Writing: subjectsAffects and affects_equiv *}
+section \<open>Writing: subjectsAffects and affects_equiv\<close>
 
-text {*
+text \<open>
   This defines the other labels of the authority graph that subject l can
   affect, i.e. if there is some part of the state that carries a label l', and
   through the actions of l, this state can be modified, then we say that the
@@ -806,7 +823,7 @@ text {*
 
   The case in which @{thm tro_asidpool_clear} is covered when the graph is wellformed
   since, in this case, the subject has Control rights to the asid.
-*}
+\<close>
 inductive_set subjectAffects :: "'a auth_graph \<Rightarrow> 'a \<Rightarrow> 'a set"
   for g :: "'a auth_graph" and l :: "'a"
 where
@@ -816,17 +833,34 @@ where
     "\<lbrakk>(l,auth,l') \<in> g; auth \<in> {Control, Write}\<rbrakk> \<Longrightarrow>
      l' \<in> subjectAffects g l" |
   affects_ep:
-    "\<lbrakk>(l,auth,l') \<in> g; auth \<in> {Receive, Notify, SyncSend, Reset}\<rbrakk> \<Longrightarrow>
+    "\<lbrakk>(l,auth,l') \<in> g; auth \<in> {Receive, Notify, SyncSend, Call, Reset}\<rbrakk> \<Longrightarrow>
      l' \<in> subjectAffects g l" |
-  (* ipc buffer is not necessary owned by thread *)
+  (* ipc buffer is not necessarily owned by thread *)
   affects_send:
-    "\<lbrakk>(l,auth,ep) \<in> g; auth \<in> {SyncSend, Notify}; (l',Receive,ep) \<in> g;
+    "\<lbrakk>(l,auth,ep) \<in> g; auth \<in> {SyncSend, Notify, Call}; (l',Receive,ep) \<in> g;
       (l',Write,l'') \<in> g\<rbrakk> \<Longrightarrow>
      l'' \<in> subjectAffects g l" |
   (* synchronous sends provide a back-channel from receiver to sender *)
   affects_recv:
     "\<lbrakk>(l,Receive,ep) \<in> g; (l',SyncSend,ep) \<in> g\<rbrakk> \<Longrightarrow>
      l' \<in> subjectAffects g l" |
+  (* a reply right can only exist if l has a call right to l',
+   * so including this case saves us from having to re-derive it *)
+  affects_reply_back:
+    "\<lbrakk>(l',Reply,l) \<in> g\<rbrakk> \<Longrightarrow>
+     l' \<in> subjectAffects g l" |
+  (* reply direct ipc buffer writing *)
+  affects_reply:
+    "\<lbrakk>(l,Reply,l') \<in> g; (l',Write,l'') \<in> g\<rbrakk> \<Longrightarrow>
+     l'' \<in> subjectAffects g l" |
+  (* deletion direct channel *)
+  affects_delete_derived:
+    "\<lbrakk>(l,DeleteDerived,l') \<in> g\<rbrakk> \<Longrightarrow>
+     l' \<in> subjectAffects g l" |
+  (* If two agents can delete the same caps, they can affect each other *)
+  affects_delete_derived2:
+    "\<lbrakk>(l,DeleteDerived,l') \<in> g; (l'',DeleteDerived,l') \<in> g\<rbrakk> \<Longrightarrow>
+     l'' \<in> subjectAffects g l" |
   (* integrity definitions allow resets to modify ipc buffer *)
   affects_reset:
     "\<lbrakk>(l,Reset,ep) \<in> g; (l',auth,ep) \<in> g; auth \<in> {SyncSend, Receive};
@@ -853,8 +887,7 @@ where
 lemma aag_can_affect_labelI[intro!]:
   "\<lbrakk>d \<in> subjectAffects (pasPolicy aag) (pasSubject aag); d \<in> subjectReads (pasPolicy aag) l\<rbrakk>
      \<Longrightarrow> aag_can_affect_label aag l"
-  apply(auto simp: aag_can_affect_label_def)
-  done
+  by (auto simp: aag_can_affect_label_def)
 
 (* Defines when two states are equivalent for some domain l that can be affected
    by the current subject. When the current subject cannot affect domain l,
@@ -869,13 +902,11 @@ where
 
 lemma equiv_for_trivial:
   "(\<And> x. P x \<Longrightarrow> False) \<Longrightarrow> equiv_for P f c c'"
-  apply(auto simp: equiv_for_def)
-  done
+  by (auto simp: equiv_for_def)
 
 lemma equiv_asids_trivial:
   "(\<And> x. P x \<Longrightarrow> False) \<Longrightarrow> equiv_asids P x y"
-  apply(auto simp: equiv_asids_def)
-  done
+  by (auto simp: equiv_asids_def)
 
 abbreviation aag_can_affect
 where
@@ -1035,7 +1066,7 @@ lemma affects_equiv_trans:
    affects_equiv aag l s u"
   by(auto simp: affects_equiv_def2 intro: states_equiv_for_trans equiv_asids_trans)
 
-section {* reads_respects *}
+section \<open>reads_respects\<close>
 
 abbreviation reads_equiv_valid
   :: "(det_state \<Rightarrow> det_state \<Rightarrow> bool) \<Rightarrow> (det_state \<Rightarrow> det_state \<Rightarrow> bool) \<Rightarrow>
@@ -1233,10 +1264,16 @@ lemma requiv_wuc_eq[intro]:
 
 lemma set_object_reads_respects:
   "reads_respects aag l \<top> (set_object ptr obj)"
-  unfolding equiv_valid_def2 equiv_valid_2_def
-  apply(clarsimp simp: set_object_def bind_def get_def put_def return_def)
-  apply(fastforce intro: reads_equiv_identical_kheap_updates affects_equiv_identical_kheap_updates
-                   simp: identical_kheap_updates_def)
+  unfolding set_object_def
+  apply(clarsimp simp: set_object_def bind_def' get_def gets_def put_def return_def fail_def assert_def
+                       get_object_def identical_kheap_updates_def
+                 cong del: if_weak_cong)
+  apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def)
+  apply (rule conjI)
+   apply (erule reads_equiv_identical_kheap_updates)
+   apply (clarsimp simp: identical_kheap_updates_def)
+  apply (erule affects_equiv_identical_kheap_updates)
+  apply (clarsimp simp: identical_kheap_updates_def)
   done
 
 lemma update_object_noop:
@@ -1249,7 +1286,7 @@ lemma update_object_noop:
 lemma set_object_rev:
   "reads_equiv_valid_inv A aag (\<lambda> s. kheap s ptr = Some obj \<and> is_subject aag ptr) (set_object ptr obj)"
   unfolding equiv_valid_def2 equiv_valid_2_def
-  apply(clarsimp simp: set_object_def bind_def get_def put_def return_def)
+  apply(clarsimp simp: set_object_def bind_def get_def gets_def put_def return_def assert_def get_object_def)
   apply(fastforce dest: update_object_noop)
   done
 
@@ -1269,7 +1306,7 @@ abbreviation reads_equiv_valid_rv_inv
 where
   "reads_equiv_valid_rv_inv A aag R P f \<equiv> reads_equiv_valid_rv A A aag R P f"
 
-section {* Basic getters/modifiers lemmas *}
+section \<open>Basic getters/modifiers lemmas\<close>
 
 lemma gets_kheap_revrv:
   "reads_equiv_valid_rv_inv (affects_equiv aag l) aag
@@ -1667,7 +1704,7 @@ lemma auth_ipc_buffers_mem_Write':
    apply (auto dest: ipcframe_subset_page)
   done
 
-section {* Constraining modifications to a set of label *}
+section \<open>Constraining modifications to a set of label\<close>
 (*
    We define here some machinery for reasoning about updates that occur
    outside of what the current subject can read, and the domain l in

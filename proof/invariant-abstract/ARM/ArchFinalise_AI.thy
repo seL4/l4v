@@ -903,7 +903,8 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
         \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)
         \<and> (is_arch_cap cap \<longrightarrow> pspace_aligned s \<and>
                                valid_vspace_objs s \<and>
-                               valid_arch_state s)\<rbrace>
+                               valid_arch_state s \<and>
+                               valid_arch_caps s)\<rbrace>
      finalise_cap cap x
    \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
   apply (cases "is_arch_cap cap")
@@ -1062,17 +1063,10 @@ lemma tcb_cap_valid_pagetable:
   apply (rule ext)
   apply (simp add: tcb_cap_valid_def tcb_cap_cases_def is_nondevice_page_cap_arch_def
                    is_cap_simps valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
+                   is_valid_vtable_root_def
             split: Structures_A.thread_state.split)
   done
 
-lemma tcb_cap_valid_pagedirectory:
-  "tcb_cap_valid (ArchObjectCap (PageDirectoryCap word (Some v))) slot
-    = tcb_cap_valid (ArchObjectCap (PageDirectoryCap word None)) slot"
-  apply (rule ext)
-  apply (simp add: tcb_cap_valid_def tcb_cap_cases_def is_nondevice_page_cap_arch_def
-                   is_cap_simps valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
-            split: Structures_A.thread_state.split)
-  done
 
 lemma store_pde_unmap_empty:
   "\<lbrace>\<lambda>s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>
@@ -1278,30 +1272,7 @@ lemma replaceable_reset_pt:
   apply simp_all
   done
 
-lemma replaceable_reset_pd:
-  "\<lbrakk>cap = PageDirectoryCap p m \<and>
-   cte_wp_at ((=) (ArchObjectCap cap)) slot s \<and>
-   (\<forall>vs. vs_cap_ref (ArchObjectCap cap) = Some vs \<longrightarrow> \<not> (vs \<unrhd> p) s) \<and>
-   is_final_cap' (ArchObjectCap cap) s \<and>
-   obj_at (empty_table (set (second_level_tables (arch_state s)))) p s\<rbrakk> \<Longrightarrow>
-   replaceable s slot (ArchObjectCap (PageDirectoryCap p None))
-                      (ArchObjectCap cap)"
-  apply (elim conjE)
-  apply (cases m, simp_all add: replaceable_def gen_obj_refs_def cap_range_def is_cap_simps
-                           tcb_cap_valid_pagedirectory)
-  apply (rule conjI)
-   apply (frule is_final_cap_pd_asid_eq) defer
-   apply clarsimp
-   apply (drule cte_wp_at_obj_refs_singleton_page_directory)
-   apply (erule exE)
-   apply (drule_tac x="asid" in is_final_cap_pd_asid_eq)
-   apply (drule final_cap_pd_slot_eq)
-     apply simp_all
-  apply (rule_tac
-    cap="ArchObjectCap cap"
-    in  no_cap_to_obj_with_diff_ref_finalI)
-  apply simp_all
-  done
+
 
 context notes if_cong[cong] begin
 crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
@@ -1324,12 +1295,11 @@ lemma delete_asid_empty_table_pd:
           apply wps
           apply wp+
         apply (simp add: set_asid_pool_def)
-        apply wp
-          apply (case_tac "x2 = word")
-           defer
-           apply wps
-           apply (rule set_object_at_obj)
-          apply (wp get_object_ret | wps)+
+        apply (case_tac "x2 = word")
+         defer
+         apply wps
+         apply (rule set_object_at_obj)
+        apply (wp get_object_ret | wps)+
    apply (clarsimp simp: obj_at_def empty_table_def)+
   done
 
@@ -1532,7 +1502,7 @@ lemma word32_ucast_enumerates_word8:
    apply (simp add: word_shift_by_2)
   apply (clarsimp simp: pt_bits_def pageBits_def)
   apply (rule order_trans)
-   apply (rule minus_one_helper3)
+   apply (rule word_le_minus_one_leq)
    apply (rule ucast_less)
    apply simp+
   done

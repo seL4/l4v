@@ -28,13 +28,23 @@ val apply_tac = Utils.apply_tac
 val the' = Utils.the'
 
 type WARules = {
-     ctype : typ, atype : typ,
+     signed : bool,
+     lentype : typ, ctype : typ, atype : typ,
      abs_fn : term, inv_fn : term,
      rules : thm list
 }
 
+fun WARules_update rules_upd {signed, lentype, ctype, atype, abs_fn, inv_fn, rules} =
+  {signed = signed, lentype = lentype, ctype = ctype, atype = atype,
+   abs_fn = abs_fn, inv_fn = inv_fn,
+   rules = rules_upd rules}
+
+val word_sizes = [@{typ 64}, @{typ 32}, @{typ 16}, @{typ 8}]
+
 fun mk_word_abs_rule T =
 {
+  signed = false,
+  lentype = T,
   ctype = fastype_of (@{mk_term "x :: (?'W::len) word" ('W)} T),
   atype = @{typ nat},
   abs_fn = @{mk_term "unat :: (?'W::len) word => nat" ('W)} T,
@@ -43,10 +53,12 @@ fun mk_word_abs_rule T =
 }
 
 val word_abs : WARules list =
-    map mk_word_abs_rule [@{typ 32}, @{typ 16}, @{typ 8}]
+    map mk_word_abs_rule word_sizes
 
 fun mk_sword_abs_rule T =
 {
+  signed = true,
+  lentype = T,
   ctype = fastype_of (@{mk_term "x :: (?'W::len) signed word" ('W)} T),
   atype = @{typ int},
   abs_fn = @{mk_term "sint :: (?'W::len) signed word => int" ('W)} T,
@@ -55,7 +67,22 @@ fun mk_sword_abs_rule T =
 }
 
 val sword_abs : WARules list =
-    map mk_sword_abs_rule [@{typ 32}, @{typ 16}, @{typ 8}]
+    map mk_sword_abs_rule word_sizes
+
+(* Make rules for signed word reads from the lifted heap.
+ *
+ * The lifted heap stores all words as unsigned, but we need to avoid
+ * generating unsigned arith guards when accessing signed words.
+ * These rules are placed early in the ruleset and kick in before the
+ * unsigned abstract_val rules get to run. *)
+fun mk_sword_heap_get_rule ctxt heap_info (rules: WARules) =
+  let val uwordT = Type (@{type_name word}, [#lentype rules])
+  in case try (HeapLift.get_heap_getter heap_info) uwordT of
+         NONE => NONE
+       | SOME getter => SOME (@{thm abstract_val_heap_sword_template}
+                              |> Drule.infer_instantiate ctxt
+                                   [(("heap_get", 0), Thm.cterm_of ctxt getter)])
+  end
 
 (* Get abstract version of a HOL type. *)
 fun get_abs_type (rules : WARules list) T =
@@ -161,6 +188,8 @@ end
 fun translate
       (filename: string)
       (prog_info: ProgramInfo.prog_info)
+      (* Needed for mk_sword_heap_get_rule *)
+      (heap_info: HeapLiftBase.heap_info option)
       (* Note that we refer to the previous phase as "l2"; it may be
        * from the L2 or HL phase. *)
       (l2_results: FunctionInfo.phase_results)
@@ -187,7 +216,15 @@ let
   fun convert lthy l2_infos f: AutoCorresUtil.convert_result =
   let
     val old_fn_info = the (Symtab.lookup l2_infos f);
-    val wa_rules = rules_for f;
+
+    (* Add heap lift workaround for each word length that is in the heap. *)
+    fun add_sword_heap_get_rules rules =
+      if not (#signed rules) then [] else
+      case heap_info of
+          NONE => []
+        | SOME hi => the_list (mk_sword_heap_get_rule lthy hi rules)
+    val wa_rules = rules_for f
+    val sword_heap_rules = map add_sword_heap_get_rules wa_rules
 
     (* Fix measure variable. *)
     val ([measure_var_name], lthy) = Variable.variant_fixes ["rec_measure'"] lthy;
@@ -260,7 +297,7 @@ let
      * FIXME: move this out of convert?
      *)
     val rules = Utils.get_rules lthy @{named_theorems word_abs}
-                @ List.concat (map #rules wa_rules)
+                @ List.concat (sword_heap_rules @ map #rules wa_rules)
                 @ @{thms word_abs_default}
     val fo_rules = [@{thm abstract_val_fun_app}]
 

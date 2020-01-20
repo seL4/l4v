@@ -16,7 +16,7 @@ chapter "System-Initialisation"
 
 session SysInit = DSpecProofs +
   sessions
-    Lib
+    Sep_Algebra
     SepDSpec
     DSpecProofs
   theories

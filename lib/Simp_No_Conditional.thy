@@ -15,7 +15,7 @@ imports Main
 
 begin
 
-text {*
+text \<open>
 Simplification without conditional rewriting. Setting the simplifier depth
 limit to zero prevents attempts at conditional rewriting. This should make
 the simplifier faster and more predictable on average. It may be particularly
@@ -25,9 +25,9 @@ repeatedly attempts and fails a conditional rewrite.
 As always, there are caveats. Failing to perform a simple conditional rewrite
 may open the door to expensive alternatives. Various simprocs which are
 conditional in nature will not be deactivated.
-*}
+\<close>
 
-ML {*
+ML \<open>
 
 structure Simp_No_Conditional = struct
 
@@ -55,15 +55,15 @@ val auto_method = mk_clasimp_all_method (CHANGED_PROP o auto_tac)
 
 end
 
-*}
+\<close>
 
-method_setup simp_no_cond = {* Simp_No_Conditional.simp_method *}
+method_setup simp_no_cond = \<open>Simp_No_Conditional.simp_method\<close>
     "Simplification with no conditional simplification."
 
-method_setup clarsimp_no_cond = {* Simp_No_Conditional.clarsimp_method *}
+method_setup clarsimp_no_cond = \<open>Simp_No_Conditional.clarsimp_method\<close>
     "Clarsimp with no conditional simplification."
 
-method_setup auto_no_cond = {* Simp_No_Conditional.auto_method *}
+method_setup auto_no_cond = \<open>Simp_No_Conditional.auto_method\<close>
     "Auto with no conditional simplification."
 
 end

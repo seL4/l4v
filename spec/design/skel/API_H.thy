@@ -14,7 +14,7 @@ theory API_H
 imports Syscall_H Delete_H
 begin
 
-text {* collects all API modules *}
+text \<open>collects all API modules\<close>
 
 #INCLUDE_HASKELL SEL4.lhs
 

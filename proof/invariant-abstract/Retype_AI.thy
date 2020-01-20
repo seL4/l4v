@@ -20,6 +20,8 @@ abbreviation "up_aligned_area ptr sz \<equiv> {ptr..(ptr && ~~ mask sz) + (2 ^ s
 abbreviation "down_aligned_area ptr sz \<equiv> {(ptr && ~~ mask sz) + (2 ^ sz - 1) .. ptr}"
 
 context begin interpretation Arch .
+requalify_facts
+  valid_vspace_obj_default
 requalify_consts
   clearMemory
   clearMemoryVM
@@ -991,7 +993,7 @@ lemma pspace_no_overlap_same_type:
 lemma set_object_no_overlap:
   "\<lbrace>pspace_no_overlap S and obj_at (\<lambda>k. a_type ko = a_type k) p\<rbrace>
   set_object p ko \<lbrace>\<lambda>r. pspace_no_overlap S\<rbrace>"
-  unfolding set_object_def
+  unfolding set_object_def get_object_def
   apply simp
   apply wp
   apply (clarsimp simp del: fun_upd_apply)
@@ -1397,13 +1399,6 @@ lemma valid_obj_default_object:
     apply (simp add: valid_sched_context_def valid_bound_obj_def default_sched_context_def)
    apply (simp add: valid_reply_def valid_bound_obj_def default_reply_def)
   apply (clarsimp simp add: wellformed_arch_default)
-  done
-
-lemma valid_vspace_obj_default:
-  assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
-  shows "ArchObj ao = default_object ty dev us dm \<Longrightarrow> valid_vspace_obj ao s'"
-  apply (cases ty, simp_all add: default_object_def tyunt)
-  apply (simp add: valid_vspace_obj_default')
   done
 
 lemma usable_range_subseteq:

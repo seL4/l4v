@@ -61,14 +61,14 @@ lemma reset_cap_asid_simps2:
   "reset_cap_asid cap = (UntypedCap dev a ra) \<Longrightarrow> cap = UntypedCap dev a ra"
   "reset_cap_asid cap = (EndpointCap b c d) \<Longrightarrow> cap = EndpointCap b c d"
   "reset_cap_asid cap = (NotificationCap e f g) \<Longrightarrow> cap = NotificationCap e f g"
-  "reset_cap_asid cap = (ReplyCap h) \<Longrightarrow> cap = ReplyCap h"
+  "reset_cap_asid cap = (ReplyCap h R) \<Longrightarrow> cap = ReplyCap h R"
   "reset_cap_asid cap = (MasterReplyCap i) \<Longrightarrow> cap = MasterReplyCap i"
   "reset_cap_asid cap = (CNodeCap j k l sz) \<Longrightarrow> cap = CNodeCap j k l sz"
   "reset_cap_asid cap = (TcbCap m) \<Longrightarrow> cap = TcbCap m"
   "reset_cap_asid cap = DomainCap \<Longrightarrow> cap = DomainCap"
   "reset_cap_asid cap = RestartCap \<Longrightarrow> cap = RestartCap"
-  "reset_cap_asid cap = (PendingSyncSendCap n p q r s) \<Longrightarrow> cap = (PendingSyncSendCap n p q r s)"
-  "reset_cap_asid cap = (PendingSyncRecvCap t isf ) \<Longrightarrow> cap = (PendingSyncRecvCap t isf)"
+  "reset_cap_asid cap = (PendingSyncSendCap n p q r s rp) \<Longrightarrow> cap = (PendingSyncSendCap n p q r s rp)"
+  "reset_cap_asid cap = (PendingSyncRecvCap t isf rp) \<Longrightarrow> cap = (PendingSyncRecvCap t isf rp)"
   "reset_cap_asid cap = (PendingNtfnRecvCap u) \<Longrightarrow> cap = (PendingNtfnRecvCap u)"
   "reset_cap_asid cap = IrqControlCap \<Longrightarrow> cap = IrqControlCap"
   "reset_cap_asid cap = (IrqHandlerCap v) \<Longrightarrow> cap = (IrqHandlerCap v)"
@@ -159,9 +159,9 @@ lemma sep_any_map_c_imp: "(dest \<mapsto>c cap) s \<Longrightarrow> (dest \<maps
   by (fastforce simp: sep_any_def)
 
 lemma obj_exists_map_i:
-  "<obj_id \<mapsto>o obj \<and>* R> s \<Longrightarrow> \<exists>obj'. (opt_object obj_id s = Some obj'
-  \<and> object_clean obj = object_clean obj')"
-  apply (clarsimp simp: opt_object_def sep_map_o_conj)
+  "<obj_id \<mapsto>o obj \<and>* R> s \<Longrightarrow> \<exists>obj'. (cdl_objects s obj_id = Some obj'
+                                       \<and> object_clean obj = object_clean obj')"
+  apply (clarsimp simp: sep_map_o_conj)
   apply (case_tac "cdl_objects s obj_id")
    apply (drule_tac x = "(obj_id,Fields)" in fun_cong)
     apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
@@ -182,8 +182,8 @@ lemma obj_exists_map_i:
 
 lemma obj_exists_map_f:
   "<obj_id \<mapsto>f obj \<and>* R> s \<Longrightarrow>
-  \<exists>obj'. (opt_object obj_id s = Some obj' \<and> object_type obj = object_type obj')"
-  apply (clarsimp simp: opt_object_def sep_map_f_conj Let_def)
+  \<exists>obj'. (cdl_objects s obj_id = Some obj' \<and> object_type obj = object_type obj')"
+  apply (clarsimp simp: sep_map_f_conj Let_def)
   apply (case_tac "cdl_objects s obj_id")
    apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
       object_at_heap_def sep_state_projection_def
@@ -210,7 +210,7 @@ lemma opt_cap_sep_imp:
   \<Longrightarrow> \<exists>cap'. opt_cap p s = Some cap' \<and> reset_cap_asid cap' = reset_cap_asid cap"
   apply (clarsimp simp: opt_cap_def sep_map_c_conj Let_def)
   apply (clarsimp simp:  sep_map_c_def lift_def
-    opt_object_def split_def
+    split_def
     sep_any_def sep_map_general_def slots_of_def
     sep_state_projection_def object_project_def
     object_slots_object_clean
@@ -222,7 +222,7 @@ lemma opt_cap_sep_any_imp:
   apply (clarsimp simp: sep_any_exist
     opt_cap_def sep_map_c_conj Let_def)
   apply (clarsimp simp:  sep_map_c_def lift_def
-    opt_object_def split_def object_slots_object_clean
+    split_def object_slots_object_clean
     sep_any_def sep_map_general_def slots_of_def
     sep_state_projection_def object_project_def
     Let_unfold split:sep_state.splits option.splits)
@@ -236,7 +236,7 @@ lemma sep_f_size_opt_cnode:
   apply (case_tac obj)
   apply (auto simp: intent_reset_def empty_cnode_def
     opt_cnode_def update_slots_def sep_state_projection_def
-    opt_object_def object_wipe_slots_def
+    object_wipe_slots_def
     object_project_def object_clean_def asid_reset_def
     split:cdl_cap.splits cdl_object.splits)
   done
@@ -418,7 +418,7 @@ lemma get_cnode_wp [wp]:
    \<lbrace> P \<rbrace>"
   apply (clarsimp simp: get_cnode_def)
   apply (wp | wpc)+
-  apply (clarsimp simp: opt_object_def split: cdl_object.splits)
+  apply (clarsimp split: cdl_object.splits)
   done
 
 lemma resolve_address_bits_wp:
@@ -545,7 +545,6 @@ lemma reset_cap_asid_cap_has_object:
 lemma cap_object_reset_cap_asid:
   "\<lbrakk>reset_cap_asid cap = reset_cap_asid cap'\<rbrakk> \<Longrightarrow> cap_object cap = cap_object cap'"
   apply (case_tac cap',simp_all add:reset_cap_asid_def split:cdl_cap.split_asm)
-  apply (simp add:cap_object_def cap_has_object_def)+
   done
 
 lemma cap_type_reset_cap_asid[simp]:
@@ -605,7 +604,7 @@ lemma derive_cap_wpE:
 
 lemma derive_cap_wp2: "\<lbrace>P\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. if rv = NullCap then True else P s\<rbrace>, -"
   apply (rule hoare_post_imp_R)
-   apply (wp_once derive_cap_wpE)
+   apply (wp (once) derive_cap_wpE)
   apply (clarsimp)
   done
 
@@ -656,9 +655,10 @@ lemma reset_cap_asid_cap_type:
 
 lemma ep_related_cap_update_cap_rights[simp]:
   "ep_related_cap (update_cap_rights rights cap) = ep_related_cap cap"
-  "ep_related_cap cap \<Longrightarrow> cap_badge (update_cap_rights rights cap) = cap_badge cap"
-  by (auto simp:ep_related_cap_def cap_badge_def
-    update_cap_rights_def split:cdl_cap.splits)
+  "\<lbrakk> is_ep_cap cap \<rbrakk> \<Longrightarrow> cap_badge (update_cap_rights rights cap) = cap_badge cap"
+  "\<lbrakk> is_ntfn_cap cap \<rbrakk> \<Longrightarrow> cap_badge (update_cap_rights rights cap) = cap_badge cap"
+  by (auto simp:ep_related_cap_def cap_badge_def cap_type_def update_cap_rights_def
+          split:cdl_cap.splits)
 
 lemma reset_cap_asid_cap_badge:
   "\<lbrakk>reset_cap_asid cap = reset_cap_asid cap';ep_related_cap cap\<rbrakk>
@@ -672,6 +672,18 @@ lemma reset_cap_asid_ep_related_cap:
   \<Longrightarrow> ep_related_cap cap = ep_related_cap cap'"
   apply (clarsimp simp: ep_related_cap_def)
   apply (case_tac cap, (case_tac cap', simp_all add: reset_cap_asid_def)+)
+  done
+
+lemma reset_cap_asid_ep_cap:
+  "reset_cap_asid cap = reset_cap_asid cap'
+  \<Longrightarrow> is_ep_cap cap = is_ep_cap cap'"
+  apply (case_tac cap; case_tac cap'; simp add: reset_cap_asid_def)
+  done
+
+lemma reset_cap_asid_ntfn_cap:
+  "reset_cap_asid cap = reset_cap_asid cap'
+  \<Longrightarrow> is_ntfn_cap cap = is_ntfn_cap cap'"
+  apply (case_tac cap; case_tac cap'; simp add: reset_cap_asid_def)
   done
 
 lemma cap_rights_reset_cap_asid:
@@ -892,7 +904,7 @@ lemma lookup_cap_and_slot_rvu:
 
 lemma update_cap_data:
   "\<lbrace>\<lambda>s. valid_src_cap cap badge \<and> cap_has_type cap
-   \<and> (ep_related_cap cap \<longrightarrow> \<not> preserve \<and> cap_badge cap = 0)
+   \<and> ((is_ep_cap cap \<or> is_ntfn_cap cap) \<longrightarrow> \<not> preserve \<and> cap_badge cap = 0)
    \<and> Q (update_cap_data_det badge cap) s \<rbrace>
   update_cap_data preserve badge cap
   \<lbrace>\<lambda>rv s. Q rv s\<rbrace>"
@@ -974,11 +986,21 @@ lemma cap_has_type_asid_cong:
   \<Longrightarrow> cap_has_type cap' = cap_has_type src_cap"
   by (drule reset_cap_asid_cap_type, simp)
 
+(* FIXME: MOVE *)
+fun is_reply_cap
+  where "is_reply_cap (ReplyCap _ _) = True"
+      | "is_reply_cap _ = False"
+
+lemma ep_related_capI:
+  "is_ep_cap cap \<Longrightarrow> ep_related_cap cap"
+  "is_ntfn_cap cap \<Longrightarrow> ep_related_cap cap"
+  "is_reply_cap cap \<Longrightarrow> ep_related_cap cap"
+  by (cases cap; simp add: ep_related_cap_def cap_type_def)+
 
 lemma decode_cnode_mint_rvu:
   "\<lbrace>\<lambda>s. caps \<noteq> [] \<and>
     cap_has_type src_cap \<and> valid_src_cap src_cap badge
-    \<and> (ep_related_cap src_cap \<longrightarrow>
+    \<and> ((is_ep_cap src_cap \<or> is_ntfn_cap src_cap) \<longrightarrow>
            cap_badge src_cap = 0)
     \<and> (\<forall>src_cap'. (reset_cap_asid src_cap'
        = reset_cap_asid src_cap) \<longrightarrow>
@@ -1021,8 +1043,13 @@ lemma decode_cnode_mint_rvu:
      simp:conj_comms is_exclusive_cap_update_cap_data
      safe_for_derive_not_non valid_src_cap_def)
    apply (intro conjI impI allI)
-      apply (metis reset_cap_asid_cap_type)
-     apply (metis reset_cap_asid_cap_badge reset_cap_asid_ep_related_cap)
+       apply (metis reset_cap_asid_cap_type)
+      apply (frule (1) reset_cap_asid_ep_cap[THEN iffD1])
+      apply simp
+      apply (metis reset_cap_asid_cap_badge ep_related_capI)
+     apply (frule (1) reset_cap_asid_ntfn_cap[THEN iffD1])
+     apply simp
+     apply (metis reset_cap_asid_cap_badge ep_related_capI)
     apply (metis option.inject reset_cap_asid_cnode_cap)
    apply (metis cap_rights_reset_cap_asid)
   apply sep_solve
@@ -1079,7 +1106,9 @@ lemma decode_cnode_mutate_rvu:
     apply (sep_solve)
    apply (clarsimp dest!: mapu_dest_opt_cap
      simp: conj_comms update_cap_data_non cong:non_cap_cong)
-   apply (metis reset_cap_asid_cap_type reset_cap_asid_ep_related_cap valid_src_cap_asid_cong)
+   apply (subst (asm) reset_cap_asid_ep_related_cap[OF sym], assumption)
+   apply (metis reset_cap_asid_cap_type reset_cap_asid_ep_related_cap valid_src_cap_asid_cong
+                ep_related_capI)
   apply sep_solve
   done
 
@@ -1100,7 +1129,7 @@ lemma get_thread_sep_wp:
     get_thread thread
    \<lbrace>\<lambda>rv s. Q rv\<rbrace>"
   apply (simp add: get_thread_def | wp | wpc)+
-  apply (auto simp: object_at_def opt_object_def)
+  apply (auto simp: object_at_def)
   done
 
 lemma get_thread_inv:
@@ -1113,7 +1142,7 @@ lemma get_thread_sep_wp_precise:
     get_thread thread
    \<lbrace>\<lambda>rv. Q rv\<rbrace>"
   apply (simp add:get_thread_def | wp | wpc)+
-  apply (auto simp: object_at_def opt_object_def)
+  apply (auto simp: object_at_def)
   done
 
 (* We are not interested in ep related invocation *)
@@ -1133,7 +1162,7 @@ lemma has_restart_cap_sep_wp:
   apply (simp add: object_at_def get_thread_def has_restart_cap_def
        | wp+ | wpc | intro conjI)+
   apply (clarsimp dest!: opt_cap_sep_imp
-                   simp: opt_object_def opt_cap_def slots_of_def)
+                   simp: opt_cap_def slots_of_def)
   apply (clarsimp simp: object_slots_def)
   apply (erule rsubst)
   apply (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)

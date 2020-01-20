@@ -21,7 +21,7 @@ lemma field_lvalue_offset_eq:
   apply (simp add: field_lvalue_def)
   done
 
-ML {*
+ML \<open>
 fun dest_binT (Type (@{type_name signed}, [t])) = Word_Lib.dest_binT t
   | dest_binT t = Word_Lib.dest_binT t
 
@@ -200,9 +200,13 @@ fun get_all_export_params ctxt csenv : export_params = let
     structs_by_typ = structs_by_typ ctxt csenv,
     locals = locals ctxt,
     local_upds = local_upds ctxt} end
-*}
+\<close>
 
-ML {*
+ML \<open>
+
+val machine_word = case @{typ machine_word} of
+    @{typ word32} => "Word 32"
+  | @{typ word64} => "Word 64"
 
 fun convert_type _ _ @{typ bool} = "Bool"
   | convert_type _ _ (Type (@{type_name word}, [n]))
@@ -213,12 +217,13 @@ fun convert_type _ _ @{typ bool} = "Bool"
             handle Fail _ => raise TYPE ("convert_type", [t, n], []))
          | _ => raise TYPE ("convert_type", [t, n], [])))
   | convert_type true ctxt (Type (@{type_name ptr}, [T])) = "Ptr " ^ convert_type true ctxt T
-  | convert_type false _ (Type (@{type_name ptr}, _)) = "Word 32"
-  | convert_type _ _ @{typ "word32 \<Rightarrow> word8"} = "Mem"
-  | convert_type _ _ @{typ "word32 \<Rightarrow> bool"} = "Dom"
-  | convert_type _ _ @{typ "word32 set"} = "Dom"
+  | convert_type false _ (Type (@{type_name ptr}, _)) = machine_word
+  | convert_type _ _ @{typ "machine_word \<Rightarrow> word8"} = "Mem"
+  | convert_type _ _ @{typ "machine_word \<Rightarrow> bool"} = "Dom"
+  | convert_type _ _ @{typ "machine_word set"} = "Dom"
   | convert_type _ _ @{typ heap_typ_desc} = "HTD"
-  | convert_type _ _ @{typ nat} = "Word 32"
+
+  | convert_type _ _ @{typ nat} = raise TYPE ("convert_type: nat", [], [])
   | convert_type _ _ @{typ unit} = "UNIT"
   | convert_type _ _ (Type ("fun", [Type (@{type_name word}, [i]), Type (@{type_name word}, [j])]))
     = "WordArray " ^ signed_string_of_int (dest_binT i) ^ " " ^ signed_string_of_int (dest_binT j)
@@ -228,19 +233,19 @@ fun convert_type _ _ @{typ bool} = "Bool"
     else (Proof_Context.get_thm ctxt
         (Long_Name.base_name s ^ "_td_names"); "Struct " ^ s)
   | convert_type _ _ T = raise TYPE ("convert_type", [T], [])
-*}
+\<close>
 
 consts
   pseudo_acc :: "'a \<Rightarrow> 'a"
 
-text {*
+text \<open>
 
 Phase 1 of the conversion, converts accs and upds on SIMPL
 state (a record) to accs of named vars, using the pseudo_acc
 constant above to guard the accesses and lists of upds with strings.
-*}
+\<close>
 
-ML {*
+ML \<open>
 
 fun naming localname = Long_Name.base_name localname
     |> unsuffix "_'" |> suffix "#v"
@@ -271,9 +276,9 @@ fun mk_fun_app f x = let
     val fT = fastype_of f
   in Const (@{const_name "fun_app"}, fT --> fastype_of x --> range_type fT) $ f $ x end
 
-val ghost_assns = mk_pseudo_acc "GhostAssertions" @{typ "word64 => word32"}
+val ghost_assns = mk_pseudo_acc "GhostAssertions" @{typ "ghost_assertions"}
 
-val int_to_ghost_key = @{term "word_of_int :: int \<Rightarrow> word64"}
+val int_to_ghost_key = @{term "word_of_int :: int \<Rightarrow> 50 word"}
 
 fun convert_fetch_phase1 _ (@{term hrs_mem} $ _) = mk_pseudo_acc "Mem" @{typ heap_mem}
   | convert_fetch_phase1 _ (@{term hrs_htd} $ _) = mk_pseudo_acc "HTD" @{typ heap_typ_desc}
@@ -334,14 +339,15 @@ fun convert_upd_phase1 ctxt params (t as (Const (@{const_name globals_update}, _
     val v = betapply (f, Const (c', cT') $ s)
   in [(naming c', convert_fetch_phase1 params v)] end
   | convert_upd_phase1 _ _ t = raise TERM ("convert_upd_phase1", [t])
-*}
+\<close>
 
-text {* Phase 2 eliminates compound types, so we access and
-update only words from memory and local values. *}
+text \<open>Phase 2 eliminates compound types, so we access and
+update only words from memory and local values.\<close>
 
-ML {*
+ML \<open>
 fun ptr_simp ctxt = ctxt addsimps @{thms CTypesDefs.ptr_add_def size_of_def size_td_array
         field_lvalue_offset_eq align_td_array' word_of_int scast_def[symmetric]
+        ucast_def[symmetric]
         sint_sbintrunc' word_smod_numerals word_sdiv_numerals sdiv_int_def smod_int_def}
   |> Simplifier.rewrite
 
@@ -394,14 +400,14 @@ fun mk_arr_idx arr i = let
 
 fun get_ptr_val (Const (@{const_name "Ptr"}, _) $ x) = x
   | get_ptr_val p = Const (@{const_name ptr_val},
-        fastype_of p --> @{typ word32}) $ p
+        fastype_of p --> @{typ machine_word}) $ p
 
 fun mk_ptr_offs opt_T p offs = let
     val pT = fastype_of p
     val T = case opt_T of NONE => pT
       | SOME T => Type (@{type_name ptr}, [T])
-  in Const (@{const_name Ptr}, @{typ word32} --> T)
-       $ (@{term "(+) :: word32 \<Rightarrow> _"}
+  in Const (@{const_name Ptr}, @{typ machine_word} --> T)
+       $ (@{term "(+) :: machine_word \<Rightarrow> _"}
             $ get_ptr_val p $ offs)
   end
 
@@ -438,7 +444,7 @@ fun dest_mem_acc_addr (Const (@{const_name h_val}, _) $ _ $ p)
 fun narrow_mem_upd ctxt (params : export_params) p v = let
     val T = fastype_of v
     fun mk_offs T = mk_ptr_offs (SOME T) p
-    fun mk_offs2 T = mk_offs T o HOLogic.mk_number @{typ word32}
+    fun mk_offs2 T = mk_offs T o HOLogic.mk_number @{typ machine_word}
     val sterm = Syntax.pretty_term ctxt #> Pretty.string_of
     val styp = Syntax.pretty_typ ctxt #> Pretty.string_of
   in if (dest_mem_acc_addr v = SOME p) then []
@@ -454,9 +460,9 @@ fun narrow_mem_upd ctxt (params : export_params) p v = let
         val (elT, n) = dest_arrayT T
         val elT_size = get_c_type_size ctxt elT
       in case v of (Const (@{const_name Arrays.update}, _) $ arr $ i $ x)
-          => narrow_mem_upd ctxt params (mk_offs elT (@{term "( * ) :: word32 => _"}
-                  $ HOLogic.mk_number @{typ word32} elT_size
-                      $ (@{term "of_nat :: nat \<Rightarrow> word32"} $ i)))
+          => narrow_mem_upd ctxt params (mk_offs elT (@{term "(*) :: machine_word => _"}
+                  $ HOLogic.mk_number @{typ machine_word} elT_size
+                      $ (@{term "of_nat :: nat \<Rightarrow> machine_word"} $ i)))
               x @ narrow_mem_upd ctxt params p arr
       | _ => let
           val addrs = map (fn i => (mk_offs2 elT (i * elT_size)))
@@ -479,10 +485,10 @@ fun narrow_mem_upd ctxt (params : export_params) p v = let
 fun triv_mem_upd ctxt p v = case dest_mem_acc_addr v of
       NONE => false
     | SOME p' => p aconv p' orelse let
-      val t = @{term "(-) :: word32 \<Rightarrow> _"} $ get_ptr_val p $ get_ptr_val p'
+      val t = @{term "(-) :: machine_word \<Rightarrow> _"} $ get_ptr_val p $ get_ptr_val p'
       val thm = ptr_simp ctxt (Thm.cterm_of ctxt t)
       val t' = Thm.rhs_of thm |> Thm.term_of
-    in t' = @{term "0 :: word32"}
+    in t' = @{term "0 :: machine_word"}
         orelse (Thm.pretty_thm ctxt thm |> Pretty.writeln; false)
     end
 
@@ -491,8 +497,8 @@ fun narrow_mem_acc _ _ [] p = p
     fun get_offs (Const (@{const_name Arrays.index}, idxT) $ i) = let
         val (elT, _) = dest_arrayT (domain_type idxT)
         val elT_size = get_c_type_size ctxt elT
-      in @{term "( * ) :: word32 \<Rightarrow> _"} $ HOLogic.mk_number @{typ word32} elT_size
-              $ (@{term "of_nat :: nat \<Rightarrow> word32"} $ i) end
+      in @{term "(*) :: machine_word \<Rightarrow> _"} $ HOLogic.mk_number @{typ machine_word} elT_size
+              $ (@{term "of_nat :: nat \<Rightarrow> machine_word"} $ i) end
       | get_offs (Const (s, T)) = let
         val struct_typ = domain_type T |> dest_Type |> fst
         val (_, _, _, _, flds) = the (#structs_by_typ params struct_typ)
@@ -500,10 +506,10 @@ fun narrow_mem_acc _ _ [] p = p
         val _ = (length matches = 1)
             orelse raise TERM ("narrow_mem_acc: get_offs: ", [Const (s, T)])
         val offs = snd (snd (hd matches))
-      in HOLogic.mk_number @{typ word32} offs end
+      in HOLogic.mk_number @{typ machine_word} offs end
       | get_offs t = raise TERM ("narrow_mem_acc: get_offs: ", [t])
     val T' = get_acc_type accs (@{typ nat} (* doesn't matter *))
-    val offs = foldr1 (fn (x, y) => @{term "(+) :: word32 \<Rightarrow> _"} $ x $ y)
+    val offs = foldr1 (fn (x, y) => @{term "(+) :: machine_word \<Rightarrow> _"} $ x $ y)
         (map get_offs accs)
     in mk_ptr_offs (SOME T') p offs end
 
@@ -514,13 +520,13 @@ fun try_norm_index ctxt i = let
 fun mk_acc_array i xs = let
     val n = length xs
     val _ = warning ("expanding acc array, width " ^ string_of_int n)
-    val i = @{term "of_nat :: nat \<Rightarrow> word32"} $ i
+    val i = @{term "of_nat :: nat \<Rightarrow> machine_word"} $ i
     fun inner [(x, _)] = x
       | inner ((x, j) :: xs) = let
         val y = inner xs
         val T = fastype_of x
       in Const (@{const_name "If"}, HOLogic.boolT --> T --> T --> T)
-        $ HOLogic.mk_eq (i, HOLogic.mk_number @{typ word32} j) $ x $ y end
+        $ HOLogic.mk_eq (i, HOLogic.mk_number @{typ machine_word} j) $ x $ y end
       | inner [] = error "mk_acc_array: empty"
   in inner (xs ~~ (0 upto (n - 1))) end
 
@@ -642,11 +648,11 @@ fun convert_upd_ph2_worker ctxt params s v T accs =
 fun convert_upd_ph2 ctxt params (s, v)
     = convert_upd_ph2_worker ctxt params s v (fastype_of v) []
 (*      |> tap (map (snd #> Syntax.pretty_term ctxt #> Pretty.writeln)) *)
-*}
+\<close>
 
-text {* The final conversion reduces Isabelle terms to strings *}
+text \<open>The final conversion reduces Isabelle terms to strings\<close>
 
-ML {*
+ML \<open>
 val space_pad = space_implode " "
 
 fun space_pad_list xs = space_pad (string_of_int (length xs) :: xs)
@@ -669,6 +675,8 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
   | convert_ph3 ctxt params (t as (Const (@{const_name field_lvalue}, T) $ _ $ s))
     = convert_ph3 ctxt params (ptr_simp_term ctxt "field_lvalue"
         (head_of t $ Free ("p", domain_type T) $ s) t)
+  | convert_ph3 ctxt params (Const (@{const_name store_word64}, _) $ p $ w $ m)
+        = convert_op ctxt params "MemUpdate" "Mem" [m, p, w]
   | convert_ph3 ctxt params (Const (@{const_name store_word32}, _) $ p $ w $ m)
         = convert_op ctxt params "MemUpdate" "Mem" [m, p, w]
   | convert_ph3 ctxt params (Const (@{const_name store_word8}, _) $ p $ w $ m)
@@ -677,6 +685,8 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
         = convert_op ctxt params "MemUpdate" "Mem" [m, p, v]
   | convert_ph3 ctxt params (t as (Const (@{const_name h_val}, _) $ m $ p))
         = convert_op ctxt params "MemAcc" (convert_type false ctxt (fastype_of t)) [m, p]
+  | convert_ph3 ctxt params (Const (@{const_name load_word64}, _) $ p $ m)
+        = convert_op ctxt params "MemAcc" "Word 64" [m, p]
   | convert_ph3 ctxt params (Const (@{const_name load_word32}, _) $ p $ m)
         = convert_op ctxt params "MemAcc" "Word 32" [m, p]
   | convert_ph3 ctxt params (Const (@{const_name load_word8}, _) $ p $ m)
@@ -703,7 +713,7 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
         = convert_op ctxt params "PValid" "Bool" [htd, ptr_to_typ p, p]
   | convert_ph3 ctxt params (Const (@{const_name array_assertion}, _) $ p $ n $ htd)
         = convert_op ctxt params "PArrayValid" "Bool"
-            [htd, ptr_to_typ p, p, @{term "of_nat :: nat => word32"} $ n]
+            [htd, ptr_to_typ p, p, @{term "of_nat :: nat => machine_word"} $ n]
   | convert_ph3 ctxt params (Const (@{const_name ptr_add_assertion'}, assT)
             $ p $ n $ str $ htd)
         = convert_ph3 ctxt params let val T = dest_ptr_type (fastype_of p)
@@ -730,7 +740,7 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
   | convert_ph3 ctxt params (Const (@{const_name insert}, _) $ v $ S $ x)
         = convert_op ctxt params "Or" "Bool" [HOLogic.mk_eq (v, x), betapply (S, x)]
   | convert_ph3 _ _ (Free ("symbol_table", _) $ s)
-        = "Symbol " ^ HOLogic.dest_string s ^ " Word 32"
+        = "Symbol " ^ HOLogic.dest_string s ^ " " ^ machine_word
   | convert_ph3 ctxt params (Const (@{const_name of_nat}, T) $ (Const (@{const_name unat}, _) $ x))
         = let
             val t1 = fastype_of x
@@ -785,7 +795,7 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
   end
 
 fun htd_simp ctxt = ctxt addsimps @{thms fold_all_htd_updates
-        unat_lt2p[where 'a=32, simplified]}
+        unat_less_2p_word_bits[simplified word_bits_conv]}
   |> Simplifier.add_cong @{thm if_cong} |> Simplifier.rewrite
 
 fun simp_htd ctxt t = let
@@ -800,9 +810,9 @@ fun convert_upd_ph3 ctxt params (s, v) =
     val v = convert_ph3 ctxt params v
   in (nm, v) end
     handle TERM (s, ts) => raise TERM ("convert_upd_ph3: " ^ s, v :: ts)
-*}
+\<close>
 
-ML {*
+ML \<open>
 fun convert_fetch ctxt params t =
     Envir.beta_eta_contract t
     |> convert_fetch_phase1 params
@@ -827,13 +837,12 @@ fun convert_param_upds ctxt params (t as (Const (c, _) $ _ $ s))
   | convert_param_upds ctxt _ t = (if t = s_st ctxt then []
     else raise TERM ("convert_param_upds", [t]))
 
-*}
+\<close>
 
-lemmas sdiv_word32_max_ineq = sdiv_word32_max[folded zle_diff1_eq, simplified]
+ML \<open>
 
-ML {*
-
-val all_c_params = ["Mem Mem", "HTD HTD", "PMS PMS", "GhostAssertions WordArray 64 32"]
+val all_c_params = ["Mem Mem", "HTD HTD", "PMS PMS",
+                    "GhostAssertions WordArray 50 " ^ ParseGraph.ptr_size_str]
 val all_c_in_params = map (prefix "Var ") all_c_params
 val all_asm_params = ["Mem Mem", "PMS PMS"]
 val all_asm_in_params = map (prefix "Var ") all_asm_params
@@ -976,11 +985,7 @@ fun emit_body ctxt outfile params (Const (@{const_name Seq}, _) $ a $ b) n c e =
     val (n, nm) = emit_body ctxt outfile params a n c e
     val thy = Proof_Context.theory_of ctxt
     val G = Pattern.rewrite_term thy
-      (@{thms Word_Lemmas_32.signed_arith_ineq_checks_to_eq_word32
-              signed_arith_eq_checks_to_ord
-              signed_mult_eq_checks32_to_64
-              sdiv_word32_min[THEN eqTrueI] sdiv_word32_max_ineq
-              signed_shift_guard_to_word_32}
+      (@{thms guard_arith_simps meta_eq_to_obj_eq[OF ptr_arr_retyps_def]}
         |> map (Thm.concl_of #> HOLogic.dest_Trueprop #> HOLogic.dest_eq)) [] G
     val s = convert_fetch ctxt params (reduce_set_mem ctxt (s_st ctxt) G)
   in
@@ -1003,7 +1008,7 @@ fun emit_body ctxt outfile params (Const (@{const_name Seq}, _) $ a $ b) n c e =
     n c _ = let
     val spec = HOLogic.dest_string spec
     val lhss = convert_param_upds ctxt params
-      (betapplys (lhs, [@{term "0 :: word32"}, s_st ctxt]))
+      (betapplys (lhs, [@{term "0 :: machine_word"}, s_st ctxt]))
     val args = HOLogic.dest_list (betapply (vs, s_st ctxt))
       |> map (convert_fetch ctxt params)
     val args = args @ all_asm_in_params
@@ -1046,17 +1051,17 @@ fun emit_body ctxt outfile params (Const (@{const_name Seq}, _) $ a $ b) n c e =
     = (n, c)
   | emit_body ctxt outfile params (Const (@{const_name whileAnno}, _) $ C $ _ $ _ $ bd) n c e = let
     fun sn i = string_of_int (n + i)
-    val lc = "loop#" ^ sn 0 ^ "#count" ^ " Word 32"
+    val lc = "loop#" ^ sn 0 ^ "#count" ^ " " ^ machine_word
     val (n', nm) = emit_body ctxt outfile params bd (n + 4) (sn 0) e
     val cond = convert_fetch ctxt params (reduce_set_mem ctxt (s_st ctxt) C)
     val err_cond = case get_global_valid_assertion ctxt params C
         of NONE => "Op True Bool 0"
         | SOME s => s
   in emit outfile (sn 0 ^ " Basic " ^ sn 1 ^ " 1 " ^ lc
-      ^ " Op Plus Word 32 2 Var " ^ lc ^ " Num 1 Word 32");
+      ^ " Op Plus " ^ machine_word ^ " 2 Var " ^ lc ^ " Num 1 " ^ machine_word);
     emit outfile (sn 1 ^ " Cond " ^ sn 2 ^ " Err " ^ err_cond);
     emit outfile (sn 2 ^ " Cond " ^ nm ^ " " ^ c ^ " " ^ cond);
-    emit outfile (sn 3 ^ " Basic " ^ sn 1 ^ " 1 " ^ lc ^ " Num 0 Word 32");
+    emit outfile (sn 3 ^ " Basic " ^ sn 1 ^ " 1 " ^ lc ^ " Num 0 " ^ machine_word);
     (n', sn 3)
   end
   | emit_body _ _ _ t _ _ _ = raise TERM ("emit_body", [t])
@@ -1138,8 +1143,8 @@ fun scan_func_body_asm_instructions ctxt name = let
 fun emit_asm_protoes ctxt outfile fs = let
     val asm_info = maps (scan_func_body_asm_instructions ctxt) fs
       |> sort_distinct (fn ((s, _, _), (t, _, _)) => fast_string_ord (s, t))
-    fun mk_args n = (map (fn i => "arg" ^ string_of_int i ^ " Word 32") (1 upto n))
-    fun mk_rets has_lhs = (if has_lhs then ["ret1 Word 32"] else [])
+    fun mk_args n = (map (fn i => "arg" ^ string_of_int i ^ " " ^ machine_word) (1 upto n))
+    fun mk_rets has_lhs = (if has_lhs then ["ret1 " ^ machine_word] else [])
     fun emit_it (nm, has_lhs, nm_args) = emit outfile
       ("Function " ^ nm
               ^ " " ^ space_pad_list (mk_args nm_args @ all_asm_params)
@@ -1154,16 +1159,16 @@ fun emit_C_everything ctxt csenv outfile = let
   in app (emit_struct ctxt outfile csenv) structs;
      app (emit_func_body ctxt outfile params) fs;
      emit_asm_protoes ctxt outfile fs end
-*}
+\<close>
 
-ML {*
+ML \<open>
 fun openOut_relative thy = ParseGraph.filename_relative thy #> TextIO.openOut;
 
 fun emit_C_everything_relative ctxt csenv fname = let
     val thy = Proof_Context.theory_of ctxt
     val outfile = openOut_relative thy fname
   in emit_C_everything ctxt csenv outfile; TextIO.closeOut outfile end
-*}
+\<close>
 
 end
 

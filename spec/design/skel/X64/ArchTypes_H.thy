@@ -29,7 +29,7 @@ context Arch begin global_naming X64_H
 
 end
 
-text {* object\_type instance proofs *}
+text \<open>object\_type instance proofs\<close>
 
 qualify X64_H (in Arch)
 instantiation X64_H.object_type :: enum

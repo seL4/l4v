@@ -22,7 +22,6 @@ context begin interpretation Arch .
 
 requalify_consts
   arch_activate_idle_thread
-  arch_tcb_set_ipc_buffer
   sanitise_register
   arch_get_sanitise_register_info
   arch_post_modify_registers

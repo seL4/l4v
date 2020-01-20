@@ -16,10 +16,6 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch_ignore (add: tcb_sched_action)
 
-crunch cur_thread[wp]: finalise_cap "\<lambda>s. P (cur_thread s)"
-  (wp: crunch_wps select_wp modify_wp dxo_wp_weak
-   simp: crunch_simps)
-
 lemma dmo_maskInterrupt_reads_respects:
   "reads_respects aag l \<top> (do_machine_op (maskInterrupt m irq))"
   unfolding maskInterrupt_def
@@ -55,22 +51,29 @@ lemma deleted_irq_handler_reads_respects:
 lemma empty_slot_reads_respects:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   shows
-  "reads_respects aag l (K (is_subject aag (fst slot))) (empty_slot slot free_irq)"
+  "reads_respects aag l (K (aag_can_read aag (fst slot))) (empty_slot slot free_irq)"
   unfolding empty_slot_def fun_app_def
   apply (simp add: bind_assoc[symmetric] cong: if_cong)
   apply (fold update_cdt_def)
   apply (simp add: bind_assoc empty_slot_ext_def cong: if_cong)
   apply(rule gen_asm_ev)
-  apply (wp deleted_irq_handler_reads_respects set_cap_reads_respects set_original_reads_respects update_cdt_list_reads_respects | wpc | simp | (frule aag_can_read_self,fastforce simp: equiv_for_def split: option.splits))+
-        apply (wp update_cdt_reads_respects get_cap_wp get_cap_rev)+
-  apply(intro impI allI conjI)
-        apply(fastforce simp: reads_equiv_def2 equiv_for_def elim: states_equiv_forE_cdt dest: aag_can_read_self split: option.splits)+ done
+  apply (wp deleted_irq_handler_reads_respects set_cap_reads_respects set_original_reads_respects
+            update_cdt_list_reads_respects update_cdt_reads_respects get_cap_wp get_cap_rev
+        | wpc
+        | simp
+        | frule aag_can_read_self, fastforce simp: equiv_for_def split: option.splits)+
+  by (fastforce simp: reads_equiv_def2 equiv_for_def
+                elim: states_equiv_forE_cdt
+                dest: aag_can_read_self
+               split: option.splits)
 
 lemma requiv_get_tcb_eq':
   "\<lbrakk>reads_equiv aag s t; aag_can_read aag thread\<rbrakk> \<Longrightarrow>
     get_tcb thread s = get_tcb thread t"
-  apply(auto simp: reads_equiv_def2 elim: states_equiv_forE_kheap dest!: aag_can_read_self simp: get_tcb_def split: option.split kernel_object.split)
-  done
+  by (auto simp: reads_equiv_def2 get_tcb_def
+           elim: states_equiv_forE_kheap
+          dest!: aag_can_read_self
+          split: option.split kernel_object.split)
 
 lemma requiv_the_get_tcb_eq':
   "\<lbrakk>reads_equiv aag s t; aag_can_read aag thread\<rbrakk> \<Longrightarrow>
@@ -80,13 +83,7 @@ lemma requiv_the_get_tcb_eq':
   apply(fastforce intro: requiv_get_tcb_eq')
   done
 
-
-
 (* FIXME: move *)
-
-
-
-
 lemma set_object_modifies_at_most:
   "modifies_at_most aag {pasObjectAbs aag ptr} (\<lambda> s. \<not> asid_pool_at ptr s \<and> (\<forall> asid_pool. obj \<noteq> ArchObj (ASIDPool asid_pool))) (set_object ptr obj)"
   apply(rule modifies_at_mostI)
@@ -95,14 +92,13 @@ lemma set_object_modifies_at_most:
   done
 
 
-
-
-(*Not currently considered*)
-lemma scheduler_action_states_equiv[simp]: "states_equiv_for P Q R S st (scheduler_action_update f s) = states_equiv_for P Q R S st s"
+lemma scheduler_action_states_equiv[simp]:
+  "states_equiv_for P Q R S st (scheduler_action_update f s) = states_equiv_for P Q R S st s"
   apply (simp add: states_equiv_for_def equiv_for_def equiv_asids_def equiv_asid_def)
   done
 
 crunch states_equiv[wp]: set_thread_state_ext "states_equiv_for P Q R S st"
+  (ignore_del: set_thread_state_ext)
 
 lemma set_scheduler_action_reads_respects[wp]:
   "reads_respects aag l \<top> (set_scheduler_action action)"
@@ -179,21 +175,22 @@ lemma set_bound_notification_reads_respects:
   done
 
 lemma set_thread_state_ext_owned_reads_respects:
-  "reads_respects aag l (\<lambda>s. is_subject aag ref) (set_thread_state_ext ref)"
+  "reads_respects aag l (\<lambda>s. aag_can_read aag ref) (set_thread_state_ext ref)"
   apply (simp add: set_thread_state_ext_def when_def get_thread_state_def | wp thread_get_rev)+
   apply (simp add: reads_equiv_def)
   done
 
+
 lemma set_thread_state_owned_reads_respects:
-  "reads_respects aag l (\<lambda>s. is_subject aag ref) (set_thread_state ref ts)"
-  apply (simp add: set_thread_state_def fun_app_def)
+  "reads_respects aag l (\<lambda>s. aag_can_read aag ref) (set_thread_state ref ts)"
+  apply (simp add: set_thread_state_def)
   apply (wp set_object_reads_respects gets_the_ev set_thread_state_ext_owned_reads_respects)
-  apply (force elim: reads_equivE equiv_forE)
-  done
+  by (fastforce intro: kheap_get_tcb_eq elim: reads_equivE equiv_forD)
+
 
 lemma set_bound_notification_owned_reads_respects:
   "reads_respects aag l (\<lambda>s. is_subject aag ref) (set_bound_notification ref ntfn)"
-  apply (simp add:set_bound_notification_def fun_app_def)
+  apply (simp add:set_bound_notification_def)
   apply (wp set_object_reads_respects gets_the_ev)
   apply (force elim: reads_equivE equiv_forE)
   done
@@ -304,7 +301,7 @@ lemma get_object_reads_respects:
   "reads_respects aag l (K (aag_can_read aag ptr \<or> (aag_can_affect aag l ptr))) (get_object ptr)"
   apply (unfold get_object_def fun_app_def)
   apply (subst gets_apply)
-  apply (wp gets_apply_ev | wp_once hoare_drop_imps)+
+  apply (wp gets_apply_ev | wp (once) hoare_drop_imps)+
   apply (fastforce elim: reads_equivE affects_equivE equiv_forE)
   done
 
@@ -331,38 +328,6 @@ fun ep_queue_invisible where
   "ep_queue_invisible aag l (SendEP list) = labels_are_invisible aag l ((pasObjectAbs aag) ` (set list))" |
   "ep_queue_invisible aag l (RecvEP list) = labels_are_invisible aag l ((pasObjectAbs aag) ` (set list))" |
   "ep_queue_invisible aag l IdleEP = True"
-
-(*
-(* unneeded now? *)
-lemma aag_can_affect_ep_queued:
-  "\<lbrakk>(pasSubject aag, Reset, pasObjectAbs aag epptr) \<in> pasPolicy aag;
-    ko_at (Endpoint (SendEP list)) epptr s \<or> ko_at (Endpoint (RecvEP list)) epptr s;
-    t \<in> set list; pas_refined aag s; valid_objs s; sym_refs (state_refs_of s)\<rbrakk> \<Longrightarrow>
-  aag_can_affect aag (pasObjectAbs aag t) t"
-  apply(erule disjE)
-   apply(drule_tac P="send_blocked_on epptr" in ep_queued_st_tcb_at'')
-       apply(fastforce)
-      apply assumption
-     apply assumption
-    apply simp
-   apply(rule conjI)
-    apply(erule_tac auth=SyncSend and l'="pasObjectAbs aag t" in affects_reset)
-      apply(erule pas_refined_mem[rotated])
-      apply(rule sta_ts)
-      apply(clarsimp simp: thread_states_def split: option.split simp: tcb_states_of_state_def st_tcb_def2)
-      apply(case_tac "tcb_state tcb", simp_all)
-  apply(drule_tac P="receive_blocked_on epptr" in ep_queued_st_tcb_at'')
-      apply(fastforce)
-     apply assumption
-    apply assumption
-   apply simp
-  apply(erule_tac auth=Receive and l'="pasObjectAbs aag t" in affects_reset)
-   apply(erule pas_refined_mem[rotated])
-   apply(rule sta_ts)
-   apply(clarsimp simp: thread_states_def split: option.split simp: tcb_states_of_state_def st_tcb_def2)
-   apply(case_tac "tcb_state tcb", simp_all)
-  done
-*)
 
 lemma obj_eq_st_tcb_at:
   "\<lbrakk>kheap s x = kheap s' x; st_tcb_at P x s'\<rbrakk> \<Longrightarrow>
@@ -689,7 +654,7 @@ lemma set_tcb_queue_reads_respects[wp]:
 
 lemma aag_can_read_self'[simp]:
   "aag_can_read_label aag (pasSubject aag)"
-  by (fastforce intro: reads_lrefl)
+  by fastforce
 
 lemma gets_apply_ready_queues_reads_respects:
   "reads_respects aag l (\<lambda>_. pasSubject aag \<in> pasDomainAbs aag d) (gets_apply ready_queues d)"
@@ -697,32 +662,12 @@ lemma gets_apply_ready_queues_reads_respects:
   apply (force elim: reads_equivE simp: equiv_for_def)
   done
 
-(*
-lemma set_tcb_queue_equiv_but_for_labels:
-  "\<lbrace>equiv_but_for_labels aag L st and K (pasDomainAbs aag d \<in> L)\<rbrace>
-   set_tcb_queue d prio queue
-   \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  apply (simp add: set_tcb_queue_def modify_def)
-  apply wp
-  apply (force simp: equiv_but_for_labels_def states_equiv_for_def equiv_for_def equiv_asids_def equiv_asid_def)
-  done
-*)
-
 lemma set_tcb_queue_modifies_at_most:
   "modifies_at_most aag L (\<lambda>s. pasDomainAbs aag d \<inter> L \<noteq> {}) (set_tcb_queue d prio queue)"
   apply (rule modifies_at_mostI)
   apply (simp add: set_tcb_queue_def modify_def, wp)
   apply (force simp: equiv_but_for_labels_def states_equiv_for_def equiv_for_def equiv_asids_def equiv_asid_def)
   done
-
-(*
-lemma set_tcb_queue_modifies_at_most:
-  "modifies_at_most aag {pasObjectAbs aag thread} (\<lambda>s. True) (set_tcb_queue d prio queue)"
-  apply (rule modifies_at_mostI)
-  apply (simp add: set_tcb_queue_def modify_def, wp)
-  apply (force simp: equiv_but_for_labels_def states_equiv_for_def equiv_for_def equiv_asids_def equiv_asid_def)
-  done
-*)
 
 (* FIXME: move *)
 lemma equiv_valid_rv_trivial':
@@ -793,16 +738,20 @@ lemma possible_switch_to_reads_respects:
     (possible_switch_to tptr)"
   apply (simp add: possible_switch_to_def ethread_get_def)
   apply (case_tac "aag_can_read aag tptr \<or> aag_can_affect aag l tptr")
-   apply ((wp static_imp_wp tcb_sched_action_reads_respects | wpc | simp add: fun_app_def)+)[1]
-   apply (clarsimp simp: get_etcb_def)
-   apply ((intro conjI impI allI | elim aag_can_read_self reads_equivE affects_equivE equiv_forE conjE disjE | force)+)[1]
+   subgoal
+     apply (wp static_imp_wp tcb_sched_action_reads_respects | wpc | simp)+
+     apply (clarsimp simp: get_etcb_def)
+     apply (intro conjI impI allI
+           | elim aag_can_read_self reads_equivE affects_equivE equiv_forE conjE disjE
+           | force)+
+   done
   apply clarsimp
-  apply (wp_once, rename_tac cur_dom)
+  apply (wp (once), rename_tac cur_dom)
    apply (simp add: equiv_valid_def2)
      apply (rule_tac W="\<top>\<top>" and Q="\<lambda>tcb. pas_refined aag and K (tcb_domain tcb \<noteq> cur_dom)" in equiv_valid_rv_bind)
        prefer 3
        apply wp
-      apply (clarsimp simp: gets_the_def get_etcb_def equiv_valid_2_def gets_def bind_def assert_opt_def get_def fail_def return_def split: option.splits)
+      apply (monad_eq simp: get_etcb_def equiv_valid_2_def)
      apply (rule gen_asm_ev2')
      apply (simp add: equiv_valid_def2[symmetric])
      apply (wp tcb_sched_action_reads_respects)
@@ -810,7 +759,7 @@ lemma possible_switch_to_reads_respects:
     apply (wp gets_cur_domain_ev)+
   apply (clarsimp simp: get_etcb_def pas_refined_def tcb_domain_map_wellformed_aux_def)
   apply (frule_tac x="(tptr, tcb_domain y)" in bspec, force intro: domtcbs)
-  apply (erule notE, rule aag_can_read_self)
+  apply (erule notE)
   apply (fastforce dest: domains_distinct[THEN pas_domains_distinct_inj])
   done
 
@@ -820,17 +769,24 @@ crunch sched_act[wp]: set_simple_ko "\<lambda>s. P (scheduler_action s)"
 lemma cancel_all_ipc_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects aag l (pas_refined aag and K (is_subject aag epptr)) (cancel_all_ipc epptr)"
+  "reads_respects aag l (pas_refined aag and K (aag_can_read aag epptr)) (cancel_all_ipc epptr)"
   unfolding cancel_all_ipc_def fun_app_def
   apply (wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects
-            set_thread_state_pas_refined hoare_vcg_ball_lift mapM_x_wp set_thread_state_runnable_valid_sched_action
-            set_simple_ko_reads_respects get_ep_queue_reads_respects get_epq_SendEP_ret get_epq_RecvEP_ret
-            get_simple_ko_reads_respects get_simple_ko_wp | wpc
-          | clarsimp simp: ball_conj_distrib | rule subset_refl | wp_once hoare_drop_imps | assumption)+
+            set_thread_state_pas_refined hoare_vcg_ball_lift mapM_x_wp
+            set_thread_state_runnable_valid_sched_action
+            set_simple_ko_reads_respects get_ep_queue_reads_respects get_epq_SendEP_ret
+            get_epq_RecvEP_ret
+            get_simple_ko_reads_respects get_simple_ko_wp
+        | wpc
+        | clarsimp simp: ball_conj_distrib
+        | rule subset_refl
+        | wp (once) hoare_drop_imps
+        | assumption)+
   done
 
 fun ntfn_queue_invisible where
-  "ntfn_queue_invisible aag l (WaitingNtfn list) = labels_are_invisible aag l ((pasObjectAbs aag) ` (set list))" |
+  "ntfn_queue_invisible aag l (WaitingNtfn list) =
+     labels_are_invisible aag l ((pasObjectAbs aag) ` (set list))" |
   "ntfn_queue_invisible aag l _ = True"
 
 
@@ -886,114 +842,24 @@ lemma set_notification_equiv_but_for_labels:
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   unfolding set_simple_ko_def
   apply (wp set_object_equiv_but_for_labels get_object_wp)
-  apply (clarsimp simp: asid_pool_at_kheap partial_inv_def split: kernel_object.splits simp: obj_at_def)
+  apply (clarsimp simp: asid_pool_at_kheap partial_inv_def obj_at_def split: kernel_object.splits)
   done
 
 lemma cancel_all_signals_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects aag l (pas_refined aag and K (is_subject aag ntfnptr)) (cancel_all_signals ntfnptr)"
+  "reads_respects aag l (pas_refined aag and K (aag_can_read aag ntfnptr)) (cancel_all_signals ntfnptr)"
   unfolding cancel_all_signals_def
-  apply ((wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects
-        set_thread_state_pas_refined hoare_vcg_ball_lift mapM_x_wp set_thread_state_runnable_valid_sched_action
-        set_simple_ko_reads_respects get_epq_SendEP_ret get_epq_RecvEP_ret
-        get_simple_ko_reads_respects get_simple_ko_wp
-        | wpc | clarsimp simp: ball_conj_distrib | rule subset_refl | wp_once hoare_drop_imps | simp)+)[1]
-  done
-(*
-  apply (wp hoare_vcg_all_lift)
-  apply(case_tac "aag_can_read aag ntfnptr \<or> aag_can_affect aag l ntfnptr")
-   apply((wp mapM_x_ev' set_thread_state_reads_respects set_simple_ko_reads_respects
-             get_simple_ko_reads_respects hoare_vcg_all_lift
-
-         | wpc | simp)+)[1]
-    apply (wp hoare_drop_imps)
-   apply simp
-   apply force
-  apply(clarsimp simp: equiv_valid_def2 simp del: K_def)
-  apply(rule_tac W="\<lambda> ntfn ntfn'. (\<not> ntfn_queue_invisible aag l ntfn \<or> \<not> ntfn_queue_invisible aag l ntfn') \<longrightarrow> ntfn = ntfn'" and Q="\<top>\<top>" in equiv_valid_rv_bind)
-    apply(rule get_notification_revrv)
-   apply(case_tac "rv = rv'")
-    apply(clarsimp)
-    apply(fold equiv_valid_def2)
-    apply(rule equiv_valid_guard_imp)
-     apply((wp mapM_x_ev' set_thread_state_reads_respects set_simple_ko_reads_respects
-               get_simple_ko_reads_respects hoare_vcg_all_lift
-           | wpc | simp)+)[1]
-    apply clarsimp+
-    apply force
-   apply(clarsimp  split: notification.splits)
-   apply(intro allI impI conjI)
-           apply(fastforce intro: return_ev2)
-          apply(subst bind_return_unit[where f="return ()"])
-          apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-               apply(subst bind_return_unit[where f="return ()"])
-               apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-                    apply (simp add: op_eq_unit_taut)
-                    apply (rule equiv_valid_2_unobservable)
-                       apply wp
-                   apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_r_invisible])
-                      apply(rule modifies_at_mostI |
-                            wp set_thread_state_equiv_but_for  | simp add: labels_are_invisible_def)+
-              apply(rule ev2_invisible_ntfn)
-                  apply (simp add: labels_are_invisible_def)+
-                apply(rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp  | wp_once hoare_drop_imps)+
-         apply(fastforce intro: return_ev2)
-        apply(subst bind_return_unit[where f="return ()"])
-        apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-             apply(subst bind_return_unit[where f="return ()"])
-             apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-                  apply (simp add: op_eq_unit_taut)
-                  apply (rule equiv_valid_2_unobservable)
-                     apply wp
-                 apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_l_invisible])
-                    apply(rule modifies_at_mostI |
-                          wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-            apply(rule ev2_invisible_ntfn)
-                apply (simp add: labels_are_invisible_def)+
-              apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+)[7]
-       apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-            apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-                 apply (simp add: op_eq_unit_taut)
-                 apply (rule equiv_valid_2_unobservable)
-                    apply wp
-                apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_invisible])
-                   apply(rule modifies_at_mostI |
-                         wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-           apply(rule ev2_invisible_ntfn)
-               apply (simp add: labels_are_invisible_def)+
-             apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+)[7]
-      apply(subst bind_return_unit[where f="return ()"])
-      apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-           apply(subst bind_return_unit[where f="return ()"])
-           apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-                apply (simp add: op_eq_unit_taut)
-                apply (rule equiv_valid_2_unobservable)
-                   apply wp
-               apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_l_invisible])
-                  apply(rule modifies_at_mostI |
-                        wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-          apply(rule ev2_invisible_ntfn)
-              apply (simp add: labels_are_invisible_def)+
-            apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+)[7]
-     apply(fastforce intro: return_ev2)
-    apply(subst bind_return_unit[where f="return ()"])
-    apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-         apply(subst bind_return_unit[where f="return ()"])
-         apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-              apply (simp add: op_eq_unit_taut)
-              apply (rule equiv_valid_2_unobservable)
-                 apply wp
-             apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_r_invisible])
-                apply(rule modifies_at_mostI |
-                      wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-        apply(rule ev2_invisible_ntfn)
-            apply (simp add: labels_are_invisible_def)+
-          apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp  | wp_once hoare_drop_imps)+)[7]
-   apply(fastforce intro: return_ev2)
-  apply wp
-  done
-*)
+  by (wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects
+         set_thread_state_pas_refined hoare_vcg_ball_lift mapM_x_wp
+         set_thread_state_runnable_valid_sched_action
+         set_simple_ko_reads_respects get_epq_SendEP_ret get_epq_RecvEP_ret
+         get_simple_ko_reads_respects get_simple_ko_wp
+     | wpc
+     | clarsimp simp: ball_conj_distrib
+     | rule subset_refl
+     | wp (once) hoare_drop_imps
+     | simp)+
 
 lemma get_bound_notification_reads_respects':
   "reads_respects aag l (K(is_subject aag thread)) (get_bound_notification thread)"
@@ -1008,18 +874,21 @@ lemma reads_affects_equiv_get_tcb_eq:
   "\<lbrakk>aag_can_read aag thread \<or> aag_can_affect aag l thread;
     reads_equiv aag s t; affects_equiv aag l s t\<rbrakk> \<Longrightarrow>
    get_tcb thread s = get_tcb thread t"
-  apply (fastforce simp: get_tcb_def split: kernel_object.splits option.splits simp: reads_affects_equiv_kheap_eq)
+  apply (fastforce simp: get_tcb_def split: kernel_object.splits option.splits
+                   simp: reads_affects_equiv_kheap_eq)
   done
 
 lemma thread_get_reads_respects:
-  "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread)) (thread_get f thread)"
+  "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread))
+                  (thread_get f thread)"
   unfolding thread_get_def fun_app_def
   apply (wp gets_the_ev)
   apply (auto intro: reads_affects_equiv_get_tcb_eq)
   done
 
 lemma get_bound_notification_reads_respects:
-  "reads_respects aag l (\<lambda> s. aag_can_read aag thread \<or> aag_can_affect aag l thread) (get_bound_notification thread)"
+  "reads_respects aag l (\<lambda> s. aag_can_read aag thread \<or> aag_can_affect aag l thread)
+                  (get_bound_notification thread)"
   unfolding get_bound_notification_def
   apply(rule equiv_valid_guard_imp)
    apply(wp thread_get_reads_respects | simp)+
@@ -1043,27 +912,20 @@ lemma bound_tcb_at_eq:
    apply (fastforce simp: state_refs_of_def)
   apply (auto simp: pred_tcb_at_def obj_at_def valid_obj_def valid_ntfn_def is_tcb
                     state_refs_of_def refs_of_rev
-          simp del: refs_of_simps
-             elim!: valid_objsE)
+          simp del: refs_of_simps)
   done
 
 lemma unbind_maybe_notification_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
   "reads_respects aag l
-     (pas_refined aag and invs and K (is_subject aag ntfnptr))
+     (pas_refined aag and invs and K (aag_can_read aag ntfnptr))
      (unbind_maybe_notification ntfnptr)"
-  apply (clarsimp simp: unbind_maybe_notification_def)
-apply wp
-  apply (case_tac "ntfn_bound_tcb rv")
-   apply (clarsimp, wp)[1]
-  \<comment> \<open>interesting case, ntfn is bound\<close>
-  apply (clarsimp)
-   apply ((wp set_bound_notification_none_reads_respects set_simple_ko_reads_respects
-              get_simple_ko_reads_respects
-          | wpc
-          | simp)+)
-  done
+  unfolding unbind_maybe_notification_def
+  by (wp set_bound_notification_none_reads_respects set_simple_ko_reads_respects
+         get_simple_ko_reads_respects
+     | wpc
+     | simp)+
 
 lemma unbind_notification_is_subj_reads_respects:
   "reads_respects aag l (pas_refined aag and invs and K (is_subject aag t))
@@ -1078,12 +940,13 @@ lemma unbind_notification_is_subj_reads_respects:
   apply (rule bound_tcb_at_implies_read, auto)
   done
 
+(* aag_can_read is transitive on endpoints but intransitive on notifications *)
 lemma fast_finalise_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects aag l (pas_refined aag and invs and K (pas_cap_cur_auth aag cap) and
-    K (fin \<longrightarrow> (case cap of EndpointCap r badge rights \<Rightarrow> is_subject aag r |
-                           NotificationCap r badge rights \<Rightarrow> is_subject aag r |
+  "reads_respects aag l (pas_refined aag and invs and
+    K (fin \<longrightarrow> (case cap of EndpointCap r badge rights \<Rightarrow> aag_can_read aag r |
+                            NotificationCap r badge rights \<Rightarrow> is_subject aag r |
                             _ \<Rightarrow> True)))
   (fast_finalise cap fin)"
   apply(case_tac cap, simp_all)
@@ -1101,7 +964,9 @@ lemma fast_finalise_reads_respects:
 lemma cap_delete_one_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects_f aag l (silc_inv aag st and invs and pas_refined aag and K (is_subject aag (fst slot))) (cap_delete_one slot)"
+  "reads_respects_f aag l (silc_inv aag st and invs and pas_refined aag
+                              and K (is_subject aag (fst slot)))
+                    (cap_delete_one slot)"
   unfolding cap_delete_one_def fun_app_def
   apply(unfold unless_def when_def)
   apply(rule equiv_valid_guard_imp)
@@ -1110,11 +975,12 @@ lemma cap_delete_one_reads_respects_f:
             reads_respects_f[OF fast_finalise_reads_respects, where st=st and aag=aag]
             empty_slot_silc_inv
         | simp | elim conjE)+
-      apply (rule_tac Q="\<lambda>rva s.
-             rva = is_final_cap' rv s \<and>
-             cte_wp_at ((=) rv) slot s \<and>
-             silc_inv aag st s \<and>
-             is_subject aag (fst slot) \<and> pasObjectAbs aag (fst slot) \<noteq> SilcLabel" in hoare_strengthen_post)
+      apply (rule_tac Q="\<lambda>rva s. rva = is_final_cap' rv s \<and>
+                                 cte_wp_at ((=) rv) slot s \<and>
+                                 silc_inv aag st s \<and>
+                                 is_subject aag (fst slot) \<and>
+                                 pasObjectAbs aag (fst slot) \<noteq> SilcLabel"
+                   in hoare_strengthen_post)
        apply wp
       apply (rule conjI)
        apply clarsimp
@@ -1127,8 +993,42 @@ lemma cap_delete_one_reads_respects_f:
      apply(wp reads_respects_f[OF get_cap_rev, where st=st and aag=aag]
               get_cap_auth_wp[where aag=aag]
         | simp | elim conjE)+
-  apply (auto simp: cte_wp_at_caps_of_state silc_inv_def)
-  done
+  by (fastforce simp: cte_wp_at_caps_of_state silc_inv_def)
+
+lemma cap_delete_one_reads_respects_f_transferable:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "reads_respects_f aag l (silc_inv aag st and invs and pas_refined aag
+                            and K(aag_can_read_not_silc aag (fst slot)) and is_transferable_in slot)
+                    (cap_delete_one slot)"
+  unfolding cap_delete_one_def fun_app_def
+  apply(unfold unless_def when_def)
+  apply(rule equiv_valid_guard_imp)
+   apply(wp is_final_cap_reads_respects
+            reads_respects_f[OF empty_slot_reads_respects, where st=st and aag=aag]
+            reads_respects_f[OF fast_finalise_reads_respects, where st=st and aag=aag]
+            empty_slot_silc_inv
+        | simp | elim conjE)+
+      apply (rule_tac Q="\<lambda>rva s. rva = is_final_cap' rv s \<and>
+                                 cte_wp_at ((=) rv) slot s \<and>
+                                 silc_inv aag st s \<and>
+                                 is_transferable_in slot s \<and>
+                                 aag_can_read_not_silc aag (fst slot)"
+                   in hoare_strengthen_post)
+       apply wp
+      apply (rule conjI)
+       apply clarsimp
+       apply (drule silc_inv)
+       apply (erule_tac x=rv in allE, erule_tac x=slot in allE)
+       apply simp
+       apply (drule(1) intra_label_capD)
+       apply (clarsimp simp: cap_points_to_label_def' cte_wp_at_caps_of_state split: cap.splits)
+      apply (force elim: is_transferable_capE)
+     apply(wp reads_respects_f[OF get_cap_rev, where st=st and aag=aag]
+              get_cap_wp
+        | simp | elim conjE)+
+  by (fastforce simp: cte_wp_at_caps_of_state silc_inv_def)
+
 
 lemma get_blocking_object_reads_respects:
   "reads_respects aag l \<top>  (get_blocking_object state)"
@@ -1137,26 +1037,29 @@ lemma get_blocking_object_reads_respects:
    apply(wp | wpc | simp)+
    done
 
-fun tcb_st_to_auth' where
-  "tcb_st_to_auth' (BlockedOnSend x xa) = SyncSend" |
-  "tcb_st_to_auth' (BlockedOnReceive x) = Receive" |
-  "tcb_st_to_auth' (BlockedOnNotification x) = Receive"
+fun tcb_st_to_auth'
+where
+  "tcb_st_to_auth' (BlockedOnSend x pl) = SyncSend"
+| "tcb_st_to_auth' (BlockedOnReceive x pl) = Receive"
+| "tcb_st_to_auth' (BlockedOnNotification x) = Receive"
 
 
 
 
 lemma owns_thread_blocked_reads_endpoint:
   "\<lbrakk>pas_refined aag s; invs s;
-        st_tcb_at (\<lambda> y. y = state) tptr s;
-        is_subject aag tptr;
-        state = (BlockedOnReceive x) \<or> state = (BlockedOnSend x xb) \<or> state = BlockedOnNotification x\<rbrakk> \<Longrightarrow> aag_can_read aag x"
+    st_tcb_at (\<lambda> y. y = state) tptr s;
+    is_subject aag tptr;
+    state = (BlockedOnReceive x pl) \<or> state = (BlockedOnSend x xb) \<or> state = BlockedOnNotification x\<rbrakk>
+   \<Longrightarrow> aag_can_read aag x"
   apply(rule_tac auth="tcb_st_to_auth' state" in reads_ep)
    apply(drule sym, simp, rule pas_refined_mem)
     apply(rule_tac s=s in sta_ts)
-    apply(clarsimp simp: thread_states_def split: option.splits simp: tcb_states_of_state_def st_tcb_at_def get_tcb_def obj_at_def)
+    apply(clarsimp simp: thread_states_def split: option.splits
+                   simp: tcb_states_of_state_def st_tcb_at_def get_tcb_def obj_at_def)
     apply fastforce
    apply assumption
-  apply(fastforce)
+  apply fastforce
   done
 
 
@@ -1166,10 +1069,12 @@ lemma st_tcb_at_sym:
   done
 
 lemma blocked_cancel_ipc_reads_respects:
-  "reads_respects aag l (pas_refined aag and invs and st_tcb_at ((=) state) tptr and (\<lambda>_. (is_subject aag tptr)))
+  "reads_respects aag l (pas_refined aag and invs and st_tcb_at ((=) state) tptr
+                                         and (\<lambda>_. (is_subject aag tptr)))
     (blocked_cancel_ipc state tptr)"
   unfolding blocked_cancel_ipc_def
-  apply(wp set_thread_state_owned_reads_respects set_simple_ko_reads_respects get_ep_queue_reads_respects
+  apply(wp set_thread_state_owned_reads_respects set_simple_ko_reads_respects
+           get_ep_queue_reads_respects
            get_simple_ko_reads_respects get_blocking_object_reads_respects
       | simp add: get_blocking_object_def | wpc)+
   apply(fastforce intro: aag_can_read_self owns_thread_blocked_reads_endpoint simp: st_tcb_at_sym)
@@ -1177,20 +1082,16 @@ lemma blocked_cancel_ipc_reads_respects:
 
 lemma select_singleton_ev:
   "equiv_valid_inv I B (K (\<exists>a. A = {a})) (select A)"
-  apply(fastforce simp: equiv_valid_def2 equiv_valid_2_def select_def)
-  done
+  by (fastforce simp: equiv_valid_def2 equiv_valid_2_def select_def)
 
 lemma thread_set_fault_pas_refined':
   "\<lbrace>pas_refined aag\<rbrace>
      thread_set (tcb_fault_update fault) thread
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply(wp thread_set_pas_refined | simp)+
-  done
+  by (wp thread_set_pas_refined | simp)+
 
-lemma thread_set_fault_empty_invs:
-  "\<lbrace>invs\<rbrace> thread_set (tcb_fault_update Map.empty) thread \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply(wp itr_wps(27) | simp)+
-  done
+(* FIXME MERGE names *)
+lemmas thread_set_fault_empty_invs = thread_set_tcb_fault_reset_invs
 
 lemma thread_set_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1204,11 +1105,14 @@ lemma thread_set_reads_respects:
   apply(rule equiv_valid_rv_guard_imp)
    apply(rule_tac L="{pasObjectAbs aag y}" and L'="{pasObjectAbs aag y}" in ev2_invisible[OF domains_distinct])
        apply (assumption | simp add: labels_are_invisible_def)+
-     apply(rule modifies_at_mostI[where P="\<top>"] | wp set_object_equiv_but_for_labels | simp | (clarify, drule get_tcb_not_asid_pool_at))+
+     apply(rule modifies_at_mostI[where P="\<top>"]
+          | wp set_object_equiv_but_for_labels
+          | simp
+          | (clarify, drule get_tcb_not_asid_pool_at))+
   done
 
 lemma get_thread_state_rev:
-  "reads_equiv_valid_inv A aag (K (is_subject aag ref)) (get_thread_state ref)"
+  "reads_equiv_valid_inv A aag (K (aag_can_read aag ref)) (get_thread_state ref)"
   unfolding get_thread_state_def
   by (rule thread_get_rev)
 
@@ -1228,56 +1132,70 @@ lemma thread_set_tcb_at:
    \<lbrace>\<lambda>s. tcb_at ptr s \<longrightarrow> Q s\<rbrace> thread_set x ptr \<lbrace>\<lambda>_ s. P s\<rbrace>"
   apply (rule use_spec(1))
   apply (case_tac "tcb_at ptr s")
-  apply (clarsimp simp add: spec_valid_def valid_def)
+   apply (clarsimp simp add: spec_valid_def valid_def)
   apply (simp add: spec_valid_def thread_set_def set_object_def[abs_def])
-  apply wp
-  apply clarsimp
-  apply (clarsimp simp: get_tcb_def obj_at_def is_tcb_def split: option.splits Structures_A.kernel_object.splits)
+  apply (wp get_object_wp)
+  apply (force simp: get_tcb_def obj_at_def is_tcb_def
+              split: option.splits Structures_A.kernel_object.splits)
   done
 
 (* FIXME: Why was the [wp] attribute on this lemma clobbered by interpretation of the Arch locale? *)
 lemmas [wp] = thread_set_fault_valid_global_refs
 
+
 lemma reply_cancel_ipc_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes gets_ev[wp del]
   shows
-  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and K (is_subject aag tptr)) (reply_cancel_ipc tptr)"
+  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and tcb_at tptr
+                             and K (is_subject aag tptr))
+      (reply_cancel_ipc tptr)"
   apply (rule gen_asm_ev)
   unfolding reply_cancel_ipc_def
-  apply (wp cap_delete_one_reads_respects_f[where st=st and aag=aag] select_singleton_ev select_inv select_wp
-            reads_respects_f[OF get_cap_rev, where st=st and aag=aag] assert_wp
+  apply (wp cap_delete_one_reads_respects_f_transferable[where st=st and aag=aag]
+            select_singleton_ev select_inv select_wp assert_wp
+            reads_respects_f[OF get_cap_rev, where st=st and aag=aag]
             reads_respects_f[OF thread_set_reads_respects, where st=st and aag=aag ]
             reads_respects_f[OF gets_descendants_of_revrv[folded equiv_valid_def2]]
         | simp add: when_def split del: if_split | elim conjE)+
-   apply(rule_tac Q="\<lambda> rv s. silc_inv aag st s \<and> invs s \<and> pas_refined aag s \<and> is_subject aag tptr \<and>
-                   (\<forall>x\<in>descendants_of (tptr, tcb_cnode_index 2) (cdt s).
-                       is_subject aag (fst x))" in hoare_strengthen_post)
+   apply(rule_tac Q="\<lambda> rv s. silc_inv aag st s \<and> invs s \<and> pas_refined aag s \<and> tcb_at tptr s
+                           \<and> is_subject aag tptr"
+               in hoare_strengthen_post)
     apply(wp thread_set_tcb_fault_update_silc_inv hoare_vcg_imp_lift hoare_vcg_ball_lift
-      thread_set_fault_empty_invs thread_set_fault_pas_refined' | wps | simp)+
-  apply(fastforce dest: descendants_of_owned)
-  done
+             thread_set_fault_empty_invs thread_set_fault_pas_refined'
+         | wps | simp)+
+   apply clarsimp apply (rule conjI,rule TrueI)
+   apply clarsimp
+   apply (frule(1) reply_cap_descends_from_master0)
+   apply (frule all_children_subjectReads[THEN all_children_descendants_of],force,force)
+   apply (fastforce simp: cte_wp_at_caps_of_state
+                    elim: silc_inv_no_transferable'[where slot = "(a,b)" for a b,simplified])
+  by fastforce
 
 lemma cancel_signal_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects aag l ((\<lambda>s. is_subject aag (cur_thread s)) and K (aag_can_read_label aag (pasObjectAbs aag ntfnptr) \<or>
-        aag_can_affect aag l ntfnptr)) (cancel_signal threadptr ntfnptr)"
+  "reads_respects aag l ((\<lambda>s. is_subject aag (cur_thread s))
+                           and K (aag_can_read aag ntfnptr \<or> aag_can_affect aag l ntfnptr))
+      (cancel_signal threadptr ntfnptr)"
   unfolding cancel_signal_def
-  apply(wp set_thread_state_reads_respects set_simple_ko_reads_respects get_simple_ko_reads_respects hoare_drop_imps | wpc | simp)+
-  done
+  by (wp set_thread_state_reads_respects set_simple_ko_reads_respects
+         get_simple_ko_reads_respects hoare_drop_imps
+     | wpc | simp)+
 
 lemma cancel_signal_owned_reads_respects:
-  "reads_respects aag l (K (is_subject aag threadptr) and K (aag_can_read_label aag (pasObjectAbs aag ntfnptr) \<or>
-        aag_can_affect aag l ntfnptr)) (cancel_signal threadptr ntfnptr)"
+  "reads_respects aag l (K (is_subject aag threadptr)
+                         and K (aag_can_read aag ntfnptr \<or> aag_can_affect aag l ntfnptr))
+     (cancel_signal threadptr ntfnptr)"
   unfolding cancel_signal_def
-  apply(wp set_thread_state_owned_reads_respects set_simple_ko_reads_respects get_simple_ko_reads_respects hoare_drop_imps | wpc | simp)+
-  done
+  by (wp set_thread_state_owned_reads_respects set_simple_ko_reads_respects
+         get_simple_ko_reads_respects hoare_drop_imps
+     | wpc | simp)+
 
 lemma cancel_ipc_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and
+  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and tcb_at t and
    (K (is_subject aag t)))
     (cancel_ipc t)"
   unfolding cancel_ipc_def
@@ -1291,16 +1209,34 @@ lemma cancel_ipc_reads_respects_f:
        apply (simp add: st_tcb_at_def obj_at_def | blast)+
   done
 
+lemma update_restart_pc_reads_respects[wp]:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "reads_respects aag l (silc_inv aag s and K (is_subject aag thread))
+      (update_restart_pc thread)"
+  unfolding update_restart_pc_def
+  apply (subst as_user_bind)
+  apply (wpsimp wp: as_user_set_register_reads_respects' as_user_get_register_reads_respects)
+  done
 
 lemma suspend_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and
+  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and tcb_at thread and
   (K (is_subject aag thread))) (suspend thread)"
   unfolding suspend_def
-  apply(wp reads_respects_f[OF set_thread_state_owned_reads_respects, where st=st and Q="\<top>"] reads_respects_f[OF tcb_sched_action_reads_respects, where st=st and Q=\<top>] set_thread_state_pas_refined| simp)+
+  apply(wp reads_respects_f[OF set_thread_state_owned_reads_respects, where st=st and Q="\<top>"]
+           reads_respects_f[OF tcb_sched_action_reads_respects, where st=st and Q=\<top>]
+           reads_respects_f[OF get_thread_state_rev, where st=st and Q="\<top>"]
+           reads_respects_f[OF update_restart_pc_reads_respects, where st=st and Q="\<top>"]
+           gts_wp
+           set_thread_state_pas_refined| simp)+
     apply(wp cancel_ipc_reads_respects_f[where st=st] cancel_ipc_silc_inv)+
-  apply(simp)
+   apply clarsimp
+   apply (wp hoare_allI hoare_drop_imps)
+    apply clarsimp
+    apply(wp cancel_ipc_silc_inv)+
+  apply auto
   done
 
 lemma prepare_thread_delete_reads_respects_f:
@@ -1318,19 +1254,17 @@ lemma arch_finalise_cap_reads_respects:
   apply simp
   apply (simp split: bool.splits)
   apply (intro impI conjI)
-  apply (
-         wp delete_asid_pool_reads_respects
+  apply (wp delete_asid_pool_reads_respects
             unmap_page_reads_respects
             unmap_page_table_reads_respects
             delete_asid_reads_respects
-
-    | simp add: invs_psp_aligned invs_vspace_objs invs_valid_objs valid_cap_def
-    split: option.splits bool.splits | intro impI conjI allI |
-    elim conjE |
-    (rule aag_cap_auth_subject,assumption,assumption) |
-    (drule cte_wp_valid_cap)
-    )+
-done
+        | simp add: invs_psp_aligned invs_vspace_objs invs_valid_objs valid_cap_def
+             split: option.splits bool.splits
+        | intro impI conjI allI
+        | elim conjE
+        | rule aag_cap_auth_subject,assumption,assumption
+        | drule cte_wp_valid_cap)+
+  done
 
 lemma deleting_irq_handler_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1339,13 +1273,14 @@ lemma deleting_irq_handler_reads_respects:
   unfolding deleting_irq_handler_def
   apply(wp cap_delete_one_reads_respects_f
            reads_respects_f[OF get_irq_slot_reads_respects]
-      | simp | blast)+
+       | simp | blast)+
   done
 
 lemma finalise_cap_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and cte_wp_at ((=) cap) slot and K (pas_cap_cur_auth aag cap)
+  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs
+                          and cte_wp_at ((=) cap) slot and K (pas_cap_cur_auth aag cap)
     and K (final \<longrightarrow> (case cap of EndpointCap r badge rights \<Rightarrow> is_subject aag r |
                            NotificationCap r badge rights \<Rightarrow> is_subject aag r |
                             _ \<Rightarrow> True))) (finalise_cap cap final)"
@@ -1360,18 +1295,22 @@ lemma finalise_cap_reads_respects:
                          add: invs_valid_objs invs_sym_refs aag_cap_auth_def
                               cap_auth_conferred_def cap_rights_to_auth_def
                               cap_links_irq_def aag_has_auth_to_Control_eq_owns
+                              cte_wp_at_caps_of_state
                   | rule aag_Control_into_owns_irq
                   | clarsimp split del: if_split
                   | rule conjI
-                  | wp_once reads_respects_f[where st=st]
+                  | wp (once) reads_respects_f[where st=st]
                   | blast
-                  | clarsimp)+)[11]
+                  | clarsimp
+                  | force dest:caps_of_state_valid simp: valid_cap_def)+)[11]
   apply (rule equiv_valid_guard_imp)
-  by ((wp arch_finalise_cap_reads_respects reads_respects_f[where st=st] arch_finalise_cap_silc_inv | simp | elim conjE)+)[2]
+  by ((wp arch_finalise_cap_reads_respects reads_respects_f[where st=st] arch_finalise_cap_silc_inv
+      | simp | elim conjE)+)[2]
 
 
 lemma cap_swap_for_delete_reads_respects:
-  "reads_respects aag l (K (is_subject aag (fst slot1) \<and> is_subject aag (fst slot2))) (cap_swap_for_delete slot1 slot2)"
+  "reads_respects aag l (K (is_subject aag (fst slot1) \<and> is_subject aag (fst slot2)))
+     (cap_swap_for_delete slot1 slot2)"
   unfolding cap_swap_for_delete_def
   apply(simp add: when_def)
   apply(rule conjI, rule impI)
@@ -1380,24 +1319,6 @@ lemma cap_swap_for_delete_reads_respects:
    apply(simp)
   apply(rule impI, wp)
   done
-
-
-
-lemma rec_del_pas_refined'':
-  "\<lbrace>pas_refined aag and K (case call of
-  CTEDeleteCall slot exposed \<Rightarrow> is_subject aag (fst slot) |
-  FinaliseSlotCall slot exposed \<Rightarrow> is_subject aag (fst slot) |
-  ReduceZombieCall cap slot exposed \<Rightarrow> is_subject aag (fst slot) \<and>
-  is_subject aag (obj_ref_of cap))\<rbrace>
-    rec_del call \<lbrace>K (pas_refined aag)\<rbrace>"
-  apply(rule validE_cases_valid)
-  apply(rule_tac E="K (pas_refined aag)" in hoare_post_impErr)
-    apply(rule rec_del_pas_refined')
-   apply(simp)+
-   done
-
-
-
 
 lemma owns_cnode_owns_obj_ref_of_child_cnodes_threads_and_zombies:
   "\<lbrakk>pas_refined aag s; is_subject aag (fst slot);
@@ -1418,15 +1339,8 @@ lemma owns_cnode_owns_obj_ref_of_child_cnodes_threads_and_zombies:
   apply(erule (1) aag_Control_into_owns)
   done
 
-
-lemma only_timer_irq_inv_irq_state_independent_A[simp, intro!]:
-  "irq_state_independent_A (only_timer_irq_inv irq st)"
-  apply (clarsimp simp: irq_state_independent_A_def only_timer_irq_inv_def only_timer_irq_def irq_is_recurring_def is_irq_at_def)
-  done
-
-lemma only_timer_irq_inv_wuc_update[simp]:
-  "only_timer_irq_inv irq st (work_units_completed_update f s) = only_timer_irq_inv irq st s"
-  by (clarsimp simp: only_timer_irq_inv_def only_timer_irq_def irq_is_recurring_def is_irq_at_def)
+lemmas only_timer_irq_inv_irq_state_independent_A[intro!]
+       = irq_state_independent_A_only_timer_irq_inv
 
 lemma rec_del_only_timer_irq:
   "\<lbrace>only_timer_irq_inv irq (st::det_ext state)\<rbrace> rec_del call \<lbrace>\<lambda>_. only_timer_irq irq\<rbrace>"
@@ -1434,7 +1348,7 @@ lemma rec_del_only_timer_irq:
   apply (rule hoare_pre, rule only_timer_irq_pres)
     apply (rule hoare_pre, wp rec_del_irq_masks)
     apply (wp rec_del_domain_sep_inv | force
-      | (rule hoare_pre, wp_once rec_del_domain_sep_inv))+
+      | (rule hoare_pre, wp (once) rec_del_domain_sep_inv))+
   done
 
 lemma rec_del_only_timer_irq_inv:
@@ -1484,7 +1398,8 @@ proof (induct s rule: rec_del.induct, simp_all only: rec_del_fails drop_spec_ev[
               reads_respects_f[OF empty_slot_reads_respects, where st=st] empty_slot_silc_inv)
       apply(rule "1.hyps")
      apply(rule_tac Q'="\<lambda>r s. silc_inv aag st s \<and> is_subject aag (fst slot)" in hoare_post_imp_R)
-      apply((wp validE_validE_R'[OF rec_del_silc_inv] | fastforce simp: silc_inv_def)+)[2]
+      apply((wp validE_validE_R'[OF rec_del_silc_inv_not_transferable]
+            | fastforce simp: silc_inv_def)+)[2]
     apply simp
     done
 next
@@ -1494,19 +1409,23 @@ next
      apply(wp drop_spec_ev[OF returnOk_ev] drop_spec_ev[OF liftE_ev]
               set_cap_reads_respects_f "2.hyps" preemption_point_inv'
               drop_spec_ev[OF preemption_point_reads_respects_f[where st=st and st'=st']]
-              validE_validE_R'[OF rec_del_silc_inv] rec_del_invs rec_del_respects(2)
-              rec_del_only_timer_irq_inv
+              validE_validE_R'[OF rec_del_silc_inv_not_transferable] rec_del_invs
+              rec_del_respects(2) rec_del_only_timer_irq_inv
           | simp add: split_def split del: if_split | (rule irq_state_independent_A_conjI, simp)+)+
-             apply(rule_tac Q'="\<lambda>rv s. emptyable (slot_rdcall (ReduceZombieCall (fst rvb) slot exposed)) s \<and> (\<not> exposed \<longrightarrow>
-                   ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) slot s) \<and>
-                  is_subject aag (fst slot)" in hoare_post_imp_R)
+             apply(rule_tac Q'="\<lambda>rv s.
+                                emptyable (slot_rdcall (ReduceZombieCall (fst rvb) slot exposed)) s
+                             \<and> (\<not> exposed \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) slot s)
+                                            \<and> is_subject aag (fst slot)"
+                         in hoare_post_imp_R)
               apply(wp rec_del_emptyable reduce_zombie_cap_to)
              apply simp
-            apply(wp drop_spec_ev[OF liftE_ev] set_cap_reads_respects_f[where st=st] set_cap_silc_inv[where st=st] | simp)+
-           apply(wp replace_cap_invs set_cap_cte_wp_at   set_cap_sets final_cap_same_objrefs
+            apply(wp drop_spec_ev[OF liftE_ev] set_cap_reads_respects_f[where st=st]
+                     set_cap_silc_inv[where st=st]
+                 | simp)+
+           apply(wp replace_cap_invs set_cap_cte_wp_at set_cap_sets final_cap_same_objrefs
                     set_cap_cte_cap_wp_to  hoare_vcg_const_Ball_lift static_imp_wp
                     drop_spec_ev[OF liftE_ev] finalise_cap_reads_respects set_cap_silc_inv
-                    set_cap_only_timer_irq_inv
+                    set_cap_only_timer_irq_inv set_cap_pas_refined_not_transferable
                 | simp add: cte_wp_at_eq_simp
                 | erule finalise_cap_not_reply_master[simplified Inr_in_liftE_simp])+
          apply(rule hoare_strengthen_post)
@@ -1525,11 +1444,13 @@ next
                                  \<and> simple_sched_action s
                                  \<and> pas_cap_cur_auth aag (fst fin)
                                  \<and> is_subject aag (fst slot)
-                                 \<and> (case (fst fin) of Zombie ptr bits n \<Rightarrow> is_subject aag (obj_ref_of (fst fin))
+                                 \<and> (case (fst fin) of Zombie ptr bits n \<Rightarrow>
+                                                            is_subject aag (obj_ref_of (fst fin))
                                                      | _ \<Rightarrow> True)
                                  \<and> (is_zombie (fst fin) \<or> fst fin = NullCap) \<and>
                                    (is_zombie (fst fin) \<or> fst fin = NullCap)" in hoare_vcg_conj_lift)
-           apply(wp finalise_cap_invs finalise_cap_replaceable Finalise_AC.finalise_cap_makes_halted finalise_cap_auth'
+           apply(wp finalise_cap_invs finalise_cap_replaceable Finalise_AC.finalise_cap_makes_halted
+                    finalise_cap_auth'
                     finalise_cap_ret_is_subject finalise_cap_ret' finalise_cap_silc_inv
                     finalise_cap_ret_is_silc finalise_cap_only_timer_irq_inv)[1]
           apply(rule finalise_cap_cases[where slot=slot])
@@ -1543,7 +1464,8 @@ next
           apply(drule_tac s="{word}" in sym)
           apply clarsimp
           apply(rule conjI, fastforce)
-          apply(clarsimp, rule conjI)
+          apply(clarsimp, rule conjI) apply (erule replaceable_zombie_not_transferable)(* WHY *)
+           apply (rule conjI)
            apply(fastforce simp: silc_inv_def)
           apply(rule conjI)
            apply(fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def
@@ -1582,9 +1504,11 @@ next
          apply (clarsimp simp: cap_points_to_label_def split: cap.splits)
         apply (simp add: silc_inv_def)
        apply (force simp: owns_cnode_owns_obj_ref_of_child_cnodes_threads_and_zombies)
-      apply(wp drop_spec_ev[OF liftE_ev] reads_respects_f[OF get_cap_rev, where st=st and Q="\<top>"] get_cap_wp | simp)+
+      apply(wp drop_spec_ev[OF liftE_ev] reads_respects_f[OF get_cap_rev, where st=st and Q="\<top>"]
+               get_cap_wp
+           | simp)+
     apply(clarsimp cong: conj_cong simp:invs_valid_objs invs_arch_state invs_psp_aligned)
-    apply(intro conjI impI | clarsimp | assumption)+
+    apply(intro conjI impI | clarsimp | assumption | fastforce dest:silc_inv_not_subject)+
       apply(erule (1) cap_cur_auth_caps_of_state[rotated])
       apply(simp add: cte_wp_at_caps_of_state)
      apply(fastforce dest: cte_wp_at_valid_objs_valid_cap simp: invs_valid_objs)
@@ -1597,16 +1521,23 @@ next
   case (3 ptr bits n slot s) show ?case
     apply(simp add: rec_del.simps)
     apply(rule spec_equiv_valid_guard_imp)
-     apply(wp drop_spec_ev[OF liftE_ev] drop_spec_ev[OF returnOk_ev] reads_respects_f[OF cap_swap_for_delete_reads_respects] cap_swap_for_delete_silc_inv drop_spec_ev[OF assertE_ev])+
+     apply(wp drop_spec_ev[OF liftE_ev] drop_spec_ev[OF returnOk_ev]
+              reads_respects_f[OF cap_swap_for_delete_reads_respects] cap_swap_for_delete_silc_inv
+              drop_spec_ev[OF assertE_ev])+
     apply(fastforce simp: silc_inv_def)
     done
 next
   case (4 ptr bits n slot s) show ?case
     apply(simp add: rec_del.simps)
     apply(rule spec_equiv_valid_guard_imp)
-     apply(wp drop_spec_ev[OF returnOk_ev] drop_spec_ev[OF liftE_ev] set_cap_reads_respects_f drop_spec_ev[OF assertE_ev] get_cap_wp "4.hyps" reads_respects_f[OF get_cap_rev, where st=st and Q="\<top>"] validE_validE_R'[OF rec_del_silc_inv] | simp add: in_monad)+
+     apply(wp drop_spec_ev[OF returnOk_ev] drop_spec_ev[OF liftE_ev] set_cap_reads_respects_f
+              drop_spec_ev[OF assertE_ev] get_cap_wp "4.hyps"
+              reads_respects_f[OF get_cap_rev, where st=st and Q="\<top>"]
+              validE_validE_R'[OF rec_del_silc_inv_not_transferable]
+          | simp add: in_monad)+
     apply (rule_tac Q'="\<lambda> _. silc_inv aag st and
-                    K (pasObjectAbs aag (fst slot) \<noteq> SilcLabel \<and> is_subject aag (fst slot))" in hoare_post_imp_R)
+                           K (pasObjectAbs aag (fst slot) \<noteq> SilcLabel \<and> is_subject aag (fst slot))"
+                 in hoare_post_imp_R)
      prefer 2
      apply (clarsimp)
      apply(rule conjI, assumption)
@@ -1619,7 +1550,7 @@ next
        apply assumption
       apply(fastforce simp: cap_points_to_label_def)
      apply(clarsimp simp: slots_holding_overlapping_caps_def2 ctes_wp_at_def)
-    apply(wp validE_validE_R'[OF rec_del_silc_inv] | simp)+
+    apply(wp validE_validE_R'[OF rec_del_silc_inv_not_transferable] | simp)+
     apply (clarsimp simp add: zombie_is_cap_toE)
     apply (clarsimp simp: cte_wp_at_caps_of_state zombie_ptr_emptyable silc_inv_def)
    done
@@ -1627,30 +1558,94 @@ qed
 
 lemmas rec_del_reads_respects_f = use_spec_ev[OF rec_del_spec_reads_respects_f]
 
+
+(* FIXME MOVE in lib *)
+lemma ev_pre_cont:
+  "equiv_valid I A B \<bottom> f"
+  by (simp add: equiv_valid_def2 equiv_valid_2_def)
+
+lemma finalise_cap_transferable_ev:
+  "equiv_valid_inv I A (K(is_transferable_cap cap)) (finalise_cap cap final)"
+  by (rule gen_asm_ev) (erule is_transferable_capE; wpsimp wp: return_ev)
+
+lemma rec_del_Finalise_transferable_read_respects_f:
+  "reads_respects_f aag l (silc_inv aag st and is_transferable_in slot
+                           and K(aag_can_read_not_silc aag (fst slot)))
+     (rec_del (FinaliseSlotCall slot exposed))"
+  apply (subst rec_del.simps[abs_def])
+  apply (wp | wpc | simp)+
+           apply ((wp ev_pre_cont hoare_pre_cont)+)[3]
+        apply simp
+        apply (wp liftE_ev finalise_cap_transferable_ev | simp)+
+       apply (rule hoare_post_imp[OF _ finalise_cap_transferable[where P=\<top>]], fastforce)
+      apply (wp is_final_cap_reads_respects hoare_drop_imp get_cap_wp
+                reads_respects_f[OF get_cap_rev, where st=st and Q="\<top>"]
+            | simp)+
+  by (fastforce simp: cte_wp_at_caps_of_state)
+
+lemma rec_del_Finalise_transferableE_R:
+  "\<lbrace>(\<lambda>s. is_transferable (caps_of_state s slot)) and P\<rbrace>
+     rec_del (FinaliseSlotCall slot exposed)
+   \<lbrace>\<lambda>_.P \<rbrace>, -"
+  apply (rule hoare_pre)
+   apply (simp add: validE_R_def)
+   apply (rule hoare_post_impErr)
+     apply (rule rec_del_Finalise_transferable)
+  by force+
+
+lemma rec_del_CTEDeleteCall_reads_respects_f:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs
+                           and simple_sched_action and pas_refined aag and emptyable slot
+                           and (\<lambda>s. \<not> exposed \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) slot s)
+                           and cdt_change_allowed' aag slot)
+     (rec_del (CTEDeleteCall slot exposed))"
+  apply (cases "is_subject aag (fst slot)")
+   apply (rule equiv_valid_guard_imp)
+   apply (wp rec_del_reads_respects_f)
+   apply fastforce
+  apply (subst rec_del.simps[abs_def])
+  apply (wp when_ev reads_respects_f[OF empty_slot_reads_respects] empty_slot_silc_inv
+            rec_del_Finalise_transferable_read_respects_f hoare_vcg_all_lift_R hoare_drop_impE_R
+            rec_del_Finalise_transferableE_R
+        | wpc | simp)+
+  apply clarsimp
+  apply (frule(3) cca_can_read[OF invs_mdb invs_valid_objs])
+  apply (frule(2) cdt_change_allowed_not_silc[rotated 2], force, force)
+  apply (frule(1) cca_to_transferable_or_subject[rotated 2], force, force)
+  apply force
+  done
+
+
+
 lemma cap_delete_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and pas_refined aag and emptyable slot and K (is_subject aag (fst slot)))
+  "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs
+                           and simple_sched_action and pas_refined aag and emptyable slot
+                           and K (is_subject aag (fst slot)))
     (cap_delete slot)"
   unfolding cap_delete_def
-  apply(wp rec_del_spec_reads_respects_f | rule use_spec_ev | simp | elim conjE | force)+
-  done
+  by(wp rec_del_spec_reads_respects_f | rule use_spec_ev | simp | elim conjE | force)+
 
 
 
 (*NOTE: Required to dance around the issue of the base potentially
         being zero and thus we can't conclude it is in the current subject.*)
 lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq':
-  "\<lbrakk>pas_cap_cur_auth aag (ArchObjectCap (ASIDPoolCap ptr base)); reads_equiv aag s t; pas_refined aag x\<rbrakk>
-   \<Longrightarrow>
-   arm_asid_table (arch_state s) (asid_high_bits_of base) =
-   arm_asid_table (arch_state t) (asid_high_bits_of base)"
+  "\<lbrakk>pas_cap_cur_auth aag (ArchObjectCap (ASIDPoolCap ptr base)); reads_equiv aag s t;
+    pas_refined aag x\<rbrakk>
+   \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of base) =
+       arm_asid_table (arch_state t) (asid_high_bits_of base)"
   apply (subgoal_tac "asid_high_bits_of 0 = asid_high_bits_of 1")
    apply(case_tac "base = 0")
     apply(subgoal_tac "is_subject_asid aag 1")
-     apply ((auto intro: requiv_arm_asid_table_asid_high_bits_of_asid_eq
-                       aag_cap_auth_ASIDPoolCap_asid) |
-            (auto simp: asid_high_bits_of_def asid_low_bits_def))+
+     apply ((fastforce intro: requiv_arm_asid_table_asid_high_bits_of_asid_eq
+                              aag_cap_auth_ASIDPoolCap_asid)+)[2]
+   apply (auto intro: requiv_arm_asid_table_asid_high_bits_of_asid_eq
+                      aag_cap_auth_ASIDPoolCap_asid)[1]
+  apply (simp add: asid_high_bits_of_def asid_low_bits_def)
   done
 
 lemma pt_cap_aligned:
@@ -1659,7 +1654,7 @@ lemma pt_cap_aligned:
    \<Longrightarrow> is_aligned word pt_bits"
   by (auto simp: obj_ref_of_def pt_bits_def pageBits_def
           dest!: cap_aligned_valid[OF valid_capsD, unfolded cap_aligned_def,
-                                    THEN conjunct1])
+                                   THEN conjunct1])
 
 section "globals_equiv"
 
@@ -1687,6 +1682,7 @@ lemma set_irq_state_valid_global_objs:
   done
 
 crunch device_state_invs[wp]: maskInterrupt "\<lambda> ms. P (device_state ms)"
+  (ignore_del: maskInterrupt)
 
 lemma set_irq_state_globals_equiv:
   "invariant (set_irq_state state irq) (globals_equiv st)"
@@ -1703,7 +1699,7 @@ lemma cancel_all_ipc_globals_equiv':
   apply(wp mapM_x_wp[OF _ subset_refl] set_thread_state_globals_equiv
            set_simple_ko_globals_equiv hoare_vcg_all_lift get_object_inv
            dxo_wp_weak | wpc | simp
-        | wp_once hoare_drop_imps)+
+        | wp (once) hoare_drop_imps)+
   done
 
 lemma cancel_all_ipc_globals_equiv:
@@ -1737,7 +1733,7 @@ lemma cancel_all_signals_globals_equiv':
   apply(wp mapM_x_wp[OF _ subset_refl] set_thread_state_globals_equiv
            set_notification_valid_ko_at_arm dxo_wp_weak
            set_notification_globals_equiv hoare_vcg_all_lift | wpc | simp
-        | wp_once hoare_drop_imps)+
+        | wp (once) hoare_drop_imps)+
   done
 
 lemma cancel_all_signals_globals_equiv:
@@ -1812,17 +1808,18 @@ lemma tcb_sched_action_dequeue_valid_ko_at_arm[wp]:
   apply (simp add: etcb_at_def)
  done
 
-crunch valid_ko_at_arm[wp]: fast_finalise "valid_ko_at_arm" (wp: mapM_x_wp' dxo_wp_weak ignore: reschedule_required)
-crunch valid_ko_at_arm[wp]: set_original "valid_ko_at_arm" (simp: valid_ko_at_arm_def)
+crunch valid_ko_at_arm[wp]: fast_finalise "valid_ko_at_arm"
+  (wp: mapM_x_wp' dxo_wp_weak ignore: reschedule_required)
+crunch valid_ko_at_arm[wp]: set_original "valid_ko_at_arm"
+  (simp: valid_ko_at_arm_def)
 crunch valid_ko_at_arm[wp]: set_cdt "valid_ko_at_arm" (simp: valid_ko_at_arm_def)
 
-crunch valid_ko_at_arm[wp]: cap_insert "valid_ko_at_arm" (wp: hoare_drop_imps dxo_wp_weak simp: crunch_simps ignore: cap_insert_ext)
+crunch valid_ko_at_arm[wp]: cap_insert "valid_ko_at_arm"
+  (wp: hoare_drop_imps dxo_wp_weak simp: crunch_simps ignore: cap_insert_ext)
 
 crunch valid_ko_at_arm[wp]: set_message_info "valid_ko_at_arm"
 crunch valid_ko_at_arm[wp]: set_extra_badge "valid_ko_at_arm"
 crunch valid_ko_at_arm[wp]: copy_mrs "valid_ko_at_arm" (wp: mapM_wp')
-
-crunch valid_ko_at_arm[wp]: set_mrs "valid_ko_at_arm" (wp: mapM_x_wp' simp: zipWithM_x_mapM_x simp: arm_global_pd_not_tcb)
 
 crunch globals_equiv[wp]: deleted_irq_handler "globals_equiv st"
 
@@ -1845,9 +1842,9 @@ crunch valid_ko_at_arm[wp]: thread_set "valid_ko_at_arm" (simp: arm_global_pd_no
 lemma set_asid_pool_valid_ko_at_arm[wp]:
   "\<lbrace>valid_ko_at_arm\<rbrace> set_asid_pool a b\<lbrace>\<lambda>_.valid_ko_at_arm\<rbrace>"
   unfolding set_asid_pool_def
-  apply (wp get_object_wp | wpc)+
+  apply (wpsimp wp: set_object_wp_strong simp: a_type_def)
   apply(fastforce simp: valid_ko_at_arm_def get_tcb_ko_at obj_at_def)
-done
+  done
 
 crunch valid_ko_at_arm[wp]: finalise_cap "valid_ko_at_arm"
   (wp: hoare_vcg_if_lift2 hoare_drop_imps select_wp modify_wp mapM_wp' dxo_wp_weak
@@ -1871,7 +1868,8 @@ lemma pagebitsforsize_ge_2[simp] :
 done
 
 lemma arch_finalise_cap_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_global_objs and valid_arch_state and pspace_aligned and valid_vspace_objs and valid_global_refs and valid_vs_lookup\<rbrace>
+  "\<lbrace>globals_equiv st and valid_global_objs and valid_arch_state and pspace_aligned
+     and valid_vspace_objs and valid_global_refs and valid_vs_lookup\<rbrace>
      arch_finalise_cap cap b
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct cap)

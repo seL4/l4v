@@ -16,9 +16,9 @@ data ArchInvocationLabel
         = RISCVPageTableMap
         | RISCVPageTableUnmap
         | RISCVPageMap
-        | RISCVPageRemap
         | RISCVPageUnmap
         | RISCVPageGetAddress
         | RISCVASIDControlMakePool
         | RISCVASIDPoolAssign
+        | RISCVIRQIssueIRQHandler
         deriving (Show, Eq, Enum, Bounded)

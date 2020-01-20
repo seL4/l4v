@@ -56,7 +56,8 @@ lemma suspend_st_tcb_at':
   "\<lbrace>\<lambda>s. (t\<noteq>t' \<longrightarrow> st_tcb_at' P t' s) \<and> (t=t' \<longrightarrow> P Inactive)\<rbrace>
   suspend t
   \<lbrace>\<lambda>_. st_tcb_at' P t'\<rbrace>"
-  apply (simp add: suspend_def unless_def)
+  apply (simp add: suspend_def)
+  unfolding updateRestartPC_def
   apply (cases "t=t'")
   apply (simp|wp cancelIPC_st_tcb_at' sts_st_tcb')+
   done
@@ -167,7 +168,7 @@ crunch ksCurThread[wp]: readVCPUReg "\<lambda>s. P (ksCurThread s)"
   (ignore: getObject)
 
 lemma fromEnum_maxBound_vcpureg_def:
-  "fromEnum (maxBound :: vcpureg) = 38"
+  "fromEnum (maxBound :: vcpureg) = 39"
   by (clarsimp simp: fromEnum_def maxBound_def enum_vcpureg)
 
 lemma unat_of_nat_mword_fromEnum_vcpureg[simp]:

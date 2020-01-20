@@ -17,9 +17,9 @@ imports
 begin
 context Arch begin global_naming ARM_HYP_H
 
-text {*
+text \<open>
   An enumeration of arch-specific system call labels.
-*}
+\<close>
 
 #INCLUDE_HASKELL SEL4/API/InvocationLabels/ARM.lhs CONTEXT ARM_HYP_H ONLY ArchInvocationLabel
 

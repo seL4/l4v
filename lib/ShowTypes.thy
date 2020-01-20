@@ -44,7 +44,7 @@ theory ShowTypes imports
 keywords "term_show_types" "thm_show_types" "goal_show_types" :: diag
 begin
 
-ML {*
+ML \<open>
 structure Show_Types = struct
 
 fun pretty_markup_to_string no_markup =
@@ -122,6 +122,6 @@ Outer_Syntax.command @{command_keyword goal_show_types}
                          [x] => writeln x
                        | _ => print_subgoals xs 1) end)))
 end;
-*}
+\<close>
 
 end

@@ -12,7 +12,7 @@ theory BuildRefineCache_C (* FIXME: broken *)
 imports Main
 begin
 
-ML {*
+ML \<open>
 
 (* needed to generate a proof cache *)
 proofs := 1;
@@ -22,9 +22,9 @@ tracing "Building crefinement image using Refine_C";
 
 time_use_thy "Refine_C";
 
-*}
+\<close>
 
-ML {*
+ML \<open>
 
 tracing "Synching proof cache";
 
@@ -38,6 +38,6 @@ in
   File.open_output (XML_Syntax.output_forest xml) (Path.basic "proof_cache.xml")
 end;
 
-*}
+\<close>
 
 end;

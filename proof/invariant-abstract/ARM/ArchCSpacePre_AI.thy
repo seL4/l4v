@@ -235,14 +235,6 @@ lemma valid_arch_mdb_weak_derived_update:
             (caps_of_state s(dest \<mapsto> cap, src \<mapsto> NullCap))"
   by auto
 
-(* this is not true in RT
-lemma valid_arch_mdb_tcb_cnode_update:
-  "valid_arch_mdb (is_original_cap s) (caps_of_state s) \<Longrightarrow>
-           valid_arch_mdb ((is_original_cap s) ((t, tcb_cnode_index 2) := True))
-              (caps_of_state s((t, tcb_cnode_index 2) \<mapsto> ReplyCap t))"
-  by auto
-*)
-
 lemmas valid_arch_mdb_updates = valid_arch_mdb_free_index_update valid_arch_mdb_not_arch_cap_update
                                 valid_arch_mdb_derived_cap_update valid_arch_mdb_free_index_update'
                                 valid_arch_mdb_weak_derived_update

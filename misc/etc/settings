@@ -14,22 +14,30 @@
 init_components "$USER_HOME/.isabelle/contrib" "$ISABELLE_HOME/Admin/components/main"
 init_components "$USER_HOME/.isabelle/contrib" "$ISABELLE_HOME/Admin/components/bundled"
 
-# 64 bit setup for large C proofs:
 if [ -n "$ML_HOME" ]
 then
-  ML_OPTIONS="-H 2000"
-  ML_PLATFORM="$ISABELLE_PLATFORM64"
-  ML_HOME="$(dirname ${ML_HOME})/$ML_PLATFORM"
+    # For Isabelle2018 and earlier, select the 64 bit ML runtime.
+    # Note: you also need this for Isabelle2019, if your proof session
+    # runs into the 16GB memory limit for the default runtime.
+    if echo "$ML_SYSTEM" | grep -q 'polyml-5\.7.*'
+    then
+        ML_PLATFORM=$ISABELLE_PLATFORM64
+        ML_OPTIONS="-H 2000 --maxheap 20000 --stackspace 64"
+        ML_HOME=$(dirname "$ML_HOME")/$ML_PLATFORM
+    else
+        # 10GB should be enough, even for large C proofs
+        ML_OPTIONS="-H 1000 --maxheap 10000 --stackspace 64"
+    fi
 fi
 
-# increased memory settings for large builds
+# Also increase memory for Java and Scala frontends.
 ISABELLE_BUILD_JAVA_OPTIONS="-Xms2048m -Xmx6096m -Xss4m"
 JEDIT_JAVA_OPTIONS="-Xms128m -Xmx4096m -Xss4m"
 
-# show brackets in jEdit
+# Show bracket syntax for implications
 ISABELLE_JEDIT_OPTIONS="-m brackets"
 
-# Everyone most likely wants ARM
+# By default, build proofs for ARM version of seL4
 : ${L4V_ARCH:="ARM"}
 
 # --- end L4.verified repository settings ---

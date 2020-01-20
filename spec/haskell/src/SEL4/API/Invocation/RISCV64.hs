@@ -45,8 +45,6 @@ data PageTableInvocation
 data PageInvocation
     = PageGetAddr {
         pageGetBasePtr :: PPtr Word }
-    | PageRemap {
-        pageRemapEntries :: (PTE, PPtr PTE) }
     | PageMap {
         pageMapCap :: Capability,
         pageMapCTSlot :: PPtr CTE,
@@ -73,11 +71,16 @@ data ASIDPoolInvocation
 
 {- Interrupt Control -}
 
--- on current RISCV platforms, we do not have proper interrupts
+-- The RISCV platform requires an interrupt control call to record whether
+-- the interrupt was edge or level-triggered.
 
 data IRQControlInvocation
-    = RISCVNoIRQControlInvocation
-    deriving Show
+    = IssueIRQHandler {
+        issueHandlerIRQ :: IRQ,
+        issueHandlerSlot,
+        issueHandlerControllerSlot :: PPtr CTE,
+        issueHandlerTrigger :: Bool }
+    deriving (Show, Eq)
 
 {- Additional Register Subsets -}
 

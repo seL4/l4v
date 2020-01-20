@@ -28,21 +28,21 @@ imports "Monad_WP/NonDetMonadVCG"
 begin
 
 (* Setup "monad_eq" attributes. *)
-ML {*
+ML \<open>
 structure MonadEqThms = Named_Thms (
     val name = Binding.name "monad_eq"
     val description = "monad equality-prover theorems"
     )
-*}
-attribute_setup monad_eq = {*
+\<close>
+attribute_setup monad_eq = \<open>
   Attrib.add_del
     (Thm.declaration_attribute MonadEqThms.add_thm)
-    (Thm.declaration_attribute MonadEqThms.del_thm) *}
+    (Thm.declaration_attribute MonadEqThms.del_thm)\<close>
   "Monad equality-prover theorems"
 
 (* Setup tactic. *)
 
-ML {*
+ML \<open>
 fun monad_eq_tac ctxt =
 let
   (* Set a simpset as being hidden, so warnings are not printed from it. *)
@@ -50,10 +50,10 @@ let
 in
   CHANGED (clarsimp_tac (ctxt' addsimps (MonadEqThms.get ctxt')) 1)
 end
-*}
+\<close>
 
-method_setup monad_eq = {*
-    Method.sections Clasimp.clasimp_modifiers >> (K (SIMPLE_METHOD o monad_eq_tac)) *}
+method_setup monad_eq = \<open>
+    Method.sections Clasimp.clasimp_modifiers >> (K (SIMPLE_METHOD o monad_eq_tac))\<close>
   "prove equality on monads"
 
 lemma monad_eq_simp_state [monad_eq]:

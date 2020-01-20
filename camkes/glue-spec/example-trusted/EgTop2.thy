@@ -35,10 +35,10 @@ where
  | "sends _ _ = False"
 (*>*)
 
-text {*
+text \<open>
   Now it's possible to state and prove the desired property of the system; that
   @{term client} never receives the secret ``baz''.
-*}
+\<close>
 
 lemma "\<forall>p. \<exists>e s. gs\<^sub>0 p = Some (e, s) \<and>
   (e = client_untrusted \<or>

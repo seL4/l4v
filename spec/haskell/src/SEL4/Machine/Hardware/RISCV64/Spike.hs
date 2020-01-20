@@ -8,7 +8,7 @@
 
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, GeneralizedNewtypeDeriving #-}
 
-module SEL4.Machine.Hardware.RISCV64.Spike where
+module SEL4.Machine.Hardware.RISCV64.HiFive where
 
 import Prelude hiding (Word)
 import SEL4.Machine.RegisterSet
@@ -24,18 +24,18 @@ newtype IRQ = IRQ Word32
 
 instance Bounded IRQ where
     minBound = IRQ 0
-    maxBound = IRQ 5 -- no external interrupts supported yet on spike
+    maxBound = IRQ 53
 
 newtype PAddr = PAddr { fromPAddr :: Word }
     deriving (Integral, Real, Show, Eq, Num, Bits, FiniteBits, Ord, Enum, Bounded)
 
-kernelBase :: VPtr
-kernelBase = VPtr 0xFFFFFFFF80000000
+kernelELFBase :: VPtr
+kernelELFBase = VPtr 0xFFFFFFFF84000000
 
 physBase = 0x0 -- called PADDR_BASE in C
 physMappingOffset = fromVPtr pptrBase - physBase -- called BASE_OFFSET in C
 paddrLoad = 0xC0000000
-kernelBaseOffset = fromVPtr kernelBase - paddrLoad
+kernelBaseOffset = fromVPtr kernelELFBase - paddrLoad
 
 ptrFromPAddr :: PAddr -> PPtr a
 ptrFromPAddr (PAddr addr) = PPtr $ addr + physMappingOffset
@@ -48,6 +48,9 @@ addrFromKPPtr (PPtr ptr) = PAddr $ ptr - kernelBaseOffset
 
 pageColourBits :: Int
 pageColourBits = error "unused on this architecture"
+
+irqInvalid :: IRQ
+irqInvalid = IRQ 0
 
 {- stubs -}
 

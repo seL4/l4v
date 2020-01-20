@@ -823,6 +823,12 @@ lemma copyMRs_simple:
   apply (simp add: upto_enum_def mapM_Nil)
   done
 
+(* FIXME: MOVE *)
+lemma returnOK_catch[simp]:
+  "(returnOk rv <catch> m) = return rv"
+  unfolding catch_def returnOk_def
+  by clarsimp
+
 lemma doIPCTransfer_simple_rewrite:
   "monadic_rewrite True True
    ((\<lambda>_. msgExtraCaps (messageInfoFromWord msgInfo) = 0
@@ -830,7 +836,7 @@ lemma doIPCTransfer_simple_rewrite:
                       \<le> of_nat (length X64_H.msgRegisters))
       and obj_at' (\<lambda>tcb. tcbFault tcb = None
                \<and> (user_regs o atcbContextGet o tcbArch) tcb msgInfoRegister = msgInfo) sender)
-   (doIPCTransfer sender ep badge True rcvr)
+   (doIPCTransfer sender ep badge grant rcvr)
    (do rv \<leftarrow> mapM_x (\<lambda>r. do v \<leftarrow> asUser sender (getRegister r);
                              asUser rcvr (setRegister r v)
                           od)
@@ -892,7 +898,7 @@ lemma empty_fail_isRunnable:
 
 lemma setupCallerCap_rewrite:
   "monadic_rewrite True True (\<lambda>s. reply_masters_rvk_fb (ctes_of s))
-   (setupCallerCap send rcv)
+   (setupCallerCap send rcv canGrant)
    (do setThreadState BlockedOnReply send;
        replySlot \<leftarrow> getThreadReplySlot send;
        callerSlot \<leftarrow> getThreadCallerSlot rcv;
@@ -902,7 +908,7 @@ lemma setupCallerCap_rewrite:
                  \<and> capReplyMaster (cteCap replySlotCTE)
                  \<and> mdbFirstBadged (cteMDBNode replySlotCTE)
                  \<and> mdbRevocable (cteMDBNode replySlotCTE));
-       cteInsert (ReplyCap send False) replySlot callerSlot
+       cteInsert (ReplyCap send False canGrant) replySlot callerSlot
     od)"
   apply (simp add: setupCallerCap_def getThreadCallerSlot_def
                    getThreadReplySlot_def locateSlot_conv

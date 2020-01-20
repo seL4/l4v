@@ -45,6 +45,7 @@ struct
   fun put_precond _ _ = error "crunch no_irq should not be calling put_precond";
   val pre_thms = [];
   val wpc_tactic = wp_cases_tactic_weak;
+  fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. no_irq mapp_lambda_ignore";
   val get_monad_state_type = get_nondet_monad_state_type;
@@ -771,6 +772,14 @@ lemma empty_fail_clearMemory [simp, intro!]:
   by (simp add: clearMemory_def mapM_x_mapM ef_storeWord)
 
 end
+
+lemmas msgRegisters_A_unfold
+  = msg_registers_def
+    msgRegisters_def
+        [unfolded upto_enum_def, simplified,
+         unfolded fromEnum_def enum_register, simplified,
+         unfolded toEnum_def enum_register, simplified]
+
 end
 
 end

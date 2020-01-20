@@ -332,20 +332,20 @@ lemma insert_cap_child_corres:
     apply (clarsimp simp: caps_of_state_transform_opt_cap cte_wp_at_caps_of_state
       transform_cap_def)+
   apply (clarsimp simp: valid_mdb_def cte_wp_at_cases dest!:invs_mdb)
-  apply (case_tac "cdt s' child", safe intro!: mdb_cte_atI)
-  (* 121 subgoals *)
-  by (auto dest: mdb_cte_atD is_untyped_cap_eqD
-           simp: valid_mdb_def swp_def cte_wp_at_caps_of_state not_idle_thread_def)
+  apply (case_tac "cdt s' child", safe intro!: mdb_cte_atI;
+         auto dest: mdb_cte_atD is_untyped_cap_eqD
+              simp: valid_mdb_def swp_def cte_wp_at_caps_of_state not_idle_thread_def)
+  done
 
 lemma reply_cap_insert_corres:
   "sid \<noteq> did\<Longrightarrow>dcorres dc \<top>
     (valid_idle and not_idle_thread did and valid_mdb and st_tcb_at (\<lambda>r. \<not> inactive r \<and> \<not> idle r) sid
      and valid_etcbs and tcb_at did and tcb_at sid and valid_objs)
-    (insert_cap_child (cdl_cap.ReplyCap sid)  (sid, tcb_replycap_slot)
+    (insert_cap_child (cdl_cap.ReplyCap sid rights)  (sid, tcb_replycap_slot)
       (did, tcb_caller_slot))
-    (cap_insert (cap.ReplyCap sid False) (sid,tcb_cnode_index 2) (did,tcb_cnode_index 3))"
+    (cap_insert (cap.ReplyCap sid False rights) (sid,tcb_cnode_index 2) (did,tcb_cnode_index 3))"
   apply (rule corres_guard_imp)
-  apply (rule insert_cap_child_corres [where cap = "cap.ReplyCap sid False"
+  apply (rule insert_cap_child_corres [where cap = "cap.ReplyCap sid False rights"
       and src = "(sid, tcb_cnode_index 2)" and child = "(did, tcb_cnode_index 3)",
       unfolded transform_cap_def transform_tcb_slot_simp
       ,simplified])
@@ -493,11 +493,11 @@ crunch idle_thread[wp]: cap_move "\<lambda>s::'a::state_ext state. P (idle_threa
   (wp: dxo_wp_weak)
 
 lemma cap_null_reply_case_If:
-  "(case cap of cap.ReplyCap t b \<Rightarrow> f t b | cap.NullCap \<Rightarrow> g | _ \<Rightarrow> h)
+  "(case cap of cap.ReplyCap t b R \<Rightarrow> f t b R | cap.NullCap \<Rightarrow> g | _ \<Rightarrow> h)
         = (if cap = cap.NullCap then g
            else if is_reply_cap cap \<or> is_master_reply_cap cap
-           then f (obj_ref_of cap) (is_master_reply_cap cap)
-              else h)"
+           then f (obj_ref_of cap) (is_master_reply_cap cap) (cap_rights cap)
+           else h)"
   by (simp add: is_reply_cap_def is_master_reply_cap_def split: cap.split)
 
 (* FIXME: move *)
@@ -982,8 +982,8 @@ lemma dcorres_ep_cancel_badge_sends:
                       apply (rule dcorres_rhs_noop_above_True[OF set_thread_state_ext_dcorres])
                       apply (rule dcorres_rhs_noop_above_True[OF tcb_sched_action_dcorres])
                       apply simp
-                     apply (clarsimp simp:set_object_def simpler_modify_def get_def return_def
-                     bind_def put_def corres_underlying_def)
+                     apply (clarsimp simp: set_object_def get_object_def in_monad simpler_modify_def
+                                           get_def return_def bind_def put_def corres_underlying_def)
                      apply (clarsimp simp:transform_def transform_current_thread_def)
                      apply (rule ext)
                      apply (frule(1) valid_etcbs_get_tcb_get_etcb)
@@ -1119,7 +1119,8 @@ lemmas dcorres_list_all2_mapM_
 lemma set_get_set_asid_pool:
   "do _ \<leftarrow> set_asid_pool a x; ap \<leftarrow> get_asid_pool a; set_asid_pool a (y ap) od = set_asid_pool a (y x)"
   apply (rule ext)
-  apply (simp add: get_asid_pool_def set_asid_pool_def get_object_def bind_assoc exec_gets)
+  apply (simp add: get_asid_pool_def set_asid_pool_def get_object_def set_object_def
+                   a_type_def bind_assoc exec_gets)
   apply (case_tac "kheap xa a", simp_all)
   apply (case_tac aa, simp_all)
   apply (rename_tac arch_kernel_obj)
@@ -1168,7 +1169,8 @@ lemma empty_pool:
 lemma get_set_asid_pool:
   "do ap \<leftarrow> get_asid_pool a; set_asid_pool a x od = set_asid_pool a x"
   apply (rule ext)
-  apply (simp add: get_asid_pool_def set_asid_pool_def get_object_def bind_assoc exec_gets)
+  apply (simp add: get_asid_pool_def set_asid_pool_def set_object_def get_object_def
+                   a_type_def bind_assoc exec_gets)
   apply (case_tac "kheap xa a", simp_all)
   apply (case_tac aa, simp_all)
   apply (rename_tac arch_kernel_obj)
@@ -1204,9 +1206,9 @@ lemma dcorres_set_asid_pool_none_trivial:
   apply (simp add:set_asid_pool_def get_object_def gets_def bind_assoc)
   apply (clarsimp simp:KHeap_D.set_object_def simpler_modify_def put_def bind_def obj_at_def
                        corres_underlying_def update_slots_def return_def object_slots_def)
-  apply (clarsimp simp:KHeap_A.set_object_def get_def put_def bind_def return_def)
+  apply (clarsimp simp:KHeap_A.set_object_def get_object_def in_monad get_def put_def bind_def return_def)
   apply (clarsimp simp:transform_def transform_current_thread_def
-                       opt_cap_def slots_of_def opt_object_def)
+                       opt_cap_def slots_of_def)
   apply (drule(1) arch_obj_not_idle)
   apply (rule ext)
   apply (clarsimp simp:not_idle_thread_def transform_objects_def restrict_map_def map_add_def)
@@ -1230,7 +1232,7 @@ lemma opt_cap_asid_pool_Some:
   "\<lbrakk> valid_idle s; kheap s a = Some (ArchObj (arch_kernel_obj.ASIDPool pool)) \<rbrakk>
          \<Longrightarrow>  (opt_cap (a, snd (transform_asid asid)) (transform s))
     = Some (transform_asid_pool_entry (pool (ucast asid)))"
-  apply (clarsimp simp:opt_cap_def transform_def slots_of_def opt_object_def object_slots_def
+  apply (clarsimp simp:opt_cap_def transform_def slots_of_def object_slots_def
                        transform_objects_def map_add_def restrict_map_def not_idle_thread_def)
   apply (frule arch_obj_not_idle,simp)
   apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def not_idle_thread_def
@@ -1385,7 +1387,7 @@ lemma opt_cap_pt_Some:
   "\<lbrakk>valid_idle s';kheap s' (y && ~~ mask pt_bits)= Some (ArchObj (arch_kernel_obj.PageTable fun))\<rbrakk>
          \<Longrightarrow>  (opt_cap (y && ~~ mask pt_bits, unat (y && mask pt_bits >> 2)) (transform s'))
     = Some (transform_pte (fun (of_nat (unat (y && mask pt_bits >> 2)))))"
-  apply (clarsimp simp: opt_cap_def transform_def slots_of_def opt_object_def object_slots_def
+  apply (clarsimp simp: opt_cap_def transform_def slots_of_def object_slots_def
                         transform_objects_def map_add_def restrict_map_def not_idle_thread_def)
   apply (frule arch_obj_not_idle, simp)
   apply (clarsimp simp:transform_page_table_contents_def unat_map_def not_idle_thread_def)
@@ -1424,7 +1426,7 @@ ucast (y && mask pd_bits >> 2) \<notin> kernel_mapping_slots
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp:PageTableUnmap_D.empty_slot_def)
-  apply (clarsimp simp:set_pd_def get_object_def gets_def bind_assoc)
+  apply (clarsimp simp:set_pd_def set_object_def get_object_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (simp add:PageTableUnmap_D.empty_slot_def gets_the_def gets_def bind_assoc)
@@ -1475,7 +1477,7 @@ lemma dcorres_empty_pte_slot:
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp:PageTableUnmap_D.empty_slot_def)
-  apply (clarsimp simp:set_pt_def get_object_def gets_def bind_assoc)
+  apply (clarsimp simp:set_pt_def set_object_def get_object_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (simp add:PageTableUnmap_D.empty_slot_def gets_the_def gets_def bind_assoc)
@@ -1546,7 +1548,7 @@ lemma store_pde_set_cap_corres:
   "\<lbrakk>ucast (ptr && mask pd_bits >> 2) \<in> kernel_mapping_slots \<rbrakk> \<Longrightarrow>
    dcorres dc \<top> valid_idle (return a)
       (store_pde ptr pde)"
-  apply (clarsimp simp:store_pde_def get_pd_def set_pd_def get_object_def gets_def bind_assoc)
+  apply (clarsimp simp:store_pde_def get_pd_def set_pd_def set_object_def get_object_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:corres_free_fail assert_def split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (rule dcorres_absorb_get_r)
@@ -1725,7 +1727,7 @@ lemma dcorres_clear_object_caps_pt:
     apply (simp | rule conjI)+
      apply (rule set_eqI)
      apply (clarsimp simp:image_def)
-     apply (clarsimp simp: transform_def opt_cap_def slots_of_def opt_object_def valid_state_def
+     apply (clarsimp simp: transform_def opt_cap_def slots_of_def valid_state_def
                            valid_pspace_def transform_objects_def restrict_map_def map_add_def
                            obj_at_def invs_def)
      apply (drule(1) arch_obj_not_idle)
@@ -1767,8 +1769,8 @@ lemma dcorres_clear_object_caps_pt:
 
 lemma opt_object_cnode:
   "\<lbrakk>valid_idle s; kheap s a = Some (kernel_object.CNode sz fun)\<rbrakk> \<Longrightarrow>
-   opt_object a (transform s) = Some (transform_object (machine_state s) a opt_etcb (CNode sz fun))"
-  apply (clarsimp simp:opt_object_def transform_def)
+   cdl_objects (transform s) a = Some (transform_object (machine_state s) a opt_etcb (CNode sz fun))"
+  apply (clarsimp simp: transform_def)
   apply (frule cnode_not_idle)
    apply fastforce
   apply (clarsimp simp: not_idle_thread_def restrict_map_def
@@ -1777,14 +1779,14 @@ lemma opt_object_cnode:
 
 lemma thread_set_valid_idle:
   "\<lbrace>not_idle_thread thread and valid_idle\<rbrace> thread_set f thread \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  apply (simp add:thread_set_def not_idle_thread_def )
-  apply (simp add:gets_the_def valid_idle_def)
+  apply (simp add: thread_set_def not_idle_thread_def)
+  apply (simp add: gets_the_def valid_idle_def)
   apply wp
-    apply (rule_tac Q="not_idle_thread thread and valid_idle" in hoare_vcg_precond_imp)
-     apply (fastforce simp: KHeap_A.set_object_def get_def put_def bind_def obj_at_def
-                            return_def valid_def not_idle_thread_def valid_idle_def pred_tcb_at_def)
-    apply simp+
-   apply wp
+  apply (rule_tac Q="not_idle_thread thread and valid_idle" in hoare_vcg_precond_imp)
+  apply (clarsimp simp: KHeap_A.set_object_def get_object_def in_monad get_def put_def bind_def obj_at_def
+                        return_def valid_def not_idle_thread_def valid_idle_def pred_tcb_at_def)
+  apply simp+
+  apply wp
   apply (clarsimp simp:not_idle_thread_def valid_idle_def)
   done
 
@@ -1795,10 +1797,10 @@ lemma dcorres_get_object_special:
   and   AP_LIFT :: "'b \<Rightarrow> det_state \<Rightarrow> 'a"
   assumes unc: "\<And>obj. UN_C (C obj) = obj"
   and     ap_lift: "\<And>s obj. \<lbrakk>AP ptr s = Some obj; AP_Q s\<rbrakk>
-                   \<Longrightarrow> opt_object ptr (transform s) = Some (C (AP_LIFT obj s))"
+                   \<Longrightarrow> cdl_objects (transform s) ptr = Some (C (AP_LIFT obj s))"
   and     c: "\<And>obj. dcorres r (R obj) (R' obj) (a (C obj)) c"
   \<comment> \<open>weak\<close>
-  shows   "dcorres r (\<lambda>s. (\<forall>obj. opt_object ptr s = Some (C obj) \<longrightarrow> R obj s))
+  shows   "dcorres r (\<lambda>s. (\<forall>obj. cdl_objects s ptr = Some (C obj) \<longrightarrow> R obj s))
                      (\<lambda>s. (\<forall>obj'. AP ptr s = Some obj' \<longrightarrow> R' (AP_LIFT obj' s) s) \<and> AP ptr s \<noteq> None \<and> AP_Q s)
                      (KHeap_D.get_object ptr >>= a) c"
   apply (rule stronger_corres_guard_imp)
@@ -1806,7 +1808,7 @@ lemma dcorres_get_object_special:
     apply (rule corres_underlying_gets_pre_lhs)
     apply (rule_tac  F = "\<exists>obj. x = C obj" in corres_gen_asm)
     apply clarsimp
-    apply (rule_tac P = "\<lambda>s. R (UN_C (C obj)) s \<and> opt_object ptr s = Some (C obj)"
+    apply (rule_tac P = "\<lambda>s. R (UN_C (C obj)) s \<and> cdl_objects s ptr = Some (C obj)"
       and P' = "\<lambda>s. (\<forall>obj'. AP ptr s = Some obj' \<longrightarrow> R' (UN_C (C (AP_LIFT obj' s))) s) \<and> AP ptr s \<noteq> None \<and> AP_Q s"
       in stronger_corres_guard_imp)
       apply (rule c)
@@ -1824,10 +1826,10 @@ lemma dcorres_get_object_special:
 lemma dcorres_get_object_special_2:
   fixes   AP_LIFT :: "tcb \<Rightarrow> etcb \<Rightarrow> det_state \<Rightarrow> cdl_tcb"
   assumes     ap_lift: "\<And>s obj etcb. \<lbrakk> get_tcb ptr s = Some obj; get_etcb ptr s = Some etcb; AP_Q s\<rbrakk>
-                   \<Longrightarrow> opt_object ptr (transform s) = Some (Tcb (AP_LIFT obj etcb s))"
+                   \<Longrightarrow> cdl_objects (transform s) ptr = Some (Tcb (AP_LIFT obj etcb s))"
   and     c: "\<And>obj. dcorres r (R obj) (R' obj) (a (Tcb obj)) c"
   \<comment> \<open>weak\<close>
-  shows   "dcorres r (\<lambda>s. (\<forall>obj. opt_object ptr s = Some (Tcb obj) \<longrightarrow> R obj s))
+  shows   "dcorres r (\<lambda>s. (\<forall>obj. cdl_objects s ptr = Some (Tcb obj) \<longrightarrow> R obj s))
                      (\<lambda>s. (\<forall>obj' etcb. get_tcb ptr s = Some obj' \<and> get_etcb ptr s = Some etcb \<longrightarrow> R' (AP_LIFT obj' etcb s) s) \<and>
                            get_tcb ptr s \<noteq> None \<and> get_etcb ptr s \<noteq> None \<and> AP_Q s)
                      (KHeap_D.get_object ptr >>= a) c"
@@ -1836,7 +1838,7 @@ lemma dcorres_get_object_special_2:
     apply (rule corres_underlying_gets_pre_lhs)
     apply (rule_tac  F = "\<exists>obj. x = Tcb obj" in corres_gen_asm)
     apply clarsimp
-    apply (rule_tac P = "\<lambda>s. R (obj_tcb (Tcb obj)) s \<and> opt_object ptr s = Some (Tcb obj)"
+    apply (rule_tac P = "\<lambda>s. R (obj_tcb (Tcb obj)) s \<and> cdl_objects s ptr = Some (Tcb obj)"
       and P' = "\<lambda>s. (\<forall>obj' etcb. get_tcb ptr s = Some obj'\<and> get_etcb ptr s = Some etcb \<longrightarrow> R' (AP_LIFT obj' etcb s) s) \<and> get_tcb ptr s \<noteq> None \<and> get_etcb ptr s \<noteq> None \<and> AP_Q s"
       in stronger_corres_guard_imp)
       apply (rule c)
@@ -1918,7 +1920,7 @@ lemma dcorres_get_object_cnode_split:
                          valid_idle s)
                     (KHeap_D.get_object ptr >>= a) c"
   apply (rule corres_guard_imp [where
-         Q = "\<lambda>s. \<forall>obj. opt_object ptr s = Some (cdl_object.CNode obj) \<longrightarrow> P s" and
+         Q = "\<lambda>s. \<forall>obj. cdl_objects s ptr = Some (cdl_object.CNode obj) \<longrightarrow> P s" and
          Q' = "\<lambda>s. (\<forall>obj'. (get_cnode' ptr s = Some obj')\<longrightarrow> (P' (obj_cnode (transform_cnode (fst obj') (snd obj'))) s) ) \<and>
                     get_cnode' ptr s \<noteq> None \<and> cnode_size_bits (the (kheap s ptr)) \<noteq> 0 \<and> valid_idle s"])
     apply (rule dcorres_get_object_special [where C = "Types_D.CNode" and UN_C = obj_cnode
@@ -2285,7 +2287,7 @@ lemma dcorres_update_cap_data:
    apply (clarsimp simp:word_bits_def dest!:leI)
    apply (simp add:of_drop_to_bl)
    apply (simp add:mask_twice)
-   apply (clarsimp simp:word_size opt_object_def word_bits_def)
+   apply (clarsimp simp:word_size word_bits_def)
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all add: arch_update_cap_data_def)
   done
@@ -2323,7 +2325,7 @@ lemma lsfco_not_idle:
   done
 
 lemma cdl_right_UNIV:
-  "UNIV = {Read, Write, Grant}"
+  "UNIV = {Read, Write, Grant, GrantReply}"
   apply (rule set_eqI)
   apply (case_tac x, auto)
   done

@@ -2,10 +2,10 @@
  * Copyright 2014, NICTA
  *
  * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
  *
- * @TAG(NICTA_GPL)
+ * @TAG(NICTA_BSD)
  *)
 
 (*
@@ -17,9 +17,9 @@ theory EquivValid
 imports Corres_UL
 begin
 
-section{* State equivalence validity *}
+section\<open>State equivalence validity\<close>
 
-text{*
+text\<open>
 
 A generalised information flow property.
 
@@ -37,7 +37,7 @@ does this.
 
 @{term "P'"} holds in the initial state for @{term "f'"}.
 
-*}
+\<close>
 
 definition
   equiv_valid_2 :: "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s,'b) nondet_monad \<Rightarrow> ('s,'c) nondet_monad \<Rightarrow> bool"
@@ -133,9 +133,9 @@ lemma equiv_valid_2_rvrel_imp:
   apply(fastforce simp: equiv_valid_2_def)
   done
 
-subsection{* Specialised fixed-state state equivalence validity *}
+subsection\<open>Specialised fixed-state state equivalence validity\<close>
 
-text{*
+text\<open>
 
 For resolve_address_bits and rec_del: talk about a fixed initial
 state. Note we only do this for one of the computations; the other
@@ -147,7 +147,7 @@ values is equality and the required preconditions are identical.
 
 wp can cope with this.
 
-*}
+\<close>
 
 definition
   spec_equiv_valid :: "'s \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s,'b) nondet_monad \<Rightarrow> bool"
@@ -157,15 +157,15 @@ where
 abbreviation spec_equiv_valid_inv where
   "spec_equiv_valid_inv st I A P f \<equiv> spec_equiv_valid st I A A P f"
 
-subsection{* Specialised state equivalence validity *}
+subsection\<open>Specialised state equivalence validity\<close>
 
-text{*
+text\<open>
 
 Most of the time we deal with the streamlined version.
 
 wp can cope with this too.
 
-*}
+\<close>
 
 definition
   equiv_valid :: "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s,'b) nondet_monad \<Rightarrow> bool"
@@ -222,11 +222,11 @@ lemmas gen_asm_ev =
 
 declare K_def [simp]
 
-text {*
+text \<open>
   This is a further streamlined version that we expect to get the most from
   automating, and for the most part, we shouldn't need to deal with the
   extra generality of the properties above.
-*}
+\<close>
 abbreviation equiv_valid_inv where
   "equiv_valid_inv I A P f \<equiv> equiv_valid I A A P f"
 
@@ -514,7 +514,7 @@ lemma K_bind_ev:
   "equiv_valid I A B P f \<Longrightarrow> equiv_valid I A B P (K_bind f x)"
   by simp
 
-subsection{* wp setup *}
+subsection\<open>wp setup\<close>
 
 lemmas splits_ev[wp_split] =
   bind_ev_pre bindE_ev_pre
@@ -541,13 +541,13 @@ lemmas wp_ev[wp] =
   whenE_ev
   K_bind_ev
 
-subsection{* crunch setup *}
+subsection\<open>crunch setup\<close>
 
 lemmas pre_ev =
   hoare_pre
   equiv_valid_guard_imp
 
-subsection{* Tom instantiates wpc *}
+subsection\<open>Tom instantiates wpc\<close>
 
 lemma wpc_helper_equiv_valid:
   "equiv_valid D A B Q f \<Longrightarrow> wpc_helper (P, P') (Q, Q') (equiv_valid D A B P f)"
@@ -558,7 +558,7 @@ lemma wpc_helper_equiv_valid:
 
 wpc_setup "\<lambda>m. equiv_valid D A B Q m" wpc_helper_equiv_valid
 
-subsection{* More hoare-like rules *}
+subsection\<open>More hoare-like rules\<close>
 
 lemma mapM_ev_pre:
   assumes reads_res: "\<And> x. x \<in> set lst \<Longrightarrow> equiv_valid_inv D A I (m x)"
@@ -673,7 +673,7 @@ lemma mapME_x_ev':
   apply(rule equiv_valid_guard_imp[OF reads_res], simp+, wp)
   done
 
-subsection{* Rules for the specialised validity *}
+subsection\<open>Rules for the specialised validity\<close>
 
 lemma use_spec_ev:
   "(\<And>st. spec_equiv_valid st I A B P f) \<Longrightarrow> equiv_valid I A B P f"

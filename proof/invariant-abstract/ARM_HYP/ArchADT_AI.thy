@@ -8,14 +8,14 @@
  * @TAG(GD_GPL)
  *)
 
-chapter \<open>ARM-specific definitions for abstract datatype for the abstract specification\<close>
+chapter \<open>ARM_HYP-specific definitions for abstract datatype for the abstract specification\<close>
 
 theory ArchADT_AI
 imports
   "Lib.Simulation"
   "../Invariants_AI"
 begin
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma word_1FF_is_mask:
   "0x1FF = mask 9"

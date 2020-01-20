@@ -9,14 +9,14 @@
  *)
 
 (*
-ARM-specific CSpace invariants
+ARM_HYP-specific CSpace invariants
 *)
 
 theory ArchCSpace_AI
 imports "../CSpace_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems CSpace_AI_assms
 
@@ -53,25 +53,6 @@ lemma weak_derived_valid_cap [CSpace_AI_assms]:
                     valid_cap_def cap_aligned_def bits_of_def
                      aobj_ref_cases Let_def cap_asid_def
                split: cap.splits arch_cap.splits option.splits)
-  done
-
-(* FIXME: unused *)
-lemma weak_derived_tcb_cap_valid:
-  "\<lbrakk> tcb_cap_valid cap p s; weak_derived cap cap' \<rbrakk> \<Longrightarrow> tcb_cap_valid cap' p s"
-  apply (clarsimp simp add: tcb_cap_valid_def weak_derived_def
-                            obj_at_def is_tcb
-                     split: option.split)
-  apply (clarsimp simp: st_tcb_def2)
-  apply (erule disjE, simp_all add: copy_of_def split: if_split_asm)
-    apply clarsimp
-   apply (clarsimp simp: tcb_cap_cases_def split: if_split_asm)
-   apply (auto simp: is_cap_simps same_object_as_def
-                     valid_ipc_buffer_cap_def
-                     is_nondevice_page_cap_simps
-                     is_nondevice_page_cap_arch_def
-              split: cap.split_asm arch_cap.split_asm
-                     Structures_A.thread_state.split_asm)[3]
-  apply clarsimp
   done
 
 lemma copy_obj_refs [CSpace_AI_assms]:
@@ -145,6 +126,15 @@ lemma set_free_index_invs [CSpace_AI_assms]:
   apply (simp)
   done
 
+lemma unique_table_refs_upd_eqD:
+  "\<lbrakk>ms a = Some b; obj_refs b = obj_refs b'; table_cap_ref b = table_cap_ref b'\<rbrakk>
+   \<Longrightarrow> unique_table_refs (ms (a \<mapsto> b')) = unique_table_refs ms"
+  unfolding unique_table_refs_def
+  (* match up p and p' on both sides of equality *)
+  apply (rule all_cong[where Q=\<top>, simplified])
+  apply (rule all_cong[where Q=\<top>, simplified])
+  by auto
+
 lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
   "\<lbrace>valid_arch_caps and cte_wp_at ((=) src_cap) src\<rbrace>
    set_untyped_cap_as_full src_cap cap src
@@ -190,9 +180,9 @@ lemma is_derived_is_cap:
   \<and> (is_zombie cap = is_zombie cap')
   \<and> (is_arch_cap cap = is_arch_cap cap')"
   apply (clarsimp simp: is_derived_def is_derived_arch_def split: if_split_asm)
-  apply (clarsimp simp: cap_master_cap_def is_cap_simps
-    split: cap.splits arch_cap.splits)+
-  done
+  by (clarsimp simp: cap_master_cap_def is_cap_simps
+              split: cap.splits arch_cap.splits)+
+
 
 (* FIXME: move to CSpace_I near lemma vs_lookup1_tcb_update *)
 lemma vs_lookup_pages1_tcb_update:
@@ -355,7 +345,7 @@ end
 global_interpretation cap_insert_crunches?: cap_insert_crunches .
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma cap_insert_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
   "\<lbrace>cap_refs_in_kernel_window
@@ -375,7 +365,7 @@ lemma mask_cap_valid[simp, CSpace_AI_assms]:
   apply (cases c, simp_all add: valid_cap_def mask_cap_def
                              cap_rights_update_def
                              cap_aligned_def
-                             acap_rights_update_def)
+                             acap_rights_update_def split:bool.splits)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
   apply (rename_tac arch_cap)
   by (case_tac arch_cap, simp_all)
@@ -384,14 +374,14 @@ lemma mask_cap_objrefs[simp, CSpace_AI_assms]:
   "obj_refs (mask_cap rs cap) = obj_refs cap"
   by (cases cap, simp_all add: mask_cap_def cap_rights_update_def
                                acap_rights_update_def
-                        split: arch_cap.split)
+                        split: arch_cap.split bool.splits)
 
 
 lemma mask_cap_zobjrefs[simp, CSpace_AI_assms]:
   "zobj_refs (mask_cap rs cap) = zobj_refs cap"
   by (cases cap, simp_all add: mask_cap_def cap_rights_update_def
                                acap_rights_update_def
-                        split: arch_cap.split)
+                        split: arch_cap.split bool.splits)
 
 
 lemma derive_cap_valid_cap [CSpace_AI_assms]:
@@ -407,7 +397,7 @@ lemma valid_cap_update_rights[simp, CSpace_AI_assms]:
   "valid_cap cap s \<Longrightarrow> valid_cap (cap_rights_update cr cap) s"
   apply (case_tac cap,
          simp_all add: cap_rights_update_def valid_cap_def cap_aligned_def
-                       acap_rights_update_def)
+                       acap_rights_update_def split:bool.splits)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all)
@@ -552,7 +542,7 @@ global_interpretation CSpace_AI?: CSpace_AI
   qed
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma is_cap_simps':
   "is_cnode_cap cap = (\<exists>r bits g. cap = cap.CNodeCap r bits g)"
@@ -563,8 +553,8 @@ lemma is_cap_simps':
   "is_ntfn_cap cap = (\<exists>r b R. cap = cap.NotificationCap r b R)"
   "is_zombie cap = (\<exists>r b n. cap = cap.Zombie r b n)"
   "is_arch_cap cap = (\<exists>a. cap = cap.ArchObjectCap a)"
-  "is_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x False)"
-  "is_master_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x True)"
+  "is_reply_cap cap = (\<exists>x R. cap = cap.ReplyCap x False R)"
+  "is_master_reply_cap cap = (\<exists>x R. cap = cap.ReplyCap x True R)"
   "is_nondevice_page_cap cap = (\<exists> u v w x. cap = ArchObjectCap (PageCap False u v w x))"
   apply (auto simp: is_zombie_def is_arch_cap_def is_nondevice_page_cap_def
                               is_reply_cap_def is_master_reply_cap_def is_nondevice_page_cap_arch_def
@@ -627,7 +617,7 @@ lemma arch_post_cap_deletion_invs:
 end
 
 (* is this the right way? we need this fact globally but it's proven with
-   ARM defns. *)
+   ARM_HYP defns. *)
 lemma set_cap_valid_arch_caps_simple:
   "\<lbrace>\<lambda>s. valid_arch_caps s
       \<and> valid_objs s
@@ -636,21 +626,21 @@ lemma set_cap_valid_arch_caps_simple:
       \<and> \<not> (is_arch_cap cap)\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
-  apply (wp ARM.set_cap_valid_arch_caps)
+  apply (wp ARM_HYP.set_cap_valid_arch_caps)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (frule(1) caps_of_state_valid_cap)
   apply (rename_tac cap')
-  apply (subgoal_tac "\<forall>x \<in> {cap, cap'}. \<not> ARM.is_pt_cap x \<and> \<not> ARM.is_pd_cap x")
+  apply (subgoal_tac "\<forall>x \<in> {cap, cap'}. \<not> ARM_HYP.is_pt_cap x \<and> \<not> ARM_HYP.is_pd_cap x")
    apply simp
    apply (rule conjI)
-    apply (clarsimp simp: ARM.vs_cap_ref_def is_cap_simps)
+    apply (clarsimp simp: ARM_HYP.vs_cap_ref_def is_cap_simps)
    apply (erule impCE)
     apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
                           cte_wp_at_caps_of_state
-                          ARM.obj_ref_none_no_asid)
-   apply (rule ARM.no_cap_to_obj_with_diff_ref_triv, simp_all)
-   apply (rule ccontr, clarsimp simp: ARM.table_cap_ref_def is_cap_simps)
-  apply (auto simp: ARM.is_cap_simps)
+                          ARM_HYP.obj_ref_none_no_asid)
+   apply (rule ARM_HYP.no_cap_to_obj_with_diff_ref_triv, simp_all)
+   apply (rule ccontr, clarsimp simp: ARM_HYP.table_cap_ref_def is_cap_simps)
+  apply (auto simp: ARM_HYP.is_cap_simps)
   done
 
 lemma set_cap_kernel_window_simple:
@@ -658,9 +648,9 @@ lemma set_cap_kernel_window_simple:
       \<and> cte_wp_at (\<lambda>cap'. cap_range cap' = cap_range cap) ptr s\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
-  apply (wp ARM.set_cap_cap_refs_in_kernel_window)
+  apply (wp ARM_HYP.set_cap_cap_refs_in_kernel_window)
   apply (clarsimp simp: cte_wp_at_caps_of_state
-                        ARM.cap_refs_in_kernel_windowD)
+                        ARM_HYP.cap_refs_in_kernel_windowD)
   done
 
 end

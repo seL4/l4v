@@ -20,7 +20,7 @@ begin
 
 section "Introduction"
 
-text {*
+text \<open>
 
   The Separation Kernel maintains separation between processes by limiting the capabilities that are
   present in the system. We call these the "restricted capabilities" in the documentation that
@@ -61,11 +61,11 @@ text {*
   We provide ab informal explanation at the site of the overriden definition in each of these
   cases. (The bi-simulation proof provides the formal demonstration.)
 
-*}
+\<close>
 
-section {* Generic system call structure\label{s:spec_syscall} *}
+section \<open>Generic system call structure\label{s:spec_syscall}\<close>
 
-section {* System call entry point *}
+section \<open>System call entry point\<close>
 
 fun
   perform_invocation :: "bool \<Rightarrow> bool \<Rightarrow> invocation \<Rightarrow> (data list,'z::state_ext) p_monad"
@@ -132,14 +132,14 @@ definition
   handle_call :: "(unit,'z::state_ext) p_monad" where
  "handle_call \<equiv> handle_invocation True True"
 
-text {*
+text \<open>
 
   This definition of \texttt{handle_recv} is almost identical to the abstract specification's definition
   for the restricted capabilities. Also, a call to \texttt{delete_caller_cap} has been removed. They have
   the same behaviour under the restricted capabilities since there are no caller capabilities in
   \texttt{sep-abstract}.
 
-*}
+\<close>
 
 definition
   handle_recv :: "bool \<Rightarrow> (unit,'z::state_ext) s_monad" where
@@ -171,27 +171,27 @@ definition
       <catch> handle_fault thread
    od"
 
-text {*
+text \<open>
 
   The definition here has been specialised to \texttt{return ()}. The behaviour
   is identical with the abstract specification under restricted capabilities because there
   are no \texttt{Reply} capabilities in \texttt{sep-abstract}.
 
-*}
+\<close>
 
 definition
   handle_reply :: "(unit,'z::state_ext) s_monad" where
  "handle_reply \<equiv> return ()"
 
-section {* Top-level event handling  *}
+section \<open>Top-level event handling\<close>
 
-text {*
+text \<open>
 
   The definition here is almost identical to that of the abstract specification (for the restricted
   capablities), except that a call to \texttt{handle_reply} has been removed. Since there
   are no \texttt{Reply}s in the restricted capabilities the behaviour is the same.
 
-*}
+\<close>
 
 
 fun
@@ -216,7 +216,7 @@ where
 
 | "handle_event (UserLevelFault w1 w2) = (without_preemption $ do
     thread \<leftarrow> gets cur_thread;
-    handle_fault thread $ UserException w1 (w2 && mask 29);
+    handle_fault thread $ UserException w1 (w2 && mask 28);
     return ()
   od)"
 
@@ -239,13 +239,13 @@ where
     return ()
   od)"
 
-section {* Kernel entry point  *}
+section \<open>Kernel entry point\<close>
 
-text {*
+text \<open>
   This function is the main kernel entry point. The main event loop of the
   kernel handles events, handles a potential preemption interrupt, schedules
   and switches back to the active thread.
-*}
+\<close>
 
 definition
   call_kernel :: "event \<Rightarrow> (unit,'z::state_ext_sched) s_monad" where

@@ -20,24 +20,42 @@ lemma fold_all_htd_updates':
     = all_htd_updates TYPE('a) 1 (ptr_val p) 1"
   "(if P then (f :: heap_typ_desc \<Rightarrow> heap_typ_desc) else g) s
     = (if P then f s else g s)"
-  "\<lbrakk> n < 2 ^ 32 \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> n < 2 ^ word_bits \<rbrakk> \<Longrightarrow>
     ptr_retyps n p = all_htd_updates TYPE('a) 1 (ptr_val p) (of_nat n)"
-  "\<lbrakk> n < 2 ^ 32 \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> n < 2 ^ word_bits \<rbrakk> \<Longrightarrow>
     ptr_retyps (2 ^ n) p = all_htd_updates TYPE('a) 3 (ptr_val p) (of_nat n)"
-  "n < 2 ^ 32 \<Longrightarrow> typ_clear_region x n = all_htd_updates TYPE(word32) 0 x (of_nat n)"
-  "n < 2 ^ 32 \<Longrightarrow> typ_region_bytes x n = all_htd_updates TYPE(word32) 2 x (of_nat n)"
-  "\<lbrakk> n < 2 ^ 32 \<rbrakk> \<Longrightarrow>
+  "n < 2 ^ word_bits \<Longrightarrow> typ_clear_region x n = all_htd_updates TYPE(machine_word) 0 x (of_nat n)"
+  "n < 2 ^ word_bits \<Longrightarrow> typ_region_bytes x n = all_htd_updates TYPE(machine_word) 2 x (of_nat n)"
+  "\<lbrakk> n < 2 ^ word_bits \<rbrakk> \<Longrightarrow>
     ptr_arr_retyps n p = all_htd_updates TYPE('a) 4 (ptr_val p) (of_nat n)"
-  "\<lbrakk> n < 2 ^ 32 \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> n < 2 ^ word_bits \<rbrakk> \<Longrightarrow>
     ptr_arr_retyps (2 ^ n) p = all_htd_updates TYPE('a) 5 (ptr_val p) (of_nat n)"
-  by (simp_all add: all_htd_updates_def unat_of_nat fun_eq_iff of_nat_neq_0)
+  by (simp_all add: all_htd_updates_def unat_of_nat fun_eq_iff of_nat_neq_0 word_bits_conv)
 
-lemma unat_lt2p_word32:
-  "unat (w :: word32) < 2 ^ 32"
-  by (rule order_less_le_trans, rule unat_lt2p, simp)
+lemma upcast_unat_less_2p_length:
+    "is_up UCAST('a :: len \<rightarrow> 'b :: len) \<Longrightarrow> unat (x :: 'a word) < 2 ^ LENGTH('b)"
+  by (simp add: is_up unat_pow_le_intro)
 
-lemmas fold_all_htd_updates
-    = fold_all_htd_updates' fold_all_htd_updates'(3-)[OF unat_lt2p_word32]
+(* FIXME: this is a hack that happens to work on all arches. Use arch split. *)
+lemma is_up_u32_word_size: "is_up UCAST(32 \<rightarrow> machine_word_len)"
+  by (clarsimp simp add: is_up_def source_size target_size)
+
+lemma is_up_i32_word_size: "is_up UCAST(32 signed \<rightarrow> machine_word_len)"
+  by (clarsimp simp add: is_up_def source_size target_size)
+
+lemma unat_word32_less_2p_word_bits: "unat (x :: 32 word) < 2 ^ word_bits"
+  by (rule upcast_unat_less_2p_length[OF is_up_u32_word_size, simplified word_bits_def[symmetric]])
+
+lemma unat_sword32_less_2p_word_bits: "unat (x :: 32 signed word) < 2 ^ word_bits"
+  by (rule upcast_unat_less_2p_length[OF is_up_i32_word_size, simplified word_bits_def[symmetric]])
+
+lemmas fold_all_htd_updates_intermediate
+    = fold_all_htd_updates'
+      fold_all_htd_updates'(3-)[OF unat_less_2p_word_bits]
+      fold_all_htd_updates'(3-)[OF unat_word32_less_2p_word_bits]
+      fold_all_htd_updates'(3-)[OF unat_sword32_less_2p_word_bits]
+
+lemmas fold_all_htd_updates = fold_all_htd_updates_intermediate[simplified word_bits_conv]
 
 lemma signed_div_range_check:
   assumes len: "size a > 1"
@@ -117,5 +135,94 @@ lemma ptr_add_assertion_sintD:
   apply (simp add: array_assertion_shrink_right)
   apply (auto simp: linorder_not_less)
   done
+
+\<comment> \<open>
+  Some lemmas used by both SimplExport and ProveGraphRefine.
+\<close>
+
+lemmas sdiv_word_max_ineq = sdiv_word_max[folded zle_diff1_eq, simplified]
+
+lemmas signed_mult_eq_checks_all =
+  signed_mult_eq_checks_double_size[where 'a="32" and 'b="64", simplified]
+  signed_mult_eq_checks_double_size[where 'a="32 signed" and 'b="64 signed", simplified]
+  signed_mult_eq_checks_double_size[where 'a="64" and 'b="128", simplified]
+  signed_mult_eq_checks_double_size[where 'a="64 signed" and 'b="128 signed", simplified]
+
+lemmas signed_arith_ineq_checks_to_eq_all =
+  signed_arith_ineq_checks_to_eq[where 'a="32"]
+  signed_arith_ineq_checks_to_eq[where 'a="32", simplified word_size, simplified]
+  signed_arith_ineq_checks_to_eq[where 'a="32 signed"]
+  signed_arith_ineq_checks_to_eq[where 'a="32 signed", simplified word_size, simplified]
+  signed_arith_ineq_checks_to_eq[where 'a="64"]
+  signed_arith_ineq_checks_to_eq[where 'a="64", simplified word_size, simplified]
+  signed_arith_ineq_checks_to_eq[where 'a="64 signed"]
+  signed_arith_ineq_checks_to_eq[where 'a="64 signed", simplified word_size, simplified]
+
+lemmas signed_div_range_check_all =
+  signed_div_range_check[where 'a="32", simplified word_size, simplified]
+  signed_div_range_check[where 'a="32 signed", simplified word_size, simplified]
+  signed_div_range_check[where 'a="64", simplified word_size, simplified]
+  signed_div_range_check[where 'a="64 signed", simplified word_size, simplified]
+
+lemma word32_31_less:
+  "31 < len_of TYPE (32 signed)" "31 > (0 :: nat)"
+  "31 < len_of TYPE (32)" "31 > (0 :: nat)"
+  by auto
+
+lemma word64_31_less:
+  "31 < len_of TYPE (64 signed)" "31 > (0 :: nat)"
+  "31 < len_of TYPE (64)" "31 > (0 :: nat)"
+  by auto
+
+lemmas signed_shift_guard_to_word_all =
+  signed_shift_guard_to_word[OF word32_31_less(1-2)]
+  signed_shift_guard_to_word[OF word32_31_less(3-4)]
+  signed_shift_guard_to_word[OF word64_31_less(1-2)]
+  signed_shift_guard_to_word[OF word64_31_less(3-4)]
+
+lemmas guard_arith_simps =
+  neg_le_iff_le
+  signed_arith_eq_checks_to_ord
+  signed_arith_ineq_checks_to_eq_all
+  signed_div_range_check_all
+  signed_mult_eq_checks_all
+  signed_shift_guard_to_word_all
+  sdiv_word_min[THEN eqTrueI] sdiv_word_max_ineq
+
+(* FIXME: move to word lib *)
+lemma small_downcasts:
+  "unat (x :: 'a :: len word) < 2 ^ LENGTH('b :: len) \<Longrightarrow> unat (UCAST('a \<rightarrow> 'b) x) = unat x"
+  apply (case_tac "LENGTH('a) \<le> LENGTH('b)", simp add: unat_ucast_up_simp)
+  apply (simp add: unat_ucast unat_less_power)
+  done
+
+(* FIXME: move to word lib *)
+lemma less_shift_makes_shift_cast_safe:
+  "y < (a :: 'a :: len word) >> unat (x :: 'b :: len word) \<Longrightarrow>
+  unat (UCAST('b \<rightarrow> 'a) x) = unat x"
+  apply (prop_tac "unat x < LENGTH('a)")
+   apply (rotate_tac)
+   apply (erule contrapos_pp; simp add: not_less)
+   apply (prop_tac "a >> unat x = 0")
+    apply (rule shiftr_eq_0; simp)
+   apply simp
+  apply (subst small_downcasts)
+  apply (meson le_less_trans n_less_equal_power_2 nat_less_le)
+  apply simp
+  done
+
+lemmas less_shift_makes_shift_cast_safe_arg_cong =
+  arg_cong[where f="f w" for f w, OF less_shift_makes_shift_cast_safe]
+
+\<comment> \<open>
+  @{thm less_shift_makes_shift_cast_safe} allows us to
+  remove the `ucast` in `unat (ucast x)`, but this loses potentially important
+  type information. These rules act as "lenses" to make sure we only modify
+  the relevant ucasts (the ones that show up in the guards of translated
+  nontrivial shifts).
+\<close>
+lemmas less_shift_targeted_cast_convs =
+  less_shift_makes_shift_cast_safe_arg_cong[where f=shiftr]
+  less_shift_makes_shift_cast_safe_arg_cong[where f="(^)"]
 
 end

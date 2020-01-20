@@ -15,7 +15,7 @@ imports Apply_Trace
 keywords "apply_trace" :: prf_script
 begin
 
-ML{*
+ML\<open>
 
 val _ =
   Outer_Syntax.command @{command_keyword "apply_trace"} "initial refinement step (unstructured)"
@@ -24,7 +24,7 @@ val _ =
     (fn ((on,query),text) => Toplevel.proofs (Apply_Trace.apply_results {silent_fail = false}
      (Pretty.writeln ooo (Apply_Trace.pretty_deps on query)) text)));
 
-*}
+\<close>
 
 lemmas [no_trace] = protectI protectD TrueI Eq_TrueI eq_reflection
 

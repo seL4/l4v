@@ -42,7 +42,7 @@ This module specifies the behavior of notification objects.
 
 \subsection{Sending Signals}
 
-> -- helper function
+> -- helper function, FIXME redundant with Structure.isReceive
 > receiveBlocked :: ThreadState -> Bool
 > receiveBlocked st = case st of
 >     BlockedOnReceive _ _ -> True

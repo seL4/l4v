@@ -37,22 +37,21 @@ crunch typ_at[wp, Syscall_AI_assms]: invoke_irq_control "\<lambda>s. P (typ_at T
 
 lemma obj_refs_cap_rights_update[simp, Syscall_AI_assms]:
   "obj_refs (cap_rights_update rs cap) = obj_refs cap"
-  by (simp add: cap_rights_update_def acap_rights_update_def
-         split: cap.split arch_cap.split)
+  by (auto simp: cap_rights_update_def acap_rights_update_def
+          split: cap.split arch_cap.split bool.splits)
 
 (* FIXME: move to TCB *)
 lemma table_cap_ref_mask_cap [Syscall_AI_assms]:
   "table_cap_ref (mask_cap R cap) = table_cap_ref cap"
   by (clarsimp simp add:mask_cap_def table_cap_ref_def acap_rights_update_def
-    cap_rights_update_def split:cap.splits arch_cap.splits)
+    cap_rights_update_def split:cap.splits arch_cap.splits bool.splits)
 
-lemma diminished_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
-  "\<lbrakk> cte_wp_at (diminished cap) p s; valid_arch_caps s \<rbrakk>
+lemma eq_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
+  "\<lbrakk> cte_wp_at ((=) cap) p s; valid_arch_caps s \<rbrakk>
       \<Longrightarrow> no_cap_to_obj_with_diff_ref cap S s"
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_arch_caps_def)
   apply (frule(1) unique_table_refs_no_cap_asidD)
-  apply (clarsimp simp add: no_cap_to_obj_with_diff_ref_def
-    table_cap_ref_mask_cap diminished_def Ball_def)
+  apply (clarsimp simp add: no_cap_to_obj_with_diff_ref_def table_cap_ref_mask_cap Ball_def)
   done
 
 lemma getDFSR_invs[wp]:
@@ -98,6 +97,10 @@ crunches make_fault_msg
   for cur_thread[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
   and cur_sc[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_sc s)"
   and pred_tcb_at[wp, Syscall_AI_assms]: "pred_tcb_at proj P t"
+
+lemma hv_inv_ex:
+  "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
+  by (cases vp; wpsimp wp: dmo_inv getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv)
 
 end
 

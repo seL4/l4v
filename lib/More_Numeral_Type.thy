@@ -138,6 +138,62 @@ lemma pred[simp,intro!]:
   "0 < (x::'a) \<Longrightarrow> x - 1 < x"
   by (auto intro!: minus_less)
 
+lemma minus1_leq:
+  "\<lbrakk> x - 1 \<le> y; y < x \<rbrakk> \<Longrightarrow> (y::'a) = x-1"
+  by (smt Rep_1 Rep_Abs_mod Rep_less_n less_def diff_def int_mod_ge le_neq_trans)
+
+lemma max_bound_leq[simp,intro!]:
+  "(x::'a) \<le> -1"
+  by (smt Rep_1 Rep_Abs_mod Rep_less_n less_eq_def int_mod_ge' minus_def)
+
+lemma leq_minus1_less:
+  "0 < y \<Longrightarrow> (x \<le> y - 1) = (x < (y::'a))"
+  by (metis le_less less_trans minus1_leq not_less pred)
+
+lemma max_bound_neq_conv[simp]:
+  "(x \<noteq> -1) = ((x::'a) < -1)"
+  using le_neq_trans by auto
+
+lemma max_bound_leq_conv[simp]:
+  "(- 1 \<le> (x::'a)) = (x = - 1)"
+  by (simp add: eq_iff)
+
+lemma max_bound_not_less[simp]:
+  "\<not> -1 < (x::'a)"
+  using minus1_leq by fastforce
+
+lemma minus_1_eq:
+  "(-1::'a) = of_nat (nat n - 1)"
+  unfolding definitions using Rep_Abs_1 of_nat_eq size1 by auto
+
+lemma n_not_less_Rep[simp]:
+  "\<not> n < Rep x"
+  using Rep[of x] by (simp add: not_less)
+
+lemma size_plus:
+  "(x::'a) < x + y \<Longrightarrow> size (x + y) = size x + size y"
+  unfolding definitions Rep_Abs_mod
+  using Rep size0
+  by (simp flip: nat_add_distrib add: eq_nat_nat_iff pos_mod_sign mod_add_if_z split: if_split_asm)
+
+lemma Suc_size[simp]:
+  "(x::'a) < x + 1 \<Longrightarrow> size (x + 1) = Suc (size x)"
+  by (simp add: size_plus)
+
+lemma no_overflow_eq_max_bound:
+  "((x::'a) < x + 1) = (x < -1)"
+  unfolding definitions
+  by (smt Rep_Abs_mod Rep_Abs_1 Rep_less_n int_mod_ge int_mod_ge' size0)
+
+lemma plus_one_leq:
+  "x < y \<Longrightarrow> x + 1 \<le> (y::'a)"
+  by (metis add_diff_cancel_right' leq_minus1_less not_le zero_least)
+
+lemma less_uminus:
+  "\<lbrakk> - x < y; x \<noteq> 0 \<rbrakk> \<Longrightarrow> - y < (x::'a)"
+  unfolding definitions
+  by (smt Rep_inverse Rep_mod Rep_Abs_mod size0 zmod_zminus1_eq_if)
+
 lemma of_nat_cases[case_names of_nat]:
   "(\<And>m. \<lbrakk> (x::'a) = of_nat m; m < nat n \<rbrakk> \<Longrightarrow> P) \<Longrightarrow> P"
   by (metis mod_type.Rep_less_n mod_type_axioms nat_mono_iff of_nat_size size0 size_def)
@@ -183,6 +239,108 @@ proof (cases x rule: of_nat_cases)
   with of_nat show ?thesis by simp
 qed
 
+lemma from_top_induct[case_names top step]:
+  assumes top: "\<And>x. y \<le> x \<Longrightarrow> P (x::'a)"
+  assumes step: "\<And>x. \<lbrakk>P x; 0 < x; x \<le> y\<rbrakk> \<Longrightarrow> P (x - 1)"
+  shows "P x"
+proof -
+  obtain z where x: "x = y - z"
+    by (metis diff_eq_diff_eq diff_right_commute)
+  moreover
+  have "P (y - z)"
+  proof (induct z rule: plus_induct)
+    case 0
+    then show ?case by (simp add: top)
+  next
+    case (plus x)
+    then have [simp]: "y - (x + 1) = (y - x) - 1" by simp
+    show ?case
+    proof (cases "x < y")
+      case True
+      with plus show ?thesis
+       by simp (metis diff_add_cancel eq_iff_diff_eq_0 le_neq_trans step plus_one_leq not_le
+                      top zero_less_eq)
+    next
+      case False
+      with plus show ?thesis
+       by (smt top Rep_Abs_mod Rep_le_n less_def less_eq_def diff_def int_mod_ge' size0)
+    qed
+  qed
+  ultimately show ?thesis by simp
+qed
+
+lemma tranclp_greater: "(>)\<^sup>+\<^sup>+ = ((>) :: 'a \<Rightarrow> 'a \<Rightarrow> bool)"
+  by(auto simp add: fun_eq_iff intro: less_trans elim: tranclp.induct)
+
+lemma card_n:
+  "CARD('a) = nat n"
+  using type by (simp add: type_definition.card)
+
+lemma finite_UNIV[intro!,simp]:
+  "finite (UNIV::'a set)"
+  by (rule card_ge_0_finite) (simp add: card_n size0)
+
+lemma finite_greater[simp]:
+  "finite {(x, y). y < (x::'a)}"
+  by (rule finite_subset[of _ "UNIV \<times> UNIV"], simp)
+     (rule finite_cartesian_product; rule finite_UNIV)
+
+lemma wf_greater[intro!,simp]:
+  "wf {(x,y). x > (y::'a)}"
+  by (auto simp: trancl_def tranclp_greater intro!: finite_acyclic_wf acyclicI)
+
+(* less_induct already instantiated in class well_order *)
+lemma greater_induct[case_names greater]:
+  "(\<And>x. (\<And>z. x < z \<Longrightarrow> P z) \<Longrightarrow> P x) \<Longrightarrow> P (x::'a)"
+  by (rule wf_induct_rule, rule wf_greater) fastforce
+
+lemma from_top_full_induct[case_names top step]:
+  assumes top: "\<And>x. y \<le> x \<Longrightarrow> P (x::'a)"
+  assumes step: "\<And>x. \<lbrakk>\<forall>z > x. P z; x < y\<rbrakk> \<Longrightarrow> P x"
+  shows "P x"
+proof (induct x rule: greater_induct)
+  case (greater x)
+  show ?case
+  proof (cases "x < y")
+    case True
+    then show ?thesis by (blast intro: step greater)
+  next
+    case False
+    then show ?thesis by (auto simp: not_less intro: top)
+  qed
+qed
+
+interpretation greater_wellorder: wellorder "(\<ge>) :: 'a \<Rightarrow> 'a \<Rightarrow> bool" "(>) :: 'a \<Rightarrow> 'a \<Rightarrow> bool"
+  by unfold_locales (auto intro: greater_induct)
+
+lemma greater_least_fold[simp]: "greater_wellorder.Least = Greatest"
+  by (auto simp: greater_wellorder.Least_def Greatest_def)
+
+lemmas GreatestI = greater_wellorder.LeastI[simplified greater_least_fold]
+lemmas Greatest_le = greater_wellorder.Least_le[simplified greater_least_fold]
+lemmas exists_greatest_iff = greater_wellorder.exists_least_iff
+lemmas GreatestI2_wellorder = greater_wellorder.LeastI2_wellorder[simplified greater_least_fold]
+
+lemma neq_0_conv:
+  "((x::'a) \<noteq> 0) = (0 < x)"
+  by (meson neqE not_less_zero_bit0)
+
+lemma minus_leq_less: "\<lbrakk> (x::'a) \<le> y; 0 < z; z \<le> x \<rbrakk> \<Longrightarrow> x - z < y"
+  by (metis le_less less_trans minus_less)
+
+lemma minus_one_leq_less: "\<lbrakk> (x::'a) \<le> y; 0 < x \<rbrakk> \<Longrightarrow> x - 1 < y"
+  using pred by fastforce
+
+lemma size_minus:
+  "y \<le> (x::'a) \<Longrightarrow> size (x - y) = size x - size y"
+  unfolding definitions Rep_Abs_mod
+  using Rep size0
+  by (simp flip: nat_diff_distrib add: eq_nat_nat_iff pos_mod_sign mod_sub_if_z split: if_split_asm)
+
+lemma size_minus_one:
+  "0 < (x::'a) \<Longrightarrow> size (x - 1) = size x - Suc 0"
+  by (simp add: size_minus)
+
 end
 
 interpretation bit0:
@@ -211,7 +369,6 @@ definition enum_alt_bit1  where "enum_alt \<equiv> alt_from_ord (enum :: 'a :: f
 instance by intro_classes (auto simp: enum_alt_bit0_def enum_alt_bit1_def)
 
 end
-
 
 subsection \<open>Relating @{const enum} and @{const size}\<close>
 
@@ -263,12 +420,23 @@ lemma minBound_size_bit1[simp]:
   "(minBound::'a::finite bit1) = 0"
   by (simp add: minBound_def hd_map enum_bit1_def Abs_bit1'_def zero_bit1_def)
 
-lemma maxBound_size_bit0[simp]:
+lemma maxBound_size_bit0:
   "(maxBound::'a::finite bit0) = of_nat (2 * CARD('a) - 1)"
   by (simp add: maxBound_def enum_bit0_def last_map Abs_bit0'_def bit0.of_nat_eq)
 
-lemma maxBound_size_bit1[simp]:
+lemma maxBound_size_bit1:
   "(maxBound::'a::finite bit1) = of_nat (2 * CARD('a))"
   by (simp add: maxBound_def enum_bit1_def last_map Abs_bit1'_def bit1.of_nat_eq)
+
+lemma maxBound_minus_one_bit0:
+  "maxBound = (-1 ::'a::finite bit0)"
+  by (simp add: bit0.definitions bit0.of_nat_eq bit0.Rep_Abs_1 maxBound_size_bit0)
+
+lemma maxBound_minus_one_bit1:
+  "maxBound = (-1 ::'a::finite bit1)"
+  by (simp add: bit1.definitions bit1.of_nat_eq bit1.Rep_Abs_1 zmod_minus1 maxBound_size_bit1)
+
+lemmas maxBound_size_bit = maxBound_size_bit0 maxBound_size_bit1
+lemmas maxBound_minus_one_bit[simp] = maxBound_minus_one_bit1 maxBound_minus_one_bit0
 
 end

@@ -27,6 +27,11 @@ definition
   alignUp :: "'a::len word \<Rightarrow> nat \<Rightarrow> 'a word" where
  "alignUp x n \<equiv> x + 2 ^ n - 1 && complement (2 ^ n - 1)"
 
+(* standard notation for blocks of 2^n-1 words, usually aligned;
+   abbreviation so it simplifies directly *)
+abbreviation mask_range :: "'a::len word \<Rightarrow> nat \<Rightarrow> 'a word set" where
+  "mask_range p n \<equiv> {p .. p + mask n}"
+
 (* Haskellish names/syntax *)
 notation (input)
   test_bit ("testBit")
@@ -251,6 +256,10 @@ lemma and_mask_arith:
 
 lemma mask_2pm1: "mask n = 2 ^ n - 1"
   by (simp add : mask_def)
+
+lemma add_mask_fold:
+  "x + 2 ^ n - 1 = x + mask n"
+  by (simp add: mask_def)
 
 lemma word_and_mask_le_2pm1: "w && mask n \<le> 2 ^ n - 1"
   by (simp add: mask_2pm1[symmetric] word_and_le1)
@@ -512,19 +521,6 @@ lemma word_and_max_word:
    the following will usually be much faster. *)
 lemmas word_and_max_simps[simplified max_word_def, simplified] =
   word_and_max[where 'a=8] word_and_max[where 'a=16] word_and_max[where 'a=32] word_and_max[where 'a=64]
-
-lemma word_and_1:
-  fixes x::"'a::len word"
-  shows "(x AND 1) = (if x!!0 then 1 else 0)"
-  apply(rule word_eqI)
-  apply(simp add:word_ao_nth)
-  apply(rule conjI)
-   apply(auto)[1]
-  apply clarsimp
-  apply (case_tac n)
-   apply simp
-  apply simp
-  done
 
 lemma word_and_1_bl:
   fixes x::"'a::len word"

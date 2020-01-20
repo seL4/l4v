@@ -14,7 +14,7 @@
 
 chapter CAmkES
 
-session CamkesAdlSpec (Camkes) in "adl-spec" = HOL +
+session CamkesAdlSpec (Camkes) in "adl-spec" = Access +
   options [document = pdf]
   theories
     "Wellformed_CAMKES"
@@ -49,8 +49,8 @@ session CamkesCdlBase (Camkes) in "adl-spec" = DPolicy +
 (* CAmkES<->CapDL reasoning. *)
 session CamkesCdlRefine (Camkes) in "cdl-refine" = CamkesCdlBase +
   theories
-    Generator_CAMKES_CDL
     Policy_CAMKES_CDL
+    Eval_CAMKES_CDL
 
 session CamkesGlueSpec (Camkes) in "glue-spec" = HOL +
   options [document = pdf]

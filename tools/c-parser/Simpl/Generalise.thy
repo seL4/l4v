@@ -148,7 +148,7 @@ lemma generaliseImpl:
   qed
 
 
-ML_file "generalise_state.ML"
+ML_file \<open>generalise_state.ML\<close>
 
 end
 

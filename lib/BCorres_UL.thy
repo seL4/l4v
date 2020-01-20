@@ -271,7 +271,7 @@ lemma gets_the_bcorres_underlying[wp]:
   "(\<And>s. f' (t s) = f s) \<Longrightarrow> bcorres_underlying t (gets_the f) (gets_the f')"
   by (wpsimp simp: gets_the_def)
 
-ML {*
+ML \<open>
 structure CrunchBCorresInstance : CrunchInstance =
 struct
   val name = "bcorres";
@@ -292,16 +292,17 @@ struct
     | put_precond _ _ = error "put_precond: not an bcorres term";
   val pre_thms = [];
   val wpc_tactic = WeakestPreCases.wp_cases_tac @{thms wpc_processors};
+  fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. bcorres_underlying t_free_ignore mapp_lambda_ignore g_free_ignore";
   val get_monad_state_type = get_nondet_monad_state_type;
 end;
 
 structure CrunchBCorres : CRUNCH = Crunch(CrunchBCorresInstance);
-*}
+\<close>
 
-setup {*
+setup \<open>
   add_crunch_instance "bcorres" (CrunchBCorres.crunch_x, CrunchBCorres.crunch_ignore_add_del)
-*}
+\<close>
 
 end

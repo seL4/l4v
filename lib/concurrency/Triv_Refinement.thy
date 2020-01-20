@@ -15,8 +15,8 @@ imports
 
 begin
 
-text {* This is a simple (almost trivial) definition of refinement,
-which simply resolves nondeterminism to a smaller set of options. *}
+text \<open>This is a simple (almost trivial) definition of refinement,
+which simply resolves nondeterminism to a smaller set of options.\<close>
 definition
   triv_refinement :: "('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad \<Rightarrow> bool"
 where

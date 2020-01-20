@@ -177,7 +177,7 @@ lemma tcbSchedEnqueue_cslift_precond_discharge:
     apply (simp add: maxDom_to_H maxPrio_to_H)+
   apply (simp add: cready_queues_index_to_C_def2 numPriorities_def)
   apply (clarsimp simp: ctcb_relation_def)
-  apply (frule arg_cong[where f=unat], subst(asm) unat_ucast_8_64)
+  apply (frule arg_cong[where f=unat], subst(asm) unat_ucast_up_simp, simp)
   apply (frule tcb_queue'_head_end_NULL)
    apply (erule conjunct1[OF valid_queues_valid_q])
   apply (frule(1) tcb_queue_relation_qhead_valid')
@@ -590,6 +590,25 @@ lemma setThreadState_ccorres_valid_queues'_simple:
   apply (clarsimp simp: weak_sch_act_wf_def valid_queues'_def)
   done
 
+lemma updateRestartPC_ccorres:
+  "ccorres dc xfdc (tcb_at' thread) \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr thread \<rbrace> hs
+     (updateRestartPC thread) (Call updateRestartPC_'proc)"
+  apply (cinit lift: tcb_')
+   apply (subst asUser_bind_distrib; (wp add: empty_fail_getRegister)?)
+   apply (ctac (no_vcg) add: getRegister_ccorres)
+    apply (ctac (no_vcg) add: setRegister_ccorres)
+   apply wpsimp+
+   apply (simp add: X64_H.faultRegister_def X64_H.nextInstructionRegister_def
+                    X64.faultRegister_def X64.nextInstructionRegister_def)
+  done
+
+crunches updateRestartPC
+  for valid_queues'[wp]: valid_queues'
+  and sch_act_simple[wp]: sch_act_simple
+  and valid_queues[wp]: Invariants_H.valid_queues
+  and valid_objs'[wp]: valid_objs'
+  and tcb_at'[wp]: "tcb_at' p"
+
 lemma suspend_ccorres:
   assumes cteDeleteOne_ccorres:
   "\<And>w slot. ccorres dc xfdc
@@ -605,22 +624,55 @@ lemma suspend_ccorres:
    (suspend thread) (Call suspend_'proc)"
   apply (cinit lift: target_')
    apply (ctac(no_vcg) add: cancelIPC_ccorres1 [OF cteDeleteOne_ccorres])
-    apply (ctac(no_vcg) add: setThreadState_ccorres_valid_queues'_simple)
-     apply (ctac add: tcbSchedDequeue_ccorres')
-    apply (rule_tac Q="\<lambda>_.
-                        (\<lambda>s. \<forall>t' d p. (t' \<in> set (ksReadyQueues s (d, p)) \<longrightarrow>
-                              obj_at' (\<lambda>tcb. tcbQueued tcb \<and> tcbDomain tcb = d
-                                                           \<and> tcbPriority tcb = p) t' s \<and>
-                (t' \<noteq> thread \<longrightarrow> st_tcb_at' runnable' t' s)) \<and>
-                distinct (ksReadyQueues s (d, p))) and valid_queues' and valid_objs' and tcb_at' thread"
-              in hoare_post_imp)
+    apply (rule getThreadState_ccorres_foo)
+    apply (rename_tac threadState)
+    apply (rule ccorres_move_c_guard_tcb)
+    apply (rule_tac xf'=ret__unsigned_longlong_'
+            and val="thread_state_to_tsType threadState"
+            and R="st_tcb_at' ((=) threadState) thread"
+            and R'=UNIV
+            in
+            ccorres_symb_exec_r_known_rv)
+       apply clarsimp
+       apply (rule conseqPre, vcg)
+       apply (clarsimp simp: st_tcb_at'_def)
+       apply (frule (1) obj_at_cslift_tcb)
+       apply (clarsimp simp: typ_heap_simps ctcb_relation_thread_state_to_tsType)
+      apply ceqv
+     supply Collect_const[simp del]
+     apply (rule ccorres_split_nothrow)
+         apply (rule ccorres_cond[where R=\<top> and xf=xfdc])
+           apply clarsimp
+           apply (rule iffI)
+            apply simp
+           apply (erule thread_state_to_tsType.elims; simp add: StrictC'_thread_state_defs)
+          apply (ctac (no_vcg) add: updateRestartPC_ccorres)
+         apply (rule ccorres_return_Skip)
+        apply ceqv
+       apply (ctac(no_vcg) add: setThreadState_ccorres_valid_queues'_simple)
+        apply (ctac add: tcbSchedDequeue_ccorres')
+       apply (rule_tac Q="\<lambda>_.
+                           (\<lambda>s. \<forall>t' d p. (t' \<in> set (ksReadyQueues s (d, p)) \<longrightarrow>
+                                 obj_at' (\<lambda>tcb. tcbQueued tcb \<and> tcbDomain tcb = d
+                                                              \<and> tcbPriority tcb = p) t' s \<and>
+                   (t' \<noteq> thread \<longrightarrow> st_tcb_at' runnable' t' s)) \<and>
+                   distinct (ksReadyQueues s (d, p))) and valid_queues' and valid_objs' and tcb_at' thread"
+                 in hoare_post_imp)
+        apply clarsimp
+        apply (drule_tac x="t" in spec)
+        apply (drule_tac x=d in spec)
+        apply (drule_tac x=p in spec)
+        apply (clarsimp elim!: obj_at'_weakenE simp: inQ_def)
+       apply (wp sts_valid_queues_partial)[1]
+      apply clarsimp
+      apply (wpsimp simp: valid_tcb_state'_def)
      apply clarsimp
-     apply (drule_tac x="t" in spec)
-     apply (drule_tac x=d in spec)
-     apply (drule_tac x=p in spec)
-     apply (clarsimp elim!: obj_at'_weakenE simp: inQ_def)
-    apply (wp_trace sts_valid_queues_partial)[1]
-  apply (rule hoare_strengthen_post)
+     apply (rule conseqPre, vcg exspec=updateRestartPC_modifies)
+     apply (rule subset_refl)
+    apply clarsimp
+    apply (rule conseqPre, vcg)
+    apply (rule subset_refl)
+   apply (rule hoare_strengthen_post)
     apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_vcg_conj_lift)
       apply (rule cancelIPC_sch_act_simple)
@@ -825,7 +877,7 @@ lemma finaliseCap_True_cases_ccorres:
                    \<and> ccap_relation (snd rv) (finaliseCap_ret_C.cleanupInfo_C rv'))
    ret__struct_finaliseCap_ret_C_'
    (invs') (UNIV \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. final_' s = from_bool final}
-                        \<inter> {s. exposed_' s = from_bool flag (* dave has name wrong *)}) []
+                        \<inter> {s. exposed_' s = from_bool flag \<comment> \<open>dave has name wrong\<close>}) []
    (finaliseCap cap final flag) (Call finaliseCap_'proc)"
   apply (subgoal_tac "\<not> isArchCap \<top> cap")
    prefer 2
@@ -944,7 +996,7 @@ lemma finaliseCap_True_standin_ccorres:
                    \<and> ccap_relation (snd rv) (finaliseCap_ret_C.cleanupInfo_C rv'))
    ret__struct_finaliseCap_ret_C_'
    (invs') (UNIV \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. final_' s = from_bool final}
-                        \<inter> {s. exposed_' s = from_bool True (* dave has name wrong *)}) []
+                        \<inter> {s. exposed_' s = from_bool True \<comment> \<open>dave has name wrong\<close>}) []
    (finaliseCapTrue_standin cap final) (Call finaliseCap_'proc)"
   unfolding finaliseCapTrue_standin_simple_def
   apply (case_tac "P :: bool" for P)
@@ -1607,7 +1659,7 @@ lemma cteDeleteOne_ccorres:
 
 lemma getIRQSlot_ccorres_stuff:
   "\<lbrakk> (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow>
-   CTypesDefs.ptr_add (intStateIRQNode_' (globals s')) (uint (irq :: 8 word))
+   CTypesDefs.ptr_add intStateIRQNode_Ptr (uint (irq :: 8 word))
      = Ptr (irq_node' s + 2 ^ cte_level_bits * ucast irq)"
   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def
                             cinterrupt_relation_def)
@@ -1625,6 +1677,7 @@ lemma deletingIRQHandler_ccorres:
    apply (rule_tac r'="\<lambda>rv rv'. rv' = Ptr rv"
                 and xf'="slot_'" in ccorres_split_nothrow)
        apply (simp add: sint_ucast_eq_uint is_down)
+       apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
        apply (rule ccorres_move_array_assertion_irq)
        apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
 
@@ -1632,8 +1685,8 @@ lemma deletingIRQHandler_ccorres:
        apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
                              locateSlot_conv)
        apply (simp add: bind_def simpler_gets_def return_def
-          ucast_nat_def uint_up_ucast is_up)
-       apply (erule getIRQSlot_ccorres_stuff)
+                        ucast_nat_def uint_up_ucast is_up)
+       apply (erule getIRQSlot_ccorres_stuff[simplified])
       apply ceqv
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_symb_exec_l)
@@ -1651,7 +1704,7 @@ lemma deletingIRQHandler_ccorres:
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
                         irq_opt_relation_def Kernel_C.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp:uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
+  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
   done
 
 (* 6 = wordRadix,
@@ -1768,12 +1821,6 @@ lemma cnotification_relation_udpate_arch:
   apply (safe ; case_tac "xa = p" ; clarsimp simp: option_map2_def map_option_case)
   done
 
-(*
-lemmas Kernel_C_reg_simps = Kernel_C.E_def Kernel_C.R1_def  Kernel_C.CPSR_def
-    Kernel_C.R2_def Kernel_C.R3_def Kernel_C.R4_def Kernel_C.R5_def Kernel_C.R6_def Kernel_C.R7_def
-    Kernel_C.R8_def Kernel_C.R9_def Kernel_C.R10_def Kernel_C.R11_def Kernel_C.R12_def Kernel_C.SP_def
-    Kernel_C.LR_def Kernel_C.FaultInstruction_def Kernel_C.TPIDRURW_def Kernel_C.LR_svc_def
-*)
 lemma sanitiseSetRegister_ccorres:
   "\<lbrakk> val = val'; reg' = register_from_H reg\<rbrakk> \<Longrightarrow>
      ccorres dc xfdc (tcb_at' tptr)
@@ -2419,7 +2466,7 @@ lemma finaliseCap_ccorres:
    (invs' and sch_act_simple and valid_cap' cap and (\<lambda>s. ksIdleThread s \<notin> capRange cap)
           and (\<lambda>s. 2 ^ capBits cap \<le> gsMaxObjectSize s))
    (UNIV \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. final_' s = from_bool final}
-                        \<inter> {s. exposed_' s = from_bool flag (* dave has name wrong *)}) []
+                        \<inter> {s. exposed_' s = from_bool flag \<comment> \<open>dave has name wrong\<close>}) []
    (finaliseCap cap final flag) (Call finaliseCap_'proc)"
   apply (rule_tac F="capAligned cap" in Corres_UL_C.ccorres_req)
    apply (clarsimp simp: valid_capAligned)

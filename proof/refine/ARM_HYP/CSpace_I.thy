@@ -21,12 +21,12 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma capUntypedPtr_simps [simp]:
   "capUntypedPtr (ThreadCap r) = r"
   "capUntypedPtr (NotificationCap r badge a b) = r"
-  "capUntypedPtr (EndpointCap r badge a b c) = r"
+  "capUntypedPtr (EndpointCap r badge a b c d) = r"
   "capUntypedPtr (Zombie r bits n) = r"
   "capUntypedPtr (ArchObjectCap x) = Arch.capUntypedPtr x"
   "capUntypedPtr (UntypedCap d r n f) = r"
   "capUntypedPtr (CNodeCap r n g n2) = r"
-  "capUntypedPtr (ReplyCap r m) = r"
+  "capUntypedPtr (ReplyCap r m a) = r"
   "Arch.capUntypedPtr (ARM_HYP_H.ASIDPoolCap r asid) = r"
   "Arch.capUntypedPtr (ARM_HYP_H.PageCap d r rghts sz mapdata) = r"
   "Arch.capUntypedPtr (ARM_HYP_H.PageTableCap r mapdata2) = r"
@@ -46,11 +46,6 @@ lemma maskCapRights_allRights [simp]:
   unfolding maskCapRights_def isCap_defs allRights_def
             ARM_HYP_H.maskCapRights_def maskVMRights_def
   by (cases c) (simp_all add: Let_def split: arch_capability.split vmrights.split)
-
-lemma diminished_refl'[simp]:
-  "diminished' cap cap"
-  unfolding diminished'_def
-  by (rule exI[where x=allRights], simp)
 
 lemma getCTE_inv [wp]: "\<lbrace>P\<rbrace> getCTE addr \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: getCTE_def) wp
@@ -86,10 +81,10 @@ proof (induct arbitrary: s rule: resolveAddressBits.induct)
     apply (simp add: Let_def split_def cap_case_CNodeCap[unfolded isCap_simps]
                split del: if_split cong: if_cong)
     apply (rule hoare_pre_spec_validE)
-     apply ((elim exE | wp_once spec_strengthen_postE[OF "1.hyps"])+,
+     apply ((elim exE | wp (once) spec_strengthen_postE[OF "1.hyps"])+,
               (rule refl conjI | simp add: in_monad split del: if_split)+)
             apply (wp | simp add: locateSlot_conv split del: if_split
-                      | wp_once hoare_drop_imps)+
+                      | wp (once) hoare_drop_imps)+
   done
 qed
 
@@ -252,45 +247,6 @@ next
   qed
 qed
 
-lemma no_loops_splitat_tt:
-  assumes p1: "m \<turnstile> x \<leadsto>\<^sup>+ y"
-  and     p2: "m \<turnstile> x \<leadsto>\<^sup>+ p"
-  and     nl: "no_loops m"
-  and  r1: "\<lbrakk> m \<turnstile> p \<leadsto>\<^sup>* y; \<not> m \<turnstile> y \<leadsto>\<^sup>+ p \<rbrakk> \<Longrightarrow> P"
-  and  r2: "\<lbrakk> m \<turnstile> y \<leadsto>\<^sup>* p; \<not> m \<turnstile> p \<leadsto>\<^sup>+ y \<rbrakk> \<Longrightarrow> P"
-  shows "P"
-proof (cases "m \<turnstile> p \<leadsto>\<^sup>* y")
-  case True
-  thus ?thesis
-  proof (rule r1)
-    from nl show "\<not> m \<turnstile> y \<leadsto>\<^sup>+ p"
-    proof (rule contrapos_pn)
-      assume "m \<turnstile> y \<leadsto>\<^sup>+ p"
-      hence "m \<turnstile> p \<leadsto>\<^sup>+ p" using True by simp
-      thus "\<not> no_loops m"
-        by (rule neg_no_loopsI)
-    qed
-  qed
-next
-  case False
-
-  show ?thesis
-  proof (rule r2)
-   from False show "\<not> m \<turnstile> p \<leadsto>\<^sup>+ y"
-     by (rule contrapos_nn) (erule trancl_into_rtrancl)
-
-   show "m \<turnstile> y \<leadsto>\<^sup>* p"
-     by (rule next_trancl_split_tt) fact+
- qed
-qed
-
-lemma no_loops_next_selfD:
-  "\<lbrakk>no_loops m; m \<turnstile> x \<leadsto> x \<rbrakk> \<Longrightarrow> False"
-   apply (clarsimp simp: next_unfold')
-   apply (drule (1) no_self_loop_next_noloop)
-   apply simp
-   done
-
 lemma no_loops_upd_last:
   assumes noloop: "no_loops m"
   and     nxt: "m \<turnstile> x \<leadsto>\<^sup>+ p"
@@ -303,7 +259,7 @@ proof -
   proof (induct rule: converse_trancl_induct')
     case (base y)
     hence "m (p \<mapsto> cte) \<turnstile> y \<leadsto> p" using noloop
-      by (auto simp add: mdb_next_update dest!: no_loops_next_selfD)
+      by (auto simp add: mdb_next_update)
     thus ?case ..
   next
     case (step y z)
@@ -478,22 +434,6 @@ lemma mdb_chain_0_update_0:
   apply (auto elim: next_rtrancl_tranclE dest: no_0_lhs_trancl)
   done
 
-lemma no_loops_0_update:
-  assumes x: "mdbNext (cteMDBNode cte) = 0"
-  assumes p: "p \<noteq> 0"
-  assumes 0: "no_0 m"
-  assumes n: "no_loops m"
-  shows "no_loops (m(p \<mapsto> cte))"
-  unfolding no_loops_def
-proof (rule, rule contrapos_pn [OF n], rule neg_no_loopsI)
-  fix c
-  assume lp: "m(p \<mapsto> cte) \<turnstile> c \<leadsto>\<^sup>+ c"
-  thus "m \<turnstile> c \<leadsto>\<^sup>+ c"
-  proof (rule has_loop_update)
-    from lp show "c \<noteq> 0" by (rule no_0_lhs_trancl [OF _ no_0_update]) fact+
-  qed fact+
-qed
-
 lemma valid_badges_0_update:
   assumes nx: "mdbNext (cteMDBNode cte) = 0"
   assumes pv: "mdbPrev (cteMDBNode cte) = 0"
@@ -617,15 +557,16 @@ lemma isPhysicalCap[simp]:
   by (simp add: isPhysicalCap_def ARM_HYP_H.isPhysicalCap_def
          split: capability.split arch_capability.split)
 
+(* FIXME instead of a definition and then a simp rule in the simp set, we should use fun *)
 definition
   capMasterCap :: "capability \<Rightarrow> capability"
 where
  "capMasterCap cap \<equiv> case cap of
-   EndpointCap ref bdg s r g \<Rightarrow> EndpointCap ref 0 True True True
+   EndpointCap ref bdg s r g gr \<Rightarrow> EndpointCap ref 0 True True True True
  | NotificationCap ref bdg s r \<Rightarrow> NotificationCap ref 0 True True
  | CNodeCap ref bits gd gs \<Rightarrow> CNodeCap ref bits 0 0
  | ThreadCap ref \<Rightarrow> ThreadCap ref
- | ReplyCap ref master \<Rightarrow> ReplyCap ref True
+ | ReplyCap ref master g \<Rightarrow> ReplyCap ref True True
  | UntypedCap d ref n f \<Rightarrow> UntypedCap d ref n 0
  | ArchObjectCap acap \<Rightarrow> ArchObjectCap (case acap of
       PageCap d ref rghts sz mapdata \<Rightarrow>
@@ -642,7 +583,7 @@ where
  | _ \<Rightarrow> cap"
 
 lemma capMasterCap_simps[simp]:
-  "capMasterCap (EndpointCap ref bdg s r g) = EndpointCap ref 0 True True True"
+  "capMasterCap (EndpointCap ref bdg s r g gr) = EndpointCap ref 0 True True True True"
   "capMasterCap (NotificationCap ref bdg s r) = NotificationCap ref 0 True True"
   "capMasterCap (CNodeCap ref bits gd gs) = CNodeCap ref bits 0 0"
   "capMasterCap (ThreadCap ref) = ThreadCap ref"
@@ -664,13 +605,13 @@ lemma capMasterCap_simps[simp]:
             capability.ArchObjectCap (arch_capability.VCPUCap vref)"
   "capMasterCap (capability.UntypedCap d word n f) = capability.UntypedCap d word n 0"
   "capMasterCap capability.IRQControlCap = capability.IRQControlCap"
-  "capMasterCap (capability.ReplyCap word m) = capability.ReplyCap word True"
+  "capMasterCap (capability.ReplyCap word m g) = capability.ReplyCap word True True"
   by (simp_all add: capMasterCap_def)
 
 lemma capMasterCap_eqDs1:
-  "capMasterCap cap = EndpointCap ref bdg s r g
-     \<Longrightarrow> bdg = 0 \<and> s \<and> r \<and> g
-          \<and> (\<exists>bdg s r g. cap = EndpointCap ref bdg s r g)"
+  "capMasterCap cap = EndpointCap ref bdg s r g gr
+     \<Longrightarrow> bdg = 0 \<and> s \<and> r \<and> g \<and> gr
+          \<and> (\<exists>bdg s r g gr. cap = EndpointCap ref bdg s r g gr)"
   "capMasterCap cap = NotificationCap ref bdg s r
      \<Longrightarrow> bdg = 0 \<and> s \<and> r
           \<and> (\<exists>bdg s r. cap = NotificationCap ref bdg s r)"
@@ -690,8 +631,8 @@ lemma capMasterCap_eqDs1:
      \<Longrightarrow> cap = Zombie ref tp n"
   "capMasterCap cap = UntypedCap d ref bits 0
      \<Longrightarrow> \<exists>f. cap = UntypedCap d ref bits f"
-  "capMasterCap cap = ReplyCap ref master
-     \<Longrightarrow> \<exists>master. cap = ReplyCap ref master"
+  "capMasterCap cap = ReplyCap ref master g
+     \<Longrightarrow> master \<and> g \<and> (\<exists>master g. cap = ReplyCap ref master g)"
   "capMasterCap cap = ArchObjectCap (PageCap d ref rghts sz mapdata)
      \<Longrightarrow> rghts = VMReadWrite \<and> mapdata = None
           \<and> (\<exists>rghts mapdata. cap = ArchObjectCap (PageCap d ref rghts sz mapdata))"
@@ -718,18 +659,18 @@ where
                  else None"
 
 lemma capBadge_simps[simp]:
- "capBadge (UntypedCap d p n f)                 = None"
+ "capBadge (UntypedCap d p n f)               = None"
  "capBadge (NullCap)                          = None"
  "capBadge (DomainCap)                        = None"
- "capBadge (EndpointCap ref badge s r w)      = Some badge"
- "capBadge (NotificationCap ref badge s r)   = Some badge"
+ "capBadge (EndpointCap ref badge s r g gr)   = Some badge"
+ "capBadge (NotificationCap ref badge s r)    = Some badge"
  "capBadge (CNodeCap ref bits gd gs)          = None"
  "capBadge (ThreadCap ref)                    = None"
  "capBadge (Zombie ref b n)                   = None"
  "capBadge (ArchObjectCap cap)                = None"
  "capBadge (IRQControlCap)                    = None"
  "capBadge (IRQHandlerCap irq)                = None"
- "capBadge (ReplyCap tcb master)              = None"
+ "capBadge (ReplyCap tcb master g)            = None"
   by (simp add: capBadge_def isCap_defs)+
 
 lemma capClass_Master:
@@ -861,18 +802,6 @@ lemma untypedRange_Master:
   "untypedRange (capMasterCap cap) = untypedRange cap"
   by (simp add: capMasterCap_def split: capability.split)
 
-lemma sameObject_untypedRange:
-  "sameObjectAs cap cap' \<Longrightarrow> untypedRange cap' = untypedRange cap"
-  apply (rule master_eqI, rule untypedRange_Master)
-  apply (clarsimp simp: sameObjectAs_def2)
-  done
-
-lemma sameObject_untypedCap:
-  "sameObjectAs cap cap' \<Longrightarrow> isUntypedCap cap' = isUntypedCap cap"
-  apply (rule master_eqI, rule isCap_Master)
-  apply (clarsimp simp: sameObjectAs_def2)
-  done
-
 lemma sameObject_capRange:
   "sameObjectAs cap cap' \<Longrightarrow> capRange cap' = capRange cap"
   apply (rule master_eqI, rule capRange_Master)
@@ -892,14 +821,14 @@ lemma isMDBParent_Null [simp]:
 lemma capUntypedSize_simps [simp]:
   "capUntypedSize (ThreadCap r) = 1 << objBits (undefined::tcb)"
   "capUntypedSize (NotificationCap r badge a b) = 1 << objBits (undefined::Structures_H.notification)"
-  "capUntypedSize (EndpointCap r badge a b c) = 1 << objBits (undefined::endpoint)"
+  "capUntypedSize (EndpointCap r badge a b c d) = 1 << objBits (undefined::endpoint)"
   "capUntypedSize (Zombie r zs n) = 1 << (zBits zs)"
   "capUntypedSize NullCap = 0"
   "capUntypedSize DomainCap = 1"
   "capUntypedSize (ArchObjectCap x) = Arch.capUntypedSize x"
   "capUntypedSize (UntypedCap d r n f) = 1 << n"
   "capUntypedSize (CNodeCap r n g n2) = 1 << (objBits (undefined::cte) + n)"
-  "capUntypedSize (ReplyCap r m) = 1 << objBits (undefined :: tcb)"
+  "capUntypedSize (ReplyCap r m a) = 1 << objBits (undefined :: tcb)"
   "capUntypedSize IRQControlCap = 1"
   "capUntypedSize (IRQHandlerCap irq) = 1"
   by (auto simp add: capUntypedSize_def isCap_simps objBits_simps
@@ -913,16 +842,6 @@ lemma sameRegionAs_classes:
      apply (simp add: capRange_def split: if_split_asm)
     apply (clarsimp simp: isCap_simps)
    apply (clarsimp simp: isCap_simps)
-  done
-
-lemma sameRegionAs_capRange:
-  "\<lbrakk> sameRegionAs cap cap';
-     \<not> isUntypedCap cap; \<not> isArchPageCap cap \<rbrakk>
-      \<Longrightarrow> capRange cap = capRange cap'"
-  apply (rule master_eqI, rule capRange_Master)
-  apply (erule sameRegionAsE, simp_all)
-  apply (clarsimp simp: isCap_simps)
-  apply (simp add: capRange_def capMasterCap_def)
   done
 
 lemma capAligned_capUntypedPtr:
@@ -971,14 +890,6 @@ lemma capBadge_maskCapRights[simp]:
   apply (case_tac arch_capability;
          simp add: ARM_HYP_H.maskCapRights_def Let_def isCap_simps)
   done
-
-lemma maskCapRights_region [simp]:
-  "sameRegionAs (maskCapRights R cap) cap' = sameRegionAs cap cap'"
-  by (simp add: sameRegionAs_def2)
-
-lemma sameRegionAs_mask2 [simp]:
-  "sameRegionAs cap (maskCapRights R cap') = sameRegionAs cap cap'"
-  by (simp add: sameRegionAs_def2)
 
 lemma getObject_cte_det:
   "(r::cte,s') \<in> fst (getObject p s) \<Longrightarrow> fst (getObject p s) = {(r,s)} \<and> s' = s"
@@ -1040,21 +951,6 @@ lemma ctes_of_valid_cap':
 lemma valid_capAligned:
   "valid_cap' c s \<Longrightarrow> capAligned c"
   by (simp add: valid_cap'_def)
-
-lemma capUntypedSize_range:
-  "\<lbrakk> capAligned cap; capClass cap = PhysicalClass \<rbrakk> \<Longrightarrow>
-   {capUntypedPtr cap .. capUntypedPtr cap + capUntypedSize cap - 1}
-            \<subseteq> {capUntypedPtr cap .. capUntypedPtr cap + 2 ^ capBits cap - 1}"
-  apply (rule range_subsetI)
-   apply simp
-  apply (clarsimp simp add: capAligned_def)
-  apply (erule is_aligned_get_word_bits)
-   apply (simp add: capUntypedSize_def ARM_HYP_H.capUntypedSize_def objBits_simps
-                 isCap_simps
-          split: capability.splits arch_capability.split
-                 zombie_type.splits)
-   apply (auto simp: is_aligned_no_overflow objBits_simps word_bits_def vspace_bits_defs vcpu_bits_def)
-  done
 
 lemma caps_no_overlap'_no_region:
   "\<lbrakk> caps_no_overlap' m (capRange cap); valid_objs' s;
@@ -1286,9 +1182,9 @@ lemma cte_refs_capRange:
     apply (intro conjI)
      apply (erule(1) is_aligned_no_wrap')
     apply (rule word_plus_mono_right[where z="2^tcbBlockSizeBits - 1", simplified field_simps])
-     apply (drule minus_one_helper3, simp)
+     apply (drule word_le_minus_one_leq, simp)
     apply (erule is_aligned_no_wrap'[where off="2^tcbBlockSizeBits - 1", simplified field_simps])
-    apply (drule minus_one_helper3)
+    apply (drule word_le_minus_one_leq)
     apply simp
    defer
    \<comment> \<open>CNodeCap\<close>
@@ -1381,10 +1277,6 @@ lemma irrefl_direct_simp [iff]:
 lemma irrefl_trancl_simp [iff]:
   "m \<turnstile> x \<leadsto>\<^sup>+ x = False"
   using no_loops by (rule no_loops_trancl_simp)
-
-lemma irrefl_rtrancl:
-  "\<lbrakk> m \<turnstile> x \<leadsto>\<^sup>* y; m \<turnstile> y \<leadsto>\<^sup>* x \<rbrakk> \<Longrightarrow> x = y"
-  by (fastforce dest: rtranclD trancl_trans)
 
 lemma irrefl_subtree [iff]:
   "m \<turnstile> x \<rightarrow> x = False"
@@ -1516,10 +1408,6 @@ lemma
   class_links: "class_links m" and
   irq_control: "irq_control m"
   using valid by (simp add: valid_mdb_ctes_def)+
-
-lemma zero_next [simp]:
-  "m \<turnstile> 0 \<leadsto> p' = False"
-  by (clarsimp simp: mdb_next_unfold)
 
 end (* of context vmdb *)
 
@@ -1660,10 +1548,6 @@ lemma p_next:
   using m_p by (auto simp: mdb_next_unfold)
 
 end (* of locale mdb_ptr *)
-
-lemma no_mdb_not_source:
-  "no_mdb cte \<Longrightarrow> m \<turnstile> c \<leadsto> c' \<Longrightarrow> m p = Some cte \<Longrightarrow> c = p \<longrightarrow> c' = 0"
-  by (clarsimp simp add: mdb_next_unfold no_mdb_def)
 
 lemma no_mdb_not_target:
   "\<lbrakk> m \<turnstile> c \<leadsto> c'; m p = Some cte; no_mdb cte; valid_dlist m; no_0 m \<rbrakk>
@@ -1881,11 +1765,6 @@ lemma valid_nullcaps_init:
   by (simp add: valid_nullcaps_def initMDBNode_def nullPointer_def)
 end
 
-lemma class_links_def2:
-  "class_links m = (\<forall>p cte. m p = Some cte \<longrightarrow> mdbNext (cteMDBNode cte) \<in> dom m
-         \<longrightarrow> capClass (cteCap cte) = capClass (cteCap (the (m (mdbNext (cteMDBNode cte))))))"
-  by (auto simp add: class_links_def dom_def mdb_next_unfold)
-
 lemma class_links_init:
   "\<lbrakk> class_links m; no_0 m; m p = Some cte;
      no_mdb cte; valid_dlist m \<rbrakk>
@@ -2013,28 +1892,6 @@ lemma distinct_zombies_seperateE:
   apply auto[1]
   done
 
-lemma distinct_zombies_seperate_if_zombiedE:
-  "\<lbrakk> distinct_zombies m; m x = Some cte;
-        isUntypedCap (cteCap cte) \<longrightarrow> isUntypedCap (cteCap cte');
-        isArchPageCap (cteCap cte) \<longrightarrow> isArchPageCap (cteCap cte');
-        capClass (cteCap cte') = capClass (cteCap cte);
-        capBits (cteCap cte') = capBits (cteCap cte);
-        capUntypedPtr (cteCap cte') = capUntypedPtr (cteCap cte);
-        \<And>y cte''. \<lbrakk> m y = Some cte''; x \<noteq> y;
-                    isZombie (cteCap cte'); \<not> isZombie (cteCap cte);
-                    \<not> isUntypedCap (cteCap cte''); \<not> isArchPageCap (cteCap cte'');
-                    capClass (cteCap cte'') = PhysicalClass;
-                    capUntypedPtr (cteCap cte'') = capUntypedPtr (cteCap cte);
-                    capBits (cteCap cte'') = capBits (cteCap cte)
-                        \<rbrakk> \<Longrightarrow> False    \<rbrakk>
-          \<Longrightarrow> distinct_zombies (m (x \<mapsto> cte'))"
-  apply (cases "isZombie (cteCap cte') \<and> \<not> isZombie (cteCap cte)")
-   apply (erule distinct_zombies_seperateE)
-   apply auto[1]
-  apply clarsimp
-  apply (erule(7) distinct_zombies_unzombieE)
-  done
-
 lemma distinct_zombies_init:
   "\<lbrakk> distinct_zombies m; caps_no_overlap' m (capRange (cteCap cte));
         capAligned (cteCap cte); \<forall>x cte. m x = Some cte \<longrightarrow> capAligned (cteCap cte) \<rbrakk>
@@ -2157,37 +2014,12 @@ lemma setCTE_valid_objs'[wp]:
                   split: kernel_object.split_asm if_split_asm)
   done
 
-lemma setCTE_valid_pspace:
-  fixes cap
-  defines "cte \<equiv> CTE cap initMDBNode"
-  shows
-  "\<lbrace>\<lambda>s. valid_pspace' s \<and> s \<turnstile>' cap \<and> cte_wp_at' no_mdb ptr s \<and>
-        caps_no_overlap' (ctes_of s) (capRange cap) \<and>
-        cap \<noteq> NullCap \<and> fresh_virt_cap_class (capClass cap) (ctes_of s) \<and>
-        (cap = capability.IRQControlCap \<longrightarrow> no_irq' (ctes_of s))\<rbrace>
-  setCTE ptr cte
-  \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
-  apply (simp add: valid_pspace'_def setCTE_def cte_def)
-  apply (rule hoare_pre)
-   apply (wp setCTE_valid_objs'[unfolded setCTE_def]
-             setCTE_valid_mdb[unfolded setCTE_def])
-  apply simp
-  done
-
 lemma getCTE_cte_wp_at:
   "\<lbrace>\<top>\<rbrace> getCTE p \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>c. c = rv) p\<rbrace>"
   apply (clarsimp simp: valid_def cte_wp_at'_def getCTE_def)
   apply (frule state_unchanged [OF getObject_cte_inv])
   apply simp
   apply (drule getObject_cte_det, simp)
-  done
-
-lemma getCTE_cte_at:
-  "\<lbrace>\<top>\<rbrace> getCTE c \<lbrace>\<lambda>_. cte_at' c\<rbrace>"
-  apply (rule hoare_strengthen_post)
-   apply (rule getCTE_cte_wp_at)
-  apply (erule cte_wp_at_weakenE')
-  apply simp
   done
 
 lemma getCTE_sp:
@@ -2226,55 +2058,12 @@ lemma setCTE_no_0_obj' [wp]:
   "\<lbrace>no_0_obj'\<rbrace> setCTE p c \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
   by (simp add: setCTE_def) wp
 
-lemma insertInitCap_valid_pspace:
-  "\<lbrace>valid_pspace' and valid_cap' cap and
-    (\<lambda>s. caps_no_overlap' (ctes_of s) (capRange cap))
-    and (\<lambda>s. fresh_virt_cap_class (capClass cap) (ctes_of s)) and
-    (\<lambda>s. cap = capability.IRQControlCap \<longrightarrow> no_irq' (ctes_of s))\<rbrace>
-  insertInitCap ptr cap
-  \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
-  unfolding insertInitCap_def
-  apply (simp   add: updateCap_def valid_pspace'_def
-                     valid_mdb'_def bind_assoc
-          split del: if_split)
-  apply (wp setCTE_map_to_ctes getCTE_ctes_wp
-            | simp add: updateMDB_def split del: if_split)+
-       apply (rule hoare_post_imp)
-        apply (erule_tac P="pspace_aligned' s \<and> pspace_distinct' s
-          \<and> no_0_obj' s" in conjunct2)
-       apply (simp cong: conj_cong)
-       apply (wp setCTE_map_to_ctes getCTE_ctes_wp)+
-  apply clarsimp
-  apply (rule conjI)
-   apply (clarsimp simp: valid_mdb_ctes_def)
-  apply (simp add: const_def cte_overwrite nullMDBNode_def
-                   initMDBNode_def[symmetric]
-             cong: if_cong)
-  apply (fold fun_upd_def)
-  apply (rule impI, rule valid_mdb_ctes_init, simp_all)
-  apply (simp add: no_mdb_def nullPointer_def)
-  done
-
-
 declare mresults_fail[simp]
 
 crunch idle[wp]: get_object "valid_idle"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma cte_refs_Master:
-  "cte_refs' (capMasterCap cap) = cte_refs' cap"
-  by (rule ext, simp add: capMasterCap_def split: capability.split)
 end
-
-lemma (in vmdb) untyped_mdb': "untyped_mdb' m"
-  using valid ..
-
-lemma (in vmdb) untyped_inc': "untyped_inc' m"
-  using valid ..
-
-lemma diminished_capMaster:
-  "diminished' cap cap' \<Longrightarrow> capMasterCap cap' = capMasterCap cap"
-  by (clarsimp simp: diminished'_def)
 
 
 end (* of theory *)

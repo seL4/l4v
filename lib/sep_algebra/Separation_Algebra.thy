@@ -21,10 +21,10 @@ imports
   "HOL-Library.Adhoc_Overloading"
 begin
 
-text {* This theory is the main abstract separation algebra development *}
+text \<open>This theory is the main abstract separation algebra development\<close>
 
 
-section {* Input syntax for lifting boolean predicates to separation predicates *}
+section \<open>Input syntax for lifting boolean predicates to separation predicates\<close>
 
 abbreviation (input)
   pred_and :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> bool" (infixr "and" 35) where
@@ -55,7 +55,7 @@ abbreviation (input)
   "ALLS x. P x \<equiv> \<lambda>s. \<forall>x. P x s"
 
 
-section {* Associative/Commutative Monoid Basis of Separation Algebras *}
+section \<open>Associative/Commutative Monoid Basis of Separation Algebras\<close>
 
 class pre_sep_algebra = zero + plus +
   fixes sep_disj :: "'a => 'a => bool" (infix "##" 60)
@@ -92,14 +92,14 @@ lemmas sep_add_ac = sep_add_assoc sep_add_commute sep_add_left_commute
 end
 
 
-section {* Separation Algebra as Defined by Calcagno et al. *}
+section \<open>Separation Algebra as Defined by Calcagno et al.\<close>
 
 class sep_algebra = pre_sep_algebra +
   assumes sep_disj_addD1: "\<lbrakk> x ## y + z; y ## z \<rbrakk> \<Longrightarrow> x ## y"
   assumes sep_disj_addI1: "\<lbrakk> x ## y + z; y ## z \<rbrakk> \<Longrightarrow> x + y ## z"
 begin
 
-subsection {* Basic Construct Definitions and Abbreviations *}
+subsection \<open>Basic Construct Definitions and Abbreviations\<close>
 
 (* Lower precedence than pred_conj, otherwise "P \<and>* Q and R" is ambiguous,
  * (noting that Isabelle turns "(P \<and>* Q) and R" into "P \<and>* Q and R").
@@ -136,7 +136,7 @@ abbreviation
   "sep_false \<equiv> \<langle>False\<rangle>"
 
 
-subsection {* Disjunction/Addition Properties *}
+subsection \<open>Disjunction/Addition Properties\<close>
 
 lemma disjoint_zero_sym [simp]: "0 ## x"
   by (simp add: sep_disj_commute)
@@ -174,7 +174,7 @@ lemma sep_disj_add:
   by (metis sep_disj_addI1 sep_disj_addI3)
 
 
-subsection {* Substate Properties *}
+subsection \<open>Substate Properties\<close>
 
 lemma sep_substate_disj_add:
   "x ## y \<Longrightarrow> x \<preceq> x + y"
@@ -185,7 +185,7 @@ lemma sep_substate_disj_add':
   by (simp add: sep_add_ac sep_substate_disj_add)
 
 
-subsection {* Separating Conjunction Properties *}
+subsection \<open>Separating Conjunction Properties\<close>
 
 lemma sep_conjD:
   "(P \<and>* Q) h \<Longrightarrow> \<exists>x y. x ## y \<and> h = x + y \<and> P x \<and> Q y"
@@ -270,7 +270,7 @@ lemma sep_empty_zero [simp,intro!]: "\<box> 0"
   by (simp add: sep_empty_def)
 
 
-subsection {* Properties of @{text sep_true} and @{text sep_false} *}
+subsection \<open>Properties of @{text sep_true} and @{text sep_false}\<close>
 
 lemma sep_conj_sep_true:
   "P h \<Longrightarrow> (P ** sep_true) h"
@@ -295,7 +295,7 @@ lemma sep_conj_false_left [simp]:
 
 
 
-subsection {* Properties of @{const sep_empty} *}
+subsection \<open>Properties of @{const sep_empty}\<close>
 
 lemma sep_conj_empty [simp]:
   "(P ** \<box>) = P"
@@ -314,7 +314,7 @@ lemma sep_conj_sep_emptyE:
   by simp
 
 
-subsection {* Properties of top (@{text sep_true}) *}
+subsection \<open>Properties of top (@{text sep_true})\<close>
 
 lemma sep_conj_true_P [simp]:
   "(sep_true ** (sep_true ** P)) = (sep_true ** P)"
@@ -334,7 +334,7 @@ lemma sep_conj_sep_true_right:
       simp add: sep_conj_ac)
 
 
-subsection {* Separating Conjunction with Quantifiers *}
+subsection \<open>Separating Conjunction with Quantifiers\<close>
 
 lemma sep_conj_conj:
   "((P and Q) ** R) h \<Longrightarrow> ((P ** R) and (Q ** R)) h"
@@ -360,7 +360,7 @@ lemma sep_conj_spec2:
 
 lemmas sep_conj_spec = sep_conj_spec1 sep_conj_spec2
 
-subsection {* Properties of Separating Implication *}
+subsection \<open>Properties of Separating Implication\<close>
 
 lemma sep_implI:
   assumes a: "\<And>h'. \<lbrakk> h ## h'; P h' \<rbrakk> \<Longrightarrow> Q (h + h')"
@@ -410,7 +410,7 @@ lemma sep_conj_sep_impl_sep_conj2:
   by (erule (1) sep_conj_impl, erule sep_conj_sep_impl, simp add: sep_conj_ac)
 
 
-subsection {* Pure assertions *}
+subsection \<open>Pure assertions\<close>
 
 definition
   pure :: "('a \<Rightarrow> bool) \<Rightarrow> bool" where
@@ -475,7 +475,7 @@ lemmas pure_conj = pure_conj_right pure_conj_right' pure_conj_left
 declare pure_conj[simp add]
 
 
-subsection {* Intuitionistic assertions *}
+subsection \<open>Intuitionistic assertions\<close>
 
 definition intuitionistic :: "('a \<Rightarrow> bool) \<Rightarrow> bool" where
   "intuitionistic P \<equiv> \<forall>h h'. P h \<and> h \<preceq> h' \<longrightarrow> P h'"
@@ -625,7 +625,7 @@ lemma intuitionistic_sep_impl_sep_true_simp:
   by (fast elim: sep_impl_sep_true_P intuitionistic_sep_impl_sep_true_P)
 
 
-subsection {* Strictly exact assertions *}
+subsection \<open>Strictly exact assertions\<close>
 
 definition strictly_exact :: "('a \<Rightarrow> bool) \<Rightarrow> bool" where
   "strictly_exact P \<equiv> \<forall>h h'. P h \<and> P h' \<longrightarrow> h = h'"
@@ -654,7 +654,7 @@ lemma strictly_exact_conj_impl:
 
 end
 
-section {* Separation Algebra with Stronger, but More Intuitive Disjunction Axiom *}
+section \<open>Separation Algebra with Stronger, but More Intuitive Disjunction Axiom\<close>
 
 class stronger_sep_algebra = pre_sep_algebra +
   assumes sep_add_disj_eq [simp]: "y ## z \<Longrightarrow> x ## y + z = (x ## y \<and> x ## z)"
@@ -676,7 +676,7 @@ interpretation sep: comm_monoid "(**)" \<box>
 interpretation sep: comm_monoid_mult "(**)" \<box>
   by unfold_locales simp
 
-section {* Folding separating conjunction over lists and sets of predicates *}
+section \<open>Folding separating conjunction over lists and sets of predicates\<close>
 
 definition
   sep_list_conj :: "('a::sep_algebra \<Rightarrow> bool) list \<Rightarrow> ('a \<Rightarrow> bool)"  where
@@ -709,7 +709,7 @@ adhoc_overloading sep_conj_lifted sep_set_conj
 (* FIXME. Add notation for sep_map_list_conj, and consider unifying with sep_map_set_conj. *)
 
 
-text{* Now: lots of fancy syntax. First, @{term "sep_map_set_conj (%x. g) A"} is written @{text"\<And>+x\<in>A. g"}. *}
+text\<open>Now: lots of fancy syntax. First, @{term "sep_map_set_conj (%x. g) A"} is written @{text"\<And>+x\<in>A. g"}.\<close>
 
 (* Clagged from Big_Operators. *)
 syntax
@@ -725,7 +725,7 @@ translations \<comment> \<open>Beware of argument permutation!\<close>
   "SETSEPCONJ x:A. g" == "CONST sep_map_set_conj (%x. g) A"
   "\<And>* x\<in>A. g" == "CONST sep_map_set_conj (%x. g) A"
 
-text{* Instead of @{term"\<And>*x\<in>{x. P}. g"} we introduce the shorter @{text"\<And>+x|P. g"}. *}
+text\<open>Instead of @{term"\<And>*x\<in>{x. P}. g"} we introduce the shorter @{text"\<And>+x|P. g"}.\<close>
 
 syntax
   "_qsep_map_set_conj" :: "pttrn \<Rightarrow> bool \<Rightarrow> 'a \<Rightarrow> 'a" ("(3SETSEPCONJ _ |/ _./ _)" [0,0,10] 10)
@@ -740,7 +740,7 @@ translations
   "SETSEPCONJ x|P. g" => "CONST sep_map_set_conj (%x. g) {x. P}"
   "\<And>*x|P. g" => "CONST sep_map_set_conj (%x. g) {x. P}"
 
-print_translation {*
+print_translation \<open>
 let
   fun setsepconj_tr' [Abs (x, Tx, t), Const (@{const_syntax Collect}, _) $ Abs (y, Ty, P)] =
         if x <> y then raise Match
@@ -754,7 +754,7 @@ let
           end
     | setsepconj_tr' _ = raise Match;
 in [(@{const_syntax sep_map_set_conj}, K setsepconj_tr')] end
-*}
+\<close>
 
 
 interpretation sep: folding "(\<and>*)" \<box>
@@ -1025,21 +1025,21 @@ lemma sep_map_set_conj_set_disjoint:
   by (metis Collect_disj_eq)
 
 
-text {*
+text \<open>
   Separation algebra with positivity
-  *}
+\<close>
 
 class positive_sep_algebra = stronger_sep_algebra +
   assumes sep_disj_positive : "a ## a \<Longrightarrow> a + a = b \<Longrightarrow> a = b"
 
 
 
-section {* Separation Algebra with a Cancellative Monoid *}
+section \<open>Separation Algebra with a Cancellative Monoid\<close>
 
-text {*
+text \<open>
   Separation algebra with a cancellative monoid. The results of being a precise
   assertion (distributivity over separating conjunction) require this.
-  *}
+\<close>
 class cancellative_sep_algebra = positive_sep_algebra +
   assumes sep_add_cancelD: "\<lbrakk> x + z = y + z ; x ## z ; y ## z \<rbrakk> \<Longrightarrow> x = y"
 begin

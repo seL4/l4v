@@ -53,12 +53,16 @@ lemma vm_sets_diff[simp]:
 lemmas vm_sets_diff2[simp] = not_sym[OF vm_sets_diff]
 
 lemma cap_master_cap_tcb_cap_valid_arch:
-  "\<lbrakk> cap_master_cap c = cap_master_cap c'; is_arch_cap c \<rbrakk> \<Longrightarrow>
-  tcb_cap_valid c p s = tcb_cap_valid c' p s"
-  by (simp add: cap_master_cap_def tcb_cap_valid_def tcb_cap_cases_def
-                   valid_ipc_buffer_cap_def is_cap_simps
-            split: option.splits cap.splits arch_cap.splits
-                   thread_state.splits)
+  "\<lbrakk> cap_master_cap c = cap_master_cap c'; is_arch_cap c' ;
+     is_valid_vtable_root c \<Longrightarrow> is_valid_vtable_root c' ; tcb_cap_valid c p s \<rbrakk> \<Longrightarrow>
+   tcb_cap_valid c' p s"
+  (* slow: 5 to 10s *)
+  by (auto simp: cap_master_cap_def tcb_cap_valid_def tcb_cap_cases_def
+                 valid_ipc_buffer_cap_def  is_cap_simps
+                 is_nondevice_page_cap_simps is_nondevice_page_cap_arch_def
+           elim: pred_tcb_weakenE
+          split: option.splits cap.splits arch_cap.splits
+                 Structures_A.thread_state.splits)
 
 lemma storeWord_invs[wp, TcbAcc_AI_assms]:
   "\<lbrace>in_user_frame p and invs\<rbrace> do_machine_op (storeWord p w) \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -97,8 +101,8 @@ lemma thread_set_hyp_refs_trivial [TcbAcc_AI_assms]:
   assumes x: "\<And>tcb. tcb_state  (f tcb) = tcb_state  tcb"
   assumes y: "\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb"
   shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
-  apply wp
+  apply (simp add: thread_set_def)
+  apply (wpsimp wp: set_object_wp)
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (clarsimp elim!: rsubst[where P=P])
   apply (rule all_ext;

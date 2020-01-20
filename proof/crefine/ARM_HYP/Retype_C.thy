@@ -34,8 +34,8 @@ lemma map_option_byte_to_word_heap:
                      Let_def disj disj[where x = 0,simplified]
               split: option.splits)
 
-text {* Generalise the different kinds of retypes to allow more general proofs
-about what they might change. *}
+text \<open>Generalise the different kinds of retypes to allow more general proofs
+about what they might change.\<close>
 definition
   ptr_retyps_gen :: "nat \<Rightarrow> ('a :: c_type) ptr \<Rightarrow> bool \<Rightarrow> heap_typ_desc \<Rightarrow> heap_typ_desc"
 where
@@ -173,14 +173,14 @@ lemma memzero_spec:
   apply (hoare_rule HoarePartial.ProcNoRec1)
   apply (clarsimp simp: whileAnno_def)
   apply (rule_tac I1="{t. (ptr_val (s_' s) \<le> ptr_val (s_' s) + ((n_' s) - 1) \<and> ptr_val (s_' s) \<noteq> 0) \<and>
-                             ptr_val (s_' s) + (n_' s - n_' t) = ptr_val (p_' t) \<and>
+                             ptr_val (s_' s) + (n_' s - n_' t) = ptr_val (p___ptr_to_unsigned_char_' t) \<and>
                              n_' t \<le> n_' s \<and>
                              (is_aligned (n_' t) 2) \<and>
                              (is_aligned (n_' s) 2) \<and>
                              (is_aligned (ptr_val (s_' t)) 2) \<and>
                              (is_aligned (ptr_val (s_' s)) 2) \<and>
-                             (is_aligned (ptr_val (p_' t)) 2) \<and>
-                             {ptr_val (p_' t) ..+ unat (n_' t)} \<times> {SIndexVal, SIndexTyp 0}
+                             (is_aligned (ptr_val (p___ptr_to_unsigned_char_' t)) 2) \<and>
+                             {ptr_val (p___ptr_to_unsigned_char_' t) ..+ unat (n_' t)} \<times> {SIndexVal, SIndexTyp 0}
                                  \<subseteq> dom_s (hrs_htd (t_hrs_' (globals t))) \<and>
                              globals t = (globals s)\<lparr> t_hrs_' :=
                              hrs_mem_update (heap_update_list (ptr_val (s_' s))
@@ -191,7 +191,7 @@ lemma memzero_spec:
     apply (clarsimp simp add: hrs_mem_update_def)
 
    apply clarsimp
-   apply (case_tac s, case_tac p)
+   apply (case_tac s, case_tac p___ptr_to_unsigned_char)
 
    apply (subgoal_tac "4 \<le> unat na")
     apply (intro conjI)
@@ -201,7 +201,7 @@ lemma memzero_spec:
             apply (auto intro!: intvlI)[1]
           apply (subst c_guard_word32, simp_all)[1]
           apply (clarsimp simp: field_simps)
-          apply (metis le_minus' minus_one_helper5 olen_add_eqv diff_self word_le_0_iff word_le_less_eq)
+          apply (metis le_minus' word_leq_minus_one_le olen_add_eqv diff_self word_le_0_iff word_le_less_eq)
          apply (clarsimp simp: field_simps)
         apply (frule is_aligned_and_not_zero)
          apply clarsimp
@@ -248,9 +248,9 @@ lemma memset_spec:
   apply (clarsimp simp: whileAnno_def)
   apply (rule_tac I1="{t. (ptr_val (s_' s) \<le> ptr_val (s_' s) + ((n_' s) - 1) \<and> ptr_val (s_' s) \<noteq> 0) \<and>
                              c_' t = c_' s \<and>
-                             ptr_val (s_' s) + (n_' s - n_' t) = ptr_val (p_' t) \<and>
+                             ptr_val (s_' s) + (n_' s - n_' t) = ptr_val (p___ptr_to_unsigned_char_' t) \<and>
                              n_' t \<le> n_' s \<and>
-                             {ptr_val (p_' t) ..+ unat (n_' t)} \<times> {SIndexVal, SIndexTyp 0}
+                             {ptr_val (p___ptr_to_unsigned_char_' t) ..+ unat (n_' t)} \<times> {SIndexVal, SIndexTyp 0}
                                 \<subseteq> dom_s (hrs_htd (t_hrs_' (globals t))) \<and>
                              globals t = (globals s)\<lparr> t_hrs_' :=
                              hrs_mem_update (heap_update_list (ptr_val (s_' s))
@@ -281,7 +281,7 @@ lemma memset_spec:
         apply assumption
        apply (erule order_trans [rotated])
        apply (simp add: lt1_neq0)
-      apply (case_tac p, simp add: CTypesDefs.ptr_add_def unat_minus_one field_simps)
+      apply (case_tac p___ptr_to_unsigned_char, simp add: CTypesDefs.ptr_add_def unat_minus_one field_simps)
      apply (metis word_must_wrap word_not_simps(1) linear)
     apply (erule order_trans[rotated])
     apply (clarsimp simp: ptr_val_case split: ptr.splits)
@@ -597,7 +597,7 @@ lemma valid_call_Spec_eq_subset:
   apply (clarsimp simp: HoarePartialDef.valid_def)
   apply (erule exec_Normal_elim_cases, simp_all)
   apply (erule exec_Normal_elim_cases, auto simp: image_def)
-   apply fastforce
+   apply blast
   apply (thin_tac "R \<subseteq> _", fastforce)
   done
 
@@ -816,7 +816,8 @@ proof (cases "{ptr_val p' ..+ size_of TYPE('a)} \<inter> {p ..+ nptrs * size_of 
 
   show ?thesis
     by (clarsimp simp: h_t_valid_def valid_footprint_def Let_def
-                       notin same size_of_def[symmetric, where t="TYPE('a)"])
+                       notin same size_of_def[symmetric, where t="TYPE('a)"]
+             cong del: image_cong_simp)
 next
   case False
 
@@ -836,7 +837,7 @@ next
     \<Longrightarrow> \<exists>quot rem. k = quot * size_of TYPE('a) + rem \<and> rem < size_of TYPE('a) \<and> quot < nptrs"
     apply (intro exI conjI, rule div_mult_mod_eq[symmetric])
      apply simp
-    apply (simp add: Word_Miscellaneous.td_gal_lt)
+    apply (simp add: Misc_Arithmetic.td_gal_lt)
     done
 
   have gd: "\<And>p'. p' \<in> ?S \<Longrightarrow> gd p'"
@@ -883,9 +884,8 @@ lemma clift_ptr_retyps_gen_memset_same:
    apply (clarsimp simp: h_val_def)
    apply (simp only: Word.Abs_fnat_hom_mult hrs_mem_update)
    apply (frule_tac k="size_of TYPE('a)" in mult_le_mono1[where j=n, OF Suc_leI])
-   apply (subst heap_list_update_list)
-    apply (simp add: addr_card_def card_word word_bits_def)
-   apply simp
+   apply (subst heap_list_update_list; simp?)
+   apply (simp add: addr_card_def card_word word_bits_def)
   apply (clarsimp split: if_split)
   apply (simp add: h_val_def)
   apply (subst heap_list_update_disjoint_same, simp_all)
@@ -987,8 +987,8 @@ proof -
      apply (simp add: size_of)
      apply (cases y, clarsimp simp: and_not_mask shiftl_t2n)
     apply (simp add: shiftr_div_2n')
-    apply (rule Word_Miscellaneous.td_gal_lt[THEN iffD1], simp)
-    apply (drule minus_one_helper5[OF yuck])
+    apply (rule Misc_Arithmetic.td_gal_lt[THEN iffD1], simp)
+    apply (drule word_leq_minus_one_le[OF yuck])
     apply (rule unat_less_helper, simp)
     done
 qed
@@ -1817,8 +1817,7 @@ proof (intro impI allI)
   note irq = h_t_valid_eq_array_valid[where 'a=cte_C]
     h_t_array_valid_ptr_retyps_gen[where p="Ptr ptr", simplified, OF szo empty]
 
-  with rf have irq: "h_t_valid (hrs_htd ?ks') c_guard
-      (ptr_coerce (intStateIRQNode_' (globals x)) :: (cte_C[256]) ptr)"
+  with rf have irq: "h_t_valid (hrs_htd ?ks') c_guard intStateIRQNode_array_Ptr"
     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
     apply (simp add: hrs_htd_update h_t_valid_eq_array_valid)
     apply (simp add: h_t_array_valid_ptr_retyps_gen[OF szo] empty)
@@ -3175,9 +3174,9 @@ lemma cnc_tcb_helper:
         (\<lambda>a. hrs_mem_update (heap_update (Ptr &(p\<rightarrow>[''tcbTimeSlice_C'']) :: machine_word ptr) (5 :: machine_word))
               (hrs_mem_update
                 (heap_update ((Ptr &((Ptr &((Ptr &(p\<rightarrow>[''tcbArch_C'']) :: arch_tcb_C ptr)\<rightarrow>[''tcbContext_C''])
-                     :: user_context_C ptr)\<rightarrow>[''registers_C''])) :: (word32[20]) ptr)
+                     :: user_context_C ptr)\<rightarrow>[''registers_C''])) :: (word32[19]) ptr)
                   (Arrays.update (h_val (hrs_mem a) ((Ptr &((Ptr &((Ptr &(p\<rightarrow>[''tcbArch_C'']) :: arch_tcb_C ptr)\<rightarrow>[''tcbContext_C''])
-                       :: user_context_C ptr)\<rightarrow>[''registers_C''])) :: (word32[20]) ptr)) (unat Kernel_C.CPSR) (0x150 :: word32)))
+                       :: user_context_C ptr)\<rightarrow>[''registers_C''])) :: (word32[19]) ptr)) (unat Kernel_C.CPSR) (0x150 :: word32)))
                    (hrs_htd_update (\<lambda>xa. ptr_retyps_gen 1 (Ptr (ctcb_ptr_to_tcb_ptr p) :: (cte_C[5]) ptr) False
                        (ptr_retyps_gen 1 p False xa)) a)))) x)
              \<in> rf_sr"
@@ -3477,7 +3476,7 @@ proof -
     \<lparr>tcbArch_C := tcbArch_C undefined
       \<lparr>tcbContext_C := tcbContext_C (tcbArch_C undefined)
          \<lparr>registers_C :=
-           foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<20]
+           foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<19]
              (registers_C (tcbContext_C (tcbArch_C undefined)))
          \<rparr>,
        tcbVCPU_C := vcpu_Ptr 0
@@ -3643,7 +3642,7 @@ proof -
 
   note ht_rest = clift_eq_h_t_valid_eq[OF cl_rest, simplified]
 
-  note irq = h_t_valid_eq_array_valid[where 'a=cte_C and p="ptr_coerce x" for x]
+  note irq = h_t_valid_eq_array_valid[where p=intStateIRQNode_array_Ptr]
     h_t_array_valid_ptr_retyps_gen[where n=1, simplified, OF refl empty_smaller(1)]
     h_t_array_valid_ptr_retyps_gen[where p="Ptr x" for x, simplified, OF refl empty_smaller(2)]
 
@@ -3721,11 +3720,6 @@ lemma cnc_foldl_foldr:
                 new_cap_addrs_def objBits_simps ko_def power_minus_is_div
           cong: foldr_cong)
 
-lemma objBitsKO_gt_0:
-  "0 < objBitsKO ko"
-  by (simp add: objBits_simps' archObjSize_def machine_bits_defs
-         split: kernel_object.splits arch_kernel_object.splits)
-
 lemma objBitsKO_gt_1:
   "(1 :: word32) < 2 ^ objBitsKO ko"
   by (simp add: objBits_simps' archObjSize_def machine_bits_defs
@@ -3738,7 +3732,7 @@ lemma ps_clear_subset:
   shows  "ps_clear x (objBitsKO ko) (s' \<lparr>ksPSpace := (\<lambda>x. if x \<in> as' then Some (f x) else ksPSpace s' x) \<rparr>)"
   using al pd sub
   apply -
-  apply (simp add: ps_clear_def3 [OF al  objBitsKO_gt_0] dom_if_Some)
+  apply (simp add: ps_clear_def3 [OF al objBitsKO_gt_0] dom_if_Some)
   apply (erule disjoint_subset2 [rotated])
   apply fastforce
   done
@@ -4196,6 +4190,7 @@ proof (intro impI allI)
     \<Longrightarrow> p + ucast off * 4 + x \<in> {ptr..+ n * 2 ^ (gbits + pageBits) }"
     using sz
     apply (clarsimp simp: new_cap_addrs_def objBits_simps shiftl_t2n intvl_def)
+    apply (rename_tac x off pa)
     apply (rule_tac x = "2 ^ pageBits * pa + unat off * 4 + unat x" in exI)
     apply (simp add: ucast_nat_def power_add)
     apply (subst mult.commute, subst add.assoc)
@@ -4495,7 +4490,7 @@ lemma memzero_modifies:
   "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call memzero_'proc {t. t may_only_modify_globals \<sigma> in [t_hrs]}"
   apply (rule allI, rule conseqPre)
   apply (hoare_rule HoarePartial.ProcNoRec1)
-   apply (tactic {* HoarePackage.vcg_tac "_modifies" "false" [] @{context} 1 *})
+   apply (tactic \<open>HoarePackage.vcg_tac "_modifies" "false" [] @{context} 1\<close>)
   apply (clarsimp simp: mex_def meq_def simp del: split_paired_Ex)
   apply (intro exI globals.equality, simp_all)
   done
@@ -5475,7 +5470,7 @@ lemma ptr_retyp_fromzeroVCPU:
   assumes cor: "caps_overlap_reserved' {p ..+ 2 ^ vcpu_bits} \<sigma>"
   assumes ptr0: "p \<noteq> 0"
   assumes kdr: "{p ..+ 2 ^ vcpu_bits} \<inter> kernel_data_refs = {}"
-  assumes subr: "{p ..+ 428} \<subseteq> {p ..+ 2 ^ vcpu_bits}"
+  assumes subr: "{p ..+ 432} \<subseteq> {p ..+ 2 ^ vcpu_bits}"
   assumes act_bytes: "region_actually_is_bytes p (2 ^ vcpu_bits) \<sigma>'"
   assumes rep0: "heap_list (hrs_mem (t_hrs_' (globals \<sigma>'))) (2 ^ vcpu_bits) p = replicate (2 ^ vcpu_bits) 0"
   assumes "\<not> snd (placeNewObject p vcpu0 0 \<sigma>)"
@@ -5492,7 +5487,7 @@ proof -
   let ?htdret = "(hrs_htd_update (ptr_retyp (vcpu_Ptr p)) (t_hrs_' (globals \<sigma>')))"
   let ?zeros = "from_bytes (replicate (size_of TYPE(vcpu_C)) 0) :: vcpu_C"
 
-  have "size_of TYPE(vcpu_C) = 428" (is "_ = ?vcpusz")
+  have "size_of TYPE(vcpu_C) = 432" (is "_ = ?vcpusz")
     by simp
 
   have ptr_al:
@@ -5695,7 +5690,7 @@ proof -
     apply (clarsimp simp: ko_vcpu_def vcpu0_def)
     apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def
                           cmachine_state_relation_def Let_def h_t_valid_clift_Some_iff)
-    apply (subgoal_tac "region_is_bytes p 428 \<sigma>'")
+    apply (subgoal_tac "region_is_bytes p 432 \<sigma>'")
      prefer 2
      apply (fastforce simp: region_actually_is_bytes[OF act_bytes]
                             region_is_bytes_subset[OF _ subr])
@@ -5725,7 +5720,7 @@ lemma placeNewObject_vcpu_fromzero_ccorres:
   apply (rule ccorres_from_vcg_nofail, clarsimp)
   apply (rule conseqPre, vcg)
   apply (clarsimp simp: rf_sr_htd_safe)
-  apply (subgoal_tac "{regionBase..+428} \<subseteq> {regionBase..+2^vcpu_bits}")
+  apply (subgoal_tac "{regionBase..+432} \<subseteq> {regionBase..+2^vcpu_bits}")
    prefer 2
    apply clarsimp
    apply (drule intvlD, clarsimp)
@@ -7002,7 +6997,7 @@ lemma intvl_mult_is_union:
    apply (rule_tac x="k div n" in bexI)
     apply (rule_tac x="k mod n" in exI)
     apply (simp only: Abs_fnat_hom_mult Abs_fnat_hom_add, simp)
-   apply (simp add: Word_Miscellaneous.td_gal_lt[symmetric] mult.commute)
+   apply (simp add: Misc_Arithmetic.td_gal_lt[symmetric] mult.commute)
   apply (rule_tac x="xa * n + k" in exI, simp)
   apply (subst add.commute, rule order_less_le_trans, erule add_less_mono1)
   apply (case_tac m, simp_all)
@@ -7153,13 +7148,10 @@ lemma ccorres_typ_region_bytes_dummy:
       apply (simp add: invs_pspace_aligned')+
   apply (frule typ_bytes_cpspace_relation_clift_vcpu)
       apply (simp add: invs_pspace_aligned')+
-  apply (frule typ_bytes_cpspace_relation_clift_gptr[where
-            ptr'="pd_Ptr (symbol_table ''armUSGlobalPD'')"])
+  apply (frule typ_bytes_cpspace_relation_clift_gptr[where ptr'="armUSGlobalPD_Ptr"])
         apply (simp add: invs_pspace_aligned')+
-  apply (frule typ_bytes_cpspace_relation_clift_gptr[where
-            ptr'="ptr_coerce x :: (cte_C[256]) ptr" for x])
+  apply (frule typ_bytes_cpspace_relation_clift_gptr[where ptr'="intStateIRQNode_array_Ptr"])
         apply (simp add: invs_pspace_aligned')+
-    apply (simp add: cte_level_bits_def cte_C_size, simp+)
   apply (simp add: carch_state_relation_def cmachine_state_relation_def)
   apply (simp add: cpspace_relation_def htd_safe_typ_region_bytes)
   apply (simp add: h_t_valid_clift_Some_iff)
@@ -8077,7 +8069,7 @@ lemma offset_intvl_first_chunk_subsets_unat:
    apply (frule(1) offset_intvl_first_chunk_subsets)
    apply simp
   apply (intro conjI unat_sub)
-   apply (rule minus_one_helper2, simp)
+   apply (rule word_minus_one_le_leq, simp)
    apply (simp add: word_less_nat_alt unat_of_nat)
   apply (simp add: word_le_nat_alt word_less_nat_alt unat_of_nat)
   done
@@ -8254,7 +8246,7 @@ shows  "ccorres dc xfdc
             in ccorres_zipWithM_x_while_genQ[where j=1, OF _ _ _ _ _ i_xf_for_sequence, simplified])
           apply clarsimp
           apply (subst upt_enum_offset_trivial)
-            apply (rule minus_one_helper)
+            apply (rule word_leq_le_minus_one)
              apply (rule word_of_nat_le)
              apply (drule range_cover.range_cover_n_less)
              apply (simp add:word_bits_def minus_one_norm)
@@ -8434,7 +8426,7 @@ shows  "ccorres dc xfdc
          invs_pspace_distinct')+
        apply (frule range_cover.range_cover_n_less)
        apply (subst upt_enum_offset_trivial)
-         apply (rule minus_one_helper[OF word_of_nat_le])
+         apply (rule word_leq_le_minus_one[OF word_of_nat_le])
           apply (fold_subgoals (prefix))[3]
           subgoal premises prems using prems
                     by (simp add:word_bits_conv minus_one_norm range_cover_not_zero[rotated])+

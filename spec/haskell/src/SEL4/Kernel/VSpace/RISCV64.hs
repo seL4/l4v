@@ -39,10 +39,6 @@ import SEL4.API.Invocation.RISCV64 as ArchInv
 
 {- Constants -}
 
--- counting from 0, i.e. number of levels = maxPTLevel + 1 = top-level table
-maxPTLevel :: Int
-maxPTLevel = 2
-
 ipcBufferSizeBits :: Int
 ipcBufferSizeBits = 10
 
@@ -108,6 +104,10 @@ findVSpaceForASIDAssert asid = do
     checkPTAt pm
     return pm
 
+maybeVSpaceForASID :: ASID -> Kernel (Maybe (PPtr PTE))
+maybeVSpaceForASID asid =
+    liftM Just (findVSpaceForASID asid) `catchFailure` const (return Nothing)
+
 -- used in proofs only, will be translated to ptable_at.
 checkPTAt :: PPtr PTE -> Kernel ()
 checkPTAt _ = return ()
@@ -146,12 +146,13 @@ pteAtIndex level ptPtr vPtr = getObject (ptSlotIndex level ptPtr vPtr)
 -- top-level page table, and level 0 is the bottom level that contains only
 -- pages or invalid entries.
 lookupPTSlotFromLevel :: Int -> PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
+lookupPTSlotFromLevel 0 ptPtr vPtr =
+    return (ptBitsLeft 0, ptSlotIndex 0 ptPtr vPtr)
 lookupPTSlotFromLevel level ptPtr vPtr = do
     pte <- pteAtIndex level ptPtr vPtr
-    let ptr = getPPtrFromHWPTE pte
-    if isPageTablePTE pte && level > 0
-        then lookupPTSlotFromLevel (level-1) ptr vPtr
-        else return (ptBitsLeft level, ptr)
+    if isPageTablePTE pte
+        then lookupPTSlotFromLevel (level-1) (getPPtrFromHWPTE pte) vPtr
+        else return (ptBitsLeft level, ptSlotIndex level ptPtr vPtr)
 
 -- lookupPTSlot walks the page table and returns a pointer to the slot that maps
 -- a given virtual address, together with the number of bits left to translate,
@@ -171,19 +172,11 @@ handleVMFault thread f = do
         RISCVLoadAccessFault -> throw $ loadf addr
         RISCVStorePageFault -> throw $ storef addr
         RISCVStoreAccessFault -> throw $ storef addr
-        RISCVInstructionPageFault -> do
-            withoutFailure $ setPC
-            throw $ instrf addr
-        RISCVInstructionAccessFault ->  do
-            withoutFailure $ setPC
-            throw $ instrf addr
-        _ -> error "Invalid VM fault type"
+        RISCVInstructionPageFault -> throw $ instrf addr
+        RISCVInstructionAccessFault -> throw $ instrf addr
     where loadf a = ArchFault $ VMFault a [0, vmFaultTypeFSR RISCVLoadAccessFault]
           storef a = ArchFault $ VMFault a [0, vmFaultTypeFSR RISCVStoreAccessFault]
           instrf a = ArchFault $ VMFault a [1, vmFaultTypeFSR RISCVInstructionAccessFault]
-          setPC = do
-              sepc <- asUser thread $ getRegister (Register SEPC)
-              asUser thread $ setRegister (Register NEXTPC) sepc
 
 {- Unmapping and Deletion -}
 
@@ -233,11 +226,12 @@ deleteASID asid pt = do
 lookupPTFromLevel :: Int -> PPtr PTE -> VPtr -> PPtr PTE -> KernelF LookupFailure (PPtr PTE)
 lookupPTFromLevel level ptPtr vPtr targetPtPtr = do
     unless (0 < level) $ throw InvalidRoot
-    pte <- withoutFailure $ pteAtIndex level ptPtr vPtr
+    let slot = ptSlotIndex level ptPtr vPtr
+    pte <- withoutFailure $ getObject slot
     unless (isPageTablePTE pte) $ throw InvalidRoot
     let ptr = getPPtrFromHWPTE pte
     if ptr == targetPtPtr
-        then return $ ptSlotIndex (level-1) ptr vPtr
+        then return slot
         else lookupPTFromLevel (level-1) ptr vPtr targetPtPtr
 
 unmapPageTable :: ASID -> VPtr -> PPtr PTE -> Kernel ()
@@ -255,7 +249,7 @@ checkMappingPPtr :: PPtr Word -> PTE -> KernelF LookupFailure ()
 checkMappingPPtr pptr pte =
     case pte of
         PagePTE { ptePPN = ppn } ->
-            unless (ptrFromPAddr ppn == pptr) $ throw InvalidRoot
+            unless (ptrFromPAddr (ppn `shiftL` ptBits) == pptr) $ throw InvalidRoot
         _ -> throw InvalidRoot
 
 unmapPage :: VMPageSize -> ASID -> VPtr -> PPtr Word -> Kernel ()
@@ -336,7 +330,6 @@ checkSlot slot test = do
 decodeRISCVFrameInvocationMap :: PPtr CTE -> ArchCapability -> VPtr -> Word ->
     Word -> Capability -> KernelF SyscallError ArchInv.Invocation
 decodeRISCVFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
-    when (isJust $ capFMappedAddress cap) $ throw $ InvalidCapability 0
     (vspace,asid) <- case vspaceCap of
         ArchObjectCap (PageTableCap {
                 capPTMappedAddress = Just (asid, _),
@@ -352,7 +345,12 @@ decodeRISCVFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
     (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
     unless (bitsLeft == pgBits) $ throw $
         FailedLookup False $ MissingCapability bitsLeft
-    checkSlot slot (\pte ->  pte == InvalidPTE)
+    case capFMappedAddress cap of
+        Just (asid', vaddr') -> do
+            when (asid' /= asid) $ throw $ InvalidCapability 1
+            when (vaddr' /= vptr) $ throw $ InvalidArgument 0
+            checkSlot slot (not . isPageTablePTE)
+        Nothing -> checkSlot slot (\pte ->  pte == InvalidPTE)
     let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
     let framePAddr = addrFromPPtr (capFBasePtr cap)
     let exec = not $ riscvExecuteNever (attribsFromWord attr)
@@ -360,33 +358,6 @@ decodeRISCVFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
         pageMapCap = ArchObjectCap $ cap { capFMappedAddress = Just (asid,vptr) },
         pageMapCTSlot = cte,
         pageMapEntries = (makeUserPTE framePAddr exec vmRights, slot) }
-
-decodeRISCVFrameInvocationRemap :: PPtr CTE -> ArchCapability -> Word ->
-    Word -> Capability -> KernelF SyscallError ArchInv.Invocation
-decodeRISCVFrameInvocationRemap cte cap rightsMask attr vspaceCap = do
-    (vspace,asid) <- case vspaceCap of
-        ArchObjectCap (PageTableCap {
-                capPTMappedAddress = Just (asid, _),
-                capPTBasePtr = vspace })
-            -> return (vspace, asid)
-        _ -> throw $ InvalidCapability 1
-    (asid',vaddr) <- case capFMappedAddress cap of
-        Just v -> return v
-        _ -> throw $ InvalidCapability 0
-    vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
-    when (vspaceCheck /= vspace || asid /= asid') $ throw $ InvalidCapability 1
-    checkVPAlignment (capFSize cap) vaddr
-    (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vaddr
-    let pgBits = pageBitsForSize $ capFSize cap
-    unless (bitsLeft == pgBits) $ throw $
-        FailedLookup False $ MissingCapability bitsLeft
-    checkSlot slot (not . isPageTablePTE)
-    let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
-    let framePAddr = addrFromPPtr (capFBasePtr cap)
-    let exec = not $ riscvExecuteNever (attribsFromWord attr)
-    return $ InvokePage $ PageRemap {
-        pageRemapEntries = (makeUserPTE framePAddr exec vmRights, slot) }
-
 
 decodeRISCVFrameInvocation :: Word -> [Word] -> PPtr CTE ->
                    ArchCapability -> [(Capability, PPtr CTE)] ->
@@ -397,9 +368,6 @@ decodeRISCVFrameInvocation label args cte (cap@FrameCap {}) extraCaps =
         (ArchInvocationLabel RISCVPageMap, vaddr:rightsMask:attr:_, (vspaceCap,_):_) -> do
             decodeRISCVFrameInvocationMap cte cap (VPtr vaddr) rightsMask attr vspaceCap
         (ArchInvocationLabel RISCVPageMap, _, _) -> throw TruncatedMessage
-        (ArchInvocationLabel RISCVPageRemap, rightsMask:attr:_, (vspaceCap,_):_) -> do
-            decodeRISCVFrameInvocationRemap cte cap rightsMask attr vspaceCap
-        (ArchInvocationLabel RISCVPageRemap, _, _) -> throw TruncatedMessage
         (ArchInvocationLabel RISCVPageUnmap, _, _) ->
             return $ InvokePage $ PageUnmap {
                 pageUnmapCap = cap,
@@ -430,6 +398,7 @@ decodeRISCVPageTableInvocationMap cte cap vptr attr vspaceCap = do
             ptePPN = addrFromPPtr (capPTBasePtr cap) `shiftR` pageBits,
             pteGlobal = False,
             pteUser = False }
+    let vptr = vptr .&. complement (mask bitsLeft)
     return $ InvokePageTable $ PageTableMap {
         ptMapCap = ArchObjectCap $ cap { capPTMappedAddress = Just (asid, vptr) },
         ptMapCTSlot = cte,
@@ -448,6 +417,14 @@ decodeRISCVPageTableInvocation label args cte cap@(PageTableCap {}) extraCaps =
             cteVal <- withoutFailure $ getCTE cte
             final <- withoutFailure $ isFinalCapability cteVal
             unless final $ throw RevokeFirst
+            case cap of
+                PageTableCap { capPTMappedAddress = Just (asid,_),
+                               capPTBasePtr = pt }
+                    -> do
+                        -- top-level PTs must be unmapped via Revoke
+                        maybeVSpace <- withoutFailure $ maybeVSpaceForASID asid
+                        when (maybeVSpace == Just pt) $ throw RevokeFirst
+                _ -> return ()
             return $ InvokePageTable $ PageTableUnmap {
                 ptUnmapCap = cap,
                 ptUnmapCapSlot = cte }
@@ -552,10 +529,6 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
 performPageInvocation :: PageInvocation -> Kernel ()
 performPageInvocation (PageMap cap ctSlot (pte,slot)) = do
     updateCap ctSlot cap
-    storePTE slot pte
-    doMachineOp sfence
-
-performPageInvocation (PageRemap (pte,slot)) = do
     storePTE slot pte
     doMachineOp sfence
 

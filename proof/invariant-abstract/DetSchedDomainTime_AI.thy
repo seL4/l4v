@@ -60,8 +60,6 @@ locale DetSchedDomainTime_AI =
     "\<And>P f t x y. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> handle_arch_fault_reply f t x y \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes init_arch_objects_domain_list_inv'[wp]:
     "\<And>P t p n s r. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> init_arch_objects t p n s r \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes arch_tcb_set_ipc_buffer_domain_list_inv'[wp]:
-    "\<And>P t p. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> arch_tcb_set_ipc_buffer t p \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes arch_post_modify_registers_domain_list_inv'[wp]:
     "\<And>P t p. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> arch_post_modify_registers t p \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes arch_invoke_irq_control_domain_list_inv'[wp]:
@@ -88,8 +86,6 @@ locale DetSchedDomainTime_AI =
     "\<And>P f t x y. \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace> handle_arch_fault_reply f t x y \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes init_arch_objects_domain_time_inv'[wp]:
     "\<And>P t p n s r. \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace> init_arch_objects t p n s r \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
-  assumes arch_tcb_set_ipc_buffer_domain_time_inv'[wp]:
-    "\<And>P t p. \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace> arch_tcb_set_ipc_buffer t p \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes arch_post_modify_registers_domain_time_inv'[wp]:
     "\<And>P t p. \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace> arch_post_modify_registers t p \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes arch_invoke_irq_control_domain_time_inv'[wp]:
@@ -112,6 +108,10 @@ locale DetSchedDomainTime_AI =
     "\<And>P ft. \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace> arch_post_cap_deletion ft \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes arch_post_cap_deletion_domain_list_inv'[wp]:
     "\<And>P ft. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> arch_post_cap_deletion ft \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+
+crunches update_restart_pc
+  for domain_list[wp]: "\<lambda>s. P (domain_list s)"
+  and domain_time[wp]: "\<lambda>s. P (domain_time s)"
 
 locale DetSchedDomainTime_AI_2 = DetSchedDomainTime_AI +
   assumes handle_hypervisor_fault_domain_list_inv'[wp]:

@@ -224,7 +224,7 @@ lemma as_user_ipc_tcb_cap_valid4[wp]:
   "\<lbrace>\<lambda>s. tcb_cap_valid cap (t, tcb_cnode_index 2) s\<rbrace>
     as_user a b
    \<lbrace>\<lambda>rv. tcb_cap_valid cap (t, tcb_cnode_index 2)\<rbrace>"
-  apply (simp add: as_user_def set_object_def)
+  apply (simp add: as_user_def set_object_def get_object_def)
   apply (wp | wpc | simp)+
   apply (clarsimp simp: tcb_cap_valid_def obj_at_def
                         pred_tcb_at_def is_tcb
@@ -376,19 +376,6 @@ lemma tcc_invs[Tcb_AI_asms]:
      apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
   by (auto simp: valid_ipc_buffer_cap)
 
-(*
-   The reason for proofs of the kind shown above (example below) seems to be as follows.
-   We need to strengthen a post-condition using strengthen_lemma, and need to use
-   my_special_lemma in some cases but not others. Thus we should apply my_special_lemma only when
-   normal lemmas do not match. I do not understand all details here.
-
-       apply ((wpsimp wp: normal_lemma1 normal_lemma2
-               | strengthen strengthen_lemma
-               | wp my_special_lemma)+)[1]
-
-    Mitchell Buckley.
-*)
-
 crunches empty_slot
   for sc_tcb_sc_at[wp]: "sc_tcb_sc_at P target"
   (wp: crunch_wps)
@@ -517,15 +504,12 @@ lemma update_cap_valid[Tcb_AI_asms]:
          simp_all add: update_cap_data_def cap_rights_update_def
                        is_cap_defs Let_def split_def valid_cap_def
                        badge_update_def the_cnode_cap_def cap_aligned_def
-                       arch_update_cap_data_def
-            split del: if_split)
-     apply (simp add: badge_update_def cap_rights_update_def)
-    apply (simp add: badge_update_def)
+                       arch_update_cap_data_def split: bool.splits)
    apply (simp add: word_bits_def)
   apply (rename_tac arch_cap)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
   apply (case_tac arch_cap, simp_all add: acap_rights_update_def
-                                     split: option.splits prod.splits)
+                                     split: option.splits prod.splits bool.splits)
   done
 
 crunch pred_tcb_at: switch_to_thread "pred_tcb_at proj P t"

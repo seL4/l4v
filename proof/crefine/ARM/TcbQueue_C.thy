@@ -323,27 +323,6 @@ lemma tcb_queue_relation_ptr_rel:
   apply (clarsimp simp: distinct_conv_nth)
   done
 
-lemma distinct_cons_nth:
-  assumes dxs: "distinct xs"
-  and      ln: "n < length xs"
-  and      x: "x \<notin> set xs"
-  shows    "(x # xs) ! n \<noteq> xs ! n"
-proof
-  assume n: "(x # xs) ! n = xs ! n"
-  have ln': "n < length (x # xs)" using ln by simp
-  have sln: "Suc n < length (x # xs)" using ln by simp
-
-  from n have "(x # xs) ! n = (x # xs) ! Suc n" by simp
-  moreover have "distinct (x # xs)" using dxs x by simp
-  ultimately show False
-    unfolding distinct_conv_nth
-    apply -
-    apply (drule spec, drule mp [OF _ ln'])
-    apply (drule spec, drule mp [OF _ sln])
-    apply simp
-    done
-qed
-
 lemma distinct_nth:
   assumes dist: "distinct xs"
   and     ln: "n < length xs"
@@ -369,31 +348,6 @@ next
 
   have ln': "n < length (x # xs)" using ln by simp
   have lm': "Suc m < length (x # xs)" using lm by simp
-
-  have "distinct (x # xs)" using dist xxs by simp
-  thus ?thesis using False
-    unfolding distinct_conv_nth
-    apply -
-    apply (drule spec, drule mp [OF _ ln'])
-    apply (drule spec, drule mp [OF _ lm'])
-    apply clarsimp
-    done
-qed
-
-lemma distinct_nth_cons':
-  assumes dist: "distinct xs"
-  and     xxs: "x \<notin> set xs"
-  and     ln: "n < length xs"
-  and     lm: "m < length xs"
-  shows   "(xs ! n = (x # xs) ! m) = (m = Suc n)"
-proof (cases "m = Suc n")
-  case True
-  thus ?thesis by simp
-next
-  case False
-
-  have ln': "Suc n < length (x # xs)" using ln by simp
-  have lm': "m < length (x # xs)" using lm by simp
 
   have "distinct (x # xs)" using dist xxs by simp
   thus ?thesis using False
@@ -447,8 +401,8 @@ lemma tcb_queue_next_prev:
         apply clarsimp
        subgoal by (clarsimp  simp: last_conv_nth distinct_nth distinct_nth_cons nth_first_not_member)
       subgoal by (fastforce  simp: last_conv_nth distinct_nth distinct_nth_cons nth_first_not_member)
-     subgoal by (clarsimp  simp: last_conv_nth distinct_nth distinct_nth_cons distinct_nth_cons' nth_first_not_member)
-    by (fastforce simp: last_conv_nth distinct_nth distinct_nth_cons distinct_nth_cons' nth_first_not_member)
+     subgoal by (clarsimp  simp: last_conv_nth distinct_nth distinct_nth_cons nth_first_not_member)
+    by (fastforce simp: last_conv_nth distinct_nth distinct_nth_cons nth_first_not_member)
 
 
 lemma null_not_in:
@@ -1208,9 +1162,6 @@ lemma rf_sr_tcb_update_not_in_queue:
    subgoal by (simp add: carch_state_relation_def carch_globals_def
                          typ_heap_simps')
   by (simp add: cmachine_state_relation_def)
-
-lemmas rf_sr_tcb_update_not_in_queue2
-    = rf_sr_tcb_update_no_queue_helper [OF rf_sr_tcb_update_not_in_queue, simplified]
 
 end
 end

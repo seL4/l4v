@@ -375,7 +375,7 @@ lemma stateAssert_A_top [simp]:
   "stateAssert \<top> l = return ()"
   by (simp add: stateAssert_def get_def bind_def return_def)
 
-text {* Use of the submonad concept to demonstrate commutativity. *}
+text \<open>Use of the submonad concept to demonstrate commutativity.\<close>
 
 lemma gets_modify_comm:
   "\<And> s. \<lbrakk> g (f s) = g s \<rbrakk> \<Longrightarrow>

@@ -190,8 +190,6 @@ lemma scheduler_affects_equiv_sym[elim]:
 
 declare globals_equiv_scheduler_sym[elim]
 declare globals_equiv_scheduler_trans[elim]
-declare scheduler_affects_equiv_sym[elim]
-declare scheduler_affects_equiv_trans[elim]
 declare silc_dom_equiv_sym[elim]
 declare silc_dom_equiv_trans[elim]
 
@@ -287,13 +285,12 @@ lemmas globals_equiv_scheduler_inv = globals_equiv_scheduler_inv'[where P="\<top
 lemmas reads_respects_scheduler_unobservable =
              reads_respects_scheduler_unobservable'[where P="\<top>",simplified]
 
-crunch globals_equiv[wp]: set_scheduler_action "globals_equiv st"
-
 lemma silc_dom_equiv_scheduler_action_update[simp]:
   "silc_dom_equiv aag st (s\<lparr>scheduler_action := x\<rparr>) = silc_dom_equiv aag st s"
   by (simp add: silc_dom_equiv_def equiv_for_def)
 
 crunch silc_dom_equiv[wp]: set_scheduler_action "silc_dom_equiv aag st"
+  (ignore_del: set_scheduler_action)
 
 lemma schedule_globals_frame_trans_state_upd[simp]:
   "scheduler_globals_frame_equiv st (trans_state f s) = scheduler_globals_frame_equiv st s"
@@ -509,7 +506,7 @@ lemma arch_switch_to_thread_globals_equiv_scheduler:
        \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
   unfolding arch_switch_to_thread_def storeWord_def
   by (wpsimp wp: clearExMonitor_globals_equiv_scheduler dmo_wp modify_wp thread_get_wp'
-           | wp_once globals_equiv_scheduler_inv'[where P="\<top>"])+
+           | wp (once) globals_equiv_scheduler_inv'[where P="\<top>"])+
 
 lemma dmo_storeWord_reads_respects_scheduler[wp]:
   "reads_respects_scheduler aag l \<top> (do_machine_op (storeWord rva rvb))"
@@ -1845,7 +1842,7 @@ lemma reads_respects_scheduler_invisible_no_domain_switch:
              hoare_vcg_disj_lift
           | wpc | simp
           | rule hoare_pre_cont[where a=next_domain]
-          | wp_once hoare_drop_imp[where f="set_scheduler_action choose_new_thread"])+
+          | wp (once) hoare_drop_imp[where f="set_scheduler_action choose_new_thread"])+
             (* stop on fastfail calculation *)
             apply (clarsimp simp: conj_ac cong: imp_cong conj_cong)
             apply (wp hoare_drop_imps)[1]
@@ -1961,7 +1958,7 @@ lemma schedule_reads_respects_scheduler_cur_domain:
                      apply ((wpsimp wp: when_ev gts_wp get_thread_state_reads_respects_scheduler
                                         ethread_get_when_reads_respects_scheduler
                                         hoare_vcg_all_lift
-                            | wp_once hoare_vcg_conj_lift hoare_drop_imps)+)+
+                            | wp (once) hoare_vcg_conj_lift hoare_drop_imps)+)+
   (* TODO: cleanup *)
   apply (intro impI conjI allI
          ; (fastforce simp: guarded_pas_domain_def valid_sched_def
@@ -2185,9 +2182,9 @@ lemma timer_tick_snippit:
                       when (dom_time = 0) reschedule_required
                    od))"
   apply (rule equiv_valid_guard_imp)
-   apply (wp when_ev | wp_once hoare_drop_imps)+
+   apply (wp when_ev | wp (once) hoare_drop_imps)+
        apply (clarsimp simp: scheduler_equiv_def)
-       apply (wp reschedule_required_reads_respects_scheduler | wp_once hoare_drop_imps)+
+       apply (wp reschedule_required_reads_respects_scheduler | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: scheduler_equiv_def domain_fields_equiv_def)
   done
 
@@ -2206,7 +2203,7 @@ lemma timer_tick_reads_respects_scheduler_cur_domain:
   apply (wp when_ev reschedule_required_reads_respects_scheduler
             ethread_set_reads_respects_scheduler
             get_thread_state_reads_respects_scheduler gts_wp
-         | wpc | wp_once hoare_drop_imps)+
+         | wpc | wp (once) hoare_drop_imps)+
   apply (fastforce simp add: invs_def valid_state_def valid_idle_def
                             pred_tcb_at_def obj_at_def guarded_pas_domain_def
                             scheduler_equiv_def domain_fields_equiv_def
@@ -2485,14 +2482,13 @@ lemma dmo_getActive_IRQ_reads_respect_scheduler:
       apply (clarsimp simp add: scheduler_affects_equiv_def states_equiv_for_def
                        equiv_for_def equiv_asids_def equiv_asid_def
                        scheduler_globals_frame_equiv_def silc_dom_equiv_def
-                       idle_equiv_def
-                       )
-     apply wp_once
+                       idle_equiv_def)
+     apply wp
     apply (rule_tac P="\<lambda>s. irq_masks_of_state st = irq_masks_of_state s" in gets_ev')
    apply wp
   apply clarsimp
   apply (simp add: scheduler_equiv_def)
-   done
+  done
 
 definition idle_context
 where
@@ -2502,9 +2498,8 @@ lemma thread_set_context_globals_equiv:
   "\<lbrace>(\<lambda>s. t = idle_thread s \<longrightarrow> tc = idle_context s) and invs and globals_equiv st\<rbrace>
      thread_set (tcb_arch_update (arch_tcb_context_set tc)) t
    \<lbrace>\<lambda>rv. globals_equiv st\<rbrace>"
-  apply (clarsimp simp: thread_set_def set_object_def)
-  apply wp
-  apply clarsimp
+  apply (clarsimp simp: thread_set_def)
+  apply (wpsimp wp: set_object_wp)
   apply (subgoal_tac "t \<noteq> arm_global_pd (arch_state s)")
    apply (clarsimp simp: idle_equiv_def globals_equiv_def tcb_at_def2 get_tcb_def idle_context_def)
    apply (clarsimp split: option.splits kernel_object.splits)
@@ -2587,6 +2582,7 @@ lemma set_object_reads_respects_scheduler[wp]:
   "reads_respects_scheduler aag l \<top> (set_object ptr obj)"
   unfolding equiv_valid_def2 equiv_valid_2_def
   apply(clarsimp simp: set_object_def bind_def get_def put_def return_def
+                       get_object_def assert_def fail_def gets_def
                        scheduler_equiv_def domain_fields_equiv_def
                        globals_equiv_scheduler_def silc_dom_equiv_def)
   apply (clarsimp simp: equiv_for_def scheduler_affects_equiv_def
@@ -2597,7 +2593,7 @@ lemma set_object_reads_respects_scheduler[wp]:
       apply (clarsimp simp: equiv_for_def scheduler_affects_equiv_def
                             scheduler_globals_frame_equiv_def identical_kheap_updates_def
             | rule states_equiv_for_identical_kheap_updates idle_equiv_identical_kheap_updates)+
-      done
+  done
 
 lemma sts_reads_respects_scheduler:
   "reads_respects_scheduler aag l

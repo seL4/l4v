@@ -75,7 +75,18 @@ fun local_temp_file path = let
     end;
   in try_path () end;
 
-(* Output all traces in this session to given path *)
+(* Output all traces in this session to given path.
+   Wraps each theory in the session in a JSON dictionary as follows:
+
+   {
+     "session": <escaped session name>,
+     "content": [
+       <theory "foo" content>,
+       <theory "bar" content>,
+       ...
+     ]
+   }
+*)
 fun levity_report_all output_path: unit =
 let
   val this_session = Session.get_name ();
@@ -85,8 +96,13 @@ let
      whereas we can only rename atomically on the same file system *)
   val temp_path = local_temp_file output_path;
 
-  (* Wrap individual theory reports in JSON dictionaries
-     indexed by session name and theory name.
+  (* Wrap individual theory reports in a JSON dictionary as follows:
+
+     {
+       "theory": <escaped theory name>,
+       "content": <theory content as JSON dictionary>
+     }
+
      Note that this closes and re-opens the output file
      over and over. But it's better than building the entire
      combined output in memory. *)
@@ -94,22 +110,26 @@ let
     | dump_all (first: bool) (thy_name::remaining) = let
         val _ = @{print} ("Reporting on " ^ thy_name ^ "...")
         val separator = if first then "" else ", "; (* from previous item *)
-        val json_key = [separator ^ quote thy_name ^ ":"];
+        val json_start = [separator, "{", quote "theory", ":", JSON_string_encode thy_name, ",\n",
+                          quote "content", ":"];
+        val json_end = ["}\n"];
         in case levity_report_for thy_name of
               NONE => (
                 @{print} ("No transaction record for " ^ thy_name);
                 dump_all first remaining
                 )
             | SOME thy_report => (
-                File.append_list temp_path (json_key @ thy_report);
+                File.append_list temp_path (json_start @ thy_report @ json_end);
                 dump_all false remaining
                 )
         end;
 
   val thy_names = Thy_Info.get_names ();
-  val _ = File.write_list temp_path ["{\n", quote this_session ^ ":\n", "{\n"];
+  val _ = File.write_list temp_path
+            ["{", quote "session", ":", JSON_string_encode this_session, ",\n",
+             quote "content", ":", "[\n"];
   val _ = dump_all true thy_names;
-  val _ = File.append_list temp_path ["}\n", "}"];
+  val _ = File.append_list temp_path ["]\n", "}"];
   val _ = OS.FileSys.rename {
             old = Path.implode (Path.expand temp_path),
             new = Path.implode (Path.expand output_path)

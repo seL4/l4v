@@ -158,7 +158,7 @@ lemma getKSASIDTable_ccorres_stuff:
   apply (drule rf_asidTable [where idx=idx])
     apply fastforce
    apply (simp add: mask_def)
-   apply (simp add: minus_one_helper3)
+   apply (simp add: word_le_minus_one_leq)
   apply (clarsimp split: option.splits)
   done
 
@@ -190,7 +190,7 @@ lemma vspace_at_asid_cross_over:
   "\<lbrakk> vspace_at_asid' pm asid s; asid \<le> mask asid_bits;
           (s, s') \<in> rf_sr\<rbrakk>
       \<Longrightarrow> \<exists>apptr ap. index (x86KSASIDTable_' (globals s')) (unat (asid >> asid_low_bits))
-                     = (ap_Ptr apptr) \<and> cslift s' (ap_Ptr apptr) = Some (asid_pool_C ap)
+                     = (ap_Ptr apptr) \<and> cslift s' (ap_Ptr apptr) = Some (asid_pool_C.asid_pool_C ap)
                   \<and> asid_map_lift (index ap (unat (asid && mask asid_low_bits)))
                       = Some (Asid_map_asid_map_vspace \<lparr>vspace_root_CL = pm\<rparr>)
                   \<and> is_aligned pm pml4Bits
@@ -1017,8 +1017,8 @@ lemma ccorres_pre_gets_x64KSSKIMPML4_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
                   (\<lambda>s. (\<forall>rv. x64KSSKIMPML4 (ksArchState s) = rv  \<longrightarrow> P rv s))
-                  (P' (ptr_val (pml4_Ptr (symbol_table ''x64KSSKIMPML4''))))
-                          hs (gets (x64KSSKIMPML4 \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+                  (P' (ptr_val x64KSSKIMPML4_Ptr))
+                  hs (gets (x64KSSKIMPML4 \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_symb_exec_l)
        defer
@@ -1069,8 +1069,7 @@ context kernel_m begin
 (* FIXME: move *)
 lemma ccorres_h_t_valid_x64KSSKIMPML4:
   "ccorres r xf P P' hs f (f' ;; g') \<Longrightarrow>
-   ccorres r xf P P' hs f
-    (Guard C_Guard {s'. s' \<Turnstile>\<^sub>c pml4_Ptr (symbol_table ''x64KSSKIMPML4'')} f';; g')"
+   ccorres r xf P P' hs f (Guard C_Guard {s'. s' \<Turnstile>\<^sub>c x64KSSKIMPML4_Ptr} f';; g')"
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_move_c_guards[where P = \<top>])
     apply clarsimp
@@ -1386,9 +1385,6 @@ lemma setVMRoot_ccorres:
   apply (match premises in H: \<open>cr3_C.words_C _.[0] && _ = 0\<close> \<Rightarrow> \<open>insert H; word_bitwise\<close>)
   done
 
-(* FIXME: remove *)
-lemmas invs'_invs_no_cicd = invs_invs_no_cicd'
-
 lemma ccorres_seq_IF_False:
   "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (IF False THEN x ELSE y FI ;; c) = ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (y ;; c)"
   by simp
@@ -1401,7 +1397,7 @@ lemma ptrFromPAddr_mask6_simp[simp]:
 
 (* FIXME: move *)
 lemma register_from_H_bound[simp]:
-  "unat (register_from_H v) < 23"
+  "unat (register_from_H v) < 24"
   by (cases v, simp_all add: "StrictC'_register_defs")
 
 (* FIXME: move *)
@@ -1873,7 +1869,7 @@ lemmas ccorres_name_ksCurThread = ccorres_pre_getCurThread[where f="\<lambda>_. 
 
 lemma unmapPage_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
-                          and (\<lambda>_. asid_wf asid \<and> vmsz_aligned' vptr sz
+                          and (\<lambda>_. asid_wf asid \<and> vmsz_aligned vptr sz
                                            \<and> vptr < pptrBase))
       (UNIV \<inter> {s. framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 3}
             \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
@@ -1975,22 +1971,12 @@ lemma unmapPage_ccorres:
         apply (rule ccorres_name_ksCurThread)
         apply (rule_tac val="tcb_ptr_to_ctcb_ptr rv" and xf'="\<lambda>s. ksCurThread_' (globals s)"
                         in ccorres_abstract_known, ceqv)
-        apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_move_c_guard_tcb_ctes)+
-        apply (rule ccorres_symb_exec_r)
-          apply (rule ccorres_rhs_assoc2)
-          apply (rule ccorres_symb_exec_r_known_rv[where R=\<top> and R'=UNIV and xf'=ret__int_' and val=1])
-             apply vcg
-             apply clarsimp
-            apply ceqv
-           apply ccorres_rewrite
-           apply (clarsimp simp: liftE_liftM)
-           apply (ctac add: invalidateTranslationSingleASID_ccorres[simplified dc_def])
-          apply vcg
-         apply clarsimp
-         apply vcg
-        apply (rule conseqPre, vcg)
         apply clarsimp
-       apply (wpsimp simp: cur_tcb'_def[symmetric])
+        apply ccorres_rewrite
+        apply (clarsimp simp: liftE_liftM)
+        apply (ctac add: invalidateTranslationSingleASID_ccorres[simplified dc_def])
+       apply clarsimp
+      apply clarsimp
       apply (clarsimp simp: guard_is_UNIV_def conj_comms tcb_cnode_index_defs)
      apply (simp add: throwError_def)
      apply (rule ccorres_split_throws)
@@ -1999,7 +1985,7 @@ lemma unmapPage_ccorres:
     apply wpsimp
    apply (simp add: Collect_const_mem)
    apply (vcg exspec=findVSpaceForASID_modifies)
-  by (auto simp: invs_arch_state' invs_no_0_obj' invs_valid_objs' vmsz_aligned'_def
+  by (auto simp: invs_arch_state' invs_no_0_obj' invs_valid_objs' vmsz_aligned_def
                  is_aligned_weaken[OF _ pbfs_atleast_pageBits] pageBitsForSize_def
                  Collect_const_mem vm_page_size_defs word_sle_def
                  ccHoarePost_def typ_heap_simps bit_simps
@@ -2080,17 +2066,6 @@ lemma updateCap_frame_mapped_addr_ccorres:
                         X86_MappingNone_def asidInvalid_def)
   done
 
-(* FIXME: move *)
-lemma diminished_PageCap:
-  "diminished' (ArchObjectCap (PageCap p R mt sz d a)) cap \<Longrightarrow>
-  \<exists>R'. cap = ArchObjectCap (PageCap p R' mt sz d a)"
-  apply (clarsimp simp: diminished'_def)
-  apply (clarsimp simp: maskCapRights_def Let_def)
-  apply (cases cap, simp_all add: isCap_simps)
-  apply (simp add: X64_H.maskCapRights_def)
-  apply (simp add: isPageCap_def split: arch_capability.splits)
-  done
-
 lemma ccap_relation_mapped_asid_0:
   "\<lbrakk>ccap_relation (ArchObjectCap (PageCap d v0 v1 v2 v3 v4)) cap\<rbrakk>
   \<Longrightarrow> (capFMappedASID_CL (cap_frame_cap_lift cap) \<noteq> 0 \<longrightarrow> v4 \<noteq> None) \<and>
@@ -2109,8 +2084,8 @@ lemma getSlotCap_wp':
   done
 
 lemma vmsz_aligned_aligned_pageBits:
-  "vmsz_aligned' ptr sz \<Longrightarrow> is_aligned ptr pageBits"
-  apply (simp add: vmsz_aligned'_def)
+  "vmsz_aligned ptr sz \<Longrightarrow> is_aligned ptr pageBits"
+  apply (simp add: vmsz_aligned_def)
   apply (erule is_aligned_weaken)
   apply (simp add: pageBits_def pageBitsForSize_def
             split: vmpage_size.split)
@@ -2123,7 +2098,7 @@ lemma framesize_from_H_bounded:
 
 lemma performPageInvocationUnmap_ccorres':
   "ccorres (\<lambda>rv rv'. rv' = scast EXCEPTION_NONE) ret__unsigned_long_'
-       (invs' and cte_wp_at' (diminished' (ArchObjectCap cap) o cteCap) ctSlot and K (isPageCap cap))
+       (invs' and cte_wp_at' ((=) (ArchObjectCap cap) o cteCap) ctSlot and K (isPageCap cap))
        (UNIV \<inter> \<lbrace>ccap_relation (ArchObjectCap cap) \<acute>cap\<rbrace> \<inter> \<lbrace>\<acute>ctSlot = Ptr ctSlot\<rbrace>)
        hs
        (performPageInvocationUnmap cap ctSlot)
@@ -2131,7 +2106,7 @@ lemma performPageInvocationUnmap_ccorres':
   apply (cinit lift: cap_' ctSlot_')
    apply csymbr
    apply (rule ccorres_guard_imp
-                 [where A="invs' and cte_wp_at' (diminished' (ArchObjectCap cap) o cteCap) ctSlot
+                 [where A="invs' and cte_wp_at' ((=) (ArchObjectCap cap) o cteCap) ctSlot
                                  and K (isPageCap cap)"])
      apply wpc
       apply (rule_tac P="ret__unsigned_longlong = 0" in ccorres_gen_asm)
@@ -2177,15 +2152,16 @@ lemma performPageInvocationUnmap_ccorres':
      apply (simp add: cte_wp_at_ctes_of)
      apply wp
     apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps split: if_split)
-    apply (drule diminished_PageCap)
+    apply (drule_tac t="cteCap cte" in sym)
     apply clarsimp
     apply (frule ccap_relation_mapped_asid_0)
-     apply (frule ctes_of_valid', clarsimp)
-     apply (drule valid_global_refsD_with_objSize, clarsimp)
-     apply (fastforce simp: mask_def valid_cap'_def
-                            vmsz_aligned_aligned_pageBits)
+    apply (frule ctes_of_valid', clarsimp)
+    apply (drule valid_global_refsD_with_objSize, clarsimp)
+    apply (fastforce simp: mask_def valid_cap'_def
+                           vmsz_aligned_aligned_pageBits)
    apply assumption
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps split: if_split)
+  apply (drule_tac t="cteCap cte" in sym)
   apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap
                         framesize_from_H_bounded framesize_from_to_H
                         ccap_relation_PageCap_BasePtr ccap_relation_PageCap_Size
@@ -2218,7 +2194,7 @@ lemma performPageInvocationUnmap_ccorres:
   notes Collect_const[simp del]
   shows
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and cte_wp_at' (diminished' (ArchObjectCap cap) o cteCap) ctSlot  and K (isPageCap cap))
+       (invs' and cte_wp_at' ((=) (ArchObjectCap cap) o cteCap) ctSlot  and K (isPageCap cap))
        (UNIV \<inter> \<lbrace>ccap_relation (ArchObjectCap cap) \<acute>cap\<rbrace> \<inter> \<lbrace>\<acute>cte = Ptr ctSlot\<rbrace>)
        hs
        (liftE (performPageInvocation (PageUnmap cap ctSlot)))
@@ -2240,7 +2216,7 @@ lemma performPageInvocationUnmap_ccorres:
      apply (rule ccorres_rhs_assoc)
      apply (drule_tac s=cap in sym, simp) (* schematic ugliness *)
      apply ccorres_rewrite
-     apply (rule ccorres_add_return2) thm ccorres_add_returnOk
+     apply (rule ccorres_add_return2)
      apply (ctac add: performPageInvocationUnmap_ccorres'[simplified K_def, simplified])
        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
        apply (rule allI, rule conseqPre, vcg)
@@ -2330,7 +2306,7 @@ lemma makeUserPDELargePage_spec:
 
 lemma makeUserPDEPageTable_spec:
   "\<forall>s. \<Gamma> \<turnstile>
-  \<lbrace>s. vmsz_aligned' (\<acute>paddr) X64SmallPage\<rbrace>
+  \<lbrace>s. vmsz_aligned (\<acute>paddr) X64SmallPage\<rbrace>
   Call makeUserPDEPageTable_'proc
   \<lbrace> pde_lift \<acute>ret__struct_pde_C = Some (Pde_pde_pt \<lparr>
        pde_pde_pt_CL.xd_CL = 0,
@@ -2349,7 +2325,7 @@ lemma makeUserPDEPageTable_spec:
 
 lemma makeUserPDPTEHugePage_spec:
   "\<forall>s. \<Gamma> \<turnstile>
-  \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0 \<and> vmsz_aligned' (\<acute>paddr) X64HugePage \<rbrace>
+  \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0 \<and> vmsz_aligned (\<acute>paddr) X64HugePage \<rbrace>
   Call makeUserPDPTEHugePage_'proc
   \<lbrace> pdpte_lift \<acute>ret__struct_pdpte_C = Some (Pdpte_pdpte_1g \<lparr>
        pdpte_pdpte_1g_CL.xd_CL = 0,
@@ -2459,7 +2435,7 @@ lemma asid_pool_at_c_guard:
 
 (* FIXME: move *)
 lemma setObjectASID_Basic_ccorres:
-  "ccorres dc xfdc \<top> {s. f s = p \<and> casid_pool_relation pool (asid_pool_C (pool' s))} hs
+  "ccorres dc xfdc \<top> {s. f s = p \<and> casid_pool_relation pool (asid_pool_C.asid_pool_C (pool' s))} hs
      (setObject p pool)
      ((Basic (\<lambda>s. globals_update( t_hrs_'_update
             (hrs_mem_update (heap_update (Ptr &(ap_Ptr (f s)\<rightarrow>[''array_C''])) (pool' s)))) s)))"

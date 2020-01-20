@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-chapter {* Syntax *}
+chapter \<open>Syntax\<close>
 (*<*)
 theory Syntax imports
   "CParser.CTranslation"
@@ -15,7 +15,7 @@ theory Syntax imports
 begin
 (*>*)
 
-text {*
+text \<open>
   To express properties about the execution of code, we introduce dedicated syntax to aid
   readability. This syntax is based on Hoare logic and used for stating the pre- and
   post-conditions of a function. The following describes a function @{term f} with pre-condition
@@ -34,7 +34,7 @@ text {*
   pre-condition reasoning over Hoare triples expressed this way. The tactic can take advantage of
   any previously proved lemmas tagged with the attribute ``[wp].'' Other Isabelle-specific notation
   will be introduced in the following chapters as it is used.
-*}
+\<close>
 
 (*<*)
 end

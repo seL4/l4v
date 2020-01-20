@@ -43,7 +43,11 @@ abbreviation
 abbreviation
   pde_Ptr :: "word32 \<Rightarrow> pde_C ptr" where "pde_Ptr == Ptr"
 abbreviation
-  regs_C_Ptr :: "addr \<Rightarrow> (machine_word_len word[39]) ptr" where "regs_C_Ptr \<equiv> Ptr"
+  pt_Ptr :: "32 word \<Rightarrow> (pte_C[512]) ptr" where "pt_Ptr == Ptr"
+abbreviation
+  pd_Ptr :: "32 word \<Rightarrow> (pde_C[2048]) ptr" where "pd_Ptr == Ptr"
+abbreviation
+  regs_C_Ptr :: "addr \<Rightarrow> (machine_word_len word[40]) ptr" where "regs_C_Ptr \<equiv> Ptr"
 abbreviation
   vgic_lr_C_Ptr :: "addr \<Rightarrow> (virq_C[64]) ptr" where "vgic_lr_C_Ptr \<equiv> Ptr"
 abbreviation
@@ -358,11 +362,12 @@ where
  | Cap_untyped_cap uc \<Rightarrow> UntypedCap (to_bool(capIsDevice_CL uc)) (capPtr_CL uc) (unat (capBlockSize_CL uc)) (unat (capFreeIndex_CL uc << 4))
  | Cap_endpoint_cap ec \<Rightarrow>
     EndpointCap (capEPPtr_CL ec) (capEPBadge_CL ec) (to_bool(capCanSend_CL ec)) (to_bool(capCanReceive_CL ec))
-                (to_bool(capCanGrant_CL ec))
+                (to_bool(capCanGrant_CL ec)) (to_bool(capCanGrantReply_CL ec))
  | Cap_notification_cap ntfn \<Rightarrow>
     NotificationCap (capNtfnPtr_CL ntfn)(capNtfnBadge_CL ntfn)(to_bool(capNtfnCanSend_CL ntfn))
                      (to_bool(capNtfnCanReceive_CL ntfn))
- | Cap_reply_cap rc \<Rightarrow> ReplyCap (ctcb_ptr_to_tcb_ptr (Ptr (cap_reply_cap_CL.capTCBPtr_CL rc))) (to_bool (capReplyMaster_CL rc))
+ | Cap_reply_cap rc \<Rightarrow> ReplyCap (ctcb_ptr_to_tcb_ptr (Ptr (cap_reply_cap_CL.capTCBPtr_CL rc)))
+                               (to_bool (capReplyMaster_CL rc)) (to_bool (capReplyCanGrant_CL rc))
  | Cap_thread_cap tc \<Rightarrow>  ThreadCap(ctcb_ptr_to_tcb_ptr (Ptr (cap_thread_cap_CL.capTCBPtr_CL tc)))
  | Cap_irq_handler_cap ihc \<Rightarrow> IRQHandlerCap (ucast(capIRQ_CL ihc))
  | Cap_irq_control_cap \<Rightarrow> IRQControlCap

@@ -121,7 +121,7 @@ lemma monad_equiv_guard:
  * variables being expanded inside of guard statements. *)
 lemma monad_equiv_guard' [L2flow]:
     "\<lbrakk> \<And>s. simp_expr True (G s) (G' s) \<rbrakk> \<Longrightarrow>
-        monad_equiv P (L2_guard G) (L2_guard G') (\<lambda>r s. P s \<and> G' s \<and> r = ()) (\<lambda>_ _. False)"
+        monad_equiv P (L2_guard (\<lambda>s. G s)) (L2_guard (\<lambda>s. G' s)) (\<lambda>r s. P s \<and> G' s \<and> r = ()) (\<lambda>_ _. False)"
   apply (rule monad_equiv_guard)
   apply (rule simp_expr_weaken)
    apply assumption
@@ -190,7 +190,7 @@ lemma monad_equiv_condition [L2flow]:
      monad_equiv (\<lambda>s. P s \<and> C' s) L L' QL EL;
      monad_equiv (\<lambda>s. P s \<and> \<not> C' s) R R' QR ER \<rbrakk> \<Longrightarrow>
    monad_equiv P (L2_condition (\<lambda>s. C s) L R) (L2_condition (\<lambda>s. C' s) L' R')
-      (\<lambda>r s. \<exists>s. P s) (* Deliberately weak to avoid exponential growth. *)
+      (\<lambda>r s. \<exists>s. P s) \<comment> \<open>Deliberately weak to avoid exponential growth.\<close>
       (\<lambda>r s. \<exists>s. P s)"
   apply rule
    apply (monad_eq simp: L2_defs monad_equiv_def simp_expr_def split: condition_splits)

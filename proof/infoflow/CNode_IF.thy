@@ -45,20 +45,19 @@ lemma gets_apply:
   done
 
 lemma get_object_rev:
-  "reads_equiv_valid_inv A aag (\<lambda> s. is_subject aag oref) (get_object oref)"
+  "reads_equiv_valid_inv A aag (\<lambda> s. aag_can_read aag oref) (get_object oref)"
   apply (unfold get_object_def fun_app_def)
   apply (subst gets_apply)
-  apply (wp gets_apply_ev | wp_once hoare_drop_imps)+
-  apply (fastforce elim: reads_equivE equiv_forE intro: aag_can_read_self)
+  apply (wp gets_apply_ev | wp (once) hoare_drop_imps)+
+  apply (fastforce elim: reads_equivE equiv_forE)
   done
 
 lemma get_cap_rev:
-  "reads_equiv_valid_inv A aag (K (is_subject aag (fst slot))) (get_cap slot)"
+  "reads_equiv_valid_inv A aag (K (aag_can_read aag (fst slot))) (get_cap slot)"
   unfolding get_cap_def
   apply(wp get_object_rev | wpc | simp add: split_def)+
   done
 
-declare word_neq_0_conv[simp del]
 declare if_weak_cong[cong]
 
 lemma resolve_address_bits_spec_rev:
@@ -80,17 +79,21 @@ proof(induct ref arbitrary: s rule: resolve_address_bits'.induct)
 qed
 
 lemma resolve_address_bits_rev:
-  "reads_equiv_valid_inv A aag (pas_refined aag and K (is_cnode_cap (fst ref) \<longrightarrow> is_subject aag (obj_ref_of (fst ref)))) (resolve_address_bits ref)"
+  "reads_equiv_valid_inv A aag (pas_refined aag
+                                and K (is_cnode_cap (fst ref)
+                                       \<longrightarrow> is_subject aag (obj_ref_of (fst ref))))
+                (resolve_address_bits ref)"
   by (rule use_spec_ev[OF resolve_address_bits_spec_rev])
 
 lemma lookup_slot_for_thread_rev:
-  "reads_equiv_valid_inv A aag (pas_refined aag and K (is_subject aag thread)) (lookup_slot_for_thread thread cptr)"
+  "reads_equiv_valid_inv A aag (pas_refined aag and K (is_subject aag thread))
+                         (lookup_slot_for_thread thread cptr)"
   unfolding lookup_slot_for_thread_def fun_app_def
   apply (rule gen_asm_ev)
   apply (wp resolve_address_bits_rev gets_the_ev
        | simp)+
   apply (rule conjI)
-   apply (blast intro: requiv_get_tcb_eq)
+   apply blast
   apply (clarsimp simp: tcb.splits)
   apply (erule (2) owns_thread_owns_cspace)
   defer
@@ -98,17 +101,20 @@ lemma lookup_slot_for_thread_rev:
   done
 
 lemma lookup_cap_and_slot_rev[wp]:
-  "reads_equiv_valid_inv A aag (pas_refined aag and K (is_subject aag thread)) (lookup_cap_and_slot thread cptr)"
+  "reads_equiv_valid_inv A aag (pas_refined aag and K (is_subject aag thread))
+                         (lookup_cap_and_slot thread cptr)"
   unfolding lookup_cap_and_slot_def
   apply (wp lookup_slot_for_thread_rev lookup_slot_for_thread_authorised get_cap_rev
-        | simp add: split_def)+
+        | simp add: split_def
+        | strengthen aag_can_read_self)+
   done
 
 
-lemmas lookup_cap_and_slot_reads_respects_g = reads_respects_g_from_inv[OF lookup_cap_and_slot_rev lookup_cap_and_slot_inv]
+lemmas lookup_cap_and_slot_reads_respects_g =
+                  reads_respects_g_from_inv[OF lookup_cap_and_slot_rev lookup_cap_and_slot_inv]
 
 lemma set_cap_reads_respects:
-  "reads_respects aag l (K (is_subject aag (fst slot))) (set_cap cap slot)"
+  "reads_respects aag l (K (aag_can_read aag (fst slot))) (set_cap cap slot)"
   apply(simp add: set_cap_def split_def)
   apply(wp set_object_reads_respects get_object_rev hoare_vcg_all_lift
        | wpc
@@ -160,12 +166,13 @@ lemma set_cdt_list_ev2:
   apply(fastforce simp: equiv_for_or or_comp_dist reads_equiv_cdt_list_update affects_equiv_cdt_list_update)
   done
 
+lemma kheap_get_tcb_eq: "kheap s ref = kheap t ref \<Longrightarrow> get_tcb ref s = get_tcb ref t"
+  by (simp add: get_tcb_def)
+
 lemma thread_get_rev:
-  "reads_equiv_valid_inv A aag (K (is_subject aag thread)) (thread_get f thread)"
+  "reads_equiv_valid_inv A aag (K (aag_can_read aag thread)) (thread_get f thread)"
   unfolding thread_get_def fun_app_def
-  apply (wp gets_the_ev)
-  apply fastforce
-  done
+  by (wp gets_the_ev) (fastforce intro: kheap_get_tcb_eq elim: reads_equivE equiv_forD)
 
 lemma update_cdt_reads_respects:
   "reads_respects aag l (K  (\<forall> rv rv'.
@@ -213,7 +220,7 @@ lemma hoare_vcg_post_lift:
 lemmas hoare_vcg_post_lift' = hoare_vcg_post_lift[where P="True", simplified]
 
 lemma set_untyped_cap_as_full_reads_respects:
-  "reads_respects aag l (K (is_subject aag (fst src_slot)))
+  "reads_respects aag l (K (aag_can_read aag (fst src_slot)))
         (set_untyped_cap_as_full src_cap new_cap src_slot)"
   unfolding set_untyped_cap_as_full_def
   apply (wp set_cap_reads_respects)
@@ -243,23 +250,29 @@ lemma morestuff: "\<lbrakk>is_subject aag (fst src_slot);
 lemma cap_insert_reads_respects:
   notes split_paired_All[simp del]
   shows
-  "reads_respects aag l (K (is_subject aag (fst src_slot) \<and> is_subject aag (fst dest_slot))) (cap_insert new_cap src_slot dest_slot)"
+  "reads_respects aag l (K (aag_can_read aag (fst src_slot) \<and> aag_can_read aag (fst dest_slot)))
+                  (cap_insert new_cap src_slot dest_slot)"
   unfolding cap_insert_def
   apply(rule gen_asm_ev)
   apply(subst gets_apply)
   apply (simp only: cap_insert_ext_extended.dxo_eq)
   apply (simp only: cap_insert_ext_def)
-  apply(wp set_original_reads_respects update_cdt_reads_respects set_cap_reads_respects gets_apply_ev update_cdt_list_reads_respects | simp split del: if_split | clarsimp simp: equiv_for_def split: option.splits)+
-            apply (wp set_untyped_cap_as_full_reads_respects get_cap_wp get_cap_rev | simp)+
-  apply (intro impI conjI allI)
-                         apply(fastforce simp: reads_equiv_def2 equiv_for_def elim: states_equiv_forE_is_original_cap states_equiv_forE_cdt dest: aag_can_read_self split: option.splits)+
-             done
+  apply(wp set_original_reads_respects update_cdt_reads_respects set_cap_reads_respects
+           gets_apply_ev update_cdt_list_reads_respects set_untyped_cap_as_full_reads_respects
+           get_cap_wp get_cap_rev
+       | simp split del: if_split
+       | clarsimp simp: equiv_for_def split: option.splits)+
+  by (fastforce simp: reads_equiv_def2 equiv_for_def
+                elim: states_equiv_forE_is_original_cap states_equiv_forE_cdt
+                dest: aag_can_read_self
+               split: option.splits)
 
 
 lemma cap_move_reads_respects:
   notes split_paired_All[simp del]
   shows
-  "reads_respects aag l (K (is_subject aag (fst src_slot) \<and> is_subject aag (fst dest_slot))) (cap_move new_cap src_slot dest_slot)"
+  "reads_respects aag l (K (is_subject aag (fst src_slot) \<and> is_subject aag (fst dest_slot)))
+                 (cap_move new_cap src_slot dest_slot)"
   unfolding cap_move_def
   apply (subst gets_apply)
   apply (simp add: bind_assoc[symmetric])
@@ -271,7 +284,10 @@ lemma cap_move_reads_respects:
            set_cap_reads_respects update_cdt_list_reads_respects
        | simp split del: if_split | fastforce simp: equiv_for_def split: option.splits)+
   apply (intro impI conjI allI)
-  apply(fastforce simp: reads_equiv_def2 equiv_for_def elim: states_equiv_forE_is_original_cap states_equiv_forE_cdt dest: aag_can_read_self split: option.splits)+
+  apply(fastforce simp: reads_equiv_def2 equiv_for_def
+                  elim: states_equiv_forE_is_original_cap states_equiv_forE_cdt
+                  dest: aag_can_read_self
+                 split: option.splits)+
   done
 
 lemma get_idemp:
@@ -321,12 +337,11 @@ lemma set_object_globals_equiv:
              \<and> (\<forall>tcb'. obj = (TCB tcb') \<longrightarrow> tcb_at (idle_thread t) t)) \<rbrace>
    set_object ptr obj
    \<lbrace> \<lambda>_. globals_equiv s \<rbrace>"
-  unfolding set_object_def
-  apply(wp)
+  apply (wpsimp wp: set_object_wp)
   apply (case_tac "ptr = idle_thread sa")
-   apply(clarsimp simp: globals_equiv_def idle_equiv_def tcb_at_def2)
+   apply (clarsimp simp: globals_equiv_def idle_equiv_def tcb_at_def2)
    apply (intro impI conjI allI notI iffI | clarsimp)+
-  apply(clarsimp simp: globals_equiv_def idle_equiv_def tcb_at_def2)
+  apply (clarsimp simp: globals_equiv_def idle_equiv_def tcb_at_def2)
   done
 
 lemma set_object_globals_equiv'':
@@ -586,7 +601,7 @@ lemma cte_wp_at_page_directory_not_in_globals:
   apply (rule pd_shifting_global_refs)
   apply (simp add: pd_bits_def pageBits_def)+
 done
-crunch valid_vs_lookup[wp]: do_machine_op "valid_vs_lookup"
+
 
 lemma not_in_global_not_arm:
   "A \<notin> global_refs s \<Longrightarrow> A \<noteq> arm_global_pd (arch_state s)" by (simp add: global_refs_def)
@@ -667,10 +682,10 @@ definition irq_at :: "nat \<Rightarrow> (10 word \<Rightarrow> bool) \<Rightarro
 definition is_irq_at :: "('z::state_ext) state \<Rightarrow> irq \<Rightarrow> nat \<Rightarrow> bool" where
   "is_irq_at s \<equiv> \<lambda> irq pos. irq_at pos (irq_masks (machine_state s)) = Some irq"
 
-text {*
+text \<open>
   We require that interrupts recur in order to ensure that no individual
   big step ever diverges.
-*}
+\<close>
 definition irq_is_recurring :: "irq \<Rightarrow> ('z::state_ext) state \<Rightarrow> bool" where
   "irq_is_recurring irq s \<equiv> \<forall>n. (\<exists>m. is_irq_at s irq (n+m))"
 
@@ -706,10 +721,10 @@ lemma dmo_getActiveIRQ_only_timer:
   apply(simp add: is_irq_at_def)
   done
 
-text {*
+text \<open>
   There is only one interrupt turned on, namely @{term irq}, and it is
   a timer interrupt.
-*}
+\<close>
 definition only_timer_irq :: "10 word \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "only_timer_irq irq s \<equiv> (\<forall>x. interrupt_states s x = IRQTimer \<longrightarrow> x = irq) \<and> irq_is_recurring irq s"
 
@@ -950,7 +965,8 @@ lemma work_units_limit_reached_reads_respects[wp]:
   apply force
   done
 
-crunch only_timer_irq_inv[wp]: reset_work_units, work_units_limit_reached, update_work_units "only_timer_irq_inv irq st"
+crunches reset_work_units, work_units_limit_reached, update_work_units
+     for only_timer_irq_inv[wp]: "only_timer_irq_inv irq st"
   (simp: only_timer_irq_inv_def only_timer_irq_def irq_is_recurring_def is_irq_at_def)
 
 crunch invs[wp]: work_units_limit_reached invs
@@ -960,70 +976,70 @@ lemma preemption_point_reads_respects:
   apply (simp add: preemption_point_def2)
   apply (wp | wpc | simp add: comp_def)+
             apply ((wp dmo_getActiveIRQ_reads_respects hoare_TrueI | simp
-                  | wp_once hoare_drop_imps)+)[8]
+                  | wp (once) hoare_drop_imps)+)[8]
    apply wp
   apply force
   done
 
-lemma descendants_of_all_children: "\<lbrakk>all_children P s; p \<in> descendants_of q s; P q\<rbrakk> \<Longrightarrow> P p"
- apply (simp add: descendants_of_def cdt_parent_rel_def is_cdt_parent_def)
- apply (erule_tac P="P q" in rev_mp)
-  apply (erule trancl.induct)
-  apply clarsimp
-  apply (fastforce simp: all_children_def)+
-  done
-
-lemma all_children_descendants_equal: "equiv_for P id s t \<Longrightarrow> all_children P s \<Longrightarrow> all_children P t \<Longrightarrow> P slot \<Longrightarrow> descendants_of slot s = descendants_of slot t"
+lemma all_children_descendants_equal:
+  "\<lbrakk>equiv_for P id s t; all_children P s; all_children P t; P slot\<rbrakk>
+   \<Longrightarrow> descendants_of slot s = descendants_of slot t"
   apply(clarsimp | rule equalityI)+
-   apply(frule_tac p="(a, b)" and q="slot" and s=s in descendants_of_all_children)
+   apply(frule_tac p="(a, b)" and q="slot" and m=s in all_children_descendants_of)
      apply(simp)+
    apply(simp add: descendants_of_def cdt_parent_rel_def is_cdt_parent_def)
    apply(rule_tac r'="{(p, c). s c = Some p}" and Q="P" in trancl_subset_equivalence)
      apply(clarsimp)+
-    apply(frule_tac p="(aa, ba)" and q="slot" and s=s in descendants_of_all_children)
+    apply(frule_tac p="(aa, ba)" and q="slot" in all_children_descendants_of)
       apply(fastforce simp: descendants_of_def cdt_parent_rel_def is_cdt_parent_def)+
    apply(fastforce simp: equiv_for_def)
   apply(clarsimp)
-  apply(frule_tac p="(a, b)" and q="slot" and s=t in descendants_of_all_children)
+  apply(frule_tac p="(a, b)" and q="slot" and m=t in all_children_descendants_of)
     apply(simp)+
   apply(simp add: descendants_of_def cdt_parent_rel_def is_cdt_parent_def)
   apply(rule_tac r'="{(p, c). t c = Some p}" and Q="P" in trancl_subset_equivalence)
     apply(clarsimp)+
-   apply(frule_tac p="(aa, ba)" and q="slot" and s=t in descendants_of_all_children)
+   apply(frule_tac p="(aa, ba)" and q="slot" and m=t in all_children_descendants_of)
      apply(fastforce simp: equiv_for_def descendants_of_def cdt_parent_rel_def is_cdt_parent_def)+
   done
 
-lemma descendants_of_eq: "\<lbrakk>reads_equiv aag s t; affects_equiv aag l s t; pas_refined aag s;
-           pas_refined aag t; is_subject aag (fst slot)\<rbrakk>
-          \<Longrightarrow> descendants_of slot (cdt s) = descendants_of slot (cdt t)"
-  apply (rule_tac P="\<lambda>x. is_subject aag (fst x)" in all_children_descendants_equal)
-     apply (frule aag_can_read_self)
-     apply (fastforce simp add: reads_equiv_def2 states_equiv_for_def equiv_for_def)
-    apply (rule pas_refined_all_children[OF _ refl],assumption)+
+lemma cca_can_read:
+  "\<lbrakk>valid_mdb s; valid_objs s; cdt_change_allowed' aag slot s; pas_refined aag s\<rbrakk>
+    \<Longrightarrow> aag_can_read aag (fst slot)"
+  apply (frule(3) cdt_change_allowed_delete_derived)
+  by (rule read_delder_thread_read_thread_rev[OF reads_lrefl])
+
+lemma all_children_subjectReads:
+  "pas_refined aag s \<Longrightarrow> all_children (aag_can_read aag \<circ> fst) (cdt s)"
+  apply (rule all_childrenI)
   apply simp
-  done
+  apply (erule read_delder_thread_read_thread_rev)
+  by (rule aag_cdt_link_DeleteDerived)
+
+lemma descendants_of_eq:
+  "\<lbrakk>reads_equiv aag s t; affects_equiv aag l s t; pas_refined aag s;
+    pas_refined aag t; is_subject aag (fst slot)\<rbrakk>
+   \<Longrightarrow> descendants_of slot (cdt s) = descendants_of slot (cdt t)"
+  apply (rule all_children_descendants_equal[OF _ all_children_subjectReads all_children_subjectReads])
+     apply (elim reads_equivE)
+     apply (solves\<open>simp add: equiv_for_apply\<close>)
+  by force+
 
 lemma gets_descendants_of_revrv:
-  "reads_equiv_valid_rv_inv (affects_equiv aag l) aag (=) (pas_refined aag and K (is_subject aag (fst slot))) (gets (descendants_of slot \<circ> cdt))"
+  "reads_equiv_valid_rv_inv (affects_equiv aag l) aag (=)
+                            (pas_refined aag and K (is_subject aag (fst slot)))
+                            (gets (descendants_of slot \<circ> cdt))"
   apply(rule gets_evrv'')
   apply clarsimp
-  apply (rule descendants_of_eq)
-  apply (assumption)+
-  done
+  by (rule descendants_of_eq)
 
 lemma silc_dom_equiv_trans:
   "\<lbrakk>silc_dom_equiv aag s t; silc_dom_equiv aag t u\<rbrakk> \<Longrightarrow> silc_dom_equiv aag s u"
-  apply(auto simp: silc_dom_equiv_def elim: equiv_for_trans)
-  done
+  by (auto simp: silc_dom_equiv_def elim: equiv_for_trans)
 
 lemma silc_dom_equiv_sym:
   "\<lbrakk>silc_dom_equiv aag s t\<rbrakk> \<Longrightarrow> silc_dom_equiv aag t s"
-  apply(auto simp: silc_dom_equiv_def elim: equiv_for_sym)
-  done
-
-lemma silc_inv_silc_dom_equiv:
-  "silc_inv aag st s \<Longrightarrow> silc_dom_equiv aag st s"
-  by(simp add: silc_inv_def)
+  by (auto simp: silc_dom_equiv_def elim: equiv_for_sym)
 
 lemma reads_respects_f:
   "\<lbrakk>reads_respects aag l P f; \<lbrace>silc_inv aag st and Q\<rbrace> f \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>\<rbrakk> \<Longrightarrow>
@@ -1046,7 +1062,7 @@ lemma preemption_point_reads_respects_f:
    apply (rule reads_respects_f)
     apply (rule preemption_point_reads_respects)
    apply (wp, force+)
-   done
+  done
 
 abbreviation
   reads_spec_equiv_valid_f :: "det_state \<Rightarrow> (det_state \<Rightarrow> det_state \<Rightarrow> bool) \<Rightarrow> (det_state \<Rightarrow> det_state \<Rightarrow> bool) \<Rightarrow> 'a subject_label PAS \<Rightarrow> (det_state \<Rightarrow> bool) \<Rightarrow> (det_state,'b) nondet_monad \<Rightarrow> bool"
@@ -1134,8 +1150,6 @@ lemma select_ext_ev:
   apply (clarsimp simp: select_ext_def gets_def get_def assert_def return_def bind_def)
   apply (simp add: equiv_valid_def2 equiv_valid_2_def return_def fail_def)
   done
-
-crunch cur_domain[wp]: possible_switch_to "\<lambda>s. P (cur_domain s)"
 
 end
 

@@ -25,6 +25,8 @@ requalify_consts
   arch_post_cap_deletion
   arch_gen_obj_refs
   arch_cap_cleanup_opt
+  faultRegister
+  nextInstructionRegister
 
 requalify_types
   arch_gen_obj_ref
@@ -690,7 +692,7 @@ where
      case state
        of
           BlockedOnSend x y \<Rightarrow> blocked_cancel_ipc state tptr None
-        | BlockedOnReceive x reply \<Rightarrow> blocked_cancel_ipc state tptr reply
+        | BlockedOnReceive x reply _ \<Rightarrow> blocked_cancel_ipc state tptr reply
         | BlockedOnNotification event \<Rightarrow> cancel_signal tptr event
         | BlockedOnReply reply \<Rightarrow> reply_remove_tcb tptr reply
         | _ \<Rightarrow> return ()

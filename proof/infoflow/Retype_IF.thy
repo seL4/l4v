@@ -15,14 +15,18 @@ begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma create_cap_reads_respects:
-  "reads_respects aag l (K (is_subject aag (fst (fst slot)))) (create_cap type bits untyped dev slot)"
-  apply(rule gen_asm_ev)
-  apply(simp add: create_cap_def split_def bind_assoc[symmetric])
+  "reads_respects aag l (K (is_subject aag (fst (fst slot))))
+     (create_cap type bits untyped dev slot)"
+  apply (rule gen_asm_ev)
+  apply (simp add: create_cap_def split_def bind_assoc[symmetric])
   apply (fold update_cdt_def)
   apply (simp add: bind_assoc create_cap_ext_def)
   apply (wp set_cap_reads_respects set_original_reads_respects update_cdt_list_reads_respects update_cdt_reads_respects| simp | fastforce simp: equiv_for_def split: option.splits)+
   apply (intro impI conjI allI)
-   apply(fastforce simp: reads_equiv_def2 equiv_for_def elim: states_equiv_forE_is_original_cap states_equiv_forE_cdt dest: aag_can_read_self split: option.splits)+
+   apply (fastforce simp: reads_equiv_def2 equiv_for_def
+                    elim: states_equiv_forE_is_original_cap states_equiv_forE_cdt
+                    dest: aag_can_read_self
+                   split: option.splits)+
   done
 
 lemma gets_any_evrv:
@@ -200,7 +204,8 @@ lemma dmo_cleanCacheRange_PoU_reads_respects:
   by(wp dmo_cacheRangeOp_reads_respects dmo_mol_reads_respects | simp add: cleanByVA_PoU_def)+
 
 crunch irq_state[wp]: clearMemory "\<lambda>s. P (irq_state s)"
-  (wp: crunch_wps simp: crunch_simps storeWord_def cleanByVA_PoU_def ignore: cacheRangeOp)
+  (wp: crunch_wps simp: crunch_simps storeWord_def cleanByVA_PoU_def
+   ignore_del: clearMemory)
 
 lemma dmo_clearMemory_reads_respects:
   "reads_respects aag l \<top> (do_machine_op (clearMemory ptr bits))"
@@ -221,12 +226,11 @@ lemma dmo_freeMemory_reads_respects:
   apply wp
   done
 
-lemma set_pd_globals_equiv: "\<lbrace>globals_equiv st and (\<lambda>s. a \<noteq> arm_global_pd (arch_state s))\<rbrace> set_pd a b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (rule hoare_pre)
-   apply (simp add: set_pd_def get_object_def)
-   apply (wp set_object_globals_equiv)
-  apply clarsimp
-  done
+lemma set_pd_globals_equiv:
+  "\<lbrace>globals_equiv st and (\<lambda>s. a \<noteq> arm_global_pd (arch_state s))\<rbrace> set_pd a b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding set_pd_def
+  by (wpsimp wp: set_object_globals_equiv[THEN hoare_set_object_weaken_pre]
+           simp: obj_at_def)
 
 lemma globals_equiv_cdt_update[simp]:
   "globals_equiv s (s'\<lparr> cdt := x \<rparr>) = globals_equiv s s'"
@@ -244,12 +248,11 @@ lemma create_cap_globals_equiv:
             set_cdt_valid_global_objs dxo_wp_weak set_original_wp | simp)+
   done
 
-(* could remove the precondition here and replace with \<top> if we wanted the trouble *)
 lemma set_pd_reads_respects:
   "reads_respects aag l (K (is_subject aag a)) (set_pd a b)"
   unfolding set_pd_def
-  apply(wp set_object_reads_respects get_object_rev get_object_wp | clarsimp split: kernel_object.splits arch_kernel_obj.splits simp: asid_pool_at_kheap obj_at_def)+
-  done
+  by (blast intro: equiv_valid_guard_imp set_object_reads_respects)
+
 
 lemma set_pd_reads_respects_g:
   "reads_respects_g aag l (\<lambda> s. is_subject aag ptr \<and> ptr \<noteq> arm_global_pd (arch_state s)) (set_pd ptr pd)"
@@ -525,12 +528,12 @@ lemma do_machine_op_mapM_x:
   apply(clarsimp simp: mapM_x_Cons do_machine_op_bind[OF ef empty_fail_mapM_x[OF ef]])
   done
 
-text {*
+text \<open>
 
         | simp add: unless_def when_def
         | intro conjI impI)+
      (create_word_objects ptr numObjects bits dev)"
-*}
+\<close>
 
 lemma init_arch_objects_reads_respects_g:
   "reads_respects_g aag l
@@ -669,7 +672,7 @@ lemma retype_region_globals_equiv:
     apply(clarsimp simp: pspace_no_overlap_def)
     apply(drule_tac x="arm_global_pd (arch_state sa)" in spec)
     apply(clarsimp simp: invs_def valid_state_def valid_global_objs_def valid_vso_at_def obj_at_def ptr_add_def)
-    apply(frule_tac p=p in range_cover_subset)
+    apply(frule_tac p=x in range_cover_subset)
       apply(simp add: blah)
      apply simp
     apply(frule range_cover_subset')
@@ -1020,7 +1023,7 @@ lemma reset_untyped_cap_reads_respects_g:
          apply (wp only_timer_irq_inv_pres[where P=\<top> and Q=\<top>]
                    no_irq_clearMemory
               | simp
-              | wp_once dmo_wp)+
+              | wp (once) dmo_wp)+
         apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
         apply (frule(1) caps_of_state_valid)
         apply (clarsimp simp: valid_cap_simps cap_aligned_def
@@ -1037,7 +1040,7 @@ lemma reset_untyped_cap_reads_respects_g:
          apply (wp only_timer_irq_inv_pres[where P=\<top> and Q=\<top>]
                    no_irq_clearMemory
              | simp
-             | wp_once dmo_wp)+
+             | wp (once) dmo_wp)+
         apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
         apply (frule(1) caps_of_state_valid)
         apply (clarsimp simp: valid_cap_simps cap_aligned_def

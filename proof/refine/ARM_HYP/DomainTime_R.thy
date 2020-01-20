@@ -13,9 +13,9 @@ imports
   ADT_H
 begin
 
-text {* Preservation of domain time remaining over kernel invocations;
+text \<open>Preservation of domain time remaining over kernel invocations;
         invariance of domain list validity
-*}
+\<close>
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -69,10 +69,6 @@ crunch ksDomSchedule_inv[wp]: doReplyTransfer "\<lambda>s. P (ksDomSchedule s)"
         simp: unless_def crunch_simps
       ignore: transferCapsToSlots setObject getObject)
 
-lemma cteRevoke_ksDomSchedule_inv[wp]:
-  "cteRevoke p \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
-  by (wp cteRevoke_preservation cteDelete_preservation | clarsimp)+
-
 crunch ksDomSchedule_inv[wp]: finaliseCap "\<lambda>s. P (ksDomSchedule s)"
   (simp: crunch_simps assertE_def unless_def
  ignore: getObject setObject forM ignoreFailure
@@ -87,7 +83,7 @@ crunch ksDomSchedule_inv[wp]: createNewObjects "\<lambda>s. P (ksDomSchedule s)"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps hoare_unless_wp)
 
 crunch ksDomSchedule_inv[wp]: preemptionPoint "\<lambda>s. P (ksDomSchedule s)"
-  (simp: whenE_def)
+  (simp: whenE_def ignore_del: preemptionPoint)
 
 crunch ksDomSchedule_inv[wp]: performARMMMUInvocation "\<lambda>s. P (ksDomSchedule s)"
   (ignore: getObject setObject
@@ -181,10 +177,6 @@ crunch ksDomainTime_inv[wp]: doReplyTransfer "\<lambda>s. P (ksDomainTime s)"
         simp: unless_def crunch_simps
       ignore: transferCapsToSlots setObject getObject)
 
-lemma cteRevoke_ksDomainTime_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomainTime s) \<rbrace> cteRevoke param_a \<lbrace>\<lambda>_ s. P (ksDomainTime s)\<rbrace>"
-  by (wp cteRevoke_preservation | clarsimp)+
-
 crunch ksDomainTime_inv[wp]: finaliseCap "\<lambda>s. P (ksDomainTime s)"
   (simp: crunch_simps assertE_def unless_def
  ignore: getObject setObject forM ignoreFailure
@@ -206,7 +198,7 @@ crunch ksDomainTime_inv[wp]: performARMMMUInvocation "\<lambda>s. P (ksDomainTim
    simp: unless_def)
 
 crunch ksDomainTime_inv[wp]: preemptionPoint "\<lambda>s. P (ksDomainTime s)"
-  (simp: whenE_def)
+  (simp: whenE_def ignore_del: preemptionPoint)
 
 lemma setObjectVCPU_ksDomainTime_inv[wp]:
   "setObject p (v::vcpu) \<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace>"
@@ -302,7 +294,7 @@ lemma handleInterrupt_valid_domain_time:
      apply wp
     (* IRQTimer : tick occurs *) (* IRQReserved : trivial *)
     apply (wpsimp wp: timerTick_valid_domain_time
-          | wp_once hoare_vcg_imp_lift )+
+          | wp (once) hoare_vcg_imp_lift )+
   done
 
 lemma schedule_domain_time_left':
@@ -314,7 +306,7 @@ lemma schedule_domain_time_left':
   supply word_neq_0_conv[simp]
   apply wpsimp+
        apply (rule_tac Q="\<lambda>_. valid_domain_list'" in hoare_post_imp, clarsimp)
-       apply (wp | clarsimp | wp_once hoare_drop_imps)+
+       apply (wp | clarsimp | wp (once) hoare_drop_imps)+
   done
 
 lemma handleEvent_ksDomainTime_inv:

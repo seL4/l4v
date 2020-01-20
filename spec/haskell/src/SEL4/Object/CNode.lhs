@@ -551,11 +551,6 @@ The following function is used by the bootstrap code to create the initial set o
 >         mdbRevocable = True,
 >         mdbFirstBadged = True }))
 
-This function is used in the assertion above; it returns "True" if no reply capabilities (masters or otherwise) currently exist for the given thread. In the Haskell model, it always returns "True"; in the Isabelle formalisation of this model, it is strengthened to return "False" if a reply capability for the thread does exist.
-
-> noReplyCapsFor :: PPtr TCB -> KernelState -> Bool
-> noReplyCapsFor _ _ = True
-
 These functions concern the free indices of untyped caps. For verification reasons we also track the free ranges in a ghost variable, which must be updated appropriately when untyped caps might be changed.
 
 > updateTrackedFreeIndex :: PPtr CTE -> Int -> Kernel ()

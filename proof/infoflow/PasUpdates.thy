@@ -9,8 +9,10 @@
  *)
 
 
-text{* This file contains a bunch of lemmas about updating the "extrenal flag of a PAS.
-  The concerned flags are the current subject, MayEditReadyQueue and MayActivate *}
+text \<open>
+  Lemmas about updating the external flags of a PAS.
+  These flags are: pasSubject, pasMayEditReadyQueues and pasMayActivate.
+\<close>
 
 theory PasUpdates
 imports
@@ -21,24 +23,7 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-section {* Separation lemmas for the idle thread and domain fields *}
-
-crunch idle_thread[wp]: preemption_point "\<lambda>s::det_state. P (idle_thread s)"
-(wp: OR_choiceE_weak_wp crunch_wps simp: crunch_simps ignore: do_extended_op OR_choiceE)
-
-crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,
-                        cancel_badged_sends
-                        "\<lambda>s::det_state. P (idle_thread s)"
-  (   wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp
-          dxo_wp_weak
-    simp: crunch_simps check_cap_at_def filterM_mapM unless_def
-  ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
-
-crunch idle_thread[wp]: handle_event "\<lambda>s::det_state. P (idle_thread s)"
-  (  wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation dxo_wp_weak
-   simp: crunch_simps check_cap_at_def filterM_mapM unless_def
- ignore: without_preemption filterM rec_del check_cap_at cap_revoke resetTimer ackInterrupt
-         getFAR getDFSR getIFSR getActiveIRQ)
+section \<open>Separation lemmas for the idle thread and domain fields\<close>
 
 abbreviation (input) domain_fields
 where
@@ -57,9 +42,11 @@ crunch domain_fields[wp]: retype_region_ext,create_cap_ext,cap_insert_ext,ethrea
                           finalise_cap,cap_move,cap_swap,cap_delete,cancel_badged_sends,
                           cap_insert
                           "domain_fields P"
-  (   wp: syscall_valid select_wp crunch_wps rec_del_preservation cap_revoke_preservation modify_wp
-    simp: crunch_simps check_cap_at_def filterM_mapM unless_def
-  ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
+  (    wp: syscall_valid select_wp crunch_wps rec_del_preservation cap_revoke_preservation modify_wp
+     simp: crunch_simps check_cap_at_def filterM_mapM unless_def
+   ignore: without_preemption filterM rec_del check_cap_at cap_revoke
+   ignore_del: retype_region_ext create_cap_ext cap_insert_ext ethread_set cap_move_ext
+               empty_slot_ext cap_swap_ext set_thread_state_ext tcb_sched_action reschedule_required)
 
 lemma cap_revoke_domain_fields[wp]:"\<lbrace>domain_fields P\<rbrace> cap_revoke a \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
   by (rule cap_revoke_preservation2; wp)
@@ -70,15 +57,16 @@ lemma invoke_cnode_domain_fields[wp]: "\<lbrace>domain_fields P\<rbrace> invoke_
       | rule conjI)+
 
 crunch domain_fields[wp]:
-  set_domain,set_priority,set_extra_badge,
-  possible_switch_to,handle_send,handle_recv,handle_reply
+  set_domain,possible_switch_to,set_priority,set_extra_badge,
+  handle_send,handle_recv,handle_reply
   "domain_fields P"
   (wp: syscall_valid crunch_wps mapME_x_inv_wp
    simp: crunch_simps check_cap_at_def detype_def detype_ext_def mapM_x_defsym
    ignore: check_cap_at syscall
+   ignore_del: set_domain set_priority possible_switch_to
    rule: transfer_caps_loop_pres)
 
-section {* PAS wellformedness property for non-interference *}
+section \<open>PAS wellformedness property for non-interference\<close>
 
 definition pas_wellformed_noninterference where
   "pas_wellformed_noninterference aag \<equiv>
@@ -96,7 +84,7 @@ lemma pas_wellformed_noninterference_silc[intro!]:
   apply (fastforce simp: pas_wellformed_noninterference_def)
   done
 
-section {* PAS subject update *}
+section \<open>PAS subject update\<close>
 
 lemma pasObjectAbs_pasSubject_update:
   "pasObjectAbs (aag\<lparr> pasSubject := x \<rparr>) = pasObjectAbs aag"
@@ -191,7 +179,7 @@ lemma silc_inv_pasSubject_update:
   apply (fastforce intro: silc_inv_pasSubject_update' dest: pas_wellformed_noninterference_silc)
   done
 
-section {* PAS MayActivate update *}
+section \<open>PAS MayActivate update\<close>
 
 lemma prop_of_pasMayActivate_update_idemp:
   "\<lbrakk>P aag; pasMayActivate aag = v\<rbrakk> \<Longrightarrow> P (aag\<lparr> pasMayActivate := v \<rparr>)"
@@ -253,7 +241,12 @@ lemma guarded_pas_domainMayActivate_update[simp]:
   "guarded_pas_domain (aag\<lparr>pasMayActivate := False\<rparr>) = guarded_pas_domain aag"
   by (simp add: guarded_pas_domain_def)
 
-section {* PAS MayEditReadyQueue update *}
+lemma cdt_change_allowedMayActivate_update[simp]:
+  "cdt_change_allowed (aag\<lparr>pasMayActivate := x\<rparr>) =
+   cdt_change_allowed aag "
+  by (simp add: cdt_change_allowed_def[abs_def] cdt_direct_change_allowed.simps direct_call_def)
+
+section \<open>PAS MayEditReadyQueue update\<close>
 
 lemma prop_of_pasMayEditReadyQueues_update_idemp:
   "\<lbrakk>P aag; pasMayEditReadyQueues aag = v\<rbrakk> \<Longrightarrow> P (aag\<lparr> pasMayEditReadyQueues := v \<rparr>)"
@@ -316,6 +309,11 @@ lemma pas_refined_pasMayEditReadyQueues_update:
 lemma guarded_pas_domainMayEditReadyQueues_update[simp]:
   "guarded_pas_domain (aag\<lparr>pasMayEditReadyQueues := False\<rparr>) = guarded_pas_domain aag"
   by (simp add: guarded_pas_domain_def)
+
+lemma cdt_change_allowedMayEditReadyQueues_update[simp]:
+  "cdt_change_allowed (aag\<lparr>pasMayEditReadyQueues := x\<rparr>) =
+   cdt_change_allowed aag"
+  by (simp add: cdt_change_allowed_def[abs_def] cdt_direct_change_allowed.simps direct_call_def)
 
 end
 

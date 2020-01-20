@@ -420,7 +420,7 @@ lemma opt_cap_example_spec [simp]:
   "opt_cap (6, slot) example_spec = object_slots (CNode cnode_a1) slot"
   "opt_cap (7, slot) example_spec = object_slots (CNode cnode_a2) slot"
   "opt_cap (0xB, slot) example_spec = object_slots (CNode cnode_extra) slot"
-  by (auto simp: example_spec_def opt_cap_def slots_of_def opt_object_def
+  by (auto simp: example_spec_def opt_cap_def slots_of_def
                  map_add_def  irq_objects_def
           split: if_split_asm)
 
@@ -474,14 +474,14 @@ lemma slots_of_example_spec_obj_ids:
   (obj_id = pt_a_id) \<or>
   (obj_id = pd_b_id) \<or>
   (obj_id = 0x104))"
-  by (clarsimp simp: example_spec_def slots_of_def opt_object_def object_slots_def
+  by (clarsimp simp: example_spec_def slots_of_def object_slots_def
               split: if_split_asm)
 
 lemma irq_handler_cap_example_spec:
   "\<lbrakk>is_irqhandler_cap cap; opt_cap (obj_id, slot) example_spec = Some cap\<rbrakk>
   \<Longrightarrow> (obj_id = cnode_a2_id \<and> slot = 12) \<or>
       (obj_id = cnode_b_id \<and> slot = 254)"
-  by (clarsimp simp: example_spec_def opt_cap_def slots_of_def opt_object_def
+  by (clarsimp simp: example_spec_def opt_cap_def slots_of_def
                      object_slots_def empty_irq_node_def new_irq_node_def new_cnode_def
                      obj_defs new_cap_map_def empty_cap_map_def
               split: if_split_asm)
@@ -540,7 +540,7 @@ lemma well_formed_fake_pt_caps_unique_example:
   "well_formed_fake_pt_caps_unique example_spec"
    apply (clarsimp simp: well_formed_fake_pt_caps_unique_def
                          pd_at_example_spec)
-   apply (fastforce simp: example_spec_def opt_cap_def slots_of_def opt_object_def
+   apply (fastforce simp: example_spec_def opt_cap_def slots_of_def
                           object_slots_def is_fake_pt_cap_simps
                           pd_a_def pd_b_def new_cap_map_def irq_objects_def
                    split: if_split_asm option.splits)
@@ -576,30 +576,30 @@ lemma well_formed_cdt_example [simp]:
   apply (case_tac "(obj_id = cnode_a2_id \<and> slot = 0) \<or>
                    (obj_id = cnode_b_id \<and> slot = 4)")
    apply (rule_tac x=cnode_extra_id in exI, clarsimp, rule conjI)
-    subgoal by (fastforce simp: example_spec_def cnode_defs opt_object_def
+    subgoal by (fastforce simp: example_spec_def cnode_defs
                     split: if_split_asm)
    apply (rule_tac x=1 in exI)
    apply (clarsimp simp: is_orig_cap_example_spec)
-   apply (clarsimp simp: example_spec_def opt_cap_def slots_of_def opt_object_def
+   apply (clarsimp simp: example_spec_def opt_cap_def slots_of_def
                          cnode_defs object_slots_def new_cnode_def new_cap_map_def
                          irq_objects_def map_add_def empty_irq_node_def
                   split: if_split_asm)
   apply (case_tac "(obj_id = cnode_a2_id \<and> slot = 10)")
    apply (rule_tac x=cnode_extra_id in exI, clarsimp, rule conjI)
-    apply (fastforce simp: example_spec_def cnode_defs opt_object_def
+    apply (fastforce simp: example_spec_def cnode_defs
                     split: if_split_asm)
    apply (rule_tac x=2 in exI)
    apply (clarsimp simp: is_orig_cap_example_spec)
-   apply (clarsimp simp: example_spec_def opt_cap_def slots_of_def opt_object_def
+   apply (clarsimp simp: example_spec_def opt_cap_def slots_of_def
                          cnode_defs object_slots_def new_cnode_def new_cap_map_def
                          irq_objects_def map_add_def empty_irq_node_def
                   split: if_split_asm)
   apply clarsimp
   apply (rule_tac x=obj_id in exI, clarsimp, rule conjI)
-   apply (clarsimp simp: example_spec_def cnode_defs opt_object_def
+   apply (clarsimp simp: example_spec_def cnode_defs
                   dest!: object_slots_new_cnode_D
                   split: if_split_asm)
-  apply (fastforce simp: is_orig_cap_example_spec opt_cap_def slots_of_def opt_object_def)
+  apply (fastforce simp: is_orig_cap_example_spec opt_cap_def slots_of_def)
   done
 
 lemma well_formed_orig_cap_example [simp]:
@@ -742,7 +742,7 @@ lemma well_formed_cap_to_object_example:
    apply (clarsimp simp: example_spec_def)
   apply clarsimp
   apply (clarsimp simp: example_spec_def)
-  by (clarsimp simp: opt_cap_def slots_of_def opt_object_def obj_defs
+  by (clarsimp simp: opt_cap_def slots_of_def obj_defs
                         object_slots_def object_size_bits_def
                         new_cap_map_def empty_cap_map_def frame_cap_not_cnode
                         empty_irq_node_def new_irq_node_def
@@ -755,7 +755,7 @@ lemma well_formed_cap_to_non_empty_pt_example:
   apply (clarsimp simp: well_formed_cap_to_non_empty_pt_def pt_at_example_spec)
   apply (rule exI [where x=pd_a_id])
   apply (clarsimp simp: well_formed_cap_to_non_empty_pt_def example_spec_def is_pt_def
-                        object_at_def opt_cap_def slots_of_def object_slots_def opt_object_def
+                        object_at_def opt_cap_def slots_of_def object_slots_def
                         obj_defs new_cap_map_def is_pd_def empty_cap_map_def
               split: if_split_asm)
   done
@@ -782,7 +782,7 @@ lemma well_formed_irqhandler_caps_unique_example_spec:
   "well_formed_irqhandler_caps_unique example_spec"
   apply (clarsimp simp: well_formed_irqhandler_caps_unique_def)
   apply (drule (1) irq_handler_cap_example_spec)+
-  by (clarsimp simp: example_spec_def opt_cap_def slots_of_def opt_object_def
+  by (clarsimp simp: example_spec_def opt_cap_def slots_of_def
                         object_slots_def obj_defs
                         new_cnode_def new_cap_map_def
                  split: if_split_asm)
@@ -815,7 +815,7 @@ lemma bound_irqs_example_spec [simp]:
   apply rule
    apply clarsimp
    apply (erule (1) slots_of_example_irq_node)
-  apply (clarsimp simp: example_spec_def slots_of_def opt_object_def
+  apply (clarsimp simp: example_spec_def slots_of_def
                         object_slots_def new_irq_node_def)
   done
 
@@ -893,7 +893,7 @@ lemma well_formed_example:
   by (auto simp: example_spec_def object_size_bits_def object_default_state_def2
                     pd_size_def word_bits_def empty_cnode_def is_cnode_def
                     object_slots_def empty_cap_map_def tcb_slot_defs slots_of_def
-                    default_tcb_def obj_defs cap_at_def opt_cap_def opt_object_def
+                    default_tcb_def obj_defs cap_at_def opt_cap_def
                     small_frame_size_def small_section_size_def pt_size_def
                     new_cnode_def new_cap_map_def empty_irq_node_def
                     new_irq_node_def

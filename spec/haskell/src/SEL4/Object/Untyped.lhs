@@ -51,14 +51,6 @@ We start by defining a simple function to align one value to a power-of-two boun
 > alignUp baseValue alignment =
 >   (baseValue + (1 `shiftL` alignment) - 1) .&. complement (mask alignment)
 
-The range of allowable sizes for Untyped objects depends on the word size.
-
-> minUntypedSizeBits :: Int
-> minUntypedSizeBits = 4
-
-> maxUntypedSizeBits :: Int
-> maxUntypedSizeBits = wordSizeCase 29 47
-
 The expected parameters are the type of the new objects, the size of the requested objects (for those with variable size), a capability to a capability space, index and depth used to locate the destination for the new capabilities, and the maximum number of new capabilities to be created. When successful, it returns the number of new objects or regions created.
 
 > decodeUntypedInvocation :: Word -> [Word] -> PPtr CTE -> Capability ->

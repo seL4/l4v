@@ -174,7 +174,8 @@ lemma cap_get_tag_EndpointCap:
         (capEPBadge_CL (cap_endpoint_cap_lift cap'))
         (to_bool (capCanSend_CL (cap_endpoint_cap_lift cap')))
         (to_bool (capCanReceive_CL (cap_endpoint_cap_lift cap')))
-        (to_bool (capCanGrant_CL (cap_endpoint_cap_lift cap'))))"
+        (to_bool (capCanGrant_CL (cap_endpoint_cap_lift cap')))
+        (to_bool (capCanGrantReply_CL (cap_endpoint_cap_lift cap'))))"
   using cr
   apply -
   apply (rule iffI)
@@ -248,7 +249,8 @@ lemma cap_get_tag_ReplyCap:
   shows "(cap_get_tag cap' = scast cap_reply_cap) =
   (cap =
       ReplyCap (ctcb_ptr_to_tcb_ptr (Ptr (cap_reply_cap_CL.capTCBPtr_CL (cap_reply_cap_lift cap'))))
-               (to_bool (capReplyMaster_CL (cap_reply_cap_lift cap'))))"
+               (to_bool (capReplyMaster_CL (cap_reply_cap_lift cap')))
+               (to_bool (capReplyCanGrant_CL (cap_reply_cap_lift cap'))))"
   using cr
   apply -
   apply (rule iffI)
@@ -982,12 +984,12 @@ proof -
 qed
 
 lemma mdbNext_not_zero_eq:
-  "cmdbnode_relation n n' \<Longrightarrow> \<forall>s s'. (s, s') \<in> rf_sr (*ja \<and> (is_aligned (mdbNext n) 3)*)
+  "cmdbnode_relation n n' \<Longrightarrow> \<forall>s s'. (s, s') \<in> rf_sr \<comment> \<open>ja \<and> (is_aligned (mdbNext n) 3)\<close>
   \<longrightarrow> (mdbNext n \<noteq> 0) = (s' \<in> {_. mdbNext_CL (mdb_node_lift n') \<noteq> 0})"
   by (fastforce elim: cmdbnode_relationE)
 
 lemma mdbPrev_not_zero_eq:
-  "cmdbnode_relation n n' \<Longrightarrow> \<forall>s s'. (s, s') \<in> rf_sr (*ja\<and> (is_aligned (mdbPrev n) 3)*)
+  "cmdbnode_relation n n' \<Longrightarrow> \<forall>s s'. (s, s') \<in> rf_sr \<comment> \<open>ja\<and> (is_aligned (mdbPrev n) 3)\<close>
   \<longrightarrow> (mdbPrev n \<noteq> 0) = (s' \<in> {_. mdbPrev_CL (mdb_node_lift n') \<noteq> 0})"
   by (fastforce elim: cmdbnode_relationE)
 
@@ -1831,8 +1833,8 @@ where
   | "thread_state_to_tsType (Structures_H.Inactive) = scast ThreadState_Inactive"
   | "thread_state_to_tsType (Structures_H.IdleThreadState) = scast ThreadState_IdleThreadState"
   | "thread_state_to_tsType (Structures_H.BlockedOnReply) = scast ThreadState_BlockedOnReply"
-  | "thread_state_to_tsType (Structures_H.BlockedOnReceive oref) = scast ThreadState_BlockedOnReceive"
-  | "thread_state_to_tsType (Structures_H.BlockedOnSend oref badge cg isc) = scast ThreadState_BlockedOnSend"
+  | "thread_state_to_tsType (Structures_H.BlockedOnReceive oref cg) = scast ThreadState_BlockedOnReceive"
+  | "thread_state_to_tsType (Structures_H.BlockedOnSend oref badge cg cgr isc) = scast ThreadState_BlockedOnSend"
   | "thread_state_to_tsType (Structures_H.BlockedOnNotification oref) = scast ThreadState_BlockedOnNotification"
 
 
@@ -1858,7 +1860,8 @@ definition
   cap_rights_from_word_canon :: "machine_word \<Rightarrow> seL4_CapRights_CL"
   where
   "cap_rights_from_word_canon wd \<equiv>
-    \<lparr> capAllowGrant_CL = from_bool (wd !! 2),
+    \<lparr> capAllowGrantReply_CL = from_bool (wd !! 3),
+      capAllowGrant_CL = from_bool (wd !! 2),
       capAllowRead_CL = from_bool (wd !! 1),
       capAllowWrite_CL = from_bool (wd !! 0)\<rparr>"
 
@@ -1866,6 +1869,7 @@ definition
   cap_rights_from_word :: "machine_word \<Rightarrow> seL4_CapRights_CL"
   where
   "cap_rights_from_word wd \<equiv> SOME cr.
+   to_bool (capAllowGrantReply_CL cr) = wd !! 3 \<and>
    to_bool (capAllowGrant_CL cr) = wd !! 2 \<and>
    to_bool (capAllowRead_CL cr) = wd !! 1 \<and>
    to_bool (capAllowWrite_CL cr) = wd !! 0"
@@ -2133,11 +2137,11 @@ lemma cap_get_tag_isCap_unfolded_H_cap:
   shows "ccap_relation (capability.ThreadCap v0) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_thread_cap)"
   and "ccap_relation (capability.NullCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_null_cap)"
   and "ccap_relation (capability.NotificationCap v4 v5 v6 v7) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_notification_cap) "
-  and "ccap_relation (capability.EndpointCap v8 v9 v10 v11 v12) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_endpoint_cap)"
+  and "ccap_relation (capability.EndpointCap v8 v9 v10 v10b v11 v12) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_endpoint_cap)"
   and "ccap_relation (capability.IRQHandlerCap v13) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_handler_cap)"
   and "ccap_relation (capability.IRQControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_control_cap)"
   and "ccap_relation (capability.Zombie v14 v15 v16) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_zombie_cap)"
-  and "ccap_relation (capability.ReplyCap v17 v18) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_reply_cap)"
+  and "ccap_relation (capability.ReplyCap v17 v18 vr18b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_reply_cap)"
   and "ccap_relation (capability.UntypedCap v100 v19 v20 v20b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_untyped_cap)"
   and "ccap_relation (capability.CNodeCap v21 v22 v23 v24) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_cnode_cap)"
   and "ccap_relation (capability.DomainCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_domain_cap)"
@@ -2257,7 +2261,7 @@ lemma cap_lift_Some_CapD:
   by (auto simp: cap_lifts cap_lift_defs)
 
 lemma rf_sr_x64KSSKIMPML4:
-  "(s, s') \<in> rf_sr \<Longrightarrow> x64KSSKIMPML4 (ksArchState s) = symbol_table ''x64KSSKIMPML4''"
+  "(s, s') \<in> rf_sr \<Longrightarrow> x64KSSKIMPML4 (ksArchState s) = ptr_val x64KSSKIMPML4_Ptr"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
 
 lemma ghost_assertion_size_logic':

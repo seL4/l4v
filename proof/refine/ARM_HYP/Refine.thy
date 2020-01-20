@@ -22,7 +22,7 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-text {* User memory content is the same on both levels *}
+text \<open>User memory content is the same on both levels\<close>
 lemma typ_at_AUserDataI:
   "\<lbrakk> typ_at (AArch (AUserData sz)) p s; pspace_relation (kheap s) (ksPSpace s');
      pspace_aligned' s'; pspace_distinct' s'; n < 2 ^ (pageBitsForSize sz - pageBits) \<rbrakk>
@@ -219,7 +219,7 @@ shows "absKState s' = abs_state s"
   apply (rule absExst_correct, simp+)
   done
 
-text {* The top-level invariance *}
+text \<open>The top-level invariance\<close>
 
 lemma set_thread_state_sched_act:
   "\<lbrace>(\<lambda>s. runnable state) and (\<lambda>s. P (scheduler_action s))\<rbrace>
@@ -338,9 +338,7 @@ lemma do_user_op_invs2:
 lemma thread_set_ct_idle:
   "(\<And>tcb. tcb_state (f tcb) = tcb_state tcb) \<Longrightarrow>
   \<lbrace>ct_idle\<rbrace> thread_set f t \<lbrace>\<lambda>rv. ct_idle\<rbrace>"
-  by (clarsimp simp: thread_set_def set_object_def get_tcb_def
-                     ct_in_state_def st_tcb_at_def obj_at_def
-    | wp)+
+  by (simp add: thread_set_ct_in_state)
 
 lemma ct_running_irq_state_independent[intro!, simp]:
   "ct_running (s \<lparr>machine_state := machine_state s \<lparr>irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)
@@ -452,10 +450,6 @@ lemma ckernel_invs:
           | strengthen non_kernel_IRQs_strg[where Q=True, simplified], simp cong: conj_cong)+
   done
 
-lemma doMachineOp_sch_act_simple:
-  "\<lbrace>sch_act_simple\<rbrace> doMachineOp f \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
-  by (simp add: sch_act_simple_def) wp
-
 lemma doMachineOp_ct_running':
   "\<lbrace>ct_running'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. ct_running'\<rbrace>"
   apply (simp add: ct_in_state'_def doMachineOp_def split_def)
@@ -556,7 +550,7 @@ lemma doUserOp_invs':
         (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
   apply (wp device_update_invs' doMachineOp_ct_running' select_wp
-    | (wp_once dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
+    | (wp (once) dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
                                        user_memory_update_def))+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def
@@ -581,7 +575,7 @@ lemma Ex_Some_conv:
   "((\<exists>y. x = Some y) \<longrightarrow> P x) = (\<forall>y. x = Some y \<longrightarrow> P (Some y))"
   by auto
 
-text {* The top-level correspondence *}
+text \<open>The top-level correspondence\<close>
 
 lemma kernel_corres:
   "corres dc (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle)
@@ -608,7 +602,7 @@ lemma kernel_corres:
            apply simp
            apply (rule handle_interrupt_corres)
           apply simp
-          apply (wp hoare_drop_imps)[1]
+          apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
          apply simp
          apply (rule_tac Q="\<lambda>irq s. irq \<notin> Some ` non_kernel_IRQs \<and> invs' s \<and>
                               (\<forall>irq'. irq = Some irq' \<longrightarrow>
@@ -758,9 +752,6 @@ lemma valid_corres_combined:
   shows "valid ?P f' (\<lambda>r' s'. \<exists>r s. (s,s') \<in> sr \<and> Q r s \<and> Q' r' s' \<and> rr r r')"
   using assms
   by (fastforce simp: valid_def corres_underlying_def split_def)
-
-(* FIXME: move *)
-lemma fw_sim_LI: "fw_sim r C A = LI A C r UNIV" by (simp add: fw_sim_def LI_def)
 
 definition
   "full_invs' \<equiv> {((tc,s),m,e). invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and>
@@ -970,7 +961,7 @@ lemma ckernel_invariant:
   apply (fastforce simp: ex_abs_def)
   done
 
-text {* The top-level theorem *}
+text \<open>The top-level theorem\<close>
 
 lemma fw_sim_A_H:
   "LI (ADT_A uop)

@@ -671,7 +671,7 @@ lemma threadSet_all_invs_triv':
               thread_set_ct_idle
            | simp add: tcb_cap_cases_def tcb_arch_ref_def
            | rule threadSet_ct_in_state'
-           | wp_once hoare_vcg_disj_lift)+
+           | wp (once) hoare_vcg_disj_lift)+
   apply clarsimp
   apply (rule exI, rule conjI, assumption)
   apply (clarsimp simp: invs_def invs'_def cur_tcb_def cur_tcb'_def)

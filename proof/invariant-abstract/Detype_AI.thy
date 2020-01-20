@@ -92,7 +92,7 @@ definition
   obj_reply_refs :: "cap \<Rightarrow> machine_word set"
 where
  "obj_reply_refs cap \<equiv> obj_refs cap \<union>
-   (case cap of cap.ReplyCap t \<Rightarrow> {t} | _ \<Rightarrow> {})"
+   (case cap of cap.ReplyCap t R \<Rightarrow> {t} | _ \<Rightarrow> {})"
 
 
 lemma ex_cte_cap_to_obj_ref_disj:
@@ -451,16 +451,6 @@ lemma no_obj_refs:
   apply (simp add:cap_range_def)
   apply blast
   done
-
-lemma unique_table_refs:
-    "\<And>cps P. unique_table_refs cps
-             \<Longrightarrow> unique_table_refs (\<lambda>x. if P x then None else cps x)"
-    apply (simp only: unique_table_refs_def option.simps
-                      simp_thms
-               split: if_split)
-    apply blast
-    done
-
 
 lemma valid_pspace: "valid_pspace s" using invs
   by (simp add: invs_def valid_state_def)

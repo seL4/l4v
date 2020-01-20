@@ -257,14 +257,6 @@ where
     | _ \<Rightarrow> Nothing)"
 
 definition
-  transform_intent_page_remap :: "word32 list \<Rightarrow> cdl_page_intent option"
-where
-  "transform_intent_page_remap args =
-    (case args of
-      rightsW#attr#_ \<Rightarrow> Some (PageRemapIntent (data_to_rights rightsW) attr)
-    | _ \<Rightarrow> Nothing)"
-
-definition
   transform_intent_domain :: "word32 list \<Rightarrow> cdl_domain_intent option"
 where
   "transform_intent_domain args =
@@ -362,9 +354,6 @@ definition
     | ArchInvocationLabel ARMPageMap \<Rightarrow>
                           map_option PageIntent
                                    (transform_intent_page_map args)
-    | ArchInvocationLabel ARMPageRemap \<Rightarrow>
-                          map_option PageIntent
-                                   (transform_intent_page_remap args)
     | ArchInvocationLabel ARMPageUnmap \<Rightarrow> Some (PageIntent PageUnmapIntent)
     | ArchInvocationLabel ARMPageClean_Data \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
     | ArchInvocationLabel ARMPageInvalidate_Data  \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
@@ -542,17 +531,17 @@ lemma transform_intent_isnot_TcbIntent:
           (label \<noteq> TCBUnbindNotification) \<and>
           (label \<noteq> TCBSetTLSBase))"
   apply(rule iffI)
-   apply(erule contrapos_np)
-   apply(clarsimp simp: transform_intent_def)
-   apply(case_labels label)
-                                    apply(simp_all)
-          apply(fastforce simp: transform_intent_tcb_defs
-                                option_map_def
-                         split: list.split)+
+   subgoal
+     apply(erule contrapos_np)
+     apply(clarsimp simp: transform_intent_def)
+     apply(case_labels label; simp)
+     apply(fastforce simp: transform_intent_tcb_defs option_map_def
+                    split: list.split)+
+     done
   apply(unfold transform_intent_def)
   apply(case_labels label, simp_all add: option_map_def split: option.split)
-  apply (auto simp: transform_intent_tcb_defs
-                 split:  list.splits arch_invocation_label.splits)
+  apply(auto simp: transform_intent_tcb_defs
+            split: list.splits arch_invocation_label.splits)
 done
 
 (*
@@ -622,8 +611,8 @@ where
         Types_D.EndpointCap ptr badge cap_rights_
     | Structures_A.NotificationCap ptr badge cap_rights_ \<Rightarrow>
         Types_D.NotificationCap ptr badge cap_rights_
-    | Structures_A.ReplyCap ptr is_master \<Rightarrow>
-        if is_master then Types_D.MasterReplyCap ptr else Types_D.ReplyCap ptr
+    | Structures_A.ReplyCap ptr is_master cap_rights_ \<Rightarrow>
+        if is_master then Types_D.MasterReplyCap ptr else Types_D.ReplyCap ptr cap_rights_
     | Structures_A.CNodeCap ptr size_bits guard \<Rightarrow>
         Types_D.CNodeCap ptr (of_bl guard) (length guard) size_bits
     | Structures_A.ThreadCap ptr \<Rightarrow>
@@ -707,16 +696,17 @@ definition
 where
   "infer_tcb_pending_op ptr t \<equiv>
     case t of
-        Structures_A.BlockedOnReceive ptr \<Rightarrow>
-          PendingSyncRecvCap ptr False
+        Structures_A.BlockedOnReceive ptr payload \<Rightarrow>
+          PendingSyncRecvCap ptr False (receiver_can_grant payload)
 
-      |Structures_A.BlockedOnReply \<Rightarrow>
-          PendingSyncRecvCap ptr True
+      | Structures_A.BlockedOnReply \<Rightarrow>
+          PendingSyncRecvCap ptr True False
 
       | Structures_A.BlockedOnSend ptr payload \<Rightarrow>
           PendingSyncSendCap ptr
               (sender_badge payload) (sender_is_call payload)
-              (sender_can_grant payload) False
+              (sender_can_grant payload) (sender_can_grant_reply payload)
+              False
 
       | Structures_A.BlockedOnNotification ptr \<Rightarrow>
           PendingNtfnRecvCap ptr

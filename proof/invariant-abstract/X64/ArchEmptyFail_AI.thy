@@ -155,7 +155,7 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slo
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits
-         forM_x_def empty_fail_mapM_x update_object_def
+         forM_x_def empty_fail_mapM_x set_object_def
    ignore: nativeThreadUsingFPU_impl switchFpuOwner_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: setRegister, setNextPC
@@ -192,6 +192,10 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   qed
 
 context Arch begin global_naming X64
+
+crunch (empty_fail) empty_fail[wp,EmptyFail_AI_assms]: possible_switch_to
+  (ignore_del: possible_switch_to)
+
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_thread
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits
@@ -199,7 +203,7 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_t
          thread_state.splits endpoint.splits catch_def sum.splits cnode_invocation.splits
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
          asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits
-         page_directory_invocation.splits update_object_def
+         page_directory_invocation.splits set_object_def
    ignore: resetTimer_impl)
 end
 

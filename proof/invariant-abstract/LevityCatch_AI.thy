@@ -35,11 +35,6 @@ lemma obj_ref_elemD:
   "r \<in> obj_refs cap \<Longrightarrow> obj_refs cap = {r}"
   by (cases cap, simp_all)
 
-
-definition
-  "diminished cap cap' \<equiv> \<exists>R. cap = mask_cap R cap'"
-
-
 lemma const_on_failure_wp :
   "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>rv. Q n\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> const_on_failure n m \<lbrace>Q\<rbrace>"
   apply (simp add: const_on_failure_def)

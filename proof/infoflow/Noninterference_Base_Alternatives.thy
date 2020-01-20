@@ -13,11 +13,11 @@ imports Noninterference_Base "Lib.Eisbach_Methods"
 begin
 
 
-text {*
+text \<open>
   This theory explores a bunch of alternative definitions for the @{term sources}
   and @{term ipurge} functions that are the basis of our noninterference formulation
   and shows that they all turn out to yield equivalent noninterference properties.
-*}
+\<close>
 context noninterference_system begin
 
 

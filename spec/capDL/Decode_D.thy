@@ -116,11 +116,11 @@ definition
 where
   "decode_invocation invoked_cap invoked_cap_ref caps intent \<equiv>
     case invoked_cap of
-       (* For endpoint-like caps, we always perform an operation,
-        * regardless of the user's actual intent. *)
+       \<comment> \<open>For endpoint-like caps, we always perform an operation,
+          regardless of the user's actual intent.\<close>
          EndpointCap o_id badge rights \<Rightarrow>
            (if Write \<in> rights then
-             returnOk $ InvokeEndpoint (SyncMessage badge (Grant \<in> rights) o_id)
+             returnOk $ InvokeEndpoint (SyncMessage badge (Grant \<in> rights) (GrantReply \<in> rights) o_id)
            else
              throw)
        | NotificationCap o_id badge rights \<Rightarrow>
@@ -128,20 +128,20 @@ where
              returnOk $ InvokeNotification (Signal badge o_id)
            else
              throw)
-       | ReplyCap o_id\<Rightarrow>
-           returnOk $ InvokeReply (ReplyMessage o_id invoked_cap_ref)
+       | ReplyCap o_id rights \<Rightarrow>
+           returnOk $ InvokeReply (ReplyMessage o_id invoked_cap_ref (Grant \<in> rights))
 
-       (*
-        * For other operations, we only perform the user's intent
-        * if it matches up with the cap.
-        *
-        * Note that this does not currently match the current
-        * implementation: instead, the user's message will be
-        * decoded into a new (undefined) intent for what the
-        * cap happened to be. I propose modifying labels used to
-        * avoid overlaps between different items so that we can
-        * recognise when the user is invoking the wrong item.
-        *)
+       \<comment> \<open>
+         For other operations, we only perform the user's intent
+         if it matches up with the cap.
+        
+         Note that this does not currently match the current
+         implementation: instead, the user's message will be
+         decoded into a new (undefined) intent for what the
+         cap happened to be. I propose modifying labels used to
+         avoid overlaps between different items so that we can
+         recognise when the user is invoking the wrong item.
+       \<close>
        | CNodeCap _ _ _ _ \<Rightarrow>
            doE
              cnode_intent \<leftarrow> throw_opt undefined $ get_cnode_intent intent;
@@ -206,7 +206,7 @@ where
             liftME InvokeDomain $ decode_domain_invocation caps domain_intent
           odE
 
-       (* Don't support operations on other types of caps. *)
+       \<comment> \<open>Don't support operations on other types of caps.\<close>
        | _ \<Rightarrow> throw"
 
 end

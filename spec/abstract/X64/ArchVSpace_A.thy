@@ -134,7 +134,7 @@ find_vspace_for_asid_assert :: "asid \<Rightarrow> (obj_ref,'z::state_ext) s_mon
 
 text \<open>Format a VM fault message to be passed to a thread's supervisor after
 it encounters a page fault.\<close>
-fun
+definition
 handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit,'z::state_ext) f_monad"
 where
 "handle_vm_fault thread fault_type = doE
@@ -386,8 +386,8 @@ where
    | PageCap dev r R mt pgs x \<Rightarrow> returnOk $ ArchObjectCap (PageCap dev r R VMNoMap pgs None)
    | ASIDControlCap \<Rightarrow> returnOk (ArchObjectCap c)
    | ASIDPoolCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)
-\<comment> \<open>FIXME x64-vtd:\<close>
-\<comment> \<open>| IOSpaceCap _ _ \<Rightarrow> returnOk c
+\<^cancel>\<open>FIXME x64-vtd:
+   | IOSpaceCap _ _ \<Rightarrow> returnOk c
    | IOPageTableCap _ _ _ \<Rightarrow> returnOk c\<close>
    | IOPortCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)
    | IOPortControlCap \<Rightarrow> returnOk NullCap"
@@ -430,7 +430,7 @@ where
      return (NullCap, NullCap)
   od
   | (IOPortCap f l, True) \<Rightarrow> return (NullCap, (ArchObjectCap (IOPortCap f l)))
-  \<comment> \<open>FIXME x64-vtd: IOSpaceCap and IOPageTableCap for arch_finalise_cap\<close>
+  \<comment> \<open>FIXME x64-vtd: IOSpaceCap and IOPageTableCap for @{text arch_finalise_cap}\<close>
   | _ \<Rightarrow> return (NullCap, NullCap)"
 
 

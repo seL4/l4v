@@ -22,7 +22,7 @@ imports
   "../Map_Extra"
 begin
 
-text {*
+text \<open>
   Example instantiation of the abstract separation algebra to the sliced-memory
   model used for building a separation logic in ``Verification of Programs in
   Virtual Memory Using Separation Logic'' (PhD Thesis) by Rafal Kolanski.
@@ -37,7 +37,7 @@ text {*
   0 for the monoid.
   This models multiple page tables in memory, whereas the original logic was
   only capable of one at a time.
-*}
+\<close>
 
 datatype ('p,'v,'value,'r) vm_sep_state
   = VMSepState "((('p \<times> 'v) \<rightharpoonup> 'value) \<times> 'r set)"

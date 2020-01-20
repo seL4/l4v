@@ -142,11 +142,11 @@ lemma threadGet_obj_at2:
   done
 
 lemma register_from_H_less:
-  "register_from_H hr < 23"
+  "register_from_H hr < 24"
   by (cases hr, simp_all add: "StrictC'_register_defs")
 
 lemma register_from_H_sless:
-  "register_from_H hr <s 23"
+  "register_from_H hr <s 24"
   by (cases hr, simp_all add: "StrictC'_register_defs" word_sless_def word_sle_def)
 
 lemma register_from_H_0_sle[simp]:
