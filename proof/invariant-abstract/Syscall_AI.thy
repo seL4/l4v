@@ -1123,7 +1123,7 @@ lemma hinv_invs':
   assumes sts_Q[wp]:
     "\<And>a b. \<lbrace>invs and Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   shows
-    "\<lbrace>invs and Q and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
+    "\<lbrace>invs and Q and (\<lambda>s. scheduler_action s = resume_cur_thread) and
       (\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)\<rbrace>
        handle_invocation calling blocking can_donate first_phase cptr
      \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>"
@@ -1147,6 +1147,7 @@ lemma hinv_invs':
       apply (rule hoare_vcg_E_elim)
        apply (wpsimp wp: decode_inv_inv simp: if_apply_def2)+
   apply (auto simp: ct_in_state_def cur_sc_tcb_invs fault_tcbs_valid_states_active
+                    is_schedulable_bool_def'
               dest: invs_fault_tcbs_valid_states
               elim: st_tcb_ex_cap)
   done
@@ -1187,13 +1188,13 @@ lemma hs_tcb_on_err:
   done
 
 lemma hs_invs[wp]:
-  "\<lbrace>invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
+  "\<lbrace>invs and (\<lambda>s. scheduler_action s = resume_cur_thread) and
     (\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)\<rbrace>
      handle_send blocking
    \<lbrace>\<lambda>r. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (rule validE_valid)
   apply (simp add: handle_send_def whenE_def)
-  apply (wp | simp add: ct_in_state_def tcb_at_invs)+
+  apply (wp | simp add: tcb_at_invs)+
   done
 
 end
@@ -1398,7 +1399,7 @@ lemma do_reply_transfer_nonz_cap:
       | rule conjI)+
 
 lemma hc_invs[wp]:
-  "\<lbrace>invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
+  "\<lbrace>invs and (\<lambda>s. scheduler_action s = resume_cur_thread) and
     (\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)\<rbrace>
      handle_call
    \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
@@ -1410,11 +1411,10 @@ lemma select_insert:
   "select (insert x X) = (return x \<sqinter> select X)"
   by (simp add: alternative_def select_def return_def)
 
-lemma update_time_stamp_is_schedulable_bool [wp]:
-  "\<lbrace>\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
-     update_time_stamp
-   \<lbrace>\<lambda>rv s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>"
-  by (wpsimp simp: update_time_stamp_def do_machine_op_def is_schedulable_bool_def
+lemma update_time_stamp_ct_in_release_queue [wp]:
+  "update_time_stamp
+   \<lbrace>\<lambda>s. P (in_release_queue (cur_thread s) s)\<rbrace>"
+  by (wpsimp simp: update_time_stamp_def do_machine_op_def
                    is_sc_active_def get_tcb_def in_release_queue_def
             split: option.splits)
 
@@ -1433,8 +1433,14 @@ crunches update_time_stamp
   for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   and ct_in_state[wp]: "ct_in_state P"
+  and sc_at_pred_n[wp]: "\<lambda>s. Q (sc_at_pred_n N proj P p s)"
   and pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at p P t s)"
   and pred_tcb_at_ct[wp]: "\<lambda>s. pred_tcb_at p P (cur_thread s) s"
+
+lemma update_time_stamp_ct_is_schedulable_bool [wp]:
+  "update_time_stamp
+   \<lbrace>\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>"
+  by (wpsimp simp: is_schedulable_bool_def' wp: hoare_vcg_ex_lift)
 
 crunches thread_set
   for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
@@ -1650,7 +1656,7 @@ lemma handle_invocation_not_blocking_not_calling_first_phase_ct_active[wp]:
 
 lemma he_invs[wp]:
   "\<And>e.
-    \<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_active s) \<and>
+    \<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and>
          scheduler_action s = resume_cur_thread \<and>
          is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
       handle_event e
@@ -1663,7 +1669,7 @@ lemma he_invs[wp]:
                           simp: if_apply_def2 valid_fault_def
                      | wps
                      | fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
-                                elim!: st_tcb_ex_cap)+
+                                elim!: st_tcb_ex_cap dest: active_from_running)+
 
 end
 

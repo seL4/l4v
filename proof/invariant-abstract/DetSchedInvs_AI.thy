@@ -2565,7 +2565,7 @@ lemma valid_sched_released_ipc_queues:
   "valid_sched s \<Longrightarrow> released_ipc_queues s"
   by (clarsimp simp: valid_sched_def)
 
-lemma valid_sched_active_sc_valid_refills:
+lemma valid_sched_active_sc_valid_refills[elim]:
   "valid_sched s \<Longrightarrow> active_sc_valid_refills s" by (simp add: valid_sched_def)
 
 lemma valid_sched_imp_except_blocked:
@@ -3116,6 +3116,14 @@ lemma cur_sc_tcb_only_sym_bound_lift_pre_conj:
       | wps A B)+
 
 lemmas cur_sc_tcb_only_sym_bound_lift = cur_sc_tcb_only_sym_bound_lift_pre_conj[where R=\<top>, simplified]
+
+lemma active_sc_tcb_at_fold:
+  "(\<exists>scp. bound_sc_tcb_at (\<lambda>x. x = Some scp) t s \<and> sc_at_pred sc_active scp s)
+   = active_sc_tcb_at t s"
+  apply (intro iffI)
+  apply (clarsimp simp: pred_tcb_at_def sc_at_pred_n_def obj_at_def vs_all_heap_simps is_sc_active_def2 split: option.splits)
+  apply (fastforce simp: pred_tcb_at_def sc_at_pred_n_def obj_at_def vs_all_heap_simps is_sc_active_def2 split: option.splits)
+  done
 
 \<comment> \<open>Locales that generate various traditional obj_at lemmas from valid_sched_pred etc.\<close>
 

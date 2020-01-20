@@ -2323,6 +2323,28 @@ lemma schedulable_unfold: "tcb_at tp s \<Longrightarrow> (the (is_schedulable_op
 lemma in_q_not_schedulable[simp]: "tcb_at tp s \<Longrightarrow> is_schedulable_opt tp True s = (Some False)"
   by (clarsimp simp: is_schedulable_opt_def get_tcb_ko_at obj_at_def is_tcb split: option.splits)
 
+lemma is_sc_active_def2:
+  "(is_sc_active scp s) = (\<exists>sc n. kheap s scp = Some (SchedContext sc n) \<and> sc_active sc)"
+  unfolding is_sc_active_def
+  apply (clarsimp split: option.splits)
+  apply (case_tac x2; simp)
+  done
+
+lemma is_schedulable_bool_def':
+  "is_schedulable_bool t inr s = ((\<exists>scp. bound_sc_tcb_at (\<lambda>x. x = Some scp) t s
+                                   \<and> sc_at_pred sc_active scp s)
+                                  \<and> st_tcb_at active t s
+                                  \<and> \<not>inr)"
+  unfolding is_schedulable_bool_def
+  apply (rule iffI)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_sc_active_def2 active_sc_def sc_at_pred_n_def
+                         runnable_eq_active split: option.splits
+                   dest!: get_tcb_SomeD)
+  apply (fastforce simp: pred_tcb_at_def obj_at_def is_sc_active_def2 active_sc_def get_tcb_def sc_at_pred_n_def
+                        runnable_eq_active split: option.splits
+                  dest!: get_tcb_SomeD)
+  done
+
 lemma update_sched_context_obj_at_impossible:
   "\<lbrakk> \<And>np n. \<not> (P (SchedContext np n)) \<rbrakk> \<Longrightarrow>
        \<lbrace>\<lambda>s. Q (obj_at P p s)\<rbrace>
