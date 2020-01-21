@@ -321,9 +321,9 @@ lemma set_asid_pool_cur_tcb [wp]:
   by (rule hoare_lift_Pf [where f=cur_thread]; wpsimp wp: tcb_at_typ_at)
 
 lemma set_asid_pool_cur_sc_tcb [wp]:
-  "\<lbrace>\<lambda>s. cur_sc_tcb s\<rbrace> (set_asid_pool p a) \<lbrace>\<lambda>_ s. cur_sc_tcb s\<rbrace>"
+  "set_asid_pool p a \<lbrace>cur_sc_tcb\<rbrace>"
   by (wpsimp simp: set_asid_pool_def set_object_def get_object_def cur_sc_tcb_def sc_tcb_sc_at_def
-                   obj_at_def)
+                   obj_at_def a_type_simps)
 
 crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
   (wp: get_object_wp)
@@ -893,11 +893,11 @@ lemma set_pd_valid_mdb:
   set_pd p pd
   \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
   apply (rule valid_mdb_lift)
-    by (wpsimp wp: set_pd_cdt set_object_wp simp: set_pd_def)+
+  by (wpsimp wp: set_pd_cdt set_object_wp simp: set_pd_def)+
 
 lemma set_pd_valid_idle:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace> set_pd p pd \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
- by (wpsimp wp: valid_idle_lift set_object_wp simp: set_pd_def)
+  by (wpsimp simp: set_pd_def)
 
 lemma set_pd_ifunsafe:
   "\<lbrace>\<lambda>s. if_unsafe_then_cap s\<rbrace>
@@ -944,9 +944,9 @@ lemma set_pd_cur:
   done
 
 lemma set_pd_cur_sc_tcb:
-  "\<lbrace>\<lambda>s. cur_sc_tcb s\<rbrace> set_pd p pd \<lbrace>\<lambda>_ s. cur_sc_tcb s\<rbrace>"
+  "set_pd p pd \<lbrace>cur_sc_tcb\<rbrace>"
   by (wpsimp simp: set_pd_def set_object_def get_object_def cur_sc_tcb_def sc_tcb_sc_at_def
-                   obj_at_def)
+                   obj_at_def a_type_simps)
 
 crunch interrupt_states[wp]: set_pd "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
@@ -1038,8 +1038,8 @@ lemma set_pt_valid_mdb:
   by (wpsimp wp: set_pt_cdt valid_mdb_lift simp: set_pt_def set_object_def)
 
 lemma set_pt_valid_idle:
-  "\<lbrace>\<lambda>s. valid_idle s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
-  by (wpsimp simp: set_pt_def set_object_def get_object_def obj_at_def wp: valid_idle_lift)
+  "set_pt p pt \<lbrace>valid_idle\<rbrace>"
+  by (wpsimp simp: set_pt_def)
 
 lemma set_pt_ifunsafe:
   "\<lbrace>\<lambda>s. if_unsafe_then_cap s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. if_unsafe_then_cap s\<rbrace>"
@@ -1075,9 +1075,10 @@ lemma set_pt_cur:
   by (wpsimp wp: set_object_wp_strong simp: a_type_def is_tcb)
 
 lemma set_pt_cur_sc_tcb:
-  "\<lbrace>\<lambda>s. cur_sc_tcb s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. cur_sc_tcb s\<rbrace>"
-  by (wpsimp simp: set_pt_def set_object_def get_object_def cur_sc_tcb_def sc_tcb_sc_at_def
-                   obj_at_def)
+  "set_pt p pt \<lbrace>cur_sc_tcb\<rbrace>"
+  by (wpsimp simp: set_pt_def cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def a_type_simps
+             wp: set_object_wp_strong
+             split: if_split_asm)
 
 lemma set_pt_aligned [wp]:
   "\<lbrace>pspace_aligned\<rbrace> set_pt p pt \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
@@ -1532,7 +1533,7 @@ crunch valid_irq_states[wp]: set_pd "valid_irq_states"
 
 lemma set_pt_reply_at_ppred[wp]:
   "set_pt p pt \<lbrace> \<lambda>s. P (reply_at_pred P' r s) \<rbrace>"
-  by (wpsimp simp: set_pt_def wp: set_object_wp get_object_wp)
+  by (wpsimp simp: set_pt_def wp: set_object_wp_strong get_object_wp)
      (fastforce elim!: bool_to_boolE[of P]
                  simp: obj_at_def reply_at_ppred_def
                 split: kernel_object.splits if_splits)
@@ -1542,9 +1543,9 @@ sublocale set_pt: non_reply_op "set_pt p pt"
 
 lemma set_pt_sc_at_pred_n[wp]:
   "set_pt p pt \<lbrace> \<lambda>s. P (sc_at_pred_n N (\<lambda>sc. sc) P' r s) \<rbrace>"
-  by (wpsimp simp: set_pt_def wp: set_object_wp get_object_wp)
+  by (wpsimp simp: set_pt_def wp: set_object_wp_strong get_object_wp)
      (fastforce elim!: bool_to_boolE[of P]
-                 simp: obj_at_def sc_at_pred_n_def
+                 simp: obj_at_def sc_at_pred_n_def a_type_simps
                 split: kernel_object.splits if_splits)
 
 sublocale set_pt: non_sc_op "set_pt p pt"
@@ -1768,7 +1769,8 @@ lemma set_asid_pool_valid_mdb [wp]:
 
 lemma set_asid_pool_valid_idle [wp]:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
-  by (wpsimp simp: set_asid_pool_def set_object_def get_object_def obj_at_def wp: valid_idle_lift)
+  by (wpsimp simp: set_asid_pool_def set_object_def get_object_def obj_at_def a_type_simps
+             wp: valid_idle_lift)
 
 
 lemma set_asid_pool_ifunsafe [wp]:
@@ -2049,7 +2051,7 @@ lemma cur_tcb_more_update[iff]:
 
 lemma set_asid_pool_reply_at_ppred[wp]:
   "set_asid_pool p ap \<lbrace> \<lambda>s. P (reply_at_pred P' r s) \<rbrace>"
-  by (wpsimp simp: set_asid_pool_def wp: set_object_wp get_object_wp)
+  by (wpsimp simp: set_asid_pool_def wp: set_object_wp_strong get_object_wp)
      (fastforce elim!: bool_to_boolE[of P]
                  simp: obj_at_def reply_at_ppred_def
                 split: kernel_object.splits if_splits)
@@ -2059,9 +2061,9 @@ sublocale set_asid_pool: non_reply_op "set_asid_pool p ap"
 
 lemma set_asid_pool_sc_at_pred_n[wp]:
   "set_asid_pool p ap \<lbrace> \<lambda>s. P (sc_at_pred_n N (\<lambda>sc. sc) P' r s) \<rbrace>"
-  by (wpsimp simp: set_asid_pool_def wp: set_object_wp get_object_wp)
+  by (wpsimp simp: set_asid_pool_def wp: set_object_wp_strong get_object_wp)
      (fastforce elim!: bool_to_boolE[of P]
-                 simp: obj_at_def sc_at_pred_n_def
+                 simp: obj_at_def sc_at_pred_n_def a_type_simps
                 split: kernel_object.splits if_splits)
 
 sublocale set_asid_pool: non_sc_op "set_asid_pool p pt"
@@ -3183,7 +3185,7 @@ lemma vs_refs_pages_subset2:
 
 lemma set_pd_reply_at_ppred[wp]:
   "set_pd p pt \<lbrace> \<lambda>s. P (reply_at_pred P' r s) \<rbrace>"
-  by (wpsimp simp: set_pd_def wp: set_object_wp get_object_wp)
+  by (wpsimp simp: set_pd_def wp: set_object_wp_strong get_object_wp)
      (fastforce elim!: bool_to_boolE[of P]
                  simp: obj_at_def reply_at_ppred_def
                 split: kernel_object.splits if_splits)
@@ -3193,9 +3195,9 @@ sublocale set_pd: non_reply_op "set_pd p pt"
 
 lemma set_pd_sc_at_pred_n[wp]:
   "set_pd p pd \<lbrace> \<lambda>s. P (sc_at_pred_n N (\<lambda>sc. sc) P' r s) \<rbrace>"
-  by (wpsimp simp: set_pd_def wp: set_object_wp get_object_wp)
+  by (wpsimp simp: set_pd_def wp: set_object_wp_strong get_object_wp)
      (fastforce elim!: bool_to_boolE[of P]
-                 simp: obj_at_def sc_at_pred_n_def
+                 simp: obj_at_def sc_at_pred_n_def a_type_simps
                 split: kernel_object.splits if_splits)
 
 sublocale set_pd: non_sc_op "set_pd p pt"

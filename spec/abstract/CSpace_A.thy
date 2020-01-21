@@ -319,7 +319,7 @@ fun
   fast_finalise :: "cap \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "fast_finalise NullCap                 final = return ()"
-| "fast_finalise (ReplyCap r)            final =
+| "fast_finalise (ReplyCap r _)          final =
       (when final $ do
          reply \<leftarrow> get_reply r;
          tptr \<leftarrow> return (reply_tcb reply);

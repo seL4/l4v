@@ -511,7 +511,8 @@ lemma set_thread_state_not_live:
     and bound_yt_tcb_at ((=) None) t\<rbrace>
    set_thread_state t Inactive
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
-  by (wpsimp simp: set_thread_state_def set_object_def obj_at_def pred_tcb_at_def get_tcb_def live_def hyp_live_def)
+  by (wpsimp simp: set_thread_state_def obj_at_def pred_tcb_at_def get_tcb_def live_def hyp_live_def
+             wp: set_object_wp)
 
 lemma reply_remove_tcb_bound_sc_tcb_at_None[wp]:
   "\<lbrace>bound_sc_tcb_at ((=) None) t'\<rbrace> reply_remove_tcb t r \<lbrace>\<lambda>rv. bound_sc_tcb_at ((=) None) t'\<rbrace>"
@@ -578,7 +579,7 @@ lemma reply_unlink_sc_not_live:
                     simple_obj_set_prop_at get_simple_ko_wp
                     set_simple_ko_obj_at_disjoint hoare_vcg_all_lift
               simp: reply_unlink_sc_def is_reply update_sk_obj_ref_def
-        | wp_once hoare_drop_imps)+
+        | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: obj_at_def live_def live_reply_def invs_reply_tcb_None_reply_sc_None)
   done
 
@@ -604,7 +605,7 @@ lemma reply_unlink_sc_None:
   apply (wpsimp simp: is_reply update_sk_obj_ref_def
                wp: update_sched_context_obj_at_impossible simple_obj_set_prop_at get_simple_ko_wp
                    set_simple_ko_obj_at_disjoint hoare_vcg_all_lift assert_wp hoare_vcg_const_imp_lift
-        | wp_once hoare_drop_imps)+
+        | wp (once) hoare_drop_imps)+
   apply (rule conjI, clarsimp)
    apply (erule_tac p=scp in obj_at_valid_objsE, assumption)
    apply (clarsimp simp: valid_obj_def valid_sched_context_def dest!:distinct_hd_not_in_tl)
@@ -644,7 +645,7 @@ lemma reply_unlink_tcb_not_live':
      (wpsimp wp: not_live_reply_weaken[OF reply_unlink_tcb_not_live] simp: obj_at_def)
 
 lemma st_tcb_recv_reply_state_refs:
-  "\<lbrakk>valid_objs s; sym_refs (state_refs_of s); st_tcb_at ((=) (BlockedOnReceive ep (Some reply))) thread s\<rbrakk>
+  "\<lbrakk>valid_objs s; sym_refs (state_refs_of s); st_tcb_at ((=) (BlockedOnReceive ep (Some reply) pl)) thread s\<rbrakk>
   \<Longrightarrow> \<exists>rep. (kheap s reply = Some (Reply rep) \<and> reply_tcb rep = Some thread)"
   apply (frule (1) st_tcb_at_valid_st2)
   apply (drule (1) sym_refs_st_tcb_atD[rotated])
@@ -654,7 +655,7 @@ lemma st_tcb_recv_reply_state_refs:
 
 lemma blocked_cancel_ipc_unlive:
   "\<lbrace>st_tcb_at ((=) st) thread and
-       K (rep = Some reply \<and> (\<exists>ep. st = BlockedOnReceive ep rep))\<rbrace>
+       K (rep = Some reply \<and> (\<exists>ep pl. st = BlockedOnReceive ep rep pl))\<rbrace>
     blocked_cancel_ipc st thread rep
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) reply\<rbrace>"
   apply (rule hoare_gen_asm, clarsimp)
@@ -666,7 +667,7 @@ lemma blocked_cancel_ipc_unlive:
            simp: is_reply reply_sc_reply_at_def obj_at_def)
 
 lemma cancel_ipc_unlive_reply_receive:
-  "\<lbrace>st_tcb_at (\<lambda>st. (\<exists>x. st = (BlockedOnReceive x (Some reply)))) thread\<rbrace>
+  "\<lbrace>st_tcb_at (\<lambda>st. (\<exists>x pl. st = (BlockedOnReceive x (Some reply) pl))) thread\<rbrace>
      cancel_ipc thread
    \<lbrace>\<lambda> rv. obj_at (Not \<circ> live) reply\<rbrace>"
   apply (clarsimp simp: cancel_ipc_def)
@@ -685,8 +686,8 @@ lemma reply_unlink_sc_not_live':
   by (rule hoare_strengthen_post, rule reply_unlink_sc_not_live, clarsimp simp: obj_at_def)
 
 lemma set_tcb_yt_update_bound_tcb_at[wp]:
-  "\<lbrace>bound_tcb_at P t\<rbrace> set_tcb_obj_ref tcb_yield_to_update scp tcb \<lbrace>\<lambda>rv. bound_tcb_at P t\<rbrace>"
-  by (wpsimp simp: set_tcb_obj_ref_def set_object_def pred_tcb_at_def obj_at_def get_tcb_rev)
+  "set_tcb_obj_ref tcb_yield_to_update scp tcb \<lbrace>bound_tcb_at P t\<rbrace>"
+  by (wpsimp simp: set_tcb_obj_ref_def pred_tcb_at_def obj_at_def get_tcb_rev wp: set_object_wp)
 
 lemma complete_yield_to_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> complete_yield_to scptr \<lbrace>\<lambda>rv. bound_tcb_at P t\<rbrace>"
@@ -700,8 +701,8 @@ lemma complete_yield_to_bound_sc_tcb_at[wp]:
 
 lemma ssc_bound_yt_tcb_at[wp]:
   "\<lbrace>bound_yt_tcb_at P t\<rbrace> set_tcb_obj_ref tcb_sched_context_update tcb ntfn \<lbrace>\<lambda>_. bound_yt_tcb_at P t\<rbrace>"
-  apply (simp add: set_tcb_obj_ref_def set_object_def)
-  apply wp
+  apply (simp add: set_tcb_obj_ref_def)
+  apply (wp set_object_wp)
   apply (auto simp: pred_tcb_at_def obj_at_def get_tcb_def)
   done
 
@@ -739,7 +740,7 @@ lemma unbind_from_sc_bound_sc_tcb_at:
   apply (simp add: unbind_from_sc_def)
     apply (wpsimp wp: sched_context_unbind_tcb_bound_sc_tcb_at_None
                       hoare_vcg_all_lift gbn_wp
-           | wp_once hoare_drop_imps)+
+           | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def)
   apply (erule(1) pspace_valid_objsE)
   by (auto simp: obj_at_def pred_tcb_at_def valid_obj_def valid_tcb_def
@@ -796,7 +797,7 @@ lemma complete_yield_to_not_live:
                     set_tcb_obj_ref_obj_at_trivial
                     set_consumed_obj_at_trivial
                     get_object_wp hoare_vcg_all_lift
-         | wp_once hoare_drop_imps)+
+         | wp (once) hoare_drop_imps)+
   apply (auto simp: obj_at_def live_def live_sc_def dest: sym_ref_sc_yf)
   done
 
@@ -831,9 +832,9 @@ method hammer = ((clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
                    | (strengthen tcb_cap_valid_imp_NullCap tcb_cap_valid_imp', wp)
                    | erule cte_wp_at_weakenE tcb_cap_valid_imp'[rule_format, rotated -1]
                    | erule(1) no_cap_to_obj_with_diff_ref_finalI_ARCH
-                   | ((wp_once hoare_drop_imps)?,
-                      (wp_once hoare_drop_imps)?,
-                      wp_once deleting_irq_handler_empty)
+                   | ((wp (once) hoare_drop_imps)?,
+                      (wp (once) hoare_drop_imps)?,
+                      wp (once) deleting_irq_handler_empty)
                    | simp add: valid_cap_simps is_nondevice_page_cap_simps)+)[1]
 
 lemma sched_context_unbind_ntfn_unbinds:
@@ -927,23 +928,23 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
               apply hammer
               apply ((wpsimp
                    | hammer
-                   | (wp_once hoare_drop_imps,
-                      wp_once reply_unlink_sc_not_live'[unfolded o_def]
-                              cancel_all_ipc_unlive[unfolded o_def]
-                              cancel_all_signals_unlive[unfolded o_def]))+)[2]
+                   | (wp (once) hoare_drop_imps,
+                      wp (once) reply_unlink_sc_not_live'[unfolded o_def]
+                                cancel_all_ipc_unlive[unfolded o_def]
+                                cancel_all_signals_unlive[unfolded o_def]))+)[2]
             \<comment> \<open>ntfn\<close>
             apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc
                     | hammer
-                    | (wp_once hoare_drop_imps, wp_once reply_unlink_sc_not_live'[unfolded o_def]
+                    | (wp (once) hoare_drop_imps, wp (once) reply_unlink_sc_not_live'[unfolded o_def]
                             cancel_all_ipc_unlive[unfolded o_def]
                             cancel_all_signals_unlive[unfolded o_def]))+)[1]
            \<comment> \<open>reply\<close>
            apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc | hammer)+)[1]
                      apply (rename_tac tcb, rule_tac t=tcb and s= "the (reply_tcb reply)" in subst, simp)
-                     apply (wp_once hoare_drop_imps, rule hoare_vcg_conj_lift,
-                             wp_once cancel_ipc_unlive_reply_receive[unfolded o_def], hammer)
-                    apply ((wpsimp wp: gts_wp get_simple_ko_wp | hammer | wp_once hoare_drop_imps, rule hoare_vcg_conj_lift,
-                             wp_once cancel_ipc_unlive_reply_receive[unfolded o_def] reply_remove_unlive[unfolded o_def])+)[9]
+                     apply (wp (once) hoare_drop_imps, rule hoare_vcg_conj_lift,
+                             wp (once) cancel_ipc_unlive_reply_receive[unfolded o_def], hammer)
+                    apply ((wpsimp wp: gts_wp get_simple_ko_wp | hammer | wp (once) hoare_drop_imps, rule hoare_vcg_conj_lift,
+                             wp (once) cancel_ipc_unlive_reply_receive[unfolded o_def] reply_remove_unlive[unfolded o_def])+)[9]
            apply (auto simp: obj_at_def is_cap_simps ran_tcb_cap_cases valid_ipc_buffer_cap_def pred_tcb_at_def
                              live_def live_reply_def vs_cap_ref_def no_cap_to_obj_with_diff_ref_Null
                              invs_reply_tcb_None_reply_sc_None
@@ -971,9 +972,9 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                           finalise_cap_replaceable_helper
                     simp: no_cap_to_idle_sc_ptr
         | hammer
-        | wp_once sched_context_unbind_yield_from_not_live[unfolded o_def]
-        | wp_once hoare_drop_imps; wp_once hoare_vcg_conj_lift,
-          wp_once sc_refill_max_update_not_live[unfolded o_def])+)[1]
+        | wp (once) sched_context_unbind_yield_from_not_live[unfolded o_def]
+        | wp (once) hoare_drop_imps; wp (once) hoare_vcg_conj_lift,
+          wp (once) sc_refill_max_update_not_live[unfolded o_def])+)[1]
       \<comment> \<open>schedcontrol\<close>
       apply ((wpsimp | hammer)+)[1]
      \<comment> \<open>irqcontrol\<close>

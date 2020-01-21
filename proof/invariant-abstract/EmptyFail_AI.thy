@@ -147,7 +147,6 @@ crunch_ignore (empty_fail)
   (add: NonDetMonad.bind bindE lift liftE liftM "when" whenE unless unlessE return fail
         assert_opt mapM mapM_x sequence_x catch handleE do_extended_op
         cap_insert_ext empty_slot_ext create_cap_ext cap_swap_ext cap_move_ext
-        reschedule_required possible_switch_to set_thread_state_act
         OR_choice OR_choiceE getRegister lookup_error_on_failure
         mapME_x const_on_failure liftME mapME do_machine_op select
         empty_on_failure unify_failure zipWithM_x throw_on_false

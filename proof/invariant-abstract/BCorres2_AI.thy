@@ -258,7 +258,7 @@ lemma all_but_exst_update[simp]:
   done
 
 crunch all_but_exst[wp]: cap_move_ext "all_but_exst P"
-  (simp: Let_def)
+  (simp: Let_def ignore_del: cap_move_ext)
 
 crunch (empty_fail) empty_fail[wp]: cap_move_ext
   (ignore_del: cap_move_ext)

@@ -53,7 +53,7 @@ definition
 
 lemma update_restart_pc_caps_of_state[wp]:
   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> update_restart_pc t \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  by (simp add: update_restart_pc_def as_user_caps)
+  by (simp add: update_restart_pc_def as_user_caps_of_state)
 
 locale Finalise_AI_1 =
   fixes state_ext_type1 :: "('a :: state_ext) itself"
@@ -465,7 +465,7 @@ lemma suspend_caps_of_state:
            \<and> P (caps_of_state s)\<rbrace>
      suspend t
    \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  by (wpsimp wp: cancel_ipc_caps_of_state simp: suspend_def fun_upd_def[symmetric])+
+  by (wpsimp wp: cancel_ipc_caps_of_state hoare_drop_imps simp: suspend_def fun_upd_def[symmetric])+
 
 lemma suspend_final_cap:
   "\<lbrace>\<lambda>s. is_final_cap' cap s \<and> \<not> can_fast_finalise cap
@@ -702,7 +702,7 @@ lemma reply_tcb_state_refs:
     kheap s rptr = Some (Reply reply)\<rbrakk>
   \<Longrightarrow> \<exists>tcb. kheap s t = Some (TCB tcb) \<and>
      st_tcb_at (\<lambda>st. st = BlockedOnReply rptr
-                    \<or> (\<exists>ep. st = BlockedOnReceive ep (Some rptr))) t s"
+                    \<or> (\<exists>ep pl. st = BlockedOnReceive ep (Some rptr) pl)) t s"
   apply (erule (1) valid_objsE)
   apply (drule sym_refs_ko_atD[rotated])
    apply (simp add: obj_at_def)

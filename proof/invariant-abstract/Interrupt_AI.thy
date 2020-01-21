@@ -168,7 +168,7 @@ crunches test_reschedule,
   schedule_tcb, cancel_all_ipc, cancel_all_signals, set_cap, post_cap_deletion, sched_context_unbind_tcb,
   sched_context_donate
   for mdb_inv[wp]: "\<lambda>s. P (cdt s)"
-  (wp: crunch_wps simp: crunch_simps ignore: tcb_release_remove test_reschedule)
+  (wp: crunch_wps simp: crunch_simps ignore: tcb_release_remove)
 
 context notes if_cong[cong] begin
 crunch mdb_inv[wp]: fast_finalise "\<lambda>s. P (cdt s)"

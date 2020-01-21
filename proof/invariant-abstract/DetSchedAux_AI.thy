@@ -185,7 +185,7 @@ lemma invoke_untyped_etcb_at:
             create_cap.cspace_pred_tcb_at[where P=Not]
             hoare_convert_imp[OF create_cap.cspace_pred_tcb_at[where P=Not]]
             hoare_convert_imp[OF _ init_arch_objects_valid_sched_pred]
-         | wp_once hoare_drop_impE_E)+
+         | wp (once) hoare_drop_impE_E)+
   done
 end
 

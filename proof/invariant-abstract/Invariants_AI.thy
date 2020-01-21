@@ -814,15 +814,16 @@ text \<open>symref related definitions\<close>
 definition
   tcb_st_refs_of :: "thread_state  \<Rightarrow> (obj_ref \<times> reftype) set"
 where
-  "tcb_st_refs_of z \<equiv> case z of (Running)               => {}
-  | (Inactive)              => {}
-  | (Restart)               => {}
-  | (BlockedOnReply r)      => {(r, TCBReply)}
-  | (IdleThreadState)       => {}
-  | (BlockedOnReceive x r)  => if bound r then {(x, TCBBlockedRecv), (the r, TCBReply)}
+  "tcb_st_refs_of z \<equiv> case z of
+    Running                 => {}
+  | Inactive                => {}
+  | Restart                 => {}
+  | BlockedOnReply r        => {(r, TCBReply)}
+  | IdleThreadState         => {}
+  | BlockedOnReceive x r d  => if bound r then {(x, TCBBlockedRecv), (the r, TCBReply)}
                                else {(x, TCBBlockedRecv)}
-  | (BlockedOnSend x payl)  => {(x, TCBBlockedSend)}
-  | (BlockedOnNotification x) => {(x, TCBSignal)}"
+  | BlockedOnSend x payl    => {(x, TCBBlockedSend)}
+  | BlockedOnNotification x => {(x, TCBSignal)}"
 
 definition
   ep_q_refs_of   :: "endpoint      \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -1168,7 +1169,7 @@ definition
 
 abbreviation
   "idle_tcb_at \<equiv> pred_tcb_at (\<lambda>t. (itcb_state t, itcb_bound_notification t,
-                                    itcb_sched_context t, itcb_yield_to t))"
+                                    itcb_sched_context t, itcb_yield_to t, itcb_arch t))"
 
 abbreviation (* could consider introducing projection like pred_tcb_at? maybe? *)
   "idle_sc_at \<equiv> obj_at (\<lambda>ko. \<exists>sc. ko = SchedContext sc min_sched_context_bits
@@ -1181,7 +1182,7 @@ abbreviation (* could consider introducing projection like pred_tcb_at? maybe? *
                                   \<and> sc_replies sc = [])"
 
 definition
-  "valid_idle \<equiv> \<lambda>s. idle_tcb_at (\<lambda>(st, ntfn, sc, yt).
+  "valid_idle \<equiv> \<lambda>s. idle_tcb_at (\<lambda>(st, ntfn, sc, yt, arch).
        (idle st) \<and> (ntfn  = None) \<and> (sc = Some idle_sc_ptr) \<and> (yt = None) \<and> valid_arch_idle arch) (idle_thread s) s
          \<and> idle_thread s = idle_thread_ptr
          \<and> idle_sc_at idle_sc_ptr s"
@@ -1521,10 +1522,10 @@ lemma valid_cap_def2:
   "s \<turnstile> c \<equiv> cap_aligned c \<and> wellformed_cap c \<and> valid_cap_ref c s"
   apply (rule eq_reflection)
   apply (cases c)
-          apply (simp_all add: valid_cap_simps wellformed_cap_simps
-                               valid_cap_ref_simps
-                        split: option.splits)
-    apply (fastforce+)[5]
+               apply (simp_all add: valid_cap_simps wellformed_cap_simps
+                                    valid_cap_ref_simps
+                             split: option.splits)
+        apply (fastforce+)[6]
   by (simp add: valid_arch_cap_def2)
 
 lemma valid_capsD:
@@ -1693,7 +1694,7 @@ lemma refs_of_rev:
  "(x, NTFNSchedContext) \<in> refs_of ko =
     (\<exists>ntfn. ko = Notification ntfn \<and> (ntfn_sc ntfn = Some x))"
  "(x, TCBReply) \<in>  refs_of ko =
-    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = BlockedOnReply x \<or> (\<exists>n. tcb_state tcb = BlockedOnReceive n (Some x))))"
+    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = BlockedOnReply x \<or> (\<exists>n d. tcb_state tcb = BlockedOnReceive n (Some x) d)))"
  "(x, SCTcb) \<in>  refs_of ko =
     (\<exists>sc n. ko = SchedContext sc n \<and> (sc_tcb sc = Some x))"
  "(x, SCNtfn) \<in>  refs_of ko =
@@ -2803,12 +2804,10 @@ lemma reply_at_typ_at:
 lemma valid_tcb_state_typ:
   assumes P: "\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_tcb_state st s\<rbrace> f \<lbrace>\<lambda>rv s. valid_tcb_state st s\<rbrace>"
-  apply (case_tac st; wpsimp simp: valid_tcb_state_def hoare_post_taut reply_at_typ
-                                   ep_at_typ P tcb_at_typ ntfn_at_typ)
-   apply (rule hoare_vcg_conj_lift)
-    apply (rename_tac obj_ref; case_tac obj_ref;
-           simp add: reply_at_typ_at assms wp_post_taut)+
-  done
+  by (case_tac st; wpsimp simp: valid_tcb_state_def hoare_post_taut reply_at_typ
+                                ep_at_typ P tcb_at_typ ntfn_at_typ
+                          wp: assms valid_case_option_post_wp
+                          cong: option.case_cong)
 
 lemma valid_tcb_typ:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
@@ -3523,7 +3522,6 @@ lemma obj_at_default_cap_valid:
             a_type_def obj_at_def is_sc_obj_def
      split: apiobject_type.splits
             option.splits)
-
 
 lemma obj_ref_default [simp]:
   "obj_ref_of (default_cap ty x us dev) = x"
@@ -4507,23 +4505,6 @@ lemma valid_cap_wellformed:
   "s \<turnstile> cap \<Longrightarrow> wellformed_cap cap"
   by (simp add: valid_cap_def2)
 
-lemma wellformed_cap_eq_diminished:
-  "wellformed_cap cap \<Longrightarrow> diminished cap cap"
-  by (auto simp: diminished_def mask_cap_def intro: exI[of _ UNIV])
-
-lemma cte_wp_at_eq_diminishedE:
-  "cte_wp_at ((=) cap) slot s \<Longrightarrow> wellformed_cap cap \<Longrightarrow> cte_wp_at (diminished cap) slot s"
-  by (auto elim: cte_wp_at_weakenE wellformed_cap_eq_diminished)
-
-lemma diminished_cap_simps[simp]:
-  "diminished IRQControlCap = (=) IRQControlCap"
-  "diminished (CNodeCap r sz guard) = (=) (CNodeCap r sz guard)"
-  "diminished (ThreadCap ref) = (=) (ThreadCap ref)"
-  by (intro ext iffI
-      ; rename_tac cap
-      ; case_tac cap
-      ; clarsimp simp: diminished_def mask_cap_def cap_rights_update_def)+
-
 lemma ko_at_fold:
   "(kheap s p = Some ko) = (ko_at ko p s)"
   by (clarsimp simp: obj_at_def)
@@ -4573,8 +4554,6 @@ lemmas invs_implies =
   invs_mdb
   invs_valid_objs
   invs_valid_pspace
-  invs_valid_reply_caps
-  invs_valid_reply_masters
   invs_valid_stateI
   invs_zombies
   invs_hyp_sym_refs

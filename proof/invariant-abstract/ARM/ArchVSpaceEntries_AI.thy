@@ -319,7 +319,7 @@ lemma store_pde_non_master_valid_pdpt:
      apply (case_tac pde,simp_all)
     apply (case_tac pde,simp_all)
    apply (case_tac pde,simp_all)
-    apply (clarsimp simp: is_aligned_neg_mask_eq)+
+    apply (clarsimp)+
   apply (simp add:fun_upd_def)
   apply (rule entries_align_pde_update)
    apply (drule(1) valid_pdpt_objs_pdD,simp)
@@ -358,7 +358,7 @@ lemma store_pte_non_master_valid_pdpt:
    apply (case_tac "pt pa")
      apply simp
     apply (case_tac pte,simp_all)
-    apply (clarsimp simp: is_aligned_neg_mask_eq)
+    apply (clarsimp)
    apply (case_tac pte,simp_all)
   apply (simp add:fun_upd_def)
   apply (rule entries_align_pte_update)
@@ -411,23 +411,9 @@ lemma set_simple_ko_valid_pdpt_objs[wp]:
            simp: a_type_def obj_valid_pdpt_def obj_at_def
           split: kernel_object.splits)
 
-crunch valid_pdpt_objs[wp]: set_thread_state_act "valid_pdpt_objs"
-  (wp: check_cap_inv crunch_wps simp: crunch_simps
-       ignore: check_cap_at set_object)
-
-crunch valid_pdpt_objs[wp]: reschedule_required "valid_pdpt_objs"
-
 crunch valid_pdpt_objs[wp]: possible_switch_to "valid_pdpt_objs"
   (wp: check_cap_inv crunch_wps simp: crunch_simps
        ignore: check_cap_at set_object)
-
-crunch valid_pdpt_objs[wp]: test_reschedule "valid_pdpt_objs"
-  (wp: check_cap_inv crunch_wps simp: crunch_simps
-       ignore: check_cap_at set_object)
-
-crunch valid_pdpt_objs[wp]: cap_swap_for_delete, empty_slot "valid_pdpt_objs"
-  (wp: crunch_wps select_wp preemption_point_inv simp: crunch_simps unless_def
-   ignore:set_object)
 
 lemma schedule_tcb_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> schedule_tcb r \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
@@ -721,10 +707,6 @@ crunch valid_pdpt_objs[wp]: invoke_irq_handler "valid_pdpt_objs"
   (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps
     ignore: tcb_release_remove set_object simp: unless_def)
 
-crunch valid_pdpt_objs[wp]: sched_context_donate "valid_pdpt_objs"
-  (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps
-    ignore: tcb_release_remove set_object simp: unless_def)
-
 crunch valid_pdpt_objs[wp]: do_reply_transfer "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps hoare_vcg_if_lift2
    ignore: tcb_release_remove set_object tcb_release_enqueue
@@ -935,7 +917,7 @@ lemma store_pte_valid_pdpt:
     apply (case_tac pte)
      apply simp+
     apply (case_tac "pta p",simp_all)
-    apply (clarsimp simp: is_aligned_neg_mask_eq)
+    apply (clarsimp)
    apply (simp add:fun_upd_def)
    apply (rule entries_align_pte_update)
     apply (drule (1) valid_pdpt_objs_ptD,simp)
@@ -1029,9 +1011,9 @@ lemma store_pde_valid_pdpt:
      apply simp
     apply (case_tac pde,simp_all)
      apply (case_tac "pda p",simp_all)
-     apply (clarsimp simp: is_aligned_neg_mask_eq)
+     apply (clarsimp)
     apply (case_tac "pda p",simp_all)
-    apply (clarsimp simp: is_aligned_neg_mask_eq)
+    apply (clarsimp)
    apply (simp add:fun_upd_def)
    apply (rule entries_align_pde_update)
     apply simp+
@@ -1403,14 +1385,14 @@ lemma ensure_safe_mapping_ensures[wp]:
            apply (clarsimp)
            apply (drule(1) valid_pdpt_objs_ptD)
            apply (frule align_entry_ptD,simp)
-           apply (simp add:is_aligned_neg_mask_eq)
+           apply simp
           apply clarsimp
           apply (drule(1) valid_pdpt_objs_ptD,clarify)
           apply (erule(4) invalid_pteI[OF _ neq_pt_offset])
          apply clarsimp
          apply (drule(1) valid_pdpt_objs_ptD,clarify)
          apply (frule align_entry_ptD,simp)
-         apply (simp add:is_aligned_neg_mask_eq)
+         apply simp
         apply (wp hoare_drop_imps |wpc|simp)+
       apply (clarsimp simp:upto_enum_def upto_enum_step_def
         upto_0_to_n2 Fun.comp_def distinct_map)
@@ -1463,13 +1445,13 @@ lemma ensure_safe_mapping_ensures[wp]:
        apply (intro conjI impI)
           apply clarsimp
           apply (frule(1) align_entry_pdD)
-          apply (simp add:is_aligned_neg_mask_eq)
+          apply simp
          apply clarsimp
          apply (frule(1) align_entry_pdD)
-         apply (simp add:is_aligned_neg_mask_eq)
+         apply simp
         apply clarsimp
         apply (frule(1) align_entry_pdD)
-        apply (simp add:is_aligned_neg_mask_eq)
+        apply simp
        apply clarsimp
        apply (erule(4) invalid_pdeI[OF _ neq_pd_offset])
       apply (wp hoare_drop_imps |wpc|simp)+
@@ -1547,8 +1529,6 @@ lemma create_mapping_entries_safe[wp]:
   apply simp
   done
 
-crunch vspace_objs[wp]: find_pd_for_asid valid_vspace_objs
-
 lemma arch_decode_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and valid_cap (cap.ArchObjectCap cap) and valid_pdpt_objs\<rbrace>
    arch_decode_invocation label args cap_index slot cap excaps
@@ -1579,10 +1559,11 @@ proof -
     apply (clarsimp; erule disjE; cases cap;
            simp add: isPDFlushLabel_def isPageFlushLabel_def throwError_R')
      \<comment> \<open>PageTableMap\<close>
-     apply (wpsimp simp: Let_def get_master_pde_def invocation_duplicates_valid_def
-                         pti_duplicates_valid_def mask_lower_twice pd_bits_def bitwise pageBits_def
-                         obj_at_def
-                     wp: get_pde_wp hoare_drop_imps hoare_vcg_if_lift_ER split: if_splits)
+     apply (wpsimp simp: Let_def get_master_pde_def
+                     wp: get_pde_wp hoare_vcg_if_lift_ER | wp (once) hoare_drop_imps)+
+     apply (clarsimp simp: invocation_duplicates_valid_def pti_duplicates_valid_def mask_lower_twice
+                           pd_bits_def bitwise pageBits_def obj_at_def
+                     split: if_split)
      apply (intro conjI; clarsimp)
     \<comment> \<open>PageMap\<close>
     apply (rename_tac dev pg_ptr rights sz pg_map)
@@ -1592,7 +1573,7 @@ proof -
     apply (fastforce simp: invs_psp_aligned page_directory_at_aligned_pd_bits
                            word_not_le sz valid_cap_def valid_arch_cap_def lookup_pd_slot_eq
                     split: if_splits)
-  done
+    done
 qed
 
 lemma decode_invocation_valid_pdpt[wp]:

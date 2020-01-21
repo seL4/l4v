@@ -48,7 +48,7 @@ lemma is_valid_vtable_root_simps[simp]:
   "\<not> is_valid_vtable_root (CNodeCap cnode_ref sz guard)"
   "\<not> is_valid_vtable_root (EndpointCap ep_ref badge R)"
   "\<not> is_valid_vtable_root (NotificationCap ep_ref badge R)"
-  "\<not> is_valid_vtable_root (ReplyCap tcb_ref master R)"
+  "\<not> is_valid_vtable_root (ReplyCap tcb_ref R)"
   "\<not> is_valid_vtable_root (Zombie e f g)"
   "\<not> is_valid_vtable_root (NullCap)"
   "\<not> is_valid_vtable_root (DomainCap)"
@@ -284,16 +284,9 @@ lemma tcb_state_same_cte_wp_at:
   done
 
 
-lemma valid_tcb_state_update: (* RT: FIXME? *)
-  "\<lbrakk> valid_tcb p t s; valid_tcb_state st s;
-     case st of
-                Structures_A.Inactive \<Rightarrow> True
-              | Structures_A.BlockedOnReceive e r \<Rightarrow>
-                     (case r of None \<Rightarrow> True
-                      | Some r' \<Rightarrow> reply_at r' s)
-              | _ \<Rightarrow> True \<rbrakk> \<Longrightarrow>
+lemma valid_tcb_state_update:
+  "\<lbrakk> valid_tcb p t s; valid_tcb_state st s \<rbrakk> \<Longrightarrow>
    valid_tcb p (t\<lparr>tcb_state := st\<rparr>) s"
-   (* FIXME RT: \<and> AllowGrant \<in> cap_rights (tcb_reply t) *)
   by (simp add: valid_tcb_def valid_tcb_state_def ran_tcb_cap_cases
          split: Structures_A.thread_state.splits)
 
@@ -1269,11 +1262,12 @@ lemma set_object_idle [wp]:
                     tcb_state t = tcb_state t' \<and>
                     tcb_bound_notification t = tcb_bound_notification t' \<and>
                     tcb_sched_context t = tcb_sched_context t' \<and>
-                    tcb_yield_to t = tcb_yield_to t') \<or>
+                    tcb_yield_to t = tcb_yield_to t' \<and>
+                    valid_arch_idle (tcb_iarch t')) \<or>
                    (ko = (SchedContext sc n) \<and> ko' = (SchedContext sc n))))\<rbrace>
    set_object p ko'
    \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  apply (wpsimp simp: set_object_def)
+  apply (wpsimp wp: set_object_wp_strong)
   apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
@@ -1285,7 +1279,7 @@ lemma set_object_fault_tcbs_valid_states[wp]:
                        tcb_fault t' = tcb_fault t))\<rbrace>
    set_object p ko'
    \<lbrace>\<lambda>rv. fault_tcbs_valid_states\<rbrace>"
-  apply (wpsimp simp: set_object_def)
+  apply (wpsimp wp: set_object_wp_strong)
   apply (clarsimp simp: fault_tcbs_valid_states_def pred_tcb_at_def obj_at_def)
   apply (drule_tac x=p in spec)
   apply clarsimp

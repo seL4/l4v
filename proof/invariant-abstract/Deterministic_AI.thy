@@ -1510,12 +1510,10 @@ lemma set_cap_match: "(\<And>s x. P s = P (s\<lparr>kheap := x\<rparr>)) \<Longr
   apply wpsimp
   done
 
-crunches cap_insert_ext, empty_slot_ext, cap_swap_ext, create_cap_ext, set_thread_state_ext,
-         retype_region_ext
+crunches cap_insert_ext, empty_slot_ext, cap_swap_ext, create_cap_ext
   for all_but_exst[wp]:  "all_but_exst P"
   and (empty_fail) empty_fail[wp]
-  (ignore_del: cap_insert_ext empty_slot_ext cap_swap_ext create_cap_ext set_thread_state_ext
-               retype_region_ext)
+  (ignore_del: cap_insert_ext empty_slot_ext cap_swap_ext create_cap_ext)
 
 interpretation cap_insert_ext_extended: is_extended "cap_insert_ext a b c d e"
   by (unfold_locales; wp)
@@ -4075,7 +4073,7 @@ crunch valid_list[wp]: transfer_caps,do_normal_transfer,do_ipc_transfer valid_li
   (wp: mapM_wp hoare_drop_imp)
 
 lemma send_ipc_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> send_ipc block call badge can_grant can_donate thread epptr \<lbrace>\<lambda>_.valid_list\<rbrace>"
+  "send_ipc block call badge can_grant can_reply_grant can_donate thread epptr \<lbrace>valid_list\<rbrace>"
    by (wpsimp simp: send_ipc_def wp: thread_get_inv hoare_drop_imp get_simple_ko_wp)
 
 crunch valid_list[wp]: send_fault_ipc,handle_timeout valid_list

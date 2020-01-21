@@ -312,8 +312,7 @@ lemma install_tcb_frame_cap_invs:
    apply (rule hoare_vcg_E_elim, wpsimp)
    \<comment> \<open>non-exception case\<close>
    apply wpsimp
-      apply (wpsimp wp: checked_insert_tcb_invs[where ref="tcb_cnode_index 2"])
-     apply (wpsimp wp: hoare_vcg_all_lift static_imp_wp)
+     apply (wpsimp wp: checked_insert_tcb_invs[where ref="tcb_cnode_index 2"])
     apply (wpsimp wp: hoare_vcg_all_lift static_imp_wp
                       thread_set_tcb_ipc_buffer_cap_cleared_invs
                       thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]

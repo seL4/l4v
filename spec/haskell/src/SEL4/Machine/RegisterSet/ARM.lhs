@@ -49,7 +49,7 @@ This module defines the ARM register set.
 > exceptionMessage = [FaultIP, SP, CPSR]
 > syscallMessage = [R0 .. R7] ++ [FaultIP, SP, LR, CPSR]
 > tlsBaseRegister = TPIDRURW
-> timeoutMessage = [FaultInstruction, SP, CPSR] ++ [R0, R1] ++ [R8 .. IP] ++ [R2 .. R7] ++ [LR]
+> timeoutMessage = [FaultIP, SP, CPSR] ++ [R0, R1] ++ [R8 .. IP] ++ [R2 .. R7] ++ [LR]
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > elr_hyp = NextIP

@@ -296,10 +296,13 @@ lemma a_typeE:
   "\<lbrakk>a_type ko = ATCB; (\<And>tcb. ko = TCB tcb \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   "\<lbrakk>a_type ko = AEndpoint; (\<And>ep. ko = Endpoint ep \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   "\<lbrakk>a_type ko = ANTFN; (\<And>ntfn. ko = Notification ntfn \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk>a_type ko = AReply; (\<And>r. ko = Reply r \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk>a_type ko = ASchedContext n; (\<And>sc. \<lbrakk> ko = SchedContext sc n; valid_sched_context_size n \<rbrakk> \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   "\<lbrakk>a_type ko = AArch T; (\<And>ao. \<lbrakk> ko = ArchObj ao; aa_type ao = T \<rbrakk> \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   "\<lbrakk>a_type ko = AGarbage sz;
     (\<And>sz' cs. \<lbrakk> ko = CNode (sz - cte_level_bits) cs; \<not>well_formed_cnode_n sz' cs;
-                cte_level_bits \<le> sz \<rbrakk> \<Longrightarrow> R)\<rbrakk>
+                cte_level_bits \<le> sz \<rbrakk> \<Longrightarrow> R);
+    (\<And>sc n. \<lbrakk> ko = SchedContext sc n; \<not>valid_sched_context_size n\<rbrakk> \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   by (cases ko; clarsimp simp add: a_type_def split: if_split_asm)+
 

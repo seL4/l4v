@@ -1821,11 +1821,9 @@ lemma install_tcb_cap_not_ipc_queued_thread[wp]:
 lemma set_simple_ko_sc_at_pred_n[wp]:
   "set_simple_ko g ep v \<lbrace> \<lambda>s. P (sc_at_pred_n N proj f t s) \<rbrace>"
   unfolding set_simple_ko_def
-  apply (wpsimp wp: set_object_wp get_object_wp)
+  apply (wpsimp wp: set_object_wp_strong get_object_wp)
   apply (intro conjI;
-         intro impI;
-         erule rsubst[where P=P];
-         clarsimp split: option.splits simp: sc_at_pred_n_def obj_at_def)
+         clarsimp elim!: rsubst[where P=P] split: option.splits simp: sc_at_pred_n_def obj_at_def)
   done
 
 crunches cancel_all_ipc

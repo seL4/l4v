@@ -457,7 +457,7 @@ begin
 
 lemma do_reply_invs[wp]:
   "\<lbrace>tcb_at t and reply_at r and invs\<rbrace>
-   do_reply_transfer t r
+   do_reply_transfer t r g
    \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wpsimp wp: handle_timeout_Timeout_invs hoare_vcg_all_lift hoare_drop_imps
@@ -499,7 +499,7 @@ lemma pinv_invs[wp]:
 end
 
 lemma do_reply_transfer_typ_at[wp]:
-  "do_reply_transfer s r \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
+  "do_reply_transfer s r g \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
   unfolding do_reply_transfer_def
   by (wpsimp wp: gts_wp hoare_vcg_if_lift2 hoare_drop_imps hoare_vcg_all_lift split_del: if_split)
 
@@ -730,22 +730,22 @@ lemma decode_inv_wf[wp]:
            and (\<lambda>s. \<forall>x \<in> set excaps. ex_cte_cap_wp_to is_cnode_cap (snd x) s)\<rbrace>
      decode_invocation first_phase label args cap_index slot cap excaps
    \<lbrace>valid_invocation\<rbrace>,-"
-  apply (simp add: decode_invocation_def cong: cap.case_cong if_cong split del: if_splits)
+  apply (simp add: decode_invocation_def cong: cap.case_cong if_cong split del: if_split)
   apply (wpsimp wp: decode_tcb_inv_wf decode_domain_inv_wf[simplified split_def]
                     decode_sched_context_inv_wf decode_sched_control_inv_wf
               simp: o_def uncurry_def split_def invs_valid_objs invs_valid_global_refs
           simp_del: is_cnode_cap.simps cte_refs.simps)
-  apply (strengthen cnode_diminished_strg)
+  apply (strengthen cnode_eq_strg)
   apply (cases slot)
   apply (rule_tac V="\<forall>x \<in> set excaps. real_cte_at (snd x) s
-                                      \<and> cte_wp_at (diminished (fst x)) (snd x) s"
+                                      \<and> cte_wp_at ((=) (fst x)) (snd x) s"
            in revcut_rl
-         , fastforce elim: cte_wp_at_eq_diminishedE valid_cap_wellformed
+         , fastforce elim: valid_cap_wellformed
                            ex_cte_cap_wp_to_cnode_real_cte)
   apply (intro conjI allI impI ballI
          ; clarsimp simp: cte_wp_at_eq_simp valid_cap_def[of cap] valid_cap_simps
          ; fastforce elim: cte_wp_at_weakenE ex_cte_cap_wp_to_weakenE
-                   intro!: diminished_no_cap_to_obj_with_diff_ref)
+                   intro!: eq_no_cap_to_obj_with_diff_ref)
   done
 
 end
@@ -983,20 +983,8 @@ lemma lookup_cap_and_slot_eq [wp]:
   "\<lbrace>\<top>\<rbrace> lookup_cap_and_slot thread cptr \<lbrace>\<lambda>rv. cte_wp_at ((=) (fst rv)) (snd rv)\<rbrace>, -"
   by (simp add: lookup_cap_and_slot_cte_wp_at_P)
 
-lemma lookup_cap_and_slot_diminished [wp]:
-  "\<lbrace>valid_objs\<rbrace> lookup_cap_and_slot thread cptr \<lbrace>\<lambda>x. cte_wp_at (diminished (fst x)) (snd x)\<rbrace>, -"
-  by (intro lookup_cap_and_slot_cte_wp_at_P
-            wellformed_cap_eq_diminished valid_cap_wellformed
-            caps_of_state_valid_cap)
-
 lemma lookup_extra_caps_eq [wp]:
   "\<lbrace>\<top>\<rbrace> lookup_extra_caps thread xb info \<lbrace>\<lambda>rv s. \<forall>x\<in>set rv. cte_wp_at ((=) (fst x)) (snd x) s\<rbrace>,-"
-  by (wpsimp simp: lookup_extra_caps_def wp: mapME_set)
-
-lemma lookup_extra_caps_diminished [wp]:
-  "\<lbrace>valid_objs\<rbrace>
-    lookup_extra_caps thread xb info
-   \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. cte_wp_at (diminished (fst x)) (snd x) s)\<rbrace>,-"
   by (wpsimp simp: lookup_extra_caps_def wp: mapME_set)
 
 (*FIXME: move to NonDetMonadVCG.valid_validE_R *)
@@ -1075,7 +1063,7 @@ lemma sts_schedulable_scheduler_action:
         is_schedulable_bool thread (in_release_queue thread s) s\<rbrace>
    set_thread_state thread Restart
   \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
-  apply (wpsimp wp: stsa_schedulable_scheduler_action simp: set_thread_state_def set_object_def)
+  apply (wpsimp wp: stsa_schedulable_scheduler_action set_object_wp simp: set_thread_state_def)
   apply (fastforce simp: is_schedulable_bool_def is_sc_active_def get_tcb_def
                          in_release_queue_def
                   split: option.splits kernel_object.splits)
@@ -1358,7 +1346,7 @@ context Syscall_AI begin
 
 lemma do_reply_transfer_nonz_cap:
   "\<lbrace>\<lambda>s :: 'state_ext state. ex_nonz_cap_to p s\<rbrace>
-     do_reply_transfer sender reply
+     do_reply_transfer sender reply grant
    \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   by (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift get_tcb_obj_ref_wp
@@ -1454,7 +1442,7 @@ crunches reply_push
 
 lemma send_ipc_not_cur_ct_active[wp]:
   "\<lbrace>\<lambda>s. ct_active s \<and> thread \<noteq> cur_thread s\<rbrace>
-     send_ipc block call badge can_grant can_donate thread epptr
+     send_ipc block call badge can_grant can_reply_grant can_donate thread epptr
    \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: send_ipc_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
@@ -1482,7 +1470,7 @@ lemma handle_timeout_ct_active[wp]:
 
 lemma do_reply_transfer_ct_active[wp]:
   "\<lbrace>ct_active\<rbrace>
-     do_reply_transfer sender reply
+     do_reply_transfer sender reply grant
    \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wpsimp wp: set_thread_state_ct_st hoare_vcg_all_lift hoare_drop_imps
@@ -1498,7 +1486,7 @@ crunches reply_unlink_tcb, do_ipc_transfer
 
 lemma send_ipc_not_blocking_not_calling_ct_active[wp]:
   "\<lbrace>ct_active and fault_tcb_at ((=) None) t\<rbrace>
-     send_ipc False False bdg x can_donate t epptr
+     send_ipc False False bdg cg crg can_donate t epptr
    \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: send_ipc_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
@@ -1703,7 +1691,7 @@ lemma send_ipc_st_tcb_at_runnable:
   unfolding send_ipc_def
   supply if_split[split del]
   apply (wpsimp wp: sts_st_tcb_at_other get_tcb_obj_ref_wp hoare_vcg_all_lift hoare_vcg_if_lift
-                    reply_unlink_runnable get_simple_ko_wp | wp_once hoare_drop_imp)+
+                    reply_unlink_runnable get_simple_ko_wp | wp (once) hoare_drop_imp)+
   apply (auto dest: runnable_not_queued)
   done
 

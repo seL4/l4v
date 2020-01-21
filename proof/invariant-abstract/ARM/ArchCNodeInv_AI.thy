@@ -154,11 +154,6 @@ lemma is_reply_update_cap_data [simp]:
   by (simp add:is_reply_cap_def update_cap_data_def arch_update_cap_data_def the_cnode_cap_def
                is_arch_cap_def badge_update_def split:cap.split)
 
-lemma is_master_reply_update_cap_data[simp]:
-  "is_master_reply_cap (update_cap_data P x c) = is_master_reply_cap c"
-  by (simp add:is_master_reply_cap_def update_cap_data_def arch_update_cap_data_def
-               the_cnode_cap_def is_arch_cap_def badge_update_def split:cap.split)
-
 lemma weak_derived_update_cap_data [CNodeInv_AI_assms]:
   "\<lbrakk>update_cap_data P x c \<noteq> NullCap; weak_derived c c'\<rbrakk>
   \<Longrightarrow> weak_derived (update_cap_data P x c) c'"
@@ -468,11 +463,11 @@ crunch valid_objs[wp]: set_consumed valid_objs
 
 lemma complete_yield_to_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> complete_yield_to t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  by (wpsimp simp: complete_yield_to_def | wp_once hoare_drop_imps)+
+  by (wpsimp simp: complete_yield_to_def | wp (once) hoare_drop_imps)+
 
 lemma sched_context_unbind_tcb_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> sched_context_unbind_tcb t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  by (wpsimp simp: sched_context_unbind_tcb_def | wp_once hoare_drop_imps)+
+  by (wpsimp simp: sched_context_unbind_tcb_def | wp (once) hoare_drop_imps)+
 
 lemma unbind_from_sc_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> unbind_from_sc t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"

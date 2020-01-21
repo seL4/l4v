@@ -2558,8 +2558,8 @@ lemma valid_idle_store_pte[wp]:
   apply wp
     apply (rule hoare_vcg_precond_imp[where Q="valid_idle"])
      apply (simp add: set_pt_def)
-     apply (wpsimp wp: get_object_wp)
-     apply (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def)
+     apply (wpsimp wp: set_object_wp_strong)
+     apply (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def a_type_simps split: if_splits)
     apply (wp|simp)+
   done
 
@@ -4911,7 +4911,7 @@ lemma set_asid_pool_asid_map:
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: a_type_def)
-  apply (clarsimp split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm)
+  apply (clarsimp split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_splits)
   apply (clarsimp simp: obj_at_def)
   apply (clarsimp simp: valid_asid_map_def)
   apply (drule bspec, blast)
@@ -4939,7 +4939,7 @@ lemma set_asid_pool_asid_map:
   apply (rule vs_lookup1I)
     apply (simp add: obj_at_def)
    apply simp
-  apply (simp split: if_splits)+
+  apply simp
   done
 
 lemma set_asid_pool_invs_map:
@@ -5009,7 +5009,7 @@ lemma invs_aligned_pdD:
 
 lemma valid_vspace_obj_default:
   assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
-  shows "ArchObj ao = default_object ty dev us \<Longrightarrow> valid_vspace_obj ao s'"
+  shows "ArchObj ao = default_object ty dev us d \<Longrightarrow> valid_vspace_obj ao s'"
   apply (cases ty, simp_all add: default_object_def tyunt)
   apply (simp add: valid_vspace_obj_default')
   done

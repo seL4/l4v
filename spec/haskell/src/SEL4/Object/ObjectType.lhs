@@ -410,7 +410,7 @@ New threads are placed in the current security domain, which must be the domain 
 >             return $ SchedContextCap (PPtr $ fromPPtr regionBase) userSize
 >         Just ReplyObject -> do
 >             placeNewObject regionBase (makeObject :: Reply) 0
->             return $ ReplyCap (PPtr $ fromPPtr regionBase)
+>             return $ ReplyCap (PPtr $ fromPPtr regionBase) True
 >         Just CapTableObject -> do
 >             placeNewObject (PPtr $ fromPPtr regionBase) (makeObject :: CTE) userSize
 >             modify (\ks -> ks { gsCNodes =

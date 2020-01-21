@@ -363,7 +363,7 @@ where
                        of EndpointCap ref badge rights \<Rightarrow> return (ref,rights)
                         | _ \<Rightarrow> fail);
      reply \<leftarrow> (case reply_cap of
-                 ReplyCap r \<Rightarrow> do
+                 ReplyCap r _ \<Rightarrow> do
                    tptr \<leftarrow> get_reply_obj_ref reply_tcb r;
                    when (tptr \<noteq> None \<and> the tptr \<noteq> thread) $ cancel_ipc (the tptr);
                    return (Some r)
@@ -459,7 +459,7 @@ definition
   receive_blocked :: "thread_state \<Rightarrow> bool"
 where
   "receive_blocked st \<equiv> case st of
-       BlockedOnReceive _ _ \<Rightarrow> True
+       BlockedOnReceive _ _ _ \<Rightarrow> True
      | _ \<Rightarrow> False"
 
 definition
@@ -584,9 +584,9 @@ definition is_timeout_fault :: "fault \<Rightarrow> bool" where
     (case f of Timeout _ \<Rightarrow> True | _ \<Rightarrow> False)"
 
 definition
-  do_reply_transfer :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  do_reply_transfer :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
- "do_reply_transfer sender reply \<equiv> do
+ "do_reply_transfer sender reply grant \<equiv> do
     recv_opt \<leftarrow> get_reply_tcb reply;
     swp maybeM recv_opt (\<lambda>receiver. do
       state \<leftarrow> get_thread_state receiver;
@@ -597,7 +597,7 @@ where
           fault \<leftarrow> thread_get tcb_fault receiver;
           case fault of
             None \<Rightarrow> do
-              do_ipc_transfer sender None 0 True receiver;
+              do_ipc_transfer sender None 0 grant receiver;
               set_thread_state receiver Running
             od
           | Some f \<Rightarrow> do

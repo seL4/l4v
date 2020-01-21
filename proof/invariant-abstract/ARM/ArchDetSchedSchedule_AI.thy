@@ -33,7 +33,10 @@ crunches setHardwareASID, set_current_pd, invalidateLocalTLB_ASID, cleanByVA, in
   invalidateLocalTLB_VAASID, do_flush, storeWord, freeMemory, ackDeadlineIRQ, clearMemory,
   getDFSR, getFAR, getIFSR
   for last_machine_time[wp]: "\<lambda>s. P (last_machine_time s)"
-  (simp: isb_def writeTTBR0_def wp: crunch_wps)
+  (simp: isb_def writeTTBR0_def wp: crunch_wps
+   ignore_del: setHardwareASID invalidateLocalTLB_ASID cleanByVA invalidateL2Range invalidateByVA
+               cleanInvalByVA cleanInvalidateL2Range branchFlush invalidateByVA_I cleanL2Range
+               invalidateLocalTLB_VAASID)
 
 lemma misc_dmo_valid_sched_pred_strong[wp]:
   "do_machine_op cleanCaches_PoU \<lbrace>valid_sched_pred_strong Q\<rbrace>"
@@ -130,11 +133,6 @@ lemma stit_activatable' [DetSchedSchedule_AI_assms]:
 lemma switch_to_idle_thread_cur_thread_idle_thread [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_ s. cur_thread s = idle_thread s\<rbrace>"
   by (wp | simp add:switch_to_idle_thread_def arch_switch_to_idle_thread_def)+
-
-crunches arch_tcb_set_ipc_buffer
-for valid_sched [wp, DetSchedSchedule_AI_assms]: valid_sched
-and simple_sched_action [wp, DetSchedSchedule_AI_assms]: simple_sched_action
-  (ignore: set_object as_user wp: valid_sched_lift crunch_wps subset_refl simp: if_fun_split)
 
 lemma set_thread_state_cur_thread_valid_blocked:
   "\<lbrace>valid_blocked and (\<lambda>s. ref = cur_thread s)\<rbrace> set_thread_state ref ts

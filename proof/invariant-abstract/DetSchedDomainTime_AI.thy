@@ -112,6 +112,7 @@ locale DetSchedDomainTime_AI =
 crunches update_restart_pc
   for domain_list[wp]: "\<lambda>s. P (domain_list s)"
   and domain_time[wp]: "\<lambda>s. P (domain_time s)"
+  (wp: crunch_wps)
 
 locale DetSchedDomainTime_AI_2 = DetSchedDomainTime_AI +
   assumes handle_hypervisor_fault_domain_list_inv'[wp]:
@@ -221,7 +222,9 @@ lemma reply_push_domain_list_inv[wp]:
     wp: hoare_vcg_if_lift2 hoare_vcg_all_lift hoare_drop_imp get_sched_context_wp)
 
 lemma send_ipc_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> send_ipc block call badge can_grant can_donate thread epptr \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+  "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>
+   send_ipc block call badge can_grant can_reply_grant can_donate thread epptr
+   \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   by (wpsimp simp: send_ipc_def wp: hoare_drop_imp hoare_vcg_all_lift)
 
 lemma send_fault_ipc_domain_list_inv[wp]:
@@ -247,7 +250,7 @@ end
 
 crunches delete_objects, preemption_point, reset_untyped_cap
   for domain_list_inv[wp]: "\<lambda>s :: det_state. P (domain_list s)"
-  (wp: crunch_wps mapME_x_inv_wp OR_choiceE_weak_wp simp: detype_def)
+  (wp: crunch_wps mapME_x_inv_wp OR_choiceE_weak_wp simp: detype_def ignore_del: preemption_point)
 
 crunches
   set_priority, restart, sched_context_bind_tcb,sched_context_bind_ntfn,
@@ -473,7 +476,7 @@ crunch domain_time_inv[wp]: delete_objects "\<lambda>s :: det_state. P (domain_t
    ignore: freeMemory)
 
 crunch domain_time_inv[wp]: preemption_point "\<lambda>s::det_state. P (domain_time s)"
-  (wp: select_inv OR_choiceE_weak_wp ignore: OR_choiceE)
+  (wp: select_inv OR_choiceE_weak_wp ignore: OR_choiceE ignore_del: preemption_point)
 
 crunch domain_time_inv[wp]: reset_untyped_cap "\<lambda>s::det_state. P (domain_time s)"
   (wp: crunch_wps hoare_unless_wp mapME_x_inv_wp select_inv

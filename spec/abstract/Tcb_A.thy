@@ -154,7 +154,6 @@ where
          \<Rightarrow> doE
               cap_delete (target, tcb_cnode_index 2);
               liftE $ thread_set (\<lambda>t. t \<lparr> tcb_ipc_buffer := ptr \<rparr>) target;
-              liftE $ arch_tcb_set_ipc_buffer target ptr;
               liftE $ case frame of
                         None \<Rightarrow> return ()
                       | Some (new_cap, src_slot)

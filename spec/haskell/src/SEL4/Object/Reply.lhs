@@ -57,12 +57,12 @@ This module specifies the behavior of reply objects.
 >     let canDonate = if (scCallee == Nothing) then canDonate else False
 >     stateCaller <- getThreadState caller
 >     case stateCaller of
->         BlockedOnReceive _ (Just r) -> fail "caller must have no reply"
+>         BlockedOnReceive _ (Just r) _ -> fail "caller must have no reply"
 >         BlockedOnReply (Just r) -> fail "caller must have no reply"
 >         _ -> return ()
 >     stateCallee <- getThreadState callee
 >     case stateCallee of
->         BlockedOnReceive e _ -> setThreadState (BlockedOnReceive e Nothing) callee
+>         BlockedOnReceive e _ d -> setThreadState (BlockedOnReceive e Nothing d) callee
 >         BlockedOnReply _ -> setThreadState (BlockedOnReply Nothing) callee
 >         _ -> return ()
 >     setReplyTCB (Just caller) replyPtr

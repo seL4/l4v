@@ -2436,9 +2436,8 @@ lemma copy_of_commute:
   apply clarsimp
   apply (clarsimp simp: copy_of_def is_reply_cap_def
                       same_object_as_commute
-                split: if_splits cap.splits)
-  apply (simp add: same_object_as_def split: cap.splits)
-      apply (case_tac c'; simp)+
+                split: if_splits cap.splits;
+         simp add: same_object_as_def split: cap.splits)
   done
 
 lemma weak_derived_commute:
@@ -2961,6 +2960,14 @@ lemma weak_derived_is_reply:
                  same_object_as_def is_cap_simps
          split: if_split_asm cap.split_asm)
 
+context begin interpretation Arch .
+lemma non_arch_cap_asid_vptr_None:
+  assumes "\<not> is_arch_cap cap"
+  shows "cap_asid cap = None"
+    and "cap_asid_base cap = None"
+    and "cap_vptr cap = None"
+  using assms by (cases cap; simp add: is_cap_simps cap_asid_def cap_asid_base_def cap_vptr_def)+
+end
 
 lemma weak_derived_Reply:
   "weak_derived (cap.ReplyCap t R) c = (\<exists> R'. c = cap.ReplyCap t R')"

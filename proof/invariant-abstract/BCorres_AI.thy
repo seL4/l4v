@@ -55,8 +55,6 @@ crunch_ignore (bcorres)
   (add: NonDetMonad.bind gets modify get put do_extended_op empty_slot_ext mapM_x "when"
         select unless mapM catch bindE liftE whenE alternative cap_swap_ext
         cap_insert_ext cap_move_ext liftM create_cap_ext
-        possible_switch_to reschedule_required set_priority
-        tcb_sched_action schedule_tcb
         lookup_error_on_failure getActiveIRQ
         gets_the liftME zipWithM_x unlessE mapME_x handleE forM_x)
 
@@ -137,7 +135,7 @@ lemma set_tcb_queue_bcorres[wp]:
   done
 
 crunch (bcorres)bcorres[wp]:
-  tcb_sched_action, reschedule_required, possible_switch_to, cancel_all_ipc, bind_notification
+  cancel_all_ipc, bind_notification, cancel_all_signals
   truncate_state
 
 crunch (bcorres)bcorres[wp]: get_tcb_obj_ref, get_sk_obj_ref truncate_state
@@ -152,6 +150,7 @@ lemma unbind_notification_bcorres[wp]:
   by (wpsimp simp: unbind_notification_def maybeM_def)
 
 crunch (bcorres)bcorres[wp]: set_reply truncate_state (simp: gets_the_def ignore: gets_the)
+
 (*
 lemma fast_finalise_bcorres[wp]:
   "bcorres (fast_finalise a b) (fast_finalise a b)"

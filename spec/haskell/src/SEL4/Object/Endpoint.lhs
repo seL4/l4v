@@ -45,7 +45,7 @@ This module specifies the contents and behaviour of a synchronous IPC endpoint.
 
 This function performs an IPC send operation, given a pointer to the sending thread, a capability to an endpoint, and possibly a fault that should be sent instead of a message from the thread.
 
-> sendIPC :: Bool -> Bool -> Word -> Bool -> Bool -> PPtr TCB ->
+> sendIPC :: Bool -> Bool -> Word -> Bool -> Bool -> Bool -> PPtr TCB ->
 >         PPtr Endpoint -> Kernel ()
 
 The normal (blocking) version of the send operation will remove a recipient from the endpoint's queue if one is available, or otherwise add the sender to the queue.
@@ -127,7 +127,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 > receiveIPC :: PPtr TCB -> Capability -> Bool -> Capability -> Kernel ()
 > receiveIPC thread cap@(EndpointCap {}) isBlocking replyCap = do
 >         replyOpt <- (case replyCap of
->             ReplyCap r -> return (Just r)
+>             ReplyCap r _ -> return (Just r)
 >             NullCap -> return Nothing
 >             _ -> fail "receiveIPC: replyCap must be ReplyCap or NullCap")
 >         when (replyOpt /= Nothing) $ do
@@ -157,7 +157,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >               True -> do
 >                   setThreadState (BlockedOnReceive {
 >                       blockingObject = epptr, replyObject = replyOpt,
->                       blockingIPCCanGrant = recvCanGrant} }) thread
+>                       blockingIPCCanGrant = recvCanGrant }) thread
 >                   when (replyOpt /= Nothing) $
 >                       setReplyTCB (Just thread) $ fromJust replyOpt
 >                   qs' <- sortQueue (queue ++ [thread])
@@ -175,8 +175,9 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                 let canGrantReply = blockingIPCCanGrantReply senderState
 >                 doIPCTransfer sender (Just epptr) badge canGrant thread
 >                 let call = blockingIPCIsCall senderState
->                 case (call, canGrant || canGrantReply) of
->                     (False, _) -> do
+>                 fault <- threadGet tcbFault sender
+>                 case (call, fault, canGrant || canGrantReply, replyOpt) of
+>                     (False, Nothing, _, _) -> do
 >                         setThreadState Running sender
 >                         possibleSwitchTo sender
 >                     (_, _, True, Just reply) -> do
@@ -215,7 +216,7 @@ If a thread is waiting for an IPC operation, it may be necessary to move the thr
 Threads blocked waiting for endpoints will simply be removed from the endpoint queue.
 
 >             BlockedOnSend {} -> blockedIPCCancel state Nothing
->             BlockedOnReceive _ replyOpt -> blockedIPCCancel state replyOpt
+>             BlockedOnReceive _ replyOpt _ -> blockedIPCCancel state replyOpt
 >             BlockedOnNotification event -> cancelSignal tptr event
 
 Threads that are waiting for an ipc reply or a fault response must have their reply capability revoked.
@@ -306,8 +307,8 @@ The following two functions are specialisations of "getObject" and
 
 > epBlocked :: ThreadState -> Maybe (PPtr Endpoint)
 > epBlocked ts = case ts of
->     BlockedOnReceive r _ -> Just r
->     BlockedOnSend r _ _ _ -> Just r
+>     BlockedOnReceive r _ _ -> Just r
+>     BlockedOnSend r _ _ _ _ -> Just r
 >     _ -> Nothing
 
 > getBlockingObject :: ThreadState -> Kernel (PPtr Endpoint)

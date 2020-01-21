@@ -133,24 +133,37 @@ proof -
         apply (erule range_cover.sz)
        apply (simp add: range_cover_def)
       apply (clarsimp simp: get_free_ref_def empty_descendants_range_in)
+      apply (rule conjI)
+       apply (intro impI)
+       apply (frule range_cover_stuff[where w=w and rv = 0 and sz = sz], simp_all)[1]
+       apply (clarsimp simp: valid_cap_simps cap_aligned_def)+
+       apply (frule alignUp_idem[OF is_aligned_weaken,where a = w])
+         apply (erule range_cover.sz)
+        apply (clarsimp simp: untyped_max_bits_def)
+       apply (clarsimp simp: valid_sched_context_size_def min_sched_context_bits_def
+                              untyped_max_bits_def obj_bits_api_def)
+        apply (simp add:range_cover_def)
+       apply (clarsimp simp: get_free_ref_def empty_descendants_range_in
+                             valid_sched_context_size_def min_sched_context_bits_def word_bits_def
+                             untyped_max_bits_def)
       apply (rule conjI[rotated], blast, clarsimp)
       apply (drule_tac x = "(obj_ref_of node_cap,nat_to_cref (bits_of node_cap) slota)" in bspec)
        apply (clarsimp simp: is_cap_simps nat_to_cref_def word_bits_def
          bits_of_def valid_cap_simps cap_aligned_def)+
      apply (simp add: free_index_of_def)
      apply (frule(1) range_cover_stuff[where sz = sz])
-        apply (clarsimp dest!: valid_cap_aligned simp: cap_aligned_def word_bits_def)+
+        apply (clarsimp dest!:valid_cap_aligned simp:cap_aligned_def word_bits_def)+
       apply simp+
-     apply (clarsimp simp: get_free_ref_def)
-    apply (erule disjE)
-     apply (drule_tac x= "cs!0" in bspec)
-    subgoal by clarsimp
-    subgoal by simp
+     apply (clarsimp simp: get_free_ref_def valid_sched_context_size_def min_sched_context_bits_def
+                           untyped_max_bits_def obj_bits_api_def)
+     apply (rule conjI; clarsimp)
+    apply (erule disjE, fastforce)
     apply (clarsimp simp: cte_wp_at_caps_of_state ex_cte_cap_wp_to_def)
-    apply (rule_tac x=aa in exI,rule exI,rule exI)
+    apply (rename_tac oref cref)
+    apply (rule_tac x=oref in exI,rule exI,rule exI)
     apply (rule conjI, assumption)
     apply simp
-   done
+    done
 qed
 
 lemma asid_bits_ge_0:

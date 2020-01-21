@@ -231,7 +231,7 @@ primrec (nonexhaustive)
 where
   "cap_rights (EndpointCap _ _ cr) = cr"
 | "cap_rights (NotificationCap _ _ cr) = cr"
-| "cap_rights (ReplyCap _ _ cr) = cr"
+| "cap_rights (ReplyCap _ cr) = cr"
 | "cap_rights (ArchObjectCap acap) = acap_rights acap"
 end
 
@@ -244,7 +244,7 @@ definition
      EndpointCap oref badge cr \<Rightarrow> EndpointCap oref badge cr'
    | NotificationCap oref badge cr
      \<Rightarrow> NotificationCap oref badge (cr' - {AllowGrant, AllowGrantReply})
-   | ReplyCap t m cr \<Rightarrow> ReplyCap t m (cr' - {AllowRead, AllowGrantReply} \<union> {AllowWrite})
+   | ReplyCap t cr \<Rightarrow> ReplyCap t (cr' - {AllowRead, AllowGrantReply} \<union> {AllowWrite})
    | ArchObjectCap acap \<Rightarrow> ArchObjectCap (acap_rights_update cr' acap)
    | _ \<Rightarrow> cap"
 
@@ -413,9 +413,9 @@ primrec runnable :: "Structures_A.thread_state \<Rightarrow> bool" where
   "runnable (Running)                 = True"
 | "runnable (Inactive)                = False"
 | "runnable (Restart)                 = True"
-| "runnable (BlockedOnReceive _ _)    = False"
-| "runnable (BlockedOnSend x y)       = False"
-| "runnable (BlockedOnNotification x) = False"
+| "runnable (BlockedOnReceive _ _ _)  = False"
+| "runnable (BlockedOnSend _ _)       = False"
+| "runnable (BlockedOnNotification _) = False"
 | "runnable (IdleThreadState)         = False"
 | "runnable (BlockedOnReply _)        = False"
 
@@ -424,7 +424,7 @@ primrec ipc_queued_thread_state :: "thread_state \<Rightarrow> bool" where
   "ipc_queued_thread_state (Running)                 = False"
 | "ipc_queued_thread_state (Inactive)                = False"
 | "ipc_queued_thread_state (Restart)                 = False"
-| "ipc_queued_thread_state (BlockedOnReceive _ _)    = True"
+| "ipc_queued_thread_state (BlockedOnReceive _ _ _)  = True"
 | "ipc_queued_thread_state (BlockedOnSend _ _)       = True"
 | "ipc_queued_thread_state (BlockedOnNotification _) = True"
 | "ipc_queued_thread_state (IdleThreadState)         = False"
@@ -572,7 +572,7 @@ where
 | "obj_size (CNodeCap r bits g) = 1 << (cte_level_bits + bits)"
 | "obj_size (ThreadCap r) = 1 << obj_bits (TCB undefined)"
 | "obj_size (SchedContextCap r bits) = 1 << bits"
-| "obj_size (ReplyCap r) = 1 << obj_bits (Reply undefined)"
+| "obj_size (ReplyCap r _) = 1 << obj_bits (Reply undefined)"
 | "obj_size (Zombie r zb n) = (case zb of None \<Rightarrow> 1 << obj_bits (TCB undefined)
                                         | Some n \<Rightarrow> 1 << (cte_level_bits + n))"
 | "obj_size (ArchObjectCap a) = 1 << arch_obj_size a"

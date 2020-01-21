@@ -171,7 +171,7 @@ definition reply_unlink_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (uni
      reply \<leftarrow> get_reply r;
      assert (reply_tcb reply = Some t);
      ts \<leftarrow> get_thread_state t;
-     assert (ts = BlockedOnReply r \<or> (\<exists>ep. ts = BlockedOnReceive ep (Some r)));
+     assert (ts = BlockedOnReply r \<or> (\<exists>ep d. ts = BlockedOnReceive ep (Some r) d));
      set_reply_obj_ref reply_tcb_update r None;
      set_thread_state t Inactive
    od"
@@ -237,7 +237,7 @@ definition
 where
   "no_reply_in_ts tptr \<equiv> do
       st \<leftarrow> get_thread_state tptr;
-      case st of BlockedOnReceive x r \<Rightarrow> return (r = None)
+      case st of BlockedOnReceive _ r _ \<Rightarrow> return (r = None)
                | BlockedOnReply r \<Rightarrow> return False
                | _ \<Rightarrow> return True
   od"
@@ -306,7 +306,7 @@ definition
   ep_blocked :: "thread_state \<Rightarrow> obj_ref option"
 where
   "ep_blocked ts \<equiv> case ts of
-     BlockedOnReceive r _ \<Rightarrow> Some r
+     BlockedOnReceive r _ _ \<Rightarrow> Some r
    | BlockedOnSend r _ \<Rightarrow> Some r
    | _ \<Rightarrow> None"
 
@@ -437,7 +437,7 @@ where
          set_endpoint epptr IdleEP;
          mapM_x (\<lambda>t.
            do st \<leftarrow> get_thread_state t;
-              reply_opt \<leftarrow> case st of BlockedOnReceive _ r_opt \<Rightarrow> return r_opt
+              reply_opt \<leftarrow> case st of BlockedOnReceive _ r_opt _ \<Rightarrow> return r_opt
                                     | _ \<Rightarrow> return None;
               when (reply_opt \<noteq> None) $ reply_unlink_tcb t (the reply_opt);
               restart_thread_if_no_fault t

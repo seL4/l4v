@@ -17,7 +17,7 @@ context Arch begin global_naming ARM
 named_theorems Deterministic_AI_assms
 
 crunch valid_list[wp, Deterministic_AI_assms]:
-  cap_swap_for_delete,set_cap,finalise_cap,arch_tcb_set_ipc_buffer,
+  cap_swap_for_delete,set_cap,finalise_cap,
   arch_post_modify_registers,make_arch_fault_msg valid_list
   (wp: crunch_wps maybeM_inv simp: unless_def crunch_simps)
 
@@ -105,11 +105,11 @@ named_theorems arch_machine_ops_last_machine_time'
 \<comment> \<open>crunch these separately so they don't appear in machine_ops_last_machine_time\<close>
 crunches cleanByVA_PoU, cleanCacheRange_PoU
   for last_machine_time[wp, arch_machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms)"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps ignore_del: cleanByVA_PoU)
 
 crunches storeWord, clearMemory, freeMemory, ackDeadlineIRQ, ackInterrupt, maskInterrupt, setDeadline
   for last_machine_time[wp, machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms)"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps ignore_del: storeWord maskInterrupt clearMemory)
 
 lemmas machine_ops_last_machine_time = machine_ops_last_machine_time'
 lemmas arch_machine_ops_last_machine_time = arch_machine_ops_last_machine_time'
