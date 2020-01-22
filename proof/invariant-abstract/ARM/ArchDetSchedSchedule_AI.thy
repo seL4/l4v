@@ -353,11 +353,11 @@ global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
 context Arch begin global_naming ARM
 
 lemma handle_hyp_fault_trivial[wp]:
-  "\<lbrace>Q ()\<rbrace> handle_hypervisor_fault t fault \<lbrace>Q\<rbrace>"
+  "handle_hypervisor_fault t fault \<lbrace>Q\<rbrace>"
   by (cases fault; wpsimp)
 
 lemma handle_reserved_irq_trivial[wp]:
-  "\<lbrace>Q ()\<rbrace> handle_reserved_irq irq \<lbrace>Q\<rbrace>"
+  "handle_reserved_irq irq \<lbrace>Q\<rbrace>"
   unfolding handle_reserved_irq_def
   by (wpsimp)
 

@@ -2704,12 +2704,17 @@ lemmas choose_thread_ct_activatable' =
   choose_thread_ct_activatable[folded obj_at_kh_kheap_simps]
 
 lemma schedule_choose_new_thread_valid_sched_misc[wp]:
-  "schedule_choose_new_thread \<lbrace>\<lambda>s::'state_ext state. P (consumed_time s) (cur_sc s) (cur_time s)
-                                          (idle_thread s) (release_queue s)
-                                          (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)
-                                          (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s)
+          (idle_thread s) (release_queue s) resume_cur_thread
+          (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)
+          (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>
+   schedule_choose_new_thread
+   \<lbrace>\<lambda>_ s::'state_ext state. P (consumed_time s) (cur_sc s) (cur_time s)
+                              (idle_thread s) (release_queue s) (scheduler_action s)
+                              (last_machine_time_of s) (etcbs_of s) (tcb_sts_of s)
+                              (tcb_scps_of s) (sc_refill_cfgs_of s)\<rbrace>"
   unfolding schedule_choose_new_thread_def
-  by wpsimp
+  by (wpsimp wp: set_scheduler_action_wp)
 
 end
 
@@ -16350,6 +16355,11 @@ locale DetSchedSchedule_AI_handle_hypervisor_fault =
       \<lbrace>\<lambda>rv. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
   assumes handle_hyp_fault_valid_machine_time[wp]:
     "\<And>t fault. handle_hypervisor_fault t fault \<lbrace>valid_machine_time::'state_ext state \<Rightarrow> _\<rbrace>"
+  assumes handle_hyp_fault_cur_time[wp]:
+    "\<And>t fault. handle_hypervisor_fault t fault
+               \<lbrace>(\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
+                       (cur_thread s) (idle_thread s) (last_machine_time_of s)
+                       (sc_refill_cfgs_of s) (etcbs_of s)) :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes handle_reserved_irq_valid_machine_time[wp]:
     "\<And>irq. handle_reserved_irq irq \<lbrace>valid_machine_time::'state_ext state \<Rightarrow> _\<rbrace>"
 
@@ -17199,7 +17209,7 @@ lemma handle_invocation_ct_conditions_temp[wp]:
 
 end
 
-context DetSchedSchedule_AI_handle_hypervisor_fault_det_ext begin
+context DetSchedSchedule_AI begin
 
 lemma refill_bounded_helper2:
   "valid_refills (cur_sc s) s \<Longrightarrow>
@@ -17231,29 +17241,6 @@ lemma refill_bounded_helper:
   apply (clarsimp simp: sc_valid_refills_def)
   done
 
-lemma update_time_stamp_cur_sc_offset_ready_cs[wp]:
-  "\<lbrace>valid_machine_time and (\<lambda>s. cur_sc_offset_ready (consumed_time s) (s:: det_ext state))\<rbrace>
-   update_time_stamp
-   \<lbrace>\<lambda>_ s. cur_sc_offset_ready (consumed_time s) s\<rbrace>"
-  unfolding update_time_stamp_def
-  apply (rule_tac hoare_seq_ext[OF _ gets_sp])
-  apply wpsimp
-   apply (rule_tac P="(\<lambda>s. cur_sc_offset_ready (consumed_time s) s) and (\<lambda>s. cur_time s = prev_time)"
-          in dmo_getCurrentTime_wp)
-    apply (clarsimp simp: cur_sc_offset_ready_2_def split: option.splits)
-    apply (case_tac x2; simp)
-    apply (rule_tac y="unat (r_time (refill_hd x51)) + unat (consumed_time s) + unat (rv - cur_time s)" in order_trans)
-     apply clarsimp
-     apply (subst add_diff_eq[symmetric])
-     apply (rule unat_plus_gt)
-    apply (subst unat_sub, assumption)
-    apply (subst diff_add_assoc[symmetric])
-     apply overflow_hammer
-    apply (clarsimp simp: le_diff_conv)
-   apply wpsimp
-  apply clarsimp
-  done
-
 lemma to_handle_final_time_obligationsAA:
   "\<lbrace>\<lambda>s. pred_next_time (\<lambda>nt. unat nt + unat MAX_SC_PERIOD \<le> unat max_time) s\<rbrace>
     update_time_stamp
@@ -17282,7 +17269,7 @@ lemma update_time_stamp_cur_time[wp]:
 lemma update_time_stamp_consumed_time_bounded[wp]:
   "\<lbrace>consumed_time_bounded and valid_machine_time\<rbrace>
    update_time_stamp
-   \<lbrace>\<lambda>_. consumed_time_bounded :: det_state \<Rightarrow> _\<rbrace>"
+   \<lbrace>\<lambda>_. consumed_time_bounded :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding update_time_stamp_def
   apply (rule_tac hoare_seq_ext[OF _ gets_sp])
   apply wpsimp
@@ -17301,11 +17288,87 @@ lemma update_time_stamp_consumed_time_bounded[wp]:
   apply clarsimp
   done
 
+crunches preemption_point
+  for consumed_time_bounded[wp]: "consumed_time_bounded :: 'state_ext state \<Rightarrow> _"
+  (wp: crunch_wps rule: preemption_point_inv simp: crunch_simps)
+
+crunches cancel_badged_sends
+  for cur_time[wp]: "(\<lambda>s. P (cur_time s)) :: 'state_ext state \<Rightarrow> _"
+  (wp: crunch_wps filterM_preserved simp: crunch_simps)
+
+crunches cap_revoke
+  for cur_time[wp]: "(\<lambda>s. P (cur_time s)) :: 'state_ext state \<Rightarrow> _"
+  and consumed_time_bounded[wp]: "consumed_time_bounded :: 'state_ext state \<Rightarrow> _"
+  (wp: crunch_wps rule: cap_revoke_preservation2 simp: crunch_simps)
+
+crunches perform_invocation
+  for cur_time[wp]: "(\<lambda>s. P (cur_time s)) :: 'state_ext state \<Rightarrow> _"
+  (wp: crunch_wps check_cap_inv get_simple_ko_wp simp: crunch_simps)
+
+crunches handle_fault, reply_from_kernel, lookup_cap_and_slot
+  for cur_time[wp]: "(\<lambda>s. P (cur_time s)) :: 'state_ext state \<Rightarrow> _"
+  and consumed_time_bounded[wp]: "consumed_time_bounded :: 'state_ext state \<Rightarrow> _"
+
+lemma handle_invocation_cur_time[wp]:
+  "handle_invocation a b c d cptr
+   \<lbrace>(\<lambda>s. P (cur_time s)) :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding handle_invocation_def
+  by (wpsimp wp: syscall_valid hoare_drop_imp hoare_drop_impE)
+
+lemma handle_call_cur_time[wp]:
+  "handle_call \<lbrace>(\<lambda>s. P (cur_time s)) :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding handle_call_def
+   by wpsimp
+
+crunches handle_send, handle_recv, handle_yield, check_budget_restart, handle_interrupt
+  for cur_time[wp]: "(\<lambda>s. P (cur_time s)) :: 'state_ext state \<Rightarrow> _"
+  (wp: crunch_wps simp: crunch_simps)
+
+(* FIXME: move *)
+lemma consumed_time_detype[simp]:
+  "consumed_time (detype r s) = consumed_time s"
+  by (simp add: detype_def)
+
+crunches perform_invocation
+  for consumed_time_bounded[wp]: "consumed_time_bounded :: 'state_ext state \<Rightarrow> _"
+  (wp: crunch_wps check_cap_inv get_simple_ko_wp mapME_x_wp_inv filterM_preserved simp: crunch_simps)
+
+crunches handle_call, handle_send, handle_recv, handle_yield, check_budget_restart, handle_interrupt
+  for consumed_time_bounded[wp]: "consumed_time_bounded :: 'state_ext state \<Rightarrow> _"
+  (wp: syscall_valid crunch_wps simp: crunch_simps ignore: syscall)
+
+lemma update_time_stamp_cur_sc_offset_ready_cs[wp]:
+  "\<lbrace>valid_machine_time and (\<lambda>s. cur_sc_offset_ready (consumed_time s) (s:: 'state_ext state))\<rbrace>
+   update_time_stamp
+   \<lbrace>\<lambda>_ s. cur_sc_offset_ready (consumed_time s) s\<rbrace>"
+  unfolding update_time_stamp_def
+  apply (rule_tac hoare_seq_ext[OF _ gets_sp])
+  apply wpsimp
+   apply (rule_tac P="(\<lambda>s. cur_sc_offset_ready (consumed_time s) s) and (\<lambda>s. cur_time s = prev_time)"
+          in dmo_getCurrentTime_wp)
+    apply (clarsimp simp: cur_sc_offset_ready_2_def split: option.splits)
+    apply (case_tac x2; simp)
+    apply (rule_tac y="unat (r_time (refill_hd x51)) + unat (consumed_time s) + unat (rv - cur_time s)" in order_trans)
+     apply clarsimp
+     apply (subst add_diff_eq[symmetric])
+     apply (rule unat_plus_gt)
+    apply (subst unat_sub, assumption)
+    apply (subst diff_add_assoc[symmetric])
+     apply overflow_hammer
+    apply (clarsimp simp: le_diff_conv)
+   apply wpsimp
+  apply clarsimp
+  done
+
 lemma strengthen_consumed_time_bound:
   "unat (cur_time s) + unat MAX_SC_PERIOD \<le> unat max_time
    \<and> unat (consumed_time s) \<le> unat (cur_time s)
    \<Longrightarrow> unat (consumed_time s) + unat MAX_SC_PERIOD \<le> unat max_time"
   by linarith
+
+end
+
+context DetSchedSchedule_AI_handle_hypervisor_fault_det_ext begin
 
 lemma check_budget_restart_valid_sched_weaker:
   "\<lbrace>valid_sched
@@ -17357,7 +17420,7 @@ lemma handle_event_valid_sched:
     and next_time_bounded 2
     and consumed_time_bounded\<rbrace>
    handle_event e
-   \<lbrace>\<lambda>rv. valid_sched:: det_state \<Rightarrow> _\<rbrace>"
+   \<lbrace>\<lambda>rv. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   supply check_budget_restart_true [wp]
      and update_time_stamp_cur_sc_blocked_is_offset_helper [wp]
      and next_time_bounded_weaken[elim!]
@@ -17467,9 +17530,24 @@ lemma call_kernel_valid_list[wp]: "\<lbrace>valid_list\<rbrace> call_kernel e \<
   apply (simp add: call_kernel_def)
   by (wpsimp wp: is_schedulable_wp hoare_drop_imps hoare_vcg_all_lift)+
 
+lemma handle_event_consumed_time_bounded[wp]:
+  "\<lbrace>consumed_time_bounded and valid_machine_time\<rbrace>
+   handle_event e
+   \<lbrace>\<lambda>_. consumed_time_bounded :: det_state \<Rightarrow> _\<rbrace>"
+  apply (case_tac e; simp; wpsimp wp: hoare_drop_imp hoare_drop_impE cong: conj_cong)
+  done
+
+lemma handle_event_current_time_bounded[wp]:
+  "\<lbrace>next_time_bounded k and valid_machine_time\<rbrace>
+   handle_event e
+   \<lbrace>\<lambda>_. current_time_bounded k :: det_state \<Rightarrow> _\<rbrace>"
+  apply (case_tac e; simp; wpsimp wp: hoare_drop_imp hoare_drop_impE cong: conj_cong)
+  apply (erule (1) next_time_bounded_current_time_bounded)
+  done
+
 end
 
-context DetSchedSchedule_AI_handle_hypervisor_fault begin
+context DetSchedSchedule_AI begin
 
 lemma reply_unlink_tcb_valid_release_q[wp]:
   "\<lbrace> valid_release_q and not_in_release_q tp\<rbrace>
@@ -17559,6 +17637,10 @@ for cur_thread[wp]: "\<lambda>s::det_state. P (cur_thread s)"
 crunches handle_reserved_irq
   for release_queue[wp]: "\<lambda>s. P (release_queue s)"
   and valid_release_q[wp]: "\<lambda>s. valid_release_q s"
+
+end
+
+context DetSchedSchedule_AI_handle_hypervisor_fault_det_ext begin
 
 lemma call_kernel_valid_sched:
   "\<lbrace>\<lambda>s. invs s \<and> valid_sched s \<and> (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) s \<and> ct_in_state activatable s
