@@ -27,12 +27,18 @@
     <set depends="isabelle Lib">
         <!-- Various seL4 specifications. -->
         <test name="design-spec" depends="haskell-translator">make design-spec</test>
-        <test name="ASpec" depends="design-spec">make ASpec</test>
-        <test name="ASpecDoc" depends="ASpec">make ASpecDoc</test>
-        <test name="ExecSpec" depends="design-spec">make ExecSpec</test>
-        <test name="DSpec" depends="design-spec">make DSpec</test>
         <test name="TakeGrant">make TakeGrant</test>
-        <test name="ASepSpec" depends="ASpec">make ASepSpec</test>
+
+        <set depends="design-spec">
+            <test name="ASpec">make ASpec</test>
+            <test name="ExecSpec">make ExecSpec</test>
+            <test name="DSpec">make DSpec</test>
+        </set>
+
+        <set depends="ASpec">
+            <test name="ASpecDoc">make ASpecDoc</test>
+            <test name="ASepSpec">make ASepSpec</test>
+        </set>
     </set>
 
     <set>
