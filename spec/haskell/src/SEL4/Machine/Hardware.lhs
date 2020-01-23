@@ -77,15 +77,6 @@ The maximum and minimum IRQ are given explicit constant names here. In Haskell, 
 > maxIRQ :: IRQ
 > maxIRQ = maxBound
 
-> deadlineIRQ :: IRQ
-
-TODO: Fix me later
-
-> deadlineIRQ = undefined
-
-> ackDeadlineIRQ :: MachineMonad ()
-> ackDeadlineIRQ = ackInterrupt deadlineIRQ
-
 \subsubsection{Virtual Memory and Hypervisor Faults}
 
 Most architectures provide some information about virtual memory and hypervisor faults in hardware registers. Other information is implied by the hardware's choice between a set of different trap handlers. The latter is represented in this model by the following data types.
@@ -182,10 +173,19 @@ This function is used to init interrupt chip
 
 \subsubsection{Timers}
 
+The timer interval is set at boot time by calling this function. It returns the IRQ that is used for timer interrupts.
+
+> configureTimer :: MachineMonad IRQ
+> configureTimer = liftM IRQ Arch.configureTimer
+
 > setDeadline :: Word64 -> MachineMonad ()
 > setDeadline = Arch.setDeadline
 
-The kernel calls this function after handling a timer interrupt, but before acknowledging it. It should take whatever action is necessary to clear the interrupt and reset the timer.
+> getCurrentTime :: MachineMonad Word64
+> getCurrentTime = Arch.getCurrentTime
+
+> ackDeadlineIRQ :: MachineMonad ()
+> ackDeadlineIRQ = Arch.ackDeadlineIRQ
 
 > resetTimer :: MachineMonad ()
 > resetTimer = Arch.resetTimer
@@ -223,26 +223,23 @@ The constant "nullPointer" is a physical pointer guaranteed to be invalid.
 > nullPointer :: PPtr a
 > nullPointer = PPtr 0
 
-> kernelWCET_us :: Word64
-> kernelWCET_ticks :: Word64
+> kernelWCETUs :: Word64
+> kernelWCETUs = 10
 
-> kernelWCET_us = 10
-> kernelWCET_ticks = Arch.usToTicks kernelWCET_us
+> kernelWCETTicks :: Word64
+> kernelWCETTicks = Arch.usToTicks kernelWCETUs
 
 > timerPrecision :: Word64
 > timerPrecision = Arch.timerPrecision
 
-> max_us_to_ticks :: Word64
-> max_us_to_ticks = Arch.max_us_to_ticks
+> maxUsToTicks :: Word64
+> maxUsToTicks = Arch.maxUsToTicks
 
-> max_ticks_to_us :: Word64
-> max_ticks_to_us = Arch.max_ticks_to_us
+> maxTicksToUs :: Word64
+> maxTicksToUs = Arch.maxTicksToUs
 
-> getCurrentTime :: MachineMonad Word64
-> getCurrentTime = Arch.getCurrentTime
-
-> ticks_to_us :: Word64 -> Word64
-> ticks_to_us = Arch.ticks_to_us
+> ticksToUs :: Word64 -> Word64
+> ticksToUs = Arch.usToTicks
 
 > usToTicks :: Word64 -> Word64
 > usToTicks = Arch.usToTicks

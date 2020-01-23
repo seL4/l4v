@@ -105,11 +105,21 @@ timerFreq = 100
 timerLimit :: Word
 timerLimit = 1000000 `div` timerFreq
 
+getCurrentTime :: Ptr CallbackData -> IO Word64
+getCurrentTime = undefined
+
 setDeadline :: Ptr CallbackData -> Word64 -> IO ()
 setDeadline _ _ = undefined
 
-getCurrentTime :: Ptr CallbackData -> IO Word64
-getCurrentTime = undefined
+ackDeadlineIRQ :: Ptr CallbackData -> IO ()
+ackDeadlineIRQ _ = undefined
+
+configureTimer :: Ptr CallbackData -> IO IRQ
+configureTimer env = do
+    MCT.callMCTApi mctdata $ MCT.mctInit
+    return timerIRQ
+      where mctdata = MCT.MCTState { MCT.env = env,
+        MCT.mctBase = mctBase }
 
 initIRQController :: Ptr CallbackData -> IO ()
 initIRQController env = callGICApi gicdata $ GIC.initIRQController

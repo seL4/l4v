@@ -110,6 +110,16 @@ getCurrentTime = undefined
 setDeadline :: Ptr CallbackData -> Word64 -> IO ()
 setDeadline _ _ = undefined
 
+ackDeadlineIRQ :: Ptr CallbackData -> IO ()
+ackDeadlineIRQ _ = undefined
+
+configureTimer :: Ptr CallbackData -> IO IRQ
+configureTimer env = do
+    MPT.callMPTimerApi mptdata $ MPT.mpTimerInit
+    return timerIRQ
+      where mptdata = MPT.MPTimerState { MPT.env = env,
+        MPT.mptBase = mptBase }
+
 initIRQController :: Ptr CallbackData -> IO ()
 initIRQController env = callGICApi gicdata $ GIC.initIRQController
   where gicdata = GicState { env = env,

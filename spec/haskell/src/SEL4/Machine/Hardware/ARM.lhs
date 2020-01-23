@@ -161,10 +161,20 @@ The following functions define the ARM-specific interface between the kernel and
 >     cbptr <- ask
 >     liftIO $ Platform.maskInterrupt cbptr maskI irq
 
+> configureTimer :: MachineMonad IRQ
+> configureTimer = do
+>     cbptr <- ask
+>     liftIO $ Platform.configureTimer cbptr
+
 > setDeadline :: Word64 -> MachineMonad ()
 > setDeadline d = do
 >     cbptr <- ask
 >     liftIO $ Platform.setDeadline cbptr d
+
+> ackDeadlineIRQ :: MachineMonad ()
+> ackDeadlineIRQ = do
+>     cbptr <- ask
+>     liftIO $ Platform.ackDeadlineIRQ cbptr
 
 > initIRQController :: MachineMonad ()
 > initIRQController = do
@@ -842,25 +852,23 @@ FIXME ARMHYP consider moving to platform code?
 
 #endif
 
-> usToTicks :: Word64 -> Word64
-> usToTicks _ = undefined
-
-> ticks_to_us :: Word64 -> Word64
-> ticks_to_us _ = undefined
-
-TODO: Check the value later. Maybe it is 1
-
-> timerPrecision :: Word64
-> timerPrecision = usToTicks 2
-
 > getCurrentTime :: MachineMonad Word64
 > getCurrentTime = do
 >     cbptr <- ask
 >     liftIO $ Platform.getCurrentTime cbptr
 
-> max_us_to_ticks :: Word64
-> max_us_to_ticks = undefined
+> timerPrecision :: Word64
+> timerPrecision = usToTicks 2
 
-> max_ticks_to_us :: Word64
-> max_ticks_to_us = undefined
+> usToTicks :: Word64 -> Word64
+> usToTicks _ = undefined
+
+> ticksToUs :: Word64 -> Word64
+> ticksToUs _ = undefined
+
+> maxUsToTicks :: Word64
+> maxUsToTicks = undefined
+
+> maxTicksToUs :: Word64
+> maxTicksToUs = undefined
 
