@@ -42,8 +42,8 @@ The following type enumerates all the kinds of invocations that clients can requ
 >         | TCBSetPriority
 >         | TCBSetMCPriority
 >         | TCBSetSchedParams
->         | TCBSetTimeoutEndpoint
 >         | TCBSetIPCBuffer
+>         | TCBSetTimeoutEndpoint
 >         | TCBSetSchedContext
 >         | TCBSetSpace
 >         | TCBSuspend
@@ -63,13 +63,13 @@ The following type enumerates all the kinds of invocations that clients can requ
 >         | IRQAckIRQ
 >         | IRQSetIRQHandler
 >         | IRQClearIRQHandler
->         | DomainSetSet
 >         | SchedControlConfigure
 >         | SchedContextConsumed
 >         | SchedContextBind
 >         | SchedContextUnbind
 >         | SchedContextUnbindObject
 >         | SchedContextYieldTo
+>         | DomainSetSet
 >         | ArchInvocationLabel ArchLabels.ArchInvocationLabel
 >         deriving (Show, Eq)
 
@@ -88,27 +88,27 @@ The following type enumerates all the kinds of invocations that clients can requ
 >          TCBSetPriority -> 6
 >          TCBSetMCPriority -> 7
 >          TCBSetSchedParams -> 8
->          TCBSetTimeoutEndpoint -> 9
->          TCBSetIPCBuffer -> 10
->          TCBSetSpace -> 11
->          TCBSuspend -> 12
->          TCBResume -> 13
->          TCBBindNotification -> 14
->          TCBUnbindNotification -> 15
->          TCBSetTLSBase -> 16
->          CNodeRevoke -> 17
->          CNodeDelete -> 18
->          CNodeCancelBadgedSends -> 19
->          CNodeCopy -> 20
->          CNodeMint -> 21
->          CNodeMove -> 22
->          CNodeMutate -> 23
->          CNodeRotate -> 24
->          IRQIssueIRQHandler -> 25
->          IRQAckIRQ -> 26
->          IRQSetIRQHandler -> 27
->          IRQClearIRQHandler -> 28
->          TCBSetSchedContext -> 29
+>          TCBSetIPCBuffer -> 9
+>          TCBSetTimeoutEndpoint -> 10
+>          TCBSetSchedContext -> 11
+>          TCBSetSpace -> 12
+>          TCBSuspend -> 13
+>          TCBResume -> 14
+>          TCBBindNotification -> 15
+>          TCBUnbindNotification -> 16
+>          TCBSetTLSBase -> 17
+>          CNodeRevoke -> 18
+>          CNodeDelete -> 19
+>          CNodeCancelBadgedSends -> 20
+>          CNodeCopy -> 21
+>          CNodeMint -> 22
+>          CNodeMove -> 23
+>          CNodeMutate -> 24
+>          CNodeRotate -> 25
+>          IRQIssueIRQHandler -> 26
+>          IRQAckIRQ -> 27
+>          IRQSetIRQHandler -> 28
+>          IRQClearIRQHandler -> 29
 >          SchedControlConfigure -> 30
 >          SchedContextConsumed -> 31
 >          SchedContextBind -> 32
@@ -128,27 +128,27 @@ The following type enumerates all the kinds of invocations that clients can requ
 >         | n == 6 = TCBSetMCPriority
 >         | n == 7 = TCBSetPriority
 >         | n == 8 = TCBSetSchedParams
->         | n == 9 = TCBSetTimeoutEndpoint
->         | n == 10 = TCBSetIPCBuffer
->         | n == 11 = TCBSetSpace
->         | n == 12 = TCBSuspend
->         | n == 13 = TCBResume
->         | n == 14 = TCBBindNotification
->         | n == 15 = TCBUnbindNotification
->         | n == 16 = TCBSetTLSBase
->         | n == 17 = CNodeRevoke
+>         | n == 9 = TCBSetIPCBuffer
+>         | n == 10 = TCBSetTimeoutEndpoint
+>         | n == 11 = TCBSetSchedContext
+>         | n == 12 = TCBSetSpace
+>         | n == 13 = TCBSuspend
+>         | n == 14 = TCBResume
+>         | n == 15 = TCBBindNotification
+>         | n == 16 = TCBUnbindNotification
+>         | n == 17 = TCBSetTLSBase
+>         | n == 18 = CNodeRevoke
 >         | n == 18 = CNodeDelete
->         | n == 19 = CNodeCancelBadgedSends
->         | n == 20 = CNodeCopy
->         | n == 21 = CNodeMint
->         | n == 22 = CNodeMove
->         | n == 23 = CNodeMutate
->         | n == 24 = CNodeRotate
->         | n == 25 = IRQIssueIRQHandler
->         | n == 26 = IRQAckIRQ
->         | n == 27 = IRQSetIRQHandler
+>         | n == 20 = CNodeCancelBadgedSends
+>         | n == 21 = CNodeCopy
+>         | n == 22 = CNodeMint
+>         | n == 23 = CNodeMove
+>         | n == 24 = CNodeMutate
+>         | n == 25 = CNodeRotate
+>         | n == 26 = IRQIssueIRQHandler
+>         | n == 27 = IRQAckIRQ
+>         | n == 28 = IRQSetIRQHandler
 >         | n == 28 = IRQClearIRQHandler
->         | n == 29 = TCBSetSchedContext
 >         | n == 30 = SchedControlConfigure
 >         | n == 31 = SchedContextConsumed
 >         | n == 32 = SchedContextBind
