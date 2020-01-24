@@ -2039,19 +2039,19 @@ abbreviation ready_queued_threads_2 :: "(domain \<Rightarrow> priority \<Rightar
 abbreviation ready_queued_threads :: "'z state \<Rightarrow> obj_ref set" where
   "ready_queued_threads s \<equiv> ready_queued_threads_2 (ready_queues s)"
 
-abbreviation released_if_bound_sc_thread_2 where
-  "released_if_bound_sc_thread_2 t curtime tcb_scps sc_refill_cfgs \<equiv>
+abbreviation released_if_bound_sc_tcb_at_2 where
+  "released_if_bound_sc_tcb_at_2 t curtime tcb_scps sc_refill_cfgs \<equiv>
     pred_map_eq None tcb_scps t \<or> released_sc_tcb_at_pred curtime tcb_scps sc_refill_cfgs t"
 
-abbreviation released_if_bound_sc_thread :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
-  "released_if_bound_sc_thread t s \<equiv> released_if_bound_sc_thread_2 t (cur_time s) (tcb_scps_of s) (sc_refill_cfgs_of s)"
+abbreviation released_if_bound_sc_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "released_if_bound_sc_tcb_at t s \<equiv> released_if_bound_sc_tcb_at_2 t (cur_time s) (tcb_scps_of s) (sc_refill_cfgs_of s)"
 
 definition released_ipc_queued_thread_2 ::
   "obj_ref \<Rightarrow> time \<Rightarrow> (obj_ref \<rightharpoonup> thread_state) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool"
   where
   "released_ipc_queued_thread_2 t curtime tcb_sts tcb_scps sc_refill_cfgs \<equiv>
     pred_map ipc_queued_thread_state tcb_sts t
-    \<longrightarrow> released_if_bound_sc_thread_2 t curtime tcb_scps sc_refill_cfgs"
+    \<longrightarrow> released_if_bound_sc_tcb_at_2 t curtime tcb_scps sc_refill_cfgs"
 
 definition released_ipc_queues_2 ::
   "time \<Rightarrow> (obj_ref \<rightharpoonup> thread_state) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool"
@@ -2070,9 +2070,6 @@ abbreviation released_ipc_queues_pred ::
   where
   "released_ipc_queues_pred P \<equiv>
     \<lambda>s. P (cur_time s) (tcb_sts_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)"
-abbreviation released_if_bound_sc_tcb_at where
-  "released_if_bound_sc_tcb_at t s \<equiv>
-    released_if_bound_sc_thread_2 t (cur_time s) (tcb_scps_of s) (sc_refill_cfgs_of s)"
 abbreviation released_ipc_queued_thread :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "released_ipc_queued_thread t \<equiv> released_ipc_queues_pred (released_ipc_queued_thread_2 t)"
 abbreviation released_ipc_queues :: "'z::state_ext state \<Rightarrow> bool" where
@@ -2601,7 +2598,7 @@ abbreviation ipc_queued_thread :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> 
   "ipc_queued_thread t s \<equiv> pred_map ipc_queued_thread_state (tcb_sts_of s) t"
 
 lemma released_ipc_queuesE1:
-  "released_ipc_queues s \<Longrightarrow> ipc_queued_thread t s \<Longrightarrow> released_if_bound_sc_thread t s"
+  "released_ipc_queues s \<Longrightarrow> ipc_queued_thread t s \<Longrightarrow> released_if_bound_sc_tcb_at t s"
   by (clarsimp simp: released_ipc_queues_defs)
 
 abbreviation not_ipc_queued_thread :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
