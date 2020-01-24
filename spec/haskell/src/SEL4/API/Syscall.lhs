@@ -97,15 +97,15 @@ System call events are dispatched here to the appropriate system call handlers, 
 >         SysYield -> withoutPreemption handleYield
 >         SysReplyRecv -> withoutPreemption $ do
 >             replyCptr <- getCapReg replyRegister
->             return $ handleInvocation False False True replyCptr
+>             return $ handleInvocation False False True True replyCptr
 >             handleRecv True True
 >         SysNBSendRecv -> do
 >             dest <- withoutPreemption $ getCapReg nbsendRecvDest
->             handleInvocation False False True dest
+>             handleInvocation False False True True dest
 >             withoutPreemption $ handleRecv True True
 >         SysNBSendWait -> do
 >             replyCptr <- withoutPreemption $ getCapReg replyRegister
->             handleInvocation False False True replyCptr
+>             handleInvocation False False True True replyCptr
 >             withoutPreemption $ handleRecv True False
 >         SysWait -> withoutPreemption $ handleRecv True False
 >         SysNBWait -> withoutPreemption $ handleRecv False False
@@ -150,7 +150,7 @@ bottom 32 bits be communicated to the fault handler, for the second word
 >     restart <- checkBudgetRestart
 >     when restart $ do
 >         thread <- getCurThread
->         handleFault thread $ UserException (w1 .&. mask 32) (w2 .&. mask 29)
+>         handleFault thread $ UserException w1 (w2 .&. mask 29)
 
 \subsubsection{Virtual Memory Faults}
 
@@ -180,7 +180,7 @@ The "Send" system call sends a message to an object. The object is specified by 
 > handleSend :: Bool -> KernelP ()
 > handleSend bl = do
 >     cptr <- withoutPreemption $ getCapReg capRegister
->     handleInvocation False bl False cptr
+>     handleInvocation False bl False False cptr
 
 \subsubsection{Call System Call}
 
@@ -189,7 +189,7 @@ The "Call" system call is similar to "Send", but it also requests a reply. For k
 > handleCall :: KernelP ()
 > handleCall = do
 >     cptr <- withoutPreemption $ getCapReg capRegister
->     handleInvocation True True True cptr
+>     handleInvocation True True True False cptr
 
 \subsubsection{Recv System Call}
 
@@ -201,17 +201,18 @@ The "Recv" system call blocks waiting to receive a message through a specified e
 >     epCptr <- getCapReg capRegister
 >     (do
 >         epCap <- capFaultOnFailure epCptr True (lookupCap thread epCptr)
+>         let exc = CapFault epCptr True (MissingCapability 0)
 >         case epCap of
 >             EndpointCap { capEPCanReceive = True } -> do
 >                 replyCap <- if canReply then lookupReply else return NullCap
 >                 withoutFailure $ receiveIPC thread epCap isBlocking replyCap
 >             NotificationCap { capNtfnCanReceive = True, capNtfnPtr = ntfnPtr } -> do
 >                 ntfn <- withoutFailure $ getNotification ntfnPtr
->                 if ntfnBoundTCB ntfn == Just thread || ntfnBoundTCB ntfn == Nothing
+>                 boundTCB <- return $ ntfnBoundTCB ntfn
+>                 if boundTCB == Just thread || boundTCB == Nothing
 >                     then withoutFailure $ receiveSignal thread epCap isBlocking
->                     else throw $ CapFault epCptr True (MissingCapability 0)
->             _ -> throw $ CapFault epCptr True (MissingCapability 0))
->       `catchFailure` handleFault thread
+>                     else throw exc
+>             _ -> throw exc) `catchFailure` handleFault thread
 
 \subsubsection{Yield System Call}
 
@@ -221,14 +222,16 @@ The "Yield" system call is trivial; it simply moves the current thread to the en
 > handleYield = do
 >     scPtr <- getCurSc
 >     sc <- getSchedContext scPtr
->     chargeBudget 0 (rAmount (refillHd sc)) False
+>     consumed <- return $ scConsumed sc
+>     chargeBudget 0 (rAmount (refillHd sc)) False True
+>     setSchedContext scPtr $ sc { scConsumed = consumed }
 
 \subsection{Capability Invocations}\label{sel4:api:syscall:invoke}
 
 The following function implements the "Send" and "Call" system calls. It determines the type of invocation, based on the object type; then it calls the appropriate internal kernel function to perform the operation.
 
-> handleInvocation :: Bool -> Bool -> Bool -> CPtr -> KernelP ()
-> handleInvocation isCall isBlocking canDonate cptr = do
+> handleInvocation :: Bool -> Bool -> Bool -> Bool -> CPtr -> KernelP ()
+> handleInvocation isCall isBlocking canDonate firstPhase cptr = do
 >     thread <- withoutPreemption getCurThread
 >     info <- withoutPreemption $ getMessageInfo thread
 >     syscall
@@ -250,7 +253,7 @@ If there was no fault, then the capability, message registers and message label 
 
 >         (\(slot, cap, extracaps, buffer) -> do
 >             args <- withoutFailure $ getMRs thread buffer info
->             decodeInvocation (msgLabel info) args cptr slot cap extracaps)
+>             decodeInvocation (msgLabel info) args cptr slot cap extracaps firstPhase)
 
 If a system call error was encountered while decoding the operation, and the user is waiting for a reply, then generate an error message.
 
@@ -284,5 +287,5 @@ While the system call is running, the thread's state is set to "Restart", so any
 >     cap <- capFaultOnFailure cref True $ lookupCap ct cref
 >     if isReplyCap cap
 >         then return cap
->         else throw $ CapFault cref True (MissingCapability 0)
+>         else throw $ CapFault cref True (MissingCapability { missingCapBitsLeft = 0 })
 

@@ -45,6 +45,7 @@ The architecture-specific definitions are imported qualified with the "Arch" pre
 > import Data.WordLib
 > import Control.Monad
 > import Control.Monad.State
+> import Data.Word(Word64)
 
 \end{impdetails}
 
@@ -75,7 +76,7 @@ The top-level kernel state structure is called "KernelState". It contains:
 \item the active security domain and the number to ticks remaining before it changes;
 
 >         ksCurDomain :: Domain,
->         ksDomainTime :: Time,
+>         ksDomainTime :: Word64,
 
 \item an array of ready queues, indexed by thread priority and domain (see "getQueue");
 
@@ -99,8 +100,6 @@ The top-level kernel state structure is called "KernelState". It contains:
 >         ksConsumedTime :: Time,
 
 >         ksCurTime :: Time,
-
-NB: It should have been Maybe (PPtr SchedContext) for the time being, but eventually it is PPtr SchedContext
 
 >         ksCurSc :: PPtr SchedContext,
 
@@ -233,10 +232,10 @@ TODO use this where update is restricted to arch state instead of fiddling in pl
 
 These functions access and modify the current domain and the number of ticks remaining until the current domain changes.
 
-> getCurDomain :: Kernel Domain
-> getCurDomain = gets ksCurDomain
+> curDomain :: Kernel Domain
+> curDomain = gets ksCurDomain
 
-> usToMs :: Time
+> usToMs :: Word64
 > usToMs = 1000
 
 > nextDomain :: Kernel ()
@@ -249,10 +248,10 @@ These functions access and modify the current domain and the number of ticks rem
 >           ksDomainTime = usToTicks ((dschLength next) * usToMs),
 >           ksReprogramTimer = True })
 
-> getDomainTime :: Kernel Time
+> getDomainTime :: Kernel Word64
 > getDomainTime = gets ksDomainTime
 
-> setDomainTime :: Time -> Kernel ()
+> setDomainTime :: Ticks -> Kernel ()
 > setDomainTime domainTime = modify (\ks -> ks { ksDomainTime = domainTime })
 
 > getCurTime :: Kernel Time
@@ -269,7 +268,6 @@ These functions access and modify the current domain and the number of ticks rem
 
 > decDomainTime :: Kernel ()
 > decDomainTime = modify (\ks -> ks { ksDomainTime = ksDomainTime ks - 1 })
-
 
 \subsection{Initial Kernel State}
 
@@ -289,17 +287,17 @@ A new kernel state structure contains an empty physical address space, a set of 
 >         ksReadyQueues =
 >             funPartialArray (const [])
 >                             ((0, 0), (fromIntegral numDomains, maxPriority)),
->         ksReleaseQueue = [],
 >         ksReadyQueuesL1Bitmap = funPartialArray (const 0) (0, fromIntegral numDomains),
 >         ksReadyQueuesL2Bitmap =
 >             funPartialArray (const 0)
 >                 ((0, 0), (fromIntegral numDomains, l2BitmapSize)),
+>         ksReleaseQueue = [],
 >         ksCurThread = error "No initial thread",
 >         ksIdleThread = error "Idle thread has not been created",
+>         ksReprogramTimer = False,
 >         ksConsumedTime = 0,
 >         ksCurTime = 0,
 >         ksCurSc = error "No initial scheduling context",
->         ksReprogramTimer = False,
 >         ksSchedulerAction = error "scheduler action has not been set",
 >         ksInterruptState = error "Interrupt controller is uninitialised",
 >         ksWorkUnitsCompleted = 0,

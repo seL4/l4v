@@ -134,13 +134,10 @@ When the last capability to an endpoint is deleted, any IPC operations currently
 >         cancelAllSignals ptr
 >     return (NullCap, NullCap)
 
-> finaliseCap (ReplyCap { capReplyPtr = rptr }) final _ = do
+> finaliseCap (ReplyCap { capReplyPtr = ptr }) final _ = do
 >     when final $ do
->         tptrOpt <- getReplyTCB rptr
->         scptrOpt <- getReplySc rptr
->         if tptrOpt /= Nothing
->             then cancelIPC $ fromJust tptrOpt
->             else when (scptrOpt /= Nothing) $ replyUnlinkSc (fromJust scptrOpt) rptr
+>         tptrOpt <- getReplyTCB ptr
+>         when (tptrOpt /= Nothing) $ replyClear ptr
 >     return (NullCap, NullCap)
 
 No action need be taken for Null or Domain capabilities.
@@ -165,10 +162,9 @@ Threads are treated as special capability nodes; they also become zombies when t
 >     tcb <- getObject tptr
 >     when (tcbSchedContext tcb /= Nothing) $ do
 >         let scPtr = fromJust $ tcbSchedContext tcb
->         schedContextUnbindTCB scPtr
 >         sc <- getSchedContext scPtr
->         when (scYieldFrom sc /= Nothing) $ do
->             schedContextCompleteYieldTo $ fromJust $ scYieldFrom sc
+>         schedContextCompleteYieldTo $ fromJust $ scYieldFrom sc
+>         schedContextUnbindTCB scPtr
 >     suspend tptr
 >     Arch.prepareThreadDelete tptr
 >     return (Zombie cte_ptr ZombieTCB 5, NullCap)
@@ -176,14 +172,23 @@ Threads are treated as special capability nodes; they also become zombies when t
 > finaliseCap (SchedContextCap { capSchedContextPtr = scPtr }) True _ = do
 >     schedContextUnbindAllTCBs scPtr
 >     schedContextUnbindNtfn scPtr
->     replies <- liftM scReplies $ getSchedContext scPtr
->     mapM_ (replyUnlinkSc scPtr) replies
->     tptrOpt <- liftM scYieldFrom $ getSchedContext scPtr
->     when (tptrOpt /= Nothing) $ do
->         schedContextCompleteYieldTo $ fromJust tptrOpt
->     return (NullCap, NullCap)
 
-> finaliseCap SchedControlCap _ _ = return (NullCap, NullCap)
+>     sc <- getSchedContext scPtr
+>     replyPtrOpt <- return $ scReply sc
+>     when (replyPtrOpt /= Nothing) $ do
+>         replyPtr <- return $ fromJust replyPtrOpt
+>         reply <- getReply replyPtr
+>         setReply replyPtr (reply { replyNext = Nothing, replySc = Nothing })
+>         setSchedContext scPtr (sc { scReply = Nothing })
+
+>     sc <- getSchedContext scPtr
+>     when (scYieldFrom sc /= Nothing) $ do
+>         schedContextCompleteYieldTo $ fromJust $ scYieldFrom sc
+
+>     sc <- getSchedContext scPtr
+>     setSchedContext scPtr $ sc { scRefillMax = 0 }
+
+>     return (NullCap, NullCap)
 
 Zombies have already been finalised.
 
@@ -225,7 +230,8 @@ the bitmask bit that will allow the reissue of an IRQHandlerCap to this IRQ.
 > hasCancelSendRights :: Capability -> Bool
 > hasCancelSendRights (EndpointCap { capEPCanSend = True,
 >                                 capEPCanReceive = True,
->                                 capEPCanGrant = True }) = True
+>                                 capEPCanGrant = True,
+>                                 capEPCanGrantReply  = True }) = True
 > hasCancelSendRights _ = False
 
 \subsection{Comparing Capabilities}
@@ -257,7 +263,7 @@ This function assumes that its arguments are in MDB order.
 >     capTCBPtr a == capTCBPtr b
 
 > sameRegionAs (a@SchedContextCap {}) (b@SchedContextCap {}) =
->     capSchedContextPtr a == capSchedContextPtr b && capSCSize a == capSCSize b
+>     capSchedContextPtr a == capSchedContextPtr b
 
 > sameRegionAs SchedControlCap SchedControlCap = True
 
@@ -352,13 +358,15 @@ The "maskCapRights" function restricts the operations that can be performed on a
 > maskCapRights r c@(EndpointCap {}) = c {
 >     capEPCanSend = capEPCanSend c && capAllowWrite r,
 >     capEPCanReceive = capEPCanReceive c && capAllowRead r,
->     capEPCanGrant = capEPCanGrant c && capAllowGrant r }
+>     capEPCanGrant = capEPCanGrant c && capAllowGrant r,
+>     capEPCanGrantReply = capEPCanGrantReply c && capAllowGrantReply r }
 
 > maskCapRights r c@(NotificationCap {}) = c {
 >     capNtfnCanSend = capNtfnCanSend c && capAllowWrite r,
 >     capNtfnCanReceive = capNtfnCanReceive c && capAllowRead r }
 
-> maskCapRights _ c@(ReplyCap {}) = c
+> maskCapRights r c@(ReplyCap {}) = c{
+>     capReplyCanGrant = capReplyCanGrant c && capAllowGrant r }
 
 > maskCapRights _ c@(CNodeCap {}) = c
 
@@ -392,22 +400,22 @@ New threads are placed in the current security domain, which must be the domain 
 >     case toAPIType t of
 >         Just TCBObject -> do
 >             placeNewObject regionBase (makeObject :: TCB) 0
->             curdom <- getCurDomain
+>             curdom <- curDomain
 >             threadSet (\t -> t { tcbDomain = curdom })
 >                 (PPtr $ fromPPtr regionBase)
 >             return $ ThreadCap (PPtr $ fromPPtr regionBase)
 >         Just EndpointObject -> do
 >             placeNewObject regionBase (makeObject :: Endpoint) 0
->             return $ EndpointCap (PPtr $ fromPPtr regionBase) 0 True True True
+>             return $ EndpointCap (PPtr $ fromPPtr regionBase) 0 True True True True
 >         Just NotificationObject -> do
 >             placeNewObject (PPtr $ fromPPtr regionBase) (makeObject :: Notification) 0
 >             return $ NotificationCap (PPtr $ fromPPtr regionBase) 0 True True
 >         Just SchedContextObject -> do
->             placeNewObject regionBase ((makeObject :: SchedContext) { scSizeBits = userSize }) 0
+>             placeNewObject regionBase (makeObject :: SchedContext) 0
 >             return $ SchedContextCap (PPtr $ fromPPtr regionBase) userSize
 >         Just ReplyObject -> do
 >             placeNewObject regionBase (makeObject :: Reply) 0
->             return $ ReplyCap (PPtr $ fromPPtr regionBase)
+>             return $ ReplyCap (PPtr $ fromPPtr regionBase) True
 >         Just CapTableObject -> do
 >             placeNewObject (PPtr $ fromPPtr regionBase) (makeObject :: CTE) userSize
 >             modify (\ks -> ks { gsCNodes =
@@ -426,56 +434,55 @@ The following functions are used to handle messages that are sent to kernel obje
 The "decodeInvocation" function parses the message, determines the operation that is being performed, and checks for any error conditions. If it returns successfully, the invocation is guaranteed to complete without any errors.
 
 > decodeInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
->         Capability -> [(Capability, PPtr CTE)] ->
+>         Capability -> [(Capability, PPtr CTE)] -> Bool ->
 >         KernelF SyscallError Invocation
 >
-> decodeInvocation _ _ _ _ cap@(EndpointCap {capEPCanSend=True}) _ =
+> decodeInvocation _ _ _ _ cap@(EndpointCap {capEPCanSend=True}) _ _ = do
 >     return $ InvokeEndpoint
->         (capEPPtr cap) (capEPBadge cap) (capEPCanGrant cap)
+>         (capEPPtr cap) (capEPBadge cap) (capEPCanGrant cap) (capEPCanGrantReply cap)
 >
-> decodeInvocation _ _ _ _ cap@(NotificationCap {capNtfnCanSend=True}) _ = do
+> decodeInvocation _ _ _ _ cap@(NotificationCap {capNtfnCanSend=True}) _ _ = do
 >     return $ InvokeNotification (capNtfnPtr cap) (capNtfnBadge cap)
 >
-> decodeInvocation _ _ _ _ cap@(ReplyCap {}) _ = do
->     return $ InvokeReply (capReplyPtr cap)
+> decodeInvocation _ _ _ _ (ReplyCap reply capEPCanGrantReply) _ _ = do
+>     return $ InvokeReply reply capEPCanGrantReply
 >
 > decodeInvocation
->         label args _ slot cap@(ThreadCap {}) extraCaps =
+>         label args _ slot cap@(ThreadCap {}) extraCaps False =
 >     liftM InvokeTCB $ decodeTCBInvocation label args cap slot extraCaps
 >
-> decodeInvocation label args _ _ DomainCap extraCaps =
+> decodeInvocation label args _ _ DomainCap extraCaps _ =
 >     liftM (uncurry InvokeDomain) $ decodeDomainInvocation label args extraCaps
 >
-> decodeInvocation label args _ _ (SchedContextCap {capSchedContextPtr=sc}) extraCaps =
+> decodeInvocation label args _ _ (SchedContextCap {capSchedContextPtr=sc}) extraCaps _ =
 >     liftM InvokeSchedContext $ decodeSchedContextInvocation label sc (map fst extraCaps) args
 >
-> decodeInvocation label args _ _ SchedControlCap extraCaps =
+> decodeInvocation label args _ _ SchedControlCap extraCaps _ =
 >     liftM InvokeSchedControl $ decodeSchedControlInvocation label args (map fst extraCaps)
 >
-> decodeInvocation
->         label args _ _ cap@(CNodeCap {}) extraCaps =
+> decodeInvocation label args _ _ cap@(CNodeCap {}) extraCaps False =
 >     liftM InvokeCNode $
 >         decodeCNodeInvocation label args cap $ map fst extraCaps
 >
-> decodeInvocation label args _ slot cap@(UntypedCap {}) extraCaps =
+> decodeInvocation label args _ slot cap@(UntypedCap {}) extraCaps _ =
 >     liftM InvokeUntyped $
 >         decodeUntypedInvocation label args slot cap $ map fst extraCaps
 >
-> decodeInvocation label args _ slot IRQControlCap extraCaps =
+> decodeInvocation label args _ slot IRQControlCap extraCaps _ =
 >     liftM InvokeIRQControl $
 >         decodeIRQControlInvocation label args slot $ map fst extraCaps
 >
-> decodeInvocation label _ _ _ (IRQHandlerCap { capIRQ = irq }) extraCaps =
+> decodeInvocation label _ _ _ (IRQHandlerCap { capIRQ = irq }) extraCaps _ =
 >     liftM InvokeIRQHandler $
 >         decodeIRQHandlerInvocation label irq extraCaps
 >
-> decodeInvocation label args capIndex slot (ArchObjectCap cap) extraCaps =
+> decodeInvocation label args capIndex slot (ArchObjectCap cap) extraCaps _ =
 >     liftM InvokeArchObject $
 >         Arch.decodeInvocation label args capIndex slot cap extraCaps
 
 If the capability cannot be invoked, because it is null or does not have a required right, then the operation returns "InvalidCapability".
 
-> decodeInvocation _ _ _ _ _ _ = throw $ InvalidCapability 0
+> decodeInvocation _ _ _ _ _ _ _ = throw $ InvalidCapability 0
 
 The "invoke" function performs the operation itself. It cannot throw faults, but it may be pre-empted. If it returns a list of words, they will be sent as a reply message with label 0; this is optional because the kernel does not generate replies from endpoint invocations.
 
@@ -487,19 +494,20 @@ This function just dispatches invocations to the type-specific invocation functi
 >     invokeUntyped invok
 >     return $ []
 >
-> performInvocation block call canDonate (InvokeEndpoint ep badge canGrant) =
+> performInvocation block call canDonate (InvokeEndpoint ep badge canGrant canGrantReply) =
 >   withoutPreemption $ do
 >     thread <- getCurThread
->     sendIPC block call badge canGrant canDonate thread ep
+>     sendIPC block call badge canGrant canGrantReply canDonate thread ep
 >     return $ []
 >
 > performInvocation _ _ _ (InvokeNotification ep badge) = do
 >     withoutPreemption $ sendSignal ep badge
 >     return $ []
 >
-> performInvocation _ _ _ (InvokeReply reply) = withoutPreemption $ do
->     sender <- getCurThread
->     doReplyTransfer sender reply
+> performInvocation _ _ _ (InvokeReply reply canGrantReply) =
+>   withoutPreemption $ do
+>     thread <- getCurThread
+>     doReplyTransfer thread reply canGrantReply
 >     return $ []
 >
 > performInvocation _ _ _ (InvokeTCB invok) = invokeTCB invok
@@ -520,14 +528,12 @@ This function just dispatches invocations to the type-specific invocation functi
 >     withoutPreemption $ invokeIRQHandler invok
 >     return $ []
 >
-
 > performInvocation _ _ _ (InvokeSchedContext invok) = do
->     withoutPreemption $ ignoreFailure (invokeSchedContext invok)
+>     invokeSchedContext invok
 >     return $ []
 >
-
 > performInvocation _ _ _ (InvokeSchedControl invok) = do
->     withoutPreemption $ ignoreFailure (invokeSchedControlConfigure invok)
+>     invokeSchedControlConfigure invok
 >     return $ []
 >
 > performInvocation _ _ _ (InvokeArchObject invok) = Arch.performInvocation invok

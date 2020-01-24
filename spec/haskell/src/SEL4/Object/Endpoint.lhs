@@ -22,16 +22,15 @@ This module specifies the contents and behaviour of a synchronous IPC endpoint.
 % {-# BOOT-EXPORTS: cancelIPC #-}
 
 > import Prelude hiding (Word)
-> import SEL4.API.Failures
 > import SEL4.API.Types
 > import SEL4.Machine
 > import SEL4.Model
-> import SEL4.Object.Reply(getReplyTCB, replyClear, replyPush, replyRemove, replyUnlinkTCB,
->                          replyRemoveTCB, setReplyTCB)
+> import SEL4.Object.Reply(getReplyTCB, replyClear, replyPush, replyRemove, replyUnlink, replyRemoveTCB, setReplyTCB)
 > import SEL4.Object.SchedContext
 > import SEL4.Object.Structures
 > import SEL4.Object.Instances()
 > import SEL4.Object.Notification
+> import {-# SOURCE #-} SEL4.Object.CNode
 > import {-# SOURCE #-} SEL4.Object.TCB
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 > import {-# SOURCE #-} SEL4.Kernel.VSpace
@@ -45,12 +44,12 @@ This module specifies the contents and behaviour of a synchronous IPC endpoint.
 
 This function performs an IPC send operation, given a pointer to the sending thread, a capability to an endpoint, and possibly a fault that should be sent instead of a message from the thread.
 
-> sendIPC :: Bool -> Bool -> Word -> Bool -> Bool -> PPtr TCB ->
+> sendIPC :: Bool -> Bool -> Word -> Bool -> Bool -> Bool -> PPtr TCB ->
 >         PPtr Endpoint -> Kernel ()
 
 The normal (blocking) version of the send operation will remove a recipient from the endpoint's queue if one is available, or otherwise add the sender to the queue.
 
-> sendIPC blocking call badge canGrant canDonate thread epptr = do
+> sendIPC blocking call badge canGrant canGrantReply canDonate thread epptr = do
 >         ep <- getEndpoint epptr
 >         case ep of
 
@@ -61,6 +60,7 @@ If the endpoint is idle, and this is a blocking IPC operation, then the current 
 >                     blockingObject = epptr,
 >                     blockingIPCBadge = badge,
 >                     blockingIPCCanGrant = canGrant,
+>                     blockingIPCCanGrantReply = canGrantReply,
 >                     blockingIPCIsCall = call }) thread
 >                 setEndpoint epptr $ SendEP [thread]
 
@@ -71,8 +71,9 @@ If the endpoint is already in the sending state, and this is a blocking IPC oper
 >                     blockingObject = epptr,
 >                     blockingIPCBadge = badge,
 >                     blockingIPCCanGrant = canGrant,
+>                     blockingIPCCanGrantReply = canGrantReply,
 >                     blockingIPCIsCall = call }) thread
->                 qs' <- sortQueue (queue ++ [thread])
+>                 qs' <- tcbEPAppend thread queue
 >                 setEndpoint epptr $ SendEP qs'
 
 A non-blocking IPC to an idle or sending endpoint will be silently dropped.
@@ -88,22 +89,22 @@ If the endpoint is receiving, then a thread is removed from its queue, and an IP
 >                     _ -> RecvEP queue
 >                 recvState <- getThreadState dest
 >                 assert (isReceive recvState)
->                        "TCB in receive endpoint queue must be blocked on receive"
+>                        "TCB in receive endpoint queue must be blocked on send"
 >                 doIPCTransfer thread (Just epptr) badge canGrant dest
 >                 scOptDest <- threadGet tcbSchedContext dest
+>                 scOptSrc <- threadGet tcbSchedContext thread
 >                 fault <- threadGet tcbFault thread
 >                 let replyOpt = replyObject recvState
 >                 case replyOpt of
->                     Just reply -> replyUnlinkTCB reply
+>                     Just reply -> replyUnlink reply
 >                     _ -> return ()
->                 case (call, fault, canGrant, replyOpt) of
+>                 case (call, fault, canGrant || canGrantReply, replyOpt) of
 >                     (False, Nothing, _, _) -> do
->                         when (canDonate && scOptDest == Nothing) $ do
->                             scOptSrc <- threadGet tcbSchedContext thread
+>                         when (canDonate && scOptDest == Nothing) $
 >                             schedContextDonate (fromJust scOptSrc) dest
 >                     (_, _, True, Just reply) -> do
 >                         replyPush thread dest reply canDonate
->                     _ -> return ()
+>                     _ -> setThreadState Inactive thread
 
 The receiving thread has now completed its blocking operation and can run. If the receiving thread has higher priority than the current thread, the scheduler is instructed to switch to it immediately.
 
@@ -124,16 +125,15 @@ The IPC receive operation is essentially the same as the send operation, but wit
 
 > receiveIPC :: PPtr TCB -> Capability -> Bool -> Capability -> Kernel ()
 > receiveIPC thread cap@(EndpointCap {}) isBlocking replyCap = do
->         replyOpt <- (case replyCap of
->             ReplyCap r -> return (Just r)
->             NullCap -> return Nothing
->             _ -> fail "receiveIPC: replyCap must be ReplyCap or NullCap")
->         when (replyOpt /= Nothing) $ do
->             let rptr = fromJust replyOpt
->             tptrOpt <- getReplyTCB rptr
->             when (tptrOpt /= Nothing && tptrOpt /= Just thread) $
->                 cancelIPC $ fromJust tptrOpt
 >         let epptr = capEPPtr cap
+>         replyOpt <- (case replyCap of
+>             ReplyCap r _ -> return (Just r)
+>             _ -> return Nothing)
+>         when (replyOpt /= Nothing) $ do
+>             tptrOpt <- getReplyTCB $ fromJust replyOpt
+>             when (tptrOpt /= Nothing && tptrOpt /= Just thread) $ do
+>                 cancelIPC $ fromJust tptrOpt
+>         let recvCanGrant = capEPCanGrant cap
 >         ep <- getEndpoint epptr
 >         -- check if anything is waiting on bound ntfn
 >         ntfnPtr <- getBoundNotification thread
@@ -144,7 +144,9 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >             IdleEP -> case isBlocking of
 >               True -> do
 >                   setThreadState (BlockedOnReceive {
->                       blockingObject = epptr, replyObject = replyOpt }) thread
+>                       blockingObject = epptr,
+>                       replyObject = replyOpt,
+>                       blockingIPCCanGrant = recvCanGrant }) thread
 >                   when (replyOpt /= Nothing) $
 >                       setReplyTCB (Just thread) $ fromJust replyOpt
 >                   setEndpoint epptr $ RecvEP [thread]
@@ -152,10 +154,12 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >             RecvEP queue -> case isBlocking of
 >               True -> do
 >                   setThreadState (BlockedOnReceive {
->                       blockingObject = epptr, replyObject = replyOpt }) thread
+>                       blockingObject = epptr,
+>                       replyObject = replyOpt,
+>                       blockingIPCCanGrant = recvCanGrant}) thread
 >                   when (replyOpt /= Nothing) $
 >                       setReplyTCB (Just thread) $ fromJust replyOpt
->                   qs' <- sortQueue (queue ++ [thread])
+>                   qs' <- tcbEPAppend thread queue
 >                   setEndpoint epptr $ RecvEP $ qs'
 >               False -> doNBRecvFailedTransfer thread
 >             SendEP (sender:queue) -> do
@@ -167,10 +171,11 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                        "TCB in send endpoint queue must be blocked on send"
 >                 let badge = blockingIPCBadge senderState
 >                 let canGrant = blockingIPCCanGrant senderState
+>                 let canGrantReply = blockingIPCCanGrantReply senderState
 >                 doIPCTransfer sender (Just epptr) badge canGrant thread
 >                 let call = blockingIPCIsCall senderState
 >                 fault <- threadGet tcbFault sender
->                 case (call, fault, canGrant, replyOpt) of
+>                 case (call, fault, canGrant || canGrantReply, replyOpt) of
 >                     (False, Nothing, _, _) -> do
 >                         setThreadState Running sender
 >                         possibleSwitchTo sender
@@ -204,27 +209,24 @@ If a thread is waiting for an IPC operation, it may be necessary to move the thr
 
 > cancelIPC :: PPtr TCB -> Kernel ()
 > cancelIPC tptr = do
+>         threadSet (\tcb -> tcb {tcbFault = Nothing}) tptr
 >         state <- getThreadState tptr
 >         case state of
 
 Threads blocked waiting for endpoints will simply be removed from the endpoint queue.
 
 >             BlockedOnSend {} -> blockedIPCCancel state Nothing
->             BlockedOnReceive _ replyOpt -> blockedIPCCancel state replyOpt
->             BlockedOnNotification event -> cancelSignal tptr event
+>             BlockedOnReceive _ _ replyOpt -> blockedIPCCancel state replyOpt
+>             BlockedOnNotification {} -> cancelSignal tptr (waitingOnNotification state)
 
 Threads that are waiting for an ipc reply or a fault response must have their reply capability revoked.
 
->             BlockedOnReply (Just _) -> replyIPCCancel
->             BlockedOnReply Nothing -> fail "cancelIPC: reply must not be Nothing"
+>             BlockedOnReply {} -> replyRemoveTCB tptr
 >             _ -> return ()
 >         where
 
 If the thread is blocking on an endpoint, then the endpoint is fetched and the thread removed from its queue.
 
->             replyIPCCancel = do
->                 threadSet (\tcb -> tcb {tcbFault = Nothing}) tptr
->                 replyRemoveTCB tptr
 >             blockedIPCCancel state replyOpt = do
 >                 epptr <- getBlockingObject state
 >                 ep <- getEndpoint epptr
@@ -237,7 +239,7 @@ If the thread is blocking on an endpoint, then the endpoint is fetched and the t
 >                 setEndpoint epptr ep'
 >                 case replyOpt of
 >                     Nothing -> return ()
->                     Just reply -> replyUnlinkTCB reply
+>                     Just reply -> replyUnlink reply
 
 Finally, replace the IPC block with a fault block (which will retry the operation if the thread is resumed).
 
@@ -257,11 +259,17 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 >             _ -> do
 >                 setEndpoint epptr IdleEP
 >                 forM_ (epQueue ep) (\t -> do
->                     state <- getThreadState t
->                     when (isReceive state) $
->                         replyUnlinkTCB $ fromJust $ replyObject state
->                     setThreadState Restart t
->                     possibleSwitchTo t)
+>                     st <- getThreadState t
+>                     let replyOpt = replyObject st
+>                     case replyOpt of
+>                         Nothing -> return ()
+>                         Just reply -> replyUnlink reply
+>                     fault <- threadGet tcbFault t
+>                     if isNothing fault 
+>                         then do
+>                             setThreadState Restart t
+>                             possibleSwitchTo t
+>                         else setThreadState Inactive t)
 >                 rescheduleRequired
 
 If a badged endpoint is recycled, then cancel every pending send operation using a badge equal to the recycled capability's badge. Receive operations are not affected.
@@ -278,8 +286,13 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 >                 st <- getThreadState t
 >                 if blockingIPCBadge st == badge
 >                     then do
->                         setThreadState Restart t
->                         possibleSwitchTo t
+>                         fault <- threadGet tcbFault t
+>                         if isNothing fault
+>                             then do
+>                                 setThreadState Restart t
+>                                 possibleSwitchTo t
+>                             else setThreadState Inactive t                        
+>                         tcbSchedEnqueue t
 >                         return False
 >                     else return True
 >             ep' <- case queue' of
@@ -301,8 +314,8 @@ The following two functions are specialisations of "getObject" and
 
 > epBlocked :: ThreadState -> Maybe (PPtr Endpoint)
 > epBlocked ts = case ts of
->     BlockedOnReceive r _ -> Just r
->     BlockedOnSend r _ _ _ -> Just r
+>     BlockedOnReceive r _ _ -> Just r
+>     BlockedOnSend r _ _ _ _ -> Just r
 >     _ -> Nothing
 
 > getBlockingObject :: ThreadState -> Kernel (PPtr Endpoint)
@@ -327,6 +340,7 @@ The following two functions are specialisations of "getObject" and
 > reorderEp epPtr tptr = do
 >     ep <- getEndpoint epPtr
 >     qs <- getEpQueue ep
->     qs' <- sortQueue qs
->     setEndpoint epPtr (updateEpQueue ep qs')
+>     qs' <- tcbEPDequeue tptr qs
+>     qs'' <- tcbEPAppend tptr qs'
+>     setEndpoint epPtr (updateEpQueue ep qs'')
 

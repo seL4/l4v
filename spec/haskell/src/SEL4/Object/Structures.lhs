@@ -62,7 +62,7 @@ This is the type used to represent a capability.
 >             capEPPtr :: PPtr Endpoint,
 >             capEPBadge :: Word,
 >             capEPCanSend, capEPCanReceive :: Bool,
->             capEPCanGrant :: Bool }
+>             capEPCanGrant, capEPCanGrantReply :: Bool }
 >         | DomainCap
 >         | Zombie {
 >             capZombiePtr :: PPtr CTE,
@@ -71,7 +71,8 @@ This is the type used to represent a capability.
 >         | ArchObjectCap {
 >             capCap :: ArchCapability }
 >         | ReplyCap {
->             capReplyPtr :: PPtr Reply }
+>             capReplyPtr :: PPtr Reply,
+>             capReplyCanGrant :: Bool }
 >         | UntypedCap {
 >             capIsDevice :: Bool,
 >             capPtr :: PPtr (),
@@ -163,7 +164,7 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 > objBitsKO (KOUserDataDevice) = pageBits
 > objBitsKO (KOKernelData) = pageBits
 > objBitsKO (KOArch a) = archObjSize a
-> objBitsKO (KOSchedContext sc) = scSizeBits sc
+> objBitsKO (KOSchedContext sc) = scheduleContextBits
 > objBitsKO (KOReply _) = replySizeBits
 
 \subsubsection{Synchronous Endpoint}
@@ -206,16 +207,19 @@ list of pointers to waiting threads;
 >     scPeriod :: Ticks,
 >     scConsumed :: Ticks,
 >     scTCB :: Maybe (PPtr TCB),
+>     scReply :: Maybe (PPtr Reply),
 >     scNtfn :: Maybe (PPtr Notification),
->     scRefills :: [Refill],
 >     scBadge :: Word,
 >     scYieldFrom :: Maybe (PPtr TCB),
 >     scRefillMax :: Int,
->     scReplies :: [PPtr Reply],
->     scSizeBits :: Int }
+>     scRefillHead :: Int,
+>     scRefillTail :: Int,
+>     scRefills :: [Refill]}
 
 > data Reply = Reply {
 >     replyTCB :: Maybe (PPtr TCB),
+>     replyPrev :: Maybe (PPtr Reply),
+>     replyNext :: Maybe (PPtr Reply),
 >     replySc :: Maybe (PPtr SchedContext) }
 
 > minRefills :: Int
@@ -240,7 +244,7 @@ There are three possible states for a notification:
 
 \item or waiting for one or more send operations to complete, with a list of pointers to the waiting threads;
 
->         | WaitingNtfn { waitingNtfnQueue :: [PPtr TCB] }
+>         | WaitingNtfn { ntfnQueue :: [PPtr TCB] }
 >     deriving Show
 
 > data Notification = NTFN {
@@ -295,6 +299,7 @@ The TCB is used to store various data about the thread's current state:
 >         tcbMCP :: Priority,
 >         tcbPriority :: Priority,
 >         tcbQueued :: Bool,
+>         tcbInReleaseQueue :: Bool,
 
 \item the thread's current fault state;
 
@@ -395,6 +400,7 @@ A user thread may be in the following states:
 
 >     = BlockedOnReceive {
 >         blockingObject :: PPtr Endpoint,
+>         blockingIPCCanGrant :: Bool,
 >         replyObject :: Maybe (PPtr Reply) }
 
 \item blocked waiting for a reply to a previously sent message;
@@ -422,6 +428,7 @@ A user thread may be in the following states:
 >         blockingObject :: PPtr Endpoint,
 >         blockingIPCBadge :: Word,
 >         blockingIPCCanGrant :: Bool,
+>         blockingIPCCanGrantReply :: Bool,
 >         blockingIPCIsCall :: Bool }
 
 \item ready to start executing at the current instruction (after a fault, an interrupted system call, or an explicitly set program counter);
@@ -479,11 +486,11 @@ Each entry in the domain schedule specifies a domain and a length (a number of t
 > dschLength = snd
 
 > isReceive :: ThreadState -> Bool
-> isReceive (BlockedOnReceive {}) = True
+> isReceive (BlockedOnReceive _ _ _) = True
 > isReceive _ = False
 
 > isSend :: ThreadState -> Bool
-> isSend (BlockedOnSend {}) = True
+> isSend (BlockedOnSend _ _ _ _ _) = True
 > isSend _ = False
 
 > isReply :: ThreadState -> Bool

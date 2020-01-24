@@ -39,9 +39,9 @@ The following type can specify any kernel object invocation. It contains physica
 
 > data Invocation
 >         = InvokeUntyped UntypedInvocation
->         | InvokeEndpoint (PPtr Endpoint) Word Bool
+>         | InvokeEndpoint (PPtr Endpoint) Word Bool Bool
 >         | InvokeNotification (PPtr Notification) Word
->         | InvokeReply (PPtr Reply)
+>         | InvokeReply (PPtr Reply) Bool
 >         | InvokeDomain (PPtr TCB) Domain
 >         | InvokeTCB TCBInvocation
 >         | InvokeSchedContext SchedContextInvocation
@@ -111,11 +111,11 @@ The following data type defines the set of possible TCB invocation operations. T
 
 > data SchedControlInvocation
 >         = InvokeSchedControlConfigure {
->             configureScPtr :: PPtr SchedContext,
->             configureBudget :: Ticks,
->             configurePeriod :: Ticks,
->             configureNRefills :: Int,
->             configureBadge :: Word }
+>             scPtr :: PPtr SchedContext,
+>             budget :: Ticks,
+>             period :: Ticks,
+>             nRefills :: Int,
+>             badge :: Word }
 >         deriving Show
 
 \subsubsection{CNode Invocations}

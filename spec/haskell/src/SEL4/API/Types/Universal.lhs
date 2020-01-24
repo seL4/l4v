@@ -39,13 +39,14 @@ The following is the definition of the seven object types that are always availa
 > ntfnSizeBits :: Int
 > ntfnSizeBits = wordSizeCase 5 5
 
-(ntfnSizeBits should maybe 5 6 if we are doing rt for x64)
-
 > cteSizeBits :: Int
 > cteSizeBits = wordSizeCase 4 5
 
 > replySizeBits :: Int
 > replySizeBits = 4
+
+> scheduleContextBits :: Int
+> scheduleContextBits = 8
 
 > apiGetObjectSize :: APIObjectType -> Int -> Int
 > apiGetObjectSize Untyped size = size
