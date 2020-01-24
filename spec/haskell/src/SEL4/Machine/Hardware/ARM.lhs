@@ -841,6 +841,9 @@ FIXME ARMHYP consider moving to platform code?
 > kernelBase :: VPtr
 > kernelBase = Platform.kernelBase
 
+> timerIRQ :: IRQ
+> timerIRQ = Platform.timerIRQ
+
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
 > hcrVCPU =  (0x87039 :: Word) -- HCR_VCPU

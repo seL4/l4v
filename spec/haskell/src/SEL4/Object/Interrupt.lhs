@@ -37,6 +37,7 @@ The architecture-specific definitions are imported qualified with the "Arch" pre
 
 \begin{impdetails}
 
+> import SEL4.Config
 > import SEL4.Machine
 > import SEL4.Model
 > import SEL4.API.Failures
@@ -50,7 +51,6 @@ The architecture-specific definitions are imported qualified with the "Arch" pre
 > import {-# SOURCE #-} SEL4.Object.TCB
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
 > import {-# SOURCE #-} SEL4.Kernel.Init
-
 > import Data.Bits
 > import Data.Array
 > import Data.Helpers
@@ -159,8 +159,8 @@ This function is called during bootstrap to set up the initial state of the inte
 >         doMachineOp $ mapM_ (maskInterrupt True) [minBound .. maxBound]
 >         let irqTable = funArray $ const IRQInactive
 >         setInterruptState $ InterruptState (ptrFromPAddr frame) irqTable
->         doMachineOp $ setDeadline (maxBound :: Word64)
->         setIRQState IRQTimer deadlineIRQ
+>         timerIRQ <- doMachineOp configureTimer
+>         setIRQState IRQTimer timerIRQ
 >         Arch.initInterruptController
 >         slot <- locateSlotCap rootCNCap biCapIRQC
 >         insertInitCap slot IRQControlCap
@@ -178,10 +178,10 @@ is set to an incorrect value.
 
 > handleInterrupt :: IRQ -> Kernel ()
 > handleInterrupt irq = do
->     if (irq > maxIRQ)
->         then doMachineOp $ (do
+>     if irq > maxIRQ 
+>         then doMachineOp $ do
 >             maskInterrupt True irq
->             ackInterrupt irq)
+>             ackInterrupt irq
 >         else do
 >             st <- getIRQState irq
 >             case st of
@@ -223,28 +223,26 @@ The following functions are used within this module to access the global interru
 >     node <- liftM intStateIRQNode getInterruptState
 >     locateSlotBasic node (fromIntegral $ fromEnum irq)
 
-> setNextTimerInterrupt :: Time -> Kernel ()
-> setNextTimerInterrupt threadTime = do
->     curTm <- getCurTime
->     domainTm <- getDomainTime
->     newDomainTm <- return $ curTm + domainTm
->     doMachineOp $ setDeadline (min threadTime newDomainTm - timerPrecision)
-
 > setNextInterrupt :: Kernel ()
 > setNextInterrupt = do
 >     curTm <- getCurTime
 >     curTh <- getCurThread
 >     scOpt <- threadGet tcbSchedContext curTh
->     assert (scOpt /= Nothing) "setNextInterrupt: scOpt must not be Nothing"
->     scPtr <- return $ fromJust scOpt
->     sc <- getSchedContext scPtr
->     newThreadTime <- return $ curTm + rAmount (refillHd sc)
+>     sc <- getSchedContext $ fromJust scOpt
+>     next_interrupt <- return $ curTm + rAmount (refillHd sc)
+>     next_interrupt <- 
+>        if numDomains > 1 
+>            then do
+>                domainTm <- getDomainTime
+>                return $ min next_interrupt (curTm + domainTm)
+>            else return next_interrupt
 >     rq <- getReleaseQueue
->     newThreadTime <- if rq == [] then return newThreadTime else do
->         rqSCOpt <- threadGet tcbSchedContext (head rq)
->         assert (rqSCOpt /= Nothing) "setNextInterrupt: rqSCOpt must not be Nothing"
->         rqSCPtr <- return $ fromJust rqSCOpt
->         rqSC <- getSchedContext rqSCPtr
->         return $ min (rTime (refillHd rqSC)) newThreadTime
->     setNextTimerInterrupt newThreadTime
+>     next_interrupt <- 
+>         if rq == [] 
+>             then return next_interrupt 
+>             else do
+>                 rqSCOpt <- threadGet tcbSchedContext (head rq)
+>                 rqSC <- getSchedContext $ fromJust rqSCOpt
+>                 return $ min (rTime (refillHd rqSC)) next_interrupt
+>     doMachineOp $ setDeadline (next_interrupt - timerPrecision)
 
