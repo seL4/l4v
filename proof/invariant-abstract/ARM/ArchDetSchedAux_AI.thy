@@ -108,6 +108,8 @@ crunches perform_asid_control_invocation
   and schedact[wp]: "\<lambda>s. P (scheduler_action s)"
   and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   and release_queue[wp]: "\<lambda>s. P (release_queue s)"
+  and misc[wp]: "\<lambda>s. P (scheduler_action s) (ready_queues s)
+               (cur_domain s) (release_queue s)"
 
 (* FIXME: move to ArchArch_AI *)
 lemma perform_asid_control_invocation_obj_at_live:
@@ -202,24 +204,14 @@ lemma perform_asid_control_invocation_valid_sched:
                       (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_aci aci"
           in valid_sched_tcb_state_preservation_gen)
                  apply simp
-                apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at)
-               apply (wpsimp wp: perform_asid_control_invocation_pred_tcb_at_live simp: ipc_queued_thread_state_live)
-              apply (wpsimp wp: perform_asid_control_invocation_sc_at_pred_n_live simp: live_sc_def)
-             apply (wpsimp wp: perform_asid_control_etcb_at)
-            apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at)
-           apply (wpsimp wp: perform_asid_control_invocation_sc_at_pred_n)
-          apply (wpsimp wp: perform_asid_control_invocation_pred_map_sc_refill_cfgs_of)
-         apply wp
-        apply wp
-       apply wp
-      apply wp
-     apply (wpsimp wp: perform_asid_control_invocation_valid_idle)
-    apply wp
-   apply (rule hoare_lift_Pf[where f=scheduler_action, OF _ perform_asid_control_invocation_schedact])
-   apply (rule hoare_lift_Pf[where f=ready_queues, OF _ perform_asid_control_invocation_rqueues])
-   apply (rule hoare_lift_Pf[where f=cur_domain, OF _ perform_asid_control_invocation_cur_domain])
-   apply (rule perform_asid_control_invocation_release_queue)
-  by clarsimp
+                 by (wpsimp wp: perform_asid_control_invocation_st_tcb_at
+                                perform_asid_control_invocation_pred_tcb_at_live
+                                perform_asid_control_invocation_sc_at_pred_n_live[where Q="Not"]
+                                perform_asid_control_etcb_at
+                                perform_asid_control_invocation_sc_at_pred_n
+                                perform_asid_control_invocation_valid_idle
+                                perform_asid_control_invocation_pred_map_sc_refill_cfgs_of
+                          simp: ipc_queued_thread_state_live live_sc_def)+
 
 lemma kernelWCET_us_non_zero:
   "kernelWCET_us \<noteq> 0"

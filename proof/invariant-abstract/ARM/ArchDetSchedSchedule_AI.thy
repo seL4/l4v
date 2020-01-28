@@ -358,6 +358,12 @@ lemma handle_reserved_irq_trivial[wp]:
   unfolding handle_reserved_irq_def
   by (wpsimp)
 
+lemma handle_vm_fault_not_timeout_fault[wp]:
+  "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. \<not> is_timeout_fault rv\<rbrace>"
+  apply (cases ft, simp_all)
+   apply (wp no_irq_getDFSR no_irq_getIFSR | simp add: is_timeout_fault_def)+
+  done
+
 end
 
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault?: DetSchedSchedule_AI_handle_hypervisor_fault

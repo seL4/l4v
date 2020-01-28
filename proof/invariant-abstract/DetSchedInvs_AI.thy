@@ -2492,11 +2492,13 @@ definition is_blocked_on_reply :: "thread_state \<Rightarrow> bool" where
 
 definition is_blocked_on_recv_ntfn :: "thread_state \<Rightarrow> bool" where
   "is_blocked_on_recv_ntfn st \<equiv>
-    (\<exists>ep reply_opt. st = BlockedOnReceive ep reply_opt) \<or> (\<exists>ntfn. st = BlockedOnNotification ntfn)"
+    (\<exists>ep reply_opt receiver_data. st = BlockedOnReceive ep reply_opt receiver_data)
+     \<or> (\<exists>ntfn. st = BlockedOnNotification ntfn)"
 
 definition is_blocked_on_send_recv :: "thread_state \<Rightarrow> bool" where
   "is_blocked_on_send_recv st \<equiv>
-    (\<exists>ep sender_data. st = BlockedOnSend ep sender_data) \<or> (\<exists>ep reply_opt. st = BlockedOnReceive ep reply_opt)"
+    (\<exists>ep sender_data. st = BlockedOnSend ep sender_data)
+     \<or> (\<exists>ep reply_opt receiver_data. st = BlockedOnReceive ep reply_opt receiver_data)"
 
 lemmas is_blocked_thread_state_defs
   = is_blocked_on_send_def is_blocked_on_reply_def is_blocked_on_recv_ntfn_def
@@ -2595,9 +2597,6 @@ lemma released_ipc_queuesE:
   shows "released_ipc_queues_2 curtime' tcb_sts' tcb_scps' tcb_faults' sc_refill_cfgs'"
   using assms by (auto simp: released_ipc_queues_defs)
 
-abbreviation active_if_bound_sc_tcb_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "active_if_bound_sc_tcb_at t s \<equiv> pred_map_eq None (tcb_scps_of s) t \<or> active_sc_tcb_at t s"
-
 (* FIXME RT: generalise this pattern *)
 lemma active_bound_sc_tcb_at:
   "active_if_bound_sc_tcb_at t s \<Longrightarrow> pred_map_eq (Some scp) (tcb_scps_of s) t \<Longrightarrow> active_sc_tcb_at t s"
@@ -2608,8 +2607,104 @@ abbreviation (input) valid_sched_ipc_queues :: valid_sched_t where
   "valid_sched_ipc_queues ctime cdom ct it rq rlq sa lmt etcbs sts scps faults scrcs replies
    \<equiv> released_ipc_queues_2 ctime sts scps faults scrcs"
 
-abbreviation non_faulted_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
-  "non_faulted_tcb_at t s \<equiv> pred_map_eq None (tcb_faults_of s) t"
+lemma is_blocked_thread_state_simps[simp]:
+  "\<not> is_blocked_on_recv_ntfn Running"
+  "\<not> is_blocked_on_recv_ntfn Inactive"
+  "\<not> is_blocked_on_recv_ntfn Restart"
+  "  is_blocked_on_recv_ntfn (BlockedOnReceive ep reply_opt receiver_data)"
+  "\<not> is_blocked_on_recv_ntfn (BlockedOnSend ep sender_data)"
+  "\<not> is_blocked_on_recv_ntfn (BlockedOnReply reply)"
+  "  is_blocked_on_recv_ntfn (BlockedOnNotification ntfn)"
+  "\<not> is_blocked_on_recv_ntfn IdleThreadState"
+  "\<not> is_blocked_on_send Running"
+  "\<not> is_blocked_on_send Inactive"
+  "\<not> is_blocked_on_send Restart"
+  "\<not> is_blocked_on_send (BlockedOnReceive ep reply_opt receiver_data)"
+  "  is_blocked_on_send (BlockedOnSend ep sender_data)"
+  "\<not> is_blocked_on_send (BlockedOnReply reply)"
+  "\<not> is_blocked_on_send (BlockedOnNotification ntfn)"
+  "\<not> is_blocked_on_send IdleThreadState"
+  "\<not> is_blocked_on_reply Running"
+  "\<not> is_blocked_on_reply Inactive"
+  "\<not> is_blocked_on_reply Restart"
+  "\<not> is_blocked_on_reply (BlockedOnReceive ep reply_opt receiver_data)"
+  "\<not> is_blocked_on_reply (BlockedOnSend ep sender_data)"
+  "  is_blocked_on_reply (BlockedOnReply reply)"
+  "\<not> is_blocked_on_reply (BlockedOnNotification ntfn)"
+  "\<not> is_blocked_on_reply IdleThreadState"
+  "\<not> is_blocked_on_send_recv Running"
+  "\<not> is_blocked_on_send_recv Inactive"
+  "\<not> is_blocked_on_send_recv Restart"
+  "  is_blocked_on_send_recv (BlockedOnReceive ep reply_opt receiver_data)"
+  "  is_blocked_on_send_recv (BlockedOnSend ep sender_data)"
+  "\<not> is_blocked_on_send_recv (BlockedOnReply reply)"
+  "\<not> is_blocked_on_send_recv (BlockedOnNotification ntfn)"
+  "\<not> is_blocked_on_send_recv IdleThreadState"
+  by (auto simp: is_blocked_thread_state_defs)
+
+(* FIXME RT: move *)
+lemma ipc_queued_thread_state_def2:
+  "ipc_queued_thread_state st \<equiv>
+    (\<exists>ep reply_opt receiver_data. st = BlockedOnReceive ep reply_opt receiver_data)
+    \<or> (\<exists>ntfn. st = BlockedOnNotification ntfn)
+    \<or> (\<exists>ep sender_data. st = BlockedOnSend ep sender_data)
+    \<or> (\<exists>reply. st = BlockedOnReply reply)"
+  by (clarsimp simp: atomize_eq; cases st; simp)
+
+lemma pred_map_ipc_queued_thread_state_iff:
+  "pred_map ipc_queued_thread_state tcb_sts t
+   \<longleftrightarrow> pred_map is_blocked_on_recv_ntfn tcb_sts t
+       \<or> pred_map is_blocked_on_send tcb_sts t
+       \<or> pred_map is_blocked_on_reply tcb_sts t"
+  by (auto simp: ipc_queued_thread_state_def2 pred_map_simps is_blocked_thread_state_defs)
+
+(* This is a bit of a compromise; ideally, we should be always using the above,
+   but sometimes you don't want to unfold st_tcb_at to pred_map everywhere just yet
+   due to dependencies etc. *)
+lemma st_tcb_ipc_queued_thread_state_iff:
+  "st_tcb_at ipc_queued_thread_state t s
+   \<longleftrightarrow> (st_tcb_at is_blocked_on_reply t s \<or>
+        st_tcb_at is_blocked_on_recv_ntfn t s \<or>
+        st_tcb_at is_blocked_on_send t s)"
+  by (fastforce simp: pred_map_ipc_queued_thread_state_iff tcb_at_kh_simps)
+
+(* FIXME RT: move *)
+definition ep_queue_of :: "endpoint \<Rightarrow> obj_ref list option"
+where
+  "ep_queue_of ep \<equiv> case ep of
+                      IdleEP \<Rightarrow> None
+                    | SendEP x \<Rightarrow> Some x
+                    | RecvEP x \<Rightarrow> Some x"
+
+(* FIXME RT: move *)
+lemma get_ep_queue_wp':
+  "\<lbrace> \<lambda>s. \<forall>q. ep_queue_of ep = Some q \<longrightarrow> Q q s \<rbrace> get_ep_queue ep \<lbrace> Q \<rbrace>"
+  by (wpsimp simp: get_ep_queue_def ep_queue_of_def)
+
+(* FIXME RT: move *)
+lemma valid_ep_distinct_queue:
+  "\<lbrakk>valid_ep ep s; ep_queue_of ep = Some q\<rbrakk> \<Longrightarrow> distinct q"
+  by (auto simp: valid_ep_def ep_queue_of_def split: endpoint.splits)
+
+(* FIXME RT: move *)
+lemma pred_map_P_not_idle:
+  "\<lbrakk>valid_idle s; pred_map P (tcb_sts_of s) t; \<And>st. idle st \<Longrightarrow> \<not> P st\<rbrakk> \<Longrightarrow> t \<noteq> idle_thread s"
+  by (clarsimp simp: vs_all_heap_simps valid_idle_def pred_tcb_at_def obj_at_def)
+
+(* FIXME RT: move *)
+lemma in_tcb_st_refs_of_iff:
+  "(ref, reftype) \<in> tcb_st_refs_of st
+   \<longleftrightarrow> (reftype = TCBReply \<and> (st = BlockedOnReply ref
+                              \<or> (\<exists>ep receiver_data. st = BlockedOnReceive ep (Some ref) receiver_data)))
+       \<or> (reftype = TCBBlockedRecv \<and> (\<exists>ropt receiver_data. st = BlockedOnReceive ref ropt receiver_data))
+       \<or> (reftype = TCBBlockedSend \<and> (\<exists>sender_data. st = BlockedOnSend ref sender_data))
+       \<or> (reftype = TCBSignal \<and> st = BlockedOnNotification ref)"
+  by (cases st) (auto simp: tcb_st_refs_of_def)
+
+(* FIXME RT: move *)
+lemma valid_ntfn_distinct_queue:
+  "\<lbrakk>valid_ntfn ntfn s; ntfn_obj ntfn = WaitingNtfn q\<rbrakk> \<Longrightarrow> distinct q"
+  by (auto simp: valid_ntfn_def split: endpoint.splits)
 
 \<comment> \<open>Lifting rules for IPC queue schedulability.\<close>
 lemma released_ipc_queue_lift_pre_conj:
@@ -3191,6 +3286,37 @@ abbreviation not_ipc_queued_thread :: "obj_ref \<Rightarrow> 'z state \<Rightarr
 
 abbreviation sc_not_in_ep_q :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "sc_not_in_ep_q scp s \<equiv> sc_with_tcb_prop scp not_ipc_queued_thread s"
+
+lemma valid_sched_not_runnable_not_queued:
+  "\<lbrakk>valid_sched s; \<not> pred_map runnable (tcb_sts_of s) tptr\<rbrakk> \<Longrightarrow> not_queued tptr s"
+  by (clarsimp simp: valid_sched_def valid_ready_qs_def not_queued_def)
+
+lemma valid_sched_not_runnable_not_in_release_q:
+  "\<lbrakk>valid_sched s; \<not> pred_map runnable (tcb_sts_of s) tptr\<rbrakk> \<Longrightarrow> not_in_release_q tptr s"
+  by (clarsimp simp: valid_sched_def valid_release_q_def not_in_release_q_def)
+
+lemma valid_sched_no_active_sc_not_queued:
+  "\<lbrakk>valid_sched s; \<not> active_sc_tcb_at tptr s\<rbrakk> \<Longrightarrow> not_queued tptr s"
+  by (clarsimp simp: valid_sched_def valid_ready_qs_def not_queued_def released_sc_tcb_at_def)
+
+lemma valid_sched_no_active_sc_not_in_release_q:
+  "\<lbrakk>valid_sched s; \<not> active_sc_tcb_at tptr s\<rbrakk> \<Longrightarrow> not_in_release_q tptr s"
+  by (clarsimp simp: valid_sched_def valid_release_q_def not_in_release_q_def released_sc_tcb_at_def)
+
+lemma valid_sched_not_runnable_scheduler_act_not:
+  "\<lbrakk>valid_sched s; \<not> pred_map runnable (tcb_sts_of s) tptr\<rbrakk> \<Longrightarrow> scheduler_act_not tptr s"
+  by (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def
+                     scheduler_act_not_def)
+
+lemma valid_sched_no_active_sc_scheduler_act_not:
+  "\<lbrakk>valid_sched s; \<not> active_sc_tcb_at tptr s\<rbrakk> \<Longrightarrow> scheduler_act_not tptr s"
+  by (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def
+                     scheduler_act_not_def released_sc_tcb_at_def)
+
+lemma valid_sched_in_release_q_scheduler_act_not:
+  "\<lbrakk>valid_sched s; in_release_queue tptr s\<rbrakk> \<Longrightarrow> scheduler_act_not tptr s"
+  by (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def
+                     scheduler_act_not_def in_release_queue_def)
 
 (*********)
 

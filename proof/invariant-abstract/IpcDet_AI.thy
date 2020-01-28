@@ -918,7 +918,9 @@ lemma reply_push_sender_sc_Some_invs:
         pspace_respects_device_region s \<and> cap_refs_respects_device_region s \<and>
         valid_replies' (replies_with_sc s) (replies_blocked s) \<and>
         fault_tcbs_valid_states s \<and> cur_tcb s \<and> cur_sc_tcb s\<rbrace>
-   reply_push sender thread reply_ptr (\<exists>y. sender_sc = Some y)
+   reply_push sender thread reply_ptr ((\<exists>y. sender_sc = Some y) \<and>
+             \<not> (case fault of None \<Rightarrow> False
+                 | Some x \<Rightarrow> is_timeout_fault x))
    \<lbrace>\<lambda>r. invs\<rbrace>"
   apply (clarsimp simp: reply_push_def)
   apply (rule hoare_seq_ext[OF _ gsc_sp])

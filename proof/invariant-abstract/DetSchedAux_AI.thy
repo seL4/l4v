@@ -599,6 +599,7 @@ lemma non_empty_sc_replies_nonz_cap:
 lemma valid_sched_tcb_state_preservation_gen:
   assumes I: "\<And>s. I s \<Longrightarrow> ct_active s \<and> invs s"
   assumes st_tcb: "\<And>P t. \<lbrace>st_tcb_at P t and ex_nonz_cap_to t and I\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  assumes fault_tcb: "\<And>P t. \<lbrace>fault_tcb_at P t and ex_nonz_cap_to t and I\<rbrace> f \<lbrace>\<lambda>_. fault_tcb_at P t\<rbrace>"
   assumes not_ipc_queued: "\<And>t. \<lbrace>\<lambda>s. \<not> st_tcb_at ipc_queued_thread_state t s \<and> I s\<rbrace>
                                 f \<lbrace>\<lambda>_ s. \<not> st_tcb_at ipc_queued_thread_state t s\<rbrace>"
   assumes non_empty_sc_replies: "\<And>scp. \<lbrace>\<lambda>s. \<not> sc_replies_sc_at (\<lambda>rs. rs \<noteq> []) scp s \<and> I s\<rbrace>
@@ -710,19 +711,41 @@ lemma valid_sched_tcb_state_preservation_gen:
    by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
   apply (prop_tac "released_ipc_queues s'")
    subgoal for s rv s'
-   apply (simp add: released_ipc_queues_defs
-                    pred_map2'_pred_maps obj_at_kh_kheap_simps[symmetric] pred_tcb_at_eq_commute)
-   apply (erule allEI, rule impI)
-   apply ((prop_tac "st_tcb_at ipc_queued_thread_state t s", rule ccontr
-           , frule use_valid, rule_tac t=t in not_ipc_queued); simp)
-   apply (frule (1) st_tcb_ex_cap, (case_tac st; clarsimp simp: ipc_queued_thread_state_def))
-   apply (erule disjEI, (frule use_valid[OF _ bound_sc]; fastforce))
-   apply (elim exE conjE, rename_tac p)
-   apply (frule use_valid[OF _ bound_sc], fastforce)
-   apply (clarsimp simp: pred_tcb_at_def[unfolded obj_at_def])
-   apply (frule (3) ex_nonz_cap_to_tcb_implies_ex_nonz_cap_to_sc)
-   apply (frule use_valid, rule_tac p=p in sc_refill_cfg, simp)
-   by simp
+     apply (simp add: released_ipc_queues_defs
+                           pred_map2'_pred_maps obj_at_kh_kheap_simps[symmetric] )
+     apply (erule allEI)
+     apply (intro conjI impI)
+       apply (all \<open>prop_tac "st_tcb_at ipc_queued_thread_state t s", rule ccontr,
+              frule use_valid, rule_tac t=t in not_ipc_queued; simp?\<close>)
+          apply (find_goal \<open>match conclusion in False \<Rightarrow>
+                   \<open>simp add: tcb_at_kh_simps pred_map_ipc_queued_thread_state_iff\<close>\<close>)+
+         (*ex_nonz_cap_to*)
+       apply (all \<open>frule (1) st_tcb_ex_cap, (case_tac st; clarsimp simp: ipc_queued_thread_state_def)\<close>)
+       (* split released_ipc_queue assumtion into three cases *)
+       apply (all \<open>simp add: st_tcb_ipc_queued_thread_state_iff; elim disjE\<close>)
+             apply (all \<open>frule use_valid, rule_tac t=t in st_tcb, simp\<close>)
+       (* remove 6 inconsistent cases; thread state for s and s' should be the same *)
+             apply (find_goal \<open>solves
+                    \<open>(simp add: is_blocked_thread_state_defs obj_at_def pred_tcb_at_def, clarsimp)\<close>\<close>)+
+     (* Eisbach somehow fails to catch the last case; clean it up separately *)
+     apply (find_goal \<open>match premises in "st_tcb_at is_blocked_on_recv_ntfn t s'"
+                                     and "st_tcb_at is_blocked_on_send t s" for t \<Rightarrow> \<open>-\<close>\<close>)
+     apply (simp add: is_blocked_thread_state_defs obj_at_def pred_tcb_at_def, clarsimp)
+     (* three valid cases left *)
+     apply (all \<open>elim conjE, drule mp, assumption\<close>)
+     apply (find_goal \<open>match conclusion in "fault_tcb_at _ _ _ \<and> _ \<or> _" \<Rightarrow>
+              \<open>erule disjE, erule conjE, rule disjI1, rule conjI\<close>\<close>)
+     apply (find_goal \<open>match conclusion in "fault_tcb_at _ _ _ \<and> _ \<or> _" \<Rightarrow> \<open>rule disjI2\<close>\<close>)
+     apply (find_goal \<open>match conclusion in "bound_sc_tcb_at _ _ _ \<or> _" \<Rightarrow>
+              \<open>erule disjE, (frule use_valid[OF _ bound_sc]; fastforce)?; rule disjI2\<close>\<close>)+
+     apply (find_goal \<open>match conclusion in "\<exists>_. _" \<Rightarrow>
+              \<open>erule exEI, rename_tac ref, frule use_valid[OF _ bound_sc], fastforce; clarsimp\<close>\<close>)+
+     apply (find_goal \<open>match conclusion in "sc_refill_cfg_sc_at _ _ _" \<Rightarrow>
+              \<open>clarsimp simp:  pred_tcb_at_def[unfolded obj_at_def],
+               frule (2) ex_nonz_cap_to_tcb_implies_ex_nonz_cap_to_sc, rule sym, simp,
+               frule use_valid, rule_tac p=ref in sc_refill_cfg; simp\<close>\<close>)+
+     apply (frule use_valid[OF _ fault_tcb], fastforce)
+     by simp
   apply (prop_tac "active_sc_valid_refills s'")
    subgoal for s rv s'
    unfolding active_sc_valid_refills_def
@@ -903,24 +926,12 @@ lemma (in DetSchedAux_AI) invoke_untyped_valid_sched:
                       (\<lambda>s. scheduler_action s = resume_cur_thread)"
             in valid_sched_tcb_state_preservation_gen)
                  apply simp
-                apply (wpsimp wp: invoke_untyped_st_tcb_at)
-               apply (wpsimp wp: invoke_untyped_pred_tcb_at_live simp: ipc_queued_thread_state_live)
-              apply (wpsimp wp: invoke_untyped_sc_at_pred_n_live simp: live_sc_def)
-             apply (wpsimp wp: invoke_untyped_etcb_at)
-            apply wpsimp
-           apply (wpsimp wp: invoke_untyped_sc_at_pred_n)
-          apply (wpsimp wp: invoke_untyped_pred_map_sc_refill_cfgs_of)
-         apply wp
-        apply wp
-       apply wp
-      apply wp
-     apply (wpsimp wp: invoke_untyped_valid_idle)
-    apply wp
-   apply (rule hoare_lift_Pf[where f=scheduler_action, OF _ invoke_untyped_valid_sched_pred_misc])
-   apply (rule hoare_lift_Pf[where f=ready_queues, OF _ invoke_untyped_valid_sched_pred_misc])
-   apply (rule hoare_lift_Pf[where f=cur_domain, OF _ invoke_untyped_valid_sched_pred_misc])
-   apply (rule invoke_untyped_valid_sched_pred_misc)
-  by clarsimp
+                 by (wpsimp wp: invoke_untyped_st_tcb_at invoke_untyped_pred_tcb_at_live
+                                invoke_untyped_sc_at_pred_n_live[where Q="Not"] invoke_untyped_etcb_at
+                                invoke_untyped_sc_at_pred_n
+                                invoke_untyped_pred_map_sc_refill_cfgs_of
+                                invoke_untyped_valid_idle invoke_untyped_valid_sched_pred_misc
+                          simp: ipc_queued_thread_state_live live_sc_def)+
 
 \<comment> \<open>Miscellaneous\<close>
 
@@ -1210,17 +1221,6 @@ lemma valid_objs_WaitingNtfn_distinct:
   apply (clarsimp simp: valid_objs_def dom_def valid_obj_def)
   apply (fastforce simp: valid_ntfn_def)
   done
-
-lemma valid_sched_not_runnable_not_in_release_q:
-  "\<lbrakk>valid_sched s; st_tcb_at (\<lambda>ts. \<not> runnable ts) tptr s\<rbrakk> \<Longrightarrow> not_in_release_q tptr s"
-  by (auto simp: valid_sched_def valid_release_q_def obj_at_kh_kheap_simps
-                 not_queued_def not_in_release_q_def vs_all_heap_simps)
-
-lemma valid_sched_not_runnable_not_queued:
-  "\<lbrakk>valid_sched s; st_tcb_at (\<lambda>ts. \<not> runnable ts) tptr s\<rbrakk> \<Longrightarrow> not_queued tptr s"
-  apply (clarsimp simp: valid_sched_def valid_ready_qs_def obj_at_kh_kheap_simps
-                        not_queued_def vs_all_heap_simps runnable_eq_active)
-  by fastforce
 
 lemma valid_blocked_except_set_no_active_sc_sum:
   "valid_blocked_except_set {tcbptr} s
