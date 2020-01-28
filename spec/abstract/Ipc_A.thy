@@ -355,6 +355,10 @@ definition
 where
   "do_nbrecv_failed_transfer thread = do as_user thread $ setRegister badge_register 0; return () od"
 
+definition is_timeout_fault :: "fault \<Rightarrow> bool" where
+  "is_timeout_fault f \<equiv>
+    (case f of Timeout _ \<Rightarrow> True | _ \<Rightarrow> False)"
+
 definition
   receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> cap \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -415,7 +419,7 @@ where
                 if (sender_can_grant data \<or> sender_can_grant_reply data) \<and> reply \<noteq> None
                 then do
                   sender_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context sender;
-                  donate \<leftarrow> return (sender_sc \<noteq> None);
+                  donate \<leftarrow> return $ (sender_sc \<noteq> None) \<and> \<not>(case_option False is_timeout_fault fault);
                   reply_push sender thread (the reply) donate
                 od
                 else set_thread_state sender Inactive
@@ -579,10 +583,6 @@ where
    od"
 
 text \<open>Transfer a reply message and delete the one-use Reply capability.\<close>
-definition is_timeout_fault :: "fault \<Rightarrow> bool" where
-  "is_timeout_fault f \<equiv>
-    (case f of Timeout _ \<Rightarrow> True | _ \<Rightarrow> False)"
-
 definition
   do_reply_transfer :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
