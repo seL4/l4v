@@ -17388,6 +17388,69 @@ crunches handle_reserved_irq
   for release_queue[wp]: "\<lambda>s. P (release_queue s)"
   and valid_release_q[wp]: "\<lambda>s. valid_release_q s"
 
+crunches install_tcb_cap
+  for ct_not_in_release_q[wp]: "ct_not_in_release_q :: 'state_ext state \<Rightarrow> _"
+  (wp: crunch_wps preemption_point_inv ignore: check_cap_at simp: check_cap_at_def)
+
+lemma cap_revoke_ct_not_in_release_q[wp]:
+  "cap_revoke slot \<lbrace>ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  by (wpsimp wp: cap_revoke_preservation2 preemption_point_inv)
+
+lemma invoke_cnode_ct_not_in_release_qE_E[wp]:
+  "\<lbrace>ct_not_in_release_q\<rbrace>
+   invoke_cnode iv
+   -, \<lbrace>\<lambda>rv. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  supply if_splits [split del]
+  by (wpsimp simp: invoke_cnode_def)+
+
+lemma invoke_tcb_ct_not_in_release_qE_E[wp]:
+  "\<lbrace>ct_not_in_release_q\<rbrace>
+   invoke_tcb iv
+   -, \<lbrace>\<lambda>rv. ct_not_in_release_q:: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (case_tac iv; simp)
+           prefer 8
+           apply (case_tac x82; wpsimp)
+          apply (wpsimp simp: install_tcb_frame_cap_def | wpsimp wp: hoare_drop_imps)+
+  done
+
+lemma invoke_irq_control_ct_not_in_release_qE_E[wp]:
+  "\<lbrace>ct_not_in_release_q\<rbrace>
+   invoke_irq_control iv
+   -, \<lbrace>\<lambda>rv. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  by (case_tac iv; wpsimp)
+
+lemma perform_invocation_ct_not_in_release_qE_E[wp]:
+  "\<lbrace>ct_not_in_release_q \<rbrace>
+   perform_invocation block call can_donate iv
+   -, \<lbrace>\<lambda>rv. ct_not_in_release_q  :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (case_tac iv; simp)
+        apply (wpsimp wp: invoke_cnode_ct_not_in_release_qE_E
+                          invoke_irq_control_ct_not_in_release_qE_E)+
+  done
+
+lemma handle_invocation_ct_not_in_release_qE_E[wp]:
+  "\<lbrace>ct_not_in_release_q\<rbrace>
+   handle_invocation calling blocking can_donate first_phase cptr
+   -, \<lbrace>\<lambda>rv. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding handle_invocation_def syscall_def
+  apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
+                   liftE_liftM_liftME liftME_def bindE_assoc)
+  apply (wpsimp wp: syscall_valid hoare_drop_imps set_thread_state_ct_in_state
+                    perform_invocation_ct_not_in_release_qE_E[simplified pred_conj_def conj_assoc])
+  done
+
+lemma handle_event_ct_not_in_release_qE_E[wp]:
+  "\<lbrace>ct_not_in_release_q\<rbrace>
+   handle_event e
+   -, \<lbrace>\<lambda>rv. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (case_tac e; simp)
+       apply (rename_tac syscall)
+       apply (case_tac syscall; simp)
+                 apply (wpsimp simp: handle_send_def handle_call_def
+                                 wp: handle_invocation_ct_not_in_release_qE_E
+                                     check_budget_restart_true)+
+  done
+
 end
 
 context DetSchedSchedule_AI_handle_hypervisor_fault_det_ext begin
