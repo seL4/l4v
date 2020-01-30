@@ -683,10 +683,16 @@ fun warn_const_ignored const cfg ctxt =
   then warning ("constant " ^ const ^ " is being ignored")
   else ();
 
-fun proof_failed_warnings const cfg wp ctxt n t =
+fun warn_stack const stack ctxt =
+  Pretty.big_list "Crunch call stack:"
+    (map (Proof_Context.pretty_const ctxt) (const::stack))
+  |> Pretty.string_of |> warning;
+
+fun proof_failed_warnings const stack cfg wp ctxt n t =
   if Thm.no_prems t
   then no_tac t
-  else (warn_const_ignored const cfg ctxt; warn_helper_thms wp ctxt n t; no_tac t)
+  else (warn_const_ignored const cfg ctxt; warn_helper_thms wp ctxt n t;
+        warn_stack const stack ctxt; no_tac t)
 
 fun crunch cfg pre extra stack const' thms =
   let
@@ -757,13 +763,9 @@ fun crunch cfg pre extra stack const' thms =
                   ORELSE'
                   CHANGED_GOAL (simp_tac ctxt''')
                   ORELSE'
-                  proof_failed_warnings const cfg wp' ctxt'''
+                  proof_failed_warnings const stack cfg wp' ctxt'''
                 ) n)
               ))) |> singleton (Proof_Context.export ctxt''' ctxt)
-              handle e =>
-                     (writeln "Crunch call stack:";
-                      map writeln (const::stack);
-                      raise e)
         in (SOME thm, (get_thm_name cfg const, thm) :: thms') end
     end
     handle WrongType =>
