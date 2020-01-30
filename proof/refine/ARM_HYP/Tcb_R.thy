@@ -306,7 +306,6 @@ crunch sch_act_simple [wp]: asUser "sch_act_simple"
   (rule: sch_act_simple_lift)
 
 crunch invs'[wp]: getSanitiseRegisterInfo invs'
-  (ignore: getObject setObject)
 
 lemma invs_valid_queues':
   "invs' s \<longrightarrow> valid_queues' s"
@@ -486,9 +485,7 @@ lemma readreg_invs':
                  dest!: global'_no_ex_cap)+
 
 crunch ex_nonz_cap_to'[wp]: getSanitiseRegisterInfo "ex_nonz_cap_to' d"
-  (ignore: getObject setObject)
 crunch it'[wp]: getSanitiseRegisterInfo "\<lambda>s. P (ksIdleThread s)"
-  (ignore: getObject setObject)
 
 lemma writereg_invs':
   "\<lbrace>invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest\<rbrace>
@@ -837,7 +834,7 @@ lemma setP_invs':
   done
 
 crunch typ_at'[wp]: setPriority, setMCPriority "\<lambda>s. P (typ_at' T p s)"
-  (ignore: getObject simp: crunch_simps)
+  (simp: crunch_simps)
 
 lemmas setPriority_typ_ats [wp] = typ_at_lifts [OF setPriority_typ_at']
 
@@ -1956,11 +1953,7 @@ lemma tcbinv_invs':
              | simp)+
   done
 
-crunch_ignore (add: setNextPC getRestartPC)
-
 declare assertDerived_wp [wp]
-
-crunch_ignore (add: assertDerived)
 
 lemma copyregsets_map_only[simp]:
   "copyregsets_map v = ARMNoExtraRegisters"

@@ -1754,7 +1754,7 @@ lemma storePTE_no_orphans [wp]:
   done
 
 crunch no_orphans [wp]: unmapPage "no_orphans"
-(wp: crunch_wps ignore: getObject)
+  (wp: crunch_wps)
 
 crunch no_orphans [wp]: unmapPageTable, prepareThreadDelete "no_orphans"
   (wp: lookupPTSlotFromLevel_inv)

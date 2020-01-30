@@ -1256,21 +1256,21 @@ crunch distinct'[wp]: transferCaps pspace_distinct'
   (wp: crunch_wps simp: zipWithM_x_mapM)
 
 crunch aligned'[wp]: setMRs pspace_aligned'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 crunch distinct'[wp]: setMRs pspace_distinct'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 crunch aligned'[wp]: copyMRs pspace_aligned'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 crunch pspace_canonical'[wp]: copyMRs pspace_canonical'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 crunch pspace_in_kernel_mappings'[wp]: copyMRs pspace_in_kernel_mappings'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 crunch distinct'[wp]: copyMRs pspace_distinct'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 crunch aligned'[wp]: setMessageInfo pspace_aligned'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 crunch distinct'[wp]: setMessageInfo pspace_distinct'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch valid_objs'[wp]: storeWordUser valid_objs'
 crunch valid_pspace'[wp]: storeWordUser valid_pspace'
@@ -1306,7 +1306,7 @@ lemma setMRs_invs_bits[wp]:
   by (simp add: setMRs_def zipWithM_x_mapM split_def storeWordUser_def | wp crunch_wps)+
 
 crunch no_0_obj'[wp]: setMRs no_0_obj'
-  (wp: crunch_wps ignore: getObject simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma copyMRs_invs_bits[wp]:
   "\<lbrace>valid_pspace'\<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
@@ -1324,7 +1324,7 @@ lemma copyMRs_invs_bits[wp]:
   by (simp add: copyMRs_def  storeWordUser_def | wp mapM_wp' | wpc)+
 
 crunch no_0_obj'[wp]: copyMRs no_0_obj'
-  (wp: crunch_wps ignore: getObject simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma mi_map_length[simp]: "msgLength (message_info_map mi) = mi_length mi"
   by (cases mi, simp)
@@ -1344,7 +1344,7 @@ lemma lookupExtraCaps_srcs[wp]:
   done
 
 crunch inv[wp]: lookupExtraCaps "P"
-  (wp: crunch_wps mapME_wp' simp: crunch_simps ignore: mapME)
+  (wp: crunch_wps mapME_wp' simp: crunch_simps)
 
 lemma invs_mdb_strengthen':
   "invs' s \<longrightarrow> valid_mdb' s" by auto
@@ -1457,7 +1457,7 @@ lemma lec_corres:
   done
 
 crunch ctes_of[wp]: copyMRs "\<lambda>s. P (ctes_of s)"
-  (ignore: threadSet setObject getObject
+  (ignore: threadSet
        wp: threadSet_ctes_of crunch_wps)
 
 lemma copyMRs_valid_mdb[wp]:
@@ -1785,17 +1785,17 @@ lemma valid_pspace_valid_objs'[elim!]:
 crunch vp[wp]: doIPCTransfer "valid_pspace'"
   (wp: crunch_wps hoare_vcg_const_Ball_lift get_rs_cte_at' wp: transferCapsToSlots_vp simp:ball_conj_distrib )
 crunch sch_act_wf[wp]: doIPCTransfer "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
-  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots  simp: zipWithM_x_mapM)
+  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots simp: zipWithM_x_mapM)
 crunch vq[wp]: doIPCTransfer "Invariants_H.valid_queues"
-  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots  simp: zipWithM_x_mapM)
+  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots simp: zipWithM_x_mapM)
 crunch vq'[wp]: doIPCTransfer "valid_queues'"
-  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots  simp: zipWithM_x_mapM)
+  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots simp: zipWithM_x_mapM)
 crunch state_refs_of[wp]: doIPCTransfer "\<lambda>s. P (state_refs_of' s)"
-  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots  simp: zipWithM_x_mapM)
+  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots simp: zipWithM_x_mapM)
 crunch ct[wp]: doIPCTransfer "cur_tcb'"
-  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots  simp: zipWithM_x_mapM)
+  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots simp: zipWithM_x_mapM)
 crunch idle'[wp]: doIPCTransfer "valid_idle'"
-  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots  simp: zipWithM_x_mapM)
+  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots simp: zipWithM_x_mapM)
 
 crunch typ_at'[wp]: doIPCTransfer "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps  simp: zipWithM_x_mapM)
@@ -1945,8 +1945,7 @@ crunch cur' [wp]: isFinalCapability "\<lambda>s. P (cur_tcb' s)"
 
 crunch ct' [wp]: deleteCallerCap "\<lambda>s. P (ksCurThread s)"
   (simp: crunch_simps unless_when
-     wp: crunch_wps getObject_inv loadObject_default_inv
-   ignore: getObject)
+     wp: crunch_wps getObject_inv loadObject_default_inv)
 
 lemma getThreadCallerSlot_inv:
   "\<lbrace>P\<rbrace> getThreadCallerSlot t \<lbrace>\<lambda>_. P\<rbrace>"
@@ -2077,8 +2076,7 @@ lemma unbindNotification_valid_objs'_strengthen:
 
 crunch valid_objs'[wp]: cteDeleteOne "valid_objs'"
   (simp: crunch_simps unless_def
-   wp: crunch_wps getObject_inv loadObject_default_inv
-   ignore: getObject)
+     wp: crunch_wps getObject_inv loadObject_default_inv)
 
 crunch nosch[wp]: handleFaultReply "\<lambda>s. P (ksSchedulerAction s)"
 
@@ -2105,9 +2103,9 @@ lemma cancelAllSignals_weak_sch_act_wf[wp]:
   done
 
 crunch weak_sch_act_wf[wp]: finaliseCapTrue_standin "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
- (ignore: setThreadState getObject setObject
-    simp: crunch_simps
-      wp: crunch_wps getObject_inv loadObject_default_inv)
+  (ignore: setThreadState
+     simp: crunch_simps
+       wp: crunch_wps getObject_inv loadObject_default_inv)
 
 lemma cteDeleteOne_weak_sch_act[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
@@ -2131,8 +2129,7 @@ crunch sch_act_wf[wp]: unbindNotification "\<lambda>s. sch_act_wf (ksSchedulerAc
 crunch valid_queues'[wp]: cteDeleteOne valid_queues'
   (simp: crunch_simps unless_def inQ_def
      wp: crunch_wps sts_st_tcb' getObject_inv loadObject_default_inv
-         threadSet_valid_queues' rescheduleRequired_valid_queues'_weak
- ignore: getObject)
+         threadSet_valid_queues' rescheduleRequired_valid_queues'_weak)
 
 lemma cancelSignal_valid_queues'[wp]:
   "\<lbrace>valid_queues'\<rbrace> cancelSignal t ntfn \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
@@ -2895,7 +2892,7 @@ crunch it'[wp]: sendSignal "\<lambda>s. P (ksIdleThread s)"
 crunch irqs_masked'[wp]: sendSignal, setBoundNotification "irqs_masked'"
   (wp: crunch_wps getObject_inv loadObject_default_inv
    simp: crunch_simps unless_def o_def
-   rule: irqs_masked_lift ignore: getObject)
+   rule: irqs_masked_lift)
 
 lemma sts_running_valid_queues:
   "runnable' st \<Longrightarrow> \<lbrace> Invariants_H.valid_queues \<rbrace> setThreadState st t \<lbrace>\<lambda>_. Invariants_H.valid_queues \<rbrace>"
@@ -3564,7 +3561,7 @@ lemma setupCallerCap_state_refs_of[wp]:
 
 crunch sch_act_wf: setupCallerCap
   "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
-  (wp: crunch_wps ssa_sch_act sts_sch_act rule: sch_act_wf_lift ignore:setObject)
+  (wp: crunch_wps ssa_sch_act sts_sch_act rule: sch_act_wf_lift)
 
 lemma setCTE_valid_queues[wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> setCTE ptr val \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"

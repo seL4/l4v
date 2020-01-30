@@ -19,12 +19,12 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 (* FIXME: Move to Refine *)
 crunches Arch.switchToThread
   for valid_queues'[wp]: valid_queues'
-  (ignore: clearExMonitor loadObject getObject updateObject setObject wp: crunch_wps)
+  (ignore: clearExMonitor wp: crunch_wps)
 crunches switchToIdleThread
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 crunches switchToIdleThread, switchToThread
   for valid_pspace'[wp]: valid_pspace'
-  (simp: whenE_def ignore: getObject)
+  (simp: whenE_def)
 
 end
 

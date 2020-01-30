@@ -3592,8 +3592,8 @@ where
      (unat Kernel_C.RSI, 0), (unat Kernel_C.RDI, 0), (unat Kernel_C.RBP, 0), (unat Kernel_C.R8 , 0),
      (unat Kernel_C.R9 , 0), (unat Kernel_C.R10, 0), (unat Kernel_C.R11, 0), (unat Kernel_C.R12, 0),
      (unat Kernel_C.R13, 0), (unat Kernel_C.R14, 0), (unat Kernel_C.R15, 0), (unat Kernel_C.RSP, 0),
-     (unat Kernel_C.FS_BASE, 0), (unat Kernel_C.GS_BASE, 0), (unat Kernel_C.Error, 0), 
-     (unat Kernel_C.FaultIP, 0), (unat Kernel_C.NextIP, 0), (unat Kernel_C.CS, 0x2B), 
+     (unat Kernel_C.FS_BASE, 0), (unat Kernel_C.GS_BASE, 0), (unat Kernel_C.Error, 0),
+     (unat Kernel_C.FaultIP, 0), (unat Kernel_C.NextIP, 0), (unat Kernel_C.CS, 0x2B),
      (unat Kernel_C.FLAGS, 0x202), (unat Kernel_C.SS, 0x33)]"
 
 (* FIXME: move *)
@@ -8058,8 +8058,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 crunch gsCNodes[wp]: insertNewCap, Arch_createNewCaps, threadSet,
         "Arch.createObject" "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps setObject_ksPSpace_only
-     simp: unless_def updateObject_default_def crunch_simps
-   ignore: getObject setObject)
+   simp: unless_def updateObject_default_def crunch_simps)
 
 lemma createNewCaps_1_gsCNodes_p:
   "\<lbrace>\<lambda>s. P (gsCNodes s p) \<and> p \<noteq> ptr\<rbrace> createNewCaps newType ptr 1 n dev\<lbrace>\<lambda>rv s. P (gsCNodes s p)\<rbrace>"

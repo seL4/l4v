@@ -1794,7 +1794,7 @@ lemma storePDE_no_orphans [wp]:
   done
 
 crunch no_orphans [wp]: unmapPage "no_orphans"
-(wp: crunch_wps ignore: getObject)
+  (wp: crunch_wps)
 
 lemma flushTable_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>

@@ -27,8 +27,7 @@ lemma foldr_data_map_insert[simp]:
 crunch arch_inv[wp]: resetUntypedCap "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps
      wp: hoare_drop_imps hoare_unless_wp mapME_x_inv_wp
-         preemptionPoint_inv
-    ignore:freeMemory forME_x)
+         preemptionPoint_inv)
 
 lemma mapM_x_mapM_valid:
   "\<lbrace> P \<rbrace> mapM_x f xs \<lbrace>\<lambda>r. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>mapM f xs \<lbrace>\<lambda>r. Q\<rbrace>"
@@ -45,8 +44,7 @@ declare withoutPreemption_lift [wp del]
 
 crunch valid_cap'[wp]:
   isFinalCapability "\<lambda>s. valid_cap' cap s"
-  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def
-    ignore:getObject setObject)
+  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)
 
 end
 

@@ -243,7 +243,6 @@ lemma threadGet_tcbFault_submonad_fn:
   done
 
 crunch inv[wp]: getSanitiseRegisterInfo P
-  (ignore: getObject)
 
 lemma empty_fail_getSanitiseRegisterInfo[wp, simp]:
   "empty_fail (getSanitiseRegisterInfo t)"
@@ -4054,7 +4053,7 @@ lemma sbn_tcbFault:
   done
 
 crunch tcbFault: unbindNotification, unbindMaybeNotification "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
-(ignore: threadSet setObject wp: sbn_tcbFault)
+  (ignore: threadSet wp: sbn_tcbFault)
 
 (* FIXME: move *)
 lemma cteDeleteOne_tcbFault:

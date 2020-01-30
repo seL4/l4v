@@ -490,7 +490,6 @@ lemma readreg_invs':
                  dest!: global'_no_ex_cap)+
 
 crunch invs'[wp]: getSanitiseRegisterInfo invs'
-  (ignore: getObject setObject)
 
 crunch ex_nonz_cap_to'[wp]: getSanitiseRegisterInfo "ex_nonz_cap_to' d"
 crunch it'[wp]: getSanitiseRegisterInfo "\<lambda>s. P (ksIdleThread s)"
@@ -711,7 +710,7 @@ crunch sch_act[wp]: tcbSchedEnqueue "\<lambda>s. sch_act_wf (ksSchedulerAction s
 crunch vq'[wp]: getCurThread valid_queues'
 
 crunch ioports'[wp]: tcbSchedEnqueue valid_ioports'
-  (wp: crunch_wps valid_ioports_lift'' simp: crunch_simps ignore: getObject setObject)
+  (wp: crunch_wps valid_ioports_lift'' simp: crunch_simps)
 
 lemma tcbSchedDequeue_sch_act_simple[wp]:
   "tcbSchedDequeue t \<lbrace>sch_act_simple\<rbrace>"
@@ -745,7 +744,7 @@ lemma setP_invs':
   done
 
 crunch typ_at'[wp]: setPriority, setMCPriority "\<lambda>s. P (typ_at' T p s)"
-  (ignore: getObject simp: crunch_simps)
+  (simp: crunch_simps)
 
 lemmas setPriority_typ_ats [wp] = typ_at_lifts [OF setPriority_typ_at']
 
@@ -1903,11 +1902,7 @@ lemma tcbinv_invs':
              | simp)+
   done
 
-crunch_ignore (add: setNextPC getRestartPC)
-
 declare assertDerived_wp [wp]
-
-crunch_ignore (add: assertDerived)
 
 lemma copyregsets_map_only[simp]:
   "copyregsets_map v = X64NoExtraRegisters"

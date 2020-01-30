@@ -17,7 +17,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 crunches unmapPageTable, unmapPageDirectory, unmapPDPT
   for ctes_of[wp]:  "\<lambda>s. P (ctes_of s)"
   and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 end
 

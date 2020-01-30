@@ -6042,7 +6042,7 @@ lemma updateTrackedFreeIndex_no_cte_prop[wp]:
   done
 
 crunch no_cte_prop[wp]: emptySlot, capSwapForDelete "no_cte_prop P"
-  (ignore: doMachineOp wp: dmo_maskInterrupt_no_cte_prop)
+  (wp: dmo_maskInterrupt_no_cte_prop ignore: doMachineOp)
 
 lemma reduceZombie_invs'':
   assumes fin:
@@ -6516,8 +6516,7 @@ lemma cteDelete_sch_act_simple:
 crunch st_tcb_at'[wp]: emptySlot "st_tcb_at' P t" (simp: case_Null_If)
 
 crunch st_tcb_at'[wp]: "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete "st_tcb_at' P t"
-  (ignore: getObject setObject simp: crunch_simps
-   wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
 end
 
 
@@ -6630,7 +6629,7 @@ crunch rvk_prog': finaliseCap
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of
        getObject_inv loadObject_default_inv
    simp: crunch_simps unless_def o_def
-   ignore: setObject setCTE threadSet)
+   ignore: setCTE threadSet)
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]
@@ -7746,7 +7745,7 @@ lemma threadSet_st_tcb_at2:
   done
 
 crunch st_tcb_at_simplish[wp]: "cancelBadgedSends" "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
-  (ignore: getObject setObject filterM
+  (ignore: filterM
        wp: crunch_wps threadSet_st_tcb_at2
      simp: crunch_simps filterM_mapM makeObject_tcb unless_def)
 
@@ -8821,8 +8820,7 @@ crunch irq_states' [wp]: finaliseCap valid_irq_states'
        no_irq_invalidateLocalTLB_ASID no_irq_setHardwareASID
        no_irq_set_current_pd no_irq_invalidateLocalTLB_VAASID
        no_irq_cleanByVA_PoU
-   simp: crunch_simps armv_contextSwitch_HWASID_def o_def setCurrentPD_to_abs
-   ignore: getObject setObject)
+   simp: crunch_simps armv_contextSwitch_HWASID_def o_def setCurrentPD_to_abs)
 
 lemma finaliseSlot_IRQInactive':
   "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> finaliseSlot' a b

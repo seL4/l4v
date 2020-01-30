@@ -476,7 +476,6 @@ crunches getSanitiseRegisterInfo
   and ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' d"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   and tcb_at'[wp]: "tcb_at' t"
-  (ignore: getObject setObject)
 
 lemma writereg_invs':
   "\<lbrace>invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest\<rbrace>
@@ -725,7 +724,7 @@ lemma setP_invs':
   done
 
 crunch typ_at'[wp]: setPriority, setMCPriority "\<lambda>s. P (typ_at' T p s)"
-  (ignore: getObject simp: crunch_simps)
+  (simp: crunch_simps)
 
 lemmas setPriority_typ_ats [wp] = typ_at_lifts [OF setPriority_typ_at']
 
@@ -1873,11 +1872,7 @@ lemma tcbinv_invs':
              | simp)+
   done
 
-crunch_ignore (add: setNextPC getRestartPC)
-
 declare assertDerived_wp [wp]
-
-crunch_ignore (add: assertDerived)
 
 lemma copyregsets_map_only[simp]:
   "copyregsets_map v = RISCVNoExtraRegisters"

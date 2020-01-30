@@ -28,8 +28,6 @@ end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunch_ignore (add: throw_on_false)
-
 definition
   "vspace_at_asid' vs asid \<equiv> \<lambda>s. \<exists>ap pool.
              x64KSASIDTable (ksArchState s) (ucast (asid_high_bits_of asid)) = Some ap \<and>
@@ -62,7 +60,7 @@ lemma findVSpaceForASIDAssert_vs_at_wp:
   done
 
 crunch inv[wp]: findVSpaceForASIDAssert "P"
-  (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps)
+  (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps ignore_del: getObject)
 
 lemma pspace_relation_pml4:
   assumes p: "pspace_relation (kheap a) (ksPSpace c)"
@@ -532,7 +530,7 @@ lemma delete_asid_pool_corres:
   done
 
 crunch typ_at' [wp]: findVSpaceForASID "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps getObject_inv simp: crunch_simps loadObject_default_def ignore: getObject)
+  (wp: crunch_wps getObject_inv simp: crunch_simps loadObject_default_def)
 
 crunch typ_at' [wp]: setVMRoot "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps)
@@ -540,7 +538,7 @@ crunch typ_at' [wp]: setVMRoot "\<lambda>s. P (typ_at' T p s)"
 lemmas setVMRoot_typ_ats [wp] = typ_at_lifts [OF setVMRoot_typ_at']
 
 crunch no_0_obj'[wp]: flushTable "no_0_obj'"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 (* FIXME x64: move to Lib *)
 lemma get_mapM_x_lower:
@@ -690,7 +688,7 @@ lemma flush_table_corres:
   qed
 
 crunch typ_at' [wp]: flushTable "\<lambda>s. P (typ_at' T p s)"
-  (simp: assertE_def when_def wp: crunch_wps ignore: getObject)
+  (simp: assertE_def when_def wp: crunch_wps)
 
 lemmas flushTable_typ_ats' [wp] = typ_at_lifts [OF flushTable_typ_at']
 
@@ -698,23 +696,21 @@ lemmas findVSpaceForASID_typ_ats' [wp] = typ_at_lifts [OF findVSpaceForASID_inv]
 
 crunch inv [wp]: findVSpaceForASID P
   (simp: assertE_def whenE_def loadObject_default_def
-   wp: crunch_wps getObject_inv ignore: getObject)
+   wp: crunch_wps getObject_inv)
 
 crunch aligned'[wp]: unmapPageTable, unmapPageDirectory, unmapPDPT "pspace_aligned'"
-  (ignore: getObject simp: crunch_simps
-       wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps
+     wp: crunch_wps getObject_inv loadObject_default_inv)
 crunch distinct'[wp]: unmapPageTable, unmapPageDirectory, unmapPDPT "pspace_distinct'"
-  (ignore: getObject simp: crunch_simps
-       wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps
+     wp: crunch_wps getObject_inv loadObject_default_inv)
 
 
 crunch no_0_obj'[wp]: storePDE, storePTE, storePDPTE, storePML4E no_0_obj'
 
 crunch valid_arch'[wp]: storePDE, storePTE, storePDPTE, storePML4E valid_arch_state'
-(ignore: setObject)
 
 crunch cur_tcb'[wp]: storePDE, storePTE, storePDPTE, storePML4E cur_tcb'
-(ignore: setObject)
 
 lemma getCurrentUserCR3_inv[wp]: "\<lbrace>P\<rbrace> getCurrentUserCR3 \<lbrace>\<lambda>_. P\<rbrace>"
   by (simp add: getCurrentUserCR3_def)
@@ -779,10 +775,10 @@ lemma unmap_page_table_corres:
   done
 
 crunch aligned' [wp]: unmapPage pspace_aligned'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch distinct' [wp]: unmapPage pspace_distinct'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma corres_split_strengthen_ftE:
   "\<lbrakk> corres (ftr \<oplus> r') P P' f j;
@@ -938,7 +934,7 @@ definition
   | PageGetAddr ptr \<Rightarrow> \<top>"
 
 crunch ctes [wp]: unmapPage "\<lambda>s. P (ctes_of s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma updateCap_valid_slots'[wp]:
   "\<lbrace>valid_slots' x2\<rbrace> updateCap cte cte' \<lbrace>\<lambda>_ s. valid_slots' x2 s \<rbrace>"
@@ -1288,7 +1284,7 @@ lemma clear_pdpt_corres:
   done
 
 crunch typ_at'[wp]: invalidatePageStructureCacheASID, unmapPageTable, unmapPageDirectory, unmapPDPT "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps hoare_vcg_all_lift_R ignore: getObject)
+  (wp: crunch_wps hoare_vcg_all_lift_R)
 
 lemmas unmapPageTable_typ_ats[wp] = typ_at_lifts[OF unmapPageTable_typ_at']
 lemmas unmapPageDirectory_typ_ats[wp] = typ_at_lifts[OF unmapPageDirectory_typ_at']
@@ -1751,47 +1747,39 @@ lemma setVMRoot_invs_no_cicd':
 
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps
-       loadObject_default_def ignore: getObject)
+       loadObject_default_def)
 
 crunch it' [wp]: findVSpaceForASID "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv ignore: getObject)
+  (simp: crunch_simps loadObject_default_def wp: getObject_inv)
 
 crunch it' [wp]: deleteASIDPool "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp'
-   ignore: getObject)
+  (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp')
 
 crunch it' [wp]: lookupPTSlot "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv
-   ignore: getObject)
+  (simp: crunch_simps loadObject_default_def wp: getObject_inv)
 
 crunch it' [wp]: storePTE "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps updateObject_default_def wp: setObject_idle'
-   ignore: setObject)
+  (simp: crunch_simps updateObject_default_def wp: setObject_idle')
 
 crunch it' [wp]: storePDE "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps updateObject_default_def wp: setObject_idle'
-   ignore: setObject)
+  (simp: crunch_simps updateObject_default_def wp: setObject_idle')
 
 crunch it' [wp]: storePDPTE "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps updateObject_default_def wp: setObject_idle'
-   ignore: setObject)
+  (simp: crunch_simps updateObject_default_def wp: setObject_idle')
 
 crunch it' [wp]: storePML4E "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps updateObject_default_def wp: setObject_idle'
-   ignore: setObject)
+  (simp: crunch_simps updateObject_default_def wp: setObject_idle')
 
 crunch it' [wp]: flushTable "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def
-   wp: setObject_idle' hoare_drop_imps mapM_x_wp'
-   ignore: getObject)
+   wp: setObject_idle' hoare_drop_imps mapM_x_wp')
 
 crunch it' [wp]: deleteASID "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def updateObject_default_def
-   wp: getObject_inv
-   ignore: getObject setObject)
+   wp: getObject_inv)
 
 crunch typ_at' [wp]: performPageTableInvocation "\<lambda>s. P (typ_at' T p s)"
-  (ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps)
 
 crunch typ_at' [wp]: performPageDirectoryInvocation "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
@@ -1800,7 +1788,7 @@ crunch typ_at' [wp]: performPDPTInvocation "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 
 crunch typ_at' [wp]: performPageInvocation "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma performASIDPoolInvocation_typ_at' [wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> performASIDPoolInvocation api \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
@@ -1877,10 +1865,10 @@ lemma storePML4E_valid_mdb [wp]:
   by (simp add: valid_mdb'_def) wp
 
 crunch nosch [wp]: storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksSchedulerAction s)"
-  (simp: updateObject_default_def)
+  (simp: updateObject_default_def ignore_del: setObject)
 
 crunch ksQ [wp]: storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksReadyQueues s)"
-  (simp: updateObject_default_def ignore: setObject)
+  (simp: updateObject_default_def)
 
 lemma storePDE_inQ[wp]:
   "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace> storePDE ptr pde \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
@@ -1904,10 +1892,10 @@ lemma storePML4E_inQ[wp]:
   done
 
 crunch norqL1[wp]: storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-  (simp: updateObject_default_def ignore: setObject)
+  (simp: updateObject_default_def)
 
 crunch norqL2[wp]: storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-  (simp: updateObject_default_def ignore: setObject)
+  (simp: updateObject_default_def)
 
 lemma storePDE_valid_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> storePDE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
@@ -2006,7 +1994,6 @@ lemma setObject_pml4e_ksInt [wp]:
   by (wp setObject_ksInterrupt updateObject_default_inv|simp)+
 
 crunch ksInterruptState [wp]: storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksInterruptState s)"
-  (ignore: setObject)
 
 lemma storePDE_ifunsafe [wp]:
   "\<lbrace>if_unsafe_then_cap'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
@@ -2054,10 +2041,8 @@ lemma storePML4E_idle [wp]:
   by (rule hoare_lift_Pf [where f="ksIdleThread"]; wp)
 
 crunch arch' [wp]: storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksArchState s)"
-  (ignore: setObject)
 
 crunch cur' [wp]: storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksCurThread s)"
-  (ignore: setObject)
 
 lemma storePDE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> storePDE pde p \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
@@ -2260,19 +2245,16 @@ lemma setObject_pml4e_ksDomScheduleIdx [wp]:
   by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
 
 crunch ksDomScheduleIdx[wp]: storePTE, storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksDomScheduleIdx s)"
-(ignore: getObject setObject)
 
 crunch gsMaxObjectSize[wp]: storePTE, storePDE, storePDPTE, storePML4E "\<lambda>s. P (gsMaxObjectSize s)"
-(ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
+  (wp: setObject_ksPSpace_only updateObject_default_inv)
 
 crunch gsUntypedZeroRanges[wp]: storePTE, storePDE, storePDPTE, storePML4E "\<lambda>s. P (gsUntypedZeroRanges s)"
-(ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
+  (wp: setObject_ksPSpace_only updateObject_default_inv)
 
 crunch pspace_canonical'[wp]: storePTE, storePDE, storePDPTE, storePML4E "pspace_canonical'"
-  (ignore: getObject setObject)
 
 crunch pspace_in_kernel_mappings'[wp]: storePTE, storePDE, storePDPTE, storePML4E "pspace_in_kernel_mappings'"
-  (ignore: getObject setObject)
 
 lemma storePDE_invs[wp]:
   "\<lbrace>invs' and valid_pde' pde\<rbrace>
@@ -2324,10 +2306,10 @@ lemma storePTE_valid_mdb [wp]:
   by (simp add: valid_mdb'_def) wp
 
 crunch nosch [wp]: storePTE "\<lambda>s. P (ksSchedulerAction s)"
-  (simp: updateObject_default_def)
+  (simp: updateObject_default_def ignore_del: setObject)
 
 crunch ksQ [wp]: storePTE "\<lambda>s. P (ksReadyQueues s)"
-  (simp: updateObject_default_def ignore: setObject)
+  (simp: updateObject_default_def)
 
 lemma storePTE_inQ[wp]:
   "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace> storePTE ptr pde \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
@@ -2337,10 +2319,10 @@ lemma storePTE_inQ[wp]:
   done
 
 crunch norqL1[wp]: storePTE "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-  (simp: updateObject_default_def ignore: setObject)
+  (simp: updateObject_default_def)
 
 crunch norqL2[wp]: storePTE "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-  (simp: updateObject_default_def ignore: setObject)
+  (simp: updateObject_default_def)
 
 lemma storePTE_valid_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> storePTE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
@@ -2364,7 +2346,6 @@ lemma setObject_pte_ksInt [wp]:
   by (wp setObject_ksInterrupt updateObject_default_inv|simp)+
 
 crunch ksInt' [wp]: storePTE "\<lambda>s. P (ksInterruptState s)"
-  (ignore: setObject)
 
 lemma storePTE_ifunsafe [wp]:
   "\<lbrace>if_unsafe_then_cap'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
@@ -2382,10 +2363,8 @@ lemma storePTE_idle [wp]:
   by (rule hoare_lift_Pf [where f="ksIdleThread"]; wp)
 
 crunch arch' [wp]: storePTE "\<lambda>s. P (ksArchState s)"
-  (ignore: setObject)
 
 crunch cur' [wp]: storePTE "\<lambda>s. P (ksCurThread s)"
-  (ignore: setObject)
 
 lemma storePTE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> storePTE pte p \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
@@ -2647,13 +2626,13 @@ lemma setASIDPool_invs [wp]:
   done
 
 crunch cte_wp_at'[wp]: unmapPageTable "\<lambda>s. P (cte_wp_at' P' p s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch cte_wp_at'[wp]: unmapPageDirectory "\<lambda>s. P (cte_wp_at' P' p s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch cte_wp_at'[wp]: unmapPDPT "\<lambda>s. P (cte_wp_at' P' p s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemmas storePDE_Invalid_invs = storePDE_invs[where pde=InvalidPDE, simplified]
 lemmas storePDPTE_Invalid_invs = storePDPTE_invs[where pde=InvalidPDPTE, simplified]
@@ -2694,7 +2673,7 @@ lemma dmo_invalidateLocalPageStructureCacheASID_invs'[wp]:
   done
 
 crunch invs'[wp]: unmapPageTable, unmapPageDirectory, unmapPDPT "invs'"
-  (ignore: getObject setObject storePDE storePDPTE storePML4E doMachineOp
+  (ignore: storePDE storePDPTE storePML4E doMachineOp
        wp: storePDE_Invalid_invs storePDPTE_Invalid_invs storePML4E_Invalid_invs mapM_wp'
            crunch_wps
      simp: crunch_simps)
@@ -2757,12 +2736,12 @@ lemma perform_pdpti_invs [wp]:
   done
 
 crunch cte_wp_at': unmapPage "\<lambda>s. P (cte_wp_at' P' p s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemmas unmapPage_typ_ats [wp] = typ_at_lifts [OF unmapPage_typ_at']
 
 crunch inv: lookupPTSlot P
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma unmapPage_invs' [wp]:
   "\<lbrace>invs'\<rbrace> unmapPage sz asid vptr pptr \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -2775,13 +2754,10 @@ lemma unmapPage_invs' [wp]:
   done
 
 crunch invs'[wp]: pteCheckIfMapped, pdeCheckIfMapped "invs'"
-  (ignore: getObject)
 
 crunch valid_pte'[wp]: pteCheckIfMapped, pdeCheckIfMapped "valid_pte' pte"
-  (ignore: getObject)
 
 crunch valid_pde'[wp]: pteCheckIfMapped, pdeCheckIfMapped "valid_pde' pde"
-  (ignore: getObject)
 
 lemma perform_page_invs [wp]:
   notes no_irq[wp]

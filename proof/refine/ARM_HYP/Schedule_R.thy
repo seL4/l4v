@@ -253,7 +253,7 @@ crunch valid_arch_state'[wp]: tcbSchedAppend valid_arch_state'
 crunch valid_arch_state'[wp]: tcbSchedDequeue valid_arch_state'
 
 crunch pred_tcb_at'[wp]: tcbSchedAppend, tcbSchedDequeue "pred_tcb_at' proj P t"
-  (wp: threadSet_pred_tcb_no_state simp: unless_def tcb_to_itcb'_def ignore: getObject setObject)
+  (wp: threadSet_pred_tcb_no_state simp: unless_def tcb_to_itcb'_def)
 
 crunch state_refs_of'[wp]: setQueue "\<lambda>s. P (state_refs_of' s)"
 
@@ -400,7 +400,7 @@ lemma tcbSchedAppend_valid_queues'[wp]:
   done
 
 crunch norq[wp]: threadSet "\<lambda>s. P (ksReadyQueues s)"
-  (simp: updateObject_default_def ignore: setObject getObject)
+  (simp: updateObject_default_def)
 
 lemma threadSet_valid_queues'_dequeue: (* threadSet_valid_queues' is too weak for dequeue *)
   "\<lbrace>\<lambda>s. (\<forall>d p t'. obj_at' (inQ d p) t' s \<and> t' \<noteq> t \<longrightarrow> t' \<in> set (ksReadyQueues s (d, p))) \<and>
@@ -508,7 +508,7 @@ crunch idle'[wp]: tcbSchedDequeue valid_idle'
   (simp: crunch_simps)
 
 crunch global_refs'[wp]: tcbSchedEnqueue valid_global_refs'
-  (wp: threadSet_global_refs simp: unless_def ignore: getObject setObject)
+  (wp: threadSet_global_refs simp: unless_def)
 crunch global_refs'[wp]: tcbSchedAppend valid_global_refs'
   (wp: threadSet_global_refs simp: unless_def)
 crunch global_refs'[wp]: tcbSchedDequeue valid_global_refs'
@@ -767,7 +767,6 @@ lemma arch_switch_thread_tcb_at' [wp]: "\<lbrace>tcb_at' t\<rbrace> Arch.switchT
 
 crunches switchToThread, Arch.switchToThread
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (ignore: getObject)
 
 lemma Arch_switchToThread_pred_tcb'[wp]:
   "\<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>
@@ -783,7 +782,7 @@ qed
 
 crunches Arch.switchToThread
   for valid_queues[wp]: Invariants_H.valid_queues
-  (wp: crunch_wps simp: crunch_simps ignore: clearExMonitor ignore: getObject updateObject)
+  (wp: crunch_wps simp: crunch_simps ignore: clearExMonitor)
 
 lemma switch_thread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
@@ -1060,7 +1059,7 @@ lemma Arch_switchToThread_invs[wp]:
   by (wpsimp simp: ARM_HYP_H.switchToThread_def wp: getObject_tcb_hyp_sym_refs)
 
 crunch ksCurDomain[wp]: "Arch.switchToThread" "\<lambda>s. P (ksCurDomain s)"
-(simp: crunch_simps ignore: getObject updateObject)
+  (simp: crunch_simps)
 
 lemma Arch_swichToThread_tcbDomain_triv[wp]:
   "\<lbrace> obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace> Arch.switchToThread t \<lbrace> \<lambda>_. obj_at'  (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>"
@@ -1292,10 +1291,10 @@ lemma setVCPU_cap_to'[wp]:
 crunches
   vcpuDisable, vcpuRestore, vcpuEnable, vcpuSaveRegRange, vgicUpdateLR, vcpuSave, vcpuSwitch
   for cap_to'[wp]: "ex_nonz_cap_to' p"
-  (ignore: doMachineOp getObject setObject wp: crunch_wps)
+  (ignore: doMachineOp wp: crunch_wps)
 
 crunch cap_to'[wp]: "Arch.switchToThread" "ex_nonz_cap_to' p"
-  (simp: crunch_simps ignore: ARM_HYP.clearExMonitor getObject updateObject)
+  (simp: crunch_simps ignore: ARM_HYP.clearExMonitor)
 
 crunch cap_to'[wp]: switchToThread "ex_nonz_cap_to' p"
   (simp: crunch_simps ignore: ARM_HYP.clearExMonitor)
@@ -1314,8 +1313,7 @@ lemmas iflive_inQ_nonz_cap[elim]
     = mp [OF iflive_inQ_nonz_cap_strg, OF conjI[rotated]]
 
 crunch ksRQ[wp]: threadSet "\<lambda>s. P (ksReadyQueues s)"
-  (ignore: setObject getObject
-       wp: updateObject_default_inv)
+  (wp: updateObject_default_inv)
 
 declare Cons_eq_tails[simp]
 
@@ -1595,9 +1593,9 @@ lemma setCurThread_const:
 
 
 crunch it[wp]: switchToIdleThread "\<lambda>s. P (ksIdleThread s)"
-  (wp: vcpuSwitch_it' ignore: getObject)
+  (wp: vcpuSwitch_it')
 crunch it[wp]: switchToThread "\<lambda>s. P (ksIdleThread s)"
-    (ignore: clearExMonitor getObject)
+  (ignore: clearExMonitor)
 
 lemma switchToIdleThread_curr_is_idle:
   "\<lbrace>\<top>\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv s. ksCurThread s = ksIdleThread s\<rbrace>"

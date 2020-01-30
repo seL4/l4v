@@ -43,7 +43,6 @@ lemma ccorres_pre_threadGet:
 
 (* FIXME MOVE *)
 crunch inv'[wp]: archThreadGet P
-  (ignore: getObject)
 
 (* FIXME MOVE near thm tg_sp' *)
 lemma atg_sp':

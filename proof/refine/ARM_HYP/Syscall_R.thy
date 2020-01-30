@@ -554,7 +554,7 @@ lemma sts_cte_at[wp]:
   done
 
 crunch obj_at_ntfn[wp]: setThreadState "obj_at' (\<lambda>ntfn. P (ntfnBoundTCB ntfn) (ntfnObj ntfn)) ntfnptr"
-  (ignore: getObject setObject wp: obj_at_setObject2  crunch_wps
+  (wp: obj_at_setObject2 crunch_wps
    simp: crunch_simps updateObject_default_def in_monad)
 
 lemma sts_mcpriority_tcb_at'[wp]:
@@ -682,7 +682,7 @@ lemma handleFaultReply_invs[wp]:
   done
 
 crunch sch_act_simple[wp]: handleFaultReply sch_act_simple
-  (wp: crunch_wps ignore: getObject setObject)
+  (wp: crunch_wps)
 
 lemma transferCaps_non_null_cte_wp_at':
   assumes PUC: "\<And>cap. P cap \<Longrightarrow> \<not> isUntypedCap cap"
@@ -1214,21 +1214,20 @@ lemma setTCB_valid_duplicates'[wp]:
   done
 
 crunch valid_duplicates'[wp]: threadSet "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(ignore: getObject setObject wp: setObject_ksInterrupt updateObject_default_inv)
+  (wp: setObject_ksInterrupt updateObject_default_inv)
 
 crunch valid_duplicates'[wp]: addToBitmap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(ignore: getObject setObject wp: setObject_ksInterrupt updateObject_default_inv)
+  (wp: setObject_ksInterrupt updateObject_default_inv)
 
 lemma tcbSchedEnqueue_valid_duplicates'[wp]:
  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
   tcbSchedEnqueue a \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  by (simp add:tcbSchedEnqueue_def unless_def setQueue_def | wp | wpc)+
+  by (simp add: tcbSchedEnqueue_def unless_def setQueue_def | wp | wpc)+
 
 crunch valid_duplicates'[wp]: rescheduleRequired "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(ignore: getObject setObject wp: setObject_ksInterrupt updateObject_default_inv)
+  (wp: setObject_ksInterrupt updateObject_default_inv)
 
 crunch valid_duplicates'[wp]: setThreadState "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (ignore: getObject setObject)
 
 (*FIXME: move to NonDetMonadVCG.valid_validE_R *)
 lemma hinv_corres:
@@ -1505,8 +1504,7 @@ lemma deleteCallerCap_nonz_cap:
 crunch sch_act_sane[wp]: cteDeleteOne sch_act_sane
   (wp: crunch_wps loadObject_default_inv getObject_inv
    simp: crunch_simps unless_def
-   rule: sch_act_sane_lift
-   ignore: getObject)
+   rule: sch_act_sane_lift)
 
 crunch sch_act_sane[wp]: deleteCallerCap sch_act_sane
   (wp: crunch_wps)
@@ -1657,8 +1655,6 @@ lemma setSchedulerAction_obj_at'[wp]:
   unfolding setSchedulerAction_def
   by (wp, clarsimp elim!: obj_at'_pspaceI)
 
-crunch_ignore (add: null_cap_on_failure)
-
 lemma hy_corres:
   "corres dc einvs (invs' and ct_active' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)) handle_yield handleYield"
   apply (clarsimp simp: handle_yield_def handleYield_def)
@@ -1769,13 +1765,13 @@ lemma hr_invs'[wp]:
 
 crunch ksCurThread[wp]: cteDeleteOne "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps setObject_ep_ct setObject_ntfn_ct
-       simp: crunch_simps unless_def ignore: setObject)
+   simp: crunch_simps unless_def)
 
 crunch ksCurThread[wp]: handleReply "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
        setObject_ntfn_ct
-        simp: unless_def crunch_simps
-      ignore: transferCapsToSlots setObject getObject)
+   simp: unless_def crunch_simps
+   ignore: transferCapsToSlots)
 
 lemmas cteDeleteOne_st_tcb_at_simple'[wp] =
     cteDeleteOne_st_tcb_at[where P=simple', simplified]
@@ -1866,9 +1862,9 @@ lemma possibleSwitchTo_sane:
   done
 
 crunch sane [wp]: handleFaultReply sch_act_sane
-  (  wp: threadGet_inv hoare_drop_imps crunch_wps
+  (wp: threadGet_inv hoare_drop_imps crunch_wps
    simp: crunch_simps
-   ignore: setSchedulerAction getObject)
+   ignore: setSchedulerAction)
 
 crunch sane [wp]: doIPCTransfer sch_act_sane
   (  wp: threadGet_inv hoare_drop_imps crunch_wps
@@ -1902,7 +1898,6 @@ lemma handleReply_nonz_cap_to_ct:
   done
 
 crunch ksQ[wp]: handleFaultReply "\<lambda>s. P (ksReadyQueues s p)"
-  (ignore: getObject)
 
 lemma doReplyTransfer_ct_not_ksQ:
   "\<lbrace> invs' and sch_act_simple
@@ -2142,10 +2137,10 @@ proof -
   qed
 
 crunch st_tcb_at'[wp]: handleVMFault "st_tcb_at' P t"
-  (ignore: getFAR getDFSR getIFSR getObject setObject)
-crunch cap_to'[wp]: handleVMFault,handleHypervisorFault "ex_nonz_cap_to' t"
   (ignore: getFAR getDFSR getIFSR)
-crunch ksit[wp]: handleVMFault,handleHypervisorFault "\<lambda>s. P (ksIdleThread s)"
+crunch cap_to'[wp]: handleVMFault, handleHypervisorFault "ex_nonz_cap_to' t"
+  (ignore: getFAR getDFSR getIFSR)
+crunch ksit[wp]: handleVMFault, handleHypervisorFault "\<lambda>s. P (ksIdleThread s)"
   (ignore: getFAR getDFSR getIFSR)
 crunch norq[wp]: handleVMFault "\<lambda>s. P (ksReadyQueues s)"
 

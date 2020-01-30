@@ -287,7 +287,7 @@ lemma setObject_typ_at_not:
   apply fastforce
   done
 
-lemma setObject_typ_at':
+lemma setObject_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace> setObject p v \<lbrace>\<lambda>r s. P (typ_at' T p' s)\<rbrace>"
   by (blast intro: P_bool_lift setObject_typ_at_inv setObject_typ_at_not)
 

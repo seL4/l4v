@@ -6576,10 +6576,10 @@ lemma cteDelete_sch_act_simple:
 crunch st_tcb_at'[wp]: emptySlot "st_tcb_at' P t" (simp: case_Null_If)
 
 crunch st_tcb_at'[wp]: vcpuSwitch "st_tcb_at' P t"
-  (simp: crunch_simps wp: crunch_wps FalseI ignore: setObject getObject)
+  (simp: crunch_simps wp: crunch_wps FalseI)
 
 crunch st_tcb_at'[wp]: "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete "st_tcb_at' P t"
-  (ignore: getObject setObject simp: crunch_simps
+  (simp: crunch_simps
    wp: crunch_wps getObject_inv loadObject_default_inv)
 end
 
@@ -6693,7 +6693,6 @@ lemma vcpuSwitch_rvk_prog':
   by (wpsimp simp: cteCaps_of_def)
 
 crunch ctes_of[wp]: vcpuFinalise "\<lambda>s. P (ctes_of s)"
-  (ignore: getObject setObject)
 
 lemma vcpuFinalise_rvk_prog':
   "vcpuFinalise v \<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option capToRPO (cteCaps_of s x))\<rbrace>"
@@ -6704,7 +6703,7 @@ crunch rvk_prog': finaliseCap
   (wp: crunch_wps threadSet_ctesCaps_of getObject_inv
        loadObject_default_inv dissociateVCPUTCB_isFinal
    simp: crunch_simps o_def
-   ignore: setObject threadSet)
+   ignore: threadSet)
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]
@@ -7805,7 +7804,7 @@ qed
 lemmas cap_revoke_corres = use_spec_corres [OF cap_revoke_corres']
 
 crunch typ_at'[wp]: invokeCNode "\<lambda>s. P (typ_at' T p s)"
-  (ignore: filterM finaliseSlot
+  (ignore: finaliseSlot
      simp: crunch_simps filterM_mapM unless_def
            arch_recycleCap_improve_cases
        wp: crunch_wps undefined_valid finaliseSlot_preservation)
@@ -7826,9 +7825,8 @@ lemma threadSet_st_tcb_at2:
   done
 
 crunch st_tcb_at_simplish[wp]: "cancelBadgedSends" "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
-  (ignore: getObject setObject filterM
-       wp: crunch_wps threadSet_st_tcb_at2
-     simp: crunch_simps filterM_mapM makeObject_tcb unless_def)
+  (wp: crunch_wps threadSet_st_tcb_at2
+   simp: crunch_simps filterM_mapM makeObject_tcb unless_def)
 
 lemma cancelBadgedSends_st_tcb_at':
   assumes x: "\<And>st. simple' st \<Longrightarrow> P st"
@@ -8980,16 +8978,14 @@ crunches
          getSCTLR_def get_gic_vcpu_ctrl_lr_def get_gic_vcpu_ctrl_apr_def
          get_gic_vcpu_ctrl_vmcr_def
          set_gic_vcpu_ctrl_vmcr_def set_gic_vcpu_ctrl_apr_def uncurry_def
-         set_gic_vcpu_ctrl_lr_def
-   ignore: getObject setObject)
+         set_gic_vcpu_ctrl_lr_def)
 
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
        no_irq_invalidateLocalTLB_ASID no_irq_setHardwareASID
        no_irq_setCurrentPD no_irq_invalidateLocalTLB_VAASID
        no_irq_cleanByVA_PoU FalseI
-   simp: crunch_simps armv_contextSwitch_HWASID_def writeContextIDAndPD_def o_def
-   ignore: getObject setObject)
+   simp: crunch_simps armv_contextSwitch_HWASID_def writeContextIDAndPD_def o_def)
 
 lemma finaliseSlot_IRQInactive':
   "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> finaliseSlot' a b

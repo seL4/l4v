@@ -1068,13 +1068,12 @@ lemma modifyReadyQueuesL1Bitmap_obj_at[wp]:
   done
 
 crunch valid_arch' [wp]: setThreadState, setBoundNotification valid_arch_state'
-  (ignore: getObject setObject simp: unless_def crunch_simps)
+  (simp: unless_def crunch_simps)
 
 crunch ksInterrupt'[wp]: threadSet "\<lambda>s. P (ksInterruptState s)"
-  (ignore: getObject wp: setObject_ksInterrupt updateObject_default_inv)
+  (wp: setObject_ksInterrupt updateObject_default_inv)
 
 crunch ksArchState[wp]: threadSet "\<lambda>s. P (ksArchState s)"
-  (ignore: getObject setObject)
 
 lemma threadSet_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> threadSet t F \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
@@ -1083,10 +1082,8 @@ lemma threadSet_typ_at'[wp]:
 lemmas threadSet_typ_at_lifts[wp] = typ_at_lifts [OF threadSet_typ_at']
 
 crunch irq_states' [wp]: threadSet valid_irq_states'
-  (ignore: setObject getObject)
 
 crunch pspace_domain_valid [wp]: threadSet "pspace_domain_valid"
-  (ignore: getObject setObject)
 
 lemma threadSet_obj_at'_really_strongest:
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> obj_at' (\<lambda>obj. if t = t' then P (f obj) else P obj)
@@ -1319,11 +1316,9 @@ lemma threadSet_ct_idle_or_in_cur_domain':
   done
 
 crunch ksDomScheduleIdx[wp]: threadSet "\<lambda>s. P (ksDomScheduleIdx s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv
-     ignore: getObject setObject)
+  (wp: setObject_ksPSpace_only updateObject_default_inv)
 crunch gsUntypedZeroRanges[wp]: threadSet "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv
-     ignore: getObject setObject)
+  (wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemma setObject_tcb_ksDomScheduleIdx [wp]:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s) \<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>_ s. P (ksDomScheduleIdx s)\<rbrace>"
@@ -1553,9 +1548,9 @@ lemma asUser_nosch[wp]:
   done
 
 crunch aligned'[wp]: asUser pspace_aligned'
-  (simp: crunch_simps ignore: getObject wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 crunch distinct'[wp]: asUser pspace_distinct'
-  (simp: crunch_simps ignore: getObject wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma asUser_valid_objs [wp]:
   "\<lbrace>valid_objs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
@@ -2257,7 +2252,6 @@ crunches rescheduleRequired, tcbSchedDequeue
   for no_0_obj'[wp]: "no_0_obj'"
   and pspace_canonical'[wp]: "pspace_canonical'"
   and pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
-  (ignore:getObject)
 
 lemma sts'_valid_pspace'_inv[wp]:
   "\<lbrace> valid_pspace' and tcb_at' t and valid_tcb_state' st \<rbrace>
@@ -4067,11 +4061,11 @@ lemma bound_tcb_ex_cap'':
                      if_live_then_nonz_capE')
 
 crunch arch' [wp]: setThreadState, setBoundNotification "\<lambda>s. P (ksArchState s)"
-  (ignore: getObject setObject simp: unless_def crunch_simps)
+  (simp: unless_def crunch_simps)
 
 crunch it' [wp]: setThreadState, setBoundNotification "\<lambda>s. P (ksIdleThread s)"
-  (ignore: getObject setObject wp: getObject_inv_tcb
-     simp: updateObject_default_def unless_def crunch_simps)
+  (wp: getObject_inv_tcb
+   simp: updateObject_default_def unless_def crunch_simps)
 
 crunch it' [wp]: removeFromBitmap "\<lambda>s. P (ksIdleThread s)"
 
@@ -4091,7 +4085,7 @@ crunch ksInterruptState[wp]: setThreadState, setBoundNotification "\<lambda>s. P
   (simp: unless_def crunch_simps)
 
 crunch gsMaxObjectSize[wp]: setThreadState, setBoundNotification "\<lambda>s. P (gsMaxObjectSize s)"
-  (simp: unless_def crunch_simps ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
+  (simp: unless_def crunch_simps wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemmas setThreadState_irq_handlers[wp]
     = valid_irq_handlers_lift'' [OF sts_ctes_of setThreadState_ksInterruptState]

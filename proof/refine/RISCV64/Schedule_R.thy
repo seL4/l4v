@@ -171,7 +171,7 @@ crunch valid_arch_state'[wp]: tcbSchedAppend valid_arch_state'
 crunch valid_arch_state'[wp]: tcbSchedDequeue valid_arch_state'
 
 crunch pred_tcb_at'[wp]: tcbSchedAppend, tcbSchedDequeue "pred_tcb_at' proj P t"
-  (wp: threadSet_pred_tcb_no_state simp: unless_def tcb_to_itcb'_def ignore: getObject setObject)
+  (wp: threadSet_pred_tcb_no_state simp: unless_def tcb_to_itcb'_def)
 
 lemma removeFromBitmap_valid_queues_no_bitmap_except[wp]:
   "\<lbrace> valid_queues_no_bitmap_except t \<rbrace>
@@ -604,7 +604,6 @@ lemma arch_switch_thread_tcb_at' [wp]: "\<lbrace>tcb_at' t\<rbrace> Arch.switchT
   by (unfold RISCV64_H.switchToThread_def, wp typ_at_lift_tcb')
 
 crunch typ_at'[wp]: "switchToThread" "\<lambda>s. P (typ_at' T p s)"
-  (ignore: )
 
 crunches setVMRoot
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t'"
@@ -1404,7 +1403,6 @@ lemma setCurThread_const:
 
 crunch it[wp]: switchToIdleThread "\<lambda>s. P (ksIdleThread s)"
 crunch it[wp]: switchToThread "\<lambda>s. P (ksIdleThread s)"
-    (ignore: )
 
 lemma switchToIdleThread_curr_is_idle:
   "\<lbrace>\<top>\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv s. ksCurThread s = ksIdleThread s\<rbrace>"

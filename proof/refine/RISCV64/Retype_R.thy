@@ -2471,12 +2471,10 @@ lemma copyGlobalMappings_cte_wp_at[wp]:
   done
 
 crunch ct[wp]: copyGlobalMappings "\<lambda>s. P (ksCurThread s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv mapM_x_wp'
-    ignore: forM_x getObject setObject)
+  (wp: setObject_ksPSpace_only updateObject_default_inv mapM_x_wp')
 
 crunch ksCurDomain[wp]: copyGlobalMappings "\<lambda>s. P (ksCurDomain s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv mapM_x_wp'
-    ignore: forM_x getObject setObject)
+  (wp: setObject_ksPSpace_only updateObject_default_inv mapM_x_wp')
 
 lemmas copyGlobalMappings_ctes_of[wp]
     = ctes_of_from_cte_wp_at[where Q="\<top>", simplified,
@@ -2503,7 +2501,7 @@ declare univ_get_wp[wp del]
 declare result_in_set_wp[wp del]
 
 crunch valid_arch_state'[wp]: copyGlobalMappings "valid_arch_state'"
-  (ignore: getObject setObject wp: crunch_wps)
+  (wp: crunch_wps)
 
 lemma nullPointer_0_simp[simp]:
   "(nullPointer = 0) = True"
@@ -3219,21 +3217,21 @@ lemma copyGlobalMappings_valid_objs'[wp]:
   unfolding copyGlobalMappings_def by (wpsimp wp: mapM_x_wp')
 
 crunch pspace_aligned'[wp]: copyGlobalMappings "pspace_aligned'"
-  (ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps)
 crunch pspace_canonical'[wp]: copyGlobalMappings "pspace_canonical'"
-  (ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps)
 crunch pspace_in_kernel_mappings'[wp]: copyGlobalMappings "pspace_in_kernel_mappings'"
-  (ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps)
 crunch pspace_distinct'[wp]: copyGlobalMappings "pspace_distinct'"
-  (ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps)
 
 lemmas storePTE_valid_mdb[wp]
     = storePTE_ctes[where P=valid_mdb_ctes, folded valid_mdb'_def]
 crunch valid_mdb[wp]: copyGlobalMappings "valid_mdb'"
-  (ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps)
 
 crunch no_0_obj' [wp]: copyGlobalMappings no_0_obj'
-  (ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps)
 
 lemma copyGlobalMappings_valid_pspace[wp]:
   "\<lbrace>valid_pspace'\<rbrace> copyGlobalMappings pt \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
@@ -3680,7 +3678,7 @@ lemma createObjects_state_refs_of'':
   done
 
 crunch state_refs_of'[wp]: copyGlobalMappings "\<lambda>s. P (state_refs_of' s)"
-  (ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps)
 
 lemma createNewCaps_state_refs_of':
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n"
@@ -3731,19 +3729,18 @@ lemma createObjects_iflive':
   done
 
 crunch ksReadyQueues[wp]: copyGlobalMappings "\<lambda>s. P (ksReadyQueues s)"
-  (ignore: getObject setObject wp: updateObject_default_inv crunch_wps)
+  (wp: updateObject_default_inv crunch_wps)
 crunch ksReadyQueuesL1[wp]: copyGlobalMappings "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-  (ignore: getObject setObject wp: updateObject_default_inv crunch_wps)
+  (wp: updateObject_default_inv crunch_wps)
 crunch ksReadyQueuesL2[wp]: copyGlobalMappings "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-  (ignore: getObject setObject wp: updateObject_default_inv crunch_wps)
+  (wp: updateObject_default_inv crunch_wps)
 
 crunch valid_idle'[wp]: copyGlobalMappings "valid_idle'"
-  (ignore: getObject setObject
-     simp: objBits_simps archObjSize_def
-       wp: updateObject_default_inv crunch_wps setObject_idle' refl)
+  (simp: objBits_simps archObjSize_def
+     wp: updateObject_default_inv crunch_wps setObject_idle' refl)
 
 crunch iflive'[wp]: copyGlobalMappings "if_live_then_nonz_cap'"
-  (ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps)
 
 lemma createNewCaps_iflive'[wp]:
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n"
@@ -3852,7 +3849,7 @@ lemma createObjects'_ct[wp]:
 crunch ct[wp]: createObjects, createNewCaps "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps simp: crunch_simps)
 crunch ksCurDomain[wp]: createObjects, doMachineOp, createNewCaps "\<lambda>s. P (ksCurDomain s)"
-  (ignore: clearMemory simp: unless_def crunch_simps wp: crunch_wps)
+  (simp: unless_def crunch_simps wp: crunch_wps)
 
 lemma copyGlobalMappings_ko_wp_at:
   "\<lbrace>(\<lambda>s. P (ko_wp_at' P' p s)) and K (\<forall>pte_x :: pte. P' (injectKO pte_x) = v)\<rbrace>
@@ -4008,8 +4005,7 @@ lemma createNewCaps_cur:
 
 crunch ksInterrupt[wp]: createNewCaps "\<lambda>s. P (ksInterruptState s)"
   (simp: crunch_simps unless_def
-   wp: setObject_ksInterrupt updateObject_default_inv crunch_wps
-       ignore: getObject setObject clearMemoryVM)
+   wp: setObject_ksInterrupt updateObject_default_inv crunch_wps)
 
 lemma createNewCaps_ifunsafe':
   "\<lbrace>\<lambda>s. valid_pspace' s \<and>
@@ -4036,15 +4032,12 @@ lemma createObjects_nosch'[wp]:
   by (rule createObjects_pspace_only, simp)
 
 crunch nosch[wp]: copyGlobalMappings "\<lambda>s. P (ksSchedulerAction s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv mapM_x_wp'
-    ignore: forM_x getObject setObject)
+  (wp: setObject_ksPSpace_only updateObject_default_inv mapM_x_wp')
 crunch nosch[wp]: createObjects, createNewCaps "\<lambda>s. P (ksSchedulerAction s)"
-  (simp: crunch_simps wp: crunch_wps
-    ignore: forM_x)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch it[wp]: createObjects, createNewCaps "\<lambda>s. P (ksIdleThread s)"
-  (wp: crunch_wps simp: crunch_simps unless_def
-    ignore: forM_x getObject)
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma createObjects_idle':
   "\<lbrace>valid_idle' and valid_pspace' and pspace_no_overlap' ptr sz
@@ -4094,14 +4087,10 @@ lemma createNewCaps_idle'[wp]:
                    | fastforce simp: curDomain_def)+
   done
 
-crunch_ignore (add: clearMemoryVM)
-
 crunch ksArch[wp]: createNewCaps "\<lambda>s. P (ksArchState s)"
-  (simp: crunch_simps unless_def wp: crunch_wps
-       ignore: getObject setObject)
+  (simp: crunch_simps unless_def wp: crunch_wps)
 crunch gsMaxObjectSize[wp]: createNewCaps "\<lambda>s. P (gsMaxObjectSize s)"
-  (simp: crunch_simps unless_def wp: crunch_wps updateObject_default_inv
-       ignore: getObject setObject)
+  (simp: crunch_simps unless_def wp: crunch_wps updateObject_default_inv)
 
 lemma createNewCaps_global_refs':
   "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0
@@ -4194,7 +4183,7 @@ lemma createObjects'_irq_states' [wp]:
   done
 
 crunch irq_states' [wp]: createNewCaps valid_irq_states'
-  (ignore: getObject wp: crunch_wps no_irq no_irq_clearMemory simp: crunch_simps unless_def)
+  (wp: crunch_wps no_irq no_irq_clearMemory simp: crunch_simps unless_def)
 
 crunch ksMachine[wp]: createObjects "\<lambda>s. P (ksMachineState s)"
   (simp: crunch_simps unless_def)
@@ -4340,7 +4329,7 @@ lemma createObjects_pspace_domain_valid:
   done
 
 crunch pspace_domain_valid[wp]: copyGlobalMappings "pspace_domain_valid"
-  (wp: crunch_wps ignore: getObject setObject)
+  (wp: crunch_wps)
 
 lemma createNewCaps_pspace_domain_valid[wp]:
   "\<lbrace>pspace_domain_valid and K ({ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}
@@ -4447,14 +4436,13 @@ lemma createObjects'_ksDomScheduleIdx[wp]:
   done
 
 crunch ksDomSchedule[wp]: copyGlobalMappings "\<lambda>s. P (ksDomSchedule s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv mapM_x_wp'
-    ignore: forM_x getObject setObject)
+  (wp: setObject_ksPSpace_only updateObject_default_inv mapM_x_wp')
 
 crunch ksDomSchedule[wp]: createNewCaps "\<lambda>s. P (ksDomSchedule s)"
-  (wp: mapM_x_wp' ignore: getObject setObject simp: crunch_simps)
+  (wp: mapM_x_wp' simp: crunch_simps)
 
 crunch ksDomScheduleIdx[wp]: createNewCaps "\<lambda>s. P (ksDomScheduleIdx s)"
-  (wp: mapM_x_wp' ignore: getObject setObject simp: crunch_simps)
+  (wp: mapM_x_wp' simp: crunch_simps)
 
 lemma createObjects_null_filter':
   "\<lbrace>\<lambda>s. P (null_filter' (ctes_of s)) \<and> makeObjectKO dev ty = Some val \<and>
@@ -4531,7 +4519,7 @@ lemma createNewCaps_null_filter':
   done
 
 crunch gsUntypedZeroRanges[wp]: createNewCaps "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (wp: mapM_x_wp' ignore: getObject setObject simp: crunch_simps)
+  (wp: mapM_x_wp' simp: crunch_simps)
 
 lemma untyped_ranges_zero_inv_null_filter:
   "untyped_ranges_zero_inv (option_map cteCap o null_filter' ctes)

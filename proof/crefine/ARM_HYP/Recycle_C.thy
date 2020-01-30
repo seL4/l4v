@@ -598,8 +598,8 @@ crunch ksArchState[wp]: invalidateTLBByASID "\<lambda>s. P (ksArchState s)"
 
 crunch gsMaxObjectSize[wp]: invalidateTLBByASID "\<lambda>s. P (gsMaxObjectSize s)"
 crunch gsMaxObjectSize[wp]: deleteASIDPool "\<lambda>s. P (gsMaxObjectSize s)"
-  (ignore: setObject getObject wp: crunch_wps getObject_inv loadObject_default_inv
-     simp: crunch_simps)
+  (wp: crunch_wps getObject_inv loadObject_default_inv
+   simp: crunch_simps)
 end
 
 context kernel_m begin
@@ -847,7 +847,7 @@ lemma setObject_tcb_ep_obj_at'[wp]:
 end
 
 crunch ep_obj_at'[wp]: setThreadState "obj_at' (P :: endpoint \<Rightarrow> bool) ptr"
-  (ignore: getObject setObject simp: unless_def)
+  (simp: unless_def)
 
 context kernel_m begin
 

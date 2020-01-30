@@ -16,10 +16,9 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 (* FIXME move to REFINE *)
 crunch valid_queues'[wp]: "Arch.switchToThread" valid_queues'
-    (ignore: )
 crunch ksCurDomain[wp]: switchToIdleThread "\<lambda>s. P (ksCurDomain s)"
 crunch valid_pspace'[wp]: switchToIdleThread, switchToThread valid_pspace'
-  (simp: whenE_def ignore: getObject)
+  (simp: whenE_def)
 
 lemma setCurrentUserCR3_valid_arch_state'[wp]:
   "\<lbrace>valid_arch_state' and K (valid_cr3' c)\<rbrace> setCurrentUserCR3 c \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"

@@ -45,7 +45,6 @@ crunch ksDomSchedule_inv[wp]: sendSignal "\<lambda>s. P (ksDomSchedule s)"
 
 crunch ksDomSchedule_inv[wp]: finaliseCap "\<lambda>s. P (ksDomSchedule s)"
   (simp: crunch_simps assertE_def unless_def pteAtIndex_def
- ignore: getObject setObject forM ignoreFailure
      wp: getObject_inv loadObject_default_inv crunch_wps)
 
 crunch ksDomSchedule_inv[wp]: finaliseCap, capSwapForDelete "\<lambda>s. P (ksDomSchedule s)"
@@ -61,18 +60,16 @@ crunch ksDomSchedule_inv[wp]: invokeTCB "\<lambda>s. P (ksDomSchedule s)"
 crunch ksDomSchedule_inv[wp]: doReplyTransfer "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
        setObject_ntfn_ct
-        simp: unless_def crunch_simps
-      ignore: transferCapsToSlots setObject getObject)
+   simp: unless_def crunch_simps
+   ignore: transferCapsToSlots)
 
 crunch ksDomSchedule_inv[wp]: finaliseCap "\<lambda>s. P (ksDomSchedule s)"
   (simp: crunch_simps assertE_def unless_def
- ignore: getObject setObject forM ignoreFailure
      wp: getObject_inv loadObject_default_inv crunch_wps)
 
 crunch ksDomSchedule_inv[wp]: cancelBadgedSends "\<lambda>s. P (ksDomSchedule s)"
-  (ignore: filterM setObject getObject
-     simp: filterM_mapM crunch_simps
-       wp: crunch_wps hoare_unless_wp)
+  (simp: filterM_mapM crunch_simps
+     wp: crunch_wps hoare_unless_wp)
 
 crunch ksDomSchedule_inv[wp]: createNewObjects "\<lambda>s. P (ksDomSchedule s)"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps hoare_unless_wp)
@@ -81,8 +78,7 @@ crunch ksDomSchedule_inv[wp]: preemptionPoint "\<lambda>s. P (ksDomSchedule s)"
   (simp: whenE_def ignore_del: preemptionPoint)
 
 crunch ksDomSchedule_inv[wp]: performRISCVMMUInvocation "\<lambda>s. P (ksDomSchedule s)"
-  (ignore: getObject setObject
-   wp: crunch_wps getObject_cte_inv getASID_wp
+  (wp: crunch_wps getObject_cte_inv getASID_wp
    simp: unless_def crunch_simps)
 
 crunch ksDomSchedule_inv[wp]: performInvocation "\<lambda>s. P (ksDomSchedule s)"
@@ -130,8 +126,7 @@ crunch ksDomainTime[wp]: setupCallerCap, doIPCTransfer, possibleSwitchTo "\<lamb
 
 crunch ksDomainTime_inv[wp]: setEndpoint, setNotification, storePTE
   "\<lambda>s. P (ksDomainTime s)"
-  (wp: crunch_wps setObject_ksPSpace_only updateObject_default_inv
-   ignore: setObject)
+  (wp: crunch_wps setObject_ksPSpace_only updateObject_default_inv)
 
 crunch ksDomainTime_inv[wp]: sendFaultIPC, handleFault, replyFromKernel "\<lambda>s. P (ksDomainTime s)"
 
@@ -144,19 +139,17 @@ crunch ksDomainTime_inv[wp]: sendSignal "\<lambda>s. P (ksDomainTime s)"
 crunch ksDomainTime_inv[wp]: deleteASID "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only getObject_inv loadObject_default_inv
        updateObject_default_inv
-   ignore: setObject getObject simp: crunch_simps)
+   simp: crunch_simps)
 
 crunch ksDomainTime_inv[wp]: setBoundNotification "\<lambda>s. P (ksDomainTime s)"
 
 crunch ksDomainTime_inv[wp]: finaliseCap "\<lambda>s. P (ksDomainTime s)"
   (simp: crunch_simps assertE_def unless_def pteAtIndex_def
- ignore: getObject setObject forM ignoreFailure
      wp: setObject_ksPSpace_only getObject_inv loadObject_default_inv crunch_wps)
 
 crunch ksDomainTime_inv[wp]: cancelBadgedSends "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only getObject_inv loadObject_default_inv
        updateObject_default_inv hoare_unless_wp
-   ignore: setObject getObject filterM
    simp: filterM_mapM crunch_simps)
 
 crunch ksDomainTime_inv[wp]: capSwapForDelete "\<lambda>s. P (ksDomainTime s)"
@@ -172,27 +165,23 @@ crunch ksDomainTime_inv[wp]: invokeTCB "\<lambda>s. P (ksDomainTime s)"
 crunch ksDomainTime_inv[wp]: doReplyTransfer "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
        setObject_ntfn_ct
-        simp: unless_def crunch_simps
-      ignore: transferCapsToSlots setObject getObject)
+   simp: unless_def crunch_simps
+   ignore: transferCapsToSlots)
 
 crunch ksDomainTime_inv[wp]: finaliseCap "\<lambda>s. P (ksDomainTime s)"
   (simp: crunch_simps assertE_def unless_def
- ignore: getObject setObject forM ignoreFailure
      wp: getObject_inv loadObject_default_inv crunch_wps)
 
 crunch ksDomainTime_inv[wp]: cancelBadgedSends "\<lambda>s. P (ksDomainTime s)"
-  (ignore: filterM setObject getObject
-     simp: filterM_mapM crunch_simps
-       wp: crunch_wps)
+  (simp: filterM_mapM crunch_simps
+     wp: crunch_wps)
 
 crunch ksDomainTime_inv[wp]: createNewObjects "\<lambda>s. P (ksDomainTime s)"
   (simp: crunch_simps zipWithM_x_mapM
-   wp: crunch_wps hoare_unless_wp
-   ignore: getObject setObject)
+   wp: crunch_wps hoare_unless_wp)
 
 crunch ksDomainTime_inv[wp]: performRISCVMMUInvocation "\<lambda>s. P (ksDomainTime s)"
-  (ignore: getObject setObject
-   wp: crunch_wps getObject_cte_inv getASID_wp setObject_ksPSpace_only updateObject_default_inv
+  (wp: crunch_wps getObject_cte_inv getASID_wp setObject_ksPSpace_only updateObject_default_inv
    simp: unless_def crunch_simps)
 
 crunch ksDomainTime_inv[wp]: preemptionPoint "\<lambda>s. P (ksDomainTime s)"

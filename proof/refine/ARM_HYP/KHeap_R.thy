@@ -2090,7 +2090,7 @@ lemma set_ntfn_global_refs' [wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
   by (rule valid_global_refs_lift'; wp)
 
-crunch typ_at' [wp]: setNotification "\<lambda>s. P (typ_at' T p s)"
+crunch typ_at' [wp]: setNotification "\<lambda>s. P (typ_at' T p s)" (ignore_del: setObject)
 
 lemma set_ntfn_valid_arch' [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"

@@ -468,9 +468,7 @@ declare word_unat_power [symmetric, simp del]
 
 crunch inv [wp]: "X64_H.decodeInvocation" "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
-   simp: forME_x_def crunch_simps
-
-   ignore: forME_x getObject)
+   simp: forME_x_def crunch_simps)
 
 lemma case_option_corresE:
   assumes nonec: "corres r Pn Qn (nc >>=E f) (nc' >>=E g)"
@@ -1928,7 +1926,7 @@ crunch nosch[wp]: setMRs "\<lambda>s. P (ksSchedulerAction s)"
    simp: split_def zipWithM_x_mapM)
 
 crunch nosch [wp]: performX64MMUInvocation, performX64PortInvocation "\<lambda>s. P (ksSchedulerAction s)"
-  (ignore: getObject setObject simp: crunch_simps
+  (simp: crunch_simps
    wp: crunch_wps getObject_cte_inv getASID_wp)
 
 lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
@@ -1936,8 +1934,7 @@ lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
 crunch st_tcb_at': performPageDirectoryInvocation, performPageTableInvocation,
                    performPageInvocation, performPDPTInvocation,
                    performASIDPoolInvocation, performX64PortInvocation "st_tcb_at' P t"
-  (ignore: getObject setObject
-   wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps)
+  (wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps)
 
 lemma performASIDControlInvocation_st_tcb_at':
   "\<lbrace>st_tcb_at' (P and (\<noteq>) Inactive and (\<noteq>) IdleThreadState) t and
@@ -1984,27 +1981,27 @@ lemma performASIDControlInvocation_st_tcb_at':
   done
 
 crunch aligned': "Arch.finaliseCap" pspace_aligned'
-  (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps)
+  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemmas arch_finalise_cap_aligned' = finaliseCap_aligned'
 
 crunch distinct': "Arch.finaliseCap" pspace_distinct'
-  (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps)
+  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemmas arch_finalise_cap_distinct' = finaliseCap_distinct'
 
 crunch nosch [wp]: "Arch.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
-  (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps updateObject_default_def)
+  (wp: crunch_wps getASID_wp simp: crunch_simps updateObject_default_def)
 
 
 crunch st_tcb_at' [wp]: "Arch.finaliseCap" "st_tcb_at' P t"
-  (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
+  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 crunch typ_at' [wp]: "Arch.finaliseCap" "\<lambda>s. P (typ_at' T p s)"
-  (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
+  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 crunch cte_wp_at':  "Arch.finaliseCap" "cte_wp_at' P p"
-  (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
+  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemma invs_asid_table_strengthen':
   "invs' s \<and> asid_pool_at' ap s \<and> asid \<le> 2 ^ asid_high_bits - 1 \<longrightarrow>

@@ -826,7 +826,6 @@ crunches vgicUpdateLR
   for sch_act_not[wp]: "sch_act_not t"
   and pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
-  (ignore: getObject setObject)
 
 lemma vgic_maintenance_corres [corres]:
   "corres dc einvs

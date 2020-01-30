@@ -1440,7 +1440,7 @@ crunch sch_act_wf[wp]: insertNewCap "\<lambda>s. sch_act_wf (ksSchedulerAction s
   (wp: crunch_wps ignore: setCTE)
 
 crunch ksCurThread[wp]: deleteObjects "\<lambda>s. P (ksCurThread s)"
-  (wp: crunch_wps ignore:freeMemory simp : unless_def)
+  (wp: crunch_wps simp: unless_def)
 
 lemma deleteObjects_gsCNodes_at_pt:
   "\<lbrace>(\<lambda>s. P (gsCNodes s ptr))

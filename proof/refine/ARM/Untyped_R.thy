@@ -5061,8 +5061,7 @@ lemma sts_valid_untyped_inv':
 
 crunch nosch[wp]: invokeUntyped "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps zipWithM_x_mapM
-     wp: crunch_wps hoare_unless_wp mapME_x_inv_wp preemptionPoint_inv
-     ignore: forME_x)
+     wp: crunch_wps hoare_unless_wp mapME_x_inv_wp preemptionPoint_inv)
 
 crunch no_0_obj'[wp]: insertNewCap no_0_obj'
   (wp: crunch_wps)
@@ -5366,7 +5365,7 @@ lemma createNewCaps_cap_to':
   done
 
 crunch it[wp]: copyGlobalMappings "\<lambda>s. P (ksIdleThread s)"
-  (wp: mapM_x_wp' ignore: clearMemory forM_x getObject)
+  (wp: mapM_x_wp' ignore: clearMemory)
 
 lemma createNewCaps_idlethread[wp]:
   "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> createNewCaps tp ptr sz us d \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
@@ -5668,8 +5667,7 @@ lemma inv_untyp_tcb'[wp]:
 
 crunch ksInterruptState_eq[wp]: invokeUntyped "\<lambda>s. P (ksInterruptState s)"
   (wp: crunch_wps mapME_x_inv_wp preemptionPoint_inv
-    simp: crunch_simps unless_def
-      ignore: forME_x)
+   simp: crunch_simps unless_def)
 
 crunch valid_irq_states'[wp]: deleteObjects, updateFreeIndex "valid_irq_states'"
   (wp: doMachineOp_irq_states' crunch_wps

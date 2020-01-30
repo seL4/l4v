@@ -147,25 +147,18 @@ crunch pred_tcb_at'2[wp]: doMachineOp "\<lambda>s. P (pred_tcb_at' a b p s)"
   (simp: crunch_simps)
 
 crunch valid_queues'[wp]: readVCPUReg "\<lambda>s. valid_queues s"
-  (ignore: getObject)
 
 crunch valid_objs'[wp]: readVCPUReg "\<lambda>s. valid_objs' s"
-  (ignore: getObject)
 
 crunch sch_act_wf'[wp]: readVCPUReg "\<lambda>s. P (sch_act_wf (ksSchedulerAction s) s)"
-  (ignore: getObject)
 
 crunch ko_at'[wp]: readVCPUReg "\<lambda>s. P (ko_at' a p s)"
-  (ignore: getObject)
 
 crunch obj_at'[wp]: readVCPUReg "\<lambda>s. P (obj_at' a p s)"
-  (ignore: getObject)
 
 crunch pred_tcb_at'[wp]: readVCPUReg "\<lambda>s. P (pred_tcb_at' a b p s)"
-  (ignore: getObject)
 
 crunch ksCurThread[wp]: readVCPUReg "\<lambda>s. P (ksCurThread s)"
-  (ignore: getObject)
 
 lemma fromEnum_maxBound_vcpureg_def:
   "fromEnum (maxBound :: vcpureg) = 39"

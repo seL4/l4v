@@ -645,7 +645,7 @@ lemma setNotification_utr[wp]:
   done
 
 crunch gsUntypedZeroRanges[wp]: setEndpoint "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (ignore: setObject wp: setObject_ksPSpace_only updateObject_default_inv)
+  (wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemma setEndpoint_utr[wp]:
   "\<lbrace>untyped_ranges_zero'\<rbrace> setEndpoint p ep \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
@@ -776,7 +776,7 @@ crunch ksQ[wp]: setEndpoint "\<lambda>s. P (ksReadyQueues s p)"
 crunch sch_act_not[wp]: setEndpoint "sch_act_not t"
 
 crunch ksCurDomain[wp]: setEndpoint "\<lambda>s. P (ksCurDomain s)"
-  (wp: setObject_ep_cur_domain ignore: setObject)
+  (wp: setObject_ep_cur_domain)
 
 lemma setEndpoint_ksDomSchedule[wp]:
   "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setEndpoint ptr ep \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
@@ -1378,7 +1378,7 @@ lemma set_ntfn_valid_inQ_queues[wp]:
     done
 
 crunch valid_inQ_queues[wp]: cancelSignal valid_inQ_queues
-  (ignore: updateObject setObject simp: updateObject_tcb_inv crunch_simps wp: crunch_wps)
+  (simp: updateObject_tcb_inv crunch_simps wp: crunch_wps)
 
 lemma (in delete_one_conc_pre) cancelIPC_valid_inQ_queues[wp]:
   "\<lbrace>valid_inQ_queues\<rbrace> cancelIPC t \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
@@ -1456,8 +1456,7 @@ lemma no_refs_simple_strg':
   by (fastforce elim!: pred_tcb'_weakenE)+
 
 crunch it[wp]: cancelSignal "\<lambda>s. P (ksIdleThread s)"
-  (wp: crunch_wps simp: crunch_simps
-        ignore: getObject setObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma (in delete_one_conc_pre) cancelIPC_it[wp]:
   "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>
@@ -2112,10 +2111,10 @@ lemma ep_q_refs_max:
   done
 
 crunch ct' [wp]: setEndpoint "\<lambda>s. P (ksCurThread s)"
-  (wp: setObject_ep_ct ignore: setObject)
+  (wp: setObject_ep_ct)
 
 crunch ct' [wp]: setNotification "\<lambda>s. P (ksCurThread s)"
-  (wp: setObject_ntfn_ct ignore: setObject)
+  (wp: setObject_ntfn_ct)
 
 lemma tcbSchedEnqueue_cur_tcb'[wp]:
   "\<lbrace>cur_tcb'\<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"

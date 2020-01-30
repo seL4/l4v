@@ -552,7 +552,7 @@ lemma sts_cte_at[wp]:
   done
 
 crunch obj_at_ntfn[wp]: setThreadState "obj_at' (\<lambda>ntfn. P (ntfnBoundTCB ntfn) (ntfnObj ntfn)) ntfnptr"
-  (ignore: getObject setObject wp: obj_at_setObject2  crunch_wps
+  (wp: obj_at_setObject2  crunch_wps
    simp: crunch_simps updateObject_default_def in_monad)
 
 lemma sts_mcpriority_tcb_at'[wp]:
@@ -605,7 +605,7 @@ lemma arch_cap_exhausted:
   by (cases param_e; simp add: isCap_simps)
 
 crunch inv[wp]: decodeInvocation P
-  (simp: crunch_simps wp: crunch_wps arch_cap_exhausted mapME_x_inv_wp getASID_wp ignore: getObject)
+  (simp: crunch_simps wp: crunch_wps arch_cap_exhausted mapME_x_inv_wp getASID_wp)
 
 (* FIXME: move to TCB *)
 lemma dec_dom_inv_wf[wp]:
@@ -1458,8 +1458,7 @@ lemma deleteCallerCap_nonz_cap:
 crunch sch_act_sane[wp]: cteDeleteOne sch_act_sane
   (wp: crunch_wps loadObject_default_inv getObject_inv
    simp: crunch_simps unless_def
-   rule: sch_act_sane_lift
-   ignore: getObject)
+   rule: sch_act_sane_lift)
 
 crunch sch_act_sane[wp]: deleteCallerCap sch_act_sane
   (wp: crunch_wps)
@@ -1610,8 +1609,6 @@ lemma setSchedulerAction_obj_at'[wp]:
   unfolding setSchedulerAction_def
   by (wp, clarsimp elim!: obj_at'_pspaceI)
 
-crunch_ignore (add: null_cap_on_failure)
-
 lemma hy_corres:
   "corres dc einvs (invs' and ct_active' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)) handle_yield handleYield"
   apply (clarsimp simp: handle_yield_def handleYield_def)
@@ -1732,7 +1729,7 @@ crunch ksCurThread[wp]: handleReply "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
        setObject_ntfn_ct
         simp: unless_def crunch_simps
-      ignore: transferCapsToSlots setObject getObject)
+   ignore: transferCapsToSlots)
 
 lemmas cteDeleteOne_st_tcb_at_simple'[wp] =
     cteDeleteOne_st_tcb_at[where P=simple', simplified]
