@@ -1427,8 +1427,8 @@ lemma deleteObjects_gsCNodes_at_pt:
         | wp (once) hoare_drop_imps)+
   done
 
-crunch gsCNodes[wp]: setThreadState, updateFreeIndex,
-    preemptionPoint "\<lambda>s. P (gsCNodes s)"
+crunches setThreadState, updateFreeIndex, preemptionPoint
+  for gsCNodes[wp]:  "\<lambda>s. P (gsCNodes s)"
   (simp: unless_def whenE_def ignore_del: preemptionPoint)
 
 lemma resetUntypedCap_gsCNodes_at_pt:

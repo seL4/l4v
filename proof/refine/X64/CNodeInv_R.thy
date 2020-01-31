@@ -5138,25 +5138,17 @@ lemma cteSwap_urz[wp]:
   apply auto
   done
 
-crunch valid_arch_state'[wp]: cteSwap "valid_arch_state'"
-
-crunch irq_states'[wp]: cteSwap "valid_irq_states'"
-
-crunch vq'[wp]: cteSwap "valid_queues'"
-
-crunch ksqsL1[wp]: cteSwap "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-
-crunch ksqsL2[wp]: cteSwap "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-
-crunch st_tcb_at'[wp]: cteSwap "st_tcb_at' P t"
-
-crunch vms'[wp]: cteSwap "valid_machine_state'"
-
-crunch pspace_domain_valid[wp]: cteSwap "pspace_domain_valid"
-
-crunch ct_not_inQ[wp]: cteSwap "ct_not_inQ"
-
-crunch ksDomScheduleIdx [wp]: cteSwap "\<lambda>s. P (ksDomScheduleIdx s)"
+crunches cteSwap
+  for valid_arch_state'[wp]: "valid_arch_state'"
+  and irq_states'[wp]: "valid_irq_states'"
+  and vq'[wp]: "valid_queues'"
+  and ksqsL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  and ksqsL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  and st_tcb_at'[wp]: "st_tcb_at' P t"
+  and vms'[wp]: "valid_machine_state'"
+  and pspace_domain_valid[wp]: "pspace_domain_valid"
+  and ct_not_inQ[wp]: "ct_not_inQ"
+  and ksDomScheduleIdx [wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
 
 lemma cteSwap_invs'[wp]:
   "\<lbrace>invs' and valid_cap' c and valid_cap' c' and
@@ -6179,7 +6171,8 @@ lemma setIOPortMask_no_cte_prop[wp]:
   apply auto
   done
 
-crunch no_cte_prop[wp]: emptySlot, capSwapForDelete "no_cte_prop P"
+crunches emptySlot, capSwapForDelete
+  for no_cte_prop[wp]: "no_cte_prop P"
   (ignore: doMachineOp wp: dmo_maskInterrupt_no_cte_prop)
 
 lemma reduceZombie_invs'':

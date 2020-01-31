@@ -2008,7 +2008,8 @@ crunch nosch[wp]: setMRs "\<lambda>s. P (ksSchedulerAction s)"
         mapM_wp'
    simp: split_def zipWithM_x_mapM)
 
-crunch nosch [wp]: performARMMMUInvocation, performARMVCPUInvocation "\<lambda>s. P (ksSchedulerAction s)"
+crunches performARMMMUInvocation, performARMVCPUInvocation
+  for nosch [wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_cte_inv getASID_wp)
 
 lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]

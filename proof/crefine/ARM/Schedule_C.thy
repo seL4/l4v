@@ -20,11 +20,15 @@ lemma setVMRoot_valid_queues':
   by (rule valid_queues_lift'; wp)
 
 (* FIXME move to REFINE *)
-crunch valid_queues'[wp]: "Arch.switchToThread" valid_queues'
-    (ignore: clearExMonitor)
-crunch ksCurDomain[wp]: switchToIdleThread "\<lambda>s. P (ksCurDomain s)"
-crunch valid_pspace'[wp]: switchToIdleThread, switchToThread valid_pspace'
-crunch valid_arch_state'[wp]: switchToThread valid_arch_state'
+crunches Arch.switchToThread
+  for valid_queues'[wp]: valid_queues'
+  (ignore: clearExMonitor)
+crunches switchToIdleThread
+  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+crunches switchToIdleThread, switchToThread
+  for valid_pspace'[wp]: valid_pspace'
+crunches switchToThread
+  for valid_arch_state'[wp]: valid_arch_state'
 
 end
 

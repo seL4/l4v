@@ -3799,11 +3799,10 @@ lemma threadSet_qsL2[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
   by (simp add: threadSet_def | wp updateObject_default_inv)+
 
-crunch qs[wp]: createObjects, createNewCaps "\<lambda>s. P (ksReadyQueues s)"
-  (simp: crunch_simps wp: crunch_wps)
-crunch qsL1[wp]: createObjects, createNewCaps "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-  (simp: crunch_simps wp: crunch_wps)
-crunch qsL2[wp]: createObjects, createNewCaps "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+crunches createObjects, createNewCaps
+  for qs[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and qsL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  and qsL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma sch_act_wf_lift_asm:
@@ -3846,9 +3845,9 @@ lemma createObjects'_ct[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> createObjects' p n v us \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
   by (rule createObjects_pspace_only, simp)
 
-crunch ct[wp]: createObjects, createNewCaps "\<lambda>s. P (ksCurThread s)"
-  (wp: crunch_wps simp: crunch_simps)
-crunch ksCurDomain[wp]: createObjects, doMachineOp, createNewCaps "\<lambda>s. P (ksCurDomain s)"
+crunches createObjects, doMachineOp, createNewCaps
+  for ct[wp]: "\<lambda>s. P (ksCurThread s)"
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   (simp: unless_def crunch_simps wp: crunch_wps)
 
 lemma copyGlobalMappings_ko_wp_at:
@@ -4033,11 +4032,10 @@ lemma createObjects_nosch'[wp]:
 
 crunch nosch[wp]: copyGlobalMappings "\<lambda>s. P (ksSchedulerAction s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv mapM_x_wp')
-crunch nosch[wp]: createObjects, createNewCaps "\<lambda>s. P (ksSchedulerAction s)"
+crunches createObjects, createNewCaps
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  and it[wp]: "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps wp: crunch_wps)
-
-crunch it[wp]: createObjects, createNewCaps "\<lambda>s. P (ksIdleThread s)"
-  (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma createObjects_idle':
   "\<lbrace>valid_idle' and valid_pspace' and pspace_no_overlap' ptr sz

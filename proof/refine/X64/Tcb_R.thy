@@ -743,14 +743,12 @@ lemma setP_invs':
   apply clarsimp
   done
 
-crunch typ_at'[wp]: setPriority, setMCPriority "\<lambda>s. P (typ_at' T p s)"
+crunches setPriority, setMCPriority
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and valid_cap[wp]: "valid_cap' c"
   (simp: crunch_simps)
 
 lemmas setPriority_typ_ats [wp] = typ_at_lifts [OF setPriority_typ_at']
-
-crunch valid_cap[wp]: setPriority, setMCPriority "valid_cap' c"
-  (wp: getObject_inv_tcb)
-
 
 definition
   newroot_rel :: "(cap \<times> cslot_ptr) option \<Rightarrow> (capability \<times> machine_word) option \<Rightarrow> bool"
@@ -1615,7 +1613,8 @@ lemmas threadSet_ipcbuffer_trivial
     = threadSet_invs_trivial[where F="tcbIPCBuffer_update F'" for F',
                               simplified inQ_def, simplified]
 
-crunch cap_to'[wp]: setPriority, setMCPriority "ex_nonz_cap_to' a"
+crunches setPriority, setMCPriority
+  for cap_to'[wp]: "ex_nonz_cap_to' a"
   (simp: crunch_simps)
 
 lemma cteInsert_sa_simple[wp]:
@@ -2742,8 +2741,8 @@ lemma cteDelete_makes_simple':
   "\<lbrace>st_tcb_at' simple' t\<rbrace> cteDelete slot v \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
   by (wp cteDelete_st_tcb_at' | simp)+
 
-crunch irq_states'[wp]: getThreadBufferSlot, setPriority, setMCPriority
-                         valid_irq_states'
+crunches getThreadBufferSlot, setPriority, setMCPriority
+  for irq_states'[wp]: valid_irq_states'
   (simp: crunch_simps)
 
 lemma inv_tcb_IRQInactive:

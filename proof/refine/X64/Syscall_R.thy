@@ -497,8 +497,8 @@ lemma sendSignal_tcb_at'[wp]:
 lemmas checkCap_inv_typ_at'
   = checkCap_inv[where P="\<lambda>s. P (typ_at' T p s)" for P T p]
 
-crunch typ_at'[wp]: restart, bindNotification "\<lambda>s. P (typ_at' T p s)"
-crunch typ_at'[wp]: performTransfer "\<lambda>s. P (typ_at' T p s)"
+crunches restart, bindNotification, performTransfer
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
 lemma invokeTCB_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>
@@ -2076,11 +2076,10 @@ proof -
       done
   qed
 
-crunch st_tcb_at'[wp]: handleVMFault,handleHypervisorFault "st_tcb_at' P t"
-  (ignore: getFaultAddress)
-crunch cap_to'[wp]: handleVMFault,handleHypervisorFault "ex_nonz_cap_to' t"
-  (ignore: getFaultAddress)
-crunch ksit[wp]: handleVMFault,handleHypervisorFault "\<lambda>s. P (ksIdleThread s)"
+crunches handleVMFault,handleHypervisorFault
+  for st_tcb_at'[wp]: "st_tcb_at' P t"
+  and cap_to'[wp]: "ex_nonz_cap_to' t"
+  and ksit[wp]: "\<lambda>s. P (ksIdleThread s)"
   (ignore: getFaultAddress)
 
 lemma hv_inv':
@@ -2135,8 +2134,8 @@ lemma deleteCallerCap_st_tcb_at_runnable[wp]:
   apply (wp cteDeleteOne_tcb_at_runnable' hoare_drop_imps | simp)+
   done
 
-crunch ksCurThread[wp]:
-  handleFault,receiveSignal,receiveIPC,asUser "\<lambda>s. P (ksCurThread s)"
+crunches handleFault, receiveSignal, receiveIPC, asUser
+  for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: hoare_drop_imps crunch_wps simp: crunch_simps)
 
 lemma handleRecv_ksCurThread[wp]:

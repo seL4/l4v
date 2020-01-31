@@ -1296,10 +1296,9 @@ lemma lookup_pdpt_slot_corres:
                   simp: lookup_pml4_slot_eq lookup_pml4_slot_kernel_mappings exI)+
   done
 
-crunch aligned'[wp]: lookupPDPTSlot, lookupPDSlot pspace_aligned'
-  (wp: getPML4E_wp getPDPTE_wp hoare_drop_imps)
-
-crunch distict'[wp]: lookupPDPTSlot, lookupPDSlot pspace_distinct'
+crunches lookupPDPTSlot, lookupPDSlot
+  for aligned'[wp]: pspace_aligned'
+  and distict'[wp]: pspace_distinct'
   (wp: getPML4E_wp getPDPTE_wp hoare_drop_imps)
 
 lemma pd_at_lift:

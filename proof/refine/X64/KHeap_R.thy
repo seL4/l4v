@@ -571,9 +571,9 @@ lemma set_ep_distinct' [wp]:
   "\<lbrace>pspace_distinct'\<rbrace> setEndpoint ep v  \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
   unfolding setEndpoint_def by wp
 
-crunch pspace_canonical'[wp]: setEndpoint, getEndpoint "pspace_canonical'"
-
-crunch pspace_in_kernel_mappings'[wp]: setEndpoint, getEndpoint "pspace_in_kernel_mappings'"
+crunches setEndpoint, getEndpoint
+  for pspace_canonical'[wp]: "pspace_canonical'"
+  and pspace_in_kernel_mappings'[wp]: "pspace_in_kernel_mappings'"
 
 lemma setEndpoint_cte_wp_at':
   "\<lbrace>cte_wp_at' P p\<rbrace> setEndpoint ptr v \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
@@ -2029,7 +2029,8 @@ lemma setObject_pspace_domain_valid[wp]:
   apply (clarsimp simp: lookupAround2_char1)
   done
 
-crunch pspace_domain_valid[wp]: setNotification, setEndpoint "pspace_domain_valid"
+crunches setNotification, setEndpoint
+  for pspace_domain_valid[wp]: "pspace_domain_valid"
 
 lemma ct_not_inQ_lift:
   assumes sch_act: "\<And>P. \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"

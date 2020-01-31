@@ -974,7 +974,8 @@ lemma sts_sch_act_not[wp]:
   apply (wp hoare_drop_imps | simp | wpcw)+
   done
 
-crunch sch_act_not[wp]: cancelSignal, setBoundNotification "sch_act_not t"
+crunches cancelSignal, setBoundNotification
+  for sch_act_not[wp]: "sch_act_not t"
   (wp: crunch_wps)
 
 lemma cancelSignal_tcb_at_runnable':
@@ -993,8 +994,9 @@ lemma cancelAllSignals_tcb_at_runnable':
   unfolding cancelAllSignals_def
   by (wpsimp wp: mapM_x_wp' sts_st_tcb' hoare_drop_imp)
 
-crunch st_tcb_at'[wp]: unbindNotification, bindNotification, unbindMaybeNotification "st_tcb_at' P p"
-(wp: threadSet_pred_tcb_no_state ignore: threadSet)
+crunches unbindNotification, bindNotification, unbindMaybeNotification
+  for st_tcb_at'[wp]: "st_tcb_at' P p"
+  (wp: threadSet_pred_tcb_no_state ignore: threadSet)
 
 lemma (in delete_one_conc_pre) finaliseCap_tcb_at_runnable':
   "\<lbrace>st_tcb_at' runnable' t\<rbrace> finaliseCap cap final True \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
@@ -1013,7 +1015,8 @@ lemma (in delete_one_conc_pre) cteDeleteOne_tcb_at_runnable':
   apply (wp finaliseCap_tcb_at_runnable' | clarsimp | wp (once) hoare_drop_imps)+
   done
 
-crunch pred_tcb_at'[wp]: getThreadReplySlot, getEndpoint "pred_tcb_at' proj st t"
+crunches getThreadReplySlot, getEndpoint
+  for pred_tcb_at'[wp]: "pred_tcb_at' proj st t"
 
 lemma (in delete_one_conc_pre) cancelIPC_tcb_at_runnable':
   "\<lbrace>st_tcb_at' runnable' t'\<rbrace> cancelIPC t \<lbrace>\<lambda>_. st_tcb_at' runnable' t'\<rbrace>"

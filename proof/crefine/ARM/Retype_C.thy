@@ -6463,8 +6463,8 @@ end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunch gsCNodes[wp]: insertNewCap, Arch_createNewCaps, threadSet,
-        "Arch.createObject" "\<lambda>s. P (gsCNodes s)"
+crunches insertNewCap, Arch_createNewCaps, threadSet, "Arch.createObject"
+  for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps setObject_ksPSpace_only
    simp: unless_def updateObject_default_def crunch_simps)
 

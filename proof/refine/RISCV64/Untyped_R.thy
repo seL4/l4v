@@ -1323,28 +1323,26 @@ lemma do_ext_op_update_cdt_list_symb_exec_l':
   update_cdt_list_def set_cdt_list_def bind_def put_def get_def gets_def return_def)
   done
 
-crunch it'[wp]: updateMDB, updateNewFreeIndex "\<lambda>s. P (ksIdleThread s)"
-crunch ups'[wp]: updateMDB, updateNewFreeIndex "\<lambda>s. P (gsUserPages s)"
-crunch cns'[wp]: updateMDB, updateNewFreeIndex "\<lambda>s. P (gsCNodes s)"
-crunch ksDomainTime[wp]: updateMDB, updateNewFreeIndex "\<lambda>s. P (ksDomainTime s)"
-crunch ksDomScheduleIdx[wp]: updateMDB, updateNewFreeIndex "\<lambda>s. P (ksDomScheduleIdx s)"
-crunch ksWorkUnitsCompleted[wp]: updateMDB, updateNewFreeIndex "\<lambda>s. P (ksWorkUnitsCompleted s)"
-crunch ksMachineState[wp]: updateNewFreeIndex "\<lambda>s. P (ksMachineState s)"
-crunch ksArchState[wp]: updateNewFreeIndex "\<lambda>s. P (ksArchState s)"
-crunch ksInterrupt[wp]: insertNewCap "\<lambda>s. P (ksInterruptState s)"
+crunches updateMDB, updateNewFreeIndex
+  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ups'[wp]: "\<lambda>s. P (gsUserPages s)"
+  and cns'[wp]: "\<lambda>s. P (gsCNodes s)"
+  and ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
+  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksWorkUnitsCompleted[wp]: "\<lambda>s. P (ksWorkUnitsCompleted s)"
+  and ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
+  and ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
+crunches insertNewCap
+  for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
+  and norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps)
 crunch nosch[wp]: insertNewCaps "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps)
-crunch norq[wp]: insertNewCap "\<lambda>s. P (ksReadyQueues s)"
-  (wp: crunch_wps)
-crunch ksIdleThread[wp]: insertNewCap "\<lambda>s. P (ksIdleThread s)"
-  (wp: crunch_simps hoare_drop_imps)
-crunch ksDomSchedule[wp]: insertNewCap "\<lambda>s. P (ksDomSchedule s)"
-  (wp: crunch_simps hoare_drop_imps)
-crunch ksCurDomain[wp]: insertNewCap "\<lambda>s. P (ksCurDomain s)"
-  (wp: crunch_wps)
-crunch ksCurThread[wp]: insertNewCap "\<lambda>s. P (ksCurThread s)"
-  (wp: crunch_wps)
+
 
 crunch exst[wp]: set_cdt "\<lambda>s. P (exst s)"
 
@@ -5652,9 +5650,10 @@ crunch ksInterruptState_eq[wp]: invokeUntyped "\<lambda>s. P (ksInterruptState s
   (wp: crunch_wps mapME_x_inv_wp preemptionPoint_inv
    simp: crunch_simps unless_def)
 
-crunch valid_irq_states'[wp]: deleteObjects, updateFreeIndex "valid_irq_states'"
+crunches deleteObjects, updateFreeIndex
+  for valid_irq_states'[wp]: "valid_irq_states'"
   (wp: doMachineOp_irq_states' crunch_wps
-    simp: freeMemory_def no_irq_storeWord unless_def)
+   simp: freeMemory_def no_irq_storeWord unless_def)
 
 lemma resetUntypedCap_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace>

@@ -1925,7 +1925,8 @@ crunch nosch[wp]: setMRs "\<lambda>s. P (ksSchedulerAction s)"
         mapM_wp'
    simp: split_def zipWithM_x_mapM)
 
-crunch nosch [wp]: performX64MMUInvocation, performX64PortInvocation "\<lambda>s. P (ksSchedulerAction s)"
+crunches performX64MMUInvocation, performX64PortInvocation
+  for nosch [wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps
    wp: crunch_wps getObject_cte_inv getASID_wp)
 

@@ -160,17 +160,13 @@ lemma tcbSchedAppend_corres:
   done
 
 
-crunch valid_pspace'[wp]: tcbSchedEnqueue valid_pspace'
+crunches tcbSchedEnqueue, tcbSchedAppend, tcbSchedDequeue
+  for valid_pspace'[wp]: valid_pspace'
+  and valid_arch_state'[wp]: valid_arch_state'
   (simp: unless_def)
-crunch valid_pspace'[wp]: tcbSchedAppend valid_pspace'
-  (simp: unless_def)
-crunch valid_pspace'[wp]: tcbSchedDequeue valid_pspace'
 
-crunch valid_arch_state'[wp]: tcbSchedAppend valid_arch_state'
-  (simp: unless_def)
-crunch valid_arch_state'[wp]: tcbSchedDequeue valid_arch_state'
-
-crunch pred_tcb_at'[wp]: tcbSchedAppend, tcbSchedDequeue "pred_tcb_at' proj P t"
+crunches tcbSchedAppend, tcbSchedDequeue
+  for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
   (wp: threadSet_pred_tcb_no_state simp: unless_def tcb_to_itcb'_def)
 
 lemma removeFromBitmap_valid_queues_no_bitmap_except[wp]:
@@ -481,7 +477,8 @@ lemma tcbSchedAppend_tcb_in_cur_domain'[wp]:
 crunch ksDomScheduleIdx[wp]: tcbSchedAppend "\<lambda>s. P (ksDomScheduleIdx s)"
   (simp: unless_def)
 
-crunch gsUntypedZeroRanges[wp]: tcbSchedAppend, tcbSchedDequeue "\<lambda>s. P (gsUntypedZeroRanges s)"
+crunches tcbSchedAppend, tcbSchedDequeue
+  for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (simp: unless_def)
 
 crunches tcbSchedDequeue, tcbSchedAppend

@@ -3839,15 +3839,16 @@ lemma setCTE_obj_at'_tcbIPCBuffer:
   unfolding setCTE_def
   by (rule setObject_cte_obj_at_tcb', simp+)
 
-crunch obj_at'_tcbIPCBuffer[wp]: cteInsert, asUser "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+crunches cteInsert, asUser
+  for obj_at'_tcbIPCBuffer[wp]: "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: setCTE_obj_at'_queued crunch_wps threadSet_obj_at'_really_strongest)
 
 crunch ksReadyQueues_inv[wp]: cteInsert "\<lambda>s. P (ksReadyQueues s)"
   (wp: hoare_drop_imps)
 
-crunch ksReadyQueuesL1Bitmap_inv[wp]: cteInsert,threadSet,asUser,emptySlot "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-  (wp: hoare_drop_imps)
-crunch ksReadyQueuesL2Bitmap_inv[wp]: cteInsert,threadSet,asUser,emptySlot "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+crunches cteInsert,threadSet,asUser,emptySlot
+  for ksReadyQueuesL1Bitmap_inv[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  and ksReadyQueuesL2Bitmap_inv[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (wp: hoare_drop_imps)
 
 crunch ksReadyQueuesL1Bitmap_inv[wp]: setEndpoint "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
@@ -4411,7 +4412,8 @@ crunch obj_at_ep[wp]: emptySlot "obj_at' (P :: endpoint \<Rightarrow> bool) p"
 crunch nosch[wp]: emptySlot "\<lambda>s. P (ksSchedulerAction s)"
 
 context begin interpretation Arch .
-crunch gsCNodes[wp]: emptySlot, asUser "\<lambda>s. P (gsCNodes s)"
+crunches emptySlot, asUser
+  for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps)
 end
 
@@ -4787,7 +4789,8 @@ lemma all_prio_not_inQ_not_tcbQueued: "\<lbrakk> obj_at' (\<lambda>a. (\<forall>
   apply (clarsimp simp: obj_at'_def inQ_def)
 done
 
-crunch ntfn_obj_at[wp]: setThreadState, emptySlot, asUser "obj_at' (P::(Structures_H.notification \<Rightarrow> bool)) ntfnptr"
+crunches setThreadState, emptySlot, asUser
+  for ntfn_obj_at[wp]: "obj_at' (P::(Structures_H.notification \<Rightarrow> bool)) ntfnptr"
   (wp: obj_at_setObject2 crunch_wps
    simp: crunch_simps updateObject_default_def in_monad)
 

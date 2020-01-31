@@ -411,7 +411,8 @@ lemma invs'_HScurVCPU_vcpu_at':
   "\<lbrakk>invs' s; armHSCurVCPU (ksArchState s) = Some (a, b) \<rbrakk> \<Longrightarrow> vcpu_at' a s"
 by (fastforce dest: invs_arch_state' simp: valid_arch_state'_def vcpu_at_is_vcpu' ko_wp_at'_def split: option.splits)
 
-crunch ksArch[wp]: vcpuDisable, vcpuRestore, vcpuSave, vcpuEnable "\<lambda>s. P (ksArchState s)"
+crunches vcpuDisable, vcpuRestore, vcpuSave, vcpuEnable
+  for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
   (wp: crunch_wps)
 
 (* FIXME move to Invariants_H *)

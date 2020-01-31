@@ -41,10 +41,12 @@ lemma case_Null_If:
   "(case c of NullCap \<Rightarrow> a | _ \<Rightarrow> b) = (if c = NullCap then a else b)"
   by (case_tac c, simp_all)
 
-crunch aligned'[wp]: emptySlot pspace_aligned' (simp: case_Null_If)
-crunch pspace_canonical'[wp]: emptySlot pspace_canonical' (simp: case_Null_If)
-crunch pspace_in_kernel_mappings'[wp]: emptySlot pspace_in_kernel_mappings' (simp: case_Null_If)
-crunch distinct'[wp]: emptySlot pspace_distinct' (simp: case_Null_If)
+crunches emptySlot
+  for aligned'[wp]: pspace_aligned'
+  and pspace_canonical'[wp]: pspace_canonical'
+  and pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
+  and distinct'[wp]: pspace_distinct'
+  (simp: case_Null_If)
 
 lemma updateCap_cte_wp_at_cases:
   "\<lbrace>\<lambda>s. (ptr = ptr' \<longrightarrow> cte_wp_at' (P \<circ> cteCap_update (K cap)) ptr' s) \<and> (ptr \<noteq> ptr' \<longrightarrow> cte_wp_at' P ptr' s)\<rbrace>
@@ -55,7 +57,8 @@ lemma updateCap_cte_wp_at_cases:
   apply (clarsimp simp: cte_wp_at_ctes_of modify_map_def)
   done
 
-crunch cte_wp_at'[wp]: postCapDeletion, updateTrackedFreeIndex "cte_wp_at' P p"
+crunches postCapDeletion, updateTrackedFreeIndex
+  for cte_wp_at'[wp]: "cte_wp_at' P p"
 
 lemma updateFreeIndex_cte_wp_at:
   "\<lbrace>\<lambda>s. cte_at' p s \<and> P (cte_wp_at' (if p = p' then P'
@@ -1098,7 +1101,8 @@ lemma vmdb_n: "valid_mdb_ctes n"
 end
 
 context begin interpretation Arch .
-crunch ctes_of[wp]: postCapDeletion, clearUntypedFreeIndex "\<lambda>s. P (ctes_of s)"
+crunches postCapDeletion, clearUntypedFreeIndex
+  for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
 
 lemma emptySlot_mdb [wp]:
   "\<lbrace>valid_mdb'\<rbrace>
@@ -1284,7 +1288,8 @@ crunch valid_idle'[wp]: setInterruptState "valid_idle'"
 
 context begin interpretation Arch .
 crunch valid_idle'[wp]: emptySlot "valid_idle'"
-crunch ksArch[wp]: deletedIRQHandler, getSlotCap, clearUntypedFreeIndex, updateMDB, getCTE, updateCap "\<lambda>s. P (ksArchState s)"
+crunches deletedIRQHandler, getSlotCap, clearUntypedFreeIndex, updateMDB, getCTE, updateCap
+  for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
 crunch ksIdle[wp]: emptySlot "\<lambda>s. P (ksIdleThread s)"
 crunch gsMaxObjectSize[wp]: emptySlot "\<lambda>s. P (gsMaxObjectSize s)"
 end
@@ -2219,7 +2224,8 @@ lemmas cteDeleteOne_def'
 lemmas cteDeleteOne_def
     = cteDeleteOne_def'[folded finaliseCapTrue_standin_simple_def]
 
-crunch typ_at'[wp]: cteDeleteOne, suspend, prepareThreadDelete "\<lambda>s. P (typ_at' T p s)"
+crunches cteDeleteOne, suspend, prepareThreadDelete
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv
    simp: crunch_simps unless_def o_def)
 
@@ -2461,7 +2467,8 @@ lemma prepares_delete_helper'':
   apply (clarsimp simp: removeable'_def)
   done
 
-crunch ctes_of[wp]: finaliseCapTrue_standin, unbindNotification "\<lambda>s. P (ctes_of s)"
+crunches finaliseCapTrue_standin, unbindNotification
+  for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv simp: crunch_simps)
 
 lemma cteDeleteOne_cteCaps_of:
@@ -2665,13 +2672,15 @@ lemma unbindMaybeNotification_obj_at'_bound:
   apply (clarsimp simp: obj_at'_def ko_wp_at'_def)
   done
 
-crunch isFinal[wp]: unbindNotification, unbindMaybeNotification "\<lambda>s. isFinal cap slot (cteCaps_of s)"
+crunches unbindNotification, unbindMaybeNotification
+  for isFinal[wp]: "\<lambda>s. isFinal cap slot (cteCaps_of s)"
   (wp: sts_bound_tcb_at' threadSet_cteCaps_of crunch_wps getObject_inv
        loadObject_default_inv
    ignore: threadSet
    simp: setBoundNotification_def)
 
-crunch bound_tcb_at'[wp]: cancelSignal, cancelAllIPC "bound_tcb_at' P t"
+crunches cancelSignal, cancelAllIPC
+  for bound_tcb_at'[wp]: "bound_tcb_at' P t"
   (wp: sts_bound_tcb_at' threadSet_cteCaps_of crunch_wps getObject_inv
        loadObject_default_inv
    ignore: threadSet)
@@ -2714,7 +2723,8 @@ lemma cancelIPC_bound_tcb_at'[wp]:
    apply (wp threadSet_pred_tcb_no_state | simp)+
   done
 
-crunch bound_tcb_at'[wp]: suspend, prepareThreadDelete "bound_tcb_at' P t"
+crunches suspend, prepareThreadDelete
+  for bound_tcb_at'[wp]: "bound_tcb_at' P t"
   (wp: sts_bound_tcb_at' cancelIPC_bound_tcb_at'
    ignore: threadSet)
 
@@ -2724,10 +2734,12 @@ lemma unbindNotification_bound_tcb_at':
   apply (wp setBoundNotification_bound_tcb gbn_wp' | wpc | simp)+
   done
 
-crunch valid_queues[wp]: unbindNotification, unbindMaybeNotification "Invariants_H.valid_queues"
+crunches unbindNotification, unbindMaybeNotification
+  for valid_queues[wp]: "Invariants_H.valid_queues"
   (wp: sbn_valid_queues)
 
-crunch weak_sch_act_wf[wp]: unbindNotification, unbindMaybeNotification "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+crunches unbindNotification, unbindMaybeNotification
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
 
 lemma unbindNotification_tcb_at'[wp]:
   "\<lbrace>tcb_at' t'\<rbrace> unbindNotification t \<lbrace>\<lambda>rv. tcb_at' t'\<rbrace>"
@@ -2880,8 +2892,8 @@ lemma deleteASID_cte_wp_at'[wp]:
           | wpc)+
   done
 
-crunch cte_wp_at'[wp]: unmapPageTable, unmapPage, unbindNotification, finaliseCapTrue_standin
-            "cte_wp_at' P p"
+crunches unmapPageTable, unmapPage, unbindNotification, finaliseCapTrue_standin
+  for cte_wp_at'[wp]: "cte_wp_at' P p"
   (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
 
 lemma arch_finaliseCap_cte_wp_at[wp]:
@@ -2958,7 +2970,8 @@ crunches setBoundNotification, setNotification
   for sch_act_simple[wp]: sch_act_simple
   (wp: sch_act_simple_lift)
 
-crunch sch_act_simple[wp]: cteDeleteOne, unbindNotification sch_act_simple
+crunches cteDeleteOne, unbindNotification
+  for sch_act_simple[wp]: sch_act_simple
   (wp: crunch_wps ssa_sch_act_simple sts_sch_act_simple getObject_inv
        loadObject_default_inv
    simp: crunch_simps
@@ -3185,7 +3198,8 @@ lemma cancelAllSignals_valid_inQ_queues[wp]:
    apply (simp)
   done
 
-crunch valid_inQ_queues[wp]: unbindNotification, unbindMaybeNotification "valid_inQ_queues"
+crunches unbindNotification, unbindMaybeNotification
+  for valid_inQ_queues[wp]: "valid_inQ_queues"
 
 lemma finaliseCapTrue_standin_valid_inQ_queues[wp]:
   "\<lbrace>valid_inQ_queues\<rbrace>

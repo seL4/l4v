@@ -77,7 +77,8 @@ lemma setTCB_valid_duplicates'[wp]:
      apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
   done
 
-crunch valid_duplicates'[wp]: threadSet, setBoundNotification "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches threadSet, setBoundNotification
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: setObject_ksInterrupt updateObject_default_inv)
 
 lemma tcbSchedEnqueue_valid_duplicates'[wp]:
@@ -1263,13 +1264,9 @@ lemma setVCPU_nondup_obj[wp]:
   apply (erule(1) ps_clear_updE)
   done
 
-crunch nondup_obj[wp]:
-  vcpuSwitch "ko_wp_at' nondup_obj p"
+crunches vcpuSwitch, setVMRoot, setVMRootForFlush
+  for nondup_obj[wp]: "ko_wp_at' nondup_obj p"
   (wp: crunch_wps FalseI simp: crunch_simps unless_def)
-
-crunch nondup_obj[wp]: setVMRoot, setVMRootForFlush
-    "ko_wp_at' nondup_obj p"
-  (wp: crunch_wps simp: crunch_simps)
 
 lemma unmapPageTable_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
@@ -1293,8 +1290,8 @@ crunch valid_duplicates'[wp]:
  deleteASID "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch valid_duplicates'[wp]:
-  deleteASIDPool, unbindNotification, prepareThreadDelete, vcpuFinalise "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunches deleteASIDPool, unbindNotification, prepareThreadDelete, vcpuFinalise
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma archFinaliseCap_valid_duplicates'[wp]:
@@ -1947,10 +1944,8 @@ lemma performArchInvocation_valid_duplicates':
    apply (wp | simp)+
   done
 
-crunch valid_duplicates' [wp]: restart "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
-  (wp: crunch_wps)
-
-crunch valid_duplicates' [wp]: setPriority, setMCPriority "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+crunches restart, setPriority, setMCPriority
+  for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (ignore: threadSet wp: setObject_ksInterrupt updateObject_default_inv
      simp: crunch_simps)
 
@@ -2012,11 +2007,8 @@ lemma tc_valid_duplicates':
                simp: isCap_simps)
   done
 
-crunch valid_duplicates' [wp]: performTransfer, unbindNotification, bindNotification "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
-  (ignore: threadSet wp: setObject_ksInterrupt updateObject_default_inv
-     simp: crunch_simps)
-
-crunch valid_duplicates' [wp]: setDomain "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+crunches performTransfer, unbindNotification, bindNotification, setDomain
+  for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (ignore: threadSet wp: setObject_ksInterrupt updateObject_default_inv
      simp: crunch_simps)
 

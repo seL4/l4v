@@ -153,19 +153,13 @@ lemma tcbSchedAppend_corres:
   done
 
 
-crunch valid_pspace'[wp]: tcbSchedEnqueue valid_pspace'
+crunches tcbSchedEnqueue, tcbSchedAppend, tcbSchedDequeue
+  for valid_pspace'[wp]: valid_pspace'
+  and valid_arch_state'[wp]: valid_arch_state'
   (simp: unless_def)
-crunch valid_pspace'[wp]: tcbSchedAppend valid_pspace'
-  (simp: unless_def)
-crunch valid_pspace'[wp]: tcbSchedDequeue valid_pspace'
 
-crunch valid_arch_state'[wp]: tcbSchedEnqueue valid_arch_state'
-  (simp: unless_def)
-crunch valid_arch_state'[wp]: tcbSchedAppend valid_arch_state'
-  (simp: unless_def)
-crunch valid_arch_state'[wp]: tcbSchedDequeue valid_arch_state'
-
-crunch pred_tcb_at'[wp]: tcbSchedAppend, tcbSchedDequeue "pred_tcb_at' proj P t"
+crunches tcbSchedAppend, tcbSchedDequeue
+  for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
   (wp: threadSet_pred_tcb_no_state simp: unless_def tcb_to_itcb'_def)
 
 crunch state_refs_of'[wp]: setQueue "\<lambda>s. P (state_refs_of' s)"
@@ -546,13 +540,11 @@ lemma tcbSchedAppend_tcb_in_cur_domain'[wp]:
 crunch ksDomScheduleIdx[wp]: tcbSchedAppend "\<lambda>s. P (ksDomScheduleIdx s)"
   (simp: unless_def)
 
-crunch gsUntypedZeroRanges[wp]: tcbSchedAppend, tcbSchedDequeue "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (simp: unless_def)
-
-crunches tcbSchedDequeue, tcbSchedAppend
-  for arch'[wp]: "\<lambda>s. P (ksArchState s)"
+crunches tcbSchedAppend, tcbSchedDequeue
+  for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
+  and arch'[wp]: "\<lambda>s. P (ksArchState s)"
   and ioports'[wp]: valid_ioports'
-  (wp: valid_ioports_lift'')
+  (simp: unless_def wp: valid_ioports_lift'')
 
 lemma tcbSchedAppend_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace> tcbSchedAppend thread
