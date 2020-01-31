@@ -2510,7 +2510,7 @@ lemma h_t_valid_Array_element':
 lemma setIOPortMask_spec:
   notes ucast_mask = ucast_and_mask[where n=6, simplified mask_def, simplified]
   notes not_max_word_simps = and_not_max_word shiftr_not_max_word and_mask_not_max_word
-  notes ucast_cmp_ucast = ucast_le_ucast ucast_less_ucast
+  notes ucast_cmp_ucast = ucast_le_ucast ucast_less_ucast_weak
   notes array_assert = array_assertion_shrink_right[OF array_ptr_valid_array_assertionD]
   notes word_unat.Rep_inject[simp del]
   shows

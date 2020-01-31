@@ -5184,7 +5184,7 @@ lemma vs_lookup_pages_pteD: (* ARMHYP rewrite with xxx_bits *)
                  split: if_split_asm)
   apply (clarsimp split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
   apply (simp add: up_ucast_inj_eq graph_of_def kernel_base_def
-                   not_le ucast_less_ucast[symmetric, where 'a=11 and 'b=32]
+                   not_le ucast_less_ucast_weak[symmetric, where 'a=11 and 'b=32]
                    mask_asid_low_bits_ucast_ucast pde_ref_pages_def pte_ref_pages_def
             split: if_split_asm)
   apply (simp add: ucast_ucast_id

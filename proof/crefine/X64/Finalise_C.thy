@@ -1123,7 +1123,7 @@ lemma deleteASIDPool_ccorres:
              apply (rule conjI, clarsimp simp: ucast_of_nat_small)
              apply (clarsimp simp: asid_map_lifts asid_map_relation_def)
             apply (simp add: asid_low_bits_def word_of_nat_less)
-           apply (clarsimp simp: asid_low_bits_def ucast_less_ucast[where y="0x200" and 'a=32, simplified])
+           apply (clarsimp simp: asid_low_bits_def ucast_less_ucast_weak[where y="0x200" and 'a=32, simplified])
           apply (vcg exspec=hwASIDInvalidate_modifies)
           apply clarsimp
          apply (rule hoare_pre, wp)

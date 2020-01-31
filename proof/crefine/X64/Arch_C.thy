@@ -5119,7 +5119,7 @@ lemma word_eq_cast_unsigned:
 lemma isIOPortRangeFree_spec:
   notes ucast_mask = ucast_and_mask[where n=6, simplified mask_def, simplified]
   notes not_max_word_simps = and_not_max_word shiftr_not_max_word and_mask_not_max_word
-  notes ucast_cmp_ucast = ucast_le_ucast ucast_less_ucast
+  notes ucast_cmp_ucast = ucast_le_ucast ucast_less_ucast_weak
   notes array_assert = array_assertion_shrink_right[OF array_ptr_valid_array_assertionD]
   notes unat_arith_simps' = unat_arith_simps[where 'a=16] unat_arith_simps[where 'a="32 signed"]
   notes word_unat.Rep_inject[simp del] int_unat[simp del]
@@ -5186,7 +5186,7 @@ lemma isIOPortRangeFree_spec:
          apply (thin_tac "test_bit _ _")
          apply (rule conjI;
                 rule word_le_split_mask[where n=6, THEN iffD2, OF disjI1];
-                rule ucast_less_ucast[where 'b="32 signed", THEN iffD1])
+                rule ucast_less_ucast_weak[where 'b="32 signed", THEN iffD1])
          apply (simp_all add: ucast_shiftr ucast_ucast_mask word_ao_dist
                               word_and_mask_eq_le_mono[of "of_nat i"]
                               word_and_mask_eq_le_mono[of low_word]
@@ -5221,7 +5221,7 @@ lemma isIOPortRangeFree_spec:
      apply (cut_tac word_and_mask_le_2pm1[of last_port 6], simp)
      apply (cut_tac shiftr_le_mask[of last_port 6, simplified mask_def], simp)
      apply (intro conjI allI impI; (simp add: unat_arith_simps; fail)?)
-     apply (drule word_exists_nth; clarsimp simp: word_size ucast_less_ucast)
+     apply (drule word_exists_nth; clarsimp simp: word_size ucast_less_ucast_weak)
       subgoal for i
         (* return false. *)
         apply (rule exI[of _ "last_port && ~~ mask 6 || of_nat i"])
@@ -5230,7 +5230,7 @@ lemma isIOPortRangeFree_spec:
         apply (frule and_mask_eq_iff_shiftr_0[where w="of_nat i", THEN iffD2])
         apply (simp add: shiftr_over_or_dist word_ao_dist mask_AND_NOT_mask unat_of_nat_eq)
         apply (rule conjI; rule word_le_split_mask[where n=6, THEN iffD2];
-               simp add: ucast_less_ucast shiftr_over_or_dist
+               simp add: ucast_less_ucast_weak shiftr_over_or_dist
                          word_ao_dist mask_AND_NOT_mask)
         apply (rule word_of_nat_le, rule nat_Suc_less_le_imp)
         apply (erule rsubst[where P="\<lambda>c. i < c"])
