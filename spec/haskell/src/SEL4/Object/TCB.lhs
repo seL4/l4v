@@ -709,7 +709,7 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 > decodeSchedContextInvocation :: Word -> PPtr SchedContext -> [Capability] -> [Word] ->
 >     KernelF SyscallError SchedContextInvocation
 > decodeSchedContextInvocation label scPtr excaps args = do
->     case invocationType label of
+>     case genInvocationType label of
 >         SchedContextConsumed -> do
 >             return $ InvokeSchedContextConsumed scPtr args
 >         SchedContextBind -> decodeSchedContext_Bind scPtr excaps
@@ -748,7 +748,7 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 > decodeSchedControlInvocation :: Word -> [Word] -> [Capability] ->
 >         KernelF SyscallError SchedControlInvocation
 > decodeSchedControlInvocation label args excaps = do
->     case invocationType label of
+>     case genInvocationType label of
 >         SchedControlConfigure -> decodeSchedControl_Configure excaps args
 >         _ -> throw IllegalOperation
 

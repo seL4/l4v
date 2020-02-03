@@ -134,11 +134,6 @@ lemma switch_to_idle_thread_cur_thread_idle_thread [wp]:
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_ s. cur_thread s = idle_thread s\<rbrace>"
   by (wp | simp add:switch_to_idle_thread_def arch_switch_to_idle_thread_def)+
 
-crunches arch_tcb_set_ipc_buffer
-  for valid_sched [wp]: valid_sched
-  and simple_sched_action [wp]: simple_sched_action
-  (ignore: set_object as_user wp: valid_sched_lift crunch_wps subset_refl simp: if_fun_split)
-
 lemma set_thread_state_cur_thread_valid_blocked:
   "\<lbrace>valid_blocked and (\<lambda>s. ref = cur_thread s)\<rbrace> set_thread_state ref ts
   \<lbrace>\<lambda>_. valid_blocked :: det_state \<Rightarrow> _\<rbrace>"
@@ -303,7 +298,7 @@ lemma dmo_getCurrentTime_vmt_sp[wp]:
       apply (rule preorder_class.eq_refl)
       apply simp
      apply simp
-    apply (clarsimp simp: of_nat_add)
+    apply clarsimp
     done
   done
 

@@ -4648,10 +4648,6 @@ lemmas cancel_ipc_valid_sched_lemmas
     cancel_signal.valid_sched
     blocked_cancel_ipc.valid_sched
 
-lemma exec_set_object:
-  "(set_object p ko >>= m) s = m () (kheap_update (\<lambda>kh. kh(p \<mapsto> ko)) s)"
-  by (simp add: set_object_def bind_assoc exec_get exec_put cong: abstract_state.fold_congs)
-
 lemma get_tcb_after_put[simp]:
   "get_tcb t (kheap_update (\<lambda>kh. kh(t \<mapsto> TCB tcb)) s) = Some tcb"
   by (simp add: get_tcb_def)
@@ -5983,7 +5979,7 @@ lemma suspend_cur_sc_chargeable:
   "\<lbrace>cur_sc_chargeable and ct_not_blocked\<rbrace>
    suspend x
    \<lbrace>\<lambda>_. cur_sc_chargeable :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding suspend_def
+  unfolding suspend_def update_restart_pc_def
   by (wpsimp wp: set_tcb_obj_ref_cur_sc_chargeable_const hoare_drop_imp
                     cancel_ipc_cur_sc_chargeable2)
 
@@ -10966,7 +10962,7 @@ lemma set_thread_state_released_if_bound_sc_valid_sched_except_blocked:
   by (wpsimp wp: set_thread_state_valid_sched_except_blocked simp: scheduler_act_not_2_def)
 
 lemmas set_thread_state_ipc_queued_valid_blocked_except_set
-  = set_thread_state_valid_blocked[where ts="BlockedOnReceive ep r_opt" for ep r_opt, simplified]
+  = set_thread_state_valid_blocked[where ts="BlockedOnReceive ep r_opt pl" for ep r_opt pl, simplified]
     set_thread_state_valid_blocked[where ts="BlockedOnSend ep data" for ep data, simplified]
     set_thread_state_valid_blocked[where ts="BlockedOnNotification ntfn" for ntfn, simplified]
     set_thread_state_valid_blocked[where ts="BlockedOnReply r" for r, simplified]
@@ -12892,6 +12888,8 @@ lemma maybe_donate_sc_valid_sched:
            simp: valid_sched_def tcb_at_kh_simps vs_all_heap_simps
                  ipc_queued_thread_state_not_runnable)
 
+lemmas as_user_bound_tcb[wp] = as_user_bound_obj_typ_at[where T=ATCB, folded tcb_at_typ]
+
 lemma receive_signal_valid_sched:
   "\<lbrace>valid_sched and valid_objs and (\<lambda>s. sym_refs (state_refs_of s))
     and current_time_bounded 1 and scheduler_act_not thread and not_queued thread
@@ -13631,7 +13629,7 @@ lemma update_sched_context_decompose:
   "update_sched_context scp (\<lambda>sc. f (g sc))
    = do update_sched_context scp g; update_sched_context scp f od"
   apply (rule ext, rename_tac s)
-  by (clarsimp simp: update_sched_context_def get_object_def set_object_def
+  by (clarsimp simp: update_sched_context_def get_object_def set_object_def a_type_simps
                      gets_def get_def put_def return_def fail_def assert_def bind_def
               split: kernel_object.splits)
 
@@ -17017,7 +17015,7 @@ lemma update_time_stamp_consumed_time_bounded[wp]:
 
 crunches preemption_point
   for consumed_time_bounded[wp]: "consumed_time_bounded :: 'state_ext state \<Rightarrow> _"
-  (wp: crunch_wps rule: preemption_point_inv simp: crunch_simps)
+  (wp: crunch_wps rule: preemption_point_inv simp: crunch_simps ignore_del: preemption_point)
 
 crunches cancel_badged_sends
   for cur_time[wp]: "(\<lambda>s. P (cur_time s)) :: 'state_ext state \<Rightarrow> _"

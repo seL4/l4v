@@ -496,7 +496,7 @@ definition
   "data \<Rightarrow> obj_ref \<Rightarrow> cap list \<Rightarrow> data list \<Rightarrow> (sched_context_invocation, 'z::state_ext) se_monad"
 where
   "decode_sched_context_invocation label sc_ptr excaps args \<equiv>
-  case invocation_type label of
+  case gen_invocation_type label of
     SchedContextConsumed \<Rightarrow> returnOk $ InvokeSchedContextConsumed sc_ptr args
   | SchedContextBind \<Rightarrow> doE
       whenE (length excaps = 0) $ throwError TruncatedMessage;
@@ -571,7 +571,7 @@ definition
   "data \<Rightarrow> data list \<Rightarrow> cap list \<Rightarrow> (sched_control_invocation,'z::state_ext) se_monad"
 where
   "decode_sched_control_invocation label args excaps \<equiv> doE
-    unlessE (invocation_type label = SchedControlConfigure) $ throwError IllegalOperation;
+    unlessE (gen_invocation_type label = SchedControlConfigure) $ throwError IllegalOperation;
     whenE (length excaps = 0) $ throwError TruncatedMessage;
     whenE (length args < TIME_ARG_SIZE*2 + 2) $ throwError TruncatedMessage;
     budget_\<mu>s \<leftarrow> returnOk $ parse_time_arg 0 args;

@@ -2208,3 +2208,11 @@ case \x of (ArchInvocationLabel ArchLabels.RISCVIRQIssueIRQHandler, irqW:trigger
         irqW#triggerW#index#depth#_, cnode#_) => ->1
     | (ArchInvocationLabel RISCVIRQIssueIRQHandler, _, _) => ->2
     | _ => ->3
+case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { capNtfnPtr = ptr }), final, _) -> ((ReplyCap { capReplyPtr = ptr }), final, _) -> (NullCap, _, _) -> (DomainCap, _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tptr}), True, _) -> ((SchedContextCap { capSchedContextPtr = scPtr }), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> (cap@(IRQHandlerCap { capIRQ = irq }), True, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---X> FIXME
+
+case \x of (cap@(EndpointCap {capEPCanSend=True}), _) -> (cap@(NotificationCap {capNtfnCanSend=True}), _) -> (cap@(ReplyCap {}), _) -> (cap@(ThreadCap {}), False) -> (DomainCap, _) -> ((SchedContextCap {capSchedContextPtr=sc}), _) -> (SchedControlCap, _) -> (cap@(CNodeCap {}), False) -> (cap@(UntypedCap {}), _) -> (IRQControlCap, _) -> ((IRQHandlerCap { capIRQ = irq }), _) -> ((ArchObjectCap cap), _) -> (_, _) ->  ---X> FIXME
+
+case \x of SwitchToThread candidate | candidate == from -> _ ->  ---X> FIXME
+
+case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { capNtfnPtr = ptr }), final, _) -> ((ReplyCap { capReplyPtr = ptr }), final, _) -> (NullCap, _, _) -> (DomainCap, _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tptr}), True, _) -> ((SchedContextCap { capSchedContextPtr = scPtr }), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> (cap@(IRQHandlerCap { capIRQ = irq }), True, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---X>
+
