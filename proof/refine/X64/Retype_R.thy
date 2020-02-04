@@ -1634,11 +1634,6 @@ apply (subst retype_region2_ext_retype_region_ext_futz[symmetric])
 apply (simp add: bind_assoc)
 done
 
-(* FIXME move *)
-lemma gets_gets:
-  "(gets x >>= (\<lambda>a. gets x >>= F a)) = (gets x >>= (\<lambda>a. F a a))"
-by (simp add: gets_def get_def bind_def return_def split_def)
-
 lemma getObject_tcb_gets:
   "getObject addr >>= (\<lambda>x::tcb. gets proj >>= (\<lambda>y. G x y))
  = gets proj >>= (\<lambda>y. getObject addr >>= (\<lambda>x. G x y))"
@@ -1671,7 +1666,8 @@ next
                    cdom \<leftarrow> curDomain;
                    G cdom
                 od"
-    by (simp add: bind_assoc curDomain_def threadSet_def setObject_tcb_gets_ksCurDomain getObject_tcb_gets gets_gets)
+    by (simp add: bind_assoc curDomain_def threadSet_def setObject_tcb_gets_ksCurDomain
+                  getObject_tcb_gets double_gets_drop_regets)
   from Cons.hyps show ?case
     apply (simp add: mapM_x_def sequence_x_def)
     apply (simp add: bind_assoc foldr_map o_def)
@@ -4011,11 +4007,6 @@ lemma copyGlobalMappings_ko_wp_at:
   apply (wp | simp)+
   done
 
-(* FIXME move *)
-lemma fold_K:
-  "(P and (\<lambda> s. Q)) = (P and K Q)"
-  by simp
-
 lemma threadSet_ko_wp_at2':
   "\<lbrace>\<lambda>s. P (ko_wp_at' P' p s) \<and> (\<forall>tcb_x :: tcb. P' (injectKO (F tcb_x)) = P' (injectKO tcb_x))\<rbrace>
      threadSet F ptr
@@ -5238,15 +5229,8 @@ lemma corres_retype_update_gsI:
   using corres_retype' [OF not_zero aligned obj_bits_api check usv ko orr cover]
   by (simp add: f)
 
-(*FIXME: Move to Deterministic_AI*)
-crunch valid_etcbs[wp]: copy_global_mappings valid_etcbs (wp: mapM_x_wp')
-
 lemma gcd_corres: "corres (=) \<top> \<top> (gets cur_domain) curDomain"
   by (simp add: curDomain_def state_relation_def)
-
-(* FIXME move *)
-lemmas corres_underlying_gets_pre_rhs =
-  corres_symb_exec_r[OF _ _ gets_inv no_fail_pre[OF non_fail_gets TrueI]]
 
 lemma retype_region2_extra_ext_mapM_x_corres:
   shows "corres dc
@@ -5329,12 +5313,6 @@ lemma data_page_relation_retype:
                    pbfs_atleast_pageBits)
    apply (clarsimp simp: image_def)+
   done
-
-(* FIXME x64: move to no_gs_types_simps in ArchRetype_AI *)
-lemma no_gs_types_simps' [simp]:
-  "ArchObject PDPTObj \<in> no_gs_types"
-  "ArchObject PML4Obj \<in> no_gs_types"
-  by (simp_all add: no_gs_types_def)
 
 lemma retype_region_pml4_at:
   "\<lbrace>\<top>\<rbrace> retype_region y n us (ArchObject PML4Obj) dev

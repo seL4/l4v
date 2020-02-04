@@ -474,10 +474,6 @@ lemma valid_mdb_interrupts'[simp]:
 crunch valid_mdb'[wp]: setIRQState "valid_mdb'"
 crunch cte_wp_at[wp]: setIRQState "cte_wp_at' P p"
 
-(* FIXME x64: move *)
-lemma no_fail_ioapicMapPinToVector[wp]: "no_fail \<top> (ioapicMapPinToVector a b c d e) "
-  by (simp add: ioapicMapPinToVector_def)
-
 method do_machine_op_corres
   = (rule corres_machine_op, rule corres_Id, rule refl, simp)
 
@@ -609,11 +605,6 @@ lemma updateIRQState_invs'[wp]:
                          valid_ioports'_def all_ioports_issued'_def issued_ioports'_def
                          Word_Lemmas.word_not_le[symmetric])
   done
-
-(* FIXME x64: move*)
-lemma no_irq_ioapicMapPinToVector[wp]:
-  "no_irq (ioapicMapPinToVector a b c d e)"
-  by (simp add: ioapicMapPinToVector_def)
 
 lemma dmo_ioapicMapPinToVector_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (ioapicMapPinToVector a b c d e) \<lbrace>\<lambda>_. invs'\<rbrace>"

@@ -24,9 +24,6 @@ end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-(* FIXME move to lib *)
-lemmas FalseI = notE[where R=False]
-
 lemma option_case_all_conv:
   "(case x of None \<Rightarrow> True | Some v \<Rightarrow> P v) = (\<forall>v. x = Some v \<longrightarrow> P v)"
   by (auto split: option.split)
@@ -486,10 +483,6 @@ lemma get_hw_asid_corres:
   apply simp
   done
 
-(* FIXME: move to Machine_AI *)
-lemma no_fail_writeContextIDAndPD[wp]: "no_fail \<top> (writeContextIDAndPD a w)"
-  by (simp add: writeContextIDAndPD_def)
-
 lemma arm_context_switch_corres:
   "corres dc
           (vspace_at_asid a pd and K (a \<noteq> 0 \<and> a \<le> mask asid_bits)
@@ -509,18 +502,6 @@ lemma arm_context_switch_corres:
        apply (rule no_fail_pre)
         apply wpsimp+
   done
-
-(* FIXME: move to Machine_AI *)
-crunches
-  get_gic_vcpu_ctrl_apr, get_gic_vcpu_ctrl_lr, addressTranslateS1CPR, getHDFAR, getHSR,
-  writeVCPUHardwareReg, readVCPUHardwareReg, get_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_hcr,
-  set_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_vmcr, setHCR, setSCTLR,
-  set_gic_vcpu_ctrl_lr, set_gic_vcpu_ctrl_apr
-  for (no_fail) no_fail[wp, intro!, simp]
-  (wp: no_fail_machine_op_lift crunch_wps
-   ignore: get_gic_vcpu_ctrl_lr_impl bind addressTranslateS1CPR_impl writeVCPUHardwareReg_impl
-           set_gic_vcpu_ctrl_hcr_impl set_gic_vcpu_ctrl_vmcr_impl setHCR_impl setSCTLR_impl
-           set_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_apr_impl)
 
 (* setObject for VCPU invariant preservation *)
 
@@ -652,10 +633,6 @@ lemma setVCPU_ct_not_inQ[wp]:
    apply (rule hoare_lift_Pf[where f=ksCurThread]; wp)
   apply assumption
   done
-
-(* FIXME: move *)
-(* prefer 2 as a tactic *)
-method prefer_next = tactic \<open>SUBGOAL (K (prefer_tac 2)) 1\<close>
 
 lemma hv_corres:
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
@@ -1376,13 +1353,6 @@ lemma vcpuSwitch_no_0_obj'[wp]: "\<lbrace>no_0_obj'\<rbrace> vcpuSwitch v \<lbra
 crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
   (simp: crunch_simps
    wp: crunch_wps getObject_inv loadObject_default_inv)
-
-(* FIXME move to ArchVSpace_AI *)
-lemma flush_space_vspace_objs[wp]:
-  "\<lbrace>valid_vspace_objs\<rbrace> flush_space space \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
-  apply (simp add: flush_space_def)
-  apply (wp load_hw_asid_wp | wpc | simp)+
-  done
 
 lemma delete_asid_corres:
   "corres dc

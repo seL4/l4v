@@ -1967,8 +1967,8 @@ lemma handleReply_ct_not_ksQ:
   apply (clarsimp)
   done
 
-crunch valid_etcbs[wp]: possible_switch_to  "valid_etcbs"
-crunch valid_etcbs[wp]: handle_recv "valid_etcbs"
+crunches possible_switch_to, handle_recv
+  for valid_etcbs[wp]: "valid_etcbs"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma hrw_corres:

@@ -578,16 +578,6 @@ lemma unaligned_page_offsets_helper:
     apply (frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+
   done
 
-(* FIXME: move *)
-lemma unaligned_helper:
-  "\<lbrakk>is_aligned x n; y\<noteq>0; y < 2 ^ n\<rbrakk> \<Longrightarrow> \<not> is_aligned (x + y) n"
-  apply (simp (no_asm_simp) add: is_aligned_mask)
-  apply (simp add: mask_add_aligned)
-  apply (cut_tac mask_eq_iff_w2p[of n y], simp_all add: word_size)
-  apply (rule ccontr)
-  apply (simp add: not_less power_overflow word_bits_conv)
-  done
-
 lemma pspace_aligned_distinct_None:
   (* NOTE: life would be easier if pspace_aligned and pspace_distinct were defined on PSpace instead of the whole kernel state. *)
 assumes pspace_aligned:

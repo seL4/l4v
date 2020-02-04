@@ -2101,16 +2101,6 @@ lemma cancelIPC_valid_queues'[wp]:
   apply (clarsimp simp: inQ_def)
   done
 
-(* FIXME move *)
-lemma cap_delete_one_cur_tcb[wp]:
-  "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> cap_delete_one slot \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
-apply (simp add: cur_tcb_def)
-apply (rule hoare_pre)
- apply wps
- apply wp
-apply simp
-done
-
 crunch valid_objs'[wp]: handleFaultReply valid_objs'
 
 lemma valid_tcb'_tcbFault_update[simp]:
@@ -3792,14 +3782,6 @@ lemmas possibleSwitchToTo_cteCaps_of[wp]
 crunches possibleSwitchTo
   for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
   (wp: possibleSwitchTo_ctes_of crunch_wps ignore: constOnFailure)
-
-(* FIXME: move to Lib *)
-lemma nonempty_cross_distinct_singleton_elim:
-  "\<lbrakk> x \<times> {a} = y \<times> {b};
-     x \<noteq> {} \<or> y \<noteq> {};
-     a \<noteq> b \<rbrakk>
-   \<Longrightarrow> P"
-  by blast
 
 (* t = ksCurThread s *)
 lemma ri_invs' [wp]:

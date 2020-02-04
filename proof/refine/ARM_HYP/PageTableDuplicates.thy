@@ -355,14 +355,6 @@ lemma page_table_at_pte_atD':
   apply (simp add:mask_out_sub_mask)
   done
 
-(* FIXME: word move *)
-lemma mask_out_first_mask_some_eq:
-  "\<lbrakk> x && ~~ mask n = y && ~~ mask n; n \<le> m \<rbrakk> \<Longrightarrow> x && ~~ mask m = y && ~~ mask m"
-  apply (rule word_eqI, rename_tac n')
-  apply (drule_tac x=n' in word_eqD)
-  apply (auto simp: word_ops_nth_size word_size)
-  done
-
 lemma largePagePTEOffsets_bound:
   "(a, b) \<in> set (zip largePagePTEOffsets [0.e.0xF]) \<Longrightarrow> a < 128"
   apply (clarsimp simp: largePagePTEOffsets_def upto_enum_step_def vspace_bits_defs zip_map1)

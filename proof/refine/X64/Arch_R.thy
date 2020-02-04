@@ -1338,31 +1338,6 @@ lemma port_out_corres[@lift_corres_args, corres]:
      apply wpsimp+
   done
 
-(* FIXME x64: move *)
-lemma no_fail_in8[wp]:
-  "no_fail \<top> (in8 a)"
-  by (wpsimp simp: in8_def wp: no_fail_machine_op_lift)
-
-lemma no_fail_in16[wp]:
-  "no_fail \<top> (in16 a)"
-  by (wpsimp simp: in16_def wp: no_fail_machine_op_lift)
-
-lemma no_fail_in32[wp]:
-  "no_fail \<top> (in32 a)"
-  by (wpsimp simp: in32_def wp: no_fail_machine_op_lift)
-
-lemma no_fail_out8[wp]:
-  "no_fail \<top> (out8 a w)"
-  by (wpsimp simp: out8_def)
-
-lemma no_fail_out16[wp]:
-  "no_fail \<top> (out16 a w)"
-  by (wpsimp simp: out16_def)
-
-lemma no_fail_out32[wp]:
-  "no_fail \<top> (out32 a w)"
-  by (wpsimp simp: out32_def)
-
 lemma perform_port_inv_corres:
   "\<lbrakk>archinv_relation ai ai'; ai = arch_invocation.InvokeIOPort x\<rbrakk>
   \<Longrightarrow> corres (intr \<oplus> (=))

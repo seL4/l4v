@@ -171,16 +171,6 @@ lemma deleteObjects_def3:
                    unless_def alignError_def)
   done
 
-(* FIXME x64: move to Word_Lib *)
-lemma ucast_less_shiftl_helper':
-  "\<lbrakk> len_of TYPE('b) + (a::nat) < len_of TYPE('a); 2 ^ (len_of TYPE('b) + a) \<le> n\<rbrakk>
-    \<Longrightarrow> (ucast (x :: 'b::len word) << a) < (n :: 'a::len word)"
-  apply (erule order_less_le_trans[rotated])
-  using ucast_less[where x=x and 'a='a]
-  apply (simp only: shiftl_t2n field_simps)
-  apply (rule word_less_power_trans2; simp)
-  done
-
 lemma obj_relation_cuts_in_obj_range:
   "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; x \<in> obj_range x ko;
        kheap s x = Some ko; valid_objs s; pspace_aligned s \<rbrakk> \<Longrightarrow> y \<in> obj_range x ko"
@@ -3344,9 +3334,6 @@ lemma storePML4E_setCTE_commute:
   apply (clarsimp simp:ko_wp_at'_def objBits_simps archObjSize_def typ_at'_def)
   apply fastforce
   done
-
-(* FIXME: move  *)
-lemmas of_nat_inj64 = of_nat_inj[where 'a=machine_word_len, folded word_bits_def]
 
 lemma copyGlobalMappings_setCTE_commute:
   "monad_commute

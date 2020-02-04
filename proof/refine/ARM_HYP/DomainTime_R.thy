@@ -19,10 +19,6 @@ text \<open>Preservation of domain time remaining over kernel invocations;
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-(* FIXME move to DetSchedDomainTime_AI *)
-crunch domain_list_inv[wp]: do_user_op "\<lambda>s. P (domain_list s)"
-  (wp: select_wp)
-
 (* abstract and haskell have identical domain list fields *)
 abbreviation
   valid_domain_list' :: "'a kernel_state_scheme \<Rightarrow> bool"

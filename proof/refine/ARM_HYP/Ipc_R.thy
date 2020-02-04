@@ -2167,16 +2167,6 @@ lemma cancelIPC_valid_queues'[wp]:
   apply (clarsimp simp: inQ_def)
   done
 
-(* FIXME move *)
-lemma cap_delete_one_cur_tcb[wp]:
-  "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> cap_delete_one slot \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
-apply (simp add: cur_tcb_def)
-apply (rule hoare_pre)
- apply wps
- apply wp
-apply simp
-done
-
 crunches archThreadGet, handleFaultReply
   for valid_objs'[wp]: valid_objs'
 

@@ -2354,9 +2354,6 @@ lemma sts_tcb_at'_preserve':
   \<lbrace>\<lambda>_. st_tcb_at' P t \<rbrace>"
   by (wpsimp wp: sts_st_tcb' simp: st_tcb_at_neg')
 
-(* FIXME move to where disj_imp lives *)
-lemma disj_imp': "(P \<or> Q) = (\<not>Q \<longrightarrow> P)" by blast
-
 lemma handleEvent_no_orphans [wp]:
   "\<lbrace> \<lambda>s. invs' s \<and>
          (e \<noteq> Interrupt \<longrightarrow> ct_running' s) \<and>

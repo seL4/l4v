@@ -16,11 +16,6 @@ theory ArchAcc_R
 imports SubMonad_R
 begin
 
-(*FIXME move*)
-lemma hoare_add_post':
-  "\<lbrakk>\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>; \<lbrace>P''\<rbrace> f \<lbrace>\<lambda>rv s. Q' rv s \<longrightarrow> Q rv s\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P' and P''\<rbrace> f \<lbrace>Q\<rbrace>"
-  by (fastforce simp add: valid_def)
-
 context begin
 
 lemma fun_all: "f = f' \<Longrightarrow> (\<forall>s. f s \<longrightarrow> f' s)"

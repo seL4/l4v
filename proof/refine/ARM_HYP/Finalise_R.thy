@@ -2849,13 +2849,6 @@ lemma cteDeleteOne_deletes[wp]:
   apply clarsimp
   done
 
-(* FIXME: move *)
-(* should probably become part of the hoare_vgc_if_lift2 set *)
-lemma hoare_vcg_if_lift3:
-  "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (P rv s \<longrightarrow> X rv s) \<and> (\<not> P rv s \<longrightarrow> Y rv s)\<rbrace> \<Longrightarrow>
-  \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (if P rv s then X rv else Y rv) s\<rbrace>"
-  by auto
-
 crunch irq_node'[wp]: vcpuSwitch "\<lambda>s. P (irq_node' s)"
   (wp: FalseI crunch_wps getObject_inv loadObject_default_inv
        updateObject_default_inv setObject_ksInterrupt

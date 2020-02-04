@@ -355,16 +355,6 @@ lemma unaligned_page_offsets_helper:
     apply (frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+
   done
 
-(* FIXME: move *)
-lemma unaligned_helper:
-  "\<lbrakk>is_aligned x n; y\<noteq>0; y < 2 ^ n\<rbrakk> \<Longrightarrow> \<not> is_aligned (x + y) n"
-  apply (simp (no_asm_simp) add: is_aligned_mask)
-  apply (simp add: mask_add_aligned)
-  apply (cut_tac mask_eq_iff_w2p[of n y], simp_all add: word_size)
-  apply (rule ccontr)
-  apply (simp add: not_less power_overflow word_bits_conv)
-  done
-
 lemma pspace_aligned_distinct_None:
   (* NOTE: life would be easier if pspace_aligned and pspace_distinct were defined on PSpace instead of the whole kernel state. *)
 assumes pspace_aligned:
@@ -855,32 +845,6 @@ lemma of_bl_mult_and_not_mask_eq:
   apply (drule two_power_increasing[where 'a=32], simp)
   apply (drule (2) less_le_trans)
 done
-
-(* FIXME: move to generic theory. *)
-lemma bin_to_bl_of_bl_eq:
-  "\<lbrakk>is_aligned (a::'a::len word) n; length b + c \<le> n; length b + c < LENGTH('a)\<rbrakk>
-  \<Longrightarrow> bin_to_bl (length b) (uint ((a + of_bl b * 2^c) >> c)) = b"
-  apply (subst word_plus_and_or_coroll)
-   apply (erule is_aligned_get_word_bits)
-    apply (rule is_aligned_AND_less_0)
-     apply (simp add: is_aligned_mask)
-    apply (rule order_less_le_trans)
-     apply (rule of_bl_length2)
-     apply (simp add: word_bits_conv cte_level_bits_def)
-    apply (simp add: two_power_increasing)
-   apply simp
-  apply (rule nth_equalityI)
-   apply (simp only: len_bin_to_bl)
-  apply (clarsimp simp only: len_bin_to_bl nth_bin_to_bl
-                             word_test_bit_def[symmetric])
-  apply (simp add: nth_shiftr nth_shiftl
-                   shiftl_t2n[where n=c, simplified mult.commute,
-                              simplified, symmetric])
-  apply (simp add: is_aligned_nth[THEN iffD1, rule_format]
-                   test_bit_of_bl nth_rev)
-  apply (case_tac "b ! i", simp_all)
-  apply arith
-  done
 
 lemma TCB_implies_KOTCB:
   "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); kheap s a = Some (TCB tcb)\<rbrakk>

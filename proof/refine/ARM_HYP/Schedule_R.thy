@@ -16,23 +16,8 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare static_imp_wp[wp_split del]
 
-(* FIXME: move *)
-lemma corres_if_r':
-  "\<lbrakk> G' \<Longrightarrow> corres_underlying sr nf nf' r P P' a c; \<not>G' \<Longrightarrow> corres_underlying sr nf nf' r P Q' a d \<rbrakk>
-   \<Longrightarrow> corres_underlying sr nf nf' r (P) (if G' then P' else Q')
-                                     (a) (if G' then c  else d)"
-  by (simp)
-
 (* Levity: added (20090713 10:04:12) *)
 declare sts_rel_idle [simp]
-
-(* FIXME: move to NonDetMonadVCG *)
-lemma return_wp_exs_valid [wp]: "\<lbrace> P x \<rbrace> return x \<exists>\<lbrace> P \<rbrace>"
-  by (simp add: exs_valid_def return_def)
-
-(* FIXME: move to NonDetMonadVCG *)
-lemma get_exs_valid [wp]: "\<lbrace>(=) s\<rbrace> get \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
-  by (simp add: get_def exs_valid_def)
 
 lemma invs_no_cicd'_queues:
   "invs_no_cicd' s \<Longrightarrow> valid_queues s"
@@ -1653,69 +1638,6 @@ lemma cur_tcb'_ksReadyQueuesL2Bitmap_upd[simp]:
 
 crunch cur[wp]: tcbSchedEnqueue cur_tcb'
   (simp: unless_def)
-
-(* FIXME: move *)
-lemma corres_noop3:
-  assumes x: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk>  \<Longrightarrow> \<lbrace>(=) s\<rbrace> f \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
-  assumes y: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk> \<Longrightarrow> \<lbrace>(=) s'\<rbrace> g \<lbrace>\<lambda>r. (=) s'\<rbrace>"
-  assumes z: "nf' \<Longrightarrow> no_fail P' g"
-  shows      "corres_underlying sr nf nf' dc P P' f g"
-  apply (clarsimp simp: corres_underlying_def)
-  apply (rule conjI)
-   apply clarsimp
-   apply (rule use_exs_valid)
-    apply (rule exs_hoare_post_imp)
-     prefer 2
-     apply (rule x)
-       apply assumption+
-    apply simp_all
-   apply (subgoal_tac "ba = b")
-    apply simp
-   apply (rule sym)
-   apply (rule use_valid[OF _ y], assumption+)
-   apply simp
-  apply (insert z)
-  apply (clarsimp simp: no_fail_def)
-  done
-
-lemma corres_symb_exec_l':
-  assumes z: "\<And>rv. corres_underlying sr nf nf' r (Q' rv) P' (x rv) y"
-  assumes x: "\<And>s. P s \<Longrightarrow> \<lbrace>(=) s\<rbrace> m \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
-  assumes y: "\<lbrace>Q\<rbrace> m \<lbrace>Q'\<rbrace>"
-  shows      "corres_underlying sr nf nf' r (P and Q) P' (m >>= (\<lambda>rv. x rv)) y"
-  apply (rule corres_guard_imp)
-    apply (subst gets_bind_ign[symmetric], rule corres_split)
-       apply (rule z)
-      apply (rule corres_noop3)
-        apply (erule x)
-       apply (rule gets_wp)
-      apply (rule non_fail_gets)
-     apply (rule y)
-    apply (rule gets_wp)
-   apply simp+
-   done
-
-lemma corres_symb_exec_r':
-  assumes z: "\<And>rv. corres_underlying sr nf nf' r P (P'' rv) x (y rv)"
-  assumes y: "\<lbrace>P'\<rbrace> m \<lbrace>P''\<rbrace>"
-  assumes x: "\<And>s. Q' s \<Longrightarrow> \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>"
-  assumes nf: "nf' \<Longrightarrow> no_fail R' m"
-  shows      "corres_underlying sr nf nf' r P (P' and Q' and R') x (m >>= (\<lambda>rv. y rv))"
-  apply (rule corres_guard_imp)
-    apply (subst gets_bind_ign[symmetric], rule corres_split)
-       apply (rule z)
-      apply (rule_tac P'="a' and a''" for a' a'' in corres_noop3)
-        apply (simp add: simpler_gets_def exs_valid_def)
-       apply clarsimp
-       apply (erule x)
-      apply (rule no_fail_pre)
-       apply (erule nf)
-      apply clarsimp
-      apply assumption
-     apply (rule gets_wp)
-    apply (rule y)
-   apply simp+
-  done
 
 lemma thread_get_exs_valid[wp]:
   "tcb_at t s \<Longrightarrow> \<lbrace>(=) s\<rbrace> thread_get f t \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"

@@ -354,10 +354,6 @@ lemma cte_map_tcb_2:
   "cte_map (t, tcb_cnode_index 2) = t + 2*2^cte_level_bits"
   by (simp add: cte_map_def tcb_cnode_index_def to_bl_1)
 
-(* FIXME: Use one of these forms everywhere, rather than choosing at random. *)
-lemmas cte_index_repair = mult.commute[where a="(2::'a::len word) ^ cte_level_bits"]
-lemmas cte_index_repair_sym = cte_index_repair[symmetric]
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma cte_wp_at_master_reply_cap_to_ex_rights:
@@ -1245,8 +1241,6 @@ lemma tcbSchedDequeue_corres':
               apply (simp add: tcb_sched_dequeue_def)
               apply (rule setQueue_corres)
              apply (wp | simp add: etcb_relation_def)+
-   apply (force simp: etcb_at_def split: option.splits)
-  apply simp
   done
 
 lemma setQueue_valid_inQ_queues:

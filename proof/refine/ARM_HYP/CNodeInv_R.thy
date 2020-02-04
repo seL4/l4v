@@ -7627,12 +7627,6 @@ lemma select_bind_spec_corres':
          | drule(1) bspec | erule rev_bexI | rule conjI)+
    done
 
-(* FIXME: move *)
-lemma next_child_child_set:
-  "\<lbrakk>next_child slot (cdt_list s) = Some child; valid_list s\<rbrakk>
-    \<Longrightarrow> child \<in> (case next_child slot (cdt_list s) of None \<Rightarrow> {} | Some n \<Rightarrow> {n})"
-  by (simp add: next_child_def)
-
 lemma cap_revoke_mdb_stuff4:
   "\<lbrakk> (s, s') \<in> state_relation; cte_wp_at ((=) cap) p s;
      cte_wp_at' ((=) cte) (cte_map p) s'; invs s; valid_list s; invs' s';

@@ -3085,9 +3085,6 @@ lemma placeNewObject_gets_globalPD_commute:
   apply clarsimp
   done
 
-(* FIXME: move  *)
-lemmas of_nat_inj32 = of_nat_inj[where 'a=32, folded word_bits_def]
-
 lemma copyGlobalMappings_setCTE_commute:
   "monad_commute
      (valid_arch_state' and pspace_distinct' and pspace_aligned' and

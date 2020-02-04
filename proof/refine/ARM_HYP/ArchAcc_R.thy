@@ -13,13 +13,8 @@
 *)
 
 theory ArchAcc_R
-imports SubMonad_R
+imports SubMonad_R ArchMove_R
 begin
-
-(*FIXME move*)
-lemma hoare_add_post':
-  "\<lbrakk>\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>; \<lbrace>P''\<rbrace> f \<lbrace>\<lambda>rv s. Q' rv s \<longrightarrow> Q rv s\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P' and P''\<rbrace> f \<lbrace>Q\<rbrace>"
-  by (fastforce simp add: valid_def)
 
 context begin
 
@@ -503,11 +498,6 @@ lemma in_zip_superSectionPDEOffsets:
   apply (drule in_set_zip2)
   apply simp
   done
-
-(* FIXME: move *)
-lemma mask_out_0:
-  "\<lbrakk>x \<le> 2^n-1; n < LENGTH('a)\<rbrakk> \<Longrightarrow> (x::'a::len word) && ~~ mask n = 0"
-  by (clarsimp simp: mask_out_sub_mask less_mask_eq)
 
 lemma addPAddr_mask_out:
   "\<lbrakk> x \<le> 15; m = 2^(n-4); is_aligned p n; 4 \<le> n; n < 32 \<rbrakk> \<Longrightarrow> p = addPAddr p (x * m) && ~~ mask n"

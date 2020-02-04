@@ -1337,8 +1337,6 @@ lemma ball_ran_modify_map_eq:
   \<Longrightarrow> (\<forall>v \<in> ran (modify_map m x f). P v) = (\<forall>v \<in> ran m. P v)"
   by (auto simp: modify_map_def ball_ran_eq)
 
-lemma disj_imp: "(P \<or> Q) = (\<not>P \<longrightarrow> Q)" by blast
-
 lemma eq_singleton_redux:
   "\<lbrakk> S = {x} \<rbrakk> \<Longrightarrow> x \<in> S"
   by simp

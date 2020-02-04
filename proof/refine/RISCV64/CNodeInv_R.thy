@@ -557,9 +557,6 @@ text \<open>Proving desired properties about rec_del/cap_delete\<close>
 
 declare of_nat_power [simp del]
 
-(* FIXME: pull up *)
-declare word_unat_power [symmetric, simp del]
-
 text \<open>Proving desired properties about recursiveDelete/cteDelete\<close>
 
 text \<open>Proving the termination of finaliseSlot\<close>
@@ -7564,12 +7561,6 @@ lemma select_bind_spec_corres':
                          select_def
          | drule(1) bspec | erule rev_bexI | rule conjI)+
    done
-
-(* FIXME: move *)
-lemma next_child_child_set:
-  "\<lbrakk>next_child slot (cdt_list s) = Some child; valid_list s\<rbrakk>
-    \<Longrightarrow> child \<in> (case next_child slot (cdt_list s) of None \<Rightarrow> {} | Some n \<Rightarrow> {n})"
-  by (simp add: next_child_def)
 
 lemma cap_revoke_mdb_stuff4:
   "\<lbrakk> (s, s') \<in> state_relation; cte_wp_at ((=) cap) p s;

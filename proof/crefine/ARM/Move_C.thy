@@ -10,7 +10,7 @@
 
 (* things that should be moved into first refinement *)
 
-theory Move
+theory Move_C
 imports "Refine.Refine"
 begin
 
