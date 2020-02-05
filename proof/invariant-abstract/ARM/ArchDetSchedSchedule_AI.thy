@@ -335,6 +335,10 @@ lemma kernel_irq_timer_kernel_IRQ[simp]:
   "kernel_irq_timer \<notin> non_kernel_IRQs"
   by (simp add: non_kernel_IRQs_def)
 
+lemma arch_perform_invocationE_E_inv[wp]:
+  "\<lbrace>\<top>\<rbrace> arch_perform_invocation i -, \<lbrace>Q\<rbrace>"
+   unfolding arch_perform_invocation_def by wpsimp
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI

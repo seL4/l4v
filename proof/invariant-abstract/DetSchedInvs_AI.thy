@@ -3695,6 +3695,12 @@ lemmas cur_sc_active_lift = hoare_lift_Pf[where f=cur_sc and P=is_active_sc and 
 abbreviation sc_bounded_release_time :: "time \<Rightarrow> sched_context \<Rightarrow> bool" where
   "sc_bounded_release_time ct sc \<equiv> cfg_bounded_release_time ct (sc_refill_cfg_of sc)"
 
+definition is_BlockedOnReceive where
+ "is_BlockedOnReceive st \<equiv> \<exists>x y z. st = BlockedOnReceive x y z"
+
+abbreviation not_BlockedOnReceive where
+ "not_BlockedOnReceive st \<equiv> \<not> is_BlockedOnReceive st"
+
 locale valid_sched_pred_locale =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   fixes f :: "('state_ext::state_ext state, 'return_t) nondet_monad"
