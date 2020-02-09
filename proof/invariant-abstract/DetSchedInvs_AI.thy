@@ -2457,12 +2457,23 @@ abbreviation ready_queued_threads_2 :: "(domain \<Rightarrow> priority \<Rightar
 abbreviation ready_queued_threads :: "'z state \<Rightarrow> obj_ref set" where
   "ready_queued_threads s \<equiv> ready_queued_threads_2 (ready_queues s)"
 
-abbreviation released_if_bound_sc_tcb_at_2 where
+abbreviation released_if_bound_sc_tcb_at_2 ::
+  "obj_ref \<Rightarrow> time \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool"
+  where
   "released_if_bound_sc_tcb_at_2 t curtime tcb_scps sc_refill_cfgs \<equiv>
     pred_map_eq None tcb_scps t \<or> released_sc_tcb_at_pred curtime tcb_scps sc_refill_cfgs t"
 
 abbreviation released_if_bound_sc_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "released_if_bound_sc_tcb_at t s \<equiv> released_if_bound_sc_tcb_at_2 t (cur_time s) (tcb_scps_of s) (sc_refill_cfgs_of s)"
+
+abbreviation active_if_bound_sc_tcb_at_2 ::
+  "obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool"
+  where
+  "active_if_bound_sc_tcb_at_2 t tcb_scps sc_refill_cfgs \<equiv>
+    pred_map_eq None tcb_scps t \<or> active_sc_tcb_at_pred tcb_scps sc_refill_cfgs t"
+
+abbreviation active_if_bound_sc_tcb_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "active_if_bound_sc_tcb_at t s \<equiv> active_if_bound_sc_tcb_at_2 t (tcb_scps_of s) (sc_refill_cfgs_of s)"
 
 type_synonym released_ipc_queues_t
   = "time
@@ -2472,11 +2483,67 @@ type_synonym released_ipc_queues_t
      \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg)
      \<Rightarrow> bool"
 
-(* FIXME RT: tcb_faults currently unused, pending IPC donation redesign. *)
+definition is_blocked_on_send :: "thread_state \<Rightarrow> bool" where
+  "is_blocked_on_send st \<equiv> \<exists>ep sender_data. st = BlockedOnSend ep sender_data"
+
+(* FIXME RT: duplicates awaiting_reply, but differently *)
+definition is_blocked_on_reply :: "thread_state \<Rightarrow> bool" where
+  "is_blocked_on_reply st \<equiv> \<exists>reply. st = BlockedOnReply reply"
+
+definition is_blocked_on_recv_ntfn :: "thread_state \<Rightarrow> bool" where
+  "is_blocked_on_recv_ntfn st \<equiv>
+    (\<exists>ep reply_opt. st = BlockedOnReceive ep reply_opt) \<or> (\<exists>ntfn. st = BlockedOnNotification ntfn)"
+
+definition is_blocked_on_send_recv :: "thread_state \<Rightarrow> bool" where
+  "is_blocked_on_send_recv st \<equiv>
+    (\<exists>ep sender_data. st = BlockedOnSend ep sender_data) \<or> (\<exists>ep reply_opt. st = BlockedOnReceive ep reply_opt)"
+
+lemmas is_blocked_thread_state_defs
+  = is_blocked_on_send_def is_blocked_on_reply_def is_blocked_on_recv_ntfn_def
+    is_blocked_on_send_recv_def
+
+abbreviation blocked_on_send_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "blocked_on_send_tcb_at t s \<equiv> pred_map is_blocked_on_send (tcb_sts_of s) t"
+
+abbreviation blocked_on_reply_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "blocked_on_reply_tcb_at t s \<equiv> pred_map is_blocked_on_reply (tcb_sts_of s) t"
+
+abbreviation blocked_on_recv_ntfn_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "blocked_on_recv_ntfn_tcb_at t s \<equiv> pred_map is_blocked_on_recv_ntfn (tcb_sts_of s) t"
+
+abbreviation blocked_on_send_recv_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "blocked_on_send_recv_tcb_at t s \<equiv> pred_map is_blocked_on_send_recv (tcb_sts_of s) t"
+
+definition is_timeout_fault_opt :: "fault option \<Rightarrow> bool" where
+  "is_timeout_fault_opt \<equiv> case_option False is_timeout_fault"
+
+abbreviation fault_tcb_at' :: "(fault option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "fault_tcb_at' P t s \<equiv> pred_map P (tcb_faults_of s) t"
+
+abbreviation timeout_faulted_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "timeout_faulted_tcb_at \<equiv> fault_tcb_at' is_timeout_fault_opt"
+
+abbreviation valid_sender_sc_tcb_at_2 ::
+  "obj_ref \<Rightarrow> time \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> fault option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool"
+  where
+  "valid_sender_sc_tcb_at_2 t curtime tcb_scps tcb_faults sc_refill_cfgs \<equiv>
+    pred_map is_timeout_fault_opt tcb_faults t \<and> active_sc_tcb_at_pred tcb_scps sc_refill_cfgs t
+    \<or> released_if_bound_sc_tcb_at_2 t curtime tcb_scps sc_refill_cfgs"
+
+abbreviation valid_sender_sc_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "valid_sender_sc_tcb_at t s \<equiv> valid_sender_sc_tcb_at_2 t (cur_time s) (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)"
+
+\<comment> \<open>Sometimes useful for identifying blocked threads that must be released_if_bound_sc_tcb_at\<close>
+abbreviation requires_released_if_bound_sc_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "requires_released_if_bound_sc_tcb_at t s
+   \<equiv> blocked_on_recv_ntfn_tcb_at t s \<or> blocked_on_send_tcb_at t s \<and> \<not> timeout_faulted_tcb_at t s"
+
+(* FIXME RT: this is no longer a suitable name. *)
 definition released_ipc_queued_thread_2 :: "obj_ref \<Rightarrow> released_ipc_queues_t" where
   "released_ipc_queued_thread_2 t curtime tcb_sts tcb_scps tcb_faults sc_refill_cfgs \<equiv>
-    pred_map ipc_queued_thread_state tcb_sts t
-    \<longrightarrow> released_if_bound_sc_tcb_at_2 t curtime tcb_scps sc_refill_cfgs"
+    (pred_map is_blocked_on_recv_ntfn tcb_sts t \<longrightarrow> released_if_bound_sc_tcb_at_2 t curtime tcb_scps sc_refill_cfgs)
+    \<and> (pred_map is_blocked_on_send tcb_sts t \<longrightarrow> valid_sender_sc_tcb_at_2 t curtime tcb_scps tcb_faults sc_refill_cfgs)
+    \<and> (pred_map is_blocked_on_reply tcb_sts t \<longrightarrow> active_if_bound_sc_tcb_at_2 t tcb_scps sc_refill_cfgs)"
 
 definition released_ipc_queues_2 ::"released_ipc_queues_t" where
   "released_ipc_queues_2 curtime tcb_sts tcb_scps tcb_faults sc_refill_cfgs \<equiv>
@@ -2492,18 +2559,39 @@ abbreviation released_ipc_queues :: "'z::state_ext state \<Rightarrow> bool" whe
 
 lemmas released_ipc_queues_defs = released_ipc_queued_thread_2_def released_ipc_queues_2_def
 
-lemma released_ipc_queuesD:
+lemma released_ipc_queues_blocked_on_recv_ntfn_D:
   assumes "released_ipc_queues_2 curtime tcb_sts tcb_scps tcb_faults sc_refill_cfgs"
-  assumes "pred_map ipc_queued_thread_state tcb_sts t"
+  assumes "pred_map is_blocked_on_recv_ntfn tcb_sts t"
   shows "released_if_bound_sc_tcb_at_2 t curtime tcb_scps sc_refill_cfgs"
   using assms unfolding released_ipc_queues_defs by simp
 
+lemma released_ipc_queues_blocked_on_send_D:
+  assumes "released_ipc_queues_2 curtime tcb_sts tcb_scps tcb_faults sc_refill_cfgs"
+  assumes "pred_map is_blocked_on_send tcb_sts t"
+  shows "valid_sender_sc_tcb_at_2 t curtime tcb_scps tcb_faults sc_refill_cfgs"
+  using assms unfolding released_ipc_queues_defs by simp
+
+lemma released_ipc_queues_blocked_on_reply_D:
+  assumes "released_ipc_queues_2 curtime tcb_sts tcb_scps tcb_faults sc_refill_cfgs"
+  assumes "pred_map is_blocked_on_reply tcb_sts t"
+  shows "active_if_bound_sc_tcb_at_2 t tcb_scps sc_refill_cfgs"
+  using assms unfolding released_ipc_queues_defs by simp
+
+\<comment> \<open>We limit this rule to two assumptions, so we can use as an elim! rule in clarsimp.\<close>
 lemma released_ipc_queuesE:
   assumes "released_ipc_queues_2 curtime tcb_sts tcb_scps tcb_faults sc_refill_cfgs"
-  assumes "\<And>t. pred_map ipc_queued_thread_state tcb_sts' t
-                \<longrightarrow> (pred_map ipc_queued_thread_state tcb_sts t
-                     \<longrightarrow> pred_map_eq None tcb_scps t \<or> released_sc_tcb_at_pred curtime tcb_scps sc_refill_cfgs t)
-                \<longrightarrow> pred_map_eq None tcb_scps' t \<or> released_sc_tcb_at_pred curtime' tcb_scps' sc_refill_cfgs' t"
+  assumes "\<And>t. (pred_map is_blocked_on_recv_ntfn tcb_sts' t
+                 \<longrightarrow> (pred_map is_blocked_on_recv_ntfn tcb_sts t
+                      \<longrightarrow> released_if_bound_sc_tcb_at_2 t curtime tcb_scps sc_refill_cfgs)
+                 \<longrightarrow> released_if_bound_sc_tcb_at_2 t curtime' tcb_scps' sc_refill_cfgs')
+                \<and> (pred_map is_blocked_on_send tcb_sts' t
+                   \<longrightarrow> (pred_map is_blocked_on_send tcb_sts t
+                        \<longrightarrow> valid_sender_sc_tcb_at_2 t curtime tcb_scps tcb_faults sc_refill_cfgs)
+                   \<longrightarrow> valid_sender_sc_tcb_at_2 t curtime' tcb_scps' tcb_faults' sc_refill_cfgs')
+                \<and> (pred_map is_blocked_on_reply tcb_sts' t
+                   \<longrightarrow> (pred_map is_blocked_on_reply tcb_sts t
+                        \<longrightarrow> active_if_bound_sc_tcb_at_2 t tcb_scps sc_refill_cfgs)
+                   \<longrightarrow> active_if_bound_sc_tcb_at_2 t tcb_scps' sc_refill_cfgs')"
   shows "released_ipc_queues_2 curtime' tcb_sts' tcb_scps' tcb_faults' sc_refill_cfgs'"
   using assms by (auto simp: released_ipc_queues_defs)
 
@@ -2525,12 +2613,12 @@ abbreviation non_faulted_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow>
 
 \<comment> \<open>Lifting rules for IPC queue schedulability.\<close>
 lemma released_ipc_queue_lift_pre_conj:
-  assumes "\<lbrace>\<lambda>s. \<not> P (st_tcb_at ipc_queued_thread_state t s) \<and> R s\<rbrace>
-           f \<lbrace>\<lambda>rv s. \<not> P (st_tcb_at ipc_queued_thread_state t s)\<rbrace>"
-  assumes "\<lbrace>\<lambda>s. \<not> P (non_faulted_tcb_at t s) \<and> R s\<rbrace>
-           f \<lbrace>\<lambda>rv s. \<not> P (non_faulted_tcb_at t s)\<rbrace>"
-  assumes "\<lbrace>\<lambda>s. P (bound_sc_tcb_at (\<lambda>sc. sc = None) t s) \<and> R s\<rbrace>
-           f \<lbrace>\<lambda>rv s. P (bound_sc_tcb_at (\<lambda>sc. sc = None) t s)\<rbrace>"
+  assumes "\<lbrace>\<lambda>s. \<not> P (blocked_on_send_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P (blocked_on_send_tcb_at t s)\<rbrace>"
+  assumes "\<lbrace>\<lambda>s. \<not> P (blocked_on_recv_ntfn_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P (blocked_on_recv_ntfn_tcb_at t s)\<rbrace>"
+  assumes "\<lbrace>\<lambda>s. \<not> P (blocked_on_reply_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rf s. \<not> P (blocked_on_reply_tcb_at t s)\<rbrace>"
+  assumes "\<lbrace>\<lambda>s. P (timeout_faulted_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (timeout_faulted_tcb_at t s)\<rbrace>"
+  assumes "\<lbrace>\<lambda>s. P (pred_map_eq None (tcb_scps_of s) t) \<and> R s\<rbrace>
+           f \<lbrace>\<lambda>rf s. P (pred_map_eq None (tcb_scps_of s) t)\<rbrace>"
   assumes "\<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace>
            f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
   assumes "\<lbrace>\<lambda>s. P (budget_ready t s) \<and> R s\<rbrace>
@@ -2540,19 +2628,18 @@ lemma released_ipc_queue_lift_pre_conj:
   shows "\<lbrace>\<lambda>s. P (released_ipc_queued_thread t s) \<and> R s\<rbrace>
          f \<lbrace>\<lambda>rf s. P (released_ipc_queued_thread t s)\<rbrace>"
   unfolding released_ipc_queued_thread_2_def released_sc_tcb_at_def
-  by (intro hoare_vcg_imp_lift_N_pre_conj hoare_vcg_disj_lift_N_pre_conj hoare_vcg_conj_lift_N_pre_conj
-            assms[unfolded obj_at_kh_kheap_simps pred_map_eq_normalise])
+  by (intro hoare_vcg_imp_lift_N_pre_conj hoare_vcg_disj_lift_N_pre_conj hoare_vcg_conj_lift_N_pre_conj assms)
 
 lemmas released_ipc_queue_lift =
   released_ipc_queue_lift_pre_conj[where R=\<top>, simplified]
 
 lemma released_ipc_queues_lift_pre_conj:
-  assumes "\<And>t. \<lbrace>\<lambda>s. \<not> P (st_tcb_at ipc_queued_thread_state t s) \<and> R s\<rbrace>
-                f \<lbrace>\<lambda>rv s. \<not> P (st_tcb_at ipc_queued_thread_state t s)\<rbrace>"
-  assumes "\<And>t. \<lbrace>\<lambda>s. \<not> P (non_faulted_tcb_at t s) \<and> R s\<rbrace>
-                f \<lbrace>\<lambda>rv s. \<not> P (non_faulted_tcb_at t s)\<rbrace>"
-  assumes "\<And>t. \<lbrace>\<lambda>s. P (bound_sc_tcb_at (\<lambda>sc. sc = None) t s) \<and> R s\<rbrace>
-                f \<lbrace>\<lambda>rv s. P (bound_sc_tcb_at (\<lambda>sc. sc = None) t s)\<rbrace>"
+  assumes "\<And>t. \<lbrace>\<lambda>s. \<not> P (blocked_on_send_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P (blocked_on_send_tcb_at t s)\<rbrace>"
+  assumes "\<And>t. \<lbrace>\<lambda>s. \<not> P (blocked_on_recv_ntfn_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P (blocked_on_recv_ntfn_tcb_at t s)\<rbrace>"
+  assumes "\<And>t. \<lbrace>\<lambda>s. \<not> P (blocked_on_reply_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rf s. \<not> P (blocked_on_reply_tcb_at t s)\<rbrace>"
+  assumes "\<And>t. \<lbrace>\<lambda>s. P (timeout_faulted_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (timeout_faulted_tcb_at t s)\<rbrace>"
+  assumes "\<And>t. \<lbrace>\<lambda>s. P (pred_map_eq None (tcb_scps_of s) t) \<and> R s\<rbrace>
+                f \<lbrace>\<lambda>rf s. P (pred_map_eq None (tcb_scps_of s) t)\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace>
                 f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. P (budget_ready t s) \<and> R s\<rbrace>
@@ -3087,8 +3174,16 @@ abbreviation sc_scheduler_act_not :: "obj_ref \<Rightarrow> 'z state \<Rightarro
 abbreviation ipc_queued_thread :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "ipc_queued_thread t s \<equiv> pred_map ipc_queued_thread_state (tcb_sts_of s) t"
 
-lemma released_ipc_queuesE1:
-  "released_ipc_queues s \<Longrightarrow> ipc_queued_thread t s \<Longrightarrow> released_if_bound_sc_tcb_at t s"
+lemma released_ipc_queues_blocked_on_recv_ntfn_E1:
+  "released_ipc_queues s \<Longrightarrow> blocked_on_recv_ntfn_tcb_at t s \<Longrightarrow> released_if_bound_sc_tcb_at t s"
+  by (clarsimp simp: released_ipc_queues_defs)
+
+lemma released_ipc_queues_blocked_on_send_E1:
+  "released_ipc_queues s \<Longrightarrow> blocked_on_send_tcb_at t s \<Longrightarrow> valid_sender_sc_tcb_at t s"
+  by (clarsimp simp: released_ipc_queues_defs)
+
+lemma released_ipc_queues_blocked_on_reply_E1:
+  "released_ipc_queues s \<Longrightarrow> blocked_on_reply_tcb_at t s \<Longrightarrow> active_if_bound_sc_tcb_at t s"
   by (clarsimp simp: released_ipc_queues_defs)
 
 abbreviation not_ipc_queued_thread :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
@@ -3205,7 +3300,7 @@ lemmas ct_not_in_release_q_lift = hoare_lift_Pf2[where f="cur_thread" and P="not
 lemmas sch_act_sane_lift = hoare_lift_Pf2[where f="cur_thread" and P="scheduler_act_not"]
 
 lemma valid_ready_qs_lift_pre_conj:
-  assumes a: "\<And>t. \<lbrace>\<lambda>s. st_tcb_at runnable t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at runnable t s\<rbrace>"
+  assumes a: "\<And>t. \<lbrace>\<lambda>s. pred_map runnable (tcb_sts_of s) t \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. pred_map runnable (tcb_sts_of s) t\<rbrace>"
   assumes b: "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
   assumes c: "\<And>t. \<lbrace>\<lambda>s. budget_ready t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_ready t s\<rbrace>"
   assumes d: "\<And>t. \<lbrace>\<lambda>s. budget_sufficient t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_sufficient t s\<rbrace>"
@@ -3266,7 +3361,7 @@ lemma sorted_release_q_lift:
   by (wpsimp simp: sorted_release_q_def wp: hoare_lift_Pf_pre_conj[where f="\<lambda>s. release_queue s", OF r c])
 
 lemma valid_release_q_lift_pre_conj:
-  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
+  assumes "\<And>P t. \<lbrace>\<lambda>s. pred_map P (tcb_sts_of s) t \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. pred_map P (tcb_sts_of s) t\<rbrace>"
   assumes a': "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
       and c: "\<And>P. \<lbrace>\<lambda>s. P (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
       and f: "\<And>P. \<lbrace>\<lambda>s. P (tcb_ready_times_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (tcb_ready_times_of s)\<rbrace>"
@@ -3278,7 +3373,7 @@ lemma valid_release_q_lift_pre_conj:
 lemmas valid_release_q_lift = valid_release_q_lift_pre_conj[where R = \<top>, simplified]
 
 lemma valid_blocked_lift_pre_conj:
-  assumes a: "\<And>t. \<lbrace>\<lambda>s. \<not> st_tcb_at active t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> st_tcb_at active t s\<rbrace>"
+  assumes a: "\<And>t. \<lbrace>\<lambda>s. \<not> pred_map active (tcb_sts_of s) t \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> pred_map active (tcb_sts_of s) t\<rbrace>"
       and c: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
       and e: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
       and d: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
@@ -3327,7 +3422,7 @@ lemma ct_in_cur_domain_lift_pre_conj:
 lemmas ct_in_cur_domain_lift = ct_in_cur_domain_lift_pre_conj[where R=\<top>, simplified]
 
 lemma weak_valid_sched_action_lift_pre_conj:
-  assumes ts: "\<And>t. \<lbrace>\<lambda>s. st_tcb_at runnable t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at runnable t s\<rbrace>"
+  assumes ts: "\<And>t. \<lbrace>\<lambda>s. pred_map runnable (tcb_sts_of s) t \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. pred_map runnable (tcb_sts_of s) t\<rbrace>"
               "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
               "\<And>t. \<lbrace>\<lambda>s. budget_ready t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_ready t s\<rbrace>"
               "\<And>t. \<lbrace>\<lambda>s. budget_sufficient t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_sufficient t s\<rbrace>"
@@ -3357,7 +3452,7 @@ lemma switch_in_cur_domain_lift_pre_conj:
 lemmas switch_in_cur_domain_lift = switch_in_cur_domain_lift_pre_conj[where R = \<top>, simplified]
 
 lemma valid_sched_action_lift_pre_conj:
-  assumes ts: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
+  assumes ts: "\<And>Q t. \<lbrace>\<lambda>s. pred_map Q (tcb_sts_of s) t \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. pred_map Q (tcb_sts_of s) t\<rbrace>"
               "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
               "\<And>t. \<lbrace>\<lambda>s. budget_ready t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_ready t s\<rbrace>"
               "\<And>t. \<lbrace>\<lambda>s. budget_sufficient t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_sufficient t s\<rbrace>"
@@ -3390,7 +3485,7 @@ lemma active_reply_scs_lift_pre_conj:
   unfolding active_reply_scs_2_def by (intro hoare_vcg_all_lift_N_pre_conj assms)
 
 lemma valid_sched_lift_pre_conj:
-  assumes "\<And>N P t. \<lbrace>\<lambda>s. N (st_tcb_at P t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (st_tcb_at P t s)\<rbrace>"
+  assumes "\<And>N P t. \<lbrace>\<lambda>s. N (pred_map P (tcb_sts_of s) t) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (pred_map P (tcb_sts_of s) t)\<rbrace>"
   assumes "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) t \<and> R s\<rbrace>
                f \<lbrace>\<lambda>rv s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) t\<rbrace>"
@@ -3406,8 +3501,8 @@ lemma valid_sched_lift_pre_conj:
   assumes "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (tcb_ready_times_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (tcb_ready_times_of s)\<rbrace>"
-  assumes "\<And>t. \<lbrace>\<lambda>s. bound_sc_tcb_at (\<lambda>sc. sc = None) t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. bound_sc_tcb_at (\<lambda>sc. sc = None) t\<rbrace>"
-  assumes "\<And>t. \<lbrace>\<lambda>s. \<not> non_faulted_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> non_faulted_tcb_at t s\<rbrace>"
+  assumes "\<And>t. \<lbrace>\<lambda>s. pred_map_eq None (tcb_scps_of s) t \<and> R s\<rbrace> f \<lbrace>\<lambda>rf s. pred_map_eq None (tcb_scps_of s) t\<rbrace>"
+  assumes "\<And>t. \<lbrace>\<lambda>s. timeout_faulted_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. timeout_faulted_tcb_at t s\<rbrace>"
   assumes "\<And>scp. \<lbrace>\<lambda>s. active_if_reply_sc_at scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_if_reply_sc_at scp s\<rbrace>"
   assumes "\<lbrace>\<lambda>s. valid_machine_time s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. valid_machine_time s\<rbrace>"
     shows "\<lbrace>\<lambda>s. valid_sched s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
