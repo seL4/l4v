@@ -30,7 +30,7 @@ This module uses the C preprocessor to select a target architecture.
 >         archThreadSet, archThreadGet,
 >         decodeSchedContextInvocation, decodeSchedControlInvocation,
 >         checkBudget, chargeBudget, checkBudgetRestart, mcsIRQ, commitTime, awaken, switchSchedContext,
->         replaceAt, tcbEPAppend, tcbEPDequeue, setTimeArg
+>         replaceAt, tcbEPAppend, tcbEPDequeue, setTimeArg, isBlocked
 >     ) where
 
 \begin{impdetails}
@@ -660,6 +660,17 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >         ThreadCap { capTCBPtr = ptr } -> return $ (ptr, domain)
 >         _ -> throw InvalidArgument { invalidArgumentNumber = 1 }
 
+> isBlocked :: PPtr TCB -> Kernel Bool
+> isBlocked thread = do
+>         state <- getThreadState thread
+>         return $ case state of
+>             Inactive -> True
+>             BlockedOnReceive {} -> True
+>             BlockedOnSend {} -> True
+>             BlockedOnNotification {} -> True
+>             BlockedOnReply _ -> True
+>             _ -> False
+
 > decodeSchedContext_Bind :: PPtr SchedContext -> [Capability] ->
 >     KernelF SyscallError SchedContextInvocation
 > decodeSchedContext_Bind scPtr excaps = do
@@ -671,6 +682,9 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >         ThreadCap tcbPtr -> do
 >             scPtrOpt <- withoutFailure $ threadGet tcbSchedContext tcbPtr
 >             when (scPtrOpt /= Nothing) $ throw IllegalOperation
+>             released <- withoutFailure $ scReleased scPtr
+>             blocked <- withoutFailure $ isBlocked tcbPtr
+>             when (blocked && not released) $ throw IllegalOperation
 >         NotificationCap ntfnPtr _ _ _ -> do
 >             scPtrOpt <- withoutFailure $ liftM ntfnSc $ getNotification ntfnPtr
 >             when (scPtrOpt /= Nothing) $ throw IllegalOperation
@@ -1001,7 +1015,7 @@ On some architectures, the thread context may include registers that may be modi
 >             refills' <- return $ replaceAt headIndex refills (rfhd { rAmount = rAmount rfhd + rAmount rftl })
 >             refills'' <- return $ replaceAt tailIndex refills' (rftl { rAmount = 0 })
 >             setRefills scPtr refills''
->         else refillBudgetCheck consumed capacity
+>         else refillBudgetCheck consumed
 >     sc' <- getSchedContext scPtr
 >     setSchedContext scPtr (sc' { scConsumed = scConsumed sc' + consumed })
 >     setConsumedTime 0

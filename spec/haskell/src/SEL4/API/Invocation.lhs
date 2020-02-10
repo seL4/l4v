@@ -111,11 +111,11 @@ The following data type defines the set of possible TCB invocation operations. T
 
 > data SchedControlInvocation
 >         = InvokeSchedControlConfigure {
->             scPtr :: PPtr SchedContext,
->             budget :: Ticks,
->             period :: Ticks,
->             nRefills :: Int,
->             badge :: Word }
+>             schedControlScPtr :: PPtr SchedContext,
+>             schedControlBudget :: Ticks,
+>             schedControlPeriod :: Ticks,
+>             schedControlNRefills :: Int,
+>             schedControlBadge :: Word }
 >         deriving Show
 
 \subsubsection{CNode Invocations}

@@ -205,6 +205,7 @@ list of pointers to waiting threads;
 
 > data SchedContext = SchedContext {
 >     scPeriod :: Ticks,
+>     scBudget :: Ticks,
 >     scConsumed :: Ticks,
 >     scTCB :: Maybe (PPtr TCB),
 >     scReply :: Maybe (PPtr Reply),
@@ -213,7 +214,7 @@ list of pointers to waiting threads;
 >     scYieldFrom :: Maybe (PPtr TCB),
 >     scRefillMax :: Int,
 >     scRefillHead :: Int,
->     scRefillTail :: Int,
+>     scRefillCount :: Int,
 >     scRefills :: [Refill]}
 
 > data Reply = Reply {

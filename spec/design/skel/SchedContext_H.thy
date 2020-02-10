@@ -31,37 +31,6 @@ requalify_consts
   getCurrentTime
 end
 
-#INCLUDE_HASKELL SEL4/Object/SchedContext.lhs bodies_only ONLY scheduleUsed mergeRefill canMergeRefill
-
-fun
-  refillsMergePrefix :: "refill list \<Rightarrow> refill list"
-where
-  "refillsMergePrefix [] = []"
-| "refillsMergePrefix [r] = [r]"
-| "refillsMergePrefix (r1 # r2 # rs) =
-     (if canMergeRefill r1 r2
-      then refillsMergePrefix (mergeRefill r1 r2 # rs)
-      else r1 # r2 # rs)"
-
-fun
-  minBudgetMerge :: "bool \<Rightarrow> refill list \<Rightarrow> refill list"
-where
-  "minBudgetMerge _ [] = []"
-| "minBudgetMerge _ [r] = [r]"
-| "minBudgetMerge full (r0#r1#rs) = (if (rAmount r0 < minBudget \<or> full)
-     then minBudgetMerge False (r1\<lparr> rAmount := rAmount r1 + rAmount r0 \<rparr> # rs)
-     else (r0#r1#rs))"
-
-function
-  refillsBudgetCheck :: "ticks \<Rightarrow> ticks \<Rightarrow> refill list \<Rightarrow> ticks \<times> refill list"
-where
-  "refillsBudgetCheck period usage [] = (usage, [])"
-| "refillsBudgetCheck period usage (r#rs) = (if rAmount r \<le> usage \<and> 0 < rAmount r
-     then refillsBudgetCheck period (usage - rAmount r)
-                                         (scheduleUsed rs (r\<lparr>rTime := rTime r + period\<rparr>))
-     else (usage, r#rs))"
-  by pat_completeness auto
-
-#INCLUDE_HASKELL SEL4/Object/SchedContext.lhs bodies_only NOT scheduleUsed mergeRefill canMergeRefill refillsMergePrefix minBudgetMerge refillsBudgetCheck
+#INCLUDE_HASKELL SEL4/Object/SchedContext.lhs bodies_only
 
 end

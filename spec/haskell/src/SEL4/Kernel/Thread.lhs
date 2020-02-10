@@ -104,17 +104,6 @@ The "activateThread" function is used to prepare a thread to run. If the thread 
 
 The following functions are used by the scheduler to determine whether a particular thread is ready to be scheduled, and whether it is ready to run.
 
-> isBlocked :: PPtr TCB -> Kernel Bool
-> isBlocked thread = do
->         state <- getThreadState thread
->         return $ case state of
->             Inactive -> True
->             BlockedOnReceive {} -> True
->             BlockedOnSend {} -> True
->             BlockedOnNotification {} -> True
->             BlockedOnReply _ -> True
->             _ -> False
-
 Note that the idle thread is not considered runnable; this is to prevent it being inserted in the scheduler queue.
 
 > isRunnable :: PPtr TCB -> Kernel Bool
