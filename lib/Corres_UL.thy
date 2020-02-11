@@ -896,6 +896,12 @@ lemma corres_cases:
   \<Longrightarrow> corres_underlying sr nf nf' r (P and Q) (P' and Q') f g"
   by (simp add: corres_underlying_def) blast
 
+lemma corres_cases':
+  "\<lbrakk> R \<Longrightarrow> corres_underlying sr nf nf' r P P' f g; \<not>R \<Longrightarrow> corres_underlying sr nf nf' r Q Q' f g \<rbrakk>
+  \<Longrightarrow> corres_underlying sr nf nf' r (\<lambda>s. (R \<longrightarrow> P s) \<and> (\<not>R \<longrightarrow> Q s))
+                                   (\<lambda>s. (R \<longrightarrow> P' s) \<and> (\<not>R \<longrightarrow> Q' s)) f g"
+  by (cases R; simp)
+
 lemma corres_alternate1:
   "corres_underlying sr nf nf' r P P' a c \<Longrightarrow> corres_underlying sr nf nf' r P P' (a OR b) c"
   apply (simp add: corres_underlying_def alternative_def)
