@@ -3570,6 +3570,11 @@ lemma from_bool_to_bool_iff:
   "w = from_bool b \<longleftrightarrow> to_bool w = b \<and> (w = 0 \<or> w = 1)"
   by (cases b) (auto simp: from_bool_def to_bool_def)
 
+lemma from_bool_eqI:
+  "from_bool x = from_bool y \<Longrightarrow> x = y"
+  unfolding from_bool_def
+  by (auto split: bool.splits)
+
 lemma word_rsplit_upt:
   "\<lbrakk> size x = LENGTH('a :: len) * n; n \<noteq> 0 \<rbrakk>
     \<Longrightarrow> word_rsplit x = map (\<lambda>i. ucast (x >> i * len_of TYPE ('a)) :: 'a word) (rev [0 ..< n])"
