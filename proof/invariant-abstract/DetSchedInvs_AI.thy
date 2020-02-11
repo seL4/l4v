@@ -543,6 +543,46 @@ lemmas all_simps = pred_map_simps pred_map_upds upd simps upd_idem
 
 end
 
+locale opt_map_opt_map_cons_def_locale =
+  c: opt_map_cons_def_locale ref_type k c C +
+  p: opt_map_cons_def_locale ref_type f p F
+  for ref_type :: "'ref itself"
+  and k :: "'a \<rightharpoonup> 'b"
+  and c :: "('ref \<rightharpoonup> 'a) \<Rightarrow> ('ref \<rightharpoonup> 'b)"
+  and C :: "'b \<Rightarrow> 'a"
+  and f :: "'b \<rightharpoonup> 'c"
+  and F :: "'c \<Rightarrow> 'b"
+  and p :: "('ref \<rightharpoonup> 'b) \<Rightarrow> ('ref \<rightharpoonup> 'c)"
+begin
+
+lemmas pred_map_upds =
+  pred_map_upds[where m="p (c m)" for m]
+
+lemma pred_map_simps:
+  "pred_map_eq v (p (c m)) = (\<lambda>x. m x = Some (C (F v)))"
+  "pred_map P (p (c m)) = (\<lambda>x. \<exists>y. m x = Some (C (F y)) \<and> P y)"
+  by (auto simp: p.pred_map_simps c.simps c.k_Some)+
+
+lemma simps:
+  shows None: "p (c m) x = None \<longleftrightarrow> (\<forall>b. m x \<noteq> Some (C (F b)))"
+    and Some: "p (c m) x = Some v \<longleftrightarrow> (m x = Some (C (F v)))"
+  by (auto simp add: p.simps c.simps)
+
+lemma upd:
+  "p (c (\<lambda>r. if r = ref then v else m r))
+   = (\<lambda>x. if x = ref then Option.bind v (\<lambda>y. Option.bind (k y) f) else p (c m) x)"
+  by (auto simp: c.upd p.upd split: option.splits if_splits)
+
+lemma upd_idem:
+  assumes "case_option None f (case_option None k (m ref)) = v"
+  shows "(if x = ref then v else p (c m) x) = p (c m) x"
+  by (auto simp: p.proj_def c.proj_def assms map_project_def opt_map_def)
+
+lemmas proj_def = p.proj_def
+lemmas all_simps = pred_map_simps pred_map_upds upd simps upd_idem
+
+end
+
 \<comment> \<open>Project threads from the kernel heap\<close>
 
 definition tcb_of :: "kernel_object \<rightharpoonup> tcb" where
@@ -794,6 +834,91 @@ global_interpretation sc_replies:
   map_project_opt_map_cons2_def_locale _ sc_of scs_of_kh SchedContext sc_replies sc_replies_of_scs
   using sc_replies_of_scs_def by unfold_locales
 
+\<comment> \<open>Endpoints\<close>
+
+\<comment> \<open>Project endpoints from the kernel heap\<close>
+
+definition ep_of :: "kernel_object \<rightharpoonup> endpoint" where
+  "ep_of ko \<equiv> case ko of Endpoint endpoint \<Rightarrow> Some endpoint | _ \<Rightarrow> None"
+
+definition send_q_of :: "endpoint \<rightharpoonup> obj_ref list" where
+  "send_q_of endpoint \<equiv> case endpoint of SendEP q  \<Rightarrow> Some q | _ \<Rightarrow> None"
+
+definition recv_q_of :: "endpoint \<rightharpoonup> obj_ref list" where
+  "recv_q_of endpoint \<equiv> case endpoint of RecvEP q  \<Rightarrow> Some q | _ \<Rightarrow> None"
+
+lemma ep_of_simps:
+  "ep_of (SchedContext sc n) = None"
+  "ep_of (CNode n cnode) = None"
+  "ep_of (TCB tcb) = None"
+  "ep_of (Endpoint endpoint) = Some endpoint"
+  "ep_of (Notification ntfn) = None"
+  "ep_of (Reply reply) = None"
+  "ep_of (ArchObj aobj) = None"
+  "send_q_of IdleEP = None"
+  "send_q_of (SendEP q) = Some q"
+  "send_q_of (RecvEP q) = None"
+  "recv_q_of IdleEP = None"
+  "recv_q_of (SendEP q) = None"
+  "recv_q_of (RecvEP q) = Some q"
+  by (auto simp: ep_of_def send_q_of_def recv_q_of_def)
+
+lemma ep_of_Some:
+  "ep_of ko = Some ep \<longleftrightarrow> ko = Endpoint ep"
+  by (simp add: ep_of_def split: kernel_object.splits)
+
+lemma ep_of_None:
+  "ep_of ko = None \<longleftrightarrow> (\<forall>ep. ko \<noteq> Endpoint ep)"
+  by (simp add: ep_of_def split: kernel_object.splits)
+
+lemma send_q_of_Some:
+  "send_q_of ep = Some q \<longleftrightarrow> ep = SendEP q"
+  by (simp add: send_q_of_def split: endpoint.splits)
+
+lemma send_q_of_None:
+  "send_q_of ep = None \<longleftrightarrow> (\<forall>q. ep \<noteq> SendEP q)"
+  by (simp add: send_q_of_def split: endpoint.splits)
+
+lemma recv_q_of_Some:
+  "recv_q_of ep = Some q \<longleftrightarrow> ep = RecvEP q"
+  by (simp add: recv_q_of_def split: endpoint.splits)
+
+lemma recv_q_of_None:
+  "recv_q_of ep = None \<longleftrightarrow> (\<forall>q. ep \<noteq> RecvEP q)"
+  by (simp add: recv_q_of_def split: endpoint.splits)
+
+definition eps_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> 'obj_ref \<rightharpoonup> endpoint" where
+  "eps_of_kh kh \<equiv> kh |> ep_of"
+
+abbreviation eps_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> endpoint" where
+  "eps_of s \<equiv> eps_of_kh (kheap s)"
+
+lemmas eps_of_def = eps_of_kh_def[of "kheap s" for s :: "'z state"]
+
+global_interpretation ep_heap: opt_map_cons_def_locale _ ep_of eps_of_kh Endpoint
+  using eps_of_kh_def ep_of_None ep_of_Some by unfold_locales
+
+\<comment> \<open>Project endpoint queues\<close>
+
+definition ep_send_qs_of_eps :: "('obj_ref \<rightharpoonup> endpoint) \<Rightarrow> 'obj_ref \<rightharpoonup> obj_ref list" where
+  "ep_send_qs_of_eps eps \<equiv> eps |> send_q_of"
+
+definition ep_recv_qs_of_eps :: "('obj_ref \<rightharpoonup> endpoint) \<Rightarrow> 'obj_ref \<rightharpoonup> obj_ref list" where
+  "ep_recv_qs_of_eps eps \<equiv> eps |> recv_q_of"
+
+abbreviation "ep_send_qs_of_kh kh \<equiv> ep_send_qs_of_eps (eps_of_kh kh)"
+abbreviation "ep_send_qs_of s \<equiv> ep_send_qs_of_kh (kheap s)"
+
+abbreviation "ep_recv_qs_of_kh kh \<equiv> ep_recv_qs_of_eps (eps_of_kh kh)"
+abbreviation "ep_recv_qs_of s \<equiv> ep_recv_qs_of_kh (kheap s)"
+
+global_interpretation ep_send_qs:  opt_map_opt_map_cons_def_locale _ ep_of eps_of_kh Endpoint send_q_of SendEP ep_send_qs_of_eps
+  using ep_send_qs_of_eps_def send_q_of_None send_q_of_Some by unfold_locales
+
+global_interpretation ep_recv_qs:
+  opt_map_opt_map_cons_def_locale _ ep_of eps_of_kh Endpoint recv_q_of RecvEP ep_recv_qs_of_eps
+  using ep_recv_qs_of_eps_def recv_q_of_None recv_q_of_Some by unfold_locales
+
 \<comment> \<open>Heap simplification rules\<close>
 
 lemmas vs_pred_map_simps =
@@ -807,6 +932,9 @@ lemmas vs_pred_map_simps =
   sc_refill_cfgs.pred_map_simps
   sc_tcbs.pred_map_simps
   sc_replies.pred_map_simps
+  ep_heap.pred_map_simps
+  ep_send_qs.pred_map_simps
+  ep_recv_qs.pred_map_simps
   tcb_heap.pred_map_upds
   tcb_sts.pred_map_upds
   tcb_scps.pred_map_upds
@@ -816,12 +944,16 @@ lemmas vs_pred_map_simps =
   sc_refill_cfgs.pred_map_upds
   sc_tcbs.pred_map_upds
   sc_replies.pred_map_upds
+  ep_heap.pred_map_upds
+  ep_send_qs.pred_map_upds
+  ep_recv_qs.pred_map_upds
   pred_map_eq[where m="kheap s" for s :: "'z state"]
   pred_map_def[where m="kheap s" for s :: "'z state"]
 
 lemmas vs_heap_simps =
   tcb_of_simps
   sc_of_simps
+  ep_of_simps
   tcb_heap.simps
   tcb_sts.simps
   tcb_scps.simps
@@ -831,6 +963,9 @@ lemmas vs_heap_simps =
   sc_refill_cfgs.simps
   sc_tcbs.simps
   sc_replies.simps
+  ep_heap.simps
+  ep_send_qs.simps
+  ep_recv_qs.simps
 
 lemmas vs_proj_defs =
   tcb_heap.proj_def
@@ -842,6 +977,9 @@ lemmas vs_proj_defs =
   sc_refill_cfgs.proj_def
   sc_tcbs.proj_def
   sc_replies.proj_def
+  ep_heap.proj_def
+  ep_send_qs.proj_def
+  ep_recv_qs.proj_def
 
 lemmas vs_proj_defsym = vs_proj_defs[symmetric]
 
@@ -853,6 +991,8 @@ lemmas vs_upds =
   sc_refill_cfgs.upd
   sc_tcbs.upd
   sc_replies.upd
+  ep_send_qs.upd
+  ep_recv_qs.upd
 
 lemmas vs_upd_idems =
   tcb_sts.upd_idem
@@ -862,6 +1002,8 @@ lemmas vs_upd_idems =
   sc_refill_cfgs.upd_idem
   sc_tcbs.upd_idem
   sc_replies.upd_idem
+  ep_send_qs.upd_idem
+  ep_recv_qs.upd_idem
 
 lemmas vs_all_heap_simps = vs_pred_map_simps vs_upds vs_heap_simps vs_upd_idems
 
@@ -1494,18 +1636,21 @@ abbreviation valid_sched_pred :: "valid_sched_t \<Rightarrow> 'z::state_ext stat
           (sc_refill_cfgs_of s) (sc_replies_of s)"
 
 type_synonym valid_sched_strong_t
-  = "time \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> valid_sched_t"
+  = "time \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref list)
+           \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> valid_sched_t"
 
 \<comment> \<open>Sometimes it's useful to prove preservation of some additional projections,
     even though they are not used in valid_sched.\<close>
 abbreviation valid_sched_pred_strong :: "valid_sched_strong_t \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_sched_pred_strong P
-   \<equiv> \<lambda>s. valid_sched_pred (P (consumed_time s) (cur_sc s) (sc_tcbs_of s)) s"
+   \<equiv> \<lambda>s. valid_sched_pred (P (consumed_time s) (cur_sc s) (ep_send_qs_of s)
+                              (ep_recv_qs_of s) (sc_tcbs_of s)) s"
 
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_pred_strengthen :: "valid_sched_t \<Rightarrow> valid_sched_strong_t" where
-  "valid_sched_pred_strengthen P _ _ _ \<equiv> P"
+  "valid_sched_pred_strengthen P _ _ _ _ _ \<equiv> P"
 
+(* FIXME RT: delete?
 lemma valid_sched_pred_lift_f:
   assumes a: "\<And>P. \<lbrace>\<lambda>s. P (a (cur_time s)) \<and> R s\<rbrace> m \<lbrace>\<lambda>rv s. P (cur_time s)\<rbrace>"
   assumes b: "\<And>P. \<lbrace>\<lambda>s. P (b (cur_domain s)) \<and> R s\<rbrace> m \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
@@ -1567,6 +1712,7 @@ lemma valid_sched_pred_lift':
   assumes "\<And>N P scp. \<lbrace>\<lambda>s. N (sc_replies_sc_at P scp s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (sc_replies_sc_at P scp s)\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_sched_pred P s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_sched_pred P\<rbrace>"
   by (rule valid_sched_pred_lift; intro assms valid_sched_heap_proj_lifts)
+*)
 
 \<comment> \<open>do_machine_op\<close>
 
