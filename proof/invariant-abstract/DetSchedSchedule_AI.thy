@@ -8782,7 +8782,6 @@ lemma cur_sc_bounded_release_helper:
 
 lemma refill_budget_check_active_sc_valid_refills:
   "\<lbrace>active_sc_valid_refills
-    and cur_sc_active
     and (\<lambda>s. (\<forall>sc. (\<exists>n. kheap s (cur_sc s) = Some (SchedContext sc n)) \<longrightarrow>
                       (sc_refill_ready (cur_time s) sc \<longrightarrow>
                        r_amount (refill_hd sc) < consumed) \<longrightarrow>
@@ -8799,7 +8798,6 @@ lemma refill_budget_check_active_sc_valid_refills:
    the cur_sc is ready at this point *)
 lemma commit_time_active_sc_valid_refills:
   "\<lbrace>active_sc_valid_refills
-    and cur_sc_active
     and cur_sc_in_release_q_imp_zero_consumed
     and (\<lambda>s. sc_not_in_release_q (cur_sc s) s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
     and current_time_bounded 2
@@ -8820,7 +8818,9 @@ lemma commit_time_active_sc_valid_refills:
                     refill_budget_check_active_sc_valid_refills)
       apply (wpsimp wp: assert_inv is_round_robin_wp)+
   apply (clarsimp simp: obj_at_def)
+  apply (subgoal_tac "cur_sc_active s")
   apply (fastforce intro: current_time_bounded_strengthen consumed_time_bounded_helper)
+  apply (clarsimp simp: vs_all_heap_simps)
   done
 
 lemma commit_time_valid_blocked_except_set[wp]:
@@ -8845,7 +8845,6 @@ lemma commit_time_active_reply_scs[wp]:
 lemma commit_time_valid_sched:
   "\<lbrace>valid_sched
     and simple_sched_action
-    and cur_sc_active
     and cur_sc_in_release_q_imp_zero_consumed
     and (\<lambda>s. sc_not_in_ready_q (cur_sc s) s)
     and (\<lambda>s. sc_not_in_release_q (cur_sc s) s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
@@ -9428,8 +9427,7 @@ lemma switch_sched_context_valid_sched:
      and (\<lambda>s. sc_not_in_release_q (cur_sc s) s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
      and (\<lambda>s. sc_not_in_ready_q (cur_sc s) s)
      and current_time_bounded 2
-     and consumed_time_bounded
-     and cur_sc_active\<rbrace>
+     and consumed_time_bounded\<rbrace>
    switch_sched_context
    \<lbrace>\<lambda>_. valid_sched :: ('state_ext state) \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: switch_sched_context_def assert_opt_def)
@@ -9460,8 +9458,7 @@ lemma sc_and_timer_valid_sched:
      and (\<lambda>s. sc_not_in_release_q (cur_sc s) s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
      and (\<lambda>s. sc_not_in_ready_q (cur_sc s) s)
      and current_time_bounded 2
-     and consumed_time_bounded
-     and cur_sc_active\<rbrace>
+     and consumed_time_bounded\<rbrace>
    sc_and_timer
    \<lbrace>\<lambda>_. valid_sched :: ('state_ext state) \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: sc_and_timer_def)
@@ -15145,8 +15142,7 @@ lemma charge_budget_active_sc_valid_refills:
     and (\<lambda>s. (\<forall>sc. (\<exists>n. kheap s (cur_sc s) = Some (SchedContext sc n)) \<longrightarrow>
                     (sc_refill_ready (cur_time s) sc \<longrightarrow>
                      r_amount (refill_hd sc) < consumed) \<longrightarrow>
-                    cur_sc_offset_ready consumed s))
-    and cur_sc_active\<rbrace>
+                    cur_sc_offset_ready consumed s))\<rbrace>
    charge_budget consumed canTimeout
    \<lbrace>\<lambda>_. active_sc_valid_refills :: 'state_ext state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
@@ -15252,7 +15248,6 @@ lemma check_budget_active_sc_valid_refills:
   "\<lbrace>active_sc_valid_refills
     and current_time_bounded 2
     and consumed_time_bounded
-    and cur_sc_active
     and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)\<rbrace>
    check_budget
    \<lbrace>\<lambda>_. active_sc_valid_refills::'state_ext state \<Rightarrow> _\<rbrace>"
@@ -15292,7 +15287,7 @@ lemma check_budget_valid_sched:
     and (\<lambda>s. cur_sc_blocked_is_offset (consumed_time s) s)
     and current_time_bounded 2
     and consumed_time_bounded
-    and cur_sc_active
+    and (\<lambda>s. cur_sc_tcb_are_bound s \<longrightarrow> cur_sc_active s)
     and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)\<rbrace>
    check_budget
    \<lbrace>\<lambda>_. valid_sched::'state_ext state \<Rightarrow> _\<rbrace>"
