@@ -270,8 +270,9 @@ definition
      thread_set_domain tptr new_dom;
      in_release_q \<leftarrow> gets $ in_release_queue tptr;
      sched \<leftarrow> is_schedulable tptr in_release_q;
-     when sched $ tcb_sched_action tcb_sched_enqueue tptr; \<comment> \<open>schedulable & dequeued\<close>
-     when (tptr = cur) $ reschedule_required
+     if tptr = cur
+     then reschedule_required
+     else when sched $ tcb_sched_action tcb_sched_enqueue tptr
    od"
 
 definition invoke_domain:: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad"
