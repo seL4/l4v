@@ -1328,7 +1328,7 @@ lemma retype_untypeds_wp_helper:
           apply (rule_tac x=t in exI)
           apply fastforce
           apply wp+
-    apply (clarsimp simp: opt_object_def real_object_at_def)
+    apply (clarsimp simp: real_object_at_def)
     apply blast
    apply clarsimp
    apply (rename_tac s untyped_caps all_available_ids t obj_id_index untyped_index)
@@ -1398,7 +1398,7 @@ lemma create_objects_sep:
   apply (clarsimp simp: si_objects_def si_objects_extra_caps'_def)
   apply (rule hoare_assume_pre)
   apply (rule hoare_chain)
-    apply (wp_once retype_untypeds_wp_helper
+    apply (wp (once) retype_untypeds_wp_helper
       [where R="(si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>* si_asid \<and>* R"
          and untyped_slots = "map unat untyped_cptrs" and dev = dev
          and free_slots    = "map unat free_cptrs"],

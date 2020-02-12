@@ -23,18 +23,21 @@ lemmas arch_machine_ops_valid_sched_pred[wp] =
 
 lemma set_pd_valid_sched_pred[wp]:
   "set_pd ptr pd \<lbrace>valid_sched_pred_strong P\<rbrace>"
-  apply (wpsimp simp: set_pd_def wp: set_object_wp get_object_wp)
-  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps split: kernel_object.splits)
+  apply (wpsimp simp: set_pd_def wp: set_object_wp_strong get_object_wp)
+  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps a_type_def fun_upd_def
+           split:  kernel_object.splits if_splits)
 
 lemma set_pt_valid_sched_pred[wp]:
   "set_pt ptr pt \<lbrace>valid_sched_pred_strong P\<rbrace>"
-  apply (wpsimp simp: set_pt_def wp: set_object_wp get_object_wp)
-  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps split: kernel_object.splits)
+  apply (wpsimp simp: set_pt_def wp: set_object_wp_strong get_object_wp)
+  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps a_type_def fun_upd_def
+           split:  kernel_object.splits if_splits)
 
 lemma set_asid_pool_bound_sc_obj_tcb_at[wp]:
   "set_asid_pool ptr pool \<lbrace>valid_sched_pred_strong P\<rbrace>"
-  apply (wpsimp simp: set_asid_pool_def wp: set_object_wp get_object_wp)
-  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps split: kernel_object.splits)
+  apply (wpsimp simp: set_asid_pool_def wp: set_object_wp_strong get_object_wp)
+  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps a_type_def fun_upd_def
+           split:  kernel_object.splits if_splits)
 
 lemma copy_global_mappings_valid_sched_pred[wp]:
   "copy_global_mappings pd \<lbrace>valid_sched_pred_strong P\<rbrace>"

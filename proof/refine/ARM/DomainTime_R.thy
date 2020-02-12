@@ -13,9 +13,9 @@ imports
   ADT_H
 begin
 
-text {* Preservation of domain time remaining over kernel invocations;
+text \<open>Preservation of domain time remaining over kernel invocations;
         invariance of domain list validity
-*}
+\<close>
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -33,23 +33,11 @@ lemmas valid_domain_list'_def = valid_domain_list_2_def
 
 (* first, crunching valid_domain_list' over the kernel - it is never changed *)
 
-crunch ksDomSchedule_inv[wp]:
-  sendFaultIPC, handleFault, replyFromKernel
-  "\<lambda>s. P (ksDomSchedule s)"
-
-crunch ksDomSchedule_inv[wp]: setDomain "\<lambda>s. P (ksDomSchedule s)"
-  (wp: crunch_wps simp: if_apply_def2)
-
-crunch ksDomSchedule_inv[wp]: sendSignal "\<lambda>s. P (ksDomSchedule s)"
-  (wp: crunch_wps simp: crunch_simps simp: unless_def o_def)
-
-crunch ksDomSchedule_inv[wp]: finaliseCap "\<lambda>s. P (ksDomSchedule s)"
-  (simp: crunch_simps assertE_def unless_def
- ignore: getObject setObject forM ignoreFailure
-     wp: getObject_inv loadObject_default_inv crunch_wps)
-
-crunch ksDomSchedule_inv[wp]: finaliseCap, capSwapForDelete "\<lambda>s. P (ksDomSchedule s)"
-  (simp: crunch_simps simp: unless_def)
+crunches sendFaultIPC, handleFault, replyFromKernel, setDomain, sendSignal,
+         finaliseCap, finaliseCap, capSwapForDelete
+  for ksDomSchedule_inv[wp]: "\<lambda>s. P (ksDomSchedule s)"
+  (wp: getObject_inv loadObject_default_inv crunch_wps
+   simp: crunch_simps if_apply_def2 unless_def o_def assertE_def)
 
 lemma finaliseSlot_ksDomSchedule_inv[wp]:
   "\<lbrace>\<lambda>s. P (ksDomSchedule s) \<rbrace> finaliseSlot param_a param_b \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
@@ -61,32 +49,25 @@ crunch ksDomSchedule_inv[wp]: invokeTCB "\<lambda>s. P (ksDomSchedule s)"
 crunch ksDomSchedule_inv[wp]: doReplyTransfer "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
        setObject_ntfn_ct
-        simp: unless_def crunch_simps
-      ignore: transferCapsToSlots setObject getObject)
-
-lemma cteRevoke_ksDomSchedule_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s) \<rbrace> cteRevoke param_a \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
-  by (wp cteRevoke_preservation | clarsimp)+
+   simp: unless_def crunch_simps
+   ignore: transferCapsToSlots)
 
 crunch ksDomSchedule_inv[wp]: finaliseCap "\<lambda>s. P (ksDomSchedule s)"
   (simp: crunch_simps assertE_def unless_def
- ignore: getObject setObject forM ignoreFailure
      wp: getObject_inv loadObject_default_inv crunch_wps)
 
 crunch ksDomSchedule_inv[wp]: cancelBadgedSends "\<lambda>s. P (ksDomSchedule s)"
-  (ignore: filterM setObject getObject
-     simp: filterM_mapM crunch_simps
-       wp: crunch_wps hoare_unless_wp)
+  (simp: filterM_mapM crunch_simps
+     wp: crunch_wps hoare_unless_wp)
 
 crunch ksDomSchedule_inv[wp]: createNewObjects "\<lambda>s. P (ksDomSchedule s)"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps hoare_unless_wp)
 
 crunch ksDomSchedule_inv[wp]: preemptionPoint "\<lambda>s. P (ksDomSchedule s)"
-  (simp: whenE_def)
+  (simp: whenE_def ignore_del: preemptionPoint)
 
 crunch ksDomSchedule_inv[wp]: performARMMMUInvocation "\<lambda>s. P (ksDomSchedule s)"
-  (ignore: getObject setObject
-   wp: crunch_wps getObject_cte_inv getASID_wp
+  (wp: crunch_wps getObject_cte_inv getASID_wp
    simp: unless_def)
 
 crunch ksDomSchedule_inv[wp]: performInvocation "\<lambda>s. P (ksDomSchedule s)"
@@ -94,12 +75,12 @@ crunch ksDomSchedule_inv[wp]: performInvocation "\<lambda>s. P (ksDomSchedule s)
    simp: unless_def crunch_simps filterM_mapM)
 
 crunch ksDomSchedule_inv[wp]: schedule "\<lambda>s. P (ksDomSchedule s)"
-  (ignore: setNextPC threadSet simp:crunch_simps bitmap_fun_defs wp:findM_inv hoare_drop_imps)
+  (ignore: setNextPC threadSet simp: crunch_simps bitmap_fun_defs wp:findM_inv hoare_drop_imps)
 
 crunch ksDomSchedule_inv[wp]: activateThread "\<lambda>s. P (ksDomSchedule s)"
 
-crunch ksDomSchedule_inv[wp]:
-  receiveSignal, getNotification, receiveIPC, deleteCallerCap "\<lambda>s. P (ksDomSchedule s)"
+crunches receiveSignal, getNotification, receiveIPC, deleteCallerCap
+  for ksDomSchedule_inv[wp]: "\<lambda>s. P (ksDomSchedule s)"
   (wp: hoare_drop_imps simp: crunch_simps)
 
 lemma handleRecv_ksDomSchedule_inv[wp]:
@@ -124,20 +105,23 @@ lemma callKernel_ksDomSchedule_inv[wp]:
 
 (* now we handle preservation of domain time remaining, which most of the kernel does not change *)
 
-crunch ksDomainTime[wp]: setExtraBadge, cteInsert "\<lambda>s. P (ksDomainTime s)"
+crunches setExtraBadge, cteInsert
+  for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps)
 
 crunch ksDomainTime[wp]: transferCapsToSlots "\<lambda>s. P (ksDomainTime s)"
 
-crunch ksDomainTime[wp]: setupCallerCap, doIPCTransfer, possibleSwitchTo "\<lambda>s. P (ksDomainTime s)"
+crunches  setupCallerCap, doIPCTransfer, possibleSwitchTo
+  for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: constOnFailure)
 
-crunch ksDomainTime_inv[wp]: setEndpoint, setNotification, storePTE, storePDE
+crunches setEndpoint, setNotification, storePTE, storePDE
+  for ksDomainTime_inv[wp]:
   "\<lambda>s. P (ksDomainTime s)"
-  (wp: crunch_wps setObject_ksPSpace_only updateObject_default_inv
-   ignore: setObject)
+  (wp: crunch_wps setObject_ksPSpace_only updateObject_default_inv)
 
-crunch ksDomainTime_inv[wp]: sendFaultIPC, handleFault, replyFromKernel "\<lambda>s. P (ksDomainTime s)"
+crunches sendFaultIPC, handleFault, replyFromKernel
+  for ksDomainTime_inv[wp]: "\<lambda>s. P (ksDomainTime s)"
 
 crunch ksDomainTime_inv[wp]: setDomain "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps simp: if_apply_def2)
@@ -148,17 +132,15 @@ crunch ksDomainTime_inv[wp]: sendSignal "\<lambda>s. P (ksDomainTime s)"
 crunch ksDomainTime_inv[wp]: deleteASID "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only getObject_inv loadObject_default_inv
        updateObject_default_inv
-   ignore: setObject getObject simp: crunch_simps)
+   simp: crunch_simps)
 
 crunch ksDomainTime_inv[wp]: finaliseCap "\<lambda>s. P (ksDomainTime s)"
   (simp: crunch_simps assertE_def
- ignore: getObject setObject forM ignoreFailure
      wp: setObject_ksPSpace_only getObject_inv loadObject_default_inv crunch_wps)
 
 crunch ksDomainTime_inv[wp]: cancelBadgedSends "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only getObject_inv loadObject_default_inv
        updateObject_default_inv hoare_unless_wp
-   ignore: setObject getObject filterM
    simp: filterM_mapM crunch_simps)
 
 crunch ksDomainTime_inv[wp]: capSwapForDelete "\<lambda>s. P (ksDomainTime s)"
@@ -174,35 +156,27 @@ crunch ksDomainTime_inv[wp]: invokeTCB "\<lambda>s. P (ksDomainTime s)"
 crunch ksDomainTime_inv[wp]: doReplyTransfer "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
        setObject_ntfn_ct
-        simp: crunch_simps
-      ignore: transferCapsToSlots setObject getObject)
-
-lemma cteRevoke_ksDomainTime_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomainTime s) \<rbrace> cteRevoke param_a \<lbrace>\<lambda>_ s. P (ksDomainTime s)\<rbrace>"
-  by (wp cteRevoke_preservation | clarsimp)+
+   simp: crunch_simps
+   ignore: transferCapsToSlots)
 
 crunch ksDomainTime_inv[wp]: finaliseCap "\<lambda>s. P (ksDomainTime s)"
   (simp: crunch_simps assertE_def unless_def
- ignore: getObject setObject forM ignoreFailure
      wp: getObject_inv loadObject_default_inv crunch_wps)
 
 crunch ksDomainTime_inv[wp]: cancelBadgedSends "\<lambda>s. P (ksDomainTime s)"
-  (ignore: filterM setObject getObject
-     simp: filterM_mapM crunch_simps
-       wp: crunch_wps)
+  (simp: filterM_mapM crunch_simps
+     wp: crunch_wps)
 
 crunch ksDomainTime_inv[wp]: createNewObjects "\<lambda>s. P (ksDomainTime s)"
   (simp: crunch_simps zipWithM_x_mapM
-   wp: crunch_wps hoare_unless_wp
-   ignore: getObject setObject)
+   wp: crunch_wps hoare_unless_wp)
 
 crunch ksDomainTime_inv[wp]: performARMMMUInvocation "\<lambda>s. P (ksDomainTime s)"
-  (ignore: getObject setObject
-   wp: crunch_wps getObject_cte_inv getASID_wp setObject_ksPSpace_only updateObject_default_inv
+  (wp: crunch_wps getObject_cte_inv getASID_wp setObject_ksPSpace_only updateObject_default_inv
    simp: unless_def)
 
 crunch ksDomainTime_inv[wp]: preemptionPoint "\<lambda>s. P (ksDomainTime s)"
-  (simp: whenE_def)
+  (simp: whenE_def ignore_del: preemptionPoint)
 
 crunch ksDomainTime_inv[wp]: performInvocation "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps zipWithM_x_inv cteRevoke_preservation mapME_x_inv_wp
@@ -210,8 +184,8 @@ crunch ksDomainTime_inv[wp]: performInvocation "\<lambda>s. P (ksDomainTime s)"
 
 crunch ksDomainTime_inv[wp]: activateThread "\<lambda>s. P (ksDomainTime s)"
 
-crunch ksDomainTime_inv[wp]:
-  receiveSignal, getNotification, receiveIPC, deleteCallerCap "\<lambda>s. P (ksDomainTime s)"
+crunches receiveSignal, getNotification, receiveIPC, deleteCallerCap
+  for ksDomainTime_inv[wp]: "\<lambda>s. P (ksDomainTime s)"
   (wp: hoare_drop_imps simp: crunch_simps)
 
 lemma handleRecv_ksDomainTime_inv[wp]:
@@ -273,7 +247,7 @@ lemma handleInterrupt_valid_domain_time:
     (* IRQTimer : tick occurs *) (* IRQReserved : trivial *)
     apply (wp timerTick_valid_domain_time
           | clarsimp simp: handleReservedIRQ_def
-          | wp_once hoare_vcg_imp_lift)+
+          | wp (once) hoare_vcg_imp_lift)+
   done
 
 lemma schedule_domain_time_left':
@@ -285,7 +259,7 @@ lemma schedule_domain_time_left':
   supply word_neq_0_conv[simp]
   apply wpsimp+
        apply (rule_tac Q="\<lambda>_. valid_domain_list'" in hoare_post_imp, clarsimp)
-       apply (wp | clarsimp | wp_once hoare_drop_imps)+
+       apply (wp | clarsimp | wp (once) hoare_drop_imps)+
   done
 
 lemma handleEvent_ksDomainTime_inv:

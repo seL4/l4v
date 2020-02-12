@@ -12,11 +12,11 @@ theory ProvePart
 imports Main
 begin
 
-text {* Introduces a (sort-of) tactic for proving part of a goal by automatic
+text \<open>Introduces a (sort-of) tactic for proving part of a goal by automatic
 methods. The split between the proven and unproven part goes down into conjunction,
-implication etc. The unproven parts are left in (roughly) their original form. *}
+implication etc. The unproven parts are left in (roughly) their original form.\<close>
 
-text {*
+text \<open>
 The first part is to take a goal and split it into two conjuncts,
 e.g. "a \<and> (\<forall>x. b \<and> c x)
     = (((P1 \<longrightarrow> a) \<and> (\<forall>x. (P2 \<longrightarrow> b) \<and> (P3 \<longrightarrow> c x)))
@@ -29,7 +29,7 @@ automatic method by setting the Pi to False. The remaining Pi
 (whose goal fragments were solved) are set to True. If the
 resulting goals cannot be solved by setting to False, or if
 no Pi are actually set to true, the process fails.
-*}
+\<close>
 
 lemma logic_to_conj_thm_workers:
   "A = (A' \<and> A'') \<Longrightarrow> B = (B' \<and> B'')
@@ -44,7 +44,7 @@ lemma logic_to_conj_thm_workers:
     \<Longrightarrow> (A \<longrightarrow> B) = ((A \<longrightarrow> B') \<and> (A \<longrightarrow> B''))"
   by auto
 
-ML {*
+ML \<open>
 structure Split_To_Conj = struct
 
 fun abs_name (Abs (s, _, _)) = s
@@ -119,16 +119,16 @@ fun get_split_tac prefix ctxt tac = SUBGOAL (fn (t, i) =>
   in (resolve0_tac [ @{thm iffD2} ] THEN' resolve0_tac [thm] THEN' tac Ps) end i)
 
 end
-*}
+\<close>
 
-text {* Testing. *}
+text \<open>Testing.\<close>
 
-ML {*
+ML \<open>
 Split_To_Conj.split_thm "P" @{context}
   @{term "x & y & (\<forall>t \<in> UNIV. \<forall>n. True \<longrightarrow> z t n)"}
-*}
+\<close>
 
-ML {*
+ML \<open>
 structure Partial_Prove = struct
 
 fun inst_frees_tac _ Ps ct = REPEAT_DETERM o SUBGOAL (fn (t, _) =>
@@ -181,12 +181,12 @@ fun method (ctxtg, []) = (fn ctxt => Method.SIMPLE_METHOD (test_start_partial_pr
 fun fin_method () = Scan.succeed (fn ctxt => Method.SIMPLE_METHOD (test_end_partial_prove ctxt))
 
 end
-*}
+\<close>
 
-method_setup partial_prove = {* Partial_Prove.method *}
+method_setup partial_prove = \<open>Partial_Prove.method\<close>
   "partially prove a compound goal by some automatic method"
 
-method_setup finish_partial_prove = {* Partial_Prove.fin_method () *}
+method_setup finish_partial_prove = \<open>Partial_Prove.fin_method ()\<close>
   "partially prove a compound goal by some automatic method"
 
 end

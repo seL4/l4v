@@ -16,12 +16,6 @@ begin
 
 context Arch begin global_naming RISCV64_A
 
-definition arch_tcb_set_ipc_buffer :: "machine_word \<Rightarrow> vspace_ref \<Rightarrow> (unit, 'a::state_ext) s_monad"
-  where
-  "arch_tcb_set_ipc_buffer target ptr \<equiv> as_user target $ setRegister TP ptr"
-
-declare arch_tcb_set_ipc_buffer_def [simp]
-
 definition sanitise_register :: "bool \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
   where
   "sanitise_register t r v \<equiv> v"

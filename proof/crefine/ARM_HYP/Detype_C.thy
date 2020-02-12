@@ -1148,7 +1148,6 @@ lemma tcb_ptr_to_ctcb_ptr_to_Ptr:
    apply (subgoal_tac "p + ctcb_offset + of_nat k \<in> {p + ctcb_offset..+b}")
     apply (simp add: field_simps)
    apply (erule intvlI)
-  apply (rule image_mono)
   apply clarsimp
   apply (drule intvlD)
   apply clarsimp
@@ -1833,14 +1832,13 @@ proof -
   }
   moreover
   {
-    assume "s' \<Turnstile>\<^sub>c (Ptr::(32 word \<Rightarrow> (pde_C[2048]) ptr)) (symbol_table ''armUSGlobalPD'')"
+    assume "s' \<Turnstile>\<^sub>c armUSGlobalPD_Ptr"
     moreover
-    from sr ptr_refs have "ptr_span (pd_Ptr (symbol_table ''armUSGlobalPD''))
+    from sr ptr_refs have "ptr_span armUSGlobalPD_Ptr
       \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
       by (fastforce simp: rf_sr_def cstate_relation_def Let_def)
     ultimately
-    have "hrs_htd (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s')))
-      \<Turnstile>\<^sub>t (Ptr::(32 word \<Rightarrow> (pde_C[2048]) ptr)) (symbol_table ''armUSGlobalPD'')"
+    have "hrs_htd (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s'))) \<Turnstile>\<^sub>t armUSGlobalPD_Ptr"
       using al wb
       apply (cases "t_hrs_' (globals s')")
       apply (simp add: hrs_htd_update_def hrs_htd_def h_t_valid_typ_region_bytes upto_intvl_eq)
@@ -2016,7 +2014,7 @@ proof -
 
    moreover from sr have
      "h_t_valid (typ_region_bytes ptr bits (hrs_htd (t_hrs_' (globals s'))))
-       c_guard (ptr_coerce (intStateIRQNode_' (globals s')) :: (cte_C[256]) ptr)"
+       c_guard intStateIRQNode_array_Ptr"
     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
     apply (simp add: h_t_valid_typ_region_bytes)
     apply (simp add: upto_intvl_eq al)

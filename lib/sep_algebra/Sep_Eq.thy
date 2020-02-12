@@ -21,12 +21,12 @@ imports
   Separation_Algebra_Alt
 begin
 
-text {*
+text \<open>
   In this theory we show that our total formulation of separation algebra is
   equivalent in strength to Calcagno et al's original partial one.
 
   This theory is not intended to be included in own developments.
-*}
+\<close>
 
 no_notation map_add (infixl "++" 100)
 declare [[syntax_ambiguity_warning = false]]

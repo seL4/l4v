@@ -26,6 +26,10 @@ section "Type setup"
 
 type_synonym byte = "8 word"
 
+type_synonym memory = "addr \<Rightarrow> byte"
+type_synonym 'a mem_upd = "addr \<Rightarrow> 'a \<Rightarrow> memory \<Rightarrow> memory"
+type_synonym 'a mem_read = "addr \<Rightarrow> memory \<Rightarrow> 'a"
+
 class unit_class =
   assumes there_is_only_one: "x = y"
 
@@ -42,6 +46,40 @@ abbreviation
   NULL :: "'a ptr" where
   "NULL \<equiv> Ptr 0"
 
+ML \<open>
+structure Ptr_Syntax =
+struct
+
+  val show_ptr_types = Attrib.setup_config_bool @{binding show_ptr_types} (K true)
+
+  fun ptr_tr' cnst ctxt typ ts = if Config.get ctxt show_ptr_types then
+      case Term.strip_type typ of
+        ([@{typ addr}], Type (@{type_name "ptr"}, [T])) =>
+          list_comb
+            (Syntax.const cnst $ Syntax_Phases.term_of_typ ctxt T
+            , ts)
+        | _ => raise Match
+  else raise Match
+
+  fun ptr_coerce_tr' cnst ctxt typ ts = if Config.get ctxt show_ptr_types then
+      case Term.strip_type typ of
+        ([Type (@{type_name ptr}, [S])], Type (@{type_name "ptr"}, [T])) =>
+          list_comb
+            (Syntax.const cnst $ Syntax_Phases.term_of_typ ctxt S
+                               $ Syntax_Phases.term_of_typ ctxt T
+            , ts)
+        | _ => raise Match
+  else raise Match
+end
+\<close>
+
+syntax
+  "_Ptr" :: "type \<Rightarrow> logic" ("(1PTR/(1'(_')))")
+translations
+  "PTR('a)" => "CONST Ptr :: (addr \<Rightarrow> 'a ptr)"
+typed_print_translation
+  \<open> [(@{const_syntax Ptr}, Ptr_Syntax.ptr_tr' @{syntax_const "_Ptr"})] \<close>
+
 primrec
   ptr_val :: "'a ptr \<Rightarrow> addr"
 where
@@ -50,6 +88,13 @@ where
 primrec
   ptr_coerce :: "'a ptr \<Rightarrow> 'b ptr" where
   "ptr_coerce (Ptr a) = Ptr a"
+
+syntax
+  "_Ptr_coerce" :: "type \<Rightarrow> type \<Rightarrow> logic" ("(1PTR'_COERCE/(1'(_ \<rightarrow> _')))")
+translations
+  "PTR_COERCE('a \<rightarrow> 'b)" => "CONST ptr_coerce :: ('a ptr \<Rightarrow> 'b ptr)"
+typed_print_translation
+  \<open> [(@{const_syntax ptr_coerce}, Ptr_Syntax.ptr_coerce_tr' @{syntax_const "_Ptr_coerce"})] \<close>
 
 definition
   (* no ctype/memtype-class constraints on these so as to allow comparison of
@@ -86,12 +131,12 @@ end
 
 subsection "Raw heap"
 
-text {* A raw map from addresses to bytes *}
+text \<open>A raw map from addresses to bytes\<close>
 
 type_synonym heap_mem = "addr \<Rightarrow> byte"
 
-text {* For heap h, pointer p and nat n, (heap_list h n p) returns the list
-        of bytes in the heap taken from addresses {p..+n} *}
+text \<open>For heap h, pointer p and nat n, (heap_list h n p) returns the list
+        of bytes in the heap taken from addresses {p..+n}\<close>
 
 primrec
   heap_list :: "heap_mem \<Rightarrow> nat \<Rightarrow> addr \<Rightarrow> byte list"
@@ -102,9 +147,9 @@ where
 
 section "Intervals"
 
-text {*
+text \<open>
   For word a and nat b, {a..+b} is the set of words x,
-  with unat (x - a) < b. *}
+  with unat (x - a) < b.\<close>
 
 definition
   intvl :: "'a::len word \<times> nat \<Rightarrow> 'a::len word set" where
@@ -129,6 +174,29 @@ primrec
   dt_snd :: "('a,'b) dt_pair \<Rightarrow> 'b"
 where
   "dt_snd (DTPair a b) = b"
+
+
+lemma split_DTPair_All:
+  "(\<forall>x. P x) = (\<forall>a b. P (DTPair a b))"
+  by (rule iffI; clarsimp) (case_tac x, simp)
+
+lemma surjective_dt_pair:
+  "p = DTPair (dt_fst p) (dt_snd p)"
+  by (cases p) simp
+
+lemmas dt_pair_collapse [simp] = surjective_dt_pair[symmetric]
+
+lemma split_DTPair_all[no_atp]: "(\<And>x. PROP P x) \<equiv> (\<And>a b. PROP P (DTPair a b))"
+proof
+  fix a b
+  assume "\<And>x. PROP P x"
+  then show "PROP P (DTPair a b)" .
+next
+  fix x
+  assume "\<And>a b. PROP P (DTPair a b)"
+  from \<open>PROP P (DTPair (dt_fst x) (dt_snd x))\<close> show "PROP P x" by simp
+qed
+
 
 type_synonym normalisor = "byte list \<Rightarrow> byte list"
 

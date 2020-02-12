@@ -13,6 +13,7 @@ imports
   "WP_Pre"
   "WPFix"
   "../../Apply_Debug"
+  "../../ml-helpers/MLUtils"
 begin
 
 definition
@@ -36,21 +37,11 @@ lemma conj_TrueI2: "P \<Longrightarrow> P \<and> True" by simp
 
 ML_file "WP-method.ML"
 
-declare [[wp_warn_unused = false]]
+declare [[wp_trace = false, wp_trace_instantiation = false]]
 
 setup WeakestPre.setup
 
-method_setup wp = {* WeakestPre.apply_rules_args false *}
+method_setup wp = \<open>WeakestPre.apply_wp_args\<close>
   "applies weakest precondition rules"
-
-method_setup wp_once = {* WeakestPre.apply_once_args false *}
-  "applies one weakest precondition rule"
-
-method_setup wp_trace = {* WeakestPre.apply_rules_args true *}
-  "applies weakest precondition rules with tracing"
-
-method_setup wp_once_trace = {* WeakestPre.apply_once_args true *}
-  "applies one weakest precondition rule with tracing"
-
 
 end

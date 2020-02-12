@@ -28,14 +28,14 @@ begin
   thm ts20110511_1_body_def
   thm ts20110511_2_body_def
 
-ML {*
+ML \<open>
   val bthm = @{thm "ts20110511_1_body_def"}
   val b_t = Thm.concl_of bthm
   val cs = Term.add_consts b_t []
-*}
+\<close>
 
-ML {* member (=) (map #1 cs) "CProof.strictc_errortype.C_Guard" orelse
-      OS.Process.exit OS.Process.failure *}
+ML \<open>member (=) (map #1 cs) "CProof.strictc_errortype.C_Guard" orelse
+      OS.Process.exit OS.Process.failure\<close>
 
 end
 

@@ -17,9 +17,9 @@ imports
 begin
 context Arch begin global_naming RISCV64_H
 
-text {*
+text \<open>
   An enumeration of arch-specific system call labels.
-*}
+\<close>
 
 #INCLUDE_HASKELL SEL4/API/InvocationLabels/RISCV64.hs CONTEXT RISCV64_H ONLY ArchInvocationLabel
 

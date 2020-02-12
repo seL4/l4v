@@ -59,6 +59,7 @@ spec/haskell/.stack-work/*
 spec/haskell/Setup.hs
 spec/haskell/configure
 spec/haskell/dist/*
+spec/haskell/stack.yaml.lock
 spec/haskell/src/SEL4/Model/PSpace.lhs-boot
 spec/haskell/src/SEL4/Kernel/FaultHandler.lhs-boot
 spec/haskell/src/SEL4/Kernel/Init.lhs-boot

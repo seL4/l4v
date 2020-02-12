@@ -12,6 +12,7 @@ chapter "An Initial Kernel State"
 
 theory Init_A
 imports "../Retype_A"
+"Lib.SplitRule"
 begin
 
 context Arch begin global_naming RISCV64_A
@@ -21,24 +22,60 @@ text \<open>
   initial state only, to show that the invariants and refinement relation are consistent.
 \<close>
 
+(* Some address sufficiently aligned address for one page *)
 definition riscv_global_pt_ptr :: obj_ref
   where
-  "riscv_global_pt_ptr = kernel_base + 0x1000"
+  "riscv_global_pt_ptr = pptr_base + 0x2000"
 
+(* Sufficiently aligned for irq type + cte_level_bits *)
 definition init_irq_node_ptr :: obj_ref
   where
-  "init_irq_node_ptr = kernel_base + 0x2000"
+  "init_irq_node_ptr = pptr_base + 0x3000"
+
+(* The highest user-level virtual address that is still canonical.
+   It can be larger than user_vtop, which is the highest address we allow to be mapped.
+   We need canonical_user, because the page tables have to have valid mappings there. *)
+definition canonical_user :: "vspace_ref" where
+  "canonical_user \<equiv> mask canonical_bit"
+
+(* Kernel and ELF window are constructed so that they can be covered with one max_pt_level entry
+   each. This is not the layout the real kernel uses, but we are only trying to show that
+   the invariants are consistent. *)
+definition init_vspace_uses :: "vspace_ref \<Rightarrow> riscvvspace_region_use"
+  where
+  "init_vspace_uses p \<equiv>
+     if p \<in> {pptr_base ..< pptr_base + (1 << 30)} then RISCVVSpaceKernelWindow
+     else if p \<in> {kernel_elf_base ..< kernel_elf_base + (1 << 20)} then RISCVVSpaceKernelELFWindow
+     else if p \<le> canonical_user then RISCVVSpaceUserRegion
+     else RISCVVSpaceInvalidRegion"
 
 definition init_arch_state :: arch_state
   where
   "init_arch_state \<equiv> \<lparr>
      riscv_asid_table = Map.empty,
-     riscv_global_pt = riscv_global_pt_ptr
+     riscv_global_pts = (\<lambda>level. if level = max_pt_level then {riscv_global_pt_ptr} else {}),
+     riscv_kernel_vspace = init_vspace_uses
    \<rparr>"
+
+
+(* {pptr_base ..< pptr_base + (1 << 30)} is pt index 0x100 at max_pt_level,
+   {kernel_elf_base ..< kernel_elf_base + (1 << 20)} comes out to pt index 0x1FE.
+   The rest is constructed such that the translation lines up with what the invariants want. *)
+definition global_pte :: "pt_index \<Rightarrow> pte"
+  where
+  "global_pte idx \<equiv>
+     if idx = 0x100
+     then PagePTE ((ucast (idx && mask (ptTranslationBits - 1)) << ptTranslationBits * 2))
+                  {} vm_kernel_only
+     else if idx = 0x1FE
+     then PagePTE (2 << ptTranslationBits * 2) {} vm_kernel_only
+     else InvalidPTE"
 
 definition init_global_pt :: kernel_object
   where
-  "init_global_pt \<equiv> ArchObj $ PageTable (\<lambda>_. InvalidPTE)"
+  "init_global_pt \<equiv> ArchObj $ PageTable (\<lambda>idx. if idx \<in> kernel_mapping_slots
+                                                then global_pte idx
+                                                else InvalidPTE)"
 
 definition init_kheap :: kheap
   where

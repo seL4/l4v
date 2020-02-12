@@ -11,10 +11,10 @@
 theory AutoLevity (* FIXME: broken *)
 imports "../tools/proofcount/ProofGraph"
 begin
-ML {* val infoflow_file = "~~/../lib/proof_counting/Noninterference_Refinement_graphs.xml" *}
-ML {* val (full_spec,proof_spec_raw,thy_deps) = Proof_Graph.read_graph_spec_from infoflow_file *}
+ML \<open>val infoflow_file = "~~/../lib/proof_counting/Noninterference_Refinement_graphs.xml"\<close>
+ML \<open>val (full_spec,proof_spec_raw,thy_deps) = Proof_Graph.read_graph_spec_from infoflow_file\<close>
 
-ML {* val proof_spec = Proof_Graph.merge_multi_thms proof_spec_raw *}
+ML \<open>val proof_spec = Proof_Graph.merge_multi_thms proof_spec_raw\<close>
 
 (* Extracts "general" lemmas from proof graph and produces lemma buckets from them *)
 (* Does theory and lemma dependency management. Might be better to produce a report and
@@ -23,7 +23,7 @@ ML {* val proof_spec = Proof_Graph.merge_multi_thms proof_spec_raw *}
 
 
 (*TODO: Can possibly extract lemmas from the middle of locales *)
-ML {*
+ML \<open>
 
 fun range (beg,fin) l = List.take (List.drop (l,beg),fin - beg)
 
@@ -332,7 +332,7 @@ in
   (Symtab.map (fn file => fn body => File.write_list (Path.explode file) (map (fn SOME s => s ^ "\n" | NONE => "") body)) cache';()) end;
 
 
-*}
+\<close>
 
 end
 

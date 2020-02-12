@@ -10,7 +10,7 @@
 
 theory SchedContext_AI
 imports
-  Lib.MonadicRewrite
+  Lib.MonadicRewrite (* FIXME RT: avoid late Lib import *)
   RealTime_AI
 
 begin
@@ -911,7 +911,7 @@ lemma ssc_refs_of_Some[wp]:
    set_tcb_obj_ref tcb_sched_context_update t (Some sc)
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
-  apply (wpsimp simp: set_object_def wp: gets_the_wp)
+  apply (wpsimp wp: set_object_wp_strong)
   apply (erule rsubst[where P=P])
   apply (clarsimp simp: state_refs_of_def)
   apply (frule get_tcb_SomeD)
@@ -925,7 +925,7 @@ lemma ssc_refs_of_None[wp]:
    set_tcb_obj_ref tcb_sched_context_update t None
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
-  apply (wpsimp simp: set_object_def wp: gets_the_wp)
+  apply (wpsimp wp: set_object_wp_strong)
   apply (erule rsubst[where P=P])
   apply (clarsimp simp: state_refs_of_def)
   apply (frule get_tcb_SomeD)
@@ -1052,7 +1052,7 @@ crunches sched_context_resume, test_possible_switch_to, tcb_release_remove, post
 
 lemma set_tcb_yt_update_bound_sc_tcb_at[wp]:
   "\<lbrace>bound_sc_tcb_at P t\<rbrace> set_tcb_obj_ref tcb_yield_to_update scp tcb \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
-  by (wpsimp simp: set_tcb_obj_ref_def set_object_def pred_tcb_at_def obj_at_def get_tcb_rev)
+  by (wpsimp simp: set_tcb_obj_ref_def pred_tcb_at_def obj_at_def get_tcb_rev wp: set_object_wp_strong)
 
 lemma set_tcb_queue_valid_replies[wp]:
   "set_tcb_queue d prio queue \<lbrace> valid_replies_pred P \<rbrace>"

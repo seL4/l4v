@@ -12,7 +12,7 @@ theory ArchIpc_AI
 imports "../Ipc_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems Ipc_AI_assms
 
@@ -37,7 +37,7 @@ lemma update_cap_data_closedform:
    | DomainCap \<Rightarrow> DomainCap
    | UntypedCap dev p n idx \<Rightarrow> UntypedCap dev p n idx
    | NullCap \<Rightarrow> NullCap
-   | ReplyCap t m \<Rightarrow> ReplyCap t m
+   | ReplyCap t m rights \<Rightarrow> ReplyCap t m rights
    | IRQControlCap \<Rightarrow> IRQControlCap
    | IRQHandlerCap irq \<Rightarrow> IRQHandlerCap irq
    | Zombie r b n \<Rightarrow> Zombie r b n
@@ -109,14 +109,12 @@ lemma is_derived_cap_rights [simp, Ipc_AI_assms]:
   apply (rule ext)
   apply (simp add: cap_rights_update_def is_derived_def is_cap_simps)
   apply (case_tac x, simp_all)
-           apply (simp add: cap_master_cap_def bits_of_def is_cap_simps
-                             vs_cap_ref_def
-                     split: cap.split)+
-  apply (simp add: is_cap_simps is_page_cap_def
-             cong: arch_cap.case_cong)
-  apply (simp split: arch_cap.split cap.split
-                add: is_cap_simps acap_rights_update_def is_pt_cap_def)
-  done
+  by (auto simp: cap_master_cap_def bits_of_def is_cap_simps
+                     vs_cap_ref_def is_page_cap_def
+                     acap_rights_update_def is_pt_cap_def
+           cong: arch_cap.case_cong
+           split: arch_cap.split cap.split bool.splits)
+
 
 lemma data_to_message_info_valid [Ipc_AI_assms]:
   "valid_message_info (data_to_message_info w)"
@@ -186,9 +184,9 @@ lemma arch_derive_cap_objrefs_iszombie [Ipc_AI_assms]:
 
 lemma obj_refs_remove_rights[simp, Ipc_AI_assms]:
   "obj_refs (remove_rights rs cap) = obj_refs cap"
-  by (simp add: remove_rights_def cap_rights_update_def
+  by (auto simp add: remove_rights_def cap_rights_update_def
                 acap_rights_update_def
-         split: cap.splits arch_cap.splits)
+         split: cap.splits arch_cap.splits bool.splits)
 
 lemma storeWord_um_inv:
   "\<lbrace>\<lambda>s. underlying_memory s = um\<rbrace>
@@ -396,7 +394,7 @@ lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
   done
 
 lemma is_derived_ReplyCap [simp, Ipc_AI_assms]:
-  "\<And>m p. is_derived m p (cap.ReplyCap t False) = (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = t)"
+  "\<And>m p R. is_derived m p (cap.ReplyCap t False R) = (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = t)"
   apply (subst fun_eq_iff)
   apply clarsimp
   apply (case_tac x, simp_all add: is_derived_def is_cap_simps
@@ -429,9 +427,9 @@ lemma do_ipc_transfer_tcb_caps [Ipc_AI_assms]:
   done
 
 lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_assms]:
-  "\<lbrace>valid_global_objs\<rbrace> setup_caller_cap send recv \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
+  "\<lbrace>valid_global_objs\<rbrace> setup_caller_cap send recv grant \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
   apply (simp add: valid_global_objs_def)
-  apply (simp_all add: setup_caller_cap_def)
+  unfolding setup_caller_cap_def
    apply (wp sts_obj_at_impossible | simp add: tcb_not_empty_table)+
   done
 
@@ -519,7 +517,7 @@ interpretation Ipc_AI?: Ipc_AI
   case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems Ipc_AI_cont_assms
 

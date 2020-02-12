@@ -67,9 +67,6 @@ There are presently no ARM-specific register subsets defined, but in future this
 >    return $ isJust v
 #endif
 
-> setTCBIPCBuffer :: VPtr -> UserMonad ()
-> setTCBIPCBuffer ptr = setRegister (RegisterSet.Register TPIDRURW) $ fromVPtr ptr
-
 > postModifyRegisters :: PPtr TCB -> PPtr TCB -> UserMonad ()
 > postModifyRegisters cur ptr = return ()
 

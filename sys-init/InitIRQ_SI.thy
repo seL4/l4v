@@ -192,15 +192,13 @@ lemma init_irqs_bound_irqs_sep:
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: init_irqs_def)
   apply (clarsimp simp: irqs_empty_def irqs_initialised_def)
-   apply (clarsimp simp: bound_irq_list_def)
   apply (rule mapM_x_set_sep' [where
               P="irq_empty spec t" and
               Q="irq_initialised spec t" and
               I="si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
                  si_irq_caps_at irq_caps spec (bound_irqs spec) \<and>*
                  si_objects" and
-              xs="sorted_list_of_set (bound_irqs spec)" and
-              R=R, simplified sep_conj_assoc], simp+)
+              R=R, simplified sep_conj_assoc], fastforce+)
   apply (wp init_irq_sep, simp+)
   done
 
@@ -211,7 +209,7 @@ lemma irq_slot_empty_initialised_NullCap:
   apply (frule (1) well_formed_irq_is_irq_node)
   apply (frule (1) well_formed_object_slots)
   apply (rule ext)
-  apply (clarsimp simp: irq_slot_empty_def irq_slot_initialised_def irq_initialised_general_def slots_of_def opt_object_def
+  apply (clarsimp simp: irq_slot_empty_def irq_slot_initialised_def irq_initialised_general_def slots_of_def
                  split: option.splits)
   apply (subgoal_tac "object_slots (object_default_state obj) slot = object_slots (spec2s t obj) slot")
    apply (subst sep_map_s_object_slots_equal, assumption, simp)
@@ -220,7 +218,7 @@ lemma irq_slot_empty_initialised_NullCap:
   apply (erule object_slots_object_default_state_NullCap
           [where obj_id = "cdl_irq_node spec irq" and cap = NullCap])
     apply (clarsimp simp: object_at_def object_type_is_object)
-   apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def)
+   apply (clarsimp simp: opt_cap_def slots_of_def)
   apply simp
   done
 

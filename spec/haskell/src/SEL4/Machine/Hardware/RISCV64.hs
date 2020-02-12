@@ -50,15 +50,14 @@ data VMPageSize
     | RISCVHugePage
     deriving (Show, Eq, Ord, Enum, Bounded)
 
+-- C defines further fault types, but the trap handler only forwards these
+-- below as VMFaults. The rest, including any unknown faults, become user level
+-- faults with the fault scause number passed on verbatim.
+
 data VMFaultType
-    = RISCVInstructionMisaligned
-    | RISCVInstructionAccessFault
-    | RISCVInstructionIllegal
-    | RISCVBreakpoint
+    = RISCVInstructionAccessFault
     | RISCVLoadAccessFault
-    | RISCVAddressMisaligned
     | RISCVStoreAccessFault
-    | RISCVEnvCall
     | RISCVInstructionPageFault
     | RISCVLoadPageFault
     | RISCVStorePageFault
@@ -68,14 +67,9 @@ data VMFaultType
 vmFaultTypeFSR :: VMFaultType -> Word
 vmFaultTypeFSR f =
     case f of
-        RISCVInstructionMisaligned -> 0
         RISCVInstructionAccessFault -> 1
-        RISCVInstructionIllegal -> 2
-        RISCVBreakpoint -> 3
         RISCVLoadAccessFault -> 5
-        RISCVAddressMisaligned -> 6
         RISCVStoreAccessFault -> 7
-        RISCVEnvCall -> 8
         RISCVInstructionPageFault -> 12
         RISCVLoadPageFault -> 13
         RISCVStorePageFault -> 15
@@ -132,8 +126,14 @@ resetTimer = do
     cbptr <- ask
     liftIO $ Platform.resetTimer cbptr
 
-getRestartPC = getRegister (Register RISCV64.SEPC)
-setNextPC = setRegister (Register RISCV64.NEXTPC)
+initIRQController :: MachineMonad ()
+initIRQController = error "Unimplemented - boot code"
+
+setIRQTrigger :: IRQ -> Bool -> MachineMonad ()
+setIRQTrigger irq trigger = error "Unimplemented - machine op"
+
+getRestartPC = getRegister (Register RISCV64.FaultIP)
+setNextPC = setRegister (Register RISCV64.NextIP)
 
 {- Memory Management -}
 
@@ -307,9 +307,6 @@ maskInterrupt maskI irq = do
 
 debugPrint :: String -> MachineMonad ()
 debugPrint str = liftIO $ putStrLn str
-
-initIRQController :: MachineMonad ()
-initIRQController = error "Unimplemented - boot code"
 
 read_sbadaddr :: MachineMonad Word
 read_sbadaddr = error "Unimplemented - machine op"

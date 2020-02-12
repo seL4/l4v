@@ -27,7 +27,7 @@ crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<l
 
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
-  handle_arch_fault_reply, arch_tcb_set_ipc_buffer,
+  handle_arch_fault_reply,
   arch_invoke_irq_control, handle_vm_fault, arch_post_modify_registers,
   prepare_thread_delete, handle_hypervisor_fault, arch_post_cap_deletion,
   make_arch_fault_msg, arch_get_sanitise_register_info, handle_reserved_irq
@@ -38,7 +38,7 @@ crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<l
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
-  handle_arch_fault_reply, init_arch_objects, arch_tcb_set_ipc_buffer,
+  handle_arch_fault_reply, init_arch_objects,
   arch_invoke_irq_control, handle_vm_fault, arch_post_modify_registers,
   prepare_thread_delete, handle_hypervisor_fault, arch_post_cap_deletion,
   arch_get_sanitise_register_info, handle_reserved_irq
@@ -55,7 +55,7 @@ global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI
   case 1 show ?case by (unfold_locales; (fact DetSchedDomainTime_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
@@ -84,7 +84,7 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
     apply (clarsimp simp: timer_tick_def num_domains_def)
     apply (wp reschedule_required_valid_domain_time
           | simp add: handle_reserved_irq_def
-          | wp_once hoare_drop_imp)+
+          | wp (once) hoare_drop_imp)+
    apply clarsimp
   done
 

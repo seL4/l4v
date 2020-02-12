@@ -1,30 +1,32 @@
-#
-# Copyright 2014, NICTA
-#
-# This software may be distributed and modified according to the terms of
-# the BSD 2-Clause license. Note that NO WARRANTY is provided.
-# See "LICENSE_BSD2.txt" for details.
-#
-# @TAG(NICTA_BSD)
-#
+<!--
+ Copyright 2014, NICTA
 
-This is the NICTA StrictC translation tool.
+ This software may be distributed and modified according to the terms of
+ the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ See "LICENSE_BSD2.txt" for details.
 
-To install, see the file INSTALL in the src/c-parser directory.
+ @TAG(NICTA_BSD)
+-->
+
+The StrictC translation tool
+============================
+
+To install, see the file INSTALL in the `src/c-parser` directory.
 
 To use:
 
 1. Use the heap CParser that is created by installation
 2. Import the theory CTranslation
 3. Load ('install') C files into your theories with the Isar command
-   install_C_file.
+   `install_C_file`.
 
-See docs/ctranslation.pdf for more information about the options
+See `docs/ctranslation.pdf` for more information about the options
 and C language semantics that this tool provides.
 
-See many examples in the testfiles directory.  For example,
-breakcontinue.thy is a fairly involved demonstration of doing things
+See also the examples in the testfiles directory.  For example,
+`breakcontinue.thy` is a fairly involved demonstration of doing things
 the hard way.
+
 
 ----------------------------------------------------------------------
 The translation tool builds on various open source projects by others.
@@ -34,7 +36,7 @@ The translation tool builds on various open source projects by others.
    Sources for this are found in the Simpl/ directory.  The
    code is covered by an LGPL licence.
 
-   See http://afp.sourceforge.net/entries/Simpl.shtml
+   See https://isa-afp.org/entries/Simpl.shtml
 
 2. Code from SML/NJ:
    - an implementation of binary sets (Binaryset.ML)

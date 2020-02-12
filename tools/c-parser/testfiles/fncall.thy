@@ -20,11 +20,11 @@ where
   "fac 0 = 1"
 | "fac (Suc n) = (Suc n) * fac n"
 
-ML {*
+ML \<open>
 
 val ast = IsarInstall.get_Csyntax @{theory} "fncall.c"
 
-*}
+\<close>
 
 external_file "fncall.c"
 install_C_file "fncall.c"

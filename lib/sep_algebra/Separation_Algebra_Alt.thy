@@ -19,13 +19,13 @@ theory Separation_Algebra_Alt
 imports Main
 begin
 
-text {*
+text \<open>
   This theory contains an alternative definition of speration algebra,
   following Calcagno et al very closely. While some of the abstract
   development is more algebraic, it is cumbersome to instantiate.
   We only use it to prove equivalence and to give an impression of how
   it would look like.
-*}
+\<close>
 
 (* The @{text "++"} notation is a horrible choice, but this theory is
    only intended to show how the development would look like, not to

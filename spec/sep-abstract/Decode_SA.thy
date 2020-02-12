@@ -23,10 +23,10 @@ section "IRQ"
 
 section "Toplevel invocation decode."
 
-text {* This definition is the toplevel decoding definition; it dispatches
+text \<open>This definition is the toplevel decoding definition; it dispatches
 to the above definitions, after checking, in some cases, whether the
 invocation is allowed.
-*}
+\<close>
 
 definition
   decode_invocation ::

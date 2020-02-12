@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-chapter {* ARM\_HYP Machine Types *}
+chapter \<open>ARM\_HYP Machine Types\<close>
 
 theory MachineTypes
 imports
@@ -21,10 +21,10 @@ context Arch begin global_naming ARM_HYP
 
 #INCLUDE_SETTINGS keep_constructor=hyp_fault_type
 
-text {*
+text \<open>
   An implementation of the machine's types, defining register set
   and some observable machine state.
-*}
+\<close>
 
 section "Types"
 
@@ -46,28 +46,28 @@ context Arch begin global_naming ARM_HYP
 
 section "Machine State"
 
-text {*
+text \<open>
   Most of the machine state is left underspecified at this level.
   We know it exists, we will declare some interface functions, but
   at this level we do not have access to how this state is transformed
   or what effect it has on the machine.
-*}
+\<close>
 typedecl machine_state_rest
 
-text {*
+text \<open>
   The exclusive monitors state is observable in user mode.
   The type for this is the type used in the Cambridge HOL4 ARM model.
-*}
+\<close>
 type_synonym exclusive_monitors = "(word32 \<Rightarrow> bool) list \<times> (word32 \<times> nat \<Rightarrow> bool)"
 
-text {*
+text \<open>
   The full machine state is the state observable by the kernel plus
   the underspecified rest above. The observable parts are the
   interrupt controller (which IRQs are masked) and the memory of the
   machine. The latter is shadow state: kernel memory is kept in a
   separate, more abstract datatype; user memory is reflected down
   to the underlying memory of the machine.
-*}
+\<close>
 end
 
 qualify ARM_HYP (in Arch)
@@ -90,9 +90,9 @@ end_qualify
 
 context Arch begin global_naming ARM_HYP
 
-text {*
+text \<open>
   The machine monad is used for operations on the state defined above.
-*}
+\<close>
 type_synonym 'a machine_monad = "(machine_state, 'a) nondet_monad"
 
 end
@@ -102,31 +102,31 @@ translations
 
 context Arch begin global_naming ARM_HYP
 
-text {*
+text \<open>
   After kernel initialisation all IRQs are masked.
-*}
+\<close>
 definition
   "init_irq_masks \<equiv> \<lambda>_. True"
 
-text {*
+text \<open>
   The initial contents of the user-visible memory is 0.
-*}
+\<close>
 definition
   init_underlying_memory :: "word32 \<Rightarrow> word8"
   where
   "init_underlying_memory \<equiv> \<lambda>_. 0"
 
-text {*
+text \<open>
   The initial exclusive state is the same constant
   that clearExMonitor defaults it to.
-*}
+\<close>
 
 consts' default_exclusive_state :: exclusive_monitors
 
-text {*
+text \<open>
   We leave open the underspecified rest of the machine state in
   the initial state.
-*}
+\<close>
 definition
   init_machine_state :: machine_state where
  "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks,

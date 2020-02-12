@@ -175,9 +175,9 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
         seL4_IRQControl_Get control_cap irq croot node_index node_depth
         \<lbrace>\<lambda>fail s. \<guillemotleft> root_tcb_id \<mapsto>f root_tcb \<and>*
        (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
-       (* Root CNode. *)
+       \<comment> \<open>Root CNode.\<close>
        cap_object root_cap \<mapsto>f CNode (empty_cnode root_size) \<and>*
-       (* Cap to the root CNode. *)
+       \<comment> \<open>Cap to the root CNode.\<close>
        (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cap \<and>*
        irq \<mapsto>irq obj \<and>* control_ptr \<mapsto>c c_cap \<and>* target_ptr \<mapsto>c irq_cap \<and>* root_ptr \<mapsto>c root_cap \<and>* R\<guillemotright> s\<rbrace>"
   apply (simp add: seL4_IRQControl_Get_def sep_state_projection2_def)
@@ -188,9 +188,9 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
                 apply (clarsimp)
                apply (rule set_cap_wp[sep_wand_wp])
               apply (rule mark_tcb_intent_error_sep_inv)
-             apply (wp_once)
+             apply (wp (once))
             apply (rule corrupt_ipc_buffer_sep_inv)
-           apply (wp_once)
+           apply (wp (once))
           apply (rule_tac P = "(iv = (InvokeIrqControl $ (IssueIrqHandler irq control_ptr (cap_object root_cap, offset node_index root_size))))" in  hoare_gen_asmEx)
           apply (clarsimp simp: unify)
           apply (wp invoke_irq_control_issue_handler_wp[sep_wand_wp])
@@ -282,10 +282,10 @@ lemma seL4_IRQHandler_IRQControl_Get:
   \<lbrace>\<lambda>fail.
     \<guillemotleft>root_tcb_id \<mapsto>f root_tcb \<and>*
     (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
-    (* Cap to the root CNode. *)
+    \<comment> \<open>Cap to the root CNode.\<close>
     (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
      irq \<mapsto>irq irq_id \<and>*
-    (* Root CNode. *)
+    \<comment> \<open>Root CNode.\<close>
      cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*
     (cnode_id, control_index) \<mapsto>c IrqControlCap \<and>*
     (cnode_id, root_index) \<mapsto>c cnode_cap \<and>*
@@ -321,9 +321,9 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
         \<lbrace>\<lambda>fail s. \<guillemotleft> root_tcb_id \<mapsto>f root_tcb \<and>*
        (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
 
-       (* Root CNode. *)
+       \<comment> \<open>Root CNode.\<close>
        cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*
-       (* Cap to the root CNode. *)
+       \<comment> \<open>Cap to the root CNode.\<close>
        (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
        (endpoint_ptr) \<mapsto>c endpoint_cap \<and>*
        irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c endpoint_cap \<and>* irq_ptr \<mapsto>c irq_cap \<and>* R\<guillemotright> s\<rbrace>"
@@ -335,9 +335,9 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
                 apply (clarsimp)
                apply (rule set_cap_wp[sep_wand_wp])
               apply (rule mark_tcb_intent_error_sep_inv)
-             apply (wp_once)
+             apply (wp (once))
             apply (rule corrupt_ipc_buffer_sep_inv)
-           apply (wp_once)
+           apply (wp (once))
           apply (rule_tac P = "(iv = (InvokeIrqHandler $ SetIrqHandler (the $ cdl_cap_irq irq_cap) endpoint_cap endpoint_ptr))" in  hoare_gen_asmEx)
           apply (clarsimp)
           apply (wp)
@@ -406,9 +406,9 @@ lemma obj_tcb_simps [simp]:
 lemma seL4_IRQHandler_SetEndpoint_wp:
   "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb \<and>*
     (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
-    (* Root CNode. *)
+    \<comment> \<open>Root CNode.\<close>
      cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*
-    (* Cap to the root CNode. *)
+    \<comment> \<open>Cap to the root CNode.\<close>
     (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
     (cnode_id, endpoint_slot) \<mapsto>c endpoint_cap \<and>*
      irq \<mapsto>irq irq_id \<and>*
@@ -431,9 +431,9 @@ lemma seL4_IRQHandler_SetEndpoint_wp:
     seL4_IRQHandler_SetEndpoint irq_handler_cptr endpoint_cptr
   \<lbrace>\<lambda>fail. \<guillemotleft>root_tcb_id \<mapsto>f root_tcb \<and>*
     (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
-    (* Root CNode. *)
+    \<comment> \<open>Root CNode.\<close>
      cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*
-    (* Cap to the root CNode. *)
+    \<comment> \<open>Cap to the root CNode.\<close>
     (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
     (cnode_id, endpoint_slot) \<mapsto>c endpoint_cap \<and>*
      irq \<mapsto>irq irq_id \<and>*

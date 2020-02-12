@@ -444,8 +444,8 @@ The "decodeInvocation" function parses the message, determines the operation tha
 > decodeInvocation _ _ _ _ cap@(NotificationCap {capNtfnCanSend=True}) _ _ = do
 >     return $ InvokeNotification (capNtfnPtr cap) (capNtfnBadge cap)
 >
-> decodeInvocation _ _ _ _ (ReplyCap reply capEPCanGrantReply) _ _ = do
->     return $ InvokeReply reply capEPCanGrantReply
+> decodeInvocation _ _ _ _ cap@(ReplyCap {}) _ = do
+>     return $ InvokeReply (capReplyPtr cap) (capReplyCanGrant cap)
 >
 > decodeInvocation
 >         label args _ slot cap@(ThreadCap {}) extraCaps False =

@@ -40,26 +40,26 @@ lemma hoare_eq_postE: " \<lbrakk> \<And>rv s. Q rv s = G rv s; \<lbrace>P\<rbrac
 lemma hoare_eq_postE_R: " \<lbrakk> \<And>rv s. Q rv s = G rv s; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>G\<rbrace>, -"
   by (metis hoare_post_imp_R)
 
-ML {*
+ML \<open>
 val sep_select_post_method =  sep_select_generic_method false [@{thm hoare_eq_post},
                                                                @{thm hoare_eq_postE},
                                                                @{thm hoare_eq_postE_R}]
 val sep_select_pre_method  =  sep_select_generic_method false [@{thm hoare_eq_pre},
                                                                @{thm hoare_eq_preE},
                                                                @{thm hoare_eq_preE_R}]
-*}
+\<close>
 
-method_setup sep_select_pre = {*
+method_setup sep_select_pre = \<open>
 
 Scan.lift (Scan.repeat Parse.int) >> sep_select_pre_method
 
-*}
+\<close>
 
-method_setup sep_select_post = {*
+method_setup sep_select_post = \<open>
 
 Scan.lift (Scan.repeat Parse.int) >> sep_select_post_method
 
-*}
+\<close>
 
 lemma strong_sep_impl_sep_wp:
     "\<And>sep_lift.
@@ -255,7 +255,7 @@ lemma strong_sep_impl_sep_wp_rv_ex_pre_post:
   apply (clarsimp simp: sep_conj_def sep_impl_def)
   by (metis (full_types) sep_add_commute sep_disj_commute)
 
-ML {*
+ML \<open>
 local
   val simpset = simpset_of (
       put_simpset HOL_basic_ss @{context}
@@ -303,61 +303,42 @@ val sep_wandise = Thm.rule_attribute [] ((fn ctxt => (
 
 fun composeOption f g x = case g x of (SOME v, SOME h) => f (v,h) | _ => (NONE , NONE)
 
-fun wp_modifiers extras_ref =
- [Args.add -- Args.colon >> K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; WeakestPre.wp_add att)),
+val wp_modifiers =
+ [Args.add -- Args.colon >> K (I, WeakestPre.wp_add),
   Args.del -- Args.colon >> K (I, WeakestPre.wp_del),
-  Args.$$$ "sep_wp" -- Args.colon >> (K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; wp_add_attrib' sep_wandise_helper att))),
-  Args.$$$ "sep_wand" -- Args.colon >> (K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; wp_add_attrib @{thm strong_sep_impl_sep_wp} att))),
-  Args.$$$ "sep_wandE" -- Args.colon >> (K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; wp_add_attrib @{thm strong_sep_impl_sep_wpE} att ))),
-  Args.$$$ "sep_wand_side" -- Args.colon >> (K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; wp_add_attrib @{thm strong_sep_impl_sep_wp_side} att ))),
-  Args.$$$ "sep_wand_side'" -- Args.colon >> (K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; wp_add_attrib @{thm strong_sep_impl_sep_wp_side} att ))),
-  Args.$$$ "sep_wand_sideE" -- Args.colon >> (K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; wp_add_attrib @{thm strong_sep_impl_sep_wp_sideE} att ))),
-  Args.$$$ "sep_wand_sideE'" -- Args.colon >> (K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; wp_add_attrib @{thm strong_sep_impl_sep_wp_sideE'} att ))),
-  Args.$$$ "comb" -- Args.colon >> K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; WeakestPre.combs_add att)),
-  Args.$$$ "comb" -- Args.add -- Args.colon >> K (I, fn att => (WeakestPre.add_extra_rule (#2 att) extras_ref; WeakestPre.combs_add att)),
+  Args.$$$ "sep_wp" -- Args.colon >> K (I, wp_add_attrib' sep_wandise_helper),
+  Args.$$$ "sep_wand" -- Args.colon >> K (I, wp_add_attrib @{thm strong_sep_impl_sep_wp}),
+  Args.$$$ "sep_wandE" -- Args.colon >> K (I, wp_add_attrib @{thm strong_sep_impl_sep_wpE}),
+  Args.$$$ "sep_wand_side" -- Args.colon >> K (I, wp_add_attrib @{thm strong_sep_impl_sep_wp_side}),
+  Args.$$$ "sep_wand_side'" -- Args.colon >> K (I, wp_add_attrib @{thm strong_sep_impl_sep_wp_side}),
+  Args.$$$ "sep_wand_sideE" -- Args.colon >> K (I, wp_add_attrib @{thm strong_sep_impl_sep_wp_sideE}),
+  Args.$$$ "sep_wand_sideE'" -- Args.colon >> K (I, wp_add_attrib @{thm strong_sep_impl_sep_wp_sideE'}),
+  Args.$$$ "comb" -- Args.colon >> K (I, WeakestPre.combs_add),
+  Args.$$$ "comb" -- Args.add -- Args.colon >> K (I, WeakestPre.combs_add),
   Args.$$$ "comb" -- Args.del -- Args.colon >> K (I, WeakestPre.combs_del),
   Args.$$$ "only" -- Args.colon
-    >> K (Context.proof_map (WeakestPre.WPData.map WeakestPre.clear_rules), fn att =>
-                               (WeakestPre.add_extra_rule (#2 att) extras_ref; WeakestPre.wp_add att))];
+    >> K (Context.proof_map (WeakestPre.WPData.map WeakestPre.clear_rules), (WeakestPre.wp_add))];
 
-fun apply_rules_args trace xs =
-  let val extras_ref = Unsynchronized.ref [] : thm list Unsynchronized.ref;
+fun apply_wp_args xs =
+  let fun apply_tac once = if once then WeakestPre.apply_once_tac else WeakestPre.apply_rules_tac;
   in
-    WeakestPre.if_colon
-    (WeakestPre.sections (wp_modifiers extras_ref) >>
-      K (fn ctxt => SIMPLE_METHOD (WeakestPre.apply_rules_tac trace ctxt [] extras_ref)))
-    (Attrib.thms >> curry (fn (extras, ctxt) =>
-      Method.SIMPLE_METHOD (
-        WeakestPre.apply_rules_tac trace ctxt extras extras_ref
-      )
-    ))
-  end xs;
-
-fun apply_once_args trace xs =
-  let val extras_ref = Unsynchronized.ref [] : thm list Unsynchronized.ref;
-  in
-    WeakestPre.if_colon
-    (WeakestPre.sections (wp_modifiers extras_ref) >>
-      K (fn ctxt => SIMPLE_METHOD (WeakestPre.apply_once_tac trace ctxt [] extras_ref)))
-    (Attrib.thms >> curry (fn (extras, ctxt) =>
-      Method.SIMPLE_METHOD (
-        WeakestPre.apply_once_tac trace ctxt extras extras_ref
-      )
-    ))
+    Scan.lift (WeakestPre.modes ["trace", "once"])
+      --| WeakestPre.if_colon (WeakestPre.sections wp_modifiers >> flat) WeakestPre.add_section
+    >> curry (fn ([trace, once], ctxt) => SIMPLE_METHOD (apply_tac once trace ctxt []))
   end xs;
 
 end;
-*}
+\<close>
 
-attribute_setup sep_wand_side_wp =  {* Scan.succeed sep_magic_wand_side *}
-attribute_setup sep_wand_side_wp' =  {* Scan.succeed sep_magic_wand_side' *}
-attribute_setup sep_wand_wp = {* Scan.succeed sep_magic_wand *}
-attribute_setup sep_wand_wpE =  {* Scan.succeed sep_magic_wandE *}
-attribute_setup sep_wand_side_wpE = {* Scan.succeed sep_magic_wand_sideE *}
-attribute_setup sep_wand_side_wpE' = {* Scan.succeed sep_magic_wand_sideE' *}
-attribute_setup sep_wandise = {* Scan.succeed sep_wandise *}
+attribute_setup sep_wand_side_wp =  \<open>Scan.succeed sep_magic_wand_side\<close>
+attribute_setup sep_wand_side_wp' =  \<open>Scan.succeed sep_magic_wand_side'\<close>
+attribute_setup sep_wand_wp = \<open>Scan.succeed sep_magic_wand\<close>
+attribute_setup sep_wand_wpE =  \<open>Scan.succeed sep_magic_wandE\<close>
+attribute_setup sep_wand_side_wpE = \<open>Scan.succeed sep_magic_wand_sideE\<close>
+attribute_setup sep_wand_side_wpE' = \<open>Scan.succeed sep_magic_wand_sideE'\<close>
+attribute_setup sep_wandise = \<open>Scan.succeed sep_wandise\<close>
 
-method_setup wp = {* apply_rules_args false *}
+method_setup wp = \<open>apply_wp_args\<close>
   "applies weakest precondition rules"
 
 lemma boxsolve: "P s \<Longrightarrow> (\<box> \<and>* (\<box> \<longrightarrow>* P)) s"
@@ -366,14 +347,14 @@ lemma boxsolve: "P s \<Longrightarrow> (\<box> \<and>* (\<box> \<longrightarrow>
 done
 
 
-ML {*
+ML \<open>
    fun J f x = f x
                handle _ => x   (* FIXME! exceptions *)
 
    fun sep_wp thms ctxt  =
    let
      val thms' = map (sep_wandise_helper ctxt |> J) thms;
-     val wp = WeakestPre.apply_rules_tac_n false ctxt thms'  (Unsynchronized.ref [] : thm list Unsynchronized.ref)
+     val wp = WeakestPre.apply_rules_tac_n false ctxt thms'
      val sep_impi = (REPEAT_ALL_NEW  (sep_match_trivial_tac ctxt)) THEN' assume_tac ctxt
      val schemsolve = sep_rule_tac (eresolve0_tac [@{thm boxsolve}]) ctxt
      val hoare_post = (resolve0_tac [(rotate_prems ~1 @{thm hoare_strengthen_post})])
@@ -384,10 +365,44 @@ ML {*
      (TRY o (sep_match_trivial_tac ctxt |> REPEAT_ALL_NEW)) THEN'
      (TRY o sep_flatten ctxt)) ORELSE' (CHANGED o wp_pre_tac)
    end
-*}
+\<close>
 
-method_setup sep_wp = {*
+method_setup sep_wp = \<open>
   Attrib.thms >> (fn thms => fn ctxt => Method.SIMPLE_METHOD' (sep_wp thms ctxt))
-*}
+\<close>
+
+
+
+lemma shift_inside_left:
+  "\<lbrace>\<lambda>s. (P \<and>* R) (sep_lift s) \<and> A\<rbrace> f \<lbrace>R'\<rbrace> \<longleftrightarrow> \<lbrace>\<lambda>s. ((P and K A) \<and>* R) (sep_lift s)\<rbrace> f \<lbrace>R'\<rbrace>"
+  apply (clarsimp simp: pred_conj_def conj_commute)
+  done
+
+lemma shift_inside_right:
+  "\<lbrace>\<lambda>s. A \<and> (P \<and>* R) (sep_lift s)\<rbrace> f \<lbrace>R'\<rbrace> \<longleftrightarrow> \<lbrace>\<lambda>s. ((P and K A) \<and>* R) (sep_lift s)\<rbrace> f \<lbrace>R'\<rbrace>"
+  apply (clarsimp simp: pred_conj_def conj_commute)
+  done
+
+(* FIXME: Make nicer alias for doing this *)
+lemmas sep_wp_simp = pred_conj_def K_def shift_inside_left shift_inside_right sep_conj_assoc[symmetric]
+
+lemma sep_hoare_fold_mapM_x:
+  "(\<And>R x. x \<in> set xs \<Longrightarrow> \<lbrace>\<lambda>s. (P x \<and>* R) (sep_lift s)\<rbrace> f x \<lbrace>\<lambda>_ s. (Q x \<and>* R) (sep_lift s)\<rbrace>)
+    \<Longrightarrow> \<lbrace>\<lambda>s. (sep_fold P Q R xs) (sep_lift s)\<rbrace> mapM_x f xs \<lbrace>\<lambda>_ s. R (sep_lift s)\<rbrace>"
+  apply (clarsimp simp: sep_fold_def)
+  apply (induct xs arbitrary: R)
+   apply (clarsimp simp: mapM_x_def sequence_x_def)+
+  apply wp
+    apply assumption+
+   apply atomize
+   apply (erule allE)
+   apply (erule allE)
+   apply (erule_tac x=a in allE)
+   apply clarsimp
+   apply (rule hoare_chain)
+     apply assumption+
+   apply (sep_erule (direct) sep_mp)
+  apply clarsimp
+  done
 
 end

@@ -56,9 +56,9 @@ lemmas C_register_defs =
   Kernel_C.R0_def Kernel_C.R1_def Kernel_C.R2_def Kernel_C.R3_def
   Kernel_C.R4_def Kernel_C.R5_def Kernel_C.R6_def Kernel_C.R7_def
   Kernel_C.R8_def Kernel_C.R9_def Kernel_C.R10_def Kernel_C.R11_def
-  Kernel_C.R12_def Kernel_C.SP_def Kernel_C.LR_def Kernel_C.LR_svc_def
+  Kernel_C.R12_def Kernel_C.SP_def Kernel_C.LR_def Kernel_C.NextIP_def
   Kernel_C.CPSR_def Kernel_C.TLS_BASE_def Kernel_C.TPIDRURW_def
-  Kernel_C.FaultInstruction_def
+  Kernel_C.FaultIP_def
 
 (* Levity: moved from Retype_C (20090419 09:44:41) *)
 lemma no_overlap_new_cap_addrs_disjoint:
@@ -88,27 +88,6 @@ lemma empty_fail_loadWordUser[intro!, simp]:
 lemma empty_fail_getMRs[iff]:
   "empty_fail (getMRs t buf mi)"
   by (auto simp add: getMRs_def split: option.split)
-
-lemma empty_fail_getExtraCPtrs [intro!, simp]:
-  "empty_fail (getExtraCPtrs sendBuffer info)"
-  apply (simp add: getExtraCPtrs_def)
-  apply (cases info, simp)
-  apply (cases sendBuffer, simp_all)
-  done
-
-lemma empty_fail_loadCapTransfer [intro!, simp]:
-  "empty_fail (loadCapTransfer a)"
-  by (simp add: loadCapTransfer_def capTransferFromWords_def)
-
-lemma empty_fail_emptyOnFailure [intro!, simp]:
-  "empty_fail m \<Longrightarrow> empty_fail (emptyOnFailure m)"
-  by (auto simp: emptyOnFailure_def catch_def split: sum.splits)
-
-lemma empty_fail_unifyFailure [intro!, simp]:
-  "empty_fail m \<Longrightarrow> empty_fail (unifyFailure m)"
-  by (auto simp: unifyFailure_def catch_def rethrowFailure_def
-                 handleE'_def throwError_def
-           split: sum.splits)
 
 lemma asUser_mapM_x:
   "(\<And>x. empty_fail (f x)) \<Longrightarrow>
@@ -227,17 +206,6 @@ proof -
          simp_all add: empty_fail_whenEs rangeCheck_def)
   done
 qed
-
-lemma exec_Basic_Guard_UNIV:
-  "Semantic.exec \<Gamma> (Basic f;; Guard F UNIV (Basic g)) x y =
-   Semantic.exec \<Gamma> (Basic (g o f)) x y"
-  apply (rule iffI)
-   apply (elim exec_elim_cases, simp_all, clarsimp)[1]
-   apply (simp add: o_def, rule exec.Basic)
-  apply (elim exec_elim_cases)
-  apply simp_all
-  apply (rule exec_Seq' exec.Basic exec.Guard | simp)+
-  done
 
 (* only exists in Haskell, only used for C refinement *)
 crunches writeTTBR0Ptr

@@ -506,10 +506,10 @@ fun docpp (SOME p) {includes, filename} =
     val cmdline =
         p ^ " " ^ includes_string ^ " -CC \"" ^ filename ^ "\" > " ^ tmpname
   in
-    if isSuccess (system cmdline) then tmpname
+    if isSuccess (system cmdline) then (tmpname, true)
     else raise Feedback.WantToExit ("cpp failed on "^filename)
   end
-  | docpp NONE {filename, ...} = filename
+  | docpp NONE {filename, ...} = (filename, false)
 
 val usage_msg = GetOpt.usageInfo {
     header =

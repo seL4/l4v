@@ -14,16 +14,16 @@ imports "Strengthen"
 
 begin
 
-text {* Here's a complicated predicate transformer. You don't need
+text \<open>Here's a complicated predicate transformer. You don't need
 to understand this, it just makes it easy to set up some complicated
-example goals below. *}
+example goals below.\<close>
 definition
   "predt f g h P x y = (\<exists>x'. (\<exists>y' \<in> f y. x' \<in> g y' ` h y) \<and> P x x')"
 
-text {* Strengthen performs the same kinds of steps as
+text \<open>Strengthen performs the same kinds of steps as
 intro/elim rules, but it can perform them within complex
 conclusions. Here's an example where we replace Q with P
-(strengthening the goal) deep within some quantifiers. *}
+(strengthening the goal) deep within some quantifiers.\<close>
 
 lemma predt_double_mono:
   assumes PQ: "\<And>x y. P x y \<longrightarrow> Q x y"
@@ -35,12 +35,12 @@ lemma predt_double_mono:
   apply assumption
   done
 
-text {* Here's a more conventional monotonicity proof.
+text \<open>Here's a more conventional monotonicity proof.
 Once the clarsimp has finished, the goal becomes a bit
 difficult to prove. Let's use some fancy strengthen
 features to address this. The rest of this demo will
 explain what the attribute and fancy features are doing,
-and thus how this proof works. *}
+and thus how this proof works.\<close>
 
 lemma predt_double_mono2:
   assumes PQ: "\<And>x y. P x y \<longrightarrow> Q x y"
@@ -57,7 +57,7 @@ lemma predt_double_mono2:
   apply (simp add: PQ)
   done
 
-text {* The @{attribute mk_strg} controls the way that
+text \<open>The @{attribute mk_strg} controls the way that
 strengthen applies a rule. By default, strengthen will
 use a rule as an introduction rule, trying to replace
 the rule's conclusion with its premises.
@@ -68,21 +68,21 @@ transform components of a goal. The syntax of the
 second theorem is reversed, showing that strengthen will
 attempt to replace instances of the subset predicate
 with instances of the proper subset predicate.
-*}
+\<close>
 thm psubset_imp_subset psubset_imp_subset[mk_strg]
 
-text {* Rules can have any number of premises, or none,
-and still be used as strengthen rules. *}
+text \<open>Rules can have any number of premises, or none,
+and still be used as strengthen rules.\<close>
 thm subset_UNIV subset_UNIV[mk_strg]
     equalityI equalityI[mk_strg]
 
-text {* Rules which would introduce schematics are
+text \<open>Rules which would introduce schematics are
 adjusted by @{attribute mk_strg} to introduce quantifiers
 instead. The argument I to mk_strg prevents this step.
-*}
+\<close>
 thm subsetD subsetD[mk_strg I] subsetD[mk_strg]
 
-text {* The first argument to mk_strg controls the way
+text \<open>The first argument to mk_strg controls the way
 the rule will be applied.
   I: use rule in introduction style, matching its conclusion.
   D: use rule in destruction (forward) style, matching its first premise.
@@ -90,12 +90,12 @@ the rule will be applied.
   D': like D, replace new schematics with universal quantifiers.
 
 The default is I'.
-*}
+\<close>
 thm subsetD subsetD[mk_strg I] subsetD[mk_strg I']
   subsetD[mk_strg D] subsetD[mk_strg D']
 
-text {* Note that I and D rules will be applicable at different
-sites. *}
+text \<open>Note that I and D rules will be applicable at different
+sites.\<close>
 lemma
   assumes PQ: "P \<Longrightarrow> Q"
   shows "{x. Suc 0 < x \<and> P} \<subseteq> {x. Suc 0 < x \<and> Q}"
@@ -106,7 +106,7 @@ lemma
   (* oops, overdid it *)
   oops
 
-text {* Subsequent arguments to mk_strg capture premises for
+text \<open>Subsequent arguments to mk_strg capture premises for
 special treatment. The 'A' argument (synonym 'E') specifies that
 a premise should be solved by assumption. Our fancy proof above
 used a strengthen rule bexI[mk_strg I _ A], which tells strengthen
@@ -115,11 +115,11 @@ to do approximately the same thing as
 
 This is a useful way to apply a rule, picking the premise which
 will cause unknowns to be instantiated correctly.
-*}
+\<close>
 thm eq_mem_trans eq_mem_trans[mk_strg I _ _] eq_mem_trans[mk_strg I A _]
     eq_mem_trans[mk_strg I _ A] eq_mem_trans[mk_strg I A A]
 
-text {* The 'O' argument ("obligation") picks out premises of
+text \<open>The 'O' argument ("obligation") picks out premises of
 a rule for immediate attention as new subgoals.
 
 The step
@@ -129,7 +129,7 @@ in our proof above had the same effect as strengthening with
 
 This option suits special cases where a particular premise is best
 handled by a specialised method.
-*}
+\<close>
 thm eq_mem_trans eq_mem_trans[mk_strg I _ _] eq_mem_trans[mk_strg I O _]
     eq_mem_trans[mk_strg I _ O] eq_mem_trans[mk_strg I O O]
 

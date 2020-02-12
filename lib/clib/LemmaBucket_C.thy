@@ -1168,4 +1168,88 @@ lemma field_lookup_array:
     auto simp add: take_map o_def sum_list_triv size_of_def)
   done
 
+lemma field_of_t_refl:
+  "field_of_t p p' = (p = p')"
+  apply (safe, simp_all add: field_of_t_def)
+  apply (simp add: field_of_def)
+  apply (drule td_set_size_lte)
+  apply (simp add: unat_eq_0)
+  done
+
+lemma ptr_retyp_same_cleared_region:
+  fixes p :: "'a :: mem_type ptr" and p' :: "'a :: mem_type ptr"
+  assumes  ht: "ptr_retyp p td, g \<Turnstile>\<^sub>t p'"
+  shows "p = p' \<or> {ptr_val p..+ size_of TYPE('a)} \<inter> {ptr_val p' ..+ size_of TYPE('a)} = {}"
+  using ht
+  by (simp add: h_t_valid_ptr_retyp_eq[where p=p and p'=p'] field_of_t_refl
+         split: if_split_asm)
+
+lemma h_t_valid_ptr_retyp_inside_eq:
+  fixes p :: "'a :: mem_type ptr" and p' :: "'a :: mem_type ptr"
+  assumes inside: "ptr_val p' \<in> {ptr_val p ..+ size_of TYPE('a)}"
+  and         ht: "ptr_retyp p td, g \<Turnstile>\<^sub>t p'"
+  shows   "p = p'"
+  using ptr_retyp_same_cleared_region[OF ht] inside mem_type_self[where p=p']
+  by blast
+
+lemma typ_slice_t_self_nth:
+  "\<exists>n < length (typ_slice_t td m). \<exists>b. typ_slice_t td m ! n = (td, b)"
+  using typ_slice_t_self [where td = td and m = m]
+  by (fastforce simp add: in_set_conv_nth)
+
+lemma ptr_retyp_other_cleared_region:
+  fixes p :: "'a :: mem_type ptr" and p' :: "'b :: mem_type ptr"
+  assumes  ht: "ptr_retyp p td, g \<Turnstile>\<^sub>t p'"
+  and   tdisj: "typ_uinfo_t TYPE('a) \<bottom>\<^sub>t typ_uinfo_t TYPE('b :: mem_type)"
+  and   clear: "\<forall>x \<in> {ptr_val p ..+ size_of TYPE('a)}. \<forall>n b. snd (td x) n \<noteq> Some (typ_uinfo_t TYPE('b), b)"
+  shows "{ptr_val p'..+ size_of TYPE('b)} \<inter> {ptr_val p ..+ size_of TYPE('a)} = {}"
+proof (rule classical)
+  assume asm: "{ptr_val p'..+ size_of TYPE('b)} \<inter> {ptr_val p ..+ size_of TYPE('a)} \<noteq> {}"
+  then obtain mv where mvp: "mv \<in> {ptr_val p..+size_of TYPE('a)}"
+    and mvp': "mv \<in> {ptr_val p'..+size_of TYPE('b)}"
+      by blast
+
+  then obtain k' where mv: "mv = ptr_val p' + of_nat k'" and klt: "k' < size_td (typ_info_t TYPE('b))"
+    by (clarsimp dest!: intvlD simp: size_of_def typ_uinfo_size)
+
+  let ?mv = "ptr_val p' + of_nat k'"
+
+  obtain n b where nl: "n < length (typ_slice_t (typ_uinfo_t TYPE('b)) k')"
+    and tseq: "typ_slice_t (typ_uinfo_t TYPE('b)) k' ! n = (typ_uinfo_t TYPE('b), b)"
+    using typ_slice_t_self_nth [where td = "typ_uinfo_t TYPE('b)" and m = k']
+    by clarsimp
+
+  with ht have "snd (ptr_retyp p td ?mv) n = Some (typ_uinfo_t TYPE('b), b)"
+    unfolding h_t_valid_def
+    apply -
+    apply (clarsimp simp: valid_footprint_def Let_def)
+    apply (drule spec, drule mp [OF _ klt])
+    apply (clarsimp simp: map_le_def)
+    apply (drule bspec)
+    apply simp
+    apply simp
+    done
+
+  moreover {
+    assume "snd (ptr_retyp p empty_htd ?mv) n = Some (typ_uinfo_t TYPE('b), b)"
+    hence "(typ_uinfo_t TYPE('b)) \<in> fst ` set (typ_slice_t (typ_uinfo_t TYPE('a))
+                                                 (unat (ptr_val p' + of_nat k' - ptr_val p)))"
+      using asm mv mvp
+      apply -
+      apply (rule_tac x = "(typ_uinfo_t TYPE('b), b)" in image_eqI)
+       apply simp
+      apply (fastforce simp add: ptr_retyp_footprint list_map_eq in_set_conv_nth split: if_split_asm)
+      done
+
+    with typ_slice_set have "(typ_uinfo_t TYPE('b)) \<in> fst ` td_set (typ_uinfo_t TYPE('a)) 0"
+      by (rule subsetD)
+
+    hence False using tdisj by (clarsimp simp: tag_disj_def typ_tag_le_def)
+  } ultimately show ?thesis using mvp mvp' mv unfolding h_t_valid_def valid_footprint_def
+    apply -
+    apply (subst (asm) ptr_retyp_d_eq_snd)
+    apply (auto simp add: map_add_Some_iff clear)
+    done
+qed
+
 end

@@ -46,6 +46,11 @@ section "Kernel Heap Accessors"
 
 text \<open>Manipulate ASID pools, page directories and page tables in the kernel
 heap.\<close>
+(* declared in Arch as workaround for VER-1099 *)
+locale_abbrev aobjs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> arch_kernel_obj"
+  where
+  "aobjs_of \<equiv> \<lambda>s. kheap s |> aobj_of"
+
 definition
   get_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref, 'z::state_ext) s_monad" where
   "get_asid_pool ptr \<equiv> do
@@ -56,11 +61,7 @@ definition
 
 definition
   set_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref) \<Rightarrow> (unit, 'z::state_ext) s_monad" where
- "set_asid_pool ptr pool \<equiv> do
-    v \<leftarrow> get_object ptr;
-    assert (case v of ArchObj (arch_kernel_obj.ASIDPool p) \<Rightarrow> True | _ \<Rightarrow> False);
-    set_object ptr (ArchObj (arch_kernel_obj.ASIDPool pool))
-  od"
+ "set_asid_pool ptr pool \<equiv> set_object ptr (ArchObj (ASIDPool pool))"
 
 definition
   get_pd :: "obj_ref \<Rightarrow> (9 word \<Rightarrow> pde,'z::state_ext) s_monad" where
@@ -72,11 +73,7 @@ definition
 
 definition
   set_pd :: "obj_ref \<Rightarrow> (9 word \<Rightarrow> pde) \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "set_pd ptr pd \<equiv> do
-     kobj \<leftarrow> get_object ptr;
-     assert (case kobj of ArchObj (PageDirectory pd) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (PageDirectory pd))
-   od"
+  "set_pd ptr pd \<equiv> set_object ptr (ArchObj (PageDirectory pd))"
 
 text \<open>The following function takes a pointer to a PDE in kernel memory
   and returns the actual PDE.\<close>
@@ -110,11 +107,7 @@ definition
 
 definition
   set_pt :: "obj_ref \<Rightarrow> (9 word \<Rightarrow> pte) \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "set_pt ptr pt \<equiv> do
-     kobj \<leftarrow> get_object ptr;
-     assert (case kobj of ArchObj (PageTable _) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (PageTable pt))
-   od"
+  "set_pt ptr pt \<equiv> set_object ptr (ArchObj (PageTable pt))"
 
 text \<open>The following function takes a pointer to a PTE in kernel memory
   and returns the actual PTE.\<close>
@@ -147,11 +140,7 @@ definition
 
 definition
   set_pdpt :: "obj_ref \<Rightarrow> (9 word \<Rightarrow> pdpte) \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "set_pdpt ptr pt \<equiv> do
-     kobj \<leftarrow> get_object ptr;
-     assert (case kobj of ArchObj (PDPointerTable _) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (PDPointerTable pt))
-   od"
+  "set_pdpt ptr pt \<equiv> set_object ptr (ArchObj (PDPointerTable pt))"
 
 text \<open>The following function takes a pointer to a PDPTE in kernel memory
   and returns the actual PDPTE.\<close>
@@ -184,11 +173,7 @@ definition
 
 definition
   set_pml4 :: "obj_ref \<Rightarrow> (9 word \<Rightarrow> pml4e) \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "set_pml4 ptr pt \<equiv> do
-     kobj \<leftarrow> get_object ptr;
-     assert (case kobj of ArchObj (PageMapL4 _) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (PageMapL4 pt))
-   od"
+  "set_pml4 ptr pt \<equiv> set_object ptr (ArchObj (PageMapL4 pt))"
 
 text \<open>The following function takes a pointer to a PML4E in kernel memory
   and returns the actual PML4E.\<close>

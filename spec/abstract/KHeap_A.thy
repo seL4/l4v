@@ -36,9 +36,10 @@ definition
   set_object :: "obj_ref \<Rightarrow> kernel_object \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_object ptr obj \<equiv> do
+     kobj <- get_object ptr;
+     assert (a_type kobj = a_type obj);
      s \<leftarrow> get;
-     kh \<leftarrow> return $ (kheap s)(ptr := Some obj);
-     put (s \<lparr> kheap := kh \<rparr>)
+     put (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)
    od"
 
 
@@ -146,7 +147,7 @@ where
   "set_simple_ko f ptr ep \<equiv> do
      obj \<leftarrow> get_object ptr;
      assert (is_simple_type obj);
-     assert (case partial_inv f obj of Some e \<Rightarrow> a_type obj = a_type (f ep) | _ \<Rightarrow> False);
+     assert (partial_inv f obj \<noteq> None);
      set_object ptr (f ep)
    od"
 
@@ -177,7 +178,6 @@ abbreviation
 abbreviation
   ntfn_set_obj :: "notification \<Rightarrow> ntfn \<Rightarrow> notification" where
   "ntfn_set_obj ntfn a \<equiv> ntfn \<lparr> ntfn_obj := a \<rparr>"
-
 
 
 section \<open>IRQ State and Slot\<close>

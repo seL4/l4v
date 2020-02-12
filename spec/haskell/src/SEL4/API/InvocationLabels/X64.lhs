@@ -39,7 +39,6 @@ This module makes use of the GHC extension allowing data types with no construct
 >--       | X64IOPageTableMap
 >--       | X64IOPageTableUnmap
 >         | X64PageMap
->         | X64PageRemap
 >         | X64PageUnmap
 >--       | X64PageMapIO
 >         | X64PageGetAddress

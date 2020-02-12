@@ -28,7 +28,13 @@ end_qualify
 section "ARM-specific invariant definitions"
 
 qualify ARM_A (in Arch)
-type_synonym iarch_tcb = unit
+(* ARM has no interest for iarch_tcb (introduced for ARM_HYP) ,
+    and we consider no non-trivial predicates of iarch_tcb,
+    so an unspecified typedecl seems appropriate.
+   In contrast to using a unit type, this avoids
+    over-simplification of idle_tcb_at predicates,
+    which would make it hard to use facts that talk about idle_tcb_at. *)
+typedecl iarch_tcb
 end_qualify
 
 context Arch begin global_naming ARM
@@ -36,7 +42,7 @@ context Arch begin global_naming ARM
 definition
   arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb"
 where
-  "arch_tcb_to_iarch_tcb arch_tcb \<equiv> ()"
+  "arch_tcb_to_iarch_tcb arch_tcb \<equiv> undefined"
 
 lemma iarch_tcb_context_set[simp]:
   "arch_tcb_to_iarch_tcb (arch_tcb_context_set p tcb) = arch_tcb_to_iarch_tcb tcb"
@@ -247,29 +253,30 @@ definition
 where
   "valid_arch_tcb \<equiv> \<lambda>a. \<top>"
 
+definition
+  valid_arch_idle :: "iarch_tcb \<Rightarrow> bool"
+where
+  "valid_arch_idle \<equiv> \<top>"
+
 primrec
   valid_pte :: "pte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_pte (InvalidPTE) = \<top>"
 | "valid_pte (LargePagePTE ptr x y) =
-   (\<lambda>s. is_aligned ptr pageBits \<and>
-        data_at ARMLargePage (ptrFromPAddr ptr) s)"
+       data_at ARMLargePage (ptrFromPAddr ptr)"
 | "valid_pte (SmallPagePTE ptr x y) =
-   (\<lambda>s. is_aligned ptr pageBits \<and>
-        data_at ARMSmallPage (ptrFromPAddr ptr) s)"
+       data_at ARMSmallPage (ptrFromPAddr ptr)"
 
 primrec
   valid_pde :: "pde \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_pde (InvalidPDE) = \<top>"
 | "valid_pde (SectionPDE ptr x y z) =
-   (\<lambda>s. is_aligned ptr pageBits \<and>
-        data_at ARMSection (ptrFromPAddr ptr) s)"
+       data_at ARMSection (ptrFromPAddr ptr)"
 | "valid_pde (SuperSectionPDE ptr x z) =
-   (\<lambda>s. is_aligned ptr pageBits \<and>
-        data_at ARMSuperSection (ptrFromPAddr ptr) s)"
+       data_at ARMSuperSection (ptrFromPAddr ptr)"
 | "valid_pde (PageTablePDE ptr x z) =
-   (typ_at (AArch APageTable) (ptrFromPAddr ptr))"
+       typ_at (AArch APageTable) (ptrFromPAddr ptr)"
 
 
 definition
@@ -291,18 +298,21 @@ definition
 where
   "wellformed_pte pte \<equiv> case pte of
      LargePagePTE p attr r \<Rightarrow>
-       ParityEnabled \<notin> attr \<and> r \<in> valid_vm_rights
+       ParityEnabled \<notin> attr \<and> r \<in> valid_vm_rights \<and> vmsz_aligned p ARMLargePage
    | SmallPagePTE p attr r \<Rightarrow>
-       ParityEnabled \<notin> attr \<and> r \<in> valid_vm_rights
+       ParityEnabled \<notin> attr \<and> r \<in> valid_vm_rights \<and> vmsz_aligned p ARMSmallPage
    | _ \<Rightarrow> True"
 
 definition
   wellformed_pde :: "pde \<Rightarrow> bool"
 where
   "wellformed_pde pde \<equiv> case pde of
-     pde.PageTablePDE p attr mw \<Rightarrow> attr \<subseteq> {ParityEnabled}
-   | pde.SectionPDE p attr mw r \<Rightarrow> r \<in> valid_vm_rights
-   | pde.SuperSectionPDE p attr r \<Rightarrow> r \<in> valid_vm_rights
+     pde.PageTablePDE p attr mw \<Rightarrow>
+       attr \<subseteq> {ParityEnabled} \<and> is_aligned p pt_bits
+   | pde.SectionPDE p attr mw r \<Rightarrow>
+       r \<in> valid_vm_rights \<and> vmsz_aligned p ARMSection
+   | pde.SuperSectionPDE p attr r \<Rightarrow>
+       r \<in> valid_vm_rights \<and> vmsz_aligned p ARMSuperSection
    | _ \<Rightarrow> True"
 
 definition
@@ -352,6 +362,38 @@ where
   "pde_ref pde \<equiv> case pde of
     PageTablePDE ptr x z \<Rightarrow> Some (ptrFromPAddr ptr)
   | _ \<Rightarrow> None"
+
+text
+\<open>Virtual address space look-ups
+In the invariants, (ref \<unrhd> p) is a predicate on states which asserts the existence of a path through
+the current virtual address space mappings, that is rooted in the global ASID table.
+
+The ref is of type "vs_ref list", and represents the path through through the virtual address space
+mappings. For example, it may look like this:
+
+[VSRef r3 (Some APageTable), VSRef r2 (Some APageDirectory), VSRef r1 (Some AASIDPool), VSRef r0 None]
+
+In this case:
+r0 is the index of an entry in the global ASID table,
+r1 is the index of an entry in the ASIDPool pointed to by r0,
+r2 is the index of a page directory entry in the page directory mapped to the ASID formed by r0 and r1,
+r3 is the index of a page table entry in the page table pointed to by r2.
+
+Then, ((ref \<unrhd> p) s) is an assertion that: in state s, p is a pointer (in the kernel address space)
+to a Page object mapped into the page table entry r3.
+
+In this example, r0 and r1 are the high and low bits of the ASID. Similarly, r2 and r3 form parts of
+the virtual address to which the page is mapped in this address space.
+
+Note that the path is ordered bottom-up, from the object under consideration, up to the global ASID
+table entry from which it can be traced.
+
+A "vs_ref list" need not always trace from a Page object, so for example, ([VSRef r0 None] \<unrhd> p) s)
+means: in state s, p is a pointer to an ASIDPool object, which was found in entry r0 of the global
+ASID table.
+
+There are also assertions of the form (ref \<rhd> p) which are similar, but don't trace any deeper than
+page directory entries.\<close>
 
 datatype vs_ref = VSRef word32 "aa_type option"
 
@@ -2118,46 +2160,6 @@ lemma vs_cap_ref_eq_imp_table_cap_ref_eq:
                   arch_cap_fun_lift_def
           split: cap.splits arch_cap.splits vmpage_size.splits option.splits)
 
-
-lemma valid_validate_vm_rights[simp]:
-  "validate_vm_rights rs \<in> valid_vm_rights"
-and validate_vm_rights_subseteq[simp]:
-  "validate_vm_rights rs \<subseteq> rs"
-and validate_vm_rights_simps[simp]:
-  "validate_vm_rights vm_read_write = vm_read_write"
-  "validate_vm_rights vm_read_only = vm_read_only"
-  "validate_vm_rights vm_kernel_only = vm_kernel_only"
-  by (simp_all add: validate_vm_rights_def valid_vm_rights_def
-                    vm_read_write_def vm_read_only_def vm_kernel_only_def)
-
-lemma validate_vm_rights_inter: (* NOTE: unused *)
-  "validate_vm_rights (validate_vm_rights fun \<inter> msk) =
-   validate_vm_rights (fun \<inter> msk)"
-  by (simp add: validate_vm_rights_def vm_read_write_def vm_read_only_def
-              vm_kernel_only_def)
-
-lemma validate_vm_rights_def':
-  "validate_vm_rights rs =
-   (THE rs'. rs' \<subseteq> rs \<and> rs' : valid_vm_rights \<and>
-     (\<forall>rs''. rs'' \<subseteq> rs \<longrightarrow> rs'' : valid_vm_rights \<longrightarrow> rs'' \<subseteq> rs'))"
-  apply (rule the_equality[symmetric])
-   apply  (auto simp add: validate_vm_rights_def valid_vm_rights_def
-                       vm_read_write_def vm_read_only_def vm_kernel_only_def)[1]
-  apply (simp add: validate_vm_rights_def valid_vm_rights_def
-                 vm_read_write_def vm_read_only_def vm_kernel_only_def)
-  apply safe
-            apply simp+
-       apply (drule_tac x="{AllowRead, AllowWrite}" in spec, simp+)
-    apply (drule_tac x="{AllowRead, AllowWrite}" in spec, simp+)
-   apply (drule_tac x="{AllowRead, AllowWrite}" in spec, simp+)
-  apply (drule_tac x="{AllowRead}" in spec, simp)
-  done
-
-lemma validate_vm_rights_eq[simp]:
-  "rs : valid_vm_rights \<Longrightarrow> validate_vm_rights rs = rs"
-  by (auto simp add: validate_vm_rights_def valid_vm_rights_def
-                     vm_read_write_def vm_read_only_def vm_kernel_only_def)
-
 lemma acap_rights_update_id [intro!, simp]:
   "\<lbrakk>wellformed_acap cap\<rbrakk> \<Longrightarrow> acap_rights_update (acap_rights cap) cap = cap"
   unfolding wellformed_acap_def acap_rights_update_def
@@ -2461,7 +2463,36 @@ lemma valid_arch_mdb_eqI:
   shows "valid_arch_mdb (is original_cap s') (caps_of_state s')"
   by (clarsimp simp: valid_arch_mdb_def)
 
+lemma arch_tcb_context_absorbs[simp]:
+  "arch_tcb_context_set uc2 (arch_tcb_context_set uc1 a_tcb) \<equiv> arch_tcb_context_set uc2 a_tcb"
+  by (simp add: arch_tcb_context_set_def)
+
+lemma arch_tcb_context_get_set[simp]:
+  "arch_tcb_context_get (arch_tcb_context_set uc a_tcb) = uc"
+  by (simp add: arch_tcb_context_get_def arch_tcb_context_set_def)
+
+lemma vs_lookup_trans_sub2:
+  assumes ko: "\<And>ko p. \<lbrakk> ko_at ko p s; vs_refs ko \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s'"
+  shows "vs_lookup_trans s \<subseteq> vs_lookup_trans s'"
+proof -
+  have "vs_lookup1 s \<subseteq> vs_lookup1 s'"
+    by (fastforce dest: ko elim: vs_lookup1_stateI2)
+  thus ?thesis by (rule rtrancl_mono)
+qed
+
+lemma vs_lookup_pages_trans_sub2:
+  assumes ko: "\<And>ko p. \<lbrakk> ko_at ko p s; vs_refs_pages ko \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs_pages ko \<subseteq> vs_refs_pages ko') p s'"
+  shows "vs_lookup_pages_trans s \<subseteq> vs_lookup_pages_trans s'"
+proof -
+  have "vs_lookup_pages1 s \<subseteq> vs_lookup_pages1 s'"
+    by (fastforce dest: ko elim: vs_lookup_pages1_stateI2)
+  thus ?thesis by (rule rtrancl_mono)
+qed
+
 end
+
+declare ARM.arch_tcb_context_absorbs[simp]
+declare ARM.arch_tcb_context_get_set[simp]
 
 setup \<open>Add_Locale_Code_Defs.setup "ARM"\<close>
 setup \<open>Add_Locale_Code_Defs.setup "ARM_A"\<close>

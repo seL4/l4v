@@ -147,7 +147,6 @@ crunch_ignore (empty_fail)
   (add: NonDetMonad.bind bindE lift liftE liftM "when" whenE unless unlessE return fail
         assert_opt mapM mapM_x sequence_x catch handleE do_extended_op
         cap_insert_ext empty_slot_ext create_cap_ext cap_swap_ext cap_move_ext
-        reschedule_required possible_switch_to set_thread_state_act
         OR_choice OR_choiceE getRegister lookup_error_on_failure
         mapME_x const_on_failure liftME mapME do_machine_op select
         empty_on_failure unify_failure zipWithM_x throw_on_false
@@ -287,7 +286,7 @@ context EmptyFail_AI_derive_cap begin
 
 lemma decode_cnode_invocation_empty_fail[wp]:
   "\<And>a b c d. empty_fail (decode_cnode_invocation a b c d :: (cnode_invocation, 'state_ext) se_monad)"
-  by (simp add: decode_cnode_invocation_def split: invocation_label.splits list.splits | wp | intro impI conjI allI)+
+  by (simp add: decode_cnode_invocation_def split: invocation_label.splits list.splits | wp | wpc | intro impI conjI allI)+
 
 end
 

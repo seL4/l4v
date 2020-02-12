@@ -12,7 +12,7 @@ theory SplitRule
 imports Main
 begin
 
-ML {*
+ML \<open>
 
 fun str_of_term t = Pretty.string_of (Syntax.pretty_term @{context} t)
 
@@ -63,13 +63,13 @@ val split_att
 
 end;
 
-*}
+\<close>
 
-ML {*
+ML \<open>
 val split_att_setup =
   Attrib.setup @{binding split_simps} SplitSimps.split_att
     "split rule involving case construct into multiple simp rules";
- *}
+\<close>
 
 setup split_att_setup
 

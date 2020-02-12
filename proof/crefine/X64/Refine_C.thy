@@ -10,8 +10,6 @@
 
 chapter "Toplevel Refinement Statement"
 
-(* In progress c refinement *)
-
 theory Refine_C
 imports
   Init_C
@@ -665,7 +663,7 @@ lemma threadSet_all_invs_triv':
               thread_set_ct_idle
            | simp add: tcb_cap_cases_def tcb_arch_ref_def
            | rule threadSet_ct_in_state'
-           | wp_once hoare_vcg_disj_lift)+
+           | wp (once) hoare_vcg_disj_lift)+
   apply clarsimp
   apply (rule exI, rule conjI, assumption)
   apply (clarsimp simp: invs_def invs'_def cur_tcb_def cur_tcb'_def)
@@ -699,7 +697,7 @@ lemma callKernel_cur:
   done
 
 lemma entry_corres_C:
-  "fp = False \<Longrightarrow> (* FIXME: fastpath *)
+  "fp = False \<Longrightarrow> \<comment> \<open>FIXME: fastpath\<close>
   corres_underlying rf_sr False True (=)
            (all_invs' e)
            \<top>
@@ -730,7 +728,7 @@ lemma entry_corres_C:
   done
 
 lemma entry_refinement_C:
-  "\<lbrakk>all_invs' e s; (s, t) \<in> rf_sr; fp = False (* FIXME: fastpath *) \<rbrakk>
+  "\<lbrakk>all_invs' e s; (s, t) \<in> rf_sr; fp = False \<comment> \<open>FIXME: fastpath\<close> \<rbrakk>
      \<Longrightarrow> \<not> snd (kernelEntry_C fp e tc t)
         \<and> (\<forall>tc' t'. (tc',t') \<in> fst (kernelEntry_C fp e tc t)
             \<longrightarrow> (\<exists>s'. (tc', s') \<in> fst (kernelEntry e tc s) \<and> (s',t') \<in> rf_sr))"
@@ -1008,7 +1006,7 @@ lemma check_active_irq_corres_C:
 
 
 lemma refinement2_both:
-  "fp = False \<Longrightarrow> (* FIXME: fastpath *)
+  "fp = False \<Longrightarrow> \<comment> \<open>FIXME: fastpath\<close>
   \<lparr> Init = Init_C, Fin = Fin_C,
      Step = (\<lambda>u. global_automaton check_active_irq_C (do_user_op_C uop) (kernel_call_C fp)) \<rparr>
    \<sqsubseteq> ADT_H uop"

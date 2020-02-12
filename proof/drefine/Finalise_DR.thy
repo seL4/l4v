@@ -280,7 +280,7 @@ lemma caps_of_state_transform_opt_cap_no_idle:
   apply (cases p)
   apply (erule cte_wp_atE)
    apply (clarsimp simp: opt_cap_def transform_cslot_ptr_def object_slots_def
-                         slots_of_def opt_object_def transform_def transform_objects_def
+                         slots_of_def transform_def transform_objects_def
                          transform_cnode_contents_def well_formed_cnode_n_def
                          restrict_map_def
                    split: option.splits if_split_asm nat.splits)
@@ -295,7 +295,7 @@ lemma caps_of_state_transform_opt_cap_no_idle:
                          object_slots_def nat_bl_to_bin_lt2p)
   apply (frule(1) valid_etcbs_tcb_etcb)
   by (clarsimp simp: opt_cap_def transform_cslot_ptr_def
-                        slots_of_def opt_object_def restrict_map_def
+                        slots_of_def restrict_map_def
                         transform_def object_slots_def transform_objects_def
                         valid_irq_node_def obj_at_def is_cap_table_def tcb_cap_cases_def
                         transform_tcb_def tcb_slot_defs infer_tcb_bound_notification_def
@@ -641,12 +641,11 @@ lemma asid_pool_not_idle:
 
 lemma opt_object_asid_pool:
   "\<lbrakk> valid_idle s; kheap s a = Some (ArchObj (arch_kernel_obj.ASIDPool fun)) \<rbrakk> \<Longrightarrow>
-     opt_object a (transform s) = Some (cdl_object.AsidPool \<lparr>cdl_asid_pool_caps = transform_asid_pool_contents fun\<rparr>)"
+     cdl_objects (transform s) a = Some (cdl_object.AsidPool \<lparr>cdl_asid_pool_caps = transform_asid_pool_contents fun\<rparr>)"
   apply (frule asid_pool_at_rev)
   apply (frule(1) asid_pool_not_idle)
-  apply (clarsimp simp:transform_objects_def opt_object_def transform_def
-    not_idle_thread_def restrict_map_def)
-done
+  apply (clarsimp simp: transform_objects_def transform_def not_idle_thread_def restrict_map_def)
+  done
 
 lemma transform_asid_pool_contents_upd:
   "transform_asid_pool_contents (pool(ucast asid := pd)) =
@@ -674,14 +673,15 @@ lemma dcorres_set_asid_pool:
   apply (simp add:KHeap_D.set_cap_def set_asid_pool_def get_object_def gets_the_def
                   gets_def bind_assoc)
   apply (rule dcorres_absorb_get_l)
-  apply (clarsimp simp:obj_at_def opt_object_asid_pool assert_opt_def has_slots_def)
-  apply (clarsimp simp:KHeap_D.set_object_def simpler_modify_def put_def bind_def
+  apply (clarsimp simp: obj_at_def opt_object_asid_pool assert_opt_def has_slots_def)
+  apply (clarsimp simp: KHeap_D.set_object_def simpler_modify_def put_def bind_def
                        corres_underlying_def update_slots_def return_def object_slots_def)
-  apply (clarsimp simp:KHeap_A.set_object_def get_def put_def bind_def return_def)
-  apply (clarsimp simp:transform_def transform_current_thread_def)
+  apply (clarsimp simp: KHeap_A.set_object_def get_object_def in_monad get_def
+                        put_def bind_def return_def)
+  apply (clarsimp simp: transform_def transform_current_thread_def)
   apply (drule(1) arch_obj_not_idle)
   apply (rule ext)
-  apply (clarsimp simp:not_idle_thread_def transform_objects_def restrict_map_def map_add_def)
+  apply (clarsimp simp: not_idle_thread_def transform_objects_def restrict_map_def map_add_def)
   apply (rule transform_asid_pool_contents_upd)
   done
 
@@ -995,7 +995,7 @@ done
 lemma opt_cap_page_table:"\<lbrakk>valid_idle s;pd_pt_relation a pt_id x s;ucast (x && mask pd_bits >> 2) \<notin> kernel_mapping_slots\<rbrakk>\<Longrightarrow>
 (opt_cap (a, unat (x && mask pd_bits >> 2) ) (transform s))
   = Some (cdl_cap.PageTableCap pt_id Fake None)"
-  apply (clarsimp simp:pd_pt_relation_def opt_cap_def transform_def unat_def slots_of_def opt_object_def)
+  apply (clarsimp simp:pd_pt_relation_def opt_cap_def transform_def unat_def slots_of_def)
   apply (frule page_directory_at_rev)
   apply (frule(1) page_directory_not_idle)
   apply (clarsimp simp:transform_objects_def not_idle_thread_def page_directory_not_idle
@@ -1010,7 +1010,7 @@ done
 lemma opt_cap_page:"\<lbrakk>valid_idle s;pt_page_relation a pg x S s \<rbrakk>\<Longrightarrow>
 \<exists>f sz. (opt_cap (a, unat (x && mask pt_bits >> 2) ) (transform s))
   = Some (cdl_cap.FrameCap False pg f sz Fake None)"
-  apply (clarsimp simp:pt_page_relation_def unat_def opt_cap_def transform_def slots_of_def opt_object_def)
+  apply (clarsimp simp:pt_page_relation_def unat_def opt_cap_def transform_def slots_of_def)
   apply (frule page_table_at_rev)
   apply (frule(1) page_table_not_idle)
   apply (clarsimp simp:transform_objects_def not_idle_thread_def page_directory_not_idle
@@ -1029,7 +1029,7 @@ lemma opt_cap_section:
   unfolding unat_def
   apply (erule disjE)
 
-    apply (clarsimp simp: pd_section_relation_def opt_cap_def transform_def slots_of_def opt_object_def)
+    apply (clarsimp simp: pd_section_relation_def opt_cap_def transform_def slots_of_def)
     apply (frule page_directory_at_rev)
     apply (frule(1) page_directory_not_idle)
     apply (clarsimp simp:transform_objects_def not_idle_thread_def page_directory_not_idle
@@ -1038,7 +1038,7 @@ lemma opt_cap_section:
       apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def unat_def[symmetric] below_kernel_base_int)
       apply (simp add:word_of_int ucast_def unat_def mask_pt_bits_less)+
     apply (simp add:mask_pd_bits_less)
-  apply (clarsimp simp:pd_super_section_relation_def opt_cap_def transform_def slots_of_def opt_object_def)
+  apply (clarsimp simp:pd_super_section_relation_def opt_cap_def transform_def slots_of_def)
   apply (frule page_directory_at_rev)
   apply (frule(1) page_directory_not_idle)
   apply (clarsimp simp:transform_objects_def not_idle_thread_def page_directory_not_idle
@@ -1049,23 +1049,23 @@ lemma opt_cap_section:
   apply (simp add:mask_pd_bits_less)
 done
 
-lemma opt_object_page_table:"\<lbrakk>valid_idle s;kheap s a = Some (ArchObj (arch_kernel_obj.PageTable fun))\<rbrakk>
-\<Longrightarrow>opt_object a (transform s) =
-  Some (cdl_object.PageTable \<lparr>cdl_page_table_caps = transform_page_table_contents fun\<rparr>)"
+lemma opt_object_page_table:
+  "\<lbrakk>valid_idle s; kheap s a = Some (ArchObj (arch_kernel_obj.PageTable fun))\<rbrakk>
+  \<Longrightarrow> cdl_objects (transform s) a =
+        Some (cdl_object.PageTable \<lparr>cdl_page_table_caps = transform_page_table_contents fun\<rparr>)"
   apply (frule page_table_at_rev)
   apply (frule(1) page_table_not_idle)
-  apply (clarsimp simp:transform_objects_def opt_object_def transform_def
-    not_idle_thread_def restrict_map_def)
-done
+  apply (clarsimp simp: transform_objects_def transform_def not_idle_thread_def restrict_map_def)
+  done
 
-lemma opt_object_page_directory:"\<lbrakk>valid_idle s;kheap s a = Some (ArchObj (arch_kernel_obj.PageDirectory fun))\<rbrakk>
-\<Longrightarrow>opt_object a (transform s) =
-  Some (cdl_object.PageDirectory \<lparr>cdl_page_directory_caps = transform_page_directory_contents fun\<rparr>)"
+lemma opt_object_page_directory:
+  "\<lbrakk>valid_idle s; kheap s a = Some (ArchObj (arch_kernel_obj.PageDirectory fun))\<rbrakk>
+  \<Longrightarrow> cdl_objects (transform s) a =
+        Some (cdl_object.PageDirectory \<lparr>cdl_page_directory_caps = transform_page_directory_contents fun\<rparr>)"
   apply (frule page_directory_at_rev)
   apply (frule(1) page_directory_not_idle)
-  apply (clarsimp simp:transform_objects_def opt_object_def transform_def
-    not_idle_thread_def restrict_map_def)
-done
+  apply (clarsimp simp:transform_objects_def transform_def not_idle_thread_def restrict_map_def)
+  done
 
 lemma remove_cdt_pt_slot_exec:
   "\<lbrakk>dcorres dc \<top> Q (g ()) f;
@@ -1114,11 +1114,11 @@ lemma dcorres_set_pte_cap:
     (KHeap_D.set_cap (a, unat (ptr && mask pt_bits >> 2)) pte_cap)
     (KHeap_A.set_object a
       (ArchObj (arch_kernel_obj.PageTable (fun(ucast (ptr && mask pt_bits >> 2) := a_pte)))))"
-  apply (simp add:KHeap_D.set_cap_def KHeap_A.set_object_def gets_the_def gets_def bind_assoc unat_def)
+  apply (simp add:KHeap_D.set_cap_def KHeap_A.set_object_def get_object_def gets_the_def gets_def bind_assoc unat_def)
   apply (rule dcorres_absorb_get_r)
   apply (rule dcorres_absorb_get_l)
   apply (clarsimp simp:obj_at_def opt_object_page_table assert_opt_def has_slots_def object_slots_def)
-  apply (clarsimp simp:KHeap_D.set_object_def simpler_modify_def put_def bind_def
+  apply (clarsimp simp:KHeap_D.set_object_def get_object_def in_monad simpler_modify_def put_def bind_def
                        corres_underlying_def update_slots_def return_def object_slots_def)
   apply (rule sym)
   apply (clarsimp simp:transform_def transform_current_thread_def)
@@ -1143,13 +1143,12 @@ lemma dcorres_delete_cap_simple_set_pt:
        and valid_idle and ko_at (ArchObj (arch_kernel_obj.PageTable fun)) (ptr && ~~ mask pt_bits))
     (delete_cap_simple (ptr && ~~ mask pt_bits, unat (ptr && mask pt_bits >> 2)))
     (set_pt (ptr && ~~ mask pt_bits) (fun(ucast (ptr && mask pt_bits >> 2) := ARM_A.pte.InvalidPTE)))"
-  apply (simp add:delete_cap_simple_def set_pt_def gets_the_def gets_def bind_assoc get_object_def)
+  apply (simp add: delete_cap_simple_def set_pt_def gets_the_def gets_def bind_assoc get_object_def)
   apply (rule dcorres_absorb_get_l)
-  apply (rule dcorres_absorb_get_r)
-  apply (clarsimp simp:assert_def corres_free_fail
-    split:Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
+  apply (clarsimp simp: assert_def corres_free_fail
+                 split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
   apply (frule opt_cap_page)
-    apply (simp add:)+
+    apply simp+
   apply (clarsimp simp:gets_def assert_opt_def PageTableUnmap_D.is_final_cap_def PageTableUnmap_D.is_final_cap'_def)
   apply (rule dcorres_absorb_get_l)
   apply (clarsimp simp: always_empty_slot_def gets_the_def gets_def bind_assoc)
@@ -1209,17 +1208,17 @@ lemma dcorres_set_pde_cap:
       (KHeap_D.set_cap (a, unat x) pde_cap)
       (KHeap_A.set_object a (ArchObj
                  (arch_kernel_obj.PageDirectory (fun(ucast x := a_pde)))))"
-  apply (simp add:KHeap_D.set_cap_def KHeap_A.set_object_def gets_the_def gets_def bind_assoc)
-  apply (rule dcorres_absorb_get_r)
+  apply (simp add: KHeap_D.set_cap_def KHeap_A.set_object_def gets_the_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_l)
-  apply (clarsimp simp:obj_at_def opt_object_page_directory assert_opt_def has_slots_def object_slots_def)
-  apply (clarsimp simp:KHeap_D.set_object_def simpler_modify_def put_def bind_def corres_underlying_def update_slots_def object_slots_def return_def)
-  apply (clarsimp simp:transform_def transform_current_thread_def)
+  apply (clarsimp simp: obj_at_def opt_object_page_directory assert_opt_def has_slots_def object_slots_def)
+  apply (clarsimp simp: KHeap_D.set_object_def get_object_def in_monad simpler_modify_def put_def
+                        bind_def corres_underlying_def update_slots_def object_slots_def return_def)
+  apply (clarsimp simp: transform_def transform_current_thread_def)
     apply (rule ext)
     apply (clarsimp | rule conjI)+
       apply (frule page_directory_at_rev)
       apply (frule(1) page_directory_not_idle)
-      apply (clarsimp simp:transform_objects_def not_idle_thread_def)
+      apply (clarsimp simp: transform_objects_def not_idle_thread_def)
       apply (rule sym)
       apply (erule transform_page_directory_contents_upd)
    apply (clarsimp simp: transform_objects_def restrict_map_def map_add_def)
@@ -1234,35 +1233,32 @@ lemma dcorres_delete_cap_simple_set_pde:
     and valid_idle and ko_at (ArchObj (arch_kernel_obj.PageDirectory fun)) (ptr && ~~ mask pd_bits))
              (delete_cap_simple (ptr && ~~ mask pd_bits, unat (ptr && mask pd_bits >> 2)))
              (set_pd (ptr && ~~ mask pd_bits) (fun(ucast (ptr && mask pd_bits >> 2) := ARM_A.pde.InvalidPDE)))"
-  apply (simp add:delete_cap_simple_def set_pd_def gets_the_def gets_def bind_assoc get_object_def)
+  apply (simp add: delete_cap_simple_def set_pd_def gets_the_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_l)
-  apply (rule dcorres_absorb_get_r)
-  apply (clarsimp simp:assert_def corres_free_fail
-    split:Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
+  apply (clarsimp simp: assert_def corres_free_fail
+                 split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
   apply (erule disjE)
-    apply (frule opt_cap_page_table,simp+)
-    apply (clarsimp simp:gets_def assert_opt_def PageTableUnmap_D.is_final_cap_def PageTableUnmap_D.is_final_cap'_def)
-    apply (rule dcorres_absorb_get_l)
-    apply (clarsimp simp:always_empty_slot_def gets_the_def gets_def bind_assoc)
-    apply (rule remove_cdt_pd_slot_exec)
-      apply (rule corres_guard_imp)
+   apply (frule opt_cap_page_table, simp+)
+   apply (clarsimp simp: gets_def assert_opt_def PageTableUnmap_D.is_final_cap_def PageTableUnmap_D.is_final_cap'_def)
+   apply (rule dcorres_absorb_get_l)
+   apply (clarsimp simp: always_empty_slot_def gets_the_def gets_def bind_assoc)
+   apply (rule remove_cdt_pd_slot_exec)
+    apply (rule corres_guard_imp)
       apply (rule dcorres_set_pde_cap)
-    apply (simp add:transform_pte_def)+
-    apply (clarsimp simp:pd_pt_relation_def transform_pde_def)+
-    apply (rule page_directory_at_rev)
-    apply simp
+        apply (simp add: transform_pte_def)+
+       apply (clarsimp simp: pd_pt_relation_def transform_pde_def)+
+   apply (rule page_directory_at_rev)
+   apply simp
   apply (frule opt_cap_section,simp+)
-    apply (clarsimp simp:gets_def assert_opt_def PageTableUnmap_D.is_final_cap_def PageTableUnmap_D.is_final_cap'_def)
-    apply (rule dcorres_absorb_get_l)
-    apply (clarsimp simp:always_empty_slot_def gets_the_def gets_def bind_assoc)
-    apply (rule remove_cdt_pd_slot_exec)
-      apply (rule corres_guard_imp)
-      apply (rule dcorres_set_pde_cap)
-    apply simp+
-    apply (clarsimp simp:pd_pt_relation_def transform_pde_def)+
-    apply (rule page_directory_at_rev)
-    apply simp
-done
+  apply (clarsimp simp: gets_def assert_opt_def PageTableUnmap_D.is_final_cap_def PageTableUnmap_D.is_final_cap'_def)
+  apply (rule dcorres_absorb_get_l)
+  apply (clarsimp simp: always_empty_slot_def gets_the_def gets_def bind_assoc)
+  apply (rule remove_cdt_pd_slot_exec)
+   apply (rule corres_guard_imp)
+     apply (rule dcorres_set_pde_cap)
+       apply simp+
+      apply (clarsimp simp: pd_pt_relation_def transform_pde_def obj_at_def a_type_def)+
+  done
 
 lemma dcorres_lookup_pd_slot:
   "is_aligned pd 14
@@ -1389,7 +1385,7 @@ lemma test_bits_neg_mask:
   "\<lbrakk>x && ~~ mask l = y && ~~ mask l;na < size x; size x = size y\<rbrakk>
   \<Longrightarrow> l\<le> na \<longrightarrow> x !! na = y !! na"
   apply (drule word_eqD)
-  apply (auto simp:word_size neg_mask_bang)
+  apply (auto simp:word_size neg_mask_test_bit)
 done
 
 lemma mask_compare_imply:
@@ -1430,83 +1426,68 @@ lemma remain_pt_pd_relation:
    \<lbrace>\<lambda>r s. \<forall>y\<in>ys. pt_page_relation (y && ~~ mask pt_bits) pg_id y S s\<rbrace>"
   apply (rule hoare_vcg_const_Ball_lift)
   apply (subgoal_tac "ptr\<noteq> y")
-   apply (simp add:store_pte_def)
+   apply (simp add: store_pte_def)
    apply wp
      apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable x)) (ptr && ~~ mask pt_bits)
                 and  pt_page_relation (y && ~~ mask pt_bits) pg_id y S" in hoare_vcg_precond_imp)
-      apply (clarsimp simp:set_pt_def)
-      apply wp
-        apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable x)) (ptr && ~~ mask pt_bits)
-                     and  pt_page_relation (y && ~~ mask pt_bits) pg_id y S" in hoare_vcg_precond_imp)
-         apply (clarsimp simp:valid_def set_object_def in_monad)
-         apply (drule_tac x= y in bspec,simp)
-         apply (clarsimp simp:pt_page_relation_def dest!: ucast_inj_mask| rule conjI)+
-          apply (drule mask_compare_imply)
-              apply ((simp add:word_size pt_bits_def pageBits_def is_aligned_mask)+)
+      apply (clarsimp simp: set_pt_def)
+      apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable x)) (ptr && ~~ mask pt_bits)
+                   and  pt_page_relation (y && ~~ mask pt_bits) pg_id y S" in hoare_vcg_precond_imp)
+       apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
+       apply (drule_tac x= y in bspec,simp)
+       apply (clarsimp simp: pt_page_relation_def dest!: ucast_inj_mask| rule conjI)+
+        apply (drule mask_compare_imply)
+            apply ((simp add: word_size pt_bits_def pageBits_def is_aligned_mask)+)
 
-         apply (clarsimp simp:pt_page_relation_def obj_at_def)
-        apply (assumption)
-       apply wp
-      apply (simp add:get_object_def)
-      apply wp
-      apply (clarsimp simp:obj_at_def)+
-     apply (assumption)
+       apply (clarsimp simp: pt_page_relation_def obj_at_def)
+      apply (assumption)
+     apply (simp add: get_object_def)
     apply wp
-   apply (clarsimp simp:obj_at_def pt_page_relation_def)+
+   apply (clarsimp simp: obj_at_def)+
   done
 
 lemma remain_pd_section_relation:
   "\<lbrakk>is_aligned ptr 2; is_aligned y 2; ptr \<noteq> y\<rbrakk>
    \<Longrightarrow> \<lbrace>\<lambda>s. pd_section_relation ( y && ~~ mask pd_bits) sid y s\<rbrace> store_pde ptr sp
        \<lbrace>\<lambda>r s. pd_section_relation (y && ~~ mask pd_bits) sid y s\<rbrace>"
-  apply (simp add:store_pde_def)
+  apply (simp add: store_pde_def)
   apply wp
     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
                   and pd_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
-     apply (clarsimp simp:set_pd_def)
-     apply wp
-       apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
-                  and pd_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
-        apply (clarsimp simp:valid_def set_object_def in_monad)
-        apply (clarsimp simp:pd_section_relation_def dest!:ucast_inj_mask | rule conjI)+
-         apply (drule mask_compare_imply)
-             apply (simp add:word_size pd_bits_def pt_bits_def pageBits_def is_aligned_mask)+
-        apply (clarsimp simp:pt_page_relation_def obj_at_def)
-       apply (assumption)
-      apply wp
-     apply (simp add:get_object_def)
-     apply wp
-     apply (clarsimp simp:obj_at_def)+
-    apply (assumption)
+     apply (clarsimp simp: set_pd_def)
+     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
+                and pd_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
+      apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
+      apply (clarsimp simp: pd_section_relation_def dest!: ucast_inj_mask | rule conjI)+
+       apply (drule mask_compare_imply)
+           apply (simp add: word_size pd_bits_def pt_bits_def pageBits_def is_aligned_mask)+
+      apply (clarsimp simp: pt_page_relation_def obj_at_def)
+     apply (assumption)
+    apply (simp add: get_object_def)
    apply wp
-  apply (clarsimp simp:obj_at_def pt_page_relation_def)+
-done
+  apply (clarsimp simp: obj_at_def)+
+  done
 
 lemma remain_pd_super_section_relation:
   "\<lbrakk>is_aligned ptr 2; is_aligned y 2; ptr \<noteq> y\<rbrakk>
    \<Longrightarrow> \<lbrace>\<lambda>s. pd_super_section_relation ( y && ~~ mask pd_bits) sid y s\<rbrace> store_pde ptr sp
        \<lbrace>\<lambda>r s. pd_super_section_relation (y && ~~ mask pd_bits) sid y s\<rbrace>"
-  apply (simp add:store_pde_def)
+  apply (simp add: store_pde_def)
   apply wp
     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
                and pd_super_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
-     apply (clarsimp simp:set_pd_def)
-     apply wp
-       apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
-                 and pd_super_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
-        apply (clarsimp simp:valid_def set_object_def in_monad)
-        apply (clarsimp simp:pd_super_section_relation_def dest!:ucast_inj_mask | rule conjI)+
-         apply (drule mask_compare_imply)
-             apply (simp add:word_size pd_bits_def pt_bits_def pageBits_def is_aligned_mask)+
-        apply (clarsimp simp:pt_page_relation_def obj_at_def)
-       apply (assumption)
-      apply wp
-     apply (simp add:get_object_def)
-     apply wp
-     apply (clarsimp simp:obj_at_def)+
-    apply (assumption)
+     apply (clarsimp simp: set_pd_def)
+     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
+               and pd_super_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
+      apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
+      apply (clarsimp simp: pd_super_section_relation_def dest!: ucast_inj_mask | rule conjI)+
+       apply (drule mask_compare_imply)
+           apply (simp add: word_size pd_bits_def pt_bits_def pageBits_def is_aligned_mask)+
+      apply (clarsimp simp: pt_page_relation_def obj_at_def)
+     apply (assumption)
+    apply (simp add: get_object_def)
    apply wp
-  apply (clarsimp simp:obj_at_def pt_page_relation_def)
+  apply (clarsimp simp: obj_at_def)+
   done
 
 lemma remain_pd_either_section_relation:
@@ -1532,7 +1513,7 @@ lemma is_aligned_less_kernel_base_helper:
   apply (simp add: word_le_nat_alt shiftr_20_unat_ucast
                    unat_ucast_pd_bits_shift)
   apply (fold word_le_nat_alt, unfold linorder_not_le)
-  apply (drule minus_one_helper3[where x=x])
+  apply (drule word_le_minus_one_leq[where x=x])
   apply (subst add.commute, subst is_aligned_add_or, assumption)
    apply (erule order_le_less_trans, simp)
   apply (simp add: word_ao_dist shiftr_over_or_dist)
@@ -1600,7 +1581,7 @@ lemma dcorres_store_pde_non_sense:
      \<and> (f (ucast (slot && mask pd_bits >> 2)) = pde)))
   (return a) (store_pde slot pde)"
   apply (simp add:store_pde_def)
-  apply (simp add:get_pd_def bind_assoc get_object_def set_pd_def gets_def)
+  apply (simp add:get_pd_def bind_assoc set_object_def get_object_def set_pd_def gets_def)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp add:assert_def corres_free_fail
                   split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -1622,7 +1603,7 @@ lemma dcorres_store_pte_non_sense:
       \<and> (f (ucast (slot && mask pt_bits >> 2)) = pte)))
   (return a) (store_pte slot pte)"
   apply (simp add:store_pte_def)
-  apply (simp add:get_pt_def bind_assoc get_object_def set_pt_def gets_def)
+  apply (simp add:get_pt_def bind_assoc set_object_def get_object_def set_pt_def gets_def)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp add:assert_def corres_free_fail
                   split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -1996,12 +1977,6 @@ crunch valid_idle[wp]: flush_table "valid_idle"
 crunch valid_idle[wp]: page_table_mapped "valid_idle"
   (wp: crunch_wps simp:crunch_simps)
 
-crunch valid_idle[wp]: invalidate_asid_entry "valid_idle"
-  (wp: crunch_wps simp:crunch_simps)
-
-crunch valid_idle[wp]: flush_space "valid_idle"
-  (wp: crunch_wps simp:crunch_simps)
-
 lemma page_table_mapped_stable[wp]:
   "\<lbrace>(=) s\<rbrace> page_table_mapped a b w \<lbrace>\<lambda>r. (=) s\<rbrace>"
   apply (simp add:page_table_mapped_def)
@@ -2146,7 +2121,7 @@ lemma pd_at_cdl_pd_at:
   \<Longrightarrow> opt_cap (transform_pd_slot_ref ptr) (transform s) =
   Some (transform_pde (fun (of_nat (unat (ptr && mask pd_bits >> 2)))))"
   apply (clarsimp simp:opt_cap_def transform_pd_slot_ref_def transform_def
-    slots_of_def opt_object_def transform_objects_def pred_tcb_def2
+    slots_of_def transform_objects_def pred_tcb_def2
     valid_idle_def restrict_map_def object_slots_def
     transform_page_directory_contents_def unat_map_def
      dest!:get_tcb_SomeD split:option.splits)
@@ -2403,7 +2378,7 @@ prefer 2
               apply (rule dcorres_flush_page)
              apply (wp do_machine_op_wp | clarsimp)+
          apply (simp add: imp_conjR)
-         apply ((wp check_mapping_pptr_pt_relation | wp_once hoare_drop_imps)+)[1]
+         apply ((wp check_mapping_pptr_pt_relation | wp (once) hoare_drop_imps)+)[1]
         apply (simp | wp lookup_pt_slot_inv)+
      apply (simp add: dc_def
        | wp lookup_pt_slot_inv find_pd_for_asid_kernel_mapping_help
@@ -2469,7 +2444,7 @@ prefer 2
               apply (rule dcorres_flush_page[unfolded dc_def])
              apply (wp do_machine_op_wp | clarsimp)+
          apply (simp add: imp_conjR)
-         apply ((wp check_mapping_pptr_section_relation | wp_once hoare_drop_imps)+)[1]
+         apply ((wp check_mapping_pptr_section_relation | wp (once) hoare_drop_imps)+)[1]
         apply (simp | wp lookup_pt_slot_inv)+
      apply (simp add: dc_def
        | wp lookup_pt_slot_inv find_pd_for_asid_kernel_mapping_help
@@ -2602,6 +2577,23 @@ lemma prepare_thread_delete_dcorres: "dcorres dc P P' (CSpace_D.prepare_thread_d
   apply (clarsimp simp: CSpace_D.prepare_thread_delete_def prepare_thread_delete_def)
   done
 
+lemma update_restart_pc_dcorres: "dcorres dc P P' (return ()) (update_restart_pc t)"
+  apply (monad_eq simp: update_restart_pc_def as_user_def gets_the_def
+                        getRegister_def setRegister_def set_object_def get_object_def
+                        corres_underlying_def return_def select_f_def)
+  apply (clarsimp simp: get_tcb_def split: option.splits kernel_object.splits)
+  apply (clarsimp simp: transform_def transform_objects_def)
+  apply (intro impI conjI)
+    apply (rule ext)
+    apply (clarsimp simp: map_add_def restrict_map_def transform_tcb_def
+                          transform_full_intent_def cap_register_def capRegister_def
+                          get_tcb_message_info_def msg_info_register_def msgInfoRegister_def
+                          get_tcb_mrs_def msgRegisters_A_unfold
+                          get_ipc_buffer_words_def transform_current_thread_def
+                          ARM.faultRegister_def ARM.nextInstructionRegister_def
+                   split: option.splits)+
+  done
+
 lemma dcorres_finalise_cap:
   "cdlcap = transform_cap cap \<Longrightarrow>
       dcorres (\<lambda>r r'. fst r = transform_cap (fst r'))
@@ -2624,6 +2616,11 @@ lemma dcorres_finalise_cap:
      apply (rule corres_guard_imp)
        apply (rule corres_split[OF _ dcorres_unbind_notification])
          apply (rule corres_split[OF _ finalise_cancel_ipc])
+         apply (rule dcorres_symb_exec_r[OF _ gts_inv gts_inv])
+         apply (rule dcorres_rhs_noop_above)
+          apply (case_tac "rv = Running"; simp)
+           apply (rule update_restart_pc_dcorres)
+          apply simp
            apply (rule corres_split)
               unfolding K_bind_def
               apply (rule dcorres_rhs_noop_above_True[OF tcb_sched_action_dcorres[where P=\<top> and P'=\<top>]])
@@ -2634,6 +2631,8 @@ lemma dcorres_finalise_cap:
              apply (rule set_cap_set_thread_state_inactive)
             apply wp+
          apply (simp add:not_idle_thread_def)
+          apply (case_tac "rv = Running"; simp)
+           apply (wp update_restart_pc_dcorres)
          apply (wp unbind_notification_invs | simp add: not_idle_thread_def)+
      apply clarsimp
      apply (drule(1) thread_in_thread_cap_not_idle[OF invs_valid_global_refs])
@@ -3261,12 +3260,6 @@ lemma cutMon_validE_R_drop:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> cutMon R f \<lbrace>Q\<rbrace>,-"
   by (simp add: validE_R_def validE_def cutMon_valid_drop)
 
-crunch idle_thread [wp]: cap_swap_for_delete "\<lambda>s::'a::state_ext state. P (idle_thread s)"
-  (wp: dxo_wp_weak)
-
-crunch idle_thread [wp]: finalise_cap "\<lambda>s. P (idle_thread s)"
- (wp: crunch_wps simp: crunch_simps)
-
 lemma preemption_point_idle_thread[wp]: "\<lbrace> \<lambda>s. P (idle_thread s) \<rbrace> preemption_point \<lbrace> \<lambda>_ s. P (idle_thread s) \<rbrace>"
   apply (simp add: preemption_point_def OR_choiceE_def)
   apply (wpsimp wp: hoare_drop_imps dxo_wp_weak[where P="\<lambda>s. P (idle_thread s)"])
@@ -3274,7 +3267,7 @@ lemma preemption_point_idle_thread[wp]: "\<lbrace> \<lambda>s. P (idle_thread s)
 
 lemma rec_del_idle_thread[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> rec_del args \<lbrace>\<lambda>rv s::'a::state_ext state. P (idle_thread s)\<rbrace>"
-  by (wp rec_del_preservation | simp)+
+  by (wp rec_del_preservation)+
 
 lemmas gets_constant = gets_to_return
 
@@ -3421,7 +3414,7 @@ lemma opt_cap_cnode:
            = (\<exists>v cap'. transform_cslot_ptr (y, v) = (y, node)
                    \<and> cn v = Some cap' \<and> cap = transform_cap cap')"
   apply clarsimp
-  apply (simp add: opt_cap_def slots_of_def opt_object_def
+  apply (simp add: opt_cap_def slots_of_def
                    transform_def transform_objects_def restrict_map_def
                    transform_cnode_contents_def option_map_join_def
                    transform_cslot_ptr_def object_slots_def
@@ -3521,7 +3514,7 @@ proof (induct arbitrary: S rule: rec_del.induct,
          apply (rule monadic_trancl_preemptible_return)
         apply (rule corres_trivial, simp add: returnOk_liftE)
         apply wp
-       apply (wp_trace cutMon_validE_R_drop rec_del_invs
+       apply (wp cutMon_validE_R_drop rec_del_invs
                   | simp add: not_idle_thread_def
                   | strengthen invs_weak_valid_mdb invs_valid_idle_strg
                   | rule hoare_vcg_E_elim[rotated])+

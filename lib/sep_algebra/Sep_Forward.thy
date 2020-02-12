@@ -11,24 +11,13 @@
 theory Sep_Forward
 imports
   Extended_Separation_Algebra
+  Sep_Util
 begin
 
 lemma sep_conj_sep_impl_spec:
   "\<lbrakk>((Q -* R) \<and>* P) h; \<And>h. (Q -* R) h \<Longrightarrow> (P \<longrightarrow>* R') h\<rbrakk> \<Longrightarrow> R' h"
   by (metis (full_types) sep_conj_sep_impl2)
 
-ML {*
-fun sep_flatten_full ctxt =
-let
-  fun simptac i =
-    CHANGED_PROP (full_simp_tac (put_simpset HOL_basic_ss ctxt addsimps @{thms sep_conj_ac}
-                                                               addsimps @{thms triv_forall_equality}) i)
-in
-  UNSOLVED' simptac
-end
-*}
-
-method_setup sep_flatten = {* Scan.succeed (SIMPLE_METHOD' o sep_flatten_full) *}
 
 method sep_invert = ((erule sep_septraction_snake | sep_erule (direct) sep_conj_sep_impl_spec),
                       sep_flatten?; sep_invert?)
@@ -117,6 +106,11 @@ method sep_forward = (sep_cancel | septract_cancel |  sep_lift |
 
 method sep_forward_solve = (solves \<open>sep_invert; (sep_forward) +\<close>)
 
-method sep_cancel = (Sep_Cancel.sep_cancel | sep_lift)
+method sep_cancel uses add = (Sep_Cancel.sep_cancel add: add | sep_lift)
+
+lemma septract_mp: "\<lbrakk>(R' \<and>* (R' -* R)) s; \<And>s. R s \<Longrightarrow> (R' \<and>* (R' \<longrightarrow>* R)) s; precise R'\<rbrakk> \<Longrightarrow> R s"
+  apply (sep_invert)
+  apply (atomize, erule allE, drule (1) mp)
+  using precise_conj_coimpl by blast
 
 end

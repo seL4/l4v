@@ -38,7 +38,7 @@ abbreviation
   throw :: "(cdl_state, 'a + 'b) nondet_monad" where
   "throw == throwError undefined"
 
-text {* Allow preemption at this point. *}
+text \<open>Allow preemption at this point.\<close>
 definition
   preemption_point :: "unit preempt_monad" where
  "preemption_point \<equiv> throw \<sqinter> returnOk ()"
@@ -51,9 +51,9 @@ definition
   unify_failure :: "('f + 'a) k_monad \<Rightarrow> (unit + 'a) k_monad" where
  "unify_failure m \<equiv> handleE' m (\<lambda>x. throwError ())"
 
-text {*
+text \<open>
   Convert a fault monad into an exception monad.
-*}
+\<close>
 definition
   fault_to_except :: "'a fault_monad \<Rightarrow> 'a except_monad"
 where

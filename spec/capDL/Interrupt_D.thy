@@ -53,8 +53,8 @@ definition
       cdl_irq_control_intent \<Rightarrow> cdl_irq_control_invocation except_monad"
 where
   "decode_irq_control_invocation target target_ref caps intent \<equiv> case intent of
-      (* Create an IRQ handler cap for the given IRQ, placing it
-       * in the specified CNode slot. *)
+      \<comment> \<open>Create an IRQ handler cap for the given IRQ, placing it
+         in the specified CNode slot.\<close>
       IrqControlIssueIrqHandlerIntent irq index depth \<Rightarrow>
         doE
           root \<leftarrow> throw_on_none $ get_index caps 0;
@@ -69,21 +69,21 @@ definition
       cdl_irq_handler_intent \<Rightarrow> cdl_irq_handler_invocation except_monad"
 where
   "decode_irq_handler_invocation target target_ref caps intent \<equiv> case intent of
-    (* Acknowledge an IRQ. *)
+    \<comment> \<open>Acknowledge an IRQ.\<close>
     IrqHandlerAckIntent \<Rightarrow>
       doE
         irq \<leftarrow> liftE $ assert_opt $ cdl_cap_irq target;
         returnOk $ AckIrq irq
       odE \<sqinter> throw
 
-    (* Modify the IRQ so that it no longer sends to an endpoint. *)
+    \<comment> \<open>Modify the IRQ so that it no longer sends to an endpoint.\<close>
     | IrqHandlerClearIntent \<Rightarrow>
       doE
         irq \<leftarrow> liftE $ assert_opt $ cdl_cap_irq target;
         returnOk $ ClearIrqHandler irq
       odE \<sqinter> throw
 
-    (* Setup an IRQ to cause an endpoint to be sent to. *)
+    \<comment> \<open>Setup an IRQ to cause an endpoint to be sent to.\<close>
     | IrqHandlerSetEndpointIntent \<Rightarrow>
       doE
         endpoint \<leftarrow> throw_on_none $ get_index caps 0;
@@ -101,7 +101,7 @@ definition
   arch_invoke_irq_control :: "arch_cdl_irq_control_invocation \<Rightarrow> unit k_monad"
 where
   "arch_invoke_irq_control params \<equiv> case params of
-      (* Create a new IRQ handler cap. *)
+      \<comment> \<open>Create a new IRQ handler cap.\<close>
       ARMIssueIrqHandler irq control_slot dest_slot trigger \<Rightarrow>
         insert_cap_child (IrqHandlerCap irq) control_slot dest_slot
   "
@@ -110,7 +110,7 @@ definition
   invoke_irq_control :: "cdl_irq_control_invocation \<Rightarrow> unit k_monad"
 where
   "invoke_irq_control params \<equiv> case params of
-      (* Create a new IRQ handler cap. *)
+      \<comment> \<open>Create a new IRQ handler cap.\<close>
       IssueIrqHandler irq control_slot dest_slot \<Rightarrow>
         insert_cap_child (IrqHandlerCap irq) control_slot dest_slot
     | ArchIssueIrqHandler arch_inv \<Rightarrow>
@@ -120,10 +120,10 @@ definition
   invoke_irq_handler :: "cdl_irq_handler_invocation \<Rightarrow> unit k_monad"
 where
   "invoke_irq_handler params \<equiv> case params of
-      (* Acknowledge and unmask an IRQ. *)
+      \<comment> \<open>Acknowledge and unmask an IRQ.\<close>
       AckIrq irq \<Rightarrow> return ()
 
-      (* Attach an IRQ handler to write to an endpoint. *)
+      \<comment> \<open>Attach an IRQ handler to write to an endpoint.\<close>
     | SetIrqHandler irq cap slot \<Rightarrow>
         do
           irqslot \<leftarrow> gets (get_irq_slot irq);
@@ -131,7 +131,7 @@ where
           insert_cap_child cap slot irqslot \<sqinter> insert_cap_sibling cap slot irqslot
         od
 
-      (* Deassociate this handler with all endpoints. *)
+      \<comment> \<open>Deassociate this handler with all endpoints.\<close>
     | ClearIrqHandler irq \<Rightarrow>
         do
           irqslot \<leftarrow> gets (get_irq_slot irq);

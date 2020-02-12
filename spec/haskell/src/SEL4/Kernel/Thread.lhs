@@ -140,9 +140,16 @@ Note that the idle thread is not considered runnable; this is to prevent it bein
 
 When a thread is suspended, either explicitly by a TCB invocation or implicitly when it is being destroyed, any operation that it is currently performing must be cancelled.
 
+> updateRestartPC :: PPtr TCB -> Kernel ()
+> updateRestartPC tcb =
+>     asUser tcb (getRegister nextInstructionRegister
+>                 >>= setRegister faultRegister)
+
 > suspend :: PPtr TCB -> Kernel ()
 > suspend target = do
 >     cancelIPC target
+>     state <- getThreadState target
+>     if state == Running then updateRestartPC target else return ()
 >     setThreadState Inactive target
 >     tcbSchedDequeue target
 >     tcbReleaseRemove target
@@ -193,7 +200,7 @@ If the sent message is a fault IPC, the stored fault is transferred.
 >             Just _ -> do
 >                 doFaultTransfer badge sender receiver receiveBuffer
 
-Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IPC replies, or fault replies. In the former case, the transfer is the same as for an IPC send, but there is never a fault, capability grants are always allowed, the badge is always 0, and capabilities are never received with diminished rights (diminished rights are now removed).
+Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IPC replies, or fault replies. In the former case, the transfer is the same as for an IPC send, but there is never a fault, capability grants are always allowed, and the badge is always 0.
 
 > doReplyTransfer :: PPtr TCB -> PPtr Reply -> Bool -> Kernel ()
 > doReplyTransfer sender reply grant = do
@@ -202,7 +209,7 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 >         Nothing -> return ()
 >         Just receiver -> do
 >             state <- getThreadState receiver
->             if (not $ isReply state)
+>             if not $ isReply state
 >                 then return ()
 >                 else do
 >                     replyRemove reply

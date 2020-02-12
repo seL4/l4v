@@ -20,10 +20,7 @@ import {-# SOURCE #-} SEL4.Object.TCB (asUser, threadGet)
 import SEL4.Machine.RegisterSet.RISCV64(Register(..))
 
 switchToThread :: PPtr TCB -> Kernel ()
-switchToThread tcb = do
-    setVMRoot tcb
-    bufferPtr <- threadGet tcbIPCBuffer tcb
-    asUser tcb $ setRegister (Register TP) $ fromVPtr bufferPtr
+switchToThread tcb = setVMRoot tcb
 
 configureIdleThread :: PPtr TCB -> KernelInit ()
 configureIdleThread _ = error "Unimplemented init code"

@@ -191,8 +191,7 @@ lemmas ccorres_move_c_guard_ap = ccorres_move_c_guards [OF move_c_guard_ap]
 lemma array_assertion_abs_irq:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> True
         \<and> (n s' \<le> 256 \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
-    \<longrightarrow> (x s' = 0 \<or> array_assertion (intStateIRQNode_' (globals s'))
-            (n s') (hrs_htd (t_hrs_' (globals s'))))"
+    \<longrightarrow> (x s' = 0 \<or> array_assertion intStateIRQNode_Ptr (n s') (hrs_htd (t_hrs_' (globals s'))))"
   apply (intro allI impI disjCI2)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
   apply (clarsimp simp: h_t_valid_clift_Some_iff)
@@ -201,6 +200,16 @@ lemma array_assertion_abs_irq:
 
 lemmas ccorres_move_array_assertion_irq
     = ccorres_move_array_assertions [OF array_assertion_abs_irq]
+
+lemma ccorres_Guard_intStateIRQNode_array_Ptr_Seq:
+  assumes "ccorres_underlying rf_sr \<Gamma> r xf arrel axf A C hs a (c;; d)"
+  shows "ccorres_underlying rf_sr \<Gamma> r xf arrel axf A C hs a (Guard F {s. s \<Turnstile>\<^sub>c intStateIRQNode_array_Ptr} c;; d)"
+  by (rule ccorres_guard_imp2[OF ccorres_move_Guard_Seq[where P=\<top> and P'=\<top>, OF _ assms]]
+      ; simp add: rf_sr_def cstate_relation_def Let_def)
+
+lemmas ccorres_Guard_intStateIRQNode_array_Ptr =
+  ccorres_Guard_intStateIRQNode_array_Ptr_Seq[where d=SKIP, simplified ccorres_seq_skip']
+  ccorres_Guard_intStateIRQNode_array_Ptr_Seq
 
 lemma rf_sr_gsCNodes_array_assertion:
   "gsCNodes s p = Some n \<Longrightarrow> (s, s') \<in> rf_sr

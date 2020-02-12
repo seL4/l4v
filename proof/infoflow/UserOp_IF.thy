@@ -14,13 +14,13 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-text {*
+text \<open>
   This theory defines an enhanced @{term do_user_op} function for the
   automaton used for the information flow proofs. This enhanced model of
   user behaviour is a less abstract representation than the original one;
   eventually we should probably extend the original one to match up with
   this one and remove the duplication.
-*}
+\<close>
 
 definition ptable_lift_s where
   "ptable_lift_s s \<equiv>  ptable_lift (cur_thread s) s"
@@ -56,47 +56,47 @@ definition do_user_op_if
 where
   "do_user_op_if uop tc =
    do
-      (* Get the page rights of each address (ReadOnly, ReadWrite, None, etc). *)
+      \<comment> \<open>Get the page rights of each address (ReadOnly, ReadWrite, None, etc).\<close>
       pr \<leftarrow> gets ptable_rights_s;
 
-      (* Fetch the 'execute never' bits of the current thread's page mappings. *)
+      \<comment> \<open>Fetch the 'execute never' bits of the current thread's page mappings.\<close>
       pxn \<leftarrow> gets (\<lambda>s x. pr x \<noteq> {} \<and> ptable_xn_s s x);
 
-      (* Get the mapping from virtual to physical addresses. *)
+      \<comment> \<open>Get the mapping from virtual to physical addresses.\<close>
       pl \<leftarrow> gets (\<lambda>s. restrict_map (ptable_lift_s s) {x. pr x \<noteq> {}});
 
       allow_read \<leftarrow> return  {y. EX x. pl x = Some y \<and> AllowRead \<in> pr x};
       allow_write \<leftarrow> return  {y. EX x. pl x = Some y \<and> AllowWrite \<in> pr x};
 
-      (* Get the current thread. *)
+      \<comment> \<open>Get the current thread.\<close>
       t \<leftarrow> gets cur_thread;
 
-      (* Generate user memory by throwing away anything from global
-       * memory that the user doesn't have access to. (The user must
-       * have both (1) a mapping to the page; (2) that mapping has the
-       * AllowRead right. *)
+      \<comment> \<open>Generate user memory by throwing away anything from global
+         memory that the user doesn't have access to. (The user must
+         have both (1) a mapping to the page; (2) that mapping has the
+         AllowRead right.\<close>
       um \<leftarrow> gets (\<lambda>s. (user_mem s) \<circ> ptrFromPAddr);
       dm \<leftarrow> gets (\<lambda>s. (device_mem s) \<circ> ptrFromPAddr);
       ds \<leftarrow> gets (device_state \<circ> machine_state);
 
       es \<leftarrow> do_machine_op getExMonitor;
 
-      (* Non-deterministically execute one of the user's operations. *)
+      \<comment> \<open>Non-deterministically execute one of the user's operations.\<close>
       u \<leftarrow> return (uop t pl pr pxn (tc, um|`allow_read, (ds \<circ> ptrFromPAddr)|` allow_read, es));
       assert (u \<noteq> {});
       (e,(tc',um',ds',es')) \<leftarrow> select u;
 
-      (* Update the changes the user made to memory into our model.
-       * We ignore changes that took place where they didn't have
-       * write permissions. (uop shouldn't be doing that --- if it is,
-       * uop isn't correctly modelling real hardware.) *)
+      \<comment> \<open>Update the changes the user made to memory into our model.
+         We ignore changes that took place where they didn't have
+         write permissions. (uop shouldn't be doing that --- if it is,
+         uop isn't correctly modelling real hardware.)\<close>
       do_machine_op (user_memory_update
           (((um' |` allow_write) \<circ> addrFromPPtr) |` (-(dom ds))));
 
       do_machine_op (device_memory_update
           (((ds' |` allow_write) \<circ> addrFromPPtr) |` (dom ds)));
 
-      (* Update exclusive monitor state used by the thread. *)
+      \<comment> \<open>Update exclusive monitor state used by the thread.\<close>
       do_machine_op (setExMonitor es');
 
       return (e,tc')

@@ -144,7 +144,7 @@ lemma st_tcb_at'_def:
   by (simp add: pred_tcb_at'_def o_def)
 
 
-text {* cte with property at *}
+text \<open>cte with property at\<close>
 definition
   "cte_wp_at' P p s \<equiv> \<exists>cte::cte. fst (getObject p s) = {(cte,s)} \<and> P cte"
 
@@ -166,14 +166,14 @@ where
   "max_ipc_words \<equiv> capTransferDataSize + msgMaxLength + msgMaxExtraCaps + 2"
 
 definition
-  tcb_st_refs_of' :: "Structures_H.thread_state   \<Rightarrow> (machine_word \<times> reftype) set"
+  tcb_st_refs_of' :: "Structures_H.thread_state \<Rightarrow> (machine_word \<times> reftype) set"
 where
   "tcb_st_refs_of' z \<equiv> case z of (Running)                  => {}
   | (Inactive)                 => {}
   | (Restart)                  => {}
-  | (BlockedOnReceive x)     => {(x, TCBBlockedRecv)}
-  | (BlockedOnSend x a b c)    => {(x, TCBBlockedSend)}
-  | (BlockedOnNotification x)    => {(x, TCBSignal)}
+  | (BlockedOnReceive x a)     => {(x, TCBBlockedRecv)}
+  | (BlockedOnSend x a b c d)  => {(x, TCBBlockedSend)}
+  | (BlockedOnNotification x)  => {(x, TCBSignal)}
   | (BlockedOnReply)           => {}
   | (IdleThreadState)          => {}"
 
@@ -246,15 +246,15 @@ where
   "zobj_refs' NullCap                        = {}"
 | "zobj_refs' DomainCap                      = {}"
 | "zobj_refs' (UntypedCap d r n f)           = {}"
-| "zobj_refs' (EndpointCap r badge x y z)    = {r}"
-| "zobj_refs' (NotificationCap r badge x y) = {r}"
+| "zobj_refs' (EndpointCap r badge x y z t)  = {r}"
+| "zobj_refs' (NotificationCap r badge x y)  = {r}"
 | "zobj_refs' (CNodeCap r b g gsz)           = {}"
 | "zobj_refs' (ThreadCap r)                  = {r}"
 | "zobj_refs' (Zombie r b n)                 = {}"
 | "zobj_refs' (ArchObjectCap ac)             = {}"
 | "zobj_refs' (IRQControlCap)                = {}"
 | "zobj_refs' (IRQHandlerCap irq)            = {}"
-| "zobj_refs' (ReplyCap tcb m)               = {}"
+| "zobj_refs' (ReplyCap tcb m x)             = {}"
 
 definition
   ex_nonz_cap_to' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -275,8 +275,8 @@ where
   "cte_refs' (UntypedCap d p n f) x               = {}"
 | "cte_refs' (NullCap) x                          = {}"
 | "cte_refs' (DomainCap) x                        = {}"
-| "cte_refs' (EndpointCap ref badge s r g) x      = {}"
-| "cte_refs' (NotificationCap ref badge s r) x   = {}"
+| "cte_refs' (EndpointCap ref badge s r g gr) x   = {}"
+| "cte_refs' (NotificationCap ref badge s r) x    = {}"
 | "cte_refs' (CNodeCap ref bits g gs) x           =
      (\<lambda>x. ref + (x * 2^cteSizeBits)) ` {0 .. 2 ^ bits - 1}"
 | "cte_refs' (ThreadCap ref) x                    =
@@ -286,7 +286,7 @@ where
 | "cte_refs' (ArchObjectCap cap) x                = {}"
 | "cte_refs' (IRQControlCap) x                    = {}"
 | "cte_refs' (IRQHandlerCap irq) x                = {x + (ucast irq) * 32}"
-| "cte_refs' (ReplyCap tcb m) x                   = {}"
+| "cte_refs' (ReplyCap tcb m g) x                 = {}"
 
 
 abbreviation
@@ -339,14 +339,14 @@ where
   "capBits NullCap = 0"
 | "capBits DomainCap = 0"
 | "capBits (UntypedCap d r b f) = b"
-| "capBits (EndpointCap r b x y z) = objBits (undefined::endpoint)"
+| "capBits (EndpointCap r b x y z t) = objBits (undefined::endpoint)"
 | "capBits (NotificationCap r b x y) = objBits (undefined::Structures_H.notification)"
 | "capBits (CNodeCap r b g gs) = objBits (undefined::cte) + b"
 | "capBits (ThreadCap r) = objBits (undefined::tcb)"
 | "capBits (Zombie r z n) = zBits z"
 | "capBits (IRQControlCap) = 0"
 | "capBits (IRQHandlerCap irq) = 0"
-| "capBits (ReplyCap tcb m) = objBits (undefined :: tcb)"
+| "capBits (ReplyCap tcb m x) = objBits (undefined :: tcb)"
 | "capBits (ArchObjectCap x) = acapBits x"
 
 definition
@@ -401,10 +401,6 @@ lemmas vspace_table_at'_defs
 abbreviation
   "asid_pool_at' \<equiv> typ_at' (ArchT ASIDPoolT)"
 
-(* FIXME: duplicated with vmsz_aligned *)
-definition
-  "vmsz_aligned' ref sz \<equiv> is_aligned ref (pageBitsForSize sz)"
-
 primrec
   zombieCTEs :: "zombie_type \<Rightarrow> nat"
 where
@@ -422,14 +418,14 @@ where valid_cap'_def:
       valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> minUntypedSizeBits \<le> n \<and> n \<le> maxUntypedSizeBits
         \<and> f \<le> 2^n \<and> is_aligned (of_nat f :: machine_word) minUntypedSizeBits
         \<and> canonical_address r \<and> r \<in> kernel_mappings
-  | Structures_H.EndpointCap r badge x y z \<Rightarrow> ep_at' r s
+  | Structures_H.EndpointCap r badge x y z t \<Rightarrow> ep_at' r s
   | Structures_H.NotificationCap r badge x y \<Rightarrow> ntfn_at' r s
   | Structures_H.CNodeCap r bits guard guard_sz \<Rightarrow>
     bits \<noteq> 0 \<and> bits + guard_sz \<le> word_bits \<and>
     guard && mask guard_sz = guard \<and>
     (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask bits)) s)
   | Structures_H.ThreadCap r \<Rightarrow> tcb_at' r s
-  | Structures_H.ReplyCap r m \<Rightarrow> tcb_at' r s
+  | Structures_H.ReplyCap r m x \<Rightarrow> tcb_at' r s
   | Structures_H.IRQControlCap \<Rightarrow> True
   | Structures_H.IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
   | Structures_H.Zombie r b n \<Rightarrow> n \<le> zombieCTEs b \<and> zBits b < word_bits
@@ -443,7 +439,7 @@ where valid_cap'_def:
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' (if d then UserDataDeviceT else UserDataT)
     (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> (t=VMNoMap) | Some (asid, ref) \<Rightarrow>
-            (t = VMVSpaceMap) \<and> 0 < asid \<and> asid_wf asid \<and> vmsz_aligned' ref sz \<and> ref < pptrBase)
+            (t = VMVSpaceMap) \<and> 0 < asid \<and> asid_wf asid \<and> vmsz_aligned ref sz \<and> ref < pptrBase)
   | PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
@@ -474,8 +470,8 @@ definition
   valid_tcb_state' :: "Structures_H.thread_state \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_tcb_state' ts s \<equiv> case ts of
-    Structures_H.BlockedOnReceive ref \<Rightarrow> ep_at' ref s
-  | Structures_H.BlockedOnSend ref b d c \<Rightarrow> ep_at' ref s
+    Structures_H.BlockedOnReceive ref a \<Rightarrow> ep_at' ref s
+  | Structures_H.BlockedOnSend ref a b d c \<Rightarrow> ep_at' ref s
   | Structures_H.BlockedOnNotification ref \<Rightarrow> ntfn_at' ref s
   | _ \<Rightarrow> True"
 
@@ -714,14 +710,14 @@ where
   "capClass (NullCap)                          = NullClass"
 | "capClass (DomainCap)                        = DomainClass"
 | "capClass (UntypedCap d p n f)               = PhysicalClass"
-| "capClass (EndpointCap ref badge s r g)      = PhysicalClass"
-| "capClass (NotificationCap ref badge s r)   = PhysicalClass"
+| "capClass (EndpointCap ref badge s r g gr)   = PhysicalClass"
+| "capClass (NotificationCap ref badge s r)    = PhysicalClass"
 | "capClass (CNodeCap ref bits g gs)           = PhysicalClass"
 | "capClass (ThreadCap ref)                    = PhysicalClass"
 | "capClass (Zombie r b n)                     = PhysicalClass"
 | "capClass (IRQControlCap)                    = IRQClass"
 | "capClass (IRQHandlerCap irq)                = IRQClass"
-| "capClass (ReplyCap tcb m)                   = ReplyClass tcb"
+| "capClass (ReplyCap tcb m g)                 = ReplyClass tcb"
 | "capClass (ArchObjectCap cap)                = acapClass cap"
 
 definition
@@ -909,10 +905,10 @@ where
 | "runnable' (Structures_H.Inactive)                = False"
 | "runnable' (Structures_H.Restart)                 = True"
 | "runnable' (Structures_H.IdleThreadState)         = False"
-| "runnable' (Structures_H.BlockedOnReceive a)    = False"
+| "runnable' (Structures_H.BlockedOnReceive a b)    = False"
 | "runnable' (Structures_H.BlockedOnReply)          = False"
-| "runnable' (Structures_H.BlockedOnSend a b c d)   = False"
-| "runnable' (Structures_H.BlockedOnNotification x)   = False"
+| "runnable' (Structures_H.BlockedOnSend a b c d e) = False"
+| "runnable' (Structures_H.BlockedOnNotification x) = False"
 
 definition
   inQ :: "domain \<Rightarrow> priority \<Rightarrow> tcb \<Rightarrow> bool"
@@ -1368,154 +1364,6 @@ locale mdb_order = mdb_next +
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Alternate split rules for preserving subgoal order"
 context begin interpretation Arch . (*FIXME: arch_split*)
-lemma capability_splits[split]:
-  "P (case capability of capability.ThreadCap x \<Rightarrow> f1 x
-     | capability.NullCap \<Rightarrow> f2
-     | capability.NotificationCap x xa xb xc \<Rightarrow> f3 x xa xb xc
-     | capability.IRQHandlerCap x \<Rightarrow> f4 x
-     | capability.EndpointCap x xa xb xc xd \<Rightarrow> f5 x xa xb xc xd
-     | capability.DomainCap \<Rightarrow> f6
-     | capability.Zombie x xa xb \<Rightarrow> f7 x xa xb
-     | capability.ArchObjectCap x \<Rightarrow> f8 x
-     | capability.ReplyCap x xa \<Rightarrow> f9 x xa
-     | capability.UntypedCap dev x xa xb \<Rightarrow> f10 dev x xa xb
-     | capability.CNodeCap x xa xb xc \<Rightarrow> f11 x xa xb xc
-     | capability.IRQControlCap \<Rightarrow> f12) =
-  ((\<forall>x1. capability = capability.ThreadCap x1 \<longrightarrow> P (f1 x1)) \<and>
-   (capability = capability.NullCap \<longrightarrow> P f2) \<and>
-   (\<forall>x31 x32 x33 x34.
-       capability =
-       capability.NotificationCap x31 x32 x33 x34 \<longrightarrow>
-       P (f3 x31 x32 x33 x34)) \<and>
-   (\<forall>x4. capability = capability.IRQHandlerCap x4 \<longrightarrow>
-         P (f4 x4)) \<and>
-   (\<forall>x51 x52 x53 x54 x55.
-       capability =
-       capability.EndpointCap x51 x52 x53 x54 x55 \<longrightarrow>
-       P (f5 x51 x52 x53 x54 x55)) \<and>
-   (capability = capability.DomainCap \<longrightarrow> P f6) \<and>
-   (\<forall>x71 x72 x73.
-       capability = capability.Zombie x71 x72 x73 \<longrightarrow>
-       P (f7 x71 x72 x73)) \<and>
-   (\<forall>x8. capability = capability.ArchObjectCap x8 \<longrightarrow>
-         P (f8 x8)) \<and>
-   (\<forall>x91 x92.
-       capability = capability.ReplyCap x91 x92 \<longrightarrow>
-       P (f9 x91 x92)) \<and>
-   (\<forall>dev x101 x102 x103.
-       capability = capability.UntypedCap dev x101 x102 x103 \<longrightarrow>
-       P (f10 dev x101 x102 x103)) \<and>
-   (\<forall>x111 x112 x113 x114.
-       capability = capability.CNodeCap x111 x112 x113 x114 \<longrightarrow>
-       P (f11 x111 x112 x113 x114)) \<and>
-   (capability = capability.IRQControlCap \<longrightarrow> P f12))"
-  "P (case capability of capability.ThreadCap x \<Rightarrow> f1 x
-     | capability.NullCap \<Rightarrow> f2
-     | capability.NotificationCap x xa xb xc \<Rightarrow> f3 x xa xb xc
-     | capability.IRQHandlerCap x \<Rightarrow> f4 x
-     | capability.EndpointCap x xa xb xc xd \<Rightarrow> f5 x xa xb xc xd
-     | capability.DomainCap \<Rightarrow> f6
-     | capability.Zombie x xa xb \<Rightarrow> f7 x xa xb
-     | capability.ArchObjectCap x \<Rightarrow> f8 x
-     | capability.ReplyCap x xa \<Rightarrow> f9 x xa
-     | capability.UntypedCap dev x xa xb \<Rightarrow> f10 dev x xa xb
-     | capability.CNodeCap x xa xb xc \<Rightarrow> f11 x xa xb xc
-     | capability.IRQControlCap \<Rightarrow> f12) =
-  (\<not> ((\<exists>x1. capability = capability.ThreadCap x1 \<and>
-             \<not> P (f1 x1)) \<or>
-       capability = capability.NullCap \<and> \<not> P f2 \<or>
-       (\<exists>x31 x32 x33 x34.
-           capability =
-           capability.NotificationCap x31 x32 x33 x34 \<and>
-           \<not> P (f3 x31 x32 x33 x34)) \<or>
-       (\<exists>x4. capability = capability.IRQHandlerCap x4 \<and>
-             \<not> P (f4 x4)) \<or>
-       (\<exists>x51 x52 x53 x54 x55.
-           capability =
-           capability.EndpointCap x51 x52 x53 x54 x55 \<and>
-           \<not> P (f5 x51 x52 x53 x54 x55)) \<or>
-       capability = capability.DomainCap \<and> \<not> P f6 \<or>
-       (\<exists>x71 x72 x73.
-           capability = capability.Zombie x71 x72 x73 \<and>
-           \<not> P (f7 x71 x72 x73)) \<or>
-       (\<exists>x8. capability = capability.ArchObjectCap x8 \<and>
-             \<not> P (f8 x8)) \<or>
-       (\<exists>x91 x92.
-           capability = capability.ReplyCap x91 x92 \<and>
-           \<not> P (f9 x91 x92)) \<or>
-       (\<exists>x101 x102 x103 dev.
-           capability = capability.UntypedCap dev x101 x102 x103 \<and>
-           \<not> P (f10 dev x101 x102 x103)) \<or>
-       (\<exists>x111 x112 x113 x114.
-           capability =
-           capability.CNodeCap x111 x112 x113 x114 \<and>
-           \<not> P (f11 x111 x112 x113 x114)) \<or>
-       capability = capability.IRQControlCap \<and> \<not> P f12))"
-  by (case_tac capability; simp)+
-
-lemma thread_state_splits[split]:
-  " P (case thread_state of
-     Structures_H.thread_state.BlockedOnReceive x \<Rightarrow> f1 x
-     | Structures_H.thread_state.BlockedOnReply \<Rightarrow> f2
-     | Structures_H.thread_state.BlockedOnNotification x \<Rightarrow> f3 x
-     | Structures_H.thread_state.Running \<Rightarrow> f4
-     | Structures_H.thread_state.Inactive \<Rightarrow> f5
-     | Structures_H.thread_state.IdleThreadState \<Rightarrow> f6
-     | Structures_H.thread_state.BlockedOnSend x xa xb xc \<Rightarrow>
-         f7 x xa xb xc
-     | Structures_H.thread_state.Restart \<Rightarrow> f8) =
-  ((\<forall>x11.
-       thread_state =
-       Structures_H.thread_state.BlockedOnReceive x11 \<longrightarrow>
-       P (f1 x11)) \<and>
-   (awaiting_reply' thread_state \<longrightarrow> P f2) \<and>
-   (\<forall>x3. thread_state =
-         Structures_H.thread_state.BlockedOnNotification x3 \<longrightarrow>
-         P (f3 x3)) \<and>
-   (thread_state = Structures_H.thread_state.Running \<longrightarrow>
-    P f4) \<and>
-   (thread_state = Structures_H.thread_state.Inactive \<longrightarrow>
-    P f5) \<and>
-   (idle' thread_state \<longrightarrow> P f6) \<and>
-   (\<forall>x71 x72 x73 x74.
-       thread_state =
-       Structures_H.thread_state.BlockedOnSend x71 x72 x73
-        x74 \<longrightarrow>
-       P (f7 x71 x72 x73 x74)) \<and>
-   (thread_state = Structures_H.thread_state.Restart \<longrightarrow> P f8))"
-  "P (case thread_state of
-     Structures_H.thread_state.BlockedOnReceive x \<Rightarrow> f1 x
-     | Structures_H.thread_state.BlockedOnReply \<Rightarrow> f2
-     | Structures_H.thread_state.BlockedOnNotification x \<Rightarrow> f3 x
-     | Structures_H.thread_state.Running \<Rightarrow> f4
-     | Structures_H.thread_state.Inactive \<Rightarrow> f5
-     | Structures_H.thread_state.IdleThreadState \<Rightarrow> f6
-     | Structures_H.thread_state.BlockedOnSend x xa xb xc \<Rightarrow>
-         f7 x xa xb xc
-     | Structures_H.thread_state.Restart \<Rightarrow> f8) =
-  (\<not> ((\<exists>x11.
-           thread_state =
-           Structures_H.thread_state.BlockedOnReceive x11 \<and>
-           \<not> P (f1 x11)) \<or>
-       awaiting_reply' thread_state \<and> \<not> P f2 \<or>
-       (\<exists>x3. thread_state =
-             Structures_H.thread_state.BlockedOnNotification
-              x3 \<and>
-             \<not> P (f3 x3)) \<or>
-       thread_state = Structures_H.thread_state.Running \<and>
-       \<not> P f4 \<or>
-       thread_state = Structures_H.thread_state.Inactive \<and>
-       \<not> P f5 \<or>
-       idle' thread_state \<and> \<not> P f6 \<or>
-       (\<exists>x71 x72 x73 x74.
-           thread_state =
-           Structures_H.thread_state.BlockedOnSend x71 x72 x73
-            x74 \<and>
-           \<not> P (f7 x71 x72 x73 x74)) \<or>
-       thread_state = Structures_H.thread_state.Restart \<and>
-       \<not> P f8))"
-  by (case_tac thread_state; simp)+
-
 lemma ntfn_splits[split]:
   " P (case ntfn of Structures_H.ntfn.IdleNtfn \<Rightarrow> f1
      | Structures_H.ntfn.ActiveNtfn x \<Rightarrow> f2 x
@@ -1599,24 +1447,6 @@ lemma projectKO_eq:
   "(fst (projectKO ko c) = {(obj, c)}) = (projectKO_opt ko = Some obj)"
   by (simp add: projectKO_def fail_def return_def split: option.splits)
 
-lemma lookupBefore_None:
-  "(lookupBefore x m = None) = (\<forall>y \<le> x. m y = None)"
-  by (simp add: lookupBefore_def Let_def dom_def, fastforce)
-
-lemma lookupBefore_exact:
-  "m x = Some y \<Longrightarrow> lookupBefore x m = Some (x, y)"
-  apply (simp add: lookupBefore_def Let_def cong: conj_cong)
-  apply (rule context_conjI)
-   apply (rule exI[where x=x])
-   apply (simp add: domI)
-  apply (rule order_antisym)
-   apply simp
-  apply (rule Max_ge)
-    apply simp
-   apply simp
-  apply (simp add: domI)
-  done
-
 lemma obj_at'_def':
   "obj_at' P p s = (\<exists>ko obj. ksPSpace s p = Some ko \<and> is_aligned p (objBitsKO ko)
                    \<and> fst (projectKO ko s) = {(obj,s)} \<and> P obj
@@ -1677,9 +1507,9 @@ lemma tcb_st_refs_of'_simps[simp]:
  "tcb_st_refs_of' (Running)                  = {}"
  "tcb_st_refs_of' (Inactive)                 = {}"
  "tcb_st_refs_of' (Restart)                  = {}"
- "\<And>x. tcb_st_refs_of' (BlockedOnReceive x)     = {(x, TCBBlockedRecv)}"
- "\<And>x c. tcb_st_refs_of' (BlockedOnSend x a b c)  = {(x, TCBBlockedSend)}"
- "\<And>x. tcb_st_refs_of' (BlockedOnNotification x)    = {(x, TCBSignal)}"
+ "tcb_st_refs_of' (BlockedOnReceive x'' a')  = {(x'', TCBBlockedRecv)}"
+ "tcb_st_refs_of' (BlockedOnSend x a b c d)  = {(x, TCBBlockedSend)}"
+ "tcb_st_refs_of' (BlockedOnNotification x') = {(x', TCBSignal)}"
  "tcb_st_refs_of' (BlockedOnReply)           = {}"
  "tcb_st_refs_of' (IdleThreadState)          = {}"
   by (auto simp: tcb_st_refs_of'_def)
@@ -1708,9 +1538,9 @@ lemma tcb_bound_refs'_simps[simp]:
 
 lemma refs_of_rev':
  "(x, TCBBlockedRecv) \<in> refs_of' ko =
-    (\<exists>tcb. ko = KOTCB tcb \<and> tcbState tcb = BlockedOnReceive x)"
+    (\<exists>tcb. ko = KOTCB tcb \<and> (\<exists>a. tcbState tcb = BlockedOnReceive x a))"
  "(x, TCBBlockedSend) \<in> refs_of' ko =
-    (\<exists>tcb. ko = KOTCB tcb \<and> (\<exists>a b c. tcbState tcb = BlockedOnSend x a b c))"
+    (\<exists>tcb. ko = KOTCB tcb \<and> (\<exists>a b c d. tcbState tcb = BlockedOnSend x a b c d))"
  "(x, TCBSignal) \<in> refs_of' ko =
     (\<exists>tcb. ko = KOTCB tcb \<and> tcbState tcb = BlockedOnNotification x)"
  "(x, EPRecv) \<in> refs_of' ko =
@@ -1745,11 +1575,11 @@ lemma projectKO_opt_tcbD:
 
 lemma st_tcb_at_refs_of_rev':
   "ko_wp_at' (\<lambda>ko. (x, TCBBlockedRecv) \<in> refs_of' ko) t s
-     = st_tcb_at' (\<lambda>ts.   ts = BlockedOnReceive x ) t s"
+     = st_tcb_at' (\<lambda>ts. \<exists>a. ts = BlockedOnReceive x a) t s"
   "ko_wp_at' (\<lambda>ko. (x, TCBBlockedSend) \<in> refs_of' ko) t s
-     = st_tcb_at' (\<lambda>ts. \<exists>a b c. ts = BlockedOnSend x a b c) t s"
+     = st_tcb_at' (\<lambda>ts. \<exists>a b c d. ts = BlockedOnSend x a b c d) t s"
   "ko_wp_at' (\<lambda>ko. (x, TCBSignal) \<in> refs_of' ko) t s
-     = st_tcb_at' (\<lambda>ts.      ts = BlockedOnNotification x) t s"
+     = st_tcb_at' (\<lambda>ts. ts = BlockedOnNotification x) t s"
   by (fastforce simp: refs_of_rev' pred_tcb_at'_def obj_at'_real_def
                      projectKO_opt_tcb[where e="KOTCB y" for y]
               elim!: ko_wp_at'_weakenE
@@ -1757,11 +1587,6 @@ lemma st_tcb_at_refs_of_rev':
 
 lemma state_refs_of'_elemD:
   "\<lbrakk> ref \<in> state_refs_of' s x \<rbrakk> \<Longrightarrow> ko_wp_at' (\<lambda>obj. ref \<in> refs_of' obj) x s"
-  by (clarsimp simp add: state_refs_of'_def ko_wp_at'_def
-                  split: option.splits if_split_asm)
-
-lemma state_refs_of'_eqD:
-  "\<lbrakk> state_refs_of' s x = S; S \<noteq> {} \<rbrakk> \<Longrightarrow> ko_wp_at' (\<lambda>obj. refs_of' obj = S) x s"
   by (clarsimp simp add: state_refs_of'_def ko_wp_at'_def
                   split: option.splits if_split_asm)
 
@@ -1840,11 +1665,6 @@ lemma sym_refs_bound_tcb_atD':
   apply auto
   done
 
-lemma ex_nonz_cap_toE':
-  "\<lbrakk> ex_nonz_cap_to' p s; \<And>cref. cte_wp_at' (\<lambda>c. p \<in> zobj_refs' (cteCap c)) cref s \<Longrightarrow> Q \<rbrakk>
-    \<Longrightarrow> Q"
-  by (fastforce simp: ex_nonz_cap_to'_def)
-
 lemma refs_of_live':
   "refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
   apply (cases ko, simp_all)
@@ -1891,10 +1711,6 @@ lemma max_ipc_words:
   unfolding max_ipc_words_def
   by (simp add: msgMaxLength_def msgLengthBits_def msgMaxExtraCaps_def msgExtraCapBits_def capTransferDataSize_def)
 
-lemma valid_objsI' [intro]:
-  "(\<And>obj x. ksPSpace s x = Some obj \<Longrightarrow> valid_obj' obj s) \<Longrightarrow> valid_objs' s"
-  unfolding valid_objs'_def by (auto elim: ranE)
-
 lemma valid_objsE' [elim]:
   "\<lbrakk> valid_objs' s; ksPSpace s x = Some obj; valid_obj' obj s \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_objs'_def by auto
@@ -1918,14 +1734,13 @@ lemma next_unfold:
    (case s c of Some cte \<Rightarrow> Some (mdbNext (cteMDBNode cte)) | None \<Rightarrow> None)"
   by (simp add: mdb_next_def split: option.split)
 
-lemma
-  is_physical_cases:
+lemma is_physical_cases:
  "(capClass cap = PhysicalClass) =
   (case cap of NullCap                         \<Rightarrow> False
              | DomainCap                       \<Rightarrow> False
              | IRQControlCap                   \<Rightarrow> False
              | IRQHandlerCap irq               \<Rightarrow> False
-             | ReplyCap r m                    \<Rightarrow> False
+             | ReplyCap r m cr                 \<Rightarrow> False
              | ArchObjectCap ASIDControlCap    \<Rightarrow> False
              | ArchObjectCap (IOPortCap _ _)   \<Rightarrow> False
              | ArchObjectCap IOPortControlCap  \<Rightarrow> False
@@ -1940,12 +1755,6 @@ lemma objBits_cte_conv: "objBits (cte :: cte) = cteSizeBits"
   by (simp add: objBits_simps word_size)
 
 lemmas valid_irq_states'_def = valid_irq_masks'_def
-
-lemma valid_pspaceI' [intro]:
-  "\<lbrakk>valid_objs' s; pspace_aligned' s; pspace_canonical' s; pspace_distinct' s;
-    valid_mdb' s; no_0_obj' s; pspace_in_kernel_mappings' s\<rbrakk>
-   \<Longrightarrow> valid_pspace' s"
-  unfolding valid_pspace'_def by simp
 
 lemma valid_pspaceE' [elim]:
   "\<lbrakk>valid_pspace' s;
@@ -2061,10 +1870,6 @@ lemma valid_obj'_pspaceI:
                   Structures_H.thread_state.splits ntfn.splits option.splits
            intro: obj_at'_pspaceI valid_cap'_pspaceI)
 
-lemma valid_objs'_pspaceI:
-  "\<lbrakk>valid_objs' s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> valid_objs' s'"
-  by (auto simp: valid_objs'_def intro: valid_obj'_pspaceI)
-
 lemma pred_tcb_at'_pspaceI:
   "pred_tcb_at' proj P t s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> pred_tcb_at' proj P t s'"
   unfolding pred_tcb_at'_def by (fast intro: obj_at'_pspaceI)
@@ -2076,18 +1881,6 @@ lemma valid_mdb'_pspaceI:
 lemma state_refs_of'_pspaceI:
   "P (state_refs_of' s) \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> P (state_refs_of' s')"
   unfolding state_refs_of'_def ps_clear_def by simp
-
-lemma if_live_then_nonz_cap'_pspaceI:
-  "if_live_then_nonz_cap' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> if_live_then_nonz_cap' s'"
-  unfolding if_live_then_nonz_cap'_def ex_nonz_cap_to'_def
-  apply (simp add: ko_wp_at'_def ps_clear_def)
-  apply (erule allEI)
-  apply (fastforce intro: cte_wp_at'_pspaceI)
-  done
-
-lemma no_0_obj_pspaceI:
-  "no_0_obj' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> no_0_obj' s'"
-  by (simp add: no_0_obj'_def)
 
 lemma valid_pspace':
   "valid_pspace' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_pspace' s'"
@@ -2101,12 +1894,6 @@ lemma ex_cte_cap_to_pspaceI'[elim]:
      intStateIRQNode (ksInterruptState s) = intStateIRQNode (ksInterruptState s')
      \<Longrightarrow> ex_cte_cap_to' p s'"
   by (fastforce simp: ex_cte_cap_to'_def elim: cte_wp_at'_pspaceI)
-
-lemma ifunsafe_valid_pspaceI'[elim]:
-  "if_unsafe_then_cap' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow>
-     intStateIRQNode (ksInterruptState s) = intStateIRQNode (ksInterruptState s')
-     \<Longrightarrow> if_unsafe_then_cap' s'"
-  by (fastforce simp: if_unsafe_then_cap'_def intro: cte_wp_at'_pspaceI)
 
 lemma valid_idle'_pspace_itI[elim]:
   "\<lbrakk> valid_idle' s; ksPSpace s = ksPSpace s'; ksIdleThread s = ksIdleThread s' \<rbrakk>
@@ -2134,50 +1921,6 @@ lemma pred_tcb'_weakenE:
   apply (simp add: pred_tcb_at'_def)
   apply (erule obj_at'_weakenE)
   apply clarsimp
-  done
-
-lemma lookupBefore_fst_snd:
-  "lookupBefore x s = Some v \<Longrightarrow> snd v = the (s (fst v))"
-  by (clarsimp simp add: lookupBefore_def Let_def split: if_split_asm)
-
-lemma lookupBefore_exact2:
-  "\<lbrakk> lookupBefore x s = Some v; fst v = x \<rbrakk> \<Longrightarrow> s x = Some (snd v)"
-  apply (cases v)
-  apply (clarsimp simp add: lookupBefore_def Let_def split: if_split_asm)
-  apply (drule subst[where P="\<lambda>x. x \<in> y" for y, OF _ Max_in])
-    apply simp
-   apply fastforce
-  apply clarsimp
-  done
-
-lemma lookupBefore_char:
-  "(lookupBefore x s = Some (y, v)) = (y \<le> x \<and> s y = Some v \<and> (\<forall>z. z \<le> x \<and> y < z \<longrightarrow> s z = None))"
-  apply (simp add: lookupBefore_def Let_def cong: conj_cong)
-  apply (rule conjI)
-   apply (clarsimp simp: dom_def)
-  apply clarsimp
-  apply (rule iffI)
-   apply (erule conjE)
-   apply (frule subst[where P="\<lambda>x. x \<in> y'" for y', OF _ Max_in])
-     apply simp
-    apply fastforce
-   apply clarsimp
-   apply (rule ccontr, clarsimp)
-   apply (subst(asm) Max_less_iff)
-     apply simp
-    apply fastforce
-   apply (drule_tac x=z in bspec)
-    apply fastforce
-   apply simp
-  apply clarsimp
-  apply (rule order_antisym)
-   apply (subst Max_le_iff)
-     apply simp
-    apply fastforce
-   apply fastforce
-  apply (rule Max_ge)
-   apply simp
-  apply fastforce
   done
 
 lemma lookupAround2_char1:
@@ -2274,7 +2017,7 @@ lemma ps_clearI:
   apply (subgoal_tac "p \<le> p + 1")
    apply (simp add: ps_clear_def2)
    apply (rule ccontr, erule nonemptyE, clarsimp)
-   apply (drule minus_one_helper[where x="z + 1" for z])
+   apply (drule word_leq_le_minus_one[where x="z + 1" for z])
     apply clarsimp
    apply simp
   apply (erule is_aligned_get_word_bits)
@@ -2313,7 +2056,7 @@ lemma ps_clear_lookupAround2:
          drule word_l_diffs(2),
          fastforce simp only: field_simps)
   apply (rule ccontr, simp add: linorder_not_le)
-  apply (drule minus_one_helper3, fastforce)
+  apply (drule word_le_minus_one_leq, fastforce)
   done
 
 lemma in_magnitude_check:
@@ -2328,7 +2071,7 @@ lemma in_magnitude_check:
     apply simp
    apply (erule(1) ps_clearI)
    apply (simp add: linorder_not_less)
-   apply (drule minus_one_helper[where x="2 ^ n"])
+   apply (drule word_leq_le_minus_one[where x="2 ^ n"])
     apply (clarsimp simp: power_overflow)
    apply (drule word_l_diffs)
     apply simp
@@ -2360,14 +2103,14 @@ lemma in_magnitude_check3:
     apply (drule(1) range_convergence2)
     apply (erule(1) ps_clearI)
     apply (simp add: linorder_not_less)
-    apply (drule minus_one_helper[where x="2 ^ n" for n], simp)
+    apply (drule word_leq_le_minus_one[where x="2 ^ n" for n], simp)
     apply (drule word_l_diffs, simp)
     apply (simp add: field_simps)
    apply (simp add: power_overflow)
   apply (clarsimp split: if_split_asm)
   apply (erule(1) ps_clear_lookupAround2)
     apply simp
-   apply (drule minus_one_helper3[where x="y - x"])
+   apply (drule word_le_minus_one_leq[where x="y - x"])
    apply (drule word_plus_mono_right[where x=x and y="y - x"])
     apply (erule is_aligned_get_word_bits)
      apply (simp add: field_simps is_aligned_no_overflow)
@@ -2400,7 +2143,7 @@ lemma tcb_space_clear:
    apply (frule(1) is_aligned_no_wrap'[rotated, rotated])
    apply (simp add: word_bits_conv objBits_defs)
    apply (erule notE, subst field_simps, rule word_plus_mono_right)
-    apply (drule minus_one_helper3,simp,erule is_aligned_no_wrap')
+    apply (drule word_le_minus_one_leq,simp,erule is_aligned_no_wrap')
    apply (simp add: word_bits_conv)
   apply (simp add: objBits_defs)
   apply (rule_tac x="y - x" in exI)
@@ -2879,10 +2622,6 @@ lemma cte_at_cte_wp_atD:
   "cte_at' p s \<Longrightarrow> \<exists>cte. cte_wp_at' ((=) cte) p s"
   by (clarsimp simp add: cte_wp_at'_def)
 
-lemma cte_at_cte_wp_atE:
-  "\<lbrakk> cte_at' p s;  \<And>cte. cte_wp_at' ((=) cte) p s \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
-  by (blast dest: cte_at_cte_wp_atD)
-
 lemma valid_pspace_no_0 [elim]:
   "valid_pspace' s \<Longrightarrow> no_0 (ctes_of s)"
   by (auto simp: valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def)
@@ -2890,10 +2629,6 @@ lemma valid_pspace_no_0 [elim]:
 lemma valid_pspace_dlist [elim]:
   "valid_pspace' s \<Longrightarrow> valid_dlist (ctes_of s)"
   by (auto simp: valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def)
-
-lemma cte_wp_at_conj':
-  "\<lbrakk> cte_wp_at' P p s; cte_wp_at' Q p s \<rbrakk> \<Longrightarrow> cte_wp_at' (P and Q) p s"
-  by (fastforce simp add: cte_wp_at'_def)
 
 lemma next_rtrancl_tranclE [consumes 1, case_names eq trancl]:
   assumes major: "m \<turnstile> x \<leadsto>\<^sup>* y"
@@ -2979,10 +2714,6 @@ lemma valid_mdb_ctesI [intro]:
   \<Longrightarrow> valid_mdb_ctes m"
   unfolding valid_mdb_ctes_def by auto
 
-lemma mdb_next_fold:
-  "(m \<turnstile> p \<leadsto> c) = (mdb_next m p = Some c)"
-  unfolding mdb_next_rel_def
-  by simp
 end
 locale PSpace_update_eq =
   fixes f :: "kernel_state \<Rightarrow> kernel_state"
@@ -3262,10 +2993,6 @@ lemma ko_wp_at_norm:
   "ko_wp_at' P p s \<Longrightarrow> \<exists>ko. P ko \<and> ko_wp_at' ((=) ko) p s"
   by (auto simp add: ko_wp_at'_def)
 
-lemma valid_mdb'_queues [iff]:
-  "valid_mdb' (ksReadyQueues_update f s) = valid_mdb' s"
-  by (simp add: valid_mdb'_def)
-
 lemma valid_mdb_machine_state [iff]:
   "valid_mdb' (ksMachineState_update f s) = valid_mdb' s"
   by (simp add: valid_mdb'_def)
@@ -3273,10 +3000,6 @@ lemma valid_mdb_machine_state [iff]:
 lemma cte_wp_at_norm':
   "cte_wp_at' P p s \<Longrightarrow> \<exists>cte. cte_wp_at' ((=) cte) p s \<and> P cte"
   by (simp add: cte_wp_at'_def)
-
-lemma pred_tcb_at'_disj:
-  "(pred_tcb_at' proj P t s \<or> pred_tcb_at' proj Q t s) = pred_tcb_at' proj (\<lambda>a. P a \<or> Q a) t s"
-  by (fastforce simp add: pred_tcb_at'_def obj_at'_def)
 
 lemma pred_tcb_at' [elim!]:
   "pred_tcb_at' proj P t s \<Longrightarrow> tcb_at' t s"
@@ -3464,16 +3187,6 @@ lemma valid_pspace_valid_objs'[elim!]:
 
 declare badgeBits_def [simp]
 
-lemma ex_cte_cap_to'_pres_asm:
-  "\<lbrakk> \<And>P p. \<lbrace>cte_wp_at' P p and Q\<rbrace> f \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>;
-     \<And>P. \<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> f \<lbrace>\<lambda>rv s. P (irq_node' s)\<rbrace> \<rbrakk>
-    \<Longrightarrow> \<lbrace>ex_cte_cap_wp_to' P p and Q\<rbrace> f \<lbrace>\<lambda>rv. ex_cte_cap_wp_to' P p\<rbrace>"
-  apply (simp add: ex_cte_cap_to'_def  pred_conj_def)
-  apply (rule hoare_pre, erule hoare_use_eq_irq_node')
-   apply (rule hoare_vcg_ex_lift, assumption)
-  apply simp
-  done
-
 lemma simple_sane_strg:
   "sch_act_simple s \<longrightarrow> sch_act_sane s"
   by (simp add: sch_act_sane_def sch_act_simple_def)
@@ -3518,10 +3231,6 @@ lemma objBitsT_koTypeOf :
   apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps bit_simps)
   done
 
-lemma sane_update [intro!]:
-  "sch_act_sane (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
-  by (simp add: sch_act_sane_def)
-
 lemma typ_at_aligned':
   "\<lbrakk> typ_at' tp p s \<rbrakk> \<Longrightarrow> is_aligned p (objBitsT tp)"
   by (clarsimp simp add: typ_at'_def ko_wp_at'_def objBitsT_koTypeOf)
@@ -3563,6 +3272,10 @@ lemma pred_tcb_at'_Not:
 lemma obj_at'_conj_distrib:
   "obj_at' (\<lambda>ko. P ko \<and> Q ko) p s \<Longrightarrow> obj_at' P p s \<and> obj_at' Q p s"
   by (auto simp: obj_at'_def)
+
+lemma obj_at'_conj:
+  "obj_at' (\<lambda>ko. P ko \<and> Q ko) p s = (obj_at' P p s \<and> obj_at' Q p s)"
+  using obj_at'_conj_distrib obj_at_conj' by blast
 
 lemma not_obj_at'_strengthen:
   "obj_at' (Not \<circ> P) p s \<Longrightarrow> \<not> obj_at' P p s"
@@ -3691,21 +3404,9 @@ lemma invs_valid_global'[elim!]:
   "invs' s \<Longrightarrow> valid_global_refs' s"
   by (fastforce simp: invs'_def valid_state'_def)
 
-lemma invs_invs_no_cicd':
+lemma invs'_invs_no_cicd:
   "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
   by (simp add: invs'_to_invs_no_cicd'_def)
-
-lemma valid_queues_valid_bitmapQ:
-  "valid_queues s \<Longrightarrow> valid_bitmapQ s"
-  by (simp add: valid_queues_def)
-
-lemma valid_queues_valid_queues_no_bitmap:
-  "valid_queues s \<Longrightarrow> valid_queues_no_bitmap s"
-  by (simp add: valid_queues_def)
-
-lemma valid_queues_bitmapQ_no_L1_orphans:
-  "valid_queues s \<Longrightarrow> bitmapQ_no_L1_orphans s"
-  by (simp add: valid_queues_def)
 
 lemma invs'_bitmapQ_no_L1_orphans:
   "invs' s \<Longrightarrow> bitmapQ_no_L1_orphans s"
@@ -3714,14 +3415,6 @@ lemma invs'_bitmapQ_no_L1_orphans:
 lemma invs_ksCurDomain_maxDomain' [elim!]:
   "invs' s \<Longrightarrow> ksCurDomain s \<le> maxDomain"
   by (simp add: invs'_def valid_state'_def)
-
-lemma ksCurThread_active_not_idle':
-  "\<lbrakk> ct_active' s ; valid_idle' s \<rbrakk> \<Longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
-  apply clarsimp
-  apply (clarsimp simp: ct_in_state'_def valid_idle'_def)
-  apply (drule idle_tcb_at'_split)
-  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
-  done
 
 lemma simple_st_tcb_at_state_refs_ofD':
   "st_tcb_at' simple' t s \<Longrightarrow> bound_tcb_at' (\<lambda>x. tcb_bound_refs' x = state_refs_of' s t) t s"
@@ -3739,13 +3432,6 @@ lemma cur_tcb'_machine_state [simp]:
 lemma invs_no_0_obj'[elim!]:
   "invs' s \<Longrightarrow> no_0_obj' s"
   by (simp add: invs'_def valid_state'_def valid_pspace'_def)
-
-lemma invs'_ksSchedulerAction:
-  "\<lbrakk> invs' s; sch_act_wf sa s; sa \<noteq> ResumeCurrentThread \<rbrakk> \<Longrightarrow>
-   invs' (s \<lparr>ksSchedulerAction := sa\<rparr>)"
-  by (clarsimp simp add: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
-                bitmapQ_defs valid_irq_node'_def valid_queues'_def cur_tcb'_def
-                ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def ct_not_inQ_def)
 
 lemma invs'_gsCNodes_update[simp]:
   "invs' (gsCNodes_update f s') = invs' s'"
@@ -3775,16 +3461,6 @@ lemma invs_queues_tcb_in_cur_domain':
 apply (subgoal_tac "x \<in> set (ksReadyQueues s (d, p))")
  apply (drule (1) valid_queues_obj_at'D[OF _ invs_queues])
  apply (auto simp: inQ_def tcb_in_cur_domain'_def elim: obj_at'_weakenE)
-done
-
-lemma invs_no_cicd_queues_tcb_in_cur_domain':
-  "\<lbrakk> ksReadyQueues s (d, p) = x # xs; all_invs_but_ct_idle_or_in_cur_domain' s; d = ksCurDomain s\<rbrakk>
-     \<Longrightarrow> tcb_in_cur_domain' x s"
-apply (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_pspace'_def tcb_in_cur_domain'_def)
-apply (elim conjE)
-apply (subgoal_tac "x \<in> set (ksReadyQueues s (d, p))")
- apply (drule (1) valid_queues_obj_at'D)
- apply (auto simp: inQ_def elim: obj_at'_weakenE)
 done
 
 lemma pred_tcb'_neq_contra:
@@ -3897,7 +3573,7 @@ lemma in_kernel_mappings_neq_mask:
    \<Longrightarrow> ptr && ~~ mask sz \<in> kernel_mappings"
   apply (clarsimp simp: kernel_mappings_def untypedBits_defs pptr_base_def
                         X64.pptrBase_def)
-  by (word_bitwise, clarsimp simp: neg_mask_bang word_size)
+  by (word_bitwise, clarsimp simp: neg_mask_test_bit word_size)
 
 lemma invs_pspace_in_kernel_mappings'[elim!]:
   "invs' s \<Longrightarrow> pspace_in_kernel_mappings' s"

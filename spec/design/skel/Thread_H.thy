@@ -42,6 +42,8 @@ context begin interpretation Arch .
 
 requalify_consts
   capRegister
+  faultRegister
+  nextInstructionRegister
 
 end
 

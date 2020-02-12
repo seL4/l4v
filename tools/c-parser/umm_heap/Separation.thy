@@ -29,14 +29,12 @@ definition sep_false :: "('a,'b) map_assert" where
   "sep_false \<equiv> \<lambda>s. False"
 
 definition
-  sep_conj :: "('a,'b) map_assert \<Rightarrow> ('a,'b) map_assert \<Rightarrow> ('a,'b) map_assert"
-  (infixr "\<and>\<^sup>*" 35)
+  sep_conj :: "('a,'b) map_assert \<Rightarrow> ('a,'b) map_assert \<Rightarrow> ('a,'b) map_assert" (infixr "\<and>\<^sup>*" 35)
 where
   "P \<and>\<^sup>* Q \<equiv> \<lambda>s. \<exists>s\<^sub>0 s\<^sub>1. s\<^sub>0 \<bottom> s\<^sub>1 \<and> s = s\<^sub>1 ++ s\<^sub>0 \<and> P s\<^sub>0 \<and> Q s\<^sub>1"
 
 definition
-  sep_impl :: "('a,'b) map_assert \<Rightarrow> ('a,'b) map_assert \<Rightarrow> ('a,'b) map_assert"
-  (infixr "\<longrightarrow>\<^sup>*" 25)
+  sep_impl :: "('a,'b) map_assert \<Rightarrow> ('a,'b) map_assert \<Rightarrow> ('a,'b) map_assert" (infixr "\<longrightarrow>\<^sup>*" 25)
 where
   "x \<longrightarrow>\<^sup>* y \<equiv> \<lambda>s. \<forall>s'. s \<bottom> s' \<and> x s' \<longrightarrow> y (s ++ s')"
 
@@ -46,17 +44,16 @@ definition
 where
   "singleton p v h d \<equiv> lift_state (heap_update p v h,d) |` s_footprint p"
 
-text {*
+text \<open>
   Like in Separation.thy, these arrows are defined using bsub and esub but
   have an \emph{input} syntax abbreviation with just sub.
   Why? Because if sub is the only way, people write things like
   @{text "p \<mapsto>\<^sup>i\<^sub>(f x y) v"} instead of @{text "p \<mapsto>\<^sup>i\<^bsub>(f x y)\<^esub> v"}. We preserve
   the sub syntax though, because esub and bsub are a pain to type.
-*}
+\<close>
 
 definition
-  sep_map :: "'a::c_type ptr \<Rightarrow> 'a ptr_guard \<Rightarrow> 'a \<Rightarrow> heap_assert"
-  ("_ \<mapsto>\<^bsub>_\<^esub> _" [56,0,51] 56)
+  sep_map :: "'a::c_type ptr \<Rightarrow> 'a ptr_guard \<Rightarrow> 'a \<Rightarrow> heap_assert" ("_ \<mapsto>\<^bsub>_\<^esub> _" [56,0,51] 56)
 where
   "p \<mapsto>\<^bsub>g\<^esub> v \<equiv> \<lambda>s. lift_typ_heap g s p = Some v \<and> dom s = s_footprint p \<and> wf_heap_val s"
 
@@ -91,7 +88,7 @@ syntax
   "_sep_assert" :: "bool \<Rightarrow> heap_state \<Rightarrow> bool" ("'(_')\<^bsup>sep\<^esup>" [0] 100)
 
 
-text {* ---- *}
+text \<open>----\<close>
 
 lemma sep_empD:
   "\<box> s \<Longrightarrow> s = Map.empty"
@@ -113,143 +110,104 @@ declare sep_false_def [symmetric, simp add]
 
 lemma singleton_dom':
   "dom (singleton p (v::'a::mem_type) h d) = dom (lift_state (h,d)) \<inter> s_footprint p"
-apply(auto simp: singleton_def lift_state_def
+  by (auto simp: singleton_def lift_state_def
            split: if_split_asm s_heap_index.splits)
-done
 
 lemma lift_state_dom:
   "d,g \<Turnstile>\<^sub>t p \<Longrightarrow> s_footprint (p::'a::mem_type ptr) \<subseteq> dom (lift_state (h,d))"
-apply(clarsimp simp: h_t_valid_def valid_footprint_def Let_def)
-apply(auto simp: lift_state_def split: s_heap_index.splits option.splits)
- apply(drule s_footprintD)
- apply(drule intvlD, clarsimp simp: size_of_def)
- apply(frule s_footprintD2)
-apply(rename_tac nat)
-apply(drule s_footprintD)
-apply(drule intvlD, clarsimp)
-apply(drule_tac x=k in spec)
-apply(erule impE)
- apply(simp add: size_of_def)
-apply(subst (asm) word_unat.eq_norm)
-apply(subst (asm) mod_less)
- apply(subst len_of_addr_card)
- apply(erule less_trans)
- apply(rule max_size)
-apply(simp add: map_le_def)
-apply auto
-apply(drule_tac x=nat in bspec)
- apply clarsimp+
-done
+  apply(clarsimp simp: h_t_valid_def valid_footprint_def Let_def)
+  apply(clarsimp simp: lift_state_def split: s_heap_index.splits option.splits)
+  apply(rule conjI; clarsimp)
+   apply(fastforce dest: s_footprintD intvlD simp: size_of_def)
+  apply(frule s_footprintD2)
+  apply(drule s_footprintD)
+  apply(drule intvlD, clarsimp)
+  apply(rename_tac k)
+  apply(drule_tac x=k in spec)
+  apply(erule impE)
+   apply(simp add: size_of_def)
+  apply(subst (asm) word_unat.eq_norm)
+  apply(subst (asm) mod_less)
+   apply(subst len_of_addr_card)
+   apply(erule less_trans)
+   apply(rule max_size)
+  apply(force simp: map_le_def)
+  done
 
 lemma singleton_dom:
   "d,g \<Turnstile>\<^sub>t p \<Longrightarrow> dom (singleton p (v::'a::mem_type) h d) = s_footprint p"
-apply(subst singleton_dom')
-apply(drule lift_state_dom)
-apply fast
-done
+  apply(subst singleton_dom')
+  apply(fastforce dest: lift_state_dom)
+  done
 
 lemma wf_heap_val_restrict [simp]:
   "wf_heap_val s \<Longrightarrow> wf_heap_val (s |` X)"
-apply(unfold wf_heap_val_def, clarify)
-apply(auto simp: restrict_map_def)
-done
+  unfolding wf_heap_val_def by (auto simp: restrict_map_def)
 
 lemma singleton_wf_heap_val [simp]:
   "wf_heap_val (singleton p v h d)"
-apply(unfold singleton_def)
-apply simp
-done
+  unfolding singleton_def by simp
 
 lemma h_t_valid_restrict_proj_d:
   "\<lbrakk> proj_d s,g \<Turnstile>\<^sub>t p; \<forall>x. x \<in> s_footprint p \<longrightarrow> s x = s' x \<rbrakk> \<Longrightarrow>
       proj_d s',g \<Turnstile>\<^sub>t p"
-apply(auto simp: h_t_valid_def valid_footprint_def Let_def)
- apply(drule_tac x=y in spec)
- apply simp
- apply(auto simp: proj_d_def map_le_def split: if_split_asm option.splits)
+  apply(clarsimp simp: h_t_valid_def valid_footprint_def Let_def)
+  apply(rule conjI)
+   apply(drule_tac x=y in spec)
+   apply simp
+   apply(clarsimp simp: proj_d_def map_le_def)
+   apply(drule_tac x="ptr_val p + of_nat y" in spec)
+   apply(drule_tac x="SIndexTyp a" in spec)
+   apply(erule impE)
+    apply(erule s_footprintI)
+    apply(simp add: size_of_def)
+   apply simp
+  apply(clarsimp simp: proj_d_def)
+  apply(drule_tac x=y in spec)
+  apply clarsimp
   apply(drule_tac x="ptr_val p + of_nat y" in spec)
-  apply(drule_tac x="SIndexTyp a" in spec)
+  apply(drule_tac x="SIndexVal" in spec)
   apply(erule impE)
-   apply(erule  s_footprintI)
+   apply(rule s_footprintI2)
    apply(simp add: size_of_def)
-  apply simp
- apply(drule_tac x="ptr_val p + of_nat y" in spec)
- apply(drule_tac x="SIndexTyp a" in spec)
- apply(erule impE)
-  apply(erule s_footprintI)
-  apply(simp add: size_of_def)
- apply simp
-apply(drule_tac x=y in spec)
-apply clarsimp
-apply(drule_tac x="ptr_val p + of_nat y" in spec)
-apply(drule_tac x="SIndexVal" in spec)
-apply(erule impE)
- apply(rule s_footprintI2)
- apply(simp add: size_of_def)
-apply(rule_tac x=ya in exI)
-apply simp
-done
+  apply force
+  done
 
 lemma s_valid_restrict [simp]:
   "s |` s_footprint p,g \<Turnstile>\<^sub>s p = s,g \<Turnstile>\<^sub>s p"
-apply(auto simp: s_valid_def )
- apply(erule h_t_valid_restrict_proj_d)
- apply(simp add: s_footprint_restrict)
-apply(erule h_t_valid_restrict_proj_d)
-apply(simp add: s_footprint_restrict)
-done
+  by (fastforce simp: s_valid_def elim: h_t_valid_restrict_proj_d)
 
 lemma proj_h_restrict:
   "(x,SIndexVal) \<in> X \<Longrightarrow> proj_h (s |` X) x = proj_h s x"
-apply(auto simp: proj_h_def)
-done
+  by (auto simp: proj_h_def)
 
 lemma heap_list_s_restrict [rule_format]:
-  "\<forall>p. (\<lambda>x. (x,SIndexVal)) ` {p..+n} \<subseteq> X \<longrightarrow>
-      heap_list_s (s |` X) n p = heap_list_s s n p"
-apply(induct_tac n)
- apply(simp add: heap_list_s_def)
-apply(auto simp: heap_list_s_def)
- apply(rule proj_h_restrict)
- apply(subgoal_tac "p \<in> {p..+Suc n}")
-  apply fast
- apply(rule intvl_self, simp)
-apply(drule_tac x="p+1" in spec)
-apply clarsimp
-apply(subgoal_tac "{p+1..+n} \<subseteq> {p..+Suc n}")
- apply fast
-apply clarsimp
-apply(rule intvl_plus_sub_Suc)
-apply simp
-done
+  "(\<lambda>x. (x,SIndexVal)) ` {p..+n} \<subseteq> X \<Longrightarrow> heap_list_s (s |` X) n p = heap_list_s s n p"
+  apply(induct n arbitrary: p)
+   apply(simp add: heap_list_s_def)
+  apply(clarsimp simp: heap_list_s_def)
+  apply(rule conjI)
+   apply(fastforce intro: proj_h_restrict intvl_self)
+  apply(fastforce intro: intvl_plus_sub_Suc)
+  done
 
 lemma lift_typ_heap_restrict [simp]:
   "lift_typ_heap g (s |` s_footprint p) p = lift_typ_heap g s p"
-apply(auto simp: lift_typ_heap_if)
-apply(subst heap_list_s_restrict)
- apply clarsimp
- apply(drule intvlD, clarsimp)
- apply(erule s_footprintI2)
-apply simp
-done
+  apply(clarsimp simp: lift_typ_heap_if)
+  apply(subst heap_list_s_restrict)
+   apply clarsimp
+   apply(drule intvlD, clarsimp)
+   apply(erule s_footprintI2)
+  apply simp
+  done
 
 lemma singleton_s_valid:
   "d,g \<Turnstile>\<^sub>t p \<Longrightarrow> singleton p (v::'a::mem_type) h d,g \<Turnstile>\<^sub>s p"
-apply(simp add: singleton_def)
-thm h_t_valid_restrict
-apply(subst h_t_s_valid)
-apply simp
-done
+  by (simp add: singleton_def h_t_s_valid)
 
 lemma singleton_lift_typ_heap_Some:
   "d,g \<Turnstile>\<^sub>t p \<Longrightarrow> lift_typ_heap g (singleton p v h d) p = Some (v::'a::mem_type)"
-apply(subst singleton_def)
-apply simp
-apply(subst lift_t)
-apply(subst lift_t_heap_update)
- apply(simp add: h_t_valid_restrict)
-apply(simp add: ptr_retyp_h_t_valid)
-done
+  by (simp add: singleton_def lift_t lift_t_heap_update h_t_valid_restrict)
 
 lemma sep_map_g:
   "(p \<mapsto>\<^sub>g v) s \<Longrightarrow> g p"
@@ -261,7 +219,7 @@ lemma sep_map_g_sep_false:
 
 lemma sep_map_singleton:
   "d,g \<Turnstile>\<^sub>t p \<Longrightarrow> ((p::'a::mem_type ptr) \<mapsto>\<^sub>g v) (singleton p v h d)"
- by (simp add: sep_map_def singleton_lift_typ_heap_Some singleton_dom)
+  by (simp add: sep_map_def singleton_lift_typ_heap_Some singleton_dom)
 
 lemma sep_mapD:
   "(p \<mapsto>\<^sub>g v) s \<Longrightarrow> lift_typ_heap g s p = Some v \<and>
@@ -298,61 +256,57 @@ lemma proj_h_heap_merge:
 
 lemma s_valid_heap_merge_right:
   "s\<^sub>1,g \<Turnstile>\<^sub>s p \<Longrightarrow> s\<^sub>0 ++ s\<^sub>1,g \<Turnstile>\<^sub>s p"
- apply (simp add: s_valid_def h_t_valid_def valid_footprint_def Let_def
-                (*proj_d_heap_merge*))
-apply auto
- apply(drule_tac x=y in spec, simp)
- apply clarsimp
- apply(erule map_le_trans)
- apply(clarsimp simp: proj_d_def map_le_def split: option.splits)
-apply(drule_tac x=y in spec, simp)
-apply(clarsimp simp: proj_d_def map_le_def split: option.splits)
-done
+  apply (clarsimp simp: s_valid_def h_t_valid_def valid_footprint_def Let_def)
+  apply (rule conjI)
+   apply(drule_tac x=y in spec, simp)
+   apply clarsimp
+   apply(erule map_le_trans)
+   apply(clarsimp simp: proj_d_def map_le_def split: option.splits)
+  apply(drule_tac x=y in spec, simp)
+  apply(clarsimp simp: proj_d_def map_le_def split: option.splits)
+  done
 
 lemma proj_d_map_add_fst:
   "fst (proj_d (s ++ t) x) = (if (x,SIndexVal) \<in> dom t then fst (proj_d t x) else
       fst (proj_d s x))"
-apply(auto simp: proj_d_def split: option.splits)
-done
+  by (auto simp: proj_d_def split: option.splits)
 
 lemma proj_d_map_add_snd:
   "snd (proj_d (s ++ t) x) n = (if (x,SIndexTyp n) \<in> dom t then snd (proj_d t x) n else
       snd (proj_d s x) n)"
-apply(auto simp: proj_d_def split: option.splits)
-done
+  by (auto simp: proj_d_def split: option.splits)
 
 lemma proj_d_restrict_map_fst:
   "(x,SIndexVal) \<in> X \<Longrightarrow> fst (proj_d (s |` X) x) = fst (proj_d s x)"
-apply(auto simp: proj_d_def)
-done
+  by (auto simp: proj_d_def)
 
 lemma proj_d_restrict_map_snd:
   "(x,SIndexTyp n) \<in> X \<Longrightarrow> snd (proj_d (s |` X) x) n = snd (proj_d s x) n"
-apply(auto simp: proj_d_def)
-done
+  by (auto simp: proj_d_def)
 
 lemma s_valid_heap_merge_right2:
   "\<lbrakk> s\<^sub>0 ++ s\<^sub>1,g \<Turnstile>\<^sub>s p; s_footprint p \<subseteq> dom s\<^sub>1 \<rbrakk> \<Longrightarrow> s\<^sub>1,g \<Turnstile>\<^sub>s p"
-apply(auto simp: s_valid_def h_t_valid_def valid_footprint_def Let_def)
- apply(clarsimp simp: map_le_def)
- apply(subst proj_d_map_add_snd)
- apply(clarsimp split: if_split_asm)
- apply(subgoal_tac "(ptr_val p + of_nat y,SIndexTyp a) \<in> s_footprint p")
-  apply fast
- apply(erule s_footprintI)
- apply(simp add: size_of_def)
-apply(subgoal_tac "(ptr_val p + of_nat y,SIndexVal) \<in> s_footprint p")
- apply(drule (1) subsetD)
- apply clarsimp
- apply(subst (asm) proj_d_map_add_fst)
- apply(drule_tac x=y in spec)
- apply(clarsimp split: if_split_asm)
-apply(rule s_footprintI2)
-apply(simp add: size_of_def)
-done
+  apply(clarsimp simp: s_valid_def h_t_valid_def valid_footprint_def Let_def)
+  apply(rule conjI)
+   apply(clarsimp simp: map_le_def)
+   apply(subst proj_d_map_add_snd)
+   apply(clarsimp split: if_split_asm)
+   apply(subgoal_tac "(ptr_val p + of_nat y,SIndexTyp a) \<in> s_footprint p")
+    apply fast
+   apply(erule s_footprintI)
+   apply(simp add: size_of_def)
+  apply(subgoal_tac "(ptr_val p + of_nat y,SIndexVal) \<in> s_footprint p")
+   apply(drule (1) subsetD)
+   apply clarsimp
+   apply(subst (asm) proj_d_map_add_fst)
+   apply(drule_tac x=y in spec)
+   apply(clarsimp split: if_split_asm)
+  apply(rule s_footprintI2)
+  apply(simp add: size_of_def)
+  done
 
 lemma heap_list_s_heap_merge_right':
-  "\<lbrakk> s\<^sub>1,g \<Turnstile>\<^sub>s (p::'a::c_type ptr); (*wf_heap_val s\<^sub>1;*) n \<le> size_of TYPE('a) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> s\<^sub>1,g \<Turnstile>\<^sub>s (p::'a::c_type ptr); n \<le> size_of TYPE('a) \<rbrakk> \<Longrightarrow>
       heap_list_s (s\<^sub>0 ++ s\<^sub>1) n (ptr_val p + of_nat (size_of TYPE('a) - n))
           = heap_list_s s\<^sub>1 n (ptr_val p + of_nat (size_of TYPE('a) - n))"
 proof (induct n)
@@ -360,30 +314,24 @@ proof (induct n)
 next
   case (Suc n)
   hence "(ptr_val p + (of_nat (size_of TYPE('a) - Suc n)),SIndexVal) \<in> dom s\<^sub>1"
-apply -
-apply auto
     by - (drule_tac x="size_of TYPE('a) - Suc n" in s_valid_Some, auto)
   with Suc show ?case
     by (simp add: heap_list_s_def proj_h_heap_merge algebra_simps)
 qed
 
 lemma heap_list_s_heap_merge_right:
-  "\<lbrakk> s\<^sub>1,g \<Turnstile>\<^sub>s ((Ptr p)::'a::c_type ptr) (*; wf_heap_state s\<^sub>1*) \<rbrakk> \<Longrightarrow>
-      heap_list_s (s\<^sub>0 ++ s\<^sub>1) (size_of TYPE('a)) p =
-          heap_list_s s\<^sub>1 (size_of TYPE('a)) p"
+  "s\<^sub>1,g \<Turnstile>\<^sub>s ((Ptr p)::'a::c_type ptr) \<Longrightarrow>
+   heap_list_s (s\<^sub>0 ++ s\<^sub>1) (size_of TYPE('a)) p = heap_list_s s\<^sub>1 (size_of TYPE('a)) p"
   by (force dest: heap_list_s_heap_merge_right')
 
 lemma lift_typ_heap_heap_merge_right:
-  "\<lbrakk> lift_typ_heap g s\<^sub>1 p = Some v (*; wf_heap_state s\<^sub>1*) \<rbrakk> \<Longrightarrow>
-      lift_typ_heap g (s\<^sub>0 ++ s\<^sub>1) (p::'a::c_type ptr) = Some v"
-  by (force simp: lift_typ_heap_if s_valid_heap_merge_right
-                  heap_list_s_heap_merge_right split: if_split_asm)
+  "lift_typ_heap g s\<^sub>1 p = Some v \<Longrightarrow> lift_typ_heap g (s\<^sub>0 ++ s\<^sub>1) (p::'a::c_type ptr) = Some v"
+  by (force simp: lift_typ_heap_if s_valid_heap_merge_right heap_list_s_heap_merge_right
+            split: if_split_asm)
 
 lemma lift_typ_heap_heap_merge_sep_map:
-  "(p \<mapsto>\<^sub>g v) s\<^sub>1 \<Longrightarrow>
-      lift_typ_heap g (s\<^sub>0 ++ s\<^sub>1) p = Some (v::'a::c_type)"
-  by - (drule sep_map_lift_typ_heapD,
-        erule lift_typ_heap_heap_merge_right)
+  "(p \<mapsto>\<^sub>g v) s\<^sub>1 \<Longrightarrow> lift_typ_heap g (s\<^sub>0 ++ s\<^sub>1) p = Some (v::'a::c_type)"
+  by (drule sep_map_lift_typ_heapD, erule lift_typ_heap_heap_merge_right)
 
 lemma sep_conjI:
   "\<lbrakk> P s\<^sub>0; Q s\<^sub>1; s\<^sub>0 \<bottom> s\<^sub>1; s = s\<^sub>1 ++ s\<^sub>0 \<rbrakk> \<Longrightarrow> (P \<and>\<^sup>* Q) s"
@@ -518,7 +466,7 @@ proof rule
   then obtain s\<^sub>0 s\<^sub>1 where "s\<^sub>0 \<bottom> s\<^sub>1" and "s = s\<^sub>1 ++ s\<^sub>0" and "P s\<^sub>0 \<or> Q s\<^sub>0" and
       "R s\<^sub>1"
     by - (drule sep_conjD, auto)
-  moreover hence "\<not> ?z \<Longrightarrow> \<not> Q s\<^sub>0"
+  moreover from this have "\<not> ?z \<Longrightarrow> \<not> Q s\<^sub>0"
     by - (clarsimp, erule notE, erule (2) sep_conjI, simp)
   ultimately show "?y \<or> ?z" by (force intro: sep_conjI)
 next
@@ -584,13 +532,13 @@ lemma sep_implD:
 
 lemma sep_emp_sep_impl [simp]:
   "(\<box> \<longrightarrow>\<^sup>* P) = P"
-apply(rule ext)
-apply(auto simp: sep_impl_def)
- apply(drule_tac x=Map.empty in spec)
- apply auto
-apply(drule sep_empD)
-apply simp
-done
+  apply(rule ext)
+  apply(clarsimp simp: sep_impl_def)
+  apply(rule iffI; clarsimp?)
+   apply(drule_tac x=Map.empty in spec)
+   apply fastforce
+  apply(fastforce dest: sep_empD)
+  done
 
 lemma sep_impl_sep_true [simp]:
   "(P \<longrightarrow>\<^sup>* sep_true) = sep_true"
@@ -610,37 +558,37 @@ lemma sep_impl_sep_true_false [simp]:
 
 lemma sep_impl_impl:
   "(P \<longrightarrow>\<^sup>* Q \<longrightarrow>\<^sup>* R) = (P \<and>\<^sup>* Q \<longrightarrow>\<^sup>* R)"
-apply(rule ext)
-apply rule
- apply(rule sep_implI)
- apply clarsimp
- apply(drule sep_conjD, clarsimp)
- apply(drule sep_implD)
- apply(drule_tac x=s\<^sub>0 in spec)
- apply(erule impE)
-  apply(clarsimp simp: map_disj_def, fast)
- apply(drule sep_implD)
- apply(drule_tac x=s\<^sub>1 in spec)
- apply(erule impE)
-  apply(clarsimp simp: map_disj_def, fast)
- apply(subst map_add_com [where h\<^sub>0=s\<^sub>1])
-  apply(clarsimp simp: map_disj_def, fast)
- apply(subst map_add_assoc)
- apply simp
-apply(rule sep_implI, clarsimp)
-apply(rule sep_implI, clarsimp)
-apply(drule sep_implD)
-apply(drule_tac x="s' ++ s'a" in spec)
-apply(erule impE)
- apply rule
-  apply(clarsimp simp: map_disj_def, fast)
- apply(erule (1) sep_conjI)
-  apply(clarsimp simp: map_disj_def, fast)
- apply(subst map_add_com)
-  apply(clarsimp simp: map_disj_def, fast)
- apply simp
-apply(simp add: map_add_assoc)
-done
+  apply(rule ext)
+  apply(rule iffI)
+   apply(rule sep_implI)
+   apply clarsimp
+   apply(drule sep_conjD, clarsimp)
+   apply(drule sep_implD)
+   apply(drule_tac x=s\<^sub>0 in spec)
+   apply(erule impE)
+    apply(clarsimp simp: map_disj_def, fast)
+   apply(drule sep_implD)
+   apply(drule_tac x=s\<^sub>1 in spec)
+   apply(erule impE)
+    apply(clarsimp simp: map_disj_def, fast)
+   apply(subst map_add_com [where h\<^sub>0=s\<^sub>1])
+    apply(clarsimp simp: map_disj_def, fast)
+   apply(subst map_add_assoc)
+   apply simp
+  apply(rule sep_implI, clarsimp)
+  apply(rule sep_implI, clarsimp)
+  apply(drule sep_implD)
+  apply(drule_tac x="s' ++ s'a" in spec)
+  apply(erule impE)
+   apply(rule conjI)
+    apply(clarsimp simp: map_disj_def, fast)
+   apply(erule (1) sep_conjI)
+    apply(clarsimp simp: map_disj_def, fast)
+   apply(subst map_add_com)
+    apply(clarsimp simp: map_disj_def, fast)
+   apply simp
+  apply(simp add: map_add_assoc)
+  done
 
 lemma sep_conj_sep_impl:
   "\<lbrakk> P s; \<And>s. (P \<and>\<^sup>* Q) s \<Longrightarrow> R s \<rbrakk> \<Longrightarrow> (Q \<longrightarrow>\<^sup>* R) s"
@@ -690,15 +638,15 @@ lemma sep_map'_any_dom_exc:
 
 lemma sep_map'_dom_exc:
   "(p \<hookrightarrow>\<^sub>g (v::'a::mem_type)) s \<Longrightarrow> (ptr_val p,SIndexVal) \<in> dom s"
-apply(clarsimp simp: sep_map'_def sep_conj_ac dest!: sep_conjD)
-apply(subgoal_tac "s\<^sub>1 (ptr_val p, SIndexVal) \<noteq> None")
- apply(force simp: map_ac_simps)
-apply(drule sep_map_dom_exc)
-apply(subgoal_tac "(ptr_val p, SIndexVal) \<in> s_footprint p")
- apply fast
-apply(rule s_footprintI2 [where x=0, simplified])
-apply simp
-done
+  apply(clarsimp simp: sep_map'_def sep_conj_ac dest!: sep_conjD)
+  apply(subgoal_tac "s\<^sub>1 (ptr_val p, SIndexVal) \<noteq> None")
+   apply(force simp: map_ac_simps)
+  apply(drule sep_map_dom_exc)
+  apply(subgoal_tac "(ptr_val p, SIndexVal) \<in> s_footprint p")
+   apply fast
+  apply(rule s_footprintI2 [where x=0, simplified])
+  apply simp
+  done
 
 lemma sep_map'_lift_typ_heapD:
   "(p \<hookrightarrow>\<^sub>g v) s \<Longrightarrow>
@@ -727,47 +675,45 @@ qed
 lemma sep_conj_overlapD:
   "\<lbrakk> (P \<and>\<^sup>* Q) s; \<And>s. P s \<Longrightarrow> ((p::'a::mem_type ptr) \<hookrightarrow>\<^sub>g -) s;
       \<And>s. Q s \<Longrightarrow> (p \<hookrightarrow>\<^sub>h -) s \<rbrakk> \<Longrightarrow> False"
-apply(drule sep_conjD, clarsimp simp: map_disj_def)
-apply(subgoal_tac "(ptr_val p,SIndexVal) \<in> dom s\<^sub>0 \<and> (ptr_val p,SIndexVal) \<in> dom s\<^sub>1")
- apply fast
-apply(fast intro!: sep_map'_any_dom_exc)
-done
+  apply(drule sep_conjD, clarsimp simp: map_disj_def)
+  apply(subgoal_tac "(ptr_val p,SIndexVal) \<in> dom s\<^sub>0 \<and> (ptr_val p,SIndexVal) \<in> dom s\<^sub>1")
+   apply fast
+  apply(fast intro!: sep_map'_any_dom_exc)
+  done
 
 lemma sep_no_skew:
   "(\<lambda>s. (p \<hookrightarrow>\<^sub>g v) s \<and> (q \<hookrightarrow>\<^sub>h w) s) s \<Longrightarrow>
       p=q \<or> {ptr_val (p::'a::c_type ptr)..+size_of TYPE('a)} \<inter>
           {ptr_val q..+size_of TYPE('a)} = {}"
-apply clarsimp
-apply(drule sep_map'_lift_typ_heapD)+
-apply(clarsimp simp: lift_typ_heap_if s_valid_def split: if_split_asm)
-apply(rule ccontr)
-apply(drule (1) h_t_valid_neq_disjoint)
-  apply simp
- apply(rule peer_typ_not_field_of)
-  apply simp+
-done
+  apply clarsimp
+  apply(drule sep_map'_lift_typ_heapD)+
+  apply(clarsimp simp: lift_typ_heap_if s_valid_def split: if_split_asm)
+  apply(rule ccontr)
+  apply(drule (1) h_t_valid_neq_disjoint; simp?)
+  apply(rule peer_typ_not_field_of; simp)
+  done
 
 lemma sep_no_skew2:
   "\<lbrakk> (\<lambda>s. (p \<hookrightarrow>\<^sub>g v) s \<and> (q \<hookrightarrow>\<^sub>h w) s) s; typ_uinfo_t TYPE('a) \<bottom>\<^sub>t typ_uinfo_t TYPE('b) \<rbrakk>
       \<Longrightarrow> {ptr_val (p::'a::c_type ptr)..+size_of TYPE('a)} \<inter>
           {ptr_val (q::'b::c_type ptr)..+size_of TYPE('b)} = {}"
-apply clarsimp
-apply(drule sep_map'_lift_typ_heapD)+
-apply(clarsimp simp: lift_typ_heap_if s_valid_def split: if_split_asm)
-apply(frule (1) h_t_valid_neq_disjoint[where q=q])
-  apply(clarsimp simp: tag_disj_def sub_typ_proper_def)
-  apply(simp add: typ_tag_lt_def)
- apply(clarsimp simp: tag_disj_def typ_tag_le_def field_of_t_def field_of_def)
-apply assumption
-done
+  apply clarsimp
+  apply(drule sep_map'_lift_typ_heapD)+
+  apply(clarsimp simp: lift_typ_heap_if s_valid_def split: if_split_asm)
+  apply(frule (1) h_t_valid_neq_disjoint[where q=q])
+    apply(clarsimp simp: tag_disj_def sub_typ_proper_def)
+    apply(simp add: typ_tag_lt_def)
+   apply(clarsimp simp: tag_disj_def typ_tag_le_def field_of_t_def field_of_def)
+  apply assumption
+  done
 
 lemma sep_conj_impl_same:
   "(P \<and>\<^sup>* (P \<longrightarrow>\<^sup>* Q)) s \<Longrightarrow> Q s"
-apply(drule sep_conjD, clarsimp)
-apply(drule sep_implD)
-apply(drule_tac x="s\<^sub>0" in spec)
-apply(clarsimp simp: map_disj_com)
-done
+  apply(drule sep_conjD, clarsimp)
+  apply(drule sep_implD)
+  apply(drule_tac x="s\<^sub>0" in spec)
+  apply(clarsimp simp: map_disj_com)
+  done
 
 
 (* Pure *)
@@ -859,7 +805,7 @@ lemma intuitionistic_sep_impl_sep_true:
 proof (rule intuitionisticI, rule sep_implI, clarsimp)
   fix s s' s'a
   assume "(sep_true \<longrightarrow>\<^sup>* P) s" and le: "s \<subseteq>\<^sub>m s'" and "s' \<bottom> s'a"
-  moreover hence "P (s ++ (s' |` (dom s' - dom s) ++ s'a))"
+  moreover from this have "P (s ++ (s' |` (dom s' - dom s) ++ s'a))"
     by - (drule sep_implD,
           drule_tac x="s'|`(dom s' - dom s) ++ s'a" in spec,
           force simp: map_disj_def dest: map_disj_map_le)
@@ -914,7 +860,7 @@ lemma intuitionistic_sep_impl:
 proof (rule intuitionisticI, rule sep_implI, clarsimp)
   fix s s' s'a
   assume le: "s \<subseteq>\<^sub>m s'" and disj: "s' \<bottom> (s'a::'a \<rightharpoonup> 'b)"
-  moreover hence "s ++ s'a \<subseteq>\<^sub>m s' ++ s'a"
+  moreover from this have "s ++ s'a \<subseteq>\<^sub>m s' ++ s'a"
   proof -
     from le disj have "s \<subseteq>\<^sub>m s ++ s'a"
       by (subst map_add_com)
@@ -931,16 +877,17 @@ qed
 lemma strongest_intuitionistic:
   "\<not> (\<exists>Q. (\<forall>s. (Q s \<longrightarrow> (P \<and>\<^sup>* sep_true) s)) \<and> intuitionistic Q \<and>
       Q \<noteq> (P \<and>\<^sup>* sep_true) \<and> (\<forall>s. P s \<longrightarrow> Q s))"
-  by (force intro!: ext dest!: sep_conjD intuitionisticD)
+  by (clarsimp, rule ext) (force dest!: sep_conjD intuitionisticD)
 
 lemma weakest_intuitionistic:
   "\<not> (\<exists>Q. (\<forall>s. ((sep_true \<longrightarrow>\<^sup>* P) s \<longrightarrow> Q s)) \<and> intuitionistic Q \<and>
       Q \<noteq> (sep_true \<longrightarrow>\<^sup>* P) \<and> (\<forall>s. Q s \<longrightarrow> P s))"
-  apply (clarsimp intro!: ext)
-  apply (rule iffI)
-   apply (rule sep_implI')
-   apply (drule_tac s=x and s'="x ++ h'" in intuitionisticD)
-     apply (clarsimp simp: map_ac_simps)+
+  apply (clarsimp, rule ext)
+  apply (rename_tac Q x)
+  apply (rule iffI; clarsimp?)
+  apply (rule sep_implI')
+  apply (rename_tac h')
+  apply (drule_tac s=x and s'="x ++ h'" in intuitionisticD; clarsimp simp: map_ac_simps)
   done
 
 lemma intuitionistic_sep_conj_sep_true_P:
@@ -1092,23 +1039,23 @@ lemma strictly_exact_conj_impl:
 
 lemma dom_eps_sep_emp [simp]:
   "dom_eps \<box> = {}"
-apply(subst dom_eps [symmetric])
-  apply(rule strictly_exact_dom_exact)
-  apply(rule strictly_exact_sep_emp)
- apply(rule sep_emp_empty)
-apply simp
-done
+  apply(subst dom_eps [symmetric])
+    apply(rule strictly_exact_dom_exact)
+    apply(rule strictly_exact_sep_emp)
+   apply(rule sep_emp_empty)
+  apply simp
+  done
 
 lemma dom_eps_sep_map:
   "g p \<Longrightarrow> dom_eps (p \<mapsto>\<^sub>g (v::'a::mem_type)) = s_footprint p"
-apply(subst dom_eps [symmetric])
-  apply(rule dom_exact_sep_map)
- apply(rule sep_map_singleton)
- apply(erule ptr_retyp_h_t_valid)
-apply(subst singleton_dom)
- apply(erule ptr_retyp_h_t_valid)
-apply simp
-done
+  apply(subst dom_eps [symmetric])
+    apply(rule dom_exact_sep_map)
+   apply(rule sep_map_singleton)
+   apply(erule ptr_retyp_h_t_valid)
+  apply(subst singleton_dom)
+   apply(erule ptr_retyp_h_t_valid)
+  apply simp
+  done
 
 (* Non-empty *)
 
@@ -1133,49 +1080,48 @@ lemma non_empty_sep_false:
 
 lemma non_empty_sep_emp:
   "non_empty \<box>"
-apply(unfold non_empty_def)
-apply(rule exI, rule sep_emp_empty)
-done
+  unfolding non_empty_def by (rule exI, rule sep_emp_empty)
 
 lemma non_empty_sep_map:
   "g p \<Longrightarrow> non_empty (p \<mapsto>\<^sub>g (v::'a::mem_type))"
-apply(unfold non_empty_def)
-apply(rule exI, rule sep_map_singleton)
-apply(erule ptr_retyp_h_t_valid)
-done
+  apply(unfold non_empty_def)
+  apply(rule exI, rule sep_map_singleton)
+  apply(erule ptr_retyp_h_t_valid)
+  done
 
 lemma non_empty_sep_conj:
   "\<lbrakk> non_empty P; non_empty Q; dom_exact P; dom_exact Q;
       dom_eps P \<inter> dom_eps Q = {} \<rbrakk> \<Longrightarrow> non_empty (P \<and>\<^sup>* Q)"
-apply(clarsimp simp: non_empty_def)
-apply(rule_tac x="s++sa" in exI)
-apply(rule sep_conjI, assumption+)
- apply(clarsimp simp: map_disj_def dom_eps)
-apply(subst map_add_com)
- apply(clarsimp simp: map_disj_def dom_eps)
-apply simp
-done
+  apply(clarsimp simp: non_empty_def)
+  apply(rename_tac s s')
+  apply(rule_tac x="s++s'" in exI)
+  apply(rule sep_conjI, assumption+)
+   apply(clarsimp simp: map_disj_def dom_eps)
+  apply(subst map_add_com)
+   apply(clarsimp simp: map_disj_def dom_eps)
+  apply simp
+  done
 
 lemma non_empty_sep_map':
   "g p \<Longrightarrow> non_empty (p \<hookrightarrow>\<^sub>g (v::'a::mem_type))"
-apply(unfold sep_map'_def)
-apply(clarsimp simp: non_empty_def sep_conj_ac)
-apply(rule_tac x="singleton p v h (ptr_retyp p d)" in exI)
-apply(rule_tac s\<^sub>0=Map.empty in sep_conjI)
-   apply simp
-  apply(rule sep_map_singleton)
-  apply(erule ptr_retyp_h_t_valid)
- apply(simp add: map_disj_def)
-apply simp
-done
+  apply(unfold sep_map'_def)
+  apply(clarsimp simp: non_empty_def sep_conj_ac)
+  apply(rule_tac x="singleton p v h (ptr_retyp p d)" in exI)
+  apply(rule_tac s\<^sub>0=Map.empty in sep_conjI)
+     apply simp
+    apply(rule sep_map_singleton)
+    apply(erule ptr_retyp_h_t_valid)
+   apply(simp add: map_disj_def)
+  apply simp
+  done
 
 lemma non_empty_sep_impl:
   "\<not> P Map.empty \<Longrightarrow> non_empty (P \<longrightarrow>\<^sup>* Q)"
-apply(clarsimp simp: non_empty_def)
-apply(rule_tac x="\<lambda>s. Some undefined" in exI)
-apply(rule sep_implI)
-apply(clarsimp simp: map_disj_def)
-done
+  apply(clarsimp simp: non_empty_def)
+  apply(rule_tac x="\<lambda>s. Some undefined" in exI)
+  apply(rule sep_implI)
+  apply(clarsimp simp: map_disj_def)
+  done
 
 (* Some useful lemmas *)
 
@@ -1192,8 +1138,7 @@ lemma pure_conj_left: "((\<lambda>s. P' \<and> Q' s) \<and>\<^sup>* Q) = (\<lamb
 lemma pure_conj_left': "((\<lambda>s. P' s \<and> Q') \<and>\<^sup>* Q) = (\<lambda>s. Q' \<and> (P' \<and>\<^sup>* Q) s)"
   by (subst conj_comms, subst pure_conj_left, simp)
 
-lemmas pure_conj = pure_conj_right pure_conj_right' pure_conj_left
-    pure_conj_left'
+lemmas pure_conj = pure_conj_right pure_conj_right' pure_conj_left pure_conj_left'
 
 declare pure_conj [simp add]
 
@@ -1224,33 +1169,28 @@ lemma sep_conj_mapD_exc:
 lemma sep_impl_conj_sameD:
   "\<lbrakk> (P \<longrightarrow>\<^sup>* P \<and>\<^sup>* Q) s; dom_exact P; non_empty P; dom s \<subseteq> UNIV - dom_eps P \<rbrakk>
       \<Longrightarrow> Q s"
-apply(drule sep_implD)
-apply(clarsimp simp: non_empty_def)
-apply(drule_tac x=sa in spec)
-apply(erule impE)
- apply(clarsimp simp: map_disj_def dom_eps)
- apply fast
-apply(drule sep_conjD, clarsimp)
-apply(clarsimp simp: map_disj_def)
-apply(subst (asm) map_add_comm)
- apply(clarsimp simp: dom_eps)
- apply fast
-apply(subst (asm) map_add_comm[of s\<^sub>1])
- apply fast
-apply(drule map_disj_add_eq_dom_right_eq)
-   apply(simp add: dom_eps)
-  apply(clarsimp simp: dom_eps map_disj_def)
-  apply fast
- apply(simp add: map_disj_def)
-apply clarsimp
-done
+  apply(drule sep_implD)
+  apply(clarsimp simp: non_empty_def)
+  apply(rename_tac s')
+  apply(drule_tac x=s' in spec)
+  apply(erule impE)
+   apply(fastforce simp: map_disj_def dom_eps)
+  apply(drule sep_conjD, clarsimp)
+  apply(clarsimp simp: map_disj_def)
+  apply(subst (asm) map_add_comm)
+   apply(clarsimp simp: dom_eps)
+   apply fast
+  apply(subst (asm) map_add_comm, fast)
+  apply(drule map_disj_add_eq_dom_right_eq)
+     apply(simp add: dom_eps)
+    apply(clarsimp simp: dom_eps map_disj_def)
+    apply fast
+   apply(simp add: map_disj_def)
+  apply clarsimp
+  done
 
 lemma sep_impl_conj_sameI:
-  "Q s \<Longrightarrow>  (P \<longrightarrow>\<^sup>* P \<and>\<^sup>* Q) s "
-apply(rule sep_implI, clarsimp)
-apply(rule sep_conjI, assumption+)
- apply(simp add: map_disj_com)
-apply simp
-done
+  "Q s \<Longrightarrow>  (P \<longrightarrow>\<^sup>* P \<and>\<^sup>* Q) s"
+  by (fastforce intro: sep_implI sep_conjI simp: map_disj_com)
 
 end

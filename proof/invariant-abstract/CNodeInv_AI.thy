@@ -228,41 +228,41 @@ lemma decode_cnode_cases2:
   assumes mvins: "\<And>index bits src_index src_depth args' src_root_cap exs'.
                     \<lbrakk> args = index # bits # src_index # src_depth # args';
                       exs = src_root_cap # exs';
-                      invocation_type label \<in> set [CNodeCopy .e. CNodeMutate];
-                      invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
-                      invocation_type label \<notin> {CNodeRevoke, CNodeDelete,
+                      gen_invocation_type label \<in> set [CNodeCopy .e. CNodeMutate];
+                      gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
+                      gen_invocation_type label \<notin> {CNodeRevoke, CNodeDelete,
                       CNodeCancelBadgedSends, CNodeRotate} \<rbrakk> \<Longrightarrow> P"
   assumes rvk: "\<And>index bits args'. \<lbrakk> args = index # bits # args';
-                          invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
-                          invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
-                          invocation_type label = CNodeRevoke \<rbrakk> \<Longrightarrow> P"
+                          gen_invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
+                          gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
+                          gen_invocation_type label = CNodeRevoke \<rbrakk> \<Longrightarrow> P"
   assumes dlt: "\<And>index bits args'. \<lbrakk> args = index # bits # args';
-                          invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
-                          invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
-                          invocation_type label = CNodeDelete \<rbrakk> \<Longrightarrow> P"
+                          gen_invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
+                          gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
+                          gen_invocation_type label = CNodeDelete \<rbrakk> \<Longrightarrow> P"
   assumes rcy: "\<And>index bits args'. \<lbrakk> args = index # bits # args';
-                          invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
-                          invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
-                          invocation_type label = CNodeCancelBadgedSends \<rbrakk> \<Longrightarrow> P"
+                          gen_invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
+                          gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
+                          gen_invocation_type label = CNodeCancelBadgedSends \<rbrakk> \<Longrightarrow> P"
   assumes rot: "\<And>index bits pivot_new_data pivot_index pivot_depth src_new_data
                   src_index src_depth args' pivot_root_cap src_root_cap exs'.
                      \<lbrakk> args = index # bits # pivot_new_data # pivot_index # pivot_depth
                                  # src_new_data # src_index # src_depth # args';
                        exs = pivot_root_cap # src_root_cap # exs';
-                       invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
-                       invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
-                       invocation_type label = CNodeRotate \<rbrakk> \<Longrightarrow> P"
+                       gen_invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
+                       gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
+                       gen_invocation_type label = CNodeRotate \<rbrakk> \<Longrightarrow> P"
   assumes errs:
-      "\<lbrakk> invocation_type label \<notin> set [CNodeRevoke .e. CNodeRotate] \<or>
+      "\<lbrakk> gen_invocation_type label \<notin> set [CNodeRevoke .e. CNodeRotate] \<or>
          args = [] \<or> (\<exists>x. args = [x]) \<or> (\<exists>index bits args'. args = index # bits # args' \<and>
-                             invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate] \<and>
-                             (invocation_type label \<in> set [CNodeCopy .e. CNodeMutate]
-                                        \<and> invocation_type label \<notin> {CNodeRevoke, CNodeDelete,
+                             gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate] \<and>
+                             (gen_invocation_type label \<in> set [CNodeCopy .e. CNodeMutate]
+                                        \<and> gen_invocation_type label \<notin> {CNodeRevoke, CNodeDelete,
                                              CNodeCancelBadgedSends, CNodeRotate}
                                         \<and> (case (args', exs) of (src_index # src_depth # args'',
                                                     src_root_cap # exs') \<Rightarrow> False | _ \<Rightarrow> True) \<or>
-                              invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate] \<and>
-                              invocation_type label = CNodeRotate \<and> (case (args', exs) of
+                              gen_invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate] \<and>
+                              gen_invocation_type label = CNodeRotate \<and> (case (args', exs) of
                               (pivot_new_data # pivot_index # pivot_depth
                                  # src_new_data # src_index # src_depth # args'',
                                pivot_root_cap # src_root_cap # exs') \<Rightarrow> False
@@ -274,13 +274,13 @@ proof -
                         CNodeMove, CNodeMutate, CNodeRotate]"
               "[CNodeCopy .e. CNodeMutate] = [CNodeCopy, CNodeMint,
                         CNodeMove, CNodeMutate]"
-    by (simp_all add: upto_enum_def fromEnum_def toEnum_def enum_invocation_label)
+    by (simp_all add: upto_enum_def fromEnum_def toEnum_def enum_invocation_label enum_gen_invocation_labels)
   show ?thesis
     apply (cases args)
      apply (simp add: errs)
     apply (case_tac list)
      apply (simp add: errs)
-    apply (case_tac "invocation_type label \<in> set [CNodeCopy .e. CNodeMutate]")
+    apply (case_tac "gen_invocation_type label \<in> set [CNodeCopy .e. CNodeMutate]")
      apply (case_tac "case (lista, exs) of (src_index # src_depth # args'',
                              src_root_cap # exs'') \<Rightarrow> False | _ \<Rightarrow> True")
       apply (rule errs)
@@ -289,7 +289,7 @@ proof -
       apply auto[1]
      apply (simp split: prod.split_asm list.split_asm)
      apply (erule(2) mvins, auto simp: simps)[1]
-    apply (case_tac "invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate]")
+    apply (case_tac "gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate]")
      apply (simp_all add: errs)
     apply (insert rvk dlt rcy rot)
     apply (simp add: simps)
@@ -423,7 +423,7 @@ lemma decode_cnode_inv_wf[wp]:
                apply ((wp derive_cap_is_derived
                           derive_cap_valid_cap
                           derive_cap_zobjrefs derive_cap_objrefs_iszombie
-                            | wp_once hoare_drop_imps)+ )[1]
+                            | wp (once) hoare_drop_imps)+ )[1]
               apply (wp whenE_throwError_wp | wpcw)+
             apply simp
             apply (rule_tac Q="\<lambda>src_cap. valid_cap src_cap and ex_cte_cap_wp_to is_cnode_cap x
@@ -689,7 +689,7 @@ lemma cap_swap_fd_not_recursive:
 
 lemma set_mrs_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_mrs p' b m \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: set_mrs_def bind_assoc set_object_def)
+  apply (simp add: set_mrs_def bind_assoc set_object_def get_object_def)
   apply (cases b)
    apply simp
    apply wp
@@ -1093,14 +1093,6 @@ lemma obj_ref_untyped_empty [simp]:
   "obj_refs c \<inter> untyped_range c = {}"
   by (cases c, auto)
 
-(*
-lemma weak_derived_Reply_eq:
-  "\<lbrakk> weak_derived c c'; c = ReplyCap t m \<rbrakk> \<Longrightarrow> c' = ReplyCap t m"
-  "\<lbrakk> weak_derived c c'; c' = ReplyCap t m \<rbrakk> \<Longrightarrow> c = ReplyCap t m"
-  by (auto simp: weak_derived_def copy_of_def
-                 same_object_as_def is_cap_simps
-          split: if_split_asm cap.split_asm)
-*)
 
 context mdb_swap_abs_invs begin
 
@@ -2358,6 +2350,9 @@ lemma cap_delete_rvk_prog:
 end
 
 
+lemma get_object_some: "kheap s ptr = Some ko \<Longrightarrow> get_object ptr s = ({(ko, s)}, False)"
+  by (clarsimp simp: get_object_def gets_def get_def bind_def assert_def return_def)
+
 lemma set_cap_id:
   "cte_wp_at ((=) c) p s \<Longrightarrow> set_cap c p s = ({((),s)}, False)"
   apply (clarsimp simp: cte_wp_at_cases)
@@ -2366,12 +2361,14 @@ lemma set_cap_id:
    apply clarsimp
    apply (simp add: set_cap_def get_object_def bind_assoc exec_gets)
    apply (rule conjI)
-    apply (clarsimp simp: set_object_def exec_get put_def)
+    apply (clarsimp simp: set_object_def)
+    apply (frule get_object_some)
+    apply (drule_tac t="fun" in map_upd_triv)
+    apply (clarsimp simp: bind_def get_def return_def put_def a_type_def)
     apply (cases s)
     apply simp
-    apply (rule ext)
-    apply auto[1]
-   apply clarsimp
+    apply (rule ext, simp)
+   apply (clarsimp simp: get_object_def gets_def get_def bind_def assert_def return_def)
   apply clarsimp
   apply (simp add: set_cap_def get_object_def bind_assoc
                    exec_gets set_object_def exec_get put_def)
@@ -2855,20 +2852,6 @@ lemma cap_move_irq_handlers[wp]:
                  dest!: weak_derived_cap_irqs)
    apply auto
   done
-
-(*
-lemma cap_move_has_reply_cap_neg:
-  "\<lbrace>\<lambda>s. \<not> has_reply_cap t s \<and>
-    cte_wp_at (weak_derived c) p s \<and>
-    cte_wp_at ((=) cap.NullCap) p' s \<and>
-    p \<noteq> p'\<rbrace>
-   cap_move c p p' \<lbrace>\<lambda>rv s. \<not> has_reply_cap t s\<rbrace>"
-  apply (simp add: has_reply_cap_def cte_wp_at_caps_of_state
-              del: split_paired_All split_paired_Ex)
-  apply (wp cap_move_caps_of_state)
-  apply (elim conjE exE)
-  apply (erule(1) cap_swap_no_reply_caps, clarsimp+)
-  done*)
 
 
 context CNodeInv_AI_4 begin

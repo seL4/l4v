@@ -150,7 +150,7 @@ bottom 32 bits be communicated to the fault handler, for the second word
 >     restart <- checkBudgetRestart
 >     when restart $ do
 >         thread <- getCurThread
->         handleFault thread $ UserException w1 (w2 .&. mask 29)
+>         handleFault thread $ UserException (w1 .&. mask 32) (w2 .&. mask 28)
 
 \subsubsection{Virtual Memory Faults}
 

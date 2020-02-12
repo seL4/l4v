@@ -43,7 +43,6 @@ lemma ccorres_pre_threadGet:
 
 (* FIXME MOVE *)
 crunch inv'[wp]: archThreadGet P
-  (ignore: getObject)
 
 (* FIXME MOVE near thm tg_sp' *)
 lemma atg_sp':
@@ -142,11 +141,11 @@ lemma threadGet_obj_at2:
   done
 
 lemma register_from_H_less:
-  "register_from_H hr < 20"
+  "register_from_H hr < 19"
   by (cases hr, simp_all add: "StrictC'_register_defs")
 
 lemma register_from_H_sless:
-  "register_from_H hr <s 20"
+  "register_from_H hr <s 19"
   by (cases hr, simp_all add: "StrictC'_register_defs" word_sless_def word_sle_def)
 
 lemma register_from_H_0_sle[simp]:
@@ -412,8 +411,9 @@ lemma invs'_HScurVCPU_vcpu_at':
   "\<lbrakk>invs' s; armHSCurVCPU (ksArchState s) = Some (a, b) \<rbrakk> \<Longrightarrow> vcpu_at' a s"
 by (fastforce dest: invs_arch_state' simp: valid_arch_state'_def vcpu_at_is_vcpu' ko_wp_at'_def split: option.splits)
 
-crunch ksArch[wp]: vcpuDisable, vcpuRestore, vcpuSave, vcpuEnable "\<lambda>s. P (ksArchState s)"
-  (ignore: getObject setObject wp: crunch_wps)
+crunches vcpuDisable, vcpuRestore, vcpuSave, vcpuEnable
+  for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
+  (wp: crunch_wps)
 
 (* FIXME move to Invariants_H *)
 lemma invs_cicd_arch_state' [elim!]:

@@ -599,8 +599,8 @@ lemma heap_to_user_data_in_user_mem'[simp]:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 crunch gsMaxObjectSize[wp]: deleteASIDPool "\<lambda>s. P (gsMaxObjectSize s)"
-  (ignore: setObject getObject wp: crunch_wps getObject_inv loadObject_default_inv
-     simp: crunch_simps)
+  (wp: crunch_wps getObject_inv loadObject_default_inv
+   simp: crunch_simps)
 end
 
 context kernel_m begin
@@ -856,7 +856,7 @@ lemma setObject_tcb_ep_obj_at'[wp]:
 end
 
 crunch ep_obj_at'[wp]: setThreadState "obj_at' (P :: endpoint \<Rightarrow> bool) ptr"
-  (ignore: getObject setObject simp: unless_def)
+  (simp: unless_def)
 
 crunch pspace_canonical'[wp]: setThreadState pspace_canonical'
 
@@ -1263,12 +1263,12 @@ lemma access_ti_list_word8_array:
 lemma coerce_memset_to_heap_update:
   "heap_update_list x (replicateHider (size_of (TYPE (tcb_C))) 0)
       = heap_update (tcb_Ptr x)
-             (tcb_C (arch_tcb_C (user_context_C (user_fpu_state_C (FCP (\<lambda>x. 0))) (FCP (\<lambda>x. 0))))
-                    (thread_state_C (FCP (\<lambda>x. 0)))
-                    (NULL)
-                    (seL4_Fault_C (FCP (\<lambda>x. 0)))
-                    (lookup_fault_C (FCP (\<lambda>x. 0)))
-                      0 0 0 0 0 0 NULL NULL NULL NULL)"
+             (tcb_C.tcb_C (arch_tcb_C (user_context_C (user_fpu_state_C (FCP (\<lambda>x. 0))) (FCP (\<lambda>x. 0))))
+                          (thread_state_C (FCP (\<lambda>x. 0)))
+                          (NULL)
+                          (seL4_Fault_C (FCP (\<lambda>x. 0)))
+                          (lookup_fault_C (FCP (\<lambda>x. 0)))
+                            0 0 0 0 0 0 NULL NULL NULL NULL)"
   apply (intro ext, simp add: heap_update_def)
   apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps tcb_C_tag_def)

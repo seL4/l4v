@@ -159,7 +159,7 @@ lemma not_empty_thread_get [wp]:
   unfolding thread_get_def
   apply (rule not_empty_guard_imp)
   apply (simp add: gets_the_def bind_assoc)
-  apply (wp )
+  apply wp
   apply (simp add: tcb_at_def)
   done
 
@@ -232,13 +232,23 @@ lemma not_empty_put [wp]:
   "not_empty \<top> (put s)"
   unfolding not_empty_def put_def by simp
 
-lemma not_empty_set_object [wp]:
-  "not_empty \<top> (set_object p v)"
-  unfolding set_object_def
-  apply simp
+lemma not_empty_assert [wp]:
+  "not_empty (\<lambda>s. C) (assert C)"
+  by (clarsimp simp: assert_def not_empty_def return_def)
+
+lemma not_empty_get_object [wp]:
+  "not_empty (\<lambda>s. kheap s p \<noteq> None) (get_object p)"
+  unfolding get_object_def
   apply (rule not_empty_guard_imp)
-  apply wp
-  apply simp
+   apply wpsimp+
+  done
+
+lemma not_empty_set_object [wp]:
+  "not_empty (\<lambda>s. typ_at (a_type v) p s) (set_object p v)"
+  unfolding set_object_def
+  apply (rule not_empty_guard_imp)
+   apply (wpsimp wp: get_object_wp)
+  apply (clarsimp simp: obj_at_def)
   done
 
 lemma not_empty_assert_opt [wp]:
@@ -251,8 +261,8 @@ lemma not_empty_thread_set [wp]:
   unfolding thread_set_def
   apply (simp add: gets_the_def bind_assoc)
   apply (rule not_empty_guard_imp)
-  apply wp
-  apply (simp add: tcb_at_def)
+   apply wp
+  apply (clarsimp simp: tcb_at_def)
   done
 
 lemma not_empty_False:
@@ -679,16 +689,7 @@ lemma handle_event_bisim:
       apply (rule bisim_split_catch_req)
         apply (rule bisim_reflE)
        apply (rule handle_fault_bisim)
-      apply wp
-      apply (case_tac vmfault_type, simp_all)[1]
-       apply (wp separate_state_pres)
-         apply (rule hoare_pre, wps, wp, simp)
-        apply wp
-         apply (rule hoare_pre, wps, wp, simp)
-        apply simp
-
-       apply (wp separate_state_pres)+
-         apply (rule hoare_pre, wps, wp+, simp)
+      apply (wpsimp wp: hv_inv_ex)
         apply wpsimp+
    apply (simp add: cur_tcb_def)
 

@@ -28,11 +28,11 @@ begin
 lemmas globals_list_def = global_array_swap_global_addresses.global_data_list_def
 declare asm_semantics_respects[unfolded Let_def, simp]
 
-ML {*
+ML \<open>
 emit_C_everything_relative @{context}
   (CalculateState.get_csenv @{theory} "global_array_swap.c" |> the)
   "global_array_swap_Cfuns.txt"
-*}
+\<close>
 
 lemma globals_list_valid:
   "globals_list_valid symbol_table t_hrs_' t_hrs_'_update globals_list"
@@ -115,19 +115,15 @@ end
 consts
   encode_machine_state :: "machine_state \<Rightarrow> unit \<times> nat"
 
-ML {*
+ML \<open>
 val funs = ParseGraph.funs @{theory} "global_array_swap_Cfuns.txt"
-*}
+\<close>
 
-local_setup {* add_field_h_val_rewrites #> add_field_to_bytes_rewrites *}
+local_setup \<open>add_field_h_val_rewrites #> add_field_to_bytes_rewrites\<close>
 
 context graph_refine begin
 
-ML {* SimplToGraphProof.globals_swap
- := (fn t => @{term "globals_swap t_hrs_' t_hrs_'_update symbol_table globals_list"} $ t)
-*}
-
-local_setup {* add_globals_swap_rewrites @{thms global_array_swap_global_addresses.global_data_mems} *}
+local_setup \<open>add_globals_swap_rewrites @{thms global_array_swap_global_addresses.global_data_mems}\<close>
 
 definition
   simpl_invariant :: "globals myvars set"
@@ -137,56 +133,64 @@ where
         \<and> htd_safe domain (hrs_htd (t_hrs_' (globals s)))}"
 
 abbreviation(input) "ghost_assns_from_globals
-    \<equiv> (K (K 0 :: word64 \<Rightarrow> word32) o ghost'state_' :: globals \<Rightarrow> _)"
+    \<equiv> (K (K 0 :: ghost_assertions) o ghost'state_' :: globals \<Rightarrow> _)"
 
+
+text \<open>Test everything.\<close>
+
+\<comment>\<open>
+  Seems to fail because at some point we need to show that
+  `toplevel.things[thing_num]` is a valid pointer, but
+  `toplevel.things` is merely a `big_struct_t` pointer,
+  so we can't reason about it as though it's an array.
+
+  Somewhat worrying that this test _ever_ passed.
+\<close>
 (*
-simpl_to_graph_thm: global_array_swap.add_a_thing: prove_ptr_safe: failed for const_globals
-
-text {* Test everything. *}
-ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
+ML \<open>
+val dbg = ProveSimplToGraphGoals.new_debug [] [];
+ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
     funs
     (CalculateState.get_csenv @{theory} "global_array_swap.c" |> the)
-    @{context} *}
+    @{context}
+    dbg
+\<close>
 *)
 
+text \<open>Manual test for debugging.\<close>
 
-text {* Manual test for debugging. *}
+ML \<open>val nm = "global_array_swap.add_a_thing"\<close>
 
-ML {* val nm = "global_array_swap.get_reference_val" *}
+local_setup \<open>define_graph_fun_short funs nm\<close>
 
-local_setup {* define_graph_fun_short funs nm *}
-
-ML {*
+ML \<open>
 val hints = SimplToGraphProof.mk_hints funs @{context} nm
-*}
-
-ML {*
 val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm
     @{context}
-*}
+\<close>
 
-ML {*
-ProveSimplToGraphGoals.simpl_to_graph_thm funs
-  (CalculateState.get_csenv @{theory} "global_array_swap.c" |> the)
-  @{context} nm;
-*}
-ML {*
-val tacs = ProveSimplToGraphGoals.graph_refine_proof_tacs
-  (CalculateState.get_csenv @{theory} "global_array_swap.c" |> the)
+ML \<open>
+val cfile = "global_array_swap.c"
+
+val csenv = let
+    val the_csenv = CalculateState.get_csenv @{theory} cfile |> the
+  in fn () => the_csenv end
+
+val tacs = ProveSimplToGraphGoals.graph_refine_proof_tacs (csenv ())
     #> map snd
 val full_tac = ProveSimplToGraphGoals.graph_refine_proof_full_tac
-  (CalculateState.get_csenv @{theory} "global_array_swap.c" |> the)
+    (csenv ())
 val full_goal_tac = ProveSimplToGraphGoals.graph_refine_proof_full_goal_tac
-  (CalculateState.get_csenv @{theory} "global_array_swap.c" |> the)
+    (csenv ())
 val debug_tac = ProveSimplToGraphGoals.debug_tac
-  (CalculateState.get_csenv @{theory} "global_array_swap.c" |> the)
-*}
+    (csenv ())
+val debug_step_tac = ProveSimplToGraphGoals.debug_step_tac
+    (csenv ())
+\<close>
 
 schematic_goal "PROP ?P"
-  apply (tactic {* resolve_tac @{context} [init_thm] 1 *})
-  apply (tactic {* ALLGOALS (TRY o (debug_tac @{context} THEN_ALL_NEW K no_tac)) *})
-
-  apply (tactic {* ALLGOALS (debug_tac @{context}) *})
+  apply (tactic \<open>resolve_tac @{context} [init_thm] 1\<close>)
+  apply (all \<open>(solves \<open>tactic \<open>HEADGOAL (debug_tac @{context})\<close>\<close>)?\<close>)
   oops
 
 end

@@ -18,9 +18,7 @@ type_synonym typ_base = bool
 datatype s_heap_index = SIndexVal | SIndexTyp nat
 datatype s_heap_value = SValue byte | STyp "typ_uinfo \<times> typ_base"
 
-primrec (nonexhaustive)
-  s_heap_tag :: "s_heap_value \<Rightarrow> typ_uinfo \<times> typ_base"
-where
+primrec (nonexhaustive) s_heap_tag :: "s_heap_value \<Rightarrow> typ_uinfo \<times> typ_base" where
   "s_heap_tag (STyp t) = t"
 
 type_synonym typ_slice = "nat \<rightharpoonup> typ_uinfo \<times> typ_base"
@@ -39,18 +37,14 @@ type_synonym heap_raw_state = "heap_mem \<times> heap_typ_desc"
 definition hrs_mem :: "heap_raw_state \<Rightarrow> heap_mem" where
   "hrs_mem \<equiv> fst"
 
-definition
-  hrs_mem_update :: "(heap_mem \<Rightarrow> heap_mem) \<Rightarrow> heap_raw_state \<Rightarrow> heap_raw_state"
-where
+definition hrs_mem_update :: "(heap_mem \<Rightarrow> heap_mem) \<Rightarrow> heap_raw_state \<Rightarrow> heap_raw_state" where
   "hrs_mem_update f \<equiv> \<lambda>(h,d). (f h,d)"
 
 definition hrs_htd :: "heap_raw_state \<Rightarrow> heap_typ_desc" where
   "hrs_htd \<equiv> snd"
 
-definition
-  hrs_htd_update :: "(heap_typ_desc \<Rightarrow> heap_typ_desc) \<Rightarrow> heap_raw_state
-                     \<Rightarrow> heap_raw_state"
-where
+definition hrs_htd_update :: "(heap_typ_desc \<Rightarrow> heap_typ_desc) \<Rightarrow> heap_raw_state \<Rightarrow> heap_raw_state"
+  where
   "hrs_htd_update f \<equiv> \<lambda>(h,d). (h,f d)"
 
 
@@ -61,7 +55,6 @@ lemma hrs_comm:
 lemma hrs_htd_update_htd_update:
   "(\<lambda>s. hrs_htd_update d (hrs_htd_update d' s)) = hrs_htd_update (d \<circ> d')"
   by (simp add: hrs_htd_update_def split_def)
-
 
 lemma hrs_htd_mem_update [simp]:
   "hrs_htd (hrs_mem_update f s) = hrs_htd s"
@@ -80,6 +73,5 @@ lemma hrs_htd_update:
   by (simp add: hrs_htd_update_def hrs_htd_def split_def)
 
 lemmas hrs_update = hrs_mem_update hrs_htd_update
-
 
 end

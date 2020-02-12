@@ -169,10 +169,8 @@ lemma ignoreFailure_empty_fail[intro!, wp, simp]:
 crunch (empty_fail) empty_fail[intro!, wp, simp]: cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isBlocked, possibleSwitchTo, tcbSchedAppend
 (simp: Let_def)
 
-crunch (empty_fail) "_H_empty_fail": "ThreadDecls_H.suspend"
-lemma ThreadDecls_H_suspend_empty_fail[intro!, wp, simp]:
-  "empty_fail (ThreadDecls_H.suspend target)"
-  by (simp add:suspend_def)
+crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
+  (ignore_del: ThreadDecls_H.suspend)
 
 lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   "empty_fail (ThreadDecls_H.restart target)"
@@ -257,18 +255,6 @@ lemma catchError_empty_fail[intro!, wp, simp]:
   "\<lbrakk> empty_fail f; \<And>x. empty_fail (g x) \<rbrakk> \<Longrightarrow> empty_fail (catchError f g)"
   by (simp add: catchError_def handle_empty_fail)
 
-lemma findM_empty_fail [intro!, wp, simp]:
-  assumes m: "\<And>x. empty_fail (f x)"
-  shows "empty_fail (findM f xs)"
-proof (induct xs)
-  case Nil
-  thus ?case by (simp add: findM_def)
-next
-  case Cons
-  from Cons
-  show ?case by (simp add: m)
-qed
-
 crunch (empty_fail) empty_fail[intro!, wp, simp]:
   chooseThread, getDomainTime, nextDomain, isHighestPrio
   (wp: empty_fail_catch)
@@ -282,7 +268,7 @@ lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
 crunch (empty_fail) empty_fail: callKernel
   (wp: empty_fail_catch)
 
-lemma call_kernel_serial:
+theorem call_kernel_serial:
   "\<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
               (\<lambda>s. scheduler_action s = resume_cur_thread)) s;
        \<exists>s'. (s, s') \<in> state_relation \<and>

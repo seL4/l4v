@@ -18,11 +18,14 @@ begin
 
 (* Inject the reply cap into the target TCB *)
 definition
-  inject_reply_cap :: "cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
+  inject_reply_cap :: "cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> bool \<Rightarrow> unit k_monad"
 where
-  "inject_reply_cap src_tcb_id dst_tcb_id \<equiv> do
-     set_cap (src_tcb_id,tcb_pending_op_slot) $ cdl_cap.PendingSyncRecvCap src_tcb_id True;
-     insert_cap_child (ReplyCap src_tcb_id) (src_tcb_id, tcb_replycap_slot) (dst_tcb_id, tcb_caller_slot);
+  "inject_reply_cap src_tcb_id dst_tcb_id can_grant \<equiv> do
+     set_cap (src_tcb_id, tcb_pending_op_slot) $
+         cdl_cap.PendingSyncRecvCap src_tcb_id True False;
+     insert_cap_child (ReplyCap src_tcb_id (if can_grant then {Grant, Write} else {Write}))
+                      (src_tcb_id, tcb_replycap_slot)
+                      (dst_tcb_id, tcb_caller_slot);
      return ()
   od"
 
@@ -48,11 +51,11 @@ where
             return None
         | Some (croot, index, depth) \<Rightarrow>
             doE
-              (* Lookup the slot. *)
+              \<comment> \<open>Lookup the slot.\<close>
               cspace_root \<leftarrow> unify_failure $ lookup_cap thread croot;
               result \<leftarrow> unify_failure $ lookup_slot_for_cnode_op cspace_root index depth;
 
-              (* Ensure nothing is already in it. *)
+              \<comment> \<open>Ensure nothing is already in it.\<close>
               cap \<leftarrow> liftE $ get_cap result;
               whenE (cap \<noteq> NullCap) throw;
 
@@ -107,29 +110,28 @@ fun
 where
   "transfer_caps_loop ep receiver [] dest = return ()"
 | "transfer_caps_loop ep receiver ((cap,slot)#caps) dest =
-      (* Transfer badge, transfer cap, or abort early if more than
-         one cap to transfer *)
+      \<comment> \<open>Transfer badge, transfer cap, or abort early if more than
+         one cap to transfer\<close>
       (if is_ep_cap cap \<and> ep = Some (cap_object cap)
       then do
-        (* transfer badge *)
+        \<comment> \<open>transfer badge\<close>
         corrupt_ipc_buffer receiver True;
-        (* transfer rest of badges or cap *)
+        \<comment> \<open>transfer rest of badges or cap\<close>
         transfer_caps_loop ep receiver caps dest
       od
       else if dest \<noteq> None then doE
-        (* Possibly diminish rights (if diminish flag was set on endpoint) *)
         new_cap \<leftarrow> returnOk (update_cap_rights (cap_rights cap - {Write}) cap) \<sqinter>
                   returnOk cap;
 
-        (* Target cap is derived. This may abort transfer early. *)
+        \<comment> \<open>Target cap is derived. This may abort transfer early.\<close>
         target_cap \<leftarrow> derive_cap slot new_cap;
         whenE (target_cap = NullCap) throw;
 
-        (* Copy the cap across as either a child or sibling. *)
+        \<comment> \<open>Copy the cap across as either a child or sibling.\<close>
         liftE (insert_cap_child target_cap slot (the dest)
                \<sqinter> insert_cap_sibling target_cap slot (the dest));
 
-        (* Transfer rest of badges *)
+        \<comment> \<open>Transfer rest of badges\<close>
         liftE $ transfer_caps_loop ep receiver caps None
       odE <catch> (\<lambda>_. return ())
       else
@@ -151,8 +153,6 @@ where
  *
  *   - Caps may not send, but still allow later caps to
  *     use the receive slot (Unwrapped endpoints);
- *
- *   - Caps may send with the rights diminished;
  *
  *   - Cap sending may stop half way (cap lookup faults);
  *
@@ -189,19 +189,19 @@ definition
   get_waiting_sync_recv_threads :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id set"
 where
   "get_waiting_sync_recv_threads target state \<equiv>
-     { x. \<exists>a. (cdl_objects state) x = Some (Tcb a) \<and>
-         (((cdl_tcb_caps a) tcb_pending_op_slot) = Some (PendingSyncRecvCap target False)) }"
+     {x. \<exists>a. (cdl_objects state) x = Some (Tcb a) \<and>
+         (\<exists>can_grant. (cdl_tcb_caps a) tcb_pending_op_slot = Some (PendingSyncRecvCap target False can_grant)) }"
 
 (*
  * Get the set of threads waiting to send to the given sync endpoint.
- * Return a tuple of (thread, is_call, can_grant).
  *)
 definition
   get_waiting_sync_send_threads :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id set"
 where
   "get_waiting_sync_send_threads target state \<equiv>
-     {x. \<exists> rights grant call a b. (cdl_objects state) x = Some (Tcb a) \<and>
-         (((cdl_tcb_caps a) tcb_pending_op_slot) = Some (PendingSyncSendCap target b call grant rights)) }"
+     {t. \<exists>fault a b. (cdl_objects state) t = Some (Tcb a) \<and>
+         (\<exists>call can_grant can_grant_reply. (cdl_tcb_caps a) tcb_pending_op_slot =
+                    Some (PendingSyncSendCap target b call can_grant can_grant_reply fault)) }"
 
 (*
  * Get the set of threads which are bound to the given ntfn, but are
@@ -212,8 +212,8 @@ definition
 where
   "get_waiting_sync_bound_ntfn_threads ntfn_id state \<equiv>
      {x. \<exists>a ep_id. (cdl_objects state) x = Some (Tcb a) \<and>
-         (((cdl_tcb_caps a) tcb_pending_op_slot) = Some (PendingSyncRecvCap ep_id False)) \<and>
-         (((cdl_tcb_caps a) tcb_boundntfn_slot) = Some (BoundNotificationCap ntfn_id))}"
+         (\<exists>can_grant. (cdl_tcb_caps a) tcb_pending_op_slot = Some (PendingSyncRecvCap ep_id False can_grant)) \<and>
+         ((cdl_tcb_caps a) tcb_boundntfn_slot = Some (BoundNotificationCap ntfn_id))}"
 
 (*
  * Mark a thread blocked on IPC.
@@ -243,20 +243,20 @@ definition
   do_ipc_transfer :: "cdl_object_id option \<Rightarrow> cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> bool \<Rightarrow> unit k_monad"
 where
   "do_ipc_transfer ep_id sender_id receiver_id can_grant \<equiv> do
-      (* look up cap transfer *)
+      \<comment> \<open>look up cap transfer\<close>
       src_slots \<leftarrow> get_send_slots sender_id;
-      do (* do normal transfer *)
+      do \<comment> \<open>do normal transfer\<close>
         caps \<leftarrow> if can_grant then
                 lookup_extra_caps sender_id src_slots <catch> (\<lambda>_. return [])
               else
                 return [];
-        (* copy registers, transfer message or fault *)
+        \<comment> \<open>copy registers, transfer message or fault\<close>
         corrupt_ipc_buffer receiver_id True;
-        (* transfer caps if no fault occured *)
+        \<comment> \<open>transfer caps if no fault occured\<close>
         transfer_caps ep_id caps sender_id receiver_id
-      od  \<sqinter>  (* fault transfer *)
+      od  \<sqinter>  \<comment> \<open>fault transfer\<close>
       corrupt_ipc_buffer receiver_id True;
-      (* set message info *)
+      \<comment> \<open>set message info\<close>
       corrupt_tcb_intent receiver_id
   od"
 
@@ -264,30 +264,26 @@ where
 (*
  * Transfer a message from "sender" to "receiver" using a reply capability.
  *
- * A reply capability always gives the sender the right to grant caps
- * over the channel. As the original sender must have had grant rights
- * to establish the reply cap to begin with (and hence could have
- * granted the other side a return communication path), this does not
- * increase any rights.
+ * The sender may have the right to grant caps over the channel.
  *
  * If a fault is pending in the receiver, the fault is transferred.
  *)
 
 definition
-  do_reply_transfer :: "cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> cdl_cap_ref \<Rightarrow> unit k_monad"
+  do_reply_transfer :: "cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> cdl_cap_ref \<Rightarrow> bool \<Rightarrow> unit k_monad"
 where
-  "do_reply_transfer sender_id receiver_id reply_cap_slot \<equiv>
+  "do_reply_transfer sender_id receiver_id reply_cap_slot can_grant \<equiv>
     do
       has_fault \<leftarrow> get_thread_fault receiver_id;
-      when (\<not> has_fault) $ do_ipc_transfer None sender_id receiver_id True;
-      (* Clear out any pending operation caps. *)
+      when (\<not> has_fault) $ do_ipc_transfer None sender_id receiver_id can_grant;
+      \<comment> \<open>Clear out any pending operation caps.\<close>
       delete_cap_simple reply_cap_slot;
       when (has_fault) $ (do corrupt_tcb_intent receiver_id;
         update_thread_fault receiver_id (\<lambda>_. False) od );
-      if ( \<not> has_fault) then set_cap (receiver_id,tcb_pending_op_slot) RunningCap
+      if ( \<not> has_fault) then set_cap (receiver_id, tcb_pending_op_slot) RunningCap
       else
          (set_cap (receiver_id,tcb_pending_op_slot) NullCap
-        \<sqinter> set_cap (receiver_id,tcb_pending_op_slot) RestartCap )
+        \<sqinter> set_cap (receiver_id,tcb_pending_op_slot) RestartCap)
     od"
 
 (* Wake-up a thread waiting on an notification. *)
@@ -349,9 +345,9 @@ where
  * them up. Otherwise, we put the sender to sleep.
  *)
 definition
-  send_ipc :: "bool \<Rightarrow> bool \<Rightarrow> cdl_badge \<Rightarrow> bool \<Rightarrow> cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
+  send_ipc :: "bool \<Rightarrow> bool \<Rightarrow> cdl_badge \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
 where
-  "send_ipc block call badge can_grant tcb_id_sender ep_id \<equiv>
+  "send_ipc block call badge can_grant can_grant_reply tcb_id_sender ep_id \<equiv>
     do
       waiters \<leftarrow> gets $ get_waiting_sync_recv_threads ep_id;
       t \<leftarrow> option_select waiters;
@@ -359,14 +355,23 @@ where
           None \<Rightarrow>
             if block then
               block_thread_on_ipc tcb_id_sender
-                  (PendingSyncSendCap ep_id badge call can_grant False)
+                  (PendingSyncSendCap ep_id badge call can_grant can_grant_reply False)
             else
               return ()
         | Some tcb_id_receiver \<Rightarrow> do
-             do_ipc_transfer (Some ep_id) tcb_id_sender tcb_id_receiver can_grant;
+             \<comment> \<open>liftM instead of bind+return avoids early unfolding in send_ipc_corres\<close>
+             recv_state \<leftarrow> liftM (\<lambda>tcb. the (cdl_tcb_caps tcb tcb_pending_op_slot)) $
+                              get_thread tcb_id_receiver;
+             reply_can_grant \<leftarrow>
+               (case recv_state of
+                    PendingSyncRecvCap target False receiver_grant \<Rightarrow> do
+                      do_ipc_transfer (Some ep_id) tcb_id_sender tcb_id_receiver can_grant;
+                      return receiver_grant od
+                  | _ \<Rightarrow> fail);
              set_cap (tcb_id_receiver,tcb_pending_op_slot) RunningCap;
-             (when (can_grant) $ (inject_reply_cap tcb_id_sender tcb_id_receiver)) \<sqinter>
-             set_cap (tcb_id_sender,tcb_pending_op_slot) NullCap \<sqinter> return ()
+             (when (can_grant \<or> can_grant_reply) $
+                  (inject_reply_cap tcb_id_sender tcb_id_receiver reply_can_grant))
+               \<sqinter> set_cap (tcb_id_sender,tcb_pending_op_slot) NullCap \<sqinter> return ()
           od
     od"
 
@@ -375,24 +380,25 @@ where
  * wake them up. Otherwise, we put the receiver to sleep.
  *)
 definition
-  receive_sync :: "cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
+  receive_sync :: "cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> bool \<Rightarrow> unit k_monad"
 where
-  "receive_sync thread ep_id \<equiv> do
+  "receive_sync thread ep_id receiver_can_grant \<equiv> do
     waiters \<leftarrow> gets $ get_waiting_sync_send_threads ep_id;
-      t \<leftarrow> option_select waiters;
-      (case t of
+      waiter \<leftarrow> option_select waiters;
+      (case waiter of
           None \<Rightarrow>
-            block_thread_on_ipc thread (PendingSyncRecvCap ep_id False) \<sqinter> corrupt_tcb_intent thread
+            block_thread_on_ipc thread (PendingSyncRecvCap ep_id False receiver_can_grant)
+             \<sqinter> corrupt_tcb_intent thread
         | Some tcb_id_sender \<Rightarrow> (do
             tcb \<leftarrow> get_thread tcb_id_sender;
             case ((cdl_tcb_caps tcb) tcb_pending_op_slot) of
-              Some (PendingSyncSendCap target _ call grant rights)\<Rightarrow>(do
-                 do_ipc_transfer (Some ep_id) tcb_id_sender thread grant;
-                 (when (grant) $ (inject_reply_cap tcb_id_sender thread)) \<sqinter>
-                 set_cap (tcb_id_sender,tcb_pending_op_slot) RunningCap \<sqinter>
+              Some (PendingSyncSendCap target _ call can_grant can_grant_reply fault) \<Rightarrow> (do
+                 do_ipc_transfer (Some ep_id) tcb_id_sender thread can_grant;
+                 (when (can_grant \<or> can_grant_reply) $
+                    (inject_reply_cap tcb_id_sender thread receiver_can_grant)) \<sqinter>
+                 set_cap (tcb_id_sender, tcb_pending_op_slot) RunningCap \<sqinter>
                  set_cap (tcb_id_sender, tcb_pending_op_slot) NullCap
               od)
-
         od)
       )
     od"
@@ -400,17 +406,17 @@ where
 (* This is more nonderministic than is really required, but
    it makes the refinement proofs much easier *)
 definition
-  receive_ipc :: "cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
+  receive_ipc :: "cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> bool \<Rightarrow> unit k_monad"
 where
-  "receive_ipc thread ep_id \<equiv> corrupt_tcb_intent thread \<sqinter> receive_sync thread ep_id"
+  "receive_ipc thread ep_id can_grant \<equiv> corrupt_tcb_intent thread \<sqinter> receive_sync thread ep_id can_grant"
 
 definition
   invoke_endpoint :: "bool \<Rightarrow> bool \<Rightarrow> cdl_endpoint_invocation \<Rightarrow> unit k_monad"
 where
   "invoke_endpoint is_call can_block params \<equiv> case params of
-    SyncMessage badge can_grant ep_id \<Rightarrow> do
+    SyncMessage badge can_grant can_grant_reply ep_id \<Rightarrow> do
       thread \<leftarrow> gets_the cdl_current_thread;
-      send_ipc can_block is_call badge can_grant thread ep_id
+      send_ipc can_block is_call badge can_grant can_grant_reply thread ep_id
     od"
 
 definition
@@ -424,9 +430,9 @@ definition
   invoke_reply :: "cdl_reply_invocation \<Rightarrow> unit k_monad"
 where
   "invoke_reply params \<equiv> case params of
-    ReplyMessage recv reply_cap_ref \<Rightarrow> do
+    ReplyMessage recv reply_cap_ref rights \<Rightarrow> do
       send \<leftarrow> gets_the cdl_current_thread;
-      do_reply_transfer send recv reply_cap_ref
+      do_reply_transfer send recv reply_cap_ref rights
     od"
 
 
@@ -438,16 +444,16 @@ definition
   where
   "send_fault_ipc tcb_id \<equiv>
     doE
-      (* Lookup where we should send the fault IPC to. *)
+      \<comment> \<open>Lookup where we should send the fault IPC to.\<close>
       tcb \<leftarrow> liftE $ get_thread tcb_id;
       target_ep_cptr \<leftarrow> returnOk $ cdl_tcb_fault_endpoint tcb;
       handler_cap \<leftarrow> lookup_cap tcb_id target_ep_cptr;
       (case handler_cap of
           EndpointCap ref badge rights \<Rightarrow>
-            if Write \<in> rights \<and> Grant \<in> rights then
+            if Write \<in> rights \<and> (Grant \<in> rights \<or> GrantReply \<in> rights) then
               liftE $ do
                 update_thread_fault tcb_id (\<lambda>_. True);
-                send_ipc True False badge True tcb_id ref
+                send_ipc True True badge (Grant \<in> rights) True tcb_id ref
               od
             else
                throw

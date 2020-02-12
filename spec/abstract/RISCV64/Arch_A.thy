@@ -20,17 +20,18 @@ definition page_bits :: nat
   where
   "page_bits \<equiv> pageBits"
 
-definition arch_invoke_irq_control :: "arch_irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
+fun arch_invoke_irq_control :: "arch_irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
   where
-  "arch_invoke_irq_control aic \<equiv> returnOk ()"
+  "arch_invoke_irq_control (RISCVIRQControlInvocation irq handler_slot control_slot trigger) =
+     without_preemption (do
+       do_machine_op $ setIRQTrigger irq trigger;
+       set_irq_state IRQSignal (irq);
+       cap_insert (IRQHandlerCap (irq)) control_slot handler_slot
+  od)"
 
 definition arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
-  "arch_switch_to_thread t \<equiv> do
-    set_vm_root t;
-    buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer t;
-    as_user t $ setRegister TP buffer_ptr
-  od"
+  "arch_switch_to_thread t \<equiv> set_vm_root t"
 
 definition arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad"
   where
@@ -94,20 +95,13 @@ definition perform_pg_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarro
        Some (asid, vaddr) \<Rightarrow> unmap_page (acap_fsize cap) asid vaddr (acap_obj cap)
      | _ \<Rightarrow> return ();
      old_cap \<leftarrow> get_cap ct_slot;
-     set_cap (ArchObjectCap $ update_map_data cap None) ct_slot
+     set_cap (ArchObjectCap $ update_map_data (the_arch_cap old_cap) None) ct_slot
    od"
 
 definition perform_pg_inv_map :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> pte \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "perform_pg_inv_map cap ct_slot pte slot \<equiv> do
      set_cap (ArchObjectCap cap) ct_slot;
-     store_pte slot pte;
-     do_machine_op sfence
-   od"
-
-definition perform_pg_inv_remap :: "pte \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-  where
-  "perform_pg_inv_remap pte slot \<equiv> do
      store_pte slot pte;
      do_machine_op sfence
    od"
@@ -122,12 +116,11 @@ definition perform_pg_inv_get_addr :: "obj_ref \<Rightarrow> (unit,'z::state_ext
      set_message_info ct msg_info
    od"
 
-text \<open>The Frame capability confers the authority to map, remap, and unmap memory.\<close>
+text \<open>The Frame capability confers the authority to map and unmap memory.\<close>
 definition perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "perform_page_invocation iv \<equiv> case iv of
      PageMap cap ct_slot (pte,slot) \<Rightarrow> perform_pg_inv_map cap ct_slot pte slot
-   | PageRemap (pte,slot) \<Rightarrow> perform_pg_inv_remap pte slot
    | PageUnmap cap ct_slot \<Rightarrow> perform_pg_inv_unmap cap ct_slot
    | PageGetAddr ptr \<Rightarrow> perform_pg_inv_get_addr ptr"
 
@@ -163,7 +156,7 @@ definition perform_page_table_invocation :: "page_table_invocation \<Rightarrow>
      PageTableMap cap ct_slot pte slot \<Rightarrow> perform_pt_inv_map cap ct_slot pte slot
    | PageTableUnmap cap ct_slot \<Rightarrow> perform_pt_inv_unmap cap ct_slot"
 
-abbreviation arch_no_return :: "(unit, 'z::state_ext) s_monad \<Rightarrow> (data list, 'z::state_ext) s_monad"
+locale_abbrev arch_no_return :: "(unit, 'z::state_ext) s_monad \<Rightarrow> (data list, 'z::state_ext) s_monad"
   where
   "arch_no_return oper \<equiv> do oper; return [] od"
 

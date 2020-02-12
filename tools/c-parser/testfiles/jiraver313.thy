@@ -12,14 +12,14 @@ theory jiraver313
   imports "CParser.CTranslation"
 begin
 
-ML {* Feedback.verbosity_level := 6 *}
+ML \<open>Feedback.verbosity_level := 6\<close>
 
 declare [[calculate_modifies_proofs = false ]]
 
 external_file "jiraver313.c"
 install_C_file memsafe "jiraver313.c"
 
-ML {*
+ML \<open>
 local
 open Absyn
 val cpp_record =
@@ -31,7 +31,7 @@ in
 val Decl d = hd decls
 val VarDecl vd = RegionExtras.node d
 end
-*}
+\<close>
 
 context jiraver313
 begin

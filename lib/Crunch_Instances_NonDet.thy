@@ -11,6 +11,7 @@
 theory Crunch_Instances_NonDet
 imports
   Crunch
+  "Monad_WP/wp/WPEx"
   "Monad_WP/NonDetMonadVCG"
 begin
 
@@ -18,7 +19,7 @@ lemmas [crunch_param_rules] = Let_def return_bind returnOk_bindE
     K_bind_def split_def bind_assoc bindE_assoc
     trans[OF liftE_bindE return_bind]
 
-ML {*
+ML \<open>
 fun get_nondet_monad_state_type
   (Type ("Product_Type.prod",
          [Type ("Set.set", [Type ("Product_Type.prod", [_,v])]),
@@ -47,6 +48,7 @@ struct
     | put_precond _ _ = error "put_precond: not a hoare triple";
   val pre_thms = @{thms "hoare_pre"};
   val wpc_tactic = wp_cases_tactic_weak;
+  val wps_tactic = wps_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. valid P_free_ignore mapp_lambda_ignore Q_free_ignore";
   val get_monad_state_type = get_nondet_monad_state_type;
@@ -74,6 +76,7 @@ struct
     | put_precond _ _ = error "put_precond: not a no_fail term";
   val pre_thms = @{thms "no_fail_pre"};
   val wpc_tactic = wp_cases_tactic_weak;
+  fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. no_fail P_free_ignore mapp_lambda_ignore";
   val get_monad_state_type = get_nondet_monad_state_type;
@@ -99,6 +102,7 @@ struct
   fun put_precond _ _ = error "crunch empty_fail should not be calling put_precond";
   val pre_thms = [];
   val wpc_tactic = wp_cases_tactic_weak;
+  fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. empty_fail mapp_lambda_ignore";
   val get_monad_state_type = get_nondet_monad_state_type;
@@ -127,25 +131,26 @@ struct
     | put_precond _ _ = error "put_precond: not a validE term";
   val pre_thms = @{thms "hoare_pre"};
   val wpc_tactic = wp_cases_tactic_weak;
+  val wps_tactic = wps_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. validE P_free_ignore mapp_lambda_ignore Q_free_ignore Q_free_ignore";
   val get_monad_state_type = get_nondet_monad_state_type;
 end;
 
 structure CrunchValidE : CRUNCH = Crunch(CrunchValidEInstance);
-*}
+\<close>
 
-setup {*
+setup \<open>
   add_crunch_instance "" (CrunchValid.crunch_x, CrunchValid.crunch_ignore_add_del)
-*}
-setup {*
+\<close>
+setup \<open>
   add_crunch_instance "valid" (CrunchValid.crunch_x, CrunchValid.crunch_ignore_add_del)
-*}
-setup {*
+\<close>
+setup \<open>
   add_crunch_instance "no_fail" (CrunchNoFail.crunch_x, CrunchNoFail.crunch_ignore_add_del)
-*}
-setup {*
+\<close>
+setup \<open>
   add_crunch_instance "empty_fail" (CrunchEmptyFail.crunch_x, CrunchEmptyFail.crunch_ignore_add_del)
-*}
+\<close>
 
 end

@@ -12,7 +12,7 @@ theory ArchDetSchedAux_AI
 imports "../DetSchedAux_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems DetSchedAux_AI_assms
 
@@ -85,7 +85,7 @@ lemma invoke_untyped_etcb_at [DetSchedAux_AI_assms]:
              hoare_convert_imp[OF create_cap_no_pred_tcb_at]
              hoare_convert_imp[OF _ init_arch_objects_exst]
       | simp
-      | (wp_once hoare_drop_impE_E))+
+      | (wp (once) hoare_drop_impE_E))+
   done
 
 
@@ -171,7 +171,7 @@ crunch valid_sched[wp]: init_arch_objects valid_sched (wp: valid_sched_lift)
 end
 
 lemmas tcb_sched_action_valid_idle_etcb
-    = ARM.tcb_sched_action_valid_idle_etcb
+    = ARM_HYP.tcb_sched_action_valid_idle_etcb
 
 global_interpretation DetSchedAux_AI_det_ext?: DetSchedAux_AI_det_ext
   proof goal_cases

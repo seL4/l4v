@@ -62,7 +62,7 @@ where
      cap_delete_one irq_slot
    od)"
 
-text \<open>Handle an interrupt occurrence. Timing and scheduling details are not
+text \<open>Handle an interrupt occurence. Timing and scheduling details are not
 included in this model, so no scheduling action needs to be taken on timer
 ticks. If the IRQ has a valid Notification cap loaded a message is
 delivered.\<close>

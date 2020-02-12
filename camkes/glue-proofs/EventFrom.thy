@@ -8,7 +8,7 @@
  * @TAG(NICTA_GPL)
  *)
 
-chapter {* Event Send *}
+chapter \<open>Event Send\<close>
 (*<*)
 theory EventFrom imports
   "CParser.CTranslation"
@@ -45,13 +45,13 @@ lemma seL4_Notify_wp[wp_unsafe]:
   done
 (*>*)
 
-text {*
+text \<open>
   The CAmkES glue code for the sending side of an event consists of a single function for emitting
   a single instance of that event. The generated code is as follows.
   \clisting{eventfrom-emit-underlying.c}
 
   The safety of this function is straightforward to show as follows.
-*}
+\<close>
 lemma EventFrom_emit_nf: "\<lbrace>\<lambda>s. \<forall>r. P r s\<rbrace> EventFrom_emit_underlying' \<lbrace>P\<rbrace>!"
   apply (simp add:EventFrom_emit_underlying'_def)
   apply (wp seL4_Notify_wp)

@@ -166,10 +166,10 @@ where
       returnOk []
     odE"
 
-| "perform_invocation block call can_donate (InvokeEndpoint ep badge can_grant) =
+| "perform_invocation block call can_donate (InvokeEndpoint ep badge can_grant can_grant_reply) =
     (without_preemption $ do
        thread \<leftarrow> gets cur_thread;
-       send_ipc block call badge can_grant can_donate thread ep;
+       send_ipc block call badge can_grant can_grant_reply can_donate thread ep;
        return []
      od)"
 
@@ -183,10 +183,10 @@ where
 
 | "perform_invocation _ _ _ (InvokeDomain tptr d) = invoke_domain tptr d"
 
-| "perform_invocation _ _ _ (InvokeReply reply) =
+| "perform_invocation _ _ _ (InvokeReply reply grant) =
     liftE (do
       sender \<leftarrow> gets cur_thread;
-      do_reply_transfer sender reply;
+      do_reply_transfer sender reply grant;
       return []
     od)"
 
@@ -341,7 +341,7 @@ definition
 
 section \<open>Top-level event handling\<close>
 
-(* fixme: move *)
+(* FIXME: move *)
 definition
   kernel_irq_timer :: "irq" where
   "kernel_irq_timer \<equiv> 0x1B" \<comment> \<open>27 for ARM MCS\<close>
@@ -392,7 +392,7 @@ where
     restart \<leftarrow> check_budget_restart;
     when restart $ do
       thread \<leftarrow> gets cur_thread;
-      handle_fault thread $ UserException (w1 && mask 32) (w2 && mask 29)
+      handle_fault thread $ UserException (w1 && mask 32) (w2 && mask 28)
     od
   od)"
 

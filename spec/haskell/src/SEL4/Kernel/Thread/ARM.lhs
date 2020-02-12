@@ -23,6 +23,7 @@ This module contains the architecture-specific thread switch code for the ARM.
 > import SEL4.Machine
 > import SEL4.Machine.RegisterSet.ARM (Register(..))
 > import SEL4.Model.StateData
+> import SEL4.Model.PSpace (getObject)
 > import SEL4.Object.Structures
 > import SEL4.Object.TCB
 > import SEL4.Kernel.VSpace.ARM
@@ -38,6 +39,10 @@ The ARM thread switch function invalidates all caches and the TLB, and writes th
 
 > switchToThread :: PPtr TCB -> Kernel ()
 > switchToThread tcb = do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     tcbobj <- getObject tcb
+>     vcpuSwitch (atcbVCPUPtr $ tcbArch tcbobj)
+#endif
 >     setVMRoot tcb
 >     doMachineOp $ ARMHardware.clearExMonitor
 
@@ -47,7 +52,7 @@ The ARM idle thread runs in system mode with interrupts enabled, with the PC poi
 > configureIdleThread tcb = do
 >     doKernelOp $ asUser tcb $ do
 >         setRegister (Register CPSR) 0x1f
->         setRegister (Register LR_svc) $ fromVPtr idleThreadStart
+>         setRegister (Register NextIP) $ fromVPtr idleThreadStart
 
 When switching to the idle thread, we ensure that it runs in the address space of the kernel to prevent the possibility of a user-level address space being deleted whilst the idle thread is running (which is possible in a multi-core scenario).
 

@@ -44,6 +44,14 @@ abbreviation
   pdpte_Ptr :: "word64 \<Rightarrow> pdpte_C ptr" where "pdpte_Ptr == Ptr"
 abbreviation
   pml4e_Ptr :: "word64 \<Rightarrow> pml4e_C ptr" where "pml4e_Ptr == Ptr"
+abbreviation
+  pml4_Ptr :: "machine_word \<Rightarrow> (pml4e_C[512]) ptr" where "pml4_Ptr == Ptr"
+abbreviation
+  pdpt_Ptr :: "machine_word \<Rightarrow> (pdpte_C[512]) ptr" where "pdpt_Ptr == Ptr"
+abbreviation
+  pd_Ptr :: "machine_word \<Rightarrow> (pde_C[512]) ptr" where "pd_Ptr == Ptr"
+abbreviation
+  pt_Ptr :: "machine_word \<Rightarrow> (pte_C[512]) ptr" where "pt_Ptr == Ptr"
 
 (* 1024 = number of entries in ioport table
         = 2^16 (total number of ioports) / word_bits *)
@@ -51,7 +59,7 @@ type_synonym ioport_table_C = "machine_word[1024]"
 
 type_synonym tcb_cnode_array = "cte_C[5]"
 type_synonym fpu_bytes_array = "word8[fpu_bytes]"
-type_synonym registers_array = "machine_word[23]"
+type_synonym registers_array = "machine_word[24]"
 
 abbreviation "user_context_Ptr \<equiv> Ptr :: addr \<Rightarrow> user_context_C ptr"
 abbreviation "machine_word_Ptr \<equiv> Ptr :: addr \<Rightarrow> machine_word ptr"
@@ -369,11 +377,12 @@ where
  | Cap_untyped_cap uc \<Rightarrow> UntypedCap (to_bool(capIsDevice_CL uc)) (capPtr_CL uc) (unat (capBlockSize_CL uc)) (unat (capFreeIndex_CL uc << 4))
  | Cap_endpoint_cap ec \<Rightarrow>
     EndpointCap (capEPPtr_CL ec) (capEPBadge_CL ec) (to_bool(capCanSend_CL ec)) (to_bool(capCanReceive_CL ec))
-                (to_bool(capCanGrant_CL ec))
+                (to_bool(capCanGrant_CL ec)) (to_bool(capCanGrantReply_CL ec))
  | Cap_notification_cap ntfn \<Rightarrow>
     NotificationCap (capNtfnPtr_CL ntfn)(capNtfnBadge_CL ntfn)(to_bool(capNtfnCanSend_CL ntfn))
                      (to_bool(capNtfnCanReceive_CL ntfn))
- | Cap_reply_cap rc \<Rightarrow> ReplyCap (ctcb_ptr_to_tcb_ptr (Ptr (cap_reply_cap_CL.capTCBPtr_CL rc))) (to_bool (capReplyMaster_CL rc))
+ | Cap_reply_cap rc \<Rightarrow> ReplyCap (ctcb_ptr_to_tcb_ptr (Ptr (cap_reply_cap_CL.capTCBPtr_CL rc)))
+                               (to_bool (capReplyMaster_CL rc)) (to_bool (capReplyCanGrant_CL rc))
  | Cap_thread_cap tc \<Rightarrow>  ThreadCap(ctcb_ptr_to_tcb_ptr (Ptr (cap_thread_cap_CL.capTCBPtr_CL tc)))
  | Cap_irq_handler_cap ihc \<Rightarrow> IRQHandlerCap (ucast(capIRQ_CL ihc))
  | Cap_irq_control_cap \<Rightarrow> IRQControlCap

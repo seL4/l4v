@@ -1092,13 +1092,13 @@ lemma getMRs_length:
   done
 
 lemma index_msgRegisters_less':
-  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x17"
+  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x18"
   by (simp add: msgRegistersC_def fupdate_def Arrays.update_def
                 fcp_beta "StrictC'_register_defs")
 
 lemma index_msgRegisters_less:
-  "n < 4 \<Longrightarrow> index msgRegistersC n <s 0x17"
-  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x17"
+  "n < 4 \<Longrightarrow> index msgRegistersC n <s 0x18"
+  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x18"
   using index_msgRegisters_less'
   by (simp_all add: word_sless_msb_less)
 
@@ -1234,23 +1234,23 @@ lemma invocation_eq_use_type:
   "\<lbrakk> value \<equiv> (value' :: 32 signed word);
        unat (scast value' :: machine_word) < length (enum :: invocation_label list); (scast value' :: machine_word) \<noteq> 0 \<rbrakk>
      \<Longrightarrow> (label = (scast value)) = (invocation_type label = enum ! unat (scast value' :: machine_word))"
-  apply (fold invocation_type_eq, unfold invocationType_def)
+  apply (fold invocationType_eq, unfold invocationType_def)
   apply (simp add: maxBound_is_length Let_def toEnum_def
                    nth_eq_iff_index_eq nat_le_Suc_less_imp
             split: if_split)
   apply (intro impI conjI)
    apply (simp add: enum_invocation_label)
-  apply (subgoal_tac "InvalidInvocation = enum ! 0")
+  apply (subgoal_tac "GenInvocationLabel InvalidInvocation = enum ! 0")
    apply (erule ssubst, subst nth_eq_iff_index_eq, simp+)
    apply (clarsimp simp add: unat_eq_0)
-  apply (simp add: enum_invocation_label)
+  apply (simp add: enum_invocation_label enum_gen_invocation_labels)
   done
 
 lemmas all_invocation_label_defs = invocation_label_defs arch_invocation_label_defs sel4_arch_invocation_label_defs
 
 lemmas invocation_eq_use_types
     = all_invocation_label_defs[THEN invocation_eq_use_type, simplified,
-                            unfolded enum_invocation_label enum_arch_invocation_label, simplified]
+                                unfolded enum_invocation_label enum_gen_invocation_labels enum_arch_invocation_label, simplified]
 
 lemma ccorres_equals_throwError:
   "\<lbrakk> f = throwError v; ccorres_underlying sr Gamm rr xf arr axf P P' hs (throwError v) c \<rbrakk>

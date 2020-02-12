@@ -36,7 +36,6 @@ FIXME ARMHYP ARMPageMapIO is an inconsistant name (but coined by kernel team)
 >         | ARMIOPageTableUnmap
 #endif
 >         | ARMPageMap
->         | ARMPageRemap
 >         | ARMPageUnmap
 #ifdef CONFIG_ARM_SMMU
 >         | ARMPageMapIO

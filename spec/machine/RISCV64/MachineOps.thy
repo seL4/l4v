@@ -66,7 +66,7 @@ definition getMemoryRegions :: "(paddr * paddr) list machine_monad"
   where
   "getMemoryRegions \<equiv> return memory_regions"
 
-text {* This instruction is required in the simulator, only. *}
+text \<open>This instruction is required in the simulator, only.\<close>
 definition storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
   where
   "storeWordVM w p \<equiv> return ()"
@@ -104,15 +104,28 @@ definition debugPrint :: "unit list \<Rightarrow> unit machine_monad"
 
 subsection \<open>Interrupt Controller\<close>
 
-text {* Interrupts that cannot occur while the kernel is running (e.g. at preemption points), but
-that can occur from user mode. Empty on RISCV64. *}
+definition
+  IRQ :: "irq \<Rightarrow> irq"
+where "IRQ \<equiv> id"
+
+consts'
+  setIRQTrigger_impl :: "irq \<Rightarrow> bool \<Rightarrow> unit machine_rest_monad"
+
+definition
+  setIRQTrigger :: "irq \<Rightarrow> bool \<Rightarrow> unit machine_monad"
+where
+  "setIRQTrigger irq trigger \<equiv> machine_op_lift (setIRQTrigger_impl irq trigger)"
+
+
+text \<open>Interrupts that cannot occur while the kernel is running (e.g. at preemption points), but
+that can occur from user mode. Empty on RISCV64.\<close>
 definition non_kernel_IRQs :: "irq set"
   where
   "non_kernel_IRQs = {}"
 
-text {* @{term getActiveIRQ} is oracle-based and deterministic to allow information flow proofs. It
+text \<open>@{term getActiveIRQ} is oracle-based and deterministic to allow information flow proofs. It
 updates the IRQ state to the reflect the passage of time since last the IRQ, then it gets the active
-IRQ (if there is one). *}
+IRQ (if there is one).\<close>
 definition getActiveIRQ :: "bool \<Rightarrow> (irq option) machine_monad"
   where
   "getActiveIRQ in_kernel \<equiv> do
@@ -139,30 +152,30 @@ definition setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Righ
 
 subsection "Clearing Memory"
 
-text {* Clear memory contents to recycle it as user memory *}
+text \<open>Clear memory contents to recycle it as user memory\<close>
 definition clearMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
   where
   "clearMemory ptr bytelength \<equiv>
      mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size .e. ptr + (of_nat bytelength) - 1]"
 
-text {* Haskell simulator interface stub. *}
+text \<open>Haskell simulator interface stub.\<close>
 definition clearMemoryVM :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
   where
   "clearMemoryVM ptr bits \<equiv> return ()"
 
-text {*
+text \<open>
   Initialize memory to be used as user memory. Note that zeroing out the memory is redundant
   in the specifications. In any case, we cannot abstract from the call to cleanCacheRange, which
   appears in the implementation.
-*}
+\<close>
 abbreviation (input) "initMemory == clearMemory"
 
-text {*
+text \<open>
   Free memory that had been initialized as user memory. While freeing memory is a no-op in the
   implementation, we zero out the underlying memory in the specifications to avoid garbage. If we
   know that there is no garbage, we can compute from the implementation state what the exact memory
   content in the specifications is.
-*}
+\<close>
 definition freeMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
   where
   "freeMemory ptr bits \<equiv>
@@ -192,11 +205,11 @@ definition setRegister :: "register \<Rightarrow> machine_word \<Rightarrow> uni
 
 definition getRestartPC :: "machine_word user_monad"
   where
-  "getRestartPC \<equiv> getRegister SEPC"
+  "getRestartPC \<equiv> getRegister FaultIP"
 
 definition setNextPC :: "machine_word \<Rightarrow> unit user_monad"
   where
-  "setNextPC \<equiv> setRegister NEXTPC"
+  "setNextPC \<equiv> setRegister NextIP"
 
 
 subsection "Caches, Barriers, and Flushing"

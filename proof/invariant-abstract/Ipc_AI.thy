@@ -18,7 +18,6 @@ requalify_consts
   in_device_frame
 requalify_facts
   set_mi_invs
-  as_user_hyp_refs_of
   valid_arch_arch_tcb_set_registers
   set_mrs_ioports
   as_user_ioports
@@ -32,7 +31,6 @@ requalify_facts
 end
 
 declare set_mi_invs[wp]
-declare as_user_hyp_refs_of[wp]
 
 lemmas lookup_slot_wrapper_defs[simp] =
    lookup_source_slot_def lookup_target_slot_def lookup_pivot_slot_def
@@ -116,7 +114,7 @@ lemma cap_derive_not_null_helper:
 
 lemma mask_cap_Null [simp]:
   "(mask_cap R c = cap.NullCap) = (c = cap.NullCap)"
-  by (cases c) (auto simp: mask_cap_def cap_rights_update_def)
+  by (cases c) (auto simp: mask_cap_def cap_rights_update_def split: bool.split)
 
 lemma ensure_no_children_wp:
   "\<lbrace>\<lambda>s. descendants_of p (cdt s) = {} \<longrightarrow> P s\<rbrace> ensure_no_children p \<lbrace>\<lambda>_. P\<rbrace>, -"
@@ -344,7 +342,7 @@ lemma mapM_length[wp]:
 
 lemma cap_badge_rights_update[simp]:
   "cap_badge (cap_rights_update rights cap) = cap_badge cap"
-  by (simp add: cap_rights_update_def split: cap.split)
+  by (auto simp: cap_rights_update_def split: cap.split bool.splits)
 
 lemma get_cap_cte_wp_at_rv:
   "\<lbrace>cte_wp_at (\<lambda>cap. P cap cap) p\<rbrace> get_cap p \<lbrace>\<lambda>rv. cte_wp_at (P rv) p\<rbrace>"
@@ -429,7 +427,7 @@ lemma derive_cap_is_derived_foo:
 
 lemma cap_rights_update_NullCap[simp]:
   "(cap_rights_update rs cap = cap.NullCap) = (cap = cap.NullCap)"
-  by (simp add: cap_rights_update_def split: cap.split)
+  by (auto simp: cap_rights_update_def split: cap.split bool.splits)
 
 crunch in_user_frame[wp]: set_extra_badge "in_user_frame buffer"
 crunch in_device_frame[wp]: set_extra_badge "in_device_frame buffer"
@@ -785,8 +783,8 @@ lemma (in Ipc_AI) derive_cap_objrefs_iszombie:
 
 lemma is_zombie_rights[simp]:
   "is_zombie (remove_rights rs cap) = is_zombie cap"
-  by (simp add: is_zombie_def remove_rights_def cap_rights_update_def
-         split: cap.splits)
+  by (auto simp: is_zombie_def remove_rights_def cap_rights_update_def
+          split: cap.splits bool.splits)
 
 crunch caps_of_state [wp]: set_extra_badge "\<lambda>s. P (caps_of_state s)"
 
@@ -898,7 +896,7 @@ lemma tcl_reply':
      apply wp
      apply (clarsimp simp: real_cte_at_cte)
      apply (clarsimp simp: cte_wp_at_caps_of_state is_derived_def is_cap_simps)
-     apply (frule(1) valid_reply_mastersD[OF caps_of_state_cteD])
+     apply (frule(1) valid_reply_mastersD'[OF caps_of_state_cteD])
      apply (frule(1) tcb_cap_valid_caps_of_stateD)
      apply (frule(1) caps_of_state_valid)
      apply (clarsimp simp: tcb_cap_valid_def valid_cap_def is_cap_simps)
@@ -1142,8 +1140,7 @@ lemma transfer_caps_respects_device_region[wp]:
   done
 
 crunches do_machine_op, set_extra_badge
-for valid_replies[wp]: valid_replies
-  (ignore: do_machine_op)
+  for valid_replies[wp]: valid_replies
 
 lemma transfer_caps_respects_valid_replies[wp]:
   "\<lbrace>\<lambda>s::'state_ext state. valid_replies s\<rbrace>
@@ -1253,7 +1250,7 @@ end
 
 lemma cte_refs_mask[simp]:
   "cte_refs (mask_cap rs cap) = cte_refs cap"
-  by (rule ext, cases cap, simp_all add: mask_cap_def cap_rights_update_def)
+  by (rule ext, cases cap, simp_all add: mask_cap_def cap_rights_update_def split:bool.splits)
 
 
 lemma get_cap_cte_caps_to[wp]:
@@ -1276,7 +1273,7 @@ lemma lookup_cap_cte_caps_to[wp]:
 lemma is_cnode_cap_mask[simp]:
   "is_cnode_cap (mask_cap rs cap) = is_cnode_cap cap"
   by (auto simp: mask_cap_def cap_rights_update_def
-          split: cap.split)
+          split: cap.split bool.splits)
 
 
 lemma get_rs_cap_to[wp]:
@@ -1514,7 +1511,7 @@ lemma lookup_extra_caps_srcs[wp]:
                    split_def lookup_slot_for_thread_def)
   apply (wp mapME_set[where R=valid_objs] get_cap_wp resolve_address_bits_real_cte_at
              | simp add: cte_wp_at_caps_of_state
-             | wp_once hoare_drop_imps
+             | wp (once) hoare_drop_imps
              | clarsimp simp: objs_valid_tcb_ctable)+
   done
 
@@ -1739,16 +1736,15 @@ crunch only_idle [wp]: store_word_offs only_idle
 lemma set_mrs_only_idle [wp]:
   "\<lbrace>only_idle\<rbrace> set_mrs t b m \<lbrace>\<lambda>_. only_idle\<rbrace>"
   apply (simp add: set_mrs_def split_def zipWithM_x_mapM
-                   set_object_def
+                   set_object_def get_object_def
               cong: option.case_cong
                del: upt.simps)
   apply (wp mapM_wp'|wpc)+
   apply (clarsimp simp del: fun_upd_apply)
-   apply (erule only_idle_tcb_update)
-    apply (drule get_tcb_SomeD)
-    apply (fastforce simp: obj_at_def)
-   apply simp
-  done
+  apply (erule only_idle_tcb_update)
+   apply (drule get_tcb_SomeD)
+   apply (fastforce simp: obj_at_def)
+  by (simp add: get_tcb_rev)
 
 context Ipc_AI begin
 
@@ -1798,18 +1794,6 @@ crunch valid_objs[wp]: do_ipc_transfer "valid_objs :: 'state_ext state \<Rightar
   (wp: hoare_vcg_const_Ball_lift simp:ball_conj_distrib )
 
 end
-
-lemma as_user_valid_ioc[wp]:
-  "\<lbrace>valid_ioc\<rbrace> as_user r f \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
-  apply (simp add: as_user_def split_def)
-  apply (wp set_object_valid_ioc_caps)
-  apply (clarsimp simp: valid_ioc_def obj_at_def get_tcb_def
-                  split: option.splits Structures_A.kernel_object.splits)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (clarsimp simp: cap_of_def tcb_cnode_map_tcb_cap_cases
-                        cte_wp_at_cases null_filter_def)
-  apply (simp add: tcb_cap_cases_def split: if_split_asm)
-  done
 
 context Ipc_AI begin
 
@@ -2058,7 +2042,7 @@ lemma cap_delete_one_valid_tcb_state:
          defer 4
          defer 5
          apply wpsimp+
-   apply (rename_tac rp_op)
+   apply (rename_tac rp_op pl)
    apply (case_tac rp_op, wpsimp)
    apply (rule P_bool_lift[where P = P], wpsimp)
    apply (subst de_Morgan_conj)+
@@ -2068,7 +2052,7 @@ lemma cap_delete_one_valid_tcb_state:
   done
 
 lemma cte_wp_at_reply_cap_can_fast_finalise:
-  "cte_wp_at ((=) (cap.ReplyCap tcb)) slot s \<longrightarrow> cte_wp_at can_fast_finalise slot s"
+  "cte_wp_at ((=) (cap.ReplyCap tcb R)) slot s \<longrightarrow> cte_wp_at can_fast_finalise slot s"
   by (clarsimp simp: cte_wp_at_caps_of_state can_fast_finalise_def)
 
 context Ipc_AI begin
@@ -2724,7 +2708,7 @@ lemma complete_signal_invs:
   apply (simp add: complete_signal_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj ntfn"; simp)
-  apply (wpsimp simp: as_user_def set_object_def wp: set_ntfn_minor_invs)
+  apply (wpsimp simp: as_user_def set_object_def get_object_def wp: set_ntfn_minor_invs)
   apply safe
     apply (clarsimp simp: obj_at_def is_tcb)
    apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_bound_obj_def
@@ -2737,13 +2721,7 @@ lemma complete_signal_invs:
                   elim!: if_live_then_nonz_capD)
   done
 
-crunch pspace_respects_device_region[wp]: as_user "pspace_respects_device_region"
-  (simp: crunch_simps wp: crunch_wps set_object_pspace_respects_device_region pspace_respects_device_region_dmo)
-
 crunch ntfn_at[wp]: set_message_info "ntfn_at ntfn"
-
-crunch typ_at[wp]: set_message_info "\<lambda>s. P (typ_at T p s)"
-  (wp: crunch_wps simp: crunch_simps)
 
 crunch arch[wp]: set_message_info "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps simp: crunch_simps)

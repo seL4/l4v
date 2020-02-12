@@ -37,7 +37,6 @@ requalify_consts
   msgInfoRegister
   msgRegisters
   fromVPtr
-  setTCBIPCBuffer
   postModifyRegisters
   tlsBaseRegister
   max_us_to_ticks

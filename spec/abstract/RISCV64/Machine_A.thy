@@ -31,14 +31,14 @@ type_synonym data            = machine_word
 type_synonym cap_ref         = "bool list"
 type_synonym length_type     = machine_word
 
-type_synonym asid_low_len    = 10
+type_synonym asid_low_len    = 9
 type_synonym asid_low_index  = "asid_low_len word"
 
-type_synonym asid_high_len   = 6
+type_synonym asid_high_len   = 7
 type_synonym asid_high_index = "asid_high_len word"
 
 type_synonym asid_len        = 16
-type_synonym asid_rep_len    = machine_word_len
+type_synonym asid_rep_len    = asid_len
 type_synonym asid            = "asid_rep_len word"
 
 text \<open>
@@ -109,8 +109,12 @@ definition msg_label_bits :: nat
 
 definition new_context :: "user_context"
   where
-  "new_context \<equiv> UserContext (\<lambda>_. 0)"
+  "new_context \<equiv> UserContext ((\<lambda>_. 0) (SSTATUS := sstatusSPIE))"
 
+text \<open>
+  The lowest virtual address in the kernel window. The kernel reserves the virtual addresses
+  from here up in every virtual address space.
+\<close>
 definition pptr_base :: "machine_word"
   where
   "pptr_base = Platform.RISCV64.pptrBase"
@@ -121,16 +125,26 @@ definition user_vtop :: "machine_word"
   "user_vtop = Platform.RISCV64.pptrUserTop"
 
 text \<open>
-  The lowest virtual address in the kernel window. The kernel reserves the virtual addresses
-  from here up in every virtual address space.
+  Virtual address for start of kernel device mapping region in highest 1GiB of memory.
 \<close>
-definition kernel_base :: "vspace_ref"
+definition kdev_base :: "machine_word"
   where
-  "kernel_base \<equiv> 0xFFFFFFFF80000000" \<comment> \<open>for Spike platform\<close>
+  "kdev_base = Platform.RISCV64.kdevBase"
 
+text \<open>
+  The virtual address the kernel code is mapped.
+\<close>
+definition kernel_elf_base :: "vspace_ref"
+  where
+  "kernel_elf_base \<equiv> Platform.RISCV64.kernelELFBase"
+
+text \<open>
+  Currently an arbitrary aligned address for the idle thread.
+  Only has to exists, does not have to match up with the concrete value in C.
+\<close>
 definition idle_thread_ptr :: vspace_ref
   where
-  "idle_thread_ptr = kernel_base + 0x1000"
+  "idle_thread_ptr = pptr_base + 0x1000"
 
 (* FIXME: nat_to_cref is not arch specific *)
 definition nat_to_cref :: "nat \<Rightarrow> nat \<Rightarrow> cap_ref"

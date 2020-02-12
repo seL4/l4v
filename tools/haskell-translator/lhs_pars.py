@@ -1252,12 +1252,15 @@ def enum_instance_proofs (header, canonical, d):
             lines.append('interpretation Arch .')
         lines.append ('definition')
         lines.append ('  enum_%s: "enum_class.enum \<equiv> ' % header)
-        lines.append ('    [ ')
-        for cons in cons_no_args[:-1]:
-            lines.append ('      %s,' % cons)
-        for cons in cons_no_args[-1:]:
-            lines.append ('      %s' % cons)
-        lines.append ('    ]')
+        if len(cons_no_args) == 0:
+            lines.append ('    []')
+        else:
+            lines.append ('    [ ')
+            for cons in cons_no_args[:-1]:
+                lines.append ('      %s,' % cons)
+            for cons in cons_no_args[-1:]:
+                lines.append ('      %s' % cons)
+            lines.append ('    ]')
         for cons in cons_one_arg:
             lines.append ('    @ (map %s enum)' % cons)
         lines[-1] = lines[-1] + '"'
@@ -1965,7 +1968,7 @@ def case_clauses_transform(xxx_todo_changeme5):
     if children and children[-1][0].strip().startswith('where'):
         sys.stderr.write('Warning: where clause in case: %r\n'
                          % line)
-        return (beforecase + '(* case removed *) undefined', [])
+        return (beforecase + '\<comment> \<open>case removed\<close> undefined', [])
         # where_clause = where_clause_transform(children[-1])
         # children = children[:-1]
         # (in_stmt, l) = where_clause[-1]
@@ -2007,7 +2010,7 @@ def case_clauses_transform(xxx_todo_changeme5):
     conv = get_case_conv(cases)
     if conv == '<X>':
         sys.stderr.write('Warning: blanked case in caseconvs\n')
-        return (beforecase + '(* case removed *) undefined', [])
+        return (beforecase + '\<comment> \<open>case removed\<close> undefined', [])
     if not conv:
         sys.stderr.write('Warning: case %r\n' % (cases, ))
         if cases not in cases_added:
@@ -2017,7 +2020,7 @@ def case_clauses_transform(xxx_todo_changeme5):
             f.write('%s ---X>\n\n' % casestr)
             f.close()
             cases_added[cases] = 1
-        return (beforecase + '(* case removed *) undefined', [])
+        return (beforecase + '\<comment> \<open>case removed\<close> undefined', [])
     conv = subs_nums_and_x(conv, x)
 
     new_line = beforecase + '(' + conv[0][0]
@@ -2376,9 +2379,9 @@ constructor_conv_table = {
     'Nothing': 'None',
     'Left': 'Inl',
     'Right': 'Inr',
-    'PPtr': '(* PPtr *)',
-    'Register': '(* Register *)',
-    'Word': '(* Word *)',
+    'PPtr': '\<comment> \<open>PPtr\<close>',
+    'Register': '\<comment> \<open>Register\<close>',
+    'Word': '\<comment> \<open>Word\<close>',
 }
 
 unique_ids_per_file = {}

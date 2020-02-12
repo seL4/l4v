@@ -12,7 +12,7 @@ theory ArchTcb_AI
 imports "../Tcb_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems Tcb_AI_asms
 
@@ -211,7 +211,7 @@ lemma as_user_ipc_tcb_cap_valid4[wp]:
   "\<lbrace>\<lambda>s. tcb_cap_valid cap (t, tcb_cnode_index 4) s\<rbrace>
     as_user a b
    \<lbrace>\<lambda>rv. tcb_cap_valid cap (t, tcb_cnode_index 4)\<rbrace>"
-  apply (simp add: as_user_def set_object_def)
+  apply (simp add: as_user_def set_object_def get_object_def)
   apply (wp | wpc | simp)+
   apply (clarsimp simp: tcb_cap_valid_def obj_at_def
                         pred_tcb_at_def is_tcb
@@ -247,6 +247,7 @@ lemma tc_invs[Tcb_AI_asms]:
   apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
   apply (rule hoare_vcg_precond_imp)
    apply wp
+      (* takes long: *)
       apply ((simp only: simp_thms
         | rule wp_split_const_if wp_split_const_if_R
                    hoare_vcg_all_lift_R
@@ -363,15 +364,12 @@ lemma update_cap_valid[Tcb_AI_asms]:
          simp_all add: update_cap_data_def cap_rights_update_def
                        is_cap_defs Let_def split_def valid_cap_def
                        badge_update_def the_cnode_cap_def cap_aligned_def
-                       arch_update_cap_data_def
-            split del: if_split)
-     apply (simp add: badge_update_def cap_rights_update_def)
-    apply (simp add: badge_update_def)
+                       arch_update_cap_data_def split: bool.splits)
    apply (simp add: word_bits_def)
   apply (rename_tac arch_cap)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
   apply (case_tac arch_cap, simp_all add: acap_rights_update_def
-                                     split: option.splits prod.splits)
+                                     split: option.splits prod.splits bool.splits)
   done
 
 
@@ -391,7 +389,7 @@ requalify_facts invoke_tcb_typ_at
 end
 
 global_interpretation Tcb_AI?: Tcb_AI
-  where is_cnode_or_valid_arch = ARM.is_cnode_or_valid_arch
+  where is_cnode_or_valid_arch = ARM_HYP.is_cnode_or_valid_arch
  proof goal_cases
   interpret Arch .
   case 1 show ?case

@@ -15,15 +15,15 @@ imports Try_Methods
 
 begin
 
-text {* The eval_bool method/simproc uses the code generator setup to
+text \<open>The eval_bool method/simproc uses the code generator setup to
 reduce terms of boolean type to True or False. Reducing booleans to
 True or False is nearly always desirable, and is a fairly good heuristic
 for when to make use of definitions/code-equations.
 
 Additional simprocs exist to reduce other types.
-*}
+\<close>
 
-ML {*
+ML \<open>
 structure Eval_Simproc = struct
 
 exception Failure
@@ -60,7 +60,7 @@ val eval_int_simproc = Simplifier.make_simproc @{context} "eval_int"
   { lhss = [@{term "i :: int"}], proc = K eval_int }
 
 end
-*}
+\<close>
 
 method_setup eval_bool = \<open>Scan.succeed (fn ctxt => SIMPLE_METHOD'
     (CHANGED o full_simp_tac (clear_simpset ctxt
@@ -74,7 +74,7 @@ method_setup eval_int_nat = \<open>Scan.succeed (fn ctxt => SIMPLE_METHOD'
 
 add_try_method eval_bool
 
-text {* Testing. *}
+text \<open>Testing.\<close>
 definition
   eval_bool_test_seq :: "int list"
 where
@@ -85,7 +85,7 @@ lemma
     \<and> sorted eval_bool_test_seq"
   by eval_bool
 
-text {*
+text \<open>
 A related gadget for installing constant definitions from locales
 as code equations. Useful where locales are being used to "hide"
 constants from the global state rather than to do anything tricky
@@ -94,9 +94,9 @@ with interpretations.
 Installing the global definitions in this way will allow eval_bool
 etc to "see through" the hiding and decide questions about these
 constants.
-*}
+\<close>
 
-ML {*
+ML \<open>
 structure Add_Locale_Code_Defs = struct
 
 fun get_const_defs thy nm = Sign.consts_of thy
@@ -112,7 +112,7 @@ fun setup nm thy = fold (fn t => Code.add_eqn_global (t, true))
     (get_const_defs thy nm) thy
 
 end
-*}
+\<close>
 
 locale eval_bool_test_locale begin
 
@@ -127,9 +127,9 @@ definition
 
 end
 
-setup {* Add_Locale_Code_Defs.setup "eval_bool_test_locale" *}
+setup \<open>Add_Locale_Code_Defs.setup "eval_bool_test_locale"\<close>
 
-setup {* Add_Locale_Code_Defs.setup "eval_bool_test_locale" *}
+setup \<open>Add_Locale_Code_Defs.setup "eval_bool_test_locale"\<close>
 
 lemma "eval_bool_test_locale.z > 150"
   by eval_bool

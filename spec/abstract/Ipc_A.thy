@@ -264,16 +264,17 @@ If a receiver is waiting then transfer the message. If no receiver is available
 and the thread is willing to block waiting to send then put it in the endpoint
 sending queue.\<close>
 definition
-  send_ipc :: "bool \<Rightarrow> bool \<Rightarrow> badge \<Rightarrow> bool \<Rightarrow> bool
+  send_ipc :: "bool \<Rightarrow> bool \<Rightarrow> badge \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> bool
                 \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "send_ipc block call badge can_grant can_donate thread epptr \<equiv> do
+  "send_ipc block call badge can_grant can_grant_reply can_donate thread epptr \<equiv> do
      ep \<leftarrow> get_endpoint epptr;
      case (ep, block) of
          (IdleEP, True) \<Rightarrow> do
                set_thread_state thread (BlockedOnSend epptr
                                    \<lparr> sender_badge = badge,
                                      sender_can_grant = can_grant,
+                                     sender_can_grant_reply = can_grant_reply,
                                      sender_is_call = call \<rparr>);
                set_endpoint epptr $ SendEP [thread]
              od
@@ -281,6 +282,7 @@ where
                set_thread_state thread (BlockedOnSend epptr
                                    \<lparr> sender_badge = badge,
                                      sender_can_grant = can_grant,
+                                     sender_can_grant_reply = can_grant_reply,
                                      sender_is_call = call\<rparr>);
                qs' \<leftarrow> sort_queue (queue @ [thread]);
                set_endpoint epptr $ SendEP qs'
@@ -291,8 +293,8 @@ where
                 set_endpoint epptr $ (case queue of [] \<Rightarrow> IdleEP
                                                      | _ \<Rightarrow> RecvEP queue);
                 recv_state \<leftarrow> get_thread_state dest;
-                reply \<leftarrow> case recv_state
-                  of (BlockedOnReceive _ reply) \<Rightarrow> return reply
+                (reply, reply_can_grant) \<leftarrow> case recv_state
+                  of (BlockedOnReceive _ reply data) \<Rightarrow> return (reply, receiver_can_grant data)
                   | _ \<Rightarrow> fail;
                 do_ipc_transfer thread (Some epptr) badge can_grant dest;
                 maybeM (reply_unlink_tcb dest) reply;
@@ -300,7 +302,7 @@ where
 
                 fault \<leftarrow> thread_get tcb_fault thread;
                 if (call \<or> fault \<noteq> None) then
-                  if (can_grant \<and> reply \<noteq> None) then
+                  if ((can_grant \<or> reply_can_grant) \<and> reply \<noteq> None) then
                     reply_push thread dest (the reply) can_donate
                   else
                     set_thread_state thread Inactive
@@ -361,7 +363,7 @@ where
                        of EndpointCap ref badge rights \<Rightarrow> return (ref,rights)
                         | _ \<Rightarrow> fail);
      reply \<leftarrow> (case reply_cap of
-                 ReplyCap r \<Rightarrow> do
+                 ReplyCap r _ \<Rightarrow> do
                    tptr \<leftarrow> get_reply_obj_ref reply_tcb r;
                    when (tptr \<noteq> None \<and> the tptr \<noteq> thread) $ cancel_ipc (the tptr);
                    return (Some r)
@@ -378,7 +380,7 @@ where
        case ep
          of IdleEP \<Rightarrow> (case is_blocking of
               True \<Rightarrow> do
-                  set_thread_state thread (BlockedOnReceive epptr reply);
+                  set_thread_state thread (BlockedOnReceive epptr reply \<lparr>receiver_can_grant = (AllowGrant \<in> rights)\<rparr>);
                   when (reply \<noteq> None) $
                     set_reply_obj_ref reply_tcb_update (the reply) (Some thread);
                   set_endpoint epptr (RecvEP [thread])
@@ -386,7 +388,8 @@ where
               | False \<Rightarrow> do_nbrecv_failed_transfer thread)
             | RecvEP queue \<Rightarrow> (case is_blocking of
               True \<Rightarrow> do
-                  set_thread_state thread (BlockedOnReceive epptr reply);
+                  set_thread_state thread (BlockedOnReceive epptr reply
+                                                            \<lparr>receiver_can_grant = (AllowGrant \<in> rights)\<rparr>);
                   when (reply \<noteq> None) $ set_reply_obj_ref reply_tcb_update (the reply) (Some thread);
                   \<comment> \<open>schedule_tcb?\<close>
                   qs' \<leftarrow> sort_queue (queue @ [thread]);
@@ -409,7 +412,7 @@ where
               fault \<leftarrow> thread_get tcb_fault sender;
               if sender_is_call data \<or> fault \<noteq> None
               then
-                if sender_can_grant data \<and> reply \<noteq> None
+                if (sender_can_grant data \<or> sender_can_grant_reply data) \<and> reply \<noteq> None
                 then do
                   sender_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context sender;
                   donate \<leftarrow> return (sender_sc \<noteq> None);
@@ -456,7 +459,7 @@ definition
   receive_blocked :: "thread_state \<Rightarrow> bool"
 where
   "receive_blocked st \<equiv> case st of
-       BlockedOnReceive _ _ \<Rightarrow> True
+       BlockedOnReceive _ _ _ \<Rightarrow> True
      | _ \<Rightarrow> False"
 
 definition
@@ -535,11 +538,11 @@ where
   "send_fault_ipc tptr handler_cap fault can_donate \<equiv>
      (case handler_cap
        of EndpointCap ref badge rights \<Rightarrow>
-           if AllowSend \<in> rights \<and> AllowGrant \<in> rights
+           if AllowSend \<in> rights \<and> (AllowGrant \<in> rights \<or> AllowGrantReply \<in> rights)
            then liftE $ (do
                thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := Some fault \<rparr>) tptr;
                send_ipc True False (cap_ep_badge handler_cap)
-                        True can_donate tptr (cap_ep_ptr handler_cap);
+                        (AllowGrant \<in> rights) True can_donate tptr (cap_ep_ptr handler_cap);
                return True
              od)
            else fail
@@ -581,9 +584,9 @@ definition is_timeout_fault :: "fault \<Rightarrow> bool" where
     (case f of Timeout _ \<Rightarrow> True | _ \<Rightarrow> False)"
 
 definition
-  do_reply_transfer :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  do_reply_transfer :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
- "do_reply_transfer sender reply \<equiv> do
+ "do_reply_transfer sender reply grant \<equiv> do
     recv_opt \<leftarrow> get_reply_tcb reply;
     swp maybeM recv_opt (\<lambda>receiver. do
       state \<leftarrow> get_thread_state receiver;
@@ -594,7 +597,7 @@ where
           fault \<leftarrow> thread_get tcb_fault receiver;
           case fault of
             None \<Rightarrow> do
-              do_ipc_transfer sender None 0 True receiver;
+              do_ipc_transfer sender None 0 grant receiver;
               set_thread_state receiver Running
             od
           | Some f \<Rightarrow> do

@@ -9,9 +9,9 @@
 # Installation instructions for the C parser
 
 NB: These instructions apply to the stand-alone release of the C parser.
-If this is in an L4.verified checkout, see the top-level README instead.
+If this is in an L4.verified checkout, see the top-level README.md instead.
 
-This code requires Isabelle2018 and the MLton SML compiler.
+This code requires Isabelle2019 and the MLton SML compiler.
 
 The C parser supports multiple target architectures:
 
@@ -46,7 +46,7 @@ Run Isabelle with this directory as an argument, e.g.:
     isabelle jedit -d src -l CParser foo.thy
 
 If that worked, then the C parser has been loaded successfully.
-See the README and PDF documentation for further instructions.
+See the README.md file and PDF documentation for further instructions.
 
 ## Other tools
 

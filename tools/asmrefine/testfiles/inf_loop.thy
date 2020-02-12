@@ -21,8 +21,8 @@ external_file "inf_loop.c"
 install_C_file "inf_loop.c"
   [machinety=machine_state, ghostty=cghost_state]
 
-setup {* DefineGlobalsList.define_globals_list_i
-  "inf_loop.c" @{typ globals} *}
+setup \<open>DefineGlobalsList.define_globals_list_i
+  "inf_loop.c" @{typ globals}\<close>
 
 locale target
   = inf_loop_global_addresses

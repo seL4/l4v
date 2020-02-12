@@ -18,7 +18,7 @@ theory Simulation
 imports Main
 begin
 
-text {*
+text \<open>
   A data type is a collection of three functions on three basic types.
   The three basic types are the private state space @{typ 'a}, the observable
   state space @{typ 'b} and the operations @{typ 'j}.
@@ -38,55 +38,55 @@ text {*
 
   Hoare triples on the system and refinement are defined over the observable
   part of the state.
-*}
+\<close>
 
 record ('a,'b,'j) data_type =
   Init :: "'b \<Rightarrow> 'a set"
   Fin :: "'a \<Rightarrow> 'b"
   Step :: "'j \<Rightarrow> ('a \<times> 'a) set"
 
-text {*
+text \<open>
   A sequence of operations over a transition relation @{term \<delta>} is executed
   by applying the relation repeatedly.
-*}
+\<close>
 definition
   steps :: "('j \<Rightarrow> ('a \<times> 'a) set) \<Rightarrow> 'a set \<Rightarrow> 'j list \<Rightarrow> 'a set" where
   "steps \<delta> \<equiv> foldl (\<lambda>S j. \<delta> j `` S)"
 
-text {*
+text \<open>
   The sequence of operations in the data type is then executed
   in an initial state by initialising the private state, executing
   the transition relation over this private state, and finally
   projecting back out the set of final, observable states.
-*}
+\<close>
 definition
    execution :: "('a,'b,'j) data_type \<Rightarrow> 'b \<Rightarrow> 'j list \<Rightarrow> 'b set" where
   "execution A s js \<equiv> Fin A ` steps (Step A) (Init A s) js"
 
-text {*
+text \<open>
   A Hoare triple over a list of operations in the data type is
   the usual: given a state in the pre-condition, all resulting states
   of the execution must be in the post-condition:
-*}
+\<close>
 definition
   hoare_triple :: "('a,'b,'j) data_type \<Rightarrow> 'b set \<Rightarrow> 'j list \<Rightarrow> 'b set \<Rightarrow> bool"
 where
   "hoare_triple A P js Q \<equiv> \<forall>s \<in> P. execution A s js \<subseteq> Q"
 
-text {*
+text \<open>
   Refinement is defined by saying that all concrete behaviours are contained in
   their corresponding abstract ones. Only the private state spaces of the
   data type may differ.
-*}
+\<close>
 definition
   refines :: "('c,'b,'j) data_type \<Rightarrow> ('a,'b,'j) data_type \<Rightarrow> bool" (infix "\<sqsubseteq>" 60)
 where
   "C \<sqsubseteq> A \<equiv> \<forall>js s. execution C s js \<subseteq> execution A s js"
 
-text {*
+text \<open>
   Alternatively, one may say that all Hoare triples proved on the abstract data
   type are true for the concrete one.
-*}
+\<close>
 lemma hoare_triple_refinement:
   "C \<sqsubseteq> A = (\<forall>P Q js. hoare_triple A P js Q \<longrightarrow> hoare_triple C P js Q)"
   by (simp add: refines_def hoare_triple_def) blast
@@ -98,11 +98,11 @@ definition
 where
   "A ;;; B \<equiv> A O B"
 
-text {*
+text \<open>
   Refinement is a global property over all executions and/or all
   hoare triples. As this is hard to show, we define the weaker concept
   of forward simulation.
-*}
+\<close>
 definition
   fw_sim :: "('a \<times> 'c) set \<Rightarrow> ('c,'b,'j) data_type \<Rightarrow> ('a,'b,'j) data_type \<Rightarrow> bool"
 where
@@ -156,12 +156,12 @@ lemma sim_imp_refines:
   done
 
 
-text {*
+text \<open>
   To further aid proofs, we define (private) invariants on data types.
   Private invariants are properties that are true throughout execution
   on the private state space of the state type. The purpose is to exploit
   these properties while showing forward simulation.
-*}
+\<close>
 definition
   invariant_holds :: "('a,'b,'j) data_type \<Rightarrow> 'a set \<Rightarrow> bool" (infix "\<Turnstile>" 60)
 where
@@ -195,12 +195,12 @@ lemma invariant_conjI2:
   by (simp add: invariant_holds_def) blast
 
 
-text {*
+text \<open>
   We can now define forward simulation with an invariant. The proof
   obligation for the step and final case in the correspondence proof
   can now assume that the invariant holds. The invariant itself can be
   shown separately.
-*}
+\<close>
 definition
   LI :: "('a,'b,'j) data_type \<Rightarrow> ('c,'b,'j) data_type \<Rightarrow> ('a \<times> 'c) set \<Rightarrow> ('a \<times> 'c) set \<Rightarrow> bool"
 where

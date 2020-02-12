@@ -12,9 +12,9 @@ imports
   "../Atomicity_Lib"
 begin
 
-text {*
+text \<open>
  Preliminaries, a type of identities.
-*}
+\<close>
 
 datatype ident = A | B
 
@@ -45,7 +45,7 @@ lemma other_other_ident_simps[simp]:
   "(x = other_ident y) = (x \<noteq> y)"
   by (simp_all split: other_ident_split add: eq_commute)
 
-text {*
+text \<open>
 The state of the algorithm. The variables A/B are condensed into
 an ab_v variable, so we can parametrise by thread A/B. The priority
 variable is t_v, and the critical section cs has two variable to
@@ -53,7 +53,7 @@ operate on, cs1_v and cs2_v.
 
 Labels are needed to track where we're up to for the preconditions,
 relies and guarantees.
-*}
+\<close>
 
 datatype label = Awaiting | Critical | Exited
 
@@ -150,17 +150,17 @@ where
 
 abbreviation "critical label \<equiv> label = Critical"
 
-text {* The required invariant. We can't both be in the critical section.
-Whenever neither of us is in the critical section, its invariant holds. *}
+text \<open>The required invariant. We can't both be in the critical section.
+Whenever neither of us is in the critical section, its invariant holds.\<close>
 definition
   req_peterson_inv :: "('a, 'b) p_state \<Rightarrow> bool"
 where
   "req_peterson_inv s = (\<not> (critical (ab_label s A) \<and> critical (ab_label s B))
     \<and> (critical (ab_label s A) \<or> critical (ab_label s B) \<or> csI (cs2_v s)))"
 
-text {* The key invariant. We can't both be enabled, where that means
+text \<open>The key invariant. We can't both be enabled, where that means
 either we're in the critical section or waiting to enter with priority.
-*}
+\<close>
 abbreviation(input)
   enabled :: "ident \<Rightarrow> ('a, 'b) p_state \<Rightarrow> bool"
 where
@@ -172,7 +172,7 @@ definition
 where
   "key_peterson_inv s = (\<not> (enabled A s \<and> enabled B s))"
 
-text {* Some trivia about labels and variables. *}
+text \<open>Some trivia about labels and variables.\<close>
 definition
   local_peterson_inv :: "('a, 'b) p_state \<Rightarrow> bool"
 where
@@ -222,12 +222,12 @@ lemma peterson_rel_imp_assume_invs:
 
 end
 
-text {*
+text \<open>
 We assume validity for the underspecified critical section code represented by
 @{text cs2}.
 
 We also assume some basic sanity properties about the structure of @{text cs2}.
-*}
+\<close>
 locale mx_locale_wp = mx_locale cs1 cs2 csI for cs1 :: "'b \<Rightarrow> 'a" and cs2 and csI +
   assumes
     cs_wp: "\<forall>s c. I s \<and> lockf s \<longrightarrow> I s \<and> lockf (s \<lparr> cs2_v := c \<rparr>)
@@ -245,10 +245,10 @@ locale mx_locale_wp = mx_locale cs1 cs2 csI for cs1 :: "'b \<Rightarrow> 'a" and
     and cs_not_env_steps_first: "not_env_steps_first cs2"
 begin
 
-method_setup rev_drule = {*
+method_setup rev_drule = \<open>
   Attrib.thms >> curry (fn (thms, ctxt)
     => SIMPLE_METHOD (dresolve_tac ctxt thms 1 #> Seq.list_of #> rev #> Seq.of_list))
-*}
+\<close>
 
 lemma cs2_wp_apply_peterson[wp]:
  "\<lbrace> (\<lambda>s0 s. csI (cs2_v s)
@@ -366,11 +366,11 @@ where
   "peterson_sr_cs1 sa sc \<equiv> peterson_sr sa sc \<and> cs1_v sa = cs1_v sc"
 
 end
-text {*
+text \<open>
 Finally we assume that we can prove refinement for @{text cs2}, although this
 may depend on being in a state where @{term cs1_v} has been correctly
 initialised.
-*}
+\<close>
 locale mx_locale_refine = mx_locale_wp cs1 cs2 csI for cs1 :: "'b \<Rightarrow> 'a" and cs2 and csI +
   assumes
     cs_refine:

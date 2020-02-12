@@ -15,7 +15,7 @@ CSpace invariants
 theory ArchCSpaceInvPre_AI
 imports "../CSpaceInvPre_AI"
 begin
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma aobj_ref_acap_rights_update[simp]:
   "aobj_ref (acap_rights_update f x) = aobj_ref x"
@@ -316,7 +316,7 @@ lemma set_cap_hyp_refs_of [wp]:
   apply (simp add: set_cap_def set_object_def split_def)
   apply (wp get_object_wp | wpc)+
   apply (auto elim!: rsubst[where P=P]
-               simp: ARM.state_hyp_refs_of_def obj_at_def
+               simp: ARM_HYP.state_hyp_refs_of_def obj_at_def
              intro!: ext
              split: if_split_asm)
   done
@@ -325,6 +325,9 @@ lemma state_hyp_refs_of_revokable[simp]:
   "state_hyp_refs_of (s \<lparr> is_original_cap := m \<rparr>) = state_hyp_refs_of s"
   by (simp add: state_hyp_refs_of_def)
 
+lemma is_valid_vtable_root_is_arch_cap:
+  "is_valid_vtable_root cap \<Longrightarrow> is_arch_cap cap"
+  by (clarsimp simp: is_valid_vtable_root_def is_arch_cap_def)
 
 end
 

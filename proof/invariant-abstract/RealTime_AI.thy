@@ -977,13 +977,19 @@ lemma reply_remove_valid_ioc[wp]:
 
 text \<open>invs\<close> (* most of these below will probably require a bunch more of lemmas *)
 
-lemma set_refills_empty_fail [simp]: (* move it elsewhere? *)
+(* FIXME RT: move to NonDetMonadVCG *)
+lemma empty_fail_put[intro!, simp]:
+  "empty_fail (put x)"
+  by (simp add: empty_fail_def put_def)
+
+lemma set_refills_empty_fail [simp]: (* FIXME RT: move *)
   "empty_fail (set_refills sc_ptr refills)"
   by (auto simp: set_refills_def get_sched_context_def update_sched_context_def get_object_def
-                 set_object_is_modify
+                 set_object_def
+          intro!: empty_fail_bind empty_fail_get
           split: kernel_object.splits)
 
-lemma do_extended_op_empty_fail [simp]: (* move it elsewhere? *)
+lemma do_extended_op_empty_fail [simp]: (* FIXME RT: move *)
   "empty_fail (do_extended_op eop)"
   by (fastforce simp: do_extended_op_def empty_fail_get mk_ef_def
                intro: empty_fail_bind empty_fail_select_f)
@@ -1101,7 +1107,7 @@ lemma reply_push_st_tcb_at[wp]:
   by (wpsimp simp: reply_push_def update_sk_obj_ref_def get_thread_state_def
                    thread_get_def no_reply_in_ts_def comp_def
                wp: weak_if_wp sts_st_tcb_at_cases hoare_vcg_all_lift hoare_vcg_const_imp_lift
-         | wp_once hoare_drop_imp)+
+         | wp (once) hoare_drop_imp)+
 
 lemma sched_context_update_consumed_if_live[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace>

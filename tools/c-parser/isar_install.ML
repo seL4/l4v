@@ -16,7 +16,7 @@ sig
   val get_Csyntax : theory -> string -> Absyn.ext_decl list
   val gen_umm_types_file : string -> string -> theory -> theory
   val do_cpp : {error_detail : int, cpp_path : string option} ->
-               {includes : string list, filename : string} -> string
+               {includes : string list, filename : string} -> string * bool
   val install_C_file : (((bool option * bool option) * bool option) * string) *
                        additional_options list option ->
                        theory -> theory
@@ -24,6 +24,7 @@ sig
   val mk_thy_relative : theory -> string -> string
 
   val extra_trace_filename : string Config.T
+  val cpp_path : string Config.T
 
   val installed_C_files : theory
     -> {c_filename : string, locale_names : string list,
@@ -35,7 +36,6 @@ structure IsarInstall : ISAR_INSTALL =
 struct
 
 type 'a wrap = 'a Region.Wrap.t
-val bogus = SourcePos.bogus
 
 fun setup_feedback extra_output_filename = let
     val trace_extra = case extra_output_filename of
@@ -44,7 +44,7 @@ fun setup_feedback extra_output_filename = let
         val out = TextIO.openOut f
       in fn s => (TextIO.output (out, s); TextIO.flushOut out) end
     val add_extra = case extra_output_filename of
-        NONE => (fn pfx => fn f => f)
+        NONE => (fn _ => fn f => f)
       | SOME _ => (fn pfx => fn f => fn s => (trace_extra (pfx ^ s); f s))
   in
     Feedback.errorf := add_extra "ERROR: " (ignore o error);
@@ -122,7 +122,7 @@ end
 
 fun do_cpp {error_detail, cpp_path} {includes, filename} =
   case cpp_path of
-      NONE => filename
+      NONE => (File.standard_path (Path.explode filename), false)
     | SOME p =>
       let
         open OS.FileSys OS.Process
@@ -133,7 +133,8 @@ fun do_cpp {error_detail, cpp_path} {includes, filename} =
         val cmdline =
             p ^ " " ^ includes_string ^ " -CC \"" ^ filename ^ "\" > " ^ tmpname ^ " 2> " ^ err_tmpname
       in
-        if isSuccess (system cmdline) then (OS.FileSys.remove err_tmpname; tmpname)
+        if isSuccess (system cmdline)
+        then (OS.FileSys.remove err_tmpname; (tmpname, true))
         else let val _ = OS.FileSys.remove tmpname
                  val (msg, rest) = File.read_lines (Path.explode err_tmpname) |> chop error_detail
                  val _ = OS.FileSys.remove err_tmpname
@@ -182,10 +183,11 @@ fun define_function_names fninfo thy = let
     val _ = informStr (4, "Adding ("^cname^" :: int) = "^Int.toString n)
     val b = Binding.name cname
     val ((_, (_, th)), lthy) =
-        Local_Theory.define ((b, NoSyn),
-                             ((Thm.def_binding b, []), mk_int_numeral n))
-                            lthy
-    val lthy' = Local_Theory.reset lthy
+        lthy
+        |> Local_Theory.open_target |> snd
+        |>Local_Theory.define ((b, NoSyn),
+                              ((Thm.def_binding b, []), mk_int_numeral n))
+    val lthy' = Local_Theory.close_target lthy
     val morph  = Proof_Context.export_morphism lthy lthy'
     val th'     = Morphism.thm morph th
 

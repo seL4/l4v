@@ -9,14 +9,14 @@
  *)
 
 (*
-ARM-specific CSpace invariants
+ARM_HYP-specific CSpace invariants
 *)
 
 theory ArchCSpacePre_AI
 imports "../CSpacePre_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemmas typ_at_eq_kheap_obj = typ_at_eq_kheap_obj atyp_at_eq_kheap_obj
 
@@ -244,7 +244,7 @@ lemma valid_arch_mdb_weak_derived_update:
 lemma valid_arch_mdb_tcb_cnode_update:
   "valid_arch_mdb (is_original_cap s) (caps_of_state s) \<Longrightarrow>
            valid_arch_mdb ((is_original_cap s) ((t, tcb_cnode_index 2) := True))
-              (caps_of_state s((t, tcb_cnode_index 2) \<mapsto> ReplyCap t True))"
+              (caps_of_state s((t, tcb_cnode_index 2) \<mapsto> ReplyCap t True r))"
   by auto
 
 lemmas valid_arch_mdb_updates = valid_arch_mdb_free_index_update valid_arch_mdb_not_arch_cap_update

@@ -32,7 +32,7 @@ imports Main
   keywords "distinct" :: thy_goal
 begin
 
-ML {*
+ML \<open>
 local
 
 (*
@@ -89,7 +89,7 @@ val _ =
             ))
 
 end
-*}
+\<close>
 
 (* Test. *)
 context

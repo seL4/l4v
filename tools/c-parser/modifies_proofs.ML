@@ -103,10 +103,12 @@ fun mvar_to_string mv = let
   open ProgramAnalysis
 in
   case mv of
-    TheHeap => NameGeneration.global_heap
-  | M vi => MString.dest (get_mname vi)
+    M vi => MString.dest (get_mname vi)
+  | TheHeap => NameGeneration.global_heap
   | PhantomState => NameGeneration.phantom_state_name
   | GhostState => NameGeneration.ghost_state_name
+  | AllGlobals => raise Match
+
 end
 
 fun gen_modify_body thy state_ty sigma t mvars = let
@@ -426,8 +428,9 @@ fun prove_all_modifies_goals thy csenv includeP tyargs globloc =
       val lthy = Named_Target.init globloc thy
     in
       lthy
+        |> Local_Theory.open_target |> snd
         |> prove_all_modifies_goals_local csenv includeP tyargs
-        |> Local_Theory.reset
+        |> Local_Theory.close_target
         |> Local_Theory.exit_global
     end
   else

@@ -16,20 +16,11 @@ theory KHeap_D
 imports Monads_D
 begin
 
-(*
- * Return an item from the heap, or return 'None' if the
- * pointer is invalid.
- *)
-definition
-  opt_object :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_object option"
-where
-  "opt_object p \<equiv> \<lambda>s. cdl_objects s p"
-
 (* Return an item from the heap. Fail if no such object exists. *)
 abbreviation
   get_object :: "cdl_object_id \<Rightarrow> cdl_object k_monad"
 where
-  "get_object p \<equiv> gets_the (opt_object p)"
+  "get_object p \<equiv> gets_the (\<lambda>s. cdl_objects s p)"
 
 (* Set an item on the heap to the given object. *)
 definition
@@ -119,7 +110,7 @@ definition
   slots_of :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_map"
 where
   "slots_of obj_id \<equiv> \<lambda>s.
-  case opt_object obj_id s of
+  case cdl_objects s obj_id of
     None \<Rightarrow> Map.empty
   | Some obj \<Rightarrow> object_slots obj"
 

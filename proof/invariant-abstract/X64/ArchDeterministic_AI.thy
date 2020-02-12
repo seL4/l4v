@@ -19,11 +19,11 @@ named_theorems Deterministic_AI_assms
 lemma flush_table_valid_list[wp]: "\<lbrace>valid_list\<rbrace> flush_table a b c d \<lbrace>\<lambda>rv. valid_list\<rbrace>"
   by (wp mapM_x_wp' | wpc | simp add: flush_table_def | rule hoare_pre)+
 
-crunch valid_list[wp]: update_object valid_list
+crunch valid_list[wp]: set_object valid_list
   (wp: get_object_wp)
 
 crunch valid_list[wp, Deterministic_AI_assms]:
-  cap_swap_for_delete,set_cap,finalise_cap,arch_tcb_set_ipc_buffer,arch_get_sanitise_register_info, arch_post_modify_registers
+  cap_swap_for_delete,set_cap,finalise_cap,arch_get_sanitise_register_info, arch_post_modify_registers
   valid_list
   (wp: crunch_wps simp: unless_def crunch_simps)
 declare get_cap_inv[Deterministic_AI_assms]
@@ -54,7 +54,7 @@ lemma perform_pdpt_invocation_valid_list[wp]:
           | intro impI conjI allI
           | wpc
           | simp split: cap.splits arch_cap.splits option.splits
-          | wp_once hoare_drop_imps)+
+          | wp (once) hoare_drop_imps)+
   done
 
 lemma perform_page_directory_invocation_valid_list[wp]:
@@ -65,7 +65,7 @@ lemma perform_page_directory_invocation_valid_list[wp]:
           | intro impI conjI allI
           | wpc
           | simp split: cap.splits arch_cap.splits option.splits
-          | wp_once hoare_drop_imps)+
+          | wp (once) hoare_drop_imps)+
   done
 
 lemma perform_page_table_invocation_valid_list[wp]:
@@ -76,7 +76,7 @@ lemma perform_page_table_invocation_valid_list[wp]:
           | intro impI conjI allI
           | wpc
           | simp split: cap.splits arch_cap.splits option.splits
-          | wp_once hoare_drop_imps)+
+          | wp (once) hoare_drop_imps)+
   done
 
 lemma perform_page_invocation_valid_list[wp]:
@@ -103,6 +103,7 @@ crunch valid_list[wp, Deterministic_AI_assms]: handle_recv, handle_yield, handle
 
 lemma handle_vm_fault_valid_list[wp, Deterministic_AI_assms]:
 "\<lbrace>valid_list\<rbrace> handle_vm_fault thread fault \<lbrace>\<lambda>_.valid_list\<rbrace>"
+  unfolding handle_vm_fault_def
   apply (cases fault,simp_all)
   apply (wp|simp)+
   done
@@ -113,7 +114,7 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
   apply (rule hoare_pre)
    by (wp get_cap_wp  do_machine_op_valid_list
        | wpc | simp add: get_irq_slot_def handle_reserved_irq_def
-       | wp_once hoare_drop_imps)+
+       | wp (once) hoare_drop_imps)+
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_send,handle_reply valid_list
 

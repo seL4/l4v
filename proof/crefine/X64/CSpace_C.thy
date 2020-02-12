@@ -20,18 +20,19 @@ lemma maskCapRights_cap_cases:
   "return (maskCapRights R c) =
   (case c of
     ArchObjectCap ac \<Rightarrow> return (Arch.maskCapRights R ac)
-  | EndpointCap _ _ _ _ _ \<Rightarrow>
-    return (capEPCanGrant_update
-       (\<lambda>_. capEPCanGrant c \<and> capAllowGrant R)
-            (capEPCanReceive_update
-               (\<lambda>_. capEPCanReceive c \<and> capAllowRead R)
-                    (capEPCanSend_update
-                          (\<lambda>_. capEPCanSend c \<and> capAllowWrite R) c)))
+  | EndpointCap _ _ _ _ _ _ \<Rightarrow>
+    return (capEPCanGrantReply_update (\<lambda>_. capEPCanGrantReply c \<and> capAllowGrantReply R)
+             (capEPCanGrant_update (\<lambda>_. capEPCanGrant c \<and> capAllowGrant R)
+               (capEPCanReceive_update (\<lambda>_. capEPCanReceive c \<and> capAllowRead R)
+                 (capEPCanSend_update (\<lambda>_. capEPCanSend c \<and> capAllowWrite R) c))))
   | NotificationCap _ _ _ _ \<Rightarrow>
     return (capNtfnCanReceive_update
                         (\<lambda>_. capNtfnCanReceive c \<and> capAllowRead R)
                         (capNtfnCanSend_update
                           (\<lambda>_. capNtfnCanSend c \<and> capAllowWrite R) c))
+  | ReplyCap _ _ _ \<Rightarrow>
+    return (capReplyCanGrant_update
+             (\<lambda>_. capReplyCanGrant c \<and> capAllowGrant R) c)
   | _ \<Rightarrow> return c)"
   apply (simp add: maskCapRights_def Let_def split del: if_split)
   apply (cases c; simp add: isCap_simps split del: if_split)
@@ -151,6 +152,8 @@ lemma to_bool_cap_rights_bf:
    to_bool_bf (capAllowWrite_CL (seL4_CapRights_lift R))"
   "to_bool (capAllowGrant_CL (seL4_CapRights_lift R)) =
    to_bool_bf (capAllowGrant_CL (seL4_CapRights_lift R))"
+  "to_bool (capAllowGrantReply_CL (seL4_CapRights_lift R)) =
+   to_bool_bf (capAllowGrantReply_CL (seL4_CapRights_lift R))"
   by (subst to_bool_bf_to_bool_mask,
       simp add: seL4_CapRights_lift_def mask_def word_bw_assocs, simp)+
 
@@ -164,11 +167,22 @@ lemma to_bool_ntfn_cap_bf:
   apply simp
   done
 
+lemma to_bool_reply_cap_bf:
+  "cap_lift c = Some (Cap_reply_cap cap)
+   \<Longrightarrow> to_bool (capReplyMaster_CL cap) = to_bool_bf (capReplyMaster_CL cap)
+      \<and> to_bool (capReplyCanGrant_CL cap) = to_bool_bf (capReplyCanGrant_CL cap)"
+  apply (simp add: cap_lift_def Let_def split: if_split_asm)
+  apply (subst to_bool_bf_to_bool_mask,
+         clarsimp simp: cap_lift_thread_cap mask_def word_bw_assocs)+
+  apply simp
+  done
+
 lemma to_bool_ep_cap_bf:
   "cap_lift c = Some (Cap_endpoint_cap cap) \<Longrightarrow>
   to_bool (capCanSend_CL cap) = to_bool_bf (capCanSend_CL cap) \<and>
   to_bool (capCanReceive_CL cap) = to_bool_bf (capCanReceive_CL cap) \<and>
-  to_bool (capCanGrant_CL cap) = to_bool_bf (capCanGrant_CL cap)"
+  to_bool (capCanGrant_CL cap) = to_bool_bf (capCanGrant_CL cap) \<and>
+  to_bool (capCanGrantReply_CL cap) = to_bool_bf (capCanGrantReply_CL cap)"
   apply (simp add:cap_lift_def Let_def split: if_split_asm)
   apply (subst to_bool_bf_to_bool_mask,
          clarsimp simp: cap_lift_thread_cap mask_def word_bw_assocs)+
@@ -307,12 +321,23 @@ lemma maskCapRights_ccorres [corres]:
       apply (simp add: Collect_const_mem from_bool_def)
       apply csymbr
       apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
-      apply (simp add: ccorres_cond_iffs)
+      apply ccorres_rewrite
       apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
       apply (rule allI)
       apply (rule conseqPre)
        apply vcg
-      apply (clarsimp simp: return_def)
+      apply (simp add: cap_get_tag_isCap isCap_simps return_def)
+      apply clarsimp
+      apply (unfold ccap_relation_def)[1]
+      apply (simp add: cap_reply_cap_lift [THEN iffD1])
+      apply (clarsimp simp: cap_to_H_def)
+      apply (simp add: map_option_case split: option.splits)
+      apply (clarsimp simp add: cap_to_H_def Let_def
+                      split: cap_CL.splits if_split_asm)
+      apply (simp add: cap_reply_cap_lift_def)
+      apply (simp add: ccap_rights_relation_def cap_rights_to_H_def
+                       to_bool_reply_cap_bf
+                       to_bool_mask_to_bool_bf to_bool_cap_rights_bf)
      apply (simp add: Collect_const_mem from_bool_def)
      apply csymbr
      apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
@@ -619,7 +644,7 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
     apply (erule (2) cspace_cte_relation_upd_mdbI)
     apply (simp add: cmdbnode_relation_def)
     apply (intro arg_cong[where f="\<lambda>f. mdbNext_update f mdb" for mdb] ext word_eqI)
-    apply (simp add: sign_extend_bitwise_if' neg_mask_bang word_size)
+    apply (simp add: sign_extend_bitwise_if' neg_mask_test_bit word_size)
     apply (match premises in C: "canonical_address _" and A: "is_aligned _ _" (multi) \<Rightarrow>
            \<open>match premises in H[thin]: _ (multi) \<Rightarrow> \<open>insert C A\<close>\<close>)
     apply (drule is_aligned_weaken[where y=2], simp add: objBits_defs)
@@ -1674,31 +1699,24 @@ done
 
 definition
   irq_opt_relation_def:
-  "irq_opt_relation (airq :: (8 word) option) (cirq :: word8) \<equiv>
+  "irq_opt_relation (airq :: (8 word) option) (cirq :: machine_word) \<equiv>
        case airq of
          Some irq \<Rightarrow> (cirq = ucast irq \<and>
-                      irq \<noteq> scast irqInvalid \<and>
-                      ucast irq \<le> (scast Kernel_C.maxIRQ :: word8))
-       | None \<Rightarrow> cirq = scast irqInvalid"
+                      irq \<noteq> ucast irqInvalid \<and>
+                      ucast irq \<le> UCAST(32 signed \<rightarrow> 8) Kernel_C.maxIRQ)
+       | None \<Rightarrow> cirq = ucast irqInvalid"
 
 
 declare unat_ucast_up_simp[simp]
 
-
 lemma setIRQState_ccorres:
   "ccorres dc xfdc
-          (\<top> and (\<lambda>s. irq \<le> scast Kernel_C.maxIRQ))
+          (\<top> and (\<lambda>s. ucast irq \<le> (ucast Kernel_C.maxIRQ :: machine_word)))
           (UNIV \<inter> {s. irqState_' s = irqstate_to_C irqState}
-                \<inter> {s. irq_' s = irq})
+                \<inter> {s. irq_' s = ucast irq})
           []
          (setIRQState irqState irq)
          (Call setIRQState_'proc )"
-proof -
-  have is_up_8_16[simp]: "is_up (ucast :: word8 \<Rightarrow> word16)"
-  by (simp add: is_up_def source_size_def target_size_def word_size)
-
-
-show ?thesis
   apply (rule ccorres_gen_asm)
   apply (cinit simp del: return_bind)
    apply (rule ccorres_symb_exec_l)
@@ -1732,12 +1750,11 @@ show ?thesis
   apply (simp add: Kernel_C.IRQTimer_def Kernel_C.IRQInactive_def)
   apply (simp add: Kernel_C.IRQInactive_def Kernel_C.IRQReserved_def)
   done
-qed
 
 
 lemma deletedIRQHandler_ccorres:
   "ccorres dc xfdc
-         (\<lambda>s. irq \<le> scast Kernel_C.maxIRQ)
+         (\<lambda>s. ucast irq \<le> (ucast Kernel_C.maxIRQ :: machine_word))
          (UNIV \<inter> {s. irq_' s = ucast irq}) []
          (deletedIRQHandler irq)
          (Call deletedIRQHandler_'proc)"
@@ -1980,8 +1997,11 @@ where
 definition
   cleanup_info_wf' :: "capability \<Rightarrow> bool"
 where
-  "cleanup_info_wf' cap \<equiv> case cap of IRQHandlerCap irq \<Rightarrow>
-      UCAST(8\<rightarrow>16) irq \<le> SCAST(32 signed\<rightarrow>16) Kernel_C.maxIRQ | ArchObjectCap acap \<Rightarrow> arch_cleanup_info_wf' acap | _ \<Rightarrow> True"
+  "cleanup_info_wf' cap \<equiv> case cap of
+      IRQHandlerCap irq \<Rightarrow>
+        UCAST(8\<rightarrow>machine_word_len) irq \<le>  SCAST(32 signed\<rightarrow>machine_word_len) Kernel_C.maxIRQ
+    | ArchObjectCap acap \<Rightarrow> arch_cleanup_info_wf' acap
+    | _ \<Rightarrow> True"
 
 (* FIXME: move *)
 lemma hrs_mem_update_compose:
@@ -2485,7 +2505,7 @@ lemma h_t_valid_Array_element':
 lemma setIOPortMask_spec:
   notes ucast_mask = ucast_and_mask[where n=6, simplified mask_def, simplified]
   notes not_max_word_simps = and_not_max_word shiftr_not_max_word and_mask_not_max_word
-  notes ucast_cmp_ucast = ucast_le_ucast ucast_less_ucast
+  notes ucast_cmp_ucast = ucast_le_ucast ucast_less_ucast_weak
   notes array_assert = array_assertion_shrink_right[OF array_ptr_valid_array_assertionD]
   notes word_unat.Rep_inject[simp del]
   shows
@@ -2685,14 +2705,16 @@ lemma postCapDeletion_ccorres:
    apply (frule cap_get_tag_isCap_unfolded_H_cap(5))
    apply (clarsimp simp: cap_irq_handler_cap_lift ccap_relation_def cap_to_H_def
                          cleanup_info_wf'_def maxIRQ_def Kernel_C.maxIRQ_def)
-   apply word_bitwise
+(*   apply word_bitwise *)
   apply (rule conjI, clarsimp simp: isCap_simps cleanup_info_wf'_def)
   apply (rule conjI[rotated], clarsimp simp: isCap_simps)
   apply (clarsimp simp: isCap_simps)
   apply (frule cap_get_tag_isCap_unfolded_H_cap(5))
   apply (clarsimp simp: cap_irq_handler_cap_lift ccap_relation_def cap_to_H_def
-                        cleanup_info_wf'_def c_valid_cap_def cl_valid_cap_def mask_def)
-  done
+                        cleanup_info_wf'_def c_valid_cap_def cl_valid_cap_def mask_def
+                        )
+  apply (rule mask_eq_ucast_eq[where 'a="8" and 'b="64" and 'c="64", symmetric, simplified])
+  by (simp add: mask_def)
 
 lemma emptySlot_ccorres:
   "ccorres dc xfdc
@@ -3295,11 +3317,11 @@ lemma sameRegionAs_spec:
            apply (simp add: ccap_relation_def map_option_case)
            apply (simp add: cap_irq_handler_cap_lift)
            apply (simp add: cap_to_H_def)
-           apply (clarsimp simp: up_ucast_inj_eq c_valid_cap_def
+           apply (clarsimp simp: up_ucast_inj_eq c_valid_cap_def ucast_eq_mask
                                  cl_valid_cap_def mask_twice
                           split: if_split bool.split
-                          | intro impI conjI
-                          | simp )
+                  | intro impI conjI
+                  | simp)
           apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
           apply (clarsimp simp: isArchCap_tag_def2)
          \<comment> \<open>capa is an EndpointCap\<close>
@@ -3526,7 +3548,7 @@ lemma sameObjectAs_spec:
 
 lemma sameRegionAs_EndpointCap:
   shows "\<lbrakk>ccap_relation capa capc;
-          RetypeDecls_H.sameRegionAs (capability.EndpointCap x y z  u v) capa\<rbrakk>
+          RetypeDecls_H.sameRegionAs (capability.EndpointCap p b cs cr cg cgr) capa\<rbrakk>
          \<Longrightarrow> cap_get_tag capc = scast cap_endpoint_cap"
   apply (simp add: sameRegionAs_def Let_def)
   apply (case_tac capa;

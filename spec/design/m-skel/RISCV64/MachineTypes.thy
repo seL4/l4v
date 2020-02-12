@@ -20,10 +20,10 @@ begin
 
 context Arch begin global_naming RISCV64
 
-text {*
+text \<open>
   An implementation of the machine's types, defining register set
   and some observable machine state.
-*}
+\<close>
 
 section "Types"
 
@@ -44,12 +44,12 @@ context Arch begin global_naming RISCV64
 
 section "Machine State"
 
-text {*
+text \<open>
   Most of the machine state is left underspecified at this level.
   We know it exists, we will declare some interface functions, but
   at this level we do not have access to how this state is transformed
   or what effect it has on the machine.
-*}
+\<close>
 typedecl machine_state_rest
 
 end
@@ -70,9 +70,9 @@ end_qualify
 
 context Arch begin global_naming RISCV64
 
-text {*
+text \<open>
   The machine monad is used for operations on the state defined above.
-*}
+\<close>
 type_synonym 'a machine_monad = "(machine_state, 'a) nondet_monad"
 
 end
@@ -82,24 +82,24 @@ translations
 
 context Arch begin global_naming RISCV64
 
-text {*
+text \<open>
   After kernel initialisation all IRQs are masked.
-*}
+\<close>
 definition
   "init_irq_masks \<equiv> \<lambda>_. True"
 
-text {*
+text \<open>
   The initial contents of the user-visible memory is 0.
-*}
+\<close>
 definition
   init_underlying_memory :: "word64 \<Rightarrow> word8"
   where
   "init_underlying_memory \<equiv> \<lambda>_. 0"
 
-text {*
+text \<open>
   We leave open the underspecified rest of the machine state in
   the initial state.
-*}
+\<close>
 definition
   init_machine_state :: machine_state where
  "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks,

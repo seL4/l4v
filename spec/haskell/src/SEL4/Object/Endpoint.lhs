@@ -128,7 +128,8 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >         let epptr = capEPPtr cap
 >         replyOpt <- (case replyCap of
 >             ReplyCap r _ -> return (Just r)
->             _ -> return Nothing)
+>             NullCap -> return Nothing
+>             _ -> fail "receiveIPC: replyCap must be ReplyCap or NullCap")
 >         when (replyOpt /= Nothing) $ do
 >             tptrOpt <- getReplyTCB $ fromJust replyOpt
 >             when (tptrOpt /= Nothing && tptrOpt /= Just thread) $ do
@@ -265,7 +266,7 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 >                         Nothing -> return ()
 >                         Just reply -> replyUnlink reply
 >                     fault <- threadGet tcbFault t
->                     if isNothing fault 
+>                     if isNothing fault
 >                         then do
 >                             setThreadState Restart t
 >                             possibleSwitchTo t
@@ -291,7 +292,7 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 >                             then do
 >                                 setThreadState Restart t
 >                                 possibleSwitchTo t
->                             else setThreadState Inactive t                        
+>                             else setThreadState Inactive t
 >                         tcbSchedEnqueue t
 >                         return False
 >                     else return True

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-chapter {* Abstract datatype for the executable specification *}
+chapter \<open>Abstract datatype for the executable specification\<close>
 
 theory ADT_H
 imports
@@ -16,13 +16,13 @@ imports
   Syscall_R
 begin
 
-text {*
+text \<open>
   The general refinement calculus (see theory Simulation) requires
   the definition of a so-called ``abstract datatype'' for each refinement layer.
   This theory defines this datatype for the executable specification.
   It is based on the abstract specification because we chose
   to base the refinement's observable state on the abstract state.
-*}
+\<close>
 
 consts
   initEntry :: word32
@@ -34,11 +34,11 @@ consts
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-text {*
+text \<open>
   The construction of the abstract data type
   for the executable specification largely follows
   the one for the abstract specification.
-*}
+\<close>
 definition
   Init_H :: "kernel_state global_state set"
   where
@@ -160,16 +160,17 @@ fun
  where
   "CapabilityMap capability.NullCap = cap.NullCap"
 | "CapabilityMap (capability.UntypedCap d ref n idx) = cap.UntypedCap d ref n idx"
-| "CapabilityMap (capability.EndpointCap ref b sr rr gr) =
+| "CapabilityMap (capability.EndpointCap ref b sr rr gr grr) =
    cap.EndpointCap ref b {x. sr \<and> x = AllowSend \<or> rr \<and> x = AllowRecv \<or>
-                             gr \<and> x = AllowGrant}"
+                             gr \<and> x = AllowGrant \<or> grr \<and> x = AllowGrantReply}"
 | "CapabilityMap (capability.NotificationCap ref b sr rr) =
    cap.NotificationCap ref b {x. sr \<and> x = AllowSend \<or> rr \<and> x = AllowRecv}"
 | "CapabilityMap (capability.CNodeCap ref n L l) =
    cap.CNodeCap ref n (bin_to_bl l (uint L))"
 | "CapabilityMap (capability.ThreadCap ref) = cap.ThreadCap ref"
 | "CapabilityMap capability.DomainCap = cap.DomainCap"
-| "CapabilityMap (capability.ReplyCap ref master) = cap.ReplyCap ref master"
+| "CapabilityMap (capability.ReplyCap ref master gr) =
+   cap.ReplyCap ref master {x. gr \<and> x = AllowGrant \<or> x = AllowWrite}"
 | "CapabilityMap capability.IRQControlCap = cap.IRQControlCap"
 | "CapabilityMap (capability.IRQHandlerCap irq) = cap.IRQHandlerCap irq"
 | "CapabilityMap (capability.Zombie p b n) =
@@ -191,29 +192,17 @@ fun
                     (arch_capability.VCPUCap v)) =
   cap.ArchObjectCap (arch_cap.VCPUCap v)"
 
-lemma cap_relation_CapabilityMap:
-  "\<lbrakk>\<forall>dev w r s d. c = capability.ArchObjectCap (arch_capability.PageCap dev w r s d) \<longrightarrow>
-              r \<noteq> VMNoAccess;
-    \<forall>ref n L l. c = capability.CNodeCap ref n L l \<longrightarrow>
-                of_bl (bin_to_bl l (uint L)) = L\<rbrakk>
-   \<Longrightarrow> cap_relation (CapabilityMap c) c"
-apply (case_tac c; simp del: bin_to_bl_def)
- apply (clarsimp simp: zbits_map_def split: zombie_type.splits)
-apply (rename_tac arch_capability)
-apply (case_tac arch_capability,
-       simp_all add: vmrights_map_def vm_rights_of_def vm_kernel_only_def
-                     vm_read_only_def vm_read_write_def
-              split: vmrights.splits)
-done
-
 (* FIXME: wellformed_cap_simps has lots of duplicates. *)
 lemma cap_relation_imp_CapabilityMap:
   "\<lbrakk>wellformed_cap c; cap_relation c c'\<rbrakk> \<Longrightarrow> CapabilityMap c' = c"
   apply (case_tac c; simp add: wellformed_cap_simps)
+       apply (rule set_eqI, clarsimp)
+       apply (case_tac "x", simp_all)
       apply (rule set_eqI, clarsimp)
-      apply (case_tac "x", simp_all)
-     apply (rule set_eqI, clarsimp)
-     apply (case_tac "x", simp_all add: word_bits_def)
+      apply (case_tac "x", simp_all add: word_bits_def)
+     apply clarsimp
+     apply (simp add: set_eq_iff, rule allI)
+     apply (case_tac x; clarsimp)
     apply (simp add: uint_of_bl_is_bl_to_bin bl_bin_bl[simplified])
    apply (simp add: zbits_map_def split: option.splits)
   apply (rename_tac arch_cap)
@@ -234,19 +223,16 @@ where
               Structures_A.thread_state.IdleThreadState"
 | "ThStateMap Structures_H.thread_state.BlockedOnReply =
               Structures_A.thread_state.BlockedOnReply"
-| "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref) =
-              Structures_A.thread_state.BlockedOnReceive oref"
-| "ThStateMap (Structures_H.thread_state.BlockedOnSend oref badge grant call) =
+| "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref grant) =
+              Structures_A.thread_state.BlockedOnReceive oref \<lparr> receiver_can_grant = grant \<rparr>"
+| "ThStateMap (Structures_H.thread_state.BlockedOnSend oref badge grant grant_reply call) =
               Structures_A.thread_state.BlockedOnSend oref
                 \<lparr> sender_badge = badge,
                   sender_can_grant = grant,
+                  sender_can_grant_reply = grant_reply,
                   sender_is_call = call \<rparr>"
 | "ThStateMap (Structures_H.thread_state.BlockedOnNotification oref) =
               Structures_A.thread_state.BlockedOnNotification oref"
-
-lemma thread_state_relation_ThStateMap:
-  "thread_state_relation (ThStateMap ts) ts"
-by (cases ts) simp_all
 
 lemma thread_state_relation_imp_ThStateMap:
   "thread_state_relation ts ts' \<Longrightarrow> ThStateMap ts' = ts"
@@ -262,14 +248,6 @@ definition
          ExceptionTypes_A.lookup_failure.DepthMismatch n m
      | Fault_H.lookup_failure.GuardMismatch n g l \<Rightarrow>
          ExceptionTypes_A.lookup_failure.GuardMismatch n (bin_to_bl l (uint g))"
-
-lemma lookup_failure_map_LookupFailureMap:
-  "(\<forall>n g l. lf = Fault_H.lookup_failure.GuardMismatch n g l \<longrightarrow>
-                of_bl (bin_to_bl l (uint g)) = g)
-   \<Longrightarrow> lookup_failure_map (LookupFailureMap lf) = lf"
-by (clarsimp simp add: LookupFailureMap_def lookup_failure_map_def
-             simp del: bin_to_bl_def
-        split: lookup_failure.splits)
 
 lemma LookupFailureMap_lookup_failure_map:
   "(\<forall>n g. lf = ExceptionTypes_A.GuardMismatch n g \<longrightarrow> length g \<le> 32)
@@ -347,7 +325,7 @@ definition
      case h x of
        Some (KOEndpoint ep) \<Rightarrow> Some (Endpoint (EndpointMap ep))
      | Some (KONotification ntfn) \<Rightarrow> Some (Notification (AEndpointMap ntfn))
-     | Some KOKernelData \<Rightarrow> undefined (* forbidden by pspace_relation *)
+     | Some KOKernelData \<Rightarrow> undefined \<comment> \<open>forbidden by pspace_relation\<close>
      | Some KOUserData \<Rightarrow> map_option (ArchObj \<circ> DataPage False) (ups x)
      | Some KOUserDataDevice \<Rightarrow> map_option (ArchObj \<circ> DataPage True) (ups x)
      | Some (KOTCB tcb) \<Rightarrow> Some (TCB (TcbMap tcb))
@@ -482,6 +460,7 @@ proof -
     by (fastforce simp add: ghost_relation_def)+
 
   show "?thesis"
+  supply image_cong_simp [cong del]
     apply (rule ext)
     apply (simp add: absHeap_def split: option.splits)
     apply (rule conjI)
@@ -846,24 +825,12 @@ shows
                         ARM_A.arch_kernel_obj.split_asm)+
   done
 
-text {* The following function can be used to reverse cte_map. *}
+text \<open>The following function can be used to reverse cte_map.\<close>
 definition
   "cteMap cns \<equiv> \<lambda>p.
    let P = (%(a,bl). cte_map (a,bl) = p \<and> cns a = Some (length bl))
    in if \<exists>x. P x then (SOME x. P x)
       else (p && ~~ mask tcbBlockSizeBits, bin_to_bl 3 (uint (p >> cte_level_bits)))"
-
-lemma wf_unique':
-   "P (THE x. \<forall>y\<in>dom fun. length y = x) \<Longrightarrow>
-    well_formed_cnode_n n fun \<Longrightarrow> P n"
-apply (subgoal_tac "(THE x. \<forall>y\<in>dom fun. length y = x) = n")
-apply simp
-apply (rule the_equality)
-apply (clarsimp simp add: well_formed_cnode_n_def dom_def Collect_eq)+
-apply (erule impE)
-apply (rule_tac x="replicate n False" in exI, simp)
-apply simp
-done
 
 lemma tcb_cap_cases_length:
   "tcb_cap_cases b = Some x \<Longrightarrow> length b = 3"
@@ -910,25 +877,6 @@ lemma bin_to_bl_of_bl_eq:
                    test_bit_of_bl nth_rev)
   apply (case_tac "b ! i", simp_all)
   apply arith
-  done
-
-lemma CNode_implies_KOCTE:
-  "\<lbrakk>pspace_relation (kheap s) (ksPSpace s');
-    kheap s a = Some (CNode sz cs); well_formed_cnode_n sz cs; cs b = Some cap\<rbrakk>
-   \<Longrightarrow> \<exists>cte. ksPSpace s' (cte_map (a, b)) = Some (KOCTE cte) \<and>
-             cap_relation cap (cteCap cte)"
-  apply (clarsimp simp add: pspace_relation_def pspace_dom_def
-                            dom_def UNION_eq Collect_eq)
-  apply (erule_tac x="cte_map (a, b)" in allE)
-  apply (erule_tac x=a in allE)
-  apply clarsimp
-  apply (erule_tac x="cte_map (a, b)" in allE)
-  apply (erule_tac x="cte_relation b" in allE)
-  apply (erule impE, fastforce simp add: dom_def)
-  apply (clarsimp simp add: cte_relation_def)
-  apply (drule iffD1)
-   apply (fastforce simp add: dom_def image_def)
-  apply clarsimp
   done
 
 lemma TCB_implies_KOTCB:
@@ -1133,7 +1081,7 @@ proof -
     done
 qed
 
-text {*
+text \<open>
   In the executable specification,
   a linked list connects all children of a certain node.
   More specifically, the predicate @{term "subtree h c c'"} holds iff
@@ -1148,7 +1096,7 @@ text {*
   which represents a childhood relation like @{term "subtree h"},
   and converts this into an optional function to the immediate parent
   in the same format as @{term "cdt s"}.
-*}
+\<close>
 definition
   "parent_of' ds \<equiv> %x.
    if \<forall>p. \<not> ds p x then None
@@ -1166,11 +1114,6 @@ lemma valid_mdb_mdb_cte_at:
    \<Longrightarrow> mdb_cte_at (\<lambda>p. \<exists>c. caps_of_state s p = Some c \<and> cap.NullCap \<noteq> c)
       (cdt s)"
   by (simp add: valid_mdb_def2)
-
-lemma cte_map_inj_through_cnp:
-  "\<lbrakk> cte_map p = cte_map p'; cnp (cte_map p) = p; cnp (cte_map p') = p' \<rbrakk>
-    \<Longrightarrow> p = p'"
-  by (drule arg_cong[where f=cnp]) metis
 
 lemma ctes_of_cte_wp_atD:
   "ctes_of s p = Some cte \<Longrightarrow> cte_wp_at' ((=) cte) p s"
@@ -1360,13 +1303,6 @@ qed
 
 lemmas absCDT_correct = absCDT_correct'(1)
 lemmas cdt_simple_rel =  absCDT_correct'(2)
-
-
-lemma has_child_cte_at:"valid_mdb s \<Longrightarrow> (cdt s) c = Some p \<Longrightarrow> cte_at p s"
-  apply (rule cte_wp_cte_at)
-  apply (simp add: valid_mdb_def mdb_cte_at_def del: split_paired_All)
-  apply blast
-  done
 
 
 (* Produce a cdt_list from a cdt by sorting the children
@@ -1675,14 +1611,6 @@ definition
    | irqstate.IRQSignal \<Rightarrow> irq_state.IRQSignal
    | irqstate.IRQTimer \<Rightarrow> irq_state.IRQTimer
    | irqstate.IRQReserved \<Rightarrow> irq_state.IRQReserved"
-
-lemma irq_state_map_inv:
-  "irq_state_map (IRQStateMap s) = s"
-  by (cases s) (simp_all add: irq_state_map_def IRQStateMap_def)
-
-lemma IRQStateMap_inv:
-  "IRQStateMap (irq_state_map s) = s"
-  by (cases s) (simp_all add: irq_state_map_def IRQStateMap_def)
 
 definition
   "absInterruptStates is' \<equiv>

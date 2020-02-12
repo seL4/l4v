@@ -42,8 +42,8 @@ definition "seL4_CapInitThreadIPCBuffer = (10 :: cdl_cptr)"
 consts
   root_tcb_id :: cdl_object_id
 
-text {* This wrapper lifts monadic operations on the underlying kernel state to
-monadic operations on the user state. *}
+text \<open>This wrapper lifts monadic operations on the underlying kernel state to
+monadic operations on the user state.\<close>
 definition
   do_kernel_op :: "(cdl_state, 'a) nondet_monad \<Rightarrow> (user_state, 'a) nondet_monad"
 where
@@ -66,7 +66,7 @@ definition
   call_kernel_loop :: "event \<Rightarrow> unit k_monad"
 where
   "call_kernel_loop ev = do
-      (* Deal with the event. *)
+      \<comment> \<open>Deal with the event.\<close>
       whileLoop (\<lambda>rv s. isLeft rv)
         (\<lambda>_. handle_event ev
             <handle> (\<lambda> _. do handle_pending_interrupts; throwError PreemptError od)
@@ -96,7 +96,7 @@ where
       ndomain \<leftarrow> gets cdl_current_domain;
       assert (minBound = ndomain);
       has_error \<leftarrow> thread_has_error thread_ptr;
-      (* capDL will need to be extended to support return types. *)
+      \<comment> \<open>capDL will need to be extended to support return types.\<close>
       when (check_error) (assert (\<not> has_error));
       return has_error
     od"

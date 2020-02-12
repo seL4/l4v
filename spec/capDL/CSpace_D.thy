@@ -139,7 +139,7 @@ definition
 where
   "get_irq_slot irq s \<equiv> (cdl_irq_node s irq, 0)"
 
-text {* Actions to be taken after deleting an IRQ Handler capability. *}
+text \<open>Actions to be taken after deleting an IRQ Handler capability.\<close>
 definition
   deleting_irq_handler :: "cdl_irq \<Rightarrow> unit k_monad"
 where
@@ -151,12 +151,12 @@ definition
   where "cancel_ipc ptr \<equiv>
   do cap \<leftarrow> KHeap_D.get_cap (ptr,tcb_pending_op_slot);
    (case cap of
-    PendingSyncRecvCap _ is_reply \<Rightarrow> ( do
+    PendingSyncRecvCap _ is_reply _ \<Rightarrow> ( do
      when is_reply $ update_thread_fault ptr (\<lambda>x. False);
      revoke_cap_simple (ptr,tcb_replycap_slot);
      when (\<not> is_reply) $ set_cap (ptr,tcb_pending_op_slot) NullCap
      od )
-   | PendingSyncSendCap _ _ _ _ _ \<Rightarrow> (do
+   | PendingSyncSendCap _ _ _ _ _ _ \<Rightarrow> (do
      revoke_cap_simple (ptr,tcb_replycap_slot);
      set_cap (ptr,tcb_pending_op_slot) NullCap
      od)
@@ -171,9 +171,9 @@ definition
   prepare_thread_delete ::"cdl_object_id \<Rightarrow> unit k_monad"
   where "prepare_thread_delete ptr \<equiv> return ()" (* for ARM it does nothing *)
 
-text {* Actions that must be taken when a capability is deleted. Returns a
+text \<open>Actions that must be taken when a capability is deleted. Returns a
 Zombie capability if deletion requires a long-running operation and also a
-possible IRQ to be cleared. *}
+possible IRQ to be cleared.\<close>
 fun
   finalise_cap :: "cdl_cap \<Rightarrow> bool \<Rightarrow> (cdl_cap \<times> cdl_cap) k_monad"
 where
@@ -188,7 +188,7 @@ where
          unbind_maybe_notification r;
          cancel_all_ipc r
        od)"
-| "finalise_cap (ReplyCap r)             final = return (NullCap, NullCap)"
+| "finalise_cap (ReplyCap r R)           final = return (NullCap, NullCap)"
 | "finalise_cap (MasterReplyCap r)       final = return (NullCap, NullCap)"
 | "finalise_cap (CNodeCap r bits g sz)   final =
       (return (if final then ZombieCap r else NullCap, NullCap))"
@@ -200,8 +200,8 @@ where
          prepare_thread_delete r od);
          return (if final then (ZombieCap r) else NullCap, NullCap)
        od)"
-| "finalise_cap (PendingSyncSendCap r _ _ _ _) final = return (NullCap, NullCap)"
-| "finalise_cap (PendingSyncRecvCap r _ ) final = return (NullCap, NullCap)"
+| "finalise_cap (PendingSyncSendCap r _ _ _ _ _) final = return (NullCap, NullCap)"
+| "finalise_cap (PendingSyncRecvCap r _ _) final = return (NullCap, NullCap)"
 | "finalise_cap (PendingNtfnRecvCap r)  final = return (NullCap, NullCap)"
 | "finalise_cap IrqControlCap            final = return (NullCap, NullCap)"
 | "finalise_cap (IrqHandlerCap irq)      final = (
@@ -240,10 +240,10 @@ where
 | "finalise_cap _ final = return (NullCap, NullCap)"
 
 
-text {* The fast_finalise operation is used to delete a capability when it is
+text \<open>The fast_finalise operation is used to delete a capability when it is
 known that a long-running operation is impossible. It is equivalent to calling
 the regular finalise operation. It cannot be defined in that way as doing so
-would create a circular definition. *}
+would create a circular definition.\<close>
 lemma fast_finalise_def2:
   "fast_finalise cap final = do
      assert (can_fast_finalise cap);
@@ -436,7 +436,7 @@ definition
 where
   "get_tcb_ep_badge t \<equiv>
     case (cdl_tcb_caps t tcb_pending_op_slot) of
-      Some (PendingSyncSendCap _ badge _ _ _) \<Rightarrow> Some badge
+      Some (PendingSyncSendCap _ badge _ _ _ _) \<Rightarrow> Some badge
     | _ \<Rightarrow> None"
 
 (*
@@ -658,7 +658,7 @@ definition
 where
   "derive_cap slot cap \<equiv> case cap of
      UntypedCap _ _ _ \<Rightarrow> doE ensure_no_children slot; returnOk cap odE
-   | ReplyCap _ \<Rightarrow> returnOk NullCap
+   | ReplyCap _ _ \<Rightarrow> returnOk NullCap
    | MasterReplyCap oref \<Rightarrow> returnOk NullCap
    | IrqControlCap \<Rightarrow> returnOk NullCap
    | ZombieCap _ \<Rightarrow> returnOk NullCap

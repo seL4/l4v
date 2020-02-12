@@ -8,7 +8,7 @@
  * @TAG(NICTA_GPL)
  *)
 
-chapter {* \label{sec:examples}Example Systems *}
+chapter \<open>\label{sec:examples}Example Systems\<close>
 
 (*<*)
 theory Examples_CAMKES
@@ -19,8 +19,8 @@ imports
 begin
 (*>*)
 
-subsection {* \label{subsec:echo}Echo *}
-text {*
+subsection \<open>\label{subsec:echo}Echo\<close>
+text \<open>
   The following ADL and IDL describe an example system involving two
   components, client and echo. There is a single connection between them, from
   a procedure @{text client.s} that client requires to a procedure
@@ -33,9 +33,9 @@ text {*
   \includegraphics[width=0.6\textwidth]{imgs/echo}
   \end{center}
   \end{figure}
-*}
+\<close>
 
-text {*
+text \<open>
   The procedure used in this system is expressed by the following IDL:
 
 \begin{verbatim}
@@ -51,7 +51,7 @@ text {*
   is a synonym for
   @{term integer} and is
   therefore not modelled in Isabelle.}
-*}
+\<close>
 definition
   simple :: procedure (* Sourced from Simple.idl4 *)
 where
@@ -78,7 +78,7 @@ where
       ] \<rparr>
   ]"
 
-text {*
+text \<open>
   Each component of the system is described by a separate IDL representation:
 
 \begin{verbatim}
@@ -95,13 +95,14 @@ text {*
 \end{verbatim}
 
   These generate the following formal representations in Isabelle:
-*}
+\<close>
 definition
   client :: component (* Sourced from Client.camkes *)
 where
   "client \<equiv> \<lparr>
     control = True,
-    requires = [(''s'', simple)],
+    hardware = False,
+    requires = [(''s'', (InterfaceRequired, simple))],
     provides = [],
     dataports = [],
     emits = [],
@@ -114,6 +115,7 @@ definition
 where
   "echo \<equiv> \<lparr>
     control = False,
+    hardware = False,
     requires = [],
     provides = [(''s'', simple)],
     dataports = [],
@@ -122,7 +124,7 @@ where
     attributes = []
   \<rparr>"
 
-text {*
+text \<open>
   A @{term composition} block is used to combine these elements into the
   complete system. There are no attributes in this simple system so the
   @{term configuration} block of the @{term assembly} can be omitted. The two
@@ -140,7 +142,7 @@ text {*
 \end{verbatim}
 
   Once again the generated Isabelle formalism looks similar:
-*}
+\<close>
 definition
   system :: assembly (* Sourced from simple.camkes *)
 where
@@ -151,19 +153,22 @@ where
         conn_type = seL4RPC,
         conn_from = [(''client'', ''s'')],
         conn_to = [(''echo'', ''s'')]
-      \<rparr>)]
+      \<rparr>)],
+      group_labels = []
     \<rparr>,
-    configuration = None
+    configuration = None,
+    policy_extra = {}
   \<rparr>"
 
-text {*
+text \<open>
   Since our wellformedness conditions are executable, we can now prove that
   this example is a wellformed assembly by evaluation.
-*}
-lemma "wellformed_assembly system" by eval
+\<close>
+lemma "wellformed_assembly system"
+  by (simp add: wellformed_CAMKES_simps system_def echo_def client_def simple_def)
 
-subsection {* \label{subsec:events}Events *}
-text {*
+subsection \<open>\label{subsec:events}Events\<close>
+text \<open>
   \begin{figure}[h]
   \begin{center}
   \caption{\label{fig:event}Event example}
@@ -175,21 +180,22 @@ text {*
   asynchronous communication between two components. The identifier assigned
   to the event, @{text 1}, is unimportant in this example as there is only
   one event in use.
-*}
+\<close>
 definition
   signal :: event
 where
   "signal \<equiv> 1"
 
-text {*
+text \<open>
   The active component @{text emitter} generates events of the type
   @{term signal}.
-*}
+\<close>
 definition
   emitter :: component
 where
   "emitter \<equiv> \<lparr>
     control = True,
+    hardware = False,
     requires = [],
     provides = [],
     dataports = [],
@@ -198,7 +204,7 @@ where
     attributes = []
   \<rparr>"
 
-text {*
+text \<open>
   The component @{text consumer} expects to receive these events. When a
   component is defined to consume an event, a function for registering a
   callback for this event is made available to the component. The component
@@ -207,25 +213,26 @@ text {*
   even when consuming components are conceptually passive they are usually
   specified as active (@{text "control = True"}) with an entry function that
   performs some initialisation and then registers an event handler.
-*}
+\<close>
 definition
   consumer :: component
 where
   "consumer \<equiv> \<lparr>
     control = True,
+    hardware = False,
     requires = [],
     provides = [],
     dataports = [],
     emits = [],
-    consumes = [(''event'', signal)],
+    consumes = [(''event'', (InterfaceRequired, signal))],
     attributes = []
   \<rparr>"
 
-text {*
+text \<open>
   The system assembly looks similar to that shown in Section
   \ref{subsec:echo}, but an asynchronous connector is used between the
   components.
-*}
+\<close>
 definition
   event_system :: assembly
 where
@@ -233,21 +240,24 @@ where
     composition = \<lparr>
       components = [(''source'', emitter), (''sink'', consumer)],
       connections = [(''simpleEvent1'', \<lparr>
-        conn_type = seL4Asynch,
+        conn_type = seL4Notification,
         conn_from = [(''source'', ''event'')],
         conn_to = [(''sink'', ''event'')]
-      \<rparr>)]
+      \<rparr>)],
+      group_labels = []
     \<rparr>,
-    configuration = None
+    configuration = None,
+    policy_extra = {}
   \<rparr>"
 
-text {*
+text \<open>
   Again, wellformedness is proved easily by evaluation.
-*}
-lemma "wellformed_assembly event_system" by eval
+\<close>
+lemma "wellformed_assembly event_system"
+  by (simp add: wellformed_CAMKES_simps event_system_def emitter_def consumer_def signal_def)
 
-subsection {* \label{subsec:dataport}Dataport Usage *}
-text {*
+subsection \<open>\label{subsec:dataport}Dataport Usage\<close>
+text \<open>
   \begin{figure}[h]
   \begin{center}
   \caption{\label{fig:dataport}Dataport example}
@@ -259,12 +269,13 @@ text {*
   to as a dataport in CAmkES. It also uses one of the key aspects of a component
   platform, component re-use. First the definition of a simple component that
   uses two dataports:
-*}
+\<close>
 definition
   data_client :: component
 where
   "data_client \<equiv> \<lparr>
     control = True,
+    hardware = False,
     requires = [],
     provides = [],
     dataports = [(''d1'', None), (''d2'', None)],
@@ -273,7 +284,7 @@ where
     attributes = []
   \<rparr>"
 
-text {*
+text \<open>
   By instantiating this component twice (once as @{text comp1} and once as
   @{text comp2})
   the system contains two identical components. The assembly below connects the
@@ -282,7 +293,7 @@ text {*
   It is possible to specify a system that instantiates @{term data_client} once and
   connects one of the instance's dataports to the other, but there is nothing to
   be gained from a component communicating with itself via shared memory.
-*}
+\<close>
 definition
   data_system :: assembly
 where
@@ -297,16 +308,23 @@ where
         conn_type = seL4SharedData,
         conn_from = [(''comp2'', ''d1'')],
         conn_to = [(''comp1'', ''d2'')]
-      \<rparr>)]
+      \<rparr>)],
+      group_labels = []
     \<rparr>,
-    configuration = None
+    configuration = None,
+    policy_extra = {}
   \<rparr>"
 
-text {* The data port example is wellformed: *}
-lemma "wellformed_assembly data_system" by eval
+text \<open>The data port example is wellformed:\<close>
+lemma "wellformed_assembly data_system"
+  apply (simp add: data_system_def data_client_def)
+  apply (simp add: wellformed_CAMKES_simps
+                   refs_valid_connection_def (* HACK because the wellformed_CAMKES_simps version backtracks excessively *))
+  done
 
-subsection {* \label{subsec:terminal}Secure Terminal *}
-text {*
+
+subsection \<open>\label{subsec:terminal}Secure Terminal\<close>
+text \<open>
   This section presents a more realistic component system as a prototype of a
   secure terminal. Two components are each given a separate region of a text
   terminal to which they can write character data. They accomplish this by using
@@ -324,36 +342,37 @@ text {*
   dedicated region. That is, (0, 0) represents the upper left corner of the
   caller's region, not the terminal as a whole. The method @{text put_char}
   returns 0 on success and non-zero if the coordinates are out of range.
-*}
+\<close>
 definition
   display :: procedure
 where
   "display \<equiv> [
-    \<lparr> m_return_type = Some (Primitive (Numerical uint32_t)), m_name = ''put_char'',
+    \<lparr> m_return_type = Some (CType ''uint32_t''), m_name = ''put_char'',
       m_parameters = [
-        \<lparr> p_type = Primitive (Numerical uint32_t),
+        \<lparr> p_type = CType ''uint32_t'',
           p_direction = InParameter,
           p_name = ''x'' \<rparr>,
-        \<lparr> p_type = Primitive (Numerical uint32_t),
+        \<lparr> p_type = CType ''uint32_t'',
           p_direction = InParameter,
           p_name = ''y'' \<rparr>,
-        \<lparr> p_type = Primitive (Numerical uint32_t),
+        \<lparr> p_type = CType ''uint32_t'',
           p_direction = InParameter,
           p_name = ''data'' \<rparr>
       ] \<rparr> ]"
 
-text {*
+text \<open>
   The trusted component that manages the terminal is passive and executes only
   in response to @{text put_char} calls from its clients. The component
   described below supports exactly two components. This is a case where a more
   flexible definition would be possible using interface arrays as described in
   Section \ref{subsubsec:iarrays}.
-*}
+\<close>
 definition
   manager :: component
 where
   "manager \<equiv> \<lparr>
     control = False,
+    hardware = False,
     requires = [],
     provides = [(''domain1'', display), (''domain2'', display)],
     dataports = [],
@@ -362,18 +381,19 @@ where
     attributes = []
   \<rparr>"
 
-text {*
+text \<open>
   The definition of the client adds an attribute so the execution can branch
   based on which instance of the component is running, but the instances could
   equally well execute exactly the same code and have their (identical) output
   written to the two distinct regions by the manager.
-*}
+\<close>
 definition
   terminal_client :: component
 where
   "terminal_client \<equiv> \<lparr>
     control = True,
-    requires = [(''d'', display)],
+    hardware = False,
+    requires = [(''d'', (InterfaceRequired, display))],
     provides = [],
     dataports = [],
     emits = [],
@@ -381,9 +401,9 @@ where
     attributes = [(''ID'', Primitive (Numerical Integer))]
   \<rparr>"
 
-text {*
+text \<open>
   Each client is connected to a single interface of the manager.
-*}
+\<close>
 definition
   channel1 :: connection
 where
@@ -409,14 +429,15 @@ where
                   (''client1'', terminal_client),
                   (''client2'', terminal_client)],
     connections = [(''channel1'', channel1),
-                   (''channel2'', channel2)]
+                   (''channel2'', channel2)],
+    group_labels = []
   \<rparr>"
 
-text {*
+text \<open>
   Each client is given a unique identifier so it can distinguish itself. As
   noted above, this is not necessarily required in all systems with multiple
   instantiations of a single component.
-*}
+\<close>
 definition
   conf :: configuration
 where
@@ -428,13 +449,17 @@ definition
 where
   "terminal \<equiv> \<lparr>
     composition = comp,
-    configuration = Some conf
+    configuration = Some conf,
+    policy_extra = {}
   \<rparr>"
 
-text {*
+text \<open>
   Wellformedness for this more complex example is easy as well.
-*}
-lemma "wellformed_assembly terminal" by eval
+\<close>
+lemma "wellformed_assembly terminal"
+  by (simp add: wellformed_CAMKES_simps refs_valid_connection_def
+                terminal_def comp_def manager_def terminal_client_def display_def
+                channel1_def channel2_def conf_def)
 
 (* An example with an unsatisfied required interface. This should be provable
  * to be not wellformed.
@@ -449,7 +474,8 @@ definition
 where
   "x \<equiv> \<lparr>
     control = undefined,
-    requires = [(undefined, undefined)], \<comment> \<open>1 required interface...\<close>
+    hardware = undefined,
+    requires = [(undefined, (InterfaceRequired, [undefined]))], \<comment> \<open>1 required interface...\<close>
     provides = undefined,
     dataports = undefined,
     emits = undefined,
@@ -462,8 +488,10 @@ definition
 where
   "broken_assembly \<equiv> \<lparr>composition = \<lparr>
     components = [(undefined, x)],
-    connections = [] \<comment> \<open>... that is unsatisfied.\<close>
-  \<rparr>, configuration = undefined\<rparr>"
+    connections = [], \<comment> \<open>... that is unsatisfied.\<close>
+    group_labels = undefined
+  \<rparr>, configuration = undefined,
+     policy_extra = undefined\<rparr>"
 
 lemma "\<not> wellformed_assembly broken_assembly"
   apply (unfold wellformed_assembly_def)
@@ -475,7 +503,7 @@ lemma "\<not> wellformed_assembly broken_assembly"
                 refs_valid_procedures_def
                 x_def ex_one_def)
   apply fastforce
- done
+  done
 (*>*)
 (*<*)end(*>*)
 
@@ -489,8 +517,10 @@ definition
 where
   "broken_assembly \<equiv> \<lparr> composition = \<lparr>
     components = [],
-    connections = undefined
-  \<rparr>, configuration = undefined \<rparr>"
+    connections = undefined,
+    group_labels = undefined
+  \<rparr>, configuration = undefined,
+     policy_extra = {} \<rparr>"
 
 lemma "\<not>wellformed_assembly broken_assembly"
   apply (unfold wellformed_assembly_def)
@@ -498,53 +528,63 @@ lemma "\<not>wellformed_assembly broken_assembly"
    apply (unfold broken_assembly_def)
    apply (frule wellformed_composition_is_nonempty)
    apply simp+
- done
+  done
 (*>*)
 (*<*)end(*>*)
 
 (*<*)
 lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
     components = [(''foo'', undefined), (''foo'', undefined)],
-    connections = undefined
-  \<rparr>, configuration = undefined \<rparr>"
+    connections = undefined,
+    group_labels = undefined
+  \<rparr>, configuration = undefined,
+     policy_extra = {} \<rparr>"
   by (simp add:wellformed_assembly_def wellformed_composition_def)
 
 lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
     components = undefined,
-    connections = [(''foo'', undefined), (''foo'', undefined)]
-  \<rparr>, configuration = undefined \<rparr>"
+    connections = [(''foo'', undefined), (''foo'', undefined)],
+    group_labels = undefined
+  \<rparr>, configuration = undefined,
+     policy_extra = {} \<rparr>"
   by (simp add:wellformed_assembly_def wellformed_composition_def)
 
 lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
     components = [(''foo'', undefined)],
-    connections = [(''foo'', undefined)]
-  \<rparr>, configuration = undefined \<rparr>"
+    connections = [(''foo'', undefined)],
+    group_labels = undefined
+  \<rparr>, configuration = undefined,
+     policy_extra = {} \<rparr>"
   by (simp add:wellformed_assembly_def wellformed_composition_def)
 
 (* Catch previous issue (\<exists>! x \<in> xs::set \<noteq> \<exists>1 x \<in> xs::list) *)
 lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
     components = [(''foo'', \<lparr>
       control = undefined,
-      requires = [(''bar'', undefined)],
+      hardware = undefined,
+      requires = [(''bar'', (InterfaceRequired, [undefined]))],
       provides = undefined,
       dataports = undefined,
       emits = undefined,
       consumes = undefined,
       attributes = undefined \<rparr>)],
-    connections = [(''bar'', \<lparr>
-      conn_type = undefined,
-      conn_from = [(''foo'', ''bar'')],
-      conn_to = undefined \<rparr>),
-    (''baz'', \<lparr>
-      conn_type = undefined,
-      conn_from = [(''foo'', ''bar'')],
-      conn_to = undefined \<rparr>)]
-  \<rparr>, configuration = undefined \<rparr>"
-  by (simp add:wellformed_assembly_def wellformed_composition_def refs_valid_components_def
-      refs_valid_composition_def refs_valid_procedures_def ex_one_def)
+    connections = [
+      (''dup1'', \<lparr>
+        conn_type = undefined,
+        conn_from = [(''foo'', ''bar'')],
+        conn_to = undefined \<rparr>),
+      (''dup2'', \<lparr>
+        conn_type = undefined,
+        conn_from = [(''foo'', ''bar'')],
+        conn_to = undefined \<rparr>)],
+    group_labels = undefined
+  \<rparr>, configuration = undefined,
+     policy_extra = {} \<rparr>"
+  by (simp add: wellformed_assembly_def wellformed_composition_def refs_valid_components_def
+                refs_valid_composition_def refs_valid_procedures_def
+                ex_one_def
+           split: prod.splits)
 
-lemma "\<not>wellformed_procedure []"
-  by (simp add:wellformed_procedure_def)
 (*>*)
 
 (*<*)end(*>*)

@@ -63,10 +63,10 @@ assumes switchFpuOwner_ccorres:
               need it to be that way *)
 assumes getActiveIRQ_ccorres:
 "\<And>in_kernel.
-   ccorres (\<lambda>(a::8 word option) c::8 word.
-     case a of None \<Rightarrow> c = (0xFF::8 word)
-     | Some (x::8 word) \<Rightarrow> c = ucast x \<and> c \<noteq> (0xFF::8 word))
-     ret__unsigned_char_'
+   ccorres (\<lambda>(a::8 word option) c::64 word.
+     case a of None \<Rightarrow> c = (0xFF::64 word)
+     | Some (x::8 word) \<Rightarrow> c = ucast x \<and> c \<noteq> (0xFF::64 word))
+     ret__unsigned_long_'
      \<top> UNIV hs
  (doMachineOp (getActiveIRQ in_kernel)) (Call getActiveIRQ_'proc)"
 

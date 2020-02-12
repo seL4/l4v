@@ -93,7 +93,7 @@ datatype cdl_cap =
   | UntypedCap bool cdl_object_set cdl_object_set
   | EndpointCap cdl_object_id cdl_badge "cdl_right set"
   | NotificationCap cdl_object_id cdl_badge "cdl_right set"
-  | ReplyCap cdl_object_id (* The id of the tcb of the target thread *)
+  | ReplyCap cdl_object_id "cdl_right set" (* The id of the tcb of the target thread *)
   | MasterReplyCap cdl_object_id
   | CNodeCap cdl_object_id cdl_cap_guard cdl_cap_guard_size cdl_size_bits
   | TcbCap cdl_object_id
@@ -101,17 +101,11 @@ datatype cdl_cap =
 
   (*
    * Capabilities representing threads waiting in endpoint queues.
-   *
-   * The PendingSyncSendCap has booleans indicating if the pending
-   * send is a call, if it has grant rights, and if the send is a
-   * fault IPC respectively.
    *)
-  | PendingSyncSendCap cdl_object_id cdl_badge bool bool bool
-
-  (* The PendingSyncRecvCap has booleans indicating if
-     it is waiting for a reply or not
-  *)
-  | PendingSyncRecvCap cdl_object_id bool
+  (* thread, badge, is call, can grant, can grant reply, is fault ipc *)
+  | PendingSyncSendCap cdl_object_id cdl_badge bool bool bool bool
+  (* thread, is waiting for reply, can grant *)
+  | PendingSyncRecvCap cdl_object_id bool bool
   | PendingNtfnRecvCap cdl_object_id
 
   (* Indicate that the thread is ready for Reschedule *)
@@ -328,13 +322,13 @@ where
   | "cap_objects (TcbCap x) = {x}"
   | "cap_objects (CNodeCap x _ _ _) = {x}"
   | "cap_objects (MasterReplyCap x) = {x}"
-  | "cap_objects (ReplyCap x) = {x}"
+  | "cap_objects (ReplyCap x _) = {x}"
   | "cap_objects (NotificationCap x _ _) = {x}"
   | "cap_objects (EndpointCap x _ _) = {x}"
   | "cap_objects (UntypedCap _ x a) = x"
   | "cap_objects (ZombieCap x) = {x}"
-  | "cap_objects (PendingSyncSendCap x _ _ _ _) = {x}"
-  | "cap_objects (PendingSyncRecvCap x _ ) = {x}"
+  | "cap_objects (PendingSyncSendCap x _ _ _ _ _) = {x}"
+  | "cap_objects (PendingSyncRecvCap x _ _) = {x}"
   | "cap_objects (PendingNtfnRecvCap x) = {x}"
   | "cap_objects (BoundNotificationCap x) = {x}"
 
@@ -360,7 +354,7 @@ where
      then (THE c. c \<in> cap_objects cap)
      else undefined"
 
-lemma cap_object_simps:
+lemma cap_object_simps[simp]:
   "cap_object (IOPageTableCap x) = x"
   "cap_object (IOSpaceCap x) = x"
   "cap_object (IOPortsCap x a) = x"
@@ -371,12 +365,12 @@ lemma cap_object_simps:
   "cap_object (TcbCap x) = x"
   "cap_object (CNodeCap x k l sz) = x"
   "cap_object (MasterReplyCap x) = x"
-  "cap_object (ReplyCap x) = x"
+  "cap_object (ReplyCap x q) = x"
   "cap_object (NotificationCap x m n) = x"
   "cap_object (EndpointCap x p q) = x"
   "cap_object (ZombieCap x) = x"
-  "cap_object (PendingSyncSendCap x s t u v) = x"
-  "cap_object (PendingSyncRecvCap x t) = x"
+  "cap_object (PendingSyncSendCap x s t u v w) = x"
+  "cap_object (PendingSyncRecvCap x t u) = x"
   "cap_object (PendingNtfnRecvCap x) = x"
   "cap_object (BoundNotificationCap x) = x"
   by (simp_all add:cap_object_def Nitpick.The_psimp cap_has_object_def)
@@ -394,6 +388,9 @@ where
     | EndpointCap f1 _ f3      \<Rightarrow> EndpointCap f1 x f3
     | _ \<Rightarrow> c"
 
+definition all_cdl_rights :: "cdl_right set" where
+  "all_cdl_rights = {Read, Write, Grant, GrantReply}"
+
 definition
   cap_rights :: "cdl_cap \<Rightarrow> cdl_right set"
 where
@@ -401,15 +398,17 @@ where
       FrameCap _ _ x _ _ _ \<Rightarrow> x
     | NotificationCap _ _ x \<Rightarrow> x
     | EndpointCap _ _ x \<Rightarrow> x
-    | _ \<Rightarrow> UNIV"
+    | ReplyCap _ x \<Rightarrow> x
+    | _ \<Rightarrow> all_cdl_rights"
 
 definition
   update_cap_rights :: "cdl_right set \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
 where
   "update_cap_rights r c \<equiv> case c of
       FrameCap dev f1 _ f2 f3 f4 \<Rightarrow> FrameCap dev f1 (validate_vm_rights r) f2 f3 f4
-    | NotificationCap f1 f2 _ \<Rightarrow> NotificationCap f1 f2 (r - {Grant})
+    | NotificationCap f1 f2 _ \<Rightarrow> NotificationCap f1 f2 (r - {Grant, GrantReply})
     | EndpointCap f1 f2 _ \<Rightarrow> EndpointCap f1 f2 r
+    | ReplyCap f1 _ \<Rightarrow> ReplyCap f1 (r - {Read, GrantReply} \<union> {Write})
     | _ \<Rightarrow> c"
 
 definition
@@ -581,9 +580,9 @@ lemma update_cap_guard_size [simp]:
 
 definition is_pending_cap :: "cdl_cap \<Rightarrow> bool"
 where "is_pending_cap c \<equiv> case c of
-  PendingSyncRecvCap _ _ \<Rightarrow> True
+  PendingSyncRecvCap _ _ _ \<Rightarrow> True
   | PendingNtfnRecvCap _ \<Rightarrow> True
-  | PendingSyncSendCap _ _ _ _ _ \<Rightarrow> True
+  | PendingSyncSendCap _ _ _ _ _ _ \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 

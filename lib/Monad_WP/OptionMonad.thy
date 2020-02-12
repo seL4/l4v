@@ -22,11 +22,15 @@ begin
 
 type_synonym ('s,'a) lookup = "'s \<Rightarrow> 'a option"
 
-text {* Similar to map_option but the second function returns option as well *}
+text \<open>Similar to map_option but the second function returns option as well\<close>
 definition
   opt_map :: "('s,'a) lookup \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow> ('s,'b) lookup" (infixl "|>" 54)
 where
   "f |> g \<equiv> \<lambda>s. case f s of None \<Rightarrow> None | Some x \<Rightarrow> g x"
+
+abbreviation opt_map_Some :: "('s \<rightharpoonup> 'a) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> 's \<rightharpoonup> 'b" (infixl "||>" 54) where
+  "f ||> g \<equiv> f |> (Some \<circ> g)"
+lemmas opt_map_Some_def = opt_map_def
 
 lemma opt_map_cong [fundef_cong]:
   "\<lbrakk> f = f'; \<And>v s. f s = Some v \<Longrightarrow> g v = g' v\<rbrakk> \<Longrightarrow> f |> g = f' |> g'"
@@ -40,6 +44,21 @@ lemma opt_mapE:
   "\<lbrakk> (f |> g) s = Some v; \<And>v'. \<lbrakk>f s = Some v'; g v' = Some v \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (auto simp: in_opt_map_eq)
 
+lemma opt_map_upd_None:
+  "f(x := None) |> g = (f |> g)(x := None)"
+  by (auto simp: opt_map_def)
+
+lemma opt_map_upd_Some:
+  "f(x \<mapsto> v) |> g = (f |> g)(x := g v)"
+  by (auto simp: opt_map_def)
+
+lemmas opt_map_upd[simp] = opt_map_upd_None opt_map_upd_Some
+
+declare None_upd_eq[simp]
+
+(* None_upd_eq[simp] so that this pattern is by simp. Hopefully not too much slowdown. *)
+lemma "\<lbrakk> (f |> g) x = None; g v = None \<rbrakk> \<Longrightarrow> f(x \<mapsto> v) |> g = f |> g"
+  by simp
 
 definition
   obind :: "('s,'a) lookup \<Rightarrow> ('a \<Rightarrow> ('s,'b) lookup) \<Rightarrow> ('s,'b) lookup" (infixl "|>>" 53)
@@ -63,10 +82,10 @@ definition oapply :: "'a \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow
   where
   "oapply x \<equiv> \<lambda>s. s x"
 
-text {*
+text \<open>
   If the result can be an exception.
   Corresponding bindE would be analogous to lifting in NonDetMonad.
-*}
+\<close>
 
 definition
   "oreturnOk x = K (Some (Inr x))"
@@ -83,7 +102,7 @@ definition
 definition
   "oskip \<equiv> oreturn ()"
 
-text {* Monad laws *}
+text \<open>Monad laws\<close>
 lemma oreturn_bind [simp]: "(oreturn x |>> f) = f x"
   by (auto simp add: oreturn_def obind_def K_def)
 
@@ -95,7 +114,7 @@ lemma obind_assoc:
   by (auto simp add: oreturn_def obind_def K_def split: option.splits)
 
 
-text {* Binding fail *}
+text \<open>Binding fail\<close>
 
 lemma obind_fail [simp]:
   "f |>> (\<lambda>_. ofail) = ofail"
@@ -107,7 +126,7 @@ lemma ofail_bind [simp]:
 
 
 
-text {* Function package setup *}
+text \<open>Function package setup\<close>
 lemma opt_bind_cong [fundef_cong]:
   "\<lbrakk> f = f'; \<And>v s. f' s = Some v \<Longrightarrow> g v s = g' v s \<rbrakk> \<Longrightarrow> f |>> g = f' |>> g'"
   by (rule ext) (simp add: obind_def split: option.splits)
@@ -146,7 +165,7 @@ lemma ocondition_cong [fundef_cong]:
   by (auto simp: ocondition_def)
 
 
-text {* Decomposition *}
+text \<open>Decomposition\<close>
 
 lemma ocondition_K_true [simp]:
   "ocondition (\<lambda>_. True) T F = T"
@@ -188,6 +207,14 @@ lemma in_oassert_eq [simp]:
   "(oassert P s = Some v) = P"
   by (simp add: oassert_def)
 
+lemma oassert_True [simp]:
+  "oassert True = oreturn ()"
+  by (simp add: oassert_def)
+
+lemma oassert_False [simp]:
+  "oassert False = ofail"
+  by (simp add: oassert_def)
+
 lemma oassertE:
   "\<lbrakk> oassert P s = Some v; P \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   by simp
@@ -195,6 +222,18 @@ lemma oassertE:
 lemma in_obind_eq:
   "((f |>> g) s = Some v) = (\<exists>v'. f s = Some v' \<and> g v' s = Some v)"
   by (simp add: obind_def split: option.splits)
+
+lemma obind_eqI:
+  "\<lbrakk> f s = f s' ; \<And>x. f s = Some x \<Longrightarrow> g x s = g' x s' \<rbrakk> \<Longrightarrow> obind f g s = obind f g' s'"
+  by (simp add: obind_def split: option.splits)
+
+(* full form of obind_eqI; the second equality makes more sense flipped here, as we end up
+   with "f s = Some x ; f s' = f s" preventing "Some x = ..." *)
+lemma obind_eqI_full:
+  "\<lbrakk> f s = f s' ; \<And>x. \<lbrakk> f s = Some x; f s' = f s \<rbrakk> \<Longrightarrow> g x s = g' x s' \<rbrakk>
+   \<Longrightarrow> obind f g s = obind f g' s'"
+  by (drule sym[where s="f s"]) (* prevent looping *)
+     (clarsimp simp: obind_def split: option.splits)
 
 lemma obindE:
   "\<lbrakk> (f |>> g) s = Some v;
@@ -220,12 +259,57 @@ lemma oreturnOkE:
 lemmas omonadE [elim!] =
   opt_mapE obindE oreturnE ofailE othrowE oreturnOkE oassertE
 
-section {* "While" loops over option monad. *}
+lemma in_opt_map_Some_eq:
+  "((f ||> g) x = Some y) = (\<exists>v. f x = Some v \<and> g v = y)"
+  by (simp add: in_opt_map_eq)
 
-text {*
+lemma in_opt_map_None_eq[simp]:
+  "((f ||> g) x = None) = (f x = None)"
+  by (simp add: opt_map_def split: option.splits)
+
+lemma oreturn_comp[simp]:
+  "oreturn x \<circ> f = oreturn x"
+  by (simp add: oreturn_def K_def o_def)
+
+lemma ofail_comp[simp]:
+  "ofail \<circ> f = ofail"
+  by (auto simp: ofail_def K_def)
+
+lemma oassert_comp[simp]:
+  "oassert P \<circ> f = oassert P"
+  by (simp add: oassert_def)
+
+lemma fail_apply[simp]:
+  "ofail s = None"
+  by (simp add: ofail_def K_def)
+
+lemma oassert_apply[simp]:
+  "oassert P s = (if P then Some () else None)"
+  by (simp add: oassert_def)
+
+lemma oreturn_apply[simp]:
+  "oreturn x s = Some x"
+  by simp
+
+lemma oapply_apply[simp]:
+  "oapply x s = s x"
+  by (simp add: oapply_def)
+
+lemma obind_comp_dist:
+  "obind f g o h = obind (f o h) (\<lambda>x. g x o h)"
+  by (auto simp: obind_def split: option.splits)
+
+lemma if_comp_dist:
+  "(if P then f else g) o h = (if P then f o h else g o h)"
+  by auto
+
+
+section \<open>"While" loops over option monad.\<close>
+
+text \<open>
   This is an inductive definition of a while loop over the plain option monad
   (without passing through a state)
-*}
+\<close>
 
 inductive_set
   option_while' :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'a option) \<Rightarrow> 'a option rel"
@@ -273,7 +357,7 @@ lemma option_while_rule:
   shows "I s' \<and> \<not> C s'"
 proof -
   { fix ss ss' assume "(ss, ss') \<in> option_while' C B" "ss = Some s" "ss' = Some s'"
-    then have ?thesis using `I s`
+    then have ?thesis using \<open>I s\<close>
       by (induct arbitrary: s) (auto intro: istep) }
   then show ?thesis using assms(1)
     by (auto simp: option_while_def option_while'_THE split: if_split_asm)
@@ -314,19 +398,19 @@ proof -
   define ss where "ss \<equiv> Some s"
   obtain ss1' where "(Some s, ss1') \<in> option_while' C B"
     using assms(3,2,4,5) by (rule option_while'_term)
-  then have *: "(ss, ss') \<in> option_while' C B" using `option_while C B s = ss'`
+  then have *: "(ss, ss') \<in> option_while' C B" using \<open>option_while C B s = ss'\<close>
     by (auto simp: option_while_simps ss_def)
   show ?thesis
   proof (cases ss')
-    case (Some s') with * ss_def show ?thesis using `I _`
+    case (Some s') with * ss_def show ?thesis using \<open>I _\<close>
       by (induct arbitrary:s) (auto intro: step)
   next
-    case None with * ss_def show ?thesis using `I _`
+    case None with * ss_def show ?thesis using \<open>I _\<close>
       by (induct arbitrary:s) (auto intro: step final)
   qed
 qed
 
-section {* Lift @{term option_while} to the @{typ "('a,'s) lookup"} monad  *}
+section \<open>Lift @{term option_while} to the @{typ "('a,'s) lookup"} monad\<close>
 
 definition
   owhile :: "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('s,'a) lookup) \<Rightarrow> 'a \<Rightarrow> ('s,'a) lookup"
@@ -338,7 +422,7 @@ lemma owhile_unroll:
   by (auto simp: ocondition_def obind_def oreturn_def owhile_def
            option_while_simps K_def split: option.split)
 
-text {* rule for terminating loops *}
+text \<open>rule for terminating loops\<close>
 
 lemma owhile_rule:
   assumes "I r s"
@@ -352,7 +436,7 @@ proof -
   let ?rs' = "owhile C B r s"
   have "(case ?rs' of Some r \<Rightarrow> I r s | _ \<Rightarrow> Q None)
       \<and> (case ?rs' of Some r' \<Rightarrow> \<not> C r' s | _ \<Rightarrow> True)"
-    by (rule option_while_rule'[where B="\<lambda>r. B r s" and s=r, OF _ `wf _`])
+    by (rule option_while_rule'[where B="\<lambda>r. B r s" and s=r, OF _ \<open>wf _\<close>])
        (auto simp: owhile_def intro: assms)
   then show ?thesis by (auto intro: final split: option.split_asm)
 qed

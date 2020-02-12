@@ -12,10 +12,10 @@ theory CommonOps
 
 imports "CLib.CTranslationNICTA"
   "GlobalsSwap"
-
+  "$L4V_ARCH/ArchSetup"
 begin
 
-text {* Additional constants needed to make conversion to and from the graph lang easy *}
+text \<open>Additional constants needed to make conversion to and from the graph lang easy\<close>
 
 definition
   bvshl :: "'a :: len0 word \<Rightarrow> 'a word \<Rightarrow> 'a word"
@@ -59,18 +59,34 @@ definition
   "mem_upd mem addr v = heap_update (Ptr addr) v mem"
 
 definition
- "store_word32 (addr :: addr) (w :: word32)
+  "store_word8 (addr :: addr) (w :: word8) m = m (addr := w)"
+
+definition
+  "load_word8 (addr :: addr) m = (m addr :: word8)"
+
+definition
+  "store_word32 (addr :: addr) (w :: word32)
     = heap_update_list addr (rev (word_rsplit w))"
 
 definition
- "load_word32 (addr :: addr) memory
+  "load_word32 (addr :: addr) memory
     = (word_rcat (rev (heap_list memory 4 addr)) :: word32)"
 
 definition
- "store_word8 (addr :: word32) (w :: word8) m = m (addr := w)"
+  "store_word64 (addr :: addr) (w :: word64)
+    = heap_update_list addr (rev (word_rsplit w))"
 
 definition
- "load_word8 (addr :: word32) m = (m addr :: word8)"
+  "load_word64 (addr :: addr) memory
+    = (word_rcat (rev (heap_list memory 8 addr)) :: word64)"
+
+abbreviation (input)
+  "store_machine_word :: machine_word mem_upd
+    \<equiv> arch_store_machine_word store_word32 store_word64"
+
+abbreviation (input)
+  "load_machine_word :: machine_word mem_read
+    \<equiv> arch_load_machine_word load_word32 load_word64"
 
 definition
   word_add_with_carry :: "('a :: len) word \<Rightarrow> 'a word \<Rightarrow> bool
@@ -82,20 +98,29 @@ where
       unat (x + y + cinw) \<noteq> unat x + unat y + unat cinw,
       (msb x \<noteq> msb y) \<and> (msb x \<noteq> msb (x + y + cinw)))"
 
+\<comment> \<open>
+  `all_htd_updates` is a utility term that we use to stash HTD updates when
+  going into and out of GraphLang.
+\<close>
 definition
-  all_htd_updates :: "('a :: c_type) itself \<Rightarrow> word32 \<Rightarrow> addr \<Rightarrow> word32
+  all_htd_updates :: "('a :: c_type) itself \<Rightarrow> machine_word \<Rightarrow> addr \<Rightarrow> machine_word
         \<Rightarrow> heap_typ_desc \<Rightarrow> heap_typ_desc"
 where
-  "all_htd_updates (tp :: ('a :: c_type) itself) x y z
-    = (if x = 0
-        then typ_clear_region y (unat z)
-        else if x = 1 then ptr_retyps (unat z) (Ptr y :: 'a ptr)
-        else if x = 2 then typ_region_bytes y (unat z)
-        else if x = 3 then ptr_retyps (2 ^ unat z) (Ptr y :: 'a ptr)
-        else if x = 4 then ptr_arr_retyps (unat z) (Ptr y :: 'a ptr)
-        else ptr_arr_retyps (2 ^ unat z) (Ptr y :: 'a ptr))"
+  "all_htd_updates (tp :: ('a :: c_type) itself) mode p sz
+    = (if mode = 0
+        then typ_clear_region p (unat sz)
+        else if mode = 1 then ptr_retyps (unat sz) (Ptr p:: 'a ptr)
+        else if mode = 2 then typ_region_bytes p (unat sz)
+        else if mode = 3 then ptr_retyps (2 ^ unat sz) (Ptr p :: 'a ptr)
+        else if mode = 4 then ptr_arr_retyps (unat sz) (Ptr p :: 'a ptr)
+        else ptr_arr_retyps (2 ^ unat sz) (Ptr p :: 'a ptr))"
 
-type_synonym ghost_assertions = "word64 \<Rightarrow> addr"
+\<comment> \<open>
+  This type has a weird domain @{typ "50 word"} to help you figure out the
+  source of your problem when asmrefine breaks - if you see `50 word`, it's
+  probably a ghost_assertions problem.
+\<close>
+type_synonym ghost_assertions = "50 word \<Rightarrow> addr"
 
 definition
   ghost_assertion_data_get :: "int \<Rightarrow> ('a \<Rightarrow> ghost_assertions) \<Rightarrow> 'a \<Rightarrow> addr"

@@ -104,12 +104,12 @@ definition distPath ::
   "lifted_globals \<Rightarrow> node_C ptr \<Rightarrow> node_C ptr list \<Rightarrow> node_C ptr \<Rightarrow> bool"
   where "distPath s x as y \<longleftrightarrow> Path s x as y \<and> distinct as"
 
-text{* The term @{term "distPath s x as y"} expresses the fact that a
+text\<open>The term @{term "distPath s x as y"} expresses the fact that a
 non-repeating path @{term as} connects location @{term x} to location
 @{term y} over the heap @{term s}. In the case where @{text "x = y"},
 and there is a cycle from @{term x} to itself, @{term as} can
 be both @{term "[]"} and the non-repeating list of nodes in the
-cycle. *}
+cycle.\<close>
 
 lemma neq_dP: "p \<noteq> q \<Longrightarrow> Path s p Ps q \<Longrightarrow> distinct Ps \<Longrightarrow>
  \<exists> a Qs. p = a & Ps = a#Qs & a \<notin> set Qs"
@@ -236,11 +236,11 @@ lemma islist_upd[simp]:
 subsection "List reversal"
 
 subsubsection "Program representation"
-text {* This is AutoCorres's representation of revappend. *}
+text \<open>This is AutoCorres's representation of revappend.\<close>
 thm revappend'_def
 
-text {* The heap operations are a bit too low level,
-        so let's lift them using our heap accessors. *}
+text \<open>The heap operations are a bit too low level,
+        so let's lift them using our heap accessors.\<close>
 schematic_goal revappend'_abstract: "revappend' p q = ?new_definition"
   apply (subst revappend'_def)
   unfolding node_next_def[symmetric]
@@ -250,10 +250,10 @@ schematic_goal revappend'_abstract: "revappend' p q = ?new_definition"
   done
 
 
-text {* node_exists is a prerequisite for most of our abstraction rules.
+text \<open>node_exists is a prerequisite for most of our abstraction rules.
         But we cannot extract this prerequisite from the program text because it is
         implied by our Hoare preconditions (below) which are not a part of the program
-        text. Here we arrange for Isabelle's tactics to infer it when needed. *}
+        text. Here we arrange for Isabelle's tactics to infer it when needed.\<close>
 
 (* FIXME: figure out why we need to take this out of the simpset for
           the loop termination subgoals. *)
@@ -271,17 +271,17 @@ lemma islist_node_exists [simp]: "\<lbrakk> p \<noteq> NULL; islist s p \<rbrakk
 
 
 subsubsection "Verification with relational abstraction"
-text {* Almost automatic proof using the relational abstraction.
-        (The termination proof uses functional abstraction.) *}
+text \<open>Almost automatic proof using the relational abstraction.
+        (The termination proof uses functional abstraction.)\<close>
 
 lemma
 "\<lbrace> \<lambda>s. List s p Ps \<and> List s q Qs \<and> set Ps \<inter> set Qs = {} \<rbrace>
    revappend' p q
  \<lbrace> \<lambda>r s. List s r (rev Ps @ Qs) \<rbrace>!"
-  txt {* We verify the abstracted version of the program. *}
+  txt \<open>We verify the abstracted version of the program.\<close>
   unfolding revappend'_abstract
 
-  txt {* Add the loop invariant and measure. *}
+  txt \<open>Add the loop invariant and measure.\<close>
   apply (subst whileLoop_add_inv
     [where I = "\<lambda>(dest', list') s.
                  \<exists>ps qs. List s list' ps \<and> List s dest' qs \<and> set ps \<inter> set qs = {} \<and>
@@ -289,21 +289,21 @@ lemma
        and M = " (\<lambda>((_, list'), s). length (list s list'))"])
   apply (wp validNF_whileLoop_inv_measure_twosteps)
 
-  txt {* Loop invariant. *}
+  txt \<open>Loop invariant.\<close>
     apply (fastforce intro: notin_List_update[THEN iffD2])
 
-  txt {* Loop measure. *}
+  txt \<open>Loop measure.\<close>
     apply wp
     apply (fastforce simp: List_conv_islist_list simp del: node_exists_imp_valid)
 
-  txt {* Loop entrance and exit. *}
+  txt \<open>Loop entrance and exit.\<close>
    apply fastforce+
   done
 
 
 
 subsubsection "Verification with functional abstraction"
-text {* Fully automatic proof using the functional abstraction. *}
+text \<open>Fully automatic proof using the functional abstraction.\<close>
 lemma
 "\<lbrace> \<lambda>s. islist s p \<and> islist s q \<and> Ps = list s p \<and> Qs = list s q \<and> set Ps \<inter> set Qs = {} \<rbrace>
    revappend' p q
@@ -317,18 +317,18 @@ lemma
        and M = "(\<lambda>((q, p), s). length (list s p))"])
   apply (wp validNF_whileLoop_inv_measure_twosteps)
 
-  txt {* Loop invariant. *}
+  txt \<open>Loop invariant.\<close>
      apply clarsimp
 
-  txt {* Loop measure. *}
+  txt \<open>Loop measure.\<close>
     apply wp
     apply (clarsimp simp del: node_exists_imp_valid)
 
-  txt {* Loop entrance and exit. *}
+  txt \<open>Loop entrance and exit.\<close>
    apply clarsimp+
   done
 
-text {* Provide the node_exists condition manually. *}
+text \<open>Provide the node_exists condition manually.\<close>
 lemma
 "\<lbrace> \<lambda>s. islist s p \<and> islist s q \<and> Ps = list s p \<and> Qs = list s q \<and> set Ps \<inter> set Qs = {} \<rbrace>
    revappend' p q

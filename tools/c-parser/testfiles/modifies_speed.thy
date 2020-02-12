@@ -12,13 +12,13 @@ theory modifies_speed
 imports "CParser.CTranslation"
 begin
 
-text {* Speed test for modifies proofs. *}
+text \<open>Speed test for modifies proofs.\<close>
 
-ML {*
+ML \<open>
 
 fun filename_relative thy name =
     Path.append (Resources.master_directory thy) (Path.explode name)
-    |> Path.implode
+    |> File.standard_path
 
 fun write_speed_test_file n_globs n_funcs = let
     val f = filename_relative @{theory} "modifies_speed.c"
@@ -44,11 +44,11 @@ fun write_speed_test_file n_globs n_funcs = let
     List.app write_func (1 upto n_funcs);
     TextIO.closeOut f
   end
-*}
+\<close>
 
-ML {*
+ML \<open>
 write_speed_test_file 10 40
-*}
+\<close>
 
 declare [[sorry_modifies_proofs = false]]
 

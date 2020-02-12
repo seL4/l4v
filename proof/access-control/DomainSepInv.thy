@@ -16,7 +16,7 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-text {*
+text \<open>
   We define and prove an invariant that is necessary to achieve domain
   separation on seL4. In its strongest form, we require that all IRQs, other than
   those for the timer, are inactive, and that no IRQControl or
@@ -24,11 +24,11 @@ text {*
   active in the future).
 
   It always requires that there are no domain caps.
-*}
+\<close>
 
-text {*
+text \<open>
   When @{term irqs} is @{term False} we require that non-timer IRQs are off permanently.
-*}
+\<close>
 definition domain_sep_inv where
   "domain_sep_inv irqs st s \<equiv>
     (\<forall> slot. \<not> cte_wp_at ((=) DomainCap) slot s) \<and>
@@ -112,9 +112,7 @@ lemma set_object_wp:
   "\<lbrace> \<lambda> s. P (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>) \<rbrace>
    set_object ptr obj
    \<lbrace> \<lambda>_. P \<rbrace>"
-  unfolding set_object_def
-  apply (wp)
-  done
+  by (wpsimp wp: set_object_wp)
 
 (* FIXME: following 3 lemmas clagged from FinalCaps *)
 lemma set_cap_neg_cte_wp_at_other_helper':
@@ -328,7 +326,7 @@ lemma empty_slot_domain_sep_inv:
 lemma set_simple_ko_neg_cte_wp_at[wp]:
   "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace> set_simple_ko f a b \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
   apply(simp add: set_simple_ko_def)
-  apply(wp set_object_wp get_object_wp
+  apply(wp set_object_wp_strong get_object_wp
      | simp add: partial_inv_def a_type_def split: kernel_object.splits)+
   apply(case_tac "a = fst slot")
    apply(clarsimp split: kernel_object.splits)
@@ -465,6 +463,11 @@ lemma set_asid_pool_neg_cte_wp_at[wp]:
 crunch domain_sep_inv[wp]: set_asid_pool "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv)
 
+lemma as_user_domain_sep_inv[wp]:
+  "\<lbrace>\<lambda>s. domain_sep_inv irqs st s\<rbrace> as_user a b \<lbrace>\<lambda>_ s. domain_sep_inv irqs st s\<rbrace>"
+  by (wpsimp simp: domain_sep_inv_def
+               wp: as_user_cte_wp_at as_user_interrupt_states hoare_vcg_conj_lift
+                   hoare_vcg_all_lift hoare_vcg_disj_lift)
 
 crunch domain_sep_inv[wp]: finalise_cap "domain_sep_inv irqs st"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps ignore: set_object tcb_sched_action)
@@ -527,7 +530,7 @@ lemma rec_del_domain_sep_inv':
                    finalise_cap_returns_NullCap
                    drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
                |simp add: without_preemption_def split del: if_split
-               |wp_once hoare_drop_imps)+
+               |wp (once) hoare_drop_imps)+
     apply(blast dest: cte_wp_at_domain_sep_inv_cap)
     done
   next
@@ -542,7 +545,7 @@ lemma rec_del_domain_sep_inv':
   case (4 ptr bits n slot s) show ?case
     apply(simp add: rec_del.simps)
     apply (wp drop_spec_validE[OF returnOk_wp] drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
-              drop_spec_validE[OF assertE_wp] get_cap_wp | simp add: without_preemption_def)+
+              drop_spec_validE[OF assertE_wp] get_cap_wp | simp)+
     apply (rule spec_strengthen_postE[OF "4.hyps"])
      apply(simp add: returnOk_def return_def)
     apply(clarsimp simp: domain_sep_inv_cap_def)
@@ -581,7 +584,7 @@ lemma cap_revoke_domain_sep_inv':
                     drop_spec_validE[OF valid_validE[OF cap_delete_domain_sep_inv]]
                     drop_spec_validE[OF assertE_wp] drop_spec_validE[OF returnOk_wp]
                     drop_spec_validE[OF liftE_wp] select_wp
-                | simp | wp_once hoare_drop_imps)+
+                | simp | wp (once) hoare_drop_imps)+
   done
   qed
 
@@ -598,8 +601,8 @@ lemma cap_move_cte_wp_at_other:
   done
 
 lemma cte_wp_at_weak_derived_ReplyCap:
-  "cte_wp_at ((=) (ReplyCap x False)) slot s
-       \<Longrightarrow> cte_wp_at (weak_derived (ReplyCap x False)) slot s"
+  "cte_wp_at ((=) (ReplyCap x False R)) slot s
+       \<Longrightarrow> cte_wp_at (weak_derived (ReplyCap x False R)) slot s"
   apply(erule cte_wp_atE)
    apply(rule cte_wp_at_cteI)
       apply assumption
@@ -642,7 +645,7 @@ lemma cancel_badged_sends_domain_sep_inv[wp]:
    \<lbrace>\<lambda>rv. domain_sep_inv irqs st\<rbrace>"
   apply(simp add: cancel_badged_sends_def)
   apply(rule hoare_pre)
-   apply(wp dxo_wp_weak mapM_wp | wpc | simp add: filterM_mapM | rule subset_refl | wp_once hoare_drop_imps)+
+   apply(wp dxo_wp_weak mapM_wp | wpc | simp add: filterM_mapM | rule subset_refl | wp (once) hoare_drop_imps)+
    done
 
 crunch domain_sep_inv[wp]: finalise_slot "domain_sep_inv irqs st"
@@ -654,8 +657,10 @@ lemma invoke_cnode_domain_sep_inv:
   unfolding invoke_cnode_def
   apply(case_tac ci)
         apply(wp cap_insert_domain_sep_inv cap_move_domain_sep_inv | simp split del: if_split)+
-    apply(rule hoare_pre)
-     apply(wp cap_move_domain_sep_inv cap_move_cte_wp_at_other get_cap_wp | simp | blast dest: cte_wp_at_weak_derived_domain_sep_inv_cap | wpc)+
+     apply(rule hoare_pre)
+      apply (wpsimp wp: cap_move_domain_sep_inv cap_move_cte_wp_at_other get_cap_wp,
+            blast dest: cte_wp_at_weak_derived_domain_sep_inv_cap)+
+   apply (wpsimp wp: cap_move_domain_sep_inv get_cap_wp)
    apply(fastforce dest:  cte_wp_at_weak_derived_ReplyCap)
   apply(wp | simp | wpc | rule hoare_pre)+
   done
@@ -931,14 +936,14 @@ lemma invoke_control_domain_sep_inv:
 crunch domain_sep_inv[wp]: receive_signal "domain_sep_inv irqs st"
 
 lemma domain_sep_inv_cap_ReplyCap[simp]:
-  "domain_sep_inv_cap irqs (ReplyCap param_a param_b)"
+  "domain_sep_inv_cap irqs (ReplyCap param_a param_b param_c)"
   by(simp add: domain_sep_inv_cap_def)
 
 lemma setup_caller_cap_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>
-   setup_caller_cap a b
+   setup_caller_cap a b c
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply(simp add: setup_caller_cap_def)
+  apply(simp add: setup_caller_cap_def split del:if_split)
   apply(wp cap_insert_domain_sep_inv' | simp)+
   done
 
@@ -987,7 +992,7 @@ lemma do_ipc_transfer_domain_sep_inv:
    do_ipc_transfer sender ep badge grant receiver
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   unfolding do_ipc_transfer_def
-  apply (wp do_normal_transfer_domain_sep_inv hoare_vcg_all_lift | wpc | wp_once hoare_drop_imps)+
+  apply (wp do_normal_transfer_domain_sep_inv hoare_vcg_all_lift | wpc | wp (once) hoare_drop_imps)+
   apply clarsimp
   done
 
@@ -1005,17 +1010,17 @@ lemma valid_ep_recv_dequeue':
 lemma send_ipc_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_objs and valid_mdb and
     sym_refs \<circ> state_refs_of\<rbrace>
-   send_ipc block call badge can_grant thread epptr
+   send_ipc block call badge can_grant can_grant_reply thread epptr
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   unfolding send_ipc_def
-  apply (wp setup_caller_cap_domain_sep_inv | wpc | simp)+
+  apply (wp setup_caller_cap_domain_sep_inv hoare_vcg_if_lift | wpc | simp split del:if_split)+
         apply(rule_tac Q="\<lambda> r s. domain_sep_inv irqs st s" in hoare_strengthen_post)
          apply(wp do_ipc_transfer_domain_sep_inv dxo_wp_weak | wpc | simp)+
-    apply (wp_once hoare_drop_imps)
+    apply (wp (once) hoare_drop_imps)
     apply (wp get_simple_ko_wp)+
   apply clarsimp
   apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def ep_q_refs_of_def
-                         valid_simple_obj_def a_type_def ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong
+                         a_type_def ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong
                    elim: ep_queued_st_tcb_at)
   done
 
@@ -1045,7 +1050,7 @@ lemma receive_ipc_base_domain_sep_inv:
           apply(rule_tac Q="\<lambda> r s. domain_sep_inv irqs st s" in hoare_strengthen_post)
           apply(wp do_ipc_transfer_domain_sep_inv hoare_vcg_all_lift | wpc | simp)+
      apply(wp hoare_vcg_imp_lift [OF set_simple_ko_get_tcb, unfolded disj_not1] hoare_vcg_all_lift get_simple_ko_wp
-         | wpc | simp add: valid_simple_obj_def a_type_def do_nbrecv_failed_transfer_def)+
+         | wpc | simp add: a_type_def do_nbrecv_failed_transfer_def)+
   apply (clarsimp simp: conj_comms)
   apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def
                          ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong)
@@ -1238,15 +1243,15 @@ lemma invoke_domain_domain_set_inv:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>
      invoke_domain word1 word2
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-apply (simp add: invoke_domain_def set_domain_extended.dxo_eq)
-apply (wp dxo_wp_weak | simp)+
-done
+  apply (simp add: invoke_domain_def)
+  apply (wp dxo_wp_weak | simp)+
+  done
 
 
 
 lemma perform_invocation_domain_sep_inv':
   "\<lbrace>domain_sep_inv irqs st and valid_invocation iv and valid_objs and valid_mdb and sym_refs \<circ> state_refs_of\<rbrace>
-   perform_invocation block call iv
+     perform_invocation block call iv
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply(case_tac iv)
           apply(wp send_ipc_domain_sep_inv invoke_tcb_domain_sep_inv
@@ -1259,15 +1264,15 @@ lemma perform_invocation_domain_sep_inv':
 
 lemma perform_invocation_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_invocation iv and invs\<rbrace>
-   perform_invocation block call iv
+     perform_invocation block call iv
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-apply (rule hoare_weaken_pre[OF perform_invocation_domain_sep_inv'])
-apply auto
-done
+  apply (rule hoare_weaken_pre[OF perform_invocation_domain_sep_inv'])
+  apply auto
+  done
 
 lemma handle_invocation_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and invs and ct_active\<rbrace>
-   handle_invocation calling blocking
+     handle_invocation calling blocking
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
                    liftE_liftM_liftME liftME_def bindE_assoc
@@ -1295,7 +1300,7 @@ lemma handle_invocation_domain_sep_inv:
 
 lemma handle_send_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and invs and ct_active\<rbrace>
-   handle_send a
+     handle_send a
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply(simp add: handle_send_def)
   apply(wp handle_invocation_domain_sep_inv)
@@ -1303,7 +1308,7 @@ lemma handle_send_domain_sep_inv:
 
 lemma handle_call_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and invs and ct_active\<rbrace>
-   handle_call
+     handle_call
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply(simp add: handle_call_def)
   apply(wp handle_invocation_domain_sep_inv)

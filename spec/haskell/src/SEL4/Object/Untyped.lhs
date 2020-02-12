@@ -51,14 +51,6 @@ We start by defining a simple function to align one value to a power-of-two boun
 > alignUp baseValue alignment =
 >   (baseValue + (1 `shiftL` alignment) - 1) .&. complement (mask alignment)
 
-The range of allowable sizes for Untyped objects depends on the word size.
-
-> minUntypedSizeBits :: Int
-> minUntypedSizeBits = 4
-
-> maxUntypedSizeBits :: Int
-> maxUntypedSizeBits = wordSizeCase 29 47
-
 The expected parameters are the type of the new objects, the size of the requested objects (for those with variable size), a capability to a capability space, index and depth used to locate the destination for the new capabilities, and the maximum number of new capabilities to be created. When successful, it returns the number of new objects or regions created.
 
 > decodeUntypedInvocation :: Word -> [Word] -> PPtr CTE -> Capability ->
@@ -70,7 +62,7 @@ The expected parameters are the type of the new objects, the size of the request
 
 The only supported operation on Untyped capabilities is Retype.
 
->     unless (invocationType label == UntypedRetype) $ throw IllegalOperation
+>     unless (genInvocationType label == UntypedRetype) $ throw IllegalOperation
 
 The first argument must be a valid object type.
 
@@ -175,7 +167,7 @@ Align up the free region pointer to ensure that created objects are aligned to t
 >         retypeIsDevice = isDevice }
 
 > decodeUntypedInvocation label _ _ _ _ = throw $
->     if invocationType label == UntypedRetype
+>     if genInvocationType label == UntypedRetype
 >         then TruncatedMessage
 >         else IllegalOperation
 

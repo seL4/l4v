@@ -592,11 +592,11 @@ lemma schedule_dcorres:
   done
 
 (*
- * The next few lemmas show that updating the register LR_svc in the
+ * The next few lemmas show that updating the register NextIP in the
  * tcb context of a thread does affect the state translation to capDL
  *)
 lemma get_tcb_message_info_nextPC [simp]:
-  "get_tcb_message_info (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(LR_svc := pc))) tcb) =
+  "get_tcb_message_info (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(NextIP := pc))) tcb) =
    get_tcb_message_info tcb"
   by (simp add: get_tcb_message_info_def
                 arch_tcb_context_get_def
@@ -604,23 +604,23 @@ lemma get_tcb_message_info_nextPC [simp]:
                 ARM.msgInfoRegister_def)
 
 lemma map_msg_registers_nextPC [simp]:
-  "map ((tcb_context tcb)(LR_svc := pc)) msg_registers =
+  "map ((tcb_context tcb)(NextIP := pc)) msg_registers =
    map (tcb_context tcb) msg_registers"
   by (simp add: msg_registers_def ARM.msgRegisters_def
                 upto_enum_red fromEnum_def toEnum_def enum_register)
 
 lemma get_ipc_buffer_words_nextPC [simp]:
-  "get_ipc_buffer_words m (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(LR_svc := pc))) tcb) =
+  "get_ipc_buffer_words m (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(NextIP := pc))) tcb) =
    get_ipc_buffer_words m tcb"
   by (rule ext) (simp add: get_ipc_buffer_words_def)
 
 lemma get_tcb_mrs_nextPC [simp]:
-  "get_tcb_mrs m (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(LR_svc := pc))) tcb) =
+  "get_tcb_mrs m (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(NextIP := pc))) tcb) =
    get_tcb_mrs m tcb"
   by (simp add: get_tcb_mrs_def Let_def arch_tcb_context_get_def)
 
-lemma transform_tcb_LR_svc:
-  "transform_tcb m t (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(LR_svc := pc))) tcb)
+lemma transform_tcb_NextIP:
+  "transform_tcb m t (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(NextIP:= pc))) tcb)
   = transform_tcb m t tcb"
   by (auto simp add: transform_tcb_def transform_full_intent_def Let_def
                      cap_register_def ARM.capRegister_def
@@ -635,12 +635,12 @@ lemma as_user_setNextPC_corres:
                    as_user_def setNextPC_def get_tcb_def
                    setRegister_def simpler_modify_def
                    select_f_def return_def in_monad
-                   set_object_def
+                   set_object_def get_object_def
                   split: option.splits Structures_A.kernel_object.splits)
   apply (subst tcb_context_update_aux)
   apply (simp add: transform_def transform_current_thread_def)
   apply (clarsimp simp: transform_objects_update_kheap_same_caps
-                        transform_tcb_LR_svc transform_objects_update_same
+                        transform_tcb_NextIP transform_objects_update_same
                         arch_tcb_update_aux3)
   done
 
@@ -652,7 +652,7 @@ lemma dcorres_dummy_set_thread_state_runnable:
   (return ())
   (set_thread_state ptr st)"
   apply (rule wp_to_dcorres)
-  apply (clarsimp simp:set_thread_state_def not_idle_thread_def set_object_def | wp)+
+  apply (clarsimp simp:set_thread_state_def not_idle_thread_def set_object_def get_object_def | wp)+
   apply (clarsimp simp:transform_def transform_current_thread_def st_tcb_at_def obj_at_def
        | rule ext)+
   apply (clarsimp simp:transform_objects_def not_idle_thread_def dest!:get_tcb_SomeD)

@@ -32,7 +32,7 @@ lemma thread_set_tcb_arch_is_schedulable_bool[wp]:
    \<lbrace>\<lambda>rv s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>"
   apply (simp add: thread_set_def)
   apply (rule hoare_seq_ext[OF _ assert_get_tcb_ko'])
-  apply (wpsimp simp: set_object_def)
+  apply (wpsimp wp: set_object_wp)
   apply (fastforce simp: is_schedulable_bool_def is_sc_active_def get_tcb_def ko_atD
                          in_release_queue_def
                   split: option.splits )

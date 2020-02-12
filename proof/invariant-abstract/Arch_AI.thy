@@ -196,13 +196,6 @@ lemma sts_pspace_no_overlap [wp]:
   by (wp pspace_no_overlap_typ_at_lift)
 
 
-lemma diminished_cte_wp_at_valid_cap:
-  "cte_wp_at (diminished c) p s \<Longrightarrow> valid_objs s \<Longrightarrow> s \<turnstile> c"
-  apply (drule(1) cte_wp_at_valid_objs_valid_cap)
-  apply (clarsimp simp: diminished_def)
-  done
-
-
 lemma delete_objects_st_tcb_at:
   "\<lbrace>pred_tcb_at proj P t and invs and K (t \<notin> {ptr .. ptr + 2 ^ bits - 1})\<rbrace>
     delete_objects ptr bits

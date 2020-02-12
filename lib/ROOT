@@ -50,9 +50,11 @@ session Lib (lib) = Word_Lib +
     Apply_Debug
     MonadicRewrite
     HaskellLemmaBucket
+    "ml-helpers/MkTermAntiquote"
     "ml-helpers/TermPatternAntiquote"
     "ml-helpers/TacticAntiquotation"
     "ml-helpers/MLUtils"
+    FP_Eval
     "subgoal_focus/Subgoal_Methods"
     Insulin
     ExtraCorres
@@ -71,9 +73,12 @@ session Lib (lib) = Word_Lib +
     SplitRule
     DataMap
     FastMap
+    RangeMap
     Corres_Method
     Conjuncts
     DetWPLib
+    Guess_ExI
+    GenericTag
 
     (* should really be a separate session, but too entangled atm: *)
     NonDetMonadLemmaBucket
@@ -147,10 +152,16 @@ session LibTest (lib) = Refine +
     ShowTypes_Test
     Time_Methods_Cmd_Test
     FastMap_Test
+    RangeMap_Test
+    FP_Eval_Tests
     Trace_Schematic_Insts_Test
     Local_Method_Tests
     Qualify_Test
+    Locale_Abbrev_Test
+    "ml-helpers/TacticTutorial"
+    "ml-helpers/MkTermAntiquote_Tests"
     "ml-helpers/TacticAntiquotation_Test"
+    "ml-helpers/TermPatternAntiquote_Tests"
   (* use virtual memory function as an example, only makes sense on ARM: *)
   theories [condition = "L4V_ARCH_IS_ARM"]
     Corres_Test

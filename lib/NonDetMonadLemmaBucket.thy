@@ -1168,6 +1168,22 @@ lemma case_options_weak_wp:
    apply simp+
   done
 
+lemma case_option_wp_None_return:
+  assumes [wp]: "\<And>x. \<lbrace>P' x\<rbrace> f x \<lbrace>\<lambda>_. Q\<rbrace>"
+  shows "\<lbrakk>\<And>x s. (Q and P x) s \<Longrightarrow> P' x s \<rbrakk>
+         \<Longrightarrow> \<lbrace>Q and (\<lambda>s. opt \<noteq> None \<longrightarrow> P (the opt) s)\<rbrace>
+             (case opt of None \<Rightarrow> return () | Some x \<Rightarrow> f x)
+             \<lbrace>\<lambda>_. Q\<rbrace>"
+  by (cases opt; wpsimp)
+
+lemma case_option_wp_None_returnOk:
+  assumes [wp]: "\<And>x. \<lbrace>P' x\<rbrace> f x \<lbrace>\<lambda>_. Q\<rbrace>,\<lbrace>E\<rbrace>"
+  shows "\<lbrakk>\<And>x s. (Q and P x) s \<Longrightarrow> P' x s \<rbrakk>
+         \<Longrightarrow> \<lbrace>Q and (\<lambda>s. opt \<noteq> None \<longrightarrow> P (the opt) s)\<rbrace>
+             (case opt of None \<Rightarrow> returnOk () | Some x \<Rightarrow> f x)
+             \<lbrace>\<lambda>_. Q\<rbrace>,\<lbrace>E\<rbrace>"
+  by (cases opt; wpsimp)
+
 lemma list_cases_weak_wp:
   assumes "\<lbrace>P_A\<rbrace> a \<lbrace>Q\<rbrace>"
   assumes "\<And>x xs. \<lbrace>P_B\<rbrace> b x xs \<lbrace>Q\<rbrace>"
@@ -1475,6 +1491,10 @@ lemma static_imp_wp:
   "\<lbrace>Q\<rbrace> m \<lbrace>R\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> Q s\<rbrace> m \<lbrace>\<lambda>rv s. P \<longrightarrow> R rv s\<rbrace>"
   by (cases P, simp_all add: valid_def)
 
+lemma static_imp_wpE :
+  "\<lbrace>Q\<rbrace> m \<lbrace>R\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> Q s\<rbrace> m \<lbrace>\<lambda>rv s. P \<longrightarrow> R rv s\<rbrace>,-"
+  by (cases P, simp_all)
+
 lemma static_imp_conj_wp:
   "\<lbrakk> \<lbrace>Q\<rbrace> m \<lbrace>Q'\<rbrace>; \<lbrace>R\<rbrace> m \<lbrace>R'\<rbrace> \<rbrakk>
     \<Longrightarrow> \<lbrace>\<lambda>s. (P \<longrightarrow> Q s) \<and> R s\<rbrace> m \<lbrace>\<lambda>rv s. (P \<longrightarrow> Q' rv s) \<and> R' rv s\<rbrace>"
@@ -1495,6 +1515,13 @@ lemma hoare_validE_R_conj:
 lemma hoare_vcg_const_imp_lift_R:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. F \<longrightarrow> P s\<rbrace> f \<lbrace>\<lambda>rv s. F \<longrightarrow> Q rv s\<rbrace>,-"
   by (cases F, simp_all)
+
+lemma hoare_vcg_disj_lift_R:
+  assumes x: "\<lbrace>P\<rbrace>  f \<lbrace>Q\<rbrace>,-"
+  assumes y: "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>,-"
+  shows      "\<lbrace>\<lambda>s. P s \<or> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<or> Q' rv s\<rbrace>,-"
+  using assms
+  by (fastforce simp: validE_R_def validE_def valid_def split: sum.splits)
 
 lemmas throwError_validE_R = throwError_wp [where E="\<top>\<top>", folded validE_R_def]
 

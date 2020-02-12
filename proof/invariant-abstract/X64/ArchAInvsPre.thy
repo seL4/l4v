@@ -156,15 +156,18 @@ lemma some_get_page_info_umapsD:
     apply (all \<open>drule (2) vs_lookup_step_alt[OF _ _ vs_refs_pml4I],
                 simp add: ucast_ucast_mask9, fastforce\<close>)
     prefer 3 subgoal
-      by (rule exI[of _ X64HugePage]; frule (3) valid_vspace_objs_entryD;
-          clarsimp simp: bit_simps vmsz_aligned_def)
+      by (rule exI[where x=X64HugePage];
+          frule (3) valid_vspace_objs_entryD;
+          fastforce simp: bit_simps dest: data_at_aligned is_aligned_ptrFromPAddrD)
    apply (all \<open>drule (2) vs_lookup_step_alt[OF _ _ vs_refs_pdptI], fastforce\<close>)
    prefer 2 subgoal
-     by (rule exI[of _ X64LargePage]; frule (3) valid_vspace_objs_entryD;
-         clarsimp simp: bit_simps vmsz_aligned_def)
+     by (rule exI[where x=X64LargePage];
+         frule (3) valid_vspace_objs_entryD;
+         fastforce simp: bit_simps dest: data_at_aligned is_aligned_ptrFromPAddrD)
   apply (drule (2) vs_lookup_step_alt[OF _ _ vs_refs_pdI], fastforce)
-  by (rule exI[of _ X64SmallPage]; frule (3) valid_vspace_objs_entryD;
-      clarsimp simp: bit_simps vmsz_aligned_def)
+  by (rule exI[where x=X64SmallPage];
+      frule (3) valid_vspace_objs_entryD;
+      fastforce simp: bit_simps dest: data_at_aligned is_aligned_ptrFromPAddrD)
 
 lemma user_mem_dom_cong:
   "kheap s = kheap s' \<Longrightarrow> dom (user_mem s) = dom (user_mem s')"

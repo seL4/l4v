@@ -957,7 +957,6 @@ lemma valid_list_post_no_parent:
   "\<lbrakk>m src = None\<rbrakk> \<Longrightarrow> valid_list_2 t n"
   apply (insert valid_list dest)
   apply (simp add: valid_list_2_def n_def)
-  apply fastforce
   done
 
 
@@ -1511,9 +1510,10 @@ lemma set_cap_match: "(\<And>s x. P s = P (s\<lparr>kheap := x\<rparr>)) \<Longr
   apply wpsimp
   done
 
-crunch all_but_exst[wp]: cap_insert_ext "all_but_exst P"
-
-crunch (empty_fail) empty_fail[wp]: cap_insert_ext
+crunches cap_insert_ext, empty_slot_ext, cap_swap_ext, create_cap_ext
+  for all_but_exst[wp]:  "all_but_exst P"
+  and (empty_fail) empty_fail[wp]
+  (ignore_del: cap_insert_ext empty_slot_ext cap_swap_ext create_cap_ext)
 
 interpretation cap_insert_ext_extended: is_extended "cap_insert_ext a b c d e"
   by (unfold_locales; wp)
@@ -1689,11 +1689,6 @@ defines "m' \<equiv>
      \<lambda>r. if m'' r = Some src then Some dest
          else (m(dest := m src, src := None)) r"
 begin
-
-lemma "{c. m c = Some ab} - {dest} \<union> {c. m c = Some dest} =
-          {c. c \<noteq> dest \<and>
-              (c \<noteq> dest \<longrightarrow> c \<noteq> ab \<and> (c \<noteq> ab \<longrightarrow> m c \<noteq> Some ab \<longrightarrow> m c = Some dest))}"
-  oops
 
 lemma valid_list_post_no_parents:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
@@ -3117,10 +3112,7 @@ lemma (in mdb_empty_abs') next_slot:
   done
 
 crunch valid_list[wp]: post_cap_deletion,set_cap valid_list
-
-crunch all_but_exst[wp]: empty_slot_ext "all_but_exst P"
-
-crunch (empty_fail) empty_fail[wp]: empty_slot_ext
+  (wp: crunch_wps)
 
 interpretation empty_slot_extended: is_extended "empty_slot_ext a b"
   by (unfold_locales; wp)
@@ -3136,7 +3128,7 @@ lemma empty_slot_valid_list[wp]:
   apply (simp add: empty_slot_def)
   apply (simp add: set_cdt_def update_cdt_list_def set_cdt_list_def
                    empty_slot_ext_def bind_assoc cong: if_cong)
-  apply (wp get_cap_wp static_imp_wp | wpc | wp_once hoare_vcg_all_lift)+
+  apply (wp get_cap_wp static_imp_wp | wpc | wp (once) hoare_vcg_all_lift)+
   apply (clarsimp simp del: fun_upd_apply)
   apply (frule mdb_empty_abs_simple.intro)
   apply(case_tac "cdt s sl")
@@ -3154,7 +3146,7 @@ lemma set_cap_exst_update:
   apply (cases p)
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
   apply (case_tac y)
-      apply (auto simp add: in_monad set_object_def split: if_split_asm)
+      apply (auto simp add: in_monad set_object_def get_object_def split: if_split_asm)
   done
 
 lemma no_parent_not_next_slot:
@@ -3780,10 +3772,6 @@ lemma next_slot:
 end
 
 
-crunch all_but_exst[wp]: cap_swap_ext "all_but_exst P"
-
-crunch (empty_fail) empty_fail[wp]: cap_swap_ext
-
 interpretation cap_swap_ext_extended: is_extended "cap_swap_ext a b c d"
   by (unfold_locales; wp cap_swap_ext_all_but_exst)
 
@@ -3812,10 +3800,6 @@ lemma cap_swap_valid_list [wp]:
 lemma exst_set_cap:
   "(x,s') \<in> fst (set_cap p c s) \<Longrightarrow> exst s' = exst s"
   by (erule use_valid[OF _ set_cap_exst],simp)
-
-crunch all_but_exst[wp]: create_cap_ext "all_but_exst P"
-
-crunch (empty_fail) empty_fail[wp]: create_cap_ext
 
 interpretation create_cap_extended: is_extended "create_cap_ext a b c"
   by (unfold_locales; wp)
@@ -3848,17 +3832,6 @@ crunch valid_list[wp]: tcb_sched_action,reschedule_required,tcb_release_remove "
 
 crunch valid_list[wp]: schedule_tcb "valid_list"
   (simp: unless_def)
-
-(*
-crunch valid_list[wp]: reply_unlink_tcb, sched_context_donate, schedule_tcb valid_list
-  (wp: crunch_wps maybeM_inv dxo_wp_weak mapM_x_wp set_object_def simp: valid_list_2_def ignore: set_object)
-
-crunch valid_list[wp]: schedule_tcb, reply_remove, reply_remove_tcb, reply_clear_tcb, cancel_all_signals,complete_yield_to,
- unbind_maybe_notification, set_consumed,sched_context_unbind_all_tcbs,sched_context_clear_replies,
-sched_context_maybe_unbind_ntfn,sched_context_unbind_yield_from valid_list
-  (wp: crunch_wps maybeM_inv dxo_wp_weak get_object_wp
-   simp: valid_list_2_def set_object_def ignore: set_object set_simple_ko get_simple_ko)
-*)
 
 lemma set_simple_ko_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> set_simple_ko f p v \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -4020,8 +3993,6 @@ locale Deterministic_AI_1 =
     "\<And>param_a param_b. \<lbrace>valid_list\<rbrace> finalise_cap param_a param_b \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes get_cap_valid_list[wp]:
     "\<And>param_a. \<lbrace>valid_list\<rbrace> get_cap param_a \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  assumes arch_tcb_set_ipc_buffer_valid_list[wp]:
-    "\<And>t ptr. \<lbrace>valid_list\<rbrace> arch_tcb_set_ipc_buffer t ptr \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes arch_get_sanitise_register_info_valid_list[wp]:
     "\<And>t. \<lbrace>valid_list\<rbrace> arch_get_sanitise_register_info t \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes arch_post_modify_registers_valid_list[wp]:
@@ -4102,7 +4073,7 @@ crunch valid_list[wp]: transfer_caps,do_normal_transfer,do_ipc_transfer valid_li
   (wp: mapM_wp hoare_drop_imp)
 
 lemma send_ipc_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> send_ipc block call badge can_grant can_donate thread epptr \<lbrace>\<lambda>_.valid_list\<rbrace>"
+  "send_ipc block call badge can_grant can_reply_grant can_donate thread epptr \<lbrace>valid_list\<rbrace>"
    by (wpsimp simp: send_ipc_def wp: thread_get_inv hoare_drop_imp get_simple_ko_wp)
 
 crunch valid_list[wp]: send_fault_ipc,handle_timeout valid_list
@@ -4130,6 +4101,8 @@ lemma refill_budget_check_round_robin_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> refill_budget_check_round_robin usage \<lbrace>\<lambda>_.valid_list\<rbrace>"
   unfolding refill_budget_check_round_robin_def
   by (wpsimp wp: hoare_drop_imps)
+
+crunch valid_list[wp]: update_restart_pc "valid_list"
 
 context Deterministic_AI_1 begin
 

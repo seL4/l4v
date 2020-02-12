@@ -18,57 +18,97 @@ begin
 (* Definitions of some built-in CAmkES entities. *)
 definition
   seL4RPC :: connector
-where
-  "seL4RPC \<equiv> SyncConnector (Native RPC)"
-lemma[simp]: "wellformed_connector seL4RPC"
-  by (auto simp:wellformed_connector_def seL4RPC_def)
-
-definition
-  seL4Asynch :: connector
-where
-  "seL4Asynch \<equiv> AsyncConnector (Native AsynchronousEvent)"
-lemma[simp]: "wellformed_connector seL4Asynch"
-  by (auto simp:wellformed_connector_def seL4Asynch_def)
-
-definition
-  seL4SharedData :: connector
-where
-  "seL4SharedData \<equiv> MemoryConnector (Native SharedData)"
-lemma[simp]: "wellformed_connector seL4SharedData"
-  by (auto simp:wellformed_connector_def seL4SharedData_def)
-
-(* These connectors aren't literally identical, but for the purposes of the architectural model they
- * are.
- *)
-definition
-  seL4RPCSimple :: connector
-where
-  "seL4RPCSimple \<equiv> seL4RPC"
-lemma[simp]: "wellformed_connector seL4RPCSimple"
-  by (simp add:seL4RPCSimple_def)
-
-definition
-  seL4RPCCall :: connector
-where
-  "seL4RPCCall \<equiv> seL4RPC"
-lemma[simp]: "wellformed_connector seL4RPCCall"
-  by (simp add:seL4RPCCall_def)
+where [wellformed_CAMKES_simps]:
+  "seL4RPC \<equiv>
+      \<lparr> connector_type = NativeConnector,
+        connector_interface = RPCInterface,
+        connector_access =
+          \<lparr> access_from_to   = {DeleteDerived},
+            access_to_from   = {Reply},
+            access_from_from = {},
+            access_to_to     = {},
+            access_from_conn = {Reset, SyncSend, Call},
+            access_to_conn   = {Reset, Receive} \<rparr> \<rparr>"
+lemma[wellformed_CAMKES_simps]: "wellformed_connector seL4RPC"
+  by (auto simp:wellformed_CAMKES_simps)
 
 definition
   seL4Notification :: connector
-where
-  "seL4Notification \<equiv> seL4Asynch"
-lemma[simp]: "wellformed_connector seL4Notification"
-  by (simp add:seL4Notification_def)
+where [wellformed_CAMKES_simps]:
+  "seL4Notification \<equiv>
+      \<lparr> connector_type = NativeConnector,
+        connector_interface = EventInterface,
+        connector_access =
+          \<lparr> access_from_to   = {},
+            access_to_from   = {},
+            access_from_from = {},
+            access_to_to     = {},
+            access_from_conn = {Reset, Notify},
+            access_to_conn   = {Reset, Receive} \<rparr> \<rparr>"
+lemma[wellformed_CAMKES_simps]: "wellformed_connector seL4Notification"
+  by (auto simp:wellformed_CAMKES_simps)
 
-lemmas connector_simps =
-  seL4SharedData_def
-  seL4RPC_def
-  seL4Asynch_def
-  seL4RPCSimple_def
-  seL4RPCCall_def
-  seL4Notification_def
+definition
+  seL4SharedData :: connector
+where [wellformed_CAMKES_simps]:
+  "seL4SharedData \<equiv>
+      \<lparr> connector_type = NativeConnector,
+        connector_interface = DataportInterface,
+        connector_access =
+          \<lparr> access_from_to   = {},
+            access_to_from   = {},
+            access_from_from = {},
+            access_to_to     = {},
+            \<comment> \<open>Here, we hardcode that both sides have Read and Write because
+                the default dataport implementation uses in-line signalling.\<close>
+            access_from_conn = {Read, Write},
+            access_to_conn   = {Read, Write} \<rparr> \<rparr>"
+lemma[wellformed_CAMKES_simps]: "wellformed_connector seL4SharedData"
+  by (auto simp:wellformed_CAMKES_simps)
 
+definition
+  seL4HardwareInterrupt :: connector
+where [wellformed_CAMKES_simps]:
+  "seL4HardwareInterrupt \<equiv>
+      \<lparr> connector_type = HardwareConnector,
+        connector_interface = EventInterface,
+        connector_access =
+          \<lparr> access_from_to   = {},
+            access_to_from   = {},
+            access_from_from = {},
+            access_to_to     = {},
+            \<comment> \<open>NB: hardware components usually share the label of the software driver,
+                    so the following are usually redundant\<close>
+            access_from_conn = {Reset, Notify},
+            access_to_conn   = {Reset, Receive} \<rparr> \<rparr>"
+lemma[wellformed_CAMKES_simps]: "wellformed_connector seL4HardwareInterrupt"
+  by (auto simp:wellformed_CAMKES_simps)
+
+definition
+  seL4HardwareMMIO :: connector
+where [wellformed_CAMKES_simps]:
+  "seL4HardwareMMIO \<equiv>
+      \<lparr> connector_type = HardwareConnector,
+        connector_interface = DataportInterface,
+        connector_access =
+          \<lparr> access_from_to   = {},
+            access_to_from   = {},
+            access_from_from = {},
+            access_to_to     = {},
+            \<comment> \<open>NB: hardware components usually share the label of the software driver,
+                    so the following are usually redundant\<close>
+            access_from_conn = {Read, Write},
+            access_to_conn   = {Read, Write} \<rparr> \<rparr>"
+lemma[wellformed_CAMKES_simps]: "wellformed_connector seL4HardwareMMIO"
+  by (auto simp:wellformed_CAMKES_simps)
+
+(* These are essentially the same connectors at the model level,
+   but have different implementations in the CAmkES library,
+   hence have different names. *)
+abbreviation "seL4RPCCall \<equiv> seL4RPC"
+lemmas seL4RPCCall_def = seL4RPC_def
+abbreviation "seL4RPCSimple \<equiv> seL4RPC"
+lemmas seL4RPCSimple_def = seL4RPC_def
 (*>*)
 
 (*<*)end(*>*)

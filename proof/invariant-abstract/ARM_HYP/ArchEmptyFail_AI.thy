@@ -12,7 +12,7 @@ theory ArchEmptyFail_AI
 imports "../EmptyFail_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems EmptyFail_AI_assms
 
@@ -36,7 +36,7 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
@@ -54,7 +54,8 @@ crunch (empty_fail) empty_fail[wp]: decode_vcpu_invocation
 
 lemma decode_tcb_invocation_empty_fail[wp]:
   "empty_fail (decode_tcb_invocation a b (ThreadCap p) d e)"
-  by (simp add: decode_tcb_invocation_def split: invocation_label.splits | wp | intro conjI impI)+
+  by (simp add: decode_tcb_invocation_def split: gen_invocation_labels.splits invocation_label.splits
+      | wp | intro conjI impI)+
 
 crunch (empty_fail) empty_fail[wp]: find_pd_for_asid, get_master_pde, check_vp_alignment,
                    create_mapping_entries, ensure_safe_mapping, get_asid_pool, resolve_vaddr
@@ -118,7 +119,7 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 crunch (empty_fail) empty_fail[wp]: vcpu_update, vcpu_save_reg_range, vgic_update_lr
   (ignore: set_object get_object)
@@ -150,7 +151,7 @@ global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
   cap_delete, choose_thread
 end
@@ -173,13 +174,16 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 lemma vgic_maintenance_empty_fail[wp]: "empty_fail vgic_maintenance"
   by (wpsimp simp: get_gic_vcpu_ctrl_eisr0_def
                    get_gic_vcpu_ctrl_eisr1_def
                    get_gic_vcpu_ctrl_misr_def
                    vgic_maintenance_def)
+
+crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: possible_switch_to
+  (ignore_del: possible_switch_to)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_thread
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def

@@ -144,14 +144,16 @@ lemma restart_tcb[wp]:
   "\<lbrace>tcb_at t'\<rbrace> Tcb_A.restart t \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
   by (wpsimp simp: tcb_at_typ wp: restart_typ_at)
 
-lemmas suspend_tcb_at[wp] = tcb_at_typ_at [OF suspend_typ_at]
+crunch ex_nonz_cap_to[wp]: update_restart_pc "ex_nonz_cap_to t"
 
-lemma suspend_nonz_cap_to_tcb:
+lemma suspend_nonz_cap_to_tcb[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to t s \<and> tcb_at t s \<and> valid_objs s\<rbrace>
      suspend t'
    \<lbrace>\<lambda>rv s. ex_nonz_cap_to t s\<rbrace>"
   unfolding suspend_def
   by (wpsimp wp: cancel_ipc_ex_nonz_cap_to_tcb wp: hoare_drop_imps)
+
+lemmas suspend_tcb_at[wp] = tcb_at_typ_at [OF suspend_typ_at]
 
 lemma readreg_invs:
   "\<lbrace>invs and tcb_at src and ex_nonz_cap_to src\<rbrace>
@@ -175,7 +177,7 @@ lemma (in Tcb_AI_1) copyreg_invs:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: if_apply_def2
                   wp: mapM_x_wp' suspend_invs suspend_nonz_cap_to_tcb static_imp_wp)
-  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_idle_def
+  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_idle_def suspend_def
                  dest!: idle_no_ex_cap)
   done
 
@@ -186,12 +188,13 @@ lemma out_invs_trivialT:
   assumes z': "\<And>tcb v. tcb_bound_notification (fn v tcb) = tcb_bound_notification tcb"
   assumes y: "\<And>tcb v. tcb_sched_context (fn v tcb) = tcb_sched_context tcb"
   assumes y': "\<And>tcb v. tcb_yield_to (fn v tcb) = tcb_yield_to tcb"
+  assumes z'': "\<And>tcb v. tcb_iarch (fn v tcb) = tcb_iarch tcb"
   assumes w: "\<And>tcb v. tcb_ipc_buffer (fn v tcb) = tcb_ipc_buffer tcb
                           \<or> tcb_ipc_buffer (fn v tcb) = 0"
   assumes a: "\<And>tcb v. tcb_fault (fn v tcb) = tcb_fault tcb"
   shows      "\<lbrace>invs\<rbrace> option_update_thread t fn v \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac v, simp_all add: option_update_thread_def)
-  apply (rule thread_set_invs_trivial [OF x z z' y y' w a r])
+  apply (rule thread_set_invs_trivial [OF x z z' y y' z'' w a r])
   done
 
 lemmas out_invs_trivial = out_invs_trivialT [OF ball_tcb_cap_casesI]
@@ -235,7 +238,7 @@ lemma set_simple_ko_valid_cap:
 
 
 lemma si_cte_at[wp]:
-  "\<lbrace>cte_at p\<rbrace> send_ipc bl c ba cg t ep r \<lbrace>\<lambda>_. cte_at p\<rbrace>"
+  "\<lbrace>cte_at p\<rbrace> send_ipc bl c ba cg cgr t ep r \<lbrace>\<lambda>_. cte_at p\<rbrace>"
   by (wp valid_cte_at_typ)
 
 
@@ -263,8 +266,6 @@ lemma thread_set_valid_objs':
   thread_set f t
   \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (simp add: thread_set_def)
-  apply wp
-   apply (rule set_object_valid_objs)
   apply wp
   apply clarsimp
   apply (clarsimp dest!: get_tcb_SomeD simp: obj_at_def)
@@ -642,7 +643,7 @@ lemma thread_set_valid_objs'':
         \<longrightarrow> valid_tcb t tcb s \<longrightarrow> valid_tcb t (f tcb) s)\<rbrace>
      thread_set f t
    \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
+  apply (simp add: thread_set_def set_object_def get_object_def)
   apply wp
   apply (clarsimp simp: fun_upd_def[symmetric])
   apply (frule(1) valid_tcb_objs)
@@ -690,15 +691,16 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
   done
 
 lemma thread_set_tcb_valid:
-  assumes x: "\<And>tcb. tcb_state (fn tcb) = tcb_state  tcb"
+  assumes x: "\<And>tcb. tcb_state (fn tcb) = tcb_state tcb"
   assumes w: "\<And>tcb. tcb_ipc_buffer (fn tcb) = tcb_ipc_buffer tcb
-                          \<or> tcb_ipc_buffer (fn tcb) = 0"
-  shows      "\<lbrace>tcb_cap_valid c p\<rbrace> thread_set fn t
+                     \<or> tcb_ipc_buffer (fn tcb) = 0"
+  shows      "\<lbrace>tcb_cap_valid c p\<rbrace>
+              thread_set fn t
               \<lbrace>\<lambda>rv. tcb_cap_valid c p\<rbrace>"
-  apply (simp add: thread_set_def set_object_def, wp)
+  apply (wpsimp wp: set_object_wp_strong simp: thread_set_def)
   apply (clarsimp simp: tcb_cap_valid_def
                  dest!: get_tcb_SomeD)
-  apply (simp add: obj_at_def pred_tcb_at_def is_tcb x get_tcb_def
+  apply (simp add: obj_at_def pred_tcb_at_def is_tcb x
             split: if_split_asm cong: option.case_cong prod.case_cong)
   apply (cut_tac tcb=y in w)
   apply auto
@@ -720,7 +722,7 @@ lemma thread_set_ipc_tcb_cap_valid:
            \<and> (\<forall>ptr. valid_ipc_buffer_cap cap (f ptr))\<rbrace>
      thread_set (tcb_ipc_buffer_update f) t
    \<lbrace>\<lambda>rv. tcb_cap_valid cap (t, tcb_cnode_index 2)\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
+  apply (simp add: thread_set_def set_object_def get_object_def)
   apply wp
   apply (clarsimp simp: tcb_cap_valid_def obj_at_def
                         pred_tcb_at_def is_tcb
@@ -987,7 +989,7 @@ lemma decode_readreg_inv:
   "\<lbrace>P\<rbrace> decode_read_registers args (cap.ThreadCap t) \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: decode_read_registers_def whenE_def | rule conjI | clarsimp
-          | wp_once | wpcw)+
+          | wp (once) | wpcw)+
   done
 
 lemma decode_writereg_inv:
@@ -995,7 +997,7 @@ lemma decode_writereg_inv:
   apply (rule hoare_pre)
    apply (simp   add: decode_write_registers_def whenE_def
            split del: if_split
-          | wp_once | wpcw)+
+          | wp (once) | wpcw)+
   done
 
 lemma decode_copyreg_inv:
@@ -1003,7 +1005,7 @@ lemma decode_copyreg_inv:
   apply (rule hoare_pre)
    apply (simp   add: decode_copy_registers_def whenE_def
            split del: if_split
-          | wp_once | wpcw)+
+          | wp (once) | wpcw)+
   done
 
 lemma decode_set_tls_base_inv:
@@ -1011,7 +1013,7 @@ lemma decode_set_tls_base_inv:
   apply (rule hoare_pre)
    apply (simp   add: decode_set_tls_base_def whenE_def
            split del: if_split
-          | wp_once | wpcw)+
+          | wp (once) | wpcw)+
   done
 
 lemma (in Tcb_AI) decode_readreg_wf:
@@ -1819,11 +1821,9 @@ lemma install_tcb_cap_not_ipc_queued_thread[wp]:
 lemma set_simple_ko_sc_at_pred_n[wp]:
   "set_simple_ko g ep v \<lbrace> \<lambda>s. P (sc_at_pred_n N proj f t s) \<rbrace>"
   unfolding set_simple_ko_def
-  apply (wpsimp wp: set_object_wp get_object_wp)
+  apply (wpsimp wp: set_object_wp_strong get_object_wp)
   apply (intro conjI;
-         intro impI;
-         erule rsubst[where P=P];
-         clarsimp split: option.splits simp: sc_at_pred_n_def obj_at_def)
+         clarsimp elim!: rsubst[where P=P] split: option.splits simp: sc_at_pred_n_def obj_at_def)
   done
 
 crunches cancel_all_ipc

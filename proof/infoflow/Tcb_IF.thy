@@ -116,27 +116,53 @@ lemma flush_space_valid_arch_state[wp]: "\<lbrace>valid_arch_state \<rbrace> flu
   apply (wp load_hw_asid_wp | wpc | simp)+
 done
 
-crunch globals_equiv[wp]: suspend,prepare_thread_delete "globals_equiv st"
+lemma get_thread_state_globals_equiv[wp]:
+  "\<lbrace>globals_equiv s and valid_ko_at_arm\<rbrace> get_thread_state ref \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding get_thread_state_def
+  apply(wp set_object_globals_equiv dxo_wp_weak |simp)+
+  done
+
+lemma suspend_globals_equiv[wp]:
+  "\<lbrace>globals_equiv st and (\<lambda>s. t \<noteq> idle_thread s) and valid_ko_at_arm\<rbrace> suspend t \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding suspend_def
+  apply (wp tcb_sched_action_extended.globals_equiv dxo_wp_weak)
+       apply simp
+      apply (wp set_thread_state_globals_equiv)
+     apply wp+
+      unfolding update_restart_pc_def
+      apply wp+
+    apply clarsimp
+    apply (rule hoare_vcg_conj_lift)
+     prefer 2
+     apply (rule hoare_drop_imps)
+     apply wp+
+    apply (rule hoare_drop_imps)
+    apply wp+
+  apply auto
+  done
+
+crunch globals_equiv[wp]: prepare_thread_delete "globals_equiv st"
   (wp: dxo_wp_weak)
 
 lemma finalise_cap_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_global_objs and valid_arch_state and pspace_aligned and valid_vspace_objs and valid_global_refs and valid_vs_lookup\<rbrace>
+  "\<lbrace>globals_equiv st and (\<lambda>s. \<forall>p. cap = ThreadCap p \<longrightarrow> p \<noteq> idle_thread s)
+    and valid_global_objs and valid_arch_state and pspace_aligned and valid_vspace_objs and valid_global_refs and valid_vs_lookup\<rbrace>
     finalise_cap cap b
    \<lbrace>\<lambda> _. globals_equiv st\<rbrace>"
   apply (induct cap)
-  apply (simp_all add:finalise_cap.simps)
-  apply (wp liftM_wp when_def cancel_all_ipc_globals_equiv cancel_all_ipc_valid_global_objs
-            cancel_all_signals_globals_equiv cancel_all_signals_valid_global_objs
-            arch_finalise_cap_globals_equiv unbind_maybe_notification_globals_equiv
-            unbind_notification_globals_equiv
-            | simp add: valid_arch_state_ko_at_arm | intro impI conjI)+
+             apply (simp_all add:finalise_cap.simps)
+             apply (wp liftM_wp when_def cancel_all_ipc_globals_equiv cancel_all_ipc_valid_global_objs
+                       cancel_all_signals_globals_equiv cancel_all_signals_valid_global_objs
+                       arch_finalise_cap_globals_equiv unbind_maybe_notification_globals_equiv
+                       unbind_notification_globals_equiv
+                       | clarsimp simp add: valid_arch_state_ko_at_arm | intro impI conjI)+
   done
 
 crunch valid_ko_at_arm[wp]: cap_swap_for_delete, restart "valid_ko_at_arm"
   (wp: dxo_wp_weak ignore: cap_swap_ext)
 
 lemma rec_del_preservation2':
-  assumes finalise_cap_P: "\<And>cap final. \<lbrace>R and P\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_.P\<rbrace>"
+  assumes finalise_cap_P: "\<And>cap final. \<lbrace>R cap and P\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_.P\<rbrace>"
   assumes set_cap_P : "\<And> cap b. \<lbrace>Q and P\<rbrace> set_cap cap b \<lbrace>\<lambda>_.P\<rbrace>"
   assumes set_cap_Q : "\<And> cap b. \<lbrace>Q\<rbrace> set_cap cap b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes empty_slot_P: "\<And> slot free. \<lbrace>Q and P\<rbrace> empty_slot slot free \<lbrace>\<lambda>_. P\<rbrace>"
@@ -146,7 +172,7 @@ lemma rec_del_preservation2':
   assumes preemption_point_Q: "\<And> a b. \<lbrace>Q\<rbrace> preemption_point \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes preemption_point_P: "\<And> a b. \<lbrace>Q and P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>"
   assumes invs_Q: "\<And> s. invs s \<Longrightarrow> Q s"
-  assumes invs_R: "\<And> s. invs s \<Longrightarrow> R s"
+  assumes invs_R: "  \<And>s slot cap. invs s \<Longrightarrow> caps_of_state s slot = Some cap \<Longrightarrow> R cap s"
   shows
   "s \<turnstile> \<lbrace>\<lambda>s. invs s \<and> P s \<and> Q s \<and> emptyable (slot_rdcall call) s \<and> valid_rec_del_call call s\<rbrace>
      rec_del call
@@ -172,7 +198,7 @@ next
     apply (rule hoare_pre_spec_validE)
     apply wp
      apply (wp set_cap_P set_cap_Q "2.hyps")+
-          apply ((wp preemption_point_Q preemption_point_P | simp | wp_once preemption_point_inv)+)[1]
+          apply ((wp preemption_point_Q preemption_point_P | simp | wp (once) preemption_point_inv)+)[1]
          apply (simp(no_asm))
          apply (rule spec_strengthen_postE)
           apply (rule spec_valid_conj_liftE1, rule valid_validE_R, rule rec_del_invs)
@@ -248,10 +274,11 @@ done
 qed
 
 lemma rec_del_preservation2:
-  "\<lbrakk>\<And>cap final. \<lbrace>R and P\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_. P\<rbrace>; \<And>cap b. \<lbrace>Q and P\<rbrace> set_cap cap b \<lbrace>\<lambda>_. P\<rbrace>;
+  "\<lbrakk>\<And>cap final. \<lbrace>R cap and P\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_. P\<rbrace>; \<And>cap b. \<lbrace>Q and P\<rbrace> set_cap cap b \<lbrace>\<lambda>_. P\<rbrace>;
   \<And>cap b. invariant (set_cap cap b) Q; \<And>slot free. \<lbrace>Q and P\<rbrace> empty_slot slot free \<lbrace>\<lambda>_. P\<rbrace>;
   \<And>slot free. invariant (empty_slot slot free) Q; \<And>a b. invariant (cap_swap_for_delete a b) Q;
-  \<And>a b. \<lbrace>Q and P\<rbrace> cap_swap_for_delete a b \<lbrace>\<lambda>_. P\<rbrace>; \<And>s. invs s \<Longrightarrow> Q s; \<And>s. invs s \<Longrightarrow> R s;
+  \<And>a b. \<lbrace>Q and P\<rbrace> cap_swap_for_delete a b \<lbrace>\<lambda>_. P\<rbrace>; \<And>s. invs s \<Longrightarrow> Q s;
+  \<And>s slot cap. invs s \<Longrightarrow> caps_of_state s slot = Some cap \<Longrightarrow> R cap s;
   invariant preemption_point Q; \<lbrace>Q and P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>\<rbrakk>
  \<Longrightarrow> \<lbrace>\<lambda>s. invs s \<and> P s \<and> emptyable (slot_rdcall call) s \<and> valid_rec_del_call call s\<rbrace> rec_del call
     \<lbrace>\<lambda>r. P\<rbrace>"
@@ -260,8 +287,8 @@ lemma rec_del_preservation2:
   apply (rule_tac Q="\<lambda>rv s. P s \<and> Q s" in hoare_strengthen_post)
    apply (rule validE_valid)
    apply (rule use_spec)
-  apply (rule rec_del_preservation2' [where R=R],simp+)
-done
+   apply (rule rec_del_preservation2' [where R=R],simp+)
+  done
 
 lemma globals_equiv_irq_state_independent_A[simp, intro!]:
   "irq_state_independent_A (globals_equiv st)"
@@ -273,13 +300,24 @@ lemma valid_ko_at_arm_irq_state_independent_A[simp, intro!]:
   apply(auto simp: irq_state_independent_A_def valid_ko_at_arm_def)
   done
 
+lemma no_cap_to_idle_thread'': "valid_global_refs s \<Longrightarrow> caps_of_state s ref \<noteq> Some (ThreadCap (idle_thread s))"
+  apply (clarsimp simp add: valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
+  apply (drule_tac x="fst ref" in spec)
+  apply (drule_tac x="snd ref" in spec)
+  apply (simp add: cap_range_def global_refs_def)
+  done
+
 lemma rec_del_globals_equiv:
-  "\<lbrace>\<lambda>s. invs s \<and> globals_equiv st s \<and> emptyable (slot_rdcall call) s \<and> valid_rec_del_call call s\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> globals_equiv st s \<and> emptyable (slot_rdcall call) s
+     \<and> valid_rec_del_call call s\<rbrace>
      rec_del call
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (wp rec_del_preservation2[where Q="valid_ko_at_arm" and R="valid_global_objs and valid_arch_state and pspace_aligned and valid_vspace_objs and
- valid_global_refs and
- valid_vs_lookup"] finalise_cap_globals_equiv)
+  apply (wp rec_del_preservation2[where Q="valid_ko_at_arm"
+            and R="\<lambda>cap s. valid_global_objs s \<and> valid_arch_state s
+                       \<and> pspace_aligned s \<and> valid_vspace_objs s
+                       \<and> valid_global_refs s  \<and> valid_vs_lookup s
+                       \<and> (\<forall>p. cap = ThreadCap p \<longrightarrow> p \<noteq> idle_thread s)
+                     "]  finalise_cap_globals_equiv)
              apply simp
             apply (wp set_cap_globals_equiv'')
             apply simp
@@ -288,7 +326,7 @@ lemma rec_del_globals_equiv:
          apply (wp empty_slot_valid_ko_at_arm)+
        apply simp
       apply (simp add: invs_valid_ko_at_arm)
-     apply (simp add: invs_def valid_state_def valid_arch_caps_def valid_pspace_def)
+     apply (clarsimp simp: invs_def valid_state_def valid_arch_caps_def valid_pspace_def no_cap_to_idle_thread'')
     apply (wp preemption_point_inv | simp)+
   done
 
@@ -454,7 +492,7 @@ lemma setup_reply_master_reads_respects:
   "reads_respects aag l (K (is_subject aag t)) (setup_reply_master t)"
   apply (simp add: setup_reply_master_def when_def)
   apply (wp set_cap_reads_respects set_original_reads_respects get_cap_rev | simp)+
-   apply (wp | wp_once hoare_drop_imps)+
+   apply (wp | wp (once) hoare_drop_imps)+
   apply clarsimp
   done
 
@@ -469,7 +507,10 @@ lemmas gets_cur_thread_respects_f =
 lemma restart_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and pas_cur_domain aag and invs and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag t)) (restart t)"
+  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and pas_cur_domain aag and invs
+                           and tcb_at t
+                           and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag t))
+      (restart t)"
   apply (rule gen_asm_ev | elim conjE)+
   apply (simp add: restart_def when_def)
   apply (wp reads_respects_f[OF set_thread_state_reads_respects, where Q="\<top>"]
@@ -479,7 +520,9 @@ lemma restart_reads_respects_f:
             setup_reply_master_pas_refined
             reads_respects_f[OF possible_switch_to_reads_respects, where Q="\<top>"]
             reads_respects_f[OF tcb_sched_action_reads_respects, where Q="\<top>"]
-            cancel_ipc_reads_respects_f setup_reply_master_silc_inv cancel_ipc_silc_inv | simp)+
+            cancel_ipc_reads_respects_f setup_reply_master_silc_inv cancel_ipc_silc_inv
+      | simp
+      | strengthen invs_mdb)+
 
     apply (simp add: get_thread_state_def thread_get_def)
     apply wp
@@ -506,7 +549,8 @@ lemma det_zipWithM:
   done
 
 lemma checked_insert_reads_respects:
-  "reads_respects aag l (K (is_subject aag (fst b) \<and> is_subject aag (fst d) \<and> is_subject aag (fst e))) (check_cap_at a b (check_cap_at c d (cap_insert a b e)))"
+  "reads_respects aag l (K (is_subject aag (fst b) \<and> is_subject aag (fst d) \<and> is_subject aag (fst e)))
+     (check_cap_at a b (check_cap_at c d (cap_insert a b e)))"
   apply(rule equiv_valid_guard_imp)
    apply(simp add: check_cap_at_def)
    apply (wp when_ev cap_insert_reads_respects get_cap_wp get_cap_rev | simp)+
@@ -553,14 +597,19 @@ lemma set_priority_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
   "reads_respects aag l
-           (pas_refined aag and K (is_subject aag word))
+           (pas_refined aag and K (is_subject aag word)
+            and pas_cur_domain aag and (\<lambda>s. is_subject aag (cur_thread s)))
            (set_priority word prio)"
   apply (simp add: set_priority_def thread_set_priority_def)
-  apply (wp get_thread_state_rev
-            gets_cur_thread_ev gts_wp hoare_vcg_all_lift
-            ethread_set_reads_respects tcb_sched_action_reads_respects
-            when_ev | simp split del: if_split | wp_once hoare_drop_imps |
-            rule hoare_strengthen_post, rule ethread_set_priority_pas_refined | force)+
+  apply (wp get_thread_state_rev gets_cur_thread_ev gts_wp when_ev
+            hoare_vcg_all_lift hoare_vcg_imp_lift'
+            ethread_set_reads_respects
+            tcb_sched_action_reads_respects
+            possible_switch_to_reads_respects
+         | simp split del: if_split
+         | wp (once) hoare_drop_imps
+         | (rule hoare_strengthen_post, rule ethread_set_priority_pas_refined)
+         | force)+
   done
 
 lemma set_mcpriority_reads_respects:
@@ -632,29 +681,34 @@ lemma invoke_tcb_reads_respects_f:
   notes validE_valid[wp del]
         static_imp_wp [wp]
   shows
-  "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and pas_refined aag and pas_cur_domain aag and Tcb_AI.tcb_inv_wf ti and (\<lambda>s. is_subject aag (cur_thread s)) and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti)) (invoke_tcb ti)"
+  "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs
+         and simple_sched_action and pas_refined aag and pas_cur_domain aag
+         and Tcb_AI.tcb_inv_wf ti and is_subject aag \<circ> cur_thread
+         and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
+     (invoke_tcb ti)"
   including no_pre
   apply(case_tac ti)
          apply(wpsimp wp: thread_get_reads_respects_f when_ev restart_reads_respects_f
                           reschedule_required_reads_respects_f as_user_reads_respects_f
                           static_imp_wp thread_get_wp' restart_silc_inv restart_pas_refined
                           hoare_vcg_if_lift)+
-         apply(auto intro: requiv_cur_thread_eq
-                   intro!: det_zipWithM
-                     simp: det_setRegister det_getRestartPC det_setNextPC authorised_tcb_inv_def reads_equiv_f_def)[1]
-        apply(wp as_user_reads_respects_f suspend_silc_inv when_ev suspend_reads_respects_f[where st=st]
-                 | simp | elim conjE, assumption)+
-        apply(auto simp: authorised_tcb_inv_def  det_getRegister reads_equiv_f_def
-                 intro!: det_mapM[OF _ subset_refl])[1]
+         apply(solves\<open>auto intro!: det_zipWithM
+                             simp: det_setRegister det_getRestartPC det_setNextPC
+                                   authorised_tcb_inv_def  reads_equiv_f_def\<close>)
+        apply(wp as_user_reads_respects_f suspend_silc_inv when_ev  suspend_reads_respects_f
+             | simp | elim conjE, assumption)+
+        apply(solves\<open>auto simp: authorised_tcb_inv_def  det_getRegister reads_equiv_f_def
+                        intro!: det_mapM[OF _ subset_refl]\<close>)
        apply(wp when_ev mapM_x_ev'' reschedule_required_reads_respects_f[where st=st]
                 as_user_reads_respects_f[where st=st] hoare_vcg_ball_lift mapM_x_wp'
                 restart_reads_respects_f restart_silc_inv hoare_vcg_if_lift
                 suspend_reads_respects_f suspend_silc_inv hoare_drop_imp
                 restart_silc_inv restart_pas_refined
-            | simp split del: if_split add: det_setRegister det_setNextPC)+
-       apply(auto simp: authorised_tcb_inv_def
+            | simp split del: if_split add: det_setRegister det_setNextPC
+            | strengthen invs_mdb)+
+       apply(solves\<open>auto simp: authorised_tcb_inv_def
                         idle_no_ex_cap[OF invs_valid_global_refs invs_valid_objs] det_getRestartPC
-                        det_getRegister)[1]
+                        det_getRegister\<close>)
       defer
       apply((wp suspend_reads_respects_f[where st=st] restart_reads_respects_f[where st=st]
               | simp add: authorised_tcb_inv_def )+)[2]
@@ -672,60 +726,74 @@ lemma invoke_tcb_reads_respects_f:
    apply(auto simp: det_setRegister authorised_tcb_inv_def)[1]
   \<comment> \<open>ThreadControl\<close>
   apply (simp add: split_def cong: option.case_cong)
-  apply (wpsimp wp: hoare_vcg_const_imp_lift_R simp: when_def | wpc)+
-                      apply (rule conjI)
-                       apply ((wpsimp wp: reschedule_required_reads_respects_f)+)[4]
-                   apply((wp reads_respects_f[OF cap_insert_reads_respects, where st=st]
-                             reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
-                             set_priority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
-                             set_mcpriority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
-                             check_cap_inv[OF check_cap_inv[OF cap_insert_valid_list]]
-                             check_cap_inv[OF check_cap_inv[OF cap_insert_valid_sched]]
-                             check_cap_inv[OF check_cap_inv[OF cap_insert_schedact]]
-                             get_thread_state_rev[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
-                             hoare_vcg_all_lift_R hoare_vcg_all_lift
-                             cap_delete_reads_respects[where st=st] itr_wps(19) cap_insert_pas_refined
-                             thread_set_pas_refined reads_respects_f[OF checked_insert_reads_respects, where st=st]
-                             checked_cap_insert_silc_inv[where st=st] cap_delete_silc_inv[where st=st]
-                             checked_cap_insert_only_timer_irq_inv[where st=st' and irq=irq]
-                             cap_delete_only_timer_irq_inv[where st=st' and irq=irq]
-                             set_priority_only_timer_irq_inv[where st=st' and irq=irq]
-                             set_mcpriority_only_timer_irq_inv[where st=st' and irq=irq]
-                             cap_delete_deletes cap_delete_valid_cap cap_delete_cte_at
-                             cap_delete_pas_refined itr_wps(12) itr_wps(14) cap_insert_cte_at
-                             checked_insert_no_cap_to hoare_vcg_const_imp_lift_R hoare_vcg_conj_lift
-                             as_user_reads_respects_f
-                            |wpc
-                            |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
-                                       tcb_at_st_tcb_at when_def
-                            |strengthen use_no_cap_to_obj_asid_strg)+)[9]
-     apply (
-        ((simp add: conj_comms, strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
-          | wp reads_respects_f[OF cap_insert_reads_respects, where st=st]
-            reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
-            set_priority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
-            set_mcpriority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
-            check_cap_inv[OF check_cap_inv[OF cap_insert_valid_list]]
-            check_cap_inv[OF check_cap_inv[OF cap_insert_valid_sched]]
-            check_cap_inv[OF check_cap_inv[OF cap_insert_schedact]]
-            get_thread_state_rev[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
-            hoare_vcg_all_lift_R hoare_vcg_all_lift
-            cap_delete_reads_respects[where st=st] itr_wps(19) cap_insert_pas_refined
-            thread_set_pas_refined reads_respects_f[OF checked_insert_reads_respects, where st=st]
-            checked_cap_insert_silc_inv[where st=st] cap_delete_silc_inv[where st=st]
-            checked_cap_insert_only_timer_irq_inv[where st=st' and irq=irq]
-            cap_delete_only_timer_irq_inv[where st=st' and irq=irq]
-            set_priority_only_timer_irq_inv[where st=st' and irq=irq]
-            set_mcpriority_only_timer_irq_inv[where st=st' and irq=irq]
-            cap_delete_deletes cap_delete_valid_cap cap_delete_cte_at
-            cap_delete_pas_refined itr_wps(12) itr_wps(14) cap_insert_cte_at
-            checked_insert_no_cap_to hoare_vcg_const_imp_lift_R
-            as_user_reads_respects_f
-       |wpc
-       |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
-                  tcb_at_st_tcb_at when_def
-       |strengthen use_no_cap_to_obj_asid_strg)+
-)
+  apply (wpsimp wp: set_priority_reads_respects[THEN
+                     reads_respects_f[where aag=aag and st=st and Q=\<top>]])
+                    apply (wpsimp wp: hoare_vcg_const_imp_lift_R simp: when_def | wpc)+
+                    apply (rule conjI)
+                     apply ((wpsimp wp: reschedule_required_reads_respects_f)+)[4]
+                 apply((wp reads_respects_f[OF cap_insert_reads_respects, where st=st]
+                           reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
+                           set_priority_reads_respects[THEN
+                                               reads_respects_f[where aag=aag and st=st and Q=\<top>]]
+                           set_mcpriority_reads_respects[THEN
+                                               reads_respects_f[where aag=aag and st=st and Q=\<top>]]
+                           check_cap_inv[OF check_cap_inv[OF cap_insert_valid_list]]
+                           check_cap_inv[OF check_cap_inv[OF cap_insert_valid_sched]]
+                           check_cap_inv[OF check_cap_inv[OF cap_insert_schedact]]
+                           check_cap_inv[OF check_cap_inv[OF cap_insert_cur_domain]]
+                           check_cap_inv[OF check_cap_inv[OF cap_insert_ct]]
+                           get_thread_state_rev[THEN
+                                               reads_respects_f[where aag=aag and st=st and Q=\<top>]]
+                           hoare_vcg_all_lift_R hoare_vcg_all_lift
+                           cap_delete_reads_respects[where st=st] checked_insert_pas_refined
+                           thread_set_pas_refined
+                           reads_respects_f[OF checked_insert_reads_respects, where st=st]
+                           checked_cap_insert_silc_inv[where st=st]
+                           cap_delete_silc_inv_not_transferable[where st=st]
+                           checked_cap_insert_only_timer_irq_inv[where st=st' and irq=irq]
+                           cap_delete_only_timer_irq_inv[where st=st' and irq=irq]
+                           set_priority_only_timer_irq_inv[where st=st' and irq=irq]
+                           set_mcpriority_only_timer_irq_inv[where st=st' and irq=irq]
+                           cap_delete_deletes cap_delete_valid_cap cap_delete_cte_at
+                           cap_delete_pas_refined' itr_wps(12) itr_wps(14) cap_insert_cte_at
+                           checked_insert_no_cap_to hoare_vcg_const_imp_lift_R hoare_vcg_conj_lift
+                           as_user_reads_respects_f thread_set_mdb
+                      | wpc
+                      | simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
+                                  tcb_at_st_tcb_at when_def
+                      | strengthen use_no_cap_to_obj_asid_strg invs_mdb
+                      | solves auto)+)[7]
+                    (* 9 subgoals here *)
+          apply ((simp add: conj_comms,
+                  strengthen imp_consequent[where Q="x = None" for x],
+                  simp cong: conj_cong)
+                | wp reads_respects_f[OF cap_insert_reads_respects, where st=st]
+                     reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
+                     set_priority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
+                     set_mcpriority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
+                     check_cap_inv[OF check_cap_inv[OF cap_insert_valid_list]]
+                     check_cap_inv[OF check_cap_inv[OF cap_insert_valid_sched]]
+                     check_cap_inv[OF check_cap_inv[OF cap_insert_schedact]]
+                     check_cap_inv[OF check_cap_inv[OF cap_insert_cur_domain]]
+                     check_cap_inv[OF check_cap_inv[OF cap_insert_ct]]
+                     get_thread_state_rev[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
+                     hoare_vcg_all_lift_R hoare_vcg_all_lift
+                     cap_delete_reads_respects[where st=st] checked_insert_pas_refined
+                     thread_set_pas_refined reads_respects_f[OF checked_insert_reads_respects, where st=st]
+                     checked_cap_insert_silc_inv[where st=st] cap_delete_silc_inv_not_transferable[where st=st]
+                     checked_cap_insert_only_timer_irq_inv[where st=st' and irq=irq]
+                     cap_delete_only_timer_irq_inv[where st=st' and irq=irq]
+                     set_priority_only_timer_irq_inv[where st=st' and irq=irq]
+                     set_mcpriority_only_timer_irq_inv[where st=st' and irq=irq]
+                     cap_delete_deletes cap_delete_valid_cap cap_delete_cte_at
+                     cap_delete_pas_refined' itr_wps(12) itr_wps(14) cap_insert_cte_at
+                     checked_insert_no_cap_to hoare_vcg_const_imp_lift_R
+                     as_user_reads_respects_f
+                |wpc
+                |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
+                           when_def st_tcb_at_triv
+                |strengthen use_no_cap_to_obj_asid_strg invs_mdb
+                |wp (once) hoare_drop_imp)+
     apply(simp add: option_update_thread_def tcb_cap_cases_def
          | wp static_imp_wp static_imp_conj_wp reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
               thread_set_pas_refined | wpc)+
@@ -735,7 +803,7 @@ lemma invoke_tcb_reads_respects_f:
             thread_set_pas_refined thread_set_emptyable thread_set_valid_cap
             thread_set_cte_at  thread_set_no_cap_to_trivial
             thread_set_tcb_fault_handler_update_only_timer_irq_inv
-        | simp add: tcb_cap_cases_def | wpc)+
+        | simp add: tcb_cap_cases_def | wpc | wp (once) hoare_drop_imp)+
   apply (clarsimp simp: authorised_tcb_inv_def  authorised_tcb_inv_extra_def emptyable_def)
   by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
                      det_setRegister

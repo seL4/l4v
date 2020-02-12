@@ -134,7 +134,7 @@ proof -
                 \<le> init_irq_node_ptr + 2 ^ 14 - 1"
     apply (simp only: add_diff_eq[symmetric])
     apply (rule word_add_le_mono2)
-     apply (rule minus_one_helper3, rule shiftl_less_t2n[OF P])
+     apply (rule word_le_minus_one_leq, rule shiftl_less_t2n[OF P])
      apply simp
     apply (simp add: kernel_base_def
       cte_level_bits_def word_bits_def init_irq_node_ptr_def)
@@ -225,6 +225,12 @@ lemma caps_of_state_init_A_st_Null:
    apply (auto simp add: cte_wp_at_caps_of_state)[1]
   apply (clarsimp, erule cte_wp_atE)
    apply (auto simp add: state_defs tcb_cap_cases_def split: if_split_asm)
+  done
+
+lemma cte_wp_at_init_A_st_Null:
+  "cte_wp_at P p init_A_st \<Longrightarrow> P cap.NullCap"
+  apply (subst(asm) cte_wp_at_caps_of_state)
+  apply (simp add:caps_of_state_init_A_st_Null split: if_splits)
   done
 
 lemmas cte_wp_at_caps_of_state_eq
@@ -358,7 +364,7 @@ lemma invs_A:
    apply (clarsimp simp: init_kheap_def split: if_split_asm)
   apply (rule conjI)
    apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def state_defs idle_sc_ptr_def
-                         default_sched_context_def)
+                         default_sched_context_def valid_arch_idle_def)
   apply (rule conjI)
    apply (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def state_defs)
   apply (rule conjI)

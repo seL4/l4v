@@ -20,7 +20,7 @@ declare [[use_anonymous_local_variables=true]]
   context jiraver150
   begin
 
-  ML {* @{const_name "unsigned_char'local0_'"} *}
+  ML \<open>@{const_name "unsigned_char'local0_'"}\<close>
 
   thm f_body_def
   thm f2_body_def

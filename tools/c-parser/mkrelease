@@ -118,7 +118,7 @@ c-parser
 EOF
 
 echo "Rearranging directories"
-/bin/mv -v "$outputdir/src/tools/c-parser/README" "$outputdir"
+/bin/mv -v "$outputdir/src/tools/c-parser/README.md" "$outputdir"
 /bin/mv -v "$outputdir/src/tools/c-parser" "$outputdir/src/"
 rmdir "$outputdir/src/tools"
 

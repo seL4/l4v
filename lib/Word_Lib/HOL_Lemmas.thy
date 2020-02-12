@@ -222,4 +222,12 @@ lemma mod_lemma: "[| (0::nat) < c; r < b |] ==> b * (q mod c) + r < b * c"
   apply (simp add: add_mult_distrib2)
   done
 
+lemma nat_le_Suc_less:
+  "0 < y \<Longrightarrow> (x \<le> y - Suc 0) = (x < y)"
+  by arith
+
+lemma nat_power_minus_less:
+  "a < 2 ^ (x - n) \<Longrightarrow> (a :: nat) < 2 ^ x"
+  by (erule order_less_le_trans) simp
+
 end

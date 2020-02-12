@@ -31,7 +31,7 @@ chapter "Proofs"
  *)
 
 session Refine = BaseRefine +
-  description {* Refinement between Haskell and Abstract spec. *}
+  description \<open>Refinement between Haskell and Abstract spec.\<close>
   sessions
     Lib
     CorresK
@@ -54,12 +54,12 @@ session Refine = BaseRefine +
  * only work for ARM.
  *)
 session RefineOrphanage = Refine +
-  description {* Proof that the kernel does not orphan threads. *}
+  description \<open>Proof that the kernel does not orphan threads.\<close>
   theories
     "refine/$L4V_ARCH/Orphanage"
 
 session BaseRefine2 = BaseRefine +
-  description {* Intermediate point in refinement proof. Useful for machines with small RAM. *}
+  description \<open>Intermediate point in refinement proof. Useful for machines with small RAM.\<close>
   theories [condition = "SKIP_AINVS_PROOFS", quick_and_dirty, skip_proofs]
     "refine/$L4V_ARCH/Untyped_R"
     "refine/$L4V_ARCH/Schedule_R"
@@ -68,7 +68,7 @@ session BaseRefine2 = BaseRefine +
    "refine/$L4V_ARCH/Schedule_R"
 
 session BaseRefine = AInvs +
-  description {* Background theory and libraries for refinement proof. *}
+  description \<open>Background theory and libraries for refinement proof.\<close>
   sessions
     Lib
     CorresK
@@ -179,6 +179,8 @@ session SepDSpec = DSpec +
     "sep-capDL/Frame_SD"
 
 session DSpecProofs in "capDL-api" = SepDSpec +
+  sessions
+    AInvs
   theories
     "API_DP"
 

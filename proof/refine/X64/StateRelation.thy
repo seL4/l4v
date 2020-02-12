@@ -52,12 +52,12 @@ where
    Fault_H.UserException x y"
 
 
-text {*
+text \<open>
   A pspace and a tree are related if every object in the pspace
   corresponds to an object in the tree. Some abstract objects
   like CapTables correspond to multiple concrete ones, thus we
   have to make cuts.
-*}
+\<close>
 
 type_synonym obj_relation_cut = "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
 type_synonym obj_relation_cuts = "(machine_word \<times> obj_relation_cut) set"
@@ -103,19 +103,19 @@ where
            Structures_H.NullCap)"
 | "cap_relation Structures_A.DomainCap c                  = (c =
            Structures_H.DomainCap)"
-| "cap_relation (Structures_A.UntypedCap dev ref n f) c       = (c =
+| "cap_relation (Structures_A.UntypedCap dev ref n f) c   = (c =
            Structures_H.UntypedCap dev ref n f)"
 | "cap_relation (Structures_A.EndpointCap ref b r) c      = (c =
            Structures_H.EndpointCap ref b (AllowSend \<in> r)
-             (AllowRecv \<in> r) (AllowGrant \<in> r))"
-| "cap_relation (Structures_A.NotificationCap ref b r) c = (c =
+             (AllowRecv \<in> r) (AllowGrant \<in> r) (AllowGrantReply \<in> r))"
+| "cap_relation (Structures_A.NotificationCap ref b r) c  = (c =
            Structures_H.NotificationCap ref b (AllowSend \<in> r) (AllowRecv \<in> r))"
-| "cap_relation (Structures_A.CNodeCap ref n L) c    = (c =
+| "cap_relation (Structures_A.CNodeCap ref n L) c         = (c =
            Structures_H.CNodeCap ref n (of_bl L) (length L))"
 | "cap_relation (Structures_A.ThreadCap ref) c            = (c =
            Structures_H.ThreadCap ref)"
-| "cap_relation (Structures_A.ReplyCap ref master) c      = (c =
-           Structures_H.ReplyCap ref master)"
+| "cap_relation (Structures_A.ReplyCap ref master r) c    = (c =
+           Structures_H.ReplyCap ref master (AllowGrant \<in> r))"
 | "cap_relation (Structures_A.IRQControlCap) c            = (c =
            Structures_H.IRQControlCap)"
 | "cap_relation (Structures_A.IRQHandlerCap irq) c        = (c =
@@ -173,11 +173,11 @@ where
      = (ts' = Structures_H.IdleThreadState)"
 | "thread_state_relation (Structures_A.BlockedOnReply) ts'
      = (ts' = Structures_H.BlockedOnReply)"
-| "thread_state_relation (Structures_A.BlockedOnReceive oref) ts'
-     = (ts' = Structures_H.BlockedOnReceive oref)"
+| "thread_state_relation (Structures_A.BlockedOnReceive oref sp) ts'
+     = (ts' = Structures_H.BlockedOnReceive oref (receiver_can_grant sp))"
 | "thread_state_relation (Structures_A.BlockedOnSend oref sp) ts'
      = (ts' = Structures_H.BlockedOnSend oref (sender_badge sp)
-                   (sender_can_grant sp) (sender_is_call sp))"
+                   (sender_can_grant sp) (sender_can_grant_reply sp) (sender_is_call sp))"
 | "thread_state_relation (Structures_A.BlockedOnNotification oref) ts'
      = (ts' = Structures_H.BlockedOnNotification oref)"
 
@@ -500,10 +500,10 @@ where
        \<and> x64_irq_relation (x64_irq_state s) (x64KSIRQState s')}"
 
 definition
-  (* NOTE: this map discards the Ident right, needed on endpoints only *)
   rights_mask_map :: "rights set \<Rightarrow> Types_H.cap_rights"
 where
- "rights_mask_map \<equiv> \<lambda>rs. CapRights (AllowWrite \<in> rs) (AllowRead \<in> rs) (AllowGrant \<in> rs)"
+ "rights_mask_map \<equiv> \<lambda>rs. CapRights (AllowWrite \<in> rs) (AllowRead \<in> rs) (AllowGrant \<in> rs)
+                                   (AllowGrantReply \<in> rs)"
 
 
 lemma obj_relation_cutsE:
@@ -560,8 +560,8 @@ lemmas cap_relation_split_asm =
 
 
 
-text {* Relations on other data types that aren't stored but
-        used as intermediate values in the specs. *}
+text \<open>Relations on other data types that aren't stored but
+        used as intermediate values in the specs.\<close>
 
 primrec
   message_info_map :: "Structures_A.message_info \<Rightarrow> Types_H.message_info"
@@ -626,14 +626,10 @@ where
        \<and> (cur_domain s = ksCurDomain s')
        \<and> (domain_time s = ksDomainTime s')}"
 
-text {* Rules for using states in the relation. *}
+text \<open>Rules for using states in the relation.\<close>
 
 lemma curthread_relation:
   "(a, b) \<in> state_relation \<Longrightarrow> ksCurThread b = cur_thread a"
-  by (simp add: state_relation_def)
-
-lemma workunitscompleted_relation:
-  "(a, b) \<in> state_relation \<Longrightarrow> ksWorkUnitsCompleted b = work_units_completed a"
   by (simp add: state_relation_def)
 
 lemma state_relation_pspace_relation[elim!]:
@@ -643,29 +639,6 @@ lemma state_relation_pspace_relation[elim!]:
 lemma state_relation_ekheap_relation[elim!]:
   "(s,s') \<in> state_relation \<Longrightarrow> ekheap_relation (ekheap s) (ksPSpace s')"
   by (simp add: state_relation_def)
-
-(* intro/dest/elim for state_relation *)
-lemma state_relationI [intro?]:
-  "\<And>s s'. \<lbrakk> pspace_relation (kheap s) (ksPSpace s');
-  ekheap_relation (ekheap s) (ksPSpace s');
-  sched_act_relation (scheduler_action s) (ksSchedulerAction s');
-  ready_queues_relation (ready_queues s) (ksReadyQueues s');
-  ghost_relation (kheap s) (gsUserPages s') (gsCNodes s');
-  cdt_relation (swp cte_at s) (cdt s) (ctes_of s');
-  cdt_list_relation (cdt_list s) (cdt s) (ctes_of s');
-  revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s');
-  (arch_state s, ksArchState s') \<in> arch_state_relation;
-  interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s');
-  cur_thread s = ksCurThread s';
-  idle_thread s = ksIdleThread s';
-  machine_state s = ksMachineState s';
-  work_units_completed s = ksWorkUnitsCompleted s';
-  domain_index s = ksDomScheduleIdx s';
-  domain_list s = ksDomSchedule s';
-  cur_domain s = ksCurDomain s';
-  domain_time s = ksDomainTime s' \<rbrakk> \<Longrightarrow>
-  (s, s') \<in> state_relation"
-  unfolding state_relation_def by blast
 
 lemma state_relationD:
   assumes sr:  "(s, s') \<in> state_relation"
@@ -712,21 +685,7 @@ lemma state_relationE [elim?]:
   shows "R"
   using sr by (blast intro!: rl dest: state_relationD)
 
-text {* This isn't defined for arch objects *}
-
-lemma objBits_obj_bits:
-  assumes rel: "other_obj_relation obj obj'"
-  shows   "obj_bits obj = objBitsKO obj'"
-  using rel
-  by (simp add: other_obj_relation_def objBits_simps' pageBits_def
-                archObjSize_def
-         split: Structures_A.kernel_object.split_asm
-                X64_A.arch_kernel_obj.split_asm
-                Structures_H.kernel_object.split_asm
-                X64_H.arch_kernel_object.split_asm)
-
-lemma replicate_length_cong:
-  "x = y \<Longrightarrow> replicate x n = replicate y n" by simp
+text \<open>This isn't defined for arch objects\<close>
 
 lemmas isCap_defs =
   isZombie_def isArchObjectCap_def
@@ -743,23 +702,6 @@ lemma isCNodeCap_cap_map [simp]:
   "cap_relation c c' \<Longrightarrow> isCNodeCap c' = is_cnode_cap c"
   apply (cases c, simp_all add: isCap_defs split: sum.splits)
    apply clarsimp+
-  done
-
-lemma isNullCap_cap_map [simp]:
-  "cap_relation c c' \<Longrightarrow> isNullCap c' = (c = cap.NullCap)"
-  apply (cases c, simp_all add: isCap_defs split: sum.splits)
-   apply clarsimp+
-  done
-
-lemma revokable_relation_eqI:
-  assumes r: "revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) m"
-  assumes c: "\<And>P p. cte_wp_at P p s'' \<Longrightarrow> cte_wp_at P p s"
-  assumes m: "\<And>p. is_original_cap s' p = is_original_cap s p"
-  shows "revokable_relation (is_original_cap s') (null_filter (caps_of_state s'')) m" using r
-  apply (clarsimp simp add: m revokable_relation_def null_filter_def)
-  apply (drule caps_of_state_cteD)
-  apply (drule c)
-  apply (simp add: cte_wp_at_caps_of_state)
   done
 
 lemma sts_rel_idle :
@@ -812,11 +754,6 @@ lemma ghost_relation_typ_at:
    apply (intro conjI impI iffI allI,simp_all)
     apply (auto elim!: allE)
    done
-
-lemma runnable_coerce_abstract:
-  "\<lbrakk> runnable' st'; thread_state_relation st st' \<rbrakk>
-    \<Longrightarrow> runnable st"
-  by (case_tac st, simp_all)
 
 end
 end

@@ -81,9 +81,9 @@ datatype irq_handler_invocation =
 
 datatype invocation =
     InvokeUntyped untyped_invocation
-  | InvokeEndpoint obj_ref machine_word bool
+  | InvokeEndpoint obj_ref machine_word bool bool
   | InvokeNotification obj_ref machine_word
-  | InvokeReply obj_ref
+  | InvokeReply obj_ref bool
   | InvokeTCB tcb_invocation
   | InvokeDomain obj_ref word8
   | InvokeSchedContext sched_context_invocation

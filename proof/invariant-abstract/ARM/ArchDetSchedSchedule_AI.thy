@@ -33,7 +33,10 @@ crunches setHardwareASID, set_current_pd, invalidateLocalTLB_ASID, cleanByVA, in
   invalidateLocalTLB_VAASID, do_flush, storeWord, freeMemory, ackDeadlineIRQ, clearMemory,
   getDFSR, getFAR, getIFSR
   for last_machine_time[wp]: "\<lambda>s. P (last_machine_time s)"
-  (simp: isb_def writeTTBR0_def wp: crunch_wps)
+  (simp: isb_def writeTTBR0_def wp: crunch_wps
+   ignore_del: setHardwareASID invalidateLocalTLB_ASID cleanByVA invalidateL2Range invalidateByVA
+               cleanInvalByVA cleanInvalidateL2Range branchFlush invalidateByVA_I cleanL2Range
+               invalidateLocalTLB_VAASID)
 
 lemma misc_dmo_valid_sched_pred_strong[wp]:
   "do_machine_op cleanCaches_PoU \<lbrace>valid_sched_pred_strong Q\<rbrace>"

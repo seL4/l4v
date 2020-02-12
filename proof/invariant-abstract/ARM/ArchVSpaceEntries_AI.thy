@@ -89,7 +89,7 @@ lemma set_object_valid_pdpt[wp]:
   "\<lbrace>valid_pdpt_objs and K (obj_valid_pdpt obj)\<rbrace>
       set_object ptr obj
    \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  apply (simp add: set_object_def, wp)
+  apply (simp add: set_object_def get_object_def, wp)
   apply (auto simp: fun_upd_def[symmetric] del: ballI elim: ball_ran_updI)
   done
 
@@ -107,7 +107,7 @@ lemma shift_0x3C_set:
   apply (subst image_cong[where N="{x. x < 2 ^ 4}"])
     apply (safe, simp_all)[1]
      apply (drule plus_one_helper2, simp_all)[1]
-    apply (drule minus_one_helper3, simp_all)[1]
+    apply (drule word_le_minus_one_leq, simp_all)[1]
    apply (rule_tac f="\<lambda>x. ucast (x && mask bits >> 2)" in arg_cong)
    apply (rule trans[OF add.commute is_aligned_add_or], assumption)
    apply (rule shiftl_less_t2n, simp_all)[1]
@@ -116,7 +116,7 @@ lemma shift_0x3C_set:
     apply (simp add: word_bits_conv)
    apply (rule word_eqI)
    apply (simp add: word_ops_nth_size word_size nth_ucast nth_shiftr
-                    nth_shiftl neg_mask_bang
+                    nth_shiftl neg_mask_test_bit
                     word_bits_conv)
    apply (safe, simp_all add: is_aligned_nth)[1]
    apply (drule_tac x="Suc (Suc n)" in spec)
@@ -319,7 +319,7 @@ lemma store_pde_non_master_valid_pdpt:
      apply (case_tac pde,simp_all)
     apply (case_tac pde,simp_all)
    apply (case_tac pde,simp_all)
-    apply (clarsimp simp: is_aligned_neg_mask_eq)+
+    apply (clarsimp)+
   apply (simp add:fun_upd_def)
   apply (rule entries_align_pde_update)
    apply (drule(1) valid_pdpt_objs_pdD,simp)
@@ -358,7 +358,7 @@ lemma store_pte_non_master_valid_pdpt:
    apply (case_tac "pt pa")
      apply simp
     apply (case_tac pte,simp_all)
-    apply (clarsimp simp: is_aligned_neg_mask_eq)
+    apply (clarsimp)
    apply (case_tac pte,simp_all)
   apply (simp add:fun_upd_def)
   apply (rule entries_align_pte_update)
@@ -405,26 +405,15 @@ lemma unmap_page_table_valid_pdpt_objs[wp]:
 
 lemma set_simple_ko_valid_pdpt_objs[wp]:
    "\<lbrace>\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x\<rbrace>
-       set_simple_ko param_a param_b param_c \<lbrace>\<lambda>_ s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x\<rbrace> "
-  by (set_simple_ko_method wp_thm: set_object_valid_pdpt simp_thm: get_object_def)
-
-crunch valid_pdpt_objs[wp]: set_thread_state_act "valid_pdpt_objs"
-  (wp: check_cap_inv crunch_wps simp: crunch_simps
-       ignore: check_cap_at set_object)
-
-crunch valid_pdpt_objs[wp]: reschedule_required "valid_pdpt_objs"
+       set_simple_ko param_a param_b param_c \<lbrace>\<lambda>_ s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x\<rbrace>"
+  unfolding set_simple_ko_def
+  by (wpsimp wp: set_object_valid_pdpt[THEN hoare_set_object_weaken_pre] get_object_wp
+           simp: a_type_def obj_valid_pdpt_def obj_at_def
+          split: kernel_object.splits)
 
 crunch valid_pdpt_objs[wp]: possible_switch_to "valid_pdpt_objs"
   (wp: check_cap_inv crunch_wps simp: crunch_simps
        ignore: check_cap_at set_object)
-
-crunch valid_pdpt_objs[wp]: test_reschedule "valid_pdpt_objs"
-  (wp: check_cap_inv crunch_wps simp: crunch_simps
-       ignore: check_cap_at set_object)
-
-crunch valid_pdpt_objs[wp]: cap_swap_for_delete, empty_slot "valid_pdpt_objs"
-  (wp: crunch_wps select_wp preemption_point_inv simp: crunch_simps unless_def
-   ignore:set_object)
 
 lemma schedule_tcb_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> schedule_tcb r \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
@@ -718,10 +707,6 @@ crunch valid_pdpt_objs[wp]: invoke_irq_handler "valid_pdpt_objs"
   (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps
     ignore: tcb_release_remove set_object simp: unless_def)
 
-crunch valid_pdpt_objs[wp]: sched_context_donate "valid_pdpt_objs"
-  (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps
-    ignore: tcb_release_remove set_object simp: unless_def)
-
 crunch valid_pdpt_objs[wp]: do_reply_transfer "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps hoare_vcg_if_lift2
    ignore: tcb_release_remove set_object tcb_release_enqueue
@@ -858,11 +843,9 @@ definition
 
 definition
   "page_inv_duplicates_valid iv \<equiv> case iv of
-         PageMap asid cap ct_slot entries \<Rightarrow>
-            page_inv_entries_safe entries
-       | PageRemap asid entries \<Rightarrow>
-            page_inv_entries_safe entries
-       | _ \<Rightarrow> \<top>"
+       PageMap asid cap ct_slot entries \<Rightarrow>
+              page_inv_entries_safe entries
+     | _ \<Rightarrow> \<top>"
 
 lemma pte_range_interD:
  "pte_range pte p \<inter> pte_range pte' p' \<noteq> {}
@@ -934,7 +917,7 @@ lemma store_pte_valid_pdpt:
     apply (case_tac pte)
      apply simp+
     apply (case_tac "pta p",simp_all)
-    apply (clarsimp simp: is_aligned_neg_mask_eq)
+    apply (clarsimp)
    apply (simp add:fun_upd_def)
    apply (rule entries_align_pte_update)
     apply (drule (1) valid_pdpt_objs_ptD,simp)
@@ -1028,9 +1011,9 @@ lemma store_pde_valid_pdpt:
      apply simp
     apply (case_tac pde,simp_all)
      apply (case_tac "pda p",simp_all)
-     apply (clarsimp simp: is_aligned_neg_mask_eq)
+     apply (clarsimp)
     apply (case_tac "pda p",simp_all)
-    apply (clarsimp simp: is_aligned_neg_mask_eq)
+    apply (clarsimp)
    apply (simp add:fun_upd_def)
    apply (rule entries_align_pde_update)
     apply simp+
@@ -1124,7 +1107,7 @@ lemma perform_page_valid_pdpt[wp]:
                                   valid_slots_def page_inv_entries_safe_def pte_check_if_mapped_def
                                   pde_check_if_mapped_def
                            split: pte.splits pde.splits
-                 | wp_once hoare_drop_imps)+
+                 | wp (once) hoare_drop_imps)+
   done
 
 definition
@@ -1402,14 +1385,14 @@ lemma ensure_safe_mapping_ensures[wp]:
            apply (clarsimp)
            apply (drule(1) valid_pdpt_objs_ptD)
            apply (frule align_entry_ptD,simp)
-           apply (simp add:is_aligned_neg_mask_eq)
+           apply simp
           apply clarsimp
           apply (drule(1) valid_pdpt_objs_ptD,clarify)
           apply (erule(4) invalid_pteI[OF _ neq_pt_offset])
          apply clarsimp
          apply (drule(1) valid_pdpt_objs_ptD,clarify)
          apply (frule align_entry_ptD,simp)
-         apply (simp add:is_aligned_neg_mask_eq)
+         apply simp
         apply (wp hoare_drop_imps |wpc|simp)+
       apply (clarsimp simp:upto_enum_def upto_enum_step_def
         upto_0_to_n2 Fun.comp_def distinct_map)
@@ -1462,13 +1445,13 @@ lemma ensure_safe_mapping_ensures[wp]:
        apply (intro conjI impI)
           apply clarsimp
           apply (frule(1) align_entry_pdD)
-          apply (simp add:is_aligned_neg_mask_eq)
+          apply simp
          apply clarsimp
          apply (frule(1) align_entry_pdD)
-         apply (simp add:is_aligned_neg_mask_eq)
+         apply simp
         apply clarsimp
         apply (frule(1) align_entry_pdD)
-        apply (simp add:is_aligned_neg_mask_eq)
+        apply simp
        apply clarsimp
        apply (erule(4) invalid_pdeI[OF _ neq_pd_offset])
       apply (wp hoare_drop_imps |wpc|simp)+
@@ -1546,100 +1529,51 @@ lemma create_mapping_entries_safe[wp]:
   apply simp
   done
 
-crunch vspace_objs[wp]: find_pd_for_asid valid_vspace_objs
-
 lemma arch_decode_invocation_valid_pdpt[wp]:
-  "\<lbrace>invs and valid_cap (cap.ArchObjectCap cap) and valid_pdpt_objs \<rbrace>
+  "\<lbrace>invs and valid_cap (cap.ArchObjectCap cap) and valid_pdpt_objs\<rbrace>
    arch_decode_invocation label args cap_index slot cap excaps
    \<lbrace>invocation_duplicates_valid o Invocations_A.InvokeArchObject\<rbrace>,-"
-  proof -
-    have bitwise:"\<And>a. (ucast (((a::word32) && ~~ mask 6) && mask 14 >> 2)::12 word)
-      = (ucast (a  && mask 14 >> 2)::12 word) && ~~ mask 4"
-      apply (simp add:mask_def)
-      apply word_bitwise
-      done
-    have sz:
-      "\<And>vmpage_size. \<lbrakk>args ! 0 + 2 ^ pageBitsForSize vmpage_size - 1 < kernel_base;
-        vmsz_aligned (args ! 0) vmpage_size\<rbrakk>
-       \<Longrightarrow> args ! 0 < kernel_base"
-      apply (rule le_less_trans[OF is_aligned_no_overflow])
-       apply (simp add:vmsz_aligned_def)
-      apply simp
-      done
+proof -
+  have bitwise:"\<And>a. (ucast (((a::word32) && ~~ mask 6) && mask 14 >> 2)::12 word)
+    = (ucast (a  && mask 14 >> 2)::12 word) && ~~ mask 4"
+    apply (simp add: mask_def)
+    apply word_bitwise
+    done
+  have sz:
+    "\<And>vmpage_size. \<lbrakk>args ! 0 + 2 ^ pageBitsForSize vmpage_size - 1 < kernel_base;
+      vmsz_aligned (args ! 0) vmpage_size\<rbrakk>
+     \<Longrightarrow> args ! 0 < kernel_base"
+    apply (rule le_less_trans[OF is_aligned_no_overflow])
+     apply (simp add: vmsz_aligned_def)
+    apply simp
+    done
   show ?thesis
-  apply (simp add: arch_decode_invocation_def
-              Let_def split_def get_master_pde_def
-              split del: if_split
-                   cong: arch_cap.case_cong if_cong cap.case_cong
-                         option.case_cong)
-  apply (rule hoare_pre)
-   apply ((wp get_pde_wp
-             ensure_safe_mapping_ensures[THEN hoare_post_imp_R]
-             create_mapping_entries_safe check_vp_wpR
-             find_pd_for_asid_aligned_pd_bits
-               [unfolded pd_bits_def pageBits_def,simplified]
-             | wpc
-             | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
-                         pti_duplicates_valid_def page_inv_duplicates_valid_def
-                         mask_lower_twice pd_bits_def bitwise pageBits_def
-                         not_le sz if_apply_def2
-                    del: hoare_True_E_R
-                     split del: if_split
-             | simp only: obj_at_def)+)
-         apply (rule_tac Q'="\<lambda>rv. \<exists>\<rhd> rv and K (is_aligned rv pd_bits) and
-                  (\<exists>\<rhd> (lookup_pd_slot rv (args ! 0) && ~~ mask pd_bits)) and
-                     valid_vspace_objs and pspace_aligned and valid_pdpt_objs"
-                     and f="find_pd_for_asid p" for p
-                    in hoare_post_imp_R)
-          apply (wp | simp)+
-         apply (fastforce simp:pd_bits_def pageBits_def)
-        apply ((wp get_pde_wp
-             ensure_safe_mapping_ensures[THEN hoare_post_imp_R]
-             create_mapping_entries_safe check_vp_wpR
-             find_pd_for_asid_aligned_pd_bits
-               [unfolded pd_bits_def pageBits_def,simplified]
-             | wpc
-             | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
-                         pti_duplicates_valid_def page_inv_duplicates_valid_def
-                         mask_lower_twice pd_bits_def bitwise pageBits_def
-                         not_le sz if_apply_def2
-                    del: hoare_True_E_R
-                     split del: if_split
-             | simp only: obj_at_def)+)
-         apply (rule_tac Q'="\<lambda>rv. \<exists>\<rhd> rv and K (is_aligned rv pd_bits) and
-                  (\<exists>\<rhd> (lookup_pd_slot rv (snd pa) && ~~ mask pd_bits)) and
-                     valid_vspace_objs and pspace_aligned and valid_pdpt_objs and
-                     K ((snd pa) < kernel_base)"
-                     and f="find_pd_for_asid p" for p
-                    in hoare_post_imp_R)
-          apply (wp| simp)+
-         apply (auto simp:pd_bits_def pageBits_def)[1]
-        apply ((wp get_pde_wp
-             ensure_safe_mapping_ensures[THEN hoare_post_imp_R]
-             create_mapping_entries_safe check_vp_wpR
-             find_pd_for_asid_aligned_pd_bits
-               [unfolded pd_bits_def pageBits_def,simplified]
-             | wpc
-             | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
-                         pti_duplicates_valid_def page_inv_duplicates_valid_def
-                         mask_lower_twice pd_bits_def bitwise pageBits_def
-                         not_le sz if_apply_def2
-                    del: hoare_True_E_R
-                     split del: if_split
-             | simp only: obj_at_def)+)
-         apply (rule hoare_post_imp_R[where P=\<top>])
-          apply (rule hoare_True_E_R)
-         apply auto[1]
-        apply ((wp
-             | wpc
-             | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
-                         pti_duplicates_valid_def page_inv_duplicates_valid_def
-                         if_apply_def2
-                     del: hoare_True_E_R
-                     split del: if_split
-             | simp only: obj_at_def)+)
-  apply (auto simp:valid_cap_simps)
-  done
+    supply if_split[split del]
+    apply (simp add: arch_decode_invocation_def)
+    \<comment> \<open>Handle the easy cases first (trivial because of the post-condition invocation_duplicates_valid)\<close>
+    apply (cases "invocation_type label \<notin> {ArchInvocationLabel ARMPageTableMap, ArchInvocationLabel ARMPageMap}")
+     apply (wpsimp simp: invocation_duplicates_valid_def page_inv_duplicates_valid_def
+                         pti_duplicates_valid_def Let_def
+                   cong: if_cong)
+    \<comment> \<open>Handle the two interesting cases now\<close>
+    apply (clarsimp; erule disjE; cases cap;
+           simp add: isPDFlushLabel_def isPageFlushLabel_def throwError_R')
+     \<comment> \<open>PageTableMap\<close>
+     apply (wpsimp simp: Let_def get_master_pde_def
+                     wp: get_pde_wp hoare_vcg_if_lift_ER | wp (once) hoare_drop_imps)+
+     apply (clarsimp simp: invocation_duplicates_valid_def pti_duplicates_valid_def mask_lower_twice
+                           pd_bits_def bitwise pageBits_def obj_at_def
+                     split: if_split)
+     apply (intro conjI; clarsimp)
+    \<comment> \<open>PageMap\<close>
+    apply (rename_tac dev pg_ptr rights sz pg_map)
+    apply (wpsimp simp: Let_def invocation_duplicates_valid_def page_inv_duplicates_valid_def
+                    wp: ensure_safe_mapping_ensures[THEN hoare_post_imp_R]
+                        check_vp_wpR hoare_vcg_if_lift_ER find_pd_for_asid_lookup_pd_wp)
+    apply (fastforce simp: invs_psp_aligned page_directory_at_aligned_pd_bits
+                           word_not_le sz valid_cap_def valid_arch_cap_def lookup_pd_slot_eq
+                    split: if_splits)
+    done
 qed
 
 lemma decode_invocation_valid_pdpt[wp]:
@@ -1674,7 +1608,7 @@ crunch invocation_duplicates_valid[wp]: set_thread_state_act "invocation_duplica
 
 lemma set_thread_state_duplicates_valid[wp]:
   "\<lbrace>invocation_duplicates_valid i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. invocation_duplicates_valid i\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def)
+  apply (simp add: set_thread_state_def set_object_def get_object_def)
   apply (wp|simp)+
   apply (clarsimp simp: invocation_duplicates_valid_def pti_duplicates_valid_def
                         page_inv_duplicates_valid_def page_inv_entries_safe_def
@@ -1696,7 +1630,7 @@ lemma handle_invocation_valid_pdpt[wp]:
   apply (simp add: handle_invocation_def)
   apply (wp syscall_valid set_thread_state_ct_st sts_schedulable_scheduler_action
          | simp add: split_def cong: conj_cong | wpc
-         | wp_once hoare_drop_imps)+
+         | wp (once) hoare_drop_imps)+
   apply (fastforce simp: ct_in_state_def fault_tcbs_valid_states_active
                    dest: invs_fault_tcbs_valid_states
                  intro!: st_tcb_ex_cap)

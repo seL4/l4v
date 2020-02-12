@@ -19,10 +19,10 @@ theory Sep_Heap_Instance
 imports Separation_Algebra
 begin
 
-text {*
+text \<open>
   Example instantiation of a the separation algebra to a map, i.e.\ a
   function from any type to @{typ "'a option"}.
-*}
+\<close>
 
 class opt =
   fixes none :: 'a
@@ -69,10 +69,10 @@ instance
 
 end
 
-text {*
+text \<open>
   For the actual option type @{const domain} and @{text "+"} are
   just @{const dom} and @{text "++"}:
-*}
+\<close>
 
 lemma domain_conv: "domain = dom"
   by (rule ext) (simp add: domain_def dom_def)
@@ -82,21 +82,21 @@ lemma plus_fun_conv: "a + b = a ++ b"
 
 lemmas map_convs = domain_conv plus_fun_conv
 
-text {*
+text \<open>
   Any map can now act as a separation heap without further work:
-*}
+\<close>
 lemma
   fixes h :: "(nat => nat) => 'foo option"
   shows "(P ** Q ** H) h = (Q ** H ** P) h"
   by (simp add: sep_conj_ac)
 
-section {* @{typ unit} Instantiation *}
+section \<open>@{typ unit} Instantiation\<close>
 
-text {*
+text \<open>
   The @{typ unit} type also forms a separation algebra. Although
   typically not useful as a state space by itself, it may be
   a type parameter to more complex state space.
-*}
+\<close>
 
 instantiation "unit" :: stronger_sep_algebra
 begin
@@ -114,12 +114,12 @@ lemma unit_disj_sep_unit [simp]: "(a :: unit) ## b"
 lemma unit_plus_unit [simp]: "(a :: unit) + b = ()"
   by (rule unit_eq)
 
-section {* @{typ "'a option"} Instantiation *}
+section \<open>@{typ "'a option"} Instantiation\<close>
 
-text {*
+text \<open>
   The @{typ "'a option"} is a seperation algebra, with @{term None}
   indicating emptyness.
-*}
+\<close>
 
 instantiation option :: (type) stronger_sep_algebra
 begin

@@ -56,7 +56,8 @@ lemma suspend_st_tcb_at':
   "\<lbrace>\<lambda>s. (t\<noteq>t' \<longrightarrow> st_tcb_at' P t' s) \<and> (t=t' \<longrightarrow> P Inactive)\<rbrace>
   suspend t
   \<lbrace>\<lambda>_. st_tcb_at' P t'\<rbrace>"
-  apply (simp add: suspend_def unless_def)
+  apply (simp add: suspend_def)
+  unfolding updateRestartPC_def
   apply (cases "t=t'")
   apply (simp|wp cancelIPC_st_tcb_at' sts_st_tcb')+
   done
@@ -146,28 +147,21 @@ crunch pred_tcb_at'2[wp]: doMachineOp "\<lambda>s. P (pred_tcb_at' a b p s)"
   (simp: crunch_simps)
 
 crunch valid_queues'[wp]: readVCPUReg "\<lambda>s. valid_queues s"
-  (ignore: getObject)
 
 crunch valid_objs'[wp]: readVCPUReg "\<lambda>s. valid_objs' s"
-  (ignore: getObject)
 
 crunch sch_act_wf'[wp]: readVCPUReg "\<lambda>s. P (sch_act_wf (ksSchedulerAction s) s)"
-  (ignore: getObject)
 
 crunch ko_at'[wp]: readVCPUReg "\<lambda>s. P (ko_at' a p s)"
-  (ignore: getObject)
 
 crunch obj_at'[wp]: readVCPUReg "\<lambda>s. P (obj_at' a p s)"
-  (ignore: getObject)
 
 crunch pred_tcb_at'[wp]: readVCPUReg "\<lambda>s. P (pred_tcb_at' a b p s)"
-  (ignore: getObject)
 
 crunch ksCurThread[wp]: readVCPUReg "\<lambda>s. P (ksCurThread s)"
-  (ignore: getObject)
 
 lemma fromEnum_maxBound_vcpureg_def:
-  "fromEnum (maxBound :: vcpureg) = 38"
+  "fromEnum (maxBound :: vcpureg) = 39"
   by (clarsimp simp: fromEnum_def maxBound_def enum_vcpureg)
 
 lemma unat_of_nat_mword_fromEnum_vcpureg[simp]:

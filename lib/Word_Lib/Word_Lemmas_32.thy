@@ -286,6 +286,8 @@ lemma unat_of_int_32:
   apply (simp add: word_of_int uint_word_of_int)
   done
 
+lemmas word_ctz_not_minus_1_32 = word_ctz_not_minus_1[where 'a=32, simplified]
+
 (* Helper for packing then unpacking a 64-bit variable. *)
 lemma cast_chunk_assemble_id_64[simp]:
   "(((ucast ((ucast (x::64 word))::32 word))::64 word) || (((ucast ((ucast (x >> 32))::32 word))::64 word) << 32)) = x"

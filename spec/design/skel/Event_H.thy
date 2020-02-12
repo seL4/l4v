@@ -14,11 +14,11 @@ theory Event_H
 imports "../machine/MachineExports"
 begin
 
-text {*
+text \<open>
   \label{sec:Event_H}
 
   These are the user-level and machine generated events the kernel reacts to.
-*}
+\<close>
 
 #INCLUDE_HASKELL SEL4/API/Syscall.lhs ONLY Event Syscall
 

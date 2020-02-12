@@ -69,7 +69,7 @@ where
 
 end
 
-text {*
+text \<open>
   Conceptually, the constant x64KSKernelVSpace_C resembles ghost state.
   The constant specifies the use of certain address ranges, or ``windows''.
   It is the very nature of these ranges is that they remain fixed
@@ -83,7 +83,7 @@ text {*
   Hence, we can later base definitions for the ADT on it,
   which can subsequently be instantiated for
   @{text kernel_all_global_addresses} as well as @{text kernel_all_substitute}.
-*}
+\<close>
 locale state_rel = Arch + substitute_pre + (*FIXME: arch_split*)
   fixes x64KSKernelVSpace_C :: "machine_word \<Rightarrow> x64vspace_region_use"
 
@@ -92,11 +92,20 @@ locale kernel = kernel_all_substitute + state_rel
 context state_rel
 begin
 
+abbreviation x64KSSKIMPML4_Ptr :: "(pml4e_C[512]) ptr" where
+  "x64KSSKIMPML4_Ptr \<equiv> pml4_Ptr (symbol_table ''x64KSSKIMPML4'')"
+
+abbreviation x64KSSKIMPDPT_Ptr :: "(pdpte_C[512]) ptr" where
+  "x64KSSKIMPDPT_Ptr \<equiv> pdpt_Ptr (symbol_table ''x64KSSKIMPDPT'')"
+
+abbreviation x64KSSKIMPD_Ptr :: "(pde_C[512]) ptr" where
+  "x64KSSKIMPD_Ptr \<equiv> pd_Ptr (symbol_table ''x64KSSKIMPD'')"
+
 (* relates fixed adresses *)
 definition
-  "carch_globals s \<equiv> (x64KSSKIMPML4 s = symbol_table ''x64KSSKIMPML4'')
-                   \<and> (x64KSSKIMPDPTs s = [symbol_table ''x64KSSKIMPDPT''])
-                   \<and> (x64KSSKIMPDs s = [symbol_table ''x64KSSKIMPD''])
+  "carch_globals s \<equiv> (x64KSSKIMPML4 s = ptr_val x64KSSKIMPML4_Ptr)
+                   \<and> (x64KSSKIMPDPTs s = [ptr_val x64KSSKIMPDPT_Ptr])
+                   \<and> (x64KSSKIMPDs s = [ptr_val x64KSSKIMPD_Ptr])
                    \<and> (x64KSSKIMPTs s = [])"
 
 (* FIXME x64: DON'T DELETE!
@@ -146,7 +155,7 @@ definition
 where
   "x64_irq_state_relation s s' \<equiv>
      case x86_irq_state_lift s' of
-       None \<Rightarrow> False (* should never happen *)
+       None \<Rightarrow> False \<comment> \<open>should never happen\<close>
      | Some x \<Rightarrow> s = x86_irq_state_to_H x"
 
 (* This is required for type collision shenanigans, 1024 matches above *)
@@ -201,7 +210,7 @@ where
   irq_masks s = irq_masks (phantom_machine_state_' s') \<and>
   irq_state s = irq_state (phantom_machine_state_' s') \<and>
   device_state s = device_state (phantom_machine_state_' s') \<and>
-  (* exclusive_state s = exclusive_state (phantom_machine_state_' s') \<and> *) (* FIXME x64:this is needed for infoflow so we'll leave it commented *)
+  \<comment> \<open>exclusive_state s = exclusive_state (phantom_machine_state_' s') \<and>\<close> \<comment> \<open>FIXME x64:this is needed for infoflow so we'll leave it commented\<close>
   machine_state_rest s = machine_state_rest (phantom_machine_state_' s')"
 
 
@@ -308,10 +317,11 @@ fun
   | "register_from_H X64.CS = scast Kernel_C.CS"
   | "register_from_H X64.SS = scast Kernel_C.SS"
   | "register_from_H X64.ErrorRegister = scast Kernel_C.Error"
-  | "register_from_H X64.TLS_BASE = scast Kernel_C.TLS_BASE"
+  | "register_from_H X64.FS_BASE = scast Kernel_C.FS_BASE"
+  | "register_from_H X64.GS_BASE = scast Kernel_C.GS_BASE"
 
 definition
-  cregs_relation :: "(MachineTypes.register \<Rightarrow> machine_word) \<Rightarrow> machine_word[23] \<Rightarrow> bool"
+  cregs_relation :: "(MachineTypes.register \<Rightarrow> machine_word) \<Rightarrow> machine_word[24] \<Rightarrow> bool"
 where
   "cregs_relation Hregs Cregs \<equiv>  \<forall>r. Hregs r = Cregs.[unat (register_from_H r)]"
 
@@ -340,14 +350,16 @@ where
      = (tsType_CL (fst ts') = scast ThreadState_IdleThreadState)"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnReply) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReply)"
-| "cthread_state_relation_lifted (Structures_H.BlockedOnReceive oref) ts'
-     = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReceive \<and>
-        oref = blockingObject_CL (fst ts'))"
-| "cthread_state_relation_lifted (Structures_H.BlockedOnSend oref badge cg isc) ts'
+| "cthread_state_relation_lifted (Structures_H.BlockedOnReceive oref cg) ts'
+     = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReceive
+        \<and> oref = blockingObject_CL (fst ts')
+        \<and> cg = to_bool (blockingIPCCanGrant_CL (fst ts')))"
+| "cthread_state_relation_lifted (Structures_H.BlockedOnSend oref badge cg cgr isc) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnSend
         \<and> oref = blockingObject_CL (fst ts')
         \<and> badge = blockingIPCBadge_CL (fst ts')
         \<and> cg    = to_bool (blockingIPCCanGrant_CL (fst ts'))
+        \<and> cgr   = to_bool (blockingIPCCanGrantReply_CL (fst ts'))
         \<and> isc   = to_bool (blockingIPCIsCall_CL (fst ts')))"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnNotification oref) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnNotification
@@ -674,7 +686,7 @@ definition
 where
   "asid_map_relation pml4ptr casid_map \<equiv>
     case (asid_map_lift casid_map) of
-        None \<Rightarrow> False (* should never happen *)
+        None \<Rightarrow> False \<comment> \<open>should never happen\<close>
       | Some Asid_map_asid_map_none \<Rightarrow> pml4ptr = None
       | Some (Asid_map_asid_map_vspace vspace_root) \<Rightarrow> pml4ptr = Some (vspace_root_CL vspace_root)"
 
@@ -684,7 +696,7 @@ definition
 where
   "casid_pool_relation asid_pool casid_pool \<equiv>
   case asid_pool of ASIDPool pool \<Rightarrow>
-  case casid_pool of asid_pool_C cpool \<Rightarrow>
+  case casid_pool of asid_pool_C.asid_pool_C cpool \<Rightarrow>
   array_relation asid_map_relation (2^asid_low_bits - 1) pool cpool"
 
 
@@ -732,25 +744,13 @@ abbreviation
   "cpspace_device_data_relation ah bh ch \<equiv> cmap_relation (heap_to_device_data ah bh) (clift ch) Ptr cuser_user_data_device_relation"
 
 abbreviation
-  pdpt_Ptr :: "machine_word \<Rightarrow> (pdpte_C[512]) ptr" where "pdpt_Ptr == Ptr"
-
-abbreviation
   "cpspace_pdpte_array_relation ah ch \<equiv> carray_map_relation pdptBits (map_to_pdptes ah) (h_t_valid (hrs_htd ch) c_guard) pdpt_Ptr"
-
-abbreviation
-  pml4_Ptr :: "machine_word \<Rightarrow> (pml4e_C[512]) ptr" where "pml4_Ptr == Ptr"
 
 abbreviation
   "cpspace_pml4e_array_relation ah ch \<equiv> carray_map_relation pml4Bits (map_to_pml4es ah) (h_t_valid (hrs_htd ch) c_guard) pml4_Ptr"
 
 abbreviation
-  pd_Ptr :: "machine_word \<Rightarrow> (pde_C[512]) ptr" where "pd_Ptr == Ptr"
-
-abbreviation
   "cpspace_pde_array_relation ah ch \<equiv> carray_map_relation pdBits (map_to_pdes ah) (h_t_valid (hrs_htd ch) c_guard) pd_Ptr"
-
-abbreviation
-  pt_Ptr :: "machine_word \<Rightarrow> (pte_C[512]) ptr" where "pt_Ptr == Ptr"
 
 abbreviation
   "cpspace_pte_array_relation ah ch \<equiv> carray_map_relation ptBits (map_to_ptes ah) (h_t_valid (hrs_htd ch) c_guard) pt_Ptr"
@@ -813,7 +813,7 @@ fun
 
 (* FIXME x64: 126? was 192 before, investigate naming *)
 definition
-  cinterrupt_relation :: "interrupt_state \<Rightarrow> cte_C ptr \<Rightarrow> (machine_word[126]) \<Rightarrow> bool"
+  cinterrupt_relation :: "interrupt_state \<Rightarrow> 'a ptr \<Rightarrow> (machine_word[126]) \<Rightarrow> bool"
 where
   "cinterrupt_relation airqs cnode cirqs \<equiv>
      cnode = Ptr (intStateIRQNode airqs) \<and>
@@ -911,7 +911,19 @@ where
     = (\<forall>(start, end) \<in> rs. region_actually_is_bytes' start (unat ((end + 1) - start)) (hrs_htd hrs)
         \<and> heap_list_is_zero (hrs_mem hrs) start (unat ((end + 1) - start)))"
 
-definition (in state_rel)
+context state_rel begin
+
+\<comment> \<open>The IRQ node is a global array of CTEs.\<close>
+abbreviation intStateIRQNode_array_Ptr :: "(cte_C[256]) ptr" where
+  "intStateIRQNode_array_Ptr \<equiv> Ptr (symbol_table ''intStateIRQNode'')"
+
+\<comment> \<open>But for compatibility with older proofs (written when the IRQ Node was a global pointer
+    initialised during boot), it is sometimes convenient to treat the IRQ node pointer as
+    a pointer to a CTE.\<close>
+abbreviation intStateIRQNode_Ptr :: "cte_C ptr" where
+  "intStateIRQNode_Ptr \<equiv> Ptr (symbol_table ''intStateIRQNode'')"
+
+definition
   cstate_relation :: "KernelStateData_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
   cstate_relation_def:
@@ -926,7 +938,7 @@ where
        cbitmap_L2_relation (ksReadyQueuesL2Bitmap_' cstate) (ksReadyQueuesL2Bitmap astate) \<and>
        ksCurThread_' cstate = (tcb_ptr_to_ctcb_ptr (ksCurThread astate)) \<and>
        ksIdleThread_' cstate = (tcb_ptr_to_ctcb_ptr (ksIdleThread astate)) \<and>
-       cinterrupt_relation (ksInterruptState astate) (intStateIRQNode_' cstate) (intStateIRQTable_' cstate) \<and>
+       cinterrupt_relation (ksInterruptState astate) intStateIRQNode_array_Ptr (intStateIRQTable_' cstate) \<and>
        cscheduler_action_relation (ksSchedulerAction astate)
                                  (ksSchedulerAction_' cstate) \<and>
        carch_state_relation (ksArchState astate) cstate \<and>
@@ -936,11 +948,10 @@ where
        apsnd fst (ghost'state_' cstate) = (gsUserPages astate, gsCNodes astate) \<and>
        ghost_size_rel (ghost'state_' cstate) (gsMaxObjectSize astate) \<and>
        ksWorkUnitsCompleted_' cstate = ksWorkUnitsCompleted astate \<and>
-       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
-         (ptr_coerce (intStateIRQNode_' cstate) :: (cte_C[256]) ptr) \<and>
-       {ptr_val (intStateIRQNode_' cstate) ..+ 2 ^ (8 + cte_level_bits)} \<subseteq> kernel_data_refs \<and>
-       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard (pml4_Ptr (symbol_table ''x64KSSKIMPML4'')) \<and>
-       ptr_span (pml4_Ptr (symbol_table ''x64KSSKIMPML4'')) \<subseteq> kernel_data_refs \<and>
+       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard intStateIRQNode_array_Ptr \<and>
+       ptr_span intStateIRQNode_array_Ptr \<subseteq> kernel_data_refs \<and>
+       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard x64KSSKIMPML4_Ptr \<and>
+       ptr_span x64KSSKIMPML4_Ptr \<subseteq> kernel_data_refs \<and>
        htd_safe domain (hrs_htd (t_hrs_' cstate)) \<and>
        kernel_data_refs = (- domain) \<and>
        globals_list_distinct (- kernel_data_refs) symbol_table globals_list \<and>
@@ -949,6 +960,8 @@ where
        ksDomScheduleIdx_' cstate = of_nat (ksDomScheduleIdx astate) \<and>
        ksCurDomain_' cstate = ucast (ksCurDomain astate) \<and>
        ksDomainTime_' cstate = ksDomainTime astate"
+
+end
 
 definition
   ccap_relation :: "capability \<Rightarrow> cap_C \<Rightarrow> bool"
@@ -1067,7 +1080,8 @@ definition
 definition
   "cap_rights_to_H rs \<equiv> CapRights (to_bool (capAllowWrite_CL rs))
                                   (to_bool (capAllowRead_CL rs))
-                                  (to_bool (capAllowGrant_CL rs))"
+                                  (to_bool (capAllowGrant_CL rs))
+                                  (to_bool (capAllowGrantReply_CL rs))"
 
 definition
   "ccap_rights_relation cr cr' \<equiv> cr = cap_rights_to_H (seL4_CapRights_lift cr')"

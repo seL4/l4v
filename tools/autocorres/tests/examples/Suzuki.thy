@@ -29,7 +29,7 @@ lemma
   "\<Gamma> \<turnstile>
      \<lbrace>distinct [\<acute>w, \<acute>x, \<acute>y, \<acute>z] \<and> (\<forall>p \<in> {\<acute>w, \<acute>x, \<acute>y, \<acute>z}. c_guard p)\<rbrace>
        Call suzuki_'proc
-     \<lbrace>\<acute>ret__int = 4 (* Return value *)\<rbrace>"
+     \<lbrace>\<acute>ret__int = 4 \<comment> \<open>Return value\<close>\<rbrace>"
   apply vcg
   oops
 
@@ -38,8 +38,8 @@ thm suzuki'_def
 lemma
   "\<lbrace>\<lambda>s. s = s0 \<and> distinct [w, x, y, z] \<and> (\<forall>p \<in> {w, x, y, z}. is_valid_node_C s p)\<rbrace>
      suzuki' w x y z
-   \<lbrace>\<lambda>rv s. rv = 4 \<and> (* Return value *)
-           (\<exists>w' x' y' z'. s = s0[w := w'][x := x'][y := y'][z := z']) (* Frame *)\<rbrace>!"
+   \<lbrace>\<lambda>rv s. rv = 4 \<and> \<comment> \<open>Return value\<close>
+           (\<exists>w' x' y' z'. s = s0[w := w'][x := x'][y := y'][z := z']) \<comment> \<open>Frame\<close>\<rbrace>!"
   apply (unfold suzuki'_def)
   apply wp
   (* Return value *)

@@ -57,19 +57,19 @@ lemma heap_update_rotate:
                 heap_update_list_rotate)
 
 lemma c_guard_align_of:
-  "\<lbrakk> align_of TYPE('a :: c_type) + size_of TYPE('a) < 2 ^ 32;
+  "\<lbrakk> align_of TYPE('a :: c_type) + size_of TYPE('a) < 2 ^ word_bits;
            align_of TYPE('a) \<noteq> 0 \<rbrakk> \<Longrightarrow>
        c_guard (Ptr (of_nat (align_of TYPE('a))) :: 'a ptr)"
   unfolding c_guard_def
   apply (simp add: ptr_aligned_def unat_of_nat c_null_guard_def)
-  apply (clarsimp simp: intvl_def simp del: word_neq_0_conv)
+  apply (clarsimp simp: intvl_def word_bits_conv)
   apply (drule trans[rotated], rule sym, rule Abs_fnat_hom_add)
   apply (subst(asm) of_nat_neq_0, simp_all)
   done
 
 lemma heap_update_field2:
   "\<lbrakk> field_ti TYPE('a :: packed_type) f = Some t;
-     align_of TYPE('a) + size_of TYPE('a) < 2 ^ 32; align_of TYPE('a) \<noteq> 0;
+     align_of TYPE('a) + size_of TYPE('a) < 2 ^ word_bits; align_of TYPE('a) \<noteq> 0;
      export_uinfo t = export_uinfo (typ_info_t TYPE('b :: packed_type))\<rbrakk>
    \<Longrightarrow> heap_update (Ptr &(p\<rightarrow>f)) (v :: 'b) hp =
        heap_update p (update_ti t (to_bytes_p v) (h_val hp p)) hp"
@@ -222,7 +222,7 @@ lemma to_bytes_array:
   apply (subst fcp_eta[where g=v, symmetric], rule access_ti_list_array)
     apply simp
    apply (simp add: size_of_def)
-  apply (clarsimp simp: fcp_beta size_of_def)
+  apply (clarsimp simp: size_of_def)
   done
 
 lemma take_heap_list_min:
@@ -240,7 +240,7 @@ lemma heap_update_mono_to_field_rewrite:
         \<equiv> field_lookup (adjust_ti (typ_info_t TYPE('b)) f upds) [] n;
       export_uinfo (adjust_ti (typ_info_t TYPE('b)) f upds)
         = export_uinfo (typ_info_t TYPE('b));
-      align_of TYPE('a) + size_of TYPE('a) < 2 ^ 32; align_of TYPE('a) \<noteq> 0 \<rbrakk>
+      align_of TYPE('a) + size_of TYPE('a) < 2 ^ word_bits; align_of TYPE('a) \<noteq> 0 \<rbrakk>
     \<Longrightarrow> heap_update (p::'a::packed_type ptr)
            (update_ti_t (adjust_ti (typ_info_t TYPE('b)) f upds) (to_bytes_p v)
                str) hp
@@ -249,27 +249,42 @@ lemma heap_update_mono_to_field_rewrite:
                 packed_heap_update_collapse h_val_heap_update
                 field_ti_def update_ti_t_def size_of_def)
 
-ML {*
+ML \<open>
 fun get_field_h_val_rewrites lthy =
   (simpset_of lthy |> dest_ss |> #simps |> map snd
     |> map (Thm.transfer (Proof_Context.theory_of lthy))
                RL @{thms h_val_mono_to_field_rewrite
-                         heap_update_mono_to_field_rewrite
-                             [unfolded align_of_def size_of_def] })
+                         heap_update_mono_to_field_rewrite[
+                            unfolded align_of_def size_of_def word_bits_conv] })
     |> map (asm_full_simplify lthy);
 
 fun add_field_h_val_rewrites lthy =
   Local_Theory.note ((@{binding field_h_val_rewrites}, []),
       get_field_h_val_rewrites lthy) lthy |> snd
-*}
+\<close>
 
-ML {*
+ML \<open>
+fun get_field_lookup_Somes lthy =
+    Global_Theory.facts_of (Proof_Context.theory_of lthy)
+    |> Facts.dest_static false []
+    |> filter (fn (s, _) => String.isSuffix "_fl_Some" s)
+    |> maps snd
+    |> map (Thm.transfer (Proof_Context.theory_of lthy))
+
+local
+fun and_THEN thm thm' = thm' RS thm
+in
+fun get_field_offset_rewrites lthy =
+    get_field_lookup_Somes lthy
+    |> map (and_THEN @{thm meta_eq_to_obj_eq} #> and_THEN @{thm field_lookup_offset_eq})
+end
+
+fun add_field_offset_rewrites lthy =
+    Local_Theory.note ((@{binding field_offset_rewrites}, []),
+      get_field_offset_rewrites lthy) lthy |> snd
+
 fun get_field_to_bytes_rewrites lthy = let
-    val fl_thms = Global_Theory.facts_of (Proof_Context.theory_of lthy)
-        |> Facts.dest_static false []
-        |> filter (fn (s, _) => String.isSuffix "_fl_Some" s)
-        |> maps snd
-        |> map (Thm.transfer (Proof_Context.theory_of lthy))
+    val fl_thms = get_field_lookup_Somes lthy
     val init1 = @{thm field_lookup_to_bytes_split_init}
     val step = @{thm field_lookup_to_bytes_split_step}
     val init = (fl_thms RL [init1 RS step])
@@ -287,6 +302,6 @@ fun get_field_to_bytes_rewrites lthy = let
 fun add_field_to_bytes_rewrites lthy =
   Local_Theory.note ((@{binding field_to_bytes_rewrites}, []),
       get_field_to_bytes_rewrites lthy) lthy |> snd
-*}
+\<close>
 
 end

@@ -72,7 +72,7 @@ declare [[allow_underscore_idents = true]]
 end
 
 (* x86-64 asm statements are not yet supported by the c-parser *)
-setup {* Context.theory_map (ASM_Ignore_Hooks.add_hook (fn _ => true)) *}
+setup \<open>Context.theory_map (ASM_Ignore_Hooks.add_hook (fn _ => true))\<close>
 
 context begin interpretation Arch . global_naming vmpage_size
 requalify_consts X64SmallPage X64LargePage X64HugePage

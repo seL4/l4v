@@ -55,7 +55,7 @@ end
 end
 
 
-ML {*
+ML \<open>
 type sep_info =
 {
   plus_thm : thm option,
@@ -77,9 +77,9 @@ fun mk_sep_info (plus_thm : thm option) (disj_thm : thm option) (zero_thm : thm 
    sep_heap_arrows = sep_heap_arrows,
    sep_heap_getters = sep_heap_getters,
    sep_heap_setters = sep_heap_setters}
-*}
+\<close>
 
-ML {*
+ML \<open>
 
 fun upd_plus_thm (sep_info : sep_info) plus =
   {plus_thm = plus,
@@ -145,11 +145,11 @@ fun upd_thms (sep_info : sep_info) thms =
    sep_heap_setters = #sep_heap_setters sep_info
   }
 
-*}
+\<close>
 
-ML {* val print_type = dest_Type #> fst *}
+ML \<open>val print_type = dest_Type #> fst\<close>
 
-ML {* fun mk_lifted_globals_record stateT rvals ctxt =
+ML \<open>fun mk_lifted_globals_record stateT rvals ctxt =
   let
       val xs =  rvals
       val state_t = "lifted_globals_ext" |> Syntax.read_term ctxt
@@ -157,15 +157,15 @@ ML {* fun mk_lifted_globals_record stateT rvals ctxt =
   betapplys (state_t, xs)
   |> Syntax.check_term ctxt
 end;
- *}
+\<close>
 
-ML {*
+ML \<open>
 val get_data = HeapInfo.get #> Symtab.lookup;
 
-*}
+\<close>
 
 
-ML{*
+ML\<open>
 fun zero_lifted_globals subT global_types heap_types  =
   let fun make_zero_heap heap_type = (@{mk_term "(\<lambda>(_ :: ?'T ptr). arbitrary_zero :: (?'T))" ('T)} heap_type)
       fun make_zero_valid_heap heap_type = (@{mk_term "(\<lambda>_. False) ::  ?'T ptr \<Rightarrow> bool" ('T)} heap_type)
@@ -183,16 +183,16 @@ val make_conj = @{mk_term "?P \<and> ?Q" (P, Q)}
 val make_conj_list = foldr1 make_conj;
 
 fun get_more ctxt t = "lifted_globals.more" |> Syntax.read_term ctxt
-*}
+\<close>
 
 
 declare [[ML_print_depth=1000]]
 
-ML {*
+ML \<open>
 fun promote subT (Const (str, typ))  =   Const (str, subT --> (typ |> range_type));
-*}
+\<close>
 
-ML {*
+ML \<open>
 
 fun sep_disj_lifted_globals ctxt subT heap_types heap_valid_getters h1 h2 =
 let
@@ -210,27 +210,27 @@ let
 in
   make_conj_list is_valid_disjoint
 end;
-*}
+\<close>
 
 
-ML {* fun setup_heap_zero stateT heap_type global_types sep_info ctxt  =
+ML \<open>fun setup_heap_zero stateT heap_type global_types sep_info ctxt  =
 let
   val (_, thm, ctxt) = Utils.define_const_args "zero_lifted_globals_ext" false (zero_lifted_globals stateT global_types heap_type ctxt) [] ctxt
 in
   (upd_zero_thm sep_info (SOME thm), ctxt)
-end *}
+end\<close>
 
-ML {* fun setup_heap_disj stateT heap_types heap_valid_getters sep_info ctxt  =
+ML \<open>fun setup_heap_disj stateT heap_types heap_valid_getters sep_info ctxt  =
 let
   val term = sep_disj_lifted_globals ctxt stateT heap_types heap_valid_getters (Free ("s0", stateT)) (Free ("s1", stateT))
   val (_, thm, ctxt') = Utils.define_const_args "sep_disj_lifted_globals_ext" false (term) [("s0", stateT), ("s1", stateT)] ctxt
 in
   (upd_disj_thm sep_info (SOME thm), ctxt')
-end *}
+end\<close>
 
 
 
-ML{*
+ML\<open>
 fun plus_lifted_globals ctxt subT global_names global_getters heap_types heap_getters heap_valid_getters h1 h2 =
 let
 
@@ -268,9 +268,9 @@ in
    mk_lifted_globals_record subT
 end;
 
-*}
+\<close>
 
-ML {*
+ML \<open>
 fun setup_heap_plus stateT global_names global_getters heap_types heap_getters heap_valid_getters sep_info ctxt =
 let
   val term = (plus_lifted_globals ctxt stateT global_names global_getters heap_types
@@ -282,9 +282,9 @@ in
 end;
 
 
-*}
+\<close>
 
-ML {*
+ML \<open>
 
    fun make_arrow stateT heap_type heap_getters heap_valid_getters p v=
       let
@@ -329,17 +329,17 @@ ML {*
       in foldr setup_arrow (sep_info,ctxt'') heap_types
    end;
 
-*}
+\<close>
 
-ML {* Utils.expand_type_abbrevs; @{theory}; Proof_Context.theory_of;*}
+ML \<open>Utils.expand_type_abbrevs; @{theory}; Proof_Context.theory_of;\<close>
 
-ML {* fun liberalise_type _ (Type (s,[])) = (s,[]) |> Type |
+ML \<open>fun liberalise_type _ (Type (s,[])) = (s,[]) |> Type |
           liberalise_type t (Type (s,(xs))) = if (Long_Name.base_name s) = "lifted_globals_ext" then
                                                (Type (s, t :: (tl xs))) else
                                                (Type (s, map (liberalise_type t) (xs)));
-*}
+\<close>
 
-ML {*
+ML \<open>
 
 fun make_rewrite heap_getters heap_setters heap_type sep_info ctxt =
      let
@@ -364,9 +364,9 @@ fun make_rewrite heap_getters heap_setters heap_type sep_info ctxt =
 end;
 
 
-*}
+\<close>
 
-ML {*
+ML \<open>
 Utils.named_cterm_instantiate;
 
 fun make_struct_rewrite (structs : HeapLiftBase.struct_info list) sep_info ctxt =
@@ -409,12 +409,12 @@ fun make_rewrites heap_types heap_getters heap_setters structs sep_info ctxt =
   in
      (sep_info, Utils.define_lemmas "sep_thms" thms ctxt |> snd )
 end;
-*}
+\<close>
 
-ML {* val myss = ref HOL_basic_ss *}
-ML {* val mythm = ref @{thms iffI} *}
+ML \<open>val myss = ref HOL_basic_ss\<close>
+ML \<open>val mythm = ref @{thms iffI}\<close>
 
-ML {* fun prove_get_leaf_lemma heap_type ((sep_info : sep_info),  ctxt) =
+ML \<open>fun prove_get_leaf_lemma heap_type ((sep_info : sep_info),  ctxt) =
           let
               val (heap_getter, heap_getter_def) = heap_type |> Typtab.lookup (#sep_heap_getters sep_info) |> the
               val (heap_arrow, heap_arrow_def) = heap_type |> Typtab.lookup (#sep_heap_arrows sep_info) |> the
@@ -431,10 +431,10 @@ ML {* fun prove_get_leaf_lemma heap_type ((sep_info : sep_info),  ctxt) =
                val name = heap_getter |> dest_Const |> fst |> Long_Name.base_name
                fun proof_tac ctxt = fast_force_tac (ctxt addsimps thms)
                val get_wp = Goal.prove ctxt ["x", "p","R"] [] proof_term (fn _ => proof_tac ctxt 1)
-       in (sep_info, Utils.define_lemma (name ^ "_wp") get_wp ctxt |> snd) end;  *}
+       in (sep_info, Utils.define_lemma (name ^ "_wp") get_wp ctxt |> snd) end;\<close>
 
 
-ML {*
+ML \<open>
       fun prove_update_heap_lemma (heap_arrow, heap_arrow_def) heap_update  ctxt =
          let val proof_term = @{mk_term "((?arr p x) s \<Longrightarrow> (?arr p v) (?heap_update (\<lambda>s. fun_upd s p v) s))" (arr,heap_update)} (heap_arrow, heap_update)
              val proof = clarsimp_tac (ctxt addsimps [heap_arrow_def])
@@ -463,9 +463,9 @@ ML {*
                                     fast_force_tac (ctxt) THEN_ALL_NEW
                                     fast_force_tac (ctxt addsimps thms)
                val set_wp = Goal.prove ctxt ["x", "p","R", "v"] [] proof_term (fn x =>  proof_tac (#context x) 1 )
-       in (sep_info, Utils.define_lemma (name ^ "_wp") set_wp ctxt |> snd) end;  *}
+       in (sep_info, Utils.define_lemma (name ^ "_wp") set_wp ctxt |> snd) end;\<close>
 
-ML {*
+ML \<open>
 
 fun prove_get_leaf_lemmas heap_types sep_info ctxt =
     foldr (uncurry prove_get_leaf_lemma) (sep_info, ctxt) heap_types
@@ -474,9 +474,9 @@ fun prove_get_leaf_lemmas heap_types sep_info ctxt =
 fun prove_set_leaf_lemmas heap_types sep_info ctxt =
    foldr (uncurry prove_set_leaf_lemma) (sep_info, ctxt) heap_types
 
-*}
+\<close>
 
-ML {*
+ML \<open>
    fun force_tac ctxt =
       SELECT_GOAL
      (Classical.clarify_tac ctxt 1 THEN
@@ -527,16 +527,16 @@ ML {*
       end;
 
 Adhoc_Overloading.is_overloaded @{context} "\<mapsto>"
-*}
+\<close>
 
-ML {*
+ML \<open>
 val _ =
   Outer_Syntax.command @{command_keyword "sep_instance"} "instantiate and prove type arity"
   (Parse.path >>
    (fn str =>  tester str |> Toplevel.begin_local_theory true #> Toplevel.end_local_theory));
 
 (* get_data @{theory} "swap.c" |> the |> #structs *)
-*}
+\<close>
 
 
 

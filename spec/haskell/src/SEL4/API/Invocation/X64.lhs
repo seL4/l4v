@@ -108,10 +108,6 @@ point to the invoked IO page table.
 > data PageInvocation
 >     = PageGetAddr {
 >         pageGetBasePtr :: PPtr Word }
->     | PageRemap {
->         pageRemapEntries :: (VMPageEntry, VMPageEntryPtr),
->         pageRemapASID :: ASID,
->         pageRemapVSpace :: PPtr PML4E }
 >     | PageMap {
 >         pageMapCap :: Capability,
 >         pageMapCTSlot :: PPtr CTE,

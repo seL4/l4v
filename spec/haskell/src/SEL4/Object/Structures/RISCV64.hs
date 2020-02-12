@@ -40,6 +40,13 @@ data ArchCapability
         capPTMappedAddress :: Maybe (ASID, VPtr) }
     deriving (Eq, Show)
 
+{- The range of allowable sizes for Untyped objects depends on addressable memory size. -}
+
+minUntypedSizeBits :: Int
+minUntypedSizeBits = 4
+
+maxUntypedSizeBits :: Int
+maxUntypedSizeBits = 38
 
 {- Kernel Objects -}
 
@@ -78,10 +85,10 @@ newtype ASID = ASID { fromASID :: Word64 }
     deriving (Show, Eq, Ord, Enum, Real, Integral, Num, Bits, Ix, Bounded)
 
 asidHighBits :: Int
-asidHighBits = 6
+asidHighBits = 7
 
 asidLowBits :: Int
-asidLowBits = 10
+asidLowBits = 9
 
 asidBits :: Int
 asidBits = asidHighBits + asidLowBits

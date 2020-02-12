@@ -53,13 +53,10 @@ lemma suspend_st_tcb_at':
   suspend t
   \<lbrace>\<lambda>_. st_tcb_at' P t'\<rbrace>"
   apply (simp add: suspend_def unless_def)
+  unfolding updateRestartPC_def
   apply (cases "t=t'")
   apply (simp|wp cancelIPC_st_tcb_at' sts_st_tcb')+
   done
-
-lemma to_bool_if:
-  "(if w \<noteq> 0 then 1 else 0) = (if to_bool w then 1 else 0)"
-  by (auto simp: to_bool_def)
 
 lemma threadGet_wp'':
   "\<lbrace>\<lambda>s. \<forall>v. obj_at' (\<lambda>tcb. f tcb = v) thread s \<longrightarrow> P v s\<rbrace> threadGet f thread \<lbrace>P\<rbrace>"
@@ -68,28 +65,7 @@ lemma threadGet_wp'':
   apply (clarsimp simp: obj_at'_def)
   done
 
-lemma tcbSchedEnqueue_queued_queues_inv:
-  "\<lbrace>\<lambda>s.  obj_at' tcbQueued t s \<and> P (ksReadyQueues s) \<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  unfolding tcbSchedEnqueue_def unless_def
-  apply (wpsimp simp: if_apply_def2 wp: threadGet_wp)
-  apply normalise_obj_at'
-  done
-
-lemma addToBitmap_sets_L1Bitmap_same_dom:
-  "\<lbrace>\<lambda>s. p \<le> maxPriority \<and> d' = d \<rbrace> addToBitmap d' p
-       \<lbrace>\<lambda>rv s. ksReadyQueuesL1Bitmap s d \<noteq> 0 \<rbrace>"
-  unfolding addToBitmap_def bitmap_fun_defs
-  apply wpsimp
-  apply (clarsimp simp: maxPriority_def numPriorities_def word_or_zero le_def
-                        prioToL1Index_max[simplified wordRadix_def, simplified])
-  done
-
 crunch ksReadyQueuesL1Bitmap[wp]: setQueue "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-
-lemma tcb_in_cur_domain'_def':
-  "tcb_in_cur_domain' t = (\<lambda>s. obj_at' (\<lambda>tcb. tcbDomain tcb = ksCurDomain s) t s)"
-  unfolding tcb_in_cur_domain'_def
-  by (auto simp: obj_at'_def)
 
 lemma sts_running_ksReadyQueuesL1Bitmap[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace>

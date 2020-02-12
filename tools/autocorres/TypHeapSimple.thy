@@ -135,9 +135,9 @@ lemma heap_type_tag_ptr_retyp_rest:
    apply clarsimp
    apply (erule disjE)
     apply (erule_tac x=0 in allE)
-    apply (clarsimp simp: typ_slices_index size_of_def)
+    apply (clarsimp simp: size_of_def)
    apply (erule_tac x="length (typ_slice_t (typ_uinfo_t TYPE('a)) (unat k))" in allE)
-   apply (clarsimp simp: typ_slices_index size_of_def list_map_eq)
+   apply (clarsimp simp: size_of_def list_map_eq)
   apply (clarsimp simp: list_map_eq last_conv_nth [simplified, symmetric] size_of_def
       split: option.splits if_split_asm prod.splits bool.splits)
    apply (metis surj_pair)
@@ -336,7 +336,7 @@ lemma simple_lift_heap_update:
           = (simple_lift h)(p := Some (v::'a::mem_type))"
   apply (rule ext)
   apply (clarsimp simp: simple_lift_def hrs_mem_update h_val_heap_update)
-  apply (fastforce simp: heap_ptr_valid_heap_update_other ptr_val_inj)
+  apply (fastforce simp: heap_ptr_valid_heap_update_other)
   done
 
 (* Updating the raw heap of one type doesn't affect the lifted heap of other types. *)

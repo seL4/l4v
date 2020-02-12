@@ -8,12 +8,12 @@
  * @TAG(NICTA_GPL)
  *)
 
-text {*
+text \<open>
   This file sets up a kernel automaton, ADT_A_if, which is
   slightly different from ADT_A.
   It then setups a big step framework to transfrom this automaton in the
   big step automaton on which the infoflow theorem will be proved
-*}
+\<close>
 
 theory ADT_IF
 imports
@@ -23,7 +23,7 @@ imports
     IRQMasks_IF FinalCaps Scheduler_IF UserOp_IF
 begin
 
-section {* Generic big step automaton *}
+section \<open>Generic big step automaton\<close>
 
 inductive_set sub_big_steps
   :: "('a,'b,'c) data_type \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool)  \<Rightarrow>  'a  \<Rightarrow> ('a \<times> 'c list) set"
@@ -33,12 +33,12 @@ where
   step: "\<lbrakk>evlist = evlist' @ [e]; (s',evlist') \<in> sub_big_steps A R s;
           (s',t) \<in> data_type.Step A e; \<not> R s t\<rbrakk> \<Longrightarrow>  (t,evlist) \<in> sub_big_steps A R s"
 
-text {*
+text \<open>
   Turn the (observable) multi-step executions of one automaton into the
   steps of another. We call this second automaton a \emph{big step} automaton
   of the first. We use a relation on observable states of the original
   automaton to demarcate one big step from the next.
-*}
+\<close>
 inductive_set big_steps
   :: "('a,'b,'c) data_type \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('c list \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> ('a \<times> 'a) set)"
   for A :: "('a,'b,'c) data_type" and R :: "'a \<Rightarrow> 'a \<Rightarrow> bool" and exmap :: "'c list \<Rightarrow> 'd"
@@ -98,10 +98,10 @@ definition Fin_trancl
 where
   "Fin_trancl A R s s' \<equiv> R\<^sup>+\<^sup>+ s s' \<or> Fin A s = Fin A s'"
 
-text {*
+text \<open>
   A sufficient condition to show that the big steps of a big step ADT
   terminate (i.e. that the relation R eventually becomes satisfied.)
-*}
+\<close>
 definition rel_terminate
   :: "('a,'b,'c) data_type \<Rightarrow> 'b \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('a set) \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> nat) \<Rightarrow> bool"
 where
@@ -164,11 +164,11 @@ lemma Step_system_execution_Run_s0:
   apply(erule Step_system.reachable_s0)
   done
 
-text {*
+text \<open>
   Define a relation on states that is basically the inverse of the
   Step relation for states @{term y} reachable from a given state @{term s}
   before the next big step has finished.
-*}
+\<close>
 definition step_measuref_rel_from
   :: "('a,'b,'c) data_type \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> ('a \<times> 'a) set"
 where
@@ -301,12 +301,12 @@ lemma big_steps_enabled:
   apply(fastforce intro: cstep)
   done
 
-text {*
+text \<open>
   We assume here that there is only one event that can ever occur. This
   is overly restrictive in general, but should be fine for the seL4
   automata (which shouldn't need multiple event labels since it should only
   ever be able to perform one event in each state).
-*}
+\<close>
 lemma Step_system_to_enabled_system:
   assumes single_event: "(\<forall>(x::'b) (y::'b). x = y)"
   assumes st: "Step_system A s0"
@@ -355,14 +355,16 @@ begin
 
 lemma enabled:
   "enabled_system A s0"
+  supply image_cong_simp [cong del]
+  supply ex_image_cong_iff [simp del]
   apply (clarsimp simp: enabled_system_def)
   apply (rename_tac jsa, induct_tac jsa rule: rev_induct)
-   apply (clarsimp simp: execution_def steps_def)
+  apply (clarsimp simp: execution_def steps_def)
    apply (fold steps_def)
-   apply (rule_tac x="Fin A x" in exI)
+    apply (rule_tac x="Fin A x" in exI)
    apply (rule imageI)
    apply (rule Init_Fin)
-   apply (rule set_mp)
+    apply (rule set_mp)
     apply (rule inv_holds_steps[OF I])
     apply (rule s0_I)
    apply simp
@@ -467,6 +469,8 @@ begin
 
 lemma enabled:
   "enabled_system A s0"
+  supply image_cong_simp [cong del]
+  supply ex_image_cong_iff [simp del]
   apply (clarsimp simp: enabled_system_def)
   apply (induct_tac jsa  rule: rev_induct)
    apply (clarsimp simp: execution_def steps_def)
@@ -674,13 +678,13 @@ lemma big_step_adt_enabled_Step_system:
   using assms by (simp add: enabled_Step_system_def big_step_adt_Step_system
                             big_step_adt_enabled_system)
 
-section {* ADT_A_if definition and enabledness *}
+section \<open>ADT_A_if definition and enabledness\<close>
 
-subsection {* global_automaton_if definition *}
+subsection \<open>global_automaton_if definition\<close>
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-text {*
+text \<open>
   We define a bunch of states that the system can be in. The first two
   are when the processor is in user mode, the final four are for when in
   kernel mode.
@@ -693,14 +697,14 @@ text {*
        is ghost state to capture when the schedule event follows interrupt-handling
        (i.e. is True when the previous mode was KernelEntry Interrupt or KernelPreempted)
      - in kernel mode, about to exit to userspace
-*}
+\<close>
 datatype sys_mode = InUserMode | InIdleMode |
                     KernelEntry event | KernelPreempted |
                     KernelSchedule bool | KernelExit
 
 type_synonym 'k global_sys_state = "(user_context \<times> 'k) \<times> sys_mode"
 
-text {*
+text \<open>
   We take the @{term global_automaton} and split the kernel transitions
   into multiple steps. This is done because, while the entire execution
   from kernel entry to exit is atomic, different parts of it need to be
@@ -723,7 +727,7 @@ text {*
   We also have the user operations possibly give an event, which gives us
   a handle on modelling when user programs request system calls or cause
   other exceptions to occur.
-*}
+\<close>
 definition global_automaton_if
   :: "((user_context \<times> 'k) \<times> irq option \<times> (user_context \<times> 'k)) set
       \<Rightarrow> ((user_context \<times> 'k) \<times> event option \<times> (user_context \<times> 'k)) set
@@ -735,52 +739,52 @@ definition global_automaton_if
 where
   "global_automaton_if get_active_irqf do_user_opf kernel_callf
                        preemptionf schedulef kernel_exitf \<equiv>
-  (* Kernel entry with preemption during event handling
-     NOTE: kernel cannot be preempted while servicing an interrupt *)
+  \<comment> \<open>Kernel entry with preemption during event handling
+     NOTE: kernel cannot be preempted while servicing an interrupt\<close>
      { ( (s, KernelEntry e),
          (s', KernelPreempted) ) |s s' e. (s, True, s') \<in> kernel_callf e \<and>
                                           e \<noteq> Interrupt} \<union>
-  (* kernel entry without preemption during event handling *)
+  \<comment> \<open>kernel entry without preemption during event handling\<close>
      { ( (s, KernelEntry e),
          (s', KernelSchedule (e = Interrupt)) ) |s s' e. (s, False, s') \<in> kernel_callf e } \<union>
-  (* handle in-kernel preemption *)
+  \<comment> \<open>handle in-kernel preemption\<close>
      { ( (s, KernelPreempted),
          (s', KernelSchedule True) ) |s s'. (s, (), s') \<in> preemptionf } \<union>
-  (* schedule *)
+  \<comment> \<open>schedule\<close>
      { ( (s, KernelSchedule b),
          (s', KernelExit) ) |s s' b. (s, (), s') \<in> schedulef } \<union>
-  (* kernel exit *)
+  \<comment> \<open>kernel exit\<close>
      { ( (s, KernelExit),
          (s', m) ) |s s' m. (s, m, s') \<in> kernel_exitf } \<union>
-  (* User runs, causes exception *)
+  \<comment> \<open>User runs, causes exception\<close>
      { ( (s, InUserMode),
          (s', KernelEntry e ) ) |s s_aux s' e.
                                  (s, None, s_aux) \<in> get_active_irqf \<and>
                                  (s_aux, Some e, s') \<in> do_user_opf \<and>
                                  e \<noteq> Interrupt} \<union>
-  (* User runs, no exception happens *)
+  \<comment> \<open>User runs, no exception happens\<close>
      { ( (s, InUserMode),
          (s', InUserMode) ) |s s_aux s'.
                              (s, None, s_aux) \<in> get_active_irqf \<and>
                              (s_aux, None, s') \<in> do_user_opf} \<union>
-  (* Interrupt while in user mode *)
+  \<comment> \<open>Interrupt while in user mode\<close>
      { ( (s, InUserMode),
          (s', KernelEntry Interrupt) ) |s s' i.
                                         (s, Some i, s') \<in> get_active_irqf} \<union>
-  (* Interrupt while in idle mode *)
+  \<comment> \<open>Interrupt while in idle mode\<close>
      { ( (s, InIdleMode),
          (s', KernelEntry Interrupt) ) |s s' i.
                                         (s, Some i, s') \<in> get_active_irqf} \<union>
-  (* No interrupt while in idle mode *)
+  \<comment> \<open>No interrupt while in idle mode\<close>
      { ( (s, InIdleMode),
          (s', InIdleMode) ) |s s'. (s, None, s') \<in> get_active_irqf}"
 
 type_synonym user_state_if = "user_context \<times> user_mem \<times> device_state \<times> exclusive_monitors"
 
-text {*
+text \<open>
   A user transition gives back a possible event that is the next
   event the user wants to perform
-*}
+\<close>
 type_synonym user_transition_if =
   "obj_ref \<Rightarrow> (word32 \<rightharpoonup> word32) \<Rightarrow> (word32 \<Rightarrow> vm_rights) \<Rightarrow> (word32 \<Rightarrow> bool) \<Rightarrow>
    user_state_if \<Rightarrow> (event option \<times> user_state_if) set"
@@ -828,7 +832,7 @@ lemma invs_exclusive_state_update[iff]:
   "invs (s\<lparr>machine_state := machine_state s\<lparr>exclusive_state := es\<rparr>\<rparr>) = invs s"
   by (simp add: invs_def)
 
-subsection {* do_user_op_if lemmas *}
+subsection \<open>do_user_op_if lemmas\<close>
 
 (* FIXME: clagged from AInvs.do_user_op_invs *)
 lemma do_user_op_if_invs:
@@ -836,7 +840,7 @@ lemma do_user_op_if_invs:
    do_user_op_if f tc
    \<lbrace>\<lambda>_. invs and ct_running\<rbrace>"
   apply (simp add: do_user_op_if_def split_def)
-  apply (wp ct_running_machine_op select_wp device_update_invs | wp_once dmo_invs | simp)+
+  apply (wp ct_running_machine_op select_wp device_update_invs | wp (once) dmo_invs | simp)+
   apply (clarsimp simp: user_mem_def user_memory_update_def simpler_modify_def
                     restrict_map_def invs_def cur_tcb_def ptable_rights_s_def
                     ptable_lift_s_def)
@@ -904,13 +908,13 @@ where
   "do_user_op_A_if uop \<equiv>
        {(s,e,(tc,s'))| s e tc s'. ((e,tc),s') \<in> fst (split (do_user_op_if uop) s)}"
 
-subsection {* kernel_entry_if*}
+subsection \<open>kernel_entry_if\<close>
 
-text {*
+text \<open>
   Enter the kernel, and handle the event. Leave the user context
   unchanged; although it shouldn't matter really what its value is
   while we are still in kernel mode.
-*}
+\<close>
 definition kernel_entry_if
   :: "event \<Rightarrow> user_context \<Rightarrow> (((interrupt + unit) \<times> user_context),det_ext) s_monad"
 where
@@ -1094,7 +1098,7 @@ lemma kernel_entry_silc_inv[wp]:
                   wp: static_imp_wp handle_event_silc_inv thread_set_silc_inv_trivial
                       thread_set_invs_trivial thread_set_not_state_valid_sched
                       thread_set_pas_refined
-        | wp_once hoare_vcg_imp_lift)+
+        | wp (once) hoare_vcg_imp_lift)+
   by force
 
 lemma kernel_entry_pas_refined[wp]:
@@ -1158,12 +1162,12 @@ where
       {(s, b, (tc,s'))|s b tc s' r. ((r,tc),s') \<in> fst (split (kernel_entry_if e) s) \<and>
                    b = (case r of Inl _ \<Rightarrow> True | Inr _ \<Rightarrow> False)}"
 
-subsection {* handle_preemption_if *}
+subsection \<open>handle_preemption_if\<close>
 
-text {*
+text \<open>
   Since this executes entirely in kernel mode, leave the
   user context unchanged
-*}
+\<close>
 definition handle_preemption_if :: "user_context \<Rightarrow> (user_context,det_ext) s_monad"
 where
   "handle_preemption_if tc \<equiv> do
@@ -1238,12 +1242,12 @@ where
   "kernel_handle_preemption_if \<equiv>
       {(s, u, s'). s' \<in> fst (split handle_preemption_if s)}"
 
-subsection {* schedule_if *}
+subsection \<open>schedule_if\<close>
 
-text {*
+text \<open>
   Since this executes entirely in kernel mode, leave the
   user context unchanged
-*}
+\<close>
 definition schedule_if
   :: "user_context \<Rightarrow> (user_context,det_ext) s_monad"
 where
@@ -1299,7 +1303,7 @@ lemma switch_to_idle_thread_guarded_pas_domain[wp]:
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>xb. guarded_pas_domain aag\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def bind_assoc
                    double_gets_drop_regets)
-  apply (wp modify_wp dmo_wp hoare_vcg_imp_lift | wp_once | simp add: guarded_pas_domain_def)+
+  apply (wp modify_wp dmo_wp hoare_vcg_imp_lift | wp (once) | simp add: guarded_pas_domain_def)+
   done
 
 lemma choose_thread_guarded_pas_domain:
@@ -1352,8 +1356,8 @@ lemma schedule_guarded_pas_domain:
           | wpc
           | rule choose_thread_guarded_pas_domain
           | simp add: schedule_choose_new_thread_def ethread_get_when_def split del: if_split
-          | wp_once hoare_drop_imp[where f="ethread_get t v" for t v]
-          | wp_once hoare_drop_imp[where f="schedule_switch_thread_fastfail c i cp p" for c i cp p])+
+          | wp (once) hoare_drop_imp[where f="ethread_get t v" for t v]
+          | wp (once) hoare_drop_imp[where f="schedule_switch_thread_fastfail c i cp p" for c i cp p])+
 
 
 
@@ -1366,8 +1370,8 @@ apply (wpsimp wp: guarded_pas_domain_lift[where f="activate_thread"]
           | wpc
           | rule choose_thread_guarded_pas_domain
           | simp add: schedule_choose_new_thread_def ethread_get_when_def split del: if_split
-          | wp_once hoare_drop_imp[where f="ethread_get t v" for t v]
-          | wp_once hoare_drop_imp[where f="schedule_switch_thread_fastfail c i cp p" for c i cp p])+
+          | wp (once) hoare_drop_imp[where f="ethread_get t v" for t v]
+          | wp (once) hoare_drop_imp[where f="schedule_switch_thread_fastfail c i cp p" for c i cp p])+
 
    apply (fastforce intro: switch_within_domain switch_thread_runnable
                     simp: valid_sched_def elim!: st_tcb_weakenE)+
@@ -1436,11 +1440,11 @@ where
   "kernel_schedule_if \<equiv>
       {(s, e, s'). s' \<in> fst (split schedule_if s)}"
 
-subsection {* kernel_exit_if *}
+subsection \<open>kernel_exit_if\<close>
 
-text {*
+text \<open>
   Restore the user context
-*}
+\<close>
 definition kernel_exit_if
   :: "user_context \<Rightarrow> (user_context,det_ext) s_monad"
 where
@@ -1459,13 +1463,13 @@ where
                    m = (if ct_running (snd s') then InUserMode else InIdleMode)}"
 
 
-subsection {* check_active_irq_if *}
+subsection \<open>check_active_irq_if\<close>
 
 type_synonym observable_if = "det_state global_sys_state"
 
-text {*
+text \<open>
   Check for active IRQs without updating the user context
-*}
+\<close>
 definition check_active_irq_if
   :: "user_context \<Rightarrow> (irq option \<times> user_context, ('z :: state_ext)) s_monad"
 where
@@ -1474,7 +1478,7 @@ where
       return (irq, tc)
    od"
 
-subsection {* ADT_A_if definition *}
+subsection \<open>ADT_A_if definition\<close>
 
 definition check_active_irq_A_if
   :: "((user_context \<times> ('z :: state_ext) state) \<times> irq option \<times>
@@ -1588,14 +1592,14 @@ lemma schedule_if_only_timer_irq_inv[wp]:
    apply(wp only_timer_irq_inv_pres schedule_if_irq_masks | blast)+
   done
 
-subsection {* Big step IF automaton *}
+subsection \<open>Big step IF automaton\<close>
 
 fun interrupted_modes where
   "interrupted_modes KernelPreempted = True" |
   "interrupted_modes (KernelEntry Interrupt) = True" |
   "interrupted_modes _ = False"
 
-text {*
+text \<open>
   A first attempt at defining the big steps. They look like this:
 
   user mode           +-----------+                   +------ ...
@@ -1619,7 +1623,7 @@ text {*
 
   The scheduler domain then runs until the next kernel exit, at which point
   whoever is now the current domain begins its big execution step.
-*}
+\<close>
 
 definition big_step_R :: "det_state global_sys_state \<Rightarrow> det_state global_sys_state \<Rightarrow> bool"
 where
@@ -1642,7 +1646,7 @@ where
 
 end
 
-subsection {* Locales setup *}
+subsection \<open>Locales setup\<close>
 
 (* the second argument of det_inv the user_context, which is saved in kernel state
    on kernel_entry_if, and restored on kernel_exit_if.
@@ -1747,7 +1751,7 @@ locale valid_initial_state = valid_initial_state_noenabled +
        assumes ADT_A_if_Init_Fin_serial:
        "Init_Fin_serial (ADT_A_if utf) s0 (full_invs_if \<inter> {s. step_restrict s})"
 
-subsection {* TODO *}
+subsection \<open>TODO\<close>
 
 function (domintros) next_irq_state :: "nat \<Rightarrow> (10 word \<Rightarrow> bool) \<Rightarrow> nat" where
   "next_irq_state cur masks =
@@ -1779,7 +1783,7 @@ lemma recurring_next_irq_state_dom:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-subsection {* domain_field preserved on non-interrupt kernel event *}
+subsection \<open>domain_field preserved on non-interrupt kernel event\<close>
 
 crunch irq_state_of_state[wp]: cap_move "\<lambda>s. P (irq_state_of_state s)"
 crunch domain_fields[wp]: handle_yield "domain_fields P"
@@ -1859,7 +1863,7 @@ lemma kernel_entry_if_domain_fields:
   apply(wp handle_event_domain_fields | simp)+
   done
 
-subsection {* to split generic preservation lemma *}
+subsection \<open>to split generic preservation lemma\<close>
 
 lemma hoare_vcg_imp_lift':
    "\<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>
@@ -2063,7 +2067,7 @@ lemma current_aag_initial:
   apply (simp add: current_aag_def the_subject_of_aag_domain cur_domain_subject_s0)
   done
 
-subsection {* @{term ADT_A_if} is a step system with the invs_if invariant*}
+subsection \<open>@{term ADT_A_if} is a step system with the invs_if invariant\<close>
 
 definition cur_thread_context_of :: "observable_if \<Rightarrow> user_context"
 where
@@ -2133,7 +2137,7 @@ lemma the_label_of_domain_exists[intro, simp]:
 (* Corollary for current_aag *)
 lemma pas_cur_domain_current_aag:
   "pas_cur_domain (current_aag s) s"
-  apply (simp add: current_aag_def the_label_of_domain_exists)
+  apply (simp add: current_aag_def)
   done
 
 lemma subject_current_aag:
@@ -2578,7 +2582,7 @@ lemma ADT_A_if_enabled_Step_system:
   apply(simp add: enabled_Step_system_def ADT_A_if_Step_system ADT_A_if_enabled_system)
   done
 
-section {* IRQs and big step automaton enabledness *}
+section \<open>IRQs and big step automaton enabledness\<close>
 
 definition irq_measure_if
 where
@@ -2924,7 +2928,7 @@ lemma rec_del_irq_state_inv':
                    finalise_cap_returns_NullCap[where irqs=False, simplified]
                    drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
                |simp add: without_preemption_def split del: if_split
-               |wp_once hoare_drop_imps
+               |wp (once) hoare_drop_imps
                |wp irq_state_inv_triv)+
     apply(blast dest: cte_wp_at_domain_sep_inv_cap)
     done
@@ -2992,7 +2996,7 @@ lemma cap_revoke_irq_state_inv'':
                     drop_spec_validE[OF assertE_wp] drop_spec_validE[OF returnOk_wp]
                     drop_spec_validE[OF liftE_wp] select_wp
                     drop_spec_validE[OF  hoare_vcg_conj_liftE1]
-                | simp | wp_once hoare_drop_imps)+
+                | simp | wp (once) hoare_drop_imps)+
   apply fastforce
   done
   qed
@@ -3022,8 +3026,8 @@ lemma invoke_cnode_irq_state_inv:
          apply((wp cap_revoke_irq_state_inv' cap_delete_irq_state_inv hoare_vcg_all_lift
                | wpc
                | simp add: cap_move_def split del: if_split
-               | wp_once irq_state_inv_triv
-               | wp_once hoare_drop_imps)+)[7]
+               | wp (once) irq_state_inv_triv
+               | wp (once) hoare_drop_imps)+)[7]
   apply fastforce
   done
 
@@ -3061,7 +3065,7 @@ lemma invoke_tcb_irq_state_inv:
             | wpc
             | simp split del: if_split add: check_cap_at_def
             | clarsimp
-            | wp_once irq_state_inv_triv)+)[3]
+            | wp (once) irq_state_inv_triv)+)[3]
     defer
     apply((wp irq_state_inv_triv | simp )+)[2]
   (* just ThreadControl left *)
@@ -3077,11 +3081,11 @@ lemma invoke_tcb_irq_state_inv:
         |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
                   tcb_at_st_tcb_at option_update_thread_def
         |strengthen use_no_cap_to_obj_asid_strg
-        |wp_once irq_state_inv_triv
-        |wp_once hoare_drop_imps | clarsimp split: option.splits | intro impI conjI allI)+
+        |wp (once) irq_state_inv_triv
+        |wp (once) hoare_drop_imps | clarsimp split: option.splits | intro impI conjI allI)+
 
 lemma do_reply_transfer_irq_state_inv_triv[wp]:
-  "\<lbrace>irq_state_inv st\<rbrace> do_reply_transfer a b c \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"
+  "\<lbrace>irq_state_inv st\<rbrace> do_reply_transfer a b c d \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"
   apply (wp irq_state_inv_triv)
   done
 
@@ -3146,7 +3150,7 @@ lemma reset_untyped_cap_irq_state_inv:
              get_cap_wp
      | rule irq_state_inv_triv
      | simp add: unless_def
-     | wp_once dmo_wp)+
+     | wp (once) dmo_wp)+
   done
 
 lemma invoke_untyped_irq_state_inv:
@@ -3206,9 +3210,9 @@ lemma handle_invocation_irq_state_inv:
        apply(wp static_imp_wp perform_invocation_irq_state_inv hoare_vcg_all_lift
                 hoare_vcg_ex_lift decode_invocation_IRQHandlerCap
             | wpc
-            | wp_once hoare_drop_imps
+            | wp (once) hoare_drop_imps
             | simp split del: if_split
-            | wp_once irq_state_inv_triv)+
+            | wp (once) irq_state_inv_triv)+
   apply fastforce
   done
 
@@ -3232,7 +3236,7 @@ lemma schedule_if_irq_state_inv:
   by (wp irq_state_inv_triv
      | simp add: schedule_if_def activate_thread_def arch_activate_idle_thread_def
      | wpc
-     | wp_once hoare_drop_imps)+
+     | wp (once) hoare_drop_imps)+
 
 lemma irq_measure_if_inv:
   assumes irq_state:
@@ -3845,7 +3849,7 @@ lemma big_step_ADT_A_if_enabled_Step_system:
   done
 
 end
-section {* Generic big step refinement *}
+section \<open>Generic big step refinement\<close>
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition internal_R
@@ -3881,7 +3885,7 @@ lemma LI_sub_big_steps:
   apply (clarsimp simp: LI_def)
   apply (erule_tac x=e in allE)
   apply (clarsimp simp: rel_semi_def)
-  apply (drule_tac x="(t', ta)" in set_mp)
+  apply (drule_tac c="(t', ta)" in set_mp)
    apply (rule_tac b=s' in relcompI)
     apply simp
     apply (rule sub_big_steps_I_holds)
@@ -3921,7 +3925,7 @@ lemma LI_big_steps:
   apply (clarsimp simp: LI_def)
   apply (erule_tac x=a in allE)
   apply (clarsimp simp: rel_semi_def)
-  apply (drule_tac x="(t', s')" in set_mp)
+  apply (drule_tac c="(t', s')" in set_mp)
    apply (rule_tac b="s'a" in relcompI)
     apply simp
    apply simp
@@ -3971,10 +3975,10 @@ lemma refines_Run_big_steps:
   apply (force intro: Run_trans)
   done
 
-text{*
+text\<open>
    TODO: with some more work we can probably change both @{term "refines"}
    to be @{term "refines'"} (see below).
-*}
+\<close>
 
 lemma big_step_adt_refines:
   "\<lbrakk>LI A C S (Ia \<times> Ic); A \<Turnstile> Ia; C \<Turnstile> Ic\<rbrakk>
@@ -4003,14 +4007,14 @@ lemma big_step_adt_refines:
   apply simp
   done
 
-text {*
+text \<open>
   A start at making the change mentioned above to
   @{thm big_step_adt_refines}.
-*}
+\<close>
 
-text {*
+text \<open>
   Refinement restricted to states reachable from a common initial state
-*}
+\<close>
 definition refines'
 where
   "refines' C A s0 \<equiv> \<forall>js s. system.reachable C s0 s \<longrightarrow> execution C s js \<subseteq> execution A s js"
@@ -4020,15 +4024,15 @@ lemma refines_refines':
   apply(auto simp: refines_def refines'_def)
   done
 
-text {* Two validity requirements on the user operation (uop) of the infoflow adt.
-        These definitions are mostly only needed in ADT_A_if_Refine. *}
+text \<open>Two validity requirements on the user operation (uop) of the infoflow adt.
+        These definitions are mostly only needed in ADT_A_if_Refine.\<close>
 
-text {* uop_nonempty is required to prove corres between do_user_op_if and doUserOp_if *}
+text \<open>uop_nonempty is required to prove corres between do_user_op_if and doUserOp_if\<close>
 definition uop_nonempty :: "user_transition_if \<Rightarrow> bool"
 where
   "uop_nonempty uop \<equiv> \<forall>t pl pr pxn tc um es. uop t pl pr pxn (tc, um, es) \<noteq> {}"
 
-text {* uop_sane is required to prove that the infoflow adt describes an enabled system *}
+text \<open>uop_sane is required to prove that the infoflow adt describes an enabled system\<close>
 definition uop_sane :: "user_transition_if \<Rightarrow> bool"
 where
   "uop_sane f \<equiv> \<forall>t pl pr pxn tcu. (f t pl pr pxn tcu) \<noteq> {} \<and>

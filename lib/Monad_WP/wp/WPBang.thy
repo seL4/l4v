@@ -19,8 +19,8 @@ lemma conj_meta_forward:
   "P \<and> Q \<Longrightarrow> (P \<Longrightarrow> P') \<Longrightarrow> (Q \<Longrightarrow> Q') \<Longrightarrow> P' \<and> Q'"
   by simp
 
-text {* Applying safe WP rules. *}
-ML {*
+text \<open>Applying safe WP rules.\<close>
+ML \<open>
 structure WP_Safe = struct
 
 fun check_has_frees_tac Ps (_ : int) thm = let
@@ -50,12 +50,12 @@ val wpe_args =
   );
 
 end
-*}
+\<close>
 
-method_setup wpe = {* WP_Safe.wpe_args *}
+method_setup wpe = \<open>WP_Safe.wpe_args\<close>
   "applies 'safe' wp rules to eliminate postcondition components"
 
-text {* Testing. *}
+text \<open>Testing.\<close>
 
 lemma
   assumes x: "\<lbrace> P \<rbrace> f \<lbrace> \<lambda>rv. Q \<rbrace>"

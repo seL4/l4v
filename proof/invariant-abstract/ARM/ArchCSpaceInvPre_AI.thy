@@ -325,6 +325,10 @@ lemma state_hyp_refs_of_revokable[simp]:
   "state_hyp_refs_of (s \<lparr> is_original_cap := m \<rparr>) = state_hyp_refs_of s"
   by (simp add: state_hyp_refs_of_def)
 
+lemma is_valid_vtable_root_is_arch_cap:
+  "is_valid_vtable_root cap \<Longrightarrow> is_arch_cap cap"
+  by (clarsimp simp: is_valid_vtable_root_def is_arch_cap_def)
+
 end
 
 end

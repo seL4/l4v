@@ -59,7 +59,7 @@ definition
   "unless p s \<equiv> when (\<not>p) s"
 
 
-text {* The monad laws: *}
+text \<open>The monad laws:\<close>
 
 lemma return_bind [simp]: "(return x >>= f) = f x"
   by (simp add: return_def bind_def runState_def)
@@ -77,7 +77,7 @@ lemma bind_assoc:
   by (clarsimp simp add: Let_def split_def)
 
 
-text {* An errorT state\_monad (returnOk=return, bindE=bind): *}
+text \<open>An errorT state\_monad (returnOk=return, bindE=bind):\<close>
 
 definition
   "returnOk \<equiv> return o Inr"

@@ -17,10 +17,9 @@ lemmas crunch_wps = hoare_drop_imps mapM_wp' mapM_x_wp'
 lemmas crunch_simps = split_def whenE_def unlessE_def Let_def if_fun_split
                       assertE_def zipWithM_mapM zipWithM_x_mapM
 
-
-lemma set_object_is_modify:
-  "set_object ptr obj = modify (\<lambda>s. s \<lparr> kheap := kheap s (ptr \<mapsto> obj) \<rparr>)"
-  unfolding set_object_def modify_def by simp
+lemma in_set_object:
+  "(rv, s') \<in> fst (set_object ptr obj s) \<Longrightarrow> s' = s \<lparr> kheap := kheap s (ptr \<mapsto> obj) \<rparr>"
+  by (clarsimp simp: set_object_def get_object_def in_monad)
 
 definition
   intr :: "ExceptionTypes_A.interrupt \<Rightarrow> irq \<Rightarrow> bool" where
@@ -105,5 +104,14 @@ lemma empty_on_failure_wp[wp]:
   "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv. Q []\<rbrace>
     \<Longrightarrow> \<lbrace>P\<rbrace> empty_on_failure m \<lbrace>Q\<rbrace>"
   by (simp add: empty_on_failure_def) wp
+
+lemma gen_invocation_typeI:
+  "invocation_type l = GenInvocationLabel x \<Longrightarrow> gen_invocation_type l = x"
+  by (simp add: gen_invocation_type_def)
+
+lemma gen_invocation_type_eq:
+  "x \<noteq> InvalidInvocation \<Longrightarrow>
+  (invocation_type l = GenInvocationLabel x) = (gen_invocation_type l = x)"
+  by (auto simp: gen_invocation_type_def split: invocation_label.splits)
 
 end

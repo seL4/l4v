@@ -1652,7 +1652,7 @@ lemma bound_sc_obj_tcb_at_set_object_no_change_sc':
   apply (rule hoare_vcg_ex_lift_N_pre_conj[of N], rename_tac scp')
   apply (rule hoare_vcg_conj_lift_N_pre_conj[of N]
          , wpsimp wp: set_object_wp simp: obj_at_def)
-  apply (wpsimp wp: set_object_wp simp: obj_at_def split_del: if_split simp_del: fun_upd_apply)
+  apply (wpsimp wp: set_object_wp_strong simp: obj_at_def split_del: if_split simp_del: fun_upd_apply)
   apply (drule use_valid[rotated, OF g]
          , fastforce simp: update_sched_context_def get_object_def set_object_def in_monad)
   by (auto elim!: rsubst[of N] simp: f vs_all_heap_simps)
@@ -1701,7 +1701,8 @@ lemma bound_sc_obj_tcb_at_set_object_no_change_tcb':
   apply (simp add: vs_all_heap_simps)
   apply (wpsimp wp: set_object_wp simp_del: fun_upd_apply)
   apply (drule use_valid[rotated, OF g]
-         , fastforce simp: in_monad thread_set_def get_tcb_ko_at set_object_def)
+         , fastforce simp: in_monad thread_set_def get_tcb_ko_at set_object_def get_object_def
+                           obj_at_def)
   by (auto elim!: rsubst[of N] simp: obj_at_def f
           split: if_splits cong: conj_cong)
 
@@ -2768,6 +2769,10 @@ abbreviation valid_sched_except_blocked_except_wk_sched_action :: "'z::state_ext
   "valid_sched_except_blocked_except_wk_sched_action
    \<equiv> valid_sched_pred valid_sched_except_blocked_except_wk_sched_action_2"
 
+abbreviation einvs :: "det_ext state \<Rightarrow> bool" where
+  "einvs \<equiv> invs and valid_list and valid_sched"
+
+
 definition not_cur_thread_2 :: "obj_ref \<Rightarrow> scheduler_action \<Rightarrow> obj_ref \<Rightarrow> bool" where
   "not_cur_thread_2 thread sa ct \<equiv> sa = resume_cur_thread \<longrightarrow> thread \<noteq> ct"
 
@@ -2845,7 +2850,7 @@ lemma ready_or_released_in_release_queue:
   by (clarsimp simp: ready_or_release_def)
 
 lemma BlockedOnReceive_reply_tcb_reply_at:
-  "st_tcb_at ((=) (BlockedOnReceive epptr (Some rptr))) tptr s
+  "\<exists>epptr pl. st_tcb_at ((=) (BlockedOnReceive epptr (Some rptr) pl)) tptr s
    \<Longrightarrow> sym_refs (state_refs_of s) \<Longrightarrow> valid_objs s
    \<Longrightarrow> reply_tcb_reply_at (\<lambda>x. x = Some tptr) rptr s"
   apply (subgoal_tac "reply_at rptr s")
@@ -3370,14 +3375,14 @@ abbreviation ct_not_blocked where
 primrec
   BlockedOnNtfn :: "thread_state \<Rightarrow> bool"
 where
-  "BlockedOnNtfn (Running)               = False"
-| "BlockedOnNtfn (Inactive)              = False"
-| "BlockedOnNtfn (Restart)               = False"
-| "BlockedOnNtfn (BlockedOnReceive _ _)  = False"
-| "BlockedOnNtfn (BlockedOnSend _ _)     = False"
+  "BlockedOnNtfn (Running)                = False"
+| "BlockedOnNtfn (Inactive)               = False"
+| "BlockedOnNtfn (Restart)                = False"
+| "BlockedOnNtfn (BlockedOnReceive _ _ _) = False"
+| "BlockedOnNtfn (BlockedOnSend _ _)      = False"
 | "BlockedOnNtfn (BlockedOnNotification _) = True"
-| "BlockedOnNtfn (IdleThreadState)       = False"
-| "BlockedOnNtfn (BlockedOnReply _)        = False"
+| "BlockedOnNtfn (IdleThreadState)        = False"
+| "BlockedOnNtfn (BlockedOnReply _)       = False"
 
 abbreviation ct_not_BlockedOnNtfn where
   "ct_not_BlockedOnNtfn s \<equiv> ct_in_state (\<lambda>x. \<not>BlockedOnNtfn x) s"

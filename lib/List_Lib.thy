@@ -66,4 +66,7 @@ lemma takeWhile_eq_Cons_iff:
   "takeWhile P xs = x # xs' \<longleftrightarrow> (\<exists>xs''. xs = x # xs'' \<and> takeWhile P xs'' = xs' \<and> P x)"
   by (cases xs) auto
 
+lemma replicate_append: "replicate n x @ (x # xs) = replicate (n + 1) x @ xs"
+  by (induct n, simp+)
+
 end

@@ -19,7 +19,7 @@ text \<open>The @{command find_names} command, when given a theorem,
   finds other names the theorem appears under, via matching on the whole
   proposition. It will not identify unnamed theorems.\<close>
 
-ML {*
+ML \<open>
 
 local
 (* all_facts_of and pretty_ref taken verbatim from non-exposed version
@@ -76,6 +76,6 @@ val _ =
     (Parse.thms1 >> (fn srcs => Toplevel.keep (fn st =>
       pretty_find_names (Toplevel.context_of st)
         (hd (Attrib.eval_thms (Toplevel.context_of st) srcs)))));
-*}
+\<close>
 
 end

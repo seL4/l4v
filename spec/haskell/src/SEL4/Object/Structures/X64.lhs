@@ -72,6 +72,15 @@ This module makes use of the GHC extension allowing declaration of types with no
 >         capPML4MappedASID :: Maybe ASID }
 >     deriving (Eq, Show)
 
+The range of allowable sizes for Untyped objects depends on addressable memory
+size.
+
+> minUntypedSizeBits :: Int
+> minUntypedSizeBits = 4
+
+> maxUntypedSizeBits :: Int
+> maxUntypedSizeBits = 47
+
 \subsection{Kernel Objects}
 
 > data ArchKernelObject

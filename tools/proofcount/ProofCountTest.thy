@@ -13,10 +13,10 @@ imports Main ProofCount
 begin
 
 
-ML {*
+ML \<open>
 val _ =
   Outer_Syntax.command @{command_keyword "done"} "done proof"
     (Scan.succeed Isar_Cmd.done_proof);
-*}
+\<close>
 
 end

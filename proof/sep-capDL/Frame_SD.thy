@@ -270,8 +270,8 @@ lemma sep_map_f_tcb_at:
   apply (case_tac z,
          simp_all add: object_wipe_slots_def object_clean_def asid_reset_def
                        update_slots_def intent_reset_def)
-  apply (simp add:object_at_def opt_object_def object_slots_def object_wipe_slots_def
-                  update_slots_def)
+  apply (simp add: object_at_def object_slots_def object_wipe_slots_def
+                   update_slots_def)
   apply (rename_tac cdl_tcb')
   apply (case_tac cdl_tcb)
   apply (case_tac cdl_tcb')
@@ -303,7 +303,7 @@ lemma set_object_cdl_field_wp:
    apply (rule ext)
    apply (simp add:object_wipe_slots_def type)
   apply (erule arg_cong[where f = R, THEN iffD1,rotated])
-  apply (clarsimp simp:opt_object_def object_at_def)
+  apply (clarsimp simp: object_at_def)
   apply (rule ext)
   apply (clarsimp split:if_splits option.splits)
   apply (cut_tac slot)
@@ -321,7 +321,7 @@ lemma set_cap_wp:
   apply (wp|wpc)+
      apply (rule_tac obj = obj in set_object_slot_wp)
     apply (wp select_wp |wpc)+
-  apply (clarsimp simp: opt_object_def)
+  apply clarsimp
   apply (clarsimp simp: update_slots_def has_slots_def
                  split: cdl_object.splits)
       apply (rename_tac tcb)
@@ -364,7 +364,7 @@ lemma set_cdl_tcb_field_wp:
           apply (drule_tac tcb = cdl_tcb in fields_cong)
           apply simp
          apply wp+
-  apply (clarsimp simp:opt_object_def object_at_def)
+  apply (clarsimp simp: object_at_def)
   done
 
 (* Specialised (and useful) versions of the above rule. *)

@@ -90,7 +90,9 @@ finaliseCap (PageTableCap {
     catchFailure
         (do
             vroot <- findVSpaceForASID asid
-            when (vroot == pte) (withoutFailure $ deleteASID asid pte))
+            if vroot == pte
+                then withoutFailure $ deleteASID asid pte
+                else throw InvalidRoot)
         (\_ -> unmapPageTable asid vptr pte)
 
     return (NullCap, NullCap)
@@ -160,14 +162,14 @@ createObject t regionBase _ isDevice =
             return $! FrameCap (pointerCast regionBase)
                   VMReadWrite RISCVSmallPage isDevice Nothing
         Arch.Types.LargePageObject -> do
-            placeNewDataObject regionBase 0 isDevice
+            placeNewDataObject regionBase ptTranslationBits isDevice
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just RISCVLargePage)})
             return $! FrameCap (pointerCast regionBase)
                   VMReadWrite RISCVLargePage isDevice Nothing
         Arch.Types.HugePageObject -> do
-            placeNewDataObject regionBase 0 isDevice
+            placeNewDataObject regionBase (ptTranslationBits+ptTranslationBits) isDevice
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just RISCVHugePage)})

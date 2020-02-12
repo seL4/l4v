@@ -495,6 +495,15 @@ where
     modify (\<lambda>s. s\<lparr> consumed_time := consumed_time s + cur_time' - prev_time \<rparr>)
   od"
 
+text \<open>Currently, @{text update_restart_pc} can be defined generically up to
+the actual register numbers.\<close>
+definition
+  update_restart_pc :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "update_restart_pc thread_ptr =
+        as_user thread_ptr (getRegister nextInstructionRegister
+                            >>= setRegister faultRegister)"
+
 text \<open>Suspend a thread, cancelling any pending operations and preventing it
 from further execution by setting it to the Inactive state.\<close>
 definition
@@ -507,6 +516,8 @@ where
        set_sc_obj_ref sc_yield_from_update sc_ptr None;
        set_tcb_obj_ref tcb_yield_to_update thread None
      od) yt_opt;
+     state \<leftarrow> get_thread_state thread;
+     (if state = Running then update_restart_pc thread else return ());
      set_thread_state thread Inactive;
      tcb_sched_action (tcb_sched_dequeue) thread;
      tcb_release_remove thread

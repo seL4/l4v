@@ -689,7 +689,7 @@ let
     case x of
         Free (a, t) => Var ((a, 0), t)
       | x => x
-  val @{term_pat "?head (* L2corres *) ?st ?ret_xf ?ex_xf ?precond ?l2_term ?l1_term"} =
+  val @{term_pat "?head \<comment> \<open>L2corres\<close> ?st ?ret_xf ?ex_xf ?precond ?l2_term ?l1_term"} =
     map_aterms convert_var_to_free (Thm.concl_of thm) |> HOLogic.dest_Trueprop
   val new_l2_term = (abs_over_tuple_vars name_map vars l2_term
       $ Free ("r'", HOLogic.mk_tupleT (dest_set vars |> map snd)))

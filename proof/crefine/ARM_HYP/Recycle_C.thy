@@ -264,6 +264,7 @@ lemma clearMemory_PageCap_ccorres:
       []
      (doMachineOp (clearMemory ptr (2 ^ pageBitsForSize sz))) (Call clearMemory_'proc)"
   (is "ccorres dc xfdc ?P ?P' [] ?m ?c")
+  supply image_cong_simp [cong del]
   apply (cinit' lift: bits_' ptr___ptr_to_unsigned_long_')
    apply (rule_tac P="capAligned (ArchObjectCap (PageCap False ptr undefined sz None))"
                 in ccorres_gen_asm)
@@ -387,7 +388,7 @@ lemma clearMemory_PageCap_ccorres:
 lemma coerce_memset_to_heap_update_asidpool:
   "heap_update_list x (replicateHider 4096 0)
       = heap_update (Ptr x :: asid_pool_C ptr)
-             (asid_pool_C (FCP (\<lambda>x. Ptr 0)))"
+             (asid_pool_C.asid_pool_C (FCP (\<lambda>x. Ptr 0)))"
   apply (intro ext, simp add: heap_update_def)
   apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps asid_pool_C_tag_def)
@@ -597,8 +598,8 @@ crunch ksArchState[wp]: invalidateTLBByASID "\<lambda>s. P (ksArchState s)"
 
 crunch gsMaxObjectSize[wp]: invalidateTLBByASID "\<lambda>s. P (gsMaxObjectSize s)"
 crunch gsMaxObjectSize[wp]: deleteASIDPool "\<lambda>s. P (gsMaxObjectSize s)"
-  (ignore: setObject getObject wp: crunch_wps getObject_inv loadObject_default_inv
-     simp: crunch_simps)
+  (wp: crunch_wps getObject_inv loadObject_default_inv
+   simp: crunch_simps)
 end
 
 context kernel_m begin
@@ -846,7 +847,7 @@ lemma setObject_tcb_ep_obj_at'[wp]:
 end
 
 crunch ep_obj_at'[wp]: setThreadState "obj_at' (P :: endpoint \<Rightarrow> bool) ptr"
-  (ignore: getObject setObject simp: unless_def)
+  (simp: unless_def)
 
 context kernel_m begin
 
@@ -1236,12 +1237,12 @@ lemma tcb_ptr_to_ctcb_ptr_force_fold:
 lemma coerce_memset_to_heap_update:
   "heap_update_list x (replicateHider (size_of (TYPE (tcb_C))) 0)
       = heap_update (tcb_Ptr x)
-             (tcb_C (arch_tcb_C (user_context_C (FCP (\<lambda>x. 0))) NULL)
-                    (thread_state_C (FCP (\<lambda>x. 0)))
-                    (NULL)
-                    (seL4_Fault_C (FCP (\<lambda>x. 0)))
-                    (lookup_fault_C (FCP (\<lambda>x. 0)))
-                      0 0 0 0 0 0 NULL NULL NULL NULL)"
+             (tcb_C.tcb_C (arch_tcb_C (user_context_C (FCP (\<lambda>x. 0))) NULL)
+                          (thread_state_C (FCP (\<lambda>x. 0)))
+                          (NULL)
+                          (seL4_Fault_C (FCP (\<lambda>x. 0)))
+                          (lookup_fault_C (FCP (\<lambda>x. 0)))
+                            0 0 0 0 0 0 NULL NULL NULL NULL)"
   apply (intro ext, simp add: heap_update_def)
   apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps tcb_C_tag_def)

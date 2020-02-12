@@ -86,7 +86,6 @@ autocorres_util.ML:
 utils.ML:
 program_info.ML:
 function_info.ML:
-mkterm_antiquote.ML:
 trace_antiquote.ML:
 autocorres_trace.ML:
     Utility libraries used by the auto-corres tools. The former includes

@@ -28,7 +28,7 @@ crunch (bcorres)bcorres[wp]: set_extra_badge,derive_cap truncate_state (ignore: 
 crunch (bcorres)bcorres[wp]: invoke_untyped truncate_state
   (ignore: sequence_x)
 
-crunch (bcorres)bcorres[wp]: set_mcpriority,arch_tcb_set_ipc_buffer truncate_state
+crunch (bcorres)bcorres[wp]: set_mcpriority truncate_state
 
 crunch (bcorres)bcorres[wp, BCorres2_AI_assms]: arch_get_sanitise_register_info, arch_post_modify_registers truncate_state
 
@@ -89,7 +89,7 @@ lemmas schedule_bcorres[wp] = schedule_bcorres1[OF BCorres2_AI_axioms]
 context Arch begin global_naming X64
 
 crunch (bcorres)bcorres[wp]: send_ipc,send_signal,do_reply_transfer,arch_perform_invocation truncate_state
-  (simp: gets_the_def swp_def update_object_def
+  (simp: gets_the_def swp_def set_object_def
  ignore: freeMemory clearMemory loadWord cap_fault_on_failure
          storeWord lookup_error_on_failure getRestartPC getRegister mapME )
 
@@ -136,6 +136,7 @@ crunch (bcorres) bcorres[wp]: handle_invocation truncate_state
 crunch (bcorres)bcorres[wp]: receive_ipc,receive_signal,delete_caller_cap truncate_state
 
 lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fault a b)"
+  unfolding handle_vm_fault_def
   apply (cases b)
   apply (simp | wp)+
   done

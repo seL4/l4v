@@ -26,20 +26,6 @@ lemma irq_state_independent_HI[intro!, simp]:
    \<Longrightarrow> irq_state_independent_H P"
   by (simp add: irq_state_independent_H_def)
 
-lemma irq_state_independent_H_conjI[intro!]:
-  "\<lbrakk>irq_state_independent_H P; irq_state_independent_H Q\<rbrakk>
-   \<Longrightarrow> irq_state_independent_H (P and Q)"
-  "\<lbrakk>irq_state_independent_H P; irq_state_independent_H Q\<rbrakk>
-   \<Longrightarrow> irq_state_independent_H (\<lambda>s. P s \<and> Q s)"
-  by (simp add: irq_state_independent_H_def)+
-
-lemma irq_state_independent_H_disjI[intro]:
-  "\<lbrakk>irq_state_independent_H P; irq_state_independent_H Q\<rbrakk>
-   \<Longrightarrow> irq_state_independent_H (P or Q)"
-  "\<lbrakk>irq_state_independent_H P; irq_state_independent_H Q\<rbrakk>
-   \<Longrightarrow> irq_state_independent_H (\<lambda>s. P s \<or> Q s)"
-  by (simp add: irq_state_independent_H_def)+
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma dmo_getirq_inv[wp]:

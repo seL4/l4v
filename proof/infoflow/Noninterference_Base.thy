@@ -12,15 +12,15 @@ theory Noninterference_Base
 imports "Lib.Simulation"
 begin
 
-text {*
+text \<open>
   Toby's extended noninterference definitions to handle dynamic assignment,
   that depends on the current state, of
   the domain that each action is assigned to. This is the gory details
   reported in the the CPP 2012 paper
   \emph{Noninterference for Operating System Kernels}.
-*}
+\<close>
 
-section {* Generic systems *}
+section \<open>Generic systems\<close>
 
 lemma un_eq:
   "\<lbrakk>S = S'; T = T'\<rbrakk> \<Longrightarrow> S \<union> T = S' \<union> T'"
@@ -51,7 +51,7 @@ lemma Un_eq_Int:
   apply fastforce
   done
 
-subsection{* Run function *}
+subsection\<open>Run function\<close>
 
 primrec Run :: "('e \<Rightarrow> ('s \<times> 's) set) \<Rightarrow> 'e list \<Rightarrow> ('s \<times> 's) set"
 where
@@ -88,9 +88,9 @@ lemma Run_app:
 
 
 
-subsection {* Base system locale *}
+subsection \<open>Base system locale\<close>
 
-text {* An ADT with an initial state. *}
+text \<open>An ADT with an initial state.\<close>
 locale system =
   fixes A :: "('a,'s,'e) data_type"
   and s0 :: "'s"  (* an initial state *)
@@ -125,13 +125,13 @@ lemmas no_absD = no_abs_def[THEN meta_eq_to_obj_eq, THEN iffD1, rule_format]
 end
 
 
-subsection {* Enabled system *}
+subsection \<open>Enabled system\<close>
 
-text{*
+text\<open>
   A system that is always enabled.
 
   In particular, the system will never be in deadlock, and there
-  is always an enabled transition from every reachable state. *}
+  is always an enabled transition from every reachable state.\<close>
 
 locale enabled_system = system +
   assumes enabled: "(\<exists> js. s \<in> execution A s0 js) \<Longrightarrow> \<exists> s'. s' \<in> execution A s js"
@@ -150,16 +150,16 @@ lemma enabled_Step:
 
 end
 
-subsection {* Step system *}
+subsection \<open>Step system\<close>
 
-text {* A Step system is a system for which a running
+text \<open>A Step system is a system for which a running
    a sequence of events is equivalent to performing a sequence of individual
    steps: one for each event in the sequence in turn. In other words
    running [a,b,c,...] is the same than running [a] then running [b] then ...
    This correspond to projecting to the observable state and deducing the real
    state from that observable state on each event.
 
-   We define the unwinding conditions on this kind of system *}
+   We define the unwinding conditions on this kind of system\<close>
 locale Step_system = system A s0
   for A :: "('a,'s,'e) data_type" and s0 :: "'s"  +
   assumes reachable_s0: "reachable s0"
@@ -221,13 +221,13 @@ lemma reachable_induct:
 
 end
 
-subsection {* Init Fin system *}
+subsection \<open>Init Fin system\<close>
 
-text {* An Init Fin system a stronger kind of Step system where know directly
+text \<open>An Init Fin system a stronger kind of Step system where know directly
    that Fin and Init behave nicely as nearly "inverse" of each other which imply
    that projecting to observable state then deducing the original state behave
    as expected in Step system.
-  *}
+\<close>
 
 locale Init_Fin_system = system A s0
   for A :: "('a,'s,'e) data_type" and s0 :: "'s"  +
@@ -318,15 +318,15 @@ sublocale Init_Fin_system \<subseteq> Step_system
   apply(unfold_locales)
   done
 
-subsection {* Init inv Fin system *}
+subsection \<open>Init inv Fin system\<close>
 
-text {* Here we go one step further than the Init_Fin_system:
+text \<open>Here we go one step further than the Init_Fin_system:
   In this local Init and Fin are actually inverse of each other
   Fin is injective
   if s : range Fin A then Init A s = {s'} and Fin A s' = s else Init A s = {}.
 
   The internal state space is thus just a restriction of the observable state space.
-*}
+\<close>
 
 (* when Init is the inverse image of Fin, the above assumptions are met by a system
    for which Fin is injective, or one that appears deterministic to an observer *)
@@ -409,12 +409,12 @@ sublocale Init_inv_Fin_system \<subseteq> Init_Fin_system
 
 
 
-section {* Non interference *}
+section \<open>Non interference\<close>
 
-subsection {* Policy *}
+subsection \<open>Policy\<close>
 
-text{* This local represent an whole infoflow policy with the all the field needed
-       for defining non leakage, non interference and non influence*}
+text\<open>This local represent an whole infoflow policy with the all the field needed
+       for defining non leakage, non interference and non influence\<close>
 
 locale noninterference_policy =
   fixes dom :: "'e \<Rightarrow> 's \<Rightarrow> 'd"        (* dynamic dom assignment *)
@@ -481,7 +481,7 @@ end
 
 
 
-subsection {* Non interference system *}
+subsection \<open>Non interference system\<close>
 
 locale noninterference_system = enabled_system A s0 +
                                 noninterference_policy dom uwr policy out schedDomain
@@ -521,14 +521,14 @@ where
 
 
 
-text {* Nonleakage *}
+text \<open>Nonleakage\<close>
 definition Nonleakage :: "bool"
 where
   "Nonleakage \<equiv> \<forall>as s u t. reachable s \<and> reachable t \<longrightarrow>
      s \<sim>schedDomain\<sim> t \<longrightarrow>
      s \<approx>(sources as s u)\<approx> t \<longrightarrow> obs_equiv s as t as u"
 
-text {* A generalisation of Nonleakage. *}
+text \<open>A generalisation of Nonleakage.\<close>
 definition Nonleakage_gen :: "bool"
 where
   "Nonleakage_gen \<equiv> \<forall>as s u t. reachable s \<and> reachable t \<longrightarrow>
@@ -600,7 +600,7 @@ lemma INT_cong':
   done
 
 
-text {* Standard Noninterference *}
+text \<open>Standard Noninterference\<close>
 
 definition Noninterference :: "bool"
 where
@@ -609,7 +609,7 @@ where
          (obs_equiv s as s (ipurge u as {s}) u)"
 
 
-text {* Strong Noninterference *}
+text \<open>Strong Noninterference\<close>
 definition Noninterference_strong :: "bool"
 where
  "Noninterference_strong \<equiv>
@@ -644,11 +644,11 @@ lemma Noninterference_Noninterference_strong:
   done
 
 
-text {* Noninfluence -- the combination of Noninterference and
+text \<open>Noninfluence -- the combination of Noninterference and
    Nonleakage.
 
    We add the assumption about equivalence wrt the scheduler's domain, as
-   is common in e.g. GVW.*}
+   is common in e.g. GVW.\<close>
 definition Noninfluence  :: "bool"
 where
  "Noninfluence \<equiv>
@@ -689,10 +689,10 @@ lemma Noninfluence_strong_Nonleakage:
   apply(clarsimp simp: Noninfluence_strong_def Nonleakage_def)
   done
 
-text {* This stronger condition is needed
+text \<open>This stronger condition is needed
    to make the induction proof work for Noninterference. It can be viewed
    as a generalisation of Noninfluence; hence its name here.
-*}
+\<close>
 definition Noninfluence_gen :: "bool"
 where
  "Noninfluence_gen \<equiv>
@@ -769,10 +769,10 @@ lemma integrity_uD:
 
 
 
-text {*
+text \<open>
   A weaker version of @{prop confidentiality_u} that, with
   @{prop integrity_u}, implies it.
-*}
+\<close>
 definition confidentiality_u_weak
 where
   "confidentiality_u_weak \<equiv> \<forall> a u s t.  reachable s \<and> reachable t \<longrightarrow>
@@ -884,7 +884,7 @@ lemma Noninfluence_gen_Noninterference_strong:
 
 end
 
-subsection {* Noninterference on enabled Step system : unwinding system *}
+subsection \<open>Noninterference on enabled Step system : unwinding system\<close>
 
 locale enabled_Step_system = enabled_system A s0 + Step_system A s0
   for A :: "('a,'s,'e) data_type" and s0 :: "'s"
@@ -1334,14 +1334,14 @@ lemma non_sched_doms_cannot_schedule:
   done
 
 
-text {*
+text \<open>
    In systems with just a single event, @{prop integrity_u} is a very strong
    condition. It implies that once the scheduler is not
    running, it can never run again.
 
    This is one explanation for why seL4 (whose automaton has only a single
    event) doesn't satisfy @{prop integrity_u}.
-*}
+\<close>
 lemma integrity_u_and_single_event_systems:
   "\<lbrakk>integrity_u; reachable s; dom a s \<noteq> schedDomain; s' \<in> execution A s as;
     \<forall> y::'e. y = a\<rbrakk> \<Longrightarrow> dom e s' \<noteq> schedDomain"
@@ -1372,9 +1372,9 @@ lemma integrity_u_and_single_event_systems:
 end
 
 
-subsection {* Complete unwinding system *}
+subsection \<open>Complete unwinding system\<close>
 
-text {* The unwinding conditions are not only sound but also complete when policy is reflexive *}
+text \<open>The unwinding conditions are not only sound but also complete when policy is reflexive\<close>
 locale complete_unwinding_system = unwinding_system +
   assumes  policy_refl:
   "(u,u) \<in> policy"
@@ -1403,12 +1403,12 @@ lemma Noninfluence_strong_uwr_integrity_u:
   apply(blast intro: uwr_sym)
   done
 
-text {*
+text \<open>
    @{prop Noninfluence_gen} actually turns out to be equivalent to @{prop Noninfluence_strong_uwr},
    when the policy is reflexive. So the two unwinding conditions for integrity
    and confidentiality actually turn out to be sound and sufficient for the
    condition we were using them to prove in the first place.
-*}
+\<close>
 lemma Noninfluence_gen_equiv_Noninfluence_strong_uwr:
   "Noninfluence_gen = Noninfluence_strong_uwr"
   apply(rule iffI)

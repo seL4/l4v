@@ -23,7 +23,7 @@ install_C_file "many_local_vars.c"
 context "many_local_vars_global_addresses" begin
 lemma "\<forall>\<sigma>. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call test_'proc
               {t. t may_not_modify_globals \<sigma>}"
-  apply (tactic {* HoarePackage.vcg_tac "_modifies" "false" [] @{context} 1 *})
+  apply (tactic \<open>HoarePackage.vcg_tac "_modifies" "false" [] @{context} 1\<close>)
 done
 end
 

@@ -12,12 +12,12 @@ theory ArchDeterministic_AI
 imports "../Deterministic_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 named_theorems Deterministic_AI_assms
 
 crunch valid_list[wp, Deterministic_AI_assms]:
- vcpu_save, vcpu_enable, vcpu_disable, vcpu_restore, arch_tcb_set_ipc_buffer, arch_get_sanitise_register_info, arch_post_modify_registers valid_list
+ vcpu_save, vcpu_enable, vcpu_disable, vcpu_restore, arch_get_sanitise_register_info, arch_post_modify_registers valid_list
   (wp: crunch_wps simp: unless_def crunch_simps)
 
 lemma vcpu_switch_valid_list[wp, Deterministic_AI_assms]:
@@ -39,7 +39,7 @@ global_interpretation Deterministic_AI_1?: Deterministic_AI_1
   case 1 show ?case by (unfold_locales; (fact Deterministic_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 crunch valid_list[wp]: invalidate_tlb_by_asid valid_list
   (wp: crunch_wps preemption_point_inv' simp: crunch_simps filterM_mapM unless_def

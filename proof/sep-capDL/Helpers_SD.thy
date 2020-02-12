@@ -196,12 +196,12 @@ where
   | TcbCap _ \<Rightarrow> TcbCap obj_id
   | CNodeCap _ f2 f3 f4 \<Rightarrow> CNodeCap obj_id f2 f3 f4
   | MasterReplyCap _ \<Rightarrow> MasterReplyCap obj_id
-  | ReplyCap _ \<Rightarrow> ReplyCap obj_id
+  | ReplyCap _ f2 \<Rightarrow> ReplyCap obj_id f2
   | NotificationCap _ f2 f3 \<Rightarrow> NotificationCap obj_id f2 f3
   | EndpointCap _ f2 f3 \<Rightarrow> EndpointCap obj_id f2 f3
   | ZombieCap _ \<Rightarrow> ZombieCap obj_id
-  | PendingSyncSendCap _ f2 f3 f4 f5 \<Rightarrow> PendingSyncSendCap obj_id f2 f3 f4 f5
-  | PendingSyncRecvCap _ f2 \<Rightarrow> PendingSyncRecvCap obj_id f2
+  | PendingSyncSendCap _ f2 f3 f4 f5 f6 \<Rightarrow> PendingSyncSendCap obj_id f2 f3 f4 f5 f6
+  | PendingSyncRecvCap _ f2 f3 \<Rightarrow> PendingSyncRecvCap obj_id f2 f3
   | PendingNtfnRecvCap _ \<Rightarrow> PendingNtfnRecvCap obj_id
   | BoundNotificationCap _ \<Rightarrow> BoundNotificationCap obj_id
   | _ \<Rightarrow> cap"
@@ -214,7 +214,7 @@ where
 
 lemma slots_of_cdl_objects:
   "slots_of obj_id s slot = Some cap \<Longrightarrow> \<exists>obj. cdl_objects s obj_id = Some obj"
-  by (clarsimp simp: slots_of_def opt_object_def split: option.splits)
+  by (clarsimp simp: slots_of_def split: option.splits)
 
 lemma opt_cap_cdl_objects:
   "opt_cap (obj_id, slot) s = Some cap \<Longrightarrow> \<exists>obj. cdl_objects s obj_id = Some obj"
@@ -223,7 +223,7 @@ lemma opt_cap_cdl_objects:
 lemma object_slots_slots_of:
   "\<lbrakk>slots_of obj_id spec slot = Some cap; cdl_objects spec obj_id = Some obj\<rbrakk>
   \<Longrightarrow> object_slots obj slot = Some cap"
-  by (clarsimp simp: slots_of_def opt_object_def)
+  by (clarsimp simp: slots_of_def)
 
 lemma object_slots_opt_cap:
   "\<lbrakk>opt_cap cap_ref spec = Some cap; cdl_objects spec obj_id = Some obj; cap_ref = (obj_id, slot)\<rbrakk>
@@ -243,11 +243,6 @@ lemma object_slots_opt_capD:
 lemma object_slots_has_slots:
   "object_slots obj \<noteq> Map.empty \<Longrightarrow> has_slots obj"
   by (clarsimp simp: has_slots_def object_slots_def split: cdl_object.splits)
-
-lemma opt_object_dom_cdl_objects [elim!]:
-  "opt_object obj_id spec = Some obj \<Longrightarrow> obj_id \<in> dom (cdl_objects spec)"
-  "opt_object obj_id spec = Some obj \<Longrightarrow> \<exists>slot. cdl_objects spec obj_id = Some slot"
-  by (clarsimp simp: opt_object_def)+
 
 lemma slots_of_dom_cdl_objects [elim!]:
   "slots_of obj_id spec slot = Some cap \<Longrightarrow> obj_id \<in> dom (cdl_objects spec)"
@@ -455,6 +450,12 @@ lemma object_size_bits_empty_cnode [simp]:
   "object_size_bits (CNode (empty_cnode sz)) = sz"
   by (clarsimp simp: object_size_bits_def empty_cnode_def)
 
+lemma is_pt_pt_size[simp]: "is_pt obj \<Longrightarrow> object_size_bits obj = pt_size"
+  by (clarsimp simp: object_size_bits_def pt_size_def is_pt_def split: cdl_object.splits)
+
+lemma is_pd_pd_size[simp]: "is_pd obj \<Longrightarrow> object_size_bits obj = pd_size"
+  by (clarsimp simp: object_size_bits_def pt_size_def is_pd_def split: cdl_object.splits)
+
 definition
   object_at_pointer_size_bits :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow> cdl_size_bits"
 where
@@ -514,7 +515,21 @@ where
 definition
   bound_irq_list :: "cdl_state \<Rightarrow> cdl_irq list"
 where
-  "bound_irq_list \<equiv> \<lambda>s. sorted_list_of_set (bound_irqs s)"
+  "bound_irq_list \<equiv>
+     \<lambda>s. [irq \<leftarrow> [0 .e. maxBound].
+            case slots_of (cdl_irq_node s irq) s 0 of
+              None \<Rightarrow> False
+            | Some cap \<Rightarrow> cap \<noteq> NullCap]"
+
+lemma bound_irq_list_set[simp]: "set (bound_irq_list s) = bound_irqs s"
+  apply (clarsimp simp: bound_irqs_def bound_irq_list_def image_def)
+  apply (intro set_eqI iffI)
+   apply (fastforce split: option.splits)
+  apply (unat_arith, clarsimp)
+  done
+
+lemma bound_irq_list_distinct[intro]: "distinct (bound_irq_list s)"
+  by (clarsimp simp: bound_irq_list_def)
 
 definition
   used_irqs :: "cdl_state \<Rightarrow> cdl_irq set"
@@ -536,7 +551,7 @@ definition
   "real_object_at \<equiv> \<lambda> obj_id s. obj_id \<in> dom (cdl_objects s) \<and> obj_id \<notin> irq_nodes s"
 
 
-(* Agregate object types. *)
+(* Aggregate object types. *)
 abbreviation
   "table_at \<equiv> \<lambda>obj_id s. pt_at obj_id s \<or> pd_at obj_id s"
 abbreviation
@@ -595,6 +610,9 @@ lemma object_type_is_object:
                     is_cnode_def is_irq_node_def is_asidpool_def is_pt_def is_pd_def is_frame_def
              split: cdl_object.splits)
 
+lemma is_ptD[dest]: "is_pt obj \<Longrightarrow> \<exists>x. obj = PageTable x"
+  by (clarsimp simp: is_pt_def split: cdl_object.splits)
+
 lemma object_at_object_type:
   "\<lbrakk>cdl_objects spec obj_id = Some obj; untyped_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = UntypedType"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; ep_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = EndpointType"
@@ -605,6 +623,7 @@ lemma object_at_object_type:
   "\<lbrakk>cdl_objects spec obj_id = Some obj; asidpool_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = AsidPoolType"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; pt_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = PageTableType"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; pd_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = PageDirectoryType"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; frame_at obj_id spec\<rbrakk> \<Longrightarrow> \<exists>n. object_type obj = FrameType n"
   by (simp_all add: object_at_def object_type_is_object)
 
 lemma object_type_object_at:
@@ -628,6 +647,15 @@ lemma set_object_type [simp]:
   "{obj_id \<in> dom (cdl_objects spec). real_object_at obj_id spec} = {obj_id. real_object_at obj_id spec}"
   by (auto simp: object_at_def real_object_at_def)
 
+lemma pt_at_is_real[simp]: "pt_at pt_id spec \<Longrightarrow> pt_id \<in> {obj_id. real_object_at obj_id spec}"
+  apply (clarsimp simp: object_at_def is_pt_def real_object_at_def dom_def
+                        irq_nodes_def is_irq_node_def)
+  by (clarsimp split: cdl_object.splits)
+
+lemma pd_at_is_real[simp]: "pd_at pt_id spec \<Longrightarrow> pt_id \<in> {obj_id. real_object_at obj_id spec}"
+  apply (clarsimp simp: object_at_def is_pd_def real_object_at_def dom_def
+                        irq_nodes_def is_irq_node_def)
+  by (clarsimp split: cdl_object.splits)
 
 definition
   real_objects :: "cdl_state \<Rightarrow> cdl_object_id set"
@@ -652,6 +680,34 @@ where "is_fake_pt_cap cap \<equiv> case cap of
     PageTableCap _ Fake _ \<Rightarrow> True
   | _ \<Rightarrow> False"
 
+definition is_real_vm_cap :: "cdl_cap \<Rightarrow> bool"
+where
+  "is_real_vm_cap cap \<equiv>
+       (case cap of
+           FrameCap _ _ _ _ Real _     \<Rightarrow> True
+         | PageTableCap _ Real _     \<Rightarrow> True
+         | PageDirectoryCap _ Real _ \<Rightarrow> True
+         | _                         \<Rightarrow> False)"
+
+definition is_fake_vm_cap :: "cdl_cap \<Rightarrow> bool"
+where
+  "is_fake_vm_cap cap \<equiv>
+       (case cap of
+           FrameCap _ _ _ _ Fake _     \<Rightarrow> True
+         | PageTableCap _ Fake _     \<Rightarrow> True
+         | PageDirectoryCap _ Fake _ \<Rightarrow> True
+         | _                         \<Rightarrow> False)"
+
+abbreviation
+  "fake_frame_cap dev ptr rights n \<equiv> FrameCap dev ptr rights n Fake None"
+abbreviation
+  "is_fake_frame_cap cap \<equiv> (case cap of FrameCap _ _ _ _ Fake None \<Rightarrow> True | _ \<Rightarrow> False)"
+
+definition dev_of :: "cdl_cap \<Rightarrow> bool option" where
+  "dev_of cap = (case cap of FrameCap dev ptr _ n _ _ \<Rightarrow> Some dev | _ \<Rightarrow> None)"
+definition cap_size_bits :: "cdl_cap \<Rightarrow> nat" where
+  "cap_size_bits cap = (case cap of FrameCap _ _ _ n _ _ \<Rightarrow> n | _ \<Rightarrow> 0)"
+
 lemma is_fake_pt_cap_is_pt_cap [elim!]:
   "is_fake_pt_cap cap \<Longrightarrow> is_pt_cap cap"
   by (clarsimp simp: is_fake_pt_cap_def split: cdl_cap.splits)
@@ -672,12 +728,12 @@ lemma is_cnode_cap_simps:
   "is_cnode_cap (FrameCap dev x g h i j) = False"
   "is_cnode_cap (TcbCap x) = False"
   "is_cnode_cap (MasterReplyCap x) = False"
-  "is_cnode_cap (ReplyCap x) = False"
+  "is_cnode_cap (ReplyCap x q) = False"
   "is_cnode_cap (NotificationCap x m n) = False"
   "is_cnode_cap (EndpointCap x p q) = False"
   "is_cnode_cap (ZombieCap x) = False"
-  "is_cnode_cap (PendingSyncSendCap x s t u v) = False"
-  "is_cnode_cap (PendingSyncRecvCap x t) = False"
+  "is_cnode_cap (PendingSyncSendCap x s t u v w) = False"
+  "is_cnode_cap (PendingSyncRecvCap x t w) = False"
   "is_cnode_cap (PendingNtfnRecvCap x) = False"
 
   "is_cnode_cap (CNodeCap x k l sz) = True"
@@ -810,6 +866,24 @@ lemma cap_object_default_cap_frame:
   "is_frame_cap cap \<Longrightarrow> cap_object (default_cap (the (cap_type cap)) {obj_id} sz dev) = obj_id"
   by clarsimp
 
+lemma is_pd_default_cap[simp]:
+  "is_pd obj \<Longrightarrow>
+   cdl_objects spec ptr = Some obj \<Longrightarrow>
+   default_cap (object_type obj) {ptr'} n b = PageDirectoryCap ptr' Real None"
+  by (clarsimp simp: object_type_is_object default_cap_def)
+
+lemma pd_at_default_cap[simp]:
+  "pd_at ptr spec \<Longrightarrow>
+   cdl_objects spec ptr = Some obj \<Longrightarrow>
+   default_cap (object_type obj) {ptr'} n b = PageDirectoryCap ptr' Real None"
+  by (fastforce simp: object_at_def)
+
+lemma pt_at_default_cap[simp]:
+  "pt_at ptr spec \<Longrightarrow>
+   cdl_objects spec ptr = Some obj \<Longrightarrow>
+   default_cap (object_type obj) {ptr'} n b = PageTableCap ptr' Real None"
+  by (clarsimp simp: object_type_is_object default_cap_def object_at_def)
+
 lemma default_cap_not_null [elim!]:
   "default_cap type obj_ids sz dev = NullCap \<Longrightarrow> False"
   "NullCap = default_cap type obj_ids sz dev\<Longrightarrow> False"
@@ -821,9 +895,13 @@ lemma cap_objects_update_cap_object [simp]:
   by (clarsimp simp: cap_has_object_def update_cap_object_def
               split: cdl_cap.splits)
 
-lemma  cap_has_object_default_cap [simp]:
+lemma cap_has_object_default_cap [simp]:
   "type \<noteq> IRQNodeType \<Longrightarrow> cap_has_object (default_cap type ids sz dev)"
   by (clarsimp simp: default_cap_def cap_has_object_def split: cdl_object_type.splits)
+
+lemma all_cdl_rights_UNIV [simp]:
+  "all_cdl_rights = UNIV"
+  by (fastforce intro: rights.exhaust simp: all_cdl_rights_def)
 
 lemma cap_rights_default_cap_cnode [simp]:
   "cap_rights (default_cap CNodeType ids sz dev) = UNIV"
@@ -845,12 +923,12 @@ lemma cap_has_object_simps [simp]:
   "cap_has_object (TcbCap x)"
   "cap_has_object (CNodeCap x k l sz)"
   "cap_has_object (MasterReplyCap x)"
-  "cap_has_object (ReplyCap x)"
+  "cap_has_object (ReplyCap x q)"
   "cap_has_object (NotificationCap x m n)"
   "cap_has_object (EndpointCap x p q)"
   "cap_has_object (ZombieCap x)"
-  "cap_has_object (PendingSyncSendCap x s t u v)"
-  "cap_has_object (PendingSyncRecvCap x t)"
+  "cap_has_object (PendingSyncSendCap x s t u v w)"
+  "cap_has_object (PendingSyncRecvCap x t w)"
   "cap_has_object (PendingNtfnRecvCap x)"
   "cap_has_object (UntypedCap dev ids ids') = True"
   by (simp_all add:cap_has_object_def)
@@ -869,12 +947,27 @@ lemma is_cap_NullCap [simp]:
   "\<not> is_irqhandler_cap NullCap"
   by (clarsimp simp: cap_type_def is_fake_pt_cap_def)+
 
+definition
+  object_slots_list :: "cdl_object \<Rightarrow> cdl_cnode_index list"
+where
+  "object_slots_list obj \<equiv> case obj of
+    PageDirectory _ \<Rightarrow> [0..<2^pd_size]
+  | PageTable _ \<Rightarrow> [0..<2^pt_size]
+  | AsidPool _ \<Rightarrow> [0..<2^asid_low_bits]
+  | CNode cnode \<Rightarrow> [0..<2^(cdl_cnode_size_bits cnode)]
+  | Tcb _ \<Rightarrow> [0..<tcb_boundntfn_slot + 1]
+  | IRQNode _ \<Rightarrow> [0]
+  | _ \<Rightarrow> []"
+
 (* The slots of an object, returns an empty list for non-existing objects
    or objects that do not have caps *)
 definition
   slots_of_list :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow> cdl_cnode_index list"
 where
-  "slots_of_list spec obj_id \<equiv> sorted_list_of_set $ dom $ slots_of obj_id spec"
+  "slots_of_list spec obj_id \<equiv>
+     case cdl_objects spec obj_id of
+       Some obj \<Rightarrow> object_slots_list obj
+     | None \<Rightarrow> []"
 
 (* Encode the guard and guard size for passing to the kernel. *)
 definition guard_as_rawdata :: "cdl_cap \<Rightarrow> cdl_raw_capdata"
@@ -930,7 +1023,7 @@ definition
   opt_thread :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_tcb option"
 where
   "opt_thread p s \<equiv>
-      case opt_object p s of
+      case cdl_objects s p of
           Some (Tcb tcb) \<Rightarrow> (Some tcb)
         | _ \<Rightarrow> None"
 
@@ -938,7 +1031,7 @@ where
 
 definition derived_cap :: "cdl_cap \<Rightarrow> cdl_cap"
 where "derived_cap cap \<equiv> case cap of
-          ReplyCap _ \<Rightarrow> NullCap
+          ReplyCap _ _ \<Rightarrow> NullCap
         | MasterReplyCap _ \<Rightarrow> NullCap
         | IrqControlCap \<Rightarrow> NullCap
         | FrameCap d p r sz b x \<Rightarrow> FrameCap d p r sz b None
@@ -959,7 +1052,7 @@ where "safe_for_derive cap \<equiv> case cap of
   | UntypedCap _ _ _ \<Rightarrow> False
   | PageTableCap _ _ _ \<Rightarrow> False
   | PageDirectoryCap _ _ _ \<Rightarrow> False
-  | ReplyCap _ \<Rightarrow> False
+  | ReplyCap _ _ \<Rightarrow> False
   | MasterReplyCap _ \<Rightarrow> False
   | IrqControlCap \<Rightarrow> False
   | ZombieCap _ \<Rightarrow> False
@@ -1090,5 +1183,76 @@ lemma dom_sub_restrict [simp]:
 lemma inter_empty_not_both:
 "\<lbrakk>x \<in> A; A \<inter> B = {}\<rbrakk> \<Longrightarrow> x \<notin> B"
   by fastforce
+
+lemma object_at_predicate_lift:
+  "object_at P obj_id spec \<Longrightarrow> P (the (cdl_objects spec obj_id))"
+  by (fastforce simp: object_at_def)
+
+lemma object_at_cdl_objects_elim[elim]:
+  "object_at P obj_id spec \<Longrightarrow> cdl_objects spec obj_id = Some (the (cdl_objects spec obj_id))"
+  by (fastforce simp: object_at_def)
+
+lemma opt_cap_object_slot:
+  "cdl_objects spec obj_id = Some obj \<Longrightarrow>
+   P (object_slots obj slot) \<Longrightarrow>
+   P (opt_cap (obj_id, slot) spec)"
+  by (fastforce simp: object_at_def opt_cap_def slots_of_def)
+
+lemma opt_cap_object_slotE:
+  "cdl_objects spec obj_id = Some obj \<Longrightarrow>
+   object_slots obj slot = Some cap \<Longrightarrow>
+   opt_cap (obj_id, slot) spec = Some cap"
+  by (rule opt_cap_object_slot)
+
+lemma slots_of_object_slot:
+  "cdl_objects spec obj_id = Some obj \<Longrightarrow>
+   P (object_slots obj slot) \<Longrightarrow>
+   P (slots_of obj_id spec slot)"
+   by (fastforce simp: object_at_def opt_cap_def slots_of_def)
+
+lemma slots_of_object_slotE:
+  "cdl_objects spec obj_id = Some obj \<Longrightarrow>
+   object_slots obj slot = Some cap \<Longrightarrow>
+   slots_of obj_id spec slot = Some cap"
+   by (fastforce simp: object_at_def opt_cap_def slots_of_def)
+
+lemma object_at_cdl_objects:
+  "cdl_objects spec obj_id = Some obj \<Longrightarrow>
+   P obj \<Longrightarrow>
+   object_at P obj_id spec"
+  by (fastforce simp: object_at_def)
+
+lemma opt_cap_object_slot_simp:
+  "cdl_objects spec obj_id = Some obj \<Longrightarrow>
+   opt_cap (obj_id, slot) spec = object_slots obj slot"
+   by (fastforce simp: object_at_def opt_cap_def slots_of_def)
+
+lemma slots_of_object_slot_simp:
+  "cdl_objects spec obj_id = Some obj \<Longrightarrow>
+   slots_of obj_id spec slot = object_slots obj slot"
+   by (fastforce simp: object_at_def opt_cap_def slots_of_def)
+
+lemma is_fake_pt_cap_cap_has_object:
+  "is_fake_pt_cap cap \<Longrightarrow> cap_has_object cap"
+  by (clarsimp simp: cap_has_object_def is_fake_pt_cap_def split: cdl_cap.splits)
+
+lemma is_fake_pt_cap_pt_cap:
+  "is_fake_pt_cap (PageTableCap x R z) \<longleftrightarrow> R = Fake"
+  by (clarsimp simp: is_fake_pt_cap_def split: cdl_frame_cap_type.splits)
+
+lemma fake_vm_cap_simp:
+  "is_fake_vm_cap (FrameCap x y z a R b) \<longleftrightarrow> R = Fake"
+  by (clarsimp simp: is_fake_vm_cap_def split: cdl_frame_cap_type.splits)
+
+lemma frame_not_pt[intro!]: "\<not> (is_frame x \<and> is_pt x)"
+  by (cases x; clarsimp simp: is_frame_def is_pt_def)
+
+lemma not_frame_and_pt: "is_frame x \<Longrightarrow> is_pt x \<Longrightarrow> False"
+  by (fastforce simp: frame_not_pt[simplified])
+
+lemma not_cap_at_cap_not_at:
+  "(slot \<in> dom (slots_of obj_id spec) \<and> \<not> cap_at P (obj_id, slot) spec) \<longleftrightarrow>
+   (slot \<in> dom (slots_of obj_id spec) \<and> cap_at (\<lambda>x. \<not> P x) (obj_id, slot) spec)"
+  by (intro iffI; clarsimp simp: cap_at_def opt_cap_def)
 
 end

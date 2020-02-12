@@ -71,6 +71,41 @@ val attribs_of: Proof.context -> thm -> string list;
 val used_facts: Proof.context option -> thm -> (string * thm) list;
 val used_facts_attribs: Proof.context -> thm -> (string * string list) list;
 
+(*
+  Returns the proof body form of the prop proved by a theorem.
+
+  Unfortunately, proof bodies don't contain terms in the same form as what you'd get
+  from things like `Thm.full_prop_of`: the proof body terms have sort constraints
+  pulled out as separate assumptions, rather than as annotations on the types of
+  terms.
+
+  It's easier for our dependency-tracking purposes to treat this transformed
+  term as the 'canonical' form of a theorem, since it's always available as the
+  top-level prop of a theorem's proof body.
+*)
+val proof_body_prop_of: thm -> term;
+
+(*
+  Get every (named) term that was proved in the proof body of the given thm.
+
+  The returned terms are in proof body form.
+*)
+val used_named_props_of: thm -> (string * term) list;
+
+(*
+  Distinguish whether the thm name "foo_3" refers to foo(3) or foo_3 by comparing
+  against the given term. Assumes the term is in proof body form.
+
+  The provided context should match the context used to extract the (name, prop) pair
+  (that is, it should match the context used to extract the thm passed into
+  `proof_body_prop_of` or `used_named_props_of`).
+
+  Returns SOME ("foo", SOME 3) if the answer is 'it refers to foo(3)'.
+  Returns SOME ("foo_3", NONE) if the answer is 'it refers to foo_3'.
+  Returns NONE if the answer is 'it doesn't seem to refer to anything.'
+*)
+val disambiguate_indices: Proof.context -> string * term -> (string * int option) option;
+
 (* Install toplevel hook for tracking command positions. *)
 
 val setup_command_hook: {trace_apply : bool} -> theory -> theory;
@@ -136,43 +171,49 @@ val get_attribute_tests = Symtab.dest o #3 o Data.get;
    member of the multi-thm "foo". We need to do some work to guess if
    such a fact refers to an indexed multi-thm or a real fact named "foo_3" *)
 
-fun get_ref_from_nm' nm =
+fun base_and_index nm =
 let
   val exploded = space_explode "_" nm;
-  val base = List.take (exploded, (length exploded) - 1) |> space_implode "_"
-  val idx = List.last exploded |> Int.fromString;
-in if is_some idx andalso base <> "" then SOME (base, the idx) else NONE end
+  val base =
+    (exploded, (length exploded) - 1)
+      |> try (List.take #> space_implode "_")
+      |> Option.mapPartial (Option.filter (fn nm => nm <> ""))
+  val idx = exploded |> try (List.last #> Int.fromString) |> Option.join;
+in
+  case (base, idx) of
+    (SOME base, SOME idx) => SOME (base, idx)
+  | _ => NONE
+end
 
-fun get_ref_from_nm nm = Option.join (try get_ref_from_nm' nm);
+fun maybe_nth idx xs = idx |> try (curry List.nth xs)
 
-fun maybe_nth l = try (curry List.nth l)
-
-
-
-fun fact_from_derivation ctxt xnm =
+fun fact_from_derivation ctxt prop xnm =
 let
-
   val facts = Proof_Context.facts_of ctxt;
   (* TODO: Check that exported local fact is equivalent to external one *)
+  fun check_prop thm = Thm.full_prop_of thm = prop
 
-  val idx_result =
-    let
-      val (name', idx) = get_ref_from_nm xnm |> the;
-      val entry = try (Facts.retrieve (Context.Proof ctxt) facts) (name', Position.none) |> the;
-      val thm = maybe_nth (#thms entry) (idx - 1) |> the;
-    in SOME thm end handle Option => NONE;
+  fun entry (name, idx) =
+    (name, Position.none)
+      |> try (Facts.retrieve (Context.Proof ctxt) facts)
+      |> Option.mapPartial (#thms #> maybe_nth (idx - 1))
+      |> Option.mapPartial (Option.filter check_prop)
+      |> Option.map (pair name)
 
-  fun non_idx_result () =
-    let
-      val entry = try (Facts.retrieve (Context.Proof ctxt) facts) (xnm, Position.none) |> the;
-      val thm = try the_single (#thms entry) |> the;
-    in SOME thm end handle Option => NONE;
+  val idx_result = (base_and_index xnm) |> Option.mapPartial entry
+  val non_idx_result = (xnm, 1) |> entry
 
+  val _ =
+    if is_some idx_result andalso is_some non_idx_result
+    then warning (
+      "Levity: found two possible results for name " ^ quote xnm ^ " with the same prop:\n" ^
+      (@{make_string} (the idx_result)) ^ ",\nand\n" ^
+      (@{make_string} (the non_idx_result)) ^ ".\nUsing the first one.")
+    else ()
 in
-  case idx_result of
-    SOME thm => SOME thm
-  | NONE => non_idx_result ()
+  merge_options (idx_result, non_idx_result)
 end
+
 
 (* Local facts (from locales) aren't marked in proof bodies, we only
    see their external variants. We guess the local name from the external one
@@ -183,47 +224,55 @@ end
 (* TODO: extend_locale breaks this naming scheme by adding the "chunk" qualifier. This can
    probably just be handled as a special case *)
 
-fun most_local_fact_of ctxt xnm =
+fun most_local_fact_of ctxt xnm prop =
 let
-  val local_name = try (fn xnm => Long_Name.explode xnm |> tl |> tl |> Long_Name.implode) xnm |> the;
-in SOME (fact_from_derivation ctxt local_name |> the) end handle Option =>
-  fact_from_derivation ctxt xnm;
+  val local_name = xnm |> try (Long_Name.explode #> tl #> tl #> Long_Name.implode)
+  val local_result = local_name |> Option.mapPartial (fact_from_derivation ctxt prop)
+  fun global_result () = fact_from_derivation ctxt prop xnm
+in
+  if is_some local_result then local_result else global_result ()
+end
 
+fun thms_of (PBody {thms,...}) = thms
 
 (* We recursively descend into the proof body to find dependent facts.
    We skip over empty derivations or facts that we fail to find, but recurse
    into their dependents. This ensures that an attempt to re-build the proof dependencies
    graph will result in a connected graph. *)
 
-fun thms_of (PBody {thms,...}) = thms
-
-fun proof_body_descend' f get_fact (ident, thm_node) deptab = let
-  val nm = Proofterm.thm_node_name thm_node
+fun proof_body_deps
+  (filter_name: string -> bool)
+  (get_fact: string -> term -> (string * thm) option)
+  (thm_ident, thm_node)
+  (tab: (string * thm) option Inttab.table) =
+let
+  val name = Proofterm.thm_node_name thm_node
   val body = Proofterm.thm_node_body thm_node
+  val prop = Proofterm.thm_node_prop thm_node
+  val result = if filter_name name then NONE else get_fact name prop
+  val is_new_result = not (Inttab.defined tab thm_ident)
+  val insert = if is_new_result then Inttab.update (thm_ident, result) else I
+  val descend =
+    if is_new_result andalso is_none result
+    then fold (proof_body_deps filter_name get_fact) (thms_of (Future.join body))
+    else I
 in
-    (if not (f nm) then
-      (Inttab.update_new (ident, SOME (nm, get_fact nm |> the)) deptab handle Inttab.DUP _ => deptab)
-    else raise Option) handle Option =>
-      ((fold (proof_body_descend' f get_fact) (thms_of (Future.join body))
-        (Inttab.update_new (ident, NONE) deptab)) handle Inttab.DUP _ => deptab)
+  tab |> insert |> descend
 end
 
-fun used_facts' f get_fact thm =
-  let
-    val body = thms_of (Thm.proof_body_of thm);
-
-  in fold (proof_body_descend' f get_fact) body Inttab.empty end
-
 fun used_facts opt_ctxt thm =
-  let
-    val nm = Thm.get_name_hint thm;
-    val get_fact = case opt_ctxt of
+let
+  val nm = Thm.get_name_hint thm;
+  val get_fact =
+    case opt_ctxt of
       SOME ctxt => most_local_fact_of ctxt
-    | NONE => (fn _ => SOME Drule.dummy_thm);
-  in
-    used_facts' (fn nm' => nm' = "" orelse nm' = nm) get_fact thm
+    | NONE => fn name => fn _ => (SOME (name, Drule.dummy_thm));
+  val body = thms_of (Thm.proof_body_of thm);
+  fun filter_name nm' = nm' = "" orelse nm' = nm;
+in
+  fold (proof_body_deps filter_name get_fact) body Inttab.empty
     |> Inttab.dest |> map_filter snd
-  end
+end
 
 fun attribs_of ctxt =
 let
@@ -239,6 +288,125 @@ let
   val attribs_of = attribs_of ctxt;
 
 in map (apsnd attribs_of) fact_nms end
+
+local
+  fun app3 f g h x = (f x, g x, h x);
+
+  datatype ('a, 'b) Either =
+      Left of 'a
+    | Right of 'b;
+
+  local
+    fun partition_map_foldr f (x, (ls, rs)) =
+      case f x of
+        Left l => (l :: ls, rs)
+      | Right r => (ls, r :: rs);
+  in
+    fun partition_map f = List.foldr (partition_map_foldr f) ([], []);
+  end
+
+  (*
+    Extracts the bits we care about from a thm_node: the name, the prop,
+    and (the next steps of) the proof.
+  *)
+  val thm_node_dest =
+    app3
+      Proofterm.thm_node_name
+      Proofterm.thm_node_prop
+      (Proofterm.thm_node_body #> Future.join);
+
+  (*
+    Partitioning function for thm_node data. We want to insert any named props,
+    then recursively find the named props used by any unnamed intermediate/anonymous props.
+  *)
+  fun insert_or_descend (name, prop, proof) =
+    if name = "" then Right proof else Left (name, prop);
+
+  (*
+    Extracts the next layer of proof data from a proof step.
+  *)
+  val next_level = thms_of #> List.map (snd #> thm_node_dest);
+
+  (*
+    Secretly used as a set, using `()` as the values.
+  *)
+  structure NamePropTab = Table(
+    type key = string * term;
+    val ord = prod_ord fast_string_ord Term_Ord.fast_term_ord);
+
+  val insert_all = List.foldr (fn (k, tab) => NamePropTab.update (k, ()) tab)
+
+  (*
+    Proofterm.fold_body_thms unconditionally recursively descends into the proof body,
+    so instead of only getting the topmost named props we'd get _all_ of them. Here
+    we do a more controlled recursion.
+  *)
+  fun used_props_foldr (proof, named_props) =
+    let
+      val (to_insert, child_proofs) =
+        proof |> next_level |> partition_map insert_or_descend;
+      val thms = insert_all named_props to_insert;
+    in
+      List.foldr used_props_foldr thms child_proofs
+    end;
+
+  (*
+    Extracts the outermost proof step of a thm (which is just "the proof of the prop of the thm").
+  *)
+  val initial_proof =
+    Thm.proof_body_of
+      #> thms_of
+      #> List.hd
+      #> snd
+      #> Proofterm.thm_node_body
+      #> Future.join;
+
+in
+  fun used_named_props_of thm =
+    let val used_props = used_props_foldr (initial_proof thm, NamePropTab.empty);
+    in used_props |> NamePropTab.keys
+    end;
+end
+
+val proof_body_prop_of =
+  Thm.proof_body_of
+    #> thms_of
+    #> List.hd
+    #> snd
+    #> Proofterm.thm_node_prop
+
+local
+  fun thm_matches prop thm = proof_body_prop_of thm = prop
+
+  fun entry ctxt prop (name, idx) =
+    name
+      |> try (Proof_Context.get_thms ctxt)
+      |> Option.mapPartial (maybe_nth (idx - 1))
+      |> Option.mapPartial (Option.filter (thm_matches prop))
+      |> Option.map (K (name, SOME idx))
+
+  fun warn_if_ambiguous
+      name
+      (idx_result: (string * int option) option)
+      (non_idx_result: (string * int option) option) =
+    if is_some idx_result andalso is_some non_idx_result
+    then warning (
+      "Levity: found two possible results for name " ^ quote name ^ " with the same prop:\n" ^
+      (@{make_string} (the idx_result)) ^ ",\nand\n" ^
+      (@{make_string} (the non_idx_result)) ^ ".\nUsing the first one.")
+    else ()
+
+in
+  fun disambiguate_indices ctxt (name, prop) =
+    let
+      val entry = entry ctxt prop
+      val idx_result = (base_and_index name) |> Option.mapPartial entry
+      val non_idx_result = (name, 1) |> entry |> Option.map (apsnd (K NONE))
+      val _ = warn_if_ambiguous name idx_result non_idx_result
+    in
+      merge_options (idx_result, non_idx_result)
+    end
+end
 
 (* We identify "apply" applications by the document position of their corresponding method.
    We can only get a document position out of "real" methods, so internal methods

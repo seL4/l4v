@@ -419,7 +419,8 @@ lemma transform_default_tcb:
                    get_tcb_mrs_def Suc_le_eq get_tcb_message_info_def msg_info_register_def
                    msgInfoRegister_def data_to_message_info_def arch_tcb_context_get_def
                    get_ipc_buffer_words_def)
-  apply (simp add: transform_intent_def invocation_type_def fromEnum_def enum_invocation_label toEnum_def)
+  apply (simp add: transform_intent_def invocation_type_def fromEnum_def enum_invocation_label
+                   enum_gen_invocation_labels toEnum_def)
   apply (simp add: fun_eq_iff tcb_slot_defs infer_tcb_pending_op_def infer_tcb_bound_notification_def
                    guess_error_def default_etcb_def default_domain_def)
   done
@@ -735,9 +736,8 @@ lemma monad_commute_set_cap_cdt:
   apply (subst oblivious_modify_swap)
    apply (simp add: KHeap_D.set_cap_def split_def gets_the_def
      KHeap_D.set_object_def)
-   apply (intro oblivious_bind oblivious_assert impI conjI allI
-               oblivious_select |
-         simp add: opt_object_def split: cdl_object.split)+
+   apply (intro oblivious_bind oblivious_assert impI conjI allI oblivious_select |
+          simp split: cdl_object.split)+
   apply (clarsimp simp:bind_assoc)
   done
 
@@ -1083,7 +1083,7 @@ lemma retype_addrs_range_subset_strong:
   shows "\<lbrakk>p \<in> set (retype_addrs ptr ty n us); range_cover ptr sz (obj_bits_api ty us) n\<rbrakk>
   \<Longrightarrow> {p..p + 2 ^ obj_bits_api ty us - 1} \<subseteq> {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}"
   apply (clarsimp simp: retype_addrs_def ptr_add_def)
-  apply (drule_tac p = pa in range_cover_subset)
+  apply (drule_tac p = x in range_cover_subset)
    apply clarsimp+
   apply blast
   done
@@ -1163,7 +1163,7 @@ lemma free_range_of_untyped_pick_retype_addrs:
   apply (subst AND_NOT_mask_plus_AND_mask_eq[symmetric,where n = sz])
   apply (subst add.commute[where a = "(ptr && mask sz)"])
   apply (rule word_plus_strict_mono_right)
-   apply (rule minus_one_helper)
+   apply (rule word_leq_le_minus_one)
     apply simp
    apply (simp add:shiftl_t2n field_simps)
    apply (subst add.assoc)
@@ -1557,7 +1557,7 @@ lemma invoke_untyped_corres:
          apply wp
         apply (simp split del: if_split)
         apply (wp get_cap_wp)+
-       apply (wp_once hoare_drop_imps)
+       apply (wp (once) hoare_drop_imps)
        apply wp
       apply ((rule validE_validE_R)?,
              rule_tac E="\<top>\<top>" and
@@ -1746,13 +1746,13 @@ lemma decode_untyped_corres:
    dcorres (dc \<oplus> (\<lambda>x y. x = translate_untyped_invocation y))
        \<top> (cte_wp_at ((=) cap') slot' and invs
            and (\<lambda>s. \<forall>x \<in> set (map fst excaps'). s \<turnstile> x)
-           and (\<lambda>s. \<forall>x \<in> set excaps'. cte_wp_at (diminished (fst x)) (snd x) s) and valid_etcbs)
+           and (\<lambda>s. \<forall>x \<in> set excaps'. cte_wp_at ((=) (fst x)) (snd x) s) and valid_etcbs)
      (Untyped_D.decode_untyped_invocation cap slot excaps ui)
      (Decode_A.decode_untyped_invocation label' args' slot' cap' (map fst excaps'))"
   apply (simp add: transform_intent_def map_option_Some_eq2
                    transform_intent_untyped_retype_def
-            split: invocation_label.split_asm arch_invocation_label.split_asm list.split_asm
-                   option.split_asm)
+            split: invocation_label.split_asm gen_invocation_labels.split_asm
+                   arch_invocation_label.split_asm list.split_asm option.split_asm)
   apply (cases ui)
   apply (drule transform_translate_type[where 'a=det_ext])
   apply (clarsimp simp: Untyped_D.decode_untyped_invocation_def
@@ -1763,7 +1763,7 @@ lemma decode_untyped_corres:
   apply (rename_tac a list w1 w2 w3 w4 w5 apiobject_type)
   apply (cases excaps')
    apply (simp add: get_index_def transform_cap_list_def
-                    alternative_refl)
+                    alternative_refl gen_invocation_type_eq)
   apply (simp add: get_index_def transform_cap_list_def throw_on_none_def
                    split_beta
                split del: if_split)
@@ -1872,10 +1872,10 @@ lemma decode_untyped_label_not_match:
   "\<lbrakk>Some intent = transform_intent (invocation_type label) args; \<forall>ui. intent \<noteq> UntypedIntent ui\<rbrakk>
     \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_untyped_invocation label args ref (cap.UntypedCap dev a b idx) e
              \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>e. (=) s\<rbrace>"
-  apply (case_tac "invocation_type label = UntypedRetype")
+  apply (case_tac "invocation_type label = GenInvocationLabel UntypedRetype")
    apply (clarsimp simp:Decode_A.decode_untyped_invocation_def transform_intent_def)+
    apply (clarsimp simp:transform_intent_untyped_retype_def split:option.splits list.splits)
-  apply (simp add:Decode_A.decode_untyped_invocation_def unlessE_def)
+  apply (simp add:Decode_A.decode_untyped_invocation_def unlessE_def gen_invocation_type_eq)
   apply wp
   done
 

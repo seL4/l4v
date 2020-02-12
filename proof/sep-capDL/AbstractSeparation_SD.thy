@@ -34,7 +34,6 @@ type_synonym sep_state_irq_map = "cdl_irq \<Rightarrow> cdl_object_id option"
 
 translations
   (type) "sep_state_heap" <=(type) "32 word \<times> cdl_component_id \<Rightarrow> cdl_component option"
-  (type) "sep_state_irq_map" <=(type) "8 word \<Rightarrow> 32 word option"
 
 
 (* Our lifted state contains sep_entities and the IRQ table.

@@ -291,9 +291,9 @@ definition clzl' :: "32 word \<Rightarrow> (globals, 32 signed word) nondet_mona
 lemma clzl'_TScorres:
   "L2_call (l2_clzl' rec_measure' x) = liftE (clzl' x)"
   apply (unfold l2_clzl'_def clzl'_def)
-  apply (tactic {* simp_tac (@{context} addsimps
+  apply (tactic \<open>simp_tac (@{context} addsimps
       (#lift_rules (the (Monad_Types.get_monad_type "nondet" (Context.Proof @{context})))
-       |> Thmtab.dest |> map fst)) 1 *})
+       |> Thmtab.dest |> map fst)) 1\<close>)
   done
 
 lemma clzl'_ac_corres: "ac_corres globals ct \<Gamma> ret__long_' (\<lambda>s. x_' s = x) (liftE (clzl' x)) (Call clzl_'proc)"
@@ -316,7 +316,7 @@ fun phasetab_merge_with merge (tab1, tab2) =
                         (* (NONE, NONE) impossible *)))
   |> FunctionInfo.Phasetab.make;
 \<close>
-setup {*
+setup \<open>
 fn thy =>
 let val clzl_cp = {
       name = "clzl",
@@ -358,7 +358,7 @@ in
   thy
   |> AutoCorresFunctionInfo.map (Symtab.update (file, fn_info'))
 end
-*}
+\<close>
 
 text \<open>Now AutoCorres will use our specification in calls to clzl.\<close>
 autocorres

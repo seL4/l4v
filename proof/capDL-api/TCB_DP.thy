@@ -930,7 +930,7 @@ shows
      is_cnode_cap cnode_cap;
      buffer_addr \<noteq> 0;
      cap_has_object tcb_cap;
-    (* Caps point to the right objects. *)
+    \<comment> \<open>Caps point to the right objects.\<close>
      one_lvl_lookup cnode_cap word_bits root_size;
      guard_equal cnode_cap tcb_root word_bits;
      guard_equal cnode_cap cspace_root word_bits;
@@ -952,23 +952,23 @@ shows
      \<guillemotleft>root_tcb_id \<mapsto>f root_tcb \<and>*
      (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
 
-     (* Root CNode. *)
+     \<comment> \<open>Root CNode.\<close>
      cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*
-     (* Cap to the root CNode. *)
+     \<comment> \<open>Cap to the root CNode.\<close>
      (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
-     (* Cap that the root task has to it's own CNode. *)
+     \<comment> \<open>Cap that the root task has to its own CNode.\<close>
      (cnode_id, cnode_cap_slot) \<mapsto>c cnode_cap' \<and>*
 
-     (* TCB's stuff *)
+     \<comment> \<open>TCB's stuff\<close>
      tcb_id    \<mapsto>f Tcb tcb \<and>*
 
-     (* Where to copy the cap from (in the client CNode). *)
+     \<comment> \<open>Where to copy the cap from (in the client CNode).\<close>
      (cnode_id, tcb_cap_slot) \<mapsto>c tcb_cap \<and>*
      (cnode_id, cspace_slot)  \<mapsto>c cspace_cap \<and>*
      (cnode_id, vspace_slot)  \<mapsto>c vspace_cap \<and>*
      (cnode_id, buffer_frame_slot) \<mapsto>c buffer_frame_cap \<and>*
 
-     (* Cap to the TCB. *)
+     \<comment> \<open>Cap to the TCB.\<close>
      (tcb_id, tcb_cspace_slot) \<mapsto>c NullCap \<and>*
      (tcb_id, tcb_vspace_slot) \<mapsto>c NullCap \<and>*
      (tcb_id, tcb_ipcbuffer_slot) \<mapsto>c NullCap \<and>*
@@ -989,23 +989,23 @@ shows
   \<lbrace>\<lambda>rv s. \<guillemotleft>root_tcb_id \<mapsto>f root_tcb \<and>*
        (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
 
-       (* Root CNode. *)
+       \<comment> \<open>Root CNode.\<close>
        cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*
-       (* Cap to the root CNode. *)
+       \<comment> \<open>Cap to the root CNode.\<close>
        (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
-       (* Cap that the root task has to it's own CNode. *)
+       \<comment> \<open>Cap that the root task has to its own CNode.\<close>
        (cnode_id, cnode_cap_slot) \<mapsto>c cnode_cap' \<and>*
 
-       (* TCB's stuff *)
+       \<comment> \<open>TCB's stuff\<close>
        tcb_id    \<mapsto>f Tcb new_tcb_fields \<and>*
 
-       (* Where to copy the cap from (in the client CNode). *)
+       \<comment> \<open>Where to copy the cap from (in the client CNode).\<close>
        (cnode_id, tcb_cap_slot) \<mapsto>c tcb_cap \<and>*
        (cnode_id, cspace_slot)  \<mapsto>c cspace_cap \<and>*
        (cnode_id, vspace_slot)  \<mapsto>c vspace_cap \<and>*
        (cnode_id, buffer_frame_slot) \<mapsto>c buffer_frame_cap \<and>*
 
-       (* Cap to the TCB. *)
+       \<comment> \<open>Cap to the TCB.\<close>
        (tcb_id, tcb_cspace_slot) \<mapsto>c (cdl_update_cnode_cap_data cspace_cap cspace_root_data)\<and>*
        (tcb_id, tcb_vspace_slot) \<mapsto>c vspace_cap \<and>*
        (tcb_id, tcb_ipcbuffer_slot) \<mapsto>c buffer_frame_cap \<and>*
@@ -1200,7 +1200,7 @@ lemma restart_cdl_current_thread:
 
 lemma seL4_TCB_WriteRegisters_wp:
   "\<lbrakk> is_cnode_cap cnode_cap;
-    (* Caps point to the right objects. *)
+    \<comment> \<open>Caps point to the right objects.\<close>
      one_lvl_lookup cnode_cap word_bits root_size;
      guard_equal cnode_cap tcb_ref word_bits;
      is_tcb root_tcb;
@@ -1282,7 +1282,7 @@ done
 
 lemma seL4_TCB_Resume_wp:
   "\<lbrakk> is_cnode_cap cnode_cap;
-    (* Caps point to the right objects. *)
+    \<comment> \<open>Caps point to the right objects.\<close>
      one_lvl_lookup cnode_cap word_bits root_size;
      guard_equal cnode_cap tcb_ref word_bits;
      is_tcb root_tcb;

@@ -39,15 +39,17 @@ where
     | cdl_cap.EndpointCap oref badge r \<Rightarrow>
          cap_rights_to_auth r True
     | cdl_cap.NotificationCap oref badge r \<Rightarrow>
-         cap_rights_to_auth (r - {AllowGrant}) False
-    | cdl_cap.ReplyCap oref \<Rightarrow> {Control}
-    | cdl_cap.MasterReplyCap oref \<Rightarrow> {Control}
+         cap_rights_to_auth (r - {AllowGrant, AllowGrantReply}) False
+    | cdl_cap.ReplyCap oref r \<Rightarrow> reply_cap_rights_to_auth False r
+    | cdl_cap.MasterReplyCap oref \<Rightarrow> UNIV
     | cdl_cap.CNodeCap oref bits guard sz \<Rightarrow> {Control}
     | cdl_cap.TcbCap obj_ref \<Rightarrow> {Control}
     | cdl_cap.DomainCap \<Rightarrow> {Control}
-    | cdl_cap.PendingSyncSendCap oref badge call grant fault \<Rightarrow>
-                               {SyncSend} \<union> (if grant then {Access.Grant} else {})
-    | cdl_cap.PendingSyncRecvCap oref fault \<Rightarrow> if fault then {} else {Receive}
+    | cdl_cap.PendingSyncSendCap oref badge call grant grant_reply fault \<Rightarrow>
+          {SyncSend} \<union> (if grant then {Access.Grant, Call} else {})
+          \<union> (if grant_reply then {Call} else {})
+    | cdl_cap.PendingSyncRecvCap oref fault grant \<Rightarrow>
+          (if fault then {} else {Receive}) \<union> (if grant then {Access.Grant} else {})
     | cdl_cap.PendingNtfnRecvCap oref \<Rightarrow> {Receive}
     | cdl_cap.RestartCap \<Rightarrow> {}
     | cdl_cap.IrqControlCap \<Rightarrow> {Control}
@@ -68,13 +70,13 @@ where
 | "cdl_obj_refs (cdl_cap.UntypedCap dev rs frange) = rs"
 | "cdl_obj_refs (cdl_cap.EndpointCap r b cr) = {r}"
 | "cdl_obj_refs (cdl_cap.NotificationCap r b cr) = {r}"
-| "cdl_obj_refs (cdl_cap.ReplyCap r) = {r}"
+| "cdl_obj_refs (cdl_cap.ReplyCap r cr) = {r}"
 | "cdl_obj_refs (cdl_cap.MasterReplyCap r) = {r}"
 | "cdl_obj_refs (cdl_cap.CNodeCap r guard bits sz) = {r}"
 | "cdl_obj_refs (cdl_cap.TcbCap r) = {r}"
 | "cdl_obj_refs (cdl_cap.DomainCap) = UNIV"
-| "cdl_obj_refs (cdl_cap.PendingSyncSendCap r badge call guard fault) = {r}"
-| "cdl_obj_refs (cdl_cap.PendingSyncRecvCap r fault) = {r}"
+| "cdl_obj_refs (cdl_cap.PendingSyncSendCap r badge call grant grant_reply fault) = {r}"
+| "cdl_obj_refs (cdl_cap.PendingSyncRecvCap r grant fault) = {r}"
 | "cdl_obj_refs (cdl_cap.PendingNtfnRecvCap r) = {r}"
 | "cdl_obj_refs cdl_cap.RestartCap = {}"
 | "cdl_obj_refs cdl_cap.IrqControlCap = {}"
@@ -88,14 +90,22 @@ where
 | "cdl_obj_refs (cdl_cap.BoundNotificationCap word) = {word}"
 | "cdl_obj_refs _ = {}"
 
+inductive cdl_cap_is_transferable for opt_cap
+where
+  cdl_it_None: "opt_cap = None \<Longrightarrow> cdl_cap_is_transferable opt_cap" |
+  cdl_it_Null: "opt_cap = Some cdl_cap.NullCap \<Longrightarrow> cdl_cap_is_transferable opt_cap" |
+  cdl_it_Reply: "opt_cap = Some (cdl_cap.ReplyCap t R) \<Longrightarrow> cdl_cap_is_transferable opt_cap"
+
 inductive_set
   cdl_state_bits_to_policy for caps cdt
 where
   csbta_caps: "\<lbrakk> caps ptr = Some cap; oref \<in> cdl_obj_refs cap;
                                             auth \<in> cdl_cap_auth_conferred cap \<rbrakk>
            \<Longrightarrow> (fst ptr, auth, oref) \<in> cdl_state_bits_to_policy caps cdt"
-| csbta_cdt: "\<lbrakk> cdt slot' = Some slot \<rbrakk>
+| csbta_cdt: "\<lbrakk> cdt slot' = Some slot; \<not>cdl_cap_is_transferable (caps slot') \<rbrakk>
            \<Longrightarrow> (fst slot, Control, fst slot') \<in> cdl_state_bits_to_policy caps cdt"
+| csbta_cdt_transferable: "\<lbrakk> cdt slot' = Some slot \<rbrakk>
+           \<Longrightarrow> (fst slot, DeleteDerived, fst slot') \<in> cdl_state_bits_to_policy caps cdt"
 
 definition
   "cdl_state_objs_to_policy s = cdl_state_bits_to_policy (\<lambda>ref. opt_cap ref s)
@@ -264,8 +274,8 @@ definition
   is_thread_state_cap :: "cdl_cap \<Rightarrow> bool"
 where
   "is_thread_state_cap cap \<equiv> case cap of
-    cdl_cap.PendingSyncSendCap _ _ _ _ _ \<Rightarrow> True
-  | cdl_cap.PendingSyncRecvCap _ _ \<Rightarrow> True
+    cdl_cap.PendingSyncSendCap _ _ _ _ _ _ \<Rightarrow> True
+  | cdl_cap.PendingSyncRecvCap _ _ _ \<Rightarrow> True
   | cdl_cap.PendingNtfnRecvCap _ \<Rightarrow> True
   | cdl_cap.RestartCap \<Rightarrow> True
   | cdl_cap.RunningCap \<Rightarrow> True
@@ -319,7 +329,7 @@ lemma caps_of_state_transform_opt_cap_rev:
   apply (drule invs_valid_objs)
   apply (case_tac ptr)
   apply (clarsimp simp:opt_cap_def transform_def transform_objects_def
-                       transform_cslot_ptr_def slots_of_def opt_object_def)
+                       transform_cslot_ptr_def slots_of_def)
   apply (rule_tac P="a=idle_thread s" in case_split)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s a")
@@ -375,7 +385,7 @@ abbreviation
 lemma opt_cap_None_word_bits:
   "\<lbrakk> einvs s; snd ptr \<ge> 2 ^ word_bits \<rbrakk> \<Longrightarrow> opt_cap ptr (transform s) = None"
   apply (case_tac ptr)
-  apply (clarsimp simp:opt_cap_def transform_def transform_objects_def slots_of_def opt_object_def)
+  apply (clarsimp simp:opt_cap_def transform_def transform_objects_def slots_of_def)
   apply (rule_tac P="a=idle_thread s" in case_split)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s a")
@@ -428,9 +438,11 @@ lemma untyped_range_transform:
 
 lemma cap_auth_conferred_transform:
   "cap_auth_conferred cap = cdl_cap_auth_conferred (transform_cap cap)"
-  apply (case_tac cap; clarsimp simp:cap_auth_conferred_def cdl_cap_auth_conferred_def)
+  apply (case_tac cap;
+         clarsimp simp: cap_auth_conferred_def cdl_cap_auth_conferred_def
+                        reply_cap_rights_to_auth_def)
   apply (rename_tac arch_cap)
-  apply (case_tac arch_cap; clarsimp simp:is_page_cap_def)
+  apply (case_tac arch_cap; clarsimp simp: is_page_cap_def)
   done
 
 lemma thread_states_transform:
@@ -448,10 +460,10 @@ lemma thread_states_transform:
       apply simp
      apply simp
     apply (rule notI, drule invs_valid_idle, simp add:valid_idle_def pred_tcb_def2)
-   apply (simp add:infer_tcb_pending_op_def, case_tac "tcb_state a",
-                                              (simp add:if_split_asm| erule disjE)+)
-  apply (simp add:infer_tcb_pending_op_def cdl_cap_auth_conferred_def,
-                    case_tac "tcb_state a", (simp add:if_split_asm| erule disjE)+)
+   apply (simp add:infer_tcb_pending_op_def, case_tac "tcb_state a";
+          fastforce split:if_splits)
+  apply (simp add:infer_tcb_pending_op_def cdl_cap_auth_conferred_def, case_tac "tcb_state a";
+         fastforce split:if_splits)
   done
 
 lemma thread_bound_ntfns_transform:
@@ -477,7 +489,7 @@ lemma thread_state_cap_transform_tcb:
   "\<lbrakk> opt_cap ptr (transform s) = Some cap; is_thread_state_cap cap \<rbrakk> \<Longrightarrow>
      \<exists>tcb. get_tcb (fst ptr) s = Some tcb"
   apply (case_tac ptr)
-  apply (simp add:opt_cap_def slots_of_def opt_object_def transform_def transform_objects_def)
+  apply (simp add:opt_cap_def slots_of_def transform_def transform_objects_def)
   apply (rule_tac P="a = idle_thread s" in case_split)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s (fst ptr)")
@@ -514,7 +526,7 @@ lemma thread_bound_ntfn_cap_transform_tcb:
   "\<lbrakk> opt_cap ptr (transform s) = Some cap; is_bound_ntfn_cap cap \<rbrakk> \<Longrightarrow>
      \<exists>tcb. get_tcb (fst ptr) s = Some tcb"
   apply (case_tac ptr)
-  apply (simp add:opt_cap_def slots_of_def opt_object_def transform_def transform_objects_def)
+  apply (simp add:opt_cap_def slots_of_def transform_def transform_objects_def)
   apply (rule_tac P="a = idle_thread s" in case_split)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s (fst ptr)")
@@ -544,11 +556,14 @@ lemma thread_states_transform_rev:
   apply (frule valid_etcbs_get_tcb_get_etcb[rotated], fastforce)
   apply (frule_tac sl=b in opt_cap_tcb, assumption, simp)
   apply (clarsimp split:if_split_asm)
-   apply (case_tac "aa tcb", simp_all add:is_thread_state_cap_def split:if_split_asm)
-   apply (rename_tac arch_cap)
-   apply (case_tac "arch_cap", simp_all split:if_split_asm)
-  apply (case_tac "tcb_state tcb", auto simp:infer_tcb_pending_op_def cdl_cap_auth_conferred_def
-                                             infer_tcb_bound_notification_def split: option.splits)
+    apply (case_tac "aa tcb"; simp add:is_thread_state_cap_def split:if_split_asm)
+    apply (rename_tac arch_cap)
+    apply (case_tac "arch_cap"; simp split:if_split_asm)
+   apply (case_tac "tcb_state tcb";
+          fastforce simp:cdl_cap_auth_conferred_def split:option.splits if_splits)
+  apply (fastforce simp:is_thread_state_cap_def infer_tcb_pending_op_def
+                        infer_tcb_bound_notification_def
+                   split:option.splits if_splits)
   done
 
 lemma thread_bound_ntfns_transform_rev:
@@ -600,7 +615,7 @@ lemma fst':
 lemma opt_cap_pt_Some':
   "\<lbrakk> valid_idle s; kheap s a = Some (ArchObj (arch_kernel_obj.PageTable fun)) \<rbrakk>
          \<Longrightarrow>  (opt_cap (a, unat slot) (transform s)) = Some (transform_pte (fun slot))"
-  apply (clarsimp simp:opt_cap_def transform_def slots_of_def opt_object_def object_slots_def
+  apply (clarsimp simp:opt_cap_def transform_def slots_of_def object_slots_def
                        transform_objects_def map_add_def restrict_map_def not_idle_thread_def)
   apply (frule arch_obj_not_idle,simp)
   apply (clarsimp simp:transform_page_table_contents_def unat_map_def not_idle_thread_def)
@@ -623,7 +638,7 @@ lemma opt_cap_pd_Some':
   "\<lbrakk> valid_idle s; kheap s a = Some (ArchObj (arch_kernel_obj.PageDirectory fun));
      slot < ucast (kernel_base >> 20) \<rbrakk> \<Longrightarrow>
      (opt_cap (a, unat slot) (transform s)) = Some (transform_pde (fun slot))"
-  apply (clarsimp simp:opt_cap_def transform_def slots_of_def opt_object_def object_slots_def
+  apply (clarsimp simp:opt_cap_def transform_def slots_of_def object_slots_def
                        transform_objects_def restrict_map_def map_add_def not_idle_thread_def)
   apply (frule arch_obj_not_idle,simp)
   apply (clarsimp simp:transform_page_directory_contents_def unat_map_def not_idle_thread_def
@@ -706,14 +721,14 @@ lemma state_vrefs_transform_rev:
   apply (subgoal_tac "a \<noteq> idle_thread s")
    prefer 2
    apply (clarsimp simp:state_vrefs_def transform_def transform_objects_def
-                        opt_cap_def slots_of_def opt_object_def)
+                        opt_cap_def slots_of_def)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s a")
    apply (clarsimp simp: state_vrefs_def transform_def transform_objects_def
-                         opt_cap_def slots_of_def opt_object_def)
+                         opt_cap_def slots_of_def)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (clarsimp simp:state_vrefs_def transform_def transform_objects_def
-                       opt_cap_def slots_of_def opt_object_def)
+                       opt_cap_def slots_of_def)
   apply (case_tac aa, simp_all add: transform_object_def object_slots_def nat_split_conv_to_if
                              split: if_split_asm)
      apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
@@ -770,10 +785,57 @@ lemma cdl_cdt_transform_rev:
      apply (simp add:dom_def)+
   done
 
+(* Prove that transform preserves transferable caps. *)
+lemma cdl_transform_null_cap:
+  "\<lbrakk> einvs s; caps_of_state s (ptr, slot) = Some cap;
+     opt_cap (transform_cslot_ptr (ptr, slot)) (transform s) = Some cdl_cap.NullCap \<rbrakk> \<Longrightarrow>
+   cap = cap.NullCap"
+  apply (case_tac "ptr = idle_thread s")
+   apply (clarsimp simp: opt_cap_def slots_of_def
+                         transform_def transform_cslot_ptr_def transform_objects_def
+                         map_add_def)
+  apply (subst (asm) caps_of_state_transform_opt_cap, assumption)
+    apply fastforce
+   apply fastforce
+  apply (clarsimp simp: transform_cap_def split: cap.splits arch_cap.splits if_splits)
+  done
+
+lemma cdl_transform_reply_cap:
+  "\<lbrakk> einvs s; caps_of_state s (ptr, slot) = Some cap;
+     opt_cap (transform_cslot_ptr (ptr, slot)) (transform s) = Some (cdl_cap.ReplyCap t R) \<rbrakk> \<Longrightarrow>
+   cap = cap.ReplyCap t False R"
+  apply (case_tac "ptr = idle_thread s")
+   apply (clarsimp simp: opt_cap_def slots_of_def
+                         transform_def transform_cslot_ptr_def transform_objects_def
+                         map_add_def)
+  apply (subst (asm) caps_of_state_transform_opt_cap, assumption)
+    apply fastforce
+   apply fastforce
+  apply (clarsimp simp: transform_cap_def split: cap.splits arch_cap.splits if_splits)
+  done
+
+lemma cdl_transferable_implies_transferable:
+  "\<lbrakk> einvs s; cdt s (ptr, slot) = Some (pptr, pslot);
+     cdl_cap_is_transferable (opt_cap (transform_cslot_ptr (ptr, slot)) (transform s)) \<rbrakk>
+       \<Longrightarrow> is_transferable_in (ptr, slot) s"
+  apply clarsimp
+  apply (frule invs_mdb_cte, drule mdb_cte_at_rewrite, clarsimp simp: mdb_cte_at_def)
+  apply ((drule spec)+, erule(1) impE, clarsimp)
+  apply (erule cdl_cap_is_transferable.cases)
+    apply (erule contrapos_pp[where Q="opt_cap _ _ = _"], clarsimp)
+    apply (rule exI)
+    apply (rule caps_of_state_transform_opt_cap)
+      apply assumption
+     apply fastforce
+    apply (blast dest: idle_thread_null_cap)
+   apply (fastforce dest: cdl_transform_null_cap[rotated])
+  apply (fastforce dest: cdl_transform_reply_cap[rotated])
+  done
+
 lemma state_objs_transform:
   "\<lbrakk> einvs s; (x, a, y) \<in> state_objs_to_policy s \<rbrakk> \<Longrightarrow>
                (x, a, y) \<in> cdl_state_objs_to_policy (transform s)"
-  apply (rule state_objs_to_policy_cases, simp)
+  apply (erule state_objs_to_policy_cases)
       apply (simp add:fst_transform_cslot_ptr)
       apply (rule_tac ptr="transform_cslot_ptr ptr" and auth=auth and oref=oref and
                       cap="transform_cap cap" and s="transform s" in csta_caps)
@@ -795,14 +857,34 @@ lemma state_objs_transform:
       apply (case_tac cap, (simp add:untyped_range_transform del:untyped_range.simps(1))+)
      apply (case_tac cap, (simp add:cdl_cap_auth_conferred_def)+)
     apply (rule thread_states_transform, simp+)
-apply (rule thread_bound_ntfns_transform, simp+)
-   apply (simp add:fst_transform_cslot_ptr)
-   apply (rule_tac slot="transform_cslot_ptr slot" and slot'="transform_cslot_ptr slot'"
-                              and s="transform s" in csta_cdt)
-   apply (simp add:transform_def)
-   apply (rule transform_cdt_some)
-    apply (simp add:invs_mdb_cte)
-   apply simp
+   apply (rule thread_bound_ntfns_transform, simp+)
+
+    apply (simp add:fst_transform_cslot_ptr)
+    apply (rule_tac slot="transform_cslot_ptr slot" and slot'="transform_cslot_ptr slot'"
+                    and s="transform s" in csta_cdt)
+     apply (simp add:transform_def)
+     apply (rule transform_cdt_some)
+      apply (simp add:invs_mdb_cte)
+     apply simp
+    apply (fastforce intro: cdl_transferable_implies_transferable)
+
+   apply (clarsimp split: prod.splits)
+   subgoal for slot pslot
+     apply (rule cdl_state_objs_to_policy_intros(3)
+                   [where slot'="(y, nat (bl_to_bin slot))" and slot="(x, nat (bl_to_bin pslot))",
+                    simplified])
+     apply (frule transform_cdt_slot_inj_on_mdb_cte_at[OF invs_mdb_cte])
+     apply (clarsimp simp: cdt_transform map_lift_over_def transform_cslot_ptr_def)
+     apply safe
+      apply (rule_tac x=pslot in exI)
+      apply (subst inv_into_f_eq[where x="(y, slot)"])
+         apply (fastforce simp: inj_on_def)
+        apply blast
+       apply simp
+      apply blast
+     apply blast
+     done
+
   apply (subgoal_tac "ptr \<noteq> idle_thread s")
    apply (simp add:state_vrefs_transform)
   apply (clarsimp simp:state_vrefs_def vs_refs_no_global_pts_def invs_def valid_state_def
@@ -813,53 +895,72 @@ lemma state_objs_transform_rev:
   "\<lbrakk> einvs s; (x, a, y) \<in> cdl_state_objs_to_policy (transform s) \<rbrakk> \<Longrightarrow>
                (x, a, y) \<in> state_objs_to_policy s"
   apply (rule cdl_state_objs_to_policy_cases, simp)
-   apply (rule_tac P="is_thread_state_cap cap" in case_split)
-    apply simp
-    apply (rule sta_ts)
-    apply (rule thread_states_transform_rev, simp+)
-    apply (clarsimp simp:opt_cap_def transform_def transform_objects_def slots_of_def opt_object_def)
-    apply (clarsimp simp: map_add_def object_slots_def)
-   apply (rule_tac P="is_real_cap cap" in case_split[rotated])
-    apply (drule state_vrefs_transform_rev, simp+)
-    apply clarsimp
-    apply (rule sta_vref)
-    apply simp
-   apply (subgoal_tac "\<not> is_null_cap cap")
-    prefer 2
-    apply (clarsimp simp:is_null_cap_def split:cdl_cap.splits)
-   apply (rule_tac P="is_bound_ntfn_cap cap" in case_split)
-    apply simp
-    apply (rule sta_bas)
-     apply (rule thread_bound_ntfns_transform_rev, simp+)
-     apply (clarsimp simp: opt_cap_def transform_def transform_objects_def slots_of_def opt_object_def)
+    apply (rule_tac P="is_thread_state_cap cap" in case_split)
+     apply simp
+     apply (rule sta_ts)
+     apply (rule thread_states_transform_rev, simp+)
+     apply (clarsimp simp:opt_cap_def transform_def transform_objects_def slots_of_def)
      apply (clarsimp simp: map_add_def object_slots_def)
-    apply (clarsimp simp: cdl_cap_auth_conferred_def is_bound_ntfn_cap_def split: cdl_cap.splits)
-   apply (frule caps_of_state_transform_opt_cap_rev, simp+)
-   apply (rule_tac P="is_untyped_cap cap" in case_split)
-    apply (subgoal_tac "a = Control")
+    apply (rule_tac P="is_real_cap cap" in case_split[rotated])
+     apply (drule state_vrefs_transform_rev, simp+)
      apply clarsimp
-     apply (subst fst_transform_cslot_ptr[symmetric])
-     apply (rule_tac cap=cap' in sta_untyped)
+     apply (rule sta_vref)
+     apply simp
+    apply (subgoal_tac "\<not> is_null_cap cap")
+     prefer 2
+     apply (clarsimp simp:is_null_cap_def split:cdl_cap.splits)
+    apply (rule_tac P="is_bound_ntfn_cap cap" in case_split)
+     apply simp
+     apply (rule sta_bas)
+      apply (rule thread_bound_ntfns_transform_rev, simp+)
+      apply (clarsimp simp: opt_cap_def transform_def transform_objects_def slots_of_def)
+      apply (clarsimp simp: map_add_def object_slots_def)
+     apply (clarsimp simp: cdl_cap_auth_conferred_def is_bound_ntfn_cap_def split: cdl_cap.splits)
+    apply (frule caps_of_state_transform_opt_cap_rev, simp+)
+    apply (rule_tac P="is_untyped_cap cap" in case_split)
+     apply (subgoal_tac "a = Control")
+      apply clarsimp
+      apply (subst fst_transform_cslot_ptr[symmetric])
+      apply (rule_tac cap=cap' in sta_untyped)
+       apply simp
+      apply (subst (asm) untyped_range_transform[symmetric])
+       apply (simp add:is_untyped_cap_def transform_cap_def
+                   split:cap.splits arch_cap.splits if_split_asm)
       apply simp
-     apply (subst (asm) untyped_range_transform[symmetric])
+     apply (simp add:cdl_cap_auth_conferred_def is_untyped_cap_def split:cdl_cap.splits)
+    apply clarsimp
+    apply (subst fst_transform_cslot_ptr[symmetric])
+    apply (rule_tac cap=cap' in sta_caps)
+      apply simp
+     apply (subst (asm) obj_refs_transform[symmetric])
       apply (simp add:is_untyped_cap_def transform_cap_def
                   split:cap.splits arch_cap.splits if_split_asm)
      apply simp
-    apply (simp add:cdl_cap_auth_conferred_def is_untyped_cap_def split:cdl_cap.splits)
+    apply (simp add:cap_auth_conferred_transform)
+
+   apply (drule cdl_cdt_transform_rev [rotated], simp+)
    apply clarsimp
-   apply (subst fst_transform_cslot_ptr[symmetric])
-   apply (rule_tac cap=cap' in sta_caps)
-     apply simp
-    apply (subst (asm) obj_refs_transform[symmetric])
-     apply (simp add:is_untyped_cap_def transform_cap_def
-                 split:cap.splits arch_cap.splits if_split_asm)
+   apply (subst fst_transform_cslot_ptr[symmetric])+
+   apply (rule sta_cdt)
     apply simp
-   apply (simp add:cap_auth_conferred_transform)
-  apply (drule cdl_cdt_transform_rev [rotated], simp+)
+   apply (erule contrapos_nn)
+   apply (frule invs_mdb_cte, drule mdb_cte_at_rewrite, clarsimp simp: mdb_cte_at_def)
+   apply (erule is_transferable.cases)
+      apply fastforce
+     apply fastforce
+    apply ((drule spec)+, erule(1) impE, clarsimp)
+    apply (subst caps_of_state_transform_opt_cap)
+      apply assumption
+     apply fastforce
+    apply (blast dest: idle_thread_null_cap)
+   apply (clarsimp simp: transform_cap_def)
+   apply (blast intro: cdl_cap_is_transferable.intros)
+
   apply clarsimp
-  apply (subst fst_transform_cslot_ptr[symmetric])+
-  apply (rule sta_cdt)
-  apply simp
+  apply (frule(1) cdl_cdt_transform_rev)
+  apply (clarsimp simp: transform_cslot_ptr_def)
+  apply (erule sta_cdt_transferable
+                 [where slot="(x, slot)" and slot'="(y, slot')" for slot slot', simplified])
   done
 
 lemma state_vrefs_asidpool_control:
@@ -907,6 +1008,7 @@ lemma transform_asid_low_bits_of:
 
 lemma cap_asid'_transform:
   "\<lbrakk> invs s; caps_of_state s ptr = Some cap \<rbrakk> \<Longrightarrow> cap_asid' cap = cdl_cap_asid' (transform_cap cap)"
+  supply image_cong_simp [cong del]
   apply (case_tac cap; simp)
   apply (drule caps_of_state_valid, simp)
   apply (rename_tac arch_cap)
@@ -957,7 +1059,7 @@ lemma state_asids_transform:
 lemma opt_cap_Some_asid_real:
   "\<lbrakk> opt_cap ref (transform s) = Some cap; asid \<in> cdl_cap_asid' cap; einvs s \<rbrakk> \<Longrightarrow> is_real_cap cap"
   apply (case_tac ref)
-  apply (clarsimp simp:opt_cap_def transform_def transform_objects_def slots_of_def opt_object_def)
+  apply (clarsimp simp:opt_cap_def transform_def transform_objects_def slots_of_def)
   apply (rule_tac P="a=idle_thread s" in case_split)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s a")
@@ -989,17 +1091,17 @@ lemma state_vrefs_asid_pool_transform_rev:
   apply (subgoal_tac "cap_object poolcap \<noteq> idle_thread s")
    prefer 2
    apply (clarsimp simp:state_vrefs_def transform_def transform_objects_def
-                        opt_cap_def slots_of_def opt_object_def)
+                        opt_cap_def slots_of_def)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s (cap_object poolcap)")
    apply (clarsimp simp:state_vrefs_def transform_def transform_objects_def
-                        opt_cap_def slots_of_def opt_object_def)
+                        opt_cap_def slots_of_def)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (clarsimp simp:transform_asid_high_bits_of')
   apply (simp add:asid_table_transform transform_asid_table_entry_def is_null_cap_def
               split:option.splits)
   apply (clarsimp simp:state_vrefs_def transform_def transform_objects_def
-                       opt_cap_def slots_of_def opt_object_def)
+                       opt_cap_def slots_of_def)
   apply (drule invs_valid_asid_table)
   apply (clarsimp simp:valid_asid_table_def)
   apply (drule bspec)

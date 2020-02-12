@@ -57,7 +57,7 @@ definition
  "arch_decode_irq_control_invocation label args src_slot cps \<equiv>
   (if invocation_type label = ArchInvocationLabel X64IRQIssueIRQHandlerIOAPIC
     then (if length args \<ge> 7 \<and> length cps \<ge> 1
-      then let pre_irq = UCAST (64 \<rightarrow> 8) (args ! 6); index = args ! 0; depth = args ! 1;
+      then let pre_irq = args ! 6; index = args ! 0; depth = args ! 1;
                cnode = cps ! 0;
                irqv = ucast pre_irq + minUserIRQ;
                ioapic = args ! 2;
@@ -89,7 +89,7 @@ definition
     else throwError TruncatedMessage)
   else (if invocation_type label = ArchInvocationLabel X64IRQIssueIRQHandlerMSI
     then (if length args \<ge> 7 \<and> length cps \<ge> 1
-      then let pre_irq = UCAST (64 \<rightarrow> 8) (args ! 6); index = args ! 0; depth = args ! 1;
+      then let pre_irq = args ! 6; index = args ! 0; depth = args ! 1;
                cnode = cps ! 0; irqv = ucast pre_irq + minUserIRQ;
                bus = args ! 2; dev = args ! 3; func = args ! 4; handle = args ! 5
         in doE
@@ -339,53 +339,36 @@ where
              attr = args ! 2;
              vspace_cap = fst (extra_caps ! 0)
          in doE
-             whenE (mapped_address \<noteq> None) $ throwError $ InvalidCapability 0;
              (vspace, asid) \<leftarrow> (case vspace_cap of
                                    ArchObjectCap (PML4Cap pm (Some asid)) \<Rightarrow>
                                          returnOk (pm, asid)
                                  | _ \<Rightarrow> throwError $ InvalidCapability 1);
+             case mapped_address of
+               Some (asid', vaddr') \<Rightarrow> doE
+                 whenE (asid' \<noteq> asid) (throwError $ InvalidCapability 1);
+                 whenE (map_type \<noteq> VMVSpaceMap) $ throwError IllegalOperation;
+                 whenE (vaddr' \<noteq> vaddr) (throwError $ InvalidArgument 0)
+               odE
+             | None \<Rightarrow> doE
+                 vtop \<leftarrow> returnOk $ vaddr + bit (pageBitsForSize pgsz);
+                 whenE (vaddr > user_vtop \<or> vtop > user_vtop) $ throwError $ InvalidArgument 0
+               odE;
              vspace' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
              whenE (vspace' \<noteq> vspace) $ throwError $ InvalidCapability 1;
-             vtop \<leftarrow> returnOk $ vaddr + bit (pageBitsForSize pgsz);
-             whenE (vaddr > user_vtop \<or> vtop > user_vtop) $ throwError $ InvalidArgument 0;
-             vm_rights \<leftarrow> returnOk $ mask_vm_rights R (data_to_rights rights_mask);
-             check_vp_alignment pgsz vaddr;
-             entries \<leftarrow> create_mapping_entries (addrFromPPtr p) vaddr pgsz vm_rights
-                                               (attribs_from_word attr) vspace;
-             ensure_safe_mapping entries;
-             returnOk $ InvokePage $ PageMap
-                       (ArchObjectCap $ PageCap dev p R VMVSpaceMap pgsz (Some (asid,vaddr))) cte entries vspace
-          odE
-    else throwError TruncatedMessage
-    else if invocation_type label = ArchInvocationLabel X64PageRemap then
-         if length args > 1 \<and> length extra_caps > 0
-         then let rights_mask = args ! 0;
-                  attr = args ! 1;
-                  vspace_cap = fst (extra_caps ! 0)
-         in doE
-             whenE (map_type \<noteq> VMVSpaceMap) $ throwError IllegalOperation;
-             (vspace,asid) \<leftarrow> (case vspace_cap of
-                                  ArchObjectCap (PML4Cap pm (Some asid)) \<Rightarrow>
-                                        returnOk (pm, asid)
-                                | _ \<Rightarrow> throwError $ InvalidCapability 1);
-             (asid',vaddr) \<leftarrow> (case mapped_address of
-                                  Some a \<Rightarrow> returnOk a
-                                | _ \<Rightarrow> throwError $ InvalidCapability 0);
-             vspace' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid';
-             whenE (vspace' \<noteq> vspace \<or> asid \<noteq> asid') $ throwError $ InvalidCapability 1;
              vm_rights \<leftarrow> returnOk $ mask_vm_rights R $ data_to_rights rights_mask;
              check_vp_alignment pgsz vaddr;
              entries \<leftarrow> create_mapping_entries (addrFromPPtr p) vaddr pgsz vm_rights
                                                (attribs_from_word attr) vspace;
              ensure_safe_mapping entries;
-             returnOk $ InvokePage $ PageRemap entries asid vspace
-         odE
+             returnOk $ InvokePage $ PageMap
+               (ArchObjectCap $ PageCap dev p R VMVSpaceMap pgsz (Some (asid,vaddr))) cte entries vspace
+          odE
     else throwError TruncatedMessage
     else if invocation_type label = ArchInvocationLabel X64PageUnmap then
-             \<comment> \<open>case map_type of
+             \<^cancel>\<open>case map_type of
                  VMIOSpaceMap \<Rightarrow> decode_io_unmap_invocation label args cte cap extra_caps
                | _ \<Rightarrow>\<close> returnOk $ InvokePage $ PageUnmap cap cte
-    \<comment> \<open>FIXME x64-vtd:
+    \<^cancel>\<open>FIXME x64-vtd:
     else if invocation_type label = ArchInvocationLabel X64PageMapIO
     then decode_io_map_invocation label args cte cap extra_caps \<close>
     else if invocation_type label = ArchInvocationLabel X64PageGetAddress

@@ -55,20 +55,6 @@ lemma weak_derived_valid_cap [CSpace_AI_assms]:
              split: cap.splits arch_cap.splits option.splits)
   done
 
-(* FIXME: unused *)
-lemma weak_derived_tcb_cap_valid:
-  "\<lbrakk> tcb_cap_valid cap p s; weak_derived cap cap' \<rbrakk> \<Longrightarrow> tcb_cap_valid cap' p s"
-  apply (clarsimp simp add: tcb_cap_valid_def weak_derived_def
-                            obj_at_def is_tcb
-                     split: option.split)
-  apply (clarsimp simp: st_tcb_def2)
-  apply (erule disjE; simp add: copy_of_def split: if_split_asm; (solves \<open>clarsimp\<close>)?)
-  apply (clarsimp simp: tcb_cap_cases_def split: if_split_asm)
-    apply (auto simp: is_cap_simps same_object_as_def valid_ipc_buffer_cap_def
-               split: cap.split_asm arch_cap.split_asm
-                      thread_state.split_asm)
-  done
-
 lemma copy_obj_refs [CSpace_AI_assms]:
   "copy_of cap cap' \<Longrightarrow> obj_refs cap' = obj_refs cap"
   apply (cases cap)
@@ -142,6 +128,15 @@ lemma set_free_index_invs [CSpace_AI_assms]:
   apply (drule_tac x = ref in orthD2[rotated])
    apply (simp add: cap_range_def)+
   done
+
+lemma unique_table_refs_upd_eqD:
+  "\<lbrakk>ms a = Some b; obj_refs b = obj_refs b'; table_cap_ref b = table_cap_ref b'\<rbrakk>
+   \<Longrightarrow> unique_table_refs (ms (a \<mapsto> b')) = unique_table_refs ms"
+  unfolding unique_table_refs_def
+  (* match up p and p' on both sides of equality *)
+  apply (rule all_cong[where Q=\<top>, simplified])
+  apply (rule all_cong[where Q=\<top>, simplified])
+  by auto
 
 lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
   "\<lbrace>valid_arch_caps and cte_wp_at ((=) src_cap) src\<rbrace>
@@ -465,7 +460,7 @@ lemma mask_cap_valid[simp, CSpace_AI_assms]:
   apply (cases c, simp_all add: valid_cap_def mask_cap_def
                              cap_rights_update_def
                              cap_aligned_def
-                             acap_rights_update_def)
+                             acap_rights_update_def split:bool.splits)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
   apply (rename_tac arch_cap)
   by (case_tac arch_cap, simp_all)
@@ -474,14 +469,14 @@ lemma mask_cap_objrefs[simp, CSpace_AI_assms]:
   "obj_refs (mask_cap rs cap) = obj_refs cap"
   by (cases cap, simp_all add: mask_cap_def cap_rights_update_def
                                acap_rights_update_def
-                        split: arch_cap.split)
+                        split: arch_cap.split bool.splits)
 
 
 lemma mask_cap_zobjrefs[simp, CSpace_AI_assms]:
   "zobj_refs (mask_cap rs cap) = zobj_refs cap"
   by (cases cap, simp_all add: mask_cap_def cap_rights_update_def
                                acap_rights_update_def
-                        split: arch_cap.split)
+                        split: arch_cap.split bool.splits)
 
 
 lemma derive_cap_valid_cap [CSpace_AI_assms]:
@@ -497,7 +492,7 @@ lemma valid_cap_update_rights[simp, CSpace_AI_assms]:
   "valid_cap cap s \<Longrightarrow> valid_cap (cap_rights_update cr cap) s"
   apply (case_tac cap,
          simp_all add: cap_rights_update_def valid_cap_def cap_aligned_def
-                       acap_rights_update_def)
+                       acap_rights_update_def split:bool.splits)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all)
@@ -651,7 +646,7 @@ lemma cap_insert_simple_invs:
   cap_insert cap src dest \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
-   apply (wp_trace cap_insert_simple_mdb cap_insert_iflive
+   apply (wp cap_insert_simple_mdb cap_insert_iflive
              cap_insert_zombies cap_insert_ifunsafe cap_insert_simple_ioports
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_no_ap)

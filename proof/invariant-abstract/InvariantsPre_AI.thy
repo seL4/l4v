@@ -93,6 +93,7 @@ lemma ko_at_weakenE:
 lemmas a_type_simps =
   a_type_def[split_simps kernel_object.split]
 
+(* FIXME: name *)
 lemma [simp]:
   "a_type (Endpoint x) = AEndpoint"
   "a_type (Notification v) = ANTFN"
@@ -104,6 +105,9 @@ lemma a_type_aa_type: "(a_type (ArchObj ako) = AArch T) = (aa_type ako = T)"
 
 abbreviation
   "typ_at T \<equiv> obj_at (\<lambda>ob. a_type ob = T)"
+
+abbreviation
+  "typs_of \<equiv> \<lambda>s. kheap s ||> a_type"
 
 definition
   pspace_aligned :: "'z::state_ext state \<Rightarrow> bool"
@@ -124,6 +128,10 @@ where
          {x .. x + (2 ^ obj_bits ko - 1)} \<inter>
          {y .. y + (2 ^ obj_bits ko' - 1)} = {}"
 
+lemma pspace_distinctD:
+  "\<lbrakk> kheap s x = Some ko; kheap s y = Some ko'; x \<noteq> y; pspace_distinct s \<rbrakk>
+   \<Longrightarrow> mask_range x (obj_bits ko) \<inter> mask_range y (obj_bits ko') = {}"
+  by (simp add: pspace_distinct_def mask_def)
 
 definition
   caps_of_state :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap option"
@@ -239,6 +247,7 @@ lemma symreftype_inverse':
   "symreftype ref = ref' \<Longrightarrow> ref = symreftype ref'"
   by (cases ref) simp_all
 
+(* FIXME this is not a destruction rule of sym_refs *)
 lemma sym_refsD:
   "\<lbrakk> (y, tp) \<in> st x; sym_refs st \<rbrakk> \<Longrightarrow> (x, symreftype tp) \<in> st y"
   apply (simp add: sym_refs_def)
@@ -246,6 +255,7 @@ lemma sym_refsD:
   apply simp
   done
 
+(* FIXME this is not a elimination rule of sym_refs *)
 lemma sym_refsE:
   "\<lbrakk> sym_refs st; (y, symreftype tp) \<in> st x \<rbrakk> \<Longrightarrow> (x, tp) \<in> st y"
   by (drule(1) sym_refsD, simp)
@@ -280,5 +290,24 @@ lemma inj_IRQRef[simp]: "inj IRQRef" by (auto intro!: injI)
 lemma inj_ArchRef[simp]: "inj ArchRef" by (auto intro!: injI)
 
 lemmas arch_cap_set_map_simps[simp] = arch_cap_set_map_def[split_simps cap.split]
+
+lemma a_typeE:
+  "\<lbrakk>a_type ko = ACapTable sz; (\<And>cs. \<lbrakk> ko = CNode sz cs; well_formed_cnode_n sz cs \<rbrakk> \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk>a_type ko = ATCB; (\<And>tcb. ko = TCB tcb \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk>a_type ko = AEndpoint; (\<And>ep. ko = Endpoint ep \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk>a_type ko = ANTFN; (\<And>ntfn. ko = Notification ntfn \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk>a_type ko = AReply; (\<And>r. ko = Reply r \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk>a_type ko = ASchedContext n; (\<And>sc. \<lbrakk> ko = SchedContext sc n; valid_sched_context_size n \<rbrakk> \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk>a_type ko = AArch T; (\<And>ao. \<lbrakk> ko = ArchObj ao; aa_type ao = T \<rbrakk> \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk>a_type ko = AGarbage sz;
+    (\<And>sz' cs. \<lbrakk> ko = CNode (sz - cte_level_bits) cs; \<not>well_formed_cnode_n sz' cs;
+                cte_level_bits \<le> sz \<rbrakk> \<Longrightarrow> R);
+    (\<And>sc n. \<lbrakk> ko = SchedContext sc n; \<not>valid_sched_context_size n\<rbrakk> \<Longrightarrow> R)\<rbrakk>
+   \<Longrightarrow> R"
+  by (cases ko; clarsimp simp add: a_type_def split: if_split_asm)+
+
+lemma typ_at_typs_of:
+  "typ_at T p s = (typs_of s p = Some T)"
+  by (auto simp: obj_at_def in_opt_map_eq)
 
 end

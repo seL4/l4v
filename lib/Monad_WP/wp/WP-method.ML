@@ -18,18 +18,12 @@ sig
 
   val get_rules: Proof.context -> thm list -> wp_rules;
 
-  val apply_rules_tac_n: bool -> Proof.context -> thm list -> thm list Unsynchronized.ref
-                      -> int -> tactic;
-  val apply_rules_tac: bool -> Proof.context -> thm list -> thm list Unsynchronized.ref
-                    -> tactic;
-  val apply_rules_args: bool -> (Proof.context -> Method.method) context_parser;
-
-  val apply_once_tac: bool -> Proof.context -> thm list -> thm list Unsynchronized.ref
-                   -> tactic;
-  val apply_once_args: bool -> (Proof.context -> Method.method) context_parser;
+  val apply_rules_tac_n: bool -> Proof.context -> thm list -> int -> tactic;
+  val apply_rules_tac: bool -> Proof.context -> thm list -> tactic;
+  val apply_once_tac: bool -> Proof.context -> thm list -> tactic;
+  val apply_wp_args: (Proof.context -> Method.method) context_parser;
 
   val setup: theory -> theory;
-  val warn_unused: bool Config.T
 
   val wp_add: Thm.attribute;
   val wp_del: Thm.attribute;
@@ -227,110 +221,115 @@ fun debug_get ctxt = WPData.get (Context.Proof ctxt);
 
 fun get_rules ctxt extras = fold_rev add_rule extras (debug_get ctxt);
 
-fun append_used_rule rule used_rules = used_rules := !used_rules @ [rule]
-
-fun add_extra_rule rule extra_rules = extra_rules := !extra_rules @ [rule]
-
-fun resolve_ruleset_tac' ctxt rs used_rules_ref n t =
-  let fun append_rule rule thm = Seq.map (fn thm => (append_used_rule rule used_rules_ref; thm)) thm;
+fun resolve_ruleset_tac' trace ctxt rs used_thms_ref n t =
+  let
+    val rtac = WP_Pre.rtac ctxt
+    fun trace_rtac tag rule = WP_Pre.trace_rule trace ctxt used_thms_ref tag rtac rule
   in case
     Thm.cprem_of t n |> Thm.term_of |> snd (#trips rs) (Thm.theory_of_thm t)
         |> Envir.beta_eta_contract |> Logic.strip_assums_concl
      handle THM _ => @{const True}
   of Const (@{const_name Trueprop}, _) $
-      (Const (@{const_name triple_judgement}, _) $ _ $ f $ _) => let
-        val ts = Net.unify_term (#1 (#rules rs)) f |> order_list |> rev;
-        val combapps = Seq.maps (fn combapp => Seq.map
-                                      (fn combapp' => (combapp, combapp')) (resolve_tac ctxt [combapp] n t))
-                                (Seq.of_list (#combs rs)) |> Seq.list_of |> Seq.of_list;
-        fun per_rule_tac t = (fn thm => append_rule t (resolve_tac ctxt [t] n thm)) ORELSE
-                             (fn _ => Seq.maps (fn combapp => append_rule t
-                                        (append_rule (#1 combapp) (resolve_tac ctxt [t] n (#2 combapp)))) combapps);
-      in FIRST (map per_rule_tac ts) ORELSE
-         FIRST (map (fn split => fn thm => append_rule split (resolve_tac ctxt [split] n thm)) (#splits rs)) end t
-    | _ => FIRST (map (fn rule => fn thm => append_rule rule (resolve_tac ctxt [rule] n thm))
-                      (map snd (#3 (#rules rs)) @ #splits rs)) t end;
+      (Const (@{const_name triple_judgement}, _) $ _ $ f $ _) =>
+      let
+        val rules = Net.unify_term (#1 (#rules rs)) f |> order_list |> rev;
+        fun per_rule_combapp_tac rule combapp =
+          let val insts_ref = Unsynchronized.ref (Trace_Schematic_Insts.empty_instantiations)
+          in WP_Pre.trace_rule' trace ctxt
+               (fn rule_insts => fn _ => insts_ref := rule_insts)
+               rtac combapp
+             THEN'
+             WP_Pre.trace_rule' trace ctxt
+               (fn rule_insts => fn _ =>
+                  (WP_Pre.append_used_rule ctxt used_thms_ref "wp_comb" combapp (!insts_ref);
+                   WP_Pre.append_used_rule ctxt used_thms_ref "wp" rule rule_insts))
+               rtac rule
+          end
+        fun per_rule_tac rule =
+          trace_rtac "wp" rule ORELSE'
+          FIRST' (map (per_rule_combapp_tac rule) (#combs rs))
+      in (FIRST' (map per_rule_tac rules) ORELSE'
+          FIRST' (map (trace_rtac "wp_split") (#splits rs))) n t
+      end
+    | _ => FIRST' (map (trace_rtac "wp") (map snd (#3 (#rules rs))) @
+                   map (trace_rtac "wp_split") (#splits rs)) n t
+  end;
 
-fun resolve_ruleset_tac ctxt rs used_rules_ref n =
-  (Apply_Debug.break ctxt (SOME "wp")) THEN (resolve_ruleset_tac' ctxt rs used_rules_ref n)
+fun resolve_ruleset_tac trace ctxt rs used_thms_ref n =
+  (Apply_Debug.break ctxt (SOME "wp")) THEN (resolve_ruleset_tac' trace ctxt rs used_thms_ref n)
 
-fun pretty_rule ctxt rule =
-  Pretty.big_list (Thm.get_name_hint rule) [Thm.pretty_thm ctxt rule]
-           |> Pretty.string_of;
+fun trace_used_thm ctxt (name, tag, prop) =
+  let val adjusted_name = ThmExtras.adjust_thm_name ctxt (name, NONE) prop
+  in Pretty.block
+    (ThmExtras.pretty_adjusted_name ctxt adjusted_name ::
+     [Pretty.str ("[" ^ tag ^ "]:"),Pretty.brk 1, Syntax.unparse_term ctxt prop])
+  end
 
-fun trace_used_thms false _ _ = Seq.empty
-  | trace_used_thms true used_rules ctxt =
-      let val used_thms = !used_rules
-      in map (fn rule => tracing (pretty_rule ctxt rule)) used_thms
-        |> Seq.of_list end;
+fun trace_used_thms trace ctxt used_thms_ref =
+  if trace
+  then Pretty.big_list "Theorems used by wp:"
+                       (map (trace_used_thm ctxt) (!used_thms_ref))
+       |> Pretty.writeln
+       handle Size => warning ("WP tracing information was too large to print.")
+  else ();
 
-val warn_unused = Attrib.setup_config_bool @{binding wp_warn_unused} (K false);
-
-fun warn_unused_thms ctxt thms extra_rules used_rules =
-  if Config.get ctxt warn_unused
-  then
-    let val used_thms = map (fn rule => Thm.get_name_hint rule) (!used_rules)
-        val unused_thms = map Thm.get_name_hint (!extra_rules @ thms) |> subtract (op =) used_thms
-    in if not (null unused_thms)
-       then "Unused theorems: " ^ commas_quote unused_thms |> warning
-       else ()
-    end
-  else ()
-
-fun warn_unsafe_thms unsafe_thms n ctxt t =
-  let val used_rules = Unsynchronized.ref [] : thm list Unsynchronized.ref;
-      val useful_unsafe_thms =
+fun warn_unsafe_rules unsafe_rules n ctxt t =
+  let val used_thms_dummy = Unsynchronized.ref [] : (string * string * term) list Unsynchronized.ref;
+      val ctxt' = Config.put WP_Pre.wp_trace false ctxt
+      val useful_unsafe_rules =
           filter (fn rule =>
             (is_some o SINGLE (
-              resolve_ruleset_tac ctxt (get_rules ctxt [rule]) used_rules n)) t) unsafe_thms
-      val unsafe_thm_names = map (fn rule => Thm.get_name_hint rule) useful_unsafe_thms
-  in if not (null unsafe_thm_names)
-     then "Unsafe theorems that could be used: " ^ commas_quote unsafe_thm_names |> warning
+              resolve_ruleset_tac false ctxt' (get_rules ctxt [rule]) used_thms_dummy n)) t)
+            unsafe_rules
+  in if not (null useful_unsafe_rules)
+     then Pretty.list "Unsafe theorems that could be used: \n" ""
+                      (map (ThmExtras.pretty_thm true ctxt) useful_unsafe_rules)
+          |> Pretty.writeln
      else () end;
 
-fun apply_rules_tac_n trace ctxt extras extras_ref n =
+fun apply_rules_tac_n trace ctxt extras n =
 let
-  val rules = get_rules ctxt extras;
-  val used_rules = Unsynchronized.ref [] : thm list Unsynchronized.ref
-  val wp_pre_tac = Method.NO_CONTEXT_TACTIC ctxt
-                      (Method_Closure.apply_method ctxt @{method wp_pre} [] [] [] ctxt [])
+  val trace' = trace orelse Config.get ctxt WP_Pre.wp_trace
+  val used_thms_ref = Unsynchronized.ref [] : (string * string * term) list Unsynchronized.ref
+  val rules = get_rules ctxt extras
+  val wp_pre_tac = TRY (WP_Pre.tac trace' used_thms_ref ctxt 1)
   val wp_fix_tac = TRY (WPFix.both_tac ctxt 1)
   val cleanup_tac = TRY (REPEAT
                       (resolve_tac ctxt [@{thm TrueI}, @{thm conj_TrueI}, @{thm conj_TrueI2}] 1
                        ORELSE assume_tac ctxt 1))
-  val steps_tac = (CHANGED (REPEAT_DETERM (resolve_ruleset_tac ctxt rules used_rules 1)))
+  val steps_tac = (CHANGED (REPEAT_DETERM (resolve_ruleset_tac trace' ctxt rules used_thms_ref 1)))
                   THEN cleanup_tac
 in
   SELECT_GOAL (
-  (fn t => Seq.map (fn thm => (warn_unused_thms ctxt extras extras_ref used_rules;
-                               trace_used_thms trace used_rules ctxt; thm))
-    ((wp_pre_tac THEN wp_fix_tac THEN steps_tac) t)) THEN_ELSE
-  (fn t => (warn_unsafe_thms (#unsafe_rules rules) 1 ctxt t; all_tac t),
-  fn t => (warn_unsafe_thms (#unsafe_rules rules) 1 ctxt t; no_tac t))) n
+    (fn t => Seq.map (fn thm => (trace_used_thms trace' ctxt used_thms_ref;
+                                 used_thms_ref := []; thm))
+                     ((wp_pre_tac THEN wp_fix_tac THEN steps_tac) t))
+    THEN_ELSE
+    (fn t => (warn_unsafe_rules (#unsafe_rules rules) 1 ctxt t; all_tac t),
+     fn t => (warn_unsafe_rules (#unsafe_rules rules) 1 ctxt t; no_tac t))) n
 end
 
-fun apply_rules_tac trace ctxt extras extras_ref =
-  apply_rules_tac_n trace ctxt extras extras_ref 1;
+fun apply_rules_tac trace ctxt extras = apply_rules_tac_n trace ctxt extras 1;
 
-fun apply_once_tac trace ctxt extras extras_ref t =
+fun apply_once_tac trace ctxt extras t =
   let
-    val used_rules = Unsynchronized.ref [] : thm list Unsynchronized.ref;
-  in Seq.map (fn thm => (warn_unused_thms ctxt extras extras_ref used_rules;
-                         trace_used_thms trace used_rules ctxt; thm))
-    (SELECT_GOAL (resolve_ruleset_tac ctxt (get_rules ctxt extras) used_rules 1) 1 t) end
+    val trace' = trace orelse Config.get ctxt WP_Pre.wp_trace
+    val used_thms_ref = Unsynchronized.ref [] : (string * string * term) list Unsynchronized.ref
+    val rules = get_rules ctxt extras
+  in Seq.map (fn thm => (trace_used_thms trace' ctxt used_thms_ref; thm))
+             (SELECT_GOAL (resolve_ruleset_tac trace' ctxt rules used_thms_ref 1) 1 t)
+  end
 
 fun clear_rules ({combs, rules, trips, splits, unsafe_rules}) =
   {combs=combs, rules=no_rules, trips=trips, splits=splits, unsafe_rules=unsafe_rules}
 
-fun wp_modifiers extras_ref =
- [Args.add -- Args.colon >> K (I, fn att => (add_extra_rule (#2 att) extras_ref; wp_add att)),
+val wp_modifiers =
+ [Args.add -- Args.colon >> K (I, wp_add),
   Args.del -- Args.colon >> K (I, wp_del),
-  Args.$$$ "comb" -- Args.colon >> K (I, fn att => (add_extra_rule (#2 att) extras_ref; combs_add att)),
-  Args.$$$ "comb" -- Args.add -- Args.colon >> K (I, fn att => (add_extra_rule (#2 att) extras_ref; combs_add att)),
+  Args.$$$ "comb" -- Args.colon >> K (I, combs_add),
+  Args.$$$ "comb" -- Args.add -- Args.colon >> K (I, combs_add),
   Args.$$$ "comb" -- Args.del -- Args.colon >> K (I, combs_del),
-  Args.$$$ "only" -- Args.colon
-    >> K (Context.proof_map (WPData.map clear_rules), fn att =>
-                               (add_extra_rule (#2 att) extras_ref; wp_add att))];
+  Args.$$$ "only" -- Args.colon >> K (Context.proof_map (WPData.map clear_rules), wp_add)];
 
 fun has_colon xs = exists (Token.keyword_with (curry (op =) ":")) xs;
 
@@ -341,35 +340,24 @@ fun if_colon scan1 scan2 xs = if has_colon (snd xs) then scan1 xs else scan2 xs;
 fun thms ss = Scan.repeat (Scan.unless (Scan.lift (Scan.first ss)) Attrib.multi_thm) >> flat;
 fun app (f, att) ths context = fold_map (Thm.apply_attribute att) ths (Context.map_proof f context);
 
-fun section ss = Scan.depend (fn context => (Scan.first ss -- Scan.pass context (thms ss)) :|--
-  (fn (m, ths) => Scan.succeed (swap (app m (rev ths) context))));
-
+fun section ss = Scan.depend (fn ctxt => (Scan.first ss -- Scan.pass ctxt (thms ss)) :|--
+  (fn (m, thms) => Scan.succeed (swap (app m (rev thms) ctxt))));
 fun sections ss = Scan.repeat (section ss);
 
-fun apply_rules_args trace xs =
-  let val extras_ref = Unsynchronized.ref [] : thm list Unsynchronized.ref;
-  in
-    if_colon
-    (sections (wp_modifiers extras_ref) >>
-      K (fn ctxt => SIMPLE_METHOD (apply_rules_tac trace ctxt [] extras_ref)))
-    (Attrib.thms >> curry (fn (extras, ctxt) =>
-      Method.SIMPLE_METHOD (
-        apply_rules_tac trace ctxt extras extras_ref
-      )
-    ))
-  end xs;
+val add_section = Scan.depend (fn ctxt => (Scan.pass ctxt Attrib.thms) :|--
+  (fn thms => Scan.succeed (swap (app (I, wp_add) (rev thms) ctxt))));
 
-fun apply_once_args trace xs =
-  let val extras_ref = Unsynchronized.ref [] : thm list Unsynchronized.ref;
+fun modes ss =
+  Scan.optional (Args.parens (Parse.list (Scan.first (map Args.$$$ ss)))
+                 >> (fn strings => map (member (op =) strings) ss))
+                (replicate (length ss) false);
+
+fun apply_wp_args xs =
+  let fun apply_tac once = if once then apply_once_tac else apply_rules_tac;
   in
-    if_colon
-    (sections (wp_modifiers extras_ref) >>
-      K (fn ctxt => SIMPLE_METHOD (apply_once_tac trace ctxt [] extras_ref)))
-    (Attrib.thms >> curry (fn (extras, ctxt) =>
-      Method.SIMPLE_METHOD (
-        apply_once_tac trace ctxt extras extras_ref
-      )
-    ))
+    Scan.lift (modes ["trace", "once"])
+      --| if_colon (sections wp_modifiers >> flat) add_section
+    >> curry (fn ([trace, once], ctxt) => SIMPLE_METHOD (apply_tac once trace ctxt []))
   end xs;
 
 end;

@@ -7,13 +7,13 @@
  *
  * @TAG(NICTA_GPL)
  *)
-chapter {* Concurrent Imperative Syntax and Semantics \label{s:cimp} *}
+chapter \<open>Concurrent Imperative Syntax and Semantics \label{s:cimp}\<close>
 (*<*)
 theory CIMP
 imports Main
 begin
 (*>*)
-text {*
+text \<open>
   This chapter introduces a small concurrent imperative language with synchronous
   message passing. The sequential part of the language is a standard, minimal, Turing-complete
   While-language. It is sufficient to express the semantics of \camkes glue code and
@@ -43,10 +43,10 @@ text {*
   Below follows the datatype for sequential commands in the language. We first define the type
   of (shallowly embedded) boolean expressions to be a function from the state @{typ 's} to
   @{typ bool}.
-*}
+\<close>
 type_synonym 's bexp = "'s \<Rightarrow> bool"
 
-text {*
+text \<open>
   The type of sequential commands itself is parameterised by a type @{typ 'a} for answers, a type
   @{typ 'q} for questions, and the type @{typ 's} for the state of the program.
 
@@ -64,7 +64,7 @@ text {*
   \end{itemize}
 
   In Isabelle, this is:
-*}
+\<close>
 datatype ('a, 'q, 's) com
   = Skip  ("SKIP")
   | LocalOp "'s \<Rightarrow> 's set"
@@ -79,16 +79,16 @@ datatype ('a, 'q, 's) com
   | Request "'s \<Rightarrow> 'q set" "'a \<Rightarrow> 's \<Rightarrow> 's set"
   | Response "'q \<Rightarrow> 's \<Rightarrow> ('s \<times> 'a) set"
 
-text {*
+text \<open>
 For notational convenience we introduce infinite loops as an
 abbreviation. They are for instance used in event handling loops.
-*}
+\<close>
 abbreviation
   LOOP_syn ("LOOP/ _")
 where
   "LOOP c \<equiv> WHILE (\<lambda>_. True) DO c"
 
-text{*
+text\<open>
   After the sequential part, we are now ready to define the
   externally-visible communication behaviour of a process.
 
@@ -96,13 +96,13 @@ text{*
   message sends, and message receives. Both of the latter are annotated
   with the action/payload of both the request and instantaneous response
   (if any) of that message.
-*}
+\<close>
 datatype ('a, 'q) seq_label
   = SL_Internal ("\<tau>")
   | SL_Send 'q 'a ("\<guillemotleft>_, _\<guillemotright>")
   | SL_Receive 'q 'a ("\<guillemotright>_, _\<guillemotleft>")
 
-text {*
+text \<open>
   The following inductive definition now gives the small-step or structural
   operational semantics of the sequential part of the language. The semantics judgment
   is a relation between configurations, labels, and follow-on configurations.
@@ -121,7 +121,7 @@ text {*
   The other rules are a standard small-step semantics for a minimal nondeterministic
   imperative language. Local and terminating steps produce @{text \<tau>} transitions, all
   other labels are passed through appropriately.
-*}
+\<close>
 inductive small_step ::
   "('a,  'q, 's) com \<times> 's \<Rightarrow> ('a, 'q) seq_label \<Rightarrow>
    ('a,  'q, 's) com \<times> 's \<Rightarrow> bool"
@@ -157,7 +157,7 @@ where
 | Choose2:
   "(c\<^sub>2, s) \<rightarrow>\<^bsub>\<alpha>\<^esub> (c\<^sub>2', s') \<Longrightarrow> (c\<^sub>1 \<squnion> c\<^sub>2, s) \<rightarrow>\<^bsub>\<alpha>\<^esub> (c\<^sub>2', s')"
 
-text{*
+text\<open>
   Note that the generic nature of the @{const LocalOp} command lets us choose the
   atomicity of local actions as appropriate for the language. Since we are in a message
   passing setting, the atomicity of internal @{term \<tau>} actions is not important for
@@ -169,17 +169,17 @@ text{*
   For this purpose, we define the global state of a component system as a function from
   process names @{typ 'proc} to configurations. The type @{typ 'proc} will later be instantiated
   with a type that enumerates precisely all process names in the system.
-*}
+\<close>
 type_synonym ('a, 'proc, 'q, 's) global_state =
   "'proc \<Rightarrow> (('a, 'q, 's) com \<times> 's)"
 
-text{*
+text\<open>
   With this, we can now define an execution step of the overall system as either
   any enabled internal @{term \<tau>} step of any process, or as a communication step
   between two processes. For such a communication step to occur, two different
   processes @{term "p\<^sub>1"} and @{term "p\<^sub>2"} must be ready to execute a request/response
   pair with matching labels @{term \<alpha>} and @{term \<beta>}.
-*}
+\<close>
 inductive
   system_step ::
   "('a, 'proc, 'q, 's) global_state \<Rightarrow> ('a, 'proc, 'q, 's) global_state \<Rightarrow> bool"
@@ -192,7 +192,7 @@ where
     gs' = gs(p\<^sub>1 := c\<^sub>1', p\<^sub>2 := c\<^sub>2') \<rbrakk>
   \<Longrightarrow> gs \<rightarrow> gs'"
 
-text {*
+text \<open>
   From this point, we could go on to provide the usual definitions of finite and infinite
   execution traces and properties on these, depending on which flavour of properties
   are desired for a specific verification (e.g. invariants, safety, liveness).
@@ -203,7 +203,7 @@ text {*
   This concludes the definition of the small concurrent imperative base language.
   In the following, we use this language to express the high-level semantics of \camkes ADL glue
   code as it maps to the seL4 microkernel.
-*}
+\<close>
 (*<*)
 end
 (*>*)

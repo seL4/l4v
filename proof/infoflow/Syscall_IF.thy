@@ -39,13 +39,16 @@ lemma cap_revoke_globals_equiv:
         | (auto simp: emptyable_def dest: reply_slot_not_descendant)[1])+
   done
 
-lemma tcb_context_merge[simp]: "arch_tcb_context_get (tcb_arch (tcb_registers_caps_merge tcb tcb'))
-                              = arch_tcb_context_get (tcb_arch tcb)"
+lemma tcb_context_merge[simp]:
+  "arch_tcb_context_get (tcb_arch (tcb_registers_caps_merge tcb tcb'))
+    = arch_tcb_context_get (tcb_arch tcb)"
   apply (simp add: tcb_registers_caps_merge_def)
   done
 
 lemma thread_set_globals_equiv':
-  "\<lbrace>globals_equiv s and valid_ko_at_arm and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace> thread_set f tptr \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  "\<lbrace>globals_equiv s and valid_ko_at_arm and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
+     thread_set f tptr
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding thread_set_def
   apply(wp set_object_globals_equiv)
   apply simp
@@ -64,7 +67,7 @@ lemma invoke_cnode_globals_equiv:
           apply(wp cap_insert_globals_equiv cap_move_globals_equiv cap_revoke_globals_equiv
                    cap_delete_globals_equiv cap_swap_globals_equiv hoare_vcg_all_lift
                    cancel_badged_sends_globals_equiv
-                    | wpc | wp_once hoare_drop_imps | simp add: invs_valid_global_objs)+
+                    | wpc | wp (once) hoare_drop_imps | simp add: invs_valid_global_objs)+
   apply (case_tac cinv)
   apply (clarsimp simp: invs_valid_ko_at_arm | strengthen real_cte_emptyable_strg)+
 done
@@ -74,11 +77,12 @@ done
 lemma cap_delete_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and emptyable slot and pas_refined aag and K(is_subject aag (fst slot))) (cap_delete slot)"
-  unfolding cap_delete_def
-  apply (wp rec_del_reads_respects_f)
-  apply (simp | blast)+
-  done
+  "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs
+         and simple_sched_action and emptyable slot and pas_refined aag
+         and cdt_change_allowed' aag slot)
+     (cap_delete slot)"
+  unfolding cap_delete_def by (wp rec_del_CTEDeleteCall_reads_respects_f) force
+
 
 (* FIXME move *)
 lemma spec_gen_asm:
@@ -97,13 +101,15 @@ lemma select_ev:
 lemma next_revoke_eq:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   shows
-  "equiv_for ((aag_can_read aag or aag_can_affect aag l) \<circ> fst) cdt_list rv
-         rv' \<Longrightarrow> is_subject aag (fst src_slot) \<Longrightarrow> next_revoke_cap src_slot rv = next_revoke_cap src_slot rv'"
+  "equiv_for ((aag_can_read aag or aag_can_affect aag l) \<circ> fst) cdt_list rv rv'
+   \<Longrightarrow> is_subject aag (fst src_slot)
+   \<Longrightarrow> next_revoke_cap src_slot rv = next_revoke_cap src_slot rv'"
   apply (clarsimp simp: next_child_def equiv_for_def next_revoke_cap_def)
   done
 
 lemma next_revoke_eq':
- "reads_equiv_f aag s t \<Longrightarrow> is_subject aag (fst src_slot) \<Longrightarrow> next_revoke_cap src_slot s = next_revoke_cap src_slot t"
+  "reads_equiv_f aag s t \<Longrightarrow> is_subject aag (fst src_slot)
+   \<Longrightarrow> next_revoke_cap src_slot s = next_revoke_cap src_slot t"
   apply (rule next_revoke_eq)
    apply (fastforce simp: reads_equiv_f_def reads_equiv_def2 states_equiv_for_def equiv_for_def)
   apply simp
@@ -115,7 +121,10 @@ lemma cap_revoke_spec_reads_respects_f:
         drop_spec_ev[wp_split del] rec_del.simps[simp del]
         split_paired_All[simp del] split_paired_Ex[simp del]
   shows
-"spec_reads_respects_f s aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and pas_refined aag and K (is_subject aag (fst slot))) (cap_revoke slot)"
+  "spec_reads_respects_f s aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs
+                                  and simple_sched_action and pas_refined aag
+                                  and K (is_subject aag (fst slot)))
+     (cap_revoke slot)"
   proof (induct rule: cap_revoke.induct[where ?a1.0=s])
   case (1 slot s)
   show ?case
@@ -125,9 +134,11 @@ lemma cap_revoke_spec_reads_respects_f:
      apply (subst spec_equiv_valid_def2)
      apply (subst rel_sum_comb_equals[symmetric])
      apply (rule_tac R'="(=)" in spec_equiv_valid_2_inv_bindE)
-        apply(rule_tac R'="equiv_for ((aag_can_read aag or aag_can_affect aag l) \<circ> fst) id" in spec_equiv_valid_2_inv_bindE)
+        apply(rule_tac R'="equiv_for ((aag_can_read aag or aag_can_affect aag l) \<circ> fst) id"
+                    in spec_equiv_valid_2_inv_bindE)
         apply (rule_tac R'="(=)" in spec_equiv_valid_2_inv_bindE)
-                 apply(simp add: rel_sum_comb_equals del: Inr_in_liftE_simp without_preemption_def fun_app_def in_returns)
+                 apply(simp add: rel_sum_comb_equals
+                            del: Inr_in_liftE_simp without_preemption_def fun_app_def)
                  apply(rule spec_equiv_valid_2_inv_by_spec_equiv_valid[OF _ refl refl refl])
                  apply(wp whenE_spec_ev)
                            apply(rule "1.hyps")
@@ -146,17 +157,32 @@ lemma cap_revoke_spec_reads_respects_f:
         | simp (no_asm) add: returnOk_def | rule next_revoke_eq'
      | (simp add: pred_conj_def, erule conjE, assumption)
      | (rule irq_state_independent_A_conjI, simp)+)+
-               apply (rule_tac P="K(all_children (\<lambda>x. is_subject aag (fst x)) rva)" and P'="K(all_children (\<lambda>x. is_subject aag (fst x)) rv'a)" in drop_spec_ev2_inv[OF return_ev2])
+               apply (rule_tac P="K(all_children (\<lambda>x. aag_can_read aag (fst x)) rva)"
+                           and P'="K(all_children (\<lambda>x. aag_can_read aag (fst x)) rv'a)"
+                            in drop_spec_ev2_inv[OF return_ev2])
                apply simp
-               apply (rule_tac P="\<lambda>x. is_subject aag (fst x)" in all_children_descendants_equal)
+               apply (rule_tac P="\<lambda>x. aag_can_read aag (fst x)" in all_children_descendants_equal)
                apply (frule aag_can_read_self)
                apply (simp add: equiv_for_def split del: if_split)+
              apply (wp drop_spec_ev2_inv[OF liftE_ev2] gets_evrv | simp)+
-     apply (wp drop_spec_ev2_inv[OF liftE_ev2] gets_evrv reads_respects_f[OF get_cap_rev, where st=st and aag=aag and Q="\<top>", simplified equiv_valid_def2]| simp)+
+     apply (wp drop_spec_ev2_inv[OF liftE_ev2] gets_evrv
+               reads_respects_f[OF get_cap_rev, where st=st and aag=aag and Q="\<top>",
+                                simplified equiv_valid_def2]
+           | simp)+
     apply clarsimp
-    apply (intro conjI impI allI)
-        apply (clarsimp simp: equiv_for_def reads_equiv_f_def  pas_refined_cdt pas_refined_all_children[OF _ refl] elim!: reads_equivE affects_equivE)+
-    apply (auto simp: emptyable_def descendants_of_owned dest!: reply_slot_not_descendant | rule_tac y="next_revoke_cap slot s" in prod.exhaust)+
+    apply (frule all_children_subjectReads[simplified comp_def])
+    apply clarsimp
+    apply (rule conjI)
+     apply (force simp: reads_equiv_f_def intro: equiv_forI
+                  elim: reads_equivE affects_equivE equiv_forD)
+    apply clarsimp
+    apply (rule conjI, erule(1) all_children_descendants_of, force)
+    apply (clarsimp simp:conj_comms)
+    apply (intro conjI;
+           (subst emptyable_def,
+            case_tac "next_revoke_cap slot s",
+            force dest: reply_slot_not_descendant
+           | force elim: all_children_descendants_of[OF cdt_change_allowed_all_children, rotated 2]))
   done
 qed
 
@@ -322,32 +348,115 @@ lemma perform_invocation_reads_respects_f_g:
           and authorised_for_globals_inv oper
           and K (authorised_invocation_extra aag oper))
     (perform_invocation blocking calling oper)"
-  apply (subst pi_cases)
-  apply (rule equiv_valid_guard_imp)
-   apply (wpc
-          | simp
-          | wp invoke_domain_reads_respects_f_g
-               reads_respects_f_g'[OF invoke_untyped_reads_respects_g]
-               invoke_untyped_silc_inv
-               reads_respects_f_g'[OF send_ipc_reads_respects_g]
-               send_ipc_silc_inv
-               reads_respects_f_g'[OF send_signal_reads_respects_g, where Q="\<top>"]
-               send_signal_silc_inv
-               do_reply_transfer_reads_respects_f_g
-               invoke_tcb_reads_respects_f_g
-               invoke_cnode_reads_respects_f_g
-               reads_respects_f_g'[OF invoke_irq_control_reads_respects_g]
-               invoke_irq_control_silc_inv
-               invoke_irq_handler_reads_respects_f_g
-               reads_respects_f_g'[OF arch_perform_invocation_reads_respects_g]
-               arch_perform_invocation_silc_inv
-         )+
-  apply (simp add: tcb_at_invs)
-  apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply clarsimp
-  apply (intro allI impI conjI)
-                     apply (simp add: authorised_invocation_def authorised_for_globals_inv_def authorised_invocation_extra_def reads_equiv_g_def requiv_cur_thread_eq is_cap_simps valid_arch_state_ko_at_arm valid_sched_def | elim exE | rule emptyable_cte_wp_atD | clarsimp | fastforce simp: reads_equiv_f_g_def)+
-  done
+proof (cases oper)
+case InvokeUntyped
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp reads_respects_f_g'[OF invoke_untyped_reads_respects_g]
+                 invoke_untyped_silc_inv
+           )+
+    by (simp add: authorised_invocation_def)
+next
+  case InvokeEndpoint
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp reads_respects_f_g'[OF send_ipc_reads_respects_g]
+                 send_ipc_silc_inv
+           )+
+    by (fastforce intro: read_reply_thread_read_thread_rev[OF reads_lrefl]
+                  simp: authorised_invocation_def reads_equiv_f_g_def)
+next
+  case InvokeNotification
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp reads_respects_f_g'[OF send_signal_reads_respects_g, where Q="\<top>"]
+           )+
+    by (fastforce simp: authorised_invocation_def valid_sched_def)
+next
+  case InvokeReply
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp do_reply_transfer_reads_respects_f_g
+           )+
+    by (fastforce intro: read_reply_thread_read_thread_rev[OF reads_lrefl] emptyable_cte_wp_atD
+                  simp: reads_equiv_f_g_def authorised_invocation_def is_cap_simps
+                  dest: emptyable_cte_wp_atD)
+next
+  case InvokeTCB
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp invoke_tcb_reads_respects_f_g
+           )+
+    by (fastforce simp: authorised_invocation_def authorised_invocation_extra_def)
+next
+  case InvokeDomain
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp invoke_domain_reads_respects_f_g
+           )+
+    by (simp add: authorised_invocation_def)
+next
+  case InvokeCNode
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp invoke_cnode_reads_respects_f_g
+           )+
+    by (fastforce simp: authorised_invocation_def)
+next
+  case InvokeIRQControl
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp reads_respects_f_g'[OF invoke_irq_control_reads_respects_g]
+                 invoke_irq_control_silc_inv
+           )+
+    by (simp add: invs_def valid_state_def
+                  authorised_invocation_def valid_arch_state_ko_at_arm)
+next
+  case InvokeIRQHandler
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp invoke_irq_handler_reads_respects_f_g
+           )+
+    by (fastforce simp: authorised_invocation_def)
+next
+  case InvokeArchObject
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp reads_respects_f_g'[OF arch_perform_invocation_reads_respects_g]
+                 arch_perform_invocation_silc_inv
+           )+
+    by (fastforce simp: authorised_invocation_def authorised_for_globals_inv_def)
+qed
 
 crunch valid_ko_at_arm[wp]: reply_from_kernel "valid_ko_at_arm" (simp: crunch_simps)
 
@@ -449,15 +558,15 @@ lemma authorised_for_globals_triv:
   done
 
 lemma decode_invocation_authorised_globals_inv:
-  "\<lbrace>cte_wp_at (diminished cap) slot and invs and
+  "\<lbrace>cte_wp_at ((=) cap) slot and invs and
     (\<lambda>s. \<forall>x\<in>set excaps.
-           cte_wp_at (diminished (fst x)) (snd x) s)\<rbrace>
+           cte_wp_at ((=) (fst x)) (snd x) s)\<rbrace>
     decode_invocation info_label args ptr slot cap excaps
    \<lbrace>\<lambda>rv. authorised_for_globals_inv rv\<rbrace>, -"
   unfolding decode_invocation_def
   apply (rule hoare_pre)
-  apply wpc
-             apply((wp authorised_for_globals_triv | wpc | simp add: uncurry_def)+)[11]
+   apply wpc
+              apply((wp authorised_for_globals_triv | wpc | simp add: uncurry_def)+)[11]
    apply (simp add: authorised_for_globals_inv_def)
    apply wp
    apply (unfold comp_def)
@@ -465,8 +574,8 @@ lemma decode_invocation_authorised_globals_inv:
    apply (wp decode_arch_invocation_authorised_for_globals)
   apply (intro impI conjI allI | clarsimp simp add: authorised_for_globals_inv_def)+
   apply (erule_tac x="(a, aa, b)" in ballE)
-  apply simp+
-done
+   apply simp+
+  done
 
 lemma set_thread_state_reads_respects_g:
   assumes domains_distinct: "pas_domains_distinct aag"
@@ -481,7 +590,8 @@ lemma set_thread_state_reads_respects_g:
   apply simp
 done
 
-lemmas get_thread_state_reads_respects_g = reads_respects_g_from_inv[OF get_thread_state_rev get_thread_state_inv]
+lemmas get_thread_state_reads_respects_g =
+          reads_respects_g_from_inv[OF get_thread_state_rev get_thread_state_inv]
 
 lemma decode_invocation_authorised_extra:
   "\<lbrace>K (is_subject aag (fst slot))\<rbrace>
@@ -490,15 +600,21 @@ lemma decode_invocation_authorised_extra:
   unfolding decode_invocation_def authorised_invocation_extra_def
   apply(rule hoare_pre)
    apply(wp decode_tcb_invocation_authorised_extra | wpc | simp add: split_def o_def uncurry_def)+
-  apply(auto intro!: TrueI)
+  apply auto
   done
 
-lemma sts_schact_is_rct_runnable: "\<lbrace>schact_is_rct and K(runnable b)\<rbrace> set_thread_state a b \<lbrace>\<lambda>_. schact_is_rct\<rbrace>"
+lemma sts_schact_is_rct_runnable:
+  "\<lbrace>schact_is_rct and K(runnable b)\<rbrace>
+      set_thread_state a b
+   \<lbrace>\<lambda>_. schact_is_rct\<rbrace>"
   apply (simp add: set_thread_state_def
-                   set_scheduler_action_def set_object_def)
-  apply (simp add: set_thread_state_ext_def)
-  apply (wp modify_wp set_scheduler_action_wp gts_wp)
-  apply (clarsimp simp: schact_is_rct_def st_tcb_at_def obj_at_def)
+                   set_scheduler_action_def)
+  apply (wpsimp wp: set_object_wp)
+     apply (simp add: set_thread_state_ext_def)
+     apply (wp modify_wp set_scheduler_action_wp gts_wp)
+    apply (wpsimp wp: set_object_wp)
+   apply wp
+  apply (clarsimp simp: schact_is_rct_def st_tcb_at_def obj_at_def gets_the_def gets_def)
   done
 
 lemma set_thread_state_only_timer_irq_inv:
@@ -603,7 +719,7 @@ lemma handle_invocation_reads_respects_g:
                        get_mi_length'
               | rule doesnt_touch_globalsI
               | (clarify,assumption)
-              | wp_once hoare_drop_imps
+              | wp (once) hoare_drop_imps
           )+
   apply (rule conjI)
    apply (clarsimp simp: requiv_g_cur_thread_eq simp: reads_equiv_f_g_conj)
@@ -621,7 +737,7 @@ lemma handle_invocation_reads_respects_g:
    apply (rule st_tcb_ex_cap)
      apply simp+
    apply (case_tac "sta",clarsimp+)
-  apply (force intro: reads_lrefl simp: only_timer_irq_inv_def runnable_eq_active)
+  apply (force simp: only_timer_irq_inv_def runnable_eq_active)
   done
 
 lemma delete_caller_cap_reads_respects_f:
@@ -653,8 +769,6 @@ lemma lookup_cap_cap_fault:
   apply assumption
   done
 
-crunch pas_cur_domain[wp]: delete_caller_cap "pas_cur_domain aag"
-
 term "equiv_valid_inv (reads_equiv_f aag) (affects_equiv aag l) P f"
 
 lemma cap_fault_on_failure_ev':
@@ -671,13 +785,10 @@ lemma delete_caller_cap_valid_ep_cap[wp]:  "\<lbrace>(\<lambda>s. s \<turnstile>
   apply clarsimp
   done
 
-lemma cte_wp_at_caps_of_state: "cte_wp_at \<top> a b \<Longrightarrow> cte_wp_at (\<lambda>x. caps_of_state b a = Some x) a b"
-  apply(simp add: cte_wp_at_def caps_of_state_def)
-  apply clarsimp
-done
 
 lemma handle_recv_reads_respects_f:
-  assumes domains_distinct: "pas_domains_distinct aag"
+  fixes st aag
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes mywp =
             domains_distinct
             cap_fault_on_failure_ev'
@@ -685,7 +796,8 @@ lemma handle_recv_reads_respects_f:
             reads_respects_f[OF receive_ipc_reads_respects, where st=st]
             delete_caller_cap_reads_respects_f[where st=st]
             delete_caller_cap_silc_inv[where st=st]
-            reads_respects_f_inv[OF receive_signal_reads_respects receive_signal_silc_inv, where st=st]
+            reads_respects_f_inv[OF receive_signal_reads_respects receive_signal_silc_inv,
+                                 where st=st]
             reads_respects_f[OF lookup_slot_for_thread_rev, where st=st and Q=\<top>]
             reads_respects_f_inv[OF get_cap_rev get_cap_inv, where st=st]
             get_cap_auth_wp[where aag=aag]
@@ -694,36 +806,23 @@ lemma handle_recv_reads_respects_f:
             get_simple_ko_wp
   shows
   "reads_respects_f aag l (silc_inv aag st and einvs and ct_active and
-        pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread) (handle_recv is_blocking)"
+        pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread)
+   (handle_recv is_blocking)"
   apply (simp add: handle_recv_def Let_def lookup_cap_def split_def)
-  apply (wp mywp | wpc | assumption | simp | clarsimp)+
-  apply(rule_tac Q="\<lambda>rv' s. invs s \<and> pas_refined aag s \<and> pas_cur_domain aag s
-                        \<and> s \<turnstile> EndpointCap x31 x32 x33 \<and> is_subject aag (cur_thread s)
-                        \<and> is_subject aag rv
-                        \<and> (pasSubject aag, Receive, pasObjectAbs aag x31) \<in> pasPolicy aag"
-                    in hoare_strengthen_post)
-  apply(wp mywp | wpc | assumption | simp |
-                    clarsimp simp: invs_valid_objs invs_sym_refs invs_distinct invs_psp_aligned
-                                   invs_valid_global_refs invs_arch_state)+
-           apply (rule_tac Q'="\<lambda>r s.
-                                       silc_inv aag st s \<and> einvs s \<and> pas_refined aag s \<and>
-                                     tcb_at rv s \<and> pas_cur_domain aag s \<and>
-                                     cte_wp_at \<top> (fst r) s \<and>
-                                     is_subject aag rv \<and> is_subject aag (cur_thread s) \<and>
-                                     is_subject aag (fst (fst r))"
-                  in hoare_post_imp_R)
-                     apply ((wp lookup_slot_for_thread_authorised lookup_slot_cte_at_wp | simp)+)[1]
-         apply (intro allI conjI impI; simp)
-               apply clarsimp
-               apply (drule cte_wp_at_caps_of_state)
-               apply (rule cte_wp_valid_cap)
-                apply (erule cte_wp_at_weakenE)
-                apply simp
-               apply(fastforce simp: cte_wp_at_def aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)+
-             apply(rule disjI1)
-             apply(rule reads_ep[where auth=Receive])
-              apply(fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)+
-        apply(wp reads_respects_f[OF handle_fault_reads_respects[OF domains_distinct],where st=st])
+
+  apply (wp mywp | wpc | assumption | simp | clarsimp
+        | strengthen aag_can_read_self[where x ="fst(fst y)" for y])+
+         apply (rule_tac Q'="\<lambda>r s. silc_inv aag st s \<and> einvs s \<and> pas_refined aag s \<and>
+                                   tcb_at rv s \<and> pas_cur_domain aag s \<and>
+                                   cte_wp_at \<top> (fst r) s \<and>
+                                   is_subject aag rv \<and> is_subject aag (cur_thread s) \<and>
+                                   is_subject aag (fst (fst r))"
+                       in hoare_post_imp_R)
+          apply ((wp lookup_slot_for_thread_authorised lookup_slot_cte_at_wp | simp)+)[1]
+        apply (clarsimp simp: silc_inv_not_subject[symmetric] invs_mdb invs_valid_objs)
+        subgoal by (auto intro: caps_of_state_valid reads_ep
+                          simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)
+        apply(wp reads_respects_f[OF handle_fault_reads_respects,where st=st])
         apply (wpsimp wp: get_simple_ko_wp get_cap_wp)+
         apply(rule VSpaceEntries_AI.hoare_vcg_all_liftE)
            apply (rule_tac Q="\<lambda>r s. silc_inv aag st s \<and> einvs s \<and> pas_refined aag s \<and>
@@ -736,35 +835,43 @@ lemma handle_recv_reads_respects_f:
       apply (wp reads_respects_f[OF as_user_reads_respects,where st=st and Q=\<top>])
       apply simp
      apply (wp as_user_silc_inv[where st=st] | simp)+
-  apply (simp add: det_getRegister invs_valid_objs tcb_at_invs)
-  apply fastforce
-  done
+  by (fastforce simp: det_getRegister invs_valid_objs tcb_at_invs)
 
 lemma handle_recv_globals_equiv:
-  "\<lbrace>globals_equiv (st :: det_state) and invs and ct_active\<rbrace> handle_recv is_blocking \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
+  "\<lbrace>globals_equiv (st :: det_state) and invs and ct_active\<rbrace>
+     handle_recv is_blocking
+   \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
   unfolding handle_recv_def
   apply (wp handle_fault_globals_equiv get_simple_ko_wp
         | wpc | simp add: Let_def)+
       apply (rule_tac Q="\<lambda>r s. invs s \<and> globals_equiv st s" and
-                      E = "\<lambda>r s. valid_fault (CapFault (of_bl ep_cptr) True r)" in hoare_post_impErr)
+                      E = "\<lambda>r s. valid_fault (CapFault (of_bl ep_cptr) True r)"
+                   in hoare_post_impErr)
         apply (rule hoare_vcg_E_elim)
          apply (wp lookup_cap_cap_fault receive_ipc_globals_equiv
-                   receive_signal_globals_equiv delete_caller_cap_invs delete_caller_cap_globals_equiv
-                | wpc | simp add: Let_def invs_imps invs_valid_idle valid_fault_def
+                   receive_signal_globals_equiv delete_caller_cap_invs
+                   delete_caller_cap_globals_equiv
+                | wpc
+                | simp add: Let_def invs_imps invs_valid_idle valid_fault_def
                 | rule_tac Q="\<lambda>rv s. invs s \<and> thread \<noteq> idle_thread s \<and> globals_equiv st s"
-                           in hoare_strengthen_post, wp,
-                    clarsimp simp: invs_valid_objs invs_valid_global_objs invs_arch_state
-                                   invs_distinct)+
-     apply (rule_tac Q'="\<lambda>r s. invs s \<and> globals_equiv st s \<and> thread \<noteq> idle_thread s \<and> tcb_at thread s \<and> cur_thread s = thread" in hoare_post_imp_R)
+                           in hoare_strengthen_post,
+                  wp,
+                  clarsimp simp: invs_valid_objs invs_valid_global_objs invs_arch_state
+                                 invs_distinct)+
+     apply (rule_tac Q'="\<lambda>r s. invs s \<and> globals_equiv st s \<and> thread \<noteq> idle_thread s \<and>
+                               tcb_at thread s \<and> cur_thread s = thread"
+                  in hoare_post_imp_R)
       apply (wp as_user_globals_equiv | simp add: invs_imps valid_fault_def)+
-    apply (wp delete_caller_cap_invs delete_caller_cap_globals_equiv | simp add: invs_imps invs_valid_idle ct_active_not_idle)+
+    apply (wp delete_caller_cap_invs delete_caller_cap_globals_equiv
+          | simp add: invs_imps invs_valid_idle ct_active_not_idle)+
   done
 
 lemma handle_recv_reads_respects_f_g:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows
   "reads_respects_f_g aag l (silc_inv aag st and einvs and ct_active and
-        pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread) (handle_recv is_blocking)"
+        pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread)
+     (handle_recv is_blocking)"
   apply (rule equiv_valid_guard_imp)
   apply (rule reads_respects_f_g)
   apply (wp handle_recv_reads_respects_f[where st=st, OF domains_distinct])
@@ -794,7 +901,9 @@ lemma get_irq_slot_reads_respects':
 
 
 lemma get_irq_slot_can_read_from_slot:
-  "\<lbrace>K(aag_can_read_label aag (pasIRQAbs aag irq)) and pas_refined aag\<rbrace> get_irq_slot irq \<lbrace>\<lambda>r. K(aag_can_read_label aag (pasObjectAbs aag (fst r)))\<rbrace>"
+  "\<lbrace>K(aag_can_read_label aag (pasIRQAbs aag irq)) and pas_refined aag\<rbrace>
+     get_irq_slot irq
+   \<lbrace>\<lambda>r. K(aag_can_read_label aag (pasObjectAbs aag (fst r)))\<rbrace>"
   unfolding get_irq_slot_def
   apply (wp gets_wp)
   apply (simp add: pas_refined_def policy_wellformed_def irq_map_wellformed_aux_def)
@@ -804,7 +913,9 @@ lemma get_irq_state_rev':
   "reads_equiv_valid_inv A aag (K (aag_can_read_label aag (pasIRQAbs aag irq))) (get_irq_state irq)"
   unfolding get_irq_state_def
   apply(rule equiv_valid_guard_imp[OF gets_ev])
-  apply(fastforce simp: reads_equiv_def2 elim: states_equiv_forE_interrupt_states intro: aag_can_read_irq_self)
+  apply(fastforce simp: reads_equiv_def2
+                  elim: states_equiv_forE_interrupt_states
+                 intro: aag_can_read_irq_self)
   done
 
 lemma equiv_valid_vacuous:
@@ -852,7 +963,7 @@ lemma handle_vm_fault_reads_respects:
   apply (cases vmfault_type)
   apply (wp dmo_getDFSR_reads_respects dmo_getFAR_reads_respects
             dmo_getIFSR_reads_respects as_user_reads_respects
-         | simp add: getRestartPC_def getRegister_def reads_lrefl)+
+         | simp add: getRestartPC_def getRegister_def)+
   done
 
 lemma handle_hypervisor_fault_reads_respects:
@@ -860,7 +971,9 @@ lemma handle_hypervisor_fault_reads_respects:
   by (cases hypfault_type; wpsimp)
 
 lemma handle_vm_fault_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arm and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> handle_vm_fault thread vmfault_type \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
+  "\<lbrace>globals_equiv st and valid_ko_at_arm and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
+     handle_vm_fault thread vmfault_type
+   \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
   apply (cases vmfault_type)
    apply (wp dmo_no_mem_globals_equiv | simp add: getDFSR_def getFAR_def getIFSR_def)+
   done
@@ -870,7 +983,9 @@ lemma handle_hypervisor_fault_globals_equiv:
   by (cases hypfault_type; wpsimp)
 
 lemma handle_vm_fault_reads_respects_g:
-  "reads_respects_g aag l (K(is_subject aag thread) and (valid_ko_at_arm and (\<lambda>s. thread \<noteq> idle_thread s))) (handle_vm_fault thread vmfault_type)"
+  "reads_respects_g aag l (K(is_subject aag thread) and (valid_ko_at_arm
+                           and (\<lambda>s. thread \<noteq> idle_thread s)))
+     (handle_vm_fault thread vmfault_type)"
   apply (rule reads_respects_g)
    apply (rule handle_vm_fault_reads_respects)
   apply (rule doesnt_touch_globalsI)
@@ -892,10 +1007,6 @@ lemma irq_state_indepedent_top[simp, intro!]:
   apply(simp add: irq_state_independent_def)
   done
 
-crunch cur_thread[wp]: handle_yield "\<lambda>s. P (cur_thread s)"
-  (wp: dxo_wp_weak ignore: tcb_sched_action reschedule_required)
-crunch cur_domain[wp]: handle_yield "\<lambda>s. P (cur_domain s)"
-
 lemma handle_yield_reads_respects:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows
@@ -908,9 +1019,6 @@ crunch silc_inv[wp]: handle_yield "silc_inv aag st"
 
 crunch globals_equiv[wp]: handle_yield "globals_equiv st" (wp: dxo_wp_weak ignore: reschedule_required)
 
-crunch pas_cur_domain[wp]: handle_reply, handle_vm_fault, handle_hypervisor_fault "pas_cur_domain aag"
-  (wp: crunch_wps ignore: getFAR getDFSR getIFSR)
-
 lemma equiv_valid_hoist_guard:
   assumes a: "Q \<Longrightarrow> equiv_valid_inv I A P f"
   assumes b: "\<And> s. P s \<Longrightarrow> Q"
@@ -922,7 +1030,11 @@ lemma equiv_valid_hoist_guard:
 lemma handle_event_reads_respects_f_g:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects_f_g aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and schact_is_rct and domain_sep_inv (pasMaySendIrqs aag) st' and (\<lambda>s. ev \<noteq> Interrupt \<and> (ct_active s)) and pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread and K (\<not> pasMaySendIrqs aag)) (handle_event ev)"
+  "reads_respects_f_g aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs
+         and schact_is_rct and domain_sep_inv (pasMaySendIrqs aag) st'
+         and (\<lambda>s. ev \<noteq> Interrupt \<and> (ct_active s)) and pas_refined aag and pas_cur_domain aag
+         and is_subject aag \<circ> cur_thread and K (\<not> pasMaySendIrqs aag))
+     (handle_event ev)"
   apply(rule gen_asm_ev)
   apply(rule_tac Q="ev \<noteq> Interrupt" in equiv_valid_hoist_guard)
    prefer 2
@@ -933,7 +1045,9 @@ lemma handle_event_reads_respects_f_g:
           apply ((wp handle_invocation_reads_respects_g[simplified]
                   handle_recv_reads_respects_f_g[where st=st]
                   handle_reply_valid_sched
-                  reads_respects_f_g[OF reads_respects_f[where st=st and aag=aag and Q=\<top>, OF handle_yield_reads_respects] doesnt_touch_globalsI]
+                  reads_respects_f_g[OF reads_respects_f[where st=st and aag=aag and Q=\<top>,
+                                                         OF handle_yield_reads_respects]
+                                        doesnt_touch_globalsI]
                   handle_reply_reads_respects_g handle_reply_silc_inv[where st=st]
                 | simp add: invs_imps | rule equiv_valid_guard_imp | force)+)[8]
      apply ((wp reads_respects_f_g'[OF handle_fault_reads_respects_g, where st=st]
@@ -941,12 +1055,18 @@ lemma handle_event_reads_respects_f_g:
             | clarsimp simp: invs_imps requiv_g_cur_thread_eq schact_is_rct_simple
             | wpc | intro impI conjI allI)+)[3]
        apply (rule equiv_valid_guard_imp)
-        apply ((wp reads_respects_f_g'[OF handle_vm_fault_reads_respects_g, where Q="\<top>" and st=st] handle_vm_fault_silc_inv | simp)+)[1]
+        apply ((wp reads_respects_f_g'[OF handle_vm_fault_reads_respects_g, where Q="\<top>" and st=st]
+                   handle_vm_fault_silc_inv
+               | simp)+)[1]
         prefer 2
         apply ((wp reads_respects_f_g'[OF handle_fault_reads_respects_g, where st=st] | simp)+)[1]
        prefer 2
        apply (simp add: validE_E_def)
-       apply (rule_tac E="\<lambda>r s.  invs s \<and> is_subject aag rv \<and> is_subject aag (cur_thread s) \<and> valid_fault r \<and> pas_refined aag s \<and> pas_cur_domain aag s \<and> silc_inv aag st s \<and> rv \<noteq> idle_thread s" and Q="\<top>\<top>" in hoare_post_impErr)
+       apply (rule_tac E="\<lambda>r s. invs s \<and> is_subject aag rv \<and> is_subject aag (cur_thread s)
+                              \<and> valid_fault r \<and> pas_refined aag s \<and> pas_cur_domain aag s
+                              \<and> silc_inv aag st s \<and> rv \<noteq> idle_thread s"
+                   and Q="\<top>\<top>"
+                    in hoare_post_impErr)
          apply (rule hoare_vcg_E_conj)
           apply (wp hv_invs handle_vm_fault_silc_inv)+
        apply (simp add: invs_imps invs_mdb invs_valid_idle)+
@@ -957,7 +1077,10 @@ lemma handle_event_reads_respects_f_g:
           | clarsimp simp: invs_imps requiv_g_cur_thread_eq schact_is_rct_simple
           | wpc | intro impI conjI allI)+
        apply (rule equiv_valid_guard_imp)
-        apply ((wp reads_respects_f_g'[OF handle_hypervisor_fault_reads_respects_g, where Q="\<top>" and st=st] handle_hypervisor_fault_silc_inv | simp)+)[1]
+        apply ((wp reads_respects_f_g'[OF handle_hypervisor_fault_reads_respects_g,
+                                       where Q="\<top>" and st=st]
+                   handle_hypervisor_fault_silc_inv
+               | simp)+)[1]
        prefer 2
        apply ((wp reads_respects_f_g'[OF handle_fault_reads_respects_g, where st=st] | simp)+)[1]
       apply (simp add: validE_E_def)
@@ -967,7 +1090,9 @@ lemma handle_event_reads_respects_f_g:
   done
 
 lemma as_user_reads_respects_g:
-  "reads_respects_g aag k (valid_ko_at_arm and (\<lambda>s. thread \<noteq> idle_thread s) and K (det f \<and> is_subject aag thread)) (as_user thread f)"
+  "reads_respects_g aag k (valid_ko_at_arm and (\<lambda>s. thread \<noteq> idle_thread s)
+                           and K (det f \<and> is_subject aag thread))
+     (as_user thread f)"
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_g)
     apply (rule as_user_reads_respects)
@@ -994,7 +1119,8 @@ lemma get_thread_state_reads_respects':
 lemma activate_thread_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects aag l (cur_tcb and (\<lambda>s. aag_can_read_label aag (pasObjectAbs aag (cur_thread s)))) activate_thread"
+  "reads_respects aag l (cur_tcb and (\<lambda>s. aag_can_read_label aag (pasObjectAbs aag (cur_thread s))))
+     activate_thread"
   apply (simp add: activate_thread_def)
   apply (wp set_thread_state_runnable_reads_respects
             get_thread_state_reads_respects'
@@ -1016,16 +1142,20 @@ lemma activate_thread_reads_respects:
   done
 
 lemma activate_thread_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_idle\<rbrace> activate_thread \<lbrace>\<lambda> r. globals_equiv st\<rbrace>"
+  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_idle\<rbrace>
+     activate_thread
+   \<lbrace>\<lambda> r. globals_equiv st\<rbrace>"
   unfolding activate_thread_def
-  apply (wp set_thread_state_globals_equiv gts_wp | wpc |
-     clarsimp simp add: arch_activate_idle_thread_def valid_idle_def pred_tcb_at_def obj_at_def | rule hoare_vcg_conj_lift)+
-  done
+  by (wp set_thread_state_globals_equiv gts_wp
+     | wpc
+     | clarsimp simp add: arch_activate_idle_thread_def valid_idle_def pred_tcb_at_def obj_at_def
+     | rule hoare_vcg_conj_lift)+
 
 lemma activate_thread_reads_respects_g:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows
-  "reads_respects_g aag l (invs and (\<lambda>s. aag_can_read_label aag (pasObjectAbs aag (cur_thread s)))) activate_thread"
+  "reads_respects_g aag l (invs and (\<lambda>s. aag_can_read_label aag (pasObjectAbs aag (cur_thread s))))
+     activate_thread"
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_g)
     apply (rule activate_thread_reads_respects[OF domains_distinct])
@@ -1051,34 +1181,35 @@ lemma perform_invocation_globals_equiv:
     authorised_for_globals_inv oper \<rbrace>
     perform_invocation blocking calling oper
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (subst pi_cases)
-  apply (rule hoare_pre)
-   apply (wp invoke_untyped_globals_equiv
-             send_ipc_globals_equiv
-             send_signal_globals_equiv
-             do_reply_transfer_globals_equiv
-             invoke_tcb_globals_equiv
-             invoke_cnode_globals_equiv
-             invoke_irq_control_globals_equiv
-             invoke_irq_handler_globals_equiv
-             arch_perform_invocation_globals_equiv
-         | wpc | simp)+
-  apply (auto simp add: invs_imps invs_vspace_objs
-                        invs_psp_aligned invs_kernel_mappings
-                        authorised_for_globals_inv_def)
+  apply (cases oper;
+         (rule hoare_pre,
+          (wp invoke_untyped_globals_equiv
+              send_ipc_globals_equiv
+              send_signal_globals_equiv
+              do_reply_transfer_globals_equiv
+              invoke_tcb_globals_equiv
+              invoke_cnode_globals_equiv
+              invoke_irq_control_globals_equiv
+              invoke_irq_handler_globals_equiv
+              arch_perform_invocation_globals_equiv
+          | wpc | simp)+;
+          auto simp: invs_imps authorised_for_globals_inv_def))
   done
 
 lemma handle_invocation_globals_equiv:
-  "\<lbrace>invs and ct_active and globals_equiv st\<rbrace> handle_invocation calling blocking \<lbrace>\<lambda>_. globals_equiv (st::det_ext state)\<rbrace>"
+  "\<lbrace>invs and ct_active and globals_equiv st\<rbrace>
+      handle_invocation calling blocking
+   \<lbrace>\<lambda>_. globals_equiv (st::det_ext state)\<rbrace>"
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
                    liftE_liftM_liftME liftME_def bindE_assoc)
   apply (wp syscall_valid handle_fault_globals_equiv
             reply_from_kernel_globals_equiv set_thread_state_globals_equiv
             hoare_vcg_all_lift
        | simp split del: if_split
-       | wp_once hoare_drop_imps)+
-        apply (rule_tac Q="\<lambda>r. invs and globals_equiv st and (\<lambda>s. thread \<noteq> idle_thread s)" and E="\<lambda>_. globals_equiv st"
-                         in hoare_post_impErr)
+       | wp (once) hoare_drop_imps)+
+        apply (rule_tac Q="\<lambda>r. invs and globals_equiv st and (\<lambda>s. thread \<noteq> idle_thread s)"
+                    and E="\<lambda>_. globals_equiv st"
+                     in hoare_post_impErr)
           apply (wp pinv_invs perform_invocation_globals_equiv
                     set_thread_state_ct_st' set_thread_state_globals_equiv
                     sts_authorised_for_globals_inv
@@ -1096,7 +1227,9 @@ lemma handle_fault_globals_equiv':
   done
 
 lemma handle_event_globals_equiv:
-  "\<lbrace>invs and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and globals_equiv st\<rbrace> handle_event ev \<lbrace>\<lambda>_. globals_equiv (st::det_ext state)\<rbrace>"
+  "\<lbrace>invs and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and globals_equiv st\<rbrace>
+     handle_event ev
+   \<lbrace>\<lambda>_. globals_equiv (st::det_ext state)\<rbrace>"
   apply (case_tac ev)
       apply (rule hoare_pre)
        apply (wp handle_invocation_globals_equiv
@@ -1110,8 +1243,10 @@ lemma handle_event_globals_equiv:
                  handle_interrupt_globals_equiv
                  handle_vm_fault_globals_equiv
                  handle_hypervisor_fault_globals_equiv
-              | wpc | simp add: handle_send_def handle_call_def Let_def
-              | wp_once hoare_drop_imps | clarsimp simp: invs_imps invs_valid_idle ct_active_not_idle)+
+             | wpc
+             | simp add: handle_send_def handle_call_def Let_def
+             | wp (once) hoare_drop_imps
+             | clarsimp simp: invs_imps invs_valid_idle ct_active_not_idle)+
   done
 
 end

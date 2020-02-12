@@ -34,11 +34,37 @@ definition page_base :: "vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vspa
 
 section "Architecture-specific Decode Functions"
 
+(* FIXME RISCV: there seems to be some lack of concern about what's returned to the user now *)
+(* FIXME RISCV: currently we're comparing against maxIRQ but the C code acknowledges a potentially
+          lower limit of PLIC_MAX_IRQ *)
+definition
+  arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
+where
+  "arch_check_irq irq \<equiv> whenE (irq > ucast maxIRQ \<or> irq = ucast irqInvalid) $
+                          throwError (RangeError 1 (ucast maxIRQ))"
+
 definition arch_decode_irq_control_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list \<Rightarrow> (arch_irq_control_invocation,'z::state_ext) se_monad"
   where
   "arch_decode_irq_control_invocation label args src_slot cps \<equiv>
-     throwError IllegalOperation"
+     (if invocation_type label = ArchInvocationLabel RISCVIRQIssueIRQHandler
+      then if length args \<ge> 4 \<and> length cps \<ge> 1
+        then let irq_word = args ! 0;
+                 trigger = args ! 1;
+                 index = args ! 2;
+                 depth = args ! 3;
+                 cnode = cps ! 0;
+                 irq = ucast irq_word
+        in doE
+          arch_check_irq irq_word;
+          irq_active \<leftarrow> liftE $ is_irq_active irq;
+          whenE irq_active $ throwError RevokeFirst;
+          dest_slot \<leftarrow> lookup_target_slot cnode (data_to_cptr index) (unat depth);
+          ensure_empty dest_slot;
+          returnOk $ RISCVIRQControlInvocation irq dest_slot src_slot (trigger \<noteq> 0)
+        odE
+      else throwError TruncatedMessage
+    else throwError IllegalOperation)"
 
 definition attribs_from_word :: "machine_word \<Rightarrow> vm_attributes"
   where
@@ -51,7 +77,7 @@ definition user_attr :: "vm_rights \<Rightarrow> vm_attributes"
 definition make_user_pte :: "vspace_ref \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> pte"
   where
   "make_user_pte addr attr rights =
-     PagePTE (addr >> pageBits) (attr \<union> user_attr rights) rights"
+     PagePTE (ucast (addr >> pageBits)) (attr \<union> user_attr rights) rights"
 
 definition check_slot :: "obj_ref \<Rightarrow> (pte \<Rightarrow> bool) \<Rightarrow> (unit,'z::state_ext) se_monad"
   where
@@ -75,7 +101,6 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
            attr = args ! 2;
            vspace_cap = fst (extra_caps ! 0)
          in doE
-           whenE (mapped_address \<noteq> None) $ throwError $ InvalidCapability 0;
            (pt, asid) \<leftarrow> case vspace_cap of
                            ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow> returnOk (pt, asid)
                          | _ \<Rightarrow> throwError $ InvalidCapability 1;
@@ -85,53 +110,29 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
            vtop \<leftarrow> returnOk $ vaddr + mask (pageBitsForSize pgsz);
            whenE (vtop \<ge> user_vtop) $ throwError $ InvalidArgument 0;
            check_vp_alignment pgsz vaddr;
-           (level, slot) \<leftarrow> liftE $ gets_the $ lookup_pt_slot pt vaddr \<circ> ptes_of;
+           (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
            unlessE (pt_bits_left level = pg_bits) $
              throwError $ FailedLookup False $ MissingCapability $ pt_bits_left level;
-           check_slot slot ((=) InvalidPTE);
+           case mapped_address of
+             Some (asid', vaddr') \<Rightarrow> doE
+               whenE (asid' \<noteq> asid) (throwError $ InvalidCapability 1);
+               whenE (vaddr' \<noteq> vaddr) (throwError $ InvalidArgument 0);
+               check_slot slot (Not \<circ> is_PageTablePTE)
+             odE
+           | None \<Rightarrow> check_slot slot ((=) InvalidPTE);
            vm_rights \<leftarrow> returnOk $ mask_vm_rights R (data_to_rights rights_mask);
            attribs \<leftarrow> returnOk $ attribs_from_word attr;
            pte \<leftarrow> returnOk $ make_user_pte (addrFromPPtr p) attribs vm_rights;
            returnOk $ InvokePage $ PageMap (FrameCap p R pgsz dev (Some (asid,vaddr))) cte (pte,slot)
          odE
-       else throwError TruncatedMessage"
-
-definition decode_fr_inv_remap :: "'z::state_ext arch_decoder"
-  where
-  "decode_fr_inv_remap label args cte cap extra_caps \<equiv> case cap of
-     FrameCap p R pgsz dev mapped_address \<Rightarrow>
-       if length args > 1 \<and> length extra_caps > 0
-       then let
-           rights_mask = args ! 0;
-           attr = args ! 1;
-           vspace_cap = fst (extra_caps ! 0)
-       in doE
-         (pt,asid) \<leftarrow> case vspace_cap of
-                        ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow> returnOk (pt, asid)
-                      | _ \<Rightarrow> throwError $ InvalidCapability 1;
-         (asid',vaddr) \<leftarrow> case mapped_address of
-                            Some a \<Rightarrow> returnOk a
-                          | _ \<Rightarrow> throwError $ InvalidCapability 0;
-         pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid';
-         whenE (pt' \<noteq> pt \<or> asid \<noteq> asid') $ throwError $ InvalidCapability 1;
-         check_vp_alignment pgsz vaddr;
-         (level, slot) \<leftarrow> liftE $ gets_the $ lookup_pt_slot pt vaddr \<circ> ptes_of;
-         unlessE (pt_bits_left level = pageBitsForSize pgsz) $
-           throwError $ FailedLookup False $ MissingCapability $ pt_bits_left level;
-         check_slot slot (Not \<circ> is_PageTablePTE);
-         vm_rights \<leftarrow> returnOk $ mask_vm_rights R $ data_to_rights rights_mask;
-         pte \<leftarrow> returnOk $ make_user_pte (addrFromPPtr p) (attribs_from_word attr) vm_rights;
-         returnOk $ InvokePage $ PageRemap (pte, slot)
-       odE
-     else throwError TruncatedMessage"
+       else throwError TruncatedMessage
+     | _ \<Rightarrow> fail"
 
 definition decode_frame_invocation :: "'z::state_ext arch_decoder"
   where
   "decode_frame_invocation label args cte cap extra_caps \<equiv>
      if invocation_type label = ArchInvocationLabel RISCVPageMap
      then decode_fr_inv_map label args cte cap extra_caps
-     else if invocation_type label = ArchInvocationLabel RISCVPageRemap
-     then decode_fr_inv_remap label args cte cap extra_caps
      else if invocation_type label = ArchInvocationLabel RISCVPageUnmap
      then returnOk $ InvokePage $ PageUnmap cap cte
      else if invocation_type label = ArchInvocationLabel RISCVPageGetAddress
@@ -155,14 +156,15 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
            whenE (user_vtop \<le> vaddr) $ throwError $ InvalidArgument 0;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
-           (level, slot) \<leftarrow> liftE $ gets_the $ lookup_pt_slot pt vaddr \<circ> ptes_of;
+           (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
            old_pte \<leftarrow> liftE $ get_pte slot;
            whenE (pt_bits_left level = pageBits \<or> old_pte \<noteq> InvalidPTE) $ throwError DeleteFirst;
-           pte \<leftarrow> returnOk $ PageTablePTE (addrFromPPtr p >> pageBits) {};
-           cap' <- returnOk $ PageTableCap p $ Some (asid, vaddr);
+           pte \<leftarrow> returnOk $ PageTablePTE (ucast (addrFromPPtr p >> pageBits)) {};
+           cap' <- returnOk $ PageTableCap p $ Some (asid, vaddr && ~~mask (pt_bits_left level));
            returnOk $ InvokePageTable $ PageTableMap cap' cte pte slot
          odE
-       else throwError TruncatedMessage"
+       else throwError TruncatedMessage
+     | _ \<Rightarrow> fail"
 
 definition decode_page_table_invocation :: "'z::state_ext arch_decoder"
   where
@@ -173,6 +175,13 @@ definition decode_page_table_invocation :: "'z::state_ext arch_decoder"
      then doE
        final \<leftarrow> liftE $ is_final_cap (ArchObjectCap cap);
        unlessE final $ throwError RevokeFirst;
+       case cap of
+         PageTableCap pt (Some (asid, _)) \<Rightarrow> doE
+             \<comment> \<open>cannot invoke unmap on top level page table\<close>
+             pt_opt \<leftarrow> liftE $ gets $ vspace_for_asid asid;
+             whenE (pt_opt = Some pt) $ throwError RevokeFirst
+           odE
+       | _ \<Rightarrow> returnOk ();
        returnOk $ InvokePageTable $ PageTableUnmap cap cte
      odE
      else throwError IllegalOperation"
@@ -254,10 +263,6 @@ definition arch_data_to_obj_type :: "nat \<Rightarrow> aobject_type option"
      else if n = 2 then Some HugePageObj
      else if n = 3 then Some PageTableObj
      else None"
-
-definition arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
-  where
-  "arch_check_irq irq \<equiv> throwError IllegalOperation"
 
 end
 end

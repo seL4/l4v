@@ -39,19 +39,14 @@ lemma set_consumed_refs_of:
         set_consumed scptr args \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   by (wpsimp simp: set_consumed_def)
 
-lemma set_mrs_ct[wp]:
-  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_mrs  thread buf msgs \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
-  by (wpsimp simp: set_mrs_def zipWithM_x_mapM store_word_offs_def
-         wp: mapM_wp' hoare_vcg_if_lift2 split_del: if_split)
-
 lemma set_mrs_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. tcb_at (cur_thread s) s\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>rv s. tcb_at (cur_thread s) s\<rbrace>"
   apply (simp add: set_mrs_redux zipWithM_x_mapM split_def
                    store_word_offs_def
              cong: option.case_cong
               del: upt.simps)
-  apply (wp mapM_wp' | wpcw | clarsimp dest!: get_tcb_SomeD
-          | simp add: do_machine_op_def thread_set_def set_object_def tcb_at_typ obj_at_def)+
+  apply (wp mapM_wp' set_object_wp | wpcw | clarsimp dest!: get_tcb_SomeD
+          | simp add: do_machine_op_def thread_set_def tcb_at_typ obj_at_def)+
   done
 
 lemma as_user_tcb_ct[wp]:
@@ -81,7 +76,7 @@ lemma as_user_ex_nonz[wp]:
 lemma set_mrs_ex_nonz_ct[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
   apply (rule set_mrs_thread_set_dmo)
-   apply (wpsimp wp: ex_nonz_cap_to_pres simp: thread_set_def set_object_def simp_del: fun_upd_apply)
+   apply (wpsimp wp: ex_nonz_cap_to_pres simp: thread_set_def wp: set_object_wp simp_del: fun_upd_apply)
    apply (clarsimp dest!: get_tcb_SomeD simp: ex_nonz_cap_to_def simp del: fun_upd_apply)
    apply (rule_tac x=a in exI)
    apply (rule_tac x=b in exI)
@@ -164,7 +159,7 @@ crunches set_consumed
  and valid_idle[wp]: valid_idle
  and zombies[wp]: zombies_final
   (simp: Let_def tcb_yield_to_noncap zipWithM_x_mapM
-    wp: hoare_drop_imps crunch_wps maybeM_inv ignore: set_consumed lookup_ipc_buffer)
+    wp: hoare_drop_imps crunch_wps maybeM_inv ignore: lookup_ipc_buffer)
 
 
 crunches complete_yield_to
@@ -266,8 +261,8 @@ crunches complete_yield_to
 
 lemma set_thread_state_bound_yt_tcb_at[wp]:
   "\<lbrace>bound_yt_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>_. bound_yt_tcb_at P t\<rbrace>"
-  unfolding set_thread_state_def set_object_def
-  by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
+  unfolding set_thread_state_def
+  by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def wp: set_object_wp)
 
 crunches set_thread_state_act
   for kheap_cur[wp]: "\<lambda>s. P (kheap s) (cur_thread s)"
@@ -276,8 +271,8 @@ crunches set_thread_state_act
 lemma set_thread_state_bound_yt_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. bound_yt_tcb_at P (cur_thread s) s\<rbrace>
      set_thread_state p ts \<lbrace>\<lambda>_ s. bound_yt_tcb_at P (cur_thread s) s\<rbrace>"
-  unfolding set_thread_state_def set_object_def
-  by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
+  unfolding set_thread_state_def
+  by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def wp: set_object_wp)
 
 lemma sssc_sc_yf_update_bound_yt_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. bound_yt_tcb_at P (cur_thread s) s\<rbrace>
@@ -302,7 +297,7 @@ lemma set_mrs_pred_tcb_at_ct[wp]:
   "\<lbrace>(\<lambda>s. pred_tcb_at proj P (cur_thread s) s)\<rbrace>
     set_mrs thread buf msgs \<lbrace>\<lambda>_ s. pred_tcb_at proj P (cur_thread s) s\<rbrace>"
   apply (clarsimp simp: set_mrs_def)
-  apply (wpsimp split_del: if_split simp: zipWithM_x_mapM set_object_def wp: mapM_wp')
+  apply (wpsimp split_del: if_split simp: zipWithM_x_mapM wp: mapM_wp' set_object_wp)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def tcb_to_itcb_def dest!: get_tcb_SomeD)
   done
 
@@ -311,7 +306,7 @@ lemma as_user_pred_tcb_at_ct[wp]:
   "\<lbrace>(\<lambda>s. pred_tcb_at proj P (cur_thread s) s)\<rbrace>
     as_user tptr f \<lbrace>\<lambda>_ s. pred_tcb_at proj P (cur_thread s) s\<rbrace>"
   apply (clarsimp simp: as_user_def)
-  apply (wpsimp split_del: if_split simp: split_def set_object_def)
+  apply (wpsimp split_del: if_split simp: split_def wp: set_object_wp)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def tcb_to_itcb_def dest!: get_tcb_SomeD)
   done
 
@@ -403,7 +398,7 @@ lemma sts_sc_tcb_sc_at_not_ct[wp]:
   "\<lbrace> \<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>
    set_thread_state t s \<lbrace> \<lambda>rv s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (wp | simp add: set_object_def sc_tcb_sc_at_def)+
+  apply (wp set_object_wp | simp add: sc_tcb_sc_at_def)+
   by (clarsimp simp: obj_at_def is_tcb get_tcb_def split: kernel_object.splits)
 
 lemma ssyf_sc_tcb_sc_at_not_ct[wp]:
@@ -469,16 +464,16 @@ crunches set_thread_state_act
 lemma sts_ex_nonz_cap_to_ct[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
   supply if_weak_cong[cong del]
-  apply (wpsimp simp: set_thread_state_def set_object_def)
+  apply (wpsimp simp: set_thread_state_def wp: set_object_wp)
   apply (clarsimp dest!: get_tcb_SomeD)
-  by (rule ex_cap_to_after_update; clarsimp simp: obj_at_def ran_tcb_cap_cases)
+  by (rule ex_cap_to_after_update[folded fun_upd_apply]; clarsimp simp: obj_at_def ran_tcb_cap_cases)
 
 lemma set_tcb_yt_ex_nonz_cap_to_ct[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> set_tcb_obj_ref tcb_yield_to_update p v \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
   supply if_weak_cong[cong del]
-  apply (wpsimp simp: set_tcb_obj_ref_def set_object_def)
+  apply (wpsimp simp: set_tcb_obj_ref_def wp: set_object_wp)
   apply (clarsimp dest!: get_tcb_SomeD)
-  by (rule ex_cap_to_after_update; clarsimp simp: obj_at_def ran_tcb_cap_cases)
+  by (rule ex_cap_to_after_update[folded fun_upd_apply]; clarsimp simp: obj_at_def ran_tcb_cap_cases)
 
 lemma complete_yield_to_ex_nonz_ct[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> complete_yield_to tcb_ptr \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
@@ -1973,7 +1968,7 @@ lemma thread_set_cap_to:
 
 lemma thread_set_timeout_fault_valid_mdb[wp]:
   "\<lbrace>valid_mdb\<rbrace> thread_set (tcb_fault_update (\<lambda>_. Some (Timeout badge))) t \<lbrace>\<lambda>rv. valid_mdb\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
+  apply (simp add: thread_set_def set_object_def get_object_def)
   apply (rule valid_mdb_lift)
     apply wp
     apply clarsimp
@@ -1985,7 +1980,7 @@ lemma thread_set_timeout_fault_valid_mdb[wp]:
 
 lemma thread_set_timeout_fault_valid_irq_handlers[wp]:
   "\<lbrace>valid_irq_handlers\<rbrace> thread_set (tcb_fault_update (\<lambda>_. Some (Timeout badge))) t \<lbrace>\<lambda>rv. valid_irq_handlers\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
+  apply (simp add: thread_set_def set_object_def get_object_def)
   apply (rule valid_irq_handlers_lift)
     apply wp
     apply clarsimp
@@ -2022,12 +2017,11 @@ lemma send_fault_ipc_invs':
                     hoare_vcg_imp_lift gbn_wp
          | clarsimp simp: tcb_cap_cases_def
          | erule disjE)+
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_ko_at)
-  apply (subst (asm) caps_of_state_tcb_index_trans, erule get_tcb_rev)
-  apply (simp (no_asm) add: ex_nonz_cap_to_def cte_wp_at_cases2)
-  apply (rule_tac x = tptr in exI)
-  apply (rule_tac x = "tcb_cnode_index n" in exI)
-  apply (clarsimp simp: obj_at_def tcb_cnode_map_def)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_ko_at,
+          subst (asm) caps_of_state_tcb_index_trans, erule get_tcb_rev,
+          simp (no_asm) add: ex_nonz_cap_to_def cte_wp_at_cases2,
+          rule exI, rule_tac x = "tcb_cnode_index n" in exI,
+          force simp: obj_at_def tcb_cnode_map_def)+
   done
 
 lemmas send_fault_ipc_invs[wp] = send_fault_ipc_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI TrueI,simplified]
@@ -2249,14 +2243,14 @@ lemma decode_sched_context_inv_inv:
   "\<lbrace>P\<rbrace> decode_sched_context_invocation label sc_ptr excaps args \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: decode_sched_context_invocation_def whenE_def split del: if_split
-          | wp_once hoare_drop_imp get_sk_obj_ref_inv get_sc_obj_ref_inv | wpcw)+
+          | wp (once) hoare_drop_imp get_sk_obj_ref_inv get_sc_obj_ref_inv | wpcw)+
   done
 
 lemma decode_sched_control_inv_inv:
   "\<lbrace>P\<rbrace> decode_sched_control_invocation label args excaps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: decode_sched_control_invocation_def whenE_def unlessE_def split del: if_split
-          | wp_once hoare_drop_imp get_sk_obj_ref_inv assertE_wp | wpcw)+
+          | wp (once) hoare_drop_imp get_sk_obj_ref_inv assertE_wp | wpcw)+
   done
 
 lemma decode_sched_context_inv_wf:

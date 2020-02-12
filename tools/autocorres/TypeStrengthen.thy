@@ -24,10 +24,10 @@ begin
 
 (* Set up the database and ts_rule attribute. *)
 ML_file "monad_types.ML"
-setup {*
+setup \<open>
  Attrib.setup (Binding.name "ts_rule") Monad_Types.ts_attrib
               "AutoCorres type strengthening rule"
-*}
+\<close>
 
 (*
  * Helpers for exception polymorphism lemmas (L2_call_Foo_polymorphic).
@@ -82,7 +82,7 @@ lemma L2_call_L2_gets_polymorphic:
   apply blast
   done
 
-setup {*
+setup \<open>
 Monad_Types.new_monad_type
   "pure"
   "Pure function"
@@ -94,7 +94,7 @@ Monad_Types.new_monad_type
   #2
   (fn _ => error "monad_mono not applicable for pure monad")
 |> Context.theory_map
-*}
+\<close>
 
 lemma TS_return_L2_seq:
     "L2_seq (TS_return A) (\<lambda>a. TS_return (B a))
@@ -143,7 +143,7 @@ lemma L2_call_TS_gets: "L2_call (TS_gets a) = L2_gets a [''TS_internal_retval'']
   apply (monad_eq simp: L2_call_def L2_gets_def TS_gets_def)
   done
 
-setup {*
+setup \<open>
 Monad_Types.new_monad_type
   "gets"
   "Read-only function"
@@ -155,7 +155,7 @@ Monad_Types.new_monad_type
   (fn (state, ret, ex) => state --> ret)
   (fn _ => error "monad_mono not applicable for gets monad")
 |> Context.theory_map
-*}
+\<close>
 
 lemma TS_gets_L2_seq:
     "L2_seq (TS_gets A) (\<lambda>x. TS_gets (B x)) = (TS_gets (\<lambda>s. let x = A s in B x s))"
@@ -229,7 +229,7 @@ lemma monad_mono_transfer_option:
   apply (metis (full_types) sum.inject(2))
   done
 
-setup {*
+setup \<open>
 Monad_Types.new_monad_type
   "option"
   "Option monad"
@@ -242,7 +242,7 @@ Monad_Types.new_monad_type
      state --> Term.map_atyps (fn t => if t = @{typ "'a"} then ret else t) @{typ "'a option"})
   (fn def => fn mono_thm => @{thm monad_mono_transfer_option} OF [def, mono_thm])
 |> Context.theory_map
-*}
+\<close>
 
 lemma gets_theE_L2_gets:
   "L2_gets a n = gets_theE (ogets a)"
@@ -321,7 +321,7 @@ lemma monad_mono_transfer_nondet:
   apply (* not *) fast
   done
 
-setup {*
+setup \<open>
 Monad_Types.new_monad_type
   "nondet"
   "Nondeterministic state monad (default)"
@@ -336,7 +336,7 @@ Monad_Types.new_monad_type
        @{typ "('s, 'a) nondet_monad"})
   (fn def => fn mono_thm => @{thm monad_mono_transfer_nondet} OF [def, mono_thm])
 |> Context.theory_map
-*}
+\<close>
 
 lemma liftE_L2_seq: "L2_seq (liftE A) (\<lambda>x. liftE (B x)) = (liftE (A >>= B))"
   apply (clarsimp simp: L2_defs)

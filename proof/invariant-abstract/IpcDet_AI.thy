@@ -69,7 +69,7 @@ crunch typ_at[wp]: send_ipc "\<lambda>s. P (typ_at T p s)"
 lemma si_tcb_at [wp]:
   "\<And>t' call bl w d cd t ep.
     \<lbrace>tcb_at t'\<rbrace>
-      send_ipc call bl w d cd t ep
+      send_ipc call bl w d gr cd t ep
     \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
   by (simp add: tcb_at_typ) wp
 
@@ -223,7 +223,7 @@ definition receive_ipc_preamble ::
   where
   "receive_ipc_preamble reply t \<equiv>
     case reply of NullCap \<Rightarrow> return None
-                | ReplyCap r \<Rightarrow>
+                | ReplyCap r _ \<Rightarrow>
                     do tptr <- get_reply_obj_ref reply_tcb r;
                        when (tptr \<noteq> None \<and> the tptr \<noteq> t) $ cancel_ipc (the tptr);
                        return (Some r)
@@ -265,7 +265,7 @@ lemma reply_remove_reply_tcb_reply_at:
                wp: reply_unlink_tcb_reply_tcb_reply_at get_simple_ko_wp)
 
 lemma get_blocking_object_wp:
-  "\<lbrace> \<lambda>s. \<forall>ep. (\<exists>r. st = BlockedOnReceive ep r) \<or> (\<exists>d. st = BlockedOnSend ep d) \<longrightarrow> Q ep s \<rbrace>
+  "\<lbrace> \<lambda>s. \<forall>ep. (\<exists>r d. st = BlockedOnReceive ep r d) \<or> (\<exists>d. st = BlockedOnSend ep d) \<longrightarrow> Q ep s \<rbrace>
     get_blocking_object st
    \<lbrace> Q \<rbrace>"
   by (cases st; wpsimp simp: get_blocking_object_def ep_blocked_def)
@@ -327,10 +327,11 @@ lemma sort_queue_ep_rv_wf''[wp]:
   by (simp add: ep_q_refs_of_def set_empty[symmetric] del: set_empty; rule sort_queue_rv_wf')+
 
 definition receive_ipc_blocked ::
-  "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> obj_ref list \<Rightarrow> ('a::state_ext state, unit) nondet_monad"
+  "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> receiver_payload \<Rightarrow> obj_ref list \<Rightarrow>
+    ('a::state_ext state, unit) nondet_monad"
   where
-  "receive_ipc_blocked is_blocking t ep_ptr reply queue \<equiv>
-    case is_blocking of True \<Rightarrow> do _ <- set_thread_state t (BlockedOnReceive ep_ptr reply);
+  "receive_ipc_blocked is_blocking t ep_ptr reply pl queue \<equiv>
+    case is_blocking of True \<Rightarrow> do _ <- set_thread_state t (BlockedOnReceive ep_ptr reply pl);
                                    _ <- when (\<exists>r. reply = Some r) (set_reply_obj_ref reply_tcb_update (the reply) (Some t));
                                    q <- sort_queue (queue @ [t]);
                                    set_endpoint ep_ptr (RecvEP q)
@@ -338,10 +339,10 @@ definition receive_ipc_blocked ::
                       | False \<Rightarrow> do_nbrecv_failed_transfer t"
 
 definition receive_ipc_idle ::
-  "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> ('a::state_ext state, unit) nondet_monad"
+  "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> receiver_payload \<Rightarrow> ('a::state_ext state, unit) nondet_monad"
   where
-  "receive_ipc_idle is_blocking t ep_ptr reply \<equiv>
-    case is_blocking of True \<Rightarrow> do _ <- set_thread_state t (BlockedOnReceive ep_ptr reply);
+  "receive_ipc_idle is_blocking t ep_ptr reply pl \<equiv>
+    case is_blocking of True \<Rightarrow> do _ <- set_thread_state t (BlockedOnReceive ep_ptr reply pl);
                                    _ <- when (\<exists>r. reply = Some r) (set_reply_obj_ref reply_tcb_update (the reply) (Some t));
                                    set_endpoint ep_ptr (RecvEP [t])
                                 od
@@ -361,8 +362,8 @@ lemma monadic_rewrite_sort_queue_singleton:
   qed
 
 lemma monadic_rewrite_receive_ipc_idle:
-  "monadic_rewrite False True (tcb_at t) (receive_ipc_blocked is_blocking t ep_ptr reply [])
-                                         (receive_ipc_idle is_blocking t ep_ptr reply)"
+  "monadic_rewrite False True (tcb_at t) (receive_ipc_blocked is_blocking t ep_ptr reply pl [])
+                                         (receive_ipc_idle is_blocking t ep_ptr reply pl)"
   apply (cases is_blocking; simp add: receive_ipc_blocked_def receive_ipc_idle_def
                                       monadic_rewrite_imp[OF monadic_rewrite_refl])
   apply (rule monadic_rewrite_bind_tail[OF _ set_thread_state_tcb])
@@ -376,8 +377,8 @@ primrec receive_ipc_preamble_rv ::
   where
   "receive_ipc_preamble_rv reply None = (\<lambda>s. reply = NullCap)"
 | "receive_ipc_preamble_rv reply (Some reply_ptr) =
-    (\<lambda>s. reply = ReplyCap reply_ptr \<and> reply_tcb_reply_at (\<lambda>t. t = None) reply_ptr s
-                                    \<and> reply_sc_reply_at (\<lambda>sc. sc = None) reply_ptr s)"
+    (\<lambda>s. (\<exists>R. reply = ReplyCap reply_ptr R) \<and> reply_tcb_reply_at (\<lambda>t. t = None) reply_ptr s
+                                            \<and> reply_sc_reply_at (\<lambda>sc. sc = None) reply_ptr s)"
 
 (* Preconditions for the guts of receive_ipc, after the reply preamble *)
 abbreviation (input) receive_ipc_preconds ::
@@ -412,7 +413,7 @@ lemma reply_tcb_reply_at_ReplyTCB_in_state_refs_of:
 
 lemma st_tcb_at_TCBReply_in_state_refs_of:
   "st_tcb_at P t s \<Longrightarrow> (r, TCBReply) \<in> state_refs_of s t \<Longrightarrow>
-     P (BlockedOnReply r) \<or> (\<exists>ep. P (BlockedOnReceive ep (Some r)))"
+     P (BlockedOnReply r) \<or> (\<exists>ep pl. P (BlockedOnReceive ep (Some r) pl))"
   by (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def get_refs_def2 tcb_st_refs_of_def
               split: thread_state.splits if_splits)
 
@@ -423,7 +424,7 @@ global_interpretation set_reply_tcb_obj_ref:
 lemma receive_ipc_blocked_invs':
   assumes ep: "case ep of IdleEP \<Rightarrow> queue = [] | RecvEP q \<Rightarrow> queue = q | SendEP _ \<Rightarrow> False"
   shows "\<lbrace> receive_ipc_preconds t ep_ptr reply reply_opt ep invs \<rbrace>
-          receive_ipc_blocked is_blocking t ep_ptr reply_opt queue
+          receive_ipc_blocked is_blocking t ep_ptr reply_opt pl queue
          \<lbrace> \<lambda>rv. invs \<rbrace>"
   proof -
     have ep_valid:
@@ -433,7 +434,7 @@ lemma receive_ipc_blocked_invs':
       apply (cases ep; clarsimp)
       apply (frule invs_valid_objs, erule valid_objsE, simp add: obj_at_def)
       apply (clarsimp simp add: valid_obj_def valid_ep_def)
-      by (fastforce dest!: ep_queued_st_tcb_at[where P="\<lambda>st. \<exists>e p r. st \<in> {BlockedOnSend e p, BlockedOnReceive e r}"]
+      by (fastforce dest!: ep_queued_st_tcb_at[where P="\<lambda>st. \<exists>e p p' r. st \<in> {BlockedOnSend e p, BlockedOnReceive e r p'}"]
                      simp: ep_q_refs_of_def invs_valid_objs invs_sym_refs pred_tcb_at_def obj_at_def)+
     have ep_queue:
       "ep_q_refs_of ep = set queue \<times> {EPRecv}"
@@ -451,7 +452,7 @@ lemma receive_ipc_blocked_invs':
                                    , assumption
                                    , fastforce simp: replies_blocked_def st_tcb_at_def obj_at_def\<close>)
        apply (all \<open>rule revcut_rl[where V="ep_ptr \<noteq> t"], fastforce simp: obj_at_def pred_tcb_at_def\<close>)
-       apply (all \<open>(match premises in \<open>reply = ReplyCap r_ptr\<close> for r_ptr \<Rightarrow>
+       apply (all \<open>(match premises in \<open>reply = ReplyCap r_ptr R\<close> for r_ptr R \<Rightarrow>
                      \<open>rule revcut_rl[where V="r_ptr \<notin> {t, ep_ptr}"]\<close>
                    , fastforce simp: obj_at_def reply_tcb_reply_at_def pred_tcb_at_def)?\<close>)
        apply (all \<open>frule obj_at_state_refs_ofD; clarsimp simp: ep_queue\<close>)
@@ -467,7 +468,7 @@ lemma receive_ipc_blocked_invs':
 
 lemma receive_ipc_idle_invs:
   "\<lbrace> receive_ipc_preconds t ep_ptr reply reply_opt IdleEP invs \<rbrace>
-    receive_ipc_idle is_blocking t ep_ptr reply_opt
+    receive_ipc_idle is_blocking t ep_ptr reply_opt pl
    \<lbrace> \<lambda>rv. invs \<rbrace>"
   apply (rule hoare_weaken_pre, rule monadic_rewrite_refine_valid[where P''=\<top>])
   apply (rule monadic_rewrite_receive_ipc_idle)
@@ -589,7 +590,7 @@ lemma pred_tcb_at_eq_state_refs_ofD:
 
 lemma si_blk_makes_simple:
   "\<lbrace>st_tcb_at simple t and K (t \<noteq> t')\<rbrace>
-   send_ipc True call bdg x can_donate t' epptr
+   send_ipc True call bdg x can_reply_grant can_donate t' epptr
    \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
   apply (simp add: send_ipc_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
@@ -614,7 +615,7 @@ lemma sfi_makes_simple:
   apply (simp add: send_fault_ipc_def)
   apply (case_tac handler_cap; simp)
    apply wpsimp
-  apply (wpsimp simp: thread_set_def set_object_def wp: si_blk_makes_simple)
+  apply (wpsimp simp: thread_set_def wp: si_blk_makes_simple set_object_wp)
   apply (auto simp: st_tcb_at_def obj_at_def)
   done
 
@@ -650,7 +651,7 @@ lemma set_reply_tcb_valid_tcb_state:
   unfolding valid_tcb_state_def by wpsimp
 
 lemma reply_unlink_tcb_sym_refs_BlockedOnReceive:
-  "\<lbrace>\<lambda>s. (\<exists>epptr. st_tcb_at ((=) (BlockedOnReceive epptr (Some rptr))) tptr s \<and>
+  "\<lbrace>\<lambda>s. (\<exists>epptr pl. st_tcb_at ((=) (BlockedOnReceive epptr (Some rptr) pl)) tptr s \<and>
                       sym_refs (\<lambda>x. if x = tptr then
                                       {r \<in> state_refs_of s x. snd r = TCBBound \<or>
                                        snd r = TCBSchedContext \<or> snd r = TCBYieldTo
@@ -669,7 +670,7 @@ lemma reply_unlink_tcb_sym_refs_BlockedOnReceive:
                 split: if_splits)
 
 lemma reply_unlink_tcb_valid_replies_BlockedOnReceive:
-  "\<lbrace>\<lambda>s. (\<exists>epptr. st_tcb_at ((=) (BlockedOnReceive epptr (Some rptr))) tptr s) \<and>
+  "\<lbrace>\<lambda>s. (\<exists>epptr pl. st_tcb_at ((=) (BlockedOnReceive epptr (Some rptr) pl)) tptr s) \<and>
         valid_replies s\<rbrace>
    reply_unlink_tcb tptr rptr
    \<lbrace>\<lambda>_. valid_replies\<rbrace>"
@@ -761,7 +762,7 @@ lemma receive_ipc_preamble_rv:
   "\<lbrace>st_tcb_at active t and invs\<rbrace> receive_ipc_preamble reply t \<lbrace>receive_ipc_preamble_rv reply\<rbrace>"
   unfolding receive_ipc_preamble_def
   apply (cases reply; clarsimp intro!: hoare_weaken_pre[OF return_wp])
-  apply (thin_tac _, rename_tac reply_ptr)
+  apply (thin_tac _, rename_tac reply_ptr R)
   apply (rule hoare_seq_ext[OF _ get_sk_obj_ref_sp]; simp)
   apply (rename_tac t_opt)
   apply (case_tac t_opt;
@@ -776,12 +777,6 @@ lemma receive_ipc_preamble_rv:
   apply (strengthen reply_tcb_reply_at_None_imp_reply_sc_reply_at_None')
   apply (wpsimp wp: cancel_ipc_reply_at_tcb_in[where tcbs="{}", simplified])
   by (clarsimp simp: reply_tcb_reply_at_def obj_at_def)
-
-lemma as_user_valid_replies[wp]:
-  "as_user receiver f \<lbrace> valid_replies_pred P \<rbrace>"
-  unfolding as_user_def
-  by (wpsimp wp: set_object_wp,
-         clarsimp dest!: get_tcb_SomeD simp: obj_at_def)
 
 crunches set_message_info, transfer_caps, copy_mrs
   for valid_replies_pred[wp]: "valid_replies_pred P"
@@ -899,6 +894,7 @@ lemma SCReply_ref_replies_with_sc:
                       sc_replies_sc_at_def obj_at_def
                split: option.splits)
 
+(* FIXME RT: rule should not generate unbound schematics in precondition (reply) *)
 lemma reply_push_sender_sc_Some_invs:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) sender_sc) sender s \<and>
         st_tcb_at active thread s \<and>
@@ -1193,36 +1189,28 @@ lemma ri_invs[wp]:
        (* otherwise (grant and reply and (call or fault)): reply_push *)
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (clarsimp)
+  apply (rename_tac rply)
   apply (wp reply_push_sender_sc_Some_invs)
   apply (clarsimp)
-  apply safe
-         apply (drule valid_repliesD1_simp, assumption, clarsimp)
-         apply (subgoal_tac "t \<noteq> sender")
-          apply (drule replies_blocked_imp_TCBReply_ref)
-          apply (subgoal_tac "(t, ReplyTCB) \<in> state_refs_of s a")
-           apply (clarsimp simp: state_refs_of_def refs_of_def reply_tcb_reply_at_def obj_at_def
-                                 get_refs_def
-                          split: option.splits)
-          apply (clarsimp simp:sym_refs_def)
-          apply (drule_tac x=t in spec)
-          apply (drule_tac x="(a, TCBReply)" in bspec)
-           apply (clarsimp split: if_splits)
-          apply (clarsimp split: if_splits)
-         apply (clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def)
-        prefer 2
-        apply simp
-       apply simp
-      apply assumption
-     apply (drule valid_repliesD1_simp, assumption, clarsimp)
-     apply (subgoal_tac "t \<noteq> sender")
-      apply (drule replies_blocked_imp_TCBReply_ref)
-      apply (subgoal_tac "(t, ReplyTCB) \<in> state_refs_of s a")
-       apply (clarsimp simp: state_refs_of_def refs_of_def reply_tcb_reply_at_def obj_at_def
-                             get_refs_def
-                      split: option.splits)
-      apply (clarsimp simp:sym_refs_def)
-      apply (drule_tac x=t in spec)
-      apply (auto simp: replies_blocked_def st_tcb_at_def obj_at_def split: if_splits)
+  apply (intro conjI)
+     prefer 3
+     apply fastforce
+    apply clarsimp
+    apply (drule valid_repliesD1_simp, assumption, clarsimp)
+    apply (subgoal_tac "t \<noteq> sender")
+     apply (drule replies_blocked_imp_TCBReply_ref)
+     apply (subgoal_tac "(t, ReplyTCB) \<in> state_refs_of s a")
+      apply (clarsimp simp: state_refs_of_def refs_of_def reply_tcb_reply_at_def obj_at_def
+                            get_refs_def
+                     split: option.splits)
+     apply (clarsimp simp:sym_refs_def)
+     apply (drule_tac x=t in spec)
+     apply (drule_tac x="(a, TCBReply)" in bspec)
+      apply (clarsimp split: if_splits)
+     apply (clarsimp split: if_splits)
+    apply (clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def)
+   apply clarsimp
+  apply assumption
   done
 
 lemma sched_context_donate_sym_refs_BlockedOnReceive:
@@ -1232,7 +1220,7 @@ lemma sched_context_donate_sym_refs_BlockedOnReceive:
                             \<or> snd r = TCBYieldTo}
                       else state_refs_of s a) \<and>
         sc_tcb_sc_at (\<lambda>t. \<exists>caller. t = Some caller \<and> st_tcb_at active caller s) scptr s \<and>
-        st_tcb_at (\<lambda>st. \<exists>epptr. st = BlockedOnReceive epptr None) dest s \<and>
+        st_tcb_at (\<lambda>st. \<exists>epptr pl. st = BlockedOnReceive epptr None pl) dest s \<and>
         bound_sc_tcb_at ((=) None) dest s\<rbrace>
    sched_context_donate scptr dest
    \<lbrace>\<lambda>rv s. sym_refs (\<lambda>a. if a = dest
@@ -1283,7 +1271,7 @@ lemma reply_push_st_tcb_at_Inactive:
   unfolding reply_push_def update_sk_obj_ref_def comp_def
   by (wpsimp wp: get_simple_ko_wp get_tcb_obj_ref_wp hoare_vcg_if_lift hoare_vcg_all_lift
                  sts_st_tcb_at_cases
-     | wp_once hoare_drop_imp)+
+     | wp (once) hoare_drop_imp)+
 
 lemma valid_replies'_inj_onD:
   "valid_replies' S T \<Longrightarrow> \<forall>x y a. (a,x) \<in> S \<longrightarrow> (a,y) \<in> S \<longrightarrow> x=y"
@@ -1419,7 +1407,7 @@ lemma active_st_tcb_at_not_in_replies_blocked:
   by (clarsimp simp: st_tcb_at_def replies_blocked_def obj_at_def)
 
 lemma no_reply_in_ts_rv_False:
-  "\<lbrace>st_tcb_at (\<lambda>st. (\<exists>x y. (st = BlockedOnReceive x (Some y))) \<or> (\<exists>y. (st = BlockedOnReply y))) caller\<rbrace>
+  "\<lbrace>st_tcb_at (\<lambda>st. (\<exists>x y pl. (st = BlockedOnReceive x (Some y) pl)) \<or> (\<exists>y. (st = BlockedOnReply y))) caller\<rbrace>
    no_reply_in_ts caller
    \<lbrace>\<lambda>ts_reply s. \<not> ts_reply\<rbrace>"
   apply (wpsimp simp: no_reply_in_ts_def get_thread_state_def wp: thread_get_wp)
@@ -1565,13 +1553,12 @@ lemma sts_refs_of_no_state_refs:
         and K (tcb_st_refs_of st = {})\<rbrace>
     set_thread_state t st
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def)
-  apply (wpsimp)
+  apply (simp add: set_thread_state_def)
+  apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: state_refs_of_def pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
   apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD
                    simp: state_refs_of_def
                  intro!: ext)
-  apply (clarsimp simp: get_tcb_def get_refs_def split: option.splits)
   done
 
 lemma si_invs'_helper_no_reply:
@@ -1584,7 +1571,7 @@ lemma si_invs'_helper_no_reply:
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
   shows
   "\<lbrace>\<lambda>s. st_tcb_at active tptr s \<and>
-        st_tcb_at (\<lambda>st. \<exists>epptr. st = BlockedOnReceive epptr None) dest s \<and>
+        st_tcb_at (\<lambda>st. \<exists>epptr pl. st = BlockedOnReceive epptr None pl) dest s \<and>
         all_invs_but_sym_refs_and_fault_tcbs s \<and>
         fault_tcbs_valid_states_except_set {tptr} s \<and>
         sym_refs (\<lambda>x. if x = dest
@@ -1841,34 +1828,37 @@ lemma si_invs'_helper_fault:
         Q s \<and> st_tcb_at active tptr s \<and> ex_nonz_cap_to tptr s \<and>
         (can_donate \<longrightarrow> bound_sc_tcb_at bound tptr s) \<and> ep_at epptr s \<and>
         (\<forall>x. (dest, x) \<notin> state_refs_of s epptr) \<and>
-        st_tcb_at (\<lambda>st. \<exists>r. st = BlockedOnReceive epptr r) dest s \<and> ex_nonz_cap_to epptr s \<and>
+        st_tcb_at (\<lambda>st. \<exists>r pl. st = BlockedOnReceive epptr r pl) dest s \<and> ex_nonz_cap_to epptr s \<and>
         sym_refs (\<lambda>x. if x = dest
                       then {r \<in> state_refs_of s x. snd r = TCBBound \<or> snd r = TCBSchedContext \<or>
                             snd r = TCBYieldTo \<or> snd r = TCBReply}
                       else state_refs_of s x) \<and>
         sym_refs (state_hyp_refs_of s)\<rbrace>
-   do recv_state <- get_thread_state dest;
-      reply <- case recv_state of BlockedOnReceive x reply \<Rightarrow>
-                         return reply
-               | _ \<Rightarrow> fail;
-      y \<leftarrow> do_ipc_transfer tptr (Some epptr) ba cg dest;
-      y \<leftarrow> maybeM (reply_unlink_tcb dest) reply;
+    do
+      recv_state <- get_thread_state dest;
+      (reply, reply_can_grant) <- case recv_state of
+                                    BlockedOnReceive _ reply data \<Rightarrow>
+                                      return (reply, receiver_can_grant data)
+                                  | _ \<Rightarrow> fail;
+      y <- do_ipc_transfer tptr (Some epptr) ba cg dest;
+      y <- maybeM (reply_unlink_tcb dest) reply;
       sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
       fault <- thread_get tcb_fault tptr;
       y <- if call \<or> (\<exists>y. fault = Some y)
-               then if cg \<and> (\<exists>y. reply = Some y)
-                    then reply_push tptr dest (the reply) can_donate
-                    else set_thread_state tptr Inactive
-           else when (can_donate \<and> sc_opt = None)
-                  (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
-                      sched_context_donate (the caller_sc_opt) dest
-                   od);
+           then if (cg \<or> reply_can_grant) \<and> (\<exists>y. reply = Some y)
+                then reply_push tptr dest (the reply) can_donate
+                else set_thread_state tptr Inactive
+           else when (can_donate \<and> sc_opt = None) (do thread_sc <- get_tcb_obj_ref tcb_sched_context tptr;
+                                                       sched_context_donate (the thread_sc) dest
+                                                   od);
       new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
-      test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
-              | Some scp \<Rightarrow> do sufficient <- get_sc_refill_sufficient scp 0;
-                               ready <- get_sc_refill_ready scp;
-                               return (sufficient \<and> ready)
-                            od;
+      test <- case new_sc_opt of
+                None \<Rightarrow> return True
+              | Some scp \<Rightarrow> do
+                  sufficient <- get_sc_refill_sufficient scp 0;
+                  ready <- get_sc_refill_ready scp;
+                  return (sufficient \<and> ready)
+                od;
       y <- assert test;
       y <- set_thread_state dest Running;
       possible_switch_to dest
@@ -1877,7 +1867,7 @@ lemma si_invs'_helper_fault:
   supply if_weak_cong[cong del]
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (case_tac recv_state; simp split del: if_split)
-  apply (rename_tac r)
+  apply (rename_tac r pl)
   apply (case_tac r, simp split del: if_split)
    apply (wpsimp wp: si_invs'_helper_no_reply wp_del: maybeM_inv)
    apply (intro conjI)
@@ -1962,34 +1952,37 @@ lemma si_invs'_helper:
         Q s \<and> st_tcb_at active tptr s \<and> ex_nonz_cap_to tptr s \<and>
         (can_donate \<longrightarrow> bound_sc_tcb_at bound tptr s) \<and> ep_at epptr s \<and>
         (\<forall>x. (dest, x) \<notin> state_refs_of s epptr) \<and>
-        st_tcb_at (\<lambda>st. \<exists>r. st = BlockedOnReceive epptr r) dest s \<and> ex_nonz_cap_to epptr s \<and>
+        st_tcb_at (\<lambda>st. \<exists>r pl. st = BlockedOnReceive epptr r pl) dest s \<and> ex_nonz_cap_to epptr s \<and>
         sym_refs (\<lambda>x. if x = dest
                       then {r \<in> state_refs_of s x. snd r = TCBBound \<or> snd r = TCBSchedContext \<or>
                             snd r = TCBYieldTo \<or> snd r = TCBReply}
                       else state_refs_of s x) \<and>
         sym_refs (state_hyp_refs_of s)\<rbrace>
-   do recv_state <- get_thread_state dest;
-      reply <- case recv_state of BlockedOnReceive x reply \<Rightarrow>
-                         return reply
-               | _ \<Rightarrow> fail;
-      y \<leftarrow> do_ipc_transfer tptr (Some epptr) ba cg dest;
-      y \<leftarrow> maybeM (reply_unlink_tcb dest) reply;
+    do
+      recv_state <- get_thread_state dest;
+      (reply, reply_can_grant) <- case recv_state of
+                                    BlockedOnReceive _ reply data \<Rightarrow>
+                                      return (reply, receiver_can_grant data)
+                                  | _ \<Rightarrow> fail;
+      y <- do_ipc_transfer tptr (Some epptr) ba cg dest;
+      y <- maybeM (reply_unlink_tcb dest) reply;
       sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
       fault <- thread_get tcb_fault tptr;
       y <- if call \<or> (\<exists>y. fault = Some y)
-               then if cg \<and> (\<exists>y. reply = Some y)
-                    then reply_push tptr dest (the reply) can_donate
-                    else set_thread_state tptr Inactive
-           else when (can_donate \<and> sc_opt = None)
-                  (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
-                      sched_context_donate (the caller_sc_opt) dest
-                   od);
+           then if (cg \<or> reply_can_grant) \<and> (\<exists>y. reply = Some y)
+                then reply_push tptr dest (the reply) can_donate
+                else set_thread_state tptr Inactive
+           else when (can_donate \<and> sc_opt = None) (do thread_sc <- get_tcb_obj_ref tcb_sched_context tptr;
+                                                       sched_context_donate (the thread_sc) dest
+                                                   od);
       new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
-      test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
-              | Some scp \<Rightarrow> do sufficient <- get_sc_refill_sufficient scp 0;
-                               ready <- get_sc_refill_ready scp;
-                               return (sufficient \<and> ready)
-                            od;
+      test <- case new_sc_opt of
+                None \<Rightarrow> return True
+              | Some scp \<Rightarrow> do
+                  sufficient <- get_sc_refill_sufficient scp 0;
+                  ready <- get_sc_refill_ready scp;
+                  return (sufficient \<and> ready)
+                od;
       y <- assert test;
       y <- set_thread_state dest Running;
       possible_switch_to dest
@@ -2009,7 +2002,7 @@ lemma si_invs':
   shows
   "\<lbrace>invs and Q and st_tcb_at active tptr and ex_nonz_cap_to tptr and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at bound tptr s)
     and ex_nonz_cap_to epptr\<rbrace>
-   send_ipc bl call ba cg can_donate tptr epptr
+   send_ipc bl call ba cg crg can_donate tptr epptr
    \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>"
   supply if_weak_cong[cong del]
   apply (simp add: send_ipc_def)
@@ -2085,7 +2078,7 @@ lemma si_invs':
    apply (erule (1) pspace_valid_objsE)
    apply (fastforce simp: state_refs_of_def)
   apply (clarsimp simp: obj_at_def split: if_splits)
-   apply (subgoal_tac "st_tcb_at (\<lambda>st. \<exists>r. st = BlockedOnReceive epptr r) dest s")
+   apply (subgoal_tac "st_tcb_at (\<lambda>st. \<exists>r pl. st = BlockedOnReceive epptr r pl) dest s")
     apply (clarsimp simp: st_tcb_at_def obj_at_def state_refs_of_def get_refs_def2
                    split: if_splits)
    apply (erule (1) valid_objsE)
@@ -2111,7 +2104,7 @@ lemma si_invs'_fault:
   "\<lbrace>all_invs_but_fault_tcbs and fault_tcbs_valid_states_except_set {tptr} and Q
     and st_tcb_at active tptr and ex_nonz_cap_to tptr
     and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at bound tptr s) and ex_nonz_cap_to epptr\<rbrace>
-   send_ipc True call ba cg can_donate tptr epptr
+   send_ipc True call ba cg crg can_donate tptr epptr
    \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>"
   supply if_weak_cong[cong del]
   apply (simp add: send_ipc_def)
@@ -2182,7 +2175,7 @@ lemma si_invs'_fault:
    apply (erule (1) pspace_valid_objsE)
    apply (fastforce simp: state_refs_of_def)
   apply (clarsimp simp: obj_at_def split: if_splits)
-   apply (subgoal_tac "st_tcb_at (\<lambda>st. \<exists>r. st = BlockedOnReceive epptr r) dest s")
+   apply (subgoal_tac "st_tcb_at (\<lambda>st. \<exists>r pl. st = BlockedOnReceive epptr r pl) dest s")
     apply (clarsimp simp: st_tcb_at_def obj_at_def state_refs_of_def get_refs_def2
                    split: if_splits)
    apply (erule (1) valid_objsE)
@@ -2428,19 +2421,25 @@ crunches set_thread_state_act
 
 lemma set_thread_state_valid_bound_tcb[wp]:
   "\<lbrace>valid_bound_tcb t'\<rbrace> set_thread_state t ts \<lbrace>\<lambda>rv. valid_bound_tcb t'\<rbrace>"
-  by (wpsimp simp: set_thread_state_def set_object_def valid_bound_obj_def is_tcb obj_at_def
-               split: option.splits)
+  by (wpsimp simp: set_thread_state_def valid_bound_obj_def is_tcb obj_at_def wp: set_object_wp
+             split: option.splits)
 
 lemma set_thread_state_valid_bound_sc[wp]:
   "\<lbrace>valid_bound_sc sc\<rbrace> set_thread_state t ts \<lbrace>\<lambda>rv. valid_bound_sc sc\<rbrace>"
-  apply (wpsimp simp: set_thread_state_def valid_bound_obj_def set_object_def
+  apply (wpsimp simp: set_thread_state_def valid_bound_obj_def wp: set_object_wp
                split: option.splits)
   apply (clarsimp simp: is_sc_obj_def obj_at_def dest!: get_tcb_SomeD)
   done
 
+lemma as_user_bound_obj_typ_at[wp]:
+  "as_user t f \<lbrace>valid_bound_obj (typ_at T) p\<rbrace>"
+  apply (wpsimp simp: as_user_def valid_bound_obj_def wp: set_object_wp split: option.splits)
+  apply (clarsimp simp: is_sc_obj_def obj_at_def get_tcb_SomeD)
+  done
+
 lemma as_user_bound_sc[wp]:
-  "\<lbrace>valid_bound_sc sc\<rbrace> as_user t f \<lbrace>\<lambda>rv. valid_bound_sc sc\<rbrace>"
-  apply (wpsimp simp: as_user_def set_object_def valid_bound_obj_def split: option.splits)
+  "as_user t f \<lbrace>valid_bound_sc sc\<rbrace>"
+  apply (wpsimp simp: as_user_def valid_bound_obj_def wp: set_object_wp split: option.splits)
   apply (clarsimp simp: is_sc_obj_def obj_at_def get_tcb_SomeD)
   done
 
@@ -2498,7 +2497,7 @@ lemma set_tcb_sc_cur_thread [wp]:
   "\<lbrace>\<lambda>s. tcb_ptr = cur_thread s\<rbrace>
    set_tcb_obj_ref tcb_sched_context_update tcb_ptr sc_ptr
    \<lbrace>\<lambda>rv s. bound_sc_tcb_at ((=) sc_ptr) (cur_thread s) s\<rbrace>"
-  by (wpsimp simp: set_tcb_obj_ref_def set_object_def pred_tcb_at_def obj_at_def)
+  by (wpsimp simp: set_tcb_obj_ref_def pred_tcb_at_def obj_at_def wp: set_object_wp)
 
 lemma maybe_return_sc_schedule_tcb_helper1:
   "\<lbrace>bound_sc_tcb_at ((=) (Some sc_ptr)) tcb_ptr and
@@ -2656,9 +2655,9 @@ lemma rai_invs':
    apply (wpsimp simp: do_nbrecv_failed_transfer_def wp: valid_irq_node_typ)
   apply wpsimp
     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
-   apply (wpsimp simp: valid_ntfn_def wp: static_imp_wp valid_irq_node_typ valid_ioports_lift)
+   apply (wpsimp simp: valid_ntfn_def tcb_at_typ wp: static_imp_wp valid_irq_node_typ valid_ioports_lift)
   apply (fastforce simp: invs_def valid_state_def valid_pspace_def state_refs_of_def valid_obj_def
-                         valid_ntfn_def
+                         valid_ntfn_def tcb_at_typ
                   elim!: obj_at_valid_objsE delta_sym_refs
                   split: if_splits)
   done

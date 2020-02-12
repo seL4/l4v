@@ -70,7 +70,7 @@ lemma masked_as_full_simps[simp]:
   "masked_as_full (cap.ArchObjectCap x) cap = (cap.ArchObjectCap x)"
   "masked_as_full (cap.CNodeCap r n g) cap = (cap.CNodeCap r n g)"
   "masked_as_full (cap.SchedContextCap r m) cap = (cap.SchedContextCap r m)"
-  "masked_as_full (cap.ReplyCap r) cap = (cap.ReplyCap r)"
+  "masked_as_full (cap.ReplyCap r R) cap = (cap.ReplyCap r R)"
   "masked_as_full cap.NullCap cap = cap.NullCap"
   "masked_as_full cap.DomainCap cap = cap.DomainCap"
   "masked_as_full (cap.ThreadCap r) cap = cap.ThreadCap r"
@@ -79,13 +79,13 @@ lemma masked_as_full_simps[simp]:
   "masked_as_full cap (cap.ArchObjectCap x) = cap"
   "masked_as_full cap (cap.CNodeCap r n g) = cap"
   "masked_as_full cap (cap.SchedContextCap r m) = cap"
-  "masked_as_full cap (cap.ReplyCap r) = cap"
+  "masked_as_full cap (cap.ReplyCap r R) = cap"
   "masked_as_full cap cap.NullCap = cap"
   "masked_as_full cap cap.DomainCap = cap"
   "masked_as_full cap (cap.ThreadCap r) = cap"
   by (simp add:masked_as_full_def)+
 
-lemma maksed_as_full_test_function_stuff[simp]:
+lemma masked_as_full_test_function_stuff[simp]:
   "gen_obj_refs (masked_as_full a cap) = gen_obj_refs a"
   "cap_asid (masked_as_full a cap ) = cap_asid a"
   "obj_refs (masked_as_full a cap ) = obj_refs a"
@@ -187,14 +187,19 @@ where
     is_derived_arch cap' cap" (* RT: FIXME : reply_cap can be drived in rt?*)
 
 
+
 (* FIXME: remove copy_of and use cap_master_cap with weak_derived directly *)
 definition
   copy_of :: "cap \<Rightarrow> cap \<Rightarrow> bool"
 where
   "copy_of cap' cap \<equiv>
-  if (is_untyped_cap cap \<comment> \<open>\<or> is_reply_cap cap \<or> is_master_reply_cap cap\<close>)
-     then cap = cap' else same_object_as cap cap'"
+     if (is_untyped_cap cap)
+     then cap = cap'
+     else same_object_as cap cap' \<and>
+          is_reply_cap cap = is_reply_cap cap'"
 
+(* cap' can be the result of a modification from cap made by the user
+   using Copy, Mint, Move, Mutate,... Actually, that relation should be symmetric*)
 definition
   "weak_derived cap cap' \<equiv>
   (copy_of cap cap' \<and>

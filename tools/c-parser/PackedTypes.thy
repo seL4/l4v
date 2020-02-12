@@ -12,13 +12,13 @@ theory PackedTypes
 imports "Word_Lib.WordSetup" CProof
 begin
 
-section {* Underlying definitions for the class axioms *}
+section \<open>Underlying definitions for the class axioms\<close>
 
-text {* field_access / field_update is the identity for packed types *}
+text \<open>field_access / field_update is the identity for packed types\<close>
 
-definition
+definition fa_fu_idem :: "'a field_desc \<Rightarrow> nat \<Rightarrow> bool" where
   "fa_fu_idem fd n \<equiv>
-  \<forall>bs bs' v. length bs = n \<longrightarrow> length bs' = n \<longrightarrow> field_access fd (field_update fd bs v) bs' = bs"
+     \<forall>bs bs' v. length bs = n \<longrightarrow> length bs' = n \<longrightarrow> field_access fd (field_update fd bs v) bs' = bs"
 
 (* Is it better to do this or to use a fold over td?  This seems easier to use *)
 primrec
@@ -39,11 +39,11 @@ where
 
 lemmas td_fafu_idem_simps = fai0 fai1 fai2 fai3 fai4 fai5
 
-text {* field_access is independent of the underlying bytes *}
+text \<open>field_access is independent of the underlying bytes\<close>
 
-definition
+definition  fa_heap_indep :: "'a field_desc \<Rightarrow> nat \<Rightarrow> bool" where
   "fa_heap_indep fd n \<equiv>
-  \<forall>bs bs' v. length bs = n \<longrightarrow> length bs' = n \<longrightarrow> field_access fd v bs = field_access fd v bs'"
+     \<forall>bs bs' v. length bs = n \<longrightarrow> length bs' = n \<longrightarrow> field_access fd v bs = field_access fd v bs'"
 
 
 primrec
@@ -64,13 +64,17 @@ where
 
 lemmas td_fa_hi_simps = fahi0 fahi1 fahi2 fahi3 fahi4 fahi5
 
-section {* Lemmas about td_fafu_idem *}
+section \<open>Lemmas about td_fafu_idem\<close>
 
 lemma field_lookup_td_fafu_idem:
-  shows "\<And>(s :: 'a field_desc typ_desc) f m n. \<lbrakk> field_lookup t f m = Some (s, n); td_fafu_idem t \<rbrakk> \<Longrightarrow> td_fafu_idem s"
-  and   "\<And>(s :: 'a field_desc typ_desc) f m n. \<lbrakk> field_lookup_struct st f m = Some (s, n); td_fafu_idem_struct st \<rbrakk> \<Longrightarrow> td_fafu_idem s"
-  and   "\<And>(s :: 'a field_desc typ_desc) f m n. \<lbrakk> field_lookup_list ts f m = Some (s, n); td_fafu_idem_list ts \<rbrakk> \<Longrightarrow> td_fafu_idem s"
-  and   "\<And>(s :: 'a field_desc typ_desc) f m n. \<lbrakk> field_lookup_pair p f m = Some (s, n); td_fafu_idem_pair p \<rbrakk> \<Longrightarrow> td_fafu_idem s"
+  shows "\<And>(s :: 'a field_desc typ_desc) f m n.
+           \<lbrakk> field_lookup t f m = Some (s, n); td_fafu_idem t \<rbrakk> \<Longrightarrow> td_fafu_idem s"
+  and   "\<And>(s :: 'a field_desc typ_desc) f m n.
+           \<lbrakk> field_lookup_struct st f m = Some (s, n); td_fafu_idem_struct st \<rbrakk> \<Longrightarrow> td_fafu_idem s"
+  and   "\<And>(s :: 'a field_desc typ_desc) f m n.
+           \<lbrakk> field_lookup_list ts f m = Some (s, n); td_fafu_idem_list ts \<rbrakk> \<Longrightarrow> td_fafu_idem s"
+  and   "\<And>(s :: 'a field_desc typ_desc) f m n.
+           \<lbrakk> field_lookup_pair p f m = Some (s, n); td_fafu_idem_pair p \<rbrakk> \<Longrightarrow> td_fafu_idem s"
   by (induct t and st and ts and p) (auto split: if_split_asm option.splits)
 
 lemma field_access_update_same:
@@ -88,12 +92,14 @@ proof (induct t and st and ts and p)
 next
   case (Cons_typ_desc p' ts' v bs bs')
   hence "fu_commutes (update_ti_pair_t p') (update_ti_list_t ts')" by clarsimp
-  moreover have "update_ti_pair p' (take (size_td_pair p') bs) = update_ti_pair_t p' (take (size_td_pair p') bs)"
+  moreover
+  have "update_ti_pair p' (take (size_td_pair p') bs) = update_ti_pair_t p' (take (size_td_pair p') bs)"
     using Cons_typ_desc.prems by (simp add: update_ti_pair_t_def min_ll)
-  moreover have "update_ti_list ts' (drop (size_td_pair p') bs) = update_ti_list_t ts' (drop (size_td_pair p') bs)"
+  moreover
+  have "update_ti_list ts' (drop (size_td_pair p') bs) = update_ti_list_t ts' (drop (size_td_pair p') bs)"
     using Cons_typ_desc.prems by (simp add: update_ti_list_t_def)
-  ultimately have
-    updeq: "(update_ti_pair p' (take (size_td_pair p') bs) (update_ti_list ts' (drop (size_td_pair p') bs) v))
+  ultimately have updeq:
+    "(update_ti_pair p' (take (size_td_pair p') bs) (update_ti_list ts' (drop (size_td_pair p') bs) v))
     = (update_ti_list ts' (drop (size_td_pair p') bs) (update_ti_pair p' (take (size_td_pair p') bs) v))"
     unfolding fu_commutes_def by simp
 
@@ -225,7 +231,7 @@ next
         by (rule field_lookup_offset2_list [where m = 0, simplified])
 
       show "access_ti_list ts' (update_ti s bs v) (drop (size_td (dt_fst p')) bs') ! (x - size_td (dt_fst p')) = bs ! (x - n)"
-        using mlt nlex xln lbs lbs' wf wfts `td_fafu_idem s` `wf_fd s`
+        using mlt nlex xln lbs lbs' wf wfts \<open>td_fafu_idem s\<close> \<open>wf_fd s\<close>
         by (simp add: Cons_typ_desc.hyps(2) [OF fl'] size_td_pair_dt_fst)
     qed
   }
@@ -236,7 +242,6 @@ next
     assume fl: "field_lookup_pair p' f 0 = Some (s, n)"
 
     hence "x < size_td (dt_fst p')"
-      apply -
       apply (cases p')
       apply (simp split: if_split_asm)
       apply (drule field_lookup_offset_size')
@@ -244,13 +249,13 @@ next
       apply simp
       done
 
-    hence ?case using wf lbs lbs' nlex xln wf wfts `td_fafu_idem s` `wf_fd s`
+    hence ?case using wf lbs lbs' nlex xln wf wfts \<open>td_fafu_idem s\<close> \<open>wf_fd s\<close>
       by (simp add: nth_append length_fa_ti access_ti_pair_dt_fst size_td_pair_dt_fst ih[OF fl])
   }
-  ultimately show ?case using `field_lookup_list (p' # ts') f 0 = Some (s, n)` by (simp split: option.splits)
+  ultimately show ?case using \<open>field_lookup_list (p' # ts') f 0 = Some (s, n)\<close> by (simp split: option.splits)
 qed (clarsimp split: if_split_asm)+
 
-subsection {* td_fa_hi *}
+subsection \<open>td_fa_hi\<close>
 
 (* \<lbrakk> size_of TYPE('a::mem_type) \<le> length h; size_of TYPE('a) \<le> length h' \<rbrakk> \<Longrightarrow> *)
 
@@ -293,8 +298,8 @@ next
     apply simp
     apply (erule conjE)
     apply (rule arg_cong2 [where f = "(@)"])
-    apply (erule Cons_typ_desc.hyps, simp, simp)
-    apply (erule Cons_typ_desc.hyps, simp, simp)
+    apply (erule Cons_typ_desc.hyps; simp)
+    apply (erule Cons_typ_desc.hyps; simp)
     done
 next
   case DTPair_typ_desc
@@ -302,9 +307,9 @@ next
     by simp (erule (2) DTPair_typ_desc.hyps)
 qed
 
-section {* Simp rules for deriving packed props from the type combinators *}
+section \<open>Simp rules for deriving packed props from the type combinators\<close>
 
-subsection {* td_fafu_idem *}
+subsection \<open>td_fafu_idem\<close>
 
 lemma td_fafu_idem_final_pad:
   "padup (2 ^ align_td t) (size_td t) = 0
@@ -329,18 +334,14 @@ lemma td_fafu_idem_extend_ti:
   assumes as: "td_fafu_idem s"
   and     at: "td_fafu_idem t"
   shows "td_fafu_idem (extend_ti s t nm)" using as at
-  apply (cases s)
-  apply (rename_tac typ_struct xs)
-  apply (case_tac typ_struct)
-   apply simp
-  apply (simp add: td_fafu_idem_list_append)
-  done
+  by (cases s, rename_tac typ_struct xs)
+     (case_tac typ_struct; simp add: td_fafu_idem_list_append)
 
 lemma fd_cons_access_updateD:
-  "\<lbrakk> fd_cons_access_update d n; length bs = n; length bs' = n\<rbrakk> \<Longrightarrow> field_access d (field_update d bs v) bs' = field_access d (field_update d bs v') bs'"
+  "\<lbrakk> fd_cons_access_update d n; length bs = n; length bs' = n\<rbrakk> \<Longrightarrow>
+   field_access d (field_update d bs v) bs' = field_access d (field_update d bs v') bs'"
   unfolding fd_cons_access_update_def by clarsimp
 
-(* Beer crime? *)
 lemma fa_fu_idem_update_desc:
   fixes a :: "'a field_desc"
   assumes fg: "fg_cons xf xfu"
@@ -359,15 +360,15 @@ proof
     assume l: "length bs = n" and l': "length bs' = n"
 
     hence "(\<forall>v. field_access a (field_update a bs (xf v)) bs' = bs)
-      = (\<forall>v. field_access a (?fu bs (xf v)) bs' = bs)" by simp
+           = (\<forall>v. field_access a (?fu bs (xf v)) bs' = bs)" by simp
 
     also have "\<dots> = (\<forall>v. field_access a (field_update a bs v) bs' = bs)" using fd
       apply -
-      apply rule
-      apply (rule allI)
-      apply (subst (asm) fd_cons_access_updateD [OF _ l l', where d = ?a', simplified])
-      apply (simp add: fd_cons_struct_def fd_cons_desc_def)
-      apply (fastforce simp: l l')
+      apply (rule iffI)
+       apply (rule allI)
+       apply (subst (asm) fd_cons_access_updateD [OF _ l l', where d = ?a', simplified])
+        apply (simp add: fd_cons_struct_def fd_cons_desc_def)
+       apply (fastforce simp: l l')
       apply (fastforce simp: l l')
       done
 
@@ -418,44 +419,35 @@ lemma td_fafu_idem_ptr:
 
 lemma td_fafu_idem_word:
    "td_fafu_idem (typ_info_t TYPE('a :: len8 word))"
-  apply(clarsimp simp add: fa_fu_idem_def)
+  apply(clarsimp simp: fa_fu_idem_def)
   apply (subst word_rsplit_rcat_size)
    apply (insert len8_dv8)
    apply (clarsimp simp add: size_of_def word_size)
-   apply (subst dvd_div_mult_self)
-    apply simp
-   apply simp
+   apply (subst dvd_div_mult_self; simp)
   apply simp
   done
 
 lemma fg_cons_array [simp]:
-  "n < card (UNIV :: 'b :: finite set) \<Longrightarrow> fg_cons (\<lambda>x. index x n) (\<lambda>x f. Arrays.update (f :: 'a['b]) n x)"
+  "n < card (UNIV :: 'b :: finite set) \<Longrightarrow>
+   fg_cons (\<lambda>x. index x n) (\<lambda>x f. Arrays.update (f :: 'a['b]) n x)"
   unfolding fg_cons_def by simp
 
 lemma td_fafu_idem_array_n:
-  "\<lbrakk>td_fafu_idem (typ_info_t TYPE('a)); n \<le> card (UNIV :: 'b set) \<rbrakk> \<Longrightarrow> td_fafu_idem (array_tag_n n :: ('a :: mem_type ['b :: finite]) field_desc typ_desc)"
-  apply (induct n)
-   apply (simp add: array_tag_n.simps empty_typ_info_def)
-  apply (simp add: array_tag_n.simps)
-  apply (rule td_fafu_idem_ti_typ_combine)
-    apply simp
-   apply simp
-  apply simp
-  done
+  "\<lbrakk> td_fafu_idem (typ_info_t TYPE('a)); n \<le> card (UNIV :: 'b set) \<rbrakk> \<Longrightarrow>
+   td_fafu_idem (array_tag_n n :: ('a :: mem_type ['b :: finite]) field_desc typ_desc)"
+  by (induct n; simp add: array_tag_n.simps empty_typ_info_def)
+     (simp add: td_fafu_idem_ti_typ_combine)
 
 lemma td_fafu_idem_array:
   "td_fafu_idem (typ_info_t TYPE('a)) \<Longrightarrow> td_fafu_idem (typ_info_t TYPE('a :: mem_type ['b :: finite]))"
-  apply (clarsimp simp add: typ_info_array array_tag_def fa_fu_idem_def)
-  apply (erule td_fafu_idem_array_n)
-  apply simp
-  done
+  by (clarsimp simp: typ_info_array array_tag_def fa_fu_idem_def td_fafu_idem_array_n)
 
 lemma td_fafu_idem_empty_typ_info:
   "td_fafu_idem (empty_typ_info t)"
   unfolding empty_typ_info_def
   by simp
 
-subsection {* td_fa_hi *}
+subsection \<open>td_fa_hi\<close>
 
 (* These are mostly identical to the above --- surely there is something which implies both? *)
 
@@ -482,14 +474,9 @@ lemma td_fa_hi_extend_ti:
   assumes as: "td_fa_hi s"
   and     at: "td_fa_hi t"
   shows "td_fa_hi (extend_ti s t nm)" using as at
-  apply (cases s)
-  apply (rename_tac typ_struct xs)
-  apply (case_tac typ_struct)
-   apply simp
-  apply (simp add: td_fa_hi_list_append)
-  done
+  by (cases s, rename_tac typ_struct xs)
+     (case_tac typ_struct; simp add: td_fa_hi_list_append)
 
-(* Beer crime? *)
 lemma fa_heap_indep_update_desc:
   fixes a :: "'a field_desc"
   assumes fg: "fg_cons xf xfu"
@@ -507,8 +494,9 @@ proof
   proof (intro impI conjI allI)
     fix bs :: "byte list" and bs' :: "byte list" and v
     assume l: "length bs = n" and l': "length bs' = n"
-    with asm have "field_access (update_desc xf xfu a) (xfu v undefined) bs =
-      field_access (update_desc xf xfu a) (xfu v undefined) bs'"
+    with asm
+    have "field_access (update_desc xf xfu a) (xfu v undefined) bs =
+          field_access (update_desc xf xfu a) (xfu v undefined) bs'"
       by (rule fa_heap_indepD)
 
     thus "field_access a v bs = field_access a v bs'"
@@ -544,16 +532,9 @@ lemma td_fa_hi_ti_typ_combine:
   and    tda: "td_fa_hi (typ_info_t TYPE('a :: mem_type))"
   and    tds: "td_fa_hi s"
   shows "td_fa_hi (ti_typ_combine TYPE('a :: mem_type) xf xfu nm s)"
-  unfolding ti_typ_combine_def using tda tds
-  apply (clarsimp simp: Let_def)
-  apply (cases s)
-  apply (rename_tac typ_struct xs)
-  apply (case_tac typ_struct)
-   apply simp
-   apply (subst td_fa_hi_adjust_ti [OF fg wf_fd], assumption)
-  apply (simp add: td_fa_hi_list_append)
-  apply (subst td_fa_hi_adjust_ti [OF fg wf_fd], assumption)
-  done
+  unfolding ti_typ_combine_def Let_def using tda tds
+  by (cases s, rename_tac typ_struct xs)
+     (case_tac typ_struct; simp add: td_fa_hi_list_append td_fa_hi_adjust_ti[OF fg wf_fd])
 
 lemma td_fa_hi_ptr:
    "td_fa_hi (typ_info_t TYPE('a :: c_type ptr))"
@@ -565,32 +546,22 @@ lemma td_fa_hi_word:
 
 lemma td_fa_hi_array_n:
   "\<lbrakk>td_fa_hi (typ_info_t TYPE('a)); n \<le> card (UNIV :: 'b set) \<rbrakk> \<Longrightarrow> td_fa_hi (array_tag_n n :: ('a :: mem_type ['b :: finite]) field_desc typ_desc)"
-  apply (induct n)
-   apply (simp add: array_tag_n.simps empty_typ_info_def)
-  apply (simp add: array_tag_n.simps)
-  apply (rule td_fa_hi_ti_typ_combine)
-    apply simp
-   apply simp
-  apply simp
-  done
+  by (induct n; simp add: array_tag_n.simps empty_typ_info_def td_fa_hi_ti_typ_combine)
 
 lemma td_fa_hi_array:
   "td_fa_hi (typ_info_t TYPE('a)) \<Longrightarrow> td_fa_hi (typ_info_t TYPE('a :: mem_type ['b :: finite]))"
-  apply (clarsimp simp add: typ_info_array array_tag_def fa_fu_idem_def)
-  apply (erule td_fa_hi_array_n)
-  apply simp
-  done
+  by (clarsimp simp add: typ_info_array array_tag_def fa_fu_idem_def td_fa_hi_array_n)
 
 lemma td_fa_hi_empty_typ_info:
   "td_fa_hi (empty_typ_info t)"
   unfolding empty_typ_info_def
   by simp
 
-section {* The type class and simp sets *}
+section \<open>The type class and simp sets\<close>
 
-text {* Packed types, with no padding, have the defining property that
+text \<open>Packed types, with no padding, have the defining property that
         access is invariant under substitution of the underlying heap and
-        access/update is the identity *}
+        access/update is the identity\<close>
 
 class packed_type = mem_type +
   assumes td_fafu_idem: "td_fafu_idem (typ_info_t TYPE('a::c_type))"
@@ -630,31 +601,25 @@ next
   case (Cons x xs) thus ?case by (simp add: min_def ac_simps drop_take)
 qed
 
-section {* Instances *}
+section \<open>Instances\<close>
 
-text {* Words (of multiple of 8 size) are packed *}
+text \<open>Words (of multiple of 8 size) are packed\<close>
 
 instantiation word :: (len8) packed_type
 begin
 instance
- apply(intro_classes)
-   apply (rule td_fafu_idem_word)
-  apply (rule td_fa_hi_word)
-  done
+  by (intro_classes; rule td_fafu_idem_word td_fa_hi_word)
 end
 
-text {* Pointers are always packed *}
+text \<open>Pointers are always packed\<close>
 
 instantiation ptr :: (c_type)packed_type
 begin
 instance
-  apply intro_classes
-   apply (simp add: fa_fu_idem_def word_rsplit_rcat_size word_size)
-  apply (simp add: fa_heap_indep_def)
-  done
+  by (intro_classes; simp add: fa_fu_idem_def word_rsplit_rcat_size word_size fa_heap_indep_def)
 end
 
-text {* Arrays of packed types are in turn packed *}
+text \<open>Arrays of packed types are in turn packed\<close>
 
 class array_outer_packed = packed_type + array_outer_max_size
 class array_inner_packed = array_outer_packed + array_inner_max_size
@@ -663,16 +628,13 @@ instance word :: (len8)array_outer_packed ..
 instance word :: (len8)array_inner_packed ..
 
 instance array :: (array_outer_packed, array_max_count) packed_type
-  apply(intro_classes)
-   apply (simp add: td_fafu_idem_intro_simps)
-  apply (simp add: td_fa_hi_intro_simps)
-  done
+  by (intro_classes; simp add: td_fafu_idem_intro_simps td_fa_hi_intro_simps)
 
 instance array :: (array_inner_packed, array_max_count) array_outer_packed ..
 
-section {* Theorems about packed types *}
+section \<open>Theorems about packed types\<close>
 
-subsection {* td_fa_hi *}
+subsection \<open>td_fa_hi\<close>
 
 lemma heap_independence:
   "\<lbrakk>length h = size_of TYPE('a :: packed_type); length h' = size_of TYPE('a) \<rbrakk>
@@ -682,30 +644,27 @@ lemma heap_independence:
 theorem packed_heap_update_collapse:
  fixes u::"'a::packed_type"
  fixes v::"'a"
- shows
-  "heap_update p v (heap_update p u h) = heap_update p v h"
- apply(simp add:heap_update_def)
- apply(rule ext)
- apply(case_tac "x \<in> {ptr_val p..+size_of TYPE('a)}")
-  apply((subst heap_update_mem_same_point, simp, simp)+)
-  apply(simp add:to_bytes_def)
-  apply(subst heap_independence)
-    apply(simp)
-   prefer 2
-   apply(force)
-  apply(simp)
- apply((subst heap_update_nmem_same, simp)+)
- apply(rule refl)
-done
+ shows "heap_update p v (heap_update p u h) = heap_update p v h"
+  unfolding heap_update_def
+  apply(rule ext)
+  apply(case_tac "x \<in> {ptr_val p..+size_of TYPE('a)}")
+   apply(simp add: heap_update_mem_same_point)
+   apply(simp add:to_bytes_def)
+   apply(subst heap_independence, simp)
+    prefer 2
+    apply(rule refl)
+   apply(simp)
+  apply(simp add: heap_update_nmem_same)
+  done
 
 lemma packed_heap_update_collapse_hrs:
   fixes p :: "'a :: packed_type ptr"
-  shows "(hrs_mem_update (heap_update p v) (hrs_mem_update (heap_update p v') hp)) =
-  (hrs_mem_update (heap_update p v) hp)"
+  shows "hrs_mem_update (heap_update p v) (hrs_mem_update (heap_update p v') hp) =
+         hrs_mem_update (heap_update p v) hp"
   unfolding hrs_mem_update_def
   by (simp add: split_def packed_heap_update_collapse)
 
-subsection {* td_fafu_idem *}
+subsection \<open>td_fafu_idem\<close>
 
 lemma order_leE:
   fixes x :: "'a :: order"
@@ -738,23 +697,16 @@ lemma intvl_less_upper:
   apply (drule intvlD)
   apply (elim conjE exE)
   apply (erule ssubst)
-  apply (rule word_plus_mono_right)
-   apply (rule of_nat_mono_maybe_le)
-    apply simp
-   apply simp
-  apply assumption
+  apply (rule word_plus_mono_right; assumption?)
+  apply (rule of_nat_mono_maybe_le; simp)
   done
 
 lemma packed_type_access_ti:
   fixes v :: "'a :: packed_type"
   assumes lbs: "length bs = size_of TYPE('a)"
   shows "access_ti (typ_info_t TYPE('a)) v bs = access_ti\<^sub>0 (typ_info_t TYPE('a)) v"
-  unfolding access_ti\<^sub>0_def using lbs
-  apply -
-  apply (rule heap_independence)
-   apply simp
-  apply (simp add: size_of_def)
-  done
+  unfolding access_ti\<^sub>0_def
+  by (rule heap_independence; simp add: lbs size_of_def)
 
 lemma update_ti_update_ti_t:
   "length bs = size_td s \<Longrightarrow> update_ti s bs v = update_ti_t s bs v"
@@ -764,17 +716,15 @@ lemma heap_list_nth:
   "m < n \<Longrightarrow> heap_list hp n p ! m = hp (p + of_nat m)"
 proof (induct m arbitrary: n p)
   case (0 n' p')
-
   thus ?case by (cases n', simp_all)
 next
   case (Suc m' n' p')
-
   show ?case
   proof (cases n')
-    case 0 thus ?thesis using `Suc m' < n'` by simp
+    case 0 thus ?thesis using \<open>Suc m' < n'\<close> by simp
   next
     case (Suc n'')
-    hence "m' < n''" using `Suc m' < n'` by simp
+    hence "m' < n''" using \<open>Suc m' < n'\<close> by simp
     thus ?thesis using Suc
       by (simp add: Suc.hyps ac_simps)
   qed
@@ -801,7 +751,6 @@ next
     apply (simp add: std)
     done
 qed
-
 
 
 lemma c_guard_no_wrap:
@@ -853,7 +802,7 @@ proof (simp add: packed_type_access_ti, rule ext)
     by (rule wf_size_desc_gt)
 
   have uofn: "unat (of_nat n :: addr_bitsize word) = n" using szn szb
-    by (simp add: unat_simps)
+    by (simp add: nat_less_le unat_of_nat_eq)
 
   from eu have std: "size_td t = size_of TYPE('a)" using fl
     by (simp add: export_size_of)
@@ -890,7 +839,7 @@ proof (simp add: packed_type_access_ti, rule ext)
         from szb szn have "of_nat n \<le> (of_nat (size_of TYPE('b) - 1) :: addr_bitsize word)"
           apply -
           apply (rule of_nat_mono_maybe_le)
-          apply simp_all
+           apply simp_all
           done
         with al show "ptr_val p \<le> ptr_val p + of_nat n"
           by (rule word_plus_mono_right2)
@@ -909,7 +858,7 @@ proof (simp add: packed_type_access_ti, rule ext)
       ultimately have "x - ptr_val p \<le> (of_nat n + of_nat (size_td t - 1))" using al szb
         apply -
         apply (rule word_diff_ls(4)[where xa=x and x=x for x, simplified])
-        apply (metis (hide_lams, mono_tags) add.commute of_nat_add)
+         apply (metis (hide_lams, mono_tags) add.commute of_nat_add)
         apply (erule (2) intvl_le_lower)
         done
       moreover have "unat (of_nat n + of_nat (size_td t - 1) :: addr_bitsize word) = n + size_td t - 1"
@@ -977,15 +926,15 @@ proof (simp add: packed_type_access_ti, rule ext)
           by (simp add: word_le_nat_alt size_of_def unat_of_nat)
 
         show "unat (x - ptr_val p) < n - 0 \<or> n - 0 + size_td t \<le> unat (x - ptr_val p)" using xin xni
-            unfolding field_lvalue_def field_lookup_offset_eq [OF fl]
+          unfolding field_lvalue_def field_lookup_offset_eq [OF fl]
           apply -
           apply (erule intvl_cut)
-          apply simp
+           apply simp
           apply (rule max_size)
           done
 
         show "wf_fd (typ_info_t TYPE('b))" by (rule wf_fd)
-        (* clag *)
+            (* clag *)
         show "length (access_ti (typ_info_t TYPE('a)) v (replicate (size_of TYPE('a)) 0)) = size_td t"
           using wf_fd [where 'a = 'a]
           by (simp add: length_fa_ti size_of_def std)
@@ -995,7 +944,7 @@ proof (simp add: packed_type_access_ti, rule ext)
 
         have "heap_list hp (size_td (typ_info_t TYPE('b))) (ptr_val p) ! unat (x - ptr_val p) = hp x"
           apply (subst heap_list_nth)
-          apply (rule unx)
+           apply (rule unx)
           apply simp
           done
 
@@ -1003,7 +952,7 @@ proof (simp add: packed_type_access_ti, rule ext)
           unfolding h_val_def
           by (simp add: from_bytes_def update_ti_t_def size_of_def field_access_update_same(1)[OF td_fafu_idem wf_fd])
       qed
-     }
+    }
     hence "\<dots> = hp x"
       by (simp add: to_bytes_p_def to_bytes_def update_ti_update_ti_t length_fa_ti [OF wf_fd] std size_of_def)
     finally show "hp x = ?RHS" by simp

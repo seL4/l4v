@@ -66,7 +66,7 @@ lemma copy_mask [simp, CNodeInv_AI_assms]:
   apply (auto simp: copy_of_def is_cap_simps mask_cap_def
                     cap_rights_update_def same_object_as_def
                     bits_of_def acap_rights_update_def
-         split: cap.splits arch_cap.splits)
+         split: cap.splits arch_cap.splits bool.splits)
   done
 
 lemma update_cap_data_mask_Null [simp, CNodeInv_AI_assms]:
@@ -74,7 +74,7 @@ lemma update_cap_data_mask_Null [simp, CNodeInv_AI_assms]:
   unfolding update_cap_data_def mask_cap_def
   apply (cases c)
   by (auto simp add: the_cnode_cap_def Let_def is_cap_simps cap_rights_update_def badge_update_def
-                        arch_update_cap_data_def)
+                        arch_update_cap_data_def split:bool.splits)
 
 lemma cap_master_update_cap_data [CNodeInv_AI_assms]:
   "\<lbrakk> update_cap_data P x c \<noteq> NullCap \<rbrakk>
@@ -149,6 +149,11 @@ lemma same_object_as_update_cap_data [CNodeInv_AI_assms]:
                    Let_def split_def the_cnode_cap_def bits_of_def split: if_split_asm cap.splits)+
   done
 
+lemma is_reply_update_cap_data [simp]:
+  "is_reply_cap (update_cap_data P x c) = is_reply_cap c"
+  by (simp add:is_reply_cap_def update_cap_data_def arch_update_cap_data_def the_cnode_cap_def
+               is_arch_cap_def badge_update_def split:cap.split)
+
 lemma weak_derived_update_cap_data [CNodeInv_AI_assms]:
   "\<lbrakk>update_cap_data P x c \<noteq> NullCap; weak_derived c c'\<rbrakk>
   \<Longrightarrow> weak_derived (update_cap_data P x c) c'"
@@ -161,7 +166,7 @@ lemma weak_derived_update_cap_data [CNodeInv_AI_assms]:
    apply (clarsimp simp: is_cap_simps split: if_split_asm)
     apply (simp add: update_cap_data_def arch_update_cap_data_def is_cap_simps)
    apply (erule (1) same_object_as_update_cap_data)
-  apply clarsimp
+ apply clarsimp
   apply (rule conjI, clarsimp simp: is_cap_simps update_cap_data_def split del: if_split)+
   apply clarsimp
   apply (clarsimp simp: same_object_as_def is_cap_simps
@@ -185,7 +190,7 @@ lemma cap_badge_update_cap_data [CNodeInv_AI_assms]:
 lemma cap_vptr_rights_update[simp, CNodeInv_AI_assms]:
   "cap_vptr (cap_rights_update f c) = cap_vptr c"
   by (simp add: cap_vptr_def cap_rights_update_def acap_rights_update_def
-           split: cap.splits arch_cap.splits)
+           split: cap.splits arch_cap.splits bool.splits)
 
 lemma cap_vptr_mask[simp, CNodeInv_AI_assms]:
   "cap_vptr (mask_cap m c) = cap_vptr c"
@@ -193,8 +198,8 @@ lemma cap_vptr_mask[simp, CNodeInv_AI_assms]:
 
 lemma cap_asid_base_rights [simp, CNodeInv_AI_assms]:
   "cap_asid_base (cap_rights_update R c) = cap_asid_base c"
-  by (simp add: cap_rights_update_def acap_rights_update_def
-           split: cap.splits arch_cap.splits)
+  by (auto simp add: cap_rights_update_def acap_rights_update_def
+           split: cap.splits arch_cap.splits bool.splits)
 
 lemma cap_asid_base_mask[simp, CNodeInv_AI_assms]:
   "cap_asid_base (mask_cap m c) = cap_asid_base c"
@@ -458,11 +463,11 @@ crunch valid_objs[wp]: set_consumed valid_objs
 
 lemma complete_yield_to_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> complete_yield_to t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  by (wpsimp simp: complete_yield_to_def | wp_once hoare_drop_imps)+
+  by (wpsimp simp: complete_yield_to_def | wp (once) hoare_drop_imps)+
 
 lemma sched_context_unbind_tcb_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> sched_context_unbind_tcb t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  by (wpsimp simp: sched_context_unbind_tcb_def | wp_once hoare_drop_imps)+
+  by (wpsimp simp: sched_context_unbind_tcb_def | wp (once) hoare_drop_imps)+
 
 lemma unbind_from_sc_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> unbind_from_sc t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
@@ -865,7 +870,7 @@ next
     apply simp
     apply (fold o_def)
     apply (rule hoare_pre_spec_validE)
-     apply (simp del: o_apply | wp_once cap_swap_fd_rvk_prog)+
+     apply (simp del: o_apply | wp (once) cap_swap_fd_rvk_prog)+
     apply (clarsimp simp: cte_wp_at_caps_of_state cap_to_rpo_def)
     done
 next

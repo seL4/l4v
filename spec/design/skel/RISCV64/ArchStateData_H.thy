@@ -23,7 +23,7 @@ begin
 
 context Arch begin global_naming RISCV64_H
 
-#INCLUDE_HASKELL SEL4/Model/StateData/RISCV64.hs CONTEXT RISCV64_H
+#INCLUDE_HASKELL SEL4/Model/StateData/RISCV64.hs CONTEXT RISCV64_H NOT RISCVVSpaceRegionUse
 
 end
 end

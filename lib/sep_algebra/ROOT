@@ -10,7 +10,6 @@
 
 chapter Lib
 
-(* This is a testing session to make sure none of these are forgotten *)
 session Sep_Algebra (lib) = Word_Lib +
   sessions
     "HOL-Eisbach"
@@ -21,7 +20,10 @@ session Sep_Algebra (lib) = Word_Lib +
     "MonadSep"
     "Sep_Forward"
     "Sep_Cancel_Example"
+    "Sep_Fold"
+    "Sep_Fold_Cancel"
     "Sep_Eq"
+    "Sep_Util"
     "Sep_Heap_Instance"
     "Sep_MP_Example"
     "Sep_Provers_Example"

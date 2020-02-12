@@ -15,11 +15,13 @@ begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 (* FIXME move to REFINE *)
-crunch valid_queues'[wp]: "Arch.switchToThread" valid_queues'
-    (ignore: )
-crunch ksCurDomain[wp]: switchToIdleThread "\<lambda>s. P (ksCurDomain s)"
-crunch valid_pspace'[wp]: switchToIdleThread, switchToThread valid_pspace'
-  (simp: whenE_def ignore: getObject)
+crunches Arch.switchToThread
+  for valid_queues'[wp]: valid_queues'
+crunches switchToIdleThread
+  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+crunches switchToIdleThread, switchToThread
+  for valid_pspace'[wp]: valid_pspace'
+  (simp: whenE_def)
 
 lemma setCurrentUserCR3_valid_arch_state'[wp]:
   "\<lbrace>valid_arch_state' and K (valid_cr3' c)\<rbrace> setCurrentUserCR3 c \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
@@ -638,11 +640,11 @@ lemma schedule_ccorres:
              apply vcg
             apply clarsimp
             apply (strengthen invs'_invs_no_cicd')
-            apply (wp | wp_once hoare_drop_imp)+
+            apply (wp | wp (once) hoare_drop_imp)+
            apply clarsimp
            apply (vcg exspec=isHighestPrio_modifies)
           apply clarsimp
-          apply (wp_once hoare_drop_imps)
+          apply (wp (once) hoare_drop_imps)
            apply wp
           apply (strengthen strenghten_False_imp[where P="a = ResumeCurrentThread" for a])
           apply (clarsimp simp: conj_ac invs_queues invs_valid_objs' cong: conj_cong)

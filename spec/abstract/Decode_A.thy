@@ -56,7 +56,7 @@ definition
   "data \<Rightarrow> data list \<Rightarrow> cap \<Rightarrow> cap list \<Rightarrow> (cnode_invocation,'z::state_ext) se_monad"
 where
 "decode_cnode_invocation label args cap excaps \<equiv> doE
-  unlessE (invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate]) $
+  unlessE (gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate]) $
     throwError IllegalOperation;
   whenE (length args < 2) (throwError TruncatedMessage);
   index \<leftarrow> returnOk $ data_to_cptr $ args ! 0;
@@ -64,7 +64,7 @@ where
   args \<leftarrow> returnOk $ drop 2 args;
   dest_slot \<leftarrow> lookup_target_slot cap index bits;
   if length args \<ge> 2 \<and> length excaps > 0
-        \<and> invocation_type label \<in> set [CNodeCopy .e. CNodeMutate] then
+        \<and> gen_invocation_type label \<in> set [CNodeCopy .e. CNodeMutate] then
   doE
     src_index \<leftarrow> returnOk $ data_to_cptr $ args ! 0;
     src_depth \<leftarrow> returnOk $ data_to_nat $ args ! 1;
@@ -76,7 +76,7 @@ where
     src_cap \<leftarrow> liftE $ get_cap src_slot;
     whenE (src_cap = NullCap) $
          throwError $ FailedLookup True $ MissingCapability src_depth;
-    (rights, cap_data, is_move) \<leftarrow> case (invocation_type label, args) of
+    (rights, cap_data, is_move) \<leftarrow> case (gen_invocation_type label, args) of
       (CNodeCopy, rightsWord # _) \<Rightarrow> doE
                     rights \<leftarrow> returnOk $ data_to_rights $ rightsWord;
                     returnOk $ (rights, None, False)
@@ -95,14 +95,14 @@ where
     whenE (new_cap = NullCap) $ throwError IllegalOperation;
     returnOk $ (if is_move then MoveCall else InsertCall) new_cap src_slot dest_slot
   odE
-  else if invocation_type label = CNodeRevoke then returnOk $ RevokeCall dest_slot
-  else if invocation_type label = CNodeDelete then returnOk $ DeleteCall dest_slot
-  else if invocation_type label = CNodeCancelBadgedSends then doE
+  else if gen_invocation_type label = CNodeRevoke then returnOk $ RevokeCall dest_slot
+  else if gen_invocation_type label = CNodeDelete then returnOk $ DeleteCall dest_slot
+  else if gen_invocation_type label = CNodeCancelBadgedSends then doE
     cap \<leftarrow> liftE $ get_cap dest_slot;
     unlessE (has_cancel_send_rights cap) $ throwError IllegalOperation;
     returnOk $ CancelBadgedSendsCall cap
   odE
-  else if invocation_type label = CNodeRotate \<and> length args > 5
+  else if gen_invocation_type label = CNodeRotate \<and> length args > 5
           \<and> length excaps > 1 then
   doE
     pivot_new_data \<leftarrow> returnOk $ args ! 0;
@@ -450,7 +450,7 @@ definition
   (tcb_invocation,'z::state_ext) se_monad"
 where
  "decode_tcb_invocation label args cap slot excs \<equiv>
-  case invocation_type label of
+  case gen_invocation_type label of
       TCBReadRegisters \<Rightarrow> decode_read_registers args cap
     | TCBWriteRegisters \<Rightarrow> decode_write_registers args cap
     | TCBCopyRegisters \<Rightarrow> decode_copy_registers args cap $ map fst excs
@@ -474,7 +474,7 @@ definition
     ((obj_ref \<times> domain), 'z::state_ext) se_monad"
 where
   "decode_domain_invocation label args excs \<equiv> doE
-     whenE (invocation_type label \<noteq> DomainSetSet) $ throwError IllegalOperation;
+     whenE (gen_invocation_type label \<noteq> DomainSetSet) $ throwError IllegalOperation;
      domain \<leftarrow> (case args of
        x # xs \<Rightarrow> doE
          whenE (unat x \<ge> num_domains) $ throwError $ InvalidArgument 0;
@@ -604,7 +604,7 @@ definition
   decode_irq_control_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list
                                      \<Rightarrow> (irq_control_invocation,'z::state_ext) se_monad" where
  "decode_irq_control_invocation label args src_slot cps \<equiv>
-  (if invocation_type label = IRQIssueIRQHandler
+  (if gen_invocation_type label = IRQIssueIRQHandler
     then if length args \<ge> 3 \<and> length cps \<ge> 1
       then let irq_word = args ! 0;
                index = args ! 1;
@@ -629,16 +629,16 @@ definition
   decode_irq_handler_invocation :: "data \<Rightarrow> irq \<Rightarrow> (cap \<times> cslot_ptr) list
                                      \<Rightarrow> (irq_handler_invocation,'z::state_ext) se_monad" where
  "decode_irq_handler_invocation label irq cps \<equiv>
-  if invocation_type label = IRQAckIRQ
+  if gen_invocation_type label = IRQAckIRQ
     then returnOk $ ACKIrq irq
-  else if invocation_type label = IRQSetIRQHandler
+  else if gen_invocation_type label = IRQSetIRQHandler
     then if cps \<noteq> []
       then let (cap, slot) = hd cps in
       if is_ntfn_cap cap \<and> AllowSend \<in> cap_rights cap
       then returnOk $ SetIRQHandler irq cap slot
       else throwError $ InvalidCapability 0
     else throwError TruncatedMessage
-  else if invocation_type label = IRQClearIRQHandler
+  else if gen_invocation_type label = IRQClearIRQHandler
     then returnOk $ ClearIRQHandler irq
   else throwError IllegalOperation"
 
@@ -672,7 +672,7 @@ definition
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap list \<Rightarrow> (untyped_invocation,'z::state_ext) se_monad"
 where
 "decode_untyped_invocation label args slot cap excaps \<equiv> doE
-  unlessE (invocation_type label = UntypedRetype) $ throwError IllegalOperation;
+  unlessE (gen_invocation_type label = UntypedRetype) $ throwError IllegalOperation;
   whenE (length args < 6) $ throwError TruncatedMessage;
   whenE (length excaps = 0) $ throwError TruncatedMessage;
   root_cap \<leftarrow> returnOk $ excaps ! 0;
@@ -762,14 +762,14 @@ where
   case cap of
     EndpointCap ptr badge rights \<Rightarrow>
       if AllowSend \<in> rights then
-        returnOk $ InvokeEndpoint ptr badge (AllowGrant \<in> rights)
+        returnOk $ InvokeEndpoint ptr badge (AllowGrant \<in> rights) (AllowGrantReply \<in> rights)
       else throwError $ InvalidCapability 0
   | NotificationCap ptr badge rights \<Rightarrow>
       if AllowSend \<in> rights then
         returnOk $ InvokeNotification ptr badge
       else throwError $ InvalidCapability 0
-  | ReplyCap reply \<Rightarrow>
-      returnOk $ InvokeReply reply
+  | ReplyCap reply rights \<Rightarrow>
+      returnOk $ InvokeReply reply (AllowGrant \<in> rights)
   | IRQControlCap \<Rightarrow>
       liftME InvokeIRQControl
         $ decode_irq_control_invocation label args slot (map fst excaps)

@@ -25,7 +25,7 @@ lemma sep_wand_lens': "(\<And>s. T s = Q s) \<Longrightarrow> ((T \<longrightarr
 
 (* Removing wands from the conclusions *)
 
-ML {*
+ML \<open>
 
 fun sep_wand_lens ctxt = resolve_tac ctxt[@{thm sep_wand_lens}]
 fun sep_wand_lens' ctxt = resolve_tac ctxt [@{thm sep_wand_lens'}]
@@ -47,7 +47,7 @@ fun sep_wand_rule_tac' thms ctxt =
 fun sep_wand_rule_method thms ctxt = SIMPLE_METHOD' (sep_wand_rule_tac thms ctxt)
 fun sep_wand_rule_method' thms ctxt = SIMPLE_METHOD' (sep_wand_rule_tac' thms ctxt)
 
-*}
+\<close>
 
 
 lemma sep_wand_match:
@@ -82,7 +82,7 @@ lemma sep_wand_match_less_safe:
   apply (clarsimp)
  done
 
-ML {*
+ML \<open>
 fun sep_match_trivial_tac ctxt =
   let
     fun flip f a b = f b a
@@ -94,10 +94,10 @@ fun sep_match_trivial_tac ctxt =
   end
 
 fun sep_safe_method ctxt = SIMPLE_METHOD' (sep_match_trivial_tac ctxt)
-*}
+\<close>
 
-method_setup sep_safe = {*
+method_setup sep_safe = \<open>
   Scan.succeed (sep_safe_method)
-*}
+\<close>
 
 end

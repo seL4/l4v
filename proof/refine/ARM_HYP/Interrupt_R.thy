@@ -105,9 +105,9 @@ lemma decode_irq_handler_corres:
   apply (simp add: decode_irq_handler_invocation_def decodeIRQHandlerInvocation_def
                  split del: if_split)
   apply (cases caps)
-   apply (simp add: returnOk_def split: invocation_label.split list.splits split del: if_split)
+   apply (simp add: returnOk_def split: gen_invocation_labels.split list.splits split del: if_split)
   apply (clarsimp simp: list_all2_Cons1 split del: if_split)
-  apply (simp add: returnOk_def split: invocation_label.split list.splits)
+  apply (simp add: returnOk_def split: gen_invocation_labels.split list.splits)
   apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm simp: returnOk_def)
   done
 
@@ -232,13 +232,13 @@ lemma arch_decode_irq_control_corres:
                               simp: invs_valid_objs invs_psp_aligned invs_valid_objs'
                                     invs_pspace_aligned' invs_pspace_distinct'
                       | strengthen invs_valid_objs invs_psp_aligned
-                      | wp_once hoare_drop_imps arch_check_irq_inv)+)
+                      | wp (once) hoare_drop_imps arch_check_irq_inv)+)
   apply (auto split: arch_invocation_label.splits invocation_label.splits)
   done
 
 lemma irqhandler_simp[simp]:
-  "invocation_type label \<noteq> IRQIssueIRQHandler \<Longrightarrow> (case invocation_type label of IRQIssueIRQHandler \<Rightarrow> b | _ \<Rightarrow> c) = c"
-  by (clarsimp split: invocation_label.splits)
+  "gen_invocation_type label \<noteq> IRQIssueIRQHandler \<Longrightarrow> (case gen_invocation_type label of IRQIssueIRQHandler \<Rightarrow> b | _ \<Rightarrow> c) = c"
+  by (clarsimp split: gen_invocation_labels.splits)
 
 lemmas unat_le_mono = word_le_nat_alt [THEN iffD1]
 
@@ -283,7 +283,7 @@ lemma decode_irq_control_corres:
                           simp: invs_valid_objs invs_psp_aligned invs_valid_objs'
                                 invs_pspace_aligned' invs_pspace_distinct'
                    | strengthen invs_valid_objs invs_psp_aligned
-                   | wp_once hoare_drop_imps arch_check_irq_inv)+
+                   | wp (once) hoare_drop_imps arch_check_irq_inv)+
    apply (auto split: arch_invocation_label.splits invocation_label.splits
                simp: not_less unat_le_helper)
   done
@@ -306,7 +306,7 @@ lemma lsfco_real_cte_at'[wp]:
   apply (rule hoare_pre)
    apply (wp resolveAddressBits_real_cte_at'
             | simp
-            | wpc | wp_once hoare_drop_imps)+
+            | wpc | wp (once) hoare_drop_imps)+
   done
 
 lemma arch_decode_irq_control_valid'[wp]:
@@ -324,7 +324,7 @@ lemma arch_decode_irq_control_valid'[wp]:
                cong: list.case_cong prod.case_cong
           | wp whenE_throwError_wp isIRQActive_wp ensureEmptySlot_stronger
           | wpc
-          | wp_once hoare_drop_imps)+
+          | wp (once) hoare_drop_imps)+
   apply (clarsimp simp add: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
                             not_less unat_le_helper unat_of_nat)
   done
@@ -338,17 +338,13 @@ lemma decode_irq_control_valid'[wp]:
   apply (simp add: decodeIRQControlInvocation_def Let_def split_def checkIRQ_def
                    rangeCheck_def unlessE_whenE
                 split del: if_split cong: if_cong list.case_cong
-                                          invocation_label.case_cong)
+                                          gen_invocation_labels.case_cong)
   apply (wpsimp wp: ensureEmptySlot_stronger isIRQActive_wp whenE_throwError_wp
                 simp: o_def
-         | wp_once hoare_drop_imps)+
+         | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
                         not_less unat_le_helper unat_of_nat)
   done
-
-lemma irq_nodes_global_refs:
-  "irq_node' s + (ucast (irq:: 10 word)) * 0x10 \<in> global_refs' s"
-  by (simp add: global_refs'_def mult.commute mult.left_commute)
 
 lemma valid_globals_ex_cte_cap_irq:
   "\<lbrakk> ex_cte_cap_wp_to' isCNodeCap ptr s; valid_global_refs' s;
@@ -758,25 +754,10 @@ lemma corres_gets_numlistregs [corres]:
 
 lemmas corres_eq_trivial = corres_Id[where f = h and g = h for h, simplified]
 
-lemma countLeadingZeros_simp' [simp]:
-  "countLeadingZeros = word_clz"
-  by (rule ext) simp
-
 lemma countTrailingZeros_simp [simp]:
   "countTrailingZeros = word_ctz"
   unfolding countTrailingZeros_def word_ctz_def
   by (simp add: to_bl_upt)
-
-lemma corres_do_machine_op_gets[corres]:
-  "f = f' \<Longrightarrow> corres (=) \<top> \<top> (do_machine_op (gets f)) (doMachineOp (gets f'))"
-  by (corressimp search: corres_machine_op corres_underlying_trivial; simp)
-
-lemma corres_do_machine_op_machine_lift[corres]:
-  "f = f' \<Longrightarrow> corres dc \<top> \<top> (do_machine_op (machine_op_lift f)) (doMachineOp (machine_op_lift f'))"
-  apply (rule corres_machine_op, simp)
-  apply (rule corres_eq_trivial)
-  apply (clarsimp simp: no_fail_machine_op_lift)+
-  done
 
 lemma dmo_machine_op_lift_invs'[wp]:
   "doMachineOp (machine_op_lift f) \<lbrace>invs'\<rbrace>"
@@ -786,16 +767,6 @@ lemma dmo_machine_op_lift_invs'[wp]:
 lemma doMachineOp_get_invs [wp]:
   "doMachineOp (gets f) \<lbrace>P\<rbrace>"
   unfolding doMachineOp_def by (wpsimp simp: in_monad)
-
-(* FIXME: move to Machine_AI *)
-lemma no_fail_get_gic_vcpu_ctrl_eisr0[wp]: "no_fail \<top> get_gic_vcpu_ctrl_eisr0"
-  by (wpsimp simp: get_gic_vcpu_ctrl_eisr0_def)
-
-lemma no_fail_get_gic_vcpu_ctrl_eisr1[wp]: "no_fail \<top> get_gic_vcpu_ctrl_eisr1"
-  by (wpsimp simp: get_gic_vcpu_ctrl_eisr1_def)
-
-lemma no_fail_get_gic_vcpu_ctrl_misr[wp]: "no_fail \<top> get_gic_vcpu_ctrl_misr"
-  by (wpsimp simp: get_gic_vcpu_ctrl_misr_def)
 
 crunch sch_act_ct_rq [wp]: doMachineOp "\<lambda>s. P (ksSchedulerAction s) (ksCurThread s) (ksReadyQueues s)"
 crunch pred_tcb_at'_ct [wp]: doMachineOp "\<lambda>s. pred_tcb_at' proj test (ksCurThread s) s"
@@ -829,26 +800,32 @@ lemma thread_state_relation_frame:
   by (cases st''; cases st'; cases st; fastforce)
 
 lemma thread_state_relation_send_rev_simp:
-  "thread_state_relation st (BlockedOnSend a b c d) =
-  (\<exists>y. (st = (Structures_A.BlockedOnSend a y)) \<and> b = sender_badge y \<and> c = sender_can_grant y \<and> d = sender_is_call y)"
+  "thread_state_relation st (BlockedOnSend a b c d e) =
+   (\<exists>y. (st = (Structures_A.BlockedOnSend a y)) \<and> b = sender_badge y
+        \<and> c = sender_can_grant y \<and> d = sender_can_grant_reply y \<and> e = sender_is_call y)"
+  by (cases st; fastforce)
+
+lemma thread_state_relation_recv_rev_simp:
+  "thread_state_relation st (BlockedOnReceive a cg) =
+   (\<exists>y. (st = (Structures_A.BlockedOnReceive a y)) \<and> cg = receiver_can_grant y
+        )"
   by (cases st; fastforce)
 
 lemmas thread_state_rev_simps'[#\<open>solves \<open>simp\<close>\<close>] =
   thread_state_relation_frame[of Structures_A.thread_state.Running Structures_H.thread_state.Running]
   thread_state_relation_frame[of Structures_A.thread_state.Inactive Structures_H.thread_state.Inactive]
-  thread_state_relation_frame[of "Structures_A.thread_state.BlockedOnReceive x" "Structures_H.thread_state.BlockedOnReceive x" for x]
   thread_state_relation_frame[of Structures_A.thread_state.Restart Structures_H.thread_state.Restart]
   thread_state_relation_frame[of "Structures_A.thread_state.BlockedOnNotification x" "Structures_H.thread_state.BlockedOnNotification x" for x]
   thread_state_relation_frame[of Structures_A.thread_state.IdleThreadState Structures_H.thread_state.IdleThreadState]
   thread_state_relation_frame[of "Structures_A.thread_state.BlockedOnReply" "Structures_H.thread_state.BlockedOnReply"]
 
 lemmas thread_state_rev_simps = thread_state_rev_simps' thread_state_relation_send_rev_simp
+                                 thread_state_relation_recv_rev_simp
 
 crunches vgicUpdateLR
   for sch_act_not[wp]: "sch_act_not t"
   and pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
-  (ignore: getObject setObject)
 
 lemma vgic_maintenance_corres [corres]:
   "corres dc einvs
@@ -882,17 +859,22 @@ proof -
                              apply (corressimp corres: hf_corres[@lift_corres_args]
                                                wp: dmo_gets_wp dmo'_gets_wp gts_wp gts_wp' wplr wplr'
                                                    hoare_vcg_all_lift hoare_vcg_imp_lift')+
-
+    (* drop unhelpful lemmas *)
+    supply if_split[split del] supply obj_at_typ_at[simp del]
     apply (frule invs_arch_state, drule valid_arch_state_elims(2), frule invs_arch_state')
-    apply (fastforce split: Structures_H.thread_state.splits
-                     simp: valid_fault_def thread_state_rev_simps valid_arch_state'_def
-                           obj_at_typ_at[symmetric]
-                           obj_at_def vcpu_at_is_vcpu' valid_fault_def
-                     simp del: obj_at_typ_at
-                     elim: ct_active_st_tcb_at_weaken
-                             [OF _ iffD1[OF runnable_eq], simplified ct_in_state_def]
-                           st_tcb_ex_cap'[OF _ _ runnable_not_halted]
-                           st_tcb_ex_cap'' pred_tcb'_weakenE ko_wp_at'_weakenE)
+    apply (clarsimp simp: thread_state_rev_simps cong: if_cong split: Structures_H.thread_state.splits)
+    (* clear up everything related to the current thread *)
+    apply (safe
+           ;(clarsimp elim!: ct_active_st_tcb_at_weaken
+                               [OF _ iffD1[OF runnable_eq], simplified ct_in_state_def]
+                             st_tcb_ex_cap'[OF _ _ runnable_not_halted]
+                             pred_tcb'_weakenE ko_wp_at'_weakenE
+                             st_tcb_ex_cap''[OF _ invs_iflive']
+                      simp: valid_fault_def invs_iflive')?)
+      (* now show there's a vcpu where we think there should be one *)
+      apply (fastforce split: option.splits elim!: ko_wp_at'_weakenE obj_at_weakenE
+                       simp: if_apply_def2 valid_arch_state'_def
+                             typ_at'_def is_vcpu'_def obj_at_typ_at[symmetric])+
     done
 qed
 
@@ -948,7 +930,7 @@ lemma handle_interrupt_corres:
              apply wp+
            apply clarsimp
           apply clarsimp
-          apply (rule hoare_post_taut) (* FIXME: wp_once does not terminate? *)
+          apply (rule hoare_post_taut) (* FIXME: wp (once) does not terminate? *)
          apply wp+
      apply clarsimp
     apply fastforce
@@ -964,10 +946,6 @@ lemma handle_interrupt_corres:
    apply clarsimp
   apply corressimp
   done
-
-lemma invs_ChooseNewThread:
-  "invs' s \<Longrightarrow> invs' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
-  by (rule invs'_update_cnt)
 
 lemma ksDomainTime_invs[simp]:
   "invs' (a\<lparr>ksDomainTime := t\<rparr>) = invs' a"
@@ -1006,13 +984,6 @@ lemma updateTimeSlice_valid_pspace[wp]:
   apply (auto simp:tcb_cte_cases_def)
   done
 
-lemma updateTimeSlice_sch_act_wf[wp]:
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-   \<lbrace>\<lambda>r s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  by (wp threadSet_sch_act,simp)
-
-
 lemma updateTimeSlice_valid_queues[wp]:
   "\<lbrace>\<lambda>s. Invariants_H.valid_queues s \<rbrace>
    threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
@@ -1021,55 +992,6 @@ lemma updateTimeSlice_valid_queues[wp]:
   apply (clarsimp simp:obj_at'_def inQ_def)
   done
 
-
-lemma updateTimeSlice_sym_refs[wp]:
-  "\<lbrace>\<lambda>s. sym_refs (state_refs_of' s)\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. sym_refs (state_refs_of' s)\<rbrace>"
-  apply (simp add: threadSet_def setObject_def split_def)
-  apply (wp crunch_wps getObject_tcb_wp
-    | simp add: updateObject_default_def loadObject_default_def
-    | wpc)+
-   apply (clarsimp simp:state_refs_of'_def
-     obj_at'_def lookupAround2_known1)
-  apply (subst lookupAround2_known1)
-   apply simp
-  apply (erule_tac f1 = sym_refs in arg_cong[THEN iffD1,rotated])
-  apply (rule ext)
-  apply (subst option.sel)
-  apply (subst fst_conv)+
-  apply (clarsimp simp:projectKO_eq projectKO_opt_tcb split:Structures_H.kernel_object.splits)
-  apply (simp add:objBits_simps)
-  apply (frule_tac s' = s and
-    v' = "(KOTCB (tcbTimeSlice_update (\<lambda>_. ts') obj))" in ps_clear_updE)
-   apply simp
-  apply (clarsimp simp:fun_upd_def)
-  apply (rule set_eqI)
-  apply (rule iffI)
-   apply (clarsimp split:option.splits if_split_asm)
-   apply (intro conjI impI)
-    apply simp
-   apply clarsimp
-   apply (drule_tac s' = s and y = thread and x = x and
-    v' = "(KOTCB (tcbTimeSlice_update (\<lambda>_. ts') obj))"
-     in ps_clear_updE[rotated])
-    apply simp
-   apply (clarsimp simp:fun_upd_def)
-  apply (clarsimp split:option.splits if_split_asm)
-  apply (intro conjI impI)
-   apply simp
-  apply clarsimp
-   apply (drule_tac y = thread and x = x and s' = s and
-    v' = "KOTCB obj"
-     in ps_clear_updE)
-    apply simp
-  apply (simp add:fun_upd_def[symmetric])
-  apply (subgoal_tac "s\<lparr>ksPSpace := ksPSpace s(thread \<mapsto> KOTCB obj)\<rparr> = s")
-   apply simp
-  apply (case_tac s)
-   apply simp
-  apply (rule ext,simp)
-  done
 
 lemma dom_upd_eq:
   "f t = Some y \<Longrightarrow> dom (\<lambda>a. if a = t then Some x else f a) = dom f"
@@ -1086,81 +1008,6 @@ lemma updateTimeSlice_hyp_refs[wp]:
   apply (erule subst[where P=P, rotated])
   apply (rule ext)
   apply (clarsimp simp: projectKOs objBitsKO_def ps_clear_def dom_upd_eq split: option.splits)
-  done
-
-lemma updateTimeSlice_if_live_then_nonz_cap'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. if_live_then_nonz_cap' s\<rbrace>"
-  apply (wp threadSet_iflive'T)
-   apply (simp add:tcb_cte_cases_def)
-  apply (clarsimp simp:if_live_then_nonz_cap'_def ko_wp_at'_def)
-  apply (intro conjI)
-   apply (clarsimp simp:obj_at'_real_def)+
-  done
-
-lemma updateTimeSlice_if_unsafe_then_cap'[wp]:
-  "\<lbrace>\<lambda>s. if_unsafe_then_cap' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. if_unsafe_then_cap' s\<rbrace>"
-  apply (wp threadSet_ifunsafe'T)
-   apply (simp add:tcb_cte_cases_def)+
-  done
-
-lemma updateTimeSlice_valid_idle'[wp]:
-  "\<lbrace>\<lambda>s. valid_idle' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. valid_idle' s\<rbrace>"
-  apply (wp threadSet_idle'T)
-  apply (simp add:tcb_cte_cases_def)
-  apply (clarsimp simp:valid_idle'_def)
-  done
-
-lemma updateTimeSlice_valid_global_refs'[wp]:
-  "\<lbrace>\<lambda>s. valid_global_refs' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. valid_global_refs' s\<rbrace>"
-  apply (wp threadSet_idle'T)
-  apply (simp add:tcb_cte_cases_def)+
-  done
-
-lemma updateTimeSlice_valid_irq_node'[wp]:
-  "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. valid_irq_node' (irq_node' s) s\<rbrace>"
-  apply (rule hoare_pre)
-  apply wps
-  apply (simp add: valid_irq_node'_def
-    | wp hoare_vcg_all_lift)+
-  done
-
-lemma updateTimeSlice_irq_handlers'[wp]:
-  "\<lbrace>\<lambda>s. valid_irq_handlers' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. valid_irq_handlers' s\<rbrace>"
-  apply (rule hoare_pre)
-  apply (wp threadSet_irq_handlers' |
-   simp add: tcb_cte_cases_def)+
-  done
-
-
-lemma updateTimeSlice_valid_queues'[wp]:
-  "\<lbrace>\<lambda>s. valid_queues' s \<rbrace>
-  threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-  \<lbrace>\<lambda>r s. valid_queues' s\<rbrace>"
-  apply (wp threadSet_valid_queues')
-  apply (auto simp:inQ_def)
-  done
-
-lemma rescheduleRequired_valid_irq_node'[wp]:
-  "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s\<rbrace> rescheduleRequired
-  \<lbrace>\<lambda>rv s. valid_irq_node' (irq_node' s) s \<rbrace>"
-  apply (simp add:rescheduleRequired_def valid_irq_node'_def)
-  apply (wp hoare_vcg_all_lift | wpc |simp)+
-   apply (simp add:tcbSchedEnqueue_def)
-   apply (wp hoare_unless_wp)
-   apply (wp threadSet_typ_at_lifts | wps)+
-  apply simp
   done
 
 (* catch up tcbSchedAppend to tcbSchedEnqueue, which has these from crunches on possibleSwitchTo *)
@@ -1183,7 +1030,7 @@ lemma timerTick_invs'[wp]:
   apply (wp threadSet_invs_trivial threadSet_pred_tcb_no_state
             rescheduleRequired_all_invs_but_ct_not_inQ
             tcbSchedAppend_invs_but_ct_not_inQ'
-       | simp add: tcb_cte_cases_def numDomains_def invs_ChooseNewThread
+       | simp add: tcb_cte_cases_def numDomains_def
        | wpc)+
       apply (simp add:decDomainTime_def)
       apply wp

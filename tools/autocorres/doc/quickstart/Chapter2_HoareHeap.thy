@@ -16,9 +16,9 @@ begin
 external_file "mult_by_add.c"
 (*>*)
 
-section  {* More Complex Functions with AutoCorres *}
+section  \<open>More Complex Functions with AutoCorres\<close>
 
-text {*
+text \<open>
 
   In the previous section we saw how to use the C-Parser and AutoCorres
   to prove properties about some very simple C programs.
@@ -29,11 +29,11 @@ text {*
   which use loops and access the heap to show how AutoCorres can
   allow such constructs to be reasoned about.
 
-*}
+\<close>
 
-subsection {* A simple loop: \texttt{mult\_by\_add} *}
+subsection \<open>A simple loop: \texttt{mult\_by\_add}\<close>
 
-text {*
+text \<open>
 
   Our C function \texttt{mult\_by\_add} implements a multiply operation
   by successive additions:
@@ -42,7 +42,7 @@ text {*
 
   We start by translating the program using the C parser and AutoCorres,
   and entering the generated locale \texttt{mult\_by\_add}.
-*}
+\<close>
 
 install_C_file "mult_by_add.c"
 autocorres [ts_rules = nondet] "mult_by_add.c"
@@ -50,21 +50,21 @@ autocorres [ts_rules = nondet] "mult_by_add.c"
 context mult_by_add begin
 (*>*)
 
-text {*
+text \<open>
   The C parser produces the SIMPL output as follows:
-*}
+\<close>
 
 thm mult_by_add_body_def
-text {* @{thm [display] mult_by_add_body_def} *}
+text \<open>@{thm [display] mult_by_add_body_def}\<close>
 
-text {*
+text \<open>
   Which is abstracted by AutoCorres to the following:
-*}
+\<close>
 
 thm mult_by_add'_def
-text {* @{thm [display] mult_by_add'_def } *}
+text \<open>@{thm [display] mult_by_add'_def }\<close>
 
-text {*
+text \<open>
 
   In this case AutoCorres has abstracted \texttt{mult\_by\_add} into a
   \emph{monadic} form. Monads are a pattern frequently used in
@@ -77,9 +77,9 @@ text {*
   more than one (or possibly zero) results\footnote{Non-determinism
   becomes useful when modelling hardware, for example, where the exact
   results of the hardware cannot be determined ahead of time.}.
-*}
+\<close>
   (* FIXME : probably describe below in further detail. *)
-text {*
+text \<open>
   The bulk of @{term "mult_by_add'"} is wrapped inside the @{term
   "whileLoop"} \emph{monad combinator}, which is really just a fancy way
   of describing the method used by AutoCorres to encode (potentially
@@ -130,26 +130,26 @@ text {*
 
   Our proof of @{term mult_by_add'} could then proceed as follows:
 
-*}
+\<close>
 
 lemma mult_by_add_correct:
     "\<lbrace> \<lambda>s. True \<rbrace> mult_by_add' a b \<lbrace> \<lambda>r s. r = a * b \<rbrace>!"
-  txt {* Unfold abstracted definition *}
+  txt \<open>Unfold abstracted definition\<close>
   apply (unfold mult_by_add'_def)
-  txt {* Annotate the loop with an invariant and a measure. *}
+  txt \<open>Annotate the loop with an invariant and a measure.\<close>
   apply (subst whileLoop_add_inv
     [where I="\<lambda>(a', result) s. result = (a - a') * b"
         and M="\<lambda>((a', result), s). a'"] )
-  txt {* Run the ``weakest precondition'' tool \texttt{wp}. *}
+  txt \<open>Run the ``weakest precondition'' tool \texttt{wp}.\<close>
   apply wp
-  txt {* Solve the program correctness goals. *}
+  txt \<open>Solve the program correctness goals.\<close>
      apply (simp add: field_simps)
     apply unat_arith
    apply (auto simp: field_simps not_less)
   done
 
 (* FIXME: Update the following explanation. *)
-text {*
+text \<open>
   The proof is straight-forward, but uses a few different techniques:
   The first is that we annotate the loop with a loop invariant and a
   measure, using the rule @{thm whileLoop_add_inv}. We then run the
@@ -163,7 +163,7 @@ text {*
   In the next section, we will look at how we can use AutoCorres to
   verify a C program that reads and writes to the heap.
 
-*}
+\<close>
 
 (*<*)
 end

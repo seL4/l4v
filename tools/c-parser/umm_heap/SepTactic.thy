@@ -37,16 +37,16 @@ lemma sep_conj_extract_assoc:
 lemma sep_conj_extract_decomposeD:
   "(sep_conj_extract (P \<and>\<^sup>* Q) \<and>\<^sup>* sep_true) s \<Longrightarrow> sep_points P s \<and>
       (sep_conj_extract Q \<and>\<^sup>* sep_true) s"
-apply (rule conjI)
- apply(simp add: sep_conj_extract_def sep_points_def sep_conj_ac)
- apply(erule (1) sep_conj_impl, simp)
-apply(simp add: sep_conj_extract_def sep_conj_ac)
-apply(subst (asm) sep_conj_assoc [symmetric])
-apply(subst (asm) sep_conj_com)
-apply(subst (asm) sep_conj_assoc)
-apply(erule (1) sep_conj_impl)
-apply simp
-done
+  apply (rule conjI)
+   apply(simp add: sep_conj_extract_def sep_points_def sep_conj_ac)
+   apply(erule (1) sep_conj_impl, simp)
+  apply(simp add: sep_conj_extract_def sep_conj_ac)
+  apply(subst (asm) sep_conj_assoc [symmetric])
+  apply(subst (asm) sep_conj_com)
+  apply(subst (asm) sep_conj_assoc)
+  apply(erule (1) sep_conj_impl)
+  apply simp
+  done
 
 lemma sep_conj_extract_decomposeD2:
   "(sep_conj_extract P \<and>\<^sup>* sep_true) s \<Longrightarrow> sep_points P s"
@@ -65,7 +65,7 @@ lemma sep_point_otherD:
   "sep_points P s \<Longrightarrow> True"
   by (rule TrueI)
 
-ML {*
+ML \<open>
 
 val sep_point_ds = [@{thm sep_point_mapD}, @{thm sep_point_map_excD}]
 
@@ -85,7 +85,7 @@ fun sep_point_tacs ds ctxt  = [
   ]
 
 fun sep_point_tac ds ctxt = EVERY (sep_point_tacs ds ctxt)
-*}
+\<close>
 
 method_setup sep_point_tac =
   "Attrib.thms >> (fn thms => Method.SIMPLE_METHOD o sep_point_tac thms)"
@@ -97,10 +97,10 @@ lemma "(P \<and>\<^sup>* p \<mapsto>\<^sub>g v \<and>\<^sup>* Q) s \<Longrightar
 
 section "sep_exists_tac"
 
-ML{*
+ML\<open>
 fun sep_exists_tac ctxt = full_simp_tac
     (put_simpset HOL_ss ctxt addsimps [@{thm "sep_conj_exists1"}, @{thm "sep_conj_exists2"}])
-*}
+\<close>
 
 method_setup sep_exists_tac =
   "Scan.succeed (Method.SIMPLE_METHOD' o sep_exists_tac)"
@@ -153,7 +153,7 @@ lemma sep_mark2_left2:
   "(P \<and>\<^sup>* sep_mark2 Q) = (sep_mark2 Q \<and>\<^sup>* P)"
   by (rule sep_conj_com)
 
-ML {*
+ML \<open>
 
 (* Replace all occurrences of an underscore that does not have an alphanumeric
    on either side of it *)
@@ -185,9 +185,9 @@ rusc "(_ +\<^sub>p _) \<mapsto> _";
 rusc "_ \<mapsto>\<^sub>_ _";
 rusc "_";
 rusc "_ O_o _"
-*}
+\<close>
 
-ML{*
+ML\<open>
 
 fun sep_select_tacs s ctxt  =
   let val (str, vars) = rusc s
@@ -214,29 +214,29 @@ fun sep_select_tac s ctxt = SELECT_GOAL (EVERY (sep_select_tacs s ctxt))
 fun lift_parser p (ctxt,ts) =
   let val (r, ts') = p ts
   in (r, (ctxt,ts')) end
-*}
+\<close>
 
 method_setup sep_select_tac =
-  {* lift_parser Args.name >> (fn s => Method.SIMPLE_METHOD' o sep_select_tac s) *}
+  \<open>lift_parser Args.name >> (fn s => Method.SIMPLE_METHOD' o sep_select_tac s)\<close>
   "takes a target conjunct in the goal and reorders it to the front"
 
 lemma
   "\<And>R x f n. ((P::heap_assert) \<and>\<^sup>* fac x n \<and>\<^sup>* R (f x)) s"
-apply(sep_select_tac "fac _ _")
-apply(sep_select_tac "R _")
-apply(sep_select_tac "fac x _")
-apply(sep_select_tac "R _")
-oops
+  apply(sep_select_tac "fac _ _")
+  apply(sep_select_tac "R _")
+  apply(sep_select_tac "fac x _")
+  apply(sep_select_tac "R _")
+  oops
 
 lemma
   "((P::heap_assert) \<and>\<^sup>* fac x n) s"
-apply(sep_select_tac "fac _ _")
-oops
+  apply(sep_select_tac "fac _ _")
+  oops
 
 lemma
   "((P::heap_assert) \<and>\<^sup>* long_name) s"
   apply(sep_select_tac "long_name")
-oops
+  oops
 
 consts c_guard :: "'a::c_type ptr_guard"
 
@@ -259,7 +259,7 @@ lemma ptr_retyp_sep_cut'_wp_hrs:
   by (case_tac s)
      (simp add: hrs_htd_update_def, erule (1) ptr_retyp_sep_cut'_wp)
 
-ML {*
+ML \<open>
 
 fun destruct bs (Bound n)      = Free (List.nth (bs,n))
   | destruct bs (Abs (s,ty,t)) = destruct ((s,ty)::bs) t
@@ -330,7 +330,7 @@ end
 
 fun sep_wp_tac ctxt = (REPEAT (sep_wp_step_tac ctxt false)) THEN sep_wp_step_tac ctxt true
 
-*}
+\<close>
 
 method_setup sep_wp_tac =
   "Scan.succeed (Method.SIMPLE_METHOD o sep_wp_tac)"
@@ -340,8 +340,8 @@ method_setup sep_wp_tac =
 (* see testfiles/sep_example_pre_list.thy for a more detailed example *)
 lemma
   "((\<lambda>z. lift (hrs_mem s) (p::(32 word) ptr) + 1 = 2) \<and>\<^sup>* P) (lift_state s)"
-apply sep_wp_tac
-oops
+  apply sep_wp_tac
+  oops
 
 
 end
