@@ -43,7 +43,6 @@ The following type enumerates all the kinds of invocations that clients can requ
 >          | TCBSetMCPriority
 >          | TCBSetSchedParams
 >          | TCBSetTimeoutEndpoint
->          | TCBSetSchedContext
 >          | TCBSetIPCBuffer
 >          | TCBSetSpace
 >          | TCBSuspend
@@ -63,13 +62,13 @@ The following type enumerates all the kinds of invocations that clients can requ
 >          | IRQAckIRQ
 >          | IRQSetIRQHandler
 >          | IRQClearIRQHandler
+>          | DomainSetSet
 >          | SchedControlConfigure
 >          | SchedContextConsumed
 >          | SchedContextBind
 >          | SchedContextUnbind
 >          | SchedContextUnbindObject
 >          | SchedContextYieldTo
->          | DomainSetSet
 >         deriving (Show, Eq, Enum, Bounded)
 
 > data InvocationLabel
