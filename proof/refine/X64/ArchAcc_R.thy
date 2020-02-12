@@ -1296,11 +1296,10 @@ lemma lookup_pdpt_slot_corres:
                   simp: lookup_pml4_slot_eq lookup_pml4_slot_kernel_mappings exI)+
   done
 
-crunch aligned'[wp]: lookupPDPTSlot, lookupPDSlot pspace_aligned'
-  (wp: getPML4E_wp getPDPTE_wp hoare_drop_imps ignore: getObject)
-
-crunch distict'[wp]: lookupPDPTSlot, lookupPDSlot pspace_distinct'
-  (wp: getPML4E_wp getPDPTE_wp hoare_drop_imps ignore: getObject)
+crunches lookupPDPTSlot, lookupPDSlot
+  for aligned'[wp]: pspace_aligned'
+  and distict'[wp]: pspace_distinct'
+  (wp: getPML4E_wp getPDPTE_wp hoare_drop_imps)
 
 lemma pd_at_lift:
   "corres_inst_eq ptr ptr' \<Longrightarrow> \<forall>s s'. (s, s') \<in> state_relation \<longrightarrow> True \<longrightarrow>
@@ -1398,16 +1397,16 @@ lemma lookup_pt_slot_corres:
 declare in_set_zip_refl[simp]
 
 crunch typ_at' [wp]: storePML4E "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
+  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
 crunch typ_at' [wp]: storePDPTE "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
+  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
 crunch typ_at' [wp]: storePDE "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
+  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
 crunch typ_at' [wp]: storePTE "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
+  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
 lemmas storePML4E_typ_ats[wp] = typ_at_lifts [OF storePML4E_typ_at']
 lemmas storePDPTE_typ_ats[wp] = typ_at_lifts [OF storePDPTE_typ_at']
@@ -1437,7 +1436,7 @@ lemma getObject_pml4e_inv[wp]:
   by (simp add: getObject_inv loadObject_default_inv)
 
 crunch typ_at'[wp]: copyGlobalMappings "\<lambda>s. P (typ_at' T p s)"
-  (wp: mapM_x_wp' ignore: forM_x getObject)
+  (wp: mapM_x_wp')
 
 lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']
 

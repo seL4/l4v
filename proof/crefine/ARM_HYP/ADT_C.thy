@@ -205,7 +205,7 @@ definition
   where
   "checkActiveIRQ_C \<equiv>
    do getActiveIRQ_C;
-      irq \<leftarrow> gets ret__unsigned_short_';
+      irq \<leftarrow> gets ret__unsigned_long_';
       return (irq \<noteq> scast irqInvalid)
    od"
 
@@ -1877,7 +1877,7 @@ definition
 definition
   "checkActiveIRQ_C \<equiv>
    do getActiveIRQ_C;
-      irq \<leftarrow> gets ret__unsigned_short_';
+      irq \<leftarrow> gets ret__unsigned_long_';
       return (irq \<noteq> scast irqInvalid)
    od"
 

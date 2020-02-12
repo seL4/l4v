@@ -1699,31 +1699,24 @@ done
 
 definition
   irq_opt_relation_def:
-  "irq_opt_relation (airq :: (8 word) option) (cirq :: word8) \<equiv>
+  "irq_opt_relation (airq :: (8 word) option) (cirq :: machine_word) \<equiv>
        case airq of
          Some irq \<Rightarrow> (cirq = ucast irq \<and>
-                      irq \<noteq> scast irqInvalid \<and>
-                      ucast irq \<le> (scast Kernel_C.maxIRQ :: word8))
-       | None \<Rightarrow> cirq = scast irqInvalid"
+                      irq \<noteq> ucast irqInvalid \<and>
+                      ucast irq \<le> UCAST(32 signed \<rightarrow> 8) Kernel_C.maxIRQ)
+       | None \<Rightarrow> cirq = ucast irqInvalid"
 
 
 declare unat_ucast_up_simp[simp]
 
-
 lemma setIRQState_ccorres:
   "ccorres dc xfdc
-          (\<top> and (\<lambda>s. irq \<le> scast Kernel_C.maxIRQ))
+          (\<top> and (\<lambda>s. ucast irq \<le> (ucast Kernel_C.maxIRQ :: machine_word)))
           (UNIV \<inter> {s. irqState_' s = irqstate_to_C irqState}
-                \<inter> {s. irq_' s = irq})
+                \<inter> {s. irq_' s = ucast irq})
           []
          (setIRQState irqState irq)
          (Call setIRQState_'proc )"
-proof -
-  have is_up_8_16[simp]: "is_up (ucast :: word8 \<Rightarrow> word16)"
-  by (simp add: is_up_def source_size_def target_size_def word_size)
-
-
-show ?thesis
   apply (rule ccorres_gen_asm)
   apply (cinit simp del: return_bind)
    apply (rule ccorres_symb_exec_l)
@@ -1757,12 +1750,11 @@ show ?thesis
   apply (simp add: Kernel_C.IRQTimer_def Kernel_C.IRQInactive_def)
   apply (simp add: Kernel_C.IRQInactive_def Kernel_C.IRQReserved_def)
   done
-qed
 
 
 lemma deletedIRQHandler_ccorres:
   "ccorres dc xfdc
-         (\<lambda>s. irq \<le> scast Kernel_C.maxIRQ)
+         (\<lambda>s. ucast irq \<le> (ucast Kernel_C.maxIRQ :: machine_word))
          (UNIV \<inter> {s. irq_' s = ucast irq}) []
          (deletedIRQHandler irq)
          (Call deletedIRQHandler_'proc)"
@@ -2005,8 +1997,11 @@ where
 definition
   cleanup_info_wf' :: "capability \<Rightarrow> bool"
 where
-  "cleanup_info_wf' cap \<equiv> case cap of IRQHandlerCap irq \<Rightarrow>
-      UCAST(8\<rightarrow>16) irq \<le> SCAST(32 signed\<rightarrow>16) Kernel_C.maxIRQ | ArchObjectCap acap \<Rightarrow> arch_cleanup_info_wf' acap | _ \<Rightarrow> True"
+  "cleanup_info_wf' cap \<equiv> case cap of
+      IRQHandlerCap irq \<Rightarrow>
+        UCAST(8\<rightarrow>machine_word_len) irq \<le>  SCAST(32 signed\<rightarrow>machine_word_len) Kernel_C.maxIRQ
+    | ArchObjectCap acap \<Rightarrow> arch_cleanup_info_wf' acap
+    | _ \<Rightarrow> True"
 
 (* FIXME: move *)
 lemma hrs_mem_update_compose:
@@ -2510,7 +2505,7 @@ lemma h_t_valid_Array_element':
 lemma setIOPortMask_spec:
   notes ucast_mask = ucast_and_mask[where n=6, simplified mask_def, simplified]
   notes not_max_word_simps = and_not_max_word shiftr_not_max_word and_mask_not_max_word
-  notes ucast_cmp_ucast = ucast_le_ucast ucast_less_ucast
+  notes ucast_cmp_ucast = ucast_le_ucast ucast_less_ucast_weak
   notes array_assert = array_assertion_shrink_right[OF array_ptr_valid_array_assertionD]
   notes word_unat.Rep_inject[simp del]
   shows
@@ -2710,14 +2705,16 @@ lemma postCapDeletion_ccorres:
    apply (frule cap_get_tag_isCap_unfolded_H_cap(5))
    apply (clarsimp simp: cap_irq_handler_cap_lift ccap_relation_def cap_to_H_def
                          cleanup_info_wf'_def maxIRQ_def Kernel_C.maxIRQ_def)
-   apply word_bitwise
+(*   apply word_bitwise *)
   apply (rule conjI, clarsimp simp: isCap_simps cleanup_info_wf'_def)
   apply (rule conjI[rotated], clarsimp simp: isCap_simps)
   apply (clarsimp simp: isCap_simps)
   apply (frule cap_get_tag_isCap_unfolded_H_cap(5))
   apply (clarsimp simp: cap_irq_handler_cap_lift ccap_relation_def cap_to_H_def
-                        cleanup_info_wf'_def c_valid_cap_def cl_valid_cap_def mask_def)
-  done
+                        cleanup_info_wf'_def c_valid_cap_def cl_valid_cap_def mask_def
+                        )
+  apply (rule mask_eq_ucast_eq[where 'a="8" and 'b="64" and 'c="64", symmetric, simplified])
+  by (simp add: mask_def)
 
 lemma emptySlot_ccorres:
   "ccorres dc xfdc
@@ -3320,11 +3317,11 @@ lemma sameRegionAs_spec:
            apply (simp add: ccap_relation_def map_option_case)
            apply (simp add: cap_irq_handler_cap_lift)
            apply (simp add: cap_to_H_def)
-           apply (clarsimp simp: up_ucast_inj_eq c_valid_cap_def
+           apply (clarsimp simp: up_ucast_inj_eq c_valid_cap_def ucast_eq_mask
                                  cl_valid_cap_def mask_twice
                           split: if_split bool.split
-                          | intro impI conjI
-                          | simp )
+                  | intro impI conjI
+                  | simp)
           apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
           apply (clarsimp simp: isArchCap_tag_def2)
          \<comment> \<open>capa is an EndpointCap\<close>

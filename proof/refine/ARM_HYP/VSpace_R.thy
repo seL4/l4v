@@ -24,8 +24,6 @@ end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunch_ignore (add: throw_on_false)
-
 (* FIXME move to lib *)
 lemmas FalseI = notE[where R=False]
 
@@ -80,7 +78,7 @@ lemma findPDForASIDAssert_pd_at_wp:
   done
 
 crunch inv[wp]: findPDForASIDAssert "P"
-  (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps)
+  (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps ignore_del: getObject)
 
 lemma pspace_relation_pd:
   assumes p: "pspace_relation (kheap a) (ksPSpace c)"
@@ -831,7 +829,7 @@ crunches
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and no_0_obj'[wp]: no_0_obj'
   and vcpu_at'[wp]: "\<lambda>s. P (vcpu_at' p s)"
-  (ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps ignore_del: setObject)
 
 lemma vcpuUpdate_corres[corres]:
   "\<forall>v1 v2. vcpu_relation v1 v2 \<longrightarrow> vcpu_relation (f v1) (f' v2) \<Longrightarrow>
@@ -1018,15 +1016,17 @@ crunches
   vcpuUpdate for vcpu_at'[wp]: "\<lambda>s. P (vcpu_at' p s)"
 
 lemma vcpuSwitch_corres:
+  assumes "vcpu' = vcpu"
+  shows
   "corres dc (\<lambda>s. (vcpu \<noteq> None \<longrightarrow> vcpu_at  (the vcpu) s) \<and>
                   ((arm_current_vcpu \<circ> arch_state) s \<noteq> None
                     \<longrightarrow> vcpu_at ((fst \<circ> the \<circ> arm_current_vcpu \<circ> arch_state) s) s))
-             (\<lambda>s. (vcpu \<noteq> None \<longrightarrow> vcpu_at'  (the vcpu) s) \<and>
+             (\<lambda>s. (vcpu' \<noteq> None \<longrightarrow> vcpu_at'  (the vcpu') s) \<and>
                   ((armHSCurVCPU \<circ> ksArchState) s \<noteq> None
                     \<longrightarrow> vcpu_at' ((fst \<circ> the \<circ> armHSCurVCPU \<circ> ksArchState) s) s) \<and>
                   no_0_obj' s)
              (vcpu_switch vcpu)
-             (vcpuSwitch vcpu)"
+             (vcpuSwitch vcpu')"
   proof -
     have modify_current_vcpu:
       "\<And>a b. corres dc \<top> \<top> (modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := Some (a, b)\<rparr>\<rparr>))
@@ -1041,7 +1041,7 @@ lemma vcpuSwitch_corres:
              simp add: state_relation_def arch_state_relation_def)
       done
     show ?thesis
-      apply (simp add: vcpu_switch_def vcpuSwitch_def)
+      apply (simp add: vcpu_switch_def vcpuSwitch_def assms)
       apply (cases vcpu)
          apply (all \<open>simp, rule corres_split'[OF  _ _ gets_sp gets_sp],
                            rule corres_guard_imp[OF get_current_vcpu TrueI TrueI],
@@ -1075,20 +1075,23 @@ lemma aligned_distinct_relation_vcpu_atI'[elim]:
   done
 
 lemma vcpuSwitch_corres':
+  assumes "vcpu' = vcpu"
+  shows
   "corres dc (\<lambda>s. (vcpu \<noteq> None \<longrightarrow> vcpu_at  (the vcpu) s) \<and>
                   ((arm_current_vcpu \<circ> arch_state) s \<noteq> None
                     \<longrightarrow> vcpu_at ((fst \<circ> the \<circ> arm_current_vcpu \<circ> arch_state) s) s))
              (pspace_aligned' and pspace_distinct' and no_0_obj')
              (vcpu_switch vcpu)
-             (vcpuSwitch vcpu)"
+             (vcpuSwitch vcpu')"
   apply (rule stronger_corres_guard_imp,
-         rule vcpuSwitch_corres)
-       apply simp
+         rule vcpuSwitch_corres[OF assms])
+   apply simp
+  apply (simp add: assms)
   apply (rule conjI)
    apply clarsimp
-    apply (rule aligned_distinct_relation_vcpu_atI' ; clarsimp simp add: state_relation_def, assumption?)
-    apply (clarsimp simp add: state_relation_def arch_state_relation_def)
-    apply (rule aligned_distinct_relation_vcpu_atI'; assumption)
+   apply (rule aligned_distinct_relation_vcpu_atI' ; clarsimp simp add: state_relation_def, assumption?)
+  apply (clarsimp simp add: state_relation_def arch_state_relation_def)
+  apply (rule aligned_distinct_relation_vcpu_atI'; assumption)
   done
 
 lemma no_fail_setCurrentPDPL2: "no_fail \<top> (setCurrentPDPL2 w)"
@@ -1207,25 +1210,16 @@ proof -
                 apply (erule notE, rule_tac a=x in ranI)
                 apply simp
                apply (rule corres_split_eqrE [OF _ find_pd_for_asid_corres])
-                 apply (rule whenE_throwError_corres)
-                   apply (simp add: lookup_failure_map_def)
+                  apply (rule whenE_throwError_corres)
+                    apply (simp add: lookup_failure_map_def)
+                   apply simp
                   apply simp
+                  apply (rule arm_context_switch_corres)
                  apply simp
-                 apply (rule corres_split[OF _ arm_context_switch_corres])
-                   apply (rule corres_split[OF _ get_tcb_corres])
-                     apply (subgoal_tac "tcb_vcpu (tcb_arch rv) = atcbVCPUPtr (tcbArch rv')")
-                      apply simp
-                      apply (rule_tac P="valid_arch_state and valid_objs and ko_at (TCB rv) t" and
-                                      P'="pspace_aligned' and pspace_distinct' and no_0_obj'"
-                                      in corres_guard_imp)
-                        apply (rule vcpuSwitch_corres'[simplified dc_def])
-                       apply (fastforce intro: valid_tcb_vcpu[OF valid_objs_valid_tcb] valid_arch_state_curr_vcpu)
-                      apply (assumption)
-                     apply (clarsimp simp add: tcb_relation_def arch_tcb_relation_def)
-                 apply (wpsimp simp: armv_contextSwitch_def if_apply_def2 wp: assert_get_tcb_ko')+
-            apply ((wp find_pd_for_asid_pd_at_asid_again
-                  | simp add: if_apply_def2 | wp (once) hoare_drop_imps)+)
-
+                apply simp
+                apply (wpsimp simp: armv_contextSwitch_def if_apply_def2 wp: assert_get_tcb_ko')+
+                apply ((wp find_pd_for_asid_pd_at_asid_again
+                        | simp add: if_apply_def2 | wp (once) hoare_drop_imps)+)
             apply clarsimp
             apply (frule page_directory_cap_pd_at_uniq, simp+)
             apply (frule(1) cte_wp_at_valid_objs_valid_cap)
@@ -1319,14 +1313,15 @@ lemma invalidateASID_valid_arch_state [wp]:
    apply (auto elim!: subset_inj_on dest!: ran_del_subset split: option.splits)
   done
 
-crunch no_0_obj'[wp]: vcpuDisable, vcpuEnable, vcpuSave, vcpuRestore no_0_obj'
-  (ignore: getObject simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
+crunches vcpuDisable, vcpuEnable, vcpuSave, vcpuRestore
+  for no_0_obj'[wp]: no_0_obj'
+  (simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
 
 lemma vcpuSwitch_no_0_obj'[wp]: "\<lbrace>no_0_obj'\<rbrace> vcpuSwitch v \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
-   (ignore: getObject simp: crunch_simps
+  (simp: crunch_simps
    wp: crunch_wps getObject_inv loadObject_default_inv)
 
 (* FIXME move to ArchVSpace_AI *)
@@ -1630,19 +1625,20 @@ crunch typ_at' [wp]: armv_contextSwitch "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps)
 
 crunch typ_at' [wp]: findPDForASID "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps getObject_inv simp: crunch_simps loadObject_default_def ignore: getObject)
+  (wp: crunch_wps getObject_inv simp: crunch_simps loadObject_default_def)
 
-crunch typ_at' [wp]: vcpuEnable, vcpuDisable, vcpuSave, vcpuRestore "\<lambda>s. P (typ_at' T p s)"
-  (simp: crunch_simps ignore: getObject
-   wp: crunch_wps getObject_inv loadObject_default_inv)
+crunches vcpuEnable, vcpuDisable, vcpuSave, vcpuRestore
+  for typ_at' [wp]: "\<lambda>s. P (typ_at' T p s)"
+  (simp: crunch_simps
+     wp: crunch_wps getObject_inv loadObject_default_inv)
 
 lemma vcpuSwitch_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (typ_at' T p s) \<rbrace>"
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 crunch typ_at' [wp]: setVMRoot "\<lambda>s. P (typ_at' T p s)"
-  (simp: crunch_simps ignore: getObject
-   wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps
+     wp: crunch_wps getObject_inv loadObject_default_inv)
 
 lemmas setVMRoot_typ_ats [wp] = typ_at_lifts [OF setVMRoot_typ_at']
 
@@ -1864,7 +1860,7 @@ lemma flush_page_corres:
   done
 
 crunch typ_at' [wp]: flushTable "\<lambda>s. P (typ_at' T p s)"
-  (simp: assertE_def when_def wp: crunch_wps ignore: getObject)
+  (simp: assertE_def when_def wp: crunch_wps)
 
 lemmas flushTable_typ_ats' [wp] = typ_at_lifts [OF flushTable_typ_at']
 
@@ -1872,26 +1868,28 @@ lemmas findPDForASID_typ_ats' [wp] = typ_at_lifts [OF findPDForASID_inv]
 
 crunch inv [wp]: findPDForASID P
   (simp: assertE_def whenE_def loadObject_default_def
-   wp: crunch_wps getObject_inv ignore: getObject)
+   wp: crunch_wps getObject_inv)
 
-crunch pspace_aligned'[wp]: vcpuEnable, vcpuSave, vcpuDisable, vcpuRestore pspace_aligned'
-  (ignore: getObject simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
+crunches vcpuEnable, vcpuSave, vcpuDisable, vcpuRestore
+  for pspace_aligned'[wp]: pspace_aligned'
+  (simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
 
 lemma vcpuSwitch_aligned'[wp]: "\<lbrace>pspace_aligned'\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. pspace_aligned'\<rbrace>"
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
-crunch pspace_distinct'[wp]: vcpuEnable, vcpuSave, vcpuDisable, vcpuRestore pspace_distinct'
-  (ignore: getObject simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
+crunches vcpuEnable, vcpuSave, vcpuDisable, vcpuRestore
+  for pspace_distinct'[wp]: pspace_distinct'
+  (simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
 
 lemma vcpuSwitch_distinct'[wp]: "\<lbrace>pspace_distinct'\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. pspace_distinct'\<rbrace>"
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 crunch aligned'[wp]: unmapPageTable "pspace_aligned'"
-  (ignore: getObject simp: crunch_simps
-       wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps
+     wp: crunch_wps getObject_inv loadObject_default_inv)
 crunch distinct'[wp]: unmapPageTable "pspace_distinct'"
-  (ignore: getObject simp: crunch_simps
-       wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps
+     wp: crunch_wps getObject_inv loadObject_default_inv)
 
 lemma page_table_mapped_corres:
   "corres (=) (valid_arch_state and valid_vspace_objs and pspace_aligned
@@ -2025,19 +2023,19 @@ crunches
   vcpuDisable, vcpuEnable, vcpuRestore, vcpuSwitch
   for valid_objs'[wp]: valid_objs'
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
-  (wp: mapM_wp_inv simp: mapM_x_mapM ignore: getObject setObject)
+  (wp: mapM_wp_inv simp: mapM_x_mapM)
 
 crunch valid_objs' [wp]: flushPage "valid_objs'"
-  (wp: crunch_wps hoare_drop_imps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps hoare_drop_imps simp: crunch_simps)
 
 crunch inv: lookupPTSlot "P"
   (wp: loadObject_default_inv)
 
 crunch aligned' [wp]: unmapPage pspace_aligned'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch distinct' [wp]: unmapPage pspace_distinct'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma corres_split_strengthen_ftE:
   "\<lbrakk> corres (ftr \<oplus> r') P P' f j;
@@ -2505,15 +2503,16 @@ lemma setObject_vcpu_cte_wp_at'[wp]:
   apply simp
   done
 
-crunch ctes[wp]: vcpuSave, vcpuRestore, vcpuDisable, vcpuEnable  "\<lambda>s. P (ctes_of s)"
-  (ignore: getObject setObject simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
+crunches vcpuSave, vcpuRestore, vcpuDisable, vcpuEnable
+  for ctes[wp]: "\<lambda>s. P (ctes_of s)"
+  (simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
 
 lemma vcpuSwitch_ctes[wp]: "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> vcpuSwitch vcpu \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 crunch ctes [wp]: unmapPage "\<lambda>s. P (ctes_of s)"
-  (simp: crunch_simps ignore: getObject
-  wp: crunch_wps loadObject_default_inv getObject_inv)
+  (simp: crunch_simps
+     wp: crunch_wps loadObject_default_inv getObject_inv)
 
 lemma triple_set_zip_eq:
   "(a, b, c) \<in> set (zip ys (zip ys xs)) \<Longrightarrow> a = b \<and> a \<in> set ys"
@@ -2606,7 +2605,8 @@ lemma pde_check_if_mapped_corres:
   apply simp
   done
 
-crunch unique_table_refs[wp]: do_machine_op, store_pte "\<lambda>s. (unique_table_refs (caps_of_state s))"
+crunches do_machine_op, store_pte
+  for unique_table_refs[wp]: "\<lambda>s. (unique_table_refs (caps_of_state s))"
 crunch valid_asid_map[wp]: store_pte "valid_asid_map"
 
 lemma set_cap_pd_at_asid [wp]:
@@ -2662,8 +2662,7 @@ lemma setCTE_valid_duplicates'[wp]:
 
 crunch valid_duplicates'[wp]: updateCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps
-   simp: crunch_simps unless_def
-   ignore: getObject setObject)
+   simp: crunch_simps unless_def)
 
 
 lemma message_info_to_data_eqv:
@@ -3190,15 +3189,16 @@ lemma armv_contextSwitch_obj_at' [wp]:
   apply (wp doMachineOp_obj_at|wpc|simp)+
   done
 
-crunch obj_at'_no_vcpu[wp]: vcpuSave, vcpuDisable, vcpuEnable, vcpuRestore "\<lambda>s. P (obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t s)"
-  (ignore: setObject getObject simp: crunch_simps wp: crunch_wps)
+crunches vcpuSave, vcpuDisable, vcpuEnable, vcpuRestore
+  for obj_at'_no_vcpu[wp]: "\<lambda>s. P (obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t s)"
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma vcpuSwitch_obj_at'_no_vcpu[wp]:
   "vcpuSwitch param_a \<lbrace>\<lambda>s. P (obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t s)\<rbrace>"
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 crunch obj_at'_no_vcpu[wp]: setVMRoot "\<lambda>s. P (obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t s)"
-  (simp: crunch_simps ignore: getObject)
+  (simp: crunch_simps)
 
 lemma storeHWASID_invs:
   "\<lbrace>invs' and
@@ -3358,13 +3358,14 @@ lemma valid_irq_node_lift_asm:
   apply simp
   done
 
-crunch ksQ[wp]: storeWordUser,armv_contextSwitch,doMachineOp "\<lambda>s. P (ksReadyQueues s)"
+crunches storeWordUser, armv_contextSwitch, doMachineOp
+  for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
 
 crunches
   vcpuDisable, vcpuRestore, vcpuEnable, vgicUpdateLR, vcpuWriteReg, vcpuReadReg,
   vcpuRestoreRegRange, vcpuSaveRegRange
   for ksQ[wp]:  "\<lambda>s. P (ksReadyQueues s)"
-  (ignore: setObject getObject wp: crunch_wps)
+  (wp: crunch_wps)
 
 lemma vcpuSave_ksQ[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> vcpuSave param_a \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
@@ -3518,7 +3519,7 @@ lemma setVCPU_valid_queues [wp]:
 crunches
   vcpuDisable, vcpuRestore, vcpuEnable, vcpuUpdate, vcpuSaveRegRange, vgicUpdateLR
   for valid_queues[wp]: valid_queues
-  (ignore: setObject getObject doMachineOp wp: mapM_x_wp)
+  (ignore: doMachineOp wp: mapM_x_wp)
 
 lemma vcpuSave_valid_queues[wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> vcpuSave param_a \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
@@ -3742,7 +3743,7 @@ lemma vcpuSaveReg_hyp[wp]:
 crunches
   vcpuRestoreRegRange, vcpuSaveRegRange, vgicUpdateLR
   for hyp[wp]: "ko_wp_at' (is_vcpu' and hyp_live') v"
-  (wp: crunch_wps setVCPU_regs_vcpu_live dmo_vcpu_hyp ignore: getObject)
+  (wp: crunch_wps setVCPU_regs_vcpu_live dmo_vcpu_hyp)
 
 lemma vcpuDisable_hyp[wp]:
   "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace> vcpuDisable (Some x) \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
@@ -3781,7 +3782,7 @@ lemma vcpuUpdate_valid_arch_state'[wp]:
 
 crunches vgicUpdateLR, vcpuSave, vcpuDisable, vcpuEnable, vcpuRestore
   for valid_arch_state'[wp]: valid_arch_state'
-  (wp: crunch_wps ignore: doMachineOp getObject setObject)
+  (wp: crunch_wps ignore: doMachineOp)
 
 lemma vcpuSwitch_valid_arch_state'[wp]:
    "\<lbrace>valid_arch_state' and (case v of None \<Rightarrow> \<top> | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x)\<rbrace>
@@ -3966,7 +3967,7 @@ crunches
   vcpuRestoreReg, vcpuRestoreRegRange, vcpuSaveReg, vcpuSaveRegRange, vgicUpdateLR
   for invs'[wp]: invs'
   (wp: crunch_wps setVCPU_regs_invs' setVCPU_vgic_invs' simp: vcpuUpdate_def
-   ignore: getObject doMachineOp vcpuUpdate)
+   ignore: doMachineOp vcpuUpdate)
 
 lemma vcpuEnable_invs'[wp]:
   "vcpuEnable v \<lbrace> invs'\<rbrace>"
@@ -4032,11 +4033,33 @@ lemma setVMRoot_valid_arch_state'[wp]:
   apply ((wpsimp wp: hoare_vcg_ex_lift hoare_drop_imps
                     getObject_tcb_wp valid_case_option_post_wp'
                simp: if_apply_def2
-    | wp hoare_vcg_all_lift)+)
-  apply (fastforce cong: option.case_cong)
+          | wp hoare_vcg_all_lift)+)
   done
 
-lemma getObject_tcb_hyp_invs': "\<lbrace>invs'\<rbrace> getObject p
+lemma modifyArchState_hyp[wp]:
+  "modifyArchState x \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  by (wpsimp simp: modifyArchState_def wp: | subst doMachineOp_bind)+
+
+lemma vcpuSwitch_hyp[wp]:
+  "vcpuSwitch x \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  apply (simp add: vcpuSwitch_def)
+  apply wpc
+    apply wpsimp
+   apply wpsimp
+  apply (clarsimp simp: ko_wp_at'_def)
+  done
+
+lemma switchToThread_valid_arch_state[wp]:
+  "\<lbrace>valid_arch_state' and live_vcpu_at_tcb p\<rbrace> ARM_HYP_H.switchToThread p \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  apply (simp add: ARM_HYP_H.switchToThread_def)
+  by (wpsimp wp: hoare_vcg_ex_lift getObject_tcb_wp valid_case_option_post_wp')+
+
+crunches switchToThread
+  for valid_arch_state'[wp]: valid_arch_state'
+  (wp: hoare_vcg_ex_lift)
+
+lemma getObject_tcb_hyp_sym_refs:
+      "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of' s)\<rbrace> getObject p
        \<lbrace>\<lambda>rv. case atcbVCPUPtr (tcbArch rv) of None \<Rightarrow> \<lambda>_. True
              | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x\<rbrace>"
   apply (wpsimp wp: getObject_tcb_wp)
@@ -4046,7 +4069,6 @@ lemma getObject_tcb_hyp_invs': "\<lbrace>invs'\<rbrace> getObject p
   apply (rename_tac tcb)
   apply (rule_tac x=tcb in exI; rule conjI, clarsimp simp: obj_at'_def projectKOs)
   apply (clarsimp, rule context_conjI, clarsimp simp: obj_at'_def projectKOs)
-  apply (frule invs_sym_hyp')
   apply (drule ko_at_state_hyp_refs_ofD')
   apply (simp add: hyp_refs_of'_def sym_refs_def)
   apply (erule_tac x=p in allE, simp)
@@ -4058,39 +4080,16 @@ lemma getObject_tcb_hyp_invs': "\<lbrace>invs'\<rbrace> getObject p
 
 lemma setVMRoot_invs'[wp]:
   "\<lbrace>invs'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  using [[goals_limit=12]]
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
-   apply (wp hoare_drop_imps getObject_tcb_hyp_invs'
+   apply (wp hoare_drop_imps getObject_tcb_hyp_sym_refs
           | wpcw
           | simp add: if_apply_def2 checkPDNotInASIDMap_def split del: if_split)+
-  done
-
-lemma getObject_tcb_hyp_invs_no_cicd': "\<lbrace>invs_no_cicd'\<rbrace> getObject p
-       \<lbrace>\<lambda>rv. case atcbVCPUPtr (tcbArch rv) of None \<Rightarrow> \<lambda>_. True
-             | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x\<rbrace>"
-  apply (wpsimp wp: getObject_tcb_wp)
-  apply (clarsimp simp: typ_at_tcb'[symmetric] typ_at'_def ko_wp_at'_def[of _ p]
-                split: option.splits)
-  apply (case_tac ko; simp)
-  apply (rename_tac tcb)
-  apply (rule_tac x=tcb in exI; rule conjI, clarsimp simp: obj_at'_def projectKOs)
-  apply (clarsimp, rule context_conjI, clarsimp simp: obj_at'_def projectKOs)
-  apply (subgoal_tac "sym_refs (state_hyp_refs_of' s)")
-   prefer 2
-   apply (simp add: invs_no_cicd'_def)
-  apply (drule ko_at_state_hyp_refs_ofD')
-  apply (simp add: hyp_refs_of'_def sym_refs_def)
-  apply (erule_tac x=p in allE, simp)
-  apply (drule state_hyp_refs_of'_elemD)
-  apply (clarsimp simp: hyp_refs_of_rev')
-  apply (simp add: ko_wp_at'_def, erule exE,
-         clarsimp simp: is_vcpu'_def hyp_live'_def arch_live'_def)
   done
 
 lemma setVMRoot_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
-   apply (wp hoare_drop_imps getObject_tcb_hyp_invs_no_cicd'
+   apply (wp hoare_drop_imps getObject_tcb_hyp_sym_refs
              armv_contextSwitch_invs_no_cicd' getHWASID_invs_no_cicd'
              dmo_setCurrentPD_invs_no_cicd'
           | wpcw
@@ -4102,22 +4101,20 @@ crunches
   vcpuSwitch
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
-  (ignore: doMachineOp getObject setObject wp: crunch_wps)
+  (ignore: doMachineOp wp: crunch_wps)
 
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps
-       loadObject_default_def ignore: getObject)
+       loadObject_default_def)
 
 crunch it' [wp]: findPDForASID "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv ignore: getObject)
+  (simp: crunch_simps loadObject_default_def wp: getObject_inv)
 
 crunch it' [wp]: deleteASIDPool "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp'
-   ignore: getObject)
+  (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp')
 
 crunch it' [wp]: lookupPTSlot "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv
-   ignore: getObject)
+  (simp: crunch_simps loadObject_default_def wp: getObject_inv)
 
 lemma storePTE_it'[wp]: "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
   by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def)
@@ -4127,13 +4124,11 @@ lemma storePDE_it'[wp]: "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> storeP
 
 crunch it' [wp]: flushTable "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def
-   wp: setObject_idle' hoare_drop_imps mapM_wp'
-   ignore: getObject)
+   wp: setObject_idle' hoare_drop_imps mapM_wp')
 
 crunch it' [wp]: deleteASID "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def updateObject_default_def
-   wp: getObject_inv
-   ignore: getObject setObject)
+   wp: getObject_inv)
 
 lemma valid_slots_lift':
   assumes t: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
@@ -4144,16 +4139,16 @@ lemma valid_slots_lift':
   done
 
 crunch typ_at' [wp]: performPageTableInvocation "\<lambda>s. P (typ_at' T p s)"
-  (ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps)
 
 crunch typ_at' [wp]: performPageDirectoryInvocation "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 
 crunch typ_at' [wp]: performPageInvocation "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps ignore: getObject)
+  (wp: crunch_wps)
 
 crunch typ_at' [wp]: performASIDPoolInvocation "\<lambda>s. P (typ_at' T p s)"
-  (ignore: getObject wp: getObject_cte_inv getASID_wp)
+  (wp: getObject_cte_inv getASID_wp)
 
 lemmas performPageTableInvocation_typ_ats' [wp] =
   typ_at_lifts [OF performPageTableInvocation_typ_at']
@@ -4754,15 +4749,16 @@ lemma setASIDPool_invs [wp]:
   apply (clarsimp simp: o_def)
   done
 
-crunch cte_wp_at'[wp]: vcpuSave, vcpuRestore, vcpuDisable, vcpuEnable  "\<lambda>s. P (cte_wp_at' P' p s)"
-  (ignore: getObject setObject simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
+crunches vcpuSave, vcpuRestore, vcpuDisable, vcpuEnable
+  for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
+  (simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
 
 lemma vcpuSwitch_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (cte_wp_at' P' p s)\<rbrace> "
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 crunch cte_wp_at'[wp]: unmapPageTable "\<lambda>s. P (cte_wp_at' P' p s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemmas storePDE_Invalid_invs = storePDE_invs[where pde=InvalidPDE, simplified]
 
@@ -4826,7 +4822,7 @@ lemma dmo_cleanCaches_PoU_invs'[wp]:
   done
 
 crunch invs'[wp]: unmapPageTable "invs'"
-  (ignore: getObject setObject storePDE doMachineOp
+  (ignore: storePDE doMachineOp
        wp: dmo_invalidateLocalTLB_VAASID_invs' dmo_setCurrentPD_invs'
            storePDE_Invalid_invs mapM_wp' no_irq_setCurrentPD
            crunch_wps
@@ -4955,12 +4951,12 @@ lemma mapM_storePDE_invs:
   done
 
 crunch cte_wp_at': unmapPage "\<lambda>s. P (cte_wp_at' P' p s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemmas unmapPage_typ_ats [wp] = typ_at_lifts [OF unmapPage_typ_at']
 
 crunch inv: lookupPTSlot P
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma flushPage_invs' [wp]:
   "\<lbrace>invs'\<rbrace> flushPage sz pd asid vptr \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -4979,14 +4975,10 @@ lemma unmapPage_invs' [wp]:
 crunch (no_irq) no_irq[wp]: doFlush
   (simp: Let_def)
 
-crunch invs'[wp]: pteCheckIfMapped, pdeCheckIfMapped "invs'"
-  (ignore: getObject)
-
-crunch valid_pte'[wp]: pteCheckIfMapped, pdeCheckIfMapped "valid_pte' pte"
-  (ignore: getObject)
-
-crunch valid_pde'[wp]: pteCheckIfMapped, pdeCheckIfMapped "valid_pde' pde"
-  (ignore: getObject)
+crunches pteCheckIfMapped, pdeCheckIfMapped
+  for invs'[wp]: "invs'"
+  and valid_pte'[wp]: "valid_pte' pte"
+  and valid_pde'[wp]: "valid_pde' pde"
 
 lemma perform_pt_invs [wp]:
   notes no_irq[wp]

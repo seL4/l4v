@@ -157,22 +157,14 @@ lemma tcbSchedAppend_corres:
   done
 
 
-crunch valid_pspace'[wp]: tcbSchedEnqueue valid_pspace'
-  (simp: unless_def)
-crunch valid_pspace'[wp]: tcbSchedAppend valid_pspace'
-  (simp: unless_def)
-crunch valid_pspace'[wp]: tcbSchedDequeue valid_pspace'
+crunches tcbSchedEnqueue, tcbSchedAppend, tcbSchedDequeue
+  for valid_pspace'[wp]: valid_pspace'
+  and valid_arch_state'[wp]: valid_arch_state'
+  and pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
+  (wp: threadSet_pred_tcb_no_state simp: unless_def tcb_to_itcb'_def)
 
-crunch valid_arch_state'[wp]: tcbSchedEnqueue valid_arch_state'
-  (simp: unless_def)
-crunch valid_arch_state'[wp]: tcbSchedAppend valid_arch_state'
-  (simp: unless_def)
-crunch valid_arch_state'[wp]: tcbSchedDequeue valid_arch_state'
-
-crunch pred_tcb_at'[wp]: tcbSchedAppend, tcbSchedDequeue "pred_tcb_at' proj P t"
-  (wp: threadSet_pred_tcb_no_state simp: unless_def tcb_to_itcb'_def ignore: getObject setObject)
-
-crunch state_refs_of'[wp]: setQueue "\<lambda>s. P (state_refs_of' s)"
+crunches setQueue
+  for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
 
 lemma removeFromBitmap_valid_queues_no_bitmap_except[wp]:
 " \<lbrace> valid_queues_no_bitmap_except t \<rbrace>
@@ -315,7 +307,7 @@ lemma tcbSchedAppend_valid_queues'[wp]:
   done
 
 crunch norq[wp]: threadSet "\<lambda>s. P (ksReadyQueues s)"
-  (simp: updateObject_default_def ignore: setObject getObject)
+  (simp: updateObject_default_def)
 
 lemma threadSet_valid_queues'_dequeue: (* threadSet_valid_queues' is too weak for dequeue *)
   "\<lbrace>\<lambda>s. (\<forall>d p t'. obj_at' (inQ d p) t' s \<and> t' \<noteq> t \<longrightarrow> t' \<in> set (ksReadyQueues s (d, p))) \<and>
@@ -416,7 +408,7 @@ crunch idle'[wp]: tcbSchedDequeue valid_idle'
   (simp: crunch_simps)
 
 crunch global_refs'[wp]: tcbSchedEnqueue valid_global_refs'
-  (wp: threadSet_global_refs simp: unless_def ignore: getObject setObject)
+  (wp: threadSet_global_refs simp: unless_def)
 crunch global_refs'[wp]: tcbSchedAppend valid_global_refs'
   (wp: threadSet_global_refs simp: unless_def)
 crunch global_refs'[wp]: tcbSchedDequeue valid_global_refs'
@@ -551,10 +543,9 @@ lemma tcbSchedAppend_tcb_in_cur_domain'[wp]:
    apply wp+
   done
 
-crunch ksDomScheduleIdx[wp]: tcbSchedAppend "\<lambda>s. P (ksDomScheduleIdx s)"
-  (simp: unless_def)
-
-crunch gsUntypedZeroRanges[wp]: tcbSchedAppend, tcbSchedDequeue "\<lambda>s. P (gsUntypedZeroRanges s)"
+crunches tcbSchedAppend, tcbSchedDequeue
+  for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (simp: unless_def)
 
 lemma tcbSchedAppend_sch_act_wf[wp]:
@@ -1165,8 +1156,7 @@ lemmas iflive_inQ_nonz_cap[elim]
     = mp [OF iflive_inQ_nonz_cap_strg, OF conjI[rotated]]
 
 crunch ksRQ[wp]: threadSet "\<lambda>s. P (ksReadyQueues s)"
-  (ignore: setObject getObject
-       wp: updateObject_default_inv)
+  (wp: updateObject_default_inv)
 
 declare Cons_eq_tails[simp]
 

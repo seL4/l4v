@@ -253,7 +253,7 @@ lemma decode_tcb_invocation_reads_respects_f:
   decode_set_tls_base_def
   apply (simp add: unlessE_def[symmetric] unlessE_whenE
         split del: if_split
-             cong: invocation_label.case_cong)
+             cong: gen_invocation_labels.case_cong)
   apply (rule equiv_valid_guard_imp)
    apply (wp (once) requiv_cur_thread_eq range_check_ev
              respects_f[OF derive_cap_rev]

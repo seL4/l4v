@@ -1252,12 +1252,15 @@ def enum_instance_proofs (header, canonical, d):
             lines.append('interpretation Arch .')
         lines.append ('definition')
         lines.append ('  enum_%s: "enum_class.enum \<equiv> ' % header)
-        lines.append ('    [ ')
-        for cons in cons_no_args[:-1]:
-            lines.append ('      %s,' % cons)
-        for cons in cons_no_args[-1:]:
-            lines.append ('      %s' % cons)
-        lines.append ('    ]')
+        if len(cons_no_args) == 0:
+            lines.append ('    []')
+        else:
+            lines.append ('    [ ')
+            for cons in cons_no_args[:-1]:
+                lines.append ('      %s,' % cons)
+            for cons in cons_no_args[-1:]:
+                lines.append ('      %s' % cons)
+            lines.append ('    ]')
         for cons in cons_one_arg:
             lines.append ('    @ (map %s enum)' % cons)
         lines[-1] = lines[-1] + '"'

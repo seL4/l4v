@@ -61,7 +61,7 @@ The following function decodes a CNode invocation message, and checks for any er
 
 The first check is that the invocation type requested is a CNode operation.
 
->     let inv = invocationType label
+>     let inv = genInvocationType label
 >     unless (inv `elem` [CNodeRevoke .. CNodeRotate]) $
 >         throw IllegalOperation
 
@@ -185,7 +185,7 @@ Otherwise, the message was too short.
 >         _ -> throw TruncatedMessage
 
 > decodeCNodeInvocation label _ (CNodeCap {}) _
->     = throw $ if invocationType label `elem` [CNodeRevoke .. CNodeRotate]
+>     = throw $ if genInvocationType label `elem` [CNodeRevoke .. CNodeRotate]
 >         then TruncatedMessage
 >         else IllegalOperation
 

@@ -1638,10 +1638,8 @@ lemma set_vm_root_empty[wp]:
   "\<lbrace>\<lambda>s. P (obj_at (empty_table {}) p s)\<rbrace> set_vm_root v \<lbrace>\<lambda>_ s. P (obj_at (empty_table {}) p s) \<rbrace>"
   apply (simp add: set_vm_root_def)
   apply wpsimp+
-       apply (rule hoare_drop_imp)
-       apply wp+
-    apply (clarsimp simp: if_apply_def2)
-    apply (wpsimp+ | rule hoare_conjI[rotated] hoare_drop_imp hoare_allI)+
+     apply (clarsimp simp: if_apply_def2)
+     apply (wpsimp+ | rule hoare_conjI[rotated] hoare_drop_imp hoare_allI)+
   done
 
 crunch obj_at[wp]: invalidate_tlb_by_asid "\<lambda>s. P' (obj_at P p s)"

@@ -13,27 +13,18 @@ imports Corres
 begin
 
 crunch_ignore (add:
-  bind return "when" get gets fail
-  assert put modify unless select
-  alternative assert_opt gets_the
-  returnOk throwError lift bindE
-  liftE whenE unlessE throw_opt
-  assertE liftM liftME sequence_x
-  zipWithM_x mapM_x sequence mapM sequenceE_x
-  sequenceE mapME mapME_x catch select_f
-  handleE' handleE handle_elseE forM forM_x
-  zipWithM filterM forME_x)
-
-crunch_ignore (add:
-  withoutFailure throw catchFailure rethrowFailure
-  capFaultOnFailure lookupErrorOnFailure
-  nullCapOnFailure nothingOnFailure
-  without_preemption withoutPreemption preemptionPoint
-  cap_fault_on_failure lookup_error_on_failure
-  const_on_failure ignore_failure ignoreFailure
-  empty_on_failure emptyOnFailure unifyFailure
-  unify_failure throw_on_false
-)
+  bind return "when" get gets fail assert put modify unless select alternative assert_opt gets_the
+  returnOk throwError lift bindE liftE whenE unlessE throw_opt assertE liftM liftME sequence_x
+  zipWithM_x mapM_x sequence mapM sequenceE_x sequenceE mapME mapME_x catch select_f
+  handleE' handleE handle_elseE forM forM_x forME_x zipWithM filterM forME_x
+  withoutFailure throw catchFailure rethrowFailure capFaultOnFailure lookupErrorOnFailure
+  nullCapOnFailure nothingOnFailure without_preemption withoutPreemption preemptionPoint
+  cap_fault_on_failure lookup_error_on_failure const_on_failure ignore_failure ignoreFailure
+  empty_on_failure emptyOnFailure unifyFailure unify_failure throw_on_false
+  storeWordVM loadWord setRegister getRegister getRestartPC
+  debugPrint setNextPC maskInterrupt clearMemory throw_on_false
+  unifyFailure ignoreFailure empty_on_failure emptyOnFailure clearMemoryVM null_cap_on_failure
+  setNextPC getRestartPC assertDerived throw_on_false getObject setObject updateObject loadObject)
 
 context Arch begin (*FIXME: arch_split*)
 
@@ -45,15 +36,6 @@ crunch_ignore (add:
   setHardwareASID setCurrentPD)
 
 end
-
-crunch_ignore (add:
-  storeWordVM loadWord setRegister getRegister getRestartPC
-  debugPrint setNextPC maskInterrupt clearMemory throw_on_false)
-
-crunch_ignore (add: unifyFailure ignoreFailure)
-
-crunch_ignore (add: empty_on_failure)
-crunch_ignore (add: emptyOnFailure)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 

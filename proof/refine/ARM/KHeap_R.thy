@@ -287,7 +287,7 @@ lemma setObject_typ_at_not:
   apply fastforce
   done
 
-lemma setObject_typ_at':
+lemma setObject_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace> setObject p v \<lbrace>\<lambda>r s. P (typ_at' T p' s)\<rbrace>"
   by (blast intro: P_bool_lift setObject_typ_at_inv setObject_typ_at_not)
 
@@ -1986,7 +1986,8 @@ lemma setObject_pspace_domain_valid[wp]:
   apply (clarsimp simp: lookupAround2_char1)
   done
 
-crunch pspace_domain_valid[wp]: setNotification, setEndpoint "pspace_domain_valid"
+crunches setNotification, setEndpoint
+  for pspace_domain_valid[wp]: "pspace_domain_valid"
 
 lemma ct_not_inQ_lift:
   assumes sch_act: "\<And>P. \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"

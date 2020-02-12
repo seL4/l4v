@@ -1238,10 +1238,10 @@ lemma lookup_pt_slot_corres [corres]:
 declare in_set_zip_refl[simp]
 
 crunch typ_at' [wp]: storePDE "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
+  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
 crunch typ_at' [wp]: storePTE "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
+  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
 lemmas storePDE_typ_ats[wp] = typ_at_lifts [OF storePDE_typ_at']
 lemmas storePTE_typ_ats[wp] = typ_at_lifts [OF storePTE_typ_at']
@@ -1261,7 +1261,7 @@ lemma getObject_pde_inv[wp]:
   by (simp add: getObject_inv loadObject_default_inv)
 
 crunch typ_at'[wp]: copyGlobalMappings "\<lambda>s. P (typ_at' T p s)"
-  (wp: mapM_x_wp' ignore: forM_x getObject)
+  (wp: mapM_x_wp')
 
 lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']
 

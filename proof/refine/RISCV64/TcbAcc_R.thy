@@ -1067,14 +1067,14 @@ lemma modifyReadyQueuesL1Bitmap_obj_at[wp]:
   apply (fastforce intro: obj_at'_pspaceI)
   done
 
-crunch valid_arch' [wp]: setThreadState, setBoundNotification valid_arch_state'
-  (ignore: getObject setObject simp: unless_def crunch_simps)
+crunches setThreadState, setBoundNotification
+  for valid_arch' [wp]: valid_arch_state'
+  (simp: unless_def crunch_simps)
 
 crunch ksInterrupt'[wp]: threadSet "\<lambda>s. P (ksInterruptState s)"
-  (ignore: getObject wp: setObject_ksInterrupt updateObject_default_inv)
+  (wp: setObject_ksInterrupt updateObject_default_inv)
 
 crunch ksArchState[wp]: threadSet "\<lambda>s. P (ksArchState s)"
-  (ignore: getObject setObject)
 
 lemma threadSet_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> threadSet t F \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
@@ -1083,10 +1083,8 @@ lemma threadSet_typ_at'[wp]:
 lemmas threadSet_typ_at_lifts[wp] = typ_at_lifts [OF threadSet_typ_at']
 
 crunch irq_states' [wp]: threadSet valid_irq_states'
-  (ignore: setObject getObject)
 
 crunch pspace_domain_valid [wp]: threadSet "pspace_domain_valid"
-  (ignore: getObject setObject)
 
 lemma threadSet_obj_at'_really_strongest:
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> obj_at' (\<lambda>obj. if t = t' then P (f obj) else P obj)
@@ -1319,11 +1317,9 @@ lemma threadSet_ct_idle_or_in_cur_domain':
   done
 
 crunch ksDomScheduleIdx[wp]: threadSet "\<lambda>s. P (ksDomScheduleIdx s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv
-     ignore: getObject setObject)
+  (wp: setObject_ksPSpace_only updateObject_default_inv)
 crunch gsUntypedZeroRanges[wp]: threadSet "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv
-     ignore: getObject setObject)
+  (wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemma setObject_tcb_ksDomScheduleIdx [wp]:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s) \<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>_ s. P (ksDomScheduleIdx s)\<rbrace>"
@@ -1553,9 +1549,9 @@ lemma asUser_nosch[wp]:
   done
 
 crunch aligned'[wp]: asUser pspace_aligned'
-  (simp: crunch_simps ignore: getObject wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 crunch distinct'[wp]: asUser pspace_distinct'
-  (simp: crunch_simps ignore: getObject wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma asUser_valid_objs [wp]:
   "\<lbrace>valid_objs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
@@ -2195,22 +2191,15 @@ lemma sbn_corres:
   apply (rule threadset_corres, simp_all add:tcb_relation_def exst_same_def)
   done
 
-crunch tcb'[wp]: rescheduleRequired "tcb_at' addr"
-  (simp: unless_def)
-
-crunch tcb'[wp]: tcbSchedDequeue "tcb_at' addr"
-  (simp: crunch_simps)
-
-crunch tcb'[wp]: setThreadState, setBoundNotification "tcb_at' addr"
+crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
+  for tcb'[wp]: "tcb_at' addr"
 
 lemma valid_tcb_tcbQueued:
   "valid_tcb' (tcbQueued_update f tcb) = valid_tcb' tcb"
   by (cases tcb, rule ext, simp add: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
 
-crunch valid_objs'[wp]: rescheduleRequired valid_objs'
-  (simp: unless_def valid_tcb_tcbQueued crunch_simps)
-
-crunch valid_objs'[wp]: removeFromBitmap valid_objs'
+crunches rescheduleRequired, removeFromBitmap
+  for valid_objs'[wp]: valid_objs'
   (simp: unless_def valid_tcb_tcbQueued crunch_simps)
 
 
@@ -2257,7 +2246,6 @@ crunches rescheduleRequired, tcbSchedDequeue
   for no_0_obj'[wp]: "no_0_obj'"
   and pspace_canonical'[wp]: "pspace_canonical'"
   and pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
-  (ignore:getObject)
 
 lemma sts'_valid_pspace'_inv[wp]:
   "\<lbrace> valid_pspace' and tcb_at' t and valid_tcb_state' st \<rbrace>
@@ -3811,12 +3799,8 @@ lemma setBoundNotification_bound_tcb:
   apply simp
   done
 
-crunch ct'[wp]: rescheduleRequired "\<lambda>s. P (ksCurThread s)"
-  (simp: unless_def)
-
-crunch ct'[wp]: tcbSchedDequeue "\<lambda>s. P (ksCurThread s)"
-crunch ct'[wp]: setThreadState, setBoundNotification "\<lambda>s. P (ksCurThread s)"
-  (simp: crunch_simps)
+crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
+  for ct'[wp]: "\<lambda>s. P (ksCurThread s)"
 
 lemma ct_in_state'_decomp:
   assumes x: "\<lbrace>\<lambda>s. t = (ksCurThread s)\<rbrace> f \<lbrace>\<lambda>rv s. t = (ksCurThread s)\<rbrace>"
@@ -3838,7 +3822,8 @@ lemma ct_in_state'_set:
   apply clarsimp
   done
 
-crunch idle'[wp]: setQueue, rescheduleRequired, tcbSchedDequeue "valid_idle'"
+crunches setQueue, rescheduleRequired, tcbSchedDequeue
+  for idle'[wp]: "valid_idle'"
   (simp: crunch_simps)
 
 lemma sts_valid_idle'[wp]:
@@ -3953,23 +3938,16 @@ lemma sbn_bound_tcb_at':
                | simp add: pred_tcb_at'_def)+
   done
 
-crunch typ_at'[wp]: rescheduleRequired "\<lambda>s. P (typ_at' T p s)"
-  (simp: unless_def)
-crunch typ_at'[wp]: tcbSchedDequeue "\<lambda>s. P (typ_at' T p s)"
-
-crunch typ_at'[wp]: setThreadState, setBoundNotification "\<lambda>s. P (typ_at' T p s)"
-  (wp: hoare_when_weak_wp)
+crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
+  for typ_at'[wp]:  "\<lambda>s. P (typ_at' T p s)"
 
 lemmas setThreadState_typ_ats[wp] = typ_at_lifts [OF setThreadState_typ_at']
 lemmas setBoundNotification_typ_ats[wp] = typ_at_lifts [OF setBoundNotification_typ_at']
 
-crunch aligned'[wp]: setThreadState, setBoundNotification pspace_aligned'
-  (wp: hoare_when_weak_wp)
-
-crunch distinct'[wp]: setThreadState, setBoundNotification pspace_distinct'
-  (wp: hoare_when_weak_wp)
-
-crunch cte_wp_at'[wp]: setThreadState, setBoundNotification "cte_wp_at' P p"
+crunches setThreadState, setBoundNotification
+  for aligned'[wp]: pspace_aligned'
+  and distinct'[wp]: pspace_distinct'
+  and cte_wp_at'[wp]: "cte_wp_at' P p"
 
 crunch refs_of'[wp]: rescheduleRequired "\<lambda>s. P (state_refs_of' s)"
   (wp: threadSet_state_refs_of')
@@ -4050,7 +4028,8 @@ lemma sbn_iflive'[wp]:
   apply auto
   done
 
-crunch ifunsafe'[wp]: setThreadState, setBoundNotification "if_unsafe_then_cap'"
+crunches setThreadState, setBoundNotification
+  for ifunsafe'[wp]: "if_unsafe_then_cap'"
 
 lemma st_tcb_ex_cap'':
   "\<lbrakk> st_tcb_at' P t s; if_live_then_nonz_cap' s;
@@ -4066,12 +4045,14 @@ lemma bound_tcb_ex_cap'':
               elim!: ko_wp_at'_weakenE
                      if_live_then_nonz_capE')
 
-crunch arch' [wp]: setThreadState, setBoundNotification "\<lambda>s. P (ksArchState s)"
-  (ignore: getObject setObject simp: unless_def crunch_simps)
+crunches setThreadState, setBoundNotification
+  for arch' [wp]: "\<lambda>s. P (ksArchState s)"
+  (simp: unless_def crunch_simps)
 
-crunch it' [wp]: setThreadState, setBoundNotification "\<lambda>s. P (ksIdleThread s)"
-  (ignore: getObject setObject wp: getObject_inv_tcb
-     simp: updateObject_default_def unless_def crunch_simps)
+crunches setThreadState, setBoundNotification
+  for it' [wp]: "\<lambda>s. P (ksIdleThread s)"
+  (wp: getObject_inv_tcb
+   simp: updateObject_default_def unless_def crunch_simps)
 
 crunch it' [wp]: removeFromBitmap "\<lambda>s. P (ksIdleThread s)"
 
@@ -4087,11 +4068,13 @@ lemma sbn_ctes_of [wp]:
   apply (wp threadSet_ctes_ofT | simp add: tcb_cte_cases_def cteSizeBits_def)+
   done
 
-crunch ksInterruptState[wp]: setThreadState, setBoundNotification "\<lambda>s. P (ksInterruptState s)"
+crunches setThreadState, setBoundNotification
+  for ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
   (simp: unless_def crunch_simps)
 
-crunch gsMaxObjectSize[wp]: setThreadState, setBoundNotification "\<lambda>s. P (gsMaxObjectSize s)"
-  (simp: unless_def crunch_simps ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
+crunches setThreadState, setBoundNotification
+  for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+  (simp: unless_def crunch_simps wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemmas setThreadState_irq_handlers[wp]
     = valid_irq_handlers_lift'' [OF sts_ctes_of setThreadState_ksInterruptState]
@@ -4107,7 +4090,8 @@ lemma sbn_global_reds' [wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
   by (rule valid_global_refs_lift'; wp)
 
-crunch irq_states' [wp]: setThreadState, setBoundNotification valid_irq_states'
+crunches setThreadState, setBoundNotification
+  for irq_states' [wp]: valid_irq_states'
   (simp: unless_def crunch_simps)
 
 lemma addToBitmap_ksMachine[wp]:
@@ -4124,11 +4108,9 @@ lemma tcbSchedEnqueue_ksMachine[wp]:
   "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> tcbSchedEnqueue x \<lbrace>\<lambda>_ s. P (ksMachineState s)\<rbrace>"
   by (simp add: tcbSchedEnqueue_def unless_def setQueue_def | wp)+
 
-crunch ksMachine[wp]: setThreadState, setBoundNotification "\<lambda>s. P (ksMachineState s)"
- (simp: crunch_simps)
-
-crunch pspace_domain_valid[wp]: setThreadState, setBoundNotification "pspace_domain_valid"
-  (simp: unless_def crunch_simps)
+crunches setThreadState, setBoundNotification
+  for ksMachine[wp]: "\<lambda>s. P (ksMachineState s)"
+  and pspace_domain_valid[wp]: "pspace_domain_valid"
 
 lemma setThreadState_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setThreadState F t \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"

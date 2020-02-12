@@ -869,19 +869,19 @@ lemma threadGet_vcpu_isolatable:
 lemma getTCB_threadGet:
   "do
      tcbobj \<leftarrow> getObject t;
-     f (atcbVCPUPtr (tcbArch tcbobj))
+     x \<leftarrow> f (atcbVCPUPtr (tcbArch tcbobj));
+     g x
    od = do
      vcpu_ptr \<leftarrow> threadGet (atcbVCPUPtr o tcbArch) t;
-     f vcpu_ptr
+     x \<leftarrow> f vcpu_ptr;
+     g x
    od"
    by (simp add: threadGet_def liftM_def)
 
 lemma setVMRoot_isolatable:
   "thread_actions_isolatable idx (setVMRoot t)"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def
-                   locateSlot_conv getSlotCap_def
-                   cap_case_isPageDirectoryCap if_bool_simps
-                   whenE_def liftE_def getTCB_threadGet
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def locateSlot_conv getSlotCap_def
+                   cap_case_isPageDirectoryCap if_bool_simps whenE_def liftE_def
                    checkPDNotInASIDMap_def stateAssert_def2
                    checkPDASIDMapMembership_def armv_contextSwitch_def
              cong: if_cong)
@@ -891,7 +891,6 @@ lemma setVMRoot_isolatable:
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
                gets_isolatable getCTE_isolatable getHWASID_isolatable
-               threadGet_vcpu_isolatable vcpuSwitch_isolatable
                findPDForASID_isolatable doMachineOp_isolatable)
     apply (simp add: projectKO_opt_asidpool
            | wp getASID_wp typ_at_lifts [OF getHWASID_typ_at'])+
@@ -1139,13 +1138,19 @@ lemma oblivious_setVMRoot_schact:
                              findFreeHWASID_def invalidateASID_def
                              invalidateHWASIDEntry_def storeHWASID_def
                              checkPDNotInASIDMap_def armv_contextSwitch_def
-                             vcpuSwitch_def vcpuDisable_def vcpuRestore_def
-                             vcpuEnable_def vcpuSave_def
-                             vcpuUpdate_def vgicUpdate_def vgicUpdateLR_def
-                             vcpuSaveReg_def vcpuSaveRegRange_def
-                             vcpuRestoreReg_def vcpuRestoreRegRange_def
                       split: if_split capability.split arch_capability.split option.split)+
 
+lemma oblivious_vcpuSwitch_schact:
+  "oblivious (ksSchedulerAction_update f) (vcpuSwitch v)"
+  apply (simp add: vcpuSwitch_def)
+  apply (safe intro!: oblivious_bind oblivious_mapM_x
+         | simp_all add: vcpuSwitch_def vcpuDisable_def vcpuRestore_def
+                         vcpuEnable_def vcpuSave_def
+                         vcpuUpdate_def vgicUpdate_def vgicUpdateLR_def
+                         vcpuSaveReg_def vcpuSaveRegRange_def
+                         vcpuRestoreReg_def vcpuRestoreRegRange_def
+                  split: if_split option.split)+
+  done
 
 lemma oblivious_switchToThread_schact:
   "oblivious (ksSchedulerAction_update f) (ThreadDecls_H.switchToThread t)"
@@ -1155,8 +1160,9 @@ lemma oblivious_switchToThread_schact:
                    getQueue_def setQueue_def storeWordUser_def setRegister_def
                    pointerInUserData_def isRunnable_def isBlocked_def
                    getThreadState_def tcbSchedDequeue_def bitmap_fun_defs)
-  by (safe intro!: oblivious_bind
-              | simp_all add: oblivious_setVMRoot_schact)+
+  apply (safe intro!: oblivious_bind
+         | simp_all add: oblivious_setVMRoot_schact  oblivious_vcpuSwitch_schact)+
+  done
 
 lemma empty_fail_getCurThread[iff]:
   "empty_fail getCurThread" by (simp add: getCurThread_def)
@@ -1514,9 +1520,9 @@ lemma threadGet_isolatable:
   apply (simp add: projectKO_opt_tcb v split: if_split)
   done
 
- lemma switchToThread_isolatable:
+lemma switchToThread_isolatable:
   "thread_actions_isolatable idx (Arch.switchToThread t)"
-  apply (simp add: ARM_HYP_H.switchToThread_def
+  apply (simp add: ARM_HYP_H.switchToThread_def getTCB_threadGet
                    storeWordUser_def stateAssert_def2)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                gets_isolatable setVMRoot_isolatable
@@ -1524,13 +1530,11 @@ lemma threadGet_isolatable:
                doMachineOp_isolatable
                threadGet_isolatable [OF all_tcbI]
                thread_actions_isolatable_returns
-               thread_actions_isolatable_fail)
-  apply (wp |
-           simp add: pointerInUserData_def
-                       typ_at_to_obj_at_arches
-                       obj_at_partial_overwrite_id2
-                       put_tcb_state_regs_tcb_def
-                split: tcb_state_regs.split)+
+               thread_actions_isolatable_fail
+               threadGet_vcpu_isolatable
+               vcpuSwitch_isolatable)
+        apply (wpsimp simp: put_tcb_state_regs_tcb_def atcbContextSet_def
+                     split: tcb_state_regs.split)+
   done
 
 lemma monadic_rewrite_trans_dup:

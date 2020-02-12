@@ -18,8 +18,8 @@ requalify_types (in Arch)
   copy_register_sets irqcontrol_invocation
   invocation
 
-#INCLUDE_HASKELL SEL4/API/Invocation.lhs Arch=Arch NOT InvocationLabel
-#INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs ONLY invocationType
+#INCLUDE_HASKELL SEL4/API/Invocation.lhs Arch=Arch NOT GenInvocationLabels InvocationLabel
+#INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs ONLY invocationType genInvocationType
 
 context Arch begin
 context begin global_naming global

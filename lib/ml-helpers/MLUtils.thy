@@ -31,4 +31,5 @@ ML_file "MethodExtras.ML"
 ML_file "OptionExtras.ML"
 ML_file "ThmExtras.ML"
 ML_file "Sum.ML"
+ML_file "TermExtras.ML"
 end

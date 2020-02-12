@@ -1610,6 +1610,13 @@ lemma scast_maxIRQ_less_eq:
 
 lemmas scast_maxIRQ_is_less = scast_maxIRQ_less_eq [THEN iffD1]
 
+lemma ucast_maxIRQ_is_less:
+  "SCAST(32 signed \<rightarrow> 64) Kernel_C.maxIRQ < UCAST(8 \<rightarrow> 64) irq \<Longrightarrow> scast Kernel_C.maxIRQ < irq"
+  apply (clarsimp simp: scast_def Kernel_C.maxIRQ_def)
+  apply (subgoal_tac "LENGTH(8) \<le> LENGTH(64)")
+  apply (drule less_ucast_ucast_less[where x= "0x7D" and y="irq"])
+    by (simp)+
+
 lemma validIRQcastingLess:
   "Kernel_C.maxIRQ <s ucast b \<Longrightarrow> X64.maxIRQ < b"
   by (simp add: Platform_maxIRQ scast_maxIRQ_is_less is_up_def target_size source_size)
@@ -1618,6 +1625,15 @@ lemma scast_maxIRQ_is_not_less:
   fixes b :: irq
   shows "\<not> Kernel_C.maxIRQ <s ucast b \<Longrightarrow> \<not> (scast Kernel_C.maxIRQ < b)"
   by (simp add: scast_maxIRQ_less_eq)
+
+lemma ucast_maxIRQ_is_not_less:
+  "\<not> (SCAST(32 signed \<rightarrow> 64) Kernel_C.maxIRQ < UCAST(8 \<rightarrow> 64) irq) \<Longrightarrow> \<not> (scast Kernel_C.maxIRQ < irq)"
+  apply (clarsimp simp: scast_def Kernel_C.maxIRQ_def)
+  apply (subgoal_tac "LENGTH(8) \<le> LENGTH(64)")
+   prefer 2
+   apply simp
+  apply (erule notE)
+  using ucast_up_mono by fastforce
 
 (* FIXME ARMHYP: move *)
 lemma ctzl_spec:
@@ -1685,7 +1701,7 @@ lemma handleInterrupt_ccorres:
   apply (cinit lift: irq_' cong: call_ignore_cong)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp  add: Platform_maxIRQ del: Collect_const)
-    apply (drule scast_maxIRQ_is_less[simplified])
+    apply (drule ucast_maxIRQ_is_less[simplified])
     apply (simp del: Collect_const)
     apply (rule ccorres_rhs_assoc)+
     apply (subst doMachineOp_bind)
@@ -1701,7 +1717,7 @@ lemma handleInterrupt_ccorres:
       apply (vcg exspec=ackInterrupt_modifies)
      apply wp
     apply (vcg exspec=maskInterrupt_modifies)
-   apply (simp add: scast_maxIRQ_is_not_less Platform_maxIRQ del: Collect_const)
+   apply (simp add: ucast_maxIRQ_is_not_less Platform_maxIRQ del: Collect_const)
    apply (rule ccorres_pre_getIRQState)
     apply wpc
       apply simp
@@ -1715,9 +1731,7 @@ lemma handleInterrupt_ccorres:
      apply (rule ccorres_getSlotCap_cte_at)
      apply (rule_tac P="cte_at' rv" in ccorres_cross_over_guard)
      apply (rule ccorres_Guard_Seq)
-     apply (rule ccorres_Guard_Seq)
      apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
-     apply (rule ptr_add_assertion_irq_guard[unfolded dc_def])
      apply (rule ccorres_move_array_assertion_irq ccorres_move_c_guard_cte)+
      apply ctac
        apply csymbr
@@ -1791,21 +1805,23 @@ lemma handleInterrupt_ccorres:
   apply (clarsimp simp: Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def
         cte_wp_at_ctes_of ucast_ucast_b is_up)
   apply (intro conjI impI)
-     apply clarsimp
-     apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
-     apply (clarsimp simp: typ_heap_simps')
-     apply (simp add: cap_get_tag_isCap)
-     apply (clarsimp simp: isCap_simps)
-     apply (frule cap_get_tag_isCap_unfolded_H_cap)
-     apply (frule cap_get_tag_to_H, assumption)
-     apply (clarsimp simp: to_bool_def)
-    apply (cut_tac un_ui_le[where b = 191 and a = irq,
-           simplified word_size])
-    apply (simp add: ucast_eq_0 is_up_def source_size_def
-                     target_size_def word_size unat_gt_0
-          | subst array_assertion_abs_irq[rule_format, OF conjI])+
-   apply (clarsimp simp:nat_le_iff)
-   apply (clarsimp simp: IRQReserved_def)+
+       apply (subst Word_Lemmas.of_int_uint_ucast)
+       apply (rule refl)
+      apply clarsimp
+      apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
+      apply (clarsimp simp: typ_heap_simps')
+      apply (simp add: cap_get_tag_isCap)
+      apply (clarsimp simp: isCap_simps)
+      apply (frule cap_get_tag_isCap_unfolded_H_cap)
+      apply (frule cap_get_tag_to_H, assumption)
+      apply (clarsimp simp: to_bool_def)
+     apply (cut_tac un_ui_le[where b = 191 and a = irq,
+            simplified word_size])
+     apply (simp add: ucast_eq_0 is_up_def source_size_def
+                      target_size_def word_size unat_gt_0
+           | subst array_assertion_abs_irq[rule_format, OF conjI])+
+    apply (clarsimp simp:nat_le_iff)
+    apply (clarsimp simp: IRQReserved_def)+
   done
 end
 

@@ -105,4 +105,13 @@ lemma empty_on_failure_wp[wp]:
     \<Longrightarrow> \<lbrace>P\<rbrace> empty_on_failure m \<lbrace>Q\<rbrace>"
   by (simp add: empty_on_failure_def) wp
 
+lemma gen_invocation_typeI:
+  "invocation_type l = GenInvocationLabel x \<Longrightarrow> gen_invocation_type l = x"
+  by (simp add: gen_invocation_type_def)
+
+lemma gen_invocation_type_eq:
+  "x \<noteq> InvalidInvocation \<Longrightarrow>
+  (invocation_type l = GenInvocationLabel x) = (gen_invocation_type l = x)"
+  by (auto simp: gen_invocation_type_def split: invocation_label.splits)
+
 end

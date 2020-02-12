@@ -119,6 +119,7 @@ lemma decodeDomainInvocation_ccorres:
        (decodeDomainInvocation lab args extraCaps
            >>= invocationCatch thread isBlocking isCall (uncurry InvokeDomain))
   (Call decodeDomainInvocation_'proc)"
+  supply gen_invocation_type_eq[simp]
   apply (cinit' lift: length___unsigned_long_' excaps_' call_' invLabel_' buffer_'
                 simp: decodeDomainInvocation_def list_case_If2 whenE_def)
    apply (rule ccorres_Cond_rhs_Seq)
@@ -499,20 +500,20 @@ lemma ccorres_subgoal_tailE:
         \<Longrightarrow> ccorres rvr xf P P' hs (a >>=E b) (c ;; d)"
   by simp
 
+
+lemmas invocation_eq_use_types_sym = invocation_eq_use_types[TRY [symmetric]]
+
 lemma label_in_CNodeInv_ranges:
-  notes invocation_eq_use_types_symm
-    = all_invocation_label_defs[THEN invocation_eq_use_type, symmetric, simplified,
-                            unfolded enum_invocation_label, simplified]
-  shows
   "(label < scast Kernel_C.CNodeRevoke \<or> scast Kernel_C.CNodeSaveCaller < label)
-      = (invocation_type label \<notin> set [CNodeRevoke .e. CNodeSaveCaller])"
+      = (gen_invocation_type label \<notin> set [CNodeRevoke .e. CNodeSaveCaller])"
   "(scast Kernel_C.CNodeCopy \<le> label \<and> label \<le> scast Kernel_C.CNodeMutate)
-      = (invocation_type label \<in> set [CNodeCopy .e. CNodeMutate])"
-  apply (simp_all add: upto_enum_def fromEnum_def enum_invocation_label
+      = (gen_invocation_type label \<in> set [CNodeCopy .e. CNodeMutate])"
+  apply (simp_all add: upto_enum_def fromEnum_def enum_gen_invocation_labels
                   del: upt.simps)
   apply (simp_all add: atLeastLessThanSuc)
-  apply (simp_all add: toEnum_def enum_invocation_label)
-  apply (simp_all add: invocation_eq_use_types_symm[simplified] invocation_label_defs)
+  apply (simp_all add: toEnum_def enum_invocation_label enum_gen_invocation_labels)
+  apply (simp_all flip: gen_invocation_type_eq)
+  apply (simp_all add: invocation_eq_use_types_sym invocation_label_defs)
   apply (simp_all add: unat_arith_simps)
   apply arith+
   done
@@ -523,7 +524,7 @@ lemma cnode_invok_case_cleanup2:
               | CNodeRotate \<Rightarrow> S | CNodeSaveCaller \<Rightarrow> T | _ \<Rightarrow> U) = U"
   apply (rule cnode_invok_case_cleanup)
   apply (simp add: upto_enum_def fromEnum_def toEnum_def
-                   enum_invocation_label)
+                   enum_invocation_label enum_gen_invocation_labels)
   apply auto
   done
 
@@ -561,6 +562,7 @@ lemma ctes_of_valid_strengthen:
   done
 
 lemma decodeCNodeInvocation_ccorres:
+  notes gen_invocation_type_eq[simp]
   shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -596,7 +598,7 @@ lemma decodeCNodeInvocation_ccorres:
                simp del: Collect_const
                    cong: call_ignore_cong globals.fold_congs
                          StateSpace.state.fold_congs bool.case_cong
-               cong del: invocation_label.case_cong_weak)
+               cong del: invocation_label.case_cong_weak gen_invocation_labels.case_cong_weak)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: unlessE_def throwError_bind invocationCatch_def)
     apply (rule syscall_error_throwError_ccorres_n)
@@ -783,8 +785,7 @@ lemma decodeCNodeInvocation_ccorres:
                          apply (vcg exspec=getSyscallArg_modifies)
                         apply (rule ccorres_Cond_rhs_Seq)
                          \<comment> \<open>CNodeMint case\<close>
-                         apply (simp add: Collect_const[symmetric]
-                                     del: Collect_const)
+                         apply (simp flip: Collect_const)
                          apply (rule ccorres_rhs_assoc)+
                          apply (rule ccorres_Cond_rhs_Seq)
                           apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
@@ -899,7 +900,7 @@ lemma decodeCNodeInvocation_ccorres:
                         apply (rule ccorres_Cond_rhs_Seq)
                          \<comment> \<open>CNodeMutate case\<close>
                          apply (rule ccorres_rhs_assoc)+
-                         apply (simp add: Collect_const[symmetric] del: Collect_const
+                         apply (simp add: flip: Collect_const
                                     cong: call_ignore_cong)
                          apply (rule ccorres_Cond_rhs_Seq)
                           apply (simp add: injection_handler_throwError dc_def[symmetric] if_P)
@@ -947,7 +948,7 @@ lemma decodeCNodeInvocation_ccorres:
                         apply simp
                         apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
                         apply (simp add: upto_enum_def fromEnum_def toEnum_def
-                                         enum_invocation_label)
+                                         enum_gen_invocation_labels)
                        apply (wp getCTE_wp')
                       apply (simp add: Collect_const_mem)
                       apply vcg
@@ -1345,7 +1346,7 @@ lemma decodeCNodeInvocation_ccorres:
            apply (vcg exspec=getSyscallArg_modifies)
           apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
           apply (simp add: upto_enum_def fromEnum_def toEnum_def
-                           enum_invocation_label)
+                           enum_gen_invocation_labels)
          apply (rule ccorres_split_throws)
           apply (simp add: ccorres_cond_iffs)
           apply (rule ccorres_return_C_errorE, simp+)[1]
@@ -1413,7 +1414,7 @@ crunch sch_act_wf[wp]: insertNewCap "\<lambda>s. sch_act_wf (ksSchedulerAction s
   (wp: crunch_wps ignore: setCTE)
 
 crunch ksCurThread[wp]: deleteObjects "\<lambda>s. P (ksCurThread s)"
-  (wp: crunch_wps ignore:freeMemory simp : unless_def)
+  (wp: crunch_wps simp: unless_def)
 
 lemma deleteObjects_gsCNodes_at_pt:
   "\<lbrace>(\<lambda>s. P (gsCNodes s ptr))
@@ -1426,8 +1427,8 @@ lemma deleteObjects_gsCNodes_at_pt:
         | wp (once) hoare_drop_imps)+
   done
 
-crunch gsCNodes[wp]: setThreadState, updateFreeIndex,
-    preemptionPoint "\<lambda>s. P (gsCNodes s)"
+crunches setThreadState, updateFreeIndex, preemptionPoint
+  for gsCNodes[wp]:  "\<lambda>s. P (gsCNodes s)"
   (simp: unless_def whenE_def ignore_del: preemptionPoint)
 
 lemma resetUntypedCap_gsCNodes_at_pt:
@@ -2685,9 +2686,10 @@ lemma Arch_isFrameType_spec:
 
 
 lemma decodeUntypedInvocation_ccorres_helper:
-notes TripleSuc[simp] untypedBits_defs[simp]
-notes valid_untyped_inv_wcap'.simps[simp del] tl_drop_1[simp]
-shows
+  notes TripleSuc[simp] untypedBits_defs[simp]
+  notes valid_untyped_inv_wcap'.simps[simp del] tl_drop_1[simp]
+  notes gen_invocation_type_eq[simp]
+  shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread)

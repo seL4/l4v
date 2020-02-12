@@ -16,13 +16,15 @@ instance tcb              :: no_vcpu by intro_classes auto
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-(* FIXME move to REFINE *)
-crunch valid_queues'[wp]: "Arch.switchToThread" valid_queues'
-    (ignore: clearExMonitor)
-crunch ksCurDomain[wp]: switchToIdleThread "\<lambda>s. P (ksCurDomain s)"
-crunch valid_pspace'[wp]: switchToIdleThread, switchToThread valid_pspace'
-  (simp: whenE_def ignore: getObject)
-crunch valid_arch_state'[wp]: switchToThread valid_arch_state'
+(* FIXME: Move to Refine *)
+crunches Arch.switchToThread
+  for valid_queues'[wp]: valid_queues'
+  (ignore: clearExMonitor wp: crunch_wps)
+crunches switchToIdleThread
+  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+crunches switchToIdleThread, switchToThread
+  for valid_pspace'[wp]: valid_pspace'
+  (simp: whenE_def)
 
 end
 
@@ -87,14 +89,28 @@ lemma Arch_switchToThread_ccorres:
            (Arch.switchToThread t) (Call Arch_switchToThread_'proc)"
   apply (cinit lift: tcb_')
    apply (unfold ARM_HYP_H.switchToThread_def)[1]
-   apply (ctac (no_vcg) add: setVMRoot_ccorres)
-    apply (simp (no_asm) del: Collect_const)
-    apply (rule_tac A'=UNIV in ccorres_guard_imp2)
-     apply (fold dc_def)[1]
-     apply (ctac add: clearExMonitor_ccorres)
-    apply clarsimp
+   apply (rule ccorres_move_c_guard_tcb)
+   apply (rule ccorres_symb_exec_l3)
+      apply (rule_tac P="ko_at' rv t" in ccorres_cross_over_guard)
+      apply (ctac add: vcpu_switch_ccorres) (* c *)
+        apply simp
+        apply (ctac (no_vcg) add: setVMRoot_ccorres)
+         apply (simp (no_asm) del: Collect_const)
+         apply (rule_tac A'=UNIV in ccorres_guard_imp2)
+          apply (fold dc_def)[1]
+          apply (ctac add: clearExMonitor_ccorres)
+         apply wpsimp+
+      apply (vcg exspec=vcpu_switch_modifies)
+     apply wpsimp+
+    apply (rule_tac Q="\<lambda>rv s. all_invs_but_ct_idle_or_in_cur_domain' s
+                              \<and> case_option (\<lambda>_. True) (ko_wp_at' (is_vcpu' and hyp_live')) (atcbVCPUPtr (tcbArch rv)) s
+                              \<and> obj_at' (\<lambda>t::tcb. True) t s" in hoare_strengthen_post[rotated])
+     apply (clarsimp simp: vcpu_at_is_vcpu' elim!: ko_wp_at'_weakenE split: option.splits)
+    apply (wpsimp wp: getObject_tcb_hyp_sym_refs)
    apply wp
-  apply clarsimp
+  apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_pspace'_def)
+  apply (frule cmap_relation_tcb, frule (1) cmap_relation_ko_atD)
+  apply (clarsimp simp: typ_heap_simps ctcb_relation_def carch_tcb_relation_def)
   done
 
 

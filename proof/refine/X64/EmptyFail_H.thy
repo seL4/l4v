@@ -184,7 +184,7 @@ lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   by (simp add:restart_def)
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]: finaliseCap, preemptionPoint, capSwapForDelete
-(wp: empty_fail_catch simp:  Let_def ignore: )
+  (wp: empty_fail_catch simp: Let_def)
 
 lemmas finalise_spec_empty_fail_induct = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. spec_empty_fail (finaliseSlot' sl exp) s"]

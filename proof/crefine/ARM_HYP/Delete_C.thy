@@ -756,7 +756,7 @@ lemma finaliseSlot_ccorres:
              apply (rule ccorres_drop_cutMon,
                     rule ccorres_split_throws)
               apply (rule_tac P="\<lambda>s. case (snd rvb) of
-                                        IRQHandlerCap irq \<Rightarrow> UCAST(10\<rightarrow>16) irq \<le> SCAST (32 signed\<rightarrow>16)Kernel_C.maxIRQ
+                                        IRQHandlerCap irq \<Rightarrow> UCAST(10\<rightarrow>machine_word_len) irq \<le> SCAST(32 signed\<rightarrow>machine_word_len) Kernel_C.maxIRQ
                                       | _ \<Rightarrow> True"
                               in ccorres_from_vcg_throws[where P'=UNIV])
               apply (rule allI, rule conseqPre, vcg)

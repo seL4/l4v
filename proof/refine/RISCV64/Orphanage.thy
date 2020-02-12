@@ -1289,8 +1289,9 @@ lemma setupCallerCap_almost_no_orphans [wp]:
          | clarsimp simp: is_active_thread_state_def isRestart_def isRunning_def)+
   done
 
-crunch no_orphans [wp]: doIPCTransfer, setMRs "no_orphans"
-(wp: no_orphans_lift)
+crunches doIPCTransfer, setMRs
+  for no_orphans [wp]: "no_orphans"
+  (wp: no_orphans_lift)
 
 crunch ksQ'[wp]: setEndpoint "\<lambda>s. P (ksReadyQueues s)"
   (wp: setObject_queues_unchanged_tcb updateObject_default_inv)
@@ -1754,9 +1755,10 @@ lemma storePTE_no_orphans [wp]:
   done
 
 crunch no_orphans [wp]: unmapPage "no_orphans"
-(wp: crunch_wps ignore: getObject)
+  (wp: crunch_wps)
 
-crunch no_orphans [wp]: unmapPageTable, prepareThreadDelete "no_orphans"
+crunches unmapPageTable, prepareThreadDelete
+  for no_orphans [wp]: "no_orphans"
   (wp: lookupPTSlotFromLevel_inv)
 
 lemma setASIDPool_no_orphans [wp]:
@@ -2311,7 +2313,8 @@ notes if_cong[cong] shows
      apply (wp | clarsimp | fastforce)+
   done
 
-crunch invs' [wp]: getThreadCallerSlot, handleHypervisorFault "invs'"
+crunches getThreadCallerSlot, handleHypervisorFault
+  for invs' [wp]: "invs'"
 
 lemma handleReply_no_orphans [wp]:
   "\<lbrace>no_orphans and invs'\<rbrace> handleReply \<lbrace>\<lambda>_. no_orphans\<rbrace>"

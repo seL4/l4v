@@ -594,11 +594,7 @@ definition
        ArchObjectCap (PageDirectoryCap pd (Some asid)) \<Rightarrow> doE
            pd' \<leftarrow> find_pd_for_asid asid;
            whenE (pd \<noteq> pd') $ throwError InvalidRoot;
-           liftE $ do
-                    arm_context_switch pd asid;
-                    t' \<leftarrow> gets_the $ get_tcb tcb;
-                    vcpu_switch $ tcb_vcpu $ tcb_arch t'
-                   od
+           liftE $ arm_context_switch pd asid
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     (\<lambda>_. do

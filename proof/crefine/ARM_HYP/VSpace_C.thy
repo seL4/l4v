@@ -2276,16 +2276,9 @@ lemma setVMRoot_ccorres:
          apply wp
         apply (simp add: whenE_def returnOk_def)
         apply (ctac (no_vcg) add: armv_contextSwitch_ccorres[unfolded dc_def])
-         apply (rule ccorres_move_c_guard_tcb)
-         apply (rule ccorres_symb_exec_l3)
             apply (rename_tac tcb)
-            apply (rule_tac P="ko_at' tcb thread" in ccorres_cross_over_guard)
-            apply (ctac add: vcpu_switch_ccorres[unfolded dc_def]) (* c *)
-           apply wp
-          apply (wp getObject_tcb_wp)
          apply simp
         apply clarsimp
-        apply (wp hoare_drop_imp hoare_vcg_ex_lift armv_contextSwitch_invs_no_cicd' valid_case_option_post_wp')
        apply (simp add: checkPDNotInASIDMap_def checkPDASIDMapMembership_def)
        apply (rule ccorres_stateAssert)
        apply (rule ccorres_rhs_assoc)+
@@ -2311,8 +2304,6 @@ lemma setVMRoot_ccorres:
    apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
    apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
    apply (auto simp: isCap_simps valid_cap'_def mask_def dest!: tcb_ko_at')[1]
-   apply (rule_tac x=ta in exI, auto split: option.splits)[1]
-   apply (frule (2) sym_refs_tcb_vcpu', clarsimp)
    apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def projectKOs)
   apply (clarsimp simp: size_of_def cte_level_bits_def
                         tcbVTableSlot_def tcb_cnode_index_defs
@@ -2327,10 +2318,6 @@ lemma setVMRoot_ccorres:
                         cap_page_directory_cap_lift_def
                         to_bool_def
                  elim!: ccap_relationE split: if_split_asm)
-  apply (rename_tac s'')
-  apply (drule_tac s=s'' in obj_at_cslift_tcb, assumption)
-  apply (clarsimp simp: typ_heap_simps)
-  apply (clarsimp simp: ctcb_relation_def carch_tcb_relation_def)
   done
 
 lemma setVMRootForFlush_ccorres:

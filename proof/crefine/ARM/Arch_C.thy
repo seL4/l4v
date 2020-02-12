@@ -23,15 +23,13 @@ lemma ksPSpace_update_eq_ExD:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 crunch ctes_of[wp]: unmapPageTable "\<lambda>s. P (ctes_of s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch gsMaxObjectSize[wp]: unmapPageTable "\<lambda>s. P (gsMaxObjectSize s)"
 
 crunch inv[wp]: pteCheckIfMapped "P"
-  (ignore: getObject setObject)
 
 crunch inv[wp]: pdeCheckIfMapped "P"
-  (ignore: getObject setObject)
 end
 
 context kernel_m begin
@@ -2784,7 +2782,7 @@ lemma liftE_case_sum:
   by (simp add:liftE_def)
 
 crunch inv': resolveVAddr "P"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 
 lemma flush_range_le:

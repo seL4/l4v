@@ -62,21 +62,17 @@ global_naming Arch
 
 lemma arch_stt_invs [wp,Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: arch_switch_to_thread_def)
-  apply wp
-  done
+  apply (wpsimp simp: arch_switch_to_thread_def)
+  by (rule sym_refs_VCPU_hyp_live; fastforce)
+
 
 lemma arch_stt_tcb [wp,Schedule_AI_asms]:
   "\<lbrace>tcb_at t'\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. tcb_at t'\<rbrace>"
-  apply (simp add: arch_switch_to_thread_def)
-  apply (wp)
-  done
+  by (wpsimp simp: arch_switch_to_thread_def wp: tcb_at_typ_at)
 
 lemma arch_stt_runnable[Schedule_AI_asms]:
-  "\<lbrace>st_tcb_at runnable t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>r . st_tcb_at runnable t\<rbrace>"
-  apply (simp add: arch_switch_to_thread_def)
-  apply wp
-  done
+  "\<lbrace>st_tcb_at runnable t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>r. st_tcb_at runnable t\<rbrace>"
+  by (wpsimp simp: arch_switch_to_thread_def)
 
 lemma idle_strg:
   "thread = idle_thread s \<and> invs s \<Longrightarrow> invs (s\<lparr>cur_thread := thread\<rparr>)"
@@ -104,13 +100,9 @@ lemma arch_stit_tcb_at[wp]:
   apply (wp tcb_at_typ_at)
   done
 
-crunch st_tcb_at[wp]: set_vm_root "st_tcb_at P t"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch ct[wp]: set_vm_root "\<lambda>s. P (cur_thread s)"
-  (simp: crunch_simps wp: hoare_drop_imps)
-
-crunch it[wp]: set_vm_root "\<lambda>s. P (idle_thread s)"
+crunches set_vm_root
+  for ct[wp]: "\<lambda>s. P (cur_thread s)"
+  and it[wp]: "\<lambda>s. P (idle_thread s)"
   (simp: crunch_simps wp: hoare_drop_imps)
 
 lemma arch_stit_activatable[wp, Schedule_AI_asms]:
@@ -118,8 +110,6 @@ lemma arch_stit_activatable[wp, Schedule_AI_asms]:
   apply (clarsimp simp: arch_switch_to_idle_thread_def)
   apply (wpsimp simp: ct_in_state_def wp: ct_in_state_thread_state_lift)
   done
-
-crunch inv[wp]: set_vm_root "\<lambda>s. P"
 
 lemma stit_invs [wp,Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. invs\<rbrace>"

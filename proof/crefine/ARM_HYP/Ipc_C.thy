@@ -35,7 +35,6 @@ crunch valid_queues[wp]: handleFaultReply valid_queues
 crunch valid_queues'[wp]: handleFaultReply valid_queues'
 
 crunch sch_act_wf: handleFaultReply "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
-  (ignore: getObject)
 
 crunch valid_ipc_buffer_ptr' [wp]: copyMRs "valid_ipc_buffer_ptr' p"
   (rule: hoare_valid_ipc_buffer_ptr_typ_at' wp: crunch_wps)
@@ -297,7 +296,6 @@ lemma asUser_getRegister_threadGet_comm:
   by (rule bind_inv_inv_comm, auto; wp)
 
 crunch inv[wp]: getSanitiseRegisterInfo P
-  (ignore: getObject)
 
 lemma empty_fail_getSanitiseRegisterInfo[wp, simp]:
   "empty_fail (getSanitiseRegisterInfo t)"
@@ -4629,7 +4627,7 @@ lemma sbn_tcbFault:
   done
 
 crunch tcbFault: unbindNotification, unbindMaybeNotification "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
-(ignore: threadSet setObject wp: sbn_tcbFault)
+  (ignore: threadSet wp: sbn_tcbFault)
 
 (* FIXME: move *)
 lemma cteDeleteOne_tcbFault:

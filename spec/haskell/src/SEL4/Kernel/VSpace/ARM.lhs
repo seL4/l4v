@@ -929,10 +929,6 @@ If the current thread has no page directory, or if it has an invalid ASID, the h
 >                     throw InvalidRoot
 >                 withoutFailure $ do
 >                     armv_contextSwitch pd asid
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->                     tcbobj <- getObject tcb
->                     vcpuSwitch (atcbVCPUPtr $ tcbArch tcbobj)
-#endif
 >             _ -> throw InvalidRoot)
 >         (\_ -> do
 >             case threadRoot of

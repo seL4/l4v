@@ -645,7 +645,7 @@ lemma setNotification_utr[wp]:
   done
 
 crunch gsUntypedZeroRanges[wp]: setEndpoint "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (ignore: setObject wp: setObject_ksPSpace_only updateObject_default_inv)
+  (wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemma setEndpoint_utr[wp]:
   "\<lbrace>untyped_ranges_zero'\<rbrace> setEndpoint p ep \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
@@ -776,7 +776,7 @@ crunch ksQ[wp]: setEndpoint "\<lambda>s. P (ksReadyQueues s p)"
 crunch sch_act_not[wp]: setEndpoint "sch_act_not t"
 
 crunch ksCurDomain[wp]: setEndpoint "\<lambda>s. P (ksCurDomain s)"
-  (wp: setObject_ep_cur_domain ignore: setObject)
+  (wp: setObject_ep_cur_domain)
 
 lemma setEndpoint_ksDomSchedule[wp]:
   "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setEndpoint ptr ep \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
@@ -974,7 +974,8 @@ lemma sts_sch_act_not[wp]:
   apply (wp hoare_drop_imps | simp | wpcw)+
   done
 
-crunch sch_act_not[wp]: cancelSignal, setBoundNotification "sch_act_not t"
+crunches cancelSignal, setBoundNotification
+  for sch_act_not[wp]: "sch_act_not t"
   (wp: crunch_wps)
 
 lemma cancelSignal_tcb_at_runnable':
@@ -993,8 +994,9 @@ lemma cancelAllSignals_tcb_at_runnable':
   unfolding cancelAllSignals_def
   by (wpsimp wp: mapM_x_wp' sts_st_tcb' hoare_drop_imp)
 
-crunch st_tcb_at'[wp]: unbindNotification, bindNotification, unbindMaybeNotification "st_tcb_at' P p"
-(wp: threadSet_pred_tcb_no_state ignore: threadSet)
+crunches unbindNotification, bindNotification, unbindMaybeNotification
+  for st_tcb_at'[wp]: "st_tcb_at' P p"
+  (wp: threadSet_pred_tcb_no_state ignore: threadSet)
 
 lemma (in delete_one_conc_pre) finaliseCap_tcb_at_runnable':
   "\<lbrace>st_tcb_at' runnable' t\<rbrace> finaliseCap cap final True \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
@@ -1013,7 +1015,8 @@ lemma (in delete_one_conc_pre) cteDeleteOne_tcb_at_runnable':
   apply (wp finaliseCap_tcb_at_runnable' | clarsimp | wp (once) hoare_drop_imps)+
   done
 
-crunch pred_tcb_at'[wp]: getThreadReplySlot, getEndpoint "pred_tcb_at' proj st t"
+crunches getThreadReplySlot, getEndpoint
+  for pred_tcb_at'[wp]: "pred_tcb_at' proj st t"
 
 lemma (in delete_one_conc_pre) cancelIPC_tcb_at_runnable':
   "\<lbrace>st_tcb_at' runnable' t'\<rbrace> cancelIPC t \<lbrace>\<lambda>_. st_tcb_at' runnable' t'\<rbrace>"
@@ -1378,7 +1381,7 @@ lemma set_ntfn_valid_inQ_queues[wp]:
     done
 
 crunch valid_inQ_queues[wp]: cancelSignal valid_inQ_queues
-  (ignore: updateObject setObject simp: updateObject_tcb_inv crunch_simps wp: crunch_wps)
+  (simp: updateObject_tcb_inv crunch_simps wp: crunch_wps)
 
 lemma (in delete_one_conc_pre) cancelIPC_valid_inQ_queues[wp]:
   "\<lbrace>valid_inQ_queues\<rbrace> cancelIPC t \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
@@ -1456,8 +1459,7 @@ lemma no_refs_simple_strg':
   by (fastforce elim!: pred_tcb'_weakenE)+
 
 crunch it[wp]: cancelSignal "\<lambda>s. P (ksIdleThread s)"
-  (wp: crunch_wps simp: crunch_simps
-        ignore: getObject setObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma (in delete_one_conc_pre) cancelIPC_it[wp]:
   "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>
@@ -2112,10 +2114,10 @@ lemma ep_q_refs_max:
   done
 
 crunch ct' [wp]: setEndpoint "\<lambda>s. P (ksCurThread s)"
-  (wp: setObject_ep_ct ignore: setObject)
+  (wp: setObject_ep_ct)
 
 crunch ct' [wp]: setNotification "\<lambda>s. P (ksCurThread s)"
-  (wp: setObject_ntfn_ct ignore: setObject)
+  (wp: setObject_ntfn_ct)
 
 lemma tcbSchedEnqueue_cur_tcb'[wp]:
   "\<lbrace>cur_tcb'\<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"

@@ -33,9 +33,10 @@ lemma decode_irq_control_error_corres:
   unfolding decode_irq_control_invocation_def
   apply (cases "invocation_type label"; simp add: arch_decode_irq_control_invocation_def
                                                   arch_decode_irq_control_error_corres)
-   apply (simp add: transform_intent_def transform_intent_issue_irq_handler_def
-                    arch_transform_intent_issue_irq_handler_def
-               split: list.splits arch_invocation_label.splits)+
+   apply (clarsimp simp: transform_intent_def transform_intent_issue_irq_handler_def
+                         arch_transform_intent_issue_irq_handler_def
+                   simp flip: gen_invocation_type_eq
+                   split: list.splits arch_invocation_label.splits)+
   done
 
 (* Interrupt Control Invocations *)
@@ -68,13 +69,14 @@ lemma decode_irq_control_corres:
                  and valid_etcbs)
      (Interrupt_D.decode_irq_control_invocation cap slot excaps ui)
      (Decode_A.decode_irq_control_invocation label' args' slot' (map fst excaps'))"
-  apply (cases "invocation_type label' = IRQIssueIRQHandler")
+  apply (cases "invocation_type label' = GenInvocationLabel IRQIssueIRQHandler")
   subgoal (* generic case *)
     apply (unfold Interrupt_D.decode_irq_control_invocation_def
                   Decode_A.decode_irq_control_invocation_def
                   arch_check_irq_def)
     apply clarsimp
     apply (simp add: transform_intent_def transform_intent_issue_irq_handler_def
+                flip: gen_invocation_type_eq
                 split: list.splits)
     apply (rule conjI)
      prefer 2 \<comment> \<open>error case\<close>
@@ -122,6 +124,7 @@ lemma decode_irq_control_corres:
     apply clarsimp
     apply (simp add: transform_intent_def transform_intent_issue_irq_handler_def
                      arch_transform_intent_issue_irq_handler_def
+                flip: gen_invocation_type_eq
                 split: list.splits)
     apply (rule conjI)
      prefer 2 \<comment> \<open>error case\<close>
@@ -167,10 +170,10 @@ lemma decode_irq_control_corres:
                     arch_check_irq_def)
       apply clarsimp
       apply (cases ui; simp)
-       apply (simp add: corres_alternate2)
+       apply (simp add: corres_alternate2 flip: gen_invocation_type_eq)
       apply(rename_tac ARMIRQControlIntent)
       apply (case_tac ARMIRQControlIntent; simp)
-      apply (simp add: corres_alternate2)
+      apply (simp add: corres_alternate2 flip: gen_invocation_type_eq)
       done
     done
 
@@ -181,7 +184,8 @@ lemma decode_irq_handler_error_corres:
      dcorres (dc \<oplus> anyrel) \<top> \<top>
       (throwError e)
       (Decode_A.decode_irq_handler_invocation label' x' excaps')"
-  by (auto simp: Decode_A.decode_irq_handler_invocation_def transform_intent_def split: list.splits )
+  by (auto simp: Decode_A.decode_irq_handler_invocation_def transform_intent_def
+           simp flip: gen_invocation_type_eq split: list.splits )
 
 primrec
   translate_irq_handler_invocation :: "Invocations_A.irq_handler_invocation \<Rightarrow> cdl_irq_handler_invocation"
@@ -207,15 +211,15 @@ lemma decode_irq_handler_corres:
      (Interrupt_D.decode_irq_handler_invocation cap slot excaps ui)
      (Decode_A.decode_irq_handler_invocation label' x' excaps')"
   apply (unfold Interrupt_D.decode_irq_handler_invocation_def Decode_A.decode_irq_handler_invocation_def)
-  apply (cases "invocation_type label' = IRQAckIRQ")
+  apply (cases "invocation_type label' = GenInvocationLabel IRQAckIRQ")
    apply (simp add: transform_intent_def cdl_cap_irq_def assert_opt_def
-                    returnOk_liftE[symmetric])
+               flip: returnOk_liftE gen_invocation_type_eq)
    apply (rule corres_alternate1)
    apply (rule dcorres_returnOk)
    apply (simp add: cdl_irq_handler_invocation_relation_def
                     translate_irq_handler_invocation_def)
-  apply (cases "invocation_type label' = IRQSetIRQHandler")
-   apply (simp add: transform_intent_def cdl_cap_irq_def)
+  apply (cases "invocation_type label' = GenInvocationLabel IRQSetIRQHandler")
+   apply (simp add: transform_intent_def cdl_cap_irq_def flip: gen_invocation_type_eq)
    apply (rule conjI)
     prefer 2 \<comment> \<open>excaps' = []\<close>
     apply (clarsimp intro!: corres_alternate2)
@@ -232,14 +236,14 @@ lemma decode_irq_handler_corres:
    apply (rule dcorres_returnOk)
    apply (simp add: cdl_irq_handler_invocation_relation_def
                     translate_irq_handler_invocation_def)
-  apply (cases "invocation_type label' = IRQClearIRQHandler")
+  apply (cases "invocation_type label' = GenInvocationLabel IRQClearIRQHandler")
    apply (simp add: transform_intent_def cdl_cap_irq_def assert_opt_def
-                    returnOk_liftE[symmetric])
+               flip: gen_invocation_type_eq returnOk_liftE)
    apply (rule corres_alternate1)
    apply (rule dcorres_returnOk)
    apply (simp add: cdl_irq_handler_invocation_relation_def
                     translate_irq_handler_invocation_def)
-  apply (cases ui, auto simp: dcorres_alternative_throw)
+  apply (cases ui, auto simp: dcorres_alternative_throw simp flip: gen_invocation_type_eq)
   done
 
 lemma option_get_cap_corres:
