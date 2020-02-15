@@ -9679,7 +9679,7 @@ lemma refill_unblock_check_cur_sc_active[wp]:
   by (wpsimp wp: valid_sched_wp get_refills_wp is_round_robin_wp)
 
 lemma switch_sched_context_valid_sched:
-  "\<lbrace>valid_sched and simple_sched_action and ct_not_in_release_q and ct_not_queued
+  "\<lbrace>valid_sched and simple_sched_action and ct_not_in_release_q
      and valid_state and ready_or_release
      and cur_sc_in_release_q_imp_zero_consumed
      and (\<lambda>s. sc_not_in_release_q (cur_sc s) s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
@@ -9710,7 +9710,7 @@ lemma switch_sched_context_valid_sched:
   done
 
 lemma sc_and_timer_valid_sched:
-  "\<lbrace>valid_sched and simple_sched_action and ct_not_in_release_q and ct_not_queued
+  "\<lbrace>valid_sched and simple_sched_action and ct_not_in_release_q
      and valid_state and cur_tcb and ready_or_release
      and cur_sc_in_release_q_imp_zero_consumed
      and (\<lambda>s. sc_not_in_release_q (cur_sc s) s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
@@ -9720,7 +9720,7 @@ lemma sc_and_timer_valid_sched:
    sc_and_timer
    \<lbrace>\<lambda>_. valid_sched :: ('state_ext state) \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: sc_and_timer_def)
-  by (wpsimp simp: wp: switch_sched_context_valid_sched)
+  by (wpsimp wp: switch_sched_context_valid_sched)
 
 (*
 we know that after calling awaken,
@@ -9837,7 +9837,7 @@ lemma schedule_valid_sched_helper:
      and (\<lambda>s. active_sc_tcb_at (cur_thread s) s)
      and (\<lambda>s. in_release_q (cur_thread s) s \<longrightarrow> (\<not> budget_ready (cur_thread s) s))
      and (\<lambda>s. ct_not_in_release_q s \<longrightarrow> budget_ready (cur_thread s) s)
-     and (\<lambda>s. budget_sufficient (cur_thread s) s) and ct_not_queued
+     and (\<lambda>s. budget_sufficient (cur_thread s) s)
      and cur_sc_in_release_q_imp_zero_consumed
      and (\<lambda>s. sc_not_in_release_q (cur_sc s) s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
      and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s)
@@ -10286,8 +10286,22 @@ lemma possible_switch_to_scheduler_act_sane'':
   by (wpsimp wp: tcb_sched_action_scheduler_action hoare_drop_imp simp: set_scheduler_action_def)
      (clarsimp simp: scheduler_act_sane_def)
 
+lemma possible_switch_to_scheduler_action_indep:
+  "\<lbrace>(\<lambda>s. P (scheduler_action s)) and K (P choose_new_thread \<and> P (switch_thread target))\<rbrace>
+     possible_switch_to target
+   \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+  apply (simp add: possible_switch_to_def reschedule_required_def thread_get_def
+                   set_scheduler_action_def tcb_sched_action_def get_tcb_obj_ref_def
+                   is_schedulable_def
+              split del: if_split
+        | wp | wpc)+
+  apply (clarsimp simp: etcb_at_def scheduler_act_not_def split: option.splits)
+  done
+
 lemma awaken_ct_not_queued_helper:
-  "\<lbrace>ct_not_queued and (\<lambda>s. cur_thread s \<notin> set queue) and scheduler_act_sane\<rbrace>
+  "\<lbrace>(\<lambda>s. schact_is_rct s \<longrightarrow> ct_not_queued s)
+    and (\<lambda>s. cur_thread s \<notin> set queue)
+    and scheduler_act_sane\<rbrace>
      mapM_x (\<lambda>t. do consumed <- gets consumed_time;
                        tcb <- gets_the (get_tcb t);
                        scp <- assert_opt (tcb_sched_context tcb);
@@ -10296,18 +10310,23 @@ lemma awaken_ct_not_queued_helper:
                        y <- possible_switch_to t;
                        modify (reprogram_timer_update (\<lambda>_. True))
                     od) queue
-   \<lbrace>\<lambda>_. ct_not_queued\<rbrace>"
+   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_not_queued s\<rbrace>"
   apply (induction queue, wpsimp simp: mapM_x_Nil)
   apply (clarsimp simp: mapM_x_Cons)
-  by (wpsimp wp: possible_switch_to_ct_not_queued possible_switch_to_scheduler_act_sane'' hoare_drop_imp)
+  apply (wpsimp)
+        apply (wpsimp wp: possible_switch_to_ct_not_queued possible_switch_to_scheduler_act_sane''
+                          hoare_vcg_imp_lift' possible_switch_to_scheduler_action_indep)
+       apply (wpsimp wp: assert_inv)+
+  apply (simp add: schact_is_rct_def)
+  done
 
 lemma awaken_ct_not_queued:
-  "\<lbrace>ct_not_queued
+  "\<lbrace>(\<lambda>s. schact_is_rct s \<longrightarrow> ct_not_queued s)
     and scheduler_act_sane
     and valid_release_q
     and (\<lambda>s. (in_release_q (cur_thread s) s \<longrightarrow> \<not> budget_ready (cur_thread s) s))\<rbrace>
    awaken
-   \<lbrace>\<lambda>_. ct_not_queued\<rbrace>"
+   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_not_queued s\<rbrace>"
   apply (clarsimp simp: awaken_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (wpsimp wp: awaken_ct_not_queued_helper simp: thread_get_def)
@@ -10436,9 +10455,7 @@ lemma awaken_in_release_q:
   apply (clarsimp simp: not_in_release_q_def in_queue_2_def dropWhile_eq_drop[symmetric])
   apply (subst (asm) takeWhile_dropWhile_id[symmetric])
   apply clarsimp
-  apply (erule disjE)
-   defer
-   apply (assumption)
+  apply (erule disjE[OF Meson.disj_comm], assumption)
   apply (drule set_takeWhileD, clarsimp)
   apply (subst (asm) fun_of_m_get_tcb_refill_budget_ready)
    apply (clarsimp simp: valid_release_q_def)
@@ -15024,15 +15041,12 @@ lemma handle_invocation_cur_sc_chargeable:
           apply (fastforce simp: ct_in_state_def runnable_eq_active)
          apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
         apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-        apply (erule if_live_then_nonz_cap_invs, assumption)
-        apply (fastforce simp: live_def split: thread_state.split)
-       apply (rule fault_tcbs_valid_states_active, clarsimp)
-       apply (simp add: ct_in_state_def)
       apply (wp decode_inv_wf)
      apply wpsimp
      apply (rule validE_cases_valid, clarsimp)
      apply (subst validE_R_def[symmetric])
      apply wpsimp+
+  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
 lemma handle_event_cur_sc_chargeable:
@@ -17966,6 +17980,176 @@ lemma handle_event_current_time_bounded[wp]:
    \<lbrace>\<lambda>_. current_time_bounded k :: det_state \<Rightarrow> _\<rbrace>"
   apply (case_tac e; simp; wpsimp wp: hoare_drop_imp hoare_drop_impE cong: conj_cong)
   apply (erule (1) next_time_bounded_current_time_bounded)
+  done
+
+lemma preemption_point_valid_sched_pred[wp]:
+  "preemption_point \<lbrace>valid_sched_pred_strong P\<rbrace>"
+  unfolding preemption_point_def
+  by (wpsimp simp: OR_choiceE_def wp: hoare_drop_imps)
+
+end
+
+context DetSchedSchedule_AI_handle_hypervisor_fault_det_ext begin
+
+lemma rec_del_valid_sched:
+ "\<lbrace>ct_not_queued and scheduler_act_sane and ct_not_blocked and invs and valid_rec_del_call args
+        and (\<lambda>s. \<not> exposed_rdcall args
+               \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) (slot_rdcall args) s)
+        and (\<lambda>s. case args of ReduceZombieCall cap sl ex \<Rightarrow>
+                       \<not> cap_removeable cap sl
+                       \<and> (\<forall>t\<in>obj_refs cap. halted_if_tcb t s)
+                  | _ \<Rightarrow> True)\<rbrace>
+  rec_del args
+  \<lbrace>\<lambda>rv. ct_not_queued :: det_state \<Rightarrow> _\<rbrace>"
+  apply (rule validE_valid)
+  apply (rule hoare_post_impErr)
+  apply (rule hoare_pre)
+    apply (rule use_spec)
+    apply (rule rec_del_invs''[where Q="ct_not_queued and scheduler_act_sane and ct_not_blocked"])
+         apply wpsimp+
+  done
+
+lemma cap_delete_ct_not_queued[wp]:
+  "\<lbrace>ct_not_queued and invs and scheduler_act_sane and ct_not_blocked\<rbrace>
+   cap_delete c
+   \<lbrace>\<lambda>rv. ct_not_queued :: det_ext state \<Rightarrow> _\<rbrace>"
+  supply if_split [split del]
+  unfolding cap_delete_def
+  by (wpsimp wp: rec_del_valid_sched)
+
+lemma install_tcb_frame_cap_ct_not_queued[wp]:
+  "\<lbrace>ct_not_queued and invs and scheduler_act_sane and ct_not_blocked\<rbrace>
+   install_tcb_frame_cap target slot buffer
+   \<lbrace>\<lambda>rv. ct_not_queued :: det_ext state \<Rightarrow> _\<rbrace>"
+  unfolding install_tcb_frame_cap_def
+  by (wpsimp wp: check_cap_inv hoare_vcg_imp_lift')
+
+lemma install_tcb_cap_ct_not_queued[wp]:
+  "\<lbrace>ct_not_queued and invs and scheduler_act_sane and ct_not_blocked\<rbrace>
+   install_tcb_cap target slot n slot_opt
+   \<lbrace>\<lambda>rv. ct_not_queued :: det_ext state \<Rightarrow> _\<rbrace>"
+  unfolding install_tcb_cap_def
+  by (wpsimp wp: check_cap_inv hoare_vcg_imp_lift')
+
+lemma tcc_ct_not_queued:
+  "\<lbrace>ct_not_queued and invs and scheduler_act_sane and ct_not_blocked
+    and tcb_inv_wf (ThreadControlCaps target slot fault_handler timeout_handler
+                                      croot vroot buffer)\<rbrace>
+     invoke_tcb (ThreadControlCaps target slot fault_handler timeout_handler croot vroot buffer)
+   \<lbrace>\<lambda>rv. ct_not_queued :: det_state \<Rightarrow> _\<rbrace>"
+  apply (simp add: split_def cong: option.case_cong)
+  apply wp
+      \<comment> \<open>install_tcb_cap slot 1\<close>
+      apply (clarsimp cong: conj_cong)
+      apply (wpsimp wp: install_tcb_cap_invs)
+     \<comment> \<open>install_tcb_cap slot 0\<close>
+     apply (clarsimp cong: conj_cong)
+     apply (rule hoare_vcg_E_elim, wp)
+     apply ((wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_all_lift
+                 install_tcb_cap_invs
+                 static_imp_wp static_imp_conj_wp
+            | strengthen tcb_cap_always_valid_strg
+            | wp install_tcb_cap_cte_wp_at_ep)+)[1]
+    \<comment> \<open>install_tcb_cap slot 4\<close>
+    apply (clarsimp cong: conj_cong)
+    apply (rule hoare_vcg_E_elim, wp)
+    apply ((wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_all_lift
+                 install_tcb_cap_invs
+                 static_imp_wp static_imp_conj_wp
+           | strengthen tcb_cap_always_valid_strg
+           | wp install_tcb_cap_cte_wp_at_ep)+)[1]
+   \<comment> \<open>install_tcb_cap slot 3\<close>
+   apply (clarsimp cong: conj_cong)
+   apply (rule hoare_vcg_E_elim, wp)
+   apply ((wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_all_lift
+                 install_tcb_cap_invs
+                 static_imp_wp static_imp_conj_wp
+          | strengthen tcb_cap_always_valid_strg
+          | wp install_tcb_cap_cte_wp_at_ep)+)[1]
+  \<comment> \<open>resolve using precondition\<close>
+  apply simp
+  apply (strengthen tcb_cap_valid_ep_strgs)
+  apply (clarsimp cong: conj_cong)
+  apply (intro conjI impI;
+         clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
+                 dest!: valid_vtable_root_is_arch_cap)
+     apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state\<close>)
+    apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
+  by auto
+
+lemma invoke_tcb_ct_not_queuedE_E[wp]:
+  "\<lbrace>ct_not_queued and invs and scheduler_act_sane and ct_not_blocked and tcb_inv_wf iv\<rbrace>
+   invoke_tcb iv
+   -, \<lbrace>\<lambda>rv. ct_not_queued :: det_ext state \<Rightarrow> _\<rbrace>"
+  apply (case_tac iv)
+          apply (wpsimp)
+         apply (wpsimp)
+        apply (wpsimp)
+       apply (rule valid_validE_E)
+       apply (wpsimp wp: tcc_ct_not_queued[simplified])
+      apply wpsimp
+     apply (wpsimp)
+    apply (wpsimp)
+   apply (case_tac x82; simp)
+    apply (wpsimp)
+   apply (wpsimp)
+  apply (wpsimp)
+  done
+
+lemma cap_revoke_ct_not_queued[wp]:
+  "\<lbrace>ct_not_queued and invs and scheduler_act_sane and ct_not_blocked\<rbrace> cap_revoke slot \<lbrace>\<lambda>rv. ct_not_queued :: det_state \<Rightarrow> _\<rbrace>"
+  apply (rule hoare_strengthen_post)
+   apply (rule validE_valid, rule cap_revoke_preservation)
+    apply (wpsimp wp: preemption_point_inv')+
+    apply (clarsimp simp: ct_in_state_def)+
+  done
+
+lemma invoke_cnode_ct_not_queuedE_E[wp]:
+  "\<lbrace>ct_not_queued and invs and scheduler_act_sane and ct_not_blocked\<rbrace>
+   invoke_cnode iv
+   -, \<lbrace>\<lambda>rv. ct_not_queued :: det_ext state \<Rightarrow> _\<rbrace>"
+  supply if_split [split del]
+  unfolding invoke_cnode_def
+  by wpsimp
+
+lemma invoke_irq_control_ct_not_queuedE_E[wp]:
+  "\<lbrace>ct_not_queued\<rbrace>
+   invoke_irq_control iv
+   -, \<lbrace>\<lambda>rv. ct_not_queued :: det_ext state \<Rightarrow> _\<rbrace>"
+  by (case_tac iv; wpsimp)
+
+lemma perform_invocation_ct_not_queued:
+  "\<lbrace>ct_not_queued and invs and scheduler_act_sane and ct_not_blocked and valid_invocation iv\<rbrace>
+   perform_invocation blocking calling can_donate iv
+   -, \<lbrace>\<lambda>rv. ct_not_queued :: det_ext state \<Rightarrow> _\<rbrace>"
+  apply (case_tac iv; simp)
+  by wpsimp+
+
+lemma cap_cap_slot_fold:
+  "(\<forall>cap ref cnodeindex. x = (cap, ref, cnodeindex) \<longrightarrow> P cap ref cnodeindex) = P (fst x) (fst (snd x)) (snd (snd x))"
+  by (metis fst_conv snd_conv surj_pair)
+
+lemma handle_invocation_ct_not_queued_E_E:
+  "\<lbrace>ct_not_queued and invs and scheduler_act_sane and ct_active\<rbrace>
+   handle_invocation calling blocking can_donate first_phase cptr
+   -, \<lbrace>\<lambda>rv. ct_not_queued :: det_ext state \<Rightarrow> _\<rbrace>"
+  unfolding handle_invocation_def
+  apply (wpsimp wp: syscall_valid perform_invocation_ct_not_queued set_thread_state_ct_in_state
+              simp: cap_cap_slot_fold)
+  by (fastforce simp: ct_in_state_def elim: pred_tcb_weakenE)
+
+lemma handle_event_ct_not_queuedE_E[wp]:
+  "\<lbrace>ct_not_queued and invs and scheduler_act_sane and ct_not_blocked and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
+   handle_event e
+    -, \<lbrace>\<lambda>_. ct_not_queued :: det_ext state \<Rightarrow> _\<rbrace>"
+  apply (case_tac e; simp)
+       subgoal for syscall
+             apply (case_tac syscall; simp)
+             apply (wpsimp simp: handle_call_def handle_send_def
+                             wp: handle_invocation_ct_not_queued_E_E check_budget_restart_true
+                    | erule active_from_running)+
+       done
+      apply wpsimp+
   done
 
 end

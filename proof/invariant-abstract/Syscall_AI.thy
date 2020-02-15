@@ -223,13 +223,15 @@ where
 | "valid_invocation (InvokeArchObject i) = valid_arch_inv i"
 
 lemma sts_Restart_invs[wp]:
-  "\<lbrace>st_tcb_at active t and invs and ex_nonz_cap_to t and fault_tcb_at ((=) None) t\<rbrace>
+  "\<lbrace>st_tcb_at active t and invs\<rbrace>
    set_thread_state t Structures_A.Restart
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wp sts_invs_minor2)
-  apply (auto elim!: pred_tcb_weakenE
-           notE [rotated, OF _ idle_no_ex_cap]
-           simp: invs_def valid_state_def valid_pspace_def)
+  apply (wpsimp wp: sts_invs_minor2)
+  apply (intro conjI)
+     apply (fastforce elim: pred_tcb_weakenE simp: runnable_eq_active)
+    apply (fastforce elim: st_tcb_ex_cap simp: runnable_eq_active)
+   apply (erule not_idle_thread'[rotated]; clarsimp)
+  apply (fastforce elim: fault_tcbs_valid_states_active[rotated])
   done
 
 lemma check_budget_restart_invs[wp]:
