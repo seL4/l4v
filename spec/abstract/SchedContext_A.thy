@@ -226,27 +226,28 @@ where
 
     used \<leftarrow> return $ \<lparr>r_time = last_entry + period, r_amount = usage\<rparr>;
 
-    if (\<not>ready \<or> r_amount (hd refills) < usage)
+    if \<not>ready \<or> r_amount (hd refills) < usage
     then set_refills sc_ptr [\<lparr>r_time = last_entry + period + usage, r_amount = sc_budget sc\<rparr>]
-    else if (usage = r_amount (hd refills))
+    else if usage = r_amount (hd refills)
          then set_refills sc_ptr (schedule_used False (tl refills) used)
-                \<comment> \<open>if refills has length at most sc_refills_max sc, then popping the head
+                \<comment> \<open>if refills has length at most @{text \<open>sc_refills_max sc\<close>}, then popping the head
                     will ensure the refills are not full, so we may use False here\<close>
-         else do remnant \<leftarrow> return $ (r_amount (hd refills) - usage);
-                 if (remnant < MIN_BUDGET)
-                 then if (tl refills = [])
-                         then set_refills sc_ptr [\<lparr>r_time = last_entry + period - remnant,
-                                                   r_amount = r_amount (hd refills)\<rparr>]
-                         else do new_snd \<leftarrow> return $
-                                             (\<lparr> r_time = r_time (hd (tl refills)) - remnant,
-                                                r_amount = r_amount (hd (tl refills)) + remnant \<rparr>);
-                           set_refills sc_ptr (schedule_used False (new_snd # tl (tl refills)) used)
-                              od
-                 else do full \<leftarrow> refill_full sc_ptr;
-                         rfhd \<leftarrow> return $ (hd refills);
-                         new_head \<leftarrow> return $ (\<lparr>r_time = r_time rfhd + usage, r_amount = remnant\<rparr>);
-                         set_refills sc_ptr (schedule_used full (new_head # (tl refills)) used)
+         else do remnant \<leftarrow> return $ r_amount (hd refills) - usage;
+                 if remnant < MIN_BUDGET
+                 then if tl refills = []
+                      then set_refills sc_ptr [\<lparr>r_time = last_entry + period - remnant,
+                                                r_amount = r_amount (hd refills)\<rparr>]
+                      else do
+                        new_snd \<leftarrow> return $ (\<lparr>r_time = r_time (hd (tl refills)) - remnant,
+                                              r_amount = r_amount (hd (tl refills)) + remnant \<rparr>);
+                        set_refills sc_ptr (schedule_used False (new_snd # tl (tl refills)) used)
                       od
+                 else do
+                   full \<leftarrow> refill_full sc_ptr;
+                   rfhd \<leftarrow> return $ (hd refills);
+                   new_head \<leftarrow> return $ (\<lparr>r_time = r_time rfhd + usage, r_amount = remnant\<rparr>);
+                   set_refills sc_ptr (schedule_used full (new_head # (tl refills)) used)
+                 od
               od
    od"
 
@@ -271,13 +272,13 @@ where
             unused \<leftarrow> return $ (new_budget - r_amount refill_hd);
             new \<leftarrow> return $ \<lparr>r_time = r_time refill_hd + new_period - unused, r_amount = unused \<rparr>;
             new_refills \<leftarrow> return $ (schedule_used False [refill_hd] new);
-                 \<comment> \<open>since the length of refill_hd is 1 and MAX_REFILLS is at least
-                      @{term MIN_REFILLS} = 2, we will have that [refill_hd] is not full, and so
+                 \<comment> \<open>since the length of @{text refill_hd} is 1 and @{text MAX_REFILLS} is at least
+                      @{term \<open>MIN_REFILLS = 2\<close>}, we will have that @{term \<open>[refill_hd]\<close>} is not full, and so
                       we may use False here\<close>
             update_sched_context sc_ptr (\<lambda>_. sc\<lparr>sc_period := new_period,
-                                         sc_refill_max := new_max_refills,
-                                         sc_refills := new_refills,
-                                         sc_budget := new_budget\<rparr>)
+                                                sc_refill_max := new_max_refills,
+                                                sc_refills := new_refills,
+                                                sc_budget := new_budget\<rparr>)
           od
     od"
 
@@ -340,7 +341,7 @@ where
       ct \<leftarrow> gets cur_thread;
       buffer \<leftarrow> return $ data_to_oref $ args ! 0;
       sent \<leftarrow> set_mrs ct (Some buffer) ((ucast consumed) # [ucast (consumed >> 32)]);
-      set_message_info ct $ MI sent 0 0 0 \<comment> \<open>RT: is this correct?\<close>
+      set_message_info ct $ MI sent 0 0 0 \<comment> \<open>FIXME RT: is this correct?\<close>
     od"
 
 text \<open>yield\_to related functions\<close>
@@ -466,7 +467,7 @@ where
       when (0 < consumed) $ do
         curtime \<leftarrow> gets cur_time;
         assert $ sc_refill_sufficient consumed sc;
-        assert $ sc_refill_ready curtime sc;   \<comment> \<open>asserting ready & sufficient\<close>
+        assert $ sc_refill_ready curtime sc;   \<comment> \<open>asserting @{text \<open>ready & sufficient\<close>}\<close>
         robin \<leftarrow> is_round_robin csc;
         if robin
         then refill_budget_check_round_robin consumed
@@ -474,7 +475,7 @@ where
         sc2 \<leftarrow> get_sched_context csc;
         curtime2 \<leftarrow> gets cur_time;
         assert $ sc_refill_sufficient 0 sc2;
-        assert $ sc_refill_ready curtime2 sc2  \<comment> \<open>asserting ready & sufficient again\<close>
+        assert $ sc_refill_ready curtime2 sc2  \<comment> \<open>asserting @{text \<open>ready & sufficient\<close>} again\<close>
       od;
       update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>)
     od;

@@ -43,8 +43,8 @@ where
   od"
 
 text \<open>Remove the binding between a notification and a scheduling context.
-        This is avoids double reads when calling sched_context_unbind_ntfn
-        from sched_context_maybe_unbind_ntfn (which has infoflow repercussions)\<close>
+        This is avoids double reads when calling @{text sched_context_unbind_ntfn}
+        from @{text sched_context_maybe_unbind_ntfn} (which has infoflow repercussions)\<close>
 abbreviation
   do_unbind_ntfn_sc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -103,7 +103,7 @@ where
 
 text \<open>
   Unbind a TCB from its scheduling context.
-  Takes the TCB as argument and calls sched_context_unbind_tcb.
+  Takes the TCB as argument and calls @{text sched_context_unbind_tcb}.
 \<close>
 definition
   maybe_sched_context_unbind_tcb :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -152,7 +152,7 @@ where
      if (hd sc_replies = reply_ptr)
      then do  \<comment> \<open>if it is the head\<close>
        assert (reply_sc reply = Some sc_ptr); \<comment> \<open>only the head of the list should point to the sc\<close>
-       set_reply reply_ptr (reply_sc_update (K None) reply); \<comment> \<open>set reply_sc to None\<close>
+       set_reply reply_ptr (reply_sc_update (K None) reply); \<comment> \<open>set @{text reply_sc} to None\<close>
        (case (tl sc_replies) of [] \<Rightarrow> return ()
          | r'#_ \<Rightarrow> set_reply_obj_ref reply_sc_update r' (Some sc_ptr)); \<comment> \<open>fix up the refs\<close>
        set_sc_obj_ref sc_replies_update sc_ptr (tl sc_replies) \<comment> \<open>pop the head\<close>
@@ -160,7 +160,7 @@ where
      else do
        assert (reply_sc reply = None); \<comment> \<open>only the head of the list should point to the sc\<close>
        update_sched_context sc_ptr (sc_replies_update (takeWhile (\<lambda>r. r \<noteq> reply_ptr)))
-                                     \<comment> \<open>take until the (first and only) occurrence of reply_ptr\<close>
+                                     \<comment> \<open>take until the (first and only) occurrence of @{text reply_ptr}\<close>
      od
   od"
 
@@ -201,12 +201,12 @@ where (* reply_tcb/caller must be in BlockedOnReply *)
         reply_unlink_sc sc_ptr r;
         when (hd replies = r \<and> caller_sc = None) $ sched_context_donate sc_ptr caller
       od;
-    \<comment> \<open>FIXME: check the C code!\<close>
+    \<comment> \<open>FIXME RT: check the C code!\<close>
     reply_unlink_tcb caller r
    od" (* the r.caller is in Inactive on return *)
 
 text \<open>Remove a specific thread, and the reply it is blocking on, from the call stack.
-        The thread must be BlockedOnReply.\<close>
+        The thread must be @{const BlockedOnReply}.\<close>
 definition
   reply_remove_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -253,15 +253,16 @@ where
     reply_tcb_opt \<leftarrow> get_reply_tcb reply_ptr;
     assert (reply_tcb_opt = None);
 
-    \<comment> \<open>The caller thread is either active (if we came via send_ipc),
-        or was BlockedOnSend (if we came via receive_ipc).
+    \<comment> \<open>The caller thread is either active (if we came via @{text send_ipc}),
+        or was @{const BlockedOnSend} (if we came via @{text receive_ipc}).
         Either way, it can't have a reply object.\<close>
     ts_reply_caller \<leftarrow> no_reply_in_ts caller;
     assert ts_reply_caller;
 
-    \<comment> \<open>The callee thread is either active (if we came via receive_ipc),
-        or was BlockedOnReceive (if we came via send_ipc).
-        In the latter case, the reply was already removed via reply_unlink_tcb in send_ipc.\<close>
+    \<comment> \<open>The callee thread is either active (if we came via @{text receive_ipc}),
+        or was @{const BlockedOnReceive} (if we came via @{text send_ipc}).
+        In the latter case, the reply was already removed via @{text reply_unlink_tcb}
+        in @{text send_ipc}.\<close>
     ts_reply_callee \<leftarrow> no_reply_in_ts caller;
     assert ts_reply_callee;
 
@@ -270,7 +271,7 @@ where
     set_thread_state caller (BlockedOnReply reply_ptr);
 
     when (sc_caller \<noteq> None \<and> sc_callee = None \<and> can_donate) $ do
-      \<comment> \<open>FIXME: maybe define a function to add a reply to the queue?\<close>
+      \<comment> \<open>FIXME RT: maybe define a function to add a reply to the queue?\<close>
       sc_replies \<leftarrow> liftM sc_replies $ get_sched_context (the sc_caller);
       case sc_replies of
           [] \<Rightarrow> assert True
@@ -328,7 +329,7 @@ definition
 where
   "sort_queue qs = do
      prios \<leftarrow> mapM (thread_get tcb_priority) qs;
-     return $ map snd $ sort_key (\<lambda>x.255 - (fst x)) (zip prios qs) \<comment> \<open>0 \<le> priority < 256\<close>
+     return $ map snd $ sort_key (\<lambda>x. 255 - (fst x)) (zip prios qs) \<comment> \<open>@{text \<open>0 \<le> priority < 256\<close>}\<close>
    od"
 
 text \<open>Bring endpoint queue back into priority order\<close>
@@ -396,9 +397,9 @@ definition
      cur_dom \<leftarrow> gets cur_domain;
      target_dom \<leftarrow> thread_get tcb_domain target;
      action \<leftarrow> gets scheduler_action;
-     \<comment> \<open>not in release queue & active_sc\<close>
-     if (target_dom \<noteq> cur_dom) then
-       tcb_sched_action tcb_sched_enqueue target \<comment> \<open>not in cur_domain\<close>
+     \<comment> \<open>not in @{text \<open>release queue & active_sc\<close>}\<close>
+     if target_dom \<noteq> cur_dom then
+       tcb_sched_action tcb_sched_enqueue target \<comment> \<open>not @{text \<open>in cur_domain\<close>}\<close>
      else if (action \<noteq> resume_cur_thread) then
        do
          reschedule_required;
@@ -481,8 +482,8 @@ where
   od"
 
 text \<open>Remove the binding between a notification and a TCB. This is avoids double reads
-        when calling unbind_notification from unbind_maybe_notification (which has infoflow
-        repercussions\<close>
+      when calling @{text unbind_notification} from @{text unbind_maybe_notification}
+      (which would have infoflow repercussions).\<close>
 abbreviation
   do_unbind_notification :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where

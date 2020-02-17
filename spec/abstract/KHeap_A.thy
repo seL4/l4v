@@ -480,8 +480,8 @@ definition reschedule_required :: "(unit, 'z::state_ext) s_monad" where
          when sched $ do
            sc_opt \<leftarrow> thread_get tcb_sched_context t;
            scp \<leftarrow> assert_opt sc_opt;
-           sufficient \<leftarrow> get_sc_refill_sufficient scp 0; \<comment> \<open>refill_sufficient sc_ptr 0\<close>
-           ready \<leftarrow> get_sc_refill_ready scp; \<comment> \<open>refill_ready sc_ptr\<close>
+           sufficient \<leftarrow> get_sc_refill_sufficient scp 0;
+           ready \<leftarrow> get_sc_refill_ready scp;
            assert (sufficient & ready);
            tcb_sched_action (tcb_sched_enqueue) t
          od

@@ -391,7 +391,7 @@ where
                   set_thread_state thread (BlockedOnReceive epptr reply
                                                             \<lparr>receiver_can_grant = (AllowGrant \<in> rights)\<rparr>);
                   when (reply \<noteq> None) $ set_reply_obj_ref reply_tcb_update (the reply) (Some thread);
-                  \<comment> \<open>schedule_tcb?\<close>
+                  \<^cancel>\<open>FIXME RT: schedule_tcb?\<close>
                   qs' \<leftarrow> sort_queue (queue @ [thread]);
                   set_endpoint epptr (RecvEP qs')
                 od
@@ -422,7 +422,7 @@ where
               else do
                 set_thread_state sender Running;
                 possible_switch_to sender
-              \<comment> \<open>the C code has a test here for (refiil_sufficient sender'sc \<or> sender's sc is None)\<close>
+              \<^cancel>\<open>FIXME RT: the C code has a test here for (refiil_sufficient sender'sc \<or> sender's sc is None)\<close>
               od
             od
    od"
@@ -660,12 +660,12 @@ where
      if canTimeout \<and> (is_ep_cap (tcb_timeout_handler tcb)) then
        handle_timeout ct (Timeout (sc_badge csc))
      else if sc_refill_ready curtime csc \<and> sc_refill_sufficient 0 csc then do
-     \<comment> \<open>C code assets cur_thread not to be in ready q at this point\<close>
+     \<comment> \<open>C code assets @{text cur_thread} not to be in ready q at this point\<close>
        d \<leftarrow> thread_get tcb_domain ct;
        prio \<leftarrow> thread_get tcb_priority ct;
        queue \<leftarrow> get_tcb_queue d prio;
        assert (\<not>(ct \<in> set queue));
-       tcb_sched_action tcb_sched_append ct \<comment> \<open>not_queued & ready & sufficient & runnable\<close>
+       tcb_sched_action tcb_sched_append ct \<comment> \<open>@{text \<open>not_queued & ready & sufficient & runnable\<close>}\<close>
      od
      else
        postpone sc_ptr
@@ -701,14 +701,14 @@ where
      csc \<leftarrow> gets cur_sc;
      consumed \<leftarrow> gets consumed_time;
      sc \<leftarrow> get_sched_context csc;
-    \<comment> \<open>maybe assert refill_ready?\<close>
+    \<comment> \<open>FIXME RT: maybe assert @{text refill_ready}?\<close>
      capacity \<leftarrow> get_sc_refill_capacity csc consumed;
 
-     full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc); \<comment> \<open>= refill_full csc\<close>
+     full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc); \<comment> \<open>@{text \<open>= refill_full csc\<close>}\<close>
 
-     robin \<leftarrow> return (sc_period sc = sc_budget sc); \<comment> \<open>is_round_robin csc;\<close>
+     robin \<leftarrow> return (sc_period sc = sc_budget sc);
 
-     if (capacity \<ge> MIN_BUDGET \<and> (robin \<or> \<not>full)) then do
+     if capacity \<ge> MIN_BUDGET \<and> (robin \<or> \<not>full) then do
        dom_exp \<leftarrow> gets is_cur_domain_expired;
        if dom_exp then do
          modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
@@ -750,10 +750,10 @@ where
       tcb_sched_action tcb_sched_dequeue tcb_ptr;
       cur_sc \<leftarrow> gets cur_sc;
       when (cur_sc = sc_ptr) $ commit_time
-           \<comment> \<open>The C code here includes an assert saying that check_budget returns True.
-               However, we can call invoke_sched_control_configure only if the call to
-               check_budget_restart at the beginning of handle_event returns True, so we
-               know that check_budget would return True if called here.\<close>
+           \<comment> \<open>The C code here includes an assert saying that @{text check_budget} returns True.
+               However, we can call @{text invoke_sched_control_configure} only if the call to
+               @{text check_budget_restart} at the beginning of @{text handle_event} returns True, so we
+               know that @{text check_budget} would return True if called here.\<close>
 
     od;
 

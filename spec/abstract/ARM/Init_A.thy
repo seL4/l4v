@@ -83,7 +83,7 @@ definition
     tcb_domain = 0,
     tcb_arch = init_arch_tcb
   \<rparr>,
-  init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage), \<comment> \<open>FIXME: same reason as why we kept the definition of init_globals_frame\<close>
+  init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage), \<comment> \<open>FIXME: same reason as why we kept the definition of @{text init_globals_frame}\<close>
   init_global_pd \<mapsto> ArchObj (PageDirectory global_pd),
   idle_sc_ptr \<mapsto> SchedContext (default_sched_context\<lparr>sc_tcb := Some idle_thread_ptr, sc_refill_max := MIN_REFILLS\<rparr>) min_sched_context_bits
   )"

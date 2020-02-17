@@ -39,7 +39,7 @@ definition
      sc \<leftarrow> get_sched_context scp;
      curtime \<leftarrow> gets cur_time;
      assert $ sc_refill_sufficient 0 sc;
-     assert $ sc_refill_ready curtime sc;   \<comment> \<open>asserting ready & sufficient\<close>
+     assert $ sc_refill_ready curtime sc;   \<comment> \<open>asserting @{text \<open>ready & sufficient\<close>}\<close>
 
      arch_switch_to_thread t;
      tcb_sched_action (tcb_sched_dequeue) t;
@@ -57,7 +57,7 @@ definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_m
      sc \<leftarrow> get_sched_context scp;
      curtime \<leftarrow> gets cur_time;
      assert $ sc_refill_sufficient 0 sc;
-     assert $ sc_refill_ready curtime sc;   \<comment> \<open>asserting ready & sufficient\<close>
+     assert $ sc_refill_ready curtime sc;   \<comment> \<open>asserting @{text \<open>ready & sufficient\<close>}\<close>
      switch_to_thread thread
    od"
 
@@ -135,7 +135,7 @@ where
       sc \<leftarrow> get_sched_context scp;
       curtime \<leftarrow> gets cur_time;
       assert $ sc_refill_sufficient 0 sc;
-      assert $ sc_refill_ready curtime sc   \<comment> \<open>asserting ready & sufficient\<close>
+      assert $ sc_refill_ready curtime sc   \<comment> \<open>asserting @{text \<open>ready & sufficient\<close>}\<close>
      od;
 
     reprogram \<leftarrow> gets reprogram_timer;
@@ -301,7 +301,7 @@ where
   "sched_context_yield_to sc_ptr args \<equiv> do
     sc_yf_opt \<leftarrow> get_sc_obj_ref sc_yield_from sc_ptr;
     when (sc_yf_opt \<noteq> None) $ do
-      complete_yield_to (the sc_yf_opt); \<comment> \<open> sc_yield_from = None \<close>
+      complete_yield_to (the sc_yf_opt); \<comment> \<open>@{text \<open>sc_yield_from = None\<close>}\<close>
       sc_yf_opt \<leftarrow> get_sc_obj_ref sc_yield_from sc_ptr;
       assert (sc_yf_opt = None)
     od;
@@ -325,7 +325,7 @@ where
       if (cur_dom \<noteq> tcb_ptr_dom \<or> prios < ct_prios)
       then do
         tcb_sched_action tcb_sched_dequeue tcb_ptr;
-        tcb_sched_action tcb_sched_enqueue tcb_ptr; \<comment> \<open> schedulable & dequeued & sufficient & ready \<close>
+        tcb_sched_action tcb_sched_enqueue tcb_ptr; \<comment> \<open>@{text \<open>schedulable & dequeued & sufficient & ready\<close>}\<close>
         set_consumed sc_ptr args
       od
       else do

@@ -553,7 +553,7 @@ where
           ct_mcp \<leftarrow> liftE $ thread_get tcb_mcpriority ct_ptr;
           whenE (prios > ct_mcp) $ throwError IllegalOperation
       odE;
-\<comment> \<open>     whenE (sc_yield_from sc \<noteq> None) $ throwError IllegalOperation;\<close>
+\<^cancel>\<open>     whenE (sc_yield_from sc \<noteq> None) $ throwError IllegalOperation;\<close>
       ct_ptr \<leftarrow> liftE $ gets cur_thread;
       yt_ptr \<leftarrow> liftE $ thread_get tcb_yield_to ct_ptr;
       whenE (yt_ptr \<noteq> None) $ throwError IllegalOperation;
@@ -686,7 +686,7 @@ where
     $ throwError (InvalidArgument 1);
   whenE (new_type = Untyped \<and> user_obj_size < untyped_min_bits)
     $ throwError (InvalidArgument 1);
-  whenE (new_type = SchedContextObject \<and> user_obj_size < 8) \<comment> \<open>seL4_MfsinSchedContextBits\<close>
+  whenE (new_type = SchedContextObject \<and> user_obj_size < 8) \<comment> \<open>@{text seL4_MfsinSchedContextBits}\<close>
     $ throwError (InvalidArgument 1);
   node_index \<leftarrow> returnOk $ data_to_cptr (args!2);
   node_depth \<leftarrow> returnOk $ data_to_nat (args!3);
