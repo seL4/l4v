@@ -52,7 +52,32 @@ EXCLUDE["ARM_HYP"]=[
     "RefineOrphanage",
     "SimplExportAndRefine"]
 
-EXCLUDE["ARM"]=[]
+# for MCS, remove most sessions:
+EXCLUDE["ARM"]=[
+    "Access",
+    "AutoCorres",
+    "CamkesDarpaReport",
+    "CamkesGlueSpec",
+    "SimpleSystem",
+    "RelyGuarantee",
+    "Concurrency",
+    "DBaseRefine",
+    "DSpec",
+    "RefineOrphanage",
+    "SepTacticsExamples",
+    "SimplExportAndRefine",
+    "AsmRefine",
+    "BaseRefine",
+    "CKernel",
+    "c-kernel",
+    "CParser",
+    "ASepSpec",
+    "Bisim",
+    "ExecSpec",
+    "SepTactics",
+    "TakeGrant",
+    "Sep_Algebra"
+]
 
 EXCLUDE["X64"]=[
     "Access",
@@ -128,7 +153,6 @@ for arch in archs:
     # Arguments:
     args  = ['./misc/regression/run_tests.py']            # Script name
     args += [r for t in EXCLUDE[arch] for r in ['-r', t]] # Exclusion list
-    args += ["ASpec", "HaskellKernel", "AInvs", "Licenses"] # run these tests only for RT
     args += passthrough_args                              # Other arguments
 
     # Run the tests from the script directory.
