@@ -410,6 +410,7 @@ New threads are placed in the current security domain, which must be the domain 
 >         Just NotificationObject -> do
 >             placeNewObject (PPtr $ fromPPtr regionBase) (makeObject :: Notification) 0
 >             return $ NotificationCap (PPtr $ fromPPtr regionBase) 0 True True
+>         -- FIXME RT: need to update Refill array/list
 >         Just SchedContextObject -> do
 >             placeNewObject regionBase (makeObject :: SchedContext) 0
 >             return $ SchedContextCap (PPtr $ fromPPtr regionBase) userSize

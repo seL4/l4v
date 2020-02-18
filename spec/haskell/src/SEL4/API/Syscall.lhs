@@ -212,7 +212,8 @@ The "Recv" system call blocks waiting to receive a message through a specified e
 >                 if boundTCB == Just thread || boundTCB == Nothing
 >                     then withoutFailure $ receiveSignal thread epCap isBlocking
 >                     else throw exc
->             _ -> throw exc) `catchFailure` handleFault thread
+>             _ -> throw exc)
+>         `catchFailure` handleFault thread
 
 \subsubsection{Yield System Call}
 

@@ -18,26 +18,31 @@ begin
 #INCLUDE_HASKELL SEL4/API/Syscall.lhs decls_only NOT Event Syscall
 #INCLUDE_HASKELL SEL4/API/Syscall.lhs bodies_only NOT handleRecv
 
+(* FIXME RT: too much internal error-monad going on for the translator to figure it out on its own. Rewrite. *)
 defs handleRecv_def:
 "handleRecv isBlocking canReply\<equiv> (do
     thread \<leftarrow> getCurThread;
     epCptr \<leftarrow> getCapReg capRegister;
     ((doE
         epCap \<leftarrow> capFaultOnFailure epCptr True (lookupCap thread epCptr);
+        exc \<leftarrow> returnOk ( CapFault epCptr True (MissingCapability 0));
         (case epCap of
-              EndpointCap _ _ _ True _ \<Rightarrow>   (doE
+              EndpointCap _ _ _ True _ _ \<Rightarrow>   (doE
                 replyCap \<leftarrow> if canReply then lookupReply else returnOk NullCap;
                 withoutFailure $ receiveIPC thread epCap isBlocking replyCap
               odE)
             | NotificationCap ntfnPtr _ _ True \<Rightarrow>   (doE
                 ntfn \<leftarrow> withoutFailure $ getNotification ntfnPtr;
-                if ntfnBoundTCB ntfn = Just thread \<or> ntfnBoundTCB ntfn = Nothing
+                boundTCB \<leftarrow> returnOk $ ntfnBoundTCB ntfn;
+                if boundTCB = Just thread \<or> boundTCB = Nothing
                     then withoutFailure $ receiveSignal thread epCap isBlocking
-                    else throw $ CapFault epCptr True (MissingCapability 0)
+                    else throw exc
             odE)
-            | _ \<Rightarrow>   throw $ CapFault epCptr True (MissingCapability 0))
-    odE))
-      `~catchFailure~` handleFault thread
+            | _ \<Rightarrow>   throw exc)
+
+    odE)
+            )
+        `~catchFailure~` handleFault thread
 od)"
 
 end
