@@ -2125,11 +2125,11 @@ where
   "cur_sc_budget_sufficient s \<equiv>
       is_refill_sufficient 0 (cur_sc s) s"
 
-abbreviation cur_sc_blocked_is_offset :: "time \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "cur_sc_blocked_is_offset consumed s \<equiv>
-      \<forall>t. pred_map_eq (Some (cur_sc s)) (tcb_scps_of s) t
+definition cur_sc_not_blocked where
+  "cur_sc_not_blocked s \<equiv>
+       \<forall>t. pred_map_eq (Some (cur_sc s)) (tcb_scps_of s) t
           \<longrightarrow> ipc_queued_thread t s
-          \<longrightarrow> cur_sc_offset_sufficient consumed s \<and> cur_sc_offset_ready consumed s"
+          \<longrightarrow> False"
 
 lemma as_user_tcb_arch_inv:
   assumes "\<And>s tcb upd. \<lbrakk> kheap s t = Some (TCB tcb); P s \<rbrakk>
@@ -15107,46 +15107,12 @@ lemma refill_budget_check_round_robin_released_ipc_queues:
   "\<lbrace>released_ipc_queues
     and valid_machine_time
     and active_sc_valid_refills
-    and (\<lambda>s. \<forall>t. pred_map_eq (Some (cur_sc s)) (tcb_scps_of s) t
-                 \<longrightarrow> ipc_queued_thread t s
-                 \<longrightarrow> cur_sc_offset_sufficient usage s)\<rbrace>
+    and cur_sc_not_blocked\<rbrace>
    refill_budget_check_round_robin usage
    \<lbrace>\<lambda>_. released_ipc_queues\<rbrace>"
   supply if_split[split del]
   unfolding refill_budget_check_round_robin_def
-  apply (wpsimp wp: set_refills_released_ipc_queues is_round_robin_wp)
-  apply (simp add: released_ipc_queues_defs released_sc_tcb_at_def)
-  apply (intro conjI impI allI; (elim conjE)?
-         ; (clarsimp simp: refill_ready_def, erule cur_time_no_overflow)?)+
-       apply (all \<open>rename_tac tcb_ptr; (drule_tac x=tcb_ptr in spec)+;
-                   clarsimp simp: refill_sufficient_defs pred_map_ipc_queued_thread_state_iff\<close>)
-       (* MIN_BUDGET \<le> r_amount (refill_hd sc) - usage *)
-       apply (find_goal
-                \<open>solves
-                   \<open>clarsimp simp: vs_all_heap_simps is_sc_active_def obj_at_def tcb_at_kh_simps
-                            split: if_splits\<close>\<close>)+
-       (* MIN_BUDGET \<le> sc_budget sc *)
-     apply (find_goal \<open>match conclusion in "_ \<le> sc_budget _"
-                       \<Rightarrow> \<open>clarsimp simp: vs_all_heap_simps is_sc_active_def obj_at_def;
-                           subgoal_tac "valid_refills (cur_sc s) s",
-                           simp add: valid_refills_def vs_all_heap_simps,
-                           force simp: MIN_BUDGET_le_MIN_SC_BUDGET;
-                           erule active_implies_valid_refills[rotated],
-                           clarsimp simp:  active_sc_def vs_all_heap_simps\<close>\<close>)+
-   (* MIN_BUDGET
-        \<le> r_amount (refill_hd sc) -
-            (if usage < MIN_BUDGET then MIN_BUDGET else usage) *)
-   apply (all \<open>clarsimp split: if_splits,
-               subgoal_tac "MIN_BUDGET \<le> r_amount (refill_hd sc)",
-               clarsimp simp: vs_all_heap_simps is_sc_active_def obj_at_def,
-               simp add: word_le_nat_alt unat_sub,
-               subgoal_tac "unat (2 * MIN_BUDGET) = 2 * unat MIN_BUDGET",
-               linarith; simp add: MIN_BUDGET_def\<close>)
-       apply (find_goal \<open>match conclusion in "_ \<le> _"
-                            \<Rightarrow> \<open>clarsimp simp: vs_all_heap_simps is_sc_active_def obj_at_def\<close>\<close>)+
-   using unat_MIN_BUDGET_MIN_SC_BUDGET[simplified MIN_BUDGET_def MIN_SC_BUDGET_def]
-   apply fastforce+
-  done
+  by (wpsimp wp: set_refills_released_ipc_queues is_round_robin_wp simp: cur_sc_not_blocked_def)
 
 (* FIXME RT: move *)
 lemma released_imp_active: "released_sc_tcb_at t s \<Longrightarrow> active_sc_tcb_at t s"
@@ -15156,52 +15122,12 @@ lemma refill_budget_check_released_ipc_queues:
   "\<lbrace>released_ipc_queues
     and valid_machine_time
     and active_sc_valid_refills
-    and cur_sc_blocked_is_offset usage\<rbrace>
+    and cur_sc_not_blocked\<rbrace>
    refill_budget_check usage
    \<lbrace>\<lambda>_. released_ipc_queues\<rbrace>"
   supply if_split[split del]
   unfolding refill_budget_check_def
-  apply (wpsimp wp: set_refills_released_ipc_queues is_round_robin_wp)
-  apply (clarsimp simp: obj_at_def pred_map_ipc_queued_thread_state_iff)
-  apply (intro conjI; intro allI impI)
-  (* r_amount (refill_hd sc) < usage *)
-  using MIN_BUDGET_pos
-   apply (fastforce simp: released_ipc_queues_defs vs_all_heap_simps refill_sufficient_defs)
-  apply (rule conjI; intro allI impI)
-  (* r_amount (refill_hd sc) = usage *)
-  using MIN_BUDGET_pos
-   apply (fastforce simp: vs_all_heap_simps refill_sufficient_defs )
-  apply (intro conjI; intro impI)
-   (* r_amount (refill_hd sc) - usage < MIN_BUDGET *)
-   apply (fastforce simp: vs_all_heap_simps refill_sufficient_defs)
-  apply (erule allEI; rule impI)
-  apply (intro conjI; rule impI; rule conjI; drule (1) mp; elim conjE; drule (1) mp; elim conjE;
-          (drule (1) released_ipc_queues_blocked_on_send_E1
-         | drule (1) released_ipc_queues_blocked_on_recv_ntfn_E1); clarsimp)
-     (* refill_sufficient *)
-     apply (find_goal \<open>match conclusion in "refill_sufficient 0 _" \<Rightarrow>
-             \<open>clarsimp simp: vs_all_heap_simps refill_sufficient_defs split: if_splits, rule conjI\<close>\<close>)+
-       apply ((intro conjI impI;
-               metis MIN_BUDGET_le_MIN_SC_BUDGET MIN_SC_BUDGET_def le_minus' mult_2
-                     word_le_imp_diff_le word_le_less_eq word_le_not_less)+)[2]
-     apply (find_goal \<open>match conclusion in "_ \<longrightarrow> _" \<Rightarrow>
-              \<open>fastforce simp: vs_all_heap_simps refill_sufficient_defs Let_def split: if_splits\<close>\<close>)+
-   (* refill_ready *)
-   apply (all \<open>prop_tac "valid_refills (cur_sc s) s",
-               fastforce simp: vs_all_heap_simps tcb_at_kh_simps
-                         dest!: active_bound_sc_tcb_at
-                         intro!: active_sc_tcb_at_bound_valid_refills[rule_format]\<close>)
-   apply (all \<open>prop_tac "sc_refill_max sc \<ge> MIN_REFILLS \<and> MIN_SC_BUDGET \<le> sc_budget sc",
-                clarsimp simp: valid_refills_def  vs_all_heap_simps\<close>)
-   apply (all \<open>clarsimp simp: vs_all_heap_simps refill_ready_def cur_sc_offset_ready_def
-                              Let_def tcb_at_kh_simps MIN_REFILLS_def
-                        split: if_splits\<close>)
-   apply (all \<open>subgoal_tac "r_time (refill_hd sc) + usage \<le> cur_time s + kernelWCET_ticks"\<close>)
-     apply (find_goal \<open>match conclusion in "_ \<and> _" \<Rightarrow>
-                 \<open>case_tac "sc_refills sc";
-                  fastforce simp: MIN_SC_BUDGET_def valid_refills_def split: list.splits\<close>\<close>)+
-  apply (all \<open>clarsimp simp: word_le_nat_alt intro!: order_trans[OF unat_plus_gt]\<close>)
-  using cur_time_no_overflow unat_plus_simple by force+
+  by (wpsimp wp: set_refills_released_ipc_queues is_round_robin_wp simp: cur_sc_not_blocked_def)
 
 lemma charge_budget_valid_blocked[wp]:
   "\<lbrace>valid_blocked_except_set S\<rbrace>
@@ -15307,7 +15233,7 @@ crunches charge_budget
 lemma charge_budget_released_ipc_queues:
   "\<lbrace>released_ipc_queues
     and valid_machine_time
-    and cur_sc_blocked_is_offset consumed
+    and cur_sc_not_blocked
     and active_sc_valid_refills\<rbrace>
    charge_budget consumed canTimeout
    \<lbrace>\<lambda>_. released_ipc_queues :: 'state_ext state \<Rightarrow> _\<rbrace>"
@@ -15321,6 +15247,14 @@ lemma charge_budget_released_ipc_queues:
                          is_round_robin_wp' get_sched_context_wp gets_wp)+
   done
 
+lemma ct_not_blocked_cur_sc_not_blocked:
+  "cur_sc_chargeable s \<Longrightarrow> ct_not_blocked s \<Longrightarrow> cur_sc_not_blocked s"
+  unfolding cur_sc_not_blocked_def cur_sc_chargeable_def
+  apply (clarsimp)
+  apply (drule_tac x=t in spec)
+  apply (drule_tac x=t in spec)
+  by (auto simp: ct_in_state_def tcb_at_kh_simps vs_all_heap_simps)
+
 lemma charge_budget_valid_ready_qs:
   "\<lbrace>valid_ready_qs
     and released_ipc_queues
@@ -15330,7 +15264,7 @@ lemma charge_budget_valid_ready_qs:
     and scheduler_act_sane
     and ct_not_queued and scheduler_act_sane
     and cur_sc_chargeable
-    and cur_sc_blocked_is_offset consumed\<rbrace>
+    and cur_sc_not_blocked\<rbrace>
    charge_budget consumed canTimeout
    \<lbrace>\<lambda>_. valid_ready_qs :: 'state_ext state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
@@ -15447,7 +15381,7 @@ lemma charge_budget_valid_sched:
     and ct_not_queued
     and scheduler_act_sane
     and cur_sc_chargeable
-    and cur_sc_blocked_is_offset consumed
+    and cur_sc_not_blocked
     and current_time_bounded 2
     and K (unat consumed + unat MAX_SC_PERIOD \<le> unat max_time)
     and cur_sc_active
@@ -15470,7 +15404,7 @@ lemma check_budget_valid_ready_qs:
     and ct_not_queued
     and active_sc_valid_refills
     and scheduler_act_sane and cur_sc_chargeable
-    and (\<lambda>s. cur_sc_blocked_is_offset (consumed_time s) s)\<rbrace>
+    and cur_sc_not_blocked\<rbrace>
    check_budget
    \<lbrace>\<lambda>_. valid_ready_qs::'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding check_budget_def
@@ -15492,7 +15426,7 @@ lemma check_budget_released_ipc_queues:
   "\<lbrace>released_ipc_queues
     and valid_machine_time
     and active_sc_valid_refills
-    and (\<lambda>s. cur_sc_blocked_is_offset (consumed_time s) s)\<rbrace>
+    and cur_sc_not_blocked\<rbrace>
    check_budget
    \<lbrace>\<lambda>_. released_ipc_queues::'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding check_budget_def
@@ -15544,9 +15478,11 @@ lemma check_budget_ready_or_release:
 lemma check_budget_valid_sched:
   "\<lbrace>valid_sched
     and (\<lambda>s. heap_refs_retract_at (tcb_scps_of s) (sc_tcbs_of s) (cur_thread s))
-    and ct_not_in_release_q and ct_not_queued
-    and scheduler_act_sane and cur_sc_chargeable
-    and (\<lambda>s. cur_sc_blocked_is_offset (consumed_time s) s)
+    and ct_not_in_release_q
+    and ct_not_queued
+    and scheduler_act_sane
+    and cur_sc_chargeable
+    and cur_sc_not_blocked
     and current_time_bounded 2
     and consumed_time_bounded
     and (\<lambda>s. cur_sc_tcb_are_bound s \<longrightarrow> cur_sc_active s)
@@ -15773,13 +15709,6 @@ lemma current_time_bounded_weaken1:
   by (clarsimp simp: current_time_bounded_def)
 
 lemmas next_time_bounded_weaken2 = next_time_bounded_current_time_bounded[THEN current_time_bounded_weaken1]
-
-lemma ct_not_blocked_cur_sc_blocked_is_offset:
-  "invs s \<Longrightarrow> schact_is_rct s \<Longrightarrow> ct_not_blocked s \<Longrightarrow> cur_sc_blocked_is_offset cons s"
-  apply (prop_tac "cur_sc_tcb s", clarsimp simp: invs_def)
-  apply (clarsimp simp: cur_sc_tcb_def schact_is_rct_def obj_at_kh_kheap_simps pred_map_eq_normalise)
-  apply (subgoal_tac "t = cur_thread s", clarsimp simp: ct_in_state_def vs_all_heap_simps tcb_at_kh_simps)
-  by (erule (2) heap_refs_retract_eq[OF invs_retract_tcb_scps, THEN sym])
 
 lemma current_time_bounded1_drop_WCET:
   "current_time_bounded 1 s \<Longrightarrow> unat (cur_time s) + unat MAX_SC_PERIOD \<le> unat max_time"
@@ -16611,7 +16540,7 @@ lemma check_budget_restart_valid_sched:
     and consumed_time_bounded
     and cur_sc_active
     and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
-    and (\<lambda>s. cur_sc_blocked_is_offset (consumed_time s) s)\<rbrace>
+    and cur_sc_not_blocked\<rbrace>
    check_budget_restart
    \<lbrace>\<lambda>rv s::'state_ext state. \<not>rv \<longrightarrow> valid_sched s\<rbrace>"
   apply (clarsimp simp: check_budget_restart_def)
@@ -16644,7 +16573,7 @@ lemma handle_yield_valid_sched:
               simp: invs_retract_tcb_scps[THEN heap_refs_retract_heap_refs_retract_at])
   apply (intro conjI)
      apply (clarsimp)
-    apply (erule ct_not_blocked_cur_sc_blocked_is_offset; simp)
+    apply (drule ct_not_blocked_cur_sc_not_blocked; simp)
    apply (rule_tac y=" unat MAX_SC_PERIOD + unat MAX_SC_PERIOD" in order_trans[rotated])
     apply (clarsimp simp: current_time_bounded_def)
    apply (rule add_mono[rotated], simp)
@@ -17685,23 +17614,9 @@ lemma valid_sched_ct_not_queued:
   "\<lbrakk>valid_sched s; schact_is_rct s\<rbrakk> \<Longrightarrow> ct_not_queued s"
   by (fastforce simp: valid_sched_def ct_not_in_q_def schact_is_rct_def)
 
-lemma ct_not_blocked_cur_sc_blocked_is_offset_trivial:
-  "cur_sc_tcb_only_sym_bound s \<and> ct_not_blocked s \<Longrightarrow> cur_sc_blocked_is_offset t s"
-  unfolding cur_sc_tcb_only_sym_bound_def
-  apply (erule conjE, drule conjunct2)
-  apply (erule allEI, erule (1) imp_forward2)
-  by (clarsimp simp: ct_in_state_kh_simp vs_all_heap_simps)
-
-lemma update_time_stamp_cur_sc_blocked_is_offset_helper:
-  "\<lbrace>schact_is_rct and invs and ct_active\<rbrace>
-   update_time_stamp
-   \<lbrace>\<lambda>rv s. cur_sc_blocked_is_offset (consumed_time s) s\<rbrace>"
-  apply (wpsimp wp: check_budget_restart_valid_sched |
-         strengthen ct_not_blocked_cur_sc_blocked_is_offset_trivial)+
-  apply (fastforce elim!: valid_sched_ct_not_queued
-                   intro: invs_strengthen_cur_sc_tcb_are_bound
-                          invs_strengthen_cur_sc_tcb_only_sym_bound)
-  done
+lemma ct_not_blocked_cur_sc_not_blocked_trivial:
+  "cur_sc_tcb_only_sym_bound s \<and> ct_not_blocked s \<Longrightarrow> cur_sc_not_blocked s"
+  by (rule ct_not_blocked_cur_sc_not_blocked[OF strengthen_cur_sc_chargeable]; clarsimp)
 
 end
 
@@ -17870,13 +17785,14 @@ lemma check_budget_restart_valid_sched_weaker:
     and current_time_bounded 2
     and consumed_time_bounded
     and cur_sc_active
-    and (\<lambda>s. cur_sc_blocked_is_offset (consumed_time s) s)
+    and ct_not_blocked
     and (\<lambda>s. valid_refills (cur_sc s) s \<and>
    cur_sc_offset_ready (consumed_time s) s)\<rbrace>
    check_budget_restart
    \<lbrace>\<lambda>rv s::det_ext state. \<not>rv \<longrightarrow> valid_sched s\<rbrace>"
   apply (wpsimp wp: check_budget_restart_valid_sched
               simp: consumed_time_bounded_def current_time_bounded_def)
+  apply (erule (2) ct_not_blocked_cur_sc_not_blocked[OF invs_cur_sc_chargeableE])
   done
 
 lemma check_budget_valid_sched_weaker:
@@ -17887,17 +17803,19 @@ lemma check_budget_valid_sched_weaker:
     and consumed_time_bounded
     and current_time_bounded 2
     and cur_sc_active
-    and (\<lambda>s. cur_sc_blocked_is_offset (consumed_time s) s)
+    and ct_not_blocked
     and (\<lambda>s. valid_refills (cur_sc s) s)
     and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)\<rbrace>
    check_budget
    \<lbrace>\<lambda>_. valid_sched::det_ext state \<Rightarrow> _\<rbrace>"
-  by (wpsimp wp: check_budget_valid_sched simp: invs_retract_tcb_scps[THEN heap_refs_retract_heap_refs_retract_at])
+  apply (wpsimp wp: check_budget_valid_sched simp: invs_retract_tcb_scps[THEN heap_refs_retract_heap_refs_retract_at])
+  apply (erule (1) ct_not_blocked_cur_sc_not_blocked)
+  done
 
 lemma handle_event_valid_sched:
   "\<lbrace>invs
     and valid_sched
-    and ct_in_state (\<lambda>st. st = Running \<or> idle st)
+    and ct_in_state activatable
     and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)
     and cur_sc_active
     and ct_not_in_release_q
@@ -17912,7 +17830,6 @@ lemma handle_event_valid_sched:
    handle_event e
    \<lbrace>\<lambda>rv. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   supply check_budget_restart_true [wp]
-     and update_time_stamp_cur_sc_blocked_is_offset_helper [wp]
      and next_time_bounded_weaken[elim!]
   apply (cases e, simp_all)
   (* SyscallEvent *)
@@ -17995,16 +17912,14 @@ lemma handle_event_valid_sched:
                          and current_time_bounded 2" in hoare_strengthen_post[rotated])
          apply (clarsimp simp: if_split)
          apply (intro conjI allI impI)
-                 apply fastforce
-                apply (fastforce intro: invs_cur_sc_chargeableE)
-               apply (frule_tac cons="consumed_time s" in ct_not_blocked_cur_sc_blocked_is_offset; simp?)
-               apply (fastforce elim: ct_in_state_weaken)
+                apply fastforce
+               apply (fastforce intro: invs_cur_sc_chargeableE)
               apply (fastforce elim: ct_in_state_weaken)
-             apply (fastforce intro: invs_cur_sc_chargeableE)
-            apply (frule_tac cons="consumed_time s" in ct_not_blocked_cur_sc_blocked_is_offset; simp?)
-            apply (fastforce elim: ct_in_state_weaken)
-          apply (fastforce elim!: current_time_bounded_strengthen)
-         apply (fastforce elim!: ct_in_state_weaken current_time_bounded_strengthen)
+             apply fastforce
+            apply (fastforce intro: invs_cur_sc_chargeableE)
+           apply (fastforce elim: ct_in_state_weaken)
+          apply fastforce
+         apply (fastforce elim!: current_time_bounded_strengthen)
         apply wpsimp
        apply (wpsimp, clarsimp simp: ct_in_state_def)
       apply (fastforce elim!: valid_sched_ct_not_queued elim: invs_cur_sc_chargeableE ct_in_state_weaken
@@ -18013,9 +17928,9 @@ lemma handle_event_valid_sched:
   (* VMFaultEvent *)
    apply (wpsimp wp: handle_fault_valid_sched check_budget_restart_valid_sched_weaker
                      hoare_vcg_if_lift2 hoare_vcg_disj_lift)
-   apply (frule active_from_running, clarsimp)
+   apply (frule active_from_running)
    apply (clarsimp simp: valid_fault_def ct_in_state_def2[symmetric])
-   apply (strengthen valid_sched_valid_machine_time schact_is_rct_sane valid_sched_ct_not_queued, simp)
+   apply (strengthen valid_sched_valid_machine_time schact_is_rct_sane valid_sched_ct_not_queued ct_runnable_ct_not_blocked, simp)
   (* HypervisorEvent *)
   apply (wpsimp wp: handle_hyp_fault_valid_sched check_budget_restart_valid_sched_weaker
                     hoare_vcg_if_lift2 hoare_vcg_disj_lift)
@@ -18091,7 +18006,7 @@ lemma call_kernel_valid_sched_check_budget_helper:
     and consumed_time_bounded
     and cur_sc_active
     and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
-    and (\<lambda>s. cur_sc_blocked_is_offset (consumed_time s) s)\<rbrace>
+    and cur_sc_not_blocked\<rbrace>
    check_budget
    \<lbrace>\<lambda>_ s::'state_ext state.
            valid_sched s \<and>
@@ -18105,17 +18020,12 @@ lemma call_kernel_valid_sched_check_budget_helper:
   apply (fastforce elim: current_time_bounded_strengthen intro: consumed_time_bounded_helper)
   done
 
-abbreviation cur_sc_blocked_is_offset :: "_ \<Rightarrow> _ \<Rightarrow> bool" where
-"cur_sc_blocked_is_offset consumed s \<equiv> (\<forall>t. bound_sc_tcb_at ((=) (Some (cur_sc s))) t s
-                  \<longrightarrow> ipc_queued_thread t s
-                  \<longrightarrow> cur_sc_offset_sufficient consumed s \<and> cur_sc_offset_ready consumed s)"
-
 lemma call_kernel_valid_sched_charge_budget_helper:
   "\<lbrace>valid_sched
     and invs
     and ct_not_in_release_q and ct_not_queued
     and cur_sc_chargeable and scheduler_act_sane
-    and cur_sc_blocked_is_offset consumed
+    and cur_sc_not_blocked
     and current_time_bounded 2
     and cur_sc_active
     and (\<lambda>s. unat consumed + unat MAX_SC_PERIOD \<le> unat max_time)
