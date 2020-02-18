@@ -550,7 +550,7 @@ This module uses the C preprocessor to select a target architecture.
 >         when (replyPtrOpt /= Nothing) $ do
 >             let replyPtr = fromJust replyPtrOpt
 >             reply <- getReply replyPtr
->             setReply replyPtr reply { replySc = Nothing }
+>             setReply replyPtr (reply { replySc = Nothing })
 >             setSchedContext scPtr $ sc { scReply = Nothing }
 >     InvokeSchedContextYieldTo scPtr buffer -> do
 >         schedContextYieldTo scPtr buffer
@@ -643,9 +643,9 @@ This module uses the C preprocessor to select a target architecture.
 >                     assert (rsz == minRefills) "we consume head; it should have minRefills budget"
 >                     refills <- getRefills scPtr
 >                     let newHd = (refillHd sc) { rAmount = rAmount (refillHd sc) - consumed }
->                         newTl = (refillTl sc) { rAmount = rAmount (refillTl sc) + consumed }
->                         refills' = replaceAt (scRefillHead sc) refills newHd
->                         refills'' = replaceAt (scRefillTail sc) refills' newTl
+>                     let newTl = (refillTl sc) { rAmount = rAmount (refillTl sc) + consumed }
+>                     let refills' = replaceAt (scRefillHead sc) refills newHd
+>                     let refills'' = replaceAt (scRefillTail sc) refills' newTl
 >                     setRefills scPtr refills''
 >                 else refillSplitCheck scPtr consumed
 >         sc' <- getSchedContext scPtr
