@@ -38,12 +38,18 @@ requalify_consts
   fromVPtr
   postModifyRegisters
   tlsBaseRegister
-  max_us_to_ticks
+  maxUsToTicks
+  timerIRQ
 end
 
 abbreviation "mapMaybe \<equiv> option_map"
 
-#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= bodies_only NOT liftFnMaybe assertDerived archThreadGet archThreadSet asUser sanitiseRegister getSanitiseRegisterInfo takeWhileM sort_key
+fun tcbEPFindIndex where
+  "tcbEPFindIndex tptr queue curIndex =
+#INCLUDE_HASKELL SEL4/Object/TCB.lhs BODY tcbEPFindIndex
+  tptr queue curIndex"
+
+#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= bodies_only NOT liftFnMaybe assertDerived archThreadGet archThreadSet asUser sanitiseRegister getSanitiseRegisterInfo takeWhileM sort_key tcbEPFindIndex
 
 defs asUser_def:
 "asUser tptr f\<equiv> (do

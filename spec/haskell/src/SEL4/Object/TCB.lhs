@@ -996,7 +996,7 @@ On some architectures, the thread context may include registers that may be modi
 
 > replaceAt :: Int -> [a] -> a -> [a]
 > replaceAt i lst v =
->     let x = take i lst
+>     let x = take i lst;
 >         y = drop (i + 1) lst
 >     in x ++ [v] ++ y
 
@@ -1117,17 +1117,17 @@ On some architectures, the thread context may include registers that may be modi
 >     if prio > curPrio
 >         then
 >             if curIndex == 0
->                 then return (-1)
+>                 then return 0
 >                 else tcbEPFindIndex tptr queue (curIndex - 1)
->         else return curIndex
+>         else return (curIndex + 1)
 
 > tcbEPAppend :: PPtr TCB -> [PPtr TCB] -> Kernel [PPtr TCB]
 > tcbEPAppend tptr queue =
->     if (null queue)
+>     if null queue
 >         then return [tptr]
 >         else do
 >             index <- tcbEPFindIndex tptr queue (length queue - 1)
->             return $ take (index + 1) queue ++ [tptr] ++ drop (index + 1) queue
+>             return $ take index queue ++ [tptr] ++ drop index queue
 
 > tcbEPDequeue :: PPtr TCB -> [PPtr TCB] -> Kernel [PPtr TCB]
 > tcbEPDequeue tptr queue = do
