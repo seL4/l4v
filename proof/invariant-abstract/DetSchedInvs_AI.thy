@@ -2415,6 +2415,23 @@ lemmas valid_release_q_def = valid_release_q_except_set_2_def
 lemma valid_release_q_distinct[elim!]: "valid_release_q s \<Longrightarrow> distinct (release_queue s)"
   by (clarsimp simp: valid_release_q_def)
 
+definition ready_or_release_2 where
+  "ready_or_release_2 ready_qs release_q \<equiv> \<forall>t. \<not> (in_queues_2 ready_qs t \<and> in_queue_2 release_q t)"
+
+abbreviation ready_or_release :: "'z state  \<Rightarrow> bool" where
+  "ready_or_release s \<equiv> ready_or_release_2 (ready_queues s) (release_queue s)"
+
+lemmas ready_or_release_def
+  = ready_or_release_2_def[of "ready_queues s" "release_queue s" for s :: "'z state"]
+
+lemma ready_or_released_in_ready_qs:
+  "ready_or_release s \<Longrightarrow> in_ready_q t s \<Longrightarrow> not_in_release_q t s"
+  by (clarsimp simp: ready_or_release_def)
+
+lemma ready_or_released_in_release_queue:
+  "ready_or_release s \<Longrightarrow> in_release_queue t s \<Longrightarrow> not_queued t s"
+  by (clarsimp simp: ready_or_release_def)
+
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_valid_release_q :: "obj_ref set \<Rightarrow> valid_sched_t" where
   "valid_sched_valid_release_q S ctime cdom ct it rq rlq sa lmt etcbs tcb_sts
@@ -2877,6 +2894,7 @@ definition valid_sched_2 where
   "valid_sched_2 wk_vsa vbl ctime cdom ct it queues rlq sa lmt etcbs tcb_sts tcb_scps tcb_faults sc_refill_cfgs sc_reps \<equiv>
     valid_ready_qs_2 queues ctime etcbs tcb_sts tcb_scps sc_refill_cfgs
     \<and> valid_release_q_2 rlq tcb_sts tcb_scps sc_refill_cfgs
+    \<and> ready_or_release_2 queues rlq
     \<and> ct_not_in_q_2 queues sa ct
     \<and> valid_sched_action_2 wk_vsa {} ctime sa ct cdom rlq etcbs tcb_sts tcb_scps sc_refill_cfgs
     \<and> ct_in_cur_domain_2 ct it sa cdom etcbs
@@ -2978,23 +2996,6 @@ definition valid_reply_scs where
 definition next_thread where
   "next_thread queues \<equiv> (hd (max_non_empty_queue queues))"
 
-definition ready_or_release_2 where
-  "ready_or_release_2 ready_qs release_q \<equiv> \<forall>t. \<not> (in_queues_2 ready_qs t \<and> in_queue_2 release_q t)"
-
-abbreviation ready_or_release :: "'z state  \<Rightarrow> bool" where
-  "ready_or_release s \<equiv> ready_or_release_2 (ready_queues s) (release_queue s)"
-
-lemmas ready_or_release_def
-  = ready_or_release_2_def[of "ready_queues s" "release_queue s" for s :: "'z state"]
-
-lemma ready_or_released_in_ready_qs:
-  "ready_or_release s \<Longrightarrow> in_ready_q t s \<Longrightarrow> not_in_release_q t s"
-  by (clarsimp simp: ready_or_release_def)
-
-lemma ready_or_released_in_release_queue:
-  "ready_or_release s \<Longrightarrow> in_release_queue t s \<Longrightarrow> not_queued t s"
-  by (clarsimp simp: ready_or_release_def)
-
 lemma BlockedOnReceive_reply_tcb_reply_at:
   "\<exists>epptr pl. st_tcb_at ((=) (BlockedOnReceive epptr (Some rptr) pl)) tptr s
    \<Longrightarrow> sym_refs (state_refs_of s) \<Longrightarrow> valid_objs s
@@ -3029,32 +3030,35 @@ lemma valid_blocked_except_set_not_runnable:
   unfolding valid_blocked_defs obj_at_kh_kheap_simps runnable_eq
   by (erule allEI; rename_tac t'; case_tac "t' = t"; clarsimp simp: pred_map_simps)
 
-lemma valid_sched_valid_blocked:
+lemma valid_sched_valid_blocked[elim!]:
   "valid_sched s \<Longrightarrow> valid_blocked_except_set S s" by (clarsimp simp: valid_sched_def)
 
-lemma valid_sched_valid_ready_qs:
+lemma valid_sched_valid_ready_qs[elim!]:
   "valid_sched s \<Longrightarrow> valid_ready_qs s" by (clarsimp simp: valid_sched_def)
 
-lemma valid_sched_valid_release_q:
+lemma valid_sched_valid_release_q[elim!]:
   "valid_sched s \<Longrightarrow> valid_release_q s" by (clarsimp simp: valid_sched_def)
 
-lemma valid_sched_valid_sched_action:
+lemma valid_sched_ready_or_release[elim!]:
+  "valid_sched s \<Longrightarrow> ready_or_release s" by (clarsimp simp: valid_sched_def)
+
+lemma valid_sched_valid_sched_action[elim!]:
   "valid_sched s \<Longrightarrow> valid_sched_action s" by (simp add: valid_sched_def)
 
-lemma valid_sched_weak_valid_sched_action:
+lemma valid_sched_weak_valid_sched_action[elim!]:
   "valid_sched s \<Longrightarrow> weak_valid_sched_action s" by (simp add: valid_sched_def valid_sched_action_def)
 
-lemma valid_sched_ct_in_cur_domain:
+lemma valid_sched_ct_in_cur_domain[elim!]:
   "valid_sched s \<Longrightarrow> ct_in_cur_domain s" by (simp add: valid_sched_def)
 
-lemma valid_sched_released_ipc_queues:
+lemma valid_sched_released_ipc_queues[elim!]:
   "valid_sched s \<Longrightarrow> released_ipc_queues s"
   by (clarsimp simp: valid_sched_def)
 
 lemma valid_sched_active_sc_valid_refills[elim]:
   "valid_sched s \<Longrightarrow> active_sc_valid_refills s" by (simp add: valid_sched_def)
 
-lemma valid_sched_imp_except_blocked:
+lemma valid_sched_imp_except_blocked[elim!]:
   "valid_sched s \<Longrightarrow> valid_sched_except_blocked s"
   by (clarsimp simp: valid_sched_def)
 
@@ -3407,11 +3411,12 @@ lemma valid_sched_lift_pre_conj:
   assumes "\<And>scp. \<lbrace>\<lambda>s. active_if_reply_sc_at scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_if_reply_sc_at scp s\<rbrace>"
   assumes "\<lbrace>\<lambda>s. valid_machine_time s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. valid_machine_time s\<rbrace>"
     shows "\<lbrace>\<lambda>s. valid_sched s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  by (wpsimp simp: valid_sched_def
+  by (wpsimp simp: valid_sched_def ready_or_release_def ready_or_release_def
                wp: valid_ready_qs_lift_pre_conj ct_not_in_q_lift_pre_conj
                    ct_in_cur_domain_lift_pre_conj valid_release_q_lift_pre_conj
                    valid_sched_action_lift_pre_conj valid_blocked_lift_pre_conj assms
-                   released_ipc_queues_lift_pre_conj active_sc_valid_refills_lift_pre_conj active_reply_scs_lift_pre_conj)
+                   released_ipc_queues_lift_pre_conj active_sc_valid_refills_lift_pre_conj
+                   active_reply_scs_lift_pre_conj hoare_vcg_all_lift hoare_vcg_imp_lift)
 
 lemmas valid_sched_lift = valid_sched_lift_pre_conj[where R = \<top>, simplified]
 
