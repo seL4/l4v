@@ -24,10 +24,10 @@ begin
 
 context begin interpretation Arch .
 requalify_consts
-  kernelWCET_ticks
+  kernelWCETTicks
   kernelWCET_us
-  ticks_to_us
-  max_ticks_to_us
+  ticksToUs
+  maxTicksToUs
   getCurrentTime
 end
 

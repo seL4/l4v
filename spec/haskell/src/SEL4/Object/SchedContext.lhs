@@ -62,7 +62,7 @@ This module uses the C preprocessor to select a target architecture.
 > minBudget = 2 * kernelWCETTicks
 
 > minBudgetUs :: Word64
-> minBudgetUs = 2 * kernelWCETUs
+> minBudgetUs = 2 * kernelWCET_us
 
 > coreSchedContextBytes :: Int
 > coreSchedContextBytes = 88
@@ -528,13 +528,13 @@ This module uses the C preprocessor to select a target architecture.
 >     sc <- getSchedContext scPtr
 >     tptr <- return $ fromJust $ scTCB sc
 >     schedulable <- isSchedulable tptr
->     if schedulable 
+>     if schedulable
 >         then do
 >             refillUnblockCheck scPtr
 >             ctPtr <- getCurThread
 >             curprio <- threadGet tcbPriority ctPtr
 >             prio <- threadGet tcbPriority tptr
->             if prio < curprio 
+>             if prio < curprio
 >                 then do
 >                     tcbSchedDequeue tptr
 >                     tcbSchedEnqueue tptr
@@ -586,7 +586,7 @@ This module uses the C preprocessor to select a target architecture.
 > getTCBSc :: PPtr TCB -> Kernel SchedContext
 > getTCBSc tcbPtr = do
 >     scOpt <- threadGet tcbSchedContext tcbPtr
->     assert (scOpt /= Nothing) "getTCBSc: SchedContext pointer must not be Nothing" 
+>     assert (scOpt /= Nothing) "getTCBSc: SchedContext pointer must not be Nothing"
 >     getSchedContext $ fromJust scOpt
 
 > getScTime :: PPtr TCB -> Kernel Time
