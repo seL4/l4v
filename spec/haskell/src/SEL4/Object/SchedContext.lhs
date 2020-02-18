@@ -285,23 +285,6 @@ This module uses the C preprocessor to select a target architecture.
 >     empty' <- refillEmpty scPtr
 >     assert (not empty) "We just inserted something to the refills, it better not be empty!"
 
-> refillsBudgetCheck :: PPtr SchedContext -> Ticks -> Kernel Ticks
-> refillsBudgetCheck scPtr usage = do
->     sc <- getSchedContext scPtr
->     refills <- getRefills scPtr
->     hdRefill <- return $ refillHd sc
->     if rAmount hdRefill <= usage
->         then do
->             single <- refillSingle scPtr
->             if single
->                 then do
->                     setRefills scPtr $ replaceAt (scRefillHead sc) refills (hdRefill { rTime = rTime hdRefill + scPeriod sc })
->                 else do
->                     hdRefill <- refillPopHead scPtr
->                     scheduleUsed scPtr (hdRefill { rTime = rTime hdRefill + scPeriod sc })
->             refillsBudgetCheck scPtr (usage - rAmount hdRefill)
->         else return usage
-
 > minBudgetMerge :: PPtr SchedContext -> Kernel ()
 > minBudgetMerge scPtr = do
 >     full <- refillFull scPtr
