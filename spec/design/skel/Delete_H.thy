@@ -60,7 +60,7 @@ defs
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs
 
-function
+fun
   cteDeleteOne' :: "machine_word \<Rightarrow> unit kernel"
 where
  "cteDeleteOne' x s =
@@ -89,14 +89,9 @@ where
 )
 cteDeleteOne' x s"
 
-  by auto
-
 defs
   cteDeleteOne_def1:
  "cteDeleteOne \<equiv> cteDeleteOne'"
-
-termination cteDeleteOne'
-  by (rule cteDeleteOne'.termination[OF wf_empty], simp+)
 
 lemma cteDeleteOne_def:
  "cteDeleteOne =
