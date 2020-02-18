@@ -104,6 +104,19 @@ definition
   storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
   where "storeWordVM w p \<equiv> return ()"
 
+consts'
+  configureTimer_impl :: "unit machine_rest_monad"
+  configureTimer_val :: "machine_state \<Rightarrow> irq"
+
+definition
+  configureTimer :: "irq machine_monad"
+where
+  "configureTimer \<equiv> do
+    machine_op_lift configureTimer_impl;
+    gets configureTimer_val
+  od"
+
+
 consts' maxTimer_us :: "64 word"
 consts' timerPrecision :: "64 word"
 consts' max_ticks_to_us :: "64 word"

@@ -235,11 +235,11 @@ end
 instantiation reply :: pspace_storable
 begin
 
-(* endpoint extra instance defs *)
+(* reply extra instance defs *)
 
 
 definition
-  makeObject_reply: "(makeObject :: reply)  \<equiv> Reply Nothing Nothing"
+  makeObject_reply: "(makeObject :: reply)  \<equiv> Reply Nothing Nothing Nothing Nothing"
 
 definition
   loadObject_reply[simp]:
@@ -269,8 +269,9 @@ begin
 
 
 definition
-  makeObject_sc: "(makeObject :: sched_context) \<equiv> SchedContext 0 0 Nothing Nothing
-    [Refill 0 0, Refill 0 0] 0 Nothing 0 [] 0"
+  makeObject_sc:
+  "(makeObject :: sched_context) \<equiv>
+     SchedContext 0 0 Nothing Nothing Nothing 0 Nothing 0 0 0  [Refill 0 0, Refill 0 0]"
 
 definition
   loadObject_sc[simp]:

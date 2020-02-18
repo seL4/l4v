@@ -19,7 +19,6 @@ imports
   FaultHandlerDecls_H
   SchedContext_H
   "./$L4V_ARCH/ArchTCB_H"
-  "../../lib/HaskellLib_H"
 begin
 
 context begin interpretation Arch .

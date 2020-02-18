@@ -55,6 +55,7 @@ requalify_consts
   clearMemory
   non_kernel_IRQs
   tlsBaseRegister
+  configureTimer
   kernelWCET_us
   kernelWCET_ticks
   maxTimer_us

@@ -78,6 +78,10 @@ definition
   maxIRQ :: "irq" where
   "maxIRQ \<equiv> 0x9F"
 
+definition
+  timerIRQ :: "irq" where
+  "timerIRQ \<equiv> 29"
+
 end
 
 end
