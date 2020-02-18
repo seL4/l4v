@@ -146,8 +146,8 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >               True -> do
 >                   setThreadState (BlockedOnReceive {
 >                       blockingObject = epptr,
->                       replyObject = replyOpt,
->                       blockingIPCCanGrant = recvCanGrant }) thread
+>                       blockingIPCCanGrant = recvCanGrant,
+>                       replyObject = replyOpt }) thread
 >                   when (replyOpt /= Nothing) $
 >                       setReplyTCB (Just thread) $ fromJust replyOpt
 >                   setEndpoint epptr $ RecvEP [thread]
@@ -156,8 +156,8 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >               True -> do
 >                   setThreadState (BlockedOnReceive {
 >                       blockingObject = epptr,
->                       replyObject = replyOpt,
->                       blockingIPCCanGrant = recvCanGrant}) thread
+>                       blockingIPCCanGrant = recvCanGrant,
+>                       replyObject = replyOpt}) thread
 >                   when (replyOpt /= Nothing) $
 >                       setReplyTCB (Just thread) $ fromJust replyOpt
 >                   qs' <- tcbEPAppend thread queue
