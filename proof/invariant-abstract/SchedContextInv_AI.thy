@@ -803,16 +803,6 @@ lemmas sum_list_elements_unat_sum = sum_list_elements_unat_sum'[rule_format]
 
 (***)
 
-lemma sum_list_replicate:
-  "n * unat a = sum_list (map unat (replicate n a))"
-  by (induct n arbitrary: a; simp)
-
-lemma replicate_no_overflow:
-  "n * unat (a :: time) \<le> unat (upper_bound :: time)
-   \<Longrightarrow> unat (word_of_int n * a) = n * unat a"
-  using sum_list_bounded_le[symmetric] sum_list_replicate
-  by (metis (mono_tags, hide_lams) Num.of_nat_simps(5) word_of_nat word_unat.Rep_inverse)
-
 lemma MIN_BUDGET_no_overflow:
   "unat MIN_BUDGET = 2 * unat kernelWCET_ticks"
   apply (simp add: MIN_BUDGET_def kernelWCET_ticks_def)
@@ -822,12 +812,9 @@ lemma MIN_BUDGET_no_overflow:
 
 lemma unat_MIN_BUDGET_MIN_SC_BUDGET:
   "unat MIN_BUDGET + unat MIN_BUDGET = unat MIN_SC_BUDGET"
-  supply us_to_ticks_mult[simp del]
   apply (simp add: MIN_BUDGET_def MIN_SC_BUDGET_def kernelWCET_ticks_def)
-  apply (subgoal_tac "4 * us_to_ticks kernelWCET_us
-                      = 2 * us_to_ticks kernelWCET_us + 2 * us_to_ticks kernelWCET_us")
-   prefer 2
-   apply simp
+  apply (prop_tac "4 * us_to_ticks kernelWCET_us
+                   = 2 * us_to_ticks kernelWCET_us + 2 * us_to_ticks kernelWCET_us", simp)
   apply (erule_tac s="2 * us_to_ticks kernelWCET_us + 2 * us_to_ticks kernelWCET_us"
                and t="4 * us_to_ticks kernelWCET_us"
          in ssubst)
