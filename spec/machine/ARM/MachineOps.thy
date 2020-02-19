@@ -126,8 +126,6 @@ axiomatization
 where
   us_to_ticks_mono[intro!]: "mono us_to_ticks"
 and
-  us_to_ticks_mult[iff]: "n * (us_to_ticks x) = us_to_ticks (n * x)"
-and
   us_to_ticks_zero[iff]: "us_to_ticks 0 = 0"
 and
   us_to_ticks_nonzero: "y \<noteq> 0 \<Longrightarrow> us_to_ticks y \<noteq> 0"
@@ -144,8 +142,18 @@ context Arch begin global_naming ARM
 definition
   "kernelWCET_ticks = us_to_ticks (kernelWCET_us)"
 
+lemma replicate_no_overflow:
+  "n * unat (a :: 64 word) \<le> unat (upper_bound :: 64 word)
+   \<Longrightarrow> unat (word_of_int n * a) = n * unat a"
+  by (metis (mono_tags, hide_lams) le_unat_uoi of_nat_mult word_of_nat word_unat.Rep_inverse)
+
 lemma kernelWCET_ticks_pos2: "0 < 2 * kernelWCET_ticks"
-  by (metis ARM.kernelWCET_ticks_def ARM.kernelWCET_us_pos2 ARM.us_to_ticks_mult ARM.us_to_ticks_nonzero word_neq_0_conv)
+  apply (simp add: kernelWCET_ticks_def word_less_nat_alt)
+  apply (subgoal_tac "unat (2 * us_to_ticks kernelWCET_us) = 2 * unat (us_to_ticks kernelWCET_us)")
+   using ARM.kernelWCET_us_pos2 ARM.us_to_ticks_nonzero unat_gt_0 apply force
+  apply (subgoal_tac "2 * unat (us_to_ticks kernelWCET_us) \<le> unat (max_word :: 64 word)")
+   using replicate_no_overflow apply fastforce
+  using kernelWCET_ticks_no_overflow by force
 
 text \<open>
 This encodes the following assumptions:

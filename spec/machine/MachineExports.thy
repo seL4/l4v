@@ -63,11 +63,11 @@ requalify_consts
   timerPrecision
 requalify_facts
   us_to_ticks_mono
-  us_to_ticks_mult
   us_to_ticks_zero
   us_to_ticks_nonzero
   kernelWCET_ticks_no_overflow
   kernelWCET_ticks_def
+  replicate_no_overflow
 
 (* HERE IS THE PLACE FOR GENERIC WORD LEMMAS FOR ALL ARCHITECTURES *)
 
