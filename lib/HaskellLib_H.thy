@@ -554,4 +554,24 @@ definition
   findIndex :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> nat option" where
   "findIndex = findIndex' 0"
 
+definition
+  whileM :: "('s, bool) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
+  "whileM C B \<equiv> do
+    c \<leftarrow> C;
+    whileLoop (\<lambda>c s. c) (\<lambda>_. do B; C od) c;
+    return ()
+  od"
+
+definition
+  ifM :: "('s, bool) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow>
+          ('s, 'a) nondet_monad" where
+  "ifM test t f = do
+    c \<leftarrow> test;
+    if c then t else f
+   od"
+
+definition
+  whenM :: "('s, bool) nondet_monad \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
+  "whenM t m = ifM t m (return ())"
+
 end
