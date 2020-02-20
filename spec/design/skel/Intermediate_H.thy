@@ -58,7 +58,7 @@ defs createNewCaps_def:
     (case toAPIType t of
           Some TCBObject \<Rightarrow> (do
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::tcb)) 0;
-            curdom \<leftarrow> getCurDomain;
+            curdom \<leftarrow> curDomain;
             mapM_x (\<lambda>tptr. threadSet (tcbDomain_update (\<lambda>_. curdom)) tptr) addrs;
             return $ map (\<lambda> addr. ThreadCap addr) addrs
           od)
@@ -72,12 +72,12 @@ defs createNewCaps_def:
           od)
         | Some SchedContextObject \<Rightarrow> (do
             addrs \<leftarrow> createObjects regionBase numObjects
-              (injectKO (scSizeBits_update (\<lambda> x. userSize) (makeObject ::sched_context))) 0;
+              (injectKO (makeObject ::sched_context)) 0; \<comment> \<open>FIXME RT: set refill list\<close>
             return $ map (\<lambda> addr. SchedContextCap addr userSize) addrs
           od)
         | Some ReplyObject \<Rightarrow> (do
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::reply)) 0;
-            return $ map (\<lambda> addr. ReplyCap addr) addrs
+            return $ map (\<lambda> addr. ReplyCap addr True) addrs
           od)
         | Some ArchTypes_H.CapTableObject \<Rightarrow> (do
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::cte)) userSize;
