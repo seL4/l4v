@@ -1090,25 +1090,29 @@ On some architectures, the thread context may include registers that may be modi
 >         else rollbackTime
 >     setCurSc csc
 
+> releaseQNonEmptyAndReady :: Kernel Bool
+> releaseQNonEmptyAndReady = do
+>     rq <- getReleaseQueue
+>     if rq == [] then return False
+>         else do
+>             scOpt <- threadGet tcbSchedContext $ head rq
+>             ready <- refillReady $ fromJust scOpt
+>             return ready
+
 > awaken :: Kernel ()
 > awaken = do
->     rq <- getReleaseQueue
->     when (rq /= []) $ do
->         scOpt <- threadGet tcbSchedContext $ head rq
->         ready <- refillReady $ fromJust scOpt
->         when ready $ do
->             awakened <- tcbReleaseDequeue
->             ctPtr <- getCurThread
->             assert (awakened /= ctPtr) "the currently running thread cannot have just woken up"
->             scPtrOpt <- threadGet tcbSchedContext awakened
->             scPtr <- return $ fromJust scPtrOpt
->             roundRobin <- isRoundRobin scPtr
->             assert (not roundRobin) "round robin threads should not be in the release queue"
->             sufficient <- refillSufficient scPtr 0
->             assert sufficient "threads HEAD refill should always be > MIN_BUDGET"
->             possibleSwitchTo awakened
->             setReprogramTimer True
->             awaken
+>     whileM releaseQNonEmptyAndReady $ do
+>         awakened <- tcbReleaseDequeue
+>         ctPtr <- getCurThread
+>         assert (awakened /= ctPtr) "the currently running thread cannot have just woken up"
+>         scPtrOpt <- threadGet tcbSchedContext awakened
+>         scPtr <- return $ fromJust scPtrOpt
+>         roundRobin <- isRoundRobin scPtr
+>         assert (not roundRobin) "round robin threads should not be in the release queue"
+>         sufficient <- refillSufficient scPtr 0
+>         assert sufficient "threads HEAD refill should always be > MIN_BUDGET"
+>         possibleSwitchTo awakened
+>         setReprogramTimer True
 
 > tcbEPFindIndex :: PPtr TCB -> [PPtr TCB] -> Int -> Kernel Int
 > tcbEPFindIndex tptr queue curIndex = do
