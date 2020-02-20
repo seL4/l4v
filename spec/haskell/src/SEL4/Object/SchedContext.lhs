@@ -41,6 +41,7 @@ This module uses the C preprocessor to select a target architecture.
 > import SEL4.API.Failures(SyscallError(..))
 > import SEL4.API.Types(MessageInfo(..))
 > import {-# SOURCE #-} SEL4.Kernel.VSpace(lookupIPCBuffer)
+> import SEL4.Model.Failures
 > import SEL4.Model.Preemption(KernelP, withoutPreemption)
 > import SEL4.Model.PSpace(getObject, setObject)
 > import SEL4.Model.StateData
@@ -151,6 +152,10 @@ This module uses the C preprocessor to select a target architecture.
 > refillNext scPtr index = do
 >     sc <- getSchedContext scPtr
 >     return $ if (index == scRefillMax sc - 1) then 0 else index + 1
+
+> -- Odd argument order plays well with `liftScPtr`.
+> refillIndex :: Int -> SchedContext -> Refill
+> refillIndex index sc = scRefills sc !! index
 
 > refillSize :: PPtr SchedContext -> Kernel Int
 > refillSize scPtr = do
@@ -351,36 +356,42 @@ This module uses the C preprocessor to select a target architecture.
 >             setRefills scPtr $ replaceAt (scRefillHead sc) (scRefills sc) (hdRefill { rAmount = remnant })
 >             scheduleUsed scPtr new
 
-
-> replenishmentMerge :: PPtr SchedContext -> Kernel ()
-> replenishmentMerge scPtr = do
->     ct <- getCurTime
->     single <- refillSingle scPtr
->     when single $ do
->         sc <- getSchedContext scPtr
->         refills <- getRefills scPtr
->         next <- refillNext scPtr (scRefillHead sc)
->         let nextrefill = refills !! next
->         let amount = rAmount (refills !! scRefillHead sc)
->         when (rTime nextrefill < ct + amount) $ do
->             refillPopHead scPtr
->             sc <- getSchedContext scPtr
->             hdrefill <- return $ refillHd sc
->             setRefills scPtr $ replaceAt (scRefillHead sc) (scRefills sc) (hdrefill { rAmount = rAmount hdrefill + amount, rTime = ct })
->         replenishmentMerge scPtr
+> refillUnblockCheckMergable :: PPtr SchedContext -> Kernel Bool
+> refillUnblockCheckMergable scPtr = do
+>     head <- liftScPtr scPtr refillHd
+>     let amount = rAmount head
+>     let tail = rTime head + amount
+>     headIndex <- liftScPtr scPtr scRefillHead
+>     nextRefillIndex <- refillNext scPtr headIndex
+>     nextRefill <- liftScPtr scPtr (refillIndex nextRefillIndex)
+>     let enough_time = rTime nextRefill <= tail
+>     refills <- refillSize scPtr
+>     return (refills > 1 && enough_time)
 
 > refillUnblockCheck :: PPtr SchedContext -> Kernel ()
 > refillUnblockCheck scPtr = do
->     robin <- isRoundRobin scPtr
->     when (not robin) $ do
->         ready <- refillReady scPtr
->         when ready $ do
->             ct <- getCurTime
->             sc <- getSchedContext scPtr
->             hdRefill <- return $ refillHd sc
->             setRefills scPtr $ replaceAt (scRefillHead sc) (scRefills sc) (hdRefill { rTime = ct })
->             setReprogramTimer True
->             replenishmentMerge scPtr
+>     ifM (isRoundRobin scPtr)
+>       (do
+>         curTime <- getCurTime
+>         head <- liftScPtr scPtr refillHd
+>         setRefillHd scPtr $ head { rTime = curTime + kernelWCETTicks }
+>         refillCount <- liftScPtr scPtr scRefillCount
+>         when (refillCount > 1) $ do
+>           head <- liftScPtr scPtr refillHd
+>           tail <- liftScPtr scPtr refillTl
+>           setRefillTl scPtr $ tail { rTime = rTime head + rAmount head })
+>       (whenM (refillReady scPtr) $ do
+>         setReprogramTimer True
+>         curTime <- getCurTime
+>         head <- liftScPtr scPtr refillHd
+>         setRefillHd scPtr $ head { rTime = curTime + kernelWCETTicks }
+>         whenM (refillUnblockCheckMergable scPtr) $ do
+>           amount <- liftM rAmount $ liftScPtr scPtr refillHd
+>           refillPopHead scPtr
+>           curTime <- getCurTime
+>           head <- liftScPtr scPtr refillHd
+>           setRefillHd scPtr $ Refill { rTime = curTime + kernelWCETTicks,
+>                                        rAmount = rAmount head + amount })
 
 > schedContextUpdateConsumed :: PPtr SchedContext -> Kernel Time
 > schedContextUpdateConsumed scPtr = do
@@ -594,7 +605,6 @@ This module uses the C preprocessor to select a target architecture.
 >             when (curSc == scPtr) $ do
 >                 budgetEnough <- checkBudget
 >                 when budgetEnough $ commitTime
->         let (period, mRefills) = if budget == period then (0, minRefills) else (period, mRefills)
 
 >         sc <- getSchedContext scPtr
 >         runnable <- isRunnable $ fromJust $ scTCB sc

@@ -313,6 +313,21 @@ The following function allows the machine monad to be directly accessed from ker
 
 \subsection{Miscellaneous Monad Functions}
 
+The functions "ifM", and "whenM" are monadic versions of "if", and "when", where the condition runs in the monad.
+
+> ifM :: Monad m => m Bool -> m a -> m a -> m a
+> ifM test t f = do
+>     check <- test
+>     if check then t else f
+
+> whenM :: Monad m => m Bool -> m () -> m ()
+> whenM test body = ifM test body (return ())
+
+The function "whileM" allows writing while loops where the loop body and the condition are monads. The body is run until the test returns False.
+
+> whileM :: Monad m => m Bool -> m () -> m ()
+> whileM test body = whenM test $ body >> whileM test body
+
 \subsubsection{Assertions and Undefined Behaviour}
 
 The function "assert" is used to state that a predicate must be true at a given point. If it is not, the behaviour of the kernel is undefined. The Haskell model will not terminate in this case.
