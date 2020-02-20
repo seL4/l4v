@@ -73,7 +73,6 @@ EXCLUDE["ARM"]=[
     "CParser",
     "ASepSpec",
     "Bisim",
-    "ExecSpec",
     "SepTactics",
     "TakeGrant",
     "Sep_Algebra"
