@@ -10,12 +10,12 @@ begin
 
 context begin interpretation Arch .
 requalify_facts
-  machine_op_lift_last_machine_time
+  machine_op_lift_machine_times
   machine_ops_last_machine_time
 end
 
 lemmas [wp] =
-  machine_op_lift_last_machine_time
+  machine_op_lift_machine_times
   machine_ops_last_machine_time
 
 (* FIXME: move to KHeap_AI *)
@@ -1607,6 +1607,9 @@ lemmas current_time_bounded_def = current_time_bounded_2_def
 abbreviation last_machine_time_of :: "'z state \<Rightarrow> time" where
   "last_machine_time_of s \<equiv> last_machine_time (machine_state s)"
 
+abbreviation time_state_of :: "'z state \<Rightarrow> nat" where
+  "time_state_of s \<equiv> time_state (machine_state s)"
+
 type_synonym valid_sched_t
   = "time
      \<Rightarrow> domain
@@ -1615,7 +1618,6 @@ type_synonym valid_sched_t
      \<Rightarrow> (domain \<Rightarrow> priority \<Rightarrow> obj_ref list)
      \<Rightarrow> obj_ref list
      \<Rightarrow> scheduler_action
-     \<Rightarrow> time
      \<Rightarrow> (obj_ref \<rightharpoonup> etcb)
      \<Rightarrow> (obj_ref \<rightharpoonup> thread_state)
      \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option)
@@ -1627,24 +1629,25 @@ type_synonym valid_sched_t
 abbreviation valid_sched_pred :: "valid_sched_t \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_sched_pred P \<equiv>
     \<lambda>s. P (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
-          (ready_queues s) (release_queue s) (scheduler_action s) (last_machine_time_of s)
+          (ready_queues s) (release_queue s) (scheduler_action s)
           (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
           (sc_refill_cfgs_of s) (sc_replies_of s)"
 
 type_synonym valid_sched_strong_t
   = "time \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref list)
-           \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> valid_sched_t"
+           \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> time \<Rightarrow> nat \<Rightarrow> valid_sched_t"
 
 \<comment> \<open>Sometimes it's useful to prove preservation of some additional projections,
     even though they are not used in valid_sched.\<close>
 abbreviation valid_sched_pred_strong :: "valid_sched_strong_t \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_sched_pred_strong P
    \<equiv> \<lambda>s. valid_sched_pred (P (consumed_time s) (cur_sc s) (ep_send_qs_of s)
-                              (ep_recv_qs_of s) (sc_tcbs_of s)) s"
+                              (ep_recv_qs_of s) (sc_tcbs_of s) (last_machine_time_of s)
+                              (time_state_of s)) s"
 
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_pred_strengthen :: "valid_sched_t \<Rightarrow> valid_sched_strong_t" where
-  "valid_sched_pred_strengthen P _ _ _ _ _ \<equiv> P"
+  "valid_sched_pred_strengthen P _ _ _ _ _ _ _ \<equiv> P"
 
 (* FIXME RT: delete?
 lemma valid_sched_pred_lift_f:
@@ -1719,18 +1722,21 @@ crunches do_machine_op
 
 lemma dmo_valid_sched_pred:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (last_machine_time s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (time_state s)\<rbrace>"
   shows "do_machine_op f \<lbrace>valid_sched_pred_strong P\<rbrace>"
   by (rule hoare_lift_Pf[where f=last_machine_time_of]
+      ; rule hoare_lift_Pf[where f=time_state_of]
       ; intro do_machine_op_valid_sched_pred_misc do_machine_op_machine_state assms)
 
 lemma dmo_valid_sched_pred':
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (last_machine_time s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (time_state s)\<rbrace>"
   shows "(do_machine_op $ f) \<lbrace>valid_sched_pred_strong P\<rbrace>"
   unfolding fun_app_def by (rule dmo_valid_sched_pred[OF assms])
 
 lemmas dmo_lift_valid_sched_pred[wp] =
-  dmo_valid_sched_pred[OF machine_op_lift_last_machine_time]
-  dmo_valid_sched_pred'[OF machine_op_lift_last_machine_time]
+  dmo_valid_sched_pred[OF machine_op_lift_machine_times]
+  dmo_valid_sched_pred'[OF machine_op_lift_machine_times]
 
 lemmas machine_ops_valid_sched_pred[wp] =
   machine_ops_last_machine_time[THEN dmo_valid_sched_pred]
@@ -2348,7 +2354,7 @@ lemma active_sc_valid_refills_lift_pre_conj:
 
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_valid_ready_qs :: valid_sched_t where
-  "valid_sched_valid_ready_qs ctime cdom ct it rq rlq sa lmt etcbs tcb_sts
+  "valid_sched_valid_ready_qs ctime cdom ct it rq rlq sa etcbs tcb_sts
                          tcb_scps tcb_faults sc_refill_cfgs sc_reps\<equiv>
     valid_ready_qs_2 rq ctime etcbs tcb_sts tcb_scps sc_refill_cfgs"
 
@@ -2430,7 +2436,7 @@ lemma ready_or_released_in_release_queue:
 
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_valid_release_q :: "obj_ref set \<Rightarrow> valid_sched_t" where
-  "valid_sched_valid_release_q S ctime cdom ct it rq rlq sa lmt etcbs tcb_sts
+  "valid_sched_valid_release_q S ctime cdom ct it rq rlq sa etcbs tcb_sts
                                tcb_scps tcb_faults sc_refill_cfgs sc_reps\<equiv>
     valid_release_q_except_set_2 S rlq tcb_sts tcb_scps sc_refill_cfgs"
 
@@ -2600,7 +2606,7 @@ lemma active_bound_sc_tcb_at:
 
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_ipc_queues :: valid_sched_t where
-  "valid_sched_ipc_queues ctime cdom ct it rq rlq sa lmt etcbs sts scps faults scrcs replies
+  "valid_sched_ipc_queues ctime cdom ct it rq rlq sa etcbs sts scps faults scrcs replies
    \<equiv> released_ipc_queues_2 ctime sts scps faults scrcs"
 
 lemma is_blocked_thread_state_simps[simp]:
@@ -2934,7 +2940,7 @@ lemma valid_blockedD:
 
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_valid_blocked :: "obj_ref set \<Rightarrow> valid_sched_t" where
-  "valid_sched_valid_blocked S ctime cdom ct it rq rlq sa lmt etcbs tcb_sts
+  "valid_sched_valid_blocked S ctime cdom ct it rq rlq sa etcbs tcb_sts
                          tcb_scps tcb_faults sc_refill_cfgs sc_reps \<equiv>
     valid_blocked_except_set_2 S rq rlq sa ct tcb_sts tcb_scps sc_refill_cfgs"
 
@@ -3069,7 +3075,7 @@ lemma active_reply_scsE:
   using assms by (simp add: active_reply_scs_2_def active_if_reply_sc_at_2_def)
 
 definition valid_sched_2 where
-  "valid_sched_2 wk_vsa vbl ctime cdom ct it queues rlq sa lmt etcbs tcb_sts tcb_scps tcb_faults sc_refill_cfgs sc_reps \<equiv>
+  "valid_sched_2 wk_vsa vbl ctime cdom ct it queues rlq sa etcbs tcb_sts tcb_scps tcb_faults sc_refill_cfgs sc_reps \<equiv>
     valid_ready_qs_2 queues ctime etcbs tcb_sts tcb_scps sc_refill_cfgs
     \<and> valid_release_q_2 rlq tcb_sts tcb_scps sc_refill_cfgs
     \<and> ready_or_release_2 queues rlq
@@ -3080,7 +3086,6 @@ definition valid_sched_2 where
     \<and> valid_idle_etcb_2 etcbs
     \<and> released_ipc_queues_2 ctime tcb_sts tcb_scps tcb_faults sc_refill_cfgs
     \<and> active_reply_scs_2 sc_reps sc_refill_cfgs
-    \<and> valid_machine_time_2 ctime lmt
     \<and> active_sc_valid_refills_2 ctime sc_refill_cfgs"
 
 abbreviation valid_sched :: "'z::state_ext state \<Rightarrow> bool" where
@@ -3625,7 +3630,6 @@ lemma valid_sched_lift_pre_conj:
   assumes "\<And>t. \<lbrace>\<lambda>s. pred_map_eq None (tcb_scps_of s) t \<and> R s\<rbrace> f \<lbrace>\<lambda>rf s. pred_map_eq None (tcb_scps_of s) t\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. timeout_faulted_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. timeout_faulted_tcb_at t s\<rbrace>"
   assumes "\<And>scp. \<lbrace>\<lambda>s. active_if_reply_sc_at scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_if_reply_sc_at scp s\<rbrace>"
-  assumes "\<lbrace>\<lambda>s. valid_machine_time s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. valid_machine_time s\<rbrace>"
     shows "\<lbrace>\<lambda>s. valid_sched s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   by (wpsimp simp: valid_sched_def ready_or_release_def ready_or_release_def
                wp: valid_ready_qs_lift_pre_conj ct_not_in_q_lift_pre_conj

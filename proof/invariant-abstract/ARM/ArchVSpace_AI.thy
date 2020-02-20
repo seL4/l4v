@@ -574,7 +574,7 @@ lemma clean_D_PoU_underlying_memory[wp]:
 crunches dsb, invalidate_I_PoU, clean_D_PoU, cleanCaches_PoU
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   and underlying_memory_inv[wp]: "\<lambda>ms. P (underlying_memory ms)"
-  and last_machine_time[wp]: "\<lambda>ms. P (last_machine_time ms)"
+  and machine_times[wp]: "\<lambda>ms. P (last_machine_time ms) (time_state ms)"
   (ignore_del: dsb invalidate_I_PoU clean_D_PoU cleanCaches_PoU)
 
 lemma dmo_cleanCaches_PoU_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op cleanCaches_PoU \<lbrace>\<lambda>y. invs\<rbrace>"

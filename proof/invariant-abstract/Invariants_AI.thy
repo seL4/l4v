@@ -48,6 +48,7 @@ requalify_consts
   ASIDPoolObj
 
   last_machine_time
+  time_state
 
   valid_vs_lookup
   user_mem

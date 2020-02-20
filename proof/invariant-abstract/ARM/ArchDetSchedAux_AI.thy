@@ -182,6 +182,9 @@ lemma perform_asid_control_invocation_valid_idle:
 
 crunches perform_asid_control_invocation
   for lmt[wp]: "\<lambda>s. P (last_machine_time_of s)"
+  (ignore: do_machine_op
+     simp: detype_def crunch_simps
+       wp: do_machine_op_machine_state dxo_wp_weak crunch_wps)
 
 lemma perform_asid_control_invocation_pred_map_sc_refill_cfgs_of:
   "perform_asid_control_invocation aci

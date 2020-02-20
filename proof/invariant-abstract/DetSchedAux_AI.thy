@@ -86,11 +86,9 @@ sublocale init_arch_objects: valid_sched_pred_locale _ "init_arch_objects t p n 
 crunches invoke_untyped
   for valid_sched_pred_misc[wp]:
       "\<lambda>s::'state_ext state. P (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
-                               (ready_queues s) (release_queue s) (scheduler_action s)
-                               (last_machine_time_of s)"
+                               (ready_queues s) (release_queue s) (scheduler_action s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv
-   simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: do_machine_op)
+   simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym)
 
 end
 
@@ -615,7 +613,6 @@ lemma valid_sched_tcb_state_preservation_gen:
   assumes idle_thread: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   assumes valid_blocked: "\<lbrace>valid_blocked\<rbrace> f \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   assumes valid_idle: "\<lbrace>I\<rbrace> f \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-  assumes machine_time: "\<And>P. f \<lbrace>\<lambda>s. P (last_machine_time_of s)\<rbrace>"
   assumes valid_others:
     "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) (ready_queues s) (cur_domain s) (release_queue s)\<rbrace>
           f \<lbrace>\<lambda>r s. P (scheduler_action s) (ready_queues s) (cur_domain s) (release_queue s)\<rbrace>"
@@ -630,7 +627,6 @@ lemma valid_sched_tcb_state_preservation_gen:
   apply (frule use_valid, rule_tac P="\<lambda>ct. ct = cur_time s" in cur_time, simp)
   apply (frule use_valid, rule_tac P="\<lambda>ct. ct = cur_thread s" in cur_thread, simp)
   apply (frule use_valid, rule_tac P="\<lambda>it. it = idle_thread s" in idle_thread, simp)
-  apply (frule use_valid, rule_tac P="\<lambda>mt. mt = last_machine_time_of s" in machine_time, simp)
   apply (frule use_valid[OF _ valid_blocked], assumption)
   apply (frule use_valid[OF _ valid_idle], assumption)
   apply (prop_tac "valid_ready_qs s'")

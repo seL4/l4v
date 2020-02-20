@@ -100,11 +100,11 @@ named_theorems arch_machine_ops_last_machine_time'
 
 \<comment> \<open>crunch these separately so they don't appear in machine_ops_last_machine_time\<close>
 crunches cleanByVA_PoU, cleanCacheRange_PoU
-  for last_machine_time[wp, arch_machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms)"
+  for machine_times[wp, arch_machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms) (time_state ms)"
   (wp: crunch_wps simp: crunch_simps ignore_del: cleanByVA_PoU)
 
 crunches storeWord, clearMemory, freeMemory, ackDeadlineIRQ, ackInterrupt, maskInterrupt, setDeadline
-  for last_machine_time[wp, machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms)"
+  for machine_times[wp, machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms) (time_state ms)"
   (wp: crunch_wps simp: crunch_simps ignore_del: storeWord maskInterrupt clearMemory)
 
 lemmas machine_ops_last_machine_time = machine_ops_last_machine_time'

@@ -28,7 +28,7 @@ crunches setHardwareASID, set_current_pd, invalidateLocalTLB_ASID, cleanByVA, in
   invalidateCacheRange_RAM, cleanCacheRange_RAM, setIRQTrigger, maskInterrupt, clearExMonitor,
   invalidateLocalTLB_VAASID, do_flush, storeWord, freeMemory, ackDeadlineIRQ, clearMemory,
   getDFSR, getFAR, getIFSR
-  for last_machine_time[wp]: "\<lambda>s. P (last_machine_time s)"
+  for machine_times[wp]: "\<lambda>s. P (last_machine_time s) (time_state s)"
   (simp: isb_def writeTTBR0_def wp: crunch_wps
    ignore_del: setHardwareASID invalidateLocalTLB_ASID cleanByVA invalidateL2Range invalidateByVA
                cleanInvalByVA cleanInvalidateL2Range branchFlush invalidateByVA_I cleanL2Range
@@ -75,7 +75,7 @@ crunches arch_perform_invocation
   for valid_sched_misc[wp, DetSchedSchedule_AI_assms]:
         "\<lambda>s. P (consumed_time s) (cur_time s) (cur_domain s) (cur_thread s)
                (cur_sc s) (idle_thread s) (ready_queues s) (release_queue s)
-               (scheduler_action s) (last_machine_time_of s)"
+               (scheduler_action s) (last_machine_time_of s) (time_state_of s)"
   (wp: dmo_valid_sched_pred crunch_wps simp: crunch_simps detype_def ignore: do_machine_op)
 
 lemma switch_to_idle_thread_ct_in_cur_domain [wp]:
