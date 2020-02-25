@@ -668,14 +668,14 @@ fun crunch_rule cfg const goal extra thms =
         | NONE => Thm.prems_of thm |> maps (monads_of ctxt)
   in (ms, thm) end
 
-fun warn_helper_thms wp ctxt n t =
+fun warn_helper_thms wp ctxt t =
   let val simp_thms = maybe_thms ctxt "crunch_simps"
       val ctxt' = ctxt addsimps simp_thms
       val wp_thms = maybe_thms ctxt "crunch_wps"
-      val can_simp = (is_some o SINGLE (CHANGED (clarsimp_tac ctxt' n))) t
-      val can_wp = (is_some o SINGLE (CHANGED (wp wp_thms n))) t
-  in if can_simp orelse can_wp
-     then warning "Using crunch_simps and crunch_wps makes more progress"
+      val simp_or_wp = CHANGED_GOAL (clarsimp_tac ctxt') ORELSE' CHANGED_GOAL (wp wp_thms)
+      val can_simp_or_wp = (is_some o SINGLE (FIRSTGOAL simp_or_wp)) t
+  in if can_simp_or_wp
+     then warning "Using crunch_simps or crunch_wps makes more progress"
      else () end;
 
 fun warn_const_ignored const cfg ctxt =
@@ -688,11 +688,11 @@ fun warn_stack const stack ctxt =
     (map (Proof_Context.pretty_const ctxt) (const::stack))
   |> Pretty.string_of |> warning;
 
-fun proof_failed_warnings const stack cfg wp ctxt n t =
+fun proof_failed_warnings const stack cfg wp ctxt t =
   if Thm.no_prems t
-  then no_tac t
-  else (warn_const_ignored const cfg ctxt; warn_helper_thms wp ctxt n t;
-        warn_stack const stack ctxt; no_tac t)
+  then all_tac t
+  else (warn_const_ignored const cfg ctxt; warn_helper_thms wp ctxt t;
+        warn_stack const stack ctxt; all_tac t)
 
 fun crunch cfg pre extra stack const' thms =
   let
@@ -762,10 +762,9 @@ fun crunch cfg pre extra stack const' thms =
                   SELECT_GOAL (safe_tac ctxt''')
                   ORELSE'
                   CHANGED_GOAL (simp_tac ctxt''')
-                  ORELSE'
-                  proof_failed_warnings const stack cfg wp' ctxt'''
-                ) n)
-              ))) |> singleton (Proof_Context.export ctxt''' ctxt)
+                ) n))
+              THEN proof_failed_warnings const stack cfg wp' ctxt'''
+              )) |> singleton (Proof_Context.export ctxt''' ctxt)
         in (SOME thm, (get_thm_name cfg const, thm) :: thms') end
     end
     handle WrongType =>
