@@ -1429,7 +1429,7 @@ abbreviation refill_sufficient_sc :: "time \<Rightarrow> sc_refill_cfg \<Rightar
 lemmas refill_sufficient_sc_def
   = refill_sufficient_def[where refill="scrc_refill_hd cfg" for cfg :: sc_refill_cfg]
 
-abbreviation is_refill_sufficient :: "time \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+abbreviation is_refill_sufficient :: "time \<Rightarrow> obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "is_refill_sufficient usage scp s \<equiv> pred_map (refill_sufficient_sc usage) (sc_refill_cfgs_of s) scp"
 
 lemmas is_refill_sufficient_def =
@@ -1581,7 +1581,7 @@ definition refill_ready_no_overflow :: "time \<Rightarrow> time \<Rightarrow> re
 abbreviation refill_ready_no_overflow_sc :: "time \<Rightarrow> time \<Rightarrow> sc_refill_cfg \<Rightarrow> bool" where
   "refill_ready_no_overflow_sc usage curtime cfg \<equiv> refill_ready_no_overflow usage curtime (scrc_refill_hd cfg)"
 
-abbreviation cur_sc_offset_ready :: "time \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+abbreviation cur_sc_offset_ready :: "time \<Rightarrow> 'z state \<Rightarrow> bool" where
   "cur_sc_offset_ready usage s \<equiv> pred_map (refill_ready_no_overflow_sc usage (cur_time s)) (sc_refill_cfgs_of s) (cur_sc s)"
 
 lemmas cur_sc_offset_ready_def = refill_ready_no_overflow_def
