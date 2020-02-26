@@ -2119,12 +2119,6 @@ lemma sched_context_donate_valid_sched_misc[wp]:
   apply (rule hoare_lift_Pf[where f=sc_refill_cfgs_of, rotated], wpsimp)
   by wpsimp
 
-(* FIXME RT: move to DetSchedInvs_AI *)
-definition
-  sc_is_round_robin :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "sc_is_round_robin = sc_at_pred (\<lambda>sc. (sc_period sc = sc_budget sc))"
-
 crunches sched_context_donate
   for simple[wp]: simple_sched_action
   (simp: crunch_simps)
@@ -2260,11 +2254,6 @@ locale DetSchedSchedule_AI =
     "\<And>t P. prepare_thread_delete t \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_post_cap_deletion_valid_sched_pred[wp] :
     "\<And>c P. arch_post_cap_deletion c \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  (* FIXME RT: Reframe sc_is_round_robin using heap projections, then the next 2 assumptions are redundant. *)
-  assumes arch_switch_to_idle_thread_sc_is_round_robin[wp]:
-    "\<And>P t. arch_switch_to_idle_thread \<lbrace>\<lambda>s::'state_ext state. P (sc_is_round_robin t s)\<rbrace>"
-  assumes arch_switch_to_thread_sc_is_round_robin[wp]:
-    "\<And>P t' t. arch_switch_to_thread t' \<lbrace>\<lambda>s::'state_ext state. P (sc_is_round_robin t s)\<rbrace>"
   assumes prepare_thread_delete_ct_in_state[wp]:
     "\<And>t P. prepare_thread_delete t \<lbrace>ct_in_state P ::det_state \<Rightarrow> _\<rbrace>"
   assumes update_time_stamp_valid_machine_time[wp]:
@@ -9822,14 +9811,6 @@ crunches refill_unblock_check
   and sc_at_period_sc[wp]: "\<lambda>s. sc_at_period P (cur_sc s) s"
     (wp: crunch_wps simp: crunch_simps)
 
-lemma refill_unblock_check_sc_is_round_robin[wp]:
-  "\<lbrace>\<lambda>s. P (sc_is_round_robin p s)\<rbrace>
-   refill_unblock_check sc_ptr
-   \<lbrace>\<lambda>rv s. P (sc_is_round_robin p s)\<rbrace>"
-  unfolding refill_unblock_check_def is_round_robin_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp is_round_robin_wp)
-  by (fastforce simp: sc_is_round_robin_def obj_at_def sc_at_pred_n_def)
-
 lemma refill_unblock_check_valid_sched_action[wp]:
   "\<lbrace>valid_sched_action and active_sc_valid_refills
     and valid_machine_time\<rbrace>
@@ -9871,12 +9852,6 @@ lemma refill_unblock_check_valid_sched:
                  refill_unblock_check_valid_sched_action
                  refill_unblock_check_active_sc_valid_refills)
 
-lemma refill_unblock_check_sc_is_round_robin_ct[wp]:
-  "\<lbrace>\<lambda>s. P (sc_is_round_robin (cur_sc s) s)\<rbrace>
-    refill_unblock_check sc_ptr
-   \<lbrace>\<lambda>rv s. P (sc_is_round_robin (cur_sc s) s)\<rbrace>"
-  by (rule hoare_lift_Pf[where f=cur_sc]; wpsimp)
-
 lemma refill_unblock_check_cur_sc_budget_sufficient[wp]:
   "\<lbrace>\<lambda>s. sc_ptr \<noteq> cur_sc s \<and> cur_sc_budget_sufficient s\<rbrace>
   refill_unblock_check sc_ptr
@@ -9886,11 +9861,6 @@ lemma refill_unblock_check_cur_sc_budget_sufficient[wp]:
   by (clarsimp simp: vs_all_heap_simps)
 
 (* end refill_unblock_check *)
-
-lemma sc_is_round_robin_reprogram_timer_update[simp]:
-  "sc_is_round_robin p (s\<lparr>reprogram_timer := b\<rparr>)
-          = sc_is_round_robin p s"
-  by (clarsimp simp: sc_is_round_robin_def)
 
 lemma ready_or_release_updates[simp]:
   "ready_or_release (trans_state a s) = ready_or_release s"
@@ -9931,7 +9901,7 @@ lemma refill_unblock_check_cur_sc_more_than_ready[wp]:
 
 lemma switch_sched_context_valid_sched:
   "\<lbrace>valid_sched and simple_sched_action and ct_not_in_release_q
-     and valid_state and ready_or_release
+     and valid_state
      and cur_sc_in_release_q_imp_zero_consumed
      and cur_sc_more_than_ready
      and current_time_bounded 2
@@ -10012,17 +9982,6 @@ lemma cur_sc_tcb_rev:
   by (clarsimp simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
      (drule (2) sym_ref_sc_tcb, clarsimp simp: pred_tcb_at_def obj_at_def)
 
-lemma sc_is_round_robin_sa_update[simp]:
-  "sc_is_round_robin t (s\<lparr>scheduler_action :=sa\<rparr>) = sc_is_round_robin t s"
-  by (clarsimp simp: sc_is_round_robin_def)
-
-lemma sc_is_round_robin_rdq_update[simp]:
-  "sc_is_round_robin t (s\<lparr>ready_queues :=rdq\<rparr>) = sc_is_round_robin t s"
-  by (clarsimp simp: sc_is_round_robin_def)
-
-(*   and sc_is_round_robin[wp]: "\<lambda>s. P (sc_is_round_robin p s)"
-  and sc_is_round_robin_cur[wp]: "\<lambda>s. P (sc_is_round_robin (cur_sc s) s)" *)
-
 lemma valid_refills_cur_thread_update[simp]:
   "valid_refills ptr (s\<lparr>cur_thread := param_a\<rparr>) = valid_refills ptr s"
   by (clarsimp simp: valid_refills_def)
@@ -10039,30 +9998,9 @@ lemma valid_refills_domain_index_update[simp]:
   "valid_refills ptr (s\<lparr>domain_index := param_a\<rparr>) = valid_refills ptr s"
   by (clarsimp simp: valid_refills_def)
 
-lemma sc_is_round_robin_cur_thread_update[simp]:
-  "sc_is_round_robin p (s\<lparr>cur_thread := param_a\<rparr>) = sc_is_round_robin p s"
-  by (clarsimp simp: sc_is_round_robin_def)
-
-lemma sc_is_round_robin_release_queue_update[simp]:
-  "sc_is_round_robin p (s\<lparr>release_queue := param_a\<rparr>) = sc_is_round_robin p s"
-  by (clarsimp simp: sc_is_round_robin_def)
-
-lemma next_domain_sc_is_round_robin[wp]:
-  "\<lbrace>\<lambda>s. P (sc_is_round_robin p s)\<rbrace> next_domain \<lbrace>\<lambda>_. \<lambda>s. P (sc_is_round_robin p s)\<rbrace>"
-  apply (clarsimp simp: sc_is_round_robin_def obj_at_def sc_at_pred_n_def)
-  by wpsimp
-
-lemma next_domain_sc_is_round_robin_cur[wp]:
-  "\<lbrace>\<lambda>s. P (sc_is_round_robin (cur_sc s) s)\<rbrace> next_domain \<lbrace>\<lambda>_. \<lambda>s. P (sc_is_round_robin (cur_sc s) s)\<rbrace>"
-  by (rule hoare_lift_Pf[where f=cur_sc]; wpsimp)
-
 crunches schedule_choose_new_thread, switch_to_thread, set_scheduler_action, tcb_sched_action
   for sc_at_period[wp]: "sc_at_period P p :: 'state_ext state \<Rightarrow> _"
     (wp: valid_sched_pred_heap_proj_lowers[where R=\<top>, simplified])
-
-crunches switch_to_idle_thread
-  for sc_is_round_robin[wp]: "\<lambda>s::'state_ext state. P (sc_is_round_robin p s)"
-  (wp: crunch_wps dxo_wp_weak simp: crunch_simps Let_def)
 
 crunches schedule_choose_new_thread
   for ready_or_release[wp]: "ready_or_release :: 'state_ext state \<Rightarrow> _"
@@ -10185,12 +10123,6 @@ lemma possible_switch_to_scheduler_act_sane'':
   apply (clarsimp simp: possible_switch_to_def)
   by (wpsimp wp: tcb_sched_action_scheduler_action hoare_drop_imp simp: set_scheduler_action_def)
      (clarsimp simp: scheduler_act_sane_def)
-
-(* unused? *)
-crunches awaken
-  for sc_is_round_robin[wp]: "\<lambda>s::det_state. P (sc_is_round_robin p s)"
-  and sc_is_round_robin_cur[wp]: "\<lambda>s::det_state. P (sc_is_round_robin (cur_sc s) s)"
-    (wp: crunch_wps simp: crunch_simps)
 
 lemma awaken_ct_cur_sc_in_release_q_imp_zero_consumed[wp]:
   "awaken \<lbrace>cur_sc_in_release_q_imp_zero_consumed ::'state_ext state \<Rightarrow> _\<rbrace>"
@@ -10537,6 +10469,7 @@ lemma schedule_valid_sched:
   "\<lbrace> valid_sched
      and invs
      and current_time_bounded 2
+     and ct_active
      and consumed_time_bounded
      and scheduler_act_sane
      and cur_sc_in_release_q_imp_zero_consumed
@@ -15786,7 +15719,6 @@ abbreviation (input) iscc_valid_sched_predicate where
     \<and> MIN_REFILLS \<le> mrefills
     \<and> MIN_SC_BUDGET \<le> budget
     \<and> schact_is_rct s
-    \<and> ready_or_release s
     \<and> invs s
     \<and> sc_ptr \<noteq> idle_sc_ptr
     \<and> ct_not_in_release_q s
@@ -15852,7 +15784,7 @@ lemma refill_update_active_reply_scs[wp]:
 
 lemma invoke_sched_control_configure_valid_sched:
   "\<lbrace>valid_sched
-    and valid_sched_control_inv iv and schact_is_rct and ready_or_release and invs
+    and valid_sched_control_inv iv and schact_is_rct and invs
     and ct_not_in_release_q and ct_released and ct_not_queued
     and current_time_bounded 2
     and consumed_time_bounded
@@ -15876,7 +15808,6 @@ lemma invoke_sched_control_configure_valid_sched:
                              \<and> budget \<le> period
                              \<and> ex_nonz_cap_to sc_ptr s
                              \<and> schact_is_rct s
-                             \<and> ready_or_release s
                              \<and> invs s
                              \<and> sc_ptr \<noteq> idle_sc_ptr
                              \<and> ct_not_in_release_q s
@@ -16107,7 +16038,7 @@ context DetSchedSchedule_AI_det_ext begin
 
 lemma perform_invocation_valid_sched:
   "\<lbrace>invs and valid_invocation i and ct_active and scheduler_act_sane and valid_sched
-        and ready_or_release and valid_reply_scs and cur_sc_active
+        and valid_reply_scs and cur_sc_active
         and schact_is_rct and ct_not_queued and ct_not_in_release_q and ct_released
         and current_time_bounded 2 and consumed_time_bounded
         and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
@@ -16157,7 +16088,6 @@ lemma lookup_extra_caps_not_timeout[wp]:
 lemma handle_invocation_valid_sched:
   "\<lbrace>invs
     and valid_sched
-    and ready_or_release
     and ct_active
     and ct_not_queued
     and ct_not_in_release_q
@@ -17894,7 +17824,6 @@ lemma handle_event_valid_sched:
     and cur_sc_active
     and ct_not_in_release_q
     and schact_is_rct
-    and ready_or_release
     and valid_reply_scs
     and (\<lambda>s. cur_sc_budget_sufficient s)
     and ct_released and (\<lambda>s. valid_refills (cur_sc s) s)
@@ -18762,7 +18691,6 @@ apply (rule_tac Q="\<lambda>_.  ct_active and ct_not_in_release_q and
                (\<lambda>s. \<forall>t. in_release_q t s \<longrightarrow> budget_sufficient t s) and
                (\<lambda>s. budget_sufficient (cur_thread s) s) and
                (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and
-               (\<lambda>s. \<not> sc_is_round_robin (cur_sc s) s) and
                valid_sched and
                scheduler_act_sane and
                ct_not_queued and
@@ -18776,7 +18704,6 @@ and E="\<lambda>_.  ct_active and ct_not_in_release_q and
                (\<lambda>s. \<forall>t. in_release_q t s \<longrightarrow> budget_sufficient t s) and
                (\<lambda>s. budget_sufficient (cur_thread s) s) and
                (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and
-               (\<lambda>s. \<not> sc_is_round_robin (cur_sc s) s) and
                valid_sched and
                scheduler_act_sane and
                ct_not_queued and
