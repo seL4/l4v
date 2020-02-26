@@ -181,18 +181,8 @@ lemma handle_vm_fault_st_tcb_cur_thread [wp]:
     apply (wp|simp)+
   done
 
-lemma sc_is_round_robin_arch_state_update[simp]:
-  "sc_is_round_robin scp (s\<lparr>arch_state := param_a\<rparr>) = sc_is_round_robin scp s"
-  by (fastforce simp: sc_is_round_robin_def)
-
-lemma sc_is_round_robin_machine_state_update[simp]:
-  "sc_is_round_robin scp (s\<lparr>machine_state := param_a\<rparr>) = sc_is_round_robin scp s"
-  by (fastforce simp: sc_is_round_robin_def)
-
-
 crunches arch_switch_to_thread, arch_switch_to_idle_thread
   for valid_list [wp]: "valid_list"
-  and sc_is_round_robin [wp]: "\<lambda>s. P (sc_is_round_robin scp s)"
 
 crunch cur_tcb [wp]: handle_arch_fault_reply, handle_vm_fault, arch_post_modify_registers cur_tcb
 
