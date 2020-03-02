@@ -1,3 +1,5 @@
+<!--@TAG(DATA61_BSD)-->
+
 CapDL Separation Logic Proof
 ============================
 

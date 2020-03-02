@@ -1,3 +1,5 @@
+<!--@TAG(DATA61_BSD)-->
+
 [![DOI][0]](http://dx.doi.org/10.5281/zenodo.591732)
 
   [0]: https://zenodo.org/badge/doi/10.5281/zenodo.591732.svg

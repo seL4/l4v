@@ -1,3 +1,5 @@
+<!--@TAG(DATA61_BSD)-->
+
 The capDL Specification of seL4
 ===============================
 

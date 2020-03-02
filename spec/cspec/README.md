@@ -1,3 +1,5 @@
+<!--@TAG(DATA61_BSD)-->
+
 The C Semantics of seL4
 =======================
 

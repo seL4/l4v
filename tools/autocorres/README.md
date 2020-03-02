@@ -1,3 +1,5 @@
+<!--@TAG(DATA61_BSD)-->
+
 Note to maintainer: sync with tools/release_files/README
 
 AutoCorres

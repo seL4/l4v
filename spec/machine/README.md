@@ -1,3 +1,5 @@
+<!--@TAG(DATA61_BSD)-->
+
 The Machine Interface Specification of seL4
 ===========================================
 

@@ -1,3 +1,5 @@
+<!--@TAG(DATA61_BSD)-->
+
 The Executable Design Specification of seL4
 ===========================================
 

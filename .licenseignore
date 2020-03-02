@@ -1,8 +1,6 @@
 *.lev
-*.md
 *.pdf
 *.html
-*.tex
 *.sty
 *.log
 *.bbl
@@ -41,7 +39,6 @@ internal/*
 
 **/ROOTS
 **/MANIFEST
-**/README
 **/VERSION
 **/*FILES
 **/*LICENSE

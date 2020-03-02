@@ -1,3 +1,5 @@
+<!--@TAG(DATA61_BSD)-->
+
 An Abstract Take/Grant Security Model
 =====================================
 

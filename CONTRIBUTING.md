@@ -1,3 +1,5 @@
+<!--@TAG(DATA61_BSD)-->
+
 Contributions to the seL4 kernel verification repository are welcome!
 
 
