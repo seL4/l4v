@@ -67,7 +67,7 @@ EXCLUDE["ARM"]=[
     "SepTacticsExamples",
     "SimplExportAndRefine",
     "AsmRefine",
-    "BaseRefine",
+    "Refine",
     "CKernel",
     "c-kernel",
     "CParser",
