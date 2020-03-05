@@ -69,6 +69,12 @@ crunches arch_switch_to_thread,
   for valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]: "valid_sched_pred_strong P"
   (wp: dmo_valid_sched_pred crunch_wps simp: crunch_simps)
 
+crunches
+  perform_page_table_invocation, perform_page_directory_invocation,
+  perform_page_invocation, perform_asid_pool_invocation
+  for valid_sched_misc[wp]: "valid_sched_pred_strong P"
+  (wp: dmo_valid_sched_pred crunch_wps simp: crunch_simps detype_def ignore: do_machine_op)
+
 crunches arch_perform_invocation
   for valid_sched_misc[wp, DetSchedSchedule_AI_assms]:
         "\<lambda>s. P (consumed_time s) (cur_time s) (cur_domain s) (cur_thread s)
@@ -315,6 +321,15 @@ crunches arch_perform_invocation
 lemma arch_perform_invocation_cur_sc_tcb_only_sym_bound[DetSchedSchedule_AI_assms]:
   "arch_perform_invocation i \<lbrace>cur_sc_tcb_only_sym_bound\<rbrace>"
   by (wpsimp wp: cur_sc_tcb_only_sym_bound_lift)
+
+lemma arch_perform_invocation_bound_sc_obj_tcb_at[DetSchedSchedule_AI_assms]:
+  "\<lbrace>\<lambda>s. bound_sc_obj_tcb_at (P (cur_time s)) t s
+        \<and> ex_nonz_cap_to t s \<and> invs s \<and> ct_active s \<and> valid_arch_inv i s
+        \<and> scheduler_action s = resume_cur_thread\<rbrace>
+   arch_perform_invocation i
+   \<lbrace>\<lambda>_ s. bound_sc_obj_tcb_at (P (cur_time s)) t s\<rbrace>"
+  unfolding arch_perform_invocation_def
+  by (cases i; wpsimp simp: valid_arch_inv_def)
 
 lemma arch_finalise_cap_ct_in_state:
   "arch_finalise_cap c x \<lbrace>ct_in_state P :: det_state \<Rightarrow> _\<rbrace>"

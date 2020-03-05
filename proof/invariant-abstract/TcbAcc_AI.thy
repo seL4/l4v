@@ -2104,14 +2104,18 @@ lemma thread_set_cte_at[wp]:
   "\<lbrace>cte_at c\<rbrace> thread_set t p \<lbrace>\<lambda>rv. cte_at c\<rbrace>"
   by (wp valid_cte_at_typ)
 
-
-lemma set_thread_state_ko:
-  "\<lbrace>ko_at obj ptr and K (\<not>is_tcb obj)\<rbrace> set_thread_state x st \<lbrace>\<lambda>rv. ko_at obj ptr\<rbrace>"
-  apply (simp add: set_thread_state_def)
-  apply (wp set_object_ko|clarsimp)+
-  apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: obj_at_def is_tcb)
+lemma set_thread_state_ko':
+  "\<lbrace>\<lambda>s. P (ko_at obj ptr s) \<and> \<not>is_tcb obj\<rbrace>
+   set_thread_state x st
+   \<lbrace>\<lambda>rv s. P (ko_at obj ptr s)\<rbrace>"
+  apply (simp add: set_thread_state_def set_object_def get_object_def)
+  apply wpsimp
+  apply (rule bool_to_bool_cases[of P]; clarsimp simp: obj_at_def is_tcb)
   done
+
+lemmas set_thread_state_ko =
+  set_thread_state_ko'[where P=id, simplified]
+  set_thread_state_ko'[where P=Not, simplified]
 
 lemma set_tcb_obj_ref_ko:
   "\<lbrace>ko_at obj ptr and K (\<not>is_tcb obj)\<rbrace> set_tcb_obj_ref f x ntfn \<lbrace>\<lambda>rv. ko_at obj ptr\<rbrace>"

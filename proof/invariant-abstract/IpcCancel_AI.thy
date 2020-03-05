@@ -534,7 +534,7 @@ lemmas sym_refs_insert_delete' =
   sym_refs_insert_delete[simplified fun_upd_def]
 
 lemma assert_opt_sp:
-  "\<lbrace> P \<rbrace> assert_opt x \<lbrace> \<lambda>rv s. x = Some rv \<and> P s\<rbrace>"
+  "\<lbrace> P \<rbrace> assert_opt x \<lbrace> \<lambda>rv s. P s \<and> x = Some rv \<rbrace>"
   by (wpsimp wp: assert_opt_wp)
 
 lemma blocked_cancel_ipc_invs:
