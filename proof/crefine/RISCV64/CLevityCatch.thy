@@ -11,7 +11,7 @@
 theory CLevityCatch
 imports
   Include_C
-  Move
+  Move_C
   "CLib.LemmaBucket_C"
   "Lib.LemmaBucket"
 begin
