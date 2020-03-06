@@ -402,7 +402,8 @@ lemma (in DetSchedAux_AI) invoke_untyped_bound_sc_obj_tcb_at[wp]:
         \<and> invs s\<rbrace>
    invoke_untyped ui
    \<lbrace>\<lambda>rv s. bound_sc_obj_tcb_at (P (cur_time s)) t s\<rbrace>"
-  apply (rule hoare_lift_Pf_pre_conj[where f=cur_time, rotated], wpsimp)
+  apply wp_pre
+   apply (rule hoare_lift_Pf3[where f=cur_time, rotated], wpsimp)
   by (rule bound_sc_obj_tcb_at_nonz_cap_lift; wpsimp wp: invoke_untyped_sc_at_pred_n)
 
 lemma set_cap_obj_at_impossible_cur_time:

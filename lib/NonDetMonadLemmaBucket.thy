@@ -95,19 +95,20 @@ lemma hoare_vcg_if_lift_strong:
   by (wpsimp wp: hoare_vcg_imp_lift' | assumption | fastforce)+
 
 lemma hoare_lift_Pf_pre_conj:
-  assumes P: "\<And>x. \<lbrace>\<lambda>s. Q x s \<and> R s\<rbrace> m \<lbrace>P x\<rbrace>"
+  assumes P: "\<And>x. \<lbrace>\<lambda>s. Q x s\<rbrace> m \<lbrace>P x\<rbrace>"
   assumes f: "\<And>P. \<lbrace>\<lambda>s. P (g s) \<and> R s\<rbrace> m \<lbrace>\<lambda>_ s. P (f s)\<rbrace>"
   shows "\<lbrace>\<lambda>s. Q (g s) s \<and> R s\<rbrace> m \<lbrace>\<lambda>rv s. P (f s) rv s\<rbrace>"
   apply (clarsimp simp: valid_def)
-  apply (rule use_valid [OF _ P], simp, simp)
+  apply (rule use_valid [OF _ P], simp)
   apply (rule use_valid [OF _ f], simp, simp)
   done
 
-lemmas hoare_lift_Pf3 = hoare_lift_Pf_pre_conj[where R=\<top> and f=f and g=f for f, simplified]
+lemmas hoare_lift_Pf4 = hoare_lift_Pf_pre_conj[where R=\<top>, simplified]
+lemmas hoare_lift_Pf3 = hoare_lift_Pf4[where f=f and g=f for f]
 lemmas hoare_lift_Pf2 = hoare_lift_Pf3[where P="\<lambda>f _. P f" for P]
 lemmas hoare_lift_Pf = hoare_lift_Pf2[where Q=P and P=P for P]
 
-lemmas hoare_lift_Pf3_pre_conj = hoare_lift_Pf_pre_conj[where f=f and g=f for f, simplified]
+lemmas hoare_lift_Pf3_pre_conj = hoare_lift_Pf_pre_conj[where f=f and g=f for f]
 lemmas hoare_lift_Pf2_pre_conj = hoare_lift_Pf3_pre_conj[where P="\<lambda>f _. P f" for P]
 lemmas hoare_lift_Pf_pre_conj' = hoare_lift_Pf2_pre_conj[where Q=P and P=P for P]
 

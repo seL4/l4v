@@ -13614,7 +13614,7 @@ lemma refill_unblock_check_budget_ready_ct[wp]:
   "\<lbrace>\<lambda>s. budget_ready (cur_thread s) s \<and> valid_machine_time s\<rbrace>
    refill_unblock_check sc_ptr
    \<lbrace>\<lambda>xc s. budget_ready (cur_thread s) s\<rbrace>"
-  by (rule hoare_lift_Pf_pre_conj[where f=cur_thread]) wpsimp+
+  by (wp_pre, rule hoare_lift_Pf2[where f=cur_thread]) wpsimp+
 
 lemma refill_unblock_check_budget_sufficient_ct[wp]:
   "\<lbrace>\<lambda>s. budget_sufficient (cur_thread s) s \<and> active_sc_tcb_at (cur_thread s) s \<and> active_sc_valid_refills s\<rbrace>
@@ -13746,12 +13746,8 @@ lemma refill_unblock_check_ct_released:
   "\<lbrace>ct_released and valid_machine_time and active_sc_valid_refills\<rbrace>
    refill_unblock_check sc_ptr
    \<lbrace>\<lambda>_. ct_released\<rbrace>"
-  apply (rule hoare_pre)
-   apply (rule hoare_lift_Pf_pre_conj'[where f=cur_thread])
-    apply (wpsimp, assumption)
-   apply wpsimp
-  apply clarsimp
-  done
+  apply (wp_pre, rule hoare_lift_Pf2[where f=cur_thread])
+    by wpsimp+
 
 (* end *)
 

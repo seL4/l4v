@@ -93,7 +93,7 @@ lemma perform_asid_control_invocation_bound_sc_obj_tcb_at[wp]:
         \<and> valid_aci aci s \<rbrace>
    perform_asid_control_invocation aci
    \<lbrace>\<lambda>rv s. bound_sc_obj_tcb_at (P (cur_time s)) t s\<rbrace>"
-  apply (rule hoare_lift_Pf_pre_conj[where f=cur_time, rotated], wpsimp)
+  apply (rule hoare_lift_Pf3[where f=cur_time, rotated], wpsimp)
   by (rule bound_sc_obj_tcb_at_nonz_cap_lift
       ; wpsimp wp: perform_asid_control_invocation_st_tcb_at
                    perform_asid_control_invocation_sc_at_pred_n)
