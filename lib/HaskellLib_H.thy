@@ -574,4 +574,12 @@ definition
   whenM :: "('s, bool) nondet_monad \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
   "whenM t m = ifM t m (return ())"
 
+definition
+  orM :: "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
+  "orM a b = ifM a (return True) b"
+
+definition
+  andM :: "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
+  "andM a b = ifM a b (return False)"
+
 end

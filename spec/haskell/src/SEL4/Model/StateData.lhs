@@ -328,6 +328,14 @@ The function "whileM" allows writing while loops where the loop body and the con
 > whileM :: Monad m => m Bool -> m () -> m ()
 > whileM test body = whenM test $ body >> whileM test body
 
+The functions "orM" and "andM" allow composing conditions that run in a monad. These are "short-circuiting", in that if a monad doesn't need to be evaluated to return a result, it won't be.
+
+> orM :: Monad m => m Bool -> m Bool -> m Bool
+> orM a b = ifM a (return True) b
+
+> andM :: Monad m => m Bool -> m Bool -> m Bool
+> andM a b = ifM a b (return False)
+
 \subsubsection{Assertions and Undefined Behaviour}
 
 The function "assert" is used to state that a predicate must be true at a given point. If it is not, the behaviour of the kernel is undefined. The Haskell model will not terminate in this case.
