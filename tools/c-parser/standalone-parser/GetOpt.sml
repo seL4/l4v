@@ -1,6 +1,4 @@
-(*
- * @TAG(OTHER_PRINCETON_OSS)
- *)
+(* SPDX-License-Identifier: SMLNJ *)
 (* getopt.sml
  *
  * COPYRIGHT (c) 1998 Bell Labs, Lucent Technologies.

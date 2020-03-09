@@ -1,11 +1,7 @@
 %
 % Copyright 2014, General Dynamics C4 Systems
 %
-% This software may be distributed and modified according to the terms of
-% the GNU General Public License version 2. Note that NO WARRANTY is provided.
-% See "LICENSE_GPLv2.txt" for details.
-%
-% @TAG(GD_GPL)
+% SPDX-License-Identifier: GPL-2.0-only
 %
 
 This module provides the invocation handling for the kernel's two interrupt-handling capability types: the interrupt controller, and the IRQ handlers. It also provides a function that dispatches received interrupts to the appropriate handlers.

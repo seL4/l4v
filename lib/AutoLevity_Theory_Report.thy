@@ -1,14 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
- *
- * Report generating for autolevity. Computes proof start/end ranges, tracks levity tags
- * and reports on lemma, const, type and theory dependencies.
+ * SPDX-License-Identifier: BSD-2-Clause
  *)
 
 theory AutoLevity_Theory_Report

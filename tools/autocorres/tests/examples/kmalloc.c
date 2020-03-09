@@ -1,7 +1,4 @@
-/* this is a -*- c -*- file */
-/*
- * @TAG(OTHER_BSD)
- */
+/* SPDX-License-Identifier: BSD-2-Clause */
 
 /* ********************************************************************
  *

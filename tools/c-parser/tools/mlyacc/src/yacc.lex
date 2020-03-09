@@ -1,5 +1,5 @@
 (*
- * @TAG(OTHER_PRINCETON_OSS)
+<!--SPDX-License-Identifier: SMLNJ-->
  *)
 (* Modified by sweeks@acm.org on 2000-8-24.
  * Ported to MLton.

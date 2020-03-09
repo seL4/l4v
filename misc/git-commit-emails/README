@@ -1,3 +1,8 @@
+<!--
+     Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+
+     SPDX-License-Identifier: BSD-2-Clause
+-->
 
 This script takes a git repository, fetches any remote patches on the
 repository, and then shoots out an email describing any new commits.

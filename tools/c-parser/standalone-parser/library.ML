@@ -1,9 +1,6 @@
-(*
- * Extracted from Isabelle sources (src/Pure/library.ML)
- *
- * @TAG(OTHER_BSD)
- *)
+(* SPDX-License-Identifier: BSD-3-Clause *)
 
+(*  Extracted from Isabelle sources (src/Pure/library.ML) *)
 
 signature LIBRARY =
 sig
