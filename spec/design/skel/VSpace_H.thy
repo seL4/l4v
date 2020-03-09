@@ -25,6 +25,7 @@ requalify_consts
   activateGlobalVSpace
   initL2Cache
   initIRQController
+  configureTimer
 
   createIPCBufferFrame
   createBIFrame

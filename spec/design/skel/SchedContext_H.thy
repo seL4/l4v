@@ -25,7 +25,7 @@ begin
 context begin interpretation Arch .
 requalify_consts
   kernelWCETTicks
-  kernelWCET_us
+  kernelWCETUs
   ticksToUs
   maxTicksToUs
   getCurrentTime
