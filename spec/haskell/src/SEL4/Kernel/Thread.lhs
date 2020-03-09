@@ -152,9 +152,9 @@ The invoked thread will return to the instruction that caused it to enter the ke
 
 > restart :: PPtr TCB -> Kernel ()
 > restart target = do
->     blocked <- isBlocked target
+>     stopped <- isStopped target
 >     scOpt <- threadGet tcbSchedContext target
->     when blocked $ do
+>     when stopped $ do
 >         cancelIPC target
 >         setThreadState Restart target
 >         schedContextResume (fromJust scOpt)

@@ -59,16 +59,21 @@ The following data type defines the set of possible TCB invocation operations. T
 > data TCBInvocation
 >         = Suspend { suspendThread :: PPtr TCB }
 >         | Resume { resumeThread :: PPtr TCB }
->         | ThreadControl {
->             tcThread :: PPtr TCB,
->             tcThreadCapSlot :: PPtr CTE,
->             tcNewFaultHandler :: Maybe (Capability, PPtr CTE),
->             tcNewTimeoutHandler :: Maybe (Capability, PPtr CTE),
->             tcNewMCPriority :: Maybe (Priority, PPtr TCB),
->             tcNewPriority :: Maybe (Priority, PPtr TCB),
->             tcNewCRoot, tcNewVRoot :: Maybe (Capability, PPtr CTE),
->             tcNewIPCBuffer :: Maybe (VPtr, Maybe (Capability, PPtr CTE)),
->             tcNewSc :: Maybe (Maybe (PPtr SchedContext)) }
+>         | ThreadControlCaps {
+>             tcCapsTarget :: PPtr TCB,
+>             tcCapsSlot :: PPtr CTE,
+>             tcCapsFaultHandler :: Maybe (Capability, PPtr CTE),
+>             tcCapsTimeoutHandler :: Maybe (Capability, PPtr CTE),
+>             tcCapsCRoot :: Maybe (Capability, PPtr CTE),
+>             tcCapsVRoot :: Maybe (Capability, PPtr CTE),
+>             tcCapsBuffer :: Maybe (VPtr, Maybe (Capability, PPtr CTE)) }
+>         | ThreadControlSched {
+>             tcSchedTarget :: PPtr TCB,
+>             tcSchedSlot :: PPtr CTE,
+>             tcSchedFaultHandler :: Maybe (Capability, PPtr CTE),
+>             tcSchedPriority :: Maybe (Priority, PPtr TCB),
+>             tcSchedMCPriority :: Maybe (Priority, PPtr TCB),
+>             tcSchedSchedContext :: Maybe (PPtr SchedContext) }
 >         | NotificationControl {
 >             notificationTCB :: PPtr TCB,
 >             notificationPtr :: Maybe (PPtr Notification) }

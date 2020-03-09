@@ -224,7 +224,7 @@ The "Yield" system call is trivial; it simply moves the current thread to the en
 >     scPtr <- getCurSc
 >     sc <- getSchedContext scPtr
 >     consumed <- return $ scConsumed sc
->     chargeBudget 0 (rAmount (refillHd sc)) False True
+>     chargeBudget (rAmount (refillHd sc)) False True
 >     setSchedContext scPtr $ sc { scConsumed = consumed }
 
 \subsection{Capability Invocations}\label{sel4:api:syscall:invoke}
