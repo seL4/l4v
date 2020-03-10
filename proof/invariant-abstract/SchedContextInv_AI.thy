@@ -2316,4 +2316,3 @@ lemma decode_sched_control_inv_wf:
   by fastforce
 
 end
-

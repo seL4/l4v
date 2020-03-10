@@ -530,4 +530,3 @@ Various operations on the free index of an Untyped cap.
 > untypedZeroRange _ = Nothing
 
 
-

@@ -505,7 +505,7 @@ The following function is used to alter the priority of a thread.
 > threadSetPriority_onRunning tptr prio = do
 >     queued <- threadGet tcbQueued tptr
 >     curThread <- getCurThread
->     if queued && tptr == curThread 
+>     if queued && tptr == curThread
 >         then do
 >              tcbSchedDequeue tptr
 >              threadSetPriority tptr prio
@@ -575,7 +575,7 @@ candidates are enqueued.
 
 In most cases, the current thread has just sent a message to the woken thread, so we switch if the woken thread has the same or higher priority than the current thread; that is, whenever the priorities permit the switch.
 
- 
+
 \subsubsection{Cancelling Stored Scheduler Action}
 
 This function is called when the system state has changed sufficiently that the stored scheduler action may be invalid. It safely discards any stored state and organises for a full reschedule to be performed.

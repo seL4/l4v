@@ -178,7 +178,7 @@ is set to an incorrect value.
 
 > handleInterrupt :: IRQ -> Kernel ()
 > handleInterrupt irq = do
->     if irq > maxIRQ 
+>     if irq > maxIRQ
 >         then doMachineOp $ do
 >             maskInterrupt True irq
 >             ackInterrupt irq
@@ -230,16 +230,16 @@ The following functions are used within this module to access the global interru
 >     scOpt <- threadGet tcbSchedContext curTh
 >     sc <- getSchedContext $ fromJust scOpt
 >     next_interrupt <- return $ curTm + rAmount (refillHd sc)
->     next_interrupt <- 
->        if numDomains > 1 
+>     next_interrupt <-
+>        if numDomains > 1
 >            then do
 >                domainTm <- getDomainTime
 >                return $ min next_interrupt (curTm + domainTm)
 >            else return next_interrupt
 >     rq <- getReleaseQueue
->     next_interrupt <- 
->         if rq == [] 
->             then return next_interrupt 
+>     next_interrupt <-
+>         if rq == []
+>             then return next_interrupt
 >             else do
 >                 rqSCOpt <- threadGet tcbSchedContext (head rq)
 >                 rqSC <- getSchedContext $ fromJust rqSCOpt
