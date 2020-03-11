@@ -403,7 +403,7 @@ A user thread may be in the following states:
 \item blocked waiting for a reply to a previously sent message;
 
 >     | BlockedOnReply {
->         replyObject :: Maybe (PPtr Reply) }
+>         blockedReplyObject :: PPtr Reply }
 
 \item blocked on an notification;
 

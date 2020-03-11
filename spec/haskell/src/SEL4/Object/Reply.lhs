@@ -48,7 +48,7 @@ This module specifies the behavior of reply objects.
 >     setThreadState tsCallee { replyObject = Nothing } calleePtr
 
 >     setReplyTCB (Just callerPtr) replyPtr
->     setThreadState (BlockedOnReply (Just replyPtr)) callerPtr
+>     setThreadState (BlockedOnReply replyPtr) callerPtr
 
 >     when (scPtrOptDonated /= Nothing && canDonate) $ do
 >         assert (scPtrOptCallee == Nothing) "replyPush: callee must not have a scheduling context"
