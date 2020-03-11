@@ -85,7 +85,7 @@ If the endpoint is receiving, then a thread is removed from its queue, and an IP
 >                     _ -> RecvEP queue
 >                 recvState <- getThreadState dest
 >                 assert (isReceive recvState)
->                        "TCB in receive endpoint queue must be blocked on send"
+>                        "TCB in receive endpoint queue must be blocked on receive"
 >                 doIPCTransfer thread (Just epptr) badge canGrant dest
 >                 scOptDest <- threadGet tcbSchedContext dest
 >                 scOptSrc <- threadGet tcbSchedContext thread
