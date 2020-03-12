@@ -5,7 +5,7 @@
  *)
 
 theory Arch_C
-imports Recycle_C Move_C
+imports Recycle_C
 begin
 
 (* FIXME: move *)

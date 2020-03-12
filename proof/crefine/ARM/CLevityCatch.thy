@@ -6,7 +6,8 @@
 
 theory CLevityCatch
 imports
-  Include_C
+  "../Include_C"
+  ArchMove_C
   "CLib.LemmaBucket_C"
   "Lib.LemmaBucket"
 begin
