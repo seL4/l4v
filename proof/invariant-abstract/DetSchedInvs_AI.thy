@@ -1408,7 +1408,7 @@ lemma is_sc_active_kh_simp[obj_at_kh_kheap_simps]:
   by (auto simp: is_sc_active_def vs_all_heap_simps
           split: option.splits kernel_object.splits)
 
-abbreviation is_active_sc :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+abbreviation is_active_sc :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "is_active_sc scp s \<equiv> pred_map active_scrc (sc_refill_cfgs_of s) scp"
 
 lemmas is_active_sc_def =

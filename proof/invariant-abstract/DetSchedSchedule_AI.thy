@@ -2217,6 +2217,7 @@ abbreviation cur_sc_in_release_q_imp_zero_consumed :: "'z state \<Rightarrow> bo
 abbreviation cur_sc_more_than_ready :: "'z state \<Rightarrow> bool" where
   "cur_sc_more_than_ready s \<equiv>
      consumed_time s \<noteq> 0
+     \<longrightarrow> cur_sc_active s
      \<longrightarrow> cur_sc_offset_ready (consumed_time s) s
           \<and> cur_sc_offset_sufficient (consumed_time s) s"
 
@@ -9921,8 +9922,8 @@ lemma refill_unblock_check_cur_sc_more_than_ready[wp]:
    refill_unblock_check scptr
    \<lbrace>\<lambda>_. cur_sc_more_than_ready\<rbrace>"
   apply (wpsimp wp: hoare_vcg_imp_lift')
-   apply (rule_tac hoare_weaken_pre, wps)
-    apply (wpsimp wp: ruc_refill_ready_no_overflow_sc ruc_is_refill_sufficient_indep, assumption)
+    apply (wps, wpsimp)
+   apply (wps, wpsimp wp: ruc_refill_ready_no_overflow_sc ruc_is_refill_sufficient_indep)
   apply clarsimp
   done
 
