@@ -202,31 +202,33 @@ datatype reftype
      | TCBHypRef | HypTCBRef
      | TCBSchedContext | SCTcb | NTFNSchedContext | SCNtfn
      | TCBReply | ReplyTCB | SCReply | ReplySchedContext
-     | TCBYieldTo | SCYieldFrom
+     | TCBYieldTo | SCYieldFrom | ReplyNext | ReplyPrev
 
 primrec
  symreftype :: "reftype \<Rightarrow> reftype"
 where
-  "symreftype TCBBlockedSend = EPSend"
-| "symreftype TCBBlockedRecv = EPRecv"
-| "symreftype TCBSignal       = NTFNSignal"
-| "symreftype TCBBound       = NTFNBound"
-| "symreftype EPSend         = TCBBlockedSend"
-| "symreftype EPRecv         = TCBBlockedRecv"
-| "symreftype NTFNSignal       = TCBSignal"
-| "symreftype NTFNBound       = TCBBound"
-| "symreftype TCBHypRef = HypTCBRef"
-| "symreftype HypTCBRef = TCBHypRef"
-| "symreftype TCBSchedContext = SCTcb"
-| "symreftype SCTcb       = TCBSchedContext"
-| "symreftype NTFNSchedContext = SCNtfn"
-| "symreftype SCNtfn       = NTFNSchedContext"
-| "symreftype TCBReply        = ReplyTCB"
-| "symreftype ReplyTCB     = TCBReply"
-| "symreftype SCReply         = ReplySchedContext"
+  "symreftype TCBBlockedSend    = EPSend"
+| "symreftype TCBBlockedRecv    = EPRecv"
+| "symreftype TCBSignal         = NTFNSignal"
+| "symreftype TCBBound          = NTFNBound"
+| "symreftype EPSend            = TCBBlockedSend"
+| "symreftype EPRecv            = TCBBlockedRecv"
+| "symreftype NTFNSignal        = TCBSignal"
+| "symreftype NTFNBound         = TCBBound"
+| "symreftype TCBHypRef         = HypTCBRef"
+| "symreftype HypTCBRef         = TCBHypRef"
+| "symreftype TCBSchedContext   = SCTcb"
+| "symreftype SCTcb             = TCBSchedContext"
+| "symreftype NTFNSchedContext  = SCNtfn"
+| "symreftype SCNtfn            = NTFNSchedContext"
+| "symreftype TCBReply          = ReplyTCB"
+| "symreftype ReplyTCB          = TCBReply"
+| "symreftype SCReply           = ReplySchedContext"
 | "symreftype ReplySchedContext = SCReply"
-| "symreftype TCBYieldTo      = SCYieldFrom"
-| "symreftype SCYieldFrom     = TCBYieldTo"
+| "symreftype TCBYieldTo        = SCYieldFrom"
+| "symreftype SCYieldFrom       = TCBYieldTo"
+| "symreftype ReplyNext         = ReplyPrev"
+| "symreftype ReplyPrev         = ReplyNext"
 
 
 definition

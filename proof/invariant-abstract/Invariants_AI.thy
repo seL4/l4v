@@ -564,7 +564,7 @@ where
 | "cap_class (cap.DomainCap)                        = DomainClass"
 | "cap_class (cap.Zombie r b n)                     = PhysicalClass"
 | "cap_class (cap.SchedContextCap r n)              = PhysicalClass"
-| "cap_class (cap.SchedControlCap)                  = IRQClass" (* RT need a new one? *)
+| "cap_class (cap.SchedControlCap)                  = SchedControlClass"
 | "cap_class (cap.IRQControlCap)                    = IRQClass"
 | "cap_class (cap.IRQHandlerCap irq)                = IRQClass"
 | "cap_class (cap.ReplyCap tcb rights)              = PhysicalClass"

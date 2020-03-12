@@ -233,8 +233,8 @@ definition refs_of_sc' :: "sched_context \<Rightarrow> (obj_ref \<times> reftype
 definition refs_of_reply' :: "reply \<Rightarrow> (obj_ref \<times> reftype) set" where
   "refs_of_reply' r \<equiv> get_refs ReplySchedContext (replySc r)
                           \<union> get_refs ReplyTCB (replyTCB r)
-                          \<union> get_refs ReplyTCB (replyNext r)
-                          \<union> get_refs ReplyTCB (replyPrev r)" (* FIXME RT: ReplyNext, ReplyPrev *)
+                          \<union> get_refs ReplyNext (replyNext r)
+                          \<union> get_refs ReplyPrev (replyPrev r)"
 
 lemmas refs_of'_defs[simp] = refs_of_tcb'_def refs_of_ntfn'_def refs_of_sc'_def refs_of_reply'_def
 
@@ -708,7 +708,7 @@ where
 | "capClass (ThreadCap ref)                    = PhysicalClass"
 | "capClass (Zombie r b n)                     = PhysicalClass"
 | "capClass (IRQControlCap)                    = IRQClass"
-| "capClass (SchedControlCap)                  = ASIDMasterClass" \<comment>\<open>FIXME RT: introduce SchedControlClass\<close>
+| "capClass (SchedControlCap)                  = SchedControlClass"
 | "capClass (IRQHandlerCap irq)                = IRQClass"
 | "capClass (ReplyCap tcb m)                   = PhysicalClass"
 | "capClass (ArchObjectCap cap)                = acapClass cap"

@@ -909,6 +909,12 @@ definition
 section "Cap classification used to define invariants"
 
 datatype capclass =
-  PhysicalClass | IRQClass | ASIDMasterClass | NullClass | DomainClass | IOPortClass
+    PhysicalClass
+  | IRQClass
+  | ASIDMasterClass
+  | NullClass
+  | DomainClass
+  | IOPortClass
+  | SchedControlClass
 
 end
