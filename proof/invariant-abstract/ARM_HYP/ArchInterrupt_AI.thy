@@ -221,7 +221,7 @@ lemma vgic_maintenance_invs[wp]:
          | wps
          | wp (once) hoare_drop_imp[where f="do_machine_op m" for m]
                    hoare_drop_imp[where f="return $ m" for m]
-         | strengthen not_pred_tcb_at_strengthen
+         | strengthen Not_pred_tcb_at_strengthen
          | wp (once) hoare_vcg_imp_lift' gts_wp)+
   apply (frule tcb_at_invs)
   apply (clarsimp simp: runnable_eq halted_eq not_pred_tcb)
@@ -237,7 +237,7 @@ lemma vppi_event_invs[wp]:
                 wp: hoare_vcg_imp_lift' gts_wp hoare_vcg_all_lift maskInterrupt_invs
                 cong: vcpu.fold_congs
          | wps
-         | strengthen not_pred_tcb_at_strengthen)+
+         | strengthen Not_pred_tcb_at_strengthen)+
   apply (frule tcb_at_invs)
   apply (clarsimp simp: runnable_eq halted_eq not_pred_tcb)
   apply (fastforce intro!: st_tcb_ex_cap[where P=active]

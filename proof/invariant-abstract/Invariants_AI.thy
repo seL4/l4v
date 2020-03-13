@@ -2678,7 +2678,7 @@ lemma not_obj_at_strengthen:
   "obj_at (Not \<circ> P) p s \<Longrightarrow> \<not> obj_at P p s"
   by (clarsimp simp: obj_at_def)
 
-lemma not_pred_tcb_at_strengthen:
+lemma Not_pred_tcb_at_strengthen:
   "pred_tcb_at proj (Not \<circ> P) p s \<Longrightarrow> \<not> pred_tcb_at proj P p s"
   apply (simp add: pred_tcb_at_def)
   apply (strengthen not_obj_at_strengthen)

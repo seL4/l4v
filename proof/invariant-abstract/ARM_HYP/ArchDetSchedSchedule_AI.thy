@@ -455,7 +455,7 @@ lemma vgic_maintenance_irq_valid_sched[wp]:
          | wp (once) hoare_drop_imp[where f="do_machine_op m" for m]
                    hoare_drop_imp[where f="return $ m" for m]
          | wps
-         | strengthen not_pred_tcb_at_strengthen)+
+         | strengthen Not_pred_tcb_at_strengthen)+
   apply (frule tcb_at_invs)
   apply (clarsimp simp: runnable_eq halted_eq not_pred_tcb)
   apply (fastforce intro!: st_tcb_ex_cap[where P=active]
@@ -475,7 +475,7 @@ lemma vppi_event_irq_valid_sched[wp]:
                     ct_in_state_thread_state_lift ct_not_queued_lift sch_act_sane_lift
                 cong: vcpu.fold_congs
          | wps
-         | strengthen not_pred_tcb_at_strengthen)+
+         | strengthen Not_pred_tcb_at_strengthen)+
   apply (frule tcb_at_invs)
   apply (clarsimp simp: runnable_eq halted_eq not_pred_tcb)
   apply (fastforce intro!: st_tcb_ex_cap[where P=active]
