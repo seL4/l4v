@@ -1,11 +1,7 @@
 --
 -- Copyright 2014, General Dynamics C4 Systems
 --
--- This software may be distributed and modified according to the terms of
--- the GNU General Public License version 2. Note that NO WARRANTY is provided.
--- See "LICENSE_GPLv2.txt" for details.
---
--- @TAG(GD_GPL)
+-- SPDX-License-Identifier: GPL-2.0-only
 --
 
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, GeneralizedNewtypeDeriving #-}
@@ -36,6 +32,9 @@ kernelBase = VPtr 0xe0000000
 physBase = 0x80000000
 physMappingOffset = 0xe0000000 - physBase
 
+pptrTop = 0xfff00000
+paddrTop = pptrTop - (fromVPtr kernelBase - physBase)
+
 ptrFromPAddr :: PAddr -> PPtr a
 ptrFromPAddr (PAddr addr) = PPtr $ addr + physMappingOffset
 
@@ -62,6 +61,7 @@ avicPPtr = PPtr 0xfff01000
 avicAddr = PAddr 0x68000000
 
 irqVGICMaintenance = IRQ 25
+irqVTimerEvent = IRQ 27
 irqSMMU = IRQ 109
 
 getKernelDevices :: Ptr CallbackData -> IO [(PAddr, PPtr Word)]

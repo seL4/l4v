@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  *)
 
 section "Lemmas with Generic Word Length"
@@ -3569,6 +3565,11 @@ lemma from_bool_all_helper:
 lemma from_bool_to_bool_iff:
   "w = from_bool b \<longleftrightarrow> to_bool w = b \<and> (w = 0 \<or> w = 1)"
   by (cases b) (auto simp: from_bool_def to_bool_def)
+
+lemma from_bool_eqI:
+  "from_bool x = from_bool y \<Longrightarrow> x = y"
+  unfolding from_bool_def
+  by (auto split: bool.splits)
 
 lemma word_rsplit_upt:
   "\<lbrakk> size x = LENGTH('a :: len) * n; n \<noteq> 0 \<rbrakk>

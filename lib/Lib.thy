@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  *)
 
 (*
@@ -1337,8 +1333,6 @@ lemma ball_ran_modify_map_eq:
   \<Longrightarrow> (\<forall>v \<in> ran (modify_map m x f). P v) = (\<forall>v \<in> ran m. P v)"
   by (auto simp: modify_map_def ball_ran_eq)
 
-lemma disj_imp: "(P \<or> Q) = (\<not>P \<longrightarrow> Q)" by blast
-
 lemma eq_singleton_redux:
   "\<lbrakk> S = {x} \<rbrakk> \<Longrightarrow> x \<in> S"
   by simp
@@ -2654,5 +2648,11 @@ lemma le_nat_shrink_left:
 lemma length_ge_split:
   "n < length xs \<Longrightarrow> \<exists>x xs'. xs = x # xs' \<and> n \<le> length xs'"
   by (cases xs) auto
+
+text \<open>Support for defining enumerations on datatypes derived from enumerations\<close>
+lemma distinct_map_enum:
+  "\<lbrakk> (\<forall> x y. (F x = F y \<longrightarrow> x = y )) \<rbrakk>
+   \<Longrightarrow> distinct (map F (enum_class.enum :: 'a :: enum list))"
+  by (simp add: distinct_map enum_distinct inj_onI)
 
 end

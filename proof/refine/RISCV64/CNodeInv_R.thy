@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -556,9 +552,6 @@ declare if_split [split]
 text \<open>Proving desired properties about rec_del/cap_delete\<close>
 
 declare of_nat_power [simp del]
-
-(* FIXME: pull up *)
-declare word_unat_power [symmetric, simp del]
 
 text \<open>Proving desired properties about recursiveDelete/cteDelete\<close>
 
@@ -7564,12 +7557,6 @@ lemma select_bind_spec_corres':
                          select_def
          | drule(1) bspec | erule rev_bexI | rule conjI)+
    done
-
-(* FIXME: move *)
-lemma next_child_child_set:
-  "\<lbrakk>next_child slot (cdt_list s) = Some child; valid_list s\<rbrakk>
-    \<Longrightarrow> child \<in> (case next_child slot (cdt_list s) of None \<Rightarrow> {} | Some n \<Rightarrow> {n})"
-  by (simp add: next_child_def)
 
 lemma cap_revoke_mdb_stuff4:
   "\<lbrakk> (s, s') \<in> state_relation; cte_wp_at ((=) cap) p s;

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -13,7 +9,7 @@
 *)
 
 theory ArchAcc_R
-imports SubMonad_R
+imports SubMonad_R ArchMove_R
 begin
 
 context Arch begin global_naming X64_A (*FIXME: arch_split*)
@@ -536,27 +532,6 @@ lemma get_pml4e_corres':
   apply (rule aligned_distinct_relation_pml4e_atI')
    apply (simp add:state_relation_def)+
   done
-
-(* FIXME: move *)
-lemma table_size_slot_eq:
-  "((p::machine_word) && ~~ mask table_size) + (ucast x << word_size_bits) = p \<Longrightarrow>
-    (x::9 word) = ucast (p && mask table_size >> word_size_bits)"
-  apply (clarsimp simp: bit_simps mask_def)
-  apply word_bitwise
-  apply clarsimp
-  done
-
-lemmas pd_bits_slot_eq = table_size_slot_eq[folded pd_bits_def]
-lemmas pt_bits_slot_eq = table_size_slot_eq[folded pt_bits_def]
-lemmas pdpt_bits_slot_eq = table_size_slot_eq[folded pdpt_bits_def]
-lemmas pml4_bits_slot_eq = table_size_slot_eq[folded pml4_bits_def]
-
-lemma more_pd_inner_beauty:
-  fixes x :: "9 word"
-  fixes p :: machine_word
-  assumes x: "x \<noteq> ucast (p && mask pd_bits >> word_size_bits)"
-  shows "(p && ~~ mask pd_bits) + (ucast x << word_size_bits) = p \<Longrightarrow> False"
-  by (rule mask_split_aligned_neg[OF _ _ x]; simp add: bit_simps)
 
 \<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
 lemma set_pd_corres:
@@ -1683,10 +1658,6 @@ lemma asidLowBitsOf [simp]:
   apply (rule word_eqI)
   apply (simp add: word_size nth_ucast)
   done
-
-(* FIXME: move to invariants? *)
-definition
-  "vspace_at_asid_ex asid \<equiv> \<lambda>s. \<exists>pm. vspace_at_asid asid pm s"
 
 lemma le_mask_asidBits_asid_wf:
   "asid_wf asid \<longleftrightarrow> asid \<le> mask asidBits"

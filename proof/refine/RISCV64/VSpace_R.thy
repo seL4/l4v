@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -314,89 +310,11 @@ crunch typ_at' [wp]: setVMRoot "\<lambda>s. P (typ_at' T p s)"
 
 lemmas setVMRoot_typ_ats [wp] = typ_at_lifts [OF setVMRoot_typ_at']
 
-(* FIXME: move to Lib *)
-lemma get_mapM_x_lower:
-  fixes P :: "'a option \<Rightarrow> 's \<Rightarrow> bool"
-  fixes f :: "('s,'a) nondet_monad"
-  fixes g :: "'a \<Rightarrow> 'b \<Rightarrow> ('s,'c) nondet_monad"
-  \<comment> \<open>@{term g} preserves the state that @{term f} cares about\<close>
-  assumes g: "\<And>x y. \<lbrace> P (Some x) \<rbrace> g x y \<lbrace> \<lambda>_. P (Some x) \<rbrace>"
-  \<comment> \<open>@{term P} specifies whether @{term f} either fails or returns a deterministic result\<close>
-  assumes f: "\<And>opt_x s. P opt_x s \<Longrightarrow> f s = case_option ({},True) (\<lambda>x. ({(x,s)},False)) opt_x"
-  \<comment> \<open>Every state determines P, and therefore the behaviour of @{term f}\<close>
-  assumes x: "\<And>s. \<exists> opt_x. P opt_x s"
-  \<comment> \<open>If @{term f} may fail, ensure there is at least one @{term f}\<close>
-  assumes y: "\<exists>s. P None s \<Longrightarrow> ys \<noteq> []"
-  shows "do x \<leftarrow> f; mapM_x (g x) ys od = mapM_x (\<lambda>y. do x \<leftarrow> f; g x y od) ys"
-  proof -
-    have f_rv: "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>r. P (Some r)\<rbrace>"
-      using x f
-      apply (clarsimp simp: valid_def)
-      apply (drule_tac x=s in meta_spec; clarsimp)
-      apply (case_tac opt_x; simp)
-      done
-    { fix y and h :: "'a \<Rightarrow> ('s,'d) nondet_monad"
-      have "do x \<leftarrow> f; _ \<leftarrow> g x y; h x od
-              = do x \<leftarrow> f; _ \<leftarrow> g x y; x \<leftarrow> f; h x od"
-        apply (rule ext)
-        apply (subst monad_eq_split[where g="do x \<leftarrow> f; g x y; return x od"
-                                      and P="\<top>" and Q="\<lambda>r. P (Some r)"
-                                      and f="h" and f'="\<lambda>_. f >>= h",
-                                    simplified bind_assoc, simplified])
-        apply (wpsimp wp: g f_rv simp: f return_def bind_def)+
-        done
-    } note f_redundant = this
-    show ?thesis
-    proof (cases "\<exists>s. P None s")
-      case True show ?thesis
-        apply (cases ys; simp add: True y mapM_x_Cons bind_assoc)
-        subgoal for y ys
-          apply (thin_tac _)
-          apply (induct ys arbitrary: y; simp add: mapM_x_Nil mapM_x_Cons bind_assoc)
-          apply (subst f_redundant; simp)
-          done
-        done
-    next
-      case False
-      show ?thesis using False
-        apply (induct ys; simp add: mapM_x_Nil mapM_x_Cons bind_assoc)
-         apply (rule ext)
-         subgoal for s
-           by (insert x[of s]; drule spec[of _ s]; clarsimp; case_tac opt_x;
-               clarsimp simp: bind_def return_def f)
-        apply (subst f_redundant; simp)
-        done
-    qed
-  qed
-
-lemma get_pt_mapM_x_lower:
-  assumes g: "\<And>P pt x. \<lbrace> \<lambda>s. P (kheap s pt_ptr) \<rbrace> g pt x \<lbrace> \<lambda>_ s. P (kheap s pt_ptr) \<rbrace>"
-  assumes y: "ys \<noteq> []"
-  notes [simp] = gets_map_def get_object_def gets_def get_def bind_def return_def
-                 assert_opt_def fail_def opt_map_def
-  shows "do pt \<leftarrow> get_pt pt_ptr; mapM_x (g pt) ys od
-          = mapM_x (\<lambda>y. get_pt pt_ptr >>= (\<lambda>pt. g pt y)) ys"
-  apply (rule get_mapM_x_lower
-                [where P="\<lambda>opt_pt s. case kheap s pt_ptr of
-                                       Some (ArchObj (PageTable pt)) \<Rightarrow> opt_pt = Some pt
-                                     | _ \<Rightarrow> opt_pt = None",
-                 OF _ _ _ y])
-    apply (wp g)
-   apply (case_tac "kheap s pt_ptr"; simp; rename_tac ko; case_tac ko; simp;
-          rename_tac ako; case_tac ako; simp)+
-  done
-
 lemma get_pte_corres'':
   assumes "p' = p"
   shows "corres pte_relation' (pte_at p and pspace_aligned and pspace_distinct) \<top>
                               (get_pte p) (getObject p')"
   using assms get_pte_corres by simp
-
-(* FIXME: move to Lib *)
-lemma zip_map_rel:
-  assumes "(x,y) \<in> set (zip xs ys)" "map f xs = map g ys"
-  shows "f x = g y"
-  using assms by (induct xs arbitrary: x y ys; cases ys) auto
 
 crunches unmapPageTable, unmapPage
   for aligned'[wp]: "pspace_aligned'"

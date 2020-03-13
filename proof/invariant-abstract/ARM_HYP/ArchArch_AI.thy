@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory ArchArch_AI
@@ -31,7 +27,8 @@ definition
                                       and (\<lambda>s. tcb_ptr \<noteq> idle_thread s)
      | VCPUInjectIRQ vcpu_ptr index virq \<Rightarrow> vcpu_at vcpu_ptr
      | VCPUReadRegister vcpu_ptr reg \<Rightarrow> vcpu_at vcpu_ptr
-     | VCPUWriteRegister vcpu_ptr reg val \<Rightarrow> vcpu_at vcpu_ptr"
+     | VCPUWriteRegister vcpu_ptr reg val \<Rightarrow> vcpu_at vcpu_ptr
+     | VCPUAckVPPI vcpu_ptr vppi \<Rightarrow> vcpu_at vcpu_ptr"
 
 lemma safe_parent_strg:
   "cte_wp_at (\<lambda>cap. cap = UntypedCap False frame pageBits idx) p s \<and>
@@ -1015,13 +1012,6 @@ lemma set_vcpu_regs_update[wp]:
   unfolding invs_def valid_state_def
   by (wpsimp wp: set_vcpu_valid_pspace set_vcpu_valid_arch_eq_hyp)
 
-lemma vcpu_write_reg_invs[wp]:
-  "\<lbrace>invs\<rbrace> vcpu_write_reg vcpuptr r v \<lbrace>\<lambda>_. invs\<rbrace>"
-  unfolding vcpu_write_reg_def vcpu_update_def
-  apply (wpsimp wp: get_vcpu_wp)
-  apply (fastforce simp: obj_at_def dest!: invs_valid_objs)
-  done
-
 lemma write_vcpu_register_invs[wp]:
   "\<lbrace>invs\<rbrace> write_vcpu_register vcpu reg val \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding write_vcpu_register_def
@@ -1036,6 +1026,10 @@ lemma vgic_update_valid_pspace[wp]:
 
 crunches invoke_vcpu_inject_irq, vcpu_read_reg
   for invs[wp]: invs (ignore: do_machine_op)
+
+lemma invoke_vcpu_ack_vppi_invs[wp]:
+  "invoke_vcpu_ack_vppi vcpu_ptr vppi \<lbrace>invs\<rbrace>"
+  unfolding invoke_vcpu_ack_vppi_def by (wpsimp cong: vcpu.fold_congs)
 
 lemma perform_vcpu_invs[wp]:
   "\<lbrace>invs and valid_vcpu_invocation vi\<rbrace> perform_vcpu_invocation vi \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -1661,26 +1655,29 @@ lemma arch_decode_inv_wf[wp]:
   apply (cases "invocation_type label"; (simp, wp?))
   apply (rename_tac arch_iv)
   apply (case_tac "arch_iv"; (simp, wp?))
-     apply (simp add: decode_vcpu_set_tcb_def)
-     apply (rule hoare_pre, wpsimp)
-     apply (clarsimp simp: valid_arch_inv_def valid_vcpu_invocation_def)
-     apply (rename_tac tcb_ptr)
-     apply (frule_tac c="ThreadCap tcb_ptr" in cte_wp_valid_cap, fastforce)
-     apply (simp add: valid_cap_def)
-     apply (cases slot)
-     apply (clarsimp simp: ex_nonz_cap_to_def)
-     apply (rule conjI, fastforce elim: cte_wp_at_weakenE)
-     apply (rule conjI, fastforce elim: cte_wp_at_weakenE)
-     apply (clarsimp dest!: invs_valid_global_refs simp:  cte_wp_at_caps_of_state)
-     apply (drule_tac ?cap="ThreadCap (idle_thread s)" in valid_global_refsD2, assumption)
-     apply (simp add:global_refs_def cap_range_def)
-    apply (simp add: decode_vcpu_inject_irq_def)
-    apply (rule hoare_pre, wpsimp simp: whenE_def wp: get_vcpu_wp)
-    apply (clarsimp simp: valid_arch_inv_def valid_vcpu_invocation_def obj_at_def)
-   apply (simp add: decode_vcpu_read_register_def)
+      apply (simp add: decode_vcpu_set_tcb_def)
+      apply (rule hoare_pre, wpsimp)
+      apply (clarsimp simp: valid_arch_inv_def valid_vcpu_invocation_def)
+      apply (rename_tac tcb_ptr)
+      apply (frule_tac c="ThreadCap tcb_ptr" in cte_wp_valid_cap, fastforce)
+      apply (simp add: valid_cap_def)
+      apply (cases slot)
+      apply (clarsimp simp: ex_nonz_cap_to_def)
+      apply (rule conjI, fastforce elim: cte_wp_at_weakenE)
+      apply (rule conjI, fastforce elim: cte_wp_at_weakenE)
+      apply (clarsimp dest!: invs_valid_global_refs simp:  cte_wp_at_caps_of_state)
+      apply (drule_tac ?cap="ThreadCap (idle_thread s)" in valid_global_refsD2, assumption)
+      apply (simp add:global_refs_def cap_range_def)
+     apply (simp add: decode_vcpu_inject_irq_def)
+     apply (rule hoare_pre, wpsimp simp: whenE_def wp: get_vcpu_wp)
+     apply (clarsimp simp: valid_arch_inv_def valid_vcpu_invocation_def obj_at_def)
+    apply (simp add: decode_vcpu_read_register_def)
+    apply (rule hoare_pre, wpsimp)
+    apply (clarsimp simp: valid_arch_inv_def valid_cap_def valid_vcpu_invocation_def)
+   apply (simp add: decode_vcpu_write_register_def)
    apply (rule hoare_pre, wpsimp)
    apply (clarsimp simp: valid_arch_inv_def valid_cap_def valid_vcpu_invocation_def)
-  apply (simp add: decode_vcpu_write_register_def)
+  apply (simp add: decode_vcpu_ack_vppi_def arch_check_irq_def)
   apply (rule hoare_pre, wpsimp)
   apply (clarsimp simp: valid_arch_inv_def valid_cap_def valid_vcpu_invocation_def)
   done
@@ -1705,7 +1702,8 @@ lemma perform_vcpu_invocation_pred_tcb_at[wp_unsafe]:
         | clarsimp simp: invoke_vcpu_read_register_def
                          read_vcpu_register_def
                          invoke_vcpu_write_register_def
-                         write_vcpu_register_def)+
+                         write_vcpu_register_def
+                         invoke_vcpu_ack_vppi_def)+
   done
 
 crunch pred_tcb_at: perform_page_table_invocation, perform_page_invocation,

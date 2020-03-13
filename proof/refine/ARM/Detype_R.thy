@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Detype_R
@@ -3111,9 +3107,6 @@ lemma placeNewObject_gets_globalPD_commute:
      return_def bind_def simpler_modify_def)
   apply clarsimp
   done
-
-(* FIXME: move  *)
-lemmas of_nat_inj32 = of_nat_inj[where 'a=32, folded word_bits_def]
 
 lemma copyGlobalMappings_setCTE_commute:
   "monad_commute

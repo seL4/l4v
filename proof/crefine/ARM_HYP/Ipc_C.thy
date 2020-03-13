@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Ipc_C
@@ -557,6 +553,7 @@ definition
        VMFault _ _ \<Rightarrow> default_action
      | VCPUFault _ \<Rightarrow> default_action
      | VGICMaintenance _ \<Rightarrow> default_action
+     | VPPIEvent _ \<Rightarrow> default_action
     od)"
 
 definition
@@ -636,6 +633,12 @@ lemma handleArchFaultReply':
   apply (clarsimp simp: mapM_def sequence_def bind_assoc asUser_bind_distrib
                         asUser_return submonad_asUser.fn_stateAssert)
   apply (case_tac f ; clarsimp)
+     apply (clarsimp simp: handleArchFaultReply_def asUser_getRegister_discarded
+                             bind_subst_lift [OF stateAssert_stateAssert]
+                             pred_conj_def)
+     apply (rule bind_apply_cong [OF refl], rename_tac sb s'')
+     apply (rule bind_apply_cong [OF refl], rename_tac rv r'')
+     apply (case_tac sb, simp_all add: word_size n_msgRegisters_def)[1]
     apply (clarsimp simp: handleArchFaultReply_def asUser_getRegister_discarded
                             bind_subst_lift [OF stateAssert_stateAssert]
                             pred_conj_def)
@@ -2054,6 +2057,37 @@ proof -
        apply wp
       apply (clarsimp simp: option_to_ptr_def seL4_VCPUFault_HSR_def guard_is_UNIV_def)
 
+      (* VPPIEvent *)
+      apply (simp add: Collect_True Collect_False ccorres_cond_iffs zip_upt_Cons msgMaxLength_unfold
+                       zipWithM_mapM mapM_Cons bind_assoc seL4_Fault_tag_defs
+                   del: Collect_const)
+      apply (rename_tac irq)
+      apply (rule ccorres_stateAssert)
+      apply (rule ccorres_rhs_assoc)+
+      apply (rule ccorres_move_c_guard_tcb)
+      apply (rule_tac val="ucast (vppiIRQ aft)" in symb_exec_r_fault)
+         apply (rule conseqPre, vcg)
+         apply clarsimp
+         apply (drule(1) obj_at_cslift_tcb)
+         apply (clarsimp simp: typ_heap_simps)
+         apply (rule conjI)
+          apply (clarsimp simp: ctcb_relation_def cfault_rel_def seL4_Fault_lift_def Let_def
+                          split: if_split_asm)
+         apply (subgoal_tac "seL4_Fault_get_tag (tcbFault_C ko') = scast seL4_Fault_VPPIEvent")
+          apply (frule seL4_Fault_lift_VPPIEvent)
+          apply (clarsimp simp: seL4_Fault_VPPIEvent_lift_def)
+          apply (clarsimp simp: ctcb_relation_def is_cap_fault_def word_and_1 cfault_rel_def
+                          split: if_split_asm option.splits)
+          apply (simp add: ucast_ucast_mask)
+         apply (clarsimp simp: ctcb_relation_def cfault_rel_def seL4_Fault_lift_def Let_def
+                         split: if_split_asm)
+        apply ceqv
+       apply (ctac(no_vcg) add: setMR_ccorres)
+        apply (simp add: mapM_Nil)
+        apply (rule ccorres_return_C, simp+)[1]
+       apply wp
+      apply (clarsimp simp: option_to_ptr_def seL4_VPPIEvent_IRQ_def guard_is_UNIV_def ucast_nat_def)
+
       (*VGICMaintenanceFault*)
      apply (simp add: Collect_True Collect_False ccorres_cond_iffs zip_upt_Cons msgMaxLength_unfold
                       zipWithM_mapM mapM_Cons bind_assoc seL4_Fault_tag_defs
@@ -2399,7 +2433,8 @@ where
   "makeArchFaultMessage2 \<equiv>
      \<lambda>aft. case aft of VMFault _ _ \<Rightarrow> 5
                      | VCPUFault _ \<Rightarrow> 7
-                     | VGICMaintenance _ \<Rightarrow> 6"
+                     | VGICMaintenance _ \<Rightarrow> 6
+                     | VPPIEvent _ \<Rightarrow> 8"
 
 lemma makeFaultMessage2:
   "makeFaultMessage ft thread
@@ -2449,6 +2484,7 @@ lemma doFaultTransfer_ccorres [corres]:
                   | ArchFault (VMFault _ _) \<Rightarrow> 5
                   | ArchFault (VGICMaintenance _) \<Rightarrow> 6
                   | ArchFault (VCPUFault _) \<Rightarrow> 7
+                  | ArchFault (VPPIEvent _) \<Rightarrow> 8
                   | UnknownSyscallException _ \<Rightarrow> 2
                   | UserException _ _ \<Rightarrow> 3"
               in ccorres_symb_exec_r_known_rv_UNIV
@@ -4364,8 +4400,18 @@ lemma handleArchFaultReply_corres:
    apply (clarsimp simp: bind_assoc seL4_Fault_tag_defs ccorres_cond_iffs Let_def
                    split del: if_split)
    apply (wpc ; clarsimp simp: seL4_Fault_tag_defs ; ccorres_rewrite)
-     (* same thing three times, could probably be cleaner *)
-     (* VMFault *)
+      (* same thing four times, could probably be cleaner *)
+      (* VMFault *)
+      apply (rule ccorres_symb_exec_l)
+         apply (rule ccorres_stateAssert)
+         apply wpc
+          apply (clarsimp simp: ccorres_cond_iffs)
+          apply (rule ccorres_return_C)
+            apply simp+
+         apply (rule ccorres_symb_exec_l)
+            apply (ctac add: ccorres_return_C)
+           apply (wp mapM_wp' empty_fail_loadWordUser | clarsimp simp: to_bool_def true_def)+
+     (* VCPUFault *)
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_stateAssert)
         apply wpc
@@ -4375,7 +4421,7 @@ lemma handleArchFaultReply_corres:
         apply (rule ccorres_symb_exec_l)
            apply (ctac add: ccorres_return_C)
           apply (wp mapM_wp' empty_fail_loadWordUser | clarsimp simp: to_bool_def true_def)+
-    (* VCPUFault *)
+    (* VPPIEvent *)
     apply (rule ccorres_symb_exec_l)
        apply (rule ccorres_stateAssert)
        apply wpc

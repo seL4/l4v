@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Ipc_R
@@ -2101,16 +2097,6 @@ lemma cancelIPC_valid_queues'[wp]:
   apply (clarsimp simp: inQ_def)
   done
 
-(* FIXME move *)
-lemma cap_delete_one_cur_tcb[wp]:
-  "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> cap_delete_one slot \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
-apply (simp add: cur_tcb_def)
-apply (rule hoare_pre)
- apply wps
- apply wp
-apply simp
-done
-
 crunch valid_objs'[wp]: handleFaultReply valid_objs'
 
 lemma valid_tcb'_tcbFault_update[simp]:
@@ -3792,14 +3778,6 @@ lemmas possibleSwitchToTo_cteCaps_of[wp]
 crunches possibleSwitchTo
   for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
   (wp: possibleSwitchTo_ctes_of crunch_wps ignore: constOnFailure)
-
-(* FIXME: move to Lib *)
-lemma nonempty_cross_distinct_singleton_elim:
-  "\<lbrakk> x \<times> {a} = y \<times> {b};
-     x \<noteq> {} \<or> y \<noteq> {};
-     a \<noteq> b \<rbrakk>
-   \<Longrightarrow> P"
-  by blast
 
 (* t = ksCurThread s *)
 lemma ri_invs' [wp]:

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 chapter "Toplevel Refinement Statement"
@@ -684,7 +680,7 @@ lemma threadSet_all_invs_triv':
      apply (simp add: exst_same_def)
     apply (wp thread_set_invs_trivial thread_set_ct_running thread_set_not_state_valid_sched
               threadSet_invs_trivial threadSet_ct_running' static_imp_wp
-              thread_set_ct_idle
+              thread_set_ct_in_state
            | simp add: tcb_cap_cases_def tcb_arch_ref_def
            | rule threadSet_ct_in_state'
            | wp (once) hoare_vcg_disj_lift)+

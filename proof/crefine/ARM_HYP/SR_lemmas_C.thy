@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory SR_lemmas_C
@@ -2387,7 +2383,6 @@ lemmas seL4_VCPUReg_defs =
     seL4_VCPUReg_TPIDRPRW_def
     seL4_VCPUReg_TPIDRURO_def
     seL4_VCPUReg_FPEXC_def
-    seL4_VCPUReg_CNTV_TVAL_def
     seL4_VCPUReg_CNTV_CTL_def
     seL4_VCPUReg_LRsvc_def
     seL4_VCPUReg_SPsvc_def
@@ -2409,6 +2404,11 @@ lemmas seL4_VCPUReg_defs =
     seL4_VCPUReg_SPSRund_def
     seL4_VCPUReg_SPSRirq_def
     seL4_VCPUReg_SPSRfiq_def
+    seL4_VCPUReg_CNTV_CTL_def
+    seL4_VCPUReg_CNTV_CVALhigh_def
+    seL4_VCPUReg_CNTV_CVALlow_def
+    seL4_VCPUReg_CNTVOFFhigh_def
+    seL4_VCPUReg_CNTVOFFlow_def
 
 (* rewrite a definition from a C enum into a vcpureg enumeration lookup *)
 (* FIXME type annotations are ham-fisted and repetitive *)
@@ -2449,6 +2449,9 @@ lemmas vcpureg_eq_use_types
 
 lemmas cvcpu_relation_regs_def =
           cvcpu_relation_def[simplified cvcpu_regs_relation_def Let_def vcpuSCTLR_def, simplified]
+
+lemmas cvcpu_relation_vppi_def =
+          cvcpu_relation_def[simplified cvcpu_vppi_masked_relation_def, simplified]
 
 lemma capTCBPtr_eq:
   "\<lbrakk> ccap_relation cap cap'; isThreadCap cap \<rbrakk>

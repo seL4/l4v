@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Invariants_AI
@@ -2681,6 +2677,13 @@ lemma ko_at_obj_congD:
 lemma not_obj_at_strengthen:
   "obj_at (Not \<circ> P) p s \<Longrightarrow> \<not> obj_at P p s"
   by (clarsimp simp: obj_at_def)
+
+lemma not_pred_tcb_at_strengthen:
+  "pred_tcb_at proj (Not \<circ> P) p s \<Longrightarrow> \<not> pred_tcb_at proj P p s"
+  apply (simp add: pred_tcb_at_def)
+  apply (strengthen not_obj_at_strengthen)
+  apply (fastforce simp add: comp_def obj_at_def)
+  done
 
 text \<open>using typ_at triples to prove other triples\<close>
 

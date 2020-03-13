@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory ArchEmptyFail_AI
@@ -121,7 +117,7 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
 
 context Arch begin global_naming ARM_HYP
 
-crunch (empty_fail) empty_fail[wp]: vcpu_update, vcpu_save_reg_range, vgic_update_lr
+crunch (empty_fail) empty_fail[wp]: vcpu_update, vcpu_save_reg_range, vgic_update_lr, save_virt_timer
   (ignore: set_object get_object)
 
 lemma vcpu_save_empty_fail[wp,EmptyFail_AI_assms]: "empty_fail (vcpu_save a)"

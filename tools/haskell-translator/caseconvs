@@ -1827,6 +1827,11 @@ case \x of ((mr0:mr1:_), cap@(VCPUCap {})) -> (_, _) ->  ---> let (ls, cap) = \x
        in ->1
    else ->2
 
+case \x of ((mr0:_), cap@(VCPUCap {})) -> (_, _) ->  ---> let (ls, cap) = \x in
+   if isVCPUCap cap \<and> length ls > 0
+   then let mr0 = ls !! 0
+        in ->1
+   else ->2
 
 case \x of cap@(PageDirectoryCap {}) -> cap@(PageTableCap {}) -> cap@(PageCap {}) -> ASIDControlCap -> cap@(ASIDPoolCap {}) -> (VCPUCap {}) ->   ---> let cap = \x in
     if isPageDirectoryCap cap

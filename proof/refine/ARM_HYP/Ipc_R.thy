@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Ipc_R
@@ -1564,7 +1560,7 @@ lemma make_arch_fault_msg_corres:
   "corres (=) (tcb_at t) (tcb_at' t)
   (make_arch_fault_msg f t)
   (makeArchFaultMessage (arch_fault_map f) t)"
-  apply (cases f; clarsimp simp: makeArchFaultMessage_def split: arch_fault.split)
+  apply (cases f; clarsimp simp: makeArchFaultMessage_def ucast_nat_def split: arch_fault.split)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr[OF _ getRestartPCs_corres])
       apply (rule corres_split_eqr[OF _ corres_machine_op])
@@ -2166,16 +2162,6 @@ lemma cancelIPC_valid_queues'[wp]:
    apply (wp threadSet_valid_queues' threadSet_sch_act| simp)+
   apply (clarsimp simp: inQ_def)
   done
-
-(* FIXME move *)
-lemma cap_delete_one_cur_tcb[wp]:
-  "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> cap_delete_one slot \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
-apply (simp add: cur_tcb_def)
-apply (rule hoare_pre)
- apply wps
- apply wp
-apply simp
-done
 
 crunches archThreadGet, handleFaultReply
   for valid_objs'[wp]: valid_objs'

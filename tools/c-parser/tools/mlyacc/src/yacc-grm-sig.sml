@@ -1,6 +1,4 @@
-(*
- * @TAG(OTHER_PRINCETON_OSS)
- *)
+(* SPDX-License-Identifier: SMLNJ *)
 signature Mlyacc_TOKENS =
 sig
 type ('a,'b) token

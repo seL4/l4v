@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory EmptyFail_H
@@ -280,7 +276,7 @@ crunch (empty_fail) empty_fail: decodeVCPUInjectIRQ, decodeVCPUWriteReg, decodeV
   (simp: Let_def)
 
 crunch (empty_fail) empty_fail: callKernel
-  (wp: empty_fail_catch)
+  (wp: empty_fail_catch simp: Let_def)
 
 theorem call_kernel_serial:
   "\<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and

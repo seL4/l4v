@@ -1,16 +1,12 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (* things that should be moved into first refinement *)
 
-theory Move
+theory Move_C
 imports "Refine.Refine"
 begin
 
@@ -161,7 +157,7 @@ crunch pred_tcb_at'[wp]: readVCPUReg "\<lambda>s. P (pred_tcb_at' a b p s)"
 crunch ksCurThread[wp]: readVCPUReg "\<lambda>s. P (ksCurThread s)"
 
 lemma fromEnum_maxBound_vcpureg_def:
-  "fromEnum (maxBound :: vcpureg) = 39"
+  "fromEnum (maxBound :: vcpureg) = 42"
   by (clarsimp simp: fromEnum_def maxBound_def enum_vcpureg)
 
 lemma unat_of_nat_mword_fromEnum_vcpureg[simp]:
@@ -178,6 +174,9 @@ lemma unat_of_nat_mword_length_upto_vcpureg[simp]:
   apply (simp add: fromEnum_maxBound_vcpureg_def)
   done
 
+lemma fromEnum_maxBound_vppievent_irq_def:
+  "fromEnum (maxBound :: vppievent_irq) = 0"
+  by (clarsimp simp: fromEnum_def maxBound_def enum_vppievent_irq)
 
 (* when creating a new object, the entire slot including starting address should be free *)
 (* FIXME move *)

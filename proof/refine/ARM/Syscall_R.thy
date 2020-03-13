@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -1967,8 +1963,8 @@ lemma handleReply_ct_not_ksQ:
   apply (clarsimp)
   done
 
-crunch valid_etcbs[wp]: possible_switch_to  "valid_etcbs"
-crunch valid_etcbs[wp]: handle_recv "valid_etcbs"
+crunches possible_switch_to, handle_recv
+  for valid_etcbs[wp]: "valid_etcbs"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma hrw_corres:

@@ -1,12 +1,9 @@
-(*
- * @TAG(OTHER_BSD)
- *)
+(* SPDX-License-Identifier: HPND *)
 
 (* Copyright (C) 1999-2002 Henry Cejtin, Matthew Fluet, Suresh
  *    Jagannathan, and Stephen Weeks.
  * Copyright (C) 1997-1999 NEC Research Institute.
  *
- * MLton is released under a BSD-style license.
  * Please see the file MLton-LICENSE for license information.
  *)
 signature SOURCE_FILE =

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory ArchBCorres2_AI
@@ -146,6 +142,11 @@ lemma vgic_maintenance_bcorres[wp]:
   "bcorres vgic_maintenance vgic_maintenance"
   unfolding vgic_maintenance_def
   by (wpsimp simp: vgic_update_lr_bcorres)
+
+lemma vppi_event_bcorres[wp]:
+  "bcorres (vppi_event irq) (vppi_event irq)"
+  unfolding vppi_event_def
+  by wpsimp
 
 lemma handle_reserved_irq_bcorres[wp]: "bcorres (handle_reserved_irq a) (handle_reserved_irq a)"
   unfolding handle_reserved_irq_def by wpsimp

@@ -1,11 +1,7 @@
 %
-% Copyright 2016, Data61, CSIRO
+% Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 %
-% This software may be distributed and modified according to the terms of
-% the GNU General Public License version 2. Note that NO WARRANTY is provided.
-% See "LICENSE_GPLv2.txt" for details.
-%
-% @TAG(DATA61_GPL)
+% SPDX-License-Identifier: GPL-2.0-only
 %
 
 This module defines the encoding of arch-specific faults.
@@ -50,6 +46,7 @@ in handleVMFault?
 #endif
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > makeArchFaultMessage (VCPUFault hsr) thread = return (7, [hsr])
+> makeArchFaultMessage (VPPIEvent irq) thread = return (8, [fromIntegral $ fromEnum $ irq])
 > makeArchFaultMessage (VGICMaintenance archData) thread = do
 >     let msg = (case archData of
 >                    Nothing -> [-1]
@@ -61,6 +58,7 @@ in handleVMFault?
 > handleArchFaultReply (VMFault {}) _ _ _ = return True
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > handleArchFaultReply (VCPUFault {}) _ _ _ = return True
+> handleArchFaultReply (VPPIEvent {}) _ _ _ = return True
 > handleArchFaultReply (VGICMaintenance {}) _ _ _ = return True
 #endif
 

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Orphanage
@@ -2434,9 +2430,6 @@ lemma sts_tcb_at'_preserve':
   \<lbrace>\<lambda>_. st_tcb_at' P t \<rbrace>"
   by (wpsimp wp: sts_st_tcb' simp: st_tcb_at_neg')
 
-(* FIXME move to where disj_imp lives *)
-lemma disj_imp': "(P \<or> Q) = (\<not>Q \<longrightarrow> P)" by blast
-
 lemma handleEvent_no_orphans [wp]:
   "\<lbrace> \<lambda>s. invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and>
          (e \<noteq> Interrupt \<longrightarrow> ct_running' s) \<and>
@@ -2449,11 +2442,6 @@ lemma handleEvent_no_orphans [wp]:
    apply (wp hv_inv' hoare_drop_imps | wpc | clarsimp simp: handleHypervisorFault_def)+
   apply (auto simp: activatable_from_running' active_from_running')
   done
-
-(* FIXME: move? *)
-lemma hoare_vcg_conj_liftE:
-  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>Q'\<rbrace>; \<lbrace>P'\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> R r s\<rbrace>, \<lbrace>\<lambda>r s. Q' r s \<and> E r s\<rbrace>"
-  by (fastforce simp: validE_def valid_def split: sum.splits)
 
 theorem callKernel_no_orphans [wp]:
   "\<lbrace> \<lambda>s. invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and>

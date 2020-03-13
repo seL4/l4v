@@ -1,11 +1,7 @@
 %
 % Copyright 2014, General Dynamics C4 Systems
 %
-% This software may be distributed and modified according to the terms of
-% the GNU General Public License version 2. Note that NO WARRANTY is provided.
-% See "LICENSE_GPLv2.txt" for details.
-%
-% @TAG(GD_GPL)
+% SPDX-License-Identifier: GPL-2.0-only
 %
 FIXME ARMHYP LICENSE UPDATE?
 
@@ -18,7 +14,7 @@ hypervisor extensions on ARM.
 
 \end{impdetails}
 
-> module SEL4.Object.VCPU.ARM(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, dissociateVCPUTCB, vgicMaintenance) where
+> module SEL4.Object.VCPU.ARM(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, dissociateVCPUTCB, vgicMaintenance, vppiEvent, irqVPPIEventIndex) where
 
 \begin{impdetails}
 
@@ -27,7 +23,7 @@ hypervisor extensions on ARM.
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.Object.Structures.TARGET
-> import SEL4.Machine.Hardware.ARM hiding (MachineMonad)
+> import SEL4.Machine.Hardware.ARM hiding (MachineMonad, IRQ, maskInterrupt)
 > import SEL4.Model.StateData.TARGET
 > import SEL4.API.Failures
 > import SEL4.Object.Instances()
@@ -38,12 +34,14 @@ hypervisor extensions on ARM.
 > import SEL4.API.Types
 > import SEL4.API.InvocationLabels
 > import SEL4.API.Failures.TARGET
+> import SEL4.Machine.Hardware.ARM.PLATFORM (irqVTimerEvent)
 > import {-# SOURCE #-} SEL4.Kernel.FaultHandler
 > import {-# SOURCE #-} SEL4.Object.TCB
 > import {-# SOURCE #-} SEL4.Kernel.Thread
+> import {-# SOURCE #-} SEL4.Object.Interrupt
 
 > import Data.Bits hiding (countTrailingZeros)
-> import Data.Word(Word8, Word16, Word32)
+> import Data.Word(Word8, Word16, Word32, Word64)
 > import Data.Array
 > import Data.Maybe
 
@@ -265,6 +263,24 @@ it is the value that is stored inside of lr in the vgic
 >       else vgicUpdateLR vcpuPtr index virq
 >     return []
 
+\subsection{VCPU: acknowledge VPPI}
+
+> decodeVCPUAckVPPI :: [Word] -> ArchCapability ->
+>         KernelF SyscallError ArchInv.Invocation
+> decodeVCPUAckVPPI (mr0:_) cap@(VCPUCap {}) = do
+>     let vcpuPtr = capVCPUPtr cap
+>     rangeCheck mr0 (fromEnum minIRQ) (fromEnum maxIRQ)
+>     let irq = toEnum (fromIntegral mr0) :: IRQ
+>     case irqVPPIEventIndex irq of
+>         Nothing -> throw $ InvalidArgument 0
+>         Just vppi -> return $ InvokeVCPU $ VCPUAckVPPI vcpuPtr vppi
+> decodeVCPUAckVPPI _ _ = throw TruncatedMessage
+
+> invokeVCPUAckVPPI :: PPtr VCPU -> VPPIEventIRQ -> Kernel [Word]
+> invokeVCPUAckVPPI vcpuPtr vppi = do
+>     vcpuUpdate vcpuPtr (\vcpu -> vcpu { vcpuVPPIMasked = f (vcpuVPPIMasked vcpu) })
+>     return []
+>     where f = (\masked -> masked // [(vppi, False)])
 
 \subsection{VCPU: perform and decode main functions}
 
@@ -277,6 +293,8 @@ it is the value that is stored inside of lr in the vgic
 >     invokeVCPUWriteReg vcpuPtr reg val
 > performARMVCPUInvocation (VCPUInjectIRQ vcpuPtr index virq) =
 >     invokeVCPUInjectIRQ vcpuPtr index virq
+> performARMVCPUInvocation (VCPUAckVPPI vcpuPtr vppi) =
+>     invokeVCPUAckVPPI vcpuPtr vppi
 
 > decodeARMVCPUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
@@ -291,6 +309,8 @@ it is the value that is stored inside of lr in the vgic
 >             decodeVCPUWriteReg args cap
 >         ArchInvocationLabel ARMVCPUInjectIRQ ->
 >             decodeVCPUInjectIRQ args cap
+>         ArchInvocationLabel ARMVCPUAckVPPI ->
+>             decodeVCPUAckVPPI args cap
 >         _ -> throw IllegalOperation
 > decodeARMVCPUInvocation _ _ _ _ _ _ = throw IllegalOperation
 
@@ -307,6 +327,41 @@ For initialisation, see makeVCPUObject.
 
 \subsection{VCPU State Control}
 
+> saveVirtTimer :: PPtr VCPU -> Kernel ()
+> saveVirtTimer vcpuPtr = do
+>     vcpuSaveReg vcpuPtr VCPURegCNTV_CTL
+>     doMachineOp $ writeVCPUHardwareReg VCPURegCNTV_CTL 0
+>     cval <- doMachineOp get_cntv_cval_64
+>     cntvoff <- doMachineOp get_cntv_off_64
+>     vcpuWriteReg vcpuPtr VCPURegCNTV_CVALhigh (fromIntegral $ cval `shiftR` 32)
+>     vcpuWriteReg vcpuPtr VCPURegCNTV_CVALlow (fromIntegral cval)
+>     vcpuWriteReg vcpuPtr VCPURegCNTVOFFhigh (fromIntegral $ cntvoff `shiftR` 32)
+>     vcpuWriteReg vcpuPtr VCPURegCNTVOFFlow (fromIntegral cntvoff)
+>     cntpct <- doMachineOp read_cntpct
+>     vcpuUpdate vcpuPtr (\vcpu -> vcpu { vcpuVTimer = VirtTimer cntpct })
+
+> restoreVirtTimer :: PPtr VCPU -> Kernel ()
+> restoreVirtTimer vcpuPtr = do
+>     cvalHigh <- vcpuReadReg vcpuPtr VCPURegCNTV_CVALhigh
+>     cvalLow <- vcpuReadReg vcpuPtr VCPURegCNTV_CVALlow
+>     let cval = ((fromIntegral cvalHigh :: Word64) `shiftL` 32) .|. (fromIntegral cvalLow :: Word64)
+>     doMachineOp $ set_cntv_cval_64 cval
+>     current_cntpct <- doMachineOp read_cntpct
+>     vcpu <- getObject vcpuPtr
+>     let lastPCount =  vtimerLastPCount (vcpuVTimer vcpu)
+>     let pcountDelta = current_cntpct - lastPCount
+>     offsetHigh <- vcpuReadReg vcpuPtr VCPURegCNTVOFFhigh
+>     offsetLow <- vcpuReadReg vcpuPtr VCPURegCNTVOFFlow
+>     let offset = (((fromIntegral offsetHigh :: Word64) `shiftL` 32) .|. (fromIntegral offsetLow :: Word64)) + pcountDelta
+>     vcpuWriteReg vcpuPtr VCPURegCNTVOFFhigh (fromIntegral $ offset `shiftR` 32)
+>     vcpuWriteReg vcpuPtr VCPURegCNTVOFFlow (fromIntegral offset)
+>     doMachineOp $ set_cntv_off_64 offset
+>     let vppi = fromJust $ irqVPPIEventIndex (IRQ irqVTimerEvent)
+>     let masked = (vcpuVPPIMasked vcpu) ! vppi
+>     safeToUnmask <- isIRQActive (IRQ irqVTimerEvent)
+>     when safeToUnmask $ doMachineOp $ maskInterrupt masked (IRQ irqVTimerEvent)
+>     vcpuRestoreReg vcpuPtr VCPURegCNTV_CTL
+
 > vcpuEnable :: PPtr VCPU -> Kernel ()
 > vcpuEnable vcpuPtr = do
 >     vcpuRestoreReg vcpuPtr VCPURegSCTLR
@@ -316,6 +371,7 @@ For initialisation, see makeVCPUObject.
 >         setHCR hcrVCPU
 >         isb
 >         set_gic_vcpu_ctrl_hcr (vgicHCR . vcpuVGIC $ vcpu)
+>     restoreVirtTimer vcpuPtr
 
 > vcpuDisable :: Maybe (PPtr VCPU) -> Kernel ()
 > vcpuDisable vcpuPtrOpt = do
@@ -337,6 +393,17 @@ For initialisation, see makeVCPUObject.
 >         setSCTLR sctlrDefault -- S1 MMU off
 >         setHCR hcrNative
 >         isb
+>
+>     case vcpuPtrOpt of
+>         Just vcpuPtr -> do
+>             saveVirtTimer vcpuPtr
+>             doMachineOp $ maskInterrupt True (IRQ irqVTimerEvent)
+>         Nothing -> return ()
+
+> armvVCPUSave :: PPtr VCPU -> Bool -> Kernel ()
+> armvVCPUSave vcpuPtr active = do
+>     vcpuSaveRegRange vcpuPtr VCPURegACTLR VCPURegSPSRfiq
+>     doMachineOp isb
 
 > vcpuSave :: Maybe (PPtr VCPU, Bool) -> Kernel ()
 > vcpuSave (Just (vcpuPtr, active)) = do
@@ -347,6 +414,7 @@ For initialisation, see makeVCPUObject.
 >           vcpuSaveReg vcpuPtr VCPURegSCTLR
 >           hcr <- doMachineOp get_gic_vcpu_ctrl_hcr
 >           vgicUpdate vcpuPtr (\vgic -> vgic { vgicHCR = hcr })
+>           saveVirtTimer vcpuPtr
 >
 >     vmcr <- doMachineOp get_gic_vcpu_ctrl_vmcr
 >     vgicUpdate vcpuPtr (\vgic -> vgic { vgicVMCR = vmcr })
@@ -360,8 +428,7 @@ For initialisation, see makeVCPUObject.
 >           val <- doMachineOp $ get_gic_vcpu_ctrl_lr (fromIntegral vreg)
 >           vgicUpdateLR vcpuPtr (fromIntegral vreg) val) gicIndices
 >
->     vcpuSaveRegRange vcpuPtr VCPURegACTLR VCPURegSPSRfiq
->     doMachineOp isb
+>     armvVCPUSave vcpuPtr active
 >
 > vcpuSave _ = fail "vcpuSave: no VCPU to save"
 
@@ -432,44 +499,64 @@ For initialisation, see makeVCPUObject.
 
 > vgicMaintenance :: Kernel ()
 > vgicMaintenance = do
->     ct <- gets ksCurThread
->     runnable <- isRunnable ct
->     when runnable $ do
->       eisr0 <- doMachineOp $ get_gic_vcpu_ctrl_eisr0
->       eisr1 <- doMachineOp $ get_gic_vcpu_ctrl_eisr1
->       flags <- doMachineOp $ get_gic_vcpu_ctrl_misr
->       let vgic_misr_eoi = 1 -- defined to be VGIC_HCR_EN
->       let irq_idx = irqIndex eisr0 eisr1
+>     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+>     -- ignore event unless current VCPU active
+>     case hsCurVCPU of
+>         Just (vcpuPtr, True) -> do
+>             eisr0 <- doMachineOp $ get_gic_vcpu_ctrl_eisr0
+>             eisr1 <- doMachineOp $ get_gic_vcpu_ctrl_eisr1
+>             flags <- doMachineOp $ get_gic_vcpu_ctrl_misr
+>             let vgic_misr_eoi = 1 -- defined to be VGIC_HCR_EN
+>             let irq_idx = irqIndex eisr0 eisr1
 >
->       gic_vcpu_num_list_regs <- gets (armKSGICVCPUNumListRegs . ksArchState)
->       fault <-
->           if (flags .&. vgic_misr_eoi /= 0)
->           then
->               if (eisr0 == 0 && eisr1 == 0 ||
->                   irq_idx >= gic_vcpu_num_list_regs) -- irq_idx invalid
->                   then return $ VGICMaintenance Nothing
->                   else (do
->                       setIndex irq_idx
->                       return $ VGICMaintenance $ Just $ fromIntegral irq_idx
->                       )
->           else return $ VGICMaintenance Nothing
+>             gic_vcpu_num_list_regs <- gets (armKSGICVCPUNumListRegs . ksArchState)
+>             fault <-
+>                 if (flags .&. vgic_misr_eoi /= 0)
+>                 then
+>                     if (eisr0 == 0 && eisr1 == 0 ||
+>                         irq_idx >= gic_vcpu_num_list_regs) -- irq_idx invalid
+>                         then return $ VGICMaintenance Nothing
+>                         else (do
+>                             setIndex vcpuPtr irq_idx
+>                             return $ VGICMaintenance $ Just $ fromIntegral irq_idx
+>                             )
+>                 else return $ VGICMaintenance Nothing
 >
->       ct <- getCurThread
->       handleFault ct $ ArchFault fault
->
+>             curThread <- getCurThread
+>             runnable <- isRunnable curThread
+>             when runnable $ handleFault curThread $ ArchFault fault
+>         _ -> return ()
 >     where
 >         irqIndex eisr0 eisr1 =
 >             if eisr0 /= 0 then countTrailingZeros eisr0
 >                           else (countTrailingZeros eisr1) + 32
->         setIndex irq_idx = (do
+>         setIndex vcpuPtr irq_idx = (do
 >                 virq <- doMachineOp $ get_gic_vcpu_ctrl_lr (fromIntegral irq_idx)
 >                 virqen <- return $ virqSetEOIIRQEN virq 0
 >                 doMachineOp $ set_gic_vcpu_ctrl_lr (fromIntegral irq_idx) virqen
->                 hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
->                 case hsCurVCPU of
->                     Just (vcpuPtr, True) -> vgicUpdateLR vcpuPtr irq_idx virqen
->                     _ -> return ()
+>                 vgicUpdateLR vcpuPtr irq_idx virqen
 >                 )
+
+\subsection{VPPI Events}
+
+> irqVPPIEventIndex :: IRQ -> Maybe VPPIEventIRQ
+> irqVPPIEventIndex irq =
+>     if irq == IRQ irqVTimerEvent then Just VPPIEventIRQ_VTimer
+>                                  else Nothing
+
+> vppiEvent :: IRQ -> Kernel ()
+> vppiEvent irq = do
+>     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+>     case hsCurVCPU of
+>         Just (vcpuPtr, True) -> do
+>             doMachineOp $ maskInterrupt True irq
+>             let vppi = fromJust $ irqVPPIEventIndex irq
+>             vcpuUpdate vcpuPtr
+>                        (\vcpu -> vcpu{ vcpuVPPIMasked = vcpuVPPIMasked vcpu // [(vppi, True)] })
+>             curThread <- getCurThread
+>             runnable <- isRunnable curThread
+>             when runnable $ handleFault curThread $ ArchFault $ VPPIEvent irq
+>         _ -> return ()
 
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Arch_C
@@ -2712,124 +2708,135 @@ lemma decodeARMFrameInvocation_ccorres:
                     if_cong invocation_label.case_cong arch_invocation_label.case_cong list.case_cong)
 
    apply (rule ccorres_Cond_rhs[rotated])+
-         apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-        apply (rule ccorres_equals_throwError)
-         apply (fastforce simp: throwError_bind invocationCatch_def
+       apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+       apply (rule ccorres_equals_throwError)
+        apply (fastforce simp: throwError_bind invocationCatch_def
                         split: invocation_label.split arch_invocation_label.split)
-        apply (rule syscall_error_throwError_ccorres_n)
-        apply (simp add: syscall_error_to_H_cases)
-       apply (simp add: returnOk_bind bindE_assoc performARMMMUInvocations)
-       apply (rule ccorres_rhs_assoc)+
-       apply (ctac add: setThreadState_ccorres)
-         apply csymbr
-         apply (ctac(no_vcg) add: performPageGetAddress_ccorres)
-           apply (rule ccorres_alternative2)
-           apply (rule ccorres_return_CE, simp+)[1]
-          apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-         apply wp+
-       apply (vcg exspec=setThreadState_modifies)
+       apply (rule syscall_error_throwError_ccorres_n)
+       apply (simp add: syscall_error_to_H_cases)
+      apply (simp add: returnOk_bind bindE_assoc performARMMMUInvocations)
       apply (rule ccorres_rhs_assoc)+
-      apply csymbr+
-      apply (simp add: ivc_label_flush_case decodeARMPageFlush_def
-                       list_case_If2 if3_fold2
-                  del: Collect_const
-                 cong: StateSpace.state.fold_congs globals.fold_congs
-                      if_cong invocation_label.case_cong arch_invocation_label.case_cong list.case_cong)
-      apply (simp add: split_def case_option_If2 if_to_top_of_bind
-                  del: Collect_const cong: if_cong invocation_label.case_cong arch_invocation_label.case_cong)
-      apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
-         apply vcg
+      apply (ctac add: setThreadState_ccorres)
+        apply csymbr
+        apply (ctac(no_vcg) add: performPageGetAddress_ccorres)
+          apply (rule ccorres_alternative2)
+          apply (rule ccorres_return_CE, simp+)[1]
+         apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+        apply wp+
+      apply (vcg exspec=setThreadState_modifies)
+     apply (rule ccorres_rhs_assoc)+
+     apply csymbr+
+     apply (simp add: ivc_label_flush_case decodeARMPageFlush_def
+                      list_case_If2 if3_fold2
+                 del: Collect_const
+                cong: StateSpace.state.fold_congs globals.fold_congs
+                      if_cong invocation_label.case_cong arch_invocation_label.case_cong
+                      list.case_cong)
+     apply (simp add: split_def case_option_If2 if_to_top_of_bind
+                 del: Collect_const cong: if_cong invocation_label.case_cong arch_invocation_label.case_cong)
+     apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+        apply vcg
 
 
-        apply (clarsimp simp:list_length_less )
-        apply (drule unat_less_iff[where c=2])
-         apply (simp add:word_bits_def)
-        apply simp
-       apply (simp add: throwError_bind invocationCatch_def)
-       apply (rule syscall_error_throwError_ccorres_n)
-       apply (simp add: syscall_error_to_H_cases)
-      apply csymbr
-      apply csymbr
-      apply csymbr
-      apply (rule ccorres_if_cond_throws2[rotated -1,where Q = \<top> and Q' = \<top>])
-         apply vcg
-        apply (clarsimp)
-        apply (frule ccap_relation_mapped_asid_0)
-        apply fastforce
-       apply (simp add: throwError_bind invocationCatch_def)
-       apply (rule syscall_error_throwError_ccorres_n)
-       apply (simp add: syscall_error_to_H_cases)
-      apply (simp add: invocationCatch_use_injection_handler
-                       injection_bindE[OF refl refl] bindE_assoc
-                       injection_handler_returnOk injection_handler_whenE
-                       lookupError_injection)
-      apply (ctac add: ccorres_injection_handler_csum1
-                            [OF ccorres_injection_handler_csum1,
-                             OF findPDForASID_ccorres])
-         apply (rule ccorres_if_cond_throws
-           [where P = False and Q = \<top> and Q'=\<top>
-           ,simplified])
-           apply simp
-          apply (rule ccorres_add_return)
-          apply (ctac add: getSyscallArg_ccorres_foo
-            [where args=args and n=0 and buffer=buffer])
-            apply (rule ccorres_add_return)
-            apply (ctac add: getSyscallArg_ccorres_foo
-              [where args = args and n = 1 and buffer = buffer])
-              apply (simp only:if_to_top_of_bindE)
-              apply (rule ccorres_if_cond_throws[rotated -1,where Q = \<top> and Q' = \<top>])
-                 apply vcg
-                apply (clarsimp simp:hd_drop_conv_nth hd_conv_nth)
-               apply (simp add:injection_handler_throwError)
-               apply (rule syscall_error_throwError_ccorres_n)
-               apply (simp add: syscall_error_to_H_cases)
-              apply (simp only:returnOk_bindE)
-              apply csymbr
-              apply csymbr
-              apply (rule ccorres_Guard_Seq)
-              apply csymbr
-              apply csymbr
-              apply csymbr
-              apply (rule ccorres_if_cond_throws[rotated -1,where Q = \<top> and Q' = \<top>])
-                 apply vcg
-                apply (clarsimp simp:hd_drop_conv_nth hd_conv_nth)
-                apply (clarsimp dest!: ccap_relation_PageCap_generics)
-               apply (simp add:injection_handler_throwError)
-               apply (rule syscall_error_throwError_ccorres_n)
-               apply (simp add: syscall_error_to_H_cases)
-              apply csymbr
-              apply csymbr
-              apply csymbr
-              apply (simp add: performARMMMUInvocations bindE_assoc)
-              apply (ctac add: setThreadState_ccorres)
-                apply (ctac(no_vcg) add: performPageFlush_ccorres)
-                  apply (rule ccorres_alternative2)
-                  apply (rule ccorres_return_CE, simp+)[1]
-                 apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-                apply wp
-               apply simp
-               apply (strengthen unat_sub_le_strg[where v="2 ^ pageBitsForSize (capVPSize cp)"])
-               apply (simp add: linorder_not_less linorder_not_le order_less_imp_le)
-               apply (wp sts_invs_minor')
+       apply (clarsimp simp:list_length_less )
+       apply (drule unat_less_iff[where c=2])
+        apply (simp add:word_bits_def)
+       apply simp
+      apply (simp add: throwError_bind invocationCatch_def)
+      apply (rule syscall_error_throwError_ccorres_n)
+      apply (simp add: syscall_error_to_H_cases)
+     apply csymbr
+     apply csymbr
+     apply csymbr
+     apply (rule ccorres_if_cond_throws2[rotated -1,where Q = \<top> and Q' = \<top>])
+        apply vcg
+       apply (clarsimp)
+       apply (frule ccap_relation_mapped_asid_0)
+       apply fastforce
+      apply (simp add: throwError_bind invocationCatch_def)
+      apply (rule syscall_error_throwError_ccorres_n)
+      apply (simp add: syscall_error_to_H_cases)
+     apply (simp add: invocationCatch_use_injection_handler
+                      injection_bindE[OF refl refl] bindE_assoc
+                      injection_handler_returnOk injection_handler_whenE
+                      lookupError_injection)
+     apply (ctac add: ccorres_injection_handler_csum1
+                           [OF ccorres_injection_handler_csum1,
+                            OF findPDForASID_ccorres])
+        apply (rule ccorres_if_cond_throws
+          [where P = False and Q = \<top> and Q'=\<top>
+          ,simplified])
+          apply simp
+         apply (rule ccorres_add_return)
+         apply (ctac add: getSyscallArg_ccorres_foo
+           [where args=args and n=0 and buffer=buffer])
+           apply (rule ccorres_add_return)
+           apply (ctac add: getSyscallArg_ccorres_foo
+             [where args = args and n = 1 and buffer = buffer])
+             apply (simp only:if_to_top_of_bindE)
+             apply (rule ccorres_if_cond_throws[rotated -1,where Q = \<top> and Q' = \<top>])
+                apply vcg
+               apply (clarsimp simp:hd_drop_conv_nth hd_conv_nth)
+              apply (simp add:injection_handler_throwError)
+              apply (rule syscall_error_throwError_ccorres_n)
+              apply (simp add: syscall_error_to_H_cases)
+             apply (simp only:returnOk_bindE)
+             apply csymbr
+             apply csymbr
+             apply (rule ccorres_Guard_Seq)
+             apply csymbr
+             apply csymbr
+             apply csymbr
+             apply (rule ccorres_if_cond_throws[rotated -1,where Q = \<top> and Q' = \<top>])
+                apply vcg
+               apply (clarsimp simp:hd_drop_conv_nth hd_conv_nth)
+               apply (clarsimp dest!: ccap_relation_PageCap_generics)
+              apply (simp add:injection_handler_throwError)
+              apply (rule syscall_error_throwError_ccorres_n)
+              apply (simp add: syscall_error_to_H_cases)
+             apply csymbr
+             apply csymbr
+             apply csymbr
+
+             apply (rule ccorres_if_cond_throws[rotated -1,where Q = \<top> and Q' = \<top>])
+                apply vcg
+               apply (clarsimp simp: paddrTop_def ARM_HYP.paddrTop_def pptrTop_def fromPAddr_def
+                                     physBase_def ARM_HYP.physBase_def ARM_HYP.kernelBase_def
+                                     hd_drop_conv_nth hd_conv_nth)
+               apply (clarsimp dest!: ccap_relation_PageCap_generics)
+              apply (simp add:injection_handler_throwError)
+              apply (rule syscall_error_throwError_ccorres_n)
+              apply (simp add: syscall_error_to_H_cases)
+             apply (simp add: performARMMMUInvocations bindE_assoc)
+             apply (ctac add: setThreadState_ccorres)
+               apply (ctac(no_vcg) add: performPageFlush_ccorres)
+                 apply (rule ccorres_alternative2)
+                 apply (rule ccorres_return_CE, simp+)[1]
+                apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+               apply wp
               apply simp
-              apply (vcg exspec=setThreadState_modifies)
+              apply (strengthen unat_sub_le_strg[where v="2 ^ pageBitsForSize (capVPSize cp)"])
+              apply (simp add: linorder_not_less linorder_not_le order_less_imp_le)
+              apply (wp sts_invs_minor')
              apply simp
-             apply wp
-            apply vcg
-           apply wp
-          apply vcg
+             apply (vcg exspec=setThreadState_modifies)
+            apply simp
+            apply wp
+           apply vcg
+          apply wp
          apply vcg
-        apply simp
-        apply (rule_tac P'="{s. pd___struct_findPDForASID_ret_C = errstate s}"
-                    in ccorres_from_vcg_split_throws[where P=\<top>])
-         apply vcg
-        apply (rule conseqPre, vcg)
-        apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
-                              syscall_error_to_H_cases exception_defs false_def)
-        apply (erule lookup_failure_rel_fault_lift[rotated])
-        apply (simp add: exception_defs)
-       apply (wp injection_wp[OF refl])
-      apply simp
+        apply vcg
+       apply simp
+       apply (rule_tac P'="{s. pd___struct_findPDForASID_ret_C = errstate s}"
+                   in ccorres_from_vcg_split_throws[where P=\<top>])
+        apply vcg
+       apply (rule conseqPre, vcg)
+       apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
+                             syscall_error_to_H_cases exception_defs false_def)
+       apply (erule lookup_failure_rel_fault_lift[rotated])
+       apply (simp add: exception_defs)
+      apply (wp injection_wp[OF refl])
+     apply simp
       apply (vcg exspec=findPDForASID_modifies)
 
 \<comment> \<open>ARMPageUnmap\<close>
@@ -4411,29 +4418,6 @@ lemma writeVCPUReg_ccorres:
   apply fastforce
   done
 
-lemma vcpu_read_reg_ccorres:
-  "ccorres (=) ret__unsigned_long_' \<top>
-       (UNIV \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace> \<inter> \<lbrace> \<acute>reg = of_nat (fromEnum reg) \<rbrace>) hs
-     (vcpuReadReg vcpuptr reg)
-     (Call vcpu_read_reg_'proc)"
-  supply Collect_const[simp del]
-  apply (cinit lift: vcpu_' reg_')
-   apply (rule ccorres_assert)
-   apply clarsimp
-   apply (rule ccorres_cond_false_seq, simp)
-   apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-   apply (rule ccorres_move_const_guards)
-   apply ccorres_rewrite
-   apply (rule ccorres_move_c_guard_vcpu)
-   apply (rule ccorres_return_C; clarsimp)
-  apply (clarsimp simp: vcpu_at_ko'_eq)
-
-  using maxBound_is_bound[of reg, simplified fromEnum_maxBound_vcpureg_def]
-  apply (clarsimp simp: seL4_VCPUReg_Num_def not_le word_less_nat_alt)
-  apply (fastforce elim: allE[where x=reg]
-                   simp: cvcpu_relation_def cvcpu_regs_relation_def typ_heap_simps' )
-  done
-
 lemma readVCPUReg_ccorres:
   notes Collect_const[simp del] dc_simp[simp del]
   shows
@@ -5151,6 +5135,156 @@ lemma decodeVCPUSetTCB_ccorres:
                   dest!: interpret_excaps_eq)[1]
 done
 
+lemma invokeVCPUAckVPPI_ccorres:
+  notes Collect_const[simp del] dc_simp[simp del]
+  shows
+  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and vcpu_at' vcpuptr)
+       (UNIV \<inter> \<lbrace>\<acute>vcpu = Ptr vcpuptr \<rbrace>
+             \<inter> \<lbrace> unat \<acute>vppi = fromEnum vppi \<rbrace>)
+       hs
+       (liftE (invokeVCPUAckVPPI vcpuptr vppi))
+       (Call invokeVCPUAckVPPI_'proc)"
+  apply (cinit' lift: vcpu_' vppi_' simp: liftE_liftM)
+   apply (simp add: invokeVCPUAckVPPI_def)
+   apply (rule ccorres_move_const_guards)
+   apply (rule ccorres_move_c_guard_vcpu)
+   apply (simp add: false_def)
+   apply (ctac (no_vcg) add: vcpuVPPIMasked_update_ccorres[
+                               where v=False, simplified false_def from_bool_def,
+                               simplified])
+     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+     apply (rule allI, rule conseqPre, vcg)
+     apply (clarsimp simp: return_def dc_def)
+    apply wpsimp+
+  apply (case_tac vppi, simp add: fromEnum_def enum_vppievent_irq flip: word_unat.Rep_inject)
+  done
+
+lemma unat_of_nat_fromEnum_vppievent_irq[simp]:
+  "unat (of_nat (fromEnum (vppi :: vppievent_irq)) :: machine_word) = fromEnum vppi"
+  by (cases vppi, clarsimp simp: fromEnum_def enum_vppievent_irq)
+
+lemma liftE_invokeVCPUAckVPPI_empty_return:
+  "liftE (invokeVCPUAckVPPI vcpu val) >>=E (\<lambda>rv. m rv)
+    = liftE (invokeVCPUAckVPPI vcpu val) >>=E (\<lambda>_. m [])"
+  unfolding invokeVCPUAckVPPI_def
+  by (clarsimp simp: liftE_bindE bind_assoc)
+
+lemma decodeVCPUAckVPPI_ccorres:
+  notes if_cong[cong] Collect_const[simp del]
+  shows
+  "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
+              and sysargs_rel args buffer
+              and (valid_cap' (ArchObjectCap cp))
+              and K (isVCPUCap cp))
+       (UNIV \<inter> {s. unat (length_' s) = length args}
+             \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
+             \<inter> {s. buffer_' s = option_to_ptr buffer}
+             ) hs
+       (decodeVCPUAckVPPI args cp
+              >>= invocationCatch thread isBlocking isCall InvokeArchObject)
+       (Call decodeVCPUAckVPPI_'proc)"
+proof -
+
+  have ucast_scast_invalid[simp]:
+    "UCAST(32 signed \<rightarrow> 32) VPPIEventIRQ_invalid = SCAST(32 signed \<rightarrow> 32) VPPIEventIRQ_invalid"
+    by (simp flip: word_unat.Rep_inject add: VPPIEventIRQ_invalid_def)
+
+  have irqVPPIEventIndex_not_invalid:
+    "\<And>vppi. irqVPPIEventIndex (UCAST(32 \<rightarrow> 10) (args ! 0)) = Some vppi
+            \<Longrightarrow> of_nat (fromEnum vppi) \<noteq> SCAST(32 signed \<rightarrow> 32) VPPIEventIRQ_invalid"
+    by (clarsimp simp: irqVPPIEventIndex_def VPPIEventIRQ_invalid_def IRQ_def
+                       fromEnum_def enum_vppievent_irq
+                 split: if_splits)
+
+  show ?thesis
+    apply (rule ccorres_grab_asm)
+    apply (cinit' lift: length_' cap_' buffer_')
+     apply (clarsimp simp: decodeVCPUAckVPPI_def)
+     apply (csymbr, rename_tac cp')
+     apply csymbr
+     apply (rule ccorres_Cond_rhs_Seq ; clarsimp)
+      apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
+                  cong: StateSpace.state.fold_congs globals.fold_congs)
+      apply (rule syscall_error_throwError_ccorres_n)
+      apply (simp add: syscall_error_to_H_cases)
+     apply (rule_tac ccorres_gen_asm[where P="args \<noteq> []"], simp add: Let_def)
+     apply (rule ccorres_add_return)
+     apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
+       apply csymbr
+       (* isolate checkIRQ for ctac by using injection_handler *)
+       apply (fold checkIRQ_def[simplified])
+       apply (simp add: invocationCatch_use_injection_handler)
+       apply (simp add: split_def invocationCatch_use_injection_handler
+                                      injection_handler_bindE bindE_assoc)
+       apply (ctac add: ccorres_injection_handler_csum1[OF Arch_checkIRQ_ccorres]; clarsimp)
+          apply ccorres_rewrite
+          apply (prop_tac "toEnum (unat (args ! 0)) = UCAST(32 \<rightarrow> 10) (args ! 0)")
+           apply (fastforce simp: Kernel_C.maxIRQ_def word_le_nat_alt ucast_nat_def)
+          apply csymbr
+          apply clarsimp
+          (* simplify outcome of irqVPPIEventIndex_'proc *)
+          apply (rule_tac Q=\<top> and Q'=UNIV
+                   and C'="{s. irqVPPIEventIndex (UCAST(32 \<rightarrow> 10) (args ! 0)) = None}"
+                   in ccorres_rewrite_cond_sr_Seq)
+           apply (solves \<open>clarsimp simp: irqVPPIEventIndex_not_invalid split: option.splits\<close>)
+
+          apply (rule ccorres_Cond_rhs_Seq)
+           apply (clarsimp simp: irqVPPIEventIndex_not_invalid; ccorres_rewrite)
+           apply (simp add: throwError_bind invocationCatch_def whenE_def injection_handler_throwError)
+           apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
+                      cong: StateSpace.state.fold_congs globals.fold_congs)
+           apply (rule syscall_error_throwError_ccorres_n[simplified dc_def id_def])
+           apply (solves \<open>simp add: syscall_error_to_H_cases\<close>)
+
+          apply (clarsimp simp: irqVPPIEventIndex_not_invalid; ccorres_rewrite)
+          apply (simp add: injection_handler_returnOk ccorres_invocationCatch_Inr bindE_assoc)
+          apply (ctac add: setThreadState_ccorres)
+            apply (simp add: injection_handler_returnOk ccorres_invocationCatch_Inr
+                             performInvocation_def ARM_HYP_H.performInvocation_def
+                             performARMVCPUInvocation_def bindE_assoc)
+            \<comment> \<open>we want the second alternative - nothing to return to user\<close>
+            apply (subst liftE_invokeVCPUAckVPPI_empty_return, clarsimp)
+            apply (ctac add: invokeVCPUAckVPPI_ccorres)
+               apply (rule ccorres_alternative2)
+               apply (rule ccorres_return_CE, simp+)[1]
+              apply (rule ccorres_return_C_errorE; solves simp)
+             apply wpsimp+
+            apply (vcg exspec=invokeVCPUAckVPPI_modifies)
+           apply (wpsimp wp: sts_invs_minor' ct_in_state'_set)
+          apply clarsimp
+          apply (vcg exspec=setThreadState_modifies)
+         apply (ccorres_rewrite)
+         apply (rule ccorres_return_C_errorE, simp+)[1]
+        apply (wpsimp wp: injection_wp_E[OF refl] checkIRQ_ret_good)
+       apply clarsimp
+       apply (vcg exspec=Arch_checkIRQ_modifies)
+      apply wpsimp
+     apply (vcg exspec=getSyscallArg_modifies)
+
+    apply (clarsimp simp: cap_get_tag_isCap)
+    apply (cases args; clarsimp simp: unat_eq_0)
+    apply (rule conjI)
+     (* Haskell side *)
+     apply (clarsimp simp: excaps_in_mem_def slotcap_in_mem_def isCap_simps ctes_of_cte_at)
+     apply (clarsimp simp: word_le_nat_alt conj_commute
+                           invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                           rf_sr_ksCurThread msgRegisters_unfold
+                           valid_tcb_state'_def ThreadState_Restart_def mask_def
+                           valid_cap'_def ct_in_state'_def sysargs_rel_to_n st_tcb_at'_def comp_def
+                           runnable'_eq)
+     apply (fastforce elim: obj_at'_weakenE)
+    (* C side *)
+    apply (clarsimp simp: word_le_nat_alt conj_commute
+                          invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                          rf_sr_ksCurThread msgRegisters_unfold
+                          valid_tcb_state'_def ThreadState_Restart_def Kernel_C.maxIRQ_def
+                          and_mask_eq_iff_le_mask capVCPUPtr_eq)
+    apply (clarsimp simp:  mask_def)
+    done
+qed
+
 lemma decodeARMVCPUInvocation_ccorres:
   notes if_cong[cong] Collect_const[simp del]
   shows
@@ -5197,6 +5331,11 @@ lemma decodeARMVCPUInvocation_ccorres:
     apply (simp add: invocation_eq_use_types)
     apply (rule ccorres_trim_returnE, simp+)
     apply (rule ccorres_call[OF decodeVCPUInjectIRQ_ccorres]; simp)
+
+   apply (rule ccorres_Cond_rhs)
+    apply (simp add: invocation_eq_use_types)
+    apply (rule ccorres_trim_returnE, simp+)
+    apply (rule ccorres_call[OF decodeVCPUAckVPPI_ccorres]; simp)
 
    \<comment> \<open>unknown (arch) invocation labels all throw IllegalOperation in line with the Haskell\<close>
     apply (rule ccorres_inst[where P=\<top> and P'=UNIV])

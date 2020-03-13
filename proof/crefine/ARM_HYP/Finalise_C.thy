@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Finalise_C
@@ -1866,7 +1862,7 @@ lemma setObject_vcpuTCB_updated_Basic_ccorres:
                                  cmachine_state_relation_def
                                  update_vcpu_map_tos)?)
   apply (erule cmap_relation_updI, erule ko_at_projectKO_opt, simp+)
-    apply (clarsimp simp add: cvcpu_relation_def
+    apply (clarsimp simp add: cvcpu_relation_def cvcpu_vppi_masked_relation_def
                               option_to_ctcb_ptr_def
                               cvcpu_regs_relation_def
                               Let_def vcpuSCTLR_def)
@@ -2907,6 +2903,36 @@ lemma finaliseCap_ccorres:
   apply (frule(1) ccap_relation_IRQHandler_mask)
   apply (clarsimp simp add:mask_eq_ucast_eq)
   done
-  end
+
+lemma checkIRQ_ret_good:
+  "\<lbrace>\<lambda>s. (irq \<le> scast Kernel_C.maxIRQ \<longrightarrow> P s) \<and> Q s\<rbrace> checkIRQ irq \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. Q\<rbrace>"
+  apply (clarsimp simp: checkIRQ_def rangeCheck_def maxIRQ_def minIRQ_def)
+  apply (rule hoare_pre,wp)
+  by (clarsimp simp: Kernel_C.maxIRQ_def split: if_split)
+
+lemma Arch_checkIRQ_ccorres:
+  "ccorres (syscall_error_rel \<currency> (\<lambda>r r'. irq \<le> scast Kernel_C.maxIRQ))
+           (liftxf errstate id undefined ret__unsigned_long_')
+   \<top> (UNIV \<inter> \<lbrace>irq = \<acute>irq_w___unsigned_long\<rbrace>) []
+   (checkIRQ irq) (Call Arch_checkIRQ_'proc)"
+  apply (cinit lift: irq_w___unsigned_long_' )
+   apply (simp add: rangeCheck_def unlessE_def ARM_HYP.minIRQ_def checkIRQ_def
+                    ucast_nat_def word_le_nat_alt[symmetric]
+                    linorder_not_le[symmetric] maxIRQ_def
+                    length_ineq_not_Nil hd_conv_nth cast_simps
+               del: Collect_const cong: call_ignore_cong)
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply (simp add: throwError_bind)
+    apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
+     apply vcg
+    apply (rule conseqPre, vcg)
+    apply (clarsimp simp: throwError_def return_def Kernel_C.maxIRQ_def
+                          exception_defs syscall_error_rel_def
+                          syscall_error_to_H_cases)
+   apply (clarsimp simp: Kernel_C.maxIRQ_def)
+   apply (rule ccorres_return_CE, simp+)
+  done
+
+end
 
 end

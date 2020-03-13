@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory IpcCancel_R
@@ -343,10 +339,6 @@ lemma ac_corres:
 lemma cte_map_tcb_2:
   "cte_map (t, tcb_cnode_index 2) = t + 2*2^cte_level_bits"
   by (simp add: cte_map_def tcb_cnode_index_def to_bl_1 shiftl_t2n)
-
-(* FIXME: Use one of these forms everywhere, rather than choosing at random. *)
-lemmas cte_index_repair = mult.commute[where a="(2::'a::len word) ^ cte_level_bits"]
-lemmas cte_index_repair_sym = cte_index_repair[symmetric]
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 

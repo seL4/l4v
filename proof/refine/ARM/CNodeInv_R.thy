@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -7546,12 +7542,6 @@ lemma cap_revoke_mdb_stuff1:
   apply (drule(1) subtree_first_step)
   apply clarsimp
   done
-
-(* FIXME: move *)
-lemma next_child_child_set:
-  "\<lbrakk>next_child slot (cdt_list s) = Some child; valid_list s\<rbrakk>
-    \<Longrightarrow> child \<in> (case next_child slot (cdt_list s) of None \<Rightarrow> {} | Some n \<Rightarrow> {n})"
-  by (simp add: next_child_def)
 
 lemma cap_revoke_mdb_stuff4:
   "\<lbrakk> (s, s') \<in> state_relation; cte_wp_at ((=) cap) p s;

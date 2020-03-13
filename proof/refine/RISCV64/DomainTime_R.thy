@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory DomainTime_R
@@ -18,10 +14,6 @@ text \<open>Preservation of domain time remaining over kernel invocations;
 \<close>
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-
-(* FIXME move to DetSchedDomainTime_AI *)
-crunch domain_list_inv[wp]: do_user_op "\<lambda>s. P (domain_list s)"
-  (wp: select_wp)
 
 (* abstract and haskell have identical domain list fields *)
 abbreviation

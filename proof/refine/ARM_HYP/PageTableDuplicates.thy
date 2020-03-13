@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory PageTableDuplicates
@@ -353,14 +349,6 @@ lemma page_table_at_pte_atD':
   apply (subst (asm) is_aligned_neg_mask_eq[where n = 3])
    apply (simp add: is_aligned_andI1)
   apply (simp add:mask_out_sub_mask)
-  done
-
-(* FIXME: word move *)
-lemma mask_out_first_mask_some_eq:
-  "\<lbrakk> x && ~~ mask n = y && ~~ mask n; n \<le> m \<rbrakk> \<Longrightarrow> x && ~~ mask m = y && ~~ mask m"
-  apply (rule word_eqI, rename_tac n')
-  apply (drule_tac x=n' in word_eqD)
-  apply (auto simp: word_ops_nth_size word_size)
   done
 
 lemma largePagePTEOffsets_bound:
@@ -2086,6 +2074,10 @@ lemma timerTick_valid_duplicates'[wp]:
 lemma vgicMaintenance_valid_duplicates'[wp]:
   "vgicMaintenance \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   unfolding vgicMaintenance_def Let_def by (wpsimp wp: hoare_drop_imps)
+
+lemma vppiEvent_valid_duplicates'[wp]:
+  "vppiEvent irq \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  unfolding vppiEvent_def Let_def by (wpsimp wp: hoare_drop_imps)
 
 lemma handleInterrupt_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>

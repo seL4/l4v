@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Interrupt_C
@@ -389,27 +385,6 @@ lemma unat_ucast_16_32:
   apply simp
   done
 
-lemma isIRQActive_ccorres:
-  "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_'
-        (\<lambda>s. irq \<le> scast Kernel_C.maxIRQ) (UNIV \<inter> {s. irq_' s = ucast irq}) []
-        (isIRQActive irq) (Call isIRQActive_'proc)"
-  apply (cinit lift: irq_')
-   apply (simp add: getIRQState_def getInterruptState_def)
-   apply (rule_tac P="irq \<le> ucast Kernel_C.maxIRQ \<and> unat irq < (192::nat)" in ccorres_gen_asm)
-   apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-   apply (rule allI, rule conseqPre, vcg)
-   apply (clarsimp simp: simpler_gets_def word_sless_msb_less maxIRQ_def
-                         word_less_nat_alt)
-   apply (clarsimp simp: order_le_less_trans unat_less_helper Kernel_C.IRQInactive_def
-                         Kernel_C.maxIRQ_def word_0_sle_from_less[OF order_less_le_trans, OF ucast_less])
-   apply (clarsimp simp: rf_sr_def cstate_relation_def Kernel_C.maxIRQ_def
-                         Let_def cinterrupt_relation_def)
-   apply (drule spec, drule(1) mp)
-   apply (case_tac "intStateIRQTable (ksInterruptState \<sigma>) irq")
-     apply (simp add: from_bool_def irq_state_defs Kernel_C.maxIRQ_def
-                      word_le_nat_alt)+
-  done
-
 lemma Platform_maxIRQ:
   "ARM_HYP.maxIRQ = scast Kernel_C.maxIRQ"
   by (simp add: ARM_HYP.maxIRQ_def Kernel_C.maxIRQ_def)
@@ -436,36 +411,6 @@ lemma decodeIRQ_arch_helper: "x \<noteq> IRQIssueIRQHandler \<Longrightarrow>
 lemma decodeIRQ_arch_helper': "x \<noteq> ArchInvocationLabel ARMIRQIssueIRQHandler \<Longrightarrow>
          (case x of ArchInvocationLabel ARMIRQIssueIRQHandler \<Rightarrow> f | _ \<Rightarrow> g) = g"
   by (clarsimp split: invocation_label.splits arch_invocation_label.splits)
-
-lemma Arch_checkIRQ_ccorres:
-  "ccorres (syscall_error_rel \<currency> (\<lambda>r r'. irq \<le> scast Kernel_C.maxIRQ))
-           (liftxf errstate id undefined ret__unsigned_long_')
-   \<top> (UNIV \<inter> \<lbrace>irq = \<acute>irq_w\<rbrace>) []
-   (checkIRQ irq) (Call Arch_checkIRQ_'proc)"
-  apply (cinit lift: irq_w_' )
-   apply (simp add: rangeCheck_def unlessE_def ARM_HYP.minIRQ_def checkIRQ_def
-                    ucast_nat_def word_le_nat_alt[symmetric]
-                    linorder_not_le[symmetric] Platform_maxIRQ
-                    length_ineq_not_Nil hd_conv_nth cast_simps
-               del: Collect_const cong: call_ignore_cong)
-   apply (rule ccorres_Cond_rhs_Seq)
-    apply (simp add: throwError_bind)
-    apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
-     apply vcg
-    apply (rule conseqPre, vcg)
-    apply (clarsimp simp: throwError_def return_def
-                          exception_defs syscall_error_rel_def
-                          syscall_error_to_H_cases)
-   apply clarsimp
-   apply (rule ccorres_return_CE, simp+)
-  done
-
-lemma checkIRQ_ret_good:
-  "\<lbrace>\<lambda>s. (irq \<le> scast Kernel_C.maxIRQ \<longrightarrow> P s) \<and> Q s\<rbrace> checkIRQ irq \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. Q\<rbrace>"
-  apply (clarsimp simp: checkIRQ_def rangeCheck_def Platform_maxIRQ minIRQ_def)
-  apply (rule hoare_pre,wp)
-  by (clarsimp simp: Kernel_C.maxIRQ_def split: if_split)
-
 
 lemma Arch_decodeIRQControlInvocation_ccorres:
   notes if_cong[cong]

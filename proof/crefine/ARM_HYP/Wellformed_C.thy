@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (* Wellformedness of caps, kernel objects, states on the C level
@@ -47,11 +43,13 @@ abbreviation
 abbreviation
   pd_Ptr :: "32 word \<Rightarrow> (pde_C[2048]) ptr" where "pd_Ptr == Ptr"
 abbreviation
-  regs_C_Ptr :: "addr \<Rightarrow> (machine_word_len word[40]) ptr" where "regs_C_Ptr \<equiv> Ptr"
+  regs_C_Ptr :: "addr \<Rightarrow> (machine_word_len word[43]) ptr" where "regs_C_Ptr \<equiv> Ptr"
 abbreviation
   vgic_lr_C_Ptr :: "addr \<Rightarrow> (virq_C[64]) ptr" where "vgic_lr_C_Ptr \<equiv> Ptr"
 abbreviation
   vgic_C_Ptr :: "addr \<Rightarrow> gicVCpuIface_C ptr" where "vgic_C_Ptr \<equiv> Ptr"
+abbreviation
+  vcpu_vppi_masked_C_Ptr :: "addr \<Rightarrow> (machine_word[1]) ptr" where "vcpu_vppi_masked_C_Ptr \<equiv> Ptr"
 (* FIXME might be useful on other platforms if not existing already *)
 abbreviation
   word_Ptr :: "addr \<Rightarrow> machine_word ptr" where "word_Ptr \<equiv> Ptr"

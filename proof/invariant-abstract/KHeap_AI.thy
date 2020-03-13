@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory KHeap_AI
@@ -192,16 +188,17 @@ lemma assert_get_tcb:
   "\<lbrace> P \<rbrace> gets_the (get_tcb t) \<lbrace> \<lambda>r. P and tcb_at t \<rbrace>"
   by (clarsimp simp: valid_def in_monad gets_the_def tcb_at_def)
 
+(* This rule is not always safe. However, we make it [wp] while we're only doing proofs that don't
+   involve extended state, and then remove it from [wp] in Deterministic_AI. *)
 lemma dxo_wp_weak[wp]:
-assumes xopv: "\<And>s f. P (trans_state f s) = P s"
-shows
-"\<lbrace>P\<rbrace> do_extended_op x \<lbrace>\<lambda>_. P\<rbrace>"
+  assumes xopv: "\<And>s f. P (trans_state f s) = P s"
+  shows "\<lbrace>P\<rbrace> do_extended_op x \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding do_extended_op_def
   apply (simp add: split_def)
   apply wp
   apply (clarsimp simp: mk_ef_def)
   apply (simp add: xopv[simplified trans_state_update'])
-done
+  done
 
 crunches set_thread_state
   for ct[wp]: "\<lambda>s. P (cur_thread s)"

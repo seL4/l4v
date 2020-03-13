@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -16,13 +12,6 @@ theory VSpace_R
 imports TcbAcc_R
 begin
 context Arch begin global_naming X64 (*FIXME: arch_split*)
-
-(* FIXME x64: move *)
-lemmas store_pde_typ_ats' [wp] = abs_typ_at_lifts [OF store_pde_typ_at]
-lemmas store_pdpte_typ_ats' [wp] = abs_typ_at_lifts [OF store_pdpte_typ_at]
-lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
-lemmas store_pde_typ_ats[wp] = store_pde_typ_ats' abs_atyp_at_lifts[OF store_pde_typ_at]
-lemmas store_pdpte_typ_ats[wp] = store_pdpte_typ_ats' abs_atyp_at_lifts[OF store_pdpte_typ_at]
 
 end
 
@@ -124,44 +113,10 @@ lemma find_vspace_for_asid_eq_helper:
   apply (simp add: bit_simps)
   done
 
-(* FIXME x64: move to invariants *)
-lemma find_vspace_for_asid_wp:
-  "\<lbrace> valid_vspace_objs and pspace_aligned and K (asid \<noteq> 0)
-        and (\<lambda>s. \<forall>pm. vspace_at_asid asid pm s \<longrightarrow> Q pm s)
-        and (\<lambda>s. (\<forall>pm. \<not> vspace_at_asid asid pm s) \<longrightarrow> E ExceptionTypes_A.lookup_failure.InvalidRoot s) \<rbrace>
-    find_vspace_for_asid asid
-   \<lbrace> Q \<rbrace>,\<lbrace> E \<rbrace>"
-  apply (wpsimp simp: find_vspace_for_asid_def vspace_at_asid_def)
-  apply (intro conjI impI allI)
-    apply (erule mp; clarsimp; thin_tac "\<forall>pm. _ pm s")
-    apply (erule vs_lookupE; clarsimp simp: vs_asid_refs_def graph_of_def)
-    apply (drule vs_lookup1_trans_is_append)
-    apply (clarsimp simp: up_ucast_inj_eq)
-   apply (erule mp; clarsimp; thin_tac "\<forall>pm. _ pm s")
-   apply (erule vs_lookupE; clarsimp simp: vs_asid_refs_def graph_of_def)
-   apply (frule vs_lookup1_trans_is_append; clarsimp simp: up_ucast_inj_eq)
-   apply (erule rtranclE; clarsimp)
-   apply (frule vs_lookup1_wellformed.lookup1_is_append; clarsimp)
-   apply (drule vs_lookup1_wellformed.lookup_trans_eq; clarsimp)
-   apply (clarsimp simp: vs_lookup1_def vs_refs_def)
-   apply (case_tac ko; clarsimp; rename_tac ako; case_tac ako; clarsimp)
-   apply (clarsimp simp: graph_of_def obj_at_def mask_asid_low_bits_ucast_ucast)
-  apply (drule spec; erule mp; thin_tac "_ s \<longrightarrow> _ s")
-  apply (rule vs_lookupI)
-   apply (fastforce simp: vs_asid_refs_def graph_of_def image_def)
-  apply (rule rtrancl_into_rtrancl[rotated])
-   apply (erule vs_lookup1I; fastforce simp: vs_refs_def graph_of_def image_def
-                                             ucast_ucast_mask asid_low_bits_def)
-  by simp
-
 lemma asidBits_asid_bits[simp]:
   "asidBits = asid_bits"
   by (simp add: asid_bits_def asidBits_def
                 asidHighBits_def asid_low_bits_def)
-
-(* FIXME x64: move *)
-lemma no_fail_getFaultAddress[wp]: "no_fail \<top> getFaultAddress"
-  by (simp add: getFaultAddress_def)
 
 lemma hv_corres:
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
@@ -301,10 +256,6 @@ lemma get_asid_pool_corres_inv':
   apply simp
   done
 
-(* FIXME x64: move *)
-lemma no_fail_invalidateASID[wp]: "no_fail \<top> (invalidateASID a b)"
-  by (simp add: invalidateASID_def)
-
 lemma dMo_no_0_obj'[wp]:
   "\<lbrace>no_0_obj'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
@@ -344,21 +295,6 @@ lemma invalidateASID_valid_arch_state [wp]:
 
 crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
   (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
-
-(* FIXME x64: move *)
-lemma set_asid_pool_vspace_objs_unmap_single:
-  "\<lbrace>valid_vspace_objs and ko_at (ArchObj (X64_A.ASIDPool ap)) p\<rbrace>
-       set_asid_pool p (ap(x := None)) \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
-  using set_asid_pool_vspace_objs_unmap[where S="- {x}"]
-  by (simp add: restrict_map_def fun_upd_def if_flip)
-
-(* FIXME x64: move *)
-lemma hw_asid_invalidate_valid_arch_state[wp]:
-  "\<lbrace>valid_arch_state\<rbrace> hw_asid_invalidate asid pm \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  unfolding hw_asid_invalidate_def by wp
-
-(* FIXME x64: move *)
-crunch valid_global_objs[wp]: hw_asid_invalidate "valid_global_objs"
 
 
 lemma delete_asid_corres [corres]:
@@ -540,106 +476,11 @@ lemmas setVMRoot_typ_ats [wp] = typ_at_lifts [OF setVMRoot_typ_at']
 crunch no_0_obj'[wp]: flushTable "no_0_obj'"
   (wp: crunch_wps simp: crunch_simps)
 
-(* FIXME x64: move to Lib *)
-lemma get_mapM_x_lower:
-  fixes P :: "'a option \<Rightarrow> 's \<Rightarrow> bool"
-  fixes f :: "('s,'a) nondet_monad"
-  fixes g :: "'a \<Rightarrow> 'b \<Rightarrow> ('s,'c) nondet_monad"
-  \<comment> \<open>@{term g} preserves the state that @{term f} cares about\<close>
-  assumes g: "\<And>x y. \<lbrace> P (Some x) \<rbrace> g x y \<lbrace> \<lambda>_. P (Some x) \<rbrace>"
-  \<comment> \<open>@{term P} specifies whether @{term f} either fails or returns a deterministic result\<close>
-  assumes f: "\<And>opt_x s. P opt_x s \<Longrightarrow> f s = case_option ({},True) (\<lambda>x. ({(x,s)},False)) opt_x"
-  \<comment> \<open>Every state determines P, and therefore the behaviour of @{term f}\<close>
-  assumes x: "\<And>s. \<exists> opt_x. P opt_x s"
-  \<comment> \<open>If @{term f} may fail, ensure there is at least one @{term f}\<close>
-  assumes y: "\<exists>s. P None s \<Longrightarrow> ys \<noteq> []"
-  shows "do x \<leftarrow> f; mapM_x (g x) ys od = mapM_x (\<lambda>y. do x \<leftarrow> f; g x y od) ys"
-  proof -
-    have f_rv: "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>r. P (Some r)\<rbrace>"
-      using x f
-      apply (clarsimp simp: valid_def)
-      apply (drule_tac x=s in meta_spec; clarsimp)
-      apply (case_tac opt_x; simp)
-      done
-    { fix y and h :: "'a \<Rightarrow> ('s,'d) nondet_monad"
-      have "do x \<leftarrow> f; _ \<leftarrow> g x y; h x od
-              = do x \<leftarrow> f; _ \<leftarrow> g x y; x \<leftarrow> f; h x od"
-        apply (rule ext)
-        apply (subst monad_eq_split[where g="do x \<leftarrow> f; g x y; return x od"
-                                      and P="\<top>" and Q="\<lambda>r. P (Some r)"
-                                      and f="h" and f'="\<lambda>_. f >>= h",
-                                    simplified bind_assoc, simplified])
-        apply (wpsimp wp: g f_rv simp: f return_def bind_def)+
-        done
-    } note f_redundant = this
-    show ?thesis
-    proof (cases "\<exists>s. P None s")
-      case True show ?thesis
-        apply (cases ys; simp add: True y mapM_x_Cons bind_assoc)
-        subgoal for y ys
-          apply (thin_tac _)
-          apply (induct ys arbitrary: y; simp add: mapM_x_Nil mapM_x_Cons bind_assoc)
-          apply (subst f_redundant; simp)
-          done
-        done
-    next
-      case False
-      show ?thesis using False
-        apply (induct ys; simp add: mapM_x_Nil mapM_x_Cons bind_assoc)
-         apply (rule ext)
-         subgoal for s
-           by (insert x[of s]; drule spec[of _ s]; clarsimp; case_tac opt_x;
-               clarsimp simp: bind_def return_def f)
-        apply (subst f_redundant; simp)
-        done
-    qed
-  qed
-
-(* FIXME x64: move to invariants *)
-lemma get_pt_mapM_x_lower:
-  assumes g: "\<And>P pt x. \<lbrace> \<lambda>s. P (kheap s pt_ptr) \<rbrace> g pt x \<lbrace> \<lambda>_ s. P (kheap s pt_ptr) \<rbrace>"
-  assumes y: "ys \<noteq> []"
-  notes [simp] = get_pt_def get_object_def gets_def get_def bind_def return_def
-                 assert_def fail_def
-  shows "do pt \<leftarrow> get_pt pt_ptr; mapM_x (g pt) ys od
-          = mapM_x (\<lambda>y. get_pt pt_ptr >>= (\<lambda>pt. g pt y)) ys"
-  apply (rule get_mapM_x_lower
-                [where P="\<lambda>opt_pt s. case kheap s pt_ptr of
-                                       Some (ArchObj (PageTable pt)) \<Rightarrow> opt_pt = Some pt
-                                     | _ \<Rightarrow> opt_pt = None",
-                 OF _ _ _ y])
-    apply (wp g)
-   apply (case_tac "kheap s pt_ptr"; simp; rename_tac ko; case_tac ko; simp;
-          rename_tac ako; case_tac ako; simp)+
-  done
-
-(* FIXME x64: move to invariants *)
-lemma get_pt_get_pte:
-  assumes align: "is_aligned pt_ptr pt_bits"
-  shows "do pt \<leftarrow> get_pt pt_ptr; f (pt i) od
-            = do pte \<leftarrow> get_pte (pt_ptr + (ucast i << word_size_bits)); f pte od"
-  proof -
-    have i: "ucast i < (2::machine_word) ^ (pt_bits - word_size_bits)"
-      by (rule less_le_trans[OF ucast_less]; simp add: bit_simps)
-    have s: "ucast i << word_size_bits < (2::machine_word) ^ pt_bits"
-      by (rule shiftl_less_t2n[OF i]; simp add: bit_simps)
-    show ?thesis
-      apply (simp add: get_pte_def is_aligned_add_helper align s)
-      apply (simp add: shiftl_shiftr_id less_le_trans[OF i] bit_simps ucast_ucast_id)
-      done
-  qed
-
 lemma get_pte_corres'':
   assumes "p' = p"
   shows "corres pte_relation' (pte_at p) (pspace_aligned' and pspace_distinct')
                               (get_pte p) (getObject p')"
   using assms get_pte_corres' by simp
-
-(* FIXME: move to Lib *)
-lemma zip_map_rel:
-  assumes "(x,y) \<in> set (zip xs ys)" "map f xs = map g ys"
-  shows "f x = g y"
-  using assms by (induct xs arbitrary: x y ys; cases ys) auto
 
 lemma flush_table_corres:
   assumes "pm' = pm" "vptr' = vptr" "pt' = pt" "asid' = asid"
@@ -729,10 +570,6 @@ lemma invalidatePageStructureCacheASID_corres' [corres]:
 lemmas invalidatePageStructureCacheASID_corres =
   invalidatePageStructureCacheASID_corres'[OF refl refl]
 
-(* FIXME x64: move *)
-lemma flush_table_pde_at[wp]: "\<lbrace>pde_at p\<rbrace> flush_table a b c d \<lbrace>\<lambda>_. pde_at p\<rbrace>"
-  by (wpsimp simp: flush_table_def pde_at_def wp: flush_table_typ_at mapM_x_wp')
-
 crunch inv[wp]: lookupPTSlot "P"
   (wp: loadObject_default_inv)
 
@@ -816,11 +653,6 @@ lemma set_pt_vs_lookup [wp]:
   apply (erule rsubst [where P=P])
   by (rule order_antisym; rule vs_lookup_sub;
       clarsimp simp: obj_at_def vs_refs_def split: if_splits)
-
-(* FIXME x64: move *)
-lemma no_fail_invalidateTranslationSingleASID[wp]:
-  "no_fail \<top> (invalidateTranslationSingleASID v a)"
-  by (simp add: invalidateTranslationSingleASID_def)
 
 lemmas liftE_get_pde_corres = get_pde_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
 lemmas liftE_get_pte_corres = get_pte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
@@ -2637,11 +2469,6 @@ crunch cte_wp_at'[wp]: unmapPDPT "\<lambda>s. P (cte_wp_at' P' p s)"
 lemmas storePDE_Invalid_invs = storePDE_invs[where pde=InvalidPDE, simplified]
 lemmas storePDPTE_Invalid_invs = storePDPTE_invs[where pde=InvalidPDPTE, simplified]
 lemmas storePML4E_Invalid_invs = storePML4E_invs[where pde=InvalidPML4E, simplified]
-
-(* FIXME x64: move*)
-lemma no_irq_invalidateTranslationSingleASID[wp]:
-  "no_irq (invalidateTranslationSingleASID a b)"
-  by (simp add: invalidateTranslationSingleASID_def)
 
 lemma dmo_invalidateTranslationSingleASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (invalidateTranslationSingleASID a b) \<lbrace>\<lambda>_. invs'\<rbrace>"

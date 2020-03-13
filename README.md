@@ -1,3 +1,9 @@
+<!--
+     Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+
+     SPDX-License-Identifier: BSD-2-Clause
+-->
+
 [![DOI][0]](http://dx.doi.org/10.5281/zenodo.591732)
 
   [0]: https://zenodo.org/badge/doi/10.5281/zenodo.591732.svg

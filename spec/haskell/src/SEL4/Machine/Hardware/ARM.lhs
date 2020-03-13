@@ -1,11 +1,7 @@
 %
 % Copyright 2014, General Dynamics C4 Systems
 %
-% This software may be distributed and modified according to the terms of
-% the GNU General Public License version 2. Note that NO WARRANTY is provided.
-% See "LICENSE_GPLv2.txt" for details.
-%
-% @TAG(GD_GPL)
+% SPDX-License-Identifier: GPL-2.0-only
 %
 
 \begin{impdetails}
@@ -843,6 +839,21 @@ FIXME ARMHYP consider moving to platform code?
 > set_gic_vcpu_ctrl_lr :: Word -> Word -> MachineMonad ()
 > set_gic_vcpu_ctrl_lr = error "FIXME ARMHYP Unimplemented callback"
 
+\subsection{Virtual timer interface}
+
+> get_cntv_cval_64 :: MachineMonad Word64
+> get_cntv_cval_64 = error "FIXME ARMHYP Unimplemented callback"
+> set_cntv_cval_64 :: Word64 -> MachineMonad ()
+> set_cntv_cval_64 = error "FIXME ARMHYP Unimplemented callback"
+
+> get_cntv_off_64 :: MachineMonad Word64
+> get_cntv_off_64 = error "FIXME ARMHYP Unimplemented callback"
+> set_cntv_off_64 :: Word64 -> MachineMonad ()
+> set_cntv_off_64 = error "FIXME ARMHYP Unimplemented callback"
+
+> read_cntpct :: MachineMonad Word64
+> read_cntpct = error "FIXME ARMHYP Unimplemented callback"
+
 #endif
 
 \subsection{Constants}
@@ -857,6 +868,9 @@ FIXME ARMHYP consider moving to platform code?
 > timerIRQ = Platform.timerIRQ
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+> paddrTop :: PAddr
+> paddrTop = toPAddr Platform.paddrTop
 
 > hcrVCPU =  (0x87039 :: Word) -- HCR_VCPU
 > hcrNative = (0xfe8703b :: Word) -- HCR_NATIVE

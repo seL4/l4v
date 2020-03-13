@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  *)
 
 (* Author: Thomas Sewell
@@ -443,13 +439,6 @@ lemma finite_inv_card_less':
 lemma finite_inv_card_less:
    "(card (UNIV - insert (a :: ('a :: finite)) s) < card (UNIV - s)) = (a \<notin> s)"
   by (simp add: finite_inv_card_less')
-
-text \<open>Support for defining enumerations on datatypes derived from enumerations\<close>
-lemma distinct_map_enum: "\<lbrakk> (\<forall> x y. (F x = F y \<longrightarrow> x = y )) \<rbrakk> \<Longrightarrow> distinct (map F (enum :: 'a :: enum list))"
-  apply (simp add: distinct_map)
-  apply (rule inj_onI)
-  apply simp
-  done
 
 definition
   "minimum ls \<equiv> Min (set ls)"

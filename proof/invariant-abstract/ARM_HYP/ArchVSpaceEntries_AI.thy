@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory ArchVSpaceEntries_AI
@@ -394,9 +390,6 @@ lemma unmap_page_valid_pdpt[wp]:
 
 crunch valid_pdpt_objs[wp]: flush_table "valid_pdpt_objs"
   (wp: crunch_wps simp: crunch_simps)
-
-crunch kheap[wp]: vcpu_restore,vcpu_enable,get_vcpu "\<lambda>s. P (kheap s)"
-  (wp: crunch_wps simp: crunch_simps ignore: set_object set_vcpu)
 
 (*
 
@@ -1485,7 +1478,7 @@ lemma decode_vcpu_invocation_valid_pdpt[wp]:
   apply (simp add: decode_vcpu_invocation_def)
   apply (wpsimp simp: decode_vcpu_set_tcb_def
                       decode_vcpu_inject_irq_def decode_vcpu_read_register_def
-                      decode_vcpu_write_register_def
+                      decode_vcpu_write_register_def decode_vcpu_ack_vppi_def
                       if_apply_def2
     | simp add: invocation_duplicates_valid_def)+
   done

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Invariants_H
@@ -3423,6 +3419,10 @@ lemma obj_at'_conj:
 lemma not_obj_at'_strengthen:
   "obj_at' (Not \<circ> P) p s \<Longrightarrow> \<not> obj_at' P p s"
   by (clarsimp simp: obj_at'_def)
+
+lemma not_pred_tcb':
+  "(\<not>pred_tcb_at' proj P t s) = (\<not>tcb_at' t s \<or> pred_tcb_at' proj (\<lambda>a. \<not>P a) t s)"
+  by (auto simp: pred_tcb_at'_def obj_at'_def)
 
 lemma not_pred_tcb_at'_strengthen:
   "pred_tcb_at' f (Not \<circ> P) p s \<Longrightarrow> \<not> pred_tcb_at' f P p s"

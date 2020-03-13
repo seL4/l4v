@@ -1,16 +1,12 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (* things that should be moved into first refinement *)
 
-theory Move
+theory Move_C
 imports "Refine.Refine"
 begin
 
@@ -58,6 +54,66 @@ lemma suspend_st_tcb_at':
   apply (simp|wp cancelIPC_st_tcb_at' sts_st_tcb')+
   done
 
+lemma to_bool_if:
+  "(if w \<noteq> 0 then 1 else 0) = (if to_bool w then 1 else 0)"
+  by (auto simp: to_bool_def)
+
+(* FIXME MOVE *)
+lemma typ_at'_no_0_objD:
+  "typ_at' P p s \<Longrightarrow> no_0_obj' s \<Longrightarrow> p \<noteq> 0"
+  by (cases "p = 0" ; clarsimp)
+
+(* FIXME ARMHYP MOVE *)
+lemma ko_at'_not_NULL:
+  "\<lbrakk> ko_at' ko p s ; no_0_obj' s\<rbrakk>
+   \<Longrightarrow> p \<noteq> 0"
+  by (fastforce simp:  word_gt_0 typ_at'_no_0_objD)
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
+(* FIXME move *)
+lemma setVMRoot_valid_queues':
+  "\<lbrace> valid_queues' \<rbrace> setVMRoot a \<lbrace> \<lambda>_. valid_queues' \<rbrace>"
+  by (rule valid_queues_lift'; wp)
+
+(* FIXME: change the original to be predicated! *)
+crunch ko_at'2[wp]: doMachineOp "\<lambda>s. P (ko_at' p t s)"
+  (simp: crunch_simps)
+
+(* FIXME: change the original to be predicated! *)
+crunch pred_tcb_at'2[wp]: doMachineOp "\<lambda>s. P (pred_tcb_at' a b p s)"
+  (simp: crunch_simps)
+
+end
+
+(* FIXME move *)
+lemma shiftr_and_eq_shiftl:
+  fixes w x y :: "'a::len word"
+  assumes r: "(w >> n) && x = y"
+  shows "w && (x << n) = (y << n)"
+  using assms
+  proof -
+    { fix i
+      assume i: "i < LENGTH('a)"
+      hence "test_bit (w && (x << n)) i \<longleftrightarrow> test_bit (y << n) i"
+        using word_eqD[where x="i-n", OF r]
+        by (cases "n \<le> i") (auto simp: nth_shiftl nth_shiftr)
+    }
+    thus ?thesis using word_eq_iff by blast
+  qed
+
+(* FIXME: move *)
+lemma cond_throw_whenE:
+   "(if P then f else throwError e) = (whenE (\<not> P) (throwError e) >>=E (\<lambda>_. f))"
+   by (auto split: if_splits
+             simp: throwError_def bindE_def
+                   whenE_def bind_def returnOk_def return_def)
+
+lemma ksPSpace_update_eq_ExD:
+  "s = t\<lparr> ksPSpace := ksPSpace s\<rparr>
+     \<Longrightarrow> \<exists>ps. s = t \<lparr> ksPSpace := ps \<rparr>"
+  by (erule exI)
+
 lemma threadGet_wp'':
   "\<lbrace>\<lambda>s. \<forall>v. obj_at' (\<lambda>tcb. f tcb = v) thread s \<longrightarrow> P v s\<rbrace> threadGet f thread \<lbrace>P\<rbrace>"
   apply (rule hoare_pre)
@@ -65,7 +121,28 @@ lemma threadGet_wp'':
   apply (clarsimp simp: obj_at'_def)
   done
 
+lemma tcbSchedEnqueue_queued_queues_inv:
+  "\<lbrace>\<lambda>s.  obj_at' tcbQueued t s \<and> P (ksReadyQueues s) \<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
+  unfolding tcbSchedEnqueue_def unless_def
+  apply (wpsimp simp: if_apply_def2 wp: threadGet_wp)
+  apply normalise_obj_at'
+  done
+
+lemma addToBitmap_sets_L1Bitmap_same_dom:
+  "\<lbrace>\<lambda>s. p \<le> maxPriority \<and> d' = d \<rbrace> addToBitmap d' p
+       \<lbrace>\<lambda>rv s. ksReadyQueuesL1Bitmap s d \<noteq> 0 \<rbrace>"
+  unfolding addToBitmap_def bitmap_fun_defs
+  apply wpsimp
+  apply (clarsimp simp: maxPriority_def numPriorities_def word_or_zero le_def
+                        prioToL1Index_max[simplified wordRadix_def, simplified])
+  done
+
 crunch ksReadyQueuesL1Bitmap[wp]: setQueue "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+
+lemma tcb_in_cur_domain'_def':
+  "tcb_in_cur_domain' t = (\<lambda>s. obj_at' (\<lambda>tcb. tcbDomain tcb = ksCurDomain s) t s)"
+  unfolding tcb_in_cur_domain'_def
+  by (auto simp: obj_at'_def)
 
 lemma sts_running_ksReadyQueuesL1Bitmap[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace>

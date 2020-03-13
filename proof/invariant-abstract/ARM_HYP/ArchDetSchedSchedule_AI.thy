@@ -1,11 +1,7 @@
 (*
- * Copyright 2016, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory ArchDetSchedSchedule_AI
@@ -446,28 +442,51 @@ lemma dmo_ct_idle[wp]:
 
 lemma vgic_maintenance_irq_valid_sched[wp]:
   "\<lbrace>valid_sched and invs and scheduler_act_sane and ct_not_queued\<rbrace>
-  vgic_maintenance \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+   vgic_maintenance
+   \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   unfolding vgic_maintenance_def
   supply if_split[split del] valid_fault_def[simp]
   apply (wpsimp simp: get_gic_vcpu_ctrl_misr_def get_gic_vcpu_ctrl_eisr1_def
-                      get_gic_vcpu_ctrl_eisr0_def
-                 wp: thread_get_wp' handle_fault_valid_sched
+                      get_gic_vcpu_ctrl_eisr0_def if_apply_def2
+                 wp: thread_get_wp'
                      ct_in_state_thread_state_lift ct_not_queued_lift sch_act_sane_lift
+                     hoare_vcg_imp_lift' gts_wp hoare_vcg_all_lift
+                     handle_fault_valid_sched hoare_vcg_disj_lift
          | wp (once) hoare_drop_imp[where f="do_machine_op m" for m]
                    hoare_drop_imp[where f="return $ m" for m]
-                   hoare_vcg_disj_lift
-         | clarsimp simp: if_apply_def2
-         | wp (once) hoare_vcg_imp_lift'
-         | rule hoare_vcg_conj_lift
-                hoare_lift_Pf[where f=cur_thread and m="vgic_update_lr p i v" for p i v])+
-  apply (clarsimp intro!: st_tcb_ex_cap[where P=active]
-                     simp: st_tcb_at_def obj_at_def ct_in_state_def runnable_eq halted_eq)+
+         | wps
+         | strengthen not_pred_tcb_at_strengthen)+
+  apply (frule tcb_at_invs)
+  apply (clarsimp simp: runnable_eq halted_eq not_pred_tcb)
+  apply (fastforce intro!: st_tcb_ex_cap[where P=active]
+                   simp: st_tcb_at_def ct_in_state_def obj_at_def)
+  done
+
+lemma vppi_event_irq_valid_sched[wp]:
+  "\<lbrace>valid_sched and invs and scheduler_act_sane and ct_not_queued\<rbrace>
+   vppi_event irq
+   \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  unfolding vppi_event_def
+  supply if_split[split del] valid_fault_def[simp]
+  apply (wpsimp simp: if_apply_def2
+                wp: hoare_vcg_imp_lift' gts_wp hoare_vcg_all_lift maskInterrupt_invs
+                    hoare_vcg_disj_lift
+                    handle_fault_valid_sched
+                    ct_in_state_thread_state_lift ct_not_queued_lift sch_act_sane_lift
+                cong: vcpu.fold_congs
+         | wps
+         | strengthen not_pred_tcb_at_strengthen)+
+  apply (frule tcb_at_invs)
+  apply (clarsimp simp: runnable_eq halted_eq not_pred_tcb)
+  apply (fastforce intro!: st_tcb_ex_cap[where P=active]
+                   simp: not_pred_tcb st_tcb_at_def obj_at_def ct_in_state_def)
   done
 
 lemma handle_reserved_irq_valid_sched:
   "\<lbrace>valid_sched and invs and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow>  scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
   handle_reserved_irq irq \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  unfolding handle_reserved_irq_def by (wpsimp simp: non_kernel_IRQs_def)
+  unfolding handle_reserved_irq_def irq_vppi_event_index_def
+  by (wpsimp simp: non_kernel_IRQs_def)
 
 lemma handle_hyp_fault_valid_sched[wp]:
   "\<lbrace>valid_sched and invs and st_tcb_at active t and not_queued t and scheduler_act_not t

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Finalise_R
@@ -2848,13 +2844,6 @@ lemma cteDeleteOne_deletes[wp]:
   apply (wp cteDeleteOne_cteCaps_of)
   apply clarsimp
   done
-
-(* FIXME: move *)
-(* should probably become part of the hoare_vgc_if_lift2 set *)
-lemma hoare_vcg_if_lift3:
-  "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (P rv s \<longrightarrow> X rv s) \<and> (\<not> P rv s \<longrightarrow> Y rv s)\<rbrace> \<Longrightarrow>
-  \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (if P rv s then X rv else Y rv) s\<rbrace>"
-  by auto
 
 crunch irq_node'[wp]: vcpuSwitch "\<lambda>s. P (irq_node' s)"
   (wp: FalseI crunch_wps getObject_inv loadObject_default_inv

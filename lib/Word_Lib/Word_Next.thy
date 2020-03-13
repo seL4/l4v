@@ -1,6 +1,4 @@
-(*
- * @TAG(OTHER_BSD)
- *)
+(* SPDX-License-Identifier: BSD-3-Clause *)
 
 section\<open>Increment and Decrement Machine Words Without Wrap-Around\<close>
 

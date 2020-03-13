@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory TcbAcc_R
@@ -13,10 +9,6 @@ imports CSpace_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-(* FIXME MOVE *)
-lemma hoare_pre_post:
-  "\<lbrakk> \<And>s. P s \<Longrightarrow> Q s ; \<lbrace> Q \<rbrace> f \<lbrace>\<lambda>_. Q \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace>\<lambda>_. Q \<rbrace>"
-  by (blast intro: hoare_chain)
 
 declare if_weak_cong [cong]
 declare result_in_set_wp[wp]
@@ -2730,12 +2722,6 @@ lemma removeFromBitmap_bitmapQ_no_L2_orphans[wp]:
   apply clarsimp
   apply metis
   done
-
-(* FIXME move *)
-lemma no_other_bits_set:
-  "\<lbrakk> (w::'a::len word) && ~~ (2 ^ n) = 0 ; n' \<noteq> n ; n < size w ; n' < size w \<rbrakk>
-   \<Longrightarrow>  \<not> w !! n'"
-  by (fastforce dest!: word_eqD simp: word_ops_nth_size word_size nth_w2p)
 
 lemma removeFromBitmap_valid_bitmapQ_except:
   "\<lbrace> valid_bitmapQ_except d p \<rbrace>

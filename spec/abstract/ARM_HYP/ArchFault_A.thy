@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -27,6 +23,7 @@ where
      upc \<leftarrow> do_machine_op (addressTranslateS1CPR pc);
      return (5, (upc && ~~ mask pageBits || pc && mask pageBits) # vptr # archData) od"
 | "make_arch_fault_msg (VCPUFault hsr) thread = return (7, [hsr])"
+| "make_arch_fault_msg (VPPIEvent irq) thread = return (8, [ucast irq])"
 | "make_arch_fault_msg (VGICMaintenance archData) thread = do
       msg \<leftarrow> return $ (case archData of None \<Rightarrow> [-1] | Some idx \<Rightarrow> [idx]);
       return (6, msg)

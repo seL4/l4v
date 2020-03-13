@@ -1,15 +1,11 @@
 #!/usr/bin/env python
-# This Python file uses the following encoding: utf-8
+#  -*- coding: utf-8 -*-
 #
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
-# Copyright 2014, NICTA
+# SPDX-License-Identifier: BSD-2-Clause
 #
-# This software may be distributed and modified according to the terms of
-# the BSD 2-Clause license. Note that NO WARRANTY is provided.
-# See "LICENSE_BSD2.txt" for details.
-#
-# @TAG(NICTA_BSD)
-#
+
 #
 #  unicode.py
 #

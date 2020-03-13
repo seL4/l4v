@@ -1,11 +1,7 @@
 %
 % Copyright 2014, General Dynamics C4 Systems
 %
-% This software may be distributed and modified according to the terms of
-% the GNU General Public License version 2. Note that NO WARRANTY is provided.
-% See "LICENSE_GPLv2.txt" for details.
-%
-% @TAG(GD_GPL)
+% SPDX-License-Identifier: GPL-2.0-only
 %
 
 \begin{impdetails}
@@ -75,8 +71,6 @@ This module defines the ARM register set.
 >     | VCPURegTPIDRPRW
 >     | VCPURegTPIDRURO
 >     | VCPURegFPEXC
->     | VCPURegCNTVTVAL
->     | VCPURegCNTVCTL
 >     | VCPURegLRsvc
 >     | VCPURegSPsvc
 >     | VCPURegLRabt
@@ -97,6 +91,11 @@ This module defines the ARM register set.
 >     | VCPURegSPSRund
 >     | VCPURegSPSRirq
 >     | VCPURegSPSRfiq
+>     | VCPURegCNTV_CTL
+>     | VCPURegCNTV_CVALhigh
+>     | VCPURegCNTV_CVALlow
+>     | VCPURegCNTVOFFhigh
+>     | VCPURegCNTVOFFlow
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
 > vcpuRegNum :: Int

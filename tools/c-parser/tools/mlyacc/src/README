@@ -1,3 +1,9 @@
+<!--
+     Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+
+     SPDX-License-Identifier: BSD-2-Clause
+-->
+
 These are the sources for the parser-generator part of ML-Yacc.
 The file FILES explains what each file contains.
 
@@ -5,4 +11,3 @@ Note that yacc-grm-sig.sml and yacc-grm.sml are derived from yacc.grm,
 but in order to avoid forcing the user to have a copy of mlyacc in
 order to build mlyacc, we will distribute the source files and put
 them into the CVS repository.
-

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 chapter "Toplevel Refinement Statement"
@@ -540,7 +536,6 @@ lemma no_fail_callKernel:
   apply metis
   done
 
-
 lemma handleVCPUFault_ccorres:
   "ccorres dc xfdc
      (invs' and ct_running' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
@@ -550,14 +545,19 @@ lemma handleVCPUFault_ccorres:
    apply (simp add: callKernel_def handleEvent_def handleHypervisorFault_def)
    apply (simp add: liftE_def bind_assoc)
    apply (rule ccorres_pre_getCurThread, rename_tac curThread)
+   (* armv_handleVCPUFault returns false on this platform, doing nothing else *)
+   apply (rule ccorres_symb_exec_r)
+   apply (rule ccorres_cond_false_seq, simp)
    apply (rule ccorres_symb_exec_r)
      apply (ctac (no_vcg) add: handleFault_ccorres)
       apply (ctac (no_vcg) add: schedule_ccorres)
        apply (ctac (no_vcg) add: activateThread_ccorres[simplified dc_def])
       apply (wp schedule_sch_act_wf schedule_invs'|strengthen invs_queues invs_valid_objs')+
+      apply vcg
+     apply (clarsimp, rule conseqPre, vcg)
+     apply clarsimp
     apply vcg
-   apply clarsimp
-   apply (rule conseqPre, vcg)
+   apply (clarsimp, rule conseqPre, vcg)
    apply clarsimp
   apply (clarsimp simp: ct_not_ksQ ct_running_imp_simple')
   apply (rule conjI, rule active_ex_cap', erule active_from_running', fastforce)
@@ -708,7 +708,7 @@ lemma threadSet_all_invs_triv':
      apply (simp add: exst_same_def)
     apply (wp thread_set_invs_trivial thread_set_ct_running thread_set_not_state_valid_sched
               threadSet_invs_trivial threadSet_ct_running' static_imp_wp
-              thread_set_ct_idle
+              thread_set_ct_in_state
            | simp add: tcb_cap_cases_def
            | rule threadSet_ct_in_state'
            | wp (once) hoare_vcg_disj_lift)+

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -15,11 +11,6 @@
 theory ArchAcc_R
 imports SubMonad_R
 begin
-
-(*FIXME move*)
-lemma hoare_add_post':
-  "\<lbrakk>\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>; \<lbrace>P''\<rbrace> f \<lbrace>\<lambda>rv s. Q' rv s \<longrightarrow> Q rv s\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P' and P''\<rbrace> f \<lbrace>Q\<rbrace>"
-  by (fastforce simp add: valid_def)
 
 context begin
 

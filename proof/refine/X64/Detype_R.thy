@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Detype_R
@@ -169,16 +165,6 @@ lemma deleteObjects_def3:
    apply (simp add: deleteObjects_def2)
   apply (simp add: deleteObjects_def is_aligned_mask
                    unless_def alignError_def)
-  done
-
-(* FIXME x64: move to Word_Lib *)
-lemma ucast_less_shiftl_helper':
-  "\<lbrakk> len_of TYPE('b) + (a::nat) < len_of TYPE('a); 2 ^ (len_of TYPE('b) + a) \<le> n\<rbrakk>
-    \<Longrightarrow> (ucast (x :: 'b::len word) << a) < (n :: 'a::len word)"
-  apply (erule order_less_le_trans[rotated])
-  using ucast_less[where x=x and 'a='a]
-  apply (simp only: shiftl_t2n field_simps)
-  apply (rule word_less_power_trans2; simp)
   done
 
 lemma obj_relation_cuts_in_obj_range:
@@ -3344,9 +3330,6 @@ lemma storePML4E_setCTE_commute:
   apply (clarsimp simp:ko_wp_at'_def objBits_simps archObjSize_def typ_at'_def)
   apply fastforce
   done
-
-(* FIXME: move  *)
-lemmas of_nat_inj64 = of_nat_inj[where 'a=machine_word_len, folded word_bits_def]
 
 lemma copyGlobalMappings_setCTE_commute:
   "monad_commute

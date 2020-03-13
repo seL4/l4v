@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -821,11 +817,13 @@ lemma empty_fail_set_gic_vcpu_ctrl_hcr[simp, intro!]:
   "empty_fail (set_gic_vcpu_ctrl_hcr w)"
   by (simp add: set_gic_vcpu_ctrl_hcr_def)
 
-crunches readVCPUHardwareReg, writeVCPUHardwareReg
+crunches readVCPUHardwareReg, writeVCPUHardwareReg, get_cntv_cval_64, set_cntv_cval_64,
+          get_cntv_off_64, set_cntv_off_64, read_cntpct
   for (no_fail) no_fail[intro!, wp, simp]
   and (empty_fail) empty_fail[intro!, wp, simp]
   and (no_irq) no_irq[intro!, wp, simp]
-  (ignore: machine_op_lift writeVCPUHardwareReg_impl gets wp: ef_machine_op_lift)
+  (ignore: machine_op_lift writeVCPUHardwareReg_impl set_cntv_cval_64_impl set_cntv_off_64_impl gets
+   wp: ef_machine_op_lift)
 
 lemma empty_fail_cacheRangeOp [simp, intro!]:
   assumes ef: "\<And>a b. empty_fail (oper a b)"
