@@ -33,7 +33,7 @@ internal/*
 .git/*
 
 
-.licenseignore
+.reuse/dep5
 
 **/ROOTS
 **/MANIFEST
