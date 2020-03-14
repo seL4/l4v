@@ -1,4 +1,6 @@
 (* SPDX-License-Identifier: BSD-3-Clause *)
+(* SPDX-FileCopyrightText: Lawrence C Paulson, Cambridge University Computer Laboratory *)
+(* SPDX-FileCopyrightText: Markus Wenzel, TU Muenchen *)
 
 (*  Extracted from Isabelle sources (src/Pure/library.ML) *)
 

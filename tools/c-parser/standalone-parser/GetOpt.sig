@@ -1,4 +1,5 @@
 (* SPDX-License-Identifier: SMLNJ *)
+(* SPDX-FileCopyrightText: 1998 Bell Labs, Lucent Technologies *)
 
 (* getopt-sig.sml
  *
