@@ -1,7 +1,7 @@
 <!--
      Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 
-     SPDX-License-Identifier: BSD-2-Clause
+     SPDX-License-Identifier: CC-BY-SA-4.0
 -->
 
 [![DOI][0]](http://dx.doi.org/10.5281/zenodo.591732)
