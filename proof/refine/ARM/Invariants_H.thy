@@ -184,25 +184,17 @@ definition tcb_st_refs_of' :: "thread_state \<Rightarrow> (word32 \<times> refty
   | (BlockedOnSend x _ _ _ _)  => {(x, TCBBlockedSend)}
   | (BlockedOnNotification x)  => {(x, TCBSignal)}"
 
-(* FIXME RT: would it make sense to include SchedContext and YieldTo references here?
-     It seems to be used in lemmas below for expressing "references other than the thread state",
-     but it's unclear if that is still the case in the rest of the proof. We already have a shortish
-     way of saying "tcb_bound_refs' a", which is "get_refs TCBBound a", so the name tcb_bound_refs
-     would be reasonably available for that purpose. *)
-(* FIXME RT: should the definition of get_ref use the set_option x \<times> {Ref} pattern? *)
 definition
-  tcb_bound_refs' :: "word32 option \<Rightarrow> (word32 \<times> reftype) set" where
-  "tcb_bound_refs' a \<equiv> set_option a \<times> {TCBBound}"
-
-lemma tcb_bound_refs'_get_refs[simp]:
-  "tcb_bound_refs' b = get_refs TCBBound b"
-  by (cases b; simp add: tcb_bound_refs'_def)
+  tcb_bound_refs' ::
+  "word32 option \<Rightarrow> word32 option \<Rightarrow> word32 option \<Rightarrow> (word32 \<times> reftype) set" where
+  "tcb_bound_refs' ntfn sc yt \<equiv> get_refs TCBBound ntfn
+                                  \<union> get_refs TCBSchedContext sc
+                                  \<union> get_refs TCBYieldTo yt"
 
 definition refs_of_tcb' :: "tcb \<Rightarrow> (obj_ref \<times> reftype) set" where
-  "refs_of_tcb' tcb \<equiv> tcb_st_refs_of' (tcbState tcb)
-                          \<union> get_refs TCBBound (tcbBoundNotification tcb)
-                          \<union> get_refs TCBSchedContext (tcbSchedContext tcb)
-                          \<union> get_refs TCBYieldTo (tcbYieldTo tcb)"
+  "refs_of_tcb' tcb \<equiv>
+     tcb_st_refs_of' (tcbState tcb)
+       \<union> tcb_bound_refs' (tcbBoundNotification tcb) (tcbSchedContext tcb) (tcbYieldTo tcb)"
 
 definition ep_q_refs_of' :: "endpoint \<Rightarrow> (word32 \<times> reftype) set" where
   "ep_q_refs_of' x \<equiv> case x of
@@ -265,7 +257,8 @@ definition live_ntfn' :: "notification \<Rightarrow> bool" where
                       \<or> (\<exists>ts. ntfnObj ntfn = WaitingNtfn ts)"
 
 definition live_reply' :: "reply \<Rightarrow> bool" where
-  "live_reply' reply \<equiv> bound (replyTCB reply) \<or> bound (replySc reply)"
+  "live_reply' reply \<equiv> bound (replyTCB reply) \<or> bound (replySc reply) \<or> bound (replyNext reply)
+                        \<or> bound (replyPrev reply)"
 
 primrec live' :: "Structures_H.kernel_object \<Rightarrow> bool" where
   "live' (KOTCB tcb) =
@@ -1464,8 +1457,10 @@ lemma ntfn_bound_refs'_simps[simp]:
   by (auto simp: ntfn_bound_refs'_def)
 
 lemma tcb_bound_refs'_simps[simp]:
-  "tcb_bound_refs' (Some a) = {(a, TCBBound)}"
-  "tcb_bound_refs' None = {}"
+  "tcb_bound_refs' (Some a) b c = {(a, TCBBound)} \<union> tcb_bound_refs' None b c"
+  "tcb_bound_refs' b (Some a) c = {(a, TCBSchedContext)} \<union> tcb_bound_refs' b None c"
+  "tcb_bound_refs' b c (Some a) = {(a, TCBYieldTo)} \<union> tcb_bound_refs' b c None"
+  "tcb_bound_refs' None None None = {}"
   by (auto simp: tcb_bound_refs'_def)
 
 lemma refs_of_rev':
@@ -1546,19 +1541,19 @@ lemma st_tcb_at_state_refs_ofD':
                  \<and> obj_at' ((=) sc_ptr o tcbSchedContext) t s
                  \<and> obj_at' ((=) yieldto_ptr o tcbYieldTo) t s
                  \<and> state_refs_of' s t = (tcb_st_refs_of' ts
-                                         \<union> get_refs TCBBound ntfnptr
-                                         \<union> get_refs TCBSchedContext sc_ptr
-                                         \<union> get_refs TCBYieldTo yieldto_ptr)"
+                                         \<union> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr)"
   by (auto simp: pred_tcb_at'_def tcb_ntfn_is_bound'_def obj_at'_def projectKO_eq
                  project_inject state_refs_of'_def)
 
 lemma bound_tcb_at_state_refs_ofD':
-  "bound_tcb_at' P t s \<Longrightarrow> \<exists>ts ntfnptr. P ntfnptr \<and> obj_at' (tcb_ntfn_is_bound' ntfnptr) t s
-          \<and> state_refs_of' s t = (tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr)"
-  sorry (* FIXME RT: see lemma above, statement gets quite a bit larger,
-                     probably better to avoid tcb_ntfn_is_bound', and use ((=) *_ptr o accessor)
+  "bound_tcb_at' P t s \<Longrightarrow>
+    \<exists>ts ntfnptr sc_ptr yieldto_ptr. P ntfnptr
+                 \<and> obj_at' ((=) ntfnptr o tcbBoundNotification) t s
+                 \<and> obj_at' ((=) sc_ptr o tcbSchedContext) t s
+                 \<and> obj_at' ((=) yieldto_ptr o tcbYieldTo) t s
+          \<and> state_refs_of' s t = (tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr)"
   by (auto simp: pred_tcb_at'_def obj_at'_def tcb_ntfn_is_bound'_def projectKO_eq
-                 project_inject state_refs_of'_def) *)
+                 project_inject state_refs_of'_def)
 
 lemma sym_refs_obj_atD':
   "\<lbrakk> obj_at' P p s; sym_refs (state_refs_of' s) \<rbrakk> \<Longrightarrow>
@@ -1580,8 +1575,8 @@ lemma sym_refs_ko_atD':
 lemma sym_refs_st_tcb_atD':
   "\<lbrakk> st_tcb_at' P t s; sym_refs (state_refs_of' s) \<rbrakk> \<Longrightarrow>
      \<exists>ts ntfnptr. P ts \<and> obj_at' (tcb_ntfn_is_bound' ntfnptr) t s
-        \<and> state_refs_of' s t = tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr
-        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr. ko_wp_at' (\<lambda>ko. (t, symreftype tp) \<in> refs_of' ko) x s)"
+        \<and> state_refs_of' s t = tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr XX YY
+        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr XX YY. ko_wp_at' (\<lambda>ko. (t, symreftype tp) \<in> refs_of' ko) x s)"
   apply (drule st_tcb_at_state_refs_ofD')
   apply (erule exE)+
   apply (rule_tac x=ts in exI)
@@ -1590,13 +1585,13 @@ lemma sym_refs_st_tcb_atD':
   apply (frule obj_at_state_refs_ofD')
   apply (drule (1)sym_refs_obj_atD')
   apply auto
-  sorry (* FIXME RT: same as above; update for content of state_refs_of' *)
+  sorry (* FIXME RT: similar to st_tcb_at_state_refs_ofD'; update for content of state_refs_of' *)
 
 lemma sym_refs_bound_tcb_atD':
   "\<lbrakk> bound_tcb_at' P t s; sym_refs (state_refs_of' s) \<rbrakk> \<Longrightarrow>
      \<exists>ts ntfnptr. P ntfnptr \<and> obj_at' (tcb_ntfn_is_bound' ntfnptr) t s
-        \<and> state_refs_of' s t = tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr
-        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr. ko_wp_at' (\<lambda>ko. (t, symreftype tp) \<in> refs_of' ko) x s)"
+        \<and> state_refs_of' s t = tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr XX YY
+        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr XX YY. ko_wp_at' (\<lambda>ko. (t, symreftype tp) \<in> refs_of' ko) x s)"
   apply (drule bound_tcb_at_state_refs_ofD')
   apply (erule exE)+
   apply (rule_tac x=ts in exI)
@@ -1605,14 +1600,22 @@ lemma sym_refs_bound_tcb_atD':
   apply (frule obj_at_state_refs_ofD')
   apply (drule (1)sym_refs_obj_atD')
   apply auto
-  done
+  sorry (* FIXME RT *)
+
+lemma get_refs_nonempty[simp]:
+  "(get_refs ref_ty ptr_opt \<noteq> {}) = (ptr_opt \<noteq> None)"
+  by (clarsimp simp: get_refs_def split: option.splits)
+
+lemma get_refs_empty[simp]:
+  "(get_refs ref_ty ptr_opt = {}) = (ptr_opt = None)"
+  by (clarsimp simp: get_refs_def split: option.splits)
 
 lemma refs_of_live':
   "refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
   apply (cases ko; simp)
-    apply clarsimp
-   apply (rename_tac notification)
-   apply (case_tac "ntfnObj notification"; simp)
+      apply clarsimp
+     apply (rename_tac notification)
+     apply (case_tac "ntfnObj notification"; simp add: live_ntfn'_def)
   sorry (* FIXME RT *)
 
 lemma if_live_then_nonz_capE':
@@ -3264,9 +3267,9 @@ lemma invs_ksCurDomain_maxDomain' [elim!]:
   "invs' s \<Longrightarrow> ksCurDomain s \<le> maxDomain"
   by (simp add: invs'_def valid_state'_def)
 
+(* FIXME RT: not going to work any more like this:
 lemma simple_st_tcb_at_state_refs_ofD':
   "st_tcb_at' simple' t s \<Longrightarrow> bound_tcb_at' (\<lambda>x. tcb_bound_refs' x = state_refs_of' s t) t s"
-  sorry (* FIXME RT: needs update to lemma statement to add new kinds of refs
   by (fastforce simp: pred_tcb_at'_def obj_at'_def state_refs_of'_def
                       projectKO_eq project_inject) *)
 
