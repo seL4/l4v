@@ -203,6 +203,7 @@ end
 
 lemmas projectKO_opts_defs =
   projectKO_opt_tcb projectKO_opt_cte projectKO_opt_ntfn projectKO_opt_ep
+  projectKO_opt_reply projectKO_opt_sc
   projectKO_opt_user_data projectKO_opt_user_data_device
 
 lemmas injectKO_defs =

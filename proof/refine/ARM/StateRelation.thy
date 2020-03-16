@@ -690,6 +690,7 @@ lemmas isCap_defs =
   isThreadCap_def isCNodeCap_def isNotificationCap_def
   isEndpointCap_def isUntypedCap_def isNullCap_def
   isIRQHandlerCap_def isIRQControlCap_def isReplyCap_def
+  isSchedContextCap_def isSchedControlCap_def
   isPageCap_def isPageTableCap_def isPageDirectoryCap_def
   isASIDControlCap_def isASIDPoolCap_def isArchPageCap_def
   isDomainCap_def

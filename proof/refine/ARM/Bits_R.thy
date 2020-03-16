@@ -56,7 +56,9 @@ lemma isCap_simps:
   "isNotificationCap v = (\<exists>v0 v1 v2 v3. v = NotificationCap v0 v1 v2 v3)"
   "isEndpointCap v = (\<exists>v0 v1 v2 v3 v4 v5. v = EndpointCap v0 v1 v2 v3 v4 v5)"
   "isUntypedCap v = (\<exists>d v0 v1 f. v = UntypedCap d v0 v1 f)"
-  "isReplyCap v = (\<exists>v0 v1 v2. v = ReplyCap v0 v1 v2)"
+  "isReplyCap v = (\<exists>v0 v1. v = ReplyCap v0 v1)"
+  "isSchedContextCap v = (\<exists>v0 v1. v = SchedContextCap v0 v1)"
+  "isSchedControlCap v = (v = SchedControlCap)"
   "isIRQControlCap v = (v = IRQControlCap)"
   "isIRQHandlerCap v = (\<exists>v0. v = IRQHandlerCap v0)"
   "isNullCap v = (v = NullCap)"
@@ -90,6 +92,14 @@ lemma projectKO_ntfn:
   "(projectKO_opt ko = Some t) = (ko = KONotification t)"
   by (cases ko) (auto simp: projectKO_opts_defs)
 
+lemma projectKO_reply:
+  "(projectKO_opt ko = Some t) = (ko = KOReply t)"
+  by (cases ko) (auto simp: projectKO_opts_defs)
+
+lemma projectKO_sc:
+  "(projectKO_opt ko = Some t) = (ko = KOSchedContext t)"
+  by (cases ko) (auto simp: projectKO_opts_defs)
+
 lemma projectKO_ASID:
   "(projectKO_opt ko = Some t) = (ko = KOArch (KOASIDPool t))"
   by (cases ko)
@@ -117,7 +127,7 @@ lemma projectKO_user_data_device:
 
 
 lemmas projectKOs =
-  projectKO_ntfn projectKO_ep projectKO_cte projectKO_tcb
+  projectKO_ntfn projectKO_ep projectKO_cte projectKO_tcb projectKO_reply projectKO_sc
   projectKO_ASID projectKO_PTE projectKO_PDE projectKO_user_data projectKO_user_data_device
   projectKO_eq projectKO_eq2
 
@@ -148,7 +158,7 @@ lemma capAligned_tcbI:
   done
 
 lemma capAligned_reply_tcbI:
-  "tcb_at' p s \<Longrightarrow> capAligned (ReplyCap p m r)"
+  "tcb_at' p s \<Longrightarrow> capAligned (ReplyCap p r)"
   apply (clarsimp simp: obj_at'_real_def capAligned_def
                         objBits_simps word_bits_def capUntypedPtr_def isCap_simps)
   apply (fastforce dest: ko_wp_at_norm
