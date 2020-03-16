@@ -86,9 +86,12 @@ sublocale init_arch_objects: valid_sched_pred_locale _ "init_arch_objects t p n 
 crunches invoke_untyped
   for valid_sched_pred_misc[wp]:
       "\<lambda>s::'state_ext state. P (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
-                               (ready_queues s) (release_queue s) (scheduler_action s)"
+                               (ready_queues s) (release_queue s) (scheduler_action s)
+                               (consumed_time s) (cur_sc s) (last_machine_time_of s)
+                               (time_state_of s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv
-   simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym)
+   simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym
+   ignore: do_machine_op)
 
 end
 
@@ -229,7 +232,7 @@ lemma invoke_untyped_sc_at_pred_n:
 
 lemma retype_region_active_sc_props[wp]:
   "retype_region ptr numObjects o_bits type dev
-   \<lbrace>\<lambda>s. \<forall>p. pred_map active_scrc (sc_refill_cfgs_of s) p \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
+   \<lbrace>\<lambda>s. pred_map active_scrc (sc_refill_cfgs_of s) p \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding retype_region_def
   apply wp
   apply (clarsimp simp del: fun_upd_apply simp add: vs_all_heap_simps foldr_fun_upd_value)
@@ -238,25 +241,26 @@ lemma retype_region_active_sc_props[wp]:
   done
 
 lemma delete_objects_pred_map_sc_refill_cfgs_of:
-  shows "delete_objects base sz
-         \<lbrace>\<lambda>s. \<forall>p. pred_map active_scrc (sc_refill_cfgs_of s) p
-                  \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
+  "delete_objects base sz
+   \<lbrace>\<lambda>s. pred_map active_scrc (sc_refill_cfgs_of s) p
+        \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding delete_objects_def2
   apply wpsimp
   by (clarsimp simp: detype_def vs_all_heap_simps split: if_splits)
 
 lemma reset_untyped_cap_pred_map_sc_refill_cfgs_of:
-  shows "reset_untyped_cap slot
-         \<lbrace>\<lambda>s. \<forall>p. pred_map active_scrc (sc_refill_cfgs_of s) p
-                  \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
+  "reset_untyped_cap slot
+   \<lbrace>\<lambda>s. pred_map active_scrc (sc_refill_cfgs_of s) p
+        \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding reset_untyped_cap_def
-  by (wpsimp wp: mapME_x_wp_inv preemption_point_inv hoare_drop_imp
-                 delete_objects_pred_map_sc_refill_cfgs_of)
+  by (wpsimp wp: mapME_x_wp_inv preemption_point_inv
+                 delete_objects_pred_map_sc_refill_cfgs_of
+                 comb: hoare_drop_imp hoare_drop_imp[THEN hoare_vcg_conj_lift])
 
 lemma invoke_untyped_pred_map_sc_refill_cfgs_of:
   "invoke_untyped ui
-   \<lbrace>\<lambda>s. \<forall>p. pred_map active_scrc (sc_refill_cfgs_of s) p
-            \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
+   \<lbrace>\<lambda>s. pred_map active_scrc (sc_refill_cfgs_of s) p
+        \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding invoke_untyped_def
   by (wpsimp wp: mapM_x_wp_inv reset_untyped_cap_pred_map_sc_refill_cfgs_of)
 
@@ -924,6 +928,7 @@ lemma (in DetSchedAux_AI) invoke_untyped_valid_sched:
                                 invoke_untyped_sc_at_pred_n
                                 invoke_untyped_pred_map_sc_refill_cfgs_of
                                 invoke_untyped_valid_idle invoke_untyped_valid_sched_pred_misc
+                                hoare_vcg_all_lift
                           simp: ipc_queued_thread_state_live live_sc_def)+
 
 \<comment> \<open>Miscellaneous\<close>

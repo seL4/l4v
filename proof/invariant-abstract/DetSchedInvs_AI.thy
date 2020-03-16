@@ -3915,8 +3915,8 @@ lemma fault_tcb_at_cur_thread:
 
 end
 
-abbreviation cur_sc_active
-where "cur_sc_active s \<equiv> is_active_sc (cur_sc s) s"
+abbreviation cur_sc_active where
+  "cur_sc_active s \<equiv> is_active_sc (cur_sc s) s"
 
 lemmas cur_sc_active_lift = hoare_lift_Pf[where f=cur_sc and P=is_active_sc and m=f for f, rotated]
 

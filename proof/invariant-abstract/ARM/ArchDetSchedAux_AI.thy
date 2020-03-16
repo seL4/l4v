@@ -188,10 +188,11 @@ crunches perform_asid_control_invocation
 
 lemma perform_asid_control_invocation_pred_map_sc_refill_cfgs_of:
   "perform_asid_control_invocation aci
-   \<lbrace>\<lambda>s. \<forall>p. pred_map active_scrc (sc_refill_cfgs_of s) p
-            \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
+   \<lbrace>\<lambda>s. pred_map active_scrc (sc_refill_cfgs_of s) p
+        \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding perform_asid_control_invocation_def
-  by (wpsimp wp: hoare_drop_imp delete_objects_pred_map_sc_refill_cfgs_of)
+  by (wpsimp wp: delete_objects_pred_map_sc_refill_cfgs_of
+           comb: hoare_drop_imp)
 
 lemma perform_asid_control_invocation_valid_sched:
   "\<lbrace>ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci and
@@ -210,6 +211,7 @@ lemma perform_asid_control_invocation_valid_sched:
                                 perform_asid_control_invocation_sc_at_pred_n
                                 perform_asid_control_invocation_valid_idle
                                 perform_asid_control_invocation_pred_map_sc_refill_cfgs_of
+                                hoare_vcg_all_lift
                           simp: ipc_queued_thread_state_live live_sc_def)+
 
 lemma kernelWCET_us_non_zero:
