@@ -35,8 +35,6 @@ lemma maskCapRights_cap_cases:
   done
 
 
-lemma imp_ignore: "B \<Longrightarrow> A \<longrightarrow> B" by blast
-
 lemma wordFromVMRights_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call wordFromVMRights_'proc \<lbrace>\<acute>ret__unsigned_long = \<^bsup>s\<^esup>vm_rights\<rbrace>"
   by vcg simp?

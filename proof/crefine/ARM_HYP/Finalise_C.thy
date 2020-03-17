@@ -1850,22 +1850,17 @@ lemma setObject_vcpuTCB_updated_Basic_ccorres:
             (hrs_mem_update (heap_update (Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''vcpuTCB_C'']))
                                          ( option_to_ctcb_ptr tptr :: tcb_C ptr)))) s)))"
   apply (rule ccorres_guard_imp2)
-  apply (rule_tac P="ko_at' (vcpuTCBPtr_update t vcpu) vcpuptr" and P'=UNIV in setObject_ccorres_helper)
-     apply (simp_all add: objBits_simps archObjSize_def pageBits_def obj_tcb_at' vcpuBits_def)
+   apply (rule_tac P="ko_at' (vcpuTCBPtr_update t vcpu) vcpuptr" and P'=UNIV in setObject_ccorres_helper)
+     apply (simp_all add: objBits_simps archObjSize_def pageBits_def obj_tcb_at' vcpuBits_def vcpu_bits_def)
   apply (rule conseqPre, vcg, clarsimp)
   apply (rule cmap_relationE1[OF cmap_relation_vcpu], assumption, erule ko_at_projectKO_opt)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def typ_heap_simps'
                         cpspace_relation_def update_vcpu_map_tos)
-  apply (safe ; (clarsimp simp: cpspace_relation_def typ_heap_simps
-                                carch_state_relation_def Let_def
-                                 update_vcpu_map_to_vcpu
-                                 cmachine_state_relation_def
-                                 update_vcpu_map_tos)?)
+  apply (safe ; (clarsimp simp: cpspace_relation_def typ_heap_simps carch_state_relation_def Let_def
+                                 update_vcpu_map_to_vcpu cmachine_state_relation_def update_vcpu_map_tos)?)
   apply (erule cmap_relation_updI, erule ko_at_projectKO_opt, simp+)
-    apply (clarsimp simp add: cvcpu_relation_def cvcpu_vppi_masked_relation_def
-                              option_to_ctcb_ptr_def
-                              cvcpu_regs_relation_def
-                              Let_def vcpuSCTLR_def)
+   apply (clarsimp simp add: cvcpu_relation_def cvcpu_vppi_masked_relation_def option_to_ctcb_ptr_def
+                             cvcpu_regs_relation_def Let_def vcpuSCTLR_def)
   apply simp
   done
 

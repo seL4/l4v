@@ -603,14 +603,6 @@ lemma to_bool_false [simp]:
   unfolding to_bool_def false_def
   by simp
 
-(* MOVE *)
-lemma tcb_aligned':
-  "tcb_at' t s \<Longrightarrow> is_aligned t tcbBlockSizeBits"
-  apply (drule obj_at_aligned')
-   apply (simp add: objBits_simps)
-  apply (simp add: objBits_simps)
-  done
-
 lemma tcb_ptr_to_ctcb_ptr_mask [simp]:
   assumes tcbat: "tcb_at' thread s"
   shows   "ptr_val (tcb_ptr_to_ctcb_ptr thread) && ~~ mask tcbBlockSizeBits = thread"

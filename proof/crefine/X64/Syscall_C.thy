@@ -746,23 +746,6 @@ lemma handleFault_ccorres:
   apply (clarsimp simp: pred_tcb_at')
   done
 
-lemma getMessageInfo_less_4:
-  "\<lbrace>\<top>\<rbrace> getMessageInfo t \<lbrace>\<lambda>rv s. msgExtraCaps rv < 4\<rbrace>"
-  including no_pre
-  apply (simp add: getMessageInfo_def)
-  apply wp
-  apply (rule hoare_strengthen_post, rule hoare_vcg_prop)
-  apply (simp add: messageInfoFromWord_def Let_def
-                   Types_H.msgExtraCapBits_def)
-  apply (rule word_leq_minus_one_le, simp)
-  apply simp
-  apply (rule word_and_le1)
-  done
-
-lemma invs_queues_imp:
-  "invs' s \<longrightarrow> valid_queues s"
-  by clarsimp
-
 (* FIXME: move *)
 lemma length_CL_from_H [simp]:
   "length_CL (mi_from_H mi) = msgLength mi"
@@ -788,16 +771,6 @@ lemma getMRs_length:
   apply (simp add: min_def split: if_splits)
   apply (clarsimp simp: word_le_nat_alt)
   apply (simp add: msgMaxLength_def msgLengthBits_def n_msgRegisters_def)
-  done
-
-lemma getMessageInfo_msgLength':
-  "\<lbrace>\<top>\<rbrace> getMessageInfo t \<lbrace>\<lambda>rv s. msgLength rv \<le> 0x78\<rbrace>"
-  including no_pre
-  apply (simp add: getMessageInfo_def)
-  apply wp
-  apply (rule hoare_strengthen_post, rule hoare_vcg_prop)
-  apply (simp add: messageInfoFromWord_def Let_def msgMaxLength_def not_less
-                   Types_H.msgExtraCapBits_def split: if_split )
   done
 
 lemma handleInvocation_ccorres:
@@ -1192,19 +1165,6 @@ lemma cap_case_EndpointCap_NotificationCap:
            else h)"
   by (simp add: isCap_simps
          split: capability.split)
-
-
-(* FIXME: MOVE *)
-lemma capFaultOnFailure_if_case_sum:
-  " (capFaultOnFailure epCPtr b (if c then f else g) >>=
-      sum.case_sum (handleFault thread) return) =
-    (if c then ((capFaultOnFailure epCPtr b  f)
-                 >>= sum.case_sum (handleFault thread) return)
-          else ((capFaultOnFailure epCPtr b  g)
-                 >>= sum.case_sum (handleFault thread) return))"
-  by (case_tac c, clarsimp, clarsimp)
-
-
 
 (* FIXME:  MOVE to Corres_C.thy *)
 lemma ccorres_trim_redundant_throw_break:
@@ -1641,17 +1601,6 @@ lemma ctzl_spec:
   apply (simp add: mex_def meq_def)
   done
 
-lemma dmo_machine_valid_lift:
-  "(\<And>s f m. P s = P (ksMachineState_update f s)) \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp f' \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (wpsimp simp: split_def doMachineOp_def machine_op_lift_def machine_rest_lift_def in_monad)
-  done
-
-lemma tcb_runnable_imp_simple:
-  "obj_at' (\<lambda>s. runnable' (tcbState s)) t s \<Longrightarrow> obj_at' (\<lambda>s. simple' (tcbState s)) t s"
-  apply (clarsimp simp: obj_at'_def)
-  apply (case_tac "tcbState obj" ; clarsimp)
-  done
-
 lemma ccorres_return_void_C_Seq:
   "ccorres_underlying sr \<Gamma> r rvxf arrel xf P P' hs X (return_void_C) \<Longrightarrow>
       ccorres_underlying sr \<Gamma> r rvxf arrel xf P P' hs X (return_void_C ;; Z)"
@@ -1665,14 +1614,6 @@ lemma ccorres_return_void_C_Seq:
   apply (auto elim!:exec_Normal_elim_cases intro: exec.Throw)
  done
 
-
-lemma scast_specific_plus64:
-  "scast (of_nat (word_ctz x) + 0x20 :: 64 signed word) = of_nat (word_ctz x) + (0x20 :: machine_word)"
-  by (simp add: scast_down_add is_down_def target_size_def source_size_def word_size)
-
-lemma scast_specific_plus64_signed:
-  "scast (of_nat (word_ctz x) + 0x20 :: machine_word) = of_nat (word_ctz x) + (0x20 :: 64 signed word)"
-  by (simp add: scast_down_add is_down_def target_size_def source_size_def word_size)
 
 lemma ccorres_handleReservedIRQ:
   "ccorres dc xfdc

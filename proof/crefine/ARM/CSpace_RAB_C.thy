@@ -553,14 +553,6 @@ lemma cap_rights_to_H_from_word_canon [simp]:
   apply (simp add: cap_rights_to_H_def)
   done
 
-(* MOVE *)
-lemma tcb_aligned':
-  "tcb_at' t s \<Longrightarrow> is_aligned t tcbBlockSizeBits"
-  apply (drule obj_at_aligned')
-   apply (simp add: objBits_simps)
-  apply (simp add: objBits_simps)
-  done
-
 abbreviation
   "lookupSlot_raw_xf \<equiv>
      liftxf errstate lookupSlot_raw_ret_C.status_C

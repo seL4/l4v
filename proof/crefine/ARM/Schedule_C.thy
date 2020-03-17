@@ -8,26 +8,6 @@ theory Schedule_C
 imports Tcb_C
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-
-(* FIXME move *)
-lemma setVMRoot_valid_queues':
-  "\<lbrace> valid_queues' \<rbrace> setVMRoot a \<lbrace> \<lambda>_. valid_queues' \<rbrace>"
-  by (rule valid_queues_lift'; wp)
-
-(* FIXME move to REFINE *)
-crunches Arch.switchToThread
-  for valid_queues'[wp]: valid_queues'
-  (ignore: clearExMonitor)
-crunches switchToIdleThread
-  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
-crunches switchToIdleThread, switchToThread
-  for valid_pspace'[wp]: valid_pspace'
-crunches switchToThread
-  for valid_arch_state'[wp]: valid_arch_state'
-
-end
-
 (*FIXME: arch_split: move up?*)
 context Arch begin
 context begin global_naming global
@@ -39,16 +19,6 @@ end
 
 context kernel_m begin
 
-(* FIXME: move to Refine *)
-lemma valid_idle'_tcb_at'_ksIdleThread:
-  "valid_idle' s \<Longrightarrow> tcb_at' (ksIdleThread s) s"
-  by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def)
-
-(* FIXME: move to Refine *)
-lemma invs_no_cicd'_valid_idle':
-  "invs_no_cicd' s \<Longrightarrow> valid_idle' s"
-  by (simp add: invs_no_cicd'_def)
-
 lemma Arch_switchToIdleThread_ccorres:
   "ccorres dc xfdc (invs_no_cicd') UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
@@ -57,11 +27,6 @@ lemma Arch_switchToIdleThread_ccorres:
    apply (ctac (no_vcg) add: setVMRoot_ccorres)
   apply (clarsimp simp: valid_idle'_tcb_at'_ksIdleThread[OF invs_no_cicd'_valid_idle'])
   done
-
-(* FIXME: move *)
-lemma empty_fail_getIdleThread [simp,intro!]:
-  "empty_fail getIdleThread"
-  by (simp add: getIdleThread_def)
 
 lemma switchToIdleThread_ccorres:
   "ccorres dc xfdc invs_no_cicd' UNIV []
@@ -345,7 +310,7 @@ lemma scheduleChooseNewThread_ccorres:
          chooseThread
       od)
      (Call scheduleChooseNewThread_'proc)"
-  apply (cinit)
+  apply (cinit')
    apply (rule ccorres_pre_getDomainTime)
    apply (rule ccorres_split_nothrow)
        apply (rule_tac R="\<lambda>s. ksDomainTime s = domainTime" in ccorres_when)
@@ -372,6 +337,7 @@ lemma isHighestPrio_ccorres:
   (* FIXME: these should likely be in simpset for CRefine, or even in general *)
   supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp] if_1_0_0[simp]
           ccorres_IF_True[simp]
+  supply if_weak_cong[cong]
   apply (cinit lift: dom_' prio_')
    apply clarsimp
    apply (rule ccorres_move_const_guard)

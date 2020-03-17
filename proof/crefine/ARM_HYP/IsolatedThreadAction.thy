@@ -115,70 +115,7 @@ lemma isolate_thread_actions_bind:
 
 lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
-lemma tcbSchedEnqueue_obj_at_unchangedT:
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  shows  "\<lbrace>obj_at' P t\<rbrace> tcbSchedEnqueue t' \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: tcbSchedEnqueue_def unless_def)
-  apply (wp | simp add: y)+
-  done
-
-lemma asUser_obj_at_notQ:
-  "\<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>
-   asUser t (setRegister r v)
-   \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
-  apply (simp add: asUser_def)
-  apply (rule hoare_seq_ext)+
-    apply (simp add: split_def)
-    apply (rule threadSet_obj_at'_really_strongest)
-   apply (wp threadGet_wp |rule gets_inv|wpc|clarsimp)+
-  apply (clarsimp simp: obj_at'_def)
-  done
-
-(* FIXME: Move to Schedule_R.thy. Make Arch_switchToThread_obj_at a specialisation of this *)
-lemma Arch_switchToThread_obj_at_pre:
-  "\<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>
-   Arch.switchToThread t
-   \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
-  apply (simp add: ARM_HYP_H.switchToThread_def)
-  apply (wp asUser_obj_at_notQ doMachineOp_obj_at setVMRoot_obj_at'_no_vcpu hoare_drop_imps|wpc)+
-  done
-
-lemma rescheduleRequired_obj_at_unchangedT:
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  shows  "\<lbrace>obj_at' P t\<rbrace> rescheduleRequired \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: rescheduleRequired_def)
-  apply (wp tcbSchedEnqueue_obj_at_unchangedT[OF y] | wpc)+
-  apply simp
-  done
-
-lemma setThreadState_obj_at_unchangedT:
-  assumes x: "\<And>f. \<forall>tcb. P (tcbState_update f tcb) = P tcb"
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  shows "\<lbrace>obj_at' P t\<rbrace> setThreadState t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: setThreadState_def)
-  apply (wp rescheduleRequired_obj_at_unchangedT[OF y], simp)
-  apply (wp threadSet_obj_at'_strongish)
-  apply (clarsimp simp: obj_at'_def projectKOs x cong: if_cong)
-  done
-
-lemma setBoundNotification_obj_at_unchangedT:
-  assumes x: "\<And>f. \<forall>tcb. P (tcbBoundNotification_update f tcb) = P tcb"
-  shows "\<lbrace>obj_at' P t\<rbrace> setBoundNotification t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: setBoundNotification_def)
-  apply (wp threadSet_obj_at'_strongish)
-  apply (clarsimp simp: obj_at'_def projectKOs x cong: if_cong)
-  done
-
-lemmas setThreadState_obj_at_unchanged
-    = setThreadState_obj_at_unchangedT[OF all_tcbI all_tcbI]
-
-lemmas setBoundNotification_obj_at_unchanged
-    = setBoundNotification_obj_at_unchangedT[OF all_tcbI]
-
 lemmas setNotification_tcb = set_ntfn_tcb_obj_at'
-
-(* FIXME: move *)
-lemmas threadSet_obj_at' = threadSet_obj_at'_strongish
 
 context kernel_m begin
 
@@ -692,7 +629,7 @@ lemma setVCPU_isolatable:
   apply (clarsimp simp: thread_actions_isolatable_def monadic_rewrite_def isolate_thread_actions_def)
   apply (clarsimp simp: exec_gets getSchedulerAction_def)
   apply (subst setObject_assert_modify;
-         simp add: projectKOs objBits_simps archObjSize_def vcpuBits_def pageBits_def)+
+         simp add: projectKOs objBits_simps archObjSize_def vcpuBits_def vcpu_bits_def pageBits_def)+
   apply (clarsimp simp: select_f_asserts assert_def obj_at_partial_overwrite_id2 split: if_splits)
   apply (clarsimp simp: select_f_def simpler_modify_def bind_def o_def)
   apply (case_tac s)
@@ -1002,12 +939,6 @@ lemma copyMRs_simple:
             split: option.split)
   apply (simp add: upto_enum_def mapM_Nil)
   done
-
-(* FIXME: MOVE *)
-lemma returnOK_catch[simp]:
-  "(returnOk rv <catch> m) = return rv"
-  unfolding catch_def returnOk_def
-  by clarsimp
 
 lemma doIPCTransfer_simple_rewrite:
   "monadic_rewrite True True

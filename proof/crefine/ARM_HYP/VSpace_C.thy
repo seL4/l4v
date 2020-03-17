@@ -36,26 +36,6 @@ lemma ccorres_flip_Guard:
   apply (fastforce intro: exec.Guard exec.GuardFault exec_handlers.intros)
   done
 
-(* FIXME: move *)
-lemma empty_fail_findPDForASID[iff]:
-  "empty_fail (findPDForASID asid)"
-  apply (simp add: findPDForASID_def liftME_def)
-  apply (intro empty_fail_bindE, simp_all split: option.split)
-     apply (simp add: assertE_def split: if_split)
-    apply (simp add: assertE_def split: if_split)
-   apply (simp add: empty_fail_getObject)
-  apply (simp add: assertE_def liftE_bindE checkPDAt_def split: if_split)
-  done
-
-(* FIXME: move *)
-lemma empty_fail_findPDForASIDAssert[iff]:
-  "empty_fail (findPDForASIDAssert asid)"
-  apply (simp add: findPDForASIDAssert_def catch_def
-                   checkPDAt_def checkPDUniqueToASID_def
-                   checkPDASIDMapMembership_def)
-  apply (intro empty_fail_bind, simp_all split: sum.split)
-  done
-
 
 end
 
@@ -585,12 +565,6 @@ lemma leq_asid_bits_shift:
   "x \<le> mask asid_bits
    \<Longrightarrow> (x :: word32) >> asid_low_bits \<le> mask asid_high_bits"
   by (simp add: leq_mask_shift asid_bits_def asid_low_bits_def asid_high_bits_def)
-
-lemma ucast_asid_high_bits_is_shift:
-  "asid \<le> mask asid_bits
-   \<Longrightarrow> ucast (asid_high_bits_of asid) = (asid >> asid_low_bits)"
-  unfolding asid_bits_def asid_low_bits_def asid_high_bits_of_def
-  by (rule ucast_ucast_eq_mask_shift, simp)
 
 lemma cap_small_frame_cap_get_capFMappedASID_spec:
   "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. cap_get_tag \<acute>cap = scast cap_small_frame_cap\<rbrace>
@@ -1896,7 +1870,7 @@ lemma vcpuWriteReg_obj_at'_vcpuVPPIMasked:
    \<lbrace>\<lambda>s. obj_at' (\<lambda>vcpu. P (vcpuVPPIMasked vcpu))  vcpuptr s \<rbrace>"
   apply (simp add: vcpuWriteReg_def vcpuUpdate_def obj_at'_real_def)
   apply (wp setObject_ko_wp_at[where n="objBits (undefined :: vcpu)"], simp)
-      apply (simp add: objBits_simps archObjSize_def vcpuBits_def')+
+      apply (simp add: objBits_simps archObjSize_def vcpuBits_def' vcpu_bits_def pageBits_def)+
     apply (wpsimp wp: getVCPU_wp)+
   apply (clarsimp simp: pred_conj_def is_vcpu'_def ko_wp_at'_def obj_at'_real_def projectKOs)
   done
@@ -2712,16 +2686,6 @@ lemma framesize_from_H_mask:
                 Kernel_C.ARMSection_def Kernel_C.ARMSuperSection_def
            split: vmpage_size.splits)
 
-(* FIXME: move *)
-
-lemma dmo_invalidateCacheRange_RAM_invs'[wp]:
-  "valid invs' (doMachineOp (invalidateCacheRange_RAM vs ve ps)) (\<lambda>rv. invs')"
-  apply (wp dmo_invs' no_irq no_irq_invalidateCacheRange_RAM)
-  apply (clarsimp simp: disj_commute[of "pointerInUserData p s" for p s])
-  apply (erule use_valid)
-   apply (wp, simp)
-  done
-
 lemma dmo_flushtype_case:
   "(doMachineOp (case t of
     ARM_HYP_H.flush_type.Clean \<Rightarrow> f
@@ -3141,15 +3105,6 @@ lemma flushPage_ccorres:
   apply (simp add: pageBits_def mask_eq_iff_w2p word_size)
   done
 
-lemma ignoreFailure_liftM:
-  "ignoreFailure = liftM (\<lambda>v. ())"
-  apply (rule ext)+
-  apply (simp add: ignoreFailure_def liftM_def
-                   catch_def)
-  apply (rule bind_apply_cong[OF refl])
-  apply (simp split: sum.split)
-  done
-
 lemma ccorres_pre_getObject_pte:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
@@ -3352,7 +3307,7 @@ lemma array_assertion_abs_pte_16:
   apply (drule(1) page_table_at_rf_sr, clarsimp)
   apply (cases ptPtr, simp)
   apply (erule clift_array_assertion_imp, simp_all)
-  apply (rule large_ptSlot_array_constraint, simp_all)
+  apply (rule large_ptSlot_array_constraint[simplified], simp_all)
   done
 
 lemmas ccorres_move_array_assertion_pte_16
@@ -3842,14 +3797,6 @@ lemma ccap_relation_mapped_asid_0:
   apply simp
   done
 
-(* FIXME: move *)
-lemma getSlotCap_wp':
-  "\<lbrace>\<lambda>s. \<forall>cap. cte_wp_at' (\<lambda>c. cteCap c = cap) p s \<longrightarrow> Q cap s\<rbrace> getSlotCap p \<lbrace>Q\<rbrace>"
-  apply (simp add: getSlotCap_def)
-  apply (wp getCTE_wp')
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  done
-
 lemma vmsz_aligned_aligned_pageBits:
   "vmsz_aligned' ptr sz \<Longrightarrow> is_aligned ptr pageBits"
   apply (simp add: vmsz_aligned'_def)
@@ -4132,34 +4079,6 @@ lemma cap_lift_PDCap_Base:
 declare mask_Suc_0[simp]
 
 (* FIXME: move *)
-lemma setCTE_asidpool':
-  "\<lbrace> ko_at' (ASIDPool pool) p \<rbrace> setCTE c p' \<lbrace>\<lambda>_. ko_at' (ASIDPool pool) p\<rbrace>"
-  apply (clarsimp simp: setCTE_def)
-  apply (simp add: setObject_def split_def)
-  apply (rule hoare_seq_ext [OF _ hoare_gets_post])
-  apply (clarsimp simp: valid_def in_monad)
-  apply (frule updateObject_type)
-  apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (rule conjI)
-   apply (clarsimp simp: lookupAround2_char1)
-   apply (clarsimp split: if_split)
-   apply (case_tac obj', auto)[1]
-   apply (rename_tac arch_kernel_object)
-   apply (case_tac arch_kernel_object, auto)[1]
-   apply (simp add: updateObject_cte)
-   apply (clarsimp simp: updateObject_cte typeError_def magnitudeCheck_def in_monad
-                   split: kernel_object.splits if_splits option.splits)
-  apply (clarsimp simp: ps_clear_upd' lookupAround2_char1)
-  done
-
-(* FIXME: move *)
-lemma udpateCap_asidpool':
-  "\<lbrace> ko_at' (ASIDPool pool) p \<rbrace> updateCap c p' \<lbrace>\<lambda>_. ko_at' (ASIDPool pool) p\<rbrace>"
-  apply (simp add: updateCap_def)
-  apply (wp setCTE_asidpool')
-  done
-
-(* FIXME: move *)
 lemma asid_pool_at_rf_sr:
   "\<lbrakk>ko_at' (ASIDPool pool) p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow>
   \<exists>pool'. cslift s' (ap_Ptr p) = Some pool' \<and>
@@ -4170,20 +4089,9 @@ lemma asid_pool_at_rf_sr:
   done
 
 (* FIXME: move *)
-lemma asid_pool_at_ko:
-  "asid_pool_at' p s \<Longrightarrow> \<exists>pool. ko_at' (ASIDPool pool) p s"
-  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def projectKOs)
-  apply (case_tac ko, auto)
-  apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object, auto)[1]
-  apply (rename_tac asidpool)
-  apply (case_tac asidpool, auto)[1]
-  done
-
-(* FIXME: move *)
 lemma asid_pool_at_c_guard:
   "\<lbrakk>asid_pool_at' p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow> c_guard (ap_Ptr p)"
-  by (fastforce intro: typ_heap_simps dest!: asid_pool_at_ko asid_pool_at_rf_sr)
+  by (fastforce intro: typ_heap_simps dest!: ArchMove_C.asid_pool_at_ko asid_pool_at_rf_sr)
 
 (* FIXME: move *)
 lemma setObjectASID_Basic_ccorres:
@@ -4315,7 +4223,7 @@ lemma performASIDPoolInvocation_ccorres:
    apply simp
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (rule conjI)
-   apply (clarsimp dest!: asid_pool_at_ko simp: obj_at'_def)
+   apply (clarsimp dest!: ArchMove_C.asid_pool_at_ko simp: obj_at'_def)
   apply (rule cmap_relationE1[OF cmap_relation_cte], assumption+)
   apply (clarsimp simp: typ_heap_simps cap_get_tag_isCap_ArchObject2
                         isPDCap_def isCap_simps

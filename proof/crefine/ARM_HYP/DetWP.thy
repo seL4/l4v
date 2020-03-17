@@ -8,13 +8,6 @@ theory DetWP
 imports "Lib.DetWPLib" "../Include_C"
 begin
 
-(* FIXME YUCK where did you come from *)
-declare ptBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
-declare pdBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
-declare pteBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
-declare pdeBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
-declare vcpuBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma det_wp_doMachineOp [wp]:
@@ -133,7 +126,6 @@ lemma det_wp_asUser [wp]:
   apply simp
   done
 
-(* FIXME move into Refine somewhere *)
 lemma wordSize_def':
   "wordSize = 4"
   unfolding wordSize_def wordBits_def

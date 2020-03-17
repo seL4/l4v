@@ -8,16 +8,6 @@ theory TcbQueue_C
 imports Ctac_lemmas_C
 begin
 
-(* FIXME: move *)
-lemma (in semigroup) foldl_first:
-  "f x (foldl f y zs) = foldl f (f x y) zs"
-  by (induction zs arbitrary: x y) (auto simp: assoc)
-
-(* FIXME: move *)
-lemma (in monoid) foldl_first':
-  "f x (foldl f z zs) = foldl f x zs"
-  using foldl_first by simp
-
 context kernel
 begin
 
@@ -212,14 +202,6 @@ proof -
   finally show ?thesis .
 qed
 
-
-(* MOVE *)
-lemma tcb_aligned':
-  "tcb_at' t s \<Longrightarrow> is_aligned t tcbBlockSizeBits"
-  apply (drule obj_at_aligned')
-   apply (simp add: objBits_simps)
-  apply (simp add: objBits_simps)
-  done
 
 lemma tcb_at_not_NULL:
   assumes tat: "tcb_at' t s"
@@ -1185,11 +1167,6 @@ lemma cvariable_relation_upd_const:
     \<Longrightarrow> cvariable_array_map_relation (m (x \<mapsto> y)) (\<lambda>x. n)
         = cvariable_array_map_relation m (\<lambda>x. n)"
   by (auto simp: fun_eq_iff cvariable_array_map_relation_def)
-
-(* FIXME: move *)
-lemma invs'_pspace_domain_valid:
-  "invs' s \<Longrightarrow> pspace_domain_valid s"
-  by (simp add: invs'_def valid_state'_def)
 
 lemma ptr_span_ctcb_subset:
   "is_aligned p tcbBlockSizeBits \<Longrightarrow> ptr_span (tcb_ptr_to_ctcb_ptr p) \<subseteq> {p .. p + 2^tcbBlockSizeBits-1}"

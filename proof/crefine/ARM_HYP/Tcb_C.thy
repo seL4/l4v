@@ -348,16 +348,6 @@ lemma getMRs_rel_state:
   apply (erule doMachineOp_state)
   done
 
-(* FIXME: move *)
-lemma setTCB_cur:
-  "\<lbrace>cur_tcb'\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
-  including no_pre
-  apply (wp cur_tcb_lift)
-  apply (simp add: setObject_def split_def updateObject_default_def)
-  apply wp
-  apply simp
-  done
-
 lemma setThreadState_getMRs_rel:
   "\<lbrace>getMRs_rel args buffer and cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer
            and (\<lambda>_. runnable' st)\<rbrace>
@@ -1274,9 +1264,6 @@ lemma invokeTCB_CopyRegisters_ccorres:
             | rule conjI)+
      apply (clarsimp dest!: global'_no_ex_cap simp: invs'_def valid_state'_def | rule conjI)+
   done
-
-(* FIXME: move *)
-lemmas mapM_x_append = mapM_x_append2
 
 lemma invokeTCB_WriteRegisters_ccorres_helper:
   "\<lbrakk> unat (f (of_nat n)) = incn
@@ -2747,14 +2734,6 @@ lemma slotCapLongRunningDelete_ccorres:
                  dest!: ccte_relation_ccap_relation)
   done
 
-(* FIXME: move *)
-lemma empty_fail_slotCapLongRunningDelete:
-  "empty_fail (slotCapLongRunningDelete slot)"
-  by (auto simp: slotCapLongRunningDelete_def Let_def
-                 case_Null_If isFinalCapability_def
-          split: if_split
-         intro!: empty_fail_bind)
-
 definition
   isValidVTableRoot_C :: "cap_C \<Rightarrow> bool"
 where
@@ -2796,19 +2775,9 @@ lemma updateCapData_spec:
          \<lbrace>ccap_relation (RetypeDecls_H.updateCapData preserve newData cap) \<acute>ret__struct_cap_C\<rbrace>"
   by (simp add: updateCapData_spec)
 
-lemma if_n_updateCapData_valid_strg:
-  "s \<turnstile>' cap \<longrightarrow> s \<turnstile>' (if P then cap else updateCapData prs v cap)"
-  by (simp add: valid_updateCapDataI split: if_split)
-
 lemma length_excaps_map:
   "length (excaps_map xcs) = length xcs"
   by (simp add: excaps_map_def)
-
-(* FIXME: move *)
-lemma from_bool_all_helper:
-  "(\<forall>bool. from_bool bool = val \<longrightarrow> P bool)
-      = ((\<exists>bool. from_bool bool = val) \<longrightarrow> P (val \<noteq> 0))"
-  by (auto simp: from_bool_0)
 
 lemma getSyscallArg_ccorres_foo':
   "ccorres (\<lambda>a rv. rv = ucast (args ! n)) (\<lambda>x. ucast (ret__unsigned_long_' x))

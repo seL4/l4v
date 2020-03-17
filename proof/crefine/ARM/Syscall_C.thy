@@ -713,10 +713,6 @@ lemma handleFault_ccorres:
   apply (clarsimp simp: pred_tcb_at')
   done
 
-lemma invs_queues_imp:
-  "invs' s \<longrightarrow> valid_queues s"
-  by clarsimp
-
 (* FIXME: move *)
 lemma length_CL_from_H [simp]:
   "length_CL (mi_from_H mi) = msgLength mi"
@@ -1148,16 +1144,6 @@ lemma cap_case_EndpointCap_NotificationCap:
   by (simp add: isCap_simps
          split: capability.split)
 
-
-(* FIXME: MOVE *)
-lemma capFaultOnFailure_if_case_sum:
-  " (capFaultOnFailure epCPtr b (if c then f else g) >>=
-      sum.case_sum (handleFault thread) return) =
-    (if c then ((capFaultOnFailure epCPtr b  f)
-                 >>= sum.case_sum (handleFault thread) return)
-          else ((capFaultOnFailure epCPtr b  g)
-                 >>= sum.case_sum (handleFault thread) return))"
-  by (case_tac c, clarsimp, clarsimp)
 
 lemma invs_valid_objs_strengthen:
   "invs' s \<longrightarrow> valid_objs' s" by fastforce

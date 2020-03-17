@@ -1561,15 +1561,6 @@ lemma ctcb_relation_null_queue_ptrs:
   apply (simp add: ctcb_relation_def tcb_null_queue_ptrs_def)
   done
 
-lemma map_to_ko_atI':
-  "\<lbrakk>(projectKO_opt \<circ>\<^sub>m (ksPSpace s)) x = Some v; invs' s\<rbrakk> \<Longrightarrow> ko_at' v x s"
-  apply (clarsimp simp: map_comp_Some_iff)
-  apply (erule aligned_distinct_obj_atI')
-    apply clarsimp
-   apply clarsimp
-  apply (simp add: project_inject)
-  done
-
 (* Levity: added (20090419 09:44:27) *)
 declare ntfnQueue_head_mask_4 [simp]
 
@@ -1934,11 +1925,6 @@ lemma rf_sr_heap_device_data_relation:
 
 
 
-lemma ko_at_projectKO_opt:
-  "ko_at' ko p s \<Longrightarrow> (projectKO_opt \<circ>\<^sub>m ksPSpace s) p = Some ko"
-  by (clarsimp elim!: obj_atE' simp: projectKOs)
-
-
 lemma user_word_at_cross_over:
   "\<lbrakk> user_word_at x p s; (s, s') \<in> rf_sr; p' = Ptr p \<rbrakk>
    \<Longrightarrow> c_guard p' \<and> hrs_htd (t_hrs_' (globals s')) \<Turnstile>\<^sub>t p'
@@ -2258,7 +2244,7 @@ lemma page_directory_at_carray_map_relation:
   apply (drule_tac x="p' && mask pdBits >> 3" in spec)
   apply (clarsimp simp: shiftr_shiftl1)
   apply (drule mp)
-   apply (simp add: shiftr_over_and_dist mask_def pdBits_def'
+   apply (simp add: shiftr_over_and_dist mask_def pdBits_def' pd_bits_def pde_bits_def
                     order_le_less_trans[OF word_and_le1])
   apply (clarsimp simp: typ_at_to_obj_at_arches objBits_simps archObjSize_def
                         table_bits_defs

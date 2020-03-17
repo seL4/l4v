@@ -21,16 +21,6 @@ end
 
 context kernel_m begin
 
-(* FIXME: move to Move *)
-lemma length_superSectionPDEOffsets_simp [simp]:
-  "length superSectionPDEOffsets = 16"
-  by (clarsimp simp: superSectionPDEOffsets_def table_bits_defs upto_enum_step_def)
-
-(* FIXME: move to Move *)
-lemma length_largePagePTEOffsets_simp [simp]:
-  "length largePagePTEOffsets = 16"
-  by (clarsimp simp: largePagePTEOffsets_def table_bits_defs upto_enum_step_def)
-
 lemma storePTE_def':
   "storePTE slot pte = setObject slot pte"
   unfolding storePTE_def
@@ -62,7 +52,7 @@ lemma performPageTableInvocationUnmap_ccorres:
   apply (rule ccorres_gen_asm)
   apply (cinit lift: cap_' ctSlot_')
    apply csymbr
-   apply (simp del: Collect_const)
+   apply (simp add: del: Collect_const)
    apply (rule ccorres_split_nothrow_novcg_dc)
       apply (subgoal_tac "capPTMappedAddress cap
                            = (\<lambda>cp. if to_bool (capPTIsMapped_CL cp)
@@ -79,7 +69,7 @@ lemma performPageTableInvocationUnmap_ccorres:
           apply csymbr
           apply (simp add: storePTE_def' swp_def)
           apply (ctac add: clearMemory_setObject_PTE_ccorres[simplified objBits_InvalidPTE,
-                              unfolded dc_def])
+                              unfolded dc_def, simplified])
          apply wp
         apply (simp del: Collect_const)
         apply (vcg exspec=unmapPageTable_modifies)
@@ -1227,13 +1217,6 @@ lemma lookupPTSlot_le_0x3C:
   apply (simp add: word_bits_def)
   done
 
-(* FIXME: ARMHYP move, to SR_Lemmas? *)
-lemma isPTE_exclusion:
-  "isInvalidPTE pte   \<Longrightarrow> \<not> (isSmallPagePTE pte) \<and> \<not> (isLargePagePTE pte)"
-  "isLargePagePTE pte \<Longrightarrow> \<not> (isInvalidPTE pte)   \<and> \<not> (isSmallPagePTE pte)"
-  "isSmallPagePTE pte \<Longrightarrow> \<not> (isInvalidPTE pte)   \<and> \<not> (isLargePagePTE pte)"
-  by (cases pte ;  clarsimp simp: isInvalidPTE_def isSmallPagePTE_def isLargePagePTE_def)+
-
 lemma createSafeMappingEntries_PTE_ccorres:
   "ccorres (syscall_error_rel \<currency> (\<lambda>rv rv'. isLeft rv \<and> cpte_relation (fst (theLeft rv)) (fst rv')
                                          \<and> pte_range_relation (snd (theLeft rv)) (snd rv')))
@@ -1583,22 +1566,6 @@ lemma pte_sadness:
   apply (cases pte', cases pte, simp)
   done
 
-(* FIXME: move to Lib *)
-lemma hd_in_zip_set:
-   "slots \<noteq> [] \<Longrightarrow> (hd slots, 0) \<in> set (zip slots [0.e.of_nat (length slots - Suc 0)::machine_word])"
-   by (cases slots; simp add: upto_enum_word upto_0_to_n2 del: upt_Suc)
-
-(* FIXME: move to Lib *)
-lemma last_in_zip_set:
-  "\<lbrakk> slots \<noteq> []; length js = length slots \<rbrakk> \<Longrightarrow> (last slots, last js) \<in> set (zip slots js)"
-   apply (simp add: in_set_zip last_conv_nth)
-   apply (rule_tac x="length slots - 1" in exI)
-   apply clarsimp
-   apply (subst last_conv_nth)
-    apply (cases js; simp)
-   apply simp
-   done
-
 lemma pte_lift_to_small:
   "pte_lift pte = Some (Pte_pte_small pte') \<Longrightarrow> pte_pte_small_lift pte = pte'"
   by (simp add: pte_pte_small_lift_def)
@@ -1766,7 +1733,7 @@ lemma performPageInvocationMapPTE_ccorres:
            apply (simp add: storePTE_def' split_def)
            apply (rule obj_at_setObject3)
             apply simp
-           apply (simp add: objBits_simps archObjSize_def pteBits_def)
+           apply (simp add: objBits_simps archObjSize_def pteBits_def pte_bits_def)
           apply (simp add: typ_at_to_obj_at_arches[symmetric])
           apply ((wp mapM_x_wp_inv hoare_vcg_ex_lift | simp add: split_def valid_pte_slots'2_def)+)[2]
         apply clarsimp
@@ -1778,9 +1745,9 @@ lemma performPageInvocationMapPTE_ccorres:
         apply (rule conj_assoc[where Q="a \<le> b" for a b, THEN iffD1])+
         apply (rule conjI)
     (* the inequalities first *)
-         apply (clarsimp simp: valid_pte_slots'2_def
-                               objBits_simps archObjSize_def hd_conv_nth pteBits_def)
-         apply (clarsimp simp:pte_range_relation_def ptr_range_to_list_def ptr_add_def)
+         apply (clarsimp simp: valid_pte_slots'2_def objBits_simps archObjSize_def hd_conv_nth
+                               pteBits_def pte_bits_def)
+         apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def ptr_add_def)
          apply (frule is_aligned_addrFromPPtr_n,simp)
          apply (cut_tac n = "sz + 3" in  power_not_zero[where 'a="machine_word_len"])
           apply simp
@@ -1792,7 +1759,7 @@ lemma performPageInvocationMapPTE_ccorres:
         apply (auto simp: valid_pte_slots'2_def upt_conv_Cons[where i=0])[1]
        apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth ucast_minus)
        apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def objBits_simps
-                             archObjSize_def pteBits_def)
+                             archObjSize_def pteBits_def pte_bits_def)
        apply (simp add: CTypesDefs.ptr_add_def ucast_nat_def word_0_sle_from_less)
        apply (clarsimp simp: valid_pte_slots'2_def del: disjCI)
        apply (erule disjE, simp_all add: unat_arith_simps)[1]
@@ -1840,16 +1807,6 @@ lemma pde_align_ptBits:
   apply (simp add: table_bits_defs)
   done
 
-(* FIXME: consider generalising and moving to Word_Lemmas *)
-lemma vaddr_segment_nonsense3_folded:
-  "is_aligned (p :: word32) pageBits \<Longrightarrow>
-   (p + ((vaddr >> pageBits) && mask (pt_bits - pte_bits) << pte_bits) && ~~ mask pt_bits) = p"
-  apply (rule is_aligned_add_helper[THEN conjunct2])
-   apply (simp add: vspace_bits_defs mask_def)+
-  apply (rule shiftl_less_t2n[where m=12 and n=3, simplified, OF and_mask_less'[where n=9, unfolded mask_def, simplified]])
-   apply simp+
-  done
-
 lemma createMappingEntries_valid_pte_slots'2:
   "\<lbrace>K (vmsz_aligned' vptr sz \<and> vmsz_aligned' base sz) and valid_objs'\<rbrace>
      createMappingEntries base vptr sz vm_rights attrib pt
@@ -1893,19 +1850,6 @@ lemma createMappingEntries_valid_pte_slots'2:
    apply (wp | simp add:valid_pte_slots'2_def)+
   done
 
-(* FIXME: rewrite using 'unat_shiftr_shiftl_mask_zero *)
-(* FIXME: move *)
-(* this one is specialised to a PDE for a supersection *)
-lemma vaddr_segment_nonsense6:
-  "is_aligned (p :: word32) 14 \<Longrightarrow>
-   (p + (vaddr >> 21 << 3) && ~~ mask 14) = p"
-  apply (rule is_aligned_add_helper[THEN conjunct2])
-   apply (erule is_aligned_weaken, simp)
-  apply simp
-  apply (rule shiftl_less_t2n[where m=14 and n=3 and 'a=machine_word_len, simplified])
-  apply (rule shiftr_less_t2n'[where m=11 and n=21 and 'a=machine_word_len, simplified])
-  done
-
 (* replay of proof in Arch_R with stronger validity result *)
 lemma createMappingEntries_valid_pde_slots'2:
   "\<lbrace>page_directory_at' pd and K (vmsz_aligned' vptr sz \<and> vptr < kernelBase \<and> vmsz_aligned' base sz)\<rbrace>
@@ -1915,7 +1859,7 @@ lemma createMappingEntries_valid_pde_slots'2:
   apply (cases sz, simp_all)
      apply wpsimp+
    apply (clarsimp simp: page_directory_at'_def
-      lookup_pd_slot_eq[simplified pdBits_eq])
+                         lookup_pd_slot_eq[simplified pd_bits_def pde_bits_def])
    apply (clarsimp simp: lookup_pd_slot_def Let_def mask_add_aligned table_bits_defs)
    apply (rule conjI, erule less_kernelBase_valid_pde_offset'')
    apply (rule conjI, subst vaddr_segment_nonsense6, assumption, blast)
@@ -2165,7 +2109,7 @@ lemma performPageInvocationMapPDE_ccorres:
            apply (simp add: storePDE_def' split_def)
            apply (rule obj_at_setObject3)
             apply simp
-           apply (simp add: objBits_simps archObjSize_def pdeBits_def)
+           apply (simp add: objBits_simps archObjSize_def pdeBits_def pde_bits_def)
           apply (simp add: typ_at_to_obj_at_arches[symmetric])
           apply ((wp mapM_x_storePDE_pde_mappings' mapM_x_wp' valid_pde_slots_lift2 | simp add: split_def)+)[2]
          apply (clarsimp simp: valid_pde_mapping'_def valid_pde_slots'2_def)
@@ -2180,7 +2124,7 @@ lemma performPageInvocationMapPDE_ccorres:
         apply (rule conjI)
     (* the inequalities first *)
          apply (clarsimp simp: valid_pde_slots'2_def
-                               objBits_simps archObjSize_def hd_conv_nth pdeBits_def)
+                               objBits_simps archObjSize_def hd_conv_nth pdeBits_def pde_bits_def)
          apply (clarsimp simp:pde_range_relation_def ptr_range_to_list_def ptr_add_def)
          apply (frule is_aligned_addrFromPPtr_n,simp)
          apply (cut_tac n = "sz + 3" in  power_not_zero[where 'a="machine_word_len"])
@@ -2193,7 +2137,7 @@ lemma performPageInvocationMapPDE_ccorres:
         apply (auto simp: valid_pde_slots'2_def upt_conv_Cons[where i=0])[1]
        apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth ucast_minus)
        apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def objBits_simps
-                             archObjSize_def pdeBits_def)
+                             archObjSize_def pdeBits_def pde_bits_def)
        apply (simp add: CTypesDefs.ptr_add_def ucast_nat_def word_0_sle_from_less)
        apply (clarsimp simp: valid_pde_slots'2_def del: disjCI)
        apply (erule disjE, simp_all add: unat_arith_simps)[1]
@@ -2201,7 +2145,7 @@ lemma performPageInvocationMapPDE_ccorres:
       apply (wp valid_pde_slots_lift2 hoare_drop_imps)
      apply vcg
     apply (wp valid_pde_slots_lift2 hoare_drop_imps hoare_vcg_all_lift)
-   apply (vcg)
+   apply vcg
   apply simp
   apply (strengthen refl[where t=True] UNIV_I, simp)?
   apply (rule conjI, fastforce)
@@ -2281,30 +2225,6 @@ lemma framesize_from_H_eq_eq:
 
 lemmas framesize_from_H_eq_eqs = framesize_from_H_eq_eq trans [OF eq_commute framesize_from_H_eq_eq]
 
-(* FIXME: generalise, move to Word_Lib, and/or rewrite using 'shift_then_mask_eq_shift_low_bits' *)
-lemma shiftr_asid_low_bits_mask_asid_high_bits:
-  "(asid :: word32) \<le> mask asid_bits
-      \<Longrightarrow> (asid >> asid_low_bits) && mask asid_high_bits = asid >> asid_low_bits"
-  apply (rule iffD2 [OF mask_eq_iff_w2p])
-   apply (simp add: asid_high_bits_def word_size)
-  apply (rule shiftr_less_t2n)
-  apply (simp add: asid_low_bits_def asid_high_bits_def mask_def)
-  apply (simp add: asid_bits_def)
-  done
-
-(* FIXME: generalise, move to Word_Lib, and/or rewrite using 'leq_low_bits_iff_zero' *)
-lemma shiftr_asid_low_bits_mask_eq_0:
-  "\<lbrakk> (asid :: word32) \<le> mask asid_bits; asid >> asid_low_bits = 0 \<rbrakk>
-        \<Longrightarrow> (asid && mask asid_low_bits = 0) = (asid = 0)"
-  apply (rule iffI[rotated])
-   apply simp
-  apply (rule asid_low_high_bits)
-     apply simp
-    apply (simp add: ucast_asid_high_bits_is_shift)
-   apply (simp add: mask_def)
-  apply simp
-  done
-
 lemma generic_frame_cap_set_capFMappedAddress_ccap_relation:
   "\<lbrakk> cap_lift c'' = generic_frame_cap_set_capFMappedAddress_CL (cap_lift c') asid addr;
      ccap_relation c c'; isArchPageCap c; asid \<le> mask asid_bits; asid \<noteq> 0;
@@ -2349,11 +2269,6 @@ lemma ivc_label_flush_case:
   |  _  \<Rightarrow> E)
   = C"
   by (auto split: invocation_label.split arch_invocation_label.split)
-
-(* FIXME: move to Lib *)
-lemma list_length_less:
-  "(args = [] \<or> length args \<le> Suc 0) = (length args < 2)"
-  by (case_tac args,simp_all)
 
 
 lemma injection_handler_whenE:
@@ -2446,18 +2361,6 @@ lemma setVMRootForFlush_ccorres2:
   apply (auto simp: cap_get_tag_isCap_ArchObject2)
   done
 
-(* FIXME: move to Lib *)
-lemma at_least_2_args:
-  "\<not>  length args < 2 \<Longrightarrow> \<exists>a b c. args = a#b#c"
-  apply (case_tac args)
-   apply simp
-  apply (case_tac list)
-   apply simp
-  apply (case_tac lista)
-   apply simp
-  apply simp
-  done
-
 
 definition
   to_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a option"
@@ -2517,10 +2420,6 @@ lemma cpte_relation_get_tag_simps:
   "cpte_relation (ARM_HYP_H.LargePagePTE w x y z) cpte \<Longrightarrow> pte_get_tag cpte = scast pte_pte_small"
   by (clarsimp simp: cpte_relation_def pte_get_tag_alt)+
 
-(* FIXME: move *)
-lemma valid_objs_valid_pte': "\<lbrakk> valid_objs' s ; ko_at' (ko :: pte) p s \<rbrakk> \<Longrightarrow> valid_pte' ko s"
-  by (fastforce simp add: obj_at'_def ran_def valid_obj'_def projectKOs valid_objs'_def)
-
 (* Note: needs valid_objs' on ARM Hypervisor since the cpte_relation says nothing about alignment
          of the page addresses - therefore the only way to ensure that a C large page is aligned
          is to appeal to validity of the PTE on the Haskell side *)
@@ -2567,7 +2466,7 @@ lemma resolveVAddr_ccorres:
                                         (2 ^ (ptBits - 3)) (hrs_htd (t_hrs_' (globals s)))}"
                   in ccorres_from_vcg_might_throw)
      apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: pteBits_def if_1_0_0 typ_heap_simps' gen_framesize_to_H_def
+     apply (clarsimp simp: pteBits_def pt_bits_def pte_bits_def typ_heap_simps' gen_framesize_to_H_def
                            c_page_sizes_noteq)
      subgoal for word1 pte \<sigma> x cpte _ tag
 
@@ -2575,7 +2474,8 @@ lemma resolveVAddr_ccorres:
         prefer 2
         apply (simp add: mask_def ARMLargePage_def)
        \<comment> \<open>reduce to resolve_ret_rel goals first\<close>
-       apply (clarsimp simp: fst_return pte_get_tag_alt true_def false_def split: pte.splits)
+       apply (clarsimp simp: fst_return pte_get_tag_alt true_def false_def pt_bits_def pte_bits_def
+                      split: pte.splits)
        apply (safe ; clarsimp simp: cpte_relation_get_tag_simps c_pages_noteq)
        (* 4 subgoals *)
        apply (fastforce simp: cpte_relation_def pte_pte_small_lift_def pte_lift_def Let_def mask_def
@@ -2585,7 +2485,7 @@ lemma resolveVAddr_ccorres:
        done
     apply (rule guard_is_UNIVI)
     apply (clarsimp simp: typ_heap_simps)
-    apply (auto simp: ptBits_def' pageBits_def
+    apply (auto simp: ptBits_def' pageBits_def pt_bits_def pte_bits_def
                dest!: page_table_at_rf_sr
                elim: clift_array_assertion_imp)[1]
    apply (rule_tac P'="{s. \<exists>v. cslift s (pde_Ptr (lookup_pd_slot pd vaddr)) = Some v
@@ -2636,13 +2536,6 @@ lemma two_nat_power_pageBitsForSize_le:
   "(2 :: nat) ^ pageBits \<le> 2 ^ pageBitsForSize vsz"
   by (cases vsz, simp_all add: pageBits_def)
 
-
-(* FIXME: move *)
-lemma is_aligned_pageBitsForSize_minimum:
-  "\<lbrakk> is_aligned p (pageBitsForSize sz) ; n \<le> pageBits \<rbrakk> \<Longrightarrow> is_aligned p n"
-  apply (cases sz; clarsimp simp: pageBits_def)
-  apply (erule is_aligned_weaken, simp)+
-  done
 
 lemma ptrFromPAddr_add_left:
   "ptrFromPAddr (x + y) = ptrFromPAddr x + y"
@@ -3224,18 +3117,6 @@ lemma maskCapRights_eq_Untyped [simp]:
   done
 
 
-(* FIXME: generalise, move to Word_Lib, and/or rewrite using
-   'leq_high_bits_shiftr_low_bits_leq_bits' *)
-lemma le_mask_asid_bits_helper:
-  "x \<le> 2 ^ asid_high_bits - 1 \<Longrightarrow> (x::word32) << asid_low_bits \<le> mask asid_bits"
-  apply (simp add: mask_def)
-  apply (drule le2p_bits_unset_32)
-   apply (simp add: asid_high_bits_def word_bits_def)
-  apply (subst upper_bits_unset_is_l2p_32 [symmetric])
-   apply (simp add: asid_bits_def word_bits_def)
-  apply (clarsimp simp: asid_bits_def asid_low_bits_def asid_high_bits_def nth_shiftl)
-  done
-
 declare Word_Lemmas.from_bool_mask_simp [simp]
 
 lemma isPDFlush_fold:
@@ -3343,23 +3224,10 @@ lemma framesize_from_H_mask2:
       Kernel_C.ARMSuperSection_def)+
   done
 
-(* FIXME: move to Lib *)
-lemma rel_option_alt_def:
-  "rel_option f a b = (
-      (a = None \<and>  b = None)
-      \<or> (\<exists>x y. a = Some x \<and>  b = Some y \<and> f x y))"
-  apply (case_tac a, case_tac b, simp, simp, case_tac b, auto)
-  done
-
 lemma injection_handler_stateAssert_relocate:
   "injection_handler Inl (stateAssert ass xs >>= f) >>=E g
     = do v \<leftarrow> stateAssert ass xs; injection_handler Inl (f ()) >>=E g od"
   by (simp add: injection_handler_def handleE'_def bind_bindE_assoc bind_assoc)
-
-(* FIXME: move to where is_aligned_ptrFromPAddr is *)
-lemma is_aligned_ptrFromPAddr_pageBitsForSize:
-  "is_aligned p (pageBitsForSize sz) \<Longrightarrow> is_aligned (ptrFromPAddr p) (pageBitsForSize sz)"
-  by (cases sz ; simp add: is_aligned_ptrFromPAddr_n pageBits_def)
 
 lemma decodeARMPageDirectoryInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
