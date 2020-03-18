@@ -42,7 +42,7 @@ for line in instructions:
     output_f = open(output_tmp, 'w')
     output_f.write('(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)\n')
     output_f.write('(* instead, see the skeleton file %s *)\n' %
-            os.path.basename(input))
+                   os.path.basename(input))
 
     input_f = open(input)
     for line in input_f:
@@ -88,10 +88,10 @@ for line in instructions:
                 pass
             else:
                 output_f.writelines(parsed)
-        elif line.startswith ("#INCLUDE_SETTINGS"):
-            (_, settings) = line.split (None, 1)
-            settings = settings.strip ()
-            lhs_pars.settings_line (settings)
+        elif line.startswith("#INCLUDE_SETTINGS"):
+            (_, settings) = line.split(None, 1)
+            settings = settings.strip()
+            lhs_pars.settings_line(settings)
         else:
             output_f.write(line)
 

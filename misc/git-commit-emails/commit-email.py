@@ -49,13 +49,16 @@ MAX_EMAILS_PER_RUN = 10
 # Footer at the bottom of emails
 BODY_FOOTER = ["", "-- ", "Sent with ❤ by 'commit-email.py'."]
 
+
 def as_utf8(s):
     """Interpret the given byte string as utf-8."""
     assert isinstance(s, str)
     return s.decode('utf-8', 'replace')
 
+
 def is_unicode(s):
     return isinstance(s, unicode)
+
 
 def is_ascii(s):
     assert is_unicode(s)
@@ -66,19 +69,25 @@ def is_ascii(s):
     else:
         return True
 
+
 def encode_unicode_header(s):
     if is_ascii(s):
         return s
     return email.Header.make_header([(s, "utf-8")]).encode()
 
+
 VERBOSE = False
+
+
 def debug(x):
     if VERBOSE:
         sys.stderr.write(x + "\n")
 
+
 def get_commit_patch(repo, hexsha):
     patch = repo.git.show(hexsha, patience=True, pretty="format:", stat=True, patch=True)
     return as_utf8(patch)
+
 
 def get_commit_branches(repo, remote, hexsha):
     commit_branches = set()
@@ -91,6 +100,7 @@ def get_commit_branches(repo, remote, hexsha):
             pass
     return sorted([as_utf8(x) for x in commit_branches])
 
+
 def first_line(s, max_len=256):
     """Summarise the message 's'."""
     assert is_unicode(s)
@@ -99,6 +109,7 @@ def first_line(s, max_len=256):
     if len(s) > max_len:
         s = s[:max_len - 3] + "…"
     return s
+
 
 def send_email(from_addr, dest_addrs, headers, body, dry_run=False):
     # Ensure we only have unicode inputs, and that email addresses, header
@@ -168,8 +179,8 @@ def email_commit(from_addr, dest_addrs, repo, remote, commit, repo_name, dry_run
             "commit:  %s" % (as_utf8(commit.hexsha[:12])),
             "author:  %s <%s>" % (commit.author.name, as_utf8(commit.author.email)),
             "date:    %s" % (
-                    datetime.datetime.fromtimestamp(commit.authored_date)
-                    .strftime('%A, %-d %B %Y @ %H:%M')),
+                datetime.datetime.fromtimestamp(commit.authored_date)
+                .strftime('%A, %-d %B %Y @ %H:%M')),
             "branch:  %s" % (", ".join(branches)),
             ]
             + [""]
@@ -181,19 +192,20 @@ def email_commit(from_addr, dest_addrs, repo, remote, commit, repo_name, dry_run
 
     # Construct email
     send_email(
-            from_addr=from_addr,
-            dest_addrs=dest_addrs,
-            headers={
-                "Reply-To": "%s <%s>" % (
-                        encode_unicode_header(commit.author.name),
-                        encode_unicode_header(as_utf8(commit.author.email))),
-                "From": "%s <%s>" % (
-                        encode_unicode_header(commit.author.name), from_addr),
-                "Subject": encode_unicode_header(subject),
-                },
-            body="\n".join(body) + "\n",
-            dry_run=dry_run
-            )
+        from_addr=from_addr,
+        dest_addrs=dest_addrs,
+        headers={
+            "Reply-To": "%s <%s>" % (
+                encode_unicode_header(commit.author.name),
+                encode_unicode_header(as_utf8(commit.author.email))),
+            "From": "%s <%s>" % (
+                encode_unicode_header(commit.author.name), from_addr),
+            "Subject": encode_unicode_header(subject),
+        },
+        body="\n".join(body) + "\n",
+        dry_run=dry_run
+    )
+
 
 def email_bulk_commit(from_addr, dest_addrs, repo, commits, repo_name, dry_run=False):
     # Check inputs.
@@ -224,41 +236,43 @@ def email_bulk_commit(from_addr, dest_addrs, repo, commits, repo_name, dry_run=F
 
     # Construct email
     send_email(
-            from_addr=from_addr,
-            dest_addrs=dest_addrs,
-            headers={
-                "From": "%s <%s>" % (
-                        encode_unicode_header(author), from_addr),
-                "Reply-To": "%s <%s>" % (
-                        encode_unicode_header(author),
-                        encode_unicode_header(message_from_address)),
-                "Subject": encode_unicode_header(subject),
-                },
-            body="\n".join(body) + "\n",
-            dry_run=dry_run
-            )
+        from_addr=from_addr,
+        dest_addrs=dest_addrs,
+        headers={
+            "From": "%s <%s>" % (
+                encode_unicode_header(author), from_addr),
+            "Reply-To": "%s <%s>" % (
+                encode_unicode_header(author),
+                encode_unicode_header(message_from_address)),
+            "Subject": encode_unicode_header(subject),
+        },
+        body="\n".join(body) + "\n",
+        dry_run=dry_run
+    )
+
 
 def main():
     # Parse arguments.
     parser = argparse.ArgumentParser(
-            description="Email new commits in a git repository.")
+        description="Email new commits in a git repository.")
     parser.add_argument('repo', help="git repository location", metavar='REPO')
     parser.add_argument('--remote', '-r',
-            help="remote to pull from (default 'origin')", default="origin", type=unicode)
+                        help="remote to pull from (default 'origin')", default="origin", type=unicode)
     parser.add_argument('--verbose', '-v', action="store_true",
-            help="be verbose")
+                        help="be verbose")
     parser.add_argument('--mark-only', action="store_true",
-            help="mark commits as emailed, but don't actually send off an email")
+                        help="mark commits as emailed, but don't actually send off an email")
     parser.add_argument('--dry-run', '-n', action="store_true",
-            help="don't do a 'git' fetch, and print emails to standard out")
+                        help="don't do a 'git' fetch, and print emails to standard out")
     parser.add_argument('--no-fetch', action="store_true",
-            help="don't do a 'git fetch'.")
+                        help="don't do a 'git fetch'.")
     parser.add_argument('--repo-name', help="email subject prefix", type=unicode)
     parser.add_argument('--to', '-d', help="email address to send to", dest="to_addr", type=unicode)
-    parser.add_argument('--from', '-f', help="email address to send from", dest="from_addr", type=unicode)
+    parser.add_argument('--from', '-f', help="email address to send from",
+                        dest="from_addr", type=unicode)
     parser.add_argument('--max-emails', '-M', action="store",
-            help="maximum commit emails before we just send a single email summarising the changes",
-            dest="max_emails", default=MAX_EMAILS_PER_RUN)
+                        help="maximum commit emails before we just send a single email summarising the changes",
+                        dest="max_emails", default=MAX_EMAILS_PER_RUN)
     args = parser.parse_args()
 
     # Setup verbose debugging if neccessary.
@@ -316,7 +330,7 @@ def main():
             if not args.mark_only:
                 debug("Sending bulk email with %d commits..." % len(new_commits))
                 email_bulk_commit(args.from_addr, [args.to_addr], repo, new_commits,
-                        repo_name=args.repo_name, dry_run=args.dry_run)
+                                  repo_name=args.repo_name, dry_run=args.dry_run)
             if not args.dry_run:
                 for commit in new_commits:
                     db[commit.hexsha] = True
@@ -327,13 +341,14 @@ def main():
                 if not args.mark_only:
                     debug("Emailing commit %s to %s..." % (commit.hexsha, args.to_addr))
                     email_commit(args.from_addr, [args.to_addr], repo, remote, commit,
-                            repo_name=args.repo_name, dry_run=args.dry_run)
+                                 repo_name=args.repo_name, dry_run=args.dry_run)
                 if not args.dry_run:
                     db[commit.hexsha] = True
                     db.sync()
     finally:
         # Close the database.
         db.close()
+
 
 if __name__ == "__main__":
     main()

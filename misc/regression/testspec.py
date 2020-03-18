@@ -15,8 +15,10 @@ from lxml import etree
 REGRESSION_DIR = os.path.dirname(os.path.realpath(__file__))
 REGRESSION_DTD = os.path.join(REGRESSION_DIR, "regression.dtd")
 
+
 class TestSpecParseException(Exception):
     pass
+
 
 class TestEnv(object):
 
@@ -44,6 +46,7 @@ class TestEnv(object):
             setattr(new_env, name, new)
         return new_env
 
+
 def parse_attributes(tag, env):
     """Parse attributes such as "timeout" in the given XML tag,
     returning an updated env to reflect them."""
@@ -52,7 +55,8 @@ def parse_attributes(tag, env):
 
     def parse_attr(name, xml_name, cast):
         value = tag.get(xml_name)
-        if value is not None: updates[name] = cast(value)
+        if value is not None:
+            updates[name] = cast(value)
 
     parse_attr("cwd", "cwd", str)
     parse_attr("timeout", "timeout", int)
@@ -60,6 +64,7 @@ def parse_attributes(tag, env):
     parse_attr("depends", "depends", lambda s: s.split())
 
     return env.update(updates) if updates else env
+
 
 class Test(object):
 
@@ -77,12 +82,15 @@ class Test(object):
         self.cpu_timeout = env.cpu_timeout
         self.depends = env.depends
 
+
 def parse_test(doc, env):
     test = Test(doc.get("name"), doc.text.strip(), env)
     return [test]
 
+
 def tests_names(tests):
     return [t.name for t in tests]
+
 
 def parse_sequence(doc, env):
     tests = []
@@ -94,6 +102,7 @@ def parse_sequence(doc, env):
 
     return tests
 
+
 def parse_set(doc, env):
     tests = []
 
@@ -102,6 +111,7 @@ def parse_set(doc, env):
 
     return tests
 
+
 parsers = {
     'testsuite': parse_set,
     'set': parse_set,
@@ -109,12 +119,14 @@ parsers = {
     'test': parse_test
 }
 
+
 def parse_tag(doc, env):
     try:
         parser = parsers[doc.tag]
     except KeyError:
         raise TestSpecParseException("Unknown tag '%s'" % doc.tag)
     return parser(doc, parse_attributes(doc, env))
+
 
 def validate_xml(doc, filename):
     """Ensure the XML matches the regression DTD."""
@@ -126,8 +138,9 @@ def validate_xml(doc, filename):
     # Parse the file, and validate against the DTD.
     if not dtd.validate(doc):
         raise Exception(
-                "%s does not validate against DTD:\n\n" % filename
-                + str(dtd.error_log))
+            "%s does not validate against DTD:\n\n" % filename
+            + str(dtd.error_log))
+
 
 def parse_testsuite_xml(filename):
     # Parse the file.
@@ -144,6 +157,7 @@ def parse_testsuite_xml(filename):
     # Returns a list of all tests found in this file.
     return parse_tag(doc.getroot(), env)
 
+
 def parse_test_files(xml_files):
     tests = []
     for x in xml_files:
@@ -154,15 +168,19 @@ def parse_test_files(xml_files):
             raise
     return tests
 
+
 def show_names(names):
     return ' '.join(sorted(names))
+
 
 def check_tests(tests):
     # Check that test names are unique.
     names, dups = set(), set()
     for n in tests_names(tests):
-        if n in names: dups.add(n)
-        else: names.add(n)
+        if n in names:
+            dups.add(n)
+        else:
+            names.add(n)
     if dups:
         raise TestSpecParseException(
             "Duplicate test names: %s" % show_names(dups))
@@ -173,10 +191,12 @@ def check_tests(tests):
         raise TestSpecParseException(
             "Invalid dependencies: %s" % show_names(bad_depends))
 
+
 def step_rel(rel):
     # From a one-step relation represented as a dictionary,
     # generate the corresponding one-or-two-step relation.
     return dict((s, rel[s].union(*(rel[t] for t in rel[s]))) for s in rel)
+
 
 def trans_depends(rel):
     # Repeatedly add dependencies of dependencies until convergence.
@@ -185,13 +205,17 @@ def trans_depends(rel):
         rel, rel_t = rel_t, step_rel(rel_t)
     return rel_t
 
+
 def refl_depends(rel):
     rel_r = {}
-    for t in rel: rel_r[t] = rel[t] | {t}
+    for t in rel:
+        rel_r[t] = rel[t] | {t}
     return rel_r
+
 
 class Depends(object):
     __slots__ = 'step', 'trans', 'rtrans'
+
     def __init__(self, step):
         trans = trans_depends(step)
         rtrans = refl_depends(trans)
@@ -202,13 +226,16 @@ class Depends(object):
             # Allow the user to customise handling of missing keys,
             # but by default, raise the appropriate KeyError.
             def result(x, fail=lambda x: rel[x]):
-                if x in rel: return rel[x]
-                else: return fail(x)
+                if x in rel:
+                    return rel[x]
+                else:
+                    return fail(x)
             return result
 
         self.step = lookup(step)
         self.trans = lookup(trans)
         self.rtrans = lookup(rtrans)
+
 
 def collect_dependencies(tests):
     forward, reverse = {}, {}
@@ -216,6 +243,7 @@ def collect_dependencies(tests):
         forward[t.name] = frozenset(t.depends)
         reverse[t.name] = frozenset(r.name for r in tests if t.name in r.depends)
     return Depends(forward), Depends(reverse)
+
 
 def toposort(keys, forward_depends, reverse_depends):
     """Topological sort.
@@ -253,13 +281,16 @@ def toposort(keys, forward_depends, reverse_depends):
 
     return result
 
+
 class TestInfo(object):
     __slots__ = 'tests', 'tests_by_name', 'forward_deps', 'reverse_deps'
+
     def __init__(self, tests, tests_by_name, forward_deps, reverse_deps):
         self.tests = tests
         self.tests_by_name = tests_by_name
         self.forward_deps = forward_deps
         self.reverse_deps = reverse_deps
+
 
 def process_tests(tests):
     """Given a list of tests (possibly from multiple XML file), check for
@@ -292,14 +323,16 @@ def process_tests(tests):
 
     return TestInfo(tests, tests_by_name, forward_deps, reverse_deps)
 
+
 def process_test_files(xml_files):
     return process_tests(parse_test_files(xml_files))
+
 
 def main():
     # Parse arguments
     parser = argparse.ArgumentParser(description="Regression Framework Testspec Parser")
     parser.add_argument("file", metavar="FILE", type=str, nargs="*",
-            help="a regression XML file to parse")
+                        help="a regression XML file to parse")
     args = parser.parse_args()
 
     # Ensure we have at least one file.
@@ -313,6 +346,7 @@ def main():
     for test in test_info.tests:
         print("\"%s\" [timeout=%d, cpu-timeout=%g, parents=%s, cwd=%s]" % (
             test.command, test.timeout, test.cpu_timeout, ",".join(test.depends), test.cwd))
+
 
 if __name__ == "__main__":
     main()

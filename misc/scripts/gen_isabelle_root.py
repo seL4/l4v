@@ -17,23 +17,23 @@ import glob
 # Parse arguments
 parser = optparse.OptionParser()
 parser.add_option("-o", "--output", dest="output",
-        help="output file", metavar="FILE")
+                  help="output file", metavar="FILE")
 parser.add_option("-i", "--input-dir", dest="input_dir",
-        help="input directory", action="append", default=[],
-        metavar="DIR")
+                  help="input directory", action="append", default=[],
+                  metavar="DIR")
 parser.add_option("-s", "--session-name", dest="session_name",
-        help="isabelle session name", metavar="NAME")
+                  help="isabelle session name", metavar="NAME")
 parser.add_option("-b", "--base-session", dest="base_session",
-        help="isabelle base session", metavar="NAME")
+                  help="isabelle base session", metavar="NAME")
 parser.add_option("-d", "--named-session-dependency", dest="session_dependencies",
-        help="additional named session dependency", action="append", default=[],
-        metavar="NAME")
+                  help="additional named session dependency", action="append", default=[],
+                  metavar="NAME")
 parser.add_option("-q", "--quick-and-dirty", dest="quick_and_dirty",
-        help="ROOT file should compile with \"quick and dirty\" enabled.",
-        action="store_true", default=False)
+                  help="ROOT file should compile with \"quick and dirty\" enabled.",
+                  action="store_true", default=False)
 parser.add_option("-T", "--generate-theory", dest="theory_file",
-        action="store_true", default=False,
-        help="Generate a theory file instead of a ROOT file.")
+                  action="store_true", default=False,
+                  help="Generate a theory file instead of a ROOT file.")
 (options, args) = parser.parse_args()
 
 # Check arguments
@@ -58,6 +58,7 @@ with open(options.output, "w") as output:
 
     if options.theory_file:
         session_name = os.path.splitext(os.path.basename(options.output))[0]
+
         def import_name(file):
             return os.path.splitext(os.path.relpath(file, os.path.dirname(options.output)))[0]
 

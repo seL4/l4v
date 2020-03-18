@@ -50,14 +50,18 @@ except ImportError:
 # for the total user and system times of its child processes.
 # For compatibility with both versions, we ignore the additional
 # values.
+
+
 def cpu_time_of(process):
     cpu_times = process.cpu_times()
     return cpu_times[0] + cpu_times[1]
+
 
 class Poller(threading.Thread):
     '''Subclass of threading.Thread that monitors CPU usage of another process.
        Use run() to start the process.
        Use cpu_usage() to retrieve the latest estimate of CPU usage.'''
+
     def __init__(self, pid):
         super(Poller, self).__init__()
         # Daemonise ourselves to avoid delaying exit of the process of our
@@ -73,7 +77,7 @@ class Poller(threading.Thread):
 
         # Remember CPU times of recently seen children.
         # This is to prevent double-counting for child processes.
-        self.current_children = {} # {(pid, create_time): CPU time}
+        self.current_children = {}  # {(pid, create_time): CPU time}
         # CPU time of dead children is recorded here.
         self.old_children_cpu = 0.0
 
@@ -154,6 +158,7 @@ class Poller(threading.Thread):
     def __exit__(self, *_):
         self.finished = True
 
+
 def process_poller(pid):
     '''Initiate polling of a subprocess. This is intended to be used in a
     `with` block.'''
@@ -166,9 +171,10 @@ def process_poller(pid):
 
     return p
 
+
 def main():
     if len(sys.argv) <= 1 or sys.argv[1] in ['-?', '--help']:
-        print('Usage: %s command args...\n Measure total CPU ' \
+        print('Usage: %s command args...\n Measure total CPU '
               'usage of a command' % sys.argv[0], file=sys.stderr)
         return -1
 
@@ -193,6 +199,7 @@ def main():
     print('Total cpu %f seconds' % m.cpu_usage(), file=sys.stderr)
 
     return p.returncode
+
 
 if __name__ == '__main__':
     sys.exit(main())
