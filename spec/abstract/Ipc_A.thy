@@ -538,14 +538,13 @@ where
   "send_fault_ipc tptr handler_cap fault can_donate \<equiv>
      (case handler_cap
        of EndpointCap ref badge rights \<Rightarrow>
-           if AllowSend \<in> rights \<and> (AllowGrant \<in> rights \<or> AllowGrantReply \<in> rights)
-           then liftE $ (do
+            liftE $ do
                thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := Some fault \<rparr>) tptr;
                send_ipc True False (cap_ep_badge handler_cap)
-                        (AllowGrant \<in> rights) True can_donate tptr (cap_ep_ptr handler_cap);
+                        (AllowGrant \<in> rights) (AllowGrantReply \<in> rights) can_donate tptr
+                        (cap_ep_ptr handler_cap);
                return True
-             od)
-           else fail
+           od
         | NullCap \<Rightarrow> liftE $ return False
         | _ \<Rightarrow> fail)"
 

@@ -251,13 +251,12 @@ where
     ThreadControlCaps (obj_ref_of cap) slot None None None None (Some (buffer, newbuf))
 odE"
 
-definition
-  valid_fault_handler :: "cap \<Rightarrow> bool" where
-  "valid_fault_handler cap \<equiv>
-    case cap of
-        EndpointCap ref badge rights \<Rightarrow> AllowSend \<in> rights \<and> AllowGrant \<in> rights
-      | NullCap \<Rightarrow> True
-      | _ \<Rightarrow> False"
+definition has_handler_rights :: "cap \<Rightarrow> bool" where
+  "has_handler_rights cap \<equiv>
+     AllowSend \<in> cap_rights cap \<and> {AllowGrant, AllowGrantReply} \<inter> cap_rights cap \<noteq> {}"
+
+definition valid_fault_handler :: "cap \<Rightarrow> bool" where
+  "valid_fault_handler \<equiv> is_ep_cap and has_handler_rights or (=) NullCap"
 
 definition
   check_handler_ep :: "nat \<Rightarrow> (cap \<times> cslot_ptr) \<Rightarrow> ((cap \<times> cslot_ptr),'z::state_ext) se_monad"
