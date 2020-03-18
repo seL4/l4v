@@ -99,10 +99,11 @@ lemma same_object_as_Nulls[simp]:
 
 lemma checked_insert_tcb_invs: (* arch specific *)
   "\<lbrace>invs and cte_wp_at (\<lambda>c. c = cap.NullCap) (target, ref)
-        and K (is_cnode_or_valid_arch new_cap \<or> is_ep_cap new_cap \<or> new_cap = NullCap)
+        and K (is_cnode_or_valid_arch new_cap \<or>
+               valid_fault_handler new_cap)
         and valid_cap new_cap
         and tcb_cap_valid new_cap (target, ref)
-        and (\<lambda>s. is_ep_cap new_cap \<or> new_cap = NullCap
+        and (\<lambda>s. valid_fault_handler new_cap
                          \<longrightarrow> cte_wp_at (\<lambda>c. c = new_cap \<or> c = NullCap) src_slot s)
         and (cte_wp_at (\<lambda>c. obj_refs c = obj_refs new_cap
                               \<longrightarrow> table_cap_ref c = table_cap_ref new_cap \<and>
@@ -139,7 +140,7 @@ lemma checked_insert_tcb_invs: (* arch specific *)
   apply (rule conjI)
    apply (erule disjE)
     apply (erule(1) checked_insert_is_derived, simp+)
-   apply (auto simp: is_cnode_or_valid_arch_def is_derived_def is_cap_simps)
+   apply (auto simp: is_cnode_or_valid_arch_def is_derived_def is_cap_simps valid_fault_handler_def)
   done
 
 lemma checked_insert_tcb_invs': (* arch specific *)
@@ -154,7 +155,7 @@ lemma checked_insert_tcb_invs': (* arch specific *)
      (cap_insert new_cap src_slot (target, ref)))
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp wp: checked_insert_tcb_invs)
-  by (auto simp: is_cap_simps is_cnode_or_valid_arch_def)
+  by (auto simp: is_cap_simps is_cnode_or_valid_arch_def valid_fault_handler_def)
 
 crunches arch_post_modify_registers
   for tcb_at[wp, Tcb_AI_asms]: "tcb_at a"
@@ -251,12 +252,13 @@ lemma install_tcb_cap_invs:
   "\<lbrace>invs and tcb_at target and
     (\<lambda>s. \<forall>new_cap src_slot.
        slot_opt = Some (new_cap, src_slot)
-         \<longrightarrow> K (is_cnode_or_valid_arch new_cap \<or> is_ep_cap new_cap \<or> NullCap = new_cap) s
+         \<longrightarrow> K (is_cnode_or_valid_arch new_cap \<or>
+                valid_fault_handler new_cap) s
           \<and> valid_cap new_cap s
           \<and> tcb_cap_valid new_cap (target, tcb_cnode_index n) s
-          \<and> (is_ep_cap new_cap \<or> new_cap = NullCap
-                           \<longrightarrow> cte_wp_at (\<lambda>c. is_ep_cap c \<or> c = NullCap) (target, tcb_cnode_index n) s
-                             \<and> cte_wp_at (\<lambda>c. c = new_cap \<or> c = NullCap) src_slot s)
+          \<and> (valid_fault_handler new_cap
+               \<longrightarrow> cte_wp_at valid_fault_handler (target, tcb_cnode_index n) s
+               \<and> cte_wp_at (\<lambda>c. c = new_cap \<or> c = NullCap) src_slot s)
           \<and> (case tcb_cap_cases (tcb_cnode_index n) of None \<Rightarrow> True | Some (getF, setF, restr) \<Rightarrow> \<forall>st. restr target st new_cap)
           \<and> (tcb_cnode_index n = tcb_cnode_index 2 \<longrightarrow> (\<forall>ptr. valid_ipc_buffer_cap new_cap ptr))
           \<and> real_cte_at src_slot s \<and> no_cap_to_obj_dr_emp new_cap s)\<rbrace>
@@ -318,7 +320,7 @@ lemma install_tcb_frame_cap_invs:
              static_imp_wp static_imp_conj_wp
            | strengthen use_no_cap_to_obj_asid_strg
            | wp cap_delete_ep)+)[1]
-  by (clarsimp simp: is_cap_simps')
+  by (clarsimp simp: is_cap_simps' valid_fault_handler_def)
 
 lemma tcc_invs[Tcb_AI_asms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlCaps t sl fh th croot vroot buf)\<rbrace>
@@ -369,7 +371,7 @@ lemma tcc_invs[Tcb_AI_asms]:
                  dest!: valid_vtable_root_is_arch_cap)
       apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state\<close>)
      apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
-  by (auto simp: valid_ipc_buffer_cap)
+  by (auto simp: valid_ipc_buffer_cap valid_fault_handler_def)
 
 crunches empty_slot
   for sc_tcb_sc_at[wp]: "sc_tcb_sc_at P target"
@@ -409,8 +411,6 @@ lemma tcs_invs[Tcb_AI_asms]:
    apply (intro conjI impI;
           (clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
                   dest!: valid_vtable_root_is_arch_cap)?)
-     apply (intro conjI impI)
-      apply (erule cte_wp_at_strengthen, simp)
      apply (erule cte_wp_at_strengthen, simp)
     apply (clarsimp simp: obj_at_def is_ep is_tcb)
    apply (intro conjI; intro allI impI)

@@ -6648,7 +6648,7 @@ lemma tcc_valid_sched:
   apply (intro conjI impI;
          clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
                  dest!: valid_vtable_root_is_arch_cap)
-     apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state\<close>)
+     apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
     apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
   by auto
 
@@ -14788,7 +14788,7 @@ lemma tcc_cur_sc_chargeable:
   apply (intro conjI impI;
          clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
                  dest!: valid_vtable_root_is_arch_cap)
-      apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state\<close>)
+      apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
      apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
   by auto
 
@@ -16725,19 +16725,34 @@ lemma send_signal_scheduler_act_sane:
   apply (drule TCBSignal_in_state_refs_of)
   by (clarsimp simp: tcb_at_kh_simps ct_in_state_def pred_map_eq_normalise vs_all_heap_simps)
 
+lemma send_fault_ipc_scheduler_act_sane[wp]:
+  "\<lbrace>scheduler_act_sane and ct_not_blocked\<rbrace>
+   send_fault_ipc tptr handler_cap fault can_donate
+   \<lbrace>\<lambda>_. scheduler_act_sane ::'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding send_fault_ipc_def
+  by (wpsimp wp: thread_set_ct_in_state)
+
+lemma handle_timeout_scheduler_act_sane[wp]:
+  "\<lbrace>scheduler_act_sane and ct_not_blocked\<rbrace>
+   handle_timeout tptr timeout
+   \<lbrace>\<lambda>_. scheduler_act_sane ::'state_ext state \<Rightarrow> _\<rbrace>"
+  unfolding handle_timeout_def by wpsimp
+
+lemma ipc_queued_thread_state_if[simp]:
+  "ipc_queued_thread_state (if r then Restart else Inactive) = False"
+  by simp
+
 lemma do_reply_transfer_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane and ct_not_blocked\<rbrace>
    do_reply_transfer sender reply grant
    \<lbrace>\<lambda>_. scheduler_act_sane ::'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding do_reply_transfer_def handle_timeout_def
-  apply (wpsimp wp: possible_switch_to_scheduler_act_sane' thread_set_ct_in_state simp: send_fault_ipc_def)
-              apply (wpsimp wp: hoare_vcg_all_lift hoare_drop_imp hoare_vcg_if_lift2 sts_ctis_neq thread_set_ct_in_state)+
-                apply (rule_tac Q="\<lambda>_ s. scheduler_act_sane s \<and> x \<noteq> cur_thread s \<and> ct_not_blocked s" in hoare_strengthen_post[rotated])
-                 apply (clarsimp)
-                apply ((wpsimp wp: hoare_drop_imp)+)[12]
-    apply (wpsimp wp: gts_wp get_simple_ko_wp)+
-  apply (clarsimp simp: ct_in_state_def pred_tcb_at_eq_commute)
-  by (clarsimp simp: tcb_at_kh_simps vs_all_heap_simps)
+  unfolding do_reply_transfer_def
+  supply if_split[split del]
+  apply (wpsimp wp: possible_switch_to_scheduler_act_sane' hoare_vcg_all_lift
+                    hoare_vcg_if_lift2 sts_ctis_neq thread_set_ct_in_state
+                    gts_wp get_simple_ko_wp
+         | wp (once) hoare_drop_imps)+
+  by (clarsimp simp: ct_in_state_def pred_tcb_at_eq_commute tcb_at_kh_simps vs_all_heap_simps)
 
 lemma invoke_domain_valid_sched_misc[wp]:
   "invoke_domain thread domain
@@ -18303,7 +18318,7 @@ lemma tcc_ct_not_queued:
   apply (intro conjI impI;
          clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
                  dest!: valid_vtable_root_is_arch_cap)
-     apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state\<close>)
+     apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
     apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
   by auto
 
@@ -18591,13 +18606,6 @@ lemma handle_recv_scheduler_act_sane[wp]:
   unfolding handle_recv_def
   by (wpsimp wp: thread_set_ct_in_state hoare_drop_imp hoare_vcg_all_lift
            simp: Let_def lookup_cap_def)
-
-lemma handle_timeout_scheduler_act_sane[wp]:
-  "\<lbrace>scheduler_act_sane and ct_not_blocked\<rbrace>
-   handle_timeout tptr ex
-   \<lbrace>\<lambda>_. scheduler_act_sane :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding handle_timeout_def send_fault_ipc_def
-  by (wpsimp wp: thread_set_ct_in_state)
 
 lemma handle_fault_reply_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane and ct_not_blocked\<rbrace>

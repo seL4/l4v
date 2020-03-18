@@ -155,20 +155,19 @@ definition
  "halted_if_tcb \<equiv> \<lambda>t s. tcb_at t s \<longrightarrow> st_tcb_at halted t s"
 
 lemma tcb_cap_valid_NullCapD:
-  "\<And>cap sl. \<lbrakk> tcb_cap_valid cap sl s \<rbrakk> \<Longrightarrow>
-   tcb_cap_valid cap.NullCap sl s"
+  "tcb_cap_valid cap sl s \<Longrightarrow> tcb_cap_valid NullCap sl s"
   apply (clarsimp simp: tcb_cap_valid_def valid_ipc_buffer_cap_def
                  elim!: pred_tcb_weakenE split: option.splits)
   apply (rename_tac get set restr)
   apply (subgoal_tac "(get, set, restr) \<in> ran tcb_cap_cases")
    apply (fastforce simp: ran_tcb_cap_cases is_cap_simps
-                  split: Structures_A.thread_state.split)
+                    split: Structures_A.thread_state.split)
   apply (simp add: ranI)
   done
 
 
 lemma valid_NullCapD:
-  "\<lbrakk> valid_objs s \<rbrakk> \<Longrightarrow> tcb_cap_valid cap.NullCap sl s"
+  "valid_objs s \<Longrightarrow> tcb_cap_valid NullCap sl s"
   apply (clarsimp simp: tcb_cap_valid_def
                         valid_ipc_buffer_cap_def)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb split: option.split)
@@ -179,7 +178,7 @@ lemma valid_NullCapD:
 
 
 lemma valid_NullCap_strg:
-  " valid_objs s \<longrightarrow> tcb_cap_valid cap.NullCap sl s"
+  " valid_objs s \<longrightarrow> tcb_cap_valid NullCap sl s"
   by (simp add: valid_NullCapD)
 
 
@@ -929,7 +928,7 @@ lemma tcb_cap_valid_imp':
 
 
 lemma tcb_cap_valid_imp_NullCap:
-  "(tcb_cap_valid cap sl s \<longrightarrow> tcb_cap_valid cap.NullCap sl s)"
+  "(tcb_cap_valid cap sl s \<longrightarrow> tcb_cap_valid NullCap sl s)"
   apply (strengthen tcb_cap_valid_imp')
   apply (clarsimp simp: ran_tcb_cap_cases valid_ipc_buffer_cap_def
                  split: Structures_A.thread_state.split_asm)

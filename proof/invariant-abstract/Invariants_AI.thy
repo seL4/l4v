@@ -618,10 +618,8 @@ where
                           (\<lambda>_ _. is_valid_vtable_root or ((=) NullCap))),
     tcb_cnode_index 2 \<mapsto> (tcb_ipcframe, tcb_ipcframe_update,
                           (\<lambda>_ _. is_nondevice_page_cap or ((=) NullCap))),
-    tcb_cnode_index 3 \<mapsto> (tcb_fault_handler, tcb_fault_handler_update,
-                             (\<lambda>_ _. is_ep_cap or ((=) NullCap))),
-    tcb_cnode_index 4 \<mapsto> (tcb_timeout_handler, tcb_timeout_handler_update,
-                             (\<lambda>_ _. is_ep_cap or ((=) NullCap)))]"
+    tcb_cnode_index 3 \<mapsto> (tcb_fault_handler, tcb_fault_handler_update, \<lambda>_ _. valid_fault_handler),
+    tcb_cnode_index 4 \<mapsto> (tcb_timeout_handler, tcb_timeout_handler_update, \<lambda>_ _. valid_fault_handler)]"
 
 definition
   valid_fault :: "ExceptionTypes_A.fault \<Rightarrow> bool"
@@ -1544,11 +1542,9 @@ lemma tcb_cap_cases_simps[simp]:
    Some (tcb_ipcframe, tcb_ipcframe_update,
          (\<lambda>_ _. is_nondevice_page_cap or ((=) cap.NullCap)))"
   "tcb_cap_cases (tcb_cnode_index 3) =
-   Some (tcb_fault_handler, tcb_fault_handler_update,
-         (\<lambda>_ _. is_ep_cap or ((=) NullCap)))"
+   Some (tcb_fault_handler, tcb_fault_handler_update, \<lambda>_ _. valid_fault_handler)"
   "tcb_cap_cases (tcb_cnode_index 4) =
-   Some (tcb_timeout_handler, tcb_timeout_handler_update,
-         (\<lambda>_ _. is_ep_cap or ((=) NullCap)))"
+   Some (tcb_timeout_handler, tcb_timeout_handler_update, \<lambda>_ _. valid_fault_handler)"
   by (simp add: tcb_cap_cases_def)+
 
 lemma ran_tcb_cap_cases:
@@ -1556,8 +1552,8 @@ lemma ran_tcb_cap_cases:
     {(tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>)),
      (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. is_valid_vtable_root or ((=) NullCap))),
      (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or ((=) NullCap))),
-     (tcb_fault_handler, tcb_fault_handler_update, (\<lambda>_ _. is_ep_cap or ((=) NullCap))),
-     (tcb_timeout_handler, tcb_timeout_handler_update, (\<lambda>_ _. is_ep_cap or ((=) NullCap)))}"
+     (tcb_fault_handler, tcb_fault_handler_update, \<lambda>_ _. valid_fault_handler),
+     (tcb_timeout_handler, tcb_timeout_handler_update, \<lambda>_ _. valid_fault_handler)}"
   by (simp add: tcb_cap_cases_def insert_commute)
 
 lemma tcb_cnode_map_tcb_cap_cases:
@@ -1594,7 +1590,7 @@ lemma st_tcb_idle_cap_valid_Null [simp]:
    tcb_cap_valid NullCap sl s"
   by (clarsimp simp: tcb_cap_valid_def tcb_cap_cases_def
                       pred_tcb_at_def obj_at_def is_tcb
-                      valid_ipc_buffer_cap_null)
+                      valid_ipc_buffer_cap_null valid_fault_handler_def)
 
 
 lemma valid_objsI [intro]:

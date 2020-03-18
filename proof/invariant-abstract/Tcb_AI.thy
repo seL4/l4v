@@ -475,12 +475,12 @@ where
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) vroot
                         and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) vroot
                         and case_option \<top> (valid_cap \<circ> fst) fh
-                        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) fh)
+                        and K (case_option True (valid_fault_handler o fst) fh)
                         and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) fh
                         and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) fh
                         and case_option \<top> (valid_cap \<circ> fst) th
-                        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) th)
+                        and K (case_option True (valid_fault_handler o fst) th)
                         and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) th
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) th
                         and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) th
@@ -499,7 +499,7 @@ where
 | "tcb_inv_wf' (tcb_invocation.ThreadControlSched t sl fh mcp pr sc)
              = (tcb_at t
                         and case_option \<top> (valid_cap \<circ> fst) fh
-                        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) fh)
+                        and K (case_option True (valid_fault_handler o fst) fh)
                         and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) fh
                         and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) fh
@@ -796,7 +796,7 @@ lemma finalise_cap_ep:
   done
 
 lemma cap_delete_ep:
-  "\<lbrace>cte_wp_at (\<lambda>c. is_ep_cap c \<or> c = NullCap) slot and cte_wp_at P p and K (slot \<noteq> p)\<rbrace>
+  "\<lbrace>cte_wp_at valid_fault_handler slot and cte_wp_at P p and K (slot \<noteq> p)\<rbrace>
     cap_delete slot
    \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>, -"
   apply (simp add: cap_delete_def rec_del_CTEDeleteCall)
@@ -807,7 +807,7 @@ lemma cap_delete_ep:
       apply wpsimp+
      apply (rule hoare_strengthen_post, rule finalise_cap_ep[where P=P and p=p and slot=slot], clarsimp)
     apply (wpsimp wp: get_cap_wp)+
-  apply (simp add: cte_wp_at_caps_of_state)
+  apply (simp add: cte_wp_at_caps_of_state valid_fault_handler_def)
   done
 
 lemma checked_insert_cte_wp_at_weak:
@@ -820,7 +820,7 @@ lemma checked_insert_cte_wp_at_weak:
   done
 
 lemma install_tcb_cap_cte_wp_at_ep:
-  "\<lbrace>cte_wp_at (\<lambda>c. is_ep_cap c \<or> c = NullCap) (target, tcb_cnode_index n) and cte_wp_at P p and
+  "\<lbrace>cte_wp_at valid_fault_handler (target, tcb_cnode_index n) and cte_wp_at P p and
     K (p \<noteq> (target, tcb_cnode_index n) \<and> (\<forall>c. P c \<longrightarrow> \<not>is_untyped_cap c))\<rbrace>
    install_tcb_cap target slot n slot_opt
    \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>, -"
@@ -829,7 +829,7 @@ lemma install_tcb_cap_cte_wp_at_ep:
 
 lemma tcb_ep_slot_cte_wp_at:
   "\<lbrakk> invs s; tcb_at t s; slot = 3 \<or> slot = 4 \<rbrakk> \<Longrightarrow>
-  cte_wp_at (\<lambda>c. is_ep_cap c \<or> c = NullCap) (t, tcb_cnode_index slot) s"
+  cte_wp_at valid_fault_handler (t, tcb_cnode_index slot) s"
   apply (rule pred_tcb_cap_wp_at)
      apply (fastforce simp: tcb_at_st_tcb_at tcb_at_typ[symmetric])
     apply fastforce
@@ -842,8 +842,8 @@ lemmas tcb_ep_slot_cte_wp_ats =
   tcb_ep_slot_cte_wp_at[where slot=4, simplified]
 
 lemma tcb_cap_valid_ep_strgs:
-  "is_ep_cap cap \<or> NullCap = cap \<longrightarrow> tcb_cap_valid cap (t, tcb_cnode_index 3) s"
-  "is_ep_cap cap \<or> NullCap = cap \<longrightarrow> tcb_cap_valid cap (t, tcb_cnode_index 4) s"
+  "valid_fault_handler cap \<longrightarrow> tcb_cap_valid cap (t, tcb_cnode_index 3) s"
+  "valid_fault_handler cap \<longrightarrow> tcb_cap_valid cap (t, tcb_cnode_index 4) s"
   by (auto simp: tcb_cap_valid_def st_tcb_at_def obj_at_def is_tcb)
 
 crunches install_tcb_cap
@@ -1112,15 +1112,6 @@ lemma check_handler_ep_wpE[wp]:
   "\<lbrace>\<lambda>s. valid_fault_handler (fst cap_slot) \<longrightarrow> P cap_slot s\<rbrace> check_handler_ep n cap_slot \<lbrace>P\<rbrace>, -"
   unfolding check_handler_ep_def unlessE_def by wpsimp
 
-lemma valid_fault_handler_eq:
-  "valid_fault_handler cap =
-  (is_ep_cap cap \<and> {AllowGrant, AllowSend} \<subseteq> cap_rights cap \<or> cap = NullCap)"
-  by (auto simp: valid_fault_handler_def split: cap.splits)
-
-lemma valid_fault_handler:
-  "valid_fault_handler cap \<Longrightarrow> is_ep_cap cap \<or> NullCap = cap"
-  by (auto simp: valid_fault_handler_eq)
-
 lemma decode_update_sc_inv[wp]:
   "\<lbrace>P\<rbrace> decode_update_sc cap slot sc_cap \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding decode_update_sc_def by (wpsimp wp: hoare_drop_imps)
@@ -1141,7 +1132,7 @@ lemma decode_set_sched_params_wf[wp]:
   apply (wpsimp simp: get_tcb_obj_ref_def
                 wp: check_prio_wp_weak whenE_throwError_wp thread_get_wp gts_wp
                 split_del: if_split)
-  apply (clarsimp simp: valid_fault_handler split_paired_Ball)
+  apply (clarsimp simp: split_paired_Ball)
   apply (rule conjI; clarsimp)
   apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def is_cap_simps sc_tcb_sc_at_def
                         sc_at_ppred_def)
@@ -1249,23 +1240,9 @@ lemma val_le_length_Cons:
   apply (cases n, simp_all)
   done
 
-(*
-lemma derive_cap_ep_or_Null[wp]:
-  "\<lbrace>\<lambda>_. is_ep_cap cap \<or> cap = NullCap \<rbrace> derive_cap slot cap  \<lbrace>\<lambda>rv s. is_ep_cap rv \<or> NullCap = rv\<rbrace>, -"
-  by (wpsimp simp: derive_cap_def comp_def) auto
-
-lemma derive_cap_ep_cte_wp_at:
-  "\<lbrace>cte_wp_at ((=) cap) slot and K (is_ep_cap cap \<or> cap = NullCap) \<rbrace>
-  derive_cap slot cap  \<lbrace>\<lambda>rv. cte_wp_at ((=) rv) slot\<rbrace>, -"
-  apply (wpsimp simp: derive_cap_def comp_def)
-   apply (rule hoare_FalseE_R) (* arch case will not be taken *)
-  apply auto
-  done
-*)
-
 lemma derive_cap_cnode[wp]:  (* FIXME arch refactor *)
   "\<lbrace>\<lambda>s. is_cnode_cap cap\<rbrace> derive_cap slot cap  \<lbrace>\<lambda>rv s. is_cnode_cap rv\<rbrace>, -"
-  by (wpsimp simp: derive_cap_def comp_def valid_fault_handler_def ARM_A.arch_derive_cap_def) auto
+  by (wpsimp simp: derive_cap_def ARM_A.arch_derive_cap_def) auto
 
 
 lemma decode_cv_space_inv[wp]:
@@ -1297,7 +1274,7 @@ lemma (in Tcb_AI) decode_cv_space_wf[wp]:
          | rule hoare_drop_imps)+
   apply (clarsimp split del: if_split
                    simp del: length_greater_0_conv)
-  apply (simp add: update_cap_data_validI valid_fault_handler_eq
+  apply (simp add: update_cap_data_validI
                    no_cap_to_obj_with_diff_ref_update_cap_data
               del: length_greater_0_conv)
   done
@@ -1322,7 +1299,7 @@ lemma decode_set_space_wf[wp]:
   apply (wpsimp wp:  hoare_vcg_const_imp_lift_R simp_del: tcb_inv_wf.simps
          | strengthen tcb_inv_set_space_strg
          | rule hoare_drop_imps)+
-  apply (clarsimp simp: valid_fault_handler_eq real_cte_at_cte)
+  apply (clarsimp simp: valid_fault_handler_def real_cte_at_cte)
   apply (erule disjE; clarsimp simp: split_paired_Ball)
   done
 
@@ -1478,7 +1455,7 @@ lemma decode_set_timeout_ep_tc_inv[wp]:
                           \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
   decode_set_timeout_ep (ThreadCap t) slot extras \<lbrace>tcb_inv_wf\<rbrace>, -"
   unfolding decode_set_timeout_ep_def
-  by (wpsimp simp: neq_Nil_conv) (drule valid_fault_handler, clarsimp)
+  by (wpsimp simp: neq_Nil_conv)
 
 lemma decode_tcb_inv_wf:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t
@@ -1781,12 +1758,12 @@ lemma cap_delete_fh_lift:
   apply (rule hoare_vcg_seqE[rotated])
    apply (subst liftE_validE)
    apply (rule get_cap_sp)
-  apply (subst hoare_pre_addE[where R="K (is_ep_cap cap \<or> cap = NullCap)"])
+  apply (subst hoare_pre_addE[where R="K (valid_fault_handler cap)"])
    apply clarsimp
-   apply (subgoal_tac "cte_wp_at (\<lambda>c. is_ep_cap c \<or> c = NullCap) (target, tcb_cnode_index 3) s")
+   apply (subgoal_tac "cte_wp_at valid_fault_handler (target, tcb_cnode_index 3) s")
     apply (simp add: cte_wp_at_caps_of_state)
    apply (rule tcb_ep_slot_cte_wp_ats; clarsimp simp: pred_tcb_at_def obj_at_def is_tcb)
-  apply (case_tac cap; simp)
+  apply (case_tac cap; simp add: valid_fault_handler_def)
    apply wpsimp
    apply (rule B, simp)
   apply wpsimp
@@ -1865,7 +1842,8 @@ lemma install_tcb_cap_ex_nonz_cap_to:
       apply (clarsimp)
      apply (clarsimp simp: obj_at_def is_tcb)
      apply (subgoal_tac "valid_tcb t' tcb s")
-      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def cte_wp_at_caps_of_state tcb_at_def is_tcb)
+      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def valid_fault_handler_def
+                            cte_wp_at_caps_of_state tcb_at_def is_tcb)
       apply (subst (asm) caps_of_state_tcb_index_trans)
        apply (erule get_tcb_rev)
       apply (clarsimp simp: tcb_cnode_map_def)
@@ -1887,7 +1865,8 @@ lemma install_tcb_cap_ex_nonz_cap_to:
     apply (clarsimp simp: obj_at_def is_tcb)
     apply (subgoal_tac "valid_objs s")
      apply (subgoal_tac "valid_tcb t' tcb s")
-      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def cte_wp_at_caps_of_state tcb_at_def is_tcb)
+      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def valid_fault_handler_def
+                            cte_wp_at_caps_of_state tcb_at_def is_tcb)
       apply (subst (asm) caps_of_state_tcb_index_trans)
        apply (erule get_tcb_rev)
       apply (clarsimp simp: tcb_cnode_map_def)

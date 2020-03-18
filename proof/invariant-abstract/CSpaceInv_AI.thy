@@ -1947,6 +1947,12 @@ lemma is_arch_cap_max_free_index[simp]:
   by (auto simp: is_cap_simps free_index_update_def split: cap.splits)
 
 
+lemma not_valid_fault_handler[simp]:
+  "\<not>valid_fault_handler (UntypedCap d r n i)"
+  "\<not>valid_fault_handler (ThreadCap t)"
+  "\<not>valid_fault_handler (Zombie p x y)"
+  by (auto simp: valid_fault_handler_def)
+
 lemma tcb_cap_valid_update_free_index[simp]:
   "tcb_cap_valid (cap\<lparr>free_index:=a\<rparr>) slot s = tcb_cap_valid cap slot s"
   apply (rule iffI)
@@ -1966,7 +1972,7 @@ lemma tcb_cap_valid_update_free_index[simp]:
    apply (clarsimp simp: tcb_at_def pred_tcb_at_def is_tcb_def obj_at_def
                   dest!: get_tcb_SomeD)
    apply (clarsimp simp: tcb_cap_cases_def free_index_update_def is_cap_simps
-                         is_nondevice_page_cap_simps
+                         is_nondevice_page_cap_simps valid_fault_handler_def
                   dest!: is_valid_vtable_root_is_arch_cap
                   split: if_splits cap.split_asm Structures_A.thread_state.split_asm)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_cap_simps free_index_update_def
