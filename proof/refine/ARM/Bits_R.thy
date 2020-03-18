@@ -157,8 +157,8 @@ lemma capAligned_tcbI:
                   dest!: ko_wp_at_aligned simp: objBits_simps' projectKOs)
   done
 
-lemma capAligned_reply_tcbI:
-  "tcb_at' p s \<Longrightarrow> capAligned (ReplyCap p r)"
+lemma capAligned_replyI:
+  "reply_at' p s \<Longrightarrow> capAligned (ReplyCap p r)"
   apply (clarsimp simp: obj_at'_real_def capAligned_def
                         objBits_simps word_bits_def capUntypedPtr_def isCap_simps)
   apply (fastforce dest: ko_wp_at_norm
