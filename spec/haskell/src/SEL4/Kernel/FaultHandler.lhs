@@ -27,7 +27,7 @@ This module contains functions that determine how recoverable faults encountered
 > isValidFaultHandler :: Capability -> Bool
 > isValidFaultHandler cap =
 >     case cap of
->         EndpointCap { capEPCanSend = True, capEPCanGrant = True } -> True
+>         EndpointCap { capEPCanSend = True } -> capEPCanGrant cap || capEPCanGrantReply cap
 >         NullCap -> True
 >         _ -> False
 
@@ -75,7 +75,8 @@ The kernel stores a copy of the fault in the thread's TCB, and performs an IPC s
 >             withoutFailure $ do
 >                 threadSet (\tcb -> tcb {tcbFault = Just fault}) tptr
 >                 sendIPC True False (capEPBadge handlerCap)
->                     True (capEPCanGrantReply handlerCap) canDonate tptr (capEPPtr handlerCap)
+>                     (capEPCanGrant handlerCap) (capEPCanGrantReply handlerCap)
+>                     canDonate tptr (capEPPtr handlerCap)
 >                 return True
 >         NullCap -> withoutFailure $ return False
 >         _ -> fail "must be send+grant EPCap or NullCap"
