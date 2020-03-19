@@ -10712,7 +10712,7 @@ lemma maybe_donate_sc_valid_ready_qs:
   apply (rule hoare_when_cases, simp)
   apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
   apply (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise)
-  by (wpsimp wp: get_sc_obj_ref_wp)
+  by (wpsimp wp: get_sc_obj_ref_wp hoare_drop_imp)
 
 lemma maybe_donate_sc_released_ipc_queues:
   "\<lbrace> released_ipc_queues
@@ -10727,7 +10727,7 @@ lemma maybe_donate_sc_released_ipc_queues:
   apply (rule hoare_when_cases; clarsimp)
   apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
   apply (wpsimp wp: sched_context_donate_released_sc_released_ipc_queues
-                     hoare_vcg_if_lift2 maybeM_wp
+                     hoare_vcg_if_lift2 maybeM_wp hoare_drop_imp
               simp: get_sc_obj_ref_def obj_at_def)
   apply (subgoal_tac "ntfn_at_ppred ntfn_sc ((=) (Some xa)) ntfnptr s", fastforce)
   apply (clarsimp simp: sk_obj_at_pred_def obj_at_def)
@@ -10831,7 +10831,7 @@ lemma maybe_donate_sc_valid_release_q:
    apply (rule hoare_seq_ext[OF _ gsct_sp])
    apply (rename_tac sctcb; case_tac sctcb; clarsimp)
     apply (wpsimp wp: sched_context_resume_valid_release_q refill_unblock_check_valid_release_q
-                      sched_context_donate_valid_release_q
+                      sched_context_donate_valid_release_q hoare_drop_imp
                       sched_context_donate_sc_not_in_release_q)
     apply (clarsimp simp: obj_at_def sc_tcb_sc_at_def tcb_at_kh_simps[symmetric])
     apply (drule (2) bound_sc_tcb_bound_sc_at)
@@ -10861,8 +10861,15 @@ lemma maybe_donate_sc_valid_sched_action:
   apply (case_tac sc_opt; clarsimp)
    apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
    apply (wpsimp wp: sched_context_resume_valid_sched_action)
-      apply (wpsimp wp: refill_unblock_check_valid_sched_action hoare_vcg_all_lift
-                        hoare_vcg_imp_lift'' refill_unblock_check_ko_at_SchedContext)
+       apply (wpsimp wp: refill_unblock_check_valid_sched_action hoare_vcg_all_lift
+                         hoare_vcg_imp_lift'' refill_unblock_check_ko_at_SchedContext)
+      apply wpsimp
+     apply (rule_tac Q="\<lambda>_ s. valid_sched_action s \<and>
+                              active_sc_valid_refills s \<and>
+                              (\<forall>x. sc_tcb_sc_at ((=) (Some x)) xa s \<longrightarrow>
+                                   scheduler_act_not x s)"
+               in hoare_strengthen_post[rotated])
+      apply clarsimp
      apply (wpsimp wp: sched_context_donate_valid_sched_action
                        maybe_donate_sc_valid_sched_action_helper)
     apply (wpsimp wp: get_sc_obj_ref_wp get_sk_obj_ref_wp get_tcb_obj_ref_wp)
@@ -12472,10 +12479,13 @@ lemma maybe_donate_sc_cond_released_sc_tcb_at:
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (case_tac sc_opt; clarsimp)
    apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
-   apply (wpsimp wp: sched_context_resume_cond_released_sc_tcb_at refill_unblock_check_ko_at_SchedContext
-                     sched_context_donate_sc_tcb_sc_at sched_context_donate_bound_sc_tcb_at
-                simp: get_sc_obj_ref_def)
-  apply (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
+   apply (wpsimp wp_del: hoare_when_wp)
+        apply (wpsimp wp: sched_context_resume_cond_released_sc_tcb_at)
+       apply (rule hoare_when_weak_wp)
+       apply (wpsimp wp: refill_unblock_check_ko_at_SchedContext
+                         sched_context_donate_sc_tcb_sc_at sched_context_donate_bound_sc_tcb_at
+                    simp: get_sc_obj_ref_def)+
+   apply (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
   apply wpsimp
   apply (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
   done
@@ -12518,7 +12528,7 @@ lemma maybe_donate_sc_ready_or_release[wp]:
    maybe_donate_sc tcb_ptr ntfn_ptr
    \<lbrace>\<lambda>_. ready_or_release\<rbrace>"
   unfolding maybe_donate_sc_def when_def maybeM_def
-  by (wpsimp wp: sched_context_donate_valid_ready_qs' get_sc_obj_ref_wp get_sk_obj_ref_wp
+  by (wpsimp wp: sched_context_donate_valid_ready_qs' hoare_drop_imp get_sc_obj_ref_wp get_sk_obj_ref_wp
                  get_tcb_obj_ref_wp)
 
 crunches maybe_donate_sc
@@ -16954,8 +16964,11 @@ lemma maybe_donate_sc_ct_not_in_release_q[wp]:
    \<lbrace>\<lambda>_. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding maybe_donate_sc_def
   apply wpsimp
-        apply (wpsimp wp: sched_context_resume_ct_not_in_release_q hoare_vcg_all_lift hoare_vcg_imp_lift')
-       apply (wpsimp wp: sched_context_resume_ct_not_in_release_q hoare_vcg_all_lift hoare_vcg_imp_lift')
+         apply (wpsimp wp: sched_context_resume_ct_not_in_release_q hoare_vcg_all_lift hoare_vcg_imp_lift')
+        apply simp
+        apply (rule hoare_when_weak_wp)
+        apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+       apply wpsimp
       apply simp
       apply (wpsimp wp: sched_context_donate_bound_not_cur_thread
                   simp: vs_all_heap_simps obj_at_kh_kheap_simps)
@@ -17623,7 +17636,7 @@ lemma maybe_donate_sc_released_sc_tcb_at[wp]:
    \<lbrace>\<lambda>_. released_sc_tcb_at t\<rbrace>"
   apply (clarsimp simp: maybe_donate_sc_def)
   apply (wpsimp wp: sched_context_donate_bound_sc_obj_tcb_at_other get_sc_obj_ref_wp
-                    get_sk_obj_ref_wp get_tcb_obj_ref_wp)
+                    get_sk_obj_ref_wp get_tcb_obj_ref_wp hoare_drop_imp)
   by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps)
 
 crunches cancel_ipc, sched_context_resume
