@@ -33,6 +33,8 @@ session ASpec in "abstract" = Word_Lib +
     "HOL-Library"
     Lib
     ExecSpec
+  directories
+    "$L4V_ARCH"
   theories
     "Syscall_A"
 
@@ -76,6 +78,10 @@ session ExecSpec in "design" = Word_Lib +
   sessions
     Lib
     "HOL-Eisbach"
+  directories
+    "$L4V_ARCH"
+    "../machine"
+    "../machine/$L4V_ARCH"
   theories
     "API_H"
     "$L4V_ARCH/ArchIntermediate_H"
