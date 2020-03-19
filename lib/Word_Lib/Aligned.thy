@@ -786,7 +786,7 @@ proof -
 qed
 
 lemma is_aligned_neg_mask:
-  "m \<le> n \<Longrightarrow> is_aligned (x && ~~ mask n) m"
+  "m \<le> n \<Longrightarrow> is_aligned (x && ~~ (mask n)) m"
   by (metis and_not_mask is_aligned_shift is_aligned_weaken)
 
 lemma unat_minus:
@@ -806,7 +806,7 @@ lemma is_aligned_minus:
 
 lemma add_mask_lower_bits:
   "\<lbrakk>is_aligned (x :: 'a :: len word) n;
-    \<forall>n' \<ge> n. n' < LENGTH('a) \<longrightarrow> \<not> p !! n'\<rbrakk> \<Longrightarrow> x + p && ~~mask n = x"
+    \<forall>n' \<ge> n. n' < LENGTH('a) \<longrightarrow> \<not> p !! n'\<rbrakk> \<Longrightarrow> x + p && ~~ (mask n) = x"
   apply (subst word_plus_and_or_coroll)
    apply (rule word_eqI)
    apply (clarsimp simp: word_size is_aligned_nth)
@@ -838,7 +838,7 @@ lemma is_aligned_shiftl_self:
   by (rule is_aligned_shift)
 
 lemma is_aligned_neg_mask_eq:
-  "is_aligned p n \<Longrightarrow> p && ~~ mask n = p"
+  "is_aligned p n \<Longrightarrow> p && ~~ (mask n) = p"
   by (metis add.left_neutral is_aligned_mask word_plus_and_or_coroll2)
 
 lemma is_aligned_shiftr_shiftl:
@@ -862,7 +862,7 @@ lemma mask_zero:
   by (metis is_aligned_mask)
 
 lemma is_aligned_neg_mask_eq_concrete:
-  "\<lbrakk> is_aligned p n; msk && ~~ mask n = ~~ mask n \<rbrakk>
+  "\<lbrakk> is_aligned p n; msk && ~~(mask n) = ~~(mask n) \<rbrakk>
    \<Longrightarrow> p && msk = p"
   by (metis word_bw_assocs(1) word_bw_comms(1) is_aligned_neg_mask_eq)
 
@@ -884,11 +884,11 @@ lemma aligned_sub_aligned':
   by (simp add: aligned_sub_aligned)
 
 lemma is_aligned_neg_mask_weaken:
-  "\<lbrakk> is_aligned p n; m \<le> n \<rbrakk> \<Longrightarrow> p && ~~ mask m = p"
+  "\<lbrakk> is_aligned p n; m \<le> n \<rbrakk> \<Longrightarrow> p && ~~(mask m) = p"
    using is_aligned_neg_mask_eq is_aligned_weaken by blast
 
 lemma is_aligned_neg_mask2[simp]:
-  "is_aligned (a && ~~ mask n) n"
+  "is_aligned (a && ~~(mask n)) n"
   by (simp add: and_not_mask is_aligned_shift)
 
 end

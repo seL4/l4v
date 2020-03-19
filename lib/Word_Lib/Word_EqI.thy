@@ -14,8 +14,8 @@ begin
 
 text \<open>
   Some word equalities can be solved by considering the problem bitwise for all
-  @{prop "n < LENGTH('a::len)"}, which is different to running word_bitwise and expanding into
-  an explicit list of bits.
+  @{prop "n < LENGTH('a::len)"}, which is different to running @{text word_bitwise}
+  and expanding into an explicit list of bits.
 \<close>
 
 lemma word_or_zero:
@@ -27,7 +27,7 @@ lemma test_bit_over:
   by (simp add: test_bit_bl word_size)
 
 lemma neg_mask_test_bit:
-  "(~~ mask n :: 'a :: len word) !! m = (n \<le> m \<and> m < LENGTH('a))"
+  "(~~(mask n) :: 'a :: len word) !! m = (n \<le> m \<and> m < LENGTH('a))"
   by (metis not_le nth_mask test_bit_bin word_ops_nth_size word_size)
 
 lemma word_2p_mult_inc:
@@ -80,25 +80,25 @@ lemma not_greatest_aligned:
   by (metis NOT_mask add_diff_cancel_right' diff_0 is_aligned_neg_mask_eq not_le word_and_le1)
 
 lemma neg_mask_mono_le:
-  "x \<le> y \<Longrightarrow> x && ~~ mask n \<le> y && ~~ mask n" for x :: "'a :: len word"
+  "x \<le> y \<Longrightarrow> x && ~~(mask n) \<le> y && ~~(mask n)" for x :: "'a :: len word"
 proof (rule ccontr, simp add: linorder_not_le, cases "n < LENGTH('a)")
   case False
-  then show "y && ~~ mask n < x && ~~ mask n \<Longrightarrow> False"
+  then show "y && ~~(mask n) < x && ~~(mask n) \<Longrightarrow> False"
     by (simp add: mask_def linorder_not_less power_overflow)
 next
   case True
-  assume a: "x \<le> y" and b: "y && ~~ mask n < x && ~~ mask n"
+  assume a: "x \<le> y" and b: "y && ~~(mask n) < x && ~~(mask n)"
   have word_bits: "n < LENGTH('a)" by fact
-  have "y \<le> (y && ~~ mask n) + (y && mask n)"
+  have "y \<le> (y && ~~(mask n)) + (y && mask n)"
     by (simp add: word_plus_and_or_coroll2 add.commute)
-  also have "\<dots> \<le> (y && ~~ mask n) + 2 ^ n"
+  also have "\<dots> \<le> (y && ~~(mask n)) + 2 ^ n"
     apply (rule word_plus_mono_right)
      apply (rule order_less_imp_le, rule and_mask_less_size)
      apply (simp add: word_size word_bits)
     apply (rule is_aligned_no_overflow'', simp add: is_aligned_neg_mask word_bits)
     apply (rule not_greatest_aligned, rule b; simp add: is_aligned_neg_mask)
     done
-  also have "\<dots> \<le> x && ~~ mask n"
+  also have "\<dots> \<le> x && ~~(mask n)"
     using b
     apply (subst add.commute)
     apply (rule le_plus)
@@ -113,7 +113,7 @@ next
 qed
 
 lemma and_neg_mask_eq_iff_not_mask_le:
-  "w && ~~ mask n = ~~ mask n \<longleftrightarrow> ~~ mask n \<le> w"
+  "w && ~~(mask n) = ~~(mask n) \<longleftrightarrow> ~~(mask n) \<le> w"
   by (metis eq_iff neg_mask_mono_le word_and_le1 word_and_le2 word_bw_same(1))
 
 lemma le_mask_high_bits:
@@ -121,7 +121,7 @@ lemma le_mask_high_bits:
   by (auto simp: word_size and_mask_eq_iff_le_mask[symmetric] word_eq_iff)
 
 lemma neg_mask_le_high_bits:
-  "~~ mask n \<le> w \<longleftrightarrow> (\<forall>i \<in> {n ..< size w}. w !! i)"
+  "~~(mask n) \<le> w \<longleftrightarrow> (\<forall>i \<in> {n ..< size w}. w !! i)"
   by (auto simp: word_size and_neg_mask_eq_iff_not_mask_le[symmetric] word_eq_iff neg_mask_test_bit)
 
 lemma test_bit_conj_lt:

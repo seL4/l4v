@@ -111,7 +111,7 @@ where
 definition
   sign_extend :: "nat \<Rightarrow> 'a::len word \<Rightarrow> 'a word"
 where
-  "sign_extend n w \<equiv> if w !! n then w || ~~mask n else w && mask n"
+  "sign_extend n w \<equiv> if w !! n then w || ~~ (mask n) else w && mask n"
 
 definition
   sign_extended :: "nat \<Rightarrow> 'a::len word \<Rightarrow> bool"
@@ -168,7 +168,7 @@ declare test_bit_1 [simp del, iff]
 lemma "1 < (1024::32 word) \<and> 1 \<le> (1024::32 word)" by simp
 
 lemma and_not_mask:
-  "w AND NOT mask n = (w >> n) << n"
+  "w AND NOT (mask n) = (w >> n) << n"
   apply (rule word_eqI)
   apply (simp add : word_ops_nth_size word_size)
   apply (simp add : nth_shiftr nth_shiftl)
@@ -222,11 +222,11 @@ lemmas p2_eq_0 [simp] = trans [OF eq_commute
   iffD2 [OF Not_eq_iff p2_gt_0, folded le_def, unfolded word_gt_0 not_not]]
 
 lemma neg_mask_is_div':
-  "n < size w \<Longrightarrow> w AND NOT mask n = ((w div (2 ^ n)) * (2 ^ n))"
+  "n < size w \<Longrightarrow> w AND NOT (mask n) = ((w div (2 ^ n)) * (2 ^ n))"
   by (simp add : and_not_mask shiftr_div_2n_w shiftl_t2n word_size)
 
 lemma neg_mask_is_div:
-  "w AND NOT mask n = (w div 2^n) * 2^n"
+  "w AND NOT (mask n) = (w div 2^n) * 2^n"
   apply (cases "n < size w")
    apply (erule neg_mask_is_div')
   apply (simp add: word_size)
@@ -354,7 +354,7 @@ lemmas and_mask_eq_iff_le_mask = trans
   [OF and_mask_eq_iff_shiftr_0 le_mask_iff [THEN sym]]
 
 lemma mask_shiftl_decompose:
-  "mask m << n = mask (m + n) && ~~ mask n"
+  "mask m << n = mask (m + n) && ~~ (mask n)"
   by (auto intro!: word_eqI simp: and_not_mask nth_shiftl nth_shiftr word_size)
 
 lemma one_bit_shiftl: "set_bit 0 n True = (1 :: 'a :: len word) << n"
@@ -489,14 +489,14 @@ lemma shiftl_shiftr2:
 
 lemma shiftr_shiftl1:
   fixes a::"'a::len word"
-  shows "c \<le> b \<Longrightarrow> a >> b << c = (a >> (b - c)) AND (NOT mask c)"
+  shows "c \<le> b \<Longrightarrow> a >> b << c = (a >> (b - c)) AND (NOT (mask c))"
   apply(rule word_eqI)
   apply(auto simp:nth_shiftr nth_shiftl word_size word_ops_nth_size)
   done
 
 lemma shiftr_shiftl2:
   fixes a::"'a::len word"
-  shows "b < c \<Longrightarrow> a >> b << c = (a << (c - b)) AND (NOT mask c)"
+  shows "b < c \<Longrightarrow> a >> b << c = (a << (c - b)) AND (NOT (mask c))"
   apply(rule word_eqI)
   apply(auto simp:nth_shiftr nth_shiftl word_size word_ops_nth_size)
   done
