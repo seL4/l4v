@@ -11,14 +11,13 @@ session Word_Lib (lib) = "HOL-Word" +
   sessions
     "HOL-Library"
     "HOL-Eisbach"
+  directories  (* not in the AFP *)
+    "$L4V_ARCH"
   theories
     "Word_Lemmas_32"
     "Word_Lemmas_64"
-
-  (* not in the AFP: *)
-  theories
-    "../Distinct_Prop"
-    "../$L4V_ARCH/WordSetup"
-
+  theories (* not in the AFP: *)
+    "Distinct_Prop"
+    "$L4V_ARCH/WordSetup"
   document_files
     "root.tex"

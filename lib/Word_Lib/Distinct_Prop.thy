@@ -8,7 +8,7 @@ chapter "Distinct Proposition"
 
 theory Distinct_Prop  (* part of non-AFP Word_Lib *)
 imports
-  "Word_Lib/HOL_Lemmas"
+  "HOL_Lemmas"
   "HOL-Library.Prefix_Order"
 begin
 

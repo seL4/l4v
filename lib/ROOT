@@ -50,6 +50,10 @@ session Lib (lib) = Word_Lib +
     "ml-helpers/TermPatternAntiquote"
     "ml-helpers/TacticAntiquotation"
     "ml-helpers/MLUtils"
+    "ml-helpers/TacticTutorial"
+    "ml-helpers/MkTermAntiquote_Tests"
+    "ml-helpers/TacticAntiquotation_Test"
+    "ml-helpers/TermPatternAntiquote_Tests"
     FP_Eval
     "subgoal_focus/Subgoal_Methods"
     Insulin
@@ -122,14 +126,14 @@ session CLib (lib) in clib = CParser +
     BitFieldProofsLib
     XPres
 
-session CorresK = Lib +
+session CorresK in "CorresK" = Lib +
   sessions
     ASpec
     ExecSpec
   theories
     CorresK_Lemmas
 
-session LibTest (lib) = Refine +
+session LibTest (lib) in test = Refine +
   sessions
     Lib
     CLib
@@ -154,10 +158,6 @@ session LibTest (lib) = Refine +
     Local_Method_Tests
     Qualify_Test
     Locale_Abbrev_Test
-    "ml-helpers/TacticTutorial"
-    "ml-helpers/MkTermAntiquote_Tests"
-    "ml-helpers/TacticAntiquotation_Test"
-    "ml-helpers/TermPatternAntiquote_Tests"
   (* use virtual memory function as an example, only makes sense on ARM: *)
   theories [condition = "L4V_ARCH_IS_ARM"]
     Corres_Test
