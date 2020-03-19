@@ -285,6 +285,7 @@ lemma lookup_ipc_buffer_in_user_frame[wp, Ipc_AI_assms]:
   apply (drule(1) CSpace_AI.tcb_cap_slot_regular)
    apply simp
   apply (simp add: is_nondevice_page_cap_def is_nondevice_page_cap_arch_def case_bool_If
+                   valid_fault_handler_def
             split: if_splits)
   done
 
