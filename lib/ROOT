@@ -10,6 +10,11 @@ session Lib (lib) = Word_Lib +
   sessions
     "HOL-Library"
     "HOL-Eisbach"
+  directories
+    "ml-helpers"
+    "subgoal_focus"
+    "Monad_WP"
+    "Monad_WP/wp"
   theories
     Lib
     Apply_Trace_Cmd
@@ -24,7 +29,6 @@ session Lib (lib) = Word_Lib +
     GenericLib
     ProvePart
     Corres_Adjust_Preconds
-    AutoLevity_Base
     Requalify
     Value_Abbreviation
     Eisbach_Methods

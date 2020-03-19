@@ -54,7 +54,7 @@ fun get_methods ctxt = get_methods_global (Proof_Context.theory_of ctxt)
 
 fun try_one_method m ctxt n goal
     = can (Timeout.apply (Time.fromSeconds 5)
-        (Goal.restrict n 1 #> Method.NO_CONTEXT_TACTIC ctxt
+        (Goal.restrict n 1 #> NO_CONTEXT_TACTIC ctxt
             (Method.evaluate_runtime m ctxt [])
             #> Seq.hd
     )) goal

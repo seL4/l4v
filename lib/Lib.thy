@@ -1292,7 +1292,7 @@ lemma set_neqI:
   by clarsimp
 
 lemma set_pair_UN:
-  "{x. P x} = UNION {xa. \<exists>xb. P (xa, xb)} (\<lambda>xa. {xa} \<times> {xb. P (xa, xb)})"
+  "{x. P x} = \<Union> ((\<lambda>xa. {xa} \<times> {xb. P (xa, xb)}) ` {xa. \<exists>xb. P (xa, xb)})"
   by fastforce
 
 lemma singleton_elemD: "S = {x} \<Longrightarrow> x \<in> S"

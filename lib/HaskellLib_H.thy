@@ -249,9 +249,8 @@ instance ..
 
 end
 
-definition
-  bit_def[simp]:
- "bit x \<equiv> shiftL 1 x"
+definition bit :: "nat \<Rightarrow> 'a::{one,HS_bit}" where
+  bit_def[simp]: "bit x \<equiv> shiftL 1 x"
 
 definition
 "isAligned x n \<equiv> x && mask n = 0"

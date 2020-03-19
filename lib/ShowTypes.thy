@@ -61,7 +61,7 @@ fun term_show_types no_markup ctxt term =
       |> Config.put show_sorts false
       |> Config.put show_consts false
       *)
-      |> Variable.auto_fixes term
+      |> Proof_Context.augment term
   in
     singleton (Syntax.uncheck_terms ctxt') term
     |> Sledgehammer_Isar_Annotate.annotate_types_in_term ctxt'

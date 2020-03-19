@@ -616,7 +616,7 @@ fun crunch_rule cfg const goal extra thms =
     (* second option: produce a terminal rule via wpsimp *)
     fun wpsimp' rules = wpsimp ctxt (map snd (thms @ #wp_rules cfg) @ rules) (#simps cfg)
     val vgoal_prop = goal |> var_precond |> HOLogic.mk_Trueprop
-    val ctxt' = Variable.auto_fixes goal_prop (Variable.auto_fixes vgoal_prop ctxt)
+    val ctxt' = Proof_Context.augment goal_prop (Proof_Context.augment vgoal_prop ctxt)
     val wp_seq = seq_try_apply (Goal.prove ctxt' [] [] goal_prop)
                                (fn _ => TRY (wpsimp' []))
       |> Seq.map (singleton (Proof_Context.export ctxt' ctxt))
@@ -710,7 +710,7 @@ fun crunch cfg pre extra stack const' thms =
           | NONE => let (* not already known, find a crunch rule. *)
           val (ms, rule) = crunch_rule cfg const goal extra thms
             (* and now crunch *)
-          val ctxt' = Variable.auto_fixes goal ctxt;
+          val ctxt' = Proof_Context.augment goal ctxt;
           val ms = ms
             |> map (fn t => (real_const_from_name (fst (dest_Const (head_of t))) (#nmspce cfg) ctxt', t))
             |> subtract (fn (a, b) => a = (fst b)) (crunch_ignores cfg ctxt)
@@ -732,7 +732,7 @@ fun crunch cfg pre extra stack const' thms =
             in Instance.put_precond precond goal |> HOLogic.mk_Trueprop end;
           val goal_prop2 = if Instance.has_preconds then collect_preconds pre else goal_prop;
 
-          val ctxt''' = ctxt'' |> Variable.auto_fixes goal_prop2
+          val ctxt''' = ctxt'' |> Proof_Context.augment goal_prop2
           val _ = writeln ("attempting: " ^ Syntax.string_of_term ctxt''' goal_prop2);
 
           fun wp' wp_rules = wp ctxt (map snd (thms @ #wp_rules cfg) @ goals' @ wp_rules)

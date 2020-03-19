@@ -358,7 +358,7 @@ fun default_strengthen ctxt thms = strengthen ctxt false true thms []
 val strengthen_args =
   Attrib.thms >> curry (fn (rules, ctxt) =>
     Method.CONTEXT_METHOD (fn _ =>
-      Method.RUNTIME (Method.CONTEXT_TACTIC
+      Method.RUNTIME (CONTEXT_TACTIC
         (strengthen ctxt false true rules [] 1))
     )
   );
@@ -366,7 +366,7 @@ val strengthen_args =
 val strengthen_asm_args =
   Attrib.thms >> curry (fn (rules, ctxt) =>
     Method.CONTEXT_METHOD (fn _ =>
-      Method.RUNTIME (Method.CONTEXT_TACTIC
+      Method.RUNTIME (CONTEXT_TACTIC
         (strengthen ctxt true false rules [] 1))
     )
   );
@@ -374,7 +374,7 @@ val strengthen_asm_args =
 val strengthen_method_args =
   Method.text_closure >> curry (fn (meth, ctxt) =>
     Method.CONTEXT_METHOD (fn _ =>
-      Method.RUNTIME (Method.CONTEXT_TACTIC
+      Method.RUNTIME (CONTEXT_TACTIC
         (strengthen ctxt true true [] [meth] 1))
     )
   );
