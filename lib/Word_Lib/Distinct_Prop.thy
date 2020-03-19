@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-chapter "Distinct Proposition"
+section "Distinct Proposition"
 
 theory Distinct_Prop  (* part of non-AFP Word_Lib *)
 imports
