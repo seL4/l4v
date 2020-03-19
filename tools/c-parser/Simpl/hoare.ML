@@ -1073,7 +1073,7 @@ fun procedures_definition locname procs thy =
          |-> add_decl_and_def
       end;
 
-   fun mk_def_eq _ read_term name =
+   fun mk_def_eq thy read_term name =
       if has_body name
       then
          let
@@ -1088,8 +1088,9 @@ fun procedures_definition locname procs thy =
            val Free (gamma,_) = read_term programN;
            val eq = HOLogic.Trueprop$
                      HOLogic.mk_eq (Free (gamma,fastype_of nt --> fastype_of rhs)$nt,rhs)
+           val consts = Sign.consts_of thy;
            val eqs =
-             YXML.string_of_body (Term_XML.Encode.term (map_types (K dummyT) eq));
+            YXML.string_of_body (Term_XML.Encode.term consts (Consts.dummy_types consts eq));
            val assms = Element.Assumes [((Binding.name (suffix bodyP name'), []),[(eqs,[])])]
          in [assms]
          end
