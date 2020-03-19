@@ -599,7 +599,7 @@ fun wp ctxt rules = WeakestPre.apply_rules_tac_n false ctxt rules
 
 fun wpsimp ctxt wp_rules simp_rules =
   let val ctxt' = Config.put Method.old_section_parser true ctxt
-  in Method.NO_CONTEXT_TACTIC ctxt'
+  in NO_CONTEXT_TACTIC ctxt'
        (Method_Closure.apply_method ctxt' @{method wpsimp} [] [wp_rules, [], simp_rules] [] ctxt' [])
   end
 

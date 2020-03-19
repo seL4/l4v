@@ -434,7 +434,7 @@ fun do_modifies_one ctxt fn_info (prog_info: ProgramInfo.prog_info) callee_modif
   fun leaf_tac ctxt n = FIRST [modifies_call_tac callee_modifies ctxt n, modifies_invariant_tac true ctxt n,
                                print_tac ctxt ("do_modifies_one failed (goal " ^ string_of_int n ^ ")")];
   val thm = Goal.prove ctxt (map (fn (Free (v, _)) => v) (state0_var :: arg_vars)) [] ac_modifies_prop
-              (K (Method.NO_CONTEXT_TACTIC ctxt (Method.unfold [f_def] ctxt []) THEN
+              (K (NO_CONTEXT_TACTIC ctxt (Method.unfold [f_def] ctxt []) THEN
                   modifies_initial_tac ctxt 1 THEN
                   modifies_vcg_tac leaf_tac ctxt 1 THEN
                   leaf_tac ctxt 1));
@@ -501,7 +501,7 @@ fun do_modifies_recursive ctxt fn_info (prog_info: ProgramInfo.prog_info) (calle
                   in EqSubst.eqsubst_tac ctxt [0] [f_def] 1 THEN
                      (* AutoCorres specifies recursive calls to use "measure - 1",
                       * which in our case becomes "Suc measure - 1". Simplify to "measure". *)
-                     Method.NO_CONTEXT_TACTIC ctxt (Method.unfold @{thms diff_Suc_1} ctxt []) THEN
+                     NO_CONTEXT_TACTIC ctxt (Method.unfold @{thms diff_Suc_1} ctxt []) THEN
                      modifies_initial_tac ctxt 1 THEN
                      modifies_vcg_tac inductive_leaf_tac ctxt 1 THEN
                      inductive_leaf_tac ctxt 1 end))

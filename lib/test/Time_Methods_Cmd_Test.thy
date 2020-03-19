@@ -155,7 +155,7 @@ experiment begin
                 fun dummy_callback _ _ = ()
             in (fn st => Time_Methods.time_methods false false dummy_callback [(NONE, method)] [] st
                       |> (fn ([timing], st') => (tracing (Timing.message timing); st')))
-               |> Method.NO_CONTEXT_TACTIC @{context}
+               |> NO_CONTEXT_TACTIC @{context}
             end\<close>)
     done
 
@@ -175,7 +175,7 @@ experiment begin
       in (fn st => Time_Methods.time_methods false false dummy_callback methods [] st
                    |> (fn (timing, st') => error "test failed: shouldn't reach here")
                    handle THM _ => Seq.succeed (Seq.Result st)) (* should reach here *)
-         |> Method.NO_CONTEXT_TACTIC @{context}
+         |> NO_CONTEXT_TACTIC @{context}
          |> skip_dummy_state
       end\<close>)
     oops
@@ -197,7 +197,7 @@ experiment begin
             in
               (fn st =>
                 #2 (Time_Methods.time_methods false true timing_callback methods [] st))
-              |> Method.NO_CONTEXT_TACTIC @{context}
+              |> NO_CONTEXT_TACTIC @{context}
             end\<close>)
       | time_methods (skip_fail) good_simp: \<open>simp\<close>)
     done

@@ -108,7 +108,7 @@ fun trace_schematic_assert ctxt test_name tac expected_vars expected_tvars =
       if expected_vars = #terms insts andalso expected_tvars = #typs insts then () else
         error ("Trace_Schematic_Insts failed test: " ^ test_name)
 
-  in Method.NO_CONTEXT_TACTIC ctxt
+  in NO_CONTEXT_TACTIC ctxt
         (Trace_Schematic_Insts.trace_schematic_insts (SIMPLE_METHOD tac) check [])
      |> skip_dummy_state
   end
