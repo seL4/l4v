@@ -507,10 +507,11 @@ fun setup_attrib_tests theory = if not (is_simp_installed) then
 error "Missing interface into Raw_Simplifier. Can't trace apply statements with unpatched isabelle."
 else
 let
+(* FIXME: mk_rews not exported any more in Raw_Simplifier
   fun is_first_cong ctxt thm =
     let
-      val simpset = Raw_Simplifier.internal_ss (Raw_Simplifier.simpset_of ctxt);
-      val (congs, _) = #congs simpset;
+      val simpset = dest_ss (Raw_Simplifier.simpset_of ctxt);
+      val congs = #congs simpset;
       val cong_thm = #mk_cong (#mk_rews simpset) ctxt thm;
     in
       case (find_first (fn (_, thm') => Thm.eq_thm_prop (cong_thm, thm')) congs) of
@@ -518,7 +519,7 @@ let
           Thm.eq_thm_prop (find_first (fn (nm', _) => nm' = nm) congs |> the |> snd, cong_thm)
       | NONE => false
     end
-
+*)
   fun is_classical proj ctxt thm =
     let
       val intros = proj (Classical.claset_of ctxt |> Classical.rep_cs);
@@ -527,7 +528,7 @@ let
 in
  theory
 |> add_attribute_test "simp" is_simp
-|> add_attribute_test "cong" is_first_cong
+(* |> add_attribute_test "cong" is_first_cong  FIXME: see above *)
 |> add_attribute_test "intro" (is_classical #unsafeIs)
 |> add_attribute_test "intro!" (is_classical #safeIs)
 |> add_attribute_test "elim" (is_classical #unsafeEs)

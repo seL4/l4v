@@ -26,7 +26,7 @@ method_setup print_raw_goal = \<open>Scan.succeed (fn ctxt => fn facts =>
     Seq.make_results (Seq.single (ctxt, st)))))\<close>
 
 ML \<open>fun method_evaluate text ctxt facts =
-  Method.NO_CONTEXT_TACTIC ctxt
+  NO_CONTEXT_TACTIC ctxt
     (Method.evaluate_runtime text ctxt facts)\<close>
 
 
