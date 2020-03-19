@@ -1612,7 +1612,7 @@ lemma ucast_less_ucast:
   apply simp
   done
 
-\<comment> \<open>This weaker version was previously called ucast_less_ucast. We retain it to
+\<comment> \<open>This weaker version was previously called @{text ucast_less_ucast}. We retain it to
     support existing proofs.\<close>
 lemmas ucast_less_ucast_weak = ucast_less_ucast[OF order.strict_implies_order]
 
