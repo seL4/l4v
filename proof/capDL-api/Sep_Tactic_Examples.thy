@@ -180,7 +180,7 @@ lemma "P s \<Longrightarrow> (Q \<longrightarrow>* (P \<and>* Q)) s"
 method_setup debug = \<open>
   Attrib.thms >> (fn _ => fn ctxt =>
    let
-     val wp_pre_tac = SELECT_GOAL (Method.NO_CONTEXT_TACTIC ctxt
+     val wp_pre_tac = SELECT_GOAL (NO_CONTEXT_TACTIC ctxt
                       (Method_Closure.apply_method ctxt @{method wp_pre} [] [] [] ctxt []))
    in
      SIMPLE_METHOD' (CHANGED o wp_pre_tac)

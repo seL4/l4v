@@ -339,7 +339,7 @@ fun setup_strg ctxt params thms meths = let
     val congs = Congs.get (Proof_Context.theory_of ctxt)
     val rules = map (Make_Strengthen_Rule.auto_mk ctxt) thms
     val tac = case meths of [] => NONE
-      | _ => SOME (FIRST (map (fn meth => Method.NO_CONTEXT_TACTIC ctxt
+      | _ => SOME (FIRST (map (fn meth => NO_CONTEXT_TACTIC ctxt
         (Method.evaluate meth ctxt [])) meths))
   in apply_strg ctxt params congs rules tac
         THEN_ALL_NEW final_oblig_strengthen ctxt end

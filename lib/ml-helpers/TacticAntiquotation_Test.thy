@@ -55,9 +55,9 @@ lemma
    apply (tactic \<open>@{inline_tactic fastforce}\<close>)
   apply (tactic \<open>stored_tactic\<close>)
    apply (tactic \<open>@{inline_tactic "clarsimp simp only:"} THEN @{inline_tactic "simp"}\<close>)
-  apply (tactic \<open>Method.NO_CONTEXT_TACTIC @{context}
+  apply (tactic \<open>NO_CONTEXT_TACTIC @{context}
                     (@{inline_method "clarsimp simp add: mult_2"} [])\<close>)
-  apply (tactic \<open>Method.NO_CONTEXT_TACTIC @{context} (stored_method [])\<close>)
+  apply (tactic \<open>NO_CONTEXT_TACTIC @{context} (stored_method [])\<close>)
    apply (tactic \<open>@{inline_tactic "metis trans_less_add2 lessI less_trans"}\<close>)
   apply (tactic \<open>@{inline_tactic "fastforce simp only: mult_2[symmetric] power_Suc[symmetric]
                                             intro: less_imp_le"}\<close>)

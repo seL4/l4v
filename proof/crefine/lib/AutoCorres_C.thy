@@ -551,7 +551,7 @@ structure AutoCorresCRefine : AUTOCORRES_CREFINE = struct
 
       val ac_corres_init_thm = ccorres_thm RS (ac_wrap_def RS ccorres_to_corres')
 
-      val ccorres_to_corres_pre_process_tac = Method.NO_CONTEXT_TACTIC ctxt
+      val ccorres_to_corres_pre_process_tac = NO_CONTEXT_TACTIC ctxt
           (Method_Closure.apply_method ctxt @{method ccorres_to_corres_pre_process}
                                        [] [] [] ctxt [])
 

@@ -922,7 +922,7 @@ fun corres_boilerplate_tac opts unfold_haskell_p xfs ctxt = let
             else
                 (fn _ => all_tac)
 
-        val ccorres_rewrite_tac = Method.NO_CONTEXT_TACTIC ctxt
+        val ccorres_rewrite_tac = NO_CONTEXT_TACTIC ctxt
             (Method_Closure.apply_method ctxt @{method "ccorres_rewrite"} [] [] [] ctxt [])
 
         val ss = simpset_of (ctxt delsimps boilerplace_simp_dels |> addcongs
