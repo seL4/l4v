@@ -39,7 +39,7 @@ session ASpec in "abstract" = Word_Lib +
 (* We build the abstract specification document in a separate session,
    to avoid rebuilding ASpec (and every session that depends on it)
    whenever the git commit ID changes. *)
-session ASpecDoc in "abstract" = Word_Lib +
+session ASpecDoc in "abstract/doc" = Word_Lib +
   options [document=pdf]
   sessions
     "HOL-Library"
@@ -48,7 +48,6 @@ session ASpecDoc in "abstract" = Word_Lib +
   theories
     "Intro_Doc"
   theories
-    "Syscall_A"
     "Glossary_Doc"
     (* "KernelInit_A" *)
   document_files
@@ -72,38 +71,38 @@ session ASpecDoc in "abstract" = Word_Lib +
  * Executable/Design Specification
  *)
 
-session ExecSpec = Word_Lib +
+session ExecSpec in "design" = Word_Lib +
   options [document = false]
   sessions
     Lib
     "HOL-Eisbach"
   theories
-    "design/API_H"
-    "design/$L4V_ARCH/ArchIntermediate_H"
+    "API_H"
+    "$L4V_ARCH/ArchIntermediate_H"
 
 
 (*
  * C Kernel
  *)
 
-session CSpec = CKernel +
+session CSpec in "cspec" = CKernel +
   theories [condition = "SORRY_MODIFIES_PROOFS", quick_and_dirty]
-    "cspec/Substitute"
+    "Substitute"
   theories [condition = "SORRY_BITFIELD_PROOFS", quick_and_dirty]
-    "cspec/KernelInc_C"
+    "KernelInc_C"
   theories
-    "cspec/KernelInc_C"
-    "cspec/KernelState_C"
+    "KernelInc_C"
+    "KernelState_C"
 
-session CKernel = CParser +
+session CKernel in "cspec/$L4V_ARCH" = CParser +
   sessions
     "ExecSpec"
     "CLib"
     "AsmRefine"
   theories [condition = "SORRY_MODIFIES_PROOFS", quick_and_dirty]
-    "cspec/$L4V_ARCH/Kernel_C"
+    "Kernel_C"
   theories
-    "cspec/$L4V_ARCH/Kernel_C"
+    "Kernel_C"
 
 
 (*
@@ -134,8 +133,8 @@ session TakeGrant in "take-grant" = Word_Lib +
  * Separation Kernel Setup Specification
  *)
 
-session ASepSpec = ASpec +
+session ASepSpec in "sep-abstract" = ASpec +
   options [document = false]
   theories
-    "sep-abstract/Syscall_SA"
+    "Syscall_SA"
 

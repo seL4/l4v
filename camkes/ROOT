@@ -30,7 +30,7 @@ session CamkesAdlSpec (Camkes) in "adl-spec" = Access +
 (* Base session for CAmkES<->CapDL reasoning. This session is intended to be simply a combination
  * of CamkesAdlSpec and DSpec, and is defined because we can't easily depend on both.
  *)
-session CamkesCdlBase (Camkes) in "adl-spec" = DPolicy +
+session CamkesCdlBase (Camkes) = DPolicy +
   sessions
     DSpec
     CamkesAdlSpec

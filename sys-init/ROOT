@@ -18,7 +18,7 @@ session SysInit = DSpecProofs +
   theories
     "Proof_SI"
 
-session SysInitExamples = SysInit +
+session SysInitExamples in "examples" = SysInit +
   theories
     "ExampleSpec_SI"
     "ExampleSpecIRQ_SI"

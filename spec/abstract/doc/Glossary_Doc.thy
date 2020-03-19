@@ -37,7 +37,7 @@ chapter "Glossary"
 (*<*)
 
 theory Glossary_Doc
-imports Syscall_A
+imports "../Syscall_A"
 begin
 
 (*>*)

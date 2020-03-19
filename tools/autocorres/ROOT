@@ -16,7 +16,7 @@ session AutoCorres = CParser +
   theories
     "AutoCorres"
 
-session AutoCorresSEL4 = CBaseRefine +
+session AutoCorresSEL4 in "test-seL4" = CBaseRefine +
   sessions
     "HOL-Library"
     "HOL-Computational_Algebra"

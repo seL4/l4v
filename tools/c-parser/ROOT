@@ -6,11 +6,11 @@
 
 chapter "C-Parser"
 
-session "Simpl-VCG" = Word_Lib +
+session "Simpl-VCG" in Simpl = Word_Lib +
   sessions
     "HOL-Statespace"
   theories
-    "Simpl/Vcg"
+    "Vcg"
 
 session CParser = "Simpl-VCG" +
   sessions
