@@ -421,7 +421,8 @@ where
          sc_tcb \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
          when (sc_tcb = None) $ do
            sched_context_donate sc_ptr tcb_ptr;
-           refill_unblock_check (sc_ptr);
+           csc \<leftarrow> gets cur_sc;
+           when (sc_ptr \<noteq> csc) $ refill_unblock_check (sc_ptr);
            sched_context_resume sc_ptr
          od
        od)
