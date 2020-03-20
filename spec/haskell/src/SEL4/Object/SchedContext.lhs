@@ -673,7 +673,8 @@ This module uses the C preprocessor to select a target architecture.
 >                 scTCB <- liftM scTCB $ getSchedContext scPtr
 >                 when (scTCB == Nothing) $ do
 >                     schedContextDonate scPtr tcbPtr
->                     refillUnblockCheck scPtr
+>                     curSc <- getCurSc
+>                     when (scPtr /= curSc) $ refillUnblockCheck scPtr
 >                     schedContextResume scPtr
 
 > maybeReturnSc :: PPtr Notification -> PPtr TCB -> Kernel ()
