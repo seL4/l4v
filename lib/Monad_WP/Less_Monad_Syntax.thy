@@ -10,15 +10,15 @@ begin
 
 (* remove >> from Monad_Syntax, clashes with word shift *)
 no_syntax
-  "_thenM" :: "['a, 'b] \<Rightarrow> 'c" (infixr ">>" 54)
+  "_thenM" :: "['a, 'b] \<Rightarrow> 'c" (infixl ">>" 54)
 
 (* remove input version of >>= from Monad_Syntax, avoid clash with NonDetMonad *)
 no_notation
-  Monad_Syntax.bind (infixr ">>=" 54)
+  Monad_Syntax.bind (infixl ">>=" 54)
 
 (* use ASCII >>= instead of \<bind> *)
 notation (output)
-  bind_do (infixr ">>=" 54)
+  bind_do (infixl ">>=" 54)
 
 (* enable pretty printing for do { .. } syntax globally *)
 translations
