@@ -80,6 +80,8 @@ infix mem
 structure Library =
 struct
 
+  type 'a ord = 'a * 'a -> order
+
   val int_ord = Int.compare
   val fast_string_ord = String.compare
 

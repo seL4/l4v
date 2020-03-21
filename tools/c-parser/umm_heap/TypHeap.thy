@@ -854,12 +854,8 @@ proof -
      apply(subgoal_tac "k = 0")
       prefer 2
       apply(rule ccontr, simp)
-      apply(drule order_le_imp_less_or_eq[where x=t])
-      apply clarsimp
       apply(simp add: typ_slice_0_prefix)
      apply simp
-     apply(drule order_le_imp_less_or_eq[where x=t])
-     apply clarsimp
     (* given by the fd_tag_consistent condition *)
     apply(drule typ_slice_True_prefix)
     apply(clarsimp simp: field_of_def)
