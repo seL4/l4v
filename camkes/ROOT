@@ -49,6 +49,12 @@ session CamkesCdlRefine (Camkes) in "cdl-refine" = CamkesCdlBase +
 
 session CamkesGlueSpec (Camkes) in "glue-spec" = HOL +
   options [document = pdf]
+  directories
+    "example-procedure"
+    "example-event"
+    "example-dataport"
+    "example-untrusted"
+    "example-trusted"
   theories
     Abbreviations
     CIMP
