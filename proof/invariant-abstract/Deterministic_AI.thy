@@ -363,7 +363,7 @@ lemma next_not_child_pinduct2:
   by (rule next_not_child_pinduct2', simp_all add: next_not_child_termination)
 
 lemma next_not_child_linearI:
-  notes split_paired_All[simp del] split_paired_Ex[simp del]
+  notes split_paired_All[simp del] split_paired_Ex[simp del] if_weak_cong[cong]
   assumes f_d: "finite_depth m" shows
   "\<lbrakk>m p = m' p; next_sib p t m = next_sib p t' m';
      \<forall>q. p \<in> descendants_of q m \<longrightarrow> m q = m' q
@@ -2179,7 +2179,7 @@ shows
 
 lemma cap_move_valid_list [wp]:
 
-  notes split_paired_All[simp del]
+  notes split_paired_All[simp del] if_weak_cong[cong]
   shows
   "\<lbrace>valid_list\<rbrace>
   cap_move cap src dest
@@ -2198,10 +2198,7 @@ lemma cap_move_valid_list [wp]:
                   update_cdt_list_def set_cdt_list_def del: fun_upd_apply split del: if_split)
   apply(wp)
    apply (simp del: fun_upd_apply split del: if_split)
-   apply (unfold valid_list_2_def)
-   apply (simp del: fun_upd_apply cong: option.case_cong split del: if_split)
    apply (wp set_cap_caps_of_state3)+
-  apply (fold valid_list_2_def)
   apply (rule mdb_move_abs_simple.valid_list_post)
   apply (rule mdb_move_abs_simple.intro; simp)
   done
@@ -3369,7 +3366,7 @@ lemma next_child_eq_ignore: "g p = g' p \<Longrightarrow> next_child p g = next_
   by(simp add: next_child_def)
 
 lemma next_child:
-  notes split_paired_All[simp del] split_paired_Ex[simp del]
+  notes split_paired_All[simp del] split_paired_Ex[simp del] if_weak_cong[cong]
   notes parency_antisym[where x=src and y = dest,simp]
   notes next_child_antisym[where x=src and y = dest,simp]
   notes next_childD' = next_childD[OF _ valid_list]
@@ -3826,10 +3823,6 @@ lemmas transfer_caps_loop_ext_valid[wp] =
 crunch valid_list[wp]: tcb_sched_action,reschedule_required,set_thread_state_ext "valid_list"
   (simp: unless_def ignore_del: tcb_sched_action reschedule_required set_thread_state_ext)
 
-crunch all_but_exst[wp]: set_thread_state_ext "all_but_exst P"
-
-crunch (empty_fail) empty_fail[wp]: set_thread_state_ext
-
 interpretation set_thread_state_ext_extended: is_extended "set_thread_state_ext a"
   by (unfold_locales; wp)
 
@@ -4091,7 +4084,6 @@ lemma (in mdb_insert_abs) cap_insert_ext_det_def2:
         p := if src_parent then list p else list_insert_after (list p) src_slot dest_slot))) src_parent src dest src_p dest_p e"
   apply (simp add: cap_insert_ext_def update_cdt_list_bind)
   apply (rule update_list_eq)
-  apply (simp split del: if_split cong: option.case_cong)
   apply (insert dest neq)
   apply (case_tac "m src")
    apply simp+
@@ -4109,7 +4101,6 @@ lemma (in mdb_empty_abs') empty_slot_ext_det_def2:
       Some p \<Rightarrow> list (p := list_replace_list (list p) slot (list slot), slot := []))) e"
   apply (simp add: empty_slot_ext_def update_cdt_list_bind)
   apply (rule update_list_eq)
-  apply (simp cong: option.case_cong)
   apply (case_tac "m slot")
    apply simp
   apply (cut_tac no_mloop_weaken[OF no_mloop, where a=slot])
@@ -4657,7 +4648,7 @@ lemma last_child_NoneD:
   by(simp add: last_child_def empty_list_empty_desc split: if_split_asm)
 
 lemma last_last_child_NoneD:
-  notes split_paired_Ex[simp del]
+  notes split_paired_Ex[simp del] if_weak_cong[cong]
   assumes "last_last_child slot (cdt_list s) = None" "valid_list s" "valid_mdb s"
   shows "descendants_of slot (cdt s) = {}"
   apply(insert assms)
@@ -4776,7 +4767,7 @@ lemma last_child_NoneI:
   by (simp add: last_child_def empty_list_empty_desc)
 
 lemma last_last_childI:
-  notes split_paired_All[simp del] split_paired_Ex[simp del]
+  notes split_paired_All[simp del] split_paired_Ex[simp del] if_weak_cong[cong]
   assumes "child \<in> last_child_set slot (cdt_list s)"
    "descendants_of child (cdt s) = {}" "valid_mdb s" "valid_list s"
   shows "last_last_child slot (cdt_list s) = Some child"
@@ -5098,13 +5089,13 @@ lemma next_sib_2_sib':
    done
 
 lemma next_sib_2_sib:
-  "\<lbrakk>next_sib_2 slot p s = Some next; valid_list s; valid_mdb s\<rbrakk>
-    \<Longrightarrow> cdt s next = Some p"
+  "\<lbrakk>next_sib_2 slot p s = Some next; valid_list s; valid_mdb s\<rbrakk> \<Longrightarrow> cdt s next = Some p"
+  supply if_weak_cong[cong]
   apply(case_tac "cdt s slot = Some p")
    apply(simp add: next_sib_2_termination split: if_split_asm)
    apply(simp split: option.splits if_split_asm)
    apply(fastforce intro: next_sib_2_sib')+
-   done
+  done
 
 lemma ex_imp:
   "\<lbrakk>\<forall>x. P x \<longrightarrow> Q x; \<exists>x. P x\<rbrakk> \<Longrightarrow> \<exists>x. Q x"
@@ -5153,7 +5144,7 @@ lemma next_sib_2I:
     done
 
 lemma between_next_sib_2_not_sib:
-  notes split_paired_All[simp del] split_paired_Ex[simp del]
+  notes split_paired_All[simp del] split_paired_Ex[simp del] if_weak_cong[cong]
   assumes
   "next_sib_2 slot p s = Some next" "q \<in> next_slot_set slot (cdt_list s) (cdt s)"
   "next \<in> next_slot_set q (cdt_list s) (cdt s)" "valid_list s" "valid_mdb s"
