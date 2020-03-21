@@ -2818,6 +2818,7 @@ lemma receive_ipc_valid_sched:
           and not_queued thread and scheduler_act_not thread and invs\<rbrace>
    receive_ipc thread cap is_blocking
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  supply option.case_cong_weak[cong]
   apply (simp add: receive_ipc_def)
   including no_pre
   apply (wp | wpc | simp)+
