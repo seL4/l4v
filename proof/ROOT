@@ -74,6 +74,8 @@ session BaseRefine in "refine" = AInvs +
     "$L4V_ARCH/Include"
 
 session AInvs in "invariant-abstract" = ASpec +
+  directories
+    "$L4V_ARCH"
   theories [condition = "SKIP_AINVS_PROOFS", quick_and_dirty, skip_proofs]
     "KernelInit_AI"
     "$L4V_ARCH/ArchDetSchedSchedule_AI"
