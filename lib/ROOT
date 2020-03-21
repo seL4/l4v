@@ -181,6 +181,8 @@ session AutoLevity (lib) = HOL +
 session Concurrency (lib) in concurrency = HOL +
   sessions
     Lib
+  directories
+    "examples"
   theories
     Atomicity_Lib
     Triv_Refinement
