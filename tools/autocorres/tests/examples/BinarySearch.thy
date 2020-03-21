@@ -5,7 +5,7 @@
  *)
 
 theory BinarySearch
-imports "AutoCorres.AutoCorres" "../../DataStructures"
+imports "AutoCorres.AutoCorres" "AutoCorres.DataStructures"
 begin
 
 external_file "binary_search.c"
