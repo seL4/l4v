@@ -17,5 +17,8 @@ session CParser = "Simpl-VCG" +
     "HOL-Library"
     "HOL-Word"
     "Lib"
+  directories
+    "umm_heap"
+    "umm_heap/$L4V_ARCH"
   theories
     "CTranslation"
