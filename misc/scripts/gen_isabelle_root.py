@@ -34,6 +34,9 @@ parser.add_option("-q", "--quick-and-dirty", dest="quick_and_dirty",
 parser.add_option("-T", "--generate-theory", dest="theory_file",
                   action="store_true", default=False,
                   help="Generate a theory file instead of a ROOT file.")
+parser.add_option("--dir", dest="dirs",
+                  help="additional session directory", action="append",
+                  default=[], metavar="NAME")
 (options, args) = parser.parse_args()
 
 # Check arguments
@@ -76,6 +79,10 @@ with open(options.output, "w") as output:
         if options.session_dependencies:
             output.write("  sessions\n")
             for i in options.session_dependencies:
+                output.write("    \"%s\"\n" % i)
+        if options.dirs:
+            output.write("  directories\n")
+            for i in options.dirs:
                 output.write("    \"%s\"\n" % i)
         if options.quick_and_dirty:
             output.write("  theories [quick_and_dirty]\n")
