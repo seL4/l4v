@@ -50,13 +50,13 @@ $(PARSE_TESTS_THY): %.thy: %.c
 
 # Test all the files in our "tests/" directory.
 AutoCorresTest: clean-tests tests/ROOT
-	$(ISABELLE_TOOL) build -d ../.. -d tests -b -v AutoCorresTest
+	$(ISABELLE_TOOL) build -d ../.. -d tests -v AutoCorresTest
 .PHONY: AutoCorresTest
 
 # Parse the seL4 kernel
 AutoCorresSEL4:
 	make -C ../../proof CBaseRefine
-	$(ISABELLE_TOOL) build -d ../.. -b -v AutoCorresSEL4
+	$(ISABELLE_TOOL) build -d ../.. -v AutoCorresSEL4
 .PHONY: AutoCorresSEL4
 
 # Build the documentation sub-sessions.
