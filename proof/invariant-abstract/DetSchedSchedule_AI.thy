@@ -2214,12 +2214,22 @@ abbreviation cur_sc_in_release_q_imp_zero_consumed :: "'z state \<Rightarrow> bo
     \<forall>t. pred_map_eq (Some (cur_sc s)) (tcb_scps_of s) t
             \<longrightarrow> in_release_q t s \<longrightarrow> consumed_time s = 0"
 
-abbreviation cur_sc_more_than_ready :: "'z state \<Rightarrow> bool" where
-  "cur_sc_more_than_ready s \<equiv>
-     consumed_time s \<noteq> 0
-     \<longrightarrow> cur_sc_active s
-     \<longrightarrow> cur_sc_offset_ready (consumed_time s) s
-          \<and> cur_sc_offset_sufficient (consumed_time s) s"
+definition cur_sc_more_than_ready_2 where
+  "cur_sc_more_than_ready_2 cons_time c_time rf_cfgs csc \<equiv>
+     cons_time \<noteq> 0
+     \<longrightarrow> pred_map active_scrc rf_cfgs csc
+     \<longrightarrow> pred_map (refill_ready_no_overflow_sc cons_time c_time) rf_cfgs csc
+          \<and> pred_map (refill_sufficient_sc cons_time) rf_cfgs csc"
+
+abbreviation cur_sc_more_than_ready where
+  "cur_sc_more_than_ready s \<equiv> cur_sc_more_than_ready_2
+     (consumed_time s) (cur_time s) (sc_refill_cfgs_of s) (cur_sc s)"
+
+lemmas cur_sc_more_than_ready_def = cur_sc_more_than_ready_2_def
+
+lemma cur_sc_more_than_ready_trivial[simp]:
+  "cur_sc_more_than_ready_2 0 c_time rfcfg csc = True"
+  by (simp add: cur_sc_more_than_ready_2_def)
 
 locale DetSchedSchedule_AI =
   fixes state_ext_t :: "'state_ext::state_ext itself"
@@ -2252,6 +2262,8 @@ locale DetSchedSchedule_AI =
           \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_perform_invocation_cur_sc_tcb_only_sym_bound[wp]:
     "\<And>i. arch_perform_invocation i \<lbrace>cur_sc_tcb_only_sym_bound :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  assumes arch_perform_invocation_cur_sc_more_than_ready[wp]:
+    "\<And>i. arch_perform_invocation i \<lbrace>cur_sc_more_than_ready :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_perform_invocation_cur_sc_chargeableE_E[wp]:
     "\<And>i. \<lbrace>cur_sc_chargeable :: 'state_ext state \<Rightarrow> _\<rbrace> arch_perform_invocation i -, \<lbrace>\<lambda>_. cur_sc_chargeable\<rbrace>"
   assumes arch_perform_invocation_ct_not_blockedE_E[wp]:
@@ -8999,7 +9011,7 @@ lemma commit_time_valid_ready_qs:
   apply (wpsimp wp: refill_budget_check_round_robin_valid_ready_qs
                  refill_budget_check_valid_ready_qs
                  hoare_vcg_all_lift assert_inv hoare_vcg_imp_lift' is_round_robin_wp)
-  apply (subgoal_tac "cur_sc_active s", clarsimp)
+  apply (subgoal_tac "cur_sc_active s", clarsimp simp: cur_sc_more_than_ready_def)
    apply (erule consumed_time_bounded_helper)
    apply (erule current_time_bounded_strengthen, simp)
   apply (clarsimp simp: obj_at_def vs_all_heap_simps)
@@ -9333,7 +9345,7 @@ lemma commit_time_active_sc_valid_refills:
                     refill_budget_check_round_robin_active_sc_valid_refills
                     refill_budget_check_active_sc_valid_refills)
       apply (wpsimp wp: assert_inv is_round_robin_wp)+
-  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: obj_at_def cur_sc_more_than_ready_def)
   apply (subgoal_tac "cur_sc_active s")
   apply (fastforce intro: current_time_bounded_strengthen consumed_time_bounded_helper)
   apply (clarsimp simp: vs_all_heap_simps)
@@ -9925,7 +9937,7 @@ lemma refill_unblock_check_cur_sc_more_than_ready[wp]:
   "\<lbrace>cur_sc_more_than_ready and (\<lambda>s. scptr \<noteq> cur_sc s)\<rbrace>
    refill_unblock_check scptr
    \<lbrace>\<lambda>_. cur_sc_more_than_ready\<rbrace>"
-  apply (wpsimp wp: hoare_vcg_imp_lift')
+  apply (wpsimp wp: hoare_vcg_imp_lift' simp: cur_sc_more_than_ready_def)
     apply (wps, wpsimp)
    apply (wps, wpsimp wp: ruc_refill_ready_no_overflow_sc ruc_is_refill_sufficient_indep)
   apply clarsimp
@@ -12311,14 +12323,6 @@ lemma do_reply_transfer_valid_sched:
    apply (wpsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise valid_sched_def)
    apply (fastforce elim!: valid_blockedE' simp: vs_all_heap_simps)
   apply (rename_tac scp)
-  apply (rule_tac B="\<lambda>_ s. pred_map_eq (Some scp) (tcb_scps_of s) receiver
-                           \<and> pred_map runnable (tcb_sts_of s) receiver
-                           \<and> do_reply_transfer_pred receiver s"
-           in hoare_seq_ext[rotated])
-   apply (wpsimp wp: refill_unblock_check_valid_sched_except_blocked hoare_vcg_disj_lift)
-   apply (clarsimp simp: pred_map_eq_pred_mapE)
-   apply (drule (1) heap_refs_retractD[rotated])+
-   apply (clarsimp simp: sc_tcbs.pred_map_simps)
   apply (intro hoare_seq_ext[OF _ get_sched_context_sp]
                hoare_seq_ext[OF _ gets_sp]
                hoare_seq_ext[OF _ gets_the_sp]
@@ -12328,7 +12332,7 @@ lemma do_reply_transfer_valid_sched:
    apply (wpsimp wp: handle_timeout_valid_sched simp: is_timeout_fault_def)
   apply (wpsimp wp: postpone_valid_sched)
   apply (prop_tac "tp = receiver", frule (1) heap_refs_retractD, clarsimp simp: sc_tcbs.pred_map_simps)
-  by (clarsimp simp: active_bound_sc_tcb_at)
+  by (clarsimp simp: active_bound_sc_tcb_at vs_all_heap_simps)
 
 lemma handle_no_fault_valid_sched:
   "\<lbrace>valid_sched and not_queued thread and not_in_release_q thread and scheduler_act_not thread\<rbrace>
@@ -15905,7 +15909,7 @@ lemma invoke_sched_control_configure_valid_sched:
                      commit_time_released_ipc_queues commit_time_valid_blocked_except_set
                      commit_time_sc_refill_max_sc_at
                      commit_time_active_sc_valid_refills)
-   apply (simp add: sc_at_pred_n_def obj_at_def)
+   apply (simp add: sc_at_pred_n_def obj_at_def cur_sc_more_than_ready_def)
    apply (intro conjI impI)
       apply (clarsimp simp: vs_all_heap_simps obj_at_def)
       apply (frule invs_sym_refs)
@@ -17231,9 +17235,6 @@ lemma do_reply_transfer_ct_not_queued[wp]:
   apply (clarsimp simp: when_def pred_conj_def)
   apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
   apply (rule hoare_seq_ext[OF _ assert_opt_sp])
-  apply (rule hoare_seq_ext_skip)
-   apply (wpsimp wp: refill_unblock_check_pred_tcb_at
-                       [simplified pred_tcb_at_def, where proj="itcb_sched_context", simplified])
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_if)
@@ -19337,17 +19338,237 @@ lemma offset_ready_ct_ready_if_schedulable:
   apply (frule cur_time_no_overflow2, simp add: unat_plus_simple)
   done
 
+crunches handle_no_fault, reply_from_kernel
+  for cur_sc_more_than_ready[wp]: cur_sc_more_than_ready
+
+lemma handle_fault_cur_sc_more_than_ready[wp]:
+  "handle_fault thread ex \<lbrace>cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding handle_fault_def
+  by (wpsimp wp: syscall_valid simp: send_fault_ipc_def)
+
+lemma maybe_donate_sc_cur_sc_more_than_ready[wp]:
+  "maybe_donate_sc tcb_ptr ntfn_ptr \<lbrace>cur_sc_more_than_ready\<rbrace>"
+  unfolding maybe_donate_sc_def
+  by (wpsimp wp: hoare_drop_imp)
+
+crunches send_signal
+  for cur_sc_more_than_ready[wp]: "cur_sc_more_than_ready :: det_state \<Rightarrow> _"
+  (wp: crunch_wps hoare_drop_imp simp: crunch_simps)
+
+crunches cancel_all_ipc, cancel_all_signals, sched_context_unbind_all_tcbs, suspend
+  for cur_sc_more_than_ready[wp]: cur_sc_more_than_ready
+  (wp: crunch_wps ignore: update_sched_context)
+
+lemma set_refill_max_zero_cur_sc_more_than_ready[wp]:
+  "\<lbrace>cur_sc_more_than_ready\<rbrace> set_sc_obj_ref sc_refill_max_update scp 0
+   \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  apply (wpsimp wp: update_sched_context_wp)
+  apply (clarsimp simp: cur_sc_more_than_ready_def vs_all_heap_simps active_sc_def)
+  done
+
+crunches fast_finalise, cap_delete_one, finalise_cap, cap_delete, do_reply_transfer
+  for cur_sc_more_than_ready[wp]: "cur_sc_more_than_ready :: det_state \<Rightarrow> _"
+  (wp: crunch_wps ignore: update_sched_context)
+
+crunches restart, suspend, bind_notification, maybe_sched_context_unbind_tcb,
+         maybe_sched_context_bind_tcb
+  for cur_sc_more_than_ready[wp]: cur_sc_more_than_ready
+  (wp: crunch_wps simp: crunch_simps ignore: update_sched_context)
+
+crunches install_tcb_frame_cap, install_tcb_cap
+  for cur_sc_more_than_ready[wp]: "cur_sc_more_than_ready :: det_state \<Rightarrow> _"
+  (wp: check_cap_inv)
+
+lemma invoke_tcb_cur_sc_more_than_ready[wp]:
+  "\<lbrace>cur_sc_more_than_ready\<rbrace>
+   invoke_tcb iv
+   \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  apply (cases iv; (solves wpsimp)?; simp)
+    apply (wpsimp wp: mapM_x_wp_inv)
+   apply (wpsimp wp: hoare_drop_imp)
+  subgoal for tptr ntfn_opt
+    by (case_tac ntfn_opt; wpsimp)
+  done
+
+lemma sched_context_yield_to_cur_sc_more_than_ready[wp]:
+  "\<lbrace>cur_sc_more_than_ready and (\<lambda>s. sc_ptr \<noteq> cur_sc s)\<rbrace>
+   sched_context_yield_to sc_ptr args
+   \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding sched_context_yield_to_def
+  by (wpsimp wp: assert_inv hoare_drop_imp)
+
+lemma update_sched_context_cur_sc_more_than_ready:
+  "\<lbrace>cur_sc_more_than_ready and (\<lambda>s. sc_ptr \<noteq> cur_sc s \<or> consumed_time s = 0)\<rbrace>
+   update_sched_context sc_ptr f
+   \<lbrace>\<lambda>yb. cur_sc_more_than_ready\<rbrace>"
+  unfolding refill_update_def
+  apply (wpsimp wp: update_sched_context_wp)
+  by (clarsimp simp: cur_sc_more_than_ready_def vs_all_heap_simps)
+
+lemma refill_update_cur_sc_more_than_ready[wp]:
+  "\<lbrace>cur_sc_more_than_ready and (\<lambda>s. sc_ptr \<noteq> cur_sc s \<or> consumed_time s = 0)\<rbrace>
+   refill_update sc_ptr new_period new_budget new_max_refills
+   \<lbrace>\<lambda>yb. cur_sc_more_than_ready\<rbrace>"
+  unfolding refill_update_def
+  by (wpsimp wp: update_sched_context_cur_sc_more_than_ready)
+
+lemma refill_new_cur_sc_more_than_ready[wp]:
+  "\<lbrace>cur_sc_more_than_ready and (\<lambda>s. sc_ptr \<noteq> cur_sc s \<or> consumed_time s = 0)\<rbrace>
+   refill_new sc_ptr max_refills budget period
+   \<lbrace>\<lambda>yb. cur_sc_more_than_ready\<rbrace>"
+  unfolding refill_new_def
+  by (wpsimp wp: update_sched_context_cur_sc_more_than_ready)
+
+lemma invoke_sched_context_cur_sc_more_than_ready[wp]:
+  "\<lbrace>cur_sc_more_than_ready
+    and valid_sched_context_inv iv
+    and (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. sctcb = Some (cur_thread s)) (cur_sc s) s)\<rbrace>
+   invoke_sched_context iv
+   \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding invoke_sched_context_def
+  apply (cases iv; wpsimp)
+  by (clarsimp simp: sc_at_kh_simps vs_all_heap_simps)
+
+lemma commit_time_zero_consumed_time[wp]:
+  "\<lbrace>\<top>\<rbrace> commit_time \<lbrace>\<lambda>_ s. consumed_time s = 0\<rbrace>"
+  unfolding commit_time_def
+  by wpsimp
+
+lemma invoke_sched_control_configure_cur_sc_more_than_ready[wp]:
+  "\<lbrace>cur_sc_more_than_ready
+    and (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. sctcb = Some (cur_thread s)) (cur_sc s) s)\<rbrace>
+   invoke_sched_control_configure iv
+   \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding invoke_sched_control_configure_def
+  apply (cases iv; simp)
+  apply wpsimp
+         apply (rule_tac Q="\<lambda>_ s. consumed_time s = 0" in hoare_strengthen_post)
+          apply wpsimp
+         apply clarsimp
+        apply wpsimp
+       apply (rule_tac Q="\<lambda>_. cur_sc_more_than_ready" in hoare_strengthen_post)
+        apply (wpsimp wp: hoare_vcg_if_lift2)+
+  by (clarsimp simp: sc_at_kh_simps vs_all_heap_simps obj_at_def)
+
+lemma invoke_untyped_cur_sc_more_than_ready[wp]:
+  "\<lbrace>cur_sc_more_than_ready\<rbrace>
+   invoke_untyped iv
+   \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  apply (rule_tac
+         Q="\<lambda>_ s. \<forall>cons_time csc c_time.
+                  cons_time = consumed_time s \<and> csc = cur_sc s \<and> c_time = cur_time s
+                  \<longrightarrow> cons_time \<noteq> 0
+                  \<longrightarrow> ((pred_map active_scrc (sc_refill_cfgs_of s) csc
+                        \<longrightarrow> pred_map (refill_ready_no_overflow_sc cons_time c_time) (sc_refill_cfgs_of s) csc)
+                       \<and>
+                       (pred_map active_scrc (sc_refill_cfgs_of s) csc
+                        \<longrightarrow> pred_map (refill_sufficient_sc cons_time) (sc_refill_cfgs_of s) csc))"
+         in hoare_strengthen_post[rotated])
+   apply (clarsimp simp: cur_sc_more_than_ready_def)
+  apply (rule hoare_weaken_pre)
+   apply (rule hoare_vcg_all_lift)+
+   apply (rule hoare_vcg_imp_lift', wp)
+   apply (rule hoare_vcg_imp_lift', wp)
+   apply (rule hoare_vcg_conj_lift; wp invoke_untyped_pred_map_sc_refill_cfgs_of)
+  apply (clarsimp simp: cur_sc_more_than_ready_def)
+  done
+
+crunches cancel_badged_sends
+  for cur_sc_more_than_ready[wp]: cur_sc_more_than_ready
+  (wp: filterM_preserved)
+
+lemma invoke_cnode_cur_sc_more_than_ready[wp]:
+  "invoke_cnode iv \<lbrace>cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  supply if_split [split del]
+  unfolding invoke_cnode_def
+  by (cases iv; wpsimp wp: cap_revoke_preservation)
+
+lemma invoke_irq_handler_cur_sc_more_than_ready[wp]:
+  "invoke_irq_handler iv \<lbrace>cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  by (cases iv; wpsimp)
+
+lemma perform_invocation_cur_sc_more_than_ready[wp]:
+  "\<lbrace>cur_sc_more_than_ready
+    and valid_invocation iv
+    and (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. sctcb = Some (cur_thread s)) (cur_sc s) s)\<rbrace>
+   perform_invocation block call can_donate iv
+   \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  by (cases iv; wpsimp)
+
+lemma handle_invocation_cur_sc_more_than_ready[wp]:
+  "\<lbrace>cur_sc_more_than_ready and invs and schact_is_rct\<rbrace>
+   handle_invocation calling blocking can_donate first_phase cptr
+   \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding handle_invocation_def
+  apply (wpsimp wp: syscall_valid hoare_drop_imp simp: cap_cap_slot_fold sc_at_kh_simps)
+  apply (clarsimp cong: conj_cong)
+  apply (intro conjI, clarsimp)
+  apply (clarsimp simp: pred_map_eq_normalise)
+  apply (rule heap_refs_retract_atD[OF _ invs_strengthen_cur_sc_tcb_are_bound])
+   apply (simp add: invs_retract_tcb_scps)
+  apply simp
+  done
+
+crunches handle_recv
+  for cur_sc_more_than_ready[wp]: "cur_sc_more_than_ready :: det_state \<Rightarrow> _"
+  (wp: crunch_wps simp: crunch_simps ignore: set_object update_sched_context)
+
+lemma charge_budget_cur_sc_more_than_ready[wp]:
+  "\<lbrace>\<top>\<rbrace> charge_budget consumed canTimeout \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding charge_budget_def
+  by (wpsimp wp: hoare_drop_imp)
+
+lemma check_budget_cur_sc_more_than_ready[wp]:
+  "\<lbrace>\<lambda>s. cur_sc_offset_ready (consumed_time s) s\<rbrace>
+   check_budget
+   \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding check_budget_def
+  apply wpsimp
+  apply (clarsimp simp: cur_sc_more_than_ready_def)
+  by (clarsimp simp: vs_all_heap_simps obj_at_def refill_sufficient_def)
+
+lemma check_budget_restart_cur_sc_more_than_ready[wp]:
+  "\<lbrace>\<lambda>s. cur_sc_offset_ready (consumed_time s) s\<rbrace>
+   check_budget_restart
+   \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding check_budget_restart_def
+  by (wpsimp wp: hoare_drop_imp)
+
+lemmas check_budget_restart_true_schact_is_rct[wp] = check_budget_restart_true[where P=schact_is_rct]
+
+lemma handle_yield_cur_sc_more_than_ready[wp]:
+  "\<lbrace>\<top>\<rbrace> handle_yield \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding handle_yield_def
+  by wpsimp
+
 lemma handle_interrupt_cur_sc_more_than_ready[wp]:
-  "\<And>y. \<lbrace>\<top>\<rbrace> handle_interrupt y \<lbrace>\<lambda>_ s. cur_sc_more_than_ready s\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> handle_interrupt y \<lbrace>\<lambda>_ s. cur_sc_more_than_ready s\<rbrace>"
   sorry (* handle_interrupt_cur_sc_more_than_ready *)
+
+(* RT FIXME: using this is perhaps not neat. Investigate if there is a better way to solve this *)
+lemmas schact_conj_commute = conj_commute[where Q="schact_is_rct s" for s]
+
+lemma handle_event_cur_sc_more_than_ready[wp]:
+  "\<lbrace>(\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
+    and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s)
+    and valid_machine_time
+    and invs
+    and schact_is_rct\<rbrace>
+   handle_event e
+   \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  apply (cases e; (solves \<open>wpsimp\<close>)?; simp)
+  subgoal for syscall
+    apply (case_tac syscall; simp add: handle_call_def handle_send_def)
+              apply ((wpsimp simp: schact_conj_commute, wp hoare_drop_imp, wpsimp, simp)+)[6]
+        apply (wpsimp wp: check_budget_restart_false)+
+    done
+   apply (wpsimp wp: hoare_drop_imp)
+  apply (wpsimp simp: cur_sc_more_than_ready_def)
+  done
 
 lemma drop_cur_sc_in_release_q_imp_zero_consumed[wp]:
   "\<And>f. \<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>_ s. cur_sc_in_release_q_imp_zero_consumed s\<rbrace>"
   sorry (* drop_cur_sc_in_release_q_imp_zero_consumed *)
-
-lemma handle_event_cur_sc_more_than_ready[wp]:
-  "\<And>y. \<lbrace>\<top>\<rbrace> handle_event y \<lbrace>\<lambda>_ s. cur_sc_more_than_ready s\<rbrace>"
-  sorry (* handle_event_cur_sc_more_than_ready *)
 
 lemma invoke_untyped_cur_sc_offset_ready[wp]:
   "\<lbrace>\<lambda>s. cur_sc_offset_ready (consumed_time s) s\<rbrace>
@@ -19496,8 +19717,9 @@ lemma call_kernel_valid_sched:
     and cur_sc_active
     and nextnext_time_bounded 2
     and valid_reply_scs
-    and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
-    and (\<lambda>s. (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) s)\<rbrace>
+    and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s
+             \<and> cur_sc_offset_sufficient (consumed_time s) s)
+    and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
    call_kernel e
    \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: call_kernel_def)

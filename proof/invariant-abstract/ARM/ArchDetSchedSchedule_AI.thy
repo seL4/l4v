@@ -157,14 +157,6 @@ lemma activate_thread_valid_sched:
   by (wpsimp wp: set_thread_state_cur_thread_runnable_valid_sched gts_wp hoare_vcg_all_lift
                  get_tcb_obj_ref_wp hoare_drop_imps)
 
-crunch valid_sched[wp]:
-  perform_page_invocation,
-  perform_page_table_invocation,
-  perform_asid_pool_invocation,
-  perform_page_directory_invocation
-  "valid_sched"
-  (wp: mapM_x_wp' mapM_wp' crunch_wps ignore: do_machine_op)
-
 lemma arch_perform_invocation_valid_sched [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>invs and valid_sched and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
     valid_arch_inv a\<rbrace>
@@ -339,6 +331,52 @@ lemma kernel_irq_timer_kernel_IRQ[simp]:
 lemma arch_perform_invocationE_E_inv[wp]:
   "\<lbrace>\<top>\<rbrace> arch_perform_invocation i -, \<lbrace>Q\<rbrace>"
    unfolding arch_perform_invocation_def by wpsimp
+
+lemma retype_region_cur_sc_more_than_ready [wp]:
+  "retype_region ptr numObjects o_bits type dev \<lbrace>cur_sc_more_than_ready\<rbrace>"
+  apply (rule_tac Q="\<lambda>_ s. \<forall>cons_time csc c_time.
+    cons_time = consumed_time s \<and> csc = cur_sc s \<and> c_time = cur_time s \<longrightarrow>
+    (cons_time \<noteq> 0
+    \<longrightarrow> pred_map active_scrc (sc_refill_cfgs_of s) csc
+    \<longrightarrow> pred_map (refill_ready_no_overflow_sc cons_time c_time) (sc_refill_cfgs_of s) csc
+         \<and> pred_map (refill_sufficient_sc cons_time) (sc_refill_cfgs_of s) csc)" in hoare_strengthen_post)
+   apply (wp hoare_vcg_all_lift)
+    apply (rule hoare_vcg_imp_lift'[rotated])
+     apply (rule hoare_vcg_imp_lift'[rotated])
+      apply (subst imp_conjR)
+      apply (wp retype_region_active_sc_props)
+     apply wpsimp+
+   apply (clarsimp simp: cur_sc_more_than_ready_def)
+  apply (clarsimp simp: cur_sc_more_than_ready_def)
+  done
+
+lemma delete_objects_cur_sc_more_than_ready [wp]:
+  "delete_objects ptr pagebits \<lbrace>cur_sc_more_than_ready\<rbrace>"
+  apply (rule_tac Q="\<lambda>_ s. \<forall>cons_time csc c_time.
+    cons_time = consumed_time s \<and> csc = cur_sc s \<and> c_time = cur_time s \<longrightarrow>
+    (cons_time \<noteq> 0
+    \<longrightarrow> pred_map active_scrc (sc_refill_cfgs_of s) csc
+    \<longrightarrow> pred_map (refill_ready_no_overflow_sc cons_time c_time) (sc_refill_cfgs_of s) csc
+         \<and> pred_map (refill_sufficient_sc cons_time) (sc_refill_cfgs_of s) csc)" in hoare_strengthen_post)
+   apply (wp hoare_vcg_all_lift)
+    apply (rule hoare_vcg_imp_lift'[rotated])
+     apply (rule hoare_vcg_imp_lift'[rotated])
+      apply (subst imp_conjR)
+      apply (wp delete_objects_pred_map_sc_refill_cfgs_of)
+     apply wpsimp+
+   apply (clarsimp simp: cur_sc_more_than_ready_def)
+  apply (clarsimp simp: cur_sc_more_than_ready_def)
+  done
+
+lemma perform_asid_control_invocation_cur_sc_more_than_ready [wp]:
+  "perform_asid_control_invocation iv \<lbrace>cur_sc_more_than_ready\<rbrace>"
+  unfolding perform_asid_control_invocation_def
+  by (wpsimp wp: hoare_drop_imp)
+
+lemma arch_perform_invocation_cur_sc_more_than_ready [wp, DetSchedSchedule_AI_assms]:
+  "arch_perform_invocation iv \<lbrace>cur_sc_more_than_ready\<rbrace>"
+  unfolding arch_perform_invocation_def
+  by (cases iv; wpsimp)
 
 end
 
