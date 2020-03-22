@@ -608,7 +608,6 @@ where
           sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
           when (sc_opt \<noteq> None \<and> runnable (state)) $ do
             sc_ptr \<leftarrow> assert_opt sc_opt;
-            refill_unblock_check sc_ptr;
             sc \<leftarrow> get_sched_context sc_ptr;
             curtime \<leftarrow> gets cur_time;
             if sc_refill_ready curtime sc \<and> sc_refill_sufficient 0 sc
