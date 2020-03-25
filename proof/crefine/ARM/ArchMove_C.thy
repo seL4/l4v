@@ -137,6 +137,47 @@ lemma valid_eq_wf_asid_pool'[simp]:
 declare valid_asid_pool'.simps[simp del]
 (*<<<*)
 
+lemma valid_untyped':
+  notes usableUntypedRange.simps[simp del]
+  assumes pspace_distinct': "pspace_distinct' s" and
+           pspace_aligned': "pspace_aligned' s" and
+                        al: "is_aligned ptr bits"
+  shows "valid_untyped' d ptr bits idx s =
+         (\<forall>p ko. ksPSpace s p = Some ko \<longrightarrow>
+                 obj_range' p ko \<inter> {ptr..ptr + 2 ^ bits - 1} \<noteq> {} \<longrightarrow>
+                 obj_range' p ko \<subseteq> {ptr..ptr + 2 ^ bits - 1} \<and>
+                 obj_range' p ko \<inter>
+                   usableUntypedRange (UntypedCap d ptr bits idx) = {})"
+  apply (simp add: valid_untyped'_def)
+  apply (simp add: ko_wp_at'_def)
+  apply (rule arg_cong[where f=All])
+  apply (rule ext)
+  apply (rule arg_cong[where f=All])
+  apply (rule ext)
+  apply (case_tac "ksPSpace s ptr' = Some ko", simp_all)
+  apply (frule pspace_alignedD'[OF _ pspace_aligned'])
+  apply (frule pspace_distinctD'[OF _ pspace_distinct'])
+  apply simp
+  apply (frule aligned_ranges_subset_or_disjoint[OF al])
+  apply (fold obj_range'_def)
+  apply (rule iffI)
+   apply auto[1]
+  apply (rule conjI)
+   apply (rule ccontr, simp)
+   apply (simp add: Set.psubset_eq)
+   apply (erule conjE)
+   apply (case_tac "obj_range' ptr' ko \<inter> {ptr..ptr + 2 ^ bits - 1} \<noteq> {}", simp)
+   apply (cut_tac is_aligned_no_overflow[OF al])
+   apply (auto simp add: obj_range'_def)[1]
+  apply (clarsimp simp add: usableUntypedRange.simps Int_commute)
+  apply (case_tac "obj_range' ptr' ko \<inter> {ptr..ptr + 2 ^ bits - 1} \<noteq> {}", simp+)
+  apply (cut_tac is_aligned_no_overflow[OF al])
+  apply (clarsimp simp add: obj_range'_def)
+  apply (frule is_aligned_no_overflow)
+  by (metis al intvl_range_conv' le_m1_iff_lt less_is_non_zero_p1
+               nat_le_linear power_overflow sub_wrap add_0
+               add_0_right word_add_increasing word_less_1 word_less_sub_1)
+
 end
 
 end
