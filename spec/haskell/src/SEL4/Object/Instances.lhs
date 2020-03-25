@@ -99,6 +99,10 @@ As mentioned in the documentation for the type class "PSpaceStorable", there is 
 >                 | x == toOffset tcbCTableSlot = return $ tcbCTable tcb
 >                 | x == toOffset tcbIPCBufferSlot =
 >                     return $ tcbIPCBufferFrame tcb
+>                 | x == toOffset tcbFaultHandlerSlot =
+>                     return $ tcbFaultHandler tcb
+>                 | x == toOffset tcbTimeoutHandlerSlot =
+>                     return $ tcbTimeoutHandler tcb
 >                 | otherwise = fail "incorrect CTE offset into TCB"
 
 >     updateObject cte oldObj ptr ptr' next = case oldObj of
@@ -121,6 +125,10 @@ As mentioned in the documentation for the type class "PSpaceStorable", there is 
 >                     = return $ KOTCB (tcb {tcbCTable = cte})
 >                 | x == toOffset tcbIPCBufferSlot
 >                     = return $ KOTCB (tcb { tcbIPCBufferFrame = cte })
+>                 | x == toOffset tcbFaultHandlerSlot
+>                     = return $ KOTCB (tcb { tcbFaultHandler = cte})
+>                 | x == toOffset tcbTimeoutHandlerSlot
+>                     = return $ KOTCB (tcb { tcbTimeoutHandler = cte})
 >                 | otherwise = fail "incorrect CTE offset into TCB"
 
 \subsubsection{Thread Control Block}
