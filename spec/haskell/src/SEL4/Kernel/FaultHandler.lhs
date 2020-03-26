@@ -71,7 +71,7 @@ If a thread causes a fault, then an IPC containing details of the fault is sent 
 
 The kernel stores a copy of the fault in the thread's TCB, and performs an IPC send operation to the fault handler endpoint on behalf of the faulting thread. When the IPC completes, the fault will be retrieved from the TCB and sent instead of the message registers.
 
->         EndpointCap { capEPCanSend = True, capEPCanGrant = True } ->
+>         EndpointCap {} ->
 >             withoutFailure $ do
 >                 threadSet (\tcb -> tcb {tcbFault = Just fault}) tptr
 >                 sendIPC True False (capEPBadge handlerCap)
