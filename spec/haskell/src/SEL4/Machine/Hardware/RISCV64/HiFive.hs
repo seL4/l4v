@@ -22,7 +22,7 @@ newtype IRQ = IRQ Word32
 
 instance Bounded IRQ where
     minBound = IRQ 0
-    maxBound = IRQ 53
+    maxBound = IRQ 54
 
 newtype PAddr = PAddr { fromPAddr :: Word }
     deriving (Integral, Real, Show, Eq, Num, Bits, FiniteBits, Ord, Enum, Bounded)
