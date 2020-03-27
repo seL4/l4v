@@ -167,7 +167,7 @@ where
 
 (* There is a clean object there that has the same caps in the same slots, restricted to the slots "slots" *)
 definition
-  sep_map_S' :: "(cdl_object_id \<times> cdl_cnode_index set) \<Rightarrow> cdl_object \<Rightarrow> sep_pred" ("_ \<mapsto>S' _" [76,71] 76)
+  sep_map_S' :: "(cdl_object_id \<times> cdl_cnode_index set) \<Rightarrow> cdl_object \<Rightarrow> sep_pred" ("_ \<mapsto>S'' _" [76,71] 76)
 where
   "p \<mapsto>S' object \<equiv> let (obj_id, slots) = p in sep_map_general obj_id object (Slot ` slots)"
 
