@@ -64,7 +64,6 @@
     <!-- Separation Logic. -->
     <sequence depends="haskell-translator Sep_Algebra">
         <test name="SepTactics">make SepTactics</test>
-        <test name="SepTacticsExamples" depends="ASpec DSpec">make SepTacticsExamples</test>
     </sequence>
 
     <!-- Separation Logic on capDL. -->
