@@ -849,6 +849,7 @@ fun graph_refine_proof_tacs csenv ctxt = let
                         fold_all_htd_updates
                         array_assertion_shrink_right
                         sdiv_word_def sdiv_int_def
+                        signed_ge_zero_scast_eq_ucast
                         unatSuc[OF less_is_non_zero_p1'] unatSuc2[OF less_is_non_zero_p1]
                         less_shift_targeted_cast_convs
                 } delsimps @{thms ptr_val_inj})),
