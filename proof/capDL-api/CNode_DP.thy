@@ -365,17 +365,14 @@ lemma seL4_CNode_Mutate_sep:
           in hoare_strengthen_post[rotated])
          apply (clarsimp)
          apply (intro conjI)
-           apply (sep_solve)
-          apply (clarsimp simp:sep_any_exist sep_conj_assoc
-            sep_map_c_conj sep_map_f_conj Let_def
-            split:if_splits option.splits,fastforce)
+          apply (sep_solve)
+         apply fastforce
         apply (wp set_cap_wp set_cap_all_scheduable_tcbs)
        apply (rule_tac P = "is_cnode_cap c" in hoare_gen_asmEx)
        apply (simp add:decode_invocation_simps)
        apply (rule liftME_wp)
        apply (rule decode_cnode_mutate_rvu)
-      apply (simp add:lookup_extra_caps_def Let_def
-        mapME_def sequenceE_def get_index_def)
+      apply (simp add:lookup_extra_caps_def Let_def mapME_def sequenceE_def get_index_def)
       apply (rule wp_no_exception_seq)
        apply wp
       apply (rule lookup_cap_and_slot_rvu[where r = root_size])
@@ -414,7 +411,7 @@ lemma seL4_CNode_Mutate_sep:
   apply (clarsimp simp:user_pointer_at_def
           Let_def word_bits_def cnode_cap_non_ep_related)
   apply (clarsimp simp:sep_conj_assoc)
-  apply (intro conjI,fastforce+)
+  apply fastforce
   done
 
 lemma seL4_CNode_Move_sep:
