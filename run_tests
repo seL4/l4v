@@ -50,7 +50,6 @@ EXCLUDE["X64"]=[
     "DBaseRefine",
     "DSpec",
     "RefineOrphanage",
-    "SepTacticsExamples",
     "SimplExportAndRefine",
     "AsmRefine"
 ]
