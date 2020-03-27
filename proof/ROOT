@@ -26,33 +26,35 @@ chapter "Proofs"
  * Refinement proof.
  *)
 
-session Refine in "refine/$L4V_ARCH" = BaseRefine +
+session Refine in "refine" = BaseRefine +
   description \<open>Refinement between Haskell and Abstract spec.\<close>
   sessions
     Lib
     CorresK
     AInvs
+  directories
+    "$L4V_ARCH"
   theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
-    "Refine"
-    "RAB_FN"
-    "EmptyFail_H"
+    "$L4V_ARCH/Refine"
+    "$L4V_ARCH/RAB_FN"
+    "$L4V_ARCH/EmptyFail_H"
   theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
-    "Refine"
-    "RAB_FN"
-    "EmptyFail_H"
+    "$L4V_ARCH/Refine"
+    "$L4V_ARCH/RAB_FN"
+    "$L4V_ARCH/EmptyFail_H"
   theories
-    "Refine"
-    "RAB_FN"
-    "EmptyFail_H"
+    "$L4V_ARCH/Refine"
+    "$L4V_ARCH/RAB_FN"
+    "$L4V_ARCH/EmptyFail_H"
 
 (*
  * This theory is in a separate session because the proofs currently
  * only work for ARM.
  *)
-session RefineOrphanage in "orphanage" = Refine +
+session RefineOrphanage in "refine/$L4V_ARCH/orphanage" = Refine +
   description \<open>Proof that the kernel does not orphan threads.\<close>
   theories
-    "refine/$L4V_ARCH/Orphanage"
+    "Orphanage"
 
 (* FIXME isa
 session BaseRefine2 = BaseRefine +
@@ -65,13 +67,13 @@ session BaseRefine2 = BaseRefine +
    "refine/$L4V_ARCH/Schedule_R"
 *)
 
-session BaseRefine in "refine" = AInvs +
+session BaseRefine in "refine/base" = AInvs +
   description \<open>Background theory and libraries for refinement proof.\<close>
   sessions
     Lib
     CorresK
   theories
-    "$L4V_ARCH/Include"
+    "Include"
 
 session AInvs in "invariant-abstract" = ASpec +
   directories
