@@ -31,7 +31,6 @@
         </set>
 
         <set depends="ASpec">
-            <test name="ASpecDoc">make ASpecDoc</test>
             <test name="ASepSpec">make ASepSpec</test>
         </set>
     </set>

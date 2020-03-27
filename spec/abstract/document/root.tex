@@ -44,9 +44,9 @@
 \usepackage{cite}
 \usepackage{xspace}
 
-% this should be the last package used
 \usepackage{color}
 \definecolor{linkcolor}{rgb}{0,0,0.7}
+% this should be the last package used
 \usepackage[colorlinks=true,linkcolor=linkcolor,citecolor=linkcolor,
             filecolor=linkcolor,pagecolor=linkcolor,urlcolor=linkcolor]{hyperref}
 
@@ -55,7 +55,6 @@
 
 \newcommand{\version}{\input{VERSION}\xspace}
 \newcommand{\arch}{\input{ARCH}\xspace}
-\newcommand{\gitrev}{\input{gitrev}\xspace}
 
 \hypersetup
 {
@@ -88,6 +87,36 @@
 \newcommand{\obj}[1]{\textsf{\small #1}}
 
 \begin{document}
+
+% tex hacking to get git revision from repo document
+
+% we can't include gitrev.tex in document_files, because this will rebuild
+% ASpec (and therefore pretty much everything) every time the git revision
+% changes (for any change anywhere). This means gitrev.tex will not be
+% copied into the document build directory, and we have to find the repo
+% checkout. We give the root of the repo checkout as document file, because
+% if that changes, everything changes anyway. From there we can find the rest,
+% which we do below:
+
+\newcommand\gitroot{}
+\newcommand\gitrev{}
+
+\makeatletter\let\myfilehandle\@inputcheck\makeatother
+\openin\myfilehandle=git-root.tex\relax
+\begingroup\endlinechar-1
+  \global\read\myfilehandle to \gitroot
+\endgroup
+\closein\myfilehandle
+
+\makeatletter\let\myfilehandle\@inputcheck\makeatother
+\openin\myfilehandle=\gitroot/spec/abstract/document/gitrev.tex\relax
+\begingroup\endlinechar-1
+  \global\read\myfilehandle to \gitrev
+\endgroup
+\closein\myfilehandle
+
+% end tex hacking
+
 
 \title{Abstract Formal Specification of the seL4/\arch API}
 
