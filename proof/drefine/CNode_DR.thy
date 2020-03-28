@@ -174,6 +174,7 @@ lemma insert_cap_sibling_corres:
               \<and> valid_mdb s \<and> valid_idle s \<and> valid_objs s \<and> cap_aligned cap)
         (insert_cap_sibling (transform_cap cap) (transform_cslot_ptr src) (transform_cslot_ptr sibling))
         (cap_insert cap src sibling)"
+  supply if_cong[cong]
   apply (simp add: cap_insert_def[folded cap_insert_dest_original_def])
   apply (simp add: insert_cap_sibling_def insert_cap_orphan_def bind_assoc
                    option_return_modify_modify
@@ -265,6 +266,7 @@ lemma insert_cap_child_corres:
         (insert_cap_child (transform_cap cap) (transform_cslot_ptr src) (transform_cslot_ptr child))
         (cap_insert cap src child)"
   supply revokable_cap_insert_dest_original[simp]
+  supply if_cong[cong]
   apply (simp add: cap_insert_def[folded cap_insert_dest_original_def])
   apply (simp add: insert_cap_child_def insert_cap_orphan_def bind_assoc
                    option_return_modify_modify
@@ -407,6 +409,7 @@ proof -
     "\<And>p p' S. p \<noteq> p' \<Longrightarrow> insert p S - {p'} = insert p (S - {p'})"
     by auto
   show ?thesis
+    supply if_cong[cong]
     apply (simp add: cap_move_def move_cap_def cap_move_swap_ext_def swap_parents_def
                 del: fun_upd_apply)
     apply (rule stronger_corres_guard_imp)
@@ -696,6 +699,7 @@ lemma cap_revoke_corres_helper:
   proof (induct rule: cap_revoke.induct)
     case (1 slot' sfix)
   show ?case
+  supply if_cong[cong]
   apply (subst cap_revoke.simps)
   apply (rule monadic_rewrite_corres2[where P =\<top>,simplified])
    apply (rule Finalise_DR.monadic_trancl_preemptible_step)
@@ -819,7 +823,7 @@ lemma revoke_cap_spec_corres:
   apply (subst revoke_cap_def)
   apply (rule boolean_exception_corres)
   unfolding K_def
-  apply (clarsimp simp: liftE_bindE)
+  apply (clarsimp simp: liftE_bindE cong: if_cong)
   apply (rule cap_revoke_corres_helper)
   done
 
@@ -900,6 +904,7 @@ lemma dcorres_ep_cancel_badge_sends:
   "dcorres dc \<top> (valid_state and valid_etcbs)
     (CSpace_D.cancel_badged_sends epptr word2)
     (IpcCancel_A.cancel_badged_sends epptr word2)"
+  supply if_cong[cong]
   apply (clarsimp simp:IpcCancel_A.cancel_badged_sends_def)
   apply (rule dcorres_expand_pfx)
   apply clarsimp
@@ -1325,9 +1330,6 @@ lemmas valid_idle_invs_strg = invs_valid_idle_strg
 crunch idle[wp] : invalidate_tlb_by_asid "\<lambda>s. P (idle_thread s)"
 
 crunch st_tcb_at[wp]: invalidate_tlb_by_asid "st_tcb_at P thread"
-
-crunch idle [wp]: cancel_badged_sends "\<lambda>s::'z::state_ext state. P (idle_thread s)"
-  (wp: crunch_wps dxo_wp_weak filterM_preserved simp: crunch_simps)
 
 lemma dcorres_storeWord_mapM_x_cvt:
   "\<forall>x\<in>set ls. within_page buf x sz
@@ -1939,8 +1941,12 @@ lemma dcorres_gba_no_effect:
    apply (clarsimp simp: assert_opt_def corres_free_fail split: Structures_A.kernel_object.splits option.splits)
   done
 
+context
+notes if_cong[cong]
+begin
 crunch valid_etcbs[wp]: cancel_badged_sends valid_etcbs
 (wp: mapM_x_wp hoare_drop_imps hoare_unless_wp ignore: filterM)
+end
 
 lemma cap_revoke_valid_etcbs[wp]:
   "\<lbrace> valid_etcbs \<rbrace> cap_revoke cap \<lbrace> \<lambda>_. valid_etcbs \<rbrace>"
@@ -1977,6 +1983,7 @@ lemma invoke_cnode_corres:
                and valid_pdpt_objs and valid_etcbs)
      (CNode_D.invoke_cnode (translate_cnode_invocation cnodeinv))
      (CSpace_A.invoke_cnode cnodeinv)"
+  supply if_cong[cong]
   apply (simp add: CSpace_A.invoke_cnode_def CNode_D.invoke_cnode_def
                    translate_cnode_invocation_def
                 split: Invocations_A.cnode_invocation.split

@@ -642,8 +642,8 @@ proof (induct x)
             apply (simp add: p2_low_bits_max)
            apply (rule corres_returnOk[where P=\<top> and P'="\<lambda>rv. is_aligned asid asid_low_bits"])
            apply (clarsimp simp:arch_invocation_relation_def translate_arch_invocation_def
-                                transform_asid_def asid_high_bits_of_def cap_object_simps
-                                shiftr_irrelevant up_ucast_inj_eq)
+                                transform_asid_def asid_high_bits_of_def shiftr_irrelevant
+                                up_ucast_inj_eq)
            apply (erule impE)
             apply (rule arg_cong[where f=ucast])
             apply (subst shiftr_irrelevant)
@@ -746,6 +746,7 @@ next
 next
   case (PageCap dev base rights pgsz asid)
   thus ?case
+    supply option.case_cong[cong] if_cong[cong]
     apply (simp add: Decode_D.decode_invocation_def
                      decode_invocation_def arch_decode_invocation_def
                split del: if_split)
@@ -914,6 +915,7 @@ next
 next
   case (PageTableCap ptr asid)
   thus ?case
+    supply if_cong[cong]
     apply (simp add: Decode_D.decode_invocation_def
                      decode_invocation_def arch_decode_invocation_def
                split del: if_split)
@@ -959,7 +961,7 @@ next
                                   unat_map_def kernel_pde_mask_def
                                   transform_pde_def transform_mapping_def)
         apply (simp add: pd_shifting_dual ucast_nat_def shiftr_20_less triple_shift_fun
-                         le_shiftr linorder_not_le cap_object_simps)
+                         le_shiftr linorder_not_le)
        apply (rule hoare_pre, wp, auto)[1]
       apply (wp | simp)+
     apply (clarsimp simp: is_final_cap'_def
@@ -969,7 +971,7 @@ next
                      corres_alternate2)
     apply (rule corres_alternate1, simp add: returnOk_def)
     apply (clarsimp simp: arch_invocation_relation_def translate_arch_invocation_def get_pt_mapped_addr_def
-                          transform_page_table_inv_def cap_object_simps is_cap_simps)
+                          transform_page_table_inv_def is_cap_simps)
     done
 next
   case (PageDirectoryCap pd_ptr asid)
@@ -1022,9 +1024,9 @@ lemma set_object_simple_corres:
            obj_at (\<lambda>obj. \<not> is_tcb obj \<and> same_caps obj' obj \<and> obj_bits obj = obj_bits obj') ptr"])
     apply (fold modify_def)
     apply (rule corres_modify)
-    apply (clarsimp simp: transform_def transform_objects_def
-                          not_idle_thread_def obj_at_def
-                          transform_current_thread_def)
+    apply (clarsimp simp: transform_def transform_objects_def not_idle_thread_def obj_at_def
+                          transform_current_thread_def
+                    cong: if_cong)
     apply (rule ext, simp split: if_split)
     apply (intro conjI impI allI)
      apply (clarsimp simp: transform_object_def
@@ -1429,7 +1431,7 @@ lemma invoke_page_directory_corres:
    apply (wp)
        apply (rule dcorres_to_wp, rule dcorres_set_vm_root)
       apply (wp)
-     apply (clarsimp)
+     apply (clarsimp cong: if_cong)
      apply (wp do_machine_op_wp, clarsimp, wp+)
    apply (clarsimp)
   apply (rule corres_dummy_return_r)
@@ -1474,6 +1476,7 @@ lemma invoke_page_corres:
   "transform_page_inv ip' = Some ip  \<Longrightarrow>
    dcorres dc \<top> (valid_page_inv ip' and invs and page_inv_duplicates_valid ip' and valid_pdpt_objs and valid_etcbs and ct_active)
     (invoke_page ip) (perform_page_invocation ip')"
+  supply if_cong[cong]
   apply (clarsimp simp:invoke_page_def)
   apply (case_tac ip')
       apply (simp_all add:perform_page_invocation_def)
@@ -1668,6 +1671,7 @@ proof -
   show "dcorres dc ((=) (transform s')) ((=) s') (invoke_asid_control asid_inv)
            (perform_asid_control_invocation (asid_control_invocation.MakePool frame cnode_ref cref base))"
     using relation asid_para
+    supply if_cong[cong]
     apply (clarsimp simp:invoke_asid_control_def)
     apply (clarsimp simp:perform_asid_control_invocation_def)
     apply (simp add:arch_invocation_relation_def translate_arch_invocation_def)

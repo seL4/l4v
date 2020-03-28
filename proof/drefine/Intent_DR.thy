@@ -276,21 +276,18 @@ lemma corres_corrupt_tcb_intent_dupl:
  *)
 lemma corres_corrupt_tcb_intent_return:
   "dcorres dc \<top> (tcb_at ptr and not_idle_thread ptr and valid_etcbs) (corrupt_tcb_intent ptr) (return x)"
-  apply (clarsimp simp: corres_underlying_def)
-  apply (clarsimp simp: return_def corrupt_tcb_intent_def)
-  apply (clarsimp simp:corrupt_tcb_intent_def update_thread_def select_def gets_the_def
-         return_def fail_def gets_def get_def assert_opt_def bind_def
-         put_def modify_def KHeap_D.set_object_def)
-  apply (clarsimp split:option.splits
-    simp:transform_def tcb_at_def
-    transform_objects_def not_idle_thread_def
-    dest!: get_tcb_SomeD)
+  supply option.case_cong[cong]
+  apply (clarsimp simp: corres_underlying_def return_def corrupt_tcb_intent_def update_thread_def
+                        select_def gets_the_def fail_def gets_def get_def assert_opt_def bind_def
+                        put_def modify_def KHeap_D.set_object_def)
+  apply (clarsimp split: option.splits
+                  simp: transform_def tcb_at_def transform_objects_def not_idle_thread_def
+                  dest!: get_tcb_SomeD)
    apply (drule(1) valid_etcbs_tcb_etcb)
-    apply (clarsimp, clarsimp)
-  apply (rule exI)
-  apply (auto simp: transform_def transform_tcb_def
-    transform_objects_def not_idle_thread_def
-    tcb_at_def obj_at_def split:cdl_object.splits)
+   apply (clarsimp)
+  apply (force simp: transform_def transform_tcb_def transform_objects_def not_idle_thread_def
+                     tcb_at_def obj_at_def
+               split: cdl_object.splits)
   done
 
 lemma dcorres_set_object_tcb:
@@ -1003,15 +1000,19 @@ lemma lookup_ipc_buffer_None_evalMonad:
 done
 
 lemma cdl_get_ipc_buffer_None:
-  "\<lbrakk> valid_etcbs s'; not_idle_thread thread s';evalMonad(lookup_ipc_buffer in_receive thread) s' = Some None\<rbrakk> \<Longrightarrow>
+  "\<lbrakk> valid_etcbs s'; not_idle_thread thread s';
+    evalMonad(lookup_ipc_buffer in_receive thread) s' = Some None \<rbrakk> \<Longrightarrow>
   \<lbrace>(=) (transform s')\<rbrace> get_ipc_buffer thread in_receive \<lbrace>\<lambda>r s. r = None\<rbrace>"
+  supply if_cong[cong]
   apply (drule lookup_ipc_buffer_None_evalMonad)
-  apply (clarsimp simp:valid_def get_ipc_buffer_def gets_the_def gets_def bind_def get_def return_def)
+  apply (clarsimp simp: valid_def get_ipc_buffer_def gets_the_def gets_def bind_def get_def return_def)
   apply (subst (asm) opt_cap_tcb)
-      apply (simp add:obj_at_def get_tcb_rev not_idle_thread_def | drule(1) valid_etcbs_tcb_etcb | fastforce simp: get_etcb_rev)+
+     apply (simp add: obj_at_def get_tcb_rev not_idle_thread_def |
+            drule(1) valid_etcbs_tcb_etcb |
+            fastforce simp: get_etcb_rev)+
   apply (clarsimp simp: assert_opt_def return_def split: cdl_cap.splits)
-  apply (clarsimp simp:transform_cap_def split:cap.splits arch_cap.splits)
-  by (auto simp:cte_wp_at_cases split:if_split_asm)
+  apply (clarsimp simp: transform_cap_def split: cap.splits arch_cap.splits)
+  by (auto simp: cte_wp_at_cases split: if_split_asm)
 
 lemma cdl_get_ipc_buffer_Some:
   "\<lbrakk>ipc_frame_cte_at thread b rs sz s';valid_etcbs s';tcb_at thread s';not_idle_thread thread s';AllowRead \<in>  rs \<and> (\<not> in_receive \<or> (AllowWrite \<in> rs))\<rbrakk>  \<Longrightarrow>
@@ -1467,28 +1468,25 @@ lemma mask_inj_if:
   "\<lbrakk>a && mask n = a; b && mask n = b; a && mask n = b && mask n\<rbrakk>\<Longrightarrow> a = b"
   by (rule box_equals)
 
-lemma less_less_trans:
-  "\<lbrakk>(a::word32)\<le> b;b\<le> c\<rbrakk> \<Longrightarrow> a\<le> c"
-  by auto
-
+(* FIXME: move to Word_Lib, generalise *)
 lemma bound_preserve_mask:
-  "\<lbrakk>is_aligned (x::word32) n; x\<le> mask k; (z::word32)\<le> mask n;
-    n < 32;k<32;n\<le> k\<rbrakk> \<Longrightarrow> x+z \<le> mask k"
-  apply (rule less_less_trans[where b = "(mask k && ~~ mask n) + mask n"])
-   apply (rule less_less_trans[where b = "x + mask n"])
+  "\<lbrakk> is_aligned (x::word32) n; x\<le> mask k; (z::word32)\<le> mask n; n < 32; k < 32; n \<le> k \<rbrakk> \<Longrightarrow>
+   x+z \<le> mask k"
+  apply (rule order_trans[where y = "(mask k && ~~ mask n) + mask n"])
+   apply (rule order_trans[where y = "x + mask n"])
     apply (erule word_plus_mono_right)
     apply (rule is_aligned_no_wrap')
      apply simp
     apply (rule mask_lt_2pn)
-    apply (simp add:word_size)
+    apply (simp add: word_size)
    apply (rule word_plus_mono_left)
-    apply (rule less_less_trans[where b = "x && ~~ mask n"])
-     apply (simp add:mask_out_sub_mask is_aligned_mask)
+    apply (rule order_trans[where y = "x && ~~ mask n"])
+     apply (simp add: mask_out_sub_mask is_aligned_mask)
     apply (erule neg_mask_mono_le)
-   apply (simp add:mask_out_sub_mask mask_and_mask min_def)
+   apply (simp add: mask_out_sub_mask mask_and_mask min_def cong: if_cong)
    apply (rule word_leI)
-   apply (clarsimp simp:word_size)
-  apply (simp add:mask_out_sub_mask mask_and_mask min_def)
+   apply (clarsimp simp: word_size)
+  apply (simp add: mask_out_sub_mask mask_and_mask min_def)
   done
 
 lemma nat_less_le:
@@ -1531,6 +1529,7 @@ lemma store_word_corres_helper:
             \<Longrightarrow> \<exists>f. corrupt_intents (f) buf (transform s) =
                transform (update_machine (storeWord_ms ptr b (machine_state s)) s)"
   unfolding transform_def corrupt_intents_def
+  supply option.case_cong[cong]
   apply (clarsimp simp: transform_current_thread_def transform_objects_def Let_def)
   apply (rule exI)
   apply (rule ext)
@@ -1590,7 +1589,7 @@ lemma store_word_corres_helper:
       apply (erule order_less_le_trans)
       apply (simp add: mask_def)
       apply (rule iffD1[OF word_le_nat_alt[where b = "0x6::word32",simplified]])
-      apply (rule less_less_trans)
+      apply (rule order_trans)
        apply (rule  word_and_le1[where a = 3])
       apply ((clarsimp simp:ipc_frame_wp_at_def obj_at_def)+)[4]
    apply (frule_tac thread = thread and ptr = ptr and sz = sz and ms = "machine_state s" and
@@ -1664,6 +1663,7 @@ lemma dcorres_store_word_safe:
     valid_objs and pspace_distinct and pspace_aligned and valid_etcbs)
     (return a)
     (do_machine_op (storeWord ptr b))"
+  supply option.case_cong[cong]
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp: do_machine_op_def valid_def get_def gets_def bind_def return_def
                         simpler_modify_def corres_underlying_def)
@@ -1724,7 +1724,7 @@ lemma dcorres_store_word_safe:
          apply (erule order_less_le_trans)
          apply (simp add: mask_def)
          apply (rule iffD1[OF word_le_nat_alt[where b = "0x6::word32",simplified]])
-         apply (rule less_less_trans)
+         apply (rule order_trans)
           apply (rule word_and_le1[where a = 3])
          apply simp
         apply (subgoal_tac "ipc_frame_ptr_at word thread s'")
@@ -2020,6 +2020,7 @@ lemma copy_mrs_corres:
     (do corrupt_tcb_intent y;corrupt_frame buf od)
     (copy_mrs thread rv y (Some (buf + (bptr && mask (pageBitsForSize sz))))
                (mi_length mi))"
+  supply option.case_cong[cong]
   apply (simp add:copy_mrs_def del:upt.simps)
   apply (rule dcorres_expand_pfx)
   apply (rule corres_guard_imp)
@@ -2060,10 +2061,11 @@ lemma copy_mrs_corres:
 lemmas transform_cap_simps [simp] = transform_cap_def [split_simps cap.split arch_cap.split]
 
 lemma corrupt_frame_include_self:
-assumes corres:"dcorres dc \<top> P (do corrupt_tcb_intent y;corrupt_frame buf od) g"
-assumes imp:"\<And>s. P s\<Longrightarrow> ipc_frame_ptr_at buf y s \<and> not_idle_thread y s \<and> valid_etcbs s"
-shows "dcorres dc \<top> P (corrupt_frame buf) g"
+  assumes corres:"dcorres dc \<top> P (do corrupt_tcb_intent y;corrupt_frame buf od) g"
+  assumes imp:"\<And>s. P s\<Longrightarrow> ipc_frame_ptr_at buf y s \<and> not_idle_thread y s \<and> valid_etcbs s"
+  shows "dcorres dc \<top> P (corrupt_frame buf) g"
   using corres
+  supply option.case_cong[cong]
   apply (clarsimp simp:corres_underlying_def)
   apply (frule imp)
   apply (erule allE, erule (1) impE)

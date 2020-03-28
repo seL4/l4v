@@ -137,6 +137,7 @@ lemma decode_set_space_translate_tcb_invocation:
     \<and> (option_map (\<lambda>c. fst c)  (tc_new_vroot rv) = Some (fst (excaps' ! Suc 0)))
     \<and> (option_map (\<lambda>c. is_cnode_cap (fst c)) (tc_new_croot rv) = Some True)
     \<rbrace>,\<lbrace>\<lambda>rv. (=) s\<rbrace>"
+  supply if_cong[cong]
   apply (case_tac "excaps' ! 0")
   apply (case_tac "excaps' ! Suc 0")
   apply (clarsimp simp:decode_set_space_def whenE_def | rule conjI)+
@@ -229,6 +230,7 @@ lemma decode_tcb_corres:
    dcorres (dc \<oplus> (\<lambda>x y. x = translate_tcb_invocation y)) \<top> \<top>
      (Tcb_D.decode_tcb_invocation cap slot excaps ui)
      (Decode_A.decode_tcb_invocation label' args' cap' slot' excaps')"
+  supply if_cong[cong]
   apply (unfold Tcb_D.decode_tcb_invocation_def Decode_A.decode_tcb_invocation_def)
   apply (drule sym, frule transform_tcb_intent_invocation)
   apply (unfold transform_cap_def)
@@ -695,11 +697,12 @@ lemma not_idle_after_restart [wp]:
   "\<lbrace>invs and not_idle_thread obj_id' :: det_state \<Rightarrow> bool\<rbrace> Tcb_A.restart obj_id'
            \<lbrace>\<lambda>rv. valid_idle \<rbrace>"
   including no_pre
+  supply if_cong[cong]
   apply (simp add:Tcb_A.restart_def)
   apply wp
    apply (simp add:cancel_ipc_def)
    apply (wp not_idle_after_blocked_cancel_ipc not_idle_after_reply_cancel_ipc
-   not_idle_thread_cancel_signal | wpc)+
+             not_idle_thread_cancel_signal | wpc)+
    apply (rule hoare_strengthen_post[where Q="\<lambda>r. st_tcb_at ((=) r) obj_id'
                                                   and not_idle_thread obj_id' and invs"])
     apply (wp gts_sp)
@@ -948,6 +951,7 @@ lemma dcorres_idempotent_as_user_strong:
                  x
                  \<lbrace> \<lambda>_ cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_arch:=arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>) etcb)\<rbrace>"
   shows "dcorres dc \<top> (tcb_at u) (return q) (as_user u x)"
+  supply option.case_cong[cong] if_cong[cong]
   apply (clarsimp simp: as_user_def)
   apply (clarsimp simp: corres_underlying_def bind_def split_def set_object_def get_object_def
                         return_def get_def put_def get_tcb_def gets_the_def gets_def assert_opt_def
@@ -1397,6 +1401,7 @@ lemma option_set_priority_dcorres:
   "dcorres (dc \<oplus> dc) \<top> \<top>
         (returnOk ())
         (liftE (case prio' of None \<Rightarrow> return () | Some (prio, auth) \<Rightarrow> do_extended_op (set_priority obj_id' prio)))"
+  supply option.case_cong[cong] if_cong[cong]
   apply (clarsimp)
   apply (case_tac prio')
    apply (clarsimp simp: liftE_def set_priority_def returnOk_def bind_assoc)+
@@ -1409,6 +1414,7 @@ lemma option_set_priority_dcorres_strong:
   "dcorres (dc \<oplus> dc) P Q
         (returnOk ())
         (liftE (case prio' of None \<Rightarrow> return () | Some (prio, auth) \<Rightarrow> do_extended_op (set_priority obj_id' prio)))"
+  supply option.case_cong[cong] if_cong[cong]
  apply (clarsimp)
  apply (case_tac prio')
  apply (clarsimp simp: liftE_def set_priority_def returnOk_def bind_assoc)+
@@ -1471,7 +1477,7 @@ crunch emptyable[wp]: set_priority, set_mcpriority "emptyable ptr"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_priority_transform: "\<lbrace>\<lambda>ps. transform ps = cs\<rbrace> set_priority tptr prio \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
-  by (clarsimp simp: set_priority_def ethread_set_def set_eobject_def |
+  by (clarsimp simp: set_priority_def ethread_set_def set_eobject_def cong: if_cong |
       wp reschedule_required_transform tcb_sched_action_transform
          possible_switch_to_transform thread_set_priority_transform)+
 
@@ -1483,7 +1489,7 @@ lemma set_mcpriority_valid_cap_fst:
 
 lemma dcorres_dummy_returnOk_pl':
   "dcorres c P P' (f >>=E (\<lambda>_. returnOk ())) g \<Longrightarrow> dcorres c P P' f g"
-  by (simp add: bindE_returnOk)
+  by simp
 
 lemma corres_underlying_returnOk_ignored:
   "corres_underlying sr nf nf' (erel \<oplus> dc) P P' f (g >>=E (\<lambda>_. returnOk v))
