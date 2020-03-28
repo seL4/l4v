@@ -1206,16 +1206,12 @@ crunch idle_thread[wp]: handle_preemption_if "\<lambda>s::det_state. P (idle_thr
 lemma handle_preemption_if_guarded_pas_domain[wp]:
   "\<lbrace>guarded_pas_domain aag\<rbrace> handle_preemption_if tc \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
   by (rule guarded_pas_domain_lift; wp)
-(*
-crunch valid_sched[wp]: handle_interrupt "valid_sched"
-  (wp: crunch_wps simp: crunch_simps ignore: getActiveIRQ)
-*)
 
 lemma handle_preemption_if_valid_sched[wp]:
   "\<lbrace>valid_sched and invs and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
       handle_preemption_if irq \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (wpsimp simp: handle_preemption_if_def non_kernel_IRQs_def)+
-  apply (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2)+
+  apply (wpsimp simp: handle_preemption_if_def non_kernel_IRQs_def cong: if_cong)
+   apply (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2)+
   done
 
 context begin interpretation Arch . (*FIXME: arch_split*)

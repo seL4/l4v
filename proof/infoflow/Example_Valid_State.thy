@@ -968,6 +968,7 @@ lemma s0_caps_of_state :
          ((High_tcb_ptr::obj_ref, (tcb_cnode_index 2)), ReplyCap High_tcb_ptr True {AllowGrant, AllowWrite}),
          ((High_tcb_ptr::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((High_tcb_ptr::obj_ref, (tcb_cnode_index 4)), NullCap)} "
+  supply if_cong[cong]
   apply (insert High_caps_well_formed)
   apply (insert Low_caps_well_formed)
   apply (insert Silc_caps_well_formed)

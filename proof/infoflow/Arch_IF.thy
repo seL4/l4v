@@ -77,9 +77,6 @@ crunch irq_state_of_state[wp]: invoke_irq_control "\<lambda>s. P (irq_state_of_s
 crunch irq_state_of_state[wp]: invoke_irq_handler "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp simp: maskInterrupt_def)
 
-crunch irq_state'[wp]: cleanCacheRange_PoU "\<lambda> s. P (irq_state s)"
-  (wp: crunch_wps ignore: ignore_failure)
-
 crunch irq_state_of_state[wp]: arch_perform_invocation "\<lambda>(s::det_state). P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp simp: set_current_pd_def invalidateLocalTLB_ASID_def invalidateLocalTLB_VAASID_def cleanByVA_PoU_def do_flush_def cache_machine_op_defs do_flush_defs wp: crunch_wps simp: crunch_simps ignore: ignore_failure)
 
@@ -1024,7 +1021,7 @@ lemma store_word_offs_reads_respects:
 
 lemma set_mrs_reads_respects:
   "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread)) (set_mrs thread buf msgs)"
-  apply(simp add: set_mrs_def)
+  apply(simp add: set_mrs_def cong: option.case_cong_weak)
   apply(wp mapM_x_ev' store_word_offs_reads_respects set_object_reads_respects
        | wpc | simp add: split_def split del: if_split add: zipWithM_x_mapM_x)+
   apply(auto intro: reads_affects_equiv_get_tcb_eq)
@@ -2113,12 +2110,11 @@ lemma perform_asid_control_invocation_globals_equiv:
     apply (clarsimp simp: cte_wp_at_caps_of_state)
     apply (strengthen refl caps_region_kernel_window_imp[mk_strg I E])
     apply (simp add: invs_valid_objs invs_cap_refs_in_kernel_window
-                     atLeastatMost_subset_iff word_and_le2
-                     is_aligned_neg_mask_eq)
+                     atLeastatMost_subset_iff word_and_le2)
     apply(rule conjI, rule descendants_range_caps_no_overlapI)
        apply assumption
-      apply(simp add: is_aligned_neg_mask_eq cte_wp_at_caps_of_state)
-     apply(simp add: is_aligned_neg_mask_eq empty_descendants_range_in)
+      apply(simp add: cte_wp_at_caps_of_state)
+     apply(simp add: empty_descendants_range_in)
     apply(clarsimp simp: range_cover_def)
     apply(subst is_aligned_neg_mask_eq[THEN sym], assumption)
     apply(simp add: mask_neg_mask_is_zero pageBits_def mask_zero)
