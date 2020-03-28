@@ -48,7 +48,7 @@ done
 
 lemma do_normal_transfer_cur_thread_idle_thread:
   "\<lbrace>\<lambda>s. P (cur_thread s) (idle_thread s) \<rbrace> Ipc_A.do_normal_transfer a b c d e f g \<lbrace>\<lambda>rv s. P (cur_thread s)  (idle_thread s)\<rbrace>"
-  apply (simp add:do_normal_transfer_def set_message_info_def)
+  apply (simp add:do_normal_transfer_def set_message_info_def cong: if_cong)
   apply (wp as_user_cur_thread_idle_thread |wpc|clarsimp)+
   apply (wps | wp transfer_caps_it copy_mrs_it)+
   apply clarsimp
@@ -487,7 +487,7 @@ lemma set_scheduler_action_transform_inv:
 
 lemma possible_switch_to_dcorres:
   "dcorres dc P P' (return ()) (possible_switch_to t)"
-  apply (clarsimp simp: possible_switch_to_def)
+  apply (clarsimp simp: possible_switch_to_def cong: if_cong)
   apply (rule dcorres_symb_exec_r)+
         apply (rule corres_guard1_imp, rule corres_if_rhs)
           apply (rule tcb_sched_action_dcorres[THEN corres_trivial])
@@ -589,8 +589,8 @@ lemma recv_signal_corres:
      apply (rule dcorres_expand_pfx)
      apply (clarsimp simp:obj_at_def is_ntfn_def)
      apply (case_tac "ntfn_obj rv"; simp)
-       apply (clarsimp simp: ntfn_waiting_set_lift valid_state_def cap_object_simps
-                             valid_ntfn_abstract_def none_is_waiting_ntfn_def )
+       apply (clarsimp simp: ntfn_waiting_set_lift valid_state_def valid_ntfn_abstract_def
+                             none_is_waiting_ntfn_def )
        apply (case_tac is_blocking; simp)
         apply (rule corres_guard_imp)
           apply (rule corres_alternate1)
@@ -606,8 +606,8 @@ lemma recv_signal_corres:
         apply simp
        apply simp
       (* WaitingNtfn *)
-      apply (clarsimp simp: ntfn_waiting_set_lift valid_state_def
-                            valid_ntfn_abstract_def none_is_waiting_ntfn_def cap_object_simps)
+      apply (clarsimp simp: ntfn_waiting_set_lift valid_state_def valid_ntfn_abstract_def
+                            none_is_waiting_ntfn_def)
       apply (case_tac is_blocking; simp)
        apply (rule corres_guard_imp)
          apply (rule corres_alternate1)
@@ -623,8 +623,8 @@ lemma recv_signal_corres:
        apply simp
       apply simp
      (* Active NTFN *)
-     apply (clarsimp simp: ntfn_waiting_set_lift valid_state_def
-                           valid_ntfn_abstract_def none_is_waiting_ntfn_def cap_object_simps)
+     apply (clarsimp simp: ntfn_waiting_set_lift valid_state_def valid_ntfn_abstract_def
+                           none_is_waiting_ntfn_def)
      apply (rule corres_alternate2)
      apply (rule corres_guard_imp )
        apply (rule corres_dummy_return_l)
@@ -1116,6 +1116,7 @@ lemma dcorres_set_extra_badge:
                  2 + msg_max_length + n < max_ipc_length) and valid_etcbs)
            (corrupt_ipc_buffer rcv in_receive)
            (set_extra_badge rcv_buffer w n)"
+  supply if_cong[cong]
   apply (clarsimp simp:set_extra_badge_def corrupt_ipc_buffer_def)
   apply (rule dcorres_expand_pfx)
   apply clarsimp
@@ -1291,8 +1292,6 @@ lemma cap_insert_cte_wp_at_masked_as_full:
     apply (clarsimp simp:cte_wp_at_caps_of_state)
    apply (clarsimp simp:cte_wp_at_caps_of_state)+
   done
-
-declare cap_object_simps[simp]
 
 lemma is_ep_cap_transform_simp[simp]:
   "Types_D.is_ep_cap (transform_cap cap) = is_ep_cap cap"
@@ -1756,7 +1755,7 @@ lemma dcorres_lookup_extra_caps:
 done
 
 lemma dcorres_copy_mrs':
-  notes hoare_post_taut[wp]
+  notes hoare_post_taut[wp] if_cong[cong]
   shows
   "dcorres dc \<top> ((\<lambda>s. evalMonad (lookup_ipc_buffer in_receive recv) s = Some rv)
     and valid_idle and not_idle_thread thread and not_idle_thread recv and tcb_at recv
@@ -1820,6 +1819,7 @@ lemma dcorres_set_mrs':
     and valid_objs and pspace_aligned and pspace_distinct and valid_etcbs)
     (corrupt_ipc_buffer recv in_receive)
     (set_mrs recv rv msgs)"
+  supply if_cong[cong]
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:corrupt_ipc_buffer_def)
     apply (case_tac rv)
@@ -2128,6 +2128,7 @@ lemma dcorres_set_thread_state_Restart:
                KHeap_D.set_cap (recver, tcb_pending_op_slot) RestartCap
             od)
            (set_thread_state recver Structures_A.thread_state.Restart)"
+  supply option.case_cong[cong] if_cong[cong]
   apply (rule dcorres_expand_pfx)
   apply (case_tac "\<not> tcb_at recver s'")
    apply (clarsimp simp:set_thread_state_def)
@@ -2382,6 +2383,7 @@ lemma dcorres_receive_sync:
                       set_endpoint ep (Structures_A.endpoint.RecvEP (queue @ [thread]))
                    od
               | False \<Rightarrow> do_nbrecv_failed_transfer thread))"
+  supply if_cong[cong]
   apply (clarsimp simp: receive_sync_def gets_def)
   apply (rule dcorres_absorb_get_l)
   apply (case_tac rv)
@@ -2469,9 +2471,9 @@ lemma dcorres_receive_sync:
          apply (clarsimp simp:valid_state_def st_tcb_at_def obj_at_def valid_pspace_def)
          apply (drule valid_objs_valid_ep_simp)
           apply (simp add:is_ep_def)
-         apply (clarsimp simp:valid_ep_def valid_simple_obj_def a_type_def
+         apply (clarsimp simp:valid_ep_def a_type_def
                      split:Structures_A.endpoint.splits list.splits)
-        apply (clarsimp simp:valid_state_def valid_pspace_def valid_simple_obj_def a_type_def)+
+        apply (clarsimp simp:valid_state_def valid_pspace_def a_type_def)+
    apply (rule dcorres_to_wp[where Q=\<top>,simplified])
    apply (rule corres_dummy_set_sync_ep)
   (* RecvEP *)

@@ -303,7 +303,7 @@ proof -
   have "inj_on f (dom ?ifeq \<union> ran ?ifeq)"
     by (auto elim!: subset_inj_on)
   note Q = 1 2 this
-  note if_split[split del]
+  note if_split[split del] if_cong[cong]
   show ?thesis
     apply (simp add: map_lift_over_def Q)
     apply (rule ext)

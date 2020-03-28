@@ -371,6 +371,7 @@ lemma transform_intent_untyped_cap_None:
 lemma transform_intent_cnode_cap_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.CNodeCap w n list\<rbrakk>
    \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
+  supply if_cong[cong]
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply (simp add: Decode_A.decode_cnode_invocation_def unlessE_def upto_enum_def
                    fromEnum_def toEnum_def enum_invocation_label enum_gen_invocation_labels
@@ -412,7 +413,7 @@ lemma transform_intent_irq_control_None:
       \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>,
           \<lbrace>\<lambda>x. (=) s\<rbrace>"
   including no_pre
-  supply gen_invocation_type_eq[symmetric, simp]
+  supply gen_invocation_type_eq[symmetric, simp] if_cong[cong]
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply wp
   apply (clarsimp simp:decode_irq_control_invocation_def arch_decode_irq_control_invocation_def
@@ -611,6 +612,7 @@ lemma dcorres_set_eobject_tcb:
   dcorres dc ((=) (transform s')) ((=) s')
            (KHeap_D.set_object p' (Tcb tcb ))
            (set_eobject p' etcb)"
+  supply if_cong[cong]
   apply (clarsimp simp: corres_underlying_def set_eobject_def in_monad)
   apply (clarsimp simp: KHeap_D.set_object_def simpler_modify_def)
   apply (clarsimp simp: transform_def transform_current_thread_def transform_cdt_def transform_asid_table_def)
@@ -628,6 +630,7 @@ lemma invoke_domain_corres:
             invocation_duplicates_valid (Invocations_A.invocation.InvokeDomain word1 word2) and
             (tcb_at word1 and (\<lambda>s. word1 \<noteq> idle_thread s)))
            (Tcb_D.invoke_domain (SetDomain word1 word2)) (Tcb_A.invoke_domain word1 word2)"
+  supply if_cong[cong]
   apply (clarsimp simp: Tcb_D.invoke_domain_def Tcb_A.invoke_domain_def)
   apply (rule corres_bind_return_r)
   apply (clarsimp simp: Tcb_D.set_domain_def Tcb_A.set_domain_def)

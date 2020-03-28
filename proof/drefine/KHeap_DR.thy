@@ -193,9 +193,10 @@ lemma dcorres_revoke_cap_simple_helper:
   apply (rule corres_dummy_get_pl)
   apply (rule dcorres_absorb_get_l)
   apply (clarsimp simp:corres_underlying_def)
+  apply (rename_tac s' a b)
   apply (subst revoke_cap_simple.simps)
   apply (erule_tac x=s' in allE, simp)
-  apply clarsimp
+  apply (clarsimp cong: if_cong)
   apply (drule_tac x="(a,b)" in bspec)
    apply simp
   apply clarsimp
@@ -472,10 +473,8 @@ lemma final_cap_set_map:
         (*It is true since idle thread should not get any cap installed *)
         apply simp+
    apply (thin_tac "opt_cap x y = Q" for x y Q)
-   apply (auto simp: transform_cap_def cap_has_object_def cap_object_simps
-                     cap_counts_def cdl_cap_irq_def
-              split: cap.splits arch_cap.splits if_split_asm)
-  done
+   by (auto simp: transform_cap_def cap_has_object_def cap_counts_def cdl_cap_irq_def
+            split: cap.splits arch_cap.splits if_split_asm)
 
 lemma opt_cap_wp_at_ex_opt_cap:
   "opt_cap_wp_at P p s = (\<exists>cap'. opt_cap p s = Some cap' \<and> P cap')"
@@ -707,6 +706,7 @@ shows "dcorres dc \<top>
            (KHeap_D.set_cap slot cap)
            (CSpaceAcc_A.set_cap cap' slot')"
 proof -
+  note if_cong[cong]
   from assms show ?thesis
   apply (case_tac slot')
   apply (rename_tac p' sl')
@@ -995,6 +995,7 @@ done
 lemma dummy_remove_cdt_pt_slot:
   "dcorres dc \<top> ( (\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)) and valid_idle and page_table_at a)
     (remove_parent (a, y)) (return x)"
+  supply if_cong[cong]
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:remove_parent_def corres_underlying_def return_def simpler_modify_def)
   apply (clarsimp simp:remove_parent_def exs_valid_def simpler_modify_def transform_def)
@@ -1027,6 +1028,7 @@ done
 lemma dummy_remove_cdt_pd_slot:
   "dcorres dc \<top> ( (\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)) and valid_idle and page_directory_at a)
     (remove_parent (a,y)) (return x)"
+  supply if_cong[cong]
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:remove_parent_def corres_underlying_def return_def simpler_modify_def)
   apply (clarsimp simp:remove_parent_def exs_valid_def simpler_modify_def transform_def)
@@ -1059,6 +1061,7 @@ done
 lemma dummy_remove_cdt_asid_pool_slot:
   "dcorres dc \<top> ( (\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)) and valid_idle and asid_pool_at a)
     (remove_parent (a,y)) (return x)"
+  supply if_cong[cong]
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:remove_parent_def corres_underlying_def return_def simpler_modify_def)
   apply (clarsimp simp:remove_parent_def exs_valid_def simpler_modify_def transform_def)
@@ -1202,10 +1205,13 @@ definition weak_valid_mdb :: "'z::state_ext state \<Rightarrow>bool"
 where "weak_valid_mdb s \<equiv> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s) \<and> no_mloop (cdt s)"
 
 lemma cdl_remove_parent_def':
- "remove_parent slot = (modify (\<lambda>s. cdl_cdt_single_remove (cdl_cdt_set_update s {x. if cdl_cdt s x = Some slot then True else False} (\<lambda>x. cdl_cdt s slot)) slot))"
+ "remove_parent slot =
+  modify (\<lambda>s. cdl_cdt_single_remove (cdl_cdt_set_update s
+                                       {x. if cdl_cdt s x = Some slot then True else False}
+                                       (\<lambda>x. cdl_cdt s slot)) slot)"
   apply (clarsimp simp:remove_parent_def simpler_modify_def bind_def)
   apply (rule ext)
-  apply (clarsimp simp:cdl_cdt_single_remove_def cdl_cdt_set_update_def)
+  apply (clarsimp simp:cdl_cdt_single_remove_def cdl_cdt_set_update_def cong: if_cong)
 done
 
 lemma abs_remove_parent_def':
@@ -1291,6 +1297,7 @@ done
 
 lemma dmo_maskIRQ_dcorres:
   "dcorres dc \<top> \<top> (return ()) (do_machine_op (maskInterrupt b st))"
+  supply option.case_cong[cong]
   apply (clarsimp simp: do_machine_op_def corres_underlying_def return_def select_f_def in_monad)
   apply (clarsimp simp: maskInterrupt_def in_monad)
   apply (clarsimp simp: transform_def transform_current_thread_def)
@@ -1519,6 +1526,7 @@ lemma ntfn_waiting_set_lift:
   "\<lbrakk>valid_idle s; valid_etcbs s\<rbrakk> \<Longrightarrow>
   get_waiting_ntfn_recv_threads ntfnptr (transform s) =
   ntfn_waiting_set ntfnptr s"
+  supply option.case_cong[cong]
   apply (rule set_eqI)
   apply (clarsimp simp: get_waiting_ntfn_recv_threads_def)
   apply (rule iffI)
@@ -2072,6 +2080,7 @@ lemma corres_dummy_set_thread_state:
   "\<not>generates_pending st \<Longrightarrow>
   dcorres dc \<top> (st_tcb_at (Not \<circ> generates_pending) thread)
           (return ()) (set_thread_state thread st)"
+  supply option.case_cong[cong]
   apply (simp add:set_thread_state_def)
   apply (rule dcorres_absorb_gets_the)
   apply (rule dcorres_rhs_noop_below)
@@ -2158,6 +2167,7 @@ lemma fast_finalise_recv_ep:
                   od) queue;
       reschedule_required
   od)"
+  supply if_cong[cong]
   apply (simp add:get_ep_queue_def cancel_all_ipc_def_alt1)
   apply (rule dcorres_absorb_get_l)
   apply clarsimp
@@ -2235,6 +2245,7 @@ lemma fast_finalise_send_ep:
               queue;
       reschedule_required
   od)"
+  supply if_cong[cong]
   apply (simp add:get_ep_queue_def cancel_all_ipc_def_alt1)
   apply (rule dcorres_absorb_get_l)
   apply clarsimp
@@ -2309,6 +2320,7 @@ lemma fast_finalise_wait_ntfn:
                   od) list;
       reschedule_required
   od)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (simp add:cancel_all_ipc_def_alt1)
   apply (rule dcorres_absorb_get_l)
   apply clarsimp
@@ -2583,6 +2595,7 @@ lemma dcorres_unbind_maybe_notification:
 
 lemma unbind_notification_valid_state[wp]:
   "\<lbrace>valid_state\<rbrace> IpcCancel_A.unbind_notification t \<lbrace>\<lambda>rv. valid_state\<rbrace>"
+  supply if_cong[cong]
   apply (simp add: unbind_notification_def valid_state_def valid_pspace_def)
   apply (rule hoare_seq_ext [OF _ gbn_sp])
   apply (case_tac ntfnptr, clarsimp, wp, simp)
@@ -2616,6 +2629,7 @@ lemma unbind_notification_valid_state[wp]:
 
 lemma unbind_maybe_notification_valid_state[wp]:
   "\<lbrace>valid_state\<rbrace> IpcCancel_A.unbind_maybe_notification a \<lbrace>\<lambda>rv. valid_state\<rbrace>"
+  supply if_cong[cong]
   apply (simp add: unbind_maybe_notification_def valid_state_def valid_pspace_def)
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_bound_tcb ntfn", clarsimp, wp, simp+)
@@ -2695,6 +2709,7 @@ lemma set_parent_corres:
              and (\<lambda>s. cdt s slot' = None))
              (set_parent slot pslot)
              (update_cdt (\<lambda>cdt a. if a = slot' then Some pslot' else cdt a))"
+  supply if_cong[cong]
   apply (clarsimp simp:set_parent_def update_cdt_def gets_def)
   apply (rule dcorres_absorb_get_l)
   apply (rule dcorres_absorb_get_r)
@@ -2850,6 +2865,7 @@ lemma always_empty_slot_NullCap_corres:
                KHeap_D.set_cap (transform_cslot_ptr slot) cdl_cap.NullCap
             od)
            (return ())"
+  supply if_cong[cong]
   apply (simp add: remove_parent_def)
   apply (clarsimp simp: corres_underlying_def in_monad simpler_modify_def bind_def)
   apply (subst set_cap_is_noop_opt_cap)
@@ -3125,7 +3141,7 @@ lemma resolve_address_bits_error_corres:
       apply (clarsimp simp:whenE_def branch_map_simp1 split: nat.splits|rule conjI)+
      apply (drule (1) transform_objects_cnode, simp,
             clarsimp simp:transform_objects_cnode gets_the_def gets_def get_def
-                          cap_object_simps bind_def return_def valid_def exs_valid_def
+                          bind_def return_def valid_def exs_valid_def
                           assert_opt_def transform_def
                      split: nat.splits)+
   apply (clarsimp simp: get_cnode_def bind_assoc liftE_bindE)
@@ -3139,7 +3155,7 @@ lemma resolve_address_bits_error_corres:
      apply (clarsimp simp:whenE_def branch_map_simp1|rule conjI)+
      apply (drule (1) transform_objects_cnode, simp,
             clarsimp simp: transform_objects_cnode gets_the_def gets_def get_def
-                           bind_def return_def valid_def exs_valid_def cap_object_simps
+                           bind_def return_def valid_def exs_valid_def
                            assert_opt_def transform_def
                      split: nat.splits)+
   done
@@ -3168,12 +3184,10 @@ lemma resolve_address_bits_terminate_corres:
          apply (simp add:bl_to_bin_ge0)+
        apply (subst to_bl_bin[symmetric])
        apply (subst bl_and_mask)
-       apply (simp add:word_rep_drop bl_to_bin_rep_F cap_object_simps)
-       apply ((drule (1) transform_objects_cnode,
-               simp,
-               clarsimp simp: gets_the_def gets_def get_def cap_object_simps
-                              bind_def return_def valid_def exs_valid_def assert_opt_def
-                              transform_def
+       apply (simp add:word_rep_drop bl_to_bin_rep_F)
+       apply ((drule (1) transform_objects_cnode;
+               clarsimp simp: gets_the_def gets_def get_def bind_def return_def valid_def
+                              exs_valid_def assert_opt_def transform_def
                        split: nat.splits)+)[3]
     apply fastforce
    apply (frule_tac cref1=ref and cref'1="of_bl ref::word32" in iffD2[OF guard_mask_shift,rotated])
@@ -3282,6 +3296,7 @@ proof (induct n arbitrary: cref cap' cap)
 next
   case (Suc m)
   show ?case
+  supply if_cong[cong]
   apply clarify
   apply (case_tac "\<not> is_cnode_cap cap'")
    apply (subst cdl_resolve_address_bits_error_branch1,simp)
@@ -3323,7 +3338,7 @@ next
                  P' = "\<lambda>next_cap. valid_objs and (\<lambda>a. a \<turnstile> next_cap) and valid_global_refs and
                                   valid_idle and valid_etcbs"])
         apply (rule get_cap_corres[THEN corres_guard_imp])
-          apply (clarsimp simp:transform_cslot_ptr_def cap_object_simps)
+          apply (clarsimp simp:transform_cslot_ptr_def)
           apply (simp add: branch_map_simp2)
          apply clarsimp
         apply clarsimp
@@ -3336,12 +3351,12 @@ next
       apply (subst length_drop)
       apply (rule Suc.hyps[rule_format])
       apply fastforce
-     apply (clarsimp simp:returnOk_def transform_cslot_ptr_def cap_object_simps)
+     apply (clarsimp simp:returnOk_def transform_cslot_ptr_def)
      apply (simp add: branch_map_simp2)
     apply (drule (1) transform_objects_cnode, simp,
              clarsimp simp: transform_objects_cnode gets_the_def gets_def get_def
                              bind_def return_def valid_def exs_valid_def assert_opt_def
-                             cap_object_simps transform_def nat_case_split)+
+                             transform_def nat_case_split)+
   done
 qed
 
@@ -3480,6 +3495,7 @@ lemma dcorres_lookup_cap_and_slot:
 lemma dcorres_machine_op_noop:
   "\<lbrakk> \<And>m. \<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> mop \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace> \<rbrakk>
        \<Longrightarrow> dcorres dc \<top> \<top> (return ()) (do_machine_op mop)"
+  supply if_cong[cong]
   apply (simp add: do_machine_op_def)
   apply (rule corres_guard_imp)
     apply (rule corres_symb_exec_r[OF _ _ gets_wp])

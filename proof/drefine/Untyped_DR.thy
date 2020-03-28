@@ -584,6 +584,7 @@ lemma retype_region_dcorres:
   (Untyped_D.retype_region
   us (translate_object_type type) (map (retype_transform_obj_ref type us) (retype_addrs ptr type n us)))
   (Retype_A.retype_region ptr n us type dev)"
+  supply if_cong[cong]
   apply (simp add: retype_region_def Untyped_D.retype_region_def
               split del: if_split)
   apply (clarsimp simp:when_def generate_object_ids_def bind_assoc
@@ -809,6 +810,7 @@ lemma create_cap_dcorres:
         (Untyped_D.create_cap (translate_object_type type) sz (transform_cslot_ptr parent) dev
                  (transform_cslot_ptr slot, retype_transform_obj_ref type sz ptr))
         (Retype_A.create_cap type sz parent dev (slot, ptr))"
+  supply if_cong[cong]
   apply (simp add: Untyped_D.create_cap_def Retype_A.create_cap_def)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_gets_the_bind)
@@ -1265,6 +1267,7 @@ lemma reset_untyped_cap_corres:
           and (\<lambda>s. descendants_of cref (cdt s) = {}))
      (Untyped_D.reset_untyped_cap (transform_cslot_ptr cref))
      (Retype_A.reset_untyped_cap cref)"
+  supply if_cong[cong]
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
   apply (simp add: Untyped_D.reset_untyped_cap_def reset_untyped_cap_def
@@ -1463,6 +1466,7 @@ lemma invoke_untyped_corres:
            (Untyped_D.invoke_untyped
              (translate_untyped_invocation untyped_invocation))
            (Retype_A.invoke_untyped untyped_invocation)"
+    supply option.case_cong[cong] if_cong[cong]
     apply (clarsimp simp: Untyped_D.invoke_untyped_def mapM_x_def translate_untyped_invocation_def
                           ui ptrs invoke_untyped_def unlessE_whenE)
     apply (rule corres_guard_imp)
@@ -1651,7 +1655,11 @@ proof -
     done
 qed
 
+context
+notes if_cong[cong]
+begin
 crunch inv[wp]: "CSpace_D.ensure_empty" "P"
+end
 
 lemma mapME_x_inv_wp2:
   "(\<And>x. \<lbrace>P and E\<rbrace> f x \<lbrace>\<lambda>rv. P and E\<rbrace>,\<lbrace>\<lambda>rv. E\<rbrace>)
@@ -1745,6 +1753,7 @@ lemma decode_untyped_corres:
            and (\<lambda>s. \<forall>x \<in> set excaps'. cte_wp_at ((=) (fst x)) (snd x) s) and valid_etcbs)
      (Untyped_D.decode_untyped_invocation cap slot excaps ui)
      (Decode_A.decode_untyped_invocation label' args' slot' cap' (map fst excaps'))"
+  supply if_cong[cong]
   apply (simp add: transform_intent_def map_option_Some_eq2
                    transform_intent_untyped_retype_def
             split: invocation_label.split_asm gen_invocation_labels.split_asm
@@ -1806,9 +1815,8 @@ lemma decode_untyped_corres:
               apply (simp add:has_children_def KHeap_D.is_cdt_parent_def
                 descendants_of_empty_lift word_neq_0_conv)
               apply (clarsimp simp: not_less is_cap_simps bits_of_def)
-              apply (clarsimp simp:is_cap_simps cap_object_simps
-                transform_cslot_ptr_def bits_of_def
-                cap_aligned_def nat_bl_to_bin_nat_to_cref)
+              apply (clarsimp simp: is_cap_simps transform_cslot_ptr_def bits_of_def
+                                    cap_aligned_def nat_bl_to_bin_nat_to_cref)
              apply (wp check_children_wp)
             apply simp
            apply (simp add:const_on_failure_def)
@@ -1831,9 +1839,8 @@ lemma decode_untyped_corres:
             apply (simp add: dc_def[symmetric])
             apply (rule dcorres_ensure_empty)
            apply (wp mapME_x_inv_wp[OF hoare_pre(2)] | simp)+
-        apply (clarsimp simp:is_cap_simps cap_object_simps
-             transform_cslot_ptr_def bits_of_def
-             cap_aligned_def nat_bl_to_bin_nat_to_cref)
+        apply (clarsimp simp: is_cap_simps transform_cslot_ptr_def bits_of_def cap_aligned_def
+                              nat_bl_to_bin_nat_to_cref)
        apply simp
       apply clarsimp
      apply (rule hoare_pre)

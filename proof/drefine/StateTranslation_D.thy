@@ -1091,6 +1091,7 @@ lemma transform_objects_ms_underlying_mem:
   "transform_objects s =
    transform_objects (s \<lparr> machine_state :=
      undefined \<lparr> underlying_memory := underlying_memory (machine_state s) \<rparr> \<rparr>)"
+  supply option.case_cong[cong]
   apply (rule ext)
   apply (simp add: transform_objects_def map_add_def option_map_def
             split: option.split)
