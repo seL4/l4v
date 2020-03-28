@@ -39,7 +39,7 @@ lemma delete_objects_irq_masks[wp]:
 crunch irq_masks[wp]: invoke_untyped "\<lambda>s. P (irq_masks_of_state s)"
   (ignore: delete_objects wp: crunch_wps dmo_wp
        wp: mapME_x_inv_wp preemption_point_inv
-     simp: crunch_simps no_irq_clearMemory no_irq_cleanCacheRange_PoU
+     simp: crunch_simps no_irq_clearMemory
            mapM_x_def_bak unless_def)
 
 crunch irq_masks[wp]: cap_insert "\<lambda>s. P (irq_masks_of_state s)"
@@ -77,9 +77,6 @@ crunch irq_masks[wp]: finalise_cap "\<lambda>s. P (irq_masks_of_state s)"
 
 crunch irq_masks[wp]: send_signal "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps ignore: do_machine_op wp: dmo_wp simp: crunch_simps)
-
-crunch irq_masks[wp]: machine_op_lift "\<lambda>s. P (irq_masks s)"
-  (wp: crunch_wps no_irq ignore: machine_op_lift wp:dmo_wp)
 
 lemma handle_interrupt_irq_masks:
   notes no_irq[wp del]

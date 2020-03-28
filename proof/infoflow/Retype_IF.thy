@@ -918,7 +918,7 @@ lemma delete_objects_caps_no_overlap:
   apply(rule descendants_range_caps_no_overlapI)
     apply(erule use_valid | wp | simp add: descendants_range_def2 | blast)+
    apply(frule untyped_cap_aligned,
-         (simp add: is_aligned_neg_mask_eq invs_valid_objs)+)
+         (simp add: invs_valid_objs)+)
    apply(rule conjI, assumption)
    apply(drule (2) untyped_slots_not_in_untyped_range, simp+, rule subset_refl)
     apply simp
@@ -935,7 +935,7 @@ lemma get_cap_reads_respects_g:
   apply simp
   done
 
-lemma irq_state_independent_globals_equiv[simp]:
+lemma irq_state_independent_globals_equiv[simp,intro!]:
   "irq_state_independent_A (globals_equiv st)"
   by (clarsimp simp: irq_state_independent_A_def globals_equiv_def
                      idle_equiv_def)
@@ -981,7 +981,7 @@ lemma delete_objects_pspace_no_overlap_again:
   apply(frule cte_wp_at_valid_objs_valid_cap, clarsimp+)
   apply(erule pspace_no_overlap_subset[rotated])
   apply(rule pspace_no_overlap_subset, rule pspace_no_overlap_detype, simp+)
-  apply(simp add: valid_cap_simps cap_aligned_def is_aligned_neg_mask_eq field_simps)
+  apply(simp add: valid_cap_simps cap_aligned_def field_simps)
   done
 
 lemma ex_tupleI:
@@ -1022,8 +1022,7 @@ lemma reset_untyped_cap_reads_respects_g:
               | wp (once) dmo_wp)+
         apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
         apply (frule(1) caps_of_state_valid)
-        apply (clarsimp simp: valid_cap_simps cap_aligned_def
-                              is_aligned_neg_mask_eq field_simps
+        apply (clarsimp simp: valid_cap_simps cap_aligned_def field_simps
                               free_index_of_def invs_valid_global_objs)
         apply (simp add: aligned_add_aligned is_aligned_shiftl)
         apply (clarsimp simp: reset_chunk_bits_def)
@@ -1039,8 +1038,7 @@ lemma reset_untyped_cap_reads_respects_g:
              | wp (once) dmo_wp)+
         apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
         apply (frule(1) caps_of_state_valid)
-        apply (clarsimp simp: valid_cap_simps cap_aligned_def
-                              is_aligned_neg_mask_eq field_simps
+        apply (clarsimp simp: valid_cap_simps cap_aligned_def field_simps
                               free_index_of_def)
        apply (wp | simp)+
        apply (wp delete_objects_reads_respects_g)
@@ -1055,8 +1053,7 @@ lemma reset_untyped_cap_reads_respects_g:
     apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
   apply (frule(1) caps_of_state_valid)
-  apply (clarsimp simp: valid_cap_simps cap_aligned_def
-                        is_aligned_neg_mask_eq field_simps
+  apply (clarsimp simp: valid_cap_simps cap_aligned_def field_simps
                         free_index_of_def invs_valid_global_objs)
   apply (frule valid_global_refsD2, clarsimp+)
   apply (clarsimp simp: ptr_range_def[symmetric] global_refs_def

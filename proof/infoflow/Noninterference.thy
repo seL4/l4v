@@ -5,11 +5,12 @@
  *)
 
 theory Noninterference
-imports    "Noninterference_Base"
-           "Noninterference_Base_Alternatives"
-    "Scheduler_IF"
-    "ADT_IF"
-    "Access.ADT_AC"
+imports
+  Noninterference_Base
+  Noninterference_Base_Alternatives
+  Scheduler_IF
+  ADT_IF
+  Access.ADT_AC
 begin
 
 text \<open>
@@ -368,14 +369,13 @@ lemma integrity_irq_state_independent:
   by (auto simp: irq_state_independent_def integrity_def)
 
 lemma pas_refined_irq_state_independent:
-  "irq_state_independent
-         (\<lambda>sa. pas_refined aag s)"
-  by (auto simp: irq_state_independent_def)
+  "irq_state_independent (\<lambda>sa. pas_refined aag s)"
+  by (rule irq_state_independent_irq_masks)
 
 lemma irq_update_pspace_respects_device_region[simp]:
   "pspace_respects_device_region (s\<lparr>machine_state := irq_state_update f sa\<rparr>)
   = pspace_respects_device_region (s\<lparr>machine_state := sa\<rparr>)"
-  by (clarsimp simp: pspace_respects_device_region_def user_mem_def device_mem_def)
+  by (clarsimp simp: pspace_respects_device_region_def user_mem_def device_mem_def cong: if_cong)
 
 lemma irq_update_cap_refs_respects_device_region[simp]:
   "cap_refs_respects_device_region (s\<lparr>machine_state := irq_state_update f sa\<rparr>)
@@ -702,7 +702,7 @@ lemma schedule_cur_domain:
    schedule
   \<lbrace>\<lambda> r s. P (cur_domain s)\<rbrace>" (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
   supply ethread_get_wp[wp del] hoare_pre_cont[where a=next_domain, wp add]
-  supply if_split[split del]
+  supply if_split[split del] if_cong[cong]
   apply (simp add: schedule_def schedule_choose_new_thread_def | wp | wpc)+
                apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
                 apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
@@ -718,7 +718,7 @@ lemma schedule_domain_fields:
    schedule
   \<lbrace>\<lambda> r. domain_fields P\<rbrace>"  (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
   supply ethread_get_wp[wp del] hoare_pre_cont[where a=next_domain, wp add]
-  supply if_split[split del]
+  supply if_split[split del] if_cong[cong]
   apply (simp add: schedule_def schedule_choose_new_thread_def | wp | wpc)+
                apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
                 apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
@@ -2328,13 +2328,13 @@ lemma set_tcb_queue_reads_respects_g':
                (\<lambda>s s'. affects_equiv aag l s s' \<and> exclusive_state_equiv s s') \<top>
                (set_tcb_queue d prio queu)"
   unfolding equiv_valid_def2 equiv_valid_2_def
+  supply if_cong[cong]
   apply (clarsimp simp: set_tcb_queue_def bind_def modify_def put_def get_def)
-  apply ((rule conjI
-         | rule affects_equiv_ready_queues_update reads_equiv_ready_queues_update, assumption
-         | clarsimp simp: reads_equiv_g_def
-         | fastforce elim!: affects_equivE reads_equivE
-                     simp: equiv_for_def globals_equiv_def idle_equiv_def)+)
-  done
+  by ((rule conjI
+       | rule affects_equiv_ready_queues_update reads_equiv_ready_queues_update, assumption
+       | clarsimp simp: reads_equiv_g_def
+       | fastforce elim!: affects_equivE reads_equivE
+                   simp: equiv_for_def globals_equiv_def idle_equiv_def)+)
 
 (* consider rewriting the return-value assumption using equiv_valid_rv_inv *)
 lemma ev2_invisible':

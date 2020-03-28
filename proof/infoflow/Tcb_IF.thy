@@ -51,8 +51,6 @@ lemma setup_reply_master_globals_equiv:
   apply clarsimp
 done
 
-crunch globals_equiv[wp]: get_notification "globals_equiv st"
-
 lemma cancel_signal_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace> cancel_signal a b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding cancel_signal_def
@@ -98,20 +96,6 @@ done
 (*FIXME: Lots of this stuff should be in arch *)
 crunch globals_equiv[wp]: deleting_irq_handler "globals_equiv st"
 
-lemma invalidate_asid_entry_valid_arch_state[wp]: "\<lbrace>valid_arch_state \<rbrace> invalidate_asid_entry asid \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  apply (simp add: invalidate_asid_entry_def invalidate_asid_def
-                   invalidate_hw_asid_entry_def)
-  apply (wp load_hw_asid_wp modify_wp |
-    clarsimp simp del: fun_upd_apply simp: valid_arch_state_def
-    comp_upd_simp is_inv_None_upd None_upd_eq |
-    intro impI conjI)+
-done
-
-lemma flush_space_valid_arch_state[wp]: "\<lbrace>valid_arch_state \<rbrace> flush_space a \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  unfolding flush_space_def
-  apply (wp load_hw_asid_wp | wpc | simp)+
-done
-
 lemma get_thread_state_globals_equiv[wp]:
   "\<lbrace>globals_equiv s and valid_ko_at_arm\<rbrace> get_thread_state ref \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding get_thread_state_def
@@ -146,7 +130,7 @@ lemma finalise_cap_globals_equiv:
     finalise_cap cap b
    \<lbrace>\<lambda> _. globals_equiv st\<rbrace>"
   apply (induct cap)
-             apply (simp_all add:finalise_cap.simps)
+             apply (simp_all)
              apply (wp liftM_wp when_def cancel_all_ipc_globals_equiv cancel_all_ipc_valid_global_objs
                        cancel_all_signals_globals_equiv cancel_all_signals_valid_global_objs
                        arch_finalise_cap_globals_equiv unbind_maybe_notification_globals_equiv
@@ -245,7 +229,7 @@ next
 
   case (3 ptr bits n slot s)
   show ?case
-    apply (simp add: rec_del_call.simps simp_thms spec_validE_def)
+    apply (simp add: spec_validE_def)
     apply (rule hoare_pre, wp cap_swap_for_delete_P cap_swap_for_delete_Q)
     apply (clarsimp simp: invs_valid_ko_at_arm)
     done
@@ -284,11 +268,6 @@ lemma rec_del_preservation2:
    apply (rule validE_valid)
    apply (rule use_spec)
    apply (rule rec_del_preservation2' [where R=R],simp+)
-  done
-
-lemma globals_equiv_irq_state_independent_A[simp, intro!]:
-  "irq_state_independent_A (globals_equiv st)"
-  apply(auto simp: irq_state_independent_A_def globals_equiv_def idle_equiv_def)
   done
 
 lemma valid_ko_at_arm_irq_state_independent_A[simp, intro!]:

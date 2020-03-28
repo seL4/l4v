@@ -1368,7 +1368,7 @@ lemma cancel_badged_sends_reads_respects:
                          and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag epptr))
       (cancel_badged_sends epptr badge)"
   apply (rule gen_asm_ev)+
-  apply(simp add: cancel_badged_sends_def fun_app_def)
+  apply(simp add: cancel_badged_sends_def)
   apply wp
      apply ((wp mapM_ev'' mapM_wp get_thread_state_reads_respects set_thread_state_runnable_reads_respects
                 set_simple_ko_reads_respects get_simple_ko_reads_respects hoare_vcg_ball_lift
@@ -1595,7 +1595,6 @@ lemma do_normal_transfer_reads_respects:
    apply (fastforce intro: aag_has_read_auth_can_read_or_affect_ipc_buffer)
   apply(rule gen_asm_ev)
   apply(simp add: do_normal_transfer_def transfer_caps_def)
-  apply(subst transfer_caps_loop.simps)
   apply(wp ev_irrelevant_bind[where f="get_receive_slots receiver rbuf"]
            as_user_set_register_reads_respects'
            set_message_info_reads_respects copy_mrs_reads_respects
@@ -1739,9 +1738,6 @@ lemma do_ipc_transfer_reads_respects:
         | wp (once) hoare_drop_imps
         | fastforce)+
   done
-
-crunch pas_cur_domain[wp]: set_extra_badge, do_ipc_transfer "pas_cur_domain aag"
-  (wp: crunch_wps transfer_caps_loop_pres ignore: const_on_failure simp: crunch_simps)
 
 lemma complete_signal_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
