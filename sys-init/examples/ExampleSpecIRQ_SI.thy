@@ -13,7 +13,7 @@
  *)
 
 theory ExampleSpecIRQ_SI
-imports WellFormed_SI
+imports SysInit.WellFormed_SI
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -204,9 +204,6 @@ definition
    cdl_irq_node = example_irq_node,
    cdl_asid_table = undefined,
    cdl_current_domain = minBound\<rparr>"
-
-
-declare cap_object_simps [simp]
 
 
 lemmas cnode_defs = cnode_a1_def cnode_a2_def cnode_b_def cnode_extra_def
