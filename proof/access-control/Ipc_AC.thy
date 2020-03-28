@@ -68,7 +68,6 @@ lemma send_signal_mdb[wp]:
 
 crunches possible_switch_to
   for tcb_domain_map_wellformed[wp]: "tcb_domain_map_wellformed aag"
-  and pas_refined[wp]: "pas_refined aag"
 
 lemma update_waiting_ntfn_pas_refined:
   "\<lbrace>pas_refined aag and ko_at (Notification ntfn) ntfnptr and K (ntfn_obj ntfn = WaitingNtfn queue)\<rbrace>
@@ -335,7 +334,7 @@ lemma set_mrs_respects_in_signalling':
      set_mrs thread buf msgs
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (simp add: set_mrs_def split_def set_object_def get_object_def)
+  apply (simp add: set_mrs_def split_def set_object_def get_object_def split del: if_split)
   apply (wp gets_the_wp get_wp put_wp
        | wpc
        | simp split del: if_split
@@ -732,7 +731,7 @@ next
                         neq_Nil_conv cte_wp_at_caps_of_state
                         imp_conjR[symmetric] cap_master_cap_masked_as_full
                         cap_badge_masked_as_full
-                 split del: if_splits)
+                 split del: if_split)
   apply(intro conjI)
    apply clarsimp
    apply (case_tac "cap = a",clarsimp simp: remove_rights_def)
@@ -1550,7 +1549,7 @@ lemma copy_mrs_integrity_autarch:
      copy_mrs sender sbuf receiver rbuf n
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (simp add: copy_mrs_def cong: if_cong)
+  apply (simp add: copy_mrs_def cong: if_cong split del: if_split)
   apply (wp mapM_wp' as_user_integrity_autarch
             store_word_offs_integrity_autarch [where aag = aag and thread = receiver]
        | wpc
@@ -2224,8 +2223,8 @@ lemma copy_mrs_respects_in_ipc:
               \<and> unat n < 2 ^ (msg_align_bits - 2))\<rbrace>
      copy_mrs sender sbuf receiver rbuf n
    \<lbrace>\<lambda>rv. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
+  unfolding copy_mrs_def
   apply (rule hoare_gen_asm)
-  apply (simp add: copy_mrs_def)
   apply (wp as_user_respects_in_ipc store_word_offs_respects_in_ipc
             mapM_wp'
             hoare_vcg_const_imp_lift hoare_vcg_all_lift
@@ -2266,8 +2265,8 @@ lemma set_mrs_respects_in_ipc:
        (case recv_buf of None \<Rightarrow> True | Some buf' \<Rightarrow> is_aligned buf' msg_align_bits))\<rbrace>
      set_mrs receiver recv_buf msgs
    \<lbrace>\<lambda>rv. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
+  unfolding set_mrs_def set_object_def get_object_def
   apply (rule hoare_gen_asm)
-  apply (simp add: set_mrs_def set_object_def get_object_def)
   apply (wp mapM_x_wp' store_word_offs_respects_in_ipc
        | wpc
        | simp split del: if_split add: zipWithM_x_mapM_x split_def)+
@@ -2494,8 +2493,9 @@ lemma update_cdt_reply_in_ipc:
   apply (rule cca_reply; force)
   done
 
+(* FIXME: move to NondetMonad *)
 lemma spec_valid_direct:
-  "( P s \<Longrightarrow> s \<turnstile> \<lbrace> \<top> \<rbrace> f \<lbrace> Q \<rbrace>) \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace> Q \<rbrace>"
+  "\<lbrakk> P s \<Longrightarrow> s \<turnstile> \<lbrace> \<top> \<rbrace> f \<lbrace> Q \<rbrace> \<rbrakk> \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace> Q \<rbrace>"
   by (simp add: spec_valid_def valid_def)
 
 lemma set_cap_respects_in_ipc_reply:

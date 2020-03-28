@@ -1235,10 +1235,7 @@ lemma tro_tcb_unbind':
   apply (rule tro_tcb_unbind;fastforce)
   done
 
-(* FIXME MOVE to HOL standard libray (or Lib) *)
-lemma rtranclp_transp[simp,intro!]:
-  "transp R\<^sup>*\<^sup>*"
-  by (rule transpI) (rule rtranclp_trans)
+lemmas rtranclp_transp[intro!] = transp_rtranclp
 
 lemma tro_transp[intro!]:
   "transp (integrity_obj aag activate es subjects)"

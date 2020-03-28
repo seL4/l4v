@@ -135,8 +135,6 @@ lemma setup_reply_master_pas_refined:
 
 crunches possible_switch_to
   for tcb_domain_map_wellformed[wp]: " tcb_domain_map_wellformed aag"
-  and pas_refined[wp]: "pas_refined aag"
-
 
 lemma restart_pas_refined:
   "\<lbrace>pas_refined aag and invs and tcb_at t and K (is_subject aag t)\<rbrace> restart t \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"

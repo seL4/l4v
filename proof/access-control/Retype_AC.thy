@@ -505,8 +505,7 @@ lemma invoke_untyped_integrity:
          | clarsimp simp: split_paired_Ball
          | erule in_set_zipE
          | blast)+
-  apply (clarsimp simp: is_aligned_neg_mask_eq
-                        ptr_range_def p_assoc_help bits_of_def
+  apply (clarsimp simp: ptr_range_def p_assoc_help bits_of_def
                         cte_wp_at_caps_of_state)
   apply (frule(1) cap_cur_auth_caps_of_state, simp+)
   apply (clarsimp simp: aag_cap_auth_def pas_refined_all_auth_is_owns)
@@ -1079,7 +1078,7 @@ lemma delete_objects_descendants_range_in'':
      \<lbrace>\<lambda>_. descendants_range_in {word2..(word2 && ~~ mask sz) + 2 ^ sz - 1} slot\<rbrace>"
   apply(clarsimp simp: valid_def)
   apply(frule untyped_cap_aligned, fastforce)
-  apply(clarsimp simp: is_aligned_neg_mask_eq)
+  apply(clarsimp)
   apply(erule use_valid)
    apply(wp delete_objects_descendants_range_in' | clarsimp | blast)+
   done
@@ -1092,7 +1091,7 @@ lemma delete_objects_descendants_range_in''':
      \<lbrace>\<lambda>_. descendants_range_in {word2 && ~~ mask sz..(word2 && ~~ mask sz) + 2 ^ sz - 1} slot\<rbrace>"
   apply(clarsimp simp: valid_def)
   apply(frule untyped_cap_aligned, fastforce)
-  apply(clarsimp simp: is_aligned_neg_mask_eq)
+  apply(clarsimp)
   apply(erule use_valid)
    apply(wp delete_objects_descendants_range_in' | clarsimp | blast)+
   done
@@ -1117,7 +1116,7 @@ lemma delete_objects_descendants_range_in'''':
   apply(erule use_valid)
    apply(wp delete_objects_descendants_range_in' | clarsimp | blast)+
   apply(drule range_cover_subset'', simp)
-  apply(fastforce dest: untyped_cap_aligned simp: is_aligned_neg_mask_eq)
+  apply(fastforce dest: untyped_cap_aligned)
   done
 
 lemmas delete_objects_descendants_range_in =
@@ -1227,7 +1226,7 @@ lemma delete_objects_pspace_no_overlap':
    \<lbrace>\<lambda>rv. pspace_no_overlap_range_cover (ptr && ~~ mask sz) sz\<rbrace>"
   apply(clarsimp simp: valid_def)
   apply(frule untyped_cap_aligned, simp)
-  apply(clarsimp simp: is_aligned_neg_mask_eq)
+  apply(clarsimp)
   apply(frule(1) cte_wp_at_valid_objs_valid_cap)
   apply(erule use_valid, wp delete_objects_pspace_no_overlap, auto)
   done

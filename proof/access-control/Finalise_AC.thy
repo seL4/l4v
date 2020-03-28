@@ -668,7 +668,7 @@ lemma finalise_cap_auth':
   apply (rule hoare_gen_asm)
   apply (cases cap, simp_all add: arch_finalise_cap_def split del: if_split)
   apply (wp
-    | simp add: comp_def hoare_post_taut [where P = \<top>] del: hoare_post_taut split del: if_split
+    | simp add: comp_def hoare_post_taut [where P = \<top>] split del: if_split
     | fastforce simp:  aag_cap_auth_Zombie aag_cap_auth_CNode aag_cap_auth_Thread
     )+
   apply (rule hoare_pre)
