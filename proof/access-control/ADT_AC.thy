@@ -251,11 +251,10 @@ lemma dmo_user_memory_update_respects_Write:
   "\<lbrace>integrity aag X st and K (\<forall>p \<in> dom um. aag_has_auth_to aag Write p)\<rbrace>
   do_machine_op (user_memory_update um)
   \<lbrace>\<lambda>a. integrity aag X st\<rbrace>"
-  apply (simp add: user_memory_update_def)
-  apply (rule hoare_pre)
-   apply (wp dmo_wp)
+  unfolding user_memory_update_def
+  apply (wp dmo_wp)
   apply clarsimp
-  apply (simp cong: abstract_state.fold_congs)
+  apply (simp cong: abstract_state.fold_congs option.case_cong_weak)
   apply (rule integrity_underlying_mem_update)
     apply simp+
   apply (simp add: dom_def)+

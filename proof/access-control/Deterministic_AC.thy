@@ -102,8 +102,9 @@ lemma cap_insert_list_integrity:
   "\<lbrace>list_integ P st and K(P dest)\<rbrace> cap_insert_ext src_parent src dest src_p dest_p \<lbrace>\<lambda>_. list_integ P st\<rbrace>"
   apply (simp add: cap_insert_ext_def split del: if_split)
   apply (wp update_cdt_list_wp)
-  apply (intro impI conjI allI | simp add: list_filter_insert_after list_filter_remove split: option.splits | elim conjE | simp add: list_integ_def)+
-  done
+  by (intro impI conjI allI |
+      simp add: list_filter_insert_after list_filter_remove split: option.splits |
+      elim conjE | simp add: list_integ_def)+
 
 lemma create_cap_list_integrity:
   notes split_paired_All[simp del]
@@ -111,8 +112,9 @@ lemma create_cap_list_integrity:
   "\<lbrace>list_integ P st and K(P dest)\<rbrace> create_cap_ext untyped dest dest_p \<lbrace>\<lambda>_. list_integ P st\<rbrace>"
   apply (simp add: create_cap_ext_def split del: if_split)
   apply (wp update_cdt_list_wp)
-  apply (intro impI conjI allI | simp add: list_filter_replace list_filter_remove split: option.splits | elim conjE | simp add: list_integ_def)+
-  done
+  by (intro impI conjI allI |
+      simp add: list_filter_replace list_filter_remove split: option.splits |
+      elim conjE | simp add: list_integ_def)+
 
 
 lemma empty_slot_list_integrity:
@@ -134,8 +136,9 @@ lemma cap_swap_list_integrity:
   "\<lbrace>list_integ P st and K(P slot1) and K(P slot2)\<rbrace> cap_swap_ext slot1 slot2 slot1_p slot2_p \<lbrace>\<lambda>_. list_integ P st\<rbrace>"
   apply (simp add: cap_swap_ext_def split del: if_split)
   apply (wp update_cdt_list_wp)
-  apply (intro impI conjI allI | simp add: list_filter_replace list_filter_swap split: option.splits | elim conjE | simp add: list_integ_def)+ (* slow *)
-  done
+  by (intro impI conjI allI |
+      simp add: list_filter_replace list_filter_swap split: option.splits |
+      elim conjE | simp add: list_integ_def)+ (* slow *)
 
 lemma null_filter: "\<forall>x \<in> set list. \<not> P x \<Longrightarrow> list_filter list P = list"
   apply (induct list,simp+)

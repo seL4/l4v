@@ -525,7 +525,7 @@ lemma rec_del_domain_sep_inv':
          apply(wp  finalise_cap_domain_sep_inv_cap get_cap_wp
                    finalise_cap_returns_NullCap
                    drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
-               |simp add: without_preemption_def split del: if_split
+               |simp split del: if_split
                |wp (once) hoare_drop_imps)+
     apply(blast dest: cte_wp_at_domain_sep_inv_cap)
     done

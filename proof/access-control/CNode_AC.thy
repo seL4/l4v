@@ -184,7 +184,7 @@ lemma lookup_slot_for_cnode_op_authorised[wp]:
             resolve_address_bits_authorised[THEN hoare_post_imp_R[where Q'="\<lambda>x s. is_subject aag (fst (fst x))"]]
        | wpc
        | simp add: split_def authorised_cnode_inv_def split del: if_split
-              del: resolve_address_bits'.simps split_paired_All | clarsimp)+
+              del: split_paired_All | clarsimp)+
   done
 
 (* MOVE *)

@@ -520,7 +520,7 @@ crunch thread_states[wp]: do_machine_op "\<lambda>s. P (thread_states s)"
 (* FIXME: move *)
 lemma set_mrs_state_vrefs[wp]:
   "\<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
-  apply (simp add: set_mrs_def split_def set_object_def get_object_def)
+  apply (simp add: set_mrs_def split_def set_object_def get_object_def split del: if_split)
   apply (wp gets_the_wp get_wp put_wp mapM_x_wp'
        | wpc
        | simp split del: if_split add: zipWithM_x_mapM_x split_def store_word_offs_def)+
@@ -532,7 +532,7 @@ lemma set_mrs_state_vrefs[wp]:
 (* FIXME: move *)
 lemma set_mrs_thread_states[wp]:
   "\<lbrace>\<lambda>s. P (thread_states s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>rv s. P (thread_states s)\<rbrace>"
-  apply (simp add: set_mrs_def split_def set_object_def get_object_def)
+  apply (simp add: set_mrs_def split_def set_object_def get_object_def split del: if_split)
   apply (wp gets_the_wp get_wp put_wp mapM_x_wp'
        | wpc
        | simp split del: if_split add: zipWithM_x_mapM_x split_def store_word_offs_def)+
@@ -541,7 +541,7 @@ lemma set_mrs_thread_states[wp]:
 
 lemma set_mrs_thread_bound_ntfns[wp]:
   "\<lbrace>\<lambda>s. P (thread_bound_ntfns s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>rv s. P (thread_bound_ntfns s)\<rbrace>"
-  apply (simp add: set_mrs_def split_def set_object_def get_object_def)
+  apply (simp add: set_mrs_def split_def set_object_def get_object_def split del: if_split)
   apply (wp gets_the_wp get_wp put_wp mapM_x_wp' dmo_wp
        | wpc
        | simp split del: if_split add: zipWithM_x_mapM_x split_def store_word_offs_def no_irq_storeWord)+
@@ -619,7 +619,7 @@ lemma set_mrs_integrity_autarch:
      set_mrs thread buf msgs
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (simp add: set_mrs_def)
+  apply (simp add: set_mrs_def split del: if_split)
   apply (wp gets_the_wp get_wp put_wp mapM_x_wp' store_word_offs_integrity_autarch [where aag = aag and thread = thread]
        | wpc
        | simp split del: if_split add: split_def zipWithM_x_mapM_x )+
@@ -753,8 +753,7 @@ lemma perform_asid_control_invocation_respects:
    apply (wpc, simp)
    apply (wp set_cap_integrity_autarch cap_insert_integrity_autarch retype_region_integrity[where sz=12] static_imp_wp | simp)+
   apply (clarsimp simp: authorised_asid_control_inv_def
-                        ptr_range_def page_bits_def
-                        is_aligned_neg_mask_eq add.commute
+                        ptr_range_def page_bits_def add.commute
                         range_cover_def obj_bits_api_def default_arch_object_def
                         pageBits_def word_bits_def)
   apply(subst is_aligned_neg_mask_eq[THEN sym], assumption)
@@ -894,10 +893,10 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
    apply (rename_tac s idx)
    apply (frule untyped_cap_aligned, simp add: invs_valid_objs)
    apply (clarsimp simp: cte_wp_at_def aag_cap_auth_def ptr_range_def pas_refined_refl
-                         cap_links_asid_slot_def cap_links_irq_def is_aligned_neg_mask_eq
+                         cap_links_asid_slot_def cap_links_irq_def
                          obj_bits_api_def default_arch_object_def retype_addrs_def)
    apply (rule conjI, force intro: descendants_range_caps_no_overlapI
-                             simp: cte_wp_at_def is_aligned_neg_mask_eq)
+                             simp: cte_wp_at_def)
    apply (rule conjI)
     apply (cut_tac s=s and ptr="(parent_ptr, parent_idx)" in cap_refs_in_kernel_windowD)
       apply ((fastforce simp add: caps_of_state_def cap_range_def)+)[3]
@@ -919,8 +918,7 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
      apply (rule subset_refl)
     apply (simp add: page_bits_def)
    apply (clarsimp simp: ptr_range_def invs_psp_aligned invs_valid_objs
-                         descendants_range_def2 empty_descendants_range_in
-                         is_aligned_neg_mask_eq page_bits_def)
+                         descendants_range_def2 empty_descendants_range_in page_bits_def)
    apply ((strengthen refl | simp)+)?
    apply (rule conjI, fastforce)
    apply (rule conjI, fastforce intro: empty_descendants_range_in)
