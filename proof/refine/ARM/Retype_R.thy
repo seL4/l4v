@@ -4435,7 +4435,8 @@ lemma createNewCaps_vms:
    \<lbrace>\<lambda>archCaps. valid_machine_state'\<rbrace>"
   apply (clarsimp simp: valid_machine_state'_def pointerInDeviceData_def
                         Arch_createNewCaps_def createNewCaps_def pointerInUserData_def
-                        typ_at'_def createObjects_def doMachineOp_return_foo)
+                        typ_at'_def createObjects_def doMachineOp_return_foo
+                  split del: if_split)
   apply (rule hoare_pre)
    apply (wpc
          | wp hoare_vcg_const_Ball_lift hoare_vcg_disj_lift
