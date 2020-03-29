@@ -56,17 +56,6 @@ session RefineOrphanage in "refine/$L4V_ARCH/orphanage" = Refine +
   theories
     "Orphanage"
 
-(* FIXME isa
-session BaseRefine2 = BaseRefine +
-  description \<open>Intermediate point in refinement proof. Useful for machines with small RAM.\<close>
-  theories [condition = "SKIP_AINVS_PROOFS", quick_and_dirty, skip_proofs]
-    "refine/$L4V_ARCH/Untyped_R"
-    "refine/$L4V_ARCH/Schedule_R"
-  theories
-   "refine/$L4V_ARCH/Untyped_R"
-   "refine/$L4V_ARCH/Schedule_R"
-*)
-
 session BaseRefine in "refine/base" = AInvs +
   description \<open>Background theory and libraries for refinement proof.\<close>
   sessions
@@ -121,11 +110,9 @@ session CBaseRefine in "crefine" = CSpec +
     "lib/L4VerifiedLinks"
     "Include_C"
 
-(* FIXME isa
-session AutoCorresCRefine = CRefine +
+session AutoCorresCRefine in "crefine/autocorres-test" = CRefine +
   theories
-    "crefine/$L4V_ARCH/AutoCorresTest"
-*)
+    "AutoCorresTest"
 
 (*
  * CapDL Refinement
@@ -211,16 +198,13 @@ session Bisim in bisim = AInvs +
 (*
  * Binary Verification Input Step
 *)
-session SimplExportAndRefine in "asmrefine" = CSpec +
+session SimplExportAndRefine in "asmrefine" = SimplExport +
   theories
-    "SEL4SimplExport"
     "SEL4GraphRefine"
 
-(* FIXME isa
-session SimplExportOnly = CSpec +
+session SimplExport in "asmrefine/export" = CSpec +
   theories
-    "asmrefine/SEL4SimplExport"
-*)
+    "SEL4SimplExport"
 
 (*
  * Libraries

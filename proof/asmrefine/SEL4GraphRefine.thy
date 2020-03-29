@@ -9,7 +9,7 @@ imports
   "AsmRefine.ProveGraphRefine"
   "CSpec.Substitute"
   "SEL4GlobalsSwap"
-  "SEL4SimplExport"
+  "SimplExport.SEL4SimplExport"
 begin
 
 declare ptr_add_assertion_uint [simp del]
