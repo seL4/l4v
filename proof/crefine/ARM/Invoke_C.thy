@@ -568,6 +568,7 @@ lemma decodeCNodeInvocation_ccorres:
        (decodeCNodeInvocation lab args cp (map fst extraCaps)
            >>= invocationCatch thread isBlocking isCall InvokeCNode)
   (Call decodeCNodeInvocation_'proc)"
+  supply if_cong[cong]
   apply (cases "\<not>isCNodeCap cp")
    apply (simp add: decodeCNodeInvocation_def
               cong: conj_cong)
@@ -1690,6 +1691,7 @@ lemma resetUntypedCap_ccorres:
      (resetUntypedCap slot)
      (Call resetUntypedCap_'proc)"
   using [[ceqv_simpl_sequence = true]]
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: srcSlot_')
    apply (simp add: liftE_bindE getSlotCap_def
                     Collect_True extra_sle_sless_unfolds)
@@ -2533,9 +2535,10 @@ lemma checkFreeIndex_ccorres:
      apply (rule context_conjI)
       apply (clarsimp simp:cap_get_tag_isCap)
       apply assumption
-     apply (clarsimp simp:ccap_relation_def isCap_simps cap_untyped_cap_lift_def
-            cap_lift_def cap_to_H_def
-            split:if_splits)
+     apply (clarsimp simp: ccap_relation_def isCap_simps cap_untyped_cap_lift_def cap_lift_def
+                           cap_to_H_def
+                     split: if_splits
+                     cong: if_cong)
     apply (rule ensureNoChildren_wp[where P = dc])
    apply clarsimp
    apply (vcg exspec=ensureNoChildren_modifies)
@@ -2648,6 +2651,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
            liftE (stateAssert (valid_untyped_inv' uinv) []); returnOk uinv odE)
            >>= invocationCatch thread isBlocking isCall InvokeUntyped)
   (Call decodeUntypedInvocation_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (rule ccorres_name_pre)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cap_' slot_' excaps_' call_' buffer_'
                 simp: decodeUntypedInvocation_def list_case_If2

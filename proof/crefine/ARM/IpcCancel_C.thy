@@ -2123,8 +2123,8 @@ lemma possibleSwitchTo_ccorres:
   supply dc_simp [simp del]
   supply prio_and_dom_limit_helpers[simp]
   (* FIXME: these should likely be in simpset for CRefine, or even in general *)
-  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp] if_1_0_0[simp]
-         ccorres_IF_True[simp]
+  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp]
+         ccorres_IF_True[simp] if_cong[cong]
   apply (cinit lift: target_')
    apply (rule ccorres_move_c_guard_tcb)
    apply (rule ccorres_pre_curDomain, rename_tac curDom)
@@ -2175,7 +2175,7 @@ lemma scheduleTCB_ccorres':
        rescheduleRequired
   od)
   (Call scheduleTCB_'proc)"
-  apply (cinit' lift: tptr_' simp del: word_neq_0_conv)
+  apply (cinit' lift: tptr_')
    apply (rule ccorres_rhs_assoc2)+
    apply (rule_tac xf'="ret__int_'" in ccorres_split_nothrow_novcg)
        defer
@@ -2196,7 +2196,7 @@ lemma scheduleTCB_ccorres':
                                  \<and> (\<forall>t. ksSchedulerAction s = SwitchToThread t \<longrightarrow> tcb_at' t s)"
                            and P'=UNIV in ccorres_from_vcg)
            apply (rule allI, rule conseqPre, vcg)
-           apply (clarsimp simp: return_def if_1_0_0 split del: if_split)
+           apply (clarsimp simp: return_def split del: if_split)
            apply (clarsimp simp: from_bool_0 rf_sr_ksCurThread)
            apply (rule conjI)
             apply (clarsimp simp: st_tcb_at'_def)
