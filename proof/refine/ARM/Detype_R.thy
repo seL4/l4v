@@ -3348,27 +3348,20 @@ lemma curDomain_commute:
 crunch inv[wp]: curDomain P
 
 lemma placeNewObject_tcb_at':
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
-  shows
-  "\<lbrace>pspace_aligned' and pspace_distinct'
-    and pspace_no_overlap' ptr (objBits (makeObject::tcb))
-    and  K(is_aligned ptr  (objBits (makeObject::tcb)))
-   \<rbrace> placeNewObject ptr (makeObject::tcb) 0
-       \<lbrace>\<lambda>rv s. tcb_at' ptr s \<rbrace>"
-  apply (simp add:placeNewObject_def placeNewObject'_def split_def)
+  notes [simp del] = atLeastatMost_subset_iff atLeastLessThan_iff
+                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex atLeastAtMost_iff
+  shows "\<lbrace> pspace_aligned' and pspace_distinct'
+             and pspace_no_overlap' ptr (objBits (makeObject::tcb))
+             and  K(is_aligned ptr  (objBits (makeObject::tcb))) \<rbrace>
+         placeNewObject ptr (makeObject::tcb) 0
+         \<lbrace>\<lambda>_ s. tcb_at' ptr s \<rbrace>"
+  apply (simp add: placeNewObject_def placeNewObject'_def split_def)
   apply (wp hoare_unless_wp |wpc | simp add:alignError_def)+
-  apply (auto simp:obj_at'_def is_aligned_mask lookupAround2_None1
-    lookupAround2_char1 field_simps is_aligned_neg_mask_eq
-    projectKO_opt_tcb projectKO_def return_def ps_clear_def
-    split:if_splits
-    dest!:pspace_no_overlap_disjoint'
-  )[1]
-  apply (drule_tac m = "ksPSpace s" in domI)
-  apply (erule in_emptyE)
-  apply (fastforce simp:objBits_simps)
-  done
+  by (auto simp: obj_at'_def is_aligned_mask lookupAround2_None1
+                    lookupAround2_char1 field_simps objBits_simps
+                    projectKO_opt_tcb projectKO_def return_def ps_clear_def
+           split: if_splits
+           dest!: pspace_no_overlap_disjoint')
 
 lemma monad_commute_if_weak_r:
 "\<lbrakk>monad_commute P1 f h1; monad_commute P2 f h2\<rbrakk> \<Longrightarrow>
@@ -3877,16 +3870,9 @@ proof -
 qed
 
 lemma createNewCaps_not_nc:
-  "\<lbrace>\<top>\<rbrace>
-   createNewCaps ty ptr (Suc (length as)) us d
-   \<lbrace>\<lambda>r s. (\<forall>cap\<in>set r. cap \<noteq> capability.NullCap)\<rbrace>"
-   apply (clarsimp simp:simp:createNewCaps_def Arch_createNewCaps_def )
-   apply (rule hoare_pre)
-    apply wpc
-    apply wp
-    apply (simp add:Arch_createNewCaps_def split del: if_split)
-   apply (wpc|wp|clarsimp)+
-done
+  "\<lbrace>\<top>\<rbrace> createNewCaps ty ptr (Suc (length as)) us d \<lbrace>\<lambda>r s. (\<forall>cap\<in>set r. cap \<noteq> NullCap)\<rbrace>"
+  unfolding createNewCaps_def Arch_createNewCaps_def
+  by (wpsimp simp: Arch_createNewCaps_def split_del: if_split)
 
 lemma doMachineOp_psp_no_overlap:
   "\<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and> pspace_aligned' s \<and> pspace_distinct' s \<rbrace>
@@ -4102,7 +4088,7 @@ lemma no_overlap_check:
   "\<lbrakk>range_cover ptr sz bits n; pspace_no_overlap' ptr sz s;
     pspace_aligned' s;n\<noteq> 0\<rbrakk>
    \<Longrightarrow> case_option (return ())
-                   (case_prod (\<lambda>x xa. haskell_assert (x < fromPPtr ptr) []))
+                   (case_prod (\<lambda>x y. haskell_assert (x < fromPPtr ptr) []))
                    (fst (lookupAround2 (ptr + of_nat (shiftL n bits - Suc 0))
                                        (ksPSpace s))) s =
        return () s"
@@ -4295,6 +4281,7 @@ lemma createObjects_Cons:
            createObjects' (((1 + of_nat n) << (objBitsKO val + us)) + ptr)
                           (Suc 0) val us
         od) s"
+  supply option.case_cong_weak[cong]
   apply (clarsimp simp:createObjects'_def split_def bind_assoc)
   apply (subgoal_tac "is_aligned (((1::word32) + of_nat n << objBitsKO val + us) + ptr) (objBitsKO val + us)")
    prefer 2

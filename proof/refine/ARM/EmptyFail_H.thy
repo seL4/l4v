@@ -162,8 +162,11 @@ lemma ignoreFailure_empty_fail[intro!, wp, simp]:
   "empty_fail x \<Longrightarrow> empty_fail (ignoreFailure x)"
   by (simp add: ignoreFailure_def empty_fail_catch)
 
+context
+notes option.case_cong_weak[cong]
+begin
 crunch (empty_fail) empty_fail[intro!, wp, simp]: cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped, possibleSwitchTo, tcbSchedAppend
-(simp: Let_def)
+end
 
 crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
   (ignore_del: ThreadDecls_H.suspend)

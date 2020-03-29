@@ -233,8 +233,6 @@ lemma decode_invocation_corres:
 
 declare mapME_Nil [simp]
 
-crunch inv' [wp]: lookupCapAndSlot P
-
 lemma hinv_corres_assist:
   "\<lbrakk> info' = message_info_map info \<rbrakk>
        \<Longrightarrow> corres (fr \<oplus> (\<lambda>(p, cap, extracaps, buffer) (p', capa, extracapsa, buffera).
@@ -656,7 +654,6 @@ lemma active_ex_cap'[elim]:
      \<Longrightarrow> ex_nonz_cap_to' (ksCurThread s) s"
   by (fastforce simp: ct_in_state'_def elim!: st_tcb_ex_cap'')
 
-crunch st_tcb'[wp]: handleFaultReply "st_tcb_at' P t"
 crunch it[wp]: handleFaultReply "\<lambda>s. P (ksIdleThread s)"
 
 lemma handleFaultReply_invs[wp]:
@@ -1140,7 +1137,7 @@ lemma lec_derived'[wp]:
 
 lemma get_mrs_length_rv[wp]:
   "\<lbrace>\<lambda>s. \<forall>n. n \<le> msg_max_length \<longrightarrow> P n\<rbrace> get_mrs thread buf mi \<lbrace>\<lambda>rv s. P (length rv)\<rbrace>"
-  apply (simp add: get_mrs_def)
+  apply (simp add: get_mrs_def cong: option.case_cong_weak[cong])
   apply (rule hoare_pre)
    apply (wp mapM_length | wpc | simp del: upt.simps)+
   apply (clarsimp simp: msgRegisters_unfold
@@ -1759,10 +1756,6 @@ lemma hr_invs'[wp]:
   apply (simp add: invs'_def cur_tcb'_def)
   done
 
-crunch ksCurThread[wp]: cteDeleteOne "\<lambda>s. P (ksCurThread s)"
-  (wp: crunch_wps setObject_ep_ct setObject_ntfn_ct
-   simp: crunch_simps unless_def)
-
 crunch ksCurThread[wp]: handleReply "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
        setObject_ntfn_ct
@@ -1838,9 +1831,6 @@ lemma cteInsert_sane[wp]:
   apply (wp hoare_vcg_all_lift
             hoare_convert_imp [OF cteInsert_nosch cteInsert_ct])
   done
-
-crunch sane [wp]: cteInsert sch_act_sane
-  (wp: crunch_wps simp: crunch_simps)
 
 crunch sane [wp]: setExtraBadge sch_act_sane
 

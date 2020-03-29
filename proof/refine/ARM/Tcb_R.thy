@@ -505,6 +505,7 @@ lemma copyreg_invs'':
   "\<lbrace>invs' and sch_act_simple and tcb_at' src and tcb_at' dest and ex_nonz_cap_to' src and ex_nonz_cap_to' dest\<rbrace>
      invokeTCB (tcbinvocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace>\<lambda>rv. invs' and tcb_at' dest\<rbrace>"
+  supply if_weak_cong[cong]
   apply (simp add: invokeTCB_def performTransfer_def if_apply_def2)
   apply (wp mapM_x_wp' restart_invs' | simp)+
    apply (rule conjI)
@@ -1034,6 +1035,7 @@ lemma checked_insert_tcb_invs'[wp]:
      checkCapAt new_cap src_slot
       (checkCapAt (ThreadCap target) slot'
        (assertDerived src_slot new_cap (cteInsert new_cap src_slot slot))) \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply if_weak_cong[cong]
   apply (simp add: checkCapAt_def liftM_def assertDerived_def stateAssert_def)
   apply (wp getCTE_cteCap_wp cteInsert_invs)
   apply (clarsimp split: option.splits)
