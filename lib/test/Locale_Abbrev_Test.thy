@@ -5,7 +5,7 @@
  *)
 
 theory Locale_Abbrev_Test
- imports Locale_Abbrev
+ imports Lib.Locale_Abbrev
 begin
 
 section \<open>Examples for @{command locale_abbrev}/@{command revert_abbrev}\<close>
