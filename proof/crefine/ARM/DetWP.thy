@@ -60,7 +60,7 @@ lemma det_wp_getTCB [wp]:
   apply (rule det_wp_pre)
    apply (wp|wpc)+
   apply (clarsimp simp add: obj_at'_def projectKOs objBits_simps
-                      cong: conj_cong)
+                      cong: conj_cong option.case_cong)
   apply (simp add: lookupAround2_known1)
   apply (rule ps_clear_lookupAround2, assumption+)
     apply simp

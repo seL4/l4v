@@ -398,9 +398,10 @@ lemma lookup_fp_ccorres':
 
     have cap_get_tag_update_1:
       "\<And>f cap. cap_get_tag (cap_C.words_C_update (\<lambda>w. Arrays.update w (Suc 0) (f w)) cap) = cap_get_tag cap"
-      by (simp add: cap_get_tag_def)
+      by (simp add: cap_get_tag_def cong: if_cong)
 
     show ?case
+    supply if_cong[cong] option.case_cong[cong]
     apply (cinitlift cap_' bits_')
     apply (rename_tac cbits ccap)
     apply (elim conjE)
@@ -1881,6 +1882,7 @@ proof -
   (* FIXME indentation is wonky in this proof, fix will come in a future patch, hopefully when
      automatic indentation is improved *)
   show ?thesis
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: cptr_' msgInfo_')
      apply (simp add: catch_liftE_bindE unlessE_throw_catch_If
                       unifyFailure_catch_If catch_liftE
@@ -2699,6 +2701,7 @@ lemma fastpath_reply_recv_ccorres:
   show ?thesis
   using [[goals_limit = 1]]
   supply option.case_cong_weak[cong del]
+  supply if_cong[cong]
   apply (cinit lift: cptr_' msgInfo_')
      apply (simp add: catch_liftE_bindE unlessE_throw_catch_If
                       unifyFailure_catch_If catch_liftE
@@ -3494,9 +3497,13 @@ lemma setCTE_obj_at'_tcbIPCBuffer:
   unfolding setCTE_def
   by (rule setObject_cte_obj_at_tcb', simp+)
 
+context
+notes if_cong[cong]
+begin
 crunches cteInsert, asUser
   for obj_at'_tcbIPCBuffer[wp]: "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: setCTE_obj_at'_queued crunch_wps threadSet_obj_at'_really_strongest)
+end
 
 crunch ksReadyQueues_inv[wp]: cteInsert "\<lambda>s. P (ksReadyQueues s)"
   (wp: hoare_drop_imps)
@@ -3524,6 +3531,7 @@ lemma fastpath_callKernel_SysCall_corres:
                 and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
                 and (\<lambda>s. ksDomainTime s \<noteq> 0))
      (callKernel (SyscallEvent SysCall)) (fastpaths SysCall)"
+  supply if_cong[cong]
   apply (rule monadic_rewrite_introduce_alternative)
    apply (simp add: callKernel_def)
   apply (rule monadic_rewrite_imp)
@@ -4439,24 +4447,19 @@ lemma tcbSchedEnqueue_tcbIPCBuffer:
 crunch obj_at'_tcbIPCBuffer[wp]: rescheduleRequired "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps tcbSchedEnqueue_tcbIPCBuffer simp: rescheduleRequired_def)
 
+context
+notes if_cong[cong]
+begin
 crunch obj_at'_tcbIPCBuffer[wp]: setThreadState "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps threadSet_obj_at'_really_strongest)
-
-crunch obj_at'_tcbIPCBuffer[wp]: getCTE "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
-  (wp: setCTE_obj_at'_queued crunch_wps threadSet_obj_at'_really_strongest)
-
-crunch obj_at'_tcbIPCBuffer[wp]: emptySlot "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
-  (wp: crunch_wps)
-
-crunch obj_at'_tcbIPCBuffer[wp]: transferCapsToSlots "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
-  (wp: crunch_wps transferCapsToSlots_pres1 simp: crunch_simps ignore: constOnFailure)
-
-crunch obj_at'_tcbIPCBuffer[wp]: asUser "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
-  (wp: crunch_wps)
 
 crunch obj_at'_tcbIPCBuffer[wp]: handleFault "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps constOnFailure_wp tcbSchedEnqueue_tcbIPCBuffer threadSet_obj_at'_really_strongest
    simp: zipWithM_x_mapM)
+end
+
+crunch obj_at'_tcbIPCBuffer[wp]: emptySlot "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+  (wp: crunch_wps)
 
 lemma fastpath_callKernel_SysReplyRecv_corres:
   "monadic_rewrite True False
@@ -4465,6 +4468,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
      (callKernel (SyscallEvent SysReplyRecv)) (fastpaths SysReplyRecv)"
   including no_pre
   supply option.case_cong_weak[cong del]
+  supply if_cong[cong]
   apply (rule monadic_rewrite_introduce_alternative)
    apply (simp add: callKernel_def)
   apply (rule monadic_rewrite_imp)

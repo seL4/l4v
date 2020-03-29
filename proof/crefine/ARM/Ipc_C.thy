@@ -26,10 +26,6 @@ lemma replyFromKernel_success_empty:
   unfolding replyFromKernel_def replyFromKernel_success_empty_def
   by (simp add: setMRs_Nil submonad_asUser.fn_stateAssert)
 
-crunch valid_queues[wp]: handleFaultReply valid_queues
-
-crunch valid_queues'[wp]: handleFaultReply valid_queues'
-
 crunch sch_act_wf: handleFaultReply "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
 
 crunch valid_ipc_buffer_ptr' [wp]: copyMRs "valid_ipc_buffer_ptr' p"
@@ -1228,7 +1224,7 @@ lemma asUser_tcbFault_obj_at:
    \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadGet_wp)
-  apply simp
+  apply (simp cong: if_cong)
   done
 
 lemma asUser_atcbContext_obj_at:
@@ -3732,6 +3728,7 @@ lemma handleFaultReply_ccorres [corres]:
               msg \<leftarrow> getMRs s sb tag;
               handleFaultReply f r (msgLabel tag) msg
             od) (Call handleFaultReply_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (unfold K_def, rule ccorres_gen_asm)
   apply (rule monadic_rewrite_ccorres_assemble_nodrop[OF _ handleFaultReply',rotated], simp)
   apply (cinit lift: sender_' receiver_' simp: whileAnno_def)
@@ -3843,6 +3840,9 @@ lemma handleFaultReply_ccorres [corres]:
   apply (fastforce simp: seL4_Faults seL4_Arch_Faults)
   done
 
+context
+notes if_cong[cong]
+begin
 crunch tcbFault: emptySlot, tcbSchedEnqueue, rescheduleRequired
           "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
   (wp: threadSet_obj_at'_strongish crunch_wps
@@ -3851,13 +3851,14 @@ crunch tcbFault: emptySlot, tcbSchedEnqueue, rescheduleRequired
 crunch tcbFault: setThreadState, cancelAllIPC, cancelAllSignals
           "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
   (wp: threadSet_obj_at'_strongish crunch_wps)
+end
 
 lemma sbn_tcbFault:
   "\<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>
   setBoundNotification st t'
   \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>"
   apply (simp add: setBoundNotification_def)
-  apply (wp threadSet_obj_at' | simp)+
+  apply (wp threadSet_obj_at' | simp cong: if_cong)+
   done
 
 crunch tcbFault: unbindNotification, unbindMaybeNotification "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
@@ -3890,7 +3891,7 @@ proof (rule hoare_gen_asm, induct caps arbitrary: x mi destSlots)
 next
   case (Cons cp cps)
   show ?case using Cons.prems
-    by (wpsimp wp: Cons.hyps cteInsert_weak_cte_wp_at2 simp: Let_def split_def weak)
+    by (wpsimp wp: Cons.hyps cteInsert_weak_cte_wp_at2 simp: Let_def split_def weak cong: if_cong)
 qed
 
 lemma transferCaps_local_slots:
@@ -6192,6 +6193,7 @@ lemma receiveSignal_ccorres [corres]:
      (receiveSignal thread cap is_blocking)
      (Call receiveSignal_'proc)"
   unfolding K_def
+  supply if_cong[cong] option.case_cong[cong]
   apply (rule ccorres_gen_asm)
   apply (cinit lift: thread_' cap_' isBlocking_')
    apply (rule ccorres_pre_getNotification, rename_tac ntfn)

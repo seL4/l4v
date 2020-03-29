@@ -390,6 +390,7 @@ next
     note if_cong[cong]
     show ?case
       using ind.prems
+      supply option.case_cong[cong]
       apply -
       apply (rule iffD1 [OF ccorres_expand_while_iff])
       apply (subst resolveAddressBits.simps)

@@ -2018,12 +2018,10 @@ lemma ivc_label_flush_case:
   by (auto split: invocation_label.split arch_invocation_label.split)
 
 lemma injection_handler_whenE:
-  "injection_handler Inl (whenE a b)
-   = (if a then (injection_handler Inl b)
-      else (returnOk ()))"
+  "injection_handler Inl (whenE a b) = (if a then injection_handler Inl b else returnOk ())"
   apply (subst injection_handler_returnOk[symmetric])
-  apply (clarsimp simp:whenE_def injection_handler_def)
-  apply (fastforce simp:split:if_splits)
+  apply (clarsimp simp: whenE_def injection_handler_def cong: if_cong)
+  apply (fastforce split: if_splits)
   done
 
 lemma injection_handler_if_returnOk:
@@ -2215,6 +2213,7 @@ lemma decodeARMFrameInvocation_ccorres:
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMFrameInvocation_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' excaps_' cap_' buffer_'
                 simp: decodeARMMMUInvocation_def decodeARMPageFlush_def)
@@ -2753,7 +2752,7 @@ proof -
     using assms
     apply (subst AND_NOT_mask_plus_AND_mask_eq
       [where w = start,symmetric,where n = "pageBitsForSize a"])
-    apply (simp add:sign_simps page_base_def)
+    apply (simp add: page_base_def)
     apply (drule word_le_minus_mono_left[where x= "start && ~~ mask (pageBitsForSize a)"])
      apply (rule word_and_le2)
     apply (simp(no_asm_use), simp)

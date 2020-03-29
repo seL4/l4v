@@ -984,6 +984,7 @@ lemma getMRs_user_word:
       \<and> msgLength info \<le> msgMaxLength \<and> i >= scast n_msgRegisters\<rbrace>
   getMRs thread (Some buffer) info
   \<lbrace>\<lambda>xs. user_word_at (xs ! unat i) (buffer + (i * 4 + 4))\<rbrace>"
+  supply if_cong[cong]
   apply (rule hoare_assume_pre)
   apply (elim conjE)
   apply (thin_tac "valid_ipc_buffer_ptr' x y" for x y)

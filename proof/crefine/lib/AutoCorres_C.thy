@@ -34,11 +34,11 @@ The following setup restores the ordering from @{theory CRefine.Corres_C} for th
 the end of the @{attribute wp_comb} set.
 
 To ensure that we only have to do this once, we are careful to ensure that there is only
-one theory merge between AutoCorres and CRefine. We import @{theory CRefine.L4VerifiedLinks} into
+one theory merge between AutoCorres and CRefine. We import @{theory CBaseRefine.L4VerifiedLinks} into
 @{theory CRefine.AutoCorresModifiesProofs}, and import the latter here. This satisfies the
 dependencies from @{theory CRefine.AutoCorresModifiesProofs} to @{theory AutoCorres.AutoCorres}, and from
-this theory to @{theory CRefine.L4VerifiedLinks} and @{theory CRefine.Corres_C}, without duplicating
-theory merges. Finally, we list @{theory CRefine.L4VerifiedLinks} as a top-level theory in the
+this theory to @{theory CBaseRefine.L4VerifiedLinks} and @{theory CRefine.Corres_C}, without duplicating
+theory merges. Finally, we list @{theory CBaseRefine.L4VerifiedLinks} as a top-level theory in the
 CBaseRefine session, so that @{theory AutoCorres.AutoCorres} need not be processed in a CRefine
 session, but do not import @{theory AutoCorres.AutoCorres} into @{text CBaseRefine.Include_C}, since that would
 cause a redundant theory merge.

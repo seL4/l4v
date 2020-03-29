@@ -548,6 +548,7 @@ lemma sendFaultIPC_ccorres:
             \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr tptr})
       [] (sendFaultIPC tptr fault)
          (Call sendFaultIPC_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   supply Collect_const[simp del]
   apply (cinit lift: tptr_' cong: call_ignore_cong)
    apply (simp add: liftE_bindE del:Collect_const cong:call_ignore_cong)
@@ -722,6 +723,7 @@ lemma getMRs_length:
   "\<lbrace>\<lambda>s. msgLength mi \<le> 120\<rbrace> getMRs thread buffer mi
   \<lbrace>\<lambda>args s. if buffer = None then length args = min (unat n_msgRegisters) (unat (msgLength mi))
             else length args = unat (msgLength mi)\<rbrace>"
+  supply if_cong[cong]
   apply (cases buffer)
    apply (simp add: getMRs_def)
    apply (rule hoare_pre, wp)
@@ -1164,6 +1166,7 @@ lemma handleRecv_ccorres:
        []
        (handleRecv isBlocking)
        (Call handleRecv_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: isBlocking_')
    apply (rule ccorres_pre_getCurThread)
    apply (ctac)

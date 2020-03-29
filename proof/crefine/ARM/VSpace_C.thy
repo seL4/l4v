@@ -555,8 +555,9 @@ lemma generic_frame_cap_get_capFIsMapped_spec:
        Call generic_frame_cap_get_capFIsMapped_'proc
        \<lbrace>\<acute>ret__unsigned_long = (if generic_frame_cap_get_capFMappedASID_CL (cap_lift \<^bsup>s\<^esup>cap) \<noteq> 0 then 1 else 0)\<rbrace>"
   apply vcg
-  apply (clarsimp simp: generic_frame_cap_get_capFMappedASID_CL_def if_distrib [where f=scast])
-done
+  apply (clarsimp simp: generic_frame_cap_get_capFMappedASID_CL_def if_distrib [where f=scast]
+                  cong: if_cong)
+  done
 
 
 
@@ -1997,6 +1998,7 @@ lemma ccorres_return_void_C':
 lemma is_aligned_cache_preconds:
   "\<lbrakk>is_aligned rva n; n \<ge> 6\<rbrakk> \<Longrightarrow> rva \<le> rva + 0x3F \<and>
           addrFromPPtr rva \<le> addrFromPPtr rva + 0x3F \<and> rva && mask 5 = addrFromPPtr rva && mask 5"
+  supply if_cong[cong]
   apply (drule is_aligned_weaken, simp)
   apply (rule conjI)
    apply (drule is_aligned_no_overflow, simp, unat_arith)[1]
@@ -2752,6 +2754,7 @@ lemma makeUserPDE_spec:
        C_CL = 0,
        B_CL = iwb_from_cacheable  \<^bsup>s\<^esup>cacheable
     \<rparr>) \<rbrace>"
+  supply if_cong[cong]
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp:ap_from_vm_rights_mask split:if_splits)
   apply (intro conjI impI allI | clarsimp )+
