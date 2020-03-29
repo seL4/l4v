@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-theory Crunch_Test_Trace (* FIXME: not tested *)
+theory Crunch_Test_Trace
 imports
   Lib.Crunch_Instances_Trace
   Crunch_Test_Qualified_Trace
