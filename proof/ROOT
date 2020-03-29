@@ -89,25 +89,26 @@ session CRefineSyscall = CBaseRefine +
     "crefine/$L4V_ARCH/Syscall_C"
 *)
 
-session CRefine in "crefine/$L4V_ARCH" = CBaseRefine +
+session CRefine in "crefine" = CBaseRefine +
+  directories
+    "lib"
+    "$L4V_ARCH"
   theories [condition = "CREFINE_QUICK_AND_DIRTY", quick_and_dirty]
     "Refine_C"
   theories
     "Refine_C"
 
-session CBaseRefine in "crefine" = CSpec +
+session CBaseRefine in "crefine/base" = CSpec +
   sessions
     CLib
     Refine
     AutoCorres
-  directories
-    "lib"
   theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
     (* crefine/lib/AutoCorres_C explains why L4VerifiedLinks is included here. *)
-    "lib/L4VerifiedLinks"
+    "L4VerifiedLinks"
     "Include_C"
   theories
-    "lib/L4VerifiedLinks"
+    "L4VerifiedLinks"
     "Include_C"
 
 session AutoCorresCRefine in "crefine/autocorres-test" = CRefine +
