@@ -9,7 +9,7 @@ imports
   "AsmRefine.ProveGraphRefine"
   "CSpec.Substitute"
   "SEL4GlobalsSwap"
-  "SEL4SimplExport"
+  "SimplExport.SEL4SimplExport"
 begin
 
 \<comment>\<open> Name of the C function to investigate. \<close>
