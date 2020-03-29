@@ -6,7 +6,7 @@
 
 theory CLevityCatch
 imports
-  "../Include_C"
+  "CBaseRefine.Include_C"
   ArchMove_C
   "CLib.LemmaBucket_C"
   "Lib.LemmaBucket"

@@ -6,7 +6,7 @@
 
 theory AutoCorresModifiesProofs
 imports
-  "L4VerifiedLinks"
+  "CBaseRefine.L4VerifiedLinks"
   "CLib.SIMPL_Lemmas"
 begin
 
