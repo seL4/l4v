@@ -111,6 +111,8 @@ session CBaseRefine in "crefine" = CSpec +
     CLib
     Refine
     AutoCorres
+  directories
+    "lib"
   theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
     (* crefine/lib/AutoCorres_C explains why L4VerifiedLinks is included here. *)
     "lib/L4VerifiedLinks"
