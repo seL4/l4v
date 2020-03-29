@@ -1090,6 +1090,7 @@ proof -
 
   show ?thesis
   unfolding schedule_def
+  supply if_weak_cong[cong]
   apply (wp, wpc)
        \<comment> \<open>action = ResumeCurrentThread\<close>
       apply (wp)[1]
@@ -1965,6 +1966,7 @@ lemma copyreg_no_orphans:
      invokeTCB (tcbinvocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding invokeTCB_def performTransfer_def postModifyRegisters_def
+  supply if_weak_cong[cong]
   apply simp
   apply (wp hoare_vcg_if_lift static_imp_wp)
       apply (wp hoare_vcg_imp_lift' mapM_x_wp' asUser_no_orphans
