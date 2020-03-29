@@ -81,13 +81,13 @@ session AInvs in "invariant-abstract" = ASpec +
  * C Refinement proof.
  *)
 
-(* FIXME isa
-session CRefineSyscall = CBaseRefine +
+session CRefineSyscall in "crefine/intermediate" = CBaseRefine +
+  sessions
+    CRefine
   theories [condition = "CREFINE_QUICK_AND_DIRTY", quick_and_dirty]
-    "crefine/$L4V_ARCH/Syscall_C"
+    "Intermediate_C"
   theories
-    "crefine/$L4V_ARCH/Syscall_C"
-*)
+    "Intermediate_C"
 
 session CRefine in "crefine" = CBaseRefine +
   directories
