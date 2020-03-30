@@ -199,7 +199,9 @@ session Bisim in bisim = AInvs +
 (*
  * Binary Verification Input Step
 *)
-session SimplExportAndRefine in "asmrefine" = SimplExport +
+session SimplExportAndRefine in "asmrefine" = CSpec +
+  sessions
+    SimplExport
   theories
     "SEL4GraphRefine"
 
