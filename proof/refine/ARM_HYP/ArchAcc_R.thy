@@ -501,7 +501,7 @@ lemma addPAddr_mask_out:
   apply (subst is_aligned_add_or, assumption)
    apply (rule word_less_power_trans2; simp)
    apply unat_arith
-  apply (simp add: word_ao_dist is_aligned_neg_mask_eq)
+  apply (simp add: word_ao_dist)
   apply (subst mask_out_0; simp?)
   apply (rule word_less_power_trans2; simp)
   apply unat_arith
@@ -695,7 +695,6 @@ lemma no_fail_getPTE [wp]:
     apply simp
    apply (erule is_aligned_no_overflow)
   apply (clarsimp simp del: lookupAround2_same1)
-  apply (clarsimp split: option.split_asm simp: objBits_simps archObjSize_def)
   done
 
 lemma ko_at'_pt:

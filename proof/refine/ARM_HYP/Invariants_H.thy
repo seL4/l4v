@@ -521,7 +521,7 @@ where valid_cap'_def:
   | VCPUCap v \<Rightarrow> typ_at' (ArchT VCPUT) v s))"
 
 abbreviation (input)
-  valid_cap'_syn :: "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>' _" [60, 60] 61)
+  valid_cap'_syn :: "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>'' _" [60, 60] 61)
 where
   "s \<turnstile>' c \<equiv> valid_cap' c s"
 
@@ -1988,6 +1988,7 @@ lemma obj_at'_pspaceI:
 
 lemma cte_wp_at'_pspaceI:
   "\<lbrakk>cte_wp_at' P p s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> cte_wp_at' P p s'"
+  supply if_cong[cong]
   apply (clarsimp simp add: cte_wp_at'_def getObject_def)
   apply (drule equalityD2)
   apply (clarsimp simp: in_monad loadObject_cte gets_def
@@ -2064,11 +2065,11 @@ lemma valid_mdb'_pspaceI:
 
 lemma state_refs_of'_pspaceI:
   "P (state_refs_of' s) \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> P (state_refs_of' s')"
-  unfolding state_refs_of'_def ps_clear_def by simp
+  unfolding state_refs_of'_def ps_clear_def by (simp cong: option.case_cong)
 
 lemma state_hyp_refs_of'_pspaceI:
   "P (state_hyp_refs_of' s) \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> P (state_hyp_refs_of' s')"
-  unfolding state_hyp_refs_of'_def ps_clear_def by simp
+  unfolding state_hyp_refs_of'_def ps_clear_def by (simp cong: option.case_cong)
 
 lemma valid_pspace':
   "valid_pspace' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_pspace' s'"
@@ -2500,7 +2501,8 @@ lemma locateSlot_conv:
                                 isCNodeCap_def capUntypedPtr_def stateAssert_def
                                 bind_assoc exec_get locateSlotTCB_def
                                 objBits_simps
-                         split: zombie_type.split)
+                         split: zombie_type.split
+                         cong: option.case_cong)
   done
 
 lemma typ_at_tcb':
@@ -2664,7 +2666,7 @@ lemma typ_at_lift_valid_cap':
     apply (case_tac arch_capability,
            simp_all add: P [where P=id, simplified] page_table_at'_def
                          hoare_vcg_prop page_directory_at'_def All_less_Ball
-              split del: if_splits)
+              split del: if_split)
        apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped'
                  hoare_vcg_all_lift typ_at_lift_cte')+
   done
@@ -3020,7 +3022,7 @@ lemma valid_global_refs_update' [iff]:
 
 lemma valid_arch_state_update' [iff]:
   "valid_arch_state' (f s) = valid_arch_state' s"
-  by (simp add: valid_arch_state'_def arch)
+  by (simp add: valid_arch_state'_def arch cong: option.case_cong)
 
 lemma valid_idle_update' [iff]:
   "valid_idle' (f s) = valid_idle' s"

@@ -657,6 +657,7 @@ lemma timerTick_corres:
   "corres dc (cur_tcb and valid_sched)
              invs'
              timer_tick timerTick"
+  supply if_weak_cong[cong]
   apply (simp add: timerTick_def timer_tick_def)
   apply (simp add:thread_state_case_if threadState_case_if)
   apply (rule_tac Q="\<top> and (cur_tcb and valid_sched)" and Q'="\<top> and invs'" in corres_guard_imp)

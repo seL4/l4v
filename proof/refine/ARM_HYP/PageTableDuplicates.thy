@@ -15,7 +15,7 @@ lemma set_ntfn_valid_duplicate' [wp]:
   setNotification ep v  \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add:setNotification_def)
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
+                        projectKOs pspace_aligned'_def ps_clear_upd
                         objBits_def[symmetric] lookupAround2_char1
                  split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = v,simplified])
@@ -47,7 +47,7 @@ lemma setEP_valid_duplicates'[wp]:
   setEndpoint a b \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add:setEndpoint_def)
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
+                        projectKOs pspace_aligned'_def ps_clear_upd
                         objBits_def[symmetric] lookupAround2_char1
                  split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = b,simplified])
@@ -62,7 +62,7 @@ lemma setTCB_valid_duplicates'[wp]:
  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
   setObject a (tcb::tcb) \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
+                        projectKOs pspace_aligned'_def ps_clear_upd
                         objBits_def[symmetric] lookupAround2_char1
                  split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = tcb,simplified])
@@ -947,7 +947,7 @@ crunch valid_duplicates'[wp]:
 lemma setVCPU_valid_duplicates'[wp]:
  "setObject a (vcpu::vcpu) \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
+                        projectKOs pspace_aligned'_def ps_clear_upd
                         objBits_def[symmetric] lookupAround2_char1
                  split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = vcpu,simplified])
@@ -985,7 +985,7 @@ lemma set_asid_pool_valid_duplicates'[wp]:
   setObject a (pool::asidpool)
   \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
+                        projectKOs pspace_aligned'_def ps_clear_upd
                         objBits_def[symmetric] lookupAround2_char1
                  split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = pool,simplified])
@@ -1115,10 +1115,6 @@ crunch valid_duplicates'[wp]:
  flushPage "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch valid_duplicates'[wp]:
- findPDForASID "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps simp: crunch_simps unless_def)
-
 lemma lookupPTSlot_aligned:
   "\<lbrace>\<lambda>s. valid_objs' s \<and> vmsz_aligned' vptr sz \<and> sz \<noteq> ARMSuperSection\<rbrace>
    lookupPTSlot pd vptr
@@ -1163,15 +1159,11 @@ lemma flushPage_valid_arch_state'[wp]:
                    hoare_vcg_conj_lift
                    hoare_vcg_ex_lift
                    valid_case_option_post_wp'
-               simp:  crunch_simps unless_def)+
+               simp: crunch_simps unless_def
+               cong: option.case_cong_weak)+
   apply (rule_tac x=x in exI)
   apply (clarsimp split: option.splits)
   done
-
-crunch valid_arch_state'[wp]:
- flushPage valid_arch_state'
-  (wp: crunch_wps getHWASID_valid_arch' simp: crunch_simps unless_def
-   ignore: doMachineOp)
 
 crunch valid_arch_state'[wp]:
  flushTable "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
@@ -1235,7 +1227,7 @@ lemma setVCPU_nondup_obj[wp]:
    setObject a (vcpu::vcpu)
   \<lbrace>\<lambda>rv. ko_wp_at' nondup_obj p\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
+                        projectKOs pspace_aligned'_def ps_clear_upd
                         objBits_def[symmetric] lookupAround2_char1
                  split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = vcpu,simplified])
@@ -1262,9 +1254,8 @@ lemma unmapPageTable_valid_duplicates'[wp]:
   apply (rule hoare_pre)
    apply (simp add:unmapPageTable_def)
    apply (wp|wpc|simp)+
-      apply (wp storePDE_no_duplicates')+
-   apply simp
-  apply (simp add:pageTableMapped_def)
+    apply (wp storePDE_no_duplicates')+
+   apply (simp add:pageTableMapped_def)
    apply (wp getPDE_wp |wpc|simp)+
    apply (rule hoare_post_imp_R[where Q' = "\<lambda>r s. vs_valid_duplicates' (ksPSpace s)"])
     apply wp
@@ -1371,12 +1362,10 @@ lemma mapM_x_storePTE_invalid_whole:
   mapM_x (swp storePTE ARM_HYP_H.pte.InvalidPTE)
   [word , word + 2 ^ pte_bits .e. word + 2 ^ pt_bits - 1]
   \<lbrace>\<lambda>y s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (wp mapM_x_storePTE_update_helper
-    [where word = word and sz = ptBits and ptr = word])
-  apply (clarsimp simp:valid_cap'_def capAligned_def pageBits_def
-    ptBits_def is_aligned_neg_mask_eq objBits_simps
-    archObjSize_def)
-  apply (simp add:mask_def field_simps vspace_bits_defs is_aligned_neg_mask_eq')
+  apply (wp mapM_x_storePTE_update_helper[where word = word and sz = ptBits and ptr = word])
+  apply (clarsimp simp: valid_cap'_def capAligned_def pageBits_def
+                        ptBits_def objBits_simps archObjSize_def)
+  apply (simp add: mask_def field_simps vspace_bits_defs is_aligned_neg_mask_eq')
   done
 
 crunch valid_objs'[wp]:
@@ -1477,7 +1466,7 @@ lemma the_ith_mapM_x_reduce:
 
 lemma upto_enum_nat_Cons:
   "a \<le> b \<Longrightarrow> [a .e. b] = a # [Suc a .e. b]"
-  by (simp add: upt_rec)
+  by (simp add: upt_rec cong: if_weak_cong)
 
 lemma map_zip_the_i:
   "distinct xs \<Longrightarrow>
