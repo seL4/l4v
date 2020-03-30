@@ -237,6 +237,7 @@ lemma delete_asid_corresb:
     set_asid_pool_vspace_objs_unmap'
     invalidate_asid_entry_invalidates
     getASID_wp
+  notes if_weak_cong[cong] option.case_cong_weak[cong]
   shows
     "corres dc
           (invs and valid_etcbs and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0))
