@@ -624,7 +624,7 @@ lemma le_mask_eq: "x \<le> 2 ^ n - 1 \<Longrightarrow> x AND mask n = (x :: 'a :
                   simp del: word_of_int_numeral)
   apply (drule xtr6 [rotated])
   apply (rule int_mod_le)
-  apply (auto simp add : mod_pos_pos_trivial)
+  apply auto
   done
 
 lemma word_div_mult':
@@ -1014,6 +1014,7 @@ lemma kh0H_simps[simp]:
   "kh0H (init_global_pd + (ucast (y:: 12 word) << 2)) = global_pdH' init_global_pd (init_global_pd + (ucast (y:: 12 word) << 2))"
   "kh0H (Low_pt_ptr + (ucast (z:: 8 word) << 2)) = Low_ptH Low_pt_ptr (Low_pt_ptr + (ucast (z:: 8 word) << 2))"
   "kh0H (High_pt_ptr + (ucast (z:: 8 word) << 2)) = High_ptH High_pt_ptr (High_pt_ptr + (ucast (z:: 8 word) << 2))"
+  supply option.case_cong[cong]
       apply (clarsimp simp: kh0H_def option_update_range_def)
       apply fastforce
      apply (simp add:kh0H_def)
@@ -1286,6 +1287,7 @@ lemma map_to_ctes_kh0H:
           option_update_range High_tcb_cte \<circ>
           option_update_range idle_tcb_cte
           ) Map.empty"
+  supply option.case_cong[cong] if_cong[cong]
   supply objBits_defs[simp]
   apply (rule ext)
   apply (case_tac "kh0H x")
@@ -1572,6 +1574,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
   "map_to_ctes kh0H (idle_tcb_ptr + 0x20) = idle_tcb_cte (idle_tcb_ptr + 0x20)"
   "map_to_ctes kh0H (idle_tcb_ptr + 0x30) = idle_tcb_cte (idle_tcb_ptr + 0x30)"
   "map_to_ctes kh0H (idle_tcb_ptr + 0x40) = idle_tcb_cte (idle_tcb_ptr + 0x40)"
+  supply option.case_cong[cong] if_cong[cong]
      apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def)
      apply fastforce
     apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None)
@@ -1832,6 +1835,7 @@ lemma map_to_ctes_kh0H_dom:
              cnode_offs_range Silc_cnode_ptr \<union>
              cnode_offs_range High_cnode_ptr \<union>
              cnode_offs_range Low_cnode_ptr"
+  supply option.case_cong[cong] if_cong[cong]
   apply (rule equalityI)
    apply (simp add: map_to_ctes_kh0H dom_def)
    apply clarsimp
@@ -1928,6 +1932,7 @@ lemma s0H_pspace_distinct':
   notes pdeBits_def[simp] pteBits_def[simp] objBits_defs[simp]
   shows
   "pspace_distinct' s0H_internal"
+  supply option.case_cong[cong] if_cong[cong]
   apply (clarsimp simp: pspace_distinct'_def ps_clear_def)
   apply (rule disjointI)
   apply clarsimp
@@ -2052,7 +2057,8 @@ lemma kh0H_cnode_simps2[simp]:
   "kh0H (Low_cnode_ptr + 0x10 * (x && mask 10)) = Low_cte Low_cnode_ptr (Low_cnode_ptr + 0x10 * (x && mask 10))"
   "kh0H (High_cnode_ptr + 0x10 * (x && mask 10)) = High_cte High_cnode_ptr (High_cnode_ptr + 0x10 * (x && mask 10))"
   "kh0H (Silc_cnode_ptr + 0x10 * (x && mask 10)) = Silc_cte Silc_cnode_ptr (Silc_cnode_ptr + 0x10 * (x && mask 10))"
-   by (clarsimp simp: kh0H_def option_update_range_def cnode_offs_in_range' s0_ptrs_aligned kh0H_dom_distinct kh0H_dom_distinct2 not_in_range_None,
+  supply option.case_cong[cong] if_cong[cong]
+  by (clarsimp simp: kh0H_def option_update_range_def cnode_offs_in_range' s0_ptrs_aligned kh0H_dom_distinct kh0H_dom_distinct2 not_in_range_None,
          ((clarsimp simp: cnode_offs_in_range2 kh0H_dom_sets_distinct[THEN orthD1] not_in_range_None
         | clarsimp simp: cnode_offs_in_range2 kh0H_dom_sets_distinct[THEN orthD2] not_in_range_None)+),
             intro conjI,
@@ -2102,6 +2108,7 @@ lemma valid_caps_s0H[simp]:
   "valid_cap' (NotificationCap ntfn_ptr 0 False True) s0H_internal"
   "valid_cap' (ReplyCap Low_tcb_ptr True True) s0H_internal"
   "valid_cap' (ReplyCap High_tcb_ptr True True) s0H_internal"
+  supply option.case_cong[cong] if_cong[cong]
   apply (simp
         | simp add: valid_cap'_def s0H_internal_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject,
           intro conjI,
@@ -2175,7 +2182,7 @@ lemma s0H_valid_objs':
                                     High_domain_def maxDomain_def numDomains_def minBound_word
                                     High_mcp_def High_prio_def maxPriority_def numPriorities_def
                                     tcb_cte_cases_def High_capsH_def obj_at'_def projectKO_eq
-                                    project_inject ntfnH_def)
+                                    project_inject)
               apply (rule conjI)
                apply (simp add: is_aligned_def s0_ptr_defs objBitsKO_def)
               apply (rule pspace_distinctD'[OF _ s0H_pspace_distinct'])
@@ -2185,7 +2192,7 @@ lemma s0H_valid_objs':
                                    Low_mcp_def Low_prio_def maxPriority_def numPriorities_def
                                    tcb_cte_cases_def Low_capsH_def)
             apply (clarsimp simp: valid_obj'_def ntfnH_def valid_ntfn'_def obj_at'_def projectKO_eq
-                                  project_inject ntfnH_def)
+                                  project_inject)
             apply (rule conjI)
              apply (clarsimp simp: is_aligned_def s0_ptr_defs objBitsKO_def)
             apply (rule pspace_distinctD'[OF _ s0H_pspace_distinct'])
@@ -2454,6 +2461,7 @@ lemma sameRegionAs_s0H:
        p = High_cnode_ptr + 0x20 \<and> p' = High_tcb_ptr \<or>
        p = High_tcb_ptr + 0x10 \<and> p' = High_cnode_ptr + 0x30 \<or>
        p = High_cnode_ptr + 0x30 \<and> p' = High_tcb_ptr + 0x10)"
+  supply option.case_cong[cong] if_cong[cong]
   apply (frule_tac x=p in map_to_ctes_kh0H_SomeD)
   apply (elim disjE, simp_all)
           apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
@@ -2637,8 +2645,8 @@ lemma mdb_nextI:
 
 lemma s0H_valid_pspace':
   notes pdeBits_def[simp] pteBits_def[simp] objBits_defs[simp]
-  shows
-  "valid_pspace' s0H_internal"
+  shows "valid_pspace' s0H_internal"
+  supply option.case_cong[cong] if_cong[cong]
   apply (clarsimp simp: valid_pspace'_def s0H_pspace_distinct' s0H_valid_objs')
   apply (intro conjI)
     apply (clarsimp simp: pspace_aligned'_def)
@@ -2795,16 +2803,16 @@ end
 
 (* Instantiate the current, abstract domain scheduler into the
    concrete scheduler required for this example *)
-axiomatization newKSDomSchedInst where
+axiomatization  where
   newKSDomSched: "newKSDomSchedule = [(0,0xA), (1, 0xA)]"
 
-axiomatization newKSDomainTimeInst where
+axiomatization where
   newKSDomainTime: "newKSDomainTime = 5"
 
 (* kernel_data_refs is an undefined constant at the moment, and therefore
    cannot be referred to in valid_global_refs' and pspace_domain_valid.
    We use an axiomatization for the moment. *)
-axiomatization kernel_data_refs_valid where
+axiomatization  where
   kdr_valid_global_refs': "valid_global_refs' s0H_internal" and
   kdr_pspace_domain_valid: "pspace_domain_valid s0H_internal"
 
@@ -2814,6 +2822,7 @@ lemma s0H_invs:
   notes pdeBits_def[simp] pteBits_def[simp] objBits_defs[simp]
   shows
   "invs' s0H_internal"
+  supply option.case_cong[cong] if_cong[cong]
   apply (clarsimp simp: invs'_def valid_state'_def s0H_valid_pspace')
   apply (rule conjI)
    apply (clarsimp simp: sch_act_wf_def s0H_internal_def ct_in_state'_def st_tcb_at'_def obj_at'_def projectKO_eq project_inject objBitsKO_def s0_ptrs_aligned Low_tcbH_def)
@@ -2957,13 +2966,15 @@ lemma s0H_invs:
    apply (clarsimp simp: valid_irq_node'_def)
    apply (rule conjI)
     apply (clarsimp simp: s0H_internal_def is_aligned_def s0_ptr_defs)
-   apply (clarsimp simp: obj_at'_def projectKO_eq project_inject objBitsKO_def s0H_internal_def shiftl_t2n[where n=4, simplified, symmetric] kh0H_simps[simplified cte_level_bits_def])
+   apply (clarsimp simp: obj_at'_def projectKO_eq project_inject objBitsKO_def s0H_internal_def
+                         shiftl_t2n[where n=4, simplified, symmetric]
+                          kh0H_simps(1)[simplified cte_level_bits_def])
    apply (rule conjI)
     apply (rule is_aligned_add)
      apply (simp add: is_aligned_def s0_ptr_defs)
     apply (rule is_aligned_shift)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
-   apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])
+   apply (simp add: objBitsKO_def kh0H_simps(1)[simplified cte_level_bits_def])
   apply (rule conjI)
    apply (clarsimp simp: valid_irq_handlers'_def cteCaps_of_def ran_def)
    apply (drule_tac map_to_ctes_kh0H_SomeD)
@@ -3048,7 +3059,7 @@ lemma s0H_invs:
   apply (clarsimp simp: newKernelState_def newKSDomSched)
   apply (clarsimp simp: cur_tcb'_def obj_at'_def projectKO_eq project_inject s0H_internal_def objBitsKO_def s0_ptrs_aligned)
   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
-  apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])
+  apply (simp add: objBitsKO_def)
   done
 
 lemma kh0_pspace_dom:
@@ -3355,6 +3366,7 @@ definition
 
 lemma step_restrict_s0:
   "step_restrict s0"
+  supply option.case_cong[cong] if_cong[cong]
   apply (clarsimp simp: step_restrict_def has_srel_state_def)
   apply (rule_tac x="fst (fst s0H)" in exI)
   apply (rule_tac x="snd (fst s0H)" in exI)

@@ -181,6 +181,7 @@ lemma handleEvent_ccorres:
                (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
            (UNIV) []
            (handleEvent e) (callKernel_C_body_if e)"
+  supply option.case_cong[cong]
   apply (rule_tac r'="K dc \<currency> dc" and xf'="liftxf errstate id (K ()) ret__unsigned_long_'"
         in ccorres_rel_imp[rotated])
    apply (case_tac x, simp_all)[1]
@@ -290,9 +291,8 @@ lemma handleEvent_ccorres:
      apply (clarsimp simp: return_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
-  apply (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ isReply_def
+  apply (auto simp: ct_in_state'_def ct_not_ksQ isReply_def is_cap_fault_def
                     cfault_rel_def seL4_Fault_UnknownSyscall_lift seL4_Fault_UserException_lift
-                    is_cap_fault_def
               elim: pred_tcb'_weakenE st_tcb_ex_cap''
               dest: st_tcb_at_idle_thread' rf_sr_ksCurThread)
   \<comment> \<open>HypervisorEvent\<close>
@@ -453,7 +453,7 @@ lemma corres_dmo_getExMonitor_C:
           apply (clarsimp simp: getExMonitor_def machine_rest_lift_def NonDetMonad.bind_def gets_def get_def return_def modify_def put_def select_f_def)
          apply (clarsimp simp: getExMonitor_no_fail[simplified no_fail_def])
         apply (wp hoare_TrueI)+
-      apply (clarsimp simp: corres_gets rf_sr_def cstate_relation_def cmachine_state_relation_def Let_def)
+      apply (clarsimp simp: rf_sr_def cstate_relation_def cmachine_state_relation_def Let_def)
      apply (wp hoare_TrueI)+
   apply (rule TrueI conjI | clarsimp simp: getExMonitor_def machine_rest_lift_def NonDetMonad.bind_def gets_def get_def return_def modify_def put_def select_f_def)+
   done
@@ -473,7 +473,7 @@ lemma corres_dmo_setExMonitor_C:
           apply (clarsimp simp: setExMonitor_def machine_rest_lift_def NonDetMonad.bind_def gets_def get_def return_def modify_def put_def select_f_def)
          apply (clarsimp simp: setExMonitor_no_fail[simplified no_fail_def])
         apply (wp hoare_TrueI)+
-      apply (clarsimp simp: corres_gets rf_sr_def cstate_relation_def cmachine_state_relation_def Let_def)
+      apply (clarsimp simp: rf_sr_def cstate_relation_def cmachine_state_relation_def Let_def)
      apply (wp hoare_TrueI)+
   apply (rule TrueI conjI | clarsimp simp: setExMonitor_def machine_rest_lift_def NonDetMonad.bind_def gets_def get_def return_def modify_def put_def select_f_def)+
   done

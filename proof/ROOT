@@ -148,20 +148,20 @@ session InfoFlow in "infoflow" = Access +
   theories
     "InfoFlow_Image_Toplevel"
 
-session InfoFlowCBase in "infoflow/tools" = CRefine +
+session InfoFlowCBase in "infoflow/refine/base" = CRefine +
   sessions
     Refine
     Access
     InfoFlow
   theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
-    "../Include_IF_C"
+    "Include_IF_C"
   theories
-    "../Include_IF_C"
+    "Include_IF_C"
 
-session InfoFlowC = InfoFlowCBase +
+session InfoFlowC in "infoflow/refine" = InfoFlowCBase +
   theories
-    "infoflow/Noninterference_Refinement"
-    "infoflow/Example_Valid_StateH"
+    "Noninterference_Refinement"
+    "Example_Valid_StateH"
 
 (*
  * capDL
