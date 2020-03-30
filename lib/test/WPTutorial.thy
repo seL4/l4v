@@ -207,11 +207,23 @@ throwing the extra assumption away - supplying the wp rule hoare_drop_imps
 does this. There are standard sets of simp and wp rules which are frequently
 helpful to crunch, crunch_simps and crunch_wps, which contain the rules we
 added here.
+
+Finally, this proof needs to simplify the predicates underneath an
+@{text "if"}, which uses a congruence rule. The crunch command doesn't provide
+syntax for this and more rarely used simp and wp modifiers. We can still supply
+the necessary rules by putting the crunch command in a context block that declares
+those rules.
 \<close>
+
+context
+notes if_cong[cong]
+begin
 
 crunch machine_state_preserved:
   setup_reply_master, set_simple_ko
     "\<lambda>s. P (machine_state s)"
   (simp: split_def wp: crunch_wps)
+
+end
 
 end
