@@ -1327,6 +1327,7 @@ crunch cur' [wp]: invalidateASIDEntry cur_tcb'
 
 lemma invalidateASID_valid_arch_state [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> invalidateASIDEntry x \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  supply option.case_cong_weak[cong]
   apply (simp add: invalidateASID_def
                    invalidateASIDEntry_def invalidateHWASIDEntry_def)
   apply (wp | simp)+
@@ -2469,10 +2470,10 @@ lemma setCTE_vs_entry_align[wp]:
                  elim!: rsubst[where P=P])
   apply (drule(1) updateObject_cte_is_tcb_or_cte [OF _ refl, rotated])
   apply (elim exE conjE disjE)
-   apply (clarsimp simp: ps_clear_upd' objBits_simps
+   apply (clarsimp simp: ps_clear_upd objBits_simps
                          lookupAround2_char1)
    apply (simp add:vs_entry_align_def)
-  apply (clarsimp simp: ps_clear_upd' objBits_simps vs_entry_align_def)
+  apply (clarsimp simp: ps_clear_upd objBits_simps vs_entry_align_def)
   done
 
 lemma updateCap_vs_entry_align[wp]:
@@ -2622,8 +2623,6 @@ lemma pde_check_if_mapped_corres:
   apply simp
   done
 
-crunches do_machine_op, store_pte
-  for unique_table_refs[wp]: "\<lambda>s. (unique_table_refs (caps_of_state s))"
 crunch valid_asid_map[wp]: store_pte "valid_asid_map"
 
 lemma set_cap_pd_at_asid [wp]:
@@ -2666,7 +2665,7 @@ lemma setCTE_valid_duplicates'[wp]:
   setCTE p cte \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add:setCTE_def)
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
+                        projectKOs pspace_aligned'_def ps_clear_upd
                         objBits_def[symmetric] lookupAround2_char1
                  split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = cte,simplified])
@@ -3387,6 +3386,7 @@ crunches
 
 lemma vcpuSave_ksQ[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> vcpuSave param_a \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
+  supply option.case_cong_weak[cong]
   apply (wpsimp simp: vcpuSave_def modifyArchState_def armvVCPUSave_def | simp)+
   apply (rule_tac S="set gicIndices" in mapM_x_wp)
   apply wpsimp+
@@ -3591,7 +3591,7 @@ crunches
 
 lemma vcpuSave_valid_queues[wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> vcpuSave param_a \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wpsimp simp: vcpuSave_def armvVCPUSave_def wp: mapM_x_wp | simp)+
+  by (wpsimp simp: vcpuSave_def armvVCPUSave_def wp: mapM_x_wp cong: option.case_cong_weak | simp)+
 
 lemma vcpuSwitch_valid_queues[wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
@@ -3901,7 +3901,8 @@ lemma vcpuRestore_invs_no_cicd'[wp]:
 
 lemma vcpuSave_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> vcpuSave v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
-  by (wpsimp simp: vcpuSave_def armvVCPUSave_def wp: mapM_x_wp | assumption)+
+  by (wpsimp simp: vcpuSave_def armvVCPUSave_def wp: mapM_x_wp cong: option.case_cong_weak
+      | assumption)+
 
 lemma valid_arch_state'_armHSCurVCPU_update[simp]:
   "ko_wp_at' (is_vcpu' and hyp_live') v s \<Longrightarrow>
@@ -4882,7 +4883,7 @@ lemma setASIDPool_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
                         updateObject_default_def projectKOs objBits_simps
-                        in_magnitude_check state_refs_of'_def ps_clear_upd'
+                        in_magnitude_check state_refs_of'_def ps_clear_upd
                  elim!: rsubst[where P=P] intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
@@ -4892,7 +4893,7 @@ lemma setASIDPool_state_hyp_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
                         updateObject_default_def projectKOs objBits_simps
-                        in_magnitude_check state_hyp_refs_of'_def ps_clear_upd'
+                        in_magnitude_check state_hyp_refs_of'_def ps_clear_upd
                  elim!: rsubst[where P=P] intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)

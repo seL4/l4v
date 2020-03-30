@@ -924,7 +924,7 @@ proof -
   apply (frule_tac b=b and c=cte_level_bits in bin_to_bl_of_bl_eq)
     apply (fastforce simp: cte_level_bits_def objBits_defs)+
   apply (case_tac "b = [False, False, False]")
-   apply (simp add: is_aligned_neg_mask_eq)
+   apply simp
   apply (frule_tac b=b in bin_to_bl_of_bl_eq)
     apply (fastforce simp: tcb_cap_cases_length cte_level_bits_def objBits_defs)+
   apply (subgoal_tac "ksPSpace s' (cte_map (a, b)) = None")

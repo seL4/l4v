@@ -6694,12 +6694,16 @@ lemma vcpuFinalise_rvk_prog':
   "vcpuFinalise v \<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option capToRPO (cteCaps_of s x))\<rbrace>"
   by (wpsimp simp: cteCaps_of_def)
 
+context
+notes option.case_cong_weak[cong]
+begin
 crunch rvk_prog': finaliseCap
     "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps threadSet_ctesCaps_of getObject_inv
        loadObject_default_inv dissociateVCPUTCB_isFinal
    simp: crunch_simps o_def
    ignore: threadSet)
+end
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]
