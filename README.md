@@ -303,13 +303,3 @@ run
 
 in `l4v/` and open one of the files in `proof/invariant-abstract`.
 
-
-License
--------
-
-The files in this repository are released under standard open source
-licenses. Please see the individual file headers and
-[`LICENSE_GPLv2.txt`](LICENSE_GPLv2.txt) and
-[`LICENSE_BSD2.txt`](LICENSE_BSD2.txt) files for details.
-
-
