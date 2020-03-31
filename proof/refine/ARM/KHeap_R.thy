@@ -148,6 +148,9 @@ lemma updateObject_objBitsKO:
   apply (erule koType_objBitsKO)
   done
 
+lemmas tcbSlot_defs = tcbCTableSlot_def tcbVTableSlot_def tcbIPCBufferSlot_def
+                      tcbFaultHandlerSlot_def tcbTimeoutHandlerSlot_def
+
 lemma updateObject_cte_is_tcb_or_cte:
   fixes cte :: cte and ptr :: word32
   shows "\<lbrakk> fst (lookupAround2 p (ksPSpace s)) = Some (q, ko);
@@ -163,11 +166,9 @@ lemma updateObject_cte_is_tcb_or_cte:
                lookupAround2_char1
          split: kernel_object.splits)
   apply (subst(asm) in_magnitude_check3, simp+)
-   apply (simp add: in_monad tcbCTableSlot_def tcbVTableSlot_def
-                    tcbIPCBufferSlot_def
+   apply (simp add: in_monad tcbSlot_defs
              split: if_split_asm)
-  apply (simp add: in_monad tcbCTableSlot_def tcbVTableSlot_def
-                   tcbIPCBufferSlot_def
+  apply (simp add: in_monad tcbSlot_defs
             split: if_split_asm)
   done
 
@@ -628,7 +629,7 @@ lemma cte_wp_at_ctes_of:
    apply (simp add: ps_clear_def3 field_simps)
   apply (rule disjI2, rule exI[where x="(p - (p && ~~ mask 9))"])
   apply (clarsimp simp: ps_clear_def3[where na=9] is_aligned_mask
-                        word_bw_assocs)
+                        word_bw_assocs field_simps)
   done
 
 lemma tcb_cte_cases_small:
@@ -2043,11 +2044,12 @@ lemma set_ntfn_minor_invs': (* FIXME RT: needs statement update *)
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp add: invs'_def valid_state'_def cteCaps_of_def)
   apply (wp irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift,
-    simp_all add: o_def)
+            simp_all add: o_def)
+  sorry (* FIXME RT: replies_of' preservation
   apply (clarsimp elim!: rsubst[where P=sym_refs]
                  intro!: ext
                   dest!: obj_at_state_refs_ofD')+
-  sorry
+  *)
 
 lemma getEndpoint_wp:
   "\<lbrace>\<lambda>s. \<forall>ep. ko_at' ep e s \<longrightarrow> P ep s\<rbrace> getEndpoint e \<lbrace>P\<rbrace>"

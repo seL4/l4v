@@ -181,11 +181,11 @@ abbreviation scReplies_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> o
 
 definition
   tcb_cte_cases :: "word32 \<rightharpoonup> ((tcb \<Rightarrow> cte) \<times> ((cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb))" where
- "tcb_cte_cases \<equiv> [  0 \<mapsto> (tcbCTable, tcbCTable_update),
-                    16 \<mapsto> (tcbVTable, tcbVTable_update),
-                    32 \<mapsto> (tcbIPCBufferFrame, tcbIPCBufferFrame_update),
-                    48 \<mapsto> (tcbFaultHandler, tcbFaultHandler_update),
-                    64 \<mapsto> (tcbTimeoutHandler, tcbTimeoutHandler_update)
+ "tcb_cte_cases \<equiv> [    0 \<mapsto> (tcbCTable, tcbCTable_update),
+                    0x10 \<mapsto> (tcbVTable, tcbVTable_update),
+                    0x20 \<mapsto> (tcbIPCBufferFrame, tcbIPCBufferFrame_update),
+                    0x30 \<mapsto> (tcbFaultHandler, tcbFaultHandler_update),
+                    0x40 \<mapsto> (tcbTimeoutHandler, tcbTimeoutHandler_update)
                    ]"
 
 definition
@@ -254,10 +254,14 @@ definition list_refs_of_reply' :: "reply \<Rightarrow> ref_set" where
 abbreviation list_refs_of_replies_opt' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> ref_set option" where
   "list_refs_of_replies_opt' s \<equiv> replies_of' s ||> list_refs_of_reply'"
 
-(* FIXME RT: this may be a bit much, but we want the simplifier to see that it only depends
-             on ksPSpace etc. This may be one for the locale setup. Let's see how it goes. *)
+(* FIXME RT: move to Option_Monad? *)
+definition map_set :: "('a \<Rightarrow> 'b set option) \<Rightarrow> 'a \<Rightarrow> 'b set" where
+  "map_set f \<equiv> case_option {} id \<circ> f"
+
 abbreviation list_refs_of_replies' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> ref_set" where
-  "list_refs_of_replies' s \<equiv> case_option {} id o list_refs_of_replies_opt' s"
+  "list_refs_of_replies' s \<equiv> map_set (list_refs_of_replies_opt' s)"
+
+lemmas list_refs_of_replies'_def = map_set_def
 
 lemmas refs_of'_defs[simp] = refs_of_tcb'_def refs_of_ntfn'_def refs_of_sc'_def refs_of_reply'_def
 
@@ -1477,8 +1481,10 @@ lemma cte_at'_def:
 
 lemma tcb_cte_cases_simps[simp]:
   "tcb_cte_cases 0  = Some (tcbCTable, tcbCTable_update)"
-  "tcb_cte_cases 16 = Some (tcbVTable, tcbVTable_update)"
-  "tcb_cte_cases 32 = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
+  "tcb_cte_cases 0x10 = Some (tcbVTable, tcbVTable_update)"
+  "tcb_cte_cases 0x20 = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
+  "tcb_cte_cases 0x30 = Some (tcbFaultHandler, tcbFaultHandler_update)"
+  "tcb_cte_cases 0x40 = Some (tcbTimeoutHandler, tcbTimeoutHandler_update)"
   by (simp add: tcb_cte_cases_def)+
 
 lemmas refs_of'_simps[simp] = refs_of'_def[split_simps kernel_object.split]
