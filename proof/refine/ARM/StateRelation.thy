@@ -208,7 +208,7 @@ definition empty_refill :: Structures_A.refill where
   "empty_refill \<equiv> \<lparr> r_time = 0, r_amount = 0 \<rparr>"
 
 definition empty_refills :: "nat \<Rightarrow> nat \<Rightarrow> Structures_A.refill list" where
-  "empty_refills sz len =  replicate (2 ^ sz - len) empty_refill"
+  "empty_refills sz len =  replicate (max_num_refills sz - len) empty_refill"
 
 definition sc_relation ::
   "Structures_A.sched_context \<Rightarrow> nat \<Rightarrow> Structures_H.sched_context \<Rightarrow> bool" where
@@ -218,7 +218,7 @@ definition sc_relation ::
      sc_consumed sc = scConsumed sc' \<and>
      sc_tcb sc = scTCB sc' \<and>
      sc_ntfn sc = scNtfn sc' \<and>
-     sc_refills sc @ empty_refills sz (length (sc_refills sc)) = map refill_map (scRefills sc') \<and>
+     sc_refills sc @ empty_refills sz (size (sc_refills sc)) = map refill_map (scRefills sc') \<and>
      sc_refill_max sc = scRefillMax sc' \<and>
      sc_badge sc = scBadge sc' \<and>
      sc_yield_from sc = scYieldFrom sc'"
