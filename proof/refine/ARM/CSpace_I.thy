@@ -14,21 +14,8 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma capUntypedPtr_simps [simp]:
-  "capUntypedPtr (ThreadCap r) = r"
-  "capUntypedPtr (NotificationCap r badge a b) = r"
-  "capUntypedPtr (EndpointCap r badge a b c d) = r"
-  "capUntypedPtr (Zombie r bits n) = r"
-  "capUntypedPtr (ArchObjectCap x) = Arch.capUntypedPtr x"
-  "capUntypedPtr (UntypedCap d r n f) = r"
-  "capUntypedPtr (CNodeCap r n g n2) = r"
-  "capUntypedPtr (ReplyCap r m a) = r"
-  "Arch.capUntypedPtr (ARM_H.ASIDPoolCap r asid) = r"
-  "Arch.capUntypedPtr (ARM_H.PageCap d r rghts sz mapdata) = r"
-  "Arch.capUntypedPtr (ARM_H.PageTableCap r mapdata2) = r"
-  "Arch.capUntypedPtr (ARM_H.PageDirectoryCap r mapdata3) = r"
-  by (auto simp: capUntypedPtr_def
-                 ARM_H.capUntypedPtr_def)
+lemmas capUntypedPtr_simps[simp] = capUntypedPtr_def[split_simps capability.split]
+lemmas arch_capUntypedPtr_simps[simp] = ARM_H.capUntypedPtr_def[split_simps arch_capability.split]
 
 lemma rights_mask_map_UNIV [simp]:
   "rights_mask_map UNIV = allRights"
@@ -519,7 +506,6 @@ lemma isPhysicalCap[simp]:
   by (simp add: isPhysicalCap_def ARM_H.isPhysicalCap_def
          split: capability.split arch_capability.split)
 
-(* FIXME instead of a definition and then a simp rule in the simp set, we should use fun *)
 definition
   capMasterCap :: "capability \<Rightarrow> capability"
 where
@@ -528,7 +514,7 @@ where
  | NotificationCap ref bdg s r \<Rightarrow> NotificationCap ref 0 True True
  | CNodeCap ref bits gd gs \<Rightarrow> CNodeCap ref bits 0 0
  | ThreadCap ref \<Rightarrow> ThreadCap ref
- | ReplyCap ref master g \<Rightarrow> ReplyCap ref True True
+ | ReplyCap ref g \<Rightarrow> ReplyCap ref True
  | UntypedCap d ref n f \<Rightarrow> UntypedCap d ref n 0
  | ArchObjectCap acap \<Rightarrow> ArchObjectCap (case acap of
       PageCap d ref rghts sz mapdata \<Rightarrow>
@@ -542,29 +528,7 @@ where
     | _ \<Rightarrow> acap)
  | _ \<Rightarrow> cap"
 
-lemma capMasterCap_simps[simp]:
-  "capMasterCap (EndpointCap ref bdg s r g gr) = EndpointCap ref 0 True True True True"
-  "capMasterCap (NotificationCap ref bdg s r) = NotificationCap ref 0 True True"
-  "capMasterCap (CNodeCap ref bits gd gs) = CNodeCap ref bits 0 0"
-  "capMasterCap (ThreadCap ref) = ThreadCap ref"
-  "capMasterCap capability.NullCap = capability.NullCap"
-  "capMasterCap capability.DomainCap = capability.DomainCap"
-  "capMasterCap (capability.IRQHandlerCap irq) = capability.IRQHandlerCap irq"
-  "capMasterCap (capability.Zombie word zombie_type n) = capability.Zombie word zombie_type n"
-  "capMasterCap (capability.ArchObjectCap (arch_capability.ASIDPoolCap word1 word2)) =
-            capability.ArchObjectCap (arch_capability.ASIDPoolCap word1 0)"
-  "capMasterCap (capability.ArchObjectCap arch_capability.ASIDControlCap) =
-         capability.ArchObjectCap arch_capability.ASIDControlCap"
-  "capMasterCap (capability.ArchObjectCap (arch_capability.PageCap d word vmrights vmpage_size pdata)) =
-            capability.ArchObjectCap (arch_capability.PageCap d word VMReadWrite vmpage_size None)"
-  "capMasterCap (capability.ArchObjectCap (arch_capability.PageTableCap word ptdata)) =
-            capability.ArchObjectCap (arch_capability.PageTableCap word None)"
-  "capMasterCap (capability.ArchObjectCap (arch_capability.PageDirectoryCap word pddata)) =
-            capability.ArchObjectCap (arch_capability.PageDirectoryCap word None)"
-  "capMasterCap (capability.UntypedCap d word n f) = capability.UntypedCap d word n 0"
-  "capMasterCap capability.IRQControlCap = capability.IRQControlCap"
-  "capMasterCap (capability.ReplyCap word m g) = capability.ReplyCap word True True"
-  by (simp_all add: capMasterCap_def)
+lemmas capMasterCap_simps[simp] = capMasterCap_def[split_simps capability.split arch_capability.split]
 
 lemma capMasterCap_eqDs1:
   "capMasterCap cap = EndpointCap ref bdg s r g gr
@@ -577,6 +541,10 @@ lemma capMasterCap_eqDs1:
      \<Longrightarrow> gd = 0 \<and> gs = 0 \<and> (\<exists>gd gs. cap = CNodeCap ref bits gd gs)"
   "capMasterCap cap = ThreadCap ref
      \<Longrightarrow> cap = ThreadCap ref"
+  "capMasterCap cap = SchedContextCap ref n
+     \<Longrightarrow> cap =  SchedContextCap ref n"
+  "capMasterCap cap = SchedControlCap
+     \<Longrightarrow> cap = SchedControlCap"
   "capMasterCap cap = NullCap
      \<Longrightarrow> cap = NullCap"
   "capMasterCap cap = DomainCap
@@ -589,8 +557,8 @@ lemma capMasterCap_eqDs1:
      \<Longrightarrow> cap = Zombie ref tp n"
   "capMasterCap cap = UntypedCap d ref bits 0
      \<Longrightarrow> \<exists>f. cap = UntypedCap d ref bits f"
-  "capMasterCap cap = ReplyCap ref master g
-     \<Longrightarrow> master \<and> g \<and> (\<exists>master g. cap = ReplyCap ref master g)"
+  "capMasterCap cap = ReplyCap ref g
+     \<Longrightarrow> g \<and> (\<exists>g. cap = ReplyCap ref g)"
   "capMasterCap cap = ArchObjectCap (PageCap d ref rghts sz mapdata)
      \<Longrightarrow> rghts = VMReadWrite \<and> mapdata = None
           \<and> (\<exists>rghts mapdata. cap = ArchObjectCap (PageCap d ref rghts sz mapdata))"
@@ -622,11 +590,13 @@ lemma capBadge_simps[simp]:
  "capBadge (NotificationCap ref badge s r)    = Some badge"
  "capBadge (CNodeCap ref bits gd gs)          = None"
  "capBadge (ThreadCap ref)                    = None"
+ "capBadge (SchedContextCap ref n)            = None"
+ "capBadge (SchedControlCap)                  = None"
  "capBadge (Zombie ref b n)                   = None"
  "capBadge (ArchObjectCap cap)                = None"
  "capBadge (IRQControlCap)                    = None"
  "capBadge (IRQHandlerCap irq)                = None"
- "capBadge (ReplyCap tcb master g)            = None"
+ "capBadge (ReplyCap tcb g)                   = None"
   by (simp add: capBadge_def isCap_defs)+
 
 lemma capClass_Master:
@@ -650,6 +620,8 @@ lemma isCap_Master:
   "isCNodeCap (capMasterCap cap) = isCNodeCap cap"
   "isNotificationCap (capMasterCap cap) = isNotificationCap cap"
   "isEndpointCap (capMasterCap cap) = isEndpointCap cap"
+  "isSchedContextCap (capMasterCap cap) = isSchedContextCap cap"
+  "isSchedControlCap (capMasterCap cap) = isSchedControlCap cap"
   "isUntypedCap (capMasterCap cap) = isUntypedCap cap"
   "isReplyCap (capMasterCap cap) = isReplyCap cap"
   "isIRQControlCap (capMasterCap cap) = isIRQControlCap cap"
@@ -701,7 +673,7 @@ lemma sameRegionAs_def2:
            split del: if_split cong: if_cong)
   apply (clarsimp simp: capRange_def Let_def)
   apply (simp add: range_subset_eq2 cong: conj_cong)
-  by (simp add: conj_comms)
+  by (auto simp add: conj_comms)
 
 lemma sameObjectAs_def2:
  "sameObjectAs cap cap' = (\<lambda>cap cap'.
