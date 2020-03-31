@@ -7,8 +7,7 @@
 theory Invariants_H
 imports
   LevityCatch
-  "AInvs.Deterministic_AI"
-  "AInvs.AInvs"
+  "AInvs.ArchDetSchedSchedule_AI"
   "Lib.AddUpdSimps"
 begin
 
@@ -159,6 +158,27 @@ abbreviation
   "cte_at' \<equiv> cte_wp_at' \<top>"
 
 
+text \<open>Heap projections:\<close>
+abbreviation reply_of' :: "kernel_object \<Rightarrow> reply option" where
+  "reply_of' \<equiv> projectKO_opt"
+
+abbreviation replies_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> reply option" where
+  "replies_of' s \<equiv> ksPSpace s |> reply_of'"
+
+abbreviation replyNexts_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
+  "replyNexts_of s \<equiv> replies_of' s |> replyNext"
+
+abbreviation sc_of' :: "kernel_object \<Rightarrow> sched_context option" where
+  "sc_of' \<equiv> projectKO_opt"
+
+abbreviation scs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> sched_context option" where
+  "scs_of' s \<equiv> ksPSpace s |> sc_of'"
+
+abbreviation scReplies_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
+  "scReplies_of s \<equiv> scs_of' s |> scReply"
+
+
+
 definition
   tcb_cte_cases :: "word32 \<rightharpoonup> ((tcb \<Rightarrow> cte) \<times> ((cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb))" where
  "tcb_cte_cases \<equiv> [  0 \<mapsto> (tcbCTable, tcbCTable_update),
@@ -172,7 +192,9 @@ definition
   max_ipc_words :: word32 where
   "max_ipc_words \<equiv> capTransferDataSize + msgMaxLength + msgMaxExtraCaps + 2"
 
-definition tcb_st_refs_of' :: "thread_state \<Rightarrow> (word32 \<times> reftype) set" where
+type_synonym ref_set = "(obj_ref \<times> reftype) set"
+
+definition tcb_st_refs_of' :: "thread_state \<Rightarrow> ref_set" where
   "tcb_st_refs_of' z \<equiv> case z of
     Running                    => {}
   | Inactive                   => {}
@@ -186,51 +208,60 @@ definition tcb_st_refs_of' :: "thread_state \<Rightarrow> (word32 \<times> refty
 
 definition
   tcb_bound_refs' ::
-  "word32 option \<Rightarrow> word32 option \<Rightarrow> word32 option \<Rightarrow> (word32 \<times> reftype) set" where
+  "word32 option \<Rightarrow> word32 option \<Rightarrow> word32 option \<Rightarrow> ref_set" where
   "tcb_bound_refs' ntfn sc yt \<equiv> get_refs TCBBound ntfn
                                   \<union> get_refs TCBSchedContext sc
                                   \<union> get_refs TCBYieldTo yt"
 
-definition refs_of_tcb' :: "tcb \<Rightarrow> (obj_ref \<times> reftype) set" where
+definition refs_of_tcb' :: "tcb \<Rightarrow> ref_set" where
   "refs_of_tcb' tcb \<equiv>
      tcb_st_refs_of' (tcbState tcb)
        \<union> tcb_bound_refs' (tcbBoundNotification tcb) (tcbSchedContext tcb) (tcbYieldTo tcb)"
 
-definition ep_q_refs_of' :: "endpoint \<Rightarrow> (word32 \<times> reftype) set" where
+definition ep_q_refs_of' :: "endpoint \<Rightarrow> ref_set" where
   "ep_q_refs_of' x \<equiv> case x of
      IdleEP    => {}
    | (RecvEP q) => set q \<times> {EPRecv}
    | (SendEP q) => set q \<times> {EPSend}"
 
-definition ntfn_q_refs_of' :: "ntfn \<Rightarrow> (word32 \<times> reftype) set" where
+definition ntfn_q_refs_of' :: "ntfn \<Rightarrow> ref_set" where
   "ntfn_q_refs_of' x \<equiv> case x of
      IdleNtfn        => {}
    | (WaitingNtfn q) => set q \<times> {NTFNSignal}
    | (ActiveNtfn b)  => {}"
 
-definition ntfn_bound_refs' :: "word32 option \<Rightarrow> (word32 \<times> reftype) set" where
+definition ntfn_bound_refs' :: "word32 option \<Rightarrow> ref_set" where
   "ntfn_bound_refs' t \<equiv> set_option t \<times> {NTFNBound}"
 
-definition refs_of_ntfn' :: "notification \<Rightarrow> (obj_ref \<times> reftype) set" where
+definition refs_of_ntfn' :: "notification \<Rightarrow> ref_set" where
   "refs_of_ntfn' ntfn \<equiv> ntfn_q_refs_of' (ntfnObj ntfn)
                           \<union> get_refs NTFNBound (ntfnBoundTCB ntfn)
                           \<union> get_refs NTFNSchedContext (ntfnSc ntfn)"
 
-definition refs_of_sc' :: "sched_context \<Rightarrow> (obj_ref \<times> reftype) set" where
+definition refs_of_sc' :: "sched_context \<Rightarrow> ref_set" where
   "refs_of_sc' sc \<equiv> get_refs SCNtfn (scNtfn sc)
                           \<union> get_refs SCTcb (scTCB sc)
                           \<union> get_refs SCYieldFrom (scYieldFrom sc)
                           \<union> get_refs SCReply (scReply sc)"
 
-definition refs_of_reply' :: "reply \<Rightarrow> (obj_ref \<times> reftype) set" where
+definition refs_of_reply' :: "reply \<Rightarrow> ref_set" where
   "refs_of_reply' r \<equiv> get_refs ReplySchedContext (replySc r)
-                          \<union> get_refs ReplyTCB (replyTCB r)
-                          \<union> get_refs ReplyNext (replyNext r)
-                          \<union> get_refs ReplyPrev (replyPrev r)"
+                          \<union> get_refs ReplyTCB (replyTCB r)"
+
+definition list_refs_of_reply' :: "reply \<Rightarrow> ref_set" where
+  "list_refs_of_reply' r = get_refs ReplyNext (replyNext r) \<union> get_refs ReplyPrev (replyPrev r)"
+
+abbreviation list_refs_of_replies_opt' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> ref_set option" where
+  "list_refs_of_replies_opt' s \<equiv> replies_of' s ||> list_refs_of_reply'"
+
+(* FIXME RT: this may be a bit much, but we want the simplifier to see that it only depends
+             on ksPSpace etc. This may be one for the locale setup. Let's see how it goes. *)
+abbreviation list_refs_of_replies' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> ref_set" where
+  "list_refs_of_replies' s \<equiv> case_option {} id o list_refs_of_replies_opt' s"
 
 lemmas refs_of'_defs[simp] = refs_of_tcb'_def refs_of_ntfn'_def refs_of_sc'_def refs_of_reply'_def
 
-definition refs_of' :: "kernel_object \<Rightarrow> (word32 \<times> reftype) set" where
+definition refs_of' :: "kernel_object \<Rightarrow> ref_set" where
   "refs_of' x \<equiv> case x of
     (KOTCB tcb)           => refs_of_tcb' tcb
   | (KOCTE cte)           => {}
@@ -240,7 +271,7 @@ definition refs_of' :: "kernel_object \<Rightarrow> (word32 \<times> reftype) se
   | (KOReply r)           => refs_of_reply' r
   | _                     => {}"
 
-definition state_refs_of' :: "kernel_state \<Rightarrow> word32 \<Rightarrow> (word32 \<times> reftype) set" where
+definition state_refs_of' :: "kernel_state \<Rightarrow> word32 \<Rightarrow> ref_set" where
  "state_refs_of' s \<equiv> \<lambda>x. case ksPSpace s x of
                             None \<Rightarrow> {}
                           | Some ko \<Rightarrow>
@@ -967,7 +998,7 @@ definition
   "ct_idle_or_in_cur_domain' \<equiv> \<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow>
     ksCurThread s = ksIdleThread s \<or> tcb_in_cur_domain' (ksCurThread s) s"
 
-definition
+definition ct_in_state' :: "(thread_state \<Rightarrow> bool) \<Rightarrow> kernel_state \<Rightarrow> bool" where
  "ct_in_state' test \<equiv> \<lambda>s. st_tcb_at' test (ksCurThread s) s"
 
 definition
@@ -1169,6 +1200,7 @@ definition
 where
   "valid_state' \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
                       \<and> valid_queues s \<and> sym_refs (state_refs_of' s)
+                      \<and> sym_refs (list_refs_of_replies' s)
                       \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
                       \<and> valid_idle' s
                       \<and> valid_global_refs' s \<and> valid_arch_state' s
@@ -1244,7 +1276,8 @@ abbreviation
 abbreviation(input)
  "all_invs_but_sym_refs_ct_not_inQ'
     \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-           \<and> valid_queues s \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
+           \<and> valid_queues s \<and> sym_refs (list_refs_of_replies' s)
+           \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
            \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
@@ -1257,6 +1290,7 @@ abbreviation(input)
  "all_invs_but_ct_not_inQ'
     \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
            \<and> valid_queues s \<and> sym_refs (state_refs_of' s)
+           \<and> sym_refs (list_refs_of_replies' s)
            \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
@@ -1278,6 +1312,7 @@ definition
   "all_invs_but_ct_idle_or_in_cur_domain'
     \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
            \<and> valid_queues s \<and> sym_refs (state_refs_of' s)
+           \<and> sym_refs (list_refs_of_replies' s)
            \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
@@ -1764,7 +1799,7 @@ lemma cte_wp_at'_pspaceI:
   apply (clarsimp simp: in_monad return_def alignError_def fail_def assert_opt_def
                         alignCheck_def bind_def when_def
                         objBits_cte_conv tcbCTableSlot_def tcbVTableSlot_def
-                        cteSizeBits_def
+                        cteSizeBits_def tcbIPCBufferSlot_def tcbFaultHandlerSlot_def
                  split: if_split_asm
                  dest!: singleton_in_magnitude_check)
   done
@@ -2127,8 +2162,8 @@ lemma cte_wp_at_cases':
                erule rsubst[where P="\<lambda>x. ksPSpace s x = v" for s v],
                fastforce simp add: field_simps, simp)+
    apply (subst(asm) in_magnitude_check3, simp+)
-   apply (simp split: if_split_asm)
   sorry (* FIXME RT: statement should still be true, possibly just more cases in tcb_cte_cases
+   apply (simp split: if_split_asm)
   apply (simp add: cte_wp_at'_def getObject_def split_def
                    bind_def simpler_gets_def return_def
                    assert_opt_def fail_def objBits_simps'
@@ -2418,7 +2453,7 @@ lemma typ_at_lift_valid_cap':
     apply (case_tac arch_capability,
            simp_all add: P [where P=id, simplified] page_table_at'_def
                          hoare_vcg_prop page_directory_at'_def All_less_Ball
-              split del: if_splits)
+              split del: if_split)
        apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped'
                  hoare_vcg_all_lift typ_at_lift_cte')+
   sorry (* FIXME RT: probably needs lemmas for obj_at' / typ_at' relationship for Reply and SchedContext *)

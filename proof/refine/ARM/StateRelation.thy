@@ -394,38 +394,6 @@ lemma is_other_obj_relation_type:
   by (simp add: obj_relation_cuts_def3 is_other_obj_relation_type_def
          split: a_type.splits aa_type.splits)
 
-primrec
-  reply_stack_relation :: "obj_ref list \<Rightarrow> obj_ref option \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
-  "reply_stack_relation [] start next = (start = None)"
-| "reply_stack_relation (x#xs) start next = (start = Some x \<and> reply_stack_relation xs (next x) next)"
-
-definition
-  sc_replies_relation ::
-  "(obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
-  "sc_replies_relation sc_repls scRepl replNexts \<equiv>
-     \<forall>p replies. sc_repls p = Some replies \<longrightarrow> reply_stack_relation replies (scRepl p) replNexts"
-
-
-abbreviation reply_of' :: "kernel_object \<Rightarrow> reply option" where
-  "reply_of' \<equiv> projectKO_opt"
-
-abbreviation replies_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> reply option" where
-  "replies_of' s \<equiv> ksPSpace s |> reply_of'"
-
-abbreviation replyNexts_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
-  "replyNexts_of s \<equiv> replies_of' s |> replyNext"
-
-abbreviation sc_of' :: "kernel_object \<Rightarrow> sched_context option" where
-  "sc_of' \<equiv> projectKO_opt"
-
-abbreviation scs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> sched_context option" where
-  "scs_of' s \<equiv> ksPSpace s |> sc_of'"
-
-abbreviation scReplies_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
-  "scReplies_of s \<equiv> scs_of' s |> scReply"
-
-(* FIXME RT: pull into pspace_relation *)
-
 definition
   pspace_dom :: "Structures_A.kheap \<Rightarrow> word32 set"
 where
@@ -438,6 +406,24 @@ where
   (pspace_dom ab = dom con) \<and>
   (\<forall>x \<in> dom ab. \<forall>(y, P) \<in> obj_relation_cuts (the (ab x)) x.
        P (the (ab x)) (the (con y)))"
+
+
+primrec
+  reply_stack_relation :: "obj_ref list \<Rightarrow> obj_ref option \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
+  "reply_stack_relation [] start next = (start = None)"
+| "reply_stack_relation (x#xs) start next = (start = Some x \<and> reply_stack_relation xs (next x) next)"
+
+definition
+  sc_replies_relation_2 ::
+  "(obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
+  "sc_replies_relation_2 sc_repls scRepl replNexts \<equiv>
+     \<forall>p replies. sc_repls p = Some replies \<longrightarrow> reply_stack_relation replies (scRepl p) replNexts"
+
+abbreviation sc_replies_relation :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "sc_replies_relation s s' \<equiv>
+    sc_replies_relation_2 (sc_replies_of s) (scReplies_of s') (replyNexts_of s')"
+
+lemmas sc_replies_relation_def = sc_replies_relation_2_def
 
 primrec
   sched_act_relation :: "Structures_A.scheduler_action \<Rightarrow> Structures_H.scheduler_action \<Rightarrow> bool"
@@ -613,6 +599,7 @@ definition
 where
  "state_relation \<equiv> {(s, s').
          pspace_relation (kheap s) (ksPSpace s')
+       \<and> sc_replies_relation s s'
        \<and> sched_act_relation (scheduler_action s) (ksSchedulerAction s')
        \<and> ready_queues_relation (ready_queues s) (ksReadyQueues s')
        \<and> ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')
