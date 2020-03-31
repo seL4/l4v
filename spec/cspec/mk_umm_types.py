@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
@@ -43,7 +43,7 @@ parser.add_argument('--root', metavar='ROOT', type=str,
 args = parser.parse_args()
 
 if "ISABELLE_PROCESS" not in os.environ or "ISABELLE_TOOL" not in os.environ:
-    print "Run this from within 'isabelle env'."
+    print("Run this from within 'isabelle env'.")
     sys.exit(1)
 
 THY_DATA = """
@@ -79,7 +79,7 @@ with TempDir() as tmp_dir:
             result.append(a)
             result.append(x)
         return result
-    print "\nGenerating umm_types data file...\n"
+    print("\nGenerating umm_types data file...\n")
     subprocess.check_call([
         os.environ["ISABELLE_TOOL"], "build", "-c"]
         + interleave("-d", [os.path.abspath(x) for x in args.root])

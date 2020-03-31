@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
@@ -39,7 +39,7 @@ try:
 except ImportError:
     print("Error: 'psutil' module not available. Run\n"
           "\n"
-          "    pip install --user psutil\n"
+          "    pip3 install --user psutil\n"
           "\n"
           "to install.", file=sys.stderr)
     sys.exit(1)

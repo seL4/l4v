@@ -21,7 +21,7 @@ tests/ROOT: \
 		tests/examples/*.c \
 		tests/examples/*.thy \
 		../../misc/scripts/gen_isabelle_root.py
-	python ../../misc/scripts/gen_isabelle_root.py -o $@ -b AutoCorres -s AutoCorresTest -d HOL-Number_Theory \
+	python3 ../../misc/scripts/gen_isabelle_root.py -o $@ -b AutoCorres -s AutoCorresTest -d HOL-Number_Theory \
 		-i tests/parse-tests -i tests/proof-tests -i tests/examples --quick-and-dirty
 
 # Generate a Isabelle "All.thy" file containing imports to all the test cases.
@@ -34,7 +34,7 @@ tests/All.thy: \
 		tests/examples/*.c \
 		tests/examples/*.thy \
 		../../misc/scripts/gen_isabelle_root.py
-	python ../../misc/scripts/gen_isabelle_root.py -T -o $@ \
+	python3 ../../misc/scripts/gen_isabelle_root.py -T -o $@ \
 		-i tests/parse-tests -i tests/proof-tests -i tests/examples
 
 # Generate a template ".thy" file from a ".c" file.
