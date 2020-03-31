@@ -378,6 +378,16 @@ lemma arch_perform_invocation_cur_sc_more_than_ready [wp, DetSchedSchedule_AI_as
   unfolding arch_perform_invocation_def
   by (cases iv; wpsimp)
 
+lemma perform_asid_control_invocation_cur_sc_in_release_q_imp_zero_consumed [wp]:
+  "perform_asid_control_invocation iv \<lbrace>cur_sc_in_release_q_imp_zero_consumed\<rbrace>"
+  unfolding perform_asid_control_invocation_def
+  by (wpsimp wp: hoare_drop_imp)
+
+lemma arch_perform_invocation_cur_sc_in_release_q_imp_zero_consumed [wp, DetSchedSchedule_AI_assms]:
+  "arch_perform_invocation iv \<lbrace>cur_sc_in_release_q_imp_zero_consumed\<rbrace>"
+  unfolding arch_perform_invocation_def
+  by (cases iv; wpsimp wp: hoare_drop_imps)
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI

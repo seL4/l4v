@@ -3169,12 +3169,6 @@ lemmas scheduler_act_not_def = scheduler_act_not_2_def
 abbreviation ct_in_state' :: "_ \<Rightarrow> 'z state \<Rightarrow> bool" where
   "ct_in_state' P s \<equiv> pred_map P (tcb_sts_of s) (cur_thread s)"
 
-definition valid_reply_scs where
-  "valid_reply_scs \<equiv> \<lambda>s. (\<forall>a r. reply_tcb_reply_at (\<lambda>ropt. ropt = Some a) r s
-                               \<longrightarrow> (bound_sc_tcb_at (\<lambda>a. a = None) a s \<or> active_sc_tcb_at a s)) \<and>
-                         (\<forall>scptr r. reply_sc_reply_at (\<lambda>scopt. scopt = Some scptr) r s
-                               \<longrightarrow> is_sc_active scptr s)"
-
 (* next_thread *)
 definition next_thread where
   "next_thread queues \<equiv> (hd (max_non_empty_queue queues))"
@@ -3639,16 +3633,6 @@ lemma valid_sched_lift_pre_conj:
                    active_reply_scs_lift_pre_conj hoare_vcg_all_lift hoare_vcg_imp_lift)
 
 lemmas valid_sched_lift = valid_sched_lift_pre_conj[where R = \<top>, simplified]
-
-lemma valid_reply_scs_lift:
-  assumes A: "\<And>b c. f \<lbrace>\<lambda>s. \<not> reply_at_ppred reply_tcb b c s\<rbrace>"
-  assumes D: "\<And>b c. f \<lbrace>\<lambda>s. \<not> reply_at_ppred reply_sc b c s\<rbrace>"
-  assumes B: "\<And>P t. f \<lbrace>bound_sc_tcb_at P t\<rbrace>"
-  assumes C: "\<And>t. f \<lbrace>active_sc_tcb_at t\<rbrace>"
-  assumes E: "\<And>c. f \<lbrace>\<lambda>s. is_sc_active c s\<rbrace>"
-  shows "f \<lbrace>valid_reply_scs\<rbrace>"
-  unfolding valid_reply_scs_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_disj_lift A B C D E)
 
 (* This predicate declares that the current thread has a scheduling context that is
     active, ready and sufficient. *)

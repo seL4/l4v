@@ -1333,9 +1333,9 @@ lemma ready_or_release_machine_state_update[simp]:
   "ready_or_release (s\<lparr>machine_state := param_a\<rparr>) = ready_or_release s"
   by (clarsimp simp: ready_or_release_def)
 
-lemma valid_reply_scs_machine_state_update[simp]:
-  "valid_reply_scs (s\<lparr>machine_state := param_a\<rparr>) = valid_reply_scs s"
-  by (clarsimp simp: valid_reply_scs_def)
+lemma active_reply_scs_machine_state_update[simp]:
+  "active_reply_scs (s\<lparr>machine_state := param_a\<rparr>) = active_reply_scs s"
+  by clarsimp
 
 lemma valid_refills_def2:
   "valid_refills scp s = (\<exists>sc n. kheap s scp = Some (SchedContext sc n) \<and> sc_valid_refills sc)"
