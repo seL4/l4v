@@ -592,8 +592,7 @@ where
 definition
   valid_refills_number :: "nat \<Rightarrow> nat \<Rightarrow> bool"
 where
-  "valid_refills_number mrefills n \<equiv>
-    mrefills \<le> (nat (1 << n) - core_sched_context_bytes) div refill_size_bytes + MIN_REFILLS"
+  "valid_refills_number mrefills n \<equiv> mrefills \<le> max_num_refills n + MIN_REFILLS"
 
 primrec
   valid_sched_control_inv :: "sched_control_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -2289,6 +2288,20 @@ lemma decode_sched_context_inv_wf:
                         sc_yf_sc_at_def)
   done
 
+lemma unat_MIN_REFILLS:
+  "unat (MIN_REFILLS::machine_word) = MIN_REFILLS"
+  by (simp add: MIN_REFILLS_def)
+
+lemma max_num_refills:
+  "\<lbrakk> unat extra_refills \<le> max_num_refills sz; MIN_REFILLS \<le> unat (extra_refills + MIN_REFILLS);
+     valid_sched_context_size sz \<rbrakk>
+   \<Longrightarrow> unat (extra_refills + MIN_REFILLS) \<le> max_num_refills sz + MIN_REFILLS"
+  for extra_refills :: machine_word
+  apply (subst unat_add_simple)
+   apply (metis Groups.add_ac(2) no_olen_add_nat unat_MIN_REFILLS word_bits_def word_le_nat_alt)
+  apply (simp add: unat_MIN_REFILLS)
+  done
+
 lemma decode_sched_control_inv_wf:
   "\<lbrace>invs and
      (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x) and
@@ -2305,10 +2318,10 @@ lemma decode_sched_control_inv_wf:
    apply (drule hd_in_set, simp)
   apply (clarsimp simp add: valid_cap_def obj_at_def is_sc_obj_def split: cap.split_asm)
   apply (case_tac ko; simp)
-  apply (clarsimp simp: valid_refills_number_def refill_absolute_max_def MIN_REFILLS_def
+  apply (clarsimp simp: valid_refills_number_def max_refills_cap_def
                         us_to_ticks_mono[simplified mono_def] MIN_SC_BUDGET_def
                         MIN_SC_BUDGET_US_def MIN_BUDGET_def MIN_BUDGET_US_def
-                        ARM.kernelWCET_ticks_def)
-  by fastforce
+                        ARM.kernelWCET_ticks_def not_less max_num_refills)
+  done
 
 end

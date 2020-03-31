@@ -95,12 +95,9 @@ where
   od"
 
 definition
-  refill_absolute_max :: "cap \<Rightarrow> nat"
+  max_refills_cap :: "cap \<Rightarrow> nat"
 where
-  "refill_absolute_max cap =
-    (case cap of SchedContextCap _ sc \<Rightarrow>
-        (nat (1 << sc) - core_sched_context_bytes) div refill_size_bytes + MIN_REFILLS
-    | _ \<Rightarrow> 0) "
+  "max_refills_cap cap \<equiv> case cap of SchedContextCap _ sz \<Rightarrow> max_num_refills sz | _ \<Rightarrow> 0"
 
 definition
   set_refills :: "obj_ref \<Rightarrow> refill list \<Rightarrow> (unit, 'z::state_ext) s_monad"

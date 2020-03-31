@@ -487,7 +487,9 @@ lemma MIN_BUDGET_pos: "0 < MIN_BUDGET" using MIN_BUDGET_def ARM.kernelWCET_ticks
 definition "min_sched_context_bits = 8"
 definition "core_sched_context_bytes = (10 * 4 + (6 * 8))" (* RT *)
 definition "refill_size_bytes = 2 * 8"
-definition "max_extra_refills sz = ((1 << sz) - core_sched_context_bytes) / refill_size_bytes"
+
+definition max_num_refills :: "nat \<Rightarrow> nat" where
+  "max_num_refills sz = ((2 ^ sz) - core_sched_context_bytes) div refill_size_bytes"
 
 definition
   default_sched_context :: sched_context where
