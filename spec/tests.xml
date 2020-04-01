@@ -22,10 +22,9 @@
 
     <set depends="isabelle Lib">
         <!-- Various seL4 specifications. -->
-        <test name="design-spec" depends="haskell-translator">make design-spec</test>
         <test name="TakeGrant">make TakeGrant</test>
 
-        <set depends="design-spec">
+        <set depends="haskell-translator">
             <test name="ASpec">make ASpec</test>
             <test name="ExecSpec">make ExecSpec</test>
             <test name="DSpec">make DSpec</test>
