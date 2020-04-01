@@ -11,7 +11,6 @@
 theory CSpace1_R
 imports
   CSpace_I
-  "AInvs.ArchDetSchedSchedule_AI"
 begin
 
 context Arch begin global_naming ARM_A (*FIXME: arch_split*)
@@ -145,26 +144,18 @@ lemma obj_size_relation:
                   pageBits_def ptBits_def pteBits_def pdBits_def pdeBits_def)
   done
 
+(* FIXME RT: move up *)
+lemmas bits_of_simps[simp] = bits_of_def[split_simps cap.split]
+
 lemma same_region_as_relation:
-    "\<lbrakk> cap_relation c d; cap_relation c' d' \<rbrakk> \<Longrightarrow>
-  same_region_as c c' = sameRegionAs d d'"
+  "\<lbrakk> cap_relation c d; cap_relation c' d' \<rbrakk> \<Longrightarrow> same_region_as c c' = sameRegionAs d d'"
   apply (cases c)
-            apply clarsimp
-           apply (clarsimp simp: sameRegionAs_def isCap_simps Let_def is_phyiscal_relation)
-           apply (auto simp: obj_ref_of_relation obj_size_relation cong: conj_cong)[1]
-          apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def)[1]
-         apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def)[1]
-        apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def)[1]
-       apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def bits_of_def)[1]
-      apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def)[1]
-     apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def)[1]
-    apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def)[1]
-   apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def)[1]
-   apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def)[1]
-  apply simp
-  apply (cases c')
-  apply (clarsimp simp: same_arch_region_as_relation|
-         clarsimp simp: sameRegionAs_def isCap_simps Let_def)+
+               apply clarsimp
+              apply (clarsimp simp: sameRegionAs_def isCap_simps Let_def is_phyiscal_relation)
+              apply (auto simp: obj_ref_of_relation obj_size_relation cong: conj_cong)[1]
+             apply ((cases c', auto simp: sameRegionAs_def isCap_simps Let_def)+)[11]
+  apply (cases c'; (clarsimp simp: same_arch_region_as_relation|
+                      clarsimp simp: sameRegionAs_def isCap_simps Let_def)+)
   done
 
 lemma can_be_is:
@@ -365,8 +356,7 @@ proof (induct rule: resolveAddressBits.induct)
     apply (elim exE conjE)
     apply (simp only: split: if_split_asm)
      apply (clarsimp simp: in_monad locateSlot_conv stateAssert_def)
-     apply (cases cap)
-       apply (simp_all add: isCap_defs)[12]
+     apply (cases cap; simp add: isCap_defs)
      apply (clarsimp simp add: valid_cap'_def objBits_simps' cte_level_bits_def
                         split: option.split_asm)
     apply (simp only: in_bindE_R K_bind_def)
@@ -376,8 +366,7 @@ proof (induct rule: resolveAddressBits.induct)
      apply (simp only: in_bindE_R K_bind_def)
      apply (frule (12) 1 [OF refl], (assumption | rule refl)+)
      apply (clarsimp simp: in_monad locateSlot_conv objBits_simps stateAssert_def)
-     apply (cases cap)
-       apply (simp_all add: isCap_defs)[12]
+     apply (cases cap; simp add: isCap_defs)
      apply (frule in_inv_by_hoareD [OF getSlotCap_inv])
      apply simp
      apply (frule (1) post_by_hoare [OF getSlotCap_valid_cap])
@@ -386,8 +375,7 @@ proof (induct rule: resolveAddressBits.induct)
      apply (drule (1) bspec)
      apply simp
     apply (clarsimp simp: in_monad locateSlot_conv objBits_simps stateAssert_def)
-    apply (cases cap)
-     apply (simp_all add: isCap_defs)[12]
+    apply (cases cap; simp add: isCap_defs)
     apply (frule in_inv_by_hoareD [OF getSlotCap_inv])
     apply (clarsimp simp: valid_cap'_def cte_level_bits_def objBits_defs)
     done
@@ -428,17 +416,15 @@ proof -
   } note x = this
   from assms
   show ?thesis
-  apply (cases c)
-            apply (simp_all add: simps)[5]
-       defer
-       apply (simp_all add: simps)[4]
+  apply (cases c; simp add: simps)
+   defer
    apply (clarsimp simp: simps the_arch_cap_def)
    apply (rename_tac arch_cap)
    apply (case_tac arch_cap)
-        apply (simp_all add: simps arch_update_cap_data_def
+        apply (simp_all add: arch_update_cap_data_def
                              ARM_H.updateCapData_def)[5]
   \<comment> \<open>CNodeCap\<close>
-  apply (simp add: simps word_bits_def the_cnode_cap_def andCapRights_def
+  apply (simp add: word_bits_def the_cnode_cap_def andCapRights_def
                    rightsFromWord_def data_to_rights_def nth_ucast cteRightsBits_def
                    cteGuardBits_def)
   apply (insert x)
@@ -765,9 +751,9 @@ lemma lc_corres:
 lemma setObject_cte_obj_at_tcb':
   assumes x: "\<And>tcb f. P (tcbCTable_update f tcb) = P tcb"
              "\<And>tcb f. P (tcbVTable_update f tcb) = P tcb"
-             "\<And>tcb f. P (tcbReply_update f tcb) = P tcb"
-             "\<And>tcb f. P (tcbCaller_update f tcb) = P tcb"
              "\<And>tcb f. P (tcbIPCBufferFrame_update f tcb) = P tcb"
+             "\<And>tcb f. P (tcbFaultHandler_update f tcb) = P tcb"
+             "\<And>tcb f. P (tcbTimeoutHandler_update f tcb) = P tcb"
   shows
   "\<lbrace>\<lambda>s. P' (obj_at' (P :: tcb \<Rightarrow> bool) p s)\<rbrace>
   setObject c (cte::cte)
@@ -1241,10 +1227,7 @@ definition
   capBadge cap = capBadge cap' \<and>
   capASID cap = capASID cap' \<and>
   cap_asid_base' cap = cap_asid_base' cap' \<and>
-  cap_vptr' cap = cap_vptr' cap' \<and>
-  \<comment> \<open>check all fields of ReplyCap except capReplyCanGrant\<close>
-  (isReplyCap cap \<longrightarrow> capTCBPtr cap = capTCBPtr cap' \<and>
-                     capReplyMaster cap = capReplyMaster cap')"
+  cap_vptr' cap = cap_vptr' cap'"
 
 lemma capASID_update [simp]:
   "capASID (RetypeDecls_H.updateCapData P x c) = capASID c"
@@ -1299,14 +1282,10 @@ lemma updateCapData_Reply:
   done
 
 lemma weak_derived_updateCapData:
-  "\<lbrakk> (updateCapData P x c) \<noteq> NullCap; weak_derived' c c';
-      capBadge (updateCapData P x c) = capBadge c' \<rbrakk>
+  "\<lbrakk> updateCapData P x c \<noteq> NullCap; weak_derived' c c';
+     capBadge (updateCapData P x c) = capBadge c' \<rbrakk>
   \<Longrightarrow> weak_derived' (updateCapData P x c) c'"
-  apply (clarsimp simp add: weak_derived'_def updateCapData_Master)
-  apply (clarsimp elim: impE dest!: iffD1[OF updateCapData_Reply])
-  apply (clarsimp simp: isCap_simps)
-  apply (clarsimp simp: Let_def isCap_simps updateCapData_def)
-  done
+  by (clarsimp simp add: weak_derived'_def updateCapData_Master)
 
 lemma maskCapRights_Reply:
   "isReplyCap (maskCapRights r c) = isReplyCap c"
@@ -1701,41 +1680,35 @@ proof -
     done
 qed
 
-definition pspace_relations where
-  "pspace_relations ekh kh kh' \<equiv> pspace_relation kh kh' \<and> ekheap_relation ekh kh'"
-
 lemma set_cap_not_quite_corres_prequel:
   assumes cr:
-  "pspace_relations (ekheap s) (kheap s) (ksPSpace s')"
+  "pspace_relation (kheap s) (ksPSpace s')"
   "(x,t') \<in> fst (setCTE p' c' s')"
   "valid_objs s" "pspace_aligned s" "pspace_distinct s" "cte_at p s"
   "pspace_aligned' s'" "pspace_distinct' s'"
   assumes c: "cap_relation c (cteCap c')"
   assumes p: "p' = cte_map p"
   shows "\<exists>t. ((),t) \<in> fst (set_cap c p s) \<and>
-             pspace_relations (ekheap t) (kheap t) (ksPSpace t')"
+             pspace_relation (kheap t) (ksPSpace t')"
   using cr
   apply (clarsimp simp: setCTE_def setObject_def in_monad split_def)
   apply (drule(1) updateObject_cte_is_tcb_or_cte[OF _ refl, rotated])
   apply (elim disjE exE conjE)
-   apply (clarsimp simp: lookupAround2_char1 pspace_relations_def)
+   apply (clarsimp simp: lookupAround2_char1)
    apply (frule(5) cte_map_pulls_tcb_to_abstract[OF p])
     apply (simp add: domI)
    apply (frule tcb_cases_related2)
    apply (clarsimp simp: set_cap_def2 split_def bind_def get_object_def
                          simpler_gets_def assert_def fail_def return_def
                          set_object_def get_def put_def)
-   apply (rule conjI)
-    apply (erule(2) pspace_relation_update_tcbs)
-    apply (simp add: c)
-   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
-   apply (drule bspec, erule domI)
-   apply (clarsimp simp: etcb_relation_def tcb_cte_cases_def split: if_split_asm)
-  apply (clarsimp simp: pspace_relations_def)
+   apply (erule(2) pspace_relation_update_tcbs)
+   apply (simp add: c)
+  apply clarsimp
   apply (frule(5) cte_map_pulls_cte_to_abstract[OF p])
   apply (clarsimp simp: set_cap_def split_def bind_def get_object_def
                         simpler_gets_def assert_def fail_def return_def
-                        set_object_def get_def put_def domI a_type_def[split_simps kernel_object.split arch_kernel_obj.split])
+                        set_object_def get_def put_def domI
+                        a_type_def[split_simps kernel_object.split arch_kernel_obj.split])
   apply (erule(1) valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_cs_def valid_cs_size_def exI)
   apply (intro conjI impI)
@@ -1753,9 +1726,6 @@ lemma set_cap_not_quite_corres_prequel:
      apply (simp add: cte_at_cases domI well_formed_cnode_invsI[OF cr(3)])
     apply clarsimp
    apply (simp add: c)
-  apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
-  apply (drule bspec, erule domI)
-  apply (clarsimp simp: etcb_relation_def tcb_cte_cases_def split: if_split_asm)
   apply (simp add: wf_cs_insert)
   done
 
@@ -1768,7 +1738,7 @@ lemma setCTE_pspace_only:
 
 lemma set_cap_not_quite_corres:
   assumes cr:
-  "pspace_relations (ekheap s) (kheap s) (ksPSpace s')"
+  "pspace_relation (kheap s) (ksPSpace s')"
   "cur_thread s = ksCurThread s'"
   "idle_thread s = ksIdleThread s'"
   "machine_state s = ksMachineState s'"
@@ -1785,10 +1755,9 @@ lemma set_cap_not_quite_corres:
   assumes c: "cap_relation c c'"
   assumes p: "p' = cte_map p"
   shows "\<exists>t. ((),t) \<in> fst (set_cap c p s) \<and>
-             pspace_relations (ekheap t) (kheap t) (ksPSpace t') \<and>
+             pspace_relation (kheap t) (ksPSpace t') \<and>
              cdt t = cdt s \<and>
              cdt_list t = cdt_list s \<and>
-             ekheap t = ekheap s \<and>
              scheduler_action t = scheduler_action s \<and>
              ready_queues t = ready_queues s \<and>
              is_original_cap t = is_original_cap s \<and>
@@ -2250,13 +2219,9 @@ lemma is_final_untyped_ptrs:
   done
 
 lemma capClass_ztc_relation:
-  "\<lbrakk> is_zombie c \<or> is_cnode_cap c \<or> is_thread_cap c;
-       cap_relation c c' \<rbrakk> \<Longrightarrow> capClass c' = PhysicalClass"
+  "\<lbrakk> is_zombie c \<or> is_cnode_cap c \<or> is_thread_cap c; cap_relation c c' \<rbrakk>
+   \<Longrightarrow> capClass c' = PhysicalClass"
   by (auto simp: is_cap_simps)
-
-lemma pspace_relationsD:
-  "\<lbrakk>pspace_relation kh kh'; ekheap_relation ekh kh'\<rbrakk> \<Longrightarrow> pspace_relations ekh kh kh'"
-  by (simp add: pspace_relations_def)
 
 lemma cap_update_corres:
   "\<lbrakk>cap_relation cap cap';
@@ -2279,16 +2244,16 @@ lemma cap_update_corres:
     apply fastforce
    apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (clarsimp simp add: state_relation_def)
-  apply (drule(1) pspace_relationsD)
   apply (frule (3) set_cap_not_quite_corres; fastforce?)
    apply (erule cte_wp_at_weakenE, rule TrueI)
   apply clarsimp
   apply (rule bexI)
    prefer 2
    apply simp
-  apply (clarsimp simp: in_set_cap_cte_at_swp pspace_relations_def)
+  apply (clarsimp simp: in_set_cap_cte_at_swp)
   apply (drule updateCap_stuff)
   apply simp
+  sorry (* FIXME RT: sc_replies preservation
   apply (rule conjI)
    apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
   apply (rule conjI)
@@ -2330,12 +2295,7 @@ lemma cap_update_corres:
    apply (drule(1) pspace_relation_ctes_ofI, clarsimp+)
    apply (simp add: is_cap_simps, elim disjE exE, simp_all add: isCap_simps)[1]
   apply clarsimp
-  done
-
-lemma exst_set_cap:
-  "(x,s') \<in> fst (set_cap p c s) \<Longrightarrow> exst s' = exst s"
-  by (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
-               split: if_split_asm Structures_A.kernel_object.splits)
+  done *)
 
 lemma updateMDB_eqs:
   assumes "(x, s'') \<in> fst (updateMDB p f s')"
@@ -2408,24 +2368,6 @@ lemma updateMDB_pspace_relation:
   apply fastforce
   done
 
-lemma updateMDB_ekheap_relation:
-  assumes "(x, s'') \<in> fst (updateMDB p f s')"
-  assumes "ekheap_relation (ekheap s) (ksPSpace s')"
-  shows "ekheap_relation (ekheap s) (ksPSpace s'')" using assms
-  apply (clarsimp simp: updateMDB_def Let_def setCTE_def setObject_def in_monad ekheap_relation_def etcb_relation_def split_def split: if_split_asm)
-  apply (drule(1) updateObject_cte_is_tcb_or_cte[OF _ refl, rotated])
-  apply (drule_tac P="(=) s'" in use_valid [OF _ getCTE_sp], rule refl)
-  apply (drule bspec, erule domI)
-  apply (clarsimp simp: tcb_cte_cases_def lookupAround2_char1 split: if_split_asm)
-  done
-
-lemma updateMDB_pspace_relations:
-  assumes "(x, s'') \<in> fst (updateMDB p f s')"
-  assumes "pspace_relations (ekheap s) (kheap s) (ksPSpace s')"
-  assumes "pspace_aligned' s'" "pspace_distinct' s'"
-  shows "pspace_relations (ekheap s) (kheap s) (ksPSpace s'')" using assms
-  by (simp add: pspace_relations_def updateMDB_pspace_relation updateMDB_ekheap_relation)
-
 lemma updateMDB_ctes_of:
   assumes "(x, s') \<in> fst (updateMDB p f s)"
   assumes "no_0 (ctes_of s)"
@@ -2442,9 +2384,9 @@ lemma updateMDB_ctes_of:
 crunch aligned[wp]: updateMDB "pspace_aligned'"
 crunch pdistinct[wp]: updateMDB "pspace_distinct'"
 
-lemma updateMDB_the_lot:
+lemma updateMDB_the_lot: (* FIXME RT: update statement, probably needs more conjuncts *)
   assumes "(x, s'') \<in> fst (updateMDB p f s')"
-  assumes "pspace_relations (ekheap s) (kheap s) (ksPSpace s')"
+  assumes "pspace_relation (kheap s) (ksPSpace s')"
   assumes "pspace_aligned' s'" "pspace_distinct' s'" "no_0 (ctes_of s')"
   shows "ctes_of s'' = modify_map (ctes_of s') p (cteMDBNode_update f) \<and>
          ksMachineState s'' = ksMachineState s' \<and>
@@ -2457,7 +2399,7 @@ lemma updateMDB_the_lot:
          ksArchState s'' = ksArchState s' \<and>
          gsUserPages s'' = gsUserPages s' \<and>
          gsCNodes s'' = gsCNodes s' \<and>
-         pspace_relations (ekheap s) (kheap s) (ksPSpace s'') \<and>
+         pspace_relation (kheap s) (ksPSpace s'') \<and>
          pspace_aligned' s'' \<and> pspace_distinct' s'' \<and>
          no_0 (ctes_of s'') \<and>
          ksDomScheduleIdx s'' = ksDomScheduleIdx s' \<and>
@@ -2465,7 +2407,7 @@ lemma updateMDB_the_lot:
          ksCurDomain s''      = ksCurDomain s' \<and>
          ksDomainTime s''     = ksDomainTime s'"
 using assms
-  apply (simp add: updateMDB_eqs updateMDB_pspace_relations split del: if_split)
+  apply (simp add: updateMDB_eqs updateMDB_pspace_relation split del: if_split)
   apply (frule (1) updateMDB_ctes_of)
   apply clarsimp
   apply (rule conjI)
@@ -2611,20 +2553,7 @@ lemma subtree_next_0:
 definition
   "isArchCap P cap \<equiv> case cap of ArchObjectCap acap \<Rightarrow> P acap | _ \<Rightarrow> False"
 
-lemma isArchCap_simps[simp]:
-  "isArchCap P (capability.ThreadCap xc) = False"
-  "isArchCap P capability.NullCap = False"
-  "isArchCap P capability.DomainCap = False"
-  "isArchCap P (capability.NotificationCap xca xba xaa xd) = False"
-  "isArchCap P (capability.EndpointCap xda xcb xbb xab xe xi) = False"
-  "isArchCap P (capability.IRQHandlerCap xf) = False"
-  "isArchCap P (capability.Zombie xbc xac xg) = False"
-  "isArchCap P (capability.ArchObjectCap xh) = P xh"
-  "isArchCap P (capability.ReplyCap xad xi xia) = False"
-  "isArchCap P (capability.UntypedCap d xae xj f) = False"
-  "isArchCap P (capability.CNodeCap xfa xea xdb xcc) = False"
-  "isArchCap P capability.IRQControlCap = False"
-  by (simp add: isArchCap_def)+
+lemmas isArchCap_simps[simp] = isArchCap_def[split_simps capability.split]
 
 definition
   vsCapRef :: "capability \<Rightarrow> vs_ref list option"
@@ -2672,8 +2601,6 @@ definition
   badge_derived' cap' cap \<and>
   (isUntypedCap cap \<longrightarrow> descendants_of' p m = {}) \<and>
   (isReplyCap cap = isReplyCap cap') \<and>
-  (isReplyCap cap \<longrightarrow> capReplyMaster cap) \<and>
-  (isReplyCap cap' \<longrightarrow> \<not> capReplyMaster cap') \<and>
   (vsCapRef cap = vsCapRef cap' \<or> isArchCap isPageCap cap') \<and>
   ((isArchCap isPageTableCap cap \<or> isArchCap isPageDirectoryCap cap)
         \<longrightarrow> capASID cap = capASID cap' \<and> capASID cap \<noteq> None)"
@@ -2699,18 +2626,11 @@ lemma capBadge_ordering_relation:
   "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk> \<Longrightarrow>
   ((capBadge c', capBadge d') \<in> capBadge_ordering f) =
   ((cap_badge c, cap_badge d) \<in> capBadge_ordering f)"
-  apply (cases c)
-   apply (auto simp add: cap_badge_def capBadge_ordering_def split: cap.splits)
-  done
+  by (cases c, auto simp add: cap_badge_def capBadge_ordering_def split: cap.splits)
 
 lemma is_reply_cap_relation:
-  "cap_relation c c' \<Longrightarrow> is_reply_cap c = (isReplyCap c' \<and> \<not> capReplyMaster c')"
+  "cap_relation c c' \<Longrightarrow> is_reply_cap c = (isReplyCap c')"
   by (cases c, auto simp: is_cap_simps isCap_simps)
-
-lemma is_reply_master_relation:
-  "cap_relation c c' \<Longrightarrow>
-   is_master_reply_cap c = (isReplyCap c' \<and> capReplyMaster c')"
-  by (cases c, auto simp add: is_cap_simps isCap_simps)
 
 lemma cap_asid_cap_relation:
   "cap_relation c c' \<Longrightarrow> capASID c' = cap_asid c"
@@ -2730,30 +2650,28 @@ lemma is_derived_eq:
   apply (rule conjI)
    apply (clarsimp simp: is_cap_simps isCap_simps)
    apply (cases c, auto simp: isCap_simps cap_master_cap_def capMasterCap_def)[1]
-  apply (simp add:vsCapRef_def)
-  apply (simp add:vs_cap_ref_def)
-  apply (case_tac "isIRQControlCap d'")
+    apply (simp add:vsCapRef_def)
+   apply (simp add:vs_cap_ref_def)
+  apply (cases "isIRQControlCap d'")
    apply (frule(1) master_cap_relation)
    apply (clarsimp simp: isCap_simps cap_master_cap_def
-                         is_zombie_def is_reply_cap_def is_master_reply_cap_def
+                         is_zombie_def is_reply_cap_def
                   split: cap_relation_split_asm arch_cap.split_asm)[1]
   apply (frule(1) master_cap_relation)
   apply (frule(1) cap_badge_relation)
   apply (frule cap_asid_cap_relation)
   apply (frule(1) capBadge_ordering_relation)
-  apply (case_tac d)
-   apply (simp_all add: isCap_simps is_cap_simps cap_master_cap_def
-     vs_cap_ref_def vsCapRef_def capMasterCap_def
-     split: cap_relation_split_asm arch_cap.split_asm)
-   apply fastforce
-  apply ((auto split:arch_cap.splits arch_capability.splits)[3])
+  apply (case_tac d; simp add: isCap_simps is_cap_simps cap_master_cap_def
+                               vs_cap_ref_def vsCapRef_def capMasterCap_def
+                          split: cap_relation_split_asm arch_cap.split_asm)
+      apply ((auto split:arch_cap.splits arch_capability.splits)[3])
+   apply (clarsimp split:option.splits arch_cap.splits arch_capability.splits)
+   apply (intro conjI|clarsimp)+
+     apply fastforce
+    apply clarsimp+
   apply (clarsimp split:option.splits arch_cap.splits arch_capability.splits)
   apply (intro conjI|clarsimp)+
-    apply fastforce
-   apply clarsimp+
-  apply (clarsimp split:option.splits arch_cap.splits arch_capability.splits)
-  apply (intro conjI|clarsimp)+
-   apply fastforce
+  apply fastforce
   done
 end
 
@@ -3683,7 +3601,6 @@ lemma set_untyped_cap_corres:
    apply (clarsimp simp: cte_wp_at_ctes_of)
   apply clarsimp
   apply (clarsimp simp add: state_relation_def split_def)
-  apply (drule (1) pspace_relationsD)
   apply (frule_tac c = "cap.UntypedCap dev r bits idx"
                 in set_cap_not_quite_corres_prequel)
          apply assumption+
@@ -3694,7 +3611,8 @@ lemma set_untyped_cap_corres:
   apply (rule bexI)
    prefer 2
    apply assumption
-  apply (clarsimp simp: pspace_relations_def)
+  apply clarsimp
+  sorry (* FIXME RT: order of conjuncts changed (ekheap relation dropped, sc_replies relation added
   apply (subst conj_assoc[symmetric])
   apply (rule conjI)
    apply (frule setCTE_pspace_only)
@@ -3752,7 +3670,7 @@ lemma set_untyped_cap_corres:
   apply (erule impE)
    apply (clarsimp simp: cte_wp_at_caps_of_state split:if_splits)
   apply auto
-  done
+  done *)
 
 lemma getCTE_get:
   "\<lbrace>cte_wp_at' P src\<rbrace> getCTE src \<lbrace>\<lambda>rv s. P rv\<rbrace>"
@@ -3791,20 +3709,7 @@ lemma set_untyped_cap_as_full_corres:
   done
 
 (* FIXME: SELFOUR-421 move *)
-lemma isUntypedCap_simps[simp]:
-  "isUntypedCap (capability.UntypedCap uu uv uw ux) = True"
-  "isUntypedCap (capability.NullCap) = False"
-  "isUntypedCap (capability.EndpointCap v va vb vc vd ve) = False"
-  "isUntypedCap (capability.NotificationCap v va vb vc) = False"
-  "isUntypedCap (capability.ReplyCap v1 v2 v3) = False"
-  "isUntypedCap (capability.CNodeCap x1 x2 x3 x4) = False"
-  "isUntypedCap (capability.ThreadCap v) = False"
-  "isUntypedCap (capability.DomainCap) = False"
-  "isUntypedCap (capability.IRQControlCap) = False"
-  "isUntypedCap (capability.IRQHandlerCap y1) = False"
-  "isUntypedCap (capability.Zombie v va1 vb1) = False"
-  "isUntypedCap (capability.ArchObjectCap z) = False"
-  by (simp_all add: isUntypedCap_def split: capability.splits)
+lemmas isUntypedCap_simps[simp] = isUntypedCap_def[split_simps capability.split]
 
 lemma cap_relation_masked_as_full:
   "\<lbrakk>cap_relation src_cap src_cap';cap_relation c c'\<rbrakk> \<Longrightarrow>
@@ -4314,6 +4219,7 @@ lemma irq_control_preserve:
   apply (simp add:dom misc)+
   done
 end
+
 locale mdb_inv_preserve =
   fixes m m'
   assumes dom: "\<And>x. (x\<in> dom m)  = (x\<in> dom m')"
@@ -4321,7 +4227,6 @@ locale mdb_inv_preserve =
   isUntypedCap (cteCap cte) = isUntypedCap (cteCap cte')
   \<and> isNullCap (cteCap cte) = isNullCap (cteCap cte')
   \<and> isReplyCap (cteCap cte) = isReplyCap (cteCap cte')
-  \<and> (isReplyCap (cteCap cte) \<longrightarrow> capReplyMaster (cteCap cte) = capReplyMaster (cteCap cte'))
   \<and> isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte')
   \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
@@ -4428,59 +4333,44 @@ lemma descendants_of:
   done
 
 lemma by_products:
-  "reply_masters_rvk_fb m = reply_masters_rvk_fb m'
- \<and> no_0 m = no_0 m' \<and> mdb_chain_0 m = mdb_chain_0 m'
- \<and> valid_nullcaps m = valid_nullcaps m'"
-apply (intro conjI)
-  apply (simp add:ran_dom reply_masters_rvk_fb_def mdb_inv_preserve_def dom misc sameRegion mdb_next)
-    apply (rule iffI)
-    apply clarsimp
-    apply (drule_tac x = y in bspec)
-     apply (rule iffD2[OF dom])
-     apply clarsimp
-    apply (frule iffD2[OF dom,OF domI],rotate_tac)
-    apply (clarsimp simp:misc)+
-    apply (drule_tac x = y in bspec)
-     apply (rule iffD1[OF dom])
-     apply clarsimp
-    apply (frule iffD1[OF dom,OF domI],rotate_tac)
-   apply (clarsimp simp:misc)+
-   apply (clarsimp simp:no_0_def)
-   apply (rule ccontr)
-   apply (simp add:dom_in)
-   apply (subst (asm) dom[symmetric])
-   apply fastforce
+  "no_0 m = no_0 m' \<and> mdb_chain_0 m = mdb_chain_0 m'\<and> valid_nullcaps m = valid_nullcaps m'"
+  apply (intro conjI)
+    apply (clarsimp simp:no_0_def)
+    apply (rule ccontr)
+    apply (simp add:dom_in)
+    apply (subst (asm) dom[symmetric])
+    apply fastforce
    apply (rule iffI)
-   apply (clarsimp simp:mdb_chain_0_def)
-      apply (drule_tac x =x in bspec)
-      apply (rule iffD2[OF dom],clarsimp)
-      apply (erule_tac iffD1[OF connect_eqv_singleE,rotated])
-      apply (cut_tac p = p in mdb_next)
-      apply (clarsimp simp: mdb_next_rel_def)
     apply (clarsimp simp:mdb_chain_0_def)
-      apply (drule_tac x =x in bspec)
-      apply (rule iffD1[OF dom],clarsimp)
-      apply (erule_tac iffD1[OF connect_eqv_singleE,rotated])
-      apply (cut_tac p = p in mdb_next)
-      apply (clarsimp simp: mdb_next_rel_def)
-   apply (simp add:valid_nullcaps_def)
-   apply (rule forall_eq,clarsimp)+
-     apply (rule iffI)
-      apply clarsimp
-      apply (frule iffD2[OF dom,OF domI])
-      apply (clarsimp)
-      apply (case_tac y)
-      apply (drule misc)
-        apply assumption
-        apply (clarsimp simp:isCap_simps)
-     apply clarsimp
-     apply (frule iffD1[OF dom,OF domI])
-     apply (clarsimp)
-     apply (case_tac y)
-     apply (drule misc)
-       apply assumption
-       apply (clarsimp simp:isCap_simps)
-done
+    apply (drule_tac x =x in bspec)
+     apply (rule iffD2[OF dom],clarsimp)
+    apply (erule_tac iffD1[OF connect_eqv_singleE,rotated])
+    apply (cut_tac p = p in mdb_next)
+    apply (clarsimp simp: mdb_next_rel_def)
+   apply (clarsimp simp:mdb_chain_0_def)
+   apply (drule_tac x =x in bspec)
+    apply (rule iffD1[OF dom],clarsimp)
+   apply (erule_tac iffD1[OF connect_eqv_singleE,rotated])
+   apply (cut_tac p = p in mdb_next)
+   apply (clarsimp simp: mdb_next_rel_def)
+  apply (simp add:valid_nullcaps_def)
+  apply (rule forall_eq,clarsimp)+
+  apply (rule iffI)
+   apply clarsimp
+   apply (frule iffD2[OF dom,OF domI])
+   apply (clarsimp)
+   apply (case_tac y)
+   apply (drule misc)
+    apply assumption
+   apply (clarsimp simp:isCap_simps)
+  apply clarsimp
+  apply (frule iffD1[OF dom,OF domI])
+  apply (clarsimp)
+  apply (case_tac y)
+  apply (drule misc)
+   apply assumption
+  apply (clarsimp simp:isCap_simps)
+  done
 
 end
 
@@ -4525,7 +4415,7 @@ lemma updateCap_cte_wp_at':
         updateCap ptr cap \<lbrace>\<lambda>rv s. Q (cte_wp_at' P' p s)\<rbrace>"
   apply (simp add:updateCap_def cte_wp_at_ctes_of)
   apply (wp setCTE_ctes_of_wp getCTE_wp)
-  apply (clarsimp simp: cte_wp_at_ctes_of split del: if_split)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (case_tac cte, auto split: if_split)
   done
 
@@ -4619,22 +4509,6 @@ lemma updateCapFreeIndex_class_links:
   apply (subgoal_tac "mdb_inv_preserve (Q (ctes_of s)) (Q (modify_map (ctes_of s) src
               (cteCap_update (\<lambda>_. capFreeIndex_update (\<lambda>_. index) (cteCap srcCTE)))))")
     apply (drule mdb_inv_preserve.preserve_stuff)
-    apply simp
-  apply (rule preserve)
-  apply (rule mdb_inv_preserve_updateCap)
-    apply (clarsimp simp:cte_wp_at_ctes_of)+
-done
-
-lemma updateCapFreeIndex_reply_masters_rvk_fb:
-  assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
-  shows
- "\<lbrace>\<lambda>s. P (reply_masters_rvk_fb (Q (ctes_of s))) \<and> cte_wp_at' (\<lambda>c. c = srcCTE \<and> isUntypedCap (cteCap c)) src s\<rbrace>
-  updateCap src (capFreeIndex_update (\<lambda>_. index) (cteCap srcCTE))
- \<lbrace>\<lambda>r s. P (reply_masters_rvk_fb (Q (ctes_of s)))\<rbrace>"
-  apply (wp updateCap_ctes_of_wp)
-  apply (subgoal_tac "mdb_inv_preserve (Q (ctes_of s)) (Q (modify_map (ctes_of s) src
-              (cteCap_update (\<lambda>_. capFreeIndex_update (\<lambda>_. index) (cteCap srcCTE)))))")
-    apply (drule mdb_inv_preserve.by_products)
     apply simp
   apply (rule preserve)
   apply (rule mdb_inv_preserve_updateCap)
@@ -4835,19 +4709,6 @@ setUntypedCapAsFull (cteCap srcCTE) cap src
   apply clarsimp
 done
 
-lemma setUntypedCapAsFull_reply_masters_rvk_fb:
-  assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
-  shows
- "\<lbrace>\<lambda>s. P (reply_masters_rvk_fb (Q (ctes_of s))) \<and> cte_wp_at' (\<lambda>c. c = srcCTE) src s\<rbrace>
-setUntypedCapAsFull (cteCap srcCTE) cap src
- \<lbrace>\<lambda>r s. P (reply_masters_rvk_fb (Q (ctes_of s)))\<rbrace>"
-  apply (clarsimp simp:setUntypedCapAsFull_def split:if_splits,intro conjI impI)
-    apply (wp updateCapFreeIndex_reply_masters_rvk_fb)
-    apply (clarsimp simp:cte_wp_at_ctes_of preserve)+
-  apply wp
-  apply clarsimp
-done
-
 lemma modify_map_eq[simp]:
   "\<lbrakk>m slot = Some srcCTE; cap = cteCap srcCTE\<rbrakk>
    \<Longrightarrow>(modify_map m slot (cteCap_update (\<lambda>_. cap))) = m"
@@ -4961,8 +4822,8 @@ crunch valid_list[wp]: set_untyped_cap_as_full valid_list
 
 lemma updateMDB_the_lot':
   assumes "(x, s'') \<in> fst (updateMDB p f s')"
-  assumes "pspace_relations (ekheap sa) (kheap s) (ksPSpace s')"
-  assumes "pspace_aligned' s'" "pspace_distinct' s'" "no_0 (ctes_of s')" "ekheap s = ekheap sa"
+  assumes "pspace_relation (kheap s) (ksPSpace s')"
+  assumes "pspace_aligned' s'" "pspace_distinct' s'" "no_0 (ctes_of s')"
   shows "ctes_of s'' = modify_map (ctes_of s') p (cteMDBNode_update f) \<and>
          ksMachineState s'' = ksMachineState s' \<and>
          ksWorkUnitsCompleted s'' = ksWorkUnitsCompleted s' \<and>
@@ -4974,25 +4835,20 @@ lemma updateMDB_the_lot':
          ksArchState s'' = ksArchState s' \<and>
          gsUserPages s'' = gsUserPages s' \<and>
          gsCNodes s'' = gsCNodes s' \<and>
-         pspace_relations (ekheap s) (kheap s) (ksPSpace s'') \<and>
+         pspace_relation (kheap s) (ksPSpace s'') \<and>
          pspace_aligned' s'' \<and> pspace_distinct' s'' \<and>
          no_0 (ctes_of s'') \<and>
          ksDomScheduleIdx s'' = ksDomScheduleIdx s' \<and>
          ksDomSchedule s''    = ksDomSchedule s' \<and>
          ksCurDomain s''      = ksCurDomain s' \<and>
          ksDomainTime s''     = ksDomainTime s'"
-  apply (rule updateMDB_the_lot)
-      using assms
-      apply (fastforce simp: pspace_relations_def)+
-      done
+  by (rule updateMDB_the_lot; fastforce intro: assms)
 
 lemma cte_map_inj_eq':
-  "\<lbrakk>(cte_map p = cte_map p');
-   cte_at p s \<and> cte_at p' s \<and>
-   valid_objs s \<and> pspace_aligned s \<and> pspace_distinct s\<rbrakk>
+  "\<lbrakk> cte_map p = cte_map p';
+     cte_at p s \<and> cte_at p' s \<and> valid_objs s \<and> pspace_aligned s \<and> pspace_distinct s\<rbrakk>
   \<Longrightarrow> p = p'"
-  apply (rule cte_map_inj_eq; fastforce)
-  done
+  by (rule cte_map_inj_eq; fastforce)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cins_corres:
@@ -5047,7 +4903,6 @@ lemma cins_corres:
                 apply (simp+)[3]
              apply (clarsimp simp: corres_underlying_def state_relation_def
                                    in_monad valid_mdb'_def valid_mdb_ctes_def)
-             apply (drule (1) pspace_relationsD)
              apply (drule (18) set_cap_not_quite_corres)
               apply (rule refl)
              apply (elim conjE exE)
@@ -5089,8 +4944,8 @@ lemma cins_corres:
              apply (thin_tac "ksIdleThread t = p" for p t)+
              apply (thin_tac "ksReadyQueues t = p" for p t)+
              apply (thin_tac "ksSchedulerAction t = p" for p t)+
-             apply (clarsimp simp: pspace_relations_def)
 
+             sorry (* FIXME RT: sc_replies
              apply (rule conjI)
               apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
              apply (rule conjI)
@@ -5564,7 +5419,7 @@ lemma cins_corres:
    subgoal by (simp add: cdt_relation_def del: split_paired_All)
   apply (clarsimp simp: descendants_of_eq')
   subgoal by (simp add: cdt_relation_def del: split_paired_All)
-  done
+  done *)
 
 
 declare if_split [split]
@@ -6532,7 +6387,6 @@ lemma cap_swap_corres:
   apply (clarsimp simp: corres_underlying_def in_monad
                         state_relation_def)
   apply (clarsimp simp: valid_mdb'_def)
-  apply (drule(1) pspace_relationsD)
   apply (drule (12) set_cap_not_quite_corres)
       apply (erule cte_wp_at_weakenE, rule TrueI)
      apply assumption+
@@ -6605,7 +6459,7 @@ lemma cap_swap_corres:
      apply (erule weak_derived_sym')
     apply (erule weak_derived_sym')
    apply assumption
-  apply (clarsimp simp: pspace_relations_def)
+  sorry (* FIXME RT: replies_relation
   apply (rule conjI)
    apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv ARM.data_at_def)
   apply(subst conj_assoc[symmetric])
@@ -6895,7 +6749,7 @@ lemma cap_swap_corres:
     apply(erule cte_wp_at_weakenE, simp)
   apply(rule cte_at_next_slot)
      apply(simp_all)
-     done
+     done *)
 
 
 lemma cap_swap_for_delete_corres:

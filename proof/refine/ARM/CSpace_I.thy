@@ -752,7 +752,9 @@ lemma capUntypedSize_simps [simp]:
   "capUntypedSize (ArchObjectCap x) = Arch.capUntypedSize x"
   "capUntypedSize (UntypedCap d r n f) = 1 << n"
   "capUntypedSize (CNodeCap r n g n2) = 1 << (objBits (undefined::cte) + n)"
-  "capUntypedSize (ReplyCap r m a) = 1 << objBits (undefined :: tcb)"
+  "capUntypedSize (ReplyCap r a) = 1 << objBits (undefined :: reply)"
+  "capUntypedSize (SchedContextCap sc sz) = 1 << sz"
+  "capUntypedSize SchedControlCap = 1"
   "capUntypedSize IRQControlCap = 1"
   "capUntypedSize (IRQHandlerCap irq) = 1"
   by (auto simp add: capUntypedSize_def isCap_simps objBits_simps
@@ -1893,10 +1895,7 @@ lemma valid_mdb_ctes_init:
    apply clarsimp
    apply (case_tac ctea, clarsimp)
    apply (rule valid_capAligned, erule(1) ctes_of_valid_cap')
-  apply (rule conjI)
-   apply (erule (1) irq_control_init)
-  apply (simp add: ran_def reply_masters_rvk_fb_def)
-  apply (auto simp: initMDBNode_def)[1]
+  apply (erule (1) irq_control_init)
   done
 
 lemma setCTE_state_refs_of'[wp]:
@@ -1983,9 +1982,6 @@ lemma setCTE_no_0_obj' [wp]:
   by (simp add: setCTE_def) wp
 
 declare mresults_fail[simp]
-
-crunch idle[wp]: get_object "valid_idle"
-  (wp: crunch_wps simp: crunch_simps)
 
 end
 
