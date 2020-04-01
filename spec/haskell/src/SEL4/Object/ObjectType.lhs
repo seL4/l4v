@@ -259,7 +259,8 @@ This function assumes that its arguments are in MDB order.
 >     capTCBPtr a == capTCBPtr b
 
 > sameRegionAs (a@SchedContextCap {}) (b@SchedContextCap {}) =
->     capSchedContextPtr a == capSchedContextPtr b
+>     capSchedContextPtr a == capSchedContextPtr b &&
+>     capSCSize a == capSCSize b
 
 > sameRegionAs SchedControlCap SchedControlCap = True
 
