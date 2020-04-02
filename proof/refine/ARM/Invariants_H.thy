@@ -11,6 +11,10 @@ imports
   "Lib.AddUpdSimps"
 begin
 
+(* FIXME: this should go somewhere in spec *)
+translations
+  (type) "'a kernel" <=(type) "kernel_state \<Rightarrow> ('a \<times> kernel_state) set \<times> bool"
+
 context Arch begin
 lemmas [crunch_def] =
   deriveCap_def finaliseCap_def
@@ -61,17 +65,17 @@ where
   "typ_at' T \<equiv> ko_wp_at' (\<lambda>ko. koTypeOf ko = T)"
 
 abbreviation
-  "ep_at' \<equiv> obj_at' (\<top> :: endpoint \<Rightarrow> bool)"
+  "ep_at' \<equiv> obj_at' (\<lambda>_ :: endpoint. True)"
 abbreviation
-  "ntfn_at' \<equiv> obj_at' (\<top> :: notification \<Rightarrow> bool)"
+  "ntfn_at' \<equiv> obj_at' (\<lambda>_:: notification. True)"
 abbreviation
-  "tcb_at' \<equiv> obj_at' (\<top> :: tcb \<Rightarrow> bool)"
+  "tcb_at' \<equiv> obj_at' (\<lambda>_:: tcb. True)"
 abbreviation
-  "real_cte_at' \<equiv> obj_at' (\<top> :: cte \<Rightarrow> bool)"
+  "real_cte_at' \<equiv> obj_at' (\<lambda>_ :: cte. True)"
 abbreviation
-  "sc_at' \<equiv> obj_at' (\<top> :: sched_context \<Rightarrow> bool)"
+  "sc_at' \<equiv> obj_at' (\<lambda>_ :: sched_context. True)"
 abbreviation
-  "reply_at' \<equiv> obj_at' (\<top> :: reply \<Rightarrow> bool)"
+  "reply_at' \<equiv> obj_at' (\<lambda>_ :: reply. True)"
 
 abbreviation
   "ko_at' v \<equiv> obj_at' (\<lambda>k. k = v)"
@@ -1386,6 +1390,8 @@ schematic_goal wordBits_def': "wordBits = numeral ?n" (* arch-specific consequen
 
 lemmas valid_bound_ntfn'_def = valid_bound_obj'_def
 lemmas valid_bound_tcb'_def = valid_bound_obj'_def
+lemmas valid_bound_sc'_def = valid_bound_obj'_def
+lemmas valid_bound_reply'_def = valid_bound_obj'_def
 
 lemma valid_bound_obj'_None[simp]:
   "valid_bound_obj' P None = \<top>"
@@ -2298,61 +2304,43 @@ lemma locateSlot_conv:
                          split: zombie_type.split)
   sorry (* FIXME RT *)
 
+context
+begin
+
+private method typ_at_proof =
+  unfold obj_at'_real_def typ_at'_def ko_wp_at'_def,
+  (rule ext)+,
+  (rule iffI; clarsimp, case_tac ko; clarsimp simp: projectKO_opts_defs)
+
 lemma typ_at_tcb':
   "typ_at' TCBT = tcb_at'"
-  apply (rule ext)+
-  apply (simp add: obj_at'_real_def typ_at'_def)
-  apply (simp add: ko_wp_at'_def)
-  apply (rule iffI)
-   apply clarsimp
-   apply (case_tac ko)
-   apply (auto simp: projectKO_opt_tcb)[10]
-  apply clarsimp
-  apply (case_tac ko)
-  apply (auto simp: projectKO_opt_tcb)
-  done
+  by typ_at_proof
 
-lemma typ_at_ep:
+lemma typ_at_ep:  (* FIXME: rename to ' *)
   "typ_at' EndpointT = ep_at'"
-  apply (rule ext)+
-  apply (simp add: obj_at'_real_def typ_at'_def)
-  apply (simp add: ko_wp_at'_def)
-  apply (rule iffI)
-   apply clarsimp
-   apply (case_tac ko)
-   apply (auto simp: projectKO_opt_ep)[10]
-  apply clarsimp
-  apply (case_tac ko)
-  apply (auto simp: projectKO_opt_ep)
-  done
+  by typ_at_proof
 
-lemma typ_at_ntfn:
+lemma typ_at_ntfn: (* FIXME: rename to ' *)
   "typ_at' NotificationT = ntfn_at'"
-  apply (rule ext)+
-  apply (simp add: obj_at'_real_def typ_at'_def)
-  apply (simp add: ko_wp_at'_def)
-  apply (rule iffI)
-   apply clarsimp
-   apply (case_tac ko)
-   apply (auto simp: projectKO_opt_ntfn)[10]
-  apply clarsimp
-  apply (case_tac ko)
-  apply (auto simp: projectKO_opt_ntfn)
-  done
+  by typ_at_proof
 
-lemma typ_at_cte:
+lemma typ_at_cte: (* FIXME: rename to ' *)
   "typ_at' CTET = real_cte_at'"
-  apply (rule ext)+
-  apply (simp add: obj_at'_real_def typ_at'_def)
-  apply (simp add: ko_wp_at'_def)
-  apply (rule iffI)
-   apply clarsimp
-   apply (case_tac ko)
-   apply (auto simp: projectKO_opt_cte)[10]
-  apply clarsimp
-  apply (case_tac ko)
-  apply (auto simp: projectKO_opt_cte)
-  done
+  by typ_at_proof
+
+lemma typ_at_reply':
+  "typ_at' ReplyT = reply_at'"
+  by typ_at_proof
+
+lemma typ_at_sc':
+  "typ_at' SchedContextT = sc_at'"
+  by typ_at_proof
+
+lemmas typ_ats' = typ_at_sc' typ_at_reply' typ_at_cte typ_at_ntfn typ_at_ep typ_at_tcb'
+
+end
+
+
 
 lemma cte_at_typ':
   "cte_at' c = (\<lambda>s. typ_at' CTET c s \<or> (\<exists>n. typ_at' TCBT (c - n) s \<and> n \<in> dom tcb_cte_cases))"
@@ -2382,6 +2370,14 @@ lemma typ_at_lift_ntfn':
 lemma typ_at_lift_cte':
   "\<lbrace>typ_at' CTET p\<rbrace> f \<lbrace>\<lambda>_. typ_at' CTET p\<rbrace> \<Longrightarrow> \<lbrace>real_cte_at' p\<rbrace> f \<lbrace>\<lambda>_. real_cte_at' p\<rbrace>"
   by (simp add: typ_at_cte)
+
+lemma typ_at_lift_sc':
+  "f \<lbrace>typ_at' SchedContextT p\<rbrace> \<Longrightarrow> f \<lbrace>sc_at' p\<rbrace>"
+  by (simp add: typ_ats')
+
+lemma typ_at_lift_reply':
+  "f \<lbrace>typ_at' ReplyT p\<rbrace> \<Longrightarrow> f \<lbrace>reply_at' p\<rbrace>"
+  by (simp add: typ_ats')
 
 lemma typ_at_lift_cte_at':
   assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
@@ -2439,10 +2435,6 @@ lemma typ_at_lift_valid_untyped':
   apply (clarsimp split:if_splits)
   done
 
-lemma typ_at_lift_asid_at':
-  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow> \<lbrace>asid_pool_at' p\<rbrace> f \<lbrace>\<lambda>_. asid_pool_at' p\<rbrace>"
-  by assumption
-
 lemma typ_at_lift_valid_cap':
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_cap' cap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap' cap s\<rbrace>"
@@ -2492,20 +2484,32 @@ lemma valid_asid_pool_lift':
 lemma valid_bound_tcb_lift:
   "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow>
   \<lbrace>valid_bound_tcb' tcb\<rbrace> f \<lbrace>\<lambda>_. valid_bound_tcb' tcb\<rbrace>"
-  by (auto simp: valid_bound_tcb'_def valid_def typ_at_tcb'[symmetric] split: option.splits)
+  by (auto simp: valid_bound_tcb'_def valid_def typ_ats'[symmetric] split: option.splits)
+
+lemma valid_bound_sc_lift:
+  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow>
+  \<lbrace>valid_bound_sc' tcb\<rbrace> f \<lbrace>\<lambda>_. valid_bound_sc' tcb\<rbrace>"
+  by (auto simp: valid_bound_obj'_def valid_def typ_ats'[symmetric] split: option.splits)
+
+lemma valid_bound_reply_lift:
+  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow>
+  \<lbrace>valid_bound_reply' tcb\<rbrace> f \<lbrace>\<lambda>_. valid_bound_reply' tcb\<rbrace>"
+  by (auto simp: valid_bound_tcb'_def valid_def typ_ats'[symmetric] split: option.splits)
 
 lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       typ_at_lift_ntfn' typ_at_lift_cte'
+                      typ_at_lift_reply' typ_at_lift_sc'
                       typ_at_lift_cte_at'
                       typ_at_lift_page_table_at'
                       typ_at_lift_page_directory_at'
-                      typ_at_lift_asid_at'
                       typ_at_lift_valid_untyped'
                       typ_at_lift_valid_cap'
                       valid_pde_lift'
                       valid_pte_lift'
                       valid_asid_pool_lift'
                       valid_bound_tcb_lift
+                      valid_bound_reply_lift
+                      valid_bound_sc_lift
 
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"
