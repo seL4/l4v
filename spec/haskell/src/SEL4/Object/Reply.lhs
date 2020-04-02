@@ -45,7 +45,7 @@ This module specifies the behavior of reply objects.
 >     assert (replyObject tsCaller == Nothing) "tcb caller should not be in a existing call stack"
 
 >     tsCallee <- getThreadState calleePtr
->     setThreadState tsCallee { replyObject = Nothing } calleePtr
+>     setThreadState (tsCallee { replyObject = Nothing }) calleePtr
 
 >     setReplyTCB (Just callerPtr) replyPtr
 >     setThreadState (BlockedOnReply replyPtr) callerPtr
@@ -162,7 +162,7 @@ This module specifies the behavior of reply objects.
 >     tptrOpt <- getReplyTCB replyPtr
 >     let tptr = fromJust tptrOpt
 >     state <- getThreadState tptr
->     setThreadState state { replyObject = Nothing } tptr
+>     setThreadState (state { replyObject = Nothing }) tptr
 >     setReplyTCB Nothing replyPtr
 >     setThreadState Inactive $ fromJust tptrOpt
 
@@ -183,7 +183,7 @@ This module specifies the behavior of reply objects.
 > setReplyTCB :: Maybe (PPtr TCB) -> PPtr Reply -> Kernel ()
 > setReplyTCB tptrOpt rptr = do
 >     r <- getReply rptr
->     setReply rptr r { replyTCB = tptrOpt}
+>     setReply rptr (r { replyTCB = tptrOpt})
 
 > replyClear :: PPtr Reply -> Kernel ()
 > replyClear rptr = do

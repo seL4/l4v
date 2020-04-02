@@ -13,7 +13,7 @@ imports
   TCBDecls_H
   ThreadDecls_H
   NotificationDecls_H
-  ReplyDecls_H
+  Reply_H
   VSpace_H
 
 begin

@@ -9,8 +9,10 @@ chapter "Replies"
 theory Reply_H
 
 imports
+  ThreadDecls_H
+  TCBDecls_H
+  SchedContextDecls_H
   ReplyDecls_H
-
 begin
 
 #INCLUDE_HASKELL SEL4/Object/Reply.lhs bodies_only
