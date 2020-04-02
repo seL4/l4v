@@ -143,6 +143,8 @@ where
 
 abbreviation "st_tcb_at' \<equiv> pred_tcb_at' itcbState"
 abbreviation "bound_tcb_at' \<equiv> pred_tcb_at' itcbBoundNotification"
+abbreviation "bound_sc_tcb_at' \<equiv> pred_tcb_at' itcbSchedContext"
+abbreviation "bound_yt_tcb_at' \<equiv> pred_tcb_at' itcbYieldTo"
 abbreviation "mcpriority_tcb_at' \<equiv> pred_tcb_at' itcbMCP"
 
 lemma st_tcb_at'_def:
