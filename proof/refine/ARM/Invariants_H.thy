@@ -404,6 +404,7 @@ primrec capBits :: "capability \<Rightarrow> nat" where
 
 lemmas objBits_defs =
   tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def replySizeBits_def
+  scheduleContextBits_def
 
 definition capAligned :: "capability \<Rightarrow> bool" where
   "capAligned c \<equiv> is_aligned (capUntypedPtr c) (capBits c) \<and> capBits c < word_bits"
@@ -2675,6 +2676,16 @@ lemma valid_mdb_ctesI [intro]:
   unfolding valid_mdb_ctes_def by auto
 
 end
+
+locale typ_at_props' =
+  fixes f :: "'a kernel"
+  assumes typ': "f \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
+begin
+
+lemmas typ_ats'[wp] = typ_at_lifts[OF typ']
+
+end
+
 locale PSpace_update_eq =
   fixes f :: "kernel_state \<Rightarrow> kernel_state"
   assumes pspace: "ksPSpace (f s) = ksPSpace s"

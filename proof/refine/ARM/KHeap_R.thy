@@ -18,7 +18,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma obj_at_getObject:
   assumes R:
-  "\<And>a b p q n ko s obj::'a::pspace_storable.
+  "\<And>a b n ko s obj::'a::pspace_storable.
   \<lbrakk> (a, b) \<in> fst (loadObject t t n ko s); projectKO_opt ko = Some obj \<rbrakk> \<Longrightarrow> a = obj"
   shows "\<lbrace>obj_at' P t\<rbrace> getObject t \<lbrace>\<lambda>(rv::'a::pspace_storable) s. P rv\<rbrace>"
   by (auto simp: getObject_def obj_at'_def in_monad valid_def
@@ -29,11 +29,8 @@ declare projectKO_inv [wp]
 
 lemma loadObject_default_inv:
   "\<lbrace>P\<rbrace> loadObject_default addr addr' next obj \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: loadObject_default_def magnitudeCheck_def
-                   alignCheck_def unless_def alignError_def
-          | wp hoare_vcg_split_case_option
-               hoare_drop_imps hoare_vcg_all_lift)+
-  done
+  by (simp add: loadObject_default_def magnitudeCheck_def alignCheck_def unless_def alignError_def
+      | wp hoare_vcg_split_case_option hoare_drop_imps hoare_vcg_all_lift)+
 
 lemma getObject_inv:
   assumes x: "\<And>p q n ko. \<lbrace>P\<rbrace> loadObject p q n ko \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
@@ -45,12 +42,6 @@ lemma getObject_inv_tcb [wp]: "\<lbrace>P\<rbrace> getObject l \<lbrace>\<lambda
   apply simp
   apply (rule loadObject_default_inv)
   done
-end
-(* FIXME: this should go somewhere in spec *)
-translations
-  (type) "'a kernel" <=(type) "kernel_state \<Rightarrow> ('a \<times> kernel_state) set \<times> bool"
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma no_fail_loadObject_default [wp]:
   "no_fail (\<lambda>s. \<exists>obj. projectKO_opt ko = Some (obj::'a) \<and>
@@ -178,23 +169,16 @@ lemma ps_clear_domE[elim?]:
   "\<lbrakk> ps_clear x n s; dom (ksPSpace s) = dom (ksPSpace s') \<rbrakk> \<Longrightarrow> ps_clear x n s'"
   by (simp add: ps_clear_def)
 
-lemma ps_clear_upd:
+lemma ps_clear_upd':
   "ksPSpace s y = Some v \<Longrightarrow>
     ps_clear x n (ksPSpace_update (\<lambda>a. ksPSpace s(y \<mapsto> v')) s') = ps_clear x n s"
   by (rule iffI | clarsimp elim!: ps_clear_domE | fastforce)+
 
-lemmas ps_clear_updE[elim] = iffD2[OF ps_clear_upd, rotated]
+lemmas ps_clear_updE'[elim] = iffD2[OF ps_clear_upd', rotated]
 
 lemma updateObject_default_result:
   "(x, s'') \<in> fst (updateObject_default e ko p q n s) \<Longrightarrow> x = injectKO e"
   by (clarsimp simp add: updateObject_default_def in_monad)
-
-lemma ps_clear_upd':
-  "ksPSpace s y = Some v \<Longrightarrow>
-    ps_clear x n (s' \<lparr> ksPSpace := ksPSpace s(y \<mapsto> v')\<rparr>) = ps_clear x n s"
-  by (rule ps_clear_upd)
-
-lemmas ps_clear_updE'[elim] = iffD2[OF ps_clear_upd', rotated]
 
 lemma obj_at_setObject1:
   assumes R: "\<And>(v::'a::pspace_storable) p q n ko s x s''.
@@ -239,24 +223,7 @@ lemma obj_at_setObject2:
   apply (clarsimp simp: ps_clear_upd' lookupAround2_char1)
   done
 
-lemma updateObject_ep_eta:
-  "updateObject (v :: endpoint) = updateObject_default v"
-  by ((rule ext)+, simp)
-
-lemma updateObject_tcb_eta:
-  "updateObject (v :: tcb) = updateObject_default v"
-  by ((rule ext)+, simp)
-
-lemma updateObject_ntfn_eta:
-  "updateObject (v :: Structures_H.notification) = updateObject_default v"
-  by ((rule ext)+, simp)
-
-lemmas updateObject_eta =
-  updateObject_ep_eta updateObject_tcb_eta updateObject_ntfn_eta
-
-lemma objBits_type:
-  "koTypeOf k = koTypeOf k' \<Longrightarrow> objBitsKO k = objBitsKO k'"
-  by (erule koType_objBitsKO)
+lemmas objBits_type = koType_objBitsKO
 
 lemma setObject_typ_at_inv:
   "\<lbrace>typ_at' T p'\<rbrace> setObject p v \<lbrace>\<lambda>r. typ_at' T p'\<rbrace>"
@@ -466,13 +433,23 @@ lemma setObject_nosch:
   apply (wp x | simp)+
   done
 
-lemma getObject_ep_inv: "\<lbrace>P\<rbrace> (getObject addr :: endpoint kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
+lemma getObject_ep_inv: "\<lbrace>P\<rbrace> getObject addr :: endpoint kernel \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule getObject_inv)
   apply (simp add: loadObject_default_inv)
   done
 
 lemma getObject_ntfn_inv:
-  "\<lbrace>P\<rbrace> (getObject addr :: Structures_H.notification kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
+  "\<lbrace>P\<rbrace> getObject addr :: Structures_H.notification kernel \<lbrace>\<lambda>rv. P\<rbrace>"
+  apply (rule getObject_inv)
+  apply (simp add: loadObject_default_inv)
+  done
+
+lemma getObject_sc_inv: "\<lbrace>P\<rbrace> (getObject addr :: sched_context kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
+  apply (rule getObject_inv)
+  apply (simp add: loadObject_default_inv)
+  done
+
+lemma getObject_reply_inv: "\<lbrace>P\<rbrace> (getObject addr :: reply kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule getObject_inv)
   apply (simp add: loadObject_default_inv)
   done
@@ -483,109 +460,116 @@ lemma get_ep_inv'[wp]: "\<lbrace>P\<rbrace> getEndpoint ep \<lbrace>\<lambda>rv.
 lemma get_ntfn_inv'[wp]: "\<lbrace>P\<rbrace> getNotification ntfn \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: getNotification_def getObject_ntfn_inv)
 
+lemma get_sc_inv': "\<lbrace>P\<rbrace> getSchedContext sc \<lbrace>\<lambda>rv. P\<rbrace>"
+  by (simp add: getSchedContext_def getObject_sc_inv)
+
+lemma get_reply_inv': "\<lbrace>P\<rbrace> getReply p \<lbrace>\<lambda>rv. P\<rbrace>"
+  by (simp add: getReply_def getObject_reply_inv)
+
+lemma get_ep_sp':
+  "\<lbrace>P\<rbrace> getEndpoint r \<lbrace>\<lambda>t. P and ko_at' t r\<rbrace>"
+  by (clarsimp simp: getEndpoint_def getObject_def loadObject_default_def
+                     projectKOs in_monad valid_def obj_at'_def objBits_simps'
+                     in_magnitude_check split_def)
+
+lemma getEndpoint_wp:
+  "\<lbrace>\<lambda>s. \<forall>ep. ko_at' ep e s \<longrightarrow> P ep s\<rbrace> getEndpoint e \<lbrace>P\<rbrace>"
+  by (rule hoare_strengthen_post, rule get_ep_sp') simp
+
+lemma get_ntfn_sp':
+  "\<lbrace>P\<rbrace> getNotification r \<lbrace>\<lambda>t. P and ko_at' t r\<rbrace>"
+  by (clarsimp simp: getNotification_def getObject_def loadObject_default_def
+                     projectKOs in_monad valid_def obj_at'_def objBits_simps'
+                     in_magnitude_check split_def)
+
+lemma getNotification_wp:
+  "\<lbrace>\<lambda>s. \<forall>ntfn. ko_at' ntfn e s \<longrightarrow> P ntfn s\<rbrace> getNotification e \<lbrace>P\<rbrace>"
+  by (rule hoare_strengthen_post, rule get_ntfn_sp') simp
+
+lemma get_sc_sp':
+  "\<lbrace>P\<rbrace> getSchedContext p \<lbrace>\<lambda>t. P and ko_at' t p\<rbrace>"
+  by (clarsimp simp: getSchedContext_def getObject_def loadObject_default_def
+                     projectKOs in_monad valid_def obj_at'_def objBits_simps'
+                     in_magnitude_check split_def)
+
+lemma getSchedContext_wp[wp]:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko p s \<longrightarrow> P ko s\<rbrace> getSchedContext p \<lbrace>P\<rbrace>"
+  by (rule hoare_strengthen_post, rule get_sc_sp') simp
+
+lemma get_reply_sp':
+  "\<lbrace>P\<rbrace> getReply p \<lbrace>\<lambda>t. P and ko_at' t p\<rbrace>"
+  by (clarsimp simp: getReply_def getObject_def loadObject_default_def
+                     projectKOs in_monad valid_def obj_at'_def objBits_simps'
+                     in_magnitude_check split_def)
+
+lemma getReply_wp[wp]:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko p s \<longrightarrow> P ko s\<rbrace> getReply p \<lbrace>P\<rbrace>"
+  by (rule hoare_strengthen_post, rule get_reply_sp') simp
+
+context
+begin
+
+private method getObject_valid_obj =
+  rule hoare_chain,
+  rule getObject_valid_obj; clarsimp simp: objBits_simps' valid_obj'_def
+
 lemma get_ep'_valid_ep[wp]:
   "\<lbrace> invs' and ep_at' ep \<rbrace> getEndpoint ep \<lbrace> valid_ep' \<rbrace>"
-  apply (simp add: getEndpoint_def)
-  apply (rule hoare_chain)
-  apply (rule getObject_valid_obj)
-     apply simp
-    apply (simp add: objBits_simps')
-   apply clarsimp
-  apply (simp add: valid_obj'_def)
-  done
+  unfolding getEndpoint_def by getObject_valid_obj
 
 lemma get_ntfn'_valid_ntfn[wp]:
   "\<lbrace> invs' and ntfn_at' ep \<rbrace> getNotification ep \<lbrace> valid_ntfn' \<rbrace>"
-  apply (simp add: getNotification_def)
-  apply (rule hoare_chain)
-  apply (rule getObject_valid_obj)
-     apply simp
-    apply (simp add: objBits_simps')
-   apply clarsimp
-  apply (simp add: valid_obj'_def)
-  done
+  unfolding getNotification_def by getObject_valid_obj
 
-lemma setObject_distinct[wp]:
-  shows     "\<lbrace>pspace_distinct'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_distinct'_def ps_clear_upd'
-                        objBits_def[symmetric] lookupAround2_char1
-                 split: if_split_asm
-                 dest!: updateObject_objBitsKO)
-   apply (fastforce dest: bspec[OF _ domI])
-  apply (fastforce dest: bspec[OF _ domI])
-  done
+lemma get_sc_valid_sc'[wp]:
+  "\<lbrace> invs' and sc_at' sc \<rbrace> getSchedContext sc \<lbrace> valid_sched_context' \<rbrace>"
+  unfolding getSchedContext_def by getObject_valid_obj
 
-lemma setObject_aligned[wp]:
-  shows     "\<lbrace>pspace_aligned'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
-                        objBits_def[symmetric] lookupAround2_char1
-                 split: if_split_asm
-                 dest!: updateObject_objBitsKO)
-   apply (fastforce dest: bspec[OF _ domI])
-  apply (fastforce dest: bspec[OF _ domI])
-  done
+lemma get_reply_valid_reply'[wp]:
+  "\<lbrace> invs' and sc_at' sc \<rbrace> getReply sc \<lbrace> valid_reply' \<rbrace>"
+  unfolding getReply_def by getObject_valid_obj
 
-lemma set_ep_aligned' [wp]:
-  "\<lbrace>pspace_aligned'\<rbrace> setEndpoint ep v  \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
-  unfolding setEndpoint_def by wp
+end
 
-lemma set_ep_distinct' [wp]:
-  "\<lbrace>pspace_distinct'\<rbrace> setEndpoint ep v  \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
-  unfolding setEndpoint_def by wp
-
-
-lemma setEndpoint_cte_wp_at':
-  "\<lbrace>cte_wp_at' P p\<rbrace> setEndpoint ptr v \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
-  unfolding setEndpoint_def
-  apply (rule setObject_cte_wp_at'[where Q="\<top>", simplified])
-   apply (clarsimp simp add: updateObject_default_def in_monad
-                             projectKOs
-                     intro!: set_eqI)+
-  done
-
-lemma setEndpoint_pred_tcb_at'[wp]:
-  "\<lbrace>pred_tcb_at' proj P t\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
-  apply (simp add: pred_tcb_at'_def setEndpoint_def)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
+lemma get_ep_ko':
+  "\<lbrace>\<top>\<rbrace> getEndpoint ep \<lbrace>\<lambda>rv. ko_at' rv ep\<rbrace>"
+  unfolding getEndpoint_def
+  by (rule getObject_ko_at; simp add: objBits_simps')
 
 lemma get_ntfn_ko':
-  "\<lbrace>\<top>\<rbrace> getNotification ep \<lbrace>\<lambda>rv. ko_at' rv ep\<rbrace>"
-  apply (simp add: getNotification_def)
-  apply (rule getObject_ko_at)
-   apply simp
-  apply (simp add: objBits_simps')
-  done
+  "\<lbrace>\<top>\<rbrace> getNotification ntfn \<lbrace>\<lambda>rv. ko_at' rv ntfn\<rbrace>"
+  unfolding getNotification_def
+  by (rule getObject_ko_at; simp add: objBits_simps')
 
-lemma set_ntfn_aligned'[wp]:
-  "\<lbrace>pspace_aligned'\<rbrace> setNotification p ntfn \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
-  unfolding setNotification_def by wp
+lemma get_sc_ko':
+  "\<lbrace>\<top>\<rbrace> getSchedContext sc_ptr \<lbrace>\<lambda>sc. ko_at' sc sc_ptr\<rbrace>"
+  unfolding getSchedContext_def
+  by (rule getObject_ko_at; simp add: objBits_simps')
 
-lemma set_ntfn_distinct'[wp]:
-  "\<lbrace>pspace_distinct'\<rbrace> setNotification p ntfn \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
-  unfolding setNotification_def by wp
+lemma get_reply_ko':
+  "\<lbrace>\<top>\<rbrace> getReply reply_ptr \<lbrace>\<lambda>reply. ko_at' reply reply_ptr\<rbrace>"
+  unfolding getReply_def
+  by (rule getObject_ko_at; simp add: objBits_simps')
 
-lemma setNotification_cte_wp_at':
-  "\<lbrace>cte_wp_at' P p\<rbrace> setNotification ptr v \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
-  unfolding setNotification_def
-  apply (rule setObject_cte_wp_at'[where Q="\<top>", simplified])
-   apply (clarsimp simp add: updateObject_default_def in_monad
-                             projectKOs
-                     intro!: set_eqI)+
-  done
+context
+begin
 
-lemma setObject_ntfn_tcb':
-  "\<lbrace>tcb_at' t\<rbrace> setObject p (e::Structures_H.notification) \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
+private method unfold_setObject_inmonad =
+  (clarsimp simp: setObject_def split_def valid_def in_monad projectKOs
+                  objBits_def[symmetric] lookupAround2_char1 ps_clear_upd'
+            split: if_split_asm
+            dest!: updateObject_objBitsKO;
+    fastforce dest: bspec[OF _ domI])
 
-lemma set_ntfn_tcb' [wp]:
-  "\<lbrace> tcb_at' t \<rbrace> setNotification ntfn v \<lbrace> \<lambda>rv. tcb_at' t \<rbrace>"
-  by (simp add: setNotification_def setObject_ntfn_tcb')
+lemma setObject_distinct[wp]:
+  "setObject p val \<lbrace>pspace_distinct'\<rbrace>"
+  unfolding pspace_distinct'_def by unfold_setObject_inmonad
+
+lemma setObject_aligned[wp]:
+  "setObject p val \<lbrace>pspace_aligned'\<rbrace>"
+  unfolding pspace_aligned'_def by unfold_setObject_inmonad
+
+end
 
 lemma pspace_dom_update:
   "\<lbrakk> ps ptr = Some x; a_type x = a_type v \<rbrakk> \<Longrightarrow> pspace_dom (ps(ptr \<mapsto> v)) = pspace_dom ps"
@@ -1038,7 +1022,7 @@ lemma get_ntfn_corres:
 
 lemma setObject_ko_wp_at:
   fixes v :: "'a :: pspace_storable"
-  assumes R: "\<And>ko s x y n. (updateObject v ko p y n s)
+  assumes R: "\<And>ko s y n. (updateObject v ko p y n s)
                    = (updateObject_default v ko p y n s)"
   assumes n: "\<And>v' :: 'a. objBits v' = n"
   assumes m: "(1 :: word32) < 2 ^ n"
@@ -1059,7 +1043,7 @@ lemma setObject_ko_wp_at:
    apply (clarsimp simp: n ps_clear_upd' objBits_def[symmetric]
                   split: if_split_asm)
   apply (clarsimp simp: n project_inject objBits_def[symmetric]
-                        ps_clear_upd
+                        ps_clear_upd'
                  split: if_split_asm)
   done
 
@@ -1111,7 +1095,7 @@ lemma setObject_valid_objs':
 
 lemma setObject_iflive':
   fixes v :: "'a :: pspace_storable"
-  assumes R: "\<And>ko s x y n. (updateObject v ko ptr y n s)
+  assumes R: "\<And>ko s y n. (updateObject v ko ptr y n s)
                    = (updateObject_default v ko ptr y n s)"
   assumes n: "\<And>x :: 'a. objBits x = n"
   assumes m: "(1 :: word32) < 2 ^ n"
@@ -1181,7 +1165,7 @@ lemma setObject_it[wp]:
 
 lemma setObject_idle':
   fixes v :: "'a :: pspace_storable"
-  assumes R: "\<And>ko s x y n. (updateObject v ko ptr y n s)
+  assumes R: "\<And>ko s y n. (updateObject v ko ptr y n s)
                    = (updateObject_default v ko ptr y n s)"
   assumes n: "\<And>x :: 'a. objBits x = n"
   assumes m: "(1 :: word32) < 2 ^ n"
@@ -1267,123 +1251,6 @@ lemma no_fail_dmo' [wp]:
   apply (simp add: no_fail_def)
   done
 
-lemma setEndpoint_nosch[wp]:
-  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
-    setEndpoint val ptr
-   \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  apply (simp add: setEndpoint_def)
-  apply (rule setObject_nosch)
-  apply (simp add: updateObject_default_def)
-  apply wp
-  apply simp
-  done
-
-lemma setNotification_nosch[wp]:
-  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
-    setNotification val ptr
-   \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  apply (simp add: setNotification_def)
-  apply (rule setObject_nosch)
-  apply (simp add: updateObject_default_def)
-  apply wp
-  apply simp
-  done
-
-lemma set_ep_valid_objs':
-  "\<lbrace>valid_objs' and valid_ep' ep\<rbrace>
-  setEndpoint epptr ep
-  \<lbrace>\<lambda>r s. valid_objs' s\<rbrace>"
-  apply (simp add: setEndpoint_def)
-  apply (rule setObject_valid_objs')
-  apply (clarsimp simp: updateObject_default_def in_monad
-                        projectKOs valid_obj'_def)
-  done
-
-lemma set_ep_ctes_of[wp]:
-  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> setEndpoint p val \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
-  apply (simp add: setEndpoint_def)
-  apply (rule setObject_ctes_of[where Q="\<top>", simplified])
-   apply (clarsimp simp: updateObject_default_def in_monad
-                         projectKOs)
-  apply (clarsimp simp: updateObject_default_def bind_def
-                        projectKOs)
-  done
-
-lemma set_ep_valid_mdb' [wp]:
-  "\<lbrace>valid_mdb'\<rbrace>
-     setObject epptr (ep::endpoint)
-   \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
-  apply (simp add: valid_mdb'_def)
-  apply (rule set_ep_ctes_of[simplified setEndpoint_def])
-  done
-
-lemma setEndpoint_valid_mdb':
-  "\<lbrace>valid_mdb'\<rbrace> setEndpoint p v \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
-  unfolding setEndpoint_def
-  by (rule set_ep_valid_mdb')
-
-lemma set_ep_valid_pspace'[wp]:
-  "\<lbrace>valid_pspace' and valid_ep' ep\<rbrace>
-  setEndpoint epptr ep
-  \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
-  apply (simp add: valid_pspace'_def)
-  apply (wp set_ep_aligned' [simplified] set_ep_valid_objs')
-   apply (wp hoare_vcg_conj_lift)
-    apply (simp add: setEndpoint_def)
-    apply (wp setEndpoint_valid_mdb')+
-  apply auto
-  done
-
-lemma set_ep_valid_bitmapQ[wp]:
-  "\<lbrace>Invariants_H.valid_bitmapQ\<rbrace> setEndpoint epptr ep \<lbrace>\<lambda>rv. Invariants_H.valid_bitmapQ\<rbrace>"
-  apply (unfold setEndpoint_def)
-  apply (rule setObject_ep_pre)
-  apply (simp add: bitmapQ_defs setObject_def split_def)
-  apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp add: bitmapQ_def)+
-  done
-
-lemma set_ep_bitmapQ_no_L1_orphans[wp]:
-  "\<lbrace> bitmapQ_no_L1_orphans \<rbrace> setEndpoint epptr ep \<lbrace>\<lambda>rv. bitmapQ_no_L1_orphans \<rbrace>"
-  apply (unfold setEndpoint_def)
-  apply (rule setObject_ep_pre)
-  apply (simp add: bitmapQ_defs setObject_def split_def)
-  apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp add: bitmapQ_def)+
-  done
-
-lemma set_ep_bitmapQ_no_L2_orphans[wp]:
-  "\<lbrace> bitmapQ_no_L2_orphans \<rbrace> setEndpoint epptr ep \<lbrace>\<lambda>rv. bitmapQ_no_L2_orphans \<rbrace>"
-  apply (unfold setEndpoint_def)
-  apply (rule setObject_ep_pre)
-  apply (simp add: bitmapQ_defs setObject_def split_def)
-  apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp add: bitmapQ_def)+
-  done
-
-lemma set_ep_valid_queues[wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> setEndpoint epptr ep \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  apply (simp add: Invariants_H.valid_queues_def)
-  apply (wp hoare_vcg_conj_lift)
-    apply (simp add: setEndpoint_def valid_queues_no_bitmap_def)
-    apply (wp hoare_Ball_helper hoare_vcg_all_lift)
-      apply (rule obj_at_setObject2)
-      apply (clarsimp simp: updateObject_default_def in_monad)
-     apply (wp updateObject_default_inv set_ep_valid_bitmapQ[unfolded setEndpoint_def]
-            | simp add: valid_queues_no_bitmap_def)+
-  done
-
-lemma set_ep_valid_queues'[wp]:
-  "\<lbrace>valid_queues'\<rbrace> setEndpoint epptr ep \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  apply (unfold setEndpoint_def)
-  apply (simp only: valid_queues'_def imp_conv_disj
-                    obj_at'_real_def)
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
-    apply (rule setObject_ko_wp_at)
-      apply simp
-     apply (simp add: objBits_simps')
-    apply simp
-   apply (wp updateObject_default_inv | simp)+
-  apply (clarsimp simp: projectKOs ko_wp_at'_def)
-  done
-
 lemma ct_in_state_thread_state_lift':
   assumes ct: "\<And>P. \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
   assumes st: "\<And>t. \<lbrace>st_tcb_at' P t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
@@ -1396,7 +1263,7 @@ lemma ct_in_state_thread_state_lift':
 
 lemma sch_act_wf_lift:
   assumes tcb: "\<And>P t. \<lbrace>st_tcb_at' P t\<rbrace> f \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  assumes tcb_cd: "\<And>P t. \<lbrace> tcb_in_cur_domain' t\<rbrace> f \<lbrace>\<lambda>_ . tcb_in_cur_domain' t \<rbrace>"
+  assumes tcb_cd: "\<And>t. \<lbrace> tcb_in_cur_domain' t\<rbrace> f \<lbrace>\<lambda>_ . tcb_in_cur_domain' t \<rbrace>"
   assumes kCT: "\<And>P. \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
   assumes ksA: "\<And>P. \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
   shows
@@ -1428,7 +1295,7 @@ lemma ct_idle_or_in_cur_domain'_lift:
   assumes b: "\<And>P. \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
   assumes c: "\<And>P. \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>      f \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
   assumes d: "\<And>P. \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>       f \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
-  assumes e: "\<And>d a t t'. \<lbrace>\<lambda>s. t = t' \<or> obj_at' (\<lambda>tcb. d = tcbDomain tcb) t s\<rbrace>
+  assumes e: "\<And>d t t'. \<lbrace>\<lambda>s. t = t' \<or> obj_at' (\<lambda>tcb. d = tcbDomain tcb) t s\<rbrace>
                             f
                        \<lbrace>\<lambda>_ s. t = t' \<or> obj_at' (\<lambda>tcb. d = tcbDomain tcb) t s\<rbrace>"
   shows "\<lbrace> ct_idle_or_in_cur_domain' \<rbrace> f \<lbrace> \<lambda>_. ct_idle_or_in_cur_domain' \<rbrace>"
@@ -1446,37 +1313,8 @@ lemma ct_idle_or_in_cur_domain'_lift:
   apply (rule d)
   done
 
-
-lemma setObject_ep_obj_at'_tcb[wp]:
-  "\<lbrace>obj_at' (P :: tcb \<Rightarrow> bool) t \<rbrace> setObject ptr (e::endpoint) \<lbrace>\<lambda>_. obj_at' (P :: tcb \<Rightarrow> bool) t\<rbrace>"
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
-
-lemma setObject_ep_cur_domain[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> setObject ptr (e::endpoint) \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
-  apply (simp add: setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setEndpoint_tcb_in_cur_domain'[wp]:
-  "\<lbrace>tcb_in_cur_domain' t\<rbrace> setEndpoint epptr ep \<lbrace>\<lambda>_. tcb_in_cur_domain' t\<rbrace>"
-  apply (clarsimp simp: setEndpoint_def)
-  apply (rule tcb_in_cur_domain'_lift; wp)
-  done
-
-lemma setEndpoint_obj_at'_tcb[wp]:
-  "\<lbrace>obj_at' (P :: tcb \<Rightarrow> bool) t \<rbrace> setEndpoint ptr (e::endpoint) \<lbrace>\<lambda>_. obj_at' (P :: tcb \<Rightarrow> bool) t\<rbrace>"
-  by (clarsimp simp: setEndpoint_def, wp)
-
-lemma set_ep_sch_act_wf[wp]:
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
-     setEndpoint epptr ep
-   \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (wp sch_act_wf_lift)
-    apply (simp add: setEndpoint_def split_def setObject_def
-              | wp updateObject_default_inv)+
-  done
+lemmas cur_tcb_lift =
+  hoare_lift_Pf [where f = ksCurThread and P = tcb_at', folded cur_tcb'_def]
 
 lemma setObject_state_refs_of':
   assumes x: "updateObject val = updateObject_default val"
@@ -1491,7 +1329,7 @@ lemma setObject_state_refs_of':
                  elim!: rsubst[where P=P] intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (clarsimp simp: state_refs_of'_def objBits_def[symmetric]
-                        ps_clear_upd
+                        ps_clear_upd'
                   cong: if_cong option.case_cong)
   done
 
@@ -1509,206 +1347,9 @@ lemma setObject_state_refs_of_eq:
                  elim!: rsubst[where P=P] intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (frule x, drule updateObject_objBitsKO)
-  apply (simp add: state_refs_of'_def ps_clear_upd
+  apply (simp add: state_refs_of'_def ps_clear_upd'
              cong: option.case_cong if_cong)
   done
-
-lemma set_ep_state_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (epptr := ep_q_refs_of' ep))\<rbrace>
-     setEndpoint epptr ep
-   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
-  unfolding setEndpoint_def
-  by (wp setObject_state_refs_of',
-      simp_all add: objBits_simps' fun_upd_def[symmetric])
-
-lemma set_ntfn_ctes_of[wp]:
-  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> setNotification p val \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
-  apply (simp add: setNotification_def)
-  apply (rule setObject_ctes_of[where Q="\<top>", simplified])
-   apply (clarsimp simp: updateObject_default_def in_monad
-                         projectKOs)
-  apply (clarsimp simp: updateObject_default_def bind_def
-                        projectKOs)
-  done
-
-lemma set_ntfn_valid_mdb' [wp]:
-  "\<lbrace>valid_mdb'\<rbrace>
-    setObject epptr (ntfn::Structures_H.notification)
-   \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
-  apply (simp add: valid_mdb'_def)
-  apply (rule set_ntfn_ctes_of[simplified setNotification_def])
-  done
-
-lemma set_ntfn_valid_objs':
-  "\<lbrace>valid_objs' and valid_ntfn' ntfn\<rbrace>
-    setNotification p ntfn
-   \<lbrace>\<lambda>r s. valid_objs' s\<rbrace>"
-  apply (simp add: setNotification_def)
-  apply (rule setObject_valid_objs')
-  apply (clarsimp simp: updateObject_default_def in_monad
-                        valid_obj'_def)
-  done
-
-lemma set_ntfn_valid_pspace'[wp]:
-  "\<lbrace>valid_pspace' and valid_ntfn' ntfn\<rbrace>
-    setNotification p ntfn
-   \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
-  apply (simp add: valid_pspace'_def)
-  apply (wp set_ntfn_aligned' [simplified] set_ntfn_valid_objs')
-      apply (simp add: setNotification_def,wp)
-     apply auto
-  done
-
-lemma set_ntfn_valid_bitmapQ[wp]:
-  "\<lbrace>Invariants_H.valid_bitmapQ\<rbrace> setNotification p ntfn \<lbrace>\<lambda>rv. Invariants_H.valid_bitmapQ\<rbrace>"
-  apply (unfold setNotification_def)
-  apply (rule setObject_ntfn_pre)
-  apply (simp add: bitmapQ_defs setObject_def split_def)
-  apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp)+
-  done
-
-lemma set_ntfn_bitmapQ_no_L1_orphans[wp]:
-  "\<lbrace> bitmapQ_no_L1_orphans \<rbrace> setNotification p ntfn \<lbrace>\<lambda>rv. bitmapQ_no_L1_orphans \<rbrace>"
-  apply (unfold setNotification_def)
-  apply (rule setObject_ntfn_pre)
-  apply (simp add: bitmapQ_defs setObject_def split_def)
-  apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp)+
-  done
-
-lemma set_ntfn_bitmapQ_no_L2_orphans[wp]:
-  "\<lbrace> bitmapQ_no_L2_orphans \<rbrace> setNotification p ntfn \<lbrace>\<lambda>rv. bitmapQ_no_L2_orphans \<rbrace>"
-  apply (unfold setNotification_def)
-  apply (rule setObject_ntfn_pre)
-  apply (simp add: bitmapQ_defs setObject_def split_def)
-  apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp)+
-  done
-
-lemma set_ntfn_valid_queues[wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> setNotification p ntfn \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  apply (simp add: Invariants_H.valid_queues_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_vcg_conj_lift)
-    apply (simp add: setNotification_def valid_queues_no_bitmap_def)
-    apply (wp hoare_Ball_helper hoare_vcg_all_lift)
-      apply (rule obj_at_setObject2)
-      apply (clarsimp simp: updateObject_default_def in_monad)
-     apply (wp updateObject_default_inv set_ep_valid_bitmapQ[unfolded setEndpoint_def]
-            | simp add: valid_queues_no_bitmap_def)+
-  done
-
-lemma set_ntfn_valid_queues'[wp]:
-  "\<lbrace>valid_queues'\<rbrace> setNotification p ntfn \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  apply (unfold setNotification_def)
-  apply (rule setObject_ntfn_pre)
-  apply (simp only: valid_queues'_def imp_conv_disj
-                    obj_at'_real_def)
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
-    apply (rule setObject_ko_wp_at)
-      apply simp
-     apply (simp add: objBits_simps')
-    apply simp
-   apply (wp updateObject_default_inv | simp)+
-  apply (clarsimp simp: projectKOs ko_wp_at'_def)
-  done
-
-lemma set_ntfn_state_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (epptr := ntfn_q_refs_of' (ntfnObj ntfn)
-                                      \<union> ntfn_bound_refs' (ntfnBoundTCB ntfn)))\<rbrace>
-     setNotification epptr ntfn
-   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>" (* FIXME RT: needs statement update *)
-  unfolding setNotification_def
-  sorry (*
-  by (wp setObject_state_refs_of',
-      simp_all add: objBits_simps' fun_upd_def) *)
-
-lemma setNotification_pred_tcb_at'[wp]:
-  "\<lbrace>pred_tcb_at' proj P t\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
-  apply (simp add: pred_tcb_at'_def setNotification_def)
-  apply (rule obj_at_setObject2)
-   apply simp
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
-
-lemma setObject_ntfn_cur_domain[wp]:
-  "\<lbrace> \<lambda>s. P (ksCurDomain s) \<rbrace> setObject ptr (ntfn::Structures_H.notification) \<lbrace> \<lambda>_s . P (ksCurDomain s) \<rbrace>"
-  apply (clarsimp simp: setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setObject_ntfn_obj_at'_tcb[wp]:
-  "\<lbrace>obj_at' (P :: tcb \<Rightarrow> bool) t \<rbrace> setObject ptr (ntfn::Structures_H.notification) \<lbrace>\<lambda>_. obj_at' (P :: tcb \<Rightarrow> bool) t\<rbrace>"
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
-
-lemma setNotification_ksCurDomain[wp]:
-  "\<lbrace> \<lambda>s. P (ksCurDomain s) \<rbrace> setNotification ptr (ntfn::Structures_H.notification) \<lbrace> \<lambda>_s . P (ksCurDomain s) \<rbrace>"
-   apply (simp add: setNotification_def)
-   apply wp
-   done
-
-lemma setNotification_tcb_in_cur_domain'[wp]:
-  "\<lbrace>tcb_in_cur_domain' t\<rbrace> setNotification epptr ep \<lbrace>\<lambda>_. tcb_in_cur_domain' t\<rbrace>"
-  apply (clarsimp simp: setNotification_def)
-  apply (rule tcb_in_cur_domain'_lift; wp)
-  done
-
-lemma set_ntfn_sch_act_wf[wp]:
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
-     setNotification ntfnptr ntfn
-   \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (wp sch_act_wf_lift | clarsimp simp: setNotification_def)+
-    apply (simp add: setNotification_def split_def setObject_def
-         | wp updateObject_default_inv)+
-  done
-
-lemmas cur_tcb_lift =
-  hoare_lift_Pf [where f = ksCurThread and P = tcb_at', folded cur_tcb'_def]
-
-lemma set_ntfn_cur_tcb'[wp]:
-  "\<lbrace>cur_tcb'\<rbrace> setNotification ptr ntfn \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
-  apply (wp cur_tcb_lift)
-  apply (simp add: setNotification_def setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setEndpoint_typ_at'[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  unfolding setEndpoint_def
-  by (rule setObject_typ_at')
-
-lemmas setEndpoint_typ_ats[wp] = typ_at_lifts [OF setEndpoint_typ_at']
-
-lemma get_ep_sp':
-  "\<lbrace>P\<rbrace> getEndpoint r \<lbrace>\<lambda>t. P and ko_at' t r\<rbrace>"
-  by (clarsimp simp: getEndpoint_def getObject_def loadObject_default_def
-                     projectKOs in_monad valid_def obj_at'_def objBits_simps'
-                     in_magnitude_check split_def)
-
-lemma setEndpoint_cur_tcb'[wp]:
-  "\<lbrace>cur_tcb'\<rbrace> setEndpoint p v \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
-  apply (wp cur_tcb_lift)
-  apply (simp add: setEndpoint_def setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setEndpoint_iflive'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-      \<and> (v \<noteq> IdleEP \<longrightarrow> ex_nonz_cap_to' p s)\<rbrace>
-     setEndpoint p v
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  unfolding setEndpoint_def
-  apply (wp setObject_iflive'[where P="\<top>"])
-       apply simp
-      apply (simp add: objBits_simps')
-     apply simp
-    apply (clarsimp simp: updateObject_default_def in_monad projectKOs)
-   apply (clarsimp simp: updateObject_default_def in_monad
-                         projectKOs bind_def)
-  apply clarsimp
-  done
-
-declare setEndpoint_cte_wp_at'[wp]
 
 lemma ex_nonz_cap_to_pres':
   assumes y: "\<And>P p. \<lbrace>cte_wp_at' P p\<rbrace> f \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
@@ -1717,51 +1358,6 @@ lemma ex_nonz_cap_to_pres':
   apply (intro hoare_vcg_disj_lift hoare_vcg_ex_lift
                y hoare_vcg_all_lift)
   done
-
-lemma setEndpoint_cap_to'[wp]:
-  "\<lbrace>ex_nonz_cap_to' p\<rbrace> setEndpoint p' v \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
-  by (wp ex_nonz_cap_to_pres')
-
-lemma setEndpoint_ifunsafe'[wp]:
-  "\<lbrace>if_unsafe_then_cap'\<rbrace> setEndpoint p v \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
-  unfolding setEndpoint_def
-  apply (rule setObject_ifunsafe'[where P="\<top>", simplified])
-    apply (clarsimp simp: updateObject_default_def in_monad projectKOs
-                  intro!: equals0I)+
-  apply (simp add: setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setEndpoint_idle'[wp]:
-  "\<lbrace>\<lambda>s. valid_idle' s\<rbrace>
-   setEndpoint p v
-   \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
-  unfolding setEndpoint_def
-  apply (wp setObject_idle'[where P="\<top>"])
-       apply (simp add: objBits_simps' updateObject_default_inv)+
-  apply (clarsimp simp: projectKOs)
-  done
-
-crunch it[wp]: setEndpoint "\<lambda>s. P (ksIdleThread s)"
-  (simp: updateObject_default_inv)
-
-lemma setObject_ksPSpace_only:
-  "\<lbrakk> \<And>p q n ko. \<lbrace>P\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv. P \<rbrace>;
-        \<And>f s. P (ksPSpace_update f s) = P s \<rbrakk>
-     \<Longrightarrow> \<lbrace>P\<rbrace> setObject ptr val \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: setObject_def split_def)
-  apply (wp | simp | assumption)+
-  done
-
-lemma setObject_ksMachine:
-  "\<lbrakk> \<And>p q n ko. \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setObject ptr val \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
-  by (simp add: setObject_ksPSpace_only)
-
-lemma setObject_ksInterrupt:
-  "\<lbrakk> \<And>p q n ko. \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv s. P (ksInterruptState s)\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setObject ptr val \<lbrace>\<lambda>rv s. P (ksInterruptState s)\<rbrace>"
-  by (simp add: setObject_ksPSpace_only)
 
 lemma valid_irq_handlers_lift':
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
@@ -1772,18 +1368,6 @@ lemma valid_irq_handlers_lift':
   done
 
 lemmas valid_irq_handlers_lift'' = valid_irq_handlers_lift' [unfolded cteCaps_of_def]
-
-crunch ksInterruptState[wp]: setEndpoint "\<lambda>s. P (ksInterruptState s)"
-  (wp: setObject_ksInterrupt updateObject_default_inv)
-
-lemmas setEndpoint_irq_handlers[wp]
-    = valid_irq_handlers_lift'' [OF set_ep_ctes_of setEndpoint_ksInterruptState]
-
-declare set_ep_arch' [wp]
-
-lemma set_ep_maxObj [wp]:
-  "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv s. P (gsMaxObjectSize s)\<rbrace>"
-  by (simp add: setEndpoint_def | wp setObject_ksPSpace_only updateObject_default_inv)+
 
 lemma valid_global_refs_lift':
   assumes ctes: "\<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
@@ -1812,105 +1396,6 @@ lemma valid_arch_state_lift':
    apply (wp typs hoare_vcg_const_Ball_lift arch typ_at_lifts)+
   done
 
-lemma setObject_ep_ct:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::endpoint) \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
-  apply (simp add: setObject_def updateObject_ep_eta split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setObject_ntfn_ct:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::Structures_H.notification)
-   \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
-  apply (simp add: setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma get_ntfn_sp':
-  "\<lbrace>P\<rbrace> getNotification r \<lbrace>\<lambda>t. P and ko_at' t r\<rbrace>"
-  by (clarsimp simp: getNotification_def getObject_def loadObject_default_def
-                     projectKOs in_monad valid_def obj_at'_def objBits_simps'
-                     in_magnitude_check split_def)
-
-lemma set_ntfn_pred_tcb_at' [wp]:
-  "\<lbrace> pred_tcb_at' proj P t \<rbrace>
-   setNotification ep v
-   \<lbrace> \<lambda>rv. pred_tcb_at' proj P t \<rbrace>"
-  apply (simp add: setNotification_def pred_tcb_at'_def)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp add: updateObject_default_def in_monad)
-  done
-
-lemma set_ntfn_iflive'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-      \<and> (live' (KONotification v) \<longrightarrow> ex_nonz_cap_to' p s)\<rbrace>
-     setNotification p v
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: setNotification_def)
-  apply (wp setObject_iflive'[where P="\<top>"])
-       apply simp
-      apply (simp add: objBits_simps)
-     apply (simp add: objBits_simps')
-    apply (clarsimp simp: updateObject_default_def in_monad projectKOs)
-   apply (clarsimp simp: updateObject_default_def
-                         projectKOs bind_def)
-  apply clarsimp
-  done
-
-declare setNotification_cte_wp_at'[wp]
-
-lemma set_ntfn_cap_to'[wp]:
-  "\<lbrace>ex_nonz_cap_to' p\<rbrace> setNotification p' v \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
-  by (wp ex_nonz_cap_to_pres')
-
-lemma setNotification_ifunsafe'[wp]:
-  "\<lbrace>if_unsafe_then_cap'\<rbrace> setNotification p v \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
-  unfolding setNotification_def
-  apply (rule setObject_ifunsafe'[where P="\<top>", simplified])
-    apply (clarsimp simp: updateObject_default_def in_monad projectKOs
-                  intro!: equals0I)+
-  apply (simp add: setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setNotification_idle'[wp]:
-  "\<lbrace>\<lambda>s. valid_idle' s\<rbrace> setNotification p v \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  unfolding setNotification_def
-  apply (wp setObject_idle'[where P="\<top>"])
-        apply (simp add: objBits_simps' updateObject_default_inv)+
-  apply (clarsimp simp: projectKOs)
-  done
-
-crunch it[wp]: setNotification "\<lambda>s. P (ksIdleThread s)"
-  (wp: updateObject_default_inv)
-
-lemma set_ntfn_arch' [wp]:
-  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setNotification ntfn p \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
-  apply (simp add: setNotification_def setObject_def split_def)
-  apply (wp updateObject_default_inv|simp)+
-  done
-
-lemma set_ntfn_ksInterrupt[wp]:
-  "\<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv s. P (ksInterruptState s)\<rbrace>"
-  by (simp add: setNotification_def | wp setObject_ksInterrupt updateObject_default_inv)+
-
-lemma set_ntfn_ksMachine[wp]:
-  "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
-  by (simp add: setNotification_def | wp setObject_ksMachine updateObject_default_inv)+
-
-lemma set_ntfn_maxObj [wp]:
-  "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv s. P (gsMaxObjectSize s)\<rbrace>"
-  by (simp add: setNotification_def | wp setObject_ksPSpace_only updateObject_default_inv)+
-
-lemma set_ntfn_global_refs' [wp]:
-  "\<lbrace>valid_global_refs'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
-  by (rule valid_global_refs_lift'; wp)
-
-crunch typ_at' [wp]: setNotification "\<lambda>s. P (typ_at' T p s)"
-
-lemma set_ntfn_valid_arch' [wp]:
-  "\<lbrace>valid_arch_state'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift'; wp)
-
 lemmas valid_irq_node_lift =
     hoare_use_eq_irq_node' [OF _ typ_at_lift_valid_irq_node']
 
@@ -1927,9 +1412,339 @@ lemma valid_irq_states_lift':
   apply wp
   done
 
-lemmas set_ntfn_irq_handlers'[wp] = valid_irq_handlers_lift'' [OF set_ntfn_ctes_of set_ntfn_ksInterrupt]
+lemma irqs_masked_lift:
+  assumes "\<And>P. \<lbrace>\<lambda>s. P (intStateIRQTable (ksInterruptState s))\<rbrace> f
+               \<lbrace>\<lambda>rv s. P (intStateIRQTable (ksInterruptState s))\<rbrace>"
+  shows "\<lbrace>irqs_masked'\<rbrace> f \<lbrace>\<lambda>_. irqs_masked'\<rbrace>"
+  apply (simp add: irqs_masked'_def)
+  apply (wp assms)
+  done
 
-lemmas set_ntfn_irq_states' [wp] = valid_irq_states_lift' [OF set_ntfn_ksInterrupt set_ntfn_ksMachine]
+lemma setObject_pspace_domain_valid[wp]:
+  "setObject ptr val \<lbrace>pspace_domain_valid\<rbrace>"
+  by (fastforce simp: setObject_def split_def pspace_domain_valid_def valid_def in_monad
+                      lookupAround2_char1
+                dest: updateObject_objBitsKO
+                split: if_split_asm)
+
+lemma ct_not_inQ_lift:
+  assumes sch_act: "\<And>P. \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
+      and not_inQ: "\<lbrace>\<lambda>s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s\<rbrace>
+                    f \<lbrace>\<lambda>_ s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s\<rbrace>"
+  shows "\<lbrace>ct_not_inQ\<rbrace> f \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
+  unfolding ct_not_inQ_def
+  by (rule hoare_convert_imp [OF sch_act not_inQ])
+
+
+end
+
+context typ_at_props'
+begin
+
+lemmas valid_obj'[wp] = typ_at'_valid_obj'_lift[OF typ']
+
+end
+
+locale simple_ko' =
+  fixes f :: "obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel"
+  assumes f_def: "f p v = setObject p v"
+  assumes default: "updateObject (v::'a) = updateObject_default (v::'a)"
+  assumes not_tcb: "projectKO_opt (KOTCB tcb) = (None::'a option)"
+  assumes not_cte: "projectKO_opt (KOCTE cte) = (None::'a option)"
+  assumes objBits: "\<exists>n. \<forall>v. objBits (v::'a) = n \<and> (1::machine_word) < 2^n"
+begin
+
+lemma updateObject_tcb[simp]:
+  "fst (updateObject (v::'a) (KOTCB tcb) p x n s) = {}"
+  by (clarsimp simp: default updateObject_default_def in_monad projectKOs not_tcb bind_def)
+
+lemma updateObject_cte[simp]:
+  "fst (updateObject (v::'a) (KOCTE cte) p x n s) = {}"
+  by (clarsimp simp: default updateObject_default_def in_monad projectKOs not_cte bind_def)
+
+lemma cte_wp_at'[wp]: "f p v \<lbrace>\<lambda>s. P (cte_wp_at' Q p' s)\<rbrace>"
+  unfolding f_def by (rule setObject_cte_wp_at2'[where Q="\<top>", simplified]; simp)
+
+lemma ctes_of[wp]: "f p v \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
+  unfolding f_def by (rule setObject_ctes_of[where Q="\<top>", simplified]; simp)
+
+lemma valid_mdb'[wp]: "f p v \<lbrace>valid_mdb'\<rbrace>"
+  unfolding valid_mdb'_def by wp
+
+lemma pspace_aligned'[wp]: "f p v \<lbrace>pspace_aligned'\<rbrace>"
+  and pspace_distinct'[wp]: "f p v \<lbrace>pspace_distinct'\<rbrace>"
+  and no_0_obj'[wp]: "f p v \<lbrace>no_0_obj'\<rbrace>"
+  unfolding f_def by (all \<open>wp\<close>)
+
+lemma valid_objs':
+  "\<lbrace>valid_objs' and valid_obj' (injectKO v) \<rbrace> f p v \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  unfolding f_def
+  by (rule setObject_valid_objs')
+     (clarsimp simp: default updateObject_default_def in_monad projectKOs)
+
+lemma valid_pspace':
+  "\<lbrace>valid_pspace' and valid_obj' (injectKO v) \<rbrace> f p v \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
+  unfolding valid_pspace'_def by (wpsimp wp: valid_objs')
+
+lemma not_inject_tcb[simp]:
+  "injectKO (v::'a) \<noteq> KOTCB tcb"
+  by (simp flip: project_inject add: projectKOs not_tcb)
+
+lemma typeOf_not_tcb[simp]:
+  "koTypeOf (injectKO (v::'a)) \<noteq> TCBT"
+  by (cases "injectKO v"; simp)
+
+lemma obj_at_tcb'[wp]:
+  "f p v \<lbrace>\<lambda>s. P (obj_at' (Q :: tcb \<Rightarrow> bool) p' s)\<rbrace>"
+  unfolding f_def obj_at'_real_def
+  using objBits
+  apply clarsimp
+  apply (wp setObject_ko_wp_at; simp add: default)
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
+  apply (case_tac ko; simp add: projectKOs not_tcb)
+  done
+
+lemma typ_at'[wp]:
+  "f p v \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
+  unfolding f_def by (rule setObject_typ_at')
+
+sublocale typ_at_props' "f p v" for p v
+  by (unfold_locales) (rule typ_at')
+
+lemma it[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>"
+  and ct[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
+  and cur_domain[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace>"
+  and ksDomSchedule[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
+  and l1Bitmap[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+  and l2Bitmap[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+  and gsUserPages[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (gsUserPages s)\<rbrace>"
+  and gsCNodes[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (gsCNodes s)\<rbrace>"
+  and gsUntypedZeroRanges[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (gsUntypedZeroRanges s)\<rbrace>"
+  and gsMaxObjectSize[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace>"
+  and ksDomScheduleIdx[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
+  and ksDomainTime[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace>"
+  and ksReadyQueues[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace>"
+  and ksReleaseQueue[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace>"
+  and ksConsumedTime[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksConsumedTime s)\<rbrace>"
+  and ksCurTime[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksCurTime s)\<rbrace>"
+  and ksCurSc[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksCurSc s)\<rbrace>"
+  and ksReprogramTimer[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksReprogramTimer s)\<rbrace>"
+  and ksSchedulerAction[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
+  and ksInterruptState[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace>"
+  and ksWorkUnitsCompleted[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksWorkUnitsCompleted s)\<rbrace>"
+  and ksArchState[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace>"
+  and ksMachineState[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace>"
+  unfolding f_def
+  by (all \<open>wpsimp simp: setObject_def default wp: updateObject_default_inv\<close>)
+
+lemma set_ep_valid_bitmapQ[wp]:
+  "f p v \<lbrace> valid_bitmapQ \<rbrace>"
+  unfolding bitmapQ_defs by (wpsimp wp: hoare_vcg_all_lift | wps)+
+
+lemma bitmapQ_no_L1_orphans[wp]:
+  "f p v \<lbrace> bitmapQ_no_L1_orphans \<rbrace>"
+  unfolding bitmapQ_defs by (wpsimp wp: hoare_vcg_all_lift | wps)+
+
+lemma bitmapQ_no_L2_orphans[wp]:
+  "f p v \<lbrace> bitmapQ_no_L2_orphans \<rbrace>"
+  unfolding bitmapQ_defs by (wpsimp wp: hoare_vcg_all_lift | wps)+
+
+lemma valid_queues[wp]:
+  "f p v \<lbrace> valid_queues \<rbrace>"
+  unfolding valid_queues_def valid_queues_no_bitmap_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift |wps)+
+     (simp add: o_def pred_conj_def)
+
+lemma set_ep_valid_queues'[wp]:
+  "f p v \<lbrace>valid_queues'\<rbrace>"
+  unfolding valid_queues'_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
+
+lemma tcb_in_cur_domain'[wp]:
+  "f p v \<lbrace>tcb_in_cur_domain' t\<rbrace>"
+  by (rule tcb_in_cur_domain'_lift; wp)
+
+lemma pred_tcb_at'[wp]:
+  "f p v \<lbrace> \<lambda>s. Q (pred_tcb_at' proj P t s) \<rbrace>"
+  unfolding pred_tcb_at'_def by wp
+
+lemma sch_act_wf[wp]:
+  "f p v \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  by (wp sch_act_wf_lift)
+
+lemma cur_tcb'[wp]:
+  "f p v \<lbrace>cur_tcb'\<rbrace>"
+  by (wp cur_tcb_lift)
+
+lemma state_refs_of':
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (ptr := refs_of' (injectKO val)))\<rbrace>
+   f ptr val
+   \<lbrace>\<lambda>_ s. P (state_refs_of' s)\<rbrace>"
+  unfolding f_def
+  using objBits by (auto intro: setObject_state_refs_of' simp: default)
+
+lemma cap_to'[wp]:
+  "f p' v \<lbrace>ex_nonz_cap_to' p\<rbrace>"
+  by (wp ex_nonz_cap_to_pres')
+
+lemma ifunsafe'[wp]:
+  "f p v \<lbrace>if_unsafe_then_cap'\<rbrace>"
+  unfolding f_def
+  apply (rule setObject_ifunsafe'[where P="\<top>", simplified])
+    apply (clarsimp simp: default updateObject_default_def in_monad projectKOs not_tcb not_cte
+                  intro!: equals0I)+
+  apply (simp add: setObject_def split_def default)
+  apply (wp updateObject_default_inv | simp)+
+  done
+
+lemmas irq_handlers[wp] = valid_irq_handlers_lift'' [OF ctes_of ksInterruptState]
+
+lemma idle'[wp]:
+  "f p v \<lbrace>valid_idle'\<rbrace>"
+  unfolding f_def
+  using objBits
+  apply clarsimp
+  apply (wp setObject_idle'[where P="\<top>"]; simp add: default objBits_simps' updateObject_default_inv)
+  apply (clarsimp simp: projectKOs)
+  done
+
+lemma valid_arch_state'[wp]:
+  "f p v \<lbrace> valid_arch_state' \<rbrace>"
+  by (rule valid_arch_state_lift'; wp)
+
+lemma valid_global_refs'[wp]:
+  "f p v \<lbrace>valid_global_refs'\<rbrace>"
+  by (rule valid_global_refs_lift'; wp)
+
+lemmas valid_irq_node'[wp] = valid_irq_node_lift[OF ksInterruptState typ_at']
+lemmas irq_states' [wp] = valid_irq_states_lift' [OF ksInterruptState ksMachineState]
+lemmas irq_handlers'[wp] = valid_irq_handlers_lift'' [OF ctes_of ksInterruptState]
+lemmas irqs_masked'[wp] = irqs_masked_lift[OF ksInterruptState]
+
+lemma valid_machine_state'[wp]:
+  "f p v \<lbrace>valid_machine_state'\<rbrace>"
+  unfolding valid_machine_state'_def pointerInDeviceData_def pointerInUserData_def
+  by (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
+
+lemma pspace_domain_valid[wp]:
+  "f ptr val \<lbrace>pspace_domain_valid\<rbrace>"
+  unfolding f_def by wp
+
+lemmas x = ct_not_inQ_lift[OF ksSchedulerAction]
+
+lemma ct_not_inQ[wp]:
+  "f p v \<lbrace>ct_not_inQ\<rbrace>"
+  apply (rule ct_not_inQ_lift, wp)
+  apply (rule hoare_lift_Pf[where f=ksCurThread]; wp)
+  done
+
+lemma ct_idle_or_in_cur_domain'[wp]:
+  "f p v \<lbrace> ct_idle_or_in_cur_domain' \<rbrace>"
+  by (rule ct_idle_or_in_cur_domain'_lift; wp)
+
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
+interpretation set_ep': simple_ko' setEndpoint
+  by unfold_locales (simp add: setEndpoint_def projectKO_opts_defs objBits_simps'|wp)+
+
+interpretation set_ntfn': simple_ko' setNotification
+  by unfold_locales (simp add: setNotification_def projectKO_opts_defs objBits_simps'|wp)+
+
+interpretation set_reply': simple_ko' setReply
+  by unfold_locales (simp add: setReply_def projectKO_opts_defs objBits_simps'|wp)+
+
+interpretation set_sc': simple_ko' setSchedContext
+  by unfold_locales (simp add: setSchedContext_def projectKO_opts_defs objBits_simps'|wp)+
+
+lemmas set_ep_valid_objs'[wp] =
+  set_ep'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+lemmas set_ep_valid_pspace'[wp] =
+  set_ep'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+
+lemmas set_ntfn_valid_objs'[wp] =
+  set_ntfn'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+lemmas set_ntfn_valid_pspace'[wp] =
+  set_ntfn'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+
+lemmas set_reply_valid_objs'[wp] =
+  set_reply'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+lemmas set_reply_valid_pspace'[wp] =
+  set_reply'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+
+lemmas set_sc_valid_objs'[wp] =
+  set_sc'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+lemmas set_sc_valid_pspace'[wp] =
+  set_sc'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+
+
+lemma set_ep_state_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (p := ep_q_refs_of' ep))\<rbrace>
+     setEndpoint p ep
+   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
+  by (wp set_ep'.state_refs_of') (simp flip: fun_upd_def)
+
+lemma set_ntfn_state_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (p := ntfn_q_refs_of' (ntfnObj ntfn) \<union>
+                                    get_refs NTFNBound (ntfnBoundTCB ntfn) \<union>
+                                    get_refs NTFNSchedContext (ntfnSc ntfn)))\<rbrace>
+     setNotification p ntfn
+   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
+  by (wp set_ntfn'.state_refs_of') (simp flip: fun_upd_def)
+
+(* FIXME RT: add state_refs_of for reply and sc *)
+
+lemma setEndpoint_iflive'[wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
+      \<and> (v \<noteq> IdleEP \<longrightarrow> ex_nonz_cap_to' p s)\<rbrace>
+     setEndpoint p v
+   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
+  unfolding setEndpoint_def
+  apply (wp setObject_iflive'[where P="\<top>"])
+       apply simp
+      apply (simp add: objBits_simps')
+     apply simp
+    apply (clarsimp simp: updateObject_default_def in_monad projectKOs)
+   apply (clarsimp simp: updateObject_default_def in_monad
+                         projectKOs bind_def)
+  apply clarsimp
+  done
+
+lemma setObject_ksPSpace_only:
+  "\<lbrakk> \<And>p q n ko. \<lbrace>P\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv. P \<rbrace>;
+        \<And>f s. P (ksPSpace_update f s) = P s \<rbrakk>
+     \<Longrightarrow> \<lbrace>P\<rbrace> setObject ptr val \<lbrace>\<lambda>rv. P\<rbrace>"
+  apply (simp add: setObject_def split_def)
+  apply (wp | simp | assumption)+
+  done
+
+lemma setObject_ksMachine:
+  "\<lbrakk> \<And>p q n ko. \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace> \<rbrakk>
+     \<Longrightarrow> \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setObject ptr val \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
+  by (simp add: setObject_ksPSpace_only)
+
+lemma setObject_ksInterrupt:
+  "\<lbrakk> \<And>p q n ko. \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv s. P (ksInterruptState s)\<rbrace> \<rbrakk>
+     \<Longrightarrow> \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setObject ptr val \<lbrace>\<lambda>rv s. P (ksInterruptState s)\<rbrace>"
+  by (simp add: setObject_ksPSpace_only)
+
+
+lemma set_ntfn_iflive'[wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
+      \<and> (live' (KONotification v) \<longrightarrow> ex_nonz_cap_to' p s)\<rbrace>
+     setNotification p v
+   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
+  apply (simp add: setNotification_def)
+  apply (wp setObject_iflive'[where P="\<top>"])
+       apply simp
+      apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
+    apply (clarsimp simp: updateObject_default_def in_monad projectKOs)
+   apply (clarsimp simp: updateObject_default_def
+                         projectKOs bind_def)
+  apply clarsimp
+  done
 
 lemma valid_pde_mappings'_def2:
   "valid_pde_mappings' =
@@ -1958,81 +1773,6 @@ lemma set_ntfn_valid_pde_mappings'[wp]:
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
 
-lemma set_ntfn_vms'[wp]:
-  "\<lbrace>valid_machine_state'\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
-  apply (simp add: setNotification_def valid_machine_state'_def pointerInDeviceData_def pointerInUserData_def)
-  apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift)
-  by (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv |
-      simp)+
-
-lemma irqs_masked_lift:
-  assumes "\<And>P. \<lbrace>\<lambda>s. P (intStateIRQTable (ksInterruptState s))\<rbrace> f
-               \<lbrace>\<lambda>rv s. P (intStateIRQTable (ksInterruptState s))\<rbrace>"
-  shows "\<lbrace>irqs_masked'\<rbrace> f \<lbrace>\<lambda>_. irqs_masked'\<rbrace>"
-  apply (simp add: irqs_masked'_def)
-  apply (wp assms)
-  done
-
-lemma setObject_pspace_domain_valid[wp]:
-  "\<lbrace>pspace_domain_valid\<rbrace>
-    setObject ptr val
-   \<lbrace>\<lambda>rv. pspace_domain_valid\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def pspace_domain_valid_def
-                        valid_def in_monad
-                 split: if_split_asm)
-  apply (drule updateObject_objBitsKO)
-  apply (clarsimp simp: lookupAround2_char1)
-  done
-
-crunches setNotification, setEndpoint
-  for pspace_domain_valid[wp]: "pspace_domain_valid"
-
-lemma ct_not_inQ_lift:
-  assumes sch_act: "\<And>P. \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
-      and not_inQ: "\<lbrace>\<lambda>s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s\<rbrace>
-                    f \<lbrace>\<lambda>_ s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s\<rbrace>"
-  shows "\<lbrace>ct_not_inQ\<rbrace> f \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
-  unfolding ct_not_inQ_def
-  by (rule hoare_convert_imp [OF sch_act not_inQ])
-
-lemma setNotification_ct_not_inQ[wp]:
-  "\<lbrace>ct_not_inQ\<rbrace> setNotification ptr rval \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
-  apply (rule ct_not_inQ_lift [OF setNotification_nosch])
-  apply (simp add: setNotification_def ct_not_inQ_def)
-  apply (rule hoare_weaken_pre)
-  apply (wps setObject_ntfn_ct)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp add: updateObject_default_def in_monad)+
-  done
-
-lemma setNotification_ksCurThread[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setNotification a b \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
-  apply (simp add: setNotification_def setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setNotification_ksDomSchedule[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setNotification a b \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-  apply (simp add: setNotification_def setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setNotification_ksDomScheduleId[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setNotification a b \<lbrace>\<lambda>rv s. P (ksDomScheduleIdx s)\<rbrace>"
-  apply (simp add: setNotification_def setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setNotification_ct_idle_or_in_cur_domain'[wp]:
-  "\<lbrace> ct_idle_or_in_cur_domain' \<rbrace> setNotification ptr ntfn \<lbrace> \<lambda>_. ct_idle_or_in_cur_domain' \<rbrace>"
-  apply (rule ct_idle_or_in_cur_domain'_lift)
-  apply (wp hoare_vcg_disj_lift| rule obj_at_setObject2
-           | clarsimp simp: updateObject_default_def in_monad setNotification_def)+
-  done
-
-crunch gsUntypedZeroRanges[wp]: setNotification "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv)
-
 lemma set_ntfn_minor_invs': (* FIXME RT: needs statement update *)
   "\<lbrace>invs' and obj_at' (\<lambda>ntfn. ntfn_q_refs_of' (ntfnObj ntfn) = ntfn_q_refs_of' (ntfnObj val)
                            \<and> ntfn_bound_refs' (ntfnBoundTCB ntfn) = ntfn_bound_refs' (ntfnBoundTCB val))
@@ -2051,19 +1791,6 @@ lemma set_ntfn_minor_invs': (* FIXME RT: needs statement update *)
                   dest!: obj_at_state_refs_ofD')+
   *)
 
-lemma getEndpoint_wp:
-  "\<lbrace>\<lambda>s. \<forall>ep. ko_at' ep e s \<longrightarrow> P ep s\<rbrace> getEndpoint e \<lbrace>P\<rbrace>"
-  apply (rule hoare_strengthen_post)
-   apply (rule get_ep_sp')
-  apply simp
-  done
-
-lemma getNotification_wp:
-  "\<lbrace>\<lambda>s. \<forall>ntfn. ko_at' ntfn e s \<longrightarrow> P ntfn s\<rbrace> getNotification e \<lbrace>P\<rbrace>"
-  apply (rule hoare_strengthen_post)
-   apply (rule get_ntfn_sp')
-  apply simp
-  done
 
 lemma ep_redux_simps':
   "ep_q_refs_of' (case xs of [] \<Rightarrow> IdleEP | y # ys \<Rightarrow> SendEP xs)
@@ -2147,7 +1874,6 @@ lemma doMachineOp_invs_bits[wp]:
        | wp cur_tcb_lift sch_act_wf_lift tcb_in_cur_domain'_lift
        | fastforce elim: state_refs_of'_pspaceI)+
 
-crunch cte_wp_at'[wp]: doMachineOp "\<lambda>s. P (cte_wp_at' P' p s)"
 crunch obj_at'[wp]: doMachineOp "\<lambda>s. P (obj_at' P' p s)"
 
 crunch it[wp]: doMachineOp "\<lambda>s. P (ksIdleThread s)"
@@ -2155,21 +1881,5 @@ crunch idle'[wp]: doMachineOp "valid_idle'"
   (wp: crunch_wps simp: crunch_simps valid_idle'_pspace_itI)
 crunch pde_mappings'[wp]: doMachineOp "valid_pde_mappings'"
 
-lemma setEndpoint_ksMachine:
-  "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
-  by (simp add: setEndpoint_def | wp setObject_ksMachine updateObject_default_inv)+
-
-lemmas setEndpoint_valid_irq_states'  =
-  valid_irq_states_lift' [OF setEndpoint_ksInterruptState setEndpoint_ksMachine]
-
-lemma setEndpoint_ct':
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setEndpoint a b \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
-  apply (simp add: setEndpoint_def setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemmas setEndpoint_valid_globals[wp]
-    = valid_global_refs_lift' [OF set_ep_ctes_of set_ep_arch'
-                                  setEndpoint_it setEndpoint_ksInterruptState]
 end
 end
