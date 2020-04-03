@@ -870,6 +870,7 @@ lemma obj_relation_cut_same_type:
   "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; P ko z;
     (y', P') \<in> obj_relation_cuts ko' x'; P' ko' z \<rbrakk>
      \<Longrightarrow> (a_type ko = a_type ko') \<or> (\<exists>n n'. a_type ko = ACapTable n \<and> a_type ko' = ACapTable n')
+         \<or> (\<exists>n n'. a_type ko = ASchedContext n \<and> a_type ko' = ASchedContext n')
          \<or> (\<exists>sz sz'. a_type ko = AArch (AUserData sz) \<and> a_type ko' = AArch (AUserData sz'))
          \<or> (\<exists>sz sz'. a_type ko = AArch (ADeviceData sz) \<and> a_type ko' = AArch (ADeviceData sz'))"
   apply (rule ccontr)
@@ -879,7 +880,7 @@ lemma obj_relation_cut_same_type:
              split: Structures_A.kernel_object.split_asm if_split_asm
                     Structures_H.kernel_object.split_asm
                     ARM_A.arch_kernel_obj.split_asm)
-  sorry (* FIXME RT: needs lemma statement update *)
+  done
 
 definition exst_same :: "Structures_H.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"  (* FIXME RT: probably needs updating *)
 where
@@ -1049,25 +1050,27 @@ lemma setObject_ko_wp_at:
 
 lemma typ_at'_valid_obj'_lift:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_const_Ball_lift typ_at_lifts [OF P]
+  notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_const_Ball_lift typ_at_lifts [OF P]
   shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
   apply (cases obj; simp add: valid_obj'_def hoare_TrueI)
-      apply (rename_tac endpoint)
-      apply (case_tac endpoint; simp add: valid_ep'_def, wp)
-     apply (rename_tac notification)
-     apply (case_tac "ntfnObj notification";
-             simp add: valid_ntfn'_def valid_bound_tcb'_def split: option.splits,
-             (wpsimp|rule conjI)+)
-  sorry (* FIXME RT
-    apply (rename_tac tcb)
-    apply (case_tac "tcbState tcb";
-           simp add: valid_tcb'_def valid_tcb_state'_def split_def valid_bound_ntfn'_def
-              split: option.splits,
+        apply (rename_tac endpoint)
+        apply (case_tac endpoint; simp add: valid_ep'_def, wp)
+       apply (rename_tac notification)
+       apply (case_tac "ntfnObj notification";
+               simp add: valid_ntfn'_def valid_bound_tcb'_def split: option.splits,
+               (wpsimp|rule conjI)+)
+      apply (rename_tac tcb)
+      apply (case_tac "tcbState tcb";
+             simp add: valid_tcb'_def valid_tcb_state'_def split_def valid_bound_ntfn'_def
+                split: option.splits, wpsimp)
+     apply (wpsimp simp: valid_cte'_def)
+    apply (rename_tac arch_kernel_object)
+    apply (case_tac arch_kernel_object; wpsimp)
+   apply (wpsimp simp: valid_sched_context'_def,
+          clarsimp simp: valid_bound_ntfn'_def split: option.splits,
            wpsimp)
-   apply (wpsimp simp: valid_cte'_def)
-  apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object; wpsimp)
-  done *)
+  apply (wpsimp simp: valid_reply'_def)
+  done
 
 lemmas setObject_valid_obj = typ_at'_valid_obj'_lift [OF setObject_typ_at']
 
