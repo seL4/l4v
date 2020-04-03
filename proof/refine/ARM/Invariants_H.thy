@@ -1255,6 +1255,8 @@ definition
                     | NotificationT \<Rightarrow> injectKO (makeObject :: Structures_H.notification)
                     | CTET \<Rightarrow> injectKO (makeObject :: cte)
                     | TCBT \<Rightarrow> injectKO (makeObject :: tcb)
+                    | SchedContextT \<Rightarrow> injectKO (makeObject :: sched_context)
+                    | ReplyT \<Rightarrow> injectKO (makeObject :: reply)
                     | UserDataT \<Rightarrow> injectKO (makeObject :: user_data)
                     | UserDataDeviceT \<Rightarrow> injectKO (makeObject :: user_data_device)
                     | KernelDataT \<Rightarrow> KOKernelData
@@ -2289,21 +2291,27 @@ lemma locateSlot_conv:
     x \<leftarrow> stateAssert (\<lambda>s. case (gsCNodes s A) of None \<Rightarrow> False | Some n \<Rightarrow> n = bits \<and> B < 2 ^ n) [];
     locateSlotBasic A B od)"
   "locateSlotCap c B = (do
-    x \<leftarrow> stateAssert (\<lambda>s. ((isCNodeCap c \<or> (isZombie c \<and> capZombieType c \<noteq> ZombieTCB))
-            \<and> (case gsCNodes s (capUntypedPtr c) of None \<Rightarrow> False
+    x \<leftarrow> stateAssert (\<lambda>s.
+            (
+             (isCNodeCap c
+              \<or> (isZombie c \<and> capZombieType c \<noteq> ZombieTCB))
+             \<and> (case gsCNodes s (capUntypedPtr c) of
+                  None \<Rightarrow> False
                 | Some n \<Rightarrow> (isCNodeCap c \<and> n = capCNodeBits c
-                    \<or> isZombie c \<and> n = zombieCTEBits (capZombieType c)) \<and> B < 2 ^ n))
-        \<or> isThreadCap c \<or> (isZombie c \<and> capZombieType c = ZombieTCB)) [];
+                             \<or> isZombie c \<and> n = zombieCTEBits (capZombieType c)) \<and> B < 2 ^ n)
+            )
+            \<or> isThreadCap c
+            \<or> (isZombie c \<and> capZombieType c = ZombieTCB)) [];
     locateSlotBasic (capUntypedPtr c) B od)"
   apply (simp_all add: locateSlotCap_def locateSlotTCB_def fun_eq_iff)
     apply (simp add: locateSlotBasic_def objBits_simps cte_level_bits_def objBits_defs)
    apply (simp add: locateSlotCNode_def stateAssert_def)
-  apply (cases c, simp_all add: locateSlotCNode_def isZombie_def isThreadCap_def
-                                isCNodeCap_def capUntypedPtr_def stateAssert_def
-                                bind_assoc exec_get locateSlotTCB_def
-                                objBits_simps'
-                         split: zombie_type.split)
-  sorry (* FIXME RT *)
+  apply (cases c; simp)
+  by (auto simp: locateSlotCNode_def isZombie_def isThreadCap_def
+                 isCNodeCap_def capUntypedPtr_def stateAssert_def
+                 bind_assoc exec_get locateSlotTCB_def assert_def
+                 objBits_simps'
+          split: zombie_type.split option.split)
 
 context
 begin
@@ -3140,6 +3148,8 @@ lemma objBitsT_simps:
   "objBitsT NotificationT = ntfnSizeBits"
   "objBitsT CTET = cteSizeBits"
   "objBitsT TCBT = tcbBlockSizeBits"
+  "objBitsT SchedContextT = scheduleContextBits"
+  "objBitsT ReplyT = replySizeBits"
   "objBitsT UserDataT = pageBits"
   "objBitsT UserDataDeviceT = pageBits"
   "objBitsT KernelDataT = pageBits"
@@ -3155,7 +3165,7 @@ lemma objBitsT_koTypeOf :
   apply (rename_tac arch_kernel_object)
   apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps
                                                 pteBits_def pdeBits_def)
-  sorry (* FIXME RT: Sched *)
+  done
 
 lemma valid_queues_obj_at'D:
    "\<lbrakk> t \<in> set (ksReadyQueues s (d, p)); valid_queues s \<rbrakk>
