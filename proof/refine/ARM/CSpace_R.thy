@@ -3223,6 +3223,17 @@ lemma cteInsert_untyped_ranges_zero[wp]:
   apply blast
   done
 
+lemma updateCap_replies_of'[wp]:
+  "updateCap a b \<lbrace>\<lambda>s. P (replies_of' s)\<rbrace>"
+  unfolding updateCap_def
+  by (wpsimp wp: setObject_cte_replies_of' simp: setCTE_def)
+
+crunches cteInsert
+  for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
+  (wp: crunch_wps setObject_cte_replies_of' simp: crunch_simps setCTE_def)
+
+lemmas fold_list_refs_of_replies' = comp_def[symmetric, where f=Some and g=list_refs_of_reply']
+
 lemma cteInsert_invs:
  "\<lbrace>invs' and cte_wp_at' (\<lambda>c. cteCap c=NullCap) dest and valid_cap' cap and
   (\<lambda>s. src \<noteq> dest) and (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s)
@@ -3234,8 +3245,8 @@ lemma cteInsert_invs:
   apply (wpsimp wp: cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift CSpace_R.valid_queues_lift
                     valid_irq_node_lift valid_queues_lift' irqs_masked_lift cteInsert_norq
               simp: st_tcb_at'_def)
-  apply (auto simp: invs'_def valid_state'_def valid_pspace'_def elim: valid_capAligned)
-  sorry (* FIXME RT: symrefs reply_list *)
+  apply (subst fold_list_refs_of_replies')
+ by (auto simp: invs'_def valid_state'_def valid_pspace'_def elim: valid_capAligned)
 
 lemma derive_cap_corres:
  "\<lbrakk>cap_relation c c'; cte = cte_map slot \<rbrakk> \<Longrightarrow>
@@ -3617,7 +3628,7 @@ proof -
   show ?thesis
     unfolding state_relation_def swp_cte_at
     apply (subst conj_assoc[symmetric])
-    sorry (* FIXME RT: reply_replation
+    sorry (* FIXME RT: replies_relation
     apply (rule corres_underlying_decomposition [OF x])
      apply (simp add: ghost_relation_of_heap)
      apply (wp hoare_vcg_conj_lift mdb_wp rvk_wp list_wp u abs_irq_together)+
@@ -4017,9 +4028,9 @@ lemma arch_update_setCTE_invs:
              valid_queues_lift' setCTE_pred_tcb_at' irqs_masked_lift
              setCTE_norq hoare_vcg_disj_lift untyped_ranges_zero_lift
            | simp add: pred_tcb_at'_def)+
+  apply (subst fold_list_refs_of_replies')
   apply (clarsimp simp: valid_global_refs'_def is_arch_update'_def fun_upd_def[symmetric]
                         cte_wp_at_ctes_of isCap_simps untyped_ranges_zero_fun_upd)
-  sorry (* FIXME RT: sym_refs reply_lists
   apply (frule capMaster_eq_capBits_eq)
   apply (frule capMaster_isUntyped)
   apply (drule capMaster_capRange)
@@ -4029,7 +4040,7 @@ lemma arch_update_setCTE_invs:
                          untypedZeroRange_def Let_def
                          isCap_simps(1-11)[where v="ArchObjectCap ac" for ac])
   apply fastforce
-  done *)
+  done
 
 definition
   "safe_parent_for' m p cap \<equiv>
@@ -4354,7 +4365,7 @@ lemma cins_corres_simple:
          apply (subst should_be_parent_of_masked_as_full[symmetric])
          apply (subst safe_parent_is_parent)
             apply ((simp add: cte_wp_at_caps_of_state)+)[4]
-  sorry (* FIXME RT
+  sorry (* FIXME RT: replies_relation
         apply (subst conj_assoc[symmetric])
         apply (rule conjI)
          defer
@@ -5341,10 +5352,11 @@ lemma cteInsert_simple_invs:
              valid_irq_node_lift valid_queues_lift' irqs_masked_lift
              cteInsert_simple_mdb' cteInsert_valid_globals_simple
              cteInsert_norq | simp add: pred_tcb_at'_def)+
+   apply (subst fold_list_refs_of_replies')
   apply (auto simp: invs'_def valid_state'_def valid_pspace'_def
                     is_simple_cap'_def untyped_derived_eq_def o_def
               elim: valid_capAligned)
-  sorry (* FIXME RT: symrefs replies *)
+  done
 
 lemma ensureEmptySlot_stronger [wp]:
   "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>c. cteCap c = NullCap) p s \<longrightarrow> P s\<rbrace> ensureEmptySlot p \<lbrace>\<lambda>rv. P\<rbrace>, -"
@@ -5511,7 +5523,7 @@ lemma updateCap_same_master:
         apply (frule setCTE_pspace_only)
         apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
                          split: if_split_asm Structures_A.kernel_object.splits)
-  sorry (* FIXME RT: replies
+  sorry (* FIXME RT: replies_relation
        apply (rule conjI)
         apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
         apply (intro allI conjI)
@@ -5723,7 +5735,7 @@ lemma updateFreeIndex_forward_invs':
    apply (wp sch_act_wf_lift valid_queues_lift updateCap_iflive' tcb_in_cur_domain'_lift
             | simp add: pred_tcb_at'_def)+
       apply (rule hoare_vcg_conj_lift)
-  sorry (* FIXME RT: replies
+
        apply (simp add: ifunsafe'_def3 cteInsert_def setUntypedCapAsFull_def
                split del: if_split)
        apply wp+
@@ -5742,6 +5754,7 @@ lemma updateFreeIndex_forward_invs':
   apply (clarsimp simp: cte_wp_at_ctes_of fun_upd_def[symmetric])
   apply (clarsimp simp: isCap_simps valid_pspace'_def)
   apply (frule(1) valid_global_refsD_with_objSize)
+  apply (subst fold_list_refs_of_replies')
   apply clarsimp
   apply (intro conjI allI impI)
    apply (clarsimp simp: modify_map_def cteCaps_of_def ifunsafe'_def3 split:if_splits)
@@ -5755,7 +5768,7 @@ lemma updateFreeIndex_forward_invs':
    apply clarsimp
   apply (erule untyped_ranges_zero_fun_upd, simp_all)
   apply (clarsimp simp: untypedZeroRange_def cteCaps_of_def isCap_simps)
-  done *)
+  done
 
 lemma no_fail_getSlotCap:
   "no_fail (cte_at' p) (getSlotCap p)"

@@ -770,6 +770,20 @@ lemma setObject_cte_obj_at_tcb':
                         Structures_H.kernel_object.split_asm)
   done
 
+lemma setObject_cte_replies_of':
+  "\<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>
+  setObject c (cte::cte)
+  \<lbrace>\<lambda>_ s. P' (replies_of' s)\<rbrace>"
+  apply (clarsimp simp: setObject_def in_monad split_def
+                        valid_def lookupAround2_char1)
+  apply (clarsimp elim!: rsubst[where P=P'])
+  apply (rule ext)
+  apply (clarsimp simp: updateObject_cte in_monad
+                        typeError_def opt_map_def projectKO_opts_defs
+                 split: if_split_asm
+                        Structures_H.kernel_object.split_asm)
+  done
+
 lemma setCTE_typ_at':
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setCTE c cte \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
   by (clarsimp simp add: setCTE_def) (wp setObject_typ_at')
