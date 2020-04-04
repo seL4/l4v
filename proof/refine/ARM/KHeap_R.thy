@@ -337,6 +337,32 @@ lemma setObject_tcb_pre:
   apply (clarsimp simp: in_monad projectKOs in_magnitude_check)
   done
 
+lemma setObject_reply_pre:
+  assumes "\<lbrace>P and reply_at' p\<rbrace> setObject p (t::reply) \<lbrace>Q\<rbrace>"
+  shows "\<lbrace>P\<rbrace> setObject p (t::reply) \<lbrace>Q\<rbrace>" using assms
+  apply (clarsimp simp: valid_def setObject_def in_monad
+                        split_def updateObject_default_def
+                        projectKOs in_magnitude_check objBits_simps')
+  apply (drule spec, drule mp, erule conjI)
+   apply (simp add: obj_at'_def projectKOs objBits_simps')
+  apply (simp add: split_paired_Ball)
+  apply (drule spec, erule mp)
+  apply (clarsimp simp: in_monad projectKOs in_magnitude_check)
+  done
+
+lemma setObject_sched_context_pre:
+  assumes "\<lbrace>P and sc_at' p\<rbrace> setObject p (t::sched_context) \<lbrace>Q\<rbrace>"
+  shows "\<lbrace>P\<rbrace> setObject p (t::sched_context) \<lbrace>Q\<rbrace>" using assms
+  apply (clarsimp simp: valid_def setObject_def in_monad
+                        split_def updateObject_default_def
+                        projectKOs in_magnitude_check objBits_simps')
+  apply (drule spec, drule mp, erule conjI)
+   apply (simp add: obj_at'_def projectKOs objBits_simps')
+  apply (simp add: split_paired_Ball)
+  apply (drule spec, erule mp)
+  apply (clarsimp simp: in_monad projectKOs in_magnitude_check)
+  done
+
 lemma obj_at_setObject3:
   fixes Q::"'a::pspace_storable \<Rightarrow> bool"
   fixes P::"'a::pspace_storable \<Rightarrow> bool"
@@ -367,6 +393,51 @@ lemma setObject_tcb_strongest:
   apply (clarsimp simp: valid_def obj_at'_def split_def in_monad
                         updateObject_default_def projectKOs
                         ps_clear_upd')
+  done
+
+method setObject_replies_of =
+  clarsimp simp: setObject_def in_monad split_def valid_def,
+  erule rsubst[where P=P'], rule ext,
+  clarsimp simp: updateObject_default_def in_monad opt_map_def projectKO_opts_defs projectKO_eq2
+         split: Structures_H.kernel_object.split_asm
+
+lemma setObject_endpoint_replies_of'[wp]:
+  "setObject c (endpoint::endpoint) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
+  by setObject_replies_of
+
+lemma setObject_notification_replies_of'[wp]:
+  "setObject c (notification::notification) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
+  by setObject_replies_of
+
+lemma setObject_tcb_replies_of'[wp]:
+  "setObject c (tcb::tcb) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
+  by setObject_replies_of
+
+lemma setObject_sched_context_replies_of':
+  "setObject c (sched_context::sched_context) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
+  by setObject_replies_of
+
+lemma setObject_cte_replies_of'[wp]:
+  "setObject c (cte::cte) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
+  apply (clarsimp simp: setObject_def in_monad split_def valid_def lookupAround2_char1)
+  apply (erule rsubst[where P=P'], rule ext)
+  apply (clarsimp simp: updateObject_cte in_monad
+                        typeError_def opt_map_def projectKO_opts_defs
+                 split: if_split_asm
+                        Structures_H.kernel_object.split_asm)
+  done
+
+(* Warning: This may not be a weakest precondition. *)
+lemma setObject_reply_replies_of'[wp]:
+  "\<lbrace>\<lambda>s. P' ((replies_of' s)(c \<mapsto> reply))\<rbrace>
+  setObject c (reply::reply)
+  \<lbrace>\<lambda>_ s. P' (replies_of' s)\<rbrace>"
+  apply (clarsimp simp: setObject_def in_monad split_def
+                        valid_def lookupAround2_char1)
+  apply (clarsimp simp: updateObject_default_def in_monad
+                        typeError_def opt_map_def projectKO_opts_defs
+                 split: if_split_asm
+                        Structures_H.kernel_object.split_asm)
   done
 
 lemma getObject_obj_at':

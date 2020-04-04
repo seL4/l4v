@@ -164,6 +164,18 @@ lemma get_asid_pool_corres':
    apply auto
   done
 
+lemma setObject_asidpool_replies_of'[wp]:
+  "setObject c (asidpool::asidpool) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
+  by setObject_replies_of
+
+lemma setObject_pte_replies_of'[wp]:
+  "setObject c (pte::pte) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
+  by setObject_replies_of
+
+lemma setObject_pde_replies_of'[wp]:
+  "setObject c (pde::pde) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
+  by setObject_replies_of
+
 lemma storePDE_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
      storePDE ptr val
