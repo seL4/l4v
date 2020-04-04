@@ -1462,6 +1462,39 @@ lemmas valid_obj'[wp] = typ_at'_valid_obj'_lift[OF typ']
 
 end
 
+locale pspace_only' =
+  fixes f :: "'a kernel"
+  assumes pspace: "(rv, s') \<in> fst (f s) \<Longrightarrow> \<exists>g. s' = ksPSpace_update g s"
+begin
+
+lemma it[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>"
+  and ct[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
+  and cur_domain[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace>"
+  and ksDomSchedule[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
+  and l1Bitmap[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+  and l2Bitmap[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+  and gsUserPages[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (gsUserPages s)\<rbrace>"
+  and gsCNodes[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (gsCNodes s)\<rbrace>"
+  and gsUntypedZeroRanges[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (gsUntypedZeroRanges s)\<rbrace>"
+  and gsMaxObjectSize[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace>"
+  and ksDomScheduleIdx[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
+  and ksDomainTime[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace>"
+  and ksReadyQueues[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace>"
+  and ksReleaseQueue[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace>"
+  and ksConsumedTime[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksConsumedTime s)\<rbrace>"
+  and ksCurTime[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksCurTime s)\<rbrace>"
+  and ksCurSc[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksCurSc s)\<rbrace>"
+  and ksReprogramTimer[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksReprogramTimer s)\<rbrace>"
+  and ksSchedulerAction[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
+  and ksInterruptState[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace>"
+  and ksWorkUnitsCompleted[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksWorkUnitsCompleted s)\<rbrace>"
+  and ksArchState[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace>"
+  and ksMachineState[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace>"
+  unfolding valid_def using pspace
+  by (all \<open>fastforce\<close>)
+
+end
+
 locale simple_ko' =
   fixes f :: "obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel"
   assumes f_def: "f p v = setObject p v"
@@ -1528,31 +1561,12 @@ lemma typ_at'[wp]:
 sublocale typ_at_props' "f p v" for p v
   by (unfold_locales) (rule typ_at')
 
-lemma it[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>"
-  and ct[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
-  and cur_domain[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace>"
-  and ksDomSchedule[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
-  and l1Bitmap[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
-  and l2Bitmap[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
-  and gsUserPages[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (gsUserPages s)\<rbrace>"
-  and gsCNodes[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (gsCNodes s)\<rbrace>"
-  and gsUntypedZeroRanges[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (gsUntypedZeroRanges s)\<rbrace>"
-  and gsMaxObjectSize[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace>"
-  and ksDomScheduleIdx[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
-  and ksDomainTime[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace>"
-  and ksReadyQueues[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace>"
-  and ksReleaseQueue[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace>"
-  and ksConsumedTime[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksConsumedTime s)\<rbrace>"
-  and ksCurTime[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksCurTime s)\<rbrace>"
-  and ksCurSc[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksCurSc s)\<rbrace>"
-  and ksReprogramTimer[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksReprogramTimer s)\<rbrace>"
-  and ksSchedulerAction[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
-  and ksInterruptState[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace>"
-  and ksWorkUnitsCompleted[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksWorkUnitsCompleted s)\<rbrace>"
-  and ksArchState[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace>"
-  and ksMachineState[wp]: "\<And>P. f p v \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace>"
+sublocale pspace_only' "f p v" for p v
   unfolding f_def
-  by (all \<open>wpsimp simp: setObject_def default wp: updateObject_default_inv\<close>)
+  by unfold_locales
+     (fastforce simp: setObject_def updateObject_default_def magnitudeCheck_def default in_monad
+                      split_def projectKOs
+                split: option.splits)
 
 lemma set_ep_valid_bitmapQ[wp]:
   "f p v \<lbrace> valid_bitmapQ \<rbrace>"
@@ -1661,8 +1675,7 @@ lemma ct_idle_or_in_cur_domain'[wp]:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-
+(* FIXME: should these be in Arch + sublocale instead? *)
 interpretation set_ep': simple_ko' setEndpoint
   by unfold_locales (simp add: setEndpoint_def projectKO_opts_defs objBits_simps'|wp)+
 
@@ -1674,6 +1687,22 @@ interpretation set_reply': simple_ko' setReply
 
 interpretation set_sc': simple_ko' setSchedContext
   by unfold_locales (simp add: setSchedContext_def projectKO_opts_defs objBits_simps'|wp)+
+
+interpretation tcb: pspace_only' "setObject p v" for v::tcb
+  unfolding setObject_def
+  by unfold_locales
+     (fastforce simp: in_monad updateObject_default_def split_def magnitudeCheck_def projectKOs
+                split: option.splits)
+
+interpretation threadSet: pspace_only' "threadSet f p"
+  unfolding threadSet_def
+  apply unfold_locales
+  apply (clarsimp simp: in_monad)
+  apply (drule_tac P="(=) s" in use_valid[OF _ getObject_inv_tcb], rule refl)
+  apply (fastforce dest:  tcb.pspace)
+  done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemmas set_ep_valid_objs'[wp] =
   set_ep'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
