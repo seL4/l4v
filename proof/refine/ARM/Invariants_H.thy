@@ -1044,12 +1044,26 @@ where
 abbreviation
   "sch_act_not t \<equiv> \<lambda>s. ksSchedulerAction s \<noteq> SwitchToThread t"
 
-abbreviation "idle_tcb_at' \<equiv> pred_tcb_at' (\<lambda>t. (itcbState t, itcbBoundNotification t))"
+abbreviation
+  "idle_tcb_at' \<equiv>
+     pred_tcb_at' (\<lambda>t. (itcbState t, itcbBoundNotification t, itcbSchedContext t, itcbYieldTo t))"
+
+abbreviation
+  "idle_sc_at' \<equiv> obj_at' (\<lambda>sc. scPeriod sc = 0
+                               \<and> scTCB sc = Some idle_thread_ptr
+                               \<and> scNtfn sc = None
+                               \<and> scRefillMax sc = MIN_REFILLS
+                               \<and> scBadge sc = 0
+                               \<and> scYieldFrom sc = None
+                               \<and> scReply sc = None)"
 
 definition
   valid_idle' :: "kernel_state \<Rightarrow> bool"
 where
-  "valid_idle' \<equiv> \<lambda>s. idle_tcb_at' (\<lambda>p. idle' (fst p) \<and> snd p = None) (ksIdleThread s) s"
+  "valid_idle' \<equiv>
+     \<lambda>s. idle_tcb_at' (\<lambda>(st, ntfn, sc, yt). idle' st \<and> ntfn = None
+                                            \<and> sc = Some idle_sc_ptr \<and> yt = None) (ksIdleThread s) s
+         \<and> idle_sc_at' idle_sc_ptr s"
 
 definition
   valid_irq_node' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -1760,24 +1774,22 @@ lemma valid_pspaceE' [elim]:
       valid_mdb' s\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_pspace'_def by simp
 
-lemma idle'_no_refs:
-  "valid_idle' s \<Longrightarrow> state_refs_of' s (ksIdleThread s) = {}"
-  sorry (* FIXME RT
+lemma idle'_only_sc_refs:
+  "valid_idle' s \<Longrightarrow> state_refs_of' s (ksIdleThread s) = {(idle_sc_ptr, TCBSchedContext)}"
   by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def tcb_ntfn_is_bound'_def
-                     projectKO_eq project_inject state_refs_of'_def) *)
+                     projectKO_eq project_inject state_refs_of'_def)
 
 lemma idle'_not_queued':
   "\<lbrakk>valid_idle' s; sym_refs (state_refs_of' s);
-    state_refs_of' s ptr = insert t queue \<times> {rt}\<rbrakk>\<Longrightarrow>
-   ksIdleThread s \<notin> queue"
-  by (frule idle'_no_refs, fastforce simp: valid_idle'_def sym_refs_def)
+    state_refs_of' s ptr = insert t queue \<times> {rt}; ksIdleThread s \<in> queue\<rbrakk>
+     \<Longrightarrow> ptr = idle_sc_ptr"
+  by (frule idle'_only_sc_refs, fastforce simp: valid_idle'_def sym_refs_def)
 
 lemma idle'_not_queued:
   "\<lbrakk>valid_idle' s; sym_refs (state_refs_of' s);
-    state_refs_of' s ptr = queue \<times> {rt}\<rbrakk> \<Longrightarrow>
-   ksIdleThread s \<notin> queue"
-  by (frule idle'_no_refs, fastforce simp: valid_idle'_def sym_refs_def)
-
+    state_refs_of' s ptr = queue \<times> {rt}; ksIdleThread s \<in> queue\<rbrakk>
+      \<Longrightarrow> ptr = idle_sc_ptr"
+  by (frule idle'_only_sc_refs, fastforce simp: valid_idle'_def sym_refs_def)
 
 lemma obj_at_conj':
   "\<lbrakk> obj_at' P p s; obj_at' Q p s \<rbrakk> \<Longrightarrow> obj_at' (\<lambda>k. P k \<and> Q k) p s"
@@ -1857,14 +1869,13 @@ lemma valid_arch_obj'_pspaceI:
 lemma valid_obj'_pspaceI:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
   unfolding valid_obj'_def
-  sorry (* FIXME RT
   by (cases obj)
      (auto simp: valid_ep'_def valid_ntfn'_def valid_tcb'_def valid_cte'_def
-                 valid_tcb_state'_def valid_arch_obj'_pspaceI valid_bound_tcb'_def
-                 valid_bound_ntfn'_def
+                 valid_tcb_state'_def valid_arch_obj'_pspaceI valid_bound_obj'_def
+                 valid_sched_context'_def valid_reply'_def
            split: Structures_H.endpoint.splits Structures_H.notification.splits
                   Structures_H.thread_state.splits ntfn.splits option.splits
-           intro: obj_at'_pspaceI valid_cap'_pspaceI) *)
+           intro: obj_at'_pspaceI valid_cap'_pspaceI)
 
 lemma pred_tcb_at'_pspaceI:
   "pred_tcb_at' proj P t s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> pred_tcb_at' proj P t s'"
@@ -1890,8 +1901,9 @@ lemma valid_idle'_pspace_itI[elim]:
   "\<lbrakk> valid_idle' s; ksPSpace s = ksPSpace s'; ksIdleThread s = ksIdleThread s' \<rbrakk>
       \<Longrightarrow> valid_idle' s'"
   apply (clarsimp simp: valid_idle'_def ex_nonz_cap_to'_def)
-  apply (erule pred_tcb_at'_pspaceI, assumption)
-  done
+  apply (rule conjI)
+   apply (erule pred_tcb_at'_pspaceI, assumption)
+  using obj_at'_pspaceI by blast
 
 lemma obj_at'_weaken:
   assumes x: "obj_at' P t s"
@@ -3218,7 +3230,8 @@ lemma not_pred_tcb_at'_strengthen:
   by (clarsimp simp: pred_tcb_at'_def obj_at'_def)
 
 lemma idle_tcb_at'_split:
-  "idle_tcb_at' (\<lambda>p. P (fst p) \<and> Q (snd p)) t s \<Longrightarrow> st_tcb_at' P t s \<and> bound_tcb_at' Q t s"
+  "idle_tcb_at' (\<lambda>(st, ntfn, sc, yt). P st \<and> Q ntfn \<and> R sc \<and> S yt) t s
+     \<Longrightarrow> st_tcb_at' P t s \<and> bound_tcb_at' Q t s \<and> bound_sc_tcb_at' R t s \<and> bound_yt_tcb_at' S t s"
   by (clarsimp simp: pred_tcb_at'_def dest!: obj_at'_conj_distrib)
 
 lemma valid_queues_no_bitmap_def':

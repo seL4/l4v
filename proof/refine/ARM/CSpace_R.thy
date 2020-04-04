@@ -2767,7 +2767,7 @@ lemma setCTE_idle [wp]:
   apply (simp add: valid_idle'_def)
   apply (rule hoare_lift_Pf [where f="ksIdleThread"])
    apply (wp setCTE_pred_tcb_at')+
-  done
+  sorry (* FIXME RT: setCTE_idle *)
 
 crunch it[wp]: getCTE "\<lambda>s. P (ksIdleThread s)"
 

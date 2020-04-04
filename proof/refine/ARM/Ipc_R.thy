@@ -3844,7 +3844,7 @@ lemma ri_invs' [wp]:
    apply (rule conjI
            | clarsimp simp: singleton_tuple_cartesian split: list.split
            | clarsimp elim!: if_live_state_refsE
-           | clarsimp simp: global'_no_ex_cap idle'_not_queued' idle'_no_refs tcb_bound_refs'_def
+           | clarsimp simp: global'_no_ex_cap idle'_not_queued' idle'_only_sc_refs tcb_bound_refs'_def
            | drule(1) bspec | drule st_tcb_at_state_refs_ofD'
            | clarsimp simp: set_eq_subset dest!: bound_tcb_at_state_refs_ofD' )+
   apply (rule hoare_pre)
@@ -4051,7 +4051,7 @@ lemma si_invs'[wp]:
      apply (drule bound_tcb_at_state_refs_ofD')
      apply (fastforce simp: tcb_bound_refs'_def set_eq_subset)
     apply (clarsimp simp: conj_ac)
-    apply (rule conjI, clarsimp simp: idle'_no_refs)
+    apply (rule conjI, clarsimp simp: idle'_only_sc_refs)
     apply (rule conjI, clarsimp simp: global'_no_ex_cap)
     apply (rule conjI)
      apply (rule impI)

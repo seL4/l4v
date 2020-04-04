@@ -712,7 +712,7 @@ lemma cancelSignal_invs':
                                tcb_bound_refs'_def ntfn_q_refs_of'_def remove1_empty
                         split: ntfn.splits)
        apply (rule conjI, clarsimp elim!: if_live_state_refsE)
-       apply (fastforce simp: sym_refs_def dest!: idle'_no_refs)
+       apply (fastforce simp: sym_refs_def dest!: idle'_only_sc_refs)
       apply (case_tac "ntfnObj r", simp_all)
       apply (frule obj_at_valid_objs', clarsimp)
       apply (clarsimp simp: projectKOs valid_obj'_def valid_ntfn'_def)
@@ -732,7 +732,7 @@ lemma cancelSignal_invs':
        apply (case_tac "ntfnBoundTCB r")
         apply (clarsimp elim!: if_live_state_refsE)+
             apply (rule conjI, clarsimp split: option.splits)
-      apply (clarsimp dest!: idle'_no_refs)
+      apply (clarsimp dest!: idle'_only_sc_refs)
       done
   qed
 

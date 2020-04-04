@@ -1188,13 +1188,27 @@ lemma setObject_idle':
   apply (rule hoare_pre)
    apply (rule hoare_lift_Pf2 [where f="ksIdleThread"])
     apply (simp add: pred_tcb_at'_def obj_at'_real_def)
+    sorry (* FIXME RT
     apply (rule setObject_ko_wp_at [OF R n m])
    apply (wp z)
   apply (clarsimp simp add: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def)
   apply (drule_tac x=obj in spec, simp)
   apply (clarsimp simp add: project_inject)
   apply (drule_tac x=obja in spec, simp)
-  done
+  done *)
+(* the conclusion should now be
+  shows      "\<lbrace>\<lambda>s. valid_idle' s \<and>
+                   (ptr = ksIdleThread s \<longrightarrow>
+                    (\<exists>obj (val :: 'a). projectKO_opt (injectKO val) = Some obj
+                                      \<and> idle' (tcbState obj) \<and> tcbBoundNotification obj = None
+                                      \<and> tcbSchedContext obj = Some idle_sc_ptr \<and> tcbYieldTo obj = None)
+                    \<longrightarrow> (\<exists>obj. projectKO_opt (injectKO v) = Some obj \<and>
+                          idle' (tcbState obj) \<and> tcbBoundNotification obj = None
+                          \<and> tcbSchedContext obj = Some idle_sc_ptr \<and> tcbYieldTo obj = None)) \<and>
+                   P s\<rbrace>
+                setObject ptr v
+              \<lbrace>\<lambda>rv s. valid_idle' s\<rbrace>"
+*)
 
 lemma setObject_no_0_obj' [wp]:
   "\<lbrace>no_0_obj'\<rbrace> setObject p v \<lbrace>\<lambda>r. no_0_obj'\<rbrace>"
