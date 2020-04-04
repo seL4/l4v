@@ -2181,6 +2181,7 @@ lemma cte_wp_at_cases':
                          is_aligned_mask[symmetric] alignCheck_def
                          tcbVTableSlot_def field_simps tcbCTableSlot_def
                          tcbIPCBufferSlot_def
+                         tcbFaultHandlerSlot_def tcbTimeoutHandlerSlot_def
                          lookupAround2_char1
                          cte_level_bits_def Ball_def
                          unless_def when_def bind_def
@@ -2191,7 +2192,6 @@ lemma cte_wp_at_cases':
                erule rsubst[where P="\<lambda>x. ksPSpace s x = v" for s v],
                fastforce simp add: field_simps, simp)+
    apply (subst(asm) in_magnitude_check3, simp+)
-  sorry (* FIXME RT: statement should still be true, possibly just more cases in tcb_cte_cases
    apply (simp split: if_split_asm)
   apply (simp add: cte_wp_at'_def getObject_def split_def
                    bind_def simpler_gets_def return_def
@@ -2217,6 +2217,7 @@ lemma cte_wp_at_cases':
                     is_aligned_mask[symmetric] objBits_simps'
                     cte_level_bits_def magnitudeCheck_def
                     return_def fail_def tcbCTableSlot_def tcbVTableSlot_def
+                    tcbFaultHandlerSlot_def tcbTimeoutHandlerSlot_def
                     tcbIPCBufferSlot_def
                 split: option.split_asm)
      apply (clarsimp simp: bind_def tcb_cte_cases_def split: if_split_asm)
@@ -2233,7 +2234,7 @@ lemma cte_wp_at_cases':
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
   apply (erule is_aligned_no_wrap')
   apply simp
-  done *)
+  done
 
 lemma tcb_at_cte_at':
   "tcb_at' t s \<Longrightarrow> cte_at' t s"
@@ -2464,8 +2465,8 @@ lemma typ_at_lift_valid_cap':
   apply wp
   apply (case_tac cap;
          simp add: valid_cap'_def P [where P=id, simplified] typ_at_lift_tcb'
-                   hoare_vcg_prop typ_at_lift_ep'
-                   typ_at_lift_ntfn' typ_at_lift_cte_at'
+                   hoare_vcg_prop typ_at_lift_ep' typ_at_lift_reply'
+                   typ_at_lift_ntfn' typ_at_lift_cte_at' typ_at_lift_sc'
                    hoare_vcg_conj_lift [OF typ_at_lift_cte_at'])
      apply (rename_tac zombie_type nat)
      apply (case_tac zombie_type; simp)
@@ -2477,8 +2478,7 @@ lemma typ_at_lift_valid_cap':
               split del: if_split)
        apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped'
                  hoare_vcg_all_lift typ_at_lift_cte')+
-  sorry (* FIXME RT: probably needs lemmas for obj_at' / typ_at' relationship for Reply and SchedContext *)
-
+  done
 
 lemma typ_at_lift_valid_irq_node':
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
