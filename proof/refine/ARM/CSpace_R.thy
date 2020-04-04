@@ -5493,7 +5493,7 @@ lemma updateCap_same_master:
   "\<lbrakk> cap_relation cap cap' \<rbrakk> \<Longrightarrow>
    corres dc (valid_objs and pspace_aligned and pspace_distinct and
               cte_wp_at (\<lambda>c. cap_master_cap c = cap_master_cap cap \<and>
-                             \<not>is_reply_cap c \<and> \<not>is_master_reply_cap c \<and>
+                             \<not>is_reply_cap c \<and>
                              \<not>is_ep_cap c \<and> \<not>is_ntfn_cap c) slot)
              (pspace_aligned' and pspace_distinct' and cte_at' (cte_map slot))
      (set_cap cap slot)
