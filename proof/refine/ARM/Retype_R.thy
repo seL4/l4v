@@ -18,11 +18,13 @@ definition
   APIType_map2 :: "kernel_object + ARM_H.object_type \<Rightarrow> Structures_A.apiobject_type"
 where
  "APIType_map2 ty \<equiv> case ty of
-      Inr (APIObjectType ArchTypes_H.Untyped) \<Rightarrow> Structures_A.Untyped
-    | Inr (APIObjectType ArchTypes_H.TCBObject) \<Rightarrow> Structures_A.TCBObject
-    | Inr (APIObjectType ArchTypes_H.EndpointObject) \<Rightarrow> Structures_A.EndpointObject
-    | Inr (APIObjectType ArchTypes_H.NotificationObject) \<Rightarrow> Structures_A.NotificationObject
-    | Inr (APIObjectType ArchTypes_H.CapTableObject) \<Rightarrow> Structures_A.CapTableObject
+      Inr (APIObjectType Untyped) \<Rightarrow> Structures_A.Untyped
+    | Inr (APIObjectType TCBObject) \<Rightarrow> Structures_A.TCBObject
+    | Inr (APIObjectType EndpointObject) \<Rightarrow> Structures_A.EndpointObject
+    | Inr (APIObjectType NotificationObject) \<Rightarrow> Structures_A.NotificationObject
+    | Inr (APIObjectType CapTableObject) \<Rightarrow> Structures_A.CapTableObject
+    | Inr (APIObjectType ReplyObject) \<Rightarrow> Structures_A.ReplyObject
+    | Inr (APIObjectType SchedContextObject) \<Rightarrow> Structures_A.SchedContextObject
     | Inr PageTableObject \<Rightarrow> ArchObject PageTableObj
     | Inr PageDirectoryObject \<Rightarrow> ArchObject PageDirectoryObj
     | Inr LargePageObject \<Rightarrow> ArchObject LargePageObj
