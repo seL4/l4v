@@ -1660,33 +1660,41 @@ lemma sym_refs_ko_atD':
 
 lemma sym_refs_st_tcb_atD':
   "\<lbrakk> st_tcb_at' P t s; sym_refs (state_refs_of' s) \<rbrakk> \<Longrightarrow>
-     \<exists>ts ntfnptr. P ts \<and> obj_at' (tcb_ntfn_is_bound' ntfnptr) t s
-        \<and> state_refs_of' s t = tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr XX YY
-        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr XX YY. ko_wp_at' (\<lambda>ko. (t, symreftype tp) \<in> refs_of' ko) x s)"
+     \<exists>ts ntfnptr sc_ptr yieldto_ptr. P ts
+        \<and> obj_at' ((=) ntfnptr o tcbBoundNotification) t s
+        \<and> state_refs_of' s t = tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr
+        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr.
+              ko_wp_at' (\<lambda>ko. (t, symreftype tp) \<in> refs_of' ko) x s)"
   apply (drule st_tcb_at_state_refs_ofD')
   apply (erule exE)+
   apply (rule_tac x=ts in exI)
   apply (rule_tac x=ntfnptr in exI)
+  apply (rule_tac x=sc_ptr in exI)
+  apply (rule_tac x=yieldto_ptr in exI)
   apply clarsimp
   apply (frule obj_at_state_refs_ofD')
   apply (drule (1)sym_refs_obj_atD')
   apply auto
-  sorry (* FIXME RT: similar to st_tcb_at_state_refs_ofD'; update for content of state_refs_of' *)
+  done
 
 lemma sym_refs_bound_tcb_atD':
   "\<lbrakk> bound_tcb_at' P t s; sym_refs (state_refs_of' s) \<rbrakk> \<Longrightarrow>
-     \<exists>ts ntfnptr. P ntfnptr \<and> obj_at' (tcb_ntfn_is_bound' ntfnptr) t s
-        \<and> state_refs_of' s t = tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr XX YY
-        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr XX YY. ko_wp_at' (\<lambda>ko. (t, symreftype tp) \<in> refs_of' ko) x s)"
+     \<exists>ts ntfnptr sc_ptr yieldto_ptr. P ntfnptr
+        \<and> obj_at' ((=) ntfnptr o tcbBoundNotification) t s
+        \<and> state_refs_of' s t = tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr
+        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr.
+              ko_wp_at' (\<lambda>ko. (t, symreftype tp) \<in> refs_of' ko) x s)"
   apply (drule bound_tcb_at_state_refs_ofD')
   apply (erule exE)+
   apply (rule_tac x=ts in exI)
   apply (rule_tac x=ntfnptr in exI)
+  apply (rule_tac x=sc_ptr in exI)
+  apply (rule_tac x=yieldto_ptr in exI)
   apply clarsimp
   apply (frule obj_at_state_refs_ofD')
   apply (drule (1)sym_refs_obj_atD')
   apply auto
-  sorry (* FIXME RT *)
+  done
 
 lemma get_refs_nonempty[simp]:
   "(get_refs ref_ty ptr_opt \<noteq> {}) = (ptr_opt \<noteq> None)"
@@ -1696,13 +1704,24 @@ lemma get_refs_empty[simp]:
   "(get_refs ref_ty ptr_opt = {}) = (ptr_opt = None)"
   by (clarsimp simp: get_refs_def split: option.splits)
 
-lemma refs_of_live':
-  "refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
+abbreviation idle_refs :: "(machine_word \<times> reftype) set" where
+  "idle_refs \<equiv> {(idle_sc_ptr, TCBSchedContext), (idle_thread_ptr, SCTcb)}"
+
+\<comment>\<open>
+  This set subtraction gets simplified into a subset relation at all the places
+  we might want to use this rule, so we do that ahead of time.
+\<close>
+lemma refs_of_live'[simplified]:
+  "refs_of' ko - idle_refs \<noteq> {} \<Longrightarrow> live' ko"
   apply (cases ko; simp)
       apply clarsimp
      apply (rename_tac notification)
-     apply (case_tac "ntfnObj notification"; simp add: live_ntfn'_def)
-  sorry (* FIXME RT *)
+     apply (case_tac "ntfnObj notification";
+            fastforce simp: live_ntfn'_def)
+    apply fastforce
+   apply (fastforce simp: live_sc'_def)
+  apply (fastforce simp: live_reply'_def)
+  done
 
 lemma if_live_then_nonz_capE':
   "\<lbrakk> if_live_then_nonz_cap' s; ko_wp_at' live' p s \<rbrakk>
@@ -1718,10 +1737,11 @@ lemma if_live_then_nonz_capD':
 
 lemma if_live_state_refsE:
   "\<lbrakk> if_live_then_nonz_cap' s;
-     state_refs_of' s p \<noteq> {} \<rbrakk> \<Longrightarrow> ex_nonz_cap_to' p s"
-  by (clarsimp simp: state_refs_of'_def ko_wp_at'_def
-              split: option.splits if_split_asm
-              elim!: refs_of_live' if_live_then_nonz_capE')
+     state_refs_of' s p - idle_refs \<noteq> {} \<rbrakk> \<Longrightarrow> ex_nonz_cap_to' p s"
+  apply (erule if_live_then_nonz_capE')
+  apply (simp add: state_refs_of'_def ko_wp_at'_def refs_of_live'
+              split: if_split_asm option.splits)
+  done
 
 lemmas ex_cte_cap_to'_def = ex_cte_cap_wp_to'_def
 
