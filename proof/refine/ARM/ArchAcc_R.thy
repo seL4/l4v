@@ -47,6 +47,28 @@ end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+lemmas Arch_objBits_simps' = pteBits_def pdeBits_def pageBits_def objBits_simps
+
+interpretation setObject_pte: simple_ko' "setObject :: _ \<Rightarrow> pte \<Rightarrow> _"
+  by (unfold_locales,
+      simp add: projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
+
+interpretation setObject_pde: simple_ko' "setObject :: _ \<Rightarrow> pde \<Rightarrow> _"
+  by (unfold_locales,
+      simp add: projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
+
+interpretation setObject_asidpool: simple_ko' "setObject :: _ \<Rightarrow> asidpool \<Rightarrow> _"
+  by (unfold_locales,
+      simp add: projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
+
+interpretation storePDE: simple_ko' "storePDE"
+  by (unfold_locales,
+      simp add: storePDE_def projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
+
+interpretation storePTE: simple_ko' "storePTE"
+  by (unfold_locales,
+      simp add: storePTE_def projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
+
 (*FIXME move *)
 
 lemma pspace_relation_None:
