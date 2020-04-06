@@ -1529,35 +1529,55 @@ lemma tcb_bound_refs'_simps[simp]:
   "tcb_bound_refs' None None None = {}"
   by (auto simp: tcb_bound_refs'_def)
 
+\<comment>\<open>
+  Useful rewrite rules for extracting the existence of objects on the other side of symmetric refs.
+  There should be a rewrite corresponding to each entry of @{term symreftype}.
+\<close>
 lemma refs_of_rev':
- "(x, TCBBlockedRecv) \<in> refs_of' ko =
-    (\<exists>tcb. ko = KOTCB tcb \<and> (\<exists>a b. tcbState tcb = BlockedOnReceive x a b))"
- "(x, TCBBlockedSend) \<in> refs_of' ko =
+  "(x, TCBBlockedSend) \<in> refs_of' ko =
     (\<exists>tcb. ko = KOTCB tcb \<and> (\<exists>a b c d. tcbState tcb = BlockedOnSend x a b c d))"
- "(x, TCBSignal) \<in> refs_of' ko =
+  "(x, TCBBlockedRecv) \<in> refs_of' ko =
+    (\<exists>tcb. ko = KOTCB tcb \<and> (\<exists>a b. tcbState tcb = BlockedOnReceive x a b))"
+  "(x, TCBSignal) \<in> refs_of' ko =
     (\<exists>tcb. ko = KOTCB tcb \<and> tcbState tcb = BlockedOnNotification x)"
- "(x, EPRecv) \<in> refs_of' ko =
-    (\<exists>ep. ko = KOEndpoint ep \<and> (\<exists>q. ep = RecvEP q \<and> x \<in> set q))"
- "(x, EPSend) \<in> refs_of' ko =
-    (\<exists>ep. ko = KOEndpoint ep \<and> (\<exists>q. ep = SendEP q \<and> x \<in> set q))"
- "(x, NTFNSignal) \<in> refs_of' ko =
-    (\<exists>ntfn. ko = KONotification ntfn \<and> (\<exists>q. ntfnObj ntfn = WaitingNtfn q \<and> x \<in> set q))"
- "(x, TCBBound) \<in>  refs_of' ko =
+  "(x, TCBBound) \<in>  refs_of' ko =
     (\<exists>tcb. ko = KOTCB tcb \<and> (tcbBoundNotification tcb = Some x))"
- "(x, NTFNBound) \<in> refs_of' ko =
+  "(x, EPSend) \<in> refs_of' ko =
+    (\<exists>ep. ko = KOEndpoint ep \<and> (\<exists>q. ep = SendEP q \<and> x \<in> set q))"
+  "(x, EPRecv) \<in> refs_of' ko =
+    (\<exists>ep. ko = KOEndpoint ep \<and> (\<exists>q. ep = RecvEP q \<and> x \<in> set q))"
+  "(x, NTFNSignal) \<in> refs_of' ko =
+    (\<exists>ntfn. ko = KONotification ntfn \<and> (\<exists>q. ntfnObj ntfn = WaitingNtfn q \<and> x \<in> set q))"
+  "(x, NTFNBound) \<in> refs_of' ko =
     (\<exists>ntfn. ko = KONotification ntfn \<and> (ntfnBoundTCB ntfn = Some x))"
-  sorry (* FIXME RT: complete *) (*
+  "(x, TCBSchedContext) \<in> refs_of' ko =
+    (\<exists>tcb. ko = KOTCB tcb \<and> tcbSchedContext tcb = Some x)"
+  "(x, SCTcb) \<in> refs_of' ko =
+    (\<exists>sc. ko = KOSchedContext sc \<and> scTCB sc = Some x)"
+  "(x, NTFNSchedContext) \<in> refs_of' ko =
+    (\<exists>ntfn. ko = KONotification ntfn \<and> ntfnSc ntfn = Some x)"
+  "(x, SCNtfn) \<in> refs_of' ko =
+    (\<exists>sc. ko = KOSchedContext sc \<and> scNtfn sc = Some x)"
+  "(x, SCReply) \<in> refs_of' ko =
+    (\<exists>sc. ko = KOSchedContext sc \<and> scReply sc = Some x)"
+  "(x, ReplySchedContext) \<in> refs_of' ko =
+    (\<exists>reply. ko = KOReply reply \<and> replySc reply = Some x)"
+  "(x, TCBYieldTo) \<in> refs_of' ko =
+    (\<exists>tcb. ko = KOTCB tcb \<and> tcbYieldTo tcb = Some x)"
+  "(x, SCYieldFrom) \<in> refs_of' ko =
+    (\<exists>sc. ko = KOSchedContext sc \<and> scYieldFrom sc = Some x)"
   by (auto simp: refs_of'_def
                  tcb_st_refs_of'_def
                  ep_q_refs_of'_def
                  ntfn_q_refs_of'_def
                  ntfn_bound_refs'_def
                  tcb_bound_refs'_def
+                 in_get_refs
           split: Structures_H.kernel_object.splits
                  Structures_H.thread_state.splits
                  Structures_H.endpoint.splits
                  Structures_H.notification.splits
-                 Structures_H.ntfn.splits)+ *)
+                 Structures_H.ntfn.splits)
 
 lemma ko_wp_at'_weakenE:
   "\<lbrakk> ko_wp_at' P p s; \<And>ko. P ko \<Longrightarrow> Q ko \<rbrakk> \<Longrightarrow> ko_wp_at' Q p s"
