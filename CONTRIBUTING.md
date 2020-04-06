@@ -24,6 +24,13 @@ repository still builds before you send the pull requests by running the overall
 If you have larger changes or additions, it is a good idea to get in contact
 with us as <devel@sel4.systems>, so we can help you get started.
 
+The people responsible for the technical direction, procedures, and quality
+control are the [Technical Steering Committee][1] (TSC) of the seL4
+foundation. You can contact them either on the developer mailing list or on
+directly via email available from their profile pages.
+
+[1]: https://sel4.systems/Foundation/TSC
+
 
 ## Developer Certificate of Origin (DCO)
 
