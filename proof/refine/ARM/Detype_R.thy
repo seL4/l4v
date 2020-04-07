@@ -973,7 +973,7 @@ lemma refs_notRange:
   apply (erule live_notRange)
   apply (rule refs_of_live')
   apply clarsimp
-  done
+  sorry (* FIXME: needs statement update *)
 
 lemma valid_obj':
   "\<lbrakk> valid_obj' obj s; ko_wp_at' ((=) obj) p s \<rbrakk> \<Longrightarrow> valid_obj' obj state'"
