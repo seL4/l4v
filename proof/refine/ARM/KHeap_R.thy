@@ -413,7 +413,7 @@ lemma setObject_tcb_replies_of'[wp]:
   "setObject c (tcb::tcb) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
   by setObject_replies_of
 
-lemma setObject_sched_context_replies_of':
+lemma setObject_sched_context_replies_of'[wp]:
   "setObject c (sched_context::sched_context) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
   by setObject_replies_of
 
@@ -439,6 +439,9 @@ lemma setObject_reply_replies_of'[wp]:
                  split: if_split_asm
                         Structures_H.kernel_object.split_asm)
   done
+
+crunches setNotification, setEndpoint, setSchedContext
+  for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
 
 lemma getObject_obj_at':
   assumes x: "\<And>q n ko. loadObject p q n ko =
@@ -1778,22 +1781,22 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemmas set_ep_valid_objs'[wp] =
   set_ep'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
 lemmas set_ep_valid_pspace'[wp] =
-  set_ep'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+  set_ep'.valid_pspace'[simplified valid_obj'_def pred_conj_def, simplified]
 
 lemmas set_ntfn_valid_objs'[wp] =
   set_ntfn'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
 lemmas set_ntfn_valid_pspace'[wp] =
-  set_ntfn'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+  set_ntfn'.valid_pspace'[simplified valid_obj'_def pred_conj_def, simplified]
 
 lemmas set_reply_valid_objs'[wp] =
   set_reply'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
 lemmas set_reply_valid_pspace'[wp] =
-  set_reply'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+  set_reply'.valid_pspace'[simplified valid_obj'_def pred_conj_def, simplified]
 
 lemmas set_sc_valid_objs'[wp] =
   set_sc'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
 lemmas set_sc_valid_pspace'[wp] =
-  set_sc'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+  set_sc'.valid_pspace'[simplified valid_obj'_def pred_conj_def, simplified]
 
 
 lemma set_ep_state_refs_of'[wp]:
@@ -1917,8 +1920,7 @@ lemma ep_redux_simps':
   "ntfn_q_refs_of' (case xs of [] \<Rightarrow> IdleNtfn | y # ys \<Rightarrow> WaitingNtfn xs)
         = (set xs \<times> {NTFNSignal})"
   by (fastforce split: list.splits
-                simp: valid_ep_def valid_ntfn_def
-              intro!: ext)+
+                simp: valid_ep_def valid_ntfn_def)+
 
 
 (* There are two wp rules for preserving valid_ioc over set_object.
