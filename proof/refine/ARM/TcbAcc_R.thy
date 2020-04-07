@@ -101,6 +101,13 @@ lemma valid_queues_no_bitmap_exceptI[intro]:
   unfolding valid_queues_no_bitmap_except_def valid_queues_no_bitmap_def
   by simp
 
+crunches setThreadState, threadSet
+  for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
+  (wp: crunch_wps)
+
+crunches tcbSchedDequeue, tcbSchedEnqueue
+  for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
+
 lemma st_tcb_at_coerce_abstract:
   assumes t: "st_tcb_at' P t c"
   assumes sr: "(a, c) \<in> state_relation"
@@ -2681,8 +2688,6 @@ proof -
   thus ?thesis
     by - (erule hoare_strengthen_post; fastforce elim: valid_bitmap_valid_bitmapQ_exceptE)
 qed
-
-crunch valid_queues[wp]: threadGet "Invariants_H.valid_queues"
 
 lemma threadGet_const_tcb_at:
   "\<lbrace>\<lambda>s. tcb_at' t s \<and> obj_at' (P s \<circ> f) t s\<rbrace> threadGet f t \<lbrace>\<lambda>rv s. P s rv \<rbrace>"

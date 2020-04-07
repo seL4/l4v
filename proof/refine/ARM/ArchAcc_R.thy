@@ -176,10 +176,13 @@ lemma setObject_pde_replies_of'[wp]:
   "setObject c (pde::pde) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
   by setObject_replies_of
 
+crunches storePDE, storePTE
+  for replies_of': "\<lambda>s. P (replies_of' s)"
+
 lemma storePDE_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
      storePDE ptr val
-   \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>" (* FIXME RT: these should all become simple_ko' *)
   apply (simp add: storePDE_def)
   apply (wp setObject_cte_wp_at2'[where Q="\<top>"])
     apply (clarsimp simp: updateObject_default_def in_monad
