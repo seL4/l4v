@@ -2256,7 +2256,7 @@ lemma schedule_ct_activatable'[wp]:
                    simp: sch_act_wf obj_at'_activatable_st_tcb_at')
   done *)
 
-lemma threadSet_sch_act_sane:
+lemma threadSet_sch_act_sane[wp]:
   "\<lbrace>sch_act_sane\<rbrace> threadSet f t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
   by (wp sch_act_sane_lift)
 
