@@ -37,7 +37,7 @@ repo](https://github.com/seL4/verification-manifest).
 On **Buster** or **Bullseye**, to run all the tests against the
 **ARMv7-A** architecture you will need to install the following packages:
 ```bash
-sudo apt-get install \
+sudo apt-get install  \
     python3 python3-pip python3-dev \
     gcc-arm-none-eabi build-essential libxml2-utils ccache \
     ncurses-dev librsvg2-bin device-tree-compiler cmake \
