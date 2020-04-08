@@ -139,8 +139,7 @@ lemma find_pd_for_asid_assert_eq:
   apply (clarsimp split: Structures_A.kernel_object.splits
                          arch_kernel_obj.splits if_split_asm)
   apply (simp add: get_pde_def get_pd_def get_object_def
-                   bind_assoc is_aligned_neg_mask_eq
-                   pd_bits_def pdBits_def pdeBits_def pageBits_def)
+                   bind_assoc pd_bits_def pdBits_def pdeBits_def pageBits_def)
   apply (simp add: exec_gets)
   done
 
@@ -162,8 +161,7 @@ lemma find_pd_for_asid_valids:
   apply (simp_all add: validE_def validE_R_def validE_E_def
                        valid_def split: sum.split)
   apply (auto simp: returnOk_def return_def pdeBits_def
-                    pde_at_def pd_bits_def pdBits_def
-                    pageBits_def is_aligned_neg_mask_eq
+                    pde_at_def pd_bits_def pdBits_def pageBits_def
              dest!: find_pd_for_asid_eq_helper
              elim!: is_aligned_weaken)
   done
@@ -811,13 +809,10 @@ lemma invalidate_asid_entry_corres:
   apply simp
   done
 
-lemma invalidateASID_cur' [wp]:
-  "\<lbrace>cur_tcb'\<rbrace> invalidateASID x \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
-  by (simp add: invalidateASID_def|wp)+
-
-crunch aligned' [wp]: invalidateASIDEntry pspace_aligned'
-crunch distinct' [wp]: invalidateASIDEntry pspace_distinct'
-crunch cur' [wp]: invalidateASIDEntry cur_tcb'
+crunches invalidateASIDEntry
+  for aligned' [wp]: pspace_aligned'
+  and distinct' [wp]:  pspace_distinct'
+  and cur' [wp]:  cur_tcb'
 
 lemma invalidateASID_valid_arch_state [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> invalidateASIDEntry x \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
@@ -917,9 +912,7 @@ lemma valid_arch_state_unmap_strg':
   apply (auto simp: ran_def split: if_split_asm)
   done
 
-crunch armKSASIDTable_inv[wp]: invalidateASIDEntry
-    "\<lambda>s. P (armKSASIDTable (ksArchState s))"
-crunch armKSASIDTable_inv[wp]: flushSpace
+crunch armKSASIDTable_inv[wp]: invalidateASIDEntry, flushSpace
     "\<lambda>s. P (armKSASIDTable (ksArchState s))"
 
 lemma delete_asid_pool_corres:
@@ -1387,11 +1380,6 @@ lemma page_table_mapped_corres:
 crunch inv[wp]: pageTableMapped "P"
   (wp: loadObject_default_inv)
 
-crunches storePDE, storePTE
-  for no_0_obj'[wp]: no_0_obj'
-  and valid_arch'[wp]: valid_arch_state'
-  and cur_tcb'[wp]: cur_tcb'
-
 lemma unmap_page_table_corres:
   "corres dc
           (invs and page_table_at pt and
@@ -1437,10 +1425,9 @@ crunch valid_objs' [wp]: flushPage "valid_objs'"
 crunch inv: lookupPTSlot "P"
   (wp: loadObject_default_inv)
 
-crunch aligned' [wp]: unmapPage pspace_aligned'
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch distinct' [wp]: unmapPage pspace_distinct'
+crunches unmapPage
+  for aligned' [wp]: pspace_aligned'
+  and distinct' [wp]: pspace_distinct'
   (wp: crunch_wps simp: crunch_simps)
 
 lemma corres_split_strengthen_ftE:
@@ -1966,8 +1953,7 @@ lemma pde_check_if_mapped_corres:
   done
 
 crunches do_machine_op, store_pte
-  for unique_table_refs[wp]: "\<lambda>s. (unique_table_refs (caps_of_state s))"
-  and valid_asid_map[wp]: "valid_asid_map"
+  for valid_asid_map[wp]: "valid_asid_map"
 
 lemma set_cap_pd_at_asid [wp]:
   "\<lbrace>vspace_at_asid asid pd\<rbrace> set_cap t st \<lbrace>\<lambda>rv. vspace_at_asid asid pd\<rbrace>"
@@ -2682,12 +2668,6 @@ crunch it' [wp]: deleteASIDPool "\<lambda>s. P (ksIdleThread s)"
 crunch it' [wp]: lookupPTSlot "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def wp: getObject_inv)
 
-crunch it' [wp]: storePTE "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps updateObject_default_def wp: setObject_idle')
-
-crunch it' [wp]: storePDE "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps updateObject_default_def wp: setObject_idle')
-
 crunch it' [wp]: flushTable "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def
    wp: setObject_idle' hoare_drop_imps mapM_wp')
@@ -2728,64 +2708,12 @@ lemmas performPageInvocation_typ_ats' [wp] =
 lemmas performASIDPoolInvocation_typ_ats' [wp] =
   typ_at_lifts [OF performASIDPoolInvocation_typ_at']
 
-lemma storePDE_pred_tcb_at' [wp]:
-  "\<lbrace>pred_tcb_at' proj P t\<rbrace> storePDE p pde \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
-  apply (simp add: storePDE_def pred_tcb_at'_def)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp add: updateObject_default_def in_monad)
-  done
-
-lemma storePTE_pred_tcb_at' [wp]:
-  "\<lbrace>pred_tcb_at' proj P t\<rbrace> storePTE p pte \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
-  apply (simp add: storePTE_def pred_tcb_at'_def)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp add: updateObject_default_def in_monad)
-  done
-
-lemma setASID_pred_tcb_at' [wp]:
-  "\<lbrace>pred_tcb_at' proj P t\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
-  apply (simp add: pred_tcb_at'_def)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp add: updateObject_default_def in_monad)
-  done
-
 lemma dmo_ct[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> doMachineOp m \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
   apply wp
   apply clarsimp
   done
-
-lemma storePDE_valid_mdb [wp]:
-  "\<lbrace>valid_mdb'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
-  by (simp add: valid_mdb'_def) wp
-
-crunch nosch [wp]: storePDE "\<lambda>s. P (ksSchedulerAction s)"
-  (simp: updateObject_default_def ignore_del: setObject)
-
-crunch ksQ [wp]: storePDE "\<lambda>s. P (ksReadyQueues s)"
-  (simp: updateObject_default_def)
-
-lemma storePDE_inQ[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace> storePDE ptr pde \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
-  apply (simp add: obj_at'_real_def storePDE_def)
-  apply (wp setObject_ko_wp_at | simp add: objBits_simps archObjSize_def pdeBits_def)+
-  apply (clarsimp simp: projectKOs obj_at'_def ko_wp_at'_def)
-  done
-
-crunch norqL1[wp]: storePDE "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-  (simp: updateObject_default_def)
-
-crunch norqL2[wp]: storePDE "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-  (simp: updateObject_default_def)
-
-lemma storePDE_valid_queues [wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> storePDE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
-
-lemma storePDE_valid_queues' [wp]:
-  "\<lbrace>valid_queues'\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  by (wp valid_queues_lift')
 
 lemma storePDE_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> storePDE p pde \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
@@ -2807,39 +2735,6 @@ lemma storePDE_iflive [wp]:
      apply (auto simp: updateObject_default_def in_monad projectKOs pdeBits_def)
   done
 
-lemma setObject_pde_ksInt [wp]:
-  "\<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setObject p (pde::pde) \<lbrace>\<lambda>_. \<lambda>s. P (ksInterruptState s)\<rbrace>"
-  by (wp setObject_ksInterrupt updateObject_default_inv|simp)+
-
-crunch ksInterruptState [wp]: storePDE "\<lambda>s. P (ksInterruptState s)"
-
-lemma storePDE_ifunsafe [wp]:
-  "\<lbrace>if_unsafe_then_cap'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
-  apply (simp add: storePDE_def)
-  apply (rule hoare_pre)
-   apply (rule setObject_ifunsafe' [where P=\<top>], simp)
-     apply (auto simp: updateObject_default_def in_monad projectKOs)[2]
-   apply wp
-  apply simp
-  done
-
-lemma storePDE_idle [wp]:
-  "\<lbrace>valid_idle'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  unfolding valid_idle'_def
-  sorry (*
-  by (rule hoare_lift_Pf [where f="ksIdleThread"]; wp) *)
-
-crunches storePDE
-  for arch'[wp]: "\<lambda>s. P (ksArchState s)"
-  and cur'[wp]: "\<lambda>s. P (ksCurThread s)"
-
-lemma storePDE_irq_states' [wp]:
-  "\<lbrace>valid_irq_states'\<rbrace> storePDE pde p \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
-  apply (simp add: storePDE_def)
-  apply (wpsimp wp: valid_irq_states_lift' dmo_lift' no_irq_storeWord setObject_ksMachine
-                    updateObject_default_inv)
-  done
-
 lemma storePDE_pde_mappings'[wp]:
   "\<lbrace>valid_pde_mappings' and K (valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
       storePDE p pde
@@ -2857,75 +2752,6 @@ lemma storePDE_pde_mappings'[wp]:
   apply assumption
   done
 
-lemma storePDE_vms'[wp]:
-  "\<lbrace>valid_machine_state'\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  apply (simp add: storePDE_def valid_machine_state'_def pointerInUserData_def
-                   pointerInDeviceData_def)
-  apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv
-            hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
-  done
-
-crunch pspace_domain_valid[wp]: storePDE "pspace_domain_valid"
-
-lemma storePDE_ct_not_inQ[wp]:
-  "\<lbrace>ct_not_inQ\<rbrace> storePDE p pde \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
-  apply (rule ct_not_inQ_lift [OF storePDE_nosch])
-  apply (simp add: storePDE_def)
-  apply (rule hoare_weaken_pre)
-   apply (wps setObject_PDE_ct)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)+
-  done
-
-lemma setObject_pde_cur_domain[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> setObject t (v::pde) \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
-  apply (simp add: setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setObject_pde_ksDomSchedule[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setObject t (v::pde) \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-  apply (simp add: setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma storePDE_cur_domain[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> storePDE p pde \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
-by (simp add: storePDE_def) wp
-
-lemma storePDE_ksDomSchedule[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> storePDE p pde \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-by (simp add: storePDE_def) wp
-
-lemma storePDE_tcb_obj_at'[wp]:
-  "\<lbrace>obj_at' (P::tcb \<Rightarrow> bool) t\<rbrace> storePDE p pde \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
-  apply (simp add: storePDE_def)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp add: updateObject_default_def in_monad)
-  done
-
-lemma storePDE_tcb_in_cur_domain'[wp]:
-  "\<lbrace>tcb_in_cur_domain' t\<rbrace> storePDE p pde \<lbrace>\<lambda>_. tcb_in_cur_domain' t\<rbrace>"
-  by (wp tcb_in_cur_domain'_lift)
-
-lemma storePDE_ct_idle_or_in_cur_domain'[wp]:
-  "\<lbrace>ct_idle_or_in_cur_domain'\<rbrace> storePDE p pde \<lbrace>\<lambda>_. ct_idle_or_in_cur_domain'\<rbrace>"
-  by (wp ct_idle_or_in_cur_domain'_lift hoare_vcg_disj_lift)
-
-lemma setObject_pte_ksDomScheduleIdx [wp]:
-  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject p (pte::pte) \<lbrace>\<lambda>_. \<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
-  by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
-
-lemma setObject_pde_ksDomScheduleIdx [wp]:
-  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject p (pde::pde) \<lbrace>\<lambda>_. \<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
-  by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
-
-crunches storePTE, storePDE
-  for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
-  and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
-  and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv)
-
 lemma storePDE_invs[wp]:
   "\<lbrace>invs' and valid_pde' pde
           and (\<lambda>s. valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
@@ -2939,40 +2765,8 @@ lemma storePDE_invs[wp]:
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift
            | simp add: cteCaps_of_def o_def)+
-  sorry (* replies_of'
   apply clarsimp
-  done *)
-
-lemma storePTE_valid_mdb [wp]:
-  "\<lbrace>valid_mdb'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
-  by (simp add: valid_mdb'_def) wp
-
-crunch nosch [wp]: storePTE "\<lambda>s. P (ksSchedulerAction s)"
-  (simp: updateObject_default_def ignore_del: setObject)
-
-crunch ksQ [wp]: storePTE "\<lambda>s. P (ksReadyQueues s)"
-  (simp: updateObject_default_def)
-
-lemma storePTE_inQ[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace> storePTE ptr pde \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
-  apply (simp add: obj_at'_real_def storePTE_def)
-  apply (wp setObject_ko_wp_at | simp add: objBits_simps archObjSize_def pteBits_def)+
-  apply (clarsimp simp: projectKOs obj_at'_def ko_wp_at'_def)
   done
-
-crunch norqL1[wp]: storePTE "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-  (simp: updateObject_default_def)
-
-crunch norqL2[wp]: storePTE "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-  (simp: updateObject_default_def)
-
-lemma storePTE_valid_queues [wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> storePTE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
-
-lemma storePTE_valid_queues' [wp]:
-  "\<lbrace>valid_queues'\<rbrace> storePTE p pde \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  by (wp valid_queues_lift')
 
 lemma storePTE_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> storePTE p pte \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
@@ -2994,51 +2788,6 @@ lemma storePTE_iflive [wp]:
      apply (auto simp: updateObject_default_def in_monad projectKOs pteBits_def)
   done
 
-lemma setObject_pte_ksInt [wp]:
-  "\<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setObject p (pte::pte) \<lbrace>\<lambda>_. \<lambda>s. P (ksInterruptState s)\<rbrace>"
-  by (wp setObject_ksInterrupt updateObject_default_inv|simp)+
-
-crunch ksInt' [wp]: storePTE "\<lambda>s. P (ksInterruptState s)"
-
-lemma storePTE_ifunsafe [wp]:
-  "\<lbrace>if_unsafe_then_cap'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
-  apply (simp add: storePTE_def)
-  apply (rule hoare_pre)
-   apply (rule setObject_ifunsafe' [where P=\<top>], simp)
-     apply (auto simp: updateObject_default_def in_monad projectKOs)[2]
-   apply wp
-  apply simp
-  done
-
-lemma storePTE_idle [wp]:
-  "\<lbrace>valid_idle'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  unfolding valid_idle'_def
-  sorry (*
-  by (rule hoare_lift_Pf [where f="ksIdleThread"]; wp) *)
-
-crunches storePTE
-  for arch'[wp]: "\<lambda>s. P (ksArchState s)"
-  and cur'[wp]: "\<lambda>s. P (ksCurThread s)"
-
-lemma storePTE_irq_states' [wp]:
-  "\<lbrace>valid_irq_states'\<rbrace> storePTE pte p \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
-  apply (simp add: storePTE_def)
-  apply (wpsimp wp: valid_irq_states_lift' dmo_lift' no_irq_storeWord setObject_ksMachine
-                    updateObject_default_inv)
-  done
-
-lemma storePTE_valid_objs [wp]:
-  "\<lbrace>valid_objs' and valid_pte' pte\<rbrace> storePTE p pte \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (simp add: storePTE_def doMachineOp_def split_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps|wpc|simp)+
-   apply (rule setObject_valid_objs')
-   prefer 2
-   apply assumption
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  apply (clarsimp simp: valid_obj'_def)
-  done
-
 lemma storePTE_pde_mappings'[wp]:
   "\<lbrace>valid_pde_mappings'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
   apply (wp valid_pde_mappings_lift')
@@ -3047,62 +2796,6 @@ lemma storePTE_pde_mappings'[wp]:
    apply (clarsimp dest!: updateObject_default_result)
   apply assumption
   done
-
-lemma storePTE_vms'[wp]:
-  "\<lbrace>valid_machine_state'\<rbrace> storePTE p pde \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  apply (simp add: storePTE_def valid_machine_state'_def pointerInUserData_def
-                   pointerInDeviceData_def)
-  apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv
-            hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
-  done
-
-crunch pspace_domain_valid[wp]: storePTE "pspace_domain_valid"
-
-lemma storePTE_ct_not_inQ[wp]:
-  "\<lbrace>ct_not_inQ\<rbrace> storePTE p pte \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
-  apply (rule ct_not_inQ_lift [OF storePTE_nosch])
-  apply (simp add: storePTE_def)
-  apply (rule hoare_weaken_pre)
-   apply (wps setObject_pte_ct)
-  apply (rule obj_at_setObject2)
-   apply (clarsimp simp: updateObject_default_def in_monad)+
-  done
-
-lemma setObject_pte_cur_domain[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> setObject t (v::pte) \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
-  apply (simp add: setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setObject_pte_ksDomSchedule[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setObject t (v::pte) \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-  apply (simp add: setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma storePTE_cur_domain[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> storePTE p pde \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
-  by (simp add: storePTE_def) wp
-
-lemma storePTE_ksDomSchedule[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> storePTE p pde \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-  by (simp add: storePTE_def) wp
-
-
-lemma storePTE_tcb_obj_at'[wp]:
-  "\<lbrace>obj_at' (P::tcb \<Rightarrow> bool) t\<rbrace> storePTE p pte \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
-  apply (simp add: storePTE_def)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp add: updateObject_default_def in_monad)
-  done
-
-lemma storePTE_tcb_in_cur_domain'[wp]:
-  "\<lbrace>tcb_in_cur_domain' t\<rbrace> storePTE p pte \<lbrace>\<lambda>_. tcb_in_cur_domain' t\<rbrace>"
-  by (wp tcb_in_cur_domain'_lift)
-
-lemma storePTE_ct_idle_or_in_cur_domain'[wp]:
-  "\<lbrace>ct_idle_or_in_cur_domain'\<rbrace> storePTE p pte \<lbrace>\<lambda>_. ct_idle_or_in_cur_domain'\<rbrace>"
-  by (wp ct_idle_or_in_cur_domain'_lift hoare_vcg_disj_lift)
 
 lemma storePTE_invs [wp]:
   "\<lbrace>invs' and valid_pte' pte\<rbrace> storePTE p pte \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -3113,9 +2806,8 @@ lemma storePTE_invs [wp]:
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift
            | simp add: cteCaps_of_def o_def)+
-  sorry (* replies_of'
   apply clarsimp
-  done *)
+  done
 
 lemma setASIDPool_valid_objs [wp]:
   "\<lbrace>valid_objs' and valid_asid_pool' ap\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
@@ -3126,45 +2818,6 @@ lemma setASIDPool_valid_objs [wp]:
   apply (clarsimp simp: updateObject_default_def in_monad)
   apply (clarsimp simp: valid_obj'_def)
   done
-
-lemma setASIDPool_valid_mdb [wp]:
-  "\<lbrace>valid_mdb'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
-  by (simp add: valid_mdb'_def) wp
-
-lemma setASIDPool_nosch [wp]:
-  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  by (wp setObject_nosch updateObject_default_inv|simp)+
-
-lemma setASIDPool_ksQ [wp]:
-  "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksReadyQueues s)\<rbrace>"
-  by (wp setObject_qs updateObject_default_inv|simp)+
-
-lemma setASIDPool_inQ[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace>
-     setObject ptr (ap::asidpool)
-   \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
-  apply (simp add: obj_at'_real_def)
-  apply (wp setObject_ko_wp_at
-            | simp add: objBits_simps archObjSize_def)+
-   apply (simp add: pageBits_def)
-  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
-  done
-
-lemma setASIDPool_qsL1 [wp]:
-  "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
-  by (wp setObject_qs updateObject_default_inv|simp)+
-
-lemma setASIDPool_qsL2 [wp]:
-  "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
-  by (wp setObject_qs updateObject_default_inv|simp)+
-
-lemma setASIDPool_valid_queues [wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
-
-lemma setASIDPool_valid_queues' [wp]:
-  "\<lbrace>valid_queues'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  by (wp valid_queues_lift')
 
 lemma setASIDPool_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
@@ -3184,40 +2837,6 @@ lemma setASIDPool_iflive [wp]:
      apply (auto simp: updateObject_default_def in_monad projectKOs pageBits_def)
   done
 
-lemma setASIDPool_ksInt [wp]:
-  "\<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. \<lambda>s. P (ksInterruptState s)\<rbrace>"
-  by (wp setObject_ksInterrupt updateObject_default_inv|simp)+
-
-lemma setASIDPool_ifunsafe [wp]:
-  "\<lbrace>if_unsafe_then_cap'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
-  apply (rule hoare_pre)
-   apply (rule setObject_ifunsafe' [where P=\<top>], simp)
-     apply (auto simp: updateObject_default_def in_monad projectKOs)[2]
-   apply wp
-  apply simp
-  done
-
-lemma setASIDPool_it' [wp]:
-  "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. \<lambda>s. P (ksIdleThread s)\<rbrace>"
-  by (wp setObject_it updateObject_default_inv|simp)+
-
-lemma setASIDPool_idle [wp]:
-  "\<lbrace>valid_idle'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  unfolding valid_idle'_def
-  sorry (*
-  by (rule hoare_lift_Pf [where f="ksIdleThread"]; wp) *)
-
-lemma setASIDPool_irq_states' [wp]:
-  "\<lbrace>valid_irq_states'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
-  apply (rule hoare_pre)
-   apply (rule hoare_use_eq [where f=ksInterruptState, OF setObject_ksInterrupt])
-    apply (simp, rule updateObject_default_inv)
-   apply (rule hoare_use_eq [where f=ksMachineState, OF setObject_ksMachine])
-    apply (simp, rule updateObject_default_inv)
-   apply wp
-  apply assumption
-  done
-
 lemma setObject_asidpool_mappings'[wp]:
   "\<lbrace>valid_pde_mappings'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
   apply (wp valid_pde_mappings_lift')
@@ -3225,61 +2844,6 @@ lemma setObject_asidpool_mappings'[wp]:
    apply (clarsimp dest!: updateObject_default_result)
   apply assumption
   done
-
-lemma setASIDPool_vms'[wp]:
-  "\<lbrace>valid_machine_state'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
-  apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv
-            hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
-  done
-
-lemma setASIDPool_ct_not_inQ[wp]:
-  "\<lbrace>ct_not_inQ\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
-  apply (rule ct_not_inQ_lift [OF setObject_nosch])
-   apply (simp add: updateObject_default_def | wp)+
-  apply (rule hoare_weaken_pre)
-   apply (wps setObject_ASID_ct)
-  apply (rule obj_at_setObject2)
-   apply (clarsimp simp: updateObject_default_def in_monad)+
-  done
-
-lemma setObject_asidpool_cur'[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
-  apply (simp add: setObject_def)
-  apply (wp | wpc | simp add: updateObject_default_def)+
-  done
-
-lemma setObject_asidpool_cur_domain[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
-  apply (simp add: setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setObject_asidpool_ksDomSchedule[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-  apply (simp add: setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setObject_tcb_obj_at'[wp]:
-  "\<lbrace>obj_at' (P::tcb \<Rightarrow> bool) t\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp add: updateObject_default_def in_monad)
-  done
-
-lemma setObject_asidpool_tcb_in_cur_domain'[wp]:
-  "\<lbrace>tcb_in_cur_domain' t\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. tcb_in_cur_domain' t\<rbrace>"
-  by (wp tcb_in_cur_domain'_lift)
-
-lemma setObject_asidpool_ct_idle_or_in_cur_domain'[wp]:
-  "\<lbrace>ct_idle_or_in_cur_domain'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. ct_idle_or_in_cur_domain'\<rbrace>"
-  apply (rule ct_idle_or_in_cur_domain'_lift)
-      apply (wp hoare_vcg_disj_lift)+
-  done
-
-lemma setObject_ap_ksDomScheduleIdx [wp]:
-  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. \<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
-  by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
 
 lemma setASIDPool_invs [wp]:
   "\<lbrace>invs' and valid_asid_pool' ap\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -3293,7 +2857,7 @@ lemma setASIDPool_invs [wp]:
            | simp add: cteCaps_of_def
            | rule setObject_ksPSpace_only)+
   apply (clarsimp simp add: setObject_def o_def)
-  sorry (* replies_of *)
+  done
 
 crunch cte_wp_at'[wp]: unmapPageTable "\<lambda>s. P (cte_wp_at' P' p s)"
   (wp: crunch_wps simp: crunch_simps)

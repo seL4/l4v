@@ -207,7 +207,7 @@ lemma setObject_pde_replies_of'[wp]:
   by setObject_replies_of
 
 crunches storePDE, storePTE
-  for replies_of': "\<lambda>s. P (replies_of' s)"
+  for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
 
 crunch cte_wp_at'[wp]: setIRQState "\<lambda>s. P (cte_wp_at' P' p s)"
 crunch inv[wp]: getIRQSlot "P"

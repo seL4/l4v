@@ -659,6 +659,8 @@ proof -
     by (rule lift_neg_pred_tcb_at' [OF ArchThreadDecls_H_ARM_H_switchToThread_typ_at' pos])
 qed
 
+crunches doMachineOp
+  for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
 
 crunch ksQ[wp]: storeWordUser "\<lambda>s. P (ksReadyQueues s p)"
 crunch ksQ[wp]: setVMRoot "\<lambda>s. P (ksReadyQueues s)"
