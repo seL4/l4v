@@ -43,33 +43,41 @@ lemmas valid_arch_state_elims[rule_format, elim!] = conjuncts
 lemmas valid_vspace_obj_elims [rule_format, elim!] =
   valid_vspace_obj.simps[@simp_to_elim, @ \<open>(drule bspec)?\<close>]
 
-end
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-
 lemmas Arch_objBits_simps' = pteBits_def pdeBits_def pageBits_def objBits_simps
 
-interpretation setObject_pte: simple_ko' "setObject :: _ \<Rightarrow> pte \<Rightarrow> _"
+sublocale setObject_pte: simple_ko' "setObject :: _ \<Rightarrow> pte \<Rightarrow> _"
   by (unfold_locales,
       simp add: projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 
-interpretation setObject_pde: simple_ko' "setObject :: _ \<Rightarrow> pde \<Rightarrow> _"
+sublocale setObject_pde: simple_ko' "setObject :: _ \<Rightarrow> pde \<Rightarrow> _"
   by (unfold_locales,
       simp add: projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 
-interpretation setObject_asidpool: simple_ko' "setObject :: _ \<Rightarrow> asidpool \<Rightarrow> _"
+sublocale setObject_asidpool: simple_ko' "setObject :: _ \<Rightarrow> asidpool \<Rightarrow> _"
   by (unfold_locales,
       simp add: projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 
-interpretation storePDE: simple_ko' "storePDE"
+sublocale storePDE: simple_ko' "storePDE"
   by (unfold_locales,
       simp add: storePDE_def projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 
-interpretation storePTE: simple_ko' "storePTE"
+sublocale storePTE: simple_ko' "storePTE"
   by (unfold_locales,
       simp add: storePTE_def projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 
-(*FIXME move *)
+lemmas storePTE_valid_objs'[wp] =
+  storePTE.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+lemmas storePTE_valid_pspace'[wp] =
+  storePTE.valid_pspace'[simplified valid_obj'_def pred_conj_def, simplified]
+
+lemmas storePDE_valid_objs'[wp] =
+  storePDE.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+lemmas storePDE_valid_pspace'[wp] =
+  storePDE.valid_pspace'[simplified valid_obj'_def pred_conj_def, simplified]
+
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma pspace_relation_None:
   "\<lbrakk>pspace_relation p p'; p' ptr = None \<rbrakk> \<Longrightarrow> p ptr = None"
@@ -200,34 +208,6 @@ lemma setObject_pde_replies_of'[wp]:
 
 crunches storePDE, storePTE
   for replies_of': "\<lambda>s. P (replies_of' s)"
-
-lemma storePDE_cte_wp_at'[wp]:
-  "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
-     storePDE ptr val
-   \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>" (* FIXME RT: these should all become simple_ko' *)
-  apply (simp add: storePDE_def)
-  apply (wp setObject_cte_wp_at2'[where Q="\<top>"])
-    apply (clarsimp simp: updateObject_default_def in_monad
-                          projectKO_opts_defs projectKOs)
-   apply (rule equals0I)
-   apply (clarsimp simp: updateObject_default_def in_monad
-                         projectKOs projectKO_opts_defs)
-  apply simp
-  done
-
-lemma storePTE_cte_wp_at'[wp]:
-  "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
-     storePTE ptr val
-   \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
-  apply (simp add: storePTE_def)
-  apply (wp setObject_cte_wp_at2'[where Q="\<top>"])
-    apply (clarsimp simp: updateObject_default_def in_monad
-                          projectKO_opts_defs projectKOs)
-   apply (rule equals0I)
-   apply (clarsimp simp: updateObject_default_def in_monad
-                         projectKOs projectKO_opts_defs)
-  apply simp
-  done
 
 crunch cte_wp_at'[wp]: setIRQState "\<lambda>s. P (cte_wp_at' P' p s)"
 crunch inv[wp]: getIRQSlot "P"
@@ -1083,21 +1063,6 @@ lemma lookup_pt_slot_corres [@lift_corres_args, corres]:
 
 declare in_set_zip_refl[simp]
 
-crunch typ_at' [wp]: storePDE "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
-
-crunch typ_at' [wp]: storePTE "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
-
-lemmas storePDE_typ_ats[wp] = typ_at_lifts [OF storePDE_typ_at']
-lemmas storePTE_typ_ats[wp] = typ_at_lifts [OF storePTE_typ_at']
-
-lemma setObject_asid_typ_at' [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setObject p' (v::asidpool) \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  by (wp setObject_typ_at')
-
-lemmas setObject_asid_typ_ats' [wp] = typ_at_lifts [OF setObject_asid_typ_at']
-
 lemma getObject_pte_inv[wp]:
   "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>rv :: pte. P\<rbrace>"
   by (simp add: getObject_inv loadObject_default_inv)
@@ -1311,83 +1276,6 @@ lemma setObject_arch:
   apply (wp X | simp)+
   done
 
-lemma setObject_ASID_arch [wp]:
-  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setObject p (v::asidpool) \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
-  apply (rule setObject_arch)
-  apply (simp add: updateObject_default_def)
-  apply wp
-  apply simp
-  done
-
-lemma setObject_PDE_arch [wp]:
-  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setObject p (v::pde) \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
-  apply (rule setObject_arch)
-  apply (simp add: updateObject_default_def)
-  apply wp
-  apply simp
-  done
-
-lemma setObject_PTE_arch [wp]:
-  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setObject p (v::pte) \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
-  apply (rule setObject_arch)
-  apply (simp add: updateObject_default_def)
-  apply wp
-  apply simp
-  done
-
-lemma setObject_ASID_valid_arch [wp]:
-  "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::asidpool) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift'; wp)
-
-lemma setObject_PDE_valid_arch [wp]:
-  "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pde) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift') (wp setObject_typ_at')+
-
-lemma setObject_PTE_valid_arch [wp]:
-  "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pte) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift') (wp setObject_typ_at')+
-
-lemma setObject_ASID_ct [wp]:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::asidpool) \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
-  apply (simp add: setObject_def updateObject_default_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setObject_PDE_ct [wp]:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::pde) \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
-  apply (simp add: setObject_def updateObject_default_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setObject_pte_ct [wp]:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::pte) \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
-  apply (simp add: setObject_def updateObject_default_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setObject_ASID_cur_tcb' [wp]:
-  "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> setObject p (e::asidpool) \<lbrace>\<lambda>_ s. cur_tcb' s\<rbrace>"
-  apply (simp add: cur_tcb'_def)
-  apply (rule hoare_lift_Pf [where f=ksCurThread])
-   apply wp+
-  done
-
-lemma setObject_PDE_cur_tcb' [wp]:
-  "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> setObject p (e::pde) \<lbrace>\<lambda>_ s. cur_tcb' s\<rbrace>"
-  apply (simp add: cur_tcb'_def)
-  apply (rule hoare_lift_Pf [where f=ksCurThread])
-   apply wp+
-  done
-
-lemma setObject_pte_cur_tcb' [wp]:
-  "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> setObject p (e::pte) \<lbrace>\<lambda>_ s. cur_tcb' s\<rbrace>"
-  apply (simp add: cur_tcb'_def)
-  apply (rule hoare_lift_Pf [where f=ksCurThread])
-   apply wp+
-  done
-
-
-
 lemma page_directory_pde_at_lookupI':
   "page_directory_at' pd s \<Longrightarrow> pde_at' (lookup_pd_slot pd vptr) s"
   apply (simp add: lookup_pd_slot_def Let_def)
@@ -1407,50 +1295,6 @@ lemma page_table_pte_at_lookupI':
   apply (erule page_table_pte_atI')
   apply (rule vptr_shiftr_le_2pt[simplified pt_bits_stuff])
   done
-
-lemma storePTE_ctes [wp]:
-  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> storePTE p pte \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
-  apply (rule ctes_of_from_cte_wp_at [where Q=\<top>, simplified])
-  apply (rule storePTE_cte_wp_at')
-  done
-
-lemma storePDE_ctes [wp]:
-  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> storePDE p pte \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
-  apply (rule ctes_of_from_cte_wp_at [where Q=\<top>, simplified])
-  apply (rule storePDE_cte_wp_at')
-  done
-
-
-lemma storePDE_valid_objs [wp]:
-  "\<lbrace>valid_objs' and valid_pde' pde\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (simp add: storePDE_def doMachineOp_def split_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps|wpc|simp)+
-   apply (rule setObject_valid_objs')
-   prefer 2
-   apply assumption
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  apply (clarsimp simp: valid_obj'_def)
-  done
-
-lemma setObject_ASID_cte_wp_at'[wp]:
-  "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
-     setObject ptr (asid::asidpool)
-   \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
-  apply (wp setObject_cte_wp_at2'[where Q="\<top>"])
-    apply (clarsimp simp: updateObject_default_def in_monad
-                          projectKO_opts_defs projectKOs)
-   apply (rule equals0I)
-   apply (clarsimp simp: updateObject_default_def in_monad
-                         projectKOs projectKO_opts_defs)
-  apply simp
-  done
-
-lemma setObject_ASID_ctes_of'[wp]:
-  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>
-     setObject ptr (asid::asidpool)
-   \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
-  by (rule ctes_of_from_cte_wp_at [where Q=\<top>, simplified]) wp
 
 lemma clearMemory_vms':
   "valid_machine_state' s \<Longrightarrow>
