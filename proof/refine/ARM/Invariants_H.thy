@@ -2746,6 +2746,9 @@ lemmas typ_ats'[wp] = typ_at_lifts[OF typ']
 
 end
 
+(* we expect typ_at' lemmas to be [wp], so this should be easy: *)
+method typ_at_props' = unfold_locales, wp
+
 locale PSpace_update_eq =
   fixes f :: "kernel_state \<Rightarrow> kernel_state"
   assumes pspace: "ksPSpace (f s) = ksPSpace s"

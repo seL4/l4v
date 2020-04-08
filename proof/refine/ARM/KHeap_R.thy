@@ -1632,8 +1632,7 @@ lemma typ_at'[wp]:
   "f p v \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
   unfolding f_def by (rule setObject_typ_at')
 
-sublocale typ_at_props' "f p v" for p v
-  by (unfold_locales) (rule typ_at')
+sublocale typ_at_props' "f p v" for p v by typ_at_props'
 
 sublocale pspace_only' "f p v" for p v
   unfolding f_def
