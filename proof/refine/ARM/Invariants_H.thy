@@ -2941,6 +2941,26 @@ interpretation ready_queue_bitmap2_update:
   P_Arch_Idle_Int_Cur_update_eq "ksReadyQueuesL2Bitmap_update f"
   by unfold_locales auto
 
+interpretation reprogramTime_update:
+  P_Arch_Idle_Int_Cur_update_eq "ksReprogramTimer_update f"
+  by unfold_locales auto
+
+interpretation ksReleaseQueue_update:
+  P_Arch_Idle_Int_Cur_update_eq "ksReleaseQueue_update f"
+  by unfold_locales auto
+
+interpretation ksConsumedTime_update:
+  P_Arch_Idle_Int_Cur_update_eq "ksConsumedTime_update f"
+  by unfold_locales auto
+
+interpretation ksCurTime_update:
+  P_Arch_Idle_Int_Cur_update_eq "ksCurTime_update f"
+  by unfold_locales auto
+
+interpretation ksCurSc_update:
+  P_Arch_Idle_Int_Cur_update_eq "ksCurSc_update f"
+  by unfold_locales auto
+
 interpretation cur_thread_update':
   P_Arch_Idle_Int_update_eq "ksCurThread_update f"
   by unfold_locales auto
