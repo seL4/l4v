@@ -2213,10 +2213,72 @@ case \x of (ArchInvocationLabel ArchLabels.RISCVIRQIssueIRQHandler, irqW:trigger
         irqW#triggerW#index#depth#_, cnode#_) => ->1
     | (ArchInvocationLabel RISCVIRQIssueIRQHandler, _, _) => ->2
     | _ => ->3
-case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { capNtfnPtr = ptr }), final, _) -> ((ReplyCap { capReplyPtr = ptr }), final, _) -> (NullCap, _, _) -> (DomainCap, _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tptr}), True, _) -> ((SchedContextCap { capSchedContextPtr = scPtr }), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> (cap@(IRQHandlerCap { capIRQ = irq }), True, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---X> FIXME
 
-case \x of (cap@(EndpointCap {capEPCanSend=True}), _) -> (cap@(NotificationCap {capNtfnCanSend=True}), _) -> (cap@(ReplyCap {}), _) -> (cap@(ThreadCap {}), False) -> (DomainCap, _) -> ((SchedContextCap {capSchedContextPtr=sc}), _) -> (SchedControlCap, _) -> (cap@(CNodeCap {}), False) -> (cap@(UntypedCap {}), _) -> (IRQControlCap, _) -> ((IRQHandlerCap { capIRQ = irq }), _) -> ((ArchObjectCap cap), _) -> (_, _) ->  ---X> FIXME
+case \x of (cap@(EndpointCap {capEPCanSend=True}), _) -> (cap@(NotificationCap {capNtfnCanSend=True}), _) -> (cap@(ReplyCap {}), _) -> (cap@(ThreadCap {}), False) -> (DomainCap, _) -> ((SchedContextCap {capSchedContextPtr=sc}), _) -> (SchedControlCap, _) -> (cap@(CNodeCap {}), False) -> (cap@(UntypedCap {}), _) -> (IRQControlCap, _) -> ((IRQHandlerCap { capIRQ = irq }), _) -> ((ArchObjectCap cap), _) -> (_, _) ->  --->
+    let (cap, firstPhase) = \x in
+    if isEndpointCap cap \<and> capEPCanSend cap
+    then ->1
+    else if isNotificationCap cap \<and> capNtfnCanSend cap
+    then ->2
+    else if isReplyCap cap
+    then ->3
+    else if isThreadCap cap \<and> \<not> firstPhase
+    then ->4
+    else if isDomainCap cap
+    then ->5
+    else if isSchedContextCap cap
+    then let sc = capSchedContextPtr cap
+         in ->6
+    else if isSchedControlCap cap
+    then ->7
+    else if isCNodeCap cap \<and> \<not> firstPhase
+    then ->8
+    else if isUntypedCap cap
+    then ->9
+    else if isIRQControlCap cap
+    then ->10
+    else if isIRQHandlerCap cap
+    then let irq = capIRQ cap
+         in ->11
+    else if isArchObjectCap cap
+    then let cap = capCap cap
+         in ->12
+    else ->13
 
-case \x of SwitchToThread candidate | candidate == from -> _ ->  ---X> FIXME
-
-case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { capNtfnPtr = ptr }), final, _) -> ((ReplyCap { capReplyPtr = ptr }), final, _) -> (NullCap, _, _) -> (DomainCap, _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tptr}), True, _) -> ((SchedContextCap { capSchedContextPtr = scPtr }), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> (cap@(IRQHandlerCap { capIRQ = irq }), True, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---X>
+case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { capNtfnPtr = ptr }), final, _) -> ((ReplyCap { capReplyPtr = ptr }), final, _) -> (NullCap, _, _) -> (DomainCap, _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tptr}), True, _) -> ((SchedContextCap { capSchedContextPtr = scPtr }), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> (cap@(IRQHandlerCap { capIRQ = irq }), True, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---> let (cap, final, \v2\) = \x in
+    if isEndpointCap cap
+    then let ptr = capEPPtr cap
+        in ->1
+    else if isNotificationCap cap
+    then let ptr = capNtfnPtr cap
+        in ->2
+    else if isReplyCap cap
+    then let ptr = capReplyPtr cap
+        in ->3
+    else if isNullCap cap
+    then ->4
+    else if isDomainCap cap
+    then ->5
+    else if \v2\
+    then ->6
+    else if isCNodeCap cap \<and> final
+    then let ptr = capCNodePtr cap; bits = capCNodeBits cap
+        in ->7
+    else if isThreadCap cap \<and> final
+    then let tptr = capTCBPtr cap
+        in ->8
+    else if isSchedContextCap cap \<and> final
+    then let scPtr = capSchedContextPtr cap
+        in ->9
+    else if isZombie cap \<and> final
+    then let z = cap
+        in ->10
+    else if isArchObjectCap cap
+    then let cap = capCap cap; final = final
+        in ->11
+    else if isIRQHandlerCap cap \<and> final
+    then let irq = capIRQ cap
+        in ->12
+    else if isZombie cap \<and> \<not> final
+    then ->13
+    else ->14
