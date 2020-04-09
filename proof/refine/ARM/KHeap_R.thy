@@ -1812,22 +1812,63 @@ lemma set_ntfn_state_refs_of'[wp]:
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   by (wp set_ntfn'.state_refs_of') (simp flip: fun_upd_def)
 
-(* FIXME RT: add state_refs_of for reply and sc *)
+lemma setSchedContext_state_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s)(p := get_refs SCNtfn (scNtfn sc) \<union>
+                                   get_refs SCTcb (scTCB sc) \<union>
+                                   get_refs SCYieldFrom (scYieldFrom sc) \<union>
+                                   get_refs SCReply (scReply sc)))\<rbrace>
+   setSchedContext p sc
+   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
+  by (wp set_sc'.state_refs_of') (simp flip: fun_upd_def)
+
+lemma setReply_state_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s)(p := get_refs ReplySchedContext (replySc reply) \<union>
+                                   get_refs ReplyTCB (replyTCB reply)))\<rbrace>
+   setReply p reply
+   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
+  by (wp set_reply'.state_refs_of') (simp flip: fun_upd_def)
+
+lemma setSchedContext_iflive'[wp]:
+  "\<lbrace>if_live_then_nonz_cap' and ex_nonz_cap_to' p\<rbrace>
+   setSchedContext p sc
+   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
+  unfolding setSchedContext_def
+  by (wpsimp wp: setObject_iflive'[where P="\<top>"]
+           simp: updateObject_default_def in_monad
+                 projectKOs objBits_simps' bind_def
+     |simp)+
+
+lemma setReply_iflive'[wp]:
+  "\<lbrace>if_live_then_nonz_cap' and ex_nonz_cap_to' p\<rbrace>
+   setReply p reply
+   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
+  unfolding setReply_def
+  by (wpsimp wp: setObject_iflive'[where P="\<top>"]
+           simp: updateObject_default_def in_monad
+                 projectKOs objBits_simps' bind_def
+     |simp)+
 
 lemma setEndpoint_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
       \<and> (v \<noteq> IdleEP \<longrightarrow> ex_nonz_cap_to' p s)\<rbrace>
-     setEndpoint p v
+   setEndpoint p v
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   unfolding setEndpoint_def
-  apply (wp setObject_iflive'[where P="\<top>"])
-       apply simp
-      apply (simp add: objBits_simps')
-     apply simp
-    apply (clarsimp simp: updateObject_default_def in_monad projectKOs)
-   apply (clarsimp simp: updateObject_default_def in_monad
-                         projectKOs bind_def)
-  apply clarsimp
+  by (wpsimp wp: setObject_iflive'[where P="\<top>"]
+           simp: updateObject_default_def in_monad
+                 projectKOs objBits_simps' bind_def
+     |simp)+
+
+lemma setReply_list_refs_of_replies'[wp]:
+  "\<lbrace>\<lambda>s. P ((list_refs_of_replies' s)(p := list_refs_of_reply' reply))\<rbrace>
+   setReply p reply
+   \<lbrace>\<lambda>rv s. P (list_refs_of_replies' s)\<rbrace>"
+  apply (wpsimp simp: setReply_def updateObject_default_def setObject_def split_def)
+  apply (erule arg_cong[where f=P, THEN iffD1, rotated])
+  apply (clarsimp simp: opt_map_def sym_refs_def fun_upd_def list_refs_of_reply'_def
+                        map_set_def projectKO_opt_reply)
+  apply (rule ext)
+  apply (clarsimp simp: projectKO_opt_reply list_refs_of_reply'_def)
   done
 
 lemma setObject_ksPSpace_only:
