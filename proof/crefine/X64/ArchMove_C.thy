@@ -47,33 +47,12 @@ where
   "port_mask start end =
      mask (unat (end && mask wordRadix)) && ~~ mask (unat (start && mask wordRadix))"
 
-lemma unat_length_4_helper:
-  "\<lbrakk>unat (l::machine_word) = length args; \<not> l < 4\<rbrakk> \<Longrightarrow> \<exists>x xa xb xc xs. args = x#xa#xb#xc#xs"
-  apply (case_tac args; clarsimp simp: unat_eq_0)
-  by (rename_tac list, case_tac list, clarsimp, unat_arith)+
-
-lemma ucast_drop_big_mask:
-  "UCAST(64 \<rightarrow> 16) (x && 0xFFFF) = UCAST(64 \<rightarrow> 16) x"
-  by word_bitwise
-
-lemma first_port_last_port_compare:
-  "UCAST(16 \<rightarrow> 32 signed) (UCAST(64 \<rightarrow> 16) (xa && 0xFFFF))
-        <s UCAST(16 \<rightarrow> 32 signed) (UCAST(64 \<rightarrow> 16) (x && 0xFFFF))
-       = (UCAST(64 \<rightarrow> 16) xa < UCAST(64 \<rightarrow> 16) x)"
-  apply (clarsimp simp: word_sless_alt ucast_drop_big_mask)
-  apply (subst sint_ucast_eq_uint, clarsimp simp: is_down)+
-  by (simp add: word_less_alt)
-
 declare word_neq_0_conv [simp del]
 
 lemma unat_ucast_prio_L1_cmask_simp:
   "unat (ucast (p::priority) && 0x3F :: machine_word) = unat (p && 0x3F)"
   using unat_ucast_prio_mask_simp[where m=6]
   by (simp add: mask_def)
-
-lemma machine_word_and_3F_less_40:
-  "(w :: machine_word) && 0x3F < 0x40"
-  by (rule word_and_less', simp)
 
 lemma ucast_shiftl_6_absorb:
   fixes f l :: "16 word"
@@ -148,16 +127,6 @@ where
        \<and> x = word_rcat (map (underlying_memory (ksMachineState s))
                                 [p + 7, p + 6, p + 5, p + 4, p + 3, p + 2, p + 1, p])"
 
-(* FIXME: move to GenericLib *)
-lemmas unat64_eq_of_nat = unat_eq_of_nat[where 'a=64, folded word_bits_def]
-
-lemma unat_mask_3_less_8:
-  "unat (p && mask 3 :: word64) < 8"
-  apply (rule unat_less_helper)
-  apply (rule order_le_less_trans, rule word_and_le1)
-  apply (simp add: mask_def)
-  done
-
 lemma getMessageInfo_less_4:
   "\<lbrace>\<top>\<rbrace> getMessageInfo t \<lbrace>\<lambda>rv s. msgExtraCaps rv < 4\<rbrace>"
   including no_pre
@@ -181,14 +150,6 @@ lemma getMessageInfo_msgLength':
                    Types_H.msgExtraCapBits_def split: if_split )
   done
 
-lemma scast_specific_plus64:
-  "scast (of_nat (word_ctz x) + 0x20 :: 64 signed word) = of_nat (word_ctz x) + (0x20 :: machine_word)"
-  by (simp add: scast_down_add is_down_def target_size_def source_size_def word_size)
-
-lemma scast_specific_plus64_signed:
-  "scast (of_nat (word_ctz x) + 0x20 :: machine_word) = of_nat (word_ctz x) + (0x20 :: 64 signed word)"
-  by (simp add: scast_down_add is_down_def target_size_def source_size_def word_size)
-
 lemma ucast_le_ucast_8_32:
   "(ucast x \<le> (ucast y :: word32)) = (x \<le> (y :: word8))"
   by (simp add: word_le_nat_alt is_up_8_32 unat_ucast_upcast)
@@ -202,9 +163,6 @@ lemma asid_shiftr_low_bits_less:
    apply (simp add: le_mask_iff_lt_2n[THEN iffD1] asid_bits_def asid_low_bits_def)
   apply simp
   done
-
-lemmas mask_64_id[simp] = mask_len_id[where 'a=64, folded word_bits_def]
-                          mask_len_id[where 'a=64, simplified]
 
 lemma addToBitmap_sets_L1Bitmap_same_dom:
   "\<lbrace>\<lambda>s. p \<le> maxPriority \<and> d' = d \<rbrace> addToBitmap d' p

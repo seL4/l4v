@@ -11,51 +11,6 @@ theory Move_C
 imports Include_C
 begin
 
-text \<open>Map inversion (implicitly assuming injectivity).\<close>
-definition
-  "the_inv_map m = (\<lambda>s. if s\<in>ran m then Some (THE x. m x = Some s) else None)"
-
-text \<open>Map inversion can be expressed by function inversion.\<close>
-lemma the_inv_map_def2:
-  "the_inv_map m = (Some \<circ> the_inv_into (dom m) (the \<circ> m)) |` (ran m)"
-  apply (rule ext)
-  apply (clarsimp simp: the_inv_map_def the_inv_into_def dom_def)
-  apply (rule_tac f=The in arg_cong)
-  apply (rule ext)
-  apply auto
-  done
-
-text \<open>The domain of a function composition with Some is the universal set.\<close>
-lemma dom_comp_Some[simp]: "dom (comp Some f) = UNIV" by (simp add: dom_def)
-
-text \<open>Assuming injectivity, map inversion produces an inversive map.\<close>
-lemma is_inv_the_inv_map:
-  "inj_on m (dom m) \<Longrightarrow> is_inv m (the_inv_map m)"
-  apply (simp add: is_inv_def)
-  apply (intro conjI allI impI)
-   apply (simp add: the_inv_map_def2)
-  apply (auto simp add: the_inv_map_def inj_on_def dom_def)
-  done
-
-lemma the_the_inv_mapI:
-  "inj_on m (dom m) \<Longrightarrow> m x = Some y \<Longrightarrow> the (the_inv_map m y) = x"
-  by (auto simp: the_inv_map_def ran_def inj_on_def dom_def)
-
-lemma eq_restrict_map_None[simp]:
-  "restrict_map m A x = None \<longleftrightarrow> x ~: (A \<inter> dom m)"
-  by (auto simp: restrict_map_def split: if_split_asm)
-
-lemma eq_the_inv_map_None[simp]: "the_inv_map m x = None \<longleftrightarrow> x\<notin>ran m"
-  by (simp add: the_inv_map_def2)
-
-lemma is_inv_unique:
-  "is_inv f g \<Longrightarrow> is_inv f h \<Longrightarrow> g=h"
-  apply (rule ext)
-  apply (clarsimp simp: is_inv_def dom_def Collect_eq ran_def)
-  apply (drule_tac x=x in spec)+
-  apply (case_tac "g x", clarsimp+)
-  done
-
 lemma dumb_bool_for_all: "(\<forall>x. x) = False"
   by auto
 
