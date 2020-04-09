@@ -379,7 +379,7 @@ lemma global_pt_kernel_window_init_arch_state[simp]:
   done
 
 lemma idle_thread_in_kernel_window_init_arch_state[simp]:
-  "{idle_thread_ptr..0x7FF + idle_thread_ptr} \<subseteq>
+  "{idle_thread_ptr..0x3FF + idle_thread_ptr} \<subseteq>
      kernel_window_2 (riscv_kernel_vspace init_arch_state)"
   apply (clarsimp simp: state_defs pptr_base_num bit_simps kernel_window_def kernel_elf_base_def)
   apply (rule conjI; unat_arith)
