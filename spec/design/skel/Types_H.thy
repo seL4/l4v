@@ -31,6 +31,10 @@ requalify_consts
   isFrameType
   pageType
   ptrFromPAddr
+  tcbBlockSizeBits
+
+requalify_facts
+  tcbBlockSizeBits_def
 end
 
 #INCLUDE_HASKELL SEL4/API/Types.lhs all_bits NOT wordsFromBootInfo messageInfoFromWord wordFromMessageInfo ObjectType getObjectSize fromAPIType toAPIType isFrameType pageType

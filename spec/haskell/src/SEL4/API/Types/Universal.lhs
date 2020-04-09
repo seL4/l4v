@@ -24,9 +24,6 @@ The following is the definition of the five object types that are always availab
 >         | CapTableObject
 >         deriving (Enum, Bounded, Eq, Show)
 
-> tcbBlockSizeBits :: Int
-> tcbBlockSizeBits = wordSizeCase 9 11
-
 > epSizeBits :: Int
 > epSizeBits = 4
 
@@ -35,13 +32,6 @@ The following is the definition of the five object types that are always availab
 
 > cteSizeBits :: Int
 > cteSizeBits = wordSizeCase 4 5
-
-> apiGetObjectSize :: APIObjectType -> Int -> Int
-> apiGetObjectSize Untyped size = size
-> apiGetObjectSize TCBObject _ = tcbBlockSizeBits
-> apiGetObjectSize EndpointObject _ = epSizeBits
-> apiGetObjectSize NotificationObject _ = ntfnSizeBits
-> apiGetObjectSize CapTableObject size = cteSizeBits + size
 
 
 

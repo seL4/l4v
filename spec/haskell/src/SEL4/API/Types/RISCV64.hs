@@ -10,8 +10,10 @@
 
 module SEL4.API.Types.RISCV64 where
 
-import SEL4.API.Types.Universal(APIObjectType, apiGetObjectSize)
+import SEL4.API.Types.Universal(APIObjectType(..),
+                                epSizeBits, ntfnSizeBits, cteSizeBits)
 import SEL4.Machine.Hardware.RISCV64
+import Data.WordLib(wordSizeCase)
 
 -- There are two page sizes on RISCV, and one extra size specific to 64-bit.
 -- We are keeping with the design spec naming convention here; in C they are
@@ -55,6 +57,16 @@ toAPIType (APIObjectType a) = Just a
 toAPIType _ = Nothing
 
 pageType = SmallPageObject
+
+tcbBlockSizeBits :: Int
+tcbBlockSizeBits = 10
+
+apiGetObjectSize :: APIObjectType -> Int -> Int
+apiGetObjectSize Untyped size = size
+apiGetObjectSize TCBObject _ = tcbBlockSizeBits
+apiGetObjectSize EndpointObject _ = epSizeBits
+apiGetObjectSize NotificationObject _ = ntfnSizeBits
+apiGetObjectSize CapTableObject size = cteSizeBits + size
 
 getObjectSize :: ObjectType -> Int -> Int
 getObjectSize PageTableObject _ = ptBits

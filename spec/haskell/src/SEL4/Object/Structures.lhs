@@ -28,6 +28,7 @@ This module uses the C preprocessor to select a target architecture.
 > import SEL4.Machine
 > import SEL4.API.Types
 > import SEL4.API.Types.Universal
+> import SEL4.API.Types.TARGET
 > import SEL4.API.Failures
 
 > import SEL4.Object.Structures.TARGET

@@ -8,8 +8,10 @@ This module contains an instance of the machine-specific kernel API for the x64 
 
 > module SEL4.API.Types.X64 where
 
-> import SEL4.API.Types.Universal(APIObjectType, apiGetObjectSize)
+> import SEL4.API.Types.Universal(APIObjectType(..),
+>                                 epSizeBits, ntfnSizeBits, cteSizeBits)
 > import SEL4.Machine.Hardware.X64
+> import Data.WordLib(wordSizeCase)
 
 There are seven x86 64bit-specific object types:
 pages of 3 sizes, and 4 levels of page tables.
@@ -58,6 +60,16 @@ pages of 3 sizes, and 4 levels of page tables.
 > toAPIType _ = Nothing
 
 > pageType = SmallPageObject
+
+> tcbBlockSizeBits :: Int
+> tcbBlockSizeBits = 11
+
+> apiGetObjectSize :: APIObjectType -> Int -> Int
+> apiGetObjectSize Untyped size = size
+> apiGetObjectSize TCBObject _ = tcbBlockSizeBits
+> apiGetObjectSize EndpointObject _ = epSizeBits
+> apiGetObjectSize NotificationObject _ = ntfnSizeBits
+> apiGetObjectSize CapTableObject size = cteSizeBits + size
 
 > getObjectSize :: ObjectType -> Int -> Int
 > getObjectSize SmallPageObject _ = pageBitsForSize X64SmallPage
