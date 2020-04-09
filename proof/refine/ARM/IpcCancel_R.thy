@@ -65,10 +65,10 @@ locale delete_one_conc_pre =
      cteDeleteOne sl \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
   assumes delete_one_inQ_queues:
     "\<lbrace>valid_inQ_queues\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>rv. valid_inQ_queues\<rbrace>"
-  assumes delete_one_sch_act_simple:
-    "\<lbrace>sch_act_simple\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
-  assumes delete_one_sch_act_not:
-    "\<And>t. \<lbrace>sch_act_not t\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>rv. sch_act_not t\<rbrace>"
+  (* FIXME RT: not true any more: assumes delete_one_sch_act_simple:
+    "\<lbrace>sch_act_simple\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"  *)
+  (* FIXME RT: not true any more: assumes delete_one_sch_act_not:
+    "\<And>t. \<lbrace>sch_act_not t\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>rv. sch_act_not t\<rbrace>" *)
   assumes delete_one_reply_st_tcb_at: (* FIXME RT: pre can probably be weakened *)
     "\<And>P t. \<lbrace>\<lambda>s. st_tcb_at' P t s \<and> (\<exists>t' r. cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t' r) slot s)\<rbrace>
       cteDeleteOne slot
@@ -816,6 +816,7 @@ lemma (in delete_one_conc_pre) cancelIPC_tcb_in_cur_domain':
    apply (wp cancelIPC_tcbDomain_obj_at' | simp)+
   done
 
+(* FIXME RT: not true any more
 lemma (in delete_one_conc_pre) cancelIPC_sch_act_not:
   "\<lbrace>sch_act_not t'\<rbrace> cancelIPC t \<lbrace>\<lambda>_. sch_act_not t'\<rbrace>"
   apply (simp add: cancelIPC_def Let_def)
@@ -825,15 +826,16 @@ lemma (in delete_one_conc_pre) cancelIPC_sch_act_not:
        | simp add: o_def if_apply_def2
               split del: if_split
        | rule hoare_drop_imps)+
-  sorry
+  oops *)
 
 lemma (in delete_one_conc_pre) cancelIPC_weak_sch_act_wf:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
       cancelIPC t
    \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  sorry (*
   apply (rule weak_sch_act_wf_lift_linear)
   apply (wp cancelIPC_sch_act_not cancelIPC_tcb_in_cur_domain' cancelIPC_tcb_at_runnable')+
-  done
+  done *)
 
 text \<open>The suspend operation, significant as called from delete\<close>
 

@@ -2983,8 +2983,6 @@ crunch pspace_aligned'[wp]: copyGlobalMappings "pspace_aligned'"
 crunch pspace_distinct'[wp]: copyGlobalMappings "pspace_distinct'"
   (wp: crunch_wps)
 
-lemmas storePDE_valid_mdb[wp]
-    = storePDE_ctes[where P=valid_mdb_ctes, folded valid_mdb'_def]
 crunch valid_mdb[wp]: copyGlobalMappings "valid_mdb'"
   (wp: crunch_wps)
 
