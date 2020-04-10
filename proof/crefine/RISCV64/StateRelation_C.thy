@@ -392,7 +392,13 @@ definition
 
 definition
   "writable_from_vm_rights R \<equiv> case R of
-    VMReadOnly \<Rightarrow> 0
+    VMReadWrite \<Rightarrow> 1
+  | _ \<Rightarrow> 0"
+
+(* kernel-only conveys no  *)
+definition
+  "readable_from_vm_rights R \<equiv> case R of
+    VMKernelOnly \<Rightarrow> 0
   | _ \<Rightarrow> 1"
 
 (* if RWX are all 0, then the pte is a pointer to the next level page table *)
@@ -421,10 +427,10 @@ where
         pte_CL.dirty_CL = 1,
         pte_CL.accessed_CL = 1,
         pte_CL.global_CL = of_bool global,
-        pte_CL.user_CL = user_from_vm_rights rights, \<comment> \<open>FIXME RISCV user seems redundant for page ptes\<close>
+        pte_CL.user_CL = user_from_vm_rights rights,
         pte_CL.execute_CL = of_bool execute,
         pte_CL.write_CL = writable_from_vm_rights rights,
-        pte_CL.read_CL = undefined,
+        pte_CL.read_CL = readable_from_vm_rights rights,
         pte_CL.valid_CL = 1 \<rparr>
   | PageTablePTE ppn global user \<Rightarrow>
       cpte' =  \<lparr>
