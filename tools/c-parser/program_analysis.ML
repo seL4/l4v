@@ -1878,6 +1878,7 @@ in
        fold (add_modification fname) [TheHeap, PhantomState, AllGlobals] e)
     end
   | Ghostupd _ => ([stmt], add_modification fname GhostState e)
+  | Auxupd _ => ([stmt], add_modification fname TheHeap e)
   | _ => ([stmt], e)
 end
 and process_blockitems (fname : string) (env : csenv) bis =
