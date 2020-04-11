@@ -1196,10 +1196,8 @@ lemma tcb_at'_non_kernel_data_ref:
   apply (drule map_to_tcbs_from_tcb_at)
   apply (clarsimp simp: pspace_domain_valid_def map_comp_def split: option.splits)
   apply (drule spec, drule spec, drule (1) mp)
-  apply (simp add: projectKOs objBits_simps)
-  sorry (* FIXME RISCV: mask_range not expanding nicely with mask_def
+  apply (simp add: objBits_simps add_mask_fold)
   done
-  *)
 
 lemmas tcb_at'_non_kernel_data_ref'
   = tcb_at'_non_kernel_data_ref[OF invs'_pspace_domain_valid]
@@ -1390,7 +1388,7 @@ lemma rf_sr_tcb_update_no_queue:
                         heap_to_user_data_def)
   apply (frule (1) cmap_relation_ko_atD)
   apply (erule obj_atE')
-  apply (clarsimp simp: projectKOs)
+  apply clarsimp
   apply (clarsimp simp: map_comp_update projectKO_opt_tcb cvariable_relation_upd_const
                         typ_heap_simps')
   apply (intro conjI)
@@ -1398,16 +1396,16 @@ lemma rf_sr_tcb_update_no_queue:
       apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
       apply simp
       apply (rule cendpoint_relation_upd_tcb_no_queues, assumption+)
-       subgoal by (clarsimp intro!: ext)
-      subgoal by (clarsimp intro!: ext)
+       subgoal by fastforce
+      subgoal by fastforce
      apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
      apply simp
      apply (rule cnotification_relation_upd_tcb_no_queues, assumption+)
-      subgoal by (clarsimp intro!: ext)
-     subgoal by (clarsimp intro!: ext)
+      subgoal by fastforce
+     subgoal by fastforce
     apply (erule cready_queues_relation_not_queue_ptrs)
-     subgoal by (clarsimp intro!: ext)
-    subgoal by (clarsimp intro!: ext)
+     subgoal by fastforce
+    subgoal by fastforce
    subgoal by (clarsimp simp: carch_state_relation_def typ_heap_simps')
   by (simp add: cmachine_state_relation_def)
 
@@ -1440,7 +1438,7 @@ lemma rf_sr_tcb_update_not_in_queue:
                         heap_to_user_data_def)
   apply (frule (1) cmap_relation_ko_atD)
   apply (erule obj_atE')
-  apply (clarsimp simp: projectKOs)
+  apply (clarsimp)
   apply (clarsimp simp: map_comp_update projectKO_opt_tcb cvariable_relation_upd_const
                         typ_heap_simps')
   apply (subgoal_tac "\<forall>rf. \<not> ko_wp_at' (\<lambda>ko. rf \<in> refs_of' ko) thread s")
