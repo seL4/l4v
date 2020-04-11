@@ -27,25 +27,18 @@ lemma setObject_obj_at_pre:
            >>= (\<lambda>_. setObject p ko))"
   apply (rule ext)
   apply (case_tac "typ_at' (koTypeOf (injectKO ko)) p x")
-   apply (simp add: stateAssert_def bind_def
-                    get_def return_def)
-  apply (simp add: stateAssert_def bind_def
-                   get_def assert_def fail_def)
-  apply (simp add: setObject_def exec_gets split_def
-                   assert_opt_def split: option.split)
+   apply (simp add: stateAssert_def bind_def get_def return_def)
+  apply (simp add: stateAssert_def bind_def get_def assert_def fail_def)
+  apply (simp add: setObject_def exec_gets split_def assert_opt_def split: option.split)
   apply (clarsimp simp add: fail_def)
   apply (simp add: bind_def simpler_modify_def split_def)
   apply (rule context_conjI)
-   apply (clarsimp simp: updateObject_default_def
-                         in_monad)
-   apply (clarsimp simp: projectKOs in_magnitude_check)
-   subgoal sorry (* FIXME RISCV
+   apply (clarsimp simp: updateObject_default_def in_monad simp del: projectKOs)
+   apply (clarsimp simp: in_magnitude_check)
    apply (frule iffD1[OF project_koType, OF exI])
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
    apply (simp only: objBitsT_koTypeOf[symmetric] objBits_def)
-   apply simp
    apply (simp add: koTypeOf_injectKO)
-   *)
   apply (rule empty_failD[OF empty_fail_updateObject_default])
   apply (rule ccontr, erule nonemptyE)
   apply clarsimp
@@ -110,7 +103,7 @@ lemma storePTE_Basic_ccorres':
             (hrs_mem_update (heap_update (f s) pte'))) s)))"
   apply (simp add: storePTE_def)
   apply (rule setObject_ccorres_helper)
-    apply (simp_all add: objBits_simps archObjSize_def bit_simps)
+    apply (simp_all add: objBits_simps bit_simps)
   apply (rule conseqPre, vcg)
   apply (rule subsetI, clarsimp simp: Collect_const_mem)
   apply (rule cmap_relationE1, erule rf_sr_cpte_relation,
