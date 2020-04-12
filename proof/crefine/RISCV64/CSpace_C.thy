@@ -2497,17 +2497,14 @@ lemma Arch_sameRegionAs_spec:
   subgoal for capa capb cap_b cap_a
     apply (cases capa; cases capb;
            frule (1) cap_get_tag[where cap'=cap_a]; (frule cap_lifts[where c=cap_a, THEN iffD1])?;
-           frule (1) cap_get_tag[where cap'=cap_b]; (frule cap_lifts[where c=cap_b, THEN iffD1])?)
-                   apply (simp_all add: cap_tag_defs isCap_simps from_bool_def true_def false_def if_0_1_eq)
-      apply (all \<open>clarsimp simp: ccap_relation_def cap_to_H_def
-                             c_valid_cap_def cl_valid_cap_def Let_def\<close>)
-    apply (clarsimp simp: cap_frame_cap_lift_def'[simplified cap_tag_defs]
+           frule (1) cap_get_tag[where cap'=cap_b]; (frule cap_lifts[where c=cap_b, THEN iffD1])?;
+           simp add: cap_tag_defs isCap_simps from_bool_def true_def false_def if_0_1_eq;
+           clarsimp simp: ccap_relation_def cap_to_H_def c_valid_cap_def cl_valid_cap_def Let_def)
+    by (clarsimp simp: cap_frame_cap_lift_def'[simplified cap_tag_defs]
                           framesize_to_H_def pageBitsForSize_def field_simps
-                          pageBits_def ptTranslationBits_def
+                          pageBits_def ptTranslationBits_def mask_def
                           RISCV_4K_Page_def RISCV_Mega_Page_def RISCV_Giga_Page_def
                    split: vmpage_size.splits if_splits)
-    sorry (* FIXME RISCV: potential state relation / spec issue, 36 subgoals;
-                          doesn't look like this made much progress *)
   done
 
 (* combination of cap_get_capSizeBits + cap_get_archCapSizeBits from C *)
@@ -3028,22 +3025,20 @@ lemma Arch_sameObjectAs_spec:
       apply vcg
       apply (clarsimp simp: RISCV64_H.sameObjectAs_def)
       subgoal for capa capb cap_b cap_a
-      apply (cases capa)
-      apply (all \<open>frule (1) cap_get_tag[where cap'=cap_a]\<close>)
-      apply (all \<open>(frule cap_lifts[where c=cap_a, THEN iffD1])?\<close>)
-      apply (all \<open>clarsimp simp: cap_tag_defs isCap_simps from_bool_def true_def false_def if_0_1_eq
+        apply (cases capa)
+           apply (all \<open>frule (1) cap_get_tag[where cap'=cap_a]\<close>)
+           apply (all \<open>(frule cap_lifts[where c=cap_a, THEN iffD1])?\<close>)
+           apply (all \<open>clarsimp simp: cap_tag_defs isCap_simps from_bool_def true_def false_def if_0_1_eq
                           split: if_splits\<close>)
-      apply (all \<open>fastforce?\<close>)
-      (* frames remain. *)
-      apply (all \<open>cases capb\<close>)
-      apply (all \<open>frule (1) cap_get_tag[where cap'=cap_b]\<close>)
-      apply (all \<open>(frule cap_lifts[where c=cap_b, THEN iffD1])?\<close>)
-      apply (all \<open>clarsimp simp: cap_tag_defs isCap_simps from_bool_def true_def false_def if_0_1_eq
+           apply (all \<open>fastforce?\<close>)
+          (* frames remain. *)
+        apply (all \<open>cases capb\<close>)
+           apply (all \<open>frule (1) cap_get_tag[where cap'=cap_b]\<close>)
+           apply (all \<open>(frule cap_lifts[where c=cap_b, THEN iffD1])?\<close>)
+           apply (all \<open>clarsimp simp: cap_tag_defs isCap_simps from_bool_def true_def false_def if_0_1_eq
                                  ccap_relation_FrameCap_fields framesize_from_H_eq capAligned_def
                           split: if_splits\<close>)
-      apply (all \<open>(fastforce simp: RISCV64_H.sameRegionAs_def isCap_simps)?\<close>)
-      (* FIXME RISCV: if aligned to n bits, then can add mask n without overflow, should be OK *)
-      sorry
+        by (all \<open>(fastforce simp: RISCV64_H.sameRegionAs_def isCap_simps is_aligned_no_overflow_mask)?\<close>)
       done
   qed
 
@@ -3375,8 +3370,6 @@ lemma Arch_deriveCap_ccorres:
    apply csymbr
    apply (unfold RISCV64_H.deriveCap_def Let_def)
    apply (fold case_bool_If)
-   (* FIXME RISCV: this proof needs more detailed examination; check which bits correspond to which
-                   arch objects on X64, since we don't have all of them on RISCV64
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                           ccorres_cond_iffs)
@@ -3405,47 +3398,18 @@ lemma Arch_deriveCap_ccorres:
                           cap_tag_defs cap_to_H_def to_bool_def
                           cap_page_table_cap_lift_def
                    split: if_split_asm)
-   apply wpc
-    apply (clarsimp simp: cap_get_tag_isCap_ArchObject
-                          ccorres_cond_iffs)
-    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-    apply (rule allI, rule conseqPre, vcg)
-    apply clarsimp
-    apply (rule context_conjI)
-     apply (simp add: cap_get_tag_isCap_ArchObject)
-    apply (clarsimp simp: returnOk_def return_def)
-    subgoal by (simp add: ccap_relation_def cap_lift_def Let_def
-                          cap_tag_defs cap_to_H_def)
-   apply wpc
-    apply (clarsimp simp: cap_get_tag_isCap_ArchObject
-                          ccorres_cond_iffs)
-    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-    apply (rule allI, rule conseqPre, vcg)
-    apply clarsimp
-    apply (rule context_conjI)
-     apply (simp add: cap_get_tag_isCap_ArchObject)
-    apply (clarsimp simp: throwError_def return_def
-                          errstate_def syscall_error_rel_def
-                          syscall_error_to_H_cases
-                          exception_defs)
-    subgoal by (simp add: ccap_relation_def cap_lift_def Let_def
-                          cap_tag_defs cap_to_H_def to_bool_def
-                          cap_page_directory_cap_lift_def
-                   split: if_split_asm)
    \<comment> \<open>FrameCap\<close>
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                           ccorres_cond_iffs)
     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
     apply (rule allI, rule conseqPre, vcg)
-    apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
-    apply (rule context_conjI)
-     apply (simp add: cap_tag_defs)
-    apply (clarsimp simp: returnOk_def return_def isCap_simps)
-    subgoal apply (frule cap_get_tag_isCap_unfolded_H_cap)
+    apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap isCap_simps returnOk_def return_def)
+    subgoal
+      apply (frule cap_get_tag_isCap_unfolded_H_cap)
       by (clarsimp simp: cap_frame_cap_lift[simplified cap_tag_defs, simplified] cap_tag_defs
-                         ccap_relation_def cap_to_H_def asidInvalid_def maptype_to_H_def
-                         vm_page_map_type_defs c_valid_cap_def cl_valid_cap_def
+                         ccap_relation_def cap_to_H_def asidInvalid_def
+                         c_valid_cap_def cl_valid_cap_def
                   split: if_splits)
    apply (simp add: cap_get_tag_isCap_ArchObject
                     ccorres_cond_iffs)
@@ -3455,8 +3419,7 @@ lemma Arch_deriveCap_ccorres:
                   split: bool.split)
    apply (cases cap, simp_all add: isCap_simps ccap_relation_NullCap_iff)[1]
   apply clarsimp
-  done *)
-  sorry
+  done
 
 lemma isArchCap_T_isArchObjectCap:
   "isArchCap \<top> = isArchObjectCap"
