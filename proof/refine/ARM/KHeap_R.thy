@@ -2453,5 +2453,533 @@ crunch idle'[wp]: doMachineOp "valid_idle'"
   (wp: crunch_wps simp: crunch_simps valid_idle'_pspace_itI)
 crunch pde_mappings'[wp]: doMachineOp "valid_pde_mappings'"
 
+
+lemmas bit_simps' = pteBits_def asidHighBits_def asid_low_bits_def
+                    asid_high_bits_def scheduleContextBits_def
+                    replySizeBits_def pageBits_def pdeBits_def ptBits_def pdBits_def
+
+lemma is_other_obj_relation_type_a_type_CNode:
+  "\<not> is_other_obj_relation_type (a_type (CNode x11 x12))"
+  by (simp add: is_other_obj_relation_type_def a_type_def)
+
+lemma pspace_aligned_cross:
+  "\<lbrakk> pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> pspace_aligned' s'"
+  apply (clarsimp simp: pspace_aligned'_def pspace_aligned_def pspace_relation_def)
+  apply (rename_tac p' ko')
+  apply (prop_tac "p' \<in> pspace_dom (kheap s)", fastforce)
+  apply (thin_tac "pspace_dom k = p" for k p)
+  apply (clarsimp simp: pspace_dom_def)
+  apply (drule bspec, fastforce)+
+  apply clarsimp
+  apply (rename_tac ko' a a' P ko)
+  apply (erule (1) obj_relation_cutsE; clarsimp simp: objBits_simps)
+
+  \<comment>\<open>CNode\<close>
+     apply (clarsimp simp: cte_map_def)
+     apply (simp only: cteSizeBits_def cte_level_bits_def)
+     apply (rule is_aligned_add)
+      apply (erule is_aligned_weaken, simp)
+     apply (rule is_aligned_weaken)
+    apply (rule is_aligned_mult_triv2, simp)
+
+  \<comment>\<open>PageTable\<close>
+   apply (clarsimp simp: archObjSize_def pteBits_def)
+    apply (rule is_aligned_add)
+     apply (erule is_aligned_weaken)
+     apply (simp add: )
+    apply (rule is_aligned_shift)
+
+  \<comment>\<open>PageDirectory\<close>
+   apply (clarsimp simp: archObjSize_def pdeBits_def)
+    apply (rule is_aligned_add)
+     apply (erule is_aligned_weaken, simp)
+    apply (rule is_aligned_shift)
+
+  \<comment>\<open>DataPage\<close>
+   apply (rule is_aligned_add)
+    apply (erule is_aligned_weaken)
+    apply (clarsimp simp: pageBits_def pageBitsForSize_def)
+    apply (case_tac sz; simp)
+  apply (rule is_aligned_mult_triv2)
+
+  \<comment>\<open>other_obj_relation\<close>
+  apply (simp add: other_obj_relation_def)
+  apply (clarsimp simp: bit_simps' tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
+                 split: kernel_object.splits Structures_A.kernel_object.splits)
+  apply (simp add: sc_relation_def)
+  (* not enough information in sc_relation to know if alignment passes over for sched_contexts *)
+  subgoal sorry
+  by (auto simp: archObjSize_def split: arch_kernel_object.splits arch_kernel_obj.splits)
+
+lemmas is_aligned_add_step_le' = is_aligned_add_step_le[simplified mask_2pm1 add_diff_eq]
+
+lemma objBitsKO_Data:
+  "objBitsKO (if dev then KOUserDataDevice else KOUserData) = pageBits"
+  by (simp add: objBits_def objBitsKO_def word_size_def)
+
+lemma of_bl_shift_cte_level_bits:
+  "(of_bl z :: machine_word) << cte_level_bits \<le> mask (cte_level_bits + length z)"
+  by word_bitwise
+     (simp add: test_bit_of_bl bit_simps word_size cte_level_bits_def rev_bl_order_simps)
+
+lemma obj_relation_cuts_range_limit:
+  "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk>
+   \<Longrightarrow> \<exists>x n. p' = p + x \<and> is_aligned x n \<and> n \<le> obj_bits ko \<and> x \<le> mask (obj_bits ko)"
+   apply (erule (1) obj_relation_cutsE; clarsimp)
+     apply (drule (1) wf_cs_nD)
+     apply (clarsimp simp: cte_map_def)
+     apply (rule_tac x=cte_level_bits in exI)
+     apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits is_aligned_mult_triv2 mask_2pm1)
+     subgoal sorry (* easy? *)
+    apply (rule_tac x=pteBits in exI)
+    apply (simp add: bit_simps is_aligned_shift mask_def pteBits_def)
+    apply word_bitwise
+    apply (rule_tac x=pdeBits in exI)
+    apply (simp add: bit_simps is_aligned_shift mask_def pdeBits_def)
+    apply word_bitwise
+   apply (rule_tac x=pageBits in exI)
+   apply (simp add: is_aligned_shift pbfs_atleast_pageBits is_aligned_mult_triv2)
+   apply (simp add: mask_def shiftl_t2n mult_ac)
+   apply (frule word_less_power_trans2, rule pbfs_atleast_pageBits)
+   apply (simp add: pbfs_less_wb'[unfolded word_bits_def, simplified])
+   apply (simp add: pbfs_less_wb'[unfolded word_bits_def, simplified])
+  apply fastforce
+  done
+
+lemma obj_relation_cuts_range_mask_range:
+  "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko'; is_aligned p (obj_bits ko) \<rbrakk>
+   \<Longrightarrow> p' \<in> mask_range p (obj_bits ko)"
+  apply (drule (1) obj_relation_cuts_range_limit, clarsimp)
+  apply (rule conjI)
+   apply (rule word_plus_mono_right2; assumption?)
+   apply (simp add: is_aligned_no_overflow_mask)
+  apply (erule word_plus_mono_right)
+  apply (simp add: is_aligned_no_overflow_mask)
+  done
+
+lemma obj_relation_cuts_obj_bits:
+  "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk> \<Longrightarrow> objBitsKO ko' \<le> obj_bits ko"
+  apply (erule (1) obj_relation_cutsE;
+          clarsimp simp: objBits_simps objBits_defs bit_simps cte_level_bits_def
+                         pbfs_atleast_pageBits[simplified bit_simps] archObjSize_def pteBits_def
+                         pdeBits_def)
+  apply (cases ko; simp add: other_obj_relation_def objBits_defs split: kernel_object.splits)
+  subgoal sorry (* sched context, not enough information *)
+  apply (rename_tac ako, case_tac ako; clarsimp)
+  apply (rename_tac ako', case_tac ako'; clarsimp simp: archObjSize_def)
+  done
+
+lemma pspace_distinct_cross:
+  "\<lbrakk> pspace_distinct s; pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow>
+   pspace_distinct' s'"
+  apply (frule (1) pspace_aligned_cross)
+  apply (clarsimp simp: pspace_distinct'_def)
+  apply (rename_tac p' ko')
+  apply (rule pspace_dom_relatedE; assumption?)
+  apply (rename_tac p ko P)
+  apply (frule (1) pspace_alignedD')
+  apply (frule (1) pspace_alignedD)
+  apply (rule ps_clearI, assumption)
+   apply (case_tac ko'; simp add: objBits_simps objBits_defs bit_simps')
+ apply (clarsimp split: arch_kernel_object.splits simp: bit_simps' archObjSize_def)
+  apply (rule ccontr, clarsimp)
+  apply (rename_tac x' ko_x')
+  apply (frule_tac x=x' in pspace_alignedD', assumption)
+  apply (rule_tac x=x' in pspace_dom_relatedE; assumption?)
+  apply (rename_tac x ko_x P')
+  apply (frule_tac p=x in pspace_alignedD, assumption)
+  apply (case_tac "p = x")
+   apply clarsimp
+   apply (erule (1) obj_relation_cutsE; clarsimp)
+      apply (clarsimp simp: cte_relation_def cte_map_def objBits_simps)
+      apply (rule_tac n=cteSizeBits in is_aligned_add_step_le'; assumption?)
+     apply (clarsimp simp: pte_relation_def objBits_simps archObjSize_def)
+     apply (rule_tac n=pteBits in is_aligned_add_step_le'; assumption?)
+     apply (clarsimp simp: pde_relation_def objBits_simps archObjSize_def)
+     apply (rule_tac n=pdeBits in is_aligned_add_step_le'; assumption?)
+    apply (simp add: objBitsKO_Data)
+    apply (rule_tac n=pageBits in is_aligned_add_step_le'; assumption?)
+   apply (case_tac ko;
+          simp split: if_split_asm
+                 add: is_other_obj_relation_type_CapTable
+                      is_other_obj_relation_type_a_type_CNode)
+   apply (rename_tac ako,
+          case_tac ako;
+          simp add: is_other_obj_relation_type_def a_type_def split: if_split_asm)
+  apply (frule (1) obj_relation_cuts_obj_bits)
+  apply (drule (2) obj_relation_cuts_range_mask_range)+
+  apply (prop_tac "x' \<in> mask_range p' (objBitsKO ko')", simp add: mask_def add_diff_eq)
+  apply (frule_tac x=p and y=x in pspace_distinctD; assumption?)
+  apply (drule (4) mask_range_subsetD)
+  apply (erule (2) in_empty_interE)
+  done
+
+lemma pte_at_cross:
+  "\<lbrakk> pte_at p s; pspace_relation (kheap s) (ksPSpace s'); pspace_aligned s; pspace_distinct s \<rbrakk>
+   \<Longrightarrow> pte_at' p s'"
+  apply (drule (2) pspace_distinct_cross)
+  apply (clarsimp simp: pte_at_def obj_at_def typ_at'_def ko_wp_at'_def)
+  apply (prop_tac "p \<in> pspace_dom (kheap s)")
+   apply (clarsimp simp: pspace_dom_def)
+   apply (rule bexI)
+    prefer 2
+    apply fastforce
+   apply (clarsimp simp: ran_def image_iff)
+   apply (rule_tac x="(UCAST(32 \<rightarrow> 8) (p && mask pt_bits >> 2))" in exI)
+   apply (simp add: mask_pt_bits_inner_beauty)
+  apply (clarsimp simp: pspace_relation_def)
+  apply (drule bspec, fastforce)
+  apply (clarsimp simp:)
+  apply (clarsimp simp: pte_relation_def)
+  apply (drule spec[where x="(UCAST(32 \<rightarrow> 8) (p && mask pt_bits >> 2))"])
+  apply (clarsimp)
+   apply (simp add: mask_pt_bits_inner_beauty)
+  apply (clarsimp simp: objBitsKO_def archObjSize_def pteBits_def)
+  apply (clarsimp simp: pte_relation_aligned_def)
+  apply (frule (1) pspace_distinctD')
+  apply (clarsimp simp: objBitsKO_def archObjSize_def pteBits_def)
+  done
+
+lemma pde_at_cross:
+  "\<lbrakk> pde_at p s; pspace_relation (kheap s) (ksPSpace s'); pspace_aligned s; pspace_distinct s \<rbrakk>
+   \<Longrightarrow> pde_at' p s'"
+  apply (drule (2) pspace_distinct_cross)
+  apply (clarsimp simp: pde_at_def obj_at_def typ_at'_def ko_wp_at'_def)
+  apply (prop_tac "p \<in> pspace_dom (kheap s)")
+   apply (clarsimp simp: pspace_dom_def)
+   apply (rule bexI)
+    prefer 2
+    apply fastforce
+   apply (clarsimp simp: ran_def image_iff)
+   apply (rule_tac x="(UCAST(32 \<rightarrow> 12) (p && mask pd_bits >> 2))" in exI)
+   apply (simp add: mask_pd_bits_inner_beauty)
+  apply (clarsimp simp: pspace_relation_def)
+  apply (drule bspec, fastforce)
+  apply (clarsimp simp:)
+  apply (clarsimp simp: pde_relation_def)
+  apply (drule spec[where x="(UCAST(32 \<rightarrow> 12) (p && mask pd_bits >> 2))"])
+  apply (clarsimp)
+   apply (simp add: mask_pd_bits_inner_beauty)
+  apply (clarsimp simp: objBitsKO_def archObjSize_def pdeBits_def)
+  apply (clarsimp simp: pde_relation_aligned_def)
+  apply (frule (1) pspace_distinctD')
+  apply (clarsimp simp: objBitsKO_def archObjSize_def pdeBits_def)
+  done
+
+lemma asid_pool_at_cross:
+  "\<lbrakk> asid_pool_at p s; pspace_relation (kheap s) (ksPSpace s');
+     pspace_aligned s; pspace_distinct s \<rbrakk>
+   \<Longrightarrow> asid_pool_at' p s'"
+  apply (drule (2) pspace_distinct_cross)
+  apply (clarsimp simp: obj_at_def typ_at'_def ko_wp_at'_def)
+  apply (prop_tac "p \<in> pspace_dom (kheap s)")
+   apply (clarsimp simp: pspace_dom_def)
+   apply (rule bexI)
+    prefer 2
+    apply fastforce
+   apply clarsimp
+  apply (clarsimp simp: pspace_relation_def)
+  apply (drule bspec, fastforce)
+  apply (clarsimp simp: other_obj_relation_def split: kernel_object.splits arch_kernel_object.splits)
+  apply (clarsimp simp: objBits_simps)
+  apply (frule (1) pspace_alignedD)
+  apply (rule conjI, simp add: bit_simps archObjSize_def)
+  apply (clarsimp simp: pspace_distinct'_def)
+  apply (drule bspec, fastforce)
+  apply (simp add: objBits_simps)
+  done
+
+
+lemma pte_relation_must_pte:
+  "pte_relation m (ArchObj (PageTable pt)) ko \<Longrightarrow> \<exists>pte. ko = (KOArch (KOPTE pte))"
+  apply (case_tac ko)
+   apply (simp_all add:pte_relation_def)
+  apply clarsimp
+  done
+
+lemma is_aligned_pte_offset:
+  "is_aligned pt_ptr pt_bits \<Longrightarrow>
+   is_aligned (pt_ptr + (i << pt_bits)) pt_bits"
+  apply (rule is_aligned_add)
+   apply (erule is_aligned_weaken, simp add: bit_simps)
+  apply (simp add: is_aligned_shiftl)
+  done
+
+lemma page_table_at_cross:
+  "\<lbrakk> page_table_at p s; pspace_aligned s; pspace_distinct s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow>
+   page_table_at' p s'"
+  apply (clarsimp simp: page_table_at'_def)
+  apply (rule context_conjI)
+   apply (clarsimp simp: obj_at_def)
+   apply (frule (1) pspace_alignedD)
+   apply (simp add: bit_simps')
+  apply clarsimp
+  apply (rule pte_at_cross; assumption?)
+  apply (clarsimp simp: obj_at_def pte_at_def  is_aligned_pte_offset pt_bits_def pageBits_def)
+  apply (intro conjI)
+   apply (rule_tac x="ArchObj (PageTable pt)" in exI)
+   apply (intro conjI)
+    apply (subgoal_tac "p + (y << 2) && ~~ mask 10 = p", simp)
+    apply (subst is_aligned_mask_out_add_eq)
+     apply (clarsimp simp: obj_at_def pte_at_def  is_aligned_pte_offset ptBits_def pteBits_def)
+    apply clarsimp
+    defer
+    apply (clarsimp simp: a_type_def)
+   apply (rule is_aligned_add)
+    apply (erule is_aligned_weaken)
+    apply (clarsimp simp: ptBits_def)
+   apply (clarsimp simp: is_aligned_shift)
+  apply (simp add: and_mask_0_iff_le_mask)
+  apply (rule le_mask_shiftl_le_mask[where n=8]; simp add: mask_def)
+  apply (frule word_less_sub_1, simp)
+  done
+
+lemma page_directory_at_cross:
+  "\<lbrakk> page_directory_at p s; pspace_aligned s; pspace_distinct s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow>
+   page_directory_at' p s'"
+  apply (clarsimp simp: page_directory_at'_def)
+  apply (rule context_conjI)
+   apply (clarsimp simp: obj_at_def)
+   apply (frule (1) pspace_alignedD)
+   apply (simp add: bit_simps')
+  apply clarsimp
+  apply (rule pde_at_cross; assumption?)
+  apply (clarsimp simp: obj_at_def pde_at_def  is_aligned_pte_offset pdBits_def pdeBits_def pd_bits_def pageBits_def)
+  apply (intro conjI)
+   apply (rule_tac x="ArchObj (PageDirectory pd)" in exI)
+   apply (intro conjI)
+    apply (subgoal_tac "p + (y << 2) && ~~ mask 14 = p", simp)
+    apply (subst is_aligned_mask_out_add_eq)
+     apply (clarsimp simp: obj_at_def pte_at_def  is_aligned_pte_offset pdBits_def pdeBits_def)
+    apply clarsimp
+    defer
+    apply (clarsimp simp: a_type_def)
+   apply (rule is_aligned_add)
+    apply (erule is_aligned_weaken)
+    apply (clarsimp simp: ptBits_def)
+   apply (clarsimp simp: is_aligned_shift)
+  apply (simp add: and_mask_0_iff_le_mask)
+  apply (rule le_mask_shiftl_le_mask[where n=12]; simp add: mask_def)
+  apply (frule word_less_sub_1, simp)
+  done
+
+lemma corres_cross_over_asid_pool_at:
+  "\<lbrakk> \<And>s. P s \<Longrightarrow> asid_pool_at p s \<and> pspace_distinct s \<and> pspace_aligned s;
+     corres r P (Q and asid_pool_at' p) f g \<rbrakk> \<Longrightarrow>
+   corres r P Q f g"
+  apply (rule corres_cross_over_guard[where Q="Q and asid_pool_at' p"])
+   apply (drule meta_spec, drule (1) meta_mp, clarsimp)
+   apply (erule asid_pool_at_cross, clarsimp simp: state_relation_def; assumption)
+  apply assumption
+  done
+
+lemma corres_cross_over_pte_at:
+  "\<lbrakk> \<And>s. P s \<Longrightarrow> pte_at p s \<and> pspace_distinct s \<and> pspace_aligned s;
+     corres r P (P' and pte_at' p) f g\<rbrakk> \<Longrightarrow>
+   corres r P P' f g"
+  apply (rule corres_cross_over_guard[where Q="P' and pte_at' p"])
+   apply (drule meta_spec, drule (1) meta_mp, clarsimp)
+   apply (erule pte_at_cross; assumption?)
+   apply (simp add: state_relation_def)
+  apply assumption
+  done
+
+lemma aligned_distinct_obj_atI':
+  "\<lbrakk> ksPSpace s x = Some ko; pspace_aligned' s;
+      pspace_distinct' s; ko = injectKO v \<rbrakk>
+      \<Longrightarrow> ko_at' v x s"
+  apply (simp add: obj_at'_def projectKOs project_inject
+                   pspace_distinct'_def pspace_aligned'_def)
+  apply (drule bspec, erule domI)+
+  apply simp
+  done
+
+lemma pspace_relation_tcb_at':
+  assumes p: "pspace_relation (kheap a) (ksPSpace c)"
+  assumes t: "tcb_at t a"
+  assumes aligned: "pspace_aligned' c"
+  assumes distinct: "pspace_distinct' c"
+  shows "tcb_at' t c" using assms
+  apply (clarsimp simp: obj_at_def)
+  apply (drule(1) pspace_relation_absD)
+  apply (clarsimp simp: is_tcb other_obj_relation_def)
+  apply (simp split: kernel_object.split_asm)
+  apply (drule(2) aligned_distinct_obj_atI'[where 'a=tcb], simp)
+  apply (erule obj_at'_weakenE)
+  apply simp
+  done
+
+lemma tcb_at_cross:
+  "\<lbrakk> tcb_at t s; pspace_aligned s; pspace_distinct s;
+     pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> tcb_at' t s'"
+  apply (drule (2) pspace_distinct_cross)
+  apply (drule (1) pspace_aligned_cross)
+  apply (erule (3) pspace_relation_tcb_at')
+  done
+
+lemma st_tcb_at_coerce_abstract:
+  assumes t: "st_tcb_at' P t c"
+  assumes sr: "(a, c) \<in> state_relation"
+  shows "st_tcb_at (\<lambda>st. \<exists>st'. thread_state_relation st st' \<and> P st') t a"
+  using assms
+  apply (clarsimp simp: state_relation_def pred_tcb_at'_def obj_at'_def
+                        projectKOs objBits_simps)
+  apply (erule (1) pspace_dom_relatedE)
+  apply (erule (1) obj_relation_cutsE, simp_all)
+  apply (clarsimp simp: st_tcb_at_def obj_at_def other_obj_relation_def
+                        tcb_relation_def
+                 split: Structures_A.kernel_object.split_asm if_split_asm
+                        arch_kernel_obj.split_asm)+
+  apply fastforce
+  done
+
+lemma st_tcb_at_runnable_coerce_concrete:
+  assumes t: "st_tcb_at runnable t a"
+  assumes sr: "(a, c) \<in> state_relation"
+  assumes tcb: "tcb_at' t c"
+  shows "st_tcb_at' runnable' t c"
+  using t
+  apply -
+  apply (rule ccontr)
+  apply (drule pred_tcb_at'_Not[THEN iffD2, OF conjI, OF tcb])
+  apply (drule st_tcb_at_coerce_abstract[OF _ sr])
+  apply (clarsimp simp: st_tcb_def2)
+  apply (case_tac "tcb_state tcb"; simp)
+  done
+
+lemma st_tcb_at_runnable_cross:
+  "\<lbrakk> st_tcb_at runnable t s; pspace_aligned s; pspace_distinct s; (s, s') \<in> state_relation \<rbrakk>
+  \<Longrightarrow> st_tcb_at' runnable' t s'"
+  apply (frule (1) pspace_distinct_cross, fastforce simp: state_relation_def)
+  apply (frule pspace_aligned_cross, fastforce simp: state_relation_def)
+  apply (prop_tac "tcb_at t s", clarsimp simp: st_tcb_at_def obj_at_def is_tcb)
+  apply (drule (2) tcb_at_cross, fastforce simp: state_relation_def)
+  apply (erule (2) st_tcb_at_runnable_coerce_concrete)
+  done
+
+lemma cur_tcb_cross:
+  "\<lbrakk> cur_tcb s; pspace_aligned s; pspace_distinct s; (s,s') \<in> state_relation \<rbrakk> \<Longrightarrow> cur_tcb' s'"
+  apply (clarsimp simp: cur_tcb'_def cur_tcb_def state_relation_def)
+  apply (erule (3) tcb_at_cross)
+  done
+
+lemma pspace_relation_reply_at':
+  assumes p: "pspace_relation (kheap a) (ksPSpace c)"
+  assumes t: "reply_at t a"
+  assumes aligned: "pspace_aligned' c"
+  assumes distinct: "pspace_distinct' c"
+  shows "reply_at' t c" using assms
+  apply (clarsimp simp: obj_at_def)
+  apply (drule(1) pspace_relation_absD)
+  apply (clarsimp simp: is_reply other_obj_relation_def)
+  apply (simp split: kernel_object.split_asm)
+  apply (drule(2) aligned_distinct_obj_atI'[where 'a=reply], simp)
+  apply (erule obj_at'_weakenE)
+  apply simp
+  done
+
+lemma reply_at_cross:
+  "\<lbrakk> reply_at t s; pspace_aligned s; pspace_distinct s;
+     pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> reply_at' t s'"
+  apply (drule (2) pspace_distinct_cross)
+  apply (drule (1) pspace_aligned_cross)
+  apply (erule (3) pspace_relation_reply_at')
+  done
+
+lemma pspace_relation_ep_at':
+  assumes p: "pspace_relation (kheap a) (ksPSpace c)"
+  assumes t: "ep_at t a"
+  assumes aligned: "pspace_aligned' c"
+  assumes distinct: "pspace_distinct' c"
+  shows "ep_at' t c" using assms
+  apply (clarsimp simp: obj_at_def)
+  apply (drule(1) pspace_relation_absD)
+  apply (clarsimp simp: is_ep other_obj_relation_def)
+  apply (simp split: kernel_object.split_asm)
+  apply (drule(2) aligned_distinct_obj_atI'[where 'a=endpoint], simp)
+  apply (erule obj_at'_weakenE)
+  apply simp
+  done
+
+lemma ep_at_cross:
+  "\<lbrakk> ep_at t s; pspace_aligned s; pspace_distinct s;
+     pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> ep_at' t s'"
+  apply (drule (2) pspace_distinct_cross)
+  apply (drule (1) pspace_aligned_cross)
+  apply (erule (3) pspace_relation_ep_at')
+  done
+
+lemma pspace_relation_ntfn_at':
+  assumes p: "pspace_relation (kheap a) (ksPSpace c)"
+  assumes t: "ntfn_at t a"
+  assumes aligned: "pspace_aligned' c"
+  assumes distinct: "pspace_distinct' c"
+  shows "ntfn_at' t c" using assms
+  apply (clarsimp simp: obj_at_def)
+  apply (drule(1) pspace_relation_absD)
+  apply (clarsimp simp: is_ntfn other_obj_relation_def)
+  apply (simp split: kernel_object.split_asm)
+  apply (drule(2) aligned_distinct_obj_atI'[where 'a=notification], simp)
+  apply (erule obj_at'_weakenE)
+  apply simp
+  done
+
+lemma ntfn_at_cross:
+  "\<lbrakk> ntfn_at t s; pspace_aligned s; pspace_distinct s;
+     pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> ntfn_at' t s'"
+  apply (drule (2) pspace_distinct_cross)
+  apply (drule (1) pspace_aligned_cross)
+  apply (erule (3) pspace_relation_ntfn_at')
+  done
+
+lemma pspace_relation_sc_at':
+  assumes p: "pspace_relation (kheap a) (ksPSpace c)"
+  assumes t: "sc_at t a"
+  assumes aligned: "pspace_aligned' c"
+  assumes distinct: "pspace_distinct' c"
+  shows "sc_at' t c" using assms
+  apply (clarsimp simp: obj_at_def)
+  apply (drule(1) pspace_relation_absD)
+  apply (clarsimp simp: is_sc_obj other_obj_relation_def)
+  apply (simp split: kernel_object.split_asm)
+  apply (drule(2) aligned_distinct_obj_atI'[where 'a=sched_context], simp)
+  apply (erule obj_at'_weakenE)
+  apply simp
+  done
+
+lemma sc_at_cross:
+  "\<lbrakk> sc_at t s; pspace_aligned s; pspace_distinct s;
+     pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> sc_at' t s'"
+  apply (drule (2) pspace_distinct_cross)
+  apply (drule (1) pspace_aligned_cross)
+  apply (erule (3) pspace_relation_sc_at')
+  done
+
+lemma pspace_relation_real_cte_at':
+  assumes p: "pspace_relation (kheap a) (ksPSpace c)"
+  assumes t: "real_cte_at cref a"
+  assumes aligned: "pspace_aligned' c"
+  assumes distinct: "pspace_distinct' c"
+  shows "real_cte_at' (cte_map cref) c" using assms
+  apply (clarsimp simp: obj_at_def)
+  apply (frule(1) pspace_relation_absD)
+  apply (clarsimp simp: is_cap_table other_obj_relation_def well_formed_cnode_n_def)
+  apply (prop_tac "\<exists>z. ksPSpace c (cte_map (fst cref, snd cref)) = Some z \<and>
+    cte_relation (snd cref) (CNode (length (snd cref)) cs) z")
+  apply (fastforce)
+  apply (clarsimp split: kernel_object.split_asm simp: cte_relation_def)
+  apply (drule(2) aligned_distinct_obj_atI'[where 'a=cte], simp)
+  apply (erule obj_at'_weakenE)
+  apply simp
+  done
+
+lemma real_cte_at_cross:
+  "\<lbrakk> real_cte_at t s; pspace_aligned s; pspace_distinct s;
+     pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> real_cte_at' (cte_map t) s'"
+  apply (drule (2) pspace_distinct_cross)
+  apply (drule (1) pspace_aligned_cross)
+  apply (erule (3) pspace_relation_real_cte_at')
+  done
+
 end
 end

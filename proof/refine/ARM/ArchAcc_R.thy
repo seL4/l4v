@@ -156,16 +156,6 @@ lemma get_asid_pool_corres [corres]:
   apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
   done
 
-lemma aligned_distinct_obj_atI':
-  "\<lbrakk> ksPSpace s x = Some ko; pspace_aligned' s;
-      pspace_distinct' s; ko = injectKO v \<rbrakk>
-      \<Longrightarrow> ko_at' v x s"
-  apply (simp add: obj_at'_def projectKOs project_inject
-                   pspace_distinct'_def pspace_aligned'_def)
-  apply (drule bspec, erule domI)+
-  apply simp
-  done
-
 lemmas aligned_distinct_asid_pool_atI'
     = aligned_distinct_obj_atI'[where 'a=asidpool,
                                 simplified, OF _ _ _ refl]
@@ -923,13 +913,6 @@ defs checkPDAt_def:
 
 defs checkPTAt_def:
   "checkPTAt pt \<equiv> stateAssert (page_table_at' pt) []"
-
-lemma pte_relation_must_pte:
-  "pte_relation m (ArchObj (PageTable pt)) ko \<Longrightarrow> \<exists>pte. ko = (KOArch (KOPTE pte))"
-  apply (case_tac ko)
-   apply (simp_all add:pte_relation_def)
-  apply clarsimp
-  done
 
 lemma pde_relation_must_pde:
   "pde_relation m (ArchObj (PageDirectory pd)) ko \<Longrightarrow> \<exists>pde. ko = (KOArch (KOPDE pde))"
