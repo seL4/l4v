@@ -63,8 +63,7 @@ lemma map_of_le:
   done
 
 lemma list_map_le_singleton:
-  "map_le (list_map xs) [n \<mapsto> x]
-    = (xs = [] \<or> n = 0 \<and> xs = [x])"
+  "map_le (list_map xs) [n \<mapsto> x] = (xs = [] \<or> n = 0 \<and> xs = [x])"
   apply (simp add: list_map_def)
   apply (rule iffI)
    apply (drule map_of_le)
@@ -234,8 +233,8 @@ proof (rule rl)
   from al p0 show wb: "bits < word_bits"
     by (clarsimp elim!: is_aligned_get_word_bits[where 'a=machine_word_len, folded word_bits_def])
 qed
-(*FIX me: move *)
 
+(* FIXME: move *)
 lemma valid_untyped_pspace_no_overlap':
  assumes vuc: "s \<turnstile>' UntypedCap d ptr bits idx"
   and    idx: "idx< 2^ bits"
@@ -391,7 +390,7 @@ proof -
     unfolding valid_cap'_def capAligned_def by simp
 
   moreover from koat have "is_aligned x (objBits ko)"
-    by (rule obj_atE') (simp add: projectKOs objBits_def project_inject)
+    by (rule obj_atE') (simp add: objBits_def project_inject)
 
   ultimately show ?thesis
   proof (cases rule: aligned_ranges_subset_or_disjointE)
@@ -413,7 +412,7 @@ proof -
     with koat have "\<not> {ptr..ptr + 2 ^ bits - 1} \<subset> {x..x + 2 ^ objBits ko - 1}"
       apply -
       apply (erule obj_atE')+
-      apply (simp add: ko_wp_at'_def projectKOs obj_range'_def not_less objBits_def project_inject
+      apply (simp add: ko_wp_at'_def obj_range'_def not_less objBits_def project_inject
                         mask_def add_diff_eq)
       done
 
@@ -428,7 +427,7 @@ lemma tcb_ptr_to_ctcb_ptr_in_range:
   assumes tat: "ko_at' tcb x s"
   shows "ptr_val (tcb_ptr_to_ctcb_ptr x) \<in> {x..x + 2 ^ objBits tcb - 1}"
 proof -
-  from tat have al: "is_aligned x tcbBlockSizeBits" by (clarsimp elim!: obj_atE' simp: projectKOs objBits_simps')
+  from tat have al: "is_aligned x tcbBlockSizeBits" by (clarsimp elim!: obj_atE' simp: objBits_simps')
   hence "x \<le> x + 2 ^ tcbBlockSizeBits - 1"
     by (rule is_aligned_no_overflow)
 
@@ -499,7 +498,7 @@ proof -
 
   thus ?thesis
   proof (rule set_mp)
-    from koat have "is_aligned x (objBits tcb)"  by (clarsimp elim!: obj_atE' simp: objBits_simps projectKOs)
+    from koat have "is_aligned x (objBits tcb)"  by (clarsimp elim!: obj_atE' simp: objBits_simps)
     thus "x \<in> {x..x + 2 ^ objBits tcb - 1}"
       apply (rule base_member_set [simplified field_simps])
       apply (simp add: objBits_simps' word_bits_conv)
@@ -510,7 +509,7 @@ qed
 lemma ko_at_is_aligned' [intro?]:
   "ko_at' ko p s \<Longrightarrow> is_aligned p (objBits ko)"
   apply (erule obj_atE')
-  apply (simp add: objBits_def projectKOs project_inject)
+  apply (simp add: objBits_def project_inject)
   done
 
 lemma cmap_relation_disjoint_tcb:
@@ -716,7 +715,7 @@ proof -
 
     hence koat: "ko_at' tcb (ptr_val x - n) s"
       apply -
-      apply (erule obj_atI', simp_all add: objBits_simps projectKOs)
+      apply (erule obj_atI', simp_all add: objBits_simps)
       done
 
     let ?tran = "{ptr_val x - n .. (ptr_val x - n) + 2 ^ objBits tcb - 1}"
@@ -917,7 +916,7 @@ proof (rule tcb_queue_relation'_cong [OF refl refl refl])
     apply -
     apply (erule contrapos_np)
     apply (erule (1) valid_untyped_cap_ctcb_member)
-    apply (clarsimp elim!: imageE simp: ran')
+    apply fastforce
     done
 
   thus "(cm |` (- Ptr ` {ptr..+2 ^ bits})) p = cm p" by simp
@@ -980,7 +979,7 @@ proof -
   from invs have "valid_objs' s" ..
   with meps have vep: "valid_ep' ep s"
     apply -
-    apply (clarsimp simp add: map_comp_Some_iff projectKOs)
+    apply (clarsimp simp add: map_comp_Some_iff)
     apply (erule (1) valid_objsE')
     apply (simp add: valid_obj'_def)
     done
@@ -1034,7 +1033,7 @@ proof -
   from invs have "valid_objs' s" ..
   with meps have vep: "valid_ntfn' ntfn s"
     apply -
-    apply (clarsimp simp add: map_comp_Some_iff projectKOs)
+    apply (clarsimp simp add: map_comp_Some_iff)
     apply (erule (1) valid_objsE')
     apply (simp add: valid_obj'_def)
     done
@@ -1059,8 +1058,6 @@ proof -
       by (simp add: tcb_queue_relation_live_restrict [OF vuc tats tlive rl])
   qed (simp_all add: cnotification_relation_def Let_def)
 qed
-
-declare surj_Ptr[simp]
 
 declare bij_Ptr[simp]
 
@@ -1192,10 +1189,10 @@ proof (rule cmap_relation_cong)
     assume mtcb: "map_to_tcbs (ksPSpace s) x = Some tcb" and xin: "x \<in> {ptr..+2 ^ bits}"
 
     from mtcb invs have koat: "ko_at' tcb x s"
-      by (fastforce simp: map_comp_Some_iff projectKOs intro: aligned_distinct_obj_atI')
+      by (fastforce simp: map_comp_Some_iff intro: aligned_distinct_obj_atI')
 
     thus "is_aligned x (objBits tcb)"
-      by (clarsimp elim!: obj_atE' simp: projectKOs objBits_def)
+      by (clarsimp elim!: obj_atE' simp: objBits_def)
 
     (* FIXME: generalise *)
     with xin koat show "objBits tcb \<le> bits" using wb
@@ -1678,8 +1675,7 @@ proof -
     apply ((subst lift_t_typ_region_bytes,
             rule cm_disj cm_disj_tcb cm_disj_cte cm_disj_user cm_disj_device
             , assumption +,
-            simp_all add: objBits_simps' archObjSize_def projectKOs
-                          bit_simps
+            simp_all add: objBits_simps' bit_simps
                           heap_to_user_data_restrict heap_to_device_data_restrict)[1])+ \<comment> \<open>waiting ...\<close>
     apply (simp add: map_to_ctes_delete' cmap_relation_restrict_both_proj
                      cmap_relation_restrict_both cmap_array_helper hrs_htd_update
@@ -1712,7 +1708,7 @@ proof -
     apply simp
     apply (simp add: obj_at'_real_def)
     apply (erule ko_wp_at'_weakenE)
-    apply (clarsimp simp: projectKOs inQ_def)
+    apply (clarsimp simp: inQ_def)
     done
   hence tat: "\<And>p. \<forall>t \<in> set (ksReadyQueues s p). tcb_at' t s"
     and  tlive: "\<And>p. \<forall>t \<in> set (ksReadyQueues s p). ko_wp_at' live' t s"
@@ -1726,39 +1722,26 @@ proof -
     apply (drule spec, drule spec, drule mp)
     apply fastforce
     apply ((subst lift_t_typ_region_bytes, rule cm_disj_tcb, assumption+,
-      simp_all add: objBits_simps archObjSize_def pageBits_def projectKOs)[1])+
+           simp_all add: objBits_simps pageBits_def)[1])+
       \<comment> \<open>waiting ...\<close>
     apply (simp add: tcb_queue_relation_live_restrict
                      [OF D.valid_untyped tat tlive rl])
     done
 
-  (* FIXME RISCV: top-level PT relevant here? else REMOVE
-  moreover
-  from cs have clift:
-    "\<And>p. clift (hrs_htd_update (typ_region_bytes ptr bits)
-                                  (t_hrs_' (globals s'))) (p::pml4e_C ptr) =
-           (if p \<in> pml4e_Ptr ` {ptr..+2 ^ bits} then None else cslift s' p)"
-    apply (subst lift_t_typ_region_bytes[OF cm_disj], simp_all)
-      apply (fastforce simp: cpspace_relation_def)
-     apply (simp add: projectKOs)
-    apply (simp add: objBits_simps archObjSize_def bit_simps)
-    done
-
   moreover
   {
-    assume "s' \<Turnstile>\<^sub>c x64KSSKIMPML4_Ptr"
+    assume "s' \<Turnstile>\<^sub>c riscvKSGlobalPT_Ptr"
     moreover
-    from sr ptr_refs have "ptr_span x64KSSKIMPML4_Ptr
+    from sr ptr_refs have "ptr_span riscvKSGlobalPT_Ptr
       \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
       by (fastforce simp: rf_sr_def cstate_relation_def Let_def)
     ultimately
-    have "hrs_htd (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s'))) \<Turnstile>\<^sub>t x64KSSKIMPML4_Ptr"
+    have "hrs_htd (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s'))) \<Turnstile>\<^sub>t riscvKSGlobalPT_Ptr"
       using al wb
       apply (cases "t_hrs_' (globals s')")
       apply (simp add: hrs_htd_update_def hrs_htd_def h_t_valid_typ_region_bytes upto_intvl_eq)
       done
   }
-  *)
 
   moreover
   have h2ud_eq:
@@ -1776,13 +1759,13 @@ proof -
               split: if_split_asm option.splits)
     apply (frule pspace_alignedD'[OF _ pspace_aligned'])
     apply (case_tac "pageBits \<le> bits")
-     apply (simp add: objBitsKO_def projectKOs  split: kernel_object.splits)
+     apply (simp add: objBitsKO_def split: kernel_object.splits)
      apply clarsimp
      apply (rule aligned_range_offset_mem
        [where 'a=machine_word_len, folded word_bits_def, simplified, OF _ _ al _ wb])
        apply assumption+
     apply (rule iffI[rotated], simp)
-    apply (simp add: objBits_simps projectKOs)
+    apply (simp add: objBits_simps)
     apply (rule FalseE)
     apply (case_tac "ptr \<le> x", simp)
      apply clarsimp
@@ -1796,7 +1779,7 @@ proof -
     apply (frule pspace_distinctD'[OF _ pspace_distinct'])
     apply (clarsimp simp add: valid_cap'_def valid_untyped'_def2 capAligned_def)
     apply (drule_tac x=x in spec)
-    apply (simp add: obj_range'_def objBitsKO_def mask_def add_diff_eq)
+    apply (simp add: obj_range'_def objBitsKO_def mask_def)
     apply (simp only: not_le)
     apply (cut_tac is_aligned_no_overflow[OF al])
     apply (case_tac "ptr \<le> x + 2 ^ pageBits - 1",
@@ -1811,7 +1794,7 @@ proof -
      apply (rule ccontr)
      apply (simp only: not_le)
      apply (frule_tac y="x" in less_le_trans, assumption)
-     apply (simp add: field_simps word_sub_less_iff)
+     apply (simp add: word_sub_less_iff)
     apply simp
     done
   moreover
@@ -1830,13 +1813,13 @@ proof -
               split: if_split_asm option.splits)
     apply (frule pspace_alignedD'[OF _ pspace_aligned'])
     apply (case_tac "pageBits \<le> bits")
-     apply (simp add: objBitsKO_def projectKOs  split: kernel_object.splits)
+     apply (simp add: objBitsKO_def split: kernel_object.splits)
      apply clarsimp
      apply (rule aligned_range_offset_mem
        [where 'a=machine_word_len, folded word_bits_def, simplified, OF _ _ al _ wb])
        apply assumption+
     apply (rule iffI[rotated], simp)
-    apply (simp add: objBits_simps projectKOs)
+    apply (simp add: objBits_simps)
     apply (rule FalseE)
     apply (case_tac "ptr \<le> x", simp)
      apply clarsimp
@@ -1850,7 +1833,7 @@ proof -
     apply (frule pspace_distinctD'[OF _ pspace_distinct'])
     apply (clarsimp simp add: valid_cap'_def valid_untyped'_def2 capAligned_def)
     apply (drule_tac x=x in spec)
-    apply (simp add: obj_range'_def objBitsKO_def mask_def add_diff_eq)
+    apply (simp add: obj_range'_def objBitsKO_def mask_def)
     apply (simp only: not_le)
     apply (cut_tac is_aligned_no_overflow[OF al])
     apply (case_tac "ptr \<le> x + 2 ^ pageBits - 1",
@@ -1865,7 +1848,7 @@ proof -
      apply (rule ccontr)
      apply (simp only: not_le)
      apply (frule_tac y="x" in less_le_trans, assumption)
-     apply (simp add: field_simps word_sub_less_iff)
+     apply (simp add: word_sub_less_iff)
     apply simp
     done
 
@@ -1878,32 +1861,28 @@ proof -
       apply (drule(1) map_to_ko_atI')
       apply (clarsimp simp: obj_at'_def valid_untyped'_def2 mask_2pm1)
       apply (elim allE, drule(1) mp)
-      apply (clarsimp simp only: obj_range'_def upto_intvl_eq[symmetric] al)
-      sorry
-      (* FIXME RISCV
+      apply (clarsimp simp only: obj_range'_def upto_intvl_eq[symmetric] al add_mask_fold[symmetric])
       apply (subgoal_tac "objBitsKO (KOTCB v) = objBitsT TCBT")
        apply (subgoal_tac "p \<in> {p ..+ 2 ^ objBitsT TCBT}")
         apply simp
         apply blast
        apply (simp add: upto_intvl_eq)
-      apply (clarsimp simp: objBits_simps projectKOs objBitsT_simps)
+      apply (clarsimp simp: objBits_simps objBitsT_simps)
       done
-      *)
 
     note upto_rew = upto_intvl_eq[OF al, THEN eqset_imp_iff, symmetric, simplified]
 
-    from cNodePartial[simplified upto_rew] have cn_no_overlap:
+    from cNodePartial[folded add_mask_fold, simplified upto_rew]
+    have cn_no_overlap:
       "\<And>p n. gsCNodes s p = Some n \<Longrightarrow> p \<notin> {ptr..+2 ^ bits}
           \<Longrightarrow> {p ..+ 2 ^ (n + cte_level_bits)} \<inter> {ptr..+2 ^ bits} = {}"
       apply (simp add: cNodePartialOverlap_def)
       apply (elim allE, drule(1) mp)
-      apply clarsimp
+      apply (clarsimp simp flip: add_mask_fold)
       apply (frule base_member_set, simp add: word_bits_def)
-      apply (clarsimp simp only: upto_intvl_eq[symmetric] field_simps mask_2pm1)
-      sorry (* FIXME RISCV
+      apply (clarsimp simp only: upto_intvl_eq[symmetric] field_simps)
       apply blast
       done
-      *)
 
     from sr have "cvariable_array_map_relation (gsCNodes s|\<^bsub>(- {ptr..+2 ^ bits})\<^esub>) ((^) 2) cte_Ptr
        (typ_region_bytes ptr bits (hrs_htd (t_hrs_' (globals s'))))"
@@ -1949,17 +1928,12 @@ proof -
                (%x. ghost'state_'_update (gs_clear_region ptr bits)
                       (t_hrs_'_update ?th x)) s') \<in> rf_sr"
     using sr untyped_cap_rf_sr_ptr_bits_domain[OF cte invs sr]
-    (*by*) apply (simp add: rf_sr_def cstate_relation_def Let_def (* FIXME RISCV clift *)
+    by (simp add: rf_sr_def cstate_relation_def Let_def
                   psu_restrict cpspace_relation_def
                   carch_state_relation_def
                   cmachine_state_relation_def
                   hrs_htd_update htd_safe_typ_region_bytes
                   zero_ranges_are_zero_typ_region_bytes)
-    sorry
-    (* FIXME RISCV: we are missing the top-level PT version of the PML4 subgoals commented out
-                    above:
-                    typ_region_bytes ptr bits (hrs_htd (t_hrs_' (globals s'))) \<Turnstile>\<^sub>t riscvKSGlobalPT_Ptr
-    *)
 qed
 
 abbreviation (input)
