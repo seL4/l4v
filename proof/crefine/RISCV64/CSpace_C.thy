@@ -2722,8 +2722,7 @@ lemma cap_get_capIsPhysical_spec:
        \<lbrace>\<acute>ret__unsigned_long = from_bool (get_capIsPhysical_CL (cap_lift \<^bsup>s\<^esup>cap))\<rbrace>"
   apply vcg
   apply (clarsimp simp: get_capIsPhysical_CL_def)
-  apply (intro impI conjI)
-                    apply (clarsimp simp: cap_lifts pageBitsForSize_def
+  apply (intro impI conjI; clarsimp simp: cap_lifts pageBitsForSize_def
                                           cap_lift_asid_control_cap word_sle_def
                                           cap_lift_irq_control_cap cap_lift_null_cap
                                           mask_def objBits_simps cap_lift_domain_cap
@@ -2731,12 +2730,7 @@ lemma cap_get_capIsPhysical_spec:
                                           true_def false_def cap_get_tag_scast
                                    dest!: sym [where t = "ucast (cap_get_tag cap)" for cap]
                                    split: vmpage_size.splits)+
-  sorry (* FIXME RISCV: almost certainly a relation/validity/spec bug which resulted False conclusion
-  (* XXX: slow. there should be a rule for this *)
-  by (case_tac "cap_lift cap", simp_all, case_tac a,
-      auto simp: cap_lift_def cap_lift_defs cap_tag_defs Let_def
-          split: if_split_asm)
-  *)
+  by (fastforce dest!: cap_lift_Some_CapD split: option.split cap_CL.split)
 
 lemma ccap_relation_get_capPtr_not_physical:
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap \<noteq> PhysicalClass \<rbrakk> \<Longrightarrow>
