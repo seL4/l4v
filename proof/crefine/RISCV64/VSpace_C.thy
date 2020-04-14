@@ -157,40 +157,6 @@ lemma asid_high_bits_word_bits:
   "asid_high_bits < word_bits"
   by (simp add: asid_high_bits_def word_bits_def)
 
-lemma vspace_at_asid_cross_over:
-  "\<lbrakk> vspace_at_asid' pm asid s; asid \<le> mask asid_bits;
-          (s, s') \<in> rf_sr\<rbrakk>
-      \<Longrightarrow> \<exists>apptr ap. index (riscvKSASIDTable_' (globals s')) (unat (asid >> asid_low_bits))
-                     = (ap_Ptr apptr) \<and> cslift s' (ap_Ptr apptr) = Some (asid_pool_C.asid_pool_C ap)
-                  \<and> is_aligned pm ptBits
-                  \<and> array_assertion (pt_Ptr pm) 512 (hrs_htd (t_hrs_' (globals s')))"
-  apply (clarsimp simp: vspace_at_asid'_def)
-  sorry (* FIXME RISCV unclear if useful in current form
-  apply (subgoal_tac "asid >> asid_low_bits \<le> 2 ^ asid_high_bits - 1")
-   prefer 2
-   apply (simp add: asid_high_bits_word_bits)
-   apply (rule shiftr_less_t2n)
-   apply (simp add: mask_def)
-   apply (simp add: asid_low_bits_def asid_high_bits_def asid_bits_def)
-  apply (simp add: rf_sr_x86KSASIDTable)
-  apply (subgoal_tac "ucast (asid_high_bits_of asid) = asid >> asid_low_bits")
-   prefer 2
-   apply (simp add: asid_high_bits_of_def ucast_ucast_mask asid_high_bits_def[symmetric])
-   apply (subst mask_eq_iff_w2p, simp add: asid_high_bits_def word_size)
-   apply (rule shiftr_less_t2n)
-   apply (simp add: mask_def, simp add: asid_bits_def asid_low_bits_def asid_high_bits_def)
-  apply (simp add: option_to_ptr_def option_to_0_def)
-  apply (rule cmap_relationE1 [OF rf_sr_cpspace_asidpool_relation],
-         assumption, erule ko_at_projectKO_opt)
-  apply (clarsimp simp: casid_pool_relation_def array_relation_def
-                 split: asid_pool_C.split_asm)
-  apply (apply_conjunct \<open>solves \<open>simp add: page_map_l4_at'_def\<close>\<close>)
-  apply (drule spec, drule mp, rule word_and_mask_le_2pm1[of asid])
-  using page_map_l4_at'_array_assertion
-  by (simp add: asid_map_relation_def bit_simps asid_bits_defs asid_bits_of_defs ucast_ucast_mask
-         split: option.splits asid_map_CL.splits)
-  *)
-
 lemma array_relation_update:
   "\<lbrakk> array_relation R bnd table (arr :: 'a['b :: finite]);
                x' = unat (x :: ('td :: len) word); R v v';
@@ -297,47 +263,13 @@ lemma unat_asidLowBits [simp]:
   "unat Kernel_C.asidLowBits = asidLowBits"
   by (simp add: asidLowBits_def Kernel_C.asidLowBits_def asid_low_bits_def)
 
-(* FIXME RISCV: this is more complex than expected due to typ asid being 64 word and not matching
-   the 16 word that asid_high_bits_of etc. require
-   When we need to use this lemma, we also get a 64-bit asid, so the entire cast chain
-   looks something like 64\<rightarrow>16\<rightarrow>7\<rightarrow>64
-
-   this lemma was only used once, in findVSpaceForASID_ccorres
-*)
-lemma rf_sr_asidTable_None:
-  "\<lbrakk> (\<sigma>, x) \<in> rf_sr; (asid :: asid) && mask asid_bits = asid; valid_arch_state' \<sigma>  \<rbrakk> \<Longrightarrow>
-  (index (riscvKSASIDTable_' (globals x)) (unat (asid >> asid_low_bits)) = ap_Ptr 0) =
-  (riscvKSASIDTable (ksArchState \<sigma>) (ucast (asid_high_bits_of (ucast asid))) = None)"
-  apply (simp add: asid_high_bits_of_def ucast_ucast_mask2 is_down)
-  sorry (* FIXME RISCV: not clear if this is useful, and the chain of casting is painful
-  apply (subgoal_tac "(UCAST(64 \<rightarrow> 16) asid >> asid_low_bits) && mask 7 = UCAST(64 \<rightarrow> 16) asid >> asid_low_bits")(*asid_high_bits*)
-   prefer 2
-   apply (rule word_eqI)
-   apply (subst (asm) bang_eq)
-   apply (simp add: word_size nth_shiftr asid_bits_def asid_low_bits_def)
-   apply (case_tac "n < 7", simp) (*asid_high_bits*)
-   apply (clarsimp simp: linorder_not_less)
-   apply (erule_tac x="n+9" in allE) (*asid_low_bits*)
-   apply simp
-   subgoal sorry
-  (* FIXME RISCV: this is due to typ asid being 64 word and not matching the 16 word that
-     asid_high_bits_of etc. require *)
-  apply (simp add: ucast_ucast_mask2 is_down)
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def)
-  apply (simp add: array_relation_def option_to_0_def)
-  apply (erule_tac x="ucast (UCAST(64 \<rightarrow> 16) asid >> asid_low_bits)" in allE)
-  apply (erule impE)
-   prefer 2
-   apply (drule sym [where t="index a b" for a b])
-   apply (simp add: option_to_0_def option_to_ptr_def split: option.splits)
-   apply (clarsimp simp: valid_arch_state'_def valid_asid_table'_def ran_def)
-  apply (simp add: and_mask_eq_iff_le_mask)
-  apply (simp add: asid_high_bits_def mask_def word_le_nat_alt)
-  done
-  *)
+lemma asid_wf_eq_mask_eq:
+  "asid_wf asid = (asid && mask asid_bits = asid)"
+  by (simp add: asid_wf_def and_mask_eq_iff_le_mask)
 
 lemma leq_asid_bits_shift:
-  "x \<le> mask asid_bits \<Longrightarrow> (x::machine_word) >> asid_low_bits \<le> mask asid_high_bits"
+  "asid_wf x \<Longrightarrow> (x::machine_word) >> asid_low_bits \<le> mask asid_high_bits"
+  unfolding asid_wf_def
   apply (rule word_leI)
   apply (simp add: nth_shiftr word_size)
   apply (rule ccontr)
@@ -352,11 +284,29 @@ lemma leq_asid_bits_shift:
   done
 
 lemma ucast_asid_high_bits_is_shift:
-  "asid \<le> mask asid_bits \<Longrightarrow> ucast (asid_high_bits_of asid) = (asid >> asid_low_bits)"
+  "asid_wf asid \<Longrightarrow> ucast (asid_high_bits_of (ucast asid)) = asid >> asid_low_bits"
+  unfolding asid_wf_def
   apply (simp add: mask_def upper_bits_unset_is_l2p_64 [symmetric])
   apply (simp add: asid_high_bits_of_def mask_2pm1[symmetric] ucast_ucast_mask)
   using shiftr_mask_eq[where n=9 and x=asid, simplified]
-  apply (simp add: asid_low_bits_def word_size)
+  apply (simp add: asid_low_bits_def word_size asid_bits_def word_bits_def mask_def)
+  apply word_bitwise
+  apply simp
+  done
+
+lemma rf_sr_asidTable_None:
+  "\<lbrakk> (\<sigma>, x) \<in> rf_sr; asid_wf asid; valid_arch_state' \<sigma>  \<rbrakk> \<Longrightarrow>
+  (index (riscvKSASIDTable_' (globals x)) (unat (asid >> asid_low_bits)) = ap_Ptr 0) =
+  (riscvKSASIDTable (ksArchState \<sigma>) (ucast (asid_high_bits_of (ucast asid))) = None)"
+  apply (simp add: ucast_asid_high_bits_is_shift)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def)
+  apply (simp add: array_relation_def option_to_0_def)
+  apply (erule_tac x="asid >> asid_low_bits" in allE)
+  apply (erule impE)
+   apply (simp add: leq_asid_bits_shift flip: mask_2pm1)
+  apply (drule sym [where t="index a b" for a b])
+  apply (simp add: option_to_0_def option_to_ptr_def split: option.splits)
+  apply (clarsimp simp: valid_arch_state'_def valid_asid_table'_def ran_def)
   done
 
 lemma clift_ptr_safe:
@@ -577,17 +527,40 @@ lemma ccorres_from_vcg_throws_nofail:
   apply simp
   done
 
+lemma asid_wf_table_guard[unfolded asid_high_bits_def, simplified]:
+  "asid_wf asid \<Longrightarrow> asid >> asid_low_bits < 2^asid_high_bits"
+  apply (simp add: asid_wf_def)
+  apply (simp add: mask_def asid_bits_def asid_low_bits_def asid_high_bits_def)
+  apply word_bitwise
+  done
+
+lemma asidLowBits_guard0[simp]:
+  "0 <=s Kernel_C.asidLowBits"
+  by (simp add: Kernel_C.asidLowBits_def)
+
+lemma asidLowBits_shift_guard[unfolded word_bits_def, simplified, simp]:
+  "Kernel_C.asidLowBits <s of_nat word_bits"
+  by (simp add: Kernel_C.asidLowBits_def word_bits_def)
+
+lemma asidPool_table_guard[simplified, simp]:
+  "p && 2^asid_low_bits - 1 < 2^LENGTH(asid_low_len)" for p :: machine_word
+  apply (fold mask_2pm1)
+  apply (rule le_less_trans)
+  apply (rule word_and_mask_le_2pm1)
+  apply (simp add: asid_low_bits_def)
+  done
+
 lemma findVSpaceForASID_ccorres:
   "ccorres
-       (lookup_failure_rel \<currency> (\<lambda>pteptrc pteptr. pteptr = pte_Ptr pteeptrc))
+       (lookup_failure_rel \<currency> (\<lambda>pteptrc pteptr. pteptr = pte_Ptr pteptrc))
        findVSpaceForASID_xf
-       (valid_arch_state' and no_0_obj' and (\<lambda>_. asid_wf asid))
-       (UNIV \<inter> \<lbrace>\<acute>asid = asid\<rbrace> )
+       (valid_arch_state' and (\<lambda>_. asid_wf asid))
+       (UNIV \<inter> \<lbrace>\<acute>asid___unsigned_long = asid\<rbrace> )
        []
        (findVSpaceForASID asid)
        (Call findVSpaceForASID_'proc)"
   apply (rule ccorres_gen_asm)
-  apply (cinit lift: asid_')
+  apply (cinit lift: asid___unsigned_long_')
    apply (rule ccorres_assertE)+
    apply (rule ccorres_liftE_Seq)
    apply (simp add: liftME_def bindE_assoc)
@@ -595,70 +568,50 @@ lemma findVSpaceForASID_ccorres:
    apply (case_tac "asidTable (ucast (asid_high_bits_of (ucast asid)))")
     (* Case where the first look-up fails *)
     apply clarsimp
-    sorry (* FIXME RISCV: proof will be somewhat different
     apply (rule_tac P="valid_arch_state' and _" and P'=UNIV in ccorres_from_vcg_throws)
     apply (rule allI, rule conseqPre, vcg)
     apply (clarsimp simp: throwError_def return_def bindE_def NonDetMonad.lift_def
                           EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def
-                          lookup_fault_lift_invalid_root Kernel_C.asidLowBits_def)
-    apply (frule rf_sr_asidTable_None[where asid=asid, THEN iffD2])
-           simp add: asid_wf_def3, assumption, assumption)
-    apply (fastforce simp: asid_map_asid_map_none_def asid_map_asid_map_vspace_def asid_wf_def2
-                           Kernel_C.asidLowBits_def asid_shiftr_low_bits_less)
-  (* Case where the first look-up succeeds *)
+                          lookup_fault_lift_invalid_root asid_wf_table_guard)
+    apply (frule rf_sr_asidTable_None[where asid=asid, THEN iffD2],
+           simp add: asid_wf_eq_mask_eq, assumption, assumption)
+    apply (solves \<open>simp\<close>)
+   (* Case where the first look-up succeeds *)
    apply clarsimp
    apply (rule ccorres_liftE_Seq)
    apply (rule ccorres_guard_imp)
      apply (rule ccorres_pre_getObject_asidpool)
      apply (rename_tac asidPool)
-     apply (case_tac "inv ASIDPool asidPool (ucast (asid_low_bits_of asid)) = Some 0")
-      apply (clarsimp simp: ccorres_fail')
-     apply (rule_tac P="\<lambda>s. asidTable=x64KSASIDTable (ksArchState s) \<and>
-                            valid_arch_state' s \<and> (asid_wf asid)"
-                 and P'="{s'. (\<exists>ap'. cslift s' (ap_Ptr (the (asidTable (ucast (asid_high_bits_of asid)))))
+     apply (case_tac "inv ASIDPool asidPool (asid && mask asid_low_bits) = Some 0")
+      apply (solves \<open>clarsimp simp: ccorres_fail'\<close>)
+     apply (rule_tac P="\<lambda>s. asidTable=riscvKSASIDTable (ksArchState s) \<and>
+                            valid_arch_state' s \<and> asid_wf asid"
+                 and P'="{s'. (\<exists>ap'. cslift s' (ap_Ptr (the (asidTable (ucast (asid_high_bits_of (ucast asid))))))
                                                = Some ap' \<and> casid_pool_relation asidPool ap')}"
                   in ccorres_from_vcg_throws_nofail)
      apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: ucast_asid_high_bits_is_shift asid_wf_def2)
-     apply (frule_tac idx="(asid >> asid_low_bits)" in rf_asidTable, assumption,
+     apply (simp add: asid_wf_table_guard)
+     apply (clarsimp simp: ucast_asid_high_bits_is_shift)
+     apply (frule_tac idx="asid >> asid_low_bits" in rf_asidTable, assumption,
                       simp add: leq_asid_bits_shift)
      apply (clarsimp simp: typ_heap_simps)
      apply (case_tac asidPool, clarsimp simp: inv_def)
      apply (simp add: casid_pool_relation_def)
      apply (case_tac ap', simp)
      apply (simp add: array_relation_def)
-     apply (erule_tac x="(asid && 2 ^ asid_low_bits - 1)" in allE)
-     apply (simp add: word_and_le1 mask_def option_to_ptr_def option_to_0_def
-                      asid_shiftr_low_bits_less asid_low_bits_of_p2m1_eq)
+     apply (erule_tac x="asid && 2 ^ asid_low_bits - 1" in allE)
+     apply (simp add: word_and_le1 mask_def option_to_ptr_def option_to_0_def asid_low_bits_of_p2m1_eq)
      apply (rename_tac "fun" array)
      apply (case_tac "fun (asid && 2 ^ asid_low_bits - 1)", clarsimp)
       apply (clarsimp simp: throwError_def return_def EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def)
-      apply (simp add: lookup_fault_lift_invalid_root Kernel_C.asidLowBits_def)
-      apply (rule conjI)
-       apply (simp add: asid_low_bits_def asid_bits_def)
-       apply word_bitwise
-      apply (clarsimp simp: asid_map_relation_def asid_map_lift_def
-                             asid_map_asid_map_none_def asid_map_asid_map_vspace_def)
-     apply (clarsimp simp: Kernel_C.asidLowBits_def)
-     apply (rule conjI)
-      apply (simp add: asid_low_bits_def asid_bits_def)
-      apply word_bitwise
-     apply clarsimp
-     apply (subgoal_tac "asid_map_get_tag (array.[unat (asid && 2 ^ asid_low_bits - 1)]) =
-                         SCAST(32 signed \<rightarrow> 64) asid_map_asid_map_vspace")
-      prefer 2
-      apply (rule classical)
-      apply (fastforce simp: asid_map_relation_def asid_map_lift_def split: if_splits)
+      apply (solves \<open>simp add: lookup_fault_lift_invalid_root Kernel_C.asidLowBits_def\<close>)
+     apply (clarsimp simp add: asid_low_bits_def asid_bits_def)
      apply (fastforce simp: returnOk_def return_def
-                            checkPML4At_def in_monad stateAssert_def liftE_bindE
+                            checkPTAt_def in_monad stateAssert_def liftE_bindE
                             get_def bind_def assert_def fail_def
-                            asid_map_relation_def asid_map_lift_def
-                            asid_map_asid_map_none_def asid_map_asid_map_vspace_def
-                            asid_map_asid_map_vspace_lift_def
                       split: if_splits)
-    apply (simp add: mask_2pm1)+
+    apply simp+
   done
-  *)
 
 lemma ccorres_pre_gets_riscvKSGlobalPT_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
