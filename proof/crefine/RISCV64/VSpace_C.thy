@@ -687,7 +687,7 @@ next
   fix s s'
   assume "(s, s') \<in> rf_sr" and "(G and P) s" and "s' \<in> G'"
   thus "(G and (\<lambda>_. \<exists>s. P s)) s \<and> s' \<in> G'"
-    by (clarsimp elim!: exI)
+    by fastforce
 qed
 
 (* FIXME shadows two other identical versions in other files *)
@@ -708,10 +708,8 @@ lemma setObject_modify:
          (1 :: machine_word) < 2 ^ objBits v \<rbrakk>
     \<Longrightarrow> setObject p v s
       = modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))) s"
-  apply (clarsimp simp: setObject_def split_def exec_gets
-                        obj_at'_def projectKOs lookupAround2_known1
-                        assert_opt_def updateObject_default_def
-                        bind_assoc)
+  apply (clarsimp simp: setObject_def split_def exec_gets obj_at'_def lookupAround2_known1
+                        assert_opt_def updateObject_default_def bind_assoc)
   apply (simp add: projectKO_def alignCheck_assert)
   apply (simp add: project_inject objBits_def)
   apply (clarsimp simp only: objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
@@ -928,7 +926,7 @@ lemma msgRegisters_ccorres:
   "n < unat n_msgRegisters \<Longrightarrow>
   register_from_H (RISCV64_H.msgRegisters ! n) = (index kernel_all_substitute.msgRegisters n)"
   apply (simp add: kernel_all_substitute.msgRegisters_def msgRegisters_unfold fupdate_def)
-  apply (simp add: Arrays.update_def n_msgRegisters_def fcp_beta nth_Cons' split: if_split)
+  apply (simp add: Arrays.update_def n_msgRegisters_def nth_Cons' split: if_split)
   done
 
 (* usually when we call setMR directly, we mean to only set a registers, which will
@@ -970,7 +968,7 @@ lemma wordFromMessageInfo_spec:
                                       || length_CL (mil s)\<rbrace>"
   unfolding mil_def
   apply vcg
-  apply (simp add: seL4_MessageInfo_lift_def mask_shift_simps)
+  apply (simp del: scast_id add: seL4_MessageInfo_lift_def mask_shift_simps)
   apply word_bitwise
   done
 
@@ -1106,7 +1104,7 @@ lemma checkMappingPPtr_pte_ccorres:
       apply (erule cmap_relationE1[OF rf_sr_cpte_relation])
        apply (erule ko_at_projectKO_opt)
       apply simp
-     apply (wp empty_fail_getObject | simp add: objBits_simps archObjSize_def bit_simps)+
+     apply (wp empty_fail_getObject | simp add: objBits_simps bit_simps)+
   done
 
 lemma ccorres_return_void_C':
@@ -1581,7 +1579,7 @@ lemma setCTE_asidpool':
   apply (rule hoare_seq_ext [OF _ hoare_gets_post])
   apply (clarsimp simp: valid_def in_monad)
   apply (frule updateObject_type)
-  apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (clarsimp simp: obj_at'_def)
   apply (rule conjI)
    apply (clarsimp simp: lookupAround2_char1)
    apply (clarsimp split: if_split)
@@ -1614,7 +1612,7 @@ lemma asid_pool_at_rf_sr:
 (* FIXME: move *)
 lemma asid_pool_at_ko:
   "asid_pool_at' p s \<Longrightarrow> \<exists>pool. ko_at' (ASIDPool pool) p s"
-  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def projectKOs)
+  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
   apply (case_tac ko, auto)
   apply (rename_tac arch_kernel_object)
   apply (case_tac arch_kernel_object, auto)[1]
@@ -1634,7 +1632,7 @@ lemma setObjectASID_Basic_ccorres:
      ((Basic (\<lambda>s. globals_update( t_hrs_'_update
             (hrs_mem_update (heap_update (Ptr &(ap_Ptr (f s)\<rightarrow>[''array_C''])) (pool' s)))) s)))"
   apply (rule setObject_ccorres_helper)
-    apply (simp_all add: objBits_simps archObjSize_def pageBits_def)
+    apply (simp_all add: objBits_simps pageBits_def)
   apply (rule conseqPre, vcg)
   apply (rule subsetI, clarsimp simp: Collect_const_mem)
   apply (rule cmap_relationE1, erule rf_sr_cpspace_asidpool_relation,
@@ -1663,7 +1661,7 @@ lemma getObject_ap_inv [wp]: "\<lbrace>P\<rbrace> (getObject addr :: asidpool ke
 
 lemma getObject_ko_at_ap [wp]:
   "\<lbrace>\<top>\<rbrace> getObject p \<lbrace>\<lambda>rv::asidpool. ko_at' rv p\<rbrace>"
-  by (rule getObject_ko_at | simp add: objBits_simps archObjSize_def bit_simps)+
+  by (rule getObject_ko_at | simp add: objBits_simps bit_simps)+
 
 lemma canonical_address_page_table_at':
   "\<lbrakk>page_table_at' p s; pspace_canonical' s\<rbrakk> \<Longrightarrow> canonical_address p"
