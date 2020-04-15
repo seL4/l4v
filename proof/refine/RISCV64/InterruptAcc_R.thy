@@ -43,7 +43,8 @@ lemma set_irq_state_corres:
   done
 
 lemma setIRQState_invs[wp]:
-  "\<lbrace>\<lambda>s. invs' s \<and> (state \<noteq> IRQSignal \<longrightarrow> IRQHandlerCap irq \<notin> ran (cteCaps_of s)) \<and> (state \<noteq> IRQInactive \<longrightarrow> irq \<le> maxIRQ)\<rbrace>
+  "\<lbrace>\<lambda>s. invs' s \<and> (state \<noteq> IRQSignal \<longrightarrow> IRQHandlerCap irq \<notin> ran (cteCaps_of s)) \<and>
+        (state \<noteq> IRQInactive \<longrightarrow> irq \<le> maxIRQ \<and> irq \<noteq> irqInvalid)\<rbrace>
       setIRQState state irq
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: setIRQState_def setInterruptState_def getInterruptState_def)
@@ -59,6 +60,8 @@ lemma setIRQState_invs[wp]:
                         bitmapQ_defs valid_queues_no_bitmap_def)
   apply (rule conjI, clarsimp)
   apply (clarsimp simp: irqs_masked'_def ct_not_inQ_def)
+  apply (rule conjI; clarsimp)
+   apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
   apply (rule conjI)
    apply fastforce
   apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)

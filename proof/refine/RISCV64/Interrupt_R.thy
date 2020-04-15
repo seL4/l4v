@@ -438,7 +438,7 @@ lemma invoke_irq_handler_invs'[wp]:
   done
 
 lemma IRQHandler_valid':
-  "(s' \<turnstile>' IRQHandlerCap irq) = (irq \<le> maxIRQ)"
+  "(s' \<turnstile>' IRQHandlerCap irq) = (irq \<le> maxIRQ \<and> irq \<noteq> irqInvalid)"
   by (simp add: valid_cap'_def capAligned_def word_bits_conv)
 
 lemma valid_mdb_interrupts'[simp]:
