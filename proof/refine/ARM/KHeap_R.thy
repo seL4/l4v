@@ -1248,10 +1248,7 @@ abbreviation idle_tcb_ps :: "('a :: pspace_storable) \<Rightarrow> bool" where
   "idle_tcb_ps val \<equiv>
       (\<exists>tcb.
         projectKO_opt (injectKO val) = Some tcb
-        \<and> idle' (tcbState tcb)
-        \<and> tcbBoundNotification tcb = None
-        \<and> tcbSchedContext tcb = Some idle_sc_ptr
-        \<and> tcbYieldTo tcb = None)"
+        \<and> idle_tcb' tcb)"
 
 \<comment>\<open>
   `idle_sc_ps val` asserts that `val` is a pspace_storable value
@@ -1261,13 +1258,7 @@ abbreviation idle_sc_ps :: "('a :: pspace_storable) \<Rightarrow> bool" where
   "idle_sc_ps val \<equiv>
       (\<exists>sc.
         sc_of' (injectKO val) = Some sc
-        \<and> scPeriod sc = 0
-        \<and> scTCB sc = Some idle_thread_ptr
-        \<and> scNtfn sc = None
-        \<and> scRefillMax sc = MIN_REFILLS
-        \<and> scBadge sc = 0
-        \<and> scYieldFrom sc = None
-        \<and> scReply sc = None)"
+        \<and> idle_sc' sc)"
 
 lemma setObject_idle':
   fixes v :: "'a :: pspace_storable"

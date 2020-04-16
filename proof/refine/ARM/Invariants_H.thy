@@ -1044,25 +1044,51 @@ where
 abbreviation
   "sch_act_not t \<equiv> \<lambda>s. ksSchedulerAction s \<noteq> SwitchToThread t"
 
+abbreviation idle_itcb' :: "itcb' \<Rightarrow> bool" where
+  "idle_itcb' itcb \<equiv>
+      idle' (itcbState itcb)
+      \<and> itcbBoundNotification itcb = None
+      \<and> itcbSchedContext itcb = Some idle_sc_ptr
+      \<and> itcbYieldTo itcb = None"
+
+abbreviation idle_tcb' :: "tcb \<Rightarrow> bool" where
+  "idle_tcb' \<equiv> idle_itcb' o tcb_to_itcb'"
+
 abbreviation
   "idle_tcb_at' \<equiv>
      pred_tcb_at' (\<lambda>t. (itcbState t, itcbBoundNotification t, itcbSchedContext t, itcbYieldTo t))"
 
+\<comment>\<open>
+  Why the truly godforsaken name? Because `idle_tcb_at'` is already
+  taken, and currently refers to a partial projection of the `itcb'`.
+
+  `idle_tcb_at'` should be renamed to something else, and the below
+  abbreviation should be renamed to `idle_tcb_at'`, but this requires
+  coordinated updates with AInvs and so we will do it When We Have Time (TM).
+
+  VER-1242
+\<close>
 abbreviation
-  "idle_sc_at' \<equiv> obj_at' (\<lambda>sc. scPeriod sc = 0
-                               \<and> scTCB sc = Some idle_thread_ptr
-                               \<and> scNtfn sc = None
-                               \<and> scRefillMax sc = MIN_REFILLS
-                               \<and> scBadge sc = 0
-                               \<and> scYieldFrom sc = None
-                               \<and> scReply sc = None)"
+  "fixme_idle_tcb_at' \<equiv> pred_tcb_at' id idle_itcb'"
+
+abbreviation idle_sc' :: "sched_context \<Rightarrow> bool" where
+  "idle_sc' sc \<equiv>
+      scPeriod sc = 0
+      \<and> scTCB sc = Some idle_thread_ptr
+      \<and> scNtfn sc = None
+      \<and> scRefillMax sc = MIN_REFILLS
+      \<and> scBadge sc = 0
+      \<and> scYieldFrom sc = None
+      \<and> scReply sc = None"
+
+abbreviation
+  "idle_sc_at' \<equiv> obj_at' idle_sc'"
 
 definition
   valid_idle' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_idle' \<equiv>
-     \<lambda>s. idle_tcb_at' (\<lambda>(st, ntfn, sc, yt). idle' st \<and> ntfn = None
-                                            \<and> sc = Some idle_sc_ptr \<and> yt = None) (ksIdleThread s) s
+     \<lambda>s. fixme_idle_tcb_at' (ksIdleThread s) s
          \<and> idle_sc_at' idle_sc_ptr s"
 
 definition
