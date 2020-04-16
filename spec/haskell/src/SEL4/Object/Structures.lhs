@@ -80,7 +80,7 @@ This is the type used to represent a capability.
 >             capCNodeGuard :: Word,
 >             capCNodeGuardSize :: Int }
 >         | IRQControlCap
->         deriving Show
+>         deriving (Eq, Show)
 
 > data ZombieType = ZombieTCB | ZombieCNode { zombieCTEBits :: Int }
 >     deriving (Eq, Show)

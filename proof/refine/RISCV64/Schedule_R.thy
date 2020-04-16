@@ -839,7 +839,7 @@ lemma Arch_switchToThread_invs[wp]:
   done
 
 crunch ksCurDomain[wp]: "Arch.switchToThread" "\<lambda>s. P (ksCurDomain s)"
-(simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma Arch_swichToThread_tcbDomain_triv[wp]:
   "\<lbrace> obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace> Arch.switchToThread t \<lbrace> \<lambda>_. obj_at'  (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>"
@@ -1097,7 +1097,7 @@ lemma sct_cap_to'[wp]:
 
 
 crunch cap_to'[wp]: "Arch.switchToThread" "ex_nonz_cap_to' p"
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch cap_to'[wp]: switchToThread "ex_nonz_cap_to' p"
   (simp: crunch_simps)

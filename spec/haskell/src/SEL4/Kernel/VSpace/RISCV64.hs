@@ -266,6 +266,9 @@ setVMRoot :: PPtr TCB -> Kernel ()
 setVMRoot tcb = do
     threadRootSlot <- getThreadVSpaceRoot tcb
     threadRoot <- getSlotCap threadRootSlot
+    {- We use this in C to remove the check for isMapped: -}
+    assert (isValidVTableRoot threadRoot || threadRoot == NullCap)
+           "threadRoot must be valid or Null"
     catchFailure
         (case threadRoot of
             ArchObjectCap (PageTableCap {

@@ -111,30 +111,50 @@ proof -
       apply (rule_tac  R="\<lambda>thread_root. valid_vspace_objs and valid_asid_table and
                                         pspace_aligned and pspace_distinct and
                                         valid_objs and valid_global_arch_objs and
-                                        cte_wp_at ((=) thread_root) thread_root_slot"
+                                        cte_wp_at ((=) thread_root) thread_root_slot and
+                                        tcb_at (fst thread_root_slot) and
+                                        K (snd thread_root_slot = tcb_cnode_index 1)"
                     and R'="\<lambda>thread_root. no_0_obj'"
                 in corres_split[OF _ getSlotCap_corres])
          prefer 2
          apply simp
+        apply simp
         apply (rename_tac cap cap')
-        apply (case_tac cap; clarsimp simp: isCap_simps catch_throwError intro!: global)
-        apply (rename_tac acap acap')
-        apply (case_tac acap; clarsimp simp: isCap_simps catch_throwError intro!: global)
-        apply (rename_tac m)
-        apply (case_tac m; clarsimp simp: isCap_simps catch_throwError intro!: global)
+        apply (rule_tac Q="no_0_obj' and (\<lambda>_. isValidVTableRoot cap' \<or> cap' = NullCap)"
+                        in corres_cross_over_guard)
+         apply clarsimp
+         apply (drule (1) tcb_cap_wp_at[where ref="tcb_cnode_index 1" and
+                                              Q="\<lambda>cap. is_valid_vtable_root cap \<or> cap=Structures_A.NullCap"])
+           apply (simp add: tcb_cap_cases_def)
+          apply clarsimp
+         apply (clarsimp simp: cte_wp_at_caps_of_state)
+         apply (erule disjE; simp?)
+         apply (clarsimp simp: is_valid_vtable_root_def split: cap.splits arch_cap.splits option.splits)
+         apply (simp add: isValidVTableRoot_def)
         apply (rule corres_guard_imp)
-          apply (rule corres_split_catch [where f=lfr and E'="\<lambda>_. \<top>"])
-             apply (rule global, assumption)
-            apply (rule corres_split_eqrE [OF _ find_vspace_for_asid_corres[OF refl]])
-              apply (rule whenE_throwError_corres; simp add: lookup_failure_map_def)
-              apply (rule corres_machine_op)
-              apply corressimp
-               apply fastforce
-              apply simp
-             apply wpsimp+
-            apply (frule (1) cte_wp_at_valid_objs_valid_cap)
-         apply (clarsimp simp: valid_cap_def mask_def wellformed_mapdata_def)
-        apply (wpsimp wp: get_cap_wp simp: getThreadVSpaceRoot_def)+
+          apply (rule_tac P="valid_vspace_objs and valid_asid_table and pspace_aligned and
+                             pspace_distinct and valid_objs and valid_global_arch_objs and
+                             cte_wp_at ((=) cap) thread_root_slot" in corres_assert_gen_asm2)
+          prefer 3
+          apply assumption
+         apply (case_tac cap; clarsimp simp: isCap_simps catch_throwError intro!: global)
+         apply (rename_tac acap acap')
+         apply (case_tac acap; clarsimp simp: isCap_simps catch_throwError intro!: global)
+         apply (rename_tac m)
+         apply (case_tac m; clarsimp simp: isCap_simps catch_throwError intro!: global)
+         apply (rule corres_guard_imp)
+           apply (rule corres_split_catch [where f=lfr and E'="\<lambda>_. \<top>"])
+              apply (rule global, assumption)
+             apply (rule corres_split_eqrE [OF _ find_vspace_for_asid_corres[OF refl]])
+               apply (rule whenE_throwError_corres; simp add: lookup_failure_map_def)
+               apply (rule corres_machine_op)
+               apply corressimp
+                apply fastforce
+               apply simp
+              apply wpsimp+
+          apply (frule (1) cte_wp_at_valid_objs_valid_cap)
+          apply (clarsimp simp: valid_cap_def mask_def wellformed_mapdata_def)
+         apply (wpsimp wp: get_cap_wp simp: getThreadVSpaceRoot_def)+
    apply (auto dest!: tcb_at_cte_at_1)
   done
 qed
@@ -306,7 +326,7 @@ lemma delete_asid_pool_corres:
   done
 
 crunch typ_at' [wp]: setVMRoot "\<lambda>s. P (typ_at' T p s)"
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 lemmas setVMRoot_typ_ats [wp] = typ_at_lifts [OF setVMRoot_typ_at']
 
@@ -735,7 +755,7 @@ lemma pap_corres:
   done
 
 crunch obj_at[wp]: setVMRoot "\<lambda>s. P (obj_at' P' t s)"
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunches doMachineOp
   for arch[wp]: "\<lambda>s. P (ksArchState s)"
@@ -806,7 +826,7 @@ crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
        loadObject_default_def)
 
 crunch it' [wp]: deleteASIDPool "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp')
+  (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp' crunch_wps)
 
 lemma lookupPTSlot_inv:
   "lookupPTSlot pt vptr \<lbrace>P\<rbrace>"

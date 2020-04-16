@@ -564,6 +564,7 @@ lemma tcbSchedDequeue_no_orphans [wp]:
 
 crunches setVMRoot
   for ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  (wp: crunch_wps)
 
 lemma switchToIdleThread_no_orphans' [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and>
