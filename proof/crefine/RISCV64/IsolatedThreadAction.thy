@@ -671,7 +671,7 @@ lemma setVMRoot_isolatable:
                    locateSlot_conv getSlotCap_def
                    if_bool_simps cap_case_isPageTableCap
                    whenE_def liftE_def
-                   stateAssert_def2
+                   stateAssert_def2 assert_def
              cong: if_cong)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                thread_actions_isolatable_bindE[OF _ _ hoare_pre(1)]
