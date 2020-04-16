@@ -18,12 +18,12 @@ begin
 locale kernel_m = kernel +
 
 assumes setVSpaceRoot_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = pt\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace>) []
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = pt\<rbrace> \<inter> \<lbrace>\<acute>asid___unsigned_long = asid\<rbrace>) []
            (doMachineOp (RISCV64.setVSpaceRoot pt asid))
            (Call setVSpaceRoot_'proc)"
 
 assumes hwASIDFlush_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>asid = asid\<rbrace>) []
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>asid___unsigned_long = asid\<rbrace>) []
            (doMachineOp (RISCV64.hwASIDFlush asid))
            (Call hwASIDFlush_'proc)"
 
