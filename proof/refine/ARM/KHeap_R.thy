@@ -1240,49 +1240,68 @@ lemma setObject_it[wp]:
   apply (wp x | simp)+
   done
 
+\<comment>\<open>
+  `idle_tcb_ps val` asserts that `val` is a pspace_storable value
+  which corresponds to an idle TCB.
+\<close>
+abbreviation idle_tcb_ps :: "('a :: pspace_storable) \<Rightarrow> bool" where
+  "idle_tcb_ps val \<equiv>
+      (\<exists>tcb.
+        projectKO_opt (injectKO val) = Some tcb
+        \<and> idle' (tcbState tcb)
+        \<and> tcbBoundNotification tcb = None
+        \<and> tcbSchedContext tcb = Some idle_sc_ptr
+        \<and> tcbYieldTo tcb = None)"
+
+\<comment>\<open>
+  `idle_sc_ps val` asserts that `val` is a pspace_storable value
+  which corresponds to an idle SchedContext.
+\<close>
+abbreviation idle_sc_ps :: "('a :: pspace_storable) \<Rightarrow> bool" where
+  "idle_sc_ps val \<equiv>
+      (\<exists>sc.
+        sc_of' (injectKO val) = Some sc
+        \<and> scPeriod sc = 0
+        \<and> scTCB sc = Some idle_thread_ptr
+        \<and> scNtfn sc = None
+        \<and> scRefillMax sc = MIN_REFILLS
+        \<and> scBadge sc = 0
+        \<and> scYieldFrom sc = None
+        \<and> scReply sc = None)"
+
 lemma setObject_idle':
   fixes v :: "'a :: pspace_storable"
-  assumes R: "\<And>ko s y n. (updateObject v ko ptr y n s)
-                   = (updateObject_default v ko ptr y n s)"
+  assumes R: "\<And>ko s y n.
+              (updateObject v ko ptr y n s) = (updateObject_default v ko ptr y n s)"
   assumes n: "\<And>x :: 'a. objBits x = n"
-  assumes m: "(1 :: word32) < 2 ^ n"
+  assumes m: "(1 :: machine_word) < 2 ^ n"
   assumes z: "\<And>P p q n ko.
-       \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> updateObject v p q n ko
-       \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_idle' s \<and>
-                   (ptr = ksIdleThread s \<longrightarrow>
-                    (\<exists>obj (val :: 'a). projectKO_opt (injectKO val) = Some obj
-                                      \<and> idle' (tcbState obj) \<and> tcbBoundNotification obj = None)
-                    \<longrightarrow> (\<exists>obj. projectKO_opt (injectKO v) = Some obj \<and>
-                          idle' (tcbState obj) \<and> tcbBoundNotification obj = None)) \<and>
-                   P s\<rbrace>
-                setObject ptr v
+              \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>
+              updateObject v p q n ko
+              \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. valid_idle' s
+                   \<and> (ptr = ksIdleThread s
+                        \<longrightarrow> (\<exists>val :: 'a. idle_tcb_ps val)
+                        \<longrightarrow> idle_tcb_ps v)
+                   \<and> (ptr = idle_sc_ptr
+                        \<longrightarrow> (\<exists>val :: 'a. idle_sc_ps val)
+                        \<longrightarrow> idle_sc_ps v)\<rbrace>
+              setObject ptr v
               \<lbrace>\<lambda>rv s. valid_idle' s\<rbrace>"
   apply (simp add: valid_idle'_def pred_tcb_at'_def o_def)
   apply (rule hoare_pre)
    apply (rule hoare_lift_Pf2 [where f="ksIdleThread"])
     apply (simp add: pred_tcb_at'_def obj_at'_real_def)
-    sorry (* FIXME RT
-    apply (rule setObject_ko_wp_at [OF R n m])
+    apply (wpsimp wp: setObject_ko_wp_at[OF R n m])
    apply (wp z)
+  apply (rule conjI)
+   apply (clarsimp simp add: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def)
+   apply (rename_tac tcb sc obj)
+   apply (drule_tac x=obj and y=tcb in spec2, clarsimp simp: project_inject)
   apply (clarsimp simp add: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def)
-  apply (drule_tac x=obj in spec, simp)
-  apply (clarsimp simp add: project_inject)
-  apply (drule_tac x=obja in spec, simp)
-  done *)
-(* the conclusion should now be
-  shows      "\<lbrace>\<lambda>s. valid_idle' s \<and>
-                   (ptr = ksIdleThread s \<longrightarrow>
-                    (\<exists>obj (val :: 'a). projectKO_opt (injectKO val) = Some obj
-                                      \<and> idle' (tcbState obj) \<and> tcbBoundNotification obj = None
-                                      \<and> tcbSchedContext obj = Some idle_sc_ptr \<and> tcbYieldTo obj = None)
-                    \<longrightarrow> (\<exists>obj. projectKO_opt (injectKO v) = Some obj \<and>
-                          idle' (tcbState obj) \<and> tcbBoundNotification obj = None
-                          \<and> tcbSchedContext obj = Some idle_sc_ptr \<and> tcbYieldTo obj = None)) \<and>
-                   P s\<rbrace>
-                setObject ptr v
-              \<lbrace>\<lambda>rv s. valid_idle' s\<rbrace>"
-*)
+  apply (rename_tac tcb sc obj)
+  apply (drule_tac x=obj and y=sc in spec2, clarsimp simp: project_inject)
+  done
 
 lemma setObject_no_0_obj' [wp]:
   "\<lbrace>no_0_obj'\<rbrace> setObject p v \<lbrace>\<lambda>r. no_0_obj'\<rbrace>"
