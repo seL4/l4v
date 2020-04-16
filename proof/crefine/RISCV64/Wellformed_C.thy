@@ -39,7 +39,8 @@ abbreviation
   pt_Ptr :: "machine_word \<Rightarrow> (pte_C[512]) ptr" where "pt_Ptr == Ptr"
 
 type_synonym tcb_cnode_array = "cte_C[5]"
-type_synonym registers_array = "machine_word[35]"
+type_synonym registers_count = 35
+type_synonym registers_array = "machine_word[registers_count]"
 
 abbreviation "user_context_Ptr \<equiv> Ptr :: addr \<Rightarrow> user_context_C ptr"
 abbreviation "machine_word_Ptr \<equiv> Ptr :: addr \<Rightarrow> machine_word ptr"
