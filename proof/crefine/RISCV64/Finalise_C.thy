@@ -1055,87 +1055,63 @@ lemma deleteASIDPool_ccorres:
 
 
 lemma deleteASID_ccorres:
-  "ccorres dc xfdc (invs' and K (asid < 2 ^ asid_bits) and K (vs \<noteq> 0))
+  "ccorres dc xfdc (invs' and K (asid_wf asid \<and> vs \<noteq> 0))
       ({s. asid___unsigned_long_' s = asid} \<inter> {s. vspace_' s = Ptr vs}) []
       (deleteASID asid vs) (Call deleteASID_'proc)"
   apply (cinit lift: asid___unsigned_long_' vspace_' cong: call_ignore_cong)
    apply (rule ccorres_Guard_Seq)+
-  sorry (* FIXME RISCV
-   apply (rule_tac r'="\<lambda>rv rv'. case rv (ucast (asid_high_bits_of asid)) of
+   apply (rule_tac r'="\<lambda>rv rv'. case rv (ucast (asid_high_bits_of (ucast asid))) of
                                 None \<Rightarrow> rv' = NULL
                               | Some v \<Rightarrow> rv' = Ptr v \<and> rv' \<noteq> NULL"
                and xf'="poolPtr_'" in ccorres_split_nothrow)
-       apply (rule_tac P="invs' and K (asid < 2 ^ 12)"
+       apply (rule_tac P="invs' and K (asid_wf asid)"
                    and P'=UNIV in ccorres_from_vcg)
        apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: simpler_gets_def Let_def)
-       apply (erule(1) getKSASIDTable_ccorres_stuff)
-        apply (simp add: asid_high_bits_of_def
-                         asidLowBits_def Kernel_C.asidLowBits_def
-                         asid_low_bits_def unat_ucast)
-        apply (rule sym, rule Divides.mod_less, simp)
-        apply (rule unat_less_power[where sz=3, simplified])
-         apply (simp add: word_bits_conv)
-        apply (rule shiftr_less_t2n[where m=3, simplified])
-        apply simp
-       apply (rule order_less_le_trans, rule ucast_less)
-        apply simp
-       apply (simp add: asid_high_bits_def)
+       apply (clarsimp simp: simpler_gets_def Let_def ucast_asid_high_bits_is_shift)
+       apply (erule(1) getKSASIDTable_ccorres_stuff, rule refl)
+       apply (simp add: asid_wf_table_guard asid_high_bits_def)
       apply ceqv
      apply wpc
-      apply (simp add: ccorres_cond_iffs dc_def[symmetric]
-                       Collect_False
-                  del: Collect_const
-                 cong: call_ignore_cong)
-      apply (rule ccorres_return_Skip)
-     apply (clarsimp simp: dc_def[symmetric] when_def
-                           Collect_True liftM_def
-                     cong: conj_cong call_ignore_cong
-                      del: Collect_const)
+      apply simp
+      apply (rule ccorres_from_vcg[where P="\<top>" and P'=UNIV])
+      apply (rule allI, rule conseqPre, vcg)
+      apply (simp add: return_def)
+     apply (clarsimp simp: dc_def[symmetric] when_def liftM_def
+                     cong: conj_cong call_ignore_cong)
+     apply (rename_tac asidTable ap)
+     apply csymbr
      apply ccorres_rewrite
-     apply (rule ccorres_rhs_assoc)+
      apply (rule ccorres_pre_getObject_asidpool)
-     apply (rule ccorres_Guard_Seq[where F=ArrayBounds])
      apply (rule ccorres_move_c_guard_ap)
-     apply (rule ccorres_Guard_Seq)+
      apply (rename_tac pool)
-     apply (rule ccorres_rhs_assoc2)
-     apply (rule ccorres_rhs_assoc2)
-     apply (rule ccorres_rhs_assoc2)
      apply (rule_tac xf'=ret__int_'
-                 and val="from_bool (inv ASIDPool pool (ucast (asid_low_bits_of asid))
-                                            = Some vs)"
-                   and R="ko_at' pool x2 and K (vs \<noteq> 0)"
+                 and val="from_bool (inv ASIDPool pool (asid && mask asid_low_bits) = Some vs)"
+                   and R="ko_at' pool ap and K (vs \<noteq> 0)"
                 in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
         apply (vcg, clarsimp)
         apply (clarsimp dest!: rf_sr_cpspace_asidpool_relation)
         apply (erule(1) cmap_relation_ko_atE)
         apply (clarsimp simp: typ_heap_simps casid_pool_relation_def
                               array_relation_def asid_low_bits_of_mask_eq
+                        simp flip: mask_2pm1
                        split: asidpool.split_asm asid_pool_C.split_asm)
         apply (drule_tac x="asid && mask asid_low_bits" in spec)
-        apply (simp add: asid_low_bits_def Kernel_C.asidLowBits_def
-                         mask_def word_and_le1 asid_map_relation_def)
-        apply (rule conjI, fastforce simp: asid_map_lifts from_bool_def case_bool_If inv_ASIDPool)
-        apply (fastforce simp: from_bool_def case_bool_If inv_ASIDPool asid_map_lift_def
-                       split: option.split_asm asid_map_CL.split_asm if_split_asm)
+        apply (clarsimp simp: word_and_le1 from_bool_def case_bool_If inv_ASIDPool)
+        apply (fastforce simp: option_to_ptr_def option_to_0_def split: if_splits option.splits)
        apply ceqv
       apply (rule ccorres_cond2[where R=\<top>])
         apply (simp add: Collect_const_mem from_bool_0)
        apply (rule ccorres_rhs_assoc)+
-        apply (ctac (no_vcg) add: hwASIDInvalidate_ccorres)
-        apply csymbr
-         apply (rule ccorres_Guard_Seq[where F=ArrayBounds])
+        apply (ctac (no_vcg) add: hwASIDFlush_ccorres)
          apply (rule ccorres_move_c_guard_ap)
-         apply (rule ccorres_Guard_Seq)+
          apply (rule ccorres_split_nothrow_novcg_dc)
-            apply (rule_tac P="ko_at' pool x2" in ccorres_from_vcg[where P'=UNIV])
+            apply (rule_tac P="ko_at' pool ap" in ccorres_from_vcg[where P'=UNIV])
             apply (rule allI, rule conseqPre, vcg)
             apply clarsimp
             apply (rule cmap_relationE1[OF rf_sr_cpspace_asidpool_relation],
                    assumption, erule ko_at_projectKO_opt)
             apply (rule bexI [OF _ setObject_eq],
-                   simp_all add: objBits_simps archObjSize_def pageBits_def)[1]
+                   simp_all add: objBits_simps pageBits_def)[1]
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def typ_heap_simps)
             apply (rule conjI)
              apply (clarsimp simp: cpspace_relation_def typ_heap_simps'
@@ -1147,11 +1123,9 @@ lemma deleteASID_ccorres:
                        split: asidpool.split_asm asid_pool_C.split_asm)
              apply (erule array_relation_update)
                subgoal by (simp add: mask_def asid_low_bits_of_mask_eq)
-              subgoal by (clarsimp dest!: asid_map_lift_asid_map_none simp: asid_map_relation_def)
+              subgoal by (clarsimp)
              subgoal by (simp add: asid_low_bits_def)
             subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
-                                  fpu_null_state_heap_update_tag_disj_simps
-                                  global_ioport_bitmap_heap_update_tag_disj_simps
                                   carch_globals_def update_asidpool_map_tos)
            apply (rule ccorres_pre_getCurThread)
            apply (ctac add: setVMRoot_ccorres)
@@ -1162,32 +1136,16 @@ lemma deleteASID_ccorres:
                                cstate_relation_def Let_def)
         apply wp
       apply (rule ccorres_return_Skip)
-     subgoal by (clarsimp simp: guard_is_UNIV_def Collect_const_mem
-                           word_sle_def word_sless_def
-                           Kernel_C.asidLowBits_def
-                           asid_low_bits_def order_le_less_trans [OF word_and_le1])
+     apply (solves \<open>clarsimp simp: Collect_const_mem guard_is_UNIV_def\<close>)
     apply wp
    apply vcg
-  apply (clarsimp simp: Collect_const_mem if_1_0_0
-                        word_sless_def word_sle_def
-                        Kernel_C.asidLowBits_def
-                        typ_at_to_obj_at_arches)
+  apply clarsimp
   apply (rule conjI)
-   apply (clarsimp simp: mask_def inv_ASIDPool
-                  split: asidpool.split)
-   apply (frule obj_at_valid_objs', clarsimp+)
-   apply (clarsimp simp: asid_bits_def typ_at_to_obj_at_arches
-                         obj_at'_weakenE[OF _ TrueI]
-                         fun_upd_def[symmetric] valid_obj'_def
-                         projectKOs
-                         invs_cur')
-   apply (rule conjI, blast)
-   subgoal by (fastforce simp: inv_into_def ran_def  split: if_split_asm)
-  by (clarsimp simp: order_le_less_trans [OF word_and_le1]
-                        asid_shiftr_low_bits_less asid_bits_def mask_def
-                        plus_one_helper arg_cong[where f="\<lambda>x. 2 ^ x", OF meta_eq_to_obj_eq, OF asid_low_bits_def]
-                 split: option.split_asm)
-  *)
+   apply clarsimp
+   apply (frule obj_at_valid_objs'; clarsimp)
+   apply (clarsimp simp: typ_at_to_obj_at_arches obj_at'_weakenE[OF _ TrueI])
+  apply (simp add: asid_wf_table_guard)
+  done
 
 lemma setObject_ccorres_lemma:
   fixes val :: "'a :: pspace_storable" shows
