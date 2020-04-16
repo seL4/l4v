@@ -923,7 +923,7 @@ lemma getMessageInfo_ccorres':
   apply (clarsimp simp: typ_heap_simps RISCV64_H.msgInfoRegister_def RISCV64.msgInfoRegister_def
     Kernel_C.msgInfoRegister_def Kernel_C.a1_def  dest!: c_guard_clift)
   done
-find_names Kernel_C.a1_def
+
 lemma replyFromKernel_success_empty_ccorres [corres]:
   "ccorres dc xfdc \<top> (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
      (replyFromKernel thread (0, []))
@@ -1474,22 +1474,15 @@ lemma user_getreg_rv:
   apply (clarsimp simp: obj_at'_def projectKOs getRegister_def in_monad atcbContextGet_def)
   done
 
-(* FIXME RISCV: currently not true, on X64 we saved FaultIP,SP,Flags,
-   while on RISCV64 EXCEPTION_MESSAGE is FaultIP,SP,?,Exception_Number,
-   i.e. for index n=2 this won't hold, and we don't even look at n=3 because n_exceptionMessage=3
-*)
 lemma exceptionMessage_ccorres:
   "n < unat n_exceptionMessage
       \<Longrightarrow> register_from_H (RISCV64_H.exceptionMessage ! n)
              = index exceptionMessageC n"
   apply (simp add: exceptionMessageC_def RISCV64_H.exceptionMessage_def
                    RISCV64.exceptionMessage_def MessageID_Exception_def)
-  sorry
-(* FIXME RISCV
   by (simp add: Arrays.update_def n_exceptionMessage_def fcp_beta nth_Cons'
                 fupdate_def C_register_defs
          split: if_split) (* long *)
-*)
 
 lemma asUser_obj_at_elsewhere:
   "\<lbrace>obj_at' (P :: tcb \<Rightarrow> bool) t' and (\<lambda>_. t \<noteq> t')\<rbrace> asUser t m \<lbrace>\<lambda>rv. obj_at' P t'\<rbrace>"
@@ -1507,13 +1500,13 @@ lemma copyMRsFault_ccorres_exception:
   "ccorres dc xfdc
            (valid_pspace'
              and obj_at' (\<lambda>tcb. map (user_regs (atcbContext (tcbArch tcb))) exceptionMessage = msg) sender
-             and K (length msg = 3)
+             and K (length msg = 2)
              and K (recvBuffer \<noteq> Some 0)
              and K (sender \<noteq> receiver))
            (UNIV \<inter> \<lbrace>\<acute>sender = tcb_ptr_to_ctcb_ptr sender\<rbrace>
                  \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr receiver\<rbrace>
                  \<inter> \<lbrace>\<acute>receiveIPCBuffer = Ptr (option_to_0 recvBuffer)\<rbrace>
-                 \<inter> \<lbrace> \<acute>length___unsigned_long = 3 \<rbrace>
+                 \<inter> \<lbrace> \<acute>length___unsigned_long = 2 \<rbrace>
                  \<inter> \<lbrace> \<acute>id___anonymous_enum = MessageID_Exception \<rbrace>)
            hs
            (mapM_x (\<lambda>(x, y). setMR receiver recvBuffer x y) (zip [0..<120] msg))
