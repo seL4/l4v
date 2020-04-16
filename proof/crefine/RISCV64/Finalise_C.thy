@@ -399,7 +399,7 @@ lemma cancelAllIPC_ccorres:
      apply (rule cmap_relationE1[OF cmap_relation_ep], assumption)
       apply (erule ko_at_projectKO_opt)
      apply (frule obj_at_valid_objs', clarsimp+)
-     apply (clarsimp simp: projectKOs valid_obj'_def valid_ep'_def)
+     apply (clarsimp simp: valid_obj'_def valid_ep'_def)
      subgoal by (auto simp: typ_heap_simps cendpoint_relation_def
                        Let_def tcb_queue_relation'_def
                        invs_valid_objs' valid_objs'_maxDomain valid_objs'_maxPriority
@@ -487,7 +487,7 @@ lemma cancelAllSignals_ccorres:
      apply (rule cmap_relationE1[OF cmap_relation_ntfn], assumption)
       apply (erule ko_at_projectKO_opt)
      apply (frule obj_at_valid_objs', clarsimp+)
-     apply (clarsimp simp add: valid_obj'_def valid_ntfn'_def projectKOs)
+     apply (clarsimp simp add: valid_obj'_def valid_ntfn'_def)
      subgoal by (auto simp: typ_heap_simps cnotification_relation_def
                        Let_def tcb_queue_relation'_def
                        invs_valid_objs' valid_objs'_maxDomain valid_objs'_maxPriority
@@ -733,13 +733,11 @@ lemma doUnbindNotification_ccorres:
       apply simp
       apply (erule(1) rf_sr_tcb_update_no_queue2)
               apply (simp add: typ_heap_simps')+
-  sorry (* FIXME RISCV
-       apply (simp add: tcb_cte_cases_def)
+       apply (simp add: tcb_cte_cases_def cteSizeBits_def)
       apply (simp add: ctcb_relation_def option_to_ptr_def option_to_0_def)
      apply (simp add: invs'_def valid_state'_def)
      apply (wp get_ntfn_ko' | simp add: guard_is_UNIV_def)+
   done
-  *)
 
 lemma doUnbindNotification_ccorres':
   "ccorres dc xfdc (invs' and tcb_at' tcb and ko_at' ntfn ntfnptr)
@@ -785,13 +783,11 @@ lemma doUnbindNotification_ccorres':
       apply simp
       apply (erule(1) rf_sr_tcb_update_no_queue2)
               apply (simp add: typ_heap_simps')+
-  sorry (* FIXME RISCV
-       apply (simp add: tcb_cte_cases_def)
+        apply (simp add: tcb_cte_cases_def cteSizeBits_def)
       apply (simp add: ctcb_relation_def option_to_ptr_def option_to_0_def)
      apply (simp add: invs'_def valid_state'_def)
      apply (wp get_ntfn_ko' | simp add: guard_is_UNIV_def)+
   done
-  *)
 
 
 lemma unbindNotification_ccorres:
@@ -809,9 +805,8 @@ lemma unbindNotification_ccorres:
        apply (drule obj_at_ko_at', clarsimp)
        apply (drule spec, drule(1) mp, clarsimp)
        apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
-       apply (drule(1) ko_at_valid_objs', simp add: projectKOs)
-       apply (clarsimp simp: option_to_ptr_def option_to_0_def projectKOs
-                             valid_obj'_def valid_tcb'_def)
+       apply (drule(1) ko_at_valid_objs', simp)
+       apply (clarsimp simp: option_to_ptr_def option_to_0_def valid_obj'_def valid_tcb'_def)
       apply ceqv
      apply simp
      apply wpc
@@ -860,12 +855,10 @@ lemma unbindMaybeNotification_ccorres:
    apply (wp getNotification_wp)
   apply (clarsimp )
   apply (frule (1) ko_at_valid_ntfn'[OF _ invs_valid_objs'])
-  by (auto simp: valid_ntfn'_def valid_bound_tcb'_def obj_at'_def projectKOs
+  by (auto simp: valid_ntfn'_def valid_bound_tcb'_def obj_at'_def
                       objBitsKO_def is_aligned_def option_to_ctcb_ptr_def tcb_at_not_NULL
              split: ntfn.splits)
 
-(* FIXME RISCV: this definition needs to be reviewed, see sorry in finaliseCap_ccorres and
-   the return relation of deletingIRQHandler_ccorres *)
 (* TODO: move *)
 definition
   irq_opt_relation_def:
@@ -988,8 +981,7 @@ lemma finaliseCap_True_cases_ccorres:
   apply (rule TrueI conjI impI TrueI)+
    apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def isNotificationCap_def
-                         isEndpointCap_def valid_obj'_def projectKOs valid_ntfn'_def
-                         valid_bound_tcb'_def
+                         isEndpointCap_def valid_obj'_def valid_ntfn'_def valid_bound_tcb'_def
                   dest!: obj_at_valid_objs')
   apply clarsimp
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
@@ -1019,82 +1011,47 @@ lemma invs'_invs_no_cicd':
   "invs' s \<longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
   by (simp add: invs'_invs_no_cicd)
 
-lemma ucast_asid_high_bits_is_shift':
-  "asid \<le> mask asid_bits \<Longrightarrow> ucast (asid_high_bits_of (UCAST (machine_word_len \<rightarrow> asid_len) asid)) = (asid >> asid_low_bits)"
-  apply (simp add: asid_high_bits_of_def)
-  apply (subst ucast_ucast_mask2; (simp add: is_down)?)
-  apply (subst mask_eq_ucast_shiftr)
-   apply (simp add: asid_bits_def)
-  subgoal sorry
-  apply (simp add: asid_low_bits_def asid_bits_def)
-  sorry (* FIXME RISCV: looks ok, but proof is fiddly, and currently unused *)
-
 lemma deleteASIDPool_ccorres:
-  "ccorres dc xfdc (invs' and (\<lambda>_. base < 2 ^ asid_bits \<and> pool \<noteq> 0))
+  "ccorres dc xfdc (invs' and (\<lambda>_. asid_wf base \<and> pool \<noteq> 0))
       (UNIV \<inter> {s. asid_base_' s = base} \<inter> {s. pool_' s = Ptr pool}) []
       (deleteASIDPool base pool) (Call deleteASIDPool_'proc)"
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_base_' pool_' simp: whileAnno_def)
    apply (rule ccorres_assert)
-   apply (clarsimp simp: liftM_def dc_def[symmetric] fun_upd_def[symmetric]
-                         when_def
-               simp del: Collect_const)
+   apply (clarsimp simp: liftM_def dc_def[symmetric] when_def)
    apply (rule ccorres_Guard)+
    apply (rule ccorres_pre_gets_riscvKSASIDTable_ksArchState)
    apply (rule_tac R="\<lambda>s. rv = riscvKSASIDTable (ksArchState s)" in ccorres_cond2)
      apply clarsimp
      apply (subst rf_sr_riscvKSASIDTable, assumption)
-      apply (simp add: asid_high_bits_word_bits)
+      apply (simp add: asid_high_bits_word_bits asid_wf_def mask_def)
       apply (rule shiftr_less_t2n)
-      apply_trace (simp add: asid_low_bits_def asid_high_bits_def)
-  sorry (* FIXME RISCV
-     apply (subst ucast_asid_high_bits_is_shift')
-      apply (simp add: mask_def, simp add: asid_bits_def)
+      apply (simp add: asid_low_bits_def asid_high_bits_def asid_bits_def)
+     apply (subst ucast_asid_high_bits_is_shift, assumption)
      apply (simp add: option_to_ptr_def option_to_0_def split: option.split)
-     apply (subst ucast_asid_high_bits_is_shift')
-      apply (simp add: mask_def, simp add: asid_bits_def)
     apply (rule ccorres_Guard_Seq ccorres_rhs_assoc)+
     apply (rule ccorres_pre_getObject_asidpool)
     apply (rename_tac poolKO)
-      apply (rule ccorres_move_const_guard)+
-      apply (rule ccorres_split_nothrow_novcg_dc)
-         apply (rule_tac P="\<lambda>s. rv = riscvKSASIDTable (ksArchState s)"
-                      in ccorres_from_vcg[where P'=UNIV])
-         apply (rule allI, rule conseqPre, vcg)
-         apply (clarsimp simp: simpler_modify_def)
-         apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                               carch_state_relation_def cmachine_state_relation_def
-                               carch_globals_def h_t_valid_clift_Some_iff)
-         apply (erule array_relation_update[unfolded fun_upd_def])
-           apply (simp add: asid_high_bits_of_def unat_ucast asid_low_bits_def)
-           apply (rule sym, rule nat_mod_eq')
-           apply (rule order_less_le_trans, rule iffD1[OF word_less_nat_alt])
-            apply (rule shiftr_less_t2n[where m=3])
-            subgoal by simp
-           subgoal by simp
-          subgoal by (simp add: option_to_ptr_def option_to_0_def)
-         subgoal by (simp add: asid_high_bits_def)
-        apply (rule ccorres_pre_getCurThread)
-        apply (ctac add: setVMRoot_ccorres)
-       apply wp
-      apply (simp add: guard_is_UNIV_def)
-     apply (simp add: pred_conj_def fun_upd_def[symmetric]
-                      cur_tcb'_def[symmetric])
-     apply (strengthen invs'_invs_no_cicd', strengthen invs_asid_update_strg')
-     apply (rule mapM_x_wp')
-     apply (rule hoare_pre, wp)
-     apply simp
-    apply (simp add: guard_is_UNIV_def Kernel_C.asidLowBits_def
-                     word_sle_def word_sless_def Collect_const_mem
-                     mask_def asid_bits_def plus_one_helper
-                     asid_shiftr_low_bits_less)
+    apply (rule ccorres_split_nothrow_novcg_dc)
+       apply (rule_tac P="\<lambda>s. rv = riscvKSASIDTable (ksArchState s)"
+                    in ccorres_from_vcg[where P'=UNIV])
+       apply (rule allI, rule conseqPre, vcg)
+       apply (clarsimp simp: simpler_modify_def)
+       apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def ucast_asid_high_bits_is_shift
+                             carch_state_relation_def cmachine_state_relation_def
+                             carch_globals_def h_t_valid_clift_Some_iff riscvKSGlobalPT_def)
+       apply (erule array_relation_update[unfolded fun_upd_def], rule refl)
+        subgoal by (simp add: option_to_ptr_def option_to_0_def)
+       subgoal by (simp add: asid_high_bits_def)
+      apply (rule ccorres_pre_getCurThread)
+      apply (ctac add: setVMRoot_ccorres)
+     apply wp
+    apply (simp add: guard_is_UNIV_def)
    apply (rule ccorres_return_Skip)
-  apply (simp add: Kernel_C.asidLowBits_def
-                   word_sle_def word_sless_def)
-  apply (auto simp: asid_shiftr_low_bits_less Collect_const_mem
-                    mask_def asid_bits_def plus_one_helper)
+  apply (clarsimp simp: asid_wf_table_guard simp flip: fun_upd_def)
+  apply (strengthen invs'_invs_no_cicd', strengthen invs_asid_update_strg')
+  apply auto
   done
-  *)
 
 
 lemma deleteASID_ccorres:
@@ -1235,7 +1192,7 @@ lemma deleteASID_ccorres:
 lemma setObject_ccorres_lemma:
   fixes val :: "'a :: pspace_storable" shows
   "\<lbrakk> \<And>s. \<Gamma> \<turnstile> (Q s) c {s'. (s \<lparr> ksPSpace := ksPSpace s (ptr \<mapsto> injectKO val) \<rparr>, s') \<in> rf_sr},{};
-     \<And>s s' val (val' :: 'a). \<lbrakk> ko_at' val' ptr s; (s, s') \<in> rf_sr \<rbrakk>
+     \<And>s s' val'::'a. \<lbrakk> ko_at' val' ptr s; (s, s') \<in> rf_sr \<rbrakk>
            \<Longrightarrow> s' \<in> Q s;
      \<And>val :: 'a. updateObject val = updateObject_default val;
      \<And>val :: 'a. (1 :: machine_word) < 2 ^ objBits val;
@@ -1272,17 +1229,6 @@ lemma findVSpaceForASID_nonzero:
   "\<lbrace>\<top>\<rbrace> findVSpaceForASID asid \<lbrace>\<lambda>rv s. rv \<noteq> 0\<rbrace>,-"
   apply (simp add: findVSpaceForASID_def cong: option.case_cong)
   apply (wp | wpc | simp only: o_def simp_thms)+
-  done
-
-lemma unat_shiftr_le_bound:
-  "2 ^ (len_of TYPE('a :: len) - n) - 1 \<le> bnd \<Longrightarrow> 0 < n
-    \<Longrightarrow> unat ((x :: 'a word) >> n) \<le> bnd"
-  apply (erule order_trans[rotated], simp)
-  apply (rule nat_le_Suc_less_imp)
-  apply (rule unat_less_helper, simp)
-  apply (rule shiftr_less_t2n3)
-   apply simp
-  apply simp
   done
 
 lemma unmapPageTable_ccorres:
@@ -1587,29 +1533,18 @@ lemma Zombie_new_spec:
 
 lemmas upcast_ucast_id = Word_Lemmas.ucast_up_inj
 
-(* FIXME RISCV not true as stands
 lemma irq_opt_relation_Some_ucast:
-  "\<lbrakk> x && mask 6 = x;
+  "\<lbrakk> x && mask 6 = x; ucast x \<noteq> irqInvalid;
     ucast x \<le> (scast Kernel_C.maxIRQ :: 6 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
-   \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast ((ucast x):: 6 word))"
+   \<Longrightarrow> irq_opt_relation (Some (ucast x)) x"
   unfolding irq_opt_relation_def
   apply simp
-
   using ucast_ucast_mask[where x=x and 'a=6, symmetric]
   apply (simp add: irq_opt_relation_def)
-  apply (rule conjI, clarsimp simp: irqInvalid_def Kernel_C.maxIRQ_def)
+  apply (clarsimp simp: irqInvalid_def Kernel_C.maxIRQ_def)
   apply (simp only: unat_arith_simps )
   apply (clarsimp simp: word_le_nat_alt Kernel_C.maxIRQ_def)
   done
-
-lemma irq_opt_relation_Some_ucast':
-  "\<lbrakk> x && mask 6 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: 6 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
-    \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast x)"
-  apply (rule_tac P = "%y. irq_opt_relation (Some (ucast x)) y" in subst[rotated])
-  apply (rule irq_opt_relation_Some_ucast[rotated])
-    apply (simp add: ucast_ucast_mask)+
-  done
-*)
 
 lemma ccap_relation_IRQHandler_mask:
   "\<lbrakk> ccap_relation acap ccap; isIRQHandlerCap acap \<rbrakk>
@@ -1630,23 +1565,16 @@ lemma option_to_ctcb_ptr_not_0:
   done
 
 lemma update_tcb_map_to_tcb:
-  "map_to_tcbs (ksPSpace s(p \<mapsto> KOTCB tcb))
-             = (map_to_tcbs (ksPSpace s))(p \<mapsto> tcb)"
-  by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
+  "map_to_tcbs (ksPSpace s(p \<mapsto> KOTCB tcb)) = (map_to_tcbs (ksPSpace s))(p \<mapsto> tcb)"
+  by (rule ext, clarsimp simp: map_comp_def split: if_split)
 
 lemma ep_queue_relation_shift2:
-  "(option_map2 tcbEPNext_C (f (cslift s))
-         = option_map2 tcbEPNext_C (cslift s)
-    \<and> option_map2 tcbEPPrev_C (f (cslift s))
-         = option_map2 tcbEPPrev_C (cslift s))
+  "(option_map2 tcbEPNext_C (f (cslift s)) = option_map2 tcbEPNext_C (cslift s)
+    \<and> option_map2 tcbEPPrev_C (f (cslift s)) = option_map2 tcbEPPrev_C (cslift s))
      \<Longrightarrow> ep_queue_relation (f (cslift s)) ts qPrev qHead
           = ep_queue_relation (cslift s) ts qPrev qHead"
-  apply clarsimp
-  apply (induct ts arbitrary: qPrev qHead)
-   apply simp
-  apply simp
-  apply (simp add: option_map2_def fun_eq_iff
-                   map_option_case)
+  apply (induct ts arbitrary: qPrev qHead; clarsimp)
+  apply (simp add: option_map2_def fun_eq_iff map_option_case)
   apply (drule_tac x=qHead in spec)+
   apply (clarsimp split: option.split_asm)
   done
@@ -1658,10 +1586,7 @@ lemma sched_queue_relation_shift:
          = option_map2 tcbSchedPrev_C (cslift s))
      \<Longrightarrow>  sched_queue_relation (f (cslift s)) ts qPrev qHead
           =  sched_queue_relation (cslift s) ts qPrev qHead"
-  apply clarsimp
-  apply (induct ts arbitrary: qPrev qHead)
-   apply simp
-  apply simp
+  apply (induct ts arbitrary: qPrev qHead; clarsimp)
   apply (simp add: option_map2_def fun_eq_iff
                    map_option_case)
   apply (drule_tac x=qHead in spec)+
@@ -2010,8 +1935,8 @@ lemma finaliseCap_ccorres:
    apply csymbr
    apply (simp del: Collect_const)
    apply (rule ccorres_Cond_rhs_Seq)
-    apply (clarsimp simp: cap_get_tag_isCap isCap_simps from_bool_neq_0
-                    cong: if_cong simp del: Collect_const)
+    apply (clarsimp simp: cap_get_tag_isCap isCap_simps
+                    cong: if_cong)
     apply (clarsimp simp: word_sle_def)
     apply (rule ccorres_if_lhs)
      apply (rule ccorres_fail)
@@ -2169,33 +2094,22 @@ lemma finaliseCap_ccorres:
           apply (clarsimp simp: isCap_simps valid_cap'_def )
          apply clarsimp
         apply (clarsimp simp: isCap_simps valid_cap'_def )
-      apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def ccap_relation_def isCap_simps
-                            c_valid_cap_def cap_thread_cap_lift_def cap_to_H_def
-                            ctcb_ptr_to_tcb_ptr_def Let_def
-                   split: option.splits cap_CL.splits if_splits)
-     apply clarsimp
-     apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
-     apply (clarsimp simp: isCap_simps from_bool_def false_def)
-    apply (clarsimp simp: tcb_cnode_index_defs ptr_add_assertion_def)
-   apply clarsimp
-   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
-   apply (frule(1) ccap_relation_IRQHandler_mask)
-   apply (clarsimp simp: isCap_simps irqInvalid_def
-                      valid_cap'_def RISCV64.maxIRQ_def
-                      Kernel_C.maxIRQ_def)
-    subgoal sorry
-    (* FIXME RISCV: we cannot show here that the IRQ is not equal to irqInvalid, which is what
-       would be required given the definition of irq_opt_relation; on X64 being \<le> maxIRQ
-       automatically disqualified irqInvalid as it was greater than maxIRQ; on RISCV irqInvalid
-       is 0. However, valid_cap' does not prevent the irq from being irqInvalid in an irq handler
-       cap.
-    apply (rule irq_opt_relation_Some_ucast'[simplified Kernel_C.maxIRQ_def, simplified])
-     apply fastforce
-    *)
-    apply simp
-    apply (clarsimp simp: isCap_simps irqInvalid_def
-                      valid_cap'_def RISCV64.maxIRQ_def
-                      Kernel_C.maxIRQ_def)
+       apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def ccap_relation_def isCap_simps
+                             c_valid_cap_def cap_thread_cap_lift_def cap_to_H_def
+                             ctcb_ptr_to_tcb_ptr_def Let_def
+                    split: option.splits cap_CL.splits if_splits)
+      apply clarsimp
+      apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
+      apply (clarsimp simp: isCap_simps from_bool_def false_def)
+     apply (clarsimp simp: tcb_cnode_index_defs ptr_add_assertion_def)
+    apply clarsimp
+    apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
+    apply (frule(1) ccap_relation_IRQHandler_mask)
+    apply (clarsimp simp: isCap_simps irqInvalid_def valid_cap'_def)
+    apply (rule irq_opt_relation_Some_ucast)
+      apply fastforce
+     apply (simp add: irqInvalid_def)
+    apply (simp add: Kernel_C.maxIRQ_def maxIRQ_def)
    apply fastforce
   apply clarsimp
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
