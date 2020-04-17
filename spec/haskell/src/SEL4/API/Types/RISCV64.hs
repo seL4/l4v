@@ -21,9 +21,9 @@ import Data.WordLib(wordSizeCase)
 
 data ObjectType
     = APIObjectType APIObjectType
+    | HugePageObject
     | SmallPageObject
     | LargePageObject
-    | HugePageObject
     | PageTableObject
     deriving (Show, Eq)
 
