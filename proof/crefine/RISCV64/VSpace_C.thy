@@ -738,6 +738,17 @@ lemma kpptr_to_paddr_spec:
                    RISCV64.kernelELFBase_def RISCV64.paddrLoad_def)
   done
 
+(* FIXME RISCV: move up *)
+lemma will_throw_and_catch:
+  "f = throw e \<Longrightarrow> (f <catch> (\<lambda>_. g)) = g"
+  by (simp add: catch_def throwError_def)
+
+lemma isValidVTableRoot_def2:
+  "isValidVTableRoot cap =
+   (\<exists>pt asid vref. cap = ArchObjectCap (PageTableCap pt (Some (asid,vref))))"
+  unfolding isValidVTableRoot_def
+  by (auto split: capability.splits arch_capability.splits option.splits)
+
 lemma setVMRoot_ccorres:
   "ccorres dc xfdc
       (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' thread)
@@ -748,87 +759,69 @@ lemma setVMRoot_ccorres:
    apply (rule ccorres_move_array_assertion_tcb_ctes)
    apply (rule ccorres_move_c_guard_tcb_ctes)
    apply (simp add: getThreadVSpaceRoot_def locateSlot_conv bit_simps asid_bits_def)
-   sorry (* FIXME RISCV: many changes from X64
    apply (ctac, rename_tac vRootCap vRootCap')
+     apply (rule ccorres_assert2)
      apply (csymbr, rename_tac vRootTag)
-     apply csymbr
      apply (simp add: cap_get_tag_isCap_ArchObject2)
      apply (rule ccorres_Cond_rhs_Seq)
-      apply (simp add: throwError_def catch_def dc_def[symmetric])
-      apply (rule ccorres_cond_true_seq, ccorres_rewrite)
-      apply (rule ccorres_rhs_assoc)
-      apply (rule ccorres_h_t_valid_x64KSSKIMPML4)
+      apply (subst will_throw_and_catch)
+       apply (simp split: capability.split arch_capability.split option.split)
+       apply (fastforce simp: isCap_simps)
+      apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState[unfolded o_def])
+      apply (rule ccorres_rhs_assoc)+
+      apply (rule ccorres_h_t_valid_riscvKSGlobalPT)
       apply csymbr
-      apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState[unfolded comp_def])
-      apply (rule ccorres_add_return2)
-      apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
-       apply (rule ccorres_return_void_C)
-      apply (rule hoare_post_taut[where P=\<top>])
-     apply (rule ccorres_rhs_assoc)
-     apply (csymbr, rename_tac is_mapped)
-     apply csymbr
-     apply (rule_tac P="to_bool (capPML4IsMapped_CL (cap_pml4_cap_lift vRootCap'))
-                              = (capPML4MappedASID (capCap vRootCap) \<noteq> None)"
-                  in ccorres_gen_asm2)
-     apply (clarsimp simp: to_bool_def dc_def[symmetric])
-     apply (rule ccorres_Cond_rhs_Seq)
-      apply (simp add: throwError_def catch_def dc_def[symmetric], ccorres_rewrite)
-      apply (rule ccorres_rhs_assoc)
-      apply (rule ccorres_h_t_valid_x64KSSKIMPML4)
-      apply csymbr
-      apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState[unfolded comp_def])
-      apply (rule ccorres_add_return2)
-      apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
+      apply ccorres_rewrite
+      apply (subst bind_return_unit)
+      apply (ctac (no_vcg) add: setVSpaceRoot_ccorres)
+       apply (simp flip: dc_def)
        apply (rule ccorres_return_void_C)
       apply (rule hoare_post_taut[where P=\<top>])
      apply (simp add: catch_def bindE_bind_linearise bind_assoc liftE_def)
-     apply (csymbr, rename_tac pml4_ptr, csymbr)
-     apply (csymbr, rename_tac asid', csymbr)
+     apply csymbr
+     apply csymbr
+     apply csymbr
+     apply csymbr
+     apply simp
+     apply ((wpc; (solves \<open>clarsimp simp: isCap_simps isValidVTableRoot_def\<close>)?), simp)+
+     apply (simp add: catch_def bindE_bind_linearise bind_assoc liftE_def)
      apply (rule_tac f'=lookup_failure_rel
-                 and r'="\<lambda>pml4_ptr pml4_ptr'. pml4_ptr' = pml4e_Ptr pml4_ptr"
+                 and r'="\<lambda>pte_ptr pte_ptr'. pte_ptr' = pte_Ptr pte_ptr"
                  and xf'=find_ret_'
               in ccorres_split_nothrow_case_sum)
           apply (ctac add: findVSpaceForASID_ccorres)
          apply ceqv
         apply (rename_tac vspace vspace')
-        apply (rule_tac P="capPML4BasePtr_CL (cap_pml4_cap_lift vRootCap')
-                              = capPML4BasePtr (capCap vRootCap)"
+        apply (rule_tac P="capPTBasePtr_CL (cap_page_table_cap_lift vRootCap')
+                              = capPTBasePtr (capCap vRootCap)"
                      in ccorres_gen_asm2)
         apply simp
         apply (rule ccorres_Cond_rhs_Seq)
          apply (simp add: whenE_def throwError_def dc_def[symmetric], ccorres_rewrite)
          apply (rule ccorres_rhs_assoc)
-         apply (rule ccorres_h_t_valid_x64KSSKIMPML4)
+         apply (rule ccorres_h_t_valid_riscvKSGlobalPT)
          apply csymbr
-         apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState[unfolded comp_def])
+         apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState[unfolded comp_def])
          apply (rule ccorres_add_return2)
-         apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
+         apply (ctac (no_vcg) add: setVSpaceRoot_ccorres)
           apply (rule ccorres_return_void_C)
          apply (rule hoare_post_taut[where P=\<top>])
-        apply (simp add: whenE_def returnOk_def)
-        apply (csymbr, rename_tac base_addr)
-        apply (rule ccorres_symb_exec_r)
-          apply (ctac add: getCurrentUserCR3_ccorres, rename_tac currentCR3 currentCR3')
-            apply (rule ccorres_if_bind, rule ccorres_if_lhs; simp add: dc_def[symmetric])
-             apply (rule ccorres_cond_true)
-             apply (ctac add: setCurrentUserCR3_ccorres)
-            apply (rule ccorres_cond_false)
-            apply (rule ccorres_return_Skip)
-           apply (simp, rule hoare_post_taut[where P=\<top>])
-          apply vcg
-         apply vcg
-        apply (rule conseqPre, vcg, clarsimp)
+        apply (simp add: whenE_def returnOk_def flip: dc_def)
+        apply (csymbr)
+        apply (ctac (no_vcg) add: setVSpaceRoot_ccorres)
        apply (rule ccorres_cond_true_seq, simp add: dc_def[symmetric], ccorres_rewrite)
        apply (rule ccorres_rhs_assoc)
-       apply (rule ccorres_h_t_valid_x64KSSKIMPML4)
+       apply (rule ccorres_h_t_valid_riscvKSGlobalPT)
        apply csymbr
-       apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState[unfolded comp_def])
+       apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState[unfolded comp_def])
        apply (rule ccorres_add_return2)
-       apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
+       apply (ctac (no_vcg) add: setVSpaceRoot_ccorres)
         apply (rule ccorres_return_void_C)
        apply (rule hoare_post_taut[where P=\<top>])
-      apply (simp add: asid_wf_0, rule wp_post_tautE)
-     apply (vcg exspec=findVSpaceForASID_modifies)
+      apply (simp, rule wp_post_tautE)
+     apply clarsimp
+     apply (vcg)
+    apply (simp add: isCap_simps)
     apply (wpsimp wp: getSlotCap_wp)
    apply vcg
   apply (clarsimp simp: Collect_const_mem)
@@ -837,30 +830,18 @@ lemma setVMRoot_ccorres:
    apply (clarsimp simp: cte_level_bits_def tcbVTableSlot_def)
    apply (rule_tac x="cteCap cte" in exI)
    apply (rule conjI, erule cte_wp_at_weakenE', simp)
-   apply (clarsimp simp: invs_cicd_no_0_obj' invs_cicd_arch_state')
+   apply (clarsimp simp: invs_cicd_no_0_obj' invs_cicd_arch_state' isCap_simps)
    apply (frule cte_wp_at_valid_objs_valid_cap'; clarsimp simp: invs_cicd_valid_objs')
-   apply (clarsimp simp: isCap_simps valid_cap'_def mask_def asid_wf_def)
-  apply (clarsimp simp: tcb_cnode_index_defs cte_level_bits_def tcbVTableSlot_def
-                        cte_at_tcb_at_32' to_bool_def)
-  apply (clarsimp simp: cap_get_tag_isCap_ArchObject2
-                 dest!: isCapDs)
-  apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric]
-                        cap_lift_pml4_cap cap_to_H_def
-                        cap_pml4_cap_lift_def
-                        to_bool_def mask_def
-                        ccr3_relation_defs Let_def
-                        cr3_lift_def word_bw_assocs
+   apply (clarsimp simp: valid_cap'_def wellformed_mapdata'_def isValidVTableRoot_def2)
+  apply (clarsimp simp: tcb_cnode_index_defs cte_level_bits_def tcbVTableSlot_def)
+  apply (clarsimp simp: isCap_simps isValidVTableRoot_def2)
+  apply (clarsimp simp: cap_get_tag_isCap_ArchObject2)
+  by (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric]
+                        cap_lift_page_table_cap cap_to_H_def
+                        cap_page_table_cap_lift_def isCap_simps
+                        to_bool_def mask_def isZombieTCB_C_def Let_def
                  elim!: ccap_relationE
-                 split: if_split_asm X64_H.cr3.splits)
-  apply (rename_tac t t')
-  apply (rule conjI; clarsimp)
-   apply (drule_tac t="cr3_C.words_C (ret__struct_cr3_C_' t').[0]" in sym)
-   apply (simp add: word_bw_assocs)
-  apply (frule (1) word_combine_masks[where m="0x7FFFFFFFFF000" and m'="0xFFF"]; simp add: word_ao_dist2[symmetric])
-  apply (frule (1) word_combine_masks[where m="0x7FFFFFFFFFFFF" and m'="0x7FF8000000000000"]; simp)
-  apply (match premises in H: \<open>cr3_C.words_C _.[0] && _ = 0\<close> \<Rightarrow> \<open>insert H; word_bitwise\<close>)
-  done
-  *)
+                 split: if_split_asm cap_CL.splits)
 
 lemma ccorres_seq_IF_False:
   "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (IF False THEN x ELSE y FI ;; c) = ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (y ;; c)"
@@ -1669,6 +1650,106 @@ lemma canonical_address_page_table_at':
   apply (drule_tac x=0 in spec, clarsimp simp: bit_simps typ_at_to_obj_at_arches)
   apply (erule (1) obj_at'_is_canonical)
   done
+
+lemma page_table_at'_array_assertion:
+  assumes "(s,s') \<in> rf_sr"
+  assumes "page_table_at' pt s"
+  assumes "n \<le> 2^ptTranslationBits" "0 < n"
+  shows "array_assertion (pte_Ptr pt) n (hrs_htd (t_hrs_' (globals s')))"
+  using assms
+  by (fastforce simp: bit_simps
+                intro: array_assertion_abs_pt[where x="\<lambda>_. (1::nat)", simplified, rule_format])
+
+lemma page_table_at'_array_assertion_weak[unfolded ptTranslationBits_def, simplified]:
+  assumes "(s,s') \<in> rf_sr"
+  assumes "page_table_at' pt s"
+  assumes "n < 2^(ptTranslationBits-1)"
+  shows "array_assertion (pte_Ptr pt) ((unat (2^(ptTranslationBits-1) + of_nat n::machine_word)))
+                         (hrs_htd (t_hrs_' (globals s')))"
+  using assms
+  by (fastforce intro: page_table_at'_array_assertion
+                simp: unat_add_simple ptTranslationBits_def word_bits_def unat_of_nat)
+
+lemma page_table_at'_array_assertion_strong[unfolded ptTranslationBits_def, simplified]:
+  assumes "(s,s') \<in> rf_sr"
+  assumes "page_table_at' pt s"
+  assumes "n < 2^(ptTranslationBits-1)"
+  shows "array_assertion (pte_Ptr pt) (Suc (unat (2^(ptTranslationBits-1) + of_nat n::machine_word)))
+                         (hrs_htd (t_hrs_' (globals s')))"
+  using assms
+  using assms
+  by (fastforce intro: page_table_at'_array_assertion
+                simp: unat_add_simple ptTranslationBits_def word_bits_def unat_of_nat)
+
+lemma copyGlobalMappings_ccorres:
+  "ccorres dc xfdc
+           (page_table_at' pt and valid_arch_state')
+           (UNIV \<inter> {s. newLvl1pt_' s = Ptr pt}) []
+           (copyGlobalMappings pt) (Call copyGlobalMappings_'proc)"
+proof -
+  have ptIndex_maxPTLevel_pptrBase:
+    "ptIndex maxPTLevel RISCV64.pptrBase = 0x100"
+    by (simp add: ptIndex_def maxPTLevel_def ptBitsLeft_def pageBits_def ptTranslationBits_def
+                  RISCV64.pptrBase_def canonical_bit_def mask_def)
+  let ?enum = "\<lambda>n. [0x100.e.0x1FF::machine_word] ! n << 3"
+  have enum_rewrite:
+    "\<And>n. n < 256 \<Longrightarrow> ?enum n = 0x800 + of_nat n * 8"
+    by (auto simp: upto_enum_word_nth word_shiftl_add_distrib shiftl_t2n)
+  show ?thesis
+    apply (cinit lift: newLvl1pt_' simp: ptIndex_maxPTLevel_pptrBase ptTranslationBits_def)
+     apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState, rename_tac globalPT)
+     apply (rule ccorres_rel_imp[where r=dc, OF _ dc_simp])
+     apply (clarsimp simp: whileAnno_def objBits_simps bit_simps RISCV64.pptrBase_def mask_def)
+     apply (rule ccorres_h_t_valid_riscvKSGlobalPT)
+     apply csymbr
+     apply csymbr
+     apply clarsimp
+     apply (rule_tac F="\<lambda>n s. globalPT = riscvKSGlobalPT (ksArchState s) \<and> page_table_at' pt s \<and>
+                              page_table_at' globalPT s"
+                 and i="0x100"
+              in ccorres_mapM_x_while'
+            ; clarsimp simp: word_bits_def)
+       apply (rule ccorres_guard_imp2)
+        apply (rule ccorres_pre_getObject_pte, rename_tac pte)
+        apply (simp add: storePTE_def)
+        apply (rule_tac P="\<lambda>s. page_table_at' pt s \<and>
+                               page_table_at' (riscvKSGlobalPT (ksArchState s)) s \<and>
+                               ko_at' pte (riscvKSGlobalPT (ksArchState s) + ?enum n) s"
+                    and P'="\<lbrace>\<acute>i = 0x100 + of_nat n \<rbrace>"
+                 in setObject_ccorres_helper)
+          apply (rule conseqPre, vcg, clarsimp)
+          apply (prop_tac "(0x100::machine_word) + of_nat n \<noteq> 0")
+           apply unat_arith
+           apply (simp add: unat_of_nat)
+          apply clarsimp
+          apply (frule (2) page_table_at'_array_assertion_weak)
+          apply (frule (2) page_table_at'_array_assertion_strong)
+          apply (frule rf_sr_riscvKSGlobalPT, clarsimp)
+          apply (frule (2) page_table_at'_array_assertion_weak[where pt="symbol_table s" for s])
+          apply (frule (2) page_table_at'_array_assertion_strong[where pt="symbol_table s" for s])
+          apply simp
+          apply (rule cmap_relationE1[OF rf_sr_cpte_relation], assumption,
+                 erule_tac ko=ko' in ko_at_projectKO_opt)
+          apply (rule cmap_relationE1[OF rf_sr_cpte_relation], assumption,
+                 erule_tac ko=pte in ko_at_projectKO_opt)
+          apply (clarsimp simp: enum_rewrite typ_heap_simps' heap_access_Array_element)
+          apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+          apply (clarsimp simp: typ_heap_simps update_pte_map_tos)
+          apply (rule conjI)
+           apply (clarsimp simp: cpspace_relation_def typ_heap_simps
+                                 update_pte_map_tos update_pte_map_to_ptes
+                                 carray_map_relation_upd_triv)
+           subgoal by (erule (2) cmap_relation_updI; simp)
+          subgoal by (clarsimp simp: carch_state_relation_def cmachine_state_relation_def)
+         apply simp
+        apply (simp add: objBits_simps)
+       apply clarsimp
+      apply (rule conseqPre, vcg, clarsimp)
+     apply wp
+    apply (clarsimp simp: valid_arch_state'_def valid_global_pts'_def riscvKSGlobalPT_def)
+    apply (erule_tac x=maxPTLevel in allE, force)
+    done
+qed
 
 (* FIXME RISCV move *)
 definition
