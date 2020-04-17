@@ -399,19 +399,24 @@ lemma Arch_invokeIRQControl_ccorres:
       (UNIV \<inter> {s. irq_' s = ucast irq}
             \<inter> {s. handlerSlot_' s = cte_Ptr slot}
             \<inter> {s. controlSlot_' s = cte_Ptr parent}
+            \<inter> {s. trigger_' s = from_bool trigger}
             )
       hs
-      (do y <- setIRQState irqstate.IRQSignal irq;
+      (do y <- doMachineOp (setIRQTrigger irq trigger);
+          y <- setIRQState irqstate.IRQSignal irq;
           liftE (cteInsert (capability.IRQHandlerCap irq) parent slot)
        od)
       (Call Arch_invokeIRQControl_'proc)"
-  apply (cinit' lift: irq_' handlerSlot_' controlSlot_')
+  apply (cinit' lift: irq_' handlerSlot_' controlSlot_' trigger_')
+   apply clarsimp
+   apply (ctac (no_vcg) add: setIRQTrigger_ccorres)
     apply (rule ccorres_add_returnOk)
     apply (ctac add: invokeIRQControl_expanded_ccorres)
        apply (ctac add: ccorres_return_CE)
       apply (ctac add: ccorres_inst[where P=\<top> and P'=UNIV])
      apply wp
     apply (vcg exspec=invokeIRQControl_modifies)
+   apply wpsimp
   apply (fastforce simp: Kernel_C.maxIRQ_def maxIRQ_def)
   done
 

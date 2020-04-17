@@ -57,7 +57,7 @@ assumes ackInterrupt_ccorres:
            (Call ackInterrupt_'proc)"
 
 assumes setIRQTrigger_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>irq = ucast irq\<rbrace> \<inter> \<lbrace>\<acute>trigger = from_bool trigger\<rbrace>) []
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>irq = ucast irq\<rbrace> \<inter> \<lbrace>\<acute>edge_triggered = from_bool trigger\<rbrace>) []
            (doMachineOp (RISCV64.setIRQTrigger irq trigger))
            (Call setIRQTrigger_'proc)"
 
