@@ -2067,8 +2067,6 @@ lemma resetUntypedCap_ccorres:
              apply (erule is_aligned_weaken, simp)
             apply clarsimp
             apply (rule conseqPre, vcg exspec=preemptionPoint_modifies)
-  sorry (* FIXME RISCV: need to prove something about state t for which we don't know anything,
-                        meaning somewhere we lost info during the ccorres proof
             apply (clarsimp simp: in_set_conv_nth isCap_simps
                                   length_upto_enum_step upto_enum_step_nth
                                   less_Suc_eq_le getFreeRef_def
@@ -2213,7 +2211,6 @@ lemma resetUntypedCap_ccorres:
   by (clarsimp simp: order_trans[OF power_increasing[where a=2]]
                      addr_card_def card_word
                      is_aligned_weaken from_bool_0)
-  *)
 
 lemma ccorres_cross_retype_zero_bytes_over_guard:
   "range_cover ptr sz (APIType_capBits newType userSize) num_ret
@@ -2249,6 +2246,7 @@ lemma zero_bytes_heap_update:
   apply (simp add: Int_commute)
   done
 
+(* FIXME RISCV: awaiting spec update *)
 lemma invokeUntyped_def:
 "invokeUntyped x0\<equiv> (case x0 of
     (Retype srcSlot reset base retypeBase newType userSize destSlots isDev) \<Rightarrow>    (doE
@@ -2353,17 +2351,6 @@ lemma invokeUntyped_Retype_ccorres:
       "ptr_base = ptr && ~~ mask sz"
       using vui
       by (clarsimp simp: cte_wp_at_ctes_of)+
-
-(* FIXME RISCV RAF going via assertion
-    have canonical_ptr:
-      "canonical_address (ptr && ~~ mask sz)"
-      using vui misc
-      apply (clarsimp simp: cte_wp_at_ctes_of)
-      apply (frule Finalise_R.ctes_of_valid', clarsimp)
-thm valid_cap_simps'
-      apply (clarsimp simp: valid_cap_simps')
-      done
-*)
 
     have ptr_in_km:
       "(ptr && ~~ mask sz) \<in> kernel_mappings"
@@ -2883,9 +2870,7 @@ lemma Arch_isFrameType_spec:
   apply (auto simp: object_type_to_H_def isFrameType_def isFrameType_def
              split: if_splits object_type.splits)
   apply (auto simp: object_type_from_H_def )
-  sorry (* FIXME RISCV waiting on enum spec change
   done
-  *)
 
 lemma decodeUntypedInvocation_ccorres_helper:
   notes TripleSuc[simp]
@@ -3365,8 +3350,6 @@ lemma decodeUntypedInvocation_ccorres_helper:
                                    split: if_split)
                     apply (clarsimp simp: not_less shiftr_overflow maxUntypedSizeBits_def
                                           unat_of_nat_APIType_capBits)
-  sorry (* FIXME RISCV: something has gone wrong earlier in this proof, we should not be seeing
-                        type_' here at all.
                     apply (intro conjI impI;
                            clarsimp simp: not_less shiftr_overflow unat_of_nat_APIType_capBits
                                           wordBits_def word_size word_bits_def)
@@ -3508,7 +3491,6 @@ lemma decodeUntypedInvocation_ccorres_helper:
                   elim!: inl_inrE)
   apply (clarsimp simp: enum_object_type enum_apiobject_type word_le_nat_alt seL4_ObjectTypeCount_def)
   done
-  *)
 
 lemma decodeUntypedInvocation_ccorres:
 notes TripleSuc[simp]
