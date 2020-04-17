@@ -26,6 +26,7 @@ where
   "lookupPTSlotFromLevel 0 ptPtr vPtr =
      return (ptBitsLeft 0, ptSlotIndex 0 ptPtr vPtr)"
 | "lookupPTSlotFromLevel level ptPtr vPtr = do
+     checkPTAt ptPtr;
      pte <- pteAtIndex level ptPtr vPtr;
      if isPageTablePTE pte
      then lookupPTSlotFromLevel (level - 1) (getPPtrFromHWPTE pte) vPtr
@@ -37,6 +38,7 @@ fun
     (lookup_failure, machine_word) kernel_f"
 where
   "lookupPTFromLevel level ptPtr vPtr targetPtPtr = doE
+    liftE $ checkPTAt ptPtr;
     unlessE (0 < level) $ throw InvalidRoot;
     slot <- returnOk $ ptSlotIndex level ptPtr vPtr;
     pte <- withoutFailure $ getObject slot;
