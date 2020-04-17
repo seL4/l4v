@@ -147,6 +147,7 @@ lookupPTSlotFromLevel :: Int -> PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
 lookupPTSlotFromLevel 0 ptPtr vPtr =
     return (ptBitsLeft 0, ptSlotIndex 0 ptPtr vPtr)
 lookupPTSlotFromLevel level ptPtr vPtr = do
+    checkPTAt ptPtr
     pte <- pteAtIndex level ptPtr vPtr
     if isPageTablePTE pte
         then lookupPTSlotFromLevel (level-1) (getPPtrFromHWPTE pte) vPtr
