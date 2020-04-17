@@ -1722,15 +1722,6 @@ lemma ifunsafe'[wp]:
 
 lemmas irq_handlers[wp] = valid_irq_handlers_lift'' [OF ctes_of ksInterruptState]
 
-lemma idle'[wp]:
-  "f p v \<lbrace>valid_idle'\<rbrace>"
-  unfolding f_def
-  using objBits
-  apply clarsimp
-  apply (wp setObject_idle'[where P="\<top>"]; simp add: default objBits_simps' updateObject_default_inv)
-  apply (clarsimp simp: projectKOs)
-  done
-
 lemma valid_arch_state'[wp]:
   "f p v \<lbrace> valid_arch_state' \<rbrace>"
   by (rule valid_arch_state_lift'; wp)
@@ -1767,14 +1758,37 @@ lemma ct_idle_or_in_cur_domain'[wp]:
 
 end
 
+\<comment>\<open>
+  preservation of valid_idle' requires us to not be touching an SC, however
+  SCs are considered a simple_ko' - hence the special locale.
+\<close>
+locale simple_non_sc_ko' = simple_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel" for f +
+  assumes not_sc: "projectKO_opt (KOSchedContext sc) = (None :: 'a option)"
+begin
+
+lemma not_inject_sc[simp]:
+  "injectKO (v::'a) \<noteq> KOSchedContext sc"
+  by (simp flip: project_inject add: projectKOs not_sc)
+
+lemma idle'[wp]:
+  "f p v \<lbrace>valid_idle'\<rbrace>"
+  unfolding f_def
+  using objBits
+  apply clarsimp
+  apply (wp setObject_idle'; simp add: default objBits_simps' updateObject_default_inv)
+  apply (clarsimp simp: projectKOs)
+  done
+
+end
+
 (* FIXME: should these be in Arch + sublocale instead? *)
-interpretation set_ep': simple_ko' setEndpoint
+interpretation set_ep': simple_non_sc_ko' setEndpoint
   by unfold_locales (simp add: setEndpoint_def projectKO_opts_defs objBits_simps'|wp)+
 
-interpretation set_ntfn': simple_ko' setNotification
+interpretation set_ntfn': simple_non_sc_ko' setNotification
   by unfold_locales (simp add: setNotification_def projectKO_opts_defs objBits_simps'|wp)+
 
-interpretation set_reply': simple_ko' setReply
+interpretation set_reply': simple_non_sc_ko' setReply
   by unfold_locales (simp add: setReply_def projectKO_opts_defs objBits_simps'|wp)+
 
 interpretation set_sc': simple_ko' setSchedContext
