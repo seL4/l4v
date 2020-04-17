@@ -126,6 +126,7 @@ tools/c-parser/Simpl/document/root.tex
 
 tools/autocorres/doc/quickstart/output/*
 tools/autocorres/sel4.txt
+tools/autocorres/tests/ROOT
 tools/autocorres/tests/parse-tests/*.thy
 tools/autocorres/tests/examples/trace_demo_incr.trace
 tools/autocorres/tools/release_files/ChangeLog
