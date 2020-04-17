@@ -18,7 +18,7 @@ begin
 locale kernel_m = kernel +
 
 assumes setVSpaceRoot_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = pt\<rbrace> \<inter> \<lbrace>\<acute>asid___unsigned_long = asid\<rbrace>) []
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr___unsigned_long = pt\<rbrace> \<inter> \<lbrace>\<acute>asid___unsigned_long = asid\<rbrace>) []
            (doMachineOp (RISCV64.setVSpaceRoot pt asid))
            (Call setVSpaceRoot_'proc)"
 
