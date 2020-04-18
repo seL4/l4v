@@ -150,7 +150,7 @@ proof (induct level arbitrary: pt)
 next
   case (Suc level)
   then show ?case
-    by (subst lookupPTSlotFromLevel.simps) (wpsimp simp: pteAtIndex_def)
+    by (subst lookupPTSlotFromLevel.simps) (wpsimp simp: checkPTAt_def pteAtIndex_def)
 qed
 
 lemma empty_fail_arch_cap_exhausted:

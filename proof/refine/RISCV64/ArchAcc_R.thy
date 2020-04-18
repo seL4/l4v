@@ -515,7 +515,7 @@ lemma lookupPTSlotFromLevel_inv:
    apply (subst lookupPTSlotFromLevel.simps)
    apply (wpsimp simp: pteAtIndex_def wp: getPTE_wp)
   apply (subst lookupPTSlotFromLevel.simps)
-  apply (wpsimp simp: pteAtIndex_def wp: getPTE_wp|assumption)+
+  apply (wpsimp simp: pteAtIndex_def checkPTAt_def wp: getPTE_wp|assumption)+
   done
 
 declare lookupPTSlotFromLevel_inv[wp]
@@ -524,11 +524,11 @@ lemma lookupPTFromLevel_inv[wp]:
   "lookupPTFromLevel level pt vptr target_pt \<lbrace>P\<rbrace>"
 proof (induct level arbitrary: pt)
   case 0 show ?case
-    by (subst lookupPTFromLevel.simps, simp, wp)
+    by (subst lookupPTFromLevel.simps, simp add: checkPTAt_def, wp)
 next
   case (Suc level)
   show ?case
-    by (subst lookupPTFromLevel.simps, simp)
+    by (subst lookupPTFromLevel.simps, simp add: checkPTAt_def)
        (wpsimp wp: Suc getPTE_wp simp: pteAtIndex_def)
 qed
 
@@ -630,7 +630,13 @@ next
   show ?case
     apply (subst pt_lookup_slot_from_level_rec)
     apply (simp add: lookupPTSlotFromLevel.simps Let_def obind_comp_dist if_comp_dist
-                     gets_the_if_distrib)
+                     gets_the_if_distrib checkPTAt_def)
+    apply (rule corres_stateAssert_implied[where P'="\<lambda>_. True", simplified, rotated])
+     apply clarsimp
+     apply (rule page_table_at_cross; assumption?)
+      apply (drule (5) valid_vspace_objs_strongD)
+      apply (clarsimp simp: pt_at_eq in_omonad)
+     apply (simp add: state_relation_def)
     apply (rule corres_guard_imp, rule corres_split[where r'=pte_relation'])
          apply (rule corres_if3)
            apply (rename_tac pte pte', case_tac pte; (simp add: isPageTablePTE_def))
@@ -690,7 +696,13 @@ proof (induct level arbitrary: level' pt pt')
   case 0
   then show ?case
     apply (subst lookupPTFromLevel.simps, subst pt_lookup_from_level_simps)
-    apply (clarsimp simp: lookup_failure_map_def)
+    apply (clarsimp simp: checkPTAt_def liftE_bindE)
+    apply (rule corres_stateAssert_implied[where P'="\<lambda>_. True", simplified, rotated])
+     apply clarsimp
+     apply (rule page_table_at_cross; assumption?)
+      apply (drule vs_lookup_table_pt_at; simp?)
+     apply (simp add: state_relation_def)
+    apply (simp add: lookup_failure_map_def)
     done
 next
   case (minus level)
@@ -745,6 +757,13 @@ next
   from minus.prems
   show ?case
     apply (subst lookupPTFromLevel.simps, subst pt_lookup_from_level_simps)
+    apply (clarsimp simp: checkPTAt_def)
+    apply (subst liftE_bindE,
+           rule corres_stateAssert_implied[where P'="\<lambda>_. True", simplified, rotated])
+     apply clarsimp
+     apply (rule page_table_at_cross; assumption?)
+      apply (drule vs_lookup_table_pt_at; simp?)
+     apply (simp add: state_relation_def)
     apply (simp add: unlessE_whenE not_less)
     apply (rule corres_initial_splitE[where r'=dc])
        apply (corressimp simp: lookup_failure_map_def)
