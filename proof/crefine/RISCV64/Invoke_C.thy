@@ -2246,26 +2246,6 @@ lemma zero_bytes_heap_update:
   apply (simp add: Int_commute)
   done
 
-(* FIXME RISCV: awaiting spec update *)
-lemma invokeUntyped_def:
-"invokeUntyped x0\<equiv> (case x0 of
-    (Retype srcSlot reset base retypeBase newType userSize destSlots isDev) \<Rightarrow>    (doE
-    whenE reset $ resetUntypedCap srcSlot;
-    withoutPreemption $ (do
-        totalObjectSize \<leftarrow> return ( (length destSlots) `~shiftL~` (getObjectSize newType userSize));
-        stateAssert (\<lambda> x. Not (cNodeOverlap (gsCNodes x)
-                (\<lambda> x. fromPPtr retypeBase \<le> x
-                    \<and> x \<le> fromPPtr retypeBase + fromIntegral totalObjectSize - 1)))
-            [];
-        assert (canonical_address retypeBase);
-        freeRef \<leftarrow> return ( retypeBase + PPtr (fromIntegral totalObjectSize));
-        updateFreeIndex srcSlot (getFreeIndex base freeRef);
-        createNewObjects newType srcSlot destSlots retypeBase userSize isDev
-    od)
-    odE)
-  )"
-  sorry
-
 lemma invokeUntyped_Retype_ccorres:
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
      (invs' and ct_active' and ex_cte_cap_to' cnodeptr
@@ -2462,7 +2442,7 @@ lemma invokeUntyped_Retype_ccorres:
              apply (clarsimp simp: return_def)
             apply wp
            apply (vcg exspec=createNewObjects_modifies)
-          apply simp
+          apply (simp add: canonicalAddressAssert_def)
           (* strengthen canonical_address (ptr && ~~ mask sz) now, while we have canonical ptr *)
           apply (drule canonical_address_neq_mask[where sz=sz])
            apply (rule sz_bound[folded maxUntypedSizeBits_def])
@@ -2614,8 +2594,7 @@ lemma ccorres_returnOk_Basic:
   apply (clarsimp simp: returnOk_def return_def)
   done
 
-(* FIXME move to SR_Lemmas *)
-(* FIXME RISCV: enum_object_type is out of sync with C, mode objects should come first! *)
+(* FIXME RISCV: move to SR_Lemmas *)
 lemma fromEnum_object_type_to_H:
   "fromEnum x = unat (object_type_from_H x)"
   apply (cut_tac eqset_imp_iff[where x=x, OF enum_surj])
@@ -2626,8 +2605,7 @@ lemma fromEnum_object_type_to_H:
                    Kernel_C_defs
             split: if_split)
   apply (auto simp: "api_object_defs")
-  sorry (* FIXME RISCV
-  done *)
+  done
 
 lemma injection_handler_sequenceE:
   "injection_handler injf (sequenceE xs)
@@ -2806,9 +2784,7 @@ lemma toEnum_object_type_to_H:
                   maxBound_less_length)
   apply (clarsimp simp: Kernel_C_defs split:if_splits)
   apply unat_arith
-  sorry (* FIXME RISCV waiting on enum change in spec
   done
-  *)
 
 lemma unat_of_nat_APIType_capBits:
   "b \<le> word_bits
