@@ -16,5 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - name: Remove symbolic link to outside repo
+      run: rm isabelle
     - name: Check
       uses: fsfe/reuse-action@master
