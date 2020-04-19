@@ -24,10 +24,11 @@ int bad_names(void)
 }
 
 /* Also used to kill local_var_extract. */
-int bad_vars(int symbol_table) {
-  return symbol_table;
+int bad_vars(int symbol_table)
+{
+    return symbol_table;
 }
 
 /* Testcase for VER-351. The C parser generates some StrictC'__assert_fail_foo param names
  * which we need to demangle carefully. */
-void __assert_fail (const char *, const char *, int, const char *);
+void __assert_fail(const char *, const char *, int, const char *);

@@ -8,6 +8,7 @@ struct s {
     unsigned long x;
 };
 
-struct s f(struct s v) {
-  return v;
+struct s f(struct s v)
+{
+    return v;
 }

@@ -32,16 +32,14 @@
 /* Scheduling priority we should run at. */
 #define SCHED_PRIO (-10)
 
-void
-fatal(const char *str)
+void fatal(const char *str)
 {
     printf("%s\n", str);
     exit(1);
 }
 
 /* Iterate through processes in the system. */
-void
-iterate_processes(void (*proc_fn)(int, void *), void *data)
+void iterate_processes(void (*proc_fn)(int, void *), void *data)
 {
     /* Open /proc */
     DIR *proc_dir = opendir("/proc");
@@ -54,17 +52,20 @@ iterate_processes(void (*proc_fn)(int, void *), void *data)
     while (1) {
         /* Read directory. */
         struct dirent *e = readdir(proc_dir);
-        if (e == NULL)
+        if (e == NULL) {
             break;
+        }
 
         /* Skip non-directories. */
-        if ((e->d_type & DT_DIR) == 0)
+        if ((e->d_type & DT_DIR) == 0) {
             continue;
+        }
 
         /* Process? */
         int p = atoi(e->d_name);
-        if (p != 0)
+        if (p != 0) {
             proc_fn(p, data);
+        }
     }
 
     /* Cleanup. */
@@ -91,8 +92,9 @@ void test_process(int p, void *data)
     /* Read memory usage of process. */
     sprintf(buf, "/proc/%d/statm", p);
     f = fopen(buf, "r");
-    if (f == NULL)
+    if (f == NULL) {
         return;
+    }
     n = fscanf(f, "%lu %lu", &vmem_usage, &rmem_usage);
     if (n != 2) {
         /* This may still not return anything if the process dies between us
@@ -109,16 +111,16 @@ void test_process(int p, void *data)
     if (rmem_usage >= max_usage_mb) {
         (void)kill(p, SIGKILL);
         syslog(LOG_ALERT,
-                "killbig: Sending SIGKILL to pid %d (process size of %lu MB exceeds %lu MB).\n",
-                p, rmem_usage, max_usage_mb);
+               "killbig: Sending SIGKILL to pid %d (process size of %lu MB exceeds %lu MB).\n",
+               p, rmem_usage, max_usage_mb);
     }
 }
 
 void usage(int argc, char **argv)
 {
     printf("\n"
-        "usage: %s <max mem usage in MB>\n\n",
-        argc > 0 ? argv[0] : "killbig");
+           "usage: %s <max mem usage in MB>\n\n",
+           argc > 0 ? argv[0] : "killbig");
 }
 
 int main(int argc, char **argv)

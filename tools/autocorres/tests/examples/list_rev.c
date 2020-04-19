@@ -7,15 +7,18 @@
 #define NULL ((void *)0)
 
 struct node {
-  struct node *next;
-  int data;
+    struct node *next;
+    int data;
 };
 
-struct node *reverse(struct node *list) {
+struct node *reverse(struct node *list)
+{
     struct node *rev = NULL;
     while (list) {
         struct node *next = list->next;
-        list->next = rev; rev = list; list = next;
+        list->next = rev;
+        rev = list;
+        list = next;
     }
     return rev;
 }

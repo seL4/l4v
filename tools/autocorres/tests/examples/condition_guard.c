@@ -23,30 +23,39 @@
  */
 #define NULL ((void*)0)
 
-void f1(int *p) {
-  if (p != NULL && *p == 0) *p = 1;
+void f1(int *p)
+{
+    if (p != NULL && *p == 0) {
+        *p = 1;
+    }
 }
 
 struct ure {
-  int n;
+    int n;
 };
 
-void f2(struct ure *p) {
-  if (p != NULL && p->n == 0) p->n = 1;
+void f2(struct ure *p)
+{
+    if (p != NULL && p->n == 0) {
+        p->n = 1;
+    }
 }
 
-void fancy(int *p) {
-  if (p != NULL && (p[0] == 0 || p[1] == 0)) {
-    p[0] = p[1];
-  }
+void fancy(int *p)
+{
+    if (p != NULL && (p[0] == 0 || p[1] == 0)) {
+        p[0] = p[1];
+    }
 }
 
-void loop(int *p) {
-  while (p != NULL && *p == 0) {
-    p++;
-  }
+void loop(int *p)
+{
+    while (p != NULL && *p == 0) {
+        p++;
+    }
 }
 
-int arith(int x, int y) {
-  return x / y == 0 || y / x == 0;
+int arith(int x, int y)
+{
+    return x / y == 0 || y / x == 0;
 }

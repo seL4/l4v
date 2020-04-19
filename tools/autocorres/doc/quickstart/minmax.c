@@ -10,16 +10,18 @@
  * Simple pure functions.
  */
 
-unsigned min(unsigned a, unsigned b) {
-  if (a <= b) {
-    return a;
-  } else {
-    return b;
-  }
+unsigned min(unsigned a, unsigned b)
+{
+    if (a <= b) {
+        return a;
+    } else {
+        return b;
+    }
 }
 
-unsigned max(unsigned a, unsigned b) {
-  return UINT_MAX - (
-      min(UINT_MAX - a, UINT_MAX - b));
+unsigned max(unsigned a, unsigned b)
+{
+    return UINT_MAX - (
+               min(UINT_MAX - a, UINT_MAX - b));
 }
 

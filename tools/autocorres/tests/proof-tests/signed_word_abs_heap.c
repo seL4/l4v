@@ -3,16 +3,18 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
-int foo(int *p, int e) {
+int foo(int *p, int e)
+{
     int a = *p;
     if (e == 0) {
-      return 0;
+        return 0;
     } else {
-      return e + a;
+        return e + a;
     }
 }
 
-int bar(int *p, int e) {
+int bar(int *p, int e)
+{
     *p += e;
     return *p;
 }
