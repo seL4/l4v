@@ -519,7 +519,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
     (* This will keep adding new subgoals to the end, then start solving in a LIFO fashion.
        We want LIFO as we want to simplify the arithmetic from the inside out.
      *)
-    val ss = ctxt addsimps @{thms padup_def max_def}
+    val ss = ctxt addsimps (@{thms padup_def max_def align_of_def align_td_array'} @ partial_size_align_tds)
     fun tac ctxt =
         rewrite_goal_tac ctxt [typtag_thm, tag_def_thm] 1
           THEN
