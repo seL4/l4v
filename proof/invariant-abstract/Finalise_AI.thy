@@ -38,6 +38,7 @@ requalify_facts
   arch_post_cap_deletion_caps_of_state
   arch_post_cap_deletion_irq_node
   arch_post_cap_deletion_invs
+  valid_arch_arch_tcb_set_registers
 
 end
 
@@ -1067,6 +1068,35 @@ lemma reply_unlink_sc_cte_wp_at:
 crunch cte_wp_at[wp]: reply_unlink_tcb,unbind_from_sc "cte_wp_at P p"
   (wp: maybeM_inv hoare_drop_imp ignore: get_simple_ko)
 
+lemma set_mrs_valid_objs[wp]:
+  "set_mrs t a msgs \<lbrace>valid_objs\<rbrace>"
+  supply if_split[split del]
+  apply (cases a)
+   apply (simp add: set_mrs_redux)
+   apply (wpsimp wp: thread_set_valid_objs_triv)
+           apply (fastforce simp: tcb_cap_cases_def)
+          apply (simp add: valid_arch_arch_tcb_set_registers)+
+  apply (simp add: set_mrs_redux zipWithM_x_mapM split_def
+                   store_word_offs_def)
+  apply (wpsimp wp: mapM_wp' thread_set_valid_objs_triv)
+          apply (auto simp: tcb_cap_cases_def valid_arch_arch_tcb_set_registers)
+  done
+
+crunch valid_objs[wp]: set_consumed valid_objs
+  (wp: crunch_wps simp: crunch_simps ignore: update_sched_context)
+
+lemma complete_yield_to_valid_objs[wp]:
+  "\<lbrace>valid_objs\<rbrace> complete_yield_to t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  by (wpsimp simp: complete_yield_to_def | wp (once) hoare_drop_imps)+
+
+lemma sched_context_unbind_tcb_valid_objs[wp]:
+  "\<lbrace>valid_objs\<rbrace> sched_context_unbind_tcb t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  by (wpsimp simp: sched_context_unbind_tcb_def | wp (once) hoare_drop_imps)+
+
+lemma unbind_from_sc_valid_objs[wp]:
+  "\<lbrace>valid_objs\<rbrace> unbind_from_sc t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  by (wpsimp simp: unbind_from_sc_def wp: maybeM_inv)
+
 lemma unbind_from_sc_invs[wp]:
   "\<lbrace>invs and K (t \<noteq> idle_thread_ptr)\<rbrace> unbind_from_sc t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: unbind_from_sc_def
@@ -1160,10 +1190,6 @@ locale Finalise_AI_3 = Finalise_AI_2 a b
        arch_finalise_cap a b
     \<lbrace>\<lambda>rv s. P (interrupt_irq_node s)
               (cte_wp_at (P' (interrupt_irq_node s)) (p (interrupt_irq_node s)) s)\<rbrace>"
-  assumes deleting_irq_handler_st_tcb_at:
-    "\<And>P t irq.\<lbrace>st_tcb_at P t and K (\<forall>st. simple st \<longrightarrow> P st) and invs\<rbrace>
-       deleting_irq_handler irq
-     \<lbrace>\<lambda>rv. st_tcb_at P t :: 'a state \<Rightarrow> bool\<rbrace>"
   assumes irq_node_global_refs:
     "\<And>(s :: 'a state) irq. interrupt_irq_node s irq \<in> global_refs s"
   assumes get_irq_slot_fast_finalisable[wp]:
@@ -1328,6 +1354,15 @@ lemma cap_delete_one_st_tcb_at:
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
   apply (wpsimp wp: fast_finalise_st_tcb_at get_cap_wp simp: cte_wp_at_def)
+  done
+
+lemma deleting_irq_handler_st_tcb_at:
+  "\<lbrace>st_tcb_at P t and K (\<forall>st. \<not> ipc_queued_thread_state st \<longrightarrow> P st) and invs\<rbrace>
+     deleting_irq_handler irq
+   \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+  apply (simp add: deleting_irq_handler_def)
+  apply (wp cap_delete_one_st_tcb_at)
+  apply simp
   done
 
 lemma can_fast_finalise_Null:

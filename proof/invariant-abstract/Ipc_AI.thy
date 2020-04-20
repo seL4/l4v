@@ -14,7 +14,6 @@ requalify_consts
   in_device_frame
 requalify_facts
   set_mi_invs
-  valid_arch_arch_tcb_set_registers
   set_mrs_ioports
   as_user_ioports
   set_message_info_ioports
@@ -1387,21 +1386,6 @@ lemma store_word_offs_invs[wp]:
 lemma copy_mrs_invs[wp]:
   "\<lbrace> invs and tcb_at r and tcb_at s \<rbrace> copy_mrs s sb r rb n \<lbrace>\<lambda>rv. invs \<rbrace>"
   unfolding copy_mrs_redux by (wpsimp wp: mapM_wp')
-
-lemma set_mrs_valid_objs [wp]:
-  "\<lbrace>valid_objs\<rbrace> set_mrs t a msgs \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  apply (cases a)
-   apply (simp add: set_mrs_redux)
-   apply (wp thread_set_valid_objs_triv)
-       apply (auto simp: tcb_cap_cases_def)[1]
-      apply (simp add: valid_arch_arch_tcb_set_registers)+
-  apply (simp add: set_mrs_redux zipWithM_x_mapM split_def
-                   store_word_offs_def
-            split del: if_split)
-  apply (wp mapM_wp' thread_set_valid_objs_triv | simp)+
-      apply (auto simp: tcb_cap_cases_def valid_arch_arch_tcb_set_registers)
-  done
-
 
 lemma set_mrs_aligned [wp]:
   "\<lbrace>pspace_aligned\<rbrace>  set_mrs t a msgs \<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"

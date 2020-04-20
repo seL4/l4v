@@ -241,6 +241,12 @@ global_interpretation set_tcb_obj_ref: non_reply_op "set_tcb_obj_ref f ref new"
   by (clarsimp simp: reply_at_ppred_def obj_at_def get_tcb_def
               split: option.splits kernel_object.splits)
 
+global_interpretation set_tcb_obj_ref: non_ntfn_op "set_tcb_obj_ref f ref new"
+  apply unfold_locales
+  apply (wpsimp simp: set_tcb_obj_ref_def wp: set_object_wp)
+  by (clarsimp simp: ntfn_at_ppred_def obj_at_def get_tcb_def
+              split: option.splits kernel_object.splits)
+
 global_interpretation reply_unlink_tcb: non_reply_sc_op "reply_unlink_tcb t r"
   apply unfold_locales
   apply (wpsimp simp: reply_unlink_tcb_def wp: get_simple_ko_wp update_sk_obj_ref_wps gts_wp)

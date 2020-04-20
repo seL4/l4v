@@ -957,8 +957,8 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
            apply hammer
           apply hammer
          \<comment> \<open>tcb\<close>
-         apply ((wpsimp wp: suspend_final_cap suspend_unlive'[unfolded o_def] unbind_from_sc_bound_sc_tcb_at
-                            unbind_notification_valid_objs
+         apply ((wpsimp wp: suspend_final_cap suspend_unlive'[unfolded o_def]
+                            unbind_from_sc_bound_sc_tcb_at
                  | hammer | rule conjI)+)[1]
         \<comment> \<open>domain\<close>
         apply ((wpsimp | hammer)+)[1]
@@ -1657,15 +1657,6 @@ lemma (* finalise_cap_irq_node *)[Finalise_AI_asms]:
 
 lemmas (*arch_finalise_cte_irq_node *) [wp,Finalise_AI_asms]
     = hoare_use_eq_irq_node [OF arch_finalise_cap_irq_node arch_finalise_cap_cte_wp_at]
-
-lemma (* deleting_irq_handler_st_tcb_at *) [Finalise_AI_asms]:
-  "\<lbrace>st_tcb_at P t and K (\<forall>st. simple st \<longrightarrow> P st) and invs\<rbrace>
-     deleting_irq_handler irq
-   \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
-  apply (simp add: deleting_irq_handler_def)
-  apply (wp cap_delete_one_st_tcb_at hoare_drop_imp hoare_vcg_ex_lift)
-  apply simp
-  done
 
 lemma irq_node_global_refs_ARCH [Finalise_AI_asms]:
   "interrupt_irq_node s irq \<in> global_refs s"

@@ -44,13 +44,12 @@ lemma cancel_all_ipc_valid_objs:
                    get_ep_queue_def get_simple_ko_def get_object_def valid_ep_def
                wp: mapM_x_wp_inv hoare_drop_imp)
 
-lemma unbind_notification_valid_objs:
-  "\<lbrace>valid_objs\<rbrace>
-   unbind_notification ptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+lemma unbind_notification_valid_objs[wp]:
+  "unbind_notification ptr \<lbrace>valid_objs\<rbrace>"
   apply (wpsimp simp: unbind_notification_def update_sk_obj_ref_def wp: maybeM_inv)
      apply (rule hoare_strengthen_post)
       apply (rule get_ntfn_valid_ntfn)
-      apply (wpsimp simp: valid_ntfn_def split: ntfn.splits)+
+     apply (wpsimp simp: valid_ntfn_def split: ntfn.splits)+
   done
 
 lemma sched_context_maybe_unbind_ntfn_valid_objs[wp]:

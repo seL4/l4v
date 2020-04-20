@@ -1784,9 +1784,9 @@ lemma install_tcb_cap_bound_sc_tcb_at[wp]:
   by (wpsimp wp: check_cap_inv cap_delete_fh_lift)
 
 lemma install_tcb_cap_not_ipc_queued_thread[wp]:
-  "\<lbrace>st_tcb_at (not ipc_queued_thread_state) target and invs\<rbrace>
+  "\<lbrace>st_tcb_at (not ipc_queued_thread_state) t and tcb_at target and invs\<rbrace>
    install_tcb_cap target slot 3 slot_opt
-   \<lbrace>\<lambda>_. st_tcb_at (not ipc_queued_thread_state) target\<rbrace>"
+   \<lbrace>\<lambda>_. st_tcb_at (not ipc_queued_thread_state) t\<rbrace>"
   unfolding install_tcb_cap_def
   by (wpsimp wp: check_cap_inv cap_delete_fh_lift cancel_all_ipc_st_tcb_at
            simp: pred_neg_def st_tcb_at_tcb_at)

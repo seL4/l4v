@@ -268,6 +268,10 @@ global_interpretation update_sched_context: non_reply_op "update_sched_context p
   by unfold_locales (wpsimp simp: update_sched_context_def reply_at_pred_def obj_at_def
                               wp: set_object_wp get_object_wp)
 
+global_interpretation update_sched_context: non_ntfn_op "update_sched_context ptr f"
+  by unfold_locales (wpsimp simp: update_sched_context_def ntfn_at_pred_def obj_at_def
+                              wp: set_object_wp get_object_wp)
+
 definition replies_with_sc_upd_replies ::
   "obj_ref list \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> obj_ref) set \<Rightarrow> (obj_ref \<times> obj_ref) set"
   where

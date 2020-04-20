@@ -454,21 +454,6 @@ lemma zombie_is_cap_toE_pre[CNodeInv_AI_assms]:
 
 crunch st_tcb_at_halted[wp]: prepare_thread_delete "st_tcb_at halted t"
 
-crunch valid_objs[wp]: set_consumed valid_objs
-  (wp: crunch_wps simp: crunch_simps)
-
-lemma complete_yield_to_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> complete_yield_to t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  by (wpsimp simp: complete_yield_to_def | wp (once) hoare_drop_imps)+
-
-lemma sched_context_unbind_tcb_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> sched_context_unbind_tcb t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  by (wpsimp simp: sched_context_unbind_tcb_def | wp (once) hoare_drop_imps)+
-
-lemma unbind_from_sc_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> unbind_from_sc t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  by (wpsimp simp: unbind_from_sc_def wp: maybeM_inv)
-
 lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
   "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s)
          and cte_wp_at ((=) cap) slot\<rbrace>
@@ -476,7 +461,7 @@ lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
    \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
   supply if_cong[cong]
   apply (case_tac cap, simp_all)
-            apply (wp unbind_notification_valid_objs
+            apply (wp
                  | clarsimp simp: o_def valid_cap_def cap_table_at_typ
                                   is_tcb obj_at_def
                  | clarsimp simp: halted_if_tcb_def

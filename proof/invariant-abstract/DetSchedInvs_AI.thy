@@ -285,10 +285,22 @@ lemma pred_map_upd:
    = (\<lambda>x. if x = ref then \<exists>y. v = Some y \<and> P y else pred_map P m x)"
   by (auto simp: pred_map_simps)
 
+lemma pred_map_updupd:
+  "pred_map P (\<lambda>r. if r = ref then v else if r = ref' then v' else m r)
+   = (\<lambda>x. if x = ref
+          then (\<exists>y. v = Some y \<and> P y)
+          else (if x = ref' then (\<exists>y. v' = Some y \<and> P y) else pred_map P m x))"
+  by (rule ext, auto simp: pred_map_simps)
+
 lemma pred_map_eq_upd:
   "pred_map_eq w (\<lambda>r. if r = ref then v else m r)
    = (\<lambda>x. if x = ref then v = Some w else pred_map_eq w m x)"
   by (auto simp: pred_map_simps)
+
+lemma pred_map_eq_updupd:
+  "pred_map_eq w (\<lambda>r. if r = ref then v else if r = ref' then v' else m r)
+   = (\<lambda>x. if x = ref then (v = Some w) else (if x = ref' then (v' = Some w) else pred_map_eq w m x))"
+  by (rule ext, auto simp: pred_map_simps)
 
 lemma pred_map2_upd1:
   "pred_map2 P (\<lambda>r. if r = ref then v else m r) m'
@@ -3232,7 +3244,7 @@ lemma valid_sched_released_ipc_queues[elim!]:
   "valid_sched s \<Longrightarrow> released_ipc_queues s"
   by (clarsimp simp: valid_sched_def)
 
-lemma valid_sched_active_sc_valid_refills[elim]:
+lemma valid_sched_active_sc_valid_refills[elim!]:
   "valid_sched s \<Longrightarrow> active_sc_valid_refills s" by (simp add: valid_sched_def)
 
 lemma valid_sched_imp_except_blocked[elim!]:

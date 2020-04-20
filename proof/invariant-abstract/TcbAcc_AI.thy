@@ -2186,7 +2186,7 @@ lemma ct_in_state_sched_act_update[simp]:
   "ct_in_state P (scheduler_action_update f s) = ct_in_state P s"
   by (simp add: ct_in_state_def)
 
-crunch ct_in_state[wp]: set_thread_state_act "ct_in_state P"
+crunch ct_in_state[wp]: set_thread_state_act "\<lambda>s. Q (ct_in_state P s)"
 
 lemma ct_in_state_set:
   "P st \<Longrightarrow> \<lbrace>\<lambda>s. cur_thread s = t\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. ct_in_state P \<rbrace>"
@@ -2198,22 +2198,24 @@ lemma ct_in_state_weaken:
   by (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
 
 lemma set_thread_state_ct_st:
-  "\<lbrace>\<lambda>s. if thread = cur_thread s then P st else ct_in_state P s\<rbrace>
-        set_thread_state thread st
-   \<lbrace>\<lambda>rv. ct_in_state P\<rbrace>"
+  "\<lbrace>\<lambda>s. if thread = cur_thread s then Q (P st) else Q (ct_in_state P s)\<rbrace>
+   set_thread_state thread st
+   \<lbrace>\<lambda>rv s. Q (ct_in_state P s)\<rbrace>"
   apply (simp add: set_thread_state_def set_object_def get_object_def)
   apply (wp|simp)+
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
 lemma sts_ctis_neq:
-  "\<lbrace>\<lambda>s. (cur_thread s \<noteq> t \<or> P st) \<and> ct_in_state P s\<rbrace> set_thread_state t st \<lbrace>\<lambda>_. ct_in_state P\<rbrace>"
+  "\<lbrace>\<lambda>s. (cur_thread s \<noteq> t \<or> P st) \<and> ct_in_state P s\<rbrace>
+   set_thread_state t st
+   \<lbrace>\<lambda>_. ct_in_state P\<rbrace>"
   by (wpsimp wp: set_thread_state_ct_st)
 
 lemma set_thread_state_ct_in_state:
-  "\<lbrace>\<lambda>s. ct_in_state P s \<and> P st\<rbrace>
-     set_thread_state thread st
-   \<lbrace>\<lambda>rv. ct_in_state P\<rbrace>"
+  "\<lbrace>\<lambda>s. Q (ct_in_state P s) \<and> Q (P st)\<rbrace>
+   set_thread_state thread st
+   \<lbrace>\<lambda>rv s. Q (ct_in_state P s)\<rbrace>"
   by (wpsimp wp: set_thread_state_ct_st)
 
 lemma valid_running [simp]:

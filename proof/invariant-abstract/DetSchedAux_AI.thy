@@ -1325,9 +1325,17 @@ lemma pred_map_etcbs_of_detype[simp]:
 
 declare clear_um.pspace[iff]
 
+lemma active_not_blocked[elim!]:
+  "active ts \<Longrightarrow> \<not> ipc_queued_thread_state ts"
+  by (fastforce split: thread_state.splits)
+
+lemma st_tcb_at_active_not_ipc_queued_thread[elim!]:
+  "st_tcb_at active t s \<Longrightarrow> st_tcb_at (not ipc_queued_thread_state) t s"
+  by (fastforce simp: pred_tcb_at_def obj_at_def pred_neg_def)
+
 lemma ct_runnable_ct_not_blocked[elim!]:
   "ct_active s \<Longrightarrow> ct_not_blocked s"
-  by (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def split: thread_state.splits)
+  by (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
 
 lemma ready_or_release_machine_state_update[simp]:
   "ready_or_release (s\<lparr>machine_state := param_a\<rparr>) = ready_or_release s"

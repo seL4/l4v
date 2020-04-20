@@ -1234,6 +1234,11 @@ locale reply_at_pres =
   fixes f  :: "('state_ext::state_ext state, 'a) nondet_monad"
   assumes reply_at[wp]: "\<And>P p. f \<lbrace>\<lambda>s. P (reply_at p s)\<rbrace>"
 
+(* properties of functions which preserve (fields of) all notification objects *)
+locale non_ntfn_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes ntfn_obj_at[wp]: "\<And>P P' p. f \<lbrace>\<lambda>s. P (ntfn_at_pred P' p s)\<rbrace>"
+
 (* properties of functions which preserve (parts of) all scheduling context objects *)
 locale non_sc_op =
   fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
