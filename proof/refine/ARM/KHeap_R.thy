@@ -1099,6 +1099,73 @@ lemma get_ntfn_corres:
   apply (simp add: other_obj_relation_def)
   done
 
+lemma no_fail_getReply [wp]:
+  "no_fail (reply_at' ptr) (getReply ptr)"
+  apply (simp add: getReply_def getObject_def
+                   split_def)
+  apply (rule no_fail_pre)
+   apply wp
+  apply (clarsimp simp add: obj_at'_def projectKOs objBits_simps'
+                            lookupAround2_known1)
+  apply (erule(1) ps_clear_lookupAround2)
+    apply simp
+   apply (simp add: field_simps)
+   apply (erule is_aligned_no_wrap')
+    apply (simp add: word_bits_conv)
+   apply (clarsimp split: option.split_asm simp: objBits_simps' archObjSize_def)
+  done
+
+lemma get_reply_corres:
+  "corres reply_relation (reply_at ptr) (reply_at' ptr)
+     (get_reply ptr) (getReply ptr)"
+  apply (rule corres_no_failI)
+   apply wp
+  apply (simp add: get_simple_ko_def getReply_def get_object_def
+                   getObject_def bind_assoc)
+  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
+  apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_reply partial_inv_def)
+  apply (clarsimp simp: loadObject_default_def in_monad projectKOs
+                        in_magnitude_check objBits_simps')
+  apply (clarsimp simp add: state_relation_def pspace_relation_def)
+  apply (drule bspec)
+   apply blast
+  apply (simp add: other_obj_relation_def)
+  done
+
+lemma no_fail_getSchedContext [wp]:
+  "no_fail (sc_at' ptr) (getSchedContext ptr)"
+  apply (simp add: getSchedContext_def getObject_def
+                   split_def)
+  apply (rule no_fail_pre)
+   apply wp
+  apply (clarsimp simp add: obj_at'_def projectKOs objBits_simps'
+                            lookupAround2_known1)
+  apply (erule(1) ps_clear_lookupAround2)
+    apply simp
+   apply (simp add: field_simps)
+   apply (erule is_aligned_no_wrap')
+    apply (simp add: word_bits_conv)
+   apply (clarsimp split: option.split_asm simp: objBits_simps' archObjSize_def)
+  done
+
+lemma get_sc_corres:
+  "corres (\<lambda>sc sc'. \<exists>n. sc_relation sc n sc') (sc_at ptr) (sc_at' ptr)
+     (get_sched_context ptr) (getSchedContext ptr)"
+  apply (rule corres_no_failI)
+   apply wp
+  apply (simp add: get_sched_context_def getSchedContext_def get_object_def
+                   getObject_def bind_assoc)
+  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
+  apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_sc_obj_def
+                 split: Structures_A.kernel_object.splits)
+  apply (clarsimp simp: loadObject_default_def in_monad projectKOs
+                        in_magnitude_check objBits_simps')
+  apply (clarsimp simp add: state_relation_def pspace_relation_def)
+  apply (drule bspec)
+   apply blast
+  apply (fastforce simp add: other_obj_relation_def)
+done
+
 lemma setObject_ko_wp_at:
   fixes v :: "'a :: pspace_storable"
   assumes R: "\<And>ko s y n. (updateObject v ko p y n s)
