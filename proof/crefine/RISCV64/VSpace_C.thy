@@ -347,144 +347,354 @@ lemma corres_symb_exec_unknown_r:
   apply (rule corres_symb_exec_r[OF assms]; wp select_inv non_fail_select)
   done
 
-(* FIXME RISCV: we may need PT versions of these, keeping these for now
-lemma lookupPML4Slot'_spec:
-  "\<lbrace> \<lambda>s. s = \<sigma> \<and> array_assertion pm (2 ^ ptTranslationBits) (hrs_htd (t_hrs_' s)) \<rbrace>
-    lookupPML4Slot' pm vptr
-   \<lbrace> \<lambda>r s. s = \<sigma> \<and> r = pml4e_Ptr (lookupPML4Slot (ptr_val pm) vptr) \<rbrace>"
-  apply (rule hoare_weaken_pre, rule hoare_strengthen_post)
-    apply (rule autocorres_transfer_spec_no_modifies
-                  [where cs="undefined\<lparr>globals := \<sigma>, pml4_' := pm, vptr_' := vptr\<rparr>"
-                     and P="\<lambda>s. array_assertion (pml4_' s) (2 ^ ptTranslationBits) (hrs_htd (t_hrs_' (globals s)))",
-                   OF lookupPML4Slot'_def lookupPML4Slot_spec lookupPML4Slot_modifies])
-       by auto
+lemma isPageTablePTE_def2:
+  "isPageTablePTE pte = (\<exists>ppn global user. pte = PageTablePTE ppn global user)"
+  by (simp add: isPageTablePTE_def split: pte.splits)
 
-lemma no_fail_lookupPML4Slot':
-  "no_fail (\<lambda>s. array_assertion pm (2 ^ ptTranslationBits) (hrs_htd (t_hrs_' s))) (lookupPML4Slot' pm vptr)"
-  apply (rule terminates_spec_no_fail[OF lookupPML4Slot'_def lookupPML4Slot_spec]; clarsimp)
-  apply terminates_trivial
+lemma getPPtrFromHWPTE_spec':
+  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>pte___ptr_to_struct_pte_C \<rbrace>
+           Call getPPtrFromHWPTE_'proc
+           \<lbrace> \<acute>ret__ptr_to_struct_pte_C =
+               pte_Ptr (ptrFromPAddr (pte_CL.ppn_CL (pte_lift
+                            (the (clift \<^bsup>s\<^esup>t_hrs \<^bsup>s\<^esup>pte___ptr_to_struct_pte_C))) << pageBits)) \<rbrace>"
+  by vcg (simp add: bit_simps)
+
+lemma getPPtrFromHWPTE_corres:
+  "ccorres (\<lambda>_ ptr. ptr = pte_Ptr (getPPtrFromHWPTE pte))
+     ret__ptr_to_struct_pte_C_'
+     (ko_at' pte ptePtr and K (isPageTablePTE pte))
+     \<lbrace> \<acute>pte___ptr_to_struct_pte_C = pte_Ptr ptePtr \<rbrace>
+     hs
+     (return ())
+     (Call getPPtrFromHWPTE_'proc)"
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: return_def rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
+  apply (drule (1) cmap_relation_ko_atD)
+  apply (clarsimp simp: typ_heap_simps getPPtrFromHWPTE_def cpte_relation_def Let_def
+                        isPageTablePTE_def2 bit_simps)
   done
 
-lemmas corres_symb_exec_lookupPML4Slot' =
-  valid_spec_to_corres_gen_symb_exec_r[OF lookupPML4Slot'_spec no_fail_lookupPML4Slot']
+lemma isPTEPageTable_spec':
+  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>pte___ptr_to_struct_pte_C \<rbrace>
+           Call isPTEPageTable_'proc
+           \<lbrace> \<forall>cpte pte. clift \<^bsup>s\<^esup>t_hrs \<^bsup>s\<^esup>pte___ptr_to_struct_pte_C = Some cpte \<longrightarrow>
+                        cpte_relation pte cpte \<longrightarrow>
+             \<acute>ret__unsigned_long = from_bool (isPageTablePTE pte) \<rbrace>"
+  by vcg
+     (auto simp: from_bool_def cpte_relation_def isPageTablePTE_def2 Let_def
+                 readable_from_vm_rights_def writable_from_vm_rights_def bit_simps
+           split: bool.split if_split pte.splits vmrights.splits)
 
-(* FIXME: automate this. *)
-lemma pml4e_ptr_get_present'_spec:
-  "\<lbrace> \<lambda>s. s = \<sigma> \<and> s \<Turnstile>\<^sub>g pml4e_ptr \<rbrace>
-    pml4e_ptr_get_present' pml4e_ptr
-   \<lbrace> \<lambda>r s. s = \<sigma> \<and> r = pml4e_CL.present_CL (pml4e_lift (the (gslift s pml4e_ptr))) \<rbrace>"
-  apply (rule hoare_weaken_pre, rule hoare_strengthen_post)
-    apply (rule autocorres_transfer_spec_no_modifies
-                  [where cs="undefined\<lparr>globals := \<sigma>, pml4e_ptr_' := pml4e_ptr\<rparr>"
-                     and P="\<lambda>s. s \<Turnstile>\<^sub>c pml4e_ptr_' s",
-                   OF pml4e_ptr_get_present'_def pml4e_ptr_get_present_spec
-                      pml4e_ptr_get_present_modifies])
-      by (auto dest: spec[where x="undefined\<lparr>globals := \<sigma>\<rparr>"])
+lemma readable_from_vm_rights0:
+  "(readable_from_vm_rights vm = (0::machine_word)) = (vm = VMKernelOnly)"
+  by (auto simp add: readable_from_vm_rights_def split: vmrights.splits)
 
-lemma pml4e_ptr_get_present'_no_fail:
-  "no_fail (\<lambda>s. s \<Turnstile>\<^sub>g pml4e_ptr) (pml4e_ptr_get_present' pml4e_ptr)"
-  apply (rule terminates_spec_no_fail[OF pml4e_ptr_get_present'_def pml4e_ptr_get_present_spec]; clarsimp)
-  apply terminates_trivial
+lemma isPTEPageTable_corres:
+  "ccorres (\<lambda>_ isPTE. isPTE = from_bool (isPageTablePTE pte))
+     ret__unsigned_long_'
+     (ko_at' pte ptePtr)
+     \<lbrace> \<acute>pte___ptr_to_struct_pte_C = pte_Ptr ptePtr \<rbrace>
+     hs
+     (return ())
+     (Call isPTEPageTable_'proc)"
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre)
+  apply vcg
+  apply (clarsimp simp: return_def)
+  apply (drule rf_sr_cpte_relation)
+  apply (drule (1) cmap_relation_ko_atD)
+  apply (clarsimp simp: typ_heap_simps)
+  apply (cases pte; simp add: readable_from_vm_rights0 isPageTablePTE_def from_bool_def
+                              cpte_relation_def writable_from_vm_rights_def)
   done
 
-lemmas corres_symb_exec_pml4e_ptr_get_present' =
-  valid_spec_to_corres_symb_exec_r[OF pml4e_ptr_get_present'_spec pml4e_ptr_get_present'_no_fail]
-*)
-
-(* FIXME RISCV: ptrFromPAddr' does not appear to be defined anywhere, yet it exists on X64
-                This is potentially useful if we can figure out what it is
-lemma ptrFromPAddr'_spec:
-  "\<lbrace> \<lambda>s. s = \<sigma> \<rbrace>
-    ptrFromPAddr' paddr
-   \<lbrace> \<lambda>r s. s = \<sigma> \<and> r = Ptr (ptrFromPAddr paddr) \<rbrace>"
-  apply (rule hoare_weaken_pre, rule hoare_strengthen_post)
-    apply (rule autocorres_transfer_spec_no_modifies
-                  [where cs="undefined\<lparr>globals := \<sigma>, paddr_' := paddr\<rparr>" and P=\<top>,
-                   OF ptrFromPAddr'_def ptrFromPAddr_spec ptrFromPAddr_modifies])
-      by (auto dest: spec[where x="undefined\<lparr>globals := \<sigma>\<rparr>"])
-
-lemma ptrFromPAddr'_no_fail:
-  "no_fail \<top> (ptrFromPAddr' paddr)"
-  apply (rule terminates_spec_no_fail'[OF ptrFromPAddr'_def ptrFromPAddr_spec]; clarsimp)
-  apply terminates_trivial
+(* FIXME RISCV: move to CCorresLemmas, derive corres_cond from it.
+                How have we done all these proofs without this? *)
+lemma ccorres_cond_strong:
+  assumes abs: "\<forall>s s'. (s, s') \<in> sr \<and> R s \<and> s' \<in> R' \<longrightarrow> P  = (s' \<in> P') "
+  and     c1: "ccorres_underlying sr \<Gamma> r xf arrel axf Pt Rt hs a c"
+  and     c2: "ccorres_underlying sr \<Gamma> r xf arrel axf Pf Rf hs b c'"
+  shows   "ccorres_underlying sr \<Gamma> r xf arrel axf
+                              (R and (\<lambda>s. P \<longrightarrow> Pt s) and (\<lambda>s. \<not> P \<longrightarrow> Pf s))
+                              (R' \<inter> (Rt \<inter> P' \<union> Rf \<inter> - P'))
+                              hs
+                              (if P then a else b) (Cond P' c c')"
+  apply (rule ccorresI')
+  apply clarsimp
+  apply (erule disjE)
+   apply (drule exec_handlers_semantic_equivD1 [where b = c])
+    apply (rule semantic_equivI)
+    apply (fastforce elim: exec_Normal_elim_cases intro: exec.CondTrue)
+   apply (rule ccorresE [OF c1])
+        apply assumption
+       apply (insert abs)
+       apply fastforce
+      apply fastforce
+     apply fastforce
+    apply simp
+   apply (fastforce elim!: bexI [rotated])
+  apply (drule exec_handlers_semantic_equivD2 [where b = c'])
+   apply (rule semantic_equivI)
+   apply (fastforce elim: exec_Normal_elim_cases intro: exec.CondFalse)
+  apply (rule ccorresE [OF c2])
+       apply assumption
+      apply (insert abs, fastforce)
+     apply fastforce
+    apply fastforce
+   apply simp
+  apply (fastforce elim!: bexI[rotated])
   done
 
-lemmas corres_symb_exec_ptrFromPAddr' =
-  valid_spec_to_corres_gen_symb_exec_r'[OF ptrFromPAddr'_spec ptrFromPAddr'_no_fail]
+lemma ccorres_checkPTAt:
+  "ccorres r xf P P' hs (a ()) c \<Longrightarrow>
+   ccorres r xf (\<lambda>s. page_table_at' pt s \<longrightarrow> P s) P' hs (checkPTAt pt >>= a) c"
+  unfolding checkPTAt_def by (rule ccorres_stateAssert)
 
-(* Move near rf_sr_cpml4e_relation. *)
-lemma cstate_relation_cpml4e_relation:
-  "cstate_relation s s' \<Longrightarrow>
-    cmap_relation (map_to_pml4es (ksPSpace s)) (gslift s') pml4e_Ptr cpml4e_relation"
-  by (clarsimp simp: cstate_relation_def Let_def cpspace_relation_def)
-*)
+lemma pteAtIndex_ko[wp]:
+  "\<lbrace>\<top>\<rbrace> pteAtIndex level pt vptr \<lbrace>\<lambda>pte. ko_at' pte (ptSlotIndex level pt vptr)\<rbrace>"
+  unfolding pteAtIndex_def by (wpsimp wp: getPTE_wp)
 
-(* FIXME RISCV: this is a first stab at a formulation *)
+lemma ptBitsLeft_bound:
+  "level \<le> maxPTLevel \<Longrightarrow> ptBitsLeft level \<le> canonical_bit"
+  by (simp add: ptBitsLeft_def bit_simps maxPTLevel_def canonical_bit_def)
+
+lemma unat_of_nat_ptBitsLeft [simp]:
+  "level \<le> maxPTLevel \<Longrightarrow> unat (of_nat (ptBitsLeft level)::machine_word) = ptBitsLeft level"
+  apply (subst unat_of_nat64)
+   apply (rule order_le_less_trans, erule ptBitsLeft_bound)
+   apply (simp add: word_bits_def canonical_bit_def)
+  apply simp
+  done
+
+lemma pte_at'_ptSlotIndex:
+  "page_table_at' pt s \<Longrightarrow> pte_at' (ptSlotIndex level pt vptr) s"
+  apply (simp add: ptSlotIndex_def ptIndex_def)
+  apply (drule page_table_pte_atI'[where x="ucast (vptr >> ptBitsLeft level)"])
+  apply (simp add: ucast_ucast_mask bit_simps)
+  done
+
+lemma lookupPTSlotFromLevel_ccorres:
+  defines
+    "ptSlot_upd \<equiv>
+       Guard ShiftError \<lbrace>ptBitsLeft_C \<acute>ret___struct_lookupPTSlot_ret_C < 0x40\<rbrace>
+         (Guard MemorySafety
+           \<lbrace> (\<acute>vptr >> unat (ptBitsLeft_C \<acute>ret___struct_lookupPTSlot_ret_C)) && 0x1FF = 0 \<or>
+             array_assertion \<acute>pt (unat ((\<acute>vptr >> unat (ptBitsLeft_C \<acute>ret___struct_lookupPTSlot_ret_C)) && 0x1FF))
+                             (hrs_htd \<acute>t_hrs) \<rbrace>
+           (\<acute>ret___struct_lookupPTSlot_ret_C :==
+              ptSlot_C_update
+                (\<lambda>_. \<acute>pt +\<^sub>p uint ((\<acute>vptr >> unat (ptBitsLeft_C \<acute>ret___struct_lookupPTSlot_ret_C)) && 0x1FF))
+                \<acute>ret___struct_lookupPTSlot_ret_C))"
+  shows
+    "ccorres (\<lambda>(bitsLeft,ptSlot) cr. bitsLeft = unat (ptBitsLeft_C cr) \<and> ptSlot_C cr = Ptr ptSlot)
+     ret___struct_lookupPTSlot_ret_C_'
+     (page_table_at' pt and (\<lambda>_. level \<le> maxPTLevel))
+     (\<lbrace> ptBitsLeft_C \<acute>ret___struct_lookupPTSlot_ret_C = of_nat (ptTranslationBits * level + ptBits) \<rbrace>
+      \<inter> \<lbrace> \<acute>level = of_nat level \<rbrace> \<inter> \<lbrace> \<acute>pt = Ptr pt \<rbrace> \<inter> \<lbrace> \<acute>vptr = vptr \<rbrace>)
+     (SKIP#hs)
+     (lookupPTSlotFromLevel level pt vptr)
+     (ptSlot_upd;;
+      \<acute>ret__unsigned_long :== CALL isPTEPageTable(ptSlot_C \<acute>ret___struct_lookupPTSlot_ret_C);;
+      WHILE \<acute>ret__unsigned_long \<noteq> 0 \<and> 0 < \<acute>level DO
+        \<acute>level :== \<acute>level - 1;;
+        \<acute>ret___struct_lookupPTSlot_ret_C :==
+             ptBitsLeft_C_update (\<lambda>_. ptBitsLeft_C \<acute>ret___struct_lookupPTSlot_ret_C - 9)
+                                 \<acute>ret___struct_lookupPTSlot_ret_C;;
+         \<acute>pt :== CALL getPPtrFromHWPTE(ptSlot_C \<acute>ret___struct_lookupPTSlot_ret_C);;
+         ptSlot_upd;;
+         \<acute>ret__unsigned_long :== CALL isPTEPageTable(ptSlot_C \<acute>ret___struct_lookupPTSlot_ret_C)
+      OD;;
+      return_C ret__struct_lookupPTSlot_ret_C_'_update ret___struct_lookupPTSlot_ret_C_')"
+proof (induct level arbitrary: pt)
+  have [simp]: "x \<noteq> 0 \<Longrightarrow> 0 < unat x" for x::machine_word
+    by (simp add: unat_gt_0)
+
+  have misc_simps[simp]:
+    "pageBits = pt_bits"
+    "of_nat pageBits = of_nat pt_bits"
+    "pt_bits - 3 = ptTranslationBits"
+    "unat (of_nat pt_bits::machine_word) = pt_bits"
+    "\<And>x::machine_word. x * 8 = x << pte_bits"
+    "0x1FF = (mask ptTranslationBits :: machine_word)"
+    by (auto simp: bit_simps mask_def shiftl_t2n)
+
+  have and_mask_le[simp]:
+    "unat (x && mask ptTranslationBits) \<le> 2^ptTranslationBits" for x::machine_word
+  proof -
+    have "unat (x && mask ptTranslationBits) \<le> unat (2^ptTranslationBits::machine_word)"
+      apply (fold word_le_nat_alt)
+      apply (rule order_trans, rule word_and_le1)
+      apply (simp add: bit_simps mask_def del: misc_simps)
+      done
+    then show ?thesis by (simp add: bit_simps)
+  qed
+
+  case 0
+  show ?case
+    apply (simp only: ptSlot_upd_def lookupPTSlotFromLevel.simps(1))
+    apply (cinitlift pt_' vptr_', simp only:)
+    apply (rule ccorres_rhs_assoc)+
+    apply (rule ccorres_guard_imp2)
+     apply (rule ccorres_Guard_Seq)
+     apply (rule ccorres_move_array_assertion_pt)
+     apply (rule ccorres_symb_exec_r2)
+       apply (rule ccorres_symb_exec_r2)
+         apply (simp add: whileAnno_def)
+         apply (rule ccorres_expand_while_iff_Seq[THEN iffD1])
+         apply (rule ccorres_cond_false[where R="\<top>" and
+                       R'="\<lbrace> \<acute>level = 0  \<and>
+                             ptBitsLeft_C \<acute>ret___struct_lookupPTSlot_ret_C = of_nat ptBits \<and>
+                             ptSlot_C \<acute>ret___struct_lookupPTSlot_ret_C =
+                             pte_Ptr pt +\<^sub>p uint ((vptr >> ptBits) && mask ptTranslationBits) \<rbrace>"])
+         apply (rule ccorres_guard_imp)
+           apply (rule ccorres_return_C)
+             apply clarsimp
+            apply clarsimp
+           apply clarsimp
+          apply (rule TrueI)
+         apply (clarsimp simp: bit_simps pt_slot_offset_def pt_index_def pt_bits_left_def shiftl_t2n)
+        apply vcg
+       apply clarsimp
+       apply (vcg spec=modifies)
+      apply clarsimp
+      apply vcg
+     apply (vcg spec=modifies)
+    apply clarsimp
+    apply (drule pte_at'_ptSlotIndex[where level=0 and vptr=vptr])
+    apply (clarsimp simp: pt_slot_offset_def pt_index_def pt_bits_left_def c_guard_abs_pte)
+    apply (clarsimp simp: bit_simps)
+    done
+
+  case (Suc level)
+  have [simp]:
+    "Suc level \<le> maxPTLevel \<Longrightarrow>
+     unat (of_nat ptTranslationBits +
+           of_nat ptTranslationBits * of_nat level +
+           of_nat pt_bits :: machine_word) =
+     ptTranslationBits + ptTranslationBits * level + pt_bits"
+    by (simp add: bit_simps word_less_nat_alt maxPTLevel_def unat_word_ariths unat_of_nat_eq)
+
+  show ?case
+    apply (simp only: lookupPTSlotFromLevel.simps)
+    apply (subst ptSlot_upd_def)
+    \<comment> \<open>cinitlift will not fully eliminate pt and vptr,
+        so we double the precondition to remember the connection\<close>
+    apply (rule ccorres_guard_imp[where Q=Q and A=Q and
+                                        Q'="A' \<inter> \<lbrace>\<acute>pt = pte_Ptr pt\<rbrace> \<inter> \<lbrace>\<acute>vptr = vptr\<rbrace>" and
+                                        A'=A' for Q A']; simp)
+    apply (cinitlift pt_' vptr_', simp only:) \<comment> \<open>Warns about ptSlot_upd, which is fine\<close>
+    apply (rename_tac vptrC ptC)
+    apply (rule ccorres_rhs_assoc)+
+    apply (rule ccorres_guard_imp2)
+     apply (rule ccorres_gen_asm[where P="Suc level \<le> maxPTLevel"])
+     apply (rule ccorres_Guard_Seq)
+     apply (rule ccorres_move_array_assertion_pt)
+     apply (rule ccorres_symb_exec_r2)
+       apply (rule_tac G'="\<lbrace> ptSlot_C \<acute>ret___struct_lookupPTSlot_ret_C =
+                                pte_Ptr (ptSlotIndex (Suc level) pt  vptr) \<and>
+                             ptBitsLeft_C \<acute>ret___struct_lookupPTSlot_ret_C =
+                                of_nat (ptBitsLeft (Suc level)) \<and>
+                             \<acute>level = of_nat (Suc level) \<and>
+                             \<acute>vptr = vptr \<and>
+                             \<acute>pt = ptC \<and>
+                             hrs_htd \<acute>t_hrs,c_guard \<Turnstile>\<^sub>t pte_Ptr (ptSlotIndex (Suc level) pt vptr)
+                            \<rbrace>"
+                       in ccorres_symb_exec_l')
+          apply (rename_tac pte)
+          apply (rule ccorres_add_return)
+          apply (rule ccorres_guard_imp)
+            apply (rule_tac xf'=ret__unsigned_long_' in ccorres_split_nothrow_call)
+                   apply (rule_tac pte=pte in isPTEPageTable_corres)
+                  apply simp
+                 apply simp
+                apply simp
+               apply (simp only: ptSlot_upd_def)
+               apply ceqv
+              apply (rename_tac from_bl)
+              apply (fold ptSlot_upd_def)
+              apply (unfold whileAnno_def)[1]
+              apply (rule ccorres_expand_while_iff_Seq[THEN iffD1])
+              apply (rule_tac R="\<top>" and
+                              R'="\<lbrace>\<acute>ret__unsigned_long = from_bl \<and> \<acute>level =  of_nat (Suc level)\<rbrace>"
+                              in ccorres_cond_strong)
+                apply (clarsimp simp: maxPTLevel_def word_less_nat_alt unat_word_ariths
+                                      unat_of_nat_eq)
+               apply (rule ccorres_rhs_assoc)+
+               apply (rule ccorres_symb_exec_r2)
+                 apply (rule ccorres_symb_exec_r2)
+                   apply (rule ccorres_add_return)
+                   apply (rule_tac xf'="pt_'" in ccorres_split_nothrow_call)
+                          apply (rule_tac pte=pte in getPPtrFromHWPTE_corres)
+                         apply simp
+                        apply simp
+                       apply simp
+                      apply ceqv \<comment> \<open>Warns about ptSlot_upd, which is fine\<close>
+                     apply (rule ccorres_checkPTAt)
+                     apply simp
+                     apply (rule ccorres_rhs_assoc2)+
+                     apply (rule Suc[unfolded whileAnno_def])
+                    apply simp
+                    apply wp
+                   apply simp
+                   apply (vcg exspec=getPPtrFromHWPTE_spec')
+                  apply vcg
+                 apply (vcg spec=modifies)
+                apply vcg
+               apply (vcg spec=modifies)
+              apply (rule ccorres_return_C; simp)
+             apply simp
+             apply wp
+            prefer 2
+            apply assumption
+           prefer 4
+           apply (wp hoare_drop_imps)
+          apply simp
+          apply (vcg exspec=isPTEPageTable_spec')
+         apply clarsimp
+         apply (clarsimp simp: ptBitsLeft_def bit_simps)
+        apply (wpsimp simp: pteAtIndex_def)
+       apply (wpsimp simp: pteAtIndex_def wp: empty_fail_getObject)
+      apply vcg
+     apply (vcg spec=modifies)
+    apply clarsimp
+    apply (drule pte_at'_ptSlotIndex[where vptr=vptr and level="Suc level"])
+    apply (simp add: c_guard_abs_pte)
+    apply (simp add: ptSlotIndex_def ptIndex_def ptBitsLeft_def)
+    apply (simp add: bit_simps word_less_nat_alt maxPTLevel_def unat_word_ariths unat_of_nat_eq)
+    done
+qed
+
+
 lemma lookupPTSlot_ccorres:
-  "ccorres (\<lambda>(bitsLeft,ptSlot) cr. bitsLeft = unat (ptBitsLeft_C cr) \<and> (ptSlot_C cr) = Ptr ptSlot)
+  "ccorres (\<lambda>(bitsLeft,ptSlot) cr. bitsLeft = unat (ptBitsLeft_C cr) \<and> ptSlot_C cr = Ptr ptSlot)
      ret___struct_lookupPTSlot_ret_C_'
      (page_table_at' pt)
-     (\<lbrace>\<acute>lvl1pt = Ptr pt \<rbrace> \<inter> \<lbrace>\<acute>vptr = vptr  \<rbrace>)
+     (\<lbrace>\<acute>vptr = vptr  \<rbrace> \<inter> \<lbrace>\<acute>lvl1pt = Ptr pt \<rbrace>)
      hs
      (lookupPTSlot pt vptr)
      (Call lookupPTSlot_'proc)"
-  apply (cinit lift: lvl1pt_' vptr_')
-   apply (rename_tac vptr' root_pt)
-   sorry (* FIXME RISCV: this one is completely different from before and involves a loop
-   apply (simp add: liftE_bindE pde_case_isPageTablePDE)
-   apply (ctac add: lookupPDSlot_ccorres)
-      apply (rename_tac pde_ptr lookup_ret, case_tac lookup_ret, clarsimp)
-      apply (rule ccorres_pre_getObject_pde, rename_tac pde)
-      apply (csymbr, rename_tac page_size, rule ccorres_abstract_cleanup)
-      apply (rule ccorres_rhs_assoc2)
-      apply (rule_tac ccorres_symb_exec_r)
-        apply (rule ccorres_if_lhs)
-         apply (rule ccorres_cond_false)
-         apply (simp add: bind_liftE_distrib liftE_bindE returnOk_liftE[symmetric])
-         apply (rule ccorres_stateAssert)
-         apply (rule_tac P="page_table_at' (ptrFromPAddr (pdeTable pde))
-                              and ko_at' pde pde_ptr
-                              and K (isPageTablePDE pde)"
-                     and P'=UNIV
-                  in ccorres_from_vcg_throws)
-         apply (rule allI, rule conseqPre, vcg)
-         apply (clarsimp simp: returnOk_def return_def, rename_tac s s')
-         apply (frule (1) page_table_at_rf_sr, clarsimp, rename_tac pt')
-         apply (rule cmap_relationE1[OF rf_sr_cpde_relation], assumption,
-                erule ko_at_projectKO_opt, rename_tac pdpte')
-         apply (clarsimp simp: typ_heap_simps cpde_relation_def Let_def isPageTablePDE_def
-                        split: pde.splits,
-                rename_tac pt_ptr ac cd wt xd rights)
-         apply (rule context_conjI, simp add: pde_lift_def Let_def split: if_splits, intro imp_ignore)
-         apply (clarsimp simp: pde_lift_def pde_pde_pt_lift_def Let_def pde_tag_defs)
-         apply (subst array_ptr_valid_array_assertionI[OF h_t_valid_clift], assumption, simp)
-          apply (rule unat_le_helper[OF order_trans[OF word_and_le1]], simp)
-         apply (simp add: lookup_pt_slot_no_fail_def getPTIndex_def mask_def bit_simps shiftl_t2n)
-        apply (rule ccorres_cond_true)
-        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-        apply (rule allI, rule conseqPre, vcg)
-        apply (clarsimp simp: throwError_def return_def syscall_error_rel_def)
-        apply (clarsimp simp: EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def)
-        apply (simp add: lookup_fault_missing_capability_lift mask_def bit_simps)
-       apply vcg
-      apply (rule conseqPre, vcg, clarsimp)
-     apply (ccorres_rewrite, rename_tac lookupPDSlot_errstate)
-     apply (rule_tac P=\<top> and P'="{s. lookupPDSlot_errstate = errstate s}"
-              in ccorres_from_vcg_throws)
-     apply (rule allI, rule conseqPre, vcg, clarsimp simp: throwError_def return_def)
-    apply (clarsimp, wp)
-   apply (vcg exspec=lookupPDSlot_modifies)
-  apply clarsimp
-  apply (frule h_t_valid_clift; simp)
-  apply (strengthen imp_ignore[where A="Ex P" for P])
-  apply (clarsimp simp: cpde_relation_def isPageTablePDE_def Let_def
-                        pde_lift_def pde_pde_pt_lift_def pde_tag_defs
-                 split: X64_H.pde.splits if_splits)
+  apply (cinit lift: lvl1pt_')
+   apply (rename_tac lvl1pt)
+   apply (rule ccorres_symb_exec_r2)
+     apply (rule ccorres_symb_exec_r2)
+       apply (rule ccorres_symb_exec_r2)
+         apply (rule ccorres_rhs_assoc2)+
+         apply (rule lookupPTSlotFromLevel_ccorres)
+        apply vcg
+       apply (vcg spec=modifies)
+      apply vcg
+     apply (vcg spec=modifies)
+    apply vcg
+   apply (vcg spec=modifies)
+  apply (simp add: bit_simps maxPTLevel_def)
   done
-  *)
 
 abbreviation
-  "findVSpaceForASID_xf \<equiv> liftxf errstate findVSpaceForASID_ret_C.status_C findVSpaceForASID_ret_C.vspace_root_C ret__struct_findVSpaceForASID_ret_C_'"
+  "findVSpaceForASID_xf \<equiv>
+     liftxf errstate findVSpaceForASID_ret_C.status_C
+            findVSpaceForASID_ret_C.vspace_root_C
+            ret__struct_findVSpaceForASID_ret_C_'"
 
 lemma ccorres_pre_getObject_asidpool:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
