@@ -311,7 +311,7 @@ def run_test(test, status_queue, kill_switch,
         timer.cancel()
 
     if output is None:
-        output = ""
+        output = b''
     output = output.decode(encoding='utf8', errors='replace')
     if test_status[0] in [STUCK, TIMEOUT, CPU_TIMEOUT]:
         output = output + extra_timeout_output(test.name)
