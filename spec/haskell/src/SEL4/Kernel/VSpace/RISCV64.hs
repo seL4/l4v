@@ -313,12 +313,14 @@ attribsFromWord w = VMAttributes { riscvExecuteNever = w `testBit` 0 }
 
 makeUserPTE :: PAddr -> Bool -> VMRights -> PTE
 makeUserPTE baseAddr executable rights =
-    PagePTE {
-        ptePPN = baseAddr `shiftR` pageBits,
-        pteGlobal = False,
-        pteUser = rights /= VMKernelOnly,
-        pteExecute = executable,
-        pteRights = rights }
+    if rights == VMKernelOnly && not executable
+    then InvalidPTE
+    else PagePTE {
+             ptePPN = baseAddr `shiftR` pageBits,
+             pteGlobal = False,
+             pteUser = True,
+             pteExecute = executable,
+             pteRights = rights }
 
 checkVPAlignment :: VMPageSize -> VPtr -> KernelF SyscallError ()
 checkVPAlignment sz w =

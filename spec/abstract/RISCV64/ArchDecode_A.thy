@@ -66,14 +66,12 @@ definition attribs_from_word :: "machine_word \<Rightarrow> vm_attributes"
   where
   "attribs_from_word w \<equiv> if \<not> w!!0 then {Execute} else {}"
 
-definition user_attr :: "vm_rights \<Rightarrow> vm_attributes"
-  where
-  "user_attr R \<equiv> if R \<noteq> vm_kernel_only then {User} else {}"
-
 definition make_user_pte :: "vspace_ref \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> pte"
   where
-  "make_user_pte addr attr rights =
-     PagePTE (ucast (addr >> pageBits)) (attr \<union> user_attr rights) rights"
+  "make_user_pte addr attr rights \<equiv>
+    if rights = {} \<and> attr = {}
+    then InvalidPTE
+    else PagePTE (ucast (addr >> pageBits)) (attr \<union> {User}) rights"
 
 definition check_slot :: "obj_ref \<Rightarrow> (pte \<Rightarrow> bool) \<Rightarrow> (unit,'z::state_ext) se_monad"
   where
