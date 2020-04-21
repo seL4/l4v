@@ -147,10 +147,11 @@ lookupPTSlotFromLevel :: Int -> PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
 lookupPTSlotFromLevel 0 ptPtr vPtr =
     return (ptBitsLeft 0, ptSlotIndex 0 ptPtr vPtr)
 lookupPTSlotFromLevel level ptPtr vPtr = do
-    checkPTAt ptPtr
     pte <- pteAtIndex level ptPtr vPtr
     if isPageTablePTE pte
-        then lookupPTSlotFromLevel (level-1) (getPPtrFromHWPTE pte) vPtr
+        then do
+            checkPTAt (getPPtrFromHWPTE pte)
+            lookupPTSlotFromLevel (level-1) (getPPtrFromHWPTE pte) vPtr
         else return (ptBitsLeft level, ptSlotIndex level ptPtr vPtr)
 
 -- lookupPTSlot walks the page table and returns a pointer to the slot that maps
@@ -231,7 +232,9 @@ lookupPTFromLevel level ptPtr vPtr targetPtPtr = do
     let ptr = getPPtrFromHWPTE pte
     if ptr == targetPtPtr
         then return slot
-        else lookupPTFromLevel (level-1) ptr vPtr targetPtPtr
+        else do
+            withoutFailure $ checkPTAt ptr
+            lookupPTFromLevel (level-1) ptr vPtr targetPtPtr
 
 unmapPageTable :: ASID -> VPtr -> PPtr PTE -> Kernel ()
 unmapPageTable asid vaddr pt = ignoreFailure $ do

@@ -26,10 +26,12 @@ where
   "lookupPTSlotFromLevel 0 ptPtr vPtr =
      return (ptBitsLeft 0, ptSlotIndex 0 ptPtr vPtr)"
 | "lookupPTSlotFromLevel level ptPtr vPtr = do
-     checkPTAt ptPtr;
      pte <- pteAtIndex level ptPtr vPtr;
      if isPageTablePTE pte
-     then lookupPTSlotFromLevel (level - 1) (getPPtrFromHWPTE pte) vPtr
+     then do
+       checkPTAt (getPPtrFromHWPTE pte);
+       lookupPTSlotFromLevel (level - 1) (getPPtrFromHWPTE pte) vPtr
+     od
      else return (ptBitsLeft level, ptSlotIndex level ptPtr vPtr)
    od"
 
@@ -38,7 +40,6 @@ fun
     (lookup_failure, machine_word) kernel_f"
 where
   "lookupPTFromLevel level ptPtr vPtr targetPtPtr = doE
-    liftE $ checkPTAt ptPtr;
     unlessE (0 < level) $ throw InvalidRoot;
     slot <- returnOk $ ptSlotIndex level ptPtr vPtr;
     pte <- withoutFailure $ getObject slot;
@@ -46,7 +47,10 @@ where
     ptr <- returnOk (getPPtrFromHWPTE pte);
     if ptr = targetPtPtr
         then returnOk slot
-        else lookupPTFromLevel (level - 1) ptr vPtr targetPtPtr
+        else doE
+          liftE $ checkPTAt ptr;
+          lookupPTFromLevel (level - 1) ptr vPtr targetPtPtr
+        odE
   odE"
 
 #INCLUDE_HASKELL SEL4/Kernel/VSpace/RISCV64.hs CONTEXT RISCV64_H bodies_only ArchInv=ArchRetypeDecls_H NOT lookupPTSlotFromLevel lookupPTFromLevel pteAtIndex getPPtrFromHWPTE isPageTablePTE ptBitsLeft checkPTAt
