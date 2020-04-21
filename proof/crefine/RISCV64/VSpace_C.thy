@@ -488,7 +488,7 @@ lemma lookupPTSlotFromLevel_ccorres:
                 \<acute>ret___struct_lookupPTSlot_ret_C))"
   shows
     "ccorres (\<lambda>(bitsLeft,ptSlot) cr. bitsLeft = unat (ptBitsLeft_C cr) \<and> ptSlot_C cr = Ptr ptSlot)
-     ret___struct_lookupPTSlot_ret_C_'
+     ret__struct_lookupPTSlot_ret_C_'
      (page_table_at' pt and (\<lambda>_. level \<le> maxPTLevel))
      (\<lbrace> ptBitsLeft_C \<acute>ret___struct_lookupPTSlot_ret_C = of_nat (ptTranslationBits * level + ptBits) \<rbrace>
       \<inter> \<lbrace> \<acute>level = of_nat level \<rbrace> \<inter> \<lbrace> \<acute>pt = Ptr pt \<rbrace> \<inter> \<lbrace> \<acute>vptr = vptr \<rbrace>)
@@ -668,7 +668,7 @@ qed
 
 lemma lookupPTSlot_ccorres:
   "ccorres (\<lambda>(bitsLeft,ptSlot) cr. bitsLeft = unat (ptBitsLeft_C cr) \<and> ptSlot_C cr = Ptr ptSlot)
-     ret___struct_lookupPTSlot_ret_C_'
+     ret__struct_lookupPTSlot_ret_C_'
      (page_table_at' pt)
      (\<lbrace>\<acute>vptr = vptr  \<rbrace> \<inter> \<lbrace>\<acute>lvl1pt = Ptr pt \<rbrace>)
      hs
@@ -1390,19 +1390,42 @@ lemma modeUnmapPage_ccorres:
 lemmas ccorres_name_ksCurThread = ccorres_pre_getCurThread[where f="\<lambda>_. f'" for f',
     unfolded getCurThread_def, simplified gets_bind_ign]
 
+lemma of_nat_pageBitsForSize:
+  "unat x = pageBitsForSize sz \<Longrightarrow> x = of_nat (pageBitsForSize sz)" for x::machine_word
+  by (drule sym, simp)
+
+lemma checkMappingPPtr_def2:
+  "checkMappingPPtr p pte =
+   (if isPagePTE pte \<and> ptrFromPAddr (ptePPN pte << ptBits) = p
+    then returnOk()
+    else throw InvalidRoot)"
+  unfolding checkMappingPPtr_def
+  by (cases pte; simp add: isPagePTE_def unlessE_def)
+
 lemma unmapPage_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
-                          and (\<lambda>_. asid_wf asid \<and> vmsz_aligned vptr sz
-                                           \<and> vptr < pptrBase))
-      (UNIV \<inter> {s. framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 3}
-            \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
+                          and (\<lambda>_. asid_wf asid \<and> vmsz_aligned vptr sz))
+      (\<lbrace> framesize_to_H \<acute>page_size = sz \<and> \<acute>page_size < 3 \<rbrace> \<inter>
+       \<lbrace> \<acute>asid = asid \<rbrace> \<inter> \<lbrace> \<acute>vptr = vptr \<rbrace> \<inter> \<lbrace> \<acute>pptr = Ptr pptr \<rbrace>)
+      hs
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid_' vptr_' pptr_')
-   apply (simp add: ignoreFailure_liftM Collect_True
-               del: Collect_const)
+   apply (simp add: ignoreFailure_liftM)
    apply (fold dc_def)
    apply (ctac add: findVSpaceForASID_ccorres)
+      apply (rename_tac vspace find_ret)
+      apply (simp add: liftE_bindE Collect_False bind_bindE_assoc
+                  del: Collect_const)
+      apply (ctac add: lookupPTSlot_ccorres)
+        apply csymbr
+        apply (simp (no_asm) add: split_def del: Collect_const)
+        apply (rule ccorres_split_unless_throwError_cond[where Q=\<top> and Q'=\<top>])
+           apply (clarsimp simp: of_nat_pageBitsForSize split: if_split)
+          apply (simp add: throwError_def flip: dc_def)
+          apply (rule ccorres_return_void_C)
+         apply (rule ccorres_pre_getObject_pte)
+         apply (simp add: checkMappingPPtr_def2)
   sorry (* FIXME RISCV: only one case for riscv, clearing a pte in a page table
       apply (rename_tac pmPtr pm')
       apply (rule_tac P="page_map_l4_at' pmPtr" in ccorres_cross_over_guard)
@@ -1688,15 +1711,6 @@ lemma RISCVGetReadFromVMRights_spec:
   apply (drule word_less_cases, auto)+
   done
 
-lemma RISCVGetUserFromVMRights_spec:
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0\<rbrace> Call RISCVGetUserFromVMRights_'proc
-  \<lbrace> \<acute>ret__unsigned_long = user_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) \<rbrace>"
-  apply vcg
-  apply (simp add: vmrights_to_H_def user_from_vm_rights_def Kernel_C.VMKernelOnly_def
-                   Kernel_C.VMReadOnly_def Kernel_C.VMReadWrite_def)
-  apply (drule word_less_cases, auto)+
-  done
-
 lemma writable_from_vm_rights_mask:
   "(writable_from_vm_rights R) && 1 = (writable_from_vm_rights R :: machine_word)"
   by (simp add: writable_from_vm_rights_def split: vmrights.splits)
@@ -1713,20 +1727,37 @@ lemma makeUserPTE_spec:
   "\<forall>s. \<Gamma> \<turnstile>
   \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0\<rbrace>
   Call makeUserPTE_'proc
-  \<lbrace> pte_lift \<acute>ret__struct_pte_C = \<lparr>
-       pte_CL.ppn_CL = (\<^bsup>s\<^esup>paddr >> 12) && mask 44,
-       pte_CL.sw_CL = 0,
-       pte_CL.dirty_CL = 1,
-       pte_CL.accessed_CL = 1,
-       pte_CL.global_CL = 0,
-       pte_CL.user_CL = user_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
-       pte_CL.execute_CL = \<^bsup>s\<^esup>executable && mask 1,
-       pte_CL.write_CL = writable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
-       pte_CL.read_CL = readable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
-       pte_CL.valid_CL = 1\<rparr> \<rbrace>"
+  \<lbrace> if \<^bsup>s\<^esup>executable = 0 \<and> vmrights_to_H \<^bsup>s\<^esup>vm_rights = VMKernelOnly
+    then
+      pte_lift \<acute>ret__struct_pte_C = \<lparr>
+        pte_CL.ppn_CL = 0,
+        pte_CL.sw_CL = 0,
+        pte_CL.dirty_CL = 0,
+        pte_CL.accessed_CL = 0,
+        pte_CL.global_CL = 0,
+        pte_CL.user_CL = 0,
+        pte_CL.execute_CL = 0,
+        pte_CL.write_CL = 0,
+        pte_CL.read_CL = 0,
+        pte_CL.valid_CL = 0\<rparr>
+    else
+      pte_lift \<acute>ret__struct_pte_C = \<lparr>
+        pte_CL.ppn_CL = (\<^bsup>s\<^esup>paddr >> 12) && mask 44,
+        pte_CL.sw_CL = 0,
+        pte_CL.dirty_CL = 1,
+        pte_CL.accessed_CL = 1,
+        pte_CL.global_CL = 0,
+        pte_CL.user_CL = 1,
+        pte_CL.execute_CL = \<^bsup>s\<^esup>executable && mask 1,
+        pte_CL.write_CL = writable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
+        pte_CL.read_CL = readable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
+        pte_CL.valid_CL = 1\<rparr> \<rbrace>"
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: mask_def user_from_vm_rights_mask writable_from_vm_rights_mask
                         readable_from_vm_rights_mask)
+  apply (rule conjI; clarsimp simp: readable_from_vm_rights_def writable_from_vm_rights_def
+                              split: if_split vmrights.splits)
+  apply (clarsimp simp: pte_lift_def fupdate_def)
   done
 
 (* FIXME RISCV: useful? strange that the vm_attributes are so limited, so the C code could be wrong *)
