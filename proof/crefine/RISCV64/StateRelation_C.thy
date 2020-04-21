@@ -427,11 +427,11 @@ where
         pte_CL.dirty_CL = 1,
         pte_CL.accessed_CL = 1,
         pte_CL.global_CL = of_bool global,
-        pte_CL.user_CL = user_from_vm_rights rights,
+        pte_CL.user_CL = of_bool user,
         pte_CL.execute_CL = of_bool execute,
         pte_CL.write_CL = writable_from_vm_rights rights,
         pte_CL.read_CL = readable_from_vm_rights rights,
-        pte_CL.valid_CL = 1 \<rparr>
+        pte_CL.valid_CL = 1 \<rparr> \<and> \<not>(rights = VMKernelOnly  \<and> \<not>execute)
   | PageTablePTE ppn global user \<Rightarrow>
       cpte' =  \<lparr>
         pte_CL.ppn_CL = ucast ppn,
