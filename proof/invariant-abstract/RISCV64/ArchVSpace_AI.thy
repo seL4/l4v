@@ -159,7 +159,7 @@ definition
 
 definition
   "same_ref \<equiv> \<lambda>(pte, slot) cap s.
-     (\<exists>p. pte_ref pte = Some p \<and> obj_refs cap = {p}) \<and>
+     ((\<exists>p. pte_ref pte = Some p \<and> obj_refs cap = {p}) \<or> pte = InvalidPTE) \<and>
      (\<exists>level asid vref. vs_cap_ref cap = Some (asid, vref_for_level vref level) \<and>
                         vs_lookup_slot level asid vref s = Some (level, slot) \<and>
                         vref \<in> user_region \<and> level \<le> max_pt_level)"
@@ -173,7 +173,7 @@ definition
       and same_ref m (ArchObjectCap acap)
       and valid_slots m
       and valid_arch_cap acap
-      and K (is_PagePTE (fst m))
+      and K (is_PagePTE (fst m) \<or> fst m = InvalidPTE)
       and (\<lambda>s. \<exists>slot. cte_wp_at (parent_for_refs m) slot s)
   | PageUnmap acap cslot \<Rightarrow>
      \<lambda>s. \<exists>dev r R sz m.
@@ -1429,7 +1429,7 @@ lemma perform_pg_inv_map_invs[wp]:
        apply (clarsimp simp: is_FrameCap_def cap_master_cap_simps valid_cap_def cap_aligned_def
                              valid_arch_cap_def)
   using reachable_page_table_not_global vs_lookup_slot_table_unfold apply blast
-     apply (clarsimp simp: is_PagePTE_def)
+     apply (auto simp: is_PagePTE_def)[1]
     apply (clarsimp simp: is_FrameCap_def)
     apply (drule (1) unique_table_refsD[rotated], solves \<open>simp\<close>; clarsimp)
    apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
@@ -1445,7 +1445,7 @@ lemma perform_pg_inv_map_invs[wp]:
    apply (clarsimp simp: is_PagePTE_def)
    apply (drule_tac p="(cref,cidx)" in caps_of_state_valid, clarsimp)
    apply (clarsimp simp: valid_cap_def obj_at_def data_at_def)
-  apply (rename_tac level' asid' vref')
+  apply (rename_tac level' asid' vref' p')
   apply (prop_tac "level' \<le> max_pt_level")
    apply (clarsimp simp flip: asid_pool_level_neq simp: pool_for_asid_vs_lookup)
    apply (drule pool_for_asid_validD, clarsimp)
