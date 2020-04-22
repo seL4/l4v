@@ -703,6 +703,15 @@ lemma addrFromPPtr_mask_middle_pml4ShiftBits:
   done
 *)
 
+lemma ccap_relation_PageTableCap_IsMapped:
+  "\<lbrakk> ccap_relation (capability.ArchObjectCap (arch_capability.PageTableCap p m)) ccap \<rbrakk>
+   \<Longrightarrow> (capPTIsMapped_CL (cap_page_table_cap_lift ccap) = 0) = (m = None)"
+  apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
+  apply (simp add: cap_page_table_cap_lift_def)
+  apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits if_splits)
+  apply (simp add: to_bool_def)
+  done
+
 (* FIXME RISCV: on other architectures, C uses invLabel_' instead of label___unsigned_long,
                 and excaps_' instead of extraCaps___struct_extra_caps_C_' *)
 lemma decodeRISCVPageTableInvocation_ccorres:
@@ -749,8 +758,34 @@ lemma decodeRISCVPageTableInvocation_ccorres:
          apply (simp add: throwError_bind invocationCatch_def)
          apply (rule syscall_error_throwError_ccorres_n)
          apply (simp add: syscall_error_to_H_cases)
-        (* FIXME RISCV: checking if PT is mapped here violates the decode/invoke model,
-                        waiting on C update *)
+
+        apply clarsimp
+        apply csymbr
+        apply clarsimp
+
+        apply (rule_tac P="v1 = None" in ccorres_cases
+               ; clarsimp simp: ccap_relation_PageTableCap_IsMapped
+               ; ccorres_rewrite)
+         (* not mapped, perform unmap *)
+         apply (simp add: returnOk_bind bindE_assoc performRISCV64MMUInvocations)
+         apply (ctac add: setThreadState_ccorres)
+           apply (ctac add: performPageTableInvocationUnmap_ccorres)
+              apply (rule ccorres_alternative2)
+              apply (rule ccorres_return_CE, simp+)[1]
+             apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+            apply wpsimp
+           apply (vcg exspec=performPageTableInvocationUnmap_modifies)
+          apply (wp sts_invs_minor')
+         apply simp
+         apply (vcg exspec=setThreadState_modifies)
+        (* mapped, check it isn't a top-level PT *)
+        apply (rule ccorres_rhs_assoc)+
+        apply clarsimp
+        apply csymbr
+        apply csymbr
+        apply (simp add: invocationCatch_use_injection_handler bindE_assoc)
+        (* FIXME RISCV: the dynamic here with maybeVSpaceForASID, bind, bindE and the injection
+                        handler is somewhat convoluted *)
   sorry (* FIXME RISCV
         apply (ctac add: setThreadState_ccorres)
           apply (ctac add: performPageTableInvocationUnmap_ccorres)
@@ -2468,24 +2503,29 @@ thm decodeRISCVMMUInvocation_body_def
     apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
            rule ccorres_rhs_assoc2)
     *)
-    apply (rule ccorres_rhs_assoc2)
+    apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
+           rule ccorres_rhs_assoc2)
+(*
+apply (rule ccorres_split_nothrow)
+*)
     apply (rule_tac R="excaps_in_mem extraCaps \<circ> ctes_of" and
                     R'="UNIV" and
                     val="from_bool (\<not> (isArchObjectCap (fst (extraCaps ! 0)) \<and>
                                        isPageTableCap (capCap (fst (extraCaps ! 0)))) \<or>
                                     capPTMappedAddress (capCap (fst (extraCaps ! 0))) \<noteq> None)" and
-                    xf'=ret__unsigned_longlong_' in ccorres_symb_exec_r_known_rv)
+                    xf'=ret__int_' in ccorres_symb_exec_r_known_rv)
        apply vcg
        apply clarsimp
        apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
        apply (clarsimp simp: excaps_in_mem_def)
        apply (frule (1) slotcap_in_mem_PageTable)
        apply (clarsimp simp: typ_heap_simps' from_bool_0 split: if_split)
-       subgoal sorry (* FIXME RISCV x64 version here:
-       apply (fastforce simp: isCap_simps asidInvalid_def cap_lift_page_table_cap cap_to_H_simps
-                              (*get_capMappedASID_CL_def*) true_def c_valid_cap_def cl_valid_cap_def
-                        elim!: ccap_relationE split: if_splits)
-       *)
+       apply (case_tac a; clarsimp simp: isCap_simps cap_get_tag_isCap_unfolded_H_cap
+                                         cap_tag_defs true_def)
+       apply (intro conjI impI
+              ; solves \<open>clarsimp simp: isCap_simps asidInvalid_def cap_lift_page_table_cap cap_to_H_simps
+                                       true_def c_valid_cap_def cl_valid_cap_def
+                                       ccap_relation_PageTableCap_IsMapped\<close>)
       apply ceqv
      apply (rule ccorres_Cond_rhs_Seq)
       apply ccorres_rewrite
