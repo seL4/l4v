@@ -47,6 +47,21 @@ lemma Arch_finaliseInterrupt_ccorres:
   apply (simp add: return_def)
   done
 
+(* FIXME RISCV move: based on getActiveIRQ_neq_Some0xFF *)
+thm getActiveIRQ_neq_Some0xFF
+thm getActiveIRQ_neq_Some0xFF'
+lemma getActiveIRQ_neq_Some0x3FF':
+  "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
+  apply (simp add: getActiveIRQ_def)
+  apply (wp alternative_wp select_wp)
+  apply simp
+  done
+lemma getActiveIRQ_neq_Some0x3FF:
+  "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
+  apply (wpsimp simp: doMachineOp_def split_def)
+  apply (auto dest: use_valid intro: getActiveIRQ_neq_Some0x3FF')
+  done
+
 lemma handleInterruptEntry_ccorres:
   "ccorres dc xfdc
            (invs' and sch_act_simple)
@@ -60,7 +75,7 @@ proof -
     apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
     apply (rule ccorres_Guard_Seq)?
     apply wpc
-     apply (simp add: irqInvalid_def)
+     apply (simp add: irqInvalid_def Kernel_C.irqInvalid_def)
      apply (rule ccorres_symb_exec_r)
        apply (ctac (no_vcg) add: schedule_ccorres)
         apply (rule ccorres_add_return2)
@@ -70,10 +85,9 @@ proof -
          apply (clarsimp simp: return_def)
         apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
-  sorry (* FIXME RISCV
       apply vcg
      apply vcg
-    apply (clarsimp simp: irqInvalid_def ucast_8_32_neq)
+    apply (clarsimp simp: irqInvalid_def ucast_8_32_neq Kernel_C.irqInvalid_def)
     apply (rule ccorres_rhs_assoc)
     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
      apply (rule ccorres_add_return, ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres)
@@ -85,12 +99,11 @@ proof -
         apply (clarsimp simp: return_def)
        apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
-   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> X64.maxIRQ) \<and> rv \<noteq> Some 0x3FF" in hoare_post_imp)
+   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF" in hoare_post_imp)
     apply (clarsimp simp: non_kernel_IRQs_def)
-   apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+   apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0x3FF | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
-  *)
 qed
 
 lemma handleUnknownSyscall_ccorres:
@@ -141,7 +154,6 @@ lemma handleVMFaultEvent_ccorres:
    apply (rule ccorres_pre_getCurThread)
    apply (simp add: catch_def)
    apply (rule ccorres_rhs_assoc2)
-  sorry (* FIXME RISCV
    apply (rule ccorres_split_nothrow_novcg)
        apply (rule ccorres_split_nothrow_case_sum)
             apply (ctac (no_vcg) add: handleVMFault_ccorres)
@@ -174,10 +186,10 @@ lemma handleVMFaultEvent_ccorres:
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply (clarsimp simp: simple_sane_strg[unfolded sch_act_sane_not])
-  by (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ
+  apply (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ
               elim: pred_tcb'_weakenE st_tcb_ex_cap''
               dest: st_tcb_at_idle_thread' rf_sr_ksCurThread)
-  *)
+  done
 
 lemma handleUserLevelFault_ccorres:
   "ccorres dc xfdc
@@ -240,7 +252,6 @@ lemma handleSyscall_ccorres:
   apply (cinit' lift: syscall_')
    apply (simp add: callKernel_def handleEvent_def minus_one_norm)
    apply (simp add: handleE_def handleE'_def)
-  sorry (* FIXME RISCV
    apply (rule ccorres_split_nothrow_novcg)
        apply wpc
               prefer 3
@@ -264,7 +275,7 @@ lemma handleSyscall_ccorres:
                  apply (subst ccorres_seq_skip'[symmetric])
                  apply (rule ccorres_split_nothrow_novcg)
                      apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
-                      apply (case_tac rv, clarsimp, clarsimp simp: ucast_8_32_neq)
+                      apply (case_tac rv; clarsimp simp: Kernel_C.irqInvalid_def)
                      apply (rule ccorres_add_return2)
                      apply (ctac (no_vcg) add: handleInterrupt_ccorres)
                       apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
@@ -274,10 +285,10 @@ lemma handleSyscall_ccorres:
                  apply (simp add: guard_is_UNIV_def)
                 apply clarsimp
                 apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-                 (\<forall>x. rv = Some x \<longrightarrow> x \<le> X64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
+                 (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
                                              in hoare_post_imp)
                  apply (clarsimp simp: non_kernel_IRQs_def)
-                apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+                apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0x3FF | simp)+
                apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
                apply (simp add: invs'_def valid_state'_def)
               apply clarsimp
@@ -302,7 +313,7 @@ lemma handleSyscall_ccorres:
                 apply (rule ccorres_split_nothrow_novcg)
                     apply (rule ccorres_Guard)?
                     apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
-                     apply (case_tac rv, clarsimp, clarsimp simp: ucast_8_32_neq)
+                      apply (case_tac rv; clarsimp simp: Kernel_C.irqInvalid_def irqInvalid_def)
                      apply (rule ccorres_add_return2)
                     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
                      apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
@@ -312,10 +323,10 @@ lemma handleSyscall_ccorres:
                 apply (simp add: guard_is_UNIV_def)
                apply clarsimp
                apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-                (\<forall>x. rv = Some x \<longrightarrow> x \<le> X64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
+                (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
                                      in hoare_post_imp)
                 apply (clarsimp simp: non_kernel_IRQs_def)
-               apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+               apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0x3FF | simp)+
               apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
               apply (simp add: invs'_def valid_state'_def)
              apply clarsimp
@@ -339,9 +350,7 @@ lemma handleSyscall_ccorres:
                apply (rule ccorres_split_nothrow_novcg)
                    apply (rule ccorres_Guard)?
                    apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
-                    apply (case_tac rv, clarsimp)
-                    apply (clarsimp simp: ucast_8_32_neq)
-                   apply clarsimp
+                    apply (case_tac rv; clarsimp simp: Kernel_C.irqInvalid_def irqInvalid_def)
                    apply (rule ccorres_add_return2)
                    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
                     apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
@@ -351,10 +360,10 @@ lemma handleSyscall_ccorres:
                apply (simp add: guard_is_UNIV_def)
               apply clarsimp
               apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-               (\<forall>x. rv = Some x \<longrightarrow> x \<le> X64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
+               (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
                                         in hoare_post_imp)
                apply (clarsimp simp: non_kernel_IRQs_def)
-              apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+              apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0x3FF | simp)+
              apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
              apply (simp add: invs'_def valid_state'_def)
             apply clarsimp
@@ -439,12 +448,10 @@ lemma handleSyscall_ccorres:
   apply (frule active_ex_cap')
    apply (clarsimp simp: invs'_def valid_state'_def)
   apply (clarsimp simp: simple_sane_strg ct_in_state'_def st_tcb_at'_def obj_at'_def
-                        isReply_def ct_not_ksQ)
-  apply (rule conjI, fastforce)
+                        isReply_def ct_not_ksQ irqInvalid_def Kernel_C.irqInvalid_def)
   apply (auto simp: syscall_from_H_def Kernel_C.SysSend_def
               split: option.split_asm)
   done
-  *)
 
 lemma ccorres_corres_u:
   "\<lbrakk> ccorres dc xfdc P (Collect P') [] H C; no_fail P H \<rbrakk> \<Longrightarrow>
@@ -535,7 +542,6 @@ lemma callKernel_corres_C:
   using no_fail_callKernel [of e]
   apply (clarsimp simp: callKernel_C_def)
   apply (cases e, simp_all)
-  sorry (* FIXME RISCV
       prefer 4
       apply (rule ccorres_corres_u)
        apply simp
@@ -574,7 +580,6 @@ lemma callKernel_corres_C:
         apply (clarsimp simp: all_invs'_def sch_act_simple_def)
        apply simp
   done
-  *)
 
 lemma ccorres_add_gets:
   "ccorresG rf_sr \<Gamma> rv xf P P' hs (do v \<leftarrow> gets f; m od) c
@@ -602,14 +607,11 @@ lemma ccorres_get_registers:
   apply (erule_tac x="(user_regs o atcbContextGet o tcbArch) ko RISCV64.msgInfoRegister" in meta_allE)
   apply (erule ccorres_guard_imp2)
   apply (clarsimp simp: rf_sr_ksCurThread)
-  apply (drule(1) obj_at_cslift_tcb, clarsimp simp: obj_at'_def projectKOs)
+  apply (drule(1) obj_at_cslift_tcb, clarsimp simp: obj_at'_def)
   apply (clarsimp simp: ctcb_relation_def ccontext_relation_def cregs_relation_def
-                        C_register_defs
-                        carch_tcb_relation_def
-                        "StrictC'_register_defs")
-  sorry (* FIXME RISCV
+                        C_register_defs RISCV64.capRegister_def RISCV64.msgInfoRegister_def
+                        carch_tcb_relation_def)
   done
-  *)
 
 (* FIXME: fastpath
 lemma callKernel_withFastpath_corres_C:
@@ -650,13 +652,12 @@ lemma threadSet_all_invs_triv':
   threadSet (\<lambda>tcb. tcbArch_update (\<lambda>_. atcbContextSet f (tcbArch tcb)) tcb) t \<lbrace>\<lambda>_. all_invs' e\<rbrace>"
   unfolding all_invs'_def
   apply (rule hoare_pre)
-  sorry (* FIXME RISCV
    apply (rule wp_from_corres_unit)
      apply (rule threadset_corresT [where f="tcb_arch_update (arch_tcb_context_set f)"])
         apply (simp add: tcb_relation_def arch_tcb_context_set_def
                          atcbContextSet_def arch_tcb_relation_def)
        apply (simp add: tcb_cap_cases_def)
-      apply (simp add: tcb_cte_cases_def)
+      apply (simp add: tcb_cte_cases_def cteSizeBits_def)
      apply (simp add: exst_same_def)
     apply (wp thread_set_invs_trivial thread_set_ct_running thread_set_not_state_valid_sched
               threadSet_invs_trivial threadSet_ct_running' static_imp_wp
@@ -665,11 +666,13 @@ lemma threadSet_all_invs_triv':
            | rule threadSet_ct_in_state'
            | wp (once) hoare_vcg_disj_lift)+
   apply clarsimp
+  apply (rename_tac s s')
   apply (rule exI, rule conjI, assumption)
-  apply (clarsimp simp: invs_def invs'_def cur_tcb_def cur_tcb'_def)
-  apply (simp add: state_relation_def)
+  apply (prop_tac "invs s'")
+   apply (clarsimp simp: invs_def)
+  apply (clarsimp simp: invs_psp_aligned invs_distinct)
+  apply (clarsimp simp: invs_def cur_tcb_def cur_tcb'_def state_relation_def)
   done
-  *)
 
 lemma getContext_corres:
   "t' = tcb_ptr_to_ctcb_ptr t \<Longrightarrow>
@@ -704,7 +707,6 @@ lemma entry_corres_C:
            \<top>
            (kernelEntry e uc) (kernelEntry_C fp e uc)"
   apply (simp add: kernelEntry_C_def kernelEntry_def getCurThread_def)
-  sorry (* FIXME RISCV
   apply (rule corres_guard_imp)
     apply (rule corres_split [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
        prefer 2
@@ -728,17 +730,14 @@ lemma entry_corres_C:
    apply (clarsimp simp: all_invs'_def invs'_def cur_tcb'_def valid_state'_def)
   apply simp
   done
-  *)
 
 lemma entry_refinement_C:
   "\<lbrakk>all_invs' e s; (s, t) \<in> rf_sr; fp = False \<comment> \<open>FIXME: fastpath\<close> \<rbrakk>
      \<Longrightarrow> \<not> snd (kernelEntry_C fp e tc t)
         \<and> (\<forall>tc' t'. (tc',t') \<in> fst (kernelEntry_C fp e tc t)
             \<longrightarrow> (\<exists>s'. (tc', s') \<in> fst (kernelEntry e tc s) \<and> (s',t') \<in> rf_sr))"
-  sorry (* FIXME RISCV
   using entry_corres_C [where e=e and fp=False]
   by (fastforce simp add: corres_underlying_def)
-  *)
 
 lemma ct_running'_C:
   "\<lbrakk> (s, t) \<in> rf_sr; invs' s \<rbrakk> \<Longrightarrow> ct_running' s = ct_running_C t"
@@ -1168,7 +1167,7 @@ lemma kernel_all_subset_kernel:
   done
 
 theorem true_refinement:
-  "kernel_global.ADT_C symbol_table x64KSKernelVSpace_C uop
+  "kernel_global.ADT_C symbol_table riscvKSKernelVSpace_C uop
    \<sqsubseteq> ADT_H uop"
   apply (rule refinement_trans[OF _ refinement2])
   apply (simp add: kernel_global.ADT_C_def ADT_C_def)
@@ -1177,9 +1176,7 @@ theorem true_refinement:
   apply (rule_tac x=Id in exI)
   using kernel_all_subset_kernel
   apply (simp add: fw_sim_def rel_semi_def)
-  sorry (* FIXME RISCV
   done
-  *)
 
 (* FIXME: fastpath
 theorem true_fp_refinement:
