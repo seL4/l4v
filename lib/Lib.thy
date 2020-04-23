@@ -1784,12 +1784,12 @@ lemma the_the_inv_mapI:
   "inj_on m (dom m) \<Longrightarrow> m x = Some y \<Longrightarrow> the (the_inv_map m y) = x"
   by (auto simp: the_inv_map_def ran_def inj_on_def dom_def)
 
-lemma eq_restrict_map_None[simp]:
+lemma eq_restrict_map_None:
   "restrict_map m A x = None \<longleftrightarrow> x ~: (A \<inter> dom m)"
   by (auto simp: restrict_map_def split: if_split_asm)
 
 lemma eq_the_inv_map_None[simp]: "the_inv_map m x = None \<longleftrightarrow> x\<notin>ran m"
-  by (simp add: the_inv_map_def2)
+  by (simp add: the_inv_map_def2 eq_restrict_map_None)
 
 lemma is_inv_unique:
   "is_inv f g \<Longrightarrow> is_inv f h \<Longrightarrow> g=h"
