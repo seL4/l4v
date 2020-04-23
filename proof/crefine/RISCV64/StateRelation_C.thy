@@ -315,7 +315,7 @@ where
   | "fault_to_H (SeL4_Fault_CapFault cf) lf
            = Some (CapFault (seL4_Fault_CapFault_CL.address_CL cf) (to_bool (inReceivePhase_CL cf)) (lookup_fault_to_H lf))"
   | "fault_to_H (SeL4_Fault_VMFault vf) lf
-           = Some (ArchFault (VMFault (seL4_Fault_VMFault_CL.address_CL vf) [FSR_CL vf, instructionFault_CL vf]))"
+           = Some (ArchFault (VMFault (seL4_Fault_VMFault_CL.address_CL vf) [instructionFault_CL vf, FSR_CL vf]))"
   | "fault_to_H (SeL4_Fault_UnknownSyscall us) lf
            = Some (UnknownSyscallException (syscallNumber_CL us))"
   | "fault_to_H (SeL4_Fault_UserException ue) lf
