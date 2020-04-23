@@ -440,7 +440,9 @@ lemma setObject_reply_replies_of'[wp]:
                         Structures_H.kernel_object.split_asm)
   done
 
-crunches setNotification, setEndpoint, setSchedContext
+lemmas setReply_replies_of' = setObject_reply_replies_of'[folded setReply_def]
+
+crunches setNotification, setEndpoint, setSchedContext, setCTE
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
 
 lemma getObject_obj_at':
