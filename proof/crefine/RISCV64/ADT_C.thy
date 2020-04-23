@@ -728,9 +728,8 @@ lemma map_to_ctes_tcb_ctes:
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
    apply (drule (1) ps_clear_32)+
-   apply (simp add: is_aligned_add_helper[of _ 11 "0x20", simplified]
+   apply (simp add: is_aligned_add_helper[of _ 10 "0x20", simplified]
                     split_def objBits_simps')
-  sorry (* FIXME RISCV
   apply (rule conjI)
    apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
    apply (drule_tac x="p+0x40" in spec, simp add: objBitsKO_def)
@@ -739,7 +738,7 @@ lemma map_to_ctes_tcb_ctes:
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
    apply (drule (1) ps_clear_is_aligned_ctes_None(1))+
-   apply (simp add: is_aligned_add_helper[of _ 11 "0x40", simplified]
+   apply (simp add: is_aligned_add_helper[of _ 10 "0x40", simplified]
                     split_def objBits_simps')
   apply (rule conjI)
    apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
@@ -749,7 +748,7 @@ lemma map_to_ctes_tcb_ctes:
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
    apply (drule (1) ps_clear_is_aligned_ctes_None(2))+
-   apply (simp add: is_aligned_add_helper[of _ 11 "0x60", simplified]
+   apply (simp add: is_aligned_add_helper[of _ 10 "0x60", simplified]
                     split_def objBits_simps')
   apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
   apply (drule_tac x="p+0x80" in spec, simp add: objBitsKO_def)
@@ -758,10 +757,9 @@ lemma map_to_ctes_tcb_ctes:
   apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
          assumption, simp add: objBits_simps')
   apply (drule (1) ps_clear_is_aligned_ctes_None(3))+
-  apply (simp add: is_aligned_add_helper[of _ 11 "0x80", simplified]
+  apply (simp add: is_aligned_add_helper[of _ 10 "0x80", simplified]
                    split_def objBits_simps')
   done
-  *)
 
 lemma cfault_rel_imp_eq:
   "cfault_rel x a b \<Longrightarrow> cfault_rel y a b \<Longrightarrow> x=y"
@@ -818,13 +816,12 @@ lemma cpspace_tcb_relation_unique:
    apply (frule ksPSpace_valid_objs_tcbBoundNotification_nonzero[OF vs])
    apply (frule ksPSpace_valid_objs_tcbBoundNotification_nonzero[OF vs'])
    apply (thin_tac "map_to_tcbs x y = Some z" for x y z)+
-   apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x400)))")
+   apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x200)))")
    apply (clarsimp simp: ctcb_relation_def ran_tcb_cte_cases)
    apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
    apply (auto simp: cfault_rel_imp_eq cthread_state_rel_imp_eq carch_tcb_relation_def
                      ccontext_relation_imp_eq2 up_ucast_inj_eq ctcb_size_bits_def)
-  sorry (* FIXME RISCV
-  done *)
+  done
 
 lemma tcb_queue_rel_clift_unique:
   "tcb_queue_relation gn gp' (clift s) as pp cp \<Longrightarrow>
@@ -889,23 +886,14 @@ lemma cpspace_ntfn_relation_unique:
 
 declare of_bool_eq_iff[simp]
 
-lemma super_writeable_rights_inj:
-  "\<lbrakk> user_from_vm_rights r = (user_from_vm_rights r' :: machine_word);
-     writable_from_vm_rights r = (writable_from_vm_rights r' :: machine_word) \<rbrakk> \<Longrightarrow>
-   r = r'"
-  by (simp add: writable_from_vm_rights_def user_from_vm_rights_def split: vmrights.splits)
-
 lemma cpspace_pte_relation_unique:
   assumes "cpspace_pte_relation ah ch" "cpspace_pte_relation ah' ch"
-  assumes "\<forall>x \<in> ran (map_to_ptes ah). valid_pte' x s"
-  assumes "\<forall>x \<in> ran (map_to_ptes ah'). valid_pte' x s'"
   shows   "map_to_ptes ah' = map_to_ptes ah"
-  apply (rule cmap_relation_unique'[OF inj_Ptr _ assms])
-  apply (auto simp: cpte_relation_def Let_def split: pte.splits bool.splits
-              dest: super_writeable_rights_inj)
-  sorry (* FIXME RISCV
+  apply (rule cmap_relation_unique'[OF inj_Ptr _ assms, where P=\<top> and P'=\<top>]; simp)
+  apply (simp add: cpte_relation_def Let_def ucast_id
+                   writable_from_vm_rights_def readable_from_vm_rights_def
+              split: pte.splits vmrights.splits)
   done
-  *)
 
 lemma is_aligned_no_overflow_0:
   "\<lbrakk> is_aligned x n; y \<le> 2^n-1; y \<noteq> 0 \<rbrakk> \<Longrightarrow> 0 < x + y"
@@ -1021,6 +1009,11 @@ abbreviation
 where
   "map_to_cnes \<equiv> (\<circ>\<^sub>m) projectKO_opt"
 
+(* FIXME RISCV move: used to be in ADT_H *)
+lemma ctes_of_cte_wp_atxD:
+  "ctes_of s p = Some cte \<Longrightarrow> cte_wp_at' ((=) cte) p s"
+  by (simp add: KHeap_R.cte_wp_at_ctes_of)
+
 lemma map_to_cnes_eq:
   assumes aligned: "pspace_aligned' s"   and aligned': "pspace_aligned' s'"
   assumes distinct: "pspace_distinct' s" and distinct': "pspace_distinct' s'"
@@ -1039,9 +1032,7 @@ lemma map_to_cnes_eq:
    apply (frule ctes_of_cte_at, simp add: cte_at'_obj_at')
    apply (elim disjE)
     apply (simp add: obj_at'_def)
-    sorry (* FIXME RISCV
    apply (clarsimp simp add: obj_at'_real_def ko_wp_at'_def)
-   apply (clarsimp simp add: projectKO_opt_tcb split: kernel_object.splits)
    apply (drule_tac x="x-n" in spec)
    apply (clarsimp simp add: map_comp_def projectKO_opt_tcb
                    split: option.splits kernel_object.splits)
@@ -1056,7 +1047,6 @@ lemma map_to_cnes_eq:
    apply (elim disjE)
     apply (simp add: obj_at'_def)
    apply (clarsimp simp add: obj_at'_real_def ko_wp_at'_def)
-   apply (clarsimp simp add: projectKO_opt_tcb split: kernel_object.splits)
    apply (drule_tac x="x-n" in spec)
    apply (clarsimp simp add: map_comp_def projectKO_opt_tcb
                    split: option.splits kernel_object.splits)
@@ -1066,7 +1056,7 @@ lemma map_to_cnes_eq:
           in tcb_space_clear[rotated], assumption+, simp+)
   apply (case_tac "EX cte. ksPSpace s x = Some (KOCTE cte)", clarsimp)
    apply (frule SR_lemmas_C.ctes_of_ksI[OF _ aligned distinct], simp)
-   apply (drule ctes_of_cte_wp_atD)+
+   apply (drule ctes_of_cte_wpD)+
    apply (simp add: cte_wp_at'_obj_at')
    apply (elim disjE)
       apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
@@ -1088,7 +1078,7 @@ lemma map_to_cnes_eq:
   apply (case_tac "EX cte. ksPSpace s' x = Some (KOCTE cte)", clarsimp)
    apply (frule SR_lemmas_C.ctes_of_ksI[OF _ aligned' distinct'], simp)
    apply (drule_tac t="ctes_of s x" in sym)
-   apply (drule ctes_of_cte_wp_atD)+
+   apply (drule ctes_of_cte_wpD)+
    apply (simp add: cte_wp_at'_obj_at')
    apply (elim disjE)
     apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_opt_cte)
@@ -1101,7 +1091,6 @@ lemma map_to_cnes_eq:
    apply simp
   apply (clarsimp simp: projectKO_opt_cte split: kernel_object.splits)
   done
-  *)
 
 (* FIXME RISCV
 lemma valid_objs'_valid_pte'_ran:
@@ -1140,19 +1129,9 @@ proof -
     apply (drule (1) cpspace_ntfn_relation_unique)
       apply (fastforce intro: valid_pspaces)
      apply (fastforce intro: valid_pspaces)
-    sorry (* FIXME RISCV
-    apply (drule (1) cpspace_pml4e_relation_unique)
-      apply (rule valid_objs'_valid_pml4'_ran [OF valid_objs])
-     apply (rule valid_objs'_valid_pml4'_ran [OF valid_objs'])
-    apply (drule (1) cpspace_pdpte_relation_unique)
-      apply (rule valid_objs'_valid_pdpt'_ran [OF valid_objs])
-     apply (rule valid_objs'_valid_pdpt'_ran [OF valid_objs'])
-    apply (drule (1) cpspace_pde_relation_unique)
-      apply (rule valid_objs'_valid_pde'_ran [OF valid_objs])
-     apply (rule valid_objs'_valid_pde'_ran [OF valid_objs'])
     apply (drule (1) cpspace_pte_relation_unique)
-      apply (rule valid_objs'_valid_pte'_ran [OF valid_objs])
-     apply (rule valid_objs'_valid_pte'_ran [OF valid_objs'])
+  sorry (* FIXME RISCV: casid_pool_relation does not guarantee an inverse due to valid_obj'
+                        placing no constraints on asid pool domain
     apply (drule (1) cpspace_asidpool_relation_unique[
                        OF valid_objs'_imp_wf_asid_pool'[OF valid_objs]
                           valid_objs'_imp_wf_asid_pool'[OF valid_objs']])
@@ -1198,14 +1177,13 @@ lemma ksPSpace_eq_imp_typ_at'_eq:
 lemma ksPSpace_eq_imp_valid_cap'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_cap' c s' = valid_cap' c s"
-  sorry (* FIXME RISCV
-  by (auto simp: valid_cap'_def page_table_at'_def
+  by (auto simp: valid_cap'_def page_table_at'_def frame_at'_def
                  valid_untyped'_def
                  ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
                  ksPSpace_eq_imp_typ_at'_eq[OF ksPSpace]
                  ksPSpace_eq_imp_ko_wp_at'_eq[OF ksPSpace]
+                 valid_arch_cap'_def wellformed_acap'_def
           split: capability.splits zombie_type.splits arch_capability.splits)
-  *)
 
 lemma ksPSpace_eq_imp_valid_tcb'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
