@@ -468,7 +468,8 @@ where
   "casid_pool_relation asid_pool casid_pool \<equiv>
   case asid_pool of ASIDPool pool \<Rightarrow>
   case casid_pool of asid_pool_C.asid_pool_C cpool \<Rightarrow>
-  array_relation ((=) \<circ> option_to_ptr) (2^asid_low_bits - 1) pool cpool"
+  array_relation ((=) \<circ> option_to_ptr) (2^asid_low_bits - 1) pool cpool
+  \<and> dom pool \<subseteq> {0 .. mask asid_low_bits} \<and> 0 \<notin> ran pool"
 
 
 definition (* FIXME RISCV: C code is currently missing ghost state updates for user_data_* in Arch_createObject *)

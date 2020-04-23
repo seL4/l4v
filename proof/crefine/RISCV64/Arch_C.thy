@@ -194,8 +194,8 @@ proof -
     unfolding casid_pool_relation_def
     apply (clarsimp simp: makeObject_asidpool split: asid_pool_C.splits)
     apply (clarsimp simp: array_relation_def option_to_ptr_def)
-    apply (rename_tac words i)
     sorry (* FIXME RISCV
+    apply (rename_tac words i)
     apply (subgoal_tac "asid_map_C.words_C (words.[unat i]).[0] = 0")
     apply (clarsimp simp: asid_map_lift_def asid_map_get_tag_def asid_map_tag_defs)
     apply (simp add: from_bytes_def)

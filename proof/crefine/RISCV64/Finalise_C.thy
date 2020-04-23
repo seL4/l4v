@@ -1053,6 +1053,10 @@ lemma deleteASIDPool_ccorres:
   apply auto
   done
 
+(* FIXME RISCV move *)
+lemma not_in_ran_None_upd:
+  "x \<notin> ran m \<Longrightarrow> x \<notin> ran (m(y := None))"
+  by (auto simp: ran_def split: if_split)
 
 lemma deleteASID_ccorres:
   "ccorres dc xfdc (invs' and K (asid_wf asid \<and> vs \<noteq> 0))
@@ -1118,13 +1122,14 @@ lemma deleteASID_ccorres:
                                    update_asidpool_map_tos
                                    update_asidpool_map_to_asidpools)
              apply (rule cmap_relation_updI, simp_all)[1]
-             apply (simp add: casid_pool_relation_def fun_upd_def[symmetric]
-                              inv_ASIDPool
-                       split: asidpool.split_asm asid_pool_C.split_asm)
-             apply (erule array_relation_update)
-               subgoal by (simp add: mask_def asid_low_bits_of_mask_eq)
-              subgoal by (clarsimp)
-             subgoal by (simp add: asid_low_bits_def)
+             apply (clarsimp simp: casid_pool_relation_def fun_upd_def[symmetric]
+                                   inv_ASIDPool
+                             split: asidpool.split_asm asid_pool_C.split_asm)
+             apply (rule conjI, erule array_relation_update)
+                subgoal by (simp add: mask_def asid_low_bits_of_mask_eq)
+               subgoal by (clarsimp)
+              subgoal by (simp add: asid_low_bits_def)
+             subgoal by (blast intro!: not_in_ran_None_upd)
             subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
                                   carch_globals_def update_asidpool_map_tos)
            apply (rule ccorres_pre_getCurThread)

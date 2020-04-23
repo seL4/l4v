@@ -808,7 +808,7 @@ lemma findVSpaceForASID_ccorres:
      apply (case_tac asidPool, clarsimp simp: inv_def)
      apply (simp add: casid_pool_relation_def)
      apply (case_tac ap', simp)
-     apply (simp add: array_relation_def)
+     apply (clarsimp simp: array_relation_def)
      apply (erule_tac x="asid && 2 ^ asid_low_bits - 1" in allE)
      apply (simp add: word_and_le1 mask_def option_to_ptr_def option_to_0_def asid_low_bits_of_p2m1_eq)
      apply (rename_tac "fun" array)

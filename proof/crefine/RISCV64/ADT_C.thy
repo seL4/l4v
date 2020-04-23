@@ -913,10 +913,7 @@ lemma option_to_ctcb_ptr_inj:
   apply (erule is_aligned_no_overflow_0; simp)
   done
 
-(* FIXME RISCV
 lemma cpspace_asidpool_relation_unique:
-  assumes invs: "\<forall>x\<in>ran (map_to_asidpools ah). wf_asid_pool' x"
-                "\<forall>x\<in>ran (map_to_asidpools ah'). wf_asid_pool' x"
   assumes rels: "cpspace_asidpool_relation ah ch"
                 "cpspace_asidpool_relation ah' ch"
   shows   "map_to_asidpools ah' = map_to_asidpools ah"
@@ -924,40 +921,30 @@ lemma cpspace_asidpool_relation_unique:
   using rels
   apply (clarsimp simp add: cmap_relation_def)
   apply (drule inj_image_inv[OF inj_Ptr])+
-  apply simp
-  apply (rule ext)
-  apply (case_tac "x:dom (map_to_asidpools ah)")
+  apply clarsimp
+  apply (rule ext, rename_tac p)
+  apply (case_tac "p \<in> dom (map_to_asidpools ah)")
    apply (drule bspec, assumption)+
-   apply (simp add: dom_def Collect_eq, drule_tac x=x in spec)
-   using invs
+   apply (simp add: dom_def Collect_eq, drule_tac x=p in spec)
    apply (clarsimp simp: casid_pool_relation_def Let_def
                   split: asidpool.splits asid_pool_C.splits)
-   apply (rename_tac "fun" array)
-   apply (drule bspec, fastforce)+
+   apply (rename_tac ap ap' apC)
+   apply (fold mask_2pm1)
    apply (drule array_relation_to_map)+
-   apply (rule ext, rename_tac y)
-   apply (drule_tac x=y in spec)+
+   apply (rule ext, rename_tac i)
+   apply (drule_tac x=i in spec)+
    apply clarsimp
-   sorry (* FIXME RISCV
-   apply (case_tac "y\<le>2^asid_low_bits - 1", simp)
-    apply (simp add: asid_map_relation_def split: option.splits asid_map_CL.splits)
-   apply (simp add: atLeastAtMost_def atLeast_def atMost_def dom_def
-                    Collect_mono2)
-   apply (drule_tac x=y in spec)+
-   apply auto
+   apply (case_tac "i \<le> mask asid_low_bits", simp)
+    apply (drule sym[where s="option_to_ptr _"], simp)
+    apply (simp add: option_to_ptr_def option_to_0_def ran_def split: option.splits)
+   apply clarsimp
+   apply (drule_tac c=i in contra_subsetD, simp)+
+   apply (clarsimp simp: non_dom_eval_eq)
+  apply clarsimp
+  apply (rule ccontr)
+  apply clarsimp
+  apply blast
   done
-  *)
-
-lemma valid_objs'_imp_wf_asid_pool':
-  "valid_objs' s \<Longrightarrow> \<forall>x\<in>ran (map_to_asidpools (ksPSpace s)). wf_asid_pool' x"
-  apply (clarsimp simp: valid_objs'_def ran_def)
-  apply (case_tac "ksPSpace s a", simp+)
-  apply (rename_tac y, drule_tac x=y in spec)
-  apply (case_tac y, simp_all add: projectKO_opt_asidpool)
-  apply (clarsimp simp: valid_obj'_def
-                 split: arch_kernel_object.splits)
-  done
-*)
 
 lemma cpspace_user_data_relation_unique:
   "\<lbrakk>cmap_relation (heap_to_user_data ah bh) (clift ch) Ptr cuser_user_data_relation;
@@ -1092,18 +1079,6 @@ lemma map_to_cnes_eq:
   apply (clarsimp simp: projectKO_opt_cte split: kernel_object.splits)
   done
 
-(* FIXME RISCV
-lemma valid_objs'_valid_pte'_ran:
-  "valid_objs' s \<Longrightarrow> \<forall>x\<in>ran (map_to_ptes (ksPSpace s)). valid_pte' x s"
-  apply (clarsimp simp: valid_objs'_def ran_def)
-  apply (case_tac "ksPSpace s a", simp+)
-  apply (rename_tac y, drule_tac x=y in spec)
-  apply (case_tac y, simp_all add: projectKOs)
-  apply (clarsimp simp: valid_obj'_def
-                 split: arch_kernel_object.splits)
-  done
-*)
-
 lemma cpspace_relation_unique:
   assumes valid_pspaces: "valid_pspace' s" "valid_pspace' s'"
   shows "cpspace_relation (ksPSpace s) bh ch \<Longrightarrow>
@@ -1130,11 +1105,7 @@ proof -
       apply (fastforce intro: valid_pspaces)
      apply (fastforce intro: valid_pspaces)
     apply (drule (1) cpspace_pte_relation_unique)
-  sorry (* FIXME RISCV: casid_pool_relation does not guarantee an inverse due to valid_obj'
-                        placing no constraints on asid pool domain
-    apply (drule (1) cpspace_asidpool_relation_unique[
-                       OF valid_objs'_imp_wf_asid_pool'[OF valid_objs]
-                          valid_objs'_imp_wf_asid_pool'[OF valid_objs']])
+    apply (drule (1) cpspace_asidpool_relation_unique)
     apply (drule (1) cpspace_tcb_relation_unique)
        apply (fastforce intro: no_0_objs no_0_objs' valid_objs valid_objs')
       apply (fastforce intro: no_0_objs no_0_objs' valid_objs valid_objs')
@@ -1156,7 +1127,6 @@ proof -
     by (clarsimp simp: projectKO_opts map_comp_def
                 split: kernel_object.splits arch_kernel_object.splits
                        option.splits)
-    *)
 qed
 (*<<< end showing that cpspace_relation is actually unique *)
 
