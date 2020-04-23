@@ -1959,24 +1959,23 @@ lemma set_ntfn_valid_pde_mappings'[wp]:
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
 
-lemma set_ntfn_minor_invs': (* FIXME RT: needs statement update *)
-  "\<lbrace>invs' and obj_at' (\<lambda>ntfn. ntfn_q_refs_of' (ntfnObj ntfn) = ntfn_q_refs_of' (ntfnObj val)
-                           \<and> ntfn_bound_refs' (ntfnBoundTCB ntfn) = ntfn_bound_refs' (ntfnBoundTCB val))
-                       ptr
-         and valid_ntfn' val
-         and (\<lambda>s. live' (KONotification val) \<longrightarrow> ex_nonz_cap_to' ptr s)
-         and (\<lambda>s. ptr \<noteq> ksIdleThread s) \<rbrace>
-     setNotification ptr val
+lemma set_ntfn_minor_invs':
+  "\<lbrace>invs'
+      and obj_at'
+            (\<lambda>ntfn. refs_of_ntfn' ntfn = refs_of_ntfn' val)
+            ptr
+      and valid_ntfn' val
+      and (\<lambda>s. live' (KONotification val) \<longrightarrow> ex_nonz_cap_to' ptr s)
+      and (\<lambda>s. ptr \<noteq> ksIdleThread s) \<rbrace>
+   setNotification ptr val
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp add: invs'_def valid_state'_def cteCaps_of_def)
-  apply (wp irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift,
-            simp_all add: o_def)
-  sorry (* FIXME RT: replies_of' preservation
+  apply (wpsimp wp: irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift
+              simp: o_def)
   apply (clarsimp elim!: rsubst[where P=sym_refs]
                  intro!: ext
-                  dest!: obj_at_state_refs_ofD')+
-  *)
-
+                  dest!: obj_at_state_refs_ofD')
+  done
 
 lemma ep_redux_simps':
   "ep_q_refs_of' (case xs of [] \<Rightarrow> IdleEP | y # ys \<Rightarrow> SendEP xs)
