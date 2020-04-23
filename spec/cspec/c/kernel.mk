@@ -70,7 +70,7 @@ endif
 # But since they are generated after the cmake setup, they would cause unnecessary
 # kernel rebuilds if we treated them as dependencies of the kernel build.
 # We avoid this by excluding __pycache__ directories from the kernel dependencies.
-KERNEL_DEPS := $(shell find ${SOURCE_ROOT} -name __pycache__ -prune -o -type f -print)
+KERNEL_DEPS := $(shell find ${SOURCE_ROOT} -name .git -prune -o -name __pycache__ -prune -o -type f -print)
 
 # Top level rule for rebuilding kernel_all.c_pp
 ${KERNEL_BUILD_ROOT}/kernel_all.c_pp: ${KERNEL_BUILD_ROOT}/.cmake_done
