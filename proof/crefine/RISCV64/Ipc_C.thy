@@ -1719,7 +1719,6 @@ proof -
           [where xf'=ret__unsigned_longlong_' and R="?obj_at_ft" and R'=UNIV]
   show ?thesis
     apply (unfold K_def)
-    using [[goals_limit = 5]]
     apply (intro ccorres_gen_asm)
     apply (cinit' lift: sender_' receiver_' faultType_' receiveIPCBuffer_')
      apply (simp only: makeArchFaultMessage_def setMRs_to_setMR
@@ -1727,7 +1726,6 @@ proof -
      apply (rule_tac P="ft = ArchFault aft" in ccorres_gen_asm)
      apply wpc
      apply (rename_tac list)
-  sorry (* FIXME RISCV something goes wrong in here
      apply (rule_tac P="zip [Suc (Suc 0) ..< msgMaxLength] list = [(2, hd list), (3, hd (tl list))]"
                      in ccorres_gen_asm)
      apply (simp add: Collect_True Collect_False ccorres_cond_iffs
@@ -1801,7 +1799,6 @@ proof -
         split: if_split_asm)
      apply (subst upt_rec, simp)+
     done
-    *)
 qed
 
 lemma setMRs_fault_ccorres [corres]:
