@@ -235,8 +235,6 @@ where
         (TCB tcb, KOTCB tcb') \<Rightarrow> tcb_relation tcb tcb'
       | (Endpoint ep, KOEndpoint ep') \<Rightarrow> ep_relation ep ep'
       | (Notification ntfn, KONotification ntfn') \<Rightarrow> ntfn_relation ntfn ntfn'
-      | (Structures_A.SchedContext sc n, KOSchedContext sc') \<Rightarrow> sc_relation sc n sc'
-      | (Structures_A.Reply r, KOReply r') \<Rightarrow> reply_relation r r'
       | (ArchObj (ARM_A.ASIDPool pool), KOArch (KOASIDPool pool'))
              \<Rightarrow> asid_pool_relation pool pool'
       | _ \<Rightarrow> False)"
@@ -314,6 +312,22 @@ where
 | "aobj_relation_cuts (PageDirectory pd) x =
      (\<lambda>y. (x + (ucast y << 2), pde_relation y)) ` UNIV"
 
+abbreviation
+  sc_relation_cut :: "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
+where
+  "sc_relation_cut obj obj' \<equiv>
+  (case (obj, obj') of
+        (Structures_A.SchedContext sc n, KOSchedContext sc') \<Rightarrow> sc_relation sc n sc'
+      | _ \<Rightarrow> False)"
+
+abbreviation
+  reply_relation_cut :: "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
+where
+  "reply_relation_cut obj obj' \<equiv>
+  (case (obj, obj') of
+        (Structures_A.Reply r, KOReply r') \<Rightarrow> reply_relation r r'
+      | _ \<Rightarrow> False)"
+
 primrec
   obj_relation_cuts :: "Structures_A.kernel_object \<Rightarrow> word32 \<Rightarrow> obj_relation_cuts"
 where
@@ -325,8 +339,8 @@ where
 | "obj_relation_cuts (Endpoint ep) x = {(x, other_obj_relation)}"
 | "obj_relation_cuts (Notification ntfn) x = {(x, other_obj_relation)}"
 | "obj_relation_cuts (Structures_A.SchedContext sc n) x =
-     (if valid_sched_context_size n then {(x, other_obj_relation)} else {(x, \<bottom>\<bottom>)})"
-| "obj_relation_cuts (Structures_A.Reply _) x = {(x, other_obj_relation)}"
+     (if valid_sched_context_size n then {(x, sc_relation_cut)} else {(x, \<bottom>\<bottom>)})"
+| "obj_relation_cuts (Structures_A.Reply _) x = {(x, reply_relation_cut)}"
 | "obj_relation_cuts (ArchObj ao) x = aobj_relation_cuts ao x"
 
 
@@ -336,7 +350,8 @@ lemma obj_relation_cuts_def2:
                              then {(cte_map (x, y), cte_relation y) | y. y \<in> dom cs}
                              else {(x, \<bottom>\<bottom>)}
              | Structures_A.SchedContext sc n \<Rightarrow>
-                 if valid_sched_context_size n then {(x, other_obj_relation)} else {(x, \<bottom>\<bottom>)}
+                 if valid_sched_context_size n then {(x, sc_relation_cut)} else {(x, \<bottom>\<bottom>)}
+             | Structures_A.Reply reply \<Rightarrow> {(x, reply_relation_cut)}
              | ArchObj (PageTable pt) \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pte_relation y))
                                            ` (UNIV :: word8 set)
              | ArchObj (PageDirectory pd) \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pde_relation y))
@@ -351,6 +366,9 @@ lemma obj_relation_cuts_def3:
   "obj_relation_cuts ko x =
   (case a_type ko of
      ACapTable n \<Rightarrow> {(cte_map (x, y), cte_relation y) | y. length y = n}
+   | ASchedContext n \<Rightarrow>
+       if valid_sched_context_size n then {(x, sc_relation_cut)} else {(x, \<bottom>\<bottom>)}
+   | AReply \<Rightarrow> {(x, reply_relation_cut)}
    | AArch APageTable \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pte_relation y))
                             ` (UNIV :: word8 set)
    | AArch APageDirectory \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pde_relation y))
@@ -369,6 +387,8 @@ definition
  "is_other_obj_relation_type tp \<equiv>
   case tp of
      ACapTable n \<Rightarrow> False
+   | ASchedContext n \<Rightarrow> False
+   | AReply \<Rightarrow> False
    | AArch APageTable \<Rightarrow> False
    | AArch APageDirectory \<Rightarrow> False
    | AArch (AUserData _)   \<Rightarrow> False
@@ -378,6 +398,14 @@ definition
 
 lemma is_other_obj_relation_type_CapTable:
   "\<not> is_other_obj_relation_type (ACapTable n)"
+  by (simp add: is_other_obj_relation_type_def)
+
+lemma is_other_obj_relation_type_SchedContext:
+  "\<not> is_other_obj_relation_type (ASchedContext n)"
+  by (simp add: is_other_obj_relation_type_def)
+
+lemma is_other_obj_relation_type_Reply:
+  "\<not> is_other_obj_relation_type AReply"
   by (simp add: is_other_obj_relation_type_def)
 
 lemma is_other_obj_relation_type_UserData:
@@ -406,7 +434,6 @@ where
   (pspace_dom ab = dom con) \<and>
   (\<forall>x \<in> dom ab. \<forall>(y, P) \<in> obj_relation_cuts (the (ab x)) x.
        P (the (ab x)) (the (con y)))"
-
 
 primrec
   reply_stack_relation :: "obj_ref list \<Rightarrow> obj_ref option \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
@@ -510,6 +537,12 @@ lemma obj_relation_cutsE:
      \<And>sz cs z cap cte. \<lbrakk> ko = CNode sz cs; well_formed_cnode_n sz cs; y = cte_map (x, z);
                       ko' = KOCTE cte; cs z = Some cap; cap_relation cap (cteCap cte) \<rbrakk>
               \<Longrightarrow> R;
+     \<And>sc n sc'. \<lbrakk> ko = Structures_A.SchedContext sc n; valid_sched_context_size n;
+                      ko' = KOSchedContext sc'; sc_relation sc n sc' \<rbrakk>
+              \<Longrightarrow> R;
+     \<And>reply reply'. \<lbrakk> ko = Structures_A.Reply reply;
+                      ko' = KOReply reply'; reply_relation reply reply' \<rbrakk>
+              \<Longrightarrow> R;
      \<And>pt (z :: word8) pte'. \<lbrakk> ko = ArchObj (PageTable pt); y = x + (ucast z << 2);
                               ko' = KOArch (KOPTE pte'); pte_relation_aligned z (pt z) pte' \<rbrakk>
               \<Longrightarrow> R;
@@ -524,9 +557,9 @@ lemma obj_relation_cutsE:
                    a_type_def
             split: Structures_A.kernel_object.split_asm if_split_asm
                    ARM_A.arch_kernel_obj.split_asm)
-    apply ((clarsimp split: if_splits,
-                force simp: cte_relation_def pte_relation_def pde_relation_def)+)[5]
-  done
+  by (clarsimp split: if_splits kernel_object.split_asm,
+      clarsimp simp: cte_relation_def pte_relation_def pde_relation_def
+                     reply_relation_def sc_relation_def)+
 
 lemma eq_trans_helper:
   "\<lbrakk> x = y; P y = Q \<rbrakk> \<Longrightarrow> P x = Q"
