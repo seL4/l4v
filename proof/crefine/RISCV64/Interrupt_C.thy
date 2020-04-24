@@ -1015,24 +1015,19 @@ lemma decodeIRQ_arch_helper: "x \<noteq> IRQIssueIRQHandler \<Longrightarrow>
 
 lemma Arch_checkIRQ_ccorres:
   "ccorres (syscall_error_rel \<currency> dc) (liftxf errstate id undefined ret__unsigned_long_')
-   \<top> UNIV []
+   \<top> \<lbrace> \<acute>irq = irq \<rbrace> []
    (checkIRQ irq) (Call Arch_checkIRQ_'proc)"
-  apply (cinit lift:)
-   apply (simp cong: StateSpace.state.fold_congs globals.fold_congs)
-  sorry (* FIXME RISCV
+  apply (cinit lift: irq_' )
+   apply (simp add: irqInvalid_def Kernel_C.irqInvalid_def Kernel_C.maxIRQ_def maxIRQ_def
+               del: Collect_const)
    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-   apply (rule allI, rule conseqPre)
-    apply vcg
-   apply (clarsimp simp: throwError_def return_def syscall_error_rel_def whenE_def
+   apply (rule allI, rule conseqPre, vcg)
+   apply (clarsimp simp: throwError_def returnOk_def return_def syscall_error_rel_def whenE_def
                          syscall_error_to_H_cases exception_defs)
   apply clarsimp
   done
-  *)
 
-(* FIXME x64: this could change when Arch_checkIRQ definition changes *)
 lemma decodeIRQControlInvocation_ccorres:
-  notes if_cong[cong] tl_drop_1[simp]
-  shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread)
@@ -1052,31 +1047,28 @@ lemma decodeIRQControlInvocation_ccorres:
      (decodeIRQControlInvocation label args slot (map fst extraCaps)
             >>= invocationCatch thread isBlocking isCall InvokeIRQControl)
      (Call decodeIRQControlInvocation_'proc)"
-  supply gen_invocation_type_eq[simp]
+  supply gen_invocation_type_eq[simp] if_cong[cong] Collect_const[simp del]
   apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' excaps_' buffer_')
    apply (simp add: decodeIRQControlInvocation_def invocation_eq_use_types
-               del: Collect_const
               cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule ccorres_Cond_rhs)
-    apply (simp add: list_case_If2
-                del: Collect_const cong: call_ignore_cong)
+    apply (simp add: list_case_If2 cong: call_ignore_cong)
     apply (rule ccorres_rhs_assoc)+
     apply csymbr+
     apply (rule ccorres_Cond_rhs_Seq)
-     apply (simp add: word_less_nat_alt if_1_0_0
-                      throwError_bind invocationCatch_def)
+     apply (simp add: word_less_nat_alt throwError_bind invocationCatch_def)
      apply (rule ccorres_cond_true_seq)
      apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
     apply csymbr
     apply (rule ccorres_Cond_rhs_Seq)
-     apply (simp add: interpret_excaps_test_null if_1_0_0 excaps_map_def
+     apply (simp add: interpret_excaps_test_null excaps_map_def
                       throwError_bind invocationCatch_def)
      apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
-    apply (simp add: interpret_excaps_test_null if_1_0_0 excaps_map_def
+    apply (simp add: interpret_excaps_test_null excaps_map_def
                      word_less_nat_alt Let_def
-                del: Collect_const cong: call_ignore_cong)
+                cong: call_ignore_cong)
     apply (rule ccorres_add_return)
     apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
       apply csymbr
