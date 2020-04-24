@@ -968,6 +968,13 @@ where
   "exst_same' (KOTCB tcb) (KOTCB tcb') = exst_same tcb tcb'" |
   "exst_same' _ _ = True"
 
+lemma replyNexts_of_non_reply_update:
+  "\<And>s'. \<lbrakk>typ_at' (koTypeOf ko) ptr s';
+   koTypeOf ko \<noteq> ReplyT \<rbrakk>
+     \<Longrightarrow> replyNexts_of (s'\<lparr>ksPSpace := ksPSpace s'(ptr \<mapsto> ko)\<rparr>) = replyNexts_of s'"
+  by (fastforce simp: typ_at'_def ko_wp_at'_def opt_map_def projectKO_opts_defs
+               split: kernel_object.splits)
+
 lemma set_other_obj_corres:
   fixes ob' :: "'a :: pspace_storable"
   assumes x: "updateObject ob' = updateObject_default ob'"
@@ -996,7 +1003,6 @@ lemma set_other_obj_corres:
   apply (clarsimp simp add: state_relation_def z)
   apply (clarsimp simp add: caps_of_state_after_update cte_wp_at_after_update
                             swp_def fun_upd_def obj_at_def)
-  sorry (* FIXME RT
   apply (subst conj_assoc[symmetric])
   apply (rule conjI[rotated])
    apply (clarsimp simp add: ghost_relation_def)
@@ -1016,30 +1022,26 @@ lemma set_other_obj_corres:
    apply clarsimp
    apply (frule_tac ko'=ko and x'=ptr in obj_relation_cut_same_type,
            (fastforce simp add: is_other_obj_relation_type t)+)
-   apply (erule disjE)
-    apply (simp add: is_other_obj_relation_type t)
-   apply (erule disjE)
-    apply (insert t,
-      clarsimp simp: is_other_obj_relation_type_CapTable a_type_def)
-   apply (erule disjE)
-    apply (insert t,
-       clarsimp simp: is_other_obj_relation_type_UserData a_type_def)
-   apply (insert t,
-      clarsimp simp: is_other_obj_relation_type_DeviceData a_type_def)
-  apply (simp only: ekheap_relation_def)
-  apply (rule ballI, drule(1) bspec)
-  apply (drule domD)
-  apply (insert e)
-  apply atomize
-  apply (clarsimp simp: obj_at'_def)
-  apply (erule_tac x=obj in allE)
-  apply (clarsimp simp: projectKO_eq project_inject)
-  apply (case_tac ob;
-         simp_all add: a_type_def other_obj_relation_def etcb_relation_def
-                       is_other_obj_relation_type t exst_same_def)
-  by (clarsimp simp: is_other_obj_relation_type t exst_same_def
-              split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits
-                     ARM_A.arch_kernel_obj.splits)+ *)
+   apply (insert t)
+   apply ((erule disjE
+         | clarsimp simp: is_other_obj_relation_type is_other_obj_relation_type_def a_type_def)+)[1]
+  (* sc_replies_relation *)
+  apply (simp add: sc_replies_relation_def)
+  apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def)
+  apply (drule_tac x=p in spec)
+  apply (rule conjI; clarsimp simp: sc_of_def split: Structures_A.kernel_object.split_asm if_split_asm)
+   apply(clarsimp simp: a_type_def is_other_obj_relation_type_def)
+  apply (rename_tac sc n)
+  apply (prop_tac "typ_at' (koTypeOf (injectKO ob')) ptr b")
+   apply (clarsimp simp: typ_at'_def ko_wp_at'_def obj_at'_def projectKO_opts_defs
+                         is_other_obj_relation_type_def a_type_def other_obj_relation_def
+                  split: Structures_A.kernel_object.split_asm if_split_asm
+                         arch_kernel_obj.split_asm kernel_object.split_asm arch_kernel_object.split_asm)
+  apply (drule replyNexts_of_non_reply_update[simplified])
+   apply (clarsimp simp: other_obj_relation_def; cases ob; cases "injectKO ob'";
+          simp split: arch_kernel_obj.split_asm)
+  apply (clarsimp simp add: opt_map_def sc_of_def)
+  done
 
 lemmas obj_at_simps = obj_at_def obj_at'_def projectKOs map_to_ctes_upd_other
                       is_other_obj_relation_type_def
