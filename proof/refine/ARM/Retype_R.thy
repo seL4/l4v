@@ -2123,7 +2123,6 @@ qed
 lemma other_objs_default_relation:
   "\<lbrakk> case ty of Structures_A.EndpointObject \<Rightarrow> ko = injectKO (makeObject :: endpoint)
              | Structures_A.NotificationObject \<Rightarrow> ko = injectKO (makeObject :: notification)
-             | Structures_A.ReplyObject \<Rightarrow> ko = injectKO (makeObject :: reply)
              | _ \<Rightarrow> False \<rbrakk> \<Longrightarrow>
     obj_relation_retype (default_object ty dev n d) ko"
   apply (rule obj_relation_retype_other_obj)

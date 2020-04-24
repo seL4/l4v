@@ -756,8 +756,7 @@ lemma set_pd_corres [@lift_corres_args, corres]:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
-       apply simp
-      apply simp
+         apply (simp+)[4]
      apply clarsimp
      apply (frule (1) pspace_alignedD)
      apply (drule_tac p=x in pspace_alignedD, assumption)
@@ -830,7 +829,7 @@ lemma set_pt_corres [@lift_corres_args, corres]:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
-       apply simp
+         apply (simp+)[3]
       apply clarsimp
       apply (frule (1) pspace_alignedD)
       apply (drule_tac p=x in pspace_alignedD, assumption)
