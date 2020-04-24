@@ -10,11 +10,18 @@
 
 theory Refine
 imports
+(* FIXME RT: until sorrying complete: *)
+  Arch_R
+
+(* FIXME RT: until sorrying complete:
   KernelInit_R
   DomainTime_R
   InitLemmas
   PageTableDuplicates
+*)
 begin
+
+(* FIXME RT:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -976,5 +983,6 @@ theorem refinement:
   done
 
 end
+*)
 
 end
