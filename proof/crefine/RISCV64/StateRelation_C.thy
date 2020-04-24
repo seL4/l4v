@@ -92,9 +92,22 @@ begin
 abbreviation riscvKSGlobalPT_Ptr :: "(pte_C[512]) ptr" where
   "riscvKSGlobalPT_Ptr \<equiv> pt_Ptr (symbol_table ''kernel_root_pageTable'')"
 
+(* Not state dependency needed, because these are all fixed addresses: *)
+definition globalPTs_to_H :: "nat \<Rightarrow> obj_ref list" where
+  "globalPTs_to_H \<equiv> \<lambda>level.
+     if level = maxPTLevel
+     then [symbol_table ''kernel_root_pageTable'']
+     else if level = maxPTLevel-1
+     then [symbol_table ''kernel_image_level2_pt'']
+     else []"
+
 (* relates fixed addresses *)
-definition
-  "carch_globals s \<equiv> (riscvKSGlobalPT s = ptr_val riscvKSGlobalPT_Ptr)"
+definition carch_globals :: "Arch.kernel_state \<Rightarrow> bool" where
+  "carch_globals s \<equiv> riscvKSGlobalPTs s = globalPTs_to_H"
+
+lemma carch_globals_riscvKSGlobalPT:
+  "carch_globals s \<Longrightarrow> riscvKSGlobalPT s = symbol_table ''kernel_root_pageTable''"
+  by (simp add: carch_globals_def riscvKSGlobalPT_def globalPTs_to_H_def)
 
 (* FIXME RISCV: DON'T DELETE!
     keep this for a rainy day, if we find out that leaving the asid map out of the state relation

@@ -1924,7 +1924,8 @@ lemma cap_lift_Some_CapD:
 
 lemma rf_sr_riscvKSGlobalPT:
   "(s, s') \<in> rf_sr \<Longrightarrow> riscvKSGlobalPT (ksArchState s) = ptr_val riscvKSGlobalPT_Ptr"
-  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
+  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                     carch_globals_riscvKSGlobalPT)
 
 lemma ghost_assertion_size_logic':
   "unat (sz :: machine_word) \<le> gsMaxObjectSize s

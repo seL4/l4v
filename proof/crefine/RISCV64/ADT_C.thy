@@ -540,7 +540,7 @@ definition
    RISCVKernelState
       (array_map_conv (\<lambda>x. if x=NULL then None else Some (ptr_val x))
                       (2^asid_high_bits - 1) (riscvKSASIDTable_' cstate))
-      (\<lambda>level. if level = maxPTLevel then [symbol_table ''kernel_root_pageTable''] else [])
+      globalPTs_to_H
       riscvKSKernelVSpace_C"
 
 
@@ -558,7 +558,6 @@ lemma carch_state_to_H_correct:
   apply (rename_tac v1 v2 v3)
   using rel[simplified carch_state_relation_def carch_globals_def]
   apply (clarsimp simp: carch_state_to_H_def)
-  apply (rule conjI)
   apply (rule array_relation_map_conv2[OF _ eq_option_to_ptr_rev])
     apply assumption
    using valid[simplified valid_arch_state'_def]
@@ -566,25 +565,7 @@ lemma carch_state_to_H_correct:
   using valid[simplified valid_arch_state'_def]
   apply (clarsimp simp: valid_asid_table'_def mask_2pm1)
   apply fastforce
-  sorry (* FIXME RISCV current definition of carch_state_to_H is not right, and valid_arch_state'
-           is not sufficient to state a good one
-
-apply (clarsimp simp: riscvKSGlobalPT_def)
-apply (rule ext)
-apply (clarsimp split: if_split)
-apply (fastforce split: if_splits)
-
-  apply (simp add: ccr3_relation_def split: cr3.splits)
-  apply (rule conjI)
-   prefer 2
-   apply (rule ext)
-   apply (clarsimp simp: x64_irq_state_relation_def array_relation_def array_map_conv_def
-                         array_to_map_def)
-   using valid[simplified valid_arch_state'_def valid_x64_irq_state'_def]
-   apply (case_tac "x \<le> maxIRQ"; fastforce split: option.split)
-  apply (clarsimp simp: global_ioport_bitmap_relation_def)
   done
-  *)
 
 end
 
