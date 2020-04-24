@@ -975,6 +975,21 @@ lemma replyNexts_of_non_reply_update:
   by (fastforce simp: typ_at'_def ko_wp_at'_def opt_map_def projectKO_opts_defs
                split: kernel_object.splits)
 
+definition replyNext_same :: "'a :: pspace_storable \<Rightarrow> 'a \<Rightarrow> bool" where
+  "replyNext_same obj1 obj2 \<equiv>
+    (case (injectKO obj1, injectKO obj2) of
+       (KOReply r1, KOReply r2) \<Rightarrow> replyNext r1 = replyNext r2
+      | _ \<Rightarrow> True)"
+
+
+lemma replyNexts_of_replyNext_same_update:
+  "\<And>s'. \<lbrakk>typ_at' ReplyT ptr s'; ksPSpace s' ptr = Some ko;
+   koTypeOf (injectKO (ob':: 'a :: pspace_storable)) = ReplyT;
+   projectKO_opt ko = Some ab; replyNext_same (ob':: 'a) ab\<rbrakk>
+     \<Longrightarrow> replyNexts_of (s'\<lparr>ksPSpace := ksPSpace s'(ptr \<mapsto> injectKO ob')\<rparr>) = replyNexts_of s'"
+  apply (cases "injectKO ob'"; clarsimp simp: typ_at'_def ko_wp_at'_def)
+  by (cases ko; fastforce simp add: replyNext_same_def project_inject projectKO_opts_defs opt_map_def)
+
 lemma set_other_obj_corres:
   fixes ob' :: "'a :: pspace_storable"
   assumes x: "updateObject ob' = updateObject_default ob'"
@@ -1065,6 +1080,92 @@ lemma set_ntfn_corres [corres]:
        apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
   apply (corressimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ntfn obj_at_simps objBits_defs partial_inv_def)
+
+lemma pspace_relation_reply_at:
+  assumes p: "pspace_relation (kheap s) (ksPSpace s')"
+  assumes t: "reply_at' ptr s'"
+  shows "reply_at ptr s" using assms
+  apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (erule (1) pspace_dom_relatedE)
+  by (clarsimp simp: obj_relation_cuts_def2 obj_at_def is_reply cte_relation_def
+                     other_obj_relation_def pte_relation_def pde_relation_def
+              split: Structures_A.kernel_object.split_asm if_split_asm
+                     ARM_A.arch_kernel_obj.split_asm)
+
+lemma set_reply_corres: (* for reply update that doesn't touch the reply stack *)
+  "reply_relation ae ae' \<Longrightarrow>
+  corres dc \<top>
+            (obj_at' (\<lambda>ko. replyNext_same ae' ko) ptr)
+            (set_reply ptr ae) (setReply ptr ae')"
+  proof -
+  have x: "updateObject ae' = updateObject_default ae'" by clarsimp
+  have z: "\<And>s. reply_at' ptr s
+               \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO ae')) = map_to_ctes (ksPSpace s)"
+    by (clarsimp simp: obj_at_simps)
+  have b: "\<And>ko. (\<lambda>_ :: reply. True) ko \<Longrightarrow> objBits ko = objBits ae'"
+    by (clarsimp simp: obj_at_simps)
+  have e: "\<And>ko. (\<lambda>_ :: reply. True) ko \<Longrightarrow> exst_same' (injectKO ko) (injectKO ae')"
+    by (clarsimp simp: obj_at_simps)
+  have P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
+    by (clarsimp simp: obj_at_simps objBits_defs pteBits_def pdeBits_def
+                 split: kernel_object.splits arch_kernel_object.splits)
+  assume r: "reply_relation ae ae'"
+  show ?thesis
+    apply (simp add: set_simple_ko_def setReply_def is_reply_def[symmetric])
+    supply image_cong_simp [cong del]
+    apply (insert r)
+    apply (rule corres_no_failI)
+     apply (rule no_fail_pre)
+      apply wp
+      apply (rule x)
+     apply (clarsimp simp: obj_at'_weakenE[OF _ b])
+    apply (unfold set_object_def setObject_def)
+    apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
+                          put_def return_def modify_def get_object_def x
+                          projectKOs obj_at_def obj_at'_def is_reply
+                          updateObject_default_def in_magnitude_check [OF _ P])
+    apply (prop_tac "reply_at ptr a")
+     apply (clarsimp simp: obj_at'_def projectKOs dest!: state_relation_pspace_relation pspace_relation_reply_at[where ptr=ptr])
+    apply (clarsimp simp: obj_at_def is_reply)
+    apply (rename_tac reply)
+    apply (prop_tac "obj_at (same_caps (kernel_object.Reply ae)) ptr a")
+     apply (clarsimp simp: obj_at_def is_reply)
+    apply (clarsimp simp: state_relation_def
+                          z[simplified obj_at'_def is_reply projectKO_eq projectKO_opts_defs, simplified])
+    apply (clarsimp simp add: caps_of_state_after_update cte_wp_at_after_update
+                              swp_def fun_upd_def obj_at_def)
+    apply (subst conj_assoc[symmetric])
+    apply (rule conjI[rotated])
+     apply (clarsimp simp add: ghost_relation_def)
+     apply (erule_tac x=ptr in allE)+
+     apply (clarsimp simp: obj_at_def a_type_def
+                     split: Structures_A.kernel_object.splits if_split_asm)
+    apply (fold fun_upd_def)
+    apply (simp only: pspace_relation_def simp_thms
+                      pspace_dom_update[where x="kernel_object.Reply _"
+                                          and v="kernel_object.Reply _",
+                                        simplified a_type_def, simplified])
+    apply (simp only: dom_fun_upd2 simp_thms)
+    apply (elim conjE)
+    apply (frule bspec, erule domI)
+    apply (rule conjI)
+     apply (rule ballI, drule(1) bspec)
+     apply (drule domD)
+     apply (clarsimp simp: project_inject split: if_split_asm kernel_object.split_asm)
+     apply (rename_tac bb aa ba)
+     apply (drule_tac x="(aa, ba)" in bspec, simp)
+     apply clarsimp
+     apply (frule_tac ko'="kernel_object.Reply reply" and x'=ptr in obj_relation_cut_same_type)
+        apply simp+
+     apply clarsimp
+      (* sc_replies_relation *)
+    apply (simp add: sc_replies_relation_def)
+    apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def)
+    apply (drule_tac x=p in spec)
+    apply (rule conjI; clarsimp simp: sc_of_def split: Structures_A.kernel_object.split_asm if_split_asm)
+    by (subst replyNexts_of_replyNext_same_update[simplified, where ob'=ae', simplified];
+        simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def sc_of_def)
+  qed
 
 lemma no_fail_getNotification [wp]:
   "no_fail (ntfn_at' ptr) (getNotification ptr)"
