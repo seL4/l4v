@@ -1,15 +1,11 @@
 #!/usr/bin/env python
-# This Python file uses the following encoding: utf-8
+#  -*- coding: utf-8 -*-
 #
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
-# Copyright 2014, NICTA
+# SPDX-License-Identifier: BSD-2-Clause
 #
-# This software may be distributed and modified according to the terms of
-# the BSD 2-Clause license. Note that NO WARRANTY is provided.
-# See "LICENSE_BSD2.txt" for details.
-#
-# @TAG(NICTA_BSD)
-#
+
 #
 #  unicode.py
 #
@@ -17,15 +13,16 @@
 #  Based on code by Timothy Bourke, NICTA
 #
 
+import isasymbols
 from __future__ import print_function
-import os, sys
+import os
+import sys
 
 # Make isasymbols importable.
 sys.path.append(os.path.join(os.path.dirname(__file__), '../pysymbols'))
-import isasymbols
 
 translator = isasymbols.make_translator(os.path.join(os.path.dirname(__file__),
-    '../../isabelle/etc/symbols'))
+                                                     '../../isabelle/etc/symbols'))
 
 if len(sys.argv) > 1:
     f = open(sys.argv[1], 'r')

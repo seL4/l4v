@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Schedule_R
@@ -16,23 +12,8 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare static_imp_wp[wp_split del]
 
-(* FIXME: move *)
-lemma corres_if_r':
-  "\<lbrakk> G' \<Longrightarrow> corres_underlying sr nf nf' r P P' a c; \<not>G' \<Longrightarrow> corres_underlying sr nf nf' r P Q' a d \<rbrakk>
-   \<Longrightarrow> corres_underlying sr nf nf' r (P) (if G' then P' else Q')
-                                     (a) (if G' then c  else d)"
-  by (simp)
-
 (* Levity: added (20090713 10:04:12) *)
 declare sts_rel_idle [simp]
-
-(* FIXME: move to NonDetMonadVCG *)
-lemma return_wp_exs_valid [wp]: "\<lbrace> P x \<rbrace> return x \<exists>\<lbrace> P \<rbrace>"
-  by (simp add: exs_valid_def return_def)
-
-(* FIXME: move to NonDetMonadVCG *)
-lemma get_exs_valid [wp]: "\<lbrace>(=) s\<rbrace> get \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
-  by (simp add: get_def exs_valid_def)
 
 lemma invs_no_cicd'_queues:
   "invs_no_cicd' s \<Longrightarrow> valid_queues s"
@@ -153,20 +134,14 @@ lemma tcbSchedAppend_corres:
   done
 
 
-crunch valid_pspace'[wp]: tcbSchedEnqueue valid_pspace'
+crunches tcbSchedEnqueue, tcbSchedAppend, tcbSchedDequeue
+  for valid_pspace'[wp]: valid_pspace'
+  and valid_arch_state'[wp]: valid_arch_state'
   (simp: unless_def)
-crunch valid_pspace'[wp]: tcbSchedAppend valid_pspace'
-  (simp: unless_def)
-crunch valid_pspace'[wp]: tcbSchedDequeue valid_pspace'
 
-crunch valid_arch_state'[wp]: tcbSchedEnqueue valid_arch_state'
-  (simp: unless_def)
-crunch valid_arch_state'[wp]: tcbSchedAppend valid_arch_state'
-  (simp: unless_def)
-crunch valid_arch_state'[wp]: tcbSchedDequeue valid_arch_state'
-
-crunch pred_tcb_at'[wp]: tcbSchedAppend, tcbSchedDequeue "pred_tcb_at' proj P t"
-  (wp: threadSet_pred_tcb_no_state simp: unless_def tcb_to_itcb'_def ignore: getObject setObject)
+crunches tcbSchedAppend, tcbSchedDequeue
+  for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
+  (wp: threadSet_pred_tcb_no_state simp: unless_def tcb_to_itcb'_def)
 
 crunch state_refs_of'[wp]: setQueue "\<lambda>s. P (state_refs_of' s)"
 
@@ -311,7 +286,7 @@ lemma tcbSchedAppend_valid_queues'[wp]:
   done
 
 crunch norq[wp]: threadSet "\<lambda>s. P (ksReadyQueues s)"
-  (simp: updateObject_default_def ignore: setObject getObject)
+  (simp: updateObject_default_def)
 
 lemma threadSet_valid_queues'_dequeue: (* threadSet_valid_queues' is too weak for dequeue *)
   "\<lbrace>\<lambda>s. (\<forall>d p t'. obj_at' (inQ d p) t' s \<and> t' \<noteq> t \<longrightarrow> t' \<in> set (ksReadyQueues s (d, p))) \<and>
@@ -412,7 +387,7 @@ crunch idle'[wp]: tcbSchedDequeue valid_idle'
   (simp: crunch_simps)
 
 crunch global_refs'[wp]: tcbSchedEnqueue valid_global_refs'
-  (wp: threadSet_global_refs simp: unless_def ignore: getObject setObject)
+  (wp: threadSet_global_refs simp: unless_def)
 crunch global_refs'[wp]: tcbSchedAppend valid_global_refs'
   (wp: threadSet_global_refs simp: unless_def)
 crunch global_refs'[wp]: tcbSchedDequeue valid_global_refs'
@@ -546,13 +521,11 @@ lemma tcbSchedAppend_tcb_in_cur_domain'[wp]:
 crunch ksDomScheduleIdx[wp]: tcbSchedAppend "\<lambda>s. P (ksDomScheduleIdx s)"
   (simp: unless_def)
 
-crunch gsUntypedZeroRanges[wp]: tcbSchedAppend, tcbSchedDequeue "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (simp: unless_def)
-
-crunches tcbSchedDequeue, tcbSchedAppend
-  for arch'[wp]: "\<lambda>s. P (ksArchState s)"
+crunches tcbSchedAppend, tcbSchedDequeue
+  for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
+  and arch'[wp]: "\<lambda>s. P (ksArchState s)"
   and ioports'[wp]: valid_ioports'
-  (wp: valid_ioports_lift'')
+  (simp: unless_def wp: valid_ioports_lift'')
 
 lemma tcbSchedAppend_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace> tcbSchedAppend thread
@@ -669,7 +642,6 @@ lemma arch_switch_thread_tcb_at' [wp]: "\<lbrace>tcb_at' t\<rbrace> Arch.switchT
   by (unfold X64_H.switchToThread_def, wp typ_at_lift_tcb')
 
 crunch typ_at'[wp]: "switchToThread" "\<lambda>s. P (typ_at' T p s)"
-  (ignore: )
 
 lemma Arch_switchToThread_pred_tcb'[wp]:
   "\<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>
@@ -1159,8 +1131,7 @@ lemmas iflive_inQ_nonz_cap[elim]
     = mp [OF iflive_inQ_nonz_cap_strg, OF conjI[rotated]]
 
 crunch ksRQ[wp]: threadSet "\<lambda>s. P (ksReadyQueues s)"
-  (ignore: setObject getObject
-       wp: updateObject_default_inv)
+  (wp: updateObject_default_inv)
 
 declare Cons_eq_tails[simp]
 
@@ -1430,7 +1401,6 @@ lemma setCurThread_const:
 
 crunch it[wp]: switchToIdleThread "\<lambda>s. P (ksIdleThread s)"
 crunch it[wp]: switchToThread "\<lambda>s. P (ksIdleThread s)"
-    (ignore: )
 
 lemma switchToIdleThread_curr_is_idle:
   "\<lbrace>\<top>\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv s. ksCurThread s = ksIdleThread s\<rbrace>"
@@ -1498,69 +1468,6 @@ lemma cur_tcb'_ksReadyQueuesL2Bitmap_upd[simp]:
 
 crunch cur[wp]: tcbSchedEnqueue cur_tcb'
   (simp: unless_def)
-
-(* FIXME: move *)
-lemma corres_noop3:
-  assumes x: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk>  \<Longrightarrow> \<lbrace>(=) s\<rbrace> f \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
-  assumes y: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk> \<Longrightarrow> \<lbrace>(=) s'\<rbrace> g \<lbrace>\<lambda>r. (=) s'\<rbrace>"
-  assumes z: "nf' \<Longrightarrow> no_fail P' g"
-  shows      "corres_underlying sr nf nf' dc P P' f g"
-  apply (clarsimp simp: corres_underlying_def)
-  apply (rule conjI)
-   apply clarsimp
-   apply (rule use_exs_valid)
-    apply (rule exs_hoare_post_imp)
-     prefer 2
-     apply (rule x)
-       apply assumption+
-    apply simp_all
-   apply (subgoal_tac "ba = b")
-    apply simp
-   apply (rule sym)
-   apply (rule use_valid[OF _ y], assumption+)
-   apply simp
-  apply (insert z)
-  apply (clarsimp simp: no_fail_def)
-  done
-
-lemma corres_symb_exec_l':
-  assumes z: "\<And>rv. corres_underlying sr nf nf' r (Q' rv) P' (x rv) y"
-  assumes x: "\<And>s. P s \<Longrightarrow> \<lbrace>(=) s\<rbrace> m \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
-  assumes y: "\<lbrace>Q\<rbrace> m \<lbrace>Q'\<rbrace>"
-  shows      "corres_underlying sr nf nf' r (P and Q) P' (m >>= (\<lambda>rv. x rv)) y"
-  apply (rule corres_guard_imp)
-    apply (subst gets_bind_ign[symmetric], rule corres_split)
-       apply (rule z)
-      apply (rule corres_noop3)
-        apply (erule x)
-       apply (rule gets_wp)
-      apply (rule non_fail_gets)
-     apply (rule y)
-    apply (rule gets_wp)
-   apply simp+
-   done
-
-lemma corres_symb_exec_r':
-  assumes z: "\<And>rv. corres_underlying sr nf nf' r P (P'' rv) x (y rv)"
-  assumes y: "\<lbrace>P'\<rbrace> m \<lbrace>P''\<rbrace>"
-  assumes x: "\<And>s. Q' s \<Longrightarrow> \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>"
-  assumes nf: "nf' \<Longrightarrow> no_fail R' m"
-  shows      "corres_underlying sr nf nf' r P (P' and Q' and R') x (m >>= (\<lambda>rv. y rv))"
-  apply (rule corres_guard_imp)
-    apply (subst gets_bind_ign[symmetric], rule corres_split)
-       apply (rule z)
-      apply (rule_tac P'="a' and a''" for a' a'' in corres_noop3)
-        apply (simp add: simpler_gets_def exs_valid_def)
-       apply clarsimp
-       apply (erule x)
-      apply (rule no_fail_pre)
-       apply (erule nf)
-      apply clarsimp
-      apply assumption
-     apply (rule gets_wp)
-    apply (rule y)
-   apply simp+
-  done
 
 lemma thread_get_exs_valid[wp]:
   "tcb_at t s \<Longrightarrow> \<lbrace>(=) s\<rbrace> thread_get f t \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"

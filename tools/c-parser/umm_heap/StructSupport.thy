@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  *)
 
 theory StructSupport
@@ -23,7 +19,7 @@ lemma field_lookup_list_Some2 [rule_format]:
 lemma field_lookup_list_mismatch [rule_format]:
   "\<forall>m. f \<noteq> fn \<longrightarrow> field_lookup_list (ts@[DTPair t f]) (fn # fs) m =
       field_lookup_list ts (fn # fs) m"
-by (induct ts, auto split: option.split)
+  by (induct ts, auto split: option.split)
 
 lemma fnl_set:
   "set (CompoundCTypes.field_names_list (TypDesc (TypAggregate xs) tn)) = dt_snd ` set xs"
@@ -40,15 +36,13 @@ lemma fnl_extend_ti:
   done
 
 lemma fnl_extend_ti_mismatch:
-  "\<lbrakk> f \<noteq> fn \<rbrakk> \<Longrightarrow>
-    field_lookup (extend_ti tag t fn) (f # fs) m =
-      field_lookup tag (f # fs) m"
-apply(case_tac tag, simp)
-apply(rename_tac typ_struct xs)
-apply(case_tac typ_struct, simp)
-apply clarsimp
-apply (simp add: field_lookup_list_mismatch)
-done
+  "f \<noteq> fn \<Longrightarrow> field_lookup (extend_ti tag t fn) (f # fs) m = field_lookup tag (f # fs) m"
+  apply (cases tag)
+  apply (rename_tac typ_struct xs)
+  apply (case_tac typ_struct)
+  apply clarsimp
+  apply (simp add: field_lookup_list_mismatch)
+  done
 
 lemma fl_ti_pad_combine:
   "\<lbrakk> hd f \<noteq> CHR ''!''; aggregate tag \<rbrakk> \<Longrightarrow>
@@ -70,12 +64,10 @@ lemma fl_ti_typ_combine_match:
   by (simp add: fl_ti_typ_combine)
 
 lemma fl_ti_typ_combine_mismatch:
-  "\<lbrakk> f \<noteq> fn \<rbrakk> \<Longrightarrow>
+  "f \<noteq> fn \<Longrightarrow>
       field_lookup (ti_typ_combine (t_b::'b::c_type itself) f_ab f_upd_ab fn tag) (f#fs) m =
         field_lookup tag (f # fs) m"
-apply(unfold ti_typ_combine_def Let_def)
-apply(erule fnl_extend_ti_mismatch)
-done
+  unfolding ti_typ_combine_def Let_def by (erule fnl_extend_ti_mismatch)
 
 lemma fl_ti_typ_pad_combine:
   "\<lbrakk> fn \<notin> set (CompoundCTypes.field_names_list tag); hd f \<noteq> CHR ''!''; hd fn \<noteq> CHR ''!'';
@@ -102,11 +94,8 @@ lemma fl_ti_typ_pad_combine_mismatch:
   "\<lbrakk> hd f \<noteq> CHR ''!''; aggregate tag; f \<noteq> fn \<rbrakk> \<Longrightarrow>
       field_lookup (ti_typ_pad_combine (t_b::'b::c_type itself) f_ab f_upd_ab fn tag) (f#fs) m =
         field_lookup tag (f # fs) m"
-apply(unfold ti_typ_pad_combine_def Let_def)
-apply(subst fl_ti_typ_combine_mismatch)
- apply assumption
-apply(simp add: fl_ti_pad_combine size_td_ti_pad_combine)
-done
+  unfolding ti_typ_pad_combine_def Let_def
+  by (simp add: fl_ti_typ_combine_mismatch fl_ti_pad_combine size_td_ti_pad_combine)
 
 lemma fl_final_pad:
   "\<lbrakk> hd f \<noteq> CHR ''!''; aggregate tag \<rbrakk> \<Longrightarrow>

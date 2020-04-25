@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -1137,7 +1133,7 @@ crunches cteInsert
   and norqL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
   and norqL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: updateObject_cte_inv crunch_wps)
+  (wp: updateObject_cte_inv crunch_wps ignore_del: setObject)
 
 lemmas updateMDB_typ_ats [wp] = typ_at_lifts [OF updateMDB_typ_at']
 lemmas updateCap_typ_ats [wp] = typ_at_lifts [OF updateCap_typ_at']
@@ -1148,7 +1144,7 @@ lemma setObject_cte_ct:
   by (clarsimp simp: valid_def setCTE_def[symmetric] dest!: setCTE_pspace_only)
 
 crunch ct[wp]: cteInsert "\<lambda>s. P (ksCurThread s)"
-  (wp: setObject_cte_ct hoare_drop_imps ignore: setObject)
+  (wp: setObject_cte_ct hoare_drop_imps)
 end
 context mdb_insert
 begin
@@ -2982,7 +2978,6 @@ crunch it[wp]: setupReplyMaster "\<lambda>s. P (ksIdleThread s)"
   (wp: setCTE_it')
 crunch nosch[wp]: setupReplyMaster "\<lambda>s. P (ksSchedulerAction s)"
 crunch irq_node'[wp]: setupReplyMaster "\<lambda>s. P (irq_node' s)"
-  (ignore: updateObject)
 
 lemmas setCTE_cteCap_wp_irq[wp] =
     hoare_use_eq_irq_node' [OF setCTE_ksInterruptState setCTE_cteCaps_of]
@@ -3160,7 +3155,7 @@ lemma setObject_cte_domIdx:
   by (clarsimp simp: valid_def setCTE_def[symmetric] dest!: setCTE_pspace_only)
 
 crunch ksDomScheduleIdx[wp]: cteInsert "\<lambda>s. P (ksDomScheduleIdx s)"
-  (wp: setObject_cte_domIdx hoare_drop_imps ignore: setObject)
+  (wp: setObject_cte_domIdx hoare_drop_imps)
 
 crunch gsUntypedZeroRanges[wp]: cteInsert "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: setObject_ksPSpace_only updateObject_cte_inv crunch_wps)

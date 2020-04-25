@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (* Proofs about untyped invocations. *)
@@ -155,7 +151,7 @@ lemma dec_untyped_inv_corres:
         (decodeUntypedInvocation label args (cte_map slot)
           (capability.UntypedCap d w n idx) cs')"
 proof (cases "6 \<le> length args \<and> cs \<noteq> []
-                \<and> invocation_type label = UntypedRetype")
+                \<and> gen_invocation_type label = UntypedRetype")
   case False
   show ?thesis using False cap_rel
     apply (clarsimp simp: decode_untyped_invocation_def
@@ -180,7 +176,7 @@ next
     using True cap_rel
     by (clarsimp simp: neq_Nil_conv list_all2_Cons1 val_le_length_Cons)
 
-  have il: "invocation_type label = UntypedRetype"
+  have il: "gen_invocation_type label = UntypedRetype"
     using True by simp
 
   have word_unat_power2:
@@ -1323,28 +1319,26 @@ lemma do_ext_op_update_cdt_list_symb_exec_l':
   update_cdt_list_def set_cdt_list_def bind_def put_def get_def gets_def return_def)
   done
 
-crunch it'[wp]: updateMDB, updateNewFreeIndex "\<lambda>s. P (ksIdleThread s)"
-crunch ups'[wp]: updateMDB, updateNewFreeIndex "\<lambda>s. P (gsUserPages s)"
-crunch cns'[wp]: updateMDB, updateNewFreeIndex "\<lambda>s. P (gsCNodes s)"
-crunch ksDomainTime[wp]: updateMDB, updateNewFreeIndex "\<lambda>s. P (ksDomainTime s)"
-crunch ksDomScheduleIdx[wp]: updateMDB, updateNewFreeIndex "\<lambda>s. P (ksDomScheduleIdx s)"
-crunch ksWorkUnitsCompleted[wp]: updateMDB, updateNewFreeIndex "\<lambda>s. P (ksWorkUnitsCompleted s)"
-crunch ksMachineState[wp]: updateNewFreeIndex "\<lambda>s. P (ksMachineState s)"
-crunch ksArchState[wp]: updateNewFreeIndex "\<lambda>s. P (ksArchState s)"
-crunch ksInterrupt[wp]: insertNewCap "\<lambda>s. P (ksInterruptState s)"
+crunches updateMDB, updateNewFreeIndex
+  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ups'[wp]: "\<lambda>s. P (gsUserPages s)"
+  and cns'[wp]: "\<lambda>s. P (gsCNodes s)"
+  and ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
+  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksWorkUnitsCompleted[wp]: "\<lambda>s. P (ksWorkUnitsCompleted s)"
+  and ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
+  and ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
+crunches insertNewCap
+  for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
+  and norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps)
 crunch nosch[wp]: insertNewCaps "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps)
-crunch norq[wp]: insertNewCap "\<lambda>s. P (ksReadyQueues s)"
-  (wp: crunch_wps)
-crunch ksIdleThread[wp]: insertNewCap "\<lambda>s. P (ksIdleThread s)"
-  (wp: crunch_simps hoare_drop_imps)
-crunch ksDomSchedule[wp]: insertNewCap "\<lambda>s. P (ksDomSchedule s)"
-  (wp: crunch_simps hoare_drop_imps)
-crunch ksCurDomain[wp]: insertNewCap "\<lambda>s. P (ksCurDomain s)"
-  (wp: crunch_wps)
-crunch ksCurThread[wp]: insertNewCap "\<lambda>s. P (ksCurThread s)"
-  (wp: crunch_wps)
+
 
 crunch exst[wp]: set_cdt "\<lambda>s. P (exst s)"
 
@@ -4060,11 +4054,11 @@ lemma valid_sched_etcbs[elim!]: "valid_sched_2 queues ekh sa cdom kh ct it \<Lon
   by (simp add: valid_sched_def)
 
 crunch ksIdleThread[wp]: deleteObjects "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp ignore: freeMemory)
+  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp)
 crunch ksCurDomain[wp]: deleteObjects "\<lambda>s. P (ksCurDomain s)"
-  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp ignore: freeMemory)
+  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp)
 crunch irq_node[wp]: deleteObjects "\<lambda>s. P (irq_node' s)"
-  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp ignore: freeMemory)
+  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp)
 
 lemma deleteObjects_ksCurThread[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> deleteObjects ptr sz \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
@@ -5076,8 +5070,7 @@ lemma sts_valid_untyped_inv':
 
 crunch nosch[wp]: invokeUntyped "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps zipWithM_x_mapM
-     wp: crunch_wps hoare_unless_wp mapME_x_inv_wp preemptionPoint_inv
-     ignore: forME_x)
+     wp: crunch_wps hoare_unless_wp mapME_x_inv_wp preemptionPoint_inv)
 
 crunch no_0_obj'[wp]: insertNewCap no_0_obj'
   (wp: crunch_wps)
@@ -5347,7 +5340,7 @@ lemma createNewCaps_cap_to':
   done
 
 crunch it[wp]: copyGlobalMappings "\<lambda>s. P (ksIdleThread s)"
-  (wp: mapM_x_wp' ignore: clearMemory forM_x getObject)
+  (wp: mapM_x_wp')
 
 lemma createNewCaps_idlethread[wp]:
   "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> createNewCaps tp ptr sz us d \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
@@ -5651,12 +5644,12 @@ lemma inv_untyp_tcb'[wp]:
 
 crunch ksInterruptState_eq[wp]: invokeUntyped "\<lambda>s. P (ksInterruptState s)"
   (wp: crunch_wps mapME_x_inv_wp preemptionPoint_inv
-    simp: crunch_simps unless_def
-      ignore: forME_x)
+   simp: crunch_simps unless_def)
 
-crunch valid_irq_states'[wp]: deleteObjects, updateFreeIndex "valid_irq_states'"
+crunches deleteObjects, updateFreeIndex
+  for valid_irq_states'[wp]: "valid_irq_states'"
   (wp: doMachineOp_irq_states' crunch_wps
-    simp: freeMemory_def no_irq_storeWord unless_def)
+   simp: freeMemory_def no_irq_storeWord unless_def)
 
 lemma resetUntypedCap_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace>

@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(NICTA_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory ADT_IF_Refine_C
@@ -155,7 +151,7 @@ proof -
      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: return_def)
-    apply (clarsimp simp: ucast_not_helper_cheating_unsigned
+    apply (clarsimp simp: ucast_not_helper_cheating_unsigned ucast_helper_simps_32
       ucast_not_helper ccorres_cond_univ_iff ucast_ucast_a is_down)
     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
@@ -578,7 +574,7 @@ definition
   "checkActiveIRQ_C_if tc \<equiv>
    do
       getActiveIRQ_C;
-      irq \<leftarrow>  gets ret__unsigned_short_';
+      irq \<leftarrow>  gets ret__unsigned_long_';
       return (if irq = 0xFFFF then None else Some (ucast irq), tc)
    od"
 
@@ -598,7 +594,9 @@ lemma check_active_irq_corres_C:
         apply (clarsimp split: if_split option.splits)
        apply (rule ccorres_guard_imp)
          apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
-         apply (rule getActiveIRQ_ccorres)
+            apply (rule getActiveIRQ_ccorres)
+           apply simp+
+         apply (case_tac x; simp add: ucast_helper_simps_32)
         apply simp+
       apply (rule no_fail_dmo')
       apply (rule getActiveIRQ_nf)

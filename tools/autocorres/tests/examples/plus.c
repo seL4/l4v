@@ -1,18 +1,16 @@
 /*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  */
 
-unsigned int plus(unsigned int a, unsigned int b) {
+unsigned int plus(unsigned int a, unsigned int b)
+{
     return a + b;
 }
 
-unsigned int plus2(unsigned int a, unsigned int b) {
+unsigned int plus2(unsigned int a, unsigned int b)
+{
     while (b > 0) {
         a += 1;
         b -= 1;
@@ -20,6 +18,7 @@ unsigned int plus2(unsigned int a, unsigned int b) {
     return a;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     return !(plus(1, 2) == plus2(1, 2));
 }

@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(NICTA_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Syscall_DR
@@ -229,7 +225,7 @@ lemma decode_domain_corres:
      (Decode_A.decode_domain_invocation label' args' excaps')"
   apply (unfold Tcb_D.decode_domain_invocation_def Decode_A.decode_domain_invocation_def)
   apply (unfold transform_cap_list_def)
-  apply (case_labels "invocation_type label'"; simp)
+  apply (case_labels "invocation_type label'"; simp add: gen_invocation_type_eq)
                                             apply (clarsimp simp: transform_intent_def option_map_def
                                                             split: option.splits)+
                   defer
@@ -260,11 +256,11 @@ lemma decode_domain_corres:
 lemma decode_domain_cap_label_not_match:
   "\<lbrakk>\<forall>ui. Some (DomainIntent ui) \<noteq> transform_intent (invocation_type label') args'\<rbrakk>
     \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_domain_invocation label' args' excaps' \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>e. (=) s\<rbrace>"
-  apply (case_tac "invocation_type label' = DomainSetSet")
-   apply (clarsimp simp: Decode_A.decode_domain_invocation_def transform_intent_def)+
+  apply (case_tac "invocation_type label' = GenInvocationLabel DomainSetSet")
+   apply (clarsimp simp: Decode_A.decode_domain_invocation_def transform_intent_def gen_invocation_type_eq)+
    apply (clarsimp simp: transform_intent_domain_def split: option.splits list.splits)
    apply wp
-  apply (simp add: Decode_A.decode_domain_invocation_def)
+  apply (simp add: Decode_A.decode_domain_invocation_def gen_invocation_type_eq)
   apply wp
   done
 
@@ -329,8 +325,9 @@ lemma decode_invocation_irqhandlercap_corres:
   apply (clarsimp simp: throw_opt_def get_irq_handler_intent_def split: option.splits)
   apply (rule conjI)
    apply (auto simp: decode_irq_handler_invocation_def transform_intent_def
-          split del: if_split
-              split: invocation_label.splits cdl_intent.splits list.splits)[1]
+               simp flip: gen_invocation_type_eq
+               split del: if_split
+               split: invocation_label.splits gen_invocation_labels.splits cdl_intent.splits list.splits)[1]
   apply clarsimp
   apply (simp split: cdl_intent.splits)
   apply (rule corres_rel_imp)
@@ -354,12 +351,12 @@ lemma transform_intent_untyped_cap_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.UntypedCap dev w n idx\<rbrakk>
          \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
   including no_pre
+  supply gen_invocation_type_eq[symmetric, simp]
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply wp
-  apply (case_tac "invocation_type label")
-      (* 43 subgoals *)
-      apply (clarsimp simp:Decode_A.decode_untyped_invocation_def unlessE_def)
-      apply wp+
+  apply (case_labels "invocation_type label")
+      (* 46 subgoals *)
+      apply (clarsimp simp:Decode_A.decode_untyped_invocation_def unlessE_def, wp)+
      apply (clarsimp simp:transform_intent_def Decode_A.decode_untyped_invocation_def unlessE_def split del:if_split)
      apply (clarsimp simp:transform_intent_untyped_retype_def split del:if_split)
      apply (case_tac "args")
@@ -376,15 +373,16 @@ lemma transform_intent_cnode_cap_None:
    \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply (simp add: Decode_A.decode_cnode_invocation_def unlessE_def upto_enum_def
-                   fromEnum_def toEnum_def enum_invocation_label
+                   fromEnum_def toEnum_def enum_invocation_label enum_gen_invocation_labels
                    whenE_def)
   apply (intro conjI impI;
-    clarsimp simp: transform_intent_def transform_cnode_index_and_depth_def
-                   transform_intent_cnode_copy_def
-                   transform_intent_cnode_mint_def transform_intent_cnode_move_def
-                   transform_intent_cnode_mutate_def transform_intent_cnode_rotate_def
-      split: list.split_asm;
-    (solves \<open>wpsimp\<close>)?)
+           clarsimp simp: transform_intent_def transform_cnode_index_and_depth_def
+                          transform_intent_cnode_copy_def
+                          transform_intent_cnode_mint_def transform_intent_cnode_move_def
+                          transform_intent_cnode_mutate_def transform_intent_cnode_rotate_def
+                    simp flip: gen_invocation_type_eq
+                    split: list.split_asm;
+           (solves \<open>wpsimp\<close>)?)
   done
 
 lemma transform_intent_thread_cap_None:
@@ -394,20 +392,19 @@ lemma transform_intent_thread_cap_None:
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply wp+
   apply (simp add:Decode_A.decode_tcb_invocation_def)
-  apply (case_tac "invocation_type label")
-    apply simp_all
-    apply wp+
-    apply (clarsimp simp: transform_intent_def decode_read_registers_def decode_write_registers_def
-                          decode_copy_registers_def decode_tcb_configure_def decode_set_priority_def
-                          decode_set_mcpriority_def decode_set_sched_params_def
-                          decode_set_ipc_buffer_def transform_intent_tcb_defs
-                   split: list.split_asm
-          | wp+)+
-    apply (clarsimp simp: transform_intent_def decode_set_space_def decode_bind_notification_def
-                          decode_unbind_notification_def transform_intent_tcb_set_space_def
-                   split: list.split_asm
-          , wp+
-          | clarsimp simp: transform_intent_def)+
+  apply (cases "gen_invocation_type label"; simp; wp?)
+               apply (clarsimp simp: transform_intent_def decode_read_registers_def decode_write_registers_def
+                                     decode_copy_registers_def decode_tcb_configure_def decode_set_priority_def
+                                     decode_set_mcpriority_def decode_set_sched_params_def
+                                     decode_set_ipc_buffer_def transform_intent_tcb_defs
+                              simp flip: gen_invocation_type_eq
+                              split: list.split_asm
+                     | wp+)+
+         apply (clarsimp simp: transform_intent_def decode_set_space_def decode_bind_notification_def
+                               decode_unbind_notification_def transform_intent_tcb_set_space_def
+                        split: list.split_asm
+               , wp+
+               | clarsimp simp: transform_intent_def simp flip: gen_invocation_type_eq)+
   done
 
 lemma transform_intent_irq_control_None:
@@ -415,18 +412,14 @@ lemma transform_intent_irq_control_None:
       \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>,
           \<lbrace>\<lambda>x. (=) s\<rbrace>"
   including no_pre
+  supply gen_invocation_type_eq[symmetric, simp]
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply wp
   apply (clarsimp simp:decode_irq_control_invocation_def arch_decode_irq_control_invocation_def
                   split del:if_split)
-  apply (case_tac "invocation_type label")
-                      apply (clarsimp, wp)+
-       apply (clarsimp simp:transform_intent_issue_irq_handler_def transform_intent_def
-                       split:list.split_asm split del:if_split,wp+)
-      apply (clarsimp, wp)+
-  apply (rename_tac arch_label)
-  apply (case_tac "arch_label")
-                  apply (clarsimp, wp)+
+  apply (case_labels "invocation_type label"; (clarsimp, wp)?)
+   apply (clarsimp simp:transform_intent_issue_irq_handler_def transform_intent_def
+                   split:list.split_asm split del:if_split,wp+)
   apply (clarsimp simp:arch_transform_intent_issue_irq_handler_def transform_intent_def
                   split:list.split_asm split del:if_split,wp+)
   done
@@ -434,12 +427,13 @@ lemma transform_intent_irq_control_None:
 lemma transform_intent_irq_handler_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.IRQHandlerCap w\<rbrakk>
              \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
+  supply gen_invocation_type_eq[symmetric, simp]
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply (wp)
-    apply (clarsimp simp:decode_irq_handler_invocation_def|rule conjI)+
-      apply (clarsimp simp:transform_intent_def split: list.splits)+
-    apply (clarsimp simp:transform_intent_def |rule conjI | wp)+
-done
+   apply (clarsimp simp:decode_irq_handler_invocation_def|rule conjI)+
+    apply (clarsimp simp:transform_intent_def split: list.splits)+
+   apply (clarsimp simp:transform_intent_def |rule conjI | wp)+
+  done
 
 lemma transform_intent_zombie_cap_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.Zombie w option n\<rbrakk>
@@ -452,6 +446,7 @@ lemma transform_intent_domain_cap_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.DomainCap\<rbrakk>
      \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap.DomainCap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
   including no_pre
+  supply gen_invocation_type_eq[symmetric, simp]
   apply (clarsimp simp: Decode_A.decode_invocation_def)
   apply wp
   apply (case_tac excaps, simp_all)
@@ -459,9 +454,9 @@ lemma transform_intent_domain_cap_None:
    apply (case_tac args, simp_all)
     apply (wp whenE_inv whenE_inv[THEN valid_validE] | simp)+
   apply (clarsimp simp: decode_domain_invocation_def)
-   apply (case_tac args, simp_all)
-    apply ((wp whenE_inv whenE_inv[THEN valid_validE] | simp)+)[1]
-  apply (case_tac "invocation_type label \<noteq> DomainSetSet", simp_all)
+  apply (case_tac args, simp_all)
+   apply ((wp whenE_inv whenE_inv[THEN valid_validE] | simp)+)[1]
+  apply (case_tac "invocation_type label \<noteq> GenInvocationLabel DomainSetSet", simp_all)
    apply wp
   apply (clarsimp simp: transform_intent_def transform_intent_domain_def)
   done
@@ -470,6 +465,7 @@ lemma transform_intent_arch_cap_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.ArchObjectCap arch_cap\<rbrakk>
          \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
   including no_pre
+  supply gen_invocation_type_eq[symmetric, simp]
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply wp
   apply (simp add: arch_decode_invocation_def split del: if_split)

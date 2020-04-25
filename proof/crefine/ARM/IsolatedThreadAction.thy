@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory IsolatedThreadAction
@@ -121,58 +117,7 @@ lemma isolate_thread_actions_bind:
 
 lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
-lemma tcbSchedEnqueue_obj_at_unchangedT:
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  shows  "\<lbrace>obj_at' P t\<rbrace> tcbSchedEnqueue t' \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: tcbSchedEnqueue_def unless_def)
-  apply (wp | simp add: y)+
-  done
-
-(* FIXME: Move to Schedule_R.thy. Make Arch_switchToThread_obj_at a specialisation of this *)
-lemma Arch_switchToThread_obj_at_pre:
-  "\<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>
-   Arch.switchToThread t
-   \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
-  apply (simp add: ARM_H.switchToThread_def)
-  apply (wp doMachineOp_obj_at setVMRoot_obj_at hoare_drop_imps|wpc)+
-  done
-
-lemma rescheduleRequired_obj_at_unchangedT:
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  shows  "\<lbrace>obj_at' P t\<rbrace> rescheduleRequired \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: rescheduleRequired_def)
-  apply (wp tcbSchedEnqueue_obj_at_unchangedT[OF y] | wpc)+
-  apply simp
-  done
-
-lemma setThreadState_obj_at_unchangedT:
-  assumes x: "\<And>f. \<forall>tcb. P (tcbState_update f tcb) = P tcb"
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  shows "\<lbrace>obj_at' P t\<rbrace> setThreadState t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: setThreadState_def)
-  apply (wp rescheduleRequired_obj_at_unchangedT[OF y], simp)
-  apply (wp threadSet_obj_at'_strongish)
-  apply (clarsimp simp: obj_at'_def projectKOs x cong: if_cong)
-  done
-
-lemma setBoundNotification_obj_at_unchangedT:
-  assumes x: "\<And>f. \<forall>tcb. P (tcbBoundNotification_update f tcb) = P tcb"
-  shows "\<lbrace>obj_at' P t\<rbrace> setBoundNotification t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: setBoundNotification_def)
-  apply (wp threadSet_obj_at'_strongish)
-  apply (clarsimp simp: obj_at'_def projectKOs x cong: if_cong)
-  done
-
-lemmas setThreadState_obj_at_unchanged
-    = setThreadState_obj_at_unchangedT[OF all_tcbI all_tcbI]
-
-lemmas setBoundNotification_obj_at_unchanged
-    = setBoundNotification_obj_at_unchangedT[OF all_tcbI]
-
 lemmas setNotification_tcb = set_ntfn_tcb_obj_at'
-
-(* FIXME: move *)
-lemmas threadSet_obj_at' = threadSet_obj_at'_strongish
 
 context kernel_m begin
 lemma setObject_modify:
@@ -393,13 +338,6 @@ lemma objBits_2n:
   by (simp add: objBits_simps' archObjSize_def pageBits_def
                 pteBits_def pdeBits_def
          split: kernel_object.split arch_kernel_object.split)
-
-lemma magnitudeCheck_assert2:
-  "\<lbrakk> is_aligned x n; (1 :: word32) < 2 ^ n; ksPSpace s x = Some v \<rbrakk> \<Longrightarrow>
-   magnitudeCheck x (snd (lookupAround2 x (ksPSpace (s :: kernel_state)))) n
-     = assert (ps_clear x n s)"
-  using in_magnitude_check[where x=x and n=n and s=s and s'=s and v="()"]
-  by (simp add: magnitudeCheck_assert in_monad)
 
 lemma getObject_get_assert:
   assumes deflt: "\<And>a b c d. (loadObject a b c d :: ('a :: pspace_storable) kernel)
@@ -778,12 +716,6 @@ lemma copyMRs_simple:
             split: option.split)
   apply (simp add: upto_enum_def mapM_Nil)
   done
-
-(* FIXME: MOVE *)
-lemma returnOK_catch[simp]:
-  "(returnOk rv <catch> m) = return rv"
-  unfolding catch_def returnOk_def
-  by clarsimp
 
 lemma doIPCTransfer_simple_rewrite:
   "monadic_rewrite True True

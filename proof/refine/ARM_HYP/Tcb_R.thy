@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Tcb_R
@@ -306,7 +302,6 @@ crunch sch_act_simple [wp]: asUser "sch_act_simple"
   (rule: sch_act_simple_lift)
 
 crunch invs'[wp]: getSanitiseRegisterInfo invs'
-  (ignore: getObject setObject)
 
 lemma invs_valid_queues':
   "invs' s \<longrightarrow> valid_queues' s"
@@ -486,9 +481,7 @@ lemma readreg_invs':
                  dest!: global'_no_ex_cap)+
 
 crunch ex_nonz_cap_to'[wp]: getSanitiseRegisterInfo "ex_nonz_cap_to' d"
-  (ignore: getObject setObject)
 crunch it'[wp]: getSanitiseRegisterInfo "\<lambda>s. P (ksIdleThread s)"
-  (ignore: getObject setObject)
 
 lemma writereg_invs':
   "\<lbrace>invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest\<rbrace>
@@ -836,12 +829,14 @@ lemma setP_invs':
   apply (clarsimp)+
   done
 
-crunch typ_at'[wp]: setPriority, setMCPriority "\<lambda>s. P (typ_at' T p s)"
-  (ignore: getObject simp: crunch_simps)
+crunches setPriority, setMCPriority
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  (simp: crunch_simps)
 
 lemmas setPriority_typ_ats [wp] = typ_at_lifts [OF setPriority_typ_at']
 
-crunch valid_cap[wp]: setPriority, setMCPriority "valid_cap' c"
+crunches setPriority, setMCPriority
+  for valid_cap[wp]: "valid_cap' c"
   (wp: getObject_inv_tcb)
 
 
@@ -1664,7 +1659,8 @@ lemmas threadSet_ipcbuffer_trivial
     = threadSet_invs_trivial[where F="tcbIPCBuffer_update F'" for F',
                               simplified inQ_def, simplified]
 
-crunch cap_to'[wp]: setPriority, setMCPriority "ex_nonz_cap_to' a"
+crunches setPriority, setMCPriority
+  for cap_to'[wp]: "ex_nonz_cap_to' a"
   (simp: crunch_simps)
 
 lemma cteInsert_sa_simple[wp]:
@@ -1956,11 +1952,7 @@ lemma tcbinv_invs':
              | simp)+
   done
 
-crunch_ignore (add: setNextPC getRestartPC)
-
 declare assertDerived_wp [wp]
-
-crunch_ignore (add: assertDerived)
 
 lemma copyregsets_map_only[simp]:
   "copyregsets_map v = ARMNoExtraRegisters"
@@ -2692,7 +2684,7 @@ lemma decode_tcb_inv_corres:
    apply (drule obj_at_aligned', simp_all add: objBits_simps')
   apply (clarsimp simp: decode_tcb_invocation_def
                         decodeTCBInvocation_def
-             split del: if_split split: invocation_label.split)
+             split del: if_split split: gen_invocation_labels.split)
   apply (simp add: returnOk_def)
   apply (intro conjI impI
              corres_guard_imp[OF decode_readreg_corres]
@@ -2763,7 +2755,7 @@ lemma decodeTCBInv_wf:
      decodeTCBInvocation label args (capability.ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
   apply (simp add: decodeTCBInvocation_def Let_def
-              cong: if_cong invocation_label.case_cong split del: if_split)
+              cong: if_cong gen_invocation_labels.case_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wpc, (wp decodeTCBConf_wf decodeReadReg_wf decodeWriteReg_wf decodeSetTLSBase_wf
              decodeCopyReg_wf decodeBindNotification_wf decodeUnbindNotification_wf)+)
@@ -2800,8 +2792,8 @@ lemma cteDelete_makes_simple':
   "\<lbrace>st_tcb_at' simple' t\<rbrace> cteDelete slot v \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
   by (wp cteDelete_st_tcb_at' | simp)+
 
-crunch irq_states'[wp]: getThreadBufferSlot, setPriority, setMCPriority
-                         valid_irq_states'
+crunches getThreadBufferSlot, setPriority, setMCPriority
+  for irq_states'[wp]: valid_irq_states'
   (simp: crunch_simps)
 
 lemma inv_tcb_IRQInactive:

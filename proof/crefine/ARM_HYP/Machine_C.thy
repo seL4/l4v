@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -213,10 +209,10 @@ assumes getFAR_ccorres:
 (* FIXME ARMHYP double-check this, assumption is ccorres holds regardless of in_kernel *)
 assumes getActiveIRQ_ccorres:
 "\<And>in_kernel.
-   ccorres (\<lambda>(a::10 word option) c::16 word.
-     case a of None \<Rightarrow> c = (0xFFFF::16 word)
-     | Some (x::10 word) \<Rightarrow> c = ucast x \<and> c \<noteq> (0xFFFF::16 word))
-     (\<lambda>t. irq_' (s\<lparr>globals := globals t, irq_' := ret__unsigned_short_' t\<rparr> ))
+   ccorres (\<lambda>(a::10 word option) c::machine_word.
+     case a of None \<Rightarrow> c = 0x0000FFFF
+     | Some (x::10 word) \<Rightarrow> c = ucast x \<and> c \<noteq> 0x0000FFFF)
+     (\<lambda>t. irq_' (s\<lparr>globals := globals t, irq_' := ret__unsigned_long_' t\<rparr> ))
      \<top> UNIV hs
  (doMachineOp (getActiveIRQ in_kernel)) (Call getActiveIRQ_'proc)"
 
@@ -297,6 +293,33 @@ assumes set_gic_vcpu_ctrl_lr_ccorres:
 assumes get_gic_vcpu_ctrl_lr_ccorres:
   "ccorres (\<lambda>v virq. virq = virq_C (FCP (\<lambda>_. v))) ret__struct_virq_C_' \<top> (\<lbrace>\<acute>num = scast n \<rbrace>) hs
            (doMachineOp (get_gic_vcpu_ctrl_lr n)) (Call get_gic_vcpu_ctrl_lr_'proc)"
+
+(* ARM Virtual Timer *)
+
+assumes set_cntv_cval_64_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val___unsigned_longlong = val\<rbrace>) []
+           (doMachineOp (set_cntv_cval_64 val))
+           (Call set_cntv_cval_64_'proc)"
+
+assumes set_cntv_off_64_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val___unsigned_longlong = val\<rbrace>) []
+           (doMachineOp (set_cntv_off_64 val))
+           (Call set_cntv_off_64_'proc)"
+
+assumes read_cntpct_ccorres:
+  "ccorres (=) ret__unsigned_longlong_' \<top> UNIV []
+           (doMachineOp read_cntpct)
+           (Call read_cntpct_'proc)"
+
+assumes get_cntv_cval_64_ccorres:
+  "ccorres (=) ret__unsigned_longlong_' \<top> UNIV []
+           (doMachineOp get_cntv_cval_64)
+           (Call get_cntv_cval_64_'proc)"
+
+assumes get_cntv_off_64_ccorres:
+  "ccorres (=) ret__unsigned_longlong_' \<top> UNIV []
+           (doMachineOp get_cntv_off_64)
+           (Call get_cntv_off_64_'proc)"
 
 (* The following are fastpath specific assumptions.
    We might want to move them somewhere else. *)

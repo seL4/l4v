@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(NICTA_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Untyped_DR
@@ -419,7 +415,8 @@ lemma transform_default_tcb:
                    get_tcb_mrs_def Suc_le_eq get_tcb_message_info_def msg_info_register_def
                    msgInfoRegister_def data_to_message_info_def arch_tcb_context_get_def
                    get_ipc_buffer_words_def)
-  apply (simp add: transform_intent_def invocation_type_def fromEnum_def enum_invocation_label toEnum_def)
+  apply (simp add: transform_intent_def invocation_type_def fromEnum_def enum_invocation_label
+                   enum_gen_invocation_labels toEnum_def)
   apply (simp add: fun_eq_iff tcb_slot_defs infer_tcb_pending_op_def infer_tcb_bound_notification_def
                    guess_error_def default_etcb_def default_domain_def)
   done
@@ -1750,8 +1747,8 @@ lemma decode_untyped_corres:
      (Decode_A.decode_untyped_invocation label' args' slot' cap' (map fst excaps'))"
   apply (simp add: transform_intent_def map_option_Some_eq2
                    transform_intent_untyped_retype_def
-            split: invocation_label.split_asm arch_invocation_label.split_asm list.split_asm
-                   option.split_asm)
+            split: invocation_label.split_asm gen_invocation_labels.split_asm
+                   arch_invocation_label.split_asm list.split_asm option.split_asm)
   apply (cases ui)
   apply (drule transform_translate_type[where 'a=det_ext])
   apply (clarsimp simp: Untyped_D.decode_untyped_invocation_def
@@ -1762,7 +1759,7 @@ lemma decode_untyped_corres:
   apply (rename_tac a list w1 w2 w3 w4 w5 apiobject_type)
   apply (cases excaps')
    apply (simp add: get_index_def transform_cap_list_def
-                    alternative_refl)
+                    alternative_refl gen_invocation_type_eq)
   apply (simp add: get_index_def transform_cap_list_def throw_on_none_def
                    split_beta
                split del: if_split)
@@ -1871,10 +1868,10 @@ lemma decode_untyped_label_not_match:
   "\<lbrakk>Some intent = transform_intent (invocation_type label) args; \<forall>ui. intent \<noteq> UntypedIntent ui\<rbrakk>
     \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_untyped_invocation label args ref (cap.UntypedCap dev a b idx) e
              \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>e. (=) s\<rbrace>"
-  apply (case_tac "invocation_type label = UntypedRetype")
+  apply (case_tac "invocation_type label = GenInvocationLabel UntypedRetype")
    apply (clarsimp simp:Decode_A.decode_untyped_invocation_def transform_intent_def)+
    apply (clarsimp simp:transform_intent_untyped_retype_def split:option.splits list.splits)
-  apply (simp add:Decode_A.decode_untyped_invocation_def unlessE_def)
+  apply (simp add:Decode_A.decode_untyped_invocation_def unlessE_def gen_invocation_type_eq)
   apply wp
   done
 

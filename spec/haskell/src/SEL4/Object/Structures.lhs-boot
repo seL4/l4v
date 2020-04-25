@@ -1,3 +1,9 @@
+%
+% Copyright 2014, General Dynamics C4 Systems
+%
+% SPDX-License-Identifier: GPL-2.0-only
+%
+
 > module SEL4.Object.Structures( TCB) where
 
 The current perl script for generating hs-boot files cannot export the datatype

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -17,18 +13,9 @@ imports TcbAcc_R
 begin
 context Arch begin global_naming X64 (*FIXME: arch_split*)
 
-(* FIXME x64: move *)
-lemmas store_pde_typ_ats' [wp] = abs_typ_at_lifts [OF store_pde_typ_at]
-lemmas store_pdpte_typ_ats' [wp] = abs_typ_at_lifts [OF store_pdpte_typ_at]
-lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
-lemmas store_pde_typ_ats[wp] = store_pde_typ_ats' abs_atyp_at_lifts[OF store_pde_typ_at]
-lemmas store_pdpte_typ_ats[wp] = store_pdpte_typ_ats' abs_atyp_at_lifts[OF store_pdpte_typ_at]
-
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-
-crunch_ignore (add: throw_on_false)
 
 definition
   "vspace_at_asid' vs asid \<equiv> \<lambda>s. \<exists>ap pool.
@@ -62,7 +49,7 @@ lemma findVSpaceForASIDAssert_vs_at_wp:
   done
 
 crunch inv[wp]: findVSpaceForASIDAssert "P"
-  (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps)
+  (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps ignore_del: getObject)
 
 lemma pspace_relation_pml4:
   assumes p: "pspace_relation (kheap a) (ksPSpace c)"
@@ -126,44 +113,10 @@ lemma find_vspace_for_asid_eq_helper:
   apply (simp add: bit_simps)
   done
 
-(* FIXME x64: move to invariants *)
-lemma find_vspace_for_asid_wp:
-  "\<lbrace> valid_vspace_objs and pspace_aligned and K (asid \<noteq> 0)
-        and (\<lambda>s. \<forall>pm. vspace_at_asid asid pm s \<longrightarrow> Q pm s)
-        and (\<lambda>s. (\<forall>pm. \<not> vspace_at_asid asid pm s) \<longrightarrow> E ExceptionTypes_A.lookup_failure.InvalidRoot s) \<rbrace>
-    find_vspace_for_asid asid
-   \<lbrace> Q \<rbrace>,\<lbrace> E \<rbrace>"
-  apply (wpsimp simp: find_vspace_for_asid_def vspace_at_asid_def)
-  apply (intro conjI impI allI)
-    apply (erule mp; clarsimp; thin_tac "\<forall>pm. _ pm s")
-    apply (erule vs_lookupE; clarsimp simp: vs_asid_refs_def graph_of_def)
-    apply (drule vs_lookup1_trans_is_append)
-    apply (clarsimp simp: up_ucast_inj_eq)
-   apply (erule mp; clarsimp; thin_tac "\<forall>pm. _ pm s")
-   apply (erule vs_lookupE; clarsimp simp: vs_asid_refs_def graph_of_def)
-   apply (frule vs_lookup1_trans_is_append; clarsimp simp: up_ucast_inj_eq)
-   apply (erule rtranclE; clarsimp)
-   apply (frule vs_lookup1_wellformed.lookup1_is_append; clarsimp)
-   apply (drule vs_lookup1_wellformed.lookup_trans_eq; clarsimp)
-   apply (clarsimp simp: vs_lookup1_def vs_refs_def)
-   apply (case_tac ko; clarsimp; rename_tac ako; case_tac ako; clarsimp)
-   apply (clarsimp simp: graph_of_def obj_at_def mask_asid_low_bits_ucast_ucast)
-  apply (drule spec; erule mp; thin_tac "_ s \<longrightarrow> _ s")
-  apply (rule vs_lookupI)
-   apply (fastforce simp: vs_asid_refs_def graph_of_def image_def)
-  apply (rule rtrancl_into_rtrancl[rotated])
-   apply (erule vs_lookup1I; fastforce simp: vs_refs_def graph_of_def image_def
-                                             ucast_ucast_mask asid_low_bits_def)
-  by simp
-
 lemma asidBits_asid_bits[simp]:
   "asidBits = asid_bits"
   by (simp add: asid_bits_def asidBits_def
                 asidHighBits_def asid_low_bits_def)
-
-(* FIXME x64: move *)
-lemma no_fail_getFaultAddress[wp]: "no_fail \<top> getFaultAddress"
-  by (simp add: getFaultAddress_def)
 
 lemma hv_corres:
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
@@ -303,10 +256,6 @@ lemma get_asid_pool_corres_inv':
   apply simp
   done
 
-(* FIXME x64: move *)
-lemma no_fail_invalidateASID[wp]: "no_fail \<top> (invalidateASID a b)"
-  by (simp add: invalidateASID_def)
-
 lemma dMo_no_0_obj'[wp]:
   "\<lbrace>no_0_obj'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
@@ -346,21 +295,6 @@ lemma invalidateASID_valid_arch_state [wp]:
 
 crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
   (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
-
-(* FIXME x64: move *)
-lemma set_asid_pool_vspace_objs_unmap_single:
-  "\<lbrace>valid_vspace_objs and ko_at (ArchObj (X64_A.ASIDPool ap)) p\<rbrace>
-       set_asid_pool p (ap(x := None)) \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
-  using set_asid_pool_vspace_objs_unmap[where S="- {x}"]
-  by (simp add: restrict_map_def fun_upd_def if_flip)
-
-(* FIXME x64: move *)
-lemma hw_asid_invalidate_valid_arch_state[wp]:
-  "\<lbrace>valid_arch_state\<rbrace> hw_asid_invalidate asid pm \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  unfolding hw_asid_invalidate_def by wp
-
-(* FIXME x64: move *)
-crunch valid_global_objs[wp]: hw_asid_invalidate "valid_global_objs"
 
 
 lemma delete_asid_corres [corres]:
@@ -532,7 +466,7 @@ lemma delete_asid_pool_corres:
   done
 
 crunch typ_at' [wp]: findVSpaceForASID "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps getObject_inv simp: crunch_simps loadObject_default_def ignore: getObject)
+  (wp: crunch_wps getObject_inv simp: crunch_simps loadObject_default_def)
 
 crunch typ_at' [wp]: setVMRoot "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps)
@@ -540,108 +474,13 @@ crunch typ_at' [wp]: setVMRoot "\<lambda>s. P (typ_at' T p s)"
 lemmas setVMRoot_typ_ats [wp] = typ_at_lifts [OF setVMRoot_typ_at']
 
 crunch no_0_obj'[wp]: flushTable "no_0_obj'"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
-
-(* FIXME x64: move to Lib *)
-lemma get_mapM_x_lower:
-  fixes P :: "'a option \<Rightarrow> 's \<Rightarrow> bool"
-  fixes f :: "('s,'a) nondet_monad"
-  fixes g :: "'a \<Rightarrow> 'b \<Rightarrow> ('s,'c) nondet_monad"
-  \<comment> \<open>@{term g} preserves the state that @{term f} cares about\<close>
-  assumes g: "\<And>x y. \<lbrace> P (Some x) \<rbrace> g x y \<lbrace> \<lambda>_. P (Some x) \<rbrace>"
-  \<comment> \<open>@{term P} specifies whether @{term f} either fails or returns a deterministic result\<close>
-  assumes f: "\<And>opt_x s. P opt_x s \<Longrightarrow> f s = case_option ({},True) (\<lambda>x. ({(x,s)},False)) opt_x"
-  \<comment> \<open>Every state determines P, and therefore the behaviour of @{term f}\<close>
-  assumes x: "\<And>s. \<exists> opt_x. P opt_x s"
-  \<comment> \<open>If @{term f} may fail, ensure there is at least one @{term f}\<close>
-  assumes y: "\<exists>s. P None s \<Longrightarrow> ys \<noteq> []"
-  shows "do x \<leftarrow> f; mapM_x (g x) ys od = mapM_x (\<lambda>y. do x \<leftarrow> f; g x y od) ys"
-  proof -
-    have f_rv: "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>r. P (Some r)\<rbrace>"
-      using x f
-      apply (clarsimp simp: valid_def)
-      apply (drule_tac x=s in meta_spec; clarsimp)
-      apply (case_tac opt_x; simp)
-      done
-    { fix y and h :: "'a \<Rightarrow> ('s,'d) nondet_monad"
-      have "do x \<leftarrow> f; _ \<leftarrow> g x y; h x od
-              = do x \<leftarrow> f; _ \<leftarrow> g x y; x \<leftarrow> f; h x od"
-        apply (rule ext)
-        apply (subst monad_eq_split[where g="do x \<leftarrow> f; g x y; return x od"
-                                      and P="\<top>" and Q="\<lambda>r. P (Some r)"
-                                      and f="h" and f'="\<lambda>_. f >>= h",
-                                    simplified bind_assoc, simplified])
-        apply (wpsimp wp: g f_rv simp: f return_def bind_def)+
-        done
-    } note f_redundant = this
-    show ?thesis
-    proof (cases "\<exists>s. P None s")
-      case True show ?thesis
-        apply (cases ys; simp add: True y mapM_x_Cons bind_assoc)
-        subgoal for y ys
-          apply (thin_tac _)
-          apply (induct ys arbitrary: y; simp add: mapM_x_Nil mapM_x_Cons bind_assoc)
-          apply (subst f_redundant; simp)
-          done
-        done
-    next
-      case False
-      show ?thesis using False
-        apply (induct ys; simp add: mapM_x_Nil mapM_x_Cons bind_assoc)
-         apply (rule ext)
-         subgoal for s
-           by (insert x[of s]; drule spec[of _ s]; clarsimp; case_tac opt_x;
-               clarsimp simp: bind_def return_def f)
-        apply (subst f_redundant; simp)
-        done
-    qed
-  qed
-
-(* FIXME x64: move to invariants *)
-lemma get_pt_mapM_x_lower:
-  assumes g: "\<And>P pt x. \<lbrace> \<lambda>s. P (kheap s pt_ptr) \<rbrace> g pt x \<lbrace> \<lambda>_ s. P (kheap s pt_ptr) \<rbrace>"
-  assumes y: "ys \<noteq> []"
-  notes [simp] = get_pt_def get_object_def gets_def get_def bind_def return_def
-                 assert_def fail_def
-  shows "do pt \<leftarrow> get_pt pt_ptr; mapM_x (g pt) ys od
-          = mapM_x (\<lambda>y. get_pt pt_ptr >>= (\<lambda>pt. g pt y)) ys"
-  apply (rule get_mapM_x_lower
-                [where P="\<lambda>opt_pt s. case kheap s pt_ptr of
-                                       Some (ArchObj (PageTable pt)) \<Rightarrow> opt_pt = Some pt
-                                     | _ \<Rightarrow> opt_pt = None",
-                 OF _ _ _ y])
-    apply (wp g)
-   apply (case_tac "kheap s pt_ptr"; simp; rename_tac ko; case_tac ko; simp;
-          rename_tac ako; case_tac ako; simp)+
-  done
-
-(* FIXME x64: move to invariants *)
-lemma get_pt_get_pte:
-  assumes align: "is_aligned pt_ptr pt_bits"
-  shows "do pt \<leftarrow> get_pt pt_ptr; f (pt i) od
-            = do pte \<leftarrow> get_pte (pt_ptr + (ucast i << word_size_bits)); f pte od"
-  proof -
-    have i: "ucast i < (2::machine_word) ^ (pt_bits - word_size_bits)"
-      by (rule less_le_trans[OF ucast_less]; simp add: bit_simps)
-    have s: "ucast i << word_size_bits < (2::machine_word) ^ pt_bits"
-      by (rule shiftl_less_t2n[OF i]; simp add: bit_simps)
-    show ?thesis
-      apply (simp add: get_pte_def is_aligned_add_helper align s)
-      apply (simp add: shiftl_shiftr_id less_le_trans[OF i] bit_simps ucast_ucast_id)
-      done
-  qed
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma get_pte_corres'':
   assumes "p' = p"
   shows "corres pte_relation' (pte_at p) (pspace_aligned' and pspace_distinct')
                               (get_pte p) (getObject p')"
   using assms get_pte_corres' by simp
-
-(* FIXME: move to Lib *)
-lemma zip_map_rel:
-  assumes "(x,y) \<in> set (zip xs ys)" "map f xs = map g ys"
-  shows "f x = g y"
-  using assms by (induct xs arbitrary: x y ys; cases ys) auto
 
 lemma flush_table_corres:
   assumes "pm' = pm" "vptr' = vptr" "pt' = pt" "asid' = asid"
@@ -690,7 +529,7 @@ lemma flush_table_corres:
   qed
 
 crunch typ_at' [wp]: flushTable "\<lambda>s. P (typ_at' T p s)"
-  (simp: assertE_def when_def wp: crunch_wps ignore: getObject)
+  (simp: assertE_def when_def wp: crunch_wps)
 
 lemmas flushTable_typ_ats' [wp] = typ_at_lifts [OF flushTable_typ_at']
 
@@ -698,23 +537,19 @@ lemmas findVSpaceForASID_typ_ats' [wp] = typ_at_lifts [OF findVSpaceForASID_inv]
 
 crunch inv [wp]: findVSpaceForASID P
   (simp: assertE_def whenE_def loadObject_default_def
-   wp: crunch_wps getObject_inv ignore: getObject)
+   wp: crunch_wps getObject_inv)
 
-crunch aligned'[wp]: unmapPageTable, unmapPageDirectory, unmapPDPT "pspace_aligned'"
-  (ignore: getObject simp: crunch_simps
-       wp: crunch_wps getObject_inv loadObject_default_inv)
-crunch distinct'[wp]: unmapPageTable, unmapPageDirectory, unmapPDPT "pspace_distinct'"
-  (ignore: getObject simp: crunch_simps
-       wp: crunch_wps getObject_inv loadObject_default_inv)
+crunches unmapPageTable, unmapPageDirectory, unmapPDPT
+  for aligned'[wp]: "pspace_aligned'"
+  and distinct'[wp]: "pspace_distinct'"
+  (simp: crunch_simps
+     wp: crunch_wps getObject_inv loadObject_default_inv)
 
 
-crunch no_0_obj'[wp]: storePDE, storePTE, storePDPTE, storePML4E no_0_obj'
-
-crunch valid_arch'[wp]: storePDE, storePTE, storePDPTE, storePML4E valid_arch_state'
-(ignore: setObject)
-
-crunch cur_tcb'[wp]: storePDE, storePTE, storePDPTE, storePML4E cur_tcb'
-(ignore: setObject)
+crunches storePDE, storePTE, storePDPTE, storePML4E
+  for no_0_obj'[wp]: no_0_obj'
+  and valid_arch'[wp]: valid_arch_state'
+  and cur_tcb'[wp]: cur_tcb'
 
 lemma getCurrentUserCR3_inv[wp]: "\<lbrace>P\<rbrace> getCurrentUserCR3 \<lbrace>\<lambda>_. P\<rbrace>"
   by (simp add: getCurrentUserCR3_def)
@@ -734,10 +569,6 @@ lemma invalidatePageStructureCacheASID_corres' [corres]:
 
 lemmas invalidatePageStructureCacheASID_corres =
   invalidatePageStructureCacheASID_corres'[OF refl refl]
-
-(* FIXME x64: move *)
-lemma flush_table_pde_at[wp]: "\<lbrace>pde_at p\<rbrace> flush_table a b c d \<lbrace>\<lambda>_. pde_at p\<rbrace>"
-  by (wpsimp simp: flush_table_def pde_at_def wp: flush_table_typ_at mapM_x_wp')
 
 crunch inv[wp]: lookupPTSlot "P"
   (wp: loadObject_default_inv)
@@ -779,10 +610,10 @@ lemma unmap_page_table_corres:
   done
 
 crunch aligned' [wp]: unmapPage pspace_aligned'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch distinct' [wp]: unmapPage pspace_distinct'
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma corres_split_strengthen_ftE:
   "\<lbrakk> corres (ftr \<oplus> r') P P' f j;
@@ -822,11 +653,6 @@ lemma set_pt_vs_lookup [wp]:
   apply (erule rsubst [where P=P])
   by (rule order_antisym; rule vs_lookup_sub;
       clarsimp simp: obj_at_def vs_refs_def split: if_splits)
-
-(* FIXME x64: move *)
-lemma no_fail_invalidateTranslationSingleASID[wp]:
-  "no_fail \<top> (invalidateTranslationSingleASID v a)"
-  by (simp add: invalidateTranslationSingleASID_def)
 
 lemmas liftE_get_pde_corres = get_pde_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
 lemmas liftE_get_pte_corres = get_pte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
@@ -938,7 +764,7 @@ definition
   | PageGetAddr ptr \<Rightarrow> \<top>"
 
 crunch ctes [wp]: unmapPage "\<lambda>s. P (ctes_of s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma updateCap_valid_slots'[wp]:
   "\<lbrace>valid_slots' x2\<rbrace> updateCap cte cte' \<lbrace>\<lambda>_ s. valid_slots' x2 s \<rbrace>"
@@ -946,7 +772,8 @@ lemma updateCap_valid_slots'[wp]:
     by (wpsimp simp: valid_slots'_def wp: hoare_vcg_ball_lift)+
 
 
-crunch unique_table_refs[wp]: do_machine_op, store_pte, store_pde, store_pdpte "\<lambda>s. (unique_table_refs (caps_of_state s))"
+crunches do_machine_op, store_pte, store_pde, store_pdpte
+  for unique_table_refs[wp]: "\<lambda>s. (unique_table_refs (caps_of_state s))"
 
 lemma set_cap_valid_slots_inv[wp]:
   "\<lbrace>valid_slots m\<rbrace> set_cap t st \<lbrace>\<lambda>rv. valid_slots m\<rbrace>"
@@ -1287,8 +1114,9 @@ lemma clear_pdpt_corres:
   apply simp
   done
 
-crunch typ_at'[wp]: invalidatePageStructureCacheASID, unmapPageTable, unmapPageDirectory, unmapPDPT "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps hoare_vcg_all_lift_R ignore: getObject)
+crunches invalidatePageStructureCacheASID, unmapPageTable, unmapPageDirectory, unmapPDPT
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  (wp: crunch_wps hoare_vcg_all_lift_R)
 
 lemmas unmapPageTable_typ_ats[wp] = typ_at_lifts[OF unmapPageTable_typ_at']
 lemmas unmapPageDirectory_typ_ats[wp] = typ_at_lifts[OF unmapPageDirectory_typ_at']
@@ -1420,9 +1248,10 @@ lemma unmap_pd_corres:
   apply simp
   done
 
-crunch valid_objs[wp]: unmap_pd, unmap_pdpt "valid_objs"
-crunch pspace_aligned[wp]: unmap_pd, unmap_pdpt "pspace_aligned"
-crunch pspace_distinct[wp]: unmap_pd, unmap_pdpt "pspace_distinct"
+crunches unmap_pd, unmap_pdpt
+  for valid_objs[wp]: "valid_objs"
+  and pspace_aligned[wp]: "pspace_aligned"
+  and pspace_distinct[wp]: "pspace_distinct"
 
 lemma perform_page_directory_corres:
   "page_directory_invocation_map pdi pdi' \<Longrightarrow>
@@ -1751,47 +1580,39 @@ lemma setVMRoot_invs_no_cicd':
 
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps
-       loadObject_default_def ignore: getObject)
+       loadObject_default_def)
 
 crunch it' [wp]: findVSpaceForASID "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv ignore: getObject)
+  (simp: crunch_simps loadObject_default_def wp: getObject_inv)
 
 crunch it' [wp]: deleteASIDPool "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp'
-   ignore: getObject)
+  (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp')
 
 crunch it' [wp]: lookupPTSlot "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv
-   ignore: getObject)
+  (simp: crunch_simps loadObject_default_def wp: getObject_inv)
 
 crunch it' [wp]: storePTE "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps updateObject_default_def wp: setObject_idle'
-   ignore: setObject)
+  (simp: crunch_simps updateObject_default_def wp: setObject_idle')
 
 crunch it' [wp]: storePDE "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps updateObject_default_def wp: setObject_idle'
-   ignore: setObject)
+  (simp: crunch_simps updateObject_default_def wp: setObject_idle')
 
 crunch it' [wp]: storePDPTE "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps updateObject_default_def wp: setObject_idle'
-   ignore: setObject)
+  (simp: crunch_simps updateObject_default_def wp: setObject_idle')
 
 crunch it' [wp]: storePML4E "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps updateObject_default_def wp: setObject_idle'
-   ignore: setObject)
+  (simp: crunch_simps updateObject_default_def wp: setObject_idle')
 
 crunch it' [wp]: flushTable "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def
-   wp: setObject_idle' hoare_drop_imps mapM_x_wp'
-   ignore: getObject)
+   wp: setObject_idle' hoare_drop_imps mapM_x_wp')
 
 crunch it' [wp]: deleteASID "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def updateObject_default_def
-   wp: getObject_inv
-   ignore: getObject setObject)
+   wp: getObject_inv)
 
 crunch typ_at' [wp]: performPageTableInvocation "\<lambda>s. P (typ_at' T p s)"
-  (ignore: getObject wp: crunch_wps)
+  (wp: crunch_wps)
 
 crunch typ_at' [wp]: performPageDirectoryInvocation "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
@@ -1800,7 +1621,7 @@ crunch typ_at' [wp]: performPDPTInvocation "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 
 crunch typ_at' [wp]: performPageInvocation "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma performASIDPoolInvocation_typ_at' [wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> performASIDPoolInvocation api \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
@@ -1876,11 +1697,10 @@ lemma storePML4E_valid_mdb [wp]:
   "\<lbrace>valid_mdb'\<rbrace> storePML4E p pde \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
   by (simp add: valid_mdb'_def) wp
 
-crunch nosch [wp]: storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksSchedulerAction s)"
-  (simp: updateObject_default_def)
-
-crunch ksQ [wp]: storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksReadyQueues s)"
-  (simp: updateObject_default_def ignore: setObject)
+crunches storePDE, storePDPTE, storePML4E
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  and ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  (simp: updateObject_default_def ignore_del: setObject)
 
 lemma storePDE_inQ[wp]:
   "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace> storePDE ptr pde \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
@@ -1903,11 +1723,10 @@ lemma storePML4E_inQ[wp]:
   apply (clarsimp simp: projectKOs obj_at'_def ko_wp_at'_def)
   done
 
-crunch norqL1[wp]: storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-  (simp: updateObject_default_def ignore: setObject)
-
-crunch norqL2[wp]: storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-  (simp: updateObject_default_def ignore: setObject)
+crunches storePDE, storePDPTE, storePML4E
+  for norqL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  and norqL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  (simp: updateObject_default_def)
 
 lemma storePDE_valid_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> storePDE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
@@ -2005,8 +1824,8 @@ lemma setObject_pml4e_ksInt [wp]:
   "\<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setObject p (pml4e::pml4e) \<lbrace>\<lambda>_. \<lambda>s. P (ksInterruptState s)\<rbrace>"
   by (wp setObject_ksInterrupt updateObject_default_inv|simp)+
 
-crunch ksInterruptState [wp]: storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksInterruptState s)"
-  (ignore: setObject)
+crunches storePDE, storePDPTE, storePML4E
+  for ksInterruptState [wp]: "\<lambda>s. P (ksInterruptState s)"
 
 lemma storePDE_ifunsafe [wp]:
   "\<lbrace>if_unsafe_then_cap'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
@@ -2053,11 +1872,9 @@ lemma storePML4E_idle [wp]:
   unfolding valid_idle'_def
   by (rule hoare_lift_Pf [where f="ksIdleThread"]; wp)
 
-crunch arch' [wp]: storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksArchState s)"
-  (ignore: setObject)
-
-crunch cur' [wp]: storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksCurThread s)"
-  (ignore: setObject)
+crunches storePDE, storePDPTE, storePML4E
+  for arch'[wp]: "\<lambda>s. P (ksArchState s)"
+  and cur'[wp]: "\<lambda>s. P (ksCurThread s)"
 
 lemma storePDE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> storePDE pde p \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
@@ -2080,7 +1897,8 @@ lemma storePML4E_irq_states' [wp]:
                     updateObject_default_inv)
   done
 
-crunch no_0_obj' [wp]: storePDE, storePDPTE, storePML4E no_0_obj'
+crunches storePDE, storePDPTE, storePML4E
+  for no_0_obj'[wp]: no_0_obj'
 
 lemma storePDE_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
@@ -2106,7 +1924,8 @@ lemma storePML4E_vms'[wp]:
             hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
   done
 
-crunch pspace_domain_valid[wp]: storePDE, storePDPTE, storePML4E "pspace_domain_valid"
+crunches storePDE, storePDPTE, storePML4E
+  for pspace_domain_valid[wp]: "pspace_domain_valid"
 
 lemma storePDE_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace> storePDE p pde \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
@@ -2259,20 +2078,15 @@ lemma setObject_pml4e_ksDomScheduleIdx [wp]:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject p (pml4e::pml4e) \<lbrace>\<lambda>_. \<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
   by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
 
-crunch ksDomScheduleIdx[wp]: storePTE, storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksDomScheduleIdx s)"
-(ignore: getObject setObject)
+crunches storePTE, storePDE, storePDPTE, storePML4E
+  for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and pspace_canonical'[wp]: "pspace_canonical'"
+  and pspace_in_kernel_mappings'[wp]: "pspace_in_kernel_mappings'"
 
-crunch gsMaxObjectSize[wp]: storePTE, storePDE, storePDPTE, storePML4E "\<lambda>s. P (gsMaxObjectSize s)"
-(ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
-
-crunch gsUntypedZeroRanges[wp]: storePTE, storePDE, storePDPTE, storePML4E "\<lambda>s. P (gsUntypedZeroRanges s)"
-(ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
-
-crunch pspace_canonical'[wp]: storePTE, storePDE, storePDPTE, storePML4E "pspace_canonical'"
-  (ignore: getObject setObject)
-
-crunch pspace_in_kernel_mappings'[wp]: storePTE, storePDE, storePDPTE, storePML4E "pspace_in_kernel_mappings'"
-  (ignore: getObject setObject)
+crunches storePTE, storePDE, storePDPTE, storePML4E
+  for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+  and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemma storePDE_invs[wp]:
   "\<lbrace>invs' and valid_pde' pde\<rbrace>
@@ -2324,10 +2138,10 @@ lemma storePTE_valid_mdb [wp]:
   by (simp add: valid_mdb'_def) wp
 
 crunch nosch [wp]: storePTE "\<lambda>s. P (ksSchedulerAction s)"
-  (simp: updateObject_default_def)
+  (simp: updateObject_default_def ignore_del: setObject)
 
 crunch ksQ [wp]: storePTE "\<lambda>s. P (ksReadyQueues s)"
-  (simp: updateObject_default_def ignore: setObject)
+  (simp: updateObject_default_def)
 
 lemma storePTE_inQ[wp]:
   "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace> storePTE ptr pde \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
@@ -2337,10 +2151,10 @@ lemma storePTE_inQ[wp]:
   done
 
 crunch norqL1[wp]: storePTE "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-  (simp: updateObject_default_def ignore: setObject)
+  (simp: updateObject_default_def)
 
 crunch norqL2[wp]: storePTE "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-  (simp: updateObject_default_def ignore: setObject)
+  (simp: updateObject_default_def)
 
 lemma storePTE_valid_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> storePTE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
@@ -2364,7 +2178,6 @@ lemma setObject_pte_ksInt [wp]:
   by (wp setObject_ksInterrupt updateObject_default_inv|simp)+
 
 crunch ksInt' [wp]: storePTE "\<lambda>s. P (ksInterruptState s)"
-  (ignore: setObject)
 
 lemma storePTE_ifunsafe [wp]:
   "\<lbrace>if_unsafe_then_cap'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
@@ -2382,10 +2195,8 @@ lemma storePTE_idle [wp]:
   by (rule hoare_lift_Pf [where f="ksIdleThread"]; wp)
 
 crunch arch' [wp]: storePTE "\<lambda>s. P (ksArchState s)"
-  (ignore: setObject)
 
 crunch cur' [wp]: storePTE "\<lambda>s. P (ksCurThread s)"
-  (ignore: setObject)
 
 lemma storePTE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> storePTE pte p \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
@@ -2647,22 +2458,17 @@ lemma setASIDPool_invs [wp]:
   done
 
 crunch cte_wp_at'[wp]: unmapPageTable "\<lambda>s. P (cte_wp_at' P' p s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch cte_wp_at'[wp]: unmapPageDirectory "\<lambda>s. P (cte_wp_at' P' p s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch cte_wp_at'[wp]: unmapPDPT "\<lambda>s. P (cte_wp_at' P' p s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemmas storePDE_Invalid_invs = storePDE_invs[where pde=InvalidPDE, simplified]
 lemmas storePDPTE_Invalid_invs = storePDPTE_invs[where pde=InvalidPDPTE, simplified]
 lemmas storePML4E_Invalid_invs = storePML4E_invs[where pde=InvalidPML4E, simplified]
-
-(* FIXME x64: move*)
-lemma no_irq_invalidateTranslationSingleASID[wp]:
-  "no_irq (invalidateTranslationSingleASID a b)"
-  by (simp add: invalidateTranslationSingleASID_def)
 
 lemma dmo_invalidateTranslationSingleASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (invalidateTranslationSingleASID a b) \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -2693,8 +2499,9 @@ lemma dmo_invalidateLocalPageStructureCacheASID_invs'[wp]:
                      machine_rest_lift_def split_def | wp)+
   done
 
-crunch invs'[wp]: unmapPageTable, unmapPageDirectory, unmapPDPT "invs'"
-  (ignore: getObject setObject storePDE storePDPTE storePML4E doMachineOp
+crunches unmapPageTable, unmapPageDirectory, unmapPDPT
+  for invs'[wp]: "invs'"
+  (ignore: storePDE storePDPTE storePML4E doMachineOp
        wp: storePDE_Invalid_invs storePDPTE_Invalid_invs storePML4E_Invalid_invs mapM_wp'
            crunch_wps
      simp: crunch_simps)
@@ -2757,12 +2564,12 @@ lemma perform_pdpti_invs [wp]:
   done
 
 crunch cte_wp_at': unmapPage "\<lambda>s. P (cte_wp_at' P' p s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemmas unmapPage_typ_ats [wp] = typ_at_lifts [OF unmapPage_typ_at']
 
 crunch inv: lookupPTSlot P
-  (wp: crunch_wps simp: crunch_simps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma unmapPage_invs' [wp]:
   "\<lbrace>invs'\<rbrace> unmapPage sz asid vptr pptr \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -2774,14 +2581,10 @@ lemma unmapPage_invs' [wp]:
          |simp)+
   done
 
-crunch invs'[wp]: pteCheckIfMapped, pdeCheckIfMapped "invs'"
-  (ignore: getObject)
-
-crunch valid_pte'[wp]: pteCheckIfMapped, pdeCheckIfMapped "valid_pte' pte"
-  (ignore: getObject)
-
-crunch valid_pde'[wp]: pteCheckIfMapped, pdeCheckIfMapped "valid_pde' pde"
-  (ignore: getObject)
+crunches pteCheckIfMapped, pdeCheckIfMapped
+  for invs'[wp]: "invs'"
+  and valid_pte'[wp]: "valid_pte' pte"
+  and valid_pde'[wp]: "valid_pde' pde"
 
 lemma perform_page_invs [wp]:
   notes no_irq[wp]

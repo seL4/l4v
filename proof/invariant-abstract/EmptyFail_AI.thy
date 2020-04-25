@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory EmptyFail_AI
@@ -273,7 +269,7 @@ context EmptyFail_AI_derive_cap begin
 
 lemma decode_cnode_invocation_empty_fail[wp]:
   "\<And>a b c d. empty_fail (decode_cnode_invocation a b c d :: (cnode_invocation, 'state_ext) se_monad)"
-  by (simp add: decode_cnode_invocation_def split: invocation_label.splits list.splits | wp | intro impI conjI allI)+
+  by (simp add: decode_cnode_invocation_def split: invocation_label.splits list.splits | wp | wpc | intro impI conjI allI)+
 
 end
 

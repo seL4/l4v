@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -495,8 +491,8 @@ lemma sendSignal_tcb_at'[wp]:
 lemmas checkCap_inv_typ_at'
   = checkCap_inv[where P="\<lambda>s. P (typ_at' T p s)" for P T p]
 
-crunch typ_at'[wp]: restart, bindNotification "\<lambda>s. P (typ_at' T p s)"
-crunch typ_at'[wp]: performTransfer "\<lambda>s. P (typ_at' T p s)"
+crunches restart, bindNotification, performTransfer
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
 lemma invokeTCB_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>
@@ -552,7 +548,7 @@ lemma sts_cte_at[wp]:
   done
 
 crunch obj_at_ntfn[wp]: setThreadState "obj_at' (\<lambda>ntfn. P (ntfnBoundTCB ntfn) (ntfnObj ntfn)) ntfnptr"
-  (ignore: getObject setObject wp: obj_at_setObject2  crunch_wps
+  (wp: obj_at_setObject2  crunch_wps
    simp: crunch_simps updateObject_default_def in_monad)
 
 lemma sts_mcpriority_tcb_at'[wp]:
@@ -605,7 +601,7 @@ lemma arch_cap_exhausted:
   by (cases param_e; simp add: isCap_simps)
 
 crunch inv[wp]: decodeInvocation P
-  (simp: crunch_simps wp: crunch_wps arch_cap_exhausted mapME_x_inv_wp getASID_wp ignore: getObject)
+  (simp: crunch_simps wp: crunch_wps arch_cap_exhausted mapME_x_inv_wp getASID_wp)
 
 (* FIXME: move to TCB *)
 lemma dec_dom_inv_wf[wp]:
@@ -1458,8 +1454,7 @@ lemma deleteCallerCap_nonz_cap:
 crunch sch_act_sane[wp]: cteDeleteOne sch_act_sane
   (wp: crunch_wps loadObject_default_inv getObject_inv
    simp: crunch_simps unless_def
-   rule: sch_act_sane_lift
-   ignore: getObject)
+   rule: sch_act_sane_lift)
 
 crunch sch_act_sane[wp]: deleteCallerCap sch_act_sane
   (wp: crunch_wps)
@@ -1610,8 +1605,6 @@ lemma setSchedulerAction_obj_at'[wp]:
   unfolding setSchedulerAction_def
   by (wp, clarsimp elim!: obj_at'_pspaceI)
 
-crunch_ignore (add: null_cap_on_failure)
-
 lemma hy_corres:
   "corres dc einvs (invs' and ct_active' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)) handle_yield handleYield"
   apply (clarsimp simp: handle_yield_def handleYield_def)
@@ -1732,7 +1725,7 @@ crunch ksCurThread[wp]: handleReply "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
        setObject_ntfn_ct
         simp: unless_def crunch_simps
-      ignore: transferCapsToSlots setObject getObject)
+   ignore: transferCapsToSlots)
 
 lemmas cteDeleteOne_st_tcb_at_simple'[wp] =
     cteDeleteOne_st_tcb_at[where P=simple', simplified]
@@ -2063,9 +2056,10 @@ proof -
       done
   qed
 
-crunch st_tcb_at'[wp]: handleVMFault,handleHypervisorFault "st_tcb_at' P t"
-crunch cap_to'[wp]: handleVMFault,handleHypervisorFault "ex_nonz_cap_to' t"
-crunch ksit[wp]: handleVMFault,handleHypervisorFault "\<lambda>s. P (ksIdleThread s)"
+crunches handleVMFault, handleHypervisorFault
+  for st_tcb_at'[wp]: "st_tcb_at' P t"
+  and cap_to'[wp]: "ex_nonz_cap_to' t"
+  and ksit[wp]: "\<lambda>s. P (ksIdleThread s)"
 
 lemma hv_inv':
   "\<lbrace>P\<rbrace> handleVMFault p t \<lbrace>\<lambda>_. P\<rbrace>"
@@ -2119,8 +2113,8 @@ lemma deleteCallerCap_st_tcb_at_runnable[wp]:
   apply (wp cteDeleteOne_tcb_at_runnable' hoare_drop_imps | simp)+
   done
 
-crunch ksCurThread[wp]:
-  handleFault,receiveSignal,receiveIPC,asUser "\<lambda>s. P (ksCurThread s)"
+crunches handleFault,receiveSignal,receiveIPC,asUser
+  for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: hoare_drop_imps crunch_wps simp: crunch_simps)
 
 lemma handleRecv_ksCurThread[wp]:

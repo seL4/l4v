@@ -1,11 +1,7 @@
 #
-# Copyright 2014, NICTA
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
-# This software may be distributed and modified according to the terms of
-# the BSD 2-Clause license. Note that NO WARRANTY is provided.
-# See "LICENSE_BSD2.txt" for details.
-#
-# @TAG(NICTA_BSD)
+# SPDX-License-Identifier: BSD-2-Clause
 #
 
 ifndef CPARSER_PFX
@@ -59,9 +55,9 @@ CParser: c-parser-deps
 cparser_test: c-parser-deps testfiles/$(L4V_ARCH)/ROOT .FORCE
 	$(ISABELLE) build -d $(L4V_ROOT_DIR) -d testfiles/$(L4V_ARCH) -b -v CParserTest
 testfiles/$(L4V_ARCH)/ROOT: testfiles testfiles/*.c testfiles/*.thy ../../misc/scripts/gen_isabelle_root.py
-	python ../../misc/scripts/gen_isabelle_root.py -i testfiles -i testfiles/$(L4V_ARCH) -o testfiles/$(L4V_ARCH)/ROOT -s CParserTest -b CParser
+	python3 ../../misc/scripts/gen_isabelle_root.py -i testfiles -i testfiles/$(L4V_ARCH) -o testfiles/$(L4V_ARCH)/ROOT -s CParserTest -b CParser
 all_tests_$(L4V_ARCH).thy: testfiles testfiles/*.c ../../misc/scripts/gen_isabelle_root.py
-	python ../../misc/scripts/gen_isabelle_root.py -T -o $@ -b CParser -i testfiles -i testfiles/$(L4V_ARCH)
+	python3 ../../misc/scripts/gen_isabelle_root.py -T -o $@ -b CParser -i testfiles -i testfiles/$(L4V_ARCH)
 
 
 .PHONY: tools_all

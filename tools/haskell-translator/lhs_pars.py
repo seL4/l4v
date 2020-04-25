@@ -1,11 +1,7 @@
 #
-# Copyright 2014, NICTA
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
-# This software may be distributed and modified according to the terms of
-# the BSD 2-Clause license. Note that NO WARRANTY is provided.
-# See "LICENSE_BSD2.txt" for details.
-#
-# @TAG(NICTA_BSD)
+# SPDX-License-Identifier: BSD-2-Clause
 #
 
 from __future__ import print_function
@@ -61,18 +57,20 @@ def parse(call):
 
     return ['%s\n' % line for line in lines]
 
+
 def settings_line(l):
     """Adjusts some global settings."""
-    bits = l.split (',')
+    bits = l.split(',')
     for bit in bits:
-        bit = bit.strip ()
-        (kind, setting) = bit.split ('=')
-        kind = kind.strip ()
+        bit = bit.strip()
+        (kind, setting) = bit.split('=')
+        kind = kind.strip()
         if kind == 'keep_constructor':
-            [cons] = setting.split ()
+            [cons] = setting.split()
             keep_conss[cons] = 1
         else:
             assert not "setting kind understood", bit
+
 
 def set_global(_call):
     global call
@@ -114,7 +112,7 @@ element matches pred"""
 
 
 def get_defs(filename):
-    #if filename in file_defs:
+    # if filename in file_defs:
     #    return file_defs[filename]
 
     cmdline = os.environ['L4CPP']
@@ -367,9 +365,10 @@ def wrap_qualify(lines, deep=True):
 
     if call.current_context:
         lines.insert(0, 'end\nqualify {} (in Arch) {}'.format(call.current_context[-1],
-                asdfextra))
+                                                              asdfextra))
         lines.append('end_qualify\ncontext Arch begin global_naming %s' % call.current_context[-1])
     return lines
+
 
 def def_lines(d, call):
     """Produces the set of lines associated with a definition."""
@@ -558,11 +557,11 @@ def reduce_to_single_line(tree_element):
 
 
 type_conv_table = {
- 'Maybe': 'option',
- 'Bool': 'bool',
- 'Word': 'machine_word',
- 'Int': 'nat',
- 'String': 'unit list'}
+    'Maybe': 'option',
+    'Bool': 'bool',
+    'Word': 'machine_word',
+    'Int': 'nat',
+    'String': 'unit list'}
 
 
 def type_conv(string):
@@ -1027,8 +1026,8 @@ def set_instance_proofs(header, constructor_arities, d):
 
     classes = d.deriving
     instance_proof_fns = set(
-            sorted((instance_proof_table[classname] for classname in classes),
-                   key=lambda x: x.order))
+        sorted((instance_proof_table[classname] for classname in classes),
+               key=lambda x: x.order))
     for f in instance_proof_fns:
         (npfs, nexs) = f(header, canonical, d)
         pfs.extend(npfs)
@@ -1063,6 +1062,7 @@ def finite_instance_proofs(header, cons):
 
 # wondering where the serialisable proofs went? see
 # commit 21361f073bbafcfc985934e563868116810d9fa2 for last known occurence.
+
 
 # leave type tags 0..11 for explicit use outside of this script
 next_type_tag = 12
@@ -1230,16 +1230,24 @@ def num_instance_proofs(header, canonical, d):
 
 num_instance_proofs.order = 2
 
-def enum_instance_proofs (header, canonical, d):
+
+def enum_instance_proofs(header, canonical, d):
+    def singular_canonical():
+        if len(canonical) == 1:
+            [(_, (_, n))] = canonical
+            return n == 1
+        else:
+            return False
+
     lines = ['(*<*)']
-    if len(canonical) == 1:
+    if singular_canonical():
         [(_, (cons, n))] = canonical
-        assert n == 1
+        # special case for datatypes with single constructor with one argument
         lines.append('instantiation %s :: enum begin' % header)
         if call.current_context:
             lines.append('interpretation Arch .')
         lines.append('definition')
-        lines.append('  enum_%s: "enum_class.enum \<equiv> map %s enum"' \
+        lines.append('  enum_%s: "enum_class.enum \<equiv> map %s enum"'
                      % (header, cons))
 
     else:
@@ -1247,46 +1255,49 @@ def enum_instance_proofs (header, canonical, d):
         cons_one_arg = [cons for i, (cons, n) in canonical if n == 1]
         cons_two_args = [cons for i, (cons, n) in canonical if n > 1]
         assert cons_two_args == []
-        lines.append ('instantiation %s :: enum begin' % header)
+        lines.append('instantiation %s :: enum begin' % header)
         if call.current_context:
             lines.append('interpretation Arch .')
-        lines.append ('definition')
-        lines.append ('  enum_%s: "enum_class.enum \<equiv> ' % header)
-        lines.append ('    [ ')
-        for cons in cons_no_args[:-1]:
-            lines.append ('      %s,' % cons)
-        for cons in cons_no_args[-1:]:
-            lines.append ('      %s' % cons)
-        lines.append ('    ]')
+        lines.append('definition')
+        lines.append('  enum_%s: "enum_class.enum \<equiv> ' % header)
+        if len(cons_no_args) == 0:
+            lines.append('    []')
+        else:
+            lines.append('    [ ')
+            for cons in cons_no_args[:-1]:
+                lines.append('      %s,' % cons)
+            for cons in cons_no_args[-1:]:
+                lines.append('      %s' % cons)
+            lines.append('    ]')
         for cons in cons_one_arg:
-            lines.append ('    @ (map %s enum)' % cons)
+            lines.append('    @ (map %s enum)' % cons)
         lines[-1] = lines[-1] + '"'
-    lines.append ('')
+    lines.append('')
     for cons in cons_one_arg:
         lines.append('lemma %s_map_distinct[simp]: "distinct (map %s enum)"' % (cons, cons))
         lines.append('  apply (simp add: distinct_map)')
         lines.append('  by (meson injI %s.inject)' % header)
     lines.append('')
     lines.append('definition')
-    lines.append('  "enum_class.enum_all (P :: %s \<Rightarrow> bool) \<longleftrightarrow> Ball UNIV P"' \
-            % header)
+    lines.append('  "enum_class.enum_all (P :: %s \<Rightarrow> bool) \<longleftrightarrow> Ball UNIV P"'
+                 % header)
     lines.append('')
     lines.append('definition')
-    lines.append('  "enum_class.enum_ex (P :: %s \<Rightarrow> bool) \<longleftrightarrow> Bex UNIV P"' \
-            % header)
+    lines.append('  "enum_class.enum_ex (P :: %s \<Rightarrow> bool) \<longleftrightarrow> Bex UNIV P"'
+                 % header)
     lines.append('')
     lines.append('  instance')
     lines.append('  apply intro_classes')
     lines.append('   apply (safe, simp)')
     lines.append('   apply (case_tac x)')
     if len(canonical) == 1:
-        lines.append('  apply (simp_all add: enum_%s enum_all_%s_def enum_ex_%s_def' \
-                % (header, header, header))
+        lines.append('  apply (auto simp: enum_%s enum_all_%s_def enum_ex_%s_def'
+                     % (header, header, header))
         lines.append('    distinct_map_enum)')
         lines.append('  done')
     else:
-        lines.append('  apply (simp_all add: enum_%s enum_all_%s_def enum_ex_%s_def)' \
-                % (header, header, header))
+        lines.append('  apply (simp_all add: enum_%s enum_all_%s_def enum_ex_%s_def)'
+                     % (header, header, header))
         lines.append('  by fast+')
     lines.append('end')
     lines.append('')
@@ -1304,8 +1315,8 @@ def enum_instance_proofs (header, canonical, d):
     lines.append('begin')
     if call.current_context:
         lines.append('interpretation Arch .')
-    lines.append('instance by (intro_classes, simp add: enum_alt_%s)' \
-            % header)
+    lines.append('instance by (intro_classes, simp add: enum_alt_%s)'
+                 % header)
     lines.append('end')
     lines.append('')
     lines.append('(*>*)')
@@ -1341,7 +1352,7 @@ no_proofs.order = 6
 
 instance_proof_table = {
     'Eq': no_proofs,
-    'Bounded': no_proofs, #enum_instance_proofs,
+    'Bounded': no_proofs,  # enum_instance_proofs,
     'Enum': enum_instance_proofs,
     'Ix': no_proofs,
     'Ord': no_proofs,
@@ -1354,32 +1365,34 @@ instance_proof_table = {
     'PSpaceStorable': pspace_storable_instance_proofs,
     'Typeable': no_proofs,
     'Error': no_proofs,
-    }
+}
 
-def bij_instance (classname, typename, constructor, fns):
+
+def bij_instance(classname, typename, constructor, fns):
     L = [
         '',
         'instance %s :: %s ..' % (typename, classname),
         'defs (overloaded)'
     ]
     for (fname, fstr, cast_return) in fns:
-        n = len (fstr.split('%s')) - 1
+        n = len(fstr.split('%s')) - 1
         names = ('x', 'y', 'z', 'w')[:n]
-        names2 = tuple ([name + "'" for name in names])
+        names2 = tuple([name + "'" for name in names])
         fstr1 = fstr % names
         fstr2 = fstr % names2
-        L.append ('  %s_%s: "%s \<equiv>' % (fname, typename, fstr1))
+        L.append('  %s_%s: "%s \<equiv>' % (fname, typename, fstr1))
         for name in names:
-            L.append("    case %s of %s %s' \<Rightarrow>" \
-                % (name, constructor, name))
+            L.append("    case %s of %s %s' \<Rightarrow>"
+                     % (name, constructor, name))
         if cast_return:
-            L.append ('      %s (%s)"' % (constructor, fstr2))
+            L.append('      %s (%s)"' % (constructor, fstr2))
         else:
-            L.append ('      %s"' % fstr2)
+            L.append('      %s"' % fstr2)
 
     return L
 
-def get_type_map (string):
+
+def get_type_map(string):
     """Takes Haskell named record syntax and produces
         a map (in the form of a list of tuples) defining
         the converted types of the names."""
@@ -1810,7 +1823,7 @@ def do_clause_pattern(line, children, type, n=0):
             new_left = '%s:[%s]' % (bits[0], bits[1])
             new_line = lead_ws(line) + new_left + ' <- ' + right
             extra = []
-        return do_clause_pattern (new_line, children, type, n + 1) \
+        return do_clause_pattern(new_line, children, type, n + 1) \
             + extra
     for lhs in left_start_table:
         if left.startswith(lhs):
@@ -2000,8 +2013,8 @@ def case_clauses_transform(xxx_todo_changeme5):
         cases.append(case)
         bodies.append((tail, c))
 
-    cases = tuple(cases) # used as key of a dict later, needs to be hashable
-                         # (since lists are mutable, they aren't)
+    cases = tuple(cases)  # used as key of a dict later, needs to be hashable
+    # (since lists are mutable, they aren't)
     if not cases:
         print(line)
     conv = get_case_conv(cases)
@@ -2408,9 +2421,9 @@ def all_constructor_conv(cases):
     return conv
 
 
-word_getter = re.compile (r"([a-zA-Z0-9]+)")
+word_getter = re.compile(r"([a-zA-Z0-9]+)")
 
-record_getter = re.compile (r"([a-zA-Z0-9]+\s*{[a-zA-Z0-9'\s=\,_\(\):\]\[]*})")
+record_getter = re.compile(r"([a-zA-Z0-9]+\s*{[a-zA-Z0-9'\s=\,_\(\):\]\[]*})")
 
 
 def extended_pattern_conv(cases):

@@ -1,11 +1,7 @@
 (*
- * Copyright 2018, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 chapter "Platform Definitions"
@@ -20,7 +16,7 @@ begin
 
 context Arch begin global_naming RISCV64
 
-type_synonym irq = "3 word" (* maxIRQ currently 5; increase for real h/w *)
+type_synonym irq = "6 word" (* match IRQ_CNODE_SLOT_BITS in seL4 config *)
 type_synonym paddr = word64
 
 abbreviation (input) "toPAddr \<equiv> id"
@@ -154,7 +150,7 @@ definition minIRQ :: "irq"
 
 definition maxIRQ :: "irq"
   where
-  "maxIRQ \<equiv> 53"
+  "maxIRQ \<equiv> 54"
 
 (* Reserved by C to represent "not an IRQ" *)
 definition irqInvalid :: "irq"

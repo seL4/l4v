@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Interrupt_C
@@ -27,7 +23,7 @@ lemma getIRQSlot_ccorres:
   "ccorres ((=) \<circ> Ptr) irqSlot_'
           \<top> UNIV hs
       (getIRQSlot irq)
-      (\<acute>irqSlot :== CTypesDefs.ptr_add intStateIRQNode_Ptr (sint ((ucast irq) :: 32 signed word)))"
+      (\<acute>irqSlot :== CTypesDefs.ptr_add intStateIRQNode_Ptr (uint irq))"
   apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
@@ -72,13 +68,16 @@ proof -
   show ?thesis
   apply (cinit lift: irq_' slot_' cap_')
    apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
-   apply (rule ptr_add_assertion_irq_guard)
    apply (rule ccorres_move_array_assertion_irq)
-   apply (simp add: ucast_up_ucast is_up)
+   apply (simp add: ucast_up_ucast is_up of_int_uint_ucast[symmetric])
    apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
-        apply (ctac(no_vcg) add: cteInsert_ccorres)
+        apply (rule ccorres_call)
+           apply (rule cteInsert_ccorres[simplified dc_def])
+          apply simp
+         apply simp
+        apply simp
        apply (simp add: pred_conj_def)
        apply (strengthen invs_mdb_strengthen' valid_objs_invs'_strg
                          invs_pspace_canonical' invs_pspace_aligned')
@@ -108,12 +107,11 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
       (Call invokeIRQHandler_ClearIRQHandler_'proc)"
   apply (cinit lift: irq_')
    apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
-   apply (rule ptr_add_assertion_irq_guard)
    apply (rule ccorres_move_array_assertion_irq)
-   apply (simp add: ucast_up_ucast is_up)
+   apply (simp add: ucast_up_ucast is_up of_int_uint_ucast[symmetric])
    apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
-       apply (ctac add: cteDeleteOne_ccorres[where w="-1"])
+       apply (ctac add: cteDeleteOne_ccorres[where w="-1",simplified dc_def])
       apply vcg
      apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
         gs_set_assn_Delete_cstate_relation[unfolded o_def])
@@ -124,7 +122,9 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
   apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
   apply (drule word_le_nat_alt[THEN iffD1])
   apply (auto simp add:Word.uint_up_ucast is_up unat_def[symmetric])
-  done
+  apply (case_tac "of_int (uint irq) \<noteq> 0 \<longrightarrow> 0 < unat irq")
+   by (auto simp: Collect_const_mem unat_eq_0)
+
 
 lemma ntfn_case_can_send:
   "(case cap of NotificationCap x1 x2 x3 x4 \<Rightarrow> f x3
@@ -138,7 +138,7 @@ lemma list_length_geq_helper[simp]:
   by (frule length_ineq_not_Nil(3), simp, metis list.exhaust)
 
 lemma decodeIRQHandlerInvocation_ccorres:
-  notes if_cong[cong]
+  notes if_cong[cong] gen_invocation_type_eq[simp]
   shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -250,7 +250,8 @@ lemma decodeIRQHandlerInvocation_ccorres:
       apply (rule ccorres_return_CE, simp+)[1]
      apply (wp sts_invs_minor')+
     apply (rule ccorres_equals_throwError)
-     apply (fastforce simp: invocationCatch_def throwError_bind split: invocation_label.split)
+     apply (fastforce simp: invocationCatch_def throwError_bind
+                      split: gen_invocation_labels.split)
     apply (simp add: ccorres_cond_iffs cong: StateSpace.state.fold_congs globals.fold_congs)
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
@@ -296,8 +297,8 @@ lemma ucast_maxIRQ_le_eq':
 
 lemma invokeIRQControl_expanded_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-      (invs' and cte_at' parent and (\<lambda>_. (ucast irq) \<le> (scast Kernel_C.maxIRQ :: machine_word)))
-      (UNIV \<inter> {s. irq_' s = irq}
+      (invs' and cte_at' parent and (\<lambda>_. (ucast irq) \<le> (ucast Kernel_C.maxIRQ :: machine_word)))
+      (UNIV \<inter> {s. irq_' s = (ucast irq :: machine_word)}
             \<inter> {s. handlerSlot_' s = cte_Ptr slot}
             \<inter> {s. controlSlot_' s = cte_Ptr parent})
       hs
@@ -319,7 +320,12 @@ lemma invokeIRQControl_expanded_ccorres:
    apply (vcg exspec=setIRQState_modifies)
   apply (rule conjI)
    apply (clarsimp simp: is_simple_cap'_def isCap_simps valid_cap_simps' capAligned_def)
-   apply (fastforce simp: word_bits_def intro!: ucast_maxIRQ_le_eq ucast_maxIRQ_le_eq')
+   apply (clarsimp simp: Kernel_C.maxIRQ_def maxIRQ_def word_bits_def)
+   apply (subgoal_tac "UCAST(8 \<rightarrow> 64) irq \<le> UCAST(8 \<rightarrow> 64) 0x7D \<and> LENGTH(8) \<le> LENGTH(64)")
+    apply (erule conjE)
+    apply (drule_tac x="irq" and y="0x7D" in ucast_le_ucast)
+    apply (fastforce simp: word_bits_def)
+   apply simp
   apply (clarsimp simp: Collect_const_mem ccap_relation_def cap_irq_handler_cap_lift
                         cap_to_H_def c_valid_cap_def cl_valid_cap_def
                         word_bw_assocs mask_twice Kernel_C.maxIRQ_def ucast_ucast_a
@@ -335,8 +341,8 @@ lemma invokeIRQControl_expanded_ccorres:
 
 lemma invokeIRQControl_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-      (invs' and cte_at' parent and (\<lambda>_. (ucast irq) \<le> (scast Kernel_C.maxIRQ :: machine_word)))
-      (UNIV \<inter> {s. irq_' s = irq}
+      (invs' and cte_at' parent and (\<lambda>_. (ucast irq) \<le> (ucast Kernel_C.maxIRQ :: machine_word)))
+      (UNIV \<inter> {s. irq_' s = ucast irq}
             \<inter> {s. handlerSlot_' s = cte_Ptr slot}
             \<inter> {s. controlSlot_' s = cte_Ptr parent}) []
       (performIRQControl (IssueIRQHandler irq slot parent))
@@ -346,20 +352,19 @@ lemma invokeIRQControl_ccorres:
 
 lemma isIRQActive_ccorres:
   "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_'
-        (\<lambda>s. irq \<le> scast Kernel_C.maxIRQ) (UNIV \<inter> {s. irq_' s = irq}) []
+        (\<lambda>s. irq \<le> scast Kernel_C.maxIRQ) (UNIV \<inter> {s. irq_' s = ucast irq}) []
         (isIRQActive irq) (Call isIRQActive_'proc)"
   apply (cinit lift: irq_')
    apply (simp add: getIRQState_def getInterruptState_def)
-   apply (rule_tac P="irq \<le> scast Kernel_C.maxIRQ \<and> unat irq < (126::nat)" in ccorres_gen_asm)
+   apply (rule_tac P="irq \<le> ucast Kernel_C.maxIRQ \<and> unat irq < (126::nat)" in ccorres_gen_asm)
    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
    apply (rule allI, rule conseqPre, vcg)
    apply (clarsimp simp: simpler_gets_def word_sless_msb_less maxIRQ_def
                          word_less_nat_alt)
-   apply (clarsimp simp: order_le_less_trans unat_less_helper
-                         word_0_sle_from_less[OF order_less_le_trans, OF ucast_less])
+   apply (clarsimp simp: order_le_less_trans unat_less_helper Kernel_C.IRQInactive_def
+                         Kernel_C.maxIRQ_def word_0_sle_from_less[OF order_less_le_trans, OF ucast_less])
    apply (clarsimp simp: rf_sr_def cstate_relation_def Kernel_C.maxIRQ_def
                          Let_def cinterrupt_relation_def)
-
    apply (drule spec, drule(1) mp)
    apply (case_tac "intStateIRQTable (ksInterruptState \<sigma>) irq")
      apply (simp add: from_bool_def irq_state_defs Kernel_C.maxIRQ_def
@@ -369,6 +374,16 @@ lemma isIRQActive_ccorres:
 lemma Platform_maxIRQ:
   "X64.maxIRQ = scast Kernel_C.maxIRQ"
    by (simp add: X64.maxIRQ_def Kernel_C.maxIRQ_def)
+
+lemma le_maxirq_ucast_explicit:
+  "irq \<le> 0x7D \<Longrightarrow> UCAST(8 \<rightarrow> 64) irq < 0x7E"
+  apply (subgoal_tac "UCAST(8 \<rightarrow> 64) irq \<le> UCAST(8 \<rightarrow> 64) 0x7D \<and> LENGTH(8) \<le> LENGTH(64)")
+   apply (erule conjE)
+   apply (drule_tac x="irq" and y="0x7D" in ucast_le_ucast)
+   apply word_bitwise
+  apply (rule conjI)
+   apply (rule ucast_up_mono_le)
+   by auto
 
 lemma updateIRQState_ccorres:
   "x64_irq_state_relation irq_state_h irq_state_c \<Longrightarrow>
@@ -390,11 +405,7 @@ lemma updateIRQState_ccorres:
       apply (clarsimp simp: simpler_modify_def
                             rf_sr_def cstate_relation_def Let_def
                             carch_state_relation_def cmachine_state_relation_def carch_globals_def
-                            Kernel_C.maxIRQ_def)
-      apply (rule conjI)
-       (* note: 0x7D = 125 = maxIRQ *)
-       apply (erule word_le_ucast_sless[where y="0x7D" and 'a=8 and 'b=32, simplified])
-      apply (clarsimp simp: Kernel_C.maxIRQ_def is_down zero_sle_ucast_up)
+                            Kernel_C.maxIRQ_def le_maxirq_ucast_explicit)
       apply (erule array_relation_update[simplified fun_upd_def]; fastforce simp: maxIRQ_def)
      apply wpsimp+
   done
@@ -609,38 +620,93 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
      (is "ccorres _ _ ?pre _ _ _ _")
   proof -
   (* We begin with a collection of word proofs that should only be relevant to this lemma *)
-  have irq_helper_one:
-    "\<And>irq. uint (irq :: word8) \<le> 107 \<Longrightarrow> toEnum (16 + unat irq) = irq + 0x10"
+  have irq64_toEnum_plus_unat:
+    "\<And>irq. unat (irq :: 8 word) \<le> 107 \<Longrightarrow> toEnum (16 + unat irq) = irq + 0x10"
     apply (subst toEnum_of_nat)
-     apply (clarsimp)
-     apply (rule Orderings.order_class.order.strict_trans1[where b=107])
-      apply (clarsimp simp: unat_def nat_le_iff)
-     apply clarsimp
-    apply clarsimp
+     apply auto
     done
-  have irq_helper_two:
-    "\<And>irq. uint irq \<le> 107 \<Longrightarrow> UCAST(8 \<rightarrow> 64) (irq + 0x10) \<le> SCAST(32 signed \<rightarrow> 64) Kernel_C.maxIRQ"
-    apply (clarsimp simp: Kernel_C.maxIRQ_def)
-    apply (rule subst[where t="0x7D" and s="UCAST (8 \<rightarrow> 64) 0x7D"], fastforce)
-    apply (subst ucast_le_ucast, fastforce)
+  have irq64_helper_one:
+    "\<And>irq. (irq :: 64 word) \<le> 107 \<Longrightarrow> of_nat (unat irq) \<le> (0x6B :: 8 word)"
+    apply (subst ucast_nat_def)
+    apply (subgoal_tac "UCAST(64 \<rightarrow> 8) irq \<le> UCAST(64 \<rightarrow> 8) 0x6B")
+     apply simp
+    apply (rule ucast_mono_le')
+     apply simp+
+    done
+  have irq64_helper_two:
+    "\<And>irq. unat irq \<le> 107 \<Longrightarrow>
+            UCAST(8 \<rightarrow> 64) (toEnum (16 + unat (UCAST(64 \<rightarrow> 8) irq))) \<le>
+            SCAST(32 signed \<rightarrow> 64) Kernel_C.maxIRQ"
+    apply (subst irq64_toEnum_plus_unat)
+     apply (subst ucast_nat_def[symmetric])
+     apply (subst unat_of_nat)
+     apply simp
+    apply (simp add: ucast_nat_def[symmetric])
+    apply (subgoal_tac "of_nat (unat irq + 0x10) = of_nat (unat irq) + 0x10")
+     apply (erule subst)
+     apply (subst unat_of_nat)
+     apply (simp add: scast_def Kernel_C.maxIRQ_def)
+     apply (subgoal_tac "irq \<le> 107")
+      defer
+      defer
+      apply simp
+     apply (subst add.commute)
+     apply (rule Word.le_plus)
+      apply (rule_tac y="0x6B" in xtrans(6))
+       apply simp
+      apply simp
+     apply simp
+    apply (subgoal_tac "unat irq \<le> unat (0x6B :: 64 word)")
+     apply (subst word_le_nat_alt, simp)
+    apply simp
+    done
+  have irq64_helper_three:
+    "\<And>irq. \<not> 107 < unat irq \<Longrightarrow>
+        toEnum (16 + unat (UCAST(64 \<rightarrow> 8) irq)) \<le> SCAST(32 signed \<rightarrow> 8) Kernel_C.maxIRQ"
+    apply (subst toEnum_of_nat)
+     apply (simp add: unat_ucast)
+    apply (simp add: unat_ucast Kernel_C.maxIRQ_def)
+    apply (subgoal_tac "unat irq \<le> 107")
+     apply simp
+     apply (rule Word.le_plus)
+      apply (rule_tac y="0x6B" in xtrans(6))
+       apply simp
+      defer
+      apply simp
+     apply simp
+    apply (subgoal_tac "unat irq \<le> unat (0x6B :: 64 word)")
+     apply (subst word_le_nat_alt, simp)
+     apply (subst unat_of_nat)
+     apply simp
+    apply simp
+    done
+  have irq64_helper_four:
+    "\<And>irq. \<not> 107 < unat irq \<Longrightarrow>
+       irq + 0x10 =
+       UCAST(8 \<rightarrow> 64) (toEnum (16 + unat (UCAST(64 \<rightarrow> 8) irq)))"
+    apply (subgoal_tac "unat irq \<le> 107")
+     defer
+     apply simp
+    apply simp
+    apply (subst irq64_toEnum_plus_unat)
+     apply (simp add: unat_ucast)
+    apply (simp add: ucast_nat_def[symmetric])
+    apply (subgoal_tac "of_nat (unat irq + 0x10) = of_nat (unat irq) + 0x10")
+     defer
+     apply simp
+    apply (erule subst)
+    apply (subst unat_of_nat)
+    apply simp
+    done
+  have irq64_helper_five:
+    "\<And>irq. \<not> 107 < unat irq \<Longrightarrow>
+           0x30 + irq =
+           of_nat (unat ((toEnum :: nat \<Rightarrow> 8 word) (16 + unat (UCAST(64 \<rightarrow> 8) irq)))) + 0x20"
+    apply (subst ucast_nat_def)
+    apply simp
     apply (subst add.commute)
-    apply (rule Word.le_plus')
-     apply (fastforce simp: word_le_def)+
+    apply (simp add: irq64_helper_four)
     done
-  have irq_helper_three:
-    "\<And>irq. uint irq \<le> 107 \<Longrightarrow> irq + 0x10 \<le> SCAST(32 signed \<rightarrow> 8) Kernel_C.maxIRQ"
-    apply (clarsimp simp: Kernel_C.maxIRQ_def)
-    apply (subst add.commute)
-    apply (rule Word.le_plus')
-     apply fastforce
-    apply (fastforce simp: word_le_def)
-    done
-  have irq_helper_four:
-  "\<And>irq. UCAST(8 \<rightarrow> 64) (UCAST(64 \<rightarrow> 8) irq + 0x10) + 0x20 =
-         of_nat (unat (UCAST(64 \<rightarrow> 8) irq + 0x10)) + irqIntOffset"
-  apply (subst ucast_of_nat_small[symmetric, where 'a=8 and 'b=64];
-         fastforce simp: irqIntOffset_def)
-  done
 from assms show ?thesis
   supply Collect_const[simp del]
   apply (cinit' lift: invLabel_' length___unsigned_long_' srcSlot_' excaps_' buffer_'
@@ -691,7 +757,6 @@ from assms show ?thesis
           apply (rule ccorres_assert)
           apply (rule ccorres_add_return,
                  ctac add: getSyscallArg_ccorres_foo[where args=args and buffer=buffer and n=6])
-            apply csymbr
             apply (rule ccorres_move_const_guards)
             apply clarsimp
             apply (rule ccorres_Cond_rhs_Seq)
@@ -710,10 +775,9 @@ from assms show ?thesis
              (* X64IRQIssueIRQHandlerIOAPIC *)
              apply (clarsimp simp: rangeCheck_def unlessE_whenE c_irq_const_defs word_less_alt
                                    word_sless_alt is_down sint_ucast_eq_uint word_le_not_less)
-             apply (rule ccorres_move_const_guards)
              apply csymbr
              apply (clarsimp simp: scast_down_add is_down scast_ucast_simps)
-             apply (clarsimp simp: Orderings.linorder_class.not_less irq_helper_one)
+             apply (clarsimp simp: Orderings.linorder_class.not_less)
              apply (simp add: invocationCatch_use_injection_handler
                               bindE_assoc
                               injection_bindE[OF refl refl]
@@ -800,18 +864,23 @@ from assms show ?thesis
               apply (clarsimp simp: sysargs_rel_to_n unat_less_2p_word_bits
                                     invs_valid_objs' tcb_at_invs' invs_queues valid_tcb_state'_def
                                     invs_sch_act_wf' ct_in_state'_def cte_wp_at_weakenE'
-                                    pred_tcb'_weakenE irq_helper_two)
+                                    pred_tcb'_weakenE)
               apply (subst pred_tcb'_weakenE, assumption, fastforce)+
-              apply fastforce
+              apply (rule conjI)
+               apply (rule TrueI)
+              apply (rule conjI)
+               apply (rule impI)
+               apply (rule TrueI)
+              apply (rule_tac irq1="yf" in irq64_helper_two)
+              apply (simp add: unat_def)
              apply (vcg exspec=isIRQActive_modifies)
             (* X64IRQIssueIRQHandlerMSI *)
             (* Much of the proof below is copied from the IOAPIC case above \<up> *)
             apply (clarsimp simp: rangeCheck_def unlessE_whenE c_irq_const_defs word_less_alt
                                   word_sless_alt is_down sint_ucast_eq_uint word_le_not_less)
-            apply (rule ccorres_move_const_guards)
             apply csymbr
             apply (clarsimp simp: scast_down_add is_down scast_ucast_simps)
-            apply (clarsimp simp: Orderings.linorder_class.not_less irq_helper_one)
+            apply (clarsimp simp: Orderings.linorder_class.not_less)
             apply (simp add: invocationCatch_use_injection_handler
                              bindE_assoc
                              injection_bindE[OF refl refl]
@@ -894,9 +963,12 @@ from assms show ?thesis
                           apply (clarsimp simp: invs_valid_objs' tcb_at_invs'
                                                 invs_queues valid_tcb_state'_def
                                                 invs_sch_act_wf' ct_in_state'_def
-                                                cte_wp_at_weakenE' irq_helper_two)
+                                                cte_wp_at_weakenE')
                           apply (subst pred_tcb'_weakenE, assumption, fastforce)+
-                          apply fastforce
+                          apply (intro conjI impI)
+                            apply (rule TrueI)+
+                          apply (rule_tac irq1="yf" in irq64_helper_two)
+                          apply (simp add: unat_def)
                          apply (vcg exspec=getSyscallArg_modifies, wp)
                        apply (vcg exspec=getSyscallArg_modifies, wp)
                      apply (vcg exspec=getSyscallArg_modifies, wp)
@@ -922,13 +994,14 @@ from assms show ?thesis
      apply clarsimp
      apply (fastforce simp: guard_is_UNIV_def interpret_excaps_eq excaps_map_def
                       split: Product_Type.prod.split)
-    apply (auto simp: invs_queues invs_valid_objs' ct_in_state'_def
+    apply (auto simp: invs_queues invs_valid_objs' ct_in_state'_def irqIntOffset_def
                       ccap_rights_relation_def mask_def[where n=4]
-                      "StrictC'_thread_state_defs" rf_sr_ksCurThread
-                      cte_wp_at_ctes_of sysargs_rel_def sysargs_rel_n_def
+                      "StrictC'_thread_state_defs" rf_sr_ksCurThread cte_wp_at_ctes_of
+                      sysargs_rel_def sysargs_rel_n_def
                       excaps_map_def excaps_in_mem_def slotcap_in_mem_def
                       valid_tcb_state'_def from_bool_def toBool_def word_less_nat_alt
-                      c_irq_const_defs irq_helper_one irq_helper_two irq_helper_three irq_helper_four
+                      c_irq_const_defs irq64_helper_one irq64_helper_two irq64_helper_three
+                      irq64_helper_four irq64_helper_five
                       unat_less_2p_word_bits word_less_alt word_sless_alt is_down sint_ucast_eq_uint
                 dest!: interpret_excaps_eq
                 split: bool.splits Product_Type.prod.split)[3]
@@ -949,9 +1022,9 @@ lemma maxIRQ_ucast_scast [simp]:
   "ucast (scast Kernel_C.maxIRQ :: 8 word) = scast Kernel_C.maxIRQ"
   by (clarsimp simp: Kernel_C.maxIRQ_def)
 
-lemma decodeIRQ_arch_helper: "x \<noteq> invocation_label.IRQIssueIRQHandler \<Longrightarrow>
-         (case x of invocation_label.IRQIssueIRQHandler \<Rightarrow> f | _ \<Rightarrow> g) = g"
-  by (clarsimp split: invocation_label.splits)
+lemma decodeIRQ_arch_helper: "x \<noteq> IRQIssueIRQHandler \<Longrightarrow>
+         (case x of IRQIssueIRQHandler \<Rightarrow> f | _ \<Rightarrow> g) = g"
+  by (clarsimp split: gen_invocation_labels.splits)
 
 lemma Arch_checkIRQ_ccorres:
   "ccorres (syscall_error_rel \<currency> dc) (liftxf errstate id undefined ret__unsigned_long_')
@@ -995,6 +1068,7 @@ lemma decodeIRQControlInvocation_ccorres:
      (decodeIRQControlInvocation label args slot (map fst extraCaps)
             >>= invocationCatch thread isBlocking isCall InvokeIRQControl)
      (Call decodeIRQControlInvocation_'proc)"
+  supply gen_invocation_type_eq[simp]
   apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' excaps_' buffer_')
    apply (simp add: decodeIRQControlInvocation_def invocation_eq_use_types
                del: Collect_const

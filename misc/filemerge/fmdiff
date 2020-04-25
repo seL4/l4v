@@ -1,10 +1,8 @@
 #!/bin/sh
-#
-# This file is in the public domain.
-#
-# @TAG(PUBLIC_DOMAIN)
-#
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileCopyrightText: 2012, Bruno De Fraine
 
+# This file is in the public domain.
 #
 # Code from: http://www.defraine.net/~brunod/fmdiff/
 #

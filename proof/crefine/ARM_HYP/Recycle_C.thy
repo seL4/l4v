@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Recycle_C
@@ -544,16 +540,6 @@ lemma invalidateTLBByASID_ccorres:
   apply (clarsimp simp: pde_stored_asid_def to_bool_def)
   done
 
-(* FIXME: also in VSpace_C *)
-lemma ignoreFailure_liftM:
-  "ignoreFailure = liftM (\<lambda>v. ())"
-  apply (rule ext)+
-  apply (simp add: ignoreFailure_def liftM_def
-                   catch_def)
-  apply (rule bind_apply_cong[OF refl])
-  apply (simp split: sum.split)
-  done
-
 end
 
 lemma option_to_0_user_mem':
@@ -598,8 +584,8 @@ crunch ksArchState[wp]: invalidateTLBByASID "\<lambda>s. P (ksArchState s)"
 
 crunch gsMaxObjectSize[wp]: invalidateTLBByASID "\<lambda>s. P (gsMaxObjectSize s)"
 crunch gsMaxObjectSize[wp]: deleteASIDPool "\<lambda>s. P (gsMaxObjectSize s)"
-  (ignore: setObject getObject wp: crunch_wps getObject_inv loadObject_default_inv
-     simp: crunch_simps)
+  (wp: crunch_wps getObject_inv loadObject_default_inv
+   simp: crunch_simps)
 end
 
 context kernel_m begin
@@ -673,7 +659,7 @@ lemma clearMemory_setObject_PTE_ccorres:
        subgoal
          apply (subst unat_of_nat32, simp add: table_bits_defs word_bits_def)
          apply (subst unat_power_lower32', simp add: table_bits_defs word_bits_def)
-         apply (erule (1) page_table_at_rf_sr_dom_s)
+         apply (erule (1) page_table_at_rf_sr_dom_s[simplified])
          done
       apply (clarsimp simp add: table_bits_defs
                       cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -837,17 +823,6 @@ lemma cpspace_relation_ep_update_ep2:
   done
 
 end
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma setObject_tcb_ep_obj_at'[wp]:
-  "\<lbrace>obj_at' (P :: endpoint \<Rightarrow> bool) ptr\<rbrace> setObject ptr' (tcb :: tcb) \<lbrace>\<lambda>rv. obj_at' P ptr\<rbrace>"
-  apply (rule obj_at_setObject2, simp_all)
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
-end
-
-crunch ep_obj_at'[wp]: setThreadState "obj_at' (P :: endpoint \<Rightarrow> bool) ptr"
-  (ignore: getObject setObject simp: unless_def)
 
 context kernel_m begin
 

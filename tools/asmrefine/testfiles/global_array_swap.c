@@ -1,11 +1,7 @@
 /*
- * Copyright 2016, Data61
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  */
 
 typedef unsigned int uint32_t;
@@ -42,7 +38,7 @@ typedef struct {
     range_blob_t index_range;
     range_blob_t free_index_range;
 
-    void* ptr_to_stuff; /* pointer to initial thread's IPC buffer */
+    void *ptr_to_stuff; /* pointer to initial thread's IPC buffer */
     range_blob_t range_in_stuff;
     range_blob_t next_range_in_stuff;
 
@@ -63,51 +59,45 @@ int a_modified_global;
 int another_global;
 extern toplevel_struct_t toplevel;
 
-void
-modify_toplevel (int x)
+void modify_toplevel(int x)
 {
-  toplevel.config_data1 = x;
+    toplevel.config_data1 = x;
 }
 
-void
-add_a_thing (int thing_num, int data_num)
+void add_a_thing(int thing_num, int data_num)
 {
     if (data_num < 192) {
-      toplevel.things[thing_num].list_of_data[data_num].index = 1;
-    }
-    else {
-      toplevel.things[thing_num].range_in_stuff.end = -1;
+        toplevel.things[thing_num].list_of_data[data_num].index = 1;
+    } else {
+        toplevel.things[thing_num].range_in_stuff.end = -1;
     }
 }
 
-void
-update_a_global (int x) {
-  a_modified_global = x;
+void update_a_global(int x)
+{
+    a_modified_global = x;
 }
 
 /* small const global array */
 typedef int reference_val;
 
 static const reference_val a_reference_array[] = {
-        12
+    12
 };
 
-static int
-get_num_reference_vals(void)
+static int get_num_reference_vals(void)
 {
     return sizeof(a_reference_array) / sizeof(reference_val);
 }
 
-static reference_val
-get_reference_val(int i, int extra_param)
+static reference_val get_reference_val(int i, int extra_param)
 {
     reference_val ref = a_reference_array[i];
 
     if (ref < extra_param) {
-      return 0;
-    }
-    else {
-      return ref;
+        return 0;
+    } else {
+        return ref;
     }
 }
 

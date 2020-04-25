@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Detype_R
@@ -117,11 +113,6 @@ defs cNodePartialOverlap_def:
       \<or> (\<not> mask_range p (cte_level_bits + n) \<subseteq> {p. inRange p}
         \<and> \<not> mask_range p (cte_level_bits + n) \<subseteq> {p. \<not> inRange p}))"
 
-(* FIXME RISCV move: *)
-lemma mask_in_range':
-  "is_aligned ptr bits \<Longrightarrow> (ptr' && (~~ mask bits) = ptr) = (ptr' \<in> mask_range ptr bits)"
-  by (drule mask_in_range[where ptr'=ptr']) (simp add: mask_def add_diff_eq)
-
 
 (* FIXME: move *)
 lemma deleteObjects_def2:
@@ -145,7 +136,7 @@ lemma deleteObjects_def2:
   apply (rule bind_cong[rotated], rule refl)
   apply (simp add: bind_assoc modify_modify deleteRange_def gets_modify_def)
   apply (rule ext, simp add: exec_modify stateAssert_def assert_def bind_assoc exec_get
-                             NOT_eq[symmetric] mask_in_range')
+                             NOT_eq[symmetric] neg_mask_in_mask_range)
   apply (clarsimp simp: simpler_modify_def)
   apply (simp add: data_map_filterWithKey_def split: if_split_asm)
   apply (rule arg_cong2[where f=gsCNodes_update])
@@ -378,7 +369,7 @@ lemma cte_wp_at_delete':
    apply (clarsimp simp del: atLeastAtMost_iff
                        simp: field_simps objBits_simps obj_range'_def mask_def)
    apply fastforce
-  apply (simp add: obj_range'_def mask_in_range'[symmetric]
+  apply (simp add: obj_range'_def neg_mask_in_mask_range[symmetric]
               del: atLeastAtMost_iff)
   apply (simp add: objBits_simps)
   apply (frule(1) tcb_cte_cases_aligned_helpers)

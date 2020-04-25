@@ -1,11 +1,7 @@
 /*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  */
 
 /*
@@ -16,12 +12,14 @@
 
 int __real_var__;
 
-int __get_real_var__(void) {
-  return __real_var__;
+int __get_real_var__(void)
+{
+    return __real_var__;
 }
 
-void __set_real_var__(int x) {
-  __real_var__ = x;
+void __set_real_var__(int x)
+{
+    __real_var__ = x;
 }
 
 #define VAR (__get_real_var__())

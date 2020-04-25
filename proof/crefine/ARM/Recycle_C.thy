@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Recycle_C
@@ -361,8 +357,8 @@ crunch ksArchState[wp]: invalidateTLBByASID "\<lambda>s. P (ksArchState s)"
 
 crunch gsMaxObjectSize[wp]: invalidateTLBByASID "\<lambda>s. P (gsMaxObjectSize s)"
 crunch gsMaxObjectSize[wp]: deleteASIDPool "\<lambda>s. P (gsMaxObjectSize s)"
-  (ignore: setObject getObject wp: crunch_wps getObject_inv loadObject_default_inv
-     simp: crunch_simps)
+  (wp: crunch_wps getObject_inv loadObject_default_inv
+   simp: crunch_simps)
 end
 
 context kernel_m begin
@@ -498,17 +494,6 @@ lemma cpspace_relation_ep_update_ep2:
   done
 
 end
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma setObject_tcb_ep_obj_at'[wp]:
-  "\<lbrace>obj_at' (P :: endpoint \<Rightarrow> bool) ptr\<rbrace> setObject ptr' (tcb :: tcb) \<lbrace>\<lambda>rv. obj_at' P ptr\<rbrace>"
-  apply (rule obj_at_setObject2, simp_all)
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
-end
-
-crunch ep_obj_at'[wp]: setThreadState "obj_at' (P :: endpoint \<Rightarrow> bool) ptr"
-  (ignore: getObject setObject simp: unless_def)
 
 context kernel_m begin
 

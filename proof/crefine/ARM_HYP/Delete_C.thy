@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Delete_C
@@ -756,7 +752,7 @@ lemma finaliseSlot_ccorres:
              apply (rule ccorres_drop_cutMon,
                     rule ccorres_split_throws)
               apply (rule_tac P="\<lambda>s. case (snd rvb) of
-                                        IRQHandlerCap irq \<Rightarrow> UCAST(10\<rightarrow>16) irq \<le> SCAST (32 signed\<rightarrow>16)Kernel_C.maxIRQ
+                                        IRQHandlerCap irq \<Rightarrow> UCAST(10\<rightarrow>machine_word_len) irq \<le> SCAST(32 signed\<rightarrow>machine_word_len) Kernel_C.maxIRQ
                                       | _ \<Rightarrow> True"
                               in ccorres_from_vcg_throws[where P'=UNIV])
               apply (rule allI, rule conseqPre, vcg)

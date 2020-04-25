@@ -1,20 +1,17 @@
 /*
- * Copyright 2016, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  */
 
 volatile int reg;
 
 /** DONT_TRANSLATE
     MODIFIES: reg */
-int magic(int x) {
-  asm volatile ("blah blah": "r"(x));
-  return x;
+int magic(int x)
+{
+    asm volatile("blah blah": "r"(x));
+    return x;
 }
 
 /* abort will generate an empty spec "{}" if optimisation is enabled. */
@@ -23,7 +20,8 @@ int magic(int x) {
 void abort(void);
 
 /* Test specs interleaved with function bodies. */
-int call_magic(int x) {
-  /** GHOSTUPD: "(\<acute>x < 42, id)" */
-  return magic(x);
+int call_magic(int x)
+{
+    /** GHOSTUPD: "(\<acute>x < 42, id)" */
+    return magic(x);
 }

@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(NICTA_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -25,7 +21,6 @@ session CamkesAdlSpec (Camkes) in "adl-spec" = Access +
     "imgs/dataport.pdf"
     "imgs/echo.pdf"
     "imgs/event.pdf"
-    "imgs/NICTA_logo.pdf"
     "imgs/terminal.pdf"
     "intro.tex"
     "root.tex"
@@ -70,7 +65,6 @@ session CamkesGlueSpec (Camkes) in "glue-spec" = HOL +
     "event.camkes"
     "imgs/echo.pdf"
     "imgs/filter.pdf"
-    "imgs/NICTA_logo.pdf"
     "imgs/thydeps.pdf"
     "intro.tex"
     "root.bib"
@@ -99,6 +93,5 @@ session CamkesGlueProofs (Camkes) in "glue-proofs" = AutoCorres +
     "root.tex"
     "simple.camkes"
     "to-echo-int.c"
-    "imgs/NICTA_logo.pdf"
     "comment.sty"
     "ulem.sty"

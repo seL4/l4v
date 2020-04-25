@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(NICTA_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Arch_DR
@@ -595,7 +591,8 @@ lemma corres_select_ret_or_throw:
  *)
 
 lemma decode_invocation_archcap_corres:
-  notes label_split_asm = invocation_label.split_asm arch_invocation_label.split_asm
+  notes label_split_asm = invocation_label.split_asm gen_invocation_labels.split_asm
+                          arch_invocation_label.split_asm
   shows
   "\<lbrakk> Some intent = transform_intent (invocation_type label') args';
      invoked_cap_ref = transform_cslot_ptr invoked_cap_ref';

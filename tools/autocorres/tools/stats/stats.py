@@ -1,12 +1,8 @@
 #!/usr/bin/env python
 #
-# Copyright 2014, NICTA
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
-# This software may be distributed and modified according to the terms of
-# the BSD 2-Clause license. Note that NO WARRANTY is provided.
-# See "LICENSE_BSD2.txt" for details.
-#
-# @TAG(NICTA_BSD)
+# SPDX-License-Identifier: BSD-2-Clause
 #
 
 import os
@@ -22,6 +18,8 @@ import re
 import numpy
 
 # Create a temporary directory
+
+
 class TempDir(object):
     def __enter__(self, cleanup=True):
         self.filename = tempfile.mkdtemp()
@@ -33,6 +31,7 @@ class TempDir(object):
             shutil.rmtree(self.filename)
         return False
 
+
 def mkdir_p(path):
     try:
         os.makedirs(path)
@@ -42,22 +41,24 @@ def mkdir_p(path):
         else:
             raise
 
+
 def phase_sort_key(x):
     d = {
-        "CParser" : 1,
-        "L1" : 2,
-        "L1except" : 3,
-        "L1peep" : 4,
-        "L2" : 5,
-        "L2simp" : 6,
-        "HL" : 7,
-        "HLsimp" : 8,
-        "TS" : 9,
-        "polish" : 10,
-        }
+        "CParser": 1,
+        "L1": 2,
+        "L1except": 3,
+        "L1peep": 4,
+        "L2": 5,
+        "L2simp": 6,
+        "HL": 7,
+        "HLsimp": 8,
+        "TS": 9,
+        "polish": 10,
+    }
     if x in d:
         return (d[x], x)
     return (100, x)
+
 
 def write_theory_file(f, enable_stats):
     f.write("""
@@ -103,26 +104,27 @@ def write_theory_file(f, enable_stats):
 
         end
         """ % {
-            "time" : str(datetime.datetime.now()),
-            "enable_stats" : "true" if enable_stats else "false",
+            "time": str(datetime.datetime.now()),
+            "enable_stats": "true" if enable_stats else "false",
             })
+
 
 # Check usage.
 parser = argparse.ArgumentParser(
-        description='Generate statistics about AutoCorres and the C Parser.')
+    description='Generate statistics about AutoCorres and the C Parser.')
 parser.add_argument('input', metavar='INPUT',
-        type=str, help='Input C source file.')
+                    type=str, help='Input C source file.')
 parser.add_argument('-n', '--no-isabelle',
-        default=False, action='store_true',
-        help="Don't run Isabelle, but reuse previous log file.")
+                    default=False, action='store_true',
+                    help="Don't run Isabelle, but reuse previous log file.")
 parser.add_argument('-b', '--browse', default=False, action='store_true',
-        help='Open shell in temp directory.')
+                    help='Open shell in temp directory.')
 parser.add_argument('-r', '--root', action='store', type=str,
-        help='Root to l4.verified directory.', default=None)
+                    help='Root to l4.verified directory.', default=None)
 parser.add_argument('-R', '--repeats', action='store',
-        help='Number of runs for timing data.', default=1)
+                    help='Number of runs for timing data.', default=1)
 parser.add_argument('-o', '--output', metavar='OUTPUT',
-        default="/dev/stdout", type=str, help='Output file.')
+                    default="/dev/stdout", type=str, help='Output file.')
 args = parser.parse_args()
 
 if args.root == None and not args.no_isabelle:
@@ -140,7 +142,8 @@ with TempDir() as tmp_dir:
         shutil.copyfile(args.input, os.path.join(tmp_dir, "input.c"))
 
         # Get lines of code.
-        lines_of_code = int(subprocess.check_output(["c_count", args.input]).strip().split("\n")[-1])
+        lines_of_code = int(subprocess.check_output(
+            ["c_count", args.input]).strip().split("\n")[-1])
 
         # Generate a root file.
         with open(os.path.join(tmp_dir, "ROOT"), "w") as f:
@@ -160,10 +163,12 @@ with TempDir() as tmp_dir:
 
         # Process theory file with Isabelle.
         if not args.no_isabelle:
-            subprocess.check_call(["isabelle", "build", "-v", "-d", args.root, "-d", ".", "-c", "Stats"], cwd=tmp_dir)
+            subprocess.check_call(["isabelle", "build", "-v", "-d", args.root,
+                                   "-d", ".", "-c", "Stats"], cwd=tmp_dir)
 
         # Fetch log file.
-        log_data = subprocess.check_output(["isabelle", "env", "sh", "-c" ,"zcat ${ISABELLE_OUTPUT}/log/Stats.gz"])
+        log_data = subprocess.check_output(
+            ["isabelle", "env", "sh", "-c", "zcat ${ISABELLE_OUTPUT}/log/Stats.gz"])
         phase_lines_of_spec = {}
         phase_term_size = {}
         phase_num_functions = {}
@@ -191,8 +196,9 @@ with TempDir() as tmp_dir:
         output.write("\n")
         output.write("%-10s %10s %10s\n" % ("Phase", "LoS", "Term Size"))
 
-        for phase in sorted(phase_term_size.keys(),key=phase_sort_key):
-            output.write("%-10s %10d %10d\n" % (phase, phase_lines_of_spec[phase], phase_term_size[phase] / phase_num_functions[phase]))
+        for phase in sorted(phase_term_size.keys(), key=phase_sort_key):
+            output.write("%-10s %10d %10d\n" % (phase,
+                                                phase_lines_of_spec[phase], phase_term_size[phase] / phase_num_functions[phase]))
         output.write("\n")
 
         #
@@ -210,10 +216,12 @@ with TempDir() as tmp_dir:
         ac_real_time = []
         for i in xrange(int(args.repeats)):
             if not args.no_isabelle:
-                subprocess.check_call(["isabelle", "build", "-v", "-o", "threads=1", "-d", args.root, "-d", ".", "-c", "Stats"], cwd=tmp_dir)
+                subprocess.check_call(["isabelle", "build", "-v", "-o", "threads=1",
+                                       "-d", args.root, "-d", ".", "-c", "Stats"], cwd=tmp_dir)
 
             # Fetch log file.
-            log_data = subprocess.check_output(["isabelle", "env", "sh", "-c" ,"zcat ${ISABELLE_OUTPUT}/log/Stats.gz"])
+            log_data = subprocess.check_output(
+                ["isabelle", "env", "sh", "-c", "zcat ${ISABELLE_OUTPUT}/log/Stats.gz"])
             for line in log_data.replace("\r", "").split("\n"):
                 if line.startswith("C Parser CPU Time"):
                     c_parser_cpu_time.append(int(line.split(":")[1]))
@@ -230,7 +238,7 @@ with TempDir() as tmp_dir:
                 ("C Parser Real Time", c_parser_real_time),
                 ("AutoCorres CPU Time", ac_cpu_time),
                 ("AutoCorres Real Time", ac_real_time),
-                ]:
+        ]:
             output.write("%s: %.2f (%.2f)\n" % (name, numpy.mean(values), numpy.std(values)))
             output.write("    samples: " + (", ".join([str(x) for x in values])) + "\n")
 
@@ -244,4 +252,3 @@ with TempDir() as tmp_dir:
         if args.browse:
             subprocess.call("zsh", cwd=tmp_dir)
         raise
-

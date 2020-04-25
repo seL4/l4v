@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -24,6 +20,14 @@ definition
   invocation_type :: "data \<Rightarrow> invocation_label"
 where
  "invocation_type x \<equiv> if \<exists>(v :: invocation_label). fromEnum v = data_to_nat x
-                      then toEnum (data_to_nat x) else InvalidInvocation"
+                      then toEnum (data_to_nat x) else GenInvocationLabel InvalidInvocation"
+
+definition
+  gen_invocation_type :: "data \<Rightarrow> gen_invocation_labels"
+where
+ "gen_invocation_type x \<equiv>
+   case invocation_type x of
+     GenInvocationLabel l \<Rightarrow> l
+   | ArchInvocationLabel _ \<Rightarrow> InvalidInvocation"
 
 end

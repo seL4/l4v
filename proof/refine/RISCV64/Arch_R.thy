@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -1225,7 +1221,7 @@ crunch nosch[wp]: setMRs "\<lambda>s. P (ksSchedulerAction s)"
    simp: split_def zipWithM_x_mapM)
 
 crunch nosch [wp]: performRISCVMMUInvocation "\<lambda>s. P (ksSchedulerAction s)"
-  (ignore: getObject setObject simp: crunch_simps
+  (simp: crunch_simps
    wp: crunch_wps getObject_cte_inv getASID_wp)
 
 lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
@@ -1233,8 +1229,7 @@ lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
 crunch st_tcb_at': performPageTableInvocation,
                    performPageInvocation,
                    performASIDPoolInvocation "st_tcb_at' P t"
-  (ignore: getObject setObject
-   wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps pteAtIndex_def)
+  (wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps pteAtIndex_def)
 
 lemma performASIDControlInvocation_st_tcb_at':
   "\<lbrace>st_tcb_at' (P and (\<noteq>) Inactive and (\<noteq>) IdleThreadState) t and
@@ -1285,7 +1280,7 @@ lemmas arch_finalise_cap_aligned' = ArchRetypeDecls_H_RISCV64_H_finaliseCap_alig
 lemmas arch_finalise_cap_distinct' = ArchRetypeDecls_H_RISCV64_H_finaliseCap_distinct'
 
 crunch st_tcb_at' [wp]: "Arch.finaliseCap" "st_tcb_at' P t"
-  (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
+  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemma invs_asid_table_strengthen':
   "invs' s \<and> asid_pool_at' ap s \<and> asid \<le> 2 ^ asid_high_bits - 1 \<longrightarrow>

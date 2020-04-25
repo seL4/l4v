@@ -1,11 +1,7 @@
 /*
- * Copyright 2016, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  */
 
 /*
@@ -17,20 +13,25 @@
 
 /* Function/arg name conflicts */
 int f2(int, int);
-int f1(int l2_f1, int l2_f2) {
-  return f2(l2_f1, l2_f2);
+int f1(int l2_f1, int l2_f2)
+{
+    return f2(l2_f1, l2_f2);
 }
-int f2(int l2_f1, int l2_f2) {
-  return f1(l2_f1, l2_f2);
+int f2(int l2_f1, int l2_f2)
+{
+    return f1(l2_f1, l2_f2);
 }
 
 /* Locale fixed frees */
-void locale_fixed(void) {
+void locale_fixed(void)
+{
 }
-int symbol_table(int symbol_table) {
-  return symbol_table;
+int symbol_table(int symbol_table)
+{
+    return symbol_table;
 }
 
 /* Basic function for doing other tests */
-void foo(void) {
+void foo(void)
+{
 }

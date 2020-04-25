@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -794,7 +790,7 @@ qed
 declare in_set_zip_refl[simp]
 
 crunch typ_at' [wp]: storePTE "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
+  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
 lemmas storePTE_typ_ats[wp] = typ_at_lifts [OF storePTE_typ_at']
 
@@ -809,7 +805,7 @@ lemma getObject_pte_inv[wp]:
   by (simp add: getObject_inv loadObject_default_inv)
 
 crunch typ_at'[wp]: copyGlobalMappings "\<lambda>s. P (typ_at' T p s)"
-  (wp: mapM_x_wp' ignore: forM_x getObject)
+  (wp: mapM_x_wp')
 
 lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']
 

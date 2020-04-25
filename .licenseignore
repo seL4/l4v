@@ -1,8 +1,12 @@
+#
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+
 *.lev
-*.md
 *.pdf
 *.html
-*.tex
 *.sty
 *.log
 *.bbl
@@ -35,13 +39,10 @@ internal/*
 .git/*
 
 
-*/.gitignore
-.gitignore
-.licenseignore
+.reuse/dep5
 
 **/ROOTS
 **/MANIFEST
-**/README
 **/VERSION
 **/*FILES
 **/*LICENSE
@@ -118,8 +119,7 @@ tools/c-parser/Simpl/ex/ProcParExSP.thy
 tools/c-parser/Simpl/ex/Quicksort.thy
 tools/c-parser/Simpl/ex/ClosureEx.thy
 tools/c-parser/Simpl/ex/VcgExTotal.thy
-
-tools/proofcount/etc/settings
+tools/c-parser/Simpl/document/root.tex
 
 **/CFunDump.txt
 **/umm_types.txt
@@ -134,6 +134,7 @@ tools/autocorres/tools/release_files/licenses
 tools/autocorres/tools/release_files/ROOTS.base_dir
 tools/autocorres/tools/release_files/licenses-ignore
 tools/autocorres/tools/release_files/CONTRIBUTORS
+tools/autocorres/tools/release_files/README
 
 tools/c-parser/standalone-parser/table.ML
 tools/c-parser/StrictC.grm.desc
@@ -148,11 +149,11 @@ tools/c-parser/testfiles/**/ROOT
 tools/c-parser/testfiles/umm_types.txt
 tools/c-parser/testfiles/modifies_speed.c
 tools/c-parser/testfiles/jiraver473.minfo
-tools/c-parser/testfiles/ROOT
 
 tools/haskell-translator/caseconvs-useful
 tools/haskell-translator/primrecs
 tools/haskell-translator/caseconvs
+tools/haskell-translator/supplied
 
 proof/bisim/document/build
 

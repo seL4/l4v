@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  *)
 
 signature PROGRAM_ANALYSIS =
@@ -1882,6 +1878,7 @@ in
        fold (add_modification fname) [TheHeap, PhantomState, AllGlobals] e)
     end
   | Ghostupd _ => ([stmt], add_modification fname GhostState e)
+  | Auxupd _ => ([stmt], add_modification fname TheHeap e)
   | _ => ([stmt], e)
 end
 and process_blockitems (fname : string) (env : csenv) bis =

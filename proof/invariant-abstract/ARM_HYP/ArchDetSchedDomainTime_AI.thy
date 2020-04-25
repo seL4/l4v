@@ -1,11 +1,7 @@
 (*
- * Copyright 2016, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory ArchDetSchedDomainTime_AI
@@ -90,10 +86,20 @@ lemma vgic_maintenance_valid_domain_time:
   apply clarsimp
   done
 
+lemma vppi_event_valid_domain_time:
+  "\<lbrace>\<lambda>s. 0 < domain_time s\<rbrace>
+    vppi_event irq \<lbrace>\<lambda>y s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
+  unfolding vppi_event_def
+  apply (rule hoare_strengthen_post [where Q="\<lambda>_ s. 0 < domain_time s"])
+   apply (wpsimp wp: handle_fault_domain_time_inv hoare_drop_imps)
+  apply clarsimp
+  done
+
 lemma handle_reserved_irq_valid_domain_time:
   "\<lbrace>\<lambda>s. 0 < domain_time s\<rbrace>
      handle_reserved_irq i \<lbrace>\<lambda>y s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
-  unfolding handle_reserved_irq_def by (wpsimp wp: vgic_maintenance_valid_domain_time)
+  unfolding handle_reserved_irq_def
+  by (wpsimp wp: vgic_maintenance_valid_domain_time vppi_event_valid_domain_time)
 
 lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
   "\<lbrace>\<lambda>s :: det_ext state. 0 < domain_time s \<rbrace> handle_interrupt i

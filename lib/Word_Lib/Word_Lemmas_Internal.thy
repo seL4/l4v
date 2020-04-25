@@ -1,11 +1,7 @@
 (*
- * Copyright 2018, Data61
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(DATA61_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  *)
 
 section "L4V-Internal Word Lemmas"
@@ -20,6 +16,10 @@ text \<open>
 theory Word_Lemmas_Internal
 imports Word_Lemmas
 begin
+
+lemma signed_ge_zero_scast_eq_ucast:
+ "0 <=s x \<Longrightarrow> scast x = ucast x"
+  by (simp add: scast_eq_ucast word_sle_msb_le)
 
 (* FIXME: move out of Word_Lib *)
 lemma disjCI2:

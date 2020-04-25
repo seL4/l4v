@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Invocations_R
@@ -14,16 +10,14 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma invocation_type_eq[simp]:
+lemma invocationType_eq[simp]:
   "invocationType = invocation_type"
-  apply (rule ext)
-  apply (simp add: invocationType_def invocation_type_def Let_def)
-  apply safe
-   apply (frule from_to_enum)
-   apply blast
-  apply (cut_tac x=v in maxBound_is_bound)
-  apply simp
-  done
+  unfolding invocationType_def invocation_type_def Let_def
+  by (rule ext, simp) (metis from_to_enum maxBound_is_bound')
+
+lemma genInvocationType_eq[simp]:
+  "genInvocationType = gen_invocation_type"
+  by (rule ext) (simp add: genInvocationType_def gen_invocation_type_def)
 
 end
 

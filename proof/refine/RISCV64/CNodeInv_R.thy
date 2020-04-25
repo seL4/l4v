@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -150,7 +146,7 @@ lemma cnode_invok_case_cleanup:
         \<Longrightarrow> (case i of CNodeRevoke \<Rightarrow> P | CNodeDelete \<Rightarrow> Q | CNodeCancelBadgedSends \<Rightarrow> R
                  | CNodeRotate \<Rightarrow> S | CNodeSaveCaller \<Rightarrow> T
                  | _ \<Rightarrow> U) = U"
-  by (simp split: invocation_label.split)
+  by (simp split: gen_invocation_labels.split)
 
 lemma cancelSendRightsEq:
   "cap_relation cap cap' \<Longrightarrow> hasCancelSendRights cap' = has_cancel_send_rights cap"
@@ -190,12 +186,12 @@ lemma dec_cnode_inv_corres:
                         apply auto[1]
                        apply (rule_tac r'="\<lambda>a b. fst b = rights_mask_map (fst a)
                                                \<and> snd b = fst (snd a)
-                                               \<and> snd (snd a) = (invocation_type (mi_label mi)
+                                               \<and> snd (snd a) = (gen_invocation_type (mi_label mi)
                                                      \<in> {CNodeMove, CNodeMutate})"
                                   in corres_splitEE)
                            prefer 2
                            apply (rule corres_trivial)
-                           subgoal by (auto split: list.split invocation_label.split,
+                           subgoal by (auto split: list.split gen_invocation_labels.split,
                                        auto simp: returnOk_def all_rights_def
                                                   rightsFromWord_correspondence)
                           apply (rule_tac r'=cap_relation in corres_splitEE)
@@ -556,9 +552,6 @@ declare if_split [split]
 text \<open>Proving desired properties about rec_del/cap_delete\<close>
 
 declare of_nat_power [simp del]
-
-(* FIXME: pull up *)
-declare word_unat_power [symmetric, simp del]
 
 text \<open>Proving desired properties about recursiveDelete/cteDelete\<close>
 
@@ -5872,7 +5865,7 @@ lemma capCylicZombieD[dest!]:
 
 crunches finaliseCap
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (ignore: getObject setObject wp: getASID_wp crunch_wps simp: crunch_simps)
+  (wp: getASID_wp crunch_wps simp: crunch_simps)
 
 lemma finaliseSlot_abort_cases':
   "s \<turnstile> \<lbrace>\<top>\<rbrace>
@@ -6054,7 +6047,8 @@ lemma updateTrackedFreeIndex_no_cte_prop[wp]:
   apply (clarsimp simp: no_cte_prop_def finalise_prop_stuff_def)
   done
 
-crunch no_cte_prop[wp]: emptySlot, capSwapForDelete "no_cte_prop P"
+crunches emptySlot, capSwapForDelete
+  for no_cte_prop[wp]: "no_cte_prop P"
   (ignore: doMachineOp wp: dmo_maskInterrupt_no_cte_prop)
 
 lemma reduceZombie_invs'':
@@ -6528,7 +6522,7 @@ lemma cteDelete_sch_act_simple:
   done
 
 crunch st_tcb_at'[wp]: "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete "st_tcb_at' P t"
-  (ignore: getObject setObject simp: crunch_simps pteAtIndex_def
+  (simp: crunch_simps pteAtIndex_def
    wp: crunch_wps getObject_inv loadObject_default_inv)
 end
 
@@ -6641,7 +6635,7 @@ crunch rvk_prog': finaliseCap
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of
        getObject_inv loadObject_default_inv
    simp: crunch_simps unless_def o_def pteAtIndex_def setBoundNotification_def
-   ignore: setObject setCTE threadSet)
+   ignore: setCTE threadSet)
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]
@@ -7564,12 +7558,6 @@ lemma select_bind_spec_corres':
          | drule(1) bspec | erule rev_bexI | rule conjI)+
    done
 
-(* FIXME: move *)
-lemma next_child_child_set:
-  "\<lbrakk>next_child slot (cdt_list s) = Some child; valid_list s\<rbrakk>
-    \<Longrightarrow> child \<in> (case next_child slot (cdt_list s) of None \<Rightarrow> {} | Some n \<Rightarrow> {n})"
-  by (simp add: next_child_def)
-
 lemma cap_revoke_mdb_stuff4:
   "\<lbrakk> (s, s') \<in> state_relation; cte_wp_at ((=) cap) p s;
      cte_wp_at' ((=) cte) (cte_map p) s'; invs s; valid_list s; invs' s';
@@ -7747,7 +7735,7 @@ lemma arch_recycleCap_improve_cases:
   by (cases cap, simp_all add: isCap_simps)
 
 crunch typ_at'[wp]: invokeCNode "\<lambda>s. P (typ_at' T p s)"
-  (ignore: filterM finaliseSlot
+  (ignore: finaliseSlot
      simp: crunch_simps filterM_mapM unless_def
            arch_recycleCap_improve_cases
        wp: crunch_wps undefined_valid finaliseSlot_preservation)
@@ -7768,9 +7756,8 @@ lemma threadSet_st_tcb_at2:
   done
 
 crunch st_tcb_at_simplish[wp]: "cancelBadgedSends" "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
-  (ignore: getObject setObject filterM
-       wp: crunch_wps threadSet_st_tcb_at2
-     simp: crunch_simps filterM_mapM makeObject_tcb unless_def)
+  (wp: crunch_wps threadSet_st_tcb_at2
+   simp: crunch_simps filterM_mapM makeObject_tcb unless_def)
 
 lemma cancelBadgedSends_st_tcb_at':
   assumes x: "\<And>st. simple' st \<Longrightarrow> P st"
@@ -8920,7 +8907,7 @@ lemma no_irq_hwASIDFlush:
 
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq_setVSpaceRoot no_irq_hwASIDFlush
-   simp: crunch_simps o_def pteAtIndex_def ignore: getObject setObject)
+   simp: crunch_simps o_def pteAtIndex_def)
 
 lemma finaliseSlot_IRQInactive':
   "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> finaliseSlot' a b

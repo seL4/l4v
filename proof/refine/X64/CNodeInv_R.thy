@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -150,7 +146,7 @@ lemma cnode_invok_case_cleanup:
         \<Longrightarrow> (case i of CNodeRevoke \<Rightarrow> P | CNodeDelete \<Rightarrow> Q | CNodeCancelBadgedSends \<Rightarrow> R
                  | CNodeRotate \<Rightarrow> S | CNodeSaveCaller \<Rightarrow> T
                  | _ \<Rightarrow> U) = U"
-  by (simp split: invocation_label.split)
+  by (simp split: gen_invocation_labels.split)
 
 lemma cancelSendRightsEq:
   "cap_relation cap cap' \<Longrightarrow> hasCancelSendRights cap' = has_cancel_send_rights cap"
@@ -190,12 +186,12 @@ lemma dec_cnode_inv_corres:
                         apply auto[1]
                        apply (rule_tac r'="\<lambda>a b. fst b = rights_mask_map (fst a)
                                                \<and> snd b = fst (snd a)
-                                               \<and> snd (snd a) = (invocation_type (mi_label mi)
+                                               \<and> snd (snd a) = (gen_invocation_type (mi_label mi)
                                                      \<in> {CNodeMove, CNodeMutate})"
                                   in corres_splitEE)
                            prefer 2
                            apply (rule corres_trivial)
-                           subgoal by (auto split: list.split invocation_label.split,
+                           subgoal by (auto split: list.split gen_invocation_labels.split,
                                        auto simp: returnOk_def all_rights_def
                                                   rightsFromWord_correspondence)
                           apply (rule_tac r'=cap_relation in corres_splitEE)
@@ -556,9 +552,6 @@ declare if_split [split]
 text \<open>Proving desired properties about rec_del/cap_delete\<close>
 
 declare of_nat_power [simp del]
-
-(* FIXME: pull up *)
-declare word_unat_power [symmetric, simp del]
 
 text \<open>Proving desired properties about recursiveDelete/cteDelete\<close>
 
@@ -5138,25 +5131,17 @@ lemma cteSwap_urz[wp]:
   apply auto
   done
 
-crunch valid_arch_state'[wp]: cteSwap "valid_arch_state'"
-
-crunch irq_states'[wp]: cteSwap "valid_irq_states'"
-
-crunch vq'[wp]: cteSwap "valid_queues'"
-
-crunch ksqsL1[wp]: cteSwap "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-
-crunch ksqsL2[wp]: cteSwap "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-
-crunch st_tcb_at'[wp]: cteSwap "st_tcb_at' P t"
-
-crunch vms'[wp]: cteSwap "valid_machine_state'"
-
-crunch pspace_domain_valid[wp]: cteSwap "pspace_domain_valid"
-
-crunch ct_not_inQ[wp]: cteSwap "ct_not_inQ"
-
-crunch ksDomScheduleIdx [wp]: cteSwap "\<lambda>s. P (ksDomScheduleIdx s)"
+crunches cteSwap
+  for valid_arch_state'[wp]: "valid_arch_state'"
+  and irq_states'[wp]: "valid_irq_states'"
+  and vq'[wp]: "valid_queues'"
+  and ksqsL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  and ksqsL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  and st_tcb_at'[wp]: "st_tcb_at' P t"
+  and vms'[wp]: "valid_machine_state'"
+  and pspace_domain_valid[wp]: "pspace_domain_valid"
+  and ct_not_inQ[wp]: "ct_not_inQ"
+  and ksDomScheduleIdx [wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
 
 lemma cteSwap_invs'[wp]:
   "\<lbrace>invs' and valid_cap' c and valid_cap' c' and
@@ -6179,7 +6164,8 @@ lemma setIOPortMask_no_cte_prop[wp]:
   apply auto
   done
 
-crunch no_cte_prop[wp]: emptySlot, capSwapForDelete "no_cte_prop P"
+crunches emptySlot, capSwapForDelete
+  for no_cte_prop[wp]: "no_cte_prop P"
   (ignore: doMachineOp wp: dmo_maskInterrupt_no_cte_prop)
 
 lemma reduceZombie_invs'':
@@ -6671,7 +6657,7 @@ lemma cteDelete_sch_act_simple:
 crunch st_tcb_at'[wp]: emptySlot "st_tcb_at' P t" (simp: case_Null_If)
 
 crunch st_tcb_at'[wp]: "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete "st_tcb_at' P t"
-  (ignore: getObject setObject simp: crunch_simps
+  (simp: crunch_simps
    wp: crunch_wps getObject_inv loadObject_default_inv)
 end
 
@@ -6787,7 +6773,7 @@ crunch rvk_prog': finaliseCap
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of
        getObject_inv loadObject_default_inv
    simp: crunch_simps unless_def o_def
-   ignore: setObject setCTE threadSet)
+   ignore: setCTE threadSet)
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]
@@ -7710,12 +7696,6 @@ lemma select_bind_spec_corres':
          | drule(1) bspec | erule rev_bexI | rule conjI)+
    done
 
-(* FIXME: move *)
-lemma next_child_child_set:
-  "\<lbrakk>next_child slot (cdt_list s) = Some child; valid_list s\<rbrakk>
-    \<Longrightarrow> child \<in> (case next_child slot (cdt_list s) of None \<Rightarrow> {} | Some n \<Rightarrow> {n})"
-  by (simp add: next_child_def)
-
 lemma cap_revoke_mdb_stuff4:
   "\<lbrakk> (s, s') \<in> state_relation; cte_wp_at ((=) cap) p s;
      cte_wp_at' ((=) cte) (cte_map p) s'; invs s; valid_list s; invs' s';
@@ -7894,7 +7874,7 @@ lemma arch_recycleCap_improve_cases:
   by (cases cap, simp_all add: isCap_simps)
 
 crunch typ_at'[wp]: invokeCNode "\<lambda>s. P (typ_at' T p s)"
-  (ignore: filterM finaliseSlot
+  (ignore: finaliseSlot
      simp: crunch_simps filterM_mapM unless_def
            arch_recycleCap_improve_cases
        wp: crunch_wps undefined_valid finaliseSlot_preservation)
@@ -7915,9 +7895,8 @@ lemma threadSet_st_tcb_at2:
   done
 
 crunch st_tcb_at_simplish[wp]: "cancelBadgedSends" "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
-  (ignore: getObject setObject filterM
-       wp: crunch_wps threadSet_st_tcb_at2
-     simp: crunch_simps filterM_mapM makeObject_tcb unless_def)
+  (wp: crunch_wps threadSet_st_tcb_at2
+   simp: crunch_simps filterM_mapM makeObject_tcb unless_def)
 
 lemma cancelBadgedSends_st_tcb_at':
   assumes x: "\<And>st. simple' st \<Longrightarrow> P st"
@@ -9124,7 +9103,7 @@ crunch irq_states' [wp]: finaliseCap valid_irq_states'
        no_irq_writeCR3 no_irq_invalidateASID
        no_irq_invalidateLocalPageStructureCacheASID
        no_irq_switchFpuOwner no_irq_nativeThreadUsingFPU
-   simp: crunch_simps o_def ignore: getObject setObject)
+   simp: crunch_simps o_def)
 
 lemma finaliseSlot_IRQInactive':
   "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> finaliseSlot' a b

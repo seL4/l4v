@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(NICTA_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Decode_IF
@@ -253,7 +249,7 @@ lemma decode_tcb_invocation_reads_respects_f:
   decode_set_tls_base_def
   apply (simp add: unlessE_def[symmetric] unlessE_whenE
         split del: if_split
-             cong: invocation_label.case_cong)
+             cong: gen_invocation_labels.case_cong)
   apply (rule equiv_valid_guard_imp)
    apply (wp (once) requiv_cur_thread_eq range_check_ev
              respects_f[OF derive_cap_rev]

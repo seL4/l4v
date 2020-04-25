@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory VSpace_C
@@ -45,25 +41,6 @@ lemma ccorres_flip_Guard:
   apply (case_tac "s \<in> S")
    apply (fastforce intro: exec.Guard exec.GuardFault exec_handlers.intros)
   apply (fastforce intro: exec.Guard exec.GuardFault exec_handlers.intros)
-  done
-
-(* FIXME: move *)
-lemma empty_fail_findVSpaceForASID[iff]:
-  "empty_fail (findVSpaceForASID asid)"
-  apply (simp add: findVSpaceForASID_def liftME_def)
-  apply (intro empty_fail_bindE, simp_all split: option.split)
-     apply (simp add: assertE_def split: if_split)
-    apply (simp add: assertE_def split: if_split)
-   apply (simp add: empty_fail_getObject)
-  apply (simp add: assertE_def liftE_bindE checkPML4At_def split: if_split)
-  done
-
-(* FIXME: move *)
-lemma empty_fail_findVSpaceForASIDAssert[iff]:
-  "empty_fail (findVSpaceForASIDAssert asid)"
-  apply (simp add: findVSpaceForASIDAssert_def catch_def
-                   checkPML4At_def)
-  apply (intro empty_fail_bind, simp_all split: sum.split)
   done
 
 end
@@ -220,17 +197,6 @@ lemma vspace_at_asid_cross_over:
   by (simp add: asid_map_relation_def bit_simps asid_bits_defs asid_bits_of_defs ucast_ucast_mask
          split: option.splits asid_map_CL.splits)
 
-(* FIXME remove *)
-lemmas findVSpaceForASIDAssert_pd_at_wp2 = findVSpaceForASIDAssert_vs_at_wp
-
-lemma asid_shiftr_low_bits_less:
-  "(asid :: machine_word) \<le> mask asid_bits \<Longrightarrow> asid >> asid_low_bits < 0x8"
-  apply (rule_tac y="2 ^ 3" in order_less_le_trans)
-   apply (rule shiftr_less_t2n)
-   apply (simp add: le_mask_iff_lt_2n[THEN iffD1] asid_bits_def asid_low_bits_def)
-  apply simp
-  done
-
 lemma array_relation_update:
   "\<lbrakk> array_relation R bnd table (arr :: 'a['b :: finite]);
                x' = unat (x :: ('td :: len) word); R v v';
@@ -246,9 +212,6 @@ where
     case fault of
          vmfault_type.X64DataFault \<Rightarrow> scast Kernel_C.X86DataFault
        | vmfault_type.X64InstructionFault \<Rightarrow> scast Kernel_C.X86InstructionFault"
-
-lemmas mask_64_id[simp] = mask_len_id[where 'a=64, folded word_bits_def]
-                          mask_len_id[where 'a=64, simplified]
 
 (* FIXME: automate this *)
 lemma seL4_Fault_VMFault_new'_spec:
@@ -481,7 +444,6 @@ lemma corres_symb_exec_unknown_r:
   apply (rule corres_symb_exec_r[OF assms]; wp select_inv non_fail_select)
   done
 
-(* FIXME: automate this. *)
 lemma lookupPML4Slot'_spec:
   "\<lbrace> \<lambda>s. s = \<sigma> \<and> array_assertion pm (2 ^ ptTranslationBits) (hrs_htd (t_hrs_' s)) \<rbrace>
     lookupPML4Slot' pm vptr
@@ -1116,10 +1078,6 @@ next
     by (clarsimp elim!: exI)
 qed
 
-(* FIXME move *)
-lemma fromIntegral_simp_nat[simp]: "(fromIntegral :: nat \<Rightarrow> nat) = id"
-  by (simp add: fromIntegral_def fromInteger_nat toInteger_nat)
-
 (* FIXME shadows two other identical versions in other files *)
 lemma ccorres_abstract_known:
   "\<lbrakk> \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' g (g' rv'); ccorres rvr xf P P' hs f (g' val) \<rbrakk>
@@ -1256,11 +1214,6 @@ lemma setCurrentUserVSpaceRoot_ccorres:
   apply (simp add: asid_wf_def, drule less_mask_eq)
   apply (clarsimp simp: ccr3_relation_defs Let_def mask_def bit_simps asid_bits_def)
   done
-
-(* FIXME: move *)
-lemma invs_cicd_valid_objs' [elim!]:
-  "all_invs_but_ct_idle_or_in_cur_domain' s \<Longrightarrow> valid_objs' s"
-  by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_pspace'_def)
 
 lemma setVMRoot_ccorres:
   "ccorres dc xfdc
@@ -1568,15 +1521,6 @@ lemma performPageGetAddress_ccorres:
                     X64.msgInfoRegister_def Kernel_C.msgInfoRegister_def Kernel_C.RSI_def
                     word_sle_def word_sless_def Kernel_C.RDI_def
                     kernel_all_global_addresses.msgRegisters_def fupdate_def)
-  done
-
-lemma ignoreFailure_liftM:
-  "ignoreFailure = liftM (\<lambda>v. ())"
-  apply (rule ext)+
-  apply (simp add: ignoreFailure_def liftM_def
-                   catch_def)
-  apply (rule bind_apply_cong[OF refl])
-  apply (simp split: sum.split)
   done
 
 lemma ccorres_pre_getObject_pte:
@@ -2073,22 +2017,6 @@ lemma ccap_relation_mapped_asid_0:
   apply (frule cap_get_tag_PageCap_frame)
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   apply simp
-  done
-
-(* FIXME: move *)
-lemma getSlotCap_wp':
-  "\<lbrace>\<lambda>s. \<forall>cap. cte_wp_at' (\<lambda>c. cteCap c = cap) p s \<longrightarrow> Q cap s\<rbrace> getSlotCap p \<lbrace>Q\<rbrace>"
-  apply (simp add: getSlotCap_def)
-  apply (wp getCTE_wp')
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  done
-
-lemma vmsz_aligned_aligned_pageBits:
-  "vmsz_aligned ptr sz \<Longrightarrow> is_aligned ptr pageBits"
-  apply (simp add: vmsz_aligned_def)
-  apply (erule is_aligned_weaken)
-  apply (simp add: pageBits_def pageBitsForSize_def
-            split: vmpage_size.split)
   done
 
 lemma framesize_from_H_bounded:

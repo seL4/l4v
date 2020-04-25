@@ -1,7 +1,4 @@
-/* this is a -*- c -*- file */
-/*
- * @TAG(OTHER_BSD)
- */
+/* SPDX-License-Identifier: BSD-2-Clause */
 
 /* ********************************************************************
  *
@@ -49,20 +46,20 @@ typedef signed char s8_t;
 typedef u32_t word_t;
 
 
-typedef void* addr_t;
+typedef void *addr_t;
 
 
 word_t *kmem_free_list;
 
-void init (void * start, void * end);
-void free (void * address, word_t size);
+void init(void *start, void *end);
+void free(void *address, word_t size);
 
-void * alloc (word_t size);
-void * alloc_aligned (word_t size, word_t alignement, word_t mask);
+void *alloc(word_t size);
+void *alloc_aligned(word_t size, word_t alignement, word_t mask);
 
 
 
-void init(void * start, void * end)
+void init(void *start, void *end)
 {
     kmem_free_list = 0;
 
@@ -70,90 +67,88 @@ void init(void * start, void * end)
 
 }
 
-void free(void * address, word_t size)
+void free(void *address, word_t size)
 {
-    word_t* p;
-    word_t* prev, *curr;
+    word_t *p;
+    word_t *prev, *curr;
 
     size = size >= 1024 ? size : 1024;
 
     /** AUXUPD: "(True,ptr_retyps (unat \<acute>size div unat KMC) (ptr_val \<acute>address))" */
 
-    for (p = (word_t*)address;
-         p < ((word_t*)(((word_t)address) + size - (1024)));
-         p = (word_t*) *p)
+    for (p = (word_t *)address;
+         p < ((word_t *)(((word_t)address) + size - (1024)));
+         p = (word_t *) *p) {
         *p = (word_t) p + (1024);
+    }
 
-    for (prev = (word_t*) &kmem_free_list, curr = kmem_free_list;
+    for (prev = (word_t *) &kmem_free_list, curr = kmem_free_list;
          curr && (address > (void *)curr);
-         prev = curr, curr = (word_t*) *curr)
-    ;
+         prev = curr, curr = (word_t *) *curr)
+        ;
 
-    *prev = (word_t) address; *p = (word_t) curr;
+    *prev = (word_t) address;
+    *p = (word_t) curr;
 }
 
 
 
-void sep_free(void * address, word_t size)
+void sep_free(void *address, word_t size)
 {
-    word_t* p;
-    word_t* prev, *curr;
+    word_t *p;
+    word_t *prev, *curr;
 
     size = size >= 1024 ? size : 1024;
 
     /** AUXUPD: "(True,ptr_retyp (ptr_coerce \<acute>address::word32 ptr))" */
 
-    for (p = (word_t*)address;
-         p < ((word_t*)(((word_t)address) + size - (1024)));
-         p = (word_t*) *p)
-      {
+    for (p = (word_t *)address;
+         p < ((word_t *)(((word_t)address) + size - (1024)));
+         p = (word_t *) *p) {
         *p = (word_t) p + (1024);
         /** AUXUPD: "(True,ptr_retyp (Ptr (ptr_val \<acute>p + 1024)::word32 ptr))" */
-      }
+    }
 
-    for (prev = (word_t*) &kmem_free_list, curr = kmem_free_list;
+    for (prev = (word_t *) &kmem_free_list, curr = kmem_free_list;
          curr && (address > (void *)curr);
-         prev = curr, curr = (word_t*) *curr)
-    ;
+         prev = curr, curr = (word_t *) *curr)
+        ;
 
-    *prev = (word_t) address; *p = (word_t) curr;
+    *prev = (word_t) address;
+    *p = (word_t) curr;
 }
 
 
-void * alloc(word_t size)
+void *alloc(word_t size)
 {
-    word_t* prev;
-    word_t* curr;
-    word_t* tmp;
+    word_t *prev;
+    word_t *curr;
+    word_t *tmp;
     word_t i;
 
     size = size >= 1024 ? size : 1024;
 
-    for (prev = (word_t*) &kmem_free_list, curr = kmem_free_list;
+    for (prev = (word_t *) &kmem_free_list, curr = kmem_free_list;
          curr;
-         prev = curr, curr = (word_t*) *curr)
-    {
-        if (!((word_t) curr & (size - 1)))
-        {
-            tmp = (word_t*) *curr;
-            for (i = 1; tmp && (i < (size / (1024))); i++)
-            {
+         prev = curr, curr = (word_t *) *curr) {
+        if (!((word_t) curr & (size - 1))) {
+            tmp = (word_t *) *curr;
+            for (i = 1; tmp && (i < (size / (1024))); i++) {
 
-                if ((word_t) tmp != ((word_t) curr + (1024)*i))
-                {
+                if ((word_t) tmp != ((word_t) curr + (1024)*i)) {
                     tmp = 0;
                     break;
                 };
-                tmp = (word_t*) *tmp;
+                tmp = (word_t *) *tmp;
             }
-            if (tmp)
-            {
+            if (tmp) {
 
                 *prev = (word_t) tmp;
 
 
-                for (i = 0; i < (size / sizeof(word_t)); i++)
+                for (i = 0; i < (size / sizeof(word_t)); i++) {
                     curr[i] = 0;
+                }
 
                 return curr;
             }
@@ -163,40 +158,34 @@ void * alloc(word_t size)
     return 0;
 }
 
-void * sep_alloc(word_t size)
+void *sep_alloc(word_t size)
 {
-    word_t* prev;
-    word_t* curr;
-    word_t* tmp;
+    word_t *prev;
+    word_t *curr;
+    word_t *tmp;
     word_t i;
 
     size = size >= 1024 ? size : 1024;
 
-    for (prev = (word_t*) &kmem_free_list, curr = kmem_free_list;
+    for (prev = (word_t *) &kmem_free_list, curr = kmem_free_list;
          curr;
-         prev = curr, curr = (word_t*) *curr)
-    {
-        if (!((word_t) curr & (size - 1)))
-        {
-            tmp = (word_t*) *curr;
-            for (i = 1; tmp && (i < (size / (1024))); i++)
-            {
+         prev = curr, curr = (word_t *) *curr) {
+        if (!((word_t) curr & (size - 1))) {
+            tmp = (word_t *) *curr;
+            for (i = 1; tmp && (i < (size / (1024))); i++) {
 
-                if ((word_t) tmp != ((word_t) curr + (1024)*i))
-                {
+                if ((word_t) tmp != ((word_t) curr + (1024)*i)) {
                     tmp = 0;
                     break;
                 };
-                tmp = (word_t*) *tmp;
+                tmp = (word_t *) *tmp;
             }
-            if (tmp)
-            {
+            if (tmp) {
 
                 *prev = (word_t) tmp;
 
 
-                for (i = 0; i < (size / sizeof(word_t)); i++)
-                    {
+                for (i = 0; i < (size / sizeof(word_t)); i++) {
                     /** AUXUPD: "(ptr_safe (\<acute>curr +\<^sub>p uint \<acute>i) (hrs_htd \<acute>t_hrs),ptr_retyp (\<acute>curr +\<^sub>p uint \<acute>i))"*/
                     curr[i] = 0;
                 }
@@ -215,7 +204,9 @@ void kmalloc_test(word_t size)
 
     p = alloc(size);
 
-    if (!p) return;
+    if (!p) {
+        return;
+    }
 
     free(p, size);
 }
@@ -226,7 +217,9 @@ void sep_test(word_t size)
 
     p = sep_alloc(size);
 
-    if (!p) return;
+    if (!p) {
+        return;
+    }
 
     sep_free(p, size);
 }

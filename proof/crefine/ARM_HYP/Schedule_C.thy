@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Schedule_C
@@ -19,12 +15,12 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 (* FIXME: Move to Refine *)
 crunches Arch.switchToThread
   for valid_queues'[wp]: valid_queues'
-  (ignore: clearExMonitor loadObject getObject updateObject setObject wp: crunch_wps)
+  (ignore: clearExMonitor wp: crunch_wps)
 crunches switchToIdleThread
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 crunches switchToIdleThread, switchToThread
   for valid_pspace'[wp]: valid_pspace'
-  (simp: whenE_def ignore: getObject)
+  (simp: whenE_def)
 
 end
 
@@ -39,16 +35,6 @@ end
 
 context kernel_m begin
 
-(* FIXME: move to Refine *)
-lemma valid_idle'_tcb_at'_ksIdleThread:
-  "valid_idle' s \<Longrightarrow> tcb_at' (ksIdleThread s) s"
-  by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def)
-
-(* FIXME: move to Refine *)
-lemma invs_no_cicd'_valid_idle':
-  "invs_no_cicd' s \<Longrightarrow> valid_idle' s"
-  by (simp add: invs_no_cicd'_def)
-
 lemma Arch_switchToIdleThread_ccorres:
   "ccorres dc xfdc invs_no_cicd' UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
@@ -59,11 +45,6 @@ lemma Arch_switchToIdleThread_ccorres:
    apply (wp hoare_vcg_all_lift vcpuSwitch_invs_no_cicd' hoare_vcg_imp_lift vcpuSwitch_it')
   apply (clarsimp simp: invs_no_cicd'_def valid_pspace'_def valid_idle'_tcb_at'_ksIdleThread)
   done
-
-(* FIXME: move *)
-lemma empty_fail_getIdleThread [simp,intro!]:
-  "empty_fail getIdleThread"
-  by (simp add: getIdleThread_def)
 
 lemma switchToIdleThread_ccorres:
   "ccorres dc xfdc invs_no_cicd' UNIV hs

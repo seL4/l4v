@@ -1,11 +1,7 @@
 #
-# Copyright 2014, NICTA
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
-# This software may be distributed and modified according to the terms of
-# the BSD 2-Clause license. Note that NO WARRANTY is provided.
-# See "LICENSE_BSD2.txt" for details.
-#
-# @TAG(NICTA_BSD)
+# SPDX-License-Identifier: BSD-2-Clause
 #
 """Parser for skeletons of theory files which are completed
 by inserting parsed Haskell."""
@@ -46,7 +42,7 @@ for line in instructions:
     output_f = open(output_tmp, 'w')
     output_f.write('(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)\n')
     output_f.write('(* instead, see the skeleton file %s *)\n' %
-            os.path.basename(input))
+                   os.path.basename(input))
 
     input_f = open(input)
     for line in input_f:
@@ -92,10 +88,10 @@ for line in instructions:
                 pass
             else:
                 output_f.writelines(parsed)
-        elif line.startswith ("#INCLUDE_SETTINGS"):
-            (_, settings) = line.split (None, 1)
-            settings = settings.strip ()
-            lhs_pars.settings_line (settings)
+        elif line.startswith("#INCLUDE_SETTINGS"):
+            (_, settings) = line.split(None, 1)
+            settings = settings.strip()
+            lhs_pars.settings_line(settings)
         else:
             output_f.write(line)
 

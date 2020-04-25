@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory ArchKernelInit_AI
@@ -62,28 +58,28 @@ lemma pptr_base_num:
   "pptr_base = 0xFFFFFFC000000000"
   by (simp add: pptr_base_def pptrBase_def canonical_bit_def)
 
-(* IRQ nodes occupy 8 bits of address space in this RISCV example state:
-   3 for irq number, 5 for cte_level_bits. *)
+(* IRQ nodes occupy 11 bits of address space in this RISCV example state:
+   6 for irq number, 5 for cte_level_bits. *)
 lemma init_irq_ptrs_ineqs:
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) \<ge> init_irq_node_ptr"
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) + mask cte_level_bits
-                \<le> init_irq_node_ptr + mask 8"
+                \<le> init_irq_node_ptr + mask 11"
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits)
-                \<le> init_irq_node_ptr + mask 8"
+                \<le> init_irq_node_ptr + mask 11"
 proof -
-  have P: "ucast irq < (2 ^ (8 - cte_level_bits) :: machine_word)"
+  have P: "ucast irq < (2 ^ (11 - cte_level_bits) :: machine_word)"
     apply (rule order_le_less_trans[OF
-        ucast_le_ucast[where 'a=3 and 'b=64, simplified, THEN iffD2, OF word_n1_ge]])
+        ucast_le_ucast[where 'a=6 and 'b=64, simplified, THEN iffD2, OF word_n1_ge]])
     apply (simp add: cte_level_bits_def minus_one_norm)
     done
   show "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) \<ge> init_irq_node_ptr"
-    apply (rule is_aligned_no_wrap'[where sz=8])
+    apply (rule is_aligned_no_wrap'[where sz=11])
      apply (simp add: is_aligned_def init_irq_node_ptr_def pptr_base_num)
     apply (rule shiftl_less_t2n[OF P])
     apply simp
     done
   show Q: "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) + mask cte_level_bits
-                \<le> init_irq_node_ptr + mask 8"
+                \<le> init_irq_node_ptr + mask 11"
     apply (simp only: add_diff_eq[symmetric] add.assoc)
     apply (rule word_add_le_mono2)
      apply (simp only: trans [OF shiftl_t2n mult.commute] mask_def mult_1)
@@ -91,7 +87,7 @@ proof -
       apply (auto simp: cte_level_bits_def init_irq_node_ptr_def mask_def pptr_base_num)
     done
   show "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits)
-                \<le> init_irq_node_ptr + mask 8"
+                \<le> init_irq_node_ptr + mask 11"
     apply (simp only: add_diff_eq[symmetric] mask_def mult_1 shiftl_t2n mult.commute)
     apply (rule word_add_le_mono2)
      apply (rule word_le_minus_one_leq)

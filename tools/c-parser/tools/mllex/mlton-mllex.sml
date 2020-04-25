@@ -1,6 +1,5 @@
-(*
- * @TAG(OTHER_PRINCETON_OSS)
- *)
+(* SPDX-License-Identifier: SMLNJ *)
+(* SPDX-FileCopyrightText: 1989 Andrew W. Appel, David R. Tarditi *)
 
 fun main() = let
   val name = CommandLine.name()

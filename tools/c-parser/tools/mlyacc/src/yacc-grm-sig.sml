@@ -1,6 +1,6 @@
-(*
- * @TAG(OTHER_PRINCETON_OSS)
- *)
+(* SPDX-License-Identifier: SMLNJ *)
+(* SPDX-FileCopyrightText: 1989 Andrew W. Appel, David R. Tarditi *)
+
 signature Mlyacc_TOKENS =
 sig
 type ('a,'b) token

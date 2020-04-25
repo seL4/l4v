@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory TcbQueue_C
@@ -206,14 +202,6 @@ proof -
   finally show ?thesis .
 qed
 
-
-(* MOVE *)
-lemma tcb_aligned':
-  "tcb_at' t s \<Longrightarrow> is_aligned t tcbBlockSizeBits"
-  apply (drule obj_at_aligned')
-   apply (simp add: objBits_simps)
-  apply (simp add: objBits_simps)
-  done
 
 lemma tcb_at_not_NULL:
   assumes tat: "tcb_at' t s"

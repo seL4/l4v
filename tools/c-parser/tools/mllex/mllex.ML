@@ -1,6 +1,4 @@
-(*
- * @TAG(OTHER_PRINCETON_OSS)
- *)
+(* SPDX-License-Identifier: SMLNJ *)
 (* This is an -*- sml -*- file *)
 (* Modified by Michael.Norrish@nicta.com.au on 2005-04-13 so that it compiles
    with both mlton and mosml. *)

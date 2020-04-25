@@ -1,37 +1,22 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Arch_C
-imports Recycle_C Move
+imports Recycle_C
 begin
-
-(* FIXME: move *)
-lemma of_bool_from_bool: "of_bool = from_bool"
-  by (rule ext, simp add: from_bool_def split: bool.split)
-
-lemma ksPSpace_update_eq_ExD:
-  "s = t\<lparr> ksPSpace := ksPSpace s\<rparr>
-     \<Longrightarrow> \<exists>ps. s = t \<lparr> ksPSpace := ps \<rparr>"
-  by (erule exI)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 crunch ctes_of[wp]: unmapPageTable "\<lambda>s. P (ctes_of s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch gsMaxObjectSize[wp]: unmapPageTable "\<lambda>s. P (gsMaxObjectSize s)"
 
 crunch inv[wp]: pteCheckIfMapped "P"
-  (ignore: getObject setObject)
 
 crunch inv[wp]: pdeCheckIfMapped "P"
-  (ignore: getObject setObject)
 end
 
 context kernel_m begin
@@ -1696,18 +1681,6 @@ lemma createMappingEntries_valid_pte_slots'2:
    apply (wp | simp add:valid_pte_slots'2_def)+
  done
 
-(* FIXME: move *)
-(* this one is specialised to a PDE for a supersection *)
-lemma vaddr_segment_nonsense6:
-  "is_aligned (p :: word32) pdBits \<Longrightarrow>
-   (p + (vaddr >> 20 << 2) && ~~ mask pdBits) = p"
-  apply (rule is_aligned_add_helper[THEN conjunct2])
-   apply (erule is_aligned_weaken, simp)
-  apply (simp add: pdBits_def pdeBits_def)
-  apply (rule shiftl_less_t2n[where m=14 and n=2 and 'a=machine_word_len, simplified])
-  apply (rule shiftr_less_t2n'[where m=12 and n=20 and 'a=machine_word_len, simplified])
-  done
-
 (* replay of proof in Arch_R with stronger validity result *)
 lemma createMappingEntries_valid_pde_slots'2:
   "\<lbrace>page_directory_at' pd and K (vmsz_aligned' vptr sz \<and> vptr < kernelBase)\<rbrace>
@@ -2044,11 +2017,6 @@ lemma ivc_label_flush_case:
   = C"
   by (auto split: invocation_label.split arch_invocation_label.split)
 
-
-lemma list_length_less:
-  "(args = [] \<or> length args \<le> Suc 0) = (length args < 2)"
-  by (case_tac args,simp_all)
-
 lemma injection_handler_whenE:
   "injection_handler Inl (whenE a b)
    = (if a then (injection_handler Inl b)
@@ -2078,17 +2046,6 @@ lemma flushtype_relation_triv:
     invocation_eq_use_types ARM_H.isPageFlushLabel_def
     ARM_H.isPDFlushLabel_def
     split: flush_type.splits invocation_label.splits arch_invocation_label.splits)
-
-lemma at_least_2_args:
-  "\<not>  length args < 2 \<Longrightarrow> \<exists>a b c. args = a#b#c"
-  apply (case_tac args)
-   apply simp
-  apply (case_tac list)
-   apply simp
-  apply (case_tac lista)
-   apply simp
-  apply simp
-  done
 
 lemma pte_get_tag_alt:
   "pte_lift v = Some pteC
@@ -2784,7 +2741,7 @@ lemma liftE_case_sum:
   by (simp add:liftE_def)
 
 crunch inv': resolveVAddr "P"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
+  (wp: crunch_wps simp: crunch_simps)
 
 
 lemma flush_range_le:
@@ -2863,13 +2820,6 @@ lemma framesize_from_H_mask2:
       Kernel_C.ARMLargePage_def
       Kernel_C.ARMSection_def
       Kernel_C.ARMSuperSection_def)+
-  done
-
-lemma rel_option_alt_def:
-  "rel_option f a b = (
-      (a = None \<and>  b = None)
-      \<or> (\<exists>x y. a = Some x \<and>  b = Some y \<and> f x y))"
-  apply (case_tac a, case_tac b, simp, simp, case_tac b, auto)
   done
 
 lemma injection_handler_stateAssert_relocate:
@@ -3198,12 +3148,6 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
      | fastforce simp: mask_def
      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlushLabel_def
      | rule word_of_nat_less,simp add: pbfs_less)+
-
-lemma cond_throw_whenE:
-   "(if P then f else throwError e) =   (whenE (\<not> P) (throwError e) >>=E (\<lambda>_. f))"
-   by (auto split: if_splits
-             simp: throwError_def bindE_def
-                   whenE_def bind_def returnOk_def return_def)
 
 lemma Arch_decodeInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]

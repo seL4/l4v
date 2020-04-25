@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Retype_C
@@ -5345,6 +5341,7 @@ lemma pspace_no_overlap_induce_cte:
     is_aligned ptr bits; bits < word_bits;
     pspace_no_overlap' ptr bits s\<rbrakk>
    \<Longrightarrow> {ptr_val xa..+size_of TYPE(cte_C)} \<inter> {ptr..+2 ^ bits} = {}"
+  supply cteSizeBits_le_cte_level_bits[simp del]
   apply (clarsimp simp: cpspace_relation_def)
   apply (clarsimp simp: cmap_relation_def size_of_def)
   apply (subgoal_tac "xa\<in>cte_Ptr ` dom (ctes_of s)")
@@ -6463,11 +6460,10 @@ end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunch gsCNodes[wp]: insertNewCap, Arch_createNewCaps, threadSet,
-        "Arch.createObject" "\<lambda>s. P (gsCNodes s)"
+crunches insertNewCap, Arch_createNewCaps, threadSet, "Arch.createObject"
+  for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps setObject_ksPSpace_only
-     simp: unless_def updateObject_default_def crunch_simps
-   ignore: getObject setObject)
+   simp: unless_def updateObject_default_def crunch_simps)
 
 lemma createNewCaps_1_gsCNodes_p:
   "\<lbrace>\<lambda>s. P (gsCNodes s p) \<and> p \<noteq> ptr\<rbrace> createNewCaps newType ptr 1 n dev\<lbrace>\<lambda>rv s. P (gsCNodes s p)\<rbrace>"

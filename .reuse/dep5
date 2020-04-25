@@ -1,0 +1,118 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: l4v
+Upstream-Contact: seL4 team <support@sel4.systems>
+Source: https://github.com/seL4/l4v/
+
+# AFP entry https://www.isa-afp.org/entries/Simpl.html
+Files: tools/c-parser/Simpl/*
+Copyright: 2008, Norbert Schirmer, TU Muenchen
+License: LGPL-2.1-only
+
+# AFP entry Word_Lib
+Files: lib/Word_Lib/Word_Next.thy
+Copyright: Cornelius Diekmann <http://net.in.tum.de/~diekmann>,
+           Julius Michaelis <http://liftm.de>,
+           Lars Hupel <https://www21.in.tum.de/~hupel/>
+License: BSD-3-Clause
+
+# Isabelle font
+Files: misc/fonts/IsabelleText_nohints.ttf
+Copyright: Makarius Wenzel
+License: BSD-3-Clause
+
+# MLYacc/MLLex .mlb files for mlton
+Files:
+  tools/c-parser/tools/mlyacc/mlyacc.mlb
+  tools/c-parser/tools/mlyacc/mlyacclib/mlyacclib.mlb
+  tools/c-parser/tools/mllex/mllex.mlb
+Copyright: 2020, Data61, CSIRO (ABN 41 687 119 230)
+License: BSD-2-Clause
+
+# MLYacc manifest
+Files:
+  tools/c-parser/tools/mlyacc/src/FILES
+Copyright: 1989 Andrew W. Appel, David R. Tarditi
+License: SMLNJ
+
+# abstract spec figures and files, GD
+Files:
+  spec/abstract/document/imgs/CDT.graffle
+  spec/abstract/document/imgs/CDT.pdf
+  spec/abstract/document/imgs/seL4-background.odp
+  spec/abstract/document/imgs/seL4-background.pdf
+  spec/abstract/document/imgs/seL4-background_01.pdf
+  spec/abstract/document/imgs/seL4-background_03.pdf
+  spec/abstract/document/imgs/seL4-background_04.pdf
+  spec/abstract/document/imgs/sel4_internals.odp
+  spec/abstract/document/imgs/sel4_internals.pdf
+  spec/abstract/document/imgs/sel4_internals_01.pdf
+  spec/abstract/document/imgs/sel4objects.odg
+  spec/abstract/document/imgs/sel4objects.pdf
+  spec/abstract/document/imgs/sel4objects_01.pdf
+  spec/abstract/document/imgs/sel4objects_05.pdf
+Copyright: 2014, General Dynamics C4 Systems
+# GPL is unfortunate for docs and figures, should ask GD to re-release under CC
+License: GPL-2.0-only
+
+# abstract spec doc files, Data61
+Files:
+  spec/abstract/document/*/ARCH.tex
+Copyright: 2020, Data61, CSIRO (ABN 41 687 119 230)
+License: CC-BY-SA-4.0
+
+# ROOTS files, no comment syntax
+Files: ROOTS tools/ROOTS
+Copyright: 2020, Data61, CSIRO (ABN 41 687 119 230)
+License: BSD-2-Clause
+
+# tools/ files without comment syntax
+Files:
+  tools/haskell-translator/caseconvs
+  tools/haskell-translator/primrecs
+  tools/haskell-translator/supplied
+  tools/c-parser/MANIFEST
+  tools/c-parser/standalone-parser/c-parser.mlb
+  tools/c-parser/standalone-parser/tokenizer.mlb
+  tools/autocorres/tools/release_files/ROOTS.base_dir
+Copyright: 2020, Data61, CSIRO (ABN 41 687 119 230)
+License: BSD-2-Clause
+
+# AutoCorres docs
+Files:
+  tools/autocorres/tools/release_files/AUTOCORRES_FILES
+  tools/autocorres/tools/release_files/CONTRIBUTORS
+  tools/autocorres/tools/release_files/ChangeLog
+  tools/autocorres/tools/release_files/README
+  tools/autocorres/tools/stats/piccolo.txt
+  tools/autocorres/tools/stats/rtos.txt
+  tools/autocorres/tools/stats/schorr_waite.txt
+  tools/autocorres/tools/stats/sel4.txt
+  tools/autocorres/tools/stats/sysinit.txt
+Copyright: 2020, Data61, CSIRO (ABN 41 687 119 230)
+License: CC-BY-SA-4.0
+
+# ulem.sty
+Files:
+  camkes/adl-spec/document/ulem.sty
+  camkes/glue-proofs/document/ulem.sty
+  camkes/glue-spec/document/ulem.sty
+  spec/abstract/document/ulem.sty
+  tools/autocorres/doc/quickstart/document/ulem.sty
+Copyright: 1989-2011 by Donald Arseneau (Vancouver, Canada; asnd@triumf.ca)
+License: LicenseRef-ulem
+
+# Figures
+Files:
+  camkes/adl-spec/document/imgs/*.pdf
+  camkes/adl-spec/document/imgs/*.svg
+  camkes/glue-spec/document/imgs/*.pdf
+  camkes/glue-spec/document/imgs/*.svg
+  proof/infoflow/figs/example-auth-graph2.svg
+Copyright: 2020, Data61, CSIRO (ABN 41 687 119 230)
+License: CC-BY-SA-4.0
+
+# Other docs and text files
+Files:
+  misc/benchmark-isabelle/bench_results.txt
+Copyright: 2020, Data61, CSIRO (ABN 41 687 119 230)
+License: CC-BY-SA-4.0

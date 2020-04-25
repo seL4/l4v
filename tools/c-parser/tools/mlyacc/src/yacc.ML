@@ -1,6 +1,6 @@
-(*
- * @TAG(OTHER_PRINCETON_OSS)
- *)
+(* SPDX-License-Identifier: SMLNJ *)
+(* SPDX-FileCopyrightText: 1989 Andrew W. Appel, David R. Tarditi *)
+
 (* Modified by sweeks@acm.org on 2000-8-24.
  * Ported to MLton.
  *)

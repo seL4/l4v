@@ -1,11 +1,7 @@
 /*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <stdint.h>
@@ -43,7 +39,7 @@ typedef struct mct_global_map {
     uint32_t int_en;         /* 0x248 Interrupt enable */
     uint32_t wstat;          /* 0x24C  write status */
     uint32_t reserved3[44];
-}mct_global_map;
+} mct_global_map;
 
 struct mct_local_map {
     uint32_t tcompl;         /* 0x00 */

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -4133,7 +4129,7 @@ lemma vs_lookup_pages_pteD:
                  split: if_split_asm)
   apply (clarsimp split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
   apply (simp add: up_ucast_inj_eq graph_of_def kernel_mapping_slots_def kernel_base_def
-                   not_le ucast_less_ucast[symmetric, where 'a=12 and 'b=32]
+                   not_le ucast_less_ucast_weak[symmetric, where 'a=12 and 'b=32]
                    mask_asid_low_bits_ucast_ucast pde_ref_pages_def pte_ref_pages_def
             split: if_split_asm)
   apply (simp add: ucast_ucast_id
@@ -4164,7 +4160,7 @@ lemma vs_lookup_pages_pdeD:
                  split: if_split_asm)
   apply (clarsimp split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
   apply (simp add: up_ucast_inj_eq graph_of_def kernel_mapping_slots_def kernel_base_def
-                   not_le ucast_less_ucast[symmetric, where 'a=12 and 'b=32]
+                   not_le ucast_less_ucast_weak[symmetric, where 'a=12 and 'b=32]
                    mask_asid_low_bits_ucast_ucast pde_ref_pages_def
             split: if_split_asm)
   apply (simp add: ucast_ucast_id
@@ -4184,7 +4180,7 @@ apply (clarsimp simp: vs_lookup_def vs_asid_refs_def
                  split: if_split_asm)
   apply (clarsimp split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
   apply (simp add: up_ucast_inj_eq graph_of_def kernel_mapping_slots_def kernel_base_def
-                   not_le ucast_less_ucast[symmetric, where 'a=12 and 'b=32]
+                   not_le ucast_less_ucast_weak[symmetric, where 'a=12 and 'b=32]
                    mask_asid_low_bits_ucast_ucast pde_ref_pages_def pte_ref_pages_def
             split: if_split_asm)
   done

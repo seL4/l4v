@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory EmptyFail_H
@@ -184,7 +180,7 @@ lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   by (simp add:restart_def)
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]: finaliseCap, preemptionPoint, capSwapForDelete
-(wp: empty_fail_catch simp:  Let_def ignore: )
+  (wp: empty_fail_catch simp: Let_def)
 
 lemmas finalise_spec_empty_fail_induct = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. spec_empty_fail (finaliseSlot' sl exp) s"]

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Orphanage
@@ -1148,13 +1144,13 @@ lemma setNotification_no_orphans [wp]:
       apply (wp | clarsimp simp: setNotification_def updateObject_default_def)+
   done
 
-crunch no_orphans [wp]: doMachineOp "no_orphans"
-(wp: no_orphans_lift)
+crunches doMachineOp, setMessageInfo
+  for no_orphans [wp]: "no_orphans"
+  (wp: no_orphans_lift)
 
-crunch no_orphans [wp]: setMessageInfo "no_orphans"
-
-crunch no_orphans [wp]: completeSignal "no_orphans"
-(simp: crunch_simps wp: crunch_wps)
+crunches completeSignal
+  for no_orphans [wp]: "no_orphans"
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma possibleSwitchTo_almost_no_orphans [wp]:
   "\<lbrace> \<lambda>s. almost_no_orphans target s \<and> valid_queues' s \<and> st_tcb_at' runnable' target s
@@ -1194,10 +1190,10 @@ lemma no_orphans_is_almost[simp]:
   "no_orphans s \<Longrightarrow> almost_no_orphans t s"
   by (clarsimp simp: no_orphans_def almost_no_orphans_def)
 
-crunch no_orphans [wp]: decDomainTime no_orphans
-(wp: no_orphans_lift)
-
-crunch valid_queues' [wp]: decDomainTime valid_queues'
+crunches decDomainTime
+  for no_orphans [wp]: no_orphans
+  and valid_queues' [wp]: valid_queues'
+  (wp: no_orphans_lift)
 
 lemma timerTick_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
@@ -1227,16 +1223,11 @@ lemma handleDoubleFault_no_orphans [wp]:
          | clarsimp simp: is_active_thread_state_def isRestart_def isRunning_def)+
   done
 
-crunch st_tcb' [wp]: getThreadCallerSlot "st_tcb_at' (\<lambda>st. P st) t"
-
-crunch st_tcb' [wp]: getThreadReplySlot "st_tcb_at' (\<lambda>st. P st) t"
-
-crunch no_orphans [wp]: cteInsert "no_orphans"
-(wp: crunch_wps)
-
-crunch no_orphans [wp]: getThreadCallerSlot "no_orphans"
-
-crunch no_orphans [wp]: getThreadReplySlot "no_orphans"
+crunches cteInsert, getThreadCallerSlot, getThreadReplySlot
+  for st_tcb' [wp]: "st_tcb_at' (\<lambda>st. P st) t"
+  and no_orphans [wp]: "no_orphans"
+  and almost_no_orphans [wp]: "almost_no_orphans tcb_ptr"
+  (wp: crunch_wps)
 
 lemma setupCallerCap_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<rbrace>
@@ -1247,13 +1238,6 @@ lemma setupCallerCap_no_orphans [wp]:
          | clarsimp simp: is_active_thread_state_def isRestart_def isRunning_def)+
   done
 
-crunch almost_no_orphans [wp]: cteInsert "almost_no_orphans tcb_ptr"
-(wp: crunch_wps)
-
-crunch almost_no_orphans [wp]: getThreadCallerSlot "almost_no_orphans tcb_ptr"
-
-crunch almost_no_orphans [wp]: getThreadReplySlot "almost_no_orphans tcb_ptr"
-
 lemma setupCallerCap_almost_no_orphans [wp]:
   "\<lbrace> \<lambda>s. almost_no_orphans tcb_ptr s \<and> valid_queues' s \<rbrace>
    setupCallerCap sender receiver gr
@@ -1263,17 +1247,11 @@ lemma setupCallerCap_almost_no_orphans [wp]:
          | clarsimp simp: is_active_thread_state_def isRestart_def isRunning_def)+
   done
 
-crunch ksReadyQueues [wp]: doIPCTransfer "\<lambda>s. P (ksReadyQueues s)"
-(wp: transferCapsToSlots_pres1 crunch_wps)
-
-crunch no_orphans [wp]: doIPCTransfer, setMRs "no_orphans"
-(wp: no_orphans_lift)
-
-crunch ksQ'[wp]: setEndpoint "\<lambda>s. P (ksReadyQueues s)"
-  (wp: setObject_queues_unchanged_tcb updateObject_default_inv)
-
-crunch no_orphans [wp]: setEndpoint "no_orphans"
-  (wp: no_orphans_lift)
+crunches doIPCTransfer, setMRs, setEndpoint
+  for ksReadyQueues [wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and no_orphans [wp]: "no_orphans"
+  (wp: transferCapsToSlots_pres1 crunch_wps no_orphans_lift setObject_queues_unchanged_tcb
+       updateObject_default_inv)
 
 lemma sendIPC_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s \<rbrace>
@@ -1793,8 +1771,9 @@ lemma storePDE_no_orphans [wp]:
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
   done
 
-crunch no_orphans [wp]: unmapPage "no_orphans"
-(wp: crunch_wps ignore: getObject)
+crunches unmapPage
+  for no_orphans [wp]: "no_orphans"
+  (wp: crunch_wps)
 
 lemma flushTable_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
@@ -1804,7 +1783,8 @@ lemma flushTable_no_orphans [wp]:
   apply (wp hoare_drop_imps | wpc | clarsimp)+
   done
 
-crunch no_orphans [wp]: unmapPageTable, prepareThreadDelete "no_orphans"
+crunches unmapPageTable, prepareThreadDelete
+  for no_orphans [wp]: "no_orphans"
 
 lemma setASIDPool_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
@@ -1850,9 +1830,8 @@ lemma finaliseCap_no_orphans [wp]:
   apply (auto simp: valid_cap'_def dest!: isCapDs)
   done
 
-crunch no_orphans [wp]: cteSwap "no_orphans"
-
-crunch no_orphans [wp]: capSwapForDelete "no_orphans"
+crunches cteSwap, capSwapForDelete
+  for no_orphans [wp]: "no_orphans"
 
 declare withoutPreemption_lift [wp del]
 
@@ -2378,7 +2357,8 @@ notes if_cong[cong] shows
      apply (wp | clarsimp | fastforce)+
   done
 
-crunch invs' [wp]: getThreadCallerSlot, handleHypervisorFault "invs'"
+crunches getThreadCallerSlot, handleHypervisorFault
+  for invs' [wp]: "invs'"
 
 lemma handleReply_no_orphans [wp]:
   "\<lbrace>no_orphans and invs'\<rbrace> handleReply \<lbrace>\<lambda>_. no_orphans\<rbrace>"
@@ -2417,9 +2397,6 @@ lemma sts_tcb_at'_preserve':
   setThreadState st t'
   \<lbrace>\<lambda>_. st_tcb_at' P t \<rbrace>"
   by (wpsimp wp: sts_st_tcb' simp: st_tcb_at_neg')
-
-(* FIXME move to where disj_imp lives *)
-lemma disj_imp': "(P \<or> Q) = (\<not>Q \<longrightarrow> P)" by blast
 
 lemma handleEvent_no_orphans [wp]:
   "\<lbrace> \<lambda>s. invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and>

@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(NICTA_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Tcb_DR
@@ -192,12 +188,12 @@ lemma decode_tcb_cap_label_not_match:
   "\<lbrakk>\<forall>ui. Some (TcbIntent ui) \<noteq> transform_intent (invocation_type label') args'; cap' = Structures_A.ThreadCap t\<rbrakk>
     \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_tcb_invocation label' args' cap' slot' excaps' \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>e. (=) s\<rbrace>"
   apply (simp add:Decode_A.decode_tcb_invocation_def)
-  apply (case_tac "invocation_type label'")
-    apply (simp_all add:transform_intent_def)
+  apply (case_tac "gen_invocation_type label'")
+    apply (simp_all add:transform_intent_def flip: gen_invocation_type_eq)
     apply wp
     apply (simp_all add: whenE_def transform_intent_tcb_defs
                   split: option.splits)
-    apply (simp_all split:List.list.split list.split_asm option.splits)
+    apply (simp_all split:List.list.split list.split_asm option.splits add: gen_invocation_type_eq)
       apply (simp add: decode_read_registers_def decode_write_registers_def decode_set_ipc_buffer_def
                        decode_copy_registers_def decode_set_space_def decode_tcb_configure_def
                        decode_set_priority_def decode_set_mcpriority_def decode_set_sched_params_def
@@ -238,7 +234,7 @@ lemma decode_tcb_corres:
   apply (unfold transform_cap_def)
   apply (unfold transform_cap_list_def)
   apply (case_labels "invocation_type label'")
-                                              apply (simp_all)
+                                              apply (simp_all add: gen_invocation_type_eq)
                 (* TCBReadRegisters *)
                 apply (clarsimp simp: decode_read_registers_def split: list.split)
                 apply (intro conjI impI allI)

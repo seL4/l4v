@@ -1,11 +1,7 @@
 /*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  */
 
 int bad_names(void)
@@ -28,10 +24,11 @@ int bad_names(void)
 }
 
 /* Also used to kill local_var_extract. */
-int bad_vars(int symbol_table) {
-  return symbol_table;
+int bad_vars(int symbol_table)
+{
+    return symbol_table;
 }
 
 /* Testcase for VER-351. The C parser generates some StrictC'__assert_fail_foo param names
  * which we need to demangle carefully. */
-void __assert_fail (const char *, const char *, int, const char *);
+void __assert_fail(const char *, const char *, int, const char *);

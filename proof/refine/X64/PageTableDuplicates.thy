@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory PageTableDuplicates
@@ -43,7 +39,7 @@ crunch arch_inv[wp]: resetUntypedCap "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps
      wp: hoare_drop_imps hoare_unless_wp mapME_x_inv_wp
          preemptionPoint_inv
-    ignore:freeMemory forME_x)
+   ignore: freeMemory)
 
 lemma mapM_x_mapM_valid:
   "\<lbrace> P \<rbrace> mapM_x f xs \<lbrace>\<lambda>r. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>mapM f xs \<lbrace>\<lambda>r. Q\<rbrace>"
@@ -58,15 +54,13 @@ lemma mapM_x_mapM_valid:
 
 crunch valid_arch_state'[wp]:
  flushTable valid_arch_state'
-  (wp: crunch_wps  simp: crunch_simps unless_def
-    ignore:getObject updateObject setObject)
+  (wp: crunch_wps  simp: crunch_simps unless_def)
 
 declare withoutPreemption_lift [wp del]
 
 crunch valid_cap'[wp]:
   isFinalCapability "\<lambda>s. valid_cap' cap s"
-  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def
-    ignore:getObject setObject)
+  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)
 
 crunch inv [wp]: getThreadBufferSlot P
   (wp: crunch_wps)

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Finalise_C
@@ -1123,7 +1119,7 @@ lemma deleteASIDPool_ccorres:
              apply (rule conjI, clarsimp simp: ucast_of_nat_small)
              apply (clarsimp simp: asid_map_lifts asid_map_relation_def)
             apply (simp add: asid_low_bits_def word_of_nat_less)
-           apply (clarsimp simp: asid_low_bits_def ucast_less_ucast[where y="0x200" and 'a=32, simplified])
+           apply (clarsimp simp: asid_low_bits_def ucast_less_ucast_weak[where y="0x200" and 'a=32, simplified])
           apply (vcg exspec=hwASIDInvalidate_modifies)
           apply clarsimp
          apply (rule hoare_pre, wp)
@@ -1676,7 +1672,6 @@ lemma deletingIRQHandler_ccorres:
                    cong: call_ignore_cong )
    apply (rule_tac r'="\<lambda>rv rv'. rv' = Ptr rv"
                 and xf'="slot_'" in ccorres_split_nothrow)
-       apply (simp add: sint_ucast_eq_uint is_down)
        apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
        apply (rule ccorres_move_array_assertion_irq)
        apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
@@ -1684,9 +1679,9 @@ lemma deletingIRQHandler_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
                              locateSlot_conv)
-       apply (simp add: bind_def simpler_gets_def return_def
-                        ucast_nat_def uint_up_ucast is_up)
-       apply (erule getIRQSlot_ccorres_stuff[simplified])
+       apply (simp add: bind_def simpler_gets_def return_def ucast_nat_def uint_up_ucast
+                        is_up getIRQSlot_ccorres_stuff[simplified]
+                   flip: of_int_uint_ucast)
       apply ceqv
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_symb_exec_l)
@@ -1741,7 +1736,7 @@ lemma irq_opt_relation_Some_ucast':
     \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast x)"
   apply (rule_tac P = "%y. irq_opt_relation (Some (ucast x)) y" in subst[rotated])
   apply (rule irq_opt_relation_Some_ucast[rotated])
-    apply simp+
+    apply (simp add: ucast_ucast_mask)+
   done
 
 lemma ccap_relation_IRQHandler_mask:
@@ -2653,7 +2648,9 @@ lemma finaliseCap_ccorres:
    apply (clarsimp simp: isCap_simps irqInvalid_def
                       valid_cap'_def X64.maxIRQ_def
                       Kernel_C.maxIRQ_def)
-    apply (rule irq_opt_relation_Some_ucast', simp)
+    apply (rule irq_opt_relation_Some_ucast'[simplified Kernel_C.maxIRQ_def, simplified])
+     apply fastforce
+    apply simp
     apply (clarsimp simp: isCap_simps irqInvalid_def
                       valid_cap'_def X64.maxIRQ_def
                       Kernel_C.maxIRQ_def)

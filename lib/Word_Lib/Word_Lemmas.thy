@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  *)
 
 section "Lemmas with Generic Word Length"
@@ -1436,6 +1432,13 @@ lemma unat_less_helper:
   apply (simp add: unat_of_nat)
   done
 
+lemma nat_uint_less_helper:
+  "nat (uint y) = z \<Longrightarrow> x < y \<Longrightarrow> nat (uint x) < z"
+  apply (erule subst)
+  apply (subst unat_def [symmetric])
+  apply (subst unat_def [symmetric])
+  by (simp add: unat_mono)
+
 lemma of_nat_0:
   "\<lbrakk>of_nat n = (0::'a::len word); n < 2 ^ LENGTH('a)\<rbrakk> \<Longrightarrow> n = 0"
   by (drule unat_of_nat_eq, simp)
@@ -1647,7 +1650,7 @@ lemma unat_ucast:
   done
 
 lemma ucast_less_ucast:
-  "LENGTH('a) < LENGTH('b) \<Longrightarrow>
+  "LENGTH('a) \<le> LENGTH('b) \<Longrightarrow>
    (ucast x < ((ucast (y :: 'a::len word)) :: 'b::len word)) = (x < y)"
   apply (simp add: word_less_nat_alt unat_ucast)
   apply (subst mod_less)
@@ -1656,6 +1659,10 @@ lemma ucast_less_ucast:
    apply(rule less_le_trans[OF unat_lt2p], simp)
   apply simp
   done
+
+\<comment> \<open>This weaker version was previously called ucast_less_ucast. We retain it to
+    support existing proofs.\<close>
+lemmas ucast_less_ucast_weak = ucast_less_ucast[OF order.strict_implies_order]
 
 lemma sints_subset:
   "m \<le> n \<Longrightarrow> sints m \<subseteq> sints n"
@@ -3559,6 +3566,11 @@ lemma from_bool_to_bool_iff:
   "w = from_bool b \<longleftrightarrow> to_bool w = b \<and> (w = 0 \<or> w = 1)"
   by (cases b) (auto simp: from_bool_def to_bool_def)
 
+lemma from_bool_eqI:
+  "from_bool x = from_bool y \<Longrightarrow> x = y"
+  unfolding from_bool_def
+  by (auto split: bool.splits)
+
 lemma word_rsplit_upt:
   "\<lbrakk> size x = LENGTH('a :: len) * n; n \<noteq> 0 \<rbrakk>
     \<Longrightarrow> word_rsplit x = map (\<lambda>i. ucast (x >> i * len_of TYPE ('a)) :: 'a word) (rev [0 ..< n])"
@@ -4227,7 +4239,7 @@ proof -
   have LR: "ucast f < b \<Longrightarrow> unat f < unat b"
     apply (rule unat_less_helper)
     apply (simp add:ucast_nat_def)
-    apply (rule_tac 'b1 = 'b in  ucast_less_ucast[THEN iffD1])
+    apply (rule_tac 'b1 = 'b in  ucast_less_ucast[OF order.strict_implies_order, THEN iffD1])
      apply (rule upward_cast)
     apply (simp add: ucast_ucast_mask less_mask_eq word_less_nat_alt
                      unat_power_lower[OF upward_cast] no_overflow)
@@ -4236,7 +4248,7 @@ proof -
   proof-
     assume ineq: "unat f < unat b"
     have "ucast (f::'a::len word) < ((ucast (ucast b ::'a::len word)) :: 'b :: len word)"
-      apply (simp add: ucast_less_ucast upward_cast)
+      apply (simp add: ucast_less_ucast[OF order.strict_implies_order] upward_cast)
       apply (simp add: ucast_nat_def[symmetric])
       apply (rule unat_ucast_less_no_overflow[OF no_overflow ineq])
       done
@@ -4247,6 +4259,8 @@ proof -
   qed
   then show ?thesis by (simp add:RL LR iffI)
 qed
+
+lemmas ucast_up_mono = ucast_less_ucast[THEN iffD2]
 
 (* casting a long word to a shorter word and casting back to the long word
    is equal to the original long word -- if the word is small enough.
@@ -4770,6 +4784,8 @@ lemma ucast_le_ucast:
   "LENGTH('a) \<le> LENGTH('b) \<Longrightarrow> (ucast x \<le> (ucast y::'b::len word)) = (x \<le> y)"
   for x :: "'a::len word"
   by (simp add: unat_arith_simps(1) unat_ucast_up_simp)
+
+lemmas ucast_up_mono_le = ucast_le_ucast[THEN iffD2]
 
 lemma ucast_le_ucast_eq:
   fixes x y :: "'a::len word"

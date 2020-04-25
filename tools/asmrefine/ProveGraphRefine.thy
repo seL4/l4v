@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  *)
 
 theory ProveGraphRefine
@@ -477,16 +473,18 @@ fun warn_schem_tac msg ctxt tac = SUBGOAL (fn (t, i) => let
 fun prove_ptr_safe reason ctxt = DETERM o
     warn_schem_tac "prove_ptr_safe" ctxt
     (TRY o REPEAT_ALL_NEW (eqsubst_either_wrap_tac ctxt
-                @{thms array_ptr_index_coerce}
+                @{thms array_ptr_index_coerce nat_uint_less_helper}
             )
         THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps
             @{thms ptr_safe_ptr_add_array_ptr_index
-                   word_sle_msb_le word_sless_msb_less})
+                   word_sle_msb_le word_sless_msb_less
+                   nat_uint_less_helper})
         THEN_ALL_NEW asm_simp_tac (ctxt addsimps
             @{thms ptr_safe_field[unfolded typ_uinfo_t_def]
                    ptr_safe_Array_element unat_less_helper unat_def[symmetric]
                    ptr_safe_Array_element_0
-                   h_t_valid_Array_element' h_t_valid_field})
+                   h_t_valid_Array_element' h_t_valid_field
+                   nat_uint_less_helper})
         THEN_ALL_NEW except_tac ctxt
             ("prove_ptr_safe: failed for " ^ reason)
     )
@@ -558,7 +556,7 @@ fun normalise_mem_accs reason ctxt = DETERM o let
                        o_def fupdate_def
                        pointer_inverse_safe_sign
                        ptr_safe_ptr_add_array_ptr_index
-                       unat_less_helper
+                       unat_less_helper nat_uint_less_helper
             } @ get_field_h_val_rewrites ctxt
         @ #1 gr @ #2 gr
     val h_val = get_disjoint_h_val_globals_swap ctxt
@@ -583,7 +581,7 @@ fun normalise_mem_accs reason ctxt = DETERM o let
             | @{term Trueprop} $ (Const (@{const_name ptr_safe}, _) $ _ $ _)
               => prove_ptr_safe msg' ctxt i
             | _ => all_tac)
-    THEN_ALL_NEW full_simp_tac (ctxt addsimps @{thms h_val_word_simps})
+    THEN_ALL_NEW full_simp_tac (ctxt addsimps @{thms h_val_word_simps nat_uint_less_helper})
   end
 
 val heap_update_id_nonsense
@@ -851,6 +849,7 @@ fun graph_refine_proof_tacs csenv ctxt = let
                         fold_all_htd_updates
                         array_assertion_shrink_right
                         sdiv_word_def sdiv_int_def
+                        signed_ge_zero_scast_eq_ucast
                         unatSuc[OF less_is_non_zero_p1'] unatSuc2[OF less_is_non_zero_p1]
                         less_shift_targeted_cast_convs
                 } delsimps @{thms ptr_val_inj})),
@@ -899,8 +898,12 @@ fun simpl_to_graph_thm funs csenv ctxt nm = let
     val _ = if Thm.nprems_of res_thm = 0 then ()
         else raise THM ("simpl_to_graph_thm: unsolved subgoals", 1, [res_thm])
     (* FIXME: make the hidden assumptions of the thm appear again *)
-  in res_thm end handle TERM (s, ts) => raise TERM ("simpl_to_graph_thm: " ^ nm
+  in res_thm end
+    handle
+      TERM (s, ts) => raise TERM ("simpl_to_graph_thm: " ^ nm
         ^ ": " ^ s, ts)
+    | THM (s, idx, ts) => raise THM ("simpl_to_graph_thm: " ^ nm
+        ^ ": " ^ s, idx, ts)
 
 fun test_graph_refine_proof funs csenv ctxt nm = case
     Symtab.lookup funs nm of SOME (_, _, NONE) => ("skipped " ^ nm, @{thm TrueI})
@@ -962,8 +965,11 @@ fun test_graph_refine_proof_with_def funs csenv ctxt dbg nm =
         val ctxt = define_graph_fun_short funs nm ctxt
         fun try_proof nm =
             (simpl_to_graph_thm funs csenv ctxt nm; insert dbg #successes nm)
-            handle TERM (message, data) =>
-              (insert dbg #failures nm; raise TERM ("failure for " ^ nm ^ ": " ^ message, data));
+            handle
+              TERM (message, data) =>
+                (insert dbg #failures nm; raise TERM ("failure for " ^ nm ^ ": " ^ message, data))
+            | THM (message, idx, data) =>
+                (insert dbg #failures nm; raise THM ("failure for " ^ nm ^ ": " ^ message, idx, data));
         val (time, _) = Timing.timing try_proof nm
       in "success on " ^ nm ^ "  [" ^ Timing.message time ^ "]" end
 
@@ -981,7 +987,9 @@ fun test_all_graph_refine_proofs_parallel funs csenv ctxt dbg = let
     val ss = Symtab.keys funs |> filter_fns dbg
     fun test_and_log nm =
         (test_graph_refine_proof_with_def funs csenv ctxt dbg nm |> writeln)
-        handle TERM (msg, _) => warning msg
+        handle
+          TERM (msg, _) => warning msg
+        | THM (msg, _, _) => warning msg
     val (time, _) = Timing.timing (Par_List.map test_and_log) ss
     val time_msg = " [" ^ Timing.message time ^ "]"
   in

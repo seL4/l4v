@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -149,7 +145,7 @@ lemma cnode_invok_case_cleanup:
         \<Longrightarrow> (case i of CNodeRevoke \<Rightarrow> P | CNodeDelete \<Rightarrow> Q | CNodeCancelBadgedSends \<Rightarrow> R
                  | CNodeRotate \<Rightarrow> S | CNodeSaveCaller \<Rightarrow> T
                  | _ \<Rightarrow> U) = U"
-  by (simp split: invocation_label.split)
+  by (simp split: gen_invocation_labels.split)
 
 lemma cancelSendRightsEq:
   "cap_relation cap cap' \<Longrightarrow> hasCancelSendRights cap' = has_cancel_send_rights cap"
@@ -189,12 +185,12 @@ lemma dec_cnode_inv_corres:
                         apply auto[1]
                        apply (rule_tac r'="\<lambda>a b. fst b = rights_mask_map (fst a)
                                                \<and> snd b = fst (snd a)
-                                               \<and> snd (snd a) = (invocation_type (mi_label mi)
+                                               \<and> snd (snd a) = (gen_invocation_type (mi_label mi)
                                                      \<in> {CNodeMove, CNodeMutate})"
                                   in corres_splitEE)
                            prefer 2
                            apply (rule corres_trivial)
-                           subgoal by (auto split: list.split invocation_label.split,
+                           subgoal by (auto split: list.split gen_invocation_labels.split,
                                        auto simp: returnOk_def all_rights_def
                                                   rightsFromWord_correspondence)
                           apply (rule_tac r'=cap_relation in corres_splitEE)
@@ -6101,7 +6097,8 @@ lemma updateTrackedFreeIndex_no_cte_prop[wp]:
   apply (clarsimp simp: no_cte_prop_def finalise_prop_stuff_def)
   done
 
-crunch no_cte_prop[wp]: emptySlot, capSwapForDelete "no_cte_prop P"
+crunches emptySlot, capSwapForDelete
+  for no_cte_prop[wp]: "no_cte_prop P"
   (ignore: doMachineOp wp: dmo_maskInterrupt_no_cte_prop)
 
 lemma reduceZombie_invs'':
@@ -6576,10 +6573,10 @@ lemma cteDelete_sch_act_simple:
 crunch st_tcb_at'[wp]: emptySlot "st_tcb_at' P t" (simp: case_Null_If)
 
 crunch st_tcb_at'[wp]: vcpuSwitch "st_tcb_at' P t"
-  (simp: crunch_simps wp: crunch_wps FalseI ignore: setObject getObject)
+  (simp: crunch_simps wp: crunch_wps FalseI)
 
 crunch st_tcb_at'[wp]: "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete "st_tcb_at' P t"
-  (ignore: getObject setObject simp: crunch_simps
+  (simp: crunch_simps
    wp: crunch_wps getObject_inv loadObject_default_inv)
 end
 
@@ -6693,7 +6690,6 @@ lemma vcpuSwitch_rvk_prog':
   by (wpsimp simp: cteCaps_of_def)
 
 crunch ctes_of[wp]: vcpuFinalise "\<lambda>s. P (ctes_of s)"
-  (ignore: getObject setObject)
 
 lemma vcpuFinalise_rvk_prog':
   "vcpuFinalise v \<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option capToRPO (cteCaps_of s x))\<rbrace>"
@@ -6704,7 +6700,7 @@ crunch rvk_prog': finaliseCap
   (wp: crunch_wps threadSet_ctesCaps_of getObject_inv
        loadObject_default_inv dissociateVCPUTCB_isFinal
    simp: crunch_simps o_def
-   ignore: setObject threadSet)
+   ignore: threadSet)
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]
@@ -7627,12 +7623,6 @@ lemma select_bind_spec_corres':
          | drule(1) bspec | erule rev_bexI | rule conjI)+
    done
 
-(* FIXME: move *)
-lemma next_child_child_set:
-  "\<lbrakk>next_child slot (cdt_list s) = Some child; valid_list s\<rbrakk>
-    \<Longrightarrow> child \<in> (case next_child slot (cdt_list s) of None \<Rightarrow> {} | Some n \<Rightarrow> {n})"
-  by (simp add: next_child_def)
-
 lemma cap_revoke_mdb_stuff4:
   "\<lbrakk> (s, s') \<in> state_relation; cte_wp_at ((=) cap) p s;
      cte_wp_at' ((=) cte) (cte_map p) s'; invs s; valid_list s; invs' s';
@@ -7805,7 +7795,7 @@ qed
 lemmas cap_revoke_corres = use_spec_corres [OF cap_revoke_corres']
 
 crunch typ_at'[wp]: invokeCNode "\<lambda>s. P (typ_at' T p s)"
-  (ignore: filterM finaliseSlot
+  (ignore: finaliseSlot
      simp: crunch_simps filterM_mapM unless_def
            arch_recycleCap_improve_cases
        wp: crunch_wps undefined_valid finaliseSlot_preservation)
@@ -7826,9 +7816,8 @@ lemma threadSet_st_tcb_at2:
   done
 
 crunch st_tcb_at_simplish[wp]: "cancelBadgedSends" "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
-  (ignore: getObject setObject filterM
-       wp: crunch_wps threadSet_st_tcb_at2
-     simp: crunch_simps filterM_mapM makeObject_tcb unless_def)
+  (wp: crunch_wps threadSet_st_tcb_at2
+   simp: crunch_simps filterM_mapM makeObject_tcb unless_def)
 
 lemma cancelBadgedSends_st_tcb_at':
   assumes x: "\<And>st. simple' st \<Longrightarrow> P st"
@@ -8970,26 +8959,46 @@ lemma setVCPU_valid_irq_states' [wp]:
   "setObject p (vcpu::vcpu) \<lbrace>valid_irq_states'\<rbrace>"
   by (wp valid_irq_states_lift')
 
+crunches writeVCPUHardwareReg, readVCPUHardwareReg
+  for irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
+
+crunches vcpuUpdate, vcpuWriteReg, vcpuSaveReg, vcpuRestoreReg, vcpuReadReg
+  for irq_states'[wp]: valid_irq_states'
+  and ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
+  (ignore: getObject setObject)
+
+lemma saveVirtTimer_irq_states'[wp]:
+  "saveVirtTimer vcpu_ptr \<lbrace>valid_irq_states'\<rbrace>"
+  unfolding saveVirtTimer_def
+  by (wpsimp simp: read_cntpct_def get_cntv_off_64_def get_cntv_cval_64_def
+             wp: doMachineOp_irq_states')
+
+lemma restoreVirtTimer_irq_states'[wp]:
+  "restoreVirtTimer vcpu_ptr \<lbrace>valid_irq_states'\<rbrace>"
+  unfolding restoreVirtTimer_def isIRQActive_def
+  by (simp add: liftM_bind)
+     (wpsimp wp: maskInterrupt_irq_states' getIRQState_wp hoare_vcg_imp_lift' doMachineOp_irq_states'
+             simp: if_apply_def2 set_cntv_off_64_def read_cntpct_def set_cntv_cval_64_def)
+
 crunches
   vcpuDisable, vcpuEnable, vcpuRestore, vcpuRestoreReg, vcpuSaveReg,
   vcpuUpdate, vgicUpdateLR, vcpuSave
   for irq_states' [wp]: valid_irq_states'
-  (wp: crunch_wps no_irq no_irq_mapM_x
+  (wp: crunch_wps maskInterrupt_irq_states'[where b=True, simplified] no_irq no_irq_mapM_x
    simp: crunch_simps
          set_gic_vcpu_ctrl_hcr_def setSCTLR_def setHCR_def get_gic_vcpu_ctrl_hcr_def
          getSCTLR_def get_gic_vcpu_ctrl_lr_def get_gic_vcpu_ctrl_apr_def
          get_gic_vcpu_ctrl_vmcr_def
          set_gic_vcpu_ctrl_vmcr_def set_gic_vcpu_ctrl_apr_def uncurry_def
          set_gic_vcpu_ctrl_lr_def
-   ignore: getObject setObject)
+   ignore: saveVirtTimer)
 
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
        no_irq_invalidateLocalTLB_ASID no_irq_setHardwareASID
        no_irq_setCurrentPD no_irq_invalidateLocalTLB_VAASID
        no_irq_cleanByVA_PoU FalseI
-   simp: crunch_simps armv_contextSwitch_HWASID_def writeContextIDAndPD_def o_def
-   ignore: getObject setObject)
+   simp: crunch_simps armv_contextSwitch_HWASID_def writeContextIDAndPD_def o_def)
 
 lemma finaliseSlot_IRQInactive':
   "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> finaliseSlot' a b

@@ -1,11 +1,7 @@
 %
 % Copyright 2014, General Dynamics C4 Systems
 %
-% This software may be distributed and modified according to the terms of
-% the GNU General Public License version 2. Note that NO WARRANTY is provided.
-% See "LICENSE_GPLv2.txt" for details.
-%
-% @TAG(GD_GPL)
+% SPDX-License-Identifier: GPL-2.0-only
 %
 
 This module contains the thread control block structure, the TCB invocation operation, and various accessors used by both TCB invocations and the kernel.
@@ -74,7 +70,7 @@ There are eleven types of invocation for a thread control block. All require wri
 > decodeTCBInvocation :: Word -> [Word] -> Capability -> PPtr CTE ->
 >         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
 > decodeTCBInvocation label args cap slot extraCaps =
->     case invocationType label of
+>     case genInvocationType label of
 >         TCBReadRegisters -> decodeReadRegisters args cap
 >         TCBWriteRegisters -> decodeWriteRegisters args cap
 >         TCBCopyRegisters -> decodeCopyRegisters args cap $ map fst extraCaps
@@ -556,7 +552,7 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 > decodeDomainInvocation :: Word -> [Word] -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError (PPtr TCB, Domain)
 > decodeDomainInvocation label args extraCaps = do
->     when (invocationType label /= DomainSetSet) $ throw IllegalOperation
+>     when (genInvocationType label /= DomainSetSet) $ throw IllegalOperation
 >     domain <- case args of
 >         (x:_) -> do
 >                      when (fromIntegral x >= numDomains) $

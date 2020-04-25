@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Tcb_C
@@ -15,8 +11,7 @@ begin
 lemma asUser_obj_at' :
   "\<lbrace> K(t\<noteq>t') and obj_at' P t' \<rbrace> asUser t f \<lbrace> \<lambda>_.  obj_at' (P::Structures_H.tcb \<Rightarrow> bool) t' \<rbrace>"
   including no_pre
-  apply (wpsimp wp: hoare_vcg_ball_lift threadGet_wp simp: split_def asUser_def)
-  by (drule obj_at_ko_at', fastforce)
+  by (wpsimp wp: hoare_vcg_ball_lift threadGet_wp simp: split_def asUser_def)
 
 lemma getObject_sched:
   "(x::tcb, s') \<in> fst (getObject t s) \<Longrightarrow>
@@ -345,16 +340,6 @@ lemma getMRs_rel_state:
                          projectKOs ps_clear_def obj_at'_real_def
                   split: if_split)
   apply (erule doMachineOp_state)
-  done
-
-(* FIXME: move *)
-lemma setTCB_cur:
-  "\<lbrace>cur_tcb'\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
-  including no_pre
-  apply (wp cur_tcb_lift)
-  apply (simp add: setObject_def split_def updateObject_default_def)
-  apply wp
-  apply simp
   done
 
 lemma setThreadState_getMRs_rel:
@@ -1289,9 +1274,6 @@ lemma invokeTCB_CopyRegisters_ccorres:
                  split: if_split cong: if_cong | rule conjI)+
      apply (clarsimp dest!: global'_no_ex_cap simp: invs'_def valid_state'_def | rule conjI)+
   done
-
-(* FIXME: move *)
-lemmas mapM_x_append = mapM_x_append2
 
 lemma invokeTCB_WriteRegisters_ccorres_helper:
   "\<lbrakk> unat (f (of_nat n)) = incn
@@ -2456,15 +2438,6 @@ lemma decodeWriteRegisters_ccorres:
 lemma excaps_map_Nil: "(excaps_map caps = []) = (caps = [])"
   by (simp add: excaps_map_def)
 
-(* FIXME: move *)
-lemma and_eq_0_is_nth:
-  fixes x :: "('a :: len) word"
-  shows "y = 1 << n \<Longrightarrow> ((x && y) = 0) = (\<not> (x !! n))"
-  by (metis (poly_guards_query) and_eq_0_is_nth)
-
-(* FIXME: move *)
-lemmas and_neq_0_is_nth = arg_cong [where f=Not, OF and_eq_0_is_nth, simplified]
-
 lemma decodeCopyRegisters_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc)  (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -2589,11 +2562,6 @@ lemma decodeCopyRegisters_ccorres:
     word_and_1_shiftl [where n=3,simplified] cap_get_tag_isCap[symmetric] split: if_split_asm)
   done
 
-(* FIXME: move *)
-lemma ucast_le_ucast_8_32:
-  "(ucast x \<le> (ucast y :: word32)) = (x \<le> (y :: word8))"
-  by (simp add: word_le_nat_alt)
-
 method wrong_cap_throwError_ccorres = solves \<open>
         (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
       , vcg
@@ -2712,14 +2680,6 @@ lemma slotCapLongRunningDelete_ccorres:
                  dest!: ccte_relation_ccap_relation)
   done
 
-(* FIXME: move *)
-lemma empty_fail_slotCapLongRunningDelete:
-  "empty_fail (slotCapLongRunningDelete slot)"
-  by (auto simp: slotCapLongRunningDelete_def Let_def
-                 case_Null_If isFinalCapability_def
-          split: if_split
-         intro!: empty_fail_bind)
-
 definition
   isValidVTableRoot_C :: "cap_C \<Rightarrow> bool"
 where
@@ -2761,19 +2721,9 @@ lemma updateCapData_spec:
          \<lbrace>ccap_relation (RetypeDecls_H.updateCapData preserve newData cap) \<acute>ret__struct_cap_C\<rbrace>"
   by (simp add: updateCapData_spec)
 
-lemma if_n_updateCapData_valid_strg:
-  "s \<turnstile>' cap \<longrightarrow> s \<turnstile>' (if P then cap else updateCapData prs v cap)"
-  by (simp add: valid_updateCapDataI split: if_split)
-
 lemma length_excaps_map:
   "length (excaps_map xcs) = length xcs"
   by (simp add: excaps_map_def)
-
-(* FIXME: move *)
-lemma from_bool_all_helper:
-  "(\<forall>bool. from_bool bool = val \<longrightarrow> P bool)
-      = ((\<exists>bool. from_bool bool = val) \<longrightarrow> P (val \<noteq> 0))"
-  by (auto simp: from_bool_0)
 
 lemma getSyscallArg_ccorres_foo':
   "ccorres (\<lambda>a rv. rv = ucast (args ! n)) (\<lambda>x. ucast (ret__unsigned_long_' x))
@@ -4610,7 +4560,7 @@ lemma decodeTCBInvocation_ccorres:
             >>= invocationCatch thread isBlocking isCall InvokeTCB)
      (Call decodeTCBInvocation_'proc)"
   apply (cinit' lift: invLabel_' cap_' length___unsigned_long_' slot_' excaps_' call_' buffer_')
-   apply (simp add: decodeTCBInvocation_def invocation_eq_use_types
+   apply (simp add: decodeTCBInvocation_def invocation_eq_use_types gen_invocation_type_eq
                del: Collect_const)
    apply (rule ccorres_Cond_rhs)
     apply simp
@@ -4709,14 +4659,14 @@ lemma decodeTCBInvocation_ccorres:
      apply (rule ccorres_return_C_errorE, simp+)[1]
     apply wp
    apply (rule ccorres_Cond_rhs)
-    apply simp
+    apply (simp add: gen_invocation_type_eq)
     apply (rule ccorres_add_returnOk, ctac(no_vcg) add: decodeSetTLSBase_ccorres)
       apply (rule ccorres_return_CE, simp+)[1]
      apply (rule ccorres_return_C_errorE, simp+)[1]
     apply wp
    apply (rule ccorres_equals_throwError)
     apply (fastforce simp: throwError_bind invocationCatch_def
-                   split: invocation_label.split)
+                   split: invocation_label.split gen_invocation_labels.split)
    apply (simp add: ccorres_cond_iffs
               cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule syscall_error_throwError_ccorres_n)

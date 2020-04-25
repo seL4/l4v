@@ -1,11 +1,7 @@
 /*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  */
 
 /* http://blog.regehr.org/archives/909 */
@@ -18,7 +14,8 @@ int error = 0;
 extern int error;
 long str2long(const char *);
 
-long str2long(const char *s) {
+long str2long(const char *s)
+{
     long val = 0;
     int negative = 0;
 
@@ -32,7 +29,7 @@ long str2long(const char *s) {
         return -1;
     }
 
-    for (;*s != '\0'; s++) {
+    for (; *s != '\0'; s++) {
         if (*s < '0' || *s > '9') {
             /* Non-numeric character; bail out. */
             error = 1;

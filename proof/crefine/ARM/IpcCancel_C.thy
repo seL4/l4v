@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory IpcCancel_C
@@ -566,15 +562,6 @@ lemma ccorres_pre_getQueue:
    apply (simp add: maxDom_to_H maxPrio_to_H)+
   done
 
-(* FIXME: move *)
-lemma threadGet_wp:
-  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at' tcb thread s \<longrightarrow> P (f tcb) s\<rbrace> threadGet f thread \<lbrace>P\<rbrace>"
-  apply (rule hoare_post_imp [OF _ tg_sp'])
-  apply clarsimp
-  apply (frule obj_at_ko_at')
-  apply (clarsimp elim: obj_atE')
-  done
-
 lemma state_relation_queue_update_helper':
   "\<lbrakk> (s, s') \<in> rf_sr;
      (\<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s)
@@ -737,14 +724,6 @@ lemma invert_l1index_spec:
   by vcg
      (simp add: word_sle_def sdiv_int_def sdiv_word_def smod_word_def smod_int_def)
 
-lemma unat_ucast_prio_shiftr_simp[simp]:
-  "unat (ucast (p::priority) >> n :: machine_word) = unat (p >> n)"
-  by (simp add: shiftr_div_2n')+
-
-lemma unat_ucast_prio_mask_simp[simp]:
-  "unat (ucast (p::priority) && mask m :: machine_word) = unat (p && mask m)"
-  by (metis ucast_and_mask unat_ucast_8_32)
-
 lemma unat_ucast_prio_L1_cmask_simp:
   "unat (ucast (p::priority) && 0x1F :: machine_word) = unat (p && 0x1F)"
   using unat_ucast_prio_mask_simp[where m=5]
@@ -781,11 +760,6 @@ lemma prio_unat_shiftr_wordRadix_helper': (* FIXME generalise *)
 lemma prio_ucast_shiftr_wordRadix_helper2:
   "(ucast (p::priority) >> wordRadix :: machine_word) < 0x20"
   by (rule order_less_trans[OF prio_ucast_shiftr_wordRadix_helper]; simp)
-
-lemma dom_less_0x10_helper:
-  "d \<le> maxDomain \<Longrightarrow> (ucast d :: machine_word) < 0x10"
-  unfolding maxDomain_def numDomains_def
-  by (clarsimp simp add: word_less_nat_alt unat_ucast_upcast is_up word_le_nat_alt)
 
 lemma cready_queues_index_to_C_ucast_helper:
   fixes p :: priority
@@ -1172,10 +1146,6 @@ lemma rf_sr_drop_bitmaps_dequeue_helper:
              carch_state_relation_def cmachine_state_relation_def
   by (clarsimp simp: rf_sr_cbitmap_L1_relation rf_sr_cbitmap_L2_relation)
 
-lemma filter_empty_unfiltered_contr:
-  "\<lbrakk> [x\<leftarrow>xs . x \<noteq> y] = [] ; x' \<in> set xs ; x' \<noteq> y \<rbrakk> \<Longrightarrow> False"
-  by (induct xs, auto split: if_split_asm)
-
 (* FIXME same proofs as bit_set, maybe can generalise? *)
 lemma cbitmap_L1_relation_bit_clear:
   fixes p :: priority
@@ -1216,11 +1186,6 @@ lemma cbitmap_L2_relationD:
     cbitmap2.[unat d].[i] = abitmap2 (d, i)"
   unfolding cbitmap_L2_relation_def l2BitmapSize_def'
   by clarsimp
-
-(* FIXME move *)
-lemma filter_noteq_op:
-  "[x \<leftarrow> xs . x \<noteq> y] = filter ((\<noteq>) y) xs"
-  by (induct xs) auto
 
 lemma cbitmap_L2_relation_bit_clear:
   fixes p :: priority

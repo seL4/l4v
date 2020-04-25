@@ -1,12 +1,7 @@
-
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Fastpath_C
@@ -217,7 +212,7 @@ declare comp_apply [simp del]
 crunch tcbContext[wp]: deleteCallerCap "obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t"
   (wp: setEndpoint_obj_at_tcb' setBoundNotification_tcbContext
        setNotification_tcb crunch_wps seThreadState_tcbContext
-   ignore: getObject setObject simp: crunch_simps unless_def)
+   simp: crunch_simps unless_def)
 declare comp_apply [simp]
 
 
@@ -2697,6 +2692,7 @@ lemma fastpath_reply_recv_ccorres:
      automatic indentation is improved *)
   show ?thesis
   using [[goals_limit = 1]]
+  supply option.case_cong_weak[cong del]
   apply (cinit lift: cptr_' msgInfo_')
      apply (simp add: catch_liftE_bindE unlessE_throw_catch_If
                       unifyFailure_catch_If catch_liftE
@@ -3490,21 +3486,22 @@ lemma setCTE_obj_at'_tcbIPCBuffer:
   unfolding setCTE_def
   by (rule setObject_cte_obj_at_tcb', simp+)
 
-crunch obj_at'_tcbIPCBuffer[wp]: cteInsert, asUser "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+crunches cteInsert, asUser
+  for obj_at'_tcbIPCBuffer[wp]: "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: setCTE_obj_at'_queued crunch_wps threadSet_obj_at'_really_strongest)
 
 crunch ksReadyQueues_inv[wp]: cteInsert "\<lambda>s. P (ksReadyQueues s)"
   (wp: hoare_drop_imps)
 
-crunch ksReadyQueuesL1Bitmap_inv[wp]: cteInsert,threadSet,asUser,emptySlot "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-  (wp: hoare_drop_imps)
-crunch ksReadyQueuesL2Bitmap_inv[wp]: cteInsert,threadSet,asUser,emptySlot "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+crunches cteInsert, threadSet, asUser, emptySlot
+  for ksReadyQueuesL1Bitmap_inv[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  and ksReadyQueuesL2Bitmap_inv[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (wp: hoare_drop_imps)
 
 crunch ksReadyQueuesL1Bitmap_inv[wp]: setEndpoint "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv ignore: setObject)
+  (wp: setObject_ksPSpace_only updateObject_default_inv)
 crunch ksReadyQueuesL2Bitmap_inv[wp]: setEndpoint "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv ignore: setObject)
+  (wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemma setThreadState_runnable_bitmap_inv:
   "runnable' ts \<Longrightarrow>
@@ -3989,7 +3986,8 @@ crunch obj_at_ep[wp]: emptySlot "obj_at' (P :: endpoint \<Rightarrow> bool) p"
 crunch nosch[wp]: emptySlot "\<lambda>s. P (ksSchedulerAction s)"
 
 context begin interpretation Arch .
-crunch gsCNodes[wp]: emptySlot, asUser "\<lambda>s. P (gsCNodes s)"
+crunches emptySlot, asUser
+  for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps)
 end
 
@@ -4198,14 +4196,11 @@ lemma modify_setEndpoint_pivot[unfolded K_bind_def]:
 lemma setEndpoint_clearUntypedFreeIndex_pivot[unfolded K_bind_def]:
   "do setEndpoint p val; v <- clearUntypedFreeIndex slot; f od
      = do v <- clearUntypedFreeIndex slot; setEndpoint p val; f od"
-  by (simp add: clearUntypedFreeIndex_def bind_assoc
-                getSlotCap_def
-                setEndpoint_getCTE_pivot
-                updateTrackedFreeIndex_def
-                modify_setEndpoint_pivot
+  supply option.case_cong_weak[cong del]
+  by (simp add: clearUntypedFreeIndex_def bind_assoc getSlotCap_def setEndpoint_getCTE_pivot
+                updateTrackedFreeIndex_def modify_setEndpoint_pivot
          split: capability.split
-          | rule bind_cong[OF refl] allI impI
-                 bind_apply_cong[OF refl])+
+      | rule bind_cong[OF refl] allI impI bind_apply_cong[OF refl])+
 
 lemma emptySlot_setEndpoint_pivot[unfolded K_bind_def]:
   "(do emptySlot slot NullCap; setEndpoint p val; f od) =
@@ -4351,9 +4346,10 @@ lemma all_prio_not_inQ_not_tcbQueued: "\<lbrakk> obj_at' (\<lambda>a. (\<forall>
   apply (clarsimp simp: obj_at'_def inQ_def)
 done
 
-crunch ntfn_obj_at[wp]: setThreadState, emptySlot, asUser "obj_at' (P::(Structures_H.notification \<Rightarrow> bool)) ntfnptr"
-  (ignore: getObject setObject wp: obj_at_setObject2 crunch_wps
-     simp: crunch_simps updateObject_default_def in_monad)
+crunches setThreadState, emptySlot, asUser
+  for ntfn_obj_at[wp]: "obj_at' (P::(Structures_H.notification \<Rightarrow> bool)) ntfnptr"
+  (wp: obj_at_setObject2 crunch_wps
+   simp: crunch_simps updateObject_default_def in_monad)
 
 lemma st_tcb_at_is_Reply_imp_not_tcbQueued: "\<And>s t.\<lbrakk> invs' s; st_tcb_at' isReply t s\<rbrakk> \<Longrightarrow> obj_at' (\<lambda>a. \<not> tcbQueued a) t s"
   apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def st_tcb_at'_def valid_queues_no_bitmap_def)
@@ -4447,7 +4443,7 @@ crunch obj_at'_tcbIPCBuffer[wp]: asUser "obj_at' (\<lambda>tcb. P (tcbIPCBuffer 
 
 crunch obj_at'_tcbIPCBuffer[wp]: handleFault "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps constOnFailure_wp tcbSchedEnqueue_tcbIPCBuffer threadSet_obj_at'_really_strongest
-    simp: zipWithM_x_mapM ignore: sequenceE mapME getObject setObject)
+   simp: zipWithM_x_mapM)
 
 lemma fastpath_callKernel_SysReplyRecv_corres:
   "monadic_rewrite True False
@@ -4455,8 +4451,9 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
          and cnode_caps_gsCNodes')
      (callKernel (SyscallEvent SysReplyRecv)) (fastpaths SysReplyRecv)"
   including no_pre
+  supply option.case_cong_weak[cong del]
   apply (rule monadic_rewrite_introduce_alternative)
-   apply ( simp add: callKernel_def)
+   apply (simp add: callKernel_def)
   apply (rule monadic_rewrite_imp)
    apply (simp add: handleEvent_def handleReply_def
                     handleRecv_def liftE_bindE_handle liftE_handle

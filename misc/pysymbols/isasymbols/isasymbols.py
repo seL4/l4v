@@ -1,28 +1,28 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 #
-# Copyright 2015, NICTA
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
-# This software may be distributed and modified according to the terms of
-# the BSD 2-Clause license. Note that NO WARRANTY is provided.
-# See "LICENSE_BSD2.txt" for details.
-#
-# @TAG(NICTA_BSD)
+# SPDX-License-Identifier: BSD-2-Clause
 #
 
-import codecs, collections, numbers, re, types
+import codecs
+import collections
+import numbers
+import re
+import types
 from .exception import IsaSymbolsException
+
 
 class Symbol(object):
     def __init__(self, ascii_text, code_point, group=None, font=None,
-            abbreviations=None):
+                 abbreviations=None):
         assert isinstance(ascii_text, basestring)
         assert isinstance(code_point, numbers.Number)
         assert isinstance(group, (basestring, types.NoneType))
         assert isinstance(font, (basestring, types.NoneType))
         assert isinstance(abbreviations, (collections.Iterable,
-            types.NoneType))
+                                          types.NoneType))
 
         self.ascii_text = ascii_text
         self.code_point = code_point
@@ -30,10 +30,12 @@ class Symbol(object):
         self.font = font
         self.abbreviations = abbreviations or []
 
+
 def _extract_property(prop):
     # Values of the symbol fields can contain '␣' which is intended to
     # indicate a space.
     return prop.replace(u'␣', ' ')
+
 
 class Translator(object):
     def __init__(self, symbols_text):
@@ -42,7 +44,7 @@ class Translator(object):
         self.symbols = []
 
         for number, line in enumerate(x.strip() for x in
-                symbols_text.split('\n')):
+                                      symbols_text.split('\n')):
 
             if line.startswith('#'):
                 # Comment
@@ -55,9 +57,9 @@ class Translator(object):
             items = line.split()
             if len(items) < 3 or len(items) % 2 == 0:
                 raise IsaSymbolsException('%d: unexpected line format' %
-                    number)
+                                          number)
 
-            fields = {'ascii_text':items[0]}
+            fields = {'ascii_text': items[0]}
 
             for k, v in zip(*[iter(items[1:])] * 2):
 
@@ -66,7 +68,7 @@ class Translator(object):
                         code = int(_extract_property(v), 16)
                     except ValueError:
                         raise IsaSymbolsException('%d: invalid code field' %
-                            number)
+                                                  number)
                     fields['code_point'] = code
 
                 elif k == 'group:':
@@ -82,14 +84,14 @@ class Translator(object):
 
                 else:
                     raise IsaSymbolsException('%d: unexpected field %s' %
-                        (number, k))
+                                              (number, k))
 
             self.symbols.append(Symbol(**fields))
 
         # Translation dictionaries that we'll lazily initialise later.
         self._utf8_to_ascii = None
         self._utf8_to_tex = None
-        self._hshifts_tex = None # Handling for sub-/super-scripts
+        self._hshifts_tex = None  # Handling for sub-/super-scripts
 
     def encode(self, data):
         for symbol in self.symbols:
@@ -103,7 +105,7 @@ class Translator(object):
         if self._utf8_to_ascii is None:
             # First time this function has been called; init the dictionary.
             self._utf8_to_ascii = {unichr(s.code_point): s.ascii_text
-                for s in self.symbols}
+                                   for s in self.symbols}
 
         return ''.join(self._utf8_to_ascii.get(c, c) for c in data)
 
@@ -139,8 +141,9 @@ class Translator(object):
             )
 
         return ''.join(self._utf8_to_tex.get(c, c) for c in
-            reduce(lambda a, (regex, rep): regex.sub(rep, a), self._hshifts_tex,
-                data))
+                       reduce(lambda a, (regex, rep): regex.sub(rep, a), self._hshifts_tex,
+                              data))
+
 
 def make_translator(symbols_file):
     assert isinstance(symbols_file, basestring)

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Syscall_C
@@ -750,23 +746,6 @@ lemma handleFault_ccorres:
   apply (clarsimp simp: pred_tcb_at')
   done
 
-lemma getMessageInfo_less_4:
-  "\<lbrace>\<top>\<rbrace> getMessageInfo t \<lbrace>\<lambda>rv s. msgExtraCaps rv < 4\<rbrace>"
-  including no_pre
-  apply (simp add: getMessageInfo_def)
-  apply wp
-  apply (rule hoare_strengthen_post, rule hoare_vcg_prop)
-  apply (simp add: messageInfoFromWord_def Let_def
-                   Types_H.msgExtraCapBits_def)
-  apply (rule word_leq_minus_one_le, simp)
-  apply simp
-  apply (rule word_and_le1)
-  done
-
-lemma invs_queues_imp:
-  "invs' s \<longrightarrow> valid_queues s"
-  by clarsimp
-
 (* FIXME: move *)
 lemma length_CL_from_H [simp]:
   "length_CL (mi_from_H mi) = msgLength mi"
@@ -792,16 +771,6 @@ lemma getMRs_length:
   apply (simp add: min_def split: if_splits)
   apply (clarsimp simp: word_le_nat_alt)
   apply (simp add: msgMaxLength_def msgLengthBits_def n_msgRegisters_def)
-  done
-
-lemma getMessageInfo_msgLength':
-  "\<lbrace>\<top>\<rbrace> getMessageInfo t \<lbrace>\<lambda>rv s. msgLength rv \<le> 0x78\<rbrace>"
-  including no_pre
-  apply (simp add: getMessageInfo_def)
-  apply wp
-  apply (rule hoare_strengthen_post, rule hoare_vcg_prop)
-  apply (simp add: messageInfoFromWord_def Let_def msgMaxLength_def not_less
-                   Types_H.msgExtraCapBits_def split: if_split )
   done
 
 lemma handleInvocation_ccorres:
@@ -1196,19 +1165,6 @@ lemma cap_case_EndpointCap_NotificationCap:
            else h)"
   by (simp add: isCap_simps
          split: capability.split)
-
-
-(* FIXME: MOVE *)
-lemma capFaultOnFailure_if_case_sum:
-  " (capFaultOnFailure epCPtr b (if c then f else g) >>=
-      sum.case_sum (handleFault thread) return) =
-    (if c then ((capFaultOnFailure epCPtr b  f)
-                 >>= sum.case_sum (handleFault thread) return)
-          else ((capFaultOnFailure epCPtr b  g)
-                 >>= sum.case_sum (handleFault thread) return))"
-  by (case_tac c, clarsimp, clarsimp)
-
-
 
 (* FIXME:  MOVE to Corres_C.thy *)
 lemma ccorres_trim_redundant_throw_break:
@@ -1610,6 +1566,13 @@ lemma scast_maxIRQ_less_eq:
 
 lemmas scast_maxIRQ_is_less = scast_maxIRQ_less_eq [THEN iffD1]
 
+lemma ucast_maxIRQ_is_less:
+  "SCAST(32 signed \<rightarrow> 64) Kernel_C.maxIRQ < UCAST(8 \<rightarrow> 64) irq \<Longrightarrow> scast Kernel_C.maxIRQ < irq"
+  apply (clarsimp simp: scast_def Kernel_C.maxIRQ_def)
+  apply (subgoal_tac "LENGTH(8) \<le> LENGTH(64)")
+  apply (drule less_ucast_ucast_less[where x= "0x7D" and y="irq"])
+    by (simp)+
+
 lemma validIRQcastingLess:
   "Kernel_C.maxIRQ <s ucast b \<Longrightarrow> X64.maxIRQ < b"
   by (simp add: Platform_maxIRQ scast_maxIRQ_is_less is_up_def target_size source_size)
@@ -1619,6 +1582,15 @@ lemma scast_maxIRQ_is_not_less:
   shows "\<not> Kernel_C.maxIRQ <s ucast b \<Longrightarrow> \<not> (scast Kernel_C.maxIRQ < b)"
   by (simp add: scast_maxIRQ_less_eq)
 
+lemma ucast_maxIRQ_is_not_less:
+  "\<not> (SCAST(32 signed \<rightarrow> 64) Kernel_C.maxIRQ < UCAST(8 \<rightarrow> 64) irq) \<Longrightarrow> \<not> (scast Kernel_C.maxIRQ < irq)"
+  apply (clarsimp simp: scast_def Kernel_C.maxIRQ_def)
+  apply (subgoal_tac "LENGTH(8) \<le> LENGTH(64)")
+   prefer 2
+   apply simp
+  apply (erule notE)
+  using ucast_up_mono by fastforce
+
 (* FIXME ARMHYP: move *)
 lemma ctzl_spec:
   "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call ctzl_'proc
@@ -1627,17 +1599,6 @@ lemma ctzl_spec:
   apply clarsimp
   apply (rule_tac x="ret__long_'_update f x" for f in exI)
   apply (simp add: mex_def meq_def)
-  done
-
-lemma dmo_machine_valid_lift:
-  "(\<And>s f m. P s = P (ksMachineState_update f s)) \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp f' \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (wpsimp simp: split_def doMachineOp_def machine_op_lift_def machine_rest_lift_def in_monad)
-  done
-
-lemma tcb_runnable_imp_simple:
-  "obj_at' (\<lambda>s. runnable' (tcbState s)) t s \<Longrightarrow> obj_at' (\<lambda>s. simple' (tcbState s)) t s"
-  apply (clarsimp simp: obj_at'_def)
-  apply (case_tac "tcbState obj" ; clarsimp)
   done
 
 lemma ccorres_return_void_C_Seq:
@@ -1653,14 +1614,6 @@ lemma ccorres_return_void_C_Seq:
   apply (auto elim!:exec_Normal_elim_cases intro: exec.Throw)
  done
 
-
-lemma scast_specific_plus64:
-  "scast (of_nat (word_ctz x) + 0x20 :: 64 signed word) = of_nat (word_ctz x) + (0x20 :: machine_word)"
-  by (simp add: scast_down_add is_down_def target_size_def source_size_def word_size)
-
-lemma scast_specific_plus64_signed:
-  "scast (of_nat (word_ctz x) + 0x20 :: machine_word) = of_nat (word_ctz x) + (0x20 :: 64 signed word)"
-  by (simp add: scast_down_add is_down_def target_size_def source_size_def word_size)
 
 lemma ccorres_handleReservedIRQ:
   "ccorres dc xfdc
@@ -1685,7 +1638,7 @@ lemma handleInterrupt_ccorres:
   apply (cinit lift: irq_' cong: call_ignore_cong)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp  add: Platform_maxIRQ del: Collect_const)
-    apply (drule scast_maxIRQ_is_less[simplified])
+    apply (drule ucast_maxIRQ_is_less[simplified])
     apply (simp del: Collect_const)
     apply (rule ccorres_rhs_assoc)+
     apply (subst doMachineOp_bind)
@@ -1701,7 +1654,7 @@ lemma handleInterrupt_ccorres:
       apply (vcg exspec=ackInterrupt_modifies)
      apply wp
     apply (vcg exspec=maskInterrupt_modifies)
-   apply (simp add: scast_maxIRQ_is_not_less Platform_maxIRQ del: Collect_const)
+   apply (simp add: ucast_maxIRQ_is_not_less Platform_maxIRQ del: Collect_const)
    apply (rule ccorres_pre_getIRQState)
     apply wpc
       apply simp
@@ -1715,9 +1668,7 @@ lemma handleInterrupt_ccorres:
      apply (rule ccorres_getSlotCap_cte_at)
      apply (rule_tac P="cte_at' rv" in ccorres_cross_over_guard)
      apply (rule ccorres_Guard_Seq)
-     apply (rule ccorres_Guard_Seq)
      apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
-     apply (rule ptr_add_assertion_irq_guard[unfolded dc_def])
      apply (rule ccorres_move_array_assertion_irq ccorres_move_c_guard_cte)+
      apply ctac
        apply csymbr
@@ -1791,21 +1742,23 @@ lemma handleInterrupt_ccorres:
   apply (clarsimp simp: Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def
         cte_wp_at_ctes_of ucast_ucast_b is_up)
   apply (intro conjI impI)
-     apply clarsimp
-     apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
-     apply (clarsimp simp: typ_heap_simps')
-     apply (simp add: cap_get_tag_isCap)
-     apply (clarsimp simp: isCap_simps)
-     apply (frule cap_get_tag_isCap_unfolded_H_cap)
-     apply (frule cap_get_tag_to_H, assumption)
-     apply (clarsimp simp: to_bool_def)
-    apply (cut_tac un_ui_le[where b = 191 and a = irq,
-           simplified word_size])
-    apply (simp add: ucast_eq_0 is_up_def source_size_def
-                     target_size_def word_size unat_gt_0
-          | subst array_assertion_abs_irq[rule_format, OF conjI])+
-   apply (clarsimp simp:nat_le_iff)
-   apply (clarsimp simp: IRQReserved_def)+
+       apply (subst Word_Lemmas.of_int_uint_ucast)
+       apply (rule refl)
+      apply clarsimp
+      apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
+      apply (clarsimp simp: typ_heap_simps')
+      apply (simp add: cap_get_tag_isCap)
+      apply (clarsimp simp: isCap_simps)
+      apply (frule cap_get_tag_isCap_unfolded_H_cap)
+      apply (frule cap_get_tag_to_H, assumption)
+      apply (clarsimp simp: to_bool_def)
+     apply (cut_tac un_ui_le[where b = 191 and a = irq,
+            simplified word_size])
+     apply (simp add: ucast_eq_0 is_up_def source_size_def
+                      target_size_def word_size unat_gt_0
+           | subst array_assertion_abs_irq[rule_format, OF conjI])+
+    apply (clarsimp simp:nat_le_iff)
+    apply (clarsimp simp: IRQReserved_def)+
   done
 end
 

@@ -1,11 +1,7 @@
 (*
- * Copyright 2016, General Dynamics C4 Systems
+ * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (* Experimental AutoCorres proofs over CRefine: work in progress *)
@@ -105,7 +101,7 @@ lemma (* handleYield_ccorres: *)
     * FIXME: proper way to do this? *)
    apply (subst reorder_gets[symmetric, unfolded K_bind_def])
     using tcbSchedDequeue'_modifies apply (fastforce simp: NonDetMonad.valid_def)
-   apply (subst gets_gets)
+   apply (subst double_gets_drop_regets)
    apply (rule corres_pre_getCurThread_wrapper)
    apply (rule corres_split[OF _ tcbSchedDequeue_ccorres[ac]])
       apply (rule corres_split[OF _ tcbSchedAppend_ccorres[ac]])

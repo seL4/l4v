@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Syscall_C
@@ -717,10 +713,6 @@ lemma handleFault_ccorres:
   apply (clarsimp simp: pred_tcb_at')
   done
 
-lemma invs_queues_imp:
-  "invs' s \<longrightarrow> valid_queues s"
-  by clarsimp
-
 (* FIXME: move *)
 lemma length_CL_from_H [simp]:
   "length_CL (mi_from_H mi) = msgLength mi"
@@ -1153,16 +1145,6 @@ lemma cap_case_EndpointCap_NotificationCap:
          split: capability.split)
 
 
-(* FIXME: MOVE *)
-lemma capFaultOnFailure_if_case_sum:
-  " (capFaultOnFailure epCPtr b (if c then f else g) >>=
-      sum.case_sum (handleFault thread) return) =
-    (if c then ((capFaultOnFailure epCPtr b  f)
-                 >>= sum.case_sum (handleFault thread) return)
-          else ((capFaultOnFailure epCPtr b  g)
-                 >>= sum.case_sum (handleFault thread) return))"
-  by (case_tac c, clarsimp, clarsimp)
-
 lemma invs_valid_objs_strengthen:
   "invs' s \<longrightarrow> valid_objs' s" by fastforce
 
@@ -1516,6 +1498,13 @@ lemma scast_maxIRQ_is_less:
   apply fastforce
 done
 
+lemma ucast_maxIRQ_is_less:
+  "SCAST(32 signed \<rightarrow> 32) Kernel_C.maxIRQ < UCAST(10 \<rightarrow> 32) irq \<Longrightarrow> scast Kernel_C.maxIRQ < irq"
+  apply (clarsimp simp: scast_def Kernel_C.maxIRQ_def)
+  apply (subgoal_tac "LENGTH(10) \<le> LENGTH(32)")
+  apply (drule less_ucast_ucast_less[where x= "0x9F" and y="irq"])
+    by (simp)+
+
 lemma scast_maxIRQ_is_not_less: "(\<not> (Kernel_C.maxIRQ) <s (ucast \<circ> (ucast :: irq \<Rightarrow> 16 word)) b)  \<Longrightarrow> \<not> (scast Kernel_C.maxIRQ < b)"
   apply (subgoal_tac "sint (ucast Kernel_C.maxIRQ :: 32 sword) \<ge> sint (ucast (ucast b))";
          simp only: Kernel_C.maxIRQ_def word_sless_def word_sle_def)
@@ -1524,6 +1513,15 @@ lemma scast_maxIRQ_is_not_less: "(\<not> (Kernel_C.maxIRQ) <s (ucast \<circ> (uc
           simp add: is_up_def target_size source_size)
   apply (cases "sint maxIRQ \<le> sint (UCAST(10 \<rightarrow> 32 signed) b)"; simp add: maxIRQ_def sint_uint)
 done
+
+lemma ucast_maxIRQ_is_not_less:
+  "\<not> (SCAST(32 signed \<rightarrow> 32) Kernel_C.maxIRQ < UCAST(10 \<rightarrow> 32) irq) \<Longrightarrow> \<not> (scast Kernel_C.maxIRQ < irq)"
+  apply (clarsimp simp: scast_def Kernel_C.maxIRQ_def)
+  apply (subgoal_tac "LENGTH(10) \<le> LENGTH(32)")
+   prefer 2
+   apply simp
+  apply (erule notE)
+  using ucast_up_mono by fastforce
 
 lemma ccorres_handleReserveIRQ:
   "ccorres dc xfdc \<top> UNIV hs (handleReservedIRQ irq) (Call handleReservedIRQ_'proc)"
@@ -1542,7 +1540,7 @@ lemma handleInterrupt_ccorres:
   apply (cinit lift: irq_' cong: call_ignore_cong)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp  add: Platform_maxIRQ del: Collect_const)
-    apply (drule scast_maxIRQ_is_less[simplified])
+    apply (drule ucast_maxIRQ_is_less[simplified])
     apply (simp del: Collect_const)
     apply (rule ccorres_rhs_assoc)+
     apply (subst doMachineOp_bind)
@@ -1558,7 +1556,7 @@ lemma handleInterrupt_ccorres:
       apply (vcg exspec=ackInterrupt_modifies)
      apply wp
     apply (vcg exspec=maskInterrupt_modifies)
-   apply (simp add: scast_maxIRQ_is_not_less Platform_maxIRQ del: Collect_const)
+   apply (simp add: ucast_maxIRQ_is_not_less Platform_maxIRQ del: Collect_const)
    apply (rule ccorres_pre_getIRQState)
     apply wpc
       apply simp
@@ -1571,6 +1569,7 @@ lemma handleInterrupt_ccorres:
      apply (rule getIRQSlot_ccorres3)
      apply (rule ccorres_getSlotCap_cte_at)
      apply (rule_tac P="cte_at' rv" in ccorres_cross_over_guard)
+     supply ccorres_move_array_assertion_tcb_ctes [corres_pre del]
      apply ctac
        apply csymbr
        apply csymbr
@@ -1643,6 +1642,7 @@ lemma handleInterrupt_ccorres:
   apply (clarsimp simp: IRQTimer_def IRQSignal_def maxIRQ_def
                         cte_wp_at_ctes_of ucast_ucast_b is_up)
   apply (intro conjI impI)
+       using Word.word_of_int and ucast_def apply metis
       apply clarsimp
       apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
       apply (clarsimp simp: typ_heap_simps')

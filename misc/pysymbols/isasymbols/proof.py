@@ -1,14 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 #
-# Copyright 2016, NICTA
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
-# This software may be distributed and modified according to the terms of
-# the BSD 2-Clause license. Note that NO WARRANTY is provided.
-# See "LICENSE_BSD2.txt" for details.
-#
-# @TAG(NICTA_BSD)
+# SPDX-License-Identifier: BSD-2-Clause
 #
 
 '''
@@ -27,6 +22,7 @@ Example usage:
 import StringIO
 from .exception import IsaSymbolsException
 
+
 class Proof(object):
     def __init__(self, statement, name=None, debug=True):
         self.statement = statement
@@ -39,10 +35,10 @@ class Proof(object):
     def apply(self, step, solves=0):
         if self.completed:
             raise IsaSymbolsException('you cannot apply steps to a completed '
-                'proof')
+                                      'proof')
         if solves > self.subgoals:
             raise IsaSymbolsException('you cannot solve more subgoals (%d) '
-                'than remain (%d)' % (solves, self.subgoals))
+                                      'than remain (%d)' % (solves, self.subgoals))
         if ' ' in step:
             step = '(%s)' % step
         self.steps.append((' ' * (self.subgoals - 1), step))

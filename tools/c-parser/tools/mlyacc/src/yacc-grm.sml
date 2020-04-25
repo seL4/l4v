@@ -1,7 +1,5 @@
-(*
- * @TAG(OTHER_PRINCETON_OSS)
- *)
-
+(* SPDX-License-Identifier: SMLNJ *)
+(* SPDX-FileCopyrightText: 1989 Andrew W. Appel, David R. Tarditi *)
 
 functor MlyaccLrValsFun(structure Hdr : HEADER
                           where type prec = Header.prec

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory ADT_C
@@ -183,7 +179,7 @@ definition
   where
   "checkActiveIRQ_C \<equiv>
    do getActiveIRQ_C;
-      irq \<leftarrow> gets ret__unsigned_short_';
+      irq \<leftarrow> gets ret__unsigned_long_';
       return (irq \<noteq> scast irqInvalid)
    od"
 
@@ -510,51 +506,6 @@ lemma array_relation_map_conv2:
    \<forall>i>n. a i = None \<Longrightarrow> array_map_conv f n c = a"
   by (rule ext) (simp add: array_relation_def array_map_conv_def2)
 
-(* FIXME: move to somewhere sensible >>> *)
-text \<open>Map inversion (implicitly assuming injectivity).\<close>
-definition
-  "the_inv_map m = (\<lambda>s. if s\<in>ran m then Some (THE x. m x = Some s) else None)"
-
-text \<open>Map inversion can be expressed by function inversion.\<close>
-lemma the_inv_map_def2:
-  "the_inv_map m = (Some \<circ> the_inv_into (dom m) (the \<circ> m)) |` (ran m)"
-  apply (rule ext)
-  apply (clarsimp simp: the_inv_map_def the_inv_into_def dom_def)
-  apply (rule_tac f=The in arg_cong)
-  apply (rule ext)
-  apply auto
-  done
-
-text \<open>The domain of a function composition with Some is the universal set.\<close>
-lemma dom_comp_Some[simp]: "dom (comp Some f) = UNIV" by (simp add: dom_def)
-
-text \<open>Assuming injectivity, map inversion produces an inversive map.\<close>
-lemma is_inv_the_inv_map:
-  "inj_on m (dom m) \<Longrightarrow> is_inv m (the_inv_map m)"
-  apply (simp add: is_inv_def)
-  apply (intro conjI allI impI)
-   apply (simp add: the_inv_map_def2)
-  apply (auto simp add: the_inv_map_def inj_on_def dom_def)
-  done
-
-lemma the_the_inv_mapI:
-  "inj_on m (dom m) \<Longrightarrow> m x = Some y \<Longrightarrow> the (the_inv_map m y) = x"
-  by (auto simp: the_inv_map_def ran_def inj_on_def dom_def)
-
-lemma eq_restrict_map_None[simp]:
-  "restrict_map m A x = None \<longleftrightarrow> x ~: (A \<inter> dom m)"
-  by (auto simp: restrict_map_def split: if_split_asm)
-lemma eq_the_inv_map_None[simp]: "the_inv_map m x = None \<longleftrightarrow> x\<notin>ran m"
-  by (simp add: the_inv_map_def2)
-lemma is_inv_unique:
-  "is_inv f g \<Longrightarrow> is_inv f h \<Longrightarrow> g=h"
-  apply (rule ext)
-  apply (clarsimp simp: is_inv_def dom_def Collect_eq ran_def)
-  apply (drule_tac x=x in spec)+
-  apply (case_tac "g x", clarsimp+)
-  done
-(*<<<*)
-
 definition
   casid_map_to_H
   :: "(word32[256]) \<Rightarrow> (pde_C ptr \<rightharpoonup> pde_C) \<Rightarrow> asid \<rightharpoonup> hw_asid \<times> obj_ref"
@@ -566,11 +517,6 @@ definition
                                            pd_pointer_to_asid_slot) hw_asid)))
              (the_inv_map (array_map_conv (\<lambda>x. if x=0 then None else Some x)
                              0xFF hw_asid_table) asid))"
-
-lemma eq_option_to_0_rev:
-  "Some 0 ~: A \<Longrightarrow> \<forall>x. \<forall>y\<in>A.
-   ((=) \<circ> option_to_0) y x \<longrightarrow> (if x = 0 then None else Some x) = y"
-  by (clarsimp simp: option_to_0_def split: option.splits)
 
 lemma inj_hwasidsI:
   "asid_map_pd_to_hwasids m = set_option \<circ> c \<Longrightarrow>
@@ -740,12 +686,6 @@ lemma cready_queues_to_H_correct:
 
 (* showing that cpspace_relation is actually unique >>>*)
 
-(* FIXME: move *)
-lemma inj_image_inv:
-  assumes inj_f: "inj f"
-  shows "f ` A = B \<Longrightarrow> inv f ` B = A"
-  by (drule sym) (simp add: image_inv_f_f[OF inj_f])
-
 lemma cmap_relation_unique:
   assumes inj_f: "inj f"
   assumes r: "\<And>x y z. r x z \<Longrightarrow> r y z \<Longrightarrow> x=y"
@@ -782,47 +722,6 @@ lemma carch_tcb_relation_imp_eq:
   apply (cases g)
   apply (simp add: carch_tcb_relation_def ccontext_relation_imp_eq atcbContextGet_def)
   done
-
-(* FIXME: move *)
-lemma ran_tcb_cte_cases:
-  "ran tcb_cte_cases =
-   {(Structures_H.tcbCTable, tcbCTable_update),
-    (Structures_H.tcbVTable, tcbVTable_update),
-    (Structures_H.tcbReply, tcbReply_update),
-    (Structures_H.tcbCaller, tcbCaller_update),
-    (tcbIPCBufferFrame, tcbIPCBufferFrame_update)}"
-  by (auto simp add: tcb_cte_cases_def split: if_split_asm)
-
-(* FIXME: move *)
-lemma ps_clear_is_aligned_ksPSpace_None:
-  "\<lbrakk>ps_clear p n s; is_aligned p n; 0<d; d \<le> mask n\<rbrakk>
-   \<Longrightarrow> ksPSpace s (p + d) = None"
-  apply (simp add: ps_clear_def add_diff_eq[symmetric] mask_2pm1[symmetric])
-  apply (drule equals0D[where a="p + d"])
-  apply (simp add: dom_def word_gt_0 del: word_neq_0_conv)
-  apply (drule mp)
-   apply (rule word_plus_mono_right)
-    apply simp
-   apply (simp add: mask_2pm1)
-   apply (erule is_aligned_no_overflow')
-  apply (drule mp)
-   apply (case_tac "(0::word32)<2^n")
-    apply (frule le_m1_iff_lt[of "(2::word32)^n" d, THEN iffD1])
-    apply (simp add: mask_2pm1[symmetric])
-    apply (erule (1) is_aligned_no_wrap')
-   apply (simp add: is_aligned_mask mask_2pm1 not_less word_bits_def
-                    power_overflow)
-  by assumption
-
-(* FIXME: move *)
-lemma ps_clear_is_aligned_ctes_None:
-  assumes "ps_clear p tcbBlockSizeBits s"
-      and "is_aligned p tcbBlockSizeBits"
-  shows "ksPSpace s (p + 2*2^cteSizeBits) = None"
-    and "ksPSpace s (p + 3*2^cteSizeBits) = None"
-    and "ksPSpace s (p + 4*2^cteSizeBits) = None"
-  by (auto intro: assms ps_clear_is_aligned_ksPSpace_None
-            simp: objBits_defs mask_def)+
 
 lemma map_to_ctes_tcb_ctes:
   notes if_cong[cong]
@@ -998,10 +897,6 @@ lemma cpspace_ntfn_relation_unique:
               split: ntfn.splits option.splits) (* long *)
 
 (* FIXME: move *)
-lemma of_bool_inject[iff]: "of_bool a = of_bool b \<longleftrightarrow> a=b"
-  by (cases a) (cases b, simp_all)+
-
-(* FIXME: move *)
 lemma ap_from_vm_rights_inject[iff]:
   "(ap_from_vm_rights a::word32) = ap_from_vm_rights b \<longleftrightarrow> a=b"
   by (simp add: ap_from_vm_rights_def split: vmrights.splits)
@@ -1017,23 +912,6 @@ lemma cpspace_pte_relation_unique:
   shows   "map_to_ptes ah' = map_to_ptes ah"
   apply (rule cmap_relation_unique[OF inj_Ptr _ assms])
   by (simp add: cpte_relation_def s_from_cacheable_def Let_def split: pte.splits bool.splits)
-
-(* FIXME: move *)
-lemma Collect_mono2: "Collect P \<subseteq> Collect Q \<longleftrightarrow> (\<forall>x. P x \<longrightarrow> Q x)" by auto
-
-(* FIXME: move to Wellformed, turn valid_asid_pool' into an abbreviation >>>*)
-primrec
-  wf_asid_pool' :: "asidpool \<Rightarrow> bool"
-where
-  "wf_asid_pool' (ASIDPool pool) =
-   (dom pool \<subseteq> {0 .. 2^asid_low_bits - 1} \<and>
-    0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pdBits))"
-
-lemma valid_eq_wf_asid_pool'[simp]:
-  "valid_asid_pool' pool = (\<lambda>s. wf_asid_pool' pool)"
-  by (case_tac pool) simp
-declare valid_asid_pool'.simps[simp del]
-(*<<<*)
 
 lemma cpspace_asidpool_relation_unique:
   assumes invs: "\<forall>x\<in>ran (map_to_asidpools ah). wf_asid_pool' x"
@@ -1664,7 +1542,7 @@ definition
 definition
   "checkActiveIRQ_C \<equiv>
    do getActiveIRQ_C;
-      irq \<leftarrow> gets ret__unsigned_short_';
+      irq \<leftarrow> gets ret__unsigned_long_';
       return (irq \<noteq> scast irqInvalid)
    od"
 

@@ -1,6 +1,4 @@
-(*
- * @TAG(OTHER_PRINCETON_OSS)
- *)
+(* SPDX-License-Identifier: SMLNJ *)
 (* Binaryset -- modified for Moscow ML
  * from SML/NJ library v. 0.2
  *

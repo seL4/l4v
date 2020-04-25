@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (* collects lemmas common to the various CSpace branches *)
@@ -283,7 +279,7 @@ lemma array_assertion_abs_cnode_ctes:
   apply (metis array_assertion_shrink_right)
   done
 
-lemmas ccorres_move_array_assertion_cnode_ctes [corres_pre]
+lemmas ccorres_move_array_assertion_cnode_ctes
     = ccorres_move_Guard_Seq [OF array_assertion_abs_cnode_ctes]
       ccorres_move_Guard [OF array_assertion_abs_cnode_ctes]
 

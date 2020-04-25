@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 chapter "Proofs"
@@ -110,10 +106,10 @@ session CBaseRefine = CSpec +
   theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
     (* crefine/lib/AutoCorres_C explains why L4VerifiedLinks is included here. *)
     "crefine/lib/L4VerifiedLinks"
-    "crefine/$L4V_ARCH/Include_C"
+    "crefine/Include_C"
   theories
     "crefine/lib/L4VerifiedLinks"
-    "crefine/$L4V_ARCH/Include_C"
+    "crefine/Include_C"
 
 session AutoCorresCRefine = CRefine +
   theories

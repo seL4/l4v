@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -468,9 +464,7 @@ declare word_unat_power [symmetric, simp del]
 
 crunch inv [wp]: "X64_H.decodeInvocation" "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
-   simp: forME_x_def crunch_simps
-
-   ignore: forME_x getObject)
+   simp: forME_x_def crunch_simps)
 
 lemma case_option_corresE:
   assumes nonec: "corres r Pn Qn (nc >>=E f) (nc' >>=E g)"
@@ -1340,31 +1334,6 @@ lemma port_out_corres[@lift_corres_args, corres]:
      apply wpsimp+
   done
 
-(* FIXME x64: move *)
-lemma no_fail_in8[wp]:
-  "no_fail \<top> (in8 a)"
-  by (wpsimp simp: in8_def wp: no_fail_machine_op_lift)
-
-lemma no_fail_in16[wp]:
-  "no_fail \<top> (in16 a)"
-  by (wpsimp simp: in16_def wp: no_fail_machine_op_lift)
-
-lemma no_fail_in32[wp]:
-  "no_fail \<top> (in32 a)"
-  by (wpsimp simp: in32_def wp: no_fail_machine_op_lift)
-
-lemma no_fail_out8[wp]:
-  "no_fail \<top> (out8 a w)"
-  by (wpsimp simp: out8_def)
-
-lemma no_fail_out16[wp]:
-  "no_fail \<top> (out16 a w)"
-  by (wpsimp simp: out16_def)
-
-lemma no_fail_out32[wp]:
-  "no_fail \<top> (out32 a w)"
-  by (wpsimp simp: out32_def)
-
 lemma perform_port_inv_corres:
   "\<lbrakk>archinv_relation ai ai'; ai = arch_invocation.InvokeIOPort x\<rbrakk>
   \<Longrightarrow> corres (intr \<oplus> (=))
@@ -1927,8 +1896,9 @@ crunch nosch[wp]: setMRs "\<lambda>s. P (ksSchedulerAction s)"
         mapM_wp'
    simp: split_def zipWithM_x_mapM)
 
-crunch nosch [wp]: performX64MMUInvocation, performX64PortInvocation "\<lambda>s. P (ksSchedulerAction s)"
-  (ignore: getObject setObject simp: crunch_simps
+crunches performX64MMUInvocation, performX64PortInvocation
+  for nosch [wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  (simp: crunch_simps
    wp: crunch_wps getObject_cte_inv getASID_wp)
 
 lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
@@ -1936,8 +1906,7 @@ lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
 crunch st_tcb_at': performPageDirectoryInvocation, performPageTableInvocation,
                    performPageInvocation, performPDPTInvocation,
                    performASIDPoolInvocation, performX64PortInvocation "st_tcb_at' P t"
-  (ignore: getObject setObject
-   wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps)
+  (wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps)
 
 lemma performASIDControlInvocation_st_tcb_at':
   "\<lbrace>st_tcb_at' (P and (\<noteq>) Inactive and (\<noteq>) IdleThreadState) t and
@@ -1984,27 +1953,27 @@ lemma performASIDControlInvocation_st_tcb_at':
   done
 
 crunch aligned': "Arch.finaliseCap" pspace_aligned'
-  (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps)
+  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemmas arch_finalise_cap_aligned' = finaliseCap_aligned'
 
 crunch distinct': "Arch.finaliseCap" pspace_distinct'
-  (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps)
+  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemmas arch_finalise_cap_distinct' = finaliseCap_distinct'
 
 crunch nosch [wp]: "Arch.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
-  (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps updateObject_default_def)
+  (wp: crunch_wps getASID_wp simp: crunch_simps updateObject_default_def)
 
 
 crunch st_tcb_at' [wp]: "Arch.finaliseCap" "st_tcb_at' P t"
-  (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
+  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 crunch typ_at' [wp]: "Arch.finaliseCap" "\<lambda>s. P (typ_at' T p s)"
-  (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
+  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 crunch cte_wp_at':  "Arch.finaliseCap" "cte_wp_at' P p"
-  (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
+  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemma invs_asid_table_strengthen':
   "invs' s \<and> asid_pool_at' ap s \<and> asid \<le> 2 ^ asid_high_bits - 1 \<longrightarrow>

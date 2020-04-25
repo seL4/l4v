@@ -1,12 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
-# Copyright 2014, NICTA
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
-# This software may be distributed and modified according to the terms of
-# the BSD 2-Clause license. Note that NO WARRANTY is provided.
-# See "LICENSE_BSD2.txt" for details.
-#
-# @TAG(NICTA_BSD)
+# SPDX-License-Identifier: BSD-2-Clause
 #
 
 #
@@ -22,6 +18,8 @@ import tempfile
 import shutil
 
 # Create a temporary directory
+
+
 class TempDir(object):
     def __enter__(self, cleanup=True):
         self.filename = tempfile.mkdtemp()
@@ -33,18 +31,19 @@ class TempDir(object):
             shutil.rmtree(self.filename)
         return False
 
+
 parser = argparse.ArgumentParser(
-        description="Generate a 'umm_types.txt' file from the C parser, required by the bitfield generator.")
+    description="Generate a 'umm_types.txt' file from the C parser, required by the bitfield generator.")
 parser.add_argument('input', metavar='INPUT', type=str,
-        help="C file to parse")
+                    help="C file to parse")
 parser.add_argument('output', metavar='OUTPUT', type=str,
-        help="output filename")
+                    help="output filename")
 parser.add_argument('--root', metavar='ROOT', type=str,
-        help="add Isabelle ROOT or ROOTS file path", action='append')
+                    help="add Isabelle ROOT or ROOTS file path", action='append')
 args = parser.parse_args()
 
 if "ISABELLE_PROCESS" not in os.environ or "ISABELLE_TOOL" not in os.environ:
-    print "Run this from within 'isabelle env'."
+    print("Run this from within 'isabelle env'.")
     sys.exit(1)
 
 THY_DATA = """
@@ -65,9 +64,9 @@ session UmmTypes = CParser +
 # Create a new theory file and ROOT file in a temporary directory.
 with TempDir() as tmp_dir:
     filenames = {
-            "input": os.path.abspath(args.input),
-            "output": os.path.abspath(args.output),
-            }
+        "input": os.path.abspath(args.input),
+        "output": os.path.abspath(args.output),
+    }
     with open(os.path.join(tmp_dir, "UmmTypesFile.thy"), "w") as f:
         f.write(THY_DATA % filenames)
     with open(os.path.join(tmp_dir, "ROOT"), "w") as f:
@@ -80,10 +79,9 @@ with TempDir() as tmp_dir:
             result.append(a)
             result.append(x)
         return result
-    print "\nGenerating umm_types data file...\n"
+    print("\nGenerating umm_types data file...\n")
     subprocess.check_call([
-            os.environ["ISABELLE_TOOL"], "build", "-c"]
-                + interleave("-d", [os.path.abspath(x) for x in args.root])
-                + ["-d", ".", "-v", "-b", "UmmTypes"],
-            cwd=tmp_dir)
-
+        os.environ["ISABELLE_TOOL"], "build", "-c"]
+        + interleave("-d", [os.path.abspath(x) for x in args.root])
+        + ["-d", ".", "-v", "-b", "UmmTypes"],
+        cwd=tmp_dir)

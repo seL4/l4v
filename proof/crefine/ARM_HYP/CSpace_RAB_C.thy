@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory CSpace_RAB_C
@@ -602,14 +598,6 @@ lemma to_bool_false [simp]:
   "to_bool false = False"
   unfolding to_bool_def false_def
   by simp
-
-(* MOVE *)
-lemma tcb_aligned':
-  "tcb_at' t s \<Longrightarrow> is_aligned t tcbBlockSizeBits"
-  apply (drule obj_at_aligned')
-   apply (simp add: objBits_simps)
-  apply (simp add: objBits_simps)
-  done
 
 
 lemma tcb_ptr_to_ctcb_ptr_mask [simp]:

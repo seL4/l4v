@@ -1,0 +1,33 @@
+%
+%  U L E M . S T Y       [2012-05-18]
+%
+%  The ulem package provides various types of underlining that can stretch
+%  between words and be broken across lines in LaTeX or plain TeX.
+%  In LaTeX ulem replaces italics with underlining in \em-phasized text.
+%  It is most suitable for simple text such as {\em ibid.} or \emph{\LaTeX:
+%  A Document Preparation System} that may need to be underlined in a
+%  manuscript submitted for publication.  A declaration of \normalem (or
+%  the \usepackage option "normalem") restores the normal \em behavior.
+%
+%  Full instructions appear in ulem.ltx (ulem.pdf).  In summary:
+%
+%    \uline{important}   underlined text
+%    \uuline{urgent}     double-underlined text
+%    \uwave{boat}        wavy underline
+%    \sout{wrong}        line drawn through word
+%    \xout{removed}      marked over with //////.
+%    \dashuline{dashing} dash underline
+%    \dotuline{dotty}    dotted underline
+%
+%    {\em phasized\/}  | In LaTeX, by default, these are underlined; use
+%    \emph{asized}     | \normalem or [normalem] to restore italics
+%    \useunder{\uwave}{\bfseries}{\textbf}
+%                        use wavy underline in place of bold face
+%    Use \markoverwith for defining new types of underlining.
+%
+%  Copyright (c) 1989-2011 by Donald Arseneau (Vancouver, Canada; asnd@triumf.ca)
+%
+%  This software may be freely transmitted, reproduced, or modified for any
+%  purpose provided that this copyright notice is left intact.
+%  (Small excerpts may be taken and used without any restriction.)
+%

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory SyscallArgs_C
@@ -504,39 +500,6 @@ lemma invocationCatch_use_injection_handler:
             split: sum.split)
   done
 
-lemma injection_handler_returnOk:
-  "injection_handler injector (returnOk v) = returnOk v"
-  by (simp add: returnOk_liftE injection_liftE)
-
-lemma injection_handler_If:
-  "injection_handler injector (If P a b)
-     = If P (injection_handler injector a)
-            (injection_handler injector b)"
-  by (simp split: if_split)
-
-(* FIXME: duplicated in CSpace_All *)
-lemma injection_handler_liftM:
-  "injection_handler f
-    = liftM (\<lambda>v. case v of Inl ex \<Rightarrow> Inl (f ex) | Inr rv \<Rightarrow> Inr rv)"
-  apply (intro ext, simp add: injection_handler_def liftM_def
-                              handleE'_def)
-  apply (rule bind_apply_cong, rule refl)
-  apply (simp add: throwError_def split: sum.split)
-  done
-
-lemma injection_handler_throwError:
-  "injection_handler f (throwError v) = throwError (f v)"
-  by (simp add: injection_handler_def handleE'_def
-                throwError_bind)
-
-lemma injection_handler_whenE:
-  "injection_handler injf (whenE P f)
-    = whenE P (injection_handler injf f)"
-  by (simp add: whenE_def injection_handler_returnOk split: if_split)
-
-lemmas injection_handler_bindE = injection_bindE [OF refl refl]
-lemmas injection_handler_wp = injection_wp [OF refl]
-
 lemma ccorres_injection_handler_csum1:
   "ccorres (f \<currency> r) xf P P' hs a c
     \<Longrightarrow> ccorres
@@ -786,9 +749,6 @@ lemma capFVMRights_range:
    cap_frame_cap_CL.capFVMRights_CL (cap_frame_cap_lift cap) \<le> 3"
   by (simp add: cap_frame_cap_lift_def
                 cap_lift_def cap_tag_defs word_and_le1 mask_def)+
-
-lemma dumb_bool_for_all: "(\<forall>x. x) = False"
-  by auto
 
 lemma dumb_bool_split_for_vcg:
   "\<lbrace>d \<longrightarrow> \<acute>ret__unsigned_long \<noteq> 0\<rbrace> \<inter> \<lbrace>\<not> d \<longrightarrow> \<acute>ret__unsigned_long = 0\<rbrace>
@@ -1234,23 +1194,23 @@ lemma invocation_eq_use_type:
   "\<lbrakk> value \<equiv> (value' :: 32 signed word);
        unat (scast value' :: machine_word) < length (enum :: invocation_label list); (scast value' :: machine_word) \<noteq> 0 \<rbrakk>
      \<Longrightarrow> (label = (scast value)) = (invocation_type label = enum ! unat (scast value' :: machine_word))"
-  apply (fold invocation_type_eq, unfold invocationType_def)
+  apply (fold invocationType_eq, unfold invocationType_def)
   apply (simp add: maxBound_is_length Let_def toEnum_def
                    nth_eq_iff_index_eq nat_le_Suc_less_imp
             split: if_split)
   apply (intro impI conjI)
    apply (simp add: enum_invocation_label)
-  apply (subgoal_tac "InvalidInvocation = enum ! 0")
+  apply (subgoal_tac "GenInvocationLabel InvalidInvocation = enum ! 0")
    apply (erule ssubst, subst nth_eq_iff_index_eq, simp+)
    apply (clarsimp simp add: unat_eq_0)
-  apply (simp add: enum_invocation_label)
+  apply (simp add: enum_invocation_label enum_gen_invocation_labels)
   done
 
 lemmas all_invocation_label_defs = invocation_label_defs arch_invocation_label_defs sel4_arch_invocation_label_defs
 
 lemmas invocation_eq_use_types
     = all_invocation_label_defs[THEN invocation_eq_use_type, simplified,
-                            unfolded enum_invocation_label enum_arch_invocation_label, simplified]
+                                unfolded enum_invocation_label enum_gen_invocation_labels enum_arch_invocation_label, simplified]
 
 lemma ccorres_equals_throwError:
   "\<lbrakk> f = throwError v; ccorres_underlying sr Gamm rr xf arr axf P P' hs (throwError v) c \<rbrakk>

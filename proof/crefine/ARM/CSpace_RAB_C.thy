@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory CSpace_RAB_C
@@ -555,14 +551,6 @@ lemma cap_rights_to_H_from_word_canon [simp]:
   unfolding cap_rights_from_word_def rightsFromWord_def
   apply (simp add: cap_rights_from_word_canon_def)
   apply (simp add: cap_rights_to_H_def)
-  done
-
-(* MOVE *)
-lemma tcb_aligned':
-  "tcb_at' t s \<Longrightarrow> is_aligned t tcbBlockSizeBits"
-  apply (drule obj_at_aligned')
-   apply (simp add: objBits_simps)
-  apply (simp add: objBits_simps)
   done
 
 abbreviation

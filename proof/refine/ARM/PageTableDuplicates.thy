@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory PageTableDuplicates
@@ -66,22 +62,17 @@ lemma setCTE_valid_duplicates'[wp]:
      apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
   done
 
-crunch valid_duplicates' [wp]: cteInsert "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
-  (wp: crunch_wps)
-
-crunch valid_duplicates'[wp]: setupReplyMaster "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+crunches cteInsert, setupReplyMaster
+  for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma doMachineOp_ksPSpace_inv[wp]:
   "\<lbrace>\<lambda>s. P (ksPSpace s)\<rbrace> doMachineOp f \<lbrace>\<lambda>ya s. P (ksPSpace s)\<rbrace>"
   by (simp add:doMachineOp_def split_def | wp)+
 
-crunch valid_duplicates'[wp]: threadSet, setBoundNotification "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(ignore: getObject setObject wp: setObject_ksInterrupt updateObject_default_inv)
-
-crunch valid_duplicates'[wp]: setExtraBadge "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(ignore: getObject setObject sequenceE
-  wp: setObject_ksInterrupt asUser_inv updateObject_default_inv mapME_wp)
+crunches threadSet, setBoundNotification, setExtraBadge
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  (wp: setObject_ksInterrupt updateObject_default_inv)
 
 lemma transferCapsToSlots_duplicates'[wp]:
  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
@@ -89,25 +80,11 @@ lemma transferCapsToSlots_duplicates'[wp]:
   \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   by (rule transferCapsToSlots_pres1; wp)
 
-crunch valid_duplicates'[wp]: transferCaps "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(ignore: getObject setObject sequenceE simp:unless_def
-  wp: setObject_ksInterrupt asUser_inv updateObject_default_inv mapME_wp)
-
-crunch valid_duplicates'[wp]: sendFaultIPC "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(wp: crunch_wps hoare_vcg_const_Ball_lift get_rs_cte_at' ignore: transferCapsToSlots
-    simp: zipWithM_x_mapM ball_conj_distrib ignore:sequenceE mapME getObject setObject)
-
-crunch valid_duplicates'[wp]: handleFault "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(wp: crunch_wps hoare_vcg_const_Ball_lift get_rs_cte_at' ignore: transferCapsToSlots
-    simp: zipWithM_x_mapM ball_conj_distrib ignore:sequenceE mapME getObject setObject)
-
-crunch valid_duplicates'[wp]: replyFromKernel "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(wp: crunch_wps hoare_vcg_const_Ball_lift get_rs_cte_at' ignore: transferCapsToSlots
-    simp: zipWithM_x_mapM ball_conj_distrib ignore:sequenceE mapME getObject setObject)
-
-crunch valid_duplicates'[wp]: insertNewCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(wp: crunch_wps hoare_vcg_const_Ball_lift get_rs_cte_at' ignore: transferCapsToSlots
-    simp: zipWithM_x_mapM ball_conj_distrib ignore:sequenceE mapME getObject setObject)
+crunches transferCaps, sendFaultIPC, handleFault, replyFromKernel, insertNewCap
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  (ignore: transferCapsToSlots
+       wp: crunch_wps hoare_vcg_const_Ball_lift get_rs_cte_at'
+     simp: zipWithM_x_mapM ball_conj_distrib)
 
 lemma koTypeOf_pte:
   "koTypeOf ko = ArchT PTET \<Longrightarrow> \<exists>pte. ko = KOArch (KOPTE pte)"
@@ -1351,7 +1328,7 @@ crunch arch_inv[wp]: resetUntypedCap "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps
      wp: hoare_drop_imps hoare_unless_wp mapME_x_inv_wp
          preemptionPoint_inv
-    ignore:freeMemory forME_x)
+   ignore: freeMemory)
 
 crunch valid_duplicates[wp]: updateFreeIndex "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
@@ -1536,8 +1513,7 @@ lemma storePTE_no_duplicates':
 
 crunch valid_duplicates'[wp]:
  lookupPTSlot "\<lambda>s. valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps simp: crunch_simps unless_def
-    ignore:getObject updateObject setObject)
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma checkMappingPPtr_SmallPage:
   "\<lbrace>\<top>\<rbrace> checkMappingPPtr word ARMSmallPage (Inl p)
@@ -1576,13 +1552,11 @@ lemma mapM_x_mapM_valid:
 
 crunch valid_duplicates'[wp]:
  flushPage "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps simp: crunch_simps unless_def
-    ignore:getObject updateObject setObject)
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
 crunch valid_duplicates'[wp]:
  findPDForASID "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps simp: crunch_simps unless_def
-    ignore:getObject updateObject setObject)
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma lookupPTSlot_aligned:
   "\<lbrace>\<lambda>s. valid_objs' s \<and> vmsz_aligned' vptr sz \<and> sz \<noteq> ARMSuperSection\<rbrace>
@@ -1611,13 +1585,11 @@ lemma lookupPTSlot_aligned:
 
 crunch valid_arch_state'[wp]:
  flushPage valid_arch_state'
-  (wp: crunch_wps  getHWASID_valid_arch' simp: crunch_simps unless_def
-    ignore:getObject updateObject setObject)
+  (wp: crunch_wps  getHWASID_valid_arch' simp: crunch_simps unless_def)
 
 crunch valid_arch_state'[wp]:
  flushTable "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps simp: crunch_simps unless_def
-    ignore:getObject updateObject setObject)
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma unmapPage_valid_duplicates'[wp]:
   notes checkMappingPPtr_inv[wp del] shows
@@ -1668,18 +1640,15 @@ lemma unmapPage_valid_duplicates'[wp]:
 
 crunch ko_wp_at'[wp]:
  checkPDNotInASIDMap "\<lambda>s. ko_wp_at' P p s"
-  (wp: crunch_wps simp: crunch_simps unless_def
-    ignore:getObject updateObject setObject)
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
 crunch ko_wp_at'[wp]:
  armv_contextSwitch "\<lambda>s. ko_wp_at' P p s"
-  (wp: crunch_wps simp: crunch_simps unless_def
-    ignore:getObject updateObject setObject)
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
 crunch ko_wp_at'[wp]:
  setVMRootForFlush "\<lambda>s. ko_wp_at' P p s"
-  (wp: crunch_wps simp: crunch_simps unless_def
-    ignore:getObject updateObject setObject)
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma unmapPageTable_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
@@ -1703,12 +1672,11 @@ lemma unmapPageTable_valid_duplicates'[wp]:
 
 crunch valid_duplicates'[wp]:
  deleteASID "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps simp: crunch_simps unless_def
-    ignore:getObject updateObject setObject)
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch valid_duplicates'[wp]:
-  deleteASIDPool, unbindNotification, prepareThreadDelete "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps simp: crunch_simps unless_def ignore:getObject setObject)
+crunches deleteASIDPool, unbindNotification, prepareThreadDelete
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma archFinaliseCap_valid_duplicates'[wp]:
   "\<lbrace>valid_objs' and pspace_aligned' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))
@@ -1730,21 +1698,19 @@ lemma finaliseCap_valid_duplicates'[wp]:
 
 crunch valid_duplicates'[wp]:
   capSwapForDelete "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps simp: crunch_simps unless_def ignore:getObject setObject)
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
 crunch valid_duplicates'[wp]:
   cteMove "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps simp: crunch_simps unless_def ignore:getObject setObject)
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
 crunch valid_duplicates'[wp]:
   cancelBadgedSends "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def
-    ignore:getObject setObject)
+  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)
 
 crunch valid_duplicates'[wp]:
   invalidateTLBByASID "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def
-    ignore:getObject setObject)
+  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)
 
 declare withoutPreemption_lift [wp del]
 
@@ -1812,21 +1778,19 @@ lemma mapM_x_storePTE_invalid_whole:
 
 crunch valid_objs'[wp]:
   invalidateTLBByASID valid_objs'
-  (wp: crunch_wps simp: crunch_simps unless_def ignore:getObject setObject)
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
 crunch pspace_aligned'[wp]:
   invalidateTLBByASID pspace_aligned'
-  (wp: crunch_wps simp: crunch_simps unless_def ignore:getObject setObject)
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
 crunch valid_duplicates'[wp]:
   isFinalCapability "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def
-    ignore:getObject setObject)
+  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)
 
 crunch valid_cap'[wp]:
   isFinalCapability "\<lambda>s. valid_cap' cap s"
-  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def
-    ignore:getObject setObject)
+  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)
 
 crunch valid_duplicates'[wp]:
   sendSignal "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
@@ -2065,12 +2029,15 @@ lemma performArchInvocation_valid_duplicates':
   apply (wp | simp)+
   done
 
-crunch valid_duplicates'[wp]: restart "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+crunches restart
+  for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (wp: crunch_wps)
 
-crunch valid_duplicates'[wp]: setPriority, setMCPriority "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
-  (ignore: getObject threadSet wp: setObject_ksInterrupt updateObject_default_inv
-    simp:crunch_simps)
+crunches setPriority, setMCPriority
+  for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+  (ignore: threadSet
+       wp: setObject_ksInterrupt updateObject_default_inv
+     simp: crunch_simps)
 
 crunch inv[wp]: getThreadBufferSlot P
   (wp: crunch_wps)
@@ -2121,13 +2088,10 @@ lemma tc_valid_duplicates':
                         tcbIPCBufferSlot_def)
   by (auto dest!: isCapDs isReplyCapD isValidVTableRootD simp: isCap_simps)
 
-crunch valid_duplicates' [wp]: performTransfer, unbindNotification, bindNotification "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
-  (ignore: getObject threadSet wp: setObject_ksInterrupt updateObject_default_inv
-    simp:crunch_simps)
-
-crunch valid_duplicates' [wp]: setDomain "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
-  (ignore: getObject threadSet wp: setObject_ksInterrupt updateObject_default_inv
-    simp:crunch_simps)
+crunches performTransfer, unbindNotification, bindNotification, setDomain
+  for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+  (ignore: threadSet wp: setObject_ksInterrupt updateObject_default_inv
+     simp: crunch_simps)
 
 
 lemma invokeTCB_valid_duplicates'[wp]:

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory ArchDeterministic_AI
@@ -81,9 +77,9 @@ lemma handle_vm_fault_valid_list[wp, Deterministic_AI_assms]:
   apply (wp|simp)+
   done
 
-lemma vgic_maintenance_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> vgic_maintenance \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  unfolding vgic_maintenance_def by (wpsimp wp: hoare_drop_imps)
+crunches vgic_maintenance, vppi_event
+  for valid_list[wp]: valid_list
+  (wp: hoare_drop_imps)
 
 lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
   "\<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"

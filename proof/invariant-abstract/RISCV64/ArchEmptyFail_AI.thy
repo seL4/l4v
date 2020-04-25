@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory ArchEmptyFail_AI
@@ -46,7 +42,8 @@ crunch (empty_fail) empty_fail[wp]:
 
 lemma decode_tcb_invocation_empty_fail[wp]:
   "empty_fail (decode_tcb_invocation a b (ThreadCap p) d e)"
-  by (simp add: decode_tcb_invocation_def split: invocation_label.splits | wp | intro conjI impI)+
+  by (simp add: decode_tcb_invocation_def split: gen_invocation_labels.splits invocation_label.splits
+      | wp | intro conjI impI)+
 
 crunch (empty_fail) empty_fail[wp]: find_vspace_for_asid, check_vp_alignment, check_slot
 

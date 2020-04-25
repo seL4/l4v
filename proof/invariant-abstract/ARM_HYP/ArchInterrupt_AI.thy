@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory ArchInterrupt_AI
@@ -73,15 +69,7 @@ lemma is_derived_use_interrupt_ARCH[Interrupt_AI_asms]:
   apply (simp add: is_cap_simps is_pt_cap_def vs_cap_ref_def)
   done
 
-lemma maskInterrupt_invs_ARCH[Interrupt_AI_asms]:
-  "\<lbrace>invs and (\<lambda>s. \<not>b \<longrightarrow> interrupt_states s irq \<noteq> IRQInactive)\<rbrace>
-   do_machine_op (maskInterrupt b irq)
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
-   apply (simp add: do_machine_op_def split_def maskInterrupt_def)
-   apply wp
-   apply (clarsimp simp: in_monad invs_def valid_state_def all_invs_but_valid_irq_states_for_def
-     valid_irq_states_but_def valid_irq_masks_but_def valid_machine_state_def cur_tcb_def valid_irq_states_def valid_irq_masks_def)
-  done
+lemmas maskInterrupt_invs_ARCH[Interrupt_AI_asms] = maskInterrupt_invs
 
 lemma no_cap_to_obj_with_diff_IRQHandler_ARCH[Interrupt_AI_asms]:
   "no_cap_to_obj_with_diff_ref (IRQHandlerCap irq) S = \<top>"
@@ -228,15 +216,32 @@ lemma vgic_maintenance_invs[wp]:
   unfolding vgic_maintenance_def
   supply if_split[split del] valid_fault_def[simp]
   apply (wpsimp simp: get_gic_vcpu_ctrl_misr_def get_gic_vcpu_ctrl_eisr1_def
-                      get_gic_vcpu_ctrl_eisr0_def
-                 wp: thread_get_wp'
-         | rule hoare_vcg_conj_lift hoare_lift_Pf[where f=cur_thread and m="vgic_update_lr p i v" for p i v]
+                      get_gic_vcpu_ctrl_eisr0_def if_apply_def2
+                 wp: thread_get_wp' hoare_vcg_imp_lift' gts_wp hoare_vcg_all_lift
+         | wps
          | wp (once) hoare_drop_imp[where f="do_machine_op m" for m]
                    hoare_drop_imp[where f="return $ m" for m]
-         | clarsimp simp: if_apply_def2
-         | wp (once) hoare_vcg_imp_lift')+
+         | strengthen not_pred_tcb_at_strengthen
+         | wp (once) hoare_vcg_imp_lift' gts_wp)+
+  apply (frule tcb_at_invs)
+  apply (clarsimp simp: runnable_eq halted_eq not_pred_tcb)
   apply (fastforce intro!: st_tcb_ex_cap[where P=active]
-                     simp: st_tcb_at_def obj_at_def runnable_eq halted_eq)+
+                   simp: not_pred_tcb st_tcb_at_def obj_at_def halted_eq)
+  done
+
+lemma vppi_event_invs[wp]:
+  "\<lbrace>invs\<rbrace> vppi_event irq \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding vppi_event_def
+  supply if_split[split del] valid_fault_def[simp]
+  apply (wpsimp simp: if_apply_def2
+                wp: hoare_vcg_imp_lift' gts_wp hoare_vcg_all_lift maskInterrupt_invs
+                cong: vcpu.fold_congs
+         | wps
+         | strengthen not_pred_tcb_at_strengthen)+
+  apply (frule tcb_at_invs)
+  apply (clarsimp simp: runnable_eq halted_eq not_pred_tcb)
+  apply (fastforce intro!: st_tcb_ex_cap[where P=active]
+                   simp: not_pred_tcb st_tcb_at_def obj_at_def halted_eq)
   done
 
 lemma handle_reserved_irq_invs[wp]:

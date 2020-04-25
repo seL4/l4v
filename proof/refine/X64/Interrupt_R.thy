@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -109,9 +105,10 @@ lemma decode_irq_handler_corres:
   apply (simp add: decode_irq_handler_invocation_def decodeIRQHandlerInvocation_def
                  split del: if_split)
   apply (cases caps)
-   apply (simp add: returnOk_def split: invocation_label.split list.splits split del: if_split)
+   apply (simp add: returnOk_def split: invocation_label.split gen_invocation_labels.split list.splits split del: if_split)
+   defer
   apply (clarsimp simp: list_all2_Cons1 split del: if_split)
-  apply (simp add: returnOk_def split: invocation_label.split list.splits)
+  apply (simp add: returnOk_def split: invocation_label.split gen_invocation_labels.split list.splits)
   apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm simp: returnOk_def)
   done
 
@@ -175,6 +172,30 @@ lemma unat_ucast_ucast_shenanigans[simp]:
   apply (simp add: ucast_ucast_mask mask_def)
    by (word_bitwise, auto)
 
+lemma toEnum_unat_ucast_helper_64_8:
+  "unat yf \<le> 107 \<Longrightarrow> toEnum (unat (UCAST(64 \<rightarrow> 8) yf) + 16) = UCAST(64 \<rightarrow> 8) yf + 16"
+  apply (subgoal_tac "unat (UCAST (64 \<rightarrow> 8) yf) = unat yf")
+  apply (subst unat_ucast)
+  apply (simp add: ucast_nat_def)
+  apply (subst unat_ucast)
+  apply simp
+  done
+
+lemma toEnum_unat_ucast'_helper_64_8:
+  "unat yf \<le> 107 \<Longrightarrow> toEnum (16 + unat (UCAST(64 \<rightarrow> 8) yf)) = 16 + UCAST(64 \<rightarrow> 8) yf"
+  apply (subst add.commute)
+  apply (subst add.commute[where a="0x10"])
+  using toEnum_unat_ucast_helper_64_8
+  apply simp
+  done
+
+lemma unat_add_ucast_helper:
+  "unat xm \<le> 107 \<Longrightarrow> unat (0x10 + UCAST(64 \<rightarrow> 8) xm) \<le> 125"
+  apply (subgoal_tac "unat (UCAST(64 \<rightarrow> 8) xm) = unat xm")
+   apply (rule le_trans, rule unat_plus_gt, simp)
+  apply (simp add: unat_ucast)
+  done
+
 lemmas irq_const_defs =
   maxIRQ_def minIRQ_def
   X64.maxUserIRQ_def X64.minUserIRQ_def X64_H.maxUserIRQ_def X64_H.minUserIRQ_def
@@ -206,7 +227,7 @@ lemma arch_decode_irq_control_corres:
     apply (simp add: irq_const_defs)
    apply (simp add: linorder_not_less )
    apply (simp add: irq_const_defs word_le_nat_alt ucast_id)
-   apply (simp add: ucast_nat_def Groups.ab_semigroup_add_class.add.commute)
+   apply (simp add: ucast_nat_def Groups.ab_semigroup_add_class.add.commute toEnum_unat_ucast_helper_64_8)
    apply (rule corres_split_eqr[OF _ is_irq_active_corres])
      apply (rule whenE_throwError_corres, simp, simp)
      apply (rule corres_splitEE[OF _ lsfc_corres])
@@ -225,7 +246,7 @@ lemma arch_decode_irq_control_corres:
     apply (simp add: irq_const_defs)
    apply (simp add: linorder_not_less )
    apply (simp add: irq_const_defs word_le_nat_alt ucast_id)
-   apply (simp add: ucast_nat_def add.commute)
+   apply (simp add: ucast_nat_def add.commute toEnum_unat_ucast_helper_64_8)
    apply (rule corres_split_eqr[OF _ is_irq_active_corres])
      apply (rule whenE_throwError_corres, simp, simp)
      apply (rule corres_splitEE[OF _ lsfc_corres])
@@ -241,8 +262,9 @@ lemma arch_decode_irq_control_corres:
 
 
 lemma irqhandler_simp[simp]:
-  "invocation_type label \<noteq> IRQIssueIRQHandler \<Longrightarrow> (case invocation_type label of IRQIssueIRQHandler \<Rightarrow> b | _ \<Rightarrow> c) = c"
-  by (clarsimp split: invocation_label.splits)
+  "gen_invocation_type label \<noteq> IRQIssueIRQHandler \<Longrightarrow>
+   (case gen_invocation_type label of IRQIssueIRQHandler \<Rightarrow> b | _ \<Rightarrow> c) = c"
+  by (clarsimp split: gen_invocation_labels.splits)
 
 lemma decode_irq_control_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
@@ -301,7 +323,8 @@ lemma arch_decode_irq_control_valid'[wp]:
           | wp whenE_throwError_wp isIRQActive_wp ensureEmptySlot_stronger
           | wpc
           | wp (once) hoare_drop_imps)+
-  apply (fastforce simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt)
+  apply (clarsimp simp add: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt toEnum_unat_ucast_helper_64_8)
+  apply (fastforce simp add: toEnum_unat_ucast'_helper_64_8 unat_add_ucast_helper)+
   done
 
 lemma decode_irq_control_valid'[wp]:
@@ -313,7 +336,7 @@ lemma decode_irq_control_valid'[wp]:
   apply (simp add: decodeIRQControlInvocation_def Let_def split_def checkIRQ_def
                    rangeCheck_def unlessE_whenE
                 split del: if_split cong: if_cong list.case_cong
-                                          invocation_label.case_cong)
+                                          gen_invocation_labels.case_cong)
   apply (rule hoare_pre)
    apply (wp ensureEmptySlot_stronger isIRQActive_wp
              whenE_throwError_wp
@@ -447,10 +470,6 @@ lemma valid_mdb_interrupts'[simp]:
 crunch valid_mdb'[wp]: setIRQState "valid_mdb'"
 crunch cte_wp_at[wp]: setIRQState "cte_wp_at' P p"
 
-(* FIXME x64: move *)
-lemma no_fail_ioapicMapPinToVector[wp]: "no_fail \<top> (ioapicMapPinToVector a b c d e) "
-  by (simp add: ioapicMapPinToVector_def)
-
 method do_machine_op_corres
   = (rule corres_machine_op, rule corres_Id, rule refl, simp)
 
@@ -582,11 +601,6 @@ lemma updateIRQState_invs'[wp]:
                          valid_ioports'_def all_ioports_issued'_def issued_ioports'_def
                          Word_Lemmas.word_not_le[symmetric])
   done
-
-(* FIXME x64: move*)
-lemma no_irq_ioapicMapPinToVector[wp]:
-  "no_irq (ioapicMapPinToVector a b c d e)"
-  by (simp add: ioapicMapPinToVector_def)
 
 lemma dmo_ioapicMapPinToVector_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (ioapicMapPinToVector a b c d e) \<lbrace>\<lambda>_. invs'\<rbrace>"

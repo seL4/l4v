@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  *)
 
 theory Corres_UL
@@ -895,6 +891,12 @@ lemma corres_cases:
   "\<lbrakk> R \<Longrightarrow> corres_underlying sr nf nf' r P P' f g; \<not>R \<Longrightarrow> corres_underlying sr nf nf' r Q Q' f g \<rbrakk>
   \<Longrightarrow> corres_underlying sr nf nf' r (P and Q) (P' and Q') f g"
   by (simp add: corres_underlying_def) blast
+
+lemma corres_cases':
+  "\<lbrakk> R \<Longrightarrow> corres_underlying sr nf nf' r P P' f g; \<not>R \<Longrightarrow> corres_underlying sr nf nf' r Q Q' f g \<rbrakk>
+  \<Longrightarrow> corres_underlying sr nf nf' r (\<lambda>s. (R \<longrightarrow> P s) \<and> (\<not>R \<longrightarrow> Q s))
+                                   (\<lambda>s. (R \<longrightarrow> P' s) \<and> (\<not>R \<longrightarrow> Q' s)) f g"
+  by (cases R; simp)
 
 lemma corres_alternate1:
   "corres_underlying sr nf nf' r P P' a c \<Longrightarrow> corres_underlying sr nf nf' r P P' (a OR b) c"

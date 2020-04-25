@@ -1,0 +1,58 @@
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+name: Style
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  style:
+    name: Check Style
+    runs-on: ubuntu-latest
+    env:
+      full_name: ${{ github.repository }}
+    steps:
+    - name: Set env
+      run:
+        echo ::set-env name=repo_name::$(echo ${full_name##*/})
+    - uses: actions/checkout@v2
+      with:
+        path: ${{ env.repo_name }}
+    - uses: actions/checkout@v2
+      with:
+        repository: seL4/sel4_tools
+        path: sel4_tools
+    - uses: actions/setup-python@v1
+      with:
+        python-version: '3.7'
+    - name: Install python packages
+      run: pip install cmake_format==0.4.5 guardonce autopep8
+    - name: Install astyle
+      run: sudo apt-get install astyle
+    - name: Run style check
+      run: |
+        cd ${{ env.repo_name }}
+        ../sel4_tools/misc/style-all.sh
+        [ -z "$(git status --porcelain)" ] || (git diff; exit 1)
+
+  shell:
+    name: Check shell scripts
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: technote-space/get-diff-action@v1
+    - uses: actions/checkout@v2
+      with:
+        repository: seL4/sel4_tools
+        path: sel4_tools
+    - name: Install
+      run: sudo apt-get install devscripts
+    - name: Run shell script check
+      run: |
+        sel4_tools/misc/is-valid-shell-script ${{ env.GIT_DIFF }}

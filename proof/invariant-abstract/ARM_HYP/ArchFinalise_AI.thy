@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory ArchFinalise_AI
@@ -220,7 +216,7 @@ lemma set_vcpu_tcb_at_arch: (* generalise? this holds except when the ko is a vc
   by (wp set_vcpu_nonvcpu_at; auto)
 
 crunch tcb_at_arch: vcpu_switch "\<lambda>s. P (ko_at (TCB tcb) t s)"
-    (simp: crunch_simps ko_at_vcpu_helper when_def
+    (simp: crunch_simps when_def
        wp: crunch_wps set_vcpu_tcb_at_arch)
 
 crunch tcb_at_arch: unmap_page "\<lambda>s. P (ko_at (TCB tcb) t s)"
@@ -712,8 +708,25 @@ lemma vcpu_save_reg_sym_refs_hyp[wp]:
   by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift)
      (simp add: obj_at_def)
 
-crunches vcpu_disable, vcpu_invalidate_active
+lemma vcpu_update_regs_sym_refs_hyp[wp]:
+  "vcpu_update vcpu_ptr (vcpu_regs_update f) \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vcpu_update_def
+  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp)
+     (simp add: obj_at_def)
+
+lemma vcpu_write_reg_sym_refs_hyp[wp]:
+  "vcpu_write_reg vcpu_ptr reg val \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vcpu_write_reg_def by (wpsimp cong: vcpu.fold_congs)
+
+lemma vcpu_update_vtimer_sym_refs_hyp[wp]:
+  "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vcpu_update_def
+  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp)
+     (simp add: obj_at_def)
+
+crunches save_virt_timer, vcpu_disable, vcpu_invalidate_active
   for sym_refs_hyp[wp]: "\<lambda>s. sym_refs (state_hyp_refs_of s)"
+  (ignore: vcpu_update)
 
 lemma vcpu_invalidate_tcbs_inv[wp]:
   "\<lbrace>obj_at (\<lambda>tcb. \<exists>t'. tcb = TCB t' \<and> P t') t\<rbrace>
@@ -873,8 +886,25 @@ lemma vcpu_save_reg_if_live_then_nonz_cap[wp]:
   apply (simp add: obj_at_def)
   done
 
+lemma vcpu_update_regs_if_live_then_nonz_cap[wp]:
+  "vcpu_update vcpu_ptr (vcpu_regs_update f) \<lbrace>if_live_then_nonz_cap\<rbrace>"
+  unfolding vcpu_update_def
+  by (wpsimp wp: set_vcpu_if_live_then_nonz_cap_same_refs get_vcpu_wp)
+     (simp add: obj_at_def)
+
+lemma vcpu_write_if_live_then_nonz_cap[wp]:
+  "vcpu_write_reg vcpu_ptr reg val \<lbrace>if_live_then_nonz_cap\<rbrace>"
+  unfolding vcpu_write_reg_def by (wpsimp cong: vcpu.fold_congs)
+
+lemma vcpu_update_vtimer_if_live_then_nonz_cap[wp]:
+  "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace>if_live_then_nonz_cap\<rbrace>"
+  unfolding vcpu_update_def
+  by (wpsimp wp: set_vcpu_if_live_then_nonz_cap_same_refs get_vcpu_wp)
+     (simp add: obj_at_def)
+
 crunches vcpu_disable, vcpu_invalidate_active
   for if_live_then_nonz_cap[wp]: if_live_then_nonz_cap
+  (ignore: vcpu_update)
 
 lemma dissociate_vcpu_tcb_if_live_then_nonz_cap[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace> dissociate_vcpu_tcb vr t \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
@@ -892,9 +922,11 @@ lemma same_caps_tcb_arch_update[simp]:
   "same_caps (TCB (tcb_arch_update f tcb)) = same_caps (TCB tcb)"
   by (rule ext) (clarsimp simp: tcb_cap_cases_def)
 
-crunch cap_refs_respects_device_region[wp]: dissociate_vcpu_tcb "cap_refs_respects_device_region"
+crunches dissociate_vcpu_tcb
+  for cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
   (wp: crunch_wps cap_refs_respects_device_region_dmo
-      simp: crunch_simps ignore: do_machine_op)
+   simp: crunch_simps read_cntpct_def get_cntv_off_64_def get_cntv_cval_64_def maskInterrupt_def
+   ignore: do_machine_op)
 
 crunch pspace_respects_device_region[wp]: dissociate_vcpu_tcb "pspace_respects_device_region"
   (wp: crunch_wps)
@@ -950,30 +982,42 @@ lemma dmo_machine_state_lift:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. Q rv (machine_state s)\<rbrace>"
   unfolding do_machine_op_def by wpsimp (erule use_valid; assumption)
 
+lemma dmo_maskInterrupt_True_valid_irq_states[wp]:
+  "do_machine_op (maskInterrupt True irq) \<lbrace>valid_irq_states\<rbrace>"
+  unfolding valid_irq_states_def do_machine_op_def maskInterrupt_def
+  apply wpsimp
+  apply (erule use_valid)
+   apply (wpsimp simp: valid_irq_masks_def)+
+  done
+
 crunches vcpu_save_reg, vgic_update, vcpu_disable
   for valid_irq_states[wp]: valid_irq_states
   and in_user_frame[wp]: "in_user_frame p"
-  (wp: dmo_valid_irq_states
+  (wp: dmo_maskInterrupt_True_valid_irq_states dmo_valid_irq_states
    simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
-         get_gic_vcpu_ctrl_hcr_def dsb_def readVCPUHardwareReg_def writeVCPUHardwareReg_def)
+         get_gic_vcpu_ctrl_hcr_def dsb_def readVCPUHardwareReg_def writeVCPUHardwareReg_def
+         read_cntpct_def get_cntv_off_64_def get_cntv_cval_64_def maskInterrupt_def)
 
-crunches vgic_update, vcpu_update
-  for valid_machine_state[wp]: valid_machine_state
+lemma dmo_writeVCPUHardwareReg_valid_machine_state[wp]:
+  "do_machine_op (writeVCPUHardwareReg r v) \<lbrace>valid_machine_state\<rbrace>"
+  unfolding valid_machine_state_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift writeVCPUHardwareReg_underlying_memory
+                 dmo_machine_state_lift)
+
+crunches vgic_update, vcpu_update, vcpu_write_reg, vcpu_save_reg, save_virt_timer
+  for in_user_frame[wp]: "in_user_frame p"
+  and valid_machine_state[wp]: valid_machine_state
   and underlying_memory[wp]: "\<lambda>s. P (underlying_memory (machine_state s))"
-
-lemma vcpu_save_reg_underlying_memory[wp]:
-  "\<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace>
-   vcpu_save_reg vcpuptr r
-   \<lbrace>\<lambda>_ s. P (underlying_memory (machine_state s))\<rbrace>"
-  unfolding vcpu_save_reg_def
-  by (wpsimp simp: readVCPUHardwareReg_def)
+  (simp: readVCPUHardwareReg_def read_cntpct_def get_cntv_off_64_def get_cntv_cval_64_def
+   wp: writeVCPUHardwareReg_underlying_memory_pred dmo_machine_state_lift
+   ignore: do_machine_op)
 
 lemma vcpu_disable_valid_machine_state[wp]:
   "\<lbrace>valid_machine_state\<rbrace> vcpu_disable vcpu_opt \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   unfolding vcpu_disable_def valid_machine_state_def
   by (wpsimp wp: dmo_machine_state_lift hoare_vcg_all_lift hoare_vcg_disj_lift
              simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
-                   get_gic_vcpu_ctrl_hcr_def dsb_def writeVCPUHardwareReg_def)
+                   get_gic_vcpu_ctrl_hcr_def dsb_def writeVCPUHardwareReg_def maskInterrupt_def)
 
 lemma valid_arch_state_vcpu_update_str:
   "valid_arch_state s \<Longrightarrow> valid_arch_state (s\<lparr>arch_state := arm_current_vcpu_update Map.empty (arch_state s)\<rparr>)"

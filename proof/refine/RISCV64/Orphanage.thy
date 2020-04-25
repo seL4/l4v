@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Orphanage
@@ -1289,8 +1285,9 @@ lemma setupCallerCap_almost_no_orphans [wp]:
          | clarsimp simp: is_active_thread_state_def isRestart_def isRunning_def)+
   done
 
-crunch no_orphans [wp]: doIPCTransfer, setMRs "no_orphans"
-(wp: no_orphans_lift)
+crunches doIPCTransfer, setMRs
+  for no_orphans [wp]: "no_orphans"
+  (wp: no_orphans_lift)
 
 crunch ksQ'[wp]: setEndpoint "\<lambda>s. P (ksReadyQueues s)"
   (wp: setObject_queues_unchanged_tcb updateObject_default_inv)
@@ -1754,9 +1751,10 @@ lemma storePTE_no_orphans [wp]:
   done
 
 crunch no_orphans [wp]: unmapPage "no_orphans"
-(wp: crunch_wps ignore: getObject)
+  (wp: crunch_wps)
 
-crunch no_orphans [wp]: unmapPageTable, prepareThreadDelete "no_orphans"
+crunches unmapPageTable, prepareThreadDelete
+  for no_orphans [wp]: "no_orphans"
   (wp: lookupPTSlotFromLevel_inv)
 
 lemma setASIDPool_no_orphans [wp]:
@@ -2311,7 +2309,8 @@ notes if_cong[cong] shows
      apply (wp | clarsimp | fastforce)+
   done
 
-crunch invs' [wp]: getThreadCallerSlot, handleHypervisorFault "invs'"
+crunches getThreadCallerSlot, handleHypervisorFault
+  for invs' [wp]: "invs'"
 
 lemma handleReply_no_orphans [wp]:
   "\<lbrace>no_orphans and invs'\<rbrace> handleReply \<lbrace>\<lambda>_. no_orphans\<rbrace>"
@@ -2350,9 +2349,6 @@ lemma sts_tcb_at'_preserve':
   setThreadState st t'
   \<lbrace>\<lambda>_. st_tcb_at' P t \<rbrace>"
   by (wpsimp wp: sts_st_tcb' simp: st_tcb_at_neg')
-
-(* FIXME move to where disj_imp lives *)
-lemma disj_imp': "(P \<or> Q) = (\<not>Q \<longrightarrow> P)" by blast
 
 lemma handleEvent_no_orphans [wp]:
   "\<lbrace> \<lambda>s. invs' s \<and>

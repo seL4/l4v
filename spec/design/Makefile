@@ -1,11 +1,7 @@
 #
-#  Copyright 2017, Data61, CSIRO
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
-#  This software may be distributed and modified according to the terms of
-#  the GNU General Public License version 2. Note that NO WARRANTY is provided.
-#  See "LICENSE_GPLv2.txt" for details.
-#
-#  @TAG(DATA61_GPL)
+# SPDX-License-Identifier: GPL-2.0-only
 #
 
 
@@ -16,7 +12,7 @@ MAKEFILE_PATH := $(dir $(lastword $(MAKEFILE_LIST)))
 L4V_REPO_PATH := $(realpath $(MAKEFILE_PATH)../..)
 SKEL_PATH     := ${L4V_REPO_PATH}/spec/design/skel
 MSKEL_PATH    := ${L4V_REPO_PATH}/spec/design/m-skel
-HASKELL_PATH  := ${L4V_REPO_PATH}/spec/haskell
+HASKELL_PATH  := ${L4V_REPO_PATH}/spec/haskell/src
 MACHINE_PATH  := ${L4V_REPO_PATH}/spec/machine
 TRANS_PATH    := ${L4V_REPO_PATH}/tools/haskell-translator
 

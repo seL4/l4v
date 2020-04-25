@@ -1,11 +1,7 @@
 %
 % Copyright 2014, General Dynamics C4 Systems
 %
-% This software may be distributed and modified according to the terms of
-% the GNU General Public License version 2. Note that NO WARRANTY is provided.
-% See "LICENSE_GPLv2.txt" for details.
-%
-% @TAG(GD_GPL)
+% SPDX-License-Identifier: GPL-2.0-only
 %
 
 This module defines the behavior of untyped objects.
@@ -62,7 +58,7 @@ The expected parameters are the type of the new objects, the size of the request
 
 The only supported operation on Untyped capabilities is Retype.
 
->     unless (invocationType label == UntypedRetype) $ throw IllegalOperation
+>     unless (genInvocationType label == UntypedRetype) $ throw IllegalOperation
 
 The first argument must be a valid object type.
 
@@ -167,7 +163,7 @@ Align up the free region pointer to ensure that created objects are aligned to t
 >         retypeIsDevice = isDevice }
 
 > decodeUntypedInvocation label _ _ _ _ = throw $
->     if invocationType label == UntypedRetype
+>     if genInvocationType label == UntypedRetype
 >         then TruncatedMessage
 >         else IllegalOperation
 

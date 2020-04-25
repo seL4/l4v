@@ -1,11 +1,7 @@
 %
 % Copyright 2014, General Dynamics C4 Systems
 %
-% This software may be distributed and modified according to the terms of
-% the GNU General Public License version 2. Note that NO WARRANTY is provided.
-% See "LICENSE_GPLv2.txt" for details.
-%
-% @TAG(GD_GPL)
+% SPDX-License-Identifier: GPL-2.0-only
 %
 
 This module defines the types and functions related to the kernel
@@ -62,7 +58,7 @@ The following function decodes a CNode invocation message, and checks for any er
 
 The first check is that the invocation type requested is a CNode operation.
 
->     let inv = invocationType label
+>     let inv = genInvocationType label
 >     unless (inv `elem` [CNodeRevoke .. CNodeSaveCaller]) $
 >         throw IllegalOperation
 
@@ -189,7 +185,7 @@ Otherwise, the message was too short.
 >         _ -> throw TruncatedMessage
 
 > decodeCNodeInvocation label _ (CNodeCap {}) _
->     = throw $ if invocationType label `elem` [CNodeRevoke .. CNodeSaveCaller]
+>     = throw $ if genInvocationType label `elem` [CNodeRevoke .. CNodeSaveCaller]
 >         then TruncatedMessage
 >         else IllegalOperation
 

@@ -1,12 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
-# Copyright 2014, NICTA
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
-# This software may be distributed and modified according to the terms of
-# the BSD 2-Clause license. Note that NO WARRANTY is provided.
-# See "LICENSE_BSD2.txt" for details.
-#
-# @TAG(NICTA_BSD)
+# SPDX-License-Identifier: BSD-2-Clause
 #
 
 import argparse
@@ -21,6 +17,8 @@ import tempfile
 import time
 
 # Create a temporary directory
+
+
 class TempDir():
     def __init__(self, cleanup=True):
         self.cleanup = cleanup
@@ -34,6 +32,7 @@ class TempDir():
             shutil.rmtree(self.filename)
         return False
 
+
 def mkdir_p(path):
     try:
         os.makedirs(path)
@@ -43,6 +42,7 @@ def mkdir_p(path):
         else:
             raise
 
+
 def rglob(base_path, pattern):
     """Recursively find files matching glob pattern 'pattern', from base
     directory 'base_path'."""
@@ -51,6 +51,7 @@ def rglob(base_path, pattern):
         for filename in fnmatch.filter(filenames, pattern):
             results.append(os.path.join(root, filename))
     return results
+
 
 def read_manifest(filename, base):
     """Read the files described in a MANIFEST file, which has the form:
@@ -77,6 +78,7 @@ def read_manifest(filename, base):
                 results += [(base_dir, x) for x in g]
     return results
 
+
 def copy_manifest(output_dir, manifest_file, manifest_base, target):
     """
     Given a manifest file "manifest_file" and a base directory "manifest_base"
@@ -99,30 +101,31 @@ def copy_manifest(output_dir, manifest_file, manifest_base, target):
             shutil.copyfile(src, dst)
     return all_files
 
+
 # Check usage.
 parser = argparse.ArgumentParser(
-        description='Generate autocorres release tarball.')
+    description='Generate autocorres release tarball.')
 parser.add_argument('version', metavar='VERSION',
-        type=str, help='Version number of the release, such as "0.95-beta1".')
+                    type=str, help='Version number of the release, such as "0.95-beta1".')
 parser.add_argument('cparser_tar', metavar='CPARSER_RELEASE',
-        type=str, help='Tarball to the C parser release.')
+                    type=str, help='Tarball to the C parser release.')
 parser.add_argument('isabelle_tar', metavar='ISABELLE_TARBALL',
-        type=str, help='Tarball to the official Isabelle release')
+                    type=str, help='Tarball to the official Isabelle release')
 parser.add_argument('-b', '--browse', action='store_true',
-        help='Open shell to browse output prior to tar\'ing.')
+                    help='Open shell to browse output prior to tar\'ing.')
 parser.add_argument('-o', '--output', metavar='FILENAME',
-        default=None, help='Output filename. Defaults to "autocorres-<VERSION>.tar.gz".')
+                    default=None, help='Output filename. Defaults to "autocorres-<VERSION>.tar.gz".')
 parser.add_argument('--dry-run', action='store_true',
-        help='Do not output any files.', default=False)
+                    help='Do not output any files.', default=False)
 parser.add_argument('-t', '--test', action='store_true', default=False,
-        help='Test the archive.')
+                    help='Test the archive.')
 parser.add_argument('--no-cleanup', action='store_true',
-        help='Don''t delete temporary directories.', default=False)
+                    help='Don''t delete temporary directories.', default=False)
 parser.add_argument('-r', '--repository', metavar='REPO',
-        type=str, help='Path to the L4.verified repository base.', default=None)
+                    type=str, help='Path to the L4.verified repository base.', default=None)
 parser.add_argument('--archs', metavar='ARCH,...',
-        type=str, default='ARM,ARM_HYP,X64',
-        help='L4V_ARCHs to include (comma-separated)')
+                    type=str, default='ARM,ARM_HYP,X64',
+                    help='L4V_ARCHs to include (comma-separated)')
 args = parser.parse_args()
 
 args.archs = args.archs.split(',')
@@ -195,29 +198,29 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
 
     # Copy various other files.
     shutil.copyfile(
-            os.path.join(args.repository, 'lib', 'Word_Lib', 'ROOT'),
-            os.path.join(target_dir, 'lib', 'Word_Lib', 'ROOT'))
+        os.path.join(args.repository, 'lib', 'Word_Lib', 'ROOT'),
+        os.path.join(target_dir, 'lib', 'Word_Lib', 'ROOT'))
     shutil.copyfile(
-            os.path.join(release_files_dir, "ROOT.release"),
-            os.path.join(target_dir, "autocorres", "ROOT"))
+        os.path.join(release_files_dir, "ROOT.release"),
+        os.path.join(target_dir, "autocorres", "ROOT"))
     shutil.copyfile(
-            os.path.join(release_files_dir, "ROOTS.base_dir"),
-            os.path.join(target_dir, "ROOTS"))
+        os.path.join(release_files_dir, "ROOTS.base_dir"),
+        os.path.join(target_dir, "ROOTS"))
     for i in ["README", "ChangeLog"]:
         shutil.copyfile(
-                os.path.join(release_files_dir, i),
-                os.path.join(target_dir, i))
+            os.path.join(release_files_dir, i),
+            os.path.join(target_dir, i))
     shutil.copyfile(
-            os.path.join(release_files_dir, "CONTRIBUTORS"),
-            os.path.join(target_dir, "autocorres", "CONTRIBUTORS"))
+        os.path.join(release_files_dir, "CONTRIBUTORS"),
+        os.path.join(target_dir, "autocorres", "CONTRIBUTORS"))
 
     # License files.
     shutil.copyfile(
-            os.path.join(args.repository, "LICENSE_BSD2.txt"),
-            os.path.join(target_dir, "LICENSE_BSD2.txt"))
+        os.path.join(args.repository, "LICENSE_BSD2.txt"),
+        os.path.join(target_dir, "LICENSE_BSD2.txt"))
     shutil.copyfile(
-            os.path.join(args.repository, "LICENSE_GPLv2.txt"),
-            os.path.join(target_dir, "LICENSE_GPLv2.txt"))
+        os.path.join(args.repository, "LICENSE_GPLv2.txt"),
+        os.path.join(target_dir, "LICENSE_GPLv2.txt"))
 
     # Extract dependent sessions in lib. FIXME: rather kludgy
     print('Extracting sessions from lib/ROOT...')
@@ -270,7 +273,7 @@ end
             '''.strip() % (base_name,
                            os.path.basename(c_file),
                            os.path.basename(c_file)
-            ))
+                           ))
 
     for f in glob.glob(os.path.join(target_dir, "autocorres", "tests", "parse-tests", "*.c")):
         gen_thy_file(f)
@@ -281,7 +284,7 @@ end
         "-i", os.path.join(target_dir, "autocorres", "tests", "parse-tests"),
         "-i", os.path.join(target_dir, "autocorres", "tests", "proof-tests"),
         "-i", os.path.join(target_dir, "autocorres", "tests", "examples"),
-        ])
+    ])
 
     # Update include paths: change "../../lib" to "../lib".
     def inplace_replace_string(filename, old_string, new_string):
@@ -299,14 +302,19 @@ end
     print("Extracting C parser...")
     # We want to mix the C parser directory structure around a little.
     with TempDir() as c_parser_working_dir:
-        subprocess.check_call(["tar", "-xz", "-C", c_parser_working_dir, "--strip-components=1", "-f", args.cparser_tar])
+        subprocess.check_call(["tar", "-xz", "-C", c_parser_working_dir,
+                               "--strip-components=1", "-f", args.cparser_tar])
         # The C parser uses mllex and mlyacc to generate its grammar. We build
         # the grammar files so that our release won't have a dependency on mlton.
         print("Generating C parser grammar files...")
-        subprocess.check_call(['make', 'c-parser-deps'], cwd=os.path.join(c_parser_working_dir, "src", "c-parser"))
-        shutil.move(os.path.join(c_parser_working_dir, "src", "c-parser"), os.path.join(target_dir, "c-parser"))
-        shutil.move(os.path.join(c_parser_working_dir, "README.md"), os.path.join(target_dir, "c-parser", "README.md"))
-        shutil.move(os.path.join(c_parser_working_dir, "doc", "ctranslation.pdf"), os.path.join(target_dir, "c-parser", "doc", "ctranslation.pdf"))
+        subprocess.check_call(['make', 'c-parser-deps'],
+                              cwd=os.path.join(c_parser_working_dir, "src", "c-parser"))
+        shutil.move(os.path.join(c_parser_working_dir, "src", "c-parser"),
+                    os.path.join(target_dir, "c-parser"))
+        shutil.move(os.path.join(c_parser_working_dir, "README.md"),
+                    os.path.join(target_dir, "c-parser", "README.md"))
+        shutil.move(os.path.join(c_parser_working_dir, "doc", "ctranslation.pdf"),
+                    os.path.join(target_dir, "c-parser", "doc", "ctranslation.pdf"))
 
     # Double-check our theory dependencies.
     if os.path.exists(thydeps_tool):
@@ -349,7 +357,8 @@ end
     print("Extracting Isabelle...")
     base_isabelle_dir = os.path.join(base_dir, "isabelle")
     mkdir_p(base_isabelle_dir)
-    subprocess.check_call(["tar", "-xz", "-C", base_isabelle_dir, "--strip-components=1", "-f", args.isabelle_tar])
+    subprocess.check_call(["tar", "-xz", "-C", base_isabelle_dir,
+                           "--strip-components=1", "-f", args.isabelle_tar])
     base_isabelle_bin = os.path.join(base_isabelle_dir, "bin", "isabelle")
     assert os.path.exists(base_isabelle_bin)
 
@@ -362,7 +371,8 @@ end
             # Build the docs.
             try:
                 subprocess.check_call(
-                    [isabelle_bin, "build", "-c", "-d", ".", "-d", "./autocorres/doc/quickstart", "-v", "AutoCorresQuickstart"],
+                    [isabelle_bin, "build", "-c", "-d", ".", "-d",
+                        "./autocorres/doc/quickstart", "-v", "AutoCorresQuickstart"],
                     cwd=os.path.join(doc_build_dir, "doc"), env=dict(os.environ, L4V_ARCH="ARM"))
             except subprocess.CalledProcessError:
                 print("Building documentation failed.")
@@ -371,8 +381,9 @@ end
 
             # Copy the generated PDF into our output.
             shutil.copyfile(
-                    os.path.join(doc_build_dir, "doc", "autocorres", "doc", "quickstart", "output", "document.pdf"),
-                    os.path.join(tree, "quickstart.pdf"))
+                os.path.join(doc_build_dir, "doc", "autocorres", "doc",
+                             "quickstart", "output", "document.pdf"),
+                os.path.join(tree, "quickstart.pdf"))
     print("Building documentation...")
     build_docs(target_dir, base_isabelle_bin)
 
@@ -380,8 +391,8 @@ end
     if args.output != None:
         print("Creating tarball...")
         subprocess.check_call(["tar", "-cz", "--numeric-owner",
-            "--owner", "nobody", "--group", "nogroup",
-            "-C", base_dir, "-f", args.output, target_dir_name])
+                               "--owner", "nobody", "--group", "nogroup",
+                               "-C", base_dir, "-f", args.output, target_dir_name])
 
     # Run a test if requested.
     if args.test:
@@ -401,4 +412,3 @@ end
     if args.browse:
         print("Opening shell...")
         subprocess.call(user_shell, cwd=target_dir)
-

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -249,45 +245,45 @@ lemma decode_cnode_cases2:
   assumes mvins: "\<And>index bits src_index src_depth args' src_root_cap exs'.
                     \<lbrakk> args = index # bits # src_index # src_depth # args';
                       exs = src_root_cap # exs';
-                      invocation_type label \<in> set [CNodeCopy .e. CNodeMutate];
-                      invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
-                      invocation_type label \<notin> {CNodeRevoke, CNodeDelete,
+                      gen_invocation_type label \<in> set [CNodeCopy .e. CNodeMutate];
+                      gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
+                      gen_invocation_type label \<notin> {CNodeRevoke, CNodeDelete,
                       CNodeCancelBadgedSends, CNodeRotate, CNodeSaveCaller} \<rbrakk> \<Longrightarrow> P"
   assumes rvk: "\<And>index bits args'. \<lbrakk> args = index # bits # args';
-                          invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
-                          invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
-                          invocation_type label = CNodeRevoke \<rbrakk> \<Longrightarrow> P"
+                          gen_invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
+                          gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
+                          gen_invocation_type label = CNodeRevoke \<rbrakk> \<Longrightarrow> P"
   assumes dlt: "\<And>index bits args'. \<lbrakk> args = index # bits # args';
-                          invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
-                          invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
-                          invocation_type label = CNodeDelete \<rbrakk> \<Longrightarrow> P"
+                          gen_invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
+                          gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
+                          gen_invocation_type label = CNodeDelete \<rbrakk> \<Longrightarrow> P"
   assumes svc: "\<And>index bits args'. \<lbrakk> args = index # bits # args';
-                          invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
-                          invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
-                          invocation_type label = CNodeSaveCaller \<rbrakk> \<Longrightarrow> P"
+                          gen_invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
+                          gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
+                          gen_invocation_type label = CNodeSaveCaller \<rbrakk> \<Longrightarrow> P"
   assumes rcy: "\<And>index bits args'. \<lbrakk> args = index # bits # args';
-                          invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
-                          invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
-                          invocation_type label = CNodeCancelBadgedSends \<rbrakk> \<Longrightarrow> P"
+                          gen_invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
+                          gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
+                          gen_invocation_type label = CNodeCancelBadgedSends \<rbrakk> \<Longrightarrow> P"
   assumes rot: "\<And>index bits pivot_new_data pivot_index pivot_depth src_new_data
                   src_index src_depth args' pivot_root_cap src_root_cap exs'.
                      \<lbrakk> args = index # bits # pivot_new_data # pivot_index # pivot_depth
                                  # src_new_data # src_index # src_depth # args';
                        exs = pivot_root_cap # src_root_cap # exs';
-                       invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
-                       invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
-                       invocation_type label = CNodeRotate \<rbrakk> \<Longrightarrow> P"
+                       gen_invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
+                       gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
+                       gen_invocation_type label = CNodeRotate \<rbrakk> \<Longrightarrow> P"
   assumes errs:
-      "\<lbrakk> invocation_type label \<notin> set [CNodeRevoke .e. CNodeSaveCaller] \<or>
+      "\<lbrakk> gen_invocation_type label \<notin> set [CNodeRevoke .e. CNodeSaveCaller] \<or>
          args = [] \<or> (\<exists>x. args = [x]) \<or> (\<exists>index bits args'. args = index # bits # args' \<and>
-                             invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller] \<and>
-                             (invocation_type label \<in> set [CNodeCopy .e. CNodeMutate]
-                                        \<and> invocation_type label \<notin> {CNodeRevoke, CNodeDelete,
+                             gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller] \<and>
+                             (gen_invocation_type label \<in> set [CNodeCopy .e. CNodeMutate]
+                                        \<and> gen_invocation_type label \<notin> {CNodeRevoke, CNodeDelete,
                                              CNodeCancelBadgedSends, CNodeRotate, CNodeSaveCaller}
                                         \<and> (case (args', exs) of (src_index # src_depth # args'',
                                                     src_root_cap # exs') \<Rightarrow> False | _ \<Rightarrow> True) \<or>
-                              invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate] \<and>
-                              invocation_type label = CNodeRotate \<and> (case (args', exs) of
+                              gen_invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate] \<and>
+                              gen_invocation_type label = CNodeRotate \<and> (case (args', exs) of
                               (pivot_new_data # pivot_index # pivot_depth
                                  # src_new_data # src_index # src_depth # args'',
                                pivot_root_cap # src_root_cap # exs') \<Rightarrow> False
@@ -299,13 +295,13 @@ proof -
                         CNodeMove, CNodeMutate, CNodeRotate, CNodeSaveCaller]"
               "[CNodeCopy .e. CNodeMutate] = [CNodeCopy, CNodeMint,
                         CNodeMove, CNodeMutate]"
-    by (simp_all add: upto_enum_def fromEnum_def toEnum_def enum_invocation_label)
+    by (simp_all add: upto_enum_def fromEnum_def toEnum_def enum_invocation_label enum_gen_invocation_labels)
   show ?thesis
     apply (cases args)
      apply (simp add: errs)
     apply (case_tac list)
      apply (simp add: errs)
-    apply (case_tac "invocation_type label \<in> set [CNodeCopy .e. CNodeMutate]")
+    apply (case_tac "gen_invocation_type label \<in> set [CNodeCopy .e. CNodeMutate]")
      apply (case_tac "case (lista, exs) of (src_index # src_depth # args'',
                              src_root_cap # exs'') \<Rightarrow> False | _ \<Rightarrow> True")
       apply (rule errs)
@@ -314,7 +310,7 @@ proof -
       apply auto[1]
      apply (simp split: prod.split_asm list.split_asm)
      apply (erule(2) mvins, auto simp: simps)[1]
-    apply (case_tac "invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller]")
+    apply (case_tac "gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller]")
      apply (simp_all add: errs)
     apply (insert rvk dlt svc rcy rot)
     apply (simp add: simps)

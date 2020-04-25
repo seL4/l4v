@@ -1,11 +1,7 @@
 (*
- * Copyright 2019, Data61, CSIRO
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(DATA61_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory PageTableDuplicates
@@ -27,8 +23,7 @@ lemma foldr_data_map_insert[simp]:
 crunch arch_inv[wp]: resetUntypedCap "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps
      wp: hoare_drop_imps hoare_unless_wp mapME_x_inv_wp
-         preemptionPoint_inv
-    ignore:freeMemory forME_x)
+         preemptionPoint_inv)
 
 lemma mapM_x_mapM_valid:
   "\<lbrace> P \<rbrace> mapM_x f xs \<lbrace>\<lambda>r. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>mapM f xs \<lbrace>\<lambda>r. Q\<rbrace>"
@@ -45,8 +40,7 @@ declare withoutPreemption_lift [wp del]
 
 crunch valid_cap'[wp]:
   isFinalCapability "\<lambda>s. valid_cap' cap s"
-  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def
-    ignore:getObject setObject)
+  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)
 
 end
 

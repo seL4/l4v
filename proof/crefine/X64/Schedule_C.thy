@@ -1,43 +1,12 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Schedule_C
 imports Tcb_C
 begin
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-
-(* FIXME move to REFINE *)
-crunch valid_queues'[wp]: "Arch.switchToThread" valid_queues'
-    (ignore: )
-crunch ksCurDomain[wp]: switchToIdleThread "\<lambda>s. P (ksCurDomain s)"
-crunch valid_pspace'[wp]: switchToIdleThread, switchToThread valid_pspace'
-  (simp: whenE_def ignore: getObject)
-
-lemma setCurrentUserCR3_valid_arch_state'[wp]:
-  "\<lbrace>valid_arch_state' and K (valid_cr3' c)\<rbrace> setCurrentUserCR3 c \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (wpsimp simp: setCurrentUserCR3_def valid_arch_state'_def)
-
-lemma setVMRoot_valid_arch_state':
-  "\<lbrace>valid_arch_state'\<rbrace> setVMRoot t \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setCurrentUserVSpaceRoot_def)
-  apply (wp hoare_whenE_wp getCurrentUserCR3_wp findVSpaceForASID_vs_at_wp
-         | wpcw
-         | clarsimp simp: if_apply_def2 asid_wf_0
-         | strengthen valid_cr3'_makeCR3)+
-  done
-
-crunch valid_arch_state'[wp]: switchToThread valid_arch_state'
-  (wp: crunch_wps simp: crunch_simps)
-
-end
 
 (*FIXME: arch_split: move up?*)
 context Arch begin
@@ -49,16 +18,6 @@ end
 end
 
 context kernel_m begin
-
-(* FIXME: move to Refine *)
-lemma valid_idle'_tcb_at'_ksIdleThread:
-  "valid_idle' s \<Longrightarrow> tcb_at' (ksIdleThread s) s"
-  by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def)
-
-(* FIXME: move to Refine *)
-lemma invs_no_cicd'_valid_idle':
-  "invs_no_cicd' s \<Longrightarrow> valid_idle' s"
-  by (simp add: invs_no_cicd'_def)
 
 lemma Arch_switchToIdleThread_ccorres:
   "ccorres dc xfdc invs_no_cicd' UNIV []
@@ -72,11 +31,6 @@ lemma Arch_switchToIdleThread_ccorres:
    apply clarsimp
   apply (clarsimp simp: invs_no_cicd'_def valid_pspace'_def valid_idle'_tcb_at'_ksIdleThread)
   done
-
-(* FIXME: move *)
-lemma empty_fail_getIdleThread [simp,intro!]:
-  "empty_fail getIdleThread"
-  by (simp add: getIdleThread_def)
 
 lemma switchToIdleThread_ccorres:
   "ccorres dc xfdc invs_no_cicd' UNIV hs

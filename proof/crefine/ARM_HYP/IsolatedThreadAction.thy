@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory IsolatedThreadAction
@@ -119,70 +115,7 @@ lemma isolate_thread_actions_bind:
 
 lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
-lemma tcbSchedEnqueue_obj_at_unchangedT:
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  shows  "\<lbrace>obj_at' P t\<rbrace> tcbSchedEnqueue t' \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: tcbSchedEnqueue_def unless_def)
-  apply (wp | simp add: y)+
-  done
-
-lemma asUser_obj_at_notQ:
-  "\<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>
-   asUser t (setRegister r v)
-   \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
-  apply (simp add: asUser_def)
-  apply (rule hoare_seq_ext)+
-    apply (simp add: split_def)
-    apply (rule threadSet_obj_at'_really_strongest)
-   apply (wp threadGet_wp |rule gets_inv|wpc|clarsimp)+
-  apply (clarsimp simp: obj_at'_def)
-  done
-
-(* FIXME: Move to Schedule_R.thy. Make Arch_switchToThread_obj_at a specialisation of this *)
-lemma Arch_switchToThread_obj_at_pre:
-  "\<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>
-   Arch.switchToThread t
-   \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
-  apply (simp add: ARM_HYP_H.switchToThread_def)
-  apply (wp asUser_obj_at_notQ doMachineOp_obj_at setVMRoot_obj_at'_no_vcpu hoare_drop_imps|wpc)+
-  done
-
-lemma rescheduleRequired_obj_at_unchangedT:
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  shows  "\<lbrace>obj_at' P t\<rbrace> rescheduleRequired \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: rescheduleRequired_def)
-  apply (wp tcbSchedEnqueue_obj_at_unchangedT[OF y] | wpc)+
-  apply simp
-  done
-
-lemma setThreadState_obj_at_unchangedT:
-  assumes x: "\<And>f. \<forall>tcb. P (tcbState_update f tcb) = P tcb"
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  shows "\<lbrace>obj_at' P t\<rbrace> setThreadState t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: setThreadState_def)
-  apply (wp rescheduleRequired_obj_at_unchangedT[OF y], simp)
-  apply (wp threadSet_obj_at'_strongish)
-  apply (clarsimp simp: obj_at'_def projectKOs x cong: if_cong)
-  done
-
-lemma setBoundNotification_obj_at_unchangedT:
-  assumes x: "\<And>f. \<forall>tcb. P (tcbBoundNotification_update f tcb) = P tcb"
-  shows "\<lbrace>obj_at' P t\<rbrace> setBoundNotification t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: setBoundNotification_def)
-  apply (wp threadSet_obj_at'_strongish)
-  apply (clarsimp simp: obj_at'_def projectKOs x cong: if_cong)
-  done
-
-lemmas setThreadState_obj_at_unchanged
-    = setThreadState_obj_at_unchangedT[OF all_tcbI all_tcbI]
-
-lemmas setBoundNotification_obj_at_unchanged
-    = setBoundNotification_obj_at_unchangedT[OF all_tcbI]
-
 lemmas setNotification_tcb = set_ntfn_tcb_obj_at'
-
-(* FIXME: move *)
-lemmas threadSet_obj_at' = threadSet_obj_at'_strongish
 
 context kernel_m begin
 
@@ -696,7 +629,7 @@ lemma setVCPU_isolatable:
   apply (clarsimp simp: thread_actions_isolatable_def monadic_rewrite_def isolate_thread_actions_def)
   apply (clarsimp simp: exec_gets getSchedulerAction_def)
   apply (subst setObject_assert_modify;
-         simp add: projectKOs objBits_simps archObjSize_def vcpuBits_def pageBits_def)+
+         simp add: projectKOs objBits_simps archObjSize_def vcpuBits_def vcpu_bits_def pageBits_def)+
   apply (clarsimp simp: select_f_asserts assert_def obj_at_partial_overwrite_id2 split: if_splits)
   apply (clarsimp simp: select_f_def simpler_modify_def bind_def o_def)
   apply (case_tac s)
@@ -733,6 +666,22 @@ lemma vgicUpdate_isolatable:
 lemma vgicUpdateLR_isolatable:
   "thread_actions_isolatable idx (vgicUpdateLR p i virq)"
   by (clarsimp simp: vgicUpdateLR_def vgicUpdate_isolatable)
+
+lemma vcpuWriteReg_isolatable:
+  "thread_actions_isolatable idx (vcpuWriteReg v p val)"
+  apply (clarsimp simp: vcpuWriteReg_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               vcpuUpdate_isolatable doMachineOp_isolatable
+         | wpsimp)+
+  done
+
+lemma vcpuReadReg_isolatable:
+  "thread_actions_isolatable idx (vcpuReadReg v p)"
+  apply (clarsimp simp: vcpuReadReg_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               vcpuUpdate_isolatable getVCPU_isolatable thread_actions_isolatable_return
+         | wpsimp)+
+  done
 
 lemma vcpuSaveReg_isolatable:
   "thread_actions_isolatable idx (vcpuSaveReg p v)"
@@ -774,14 +723,47 @@ lemma vcpuRestoreRegRange_isolatable:
          | wpsimp)+
   done
 
+lemma saveVirtTimer_isolatable:
+  "thread_actions_isolatable idx (saveVirtTimer v)"
+  apply (clarsimp simp: saveVirtTimer_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               thread_actions_isolatable_if thread_actions_isolatable_returns
+               thread_actions_isolatable_fail
+               gets_isolatable doMachineOp_isolatable vcpuSaveReg_isolatable
+               vcpuWriteReg_isolatable vcpuUpdate_isolatable
+         | wpsimp | fastforce)+
+  done
+
+lemma getIRQState_isolatable:
+  "thread_actions_isolatable idx (getIRQState irq)"
+  apply (clarsimp simp: getIRQState_def liftM_def getInterruptState_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+                thread_actions_isolatable_returns gets_isolatable
+         | wpsimp | fastforce)+
+  done
+
+lemma restoreVirtTimer_isolatable:
+  "thread_actions_isolatable idx (restoreVirtTimer v)"
+  apply (clarsimp simp: restoreVirtTimer_def when_def isIRQActive_def liftM_bind)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               thread_actions_isolatable_if thread_actions_isolatable_returns
+               thread_actions_isolatable_fail
+               gets_isolatable doMachineOp_isolatable vcpuSaveReg_isolatable
+               vcpuReadReg_isolatable vcpuWriteReg_isolatable vcpuUpdate_isolatable
+               getVCPU_isolatable getIRQState_isolatable vcpuRestoreReg_isolatable
+         | wpsimp | fastforce)+
+  done
+
 lemma vcpuSave_isolatable:
   "thread_actions_isolatable idx (vcpuSave v)"
-  apply (clarsimp simp: vcpuSave_def thread_actions_isolatable_fail when_def split: option.splits)
+  apply (clarsimp simp: vcpuSave_def armvVCPUSave_def thread_actions_isolatable_fail when_def
+                  split: option.splits)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
                gets_isolatable doMachineOp_isolatable vcpuSaveReg_isolatable
                vgicUpdateLR_isolatable vgicUpdate_isolatable vcpuSaveRegRange_isolatable
+               saveVirtTimer_isolatable
                thread_actions_isolatable_mapM_x
          | wpsimp wp: mapM_x_wp|fastforce)+
   done
@@ -791,6 +773,7 @@ lemma vcpuEnable_isolatable:
   apply (clarsimp simp: vcpuEnable_def)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                vcpuRestoreReg_isolatable doMachineOp_isolatable getVCPU_isolatable
+               restoreVirtTimer_isolatable
          | wpsimp)+
   done
 
@@ -808,7 +791,7 @@ lemma vcpuDisable_isolatable:
   apply (clarsimp simp: vcpuDisable_def split: option.splits, intro conjI)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                doMachineOp_isolatable vcpuEnable_isolatable
-               vgicUpdate_isolatable vcpuSaveReg_isolatable
+               vgicUpdate_isolatable vcpuSaveReg_isolatable saveVirtTimer_isolatable
          | wpsimp)+
   done
 
@@ -956,12 +939,6 @@ lemma copyMRs_simple:
             split: option.split)
   apply (simp add: upto_enum_def mapM_Nil)
   done
-
-(* FIXME: MOVE *)
-lemma returnOK_catch[simp]:
-  "(returnOk rv <catch> m) = return rv"
-  unfolding catch_def returnOk_def
-  by clarsimp
 
 lemma doIPCTransfer_simple_rewrite:
   "monadic_rewrite True True
@@ -1125,11 +1102,17 @@ lemma oblivious_modifyArchState_schact[simp]:
 lemmas oblivious_getObject_ksPSpace_vcpu[simp]
   = oblivious_getObject_ksPSpace_default [OF _ loadObject_vcpu]
 
+lemma oblivious_getIRQState_schact:
+  "oblivious (ksSchedulerAction_update f) (getIRQState irq)"
+  by (simp add: getIRQState_def liftM_def getInterruptState_def)
+     (safe intro!: oblivious_bind oblivious_bindE; simp)
+
 lemma oblivious_setVMRoot_schact:
   "oblivious (ksSchedulerAction_update f) (setVMRoot t)"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def locateSlot_conv
                    getSlotCap_def getCTE_def armv_contextSwitch_def)
   by (safe intro!: oblivious_bind oblivious_bindE oblivious_catch oblivious_mapM_x
+                   oblivious_getIRQState_schact
              | simp_all add: liftE_def getHWASID_def
                              findPDForASID_def liftME_def loadHWASID_def
                              findPDForASIDAssert_def checkPDAt_def
@@ -1149,6 +1132,9 @@ lemma oblivious_vcpuSwitch_schact:
                          vcpuUpdate_def vgicUpdate_def vgicUpdateLR_def
                          vcpuSaveReg_def vcpuSaveRegRange_def
                          vcpuRestoreReg_def vcpuRestoreRegRange_def
+                         saveVirtTimer_def vcpuWriteReg_def restoreVirtTimer_def vcpuReadReg_def
+                         armvVCPUSave_def isIRQActive_def liftM_bind getIRQState_def
+                         getInterruptState_def
                   split: if_split option.split)+
   done
 

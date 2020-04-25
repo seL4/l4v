@@ -1,11 +1,7 @@
 /*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  */
 
 /*
@@ -67,25 +63,26 @@
 #define MAX_LINE_SIZE 1024
 #define LINUX_SYSINFO_LOADS_SCALE 65536
 
-void
-fatal(const char *str)
+void fatal(const char *str)
 {
     printf("%s\n", str);
     exit(1);
 }
 
 /* Get the name of a process from its PID. */
-int
-name_of(int pid, char *output, size_t len) {
+int name_of(int pid, char *output, size_t len)
+{
     char *path;
-    if (asprintf(&path, "/proc/%d/cmdline", pid) == -1)
+    if (asprintf(&path, "/proc/%d/cmdline", pid) == -1) {
         return -1;
+    }
 
     /* Open the process's command line details from /proc. */
     FILE *f = fopen(path, "r");
     free(path);
-    if (f == NULL)
+    if (f == NULL) {
         return -1;
+    }
 
     /* Here we potentially read too much, but cmdline entries are NUL delimited
      * so the resulting data is a valid C string of just the first argument as
@@ -99,8 +96,7 @@ name_of(int pid, char *output, size_t len) {
 }
 
 /* Iterate through processes in the system. */
-void
-iterate_processes(char **limit, void (*proc_fn)(int, void *), void *data)
+void iterate_processes(char **limit, void (*proc_fn)(int, void *), void *data)
 {
     /* Open /proc */
     DIR *proc_dir = opendir("/proc");
@@ -113,17 +109,20 @@ iterate_processes(char **limit, void (*proc_fn)(int, void *), void *data)
     while (1) {
         /* Read directory. */
         struct dirent *e = readdir(proc_dir);
-        if (e == NULL)
+        if (e == NULL) {
             break;
+        }
 
         /* Skip non-directories. */
-        if ((e->d_type & DT_DIR) == 0)
+        if ((e->d_type & DT_DIR) == 0) {
             continue;
+        }
 
         /* Process? */
         int p = atoi(e->d_name);
-        if (p == 0)
+        if (p == 0) {
             continue;
+        }
 
         if (limit != NULL) {
             int skip = 1;
@@ -132,7 +131,9 @@ iterate_processes(char **limit, void (*proc_fn)(int, void *), void *data)
             char name[PATH_MAX];
             if (name_of(p, name, PATH_MAX) != 0)
                 /* This process doesn't have a name. Poor thing. */
+            {
                 continue;
+            }
 
             /* Determine if this process matches any of the processes we should
              * be considering.
@@ -152,7 +153,9 @@ iterate_processes(char **limit, void (*proc_fn)(int, void *), void *data)
 
             if (skip == 1)
                 /* No match. */
+            {
                 continue;
+            }
 
 #if DEBUG
             printf("Considering %s...\n", name);
@@ -187,31 +190,37 @@ void test_process(int p, void *d)
     /* Read OOM score of process. */
     sprintf(buf, "/proc/%d/oom_score", p);
     f = fopen(buf, "r");
-    if (f == NULL)
+    if (f == NULL) {
         return;
+    }
     n = fscanf(f, "%lu", &oom_score);
-    if (n != 1)
+    if (n != 1) {
         fatal("Could not read process oom_score.");
+    }
     fclose(f);
 
     /* Read memory usage of process. */
     sprintf(buf, "/proc/%d/statm", p);
     f = fopen(buf, "r");
-    if (f == NULL)
+    if (f == NULL) {
         return;
+    }
     n = fscanf(f, "%lu %lu", &vmem_usage, &rmem_usage);
-    if (n != 2)
+    if (n != 2) {
         fatal("Could not read process memory usage.");
+    }
     fclose(f);
 
     /* Read pagefault information about the process. */
     sprintf(buf, "/proc/%d/stat", p);
     f = fopen(buf, "r");
-    if (f == NULL)
+    if (f == NULL) {
         return;
+    }
     n = fscanf(f, "%*d %*s %c %*d %*d %*d %*d %*d %*u %*u %*u %lu", &state, &pagefaults);
-    if (n != 2)
+    if (n != 2) {
         fatal("Could not read process stat info.");
+    }
     fclose(f);
 
     /* Are we in an active_state? */
@@ -225,16 +234,15 @@ void test_process(int p, void *d)
     }
 }
 
-static long int
-parse_meminfo_int(char *buf)
+static long int parse_meminfo_int(char *buf)
 {
-    while (*buf == ' ')
+    while (*buf == ' ') {
         buf++;
+    }
     return strtol(buf, NULL, 10);
 }
 
-static void
-get_free_memory(unsigned long *total, unsigned long *free)
+static void get_free_memory(unsigned long *total, unsigned long *free)
 {
     char buf[MAX_LINE_SIZE];
     unsigned long memtotal = 0;
@@ -250,8 +258,9 @@ get_free_memory(unsigned long *total, unsigned long *free)
 
     while (1) {
         char *r = fgets(buf, MAX_LINE_SIZE, f);
-        if (r == NULL)
+        if (r == NULL) {
             break;
+        }
         if (strncmp("MemTotal: ", buf, 10) == 0) {
             memtotal = parse_meminfo_int(buf + 10);
         } else if (strncmp("MemFree:  ", buf, 10) == 0) {
@@ -267,13 +276,14 @@ get_free_memory(unsigned long *total, unsigned long *free)
 }
 
 int is_system_unstable(
-        long long last_fault_count,
-        long long this_fault_count)
+    long long last_fault_count,
+    long long this_fault_count)
 {
     struct sysinfo info;
     int error = sysinfo(&info);
-    if (error)
+    if (error) {
         return 0;
+    }
 
     /* Get free RAM. */
     unsigned long memtotal, memfree;
@@ -282,8 +292,9 @@ int is_system_unstable(
 
     /* Get number of faults. */
     long long faults = 0;
-    if (last_fault_count > 0)
+    if (last_fault_count > 0) {
         faults = (this_fault_count - last_fault_count);
+    }
 
     /* Get system load. */
     double system_load = info.loads[0] / (double)LINUX_SYSINFO_LOADS_SCALE;
@@ -291,16 +302,19 @@ int is_system_unstable(
 #if DEBUG
     /* Print information. */
     printf("[RAM: %5.1lf] [LOAD: %5.1lf] [FAULTS: %5lld]\n",
-            free_ram * 100.0, system_load, faults);
+           free_ram * 100.0, system_load, faults);
 #endif
 
     /* Determine if the system is unstable. */
-    if (free_ram > DANGEROUS_FREE_RAM)
+    if (free_ram > DANGEROUS_FREE_RAM) {
         return 0;
-    if (system_load < DANGEROUS_LOAD)
+    }
+    if (system_load < DANGEROUS_LOAD) {
         return 0;
-    if (faults < DANGEROUS_FAULTS_PER_SECOND * SLEEP_TIME && system_load < VERY_DANGEROUS_LOAD)
+    }
+    if (faults < DANGEROUS_FAULTS_PER_SECOND * SLEEP_TIME && system_load < VERY_DANGEROUS_LOAD) {
         return 0;
+    }
     return 1;
 }
 
@@ -337,12 +351,12 @@ int parse_signal(const char *input, int *signal, const char **signame)
 void usage(int argc, char **argv)
 {
     printf("\n"
-        "usage: %s [<SIGNAL>] [<processes>]\n\n"
-        "Monitors the system for high load and sends a signal to (hopefully)\n"
-        "the culprit process.\n\n"
-        "<SIGNAL> must be either SIGKILL or SIGSTOP.\n"
-        "If you don't pass a list of candidate processes, all are considered.\n\n",
-        argc > 0 ? argv[0] : "autostop");
+           "usage: %s [<SIGNAL>] [<processes>]\n\n"
+           "Monitors the system for high load and sends a signal to (hopefully)\n"
+           "the culprit process.\n\n"
+           "<SIGNAL> must be either SIGKILL or SIGSTOP.\n"
+           "If you don't pass a list of candidate processes, all are considered.\n\n",
+           argc > 0 ? argv[0] : "autostop");
 }
 
 int main(int argc, char **argv)
@@ -389,13 +403,14 @@ int main(int argc, char **argv)
                 int error = kill(d.worst_pid, signal);
                 if (!error) {
                     syslog(LOG_ALERT,
-                            "auto-stop: Sending %s to pid %d to prevent system melt-down.\n", signame, d.worst_pid);
+                           "auto-stop: Sending %s to pid %d to prevent system melt-down.\n", signame, d.worst_pid);
                     skip_count = SLEEP_AFTER_STOP_SECONDS / SLEEP_TIME;
                 }
             }
         }
-        if (skip_count > 0)
+        if (skip_count > 0) {
             skip_count--;
+        }
 
         last_fault_count = d.total_faults;
         sleep(SLEEP_TIME);

@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -266,12 +262,6 @@ lemma call_kernel_sched_act_rct[wp]:
   apply (clarsimp simp: active_from_running)
   done
 
-(* FIXME move *)
-lemma ct_running_ct_active:
-  "ct_running s \<Longrightarrow> ct_active s"
-  unfolding ct_in_state_def st_tcb_at_def2
-  by fastforce
-
 lemma kernel_entry_invs:
   "\<lbrace>einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)
     and (\<lambda>s. 0 < domain_time s) and valid_domain_list and (ct_running or ct_idle)
@@ -291,7 +281,7 @@ lemma kernel_entry_invs:
             hoare_vcg_disj_lift ct_in_state_thread_state_lift thread_set_no_change_tcb_state
             call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext
             static_imp_wp
-      | clarsimp simp add: tcb_cap_cases_def ct_running_ct_active)+
+      | clarsimp simp add: tcb_cap_cases_def active_from_running)+
   done
 
 definition
@@ -334,14 +324,6 @@ lemma do_user_op_invs2:
     do_user_op_invs | simp | force)+
   done
 
-(* FIXME: move *)
-lemma thread_set_ct_idle:
-  "(\<And>tcb. tcb_state (f tcb) = tcb_state tcb) \<Longrightarrow>
-  \<lbrace>ct_idle\<rbrace> thread_set f t \<lbrace>\<lambda>rv. ct_idle\<rbrace>"
-  by (clarsimp simp: thread_set_def set_object_def get_object_def get_tcb_def
-                     ct_in_state_def st_tcb_at_def obj_at_def
-    | wp)+
-
 lemma ct_running_irq_state_independent[intro!, simp]:
   "ct_running (s \<lparr>machine_state := machine_state s \<lparr>irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)
    = ct_running s"
@@ -351,35 +333,6 @@ lemma ct_idle_irq_state_independent[intro!, simp]:
   "ct_idle (s \<lparr>machine_state := machine_state s \<lparr>irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)
    = ct_idle s"
   by (simp add: ct_in_state_def)
-
-(* FIXME: move *)
-lemma check_active_irq_invs:
-  "\<lbrace>invs and (ct_running or ct_idle) and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
-    and (\<lambda>s. 0 < domain_time s) and valid_domain_list \<rbrace>
-   check_active_irq
-   \<lbrace>\<lambda>_. invs and (ct_running or ct_idle) and valid_list and valid_sched
-        and (\<lambda>s. scheduler_action s = resume_cur_thread)
-        and (\<lambda>s. 0 < domain_time s) and valid_domain_list \<rbrace>"
-  by (wp | simp add: check_active_irq_def | force)+
-
-(* FIXME: move *)
-lemma check_active_irq_invs_just_running:
-  "\<lbrace>invs and ct_running and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
-      and (\<lambda>s. 0 < domain_time s) and valid_domain_list \<rbrace>
-   check_active_irq
-   \<lbrace>\<lambda>_. invs and ct_running and valid_list and valid_sched
-        and (\<lambda>s. scheduler_action s = resume_cur_thread)
-        and (\<lambda>s. 0 < domain_time s) and valid_domain_list \<rbrace>"
-  by (wp | simp add: check_active_irq_def | force)+
-
-lemma check_active_irq_invs_just_idle:
-  "\<lbrace>invs and ct_idle and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
-      and (\<lambda>s. 0 < domain_time s) and valid_domain_list \<rbrace>
-   check_active_irq
-   \<lbrace>\<lambda>_. invs and ct_idle and valid_list and valid_sched
-        and (\<lambda>s. scheduler_action s = resume_cur_thread)
-        and (\<lambda>s. 0 < domain_time s) and valid_domain_list \<rbrace>"
-  by (wp | simp add: check_active_irq_def | force)+
 
 lemmas ext_init_def = ext_init_det_ext_ext_def ext_init_unit_def
 
@@ -729,15 +682,6 @@ lemma ct_idle_related:
   apply (erule st_tcb_weakenE)
   apply (case_tac st, simp_all)[1]
   done
-
-(* FIXME: move *)
-lemma valid_corres_combined:
-  assumes "valid P f Q"
-  assumes "corres_underlying sr False nf' rr P P' f f'"
-  assumes "valid (\<lambda>s'. \<exists>s. (s,s')\<in>sr \<and> P s \<and> P' s') f' Q'" (is "valid ?P _ _")
-  shows "valid ?P f' (\<lambda>r' s'. \<exists>r s. (s,s') \<in> sr \<and> Q r s \<and> Q' r' s' \<and> rr r r')"
-  using assms
-  by (fastforce simp: valid_def corres_underlying_def split_def)
 
 definition
   "full_invs' \<equiv> {((tc,s),m,e). invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and>

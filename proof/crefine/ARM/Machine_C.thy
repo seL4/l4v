@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -152,10 +148,10 @@ assumes getFAR_ccorres:
 
 assumes getActiveIRQ_ccorres:
 "\<And>in_kernel.
-  ccorres (\<lambda>(a::10 word option) c::16 word.
-       case a of None \<Rightarrow> c = (0xFFFF::16 word)
-       | Some (x::10 word) \<Rightarrow> c = ucast x \<and> c \<noteq> (0xFFFF::16 word))
-       (\<lambda>t. irq_' (s\<lparr>globals := globals t, irq_' := ret__unsigned_short_' t\<rparr> ))
+  ccorres (\<lambda>(a::10 word option) c::32 word.
+       case a of None \<Rightarrow> c = 0x0000FFFF
+       | Some (x::10 word) \<Rightarrow> c = ucast x)
+       ret__unsigned_long_'
        \<top> UNIV hs
    (doMachineOp (getActiveIRQ in_kernel)) (Call getActiveIRQ_'proc)"
 

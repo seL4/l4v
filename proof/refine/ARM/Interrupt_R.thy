@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -105,9 +101,10 @@ lemma decode_irq_handler_corres:
   apply (simp add: decode_irq_handler_invocation_def decodeIRQHandlerInvocation_def
                  split del: if_split)
   apply (cases caps)
-   apply (simp add: returnOk_def split: invocation_label.split list.splits split del: if_split)
+   apply (simp add: returnOk_def split: invocation_label.split gen_invocation_labels.split list.splits split del: if_split)
+   defer
   apply (clarsimp simp: list_all2_Cons1 split del: if_split)
-  apply (simp add: returnOk_def split: invocation_label.split list.splits)
+  apply (simp add: returnOk_def split: invocation_label.split gen_invocation_labels.split list.splits)
   apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm simp: returnOk_def)
   done
 
@@ -237,8 +234,9 @@ lemma arch_decode_irq_control_corres:
   done
 
 lemma irqhandler_simp[simp]:
-  "invocation_type label \<noteq> IRQIssueIRQHandler \<Longrightarrow> (case invocation_type label of IRQIssueIRQHandler \<Rightarrow> b | _ \<Rightarrow> c) = c"
-  by (clarsimp split: invocation_label.splits)
+  "gen_invocation_type label \<noteq> IRQIssueIRQHandler \<Longrightarrow>
+   (case gen_invocation_type label of IRQIssueIRQHandler \<Rightarrow> b | _ \<Rightarrow> c) = c"
+  by (clarsimp split: gen_invocation_labels.splits)
 
 lemmas unat_le_mono = word_le_nat_alt [THEN iffD1]
 
@@ -338,7 +336,7 @@ lemma decode_irq_control_valid'[wp]:
   apply (simp add: decodeIRQControlInvocation_def Let_def split_def checkIRQ_def
                    rangeCheck_def unlessE_whenE
                 split del: if_split cong: if_cong list.case_cong
-                                          invocation_label.case_cong)
+                                          gen_invocation_labels.case_cong)
   apply (wpsimp wp: ensureEmptySlot_stronger isIRQActive_wp whenE_throwError_wp
                 simp: o_def
          | wp (once) hoare_drop_imps)+

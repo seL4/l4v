@@ -1,11 +1,9 @@
 "
-" Copyright 2016, NICTA
+" Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 "
-" This software may be distributed and modified according to the terms of
-" the BSD 2-Clause license. Note that NO WARRANTY is provided.
-" See "LICENSE_BSD2.txt" for details.
+" SPDX-License-Identifier: BSD-2-Clause
 "
-" @TAG(NICTA_BSD)
+
 "
 " Parts of this file were originally contributed by
 " Jens-Wolfhard Schicke-Uffmann <drahflow@gmx.de>
@@ -107,6 +105,8 @@ syntax region IsabelleCommand matchgroup=SpecialComment fold start="method_setup
 syntax region IsabelleComment matchgroup=IsabelleComment start="(\*" end="\*)" contains=IsabelleCommentStart
 syntax match IsabelleCommentStart "(\*" contained nextgroup=IsabelleCommentContent contains=IsabelleCommentStart
 syntax match IsabelleCommentContent ".*" contained
+
+syntax region IsabelleComment matchgroup=IsabelleComment fold start="\\<comment>\s*\\<open>" end="\\<close>" contains=IsabelleSpecial keepend
 
 " You can use LaTeX within text {* ... *} blocks and friends and sometimes it
 " is useful to have syntax highlighting enabled within these blocks when
@@ -640,10 +640,11 @@ syn match IsabelleSpecial /\\<s>/ conceal cchar=𝗌
 syn match IsabelleSpecial /\\<Leftrightarrow>/ conceal cchar=⇔
 syn match IsabelleSpecial /\\<heartsuit>/ conceal cchar=♡
 syn match IsabelleSpecial /\\<four>/ conceal cchar=𝟰
-syn match IsabelleSpecial /\\<open>/ conceal cchar=‹
-syn match IsabelleSpecial /\\<close>/ conceal cchar=›
+syn match IsabelleSpecial /\\<open>/ conceal cchar=‹ transparent
+syn match IsabelleSpecial /\\<close>/ conceal cchar=› transparent
+syn match IsabelleSpecial /\\<comment>/ conceal cchar=— transparent
 
-syn cluster IsabelleInnerStuff contains=IsabelleSpecial
+syn cluster IsabelleInnerStuff contains=IsabelleSpecial,IsabelleComment
 
 " Enable folding of proofs and locales. Note that the starting regex needs to
 " match with zero width to preserve syntax highlighting of the opening command.

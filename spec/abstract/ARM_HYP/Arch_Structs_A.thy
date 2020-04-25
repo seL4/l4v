@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 (*
@@ -146,6 +142,8 @@ record vcpu =
   vcpu_tcb   :: "obj_ref option"
   vcpu_vgic  :: gic_vcpu_interface
   vcpu_regs :: "vcpureg \<Rightarrow> machine_word"
+  vcpu_vppi_masked :: "vppievent_irq \<Rightarrow> bool"
+  vcpu_vtimer :: virt_timer
 
 end_qualify
 
@@ -169,7 +167,10 @@ definition
       vcpu_tcb    = None,
       vcpu_vgic   = default_gic_vcpu_interface,
       vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrDefault
-                             , VCPURegACTLR := actlrDefault) \<rparr>"
+                             , VCPURegACTLR := actlrDefault),
+      vcpu_vppi_masked = (\<lambda>_. False),
+      vcpu_vtimer = VirtTimer 0
+      \<rparr>"
 
 
 text \<open>

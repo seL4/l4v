@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory CSpace_All
@@ -120,16 +116,6 @@ lemma lookupCapAndSlot_ccorres :
   apply (case_tac err, simp+) [1]
 done
 
-
-(* FIXME: move *)
-lemma injection_handler_liftM:
-  "injection_handler f
-    = liftM (\<lambda>v. case v of Inl ex \<Rightarrow> Inl (f ex) | Inr rv \<Rightarrow> Inr rv)"
-  apply (intro ext, simp add: injection_handler_def liftM_def
-                              handleE'_def)
-  apply (rule bind_apply_cong, rule refl)
-  apply (simp add: throwError_def split: sum.split)
-  done
 
 lemma lookupErrorOnFailure_ccorres:
   "ccorres (f \<currency> r) xf P P' hs a c

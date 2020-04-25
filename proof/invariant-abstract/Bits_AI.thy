@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Bits_AI
@@ -104,5 +100,14 @@ lemma empty_on_failure_wp[wp]:
   "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv. Q []\<rbrace>
     \<Longrightarrow> \<lbrace>P\<rbrace> empty_on_failure m \<lbrace>Q\<rbrace>"
   by (simp add: empty_on_failure_def) wp
+
+lemma gen_invocation_typeI:
+  "invocation_type l = GenInvocationLabel x \<Longrightarrow> gen_invocation_type l = x"
+  by (simp add: gen_invocation_type_def)
+
+lemma gen_invocation_type_eq:
+  "x \<noteq> InvalidInvocation \<Longrightarrow>
+  (invocation_type l = GenInvocationLabel x) = (gen_invocation_type l = x)"
+  by (auto simp: gen_invocation_type_def split: invocation_label.splits)
 
 end

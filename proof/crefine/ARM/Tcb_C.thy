@@ -1,15 +1,11 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(GD_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory Tcb_C
-imports Move Delete_C Ipc_C
+imports Delete_C Ipc_C
 begin
 
 lemma asUser_obj_at' :
@@ -509,6 +505,7 @@ lemma invokeTCB_ThreadControl_ccorres:
    (invokeTCB (ThreadControl target slot faultep mcp priority cRoot vRoot buf))
    (Call invokeTCB_ThreadControl_'proc)"
   (is "ccorres ?rvr ?xf (?P and (\<lambda>_. ?P')) ?Q [] ?af ?cf")
+  supply option.case_cong_weak[cong]
   apply (rule ccorres_gen_asm)
   apply (cinit lift: target_' slot_' faultep_' mcp_' priority_' cRoot_newCap_' cRoot_srcSlot_'
                      vRoot_newCap_' vRoot_srcSlot_' bufferAddr_' bufferSrcSlot_' bufferCap_'
@@ -536,7 +533,7 @@ lemma invokeTCB_ThreadControl_ccorres:
           apply (fastforce intro: typ_heap_simps)
          apply simp
         apply (erule(1) rf_sr_tcb_update_no_queue2,
-                (simp add: typ_heap_simps)+)
+               (simp add: typ_heap_simps)+)
          apply (rule ball_tcb_cte_casesI, simp+)
         apply (clarsimp simp: ctcb_relation_def option_to_0_def)
        apply (rule ccorres_return_Skip)
@@ -550,8 +547,7 @@ lemma invokeTCB_ThreadControl_ccorres:
        apply (rule ccorres_subgoal_tailE)
         apply (rule ccorres_subgoal_tailE)
          apply (rule_tac A="invs' and sch_act_simple and tcb_at' target
-                            and (\<lambda>(s::kernel_state). (case priority of None \<Rightarrow> True
-                                                                     | Some x \<Rightarrow> ((\<lambda>y. fst y \<le> maxPriority)) x))
+                            and (\<lambda>(s::kernel_state). (case priority of None \<Rightarrow> True | Some x \<Rightarrow> ((\<lambda>y. fst y \<le> maxPriority)) x))
                             and case_option \<top> (case_option \<top> (valid_cap' \<circ> fst) \<circ> snd) buf
                             and case_option \<top> (case_option \<top> (cte_at' \<circ> snd) \<circ> snd) buf
                             and K (case_option True (swp is_aligned msg_align_bits \<circ> fst) buf)
@@ -614,9 +610,9 @@ lemma invokeTCB_ThreadControl_ccorres:
                             apply (ctac (no_vcg) add: rescheduleRequired_ccorres[unfolded dc_def])
                            apply (rule ccorres_return_Skip')
                           apply (rule ccorres_split_nothrow_novcg_dc)
-                             apply(rule ccorres_cond2[where R=\<top>], simp add: Collect_const_mem)
-                              apply(ctac add: setPriority_ccorres)
-                             apply(rule ccorres_return_Skip)
+                             apply (rule ccorres_cond2[where R=\<top>], simp add: Collect_const_mem)
+                              apply (ctac add: setPriority_ccorres)
+                             apply (rule ccorres_return_Skip)
                             apply (rule ccorres_return_CE, simp+)[1]
                            apply (wp (once))
                           apply (clarsimp simp: guard_is_UNIV_def)
@@ -624,7 +620,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                           apply (strengthen sch_act_wf_weak, wp)
                          apply clarsimp
                          apply wp
-                        apply (clarsimp simp : guard_is_UNIV_def Collect_const_mem)
+                        apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
                        apply (rule hoare_strengthen_post[
                                     where Q= "\<lambda>rv s.
                                               Invariants_H.valid_queues s \<and>
@@ -643,7 +639,6 @@ lemma invokeTCB_ThreadControl_ccorres:
                    apply (rule ccorres_pre_getCurThread)
                    apply (rename_tac curThread)
                    apply (rule ccorres_split_nothrow_novcg_dc)
-                      (* \<not>P *)
                       apply (simp add: when_def to_bool_def)
                       apply (rule_tac C'="{s. target = curThread}"
                                       and Q="\<lambda>s. ksCurThread s = curThread"
@@ -661,7 +656,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                      apply (clarsimp simp: guard_is_UNIV_def)
                     apply (simp add: when_def)
                     apply (wp hoare_vcg_if_lift2(1) static_imp_wp, strengthen sch_act_wf_weak; wp)
-                   apply (clarsimp simp : guard_is_UNIV_def Collect_const_mem)
+                   apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
                   apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
                                         tcbBuffer_def size_of_def cte_level_bits_def
                                         tcbIPCBufferSlot_def)
@@ -681,14 +676,14 @@ lemma invokeTCB_ThreadControl_ccorres:
                      apply (ctac(no_vcg) add: rescheduleRequired_ccorres[unfolded dc_def])
                     apply (rule ccorres_return_Skip')
                    apply (rule ccorres_split_nothrow_novcg_dc)
-                      apply (rule ccorres_cond2[where R=\<top>], simp add: Collect_const_mem)
-                       apply (ctac add: setPriority_ccorres)
-                      apply (rule ccorres_return_Skip)
+                      apply(rule ccorres_cond2[where R=\<top>], simp add: Collect_const_mem)
+                       apply(ctac add: setPriority_ccorres)
+                      apply(rule ccorres_return_Skip)
                      apply (rule ccorres_return_CE, simp+)
                     apply wp
                    apply (clarsimp simp: guard_is_UNIV_def)
                   apply (wp hoare_vcg_if_lift2(1) static_imp_wp, strengthen sch_act_wf_weak; wp)
-                 apply (clarsimp simp : guard_is_UNIV_def Collect_const_mem)
+                 apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
                 apply (simp add: guard_is_UNIV_def false_def Collect_const_mem)
                 apply (clarsimp simp: ccap_relation_def cap_thread_cap_lift cap_to_H_def)
                apply simp
@@ -716,7 +711,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                 apply wpsimp
                  apply (wp static_imp_wp, strengthen sch_act_wf_weak, wp )
                 apply wp
-               apply (clarsimp simp : guard_is_UNIV_def Collect_const_mem)
+               apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
               apply (simp cong: conj_cong)
               apply (rule hoare_strengthen_post[
                             where Q="\<lambda>a b. (Invariants_H.valid_queues b \<and>
@@ -737,25 +732,26 @@ lemma invokeTCB_ThreadControl_ccorres:
                                                                  (fst (the (snd (the buf))))
                                                                  (cteCap a))
                                                             (snd (the (snd (the buf)))) b \<longrightarrow>
-                                                   cte_wp_at' (\<lambda>scte. capMasterCap (cteCap scte)
-                                                                    = capMasterCap (fst (the (snd (the buf))))
-                                                                    \<or> is_simple_cap' (fst (the (snd (the buf)))))
-                                                              (snd (the (snd (the buf)))) b \<and>
-                                                   valid_mdb' b \<and>
-                                                   pspace_aligned' b \<and>
-                                                   cte_wp_at' (\<lambda>c. True) (snd (the (snd (the buf)))) b))"])
+                                                  cte_wp_at' (\<lambda>scte. capMasterCap (cteCap scte)
+                                                                   = capMasterCap (fst (the (snd (the buf))))
+                                                                   \<or> is_simple_cap' (fst (the (snd (the buf)))))
+                                                             (snd (the (snd (the buf)))) b \<and>
+                                                  valid_mdb' b \<and>
+                                                  pspace_aligned' b \<and>
+                                                  cte_wp_at' (\<lambda>c. True) (snd (the (snd (the buf)))) b))"])
                prefer 2
                apply fastforce
               apply (strengthen cte_is_derived_capMasterCap_strg
                                 invs_queues invs_weak_sch_act_wf invs_sch_act_wf'
                                 invs_valid_objs' invs_mdb' invs_pspace_aligned',
-                      simp add: o_def)
+                            simp add: o_def)
               apply (rule_tac P="is_aligned (fst (the buf)) msg_align_bits"
                        in hoare_gen_asm)
               apply (wp threadSet_ipcbuffer_trivial static_imp_wp
                      | simp
-                     | strengthen invs_sch_act_wf' invs_valid_objs' invs_weak_sch_act_wf invs_queues
+                     | strengthen invs_sch_act_wf' invs_valid_objs' invs_weak_sch_act_wf  invs_queues
                                   invs_valid_queues' | wp hoare_drop_imps)+
+             (* \<not> P *)
              apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
                                    option_to_0_def
                             split: option.split_asm)
@@ -780,7 +776,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                           cte_level_bits_def from_bool_def true_def size_of_def case_option_If2 )
          apply (rule conjI)
           apply (clarsimp simp: case_option_If2 if_n_0_0 objBits_simps' valid_cap'_def
-                                capAligned_def  word_bits_conv obj_at'_def projectKOs)
+                                capAligned_def word_bits_conv obj_at'_def projectKOs)
          apply (clarsimp simp: invs_valid_objs' invs_valid_queues'
                                Invariants_H.invs_queues invs_ksCurDomain_maxDomain')
         apply (rule ccorres_Cond_rhs_Seq)
@@ -788,7 +784,7 @@ lemma invokeTCB_ThreadControl_ccorres:
          apply csymbr
          apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_Guard_Seq)+
          apply (simp add: split_def getThreadVSpaceRoot_def locateSlot_conv
-                          bindE_assoc
+                          bindE_assoc liftE_bindE
                      del: Collect_const)
          apply csymbr
          apply (ctac(no_vcg) add: cteDelete_ccorres)
@@ -827,9 +823,8 @@ lemma invokeTCB_ThreadControl_ccorres:
               apply (simp add: false_def Collect_False ccorres_cond_iffs
                           del: Collect_const)
               apply (rule ccorres_return_Skip[unfolded dc_def])
-             apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
-                                   tcbVTable_def tcbVTableSlot_def
-                                   cte_level_bits_def size_of_def option_to_0_def)
+             apply (fastforce simp: guard_is_UNIV_def Kernel_C.tcbVTable_def tcbVTableSlot_def
+                                    cte_level_bits_def size_of_def)
             apply csymbr
             apply (simp add: false_def Collect_False
                         del: Collect_const)
@@ -855,7 +850,7 @@ lemma invokeTCB_ThreadControl_ccorres:
         apply csymbr
         apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_Guard_Seq)+
         apply (simp add: split_def getThreadCSpaceRoot_def locateSlot_conv
-                         bindE_assoc
+                         bindE_assoc liftE_bindE
                     del: Collect_const)
         apply csymbr
         apply (ctac(no_vcg) add: cteDelete_ccorres)
@@ -872,11 +867,10 @@ lemma invokeTCB_ThreadControl_ccorres:
                       checkCap_inv [where P="valid_cap' c" for c]
                       checkCap_inv [where P="sch_act_simple"]
                    | simp)+
-           apply (clarsimp simp: guard_is_UNIV_def from_bool_def true_def
-                                 word_sle_def Collect_const_mem
-                                 option_to_0_def Kernel_C.tcbVTable_def tcbVTableSlot_def
-                                 cte_level_bits_def size_of_def cintr_def
-                                 tcb_cnode_index_defs)
+           apply (fastforce simp: guard_is_UNIV_def
+                                  Kernel_C.tcbVTable_def tcbVTableSlot_def
+                                  cte_level_bits_def size_of_def
+                                  tcb_cnode_index_defs)
           apply (thin_tac "ccorres a1 a2 a3 a4 a5 a6 a7" for a1 a2 a3 a4 a5 a6 a7)
           apply (rule ccorres_rhs_assoc)+
           apply (rule checkCapAt_ccorres2)
@@ -990,8 +984,8 @@ lemma setupReplyMaster_ccorres:
         apply clarsimp
         apply (rule conjI)
          apply (erule(2) cmap_relation_updI)
-          apply (clarsimp simp: ccte_relation_def cap_reply_cap_lift
-                                cte_lift_def)
+          apply (clarsimp simp: ccte_relation_def cap_reply_cap_lift cte_lift_def
+                                cong: option.case_cong_weak)
           apply (simp add: cte_to_H_def cap_to_H_def mdb_node_to_H_def
                            nullMDBNode_def c_valid_cte_def)
           apply (simp add: cap_reply_cap_lift)
@@ -1209,9 +1203,6 @@ lemma invokeTCB_CopyRegisters_ccorres:
             | rule conjI)+
      apply (clarsimp dest!: global'_no_ex_cap simp: invs'_def valid_state'_def | rule conjI)+
   done
-
-(* FIXME: move *)
-lemmas mapM_x_append = mapM_x_append2
 
 lemma invokeTCB_WriteRegisters_ccorres_helper:
   "\<lbrakk> unat (f (of_nat n)) = incn
@@ -1727,6 +1718,7 @@ shows
        (doE reply \<leftarrow> invokeTCB (ReadRegisters target susp n archCp);
            liftE (replyOnRestart thread reply isCall) odE)
        (Call invokeTCB_ReadRegisters_'proc)"
+  supply option.case_cong_weak[cong]
   apply (rule ccorres_gen_asm)
   apply (cinit' lift: tcb_src_' suspendSource_' n_' call_'
                 simp: invokeTCB_def liftE_bindE bind_assoc)
@@ -2649,14 +2641,6 @@ lemma slotCapLongRunningDelete_ccorres:
                  dest!: ccte_relation_ccap_relation)
   done
 
-(* FIXME: move *)
-lemma empty_fail_slotCapLongRunningDelete:
-  "empty_fail (slotCapLongRunningDelete slot)"
-  by (auto simp: slotCapLongRunningDelete_def Let_def
-                 case_Null_If isFinalCapability_def
-          split: if_split
-         intro!: empty_fail_bind)
-
 definition
   isValidVTableRoot_C :: "cap_C \<Rightarrow> bool"
 where
@@ -2698,19 +2682,9 @@ lemma updateCapData_spec:
          \<lbrace>ccap_relation (RetypeDecls_H.updateCapData preserve newData cap) \<acute>ret__struct_cap_C\<rbrace>"
   by (simp add: updateCapData_spec)
 
-lemma if_n_updateCapData_valid_strg:
-  "s \<turnstile>' cap \<longrightarrow> s \<turnstile>' (if P then cap else updateCapData prs v cap)"
-  by (simp add: valid_updateCapDataI split: if_split)
-
 lemma length_excaps_map:
   "length (excaps_map xcs) = length xcs"
   by (simp add: excaps_map_def)
-
-(* FIXME: move *)
-lemma from_bool_all_helper:
-  "(\<forall>bool. from_bool bool = val \<longrightarrow> P bool)
-      = ((\<exists>bool. from_bool bool = val) \<longrightarrow> P (val \<noteq> 0))"
-  by (auto simp: from_bool_0)
 
 lemma getSyscallArg_ccorres_foo':
   "ccorres (\<lambda>a rv. rv = ucast (args ! n)) (\<lambda>x. ucast (ret__unsigned_long_' x))
@@ -3933,7 +3907,7 @@ lemma decodeBindNotification_ccorres:
      (decodeBindNotification cp extraCaps >>= invocationCatch thread isBlocking isCall InvokeTCB)
      (Call decodeBindNotification_'proc)"
   apply (simp, rule ccorres_gen_asm)
-  apply (cinit lift: cap_' excaps_' simp: decodeBindNotification_def)
+  apply (cinit' lift: cap_' excaps_' simp: decodeBindNotification_def)
    apply (simp add: bind_assoc whenE_def bind_bindE_assoc interpret_excaps_test_null
                del: Collect_const cong: call_ignore_cong)
    apply (rule ccorres_Cond_rhs_Seq)
@@ -4508,7 +4482,7 @@ lemma decodeTCBInvocation_ccorres:
             >>= invocationCatch thread isBlocking isCall InvokeTCB)
      (Call decodeTCBInvocation_'proc)"
   apply (cinit' lift: invLabel_' cap_' length___unsigned_long_' slot_' excaps_' call_' buffer_')
-   apply (simp add: decodeTCBInvocation_def invocation_eq_use_types
+   apply (simp add: decodeTCBInvocation_def invocation_eq_use_types gen_invocation_type_eq
                del: Collect_const)
    apply (rule ccorres_Cond_rhs)
     apply simp
@@ -4607,14 +4581,14 @@ lemma decodeTCBInvocation_ccorres:
      apply (rule ccorres_return_C_errorE, simp+)[1]
     apply wp
    apply (rule ccorres_Cond_rhs)
-    apply simp
+    apply (simp add: gen_invocation_type_eq)
     apply (rule ccorres_add_returnOk, ctac(no_vcg) add: decodeSetTLSBase_ccorres)
       apply (rule ccorres_return_CE, simp+)[1]
      apply (rule ccorres_return_C_errorE, simp+)[1]
     apply wp
    apply (rule ccorres_equals_throwError)
     apply (fastforce simp: throwError_bind invocationCatch_def
-                   split: invocation_label.split)
+                   split: invocation_label.split gen_invocation_labels.split)
    apply (simp add: ccorres_cond_iffs
               cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule syscall_error_throwError_ccorres_n)

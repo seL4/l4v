@@ -1,11 +1,7 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
- * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
- *
- * @TAG(NICTA_GPL)
+ * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory CNode_DR
@@ -488,9 +484,6 @@ proof -
                      dest: mdb_cte_atD elim!: ranE)
     done
 qed
-
-crunch idle_thread[wp]: cap_move "\<lambda>s::'a::state_ext state. P (idle_thread s)"
-  (wp: dxo_wp_weak)
 
 lemma cap_null_reply_case_If:
   "(case cap of cap.ReplyCap t b R \<Rightarrow> f t b R | cap.NullCap \<Rightarrow> g | _ \<Rightarrow> h)
@@ -1070,8 +1063,9 @@ lemma neq_CPSR:
 lemma transform_intent_invalid_invocation:
   "transform_intent (invocation_type (mi_label (data_to_message_info 0))) = (\<lambda>x. None)"
   apply (rule ext)
-  apply (clarsimp simp:transform_intent_def)
-  apply (simp add:data_to_message_info_def invocation_type_def fromEnum_def toEnum_def enum_invocation_label)
+  apply (clarsimp simp: transform_intent_def)
+  apply (simp add: data_to_message_info_def invocation_type_def fromEnum_def toEnum_def
+                   enum_gen_invocation_labels enum_invocation_label)
   done
 
 lemma transform_default_tcb:
@@ -2079,9 +2073,8 @@ lemma decode_cnode_error_corres:
       (Decode_A.decode_cnode_invocation label args (cap.CNodeCap word n list) excaps)"
   apply(subst (asm) (1) transform_intent_isnot_CNodeIntent)
   apply(unfold Decode_A.decode_cnode_invocation_def)
-  apply (rule_tac label=label and args=args and exs=excaps
-              in decode_cnode_cases2)
-        apply (simp_all add: unlessE_whenE del: disj_not1)
+  apply (rule_tac label=label and args=args and exs=excaps in decode_cnode_cases2)
+        apply (simp_all add: unlessE_whenE gen_invocation_type_eq del: disj_not1)
    apply clarsimp
    apply (rule corres_symb_exec_r_dcE, wp)
     apply (rule corres_symb_exec_r_dcE, wp)
@@ -2091,8 +2084,8 @@ lemma decode_cnode_error_corres:
          apply (rule hoare_pre, wp hoare_whenE_wp)
          apply simp
         apply (rule corres_trivial)
-        apply (simp split: invocation_label.split list.split)
-        apply auto[1]
+        apply (simp split: gen_invocation_labels.split invocation_label.split list.split)
+        apply (auto)[1]
        apply wp+
   apply (elim disjE, simp_all)
     apply (simp add: whenE_def)
@@ -2352,10 +2345,10 @@ lemma throw_on_none [simp]:
 
 lemma cnode_decode_throw:
   "\<lbrakk> transform_intent (invocation_type label) args = Some (CNodeIntent ui);
-    invocation_type label = CNodeCopy \<or>
-    invocation_type label = CNodeMint \<or>
-    invocation_type label = CNodeMove \<or>
-    invocation_type label = CNodeMutate \<rbrakk> \<Longrightarrow>
+    invocation_type label = GenInvocationLabel CNodeCopy \<or>
+    invocation_type label = GenInvocationLabel CNodeMint \<or>
+    invocation_type label = GenInvocationLabel CNodeMove \<or>
+    invocation_type label = GenInvocationLabel CNodeMutate \<rbrakk> \<Longrightarrow>
   CNode_D.decode_cnode_invocation target target_ref [] ui = Monads_D.throw"
   apply (auto simp: CNode_D.decode_cnode_invocation_def transform_intent_def
                     transform_intent_cnode_copy_def
@@ -2402,8 +2395,10 @@ lemma decode_cnode_corres:
                 transform_intent_cnode_rotate_def
                 transform_cap_list_def get_index_def
                 throw_on_none_def
-                transform_cnode_index_and_depth_def and
-         splits = invocation_label.split_asm arch_invocation_label.split_asm list.split_asm
+                transform_cnode_index_and_depth_def
+                gen_invocation_type_eq and
+         splits = gen_invocation_labels.split_asm invocation_label.split_asm
+                  arch_invocation_label.split_asm list.split_asm
   shows
   "\<lbrakk> Some (CNodeIntent ui) = transform_intent (invocation_type label') args';
      cap = transform_cap cap';
@@ -2681,8 +2676,8 @@ lemma decode_cnode_corres:
    apply fastforce
   apply (erule disjE)
    apply (simp add: transform_intent_def upto_enum_def toEnum_def fromEnum_def
-                    enum_invocation_label
-               split: invocation_label.splits arch_invocation_label.splits)
+                    enum_gen_invocation_labels enum_invocation_label gen_invocation_type_eq
+               split: gen_invocation_labels.splits invocation_label.splits arch_invocation_label.splits)
   apply (erule disjE)
    apply (simp add: defns split: splits)
   apply (erule disjE)
@@ -2693,7 +2688,7 @@ lemma decode_cnode_corres:
    apply (case_tac args'a)
     apply clarsimp
     apply (simp add: upto_enum_def toEnum_def fromEnum_def
-                     enum_invocation_label)
+                     enum_invocation_label enum_gen_invocation_labels)
     apply (simp add: defns split: splits)
    apply clarsimp
    apply (case_tac list)
@@ -2703,55 +2698,58 @@ lemma decode_cnode_corres:
    apply (case_tac excaps', simp_all)[1]
    apply (clarsimp simp: Decode_A.decode_cnode_invocation_def unlessE_whenE)
    apply (simp add: upto_enum_def toEnum_def fromEnum_def
-                    enum_invocation_label)
+                    enum_invocation_label enum_gen_invocation_labels
+               flip: gen_invocation_type_eq)
    apply (clarsimp simp: cnode_decode_throw transform_cap_list_def)
    apply (rule corres_bindE_throwError, wp, simp)
   apply (clarsimp simp: transform_intent_def transform_cnode_index_and_depth_def
                         transform_intent_cnode_rotate_def
+                  simp flip: gen_invocation_type_eq
                   split: list.splits)
    apply (simp add: cnode_decode_rotate_throw transform_cap_list_def)
-   apply (simp add: Decode_A.decode_cnode_invocation_def unlessE_whenE)
+   apply (simp add: Decode_A.decode_cnode_invocation_def unlessE_whenE gen_invocation_type_eq)
    apply (rule corres_bindE_throwError, wp, simp)
   apply (simp add: cnode_decode_rotate_throw transform_cap_list_def)
-  apply (simp add: Decode_A.decode_cnode_invocation_def unlessE_whenE)
+  apply (simp add: Decode_A.decode_cnode_invocation_def unlessE_whenE gen_invocation_type_eq)
   apply (rule corres_bindE_throwError, wp, simp)
   done
 
 lemma decode_cnode_label_not_match:
   "\<lbrakk>Some intent = transform_intent (invocation_type label) args; \<forall>ui. intent \<noteq> CNodeIntent ui\<rbrakk>
    \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_cnode_invocation label args (cap.CNodeCap a b c) (e) \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>e. (=) s\<rbrace>"
-  apply (case_tac "invocation_type label = CNodeRevoke")
+  apply (case_tac "invocation_type label = GenInvocationLabel CNodeRevoke")
    apply (clarsimp simp:Decode_A.decode_untyped_invocation_def transform_intent_def)
    apply (clarsimp simp:transform_cnode_index_and_depth_def split:option.splits list.splits)
-  apply (case_tac "invocation_type label = CNodeDelete")
+  apply (case_tac "invocation_type label = GenInvocationLabel CNodeDelete")
    apply (clarsimp simp:Decode_A.decode_untyped_invocation_def transform_intent_def)
    apply (clarsimp simp:transform_cnode_index_and_depth_def split:option.splits list.splits)
-  apply (case_tac "invocation_type label = CNodeCancelBadgedSends")
+  apply (case_tac "invocation_type label = GenInvocationLabel CNodeCancelBadgedSends")
    apply (clarsimp simp:Decode_A.decode_untyped_invocation_def transform_intent_def)
    apply (clarsimp simp:transform_cnode_index_and_depth_def split:option.splits list.splits)
-  apply (case_tac "invocation_type label = CNodeCopy")
+  apply (case_tac "invocation_type label = GenInvocationLabel CNodeCopy")
    apply (clarsimp simp:Decode_A.decode_untyped_invocation_def transform_intent_def)
    apply (clarsimp simp:transform_intent_cnode_copy_def split:option.splits list.splits)
-  apply (case_tac "invocation_type label = CNodeMint")
+  apply (case_tac "invocation_type label = GenInvocationLabel CNodeMint")
    apply (clarsimp simp:Decode_A.decode_untyped_invocation_def transform_intent_def)
    apply (clarsimp simp:transform_intent_cnode_mint_def split:option.splits list.splits)
-  apply (case_tac "invocation_type label = CNodeMove")
+  apply (case_tac "invocation_type label = GenInvocationLabel CNodeMove")
    apply (clarsimp simp:Decode_A.decode_untyped_invocation_def transform_intent_def)
    apply (clarsimp simp:transform_intent_cnode_move_def split:option.splits list.splits)
-  apply (case_tac "invocation_type label = CNodeMutate")
+  apply (case_tac "invocation_type label = GenInvocationLabel CNodeMutate")
    apply (clarsimp simp:Decode_A.decode_untyped_invocation_def transform_intent_def)
    apply (clarsimp simp:transform_intent_cnode_mutate_def split:option.splits list.splits)
-  apply (case_tac "invocation_type label = CNodeRotate")
+  apply (case_tac "invocation_type label = GenInvocationLabel CNodeRotate")
    apply (clarsimp simp:Decode_A.decode_untyped_invocation_def transform_intent_def)
    apply (clarsimp simp:transform_intent_cnode_rotate_def split:option.splits list.splits)
-  apply (case_tac "invocation_type label = CNodeSaveCaller")
+  apply (case_tac "invocation_type label = GenInvocationLabel CNodeSaveCaller")
    apply (clarsimp simp:Decode_A.decode_untyped_invocation_def transform_intent_def)
    apply (clarsimp simp:transform_cnode_index_and_depth_def split:option.splits list.splits)
   apply (clarsimp simp:Decode_A.decode_cnode_invocation_def unlessE_def)
-  apply (subgoal_tac "\<not> invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller]")
-   apply clarsimp
+  apply (subgoal_tac "\<not> gen_invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller]")
+   apply (clarsimp simp: gen_invocation_type_eq)
    apply wp
-  apply (clarsimp simp: upto_enum_def fromEnum_def toEnum_def enum_invocation_label)
+  apply (clarsimp simp: upto_enum_def fromEnum_def toEnum_def enum_invocation_label
+                        enum_gen_invocation_labels gen_invocation_type_eq)
   done
 
 end
