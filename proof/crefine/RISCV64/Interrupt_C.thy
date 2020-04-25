@@ -1027,6 +1027,37 @@ lemma Arch_checkIRQ_ccorres:
   apply clarsimp
   done
 
+lemma checkIRQ_wpE:
+  "\<lbrace> \<lambda>s. irq \<le> ucast maxIRQ \<longrightarrow> irq \<noteq> ucast irqInvalid \<longrightarrow> P () s \<rbrace> checkIRQ irq \<lbrace>P\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
+  unfolding checkIRQ_def
+  by (wpsimp simp: maxIRQ_def irqInvalid_def not_le)
+
+lemma maxIRQ_ucast_toEnum_eq:
+  "x \<le> ucast maxIRQ \<Longrightarrow> toEnum (unat x) = x" for x::machine_word
+  by (simp add: word_le_nat_alt maxIRQ_def)
+
+lemma maxIRQ_ucast_toEnum_irq_t:
+  "x \<le> ucast maxIRQ \<Longrightarrow> (toEnum (unat x)::irq) \<le> scast Kernel_C.maxIRQ" for x::machine_word
+  by (simp add: word_le_nat_alt maxIRQ_def Kernel_C.maxIRQ_def ucast_nat_def unat_ucast)
+
+lemma maxIRQ_ucast_toEnum_irq_t2:
+  "x \<le> ucast maxIRQ \<Longrightarrow> UCAST(_ \<rightarrow> machine_word_len) (toEnum (unat x)::irq) \<le> ucast Kernel_C.maxIRQ"
+  for x::machine_word
+  by (simp add: word_le_nat_alt maxIRQ_def Kernel_C.maxIRQ_def ucast_nat_def unat_ucast)
+
+lemma maxIRQ_irqInvalid:
+  "\<lbrakk> x \<le> ucast maxIRQ; x \<noteq> ucast irqInvalid \<rbrakk> \<Longrightarrow> toEnum (unat x) \<noteq> irqInvalid"
+  for x :: machine_word
+  apply (simp add: word_le_nat_alt maxIRQ_def irqInvalid_def ucast_nat_def unat_ucast)
+  apply (rule notI, erule notE)
+  apply unat_arith
+  apply (clarsimp simp: unat_ucast_mask)
+  apply (subst (asm) and_mask_eq_iff_le_mask[THEN iffD2])
+   apply (simp add: mask_def word_le_nat_alt)
+  apply assumption
+  done
+
+
 lemma decodeIRQControlInvocation_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -1048,6 +1079,8 @@ lemma decodeIRQControlInvocation_ccorres:
             >>= invocationCatch thread isBlocking isCall InvokeIRQControl)
      (Call decodeIRQControlInvocation_'proc)"
   supply gen_invocation_type_eq[simp] if_cong[cong] Collect_const[simp del]
+  supply maxIRQ_ucast_toEnum_eq[simp] maxIRQ_ucast_toEnum_irq_t[simp] maxIRQ_irqInvalid[simp]
+  supply maxIRQ_ucast_toEnum_irq_t2[simp]
   apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' excaps_' buffer_')
    apply (simp add: decodeIRQControlInvocation_def invocation_eq_use_types
               cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -1083,39 +1116,89 @@ lemma decodeIRQControlInvocation_ccorres:
             apply (simp add: rangeCheck_def unlessE_def RISCV64.minIRQ_def
                              ucast_nat_def word_le_nat_alt[symmetric]
                              linorder_not_le[symmetric] Platform_maxIRQ
-                             length_ineq_not_Nil hd_conv_nth cast_simps
-                             maxIRQ_ucast_scast
-                        del: Collect_const cong: call_ignore_cong)
+                             length_ineq_not_Nil hd_conv_nth
+                        cong: call_ignore_cong ccorres_prog_only_cong)
             apply (simp add: split_def invocationCatch_use_injection_handler injection_handler_bindE
                              bindE_assoc
-                        del: Collect_const)
+                        cong: call_ignore_cong ccorres_prog_only_cong)
             apply (ctac add: ccorres_injection_handler_csum1[OF Arch_checkIRQ_ccorres])
-               apply (simp add: injection_liftE)
-  sorry (* FIXME RISCV checkIRQ is different now
-               (* checkIRQ is guaranteed to throw on x86-64 so everything following it is never executed *)
-               apply (rule ccorres_False[where P'=UNIV])
-              apply (rule ccorres_split_throws)
-               apply clarsimp
+               apply (simp add: injection_liftE liftE_bindE)
                apply ccorres_rewrite
-               apply (rule ccorres_return_C_errorE, simp+)[1]
-              apply vcg
-             apply (wp injection_wp_E[OF refl] checkIRQ_wp)
-            apply (simp add: Collect_const_mem all_ex_eq_helper)
-            apply (vcg)
-           apply (wp hoare_vcg_const_imp_lift |wp (once) hoare_drop_imps)+
-          apply (simp add: Collect_const_mem all_ex_eq_helper)
+               apply (ctac add: isIRQActive_ccorres)
+                 apply (simp only: injection_handler_whenE injection_handler_throwError)
+                 apply (rule ccorres_split_when_throwError_cond[where Q=\<top> and Q'=\<top>])
+                    apply simp
+                   apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+                   apply (rule allI, rule conseqPre, vcg)
+                   apply (clarsimp simp: throwError_def return_def exception_defs
+                                         syscall_error_rel_def syscall_error_to_H_def
+                                         syscall_error_type_defs)
+                apply (ctac add: ccorres_injection_handler_csum1
+                                        [OF lookupTargetSlot_ccorres,
+                                            unfolded lookupTargetSlot_def])
+                   prefer 2
+                   apply ccorres_rewrite
+                   apply (ctac add: ccorres_return_C_errorE)
+                  apply ccorres_rewrite
+                    apply csymbr
+                    apply (ctac add: ccorres_injection_handler_csum1[OF ensureEmptySlot_ccorres])
+                       prefer 2
+                       apply ccorres_rewrite
+                       apply (ctac add: ccorres_return_C_errorE)
+                      apply ccorres_rewrite
+                      apply (simp add: ccorres_invocationCatch_Inr performInvocation_def
+                                       liftE_bindE bindE_assoc injection_handler_returnOk
+                                  cong: ccorres_prog_only_cong)
+                      apply (ctac (no_vcg) add: setThreadState_ccorres)
+                       apply (ctac add: invokeIRQControl_ccorres)
+                          apply (clarsimp simp: liftE_alternative)
+                          apply (rule ccorres_alternative2)
+                          apply (ctac add: ccorres_return_CE)
+                         apply (ctac add: ccorres_inst[where P=\<top> and P'=UNIV])
+                        apply wp
+                       apply (vcg exspec=invokeIRQControl_modifies)
+                      apply (wp sts_invs_minor')
+                     apply (rule injection_wp, rule refl, wp)
+                    apply simp
+                    apply vcg
+                   apply (rule injection_wp, rule refl)
+                   apply clarsimp
+                   apply (wp hoare_drop_imps)
+                  apply simp
+                  apply (vcg exspec=lookupTargetSlot_modifies)
+                 apply vcg
+                apply simp
+                apply (wp isIRQActive_wp)
+               apply simp
+               apply (vcg exspec=isIRQActive_modifies)
+              apply ccorres_rewrite
+              apply (ctac add: ccorres_return_C_errorE)
+             apply (rule injection_wp, rule refl)
+             apply simp
+             apply (wp checkIRQ_wpE)
+            apply (rule_tac P'="\<lbrace> \<acute>ksCurThread = tcb_ptr_to_ctcb_ptr thread\<rbrace>" in conseqPre)
+            apply (prop_tac "\<forall>x::machine_word. \<not> scast Kernel_C.maxIRQ < x
+                                                 \<longrightarrow> x = ucast (toEnum (unat x)::irq)")
+             apply (clarsimp simp: Kernel_C.maxIRQ_def not_less word_le_nat_alt ucast_nat_def
+                                   ucast_ucast_mask)
+             apply (rule sym)
+             apply (simp add: and_mask_eq_iff_le_mask)
+             apply (simp add: mask_def word_le_nat_alt)
+            apply (clarsimp simp: numeral_2_eq_2 exception_defs ThreadState_Restart_def false_def mask_def)
+            apply (rule conseqPre, vcg)
+             apply (fastforce simp: exception_defs)
+            apply (rule subset_refl)
+           apply simp
+           apply (wp getSlotCap_wp)
           apply vcg
          apply wp
-        apply (simp add: Collect_const_mem all_ex_eq_helper)
         apply (vcg exspec=getSyscallArg_modifies)
-       apply simp
+       apply clarsimp
        apply wp
-      apply (simp add: Collect_const_mem all_ex_eq_helper)
       apply (vcg exspec=getSyscallArg_modifies)
-     apply simp
-     apply wp
-    apply (simp add: Collect_const_mem all_ex_eq_helper)
+     apply (clarsimp, wp)
     apply (vcg exspec=getSyscallArg_modifies)
+   apply simp
    apply (clarsimp simp: decodeIRQ_arch_helper)
    apply (simp add: liftME_invocationCatch)
    apply (rule ccorres_add_returnOk)
@@ -1124,28 +1207,26 @@ lemma decodeIRQControlInvocation_ccorres:
      apply (rule ccorres_return_C_errorE, simp+)[1]
     apply wp
    apply (vcg exspec=Arch_decodeIRQControlInvocation_modifies)
-  apply (simp add: syscall_error_to_H_cases)
-  apply (clarsimp simp: if_1_0_0 interpret_excaps_test_null excaps_map_def
+  apply clarsimp
+  apply (clarsimp simp: interpret_excaps_test_null excaps_map_def
                         Collect_const_mem word_sless_def word_sle_def
                         ThreadState_Restart_def unat_of_nat mask_def
+                        sysargs_rel_to_n
                   cong: if_cong)
   apply (rule conjI)
    apply (cut_tac unat_lt2p[where x="args ! 2"])
    apply clarsimp
-   apply (clarsimp simp: sysargs_rel_to_n word_less_nat_alt unat_ucast)
+   apply (clarsimp simp: word_less_nat_alt unat_ucast)
    apply (auto simp: ct_in_state'_def neq_Nil_conv word_bits_def
                      excaps_in_mem_def slotcap_in_mem_def
                      cte_wp_at_ctes_of numeral_eqs[symmetric]
                      valid_tcb_state'_def
               elim!: pred_tcb'_weakenE cte_wp_at_weakenE'
               dest!: st_tcb_at_idle_thread' interpret_excaps_eq)[1]
-  apply (clarsimp simp: neq_Nil_conv numeral_eqs[symmetric]
-                        word_sle_def word_sless_def)
+  apply (clarsimp simp: neq_Nil_conv)
   apply (drule interpret_excaps_eq[rule_format, where n=0], simp)
-  apply (clarsimp simp: "StrictC'_thread_state_defs"
-                        rf_sr_ksCurThread ccap_rights_relation_def
-                        rightsFromWord_wordFromRights)
+  apply (clarsimp simp: rf_sr_ksCurThread)
   done
-  *)
+
 end
 end
