@@ -1167,6 +1167,79 @@ lemma set_reply_corres: (* for reply update that doesn't touch the reply stack *
         simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def sc_of_def)
   qed
 
+lemma update_sc_no_reply_stack_update_corres:
+  "\<forall>ae. sc_replies (f ae) = sc_replies ae \<Longrightarrow>
+   corres dc
+     (obj_at (\<lambda>ko. \<exists>ae n. ko = kernel_object.SchedContext ae n
+                               \<and> sc_relation (f ae) n ae') ptr)
+     (obj_at' (\<lambda>sc. scReply ae' = scReply sc) ptr)
+          (update_sched_context ptr f) (setSchedContext ptr ae')"
+  proof -
+  have x: "updateObject ae' = updateObject_default ae'" by clarsimp
+  have z: "\<And>s. sc_at' ptr s
+               \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO ae')) = map_to_ctes (ksPSpace s)"
+    by (clarsimp simp: obj_at_simps)
+  have b: "\<And>ko. (\<lambda>_ :: sched_context. True) ko \<Longrightarrow> objBits ko = objBits ae'"
+    by (clarsimp simp: obj_at_simps)
+  have e: "\<And>ko. (\<lambda>_ :: sched_context. True) ko \<Longrightarrow> exst_same' (injectKO ko) (injectKO ae')"
+    by (clarsimp simp: obj_at_simps)
+  have P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
+    by (clarsimp simp: obj_at_simps objBits_defs pteBits_def pdeBits_def
+                 split: kernel_object.splits arch_kernel_object.splits)
+  assume R : "\<forall>ae. sc_replies (f ae) = sc_replies ae"
+  show ?thesis
+    apply (insert R)
+    apply (clarsimp simp: setSchedContext_def)
+    apply (rule corres_no_failI)
+     apply (rule no_fail_pre)
+      apply wp
+      apply (rule x)
+     apply (clarsimp simp: obj_at'_weakenE[OF _ b])
+    apply (clarsimp simp: obj_at_def is_sc_obj_def obj_at'_def projectKO_eq projectKO_opts_defs)
+    apply (unfold update_sched_context_def set_object_def setObject_def)
+    apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
+                          put_def return_def modify_def get_object_def x
+                          projectKOs obj_at_def a_type_def
+                          updateObject_default_def in_magnitude_check [OF _ P]
+                   split: Structures_A.kernel_object.splits)
+    apply (rename_tac sc)
+    apply (prop_tac "obj_at (same_caps (kernel_object.SchedContext ae n)) ptr a")
+     apply (clarsimp simp: obj_at_def)
+    apply (clarsimp simp: state_relation_def
+                          z[simplified obj_at'_def is_sc_obj_def projectKO_eq projectKO_opts_defs, simplified])
+    apply (clarsimp simp add: caps_of_state_after_update cte_wp_at_after_update
+                              swp_def fun_upd_def obj_at_def)
+    apply (subst conj_assoc[symmetric])
+    apply (rule conjI[rotated])
+     apply (clarsimp simp add: ghost_relation_def)
+     apply (erule_tac x=ptr in allE)+
+     apply (clarsimp simp: obj_at_def a_type_def
+                     split: Structures_A.kernel_object.splits if_split_asm)
+    apply (fold fun_upd_def)
+    apply (simp only: pspace_relation_def simp_thms
+                      pspace_dom_update[where x="kernel_object.SchedContext _ _"
+                                          and v="kernel_object.SchedContext (f _) _",
+                                        simplified a_type_def, simplified])
+    apply (simp only: dom_fun_upd2 simp_thms)
+    apply (elim conjE)
+    apply (frule bspec, erule domI)
+    apply (rule conjI)
+     apply (rule ballI, drule(1) bspec)
+     apply (drule domD)
+     apply (clarsimp simp: project_inject split: if_split_asm kernel_object.split_asm)
+     apply (rename_tac bb aa ba)
+     apply (drule_tac x="(aa, ba)" in bspec, simp)
+     apply clarsimp
+     apply (frule_tac ko'="kernel_object.SchedContext ae n" and x'=ptr
+              in obj_relation_cut_same_type)
+        apply simp+
+     apply (clarsimp simp: a_type_def split: Structures_A.kernel_object.split_asm if_split_asm)
+      (* sc_replies_relation *)
+    apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def map_project_def scs_of_kh_def)
+    apply (drule_tac x=p in spec)
+    by (fastforce simp: typ_at'_def ko_wp_at'_def opt_map_def sc_of_def projectKO_opts_defs)
+qed
+
 lemma no_fail_getNotification [wp]:
   "no_fail (ntfn_at' ptr) (getNotification ptr)"
   apply (simp add: getNotification_def getObject_def

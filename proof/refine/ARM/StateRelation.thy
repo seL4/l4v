@@ -452,6 +452,12 @@ abbreviation sc_replies_relation :: "det_state \<Rightarrow> kernel_state \<Righ
 
 lemmas sc_replies_relation_def = sc_replies_relation_2_def
 
+abbreviation sc_replies_relation_obj :: "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
+  "sc_replies_relation_obj obj obj' next \<equiv>
+  (case (obj, obj') of
+        (Structures_A.SchedContext sc n, KOSchedContext sc') \<Rightarrow>
+               reply_stack_relation (sc_replies sc) (scReply sc') next)"
+
 primrec
   sched_act_relation :: "Structures_A.scheduler_action \<Rightarrow> Structures_H.scheduler_action \<Rightarrow> bool"
 where
