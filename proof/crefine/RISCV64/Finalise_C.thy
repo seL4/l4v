@@ -9,6 +9,48 @@ theory Finalise_C
 imports IpcCancel_C
 begin
 
+(* FIXME RISCV move *)
+lemma not_in_ran_None_upd:
+  "x \<notin> ran m \<Longrightarrow> x \<notin> ran (m(y := None))"
+  by (auto simp: ran_def split: if_split)
+
+(* FIXME RISCV: move to NonDetMonad *)
+lemma catch_bind_distrib:
+  "do _ <- m <catch> h; f od = (doE m; liftE f odE <catch> (\<lambda>x. do h x; f od))"
+  by (force simp: catch_def bindE_def bind_assoc liftE_def NonDetMonad.lift_def bind_def
+                  split_def return_def throwError_def
+            split: sum.splits)
+
+(* FIXME RISCV: move to NonDetMonad *)
+lemma catch_is_if:
+  "(doE x <- f; g x odE <catch> h) =
+   do
+     rv <- f;
+     if sum.isl rv then h (projl rv) else g (projr rv) <catch> h
+   od"
+  apply (simp add: bindE_def catch_def bind_assoc)
+  apply (rule bind_cong, rule refl)
+  apply (clarsimp simp: NonDetMonad.lift_def throwError_def split: sum.splits)
+  done
+
+(* FIXME RISCV: move to NonDetMonad *)
+lemma if_catch_distrib:
+  "((if P then f else g) <catch> h) = (if P then f <catch> h else g <catch> h)"
+  by (simp split: if_split)
+
+(* FIXME RISCV: move to Lib *)
+lemma set_as_imp:
+  "(A \<inter> P \<union> B \<inter> -P) = {s. (s \<in> P \<longrightarrow> s \<in> A) \<and> (s \<notin> P \<longrightarrow> s \<in> B)}"
+  by auto
+
+(* FIXME RISCV: move to CCorres_UL *)
+lemma ccorres_prog_only_cong:
+  "\<lbrakk> m=m'; c=c' \<rbrakk> \<Longrightarrow>
+   ccorres_underlying srel \<Gamma> rrel xf arrel axf G G' hs m c =
+   ccorres_underlying srel \<Gamma> rrel xf arrel axf G G' hs m' c'"
+  by simp
+
+
 context kernel_m
 begin
 
@@ -1053,11 +1095,6 @@ lemma deleteASIDPool_ccorres:
   apply auto
   done
 
-(* FIXME RISCV move *)
-lemma not_in_ran_None_upd:
-  "x \<notin> ran m \<Longrightarrow> x \<notin> ran (m(y := None))"
-  by (auto simp: ran_def split: if_split)
-
 lemma deleteASID_ccorres:
   "ccorres dc xfdc (invs' and K (asid_wf asid \<and> vs \<noteq> 0))
       ({s. asid___unsigned_long_' s = asid} \<inter> {s. vspace_' s = Ptr vs}) []
@@ -1195,7 +1232,7 @@ lemma findVSpaceForASID_nonzero:
   done
 
 lemma unmapPageTable_ccorres:
-  "ccorres dc xfdc (invs' and page_table_at' ptPtr and (\<lambda>s. asid \<le> mask asid_bits \<and> vaddr < pptrBase))
+  "ccorres dc xfdc (invs' and page_table_at' ptPtr and (\<lambda>s. asid_wf asid))
       ({s. asid___unsigned_long_' s = asid} \<inter> {s. vptr_' s = vaddr} \<inter> {s. target_pt_' s = Ptr ptPtr})
       [] (unmapPageTable asid vaddr ptPtr) (Call unmapPageTable_'proc)"
   apply (rule ccorres_gen_asm)
@@ -1617,63 +1654,8 @@ lemma ccap_relation_capFMappedASID_CL_0:
    apply (fastforce simp: cap_to_H_def Let_def split: cap_CL.splits if_split_asm)+
   done
 
-(* FIXME RISCV: left this in as a reference, there are no mode operations on RISCV
-lemma Mode_finaliseCap_ccorres_page_cap:
-  "cp = FrameCap x0 x1 x3 x4 x5 \<Longrightarrow>
-   ccorres
-     (\<lambda>rv rv'.
-                ccap_relation (fst rv) (remainder_C rv') \<and>
-                ccap_relation (snd rv) (finaliseCap_ret_C.cleanupInfo_C rv'))
-     ret__struct_finaliseCap_ret_C_'
-     (invs' and
-      valid_cap' (ArchObjectCap cp) and
-      (\<lambda>s. 2 ^ pageBitsForSize x3 \<le> gsMaxObjectSize s))
-     (UNIV \<inter> \<lbrace>ccap_relation (ArchObjectCap cp) \<acute>cap\<rbrace>)
-     hs
-     (case x5 of
-        None \<Rightarrow> return (NullCap, NullCap)
-      | Some (asid, ptr) \<Rightarrow> do _ <- unmapPage x3 asid ptr x0;
-                               return (NullCap, NullCap)
-                            od)
-     (Call Mode_finaliseCap_'proc)"
-  supply Collect_const[simp del]
-  apply (cinit' lift: cap_' simp: false_def)
-   apply csymbr
-   apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs)
-   apply ccorres_rewrite
-   apply (rule ccorres_rhs_assoc)
-   apply csymbr
-   apply wpc
-    apply (clarsimp simp: ccap_relation_capFMappedASID_CL_0)
-    apply ccorres_rewrite
-    apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
-    apply return_NullCap_pair_ccorres
-   apply clarsimp
-   apply (rule ccorres_cond_true_seq)
-   apply (rule ccorres_rhs_assoc)
-   apply csymbr
-   apply (rule ccorres_cond_true_seq)
-   apply (rule ccorres_rhs_assoc)+
-   apply csymbr
-   apply csymbr
-   apply csymbr
-   apply csymbr
-   apply wpfix
-   apply (ctac add: unmapPage_ccorres)
-     apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
-     apply return_NullCap_pair_ccorres
-    apply wp
-   apply (vcg exspec=unmapPage_modifies)
-  by (clarsimp elim!: ccap_relationE
-               simp: cap_to_H_def cap_frame_cap_lift_def cap_get_tag_isCap_unfolded_H_cap
-                     c_valid_cap_def cl_valid_cap_def valid_cap_simps'
-                     maptype_to_H_def vm_page_map_type_defs Let_def
-               split: cap_CL.splits if_split_asm
-               dest!: x_less_2_0_1)
-*)
-
 lemma Arch_finaliseCap_ccorres:
-  notes dc_simp[simp del] Collect_const[simp del]
+  notes dc_simp[simp del] Collect_const[simp del] if_weak_cong[cong]
   shows
   "ccorres (\<lambda>rv rv'. ccap_relation (fst rv) (remainder_C rv') \<and>
                      ccap_relation (snd rv) (finaliseCap_ret_C.cleanupInfo_C rv'))
@@ -1710,160 +1692,175 @@ lemma Arch_finaliseCap_ccorres:
      apply (rule ccorres_guard_imp[where A="?abstract_pre" and A'=UNIV])
        apply ccorres_rewrite
        apply (rule ccorres_add_return2)
-  sorry (* FIXME RISCV
-       apply (ctac (no_vcg) add: Mode_finaliseCap_ccorres_page_cap)
-        apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-        apply (rule allI, rule conseqPre, vcg)
-        apply (fastforce simp: return_def)
+       apply (rule ccorres_rhs_assoc)+
+       apply csymbr
+       apply wpc
+        apply (prop_tac "ret__unsigned_longlong = 0")
+         apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
+         apply (drule cap_to_H_Frame_unfold, clarsimp)
+         apply (simp add: cap_frame_cap_lift_def split: if_split_asm)
+        apply ccorres_rewrite
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply simp
+        apply (rule ccorres_return_C; simp)
+       apply (prop_tac "ret__unsigned_longlong \<noteq> 0")
+        apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
+        apply (drule cap_to_H_Frame_unfold, clarsimp)
+        apply (simp add: cap_frame_cap_lift_def split: if_split_asm)
+       apply ccorres_rewrite
+       apply (rule ccorres_rhs_assoc)+
+       apply csymbr
+       apply csymbr
+       apply csymbr
+       apply csymbr
+       apply wpc
+       apply simp
+       apply (ctac (no_vcg) add: unmapPage_ccorres)
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply (rule ccorres_return_C; simp)
        apply wp
-      apply fastforce
-     apply fastforce
-    apply (fastforce simp: isCap_simps)
-   apply ccorres_rewrite
-   apply (rule ccorres_Cond_rhs_Seq)
-    \<comment> \<open>final \<and> PageDirectoryCap\<close>
+      apply (clarsimp simp: valid_cap'_def wellformed_mapdata'_def)
+     apply (clarsimp simp: ccap_relation_NullCap_iff ccap_relation_frame_tags)
+     apply (clarsimp simp: ccap_relation_def c_valid_cap_def map_option_Some_eq2
+                           cl_valid_cap_def
+                     dest!: cap_to_H_Frame_unfold)
+     apply (simp add: cap_frame_cap_lift_def split: if_splits)
     apply (clarsimp simp: isCap_simps)
-    apply (rule ccorres_rhs_assoc)+
-    apply csymbr
-    apply ccorres_rewrite
-    apply (rule ccorres_rhs_assoc)+
-    apply csymbr
-    apply csymbr
-    apply clarsimp
-    apply (rule ccorres_Cond_rhs_Seq)
-     apply (subgoal_tac "capPDMappedAddress cp \<noteq> None")
-      prefer 2
-      apply (clarsimp simp add: isCap_simps)
-      apply (frule cap_get_tag_isCap_unfolded_H_cap)
-      apply (frule cap_lift_page_directory_cap)
-      apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
-                            to_bool_def cap_page_directory_cap_lift_def
-                            asid_bits_def
-                     split: if_split_asm)
-     apply clarsimp
+   apply (wpc; simp add: isCap_simps; ccorres_rewrite)
+      \<comment> \<open>ASIDControlCap\<close>
+      apply (rule ccorres_inst[where P="?abstract_pre" and P'=UNIV])
+      apply return_NullCap_pair_ccorres
+     \<comment> \<open>ASIDPoolCap\<close>
+     apply (rule ccorres_inst[where P="?abstract_pre" and P'=UNIV])
+     apply (rule ccorres_guard_imp)
+       apply (rule ccorres_rhs_assoc)+
+       apply csymbr
+       apply csymbr
+       apply (ctac (no_vcg) add: deleteASIDPool_ccorres)
+        apply (csymbr, csymbr, csymbr, csymbr)
+        apply (rule ccorres_return_C; simp)
+       apply wp
+      apply (clarsimp simp: valid_cap'_def)
+     apply (clarsimp simp: ccap_relation_NullCap_iff cap_get_tag_isCap_unfolded_H_cap)
+     apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
+     apply (clarsimp simp: cap_to_H_def Let_def cap_asid_pool_cap_lift_def
+                     split: cap_CL.splits if_splits)
+    \<comment> \<open>FrameCap\<close>
+    apply (rule ccorres_inst[where P="?abstract_pre" and P'=UNIV])
+    apply (rule ccorres_guard_imp)
+      apply (rule ccorres_add_return2)
+      apply (rule ccorres_rhs_assoc)+
+      apply csymbr
+      apply wpc
+       apply (prop_tac "ret__unsigned_longlong = 0")
+        apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
+        apply (drule cap_to_H_Frame_unfold, clarsimp)
+        apply (simp add: cap_frame_cap_lift_def split: if_split_asm)
+       apply ccorres_rewrite
+       apply csymbr
+       apply csymbr
+       apply csymbr
+       apply csymbr
+       apply simp
+       apply (rule ccorres_return_C; simp)
+      apply (prop_tac "ret__unsigned_longlong \<noteq> 0")
+       apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
+       apply (drule cap_to_H_Frame_unfold, clarsimp)
+       apply (simp add: cap_frame_cap_lift_def split: if_split_asm)
+      apply ccorres_rewrite
+      apply (rule ccorres_rhs_assoc)+
+      apply csymbr
+      apply csymbr
+      apply csymbr
+      apply csymbr
+      apply wpc
+      apply simp
+      apply (ctac (no_vcg) add: unmapPage_ccorres)
+       apply csymbr
+       apply csymbr
+       apply csymbr
+       apply csymbr
+       apply (rule ccorres_return_C; simp)
+      apply wp
+     apply (clarsimp simp: valid_cap'_def wellformed_mapdata'_def)
+    apply (clarsimp simp: ccap_relation_NullCap_iff cap_get_tag_isCap_unfolded_H_cap)
+    apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 cap_frame_cap_lift_def
+                          c_valid_cap_def cl_valid_cap_def
+                    dest!: cap_to_H_Frame_unfold
+                    split: if_splits)
+   \<comment> \<open>PageTableCap\<close>
+   apply (rule ccorres_inst[where P="?abstract_pre" and P'=UNIV])
+   apply (rule ccorres_guard_imp)
+     apply (rule ccorres_rhs_assoc)+
+     apply csymbr
+     apply ccorres_rewrite
      apply (rule ccorres_rhs_assoc)+
      apply csymbr
      apply csymbr
-     apply csymbr
-     apply (frule cap_get_tag_isCap_unfolded_H_cap)
-     apply (subst (asm) ccap_relation_def)
-     apply (clarsimp simp: cap_page_directory_cap_lift cap_to_H_def split: if_splits)
-     apply (ctac (no_vcg) add: unmapPageDirectory_ccorres)
-      apply (rule ccorres_inst[where P=\<top> and P'=UNIV], return_NullCap_pair_ccorres)
-     apply (rule wp_post_taut)
-    apply (subgoal_tac "capPDMappedAddress cp = None")
-     prefer 2
-     apply (clarsimp simp add: isCap_simps)
-     apply (frule cap_get_tag_isCap_unfolded_H_cap)
-     apply (frule cap_lift_page_directory_cap)
-     apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
-                           to_bool_def cap_page_directory_cap_lift_def
-                           asid_bits_def
-                    split: if_split_asm)
-    apply simp
-    apply (rule ccorres_inst[where P=\<top> and P'=UNIV], return_NullCap_pair_ccorres)
-   \<comment> \<open>final \<and> PageTableCap\<close>
-   apply (rule ccorres_Cond_rhs_Seq)
-    apply (clarsimp simp: isCap_simps)
-    apply (rule ccorres_rhs_assoc)+
-    apply csymbr
-    apply ccorres_rewrite
-    apply (rule ccorres_rhs_assoc)+
-    apply csymbr
-    apply csymbr
-    apply clarsimp
-    apply (rule ccorres_Cond_rhs_Seq)
-     apply (subgoal_tac "capPTMappedAddress cp \<noteq> None")
-      prefer 2
-      apply (clarsimp simp add: isCap_simps)
-      apply (frule cap_get_tag_isCap_unfolded_H_cap)
-      apply (frule cap_lift_page_table_cap)
-      apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
-                            to_bool_def cap_page_table_cap_lift_def
-                            asid_bits_def
-                     split: if_split_asm)
-     apply clarsimp
+     apply wpc
+      apply (prop_tac "ret__unsigned_longlong = 0")
+       apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 dest!: cap_to_H_PTCap)
+       apply (simp add: cap_page_table_cap_lift_def to_bool_def split: if_split_asm)
+      apply ccorres_rewrite
+      apply simp
+      apply (csymbr, csymbr, csymbr, csymbr)
+      apply (rule ccorres_return_C; simp)
+     apply (prop_tac "ret__unsigned_longlong \<noteq> 0")
+      apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 dest!: cap_to_H_PTCap)
+      apply (simp add: cap_page_table_cap_lift_def to_bool_def split: if_split_asm)
+     apply ccorres_rewrite
      apply (rule ccorres_rhs_assoc)+
      apply csymbr
      apply csymbr
-     apply csymbr
-     apply (simp add: split_def)
-     apply (frule cap_get_tag_isCap_unfolded_H_cap)
-     apply (subst (asm) ccap_relation_def)
-     apply (clarsimp simp: cap_page_table_cap_lift cap_to_H_def split: if_splits)
-     apply (ctac (no_vcg) add: unmapPageTable_ccorres)
-      apply (rule ccorres_inst[where P=\<top> and P'=UNIV], return_NullCap_pair_ccorres)
-     apply (rule wp_post_taut)
-    apply clarsimp
-    apply (subgoal_tac "capPTMappedAddress cp = None")
-     prefer 2
-     apply (clarsimp simp add: isCap_simps)
-     apply (frule cap_get_tag_isCap_unfolded_H_cap)
-     apply (frule cap_lift_page_table_cap)
-     apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
-                           to_bool_def cap_page_table_cap_lift_def
-                           asid_bits_def
-                    split: if_split_asm)
-     apply simp
-     apply (rule ccorres_inst[where P=\<top> and P'=UNIV], return_NullCap_pair_ccorres)
-   \<comment> \<open>final \<and> ASIDPoolCap\<close>
-   apply (rule ccorres_Cond_rhs_Seq)
-    apply (clarsimp simp: isCap_simps)
-    apply (rule ccorres_rhs_assoc)+
-    apply csymbr
-    apply csymbr
-    apply (frule cap_get_tag_isCap_unfolded_H_cap)
-    apply (subst (asm) ccap_relation_def)
-    apply (clarsimp simp: cap_asid_pool_cap_lift cap_to_H_def split: if_splits)
-    apply (ctac (no_vcg) add: deleteASIDPool_ccorres)
-     apply (rule ccorres_inst[where P=\<top> and P'=UNIV], return_NullCap_pair_ccorres)
-    apply (rule wp_post_taut)
-   \<comment> \<open>final \<and> (ASIDControlCap \<or> IOPortControlCap\<close>
-   apply (rule ccorres_Cond_rhs_Seq)
-    apply (clarsimp simp: isCap_simps)
-    apply (erule disjE; ccorres_rewrite; clarsimp; (rule ccorres_inst[where P=\<top> and P'=UNIV], return_NullCap_pair_ccorres))
-   \<comment> \<open>final \<and> IOPortCap\<close>
-   apply (rule ccorres_Cond_rhs_Seq)
-    apply (clarsimp simp: isCap_simps)
-    apply ccorres_rewrite
-    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-    apply (rule allI, rule conseqPre, vcg)
-    apply  (clarsimp simp: return_def ccap_relation_NullCap_iff)
-   \<comment> \<open>Mode_finaliseCap\<close>
-   apply ccorres_rewrite
-   (* Winnow out the irrelevant cases *)
-   apply (wpc; (rule ccorres_inst[where P=\<top> and P'=UNIV], fastforce simp: isCap_simps)?)
-     \<comment> \<open>PageCap\<close>
-     apply clarsimp
-     apply (rule ccorres_add_return2)
-     apply (ctac (no_vcg) add: Mode_finaliseCap_ccorres_page_cap)
-      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-      apply (rule allI, rule conseqPre, vcg)
-      apply (fastforce simp: return_def)
-     apply wp
-    \<comment> \<open>PDPointerTableCap\<close>
-    apply (rule ccorres_add_return2)
-    apply (ctac (no_vcg) add: Mode_finaliseCap_ccorres_pdpt[where is_final=True, simplified if_True])
-     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-     apply (rule allI, rule conseqPre, vcg)
-     apply (fastforce simp: return_def)
-    apply wp
-   \<comment> \<open>PML4Cap\<close>
-   apply (rule ccorres_add_return2)
-   apply (ctac (no_vcg) add: Mode_finaliseCap_ccorres_pml4[where is_final=True, simplified if_True])
-    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-    apply (rule allI, rule conseqPre, vcg)
-    apply (fastforce simp: return_def)
-   apply wp
-  by (auto elim: ccap_relationE
-           simp: cap_to_H_def cap_get_tag_isCap_unfolded_H_cap
-                 cap_page_table_cap_lift_def cap_asid_pool_cap_lift_def
-                 cap_page_directory_cap_lift_def cap_frame_cap_lift_def
-                 c_valid_cap_def cl_valid_cap_def valid_cap_simps'
-                 asid_wf_def mask_def to_bool_def asid_bits_def word_le_make_less
-                 Let_def isCap_simps cap_get_tag_isCap_ArchObject
-           split: cap_CL.splits if_split_asm)
-  *)
+     apply wpc
+     apply (simp add: bindE_assoc cong: ccorres_prog_only_cong)
+     apply (simp add: catch_is_if bind_assoc catch_throwError catch_liftE if_catch_distrib if3_fold
+                      if_swap[where P="P \<or> Q" for P Q]
+                 cong: if_cong ccorres_prog_only_cong)
+     apply (rule ccorres_split_nothrow)
+         apply (ctac add: findVSpaceForASID_ccorres)
+        apply ceqv
+       apply csymbr
+       apply csymbr
+       apply (rule ccorres_split_nothrow_novcg)
+           apply (rule_tac R'="{s. rv' = liftxf errstate
+                                                findVSpaceForASID_ret_C.status_C
+                                                findVSpaceForASID_ret_C.vspace_root_C
+                                                find_ret_' s }"
+                           in ccorres_cond_strong[where R=\<top>])
+             apply (rename_tac rv rv' base_ptr)
+             apply (case_tac rv; clarsimp)
+             apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 cap_page_table_cap_lift_def
+                             dest!: cap_to_H_PTCap)
+            apply (rule ccorres_call[where xf'=xfdc, OF deleteASID_ccorres]; simp)
+           apply csymbr
+           apply (ctac (no_vcg) add: unmapPageTable_ccorres)
+          apply ceqv
+         apply csymbr
+         apply csymbr
+         apply csymbr
+         apply csymbr
+         apply (rule ccorres_return_C; simp)
+        apply wp
+       apply (simp add: ccap_relation_NullCap_iff guard_is_UNIV_def)
+      apply (wp hoare_drop_imps)
+     apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap)
+     apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 dest!: cap_to_H_PTCap)
+     apply (simp add: cap_page_table_cap_lift_def)
+     apply (vcg expspec=findVSpaceForASID_modifies)
+    apply (clarsimp simp: valid_cap'_def wellformed_mapdata'_def)
+    apply fastforce
+   apply (clarsimp simp: ccap_relation_NullCap_iff cap_get_tag_isCap_unfolded_H_cap)
+   apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 dest!: cap_to_H_PTCap)
+   apply (clarsimp simp: cap_page_table_cap_lift_def)
+  apply fastforce
+  done
 
 lemma prepareThreadDelete_ccorres:
   "ccorres dc xfdc

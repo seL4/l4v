@@ -1639,7 +1639,8 @@ lemma cap_to_H_PTCap:
   "cap_to_H cap = ArchObjectCap (PageTableCap p asid) \<Longrightarrow>
   \<exists>cap_CL. cap = Cap_page_table_cap cap_CL \<and>
            to_bool (capPTIsMapped_CL cap_CL) = (asid \<noteq> None) \<and>
-           (asid \<noteq> None \<longrightarrow> capPTMappedASID_CL cap_CL = fst (the asid)) \<and>
+           (asid \<noteq> None \<longrightarrow> capPTMappedASID_CL cap_CL = fst (the asid) \<and>
+                            capPTMappedAddress_CL cap_CL = snd (the asid)) \<and>
            capPTBasePtr_CL cap_CL = p"
   by (auto simp add: cap_to_H_def Let_def split: cap_CL.splits if_splits)
 
