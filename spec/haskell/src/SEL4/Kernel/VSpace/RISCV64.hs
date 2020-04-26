@@ -225,6 +225,7 @@ deleteASID asid pt = do
 -- Returns only slots with pageTablePTEs
 lookupPTFromLevel :: Int -> PPtr PTE -> VPtr -> PPtr PTE -> KernelF LookupFailure (PPtr PTE)
 lookupPTFromLevel level ptPtr vPtr targetPtPtr = do
+    assert (ptPtr /= targetPtPtr) "never called at top-level"
     unless (0 < level) $ throw InvalidRoot
     let slot = ptSlotIndex level ptPtr vPtr
     pte <- withoutFailure $ getObject slot

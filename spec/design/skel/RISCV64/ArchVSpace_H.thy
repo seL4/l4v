@@ -40,6 +40,7 @@ fun
     (lookup_failure, machine_word) kernel_f"
 where
   "lookupPTFromLevel level ptPtr vPtr targetPtPtr = doE
+    assertE (ptPtr \<noteq> targetPtPtr);
     unlessE (0 < level) $ throw InvalidRoot;
     slot <- returnOk $ ptSlotIndex level ptPtr vPtr;
     pte <- withoutFailure $ getObject slot;
