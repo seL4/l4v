@@ -356,7 +356,7 @@ lemma no_fail_sfence[intro!,simp,wp]:
 lemma unmap_page_table_corres:
   assumes "asid' = ucast asid" "vptr' = vptr" "pt' = pt"
   shows "corres dc
-          (invs and K (0 < asid \<and> vptr \<in> user_region))
+          (invs and (\<lambda>s.  vspace_for_asid asid s \<noteq> Some pt) and K (0 < asid \<and> vptr \<in> user_region))
           no_0_obj'
           (unmap_page_table asid vptr pt)
           (unmapPageTable asid' vptr' pt')"

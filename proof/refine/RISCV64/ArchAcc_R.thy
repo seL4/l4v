@@ -524,7 +524,7 @@ lemma lookupPTFromLevel_inv[wp]:
   "lookupPTFromLevel level pt vptr target_pt \<lbrace>P\<rbrace>"
 proof (induct level arbitrary: pt)
   case 0 show ?case
-    by (subst lookupPTFromLevel.simps, simp add: checkPTAt_def, wp)
+    by (subst lookupPTFromLevel.simps, simp add: checkPTAt_def, wpsimp)
 next
   case (Suc level)
   show ?case
@@ -690,7 +690,7 @@ lemma pt_lookup_from_level_corres:
    corres (lfr \<oplus> (=))
           (pspace_aligned and pspace_distinct and valid_vspace_objs
              and valid_asid_table and \<exists>\<rhd>(level,pt)
-             and K (vptr \<in> user_region \<and> level \<le> max_pt_level))
+             and K (vptr \<in> user_region \<and> level \<le> max_pt_level \<and> pt \<noteq> target))
           \<top>
           (pt_lookup_from_level level pt vptr target)
           (lookupPTFromLevel level' pt' vptr target)"
@@ -698,6 +698,8 @@ proof (induct level arbitrary: level' pt pt')
   case 0
   then show ?case
     apply (subst lookupPTFromLevel.simps, subst pt_lookup_from_level_simps)
+    apply simp
+    apply (rule corres_gen_asm)
     apply (simp add: lookup_failure_map_def)
     done
 next
@@ -754,6 +756,7 @@ next
   show ?case
     apply (subst lookupPTFromLevel.simps, subst pt_lookup_from_level_simps)
     apply (simp add: unlessE_whenE not_less)
+    apply (rule corres_gen_asm, simp)
     apply (rule corres_initial_splitE[where r'=dc])
        apply (corressimp simp: lookup_failure_map_def)
       apply (rule corres_splitEE[where r'=pte_relation'])
