@@ -1231,82 +1231,257 @@ lemma findVSpaceForASID_nonzero:
   apply (wp | wpc | simp only: o_def simp_thms)+
   done
 
+(* FIXME RISCV: move up, make ccorres_underlying, check if it could be made [simp] *)
+(* Provide full ccorres context so it will work with ccorres_prog_only_cong enabled *)
+lemma ccorres_dc_comp:
+  "ccorres (dc \<circ> R) xf P P' hs m c = ccorres dc xf P P' hs m c "
+  by simp
+
+lemma ccorres_ul_pre_getObject_pte:
+  assumes cc: "\<And>rv. ccorres_underlying rf_sr \<Gamma> (inr_rrel r') xf' (inl_rel r) xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres_underlying rf_sr \<Gamma> (inr_rrel r') xf' (inl_rel r) xf
+                  (\<lambda>s. (\<forall>pte. ko_at' pte p s \<longrightarrow> P pte s))
+                  {s. \<forall>pte pte'. cslift s (pte_Ptr p) = Some pte' \<and> cpte_relation pte pte'
+                           \<longrightarrow> s \<in> P' pte}
+                          hs (getObject p >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_symb_exec_l)
+      apply (rule ccorres_guard_imp2)
+       apply (rule cc)
+      apply (rule conjI)
+       apply (rule_tac Q="ko_at' rv p s" in conjunct1)
+       apply assumption
+      apply assumption
+     apply (wp getPTE_wp empty_fail_getObject | simp)+
+  apply clarsimp
+  apply (erule cmap_relationE1 [OF rf_sr_cpte_relation],
+         erule ko_at_projectKO_opt)
+  apply simp
+  done
+
+(* FIXME RISCV: move to CCorres_UL, remove previous ccorres_cases *)
+lemma ccorres_cases:
+  assumes P:    " P \<Longrightarrow> ccorres_underlying srel Ga rrel xf arrel axf G G' hs a b"
+  assumes notP: "\<not>P \<Longrightarrow> ccorres_underlying srel Ga rrel xf arrel axf H H' hs  a b"
+  shows "ccorres_underlying  srel Ga rrel xf arrel axf (\<lambda>s. (P \<longrightarrow> G s) \<and> (\<not>P \<longrightarrow> H s))
+                      ({s. P \<longrightarrow> s \<in> G'} \<inter> {s. \<not>P \<longrightarrow> s \<in> H'})
+                      hs a b"
+  apply (cases P, auto simp: P notP)
+  done
+
+(* FIXME RISCV: move to VSpace_C, replace previous *)
+lemma ccorres_checkPTAt:
+  "ccorres_underlying srel Ga rrel xf arrel axf P P' hs (a ()) c \<Longrightarrow>
+   ccorres_underlying srel Ga rrel xf arrel axf
+                      (\<lambda>s. page_table_at' pt s \<longrightarrow> P s) P' hs (checkPTAt pt >>= a) c"
+  unfolding checkPTAt_def by (rule ccorres_stateAssert)
+
+
+lemma lookupPTFromLevel_ccorres:
+  notes Collect_const[simp del] call_ignore_cong[cong]
+  defines "idx i \<equiv> 0x1E - 9 * i"
+  defines "vshift vaddr i \<equiv> (vaddr >> unat (idx i)) && 0x1FF"
+  defines "maxPT \<equiv> 2"
+  assumes max: "level \<le> maxPTLevel"
+  shows
+    "ccorres_underlying rf_sr \<Gamma>
+      (inr_rrel (\<lambda>ptSlot ptSlot_C. ptSlot_C = pte_Ptr ptSlot)) ptSlot_' (inl_rrel dc) xfdc
+      (page_table_at' pt)
+      (\<lbrace>\<acute>i = of_nat (maxPTLevel - level)\<rbrace> \<inter> \<lbrace>\<acute>pt = pte_Ptr pt\<rbrace>)
+      [SKIP]
+      (lookupPTFromLevel level pt vaddr target_pt)
+      (      WHILE \<acute>i < maxPT \<and> \<acute>pt \<noteq> pte_Ptr target_pt DO
+               Guard ShiftError \<lbrace>idx \<acute>i < 0x40\<rbrace>
+                (Guard MemorySafety
+                  \<lbrace>vshift vaddr \<acute>i = 0 \<or>
+                   array_assertion \<acute>pt (unat (vshift vaddr \<acute>i)) (hrs_htd \<acute>t_hrs)\<rbrace>
+                  (\<acute>ptSlot :== \<acute>pt +\<^sub>p uint (vshift vaddr \<acute>i)));;
+               \<acute>ret__unsigned_long :== CALL isPTEPageTable(\<acute>ptSlot);;
+               IF \<acute>ret__unsigned_long = 0 THEN
+                 return_void_C
+               FI;;
+               \<acute>pt :== CALL getPPtrFromHWPTE(\<acute>ptSlot);;
+               \<acute>i :== \<acute>i + 1
+             OD;;
+             IF \<acute>pt \<noteq> pte_Ptr target_pt THEN
+               return_void_C
+             FI)"
+using max
+proof (induct level arbitrary: pt)
+  case 0
+  show ?case
+    apply (subst lookupPTFromLevel.simps)
+    apply (simp add: 0 whileAnno_def maxPT_def maxPTLevel_def)
+    apply (rule ccorres_assertE)
+    apply (rule ccorres_expand_while_iff_Seq[THEN iffD1])
+    apply (subst Int_commute)
+    apply (cinitlift i_')
+    apply (simp add: throwError_def)
+    apply ccorres_rewrite
+    apply (cinitlift pt_')
+    apply (rule ccorres_guard_imp)
+      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+      apply (simp add: return_def)
+      apply (rule allI, rule conseqPre, vcg)
+      apply clarsimp
+     apply simp
+    apply simp
+    done
+next
+  have [simp]: "of_nat maxPTLevel = maxPT"
+    by (simp add: maxPTLevel_def maxPT_def)
+
+  case (Suc level)
+  then
+  have level: "level < maxPTLevel" by simp
+  then
+  have [simp]: "maxPT - (1 + of_nat level) < maxPT" (is "?i < maxPT")
+    by (simp add: maxPTLevel_def maxPT_def unat_arith_simps  unat_of_nat)
+
+  from level
+  have [simp]: "idx ?i < 0x40"
+    by (simp add: idx_def maxPT_def maxPTLevel_def unat_word_ariths unat_arith_simps unat_of_nat)
+
+  from level
+  have [simp]: "pt + vshift vaddr ?i * 8 = ptSlotIndex (Suc level) pt vaddr"
+    by (simp add: ptSlotIndex_def vshift_def maxPT_def ptIndex_def idx_def ptBitsLeft_def
+                  bit_simps mask_def unat_word_ariths unat_of_nat maxPTLevel_def shiftl_t2n)
+
+  have [simp]: "\<And>pte pte'. \<lbrakk> cpte_relation pte pte'; isPageTablePTE pte \<rbrakk> \<Longrightarrow>
+                            ptrFromPAddr (pte_CL.ppn_CL (pte_lift pte') << pageBits) =
+                            getPPtrFromHWPTE pte"
+    by (clarsimp simp: cpte_relation_def isPageTablePTE_def Let_def getPPtrFromHWPTE_def bit_simps
+                 split: pte.splits)
+
+  have mask_simp[simp]: "(0x1FF::machine_word) = mask ptTranslationBits"
+    by (simp add: bit_simps mask_def)
+
+  show ?case
+    apply (simp add: Suc(2) lookupPTFromLevel.simps whileAnno_def cong: if_weak_cong)
+    apply (rule ccorres_assertE)
+    apply (rule ccorres_expand_while_iff_Seq[THEN iffD1])
+    apply (cinitlift i_' pt_')
+    apply ccorres_rewrite
+    apply (simp add: liftE_bindE)
+    apply (rule ccorres_guard_imp)
+      supply ccorres_prog_only_cong[cong]
+      apply (rule ccorres_rhs_assoc)+
+      apply (rule ccorres_ul_pre_getObject_pte, rename_tac pte)
+      apply (rule ccorres_move_Guard_Seq [where P="page_table_at' pt" and P'="\<lambda>s. True"])
+       apply (intro allI impI, simp)
+       apply (rule disjCI2)
+       apply clarsimp
+       apply (erule (1) page_table_at'_array_assertion)
+        apply (clarsimp simp: unat_and_mask_le_ptTrans vshift_def)
+       apply (simp add: neq_0_unat)
+      apply (rule ccorres_symb_exec_r2)
+        apply (rule ccorres_add_return)
+        apply (rule ccorres_split_nothrow)
+            apply (rule ccorres_call[where xf'=ret__unsigned_long_'])
+               apply (rule_tac pte=pte in isPTEPageTable_corres)
+              apply simp
+             apply simp
+            apply simp
+           apply ceqv
+          apply (simp add: from_bool_0)
+          apply (rule ccorres_Cond_rhs_Seq)
+           apply ccorres_rewrite
+           apply simp
+           apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+           apply (simp add: return_def throwError_def)
+           apply (rule allI, rule conseqPre, vcg)
+           apply clarsimp
+          apply simp
+          apply (rule_tac P="getPPtrFromHWPTE pte = target_pt" in ccorres_cases; simp)
+           apply (rule ccorres_symb_exec_r2)
+             apply csymbr
+             apply (rule ccorres_expand_while_iff_Seq[THEN iffD1])
+             apply (rule_tac P'="P' \<inter> \<lbrace> \<acute>pt = pte_Ptr (getPPtrFromHWPTE pte) \<rbrace>" for P' in ccorres_inst)
+             apply (cinitlift pt_')
+             apply ccorres_rewrite
+             apply (rule ccorres_inst[where P=\<top> and
+                                            P'="\<lbrace> \<acute>ptSlot = pte_Ptr (pt + vshift vaddr ?i * 8) \<rbrace>"])
+             apply (rule ccorres_from_vcg)
+             apply (rule allI, rule conseqPre, vcg, clarsimp)
+             apply (clarsimp simp: returnOk_def return_def)
+            apply (vcg exspec=getPPtrFromHWPTE_spec')
+           apply (vcg exspec=getPPtrFromHWPTE_modifies)
+           apply (simp add: mex_def meq_def)
+          apply (rule ccorres_checkPTAt)
+          apply (rule ccorres_symb_exec_r2)
+            apply (rule ccorres_symb_exec_r2)
+              apply (fold dc_def)[1]
+              apply (rule Suc.hyps[unfolded whileAnno_def])
+             using level apply simp
+             apply vcg
+            apply (vcg spec=modifies)
+           apply (vcg exspec=getPPtrFromHWPTE_spec')
+          apply (vcg exspec=getPPtrFromHWPTE_modifies)
+          apply (simp add: mex_def meq_def)
+         apply simp
+         apply wp
+        apply (clarsimp)
+        apply (vcg exspec=isPTEPageTable_spec')
+       apply vcg
+      apply (vcg spec=modifies)
+     apply fastforce
+    using level
+    apply (clarsimp simp: typ_heap_simps maxPT_def maxPTLevel_def)
+    done
+qed
+
+
 lemma unmapPageTable_ccorres:
   "ccorres dc xfdc (invs' and page_table_at' ptPtr and (\<lambda>s. asid_wf asid))
-      ({s. asid___unsigned_long_' s = asid} \<inter> {s. vptr_' s = vaddr} \<inter> {s. target_pt_' s = Ptr ptPtr})
+      (\<lbrace>\<acute>asid___unsigned_long = asid\<rbrace> \<inter> \<lbrace>\<acute>vptr = vaddr\<rbrace> \<inter> \<lbrace>\<acute>target_pt = pte_Ptr ptPtr\<rbrace>)
       [] (unmapPageTable asid vaddr ptPtr) (Call unmapPageTable_'proc)"
+  supply ccorres_prog_only_cong[cong] Collect_const[simp del] ccorres_dc_comp[simp]
   apply (rule ccorres_gen_asm)
+  apply (rule ccorres_guard_imp[where Q'="\<lbrace>\<acute>vptr = vaddr\<rbrace> \<inter> \<lbrace>\<acute>target_pt = pte_Ptr ptPtr\<rbrace> \<inter>
+                                          \<lbrace>\<acute>asid___unsigned_long = asid\<rbrace> \<inter> \<lbrace>\<acute>vptr = vaddr\<rbrace> \<inter>
+                                          \<lbrace>\<acute>target_pt = pte_Ptr ptPtr\<rbrace>" and
+                                      Q=A and A=A for A]; simp?)
   apply (cinit lift: asid___unsigned_long_' vptr_' target_pt_')
-  sorry (* FIXME RISCV
    apply (clarsimp simp add: ignoreFailure_liftM)
    apply (ctac add: findVSpaceForASID_ccorres,rename_tac vspace find_ret)
-      apply clarsimp
-      apply (ctac add: lookupPDSlot_ccorres, rename_tac pdSlot lu_ret)
-         apply (clarsimp simp add: pde_pde_pt_def liftE_bindE)
+      prefer 2
+      apply ccorres_rewrite
+      apply (clarsimp simp: throwError_def)
+      apply (rule ccorres_return_void_C)
+     apply ccorres_rewrite
+     apply csymbr
+     apply (rule ccorres_symb_exec_r2)
+       apply (rule ccorres_symb_exec_r2)
          apply (rule ccorres_rhs_assoc2)
-         apply (rule ccorres_rhs_assoc2)
-         apply (rule ccorres_rhs_assoc2)
-         apply (rule ccorres_pre_getObject_pde)
-         apply (simp only: pde_case_isPageTablePDE)
-         apply (rule_tac xf'=ret__int_'
-                      and R'=UNIV
-                      and val="from_bool (isPageTablePDE pde \<and> pdeTable pde = addrFromPPtr ptPtr)"
-                      and R="ko_at' pde pdSlot"
-                  in ccorres_symb_exec_r_known_rv_UNIV)
-            apply vcg
-            apply clarsimp
-            apply (erule cmap_relationE1[OF rf_sr_cpde_relation])
-             apply (erule ko_at_projectKO_opt)
-            apply (rename_tac pde_C)
-            apply (clarsimp simp: typ_heap_simps)
-            apply (rule conjI, clarsimp simp: pde_pde_pt_def)
-             apply (drule pde_lift_pde_pt[simplified pde_pde_pt_def, simplified])
-             apply (clarsimp simp: from_bool_def cpde_relation_def Let_def isPageTablePDE_def
-                                   pde_pde_pt_lift_def case_bool_If
-                             split: pde.split_asm)
-            apply clarsimp
-            apply (simp add: from_bool_def split:bool.splits)
-            apply (rule strenghten_False_imp)
-            apply (simp add: cpde_relation_def Let_def)
-            apply (subgoal_tac "pde_get_tag pde_C = 1")
-             apply (clarsimp dest!: pde_lift_pde_large[simplified pde_pde_large_def, simplified]
-                             simp: isPageTablePDE_def split: pde.splits)
-            apply (clarsimp simp: pde_get_tag_def word_and_1)
-           apply ceqv
-          apply (rule ccorres_Cond_rhs_Seq)
-           apply (simp add: from_bool_0)
-           apply ccorres_rewrite
-           apply (clarsimp simp: throwError_def)
-           apply (rule ccorres_return_void_C[simplified dc_def])
-          apply (simp add: from_bool_0)
-          apply (rule ccorres_liftE[simplified dc_def])
-          apply (ctac add: flushTable_ccorres)
-            apply (csymbr, rename_tac invalidPDE)
-            apply (rule ccorres_split_nothrow_novcg_dc)
-               apply (rule storePDE_Basic_ccorres)
-               apply (simp add: cpde_relation_def Let_def)
-              apply (csymbr, rename_tac root)
-              apply (ctac add: invalidatePageStructureCacheASID_ccorres[simplified dc_def])
-             apply wp
-            apply (clarsimp simp add: guard_is_UNIV_def)
-           apply wp
-          apply clarsimp
-          apply (vcg exspec=flushTable_modifies)
-         apply (clarsimp simp: guard_is_UNIV_def)
-        apply (simp,ccorres_rewrite,simp add:throwError_def)
-        apply (rule ccorres_return_void_C[simplified dc_def])
-       apply (clarsimp,wp)
-       apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> page_table_at' ptPtr s" in hoare_post_imp_R)
-        apply wp
-       apply clarsimp
-      apply (vcg exspec=lookupPDSlot_modifies)
-     apply (simp,ccorres_rewrite,simp add:throwError_def)
-     apply (rule ccorres_return_void_C[simplified dc_def])
+         apply (rule ccorres_splitE_novcg[OF lookupPTFromLevel_ccorres])
+             apply (simp add: maxPTLevel_def)
+            apply ceqv
+           apply (simp add: liftE_bindE)
+           apply csymbr
+           apply (rule ccorres_split_nothrow_novcg)
+               apply (rule storePTE_Basic_ccorres)
+               apply (clarsimp simp: cpte_relation_def)
+              apply ceqv
+             apply (rule ccorres_liftE)
+             apply (rule ccorres_rel_imp)
+              apply (rule ccorres_call[where xf'=xfdc])
+                 apply (rule sfence_ccorres)
+                apply simp
+               apply simp
+              apply simp
+             apply simp
+            apply wp
+           apply (simp add: guard_is_UNIV_def)
+          apply (simp add: guard_is_UNIV_def)
+         apply (simp add: guard_is_UNIV_def)
+        apply vcg
+       apply (vcg spec=modifies)
+      apply vcg
+     apply (vcg spec=modifies)
     apply wp
-   apply vcg
-  apply (auto simp add: asid_wf_def mask_def)
+   apply (vcg exspec=findVSpaceForASID_modifies)
+  apply clarsimp
   done
-  *)
 
 lemma return_Null_ccorres:
   "ccorres ccap_relation ret__struct_cap_C_'

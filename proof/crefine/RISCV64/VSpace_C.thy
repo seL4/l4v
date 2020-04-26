@@ -474,6 +474,35 @@ lemma pte_at'_ptSlotIndex:
   apply (simp add: ucast_ucast_mask bit_simps)
   done
 
+(* FIXME RISCV: move *)
+lemma unat_and_mask_le:
+  fixes x::"'a::len word"
+  assumes "n < LENGTH('a)"
+  shows "unat (x && mask n) \<le> 2^n"
+proof -
+  from assms
+  have "2^n-1 \<le> (2^n :: 'a word)"
+    using word_1_le_power word_le_imp_diff_le by blast
+  then
+  have "unat (x && mask n) \<le> unat (2^n::'a word)"
+    apply (fold word_le_nat_alt)
+    apply (rule order_trans, rule word_and_le1)
+    apply (simp add: mask_def)
+    done
+  with assms
+  show ?thesis by (simp add: unat_2tp_if)
+qed
+
+(* FIXME RISCV: move *)
+lemma neq_0_unat: "x \<noteq> 0 \<Longrightarrow> 0 < unat x" for x::machine_word
+  by (simp add: unat_gt_0)
+
+lemma ptTranslationBits_word_bits:
+  "ptTranslationBits < LENGTH(machine_word_len)"
+  by (simp add: bit_simps)
+
+lemmas unat_and_mask_le_ptTrans = unat_and_mask_le[OF ptTranslationBits_word_bits]
+
 lemma lookupPTSlotFromLevel_ccorres:
   defines
     "ptSlot_upd \<equiv>
@@ -507,8 +536,7 @@ lemma lookupPTSlotFromLevel_ccorres:
       OD;;
       return_C ret__struct_lookupPTSlot_ret_C_'_update ret___struct_lookupPTSlot_ret_C_')"
 proof (induct level arbitrary: pt)
-  have [simp]: "x \<noteq> 0 \<Longrightarrow> 0 < unat x" for x::machine_word
-    by (simp add: unat_gt_0)
+  note unat_and_mask_le_ptTrans[simp] neq_0_unat[simp]
 
   have misc_simps[simp]:
     "pageBits = pt_bits"
@@ -518,17 +546,6 @@ proof (induct level arbitrary: pt)
     "\<And>x::machine_word. x * 8 = x << pte_bits"
     "0x1FF = (mask ptTranslationBits :: machine_word)"
     by (auto simp: bit_simps mask_def shiftl_t2n)
-
-  have and_mask_le[simp]:
-    "unat (x && mask ptTranslationBits) \<le> 2^ptTranslationBits" for x::machine_word
-  proof -
-    have "unat (x && mask ptTranslationBits) \<le> unat (2^ptTranslationBits::machine_word)"
-      apply (fold word_le_nat_alt)
-      apply (rule order_trans, rule word_and_le1)
-      apply (simp add: bit_simps mask_def del: misc_simps)
-      done
-    then show ?thesis by (simp add: bit_simps)
-  qed
 
   case 0
   show ?case
