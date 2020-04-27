@@ -2226,8 +2226,6 @@ lemma le_mask_asid_bits_helper:
   apply (clarsimp simp: asid_bits_def asid_low_bits_def asid_high_bits_def nth_shiftl)
   done
 
-declare Word_Lemmas.from_bool_mask_simp [simp]
-
 lemma injection_handler_liftE:
   "injection_handler a (liftE f) = liftE f"
   by (simp add:injection_handler_def)
@@ -2250,13 +2248,14 @@ lemma injection_handler_stateAssert_relocate:
     = do v \<leftarrow> stateAssert ass xs; injection_handler Inl (f ()) >>=E g od"
   by (simp add: injection_handler_def handleE'_def bind_bindE_assoc bind_assoc)
 
-(* FIXME RISCV: adapt?
-lemma ccap_relation_page_directory_mapped_asid:
-  "ccap_relation (ArchObjectCap (PageDirectoryCap p (Some (asid, vspace)))) cap
-    \<Longrightarrow> asid = capPDMappedASID_CL (cap_page_directory_cap_lift cap)"
-  by (frule cap_get_tag_isCap_unfolded_H_cap)
-     (clarsimp simp: cap_page_directory_cap_lift ccap_relation_def cap_to_H_def split: if_splits)
-*)
+(* FIXME RISCV: ArchMove_C *)
+lemma asid_shiftr_low_bits_less[simplified]:
+  "(asid :: machine_word) \<le> mask asid_bits \<Longrightarrow> asid >> asid_low_bits < 2^LENGTH(asid_high_len)"
+  apply (rule_tac y="2 ^ 7" in order_less_le_trans)
+   apply (rule shiftr_less_t2n)
+   apply (simp add: le_mask_iff_lt_2n[THEN iffD1] asid_bits_def asid_low_bits_def)
+  apply simp
+  done
 
 lemma decodeRISCVMMUInvocation_ccorres:
   notes Collect_const[simp del] if_cong[cong]
@@ -2278,7 +2277,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
        (decodeRISCVMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeRISCVMMUInvocation_'proc)"
-thm decodeRISCVMMUInvocation_body_def
+  supply ccorres_prog_only_cong[cong]
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_'
                       extraCaps___struct_extra_caps_C_' cap_' buffer_')
    apply csymbr
@@ -2305,10 +2304,10 @@ thm decodeRISCVMMUInvocation_body_def
                              throwError_bind invocationCatch_def
                       split: invocation_label.split arch_invocation_label.split)
      apply ccorres_rewrite
-     apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def])
+     apply (rule syscall_error_throwError_ccorres_n)
      apply (fastforce simp: syscall_error_to_H_cases)
     (* RISCV64ASIDControlMakePool *)
-    apply (clarsimp simp: decodeRISCVMMUInvocation_def decodeRISCVASIDControlInvocation_def isCap_simps)
+    apply (simp add: decodeRISCVMMUInvocation_def decodeRISCVASIDControlInvocation_def isCap_simps)
     apply (simp add: word_less_nat_alt list_case_If2 split_def)
     apply csymbr
     apply (rule ccorres_Cond_rhs_Seq)
@@ -2316,7 +2315,7 @@ thm decodeRISCVMMUInvocation_body_def
      apply (rule ccorres_cond_true_seq | simp)+
      apply (simp add: throwError_bind invocationCatch_def)
      apply ccorres_rewrite
-     apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def])
+     apply (rule syscall_error_throwError_ccorres_n)
      apply (fastforce simp: syscall_error_to_H_cases)
     apply (simp add: interpret_excaps_test_null excaps_map_def)
     apply csymbr
@@ -2325,17 +2324,16 @@ thm decodeRISCVMMUInvocation_body_def
      apply (rule ccorres_cond_true_seq | simp)+
      apply (simp add: throwError_bind invocationCatch_def)
      apply ccorres_rewrite
-     apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def])
+     apply (rule syscall_error_throwError_ccorres_n)
      apply (fastforce simp: syscall_error_to_H_cases)
     apply csymbr
     apply (simp add: interpret_excaps_test_null[OF Suc_leI])
     apply (rule ccorres_Cond_rhs_Seq)
      apply (simp add: length_ineq_not_Nil throwError_bind invocationCatch_def)
      apply ccorres_rewrite
-     apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def])
+     apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
-    apply (subgoal_tac "1 < length extraCaps")
-     prefer 2
+    apply (prop_tac "1 < length extraCaps")
      apply (rule neq_le_trans, simp)
      apply (fastforce simp: Suc_leI)
     apply (simp add: Let_def split_def liftE_bindE bind_assoc length_ineq_not_Nil)
@@ -2439,7 +2437,7 @@ thm decodeRISCVMMUInvocation_body_def
                 apply (clarsimp split: list.split)
                 apply (fastforce dest!: filter_eq_ConsD)
                apply (simp add: throwError_bind invocationCatch_def)
-               apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def])
+               apply (rule syscall_error_throwError_ccorres_n)
                apply (fastforce simp: syscall_error_to_H_cases)
               apply (simp add: invocationCatch_use_injection_handler
                                injection_bindE[OF refl refl] injection_handler_If
@@ -2463,7 +2461,7 @@ thm decodeRISCVMMUInvocation_body_def
                   apply (clarsimp simp:  to_bool_if cond_throw_whenE bindE_assoc)
                   apply (rule ccorres_split_when_throwError_cond[where Q = \<top> and Q' = \<top>])
                      apply fastforce
-                    apply (rule syscall_error_throwError_ccorres_n[simplified id_def])
+                    apply (rule syscall_error_throwError_ccorres_n)
                     apply (clarsimp simp: syscall_error_rel_def shiftL_nat syscall_error_to_H_cases)
                    prefer 2
                    apply vcg
@@ -2581,22 +2579,15 @@ thm decodeRISCVMMUInvocation_body_def
      apply ccorres_rewrite
      apply (clarsimp simp: isCap_simps decodeRISCVASIDPoolInvocation_def
                            throwError_bind invocationCatch_def)
-     apply (rule syscall_error_throwError_ccorres_n[simplified dc_def id_def o_def])
+     apply (rule syscall_error_throwError_ccorres_n)
      apply (fastforce simp: syscall_error_to_H_cases)
-    apply (clarsimp simp: isCap_simps decodeRISCVASIDPoolInvocation_def split: list.split)
+    apply (simp add: isCap_simps decodeRISCVASIDPoolInvocation_def split: list.split)
+    apply (intro allI impI)
     apply csymbr
     apply (rule ccorres_add_return)
     apply (rule ccorres_Guard_Seq)
-    (* FIXME RISCV: there appears to be a missing check in the C here, we do not know that
-                    the extra cap is a page table cap; this is waiting on C update
     apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
            rule ccorres_rhs_assoc2)
-    *)
-    apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
-           rule ccorres_rhs_assoc2)
-(*
-apply (rule ccorres_split_nothrow)
-*)
     apply (rule_tac R="excaps_in_mem extraCaps \<circ> ctes_of" and
                     R'="UNIV" and
                     val="from_bool (\<not> (isArchObjectCap (fst (extraCaps ! 0)) \<and>
@@ -2623,7 +2614,8 @@ apply (rule ccorres_split_nothrow)
                         split: capability.split arch_capability.split)
       apply (rule syscall_error_throwError_ccorres_n)
       apply (fastforce simp: syscall_error_to_H_cases)
-     apply (clarsimp simp: isCap_simps Kernel_C_defs liftE_bindE bind_assoc)
+     apply (simp add: isCap_simps, elim exE conjE)
+     apply (simp add: isCap_simps Kernel_C_defs liftE_bindE bind_assoc)
      apply (rule ccorres_pre_gets_riscvKSASIDTable_ksArchState)
      apply csymbr
      apply (rule ccorres_Guard_Seq)+
@@ -2685,21 +2677,20 @@ apply (rule ccorres_split_nothrow)
            apply (rule ccorres_add_return2)
            apply (rule ccorres_pre_getObject_asidpool)
            apply (rule_tac P="\<forall>x \<in> ran (inv ASIDPool xa). x \<noteq> 0"
-                           in ccorres_gen_asm)
+                           in ccorres_gen_asm2)
            apply (rule_tac P="ko_at' xa (capASIDPool cp)"
                            in ccorres_from_vcg[where P'=UNIV])
            apply (clarsimp simp: option_to_0_def option_to_ptr_def
                                  return_def)
            apply (rule HoarePartial.SeqSwap)
-  sorry (* FIXME RISCV TODO vcg goal with loop in it, needs more thinking
             apply (rule_tac I="{t. (\<sigma>, t) \<in> rf_sr \<and> i_' t \<le> 2 ^ asid_low_bits
                                  \<and> ko_at' xa (capASIDPool cp) \<sigma>
                                  \<and> (\<exists>v. cslift t (ap_Ptr (capASIDPool cp))
                                          = Some v \<and> (\<forall>x < i_' t. capASIDBase cp + x = 0
-                                                        \<or> asid_map_get_tag (index (array_C v) (unat x)) \<noteq> scast asid_map_asid_map_none )
+                                                        \<or> index (array_C v) (unat x) \<noteq> NULL)
                                         \<and> ret__int_' t = from_bool (i_' t < 2 ^ asid_low_bits
                                              \<and> (capASIDBase cp + (i_' t) = 0
-                                                 \<or> asid_map_get_tag (index (array_C v) (unat (i_' t))) \<noteq> scast asid_map_asid_map_none)))}"
+                                                 \<or> index (array_C v) (unat (i_' t)) \<noteq> NULL)))}"
                          in HoarePartial.reannotateWhileNoGuard)
             apply (rule HoarePartial.While[OF order_refl])
              apply (rule conseqPre, vcg)
@@ -2713,7 +2704,7 @@ apply (rule ccorres_split_nothrow)
                                      asid_low_bits_def not_less field_simps
                                      false_def
                               split: if_split bool.splits)
-               apply xunat_arith
+               apply unat_arith
               apply (rule iffI)
                apply (rule disjCI)
                apply (drule plus_one_helper)
@@ -2742,22 +2733,18 @@ apply (rule ccorres_split_nothrow)
              apply (simp add: asid_low_bits_word_bits)
              apply (drule spec, drule(1) mp)
              apply (simp add: option_to_ptr_def option_to_0_def field_simps)
-             apply (clarsimp simp: asid_map_relation_def asid_map_lift_def
-                            split: if_split_asm option.splits asid_map_CL.split_asm )
             apply (frule(1) neq_le_trans)
             apply (subst filter_assocs_Cons)
               apply (simp add: split_def asid_low_bits_word_bits)
               apply (rule conjI, assumption)
               apply (clarsimp simp add: field_simps)
-              apply (drule spec, drule(1) mp)
-              apply (simp add: asid_map_relation_def asid_map_lift_asid_map_none
-                        split: option.split_asm)
+              apply fastforce
              apply (simp add: asid_low_bits_word_bits)
-             apply (erule allEI, rule impI, drule(1) mp)
+             apply (erule allEI, rule impI, erule(1) impE)
              apply (clarsimp simp: field_simps)
-             apply (drule_tac x=xa in spec)
-             apply (simp add: asid_map_relation_def asid_map_lift_def
-                       split: if_split_asm option.splits asid_map_CL.split_asm)
+             apply (rename_tac x')
+             apply (drule_tac x=x' in spec)
+             apply (simp split: if_split_asm option.splits )
             apply simp
            apply (rule conseqPre, vcg)
            apply (clarsimp simp: asidLowBits_handy_convs
@@ -2772,7 +2759,6 @@ apply (rule ccorres_split_nothrow)
                                  ucast_minus ucast_nat_def
                           elim!: ccap_relationE)
           apply ceqv
-         apply (rule ccorres_Guard_Seq)+
          apply (simp add: if_to_top_of_bind)
          apply (rule ccorres_if_cond_throws[where Q=\<top> and Q'=\<top>, rotated -1])
             apply vcg
@@ -2784,11 +2770,10 @@ apply (rule ccorres_split_nothrow)
           apply (simp add: syscall_error_to_H_cases)
          apply (simp add: returnOk_bind ccorres_invocationCatch_Inr
                           performInvocation_def
-                          RISCV64_H.performInvocation_def
-                          performRISCV64MMUInvocation_def liftE_bindE)
+                          RISCV64_H.performInvocation_def liftE_bindE)
          apply csymbr
          apply (ctac add: setThreadState_ccorres)
-           apply (simp only: liftE_bindE[symmetric])
+           apply (simp add: performRISCVMMUInvocation_def bindE_assoc flip: liftE_liftE returnOk_liftE)
            apply (ctac(no_vcg) add: performASIDPoolInvocation_ccorres)
              apply (rule ccorres_alternative2)
              apply (rule ccorres_return_CE, simp+)[1]
@@ -2806,111 +2791,106 @@ apply (rule ccorres_split_nothrow)
         apply (rule_tac I="\<lbrace>\<forall>rv. Prop \<acute>ksCurThread \<acute>vspaceCapSlot rv\<rbrace>"
                     and Q="\<lbrace>\<forall>rv. Bonus \<acute>i rv \<longrightarrow> Prop \<acute>ksCurThread \<acute>vspaceCapSlot rv\<rbrace>"
                     for Prop Bonus in HoarePartial.reannotateWhileNoGuard)
-        apply vcg
+         apply vcg
          apply fastforce
         apply clarsimp
-       apply vcg
+       apply (rule conseqPre, vcg, rule subset_refl)
       apply simp
       (* HACK: rewrites to fix schematic dependency problems *)
       apply (rule_tac t=v0 and s="capASIDPool cp" in subst, fastforce)
       apply (rule_tac t=v1 and s="capASIDBase cp" in subst, fastforce)
       apply (rule_tac t=b and s="snd (extraCaps ! 0)" in subst, fastforce)
       apply (rule return_wp)
-     apply vcg
-    apply (rule_tac t=v0 and s="capASIDPool cp" in subst, fastforce)
-    apply (rule_tac t=v1 and s="capASIDBase cp" in subst, fastforce)
+     apply (rule conseqPre, vcg)
+     apply (rule_tac t=v0 and s="capASIDPool cp" in subst, fastforce)
+     apply (rule_tac t=v1 and s="capASIDBase cp" in subst, fastforce)
+     apply (rule_tac t=b and s="snd (extraCaps ! 0)" in subst, fastforce)
+     apply (rule subset_refl)
     apply (rule_tac t=b and s="snd (extraCaps ! 0)" in subst, fastforce)
-    apply vcg
-   (* Mode stuff *)
-   apply (rule ccorres_trim_returnE; simp)
-   apply (rule ccorres_call,
-          rule decodeRISCV64ModeMMUInvocation_ccorres;
-          simp)
+    apply (rule conseqPre, vcg, rule subset_refl)
+   (* Can't reach *)
+   apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+   apply (cases cp; simp add: isCap_simps)
   apply (clarsimp simp: o_def)
-  apply (rule conjI)
-   apply (clarsimp simp: cte_wp_at_ctes_of ct_in_state'_def
-                         interpret_excaps_eq excaps_map_def)
+  apply (rule conjI) (* PTCap *)
+   apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (drule_tac t="cteCap cte" in sym)
    apply (frule(1) ctes_of_valid', simp)
-   apply (cases "extraCaps")
-    apply simp
-   apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
-   apply (clarsimp simp: mask_def[where n=4] excaps_in_mem_def
-                         slotcap_in_mem_def typ_at_to_obj_at_arches
-                         obj_at'_weakenE[OF _ TrueI] invs_arch_state'
-                         unat_lt2p[where 'a=machine_word_len, folded word_bits_def])
-   apply (rule conjI)
+  apply (rule conjI) (* not PTCap *)
+   apply (clarsimp simp: cte_wp_at_ctes_of)
+   apply (drule_tac t="cteCap cte" in sym)
+   apply (frule(1) ctes_of_valid', simp)
+   apply (rule conjI, clarsimp, simp) (* FrameCap *)
+   apply clarsimp
+   apply (rule conjI, clarsimp simp: isCap_simps) (* ASIDControlCap *)
+    apply (clarsimp simp: cte_wp_at_ctes_of ct_in_state'_def
+                          interpret_excaps_eq excaps_map_def)
+    apply (clarsimp simp: sysargs_rel_to_n word_less_nat_alt not_le)
+    apply (rule conjI; clarsimp)
     apply (frule invs_arch_state')
-    apply (clarsimp simp: valid_arch_state'_def valid_asid_table'_def neq_Nil_conv)
+    apply (rule conjI, clarsimp simp: valid_arch_state'_def valid_asid_table'_def)
+    apply (clarsimp simp: neq_Nil_conv excaps_map_def valid_tcb_state'_def invs_queues
+                          invs_sch_act_wf'
+                          unat_lt2p[where 'a=machine_word_len, folded word_bits_def])
     apply (frule interpret_excaps_eq[rule_format, where n=1], simp)
-    apply (clarsimp simp: sysargs_rel_to_n word_less_nat_alt)
-    apply (drule length_le_helper | clarsimp simp: linorder_not_less)+
-    apply (rule conjI)
-     apply clarsimp
-    apply (clarsimp simp: tcb_at_invs' Kernel_C.asidLowBits_def)
-    apply (clarsimp simp: invs_valid_objs')
-    apply (rule conjI, fastforce)
-    apply (clarsimp simp: ctes_of_valid' invs_valid_objs' isCap_simps)
-    apply (clarsimp simp: ex_cte_cap_wp_to'_def cte_wp_at_ctes_of
-                          invs_sch_act_wf' dest!: isCapDs(1))
+    apply (rule conjI; clarsimp)+
+    apply (rule conjI, erule ctes_of_valid', clarsimp)
     apply (intro conjI)
-            apply (simp add: Invariants_H.invs_queues)
-           apply (simp add: valid_tcb_state'_def)
-          apply (fastforce elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
-         apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
-         apply (case_tac "tcbState obj", (simp add: runnable'_def)+)[1]
-        apply simp
-       apply (simp add: objBits_simps archObjSize_def)
-      apply fastforce
+          apply fastforce
+         apply (fastforce elim!: pred_tcb'_weakenE)
+        apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
+        apply (case_tac "tcbState obj", (simp add: runnable'_def)+)[1]
+       apply (clarsimp simp: excaps_in_mem_def slotcap_in_mem_def)
+       apply (rule sym, simp add: objBits_simps)
+      apply (simp add: ex_cte_cap_wp_to'_def cte_wp_at_ctes_of)
+      apply clarsimp
+      apply (rule exI)+
+      apply (rule conjI; assumption)
      apply (clarsimp simp: null_def neq_Nil_conv)
      apply (drule_tac f="\<lambda>xs. (a, bb) \<in> set xs" in arg_cong)
-      apply (clarsimp simp: in_assocs_is_fun)
+     apply (clarsimp simp: in_assocs_is_fun)
      apply (clarsimp simp: le_mask_asid_bits_helper)
     apply (simp add: is_aligned_shiftl_self)
-   apply (intro conjI impI)
-     apply clarsimp
-     apply (drule obj_at_valid_objs', clarsimp)
-     apply (clarsimp simp: projectKOs valid_obj'_def inv_ASIDPool
-                    split: asidpool.split_asm)
-    apply clarsimp
-    apply (drule obj_at_valid_objs', clarsimp)
-    apply (clarsimp simp: projectKOs valid_obj'_def inv_ASIDPool
-                    split: asidpool.split_asm)
-    apply (clarsimp simp: isCap_simps Let_def valid_cap'_def
-                          maskCapRights_def[where ?x1.0="ArchObjectCap cp" for cp]
-                          RISCV64_H.maskCapRights_def
-                   split: arch_capability.split_asm)
-    apply (clarsimp simp: null_def neq_Nil_conv mask_def field_simps
-                          asid_low_bits_word_bits asidInvalid_def
-                   dest!: filter_eq_ConsD)
-    apply (subst is_aligned_add_less_t2n[rotated], assumption+)
-       apply (simp add: asid_low_bits_def asid_bits_def)
-      apply (simp add: asid_wf_def)
-     apply simp
-    apply (auto simp: ct_in_state'_def valid_tcb_state'_def
-               dest!: st_tcb_at_idle_thread'
-               elim!: pred_tcb'_weakenE)[1]
+   (* RISCVASIDPoolAssign *)
+   apply (clarsimp simp: isCap_simps valid_tcb_state'_def invs_queues invs_sch_act_wf')
+   apply (frule invs_arch_state', clarsimp)
+   apply (intro conjI)
+        apply fastforce
+       apply (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
+      apply (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
+     apply (cases extraCaps; simp)
+     apply (clarsimp simp: excaps_in_mem_def slotcap_in_mem_def isPTCap'_def)
+    apply (simp add: valid_cap'_def)
+   apply (clarsimp simp: null_def neq_Nil_conv mask_def field_simps
+                         asid_low_bits_word_bits asidInvalid_def asid_wf_def
+                  dest!: filter_eq_ConsD)
+   apply (subst is_aligned_add_less_t2n[rotated]; assumption?)
+      apply (simp add: asid_low_bits_def asid_bits_def)
+     apply (clarsimp simp: asid_wf_def valid_cap'_def asid_bits_def mask_def word_le_nat_alt
+                           word_less_nat_alt)
+    apply (simp add: objBits_simps valid_cap'_def)
+   apply simp
+  apply clarsimp
   apply (clarsimp simp: cte_wp_at_ctes_of asidHighBits_handy_convs
                         word_sle_def word_sless_def asidLowBits_handy_convs
                         rf_sr_ksCurThread "StrictC'_thread_state_defs"
                         mask_def[where n=4]
                   cong: if_cong)
   apply (clarsimp simp: to_bool_def ccap_relation_isDeviceCap2 objBits_simps
-                        archObjSize_def pageBits_def from_bool_def case_bool_If)
-  apply (rule conjI)
-   (* Is Asid Control Cap *)
+                        pageBits_def from_bool_def case_bool_If)
+  apply (rule conjI; clarsimp)
    apply (clarsimp simp: neq_Nil_conv excaps_in_mem_def excaps_map_def)
    apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
    apply (frule interpret_excaps_eq[rule_format, where n=1], simp)
    apply (clarsimp simp: mask_def[where n=4] slotcap_in_mem_def
                          ccap_rights_relation_def rightsFromWord_wordFromRights)
-   apply (clarsimp simp: asid_high_bits_word_bits split: list.split_asm)
+   apply (clarsimp simp: asid_high_bits_word_bits Kernel_C.asidHighBits_def true_def split: list.split_asm)
     apply (clarsimp simp: cap_untyped_cap_lift_def cap_lift_untyped_cap
                           cap_to_H_def[split_simps cap_CL.split]
                           hd_conv_nth length_ineq_not_Nil Kernel_C_defs
                    elim!: ccap_relationE)
    apply (clarsimp simp: to_bool_def unat_eq_of_nat
-                         objBits_simps archObjSize_def pageBits_def from_bool_def case_bool_If
+                         objBits_simps pageBits_def from_bool_def case_bool_If
                   split: if_splits)
   apply (clarsimp simp: asid_low_bits_word_bits isCap_simps neq_Nil_conv
                         excaps_map_def excaps_in_mem_def
@@ -2920,21 +2900,23 @@ apply (rule ccorres_split_nothrow)
   apply (frule ctes_of_valid', clarsimp)
   apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
   apply (rule conjI)
-   apply (clarsimp simp: cap_lift_asid_pool_cap cap_lift_page_directory_cap
+   apply (clarsimp simp: cap_lift_asid_pool_cap cap_lift_page_table_cap
                          cap_to_H_def to_bool_def valid_cap'_def
-                         cap_page_directory_cap_lift_def
-                         cap_asid_pool_cap_lift_def mask_def
+                         cap_page_table_cap_lift_def inv_ASIDPool
+                         cap_asid_pool_cap_lift_def mask_def true_def
                          asid_shiftr_low_bits_less[unfolded mask_def asid_bits_def] word_and_le1
-                  elim!: ccap_relationE split: if_split_asm)
+                  elim!: ccap_relationE split: if_split_asm asidpool.splits)
    apply (clarsimp split: list.split)
-  apply (clarsimp simp: cap_lift_asid_pool_cap cap_lift_page_directory_cap
+   apply (clarsimp simp: casid_pool_relation_def)
+   apply (case_tac asidpool', simp)
+  apply (clarsimp simp: cap_lift_asid_pool_cap cap_lift_page_table_cap
                         cap_to_H_def to_bool_def
-                        cap_page_directory_cap_lift_def
+                        cap_page_table_cap_lift_def
                  elim!: ccap_relationE split: if_split_asm)
   apply (erule rf_sr_cte_at_validD[rotated])
   apply (fastforce simp: slotcap_in_mem_def2)
   done
-  *)
+
 
 lemma setMessageInfo_ksCurThread_ccorres:
   "ccorres dc xfdc (tcb_at' thread and (\<lambda>s. ksCurThread s = thread))
