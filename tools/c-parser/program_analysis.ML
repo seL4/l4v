@@ -104,6 +104,35 @@ sig
   val merge_asm_stmt : asm_stmt_elements -> Absyn.statement_node
 
   val get_globals_rcd : csenv -> senv
+
+  type mungedb = {fun_name: string option, nm_info: nm_info} list
+
+  (* Returns the variable name munging information for all variables. *)
+  val get_mungedb : csenv -> mungedb
+
+  (* Writes the contents of the mungedb to a string list.
+     The list has one human-readable string per C declaration, sorted
+     alphabetically, with the following format per line:
+
+     C variable '{c_source_name}' \
+     declared {decl_info} -> Isabelle state field '{isabelle_name}' \
+     and {abbreviation_info}
+
+     Where:
+       - {c_source_name} is the name of the variable in the C source.
+       - {decl_info} indicates whether the variable was declared globally,
+         and if not then which function it was declared in.
+       - {isabelle_name} is the type-mangled name that we use in Isabelle
+         (e.g. "foo___int").
+       - {abbreviation_info} indicates whether an Isabelle abbreviation
+         was created between the short C name and the long Isabelle name.
+
+     For an example, see `./.testfiles/jiraver1241.thy`.
+  *)
+  val render_mungedb : mungedb -> string list
+
+  (* Writes the mungedb to the file specified in `munge_info_fname` (see
+     type s2s_config). *)
   val export_mungedb : csenv -> unit
 
 end
@@ -135,6 +164,9 @@ datatype var_info =
                 return_var : bool,
                 vtype : int ctype,
                 struct_env : senv,
+
+                (* Name of the function in which this variable was declared (if
+                   any). *)
                 fname : string option,
                 proto_param : bool,
                 munged_name : MString.t,
@@ -2230,27 +2262,57 @@ in
     [(adglob_rcd_tyname, map (fn vi => (srcname vi, get_vi_type vi)) advis)]
 end
 
+(* Iterate over each element of each list value in a table. No good guarantees
+   about traversal order. *)
+fun fold_list_values
+      (f: 'v -> 'acc -> 'acc)
+      (acc0: 'acc)
+      (tab: 'v list Symtab.table) =
+    let
+      fun f_list (_, values) acc = List.foldl (uncurry f) acc values
+    in Symtab.fold f_list tab acc0 end
+
+type mungedb = {fun_name: string option, nm_info: nm_info} list
+
+fun get_mungedb c =
+    let
+      fun get_info vinfo acc = {
+            fun_name = get_vi_fname vinfo,
+            nm_info = get_vi_nm_info c vinfo} :: acc
+    in fold_list_values get_info [] (get_vars c) end
+
+fun render_mungedb_line {fun_name: string option, nm_info: nm_info} =
+    let
+      val decl =
+          case fun_name of
+            NONE => "globally"
+          | SOME f => "in function '" ^ f ^ "'"
+      val c = #src_name nm_info
+      val abbrev =
+          if #alias nm_info
+          then "abbreviation '" ^ c ^ "'"
+          else "no abbreviation"
+      val isa = #isa_name nm_info |> MString.dest
+    in
+      "C variable '" ^ c ^ "' " ^
+      "declared " ^ decl ^ " " ^
+      "-> Isabelle state field '" ^ isa ^ "' " ^
+      "with " ^ abbrev
+    end
+
+fun render_mungedb (info: mungedb): string list =
+    List.map render_mungedb_line info
+    |> Library.sort String.compare
+
 fun export_mungedb (c as CSE cse) =
   case #munge_info_fname cse of
     NONE => ()
   | SOME fname =>
     let
       val outstrm = TextIO.openOut fname
-      fun tab_foldthis (vinfo,acc) =
-        let
-          val srcnm = srcname vinfo
-          val mnm = get_mname vinfo
-          val fopt = get_vi_fname vinfo
-        in
-          ((case fopt of NONE => "" | SOME f => f) ^ "::" ^ srcnm ^ " -> " ^
-           MString.dest mnm ^ "\n") :: acc
-        end
-      fun foldthis (_, vinfos) acc = List.foldl tab_foldthis acc vinfos
-      fun recurse tab = Symtab.fold foldthis tab []
-      val data0 = recurse (get_vars c)
-      val data = Library.sort String.compare data0
+      val data = get_mungedb c |> render_mungedb
     in
-      List.app (fn s => TextIO.output(outstrm, s)) data;
+      List.app (fn s => TextIO.output(outstrm, s ^ "\n")) data;
       TextIO.closeOut outstrm
     end
 
