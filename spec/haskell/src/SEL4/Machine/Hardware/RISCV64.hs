@@ -200,9 +200,9 @@ data VMRights
     deriving (Show, Eq)
 
 vmRightsToBits :: VMRights -> Word
-vmRightsToBits VMKernelOnly = 0x00
-vmRightsToBits VMReadOnly = 0x01
-vmRightsToBits VMReadWrite = 0x11
+vmRightsToBits VMKernelOnly = 1
+vmRightsToBits VMReadOnly = 2
+vmRightsToBits VMReadWrite = 3
 
 allowWrite :: VMRights -> Bool
 allowWrite VMKernelOnly = False
