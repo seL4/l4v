@@ -774,14 +774,9 @@ lemma set_pd_corres [@lift_corres_args, corres]:
     apply (simp split: if_split_asm)
    apply (simp add: other_obj_relation_def
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  sorry (* FIXME RT: replys_of preservation
   apply (rule conjI)
-   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
-   apply (drule(1) ekheap_kheap_dom)
-   apply clarsimp
-   apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: other_obj_relation_def
-           split: Structures_A.kernel_object.splits)
+   apply (fastforce simp: sc_replies_relation_def sc_replies_of_scs_def map_project_def
+                          scs_of_kh_def opt_map_def sc_of_def projectKO_opts_defs)
   apply (rule conjI)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pd_bits" in allE)+
@@ -789,7 +784,7 @@ lemma set_pd_corres [@lift_corres_args, corres]:
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
-  done *)
+  done
 
 
 lemma set_pt_corres [@lift_corres_args, corres]:
@@ -853,14 +848,9 @@ lemma set_pt_corres [@lift_corres_args, corres]:
     apply (simp split: if_split_asm)
    apply (simp add: other_obj_relation_def
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  sorry (* FIXME RT: replys_of preservation
   apply (rule conjI)
-   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
-   apply (drule(1) ekheap_kheap_dom)
-   apply clarsimp
-   apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: other_obj_relation_def
-           split: Structures_A.kernel_object.splits)
+   apply (fastforce simp: sc_replies_relation_def sc_replies_of_scs_def map_project_def
+                          scs_of_kh_def opt_map_def sc_of_def projectKO_opts_defs)
   apply (rule conjI)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+
@@ -868,7 +858,7 @@ lemma set_pt_corres [@lift_corres_args, corres]:
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
-  done *)
+  done
 
 
 lemma store_pde_corres [@lift_corres_args, corres]:
