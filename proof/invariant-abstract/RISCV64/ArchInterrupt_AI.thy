@@ -85,6 +85,14 @@ lemma maskInterrupt_invs_ARCH[Interrupt_AI_asms]:
                          cur_tcb_def valid_irq_states_def valid_irq_masks_def)
   done
 
+crunch device_state_inv[wp]: plic_complete_claim "\<lambda>ms. P (device_state ms)"
+
+lemma dmo_plic_complete_claim[wp]:
+  "do_machine_op (plic_complete_claim irq) \<lbrace>invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply (auto simp: plic_complete_claim_def machine_op_lift_def machine_rest_lift_def in_monad select_f_def)
+  done
+
 lemma no_cap_to_obj_with_diff_IRQHandler_ARCH[Interrupt_AI_asms]:
   "no_cap_to_obj_with_diff_ref (IRQHandlerCap irq) S = \<top>"
   by (rule ext, simp add: no_cap_to_obj_with_diff_ref_def
@@ -132,7 +140,7 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
    done
   show ?thesis
   apply (cases i, simp_all)
-    apply (wp maskInterrupt_invs_ARCH)
+    apply (wp dmo_plic_complete_claim)
     apply simp+
    apply (rename_tac irq cap prod)
    apply (rule hoare_pre)

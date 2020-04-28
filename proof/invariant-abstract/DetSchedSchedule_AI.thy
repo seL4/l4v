@@ -3143,7 +3143,8 @@ lemma set_thread_state_Restart_valid_sched:
   by (rule set_thread_state_active_valid_sched) simp
 
 context DetSchedSchedule_AI begin
-crunch valid_sched[wp]: invoke_irq_control, invoke_irq_handler "valid_sched"
+crunches invoke_irq_control, invoke_irq_handler
+  for valid_sched[wp]: "valid_sched"
 end
 
 lemma simple_sched_action_sched_act_not[simp]:
