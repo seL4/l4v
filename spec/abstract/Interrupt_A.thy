@@ -42,7 +42,7 @@ slot. The IRQHandler operations load or clear those capabilities.\<close>
 fun
   invoke_irq_handler :: "irq_handler_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "invoke_irq_handler (ACKIrq irq) = (do_machine_op $ maskInterrupt False irq)"
+  "invoke_irq_handler (ACKIrq irq) = arch_invoke_irq_handler (ACKIrq irq)"
 | "invoke_irq_handler (SetIRQHandler irq cap slot) = (do
      irq_slot \<leftarrow> get_irq_slot irq;
      cap_delete_one irq_slot;
