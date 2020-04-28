@@ -1700,7 +1700,6 @@ lemma decodeRISCVFrameInvocation_ccorres:
        apply (rule ccorres_add_return)
        apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=2 and buffer=buffer])
          apply csymbr
-
          apply (rule ccorres_add_return)
          apply (rule_tac r'="(\<lambda>rv _ rv'. ((cap_get_tag rv' = scast cap_page_table_cap)
                                             = (isArchObjectCap rv \<and> isPageTableCap (capCap rv)))
@@ -1715,20 +1714,17 @@ lemma decodeRISCVFrameInvocation_ccorres:
             apply (rename_tac rv' t t')
             apply (simp add: word_sless_def word_sle_def)
             apply ceqv
-
            apply (clarsimp simp add: split_def cap_case_PageTableCap2 hd_conv_nth option.case_eq_if)
            apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
-
-(* symb exec until ret__int init *)
+           (* symb exec until ret__int init *)
            apply csymbr
            apply csymbr
            apply csymbr
            apply csymbr
            apply csymbr
-
-       (* is first extra cap a page table cap? *)
+           (* is first extra cap a page table cap? *)
            apply (rule ccorres_if_lhs[rotated]; clarsimp)
-    (* it not PT cap, clear up the C if condition calculation, then throw *)
+            (* it not PT cap, clear up the C if condition calculation, then throw *)
             apply (rule ccorres_rhs_assoc2)
             apply (rule_tac val=1 and xf'=ret__int_' and R=\<top> and R'=UNIV in ccorres_symb_exec_r_known_rv_UNIV)
                apply vcg
@@ -1742,11 +1738,11 @@ lemma decodeRISCVFrameInvocation_ccorres:
              apply (rule syscall_error_throwError_ccorres_n)
              apply (simp add: syscall_error_to_H_cases)
             apply (solves \<open>simp add: guard_is_UNIV_def\<close>)
-    (* first extracap is a page table *)
+           (* first extracap is a page table cap *)
            apply csymbr
            apply clarsimp
            apply ccorres_rewrite
-    (* ensure the pt is mapped *)
+           (* ensure the pt is mapped *)
            apply (rule ccorres_rhs_assoc)
            apply csymbr
            apply (simp add: option.case_eq_if)
@@ -1764,13 +1760,12 @@ lemma decodeRISCVFrameInvocation_ccorres:
            apply csymbr
            apply csymbr
            apply (fold not_None_def) (* avoid expanding capPTMappedAddress  *)
-
            apply (simp add: lookupError_injection invocationCatch_use_injection_handler
                             injection_bindE[OF refl refl] injection_handler_If bindE_assoc
                             injection_handler_throwError injection_liftE[OF refl])
            apply (ctac add: ccorres_injection_handler_csum1[OF ccorres_injection_handler_csum1,
                                                             OF findVSpaceForASID_ccorres])
-                                                        (* ensure level 1 pt pointer supplied by user is actually a vspace root *)
+              (* ensure level 1 pt pointer supplied by user is actually a vspace root *)
               apply (simp add: Collect_False if_to_top_of_bindE)
               apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
                  apply vcg
@@ -1778,8 +1773,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
                apply (rule syscall_error_throwError_ccorres_n[simplified id_def dc_def])
                apply (simp add: syscall_error_to_H_cases)
               apply (clarsimp simp: bindE_assoc)
-
-(* check vaddr is valid *)
+              (* check vaddr is valid *)
               apply csymbr
               apply clarsimp
               apply ccorres_rewrite
@@ -1790,7 +1784,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
                 apply (solves \<open>clarsimp simp: RISCV64_H.pptrUserTop_def pptrUserTop_def' p_assoc_help\<close>)
                apply (rule syscall_error_throwError_ccorres_n[simplified id_def dc_def])
                apply (simp add: syscall_error_to_H_cases)
-(* check vaddr alignment *)
+              (* check vaddr alignment *)
               apply (clarsimp simp: checkVPAlignment_def unlessE_def injection_handler_If
                                     injection_handler_returnOk injection_handler_throwError)
               apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
@@ -1802,9 +1796,9 @@ lemma decodeRISCVFrameInvocation_ccorres:
                apply (rule syscall_error_throwError_ccorres_n[simplified id_def dc_def])
                apply (simp add: syscall_error_to_H_cases)
 
-(* lookup pt slot *)
+              (* lookup pt slot *)
               apply (ctac pre: ccorres_liftE_Seq add: lookupPTSlot_ccorres)
-    (* ensure remaining page bits match page bits for size *)
+                (* ensure remaining page bits match page bits for size *)
                 apply csymbr
 
                 apply clarsimp
@@ -1813,52 +1807,50 @@ lemma decodeRISCVFrameInvocation_ccorres:
                 apply (rule_tac P="unat (ptBitsLeft_C ptSlot_ret) < 64" in ccorres_gen_asm)
                 apply (fold dc_def id_def)
                 apply (rule ccorres_if_lhs[rotated])
-    (* throwing a lookup fault, branch condition on C side is true *)
-                 apply (prop_tac "ptBitsLeft_C ptSlot_ret \<noteq>
-                               of_nat (pageBitsForSize (framesize_to_H (framesize_from_H pg_sz)))")
+                 (* throwing a lookup fault, branch condition on C side is true *)
+                 apply (prop_tac "ptBitsLeft_C ptSlot_ret
+                                  \<noteq> of_nat (pageBitsForSize (framesize_to_H (
+                                      framesize_from_H pg_sz)))")
                   apply (clarsimp simp: of_nat_pageBitsForSize_eq[symmetric] framesize_from_to_H)
                  apply simp
                  apply ccorres_rewrite
-    (* throwing a lookup fault is more complicated for some reason, due to lookup_fault_missing_capability_new_'proc *)
+                 (* throwing a lookup fault is more complicated for some reason, due to
+                    lookup_fault_missing_capability_new_'proc *)
                  apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
                  apply (rule allI, rule conseqPre, vcg)
                  apply (clarsimp simp: throwError_def return_def bindE_def NonDetMonad.lift_def
-                                       EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def lookup_fault_lift_invalid_root)
-                 apply (clarsimp simp: syscall_error_rel_def EXCEPTION_SYSCALL_ERROR_def syscall_error_to_H_def
-                 syscall_error_type_defs false_def)
+                                       exception_defs lookup_fault_lift_invalid_root)
+                 apply (clarsimp simp: syscall_error_rel_def exception_defs syscall_error_to_H_def
+                                       syscall_error_type_defs false_def)
                  apply (simp add: lookup_fault_missing_capability_lift)
                  apply (subst word_le_mask_eq)
                   apply (simp add: mask_def word_le_nat_alt)
                  apply (rule refl)
-
                 apply clarsimp
                 apply (clarsimp simp: of_nat_pageBitsForSize_eq framesize_from_to_H)
                 apply ccorres_rewrite
-
                 apply csymbr
                 apply csymbr
-
-(* split on whether frame is mapped; error checking happens on both branches followed by
-performPageInvocationMapPTE; since there are only two branches and they consist mostly of
-error checking, we will take on that duplication *)
+                (* split on whether frame is mapped; error checking happens on both branches
+                   followed by performPageInvocationMapPTE; since there are only two branches and
+                   they consist mostly of error checking, we will take on that duplication *)
                 apply clarsimp
                 apply (clarsimp simp: asidInvalid_def ccap_relation_FrameCap_IsMapped)
                 apply (rule ccorres_if_lhs)
 
-(* frame not mapped *)
+                 (* frame not mapped *)
                  apply clarsimp
                  apply ccorres_rewrite
-                 apply (clarsimp simp: checkSlot_def injection_handler_bindE injection_liftE bindE_assoc
-                 unlessE_def injection_handler_If injection_handler_throwError injection_handler_returnOk)
+                 apply (clarsimp simp: checkSlot_def injection_handler_bindE injection_liftE
+                                       bindE_assoc unlessE_def injection_handler_If
+                                       injection_handler_throwError injection_handler_returnOk)
                  apply (simp add: liftE_bindE)
 
-(* fetch pte *)
+                 (* fetch pte *)
                  apply (rule ccorres_pre_getObject_pte)
                  apply (rename_tac pte)
                  apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
-
                  apply (rule ccorres_rhs_assoc)
-
                  apply (rule_tac val="from_bool (pte \<noteq> RISCV64_H.InvalidPTE)"
                            and xf'=ret__unsigned_longlong_' and R="ko_at' pte ptSlot" and R'=UNIV
                            in ccorres_symb_exec_r_known_rv)
@@ -1866,28 +1858,28 @@ error checking, we will take on that duplication *)
                     apply clarsimp
                     apply (erule cmap_relationE1[OF rf_sr_cpte_relation], erule ko_at_projectKO_opt)
                     apply (clarsimp simp: typ_heap_simps from_bool_eq_if from_bool_0)
-                    apply (auto simp: cpte_relation_def Let_def
+                    apply (fastforce simp: cpte_relation_def Let_def
                                        pte_lift_def
                                        from_bool_def case_bool_If
-                               split: pte.split_asm if_splits)[1]
+                               split: pte.split_asm if_splits)
                    apply ceqv
                   apply clarsimp
-    (* throw if pte not invalid *)
+                  (* throw if pte not invalid *)
                   apply (rule ccorres_if_cond_throws2[rotated -1, where Q=\<top> and Q'=\<top>])
                      apply vcg
                     apply (solves clarsimp)
                    apply (rule syscall_error_throwError_ccorres_n[simplified id_def dc_def])
                    apply (simp add: syscall_error_to_H_cases)
 
-(* checks handled, perform frame map *)
+                  (* checks handled, perform frame map *)
                   apply (simp add: performRISCV64MMUInvocations bindE_assoc)
                   apply csymbr
 
-(* FIXME RAF this is horrid, extract it in some way *)
+                  (* FIXME RISCV extract return/maskVMRights_'proc ccorres, similar to isPTEPageTable_corres *)
                   apply (rule_tac xf'=vmRights___unsigned_long_'
-                  and R=\<top> and R'=UNIV
-                  and val="vmRightsToBits (maskVMRights rights (rightsFromWord b))"
-                  in ccorres_symb_exec_r_known_rv) (* maskVMRights_'proc *)
+                           and val="vmRightsToBits (maskVMRights rights (rightsFromWord b))"
+                           and R=\<top> and R'=UNIV
+                           in ccorres_symb_exec_r_known_rv) (* maskVMRights_'proc *)
                      apply vcg
                      apply clarsimp
                      apply (drule ccap_relation_FrameCap_generics)
@@ -1913,9 +1905,7 @@ error checking, we will take on that duplication *)
                    apply csymbr
                    apply csymbr
                    apply csymbr
-
                    apply clarsimp
-
                    apply csymbr
                    apply (ctac add: setThreadState_ccorres)
                      apply (ctac (no_vcg) add: performPageInvocationMapPTE_ccorres)
@@ -1931,22 +1921,21 @@ error checking, we will take on that duplication *)
                  apply clarsimp
                  apply vcg
 
-(* frame is mapped, we're doing a remap *)
+                (* frame is mapped, we're doing a remap *)
                 apply (simp add: asidInvalid_def)
                 apply clarsimp
                 apply ccorres_rewrite
-
-(* ensure frame cap asid matches vspace asid *)
+                (* ensure frame cap asid matches vspace asid *)
                 apply (rule ccorres_rhs_assoc)+
                 apply wpfix
                 apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
                    apply vcg
                   apply (clarsimp simp: isCap_simps not_None_def ccap_relation_FrameCap_MappedAddress
-                  ccap_relation_PageTableCap_MappedASID ccap_relation_FrameCap_MappedASID)
+                                        ccap_relation_PageTableCap_MappedASID
+                                        ccap_relation_FrameCap_MappedASID)
                  apply (rule syscall_error_throwError_ccorres_n[simplified id_def dc_def])
                  apply (simp add: syscall_error_to_H_cases)
-
-(* ensure mapped address of frame matches *)
+                (* ensure mapped address of frame matches *)
                 apply csymbr
                 apply csymbr
                 apply (clarsimp simp: ccap_relation_FrameCap_MappedAddress)
@@ -1956,16 +1945,17 @@ error checking, we will take on that duplication *)
                  apply (rule syscall_error_throwError_ccorres_n[simplified id_def dc_def])
                  apply (simp add: syscall_error_to_H_cases)
 
-(* ensure lookupPTSlot returned a slot with a PTE *)
-                apply (clarsimp simp: bindE_assoc checkSlot_def injection_handler_bindE injection_liftE
-                unlessE_def injection_handler_If injection_handler_throwError injection_handler_returnOk)
+                (* ensure lookupPTSlot returned a slot with a PTE *)
+                (* FIXME RISCV: this is a redundant check in the C and should be removed from
+                                all specs *)
+                apply (clarsimp simp: bindE_assoc checkSlot_def injection_handler_bindE
+                                      injection_liftE unlessE_def injection_handler_If
+                                      injection_handler_throwError injection_handler_returnOk)
                 apply (simp add: liftE_bindE)
-
                 apply (rule ccorres_pre_getObject_pte)
                 apply (rename_tac ptSlot_ret_pte)
-
                 apply (rule ccorres_add_return)
-                apply (rule_tac xf'=ret__unsigned_long_' in ccorres_split_nothrow_call) 
+                apply (rule_tac xf'=ret__unsigned_long_' in ccorres_split_nothrow_call)
                        apply (rule_tac pte=ptSlot_ret_pte and ptePtr=ptSlot in isPTEPageTable_corres)
                       apply simp+
                    apply ceqv
@@ -1978,17 +1968,16 @@ error checking, we will take on that duplication *)
                     apply (solves clarsimp)
                    apply (rule syscall_error_throwError_ccorres_n[simplified id_def dc_def])
                    apply (simp add: syscall_error_to_H_cases)
-  subgoal sorry (* FIXME C returns seL4_InvalidCapability but Haskell throws DeleteFirst *)
 
-(* checks handled, perform frame remap *)
+                  (* checks handled, perform frame remap *)
                   apply (simp add: performRISCV64MMUInvocations bindE_assoc)
                   apply csymbr
 
-(* FIXME RAF this is horrid, extract it in some way *)
+                  (* FIXME RISCV extract return/maskVMRights_'proc ccorres, similar to isPTEPageTable_corres *)
                   apply (rule_tac xf'=vmRights___unsigned_long_'
-                  and R=\<top> and R'=UNIV
-                  and val="vmRightsToBits (maskVMRights rights (rightsFromWord b))"
-                  in ccorres_symb_exec_r_known_rv) (* maskVMRights_'proc *)
+                           and val="vmRightsToBits (maskVMRights rights (rightsFromWord b))"
+                           and R=\<top> and R'=UNIV
+                           in ccorres_symb_exec_r_known_rv) (* maskVMRights_'proc *)
                      apply vcg
                      apply clarsimp
                      apply (drule ccap_relation_FrameCap_generics)
@@ -2014,9 +2003,7 @@ error checking, we will take on that duplication *)
                    apply csymbr
                    apply csymbr
                    apply csymbr
-
                    apply clarsimp
-
                    apply csymbr
                    apply (ctac add: setThreadState_ccorres)
                      apply (ctac (no_vcg) add: performPageInvocationMapPTE_ccorres)
@@ -2031,21 +2018,16 @@ error checking, we will take on that duplication *)
                   apply clarsimp
                   apply vcg
                  apply clarsimp
-
                  apply wpsimp
                 apply clarsimp
                 apply vcg
-
-
-(* wp goal for lookupPTSlot *)
+               (* wp goal for lookupPTSlot *)
                apply clarsimp
                apply (wpsimp wp: hoare_drop_imps lookupPTSlot_inv hoare_vcg_all_lift lookupPTSlot_bitsLeft_less_64)
               apply clarsimp
               apply (vcg exspec=lookupPTSlot_modifies)
-
              apply clarsimp
              apply ccorres_rewrite
-
 
              apply (rule_tac P'="{s. errstate s = find_ret}" in ccorres_from_vcg_throws[where P=\<top>])
              apply clarsimp
@@ -2055,7 +2037,7 @@ error checking, we will take on that duplication *)
                                    syscall_error_to_H_cases exception_defs false_def)
              apply (erule lookup_failure_rel_fault_lift[rotated])
              apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
-                                    syscall_error_to_H_cases exception_defs false_def)
+                                   syscall_error_to_H_cases exception_defs false_def)
             apply clarsimp
             apply (wp injection_wp[OF refl] findVSpaceForASID_inv hoare_drop_imps)
            apply clarsimp
@@ -2067,7 +2049,6 @@ error checking, we will take on that duplication *)
         apply wpsimp
        apply clarsimp
        apply (vcg exspec=getSyscallArg_modifies)
-
       apply clarsimp
       apply wpsimp
      apply (vcg exspec=getSyscallArg_modifies)
@@ -2080,6 +2061,7 @@ error checking, we will take on that duplication *)
     apply (rule_tac t=c and s="hd (tl (tl args))" in ssubst, simp)
     apply (rule_tac t=d and s="tl (tl (tl args))" in ssubst, simp)
     apply assumption
+   (* rewrite to args on for C side *)
    apply (rule conseqPre)
     apply (vcg exspec=getSyscallArg_modifies)
    apply (rule_tac t="a # b # c # d" and s=args in subst, simp)
@@ -2093,60 +2075,46 @@ error checking, we will take on that duplication *)
   apply (frule cte_wp_at_eq_gsMaxObjectSize, fastforce)
   apply (clarsimp simp: ccap_relation_FrameCap_BasePtr ccap_relation_frame_tags)
 
-  apply (prop_tac "SCAST(32 signed \<rightarrow> 64) ThreadState_Restart && mask 4 =
-           SCAST(32 signed \<rightarrow> 64) ThreadState_Restart")
+  apply (prop_tac "SCAST(32 signed \<rightarrow> 64) ThreadState_Restart && mask 4
+                   = SCAST(32 signed \<rightarrow> 64) ThreadState_Restart")
   apply (solves \<open>clarsimp simp: ThreadState_Restart_def mask_def\<close>)
 
   apply (rule conjI)
+   (* RISCVPageMap, Haskell side *)
+   apply (clarsimp simp: not_None_def)
+   apply (clarsimp simp: cte_wp_at_ctes_of is_aligned_mask[symmetric] vmsz_aligned_def
+                         vmsz_aligned_addrFromPPtr)
+   apply (frule ctes_of_valid', clarsimp+)
+   apply (drule_tac t="cteCap cte" in sym, simp)
+   apply (frule valid_cap'_FrameCap_kernel_mappings[OF invs_pspace_in_kernel_mappings', where cap=cp],
+          fastforce simp: isCap_simps, fastforce)
 
-(* RISCVPageMap, Haskell side *)
-  apply (clarsimp simp: not_None_def)
-  apply (clarsimp simp: cte_wp_at_ctes_of is_aligned_mask[symmetric] vmsz_aligned_def
-                        vmsz_aligned_addrFromPPtr)
-  apply (frule ctes_of_valid', clarsimp+)
-  apply (drule_tac t="cteCap cte" in sym, simp)
-  apply (frule valid_cap'_FrameCap_kernel_mappings[OF invs_pspace_in_kernel_mappings', where cap=cp],
-         fastforce simp: isCap_simps, fastforce)
+   apply (clarsimp simp: isCap_simps sysargs_rel_to_n not_less)
+   apply (rule conjI)
+    apply (solves \<open>simp flip: Suc_length_not_empty'\<close>)
 
-  apply (clarsimp simp: isCap_simps)
-  apply (clarsimp simp: sysargs_rel_to_n not_less)
-  apply (rule conjI)
-  apply (solves \<open>simp flip: Suc_length_not_empty'\<close>)
-
-  apply clarsimp
-  apply (prop_tac "s \<turnstile>' fst (extraCaps ! 0)")
-  apply (clarsimp simp: neq_Nil_conv excaps_in_mem_def
-                        slotcap_in_mem_def dest!: ctes_of_valid')
-  apply clarsimp
-  apply (rule conjI, fastforce)
-  apply (clarsimp simp: valid_cap'_def wellformed_mapdata'_def)
-  apply (rule conjI, fastforce)+
-
-  apply (prop_tac "7 \<le> gsMaxObjectSize s")
-  subgoal for _ _ v2
-    by (cases v2; clarsimp simp: bit_simps')
-
-  subgoal
-    by (auto simp: ct_in_state'_def pred_tcb_at' mask_def valid_tcb_state'_def
-                   valid_cap'_def wellformed_acap'_def wellformed_mapdata'_def
-             elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
-
-(* RISCVPageUnMap, Haskell side *)
-  apply (clarsimp simp: isCap_simps)
-  apply (rule conjI)
    apply clarsimp
+   apply (prop_tac "s \<turnstile>' fst (extraCaps ! 0)")
+    apply (clarsimp simp: neq_Nil_conv excaps_in_mem_def
+                          slotcap_in_mem_def dest!: ctes_of_valid')
+   apply clarsimp
+   apply (rule conjI, fastforce)
+   apply (clarsimp simp: valid_cap'_def wellformed_mapdata'_def)
+   apply (rule conjI, fastforce)+
+   apply (prop_tac "7 \<le> gsMaxObjectSize s")
+   subgoal for _ _ v2
+     by (cases v2; clarsimp simp: bit_simps')
   subgoal
-    apply (clarsimp simp: comp_def)
     by (auto simp: ct_in_state'_def pred_tcb_at' mask_def valid_tcb_state'_def
                    valid_cap'_def wellformed_acap'_def wellformed_mapdata'_def
              elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
 
-  apply (clarsimp simp: not_le)
-  apply (rule conjI; clarsimp)
-   prefer 2
-
+  (* RISCVPageUnMap, Haskell side *)
+  apply (rule conjI)
   subgoal
-    by (simp add: rf_sr_ksCurThread)
+    by (auto simp: isCap_simps comp_def ct_in_state'_def pred_tcb_at' mask_def valid_tcb_state'_def
+                   valid_cap'_def wellformed_acap'_def wellformed_mapdata'_def
+             elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
 
   (* C side of precondition satisfaction *)
   (* General idea for discharging this: we have some ccap relations between Haskell and C side,
@@ -2154,191 +2122,100 @@ error checking, we will take on that duplication *)
      extra noise, the gist of it is that after those operations, the new cap and new PTE should
      also be related. So we rewrite all the C accessors into the Haskell accessors,
      and then tackle the cap relation and pte relation at the end. *)
+  subgoal for p rights sz d _ cap
+    supply framesize_from_to_H[simp]
+    apply (clarsimp simp: not_le rf_sr_ksCurThread isCap_simps)
+    apply (prop_tac "SCAST(32 signed \<rightarrow> 64) ThreadState_Restart && mask 4 =
+             SCAST(32 signed \<rightarrow> 64) ThreadState_Restart")
+     apply (solves \<open>clarsimp simp: ThreadState_Restart_def mask_def\<close>)
+    apply (rule conjI, solves \<open>simp add: word_less_nat_alt\<close>)  (* size args < 3 *)
 
-  apply (prop_tac "SCAST(32 signed \<rightarrow> 64) ThreadState_Restart && mask 4 =
-           SCAST(32 signed \<rightarrow> 64) ThreadState_Restart")
-   apply (solves \<open>clarsimp simp: ThreadState_Restart_def mask_def\<close>)
-
-  apply (rule conjI, solves \<open>simp add: word_less_nat_alt\<close>)
-
-  apply (clarsimp simp: neq_Nil_conv[where xs=extraCaps]
-                        excaps_in_mem_def slotcap_in_mem_def
-                 dest!: sym[where s="ArchObjectCap cp" for cp])
-  apply (cut_tac p="snd (hd extraCaps)" in ctes_of_valid', simp, clarsimp)
-  apply (clarsimp simp: cap_get_tag_isCap_ArchObject isCap_simps
-                        word_sle_def word_sless_def
-                        word_less_nat_alt)
-  apply (frule length_ineq_not_Nil)
-  apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
-  apply (clarsimp simp: asidInvalid_def valid_cap_simps' rf_sr_ksCurThread hd_conv_nth
-                        cap_get_tag_isCap_unfolded_H_cap)
-  apply (clarsimp simp: typ_heap_simps')
-  apply (clarsimp simp: ccap_relation_PageTableCap_BasePtr ccap_relation_PageTableCap_IsMapped
+    (* get a hold of our valid caps and resolve the C heap *)
+    apply (clarsimp simp: neq_Nil_conv[where xs=extraCaps]
+                          excaps_in_mem_def slotcap_in_mem_def
+                   dest!: sym[where s="ArchObjectCap cp" for cp])
+    apply (cut_tac p="snd (hd extraCaps)" in ctes_of_valid', simp, clarsimp)
+    apply (clarsimp simp: cap_get_tag_isCap_ArchObject isCap_simps
+                          word_sle_def word_sless_def
+                          word_less_nat_alt)
+    apply (frule length_ineq_not_Nil)
+    apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
+    apply (clarsimp simp: asidInvalid_def valid_cap_simps' rf_sr_ksCurThread hd_conv_nth
+                          cap_get_tag_isCap_unfolded_H_cap)
+    apply (clarsimp simp: typ_heap_simps')
+    (* clean up page table cap side *)
+    apply (clarsimp simp: ccap_relation_PageTableCap_BasePtr ccap_relation_PageTableCap_IsMapped
                         ccap_relation_PageTableCap_MappedASID)
-
-  apply (clarsimp simp: attribsFromWord_def)
-
-
-
-  apply (prop_tac "(addrFromPPtr v0 >> 12) AND mask 44 = (addrFromPPtr v0 >> 12)")
-  subgoal for p
-    apply (frule cte_wp_at'_frame_at', fastforce)
-
-    apply (clarsimp simp: comp_def)
-
-    apply (prop_tac "canonical_address p")
-     apply (erule canonical_address_frame_at', fastforce)
-    apply (prop_tac "p \<in> kernel_mappings")
-     apply (erule frame_at'_kernel_mappings, fastforce)
-    apply (drule_tac p=p in addrFromPPtr_in_user_region)
-    apply (prop_tac "addrFromPPtr p >> 12 \<le> mask 44")
-     apply (clarsimp simp: user_region_def canonical_user_def canonical_bit_def)
-     apply (erule leq_mask_shift[OF le_smaller_mask])
-     apply simp
-    apply (erule word_le_mask_eq)
-    done
-
-  apply simp
-  apply (prop_tac "a AND mask 16 = a")
-  subgoal by (clarsimp simp: wellformed_mapdata'_def asid_wf_def asid_bits_def word_le_mask_eq)
-
-  apply (prop_tac "unat (framesize_from_H v2) < 3")
-  subgoal
-
-    using framesize_from_H_bounded
-    apply (simp add: word_less_nat_alt)
-
-    done
-
-  apply simp
-  apply (prop_tac "unat (capFSize_CL (cap_frame_cap_lift cap)) < 3")
-
-  subgoal
-
-    apply (simp add: ccap_relation_FrameCap_Size)
-    done
-
-  apply (clarsimp simp: framesize_to_from_H)
-
-  apply (prop_tac "
-  unat
-                                      (vmRightsToBits (maskVMRights v1 (rightsFromWord (args ! Suc 0))))
-                                     < 4 \<and>
-                                     \<not> vmRightsToBits (maskVMRights v1 (rightsFromWord (args ! Suc 0))) =
-                                       0")
-
-  subgoal
-    using vmRightsToBits_bounded
-    apply (simp add: vmRightsToBits_not_0 word_less_nat_alt)
-
-    done
-  apply clarsimp
-  apply (prop_tac "vmrights_to_H (capFVMRights_CL (cap_frame_cap_lift cap)) = v1")
-   apply (drule ccap_relation_FrameCap_generics)
-   apply (solves clarsimp)
-  apply clarsimp
-  apply (clarsimp simp: and_1_0_not_bit_0)
-  apply (prop_tac "sign_extend 38 (args ! 0) = args ! 0")
-  subgoal
-
-    apply (subst sign_extend_less_mask_idem[rotated], solves \<open>simp (no_asm) add: word_size\<close>)
-     apply (simp (no_asm) add: mask_def)
-     apply (simp only: framesize_from_to_H)
-     apply (simp only: vmsz_aligned_def)
-     apply (drule (2) word_aligned_add_no_wrap_bounded)
-     apply unat_arith
-    apply (rule refl)
-
-    done
-  apply clarsimp
-
-
-  apply (rule conjI, clarsimp)
-   apply (rule conjI) (* cpte_relation *)
-    apply (clarsimp simp: cpte_relation_def Let_def makeUserPTE_def attribsFromWord_def
-     pageBits_def
-    split: pte.splits if_splits)
-  (* ccap relation *)
-   apply (simp (no_asm) add: ccap_relation_def)
-   apply (clarsimp simp: cap_frame_cap_lift[THEN iffD1])
-   apply (clarsimp simp: cap_to_H_simps wellformed_mapdata'_def)
-   apply (clarsimp simp flip: word_neq_0_conv)
-   apply (frule ccap_relation_FrameCap_generics)
-   apply simp
-   apply (clarsimp simp: c_valid_cap_def cap_frame_cap_lift[THEN iffD1])
-   apply (solves \<open>clarsimp simp: cl_valid_cap_def\<close>)
-    (* FIXME RAF the above is clearly abstractable, see ccap_relation_PageCap_generics *)
-
-  apply (clarsimp)
-  apply (rule conjI, clarsimp)
-   apply (rule conjI, clarsimp)
-
-    apply (rule conjI) (* cpte_relation *)
-     apply (clarsimp simp: cpte_relation_def Let_def makeUserPTE_def attribsFromWord_def
-      pageBits_def
-     split: pte.splits if_splits)
-   (* ccap relation *)
-    apply (simp (no_asm) add: ccap_relation_def)
-    apply (clarsimp simp: cap_frame_cap_lift[THEN iffD1])
-    apply (clarsimp simp: cap_to_H_simps wellformed_mapdata'_def)
-    apply (clarsimp simp flip: word_neq_0_conv)
-    apply (frule ccap_relation_FrameCap_generics)
+    (* clean up frame cap side *)
+    apply (clarsimp simp: attribsFromWord_def ccap_relation_FrameCap_Size)
+    apply (prop_tac "vmrights_to_H (capFVMRights_CL (cap_frame_cap_lift cap)) = rights")
+     apply (drule ccap_relation_FrameCap_generics)
+     apply (solves clarsimp)
+    apply (clarsimp simp: and_1_0_not_bit_0)
+    (* storing the page address again in the PPN bitfield does not lose info  *)
+    apply (prop_tac "(addrFromPPtr p >> 12) AND mask 44 = (addrFromPPtr p >> 12)")
+    subgoal
+      apply (frule cte_wp_at'_frame_at', fastforce)
+      apply (clarsimp simp: comp_def)
+      apply (prop_tac "canonical_address p")
+       apply (erule canonical_address_frame_at', fastforce)
+      apply (prop_tac "p \<in> kernel_mappings")
+       apply (erule frame_at'_kernel_mappings, fastforce)
+      apply (drule_tac p=p in addrFromPPtr_in_user_region)
+      apply (prop_tac "addrFromPPtr p >> 12 \<le> mask 44")
+       apply (clarsimp simp: user_region_def canonical_user_def canonical_bit_def)
+       apply (erule leq_mask_shift[OF le_smaller_mask])
+       apply simp
+      apply (erule word_le_mask_eq)
+      done
+    (* storing the ASID doesn't lose info *)
+    apply (prop_tac "a AND mask 16 = a")
+    subgoal by (clarsimp simp: wellformed_mapdata'_def asid_wf_def asid_bits_def word_le_mask_eq)
     apply simp
-    apply (clarsimp simp: c_valid_cap_def cap_frame_cap_lift[THEN iffD1])
-    apply (solves \<open>clarsimp simp: cl_valid_cap_def\<close>)
-    (* FIXME RAF the above is clearly abstractable, see ccap_relation_PageCap_generics *)
 
-   apply clarsimp
-   apply (rule conjI, clarsimp)
+    (* clean up rights back-and-forth *)
+    apply (cut_tac framesize_from_H_bounded[of sz, simplified word_less_nat_alt])
+    apply (clarsimp simp: framesize_to_from_H)
+    apply (prop_tac "unat (vmRightsToBits (maskVMRights rights (rightsFromWord (args ! Suc 0)))) < 4
+                     \<and> vmRightsToBits (maskVMRights rights (rightsFromWord (args ! Suc 0))) \<noteq> 0")
+    subgoal
+      using vmRightsToBits_bounded
+      by (simp add: vmRightsToBits_not_0 word_less_nat_alt)
+    apply clarsimp
 
-    apply (rule conjI) (* cpte_relation *)
-     apply (clarsimp simp: cpte_relation_def Let_def makeUserPTE_def attribsFromWord_def
-      pageBits_def
-     split: pte.splits if_splits)
-   (* ccap relation *)
-    apply (simp (no_asm) add: ccap_relation_def)
-    apply (clarsimp simp: cap_frame_cap_lift[THEN iffD1])
-    apply (clarsimp simp: cap_to_H_simps wellformed_mapdata'_def)
-    apply (clarsimp simp flip: word_neq_0_conv)
-    apply (frule ccap_relation_FrameCap_generics)
-    apply simp
-    apply (clarsimp simp: c_valid_cap_def cap_frame_cap_lift[THEN iffD1])
-    apply (solves \<open>clarsimp simp: cl_valid_cap_def\<close>)
-    (* FIXME RAF the above is clearly abstractable, see ccap_relation_PageCap_generics *)
+    (* idempotency of vaddr sign-extension *)
+    apply (fold canonical_bit_def)
+    apply (prop_tac "sign_extend canonical_bit (args ! 0) = args ! 0")
+    subgoal
+      apply (simp add: canonical_bit_def)
+      apply (subst sign_extend_less_mask_idem[rotated], solves \<open>simp (no_asm) add: word_size\<close>)
+       apply (simp (no_asm) add: mask_def)
+       apply (simp only: vmsz_aligned_def)
+       apply (drule (2) word_aligned_add_no_wrap_bounded)
+       apply unat_arith
+      apply (rule refl)
+      done
+    apply clarsimp
 
-   apply clarsimp
-   apply (rule conjI) (* cpte_relation *)
-    apply (clarsimp simp: cpte_relation_def Let_def makeUserPTE_def attribsFromWord_def
-     pageBits_def
-    split: pte.splits if_splits)
-  (* ccap relation *)
-   apply (simp (no_asm) add: ccap_relation_def)
-   apply (clarsimp simp: cap_frame_cap_lift[THEN iffD1])
-   apply (clarsimp simp: cap_to_H_simps wellformed_mapdata'_def)
-   apply (clarsimp simp flip: word_neq_0_conv)
-   apply (frule ccap_relation_FrameCap_generics)
-   apply simp
-   apply (clarsimp simp: c_valid_cap_def cap_frame_cap_lift[THEN iffD1])
-   apply (solves \<open>clarsimp simp: cl_valid_cap_def\<close>)
-    (* FIXME RAF the above is clearly abstractable, see ccap_relation_PageCap_generics *)
-
-  apply clarsimp
-  apply (rule conjI) (* cpte_relation *)
-   apply (clarsimp simp: cpte_relation_def Let_def makeUserPTE_def attribsFromWord_def
-    pageBits_def
-   split: pte.splits if_splits)
- (* ccap relation *)
-  apply (simp (no_asm) add: ccap_relation_def)
-  apply (clarsimp simp: cap_frame_cap_lift[THEN iffD1])
-  apply (clarsimp simp: cap_to_H_simps wellformed_mapdata'_def)
-  apply (clarsimp simp flip: word_neq_0_conv)
-  apply (frule ccap_relation_FrameCap_generics)
-  apply simp
-  apply (clarsimp simp: c_valid_cap_def cap_frame_cap_lift[THEN iffD1])
-  apply (solves \<open>clarsimp simp: cl_valid_cap_def\<close>)
-    (* FIXME RAF the above is clearly abstractable, see ccap_relation_PageCap_generics *)
-
-  done (* FIXME RISCV RAF major cleanup needed *)
+  (* now all we have left are cpte relations and ccap relations *)
+  apply (intro conjI impI allI)
+  (* runs for around 1 minute, can be improved by rules specific to the two relations rather
+     than unfolding *)
+             apply (match conclusion in \<open>cpte_relation _ _\<close> \<Rightarrow>
+                      \<open>solves \<open>simp (no_asm) add: cpte_relation_def,
+                               clarsimp simp: Let_def makeUserPTE_def attribsFromWord_def
+                                              pageBits_def
+                                        split: pte.splits if_splits\<close>\<close>
+                    | match conclusion in \<open>ccap_relation _ _\<close> \<Rightarrow>
+                        \<open>solves \<open>simp (no_asm) add: ccap_relation_def,
+                                 clarsimp simp: cap_frame_cap_lift[THEN iffD1]
+                                                cap_to_H_simps wellformed_mapdata'_def,
+                                 clarsimp simp flip: word_neq_0_conv
+                                          dest!: ccap_relation_FrameCap_generics
+                                          simp: c_valid_cap_def cap_frame_cap_lift[THEN iffD1],
+                                 clarsimp simp: cl_valid_cap_def\<close>\<close>)+
+    done
+  done
 
 (* FIXME RISCV64: adapted from x64 *)
 lemma asidHighBits_handy_convs:
