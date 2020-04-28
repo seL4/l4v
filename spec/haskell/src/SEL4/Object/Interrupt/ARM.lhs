@@ -67,6 +67,9 @@ This module defines the machine-specific interrupt handling routines.
 > invokeIRQHandler (AckIRQ irq) = doMachineOp $ maskInterrupt False irq
 > invokeIRQHandler _ = return ()
 
+> maskIrqSignal :: IRQ -> Kernel ()
+> maskIrqSignal irq = doMachineOp $ maskInterrupt True irq
+
 > checkIRQ :: Word -> KernelF SyscallError ()
 > checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)
 

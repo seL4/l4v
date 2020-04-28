@@ -128,6 +128,9 @@ updateIRQState sets the arch-specific IRQ state for an IRQ
 > invokeIRQHandler (AckIRQ irq) = doMachineOp $ maskInterrupt False irq
 > invokeIRQHandler _ = return ()
 
+> maskIrqSignal :: IRQ -> Kernel ()
+> maskIrqSignal irq = doMachineOp $ maskInterrupt True irq
+
 %FIXME: separate ranges for ISA interrupts and user interrupts
 
 checkIRQ is only used for the legacy PIC interrupt so always fails with the IOAPIC of x86-64

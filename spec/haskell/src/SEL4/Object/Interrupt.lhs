@@ -185,7 +185,7 @@ is set to an incorrect value.
 >                       sendSignal (capNtfnPtr cap) (capNtfnBadge cap)
 >                   _ -> doMachineOp $ debugPrint $
 >                       "Undelivered interrupt: " ++ show irq
->               doMachineOp $ maskInterrupt True irq
+>               Arch.maskIrqSignal irq
 >           IRQTimer -> do
 >               timerTick
 >               doMachineOp resetTimer

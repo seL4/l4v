@@ -64,6 +64,9 @@ invokeIRQHandler _ = return ()
 handleReservedIRQ :: IRQ -> Kernel ()
 handleReservedIRQ _ = return ()
 
+maskIrqSignal :: IRQ -> Kernel ()
+maskIrqSignal _ = return ()
+
 initInterruptController :: Kernel ()
 initInterruptController = error "Unimplemented. Init code."
 
