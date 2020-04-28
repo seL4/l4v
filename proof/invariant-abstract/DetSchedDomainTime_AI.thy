@@ -88,6 +88,10 @@ locale DetSchedDomainTime_AI =
     "\<And>P ft. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_post_cap_deletion ft \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes arch_post_cap_deletion_domain_list_inv'[wp]:
     "\<And>P ft. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_post_cap_deletion ft \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+  assumes arch_invoke_irq_handler_domain_list_inv'[wp]:
+    "\<And>P i. arch_invoke_irq_handler i \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
+  assumes arch_invoke_irq_handler_domain_time_inv'[wp]:
+    "\<And>P i. arch_invoke_irq_handler i \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
 
 crunches update_restart_pc
   for domain_list[wp]: "\<lambda>s. P (domain_list s)"
@@ -111,6 +115,11 @@ locale DetSchedDomainTime_AI_2 = DetSchedDomainTime_AI +
     "\<And>P irq. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes handle_reserved_irq_domain_list_inv'[wp]:
     "\<And>P irq. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+  assumes arch_mask_irq_signal_domain_list_inv'[wp]:
+    "\<And>P irq. arch_mask_irq_signal irq \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
+  assumes arch_mask_irq_signal_domain_time_inv'[wp]:
+    "\<And>P irq. arch_mask_irq_signal irq \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
+
 
 context DetSchedDomainTime_AI begin
 

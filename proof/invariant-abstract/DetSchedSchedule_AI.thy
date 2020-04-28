@@ -858,6 +858,10 @@ locale DetSchedSchedule_AI =
     "\<And>c. arch_post_cap_deletion c \<lbrace>weak_valid_sched_action\<rbrace>"
   assumes arch_finalise_cap_idle_thread[wp] :
     "\<And>P b t. arch_finalise_cap t b \<lbrace>\<lambda> (s:: det_ext state). P (idle_thread s)\<rbrace>"
+  assumes arch_invoke_irq_handler_valid_sched[wp]:
+    "\<And>i. arch_invoke_irq_handler i \<lbrace>valid_sched\<rbrace>"
+  assumes arch_mask_irq_signal_valid_sched[wp]:
+    "\<And>irq. arch_mask_irq_signal irq \<lbrace>valid_sched\<rbrace>"
 
 context DetSchedSchedule_AI begin
 
