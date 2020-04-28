@@ -23,6 +23,7 @@ This module defines the machine-specific interrupt handling routines.
 > import SEL4.API.Failures
 > import SEL4.API.Types
 > import SEL4.API.InvocationLabels
+> import SEL4.API.Invocation
 > import SEL4.API.Invocation.ARM as ArchInv
 > import SEL4.API.InvocationLabels.ARM as ArchLabels
 > import {-# SOURCE #-} SEL4.Object.Interrupt (setIRQState, isIRQActive)
@@ -61,6 +62,10 @@ This module defines the machine-specific interrupt handling routines.
 >     setIRQState IRQSignal (IRQ irq)
 >     cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot
 >     return ()
+
+> invokeIRQHandler :: IRQHandlerInvocation -> Kernel ()
+> invokeIRQHandler (AckIRQ irq) = doMachineOp $ maskInterrupt False irq
+> invokeIRQHandler _ = return ()
 
 > checkIRQ :: Word -> KernelF SyscallError ()
 > checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)

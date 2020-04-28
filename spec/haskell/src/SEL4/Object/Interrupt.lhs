@@ -109,7 +109,7 @@ An IRQ handler capability allows a thread possessing it to set an endpoint which
 
 > invokeIRQHandler :: IRQHandlerInvocation -> Kernel ()
 > invokeIRQHandler (AckIRQ irq) =
->     doMachineOp $ maskInterrupt False irq
+>     Arch.invokeIRQHandler (AckIRQ irq)
 > invokeIRQHandler (SetIRQHandler irq cap slot) = do
 >     irqSlot <- getIRQSlot irq
 >     cteDeleteOne irqSlot

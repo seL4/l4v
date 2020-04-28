@@ -10,7 +10,7 @@ begin
 
 context Arch begin global_naming RISCV64_H
 
-#INCLUDE_HASKELL SEL4/Object/Interrupt/RISCV64.hs CONTEXT RISCV64_H decls_only ArchInv= Arch=MachineOps
+#INCLUDE_HASKELL SEL4/Object/Interrupt/RISCV64.hs CONTEXT RISCV64_H decls_only ArchInv= Arch=MachineOps NOT plic_complete_claim
 
 end (* context RISCV64 *)
 

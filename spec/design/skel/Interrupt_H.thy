@@ -20,6 +20,7 @@ requalify_consts
   checkIRQ
   decodeIRQControlInvocation
   performIRQControl
+  invokeIRQHandler
   initInterruptController
   handleReservedIRQ
 

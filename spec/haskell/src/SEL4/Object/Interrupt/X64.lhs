@@ -20,7 +20,7 @@ This module defines the machine-specific interrupt handling routines for x64.
 > import SEL4.Object.Structures
 > import SEL4.API.Failures
 > import SEL4.API.Types
->-- import SEL4.API.Invocation
+> import SEL4.API.Invocation
 > import SEL4.API.InvocationLabels
 > import SEL4.API.Invocation.X64 as ArchInv
 > import SEL4.API.InvocationLabels.X64 as ArchLabels
@@ -123,6 +123,10 @@ updateIRQState sets the arch-specific IRQ state for an IRQ
 >     setIRQState IRQSignal (IRQ irq)
 >     cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot
 >     return ()
+
+> invokeIRQHandler :: IRQHandlerInvocation -> Kernel ()
+> invokeIRQHandler (AckIRQ irq) = doMachineOp $ maskInterrupt False irq
+> invokeIRQHandler _ = return ()
 
 %FIXME: separate ranges for ISA interrupts and user interrupts
 

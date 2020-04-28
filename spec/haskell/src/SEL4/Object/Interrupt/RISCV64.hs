@@ -17,6 +17,7 @@ import SEL4.Object.Structures
 import SEL4.API.Failures
 import SEL4.API.Types
 import SEL4.API.InvocationLabels
+import SEL4.API.Invocation
 import SEL4.API.Invocation.RISCV64 as ArchInv
 import SEL4.API.InvocationLabels.RISCV64 as ArchLabels
 import {-# SOURCE #-} SEL4.Object.CNode
@@ -52,6 +53,13 @@ performIRQControl (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger)
     setIRQState IRQSignal (IRQ irq)
     cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot
     return ()
+
+plic_complete_claim :: IRQ -> MachineMonad ()
+plic_complete_claim (IRQ irq) = Arch.plic_complete_claim irq
+
+invokeIRQHandler :: IRQHandlerInvocation -> Kernel ()
+invokeIRQHandler (AckIRQ irq) = doMachineOp $ plic_complete_claim irq
+invokeIRQHandler _ = return ()
 
 handleReservedIRQ :: IRQ -> Kernel ()
 handleReservedIRQ _ = return ()
