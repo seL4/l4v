@@ -56,6 +56,11 @@ assumes ackInterrupt_ccorres:
            (doMachineOp (ackInterrupt irq))
            (Call ackInterrupt_'proc)"
 
+assumes plic_complete_claim_ccorres:
+  "ccorres dc xfdc \<top> \<lbrace>\<acute>irq = ucast irq\<rbrace> []
+           (doMachineOp (plic_complete_claim irq))
+           (Call plic_complete_claim_'proc)"
+
 assumes setIRQTrigger_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>irq = ucast irq\<rbrace> \<inter> \<lbrace>\<acute>edge_triggered = from_bool trigger\<rbrace>) []
            (doMachineOp (RISCV64.setIRQTrigger irq trigger))
