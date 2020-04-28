@@ -18,7 +18,9 @@ context begin interpretation Arch .
 
 requalify_consts
   arch_invoke_irq_control
+  arch_invoke_irq_handler
   handle_reserved_irq
+  arch_mask_irq_signal
 end
 
 
@@ -94,7 +96,7 @@ definition
        cap \<leftarrow> get_cap slot;
        when (is_ntfn_cap cap \<and> AllowSend \<in> cap_rights cap)
          $ send_signal (obj_ref_of cap) (cap_ep_badge cap);
-       do_machine_op $ maskInterrupt True irq
+       arch_mask_irq_signal irq
      od
    | IRQTimer \<Rightarrow> do
        do_extended_op timer_tick;
