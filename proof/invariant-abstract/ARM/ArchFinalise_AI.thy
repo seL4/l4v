@@ -528,7 +528,7 @@ lemma suspend_unlive':
   unfolding suspend_def
   apply (wpsimp wp: get_object_wp suspend_unlive_helper set_thread_state_not_live gbyt_bound_tcb
                     cancel_ipc_bound_sc_tcb_at_None tcb_release_remove_obj_at_not_live0
-            wp_del: maybeM_wp)
+                    hoare_vcg_if_lift2)
   done
 
 lemma unbind_maybe_notification_not_live_helper:
@@ -537,7 +537,7 @@ lemma unbind_maybe_notification_not_live_helper:
    \<lbrace>\<lambda>rv. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and>
                                  ntfn_bound_tcb ntfn = None \<and>
                                  ntfn_sc ntfn = None) ptr\<rbrace>"
-    apply (simp add: unbind_maybe_notification_def maybeM_def get_sk_obj_ref_def)
+  apply (simp add: unbind_maybe_notification_def maybeM_def get_sk_obj_ref_def)
   apply (rule hoare_pre)
    apply (wp get_simple_ko_wp sbn_obj_at_impossible simple_obj_set_prop_at
             | wpc

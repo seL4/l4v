@@ -1522,7 +1522,7 @@ lemma suspend_invs_helper:
                              od)
             yt_opt;
       state <- get_thread_state t;
-      y <- if state = Running then update_restart_pc t else return ();
+      y <- when (state = Running) (update_restart_pc t);
       y <- set_thread_state t Inactive;
       y <- tcb_sched_action tcb_sched_dequeue t;
       tcb_release_remove t
@@ -1532,7 +1532,7 @@ lemma suspend_invs_helper:
   apply (rule hoare_seq_ext[OF _ gyt_sp])
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def update_restart_pc_def
                   wp: sts_only_idle valid_irq_node_typ maybeM_wp sts_fault_tcbs_valid_states
-                      sts_valid_replies update_sched_context_valid_idle)
+                      sts_valid_replies update_sched_context_valid_idle hoare_vcg_if_lift2)
   apply (simp cong: if_cong)
   apply (rule_tac V="valid_replies' (replies_with_sc s)
            (replies_blocked_upd_tcb_st Inactive t (replies_blocked s))" in revcut_rl
@@ -1576,7 +1576,6 @@ lemma reply_remove_tcb_inactive [wp]:
   by (wpsimp simp: reply_remove_tcb_def)
 
 lemma suspend_invs:
-  shows
   "\<lbrace>invs and K (t \<noteq> idle_thread_ptr)\<rbrace> suspend t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: suspend_def)
   apply (wp suspend_invs_helper)
@@ -1772,7 +1771,7 @@ lemma suspend_unlive:
    suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live0) t\<rbrace>"
   unfolding suspend_def
-  apply (wpsimp wp: set_thread_state_not_live0 suspend_unlive_helper gbn_wp)
+  apply (wpsimp wp: set_thread_state_not_live0 suspend_unlive_helper gbn_wp hoare_vcg_if_lift2)
    apply (simp add: cancel_ipc_def obj_at_pred_tcb_at_peel)
    apply (subst obj_at_pred_tcb_at_peel)+
    apply (wpsimp wp: blocked_cancel_ipc_bound_sc_tcb_at)

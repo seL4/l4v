@@ -515,7 +515,7 @@ where
        set_tcb_obj_ref tcb_yield_to_update thread None
      od) yt_opt;
      state \<leftarrow> get_thread_state thread;
-     (if state = Running then update_restart_pc thread else return ());
+     when (state = Running) $ update_restart_pc thread;
      set_thread_state thread Inactive;
      tcb_sched_action (tcb_sched_dequeue) thread;
      tcb_release_remove thread
