@@ -341,20 +341,32 @@ lemma valid_globals_ex_cte_cap_irq:
   apply (simp add: global_refs'_def cte_level_bits_def cteSizeBits_def shiftl_t2n mult.commute mult.left_commute)
   done
 
+lemma no_fail_plic_complete_claim [simp, wp]:
+  "no_fail \<top> (RISCV64.plic_complete_claim irw)"
+  unfolding RISCV64.plic_complete_claim_def
+  by (rule no_fail_machine_op_lift)
+
+lemma invoke_arch_irq_handler_corres:
+  "irq_handler_inv_relation i i' \<Longrightarrow>
+   corres dc \<top> \<top> (arch_invoke_irq_handler i) (RISCV64_H.invokeIRQHandler i')"
+  apply (cases i; clarsimp simp: RISCV64_H.invokeIRQHandler_def)
+  apply (rule corres_machine_op, rule corres_Id; simp?)
+  done
+
+
 lemma invoke_irq_handler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
    corres dc (einvs and irq_handler_inv_valid i)
              (invs' and irq_handler_inv_valid' i')
      (invoke_irq_handler i)
-     (invokeIRQHandler i')"
-  apply (cases i, simp_all add: invokeIRQHandler_def)
-    apply (rule corres_guard_imp, rule corres_machine_op)
-      apply (rule corres_Id, simp_all)
-    apply (rule no_fail_maskInterrupt)
+     (InterruptDecls_H.invokeIRQHandler i')"
+  supply arch_invoke_irq_handler.simps[simp del]
+  apply (cases i; simp add: Interrupt_H.invokeIRQHandler_def)
+    apply (rule corres_guard_imp, rule invoke_arch_irq_handler_corres; simp)
    apply (rename_tac word cap prod)
    apply clarsimp
    apply (rule corres_guard_imp)
-     apply (rule corres_split [OF _ get_irq_slot_corres])
+     apply (rule corres_split[OF _ get_irq_slot_corres])
        apply simp
        apply (rule corres_split_nor [OF _ cap_delete_one_corres])
          apply (rule cins_corres, simp+)
@@ -414,14 +426,25 @@ lemma ct_in_current_domain_ksMachineState:
   apply (simp add:tcb_in_cur_domain'_def)
   done
 
+lemma plic_complete_claim_irq_masks[wp]:
+  "RISCV64.plic_complete_claim irq \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
+  unfolding RISCV64.plic_complete_claim_def by wp
+
+lemma dmo_plic_complete_claim_invs'[wp]:
+  "doMachineOp (RISCV64.plic_complete_claim irq) \<lbrace>invs'\<rbrace>"
+  apply (wp dmo_invs')
+  apply (clarsimp simp: in_monad RISCV64.plic_complete_claim_def machine_op_lift_def machine_rest_lift_def select_f_def)
+  done
+
+lemma invoke_arch_irq_handler_invs'[wp]:
+  "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace> RISCV64_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  by (cases i; wpsimp simp: RISCV64_H.invokeIRQHandler_def)
+
 lemma invoke_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace>
-    invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (cases i, simp_all add: invokeIRQHandler_def)
-    apply (wp dmo_maskInterrupt)
-    apply (clarsimp simp: invs'_def valid_state'_def valid_irq_masks'_def
-                          valid_machine_state'_def ct_not_inQ_def
-                          ct_in_current_domain_ksMachineState)
+    InterruptDecls_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (cases i; simp add: Interrupt_H.invokeIRQHandler_def)
+    apply wpsimp
    apply (wp cteInsert_invs)+
     apply (strengthen ntfn_badge_derived_enough_strg isnt_irq_handler_strg)
     apply (wp cteDeleteOne_other_cap cteDeleteOne_other_cap[unfolded o_def])
