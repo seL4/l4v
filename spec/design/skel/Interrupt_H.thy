@@ -23,6 +23,7 @@ requalify_consts
   invokeIRQHandler
   initInterruptController
   handleReservedIRQ
+  maskIrqSignal
 
 context begin global_naming global
 requalify_consts
