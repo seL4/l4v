@@ -1803,13 +1803,7 @@ lemma invokeIRQControl_valid_duplicates'[wp]:
   apply (wp|wpc | simp add:ARM_H.performIRQControl_def)+
  done
 
-lemma invokeIRQHandler_valid_duplicates'[wp]:
-  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<rbrace> invokeIRQHandler a
-  \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add:invokeIRQHandler_def)
-  apply (rule hoare_pre)
-  apply (wp|wpc | simp add:ARM_H.performIRQControl_def)+
-  done
+crunch valid_duplicates'[wp]: InterruptDecls_H.invokeIRQHandler "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
 lemma invokeCNode_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s \<and> vs_valid_duplicates' (ksPSpace s)
@@ -2119,7 +2113,7 @@ lemma performInvocation_valid_duplicates'[wp]:
     \<and> valid_invocation' i s \<and> ct_active' s\<rbrace>
   RetypeDecls_H.performInvocation isBlocking isCall i
   \<lbrace>\<lambda>reply s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (clarsimp simp:performInvocation_def)
+  apply (clarsimp simp: performInvocation_def)
   apply (simp add:ct_in_state'_def)
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
@@ -2171,7 +2165,7 @@ lemma handleInterrupt_valid_duplicates'[wp]:
   apply (rule conjI; rule impI)
    apply (wp hoare_vcg_all_lift hoare_drop_imps
              threadSet_pred_tcb_no_state getIRQState_inv haskell_fail_wp
-          |wpc|simp add: handleReservedIRQ_def)+
+          |wpc|simp add: handleReservedIRQ_def maskIrqSignal_def)+
   done
 
 
