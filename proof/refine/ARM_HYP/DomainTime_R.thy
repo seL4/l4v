@@ -270,7 +270,7 @@ lemma handleInterrupt_valid_domain_time:
    apply (rule_tac B="\<lambda>_ s. 0 < ksDomainTime s" in hoare_seq_ext[rotated])
     apply (rule hoare_pre, wp, simp)
    apply (rename_tac st)
-   apply (case_tac st, simp_all)
+   apply (case_tac st, simp_all add: maskIrqSignal_def)
     (* IRQSignal : no timer tick, trivial preservation of ksDomainTime *)
     apply (rule_tac Q="\<lambda>_ s. 0 < ksDomainTime s" in hoare_post_imp, clarsimp)
     apply (rule hoare_pre, (wp | wpc)+)
