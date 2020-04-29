@@ -312,8 +312,8 @@ crunch simple_sched_action [wp, DetSchedSchedule_AI_assms]:
   (wp: hoare_drop_imps mapM_x_wp mapM_wp select_wp subset_refl
    simp: unless_def if_fun_split)
 
-crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
-  arch_finalise_cap, prepare_thread_delete valid_sched
+crunches arch_finalise_cap, prepare_thread_delete, arch_invoke_irq_handler
+  for valid_sched [wp, DetSchedSchedule_AI_assms]: valid_sched
   (ignore: set_object wp: crunch_wps subset_refl simp: if_fun_split)
 
 lemma activate_thread_valid_sched [DetSchedSchedule_AI_assms]:
@@ -388,7 +388,7 @@ crunch valid_list [wp, DetSchedSchedule_AI_assms]:
 crunch cur_tcb [wp, DetSchedSchedule_AI_assms]: handle_arch_fault_reply, handle_vm_fault, arch_get_sanitise_register_info, arch_post_modify_registers cur_tcb
 
 crunch not_cur_thread [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, arch_post_modify_registers "not_cur_thread t'"
-crunch valid_sched    [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg valid_sched
+crunch valid_sched    [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_mask_irq_signal valid_sched
 crunch ready_queues   [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, arch_post_modify_registers "\<lambda>s. P (ready_queues s)"
 crunch valid_etcbs    [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg valid_etcbs
 crunch scheduler_action [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, arch_post_modify_registers "\<lambda>s. P (scheduler_action s)"
