@@ -2317,6 +2317,7 @@ lemma handleInterrupt_ccorres:
          apply csymbr
          apply csymbr
          apply (ctac (no_vcg) add: sendSignal_ccorres)
+          apply (simp add: maskIrqSignal_def)
           apply (ctac (no_vcg) add: maskInterrupt_ccorres)
            apply (ctac add: ackInterrupt_ccorres [unfolded dc_def])
           apply wp+
@@ -2325,7 +2326,7 @@ lemma handleInterrupt_ccorres:
         apply (rule ccorres_rhs_assoc)+
         apply csymbr+
         apply (rule ccorres_cond_false_seq)
-        apply simp
+        apply (simp add: maskIrqSignal_def)
         apply (ctac (no_vcg) add: maskInterrupt_ccorres)
          apply (ctac add: ackInterrupt_ccorres [unfolded dc_def])
         apply wp
@@ -2334,7 +2335,8 @@ lemma handleInterrupt_ccorres:
        apply (case_tac rva, simp_all del: Collect_const)[1]
                   prefer 3
                   apply metis
-                 apply ((rule ccorres_guard_imp2,
+                 apply ((simp add: maskIrqSignal_def,
+                        rule ccorres_guard_imp2,
                         rule ccorres_cond_false_seq, simp,
                         rule ccorres_cond_false_seq, simp,
                         ctac (no_vcg) add: maskInterrupt_ccorres,
