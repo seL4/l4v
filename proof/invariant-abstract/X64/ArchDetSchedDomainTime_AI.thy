@@ -26,7 +26,8 @@ crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   handle_arch_fault_reply,
   arch_invoke_irq_control, handle_vm_fault, arch_post_modify_registers,
   prepare_thread_delete, handle_hypervisor_fault, arch_post_cap_deletion,
-  make_arch_fault_msg, arch_get_sanitise_register_info, handle_reserved_irq
+  make_arch_fault_msg, arch_get_sanitise_register_info, handle_reserved_irq,
+  arch_invoke_irq_handler, arch_mask_irq_signal
   "\<lambda>s. P (domain_list s)"
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_time s)"
@@ -37,7 +38,8 @@ crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
   handle_arch_fault_reply, init_arch_objects,
   arch_invoke_irq_control, handle_vm_fault, arch_post_modify_registers,
   prepare_thread_delete, handle_hypervisor_fault, arch_post_cap_deletion,
-  arch_get_sanitise_register_info, handle_reserved_irq
+  arch_get_sanitise_register_info, handle_reserved_irq, arch_invoke_irq_handler,
+  arch_mask_irq_signal
   "\<lambda>s. P (domain_time s)"
 
 declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
@@ -70,7 +72,7 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
   apply (case_tac "maxIRQ < i"; simp)
     subgoal by (wp hoare_false_imp, simp)
   apply (rule hoare_pre)
-   apply (wp do_machine_op_exst | simp | wpc)+
+   apply (wp do_machine_op_exst | simp add: arch_mask_irq_signal_def | wpc)+
       apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
       apply wp
      apply (wp get_cap_wp)
