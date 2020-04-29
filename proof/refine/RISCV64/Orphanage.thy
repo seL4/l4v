@@ -1694,7 +1694,7 @@ lemma handleInterrupt_no_orphans [wp]:
   unfolding handleInterrupt_def
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps hoare_vcg_all_lift getIRQState_inv
-         | wpc | clarsimp simp: invs'_def valid_state'_def
+         | wpc | clarsimp simp: invs'_def valid_state'_def maskIrqSignal_def
                                 handleReservedIRQ_def)+
   done
 
@@ -2075,9 +2075,9 @@ lemma invokeIRQControl_no_orphans [wp]:
 
 lemma invokeIRQHandler_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
-   invokeIRQHandler i
+   InterruptDecls_H.invokeIRQHandler i
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
-  apply (cases i, simp_all add: invokeIRQHandler_def)
+  apply (cases i, simp_all add: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
     apply (wp | clarsimp | fastforce)+
   done
 
