@@ -1627,32 +1627,6 @@ lemma ccorres_handleReservedIRQ:
   apply clarsimp
   done
 
-(* FIXME RISCV REMOVE after spec update: RISCV does not have maskInterrupt for signal case *)
-lemma handleInterrupt_def_FIXME:
-"handleInterrupt irq \<equiv>
-if local.maxIRQ < irq then doMachineOp $ do maskInterrupt True irq;
-                                            ackInterrupt irq
-                                         od
-else do st <- getIRQState irq;
-        case st of irqstate.IRQInactive \<Rightarrow> haskell_fail $ [] @ show irq
-        | irqstate.IRQSignal \<Rightarrow>
-            do slot <- getIRQSlot irq;
-               cap <- getSlotCap slot;
-               case cap of
-               capability.NotificationCap x xa True xb \<Rightarrow>
-                 sendSignal (capNtfnPtr cap) (capNtfnBadge cap)
-               | capability.NotificationCap x xa False xb \<Rightarrow>
-                   doMachineOp $ debugPrint $ [] @ show irq
-               | _ \<Rightarrow> doMachineOp $ debugPrint $ [] @ show irq
-            od
-        | irqstate.IRQTimer \<Rightarrow> do timerTick;
-                                 doMachineOp resetTimer
-                              od
-        | irqstate.IRQReserved \<Rightarrow> handleReservedIRQ irq;
-        doMachineOp $ ackInterrupt irq
-     od"
-  sorry
-
 lemma handleInterrupt_ccorres:
   "ccorres dc xfdc
      (invs' and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s \<and>
@@ -1661,11 +1635,7 @@ lemma handleInterrupt_ccorres:
      hs
      (handleInterrupt irq)
      (Call handleInterrupt_'proc)"
-  unfolding handleInterrupt_def_FIXME
-  apply (cinit' lift: irq_' cong: call_ignore_cong)
-  (* FIXME RISCV use this after spec update:
   apply (cinit lift: irq_' cong: call_ignore_cong)
-  *)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp  add: Platform_maxIRQ del: Collect_const)
     apply (drule ucast_maxIRQ_is_less[simplified])
@@ -1716,6 +1686,7 @@ lemma handleInterrupt_ccorres:
          apply csymbr
          apply csymbr
          apply (ctac (no_vcg) add: sendSignal_ccorres)
+          apply (simp add: maskIrqSignal_def)
           apply (ctac add: ackInterrupt_ccorres [unfolded dc_def])
           apply wp+
         apply (simp del: Collect_const)
@@ -1723,19 +1694,20 @@ lemma handleInterrupt_ccorres:
         apply (rule ccorres_rhs_assoc)+
         apply csymbr+
         apply (rule ccorres_cond_false_seq)
-        apply simp
+        apply (simp add: maskIrqSignal_def)
         apply (ctac add: ackInterrupt_ccorres [unfolded dc_def])
        apply (rule_tac P=\<top> and P'="{s. ret__int_' s = 0 \<and> cap_get_tag cap \<noteq> scast cap_notification_cap}" in ccorres_inst)
        apply (clarsimp simp: isCap_simps simp del: Collect_const)
        apply (case_tac rva, simp_all del: Collect_const)[1]
                   prefer 3
                   apply metis
-                 apply (rule ccorres_guard_imp2,
+                 apply (simp add: maskIrqSignal_def,
+                        rule ccorres_guard_imp2,
                         rule ccorres_cond_false_seq, simp,
                         rule ccorres_cond_false_seq, simp,
                         ctac (no_vcg) add: ackInterrupt_ccorres [unfolded dc_def],
                         clarsimp)+
-      apply (wp getSlotCap_wp)
+      apply (wpsimp wp: getSlotCap_wp simp: maskIrqSignal_def)
      apply simp
      apply vcg
     apply (simp add: bind_assoc)
