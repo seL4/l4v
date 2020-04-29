@@ -247,6 +247,7 @@ lemma handleInterrupt_valid_domain_time:
    apply (rename_tac st)
    apply (case_tac st, simp_all)
     (* IRQSignal : no timer tick, trivial preservation of ksDomainTime *)
+    apply (simp add: maskIrqSignal_def)
     apply (rule_tac Q="\<lambda>_ s. 0 < ksDomainTime s" in hoare_post_imp, clarsimp)
     apply (rule hoare_pre, (wp | wpc)+)
      apply (rule_tac Q="\<lambda>_ s. 0 < ksDomainTime s" in hoare_post_imp, clarsimp)

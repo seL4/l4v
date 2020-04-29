@@ -760,9 +760,10 @@ apply (rule corres_split)
             apply (case_tac xb, simp_all add: doMachineOp_return)[1]
              apply (clarsimp simp add: when_def doMachineOp_return)
              apply (rule corres_guard_imp, rule send_signal_corres)
-              apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind)+
-              apply ( rule corres_split)
-              apply (rule corres_machine_op, rule corres_eq_trivial ; (simp add:  no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
+              apply (clarsimp simp: valid_cap_def valid_cap'_def arch_mask_irq_signal_def
+                                    maskIrqSignal_def do_machine_op_bind doMachineOp_bind)+
+              apply (rule corres_machine_op, rule corres_eq_trivial;
+                      (simp add: no_fail_ackInterrupt)+)+
             apply ((wp |simp)+)
             apply clarsimp
    apply fastforce
@@ -885,7 +886,7 @@ lemma hint_invs[wp]:
   apply (rule conjI; rule impI)
 
    apply (wp dmo_maskInterrupt_True getCTE_wp'
-    | wpc | simp add: doMachineOp_bind )+
+    | wpc | simp add: doMachineOp_bind maskIrqSignal_def )+
     apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
      apply (clarsimp simp: cte_wp_at_ctes_of ex_nonz_cap_to'_def)
      apply fastforce
