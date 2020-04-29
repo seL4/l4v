@@ -153,7 +153,8 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
 
 context Arch begin global_naming ARM
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: possible_switch_to, handle_event, activate_thread
+crunches possible_switch_to, handle_event, activate_thread
+  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits
          bool.splits apiobject_type.splits aobject_type.splits notification.splits

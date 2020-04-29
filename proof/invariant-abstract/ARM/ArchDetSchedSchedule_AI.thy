@@ -12,6 +12,8 @@ context Arch begin global_naming ARM
 
 named_theorems DetSchedSchedule_AI_assms
 
+crunch valid_sched[wp, DetSchedSchedule_AI_assms]: arch_mask_irq_signal valid_sched
+
 crunch prepare_thread_delete_idle_thread[wp, DetSchedSchedule_AI_assms]:
   prepare_thread_delete "\<lambda>(s:: det_ext state). P (idle_thread s)"
 
@@ -209,8 +211,8 @@ crunch simple_sched_action [wp, DetSchedSchedule_AI_assms]:
   (wp: hoare_drop_imps mapM_x_wp mapM_wp select_wp subset_refl
    simp: unless_def if_fun_split)
 
-crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
-  arch_finalise_cap, prepare_thread_delete valid_sched
+crunches arch_finalise_cap, prepare_thread_delete, arch_invoke_irq_handler
+  for valid_sched [wp, DetSchedSchedule_AI_assms]: valid_sched
   (ignore: set_object wp: crunch_wps subset_refl simp: if_fun_split)
 
 lemma activate_thread_valid_sched [DetSchedSchedule_AI_assms]:
