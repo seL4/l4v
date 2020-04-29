@@ -13,6 +13,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 declare arch_post_modify_registers_def[simp]
 declare arch_post_cap_deletion_def[simp]
 declare arch_cap_cleanup_opt_def[simp]
+declare arch_mask_irq_signal_def[simp]
 
 (* FIXME: arch-split *)
 lemmas post_cap_deletion_simps[simp] = post_cap_deletion_def[simplified arch_post_cap_deletion_def]
