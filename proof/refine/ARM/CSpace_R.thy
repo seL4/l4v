@@ -742,7 +742,8 @@ lemma set_cap_not_quite_corres':
              domain_index t  = ksDomScheduleIdx t' \<and>
              domain_list t   = ksDomSchedule t' \<and>
              cur_domain t    = ksCurDomain t' \<and>
-             domain_time t   = ksDomainTime t'"
+             domain_time t   = ksDomainTime t' \<and>
+             sc_replies_of t = sc_replies_of s"
   using cr
   by (rule set_cap_not_quite_corres; fastforce simp: c p)
 
