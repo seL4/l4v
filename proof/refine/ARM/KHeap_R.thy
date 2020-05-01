@@ -499,55 +499,86 @@ lemma setObject_tcb_strongest:
                         ps_clear_upd')
   done
 
-method setObject_replies_of =
-  clarsimp simp: setObject_def in_monad split_def valid_def,
+method setObject_easy_cases =
+  clarsimp simp: setObject_def in_monad split_def valid_def lookupAround2_char1,
   erule rsubst[where P=P'], rule ext,
-  clarsimp simp: updateObject_default_def in_monad opt_map_def projectKO_opts_defs projectKO_eq2
-         split: Structures_H.kernel_object.split_asm
+  clarsimp simp: updateObject_cte updateObject_default_def in_monad
+                 typeError_def opt_map_def projectKO_opts_defs projectKO_eq2
+          split: if_split_asm
+                 Structures_H.kernel_object.split_asm
 
 lemma setObject_endpoint_replies_of'[wp]:
   "setObject c (endpoint::endpoint) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
-  by setObject_replies_of
+  by setObject_easy_cases
 
 lemma setObject_notification_replies_of'[wp]:
   "setObject c (notification::notification) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
-  by setObject_replies_of
+  by setObject_easy_cases
 
 lemma setObject_tcb_replies_of'[wp]:
   "setObject c (tcb::tcb) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
-  by setObject_replies_of
+  by setObject_easy_cases
 
 lemma setObject_sched_context_replies_of'[wp]:
   "setObject c (sched_context::sched_context) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
-  by setObject_replies_of
+  by setObject_easy_cases
 
 lemma setObject_cte_replies_of'[wp]:
   "setObject c (cte::cte) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
-  apply (clarsimp simp: setObject_def in_monad split_def valid_def lookupAround2_char1)
-  apply (erule rsubst[where P=P'], rule ext)
-  apply (clarsimp simp: updateObject_cte in_monad
-                        typeError_def opt_map_def projectKO_opts_defs
-                 split: if_split_asm
-                        Structures_H.kernel_object.split_asm)
-  done
+  by setObject_easy_cases
 
-(* Warning: This may not be a weakest precondition. *)
+\<comment>\<open>
+  Warning: this may not be a weakest precondition. `setObject c`
+  asserts that there's already a correctly-typed object at `c`,
+  so a weaker valid precondition might be @{term
+    "\<lambda>s. replies_of' s c \<noteq> None \<longrightarrow>  P' ((replies_of' s)(c \<mapsto> reply))"
+  }
+\<close>
 lemma setObject_reply_replies_of'[wp]:
   "\<lbrace>\<lambda>s. P' ((replies_of' s)(c \<mapsto> reply))\<rbrace>
   setObject c (reply::reply)
   \<lbrace>\<lambda>_ s. P' (replies_of' s)\<rbrace>"
-  apply (clarsimp simp: setObject_def in_monad split_def
-                        valid_def lookupAround2_char1)
-  apply (clarsimp simp: updateObject_default_def in_monad
-                        typeError_def opt_map_def projectKO_opts_defs
-                 split: if_split_asm
-                        Structures_H.kernel_object.split_asm)
-  done
+  by setObject_easy_cases
+
+lemma setObject_endpoint_scs_of'[wp]:
+  "setObject c (endpoint::endpoint) \<lbrace>\<lambda>s. P' (scs_of' s)\<rbrace>"
+  by setObject_easy_cases
+
+lemma setObject_notification_scs_of'[wp]:
+  "setObject c (notification::notification) \<lbrace>\<lambda>s. P' (scs_of' s)\<rbrace>"
+  by setObject_easy_cases
+
+\<comment>\<open>
+  Warning: this may not be a weakest precondition. `setObject c`
+  asserts that there's already a correctly-typed object at `c`,
+  so a weaker valid precondition might be @{term
+    "\<lambda>s. scs_of' s c \<noteq> None \<longrightarrow>  P' ((scs_of' s)(c \<mapsto> sched_context))"
+  }
+\<close>
+lemma setObject_sched_context_scs_of'[wp]:
+  "\<lbrace>\<lambda>s. P' ((scs_of' s)(c \<mapsto> sched_context))\<rbrace>
+  setObject c (sched_context::sched_context)
+  \<lbrace>\<lambda>_ s. P' (scs_of' s)\<rbrace>"
+  by setObject_easy_cases
+
+lemma setObject_cte_scs_of'[wp]:
+  "setObject c (cte::cte) \<lbrace>\<lambda>s. P' (scs_of' s)\<rbrace>"
+  by setObject_easy_cases
+
+lemma setObject_reply_scs_of'[wp]:
+  "setObject c (reply::reply) \<lbrace>\<lambda>s. P' (scs_of' s)\<rbrace>"
+  by setObject_easy_cases
 
 lemmas setReply_replies_of' = setObject_reply_replies_of'[folded setReply_def]
 
 crunches setNotification, setEndpoint, setSchedContext, setCTE
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
+
+lemmas setSchedContext_scs_of_of' =
+  setObject_sched_context_scs_of'[folded setSchedContext_def]
+
+crunches setNotification, setEndpoint, setCTE, setReply
+  for scs_of'[wp]: "\<lambda>s. P (scs_of' s)"
 
 lemma getObject_obj_at':
   assumes x: "\<And>q n ko. loadObject p q n ko =

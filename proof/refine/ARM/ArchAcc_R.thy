@@ -196,15 +196,15 @@ lemma get_asid_pool_corres':
 
 lemma setObject_asidpool_replies_of'[wp]:
   "setObject c (asidpool::asidpool) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
-  by setObject_replies_of
+  by setObject_easy_cases
 
 lemma setObject_pte_replies_of'[wp]:
   "setObject c (pte::pte) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
-  by setObject_replies_of
+  by setObject_easy_cases
 
 lemma setObject_pde_replies_of'[wp]:
   "setObject c (pde::pde) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
-  by setObject_replies_of
+  by setObject_easy_cases
 
 crunches storePDE, storePTE
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
