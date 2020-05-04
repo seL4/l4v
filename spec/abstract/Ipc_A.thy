@@ -315,6 +315,10 @@ where
                         | _ \<Rightarrow> return True; \<comment> \<open>why does C allow dest to have no sc?\<close>
                 assert test;
                 set_thread_state dest Running;
+                swp maybeM new_sc_opt (\<lambda>scp. do
+                  csc \<leftarrow> gets cur_sc;
+                  when (scp \<noteq> csc) (refill_unblock_check scp)
+                od);
                 possible_switch_to dest
               od
        | (RecvEP [], _) \<Rightarrow> fail
@@ -409,6 +413,12 @@ where
               do_ipc_transfer sender (Some epptr)
                         (sender_badge data) (sender_can_grant data)
                         thread;
+              sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context thread;
+              swp maybeM sc_opt (\<lambda>scp. do
+                csc \<leftarrow> gets cur_sc;
+                assert (scp \<noteq> csc);
+                refill_unblock_check scp
+              od);
               fault \<leftarrow> thread_get tcb_fault sender;
               if sender_is_call data \<or> fault \<noteq> None
               then
@@ -442,6 +452,14 @@ where
          ntfn_obj = (case rest of [] \<Rightarrow> IdleNtfn | _ \<Rightarrow> WaitingNtfn rest),
          ntfn_bound_tcb = bound_tcb,
          ntfn_sc = sc_ptr \<rparr>;
+
+     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
+     swp maybeM sc_opt (\<lambda>scp. do
+       csc \<leftarrow> gets cur_sc;
+       assert (scp \<noteq> csc);
+       refill_unblock_check scp
+     od);
+
      set_thread_state dest Running;
      as_user dest $ setRegister badge_register badge;
      maybe_donate_sc dest ntfnptr;
@@ -587,6 +605,13 @@ where
         BlockedOnReply r \<Rightarrow> do
           assert (r = reply);
           reply_remove receiver reply;
+
+          sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
+          swp maybeM sc_opt (\<lambda>scp. do
+            csc \<leftarrow> gets cur_sc;
+            when (scp \<noteq> csc) (refill_unblock_check scp)
+          od);
+
           fault \<leftarrow> thread_get tcb_fault receiver;
           case fault of
             None \<Rightarrow> do
