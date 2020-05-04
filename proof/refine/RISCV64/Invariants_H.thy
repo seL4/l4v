@@ -3255,8 +3255,7 @@ method normalise_obj_at' =
 
 end
 
-add_upd_simps "invs' (gsUntypedZeroRanges_update f s)
-    \<and> valid_queues (gsUntypedZeroRanges_update f s)"
+add_upd_simps "invs' (gsUntypedZeroRanges_update f s)"
   (obj_at'_real_def)
 declare upd_simps[simp]
 
