@@ -472,6 +472,11 @@ where
   "ready_queues_relation qs qs' \<equiv> \<forall>d p. (qs d p = qs' (d, p))"
 
 definition
+  release_queue_relation :: "Structures_A.release_queue \<Rightarrow> KernelStateData_H.release_queue \<Rightarrow> bool"
+where
+  "release_queue_relation qs qs' \<equiv> (qs = qs')"
+
+definition
   ghost_relation :: "Structures_A.kheap \<Rightarrow> (word32 \<rightharpoonup> vmpage_size) \<Rightarrow> (word32 \<rightharpoonup> nat) \<Rightarrow> bool"
 where
   "ghost_relation h ups cns \<equiv>
@@ -641,6 +646,7 @@ where
        \<and> sc_replies_relation s s'
        \<and> sched_act_relation (scheduler_action s) (ksSchedulerAction s')
        \<and> ready_queues_relation (ready_queues s) (ksReadyQueues s')
+       \<and> release_queue_relation (release_queue s) (ksReleaseQueue s')
        \<and> ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')
        \<and> cdt_relation (swp cte_at s) (cdt s) (ctes_of s')
        \<and> cdt_list_relation (cdt_list s) (cdt s) (ctes_of s')
