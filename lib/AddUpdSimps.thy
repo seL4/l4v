@@ -44,7 +44,7 @@ fun mk_upd_simps ctxt upd_app (simps, done, n) = let
     val upd_apps_prem = Thm.prems_of thm |> maps get_upd_apps
       |> sort_distinct Term_Ord.fast_term_ord
       |> filter_out (Termtab.defined done)
-      |> filter_out (curry (=) upd_app)
+      |> filter_out (curry (op =) upd_app)
       |> filter_out (head_of #> dest_Const #> fst #> String.isPrefix "HOL.")
     val (simps2, done, n) = fold (mk_upd_simps ctxt)
         upd_apps_prem (simps, done, n)
