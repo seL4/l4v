@@ -135,7 +135,7 @@ declare not_psubset_eq[dest!]
 lemma setThreadState_runnable_simp:
   "runnable' ts \<Longrightarrow> setThreadState ts t =
    threadSet (tcbState_update (\<lambda>x. ts)) t"
-  apply (simp add: setThreadState_def isRunnable_def isBlocked_def liftM_def)
+  apply (simp add: setThreadState_def isRunnable_def isStopped_def liftM_def)
   apply (subst bind_return[symmetric], rule bind_cong[OF refl])
   apply (drule use_valid[OF _ threadSet_pred_tcb_at_state[where proj="itcbState" and p=t and P="(=) ts"]])
    apply simp
@@ -205,7 +205,7 @@ lemma restart_corres:
   "corres dc (einvs  and tcb_at t) (invs' and tcb_at' t)
       (Tcb_A.restart t) (ThreadDecls_H.restart t)"
   apply (simp add: Tcb_A.restart_def Thread_H.restart_def)
-  apply (simp add: isBlocked_def2 liftM_def)
+  apply (simp add: isStopped_def2 liftM_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gts_corres])
       apply (clarsimp simp add: runnable_tsr idle_tsr when_def)
@@ -229,7 +229,7 @@ lemma restart_corres:
 lemma restart_invs':
   "\<lbrace>invs' and ex_nonz_cap_to' t and (\<lambda>s. t \<noteq> ksIdleThread s)\<rbrace>
    ThreadDecls_H.restart t \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: restart_def isBlocked_def2)
+  apply (simp add: restart_def isStopped_def2)
   apply (wp setThreadState_nonqueued_state_update
             cancelIPC_simple setThreadState_st_tcb
        | wp (once) sch_act_simple_lift)+
@@ -251,7 +251,7 @@ lemma restart_invs':
 
 lemma restart_tcb'[wp]:
   "\<lbrace>tcb_at' t'\<rbrace> ThreadDecls_H.restart t \<lbrace>\<lambda>rv. tcb_at' t'\<rbrace>"
-  apply (simp add: restart_def isBlocked_def2)
+  apply (simp add: restart_def isStopped_def2)
   apply wpsimp
   done
 

@@ -413,10 +413,10 @@ lemma ccorres_exI1:
   apply fastforce
   done
 
-lemma isBlocked_ccorres [corres]:
+lemma isStopped_ccorres [corres]:
   "ccorres (\<lambda>r r'. r = to_bool r') ret__unsigned_long_'
   (tcb_at' thread) (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread})  []
-  (isBlocked thread) (Call isBlocked_'proc)"
+  (isStopped thread) (Call isStopped_'proc)"
   apply (cinit lift: thread_' simp: getThreadState_def)
   apply (rule ccorres_pre_threadGet)
    apply (rule ccorres_move_c_guard_tcb)
@@ -1919,8 +1919,8 @@ lemma true_eq_from_bool [simp]:
   "(scast true = from_bool P) = P"
   by (simp add: true_def from_bool_def split: bool.splits)
 
-lemma isBlocked_spec:
-  "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter> {s. cslift s (thread_' s) \<noteq> None}) Call isBlocked_'proc
+lemma isStopped_spec:
+  "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter> {s. cslift s (thread_' s) \<noteq> None}) Call isStopped_'proc
        {s'. ret__unsigned_long_' s' = from_bool (tsType_CL (thread_state_lift (tcbState_C (the (cslift s (thread_' s))))) \<in>
                             {scast ThreadState_BlockedOnReply,
                              scast ThreadState_BlockedOnNotification, scast ThreadState_BlockedOnSend,
@@ -2402,7 +2402,7 @@ lemma scheduleTCB_ccorres':
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  cscheduler_action_relation_def)
           apply wp+
-     apply (simp add: isRunnable_def isBlocked_def)
+     apply (simp add: isRunnable_def isStopped_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply clarsimp
@@ -2458,7 +2458,7 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
            apply (clarsimp simp: rf_sr_def cstate_relation_def cscheduler_action_relation_def
                            split: scheduler_action.split_asm)
           apply wp+
-     apply (simp add: isRunnable_def isBlocked_def)
+     apply (simp add: isRunnable_def isStopped_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
@@ -2549,7 +2549,7 @@ lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  cscheduler_action_relation_def)
           apply wp+
-     apply (simp add: isRunnable_def isBlocked_def)
+     apply (simp add: isRunnable_def isStopped_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply clarsimp

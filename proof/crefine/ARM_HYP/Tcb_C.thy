@@ -1072,7 +1072,7 @@ lemma restart_ccorres:
         (UNIV \<inter> {s. target_' s = tcb_ptr_to_ctcb_ptr thread}) []
      (restart thread) (Call restart_'proc)"
   apply (cinit lift: target_')
-   apply (ctac(no_vcg) add: isBlocked_ccorres)
+   apply (ctac(no_vcg) add: isStopped_ccorres)
     apply (simp only: when_def)
     apply (rule ccorres_cond2[where R=\<top>])
       apply (simp add: to_bool_def Collect_const_mem)

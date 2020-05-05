@@ -91,8 +91,8 @@ The "activateThread" function is used to prepare a thread to run. If the thread 
 
 The following functions are used by the scheduler to determine whether a particular thread is ready to be scheduled, and whether it is ready to run.
 
-> isBlocked :: PPtr TCB -> Kernel Bool
-> isBlocked thread = do
+> isStopped :: PPtr TCB -> Kernel Bool
+> isStopped thread = do
 >         state <- getThreadState thread
 >         return $ case state of
 >             Inactive -> True
@@ -137,7 +137,7 @@ The invoked thread will return to the instruction that caused it to enter the ke
 
 > restart :: PPtr TCB -> Kernel ()
 > restart target = do
->     blocked <- isBlocked target
+>     blocked <- isStopped target
 >     when blocked $ do
 >         cancelIPC target
 >         setupReplyMaster target

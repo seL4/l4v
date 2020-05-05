@@ -1452,7 +1452,7 @@ lemma handleRecv_ccorres:
                 auto simp: pred_tcb_at'_def obj_at'_def objBits_simps projectKOs ct_in_state'_def)[1]
          apply wp
      apply clarsimp
-     apply (vcg exspec=isBlocked_modifies exspec=lookupCap_modifies)
+     apply (vcg exspec=isStopped_modifies exspec=lookupCap_modifies)
 
     apply wp
    apply clarsimp

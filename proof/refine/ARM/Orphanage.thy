@@ -1930,7 +1930,7 @@ lemma restart_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> tcb_at' t s \<rbrace>
    restart t
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding restart_def isBlocked_def2
+  unfolding restart_def isStopped_def2
   apply (wp tcbSchedEnqueue_almost_no_orphans sts_st_tcb' cancelIPC_weak_sch_act_wf
          | clarsimp simp: o_def if_apply_def2
          | strengthen no_orphans_strg_almost

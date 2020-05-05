@@ -330,10 +330,10 @@ lemma threadGet_vcg_corres_P:
 
 lemmas threadGet_vcg_corres = threadGet_vcg_corres_P[where P=\<top>]
 
-lemma isBlocked_ccorres [corres]:
+lemma isStopped_ccorres [corres]:
   "ccorres (\<lambda>r r'. r = to_bool r') ret__unsigned_long_'
   (tcb_at' thread) (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread})  []
-  (isBlocked thread) (Call isBlocked_'proc)"
+  (isStopped thread) (Call isStopped_'proc)"
   apply (cinit lift: thread_' simp: getThreadState_def)
   apply (rule ccorres_pre_threadGet)
    apply (rule ccorres_move_c_guard_tcb)
@@ -2212,7 +2212,7 @@ lemma scheduleTCB_ccorres':
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  cscheduler_action_relation_def)
           apply wp+
-     apply (simp add: isRunnable_def isBlocked_def)
+     apply (simp add: isRunnable_def isStopped_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply clarsimp
@@ -2268,7 +2268,7 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
            apply (clarsimp simp: rf_sr_def cstate_relation_def cscheduler_action_relation_def
                            split: scheduler_action.split_asm)
           apply wp+
-     apply (simp add: isRunnable_def isBlocked_def)
+     apply (simp add: isRunnable_def isStopped_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
@@ -2359,7 +2359,7 @@ lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  cscheduler_action_relation_def)
           apply wp+
-     apply (simp add: isRunnable_def isBlocked_def)
+     apply (simp add: isRunnable_def isStopped_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply clarsimp
