@@ -445,8 +445,7 @@ where
      set_thread_state dest Running;
      as_user dest $ setRegister badge_register badge;
      maybe_donate_sc dest ntfnptr;
-     in_release_q <- gets $ in_release_queue dest;
-     schedulable <- is_schedulable dest in_release_q;
+     schedulable <- is_schedulable dest;
      when (schedulable) $ possible_switch_to dest
    od"
 
@@ -476,8 +475,7 @@ where
                       set_thread_state tcb Running;
                       as_user tcb $ setRegister badge_register badge;
                       maybe_donate_sc tcb ntfnptr;
-                      in_release_q <- gets $ in_release_queue tcb;
-                      schedulable <- is_schedulable tcb in_release_q;
+                      schedulable <- is_schedulable tcb;
                       when (schedulable) $ possible_switch_to tcb
                     od
                   else set_notification ntfnptr $ ntfn_obj_update (K (ActiveNtfn badge)) ntfn
@@ -677,8 +675,7 @@ where
     update_sched_context csc_ptr (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);
     modify $ consumed_time_update (K 0);
     ct \<leftarrow> gets cur_thread;
-    in_release_q \<leftarrow> gets $ in_release_queue ct;
-    sched \<leftarrow> is_schedulable ct in_release_q;
+    sched \<leftarrow> is_schedulable ct;
     when (sched) $ do
       sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context ct;
       assert (sc_opt = (Some csc_ptr));

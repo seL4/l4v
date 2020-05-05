@@ -265,9 +265,15 @@ where
   od"
 
 definition
-  is_schedulable :: "obj_ref \<Rightarrow> bool \<Rightarrow> ('z::state_ext state, bool) nondet_monad"
+  in_release_queue :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "is_schedulable tcb_ptr in_release_q \<equiv> do
+  "in_release_queue tcb_ptr \<equiv> \<lambda>s. tcb_ptr \<in> set (release_queue s)"
+
+definition
+  is_schedulable :: "obj_ref \<Rightarrow> ('z::state_ext state, bool) nondet_monad"
+where
+  "is_schedulable tcb_ptr \<equiv> do
+    in_release_q \<leftarrow> gets $ in_release_queue tcb_ptr;
     tcb \<leftarrow> gets_the $ get_tcb tcb_ptr;
     if Option.is_none (tcb_sched_context tcb)
     then return False
@@ -286,26 +292,26 @@ where
      | _ \<Rightarrow> False)"
 
 definition
-  is_schedulable_opt :: "obj_ref \<Rightarrow> bool \<Rightarrow> 'z::state_ext state \<Rightarrow> bool option"
+  is_schedulable_opt :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool option"
 where
-  "is_schedulable_opt tcb_ptr in_release_q \<equiv> \<lambda>s.
+  "is_schedulable_opt tcb_ptr \<equiv> \<lambda>s.
      case get_tcb tcb_ptr s of None \<Rightarrow> None
      | Some tcb \<Rightarrow>
        (case tcb_sched_context tcb of None => Some False
         | Some sc_ptr =>
             Some (runnable (tcb_state tcb) \<and> (is_sc_active sc_ptr s)
-            \<and> \<not>in_release_q))"
+            \<and> \<not>(in_release_queue tcb_ptr s)))"
 
 definition
-  is_schedulable_bool :: "obj_ref \<Rightarrow> bool \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  is_schedulable_bool :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "is_schedulable_bool tcb_ptr in_release_q \<equiv> \<lambda>s.
+  "is_schedulable_bool tcb_ptr \<equiv> \<lambda>s.
      case get_tcb tcb_ptr s of None \<Rightarrow> False
      | Some tcb \<Rightarrow>
        (case tcb_sched_context tcb of None => False
         | Some sc_ptr =>
             (runnable (tcb_state tcb) \<and> (is_sc_active sc_ptr s)
-              \<and> \<not>in_release_q))"
+              \<and> \<not>(in_release_queue tcb_ptr s)))"
 
 (* refill checks *)
 
@@ -437,11 +443,6 @@ definition
   "tcb_sched_dequeue thread queue \<equiv> filter (\<lambda>x. x \<noteq> thread) queue"
 
 definition
-  in_release_queue :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "in_release_queue tcb_ptr \<equiv> \<lambda>s. tcb_ptr \<in> set (release_queue s)"
-
-definition
   tcb_release_dequeue :: "(unit, 'z::state_ext) s_monad"
 where
   "tcb_release_dequeue =
@@ -471,8 +472,7 @@ definition reschedule_required :: "(unit, 'z::state_ext) s_monad" where
      action \<leftarrow> gets scheduler_action;
      case action of
        switch_thread t \<Rightarrow> do
-         in_release_q \<leftarrow> gets $ in_release_queue t;
-         sched \<leftarrow> is_schedulable t in_release_q;
+         sched \<leftarrow> is_schedulable t;
          when sched $ do
            sc_opt \<leftarrow> thread_get tcb_sched_context t;
            scp \<leftarrow> assert_opt sc_opt;
@@ -492,8 +492,7 @@ where
   "schedule_tcb tcb_ptr \<equiv> do
     cur \<leftarrow> gets cur_thread;
     sched_act \<leftarrow> gets scheduler_action;
-    in_release_q \<leftarrow> gets $ in_release_queue tcb_ptr;
-    schedulable \<leftarrow> is_schedulable tcb_ptr in_release_q;
+    schedulable \<leftarrow> is_schedulable tcb_ptr;
     when (tcb_ptr = cur \<and> sched_act = resume_cur_thread \<and> \<not>schedulable) $ reschedule_required
   od"
 
@@ -503,8 +502,7 @@ where
   "set_thread_state_act tcb_ptr \<equiv> do
     cur \<leftarrow> gets cur_thread;
     sched_act \<leftarrow> gets scheduler_action;
-    in_release_q \<leftarrow> gets $ in_release_queue tcb_ptr;
-    schedulable \<leftarrow> is_schedulable tcb_ptr in_release_q;
+    schedulable \<leftarrow> is_schedulable tcb_ptr;
     when (tcb_ptr = cur \<and> sched_act = resume_cur_thread \<and> \<not>schedulable) $ set_scheduler_action choose_new_thread
   od"
 

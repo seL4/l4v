@@ -433,8 +433,7 @@ definition
                   when (irq \<noteq> None) $ do
                     update_time_stamp;
                     ct \<leftarrow> gets cur_thread;
-                    in_release_q <- gets $ in_release_queue ct;
-                    schedulable <- is_schedulable ct in_release_q;
+                    schedulable <- is_schedulable ct;
                     if schedulable then do
                       check_budget;
                       return ()

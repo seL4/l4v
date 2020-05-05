@@ -45,8 +45,7 @@ definition
 text \<open>Asserts that a thread is schedulable, ready and sufficient before switching to it.\<close>
 definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "guarded_switch_to thread \<equiv> do
-     inq \<leftarrow> gets $ in_release_queue thread;
-     sched \<leftarrow> is_schedulable thread inq;
+     sched \<leftarrow> is_schedulable thread;
      sc_opt \<leftarrow> thread_get tcb_sched_context thread;
      scp \<leftarrow> assert_opt sc_opt;
      assert sched;
@@ -229,8 +228,7 @@ definition
   "schedule \<equiv> do
      awaken;
      ct \<leftarrow> gets cur_thread;
-     inq \<leftarrow> gets $ in_release_queue ct;
-     ct_schedulable \<leftarrow> is_schedulable ct inq;
+     ct_schedulable \<leftarrow> is_schedulable ct;
      action \<leftarrow> gets scheduler_action;
      (case action
        of resume_cur_thread \<Rightarrow> do
@@ -306,8 +304,7 @@ where
     tcb_ptr \<leftarrow> assert_opt sc_tcb_opt;
 
     sched_context_resume sc_ptr;
-    in_release_q <- gets $ in_release_queue tcb_ptr;
-    schedulable <- is_schedulable tcb_ptr in_release_q;
+    schedulable <- is_schedulable tcb_ptr;
     if schedulable then do
       refill_unblock_check sc_ptr;
       sc \<leftarrow> get_sched_context sc_ptr;
