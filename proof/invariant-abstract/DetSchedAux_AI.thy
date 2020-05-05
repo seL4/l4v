@@ -935,7 +935,7 @@ lemma (in DetSchedAux_AI) invoke_untyped_valid_sched:
 
 lemma weak_valid_sched_action_switch_thread_is_schedulable:
   "\<lbrakk>weak_valid_sched_action s; scheduler_action s = switch_thread thread\<rbrakk> \<Longrightarrow>
-     is_schedulable_opt thread (in_release_queue thread s) s = Some True"
+     is_schedulable_opt thread s = Some True"
   by (auto simp: weak_valid_sched_action_def is_schedulable_opt_def in_release_queue_def
                  obj_at_kh_kheap_simps pred_map_simps map_join_simps vs_heap_simps
           split: option.splits )
@@ -1240,9 +1240,9 @@ lemma valid_blocked_except_set_in_release_queue_sum:
   done
 
 lemma schedulable_unfold2:
-  "((is_schedulable_opt tp b s) = Some X)
+  "((is_schedulable_opt tp s) = Some X)
    \<Longrightarrow> tcb_at tp s
-   \<Longrightarrow> (X = (st_tcb_at runnable tp s \<and> active_sc_tcb_at  tp s \<and> \<not>b))"
+   \<Longrightarrow> (X = (st_tcb_at runnable tp s \<and> active_sc_tcb_at  tp s \<and> \<not>(in_release_queue tp s)))"
   by (clarsimp simp: is_schedulable_opt_def obj_at_kh_kheap_simps vs_all_heap_simps
               split: option.splits)
 

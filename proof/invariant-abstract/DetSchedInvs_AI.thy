@@ -1572,13 +1572,14 @@ abbreviation bound_sc_obj_tcb_at :: "(sc_refill_cfg \<Rightarrow> bool) \<Righta
   "bound_sc_obj_tcb_at P t s \<equiv> pred_map2' P (tcb_scps_of s) (sc_refill_cfgs_of s) t"
 
 lemma is_schedulable_opt_Some:
-  "is_schedulable_opt t in_q s = Some X \<Longrightarrow>
-          st_tcb_at runnable t s \<and> active_sc_tcb_at t s \<and> \<not> in_q \<longleftrightarrow> X"
+  "is_schedulable_opt t s = Some X \<Longrightarrow>
+          st_tcb_at runnable t s \<and> active_sc_tcb_at t s \<and> \<not> (in_release_queue t s) \<longleftrightarrow> X"
   by (clarsimp simp: is_schedulable_opt_def vs_all_heap_simps obj_at_kh_kheap_simps
               split: option.splits)
 
 lemma is_schedulable_bool_def2:
-  "is_schedulable_bool t a s = (st_tcb_at runnable t s \<and> active_sc_tcb_at t s \<and> \<not> a)"
+  "is_schedulable_bool t s = (st_tcb_at runnable t s \<and> active_sc_tcb_at t s
+                               \<and> \<not> (in_release_queue t s))"
   by (clarsimp simp: is_schedulable_bool_def vs_all_heap_simps obj_at_kh_kheap_simps
               split: option.splits)
 

@@ -2466,7 +2466,6 @@ lemma schedule_tcb_invs':
    apply (simp add: schedule_tcb_def)
    apply (rule hoare_seq_ext[OF _ gets_sp])
    apply (rule hoare_seq_ext[OF _ gets_sp])
-   apply (rule hoare_seq_ext[OF _ gets_sp])
    apply (rule hoare_seq_ext[OF _ is_schedulable_sp])
    apply (simp add: when_def reschedule_required_def)
    apply (intro conjI)

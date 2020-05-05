@@ -1620,7 +1620,7 @@ lemma set_thread_state_duplicates_valid[wp]:
 lemma handle_invocation_valid_pdpt[wp]:
   "\<lbrace>\<lambda>s. valid_pdpt_objs s \<and> invs s \<and> ct_active s \<and>
         scheduler_action s = resume_cur_thread \<and>
-        is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
+        is_schedulable_bool (cur_thread s) s\<rbrace>
      handle_invocation calling blocking can_donate first_phase cptr
    \<lbrace>\<lambda>rv. valid_pdpt_objs::det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: handle_invocation_def)
@@ -1662,7 +1662,7 @@ lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (u
 lemma call_kernel_valid_pdpt[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_pdpt_objs
      and (\<lambda>s. scheduler_action s = resume_cur_thread)
-     and (\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)\<rbrace>
+     and (\<lambda>s. is_schedulable_bool (cur_thread s) s)\<rbrace>
       (call_kernel e) :: (unit,det_ext) s_monad
         \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def)
@@ -1672,13 +1672,13 @@ lemma call_kernel_valid_pdpt[wp]:
          apply (rule_tac B="\<lambda>_. invs and ct_running and
            (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x) and
            (\<lambda>s. scheduler_action s = resume_cur_thread) and
-           (\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)" in seqE)
+           (\<lambda>s. is_schedulable_bool (cur_thread s) s)" in seqE)
           apply (rule liftE_wp)
           apply (wpsimp wp: hoare_vcg_ex_lift)
          apply (rule_tac B="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and
            (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x) and
            (\<lambda>s. rv \<longrightarrow> scheduler_action s = resume_cur_thread) and
-           (\<lambda>s. rv \<longrightarrow> (is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s))" in seqE)
+           (\<lambda>s. rv \<longrightarrow> (is_schedulable_bool (cur_thread s) s))" in seqE)
           apply (rule liftE_wp)
           apply (wpsimp wp: check_budget_restart_true)
          apply (rule valid_validE)

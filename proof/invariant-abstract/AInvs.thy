@@ -23,9 +23,9 @@ lemma pred_tcb_at_upd_apply:
   by (simp add: pred_tcb_at_def obj_at_def)
 
 lemma thread_set_tcb_arch_is_schedulable_bool[wp]:
-  "\<lbrace>\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
+  "\<lbrace>\<lambda>s. is_schedulable_bool (cur_thread s) s\<rbrace>
      thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set us (tcb_arch tcb)\<rparr>) t
-   \<lbrace>\<lambda>rv s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>"
+   \<lbrace>\<lambda>rv s. is_schedulable_bool (cur_thread s) s\<rbrace>"
   apply (simp add: thread_set_def)
   apply (rule hoare_seq_ext[OF _ assert_get_tcb_ko'])
   apply (wpsimp wp: set_object_wp)
@@ -39,7 +39,7 @@ text \<open>The top-level invariance\<close>
 lemma akernel_invs:
   "\<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and>
         scheduler_action s = resume_cur_thread \<and>
-        is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
+        is_schedulable_bool (cur_thread s) s\<rbrace>
      (call_kernel e)
    \<lbrace>\<lambda>rv s. (invs s \<and> (ct_running s \<or> ct_idle s))\<rbrace>"
   unfolding call_kernel_def
@@ -51,7 +51,7 @@ lemma akernel_invs:
 lemma kernel_entry_invs:
   "\<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and>
         scheduler_action s = resume_cur_thread \<and>
-        is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
+        is_schedulable_bool (cur_thread s) s\<rbrace>
   (kernel_entry e us) :: (user_context,unit) s_monad
   \<lbrace>\<lambda>rv s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   apply (simp add: kernel_entry_def)
