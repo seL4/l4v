@@ -280,7 +280,7 @@ lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Tcb_AI_asms]:
    install_tcb_cap target slot n slot_opt
    \<lbrace>\<lambda>_. no_cap_to_obj_dr_emp cap\<rbrace>"
   apply (simp add: install_tcb_cap_def)
-  by (wpsimp wp: checked_insert_no_cap_to)
+  by (wpsimp wp: checked_insert_no_cap_to hoare_vcg_const_imp_lift)
 
 lemma is_cnode_or_valid_arch_is_cap_simps:
   "is_cnode_cap cap \<Longrightarrow> is_cnode_or_valid_arch cap"
@@ -382,7 +382,7 @@ lemma install_tcb_cap_sc_tcb_sc_at[wp]:
    install_tcb_cap target slot 3 slot_opt
    \<lbrace>\<lambda>_. sc_tcb_sc_at P d\<rbrace>"
   unfolding install_tcb_cap_def
-  by (wpsimp wp: check_cap_inv cap_delete_fh_lift)
+  by (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_const_imp_lift)
 
 lemma tcs_invs[Tcb_AI_asms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlSched t sl fh mcp pr sc)\<rbrace>

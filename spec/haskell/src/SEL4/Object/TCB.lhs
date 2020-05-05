@@ -434,11 +434,11 @@ Using case instead of if-then-else will make the code compact, but we prefer the
 >                            then withoutPreemption $ getThreadTimeoutHandlerSlot target
 >                            else fail "installTCBCap: improper index"
 >     cteDelete rootSlot True
->     withoutPreemption
->         $ checkCapAt newCap srcSlot
->         $ checkCapAt tcap slot
->         $ assertDerived srcSlot newCap
->         $ cteInsert newCap srcSlot rootSlot
+>     unless (isNullCap newCap) $
+>         withoutPreemption $ checkCapAt newCap srcSlot
+>                           $ checkCapAt tcap slot
+>                           $ assertDerived srcSlot newCap
+>                           $ cteInsert newCap srcSlot rootSlot
 
 > installFaultHandler :: PPtr TCB -> PPtr CTE -> Maybe (Capability, PPtr CTE) -> KernelP ()
 > installFaultHandler target slot fh = installTCBCap target (ThreadCap target) slot 3 fh

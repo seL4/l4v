@@ -135,9 +135,10 @@ where
      case slot_opt of None \<Rightarrow> returnOk ()
      | Some (new_cap, src_slot) \<Rightarrow> doE
       cap_delete (target, tcb_cnode_index n);
-      liftE $ check_cap_at new_cap src_slot
-            $ check_cap_at (ThreadCap target) slot
-            $ cap_insert new_cap src_slot (target, tcb_cnode_index n)
+      unlessE (new_cap = NullCap) $
+              liftE $ check_cap_at new_cap src_slot
+                    $ check_cap_at (ThreadCap target) slot
+                    $ cap_insert new_cap src_slot (target, tcb_cnode_index n)
     odE"
 
 definition

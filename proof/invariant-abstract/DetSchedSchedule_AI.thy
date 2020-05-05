@@ -6753,7 +6753,7 @@ lemma install_tcb_cap_not_in_release_q[wp]:
    install_tcb_cap target slot 3 slot_opt
   \<lbrace>\<lambda>_. not_in_release_q t :: det_state \<Rightarrow> _\<rbrace>"
   unfolding install_tcb_cap_def
-  by (wpsimp wp: check_cap_inv cap_delete_fh_lift)
+  by (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_const_imp_lift)
 
 lemma install_tcb_cap_timeout_faulted_tcb_at:
   "\<lbrace>invs and tcb_at target and (\<lambda>s. P (timeout_faulted_tcb_at t s)) \<rbrace>
@@ -6769,7 +6769,7 @@ lemma install_tcb_cap_not_is_blocked_thread_states[wp]:
    install_tcb_cap target slot 3 slot_opt
    \<lbrace>\<lambda>_. st_tcb_at (not P) target\<rbrace>"
   unfolding install_tcb_cap_def
-  by (wpsimp wp: check_cap_inv cap_delete_fh_lift cancel_all_ipc_st_tcb_at
+  by (wpsimp wp: check_cap_inv cap_delete_fh_lift cancel_all_ipc_st_tcb_at hoare_vcg_const_imp_lift
            simp: pred_neg_def)+
 
 lemma install_tcb_cap_blocked_on_recv_ntfn_tcb_at[wp]:
