@@ -223,6 +223,110 @@ lemma obj_at_setObject2:
   apply (clarsimp simp: ps_clear_upd' lookupAround2_char1)
   done
 
+\<comment>\<open>
+  Used to show a stronger variant of @{thm obj_at_setObject2}
+  for many concrete types.
+
+  Needs to be a definition so we can easily refer to it within
+  ML as a constant.
+\<close>
+definition distinct_updateObject_types ::
+  "('a :: pspace_storable) itself \<Rightarrow> ('b :: pspace_storable) itself \<Rightarrow> bool"
+where
+  "distinct_updateObject_types t t' \<equiv>
+    (\<forall>ko' s' (v :: 'a) ko p before after s.
+      (ko', s') \<in> fst (updateObject v ko p before after s)
+      \<longrightarrow> koTypeOf ko' \<noteq> koType TYPE('b))"
+
+lemma setObject_distinct_types_preserves_obj_at'_pre:
+  fixes v :: "'a :: pspace_storable"
+    and P :: "'b :: pspace_storable \<Rightarrow> bool"
+  assumes distinct_types[unfolded distinct_updateObject_types_def, rule_format]:
+    "distinct_updateObject_types TYPE('a) TYPE('b)"
+  shows "setObject p v \<lbrace>\<lambda>s. P' (obj_at' P t s)\<rbrace>"
+  apply (simp add: setObject_def split_def)
+  apply (rule hoare_seq_ext [OF _ hoare_gets_post])
+  apply (clarsimp simp: valid_def in_monad)
+  apply (frule updateObject_type)
+  apply (erule_tac P="P'" in rsubst)
+  apply (drule distinct_types)
+  apply (clarsimp simp: lookupAround2_char1)
+  apply (case_tac "obj_at' P t s")
+   apply (clarsimp simp: obj_at'_def projectKOs)
+   using project_koType ps_clear_upd'
+   apply fastforce
+  apply (clarsimp simp: obj_at'_def projectKOs ps_clear_upd')
+  apply (intro impI conjI iffI; metis objBitsT_koTypeOf project_koType)
+  done
+
+\<comment>\<open>
+  We're using @{command ML_goal} here because we want to show
+  `distinct_updateObject_types TYPE('a) TYPE('b)` for around
+  50 different combinations of 'a and 'b. Doing that by hand would
+  be painful, and not as clear for future readers as this comment
+  plus this ML code.
+\<close>
+ML \<open>
+local
+  val ko_types = [
+    @{typ notification},
+    @{typ tcb},
+    @{typ cte},
+    @{typ sched_context},
+    @{typ reply},
+
+    (*FIXME: arch_split*)
+    @{typ asidpool},
+    @{typ pte},
+    @{typ pde}
+  ];
+
+  val skipped_pairs = [
+    \<comment>\<open>
+      This corresponds to the case where we're inserting a CTE into
+      a TCB, which is the only case where the first two arguments
+      to `updateObject` should have different types.
+
+      See the comment on @{term updateObject} for more information.
+    \<close>
+    (@{typ cte}, @{typ tcb})
+  ];
+
+  fun skips (ts as (typ, typ')) =
+      typ = typ' orelse Library.member (op =) skipped_pairs ts;
+
+  fun mk_distinct_goal (typ, typ') =
+      Const (@{const_name distinct_updateObject_types},
+            Term.itselfT typ --> Term.itselfT typ' --> @{typ bool})
+      $ Logic.mk_type typ
+      $ Logic.mk_type typ';
+in
+  val distinct_updateObject_types_goals =
+      Library.map_product pair ko_types ko_types
+      |> Library.filter_out skips
+      |> List.map mk_distinct_goal
+end
+\<close>
+
+ML_goal distinct_updateObject_types: \<open>
+  distinct_updateObject_types_goals
+\<close>
+  apply -
+  \<comment>\<open>
+    The produced goals match the following pattern:
+  \<close>
+  apply (all \<open>match conclusion in \<open>distinct_updateObject_types _ _\<close> \<Rightarrow> -\<close>)
+  unfolding distinct_updateObject_types_def
+  apply safe
+  apply (clarsimp simp: distinct_updateObject_types_def
+                        setObject_def updateObject_cte updateObject_default_def
+                        typeError_def in_monad
+                 split: if_splits kernel_object.splits)+
+  done
+
+lemmas setObject_distinct_types_preserves_obj_at'[wp] =
+    distinct_updateObject_types[THEN setObject_distinct_types_preserves_obj_at'_pre]
+
 lemmas objBits_type = koType_objBitsKO
 
 lemma setObject_typ_at_inv:
