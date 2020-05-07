@@ -16,6 +16,7 @@ imports
   Match_Abbreviation
   Try_Methods
   Extract_Conjunct
+  ML_Goal
   Eval_Bool
   NICTATools
   "HOL-Library.Prefix_Order"
