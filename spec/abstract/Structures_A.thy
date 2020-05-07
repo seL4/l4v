@@ -546,8 +546,7 @@ definition
 text \<open>checks for the scheduling context size\<close>
 
 definition valid_sched_context_size :: "nat \<Rightarrow> bool" where
-  "valid_sched_context_size n \<equiv> min_sched_context_bits \<le> n \<and> n \<le> untyped_max_bits"
-
+  "valid_sched_context_size n \<equiv> min_sched_context_bits + n \<le> untyped_max_bits"
 
 primrec
   obj_bits :: "kernel_object \<Rightarrow> nat"
@@ -556,7 +555,7 @@ where
 | "obj_bits (TCB t) = tcb_bits"
 | "obj_bits (Endpoint ep) = endpoint_bits"
 | "obj_bits (Notification ntfn) = ntfn_bits" (* RT ARM: 5*)
-| "obj_bits (SchedContext sc n) = n"  (* n \<ge> 8 *)
+| "obj_bits (SchedContext sc n) = min_sched_context_bits + n"
 | "obj_bits (Reply r) = 4"
 | "obj_bits (ArchObj ao) = arch_kobj_size ao"
 
@@ -569,7 +568,7 @@ where
 | "obj_size (NotificationCap r b R) = 1 << obj_bits (Notification undefined)"
 | "obj_size (CNodeCap r bits g) = 1 << (cte_level_bits + bits)"
 | "obj_size (ThreadCap r) = 1 << obj_bits (TCB undefined)"
-| "obj_size (SchedContextCap r bits) = 1 << bits"
+| "obj_size (SchedContextCap r bits) = 1 << (min_sched_context_bits + bits)"
 | "obj_size (ReplyCap r _) = 1 << obj_bits (Reply undefined)"
 | "obj_size (Zombie r zb n) = (case zb of None \<Rightarrow> 1 << obj_bits (TCB undefined)
                                         | Some n \<Rightarrow> 1 << (cte_level_bits + n))"
@@ -597,7 +596,8 @@ where
          | TCB tcb                   \<Rightarrow> ATCB
          | Endpoint endpoint         \<Rightarrow> AEndpoint
          | SchedContext sc n         \<Rightarrow> if valid_sched_context_size n
-                                        then ASchedContext n else AGarbage n
+                                        then ASchedContext n
+                                        else AGarbage (min_sched_context_bits + n)
          | Reply r                   \<Rightarrow> AReply
          | Notification notification \<Rightarrow> ANTFN
          | ArchObj ao                \<Rightarrow> AArch (aa_type ao)"

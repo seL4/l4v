@@ -665,7 +665,7 @@ definition
 definition
   decode_untyped_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap list \<Rightarrow> (untyped_invocation,'z::state_ext) se_monad"
-where
+where (* for SchedContext objects, user_obj_size arg represents the whole size *)
 "decode_untyped_invocation label args slot cap excaps \<equiv> doE
   unlessE (gen_invocation_type label = UntypedRetype) $ throwError IllegalOperation;
   whenE (length args < 6) $ throwError TruncatedMessage;

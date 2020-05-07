@@ -97,7 +97,7 @@ where
 definition
   max_refills_cap :: "cap \<Rightarrow> nat"
 where
-  "max_refills_cap cap \<equiv> case cap of SchedContextCap _ sz \<Rightarrow> max_num_refills sz | _ \<Rightarrow> 0"
+  "max_refills_cap cap \<equiv> case cap of SchedContextCap _ sz \<Rightarrow> max_num_refills (min_sched_context_bits + sz) | _ \<Rightarrow> 0"
 
 definition
   set_refills :: "obj_ref \<Rightarrow> refill list \<Rightarrow> (unit, 'z::state_ext) s_monad"
