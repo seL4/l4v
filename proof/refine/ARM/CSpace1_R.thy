@@ -1760,6 +1760,7 @@ lemma set_cap_not_quite_corres:
              cdt_list t = cdt_list s \<and>
              scheduler_action t = scheduler_action s \<and>
              ready_queues t = ready_queues s \<and>
+             release_queue t = release_queue s \<and>
              is_original_cap t = is_original_cap s \<and>
              interrupt_state_relation (interrupt_irq_node t) (interrupt_states t)
                               (ksInterruptState t') \<and>
@@ -1848,6 +1849,7 @@ lemma updateCap_stuff:
          ksCurThread s'' = ksCurThread s' \<and>
          ksIdleThread s'' = ksIdleThread s' \<and>
          ksReadyQueues s'' = ksReadyQueues s' \<and>
+         ksReleaseQueue s'' = ksReleaseQueue s' \<and>
          ksSchedulerAction s'' = ksSchedulerAction s' \<and>
          (ksArchState s'' = ksArchState s') \<and>
          (pspace_aligned' s' \<longrightarrow> pspace_aligned' s'') \<and>
@@ -2342,6 +2344,10 @@ lemma cap_update_corres:
     apply (clarsimp simp: null_filter_def is_zombie_def split: if_split_asm)
    apply (auto elim!: modify_map_casesE del: disjE)[1]
 
+  apply (extract_conjunct \<open>match conclusion in "release_queue_relation _ _" \<Rightarrow> -\<close>)
+   apply (clarsimp simp: release_queue_relation_def
+                  elim!: use_valid[OF _ set_cap.valid_sched_pred])
+
   apply (clarsimp simp: sc_replies_relation_def)
   done
 
@@ -2352,6 +2358,7 @@ lemma updateMDB_eqs:
          ksCurThread s'' = ksCurThread s' \<and>
          ksIdleThread s'' = ksIdleThread s' \<and>
          ksReadyQueues s'' = ksReadyQueues s' \<and>
+         ksReleaseQueue s'' = ksReleaseQueue s' \<and>
          ksInterruptState s'' = ksInterruptState s' \<and>
          ksArchState s'' = ksArchState s' \<and>
          ksSchedulerAction s'' = ksSchedulerAction s' \<and>
@@ -2446,6 +2453,7 @@ lemma updateMDB_the_lot:
          ksCurThread s'' = ksCurThread s' \<and>
          ksIdleThread s'' = ksIdleThread s' \<and>
          ksReadyQueues s'' = ksReadyQueues s' \<and>
+         ksReleaseQueue s'' = ksReleaseQueue s' \<and>
          ksSchedulerAction s'' = ksSchedulerAction s' \<and>
          ksInterruptState s'' = ksInterruptState s' \<and>
          ksArchState s'' = ksArchState s' \<and>
@@ -4891,6 +4899,7 @@ lemma updateMDB_the_lot':
          ksCurThread s'' = ksCurThread s' \<and>
          ksIdleThread s'' = ksIdleThread s' \<and>
          ksReadyQueues s'' = ksReadyQueues s' \<and>
+         ksReleaseQueue s'' = ksReleaseQueue s' \<and>
          ksSchedulerAction s'' = ksSchedulerAction s' \<and>
          ksInterruptState s'' = ksInterruptState s' \<and>
          ksArchState s'' = ksArchState s' \<and>

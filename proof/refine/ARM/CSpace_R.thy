@@ -731,6 +731,7 @@ lemma set_cap_not_quite_corres':
              cdt_list t         = cdt_list (s) \<and>
              scheduler_action t = scheduler_action (s) \<and>
              ready_queues t     = ready_queues (s) \<and>
+             release_queue t = release_queue s \<and>
              is_original_cap t  = is_original_cap s \<and>
              interrupt_state_relation (interrupt_irq_node t) (interrupt_states t)
                               (ksInterruptState t') \<and>
