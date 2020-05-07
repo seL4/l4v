@@ -458,22 +458,23 @@ lemma do_reply_invs[wp]:
    do_reply_transfer t r g
    \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: do_reply_transfer_def)
-  apply (wpsimp wp: handle_timeout_Timeout_invs hoare_vcg_all_lift hoare_drop_imps
-                    refill_unblock_check_invs get_tcb_obj_ref_wp)
-           apply (wpsimp wp: gts_wp)
-          apply (rule_tac Q = "\<lambda>_ s. invs s" in hoare_strengthen_post[rotated])
-           apply (clarsimp simp: pred_tcb_at_def obj_at_def runnable_eq)
-          apply (wpsimp wp: sts_invs_minor2)+
-              apply (intro conjI impI)
-               apply (wpsimp wp: thread_set_cap_to
-                                 thread_set_no_change_tcb_state
-                                 thread_set_pred_tcb_at_sets_true gts_wp
-                                 get_simple_ko_wp thread_get_fault_wp
-                                 hoare_vcg_all_lift
-                           simp: ran_tcb_cap_cases)+
-        apply (simp flip: cases_imp_eq imp_conjL not_None_eq)
-        apply (wpsimp wp: hoare_drop_imps reply_remove_invs)
-        apply (clarsimp cong: conj_cong)
+  apply (wpsimp wp: handle_timeout_Timeout_invs get_tcb_obj_ref_wp)
+             apply (wpsimp wp: gts_wp)
+            apply (rule_tac Q = "\<lambda>_ s. invs s" in hoare_strengthen_post[rotated])
+             apply (clarsimp simp: pred_tcb_at_def obj_at_def runnable_eq)
+            apply (wpsimp wp: sts_invs_minor2)[4]
+                apply (intro conjI impI;
+                       wpsimp wp: thread_set_cap_to
+                                  thread_set_no_change_tcb_state
+                                  thread_set_pred_tcb_at_sets_true
+                            simp: ran_tcb_cap_cases)
+               apply wpsimp+
+           apply (wpsimp wp: thread_get_fault_wp)
+          apply (simp flip: cases_imp_eq imp_conjL not_None_eq)
+          apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift maybeM_inv)
+         apply wpsimp
+        apply (wpsimp wp: hoare_drop_imp reply_remove_invs)
+       apply (clarsimp cong: conj_cong)
        apply (wpsimp wp: gts_wp get_simple_ko_wp)+
   apply (clarsimp simp: reply_tcb_reply_at_def obj_at_def pred_tcb_at_def is_tcb is_reply)
   apply (frule invs_valid_idle)
@@ -1480,7 +1481,7 @@ lemma do_reply_transfer_ct_active[wp]:
   apply (wpsimp wp: set_thread_state_ct_st hoare_vcg_all_lift hoare_drop_imps
                     get_tcb_obj_ref_wp gts_wp | rule conjI)+
               apply (wpsimp wp: thread_set_ct_in_state hoare_vcg_all_lift gts_wp
-                                get_simple_ko_wp)+
+                                get_simple_ko_wp maybeM_inv)+
   apply (auto simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 

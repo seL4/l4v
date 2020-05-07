@@ -4065,7 +4065,7 @@ crunch valid_list[wp]: make_fault_msg valid_list
 crunch valid_list[wp]: do_fault_transfer valid_list
   (wp: mapM_wp hoare_drop_imp ignore: make_fault_msg)
 
-crunch valid_list[wp]: transfer_caps,do_normal_transfer,do_ipc_transfer valid_list
+crunch valid_list[wp]: transfer_caps,do_normal_transfer,do_ipc_transfer,refill_unblock_check valid_list
   (wp: mapM_wp hoare_drop_imp)
 
 lemma send_ipc_valid_list[wp]:
@@ -4155,7 +4155,7 @@ lemma fast_finalise_valid_list[wp]:
 
 crunches cap_delete_one, restart
   for valid_list[wp]: "valid_list"
-  (wp: hoare_drop_imps maybeM_inv)
+  (wp: hoare_drop_imps maybeM_inv simp: crunch_simps)
 
 context notes if_cong[cong] begin
 

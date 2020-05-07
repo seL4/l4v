@@ -177,7 +177,7 @@ crunch domain_list_inv[wp]: refill_update "\<lambda>s. P (domain_list s)"
 
 crunch domain_list_inv[wp]: set_next_interrupt, switch_sched_context
   "\<lambda>s::det_state. P (domain_list s)"
-  (simp: crunch_simps Let_def wp: get_sched_context_wp hoare_drop_imps)
+  (wp: crunch_wps)
 
 lemma sc_and_timer_domain_list[wp]:
   "sc_and_timer \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"

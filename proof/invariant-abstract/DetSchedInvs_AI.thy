@@ -3256,7 +3256,7 @@ lemma valid_sched_imp_except_blocked[elim!]:
 abbreviation sc_with_tcb_prop ::
   "obj_ref \<Rightarrow> (obj_ref \<Rightarrow> 'z state \<Rightarrow> bool) \<Rightarrow> 'z state \<Rightarrow> bool"
   where
-  "sc_with_tcb_prop scp P s \<equiv> \<forall>t. pred_map_eq (Some scp) (tcb_scps_of s) t \<longrightarrow> P t s"
+  "sc_with_tcb_prop scp P s \<equiv> \<forall>t. heap_ref_eq scp t (tcb_scps_of s) \<longrightarrow> P t s"
 
 abbreviation sc_not_in_release_q :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "sc_not_in_release_q scp s \<equiv> sc_with_tcb_prop scp not_in_release_q s"

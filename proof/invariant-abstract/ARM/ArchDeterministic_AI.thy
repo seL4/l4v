@@ -55,6 +55,7 @@ lemma perform_page_invocation_valid_list[wp]:
   done
 
 crunch valid_list[wp]: update_waiting_ntfn, invoke_domain valid_list
+  (wp: crunch_wps)
 crunch valid_list[wp]: do_reply_transfer valid_list
  (simp: is_round_robin_def
   wp: maybeM_inv get_refills_wp hoare_vcg_if_lift2 get_sched_context_wp hoare_drop_imps)
