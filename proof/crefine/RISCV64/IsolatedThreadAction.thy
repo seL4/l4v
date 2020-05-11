@@ -807,7 +807,7 @@ lemma rescheduleRequired_simple_rewrite:
 
 lemma empty_fail_isRunnable:
   "empty_fail (isRunnable t)"
-  by (simp add: isRunnable_def isBlocked_def)
+  by (simp add: isRunnable_def isStopped_def)
 
 lemma setupCallerCap_rewrite:
   "monadic_rewrite True True (\<lambda>s. reply_masters_rvk_fb (ctes_of s))
@@ -909,7 +909,7 @@ lemma oblivious_switchToThread_schact:
                    getCurThread_def setCurThread_def threadGet_def liftM_def
                    threadSet_def tcbSchedEnqueue_def unless_when asUser_def
                    getQueue_def setQueue_def storeWordUser_def setRegister_def
-                   pointerInUserData_def isRunnable_def isBlocked_def
+                   pointerInUserData_def isRunnable_def isStopped_def
                    getThreadState_def tcbSchedDequeue_def bitmap_fun_defs)
   by (safe intro!: oblivious_bind
               | simp_all add: oblivious_setVMRoot_schact)+
