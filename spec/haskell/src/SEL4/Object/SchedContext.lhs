@@ -705,4 +705,3 @@ This module uses the C preprocessor to select a target architecture.
 >     threadSet (\t -> t { tcbInReleaseQueue = False }) tcbPtr
 >     setReprogramTimer True
 >     return tcbPtr
-
