@@ -45,6 +45,9 @@ else:
             # If we don't have permission to read a particular process,
             # just return 0.
             return 0
+        except AttributeError:
+            # Newer versions of psutil do not support memory_maps on MacOS
+            return 0
 
     def get_total_usage(pid):
         '''Retrieve the memory usage of a process by PID including its children. We
