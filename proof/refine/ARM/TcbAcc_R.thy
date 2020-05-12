@@ -1044,8 +1044,6 @@ lemma threadSet_typ_at'[wp]:
 lemma setObject_tcb_pde_mappings'[wp]:
   "\<lbrace>valid_pde_mappings'\<rbrace> setObject p (tcb :: tcb) \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
   apply (wp valid_pde_mappings_lift' setObject_typ_at')
-  apply (rule obj_at_setObject2)
-  apply (auto dest: updateObject_default_result)
   done
 
 crunches threadSet

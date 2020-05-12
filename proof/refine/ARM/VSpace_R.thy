@@ -2840,9 +2840,6 @@ lemma setASIDPool_iflive [wp]:
 lemma setObject_asidpool_mappings'[wp]:
   "\<lbrace>valid_pde_mappings'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
   apply (wp valid_pde_mappings_lift')
-   apply (rule obj_at_setObject2)
-   apply (clarsimp dest!: updateObject_default_result)
-  apply assumption
   done
 
 lemma setASIDPool_invs [wp]:
