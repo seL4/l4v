@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#ifndef _ALLOC_H_
-#define _ALLOC_H_
+#pragma once
 
 #ifndef NULL
 #define NULL ((void *)0)
@@ -42,16 +41,14 @@ struct heap {
 /* Minimum alignment that the allocator will return. */
 #define DEFAULT_ALIGNMENT_BITS 3
 
-void *ualloc(struct heap* heap, word_t size);
+void *ualloc(struct heap *heap, word_t size);
 
 void *alloc(struct heap *heap, word_t size);
 
-void udealloc(struct heap* heap, void* ptr);
+void udealloc(struct heap *heap, void *ptr);
 
 void dealloc(struct heap *heap, void *ptr, word_t size);
 
 void add_mem_pool(struct heap *heap, void *ptr, word_t size);
 
 void init_allocator(struct heap *init_heap, struct mem_node *init_mem_node);
-
-#endif /* _ALLOC_H_ */

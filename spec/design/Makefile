@@ -12,7 +12,7 @@ MAKEFILE_PATH := $(dir $(lastword $(MAKEFILE_LIST)))
 L4V_REPO_PATH := $(realpath $(MAKEFILE_PATH)../..)
 SKEL_PATH     := ${L4V_REPO_PATH}/spec/design/skel
 MSKEL_PATH    := ${L4V_REPO_PATH}/spec/design/m-skel
-HASKELL_PATH  := ${L4V_REPO_PATH}/spec/haskell
+HASKELL_PATH  := ${L4V_REPO_PATH}/spec/haskell/src
 MACHINE_PATH  := ${L4V_REPO_PATH}/spec/machine
 TRANS_PATH    := ${L4V_REPO_PATH}/tools/haskell-translator
 

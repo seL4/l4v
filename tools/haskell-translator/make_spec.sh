@@ -125,7 +125,7 @@ do
     send_filenames $ARCH > $TMPFILE
     cpp_opts $ARCH
     cd $TRANSLATOR
-    python pars_skl.py $TMPFILE
+    python3 pars_skl.py $TMPFILE
 done
 
 for ARCH in ${ARCHES[@]}

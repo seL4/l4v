@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
@@ -30,11 +30,11 @@ print "Testing with QUICK_AND_DIRTY for AInvs and Refine"
 
 
 # Enable quick_and_dirty mode for various images
-if os.environ.has_key("QUICK_AND_DIRTY"):
-    os.environ["AINVS_QUICK_AND_DIRTY"]="1"
-    os.environ["REFINE_QUICK_AND_DIRTY"]="1"
-    os.environ["CREFINE_QUICK_AND_DIRTY"]="1"
-    print "Testing with QUICK_AND_DIRTY"
+if "QUICK_AND_DIRTY" in os.environ:
+    os.environ["AINVS_QUICK_AND_DIRTY"]=1
+    os.environ["REFINE_QUICK_AND_DIRTY"]=1
+    os.environ["CREFINE_QUICK_AND_DIRTY"]=1
+    print("Testing with QUICK_AND_DIRTY")
 
 # Lists of excluded tests for different archs
 EXCLUDE={}
@@ -112,7 +112,7 @@ args, passthrough_args = parser.parse_known_args()
 
 if args.l4v_arches:
     archs = args.l4v_arches.split(',')
-elif os.environ.has_key("L4V_ARCH"):
+elif "L4V_ARCH" in os.environ:
     archs = [os.environ["L4V_ARCH"]]
 else:
     archs = [L4V_ARCH_DEFAULT]
@@ -130,7 +130,7 @@ if args.help:
 
 returncode = 0
 for arch in archs:
-    print "Testing for L4V_ARCH=%s:" % arch
+    print("Testing for L4V_ARCH=%s:" % arch)
 
     os.environ["L4V_ARCH"] = arch
     # Test Orphanage when L4V_ARCH=ARM;
@@ -138,7 +138,7 @@ for arch in archs:
     # To be removed when we finish proving Orphanage for ARM_HYP and X64
     if arch == "ARM":
         os.environ["L4V_ARCH_IS_ARM"] = arch
-        print "Testing Orphanage for ARM"
+        print("Testing Orphanage for ARM")
     elif "L4V_ARCH_IS_ARM" in os.environ:
         del os.environ["L4V_ARCH_IS_ARM"]
 

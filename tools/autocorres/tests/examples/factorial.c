@@ -4,11 +4,15 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-unsigned factorial(unsigned n) {
-  if(n == 0) return 1;
-  return n * factorial(n-1);
+unsigned factorial(unsigned n)
+{
+    if (n == 0) {
+        return 1;
+    }
+    return n * factorial(n - 1);
 }
 
-unsigned call_factorial(void) {
-  return factorial(42);
+unsigned call_factorial(void)
+{
+    return factorial(42);
 }

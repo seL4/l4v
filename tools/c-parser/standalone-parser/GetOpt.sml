@@ -1,4 +1,6 @@
 (* SPDX-License-Identifier: SMLNJ *)
+(* SPDX-FileCopyrightText: 1998 Bell Labs, Lucent Technologies *)
+
 (* getopt.sml
  *
  * COPYRIGHT (c) 1998 Bell Labs, Lucent Technologies.

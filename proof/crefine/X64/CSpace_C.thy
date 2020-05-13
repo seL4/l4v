@@ -35,8 +35,6 @@ lemma maskCapRights_cap_cases:
   done
 
 
-lemma imp_ignore: "B \<Longrightarrow> A \<longrightarrow> B" by blast
-
 (* FIXME x64: ucast? see how it goes *)
 lemma wordFromVMRights_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call wordFromVMRights_'proc \<lbrace>\<acute>ret__unsigned_long = \<^bsup>s\<^esup>vm_rights\<rbrace>"
@@ -1167,16 +1165,6 @@ lemma updateMDB_mdbPrev_set_mdbNext:
 (*                                                                      *)
 (************************************************************************)
 
-(* FIXME: move *)
-lemma cteSizeBits_eq:
-  "cteSizeBits = cte_level_bits"
-  by (simp add: cte_level_bits_def cteSizeBits_def)
-
-(* FIXME: move *)
-lemma cteSizeBits_le_cte_level_bits[simp]:
-  "cteSizeBits \<le> cte_level_bits"
-  by (simp add: cte_level_bits_def cteSizeBits_def)
-
 (* FIXME: rename *)
 lemma is_aligned_3_prev:
   "\<lbrakk> valid_mdb' s; pspace_aligned' s; ctes_of s p = Some cte \<rbrakk>
@@ -2144,137 +2132,6 @@ lemma fold_heap_modify_commute_Array:
   apply (clarsimp simp: heap_modify_compose_Array[OF s, THEN fun_cong, simplified] o_def)
   done
 
-(* FIXME: move *)
-lemma msb_le_mono:
-  fixes v w :: "'a::len word"
-  shows "v \<le> w \<Longrightarrow> msb v \<Longrightarrow> msb w"
-  by (simp add: msb_big)
-
-(* FIXME: move *)
-lemma neg_msb_le_mono:
-  fixes v w :: "'a::len word"
-  shows "v \<le> w \<Longrightarrow> \<not> msb w \<Longrightarrow> \<not> msb v"
-  by (simp add: msb_big)
-
-(* FIXME: move *)
-lemmas msb_less_mono = msb_le_mono[OF less_imp_le]
-lemmas neg_msb_less_mono = neg_msb_le_mono[OF less_imp_le]
-
-(* FIXME: move *)
-lemma word_sless_iff_less:
-  "\<lbrakk> \<not> msb v; \<not> msb w \<rbrakk> \<Longrightarrow> v <s w \<longleftrightarrow> v < w"
-  by (simp add: word_sless_alt sint_eq_uint word_less_alt)
-
-(* FIXME: move *)
-lemmas word_sless_imp_less = word_sless_iff_less[THEN iffD1, rotated 2]
-lemmas word_less_imp_sless = word_sless_iff_less[THEN iffD2, rotated 2]
-
-(* FIXME: move *)
-lemma word_sle_iff_le:
-  "\<lbrakk> \<not> msb v; \<not> msb w \<rbrakk> \<Longrightarrow> v <=s w \<longleftrightarrow> v \<le> w"
-  by (simp add: word_sle_def sint_eq_uint word_le_def)
-
-(* FIXME: move *)
-lemmas word_sle_imp_le = word_sle_iff_le[THEN iffD1, rotated 2]
-lemmas word_le_imp_sle = word_sle_iff_le[THEN iffD2, rotated 2]
-
-(* FIXME: move to Word_Lib *)
-lemma word_upcast_shiftr:
-  assumes "LENGTH('a::len) \<le> LENGTH('b::len)"
-  shows "UCAST('a \<rightarrow> 'b) (w >> n) = UCAST('a \<rightarrow> 'b) w >> n"
-  apply (intro word_eqI impI iffI; clarsimp simp: word_size nth_shiftr nth_ucast)
-  apply (drule test_bit_size)
-  using assms by (simp add: word_size)
-
-lemma word_upcast_neg_msb:
-  "LENGTH('a::len) < LENGTH('b::len) \<Longrightarrow> \<not> msb (UCAST('a \<rightarrow> 'b) w)"
-  apply (clarsimp simp: ucast_def msb_word_of_int)
-  apply (drule bin_nth_uint_imp)
-  by simp
-
-(* FIXME: move to Word_Lib *)
-lemma word_upcast_0_sle:
-  "LENGTH('a::len) < LENGTH('b::len) \<Longrightarrow> 0 <=s UCAST('a \<rightarrow> 'b) w"
-  by (simp add: word_sle_iff_le[OF word_msb_0 word_upcast_neg_msb])
-
-(* FIXME: move to Word_Lib *)
-lemma scast_ucast_up_eq_ucast:
-  assumes "LENGTH('a::len) < LENGTH('b::len)"
-  shows "SCAST('b \<rightarrow> 'c) (UCAST('a \<rightarrow> 'b) w) = UCAST('a \<rightarrow> 'c::len) w"
-  using assms
-  apply (subst scast_eq_ucast; simp)
-  apply (clarsimp simp: ucast_def msb_word_of_int)
-  apply (drule bin_nth_uint_imp)
-  apply simp
-  done
-
-lemma not_max_word_iff_less:
-  "w \<noteq> max_word \<longleftrightarrow> w < max_word"
-  by (simp add: order_less_le)
-
-lemma ucast_increment:
-  assumes "w \<noteq> max_word"
-  shows "UCAST('a::len \<rightarrow> 'b::len) w + 1 = UCAST('a \<rightarrow> 'b) (w + 1)"
-  apply (cases "LENGTH('b) \<le> LENGTH('a)")
-   apply (simp add: ucast_down_add is_down)
-  apply (subgoal_tac "uint w + 1 < 2 ^ LENGTH('a)")
-   apply (subgoal_tac "uint w + 1 < 2 ^ LENGTH('b)")
-    apply (subst word_uint_eq_iff)
-    apply (simp add: uint_arith_simps uint_up_ucast is_up)
-   apply (erule less_trans, rule power_strict_increasing, simp, simp)
-  apply (subst less_diff_eq[symmetric])
-  using assms
-  apply (simp add: not_max_word_iff_less word_less_alt)
-  apply (erule less_le_trans)
-  apply (simp add: max_word_def)
-  done
-
-lemma max_word_gt_0:
-  "0 < max_word"
-  by (simp add: le_neq_trans[OF max_word_max] max_word_not_0)
-
-lemma and_not_max_word:
-  "m \<noteq> max_word \<Longrightarrow> w && m \<noteq> max_word"
-  by (simp add: not_max_word_iff_less word_and_less')
-
-lemma mask_not_max_word:
-  "m < LENGTH('a::len) \<Longrightarrow> mask m \<noteq> (max_word :: 'a word)"
-  by (metis shiftl_1_not_0 shiftl_mask_is_0 word_bool_alg.conj_one_right)
-
-lemmas and_mask_not_max_word =
-  and_not_max_word[OF mask_not_max_word]
-
-lemma shiftr_not_max_word:
-  "0 < n \<Longrightarrow> w >> n \<noteq> max_word"
-  apply (simp add: not_max_word_iff_less)
-  apply (cases "n < size w")
-   apply (cases "w = 0")
-    apply (simp add: max_word_gt_0)
-   apply (subst shiftr_div_2n_w, assumption)
-   apply (rule less_le_trans[OF div_less_dividend_word max_word_max])
-    apply simp
-   apply (metis word_size_gt_0 less_numeral_extra(3) mask_def nth_mask power_0 shiftl_t2n)
-  apply (simp add: not_less word_size)
-  apply (subgoal_tac "w >> n = 0"; simp add: max_word_gt_0 shiftr_eq_0)
-  done
-
-lemma word_sandwich1:
-  fixes a b c :: "'a::len word"
-  assumes "a < b"
-  assumes "b <= c"
-  shows "0 < b - a \<and> b - a <= c"
-  using assms diff_add_cancel order_less_irrefl add_0 word_le_imp_diff_le
-        word_le_less_eq word_neq_0_conv
-  by metis
-
-lemma word_sandwich2:
-  fixes a b :: "'a::len word"
-  assumes "0 < a"
-  assumes "a <= b"
-  shows "b - a < b"
-  using assms less_le_trans word_diff_less
-  by blast
-
 lemma make_pattern_spec:
   defines "bits \<equiv> 0x40 :: 32 sword"
   notes word_less_imp_less_0 = revcut_rl[OF word_less_imp_sless[OF _ word_msb_0]]
@@ -2403,73 +2260,15 @@ lemma word_set_or_clear_test_bit:
   shows "i < LENGTH('a) \<Longrightarrow> word_set_or_clear b p w !! i = (if p !! i then b else w !! i)"
   by (auto simp: word_set_or_clear_def word_ops_nth_size word_size split: if_splits)
 
-lemma unat_and_mask_less_2p:
-  fixes w :: "'a::len word"
-  shows "m < LENGTH('a) \<Longrightarrow> unat (w && mask m) < 2 ^ m"
-  by (simp add: unat_less_helper  and_mask_less')
-
-lemma unat_shiftr_less_2p:
-  fixes w :: "'a::len word"
-  shows "n + m = LENGTH('a) \<Longrightarrow> unat (w >> n) < 2 ^ m"
-  by (cases "n = 0"; simp add: unat_less_helper shiftr_less_t2n3)
-
-lemma nat_div_less_mono:
-  fixes m n :: nat
-  shows "m div d < n div d \<Longrightarrow> m < n"
-  by (meson div_le_mono not_less)
-
-lemma word_shiftr_less_mono:
-  fixes w :: "'a::len word"
-  shows "w >> n < v >> n \<Longrightarrow> w < v"
-  by (auto simp: word_less_nat_alt shiftr_div_2n' elim: nat_div_less_mono)
-
-lemma word_shiftr_less_mask:
-  fixes w :: "'a::len word"
-  shows "(w >> n < v >> n) \<longleftrightarrow> (w && ~~mask n < v && ~~mask n)"
-  by (metis (mono_tags) le_shiftr mask_shift shiftr_eq_neg_mask_eq word_le_less_eq word_le_not_less)
-
-lemma word_shiftr_le_mask:
-  fixes w :: "'a::len word"
-  shows "(w >> n \<le> v >> n) \<longleftrightarrow> (w && ~~mask n \<le> v && ~~mask n)"
-  by (metis (mono_tags) le_shiftr mask_shift shiftr_eq_neg_mask_eq word_le_less_eq word_le_not_less)
-
-lemma word_shiftr_eq_mask:
-  fixes w :: "'a::len word"
-  shows "(w >> n = v >> n) \<longleftrightarrow> (w && ~~mask n = v && ~~mask n)"
-  by (metis (mono_tags) mask_shift shiftr_eq_neg_mask_eq)
-
-lemmas word_shiftr_cmp_mask =
-  word_shiftr_less_mask word_shiftr_le_mask word_shiftr_eq_mask
+lemma heap_modify_fold:
+  "heap_update p (f (h_val h p)) h = heap_modify p f h"
+  by (simp add: heap_modify_def)
 
 lemma fold_array_update_index:
   fixes arr :: "'a::c_type['b::finite]"
   assumes "i < CARD('b)"
   shows "fold (\<lambda>i arr. Arrays.update arr i (f i)) is arr.[i] = (if i \<in> set is then f i else arr.[i])"
   using assms by (induct "is" arbitrary: arr) (auto split: if_splits)
-
-lemma if_if_if_same_output:
-  "(if c1 then if c2 then t else f else if c3 then t else f) = (if c1 \<and> c2 \<or> \<not>c1 \<and> c3 then t else f)"
-  by (simp split: if_splits)
-
-lemma word_le_split_mask:
-  "(w \<le> v) \<longleftrightarrow> (w >> n < v >> n \<or> w >> n = v >> n \<and> w && mask n \<le> v && mask n)"
-  apply (simp add: word_shiftr_eq_mask word_shiftr_less_mask)
-  apply (rule subst[where P="\<lambda>c. c \<le> d = e" for d e, OF AND_NOT_mask_plus_AND_mask_eq[where n=n]])
-  apply (rule subst[where P="\<lambda>c. d \<le> c = e" for d e, OF AND_NOT_mask_plus_AND_mask_eq[where n=n]])
-  apply (rule iffI)
-   apply safe
-     apply (fold_subgoals (prefix))[2]
-    apply (subst atomize_conj)
-    apply (rule context_conjI)
-     apply (metis AND_NOT_mask_plus_AND_mask_eq neg_mask_mono_le word_le_less_eq)
-    apply (metis add.commute word_and_le1 word_bw_comms(1) word_plus_and_or_coroll2 word_plus_mcs_4)
-   apply (metis Groups.add_ac(2) neg_mask_mono_le word_le_less_eq word_not_le word_plus_and_or_coroll2)
-  apply (metis add.commute word_and_le1 word_bw_comms(1) word_plus_and_or_coroll2 word_plus_mcs_3)
-  done
-
-lemma heap_modify_fold:
-  "heap_update p (f (h_val h p)) h = heap_modify p f h"
-  by (simp add: heap_modify_def)
 
 lemma t_hrs_'_update_heap_modify_fold:
   "gs\<lparr> t_hrs_' := hrs_mem_update (heap_update p (f (h_val (hrs_mem (t_hrs_' gs)) p))) (t_hrs_' gs) \<rparr>

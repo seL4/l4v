@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 /* Memory map for GIC distributor */
-typedef struct gic_dist_map_t{
+typedef struct gic_dist_map_t {
     uint32_t enable;                /* 0x000 */
     uint32_t ic_type;               /* 0x004 */
     uint32_t dist_ident;            /* 0x008 */
@@ -45,7 +45,7 @@ typedef struct gic_dist_map_t{
 
     uint32_t periph_id[12];         /* [0xFC0, 0xFF0) */
     uint32_t component_id[4];       /* [0xFF0, 0xFFF] */
-}gic_dist_map;
+} gic_dist_map;
 
 /* Memory map for GIC  cpu interface */
 typedef struct gic_cpu_iface_map {
@@ -80,5 +80,5 @@ typedef struct gic_cpu_iface_map {
 
     uint32_t periph_id[8];          /* [0xFC0, 9xFF0) PL390 only */
     uint32_t component_id[4];       /* [0xFF0, 0xFFF] PL390 only */
-}gic_cpu_iface_map;
+} gic_cpu_iface_map;
 

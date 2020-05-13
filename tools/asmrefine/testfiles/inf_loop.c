@@ -7,21 +7,21 @@
 int redundant_global = 3;
 int another_redundant_global = 2;
 
-void
-redundant_fun (int x) {
-  redundant_global = x;
+void redundant_fun(int x)
+{
+    redundant_global = x;
 }
 
-void
-other_f (void) {
-  return;
+void other_f(void)
+{
+    return;
 }
 
-int
-main_f (void) {
-  while (1) {
-    other_f ();
-  }
+int main_f(void)
+{
+    while (1) {
+        other_f();
+    }
 }
 
 

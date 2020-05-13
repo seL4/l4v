@@ -2113,7 +2113,7 @@ lemma sts_valid_objs':
   "\<lbrace>valid_objs' and valid_tcb_state' st\<rbrace>
   setThreadState st t
   \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
-  apply (simp add: setThreadState_def setQueue_def isRunnable_def isBlocked_def)
+  apply (simp add: setThreadState_def setQueue_def isRunnable_def isStopped_def)
   apply (wp threadSet_valid_objs')
      apply (simp add: valid_tcb'_def tcb_cte_cases_def)
   sorry (*

@@ -12,7 +12,7 @@ void bar(void)
     /* Index 3 is thrown away. */
     foo[3] = 42;
 }
-int * bar2(void)
+int *bar2(void)
 {
     return &foo[3];
 }

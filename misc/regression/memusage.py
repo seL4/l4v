@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
@@ -11,9 +11,12 @@ to the UNIX `time` utility.
 '''
 
 from __future__ import print_function
-import subprocess, sys, threading, time
+import subprocess
+import sys
+import threading
+import time
 
-PSUTIL_NOT_AVAILABLE=False
+PSUTIL_NOT_AVAILABLE = False
 try:
     import psutil
     if not hasattr(psutil.Process, "children") and hasattr(psutil.Process, "get_children"):
@@ -22,48 +25,53 @@ try:
         psutil.Process.memory_maps = psutil.Process.get_memory_maps
 
 except ImportError:
-  PSUTIL_NOT_AVAILABLE=True
+    PSUTIL_NOT_AVAILABLE = True
 
 if PSUTIL_NOT_AVAILABLE:
     def get_usage(proc):
         return 0
+
     def get_total_usage(proc):
         return 0
 else:
-  def get_usage(proc):
-    '''Retrieve the memory usage of a particular psutil process without its
-    children. We use the proportional set size, which accounts for shared pages
-    to give us a more accurate total usage.'''
-    assert isinstance(proc, psutil.Process)
-    try:
-        return sum([m.pss for m in proc.memory_maps(grouped=True)])
-    except psutil.AccessDenied:
-        # If we don't have permission to read a particular process,
-        # just return 0.
-        return 0
-
-  def get_total_usage(pid):
-    '''Retrieve the memory usage of a process by PID including its children. We
-    ignore NoSuchProcess errors to mask subprocesses exiting while the cohort
-    continues.'''
-    total = 0
-
-    # Fetch parent's usage.
-    try:
-        p = psutil.Process(pid)
-        total += get_usage(p)
-        children = p.children(recursive=True) #pylint: disable=E1123
-    except psutil.NoSuchProcess:
-        return 0
-
-    # Fetch usage of children.
-    for proc in children:
+    def get_usage(proc):
+        '''Retrieve the memory usage of a particular psutil process without its
+        children. We use the proportional set size, which accounts for shared pages
+        to give us a more accurate total usage.'''
+        assert isinstance(proc, psutil.Process)
         try:
-            total += get_usage(proc)
-        except psutil.NoSuchProcess:
-            pass
+            return sum([m.pss for m in proc.memory_maps(grouped=True)])
+        except psutil.AccessDenied:
+            # If we don't have permission to read a particular process,
+            # just return 0.
+            return 0
+        except AttributeError:
+            # Newer versions of psutil do not support memory_maps on MacOS
+            return 0
 
-    return total
+    def get_total_usage(pid):
+        '''Retrieve the memory usage of a process by PID including its children. We
+        ignore NoSuchProcess errors to mask subprocesses exiting while the cohort
+        continues.'''
+        total = 0
+
+        # Fetch parent's usage.
+        try:
+            p = psutil.Process(pid)
+            total += get_usage(p)
+            children = p.children(recursive=True)  # pylint: disable=E1123
+        except psutil.NoSuchProcess:
+            return 0
+
+        # Fetch usage of children.
+        for proc in children:
+            try:
+                total += get_usage(proc)
+            except psutil.NoSuchProcess:
+                pass
+
+        return total
+
 
 class Poller(threading.Thread):
     def __init__(self, pid):
@@ -106,6 +114,7 @@ class Poller(threading.Thread):
     def __exit__(self, *_):
         self.finished = True
 
+
 def process_poller(pid):
     '''Initiate polling of a subprocess. This is intended to be used in a
     `with` block.'''
@@ -118,16 +127,17 @@ def process_poller(pid):
 
     return p
 
+
 def main():
     if len(sys.argv) <= 1 or sys.argv[1] in ['-?', '--help']:
-        print('Usage: %s command args...\n Measure peak memory ' \
-            'usage of a command' % sys.argv[0], out=sys.stderr)
+        print('Usage: %s command args...\n Measure peak memory '
+              'usage of a command' % sys.argv[0], out=sys.stderr)
         return -1
 
     if PSUTIL_NOT_AVAILABLE:
         print("Error: 'psutil' module not available. Run\n"
               "\n"
-              "    pip install --user psutil\n"
+              "    pip3 install --user psutil\n"
               "\n"
               "to install.")
         sys.exit(1)
@@ -141,7 +151,7 @@ def main():
 
     high = 0
     try:
-        with process_poller(p.pid) as m: #pylint: disable=E1101
+        with process_poller(p.pid) as m:  # pylint: disable=E1101
             p.communicate()
             high = m.peak_mem_usage()
     except KeyboardInterrupt:
@@ -151,6 +161,7 @@ def main():
     print('Peak usage %d bytes' % high, out=sys.stderr)
 
     return p.returncode
+
 
 if __name__ == '__main__':
     sys.exit(main())

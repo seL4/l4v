@@ -15,11 +15,11 @@
     do { if (!(x)) { for (;;); } } while (0)
 
 /* Return the maximum of "a" and "b". */
-static word_t
-max(word_t a, word_t b)
+static word_t max(word_t a, word_t b)
 {
-    if (a >= b)
+    if (a >= b) {
         return a;
+    }
     return b;
 }
 
@@ -51,8 +51,7 @@ max(word_t a, word_t b)
  */
 
 /* Align "val" up to the next "2 ** align_bits" boundary. */
-static word_t
-align_up(word_t val, word_t align_bits)
+static word_t align_up(word_t val, word_t align_bits)
 {
     assert(align_bits < 32UL);
     return (val + ((1UL << align_bits) - 1UL)) & (~((1UL << align_bits) - 1UL));
@@ -64,25 +63,23 @@ align_up(word_t val, word_t align_bits)
  * just before the allocated chunk.
  */
 
-void*
-ualloc(struct heap* heap, word_t size)
+void *ualloc(struct heap *heap, word_t size)
 {
     assert(size > 0);
 
-    void* chunk = alloc(heap, size + 8);
-    if(chunk == NULL){
+    void *chunk = alloc(heap, size + 8);
+    if (chunk == NULL) {
         return NULL;
     }
 
-    word_t* store = chunk;
+    word_t *store = chunk;
     *store = size;
 
     return chunk + 8;
 }
 
 /* Allocate a chunk of memory. */
-void*
-alloc(struct heap* heap, word_t size)
+void *alloc(struct heap *heap, word_t size)
 {
     assert(size > 0);
 
@@ -105,8 +102,8 @@ alloc(struct heap* heap, word_t size)
         /* If the desired range
          * fits within this node, then allocate it. */
         if (desired_start >= node_start
-                && desired_end <= node_end
-                && desired_start < desired_end) {
+            && desired_end <= node_end
+            && desired_start < desired_end) {
             /* If we have space after the allocation, create a new node
              * covering the area. */
 
@@ -138,12 +135,11 @@ alloc(struct heap* heap, word_t size)
     return NULL;
 }
 
-void
-udealloc(struct heap* heap, void* ptr)
+void udealloc(struct heap *heap, void *ptr)
 {
     assert(ptr != NULL);
 
-    word_t* store = ptr - 8;
+    word_t *store = ptr - 8;
     word_t  size  = *store + 8;
 
     dealloc(heap, store, size);
@@ -151,8 +147,7 @@ udealloc(struct heap* heap, void* ptr)
 
 
 /* Free a chunk of memory. */
-void
-dealloc(struct heap* heap, void* ptr, word_t size)
+void dealloc(struct heap *heap, void *ptr, word_t size)
 {
     assert(size > 0);
     assert(ptr != NULL);
@@ -189,18 +184,16 @@ dealloc(struct heap* heap, void* ptr, word_t size)
 }
 
 /* Add a pool of memory to the given allocator. */
-void
-add_mem_pool(struct heap *heap, void *ptr, word_t size)
+void add_mem_pool(struct heap *heap, void *ptr, word_t size)
 {
     printk("Adding memory pool %lx--%lx\n",
-            (word_t)ptr, (word_t)ptr + size);
+           (word_t)ptr, (word_t)ptr + size);
     dealloc(heap, ptr, size);
     heap->num_allocs++;
 }
 
 /* Setup the initial allocator. */
-void
-init_allocator(struct heap *init_heap, struct mem_node *init_mem_node)
+void init_allocator(struct heap *init_heap, struct mem_node *init_mem_node)
 {
     init_heap->head = init_mem_node;
     init_heap->head->size = 0;

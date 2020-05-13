@@ -44,19 +44,18 @@ fun mk_upd_simps ctxt upd_app (simps, done, n) = let
     val upd_apps_prem = Thm.prems_of thm |> maps get_upd_apps
       |> sort_distinct Term_Ord.fast_term_ord
       |> filter_out (Termtab.defined done)
-      |> filter_out (curry (=) upd_app)
+      |> filter_out (curry (op =) upd_app)
       |> filter_out (head_of #> dest_Const #> fst #> String.isPrefix "HOL.")
     val (simps2, done, n) = fold (mk_upd_simps ctxt)
         upd_apps_prem (simps, done, n)
-    fun trace v = (Thm.pretty_thm ctxt thm |> Pretty.string_of |> warning;
-      v)
     val thm = Drule.export_without_context thm
   in if length simps2 <> length simps
-    then mk_upd_simps ctxt upd_app (simps2, done, n)
-    else (if Thm.nprems_of thm = 0 then trace thm :: simps2 else trace simps2,
-      Termtab.update (upd_app, ()) done, n) end
+     then mk_upd_simps ctxt upd_app (simps2, done, n)
+     else (if Thm.nprems_of thm = 0 then thm :: simps2 else simps2,
+           Termtab.update (upd_app, ()) done, n)
+  end
   handle ERROR _ => (warning (fst (dest_Const (head_of upd_app)) ^ ": no def.");
-    (simps, done, n))
+                     (simps, done, n))
 
 fun mk_upd_simps_tm ctxt t = let
     val uas = get_upd_apps t |> sort_distinct Term_Ord.fast_term_ord
@@ -67,8 +66,7 @@ fun add_upd_simps t exsimps ctxt = let
     val thms = mk_upd_simps_tm (ctxt addsimps exsimps) t
     val _ = map (Thm.pretty_thm ctxt #> Pretty.writeln) thms
   in if null thms then ctxt
-    else (Local_Theory.notes [((@{binding upd_simps}, []), [(thms, [])])] ctxt |> #2)
-      addsimps thms
+     else (Local_Theory.notes [((@{binding upd_simps}, []), [(thms, [])])] ctxt |> #2) addsimps thms
   end
 
 val add_upd_simps_syn = Outer_Syntax.local_theory @{command_keyword "add_upd_simps"}

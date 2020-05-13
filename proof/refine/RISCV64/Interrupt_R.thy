@@ -184,8 +184,8 @@ lemma arch_check_irq_valid:
   unfolding arch_check_irq_def
   apply (wpsimp simp: validE_R_def wp: whenE_throwError_wp)
   apply (rule conjI)
-   apply (metis unat_ucast_up_simp[where 'a=3 and 'b=64, simplified] word_le_nat_alt word_le_not_less)
-  apply (simp add: unat_ucast_up_simp[where 'a=3 and 'b=64, simplified] irqInvalid_def)
+   apply (metis unat_ucast_up_simp[where 'a=6 and 'b=64, simplified] word_le_nat_alt word_le_not_less)
+  apply (simp add: unat_ucast_up_simp[where 'a=6 and 'b=64, simplified] irqInvalid_def)
   apply (rule unat_mono[where a=0, simplified])
   apply (simp add: word_neq_0_conv)
   done

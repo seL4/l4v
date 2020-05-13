@@ -98,9 +98,9 @@ The "activateThread" function is used to prepare a thread to run. If the thread 
 
 \subsection{Thread State}
 
-The following functions are used by the scheduler to determine whether a particular thread is ready to be scheduled, and whether it is ready to run.
-
-Note that the idle thread is not considered runnable; this is to prevent it being inserted in the scheduler queue.
+The following function is used by the scheduler to determine whether a
+particular thread is ready to run. Note that the idle thread is not considered
+runnable; this is to prevent it being inserted in the scheduler queue.
 
 > isRunnable :: PPtr TCB -> Kernel Bool
 > isRunnable thread = do

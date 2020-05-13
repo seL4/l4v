@@ -3477,13 +3477,6 @@ lemma tcb_queue_update_other':
   unfolding tcb_queue_relation'_def
   by (simp add: tcb_queue_update_other)
 
-lemma map_to_ko_atI2:
-  "\<lbrakk>(projectKO_opt \<circ>\<^sub>m (ksPSpace s)) x = Some v; pspace_aligned' s; pspace_distinct' s\<rbrakk> \<Longrightarrow> ko_at' v x s"
-  apply (clarsimp simp: map_comp_Some_iff)
-  apply (erule (2) aligned_distinct_obj_atI')
-  apply (simp add: project_inject)
-  done
-
 lemma c_guard_tcb:
   assumes al: "is_aligned (ctcb_ptr_to_tcb_ptr p) tcbBlockSizeBits"
   and   ptr0: "ctcb_ptr_to_tcb_ptr p \<noteq> 0"
@@ -8105,30 +8098,6 @@ end
 
 context kernel_m begin
 
-(* FIXME: move *)
-lemma nat_le_induct [consumes 1, case_names base step]:
-  assumes le: "i \<le> (k::nat)" and
-        base: "P(k)" and
-        step: "\<And>i. \<lbrakk>i \<le> k; P i; 0 < i\<rbrakk> \<Longrightarrow> P(i - 1)"
-  shows "P i"
-proof -
-  obtain j where jk: "j \<le> k" and j_eq: "i = k - j"
-    using le
-    apply (drule_tac x="k - i" in meta_spec)
-    apply simp
-    done
-
-  have "j \<le> k \<Longrightarrow> P (k - j)"
-    apply (induct j)
-     apply (simp add: base)
-    apply simp
-    apply (drule step[rotated], simp+)
-    done
-
-  thus "P i" using jk j_eq
-    by simp
-qed
-
 lemma ceqv_restore_as_guard:
   "ceqv Gamma xf' rv' t t' d (Guard C_Guard {s. xf' s = rv'} d)"
   apply (simp add: ceqv_def)
@@ -8439,42 +8408,6 @@ lemma range_cover_n_le':
   apply (rule rsubst[of "\<lambda>r. r \<le> 2 ^ sbit * n", OF _ nat_mult_1])
   apply (rule mult_le_mono1, rule one_le_power, simp)
   done
-
-(* FIXME: move to AInvs *)
-context
-  fixes ptr sz us n p
-  assumes cover: "range_cover ptr sz us n"
-  assumes p: "p < n"
-begin
-
-lemma range_cover_mask_offset_bound:
-  "(ptr && mask sz) + (of_nat p << us) < 2 ^ sz"
-proof -
-  note sz = range_cover.sz[OF cover]
-  note al = range_cover.aligned[OF cover]
-  have 1: "unat (ptr && mask sz >> us) + p < 2 ^ (sz - us)"
-    using sz(3) p by simp
-  have 2: "(ptr && mask sz >> us) + of_nat p < 2 ^ (sz - us)"
-    using of_nat_power[OF 1 less_imp_diff_less, OF sz(1)]
-          of_nat_add word_unat.Rep_inverse
-    by simp
-  have 3: "ptr && mask sz >> us << us = ptr && mask sz"
-    by (rule is_aligned_shiftr_shiftl[OF is_aligned_after_mask[OF al sz(2)]])
-  have 4: "((ptr && mask sz >> us) + of_nat p) << us < 2 ^ sz"
-    by (rule shiftl_less_t2n[OF 2 sz(1)])
-  show ?thesis
-    by (rule 4[simplified 3 word_shiftl_add_distrib])
-qed
-
-lemma range_cover_neg_mask_offset:
-  "ptr + (of_nat p << us) && ~~ mask sz = ptr && ~~ mask sz"
-  apply (subst AND_NOT_mask_plus_AND_mask_eq[of ptr sz, symmetric], subst add.assoc)
-  apply (rule is_aligned_add_helper[THEN conjunct2])
-   apply (rule Aligned.is_aligned_neg_mask[OF order_refl])
-  apply (rule range_cover_mask_offset_bound)
-  done
-
-end
 
 lemma createNewObjects_ccorres:
 notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff

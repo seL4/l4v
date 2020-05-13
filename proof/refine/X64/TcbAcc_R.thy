@@ -1710,9 +1710,9 @@ lemma gbn_bound_tcb_at'[wp]: "\<lbrace>bound_tcb_at' P t\<rbrace> getBoundNotifi
 lemma gbn_inv'[wp]: "\<lbrace>P\<rbrace> getBoundNotification t \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: getBoundNotification_def) wp
 
-lemma isBlocked_def2:
-  "isBlocked t = liftM (Not \<circ> activatable') (getThreadState t)"
-  apply (unfold isBlocked_def fun_app_def)
+lemma isStopped_def2:
+  "isStopped t = liftM (Not \<circ> activatable') (getThreadState t)"
+  apply (unfold isStopped_def fun_app_def)
   apply (fold liftM_def)
   apply (rule arg_cong [where f="\<lambda>f. liftM f (getThreadState t)"])
   apply (rule ext)
@@ -1721,15 +1721,15 @@ lemma isBlocked_def2:
 
 lemma isRunnable_def2:
   "isRunnable t = liftM runnable' (getThreadState t)"
-  apply (simp add: isRunnable_def isBlocked_def2 liftM_def)
+  apply (simp add: isRunnable_def isStopped_def2 liftM_def)
   apply (rule bind_eqI, rule ext, rule arg_cong)
   apply (case_tac state)
   apply (clarsimp)+
   done
 
-lemma isBlocked_inv[wp]:
-  "\<lbrace>P\<rbrace> isBlocked t \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: isBlocked_def2 | wp gts_inv')+
+lemma isStopped_inv[wp]:
+  "\<lbrace>P\<rbrace> isStopped t \<lbrace>\<lambda>rv. P\<rbrace>"
+  by (simp add: isStopped_def2 | wp gts_inv')+
 
 lemma isRunnable_inv[wp]:
   "\<lbrace>P\<rbrace> isRunnable t \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -2194,7 +2194,7 @@ lemma sts_valid_objs':
   "\<lbrace>valid_objs' and valid_tcb_state' st\<rbrace>
   setThreadState st t
   \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
-  apply (simp add: setThreadState_def setQueue_def isRunnable_def isBlocked_def)
+  apply (simp add: setThreadState_def setQueue_def isRunnable_def isStopped_def)
   apply (wp threadSet_valid_objs')
      apply (simp add: valid_tcb'_def tcb_cte_cases_def)
      apply (wp threadSet_valid_objs' | simp)+

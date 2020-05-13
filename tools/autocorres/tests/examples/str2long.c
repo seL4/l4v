@@ -14,7 +14,8 @@ int error = 0;
 extern int error;
 long str2long(const char *);
 
-long str2long(const char *s) {
+long str2long(const char *s)
+{
     long val = 0;
     int negative = 0;
 
@@ -28,7 +29,7 @@ long str2long(const char *s) {
         return -1;
     }
 
-    for (;*s != '\0'; s++) {
+    for (; *s != '\0'; s++) {
         if (*s < '0' || *s > '9') {
             /* Non-numeric character; bail out. */
             error = 1;

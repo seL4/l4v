@@ -5,7 +5,7 @@
  *)
 
 theory DetWP
-imports "Lib.DetWPLib" Include_C
+imports "Lib.DetWPLib" "../Include_C"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -126,7 +126,6 @@ lemma det_wp_asUser [wp]:
   apply simp
   done
 
-(* FIXME move into Refine somewhere *)
 lemma wordSize_def':
   "wordSize = 8"
   unfolding wordSize_def wordBits_def

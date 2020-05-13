@@ -13,15 +13,16 @@
 #  Based on code by Timothy Bourke, NICTA
 #
 
+import isasymbols
 from __future__ import print_function
-import os, sys
+import os
+import sys
 
 # Make isasymbols importable.
 sys.path.append(os.path.join(os.path.dirname(__file__), '../pysymbols'))
-import isasymbols
 
 translator = isasymbols.make_translator(os.path.join(os.path.dirname(__file__),
-    '../../isabelle/etc/symbols'))
+                                                     '../../isabelle/etc/symbols'))
 
 if len(sys.argv) > 1:
     f = open(sys.argv[1], 'r')

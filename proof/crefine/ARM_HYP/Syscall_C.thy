@@ -787,10 +787,6 @@ lemma getMessageInfo_less_4:
   apply (rule word_and_le1)
   done
 
-lemma invs_queues_imp:
-  "invs' s \<longrightarrow> valid_queues s"
-  by clarsimp
-
 (* FIXME: move *)
 lemma length_CL_from_H [simp]:
   "length_CL (mi_from_H mi) = msgLength mi"
@@ -1208,32 +1204,6 @@ lemma deleteCallerCap_ccorres [corres]:
   done
 
 
-(* FIXME: MOVE *)
-lemma cap_case_EndpointCap_NotificationCap:
-  "(case cap of EndpointCap v0 v1 v2 v3 v4 v5 \<Rightarrow> f v0 v1 v2 v3 v4 v5
-              | NotificationCap v0 v1 v2 v3  \<Rightarrow> g v0 v1 v2 v3
-              | _ \<Rightarrow> h)
-   = (if isEndpointCap cap
-      then f (capEPPtr cap) (capEPBadge cap) (capEPCanSend cap) (capEPCanReceive cap)
-             (capEPCanGrant cap) (capEPCanGrantReply cap)
-      else if isNotificationCap cap
-           then g (capNtfnPtr cap)  (capNtfnBadge cap) (capNtfnCanSend cap) (capNtfnCanReceive cap)
-           else h)"
-  by (simp add: isCap_simps
-         split: capability.split)
-
-
-(* FIXME: MOVE *)
-lemma capFaultOnFailure_if_case_sum:
-  " (capFaultOnFailure epCPtr b (if c then f else g) >>=
-      sum.case_sum (handleFault thread) return) =
-    (if c then ((capFaultOnFailure epCPtr b  f)
-                 >>= sum.case_sum (handleFault thread) return)
-          else ((capFaultOnFailure epCPtr b  g)
-                 >>= sum.case_sum (handleFault thread) return))"
-  by (case_tac c, clarsimp, clarsimp)
-
-
 
 (* FIXME:  MOVE to Corres_C.thy *)
 lemma ccorres_trim_redundant_throw_break:
@@ -1482,7 +1452,7 @@ lemma handleRecv_ccorres:
                 auto simp: pred_tcb_at'_def obj_at'_def objBits_simps projectKOs ct_in_state'_def)[1]
          apply wp
      apply clarsimp
-     apply (vcg exspec=isBlocked_modifies exspec=lookupCap_modifies)
+     apply (vcg exspec=isStopped_modifies exspec=lookupCap_modifies)
 
     apply wp
    apply clarsimp
@@ -1696,17 +1666,6 @@ lemma get_gic_vcpu_ctrl_eisr0_invs'[wp]:
   by (simp add: get_gic_vcpu_ctrl_eisr0_def doMachineOp_def split_def select_f_returns | wp)+
 
 crunch obj_at'_s[wp]: armv_contextSwitch "\<lambda>s. obj_at' P (ksCurThread s) s"
-
-lemma dmo_machine_valid_lift:
-  "(\<And>s f. P s = P (ksMachineState_update f s)) \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp f' \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (wpsimp simp: split_def doMachineOp_def machine_op_lift_def machine_rest_lift_def in_monad)
-  done
-
-lemma tcb_runnable_imp_simple:
-  "obj_at' (\<lambda>s. runnable' (tcbState s)) t s \<Longrightarrow> obj_at' (\<lambda>s. simple' (tcbState s)) t s"
-  apply (clarsimp simp: obj_at'_def)
-  apply (case_tac "tcbState obj" ; clarsimp)
-  done
 
 lemma ccorres_return_void_C_Seq:
   "ccorres_underlying sr \<Gamma> r rvxf arrel xf P P' hs X (return_void_C) \<Longrightarrow>

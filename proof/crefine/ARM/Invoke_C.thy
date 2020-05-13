@@ -544,19 +544,6 @@ lemma hasCancelSendRights_spec:
               split: capability.splits bool.splits)[1]
   done
 
-lemma updateCapData_Untyped:
-  "isUntypedCap a
-         \<Longrightarrow> updateCapData b c a = a"
- by (clarsimp simp:isCap_simps updateCapData_def)
-
-lemma ctes_of_valid_strengthen:
-  "(invs' s \<and> ctes_of s p = Some cte) \<longrightarrow> valid_cap' (cteCap cte) s"
-  apply (case_tac cte)
-  apply clarsimp
-  apply (erule ctes_of_valid_cap')
-  apply fastforce
-  done
-
 lemma decodeCNodeInvocation_ccorres:
   notes gen_invocation_type_eq[simp]
   shows
@@ -1606,51 +1593,6 @@ lemma t_hrs_update_use_t_hrs:
     = (t_hrs_'_update (\<lambda>_. f (t_hrs_' s)) $ s)"
   by simp
 
-lemma name_seq_bound_helper:
-  "(\<not> CP n \<and> (\<forall>n' < n. CP n'))
-    \<Longrightarrow> (if \<exists>n. \<not> CP n
-            then simpl_sequence c' (map f [0 ..< (LEAST n. \<not> CP n)])
-            else c) = (simpl_sequence c' (map f [0 ..< n]))"
-  apply (simp add: exI[where x=n])
-  apply (subst Least_equality[where x=n], simp_all)
-  apply (rule ccontr, simp add: linorder_not_le)
-  done
-
-lemma reset_name_seq_bound_helper:
-  fixes sz
-  fixes v :: "('a :: len) word"
-  defines "CP \<equiv> (\<lambda>n. ~ (v && ~~ mask sz) + of_nat n * (-1 << sz) =
-                          ((-1 :: 'a word) << sz))"
-      and "n \<equiv> Suc (unat (shiftR v sz))"
-  assumes vsz: "v + 1 < 2 ^ (len_of TYPE('a) - 1)" "2 ^ sz \<noteq> (0 :: 'a word)"
-    and vless: "v < v'"
-  shows "(\<not> CP n \<and> (\<forall>n' < n. CP n'))"
-  apply (clarsimp simp: shiftl_t2n field_simps less_Suc_eq_le CP_def n_def)
-  apply (simp add: shiftr_shiftl1[where b=sz and c=sz, simplified, symmetric]
-                   shiftl_t2n)
-  apply (clarsimp simp: word_sle_msb_le shiftl_t2n[symmetric])
-  apply (case_tac n', simp_all)
-   apply (cut_tac vsz(1) order_less_le_trans[OF vless max_word_max])
-   apply (clarsimp simp: shiftr_shiftl1 dest!: word_add_no_overflow)
-   apply (drule_tac f="\<lambda>x. x - 2 ^ sz" in arg_cong, simp)
-   apply (metis less_irrefl order_le_less_trans order_less_trans
-                word_and_le2[where a=v and y="~~ mask sz"]
-                word_two_power_neg_ineq[OF vsz(2)])
-  apply (clarsimp simp add: field_simps)
-  apply (drule_tac f="\<lambda>x. shiftr x sz" in arg_cong)
-  apply (simp add: linorder_not_less[symmetric] word_shift_by_n, erule notE)
-  apply (metis less_Suc_eq_le unat_le_helper and_mask2 word_and_le2)
-  done
-
-schematic_goal sz8_helper:
-  "((-1) << 8 :: addr) = ?v"
-  by (simp add: shiftl_t2n)
-
-lemmas reset_name_seq_bound_helper2
-    = reset_name_seq_bound_helper[where sz=8 and v="v :: addr" for v,
-          simplified sz8_helper word_bits_def[symmetric],
-          THEN name_seq_bound_helper]
-
 lemma reset_untyped_inner_offs_helper:
   "\<lbrakk> cteCap cte = UntypedCap dev ptr sz idx;
       i \<le> unat ((of_nat idx - 1 :: addr) div 2 ^ sz2);
@@ -2470,11 +2412,6 @@ lemma invokeUntyped_Retype_ccorres:
       apply clarsimp
       done
 qed
-
-lemma injection_handler_whenE:
-  "injection_handler injf (whenE P f)
-    = whenE P (injection_handler injf f)"
-  by (simp add: whenE_def injection_handler_returnOk split: if_split)
 
 lemma fromEnum_object_type_to_H:
   "fromEnum x = unat (object_type_from_H x)"

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-void* memset(void *dest, int c, unsigned n)
+void *memset(void *dest, int c, unsigned n)
 {
     unsigned char *d = dest;
     while (n > 0) {
@@ -16,8 +16,8 @@ void* memset(void *dest, int c, unsigned n)
 }
 
 struct node {
-  struct node *next;
-  long data;
+    struct node *next;
+    long data;
 };
 
 void zero_node(struct node *node)

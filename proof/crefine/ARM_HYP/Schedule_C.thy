@@ -35,16 +35,6 @@ end
 
 context kernel_m begin
 
-(* FIXME: move to Refine *)
-lemma valid_idle'_tcb_at'_ksIdleThread:
-  "valid_idle' s \<Longrightarrow> tcb_at' (ksIdleThread s) s"
-  by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def)
-
-(* FIXME: move to Refine *)
-lemma invs_no_cicd'_valid_idle':
-  "invs_no_cicd' s \<Longrightarrow> valid_idle' s"
-  by (simp add: invs_no_cicd'_def)
-
 lemma Arch_switchToIdleThread_ccorres:
   "ccorres dc xfdc invs_no_cicd' UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
@@ -55,11 +45,6 @@ lemma Arch_switchToIdleThread_ccorres:
    apply (wp hoare_vcg_all_lift vcpuSwitch_invs_no_cicd' hoare_vcg_imp_lift vcpuSwitch_it')
   apply (clarsimp simp: invs_no_cicd'_def valid_pspace'_def valid_idle'_tcb_at'_ksIdleThread)
   done
-
-(* FIXME: move *)
-lemma empty_fail_getIdleThread [simp,intro!]:
-  "empty_fail getIdleThread"
-  by (simp add: getIdleThread_def)
 
 lemma switchToIdleThread_ccorres:
   "ccorres dc xfdc invs_no_cicd' UNIV hs

@@ -106,6 +106,8 @@ syntax region IsabelleComment matchgroup=IsabelleComment start="(\*" end="\*)" c
 syntax match IsabelleCommentStart "(\*" contained nextgroup=IsabelleCommentContent contains=IsabelleCommentStart
 syntax match IsabelleCommentContent ".*" contained
 
+syntax region IsabelleComment matchgroup=IsabelleComment fold start="\\<comment>\s*\\<open>" end="\\<close>" contains=IsabelleSpecial keepend
+
 " You can use LaTeX within text {* ... *} blocks and friends and sometimes it
 " is useful to have syntax highlighting enabled within these blocks when
 " working on a PDF-destined theory. This is off by default because it can be a
@@ -638,10 +640,11 @@ syn match IsabelleSpecial /\\<s>/ conceal cchar=𝗌
 syn match IsabelleSpecial /\\<Leftrightarrow>/ conceal cchar=⇔
 syn match IsabelleSpecial /\\<heartsuit>/ conceal cchar=♡
 syn match IsabelleSpecial /\\<four>/ conceal cchar=𝟰
-syn match IsabelleSpecial /\\<open>/ conceal cchar=‹
-syn match IsabelleSpecial /\\<close>/ conceal cchar=›
+syn match IsabelleSpecial /\\<open>/ conceal cchar=‹ transparent
+syn match IsabelleSpecial /\\<close>/ conceal cchar=› transparent
+syn match IsabelleSpecial /\\<comment>/ conceal cchar=— transparent
 
-syn cluster IsabelleInnerStuff contains=IsabelleSpecial
+syn cluster IsabelleInnerStuff contains=IsabelleSpecial,IsabelleComment
 
 " Enable folding of proofs and locales. Note that the starting regex needs to
 " match with zero width to preserve syntax highlighting of the opening command.

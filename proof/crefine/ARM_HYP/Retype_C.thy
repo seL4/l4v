@@ -2042,13 +2042,12 @@ proof (intro impI allI)
   have szo: "size_of TYPE(pte_C[512]) = 2 ^ ptBits"
     by (simp add: size_of_def size_td_array table_bits_defs)
   have szo2: "512 * size_of TYPE(pte_C) = 2 ^ ptBits"
-    by (simp add: szo[symmetric])
+    by (simp add: szo[symmetric] pt_bits_def pte_bits_def)
   have szo': "size_of TYPE(pte_C) = 2 ^ objBitsKO ko"
     by (simp add: objBits_simps ko_def archObjSize_def table_bits_defs)
 
   note rl' = cslift_ptr_retyp_other_inst[where n=1,
-    simplified, OF empty cover[simplified] szo[symmetric] szo]
-
+    simplified, OF empty cover[simplified One_nat_def] szo[symmetric] szo]
   have sz_weaken: "objBitsKO ko \<le> ptBits"
     by (simp add: objBits_simps ko_def archObjSize_def table_bits_defs)
   have cover': "range_cover ptr sz (objBitsKO ko) 512"
@@ -2095,11 +2094,10 @@ proof (intro impI allI)
         apply (rule projectKO_opt_retyp_same, simp add: ko_def projectKOs)
        apply (simp add: h_t_valid_clift_Some_iff dom_def split: if_split)
        apply (subst clift_ptr_retyps_gen_prev_memset_same[where n=1, simplified, OF guard],
-         simp_all only: szo refl empty, simp_all add: zero)[1]
+              simp_all only: szo refl empty, simp_all add: zero[simplified])[1]
         apply (simp add: table_bits_defs word_bits_def)
        apply (auto split: if_split)[1]
-      apply (simp_all add: objBits_simps archObjSize_def table_bits_defs
-                           ko_def word_bits_def)
+      apply (simp_all add: objBits_simps archObjSize_def table_bits_defs ko_def word_bits_def)
    done
 
   from rf have "cpspace_relation (ksPSpace \<sigma>) (underlying_memory (ksMachineState \<sigma>)) (t_hrs_' (globals x))"
@@ -2115,7 +2113,7 @@ proof (intro impI allI)
     apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard'], simp_all only: szo2 empty)
        apply simp
       apply (simp(no_asm) add: table_bits_defs word_bits_def)
-     apply (simp add: zero)
+     apply (simp add: zero[simplified])
     apply (simp add: rl projectKOs del: pte_C_size)
     apply (simp add: rl projectKO_opt_retyp_same ko_def projectKOs Let_def
                      ptr_add_to_new_cap_addrs [OF szo']
@@ -2130,7 +2128,7 @@ proof (intro impI allI)
     apply (clarsimp simp: valid_global_refs'_def  Let_def
                           valid_refs'_def ran_def rf_sr_def cstate_relation_def)
     apply (erule disjoint_subset)
-    apply (simp add:kernel_data_refs_disj)
+    apply (simp add: kernel_data_refs_disj[simplified])
     done
 
   ultimately
@@ -2238,18 +2236,18 @@ proof (intro impI allI)
   have szo: "size_of TYPE(pde_C[2048]) = 2 ^ pdBits"
     by (simp add: size_of_def size_td_array table_bits_defs)
   have szo2: "2048 * size_of TYPE(pde_C) = 2 ^ pdBits"
-    by (simp add: szo[symmetric])
+    by (simp add: szo[symmetric] pdBits_def pd_bits_def pde_bits_def pdeBits_def)
   have szo': "size_of TYPE(pde_C) = 2 ^ objBitsKO ko"
     by (simp add: objBits_simps ko_def archObjSize_def table_bits_defs)
 
   note rl' = cslift_ptr_retyp_other_inst[where n=1,
-    simplified, OF empty cover[simplified] szo[symmetric] szo]
+    simplified, OF empty cover[simplified One_nat_def] szo[symmetric] szo]
 
   have sz_weaken: "objBitsKO ko \<le> pdBits"
-    by (simp add: objBits_simps ko_def archObjSize_def pdBits_def pageBits_def)
+    by (simp add: objBits_simps ko_def archObjSize_def pdBits_def pageBits_def pd_bits_def)
   have cover': "range_cover ptr sz (objBitsKO ko) 2048"
     apply (rule range_cover_rel[OF cover sz_weaken])
-    apply (simp add: pdBits_def objBits_simps ko_def archObjSize_def pageBits_def)
+    apply (simp add: pdBits_def objBits_simps ko_def archObjSize_def pageBits_def pd_bits_def)
     done
   from sz sz_weaken have sz': "objBitsKO ko \<le> sz" by simp
   note al' = is_aligned_weaken[OF al sz_weaken]
@@ -2264,7 +2262,7 @@ proof (intro impI allI)
 
   have guard: "c_guard ?ptr"
     apply (rule is_aligned_c_guard[where n=pdBits and m=2])
-        apply (simp_all add: al ptr0 align_of_def align_td_array)
+        apply (simp_all add: al[simplified] ptr0 align_of_def align_td_array)
      apply (simp_all add: table_bits_defs)
     done
 
@@ -2274,7 +2272,7 @@ proof (intro impI allI)
     done
 
   note rl' = cslift_ptr_retyp_other_inst[OF _ cover refl szo,
-    simplified szo, simplified, OF empty]
+    simplified szo, simplified, OF empty[simplified]]
 
   from rf have pderl: "cmap_relation (map_to_pdes (ksPSpace \<sigma>)) (cslift x) Ptr cpde_relation"
     unfolding rf_sr_def cstate_relation_def by (simp add: Let_def cpspace_relation_def)
@@ -2289,7 +2287,7 @@ proof (intro impI allI)
         apply (rule projectKO_opt_retyp_same, simp add: ko_def projectKOs)
        apply (simp add: h_t_valid_clift_Some_iff dom_def split: if_split)
        apply (subst clift_ptr_retyps_gen_prev_memset_same[where n=1, simplified, OF guard],
-         simp_all only: szo empty, simp_all add: zero)[1]
+         simp_all only: szo empty, simp_all add: zero[simplified])[1]
         apply (simp add: table_bits_defs word_bits_def)
        apply (auto split: if_split)[1]
       apply (simp_all add: objBits_simps archObjSize_def table_bits_defs
@@ -2309,7 +2307,7 @@ proof (intro impI allI)
       apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard'], simp_all only: szo2 empty)
          apply simp
         apply (simp(no_asm) add: table_bits_defs word_bits_def)
-       apply (simp add: zero)
+       apply (simp add: zero[simplified])
       apply (simp add: rl projectKOs)
       apply (simp add: rl projectKO_opt_retyp_same ko_def projectKOs Let_def
                        ptr_add_to_new_cap_addrs [OF szo']
@@ -2324,7 +2322,7 @@ proof (intro impI allI)
     apply (clarsimp simp: valid_global_refs'_def  Let_def
                           valid_refs'_def ran_def rf_sr_def cstate_relation_def)
     apply (erule disjoint_subset)
-    apply (simp add:kernel_data_refs_disj)
+    apply (simp add: kernel_data_refs_disj[simplified])
     done
 
   moreover from rf have stored_asids: "(pde_stored_asid \<circ>\<^sub>m clift ?ks')
@@ -2337,7 +2335,7 @@ proof (intro impI allI)
     apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard'], simp_all only: szo2 empty)
        apply simp
       apply (simp add: table_bits_defs word_bits_def)
-     apply (simp add: zero)
+     apply (simp add: zero[simplified])
     apply (rule ext)
     apply (simp add: map_comp_def stored_asid[simplified] split: option.split if_split)
     apply (simp only: o_def CTypesDefs.ptr_add_def' Abs_fnat_hom_mult)
@@ -3096,13 +3094,6 @@ lemma tcb_queue_update_other':
   tcb_queue_relation' next prev mp tcbs qe qh"
   unfolding tcb_queue_relation'_def
   by (simp add: tcb_queue_update_other)
-
-lemma map_to_ko_atI2:
-  "\<lbrakk>(projectKO_opt \<circ>\<^sub>m (ksPSpace s)) x = Some v; pspace_aligned' s; pspace_distinct' s\<rbrakk> \<Longrightarrow> ko_at' v x s"
-  apply (clarsimp simp: map_comp_Some_iff)
-  apply (erule (2) aligned_distinct_obj_atI')
-  apply (simp add: project_inject)
-  done
 
 lemma c_guard_tcb:
   assumes al: "is_aligned (ctcb_ptr_to_tcb_ptr p) tcbBlockSizeBits"
@@ -5970,7 +5961,7 @@ proof -
       apply (ccorres_remove_UNIV_guard)
       apply (rule ccorres_rhs_assoc)+
       apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps archObjSize_def
-        ARM_HYP_H.createObject_def pageBits_def)
+        ARM_HYP_H.createObject_def pageBits_def pt_bits_def)
       apply (ctac pre only: add: placeNewObject_pte[simplified])
         apply csymbr
         apply (rule ccorres_return_C)
@@ -6004,7 +5995,7 @@ proof -
      apply (ccorres_remove_UNIV_guard)
      apply (rule ccorres_rhs_assoc)+
      apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps archObjSize_def
-        ARM_HYP_H.createObject_def pageBits_def pdBits_def)
+        ARM_HYP_H.createObject_def pageBits_def pdBits_def pd_bits_def)
      apply (ctac pre only: add: placeNewObject_pde[simplified])
        apply (ctac add: copyGlobalMappings_ccorres)
          apply csymbr
@@ -6647,6 +6638,7 @@ lemma pspace_no_overlap_induce_cte:
     is_aligned ptr bits; bits < word_bits;
     pspace_no_overlap' ptr bits s\<rbrakk>
    \<Longrightarrow> {ptr_val xa..+size_of TYPE(cte_C)} \<inter> {ptr..+2 ^ bits} = {}"
+  supply cteSizeBits_le_cte_level_bits[simp del]
   apply (clarsimp simp: cpspace_relation_def)
   apply (clarsimp simp: cmap_relation_def size_of_def)
   apply (subgoal_tac "xa\<in>cte_Ptr ` dom (ctes_of s)")
@@ -7908,29 +7900,6 @@ crunch gsMaxObjectSize[wp]: createObject "\<lambda>s. P (gsMaxObjectSize s)"
 end
 
 context kernel_m begin
-
-lemma nat_le_induct [consumes 1, case_names base step]:
-  assumes le: "i \<le> (k::nat)" and
-        base: "P(k)" and
-        step: "\<And>i. \<lbrakk>i \<le> k; P i; 0 < i\<rbrakk> \<Longrightarrow> P(i - 1)"
-  shows "P i"
-proof -
-  obtain j where jk: "j \<le> k" and j_eq: "i = k - j"
-    using le
-    apply (drule_tac x="k - i" in meta_spec)
-    apply simp
-    done
-
-  have "j \<le> k \<Longrightarrow> P (k - j)"
-    apply (induct j)
-     apply (simp add: base)
-    apply simp
-    apply (drule step[rotated], simp+)
-    done
-
-  thus "P i" using jk j_eq
-    by simp
-qed
 
 lemma ceqv_restore_as_guard:
   "ceqv Gamma xf' rv' t t' d (Guard C_Guard {s. xf' s = rv'} d)"

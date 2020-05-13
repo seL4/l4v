@@ -9,7 +9,7 @@ struct s {
 };
 
 struct word_struct {
-        unsigned long words[2];
+    unsigned long words[2];
 };
 
 struct sc {
@@ -18,43 +18,47 @@ struct sc {
 };
 
 static inline unsigned __attribute__((__const__))
-    bb(struct word_struct word_struct) {
-        return (word_struct.words[0] & 0xfffffff8) << 0;
-    }
+bb(struct word_struct word_struct)
+{
+    return (word_struct.words[0] & 0xfffffff8) << 0;
+}
 
 static inline struct s __attribute__((__const__))
-    cncn(void) {
-        struct s x;
-        x.x = 0;
-        return x;
-    }
+cncn(void)
+{
+    struct s x;
+    x.x = 0;
+    return x;
+}
 
 static inline unsigned __attribute__((__const__))
-    aa(struct word_struct word_struct) {
-            return (word_struct.words[1] & 0xfffffff8) << 0;
-    }
+aa(struct word_struct word_struct)
+{
+    return (word_struct.words[1] & 0xfffffff8) << 0;
+}
 
-static inline void
-ff(struct word_struct *mdb_node_ptr, unsigned v) {
-        mdb_node_ptr->words[1] &= ~0xfffffff8;
-            mdb_node_ptr->words[1] |= (v >> 0) & 0xfffffff8;
+static inline void ff(struct word_struct *mdb_node_ptr, unsigned v)
+{
+    mdb_node_ptr->words[1] &= ~0xfffffff8;
+    mdb_node_ptr->words[1] |= (v >> 0) & 0xfffffff8;
 }
 
 static inline struct word_struct __attribute__((__const__))
-    cc(struct word_struct word_struct, unsigned v) {
-            word_struct.words[0] &= ~0xfffffff8;
-                word_struct.words[0] |= (v >> 0) & 0xfffffff8;
-                    return word_struct;
-    }
-
-static inline void
-ee(struct word_struct *mdb_node_ptr, unsigned v) {
-        mdb_node_ptr->words[0] &= ~0xfffffff8;
-            mdb_node_ptr->words[0] |= (v >> 0) & 0xfffffff8;
+cc(struct word_struct word_struct, unsigned v)
+{
+    word_struct.words[0] &= ~0xfffffff8;
+    word_struct.words[0] |= (v >> 0) & 0xfffffff8;
+    return word_struct;
 }
 
-static inline struct word_struct
-mk_word_struct(unsigned long a, unsigned long b, unsigned long c, unsigned long d) {
+static inline void ee(struct word_struct *mdb_node_ptr, unsigned v)
+{
+    mdb_node_ptr->words[0] &= ~0xfffffff8;
+    mdb_node_ptr->words[0] |= (v >> 0) & 0xfffffff8;
+}
+
+static inline struct word_struct mk_word_struct(unsigned long a, unsigned long b, unsigned long c, unsigned long d)
+{
     struct word_struct w;
 
     w.words[0] = 0;
@@ -68,8 +72,8 @@ mk_word_struct(unsigned long a, unsigned long b, unsigned long c, unsigned long 
 }
 
 
-void
-do_call(struct s newCap, struct sc *s, struct sc *d) {
+void do_call(struct s newCap, struct sc *s, struct sc *d)
+{
     struct word_struct the_ws;
     unsigned pp, np;
     ; ;
@@ -80,12 +84,14 @@ do_call(struct s newCap, struct sc *s, struct sc *d) {
     s->ws = mk_word_struct(0, 0, 0, 0);
 
     pp = bb(the_ws);
-    if(pp)
+    if (pp) {
         ff(&((struct sc *)(pp))->ws, ((unsigned int)d));
+    }
 
     np = aa(the_ws);
-    if(np)
+    if (np) {
         ee(&((struct sc *)(np))->ws, ((unsigned int)d));
+    }
 }
 
 

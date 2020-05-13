@@ -12,12 +12,14 @@
 
 int __real_var__;
 
-int __get_real_var__(void) {
-  return __real_var__;
+int __get_real_var__(void)
+{
+    return __real_var__;
 }
 
-void __set_real_var__(int x) {
-  __real_var__ = x;
+void __set_real_var__(int x)
+{
+    __real_var__ = x;
 }
 
 #define VAR (__get_real_var__())

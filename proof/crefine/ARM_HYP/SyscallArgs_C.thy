@@ -500,34 +500,6 @@ lemma invocationCatch_use_injection_handler:
             split: sum.split)
   done
 
-lemma injection_handler_returnOk:
-  "injection_handler injector (returnOk v) = returnOk v"
-  by (simp add: returnOk_liftE injection_liftE)
-
-lemma injection_handler_If:
-  "injection_handler injector (If P a b)
-     = If P (injection_handler injector a)
-            (injection_handler injector b)"
-  by (simp split: if_split)
-
-(* FIXME: duplicated in CSpace_All *)
-lemma injection_handler_liftM:
-  "injection_handler f
-    = liftM (\<lambda>v. case v of Inl ex \<Rightarrow> Inl (f ex) | Inr rv \<Rightarrow> Inr rv)"
-  apply (intro ext, simp add: injection_handler_def liftM_def
-                              handleE'_def)
-  apply (rule bind_apply_cong, rule refl)
-  apply (simp add: throwError_def split: sum.split)
-  done
-
-lemma injection_handler_throwError:
-  "injection_handler f (throwError v) = throwError (f v)"
-  by (simp add: injection_handler_def handleE'_def
-                throwError_bind)
-
-lemmas injection_handler_bindE = injection_bindE [OF refl refl]
-lemmas injection_handler_wp = injection_wp [OF refl]
-
 lemma ccorres_injection_handler_csum1:
   "ccorres (f \<currency> r) xf P P' hs a c
     \<Longrightarrow> ccorres
@@ -778,9 +750,6 @@ lemma capFVMRights_range:
    cap_small_frame_cap_CL.capFVMRights_CL (cap_small_frame_cap_lift cap) \<le> 3"
   by (simp add: cap_frame_cap_lift_def cap_small_frame_cap_lift_def
                 cap_lift_def cap_tag_defs word_and_le1 mask_def)+
-
-lemma dumb_bool_for_all: "(\<forall>x. x) = False"
-  by auto
 
 lemma dumb_bool_split_for_vcg:
   "\<lbrace>d \<longrightarrow> \<acute>ret__unsigned_long \<noteq> 0\<rbrace> \<inter> \<lbrace>\<not> d \<longrightarrow> \<acute>ret__unsigned_long = 0\<rbrace>

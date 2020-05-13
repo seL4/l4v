@@ -16,7 +16,7 @@ begin
 
 context Arch begin global_naming RISCV64
 
-type_synonym irq = "3 word" (* maxIRQ currently 5; increase for real h/w *)
+type_synonym irq = "6 word" (* match IRQ_CNODE_SLOT_BITS in seL4 config *)
 type_synonym paddr = word64
 
 abbreviation (input) "toPAddr \<equiv> id"
@@ -150,7 +150,7 @@ definition minIRQ :: "irq"
 
 definition maxIRQ :: "irq"
   where
-  "maxIRQ \<equiv> 53"
+  "maxIRQ \<equiv> 54"
 
 (* Reserved by C to represent "not an IRQ" *)
 definition irqInvalid :: "irq"

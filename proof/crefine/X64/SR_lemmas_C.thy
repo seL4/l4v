@@ -10,17 +10,7 @@ imports
   "Refine.Invariants_H"
 begin
 
-(* FIXME: move to Word_Lib *)
-lemma sign_extend_0[simp]:
-  "sign_extend a 0 = 0"
-  by (simp add: sign_extend_def)
-
 context begin interpretation Arch . (*FIXME: arch_split*)
-
-(* FIXME: move to ainvs? *)
-lemma sign_extend_canonical_address:
-  "(x = sign_extend 47 x) = canonical_address x"
-  by (fastforce simp: sign_extended_iff_sign_extend canonical_address_sign_extended)
 
 section "ctes"
 
@@ -998,7 +988,7 @@ lemma nullCapPointers_def:
 lemma valid_mdb_ctes_of_next:
   "\<lbrakk> valid_mdb' s; ctes_of s p = Some cte; mdbNext (cteMDBNode cte) \<noteq> 0 \<rbrakk> \<Longrightarrow> cte_at' (mdbNext (cteMDBNode cte)) s"
   unfolding valid_mdb'_def valid_mdb_ctes_def
-  apply clarsimp
+  apply (erule conjE)
   apply (erule (2) valid_dlistE)
   apply (simp add: cte_wp_at_ctes_of)
   done
@@ -1006,7 +996,7 @@ lemma valid_mdb_ctes_of_next:
 lemma valid_mdb_ctes_of_prev:
   "\<lbrakk> valid_mdb' s; ctes_of s p = Some cte; mdbPrev (cteMDBNode cte) \<noteq> 0 \<rbrakk> \<Longrightarrow> cte_at' (mdbPrev (cteMDBNode cte)) s"
   unfolding valid_mdb'_def valid_mdb_ctes_def
-  apply clarsimp
+  apply (erule conjE)
   apply (erule (2) valid_dlistE)
   apply (simp add: cte_wp_at_ctes_of)
   done
@@ -1551,15 +1541,6 @@ lemma ctcb_relation_null_queue_ptrs:
   apply (simp add: ctcb_relation_def tcb_null_queue_ptrs_def)
   done
 
-lemma map_to_ko_atI':
-  "\<lbrakk>(projectKO_opt \<circ>\<^sub>m (ksPSpace s)) x = Some v; invs' s\<rbrakk> \<Longrightarrow> ko_at' v x s"
-  apply (clarsimp simp: map_comp_Some_iff)
-  apply (erule aligned_distinct_obj_atI')
-    apply clarsimp
-   apply clarsimp
-  apply (simp add: project_inject)
-  done
-
 (* FIXME x64: do we still need these?
 (* Levity: added (20090419 09:44:27) *)
 declare ntfnQueue_head_mask_4 [simp]
@@ -1889,22 +1870,6 @@ lemma cmap_relation_updI2:
   using cr cof cc inj
   by (clarsimp simp add: cmap_relation_def inj_eq split: if_split)
 
-definition
-  user_word_at :: "machine_word \<Rightarrow> machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
-where
- "user_word_at x p \<equiv> \<lambda>s. is_aligned p 3
-       \<and> pointerInUserData p s
-       \<and> x = word_rcat (map (underlying_memory (ksMachineState s))
-                                [p + 7, p + 6, p + 5, p + 4, p + 3, p + 2, p + 1, p])"
-
-definition
-  device_word_at :: "machine_word \<Rightarrow> machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
-where
- "device_word_at x p \<equiv> \<lambda>s. is_aligned p 3
-       \<and> pointerInDeviceData p s
-       \<and> x = word_rcat (map (underlying_memory (ksMachineState s))
-                                [p + 7, p + 6, p + 5, p + 4, p + 3, p + 2, p + 1, p])"
-
 lemma rf_sr_heap_user_data_relation:
   "(s, s') \<in> rf_sr \<Longrightarrow> cmap_relation
       (heap_to_user_data (ksPSpace s) (underlying_memory (ksMachineState s)))
@@ -1920,21 +1885,6 @@ lemma rf_sr_heap_device_data_relation:
   by (clarsimp simp: user_word_at_def rf_sr_def
                      cstate_relation_def Let_def
                      cpspace_relation_def)
-
-lemma ko_at_projectKO_opt:
-  "ko_at' ko p s \<Longrightarrow> (projectKO_opt \<circ>\<^sub>m ksPSpace s) p = Some ko"
-  by (clarsimp elim!: obj_atE' simp: projectKOs)
-
-lemma word_shift_by_3:
-  "x * 8 = (x::'a::len word) << 3"
-  by (simp add: shiftl_t2n)
-
-(* FIXME x64: move *)
-lemma mask_shiftr_times_simp:
-  "\<lbrakk>x > n;is_aligned p n\<rbrakk> \<Longrightarrow> (p && mask x >> n) * (2^n) = (p && mask x)"
-  apply (subst mult.commute)
-  apply (simp add: shiftl_t2n[symmetric])
-  by (simp add: is_aligned_andI1 is_aligned_shiftr_shiftl)
 
 lemma user_word_at_cross_over:
   "\<lbrakk> user_word_at x p s; (s, s') \<in> rf_sr; p' = Ptr p \<rbrakk>
@@ -2060,16 +2010,6 @@ lemma device_word_at_cross_over:
   apply (simp add: aligned_shiftr_mask_shiftl)
   done
 *)
-
-(* FIXME: move to GenericLib *)
-lemmas unat64_eq_of_nat = unat_eq_of_nat[where 'a=64, folded word_bits_def]
-
-lemma unat_mask_3_less_8:
-  "unat (p && mask 3 :: word64) < 8"
-  apply (rule unat_less_helper)
-  apply (rule order_le_less_trans, rule word_and_le1)
-  apply (simp add: mask_def)
-  done
 
 lemma memory_cross_over:
   "\<lbrakk>(\<sigma>, s) \<in> rf_sr; pspace_aligned' \<sigma>; pspace_distinct' \<sigma>;

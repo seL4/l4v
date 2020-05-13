@@ -14,13 +14,15 @@
 unsigned is_prime_linear(unsigned n)
 {
     /* Numbers less than 2 are not prime. */
-    if (n < 2)
+    if (n < 2) {
         return 0;
+    }
 
     /* Find the first non-trivial factor of 'n'. */
     for (unsigned i = 2; i < n; i++) {
-        if (n % i == 0)
+        if (n % i == 0) {
             return 0;
+        }
     }
 
     /* No factors. */
@@ -37,15 +39,17 @@ unsigned is_prime_linear(unsigned n)
 unsigned int is_prime(unsigned int n)
 {
     /* Numbers less than 2 are not primes. */
-    if (n < 2)
+    if (n < 2) {
         return 0;
+    }
 
     /* Find the first non-trivial factor of 'n' or sqrt(UINT_MAX), whichever
      * comes first. */
     /* Find the first non-trivial factor of 'n' less than sqrt(n). */
     for (unsigned i = 2; i < SQRT_UINT_MAX && i * i <= n; i++) {
-        if (n % i == 0)
+        if (n % i == 0) {
             return 0;
+        }
     }
 
     /* No factors. */

@@ -44,52 +44,6 @@ proof (rule ext)
   qed
 qed
 
-(* FIXME x64: figure out where these are needed and adjust appropriately *)
-lemma mask_pageBits_inner_beauty:
-  "is_aligned p 3 \<Longrightarrow>
-  (p && ~~ mask pageBits) + (ucast ((ucast (p && mask pageBits >> 3)):: 9 word) * 8) = (p::machine_word)"
-  apply (simp add: is_aligned_nth word_shift_by_3)
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: word_size word_ops_nth_size nth_ucast nth_shiftr nth_shiftl)
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size word_ops_nth_size nth_ucast nth_shiftr nth_shiftl
-                        pageBits_def)
-  apply (rule iffI)
-   apply (erule disjE)
-    apply clarsimp
-   apply clarsimp
-  apply simp
-  apply clarsimp
-  apply (rule context_conjI)
-   apply (rule leI)
-   apply clarsimp
-  apply simp
-  apply arith
-  done
-
-lemma more_pageBits_inner_beauty:
-  fixes x :: "9 word"
-  fixes p :: machine_word
-  assumes x: "x \<noteq> ucast (p && mask pageBits >> 3)"
-  shows "(p && ~~ mask pageBits) + (ucast x * 8) \<noteq> p"
-  apply clarsimp
-  apply (simp add: word_shift_by_3)
-  apply (subst (asm) word_plus_and_or_coroll)
-   apply (clarsimp simp: word_size word_ops_nth_size nth_ucast
-                         nth_shiftl bang_eq)
-   apply (drule test_bit_size)
-   apply (clarsimp simp: word_size pageBits_def)
-   apply arith
-  apply (insert x)
-  apply (erule notE)
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bang_eq)
-  apply (erule_tac x="n+3" in allE)
-  apply (clarsimp simp: word_ops_nth_size word_size)
-  apply (clarsimp simp: pageBits_def)
-  done
-
 
 lemma byte_to_word_heap_upd_outside_range:
   "p \<notin> {(base + ucast off * 8)..+8} \<Longrightarrow>

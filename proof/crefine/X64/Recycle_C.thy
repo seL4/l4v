@@ -546,16 +546,6 @@ next
     done
 qed
 
-(* FIXME: also in VSpace_C *)
-lemma ignoreFailure_liftM:
-  "ignoreFailure = liftM (\<lambda>v. ())"
-  apply (rule ext)+
-  apply (simp add: ignoreFailure_def liftM_def
-                   catch_def)
-  apply (rule bind_apply_cong[OF refl])
-  apply (simp split: sum.split)
-  done
-
 end
 
 lemma option_to_0_user_mem':
@@ -842,19 +832,6 @@ lemma cpspace_relation_ep_update_ep2:
   done
 
 end
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma setObject_tcb_ep_obj_at'[wp]:
-  "\<lbrace>obj_at' (P :: endpoint \<Rightarrow> bool) ptr\<rbrace> setObject ptr' (tcb :: tcb) \<lbrace>\<lambda>rv. obj_at' P ptr\<rbrace>"
-  apply (rule obj_at_setObject2, simp_all)
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
-end
-
-crunch ep_obj_at'[wp]: setThreadState "obj_at' (P :: endpoint \<Rightarrow> bool) ptr"
-  (simp: unless_def)
-
-crunch pspace_canonical'[wp]: setThreadState pspace_canonical'
 
 context kernel_m begin
 

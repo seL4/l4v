@@ -22,6 +22,7 @@ Example usage:
 import StringIO
 from .exception import IsaSymbolsException
 
+
 class Proof(object):
     def __init__(self, statement, name=None, debug=True):
         self.statement = statement
@@ -34,10 +35,10 @@ class Proof(object):
     def apply(self, step, solves=0):
         if self.completed:
             raise IsaSymbolsException('you cannot apply steps to a completed '
-                'proof')
+                                      'proof')
         if solves > self.subgoals:
             raise IsaSymbolsException('you cannot solve more subgoals (%d) '
-                'than remain (%d)' % (solves, self.subgoals))
+                                      'than remain (%d)' % (solves, self.subgoals))
         if ' ' in step:
             step = '(%s)' % step
         self.steps.append((' ' * (self.subgoals - 1), step))

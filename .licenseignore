@@ -1,3 +1,9 @@
+#
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+
 *.lev
 *.pdf
 *.html
@@ -33,7 +39,7 @@ internal/*
 .git/*
 
 
-.licenseignore
+.reuse/dep5
 
 **/ROOTS
 **/MANIFEST
@@ -122,6 +128,7 @@ tools/c-parser/Simpl/document/root.tex
 
 tools/autocorres/doc/quickstart/output/*
 tools/autocorres/sel4.txt
+tools/autocorres/tests/ROOT
 tools/autocorres/tests/parse-tests/*.thy
 tools/autocorres/tests/examples/trace_demo_incr.trace
 tools/autocorres/tools/release_files/ChangeLog

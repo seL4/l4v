@@ -1,0 +1,27 @@
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+# config for https://github.com/jorisroovers/gitlint
+
+[general]
+ignore=body-is-missing,title-trailing-punctuation
+verbosity = 2
+
+# By default gitlint will ignore merge, revert, fixup and squash commits.
+ignore-fixup-commits=false
+ignore-squash-commits=false
+
+[title-max-length]
+line-length=78
+
+[body-max-line-length]
+line-length=78
+
+# Missing body is fine, but if there is one, it should say something.
+[body-min-length]
+min-length=10
+
+# Send alert for unfinished commits
+[title-must-not-contain-word]
+words=wip,squash,tosquash

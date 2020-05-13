@@ -602,12 +602,6 @@ lemma ccorres_get_registers:
                         "StrictC'_register_defs")
   done
 
-(* FIXME: move *)
-lemma st_tcb_at'_opeq_simp:
-  "st_tcb_at' ((=) Structures_H.thread_state.Running) (ksCurThread s) s
-    = st_tcb_at' (\<lambda>st. st = Structures_H.thread_state.Running) (ksCurThread s) s"
-  by (fastforce simp add: st_tcb_at'_def obj_at'_def)
-
 (* FIXME: fastpath
 lemma callKernel_withFastpath_corres_C:
   "corres_underlying rf_sr False True dc
@@ -768,26 +762,6 @@ lemma full_invs_both:
   apply (rule fw_sim_A_H)
   done
 end
-
-(* FIXME: move to somewhere sensible *)
-lemma dom_eq:
-  "dom um = dom um' \<longleftrightarrow> (\<forall>a. um a = None \<longleftrightarrow> um' a = None)"
-  apply (simp add: dom_def del: not_None_eq)
-  apply (rule iffI)
-   apply (rule allI)
-   apply (simp add: set_eq_iff)
-   apply (drule_tac x=a in spec)
-   apply auto
-done
-
-lemma dom_user_mem':
-  "dom (user_mem' s) = {p. typ_at' UserDataT (p && ~~ mask pageBits) s}"
-  by (clarsimp simp:user_mem'_def dom_def pointerInUserData_def split:if_splits)
-
-(* FIXME:move *)
-lemma dom_device_mem':
-  "dom (device_mem' s) = {p. typ_at' UserDataDeviceT (p && ~~ mask pageBits) s}"
-  by (clarsimp simp: device_mem'_def dom_def pointerInDeviceData_def split: if_splits)
 
 context kernel_m
 begin

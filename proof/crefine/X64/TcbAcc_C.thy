@@ -37,27 +37,6 @@ lemma ccorres_pre_threadGet:
   done
 
 
-(* FIXME MOVE *)
-crunch inv'[wp]: archThreadGet P
-
-(* FIXME MOVE near thm tg_sp' *)
-lemma atg_sp':
-  "\<lbrace>P\<rbrace> archThreadGet f p \<lbrace>\<lambda>t. obj_at' (\<lambda>t'. f (tcbArch t') = t) p and P\<rbrace>"
-  including no_pre
-  apply (simp add: archThreadGet_def)
-  apply wp
-  apply (rule hoare_strengthen_post)
-   apply (rule getObject_tcb_sp)
-  apply clarsimp
-  apply (erule obj_at'_weakenE)
-  apply simp
-  done
-
-(* FIXME: MOVE to EmptyFail *)
-lemma empty_fail_archThreadGet [intro!, wp, simp]:
-  "empty_fail (archThreadGet f p)"
-  by (simp add: archThreadGet_def getObject_def split_def)
-
 lemma ccorres_pre_archThreadGet:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (g rv) c"
   shows   "ccorres r xf
@@ -298,16 +277,6 @@ lemma ccorres_pre_getObject_tcb:
            erule ko_at_projectKO_opt)
   apply simp
   done
-
-(* FIXME move to Invariants_H *)
-lemma invs_cicd_arch_state' [elim!]:
-  "all_invs_but_ct_idle_or_in_cur_domain' s \<Longrightarrow> valid_arch_state' s"
-  by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def)
-
-(* FIXME move to Invariants_H *)
-lemma invs_cicd_no_0_obj'[elim!]:
-  "all_invs_but_ct_idle_or_in_cur_domain' s \<Longrightarrow> no_0_obj' s"
-  by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_pspace'_def)
 
 (* FIXME: MOVE, probably to CSpace_RAB  *)
 lemma ccorres_gen_asm2_state:

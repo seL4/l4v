@@ -413,10 +413,10 @@ lemma ccorres_exI1:
   apply fastforce
   done
 
-lemma isBlocked_ccorres [corres]:
+lemma isStopped_ccorres [corres]:
   "ccorres (\<lambda>r r'. r = to_bool r') ret__unsigned_long_'
   (tcb_at' thread) (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread})  []
-  (isBlocked thread) (Call isBlocked_'proc)"
+  (isStopped thread) (Call isStopped_'proc)"
   apply (cinit lift: thread_' simp: getThreadState_def)
   apply (rule ccorres_pre_threadGet)
    apply (rule ccorres_move_c_guard_tcb)
@@ -689,15 +689,6 @@ lemma ccorres_pre_getQueue:
    apply (simp add: maxDom_to_H maxPrio_to_H)+
   done
 
-(* FIXME: move *)
-lemma threadGet_wp:
-  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at' tcb thread s \<longrightarrow> P (f tcb) s\<rbrace> threadGet f thread \<lbrace>P\<rbrace>"
-  apply (rule hoare_post_imp [OF _ tg_sp'])
-  apply clarsimp
-  apply (frule obj_at_ko_at')
-  apply (clarsimp elim: obj_atE')
-  done
-
 lemma state_relation_queue_update_helper':
   "\<lbrakk> (s, s') \<in> rf_sr;
      (\<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s)
@@ -896,60 +887,6 @@ lemma cbitmap_L2_relation_update:
   by (simp add: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
                 cmachine_state_relation_def)
 
-lemma unat_ucast_prio_shiftr_simp[simp]:
-  "unat (ucast (p::priority) >> n :: machine_word) = unat (p >> n)"
-  by (simp add: shiftr_div_2n')+
-
-lemma unat_ucast_prio_mask_simp[simp]:
-  "unat (ucast (p::priority) && mask m :: machine_word) = unat (p && mask m)"
-  by (simp add: ucast_and_mask)
-
-lemma unat_ucast_prio_L1_cmask_simp:
-  "unat (ucast (p::priority) && 0x3F :: machine_word) = unat (p && 0x3F)"
-  using unat_ucast_prio_mask_simp[where m=6]
-  by (simp add: mask_def)
-
-lemma machine_word_and_3F_less_40:
-  "(w :: machine_word) && 0x3F < 0x40"
-  by (rule word_and_less', simp)
-
-lemma prio_ucast_shiftr_wordRadix_helper: (* FIXME generalise *)
-  "(ucast (p::priority) >> wordRadix :: machine_word) < 4"
-  unfolding maxPriority_def numPriorities_def wordRadix_def
-  using unat_lt2p[where x=p]
-  apply (clarsimp simp add: word_less_nat_alt shiftr_div_2n' unat_ucast_upcast is_up word_le_nat_alt)
-  apply arith
-  done
-
-lemma prio_ucast_shiftr_wordRadix_helper': (* FIXME generalise *)
-  "(ucast (p::priority) >> wordRadix :: machine_word) \<le> 3"
-  unfolding maxPriority_def numPriorities_def wordRadix_def
-  using unat_lt2p[where x=p]
-  apply (clarsimp simp add: word_less_nat_alt shiftr_div_2n' unat_ucast_upcast is_up word_le_nat_alt)
-  apply arith
-  done
-
-lemma prio_unat_shiftr_wordRadix_helper': (* FIXME generalise *)
-  "unat ((p::priority) >> wordRadix) \<le> 3"
-  unfolding maxPriority_def numPriorities_def wordRadix_def
-  using unat_lt2p[where x=p]
-  apply (clarsimp simp add: word_less_nat_alt shiftr_div_2n' unat_ucast_upcast is_up word_le_nat_alt)
-  apply arith
-  done
-
-lemma prio_ucast_shiftr_wordRadix_helper2: (* FIXME possibly unused *)
-  "(ucast (p::priority) >> wordRadix :: machine_word) < 0x20"
-  by (rule order_less_trans[OF prio_ucast_shiftr_wordRadix_helper]; simp)
-
-lemma prio_ucast_shiftr_wordRadix_helper3:
-  "(ucast (p::priority) >> wordRadix :: machine_word) < 0x40"
-  by (rule order_less_trans[OF prio_ucast_shiftr_wordRadix_helper]; simp)
-
-lemma dom_less_0x10_helper:
-  "d \<le> maxDomain \<Longrightarrow> (ucast d :: machine_word) < 0x10"
-  unfolding maxDomain_def numDomains_def
-  by (clarsimp simp add: word_less_nat_alt unat_ucast_upcast is_up word_le_nat_alt)
-
 lemma cready_queues_index_to_C_ucast_helper:
   fixes p :: priority
   fixes d :: domain
@@ -1023,30 +960,6 @@ lemma carch_state_relation_enqueue_simp:
    carch_state_relation (ksArchState \<sigma>) (t_hrs_'_update f (globals \<sigma>'))"
   unfolding carch_state_relation_def
   by clarsimp
-
-(* FIXME move to lib/Eisbach_Methods *)
-(* FIXME consider printing error on solve goal apply *)
-context
-begin
-
-private definition "bool_protect (b::bool) \<equiv> b"
-
-lemma bool_protectD:
-  "bool_protect P \<Longrightarrow> P"
-  unfolding bool_protect_def by simp
-
-lemma bool_protectI:
-  "P \<Longrightarrow> bool_protect P"
-  unfolding bool_protect_def by simp
-
-(*
-  When you want to apply a rule/tactic to transform a potentially complex goal into another
-  one manually, but want to indicate that any fresh emerging goals are solved by a more
-  brutal method.
-  E.g. apply (solves_emerging \<open>frule x=... in my_rule\<close>\<open>fastforce simp: ... intro!: ... \<close>  *)
-method solves_emerging methods m1 m2 = (rule bool_protectD, (m1 ; (rule bool_protectI | (m2; fail))))
-
-end
 
 lemma t_hrs_ksReadyQueues_upd_absorb:
   "t_hrs_'_update f (g s) \<lparr>ksReadyQueues_' := rqupd \<rparr> =
@@ -1375,10 +1288,6 @@ lemma rf_sr_drop_bitmaps_dequeue_helper:
              carch_state_relation_def cmachine_state_relation_def
   by (clarsimp simp: rf_sr_cbitmap_L1_relation rf_sr_cbitmap_L2_relation)
 
-lemma filter_empty_unfiltered_contr:
-  "\<lbrakk> [x\<leftarrow>xs . x \<noteq> y] = [] ; x' \<in> set xs ; x' \<noteq> y \<rbrakk> \<Longrightarrow> False"
-  by (induct xs, auto split: if_split_asm)
-
 (* FIXME same proofs as bit_set, maybe can generalise? *)
 lemma cbitmap_L1_relation_bit_clear:
   fixes p :: priority
@@ -1419,16 +1328,6 @@ lemma cbitmap_L2_relationD:
     cbitmap2.[unat d].[i] = abitmap2 (d, i)"
   unfolding cbitmap_L2_relation_def l2BitmapSize_def'
   by clarsimp
-
-(* FIXME move *)
-lemma filter_noteq_op:
-  "[x \<leftarrow> xs . x \<noteq> y] = filter ((\<noteq>) y) xs"
-  by (induct xs) auto
-
-(* FIXME move *)
-lemma all_filter_propI:
-  "\<forall>x\<in>set lst. P x \<Longrightarrow> \<forall>x\<in>set (filter Q lst). P x"
-  by (induct lst, auto)
 
 lemma cbitmap_L2_relation_bit_clear:
   fixes p :: priority
@@ -2020,8 +1919,8 @@ lemma true_eq_from_bool [simp]:
   "(scast true = from_bool P) = P"
   by (simp add: true_def from_bool_def split: bool.splits)
 
-lemma isBlocked_spec:
-  "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter> {s. cslift s (thread_' s) \<noteq> None}) Call isBlocked_'proc
+lemma isStopped_spec:
+  "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter> {s. cslift s (thread_' s) \<noteq> None}) Call isStopped_'proc
        {s'. ret__unsigned_long_' s' = from_bool (tsType_CL (thread_state_lift (tcbState_C (the (cslift s (thread_' s))))) \<in>
                             {scast ThreadState_BlockedOnReply,
                              scast ThreadState_BlockedOnNotification, scast ThreadState_BlockedOnSend,
@@ -2503,7 +2402,7 @@ lemma scheduleTCB_ccorres':
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  cscheduler_action_relation_def)
           apply wp+
-     apply (simp add: isRunnable_def isBlocked_def)
+     apply (simp add: isRunnable_def isStopped_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply clarsimp
@@ -2559,7 +2458,7 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
            apply (clarsimp simp: rf_sr_def cstate_relation_def cscheduler_action_relation_def
                            split: scheduler_action.split_asm)
           apply wp+
-     apply (simp add: isRunnable_def isBlocked_def)
+     apply (simp add: isRunnable_def isStopped_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
@@ -2650,7 +2549,7 @@ lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  cscheduler_action_relation_def)
           apply wp+
-     apply (simp add: isRunnable_def isBlocked_def)
+     apply (simp add: isRunnable_def isStopped_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply clarsimp

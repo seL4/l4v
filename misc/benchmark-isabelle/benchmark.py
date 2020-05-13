@@ -11,11 +11,12 @@ import optparse
 import re
 import sys
 
+
 def main():
     # Parse arguments.
     parser = optparse.OptionParser(usage="usage: %prog [options] <thy file>")
     parser.add_option("-v", "--verbose", dest="verbose",
-            help="Show Isabelle output", action="store_true", default=False)
+                      help="Show Isabelle output", action="store_true", default=False)
     (options, args) = parser.parse_args()
     if len(args) != 1:
         parser.error("Expected a single argument containing the Isabelle theory file to run.")
@@ -27,7 +28,7 @@ def main():
 
     # Run Isabelle.
     process = pexpect.spawn('isabelle-process',
-            ['-r', '-q', '-f', '-e', 'use_thy \"%s\";' % filename, "Benchmark"], timeout=None)
+                            ['-r', '-q', '-f', '-e', 'use_thy \"%s\";' % filename, "Benchmark"], timeout=None)
     if not options.verbose:
         process.logfile = None
     else:
@@ -47,7 +48,7 @@ def main():
             re.compile('^category:: (.*)$', re.MULTILINE),
             re.compile('^\*\*\* (.*)$', re.MULTILINE),
             pexpect.EOF
-            ])
+        ])
         if result == 0:
             # Benchmark result.
             print("    " + process.match.group(1).strip("\r\n"))
@@ -73,6 +74,7 @@ def main():
         print("Errors during benchmark process.")
         sys.exit(1)
     sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

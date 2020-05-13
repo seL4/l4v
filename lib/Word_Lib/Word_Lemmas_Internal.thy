@@ -17,6 +17,10 @@ theory Word_Lemmas_Internal
 imports Word_Lemmas
 begin
 
+lemma signed_ge_zero_scast_eq_ucast:
+ "0 <=s x \<Longrightarrow> scast x = ucast x"
+  by (simp add: scast_eq_ucast word_sle_msb_le)
+
 (* FIXME: move out of Word_Lib *)
 lemma disjCI2:
   "(\<not> P \<Longrightarrow> Q) \<Longrightarrow> P \<or> Q"

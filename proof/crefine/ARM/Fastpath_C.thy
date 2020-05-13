@@ -2692,6 +2692,7 @@ lemma fastpath_reply_recv_ccorres:
      automatic indentation is improved *)
   show ?thesis
   using [[goals_limit = 1]]
+  supply option.case_cong_weak[cong del]
   apply (cinit lift: cptr_' msgInfo_')
      apply (simp add: catch_liftE_bindE unlessE_throw_catch_If
                       unifyFailure_catch_If catch_liftE
@@ -4195,14 +4196,11 @@ lemma modify_setEndpoint_pivot[unfolded K_bind_def]:
 lemma setEndpoint_clearUntypedFreeIndex_pivot[unfolded K_bind_def]:
   "do setEndpoint p val; v <- clearUntypedFreeIndex slot; f od
      = do v <- clearUntypedFreeIndex slot; setEndpoint p val; f od"
-  by (simp add: clearUntypedFreeIndex_def bind_assoc
-                getSlotCap_def
-                setEndpoint_getCTE_pivot
-                updateTrackedFreeIndex_def
-                modify_setEndpoint_pivot
+  supply option.case_cong_weak[cong del]
+  by (simp add: clearUntypedFreeIndex_def bind_assoc getSlotCap_def setEndpoint_getCTE_pivot
+                updateTrackedFreeIndex_def modify_setEndpoint_pivot
          split: capability.split
-          | rule bind_cong[OF refl] allI impI
-                 bind_apply_cong[OF refl])+
+      | rule bind_cong[OF refl] allI impI bind_apply_cong[OF refl])+
 
 lemma emptySlot_setEndpoint_pivot[unfolded K_bind_def]:
   "(do emptySlot slot NullCap; setEndpoint p val; f od) =
@@ -4453,8 +4451,9 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
          and cnode_caps_gsCNodes')
      (callKernel (SyscallEvent SysReplyRecv)) (fastpaths SysReplyRecv)"
   including no_pre
+  supply option.case_cong_weak[cong del]
   apply (rule monadic_rewrite_introduce_alternative)
-   apply ( simp add: callKernel_def)
+   apply (simp add: callKernel_def)
   apply (rule monadic_rewrite_imp)
    apply (simp add: handleEvent_def handleReply_def
                     handleRecv_def liftE_bindE_handle liftE_handle

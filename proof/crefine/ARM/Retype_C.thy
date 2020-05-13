@@ -5341,6 +5341,7 @@ lemma pspace_no_overlap_induce_cte:
     is_aligned ptr bits; bits < word_bits;
     pspace_no_overlap' ptr bits s\<rbrakk>
    \<Longrightarrow> {ptr_val xa..+size_of TYPE(cte_C)} \<inter> {ptr..+2 ^ bits} = {}"
+  supply cteSizeBits_le_cte_level_bits[simp del]
   apply (clarsimp simp: cpspace_relation_def)
   apply (clarsimp simp: cmap_relation_def size_of_def)
   apply (subgoal_tac "xa\<in>cte_Ptr ` dom (ctes_of s)")

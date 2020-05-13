@@ -1,0 +1,18 @@
+#
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+
+# We start every pattern with *, because the paths have to match
+# absolute as well as relative from the repo top.
+
+# ignore generated and parse test files
+*camkes/glue-proofs/*.c
+*tools/autocorres/tests/parse-tests/*
+*tools/c-parser/testfiles/*
+*spec/cspec/c/build/*
+
+# separate repositories
+*isabelle/*
+*internal/*

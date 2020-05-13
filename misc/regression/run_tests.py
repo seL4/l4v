@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
@@ -46,6 +46,7 @@ ANSI_YELLOW = "\033[33m"
 ANSI_WHITE = "\033[37m"
 ANSI_BOLD = "\033[1m"
 
+
 def output_color(color, s):
     """Wrap the given string in the given color."""
     if sys.stdout.isatty():
@@ -53,6 +54,8 @@ def output_color(color, s):
     return s
 
 # Find a command in the PATH.
+
+
 def which(filename):
     for path in os.environ["PATH"].split(os.pathsep):
         candidate = os.path.join(path, filename)
@@ -66,6 +69,8 @@ def which(filename):
 # We attempt to handle races where a PID goes away while we
 # are looking at it, but not where a PID has been reused.
 #
+
+
 def kill_family(grace_period, parent_pid):
     # Find process.
     try:
@@ -117,7 +122,7 @@ def kill_family(grace_period, parent_pid):
  SKIPPED,     # Failed dependencies
  ERROR,       # Failed to run test at all
  TIMEOUT,     # Wall timeout
- CPU_TIMEOUT, # CPU timeout
+ CPU_TIMEOUT,  # CPU timeout
  STUCK,       # No CPU activity detected
  CANCELLED    # Cancelled for external reasons
  ) = range(9)
@@ -133,6 +138,7 @@ status_name = ['RUNNING (***bug***)',
                'STUCK',
                'CANCELLED']
 status_maxlen = max(len(s) for s in status_name[1:]) + len(" *")
+
 
 def run_test(test, status_queue, kill_switch,
              verbose=False, stuck_timeout=None,
@@ -180,8 +186,8 @@ def run_test(test, status_queue, kill_switch,
     peak_mem_usage = None
     try:
         process = subprocess.Popen(command,
-                stdout=output, stderr=subprocess.STDOUT, stdin=subprocess.PIPE,
-                cwd=test.cwd)
+                                   stdout=output, stderr=subprocess.STDOUT, stdin=subprocess.PIPE,
+                                   cwd=test.cwd)
     except:
         output = "Exception while running test:\n\n%s" % (traceback.format_exc())
         if verbose:
@@ -235,9 +241,9 @@ def run_test(test, status_queue, kill_switch,
     scaled_cpu_timeout = test.cpu_timeout * timeout_scale
     with cpuusage.process_poller(process.pid) as c:
         # Inactivity timeout
-        low_cpu_usage = 0.05 # 5%
-        cpu_history = collections.deque() # sliding window
-        cpu_usage_total = [0] # workaround for variable scope
+        low_cpu_usage = 0.05  # 5%
+        cpu_history = collections.deque()  # sliding window
+        cpu_usage_total = [0]  # workaround for variable scope
 
         # Also set a CPU timeout. We poll the cpu usage periodically.
         def cpu_timeout():
@@ -305,7 +311,7 @@ def run_test(test, status_queue, kill_switch,
         timer.cancel()
 
     if output is None:
-        output = ""
+        output = b''
     output = output.decode(encoding='utf8', errors='replace')
     if test_status[0] in [STUCK, TIMEOUT, CPU_TIMEOUT]:
         output = output + extra_timeout_output(test.name)
@@ -318,23 +324,28 @@ def run_test(test, status_queue, kill_switch,
                       'mem_usage': peak_mem_usage})
 
 # run a heuristic script for getting some output on a timeout
+
+
 def extra_timeout_output(test_name):
     # we expect the script to be in the same directory as run_tests.py
     here = os.path.dirname(os.path.abspath(__file__))
     command = [os.path.join(here, 'timeout_output'), test_name]
     try:
         process = subprocess.Popen(command,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (output, _) = process.communicate()
         return output.decode('utf8')
     except Exception as e:
         return ("Exception launching timeout_output: %s" % str(e))
 
 # Print a status line.
+
+
 def print_test_line_start(test_name):
     if sys.stdout.isatty():
         print("  Started %-25s " % (test_name + " ..."))
         sys.stdout.flush()
+
 
 def print_test_line(test_name, color, status, real_time=None, cpu_time=None, mem=None):
     if mem is not None:
@@ -365,6 +376,8 @@ def print_test_line(test_name, color, status, real_time=None, cpu_time=None, mem
 #
 # Recursive glob
 #
+
+
 def rglob(base_dir, pattern):
     matches = []
     extras = []
@@ -374,11 +387,13 @@ def rglob(base_dir, pattern):
         for filename in fnmatch.filter(filenames, 'extra_tests'):
             f = os.path.join(root, filename)
             extras.extend([os.path.join(root, l.strip())
-                for l in open(f) if l.strip()])
+                           for l in open(f) if l.strip()])
     matches.extend([f for e in extras for f in rglob(e, pattern)])
     return sorted(set(matches))
 
 # Print info about tests.
+
+
 def print_tests(msg, tests, verbose):
     if verbose:
         print('%d tests %s:' % (len(tests), msg))
@@ -388,6 +403,7 @@ def print_tests(msg, tests, verbose):
             print('  #> cd ' + t.cwd)
             print('  #> ' + t.command)
             print('  -- depends: %s' % list(t.depends))
+
 
 def print_test_deps(tests):
     print('digraph "tests" {')
@@ -399,47 +415,49 @@ def print_test_deps(tests):
 #
 # Run tests.
 #
+
+
 def main():
     # Parse arguments
     parser = argparse.ArgumentParser(description="Parallel Regression Framework",
                                      epilog="RUN_TESTS_DEFAULT can be used to overwrite the default set of tests")
     parser.add_argument("-d", "--directory", action="store",
-            metavar="DIR", help="directory to search for test files",
-            default=os.getcwd())
+                        metavar="DIR", help="directory to search for test files",
+                        default=os.getcwd())
     parser.add_argument("--brief", action="store_true",
-            help="don't print failure logs at end of test run")
+                        help="don't print failure logs at end of test run")
     parser.add_argument("-f", "--fail-fast", action="store_true",
-            help="exit once the first failure is detected")
+                        help="exit once the first failure is detected")
     parser.add_argument("-j", "--jobs", type=int, default=1,
-            help="Number of tests to run in parallel")
+                        help="Number of tests to run in parallel")
     parser.add_argument("-l", "--list", action="store_true",
-            help="list all known tests (-v for details)")
+                        help="list all known tests (-v for details)")
     parser.add_argument("-L", "--dry-run", action="store_true",
-            help="list tests to be run (-v for details)")
+                        help="list tests to be run (-v for details)")
     parser.add_argument("--no-dependencies", action="store_true",
-            help="don't check for dependencies when running specific tests")
+                        help="don't check for dependencies when running specific tests")
     parser.add_argument("-x", "--exclude", action="append", metavar="TEST", default=[],
-            help="exclude the given test; tests depending on it may still run")
+                        help="exclude the given test; tests depending on it may still run")
     parser.add_argument("-r", "--remove", action="append", metavar="TEST", default=[],
-            help="remove the given test and tests that depend on it")
+                        help="remove the given test and tests that depend on it")
     parser.add_argument("-v", "--verbose", action="store_true",
-            help="print test output or list more details")
+                        help="print test output or list more details")
     parser.add_argument("--dot", action="store_true",
-            help="for -l or -L, output test dependencies in GraphViz format")
+                        help="for -l or -L, output test dependencies in GraphViz format")
     parser.add_argument("--junit-report", metavar="FILE",
-            help="write JUnit-style test report")
+                        help="write JUnit-style test report")
     parser.add_argument("--stuck-timeout", type=int, default=600, metavar='N',
-            help="timeout tests if not using CPU for N seconds (default: 600)")
+                        help="timeout tests if not using CPU for N seconds (default: 600)")
     timeout_mod_args = parser.add_mutually_exclusive_group()
     timeout_mod_args.add_argument("--scale-timeouts", type=float, default=1, metavar='N',
-            help="multiply test timeouts by N (e.g. 2 provides twice as much time)")
+                                  help="multiply test timeouts by N (e.g. 2 provides twice as much time)")
     timeout_mod_args.add_argument("--no-timeouts", action="store_true",
-            help="do not enforce any test timeouts")
+                                  help="do not enforce any test timeouts")
     parser.add_argument("--grace-period", type=float, default=5, metavar='N',
-            help="interrupt over-time processes N seconds before killing them (default: 5)")
+                        help="interrupt over-time processes N seconds before killing them (default: 5)")
     parser.add_argument("tests", metavar="TESTS",
-            help="select these tests to run (defaults to all tests)",
-            nargs="*")
+                        help="select these tests to run (defaults to all tests)",
+                        nargs="*")
     args = parser.parse_args()
 
     if args.jobs < 1:
@@ -465,11 +483,13 @@ def main():
     desired_names = set(args.tests) or set(os.environ.get('RUN_TESTS_DEFAULT', '').split())
     bad_names = desired_names - set([t.name for t in all_tests])
     if bad_names:
-        parser.error("These tests are requested, but do not exist: %s" % (", ".join(sorted(bad_names))))
+        parser.error("These tests are requested, but do not exist: %s" %
+                     (", ".join(sorted(bad_names))))
 
     def get_tests(names):
         '''Given a set of names, return the corresponding set of Tests.'''
         return {t for t in all_tests if t.name in names}
+
     def add_deps(x):
         '''Given a set of Tests, add all dependencies to it.'''
         x.update({t for w in x for t in add_deps(get_tests(w.depends))})
@@ -508,7 +528,8 @@ def main():
 
     bad_names = set.union(exclude_tests, set(args.remove)) - {t.name for t in all_tests}
     if bad_names:
-        sys.stderr.write("Warning: These tests are excluded/removed, but do not exist: %s\n" % (", ".join(sorted(bad_names))))
+        sys.stderr.write("Warning: These tests are excluded/removed, but do not exist: %s\n" %
+                         (", ".join(sorted(bad_names))))
 
     if args.dry_run:
         if args.dot:
@@ -534,6 +555,7 @@ def main():
     # current jobs on the bottom line of the tty.
     # We cache this status line to help us wipe it later.
     tty_status_line = [""]
+
     def wipe_tty_status():
         if tty_status_line[0]:
             print(" " * len(tty_status_line[0]) + "\r", end="")
@@ -584,7 +606,7 @@ def main():
         # Wait for jobs to complete.
         try:
             while True:
-                info = status_queue.get(block=True, timeout=0.1337) # Built-in pause
+                info = status_queue.get(block=True, timeout=0.1337)  # Built-in pause
                 name, status = info['name'], info['status']
 
                 test_results[name] = info
@@ -615,6 +637,7 @@ def main():
     # Print failure summaries unless requested not to.
     if not args.brief and len(failed_tests) > 0:
         LINE_LIMIT = 40
+
         def print_line():
             print("".join(["-" for x in range(72)]))
         print("")
@@ -677,8 +700,8 @@ def main():
 
     # Print summary.
     print(("\n\n"
-            + output_color(ANSI_WHITE, "%d/%d tests succeeded.") + "\n")
-            % (len(tests_to_run) - len(failed_tests), len(tests_to_run)))
+           + output_color(ANSI_WHITE, "%d/%d tests succeeded.") + "\n")
+          % (len(tests_to_run) - len(failed_tests), len(tests_to_run)))
     if len(failed_tests) > 0:
         print(output_color(ANSI_RED, "Tests failed.") + "\n")
         if kill_switch.is_set():

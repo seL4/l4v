@@ -6,7 +6,8 @@
 
 theory CLevityCatch
 imports
-  Include_C
+  "../Include_C"
+  ArchMove_C
   "CLib.LemmaBucket_C"
   "Lib.LemmaBucket"
 begin
@@ -23,19 +24,8 @@ lemmas typ_heap_simps' = typ_heap_simps c_guard_clift
 
 lemmas asUser_return = submonad.return [OF submonad_asUser]
 
-lemma setMRs_Nil:
-  "setMRs thread buffer [] = stateAssert (tcb_at' thread) [] >>= (\<lambda>_. return 0)"
-  unfolding setMRs_def
-  by (simp add: zipWithM_x_def sequence_x_def zipWith_def
-                asUser_return)
-
 lemmas asUser_bind_distrib =
   submonad_bind [OF submonad_asUser submonad_asUser submonad_asUser]
-
-lemma ps_clear_upd_None:
-  "ksPSpace s y = None \<Longrightarrow>
-    ps_clear x n (ksPSpace_update (\<lambda>a. (ksPSpace s)(y := None)) s') = ps_clear x n s"
-  by (rule iffI | clarsimp elim!: ps_clear_domE | fastforce)+
 
 lemma ntfnQueue_head_mask_4 :
   "ntfnQueue_head_CL (notification_lift ko') && ~~ mask 4 = ntfnQueue_head_CL (notification_lift ko')"
@@ -68,13 +58,6 @@ lemma no_overlap_new_cap_addrs_disjoint:
   apply auto
   done
 
-lemma empty_fail_asUser[iff]:
-  "empty_fail m \<Longrightarrow> empty_fail (asUser t m)"
-  apply (simp add: asUser_def split_def)
-  apply (intro empty_fail_bind, simp_all)
-  apply (simp add: select_f_def empty_fail_def)
-  done
-
 declare empty_fail_doMachineOp [simp]
 
 lemma empty_fail_loadWordUser[intro!, simp]:
@@ -84,20 +67,6 @@ lemma empty_fail_loadWordUser[intro!, simp]:
 lemma empty_fail_getMRs[iff]:
   "empty_fail (getMRs t buf mi)"
   by (auto simp add: getMRs_def split: option.split)
-
-lemma asUser_mapM_x:
-  "(\<And>x. empty_fail (f x)) \<Longrightarrow>
-    asUser t (mapM_x f xs) = do stateAssert (tcb_at' t) []; mapM_x (\<lambda>x. asUser t (f x)) xs od"
-  apply (simp add: mapM_x_mapM asUser_bind_distrib)
-  apply (subst submonad_mapM [OF submonad_asUser submonad_asUser])
-   apply simp
-  apply (simp add: asUser_return bind_assoc o_def)
-  apply (rule ext)
-  apply (rule bind_apply_cong [OF refl])+
-  apply (clarsimp simp: in_monad dest!: fst_stateAssertD)
-  apply (drule use_valid, rule mapM_wp', rule asUser_typ_ats, assumption)
-  apply (simp add: stateAssert_def get_def NonDetMonad.bind_def)
-  done
 
 lemma asUser_get_registers:
   "\<lbrace>tcb_at' target\<rbrace>
@@ -128,54 +97,6 @@ lemma projectKO_user_data_device:
   "(projectKO_opt ko = Some (t :: user_data_device)) = (ko = KOUserDataDevice)"
   by (cases ko)
      (auto simp: projectKO_opts_defs split: arch_kernel_object.splits)
-
-lemma device_data_at_ko:
-  "typ_at' UserDataDeviceT p s \<Longrightarrow> ko_at' UserDataDevice p s"
-  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def
-    projectKO_user_data_device projectKO_eq projectKO_eq2)
-  apply (case_tac ko, auto)
-  done
-
-(* FIXME: move *)
-lemma user_data_at_ko:
-  "typ_at' UserDataT p s \<Longrightarrow> ko_at' UserData p s"
-  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def projectKOs)
-  apply (case_tac ko, auto)
-  done
-
-(* FIXME: move *)
-lemma map_to_ko_atI:
-  "\<lbrakk>(projectKO_opt \<circ>\<^sub>m ksPSpace s) x = Some v;
-    pspace_aligned' s; pspace_distinct' s\<rbrakk>
-   \<Longrightarrow> ko_at' v x s"
-  apply (clarsimp simp: map_comp_Some_iff)
-  apply (erule (2) aligned_distinct_obj_atI')
-  apply (simp add: project_inject)
-  done
-
-lemma empty_fail_rethrowFailure:
-  "empty_fail f \<Longrightarrow> empty_fail (rethrowFailure fn f)"
-  apply (simp add: rethrowFailure_def handleE'_def)
-  apply (erule empty_fail_bind)
-  apply (simp split: sum.split)
-  done
-
-lemma empty_fail_resolveAddressBits:
-  "empty_fail (resolveAddressBits cap cptr bits)"
-proof -
-  note empty_fail_assertE[iff]
-  show ?thesis
-  apply (rule empty_fail_use_cutMon)
-  apply (induct rule: resolveAddressBits.induct)
-  apply (subst resolveAddressBits.simps)
-  apply (unfold Let_def cnode_cap_case_if fun_app_def
-                K_bind_def haskell_assertE_def split_def)
-  apply (intro empty_fail_cutMon_intros)
-  apply (clarsimp simp: empty_fail_drop_cutMon empty_fail_whenEs
-                        locateSlot_conv returnOk_liftE[symmetric]
-                        isCap_simps)+
-  done
-qed
 
 lemma empty_fail_getReceiveSlots:
   "empty_fail (getReceiveSlots r rbuf)"

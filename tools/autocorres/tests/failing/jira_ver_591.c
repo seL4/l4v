@@ -13,19 +13,20 @@
  * Jira issue VER-591.
  */
 
-int fact(int n) {
-  int r = 1;
-  for (;; n--) {
-    if (n > 0) {
-      r *= n;
-    } else {
-      if (n == 0) {
-        break;
-      } else {
-        return 0;
-      }
-      /* [1] ... over here */
+int fact(int n)
+{
+    int r = 1;
+    for (;; n--) {
+        if (n > 0) {
+            r *= n;
+        } else {
+            if (n == 0) {
+                break;
+            } else {
+                return 0;
+            }
+            /* [1] ... over here */
+        }
     }
-  }
-  return r;
+    return r;
 }

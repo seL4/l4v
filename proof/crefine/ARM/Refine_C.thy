@@ -627,12 +627,6 @@ lemma ccorres_get_registers:
                         "StrictC'_register_defs")
   done
 
-(* FIXME: move *)
-lemma st_tcb_at'_opeq_simp:
-  "st_tcb_at' ((=) Structures_H.thread_state.Running) (ksCurThread s) s
-    = st_tcb_at' (\<lambda>st. st = Structures_H.thread_state.Running) (ksCurThread s) s"
-  by (fastforce simp add: st_tcb_at'_def obj_at'_def)
-
 
 lemma callKernel_withFastpath_corres_C:
   "corres_underlying rf_sr False True dc
@@ -790,26 +784,6 @@ lemma full_invs_both:
   done
 end
 
-(* FIXME: move to somewhere sensible *)
-lemma dom_eq:
-  "dom um = dom um' \<longleftrightarrow> (\<forall>a. um a = None \<longleftrightarrow> um' a = None)"
-  apply (simp add: dom_def del: not_None_eq)
-  apply (rule iffI)
-   apply (rule allI)
-   apply (simp add: set_eq_iff)
-   apply (drule_tac x=a in spec)
-   apply auto
-done
-
-lemma dom_user_mem':
-  "dom (user_mem' s) = {p. typ_at' UserDataT (p && ~~ mask pageBits) s}"
-  by (clarsimp simp:user_mem'_def dom_def pointerInUserData_def split:if_splits)
-
-(* FIXME:move *)
-lemma dom_device_mem':
-  "dom (device_mem' s) = {p. typ_at' UserDataDeviceT (p && ~~ mask pageBits) s}"
-  by (clarsimp simp: device_mem'_def dom_def pointerInDeviceData_def split: if_splits)
-
 context kernel_m
 begin
 
@@ -825,28 +799,29 @@ lemma user_memory_update_corres_C_helper:
                     [p\<leftarrow>e. p \<in> dom um],
                    snd (t_hrs_' (globals b)))\<rparr>\<rparr>)
            \<in> rf_sr"
-apply (induct e)
- apply simp
- apply (subgoal_tac
-          "ksMachineState_update (underlying_memory_update (\<lambda>m. m)) a = a")
-  apply (simp (no_asm_simp))
- apply simp
-apply (rename_tac x xs)
-apply (simp add: foldl_fun_upd_eq_foldr)
-apply (case_tac "x \<in> dom um", simp_all)
-apply (frule_tac ptr=x and b="the (um x)" in storeByteUser_rf_sr_upd)
+  apply (induct e)
    apply simp
-  apply simp
- apply (thin_tac "(x,y) : rf_sr" for x y)+
- apply (fastforce simp add: pointerInUserData_def dom_user_mem')
-apply (simp add: o_def hrs_mem_update_def)
-done
+   apply (subgoal_tac
+            "ksMachineState_update (underlying_memory_update (\<lambda>m. m)) a = a")
+    apply (simp (no_asm_simp))
+   apply simp
+  apply (rename_tac x xs)
+  apply (simp add: foldl_fun_upd_eq_foldr)
+  apply (case_tac "x \<in> dom um", simp_all)
+  apply (frule_tac ptr=x and b="the (um x)" in storeByteUser_rf_sr_upd)
+     apply simp
+    apply simp
+   apply (thin_tac "(x,y) : rf_sr" for x y)+
+   apply (fastforce simp add: pointerInUserData_def dom_user_mem')
+  apply (simp add: o_def hrs_mem_update_def)
+  done
 
 lemma user_memory_update_corres_C:
   "corres_underlying rf_sr False nf (%_ _. True)
      (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> dom um \<subseteq> dom (user_mem' s))
      \<top>
      (doMachineOp (user_memory_update um)) (setUserMem_C um)"
+  supply option.case_cong_weak[cong]
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
    prefer 2
@@ -856,7 +831,7 @@ lemma user_memory_update_corres_C:
         modify (ksMachineState_update (underlying_memory_update
                  (\<lambda>m. foldl (\<lambda>f p. f(p := the (um p))) m [p\<leftarrow>enum. p \<in> dom um])))
                a")
-  prefer 2
+   prefer 2
    apply (clarsimp simp add: doMachineOp_def user_memory_update_def
                              simpler_modify_def simpler_gets_def select_f_def
                              NonDetMonad.bind_def return_def)

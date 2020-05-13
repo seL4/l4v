@@ -39,7 +39,7 @@ typedef struct mct_global_map {
     uint32_t int_en;         /* 0x248 Interrupt enable */
     uint32_t wstat;          /* 0x24C  write status */
     uint32_t reserved3[44];
-}mct_global_map;
+} mct_global_map;
 
 struct mct_local_map {
     uint32_t tcompl;         /* 0x00 */

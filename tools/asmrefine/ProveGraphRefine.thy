@@ -849,6 +849,7 @@ fun graph_refine_proof_tacs csenv ctxt = let
                         fold_all_htd_updates
                         array_assertion_shrink_right
                         sdiv_word_def sdiv_int_def
+                        signed_ge_zero_scast_eq_ucast
                         unatSuc[OF less_is_non_zero_p1'] unatSuc2[OF less_is_non_zero_p1]
                         less_shift_targeted_cast_convs
                 } delsimps @{thms ptr_val_inj})),
@@ -897,8 +898,12 @@ fun simpl_to_graph_thm funs csenv ctxt nm = let
     val _ = if Thm.nprems_of res_thm = 0 then ()
         else raise THM ("simpl_to_graph_thm: unsolved subgoals", 1, [res_thm])
     (* FIXME: make the hidden assumptions of the thm appear again *)
-  in res_thm end handle TERM (s, ts) => raise TERM ("simpl_to_graph_thm: " ^ nm
+  in res_thm end
+    handle
+      TERM (s, ts) => raise TERM ("simpl_to_graph_thm: " ^ nm
         ^ ": " ^ s, ts)
+    | THM (s, idx, ts) => raise THM ("simpl_to_graph_thm: " ^ nm
+        ^ ": " ^ s, idx, ts)
 
 fun test_graph_refine_proof funs csenv ctxt nm = case
     Symtab.lookup funs nm of SOME (_, _, NONE) => ("skipped " ^ nm, @{thm TrueI})
@@ -960,8 +965,11 @@ fun test_graph_refine_proof_with_def funs csenv ctxt dbg nm =
         val ctxt = define_graph_fun_short funs nm ctxt
         fun try_proof nm =
             (simpl_to_graph_thm funs csenv ctxt nm; insert dbg #successes nm)
-            handle TERM (message, data) =>
-              (insert dbg #failures nm; raise TERM ("failure for " ^ nm ^ ": " ^ message, data));
+            handle
+              TERM (message, data) =>
+                (insert dbg #failures nm; raise TERM ("failure for " ^ nm ^ ": " ^ message, data))
+            | THM (message, idx, data) =>
+                (insert dbg #failures nm; raise THM ("failure for " ^ nm ^ ": " ^ message, idx, data));
         val (time, _) = Timing.timing try_proof nm
       in "success on " ^ nm ^ "  [" ^ Timing.message time ^ "]" end
 
@@ -979,7 +987,9 @@ fun test_all_graph_refine_proofs_parallel funs csenv ctxt dbg = let
     val ss = Symtab.keys funs |> filter_fns dbg
     fun test_and_log nm =
         (test_graph_refine_proof_with_def funs csenv ctxt dbg nm |> writeln)
-        handle TERM (msg, _) => warning msg
+        handle
+          TERM (msg, _) => warning msg
+        | THM (msg, _, _) => warning msg
     val (time, _) = Timing.timing (Par_List.map test_and_log) ss
     val time_msg = " [" ^ Timing.message time ^ "]"
   in

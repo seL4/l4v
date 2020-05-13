@@ -1,7 +1,7 @@
 <!--
      Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 
-     SPDX-License-Identifier: BSD-2-Clause
+     SPDX-License-Identifier: CC-BY-SA-4.0
 -->
 
 [![DOI][0]](http://dx.doi.org/10.5281/zenodo.591732)
@@ -38,7 +38,7 @@ On **Buster** or **Bullseye**, to run all the tests against the
 **ARMv7-A** architecture you will need to install the following packages:
 ```bash
 sudo apt-get install \
-    python python-pip python-dev python3 python3-pip python3-dev \
+    python3 python3-pip python3-dev \
     gcc-arm-none-eabi build-essential libxml2-utils ccache \
     ncurses-dev librsvg2-bin device-tree-compiler cmake \
     ninja-build curl zlib1g-dev texlive-fonts-recommended \
@@ -58,7 +58,7 @@ On **Ubuntu 18.04**, to run all the tests against the **ARMv7-A**
 architecture you will need to install the following packages:
 ```bash
 sudo apt-get install \
-    python python-pip python-dev python3 python3-pip python3-dev \
+    python3 python3-pip python3-dev \
     gcc-arm-none-eabi build-essential libxml2-utils ccache \
     ncurses-dev librsvg2-bin device-tree-compiler cmake \
     ninja-build curl zlib1g-dev texlive-fonts-recommended \
@@ -69,8 +69,6 @@ sudo apt-get install \
 ### Python
 The build system for the seL4 kernel requires several python packages:
 ```bash
-sudo pip install --upgrade pip
-sudo pip install sel4-deps
 sudo pip3 install --upgrade pip
 sudo pip3 install sel4-deps
 ```
@@ -302,14 +300,4 @@ run
     ./isabelle/bin/isabelle jedit -d . -l ASpec
 
 in `l4v/` and open one of the files in `proof/invariant-abstract`.
-
-
-License
--------
-
-The files in this repository are released under standard open source
-licenses. Please see the individual file headers and
-[`LICENSE_GPLv2.txt`](LICENSE_GPLv2.txt) and
-[`LICENSE_BSD2.txt`](LICENSE_BSD2.txt) files for details.
-
 

@@ -992,12 +992,6 @@ lemma addrFromPPtr_mask_middle_pml4ShiftBits:
   apply (word_bitwise, clarsimp)
   done
 
-(* FIXME: move *)
-lemma obj_at_kernel_mappings':
-  "\<lbrakk>pspace_in_kernel_mappings' s; obj_at' P p s\<rbrakk> \<Longrightarrow>
-   p \<in> kernel_mappings"
-  by (clarsimp simp: pspace_in_kernel_mappings'_def obj_at'_def dom_def)
-
 lemma decodeX64PageTableInvocation_ccorres:
   "\<lbrakk>interpret_excaps extraCaps' = excaps_map extraCaps; isPageTableCap cp\<rbrakk> \<Longrightarrow>
    ccorres
@@ -1522,20 +1516,6 @@ lemma pte_sadness:
   apply (cases pte', cases pte, simp)
   done
 
-lemma hd_in_zip_set:
-   "slots \<noteq> [] \<Longrightarrow> (hd slots, 0) \<in> set (zip slots [0.e.of_nat (length slots - Suc 0)::machine_word])"
-   by (cases slots; simp add: upto_enum_word upto_0_to_n2 del: upt_Suc)
-
-lemma last_in_zip_set:
-  "\<lbrakk> slots \<noteq> []; length js = length slots \<rbrakk> \<Longrightarrow> (last slots, last js) \<in> set (zip slots js)"
-   apply (simp add: in_set_zip last_conv_nth)
-   apply (rule_tac x="length slots - 1" in exI)
-   apply clarsimp
-   apply (subst last_conv_nth)
-    apply (cases js; simp)
-   apply simp
-   done
-
 definition
   "isVMPTE entry \<equiv> \<exists>x y. entry = (VMPTE x, VMPTEPtr y)"
 
@@ -1869,10 +1849,6 @@ lemma slotcap_in_mem_valid:
   apply (erule(1) ctes_of_valid')
   done
 
-lemma list_length_less:
-  "(args = [] \<or> length args \<le> Suc 0) = (length args < 2)"
-  by (case_tac args,simp_all)
-
 lemma unat_less_iff64:
   "\<lbrakk>unat (a::machine_word) = b;c < 2^word_bits\<rbrakk>
    \<Longrightarrow> (a < of_nat c) = (b < c)"
@@ -1897,25 +1873,10 @@ lemma injection_handler_if_returnOk:
 lemma pbfs_less: "pageBitsForSize sz < 31"
   by (case_tac sz,simp_all add: bit_simps)
 
-lemma at_least_2_args:
-  "\<not>  length args < 2 \<Longrightarrow> \<exists>a b c. args = a#b#c"
-  apply (case_tac args)
-   apply simp
-  apply (case_tac list)
-   apply simp
-  apply (case_tac lista)
-   apply simp
-  apply simp
-  done
-
 definition
   to_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a option"
 where
   "to_option f x \<equiv> if f x then Some x else None"
-
-(* FIXME: move *)
-lemma valid_objs_valid_pte': "\<lbrakk> valid_objs' s ; ko_at' (ko :: pte) p s \<rbrakk> \<Longrightarrow> valid_pte' ko s"
-  by (fastforce simp add: obj_at'_def ran_def valid_obj'_def projectKOs valid_objs'_def)
 
 lemma cte_wp_at_eq_gsMaxObjectSize:
   "cte_wp_at' ((=) cap o cteCap) slot s
@@ -1929,13 +1890,6 @@ lemma cte_wp_at_eq_gsMaxObjectSize:
 lemma two_nat_power_pageBitsForSize_le:
   "(2 :: nat) ^ pageBits \<le> 2 ^ pageBitsForSize vsz"
   by (cases vsz, simp_all add: pageBits_def bit_simps)
-
-(* FIXME: move *)
-lemma is_aligned_pageBitsForSize_minimum:
-  "\<lbrakk> is_aligned p (pageBitsForSize sz) ; n \<le> pageBits \<rbrakk> \<Longrightarrow> is_aligned p n"
-  apply (cases sz; clarsimp simp: pageBits_def)
-  apply (erule is_aligned_weaken, simp)+
-  done
 
 lemma ptrFromPAddr_add_left:
   "ptrFromPAddr (x + y) = ptrFromPAddr x + y"
@@ -2904,22 +2858,10 @@ lemma framesize_from_H_mask2:
       Kernel_C.X64_HugePage_def)+
   done
 
-lemma rel_option_alt_def:
-  "rel_option f a b = (
-      (a = None \<and>  b = None)
-      \<or> (\<exists>x y. a = Some x \<and>  b = Some y \<and> f x y))"
-  apply (case_tac a, case_tac b, simp, simp, case_tac b, auto)
-  done
-
 lemma injection_handler_stateAssert_relocate:
   "injection_handler Inl (stateAssert ass xs >>= f) >>=E g
     = do v \<leftarrow> stateAssert ass xs; injection_handler Inl (f ()) >>=E g od"
   by (simp add: injection_handler_def handleE'_def bind_bindE_assoc bind_assoc)
-
-(* FIXME: move to where is_aligned_ptrFromPAddr is *)
-lemma is_aligned_ptrFromPAddr_pageBitsForSize:
-  "is_aligned p (pageBitsForSize sz) \<Longrightarrow> is_aligned (ptrFromPAddr p) (pageBitsForSize sz)"
-  by (cases sz ; simp add: is_aligned_ptrFromPAddr_n pageBits_def bit_simps)
 
 lemma makeUserPDPTEPageDirectory_spec:
   "\<forall>s. \<Gamma> \<turnstile>
@@ -4838,102 +4780,9 @@ lemma invokeX86PortControl_ccorres:
                         global_ioport_bitmap_relation_def Let_def typ_heap_simps)
   done
 
-lemma unat_length_4_helper:
-  "\<lbrakk>unat (l::machine_word) = length args; \<not> l < 4\<rbrakk> \<Longrightarrow> \<exists>x xa xb xc xs. args = x#xa#xb#xc#xs"
-  apply (case_tac args; clarsimp simp: unat_eq_0)
-  by (rename_tac list, case_tac list, clarsimp, unat_arith)+
-
-lemma ucast_drop_big_mask:
-  "UCAST(64 \<rightarrow> 16) (x && 0xFFFF) = UCAST(64 \<rightarrow> 16) x"
-  by word_bitwise
-
-lemma first_port_last_port_compare:
-  "UCAST(16 \<rightarrow> 32 signed) (UCAST(64 \<rightarrow> 16) (xa && 0xFFFF))
-        <s UCAST(16 \<rightarrow> 32 signed) (UCAST(64 \<rightarrow> 16) (x && 0xFFFF))
-       = (UCAST(64 \<rightarrow> 16) xa < UCAST(64 \<rightarrow> 16) x)"
-  apply (clarsimp simp: word_sless_alt ucast_drop_big_mask)
-  apply (subst sint_ucast_eq_uint, clarsimp simp: is_down)+
-  by (simp add: word_less_alt)
-
 (* FIXME X64: move to state rel? *)
 abbreviation
   "x86KSAllocatedIOPorts_ptr == ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts'')"
-
-(* FIXME X64: use earlier or replace with earlier def? *)
-definition
-  port_mask :: "16 word \<Rightarrow> 16 word \<Rightarrow> machine_word"
-where
-  "port_mask start end =
-     mask (unat (end && mask wordRadix)) && ~~ mask (unat (start && mask wordRadix))"
-
-lemma shiftr_le_mask:
-  fixes w :: "'a::len word"
-  shows "w >> n \<le> mask (LENGTH('a) - n)"
-  by (metis and_mask_eq_iff_shiftr_0 le_mask_iff shiftr_mask_eq word_size)
-
-lemma word_minus_1_shiftr:
-  notes word_unat.Rep_inject[simp del]
-  fixes w :: "'a::len word"
-  assumes low_bits_zero: "w && mask n = 0"
-  assumes neq_zero: "w \<noteq> 0"
-  shows "(w - 1) >> n = (w >> n) - 1"
-  using neq_zero low_bits_zero
-  apply (subgoal_tac "n < LENGTH('a)")
-   prefer 2
-   apply (metis not_less ucast_id ucast_mask_drop)
-  apply (rule_tac t="w - 1" and s="(w && ~~ mask n) - 1" in subst,
-         fastforce simp: low_bits_zero mask_eq_x_eq_0)
-  apply (clarsimp simp: mask_eq_0_eq_x neg_mask_is_div lt1_neq0[symmetric])
-  apply (subst shiftr_div_2n_w, fastforce simp: word_size)+
-  apply (rule word_uint.Rep_eqD)
-  apply (simp only: uint_word_ariths uint_div uint_power_lower)
-  apply (subst mod_pos_pos_trivial, fastforce, fastforce)+
-  apply (subst mod_pos_pos_trivial)
-    apply (fastforce simp: le_diff_eq uint_2p_alt word_le_def)
-   apply (subst uint_1[symmetric])
-   apply (fastforce intro: uint_sub_lt2p)
-  apply (subst int_div_sub_1, fastforce)
-  apply (clarsimp simp: and_mask_dvd low_bits_zero)
-  apply (subst mod_pos_pos_trivial)
-    apply (metis linorder_not_less mult_zero_left shiftr_div_2n shiftr_div_2n_w uint_eq_0
-                 uint_le_0_iff word_less_1 word_uint.Rep_inject word_size zle_diff1_eq)
-   apply (metis shiftr_div_2n uint_1 uint_sub_lt2p)
-  apply fastforce
-  done
-
-(* FIXME: move to Word *)
-lemma ucast_shiftr:
-  "UCAST('a::len \<rightarrow> 'b::len) w >> n = UCAST('a \<rightarrow> 'b) ((w && mask LENGTH('b)) >> n)"
-  apply (rule word_eqI[rule_format]; rule iffI; clarsimp simp: nth_ucast nth_shiftr word_size)
-  done
-
-(* FIXME: move to Word *)
-lemma mask_eq_ucast_shiftr:
-  assumes mask: "w && mask LENGTH('b) = w"
-  shows "UCAST('a::len \<rightarrow> 'b::len) w >> n = UCAST('a \<rightarrow> 'b) (w >> n)"
-  by (rule ucast_shiftr[where 'a='a and 'b='b, of w n, simplified mask])
-
-(* FIXME: move to Word *)
-lemma mask_eq_ucast_shiftl:
-  assumes "w && mask (LENGTH('a) - n) = w"
-  shows "UCAST('a::len \<rightarrow> 'b::len) w << n = UCAST('a \<rightarrow> 'b) (w << n)"
-  apply (rule subst[where P="\<lambda>c. ucast c << n = ucast (c << n)", OF assms])
-  apply (rule word_eqI[rule_format]; rule iffI;
-         clarsimp simp: nth_ucast nth_shiftl word_size;
-         drule test_bit_size; simp add: word_size)
-  done
-
-(* FIXME: replace by mask_mono *)
-lemma mask_le_mono:
-  "m \<le> n \<Longrightarrow> mask m \<le> mask n"
-  apply (subst and_mask_eq_iff_le_mask[symmetric])
-  by (auto intro: word_eqI simp: word_size)
-
-(* FIXME: move to Word *)
-lemma word_and_mask_eq_le_mono:
-  "w && mask m = w \<Longrightarrow> m \<le> n \<Longrightarrow> w && mask n = w"
-  apply (simp add: and_mask_eq_iff_le_mask)
-  by (erule order.trans, erule mask_le_mono)
 
 lemma first_last_highbits_eq_port_set:
   fixes f l :: "16 word"
@@ -5035,10 +4884,6 @@ lemma port_set_in_first_word:
     by (simp add: unat_of_nat)
   done
 
-lemma word_not_exists_nth:
-  "(w::'a::len word) = 0 \<Longrightarrow> \<forall>i<LENGTH('a). \<not> w !! i"
-  by (clarsimp simp: nth_0)
-
 lemma bitmap_word_zero_no_bits_set1:
   fixes f l :: "16 word"
   fixes arr :: "machine_word[1024]"
@@ -5062,34 +4907,6 @@ lemma bitmap_word_zero_no_bits_set1:
   apply (erule disjE; clarsimp simp:word_less_nat_alt)
   done
 
-lemma ucast_shiftl_6_absorb:
-  fixes f l :: "16 word"
-  assumes "f \<le> l"
-  assumes "f >> 6 < l >> 6"
-  shows "UCAST(16\<rightarrow>32 signed) ((f >> 6) + 1) << 6 = UCAST(16 \<rightarrow> 32 signed) (((f >> 6) + 1) << 6)"
-  using assms
-  by (word_bitwise, auto)
-
-(* FIXME: move *)
-lemma word_highbits_bounded_highbits_eq:
-  "\<lbrakk>x \<le> (y :: 'a::len word); y < (x >> n) + 1 << n\<rbrakk> \<Longrightarrow> x >> n  = y >> n"
-  apply (cases "n < LENGTH('a)")
-   prefer 2
-   apply (simp add: shiftr_eq_0)
-  apply (drule_tac n=n in le_shiftr)
-  apply (subst (asm) word_shiftl_add_distrib)
-  apply (drule_tac word_less_sub_1)
-  apply (simp only: add_diff_eq[symmetric] mask_def[symmetric] and_not_mask[symmetric])
-  apply (drule_tac u=y and n=n in le_shiftr)
-  apply (subgoal_tac "(x && ~~ mask n) + mask n >> n \<le> x >> n")
-   apply fastforce
-  apply (subst aligned_shift')
-     apply (fastforce simp: mask_lt_2pn)
-    apply (fastforce simp: is_aligned_neg_mask)
-   apply fastforce
-  apply (fastforce simp: mask_shift)
-  done
-
 lemma bitmap_word_zero_no_bits_set2:
   fixes f l :: "16 word"
   fixes arr :: "machine_word[1024]"
@@ -5107,10 +4924,6 @@ lemma bitmap_word_zero_no_bits_set2:
   apply (cut_tac w=port in unat_and_mask_less_2p[of 6]; simp)
   apply (drule_tac x="unat (port && mask 6)" in spec, clarsimp simp: neg_mask_test_bit not_le word_le_nat_alt)
   done
-
-lemma word_eq_cast_unsigned:
-  "(x = y) = (UCAST ('a signed \<rightarrow> ('a :: len)) x = ucast y)"
-  by (simp add: word_eq_iff nth_ucast)
 
 lemma isIOPortRangeFree_spec:
   notes ucast_mask = ucast_and_mask[where n=6, simplified mask_def, simplified]
@@ -5479,11 +5292,6 @@ lemma ct_active_st_tcb_at_minor':
    using assms
    by (clarsimp simp: st_tcb_at'_def ct_in_state'_def obj_at'_def projectKOs,
               case_tac "tcbState obj"; clarsimp)+
-
-(* FIXME: move to Lib *)
-lemma length_Suc_0_conv:
-  "length x = Suc 0 = (\<exists>y. x = [y])"
-  by (induct x; clarsimp)
 
 lemma decodeIOPortInvocation_ccorres:
   notes if_cong[cong]
