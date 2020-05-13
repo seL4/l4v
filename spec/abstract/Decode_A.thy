@@ -582,11 +582,11 @@ where
       throwError (RangeError (ucast MIN_SC_BUDGET_US) (ucast MAX_SC_PERIOD));
     whenE (period_\<mu>s < budget_\<mu>s) $
       throwError (RangeError (ucast MIN_BUDGET_US) (ucast period_\<mu>s));
-    whenE (unat extra_refills > max_refills_cap target_cap) $
-      throwError (RangeError 0 (of_nat (max_refills_cap target_cap)));
-    assertE (MIN_REFILLS \<le> unat (extra_refills + MIN_REFILLS));
+    whenE (unat extra_refills + MIN_REFILLS > max_refills_cap target_cap) $
+      throwError (RangeError 0 (of_nat (max_refills_cap target_cap) - MIN_REFILLS));
+    assertE (MIN_REFILLS \<le> unat extra_refills + MIN_REFILLS);
     returnOk $ InvokeSchedControlConfigure sc_ptr
-       (us_to_ticks budget_\<mu>s) (us_to_ticks period_\<mu>s) (unat $ extra_refills + MIN_REFILLS) badge
+       (us_to_ticks budget_\<mu>s) (us_to_ticks period_\<mu>s) (unat extra_refills + MIN_REFILLS) badge
   odE"
 
 
