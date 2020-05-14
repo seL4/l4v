@@ -1425,10 +1425,6 @@ lemma pde_get_tag_alt:
           | Pde_pde_large _ \<Rightarrow> scast pde_pde_large)"
   by (auto simp add: pde_lift_def Let_def split: if_split_asm)
 
-thm cpde_relation_def
-
-(* FIXME x64: this is going to be annoying because
- * you cannot determine validity just from pde_get_tag *)
 lemma cpde_relation_pde_case:
   "cpde_relation pde cpde
      \<Longrightarrow> (case pde of InvalidPDE \<Rightarrow> P

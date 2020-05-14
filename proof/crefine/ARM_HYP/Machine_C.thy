@@ -488,7 +488,6 @@ lemma cacheRangeOp_ccorres:
              (f;; \<acute>index :== \<acute>index + 1))"
   apply (clarsimp simp: cacheRangeOp_def doMachineOp_mapM_x split_def
                         cacheLine_def cacheLineBits_def)
-thm cacheLineBits_def
   apply (rule ccorres_gen_asm[where G=\<top>, simplified])
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_rel_imp)

@@ -212,8 +212,6 @@ next
 qed simp_all
 
 
-thm ccorres_lift_rhs_call [where P = "\<lambda>_ s. hrs_htd \<^bsup>s\<^esup>t_hrs \<Turnstile>\<^sub>t (xfa s)"]
-
 lemmas ccorres_lift_rhs_no_guard = ccorres_lift_rhs_call [where P = "\<lambda>_ _. True", simplified]
 lemmas ccorres_lift_rhss = ccorres_lift_rhs_no_guard ccorres_lift_rhs_call
 

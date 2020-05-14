@@ -1607,8 +1607,6 @@ lemma cap_range_def2:
   apply (case_tac ty)
   by (simp_all add: cap_range_def)
 
-find_theorems preemption_point
-
 context Untyped_AI_arch begin
 lemma retype_region_descendants_range_ret:
   "\<lbrace>\<lambda>s. (range_cover ptr sz (obj_bits_api ty us) n)

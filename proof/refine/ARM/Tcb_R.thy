@@ -824,7 +824,7 @@ lemma setP_invs':
     unfolding st_tcb_at'_def
       apply (strengthen not_obj_at'_strengthen, wp)
      apply (wp hoare_vcg_imp_lift')
-      apply (rule_tac Q="\<lambda>rv s. invs' s" in hoare_post_imp) thm valid_sched_weak_strg
+      apply (rule_tac Q="\<lambda>rv s. invs' s" in hoare_post_imp)
        apply (clarsimp simp: invs_sch_act_wf' invs'_def invs_queues)
        apply (clarsimp simp: valid_state'_def)
       apply (wp hoare_drop_imps threadSet_invs_trivial,

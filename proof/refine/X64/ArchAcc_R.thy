@@ -1504,7 +1504,6 @@ where
       | VMPDE pde \<Rightarrow> \<exists>ptr'. snd e = VMPDEPtr ptr'
       | VMPDPTE pdpte \<Rightarrow> \<exists>ptr'. snd e = VMPDPTEPtr ptr'"
 
-term createMappingEntries
 definition
   mapping_map :: "vm_page_entry \<times> machine_word \<Rightarrow> vmpage_entry \<times> vmpage_entry_ptr \<Rightarrow> bool"
 where

@@ -1818,7 +1818,7 @@ lemma createMappingEntries_valid_pte_slots'2:
       apply (wp getPDE_wp|wpc|simp add: checkPTAt_def valid_pte_slots'2_def)+
      apply (clarsimp simp:valid_pte_slots'2_def lookup_pt_slot_no_fail_def)
      apply (rule_tac x = 0 in exI)
-     apply (clarsimp simp: ptBits_eq) thm vaddr_segment_nonsense3_folded
+     apply (clarsimp simp: ptBits_eq)
      apply (subst vaddr_segment_nonsense3_folded)
       apply (simp add: page_table_at'_def table_bits_defs)
      apply (simp add: isLargePagePTE_def)

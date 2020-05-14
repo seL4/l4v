@@ -1023,8 +1023,6 @@ lemma cslift_ptr_safe:
   apply (fastforce simp add:typ_heap_simps hrs_htd_def)
   done
 
-thm ccorres_move_c_guard_cte
-
 lemma ccorres_move_ptr_safe:
   "ccorres_underlying rf_sr \<Gamma> r xf arrel axf A C' hs a c \<Longrightarrow>
   ccorres_underlying rf_sr \<Gamma> r xf arrel axf
