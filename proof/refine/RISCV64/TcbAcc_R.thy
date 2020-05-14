@@ -4562,7 +4562,7 @@ proof -
   qed
 
   show ?thesis
-    apply_trace (wp dmo_invs' no_irq_storeWord no_irq)
+    apply (wp dmo_invs' no_irq_storeWord no_irq)
     apply (clarsimp simp: storeWord_def invs'_def valid_state'_def)
     apply (clarsimp simp: valid_machine_state'_def pointerInUserData_def
                           assert_def simpler_modify_def fail_def bind_def return_def

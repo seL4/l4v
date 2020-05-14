@@ -1702,7 +1702,7 @@ lemma Zombie_new_spec:
   apply vcg
   apply (clarsimp simp: word_sle_def)
   apply (simp add: mask_def word_log_esimps[where 'a=machine_word_len, simplified])
-  apply clarsimp thm Zombie_new_body_def
+  apply clarsimp
   apply (simp add: word_add_less_mono1[where k=1 and j="0x3F", simplified])
   done
 

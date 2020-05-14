@@ -651,7 +651,7 @@ lemma thread_actions_isolatable_mapM_x:
 lemma liftM_getObject_return_tcb:
   "ko_at' v p s \<Longrightarrow> liftM f (getObject p) s = return (f (v::tcb)) s"
   by (simp add: liftM_def bind_def getObject_return_tcb return_def objBits_defs)
-term PageTableCap
+
 lemma cap_case_isPageTableCap:
   "(case cap of ArchObjectCap (PageTableCap pm (Some asid)) \<Rightarrow> fn pm asid | _ => g)
     = (if (if isArchObjectCap cap

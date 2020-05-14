@@ -48,8 +48,6 @@ lemma Arch_finaliseInterrupt_ccorres:
   done
 
 (* FIXME RISCV move: based on getActiveIRQ_neq_Some0xFF *)
-thm getActiveIRQ_neq_Some0xFF
-thm getActiveIRQ_neq_Some0xFF'
 lemma getActiveIRQ_neq_Some0x3FF':
   "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
   apply (simp add: getActiveIRQ_def)
