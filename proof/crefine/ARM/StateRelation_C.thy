@@ -233,6 +233,7 @@ fun
   | "register_from_H ARM.NextIP = scast Kernel_C.NextIP"
   | "register_from_H ARM.CPSR = scast Kernel_C.CPSR"
   | "register_from_H ARM.TPIDRURW = scast Kernel_C.TPIDRURW"
+  | "register_from_H ARM.TPIDRURO = scast Kernel_C.TPIDRURO"
   | "register_from_H ARM.FaultIP = scast Kernel_C.FaultIP"
 
 definition

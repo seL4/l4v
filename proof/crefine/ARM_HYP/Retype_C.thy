@@ -3166,9 +3166,9 @@ lemma cnc_tcb_helper:
         (\<lambda>a. hrs_mem_update (heap_update (Ptr &(p\<rightarrow>[''tcbTimeSlice_C'']) :: machine_word ptr) (5 :: machine_word))
               (hrs_mem_update
                 (heap_update ((Ptr &((Ptr &((Ptr &(p\<rightarrow>[''tcbArch_C'']) :: arch_tcb_C ptr)\<rightarrow>[''tcbContext_C''])
-                     :: user_context_C ptr)\<rightarrow>[''registers_C''])) :: (word32[19]) ptr)
+                     :: user_context_C ptr)\<rightarrow>[''registers_C''])) :: (word32[20]) ptr)
                   (Arrays.update (h_val (hrs_mem a) ((Ptr &((Ptr &((Ptr &(p\<rightarrow>[''tcbArch_C'']) :: arch_tcb_C ptr)\<rightarrow>[''tcbContext_C''])
-                       :: user_context_C ptr)\<rightarrow>[''registers_C''])) :: (word32[19]) ptr)) (unat Kernel_C.CPSR) (0x150 :: word32)))
+                       :: user_context_C ptr)\<rightarrow>[''registers_C''])) :: (word32[20]) ptr)) (unat Kernel_C.CPSR) (0x150 :: word32)))
                    (hrs_htd_update (\<lambda>xa. ptr_retyps_gen 1 (Ptr (ctcb_ptr_to_tcb_ptr p) :: (cte_C[5]) ptr) False
                        (ptr_retyps_gen 1 p False xa)) a)))) x)
              \<in> rf_sr"
@@ -3468,7 +3468,7 @@ proof -
     \<lparr>tcbArch_C := tcbArch_C undefined
       \<lparr>tcbContext_C := tcbContext_C (tcbArch_C undefined)
          \<lparr>registers_C :=
-           foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<19]
+           foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<20]
              (registers_C (tcbContext_C (tcbArch_C undefined)))
          \<rparr>,
        tcbVCPU_C := vcpu_Ptr 0

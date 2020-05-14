@@ -2063,17 +2063,15 @@ lemma vcpu_disable_ccorres:
         (* v=Some x2 *)
         apply (rule ccorres_cond_true)
         apply (rule ccorres_rhs_assoc)+
-        apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
-         apply (ctac (no_vcg) add: vcpu_hw_write_reg_ccorres)
-          apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_hcr_ccorres)
-           apply (rule ccorres_split_nothrow_novcg[of _ _ dc xfdc])
-               apply (rule ccorres_move_const_guard ccorres_move_c_guard_vcpu, simp)
-               apply clarsimp
-               apply (ctac (no_vcg) add: vgicUpdate_HCR_ccorres)
-              apply ceqv
-             apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
-              apply (ctac (no_vcg) pre: ccorres_call[where r=dc and xf'=xfdc] add: isb_ccorres)
-                apply (wpsimp simp: guard_is_UNIV_def)+
+        apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_hcr_ccorres)
+         apply (rule ccorres_split_nothrow_novcg[of _ _ dc xfdc])
+             apply (rule ccorres_move_const_guard ccorres_move_c_guard_vcpu, simp)
+             apply clarsimp
+             apply (ctac (no_vcg) add: vgicUpdate_HCR_ccorres)
+            apply ceqv
+           apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
+            apply (ctac (no_vcg) pre: ccorres_call[where r=dc and xf'=xfdc] add: isb_ccorres)
+              apply (wpsimp simp: guard_is_UNIV_def)+
        apply ceqv
       apply (clarsimp simp: doMachineOp_bind bind_assoc empty_fail_isb)
       apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_hcr_ccorres)
@@ -2105,20 +2103,18 @@ lemma vcpu_enable_ccorres:
      (vcpuEnable v) (Call vcpu_enable_'proc)"
   apply (cinit lift: vcpu_')
    apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)+
-     apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-     apply (clarsimp simp: doMachineOp_bind bind_assoc empty_fail_isb)
-     apply (ctac (no_vcg) add: setHCR_ccorres)
-      apply (ctac  (no_vcg) add: isb_ccorres)
-       apply (rule_tac P="ko_at' vcpu v" in ccorres_cross_over_guard)
-       apply (ctac pre: ccorres_move_c_guard_vcpu add: set_gic_vcpu_ctrl_hcr_ccorres[unfolded dc_def])
-      apply wpsimp+
-         apply (fold dc_def, ctac (no_vcg) add: restore_virt_timer_ccorres)
-         apply simp
-        apply wpsimp
-       apply (vcg exspec=set_gic_vcpu_ctrl_hcr_modifies)
-      apply wpsimp+
-    apply (rule_tac Q="\<lambda>_. vcpu_at' v" in hoare_post_imp, fastforce)
-    apply wpsimp
+    apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
+    apply (clarsimp simp: doMachineOp_bind bind_assoc empty_fail_isb)
+    apply (ctac (no_vcg) add: setHCR_ccorres)
+     apply (ctac  (no_vcg) add: isb_ccorres)
+      apply (rule_tac P="ko_at' vcpu v" in ccorres_cross_over_guard)
+      apply (ctac pre: ccorres_move_c_guard_vcpu add: set_gic_vcpu_ctrl_hcr_ccorres[unfolded dc_def])
+        apply wpsimp+
+        apply (fold dc_def, ctac (no_vcg) add: restore_virt_timer_ccorres)
+       apply simp
+       apply wpsimp
+      apply (vcg exspec=set_gic_vcpu_ctrl_hcr_modifies)
+     apply wpsimp+
    apply (rule_tac Q="\<lambda>_. vcpu_at' v" in hoare_post_imp, fastforce)
    apply wpsimp
   apply (clarsimp simp: typ_heap_simps' Collect_const_mem cvcpu_relation_def
@@ -2827,7 +2823,7 @@ lemma performPageFlush_ccorres:
 
 (* FIXME: move *)
 lemma register_from_H_bound[simp]:
-  "unat (register_from_H v) < 19"
+  "unat (register_from_H v) < 20"
   by (cases v, simp_all add: "StrictC'_register_defs")
 
 (* FIXME: move *)

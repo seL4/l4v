@@ -988,15 +988,13 @@ lemma vcpuDisable_corres:
    apply (clarsimp simp: doMachineOp_bind do_machine_op_bind bind_assoc IRQ_def)
    apply (rule corres_guard_imp)
      apply (rule corres_split_dc[OF _ corres_machine_op])
-        apply (rule corres_split_dc[OF _ vcpuSaveReg_corres])
-          apply (rule corres_split_eqr[OF _ corres_machine_op])
-             apply (rule corres_split_eqr[OF _ corres_machine_op])
-                apply (rule corres_split_dc[OF _ vgicUpdate_corres])
-                   apply (rule corres_split_dc[OF _ vcpuSaveReg_corres])
-                     apply (rule corres_split_dc[OF _ corres_machine_op]
-                                 corres_split_dc[OF _ saveVirtTimer_corres]
-                            | rule corres_machine_op corres_Id
-                            | wpsimp simp: vgic_map_def)+
+       apply (rule corres_split_eqr[OF _ corres_machine_op])
+          apply (rule corres_split_dc[OF _ vgicUpdate_corres])
+             apply (rule corres_split_dc[OF _ vcpuSaveReg_corres])
+               apply (rule corres_split_dc[OF _ corres_machine_op]
+                           corres_split_dc[OF _ saveVirtTimer_corres]
+                      | rule corres_machine_op corres_Id
+                      | wpsimp simp: vgic_map_def)+
    done
 
 lemma vcpuEnable_corres:
