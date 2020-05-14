@@ -463,6 +463,7 @@ lemma cancelSignal_invs':
                 hoare_vcg_all_lift set_ntfn'.ksReadyQueues
               | simp add: valid_tcb_state'_def list_case_If split del: if_split)+
        prefer 2
+  sorry (*
        apply assumption
       apply (rule hoare_strengthen_post)
        apply (rule get_ntfn_sp')
@@ -480,7 +481,6 @@ lemma cancelSignal_invs':
        apply (frule ko_at_state_refs_ofD')
        apply (rule conjI, erule delta_sym_refs)
          apply (clarsimp simp: ntfn_bound_refs'_def split: if_split_asm)
-  sorry (*
         apply (clarsimp split: if_split_asm)
           subgoal
           by (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
@@ -567,6 +567,7 @@ proof -
               | simp add: valid_tcb_state'_def split del: if_split
               | wpc)+
      prefer 2
+  sorry (*
      apply assumption
     apply (rule hoare_strengthen_post [OF get_ep_sp'])
     apply (clarsimp simp: pred_tcb_at' fun_upd_def[symmetric] conj_comms  o_def
@@ -601,7 +602,6 @@ proof -
                     cong: list.case_cong)
      apply (frule_tac x=t in distinct_remove1)
      apply (frule_tac x=t in set_remove1_eq)
-  sorry (*
      by (auto elim!: delta_sym_refs
                simp: symreftype_inverse' tcb_st_refs_of'_def tcb_bound_refs'_def
               split: thread_state.splits if_split_asm) *)
@@ -1381,6 +1381,8 @@ lemma tcbSchedDequeue_invs'_no_valid_queues:
          valid_machine_state' s \<and>
          irqs_masked' s \<and>
          valid_queues' s \<and>
+         valid_release_queue s \<and>
+         valid_release_queue' s \<and>
          ct_not_inQ s \<and>
          ct_idle_or_in_cur_domain' s \<and>
          valid_pde_mappings' s \<and>
@@ -2252,8 +2254,8 @@ lemma cancelBadgedSends_filterM_helper':
       apply (clarsimp simp: valid_pspace'_def valid_tcb'_def elim!: valid_objs_valid_tcbE dest!: st_tcb_ex_cap'')
      apply (fastforce dest!: st_tcb_ex_cap'')
     apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def)
-   apply (erule delta_sym_refs)
   sorry (*
+   apply (erule delta_sym_refs)
     apply (fastforce elim!: obj_atE'
                       simp: state_refs_of'_def projectKOs tcb_bound_refs'_def
                             subsetD symreftype_inverse'

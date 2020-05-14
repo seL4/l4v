@@ -3460,6 +3460,8 @@ crunch ksReadyQueuesL1[wp]: copyGlobalMappings "\<lambda>s. P (ksReadyQueuesL1Bi
   (wp: updateObject_default_inv crunch_wps)
 crunch ksReadyQueuesL2[wp]: copyGlobalMappings "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (wp: updateObject_default_inv crunch_wps)
+crunch ksReleaseQueue[wp]: copyGlobalMappings "\<lambda>s. P (ksReleaseQueue s)"
+  (wp: updateObject_default_inv crunch_wps)
 
 crunch valid_idle'[wp]: copyGlobalMappings "valid_idle'"
   (simp: objBits_simps archObjSize_def
@@ -3508,6 +3510,10 @@ lemma createObjects'_qs[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> createObjects' ptr n val gbits \<lbrace>\<lambda>rv s. P (ksReadyQueues s)\<rbrace>"
   by (rule createObjects_pspace_only, simp)
 
+lemma createObjects'_rlq[wp]:
+  "\<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace> createObjects' ptr n val gbits \<lbrace>\<lambda>rv s. P (ksReleaseQueue s)\<rbrace>"
+  by (rule createObjects_pspace_only, simp)
+
 lemma createObjects'_qsL1[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> createObjects' ptr n val gbits \<lbrace>\<lambda>rv s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
   by (rule createObjects_pspace_only, simp)
@@ -3518,6 +3524,7 @@ lemma createObjects'_qsL2[wp]:
 
 crunches createObjects, createNewCaps
   for qs[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and rlqs[wp]: "\<lambda>s. P (ksReleaseQueue s)"
   and qsL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
   and qsL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (simp: crunch_simps wp: crunch_wps)

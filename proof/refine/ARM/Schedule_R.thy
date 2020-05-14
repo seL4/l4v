@@ -334,6 +334,55 @@ lemma tcbSchedDequeue_valid_queues'[wp]:
    apply (clarsimp simp: valid_queues'_def obj_at'_def projectKOs inQ_def|wp)+
   done
 
+lemma tcbSchedDequeue_valid_release_queue[wp]:
+  "\<lbrace>valid_release_queue and tcb_at' t\<rbrace>
+    tcbSchedDequeue t \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
+  unfolding tcbSchedDequeue_def
+  apply (rule_tac B="\<lambda>rv. valid_release_queue and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"
+                in hoare_seq_ext)
+   prefer 2
+   apply (wp threadGet_const_tcb_at)
+   apply (fastforce simp: obj_at'_def)
+  apply clarsimp
+  apply (rename_tac queued)
+  apply (case_tac queued, simp_all)
+   apply wp
+        apply (rule threadSet_valid_release_queue)
+       apply (rule hoare_pre_post, assumption)
+       apply (wp | clarsimp simp: bitmap_fun_defs valid_release_queue_def)+
+      apply (wp hoare_vcg_all_lift setQueue_ksReadyQueues_lift)
+     apply clarsimp
+     apply (wp threadGet_obj_at' threadGet_const_tcb_at)+
+   apply clarsimp
+   apply (rule context_conjI, clarsimp simp: obj_at'_def)
+   apply (clarsimp simp: valid_release_queue_def obj_at'_def projectKOs inQ_def|wp)+
+  done
+
+lemma tcbSchedDequeue_valid_release_queue'[wp]:
+  "\<lbrace>valid_release_queue' and tcb_at' t\<rbrace>
+    tcbSchedDequeue t
+   \<lbrace>\<lambda>_. valid_release_queue'\<rbrace>"
+  unfolding tcbSchedDequeue_def
+  apply (rule_tac B="\<lambda>rv. valid_release_queue' and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"
+                in hoare_seq_ext)
+   prefer 2
+   apply (wp threadGet_const_tcb_at)
+   apply (fastforce simp: obj_at'_def)
+  apply clarsimp
+  apply (rename_tac queued)
+  apply (case_tac queued, simp_all)
+   apply wp
+        apply (rule threadSet_valid_release_queue')
+       apply (rule hoare_pre_post, assumption)
+       apply (wp | clarsimp simp: bitmap_fun_defs valid_release_queue'_def)+
+      apply (wp hoare_vcg_all_lift setQueue_ksReadyQueues_lift)
+     apply clarsimp
+     apply (wp threadGet_obj_at' threadGet_const_tcb_at)+
+   apply clarsimp
+   apply (rule context_conjI, clarsimp simp: obj_at'_def)
+   apply (clarsimp simp: valid_release_queue'_def obj_at'_def projectKOs inQ_def|wp)+
+  done
+
 crunch tcb_at'[wp]: tcbSchedAppend "tcb_at' t"
   (simp: unless_def)
 
@@ -783,11 +832,12 @@ proof -
   show ?thesis
     apply (simp add: setCurThread_def)
     apply wp
-    apply (clarsimp simp add: all_invs_but_ct_idle_or_in_cur_domain'_def invs'_def cur_tcb'_def valid_state'_def obj_at'_ct
-                              valid_pspace'_ct vms'_ct Invariants_H.valid_queues_def
-                              sch_act_wf ct_in_state'_def state_refs_of'_def
-                              ps_clear_def valid_irq_node'_def valid_queues'_def ct_not_inQ_ct
-                              tcb_in_cur_domain_ct ct_idle_or_in_cur_domain'_def
+    apply (clarsimp simp add: all_invs_but_ct_idle_or_in_cur_domain'_def invs'_def cur_tcb'_def
+                              valid_state'_def obj_at'_ct valid_pspace'_ct vms'_ct
+                              Invariants_H.valid_queues_def valid_release_queue_def
+                              valid_release_queue'_def sch_act_wf ct_in_state'_def
+                              state_refs_of'_def ps_clear_def valid_irq_node'_def valid_queues'_def
+                              ct_not_inQ_ct tcb_in_cur_domain_ct ct_idle_or_in_cur_domain'_def
                               bitmapQ_defs valid_queues_no_bitmap_def
                         cong: option.case_cong)
     done
@@ -893,6 +943,7 @@ proof -
                               ps_clear_def valid_irq_node'_def
                               ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
                               valid_queues_def bitmapQ_defs valid_queues_no_bitmap_def valid_queues'_def
+                              valid_release_queue_def valid_release_queue'_def
                               all_invs_but_ct_idle_or_in_cur_domain'_def pred_tcb_at'_def
                         cong: option.case_cong)
     apply (clarsimp simp: obj_at'_def projectKOs)
@@ -1769,8 +1820,8 @@ crunch inv[wp]: scheduleSwitchThreadFastfail P
 lemma setSchedulerAction_invs': (* not in wp set, clobbered by ssa_wp *)
   "\<lbrace>\<lambda>s. invs' s \<rbrace> setSchedulerAction ChooseNewThread \<lbrace>\<lambda>_. invs' \<rbrace>"
   by (wpsimp simp: invs'_def cur_tcb'_def valid_state'_def valid_irq_node'_def ct_not_inQ_def
-                   valid_queues_def valid_queues_no_bitmap_def valid_queues'_def
-                   ct_idle_or_in_cur_domain'_def)
+                   valid_queues_def valid_release_queue_def valid_release_queue'_def
+                   valid_queues_no_bitmap_def valid_queues'_def ct_idle_or_in_cur_domain'_def)
 
 lemma scheduleChooseNewThread_corres:
   "corres dc
@@ -1948,9 +1999,9 @@ proof -
     apply (clarsimp simp add: invs'_def valid_state'_def cur_tcb'_def
                               obj_at'_sa valid_pspace'_sa Invariants_H.valid_queues_def
                               state_refs_of'_def iflive_sa ps_clear_def
-                              valid_irq_node'_def valid_queues'_def
-                              tcb_in_cur_domain'_def ct_idle_or_in_cur_domain'_def
-                              bitmapQ_defs valid_queues_no_bitmap_def
+                              valid_irq_node'_def valid_queues'_def valid_release_queue_def
+                              valid_release_queue'_def tcb_in_cur_domain'_def
+                              ct_idle_or_in_cur_domain'_def bitmapQ_defs valid_queues_no_bitmap_def
                         cong: option.case_cong)
     done
 qed

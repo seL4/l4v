@@ -1106,8 +1106,26 @@ lemma valid_queues_lift':
   unfolding valid_queues'_def imp_conv_disj
   by (wp hoare_vcg_all_lift hoare_vcg_disj_lift tat prq)
 
+lemma valid_release_queue_lift:
+  assumes tat: "\<And>tcb. f \<lbrace>\<lambda>s. obj_at' (tcbInReleaseQueue) tcb s\<rbrace>"
+  and     prlq: "\<And>P. f \<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace>"
+  shows   "f \<lbrace>valid_release_queue\<rbrace>"
+  unfolding valid_release_queue_def iff_conv_conj_imp
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_conj_lift hoare_vcg_imp_lift' tat prlq)
+
+lemma valid_release_queue'_lift:
+  assumes tat: "\<And>tcb. f \<lbrace>\<lambda>s. \<not> (obj_at' (tcbInReleaseQueue) tcb s)\<rbrace>"
+  and     prlq: "\<And>P. f \<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace>"
+  shows   "f \<lbrace>valid_release_queue'\<rbrace>"
+  unfolding valid_release_queue'_def iff_conv_conj_imp
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_conj_lift hoare_vcg_imp_lift' tat prlq)
+
 lemma setCTE_norq [wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReadyQueues s) \<rbrace>"
+  by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
+
+lemma setCTE_release_queue [wp]:
+  "\<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReleaseQueue s) \<rbrace>"
   by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
 
 lemma setCTE_norqL1 [wp]:
@@ -1127,6 +1145,7 @@ crunches cteInsert
   and norq[wp]:  "\<lambda>s. P (ksReadyQueues s)"
   and norqL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
   and norqL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  and norlq[wp]: "\<lambda>s. P (ksReleaseQueue s)"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and no_ksReleaseQueue[wp]: "\<lambda>s. P (ksReleaseQueue s)"
   (wp: updateObject_cte_inv crunch_wps ignore_del: setObject)
@@ -2747,13 +2766,33 @@ lemma setCTE_inQ[wp]:
    apply (simp_all add: inQ_def)
   done
 
+lemma setCTE_tcbInReleaseQueue[wp]:
+  "setCTE ptr v \<lbrace>\<lambda>s. P (obj_at' (tcbInReleaseQueue) t s)\<rbrace>"
+  apply (simp add: setCTE_def)
+  apply (rule setObject_cte_obj_at_tcb'; simp)
+  done
+
 lemma setCTE_valid_queues'[wp]:
   "\<lbrace>valid_queues'\<rbrace> setCTE p cte \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
   apply (simp only: valid_queues'_def imp_conv_disj)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
   done
 
-crunch inQ[wp]: cteInsert "\<lambda>s. P (obj_at' (inQ d p) t s)"
+lemma setCTE_valid_release_queue[wp]:
+  "setCTE p cte \<lbrace>valid_release_queue\<rbrace>"
+  apply (simp only: valid_release_queue_def)
+  apply (wpsimp wp: hoare_vcg_all_lift | wps)+
+  done
+
+lemma setCTE_valid_release_queue'[wp]:
+  "setCTE p cte \<lbrace>valid_release_queue'\<rbrace>"
+  apply (simp only: valid_release_queue'_def)
+  apply (wpsimp wp: hoare_vcg_all_lift | wps)+
+  done
+
+crunches cteInsert
+  for inQ[wp]: "\<lambda>s. P (obj_at' (inQ d p) t s)"
+  and tcbInReleaseQueue[wp]: "\<lambda>s. P (obj_at' tcbInReleaseQueue t s)"
   (wp: crunch_wps)
 
 lemma setCTE_it'[wp]:
@@ -3230,6 +3269,7 @@ lemma updateCap_replies_of'[wp]:
 
 crunches cteInsert
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
+  and tcbInReleaseQueue[wp]: "\<lambda>s. P (obj_at' tcbInReleaseQueue tcb s)"
   (wp: crunch_wps setObject_cte_replies_of' simp: crunch_simps setCTE_def)
 
 lemmas fold_list_refs_of_replies' = comp_def[symmetric, where f=Some and g=list_refs_of_reply']
@@ -3243,10 +3283,11 @@ lemma cteInsert_invs:
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (wpsimp wp: cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift CSpace_R.valid_queues_lift
-                    valid_irq_node_lift valid_queues_lift' irqs_masked_lift cteInsert_norq
+                    valid_irq_node_lift valid_queues_lift' valid_release_queue_lift
+                    valid_release_queue'_lift irqs_masked_lift cteInsert_norq
               simp: st_tcb_at'_def)
   apply (subst fold_list_refs_of_replies')
- by (auto simp: invs'_def valid_state'_def valid_pspace'_def elim: valid_capAligned)
+  by (auto simp: invs'_def valid_state'_def valid_pspace'_def elim: valid_capAligned)
 
 lemma derive_cap_corres:
  "\<lbrakk>cap_relation c c'; cte = cte_map slot \<rbrakk> \<Longrightarrow>
@@ -5352,9 +5393,9 @@ lemma cteInsert_simple_invs:
   apply (rule hoare_pre)
    apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
    apply (wp cur_tcb_lift sch_act_wf_lift valid_queues_lift tcb_in_cur_domain'_lift
-             valid_irq_node_lift valid_queues_lift' irqs_masked_lift
-             cteInsert_simple_mdb' cteInsert_valid_globals_simple
-             cteInsert_norq | simp add: pred_tcb_at'_def)+
+             valid_irq_node_lift valid_queues_lift' valid_release_queue_lift
+             valid_release_queue'_lift irqs_masked_lift cteInsert_simple_mdb'
+             cteInsert_valid_globals_simple cteInsert_norq | simp add: pred_tcb_at'_def)+
    apply (subst fold_list_refs_of_replies')
   apply (auto simp: invs'_def valid_state'_def valid_pspace'_def
                     is_simple_cap'_def untyped_derived_eq_def o_def

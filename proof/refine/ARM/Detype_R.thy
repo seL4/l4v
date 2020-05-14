@@ -770,6 +770,8 @@ lemma valid_objs: "valid_objs' s"
   and        pd: "pspace_distinct' s"
   and        vq: "valid_queues s"
   and       vq': "valid_queues' s"
+  and      vrlq: "valid_release_queue s"
+  and     vrlq': "valid_release_queue' s"
   and  sym_refs: "sym_refs (state_refs_of' s)"
   and    iflive: "if_live_then_nonz_cap' s"
   and  ifunsafe: "if_unsafe_then_cap' s"
@@ -1267,6 +1269,12 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def (* FIXME: do not s
 
   from vq' show "valid_queues' ?s"
     by (simp add: valid_queues'_def)
+
+  from vrlq show "valid_release_queue ?s"
+    sorry
+
+  from vrlq' show "valid_release_queue' ?s"
+    by (simp add: valid_release_queue'_def)
 
   show "if_live_then_nonz_cap' ?s" using iflive
     apply (clarsimp simp: if_live_then_nonz_cap'_def)

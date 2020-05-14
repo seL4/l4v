@@ -71,9 +71,10 @@ crunch cur_tcb'[wp]: clearUntypedFreeIndex "cur_tcb'"
   (wp: cur_tcb_lift)
 
 crunch ksRQ[wp]: emptySlot "\<lambda>s. P (ksReadyQueues s)"
+crunch ksRLQ[wp]: emptySlot "\<lambda>s. P (ksReleaseQueue s)"
 crunch ksRQL1[wp]: emptySlot "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
 crunch ksRQL2[wp]: emptySlot "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-crunch obj_at'[wp]: postCapDeletion "obj_at' P p"
+crunch obj_at'[wp]: postCapDeletion "\<lambda>s. Q (obj_at' P p s)"
 
 lemmas postCapDeletion_valid_queues[wp] =
     valid_queues_lift [OF postCapDeletion_obj_at'
@@ -81,6 +82,7 @@ lemmas postCapDeletion_valid_queues[wp] =
                           postCapDeletion_ksRQ]
 
 crunch inQ[wp]: clearUntypedFreeIndex "\<lambda>s. P (obj_at' (inQ d p) t s)"
+crunch tcbInReleaseQueue[wp]: clearUntypedFreeIndex "\<lambda>s. P (obj_at' (tcbInReleaseQueue) t s)"
 crunch tcbDomain[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
 crunch tcbPriority[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
 
@@ -88,6 +90,16 @@ lemma emptySlot_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> emptySlot sl opt \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
   unfolding emptySlot_def
   by (wp | wpcw | wp valid_queues_lift | simp)+
+
+lemma emptySlot_valid_release_queue [wp]:
+  "emptySlot sl opt \<lbrace>Invariants_H.valid_release_queue\<rbrace>"
+  unfolding emptySlot_def
+  by (wp | wpcw | wp valid_release_queue_lift | simp)+
+
+lemma emptySlot_valid_release_queue' [wp]:
+  "emptySlot sl opt \<lbrace>Invariants_H.valid_release_queue'\<rbrace>"
+  unfolding emptySlot_def
+  by (wp | wpcw | wp valid_release_queue'_lift | simp)+
 
 crunch nosch[wp]: emptySlot "\<lambda>s. P (ksSchedulerAction s)"
 crunch ksCurDomain[wp]: emptySlot "\<lambda>s. P (ksCurDomain s)"

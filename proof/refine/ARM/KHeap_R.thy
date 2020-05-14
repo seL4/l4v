@@ -2054,6 +2054,16 @@ lemma set_ep_valid_queues'[wp]:
   unfolding valid_queues'_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
 
+lemma set_ep_valid_release_queue[wp]:
+  "f p v \<lbrace>valid_release_queue\<rbrace>"
+  unfolding valid_release_queue_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift | wps)+
+
+lemma set_ep_valid_release_queue'[wp]:
+  "f p v \<lbrace>valid_release_queue'\<rbrace>"
+  unfolding valid_release_queue'_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift | wps)+
+
 lemma tcb_in_cur_domain'[wp]:
   "f p v \<lbrace>tcb_in_cur_domain' t\<rbrace>"
   by (rule tcb_in_cur_domain'_lift; wp)

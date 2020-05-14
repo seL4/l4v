@@ -1001,6 +1001,16 @@ definition
 where
  "valid_queues' \<equiv> \<lambda>s. \<forall>d p t. obj_at' (inQ d p) t s \<longrightarrow> t \<in> set (ksReadyQueues s (d, p))"
 
+definition
+  valid_release_queue :: "kernel_state \<Rightarrow> bool"
+where
+ "valid_release_queue \<equiv> \<lambda>s. \<forall>t. t \<in> set (ksReleaseQueue s) \<longrightarrow> obj_at' (tcbInReleaseQueue) t s"
+
+definition
+  valid_release_queue' :: "kernel_state \<Rightarrow> bool"
+where
+ "valid_release_queue' \<equiv> \<lambda>s. \<forall>t. obj_at' (tcbInReleaseQueue) t s \<longrightarrow> t \<in> set (ksReleaseQueue s)"
+
 definition tcb_in_cur_domain' :: "32 word \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "tcb_in_cur_domain' t \<equiv> \<lambda>s. obj_at' (\<lambda>tcb. ksCurDomain s = tcbDomain tcb) t s"
 
@@ -1261,6 +1271,8 @@ where
                       \<and> valid_machine_state' s
                       \<and> irqs_masked' s
                       \<and> valid_queues' s
+                      \<and> valid_release_queue s
+                      \<and> valid_release_queue' s
                       \<and> ct_not_inQ s
                       \<and> ct_idle_or_in_cur_domain' s
                       \<and> valid_pde_mappings' s
@@ -1334,7 +1346,9 @@ abbreviation(input)
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
            \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
-           \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_idle_or_in_cur_domain' s \<and> valid_pde_mappings' s
+           \<and> cur_tcb' s \<and> valid_queues' s \<and> valid_release_queue s \<and> valid_release_queue' s
+           \<and> ct_idle_or_in_cur_domain' s
+           \<and> valid_pde_mappings' s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
@@ -1348,7 +1362,9 @@ abbreviation(input)
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
            \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
-           \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_idle_or_in_cur_domain' s \<and> valid_pde_mappings' s
+           \<and> cur_tcb' s \<and> valid_queues' s \<and> valid_release_queue s \<and> valid_release_queue' s
+           \<and> ct_idle_or_in_cur_domain' s
+           \<and> valid_pde_mappings' s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
@@ -1370,7 +1386,9 @@ definition
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
            \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
-           \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_not_inQ s \<and> valid_pde_mappings' s
+           \<and> cur_tcb' s \<and> valid_queues' s \<and> valid_release_queue s \<and> valid_release_queue' s
+           \<and> ct_not_inQ s
+           \<and> valid_pde_mappings' s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
@@ -3161,6 +3179,14 @@ lemma valid_queues_arch [simp]:
   "valid_queues (ksArchState_update f s) = valid_queues s"
   by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
 
+lemma valid_release_queue_arch [simp]:
+  "valid_release_queue (ksArchState_update f s) = valid_release_queue s"
+  by (simp add: valid_release_queue_def)
+
+lemma valid_release_queue'_arch [simp]:
+  "valid_release_queue' (ksArchState_update f s) = valid_release_queue' s"
+  by (simp add: valid_release_queue'_def)
+
 lemma if_unsafe_then_cap_arch' [simp]:
   "if_unsafe_then_cap' (ksArchState_update f s) = if_unsafe_then_cap' s"
   by (simp add: if_unsafe_then_cap'_def ex_cte_cap_to'_def)
@@ -3180,6 +3206,14 @@ lemma sch_act_wf_machine_state [simp]:
 lemma valid_queues_machine_state [simp]:
   "valid_queues (ksMachineState_update f s) = valid_queues s"
   by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
+
+lemma valid_release_queue_machine_state [simp]:
+  "valid_release_queue (ksMachineState_update f s) = valid_release_queue s"
+  by (simp add: valid_release_queue_def)
+
+lemma valid_release_queue'_machine_state [simp]:
+  "valid_release_queue' (ksMachineState_update f s) = valid_release_queue' s"
+  by (simp add: valid_release_queue'_def)
 
 lemma valid_queues_arch' [simp]:
   "valid_queues' (ksArchState_update f s) = valid_queues' s"
@@ -3417,6 +3451,14 @@ lemma invs_queues [elim!]:
   "invs' s \<Longrightarrow> valid_queues s"
   by (simp add: invs'_def valid_state'_def)
 
+lemma invs_valid_release_queue [elim!]:
+  "invs' s \<Longrightarrow> valid_release_queue s"
+  by (simp add: invs'_def valid_state'_def)
+
+lemma invs_valid_release_queue' [elim!]:
+  "invs' s \<Longrightarrow> valid_release_queue' s"
+  by (simp add: invs'_def valid_state'_def)
+
 lemma invs_valid_idle'[elim!]:
   "invs' s \<Longrightarrow> valid_idle' s"
   by (fastforce simp: invs'_def valid_state'_def)
@@ -3459,22 +3501,23 @@ lemma invs'_gsCNodes_update[simp]:
   "invs' (gsCNodes_update f s') = invs' s'"
   apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
              bitmapQ_defs
-             valid_queues'_def valid_irq_node'_def valid_irq_handlers'_def
-             irq_issued'_def irqs_masked'_def valid_machine_state'_def
+             valid_queues'_def valid_release_queue_def valid_release_queue'_def valid_irq_node'_def
+             valid_irq_handlers'_def irq_issued'_def irqs_masked'_def valid_machine_state'_def
              cur_tcb'_def)
   apply (cases "ksSchedulerAction s'")
-  apply (simp_all add: ct_in_state'_def tcb_in_cur_domain'_def  ct_idle_or_in_cur_domain'_def ct_not_inQ_def)
+  apply (simp_all add: ct_in_state'_def tcb_in_cur_domain'_def ct_idle_or_in_cur_domain'_def
+                       ct_not_inQ_def)
   done
 
 lemma invs'_gsUserPages_update[simp]:
   "invs' (gsUserPages_update f s') = invs' s'"
   apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
-             bitmapQ_defs
-             valid_queues'_def valid_irq_node'_def valid_irq_handlers'_def
-             irq_issued'_def irqs_masked'_def valid_machine_state'_def
-             cur_tcb'_def)
+             bitmapQ_defs valid_queues'_def valid_release_queue_def valid_release_queue'_def
+             valid_irq_node'_def valid_irq_handlers'_def irq_issued'_def irqs_masked'_def
+             valid_machine_state'_def cur_tcb'_def)
   apply (cases "ksSchedulerAction s'")
-  apply (simp_all add: ct_in_state'_def ct_idle_or_in_cur_domain'_def   tcb_in_cur_domain'_def ct_not_inQ_def)
+  apply (simp_all add: ct_in_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
+                       ct_not_inQ_def)
   done
 
 lemma pred_tcb'_neq_contra:

@@ -50,7 +50,8 @@ lemma setIRQState_invs[wp]:
   apply (simp add: setIRQState_def setInterruptState_def getInterruptState_def)
   apply (wp dmo_maskInterrupt)
   apply (clarsimp simp: invs'_def valid_state'_def cur_tcb'_def
-                        Invariants_H.valid_queues_def valid_queues'_def
+                        Invariants_H.valid_queues_def valid_queues'_def valid_release_queue_def
+                        valid_release_queue'_def
                         valid_idle'_def valid_irq_node'_def
                         valid_arch_state'_def valid_global_refs'_def
                         global_refs'_def valid_machine_state'_def
@@ -119,9 +120,10 @@ lemma preemptionPoint_inv:
 lemma invs'_wu [simp, intro!]:
   "invs' (ksWorkUnitsCompleted_update f s) = invs' s"
   apply (simp add: invs'_def cur_tcb'_def valid_state'_def Invariants_H.valid_queues_def
-                   valid_queues'_def valid_irq_node'_def valid_machine_state'_def
-                   ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
-                   bitmapQ_defs valid_queues_no_bitmap_def)
+                   valid_queues'_def valid_release_queue_def valid_release_queue'_def
+                   valid_irq_node'_def valid_machine_state'_def ct_not_inQ_def
+                   ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def bitmapQ_defs
+                   valid_queues_no_bitmap_def)
   done
 
 lemma ct_in_state'_irq_state_independent [simp, intro!]:
