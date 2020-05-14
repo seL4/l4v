@@ -732,6 +732,7 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 >     when (releaseQueue /= [] && head releaseQueue == tcbPtr) $
 >         setReprogramTimer True
 >     setReleaseQueue (filter (/=tcbPtr) releaseQueue)
+>     threadSet (\t -> t { tcbInReleaseQueue = False }) tcbPtr
 
 %
 
