@@ -757,7 +757,7 @@ lemmas threadSet_state_refs_of'T =
     threadSet_state_refs_of'T_P [where P'=False, simplified]
 
 lemmas threadSet_state_refs_of' =
-    threadSet_state_refs_of'T [OF all_tcbI all_tcbI]
+    threadSet_state_refs_of'T [OF all_tcbI all_tcbI all_tcbI all_tcbI]
 
 lemma state_refs_of'_helper[simp]:
   "{r \<in> state_refs_of' s t. snd r \<noteq> TCBBound \<and> snd r \<noteq> TCBSchedContext \<and> snd r \<noteq> TCBYieldTo}

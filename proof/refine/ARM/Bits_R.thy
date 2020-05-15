@@ -166,6 +166,12 @@ lemma capAligned_replyI:
                   dest!: ko_wp_at_aligned simp: objBits_simps' projectKOs)
   done
 
+lemma capAligned_sched_contextI:
+  "\<lbrakk>sc_at'_n r p s; sc_size_bounds r\<rbrakk>
+      \<Longrightarrow> capAligned (SchedContextCap p r)"
+  by (clarsimp simp: obj_at'_real_def capAligned_def sc_size_bounds_def ko_wp_at'_def isCap_simps
+                     objBits_simps word_bits_def capUntypedPtr_def maxUntypedSizeBits_def)
+
 lemma ko_at_valid_objs':
   assumes ko: "ko_at' k p s"
   assumes vo: "valid_objs' s"

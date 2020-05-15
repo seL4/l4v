@@ -958,6 +958,10 @@ lemma minRefillLength_ARM: "minRefillLength = 12"
   by (auto simp: minRefillLength_def minSchedContextBits_def refillAbsoluteMax'_def
                  schedContextStructSize_def refillSizeBytes_def shiftL_nat)
 
+lemma minRefillLength_minSchedContextBits[simp]:
+  "scBitsFromRefillLength' minRefillLength = minSchedContextBits"
+  by (clarsimp simp: minRefillLength_def scBits_inverse_us)
+
 (* leaving this sorried for now, still tweaking what to assume and how *)
 lemma scBits_max:
 (*  assumes "valid_sched_context_size' sc'"*)

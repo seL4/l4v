@@ -3506,7 +3506,7 @@ lemma createObject_setCTE_commute:
         K (is_aligned ptr (Types_H.getObjectSize ty us)) and
         K (Types_H.getObjectSize ty us < word_bits) and
         K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow>
-             minSchedContextBits \<le> us))
+             sc_size_bounds us))
      (RetypeDecls_H.createObject ty ptr us d)
      (setCTE src cte)"
   apply (rule commute_grab_asm)+
@@ -3559,7 +3559,7 @@ lemma createObject_setCTE_commute:
            apply (rule monad_commute_guard_imp[OF commute_commute],
                   rule monad_commute_split[OF commute_commute[OF return_commute]],
                   rule setCTE_placeNewObject_commute,
-                  (wpsimp simp: objBits_simps' refillAbsoluteMax_def scBits_inverse_us)+)+
+                  (wpsimp simp: objBits_simps' sc_size_bounds_def refillAbsoluteMax_def scBits_inverse_us)+)+
        \<comment> \<open>Arch Objects\<close>
        apply ((rule monad_commute_guard_imp[OF commute_commute],
                rule monad_commute_split[OF commute_commute[OF return_commute]],
@@ -3593,7 +3593,7 @@ lemma createObject_updateMDB_commute:
       K (is_aligned ptr (Types_H.getObjectSize ty us)) and
       K ((Types_H.getObjectSize ty us) < word_bits) and
       K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow>
-           minSchedContextBits \<le> us))
+           sc_size_bounds us))
      (updateMDB src f) (RetypeDecls_H.createObject ty ptr us d)"
   apply (clarsimp simp:updateMDB_def split:if_split_asm)
   apply (intro conjI impI)
@@ -3828,7 +3828,7 @@ lemma new_cap_object_comm_helper:
       K (cap \<noteq> capability.NullCap) and
       K (is_aligned ptr (Types_H.getObjectSize ty us) \<and> ptr \<noteq> 0 \<and> parent \<noteq> 0) and
       K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow>
-           minSchedContextBits \<le> us))
+           sc_size_bounds us))
      (RetypeDecls_H.createObject ty ptr us d) (insertNewCap parent slot cap)"
   apply (clarsimp simp:insertNewCap_def bind_assoc liftM_def)
   apply (rule monad_commute_guard_imp)
@@ -3887,7 +3887,7 @@ lemma new_cap_object_commute:
       K (Types_H.getObjectSize ty us <word_bits) and
       K (is_aligned ptr (Types_H.getObjectSize ty us) \<and> ptr \<noteq> 0) and
       K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow>
-           minSchedContextBits \<le> us))
+           sc_size_bounds us))
      (RetypeDecls_H.createObject ty ptr us d)
      (zipWithM_x (insertNewCap parent) list caps)"
   apply (clarsimp simp:zipWithM_x_mapM_x)
@@ -5326,7 +5326,7 @@ lemma createNewObjects_def2:
     range_cover ptr sz (Types_H.getObjectSize ty us) (length dslots);
     ptr \<noteq> 0;
     ksCurDomain s \<le> maxDomain;
-    ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow> minSchedContextBits \<le> us\<rbrakk>
+    ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow> sc_size_bounds us\<rbrakk>
    \<Longrightarrow> createNewObjects ty parent dslots ptr us d s =
        insertNewCaps ty parent dslots ptr us d s"
   apply (clarsimp simp:insertNewCaps_def createNewObjects_def neq_Nil_conv)
@@ -5349,7 +5349,7 @@ lemma createNewObjects_def2:
   assume range_cover: "range_cover ptr sz (Types_H.getObjectSize ty us) (Suc (length ys))"
   assume unt_at: "cte_wp_at' (\<lambda>c. isUntypedCap (cteCap c)) parent s"
   assume min_sched_bits: "ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow>
-                            minSchedContextBits \<le> us"
+                            sc_size_bounds us"
   show "zipWithM_x
         (\<lambda>num slot.
             RetypeDecls_H.createObject ty ((num << Types_H.getObjectSize ty us) + ptr) us d >>=
@@ -5435,12 +5435,12 @@ lemma createNewObjects_def2:
                   createNewCaps_obj_at'[where sz=sz])
           apply simp
          apply (rule range_cover_le)
-           apply (simp add:objSize_eq_capBits caps_r)+
+           apply (simp add:objSize_eq_capBits caps_r min_sched_bits)+
         apply (wp createNewCaps_ret_len createNewCaps_valid_arch_state)
        apply (frule range_cover_le[where n = "Suc (length as)"])
         apply simp+
        using psp_no_overlap caps_r valid_psp unt_at caps_no_overlap valid_arch_state
-       apply (clarsimp simp: valid_pspace'_def objSize_eq_capBits)
+       apply (clarsimp simp: valid_pspace'_def objSize_eq_capBits min_sched_bits)
        apply (auto simp: kscd)
        done
   qed
@@ -5458,7 +5458,7 @@ assumes check: "distinct dslots"
   \<and> caps_overlap_reserved'
    {ptr..ptr + of_nat (length dslots) * 2^ (Types_H.getObjectSize ty us) - 1} s
   \<and> valid_pspace' s \<and> valid_arch_state' s \<and> ksCurDomain s \<le> maxDomain
-  \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow> minSchedContextBits \<le> us))"
+  \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow> sc_size_bounds us))"
 shows "corres r P P' f (createNewObjects ty parent dslots ptr us d)"
   using check cover not_0
   apply (clarsimp simp:corres_underlying_def)
@@ -5487,7 +5487,7 @@ lemma createNewObjects_wp_helper:
    {ptr..ptr + of_nat (length dslots) * 2^ (Types_H.getObjectSize ty us) - 1}
   and (\<lambda>s. ksCurDomain s \<le> maxDomain)
   and K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow>
-           minSchedContextBits \<le> us))
+           sc_size_bounds us))
   \<rbrace> (createNewObjects ty parent dslots ptr us d) \<lbrace>Q\<rbrace>"
   using assms
   apply (clarsimp simp:valid_def)

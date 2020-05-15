@@ -2621,7 +2621,8 @@ lemma typ_at_lift_valid_cap':
          simp add: valid_cap'_def P [where P=id, simplified] typ_at_lift_tcb'
                    hoare_vcg_prop typ_at_lift_ep' typ_at_lift_reply'
                    typ_at_lift_ntfn' typ_at_lift_cte_at' typ_at_lift_sc'
-                   hoare_vcg_conj_lift [OF typ_at_lift_cte_at'])
+                   hoare_vcg_conj_lift [OF typ_at_lift_cte_at']
+                   hoare_vcg_conj_lift)
      apply (rename_tac zombie_type nat)
      apply (case_tac zombie_type; simp)
       apply (wp typ_at_lift_tcb' P hoare_vcg_all_lift typ_at_lift_cte')+

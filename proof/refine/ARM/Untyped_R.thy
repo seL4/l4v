@@ -35,6 +35,8 @@ where
           \<and> distinct (slot # slots)
           \<and> (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0)
           \<and> (ty = APIObjectType ArchTypes_H.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits)
+          \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
+               \<longrightarrow> sc_size_bounds us)
           \<and> (\<forall>slot \<in> set slots. cte_wp_at' (\<lambda>c. cteCap c = NullCap) slot s)
           \<and> (\<forall>slot \<in> set slots. ex_cte_cap_to' slot s)
           \<and> sch_act_simple s \<and> 0 < length slots
@@ -885,10 +887,11 @@ lemma decodeUntyped_wf[wp]:
    apply (simp add:empty_descendants_range_in')
    apply (clarsimp simp:image_def isCap_simps nullPointer_def word_size field_simps)
    apply (intro conjI)
-     apply (clarsimp simp: image_def isCap_simps nullPointer_def word_size field_simps)
-     apply (drule_tac x=x in spec)+
-     apply simp
-    apply (clarsimp simp: APIType_capBits_def)
+      apply (clarsimp simp: image_def isCap_simps nullPointer_def word_size field_simps)
+      apply (drule_tac x=x in spec)+
+      apply simp
+     apply (clarsimp simp: APIType_capBits_def)
+    apply (clarsimp simp: APIType_capBits_def sc_size_bounds_def)
    apply clarsimp
   apply (clarsimp simp: image_def getFreeRef_def cte_level_bits_def objBits_simps' field_simps)
   apply (clarsimp simp: of_nat_shiftR word_le_nat_alt)
@@ -896,10 +899,11 @@ lemma decodeUntyped_wf[wp]:
             and bits = "(APIType_capBits (toEnum (unat (args ! 0))) (unat (args ! 1)))"
              in range_cover_stuff[where w=w and sz=sz and rv = idx,rotated -1]; simp?)
   apply (intro conjI; clarsimp simp add: image_def word_size)
-   apply (clarsimp simp: image_def isCap_simps nullPointer_def word_size field_simps)
-   apply (drule_tac x=x in spec)+
-   apply simp
-  apply (clarsimp simp: APIType_capBits_def)
+    apply (clarsimp simp: image_def isCap_simps nullPointer_def word_size field_simps)
+    apply (drule_tac x=x in spec)+
+    apply simp
+   apply (clarsimp simp: APIType_capBits_def)
+  apply (clarsimp simp: APIType_capBits_def sc_size_bounds_def)
   done
 
 lemma getCTE_known_cap:
@@ -2876,6 +2880,8 @@ lemma inv_untyped_corres_helper1:
 
 lemma createNewCaps_valid_pspace_extras:
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
+          \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
+                   \<longrightarrow> sc_size_bounds us)
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2884,6 +2890,8 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
+          \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
+                   \<longrightarrow> sc_size_bounds us)
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2892,6 +2900,8 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
+          \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
+                   \<longrightarrow> sc_size_bounds us)
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2900,6 +2910,8 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
+          \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
+                   \<longrightarrow> sc_size_bounds us)
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -3038,6 +3050,8 @@ lemmas makeObjectKO_simp = makeObjectKO_def[split_simps ARM_H.object_type.split
 lemma createNewCaps_descendants_range':
   "\<lbrace>\<lambda>s. descendants_range' p q (ctes_of s) \<and>
         range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0 \<and>
+        (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
+               \<longrightarrow> sc_size_bounds us) \<and>
         pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' ptr sz s\<rbrace>
    createNewCaps ty ptr n us d
    \<lbrace> \<lambda>rv s. descendants_range' p q (ctes_of s)\<rbrace>"
@@ -3070,6 +3084,8 @@ lemma caps_overlap_reserved'_def2:
 lemma createNewCaps_caps_overlap_reserved':
   "\<lbrace>\<lambda>s. caps_overlap_reserved' S s \<and> pspace_aligned' s \<and> pspace_distinct' s \<and>
         pspace_no_overlap' ptr sz s \<and> 0 < n \<and>
+        (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
+                 \<longrightarrow> sc_size_bounds us) \<and>
         range_cover ptr sz (APIType_capBits ty us) n\<rbrace>
    createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv s. caps_overlap_reserved' S s\<rbrace>"
@@ -3082,6 +3098,8 @@ lemma createNewCaps_caps_overlap_reserved_ret':
   "\<lbrace>\<lambda>s. caps_overlap_reserved'
           {ptr..ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s \<and>
         pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' ptr sz s \<and>
+        (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
+               \<longrightarrow> sc_size_bounds us) \<and>
         0 < n \<and> range_cover ptr sz (APIType_capBits ty us) n\<rbrace>
    createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv s. \<forall>y\<in>set rv. caps_overlap_reserved' (capRange y) s\<rbrace>"
@@ -3104,6 +3122,8 @@ lemma createNewCaps_descendants_range_ret':
  "\<lbrace>\<lambda>s.  (range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n)
         \<and> pspace_aligned' s \<and> pspace_distinct' s
         \<and> pspace_no_overlap' ptr sz s
+        \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
+               \<longrightarrow> sc_size_bounds us)
         \<and> descendants_range_in' {ptr..ptr + of_nat n * 2^(APIType_capBits ty us) - 1} cref (ctes_of s)\<rbrace>
    createNewCaps ty ptr n us d
   \<lbrace> \<lambda>rv s. \<forall>y\<in>set rv. descendants_range' y cref (ctes_of s)\<rbrace>"
@@ -3127,6 +3147,8 @@ lemma createNewCaps_parent_helper:
       \<and> pspace_aligned' s \<and> pspace_distinct' s
       \<and> pspace_no_overlap' ptr sz s
       \<and> (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> 0 < us)
+      \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
+               \<longrightarrow> sc_size_bounds us)
       \<and> range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n \<rbrace>
     createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. isUntypedCap (cteCap cte) \<and>
@@ -3150,6 +3172,7 @@ lemma createNewCaps_valid_cap':
         range_cover ptr sz (APIType_capBits ty us) n \<and>
         (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> 0 < us) \<and>
         (ty = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits) \<and>
+        (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow> sc_size_bounds us) \<and>
        ptr \<noteq> 0 \<rbrace>
     createNewCaps ty ptr n us d
   \<lbrace>\<lambda>r s. \<forall>cap\<in>set r. s \<turnstile>' cap\<rbrace>"
@@ -5306,6 +5329,8 @@ lemma createNewCaps_cap_to':
   "\<lbrace>\<lambda>s. ex_cte_cap_to' p s \<and> 0 < n
       \<and> range_cover ptr sz (APIType_capBits ty us) n
       \<and> pspace_aligned' s \<and> pspace_distinct' s
+      \<and>  (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
+               \<longrightarrow> sc_size_bounds us)
       \<and> pspace_no_overlap' ptr sz s\<rbrace>
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. ex_cte_cap_to' p\<rbrace>"
@@ -5347,7 +5372,10 @@ lemma createNewCaps_IRQHandler[wp]:
   done
 
 lemma createNewCaps_ct_active':
-  "\<lbrace>ct_active' and pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz and K (range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n)\<rbrace>
+  "\<lbrace>ct_active' and pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz and
+    K (range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n \<and>
+       (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
+               \<longrightarrow> sc_size_bounds us))\<rbrace>
     createNewCaps ty ptr n us d
    \<lbrace>\<lambda>_. ct_active'\<rbrace>"
    apply (simp add: ct_in_state'_def)
@@ -5370,6 +5398,8 @@ lemma invokeUntyped_invs'':
  assumes createNew_Q: "\<And>tp ptr n us sz dev. \<lbrace>\<lambda>s. Q s
      \<and> range_cover ptr sz (APIType_capBits tp us) n
      \<and> (tp = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> 0 < us)
+     \<and> (tp = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
+               \<longrightarrow> sc_size_bounds us)
      \<and> 0 < n \<and> valid_pspace' s \<and> pspace_no_overlap' ptr sz s\<rbrace>
     createNewCaps tp ptr n us dev \<lbrace>\<lambda>_. Q\<rbrace>"
  assumes set_free_Q[wp]: "\<And>slot idx. \<lbrace>invs' and Q\<rbrace> updateFreeIndex slot idx \<lbrace>\<lambda>_.Q\<rbrace>"
@@ -5409,6 +5439,7 @@ lemma invokeUntyped_invs'':
       and slots: "cref \<notin> set slots" "distinct slots" "slots \<noteq> []"
       and tps: "tp = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> 0 < us"
             "tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits"
+            "tp = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow> sc_size_bounds us"
       using vui
       by (clarsimp simp: ui cte_wp_at_ctes_of)+
 
