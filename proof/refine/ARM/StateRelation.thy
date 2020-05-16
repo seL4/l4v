@@ -548,10 +548,10 @@ lemma obj_relation_cutsE:
      \<And>sz cs z cap cte. \<lbrakk> ko = CNode sz cs; well_formed_cnode_n sz cs; y = cte_map (x, z);
                       ko' = KOCTE cte; cs z = Some cap; cap_relation cap (cteCap cte) \<rbrakk>
               \<Longrightarrow> R;
-     \<And>sc n sc'. \<lbrakk> ko = Structures_A.SchedContext sc n; valid_sched_context_size n;
+     \<And>sc n sc'. \<lbrakk> y = x; ko = Structures_A.SchedContext sc n; valid_sched_context_size n;
                       ko' = KOSchedContext sc'; sc_relation sc n sc' \<rbrakk>
               \<Longrightarrow> R;
-     \<And>reply reply'. \<lbrakk> ko = Structures_A.Reply reply;
+     \<And>reply reply'. \<lbrakk> y = x; ko = Structures_A.Reply reply;
                       ko' = KOReply reply'; reply_relation reply reply' \<rbrakk>
               \<Longrightarrow> R;
      \<And>pt (z :: word8) pte'. \<lbrakk> ko = ArchObj (PageTable pt); y = x + (ucast z << 2);
