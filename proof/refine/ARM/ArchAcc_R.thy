@@ -122,6 +122,176 @@ lemma asid_low_bits [simp]:
   "asidLowBits = asid_low_bits"
   by (simp add: asid_low_bits_def asidLowBits_def)
 
+lemma pte_at_cross:
+  "\<lbrakk> pte_at p s; pspace_relation (kheap s) (ksPSpace s'); pspace_aligned s; pspace_distinct s \<rbrakk>
+   \<Longrightarrow> pte_at' p s'"
+  apply (drule (2) pspace_distinct_cross)
+  apply (clarsimp simp: pte_at_def obj_at_def typ_at'_def ko_wp_at'_def)
+  apply (prop_tac "p \<in> pspace_dom (kheap s)")
+   apply (clarsimp simp: pspace_dom_def)
+   apply (rule bexI)
+    prefer 2
+    apply fastforce
+   apply (clarsimp simp: ran_def image_iff)
+   apply (rule_tac x="(UCAST(32 \<rightarrow> 8) (p && mask pt_bits >> 2))" in exI)
+   apply (simp add: mask_pt_bits_inner_beauty)
+  apply (clarsimp simp: pspace_relation_def)
+  apply (drule bspec, fastforce)
+  apply (clarsimp simp:)
+  apply (clarsimp simp: pte_relation_def)
+  apply (drule spec[where x="(UCAST(32 \<rightarrow> 8) (p && mask pt_bits >> 2))"])
+  apply (clarsimp)
+   apply (simp add: mask_pt_bits_inner_beauty)
+  apply (clarsimp simp: objBitsKO_def archObjSize_def pteBits_def)
+  apply (clarsimp simp: pte_relation_aligned_def)
+  apply (frule (1) pspace_distinctD')
+  apply (clarsimp simp: objBitsKO_def archObjSize_def pteBits_def)
+  done
+
+lemma pde_at_cross:
+  "\<lbrakk> pde_at p s; pspace_relation (kheap s) (ksPSpace s'); pspace_aligned s; pspace_distinct s \<rbrakk>
+   \<Longrightarrow> pde_at' p s'"
+  apply (drule (2) pspace_distinct_cross)
+  apply (clarsimp simp: pde_at_def obj_at_def typ_at'_def ko_wp_at'_def)
+  apply (prop_tac "p \<in> pspace_dom (kheap s)")
+   apply (clarsimp simp: pspace_dom_def)
+   apply (rule bexI)
+    prefer 2
+    apply fastforce
+   apply (clarsimp simp: ran_def image_iff)
+   apply (rule_tac x="(UCAST(32 \<rightarrow> 12) (p && mask pd_bits >> 2))" in exI)
+   apply (simp add: mask_pd_bits_inner_beauty)
+  apply (clarsimp simp: pspace_relation_def)
+  apply (drule bspec, fastforce)
+  apply (clarsimp simp:)
+  apply (clarsimp simp: pde_relation_def)
+  apply (drule spec[where x="(UCAST(32 \<rightarrow> 12) (p && mask pd_bits >> 2))"])
+  apply (clarsimp)
+   apply (simp add: mask_pd_bits_inner_beauty)
+  apply (clarsimp simp: objBitsKO_def archObjSize_def pdeBits_def)
+  apply (clarsimp simp: pde_relation_aligned_def)
+  apply (frule (1) pspace_distinctD')
+  apply (clarsimp simp: objBitsKO_def archObjSize_def pdeBits_def)
+  done
+
+lemma asid_pool_at_cross:
+  "\<lbrakk> asid_pool_at p s; pspace_relation (kheap s) (ksPSpace s');
+     pspace_aligned s; pspace_distinct s \<rbrakk>
+   \<Longrightarrow> asid_pool_at' p s'"
+  apply (drule (2) pspace_distinct_cross)
+  apply (clarsimp simp: obj_at_def typ_at'_def ko_wp_at'_def)
+  apply (prop_tac "p \<in> pspace_dom (kheap s)")
+   apply (clarsimp simp: pspace_dom_def)
+   apply (rule bexI)
+    prefer 2
+    apply fastforce
+   apply clarsimp
+  apply (clarsimp simp: pspace_relation_def)
+  apply (drule bspec, fastforce)
+  apply (clarsimp simp: other_obj_relation_def split: kernel_object.splits arch_kernel_object.splits)
+  apply (clarsimp simp: objBits_simps)
+  apply (frule (1) pspace_alignedD)
+  apply (rule conjI, simp add: bit_simps archObjSize_def)
+  apply (clarsimp simp: pspace_distinct'_def)
+  apply (drule bspec, fastforce)
+  apply (simp add: objBits_simps)
+  done
+
+lemma pte_relation_must_pte:
+  "pte_relation m (ArchObj (PageTable pt)) ko \<Longrightarrow> \<exists>pte. ko = (KOArch (KOPTE pte))"
+  apply (case_tac ko)
+   apply (simp_all add:pte_relation_def)
+  apply clarsimp
+  done
+
+lemma is_aligned_pte_offset:
+  "is_aligned pt_ptr pt_bits \<Longrightarrow>
+   is_aligned (pt_ptr + (i << pt_bits)) pt_bits"
+  apply (rule is_aligned_add)
+   apply (erule is_aligned_weaken, simp)
+  apply (simp add: is_aligned_shiftl)
+  done
+
+lemma page_table_at_cross:
+  "\<lbrakk> page_table_at p s; pspace_aligned s; pspace_distinct s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow>
+   page_table_at' p s'"
+  apply (clarsimp simp: page_table_at'_def)
+  apply (rule context_conjI)
+   apply (clarsimp simp: obj_at_def)
+   apply (frule (1) pspace_alignedD)
+   apply (simp add: bit_simps')
+  apply clarsimp
+  apply (rule pte_at_cross; assumption?)
+  apply (clarsimp simp: obj_at_def pte_at_def  is_aligned_pte_offset pt_bits_def pageBits_def)
+  apply (intro conjI)
+   apply (rule_tac x="ArchObj (PageTable pt)" in exI)
+   apply (intro conjI)
+    apply (subgoal_tac "p + (y << 2) && ~~ mask 10 = p", simp)
+    apply (subst is_aligned_mask_out_add_eq)
+     apply (clarsimp simp: obj_at_def pte_at_def  is_aligned_pte_offset ptBits_def pteBits_def)
+    apply clarsimp
+    defer
+    apply (clarsimp simp: a_type_def)
+   apply (rule is_aligned_add)
+    apply (erule is_aligned_weaken)
+    apply (clarsimp simp: ptBits_def)
+   apply (clarsimp simp: is_aligned_shift)
+  apply (simp add: and_mask_0_iff_le_mask)
+  apply (rule le_mask_shiftl_le_mask[where n=8]; simp add: mask_def)
+  apply (frule word_less_sub_1, simp)
+  done
+
+lemma page_directory_at_cross:
+  "\<lbrakk> page_directory_at p s; pspace_aligned s; pspace_distinct s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow>
+   page_directory_at' p s'"
+  apply (clarsimp simp: page_directory_at'_def)
+  apply (rule context_conjI)
+   apply (clarsimp simp: obj_at_def)
+   apply (frule (1) pspace_alignedD)
+   apply (simp add: bit_simps')
+  apply clarsimp
+  apply (rule pde_at_cross; assumption?)
+  apply (clarsimp simp: obj_at_def pde_at_def  is_aligned_pte_offset pdBits_def pdeBits_def pd_bits_def pageBits_def)
+  apply (intro conjI)
+   apply (rule_tac x="ArchObj (PageDirectory pd)" in exI)
+   apply (intro conjI)
+    apply (subgoal_tac "p + (y << 2) && ~~ mask 14 = p", simp)
+    apply (subst is_aligned_mask_out_add_eq)
+     apply (clarsimp simp: obj_at_def pte_at_def  is_aligned_pte_offset pdBits_def pdeBits_def)
+    apply clarsimp
+    defer
+    apply (clarsimp simp: a_type_def)
+   apply (rule is_aligned_add)
+    apply (erule is_aligned_weaken)
+    apply (clarsimp simp: ptBits_def)
+   apply (clarsimp simp: is_aligned_shift)
+  apply (simp add: and_mask_0_iff_le_mask)
+  apply (rule le_mask_shiftl_le_mask[where n=12]; simp add: mask_def)
+  apply (frule word_less_sub_1, simp)
+  done
+
+lemma corres_cross_over_asid_pool_at:
+  "\<lbrakk> \<And>s. P s \<Longrightarrow> asid_pool_at p s \<and> pspace_distinct s \<and> pspace_aligned s;
+     corres r P (Q and asid_pool_at' p) f g \<rbrakk> \<Longrightarrow>
+   corres r P Q f g"
+  apply (rule corres_cross_over_guard[where Q="Q and asid_pool_at' p"])
+   apply (drule meta_spec, drule (1) meta_mp, clarsimp)
+   apply (erule asid_pool_at_cross, clarsimp simp: state_relation_def; assumption)
+  apply assumption
+  done
+
+lemma corres_cross_over_pte_at:
+  "\<lbrakk> \<And>s. P s \<Longrightarrow> pte_at p s \<and> pspace_distinct s \<and> pspace_aligned s;
+     corres r P (P' and pte_at' p) f g\<rbrakk> \<Longrightarrow>
+   corres r P P' f g"
+  apply (rule corres_cross_over_guard[where Q="P' and pte_at' p"])
+   apply (drule meta_spec, drule (1) meta_mp, clarsimp)
+   apply (erule pte_at_cross; assumption?)
+   apply (simp add: state_relation_def)
+  apply assumption
+  done
+
+
 lemma get_asid_pool_corres [corres]:
   "p = p' \<Longrightarrow> corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
           (asid_pool_at p) (asid_pool_at' p')
@@ -156,10 +326,6 @@ lemma get_asid_pool_corres [corres]:
   apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
   done
 
-lemmas aligned_distinct_asid_pool_atI'
-    = aligned_distinct_obj_atI'[where 'a=asidpool,
-                                simplified, OF _ _ _ refl]
-
 lemma aligned_distinct_relation_asid_pool_atI'[elim]:
   "\<lbrakk> asid_pool_at p s; pspace_relation (kheap s) (ksPSpace s');
      pspace_aligned' s'; pspace_distinct' s' \<rbrakk>
@@ -170,7 +336,7 @@ lemma aligned_distinct_relation_asid_pool_atI'[elim]:
   apply (clarsimp simp: other_obj_relation_def)
   apply (simp split: Structures_H.kernel_object.split_asm
                      arch_kernel_object.split_asm)
-  apply (drule(2) aligned_distinct_asid_pool_atI')
+  apply (drule(2) aligned'_distinct'_obj_at'I[where 'a=asidpool], simp)
   apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def
                         projectKOs)
   done
@@ -179,10 +345,7 @@ lemma get_asid_pool_corres':
   "corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
           (asid_pool_at p) (pspace_aligned' and pspace_distinct')
           (get_asid_pool p) (getObject p)"
-  apply (rule stronger_corres_guard_imp,
-         rule get_asid_pool_corres)
-   apply auto
-  done
+  by (corressimp search: get_asid_pool_corres) fastforce
 
 lemma setObject_asidpool_replies_of'[wp]:
   "setObject c (asidpool::asidpool) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
@@ -262,7 +425,7 @@ lemma get_pde_corres [corres]:
   done
 
 lemmas aligned_distinct_pde_atI'
-    = aligned_distinct_obj_atI'[where 'a=pde,
+    = aligned'_distinct'_obj_at'I[where 'a=pde,
                                 simplified, OF _ _ _ refl]
 
 lemma aligned_distinct_relation_pde_atI'[elim]:
@@ -526,7 +689,7 @@ lemma pte_relation_alignedD:
   done
 
 lemmas aligned_distinct_pte_atI'
-    = aligned_distinct_obj_atI'[where 'a=pte,
+    = aligned'_distinct'_obj_at'I[where 'a=pte,
                                 simplified, OF _ _ _ refl]
 
 lemma aligned_distinct_relation_pte_atI'[elim]:

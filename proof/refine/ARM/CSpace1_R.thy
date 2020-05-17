@@ -221,7 +221,7 @@ lemma pspace_relation_cte_wp_at:
    apply (simp add: unpleasant_helper)
    apply (drule spec, drule mp, erule domI)
    apply (clarsimp simp: cte_relation_def)
-   apply (drule(2) aligned_distinct_obj_atI'[where 'a=cte])
+   apply (drule(2) aligned'_distinct'_obj_at'I[where 'a=cte])
     apply simp
    apply (drule ko_at_imp_cte_wp_at')
    apply (clarsimp elim!: cte_wp_at_weakenE')
@@ -229,7 +229,7 @@ lemma pspace_relation_cte_wp_at:
   apply (drule(1) pspace_relation_absD)
   apply (clarsimp simp: other_obj_relation_def)
   apply (simp split: kernel_object.split_asm)
-  apply (drule(2) aligned_distinct_obj_atI'[where 'a=tcb])
+  apply (drule(2) aligned'_distinct'_obj_at'I[where 'a=tcb])
    apply simp
   apply (drule tcb_cases_related)
   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
