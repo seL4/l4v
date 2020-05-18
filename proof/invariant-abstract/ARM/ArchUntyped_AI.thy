@@ -150,9 +150,9 @@ proof -
      apply (frule(1) range_cover_stuff[where sz = sz])
         apply (clarsimp dest!:valid_cap_aligned simp:cap_aligned_def word_bits_def)+
       apply simp+
-     apply (clarsimp simp: get_free_ref_def valid_sched_context_size_def min_sched_context_bits_def
+     apply (clarsimp simp: get_free_ref_def valid_sched_context_size_def
                            untyped_max_bits_def obj_bits_api_def)
-     apply (rule conjI; clarsimp)
+     apply (rule conjI; clarsimp simp: min_sched_context_bits_def)
     apply (erule disjE, fastforce)
     apply (clarsimp simp: cte_wp_at_caps_of_state ex_cte_cap_wp_to_def)
     apply (rename_tac oref cref)

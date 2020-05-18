@@ -452,7 +452,7 @@ where
 | "cap_bits (Zombie r zs n) =
     (case zs of None \<Rightarrow> obj_bits (TCB undefined)
             | Some n \<Rightarrow> cte_level_bits + n)"
-| "cap_bits (SchedContextCap r n) = n" (* RT: correct? *)
+| "cap_bits (SchedContextCap r n) = min_sched_context_bits + n"
 | "cap_bits (SchedControlCap) = 0"
 | "cap_bits (IRQControlCap) = 0"
 | "cap_bits (IRQHandlerCap irq) = 0"
@@ -1322,7 +1322,7 @@ definition
   | ATCB \<Rightarrow> obj_bits (TCB undefined)
   | AEndpoint \<Rightarrow> obj_bits (Endpoint undefined)
   | ANTFN \<Rightarrow> obj_bits (Notification undefined)
-  | ASchedContext n \<Rightarrow> n
+  | ASchedContext n \<Rightarrow> min_sched_context_bits + n
   | AReply \<Rightarrow> obj_bits (Reply undefined)
   | AArch T' \<Rightarrow> arch_obj_bits_type T'"
 
@@ -3009,7 +3009,7 @@ lemma typ_at_eq_kheap_obj:
    (\<exists>cs. kheap s p = Some (CNode n cs) \<and> well_formed_cnode_n n cs)"
   "typ_at (AGarbage n) p s \<longleftrightarrow>
    (\<exists>cs. n \<ge> cte_level_bits \<and> kheap s p = Some (CNode (n - cte_level_bits) cs) \<and> \<not> well_formed_cnode_n (n - cte_level_bits) cs)
-   \<or> (\<exists>sc. \<not> valid_sched_context_size n \<and> kheap s p = Some (SchedContext sc n))"
+   \<or> (\<exists>sc. n \<ge> min_sched_context_bits \<and> \<not> valid_sched_context_size (n - min_sched_context_bits) \<and> kheap s p = Some (SchedContext sc (n - min_sched_context_bits)))"
   apply ((clarsimp simp add: obj_at_def a_type_def; rule iffI; clarsimp),
       case_tac ko; fastforce simp: wf_unique
                              split: if_split_asm kernel_object.splits)+
@@ -3029,7 +3029,7 @@ lemma a_type_ACapTableE:
 lemma a_type_AGarbageE:
   "\<lbrakk>a_type ko = AGarbage n;
     (!!cs. \<lbrakk>n \<ge> cte_level_bits; ko = CNode (n - cte_level_bits) cs; \<not>well_formed_cnode_n (n - cte_level_bits) cs\<rbrakk> \<Longrightarrow> R);
-    (!!sc. \<lbrakk>\<not>valid_sched_context_size n; ko = SchedContext sc n\<rbrakk> \<Longrightarrow> R)\<rbrakk>
+    (!!sc. \<lbrakk>n \<ge> min_sched_context_bits; \<not>valid_sched_context_size (n - min_sched_context_bits); ko = SchedContext sc (n - min_sched_context_bits)\<rbrakk> \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: if_split_asm; fastforce)
 
@@ -3510,7 +3510,7 @@ lemma dom_empty_cnode: "dom (empty_cnode us) = {x. length x = us}"
 lemma obj_at_default_cap_valid:
   "\<lbrakk>obj_at (\<lambda>ko. ko = default_object ty dev us dm) x s;
    ty = CapTableObject \<Longrightarrow> 0 < us;
-   ty = SchedContextObject \<Longrightarrow> valid_sched_context_size us;
+   ty = SchedContextObject \<Longrightarrow> valid_sched_context_size (us - min_sched_context_bits);
    ty \<noteq> Untyped; ty \<noteq> ArchObject ASIDPoolObj;
    cap_aligned (default_cap ty x us dev)\<rbrakk>
   \<Longrightarrow> s \<turnstile> default_cap ty x us dev"

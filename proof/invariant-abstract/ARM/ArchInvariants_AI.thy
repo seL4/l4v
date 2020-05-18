@@ -1207,7 +1207,7 @@ lemma pageBits_clb_less_word_bits [simp]:
 
 
 lemma valid_sc_size_less_word_bits:
-  "valid_sched_context_size n \<Longrightarrow> n < word_bits"
+  "valid_sched_context_size n \<Longrightarrow> min_sched_context_bits + n < word_bits"
   by (simp add: valid_sched_context_size_def untyped_max_bits_def word_bits_def)
 
 end

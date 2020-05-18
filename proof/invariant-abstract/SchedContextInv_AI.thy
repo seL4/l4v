@@ -592,7 +592,7 @@ where
 definition
   valid_refills_number :: "nat \<Rightarrow> nat \<Rightarrow> bool"
 where
-  "valid_refills_number mrefills n \<equiv> mrefills \<le> max_num_refills n"
+  "valid_refills_number mrefills n \<equiv> mrefills \<le> max_num_refills (min_sched_context_bits + n)"
 
 primrec
   valid_sched_control_inv :: "sched_control_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -2294,7 +2294,7 @@ lemma decode_sched_control_inv_wf:
      (\<lambda>s. \<forall>x\<in>set excaps. \<forall>r\<in>zobj_refs x. ex_nonz_cap_to r s)\<rbrace>
    decode_sched_control_invocation label args excaps
    \<lbrace>valid_sched_control_inv\<rbrace>, -"
-  apply (wpsimp simp: decode_sched_control_invocation_def whenE_def unlessE_def assertE_def
+  apply_trace (wpsimp simp: decode_sched_control_invocation_def whenE_def unlessE_def assertE_def
            split_del: if_split)
   apply (erule ballE[where x="hd excaps"])
    prefer 2

@@ -51,7 +51,7 @@ lemma (in Retype_AI_slot_bits) obj_bits_cong:
          split: if_splits apiobject_type.splits)
 
 lemma (in Retype_AI_slot_bits) obj_bits_api_default_object:
-  "\<lbrakk> ty \<noteq> Untyped\<rbrakk> \<Longrightarrow> obj_bits_api ty us = obj_bits (default_object ty dev us p)"
+  "\<lbrakk> ty \<noteq> Untyped; ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us\<rbrakk> \<Longrightarrow> obj_bits_api ty us = obj_bits (default_object ty dev us p)"
   unfolding obj_bits_api_def default_object_def
   by (cases ty)
      (simp_all add: slot_bits_def2 arch_kobj_size_cong wf_empty_bits)
@@ -71,7 +71,8 @@ lemma empty_cnode_dom:
 context Retype_AI_slot_bits begin
 
 lemma obj_bits_api_def2:
-  "obj_bits_api type obj_size_bits =
+  "type = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> obj_size_bits \<Longrightarrow>
+    obj_bits_api type obj_size_bits =
    (case type of Structures_A.Untyped \<Rightarrow> obj_size_bits
            | _ \<Rightarrow> obj_bits (default_object type False obj_size_bits dm))"
   by (simp add: obj_bits_api_def default_object_def
@@ -80,7 +81,8 @@ lemma obj_bits_api_def2:
          split: apiobject_type.split)
 
 lemma obj_bits_api_def3:
-  "obj_bits_api type obj_size_bits =
+  "type = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> obj_size_bits \<Longrightarrow>
+   obj_bits_api type obj_size_bits =
    (if type = Structures_A.Untyped then obj_size_bits
      else obj_bits (default_object type False obj_size_bits dm))"
   by (simp add: obj_bits_api_def default_object_def
@@ -89,7 +91,8 @@ lemma obj_bits_api_def3:
          split: apiobject_type.split)
 
 lemma obj_bits_api_def4:
-  "obj_bits_api type obj_size_bits =
+  "type = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> obj_size_bits \<Longrightarrow>
+   obj_bits_api type obj_size_bits =
    (if type = Structures_A.Untyped then obj_size_bits
      else obj_bits (default_object type True obj_size_bits dm))"
   by (simp add: obj_bits_api_def default_object_def arch_kobj_size_cong
@@ -98,11 +101,12 @@ lemma obj_bits_api_def4:
          split: apiobject_type.split)
 
 lemma obj_bits_dev_irr:
-  "ty \<noteq> Untyped \<Longrightarrow> obj_bits (default_object ty dev us p) = obj_bits_api ty us"
+  "\<lbrakk>ty \<noteq> Untyped; ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us\<rbrakk>
+     \<Longrightarrow> obj_bits (default_object ty dev us p) = obj_bits_api ty us"
   by (simp add: obj_bits_api_def3[where dm=0] cong: obj_bits_cong)
 
 lemma default_obj_range:
-  "ty \<noteq> Untyped \<Longrightarrow>
+  "\<lbrakk>ty \<noteq> Untyped; ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us\<rbrakk> \<Longrightarrow>
   obj_range p (default_object ty dev us dm) = {p..p + 2 ^ (obj_bits_api ty us) - 1}"
   by (simp add: obj_range_def obj_bits_dev_irr)
 
@@ -1259,7 +1263,7 @@ context Retype_AI_slot_bits begin
 lemma retype_addrs_obj_range_subset:
   "\<lbrakk> p \<in> set (retype_addrs ptr ty n us);
      range_cover ptr sz (obj_bits (default_object ty dev us dm)) n;
-     ty \<noteq> Untyped \<rbrakk>
+     ty \<noteq> Untyped; ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us \<rbrakk>
   \<Longrightarrow> obj_range p (default_object ty dev us dm) \<subseteq> {ptr..(ptr && ~~ mask sz) + (2^sz - 1)}"
   by (simp add: obj_range_def obj_bits_api_default_object[symmetric]
                 retype_addrs_range_subset p_assoc_help[symmetric]
@@ -1268,7 +1272,7 @@ lemma retype_addrs_obj_range_subset:
 lemma retype_addrs_obj_range_subset_strong:
   "\<lbrakk> p \<in> set (retype_addrs ptr ty n us);
     range_cover ptr sz (obj_bits_api ty us) n;
-    ty \<noteq> Untyped \<rbrakk>
+    ty \<noteq> Untyped; ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us \<rbrakk>
    \<Longrightarrow> obj_range p (default_object ty dev us dm) \<subseteq>  {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}"
   unfolding obj_range_def
   apply (frule retype_addrs_obj_range_subset)
@@ -1284,6 +1288,7 @@ lemma retype_addrs_obj_range_subset_strong:
       and  mem_p:"p \<in> set (retype_addrs ptr ty n us)"
       and  not_0:"n\<noteq> 0"
       and  tyunt:"ty\<noteq> Untyped"
+      and  tysc : "ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us"
     note n_less = range_cover.range_cover_n_less[OF cover]
     have unat_of_nat_m1: "unat (of_nat n - (1::machine_word)) < n"
       using not_0 n_less
@@ -1292,7 +1297,8 @@ lemma retype_addrs_obj_range_subset_strong:
       + (2 :: machine_word) ^ obj_bits (default_object ty dev us dm)"
       apply (simp add:distrib_right[where b = "1::'a::len word",simplified,symmetric])
       using not_0 n_less
-      apply (simp add: unat_of_nat_minus_1 obj_bits_api_def3[where dm=0] tyunt cong: obj_bits_cong)
+      apply (simp add: unat_of_nat_minus_1 obj_bits_api_def3[where dm=0] tyunt tysc
+                 cong: obj_bits_cong)
       done
     show  "p + 2 ^ obj_bits (default_object ty dev us dm) - 1 \<le> ptr + of_nat n * 2 ^ obj_bits_api ty us - 1"
       apply (subst decomp)
@@ -1300,7 +1306,7 @@ lemma retype_addrs_obj_range_subset_strong:
       apply (simp add:p_assoc_help)
       apply (rule order_trans[OF word_plus_mono_left word_plus_mono_right])
        using mem_p not_0
-         apply (clarsimp simp: retype_addrs_def ptr_add_def shiftl_t2n tyunt
+         apply (clarsimp simp: retype_addrs_def ptr_add_def shiftl_t2n tyunt tysc
                                obj_bits_dev_irr)
          apply (rule word_plus_mono_right)
           apply (rule word_mult_le_mono1[OF word_of_nat_le])
@@ -1331,7 +1337,7 @@ lemma retype_addrs_obj_range_subset_strong:
      apply (insert cover)
      apply (clarsimp simp:range_cover_def)
      apply (erule aligned_add_aligned[OF _  is_aligned_mult_triv2])
-       apply (simp add: obj_bits_dev_irr range_cover_def tyunt)+
+       apply (simp add: obj_bits_dev_irr range_cover_def tyunt tysc)+
    done
   qed
 
@@ -1339,11 +1345,12 @@ lemma retype_addrs_obj_range_subset_strong:
 lemma retype_addrs_mem_subset_ptr_bits:
   assumes cover:"range_cover ptr sz (obj_bits_api ty us) n"
   and tynunt: "ty \<noteq> Untyped"
+  and  tysc : "ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us"
   and     xv: "x \<in> set (retype_addrs ptr ty n us)"
   shows "{x .. x + (2 ^ obj_bits_api ty us - 1)} \<subseteq> {ptr .. (ptr && ~~ mask sz) + (2 ^ sz - 1)}"
   apply (insert cover)
-  using retype_addrs_obj_range_subset [OF xv _ tynunt]
-  by (simp add: obj_bits_dev_irr tynunt obj_range_def field_simps)
+  using retype_addrs_obj_range_subset [OF xv _ tynunt tysc]
+  by (simp add: obj_bits_dev_irr tynunt tysc obj_range_def field_simps)
 
 lemma pspace_no_overlap_retype_addrs_empty:
   assumes nptr: "pspace_no_overlap_range_cover ptr sz s"
@@ -1351,12 +1358,13 @@ lemma pspace_no_overlap_retype_addrs_empty:
   and yv: "y \<notin> set (retype_addrs ptr ty n us)"
   and kov: "kheap s y = Some ko"
   and tyv: "ty \<noteq> Structures_A.apiobject_type.Untyped"
+  and tysc: "ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us"
   and cover: "range_cover ptr sz (obj_bits_api ty us) n"
   and oab: "obj_bits_api ty us \<le> sz"
   shows "{x..x + (2 ^ obj_bits (default_object ty dev us dm) - 1)} \<inter> {y..y + (2 ^ obj_bits ko - 1)} = {}"
 proof -
   have "{x..x + (2 ^ obj_bits (default_object ty dev us dm) - 1)} \<subseteq> {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)}"
-   by (subst obj_bits_api_default_object [OF tyv, symmetric],
+   by (subst obj_bits_api_default_object [OF tyv tysc, symmetric],
       rule retype_addrs_mem_subset_ptr_bits) fact+
 
   moreover have "{ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<inter> {y..y + (2 ^ obj_bits ko - 1)} = {}"
@@ -1371,7 +1379,7 @@ end
 lemma valid_obj_default_object:
   assumes tyunt: "ty \<noteq> Untyped"
   and      tyct: "ty = CapTableObject \<Longrightarrow> us < word_bits - cte_level_bits \<and> 0 < us"
-  and      tysc: "ty = SchedContextObject \<Longrightarrow> valid_sched_context_size us"
+  and      tysc: "ty = SchedContextObject \<Longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits"
   and      arch: "valid_arch_tcb default_arch_tcb s"
   shows "valid_obj ptr (default_object ty dev us dm) s"
   unfolding valid_obj_def default_object_def
@@ -1392,7 +1400,7 @@ lemma valid_obj_default_object:
       apply (simp split: if_split_asm)
      apply (clarsimp split: if_split_asm)
     apply (frule tysc)
-    apply (simp add: valid_sched_context_def valid_bound_obj_def default_sched_context_def)
+    apply (simp add: valid_sched_context_def valid_bound_obj_def default_sched_context_def valid_sched_context_size_def)
    apply (simp add: valid_reply_def valid_bound_obj_def default_reply_def)
   apply (clarsimp simp add: wellformed_arch_default)
   done
@@ -1422,7 +1430,7 @@ locale Retype_AI_valid_untyped_helper =
     "\<And>s c q ty ptr sz us n dev.
       \<lbrakk> (s :: 'state_ext state) \<turnstile> c;
         cte_wp_at ((=) c) q s;
-        ty \<noteq> Untyped;
+        ty \<noteq> Untyped;ty = SchedContextObject \<Longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits;
         range_cover ptr sz (obj_bits_api ty us) n;
         is_untyped_cap c \<Longrightarrow>
           usable_untyped_range c \<inter> {ptr..ptr + of_nat (n * 2 ^ (obj_bits_api ty us)) - 1} = {};
@@ -1454,7 +1462,7 @@ locale retype_region_proofs =
       and   res: "caps_overlap_reserved {ptr..ptr + of_nat (n * 2 ^ (obj_bits_api ty us)) - 1} s"
       and tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
       and  tyct: "ty = CapTableObject \<Longrightarrow> us < word_bits - cte_level_bits \<and> 0 < us"
-      and  tysc: "ty = SchedContextObject \<Longrightarrow> valid_sched_context_size us"
+      and  tysc: "ty = SchedContextObject \<Longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits"
       and   orth: "pspace_no_overlap_range_cover ptr sz s"
       and  mem :  "caps_no_overlap ptr sz s"
       and cover: "range_cover ptr sz (obj_bits_api ty us) n"
@@ -1537,7 +1545,7 @@ proof -
     ultimately have
       "{x..x + (2 ^ obj_bits (default_object ty dev us dm) - 1)} \<inter>
        {y..y + (2 ^ obj_bits (default_object ty dev us dm) - 1)} = {}"
-      using xne tyunt cover
+      using xne tyunt tysc cover
       apply -
       apply (rule aligned_neq_into_no_overlap)
       apply (simp_all add: range_cover_def word_bits_def obj_bits_dev_irr)
@@ -1551,7 +1559,7 @@ proof -
     have "{x..x + (2 ^ obj_bits (default_object ty dev us dm) - 1)} \<inter> {y..y + (2 ^ obj_bits ko' - 1)} = {}"
       apply (rule pspace_no_overlap_retype_addrs_empty [OF orth])
       apply fact+
-      apply (insert cover tyunt)
+      apply (insert cover tyunt tysc)
       apply (simp add: range_cover_def word_bits_def)+
       done
   }note inter' = this
@@ -1588,7 +1596,7 @@ proof (clarsimp split: if_split_asm)
   thus "is_aligned x (obj_bits (default_object ty dev us (cur_domain s)))"
     apply -
     apply (drule retype_addrs_aligned)
-    apply (insert cover tyunt)
+    apply (insert cover tyunt tysc)
       apply (fastforce simp:range_cover_def word_bits_def)+
     apply (simp add: obj_bits_dev_irr
               split: Structures_A.apiobject_type.splits)
@@ -1621,7 +1629,7 @@ lemma valid_cap_pres:
   "\<lbrakk> s \<turnstile> c; cte_wp_at ((=) c) (oref,cref) s \<rbrakk> \<Longrightarrow> s' \<turnstile> c"
   using cover mem orth
   apply (simp add:s'_def ps_def)
-  apply (rule valid_untyped_helper[ OF _ _ tyunt cover _ _ _ vp ])
+  apply (rule valid_untyped_helper[ OF _ _ tyunt tysc cover _ _ _ vp ])
       apply simp+
      apply (simp add:cte_wp_at_caps_of_state)
      apply (drule res[unfolded caps_overlap_reserved_def,THEN bspec,OF ranI])
@@ -1954,7 +1962,7 @@ lemma use_retype_region_proofs':
   assumes y: "\<And>x s f. Q x (trans_state f s) = Q x s"
   shows
     "\<lbrakk> ty = CapTableObject \<Longrightarrow> 0 < us;
-       ty = SchedContextObject \<Longrightarrow> valid_sched_context_size us;
+       ty = SchedContextObject \<Longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits;
          \<And>s. P s \<longrightarrow> Q (retype_addrs ptr ty n us) s \<rbrakk> \<Longrightarrow>
     \<lbrace>\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n
         \<and> caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} s
@@ -2031,7 +2039,7 @@ lemmas retype_region_caps_of = use_retype_region_proofs
 
 lemma retype_region_valid_cap:
   "\<lbrakk>ty = Structures_A.apiobject_type.CapTableObject \<Longrightarrow> 0 < us;
-    ty = SchedContextObject \<Longrightarrow> valid_sched_context_size us\<rbrakk>
+    ty = SchedContextObject \<Longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits\<rbrakk>
    \<Longrightarrow> \<lbrace>(\<lambda>s::'state_ext state. valid_pspace s \<and> caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} s \<and>
            valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n \<and>
            caps_no_overlap ptr sz s \<and> pspace_no_overlap_range_cover ptr sz s  \<and>
@@ -2103,7 +2111,7 @@ lemma retype_region_post_retype_invs:
       and region_in_kernel_window {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}
       and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
       and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
-      and K (ty = SchedContextObject \<longrightarrow> valid_sched_context_size us)
+      and K (ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits)
       and K (range_cover ptr sz (obj_bits_api ty us) n) \<rbrace>
       retype_region ptr n us ty dev\<lbrace>\<lambda>rv. post_retype_invs ty rv\<rbrace>"
   apply (rule hoare_gen_asm)+

@@ -39,7 +39,7 @@ where
           \<and> (ptr && ~~ mask sz) = ptr_base)
           \<and> (reset \<longrightarrow> descendants_of slot (cdt s) = {})
           \<and> (ty = CapTableObject \<longrightarrow> us > 0)
-          \<and> (ty = SchedContextObject \<longrightarrow> valid_sched_context_size us)
+          \<and> (ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits)
           \<and> (ty = Untyped \<longrightarrow> us \<ge> untyped_min_bits)
           \<and> distinct (slot#slots)
           \<and> (\<forall>slot\<in>set slots. cte_wp_at ((=) cap.NullCap) slot s
@@ -1272,7 +1272,7 @@ lemma retype_region_invs_extras:
      and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
      and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
      and K (ty = CapTableObject \<longrightarrow> 0 < us)
-     and K (ty = SchedContextObject \<longrightarrow> valid_sched_context_size us)
+     and K (ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits)
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
      retype_region ptr n us ty dev\<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
   "\<lbrace>invs and pspace_no_overlap_range_cover ptr sz and caps_no_overlap ptr sz
@@ -1280,7 +1280,7 @@ lemma retype_region_invs_extras:
      and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
      and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
      and K (ty = CapTableObject \<longrightarrow> 0 < us)
-     and K (ty = SchedContextObject \<longrightarrow> valid_sched_context_size us)
+     and K (ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits)
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev\<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   "\<lbrace>invs and pspace_no_overlap_range_cover ptr sz and caps_no_overlap ptr sz
@@ -1288,7 +1288,7 @@ lemma retype_region_invs_extras:
      and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
      and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
      and K (ty = CapTableObject \<longrightarrow> 0 < us)
-     and K (ty = SchedContextObject \<longrightarrow> valid_sched_context_size us)
+     and K (ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits)
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev \<lbrace>\<lambda>rv. pspace_distinct\<rbrace>"
   "\<lbrace>invs and pspace_no_overlap_range_cover ptr sz and caps_no_overlap ptr sz
@@ -1296,7 +1296,7 @@ lemma retype_region_invs_extras:
      and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
      and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
      and K (ty = CapTableObject \<longrightarrow> 0 < us)
-     and K (ty = SchedContextObject \<longrightarrow> valid_sched_context_size us)
+     and K (ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits)
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev \<lbrace>\<lambda>rv. valid_mdb\<rbrace>"
   "\<lbrace>invs and pspace_no_overlap_range_cover ptr sz and caps_no_overlap ptr sz
@@ -1304,7 +1304,7 @@ lemma retype_region_invs_extras:
      and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
      and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
      and K (ty = CapTableObject \<longrightarrow> 0 < us)
-     and K (ty = SchedContextObject \<longrightarrow> valid_sched_context_size us)
+     and K (ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits)
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev\<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
   "\<lbrace>invs and pspace_no_overlap_range_cover ptr sz and caps_no_overlap ptr sz
@@ -1312,7 +1312,7 @@ lemma retype_region_invs_extras:
      and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
      and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
      and K (ty = CapTableObject \<longrightarrow> 0 < us)
-     and K (ty = SchedContextObject \<longrightarrow> valid_sched_context_size us)
+     and K (ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits)
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   apply (wp hoare_strengthen_post [OF retype_region_post_retype_invs],
@@ -1338,7 +1338,7 @@ context Untyped_AI_arch begin
 lemma retype_ret_valid_caps:
   "\<lbrace>pspace_no_overlap_range_cover ptr sz
       and K (tp = Structures_A.CapTableObject \<longrightarrow> us > 0)
-      and K (tp = SchedContextObject \<longrightarrow> valid_sched_context_size us)
+      and K (tp = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits)
       and K (tp = Untyped \<longrightarrow> untyped_min_bits \<le> us)
       and K (tp \<noteq> ArchObject ASIDPoolObj)
       and K (range_cover ptr sz (obj_bits_api tp us) n \<and> ptr \<noteq> 0)\<rbrace>
@@ -1350,7 +1350,7 @@ lemma retype_ret_valid_caps:
    prefer 5
    prefer 6
       apply ((clarsimp simp:valid_cap_def default_object_def cap_aligned_def
-        is_obj_defs well_formed_cnode_n_def empty_cnode_def
+        is_obj_defs well_formed_cnode_n_def empty_cnode_def valid_sched_context_size_def
         dom_def  ptr_add_def | rule conjI | intro conjI obj_at_foldr_intro imageI
       | rule is_aligned_add_multI[OF _ le_refl],
         (simp add:range_cover_def word_bits_def obj_bits_api_def)+)+)[5]
@@ -3298,7 +3298,7 @@ lemma retype_region_not_cte_wp_at:
      valid_mdb and pspace_no_overlap_range_cover ptr sz and caps_no_overlap ptr sz and
      (\<lambda>s. \<exists>cref. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) cref s) and
      K (\<not> P cap.NullCap \<and> (tp = CapTableObject \<longrightarrow> 0 < us) \<and>
-        (tp = SchedContextObject \<longrightarrow> valid_sched_context_size us) \<and>
+        (tp = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits) \<and>
         range_cover ptr sz (obj_bits_api tp us) n)\<rbrace>
      retype_region ptr n us tp dev
    \<lbrace>\<lambda>rv s. \<not> cte_wp_at P p s\<rbrace>"
@@ -3600,7 +3600,7 @@ lemma invoke_untyp_invs':
          \<and> pspace_no_overlap {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} s
          \<and> range_cover ptr sz (obj_bits_api tp us) (length slots)
          \<and> (tp = CapTableObject \<longrightarrow> 0 < us)
-         \<and> (tp = SchedContextObject \<longrightarrow> valid_sched_context_size us)
+         \<and> (tp = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us \<and>  us \<le> untyped_max_bits)
          \<and> caps_overlap_reserved {ptr..ptr + of_nat ((length slots) * 2 ^ obj_bits_api tp us) - 1} s
          \<and> caps_no_overlap ptr sz s \<rbrace>
         retype_region ptr (length slots) us tp dev \<lbrace>\<lambda>_.Q\<rbrace>"
