@@ -107,7 +107,7 @@ where
 | "cap_relation (Structures_A.ReplyCap ref r) c           = (c =
            Structures_H.ReplyCap ref (AllowGrant \<in> r))"
 | "cap_relation (Structures_A.SchedContextCap ref n) c    = (c =
-           Structures_H.SchedContextCap ref n)"
+           Structures_H.SchedContextCap ref (min_sched_context_bits + n))"
 | "cap_relation (Structures_A.SchedControlCap) c          = (c =
            Structures_H.SchedControlCap)"
 | "cap_relation (Structures_A.IRQControlCap) c            = (c =

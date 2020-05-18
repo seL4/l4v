@@ -136,7 +136,7 @@ lemma obj_size_relation:
   "\<lbrakk> cap_relation c c'; capClass c' = PhysicalClass \<rbrakk> \<Longrightarrow>
   obj_size c = capUntypedSize c'"
   apply (cases c, simp_all add: objBits_simps' zbits_map_def
-                                cte_level_bits_def
+                                cte_level_bits_def min_sched_context_bits_def
                          split: option.splits sum.splits)
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap,
