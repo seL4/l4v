@@ -163,20 +163,26 @@ lemma xpres_while:
   apply simp
   done
 
-lemma xpres_call:
-  assumes ret: "\<And>s t. xf s = v \<Longrightarrow> xf (r s t) = v"
-  and      xp: "\<And>s t. xpres xf v \<Gamma> (c s t)"
-  shows    "xpres xf v \<Gamma> (call i f r c)"
+lemma xpres_call_hoarep_gen:
+  assumes mod: "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/F s\<^esub> (P s) Call f (Q s),(A s)"
+  assumes ret: "\<And>s t. xf s = v \<Longrightarrow> i s \<in> P (x s) \<longrightarrow> t \<in> Q (x s) \<or> t \<in> A (x s) \<Longrightarrow> xf (r s t) = v"
+  assumes xpr: "\<And>s t. xpres xf v \<Gamma> (c s t)"
+  shows "xpres xf v \<Gamma> (call i f r c)"
   apply (rule xpresI)
   apply (erule exec_call_Normal_elim)
-      apply (erule (1) xpres_exec0 [OF xp])
+      apply (erule (1) xpres_exec0[OF xpr])
       apply (erule ret)
+      apply (frule (1) hoarep_exec_call_body[OF mod], fastforce)
      apply simp
      apply (erule subst, erule ret)
+     apply (frule (1) hoarep_exec_call_body[OF mod], fastforce)
     apply simp
    apply simp
   apply simp
   done
+
+lemmas xpres_call = xpres_call_hoarep_gen[OF hoarep_false_pre_gen, simplified]
+lemmas xpres_call_hoarep = xpres_call_hoarep_gen[where P="\<lambda>s. {s}" and x=i and i=i for i, simplified]
 
 lemma xpres_catch:
   assumes xpb: "xpres xf v \<Gamma> b"
