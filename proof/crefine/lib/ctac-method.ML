@@ -261,7 +261,7 @@ fun nothrows (Const ("Language.com.Skip", _)) = true
   | nothrows (Const ("Language.com.Throw", _)) = false
   | nothrows (Const ("Language.com.Catch", _) $ a $ b) =
     nothrows a orelse nothrows b
-  | nothrows (Const ("Language.call", _) $ i $ f $ r $ (Abs (_, _, (Abs (_, _, c)))))
+  | nothrows (Const ("Language.call", _) $ _ $ _ $ _ $ (Abs (_, _, (Abs (_, _, c)))))
     = nothrows c
   | nothrows _ = false (* who knows *)
 
@@ -353,8 +353,29 @@ fun solve_ceqv_xpres_rewrite_basic ctxt n = DETERM
 
 fun solve_ceqv_xpres_basic_preserves ctxt n = DETERM
   ((resolve_tac ctxt [ceqv_xpres_basic_preserves_TrueI] n
-       THEN SOLVE' (safe_simp_tac ctxt) n)
+       THEN SOLVE' (clarsimp_tac ctxt) n)
      ORELSE resolve_tac ctxt [ceqv_xpres_basic_preserves_FalseI] n);
+
+fun ceqv_xpres_call_tac ctxt (t, n) = let
+    val t_concl = Envir.beta_eta_contract (Logic.strip_assums_concl t);
+    fun f_name () = case t_concl of
+        @{term Trueprop} $ (@{term_pat "ceqv_xpres_call _ _ _"} $ Const p $ _ $ _ $ _ $ _ $ _ $ _) => fst p
+      | _ => raise TERM ("unexpected conclusion", [t_concl]);
+    fun modifies_thm () = f_name ()
+        |> Long_Name.base_name
+        |> unsuffix Hoare.proc_deco
+        |> suffix "_modifies"
+        |> my_thm ctxt
+        |> Local_Defs.unfold ctxt @{thms mex_def meq_def};
+    fun ceqv_xpres_call_modifies () =
+        resolve_tac ctxt [modifies_thm ()] 1 @{thm ceq_xpres_call_hoarep} |> Seq.hd;
+    fun ceqv_xpres_call_default s =
+        (warning ("ceqv_xpres_call_tac: " ^ s); @{thm ceqv_xpres_call});
+    val ceqv_xpres_callI = ceqv_xpres_call_modifies ()
+        handle ERROR s => ceqv_xpres_call_default s
+        handle TERM (s, _) => ceqv_xpres_call_default s
+        handle Option => ceqv_xpres_call_default "ceqv_xpres_call_modifies";
+  in resolve_tac ctxt [ceqv_xpres_callI] n end;
 
 fun solve_ceqv_xpres_lvar ctxt n = DETERM
   ((resolve_tac ctxt [ceqv_xpres_lvar_nondet_init_TrueI] n
@@ -363,7 +384,7 @@ fun solve_ceqv_xpres_lvar ctxt n = DETERM
 
 fun abstract_upds ctxt t = let
     val sT = domain_type (fastype_of t)
-    fun inner (upd $ updf $ t) = upd :: inner t
+    fun inner (upd $ _ $ t) = upd :: inner t
       | inner (Bound 0) = []
       | inner t = raise TERM ("strip_upds", [t])
     val upds = inner (betapply (t, Bound 0)) |> List.rev
@@ -410,7 +431,8 @@ fun ceqv2_consts_and_tacs ctxt = map (apfst (fst o dest_Const)) [
   (@{term ceqv_xpres_basic_preserves}, solve_ceqv_xpres_basic_preserves),
   (@{term ceqv_xpres_lvar_nondet_init}, solve_ceqv_xpres_lvar),
   (@{term ceqv_xpres_eq_If}, K (resolve_tac ctxt ceqv_xpres_eq_If_rules)),
-  (@{term ceqv_xpres_call_restore_args}, ceqv_restore_args_tac)
+  (@{term ceqv_xpres_call_restore_args}, ceqv_restore_args_tac),
+  (@{term ceqv_xpres_call}, SUBGOAL o ceqv_xpres_call_tac)
 ];
 
 fun ceqv2_all_tacs ctxt = SUBGOAL (fn (t, n) =>
@@ -427,10 +449,8 @@ in
        THEN REPEAT_DETERM (ceqv2_all_tacs ctxt 1)) n
 end;
 
-fun corres_solve_ceqv (trace : trace_opts) (depth : int)
-      ctxt = ceqv2_tac ctxt;
-
-
+fun corres_solve_ceqv (_ (*trace*) : trace_opts) (_ (*depth*) : int) =
+    ceqv2_tac;
 
 fun rename_fresh_tac nm i thm = let
     (* FIXME: proper name context handling *)
@@ -439,27 +459,25 @@ in
     rename_tac [#1 (Name.variant nm frees)] i thm
 end;
 
-(* If we are updating globals, we just ignore the new variable *)
 fun corres_pre_lift_tac lift_thm trace depth ctxt xf =
   prim_trace_tac' (#trace_this trace) depth ("PRE_LIFT_TAC " ^ xf) ctxt
-  let
-    val base_xf = Long_Name.base_name xf
-    val var_name = (unsuffix "_'" base_xf handle Fail _ => "rv")
-in if base_xf = "globals"
-   then resolve_tac ctxt [my_thm ctxt "ccorres_special_trim_Int"]
-   else EVERY' [TRY o resolve_tac ctxt [my_thm ctxt "ccorres_introduce_UNIV_Int_when_needed"],
-                Rule_Insts.res_inst_tac ctxt [((("xf'", 0), Position.none), xf)] [] (my_thm ctxt "ccorres_tmp_lift1"),
-                rename_fresh_tac var_name,
-                resolve_tac ctxt [my_thm ctxt lift_thm],
-                corres_solve_ceqv trace depth ctxt]
-end;
+  let val base_xf = Long_Name.base_name xf;
+      val var_name = (unsuffix "_'" base_xf handle Fail _ => "rv");
+      fun res_inst xf = Rule_Insts.res_inst_tac ctxt [((("xf'", 0), Position.none), xf)] []
+                                                (my_thm ctxt "ccorres_tmp_lift1");
+  in EVERY' [TRY o resolve_tac ctxt [my_thm ctxt "ccorres_introduce_UNIV_Int_when_needed"],
+             res_inst xf ORELSE' res_inst ("\<lambda>s. " ^ xf ^ " (globals s)"),
+             rename_fresh_tac var_name,
+             resolve_tac ctxt [my_thm ctxt lift_thm],
+             corres_solve_ceqv trace depth ctxt]
+  end;
 
 val corres_lift_tac = corres_pre_lift_tac "ccorres_tmp_lift2";
 
 fun extract_lhs_xf (ct as (Const ("Language.com.Basic", _) $ _)) = extract_basic_xf ct
-  | extract_lhs_xf (Const ("Language.call", _) $ i $ f $ r $ (Abs (_, _, (Abs (_, _, c)))))
+  | extract_lhs_xf (Const ("Language.call", _) $ _ $ _ $ _ $ (Abs (_, _, (Abs (_, _, c)))))
     = extract_basic_xf c
-  | extract_lhs_xf t = (NONE, NONE) (* raise TERM ("extract_lhs_xf", [t]) *)
+  | extract_lhs_xf _ = (NONE, NONE) (* raise TERM ("extract_lhs_xf", [t]) *)
 
 fun Call_name (Const ("Language.com.Call", _) $ (Const (name, _))) = name
   | Call_name t = raise TERM ("Call_name", [t])
@@ -544,7 +562,7 @@ end;
 fun normalise_xf (o_xf, o_xfru) =
     case o_xf of
         NONE                     => (false, xfdc, NONE)
-      | SOME (xf_tp as (xf, tp)) => if (Long_Name.base_name xf) = "globals" then (false, xfdc, NONE) else (true, xf_tp, o_xfru)
+      | SOME (xf_tp as (xf, _)) => if (Long_Name.base_name xf) = "globals" then (false, xfdc, NONE) else (true, xf_tp, o_xfru)
 
 (* Options *)
 
@@ -692,7 +710,7 @@ fun corres_split_tac opts ctxt =
                 let
                     val trace          = #trace opts
                     val cc             = concl_dest_ccorres prem;
-                    val (lhs, rhs)     = extract_Seq (#conc cc)
+                    val (lhs, _)     = extract_Seq (#conc cc)
                     val vcg_suffix     = #vcg_suffix opts
                     val record_splits     = Proof_Context.get_thms ctxt ("ctac_splits_record" ^ vcg_suffix)
                     val call_splits       = Proof_Context.get_thms ctxt ("ctac_splits_call" ^ vcg_suffix)
@@ -784,7 +802,7 @@ end; (* handle TERM  e => no_tac
 fun corres_trim_lvar_nondet_init_tac trace depth ctxt known_guard = let
     val match_seq = Proof_Context.get_thms ctxt "match_ccorres_Seq";
 
-    fun tac (prem, i) = let
+    fun tac (_, i) = let
               val remove_lvar_init = Proof_Context.get_thm ctxt
                                                     (if known_guard
                                                      then "ccorres_lift_rhs_remove_lvar_init"
@@ -816,7 +834,7 @@ let
 
         (* xf and friends *)
         val cc         = concl_dest_ccorres prem;
-        val (lhs, rhs) = extract_Seq (#conc cc)
+        val (lhs, _) = extract_Seq (#conc cc)
         val (_, (xf, tp), o_xfru) = normalise_xf (extract_lhs_xf lhs)
 
         val xfN   = "xf'" (* _should_ be OK here *)
@@ -1112,9 +1130,9 @@ end;
 (* Debugging *)
 
 val corres_print_xf = let
-    fun tac (ctxt : Proof.context) (prem, i) = let
+    fun tac (_ : Proof.context) (prem, _) = let
         val cc         = concl_dest_ccorres prem;
-        val (lhs, rhs) = extract_Seq (#conc cc)
+        val (lhs, _) = extract_Seq (#conc cc)
         val (is_concr, (xf, _), o_xfru)  = normalise_xf (extract_lhs_xf lhs)
 
         fun b_to_s b = if b then "true" else "false"

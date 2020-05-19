@@ -887,40 +887,48 @@ lemma While_ceqv:
   apply simp
   done
 
-lemma call_ceqv':
-  assumes ieq: "\<And>t. rewrite_xf xf t v i i'"
-  and    ceqv: "\<And>t t' s'. ceqv \<Gamma> xf v (r t s') t' (c t s') (c' t s')" (* For record field updates *)
-  and     xf:  "\<And>t t'. xf t = v \<Longrightarrow> xf (r t t') = v"
+lemma call_ceqv_hoarep_gen:
+  assumes mod: "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/F s\<^esub> (P s) Call f (Q s),(A s)"
+  assumes ieq: "\<And>s. rewrite_xf xf s v i i'"
+  and    ceqv: "\<And>t t' s'. ceqv \<Gamma> xf v (r t s') t' (c t s') (c' t s')"
+  and     xf:  "\<And>s t. xf s = v \<Longrightarrow> i' s \<in> P (x s) \<longrightarrow> t \<in> Q (x s) \<or> t \<in> A (x s) \<Longrightarrow> xf (r s t) = v"
   shows   "ceqv \<Gamma> xf v t t' (call i f r c) (call i' f r c')"
   apply (rule ceqvI)
   apply (rule iffI)
    apply (erule exec_call_Normal_elim)
-       apply (drule ceqvD1 [OF _ _ ceqv])
-        apply (simp add: xf)
+       apply (drule ceqvD1[OF _ _ ceqv])
+        apply (simp add: rewrite_xfD[OF ieq])
+        apply (erule xf)
+        apply (frule (1) hoarep_exec_call_body[OF mod], fastforce)
        apply (erule exec_call)
-        apply (simp add: rewrite_xfD [OF ieq])
+        apply (simp add: rewrite_xfD[OF ieq])
        apply assumption
-      apply (clarsimp simp: rewrite_xfD [OF ieq] elim!: exec_callAbrupt exec_callFault exec_callStuck exec_callUndefined)
-     apply (clarsimp simp: rewrite_xfD [OF ieq] elim!: exec_callAbrupt exec_callFault exec_callStuck exec_callUndefined)
-    apply (clarsimp simp: rewrite_xfD [OF ieq] elim!: exec_callAbrupt exec_callFault exec_callStuck exec_callUndefined)
-   apply (clarsimp simp: rewrite_xfD [OF ieq] elim!: exec_callAbrupt exec_callFault exec_callStuck exec_callUndefined)
-  (* clag *)
-   apply (erule exec_call_Normal_elim)
-       apply (drule ceqvD2 [OF _ _ ceqv])
-        apply (simp add: xf)
-       apply (erule exec_call)
-        apply (simp add: rewrite_xfD [OF ieq])
-       apply assumption
-      apply (clarsimp simp: rewrite_xfD [OF ieq, symmetric]
-        elim!: exec_callAbrupt exec_callFault exec_callStuck exec_callUndefined)+
+      apply (clarsimp simp: rewrite_xfD[OF ieq] elim!: exec_callAbrupt)
+     apply (clarsimp simp: rewrite_xfD[OF ieq] elim!: exec_callFault)
+    apply (clarsimp simp: rewrite_xfD[OF ieq] elim!: exec_callStuck)
+   apply (clarsimp simp: rewrite_xfD[OF ieq] elim!: exec_callUndefined)
+  apply (erule exec_call_Normal_elim)
+      apply (drule ceqvD2 [OF _ _ ceqv])
+       apply (erule xf)
+       apply (frule (1) hoarep_exec_call_body[OF mod], fastforce)
+      apply (erule exec_call)
+       apply (simp add: rewrite_xfD[OF ieq])
+      apply assumption
+     apply (clarsimp simp: rewrite_xfD[OF ieq] elim!: exec_callAbrupt)
+    apply (clarsimp simp: rewrite_xfD[OF ieq] elim!: exec_callFault)
+   apply (clarsimp simp: rewrite_xfD[OF ieq] elim!: exec_callStuck)
+  apply (clarsimp simp: rewrite_xfD[OF ieq] elim!: exec_callUndefined)
   done
 
-lemma call_ceqv:
+lemmas call_ceqv = call_ceqv_hoarep_gen[OF hoarep_false_pre_gen, simplified]
+lemmas call_ceqv_hoarep = call_ceqv_hoarep_gen[where P="\<lambda>s. {s}" and x=i and i=i for i, simplified]
+
+lemma call_ceqv':
   assumes ieq: "\<And>t. rewrite_xf xf t v i i'"
   and    ceqv: "\<And>t t' s'. ceqv \<Gamma> xf v (r t s') t' (c t s') (c' t s')" (* For record field updates *)
   and     xf:  "\<And>t t'. xf (r t t') = xf t"
   shows   "ceqv \<Gamma> xf v t t' (call i f r c) (call i' f r c')"
-  by (rule call_ceqv' [OF ieq ceqv], simp add: xf)
+  by (rule call_ceqv [OF ieq ceqv], simp add: xf)
 
 lemmas Skip_ceqv = ceqv_refl [where c = Skip]
 
@@ -1091,7 +1099,7 @@ lemmas ceqv_rules = ceqv_refl [where xf' = xfdc] \<comment> \<open>Any ceqv with
   Cond_ceqv [OF Collect_mem_eqv] Cond_UNIV_ceqv Cond_empty_ceqv
   Guard_ceqv [OF Collect_mem_eqv] Guard_UNIV_ceqv
   Seq_ceqv Seq_weak_ceqv
-  Basic_ceqv call_ceqv Skip_ceqv
+  Basic_ceqv call_ceqv' Skip_ceqv
   Catch_ceqv Throw_ceqv
   creturn_ceqv_xf creturn_ceqv_not_xf \<comment> \<open>order is important with these two, the second is more general\<close>
   ceqv_refl [where c = return_void_C] ceqv_refl [where c = break_C]
@@ -1118,10 +1126,10 @@ definition
  "ceqv_xpres_rewrite_basic xf v f f'
     \<equiv> \<forall>s. xf s = v \<longrightarrow> f s = f' s"
 
-definition
-  ceqv_xpres_basic_preserves :: "('s \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> bool \<Rightarrow> bool" where
- "ceqv_xpres_basic_preserves xf v f b
-    \<equiv> b \<longrightarrow> (\<forall>s. xf s = v \<longrightarrow> xf (f s) = v)"
+definition ceqv_xpres_basic_preserves ::
+  "('s \<Rightarrow> 'v) \<Rightarrow> 'v \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> bool \<Rightarrow> bool"
+  where
+  "ceqv_xpres_basic_preserves xf v P f b \<equiv> b \<longrightarrow> (\<forall>s. xf s = v \<longrightarrow> P s \<longrightarrow> xf (f s) = v)"
 
 definition
   ceqv_xpres_eq_If :: "bool \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
@@ -1225,7 +1233,7 @@ lemma ceqv_xpres_Seq:
 
 lemma ceqv_xpres_Basic:
   "\<lbrakk> ceqv_xpres_rewrite_basic xf v f f';
-          ceqv_xpres_basic_preserves xf v f' pres \<rbrakk>
+          ceqv_xpres_basic_preserves xf v \<top> f' pres \<rbrakk>
     \<Longrightarrow> ceqv_xpres \<Gamma> xf v True (Basic f) pres (Basic f')"
   apply (simp add: ceqv_xpres_eq_imp)
   apply (intro allI impI conjI)
@@ -1235,31 +1243,48 @@ lemma ceqv_xpres_Basic:
   apply (simp add: ceqv_xpres_basic_preserves_def)
   done
 
-lemma ceqv_xpres_call:
-  "\<lbrakk> ceqv_xpres_call_restore_args f i i';
-     ceqv_xpres_rewrite_basic xf v i' i'';
-           \<And>s'. ceqv_xpres_basic_preserves xf v (\<lambda>s. r s s') pres';
-           \<And>s' s''. ceqv_xpres \<Gamma> xf v pres' (c s' s'')  pres (c' s' s'') \<rbrakk>
-      \<Longrightarrow> ceqv_xpres \<Gamma> xf v True (call i f r c) pres (call i'' f r c')"
-  apply (simp add: ceqv_xpres_eq_imp ceqv_xpres_call_restore_args_def)
+definition ceqv_xpres_call where
+  "ceqv_xpres_call \<Gamma> xf v f r i c pres i' c'
+   \<equiv> ceqv_xpres \<Gamma> xf v True (call i f r c) pres (call i' f r c')"
+
+lemma ceqv_xpres_call_ceqv_xpres:
+  assumes "ceqv_xpres_call \<Gamma> xf v f r i c pres i' c'"
+  shows "ceqv_xpres \<Gamma> xf v True (call i f r c) pres (call i' f r c')"
+  using assms by (simp add: ceqv_xpres_call_def)
+
+lemma ceqv_xpres_call_hoarep_gen:
+  assumes mod: "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/F s\<^esub> (P s) Call f (Q s),(A s)"
+  assumes args: "ceqv_xpres_call_restore_args f i i''"
+  assumes init: "ceqv_xpres_rewrite_basic xf v i'' i'"
+  assumes glob: "\<And>t. ceqv_xpres_basic_preserves xf v
+                       (\<lambda>s. i' s \<in> P (x s) \<longrightarrow> t \<in> Q (x s) \<or> t \<in> A (x s))
+                       (\<lambda>s. r s t) pres'"
+  assumes ret: "\<And>s t. ceqv_xpres \<Gamma> xf v pres' (c s t) pres (c' s t)"
+  shows "ceqv_xpres_call \<Gamma> xf v f r i c pres i' c'"
+  using init glob ret
+  apply (simp add: ceqv_xpres_call_def ceqv_xpres_eq_imp
+                   args[unfolded ceqv_xpres_call_restore_args_def, symmetric])
   apply (intro allI conjI impI)
    defer
    apply (cases pres')
-    apply (rule xpres_call)
-     apply (simp add: ceqv_xpres_basic_preserves_def)
+    apply (rule xpres_call_hoarep_gen[OF mod])
+     apply (fastforce simp: ceqv_xpres_basic_preserves_def)
     apply (simp add: ceqv_xpres_eq_imp)
    apply (simp add: ceqv_xpres_False)
   apply (cases pres')
-   apply (clarsimp simp add: ceqv_xpres_eq_imp)
-   apply (rule call_ceqv')
+   apply (clarsimp simp: ceqv_xpres_eq_imp)
+   apply (rule call_ceqv_hoarep_gen[OF mod])
      apply (simp add: rewrite_xf_def ceqv_xpres_rewrite_basic_def)
     apply simp
-   apply (simp add: ceqv_xpres_basic_preserves_def)
+   apply (fastforce simp: ceqv_xpres_rewrite_basic_def ceqv_xpres_basic_preserves_def)
   apply (simp add: ceqv_xpres_False)
-  apply (clarsimp simp add: ceqv_def ceqv_xpres_rewrite_basic_def)
-  apply (auto elim!: exec_call_Normal_elim exec_call
-                     exec_callAbrupt exec_callFault exec_callStuck exec_callUndefined)
-  done
+  apply (clarsimp simp: ceqv_def ceqv_xpres_rewrite_basic_def)
+  by (auto elim!: exec_call_Normal_elim exec_call
+                  exec_callAbrupt exec_callFault exec_callStuck exec_callUndefined)
+
+lemmas ceqv_xpres_call = ceqv_xpres_call_hoarep_gen[OF hoarep_false_pre_gen, simplified]
+lemmas ceq_xpres_call_hoarep
+  = ceqv_xpres_call_hoarep_gen[where P="\<lambda>s. {s}" and x=i' and i'=i' for i', simplified]
 
 lemma ceqv_xpres_Skip:
   "ceqv_xpres \<Gamma> xf v True Skip True Skip"
@@ -1296,9 +1321,8 @@ lemma exec_Basic_Seq_Basic:
 
 lemma ceqv_xpres_return_C:
   "\<lbrakk> ceqv_xpres_rewrite_basic xf v qf qf';
-          \<And>f. ceqv_xpres_basic_preserves xf v (xfu f) pres';
-          \<And>f. ceqv_xpres_basic_preserves xf v
-                  (global_exn_var_'_update f) pres'';
+          \<And>f. ceqv_xpres_basic_preserves xf v \<top> (xfu f) pres';
+          \<And>f. ceqv_xpres_basic_preserves xf v \<top> (global_exn_var_'_update f) pres'';
           ceqv_xpres_eq_If pres' pres'' False pres \<rbrakk>
      \<Longrightarrow> ceqv_xpres \<Gamma> xf v True (return_C xfu qf) pres (return_C xfu qf')"
   apply (simp add: ceqv_xpres_def ceqv_xpres_rewrite_basic_def
@@ -1308,11 +1332,9 @@ lemma ceqv_xpres_return_C:
   done
 
 lemma ceqv_xpres_C_bits:
-  "\<lbrakk> \<And>f. ceqv_xpres_basic_preserves xf v
-                  (global_exn_var_'_update f) pres \<rbrakk>
+  "\<lbrakk> \<And>f. ceqv_xpres_basic_preserves xf v \<top> (global_exn_var_'_update f) pres \<rbrakk>
      \<Longrightarrow> ceqv_xpres \<Gamma> xf v True return_void_C pres return_void_C"
-  "\<lbrakk> \<And>f. ceqv_xpres_basic_preserves xf v
-                  (global_exn_var_'_update f) pres \<rbrakk>
+  "\<lbrakk> \<And>f. ceqv_xpres_basic_preserves xf v \<top> (global_exn_var_'_update f) pres \<rbrakk>
      \<Longrightarrow> ceqv_xpres \<Gamma> xf v True break_C pres break_C"
   "ceqv_xpres \<Gamma> xf v True catchbrk_C True catchbrk_C"
   by (auto simp: ceqv_xpres_def
@@ -1335,7 +1357,7 @@ lemma ceqv_xpres_lvar_nondet_init:
 lemmas ceqv_xpres_rules =
   ceqv_xpres_False_pres ceqv_xpres_xfdc ceqv_xpres_whileAnno
   ceqv_xpres_While ceqv_xpres_Cond ceqv_xpres_Guard ceqv_xpres_Seq
-  ceqv_xpres_lvar_nondet_init ceqv_xpres_Basic ceqv_xpres_call
+  ceqv_xpres_lvar_nondet_init ceqv_xpres_Basic ceqv_xpres_call_ceqv_xpres
   ceqv_xpres_Skip ceqv_xpres_Catch ceqv_xpres_Throw ceqv_xpres_return_C
   ceqv_xpres_C_bits
 
@@ -1358,11 +1380,11 @@ lemma ceqv_xpres_rewrite_basic_refl:
   by (simp add: ceqv_xpres_rewrite_basic_def)
 
 lemma ceqv_xpres_basic_preserves_TrueI:
-  "\<lbrakk> \<And>s. xf s = v \<longrightarrow> xf (f s) = v \<rbrakk> \<Longrightarrow> ceqv_xpres_basic_preserves xf v f True"
+  "\<lbrakk> \<And>s. xf s = v \<longrightarrow> P s \<longrightarrow> xf (f s) = v \<rbrakk> \<Longrightarrow> ceqv_xpres_basic_preserves xf v P f True"
   by (simp add: ceqv_xpres_basic_preserves_def)
 
 lemma ceqv_xpres_basic_preserves_FalseI:
-  "ceqv_xpres_basic_preserves xf v f False"
+  "ceqv_xpres_basic_preserves xf v P f False"
   by (simp add: ceqv_xpres_basic_preserves_def)
 
 lemma ceqv_xpres_lvar_nondet_init_TrueI:
