@@ -2278,7 +2278,6 @@ lemma assert_get_tcb_ko':
 lemma is_schedulable_wp:
   "\<lbrace>\<lambda>s. \<forall>t. is_schedulable_bool tcb_ptr s = t \<longrightarrow> P t s\<rbrace> is_schedulable tcb_ptr \<lbrace>P\<rbrace>"
   apply (clarsimp simp: is_schedulable_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ assert_get_tcb_ko'])
   apply (case_tac "tcb_sched_context tcb"; clarsimp)
    apply (wpsimp simp: is_schedulable_bool_def obj_at_def get_tcb_rev)

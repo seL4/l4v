@@ -273,13 +273,14 @@ definition
   is_schedulable :: "obj_ref \<Rightarrow> ('z::state_ext state, bool) nondet_monad"
 where
   "is_schedulable tcb_ptr \<equiv> do
-    in_release_q \<leftarrow> gets $ in_release_queue tcb_ptr;
     tcb \<leftarrow> gets_the $ get_tcb tcb_ptr;
     if Option.is_none (tcb_sched_context tcb)
     then return False
     else do
       sc \<leftarrow> get_sched_context $ the $ tcb_sched_context tcb;
-      return (runnable (tcb_state tcb) \<and> sc_active sc \<and> \<not>in_release_q)
+      is_runnable \<leftarrow> return (runnable (tcb_state tcb));
+      in_release_q \<leftarrow> gets $ in_release_queue tcb_ptr;
+      return (is_runnable \<and> sc_active sc \<and> \<not>in_release_q)
     od
   od"
 
