@@ -30,9 +30,6 @@ definition page_base :: "vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vspa
 
 section "Architecture-specific Decode Functions"
 
-(* FIXME RISCV: there seems to be some lack of concern about what's returned to the user now *)
-(* FIXME RISCV: currently we're comparing against maxIRQ but the C code acknowledges a potentially
-          lower limit of PLIC_MAX_IRQ *)
 definition
   arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
 where
