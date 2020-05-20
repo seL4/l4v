@@ -1167,7 +1167,7 @@ abbreviation
                                     itcb_sched_context t, itcb_yield_to t, itcb_arch t))"
 
 abbreviation (* could consider introducing projection like pred_tcb_at? maybe? *)
-  "idle_sc_at \<equiv> obj_at (\<lambda>ko. \<exists>sc. ko = SchedContext sc min_sched_context_bits
+  "idle_sc_at \<equiv> obj_at (\<lambda>ko. \<exists>sc. ko = SchedContext sc 0
                                   \<and> sc_period sc = 0
                                   \<and> sc_tcb sc = Some idle_thread_ptr
                                   \<and> sc_ntfn sc = None
