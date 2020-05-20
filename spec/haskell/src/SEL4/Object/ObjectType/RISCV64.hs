@@ -136,14 +136,10 @@ sameObjectAs a b = sameRegionAs a b
 
 -- Create an architecture-specific object.
 
--- % FIXME: it is not clear whether we can have large/huge device pages
-
 placeNewDataObject :: PPtr () -> Int -> Bool -> Kernel ()
 placeNewDataObject regionBase sz isDevice = if isDevice
     then placeNewObject regionBase UserDataDevice sz
     else placeNewObject regionBase UserData sz
-
--- FIXME RISCV: C code missing AUXUPD, TODO in later stages of project
 
 createObject :: ObjectType -> PPtr () -> Int -> Bool -> Kernel ArchCapability
 createObject t regionBase _ isDevice =
