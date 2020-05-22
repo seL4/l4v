@@ -62,9 +62,11 @@ This module uses the C preprocessor to select a target architecture.
 > minBudgetUs :: Word64
 > minBudgetUs = 2 * kernelWCET_us
 
-> coreSchedContextBytes :: Int
-> coreSchedContextBytes = 88
+> -- numbers from MCS C: (9 * sizeof(word_t)) + (3 * sizeof(ticks_t)) for aarch32
+> schedContextStructSize :: Int
+> schedContextStructSize = (9 * 4) + (3 * 8)
 
+> -- similarly, (2 * sizeof(ticks_t))
 > refillSizeBytes :: Int
 > refillSizeBytes = 16
 
@@ -614,7 +616,7 @@ This module uses the C preprocessor to select a target architecture.
 >                 else when runnable $ possibleSwitchTo $ fromJust $ scTCB sc
 
 > refillAbsoluteMax :: Capability -> Int
-> refillAbsoluteMax (SchedContextCap _ bits) = 1 `shiftL` bits - coreSchedContextBytes - refillSizeBytes
+> refillAbsoluteMax (SchedContextCap _ bits) = (1 `shiftL` bits - schedContextStructSize) `div` refillSizeBytes
 > refillAbsoluteMax _ = 0
 
 > isRoundRobin :: PPtr SchedContext -> Kernel Bool
