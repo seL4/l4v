@@ -407,10 +407,11 @@ New threads are placed in the current security domain, which must be the domain 
 >         Just NotificationObject -> do
 >             placeNewObject (PPtr $ fromPPtr regionBase) (makeObject :: Notification) 0
 >             return $ NotificationCap (PPtr $ fromPPtr regionBase) 0 True True
->         -- FIXME RT: need to update Refill array/list
 >         Just SchedContextObject -> do
->             placeNewObject regionBase (makeObject :: SchedContext) 0
->             return $ SchedContextCap (PPtr $ fromPPtr regionBase) userSize
+>             let scp = PPtr $ fromPPtr regionBase
+>             let newCap = SchedContextCap scp userSize
+>             placeNewObject regionBase ((makeObject :: SchedContext){scRefills = replicate (refillAbsoluteMax newCap) emptyRefill}) 0
+>             return $ newCap
 >         Just ReplyObject -> do
 >             placeNewObject regionBase (makeObject :: Reply) 0
 >             return $ ReplyCap (PPtr $ fromPPtr regionBase) True
