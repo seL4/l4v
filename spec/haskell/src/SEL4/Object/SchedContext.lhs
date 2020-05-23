@@ -20,7 +20,7 @@ This module uses the C preprocessor to select a target architecture.
 >         schedContextUnbindTCB, schedContextBindTCB, schedContextResume,
 >         setSchedContext, updateTimeStamp, commitTime, rollbackTime,
 >         refillHd, refillTl, minBudget, minBudgetUs, refillCapacity, refillBudgetCheck,
->         refillBudgetCheckRoundRobin, updateScPtr, emptyRefill,
+>         refillBudgetCheckRoundRobin, updateScPtr, emptyRefill, scBitsFromRefillLength,
 >         isCurDomainExpired, refillUnblockCheck, mapScPtr,
 >         refillReady, tcbReleaseEnqueue, tcbReleaseDequeue, refillSufficient, postpone,
 >         schedContextDonate, maybeDonateSc, maybeReturnSc, schedContextUnbindNtfn,
@@ -61,14 +61,6 @@ This module uses the C preprocessor to select a target architecture.
 
 > minBudgetUs :: Word64
 > minBudgetUs = 2 * kernelWCET_us
-
-> -- numbers from MCS C: (9 * sizeof(word_t)) + (3 * sizeof(ticks_t)) for aarch32
-> schedContextStructSize :: Int
-> schedContextStructSize = (9 * 4) + (3 * 8)
-
-> -- similarly, (2 * sizeof(ticks_t))
-> refillSizeBytes :: Int
-> refillSizeBytes = 16
 
 > getSchedContext :: PPtr SchedContext -> Kernel SchedContext
 > getSchedContext = getObject

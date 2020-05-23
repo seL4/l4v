@@ -160,7 +160,7 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 > objBitsKO (KOUserDataDevice) = pageBits
 > objBitsKO (KOKernelData) = pageBits
 > objBitsKO (KOArch a) = archObjSize a
-> objBitsKO (KOSchedContext sc) = minSchedContextBits
+> objBitsKO (KOSchedContext sc) = scBitsFromRefillLength sc
 > objBitsKO (KOReply _) = replySizeBits
 
 \subsubsection{Synchronous Endpoint}
@@ -212,6 +212,19 @@ list of pointers to waiting threads;
 >     scRefillHead :: Int,
 >     scRefillCount :: Int,
 >     scRefills :: [Refill]}
+
+> -- numbers from MCS C: (9 * sizeof(word_t)) + (3 * sizeof(ticks_t)) for aarch32
+> schedContextStructSize :: Int
+> schedContextStructSize = (9 * 4) + (3 * 8)
+
+> -- similarly, (2 * sizeof(ticks_t))
+> refillSizeBytes :: Int
+> refillSizeBytes = 16
+
+> scBitsFromRefillLength :: SchedContext -> Int
+> scBitsFromRefillLength sc = ceiling $ logBase 2 ((fromIntegral :: Int -> Float) ((length $ scRefills sc) * refillSizeBytes + schedContextStructSize))
+
+\subsubsection{Reply Objects}
 
 > data Reply = Reply {
 >     replyTCB :: Maybe (PPtr TCB),
