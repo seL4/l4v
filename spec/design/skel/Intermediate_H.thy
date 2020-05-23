@@ -67,8 +67,10 @@ defs createNewCaps_def:
             return $ map (\<lambda> addr. NotificationCap addr 0 True True) addrs
           od)
         | Some SchedContextObject \<Rightarrow> (do
+            scp \<leftarrow> return (PPtr $ fromPPtr regionBase);
+            newCap \<leftarrow> return (SchedContextCap scp userSize);
             addrs \<leftarrow> createObjects regionBase numObjects
-              (injectKO (makeObject ::sched_context)) 0; \<comment> \<open>FIXME RT: set refill list\<close>
+              (injectKO ((makeObject ::sched_context)\<lparr>scRefills := replicate (refillAbsoluteMax newCap) emptyRefill\<rparr>)) 0;
             return $ map (\<lambda> addr. SchedContextCap addr userSize) addrs
           od)
         | Some ReplyObject \<Rightarrow> (do
