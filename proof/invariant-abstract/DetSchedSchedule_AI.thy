@@ -34,10 +34,6 @@ lemma current_time_bounded_strengthen:
   unfolding current_time_bounded_def
   by (erule order_trans[rotated], clarsimp)
 
-lemma valid_sched_released_ipc_queues[elim!]:
-  "valid_sched s \<Longrightarrow> released_ipc_queues s"
-  by (simp add: valid_sched_def)
-
 lemma as_user_cur_sc_chargeable[wp]:
   "as_user f d \<lbrace>cur_sc_chargeable\<rbrace>"
   unfolding as_user_def cur_sc_chargeable_def2
@@ -873,8 +869,6 @@ lemma reschedule_valid_sched_const:
 lemma reschedule_required_simple_sched_action[wp]:
   "\<lbrace>\<top>\<rbrace> reschedule_required  \<lbrace>\<lambda>rv. simple_sched_action\<rbrace>"
   by (wpsimp wp: valid_sched_wp)
-
-crunch etcb_at[wp]: reschedule_required "etcb_at P t"
 
 lemma reschedule_required_not_queued:
   "\<lbrace>not_queued t and scheduler_act_not t\<rbrace>
@@ -5418,7 +5412,8 @@ lemma suspend_valid_sched:
   unfolding suspend_def update_restart_pc_def
   supply if_split[split del]
   apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)+
-  apply (wpsimp wp: valid_sched_wp simp: valid_sched_def)
+  apply (wpsimp wp: valid_sched_wp)
+  apply (clarsimp simp: valid_sched_def)
   apply (intro conjI)
          apply (clarsimp simp: tcb_sched_dequeue_def valid_ready_queued_thread_2_def vs_all_heap_simps
                         split: if_splits elim!: valid_ready_qsE)
@@ -7082,14 +7077,14 @@ lemma refill_update_valid_refills[wp]:
                    split: if_split_asm)
 
         \<comment> \<open>new_budget \<le> r_amount (refill_hd sc) and scptr is refill_ready\<close>
-    apply (clarsimp simp: sc_valid_refills_def valid_refills_def ordered_disjoint_def
+    apply (clarsimp simp: valid_refills_def ordered_disjoint_def
                           no_overflow_def window_def word_le_nat_alt MIN_REFILLS_def)
     apply (rule order_trans[where y="unat MIN_SC_BUDGET"])
   using MIN_BUDGET_le_MIN_SC_BUDGET word_le_nat_alt apply fast
     apply (simp add: word_le_nat_alt)
 
   \<comment> \<open>new_budget \<le> r_amount (refill_hd sc) and scptr is not refill_ready\<close>
-   apply (clarsimp simp: sc_valid_refills_def valid_refills_def ordered_disjoint_def
+   apply (clarsimp simp: valid_refills_def ordered_disjoint_def
                          no_overflow_def window_def word_le_nat_alt MIN_REFILLS_def)
    apply (rule order_trans[where y="unat MIN_SC_BUDGET"])
   using MIN_BUDGET_le_MIN_SC_BUDGET word_le_nat_alt apply fast
@@ -8268,7 +8263,7 @@ lemma refill_budget_check_round_robin_valid_refills[wp]:
      \<comment> \<open>bounded below\<close>
       apply (case_tac n; simp)
       apply (rule word_l_diffs(4); simp)
-      apply (metis MIN_BUDGET_le_MIN_SC_BUDGET MIN_REFILLS_def MIN_SC_BUDGET_def)
+      apply (metis MIN_BUDGET_le_MIN_SC_BUDGET MIN_SC_BUDGET_def)
         \<comment> \<open>window\<close>
      apply (clarsimp simp: window_def)
      apply (subst unat_sub)
@@ -8551,7 +8546,7 @@ lemma set_takeWhileD_contrap:
 
 lemma valid_refills_refill_sufficient:
   "valid_refills scp s \<Longrightarrow> is_refill_sufficient 0 scp s"
-  apply (clarsimp simp: valid_refills_def sc_valid_refills_def vs_all_heap_simps obj_at_def
+  apply (clarsimp simp: valid_refills_def vs_all_heap_simps obj_at_def
                         refill_sufficient_defs)
   apply (rename_tac sc n)
   apply (case_tac "sc_refills sc"; simp)
@@ -10029,10 +10024,6 @@ crunches schedule_choose_new_thread, switch_to_thread, set_scheduler_action, tcb
   for sc_at_period[wp]: "sc_at_period P p :: 'state_ext state \<Rightarrow> _"
     (wp: valid_sched_pred_heap_proj_lowers[where R=\<top>, simplified])
 
-crunches schedule_choose_new_thread
-  for ready_or_release[wp]: "ready_or_release :: 'state_ext state \<Rightarrow> _"
-  (wp: crunch_wps dxo_wp_weak simp: crunch_simps Let_def cur_sc_chargeable_def)
-
 lemma schedule_choose_new_thread_sc_at_period_cur[wp]:
   "\<lbrace>\<lambda>s :: ('state_ext state). sc_at_period P (cur_sc s) s\<rbrace> schedule_choose_new_thread \<lbrace>\<lambda>_ s. sc_at_period P (cur_sc s) s\<rbrace>"
    by (rule hoare_lift_Pf[where f=cur_sc];
@@ -10662,14 +10653,6 @@ crunch exst[wp]: set_mrs, as_user "\<lambda>s. P (exst s)"
   (simp: crunch_simps wp: crunch_wps)
 
 lemmas gts_drop_imp = hoare_drop_imp[where f="get_thread_state p" for p]
-
-crunch not_cur_thread[wp]: cap_insert, set_extra_badge "not_cur_thread t"
-  (wp: hoare_drop_imps dxo_wp_weak)
-
-lemma transfer_caps_not_cur_thread[wp]:
-  "\<lbrace>not_cur_thread t\<rbrace> transfer_caps info caps ep recv recv_buf
-   \<lbrace>\<lambda>rv. not_cur_thread t\<rbrace>"
-  by (simp add: transfer_caps_def | wp transfer_caps_loop_pres | wpc)+
 
 crunch (in DetSchedSchedule_AI) not_cur_thread[wp] : do_ipc_transfer "not_cur_thread t:: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps simp: crunch_simps ignore: const_on_failure)
@@ -13064,9 +13047,7 @@ lemma receive_ipc_valid_sched:
    apply (wpsimp wp: set_thread_state_Inactive_not_queued_valid_sched cong: if_cong)
    apply (intro conjI;
           clarsimp simp: pred_tcb_at_eq_commute st_tcb_at_def obj_at_def
-                 intro!: valid_sched_valid_blocked
-                         valid_sched_imp_except_blocked
-                         valid_sched_scheduler_act_not_better
+                 intro!: valid_sched_scheduler_act_not_better
                   elim!: valid_ready_qs_not_queued_not_runnable[OF valid_sched_valid_ready_qs]
                          valid_release_q_not_in_release_q_not_runnable[OF valid_sched_valid_release_q])
   \<comment> \<open>otherwise (grant and reply and (call or fault)): reply_push\<close>
@@ -16893,10 +16874,6 @@ lemma sched_context_resume_ct_not_queued:
   by (wpsimp wp: get_tcb_queue_wp is_schedulable_wp postpone_not_queued_other
            simp: thread_get_def sc_at_pred_n_def obj_at_def | wps)+
 
-crunches refill_unblock_check
-  for sc_tcb_sc_at[wp]: "\<lambda>s. Q (sc_tcb_sc_at P t s)"
-  (wp: crunch_wps simp: crunch_simps)
-
 lemma sched_context_donate_bound_not_cur_thread:
   "\<lbrace>\<lambda>s. tcb_ptr \<noteq> cur_thread s\<rbrace>
    sched_context_donate sc_ptr tcb_ptr
@@ -18094,7 +18071,7 @@ lemma handle_event_valid_sched:
                   apply (strengthen active_implies_valid_refills)
             apply (auto elim!: valid_sched_ct_not_queued elim: invs_cur_sc_chargeableE
                      intro!: next_time_bounded_weaken1 next_time_bounded_weaken2 active_implies_valid_refills
-                     simp: released_sc_tcb_at_def runnable_eq_active released_sc_tcb_at_def ct_in_state_def
+                     simp: released_sc_tcb_at_def runnable_eq_active ct_in_state_def
                           tcb_at_kh_simps vs_all_heap_simps)[1]
            apply (wpsimp wp: handle_recv_valid_sched check_budget_restart_valid_sched_weaker)
                    apply (simp add: imp_conjR)
@@ -18462,7 +18439,7 @@ lemma invoke_cnode_ct_not_in_release_qE_E[wp]:
   "\<lbrace>ct_not_in_release_q\<rbrace>
    invoke_cnode iv
    -, \<lbrace>\<lambda>rv. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  supply if_splits [split del]
+  supply if_split [split del]
   by (wpsimp simp: invoke_cnode_def)+
 
 lemma invoke_tcb_ct_not_in_release_qE_E[wp]:
@@ -19260,7 +19237,7 @@ lemma charge_budget_ready_if_schedulable[wp]:
 
 lemma nextnext_time_bounded_next_time_bounded:
   "nextnext_time_bounded k s \<Longrightarrow> valid_machine_time s \<Longrightarrow> next_time_bounded k s"
-  apply (clarsimp simp: next_time_def nextnext_time_def current_time_bounded_def)
+  apply (clarsimp simp: next_time_def current_time_bounded_def)
   apply (erule order_trans[rotated])
   apply (rule add_le_mono[OF _ le_refl])
   apply (rule add_le_mono[OF _ le_refl])
@@ -20648,7 +20625,7 @@ lemma sched_context_bind_tcb_cur_sc_in_release_q_imp_zero_consumed[wp]:
            else heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s))\<rbrace>
    sched_context_bind_tcb sc_ptr tcb_ptr
    \<lbrace>\<lambda>_ s. cur_sc_in_release_q_imp_zero_consumed s\<rbrace>"
-  supply if_splits[split del]
+  supply if_split[split del]
   apply (simp add: sched_context_bind_tcb_def)
 
   \<comment> \<open>split off the setting functions from the start of the definition
@@ -21407,9 +21384,6 @@ lemma perform_invocation_cur_sc_in_release_q_imp_zero_consumed:
                           valid_sched_valid_release_q)
   done
 
-crunches reply_from_kernel
-  for cur_sc_in_release_q_imp_zero_consumed[wp]: cur_sc_in_release_q_imp_zero_consumed
-
 crunches check_budget_restart, handle_no_fault
   for cur_sc_in_release_q_imp_zero_consumed[wp]: "cur_sc_in_release_q_imp_zero_consumed :: det_state \<Rightarrow> _"
 
@@ -22006,10 +21980,6 @@ lemma ct_ready_if_schedulable_streng3[elim!]:
   unfolding ct_ready_if_schedulable_def
   by (clarsimp simp: vs_all_heap_simps)
 
-crunches suspend
-  for ct_budget_ready[wp]: "\<lambda>s. budget_ready (cur_thread s) s"
-  (wp: crunch_wps ignore: update_sched_context set_tcb_obj_ref)
-
 lemma invoke_tcb_ct_ready_if_schedulable[wp]:
   "\<lbrace>ct_released and ct_active and tcb_inv_wf iv and invs
     and (\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s)\<rbrace>
@@ -22378,8 +22348,7 @@ lemma handle_invocation_ct_ready_if_schedulable[wp]:
      apply (wpsimp wp: hoare_vcg_if_lift2 simp: cap_cap_slot_fold)
     apply wpsimp+
   apply (auto simp: vs_all_heap_simps tcb_at_kh_simps is_BlockedOnReceive_def ct_ready_if_schedulable_def
-             elim!: ct_in_state_weaken
-             intro: sym_refs_inv_sc_tcbs)
+             elim!: ct_in_state_weaken)
   done
 
 lemma update_time_stamp_ct_ready_if_schedulable[wp]:
@@ -22453,10 +22422,6 @@ lemma reply_push_ct_ready_if_schedulable_callee:
           apply (wpsimp wp: get_tcb_obj_ref_wp hoare_drop_imp)+
   apply (clarsimp simp: obj_at_def vs_all_heap_simps)
   done
-
-crunches cancel_ipc
-  for heap_refs_inv[wp]: "\<lambda>s. heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s)"
-  (ignore: set_object thread_set)
 
 lemma receive_ipc_ct_ready_if_schedulable:
   "\<lbrace>\<lambda>s. ct_ready_if_schedulable s \<and> thread = cur_thread s \<and> valid_sched s \<and> heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s) \<rbrace>
@@ -22611,7 +22576,7 @@ lemma handle_recv_ct_ready_if_schedulable[wp]:
       apply fastforce
      by wpsimp+
 
-lemmas invs_sc_tcbs_sym_heap_refs[elim!] = sym_refs_inv_sc_tcbs[OF invs_sym_refs]
+lemmas invs_sc_tcbs_sym_heap_refs = invs_heap_refs_inv_sc_tcb
 
 lemma handle_yield_ct_ready_if_schedulable[wp]:
   "\<lbrace>active_sc_valid_refills
