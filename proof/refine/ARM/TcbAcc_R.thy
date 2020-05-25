@@ -761,45 +761,73 @@ lemmas threadSet_ifunsafe' =
     threadSet_ifunsafe'T [OF all_tcbI, OF ball_tcb_cte_casesI]
 
 lemma threadSet_state_refs_of'_helper[simp]:
-  "{r. (r \<in> tcb_st_refs_of' ts \<or>
-       r \<in> tcb_bound_refs' ntfnptr sc_ptr yt_ptr) \<and>
-      snd r = TCBBound} =
-   tcb_bound_refs' ntfnptr sc_ptr yt_ptr"
-  oops (* FIXME RT: rephrase
-  by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def
-          split: thread_state.splits) *)
+  "{r. (r \<in> tcb_st_refs_of' ts \<or> r \<in> tcb_bound_refs' ntfnptr sc_ptr yt_ptr)
+       \<and> (snd r = TCBBound \<or> snd r = TCBSchedContext \<or> snd r = TCBYieldTo)}
+   = tcb_bound_refs' ntfnptr sc_ptr yt_ptr"
+  by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def get_refs_def
+          split: thread_state.splits reftype.splits option.splits)
 
 lemma threadSet_state_refs_of'_helper'[simp]:
-  "{r. (r \<in> tcb_st_refs_of' ts \<or>
-        r \<in> tcb_bound_refs' ntfnptr sc_ptr yt_ptr) \<and>
-       snd r \<noteq> TCBBound} =
-   tcb_st_refs_of' ts"
-  oops (* FIXME RT: rephrase
-  by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def
-          split: thread_state.splits) *)
+  "{r. (r \<in> tcb_st_refs_of' ts \<or> r \<in> tcb_bound_refs' ntfnptr sc_ptr yt_ptr)
+       \<and> (snd r \<noteq> TCBBound \<and> snd r \<noteq> TCBSchedContext \<and> snd r \<noteq> TCBYieldTo)}
+   = tcb_st_refs_of' ts"
+  by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def get_refs_def
+          split: thread_state.splits reftype.splits option.splits)
 
-lemma threadSet_state_refs_of'T_P: (* FIXME RT: will need to rephrase into more cases *)
+lemma threadSet_state_refs_of'_helper_TCBBound[simp]:
+  "{r. (r \<in> tcb_st_refs_of' (tcbState obj)
+        \<or> r \<in> tcb_bound_refs' (tcbBoundNotification obj)(tcbSchedContext obj) (tcbYieldTo obj))
+          \<and> snd r = TCBBound}
+  = get_refs TCBBound (tcbBoundNotification obj)"
+  by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def get_refs_def
+          split: thread_state.splits reftype.splits option.splits)
+
+lemma threadSet_state_refs_of'_helper_TCBSchedContext[simp]:
+  "{r. (r \<in> tcb_st_refs_of' (tcbState obj)
+        \<or> r \<in> tcb_bound_refs' (tcbBoundNotification obj)(tcbSchedContext obj) (tcbYieldTo obj))
+          \<and> snd r = TCBSchedContext}
+  = get_refs TCBSchedContext (tcbSchedContext obj)"
+  by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def get_refs_def
+          split: thread_state.splits reftype.splits option.splits)
+
+lemma threadSet_state_refs_of'_helper_TCBYieldTo[simp]:
+  "{r. (r \<in> tcb_st_refs_of' (tcbState obj)
+        \<or> r \<in> tcb_bound_refs' (tcbBoundNotification obj)(tcbSchedContext obj) (tcbYieldTo obj))
+          \<and> snd r = TCBYieldTo}
+  = get_refs TCBYieldTo (tcbYieldTo obj)"
+  by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def get_refs_def
+          split: thread_state.splits reftype.splits option.splits)
+
+lemma threadSet_state_refs_of'T_P:
   assumes x: "\<forall>tcb. (P' \<longrightarrow> Q (tcbState tcb)) \<longrightarrow>
                      tcb_st_refs_of' (tcbState (F tcb))
                        = f' (tcb_st_refs_of' (tcbState tcb))"
   assumes y: "\<forall>tcb. (P' \<longrightarrow> Q' (tcbBoundNotification tcb)) \<longrightarrow>
-                     tcb_bound_refs' (tcbBoundNotification (F tcb)) (tcbSchedContext (F tcb)) (tcbYieldTo (F tcb))
-                       = g' (tcb_bound_refs' (tcbBoundNotification tcb) (tcbSchedContext tcb) (tcbYieldTo tcb))"
+                     (get_refs TCBBound (tcbBoundNotification (F tcb))
+                      = (g' (get_refs TCBBound (tcbBoundNotification tcb))))"
+  assumes z: "\<forall>tcb. (P' \<longrightarrow> Q'' (tcbSchedContext tcb)) \<longrightarrow>
+                     (get_refs TCBSchedContext (tcbSchedContext (F tcb))
+                      = (h' (get_refs TCBSchedContext (tcbSchedContext tcb))))"
+  assumes w: "\<forall>tcb. (P' \<longrightarrow> Q''' (tcbYieldTo tcb)) \<longrightarrow>
+                     (get_refs TCBYieldTo (tcbYieldTo (F tcb))
+                      = (i' (get_refs TCBYieldTo (tcbYieldTo tcb))))"
   shows
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := f' {r \<in> state_refs_of' s t. snd r \<noteq> TCBBound}
-                                  \<union> g' {r \<in> state_refs_of' s t. snd r = TCBBound}))
-              \<and> (P' \<longrightarrow> st_tcb_at' Q t s \<and> bound_tcb_at' Q' t s)\<rbrace>
-     threadSet F t
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := f' {r \<in> state_refs_of' s t. snd r \<notin> {TCBBound, TCBSchedContext, TCBYieldTo}}
+                                    \<union> g' {r \<in> state_refs_of' s t. snd r = TCBBound}
+                                    \<union> h' {r \<in> state_refs_of' s t. snd r = TCBSchedContext}
+                                    \<union> i' {r \<in> state_refs_of' s t. snd r = TCBYieldTo}))
+        \<and> (P' \<longrightarrow> st_tcb_at' Q t s \<and> bound_tcb_at' Q' t s \<and> bound_sc_tcb_at' Q'' t s
+                  \<and> bound_yt_tcb_at' Q''' t s)\<rbrace>
+   threadSet F t
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
-  sorry (*
   apply (simp add: threadSet_def)
   apply (wp getObject_tcb_wp)
-  apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def
+  apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def tcb_bound_refs'_def
                  elim!: rsubst[where P=P] intro!: ext)
   apply (cut_tac s=s and p=t and 'a=tcb in ko_at_state_refs_ofD')
    apply (simp add: obj_at'_def projectKOs)
-  apply (clarsimp simp: x y)
-  done *)
+  apply (fastforce simp: x y z w)
+  done
 
 lemmas threadSet_state_refs_of'T =
     threadSet_state_refs_of'T_P [where P'=False, simplified]
@@ -807,11 +835,25 @@ lemmas threadSet_state_refs_of'T =
 lemmas threadSet_state_refs_of' =
     threadSet_state_refs_of'T [OF all_tcbI all_tcbI]
 
-lemma threadSet_iflive'T: (* FIXME RT: rephrase *)
+lemma state_refs_of'_helper[simp]:
+  "{r \<in> state_refs_of' s t. snd r \<noteq> TCBBound \<and> snd r \<noteq> TCBSchedContext \<and> snd r \<noteq> TCBYieldTo}
+   \<union> {r \<in> state_refs_of' s t. snd r = TCBBound}
+   \<union> {r \<in> state_refs_of' s t. snd r = TCBSchedContext}
+   \<union> {r \<in> state_refs_of' s t. snd r = TCBYieldTo}
+   = state_refs_of' s t"
+  by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def get_refs_def
+          split: thread_state.splits reftype.splits option.splits)
+
+lemma threadSet_iflive'T:
   assumes x: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
   shows
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
       \<and> ((\<exists>tcb. \<not> bound (tcbBoundNotification tcb) \<and> bound (tcbBoundNotification (F tcb))
+              \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
+      \<and> ((\<exists>tcb. \<not> bound (tcbYieldTo tcb) \<and> bound (tcbYieldTo (F tcb))
+              \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
+      \<and> ((\<exists>tcb. (\<not> bound (tcbSchedContext tcb) \<or> tcbSchedContext tcb = Some idle_sc_ptr)
+              \<and> bound (tcbSchedContext (F tcb)) \<and> tcbSchedContext (F tcb) \<noteq> Some idle_sc_ptr
               \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
       \<and> ((\<exists>tcb. (tcbState tcb = Inactive \<or> tcbState tcb = IdleThreadState)
               \<and> tcbState (F tcb) \<noteq> Inactive
@@ -830,9 +872,11 @@ lemma threadSet_iflive'T: (* FIXME RT: rephrase *)
    apply (rule impI, clarsimp)
    apply (erule if_live_then_nonz_capE')
    apply (clarsimp simp: ko_wp_at'_def)
-  sorry (*
+  apply (intro conjI)
+    apply (metis if_live_then_nonz_capE' ko_wp_at'_def live'.simps(1))
+   apply (metis if_live_then_nonz_capE' ko_wp_at'_def live'.simps(1))
   apply (clarsimp simp: bspec_split [OF spec [OF x]])
-  done *)
+  done
 
 lemmas threadSet_iflive' =
     threadSet_iflive'T [OF all_tcbI, OF ball_tcb_cte_casesI]
@@ -1289,8 +1333,9 @@ lemma threadSet_not_inQ:
   done
 
 lemma threadSet_invs_trivial_helper[simp]:
-  "{r \<in> state_refs_of' s t. snd r \<noteq> TCBBound}
-   \<union> {r \<in> state_refs_of' s t. snd r = TCBBound} = state_refs_of' s t"
+  "{r \<in> state_refs_of' s t. snd r \<noteq> TCBBound \<and> snd r \<noteq> TCBSchedContext \<and> snd r \<noteq> TCBYieldTo}
+    \<union> {r \<in> state_refs_of' s t. (snd r = TCBBound \<or> snd r = TCBSchedContext \<or> snd r = TCBYieldTo)}
+   = state_refs_of' s t"
   by auto
 
 lemma threadSet_ct_idle_or_in_cur_domain':
@@ -1320,6 +1365,8 @@ lemma threadSet_invs_trivialT:
        tcb_at' t s \<and>
        (\<forall>d p. (\<exists>tcb. inQ d p tcb \<and> \<not> inQ d p (F tcb)) \<longrightarrow> t \<notin> set (ksReadyQueues s (d, p))) \<and>
        (\<forall>ko d p. ko_at' ko t s \<and> inQ d p (F ko) \<and> \<not> inQ d p ko \<longrightarrow> t \<in> set (ksReadyQueues s (d, p))) \<and>
+       ((\<exists>tcb. tcbInReleaseQueue tcb \<and> \<not> tcbInReleaseQueue (F tcb)) \<longrightarrow> t \<notin> set (ksReleaseQueue s)) \<and>
+       (\<forall>ko. ko_at' ko t s \<and> tcbInReleaseQueue (F ko) \<and> \<not> tcbInReleaseQueue ko \<longrightarrow> t \<in> set (ksReleaseQueue s)) \<and>
        ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)) \<longrightarrow> ex_nonz_cap_to' t s \<and> t \<noteq> ksCurThread s) \<and>
        (\<forall>tcb. tcbQueued (F tcb) \<and> ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> tcbQueued tcb \<or> t \<noteq> ksCurThread s)\<rbrace>
    threadSet F t
@@ -1336,7 +1383,7 @@ proof -
      apply (wp x w v u b
               threadSet_valid_pspace'T
               threadSet_sch_actT_P[where P=False, simplified]
-              threadSet_valid_queues
+              threadSet_valid_queues threadSet_valid_release_queue threadSet_valid_release_queue'
               threadSet_state_refs_of'T[where f'=id]
               threadSet_iflive'T
               threadSet_ifunsafe'T
@@ -1353,11 +1400,11 @@ proof -
               threadSet_cur
               untyped_ranges_zero_lift
            |clarsimp simp: y z a1 a2 a3 domains cteCaps_of_def |rule refl)+
-  sorry (* FIXME RT: reply_lists
    apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
-   apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def o_def)
-   by (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a)
-  *)
+   apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def valid_release_queue_def
+                         valid_release_queue'_def o_def)
+   apply (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a1 a2 a3)
+  done
 qed
 
 lemmas threadSet_invs_trivial =
@@ -1560,7 +1607,7 @@ lemma asUser_st_refs_of'[wp]:
      asUser t m
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (simp add: asUser_def split_def)
-  apply (wp threadSet_state_refs_of' hoare_drop_imps | simp)+
+  apply (wp threadSet_state_refs_of'[where h'=id and i'=id] hoare_drop_imps | simp)+
   done
 
 lemma asUser_iflive'[wp]:
@@ -1685,11 +1732,10 @@ lemma gts_inv'[wp]: "\<lbrace>P\<rbrace> getThreadState t \<lbrace>\<lambda>rv. 
 lemma gbn_corres:
   "corres (=) (tcb_at t) (tcb_at' t)
           (get_tcb_obj_ref tcb_bound_notification t) (getBoundNotification t)"
-  sorry (*
-  apply (simp add: get_bound_notification_def getBoundNotification_def)
+  apply (simp add: get_tcb_obj_ref_def getBoundNotification_def)
   apply (rule threadget_corres)
   apply (simp add: tcb_relation_def)
-  done *)
+  done
 
 lemma gbn_bound_tcb_at'[wp]: "\<lbrace>bound_tcb_at' P t\<rbrace> getBoundNotification t \<lbrace>\<lambda>rv s. P rv\<rbrace>"
   apply (simp add: getBoundNotification_def threadGet_def liftM_def)
@@ -1839,37 +1885,52 @@ crunch typ_at'[wp]: removeFromBitmap "\<lambda>s. P (typ_at' T p s)"
 lemmas addToBitmap_typ_ats [wp] = typ_at_lifts [OF addToBitmap_typ_at']
 lemmas removeFromBitmap_typ_ats [wp] = typ_at_lifts [OF removeFromBitmap_typ_at']
 
+lemma pspace_relation_tcb_domain_priority:
+  "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); kheap s t = Some (TCB tcb);
+    ksPSpace s' t = Some (KOTCB tcb')\<rbrakk>
+   \<Longrightarrow> tcb_domain tcb = tcbDomain tcb' \<and> tcb_priority tcb = tcbPriority tcb'"
+  apply (clarsimp simp: pspace_relation_def)
+  apply (drule_tac x=t in bspec, blast)
+  apply (drule_tac x="(t, other_obj_relation)" in bspec, simp)
+  apply (clarsimp simp: other_obj_relation_def tcb_relation_def)
+  done
+
 lemma tcbSchedEnqueue_corres:
   "corres dc (tcb_at t) (tcb_at' t and Invariants_H.valid_queues and valid_queues')
              (tcb_sched_action (tcb_sched_enqueue) t) (tcbSchedEnqueue t)"
 proof -
+
   have ready_queues_helper:
-    "\<And>t tcb a b. \<lbrakk> obj_at' tcbQueued t b ;  valid_queues' b  ;
-                   pspace_relation (kheap a) (ksPSpace b) \<rbrakk>
-                 \<Longrightarrow> t \<in> set (ksReadyQueues b (tcb_domain tcb, tcb_priority tcb))"
+    "\<And>t tcb s s'. \<lbrakk> obj_at' tcbQueued t s';  valid_queues' s'; kheap s t = Some (TCB tcb);
+                   pspace_relation (kheap s) (ksPSpace s') \<rbrakk>
+                   \<Longrightarrow> t \<in> set (ksReadyQueues s' (tcb_domain tcb, tcb_priority tcb))"
   unfolding valid_queues'_def
-  sorry (* FIXME RT: probably not needed
-  by (fastforce dest: ekheap_relation_absD simp: obj_at'_def inQ_def etcb_relation_def projectKO_eq projectKO_tcb)
-  *)
+  apply  (clarsimp dest:  simp: obj_at'_def inQ_def tcb_relation_def projectKO_eq projectKO_tcb)
+  using pspace_relation_tcb_domain_priority by fastforce
 
   show ?thesis unfolding tcbSchedEnqueue_def tcb_sched_action_def
-    sorry (* FIXME RT: should now be able to us threadget_corres directly
-    apply (rule corres_symb_exec_r [OF _ _ threadGet_inv,
-             where Q'="\<lambda>rv. tcb_at' t and Invariants_H.valid_queues and valid_queues' and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"])
-      defer
-      apply (wp threadGet_obj_at'; simp_all)
+    apply (rule corres_symb_exec_r[where Q'="\<lambda>rv. tcb_at' t and Invariants_H.valid_queues
+                                                  and valid_queues'
+                                                  and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"])
+       defer
+       apply (wp threadGet_obj_at'; simp_all)
+      apply (wpsimp wp: threadGet_inv)
      apply (rule no_fail_pre, wp, blast)
     apply (case_tac queued; simp_all)
-     apply (rule corres_no_failI; simp add: no_fail_return)
+     apply (rule corres_no_failI)
+      apply (simp add: no_fail_return)
      apply (clarsimp simp: in_monad gets_the_def bind_assoc
                            assert_opt_def exec_gets get_tcb_queue_def
                            set_tcb_queue_def simpler_modify_def ready_queues_relation_def
-                           state_relation_def tcb_sched_enqueue_def)
-     apply (rule ready_queues_helper; auto)
+                           state_relation_def tcb_sched_enqueue_def thread_get_def get_tcb_def
+                           gets_def get_def return_def fail_def bind_def tcb_at_def cdt_relation_def
+                    split: option.splits Structures_A.kernel_object.splits)
+      using ready_queues_helper apply blast
+
     apply (clarsimp simp: when_def)
     apply (rule stronger_corres_guard_imp)
-      apply (rule corres_split[where r'="(=)", OF _ ethreadget_corres])
-         apply (rule corres_split[where r'="(=)", OF _ ethreadget_corres])
+      apply (rule corres_split[where r'="(=)", OF _ threadget_corres])
+         apply (rule corres_split[where r'="(=)", OF _ threadget_corres])
             apply (rule corres_split[where r'="(=)"])
                apply (rule corres_split_noop_rhs2)
                    apply (rule corres_split_noop_rhs2)
@@ -1879,10 +1940,10 @@ proof -
                  apply (simp add: tcb_sched_enqueue_def split del: if_split)
                  apply (rule_tac P=\<top> and Q="K (t \<notin> set queuea)" in corres_assume_pre)
                  apply (wp setQueue_corres[unfolded dc_def] | simp)+
-              apply (wp getQueue_corres getObject_tcb_wp  | simp add: etcb_relation_def threadGet_def)+
+              apply (wp getQueue_corres getObject_tcb_wp  | simp add: tcb_relation_def threadGet_def)+
       apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def inQ_def
                              projectKO_eq project_inject)
-     done *)
+  done
 qed
 
 definition
@@ -2126,11 +2187,10 @@ lemma sbn_corres:
           (tcb_at t)
           (tcb_at' t)
           (set_tcb_obj_ref tcb_bound_notification_update t ntfn) (setBoundNotification ntfn t)"
-  sorry (*
-  apply (simp add: set_bound_notification_def setBoundNotification_def)
+  apply (simp add: set_tcb_obj_ref_def setBoundNotification_def)
   apply (subst thread_set_def[simplified, symmetric])
   apply (rule threadset_corres, simp_all add:tcb_relation_def exst_same_def)
-  done *)
+  done
 
 crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
   for tcb'[wp]: "tcb_at' addr"
@@ -3997,23 +4057,51 @@ crunches setThreadState, setBoundNotification
 crunch refs_of'[wp]: rescheduleRequired "\<lambda>s. P (state_refs_of' s)"
   (wp: threadSet_state_refs_of' crunch_wps)
 
+crunches scheduleTCB
+  for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
+
+lemma state_refs_of'_helper2[simp]:
+  "{r \<in> state_refs_of' s t. snd r = TCBBound \<or> snd r = TCBSchedContext \<or> snd r = TCBYieldTo}
+   = {r \<in> state_refs_of' s t. snd r = TCBBound}
+     \<union> {r \<in> state_refs_of' s t. snd r = TCBSchedContext}
+     \<union> {r \<in> state_refs_of' s t. snd r = TCBYieldTo}"
+  by fastforce
+
 lemma setThreadState_state_refs_of'[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_st_refs_of' st
-                                 \<union> {r \<in> state_refs_of' s t. snd r = TCBBound}))\<rbrace>
-     setThreadState st t
+                                    \<union> {r \<in> state_refs_of' s t. snd r = TCBBound
+                                                               \<or> snd r = TCBSchedContext
+                                                               \<or> snd r = TCBYieldTo}))\<rbrace>
+   setThreadState st t
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
-  sorry (*
-  by (simp add: setThreadState_def fun_upd_def
-        | wp threadSet_state_refs_of')+ *)
+  apply (clarsimp simp: setThreadState_def)
+  apply (subst bind_assoc[symmetric])
+  apply (rule_tac B="\<lambda>_ s. P (state_refs_of' s)" in hoare_seq_ext; (solves \<open>wpsimp\<close>)?)
+  apply (rule hoare_weaken_pre)
+   apply (rule threadSet_state_refs_of'[unfolded threadSet_def, simplified fun_app_def])
+      apply simp
+     apply force+
+  by (metis Un_assoc)
 
 lemma setBoundNotification_state_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_bound_refs' ntfn FIXME_x FIXME_y
-                                 \<union> {r \<in> state_refs_of' s t. snd r \<noteq> TCBBound}))\<rbrace>
-     setBoundNotification ntfn t
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := (case ntfn of None \<Rightarrow> {} | Some new \<Rightarrow> {(new, TCBBound)})
+                                    \<union> {r \<in> state_refs_of' s t. snd r \<noteq> TCBBound}))\<rbrace>
+   setBoundNotification ntfn t
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
-  sorry (* FIXME RT: needs statement update
-  by (simp add: setBoundNotification_def Un_commute fun_upd_def
-        | wp threadSet_state_refs_of' )+ *)
+  apply (clarsimp simp: setBoundNotification_def)
+  apply (wpsimp wp: threadSet_state_refs_of'
+                     [where f'=id and h'=id and i'=id and F="tcbBoundNotification_update (\<lambda>_. ntfn)"]
+              simp: get_refs_def)
+     apply simp
+    apply simp
+   apply simp
+  apply (prop_tac "{r \<in> state_refs_of' s t. snd r \<noteq> TCBBound}
+                    = {r \<in> state_refs_of' s t. snd r \<noteq> TCBBound \<and> snd r \<noteq> TCBSchedContext
+                                               \<and> snd r \<noteq> TCBYieldTo}
+                      \<union> {r \<in> state_refs_of' s t. snd r = TCBSchedContext}
+                      \<union> {r \<in> state_refs_of' s t. snd r = TCBYieldTo}")
+   apply fastforce
+  by (metis id_def Un_ac(1) Un_ac(4))
 
 lemma sts_cur_tcb'[wp]:
   "\<lbrace>cur_tcb'\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
@@ -4484,6 +4572,28 @@ lemma sts_utr[wp]:
   apply (wp untyped_ranges_zero_lift)
   done
 
+lemma pair_inject:
+  "{a,b} = {c,d} \<and> a \<noteq> d \<and> b \<noteq> c \<Longrightarrow> a = c \<and> b = d"
+  by blast
+
+lemma tcb_bound_refs'_helper:
+  "tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr
+   = {r. (r \<in> tcb_st_refs_of' st \<or> r \<in> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr) \<and> snd r = TCBBound}
+     \<union> {r. (r \<in> tcb_st_refs_of' st \<or> r \<in> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr) \<and> snd r = TCBSchedContext}
+     \<union> {r. (r \<in> tcb_st_refs_of' st \<or> r \<in> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr) \<and> snd r = TCBYieldTo}"
+  apply (clarsimp simp: tcb_bound_refs'_def get_refs_def tcb_st_refs_of'_def
+                 split: option.splits thread_state.splits reftype.splits)
+  apply (intro conjI impI allI; fastforce?)
+  done
+
+lemma valid_tcb_state'_same_tcb_st_refs_of':
+  "\<lbrakk>tcb_st_refs_of' st = tcb_st_refs_of' st'; valid_tcb_state' st s\<rbrakk>
+   \<Longrightarrow> valid_tcb_state' st' s"
+  apply (cases st'
+         ; clarsimp simp: valid_tcb_state'_def tcb_st_refs_of'_def
+                   split: Structures_H.thread_state.splits if_splits)
+  by (metis pair_inject reftype.distinct prod.inject)
+
 lemma sts_invs_minor':
   "\<lbrace>st_tcb_at' (\<lambda>st'. tcb_st_refs_of' st' = tcb_st_refs_of' st
                    \<and> (st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow>
@@ -4501,7 +4611,7 @@ lemma sts_invs_minor':
    apply (wp sts_valid_queues valid_irq_node_lift irqs_masked_lift
               setThreadState_ct_not_inQ
             | simp add: cteCaps_of_def o_def)+
-  sorry (* FIXME RT: replies_of
+
   apply (clarsimp simp: sch_act_simple_def)
   apply (intro conjI)
      apply clarsimp
@@ -4509,11 +4619,11 @@ lemma sts_invs_minor':
     apply (clarsimp dest!: st_tcb_at_state_refs_ofD'
                     elim!: rsubst[where P=sym_refs]
                    intro!: ext)
+    using tcb_bound_refs'_helper apply presburger
    apply (clarsimp elim!: st_tcb_ex_cap'')
   apply (frule tcb_in_valid_state', clarsimp+)
-  apply (cases st, simp_all add: valid_tcb_state'_def
-                  split: Structures_H.thread_state.split_asm)
-  done *)
+  apply (erule (1) valid_tcb_state'_same_tcb_st_refs_of')
+  done
 
 lemma sts_cap_to'[wp]:
   "\<lbrace>ex_nonz_cap_to' p\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
