@@ -1353,4 +1353,53 @@ lemma active_sc_valid_refillsE:
   "pred_map active_scrc (sc_refill_cfgs_of s) scp \<Longrightarrow> active_sc_valid_refills s \<Longrightarrow> valid_refills scp s"
   by (clarsimp simp: active_sc_valid_refills_def)
 
+\<comment> \<open>ordered_disjoint is trivial on lists of length 1\<close>
+lemma ordered_disjoint_length1[simp]:
+  "ordered_disjoint [a]"
+  by (clarsimp simp: ordered_disjoint_def)
+
+\<comment> \<open>ordered_disjoint is simple on lists of length 2\<close>
+lemma ordered_disjoint_length2[simp]:
+  "ordered_disjoint [a,b] = (unat (r_time a) + unat (r_amount a) \<le> unat (r_time b))"
+  by (clarsimp simp: ordered_disjoint_def)
+
+lemma no_overflow_Nil[simp]:
+  "no_overflow []"
+  by (clarsimp simp: no_overflow_def)
+
+lemma no_overflow_Cons:
+  "no_overflow (a # l) = (unat (r_time a) + unat (r_amount a) \<le> unat max_time \<and> no_overflow l)"
+  by (intro iffI; clarsimp simp: no_overflow_def Ball_def)
+
+lemma no_overflow_length1:
+  "no_overflow [a] = (unat (r_time a) + unat (r_amount a) \<le> unat max_time)"
+  using no_overflow_Cons no_overflow_Nil by fastforce
+
+lemma no_overflow_length2:
+  "no_overflow [a,b] = (unat (r_time a) + unat (r_amount a) \<le> unat max_time
+                        \<and> unat (r_time b) + unat (r_amount b) \<le> unat max_time)"
+  using no_overflow_Cons no_overflow_Nil by fastforce
+
+lemma window_length1:
+  "window [a] l = (unat (r_amount a) \<le> unat l)"
+  by (clarsimp simp: window_def)
+
+lemma window_length2:
+  "window [a, b] l = (unat (r_time b) + unat (r_amount b) \<le> unat (r_time a) + unat l)"
+  by (clarsimp simp: window_def)
+
+\<comment> \<open>by transitivity, MIN_BUDGET is bounded whenever MIN_SC_BUDGET is bounded\<close>
+lemma MIN_BUDGET_bounded_trans:
+  "unat MIN_SC_BUDGET \<le> unat k
+   \<Longrightarrow> unat MIN_BUDGET \<le> unat k"
+    apply (rule order_trans[where y="unat MIN_SC_BUDGET"])
+  using MIN_BUDGET_le_MIN_SC_BUDGET word_le_nat_alt apply fast
+  by simp
+
+(* FIXME RT: move to WordLib *)
+lemmas unat_plus_gt_trans = order_trans[OF unat_plus_gt]
+
+(* FIXME RT: move to WordLib *)
+lemmas unat_split_plus = iffD1[OF unat_plus_simple]
+
 end

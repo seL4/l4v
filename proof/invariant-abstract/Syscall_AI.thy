@@ -1105,7 +1105,7 @@ lemma hinv_invs':
        apply (rule_tac Q = "\<lambda>rv s. st_tcb_at active thread s \<and> cur_thread s = thread" in
               hoare_post_imp)
         apply simp
-       apply (wpsimp wp: sts_st_tcb_at')
+       apply (wpsimp)
       apply (simp only: simp_thms K_def if_apply_def2)
       apply (rule hoare_vcg_E_elim)
        apply (wpsimp wp: decode_inv_inv simp: if_apply_def2)+

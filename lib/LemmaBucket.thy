@@ -506,4 +506,18 @@ lemma sorted_list_of_set_already_sorted:
   "\<lbrakk> distinct xs; sorted xs \<rbrakk> \<Longrightarrow> sorted_list_of_set (set xs) = xs"
   by (simp add: sorted_list_of_set_sort_remdups distinct_remdups_id sorted_sort_id)
 
+lemma less_SucSuc0:
+  "(x :: nat) < Suc (Suc 0) = (x=0 \<or> x=1)"
+  by (case_tac x; simp)
+
+lemma list_length_1:
+  "(length l = Suc 0) = (\<exists>a. l = [a])"
+  by (case_tac l; simp)
+
+lemma list_length_2:
+  "(length l = 2) = (\<exists>a b. l = [a, b])"
+  by (case_tac l; simp add: list_length_1)
+
+lemmas add_le_mono_left = order_trans[OF add_le_mono[OF order_refl], rotated]
+
 end

@@ -560,13 +560,13 @@ lemma sc_consumed_update_sym_refs[wp]:
 
 lemma refill_unblock_check_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> refill_unblock_check r \<lbrace>\<lambda>rv. valid_state\<rbrace>"
-  apply (wpsimp simp: refill_unblock_check_def get_refills_def if_apply_def2 wp: hoare_drop_imps)
+  apply (wpsimp simp: refill_unblock_check_def get_refills_def if_apply_def2 wp: hoare_drop_imps hoare_vcg_all_lift)
   apply (clarsimp simp: valid_state_def refills_merge_valid[simplified])
   done
 
 lemma refill_unblock_check_cur_tcb [wp]:
   "\<lbrace>cur_tcb\<rbrace> refill_unblock_check r \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
-  by (wpsimp simp: refill_unblock_check_def if_apply_def2 wp: hoare_drop_imps)
+  by (wpsimp simp: refill_unblock_check_def if_apply_def2 wp: hoare_drop_imps hoare_vcg_all_lift)
 
 lemma refill_unblock_check_invs [wp]: "\<lbrace>invs\<rbrace> refill_unblock_check r \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding refill_unblock_check_def
@@ -867,17 +867,15 @@ lemma sc_and_timer_activatable:
   done
 
 lemma refill_new_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> refill_new sc_ptr new_period new_budget new_max_refills
-      \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  "refill_new sc_ptr new_period new_budget new_max_refills
+   \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
   by (wpsimp simp: refill_new_def wp: get_sched_context_wp)
 
 lemma refill_update_typ_at[wp]: (* check the definition *)
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> refill_update sc_ptr new_period new_budget new_max_refills
-      \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  "refill_update sc_ptr new_period new_budget new_max_refills
+   \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
+  supply if_split [split del]
   by (wpsimp simp: refill_update_def wp: get_sched_context_wp)
-
-crunch typ_at[wp]: is_schedulable "\<lambda>s. P (typ_at T p s)"
-  (wp: crunch_wps select_ext_wp ignore: set_refills)
 
 lemma sched_context_resume_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> sched_context_resume sc_ptr
@@ -1547,9 +1545,8 @@ lemma refill_unblock_check_state_refs_of_ct[wp]:
   apply (wpsimp simp: refill_unblock_check_def is_round_robin_def set_refills_def
                       update_sched_context_def set_object_def
                   wp: get_refills_wp get_object_wp)
-  apply (intro conjI
-         ; clarsimp simp: state_refs_of_def get_refs_def2 obj_at_def
-                  intro!: ext elim!: rsubst[where P="\<lambda>x. P x (cur_thread s)" for s])+
+  apply (clarsimp simp: state_refs_of_def get_refs_def2 obj_at_def
+                  intro!: ext elim!: rsubst[where P="\<lambda>x. P x (cur_thread s)" for s])
   done
 
 lemma refill_unblock_check_it_ct[wp]:

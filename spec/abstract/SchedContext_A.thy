@@ -257,7 +257,8 @@ where
              set_sc_obj_ref sc_budget_update sc_ptr new_budget
           od
      else do unused <- return $ new_budget - r_amount refill_hd;
-             new <- return $ \<lparr>r_time = r_time refill_hd + new_period - unused, r_amount = unused\<rparr>;
+             true_period <- return $ if (new_period=0) then new_budget else new_period;
+             new <- return $ \<lparr>r_time = r_time refill_hd + true_period - unused, r_amount = unused\<rparr>;
              new_refills <- return $ schedule_used False [refill_hd] new;
              set_sc_obj_ref sc_period_update sc_ptr new_period;
              set_sc_obj_ref sc_refill_max_update sc_ptr new_max_refills;

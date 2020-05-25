@@ -3875,8 +3875,6 @@ lemma set_tcb_queue_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> set_tcb_queue d prio queue \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
   by (wpsimp simp: set_tcb_queue_def)
 
-crunch cdt_cdt_list[wp]: get_sc_obj_ref, get_tcb_queue "\<lambda>s. P (cdt s) (cdt_list s)"
-
 lemma tcb_sched_action_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> tcb_sched_action action thread \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
   by (wpsimp simp: tcb_sched_action_def thread_get_def)
@@ -4155,7 +4153,7 @@ lemma fast_finalise_valid_list[wp]:
 
 crunches cap_delete_one, restart
   for valid_list[wp]: "valid_list"
-  (wp: hoare_drop_imps maybeM_inv simp: crunch_simps)
+  (wp: hoare_drop_imp hoare_vcg_all_lift maybeM_inv simp: crunch_simps)
 
 context notes if_cong[cong] begin
 
@@ -4169,14 +4167,12 @@ crunch valid_list[wp]: sched_context_resume,suspend "valid_list"
   (wp: get_object_wp hoare_drop_imp maybeM_inv)
 
 crunch valid_list[wp]: sched_context_bind_ntfn valid_list
-crunch valid_list[wp]: sched_context_unbind_reply valid_list (wp: mapM_x_wp')
 crunch valid_list[wp]: sched_context_yield_to valid_list
   (wp: hoare_drop_imps crunch_wps simp: crunch_simps)
 crunch valid_list[wp]: invoke_sched_context valid_list
 
 crunch valid_list[wp]: refill_update,refill_new valid_list (wp: hoare_drop_imp)
 
-crunch (empty_fail) empty_fail[wp]: commit_domain_time
 
 crunch valid_list[wp]: commit_time valid_list
   (wp: crunch_wps)
@@ -4185,13 +4181,8 @@ end
 
 context Deterministic_AI_1 begin
 
-crunch valid_list[wp]: invoke_tcb "valid_list"
+crunch valid_list[wp]: invoke_tcb, invoke_sched_control_configure "valid_list"
  (wp: hoare_drop_imp check_cap_inv mapM_x_wp')
-
-lemma invoke_sched_control_configure_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> invoke_sched_control_configure i \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  by (cases i; wpsimp simp: invoke_sched_control_configure_def
-                           wp: hoare_drop_imp)
 
 end
 

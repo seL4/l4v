@@ -1480,19 +1480,96 @@ lemma period_window_single:
    \<Longrightarrow> window refills period = (unat (r_amount a) \<le> unat period)"
   unfolding window_def by fastforce
 
+definition rr_valid_refills :: "refill list \<Rightarrow> nat \<Rightarrow> ticks \<Rightarrow> bool" where
+  "rr_valid_refills refills refill_max budget \<equiv>
+      (refills_sum refills = budget
+      \<and> ordered_disjoint refills
+      \<and> no_overflow refills
+      \<and> (MIN_BUDGET \<le> r_amount (refills ! 0))
+      \<and> (length refills = 2 \<longrightarrow> MIN_BUDGET \<le> r_amount (refills ! 1))
+      \<and> window refills budget
+      \<and> 0 < length refills
+      \<and> length refills \<le> refill_max
+      \<and> MIN_SC_BUDGET \<le> budget
+      \<and> r_time (hd refills) = 0
+      \<and> refill_max = MIN_REFILLS
+      \<and> budget \<le> MAX_SC_PERIOD)"
+
+definition sp_valid_refills :: "refill list \<Rightarrow> nat \<Rightarrow> ticks \<Rightarrow> ticks \<Rightarrow> bool" where
+  "sp_valid_refills refills refill_max period budget \<equiv>
+      (refills_sum refills = budget
+      \<and> ordered_disjoint refills
+      \<and> no_overflow refills
+      \<and> (\<forall>refill \<in> set refills. MIN_BUDGET \<le> r_amount refill)
+      \<and> window refills period
+      \<and> 0 < length refills
+      \<and> length refills \<le> refill_max
+      \<and> MIN_SC_BUDGET \<le> budget
+      \<and> budget \<le> period
+      \<and> MIN_REFILLS \<le> refill_max
+      \<and> period \<le> MAX_SC_PERIOD)"
+
+\<comment> \<open>unat is monotonic on le\<close>
+lemma unat_le_mono:
+  "a \<le> b \<Longrightarrow> unat a \<le> unat b"
+  by (clarsimp simp: word_le_nat_alt)
+
+\<comment> \<open>unat is bounded above by unat max_word\<close>
+(* FIXME RT: move *)
+lemmas unat_bounded_above[simp] = unat_le_mono[OF max_word_max]
+
+(* this could become the definition, but some discussion may be required *)
+lemma rr_valid_refills_def2:
+  "rr_valid_refills refills refill_max budget =
+   (refills_sum refills = budget
+      \<and> r_time (hd refills) = 0
+      \<and> (MIN_BUDGET \<le> r_amount (hd refills))
+      \<and> (length refills = 2 \<longrightarrow> MIN_BUDGET \<le> r_amount (last refills))
+      \<and> (length refills = 2 \<longrightarrow> unat (r_amount (hd refills)) = unat (r_time (last refills)))
+      \<and> (length refills = 2 \<longrightarrow> unat (r_amount (hd refills)) + unat (r_amount (last refills)) \<le> unat max_time)
+      \<and> length refills \<in> {1, MIN_REFILLS}
+      \<and> MIN_SC_BUDGET \<le> budget
+      \<and> refill_max = MIN_REFILLS
+      \<and> budget \<le> MAX_SC_PERIOD)"
+  unfolding rr_valid_refills_def
+  apply (intro iffI)
+   apply (clarsimp simp: MIN_REFILLS_def ordered_disjoint_def no_overflow_def window_def list_length_1 list_length_2 hd_conv_nth)
+   apply (intro conjI impI; clarsimp)
+    apply (case_tac refills; simp)
+    apply (case_tac list; simp)
+    apply (subst (asm) unat_add_lem')
+     apply (fastforce simp: MIN_REFILLS_def max_word_def)
+    apply (fastforce simp: MIN_REFILLS_def ordered_disjoint_def no_overflow_def window_def list_length_1 list_length_2 hd_conv_nth)
+   apply (case_tac refills; clarsimp)
+   apply (case_tac list; clarsimp)
+  apply (clarsimp simp: MIN_REFILLS_def ordered_disjoint_def no_overflow_def window_def list_length_1 list_length_2 hd_conv_nth)
+  apply (erule disjE; clarsimp)
+  apply (subst unat_add_lem')
+   apply (auto simp: MIN_REFILLS_def max_word_def)
+  done
+
+lemma rr_valid_refills_def3:
+  "rr_valid_refills refills refill_max budget =
+   (refill_max = MIN_REFILLS \<and> r_time (hd refills) = 0
+    \<and> sp_valid_refills refills refill_max budget budget)"
+  unfolding rr_valid_refills_def sp_valid_refills_def
+  apply (intro iffI)
+   apply (clarsimp simp: MIN_REFILLS_def)
+   apply (case_tac refills; clarsimp)
+   apply (case_tac list; fastforce)
+   apply fastforce
+  done
+
+\<comment>\<open>When the user creates a scheduling context with period = budget, we know that sporadic scheduling is
+vastly simplified. As an optimisation we set period=0 and sc_refill_max=MIN_REFILLS and adjust the
+code to handle this as a special case.\<close>
 definition cfg_valid_refills :: "sc_refill_cfg \<Rightarrow> bool" where
   "cfg_valid_refills cfg \<equiv>
-      (refills_sum (scrc_refills cfg) = scrc_budget cfg
-      \<and> ordered_disjoint (scrc_refills cfg)
-      \<and> no_overflow (scrc_refills cfg)
-      \<and> (\<forall>refill \<in> set (scrc_refills cfg). MIN_BUDGET <= r_amount refill)
-      \<and> window (scrc_refills cfg) (scrc_period cfg)
-      \<and> 0 < length (scrc_refills cfg)
-      \<and> length (scrc_refills cfg) \<le> scrc_refill_max cfg
-      \<and> MIN_SC_BUDGET \<le> scrc_budget cfg
-      \<and> scrc_budget cfg \<le> scrc_period cfg
-      \<and> MIN_REFILLS \<le> scrc_refill_max cfg
-      \<and> scrc_period cfg \<le> MAX_SC_PERIOD)"
+     if (scrc_period cfg = 0) then
+       rr_valid_refills (scrc_refills cfg) (scrc_refill_max cfg) (scrc_budget cfg)
+     else
+       sp_valid_refills (scrc_refills cfg) (scrc_refill_max cfg) (scrc_period cfg) (scrc_budget cfg)"
+
 abbreviation valid_refills_pred :: "(obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> obj_ref \<Rightarrow> bool" where
   "valid_refills_pred \<equiv> pred_map cfg_valid_refills"
 abbreviation valid_refills :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
@@ -1501,8 +1578,8 @@ abbreviation valid_refills :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool
 abbreviation sc_valid_refills :: "sched_context \<Rightarrow> bool" where
   "sc_valid_refills sc \<equiv> cfg_valid_refills (sc_refill_cfg_of sc)"
 
-lemmas sc_valid_refills_def = cfg_valid_refills_def
-lemmas valid_refills_def = cfg_valid_refills_def
+lemmas sc_valid_refills_def = cfg_valid_refills_def sp_valid_refills_def
+lemmas valid_refills_def = cfg_valid_refills_def sp_valid_refills_def
 
 \<comment> \<open>Predicates about scheduling contexts bound to threads, concerning schedulability\<close>
 

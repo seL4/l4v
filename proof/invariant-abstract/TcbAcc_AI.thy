@@ -1062,7 +1062,7 @@ lemma ssc_bound_yt_tcb_at:
   "\<lbrace>\<top>\<rbrace> set_tcb_obj_ref tcb_yield_to_update t sc \<lbrace>\<lambda>rv. bound_yt_tcb_at (\<lambda>r. r = sc) t\<rbrace>"
   by (simp add: set_tcb_obj_ref_def pred_tcb_at_def | wp set_object_at_obj3)+
 
-lemma sts_st_tcb_at':
+lemma sts_st_tcb_at'[wp]:
   "\<lbrace>K (P ts)\<rbrace> set_thread_state t ts \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (rule hoare_chain)

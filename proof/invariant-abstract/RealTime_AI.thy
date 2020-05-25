@@ -1043,7 +1043,7 @@ crunches
   refill_unblock_check, unbind_from_sc, sched_context_maybe_unbind_ntfn, reply_unlink_sc,
   sched_context_unbind_reply, schedule_tcb
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-  (wp: maybeM_inv crunch_wps simp: crunch_simps)
+  (wp: crunch_wps hoare_drop_imp hoare_vcg_all_lift simp: crunch_simps)
 
 lemma sched_context_update_consumed_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> sched_context_update_consumed param_a \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace> "

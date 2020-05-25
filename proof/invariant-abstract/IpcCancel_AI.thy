@@ -25,11 +25,11 @@ crunches is_final_cap
 
 lemma blocked_cancel_ipc_simple:
   "\<lbrace>tcb_at t\<rbrace> blocked_cancel_ipc ts t r \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
-  by (simp add: blocked_cancel_ipc_def | wp sts_st_tcb_at')+
+  by (simp add: blocked_cancel_ipc_def | wp)+
 
 lemma cancel_signal_simple:
   "\<lbrace>\<top>\<rbrace> cancel_signal t ntfn \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
-  by (simp add: cancel_signal_def | wp sts_st_tcb_at')+
+  by (simp add: cancel_signal_def | wp)+
 
 crunch typ_at[wp]: cancel_all_ipc "\<lambda>s. P (typ_at T p s)" (wp: crunch_wps mapM_x_wp)
 
@@ -1561,15 +1561,15 @@ lemma suspend_invs_helper:
 
 lemma blocked_cancel_ipc_inactive [wp]:
   "\<lbrace>\<top>\<rbrace> blocked_cancel_ipc ts t r \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) t\<rbrace>"
-  by (simp add: blocked_cancel_ipc_def | wp sts_st_tcb_at')+
+  by (simp add: blocked_cancel_ipc_def | wp)+
 
 lemma cancel_signal_inactive [wp]:
   "\<lbrace>\<top>\<rbrace> cancel_signal t ntfn \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) t\<rbrace>"
-  by (simp add: cancel_signal_def | wp sts_st_tcb_at')+
+  by (simp add: cancel_signal_def | wp)+
 
 lemma reply_unlink_tcb_inactive [wp]:
   "\<lbrace>\<top>\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) t\<rbrace>"
-  by (wpsimp simp: reply_unlink_tcb_def wp: sts_st_tcb_at')
+  by (wpsimp simp: reply_unlink_tcb_def)
 
 lemma reply_remove_tcb_inactive [wp]:
   "\<lbrace>\<top>\<rbrace> reply_remove_tcb t r \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) t\<rbrace>"

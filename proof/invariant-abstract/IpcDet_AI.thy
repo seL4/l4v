@@ -1093,7 +1093,7 @@ lemma receive_ipc_preamble_rv_reprogram_timer[simp]:
 
 crunches refill_unblock_check
   for receive_ipc_preamble_rv[wp]: "receive_ipc_preamble_rv a b"
-  (wp: hoare_if simp: crunch_simps)
+  (wp: hoare_vcg_all_lift hoare_drop_imp simp: crunch_simps)
 
 lemma set_refills_ko_at_ep[wp]:
   "set_refills scp rfls \<lbrace>ko_at (Endpoint ep) p\<rbrace>"
@@ -1103,7 +1103,7 @@ lemma set_refills_ko_at_ep[wp]:
 lemma refill_unblock_check_ko_at_ep[wp]:
   "refill_unblock_check scp \<lbrace>ko_at (Endpoint ep) p\<rbrace>"
   unfolding refill_unblock_check_def
-  by (wpsimp wp: hoare_if)
+  by (wpsimp wp: hoare_vcg_all_lift hoare_drop_imp)
 
 lemma ri_invs[wp]:
   fixes thread ep_cap is_blocking reply
