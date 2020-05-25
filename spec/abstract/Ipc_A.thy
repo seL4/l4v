@@ -770,12 +770,13 @@ where
                However, we can call @{text invoke_sched_control_configure} only if the call to
                @{text check_budget_restart} at the beginning of @{text handle_event} returns True, so we
                know that @{text check_budget} would return True if called here.\<close>
-
     od;
+
+    (period, mrefills) \<leftarrow> return (if period = budget then (0, MIN_REFILLS) else (period, mrefills));
 
     if (0 < sc_refill_max sc \<and> (\<exists>y. sc_tcb sc = Some y))
     then do tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
-            st \<leftarrow>get_thread_state tcb_ptr;
+            st \<leftarrow> get_thread_state tcb_ptr;
             if runnable st
             then refill_update sc_ptr period budget mrefills
             else refill_new sc_ptr mrefills budget period

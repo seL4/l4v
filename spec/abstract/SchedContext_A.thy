@@ -22,7 +22,7 @@ definition
 where
   "is_round_robin sc_ptr = do
     sc \<leftarrow> get_sched_context sc_ptr;
-    return (sc_period sc = sc_budget sc)
+    return (sc_period sc = 0)
   od"
 
 definition
@@ -110,7 +110,8 @@ where
   "refill_new sc_ptr max_refills budget period = do
      assert (MIN_BUDGET < budget);
      cur_time \<leftarrow> gets cur_time;
-     refill \<leftarrow> return \<lparr> r_time = cur_time, r_amount = budget \<rparr>;
+     head_time <- return (if period = 0 then 0 else cur_time);
+     refill \<leftarrow> return \<lparr> r_time = head_time, r_amount = budget \<rparr>;
      set_sc_obj_ref sc_period_update sc_ptr period;
      set_sc_obj_ref sc_refills_update sc_ptr [refill];
      set_sc_obj_ref sc_refill_max_update sc_ptr max_refills;
@@ -159,20 +160,12 @@ where
     ct \<leftarrow> gets cur_time;
     refills \<leftarrow> get_refills sc_ptr;
 
-    if robin
-    then if (length refills = 1)
-         then set_refills sc_ptr [(hd refills)\<lparr>r_time := ct + kernelWCET_ticks\<rparr>]
-         else do assert (length refills = 2);
-                 set_refills sc_ptr [(hd refills)\<lparr>r_time := ct + kernelWCET_ticks\<rparr>,
-                                     (hd (tl refills))\<lparr>r_time := r_amount (hd refills) + ct + kernelWCET_ticks\<rparr>]
-              od
-    else do ready \<leftarrow> get_sc_refill_ready sc_ptr;
-            when ready $ do
-                 modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
-                 refills' \<leftarrow> return $ refills_merge_prefix ((hd refills)\<lparr>r_time := ct + kernelWCET_ticks\<rparr>
-                                                            # tl refills);
-                 set_refills sc_ptr refills'
-                 od
+    ready \<leftarrow> get_sc_refill_ready sc_ptr;
+    when (ready \<and> \<not>robin) $ do
+         modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
+         refills' \<leftarrow> return $ refills_merge_prefix ((hd refills)\<lparr>r_time := ct + kernelWCET_ticks\<rparr>
+                                                    # tl refills);
+         set_refills sc_ptr refills'
          od
   od"
 
@@ -191,17 +184,19 @@ where
     usage2 \<leftarrow> return $ if (usage < MIN_BUDGET \<and> length refills = 1) then MIN_BUDGET else usage;
 
     if (usage2 + MIN_BUDGET \<le> r_amount (hd refills))
-    then if (length refills = 1)
-         then set_refills sc_ptr (\<lparr>r_time = cur_time, r_amount = r_amount (hd refills) - usage2\<rparr>
-                                  # [\<lparr>r_time = cur_time + r_amount (hd refills) - usage2,
-                                      r_amount = usage2\<rparr>])
-         else do assert (length refills = 2);
-                 new_tl \<leftarrow> return $ \<lparr>r_time = cur_time + r_amount (hd refills) - usage2,
-                                     r_amount = r_amount (hd (tl refills)) + usage2\<rparr>;
-                 set_refills sc_ptr (\<lparr>r_time = cur_time, r_amount = r_amount (hd refills) - usage2\<rparr>
-                                     # [new_tl])
+    then do
+         new_hd \<leftarrow> return $ \<lparr>r_time = r_time (hd refills), r_amount = r_amount (hd refills) - usage2\<rparr>;
+         if (length refills = 1)
+         then do new_tl \<leftarrow> return $ \<lparr>r_time = r_amount new_hd, r_amount = usage2\<rparr>;
+                 set_refills sc_ptr (new_hd # [new_tl])
               od
-    else set_refills sc_ptr [\<lparr>r_time = cur_time, r_amount = sc_budget sc\<rparr>]
+         else do assert (length refills = 2);
+                 new_tl \<leftarrow> return $ \<lparr>r_time = r_time (hd (tl refills)) - usage2,
+                                     r_amount = r_amount (hd (tl refills)) + usage2\<rparr>;
+                 set_refills sc_ptr (new_hd # [new_tl])
+              od
+         od
+    else set_refills sc_ptr [\<lparr>r_time = 0, r_amount = sc_budget sc\<rparr>]
    od"
 
 definition
@@ -253,7 +248,8 @@ where
      refill_hd \<leftarrow> return $ refill_hd sc;
      cur_time \<leftarrow> gets cur_time;
      ready \<leftarrow> get_sc_refill_ready sc_ptr;
-     new_time \<leftarrow> return $ if ready then cur_time else (r_time refill_hd);
+     new_time \<leftarrow> return $ if new_period = 0 then 0 else if ready then cur_time else (r_time refill_hd);
+     refill_hd \<leftarrow> return $ \<lparr>r_time = new_time, r_amount = r_amount refill_hd\<rparr>;
      if new_budget \<le> r_amount refill_hd
      then do set_sc_obj_ref sc_period_update sc_ptr new_period;
              set_sc_obj_ref sc_refill_max_update sc_ptr new_max_refills;
