@@ -12,6 +12,7 @@ theory Refine
 imports
 (* FIXME RT: until sorrying complete: *)
   Arch_R
+  Ipc_R
 
 (* FIXME RT: until sorrying complete:
   KernelInit_R
