@@ -14,7 +14,7 @@ imports
   Lib
   NatBitwise
   "More_Numeral_Type"
-  "Monad_WP/NonDetMonadVCG"
+  "Monad_WP/WhileLoopRules"
 begin
 
 abbreviation (input) "flip \<equiv> swp"
@@ -570,5 +570,23 @@ definition
 definition
   andM :: "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
   "andM a b = ifM a b (return False)"
+
+lemma ifM_wp[wp]:
+  assumes [wp]: "\<lbrace>Q\<rbrace> f \<lbrace>S\<rbrace>" "\<lbrace>R\<rbrace> g \<lbrace>S\<rbrace>"
+  assumes [wp]: "\<lbrace>A\<rbrace> P \<lbrace>\<lambda>c s. c \<longrightarrow> Q s\<rbrace>" "\<lbrace>B\<rbrace> P \<lbrace>\<lambda>c s. \<not>c \<longrightarrow> R s\<rbrace>"
+  shows "\<lbrace>A and B\<rbrace> ifM P f g \<lbrace>S\<rbrace>"
+  unfolding ifM_def by wpsimp
+
+lemma whenM_wp[wp]:
+  assumes [wp]: "\<lbrace>Q\<rbrace> f \<lbrace>S\<rbrace>"
+  assumes [wp]: "\<lbrace>A\<rbrace> P \<lbrace>\<lambda>c s. c \<longrightarrow> Q s\<rbrace>" "\<lbrace>B\<rbrace> P \<lbrace>\<lambda>c s. \<not>c \<longrightarrow> S () s\<rbrace>"
+  shows "\<lbrace>A and B\<rbrace> whenM P f \<lbrace>S\<rbrace>"
+  unfolding whenM_def by wpsimp
+
+lemma whileM_inv:
+  assumes [wp]: "f \<lbrace>Q\<rbrace>" "P \<lbrace>Q\<rbrace>"
+  shows "whileM P f \<lbrace>Q\<rbrace>"
+  unfolding whileM_def
+  by (wpsimp wp: whileLoop_wp[where I="\<lambda>_. Q"])
 
 end
