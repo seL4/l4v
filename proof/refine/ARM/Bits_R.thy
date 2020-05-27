@@ -20,7 +20,8 @@ crunch_ignore (add:
   storeWordVM loadWord setRegister getRegister getRestartPC
   debugPrint setNextPC maskInterrupt clearMemory throw_on_false
   unifyFailure ignoreFailure empty_on_failure emptyOnFailure clearMemoryVM null_cap_on_failure
-  setNextPC getRestartPC assertDerived throw_on_false getObject setObject updateObject loadObject)
+  setNextPC getRestartPC assertDerived throw_on_false getObject setObject updateObject loadObject
+  ifM whenM whileM)
 
 context Arch begin (*FIXME: arch_split*)
 
