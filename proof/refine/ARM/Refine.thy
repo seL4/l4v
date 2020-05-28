@@ -13,6 +13,7 @@ imports
 (* FIXME RT: until sorrying complete: *)
   Arch_R
   Interrupt_R
+  CNodeInv_R
 
 (* FIXME RT: until sorrying complete:
   KernelInit_R
