@@ -3612,6 +3612,7 @@ lemma si_invs'[wp]:
     apply (simp add: invs'_def valid_state'_def)
     apply (rule hoare_pre)
      apply (rule_tac P="a\<noteq>t" in hoare_gen_asm)
+  sorry (*
      apply (wp valid_irq_node_lift
                sts_valid_objs' set_ep_valid_objs' set_ep'.valid_mdb' sts_st_tcb' sts_sch_act'
                possibleSwitchTo_sch_act_not sts_valid_queues setThreadState_ct_not_inQ
@@ -3628,7 +3629,6 @@ lemma si_invs'[wp]:
                       cong: if_cong
              | wp (once) sch_act_sane_lift tcb_in_cur_domain'_lift hoare_vcg_const_imp_lift)+
     apply (clarsimp simp: pred_tcb_at' cong: conj_cong imp_cong)
-  sorry (*
     apply (frule obj_at_valid_objs', clarsimp)
     apply (frule(1) sym_refs_ko_atD')
     apply (clarsimp simp: projectKOs valid_obj'_def valid_ep'_def

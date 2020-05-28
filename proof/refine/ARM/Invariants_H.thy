@@ -183,7 +183,15 @@ abbreviation scs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> sched_
 abbreviation scReplies_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
   "scReplies_of s \<equiv> scs_of' s |> scReply"
 
+definition tcb_of' :: "kernel_object \<Rightarrow> tcb option" where
+  "tcb_of' kobj \<equiv> (case kobj of KOTCB tcb \<Rightarrow> Some tcb
+                               | _         \<Rightarrow> None)"
 
+abbreviation tcbs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> tcb option" where
+  "tcbs_of' s \<equiv> ksPSpace s |> tcb_of'"
+
+abbreviation tcb_scs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
+  "tcb_scs_of' s \<equiv> tcbs_of' s |> tcbSchedContext"
 
 definition
   tcb_cte_cases :: "word32 \<rightharpoonup> ((tcb \<Rightarrow> cte) \<times> ((cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb))" where
@@ -2805,6 +2813,9 @@ begin
 lemmas typ_ats'[wp] = typ_at_lifts[OF typ']
 
 end
+
+locale typ_at_ctes_of_props' = typ_at_props' +
+  assumes ctes: "f \<lbrace>\<lambda>s. Q (cte_wp_at' P ps)\<rbrace>"
 
 (* we expect typ_at' lemmas to be [wp], so this should be easy: *)
 method typ_at_props' = unfold_locales, wp
