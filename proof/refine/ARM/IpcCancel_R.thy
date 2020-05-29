@@ -1677,7 +1677,7 @@ proof -
       apply (rule hoare_name_pre_state)
       apply (wp hoare_vcg_const_Ball_lift set_ep_valid_objs'
           | (clarsimp simp: valid_ep'_def)
-          | (drule (1) bspec, clarsimp simp: valid_pspace'_def valid_tcb'_def valid_ep'_def elim!: valid_objs_valid_tcbE))+
+          | (drule (1) bspec, clarsimp simp: valid_pspace'_def valid_tcb'_def valid_ep'_def elim!: valid_objs_valid_tcbE'))+
       done *)
 
   show ?thesis
@@ -1793,7 +1793,7 @@ lemma cancel_all_invs'_helper:
                  elim!: rsubst[where P=sym_refs]
                  dest!: set_mono_suffix
                 intro!: ext
-       | (drule (1) bspec, clarsimp simp: valid_pspace'_def valid_tcb'_def elim!: valid_objs_valid_tcbE))+
+       | (drule (1) bspec, clarsimp simp: valid_pspace'_def valid_tcb'_def elim!: valid_objs_valid_tcbE'))+
   sorry
 
 lemma ep_q_refs_max:
@@ -2251,7 +2251,7 @@ lemma cancelBadgedSends_filterM_helper':
   apply (rule conjI[rotated], blast)
   apply clarsimp
   apply (intro conjI)
-      apply (clarsimp simp: valid_pspace'_def valid_tcb'_def elim!: valid_objs_valid_tcbE dest!: st_tcb_ex_cap'')
+      apply (clarsimp simp: valid_pspace'_def valid_tcb'_def elim!: valid_objs_valid_tcbE' dest!: st_tcb_ex_cap'')
      apply (fastforce dest!: st_tcb_ex_cap'')
     apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def)
   sorry (*

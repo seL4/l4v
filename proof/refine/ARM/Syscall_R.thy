@@ -1652,7 +1652,7 @@ lemma hy_corres:
   apply (frule ct_active_runnable')
   apply (clarsimp simp: invs'_def valid_state'_def ct_in_state'_def sch_act_wf_weak cur_tcb'_def
                         valid_pspace_valid_objs' valid_objs'_maxDomain tcb_in_cur_domain'_def)
-  apply (erule(1) valid_objs_valid_tcbE[OF valid_pspace_valid_objs'])
+  apply (erule(1) valid_objs_valid_tcbE'[OF valid_pspace_valid_objs'])
   apply (simp add:valid_tcb'_def)
   done
 

@@ -124,7 +124,12 @@ lemma st_tcb_at_coerce_abstract:
   apply fastforce
   done
 
-lemma valid_objs_valid_tcbE: "\<And>s t.\<lbrakk> valid_objs' s; tcb_at' t s; \<And>tcb. valid_tcb' tcb s \<Longrightarrow> R s tcb \<rbrakk> \<Longrightarrow> obj_at' (R s) t s"
+lemma valid_objs_valid_tcbE':
+  assumes "valid_objs' s"
+          "tcb_at' t s"
+          "\<And>tcb. ko_at' tcb t s \<Longrightarrow> valid_tcb' tcb s \<Longrightarrow> R s tcb"
+  shows "obj_at' (R s) t s"
+  using assms
   apply (clarsimp simp add: projectKOs valid_objs'_def ran_def typ_at'_def
                             ko_wp_at'_def valid_obj'_def valid_tcb'_def obj_at'_def)
   apply (fastforce simp: projectKO_def projectKO_opt_tcb return_def valid_tcb'_def)
@@ -132,13 +137,13 @@ lemma valid_objs_valid_tcbE: "\<And>s t.\<lbrakk> valid_objs' s; tcb_at' t s; \<
 
 lemma valid_objs'_maxDomain:
   "\<And>s t. \<lbrakk> valid_objs' s; tcb_at' t s \<rbrakk> \<Longrightarrow> obj_at' (\<lambda>tcb. tcbDomain tcb \<le> maxDomain) t s"
-  apply (erule (1) valid_objs_valid_tcbE)
+  apply (erule (1) valid_objs_valid_tcbE')
   apply (clarsimp simp: valid_tcb'_def)
   done
 
 lemma valid_objs'_maxPriority:
   "\<And>s t. \<lbrakk> valid_objs' s; tcb_at' t s \<rbrakk> \<Longrightarrow> obj_at' (\<lambda>tcb. tcbPriority tcb \<le> maxPriority) t s"
-  apply (erule (1) valid_objs_valid_tcbE)
+  apply (erule (1) valid_objs_valid_tcbE')
   apply (clarsimp simp: valid_tcb'_def)
   done
 

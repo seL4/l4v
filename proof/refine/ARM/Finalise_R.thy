@@ -3028,7 +3028,7 @@ lemma cancelAllIPC_valid_queues[wp]:
   apply (drule (1) ko_at_valid_objs')
   apply (auto simp: valid_obj'_def valid_ep'_def valid_tcb'_def projectKOs
              split: endpoint.splits
-              elim: valid_objs_valid_tcbE)
+              elim: valid_objs_valid_tcbE')
   done *)
 
 
@@ -3049,7 +3049,7 @@ lemma cancelAllSignals_valid_queues[wp]:
   apply (drule (1) ko_at_valid_objs')
   apply (auto simp: valid_obj'_def valid_ntfn'_def valid_tcb'_def projectKOs
              split: endpoint.splits
-              elim: valid_objs_valid_tcbE)
+              elim: valid_objs_valid_tcbE')
   done *)
 
 lemma finaliseCapTrue_standin_valid_queues[wp]:
