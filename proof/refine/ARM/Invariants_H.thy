@@ -1011,6 +1011,11 @@ definition
 where
  "valid_release_queue' \<equiv> \<lambda>s. \<forall>t. obj_at' (tcbInReleaseQueue) t s \<longrightarrow> t \<in> set (ksReleaseQueue s)"
 
+abbreviation
+  valid_release_queue_iff :: "kernel_state \<Rightarrow> bool"
+where
+  "valid_release_queue_iff \<equiv> valid_release_queue and valid_release_queue'"
+
 definition tcb_in_cur_domain' :: "32 word \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "tcb_in_cur_domain' t \<equiv> \<lambda>s. obj_at' (\<lambda>tcb. ksCurDomain s = tcbDomain tcb) t s"
 
