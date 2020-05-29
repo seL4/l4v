@@ -552,6 +552,16 @@ lemma corres_bind_return_r:
    corres_underlying S nf nf' r P Q f (do x \<leftarrow> g; return (h x) od)"
   by (fastforce simp: corres_underlying_def bind_def return_def)
 
+lemma corres_bind_return_l:
+  "corres_underlying srel nf nf' (\<lambda>x y. rrel (g x) y) P P' f f'
+  \<Longrightarrow> corres_underlying srel nf nf' rrel P P' (do x <- f; return (g x) od) f'"
+  apply (clarsimp simp: corres_underlying_def bind_def return_def)
+  apply (rename_tac s s')
+  apply (erule_tac x="(s, s')" in ballE; clarsimp)
+  apply (rename_tac rv' t')
+  apply (erule_tac x="(rv', t')" in ballE; clarsimp)
+  by force
+
 lemma corres_underlying_symb_exec_l:
   "\<lbrakk> corres_underlying sr nf nf' dc P P' f (return ()); \<And>rv. corres_underlying sr nf nf' r (Q rv) P' (g rv) h;
      \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk>
