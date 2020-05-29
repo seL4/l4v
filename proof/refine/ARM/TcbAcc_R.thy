@@ -501,10 +501,9 @@ lemma setObject_tcb_valid_objs:
   done
 
 lemma setObject_tcb_at':
-  "\<lbrace>tcb_at' t'\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv. tcb_at' t'\<rbrace>"
-  apply (rule obj_at_setObject1)
-   apply (clarsimp simp: updateObject_default_def return_def in_monad)
-  apply (simp add: objBits_simps)
+  "\<lbrace>\<lambda>s. P (tcb_at' t' s)\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv s. P (tcb_at' t' s)\<rbrace>"
+  apply (subst typ_at_tcb'[symmetric])+
+  apply (rule setObject_typ_at')
   done
 
 lemma setObject_sa_unchanged:
@@ -1117,8 +1116,8 @@ lemma threadSet_valid_release_queue':
 
 lemma threadSet_cur:
   "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. cur_tcb' s\<rbrace>"
-  apply (simp add: threadSet_def cur_tcb'_def)
-  apply (wp hoare_lift_Pf [OF setObject_tcb_at'] setObject_ct_inv)
+  apply (wpsimp simp: threadSet_def cur_tcb'_def
+                  wp: hoare_lift_Pf[OF setObject_tcb_at' setObject_ct_inv])
   done
 
 lemma modifyReadyQueuesL1Bitmap_obj_at[wp]:
