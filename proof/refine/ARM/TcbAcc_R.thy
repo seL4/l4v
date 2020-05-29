@@ -2159,6 +2159,27 @@ lemma thread_get_isRunnable_corres: "corres (=) (tcb_at t) (tcb_at' t) (thread_g
   apply (case_tac "tcb_state x",simp_all)
   done
 
+\<comment>\<open>
+  State-preservation lemmas: lemmas of the form @{term "m \<lbrace>P\<rbrace>"}.
+\<close>
+lemmas tcb_inv_collection =
+  getObject_tcb_inv
+  threadGet_inv
+
+\<comment>\<open>
+  State preservation lowered through @{thm use_valid}. Results are of
+  the form @{term "(rv, s') \<in> fst (m s) \<Longrightarrow> P s \<Longrightarrow> P s'"}.
+\<close>
+lemmas tcb_inv_use_valid =
+  tcb_inv_collection[THEN use_valid[rotated], rotated]
+
+\<comment>\<open>
+  Low-level monadic state preservation. Results are of the form
+  @{term "(rv, s') \<in> fst (m s) \<Longrightarrow> s = s'"}.
+\<close>
+lemmas tcb_inv_state_eq =
+  tcb_inv_use_valid[where s=s and P="(=) s" for s, OF _ refl]
+
 lemma threadGet_wp:
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (\<exists>tcb. ko_at' tcb t s \<and> P (f tcb) s)\<rbrace>
    threadGet f t
@@ -2168,6 +2189,151 @@ lemma threadGet_wp:
   apply clarsimp
   done
 
+\<comment>\<open>
+  For when you want an obj_at' goal instead of the ko_at' that @{thm threadGet_wp}
+  gives you.
+\<close>
+lemma threadGet_obj_at'_field:
+  "\<lbrace>\<lambda>s. obj_at' (\<lambda>tcb. P (field tcb) s) ptr s\<rbrace>
+   threadGet field ptr
+   \<lbrace>P\<rbrace>"
+  by (wpsimp wp: threadGet_wp
+           simp: obj_at_ko_at')
+
+\<comment>\<open>
+  Getting a boolean field of a thread is the same as the thread
+  "satisfying" the "predicate" which the field represents.
+\<close>
+lemma threadGet_obj_at'_bool_field:
+  "\<lbrace>tcb_at' ptr\<rbrace>
+   threadGet field ptr
+   \<lbrace>\<lambda>rv s. obj_at' field ptr s = rv\<rbrace>"
+   by (wpsimp wp: threadGet_wp
+            simp: obj_at'_def)
+
+lemma inReleaseQueue_corres:
+  shows "corres (=)
+          (tcb_at ptr)
+          (tcb_at' ptr and valid_release_queue_iff)
+          (gets (in_release_queue ptr))
+          (inReleaseQueue ptr)"
+  apply (simp add: gets_def)
+  apply (rule corres_bind_return_l)
+  apply (clarsimp simp: corres_underlying_def inReleaseQueue_def
+                        valid_release_queue_def valid_release_queue'_def
+                        no_fail_threadGet[unfolded no_fail_def])
+  apply (rename_tac s s' rv t')
+  apply (prop_tac "ksReleaseQueue s' = release_queue s")
+   subgoal by (clarsimp simp: state_relation_def release_queue_relation_def)
+  apply (frule tcb_inv_state_eq)
+  apply (clarsimp simp: split_paired_Bex in_get)
+  apply (frule tcb_inv_state_eq)
+  apply (erule allE[where x=ptr])+
+  apply (frule use_valid[OF _ threadGet_obj_at'_bool_field], assumption)
+  apply (fastforce simp: in_release_q_def)
+  done
+
+lemma isRunnable_corres:
+  "tcb_relation tcb_abs tcb_conc \<Longrightarrow>
+   corres (=)
+          (tcb_at t)
+          (ko_at' tcb_conc t)
+          (return (runnable (tcb_state tcb_abs)))
+          (isRunnable t)"
+  unfolding isRunnable_def getThreadState_def
+  apply (rule corres_symb_exec_r[where Q'="\<lambda>rv s. tcbState tcb_conc = rv"])
+     apply (case_tac "tcb_state tcb_abs"; clarsimp simp: tcb_relation_def)
+    apply (wpsimp wp: threadGet_wp)
+    apply (rule exI, fastforce)
+   apply (rule tcb_inv_collection)
+  apply (rule no_fail_pre[OF no_fail_threadGet])
+  apply (clarsimp simp: obj_at'_weaken)
+  done
+
+lemma isSchedulable_corres:
+  "corres (=)
+          (valid_objs and tcb_at t)
+          (valid_objs' and tcb_at' t and valid_release_queue_iff)
+          (is_schedulable t)
+          (isSchedulable t)"
+  unfolding is_schedulable_def isSchedulable_def fun_app_def
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF _ assert_get_tcb_corres])
+      apply (rename_tac tcb_abs tcb_conc)
+      apply (rule corres_if[OF _ corres_return_eq_same])
+        apply (clarsimp simp: tcb_relation_def Option.is_none_def)
+       apply simp
+      apply (rule corres_split[OF _ get_sc_corres[THEN equify]])
+         apply (rename_tac sc_abs sc_conc)
+         apply (rule corres_split[OF _ isRunnable_corres])
+            apply (rule corres_split[OF _ inReleaseQueue_corres])
+              apply (clarsimp simp: sc_relation_def active_sc_def)
+             apply blast
+            apply wp
+           apply assumption
+          apply wp
+         apply wp
+        apply (clarsimp simp: tcb_relation_def)
+       apply wp
+      apply wp
+     apply wp
+    apply (wpsimp simp: pred_conj_def
+                    wp: hoare_vcg_if_lift2 getObject_tcb_wp)
+   apply (clarsimp simp: pred_conj_def)
+   apply (rename_tac tcb)
+   apply (frule valid_tcb_objs, assumption)
+   apply (clarsimp simp: valid_tcb_def valid_bound_obj_def)
+   apply (case_tac "tcb_sched_context tcb"; fastforce)
+  apply (clarsimp simp: obj_at_ko_at'_eq)
+  apply (erule valid_objs_valid_tcbE', assumption)
+  apply (rename_tac tcb)
+  apply (case_tac "tcbSchedContext tcb"; clarsimp simp: valid_tcb'_def)
+  done
+
+lemma setObject_tcbState_update_corres:
+  "\<lbrakk>thread_state_relation ts ts'; tcb_relation tcb tcb'\<rbrakk> \<Longrightarrow>
+   corres dc
+          (ko_at (TCB tcb) t)
+          (ko_at' tcb' t)
+          (set_object t (TCB (tcb\<lparr>tcb_state := ts\<rparr>)))
+          (setObject t (tcbState_update (\<lambda>_. ts') tcb'))"
+  apply (rule tcb_update_corres')
+      apply (simp add: tcb_relation_def)
+     apply (rule ball_tcb_cap_casesI; clarsimp)
+    apply (rule ball_tcb_cte_casesI; clarsimp)
+   apply simp
+  apply (simp add: exst_same_def)
+  done
+
+\<comment>\<open>
+  If we don't change the @{term tcbInReleaseQueue} flag of a TCB,
+  then the release queues stay valid.
+\<close>
+lemma setObject_valid_release_queue:
+  "\<lbrace>valid_release_queue
+      and obj_at' (\<lambda>old_tcb. tcbInReleaseQueue old_tcb \<longrightarrow> tcbInReleaseQueue tcb) ptr\<rbrace>
+   setObject ptr tcb
+   \<lbrace>\<lambda>rv. valid_release_queue\<rbrace>"
+  unfolding valid_release_queue_def
+  apply (rule hoare_allI)
+  apply (wpsimp wp: setObject_tcb_obj_at'_strongest hoare_vcg_imp_lift)
+  apply (rename_tac t s)
+  apply (case_tac "ptr = t"; clarsimp)
+  apply (erule obj_at_conj'[where Q=tcbInReleaseQueue, THEN obj_at'_weaken]; force)
+  done
+
+lemma setObject_valid_release_queue':
+  "\<lbrace>valid_release_queue'
+      and obj_at' (\<lambda>old_tcb. tcbInReleaseQueue tcb \<longrightarrow> tcbInReleaseQueue old_tcb) ptr\<rbrace>
+   setObject ptr tcb
+   \<lbrace>\<lambda>rv. valid_release_queue'\<rbrace>"
+  unfolding valid_release_queue'_def
+  apply (rule hoare_allI)
+  apply (wpsimp wp: setObject_tcb_obj_at'_strongest hoare_vcg_imp_lift)
+  apply (rename_tac t s)
+  apply (case_tac "ptr = t"; clarsimp)
+  apply (clarsimp simp: obj_at'_def)
+  done
 
 lemma valid_tcb'_tcbState_update:
   "\<lbrakk>valid_tcb_state' st s; valid_tcb' tcb s\<rbrakk> \<Longrightarrow>
@@ -2176,31 +2342,51 @@ lemma valid_tcb'_tcbState_update:
   done
 
 lemma sts_corres:
-  "thread_state_relation ts ts' \<Longrightarrow>
-   corres dc
-          (tcb_at t)
-          (tcb_at' t)
+  assumes "thread_state_relation ts ts'"
+  shows "corres dc
+          (valid_objs and pspace_aligned and pspace_distinct and tcb_at t and valid_tcb_state ts)
+          (valid_objs' and valid_release_queue_iff)
           (set_thread_state t ts) (setThreadState ts' t)"
-  (is "?tsr \<Longrightarrow> corres dc ?Pre ?Pre' ?sts ?sts'")
+    (is "corres _ _ ?conc_guard _ _")
+  using assms
+  apply -
+  apply (rule corres_cross_over_guard
+                  [where Q="?conc_guard and tcb_at' t and valid_tcb_state' ts'"])
+   apply (solves \<open>auto simp: state_relation_def intro: valid_tcb_state_cross tcb_at_cross\<close>)[1]
   apply (simp add: set_thread_state_def setThreadState_def)
-  apply (subst bind_assoc[symmetric], subst thread_set_def[simplified, symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split[where r'=dc])
-       apply simp
-  sorry (*
-       apply (subst thread_get_test[where test="runnable"])
-       apply (rule corres_split[OF _ thread_get_isRunnable_corres])
-         apply (rule corres_split[OF _ gct_corres])
-           apply (rule corres_split[OF _ get_sa_corres])
-             apply (simp only: when_def)
-             apply (rule corres_if[where Q=\<top> and Q'=\<top>])
-               apply (rule iffI)
-                apply clarsimp+
-               apply (case_tac rva,simp_all)[1]
-              apply (wp rescheduleRequired_corres_simple corres_return_trivial | simp)+
-      apply (rule threadset_corres, (simp add: tcb_relation_def exst_same_def)+)
-     apply (wp hoare_vcg_conj_lift[where Q'="\<top>\<top>"] | simp add: sch_act_simple_def)+
-   done *)
+    apply (rule corres_split[OF _ assert_get_tcb_corres])
+      apply (rule corres_split[OF _ setObject_tcbState_update_corres])
+          apply (simp add: set_thread_state_act_def scheduleTCB_def)
+          apply (rule corres_split[OF _ gct_corres])
+            apply (rule corres_split[OF _ get_sa_corres])
+              apply (rule corres_split[OF _ isSchedulable_corres])
+                apply (rule corres_split corres_when)+
+                 apply (rename_tac sched_act sched_act' dont_care dont_care')
+                 apply (case_tac sched_act; clarsimp)
+                apply (rule rescheduleRequired_corres_simple)
+               apply wpsimp
+              apply (wpsimp simp: isSchedulable_def inReleaseQueue_def
+                              wp: threadGet_obj_at'_field getObject_tcb_wp)
+             apply wp
+            apply wp
+           apply wp
+          apply wp
+         apply assumption
+        apply assumption
+       apply wpsimp
+      apply (wpsimp simp: pred_conj_def sch_act_simple_def obj_at_ko_at'_eq
+                      wp: setObject_tcb_valid_objs setObject_tcb_obj_at'_strongest
+                          setObject_valid_release_queue setObject_valid_release_queue')
+     apply wp
+    apply (wpsimp wp: getObject_tcb_wp)
+   apply (fastforce simp: valid_obj_def pred_conj_def
+                   intro: get_tcb_ko_atI valid_tcb_objs valid_tcb_state_update)
+  apply (clarsimp simp: pred_conj_def obj_at_ko_at'_eq)
+  apply (rule valid_objs_valid_tcbE', assumption+)
+  apply (fastforce intro: ko_at_obj_at' valid_tcb'_tcbState_update
+                    simp: tcb_at'_obj_at'_set_obj'[unfolded fun_upd_def] valid_obj'_def)
+  done
 
 lemma sbn_corres:
   "corres dc

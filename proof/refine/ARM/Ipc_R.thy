@@ -2209,12 +2209,12 @@ proof -
              apply (simp add: fault_rel_optionation_def)
             apply wp+
           apply (clarsimp simp: st_tcb_at_tcb_at valid_tcb_state_def)
+  sorry (*
          apply clarsimp
          \<comment> \<open>concludes IdleEP if bl branch\<close>
         apply (simp add: ep_relation_def)
         apply (rule corres_guard_imp)
           apply (rule corres_split [OF _ sts_corres])
-  sorry (*
              apply (rule set_ep_corres)
              apply (simp add: ep_relation_def)
             apply (simp add: fault_rel_optionation_def)

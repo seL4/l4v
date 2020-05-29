@@ -305,6 +305,7 @@ lemma ac_corres:
            apply (rule sts_corres)
            apply simp
           apply (simp add: ntfn_relation_def)
+  sorry (*
          apply (wp)+
        apply (simp add: list_case_If del: dc_simp)
        apply (rule corres_split [OF _ set_ntfn_corres])
@@ -332,7 +333,6 @@ lemma ac_corres:
    apply (drule sym, simp)
   apply (clarsimp simp: invs_weak_sch_act_wf)
   apply (drule sym_refs_st_tcb_atD', fastforce)
-  sorry (*
   apply (fastforce simp: isWaitingNtfn_def ko_wp_at'_def obj_at'_def projectKOs
                          ntfn_bound_refs'_def
                   split: Structures_H.notification.splits ntfn.splits option.splits)
@@ -1599,10 +1599,16 @@ lemma sts_sch_act_not_ct[wp]:
 text \<open>Cancelling all IPC in an endpoint or notification object\<close>
 
 lemma ep_cancel_corres_helper:
-  "corres dc ((\<lambda>s. \<forall>t \<in> set list. tcb_at t s))
+  "corres dc ((\<lambda>s. \<forall>t \<in> set list. tcb_at t s)
+                    and valid_objs
+                    and pspace_aligned
+                    and pspace_distinct)
              ((\<lambda>s. \<forall>t \<in> set list. tcb_at' t s)
                     and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
-                    and Invariants_H.valid_queues and valid_queues' and valid_objs')
+                    and Invariants_H.valid_queues
+                    and valid_queues'
+                    and valid_objs'
+                    and valid_release_queue_iff)
           (mapM_x (\<lambda>t. do
                         y \<leftarrow> set_thread_state t Structures_A.Restart;
                         tcb_sched_action tcb_sched_enqueue t
@@ -1615,15 +1621,15 @@ lemma ep_cancel_corres_helper:
                      in corres_mapM_x)
       apply clarsimp
       apply (rule corres_guard_imp)
-        apply (subst bind_return_unit, rule corres_split [OF tcbSchedEnqueue_corres])
+        apply (subst bind_return_unit, rule corres_split[OF tcbSchedEnqueue_corres])
           apply simp
-          apply (rule corres_guard_imp [OF sts_corres])
+          apply (rule corres_guard_imp[OF sts_corres])
             apply simp
            apply (simp add: valid_tcb_state_def)
           apply simp
          apply (wp sts_valid_queues)+
        apply force
-      apply (fastforce elim: obj_at'_weakenE)
+      apply (clarsimp simp: valid_tcb_state'_def)
      apply ((wp hoare_vcg_const_Ball_lift | simp)+)[1]
     apply (rule hoare_pre)
     apply (wp hoare_vcg_const_Ball_lift
