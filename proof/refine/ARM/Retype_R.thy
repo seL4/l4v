@@ -1380,7 +1380,7 @@ lemma getObject_tcb_gets:
   "getObject addr >>= (\<lambda>x::tcb. gets proj >>= (\<lambda>y. G x y))
    = gets proj >>= (\<lambda>y. getObject addr >>= (\<lambda>x. G x y))"
   by (auto simp: exec_gets fun_eq_iff intro: bind_apply_cong
-           dest!: in_inv_by_hoareD[OF getObject_inv_tcb])
+           dest!: in_inv_by_hoareD[OF getObject_tcb_inv])
 
 lemma setObject_tcb_gets_ksCurDomain:
   "setObject addr (tcb::tcb) >>= (\<lambda>_. gets ksCurDomain >>= G)

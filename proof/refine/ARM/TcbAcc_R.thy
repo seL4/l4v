@@ -361,7 +361,7 @@ lemma threadget_corres:
   done
 
 lemma threadGet_inv [wp]: "\<lbrace>P\<rbrace> threadGet f t \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: threadGet_def getObject_inv_tcb | wp)+
+  by (simp add: threadGet_def getObject_tcb_inv | wp)+
 
 lemma ball_tcb_cte_casesI:
   "\<lbrakk> P (tcbCTable, tcbCTable_update);
@@ -1157,7 +1157,7 @@ lemma threadSet_obj_at'_really_strongest:
    apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<not> tcb_at' t s \<and> tcb_at' t s"])
     apply simp
    apply (subst simp_thms(21)[symmetric], rule hoare_vcg_conj_lift)
-    apply (rule getObject_inv_tcb)
+    apply (rule getObject_tcb_inv)
    apply (rule hoare_strengthen_post [OF getObject_ko_at])
      apply simp
     apply (simp add: objBits_simps')
@@ -1649,7 +1649,7 @@ lemma asUser_pred_tcb_at' [wp]:
 crunches asUser
   for ct[wp]: "\<lambda>s. P (ksCurThread s)"
   and cur_domain[wp]: "\<lambda>s. P (ksCurDomain s)"
-  (simp: crunch_simps wp: hoare_drop_imps getObject_inv_tcb setObject_ct_inv)
+  (simp: crunch_simps wp: hoare_drop_imps getObject_tcb_inv setObject_ct_inv)
 
 lemma asUser_tcb_in_cur_domain'[wp]:
   "\<lbrace>tcb_in_cur_domain' t'\<rbrace> asUser t m \<lbrace>\<lambda>_. tcb_in_cur_domain' t'\<rbrace>"
@@ -4195,7 +4195,7 @@ lemma bound_tcb_ex_cap'':
 crunches setThreadState, setBoundNotification (* FIXME RT: instantiate pspace_only' instead *)
   for arch'[wp]:  "\<lambda>s. P (ksArchState s)"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
-  (wp: getObject_inv_tcb crunch_wps
+  (wp: getObject_tcb_inv crunch_wps
    simp: updateObject_default_def unless_def crunch_simps)
 
 crunch it' [wp]: removeFromBitmap "\<lambda>s. P (ksIdleThread s)"

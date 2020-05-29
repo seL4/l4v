@@ -47,7 +47,7 @@ lemma getObject_inv:
   shows      "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
   by (simp add: getObject_def split_def | wp x)+
 
-lemma getObject_inv_tcb [wp]: "\<lbrace>P\<rbrace> getObject l \<lbrace>\<lambda>(rv :: Structures_H.tcb). P\<rbrace>"
+lemma getObject_tcb_inv [wp]: "\<lbrace>P\<rbrace> getObject l \<lbrace>\<lambda>(rv :: Structures_H.tcb). P\<rbrace>"
   apply (rule getObject_inv)
   apply simp
   apply (rule loadObject_default_inv)
@@ -105,7 +105,7 @@ lemma corres_get_tcb [corres]:
   apply (rule corres_no_failI)
    apply wp
   apply (clarsimp simp add: gets_def get_def return_def bind_def get_tcb_def)
-  apply (frule in_inv_by_hoareD [OF getObject_inv_tcb])
+  apply (frule in_inv_by_hoareD [OF getObject_tcb_inv])
   apply (clarsimp simp add: obj_at_def is_tcb obj_at'_def projectKO_def
                             projectKO_opt_tcb split_def
                             getObject_def loadObject_default_def in_monad)
@@ -2251,7 +2251,7 @@ interpretation threadSet: pspace_only' "threadSet f p"
   unfolding threadSet_def
   apply unfold_locales
   apply (clarsimp simp: in_monad)
-  apply (drule_tac P="(=) s" in use_valid[OF _ getObject_inv_tcb], rule refl)
+  apply (drule_tac P="(=) s" in use_valid[OF _ getObject_tcb_inv], rule refl)
   apply (fastforce dest:  tcb.pspace)
   done
 

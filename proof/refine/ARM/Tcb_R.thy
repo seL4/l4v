@@ -849,7 +849,7 @@ lemmas setPriority_typ_ats [wp] = typ_at_lifts [OF setPriority_typ_at']
 
 crunches setPriority, setMCPriority
   for valid_cap[wp]: "valid_cap' c"
-  (wp: getObject_inv_tcb)
+  (wp: getObject_tcb_inv)
 
 
 definition
