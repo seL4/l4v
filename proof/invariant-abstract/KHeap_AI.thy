@@ -2505,6 +2505,24 @@ lemma typ_at_pspace_aligned:
 
 lemmas set_object_typ_at[wp] = set_object_typ_at[where P="\<lambda>x. x"]
 
+lemma valid_objs_valid_tcbE:
+  assumes "tcb_at t s"
+          "valid_objs s"
+          "\<And>tcb. ko_at (TCB tcb) t s \<Longrightarrow> valid_tcb t tcb s \<Longrightarrow> R s (TCB tcb)"
+  shows "obj_at (R s) t s"
+  using assms
+  apply (clarsimp simp: obj_at_def)
+  apply (rename_tac ko)
+  apply (case_tac ko; clarsimp simp: is_tcb_def)
+  apply (rename_tac tcb)
+  apply (prop_tac "valid_tcb t tcb s")
+   apply (clarsimp simp: valid_objs_def)
+   apply (frule_tac x=t in bspec, force)
+   apply (erule exE)
+   apply (clarsimp simp: valid_obj_def)
+  apply force
+  done
+
 lemma set_object_dom_shrink[wp]:
   "set_object pt obj \<lbrace>\<lambda>s. p \<notin> dom (kheap s)\<rbrace>"
   apply (wp set_object_typ_at get_object_wp | simp add: set_object_def)+
