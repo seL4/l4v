@@ -2372,6 +2372,17 @@ lemma obj_at_ko_at':
   "obj_at' P p s \<Longrightarrow> \<exists>ko. ko_at' ko p s \<and> P ko"
   by (auto simp add: obj_at'_def)
 
+lemma ko_at_obj_at':
+  "\<lbrakk>ko_at' ko ptr s; P ko\<rbrakk> \<Longrightarrow>
+   obj_at' P ptr s"
+  by (clarsimp simp: obj_at'_def)
+
+lemma obj_at_ko_at'_eq:
+  "(\<exists>ko. ko_at' ko p s \<and> P ko) = obj_at' P p s"
+  apply (intro iffI; clarsimp simp: obj_at_ko_at')
+  unfolding obj_at'_def
+  by blast
+
 lemma obj_at_aligned':
   fixes P :: "('a :: pspace_storable) \<Rightarrow> bool"
   assumes oat: "obj_at' P p s"
