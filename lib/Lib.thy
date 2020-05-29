@@ -2697,4 +2697,17 @@ lemma distinct_map_enum:
    \<Longrightarrow> distinct (map F (enum_class.enum :: 'a :: enum list))"
   by (simp add: distinct_map enum_distinct inj_onI)
 
+\<comment>\<open>
+  Helps transform facts with multiple instances of a variable so that
+  they match goals up to equality.
+
+  Why does this lemma exist when lemmas like @{thm subst} already exist?
+  Because patterns like `?P ?x` usually have multiple unifiers with the
+  conclusion of a rule, whereas `(\<And>x. ?P x x)` only has one. This means
+  you can "inline" `equify` like this: `my_cool_thm[THEN equify]`.
+\<close>
+lemma equify:
+  "(\<And>x. P x x) \<Longrightarrow> x = x' \<Longrightarrow> P x x'"
+  by simp
+
 end
