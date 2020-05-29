@@ -153,6 +153,13 @@ The invoked thread will return to the instruction that caused it to enter the ke
 >     when stopped $ do
 >         cancelIPC target
 >         setThreadState Restart target
+>         scPtrOpt <- threadGet tcbSchedContext target
+>         case scPtrOpt of
+>             Nothing -> return ()
+>             Just scPtr -> do
+>                 curScPtr <- getCurSc
+>                 assert (scPtr /= curScPtr) "This is not the current sc."
+>                 refillUnblockCheck scPtr
 >         schedContextResume (fromJust scOpt)
 >         schedulable <- isSchedulable target
 >         when schedulable $ possibleSwitchTo target
@@ -198,6 +205,14 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 >                 then return ()
 >                 else do
 >                     replyRemove reply
+
+>                     scPtrOpt <- threadGet tcbSchedContext receiver
+>                     case scPtrOpt of
+>                         Nothing -> return ()
+>                         Just scPtr -> do
+>                             curScPtr <- getCurSc
+>                             when (scPtr /= curScPtr) $ (refillUnblockCheck scPtr)
+
 >                     faultOpt <- threadGet tcbFault receiver
 >                     case faultOpt of
 >                         Nothing -> do

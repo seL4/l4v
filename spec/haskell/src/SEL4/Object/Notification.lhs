@@ -80,6 +80,13 @@ If the notification object is waiting, a thread is removed from its queue and th
 >                     [] -> IdleNtfn
 >                     _  -> WaitingNtfn queue
 >                   }
+>                 scPtrOpt <- threadGet tcbSchedContext dest
+>                 case scPtrOpt of
+>                     Nothing -> return ()
+>                     Just scPtr -> do
+>                         curScPtr <- getCurSc
+>                         assert (scPtr /= curScPtr) "This is not the current sc."
+>                         refillUnblockCheck scPtr
 >                 setThreadState Running dest
 >                 asUser dest $ setRegister badgeRegister badge
 >                 maybeDonateSc dest ntfnPtr

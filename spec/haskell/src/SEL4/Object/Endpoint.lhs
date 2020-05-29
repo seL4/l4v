@@ -105,6 +105,12 @@ If the endpoint is receiving, then a thread is removed from its queue, and an IP
 The receiving thread has now completed its blocking operation and can run. If the receiving thread has higher priority than the current thread, the scheduler is instructed to switch to it immediately.
 
 >                 setThreadState Running dest
+>                 scPtrOpt <- threadGet tcbSchedContext dest
+>                 case scPtrOpt of
+>                     Nothing -> return ()
+>                     Just scPtr -> do
+>                         curScPtr <- getCurSc
+>                         when (scPtr /= curScPtr) $ (refillUnblockCheck scPtr)
 >                 possibleSwitchTo dest
 
 Empty receive endpoints are invalid.
@@ -171,6 +177,13 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                 let canGrantReply = blockingIPCCanGrantReply senderState
 >                 doIPCTransfer sender (Just epptr) badge canGrant thread
 >                 let call = blockingIPCIsCall senderState
+>                 scPtrOpt <- threadGet tcbSchedContext sender
+>                 case scPtrOpt of
+>                     Nothing -> return ()
+>                     Just scPtr -> do
+>                         curScPtr <- getCurSc
+>                         assert (scPtr /= curScPtr) "This is not the current sc."
+>                         refillUnblockCheck scPtr
 >                 fault <- threadGet tcbFault sender
 >                 case (call, fault, canGrant || canGrantReply, replyOpt) of
 >                     (False, Nothing, _, _) -> do
