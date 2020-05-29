@@ -2159,6 +2159,22 @@ lemma thread_get_isRunnable_corres: "corres (=) (tcb_at t) (tcb_at' t) (thread_g
   apply (case_tac "tcb_state x",simp_all)
   done
 
+lemma threadGet_wp:
+  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (\<exists>tcb. ko_at' tcb t s \<and> P (f tcb) s)\<rbrace>
+   threadGet f t
+   \<lbrace>P\<rbrace>"
+  apply (simp add: threadGet_def)
+  apply (wp getObject_tcb_wp)
+  apply clarsimp
+  done
+
+
+lemma valid_tcb'_tcbState_update:
+  "\<lbrakk>valid_tcb_state' st s; valid_tcb' tcb s\<rbrakk> \<Longrightarrow>
+   valid_tcb' (tcbState_update (\<lambda>_. st) tcb) s"
+  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def valid_tcb_state'_def)
+  done
+
 lemma sts_corres:
   "thread_state_relation ts ts' \<Longrightarrow>
    corres dc
@@ -2581,12 +2597,6 @@ lemma tcbSchedEnqueue_weak_sch_act[wp]:
    \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp add: tcbSchedEnqueue_def unless_def)
   apply (wp setQueue_sch_act threadSet_weak_sch_act_wf | clarsimp)+
-  done
-
-lemma threadGet_wp: "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (\<exists>tcb. ko_at' tcb t s \<and> P (f tcb) s)\<rbrace> threadGet f t \<lbrace>P\<rbrace>"
-  apply (simp add: threadGet_def)
-  apply (wp getObject_tcb_wp)
-  apply clarsimp
   done
 
 lemma threadGet_const:
@@ -3269,10 +3279,6 @@ lemma setBoundNotification_valid_release_queues[wp]:
   apply (simp add: setBoundNotification_def)
   apply (wp threadSet_valid_release_queue')
   apply (fastforce simp: inQ_def obj_at'_def pred_tcb_at'_def)
-  done
-
-lemma valid_tcb'_tcbState_update:"\<And>tcb s st . \<lbrakk> valid_tcb_state' st s; valid_tcb' tcb s \<rbrakk> \<Longrightarrow> valid_tcb' (tcbState_update (\<lambda>_. st) tcb) s"
-  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def valid_tcb_state'_def)
   done
 
 lemma setThreadState_valid_objs'[wp]:
