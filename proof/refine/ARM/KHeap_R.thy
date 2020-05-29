@@ -14,6 +14,16 @@ lemma lookupAround2_known1:
   "m x = Some y \<Longrightarrow> fst (lookupAround2 x m) = Some (x, y)"
   by (fastforce simp: lookupAround2_char1)
 
+abbreviation (input)
+  set_ko' :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> kernel_state \<Rightarrow> kernel_state"
+where
+  "set_ko' ptr ko s \<equiv> s\<lparr>ksPSpace := (ksPSpace s)(ptr := Some ko)\<rparr>"
+
+abbreviation (input)
+  set_obj' :: "machine_word \<Rightarrow> ('a :: pspace_storable) \<Rightarrow> kernel_state \<Rightarrow> kernel_state"
+where
+  "set_obj' ptr obj s \<equiv> set_ko' ptr (injectKO obj) s"
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma obj_at_getObject:
@@ -221,6 +231,32 @@ lemma obj_at_setObject2:
    apply (drule iffD1 [OF project_koType, OF exI])
    apply simp
   apply (clarsimp simp: ps_clear_upd' lookupAround2_char1)
+  done
+
+\<comment>\<open>
+  If the old and new versions of an object are the same size, then showing
+  `obj_at'` for the updated state is the same as showing the predicate for
+  the new value; we get to "reuse" the existing PSpace properties.
+\<close>
+lemma same_size_obj_at'_set_obj':
+  assumes "P (obj :: 'a :: pspace_storable)"
+      and "obj_at' (\<lambda>old_obj :: 'a. objBits old_obj = objBits obj) ptr s"
+  shows "obj_at' P ptr (set_obj' ptr obj s)"
+  using assms
+  apply (clarsimp simp: obj_at'_def projectKO_eq project_inject objBits_def)
+  apply (rule_tac x=obj in exI)
+  apply (clarsimp simp: ps_clear_upd')
+  done
+
+lemma tcb_at'_obj_at'_set_obj'[unfolded injectKO_tcb]:
+  assumes "P (tcb :: tcb)"
+      and "tcb_at' ptr s"
+  shows "obj_at' P ptr (set_obj' ptr tcb s)"
+  using assms
+  apply -
+  apply (erule same_size_obj_at'_set_obj')
+  apply (erule obj_at'_weaken)
+  apply (clarsimp simp: objBits_def objBitsKO_def)
   done
 
 \<comment>\<open>
@@ -1091,6 +1127,36 @@ lemma obj_relation_cut_same_type:
              split: Structures_A.kernel_object.split_asm if_split_asm
                     Structures_H.kernel_object.split_asm
                     ARM_A.arch_kernel_obj.split_asm)
+  done
+
+lemma setObject_updateObject_default_wp:
+  assumes "updateObject obj \<equiv> updateObject_default obj"
+  shows "\<lbrace>\<lambda>s. P (set_obj' ptr obj s)\<rbrace>
+         setObject ptr (obj :: 'a :: pspace_storable)
+         \<lbrace>\<lambda>rv. P\<rbrace>"
+  apply (wpsimp simp: setObject_def assms updateObject_default_def fun_upd_def)
+  done
+
+lemmas setObject_tcb_wp = setObject_updateObject_default_wp[OF updateObject_tcb]
+
+lemma setObject_tcb_obj_at'_strongest:
+  "\<lbrace>\<lambda>s. tcb_at' ptr s
+        \<longrightarrow> Q (obj_at' (\<lambda>old.
+                  if ptr = ptr'
+                    then P (set_obj' ptr tcb s) tcb
+                    else P (set_obj' ptr tcb s) old)
+                  ptr' s)\<rbrace>
+   setObject ptr (tcb :: tcb)
+   \<lbrace>\<lambda>rv s. Q (obj_at' (P s) ptr' s)\<rbrace>"
+  apply (rule setObject_tcb_pre)
+  apply (wpsimp wp: setObject_tcb_wp)
+  apply (erule rsubst[where P=Q])
+   apply (case_tac "ptr = ptr'"; simp)
+   apply (clarsimp simp: obj_at'_def projectKO_eq project_inject
+                         ps_clear_upd' objBits_def objBitsKO_def)
+  apply (case_tac "ptr = ptr'";
+         clarsimp simp: obj_at'_def projectKO_eq project_inject
+                        ps_clear_upd')
   done
 
 definition exst_same :: "Structures_H.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"  (* FIXME RT: probably needs updating *)
