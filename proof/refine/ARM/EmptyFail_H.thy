@@ -165,7 +165,10 @@ lemma ignoreFailure_empty_fail[intro!, wp, simp]:
 context
 notes option.case_cong_weak[cong]
 begin
-crunch (empty_fail) empty_fail[intro!, wp, simp]: cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped, possibleSwitchTo, tcbSchedAppend
+crunch (empty_fail) empty_fail[intro!, wp, simp]:
+  cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped,
+  possibleSwitchTo, tcbSchedAppend
+  (simp: crunch_simps)
 end
 
 crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
