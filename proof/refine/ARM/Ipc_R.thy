@@ -3331,7 +3331,7 @@ crunches doIPCTransfer
 
 crunches receiveIPC
   for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (wp: crunch_wps transferCapsToSlots_pres1 hoare_vcg_all_lift
+  (wp: crunch_wps transferCapsToSlots_pres1 hoare_vcg_all_lift whileM_inv
    simp: crunch_simps zipWithM_x_mapM ignore: constOnFailure)
 
 lemmas possibleSwitchToTo_cteCaps_of[wp]
