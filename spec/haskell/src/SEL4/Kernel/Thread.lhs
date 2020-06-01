@@ -496,8 +496,9 @@ The following function is used to alter a thread's domain.
 >         tcbSchedDequeue tptr
 >         threadSet (\t -> t { tcbDomain = newdom }) tptr
 >         schedulable <- isSchedulable tptr
->         when schedulable $ tcbSchedEnqueue tptr
->         when (tptr == curThread) $ rescheduleRequired
+>         if (tptr == curThread)
+>           then rescheduleRequired
+>           else when schedulable $ tcbSchedEnqueue tptr
 
 \subsubsection{Changing a thread's MCP}
 
