@@ -1506,7 +1506,7 @@ lemma set_tcb_obj_ref_sc_not_in_release_q[wp]:
   "\<lbrace>\<lambda>s. sc_not_in_release_q scp s \<and> (sc_opt = Some scp \<longrightarrow> not_in_release_q ref s)\<rbrace>
     set_tcb_obj_ref tcb_sched_context_update ref sc_opt
    \<lbrace>\<lambda>_ s. sc_not_in_release_q scp s\<rbrace>"
-  by(wpsimp wp: valid_sched_wp) (auto simp: vs_all_heap_simps split: if_splits)
+  by (wpsimp wp: valid_sched_wp) (auto simp: vs_all_heap_simps split: if_splits)
 
 lemma set_tcb_sched_context_simple_valid_sched_action:
   "\<lbrace>valid_sched_action and simple_sched_action\<rbrace>
@@ -1924,7 +1924,8 @@ lemma set_refills_valid_release_q:
   apply (rule conjI, fastforce)
   apply (erule sorted_release_qE)
   apply (rule option_eqI)
-   subgoal by (auto simp: tcb_ready_times_defs map_project_simps opt_map_simps map_join_simps vs_all_heap_simps)
+   apply (clarsimp simp: tcb_ready_times_defs map_project_simps opt_map_simps map_join_simps vs_all_heap_simps)
+   apply fastforce
   apply (drule (1) bspec)
   apply (clarsimp simp: tcb_ready_times_defs map_project_simps opt_map_simps map_join_simps vs_all_heap_simps)
   by (case_tac "ref' = sc_ptr"; fastforce)
@@ -11852,7 +11853,7 @@ lemma send_ipc_valid_sched:
          in hoare_seq_ext)
    apply (rule hoare_seq_ext[OF _ gsc_sp])
    apply (rule hoare_seq_ext_skip, wpsimp)
-   apply (auto)[1]
+   apply fastforce
    apply (rule hoare_seq_ext[OF _ assert_inv])
 
    apply (wpsimp wp: possible_switch_to_valid_sched_strong)
@@ -16832,8 +16833,8 @@ lemma send_signal_ct_not_in_release_q[wp]:
    \<lbrace>\<lambda>_. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding send_signal_def
   apply (wpsimp wp: gts_wp ct_in_state_set hoare_drop_impE get_simple_ko_wp)
-  apply (auto simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-  apply (case_tac "tcb_state tcb"; simp add: receive_blocked_def)
+  apply (intro conjI allI impI; clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+   apply (case_tac "tcb_state tcb"; simp add: receive_blocked_def)
   apply (subgoal_tac "(hd x, NTFNSignal) \<in> state_refs_of s ntfnptr")
   apply (drule sym_refsD; clarsimp)
   apply (drule TCBSignal_in_state_refs_of)
@@ -17661,7 +17662,7 @@ lemma send_ipc_ct_in_state:
                                  \<and> (cur_thread b = x21 \<longrightarrow> P Running)
                                  \<and> (thread = cur_thread b \<longrightarrow> (call \<or> fault_tcb_at bound thread b)
                                     \<longrightarrow> (\<forall>y. P (BlockedOnReply y)) \<and> (\<not>can_grant \<longrightarrow> (P Inactive)))" in hoare_strengthen_post[rotated])
-         apply (auto simp: pred_tcb_at_def obj_at_def)[1]
+         apply (fastforce simp: pred_tcb_at_def obj_at_def)
         apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_all_lift reply_unlink_tcb_ct_in_state_weak hoare_vcg_imp_lift')
        apply clarsimp
        apply (rule_tac Q="\<lambda>a b. ct_in_state P b
@@ -18021,10 +18022,10 @@ lemma handle_event_valid_sched:
                    apply (wpsimp wp: hoare_vcg_conj_lift
                           | wpsimp wp: check_budget_restart_true check_budget_restart_valid_sched_weaker)+
                   apply (strengthen active_implies_valid_refills)
-            apply (auto elim!: valid_sched_ct_not_queued elim: invs_cur_sc_chargeableE
+            apply (fastforce elim!: valid_sched_ct_not_queued elim: invs_cur_sc_chargeableE
                      intro!: next_time_bounded_weaken1 next_time_bounded_weaken2 active_implies_valid_refills
                      simp: released_sc_tcb_at_def runnable_eq_active ct_in_state_def
-                          tcb_at_kh_simps vs_all_heap_simps)[1]
+                          tcb_at_kh_simps vs_all_heap_simps)
            apply (wpsimp wp: handle_recv_valid_sched check_budget_restart_valid_sched_weaker)
                    apply (simp add: imp_conjR)
                    apply (wpsimp wp: hoare_vcg_conj_lift
@@ -20499,13 +20500,11 @@ lemma invoke_sched_control_configure_cur_sc_in_release_q_imp_zero_consumed[wp]:
                               \<and> invs s
                               \<and> current_time_bounded 0 s"
             in hoare_strengthen_post[rotated])
-      apply (auto split: if_split)[1]
-      apply (erule invs_retract_sc_tcbs)
+      apply (fastforce elim: invs_retract_sc_tcbs split: if_split)
      apply wpsimp
     apply (wpsimp wp: tcb_release_remove_cur_sc_in_release_q_imp_zero_consumed)
    apply wpsimp
-  apply (auto simp: sc_at_pred_n_def obj_at_def split: if_split)
-  apply (erule invs_retract_sc_tcbs)
+  apply (fastforce elim: invs_retract_sc_tcbs split: if_split simp: sc_at_pred_n_def obj_at_def)
   done
 
 lemma sched_context_bind_tcb_helper_cur_sc_in_release_q_imp_zero_consumed:
@@ -22029,9 +22028,8 @@ lemma refill_update_budget_ready:
    \<lbrace>\<lambda>rv. budget_ready t\<rbrace>"
   unfolding refill_update_def
   apply (wpsimp wp: valid_sched_wp update_sched_context_wp)
-  apply (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps MIN_SC_BUDGET_def refill_ready_def)
-  apply (rule_tac x=ref' in exI, clarsimp)
-  apply (erule cur_time_no_overflow)
+  apply (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps MIN_SC_BUDGET_def refill_ready_def
+              elim: cur_time_no_overflow)
   done
 
 lemma refill_update_not_active[wp]:
