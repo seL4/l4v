@@ -2815,5 +2815,15 @@ lemma real_cte_at_cross:
   apply (clarsimp split: kernel_object.split_asm simp: cte_relation_def)
   by (fastforce dest!: aligned_distinct_obj_at'I[where 'a=cte] elim: obj_at'_weakenE)
 
+lemma valid_tcb_state_cross:
+  assumes "pspace_relation (kheap s) (ksPSpace s')"
+          "thread_state_relation ts ts'"
+          "pspace_aligned s"
+          "pspace_distinct s"
+          "valid_tcb_state ts s"
+  shows "valid_tcb_state' ts' s'" using assms
+  by (fastforce dest: ep_at_cross reply_at_cross ntfn_at_cross
+                simp: valid_bound_obj'_def valid_tcb_state_def valid_tcb_state'_def
+               split: Structures_A.thread_state.split_asm option.split_asm)
 end
 end
