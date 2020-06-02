@@ -107,6 +107,8 @@ Overview
 
 The repository is organised as follows.
 
+ * [`docs`](docs/): documentation on conventions, style, etc.
+
  * [`spec`](spec/): a number of different formal specifications of seL4
     * [`abstract`](spec/abstract/): the functional abstract specification of seL4
     * [`sep-abstract`](spec/sep-abstract/): an abstract specification for a reduced
