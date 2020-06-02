@@ -133,7 +133,7 @@ definition
 lookup_ipc_buffer :: "bool \<Rightarrow> word32 \<Rightarrow> (word32 option,'z::state_ext) s_monad" where
 "lookup_ipc_buffer is_receiver thread \<equiv> do
     buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer thread;
-    buffer_frame_slot \<leftarrow> return (thread, tcb_cnode_index 4);
+    buffer_frame_slot \<leftarrow> return (thread, tcb_cnode_index 2);
     buffer_cap \<leftarrow> get_cap buffer_frame_slot;
     (case buffer_cap of
       ArchObjectCap (PageCap _ p R vms _) \<Rightarrow>
