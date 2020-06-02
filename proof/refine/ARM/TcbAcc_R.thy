@@ -2353,8 +2353,9 @@ lemma sts_corres:
   apply (rule corres_cross_over_guard
                   [where Q="?conc_guard and tcb_at' t and valid_tcb_state' ts'"])
    apply (solves \<open>auto simp: state_relation_def intro: valid_tcb_state_cross tcb_at_cross\<close>)[1]
-  apply (simp add: set_thread_state_def setThreadState_def)
+  apply (simp add: set_thread_state_def setThreadState_def threadSet_def)
   apply (rule corres_guard_imp)
+    apply (subst bind_assoc)
     apply (rule corres_split[OF _ assert_get_tcb_corres])
       apply (rule corres_split[OF _ setObject_tcbState_update_corres])
           apply (simp add: set_thread_state_act_def scheduleTCB_def)
@@ -3395,10 +3396,8 @@ lemma rescheduleRequired_valid_release_queue'_sch_act_simple:
 lemma setThreadState_valid_queues'[wp]:
   "\<lbrace>\<lambda>s. valid_queues' s\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
   apply (simp add: setThreadState_def scheduleTCB_def)
-  apply (subst bind_assoc[symmetric])
   apply (rule hoare_seq_ext_skip)
-   apply (rule hoare_weaken_pre)
-    apply (rule threadSet_valid_queues'[simplified threadSet_def fun_app_def])
+   apply (wp threadSet_valid_queues')
    apply (clarsimp simp: inQ_def)
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (clarsimp simp: getSchedulerAction_def)
@@ -3413,10 +3412,8 @@ lemma setThreadState_valid_queues'[wp]:
 lemma setThreadState_valid_release_queue[wp]:
   "setThreadState st t \<lbrace>valid_release_queue\<rbrace>"
   apply (simp add: setThreadState_def scheduleTCB_def)
-  apply (subst bind_assoc[symmetric])
   apply (rule hoare_seq_ext_skip)
-   apply (rule hoare_weaken_pre)
-    apply (rule threadSet_valid_release_queue[simplified threadSet_def fun_app_def])
+   apply (wp threadSet_valid_release_queue)
    using tcbInReleaseQueue_def valid_release_queue_def apply simp
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (clarsimp simp: getSchedulerAction_def)
@@ -3431,10 +3428,8 @@ lemma setThreadState_valid_release_queue[wp]:
 lemma setThreadState_valid_release_queue'[wp]:
   "setThreadState st t \<lbrace>valid_release_queue'\<rbrace>"
   apply (simp add: setThreadState_def scheduleTCB_def)
-  apply (subst bind_assoc[symmetric])
   apply (rule hoare_seq_ext_skip)
-   apply (rule hoare_weaken_pre)
-    apply (rule threadSet_valid_release_queue'[simplified threadSet_def fun_app_def])
+   apply (wp threadSet_valid_release_queue')
    using tcbInReleaseQueue_def valid_release_queue_def apply simp
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (clarsimp simp: getSchedulerAction_def)
@@ -4271,10 +4266,8 @@ lemma setThreadState_state_refs_of'[wp]:
    setThreadState st t
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: setThreadState_def)
-  apply (subst bind_assoc[symmetric])
   apply (rule_tac B="\<lambda>_ s. P (state_refs_of' s)" in hoare_seq_ext; (solves \<open>wpsimp\<close>)?)
-  apply (rule hoare_weaken_pre)
-   apply (rule threadSet_state_refs_of'[unfolded threadSet_def, simplified fun_app_def])
+  apply (wp threadSet_state_refs_of')
       apply simp
      apply force+
   by (metis Un_assoc)
