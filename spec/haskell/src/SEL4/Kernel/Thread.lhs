@@ -613,8 +613,7 @@ When setting the scheduler state, we check for blocking of the current thread; i
 
 > setThreadState :: ThreadState -> PPtr TCB -> Kernel ()
 > setThreadState ts tptr = do
->         tcb <- getObject tptr
->         setObject tptr $ tcb { tcbState = ts }
+>         threadSet (\t -> t { tcbState = ts }) tptr
 >         scheduleTCB tptr
 
 \subsubsection{Bound Notificaion objects}
