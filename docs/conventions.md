@@ -94,6 +94,13 @@ correct material in here!
 
  * return values that are ignored should use the dummy pattern `_`. Example: `⦃P⦄ function ⦃λ_. P⦄`.
 
+ * function variables are called `f`, `g`, or `m` (for "monad")
+
+ * property variables are called `P`, `Q`, `R`, `P'`, `Q'`. This means, in
+   Hoare triples, `P` tends to be a precondition, `Q` a postcondition. If there
+   is only one property variable, it should be called `P` so it is easy to
+   guess the name for instantiations. Example: `return_wp: ⦃P v⦄ return v ⦃P⦄` (even though P is a postcondition here).
+
 
 #### Specific property names
 
