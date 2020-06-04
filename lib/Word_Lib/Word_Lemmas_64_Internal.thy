@@ -52,5 +52,7 @@ lemma scast_specific_plus64_signed:
 lemmas mask_64_id[simp] = mask_len_id[where 'a=64, folded word_bits_def]
                           mask_len_id[where 'a=64, simplified]
 
+lemma neq_0_unat: "x \<noteq> 0 \<Longrightarrow> 0 < unat x" for x::machine_word
+  by (simp add: unat_gt_0)
 
 end

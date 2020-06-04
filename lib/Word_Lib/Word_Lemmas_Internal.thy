@@ -367,4 +367,37 @@ lemmas distinct_aligned_addresses_accumulate = aligned_mask_ranges_disjoint2[fol
 
 lemmas bang_big = test_bit_over
 
+lemma unat_and_mask_le:
+  fixes x::"'a::len word"
+  assumes "n < LENGTH('a)"
+  shows "unat (x && mask n) \<le> 2^n"
+proof -
+  from assms
+  have "2^n-1 \<le> (2^n :: 'a word)"
+    using word_1_le_power word_le_imp_diff_le by blast
+  then
+  have "unat (x && mask n) \<le> unat (2^n::'a word)"
+    apply (fold word_le_nat_alt)
+    apply (rule order_trans, rule word_and_le1)
+    apply (simp add: mask_def)
+    done
+  with assms
+  show ?thesis by (simp add: unat_2tp_if)
+qed
+
+lemma sign_extend_less_mask_idem:
+  "\<lbrakk> w \<le> mask n; n < size w \<rbrakk> \<Longrightarrow> sign_extend n w = w"
+  apply (simp add: sign_extend_def le_mask_imp_and_mask)
+  apply (simp add: le_mask_high_bits)
+  done
+
+lemma word_and_le:
+  "a \<le> c \<Longrightarrow> (a :: 'a :: len word) && b \<le> c"
+  by (subst word_bool_alg.conj.commute)
+     (erule word_and_le')
+
+lemma le_smaller_mask:
+  "\<lbrakk> x \<le> mask n; n \<le> m \<rbrakk> \<Longrightarrow> x \<le> mask m"
+  by (erule (1) order.trans[OF _ mask_mono])
+
 end
