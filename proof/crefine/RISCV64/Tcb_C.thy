@@ -1552,22 +1552,6 @@ lemma asUser_setRegister_ko_at':
   apply (clarsimp simp: setRegister_def simpler_modify_def obj_at'_def modify_registers_def)
   done
 
-(* FIXME RISCV move *)
-schematic_goal size_gpRegisters:
-  "size RISCV64.gpRegisters = numeral ?x"
-  supply Suc_eq_numeral[simp del] One_nat_def[simp del]
-  by (simp add: upto_enum_def fromEnum_def enum_register
-                RISCV64.gpRegisters_def)
-     (simp add: Suc_eq_plus1)
-
-(* FIXME RISCV move *)
-schematic_goal size_frameRegisters:
-  "size RISCV64.frameRegisters = numeral ?x"
-  supply Suc_eq_numeral[simp del] One_nat_def[simp del]
-  by (simp add: upto_enum_def fromEnum_def enum_register
-                RISCV64.frameRegisters_def)
-     (simp add: Suc_eq_plus1)
-
 lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
   notes static_imp_wp [wp] word_less_1[simp del]
   shows

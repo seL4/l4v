@@ -2594,19 +2594,6 @@ lemma ccorres_returnOk_Basic:
   apply (clarsimp simp: returnOk_def return_def)
   done
 
-(* FIXME RISCV: move to SR_Lemmas *)
-lemma fromEnum_object_type_to_H:
-  "fromEnum x = unat (object_type_from_H x)"
-  apply (cut_tac eqset_imp_iff[where x=x, OF enum_surj])
-  apply (simp add: fromEnum_def enum_object_type
-                   enum_apiobject_type
-                   object_type_from_H_def
-                   "StrictC'_object_defs" "api_object_defs"
-                   Kernel_C_defs
-            split: if_split)
-  apply (auto simp: "api_object_defs")
-  done
-
 lemma injection_handler_sequenceE:
   "injection_handler injf (sequenceE xs)
     = sequenceE (map (injection_handler injf) xs)"

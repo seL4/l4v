@@ -705,11 +705,6 @@ lemma cap_case_PageTableCap2:
   by (simp add: isCap_simps
          split: capability.split arch_capability.split)
 
-(* FIXME RISCV move *)
-schematic_goal pptrUserTop_def':
-  "RISCV64.pptrUserTop = numeral ?x"
-  by (simp add: RISCV64.pptrUserTop_def canonical_bit_def mask_def del: word_eq_numeral_iff_iszero)
-
 lemma lookupPTSlotFromLevel_bitsLeft_less_64:
   "n \<le> maxPTLevel \<Longrightarrow> \<lbrace>\<lambda>_. True\<rbrace> lookupPTSlotFromLevel n p vptr \<lbrace>\<lambda>rv _. fst rv < 64\<rbrace>"
   apply (induct n arbitrary: p)
@@ -727,28 +722,6 @@ lemma lookupPTSlot_bitsLeft_less_64:
   unfolding lookupPTSlot_def
   by (rule lookupPTSlotFromLevel_bitsLeft_less_64, simp)
 
-(* FIXME RISCV move *)
-definition
-  "not_None x = (x \<noteq> None)"
-
-(* FIXME RISCV move *)
-lemma sign_extend_less_mask_idem:
-  "\<lbrakk> w \<le> mask n; n < size w \<rbrakk> \<Longrightarrow> sign_extend n w = w"
-  apply (simp add: sign_extend_def word_le_mask_eq)
-  apply (simp add: le_mask_high_bits)
-  done
-
-(* FIXME move *)
-lemma word_and_le:
-  "a \<le> c \<Longrightarrow> (a :: 'a :: len word) && b \<le> c"
-  by (subst word_bool_alg.conj.commute)
-     (erule word_and_le')
-
-(* FIXME move near injection_handler_returnOk *)
-lemma injection_handler_assertE:
-  "injection_handler inject (assertE f) = assertE f"
-  by (simp add: assertE_liftE injection_liftE)
-
 (* FIXME move *)
 lemma addrFromPPtr_in_user_region:
   "p \<in> kernel_mappings \<Longrightarrow> addrFromPPtr p \<in> user_region"
@@ -760,18 +733,6 @@ lemma addrFromPPtr_in_user_region:
   apply (simp add: max_word_def)
   apply unat_arith
   done
-
-(* FIXME move *)
-lemma le_smaller_mask:
-  "\<lbrakk> x \<le> mask n; n \<le> m \<rbrakk> \<Longrightarrow> x \<le> mask m"
-  by (erule (1) order.trans[OF _ mask_le_mono])
-
-(* FIXME: ccorres_assertE throws away the assert completely; this version is better *)
-lemma ccorres_assertE2:
-  "\<lbrakk> P \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf G G' hs (f ()) c \<rbrakk>
-      \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf
-              (\<lambda>s. P \<longrightarrow> G s) {s. P \<longrightarrow> s \<in> G'} hs (assertE P >>=E f) c"
-  by (cases P, simp_all add: ccorres_fail')
 
 lemma page_table_at'_kernel_mappings:
   "\<lbrakk>page_table_at' p s; pspace_in_kernel_mappings' s\<rbrakk> \<Longrightarrow> p \<in> kernel_mappings"
@@ -1280,15 +1241,6 @@ lemma obj_at_pte_aligned:
   apply (clarsimp dest!:ko_at_is_aligned'
                   simp: objBits_simps archObjSize_def bit_simps
                   elim!: is_aligned_weaken)
-  done
-
-(* FIXME RISCV: dont know what these are for yet *)
-lemma addrFromPPtr_mask_5:
-  "addrFromPPtr ptr && mask (5::nat) = ptr && mask (5::nat)"
-  apply (simp add: addrFromPPtr_def RISCV64.pptrBase_def baseOffset_def canonical_bit_def
-                   pAddr_base_def)
-  apply word_bitwise
-  apply (simp add:mask_def)
   done
 
 lemma addrFromPPtr_mask_6:
@@ -2217,7 +2169,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
     done
   done
 
-(* FIXME RISCV64: adapted from x64 *)
+(* adapted from X64 *)
 lemma asidHighBits_handy_convs:
   "sint Kernel_C.asidHighBits = 7"
   "Kernel_C.asidHighBits \<noteq> 0x20"
@@ -2273,15 +2225,6 @@ lemma injection_handler_stateAssert_relocate:
   "injection_handler Inl (stateAssert ass xs >>= f) >>=E g
     = do v \<leftarrow> stateAssert ass xs; injection_handler Inl (f ()) >>=E g od"
   by (simp add: injection_handler_def handleE'_def bind_bindE_assoc bind_assoc)
-
-(* FIXME RISCV: ArchMove_C *)
-lemma asid_shiftr_low_bits_less[simplified]:
-  "(asid :: machine_word) \<le> mask asid_bits \<Longrightarrow> asid >> asid_low_bits < 2^LENGTH(asid_high_len)"
-  apply (rule_tac y="2 ^ 7" in order_less_le_trans)
-   apply (rule shiftr_less_t2n)
-   apply (simp add: le_mask_iff_lt_2n[THEN iffD1] asid_bits_def asid_low_bits_def)
-  apply simp
-  done
 
 lemma decodeRISCVMMUInvocation_ccorres:
   notes Collect_const[simp del] if_cong[cong]

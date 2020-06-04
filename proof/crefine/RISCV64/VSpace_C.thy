@@ -409,46 +409,10 @@ lemma isPTEPageTable_corres:
                               cpte_relation_def writable_from_vm_rights_def)
   done
 
-(* FIXME RISCV: move to CCorresLemmas, derive corres_cond from it.
-                How have we done all these proofs without this? *)
-lemma ccorres_cond_strong:
-  assumes abs: "\<forall>s s'. (s, s') \<in> sr \<and> R s \<and> s' \<in> R' \<longrightarrow> P  = (s' \<in> P') "
-  and     c1: "ccorres_underlying sr \<Gamma> r xf arrel axf Pt Rt hs a c"
-  and     c2: "ccorres_underlying sr \<Gamma> r xf arrel axf Pf Rf hs b c'"
-  shows   "ccorres_underlying sr \<Gamma> r xf arrel axf
-                              (R and (\<lambda>s. P \<longrightarrow> Pt s) and (\<lambda>s. \<not> P \<longrightarrow> Pf s))
-                              (R' \<inter> (Rt \<inter> P' \<union> Rf \<inter> - P'))
-                              hs
-                              (if P then a else b) (Cond P' c c')"
-  apply (rule ccorresI')
-  apply clarsimp
-  apply (erule disjE)
-   apply (drule exec_handlers_semantic_equivD1 [where b = c])
-    apply (rule semantic_equivI)
-    apply (fastforce elim: exec_Normal_elim_cases intro: exec.CondTrue)
-   apply (rule ccorresE [OF c1])
-        apply assumption
-       apply (insert abs)
-       apply fastforce
-      apply fastforce
-     apply fastforce
-    apply simp
-   apply (fastforce elim!: bexI [rotated])
-  apply (drule exec_handlers_semantic_equivD2 [where b = c'])
-   apply (rule semantic_equivI)
-   apply (fastforce elim: exec_Normal_elim_cases intro: exec.CondFalse)
-  apply (rule ccorresE [OF c2])
-       apply assumption
-      apply (insert abs, fastforce)
-     apply fastforce
-    apply fastforce
-   apply simp
-  apply (fastforce elim!: bexI[rotated])
-  done
-
 lemma ccorres_checkPTAt:
-  "ccorres r xf P P' hs (a ()) c \<Longrightarrow>
-   ccorres r xf (\<lambda>s. page_table_at' pt s \<longrightarrow> P s) P' hs (checkPTAt pt >>= a) c"
+  "ccorres_underlying srel Ga rrel xf arrel axf P P' hs (a ()) c \<Longrightarrow>
+   ccorres_underlying srel Ga rrel xf arrel axf
+                      (\<lambda>s. page_table_at' pt s \<longrightarrow> P s) P' hs (checkPTAt pt >>= a) c"
   unfolding checkPTAt_def by (rule ccorres_stateAssert)
 
 lemma pteAtIndex_ko[wp]:
@@ -473,29 +437,6 @@ lemma pte_at'_ptSlotIndex:
   apply (drule page_table_pte_atI'[where x="ucast (vptr >> ptBitsLeft level)"])
   apply (simp add: ucast_ucast_mask bit_simps)
   done
-
-(* FIXME RISCV: move *)
-lemma unat_and_mask_le:
-  fixes x::"'a::len word"
-  assumes "n < LENGTH('a)"
-  shows "unat (x && mask n) \<le> 2^n"
-proof -
-  from assms
-  have "2^n-1 \<le> (2^n :: 'a word)"
-    using word_1_le_power word_le_imp_diff_le by blast
-  then
-  have "unat (x && mask n) \<le> unat (2^n::'a word)"
-    apply (fold word_le_nat_alt)
-    apply (rule order_trans, rule word_and_le1)
-    apply (simp add: mask_def)
-    done
-  with assms
-  show ?thesis by (simp add: unat_2tp_if)
-qed
-
-(* FIXME RISCV: move *)
-lemma neq_0_unat: "x \<noteq> 0 \<Longrightarrow> 0 < unat x" for x::machine_word
-  by (simp add: unat_gt_0)
 
 lemma ptTranslationBits_word_bits:
   "ptTranslationBits < LENGTH(machine_word_len)"
@@ -734,26 +675,6 @@ lemma ccorres_pre_getObject_asidpool:
   apply simp
   done
 
-(* FIXME: move *)
-lemma ccorres_from_vcg_throws_nofail:
-  "\<forall>\<sigma>. \<Gamma>\<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel} c {},
-  {s. \<not>snd (a \<sigma>) \<longrightarrow> (\<exists>(rv, \<sigma>')\<in>fst (a \<sigma>). (\<sigma>', s) \<in> srel \<and> arrel rv (axf s))} \<Longrightarrow>
-  ccorres_underlying srel \<Gamma> r xf arrel axf P P' (SKIP # hs) a c"
-  apply (rule ccorresI')
-  apply (drule_tac x = s in spec)
-  apply (drule hoare_sound)
-  apply (simp add: HoarePartialDef.valid_def cvalid_def)
-  apply (erule exec_handlers.cases)
-    apply clarsimp
-    apply (drule spec, drule spec, drule (1) mp)
-    apply (clarsimp dest!: exec_handlers_SkipD
-                     simp: split_def unif_rrel_simps elim!: bexI [rotated])
-   apply clarsimp
-   apply (drule spec, drule spec, drule (1) mp)
-   apply clarsimp
-  apply simp
-  done
-
 lemma asid_wf_table_guard[unfolded asid_high_bits_def, simplified]:
   "asid_wf asid \<Longrightarrow> asid >> asid_low_bits < 2^asid_high_bits"
   apply (simp add: asid_wf_def)
@@ -964,11 +885,6 @@ lemma kpptr_to_paddr_spec:
   apply (simp add: RISCV64_H.addrFromKPPtr_def RISCV64.addrFromKPPtr_def RISCV64.kernelBaseOffset_def
                    RISCV64.kernelELFBase_def RISCV64.paddrLoad_def)
   done
-
-(* FIXME RISCV: move up *)
-lemma will_throw_and_catch:
-  "f = throw e \<Longrightarrow> (f <catch> (\<lambda>_. g)) = g"
-  by (simp add: catch_def throwError_def)
 
 lemma isValidVTableRoot_def2:
   "isValidVTableRoot cap =
@@ -1481,11 +1397,6 @@ declare capFSize.simps[datatype_schematic]
 declare capFIsDevice.simps[datatype_schematic]
 declare capFMappedAddress.simps[datatype_schematic]
 
-(* FIXME RISCV: move to Lib *)
-lemma if_option_None_eq:
-  "((if P then None else Some x) = None) = P"
-  by (auto split: if_splits)
-
 lemma performPageInvocationUnmap_ccorres:
   notes Collect_const[simp del]
   shows
@@ -1864,10 +1775,6 @@ proof -
     apply (erule_tac x=maxPTLevel in allE, force)
     done
 qed
-
-(* FIXME RISCV move *)
-definition
-  "isPTCap' cap \<equiv> \<exists>p asid. cap = (ArchObjectCap (PageTableCap p asid))"
 
 lemma performASIDPoolInvocation_ccorres:
   notes option.case_cong_weak [cong]

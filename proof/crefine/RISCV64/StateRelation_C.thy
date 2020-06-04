@@ -485,7 +485,7 @@ where
   \<and> dom pool \<subseteq> {0 .. mask asid_low_bits} \<and> 0 \<notin> ran pool"
 
 
-definition (* FIXME RISCV: C code is currently missing ghost state updates for user_data_* in Arch_createObject *)
+definition
   cuser_user_data_relation :: "(9 word \<Rightarrow> machine_word) \<Rightarrow> user_data_C \<Rightarrow> bool"
 where
   "cuser_user_data_relation f ud \<equiv> \<forall>off. f off = index (user_data_C.words_C ud) (unat off)"

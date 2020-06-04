@@ -283,11 +283,6 @@ lemma decodeIRQHandlerInvocation_ccorres:
 
 declare mask_of_mask[simp]
 
-(* FIXME RISCV: move to ArchMove_C *)
-lemma ucast_le_ucast_6_64:
-  "(ucast x \<le> (ucast y :: word64)) = (x \<le> (y :: 6 word))"
-  by (simp add: ucast_le_ucast)
-
 lemma ucast_maxIRQ_le_eq:
   "UCAST(6 \<rightarrow> 64) irq \<le> SCAST(32 signed \<rightarrow> 64) Kernel_C.maxIRQ \<Longrightarrow>
           irq \<le> SCAST(32 signed \<rightarrow> 6) Kernel_C.maxIRQ"

@@ -9,50 +9,25 @@ theory Finalise_C
 imports IpcCancel_C
 begin
 
-(* FIXME RISCV move *)
-lemma not_in_ran_None_upd:
-  "x \<notin> ran m \<Longrightarrow> x \<notin> ran (m(y := None))"
-  by (auto simp: ran_def split: if_split)
-
-(* FIXME RISCV: move to NonDetMonad *)
-lemma catch_bind_distrib:
-  "do _ <- m <catch> h; f od = (doE m; liftE f odE <catch> (\<lambda>x. do h x; f od))"
-  by (force simp: catch_def bindE_def bind_assoc liftE_def NonDetMonad.lift_def bind_def
-                  split_def return_def throwError_def
-            split: sum.splits)
-
-(* FIXME RISCV: move to NonDetMonad *)
-lemma catch_is_if:
-  "(doE x <- f; g x odE <catch> h) =
-   do
-     rv <- f;
-     if sum.isl rv then h (projl rv) else g (projr rv) <catch> h
-   od"
-  apply (simp add: bindE_def catch_def bind_assoc)
-  apply (rule bind_cong, rule refl)
-  apply (clarsimp simp: NonDetMonad.lift_def throwError_def split: sum.splits)
-  done
-
-(* FIXME RISCV: move to NonDetMonad *)
-lemma if_catch_distrib:
-  "((if P then f else g) <catch> h) = (if P then f <catch> h else g <catch> h)"
-  by (simp split: if_split)
-
-(* FIXME RISCV: move to Lib *)
-lemma set_as_imp:
-  "(A \<inter> P \<union> B \<inter> -P) = {s. (s \<in> P \<longrightarrow> s \<in> A) \<and> (s \<notin> P \<longrightarrow> s \<in> B)}"
-  by auto
-
-(* FIXME RISCV: move to CCorres_UL *)
-lemma ccorres_prog_only_cong:
-  "\<lbrakk> m=m'; c=c' \<rbrakk> \<Longrightarrow>
-   ccorres_underlying srel \<Gamma> rrel xf arrel axf G G' hs m c =
-   ccorres_underlying srel \<Gamma> rrel xf arrel axf G G' hs m' c'"
-  by simp
-
-
 context kernel_m
 begin
+
+(* FIXME RISCV: move to CCorres_UL, remove previous ccorres_cases *)
+(* note: moving this lemma outside of kernel_m locale currently causes some proofs to fail *)
+lemma ccorres_cases:
+  assumes P:    " P \<Longrightarrow> ccorres_underlying srel Ga rrel xf arrel axf G G' hs a b"
+  assumes notP: "\<not>P \<Longrightarrow> ccorres_underlying srel Ga rrel xf arrel axf H H' hs  a b"
+  shows "ccorres_underlying  srel Ga rrel xf arrel axf (\<lambda>s. (P \<longrightarrow> G s) \<and> (\<not>P \<longrightarrow> H s))
+                      ({s. P \<longrightarrow> s \<in> G'} \<inter> {s. \<not>P \<longrightarrow> s \<in> H'})
+                      hs a b"
+  apply (cases P, auto simp: P notP)
+  done
+
+(* FIXME RISCV: move up, make ccorres_underlying, check if it could be made [simp] *)
+(* Provide full ccorres context so it will work with ccorres_prog_only_cong enabled *)
+lemma ccorres_dc_comp:
+  "ccorres (dc \<circ> R) xf P P' hs m c = ccorres dc xf P P' hs m c "
+  by simp
 
 declare if_split [split del]
 
@@ -1231,12 +1206,6 @@ lemma findVSpaceForASID_nonzero:
   apply (wp | wpc | simp only: o_def simp_thms)+
   done
 
-(* FIXME RISCV: move up, make ccorres_underlying, check if it could be made [simp] *)
-(* Provide full ccorres context so it will work with ccorres_prog_only_cong enabled *)
-lemma ccorres_dc_comp:
-  "ccorres (dc \<circ> R) xf P P' hs m c = ccorres dc xf P P' hs m c "
-  by simp
-
 lemma ccorres_ul_pre_getObject_pte:
   assumes cc: "\<And>rv. ccorres_underlying rf_sr \<Gamma> (inr_rrel r') xf' (inl_rel r) xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres_underlying rf_sr \<Gamma> (inr_rrel r') xf' (inl_rel r) xf
@@ -1258,24 +1227,6 @@ lemma ccorres_ul_pre_getObject_pte:
          erule ko_at_projectKO_opt)
   apply simp
   done
-
-(* FIXME RISCV: move to CCorres_UL, remove previous ccorres_cases *)
-lemma ccorres_cases:
-  assumes P:    " P \<Longrightarrow> ccorres_underlying srel Ga rrel xf arrel axf G G' hs a b"
-  assumes notP: "\<not>P \<Longrightarrow> ccorres_underlying srel Ga rrel xf arrel axf H H' hs  a b"
-  shows "ccorres_underlying  srel Ga rrel xf arrel axf (\<lambda>s. (P \<longrightarrow> G s) \<and> (\<not>P \<longrightarrow> H s))
-                      ({s. P \<longrightarrow> s \<in> G'} \<inter> {s. \<not>P \<longrightarrow> s \<in> H'})
-                      hs a b"
-  apply (cases P, auto simp: P notP)
-  done
-
-(* FIXME RISCV: move to VSpace_C, replace previous *)
-lemma ccorres_checkPTAt:
-  "ccorres_underlying srel Ga rrel xf arrel axf P P' hs (a ()) c \<Longrightarrow>
-   ccorres_underlying srel Ga rrel xf arrel axf
-                      (\<lambda>s. page_table_at' pt s \<longrightarrow> P s) P' hs (checkPTAt pt >>= a) c"
-  unfolding checkPTAt_def by (rule ccorres_stateAssert)
-
 
 lemma lookupPTFromLevel_ccorres:
   notes Collect_const[simp del] call_ignore_cong[cong]

@@ -60,7 +60,6 @@ lemma ccap_relationE:
   apply (clarsimp split: option.splits)
   done
 
-(* FIXME RISCV: unused? *)
 definition
   "frameSize cap \<equiv> case cap of ArchObjectCap (FrameCap _ _ sz _ _) \<Rightarrow> sz"
 

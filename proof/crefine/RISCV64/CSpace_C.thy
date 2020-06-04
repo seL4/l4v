@@ -3292,9 +3292,6 @@ lemma updateCapData_spec:
 abbreviation
   "deriveCap_xf \<equiv> liftxf errstate deriveCap_ret_C.status_C deriveCap_ret_C.cap_C ret__struct_deriveCap_ret_C_'"
 
-(* FIXME RISCV: override original, r is a poor variable name here and diverges from X64 *)
-lemmas ctes_of_valid'[elim] = ctes_of_valid_cap''[where r=cte for cte]
-
 lemma ensureNoChildren_ccorres:
   "ccorres (syscall_error_rel \<currency> dc) (liftxf errstate id undefined ret__unsigned_long_')
    (\<lambda>s. valid_objs' s \<and> valid_mdb' s) (UNIV \<inter> \<lbrace>slot = ptr_val (\<acute>slot)\<rbrace>) []

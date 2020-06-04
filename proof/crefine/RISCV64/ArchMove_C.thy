@@ -51,6 +51,10 @@ lemma unat_mask_3_less_8:
   apply (simp add: mask_def)
   done
 
+lemma ucast_le_ucast_6_64:
+  "(ucast x \<le> (ucast y :: word64)) = (x \<le> (y :: 6 word))"
+  by (simp add: ucast_le_ucast)
+
 definition
   user_word_at :: "machine_word \<Rightarrow> machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
@@ -70,8 +74,6 @@ where
 lemmas unat64_eq_of_nat = unat_eq_of_nat[where 'a=64, folded word_bits_def]
 
 context begin interpretation Arch .
-
-(* FIXME RISCV: some 64-bit lemmas from X64's ArchMove_C will be needed here *)
 
 crunch inv'[wp]: archThreadGet P
 
@@ -337,6 +339,30 @@ lemma getMessageInfo_msgLength':
   apply (rule hoare_strengthen_post, rule hoare_vcg_prop)
   apply (simp add: messageInfoFromWord_def Let_def msgMaxLength_def not_less
                    Types_H.msgExtraCapBits_def split: if_split )
+  done
+
+definition
+  "isPTCap' cap \<equiv> \<exists>p asid. cap = (ArchObjectCap (PageTableCap p asid))"
+
+lemma asid_shiftr_low_bits_less[simplified]:
+  "(asid :: machine_word) \<le> mask asid_bits \<Longrightarrow> asid >> asid_low_bits < 2^LENGTH(asid_high_len)"
+  apply (rule_tac y="2 ^ 7" in order_less_le_trans)
+   apply (rule shiftr_less_t2n)
+   apply (simp add: le_mask_iff_lt_2n[THEN iffD1] asid_bits_def asid_low_bits_def)
+  apply simp
+  done
+
+lemma getActiveIRQ_neq_Some0x3FF':
+  "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
+  apply (simp add: getActiveIRQ_def)
+  apply (wp alternative_wp select_wp)
+  apply simp
+  done
+
+lemma getActiveIRQ_neq_Some0x3FF:
+  "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
+  apply (wpsimp simp: doMachineOp_def split_def)
+  apply (auto dest: use_valid intro: getActiveIRQ_neq_Some0x3FF')
   done
 
 end

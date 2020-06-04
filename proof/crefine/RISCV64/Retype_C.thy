@@ -2245,6 +2245,18 @@ lemma object_type_to_from_H [simp]: "object_type_to_H (object_type_from_H x) = x
   apply (clarsimp simp: object_type_from_H_def object_type_to_H_def Kernel_C_defs)
   by (clarsimp split: object_type.splits apiobject_type.splits simp: Kernel_C_defs)
 
+lemma fromEnum_object_type_to_H:
+  "fromEnum x = unat (object_type_from_H x)"
+  apply (cut_tac eqset_imp_iff[where x=x, OF enum_surj])
+  apply (simp add: fromEnum_def enum_object_type
+                   enum_apiobject_type
+                   object_type_from_H_def
+                   "StrictC'_object_defs" "api_object_defs"
+                   Kernel_C_defs
+            split: if_split)
+  apply (auto simp: "api_object_defs")
+  done
+
 declare ptr_retyps_one[simp]
 
 (* FIXME: move *)
@@ -4568,41 +4580,6 @@ lemma Arrays_udpate_array_updates_rev:
 lemma array_updates_rev_app:
   "array_updates_rev upds1 (array_updates_rev upds2 a) = array_updates_rev (upds1 @ upds2) a"
   by (simp add: array_updates_rev_def)
-
-(* FIXME RISCV REMOVE
-lemma Mode_initContext_spec':
-  defines
-    "Mode_initContext_regs \<equiv>
-      [(unat Kernel_C.RAX, 0), (unat Kernel_C.RBX, 0), (unat Kernel_C.RCX, 0), (unat Kernel_C.RDX, 0),
-       (unat Kernel_C.RSI, 0), (unat Kernel_C.RDI, 0), (unat Kernel_C.RBP, 0), (unat Kernel_C.R8 , 0),
-       (unat Kernel_C.R9 , 0), (unat Kernel_C.R10, 0), (unat Kernel_C.R11, 0), (unat Kernel_C.R12, 0),
-       (unat Kernel_C.R13, 0), (unat Kernel_C.R14, 0), (unat Kernel_C.R15, 0), (unat Kernel_C.RSP, 0)]"
-  shows
-    "\<forall>s\<^sub>0. \<Gamma> \<turnstile>
-      {t. t = s\<^sub>0 \<and> t \<Turnstile>\<^sub>c context_' t}
-        Call Mode_initContext_'proc
-      {t. t = globals_update
-               (t_hrs_'_update
-                (hrs_mem_update
-                 (heap_update
-                  (registers_Ptr &(context_' s\<^sub>0\<rightarrow>[''registers_C'']))
-                  (array_updates (h_val (hrs_mem (t_hrs_' (globals s\<^sub>0)))
-                                        (registers_Ptr &(context_' s\<^sub>0\<rightarrow>[''registers_C''])))
-                                 Mode_initContext_regs)))) s\<^sub>0}"
-  unfolding Mode_initContext_regs_def
-  apply (hoare_rule HoarePartial.ProcNoRec1)
-  apply (simp add: C_register_defs Arrays_udpate_array_updates_rev)
-  apply (rule allI, rule conseqPre)
-  apply (rule hoarep.Catch[rotated], vcg)
-  apply (rule conseqPost[where A'="{}" and Q'=Q and Q=Q for Q, simplified])
-  apply (rule hoarep.Seq[rotated]
-         | (vcg, clarsimp simp: hrs_mem_update_compose h_val_id packed_heap_update_collapse'
-                                array_updates_rev_app))+
-  by (simp add: array_updates_rev)
-
-lemmas Mode_initContext_spec'' =
-  Mode_initContext_spec'[simplified array_updates_rev' C_register_defs, simplified]
-*)
 
 lemma Arch_initContext_spec':
   shows

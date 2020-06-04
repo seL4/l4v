@@ -977,11 +977,6 @@ abbreviation
 where
   "map_to_cnes \<equiv> (\<circ>\<^sub>m) projectKO_opt"
 
-(* FIXME RISCV move: used to be in ADT_H *)
-lemma ctes_of_cte_wp_atxD:
-  "ctes_of s p = Some cte \<Longrightarrow> cte_wp_at' ((=) cte) p s"
-  by (simp add: KHeap_R.cte_wp_at_ctes_of)
-
 lemma map_to_cnes_eq:
   assumes aligned: "pspace_aligned' s"   and aligned': "pspace_aligned' s'"
   assumes distinct: "pspace_distinct' s" and distinct': "pspace_distinct' s'"
@@ -1145,15 +1140,6 @@ lemma ksPSpace_eq_imp_valid_tcb'_eq:
                  valid_tcb'_def valid_tcb_state'_def valid_bound_ntfn'_def
           split: thread_state.splits option.splits)
 
-(* FIXME RISCV
-lemma ksPSpace_eq_imp_valid_arch_obj'_eq:
-  assumes ksPSpace: "ksPSpace s' = ksPSpace s"
-  shows "valid_arch_obj' ao s' = valid_arch_obj' ao s"
-  apply (case_tac ao, simp)
-     apply (rename_tac obj, case_tac obj; simp add: valid_mapping'_def)+
-  done
-*)
-
 lemma ksPSpace_eq_imp_valid_objs'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_objs' s' = valid_objs' s"
@@ -1162,7 +1148,6 @@ lemma ksPSpace_eq_imp_valid_objs'_eq:
                      ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_tcb'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_cap'_eq[OF ksPSpace]
-(* FIXME RISCV                     ksPSpace_eq_imp_valid_arch_obj'_eq[OF ksPSpace] *)
                      valid_ntfn'_def valid_cte'_def valid_bound_tcb'_def
               split: kernel_object.splits endpoint.splits ntfn.splits option.splits)
 

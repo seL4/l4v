@@ -47,19 +47,6 @@ lemma Arch_finaliseInterrupt_ccorres:
   apply (simp add: return_def)
   done
 
-(* FIXME RISCV move: based on getActiveIRQ_neq_Some0xFF *)
-lemma getActiveIRQ_neq_Some0x3FF':
-  "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
-  apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
-  apply simp
-  done
-lemma getActiveIRQ_neq_Some0x3FF:
-  "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
-  apply (wpsimp simp: doMachineOp_def split_def)
-  apply (auto dest: use_valid intro: getActiveIRQ_neq_Some0x3FF')
-  done
-
 lemma handleInterruptEntry_ccorres:
   "ccorres dc xfdc
            (invs' and sch_act_simple)

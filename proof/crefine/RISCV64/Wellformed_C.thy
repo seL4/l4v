@@ -509,6 +509,22 @@ abbreviation(input)
 where
   "prioInvalid == seL4_InvalidPrio"
 
+(* generic lemmas with arch-specific consequences *)
+
+schematic_goal size_gpRegisters:
+  "size RISCV64.gpRegisters = numeral ?x"
+  supply Suc_eq_numeral[simp del] One_nat_def[simp del]
+  by (simp add: upto_enum_def fromEnum_def enum_register
+                RISCV64.gpRegisters_def)
+     (simp add: Suc_eq_plus1)
+
+schematic_goal size_frameRegisters:
+  "size RISCV64.frameRegisters = numeral ?x"
+  supply Suc_eq_numeral[simp del] One_nat_def[simp del]
+  by (simp add: upto_enum_def fromEnum_def enum_register
+                RISCV64.frameRegisters_def)
+     (simp add: Suc_eq_plus1)
+
 end
 
 end
