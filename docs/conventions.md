@@ -80,7 +80,9 @@ correct material in here!
 
  * `function_inv` indicates invariance, e.g. along the lines of `⦃P⦄ function ⦃λ_. P⦄`. Usually **not** safe for `[wp]`. Do not confuse with `function_invs`, which is an instance of the pattern below for the property `invs`.
 
- * `function_prop` indicates a triple with a reasonably weak precondition for `prop`. Doesn't have to be the weakest, just the weak enough to be useful. Usually of the form `{complex-ish pre} function {prop}`. Often safe for `[wp]`, use discretion.
+ * `function_prop` indicates a triple with a reasonably weak precondition for
+    a postcondition `prop`. Doesn't have to be the weakest, just the weak enough to be useful. Often safe for `[wp]`, use discretion. Example:
+    `⦃valid_objs and valid_ep ep⦄ set_endpoint p ep ⦃λ_. valid_objs⦄`
 
  * `prop_lift` indicates a lifting lemma for proving a property about (usually) an arbitrary `f` by showing simpler properties about `f`.
 
