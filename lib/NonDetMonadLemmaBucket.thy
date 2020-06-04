@@ -1133,6 +1133,9 @@ proof -
     by (auto simp: injection_handler_def handleE'_def P)
 qed
 
+lemma injection_handler_assertE:
+  "injection_handler inject (assertE f) = assertE f"
+  by (simp add: assertE_liftE injection_liftE)
 
 lemma case_options_weak_wp:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<And>x. \<lbrace>P'\<rbrace> g x \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P and P'\<rbrace> case opt of None \<Rightarrow> f | Some x \<Rightarrow> g x \<lbrace>Q\<rbrace>"
@@ -2844,6 +2847,31 @@ lemma bindE_handleE_join:
     "no_throw \<top> A \<Longrightarrow> (A >>=E (\<lambda>x. (B x) <handle> C)) = ((A >>=E B <handle> C))"
   apply (monad_eq simp: Bex_def Ball_def no_throw_def')
   apply blast
+  done
+
+lemma catch_bind_distrib:
+  "do _ <- m <catch> h; f od = (doE m; liftE f odE <catch> (\<lambda>x. do h x; f od))"
+  by (force simp: catch_def bindE_def bind_assoc liftE_def NonDetMonad.lift_def bind_def
+                  split_def return_def throwError_def
+            split: sum.splits)
+
+lemma if_catch_distrib:
+  "((if P then f else g) <catch> h) = (if P then f <catch> h else g <catch> h)"
+  by (simp split: if_split)
+
+lemma will_throw_and_catch:
+  "f = throwError e \<Longrightarrow> (f <catch> (\<lambda>_. g)) = g"
+  by (simp add: catch_def throwError_def)
+
+lemma catch_is_if:
+  "(doE x <- f; g x odE <catch> h) =
+   do
+     rv <- f;
+     if sum.isl rv then h (projl rv) else g (projr rv) <catch> h
+   od"
+  apply (simp add: bindE_def catch_def bind_assoc cong: if_cong)
+  apply (rule bind_cong, rule refl)
+  apply (clarsimp simp: NonDetMonad.lift_def throwError_def split: sum.splits)
   done
 
 lemma snd_put [monad_eq]:

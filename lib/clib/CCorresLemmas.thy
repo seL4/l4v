@@ -47,6 +47,25 @@ lemma ccorres_from_vcg_throws:
   apply simp
   done
 
+lemma ccorres_from_vcg_throws_nofail:
+  "\<forall>\<sigma>. \<Gamma>\<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel} c {},
+  {s. \<not>snd (a \<sigma>) \<longrightarrow> (\<exists>(rv, \<sigma>')\<in>fst (a \<sigma>). (\<sigma>', s) \<in> srel \<and> arrel rv (axf s))} \<Longrightarrow>
+  ccorres_underlying srel \<Gamma> r xf arrel axf P P' (SKIP # hs) a c"
+  apply (rule ccorresI')
+  apply (drule_tac x = s in spec)
+  apply (drule hoare_sound)
+  apply (simp add: HoarePartialDef.valid_def cvalid_def)
+  apply (erule exec_handlers.cases)
+    apply clarsimp
+    apply (drule spec, drule spec, drule (1) mp)
+    apply (clarsimp dest!: exec_handlers_SkipD
+                     simp: split_def unif_rrel_simps elim!: bexI [rotated])
+   apply clarsimp
+   apply (drule spec, drule spec, drule (1) mp)
+   apply clarsimp
+  apply simp
+  done
+
 lemma ccorres_liftE_Seq:
   assumes cc: "ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs (a >>= b) (c ;; d)"
   shows   "ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs (liftE a >>=E b) (c ;; d)"
@@ -194,7 +213,41 @@ lemma ccorres_if_cond_throws2:
   apply clarsimp
   done
 
-
+(* FIXME: derive corres_cond from this *)
+lemma ccorres_cond_strong:
+  assumes abs: "\<forall>s s'. (s, s') \<in> sr \<and> R s \<and> s' \<in> R' \<longrightarrow> P  = (s' \<in> P') "
+  and     c1: "ccorres_underlying sr \<Gamma> r xf arrel axf Pt Rt hs a c"
+  and     c2: "ccorres_underlying sr \<Gamma> r xf arrel axf Pf Rf hs b c'"
+  shows   "ccorres_underlying sr \<Gamma> r xf arrel axf
+                              (R and (\<lambda>s. P \<longrightarrow> Pt s) and (\<lambda>s. \<not> P \<longrightarrow> Pf s))
+                              (R' \<inter> (Rt \<inter> P' \<union> Rf \<inter> - P'))
+                              hs
+                              (if P then a else b) (Cond P' c c')"
+  apply (rule ccorresI')
+  apply clarsimp
+  apply (erule disjE)
+   apply (drule exec_handlers_semantic_equivD1 [where b = c])
+    apply (rule semantic_equivI)
+    apply (fastforce elim: exec_Normal_elim_cases intro: exec.CondTrue)
+   apply (rule ccorresE [OF c1])
+        apply assumption
+       apply (insert abs)
+       apply fastforce
+      apply fastforce
+     apply fastforce
+    apply simp
+   apply (fastforce elim!: bexI [rotated])
+  apply (drule exec_handlers_semantic_equivD2 [where b = c'])
+   apply (rule semantic_equivI)
+   apply (fastforce elim: exec_Normal_elim_cases intro: exec.CondFalse)
+  apply (rule ccorresE [OF c2])
+       apply assumption
+      apply (insert abs, fastforce)
+     apply fastforce
+    apply fastforce
+   apply simp
+  apply (fastforce elim!: bexI[rotated])
+  done
 
 lemma ccorres_cond:
   assumes abs: "\<forall>s s'. (s, s') \<in> sr \<and> R s \<longrightarrow> P  = (s' \<in> P') "
@@ -534,6 +587,15 @@ lemma ccorres_assert2:
   "\<lbrakk> P \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf G G' hs (f ()) c \<rbrakk>
       \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf
               (\<lambda>s. P \<longrightarrow> G s) {s. P \<longrightarrow> s \<in> G'} hs (assert P >>= f) c"
+  by (cases P, simp_all add: ccorres_fail')
+
+(* ccorres_assertE throws away the assert completely; this version provides more info *)
+(* FIXME: make this ccorres_assertE, and weaker ccorres_assertE into ccorres_assertE_weak, then
+          re-examine situation with ccorres_assert and ccorres_assert2*)
+lemma ccorres_assertE2:
+  "\<lbrakk> P \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf G G' hs (f ()) c \<rbrakk>
+      \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf
+              (\<lambda>s. P \<longrightarrow> G s) {s. P \<longrightarrow> s \<in> G'} hs (assertE P >>=E f) c"
   by (cases P, simp_all add: ccorres_fail')
 
 lemma ccorres_stateAssert:

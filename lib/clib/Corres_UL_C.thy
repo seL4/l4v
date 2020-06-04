@@ -127,6 +127,14 @@ lemma ccorresI':
   apply simp
   done
 
+text \<open>A congruence rule for the program part of correspondence functions (prevents schematic
+      rewriting).\<close>
+lemma ccorres_prog_only_cong:
+  "\<lbrakk> m=m'; c=c' \<rbrakk> \<Longrightarrow>
+   ccorres_underlying srel \<Gamma> rrel xf arrel axf G G' hs m c =
+   ccorres_underlying srel \<Gamma> rrel xf arrel axf G G' hs m' c'"
+  by simp
+
 lemma exec_handlers_Cons_le[simplified]:
   "\<Gamma> \<turnstile>\<^sub>h \<langle>h # hs, s'\<rangle> \<Rightarrow> (n, t) \<Longrightarrow> n \<le> length (tl (h # hs))"
   by (induct rule: exec_handlers.induct, simp_all)
