@@ -6554,7 +6554,6 @@ lemma rvk_prog_modify_map:
    apply (simp add: modify_map_def fun_upd_idem)
    apply (simp add: revoke_progress_ord_def)
   apply simp
-  apply (erule meta_allE, drule meta_mp, rule refl)
   apply (erule disjE)
    apply (simp add: modify_map_def fun_upd_idem)
    apply (simp add: revoke_progress_ord_def)

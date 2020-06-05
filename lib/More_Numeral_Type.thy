@@ -72,7 +72,7 @@ lemma of_nat_size[simp]:
   by (cases x rule: Abs_cases) (clarsimp simp: Abs_inverse of_int_eq size_def)
 
 lemma size_of_nat[simp]:
-  "size (of_nat x :: 'a) = x mod n"
+  "size (of_nat x :: 'a) = nat (int x mod n)"
   by (simp add: Rep_Abs_mod of_nat_eq size0 size_def)
 
 lemma zero_less_eq[simp]:

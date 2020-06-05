@@ -259,8 +259,8 @@ proof (subst return_bind [where x = "()" and f = "\<lambda>_. a", symmetric],
      apply clarsimp
      apply (drule arg_cong[where f=globals])
      apply (simp add: gg)
-    apply (rule_tac x=x in exI)
-    apply (rule_tac x="accessor x" in exI)
+    apply (rule_tac x=s in exI)
+    apply (rule_tac x="accessor s" in exI)
     apply (rule upd_acc [symmetric])
     done
 next

@@ -2590,6 +2590,7 @@ lemma slotCapLongRunningDelete_ccorres:
   "ccorres ((=) \<circ> from_bool) ret__unsigned_long_' invs'
            (UNIV \<inter> {s. slot_' s = cte_Ptr slot}) []
      (slotCapLongRunningDelete slot) (Call slotCapLongRunningDelete_'proc)"
+  supply subst_all [simp del] subst_all' [simp del]
   apply (cinit lift: slot_')
    apply (simp add: case_Null_If del: Collect_const)
    apply (rule ccorres_pre_getCTE)
@@ -3153,6 +3154,10 @@ lemma not_isThreadCap_case:
    (case cap of ThreadCap x \<Rightarrow> f x | _ \<Rightarrow> g) = g"
   by (clarsimp simp: isThreadCap_def split: capability.splits)
 
+lemma FF_eq_minus_1:
+  \<open>0xFF = (- 1 :: 8 word)\<close>
+  by simp
+
 lemma decodeSetMCPriority_ccorres:
   "\<lbrakk>interpret_excaps extraCaps' = excaps_map extraCaps\<rbrakk> \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -3273,8 +3278,7 @@ lemma decodeSetMCPriority_ccorres:
    apply (clarsimp simp: ct_in_state'_def pred_tcb_at'
                          valid_cap'_def isCap_simps)
    apply (rule conjI, clarsimp simp: sysargs_rel_n_def n_msgRegisters_def)
-   apply (clarsimp simp: maxPriority_def numPriorities_def)
-   apply (fold max_word_def[where 'a=8, simplified])
+   apply (clarsimp simp: maxPriority_def numPriorities_def FF_eq_minus_1)
    apply (rule conjI, clarsimp)
     apply (frule mcpriority_tcb_at'_prio_bounded, simp)
     apply (auto simp: valid_tcb_state'_def le_ucast_ucast_le
@@ -3408,8 +3412,7 @@ lemma decodeSetPriority_ccorres:
    apply (clarsimp simp: ct_in_state'_def pred_tcb_at'
                          valid_cap'_def isCap_simps)
    apply (rule conjI, clarsimp simp: sysargs_rel_n_def n_msgRegisters_def)
-   apply (clarsimp simp: maxPriority_def numPriorities_def)
-   apply (fold max_word_def[where 'a=8, simplified])
+   apply (clarsimp simp: maxPriority_def numPriorities_def FF_eq_minus_1)
    apply (rule conjI, clarsimp)
     apply (frule mcpriority_tcb_at'_prio_bounded, simp)
     apply (auto simp: valid_tcb_state'_def le_ucast_ucast_le
@@ -3568,8 +3571,7 @@ lemma decodeSetSchedParams_ccorres:
    apply (clarsimp simp: ct_in_state'_def pred_tcb_at'
       valid_cap'_def isCap_simps)
    apply (rule conjI; clarsimp simp: sysargs_rel_to_n n_msgRegisters_def)
-   apply (clarsimp simp: maxPriority_def numPriorities_def)
-   apply (fold max_word_def[where 'a=8, simplified])
+   apply (clarsimp simp: maxPriority_def numPriorities_def FF_eq_minus_1)
    apply (rule conjI, clarsimp)
     apply (insert mcpriority_tcb_at'_prio_bounded[where prio="args ! 0"])
     apply (insert mcpriority_tcb_at'_prio_bounded[where prio="args ! 1"])

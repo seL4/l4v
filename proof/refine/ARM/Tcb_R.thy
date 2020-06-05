@@ -27,6 +27,7 @@ lemma activateIdleThread_corres:
 lemma activateThread_corres:
  "corres dc (invs and ct_in_state activatable) (invs' and ct_in_state' activatable')
             activate_thread activateThread"
+  supply subst_all [simp del] subst_all' [simp del]
   apply (simp add: activate_thread_def activateThread_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ getCurThread_corres])
@@ -344,7 +345,6 @@ lemma invokeTCB_WriteRegisters_corres:
          apply (rule no_fail_pre, wp no_fail_mapM)
             apply clarsimp
             apply (wp no_fail_setRegister | simp)+
-        apply clarsimp
         apply (rule corres_split_nor[OF _ asUser_postModifyRegisters_corres[simplified]])
           apply (rule corres_split_nor[OF _ corres_when[OF refl restart_corres]])
             apply (rule corres_split_nor[OF _ corres_when[OF refl rescheduleRequired_corres]])
@@ -2169,8 +2169,8 @@ lemma decodeSetPriority_wf[wp]:
   apply (rule hoare_pre)
   apply (wp checkPrio_lt_ct_weak | wpc | simp | wp (once) checkPrio_inv)+
   apply (clarsimp simp: maxPriority_def numPriorities_def)
-  apply (cut_tac max_word_max[where 'a=8, unfolded max_word_def])
-  apply simp
+  using max_word_max [of \<open>UCAST(32 \<rightarrow> 8) x\<close> for x]
+  apply (simp add: max_word_mask numeral_eq_Suc mask_Suc)
   done
 
 lemma decodeSetPriority_inv[wp]:
@@ -2189,8 +2189,8 @@ lemma decodeSetMCPriority_wf[wp]:
   apply (rule hoare_pre)
   apply (wp checkPrio_lt_ct_weak | wpc | simp | wp (once) checkPrio_inv)+
   apply (clarsimp simp: maxPriority_def numPriorities_def)
-  apply (cut_tac max_word_max[where 'a=8, unfolded max_word_def])
-  apply simp
+  using max_word_max [of \<open>UCAST(32 \<rightarrow> 8) x\<close> for x]
+  apply (simp add: max_word_mask numeral_eq_Suc mask_Suc)
   done
 
 lemma decodeSetMCPriority_inv[wp]:
@@ -2209,9 +2209,8 @@ lemma decodeSetSchedParams_wf[wp]:
   unfolding decodeSetSchedParams_def
   apply (wpsimp wp: checkPrio_lt_ct_weak | wp (once) checkPrio_inv)+
   apply (clarsimp simp: maxPriority_def numPriorities_def)
-  apply (rule conjI;
-         cut_tac max_word_max[where 'a=8, unfolded max_word_def];
-         simp)
+  using max_word_max [of \<open>UCAST(32 \<rightarrow> 8) x\<close> for x]
+  apply (simp add: max_word_mask numeral_eq_Suc mask_Suc)
   done
 
 lemma decodeSetSchedParams_corres:

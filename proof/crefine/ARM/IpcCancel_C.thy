@@ -1803,7 +1803,7 @@ lemma scheduler_action_case_switch_to_if:
 lemma tcb_at_1:
   "tcb_at' t s \<Longrightarrow> tcb_ptr_to_ctcb_ptr t \<noteq> tcb_Ptr 1"
   apply (drule is_aligned_tcb_ptr_to_ctcb_ptr)
-  apply (clarsimp simp add: is_aligned_def max_word_def ctcb_size_bits_def)
+  apply (clarsimp simp add: is_aligned_def ctcb_size_bits_def)
   done
 
 lemma rescheduleRequired_ccorres:
@@ -1828,8 +1828,7 @@ lemma rescheduleRequired_ccorres:
         apply (clarsimp simp: setSchedulerAction_def simpler_modify_def)
         subgoal by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                               cscheduler_action_relation_def
-                              carch_state_relation_def cmachine_state_relation_def
-                              max_word_def)
+                              carch_state_relation_def cmachine_state_relation_def)
        apply wp
       apply (simp add: guard_is_UNIV_def)
      apply wp+
@@ -2145,7 +2144,7 @@ lemma possibleSwitchTo_ccorres:
      apply (rule_tac R="\<lambda>s. sact = ksSchedulerAction s \<and> weak_sch_act_wf (ksSchedulerAction s) s"
                      in ccorres_cond)
        apply (fastforce dest!: rf_sr_cscheduler_action_relation pred_tcb_at' tcb_at_not_NULL
-                        simp: cscheduler_action_relation_def max_word_def weak_sch_act_wf_def
+                        simp: cscheduler_action_relation_def weak_sch_act_wf_def
                         split: scheduler_action.splits)
       apply (ctac add: rescheduleRequired_ccorres)
         apply (ctac add: tcbSchedEnqueue_ccorres)
@@ -2206,8 +2205,7 @@ lemma scheduleTCB_ccorres':
              apply (clarsimp simp: ctcb_relation_def cthread_state_relation_def)
              apply (case_tac "tcbState ko", simp_all add: "StrictC'_thread_state_defs")[1]
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                                  cscheduler_action_relation_def max_word_def
-                                  tcb_at_not_NULL
+                                  cscheduler_action_relation_def                                  tcb_at_not_NULL
                            split: scheduler_action.split_asm)
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  cscheduler_action_relation_def)
@@ -2262,7 +2260,7 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
                  apply (fold_subgoals (prefix))[6]
                  subgoal premises prems using prems
                          by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                                       cscheduler_action_relation_def max_word_def
+                                       cscheduler_action_relation_def
                                        tcb_at_not_NULL[OF obj_tcb_at'] st_tcb_at'_def
                                 split: scheduler_action.split_asm)+
            apply (clarsimp simp: rf_sr_def cstate_relation_def cscheduler_action_relation_def
@@ -2300,7 +2298,7 @@ lemma rescheduleRequired_ccorres_valid_queues'_simple:
         apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                               cscheduler_action_relation_def
                               carch_state_relation_def cmachine_state_relation_def
-                              max_word_def)
+                              )
        apply wp
       apply (simp add: guard_is_UNIV_def)
      apply wp+
@@ -2353,7 +2351,7 @@ lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
              apply (clarsimp simp: ctcb_relation_def cthread_state_relation_def)
              apply (case_tac "tcbState ko", simp_all add: "StrictC'_thread_state_defs")[1]
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                                  cscheduler_action_relation_def max_word_def
+                                  cscheduler_action_relation_def
                                   tcb_at_not_NULL
                            split: scheduler_action.split_asm)
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def

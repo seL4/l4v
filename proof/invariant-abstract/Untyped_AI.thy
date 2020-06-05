@@ -416,7 +416,10 @@ lemma range_cover_stuff:
       apply (subgoal_tac "(1::machine_word) << sz >> bits = 2^ (sz -bits)")
        apply simp
       apply (subst shiftl_shiftr1)
-      apply (simp add: word_size word_bits_def shiftl_t2n word_1_and_bl)+
+       apply (simp_all add: word_size)
+      apply (rule bit_eqI)
+      apply (simp add: word_bits_conv shiftl_word_eq mask_eq_mask bit_and_iff bit_push_bit_iff bit_1_iff bit_mask_iff bit_exp_iff not_le)
+      apply auto
      done
 
     have cmp2[simp]: "alignUp (of_nat rv) bits < (2 :: machine_word) ^ sz"
@@ -2526,10 +2529,9 @@ lemma mapME_x_validE_nth:
 lemma alignUp_ge_nat:
   "0 < m
     \<Longrightarrow> (n :: nat) \<le> ((n + m - 1) div m) * m"
-  apply (cases n, simp_all add: Suc_le_eq)
-  apply (subgoal_tac "\<exists>q r. nat = q * m + r \<and> r < m")
-   apply clarsimp
-  apply (metis div_mult_mod_eq mod_less_divisor)
+  apply (cases n)
+   apply (simp_all add: Suc_le_eq)
+  apply (metis add.commute add_less_cancel_left dividend_less_div_times)
   done
 
 lemma alignUp_le_nat:

@@ -855,7 +855,7 @@ lemma typ_slice_list_cut:
   apply (intro conjI impI)
    apply simp
   apply (subgoal_tac "\<exists>n'. n = n' + m")
-   apply clarsimp
+   apply (clarsimp simp add: div_add1_eq)
   apply (rule_tac x="n - m" in exI)
   apply simp
   done

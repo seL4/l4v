@@ -205,17 +205,17 @@ class HS_bit = bit_operations +
   fixes shiftR :: "'a \<Rightarrow> nat \<Rightarrow> 'a"
   fixes bitSize :: "'a \<Rightarrow> nat"
 
-instantiation word :: (len0) HS_bit
+instantiation word :: (len) HS_bit
 begin
 
 definition
-  shiftL_word[simp]: "(shiftL :: 'a::len0 word \<Rightarrow> nat \<Rightarrow> 'a word) \<equiv> shiftl"
+  shiftL_word[simp]: "(shiftL :: 'a::len word \<Rightarrow> nat \<Rightarrow> 'a word) \<equiv> shiftl"
 
 definition
-  shiftR_word[simp]: "(shiftR :: 'a::len0 word \<Rightarrow> nat \<Rightarrow> 'a word) \<equiv> shiftr"
+  shiftR_word[simp]: "(shiftR :: 'a::len word \<Rightarrow> nat \<Rightarrow> 'a word) \<equiv> shiftr"
 
 definition
-  bitSize_word[simp]: "(bitSize :: 'a::len0 word \<Rightarrow> nat) \<equiv> size"
+  bitSize_word[simp]: "(bitSize :: 'a::len word \<Rightarrow> nat) \<equiv> size"
 
 instance ..
 
@@ -239,11 +239,11 @@ end
 class finiteBit = bit_operations +
   fixes finiteBitSize :: "'a \<Rightarrow> nat"
 
-instantiation word :: (len0) finiteBit
+instantiation word :: (len) finiteBit
 begin
 
 definition
-  finiteBitSize_word[simp]: "(finiteBitSize :: 'a::len0 word \<Rightarrow> nat) \<equiv> size"
+  finiteBitSize_word[simp]: "(finiteBitSize :: 'a::len word \<Rightarrow> nat) \<equiv> size"
 
 instance ..
 

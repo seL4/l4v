@@ -14,12 +14,12 @@ begin
 text \<open>Additional constants needed to make conversion to and from the graph lang easy\<close>
 
 definition
-  bvshl :: "'a :: len0 word \<Rightarrow> 'a word \<Rightarrow> 'a word"
+  bvshl :: "'a :: len word \<Rightarrow> 'a word \<Rightarrow> 'a word"
 where
  "bvshl x y = x << (unat y)"
 
 definition
-  bvlshr :: "'a :: len0 word \<Rightarrow> 'a word \<Rightarrow> 'a word"
+  bvlshr :: "'a :: len word \<Rightarrow> 'a word \<Rightarrow> 'a word"
 where
  "bvlshr x y = x >> (unat y)"
 

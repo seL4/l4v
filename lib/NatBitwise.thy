@@ -14,20 +14,6 @@ begin
 instantiation nat :: bit_operations
 begin
 
-(* NB: this is not useful, because NOT flips the sign, and hence this
- * definition always produces 0. *)
-definition
-  "bitNOT = nat o bitNOT o int"
-
-definition
-  "bitAND x y = nat (bitAND (int x) (int y))"
-
-definition
-  "bitOR x y = nat (bitOR (int x) (int y))"
-
-definition
-  "bitXOR x y = nat (bitXOR (int x) (int y))"
-
 definition
   "shiftl x y = nat (shiftl (int x) y)"
 
@@ -64,14 +50,13 @@ lemma nat_shiftl_less_cancel:
 
 lemma nat_shiftl_lt_2p_bits:
   "(x::nat) < 1 << n \<Longrightarrow> \<forall>i \<ge> n. \<not> x !! i"
-  apply (clarsimp simp: shiftl_nat_def test_bit_nat_def zless_nat_eq_int_zless)
-  apply (fastforce dest: int_shiftl_lt_2p_bits[rotated])
+  apply (clarsimp simp: shiftl_nat_def test_bit_nat_def zless_nat_eq_int_zless shiftl_eq_push_bit
+    push_bit_of_1 bit_def power_add zdiv_zmult2_eq dest!: le_Suc_ex)
   done
 
 lemma nat_eq_test_bit:
   "((x :: nat) = y) = (\<forall>i. test_bit x i = test_bit y i)"
-  apply (simp add: test_bit_nat_def)
-  apply (metis bin_eqI int_int_eq)
+  apply (simp add: test_bit_nat_def bit_eq_iff)
   done
 lemmas nat_eq_test_bitI = nat_eq_test_bit[THEN iffD2, rule_format]
 

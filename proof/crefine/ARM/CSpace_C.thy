@@ -214,8 +214,6 @@ lemma isArchCap_spec:
   "\<forall>s. \<Gamma>\<turnstile> {s} Call isArchCap_'proc \<lbrace>\<acute>ret__unsigned_long = from_bool (isArchCap_tag (cap_get_tag (cap_' s)))\<rbrace>"
   apply vcg
   apply (clarsimp simp: from_bool_def isArchCap_tag_def bool.split)
-  apply (clarsimp simp: word_mod_2p_is_mask[where n=1, simplified] mask_def)
-  apply word_bitwise
   done
 
 lemma maskCapRights_ccorres [corres]:
@@ -857,7 +855,7 @@ lemma update_freeIndex':
         apply (case_tac cte', simp)
         apply (clarsimp simp: ccap_relation_def cap_lift_def cap_get_tag_def cap_to_H_def)
         apply (thin_tac _)+
-        apply (simp add: mask_def to_bool_and_1 nth_shiftr word_ao_dist word_bool_alg.conj.assoc)
+        apply (simp add: mask_def to_bool_and_1 nth_shiftr word_ao_dist and.assoc)
         apply (rule inj_onD[OF word_unat.Abs_inj_on[where 'a=machine_word_len]], simp)
           apply (cut_tac i'_align i'_bound_word)
           apply (simp add: is_aligned_mask)
@@ -2474,7 +2472,7 @@ lemma Arch_sameRegionAs_spec:
     apply (intro conjI)
         apply (simp add: pageBitsForSize_def)
         apply (cases "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))"; simp)
-       subgoal by (simp add:cap_frame_cap_lift_def cap_lift_def cap_tag_defs mask_def word_bw_assocs)
+       subgoal by (simp add: cap_frame_cap_lift_def cap_lift_def cap_tag_defs mask_def word_bw_assocs)
       apply (simp add: pageBitsForSize_def)
       apply (case_tac "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))"; simp)
     apply (simp add: Let_def)

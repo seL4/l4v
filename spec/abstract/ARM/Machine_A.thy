@@ -82,11 +82,11 @@ definition
 
 definition
   combine_ntfn_badges :: "data \<Rightarrow> data \<Rightarrow> data" where
-  "combine_ntfn_badges \<equiv> bitOR"
+  "combine_ntfn_badges \<equiv> (OR)"
 
 definition
   combine_ntfn_msgs :: "data \<Rightarrow> data \<Rightarrow> data" where
-  "combine_ntfn_msgs \<equiv> bitOR"
+  "combine_ntfn_msgs \<equiv> (OR)"
 
 
 text \<open>These definitions will be unfolded automatically in proofs.\<close>
