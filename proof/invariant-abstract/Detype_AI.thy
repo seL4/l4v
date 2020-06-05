@@ -929,7 +929,7 @@ lemma of_nat_le_pow:
   apply simp
   done
 
-lemma maxword_len_conv': "(x::machine_word) + max_word = x - 1" by (simp add: max_word_def)
+lemma maxword_len_conv': True by simp
 
 (* FIXME: copied from Retype_C and slightly adapted. *)
 lemma (in Detype_AI) mapM_x_storeWord_step:
@@ -944,7 +944,7 @@ lemma (in Detype_AI) mapM_x_storeWord_step:
   apply (subst if_not_P)
    apply (subst not_less)
    apply (erule is_aligned_no_overflow)
-  apply (simp add: mapM_x_map comp_def upto_enum_word maxword_len_conv' del: upt.simps)
+  apply (simp add: mapM_x_map comp_def upto_enum_word del: upt.simps)
   apply (simp add: Suc_unat_mask_div_obfuscated[simplified mask_2pm1] min_def)
   apply (subst mapM_x_storeWord)
    apply (erule is_aligned_weaken [OF _ sz2])

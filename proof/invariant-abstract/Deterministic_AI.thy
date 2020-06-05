@@ -369,6 +369,7 @@ lemma next_not_child_linearI:
      \<forall>q. p \<in> descendants_of q m \<longrightarrow> m q = m' q
      \<and> next_sib q t m = next_sib q t' m'; finite_depth m; finite_depth m'\<rbrakk>
     \<Longrightarrow> next_not_child p t' m' = next_not_child p t m"
+  supply subst_all [simp del] subst_all' [simp del]
   apply(induct rule: next_not_child_pinduct[where t=t and m=m])
    apply(simp)
    apply(case_tac "m slot")
@@ -1945,7 +1946,6 @@ lemma next_not_child_no_parent:
    apply (drule_tac x="a" in meta_spec)
    apply (simp add: m'_def m''_def next_sib_def nnext nnext'' cong: if_weak_cong split: if_split_asm)
   apply (simp split del: if_split)
-  apply (thin_tac "\<And>a. \<lbrakk>False; Q a\<rbrakk> \<Longrightarrow> P a" for Q P)
   apply (simp add: m'_def m''_def next_sib_def nnext nnext'' cong: if_weak_cong split: if_split_asm | intro impI conjI)+
     apply (simp add: valid_list_2_def | drule after_in_list_in_list | clarsimp)+
     done

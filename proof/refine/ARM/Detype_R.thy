@@ -4253,7 +4253,7 @@ lemma createObjects_Cons:
            createObjects' (((1 + of_nat n) << (objBitsKO val + us)) + ptr)
                           (Suc 0) val us
         od) s"
-  supply option.case_cong_weak[cong]
+  supply option.case_cong_weak [cong] subst_all [simp del] subst_all' [simp del]
   apply (clarsimp simp:createObjects'_def split_def bind_assoc)
   apply (subgoal_tac "is_aligned (((1::word32) + of_nat n << objBitsKO val + us) + ptr) (objBitsKO val + us)")
    prefer 2

@@ -159,8 +159,8 @@ lemma init_irq_ptrs_eq:
               in shift_distinct_helper[rotated 3],
          safe intro!: plus_one_helper2,
          simp_all add: ucast_le_ucast_10_32 up_ucast_inj_eq,
-         simp_all add: cte_level_bits_def word_bits_def up_ucast_inj_eq
-                       max_word_def)
+         simp_all add: cte_level_bits_def word_bits_def up_ucast_inj_eq minus_1_eq_mask ucast_mask_eq)
+  apply (simp_all add: mask_eq_exp_minus_1)
   done
 
 lemma in_kernel_base:

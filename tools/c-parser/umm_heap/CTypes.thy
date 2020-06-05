@@ -393,7 +393,7 @@ lemma field_lookup_export_uinfo_rev'':
   apply(rule conjI; clarsimp)
    apply(drule_tac fupd=fupd in field_lookup_pair_export_None)
    apply simp
-  apply fastforce
+  apply metis
   done
 
 lemma field_lookup_export_uinfo_rev':

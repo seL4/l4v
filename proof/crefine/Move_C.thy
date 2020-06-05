@@ -222,7 +222,7 @@ lemma ucast_increment:
   using assms
   apply (simp add: not_max_word_iff_less word_less_alt)
   apply (erule less_le_trans)
-  apply (simp add: max_word_def)
+  apply simp
   done
 
 lemma max_word_gt_0:
@@ -235,7 +235,7 @@ lemma and_not_max_word:
 
 lemma mask_not_max_word:
   "m < LENGTH('a::len) \<Longrightarrow> mask m \<noteq> (max_word :: 'a word)"
-  by (metis shiftl_1_not_0 shiftl_mask_is_0 word_bool_alg.conj_one_right)
+  by (simp add: mask_eq_mask mask_eq_exp_minus_1)
 
 lemmas and_mask_not_max_word =
   and_not_max_word[OF mask_not_max_word]

@@ -459,7 +459,6 @@ lemma getHWASID_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ loadHWASID_corres[where pd=pd]])
       apply (case_tac maybe_hw_asid, simp_all)[1]
-      apply clarsimp
       apply (rule corres_split_eqr [OF _ findFreeHWASID_corres])
          apply (rule corres_split_deprecated [OF _ storeHWASID_corres[where pd=pd]])
            apply (rule corres_trivial, simp )

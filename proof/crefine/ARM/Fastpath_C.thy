@@ -3397,6 +3397,7 @@ lemma schedule_rewrite_ct_not_runnable':
                  \<and> fastpathBestSwitchCandidate t s)
             (schedule)
             (do setSchedulerAction ResumeCurrentThread; switchToThread t od)"
+  supply subst_all [simp del] subst_all' [simp del]
   apply (simp add: schedule_def)
   apply (rule monadic_rewrite_imp)
    apply (rule monadic_rewrite_trans)
@@ -4053,6 +4054,7 @@ lemma schedule_known_rewrite:
       (do Arch.switchToThread t;
           setCurThread t;
           setSchedulerAction ResumeCurrentThread od)"
+  supply subst_all [simp del] subst_all' [simp del]
   apply (simp add: schedule_def)
   apply (simp only: switchToThread_def)
   apply (rule monadic_rewrite_imp)

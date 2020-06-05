@@ -385,7 +385,6 @@ lemma corres_split_mapr:
   shows      "corres_underlying sr nf nf' r (P and Q) (P' and Q') (a >>= (\<lambda>rv. b rv)) (c >>= d)"
   apply (rule corres_split_deprecated[OF _ y z])
   apply simp
-  apply (drule sym)
   apply (simp add: x)
   done
 
@@ -396,7 +395,6 @@ lemma corres_split_maprE:
   shows      "corres_underlying sr nf nf' (r' \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E d)"
   apply (rule corres_splitEE[OF _ z x])
   apply simp
-  apply (drule sym)
   apply (simp add: y)
   done
 

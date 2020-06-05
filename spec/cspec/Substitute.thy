@@ -341,6 +341,10 @@ end
 
 cond_sorry_modifies_proofs SORRY_MODIFIES_PROOFS
 
+ML \<open>
+  Feedback.verbosity_level := ~1;
+\<close>
+
 local_setup \<open>
 SubstituteSpecs.take_all_actions
   "Kernel_C.kernel_all_global_addresses."

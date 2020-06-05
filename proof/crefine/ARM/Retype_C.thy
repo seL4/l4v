@@ -216,6 +216,25 @@ proof (subst is_aligned_mask)
    by simp
 qed
 
+lemma (in semiring_bit_shifts) take_bit_eq_0_iff:
+  \<open>take_bit n a = 0 \<longleftrightarrow> 2 ^ n dvd a\<close> (is \<open>?P \<longleftrightarrow> ?Q\<close>)
+proof
+  assume ?P
+  then show ?Q
+    by (rule take_bit_eq_0_imp_dvd)
+next
+  assume ?Q
+  then obtain b where \<open>a = 2 ^ n * b\<close> ..
+  then have \<open>a = push_bit n b\<close>
+    by (simp add: push_bit_eq_mult ac_simps)
+  then show ?P
+    by (simp add: take_bit_push_bit)
+qed
+
+lemma dvd_4_iff_and_mask_eq_0:
+  \<open>4 dvd a \<longleftrightarrow> a && Word.mask 2 = 0\<close> for a :: \<open>'a::len word\<close>
+  using take_bit_eq_0_iff [of 2 a] by (simp add: mask_eq_mask take_bit_eq_mask)
+
 (* This is currently unused, but hard to prove.
    it might be worth fixing if it breaks, but ask around first. *)
 lemma memset_spec:
@@ -240,8 +259,8 @@ lemma memset_spec:
             and V1=undefined in subst [OF whileAnno_def])
   apply vcg
     apply (clarsimp simp add: hrs_mem_update_def split: if_split_asm)
-    apply (subst (asm) word_mod_2p_is_mask [where n=2, simplified], simp)
-    apply (subst (asm) word_mod_2p_is_mask [where n=2, simplified], simp)
+    apply (subst (asm) dvd_4_iff_and_mask_eq_0)
+    apply (subst (asm) dvd_4_iff_and_mask_eq_0)
     apply (rule conjI)
      apply (rule is_aligned_and_2_to_k, clarsimp simp: mask_def)
     apply (rule is_aligned_and_2_to_k, clarsimp simp: mask_def)

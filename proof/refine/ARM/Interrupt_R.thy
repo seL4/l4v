@@ -679,13 +679,11 @@ lemma timerTick_corres:
              apply (rule_tac R="1 < ts" in corres_cases)
               apply (simp)
               apply (unfold thread_set_time_slice_def)
-              apply (fold dc_def)
               apply (rule ethread_set_corres, simp+)
               apply (clarsimp simp: etcb_relation_def)
              apply simp
              apply (rule corres_split_deprecated [OF _ ethread_set_corres])
                       apply (rule corres_split_deprecated [OF _ tcbSchedAppend_corres])
-                        apply (fold dc_def)
                         apply (rule rescheduleRequired_corres)
                        apply (wp)[1]
                       apply (rule hoare_strengthen_post)
@@ -710,18 +708,12 @@ lemma timerTick_corres:
             threadSet_tcbDomain_triv threadSet_valid_queues' threadSet_valid_objs'| simp)+
          apply (wp threadGet_wp gts_wp gts_wp')+
        apply (clarsimp simp: cur_tcb_def tcb_at_is_etcb_at valid_sched_def valid_sched_action_def)
-       apply (subgoal_tac "is_etcb_at thread s \<and> tcb_at thread s \<and> valid_etcbs s \<and> weak_valid_sched_action s")
         prefer 2
-        apply assumption
        apply clarsimp
-      apply (wp gts_wp')+
      apply (clarsimp simp add:cur_tcb_def valid_sched_def
          valid_sched_action_def valid_etcbs_def is_tcb_def
          is_etcb_at_def st_tcb_at_def obj_at_def
          dest!:get_tcb_SomeD)
-     apply (simp split:Structures_A.kernel_object.splits)
-     apply (drule_tac x = "cur_thread s" in spec)
-     apply clarsimp
     apply (clarsimp simp: invs'_def valid_state'_def
     sch_act_wf_weak
     cur_tcb'_def inQ_def
@@ -730,7 +722,6 @@ lemma timerTick_corres:
        valid_idle'_def ct_idle_or_in_cur_domain'_def
        obj_at'_def projectKO_eq)
    apply simp
-  apply simp
   done
 
 lemmas corres_eq_trivial = corres_Id[where f = h and g = h for h, simplified]

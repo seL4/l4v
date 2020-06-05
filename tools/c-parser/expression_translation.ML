@@ -360,13 +360,13 @@ in
                                  " taking address of value without one"))
     end
   | BitNegate => let val ei' = strip_kb (intprom_ei thy ei)
-                     val _ = tracing("After prom, argument to bitNOT has type "^
+                     val _ = tracing("After prom, argument to not has type "^
                                      tyname (ctype_of ei'))
                      val result =
-                         lmk_comb(@{const_name "bitNOT"},
+                         lmk_comb(@{const_name "not"},
                                   [ei'], First, ctype_of ei', false)
                  in
-                   tracing("bitNOT result has type "^tyname (ctype_of result));
+                   tracing("not result has type "^tyname (ctype_of result));
                    result
                  end
 end handle TYPE (s,tys,tms) => raise TYPE ("unop_term: "^s, tys, tms)
@@ -604,9 +604,9 @@ in
       else
         add_guard div_zero_check (mk_arithop(@{const_name "modulo"}, ei1, ei2))
     end
-  | BitwiseAnd => mk_arithop(@{const_name "bitAND"}, ei1, ei2)
-  | BitwiseOr => mk_arithop(@{const_name "bitOR"}, ei1, ei2)
-  | BitwiseXOr => mk_arithop(@{const_name "bitXOR"}, ei1, ei2)
+  | BitwiseAnd => mk_arithop(@{const_name "and"}, ei1, ei2)
+  | BitwiseOr => mk_arithop(@{const_name "or"}, ei1, ei2)
+  | BitwiseXOr => mk_arithop(@{const_name "xor"}, ei1, ei2)
   | LShift => let
       (* "the integer promotions are performed on each of the operands" *)
       val ei1' = intprom_ei thy ei1

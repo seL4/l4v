@@ -34,14 +34,11 @@ lemma ucast_not_helper_cheating:
   by (word_bitwise,simp)
 
 lemma ucast_helper_not_maxword:
-  "UCAST(10 \<rightarrow> 32) x \<noteq> 0xFFFF"
-  apply (subgoal_tac "UCAST(10 \<rightarrow> 32) x \<le> UCAST(10 \<rightarrow> 32) max_word")
-   apply (rule notI)
-   defer
-  apply (rule ucast_up_mono_le)
-    apply simp
-   apply simp
-  by (simp add: max_word_def)
+  \<open>UCAST(10 \<rightarrow> 32) x \<noteq> 0xFFFF\<close>
+  apply (simp add: ucast_def)
+  apply transfer
+  apply (simp add: take_bit_eq_mod)
+  done
 
 lemmas ucast_helper_simps_32 =
   ucast_helper_not_maxword arg_cong[where f="UCAST(16 \<rightarrow> 32)", OF minus_one_norm]
@@ -160,7 +157,7 @@ lemma handleVMFaultEvent_ccorres:
           apply clarsimp
          apply clarsimp
          apply (rule ccorres_cond_univ)
-         apply (rule_tac P="\<lambda>s. ksCurThread s = rv" in ccorres_cross_over_guard)
+         apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
          apply (rule_tac xf'=xfdc in ccorres_call)
             apply (ctac (no_vcg) add: handleFault_ccorres)
            apply simp
@@ -168,7 +165,6 @@ lemma handleVMFaultEvent_ccorres:
          apply simp
         apply (wp hv_inv_ex')
        apply (simp add: guard_is_UNIV_def)
-       apply clarsimp
        apply (vcg exspec=handleVMFault_modifies)
       apply ceqv
      apply clarsimp
@@ -241,6 +237,10 @@ lemma ct_active_not_idle'_strengthen:
   "invs' s \<and> ct_active' s \<longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
   by clarsimp
 
+lemma uint_minus_1_eq:
+  \<open>uint (- 1 :: 'a word) = 2 ^ LENGTH('a::len) - 1\<close>
+  by transfer (simp add: take_bit_minus_one_eq_mask mask_eq_exp_minus_1)
+
 lemma handleSyscall_ccorres:
   "ccorres dc xfdc
            (invs' and
@@ -276,7 +276,7 @@ lemma handleSyscall_ccorres:
                  apply (rule ccorres_split_nothrow_novcg)
                      apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
                       apply (case_tac rv)
-                      apply (clarsimp simp: max_word_minus[symmetric] ucast_def max_word_def)
+                      apply (clarsimp simp: ucast_def uint_minus_1_eq)
                      defer
                      apply (rule ccorres_add_return2)
                      apply (ctac (no_vcg) add: handleInterrupt_ccorres)
