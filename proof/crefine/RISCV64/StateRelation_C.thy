@@ -109,7 +109,7 @@ lemma carch_globals_riscvKSGlobalPT:
   "carch_globals s \<Longrightarrow> riscvKSGlobalPT s = symbol_table ''kernel_root_pageTable''"
   by (simp add: carch_globals_def riscvKSGlobalPT_def globalPTs_to_H_def)
 
-(* FIXME RISCV: DON'T DELETE!
+(* DON'T DELETE yet:
     keep this for a rainy day, if we find out that leaving the asid map out of the state relation
     is no longer possible
     This recreates the asid map from the asid table *)
