@@ -29,7 +29,6 @@ lemma objBits_InvalidPTE:
   "objBits RISCV64_H.InvalidPTE = word_size_bits"
   by (simp add: objBits_simps archObjSize_def word_size_bits_def bit_simps)
 
-(* FIXME RISCV: should this be the real objBits_InvalidPTE? *)
 lemma objBits_InvalidPTE_pte_bits:
   "objBits RISCV64_H.InvalidPTE = pte_bits"
   by (simp add: objBits_InvalidPTE bit_simps)
