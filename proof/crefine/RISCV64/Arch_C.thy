@@ -740,8 +740,6 @@ lemma page_table_at'_kernel_mappings:
   apply (erule (1) obj_at_kernel_mappings')
   done
 
-(* FIXME RISCV: on other architectures, C uses invLabel_' instead of label___unsigned_long,
-                and excaps_' instead of extraCaps___struct_extra_caps_C_' *)
 lemma decodeRISCVPageTableInvocation_ccorres:
   "\<lbrakk>interpret_excaps extraCaps' = excaps_map extraCaps; isPageTableCap cp\<rbrakk> \<Longrightarrow>
    ccorres
@@ -1554,8 +1552,6 @@ lemma vmRightsToBits_vmrights_to_H:
   apply (drule word_less_cases, erule disjE, simp, simp)+
   done
 
-(* FIXME RISCV: on other architectures, C uses invLabel_' instead of label___unsigned_long,
-                and excaps_' instead of extraCaps___struct_extra_caps_C_' *)
 lemma decodeRISCVFrameInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp] Collect_const[simp del]
   shows
@@ -2924,8 +2920,6 @@ lemma ct_active_st_tcb_at_minor':
    by (clarsimp simp: st_tcb_at'_def ct_in_state'_def obj_at'_def projectKOs,
               case_tac "tcbState obj"; clarsimp)+
 
-(* FIXME RISCV: on other architectures, C uses invLabel_' instead of label___unsigned_long,
-                and excaps_' instead of extraCaps___struct_extra_caps_C_' *)
 lemma Arch_decodeInvocation_ccorres:
   notes if_cong[cong]
   assumes "interpret_excaps extraCaps' = excaps_map extraCaps"
