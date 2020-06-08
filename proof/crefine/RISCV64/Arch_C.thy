@@ -1897,8 +1897,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
                  apply (simp add: syscall_error_to_H_cases)
 
                 (* ensure lookupPTSlot returned a slot with a PTE *)
-                (* FIXME RISCV: this is a redundant check in the C and should be removed from
-                                all specs *)
+                (* This check is redundant and should be removed; see VER-1288 *)
                 apply (clarsimp simp: bindE_assoc checkSlot_def injection_handler_bindE
                                       injection_liftE unlessE_def injection_handler_If
                                       injection_handler_throwError injection_handler_returnOk)
