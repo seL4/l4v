@@ -108,13 +108,14 @@ definition
   refill_new :: "obj_ref \<Rightarrow> nat \<Rightarrow> ticks \<Rightarrow> ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "refill_new sc_ptr max_refills budget period = do
-    assert (MIN_BUDGET < budget);
-    cur_time \<leftarrow> gets cur_time;
-    refill \<leftarrow> return \<lparr> r_time = cur_time, r_amount = budget \<rparr>;
-    update_sched_context sc_ptr
-            (\<lambda>sc. sc\<lparr> sc_period := period, sc_refills := [refill], sc_refill_max := max_refills,
-                      sc_budget := budget \<rparr>)
-  od"
+     assert (MIN_BUDGET < budget);
+     cur_time \<leftarrow> gets cur_time;
+     refill \<leftarrow> return \<lparr> r_time = cur_time, r_amount = budget \<rparr>;
+     set_sc_obj_ref sc_period_update sc_ptr period;
+     set_sc_obj_ref sc_refills_update sc_ptr [refill];
+     set_sc_obj_ref sc_refill_max_update sc_ptr max_refills;
+     set_sc_obj_ref sc_budget_update sc_ptr budget
+   od"
 
 fun
   schedule_used :: "bool \<Rightarrow> refill list \<Rightarrow> refill \<Rightarrow> refill list"
@@ -250,28 +251,22 @@ where
   "refill_update sc_ptr new_period new_budget new_max_refills = do
      sc \<leftarrow> get_sched_context sc_ptr;
      refill_hd \<leftarrow> return $ refill_hd sc;
-
      cur_time \<leftarrow> gets cur_time;
      ready \<leftarrow> get_sc_refill_ready sc_ptr;
-
      new_time \<leftarrow> return $ if ready then cur_time else (r_time refill_hd);
-     if (r_amount refill_hd \<ge> new_budget)
-     then update_sched_context sc_ptr (\<lambda>_. sc\<lparr>sc_period := new_period,
-                                       sc_refill_max := new_max_refills,
-                                       sc_refills := [\<lparr>r_time = new_time,
-                                                       r_amount = new_budget\<rparr>],
-                                       sc_budget := new_budget\<rparr>)
-     else do
-            unused \<leftarrow> return $ (new_budget - r_amount refill_hd);
-            new \<leftarrow> return $ \<lparr>r_time = r_time refill_hd + new_period - unused, r_amount = unused \<rparr>;
-            new_refills \<leftarrow> return $ (schedule_used False [refill_hd] new);
-                 \<comment> \<open>since the length of @{text refill_hd} is 1 and @{text MAX_REFILLS} is at least
-                      @{term \<open>MIN_REFILLS = 2\<close>}, we will have that @{term \<open>[refill_hd]\<close>} is not full, and so
-                      we may use False here\<close>
-            update_sched_context sc_ptr (\<lambda>_. sc\<lparr>sc_period := new_period,
-                                                sc_refill_max := new_max_refills,
-                                                sc_refills := new_refills,
-                                                sc_budget := new_budget\<rparr>)
+     if new_budget \<le> r_amount refill_hd
+     then do set_sc_obj_ref sc_period_update sc_ptr new_period;
+             set_sc_obj_ref sc_refill_max_update sc_ptr new_max_refills;
+             set_sc_obj_ref sc_refills_update sc_ptr [\<lparr>r_time = new_time, r_amount = new_budget\<rparr>];
+             set_sc_obj_ref sc_budget_update sc_ptr new_budget
+          od
+     else do unused <- return $ new_budget - r_amount refill_hd;
+             new <- return $ \<lparr>r_time = r_time refill_hd + new_period - unused, r_amount = unused\<rparr>;
+             new_refills <- return $ schedule_used False [refill_hd] new;
+             set_sc_obj_ref sc_period_update sc_ptr new_period;
+             set_sc_obj_ref sc_refill_max_update sc_ptr new_max_refills;
+             set_sc_obj_ref sc_refills_update sc_ptr new_refills;
+             set_sc_obj_ref sc_budget_update sc_ptr new_budget
           od
     od"
 
