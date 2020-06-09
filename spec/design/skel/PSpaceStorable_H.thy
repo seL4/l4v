@@ -109,6 +109,7 @@ where
   "updateObject_default val oldObj ptr ptr' next \<equiv> do
      assert (ptr = ptr');
      (_ :: 'a) \<leftarrow> projectKO oldObj;
+     assert (objBitsKO (injectKO val) = objBitsKO oldObj);
      alignCheck ptr (objBits val);
      magnitudeCheck ptr next (objBits val);
      return (injectKO val)
