@@ -2038,35 +2038,6 @@ lemma invs_non_empty_refills:
   "\<lbrakk> invs s; ko_at (SchedContext sc n) scptr s\<rbrakk> \<Longrightarrow> Suc 0 \<le> length (sc_refills sc)"
   by (clarsimp dest!: invs_valid_objs elim!: obj_at_valid_objsE simp: valid_obj_def valid_sched_context_def)
 
-lemma sched_context_nonref_update_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> scp \<noteq> idle_sc_ptr \<and> (\<exists>n. ko_at (SchedContext sc n) scp s)\<rbrace>
-   update_sched_context scp (\<lambda>_. sc\<lparr> sc_period := period, sc_refill_max := m, sc_refills := r0#rs,
-                              sc_budget := budget\<rparr>)
-   \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def simp_del: refs_of_defs
-                  wp: valid_ioports_lift update_sc_refills_period_refill_max_valid_replies
-                      update_sched_context_valid_idle set_sc_others_cur_sc_tcb)
-  apply (auto simp: state_refs_of_def obj_at_def valid_obj_def valid_sched_context_def live_def
-                    live_sc_def
-             elim!: delta_sym_refs if_live_then_nonz_capD
-             split: if_splits)
-  done
-
-lemma sched_context_nonref_update_invs_non_zero_length:
-  "\<lbrace>\<lambda>s. invs s \<and> scp \<noteq> idle_sc_ptr \<and> (\<exists>n. ko_at (SchedContext sc n) scp s) \<and> new_refills \<noteq> []\<rbrace>
-   update_sched_context scp (\<lambda>_. sc\<lparr> sc_period := period, sc_refill_max := m, sc_refills := new_refills,
-                              sc_budget := budget\<rparr>)
-   \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def simp_del: refs_of_defs
-                  wp: valid_ioports_lift update_sc_refills_period_refill_max_valid_replies
-                      update_sched_context_valid_idle set_sc_others_cur_sc_tcb)
-  apply (auto simp: state_refs_of_def obj_at_def valid_obj_def valid_sched_context_def live_def
-                    live_sc_def
-             elim!: delta_sym_refs if_live_then_nonz_capD
-             split: if_splits)
-  apply (meson list_exhaust_size_eq0 not_less_eq_eq zero_order(2))
-  done
-
 (* move to SchedContext_AI *)
 lemma set_sc_refills_cur_sc_tcb[wp]:
   "\<lbrace>\<lambda>s. cur_sc_tcb s \<and> (\<exists>n. ko_at (SchedContext sc n) p s)\<rbrace>
@@ -2114,16 +2085,14 @@ lemma sc_consumed_add_invs:
   "\<lbrace>\<lambda>s. invs s\<rbrace>
    update_sched_context scp (\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed sc + consumed\<rparr>)
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (wpsimp simp: invs_def valid_state_def valid_pspace_def sc_consumed_update_eq[symmetric]
-               wp: update_sched_context_valid_objs_same valid_irq_node_typ
-                   update_sched_context_iflive_implies update_sched_context_refs_of_same)
+  by (wpsimp simp: sc_consumed_update_eq[symmetric])
 
 lemma refill_update_invs:
   "\<lbrace>\<lambda>s. invs s \<and> sc_ptr \<noteq> idle_sc_ptr\<rbrace>
    refill_update sc_ptr new_period new_budget new_max_refills
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding refill_update_def
-  by (wpsimp wp: sched_context_nonref_update_invs_non_zero_length)
+  by (wpsimp wp: set_sc_obj_ref_invs_no_change)
 
 lemma set_refills_bound_sc:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>

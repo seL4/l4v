@@ -3809,6 +3809,27 @@ lemma cur_sc_tcb_only_sym_bound_lift_pre_conj:
 
 lemmas cur_sc_tcb_only_sym_bound_lift = cur_sc_tcb_only_sym_bound_lift_pre_conj[where R=\<top>, simplified]
 
+lemma active_sc_tcb_at_def2:
+  "active_sc_tcb_at t s = ((\<exists>scp. bound_sc_tcb_at (\<lambda>p. p = Some scp) t s \<and> is_active_sc scp s))"
+  by (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
+
+lemma budget_ready_def2:
+  "budget_ready t s = ((\<exists>scp. bound_sc_tcb_at (\<lambda>p. p = Some scp) t s \<and> is_refill_ready scp s))"
+  by (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
+
+lemma budget_sufficient_def2:
+  "budget_sufficient t s = ((\<exists>scp. bound_sc_tcb_at (\<lambda>p. p = Some scp) t s \<and> is_refill_sufficient 0 scp s))"
+  by (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
+
+lemma budget_ready_def3:
+  "active_sc_tcb_at t s
+   \<Longrightarrow> budget_ready t s \<longleftrightarrow> tcb_ready_time t s \<le> cur_time s + kernelWCET_ticks"
+  by (auto simp: vs_all_heap_simps refill_ready_def tcb_ready_times_defs
+                    opt_map_def map_project_def map_join_def pred_map_simps
+                    tcb_scps_of_tcbs_def tcbs_of_kh_def
+                    sc_refill_cfgs_of_scs_def scs_of_kh_def
+             split: option.split)
+
 lemma active_sc_tcb_at_fold:
   "(\<exists>scp. bound_sc_tcb_at (\<lambda>x. x = Some scp) t s \<and> sc_at_pred sc_active scp s)
    = active_sc_tcb_at t s"

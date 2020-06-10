@@ -893,10 +893,11 @@ lemma sc_refill_max_update_cur_sc_tcb[wp]:
   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
   done
 
-lemma set_sc_obj_ref_invs[wp]:
-    "\<lbrace>invs and K (b \<noteq> idle_sc_ptr)\<rbrace> set_sc_obj_ref sc_refill_max_update b c \<lbrace>\<lambda>_. invs\<rbrace>"
-  unfolding invs_def valid_state_def valid_pspace_def
-  by (wpsimp wp: update_sched_context_valid_idle)
+(* FIXME RT: This and many above may be generalised so that sc_refill_max_update is f
+             satisfying some conditions. *)
+lemma set_sc_refill_max_invs[wp]:
+  "\<lbrace>invs and K (b \<noteq> idle_sc_ptr)\<rbrace> set_sc_obj_ref sc_refill_max_update b c \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (wpsimp wp: set_sc_obj_ref_invs_no_change)
 
 lemma (in Finalise_AI_1) fast_finalise_invs:
   "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. invs\<rbrace>"

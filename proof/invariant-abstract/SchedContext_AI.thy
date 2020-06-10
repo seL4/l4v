@@ -1413,64 +1413,29 @@ lemma sched_context_resume_invs[wp]:
   by (wpsimp simp: sched_context_resume_def get_tcb_queue_def is_schedulable_def is_tcb
                wp: thread_get_wp)
 
-lemma set_sc_others_cur_sc_tcb:
-  "\<lbrace>cur_sc_tcb and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
-   update_sched_context p (\<lambda>_. sc\<lparr>sc_period := period,
-                           sc_refill_max := max_refills,
-                           sc_refills := refills,
-                           sc_budget := budget\<rparr>)
-   \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
-  by (wpsimp simp: update_sched_context_def set_object_def get_object_def cur_sc_tcb_def
-                   sc_tcb_sc_at_def obj_at_def)
-
-lemma set_sc_others_invs:
-  "\<lbrace>invs and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s)) and K (p \<noteq> idle_sc_ptr)\<rbrace>
-      update_sched_context p
-          (\<lambda>_. sc\<lparr>sc_period := period,
-              sc_refill_max := max_refills,
-              sc_refills := r#refills,
-              sc_budget := budget\<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
-                  wp: update_sched_context_valid_idle update_sched_context_valid_replies
-                      set_sc_others_cur_sc_tcb
-            simp_del: fun_upd_apply)
-  apply safe
-     apply (drule valid_objs_valid_sched_context, fastforce)
-     apply (clarsimp simp: valid_sched_context_def)
-    apply (drule_tac p=p in if_live_then_nonz_capD2, simp)
-     apply (clarsimp simp: live_def live_sc_def, assumption)
-   apply (erule replies_with_sc_upd_replies_subset_valid_replies')
-   apply (clarsimp simp: sc_replies_sc_at_def obj_at_def)
-  by (clarsimp simp: state_refs_of_def refs_of_def fun_upd_idem)
-
-lemma update_sc_others_cur_sc_tcb:
-  "\<lbrace>cur_sc_tcb\<rbrace> update_sched_context p
-                  (\<lambda>sc. sc\<lparr>sc_period := period,
-                           sc_refills := r # refills,
-                           sc_refill_max := max_refills,
-                           sc_budget := budget\<rparr>) \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
-  by (wpsimp wp: update_sched_context_cur_sc_tcb_no_change)
-
-lemma update_sc_others_invs:
-  "\<lbrace>invs and K (p \<noteq> idle_sc_ptr)\<rbrace>
-      update_sched_context p
-          (\<lambda>sc. sc\<lparr>sc_period := period,
-              sc_refills := r#refills,
-              sc_refill_max := max_refills,
-              sc_budget := budget\<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
+lemma set_sc_obj_ref_invs_no_change:
+  "(\<forall>sc. sc_replies (f (\<lambda>_. x) sc) = sc_replies sc)
+   \<Longrightarrow> (\<forall>sc. sc_tcb (f (\<lambda>_. x) sc) = sc_tcb sc)
+   \<Longrightarrow> (\<forall>sc. sc_ntfn (f (\<lambda>_. x) sc) = sc_ntfn sc)
+   \<Longrightarrow> (\<forall>sc. sc_yield_from (f (\<lambda>_. x) sc) = sc_yield_from sc)
+   \<Longrightarrow> \<lbrace>invs
+        and K (p \<noteq> idle_sc_ptr)
+        and K (\<forall>sc. Suc 0 \<le> length (sc_refills sc) \<longrightarrow> Suc 0 \<le> length (sc_refills (f (\<lambda>_. x) sc)))\<rbrace>
+       set_sc_obj_ref f p x
+       \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
                   wp: update_sched_context_valid_objs_same valid_irq_node_typ
                       update_sched_context_iflive_implies
                       update_sched_context_refs_of_same
                       update_sc_but_not_sc_replies_valid_replies'
                       update_sched_context_valid_idle
-                      update_sc_others_cur_sc_tcb
+                      update_sched_context_cur_sc_tcb_no_change
             simp_del: fun_upd_apply)
   by (clarsimp simp: valid_sched_context_def live_sc_def)
 
 lemma refill_new_invs[wp]:
   "\<lbrace>invs and K (sc_ptr \<noteq> idle_sc_ptr)\<rbrace> refill_new sc_ptr max_refills budget period \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp simp: refill_new_def wp: update_sc_others_invs)
+  by (wpsimp simp: refill_new_def wp: set_sc_obj_ref_invs_no_change)
 
 lemma set_consumed_invs[wp]:
   "\<lbrace>invs\<rbrace> set_consumed scp args \<lbrace>\<lambda>rv. invs\<rbrace>"
