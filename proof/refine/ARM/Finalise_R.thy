@@ -3101,7 +3101,7 @@ lemma emptySlot_valid_inQ_queues [wp]:
 
 end
 
-context simple_ko'
+context simple_non_tcb_ko'
 begin
 
 (* FIXME RT: move to KHeap *)

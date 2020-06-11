@@ -2029,27 +2029,13 @@ locale simple_ko' =
   fixes f :: "obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel"
   assumes f_def: "f p v = setObject p v"
   assumes default: "updateObject (v::'a) = updateObject_default (v::'a)"
-  assumes not_tcb: "projectKO_opt (KOTCB tcb) = (None::'a option)"
   assumes not_cte: "projectKO_opt (KOCTE cte) = (None::'a option)"
   assumes objBits: "\<exists>n. \<forall>v. objBits (v::'a) = n \<and> (1::machine_word) < 2^n"
 begin
 
-lemma updateObject_tcb[simp]:
-  "fst (updateObject (v::'a) (KOTCB tcb) p x n s) = {}"
-  by (clarsimp simp: default updateObject_default_def in_monad projectKOs not_tcb bind_def)
-
 lemma updateObject_cte[simp]:
   "fst (updateObject (v::'a) (KOCTE cte) p x n s) = {}"
   by (clarsimp simp: default updateObject_default_def in_monad projectKOs not_cte bind_def)
-
-lemma cte_wp_at'[wp]: "f p v \<lbrace>\<lambda>s. P (cte_wp_at' Q p' s)\<rbrace>"
-  unfolding f_def by (rule setObject_cte_wp_at2'[where Q="\<top>", simplified]; simp)
-
-lemma ctes_of[wp]: "f p v \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
-  unfolding f_def by (rule setObject_ctes_of[where Q="\<top>", simplified]; simp)
-
-lemma valid_mdb'[wp]: "f p v \<lbrace>valid_mdb'\<rbrace>"
-  unfolding valid_mdb'_def by wp
 
 lemma pspace_aligned'[wp]: "f p v \<lbrace>pspace_aligned'\<rbrace>"
   and pspace_distinct'[wp]: "f p v \<lbrace>pspace_distinct'\<rbrace>"
@@ -2061,28 +2047,6 @@ lemma valid_objs':
   unfolding f_def
   by (rule setObject_valid_objs')
      (clarsimp simp: default updateObject_default_def in_monad projectKOs)
-
-lemma valid_pspace':
-  "\<lbrace>valid_pspace' and valid_obj' (injectKO v) \<rbrace> f p v \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
-  unfolding valid_pspace'_def by (wpsimp wp: valid_objs')
-
-lemma not_inject_tcb[simp]:
-  "injectKO (v::'a) \<noteq> KOTCB tcb"
-  by (simp flip: project_inject add: projectKOs not_tcb)
-
-lemma typeOf_not_tcb[simp]:
-  "koTypeOf (injectKO (v::'a)) \<noteq> TCBT"
-  by (cases "injectKO v"; simp)
-
-lemma obj_at_tcb'[wp]:
-  "f p v \<lbrace>\<lambda>s. P (obj_at' (Q :: tcb \<Rightarrow> bool) p' s)\<rbrace>"
-  unfolding f_def obj_at'_real_def
-  using objBits
-  apply clarsimp
-  apply (wp setObject_ko_wp_at; simp add: default)
-  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
-  apply (case_tac ko; simp add: projectKOs not_tcb)
-  done
 
 lemma typ_at'[wp]:
   "f p v \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
@@ -2109,23 +2073,90 @@ lemma bitmapQ_no_L2_orphans[wp]:
   "f p v \<lbrace> bitmapQ_no_L2_orphans \<rbrace>"
   unfolding bitmapQ_defs by (wpsimp wp: hoare_vcg_all_lift | wps)+
 
+lemma state_refs_of':
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (ptr := refs_of' (injectKO val)))\<rbrace>
+   f ptr val
+   \<lbrace>\<lambda>_ s. P (state_refs_of' s)\<rbrace>"
+  unfolding f_def
+  using objBits by (auto intro: setObject_state_refs_of' simp: default)
+
+lemma valid_arch_state'[wp]:
+  "f p v \<lbrace> valid_arch_state' \<rbrace>"
+  by (rule valid_arch_state_lift'; wp)
+
+lemmas valid_irq_node'[wp] = valid_irq_node_lift[OF ksInterruptState typ_at']
+lemmas irq_states' [wp] = valid_irq_states_lift' [OF ksInterruptState ksMachineState]
+lemmas irqs_masked'[wp] = irqs_masked_lift[OF ksInterruptState]
+
+lemma valid_machine_state'[wp]:
+  "f p v \<lbrace>valid_machine_state'\<rbrace>"
+  unfolding valid_machine_state'_def pointerInDeviceData_def pointerInUserData_def
+  by (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
+
+lemma pspace_domain_valid[wp]:
+  "f ptr val \<lbrace>pspace_domain_valid\<rbrace>"
+  unfolding f_def by wp
+
+lemmas x = ct_not_inQ_lift[OF ksSchedulerAction]
+
+end
+
+locale simple_non_tcb_ko' = simple_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel" for f +
+  assumes not_tcb: "projectKO_opt (KOTCB sc) = (None :: 'a option)"
+begin
+
+lemma updateObject_tcb[simp]:
+  "fst (updateObject (v::'a) (KOTCB tcb) p x n s) = {}"
+  by (clarsimp simp: default updateObject_default_def in_monad projectKOs not_tcb bind_def)
+
+lemma not_inject_tcb[simp]:
+  "injectKO (v::'a) \<noteq> KOTCB tcb"
+  by (simp flip: project_inject add: projectKOs not_tcb)
+
+lemma typeOf_not_tcb[simp]:
+  "koTypeOf (injectKO (v::'a)) \<noteq> TCBT"
+  by (cases "injectKO v"; simp)
+
+lemma cte_wp_at'[wp]: "f p v \<lbrace>\<lambda>s. P (cte_wp_at' Q p' s)\<rbrace>"
+  unfolding f_def by (rule setObject_cte_wp_at2'[where Q="\<top>", simplified]; simp)
+
+lemma ctes_of[wp]: "f p v \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
+  unfolding f_def by (rule setObject_ctes_of[where Q="\<top>", simplified]; simp)
+
+lemma valid_mdb'[wp]: "f p v \<lbrace>valid_mdb'\<rbrace>"
+  unfolding valid_mdb'_def by wp
+
+lemma valid_pspace':
+  "\<lbrace>valid_pspace' and valid_obj' (injectKO v) \<rbrace> f p v \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
+  unfolding valid_pspace'_def by (wpsimp wp: valid_objs')
+
+lemma obj_at_tcb'[wp]:
+  "f p v \<lbrace>\<lambda>s. P (obj_at' (Q :: tcb \<Rightarrow> bool) p' s)\<rbrace>"
+  unfolding f_def obj_at'_real_def
+  using objBits
+  apply clarsimp
+  apply (wp setObject_ko_wp_at; simp add: default)
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
+  apply (case_tac ko; simp add: projectKOs not_tcb)
+  done
+
 lemma valid_queues[wp]:
   "f p v \<lbrace> valid_queues \<rbrace>"
   unfolding valid_queues_def valid_queues_no_bitmap_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift |wps)+
      (simp add: o_def pred_conj_def)
 
-lemma set_ep_valid_queues'[wp]:
+lemma set_non_tcb_valid_queues'[wp]:
   "f p v \<lbrace>valid_queues'\<rbrace>"
   unfolding valid_queues'_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
 
-lemma set_ep_valid_release_queue[wp]:
+lemma set_non_tcb_valid_release_queue[wp]:
   "f p v \<lbrace>valid_release_queue\<rbrace>"
   unfolding valid_release_queue_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift | wps)+
 
-lemma set_ep_valid_release_queue'[wp]:
+lemma set_non_tcb_valid_release_queue'[wp]:
   "f p v \<lbrace>valid_release_queue'\<rbrace>"
   unfolding valid_release_queue'_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift | wps)+
@@ -2146,13 +2177,6 @@ lemma cur_tcb'[wp]:
   "f p v \<lbrace>cur_tcb'\<rbrace>"
   by (wp cur_tcb_lift)
 
-lemma state_refs_of':
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (ptr := refs_of' (injectKO val)))\<rbrace>
-   f ptr val
-   \<lbrace>\<lambda>_ s. P (state_refs_of' s)\<rbrace>"
-  unfolding f_def
-  using objBits by (auto intro: setObject_state_refs_of' simp: default)
-
 lemma cap_to'[wp]:
   "f p' v \<lbrace>ex_nonz_cap_to' p\<rbrace>"
   by (wp ex_nonz_cap_to_pres')
@@ -2168,30 +2192,11 @@ lemma ifunsafe'[wp]:
   done
 
 lemmas irq_handlers[wp] = valid_irq_handlers_lift'' [OF ctes_of ksInterruptState]
-
-lemma valid_arch_state'[wp]:
-  "f p v \<lbrace> valid_arch_state' \<rbrace>"
-  by (rule valid_arch_state_lift'; wp)
+lemmas irq_handlers'[wp] = valid_irq_handlers_lift'' [OF ctes_of ksInterruptState]
 
 lemma valid_global_refs'[wp]:
   "f p v \<lbrace>valid_global_refs'\<rbrace>"
   by (rule valid_global_refs_lift'; wp)
-
-lemmas valid_irq_node'[wp] = valid_irq_node_lift[OF ksInterruptState typ_at']
-lemmas irq_states' [wp] = valid_irq_states_lift' [OF ksInterruptState ksMachineState]
-lemmas irq_handlers'[wp] = valid_irq_handlers_lift'' [OF ctes_of ksInterruptState]
-lemmas irqs_masked'[wp] = irqs_masked_lift[OF ksInterruptState]
-
-lemma valid_machine_state'[wp]:
-  "f p v \<lbrace>valid_machine_state'\<rbrace>"
-  unfolding valid_machine_state'_def pointerInDeviceData_def pointerInUserData_def
-  by (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
-
-lemma pspace_domain_valid[wp]:
-  "f ptr val \<lbrace>pspace_domain_valid\<rbrace>"
-  unfolding f_def by wp
-
-lemmas x = ct_not_inQ_lift[OF ksSchedulerAction]
 
 lemma ct_not_inQ[wp]:
   "f p v \<lbrace>ct_not_inQ\<rbrace>"
@@ -2205,17 +2210,32 @@ lemma ct_idle_or_in_cur_domain'[wp]:
 
 end
 
-\<comment>\<open>
-  preservation of valid_idle' requires us to not be touching an SC, however
-  SCs are considered a simple_ko' - hence the special locale.
-\<close>
 locale simple_non_sc_ko' = simple_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel" for f +
   assumes not_sc: "projectKO_opt (KOSchedContext sc) = (None :: 'a option)"
 begin
 
+lemma updateObject_sc[simp]:
+  "fst (updateObject (v::'a) (KOSchedContext c) p x n s) = {}"
+  by (clarsimp simp: default updateObject_default_def in_monad projectKOs not_sc bind_def)
+
 lemma not_inject_sc[simp]:
   "injectKO (v::'a) \<noteq> KOSchedContext sc"
   by (simp flip: project_inject add: projectKOs not_sc)
+
+lemma typeOf_not_sc[simp]:
+  "koTypeOf (injectKO (v::'a)) \<noteq> SchedContextT"
+  by (cases "injectKO v"; simp)
+
+end
+
+locale simple_non_tcb_non_sc_ko' =
+   simple_non_sc_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel" +
+   simple_non_tcb_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel" for f
+begin
+
+\<comment>\<open>
+  preservation of valid_idle' requires us to not be touching either of an SC or a TCB
+\<close>
 
 lemma idle'[wp]:
   "f p v \<lbrace>valid_idle'\<rbrace>"
@@ -2229,31 +2249,29 @@ lemma idle'[wp]:
 end
 
 (* FIXME: should these be in Arch + sublocale instead? *)
-interpretation set_ep': simple_non_sc_ko' setEndpoint
+interpretation set_ep': simple_non_tcb_non_sc_ko' setEndpoint
   by unfold_locales (simp add: setEndpoint_def projectKO_opts_defs objBits_simps'|wp)+
 
-interpretation set_ntfn': simple_non_sc_ko' setNotification
+interpretation set_ntfn': simple_non_tcb_non_sc_ko' setNotification
   by unfold_locales (simp add: setNotification_def projectKO_opts_defs objBits_simps'|wp)+
 
-interpretation set_reply': simple_non_sc_ko' setReply
+interpretation set_reply': simple_non_tcb_non_sc_ko' setReply
   by unfold_locales (simp add: setReply_def projectKO_opts_defs objBits_simps'|wp)+
 
-interpretation set_sc': simple_ko' setSchedContext
+interpretation set_sc': simple_non_tcb_ko' setSchedContext
   by unfold_locales (simp add: setSchedContext_def projectKO_opts_defs objBits_simps'|wp)+
 
-interpretation tcb: pspace_only' "setObject p v" for v::tcb
-  unfolding setObject_def
-  by unfold_locales
-     (fastforce simp: in_monad updateObject_default_def split_def magnitudeCheck_def projectKOs
-                split: option.splits)
+interpretation set_tcb': simple_non_sc_ko' "\<lambda>p v. setObject p (v::tcb)"
+  by unfold_locales (simp add: setSchedContext_def projectKO_opts_defs objBits_simps'|wp)+
 
 interpretation threadSet: pspace_only' "threadSet f p"
   unfolding threadSet_def
   apply unfold_locales
   apply (clarsimp simp: in_monad)
   apply (drule_tac P="(=) s" in use_valid[OF _ getObject_tcb_inv], rule refl)
-  apply (fastforce dest:  tcb.pspace)
+  apply (fastforce dest: set_tcb'.pspace)
   done
+
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 

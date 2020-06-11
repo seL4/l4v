@@ -1250,8 +1250,7 @@ lemma setupCallerCap_almost_no_orphans [wp]:
 crunches doIPCTransfer, setMRs, setEndpoint
   for ksReadyQueues [wp]: "\<lambda>s. P (ksReadyQueues s)"
   and no_orphans [wp]: "no_orphans"
-  (wp: transferCapsToSlots_pres1 crunch_wps no_orphans_lift setObject_queues_unchanged_tcb
-       updateObject_default_inv)
+  (wp: transferCapsToSlots_pres1 crunch_wps no_orphans_lift updateObject_default_inv)
 
 lemma sendIPC_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s \<rbrace>

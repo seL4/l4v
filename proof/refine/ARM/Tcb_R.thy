@@ -524,8 +524,7 @@ lemma threadSet_valid_queues_no_state:
   apply (simp add: threadSet_def)
   apply wp
    apply (simp add: valid_queues_def valid_queues_no_bitmap_def' pred_tcb_at'_def)
-   apply (wp setObject_queues_unchanged_tcb
-             hoare_Ball_helper
+   apply (wp hoare_Ball_helper
              hoare_vcg_all_lift
              setObject_tcb_strongest)[1]
   apply (wp getObject_tcb_wp)

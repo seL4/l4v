@@ -863,7 +863,7 @@ lemma sts_weak_sch_act_wf[wp]:
 
 lemma sbn_nosch[wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  by (simp add: setBoundNotification_def, wp threadSet_nosch)
+  by (simp add: setBoundNotification_def, wp threadSet.ksSchedulerAction)
 
 
 lemma sbn_weak_sch_act_wf[wp]:
@@ -968,8 +968,7 @@ lemma threadSet_valid_inQ_queues:
   apply (simp add: threadSet_def)
   apply wp
    apply (simp add: valid_inQ_queues_def pred_tcb_at'_def)
-   apply (wp setObject_queues_unchanged_tcb
-             hoare_Ball_helper
+   apply (wp hoare_Ball_helper
              hoare_vcg_all_lift
              setObject_tcb_strongest)[1]
   apply (wp getObject_tcb_wp)
@@ -1770,7 +1769,7 @@ proof -
    apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_post_imp)
     apply (clarsimp)
   sorry (*
-   apply (rule hoare_convert_imp [OF threadSet_nosch threadSet.ct])
+   apply (rule hoare_convert_imp [OF threadSet.ksSchedulerAction threadSet.ct])
   apply assumption
   done *)
 qed

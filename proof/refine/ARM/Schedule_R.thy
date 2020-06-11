@@ -192,8 +192,7 @@ lemma threadSet_valid_queues_dequeue_wp:
   apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
   apply (rule hoare_pre)
    apply (simp add: valid_queues_def valid_queues_no_bitmap_except_def valid_queues_no_bitmap_def)
-   apply (wp setObject_queues_unchanged_tcb hoare_Ball_helper hoare_vcg_all_lift
-             setObject_tcb_strongest)
+   apply (wp hoare_Ball_helper hoare_vcg_all_lift setObject_tcb_strongest)
   apply (clarsimp simp: valid_queues_no_bitmap_except_def obj_at'_def valid_queues_no_bitmap_def)
   done
 
@@ -1217,7 +1216,7 @@ lemma setThreadState_rct:
    apply (rule hoare_seq_ext [OF _
                  hoare_vcg_conj_lift
                    [OF threadSet_tcbState_st_tcb_at' [where P=runnable']
-                       threadSet_nosch]])
+                       threadSet.ksSchedulerAction]])
    apply (rule hoare_seq_ext [OF _
                  hoare_vcg_conj_lift [OF isRunnable_const isRunnable_inv]])
    apply (clarsimp simp: when_def)
@@ -1226,7 +1225,7 @@ lemma setThreadState_rct:
    apply (clarsimp)
   apply (rule hoare_seq_ext [OF _
                 hoare_vcg_conj_lift
-                  [OF threadSet_ct threadSet_nosch]])
+                  [OF threadSet_ct threadSet.ksSchedulerAction]])
   apply (rule hoare_seq_ext [OF _ isRunnable_inv])
   apply (rule hoare_seq_ext [OF _
                 hoare_vcg_conj_lift
