@@ -3244,7 +3244,7 @@ lemma transferCaps_ccorres [corres]:
      and K (ep \<noteq> Some 0)
      and K (receiveBuffer \<noteq> Some 0)
      and K (unat (msgExtraCaps mi) \<le> 3))
-    (UNIV \<inter> \<lbrace>interpret_excaps (\<acute>caps) = excaps_map caps\<rbrace>
+    (UNIV \<inter> \<lbrace>interpret_excaps (\<acute>current_extra_caps) = excaps_map caps\<rbrace>
           \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr receiver\<rbrace>
           \<inter> \<lbrace> mi = message_info_to_H \<acute>info\<rbrace>
           \<inter> \<lbrace>\<acute>receiveBuffer = Ptr (option_to_0 receiveBuffer)\<rbrace>
@@ -3252,7 +3252,7 @@ lemma transferCaps_ccorres [corres]:
     (transferCaps mi caps ep receiver receiveBuffer)
     (Call transferCaps_'proc)" (is "ccorres _ _ ?P _ _ _ _")
   apply (unfold K_def, intro ccorres_gen_asm)
-  apply (cinit lift: caps_' receiver_' info_' receiveBuffer_' endpoint_'
+  apply (cinit lift: current_extra_caps_' receiver_' info_' receiveBuffer_' endpoint_'
     simp: getThreadCSpaceRoot_def locateSlot_conv whileAnno_def)
    apply csymbr+
    apply (rule_tac P="?P" and P'="{s. info_' s = info}" in ccorres_inst)
@@ -3292,7 +3292,7 @@ lemma transferCaps_ccorres [corres]:
         apply (rule ccorres_add_return2)
         apply (rule ccorres_split_nothrow_novcg)
             apply (rule ccorres_Catch)
-            apply (rule_tac caps=caps and caps'=capsa in transferCapsLoop_ccorres, simp+)
+            apply (rule_tac caps=caps and caps'=current_extra_caps in transferCapsLoop_ccorres, simp+)
             apply (simp add: excaps_map_def)
            apply ceqv
           apply csymbr
@@ -3640,21 +3640,18 @@ proof -
                  cong: call_ignore_cong)
      apply (clarsimp cong: call_ignore_cong simp del: dc_simp)
      apply (ctac(c_lines 2, no_vcg) add: getMessageInfo_ccorres')
-       apply (rule_tac xf'=caps_' and r'="\<lambda>c c'. interpret_excaps c' = excaps_map c"
-                  in ccorres_split_nothrow_novcg)
+       apply (rule_tac xf'="\<lambda>s. current_extra_caps_' (globals s)"
+                   and r'="\<lambda>c c'. interpret_excaps c' = excaps_map c"
+              in ccorres_split_nothrow_novcg)
            apply (rule ccorres_if_lhs)
             apply (simp add: catch_def to_bool_def ccorres_cond_iffs)
-            apply (rule ccorres_rhs_assoc)+
-            apply (rule_tac xf'="\<lambda>s. (status_' s,
-                                current_extra_caps_' (globals s))"
-                             and ef'=fst and vf'=snd and es=errstate
-                        in ccorres_split_nothrow_case_sum)
+            apply (rule_tac xf'="\<lambda>s. (status_' s, current_extra_caps_' (globals s))"
+                        and ef'=fst and vf'=snd and es=errstate
+                   in ccorres_split_nothrow_case_sum)
                  apply (rule ccorres_call, rule lookupExtraCaps_ccorres, simp+)
                 apply (rule ceqv_tuple2, ceqv, ceqv)
                apply (simp add: ccorres_cond_iffs)
-               apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-               apply (rule allI, rule conseqPre, vcg)
-               apply (clarsimp simp: return_def)
+               apply (rule ccorres_return_Skip')
               apply (simp add: ccorres_cond_iffs)
               apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
               apply (rule allI, rule conseqPre, vcg)
@@ -3664,36 +3661,35 @@ proof -
             apply simp
             apply (vcg exspec=lookupExtraCaps_modifies)
            apply (simp add: to_bool_def ccorres_cond_iffs)
-           apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-           apply (rule allI, rule conseqPre, vcg)
-           apply (clarsimp simp: return_def excaps_map_def interpret_excaps_empty
-                                 word_sle_def word_sless_def)
+           apply (rule ccorres_return[where R=\<top> and R'=UNIV], vcg)
+           apply (clarsimp simp: excaps_map_def interpret_excaps_empty)
           apply ceqv
          apply csymbr
-         apply (ctac(no_vcg) add: copyMRs_ccorres)
-          apply (ctac(no_vcg) add: transferCaps_ccorres)
-           apply csymbr
-           apply (ctac(c_lines 2, no_vcg) add: setMessageInfo_ccorres)
-             apply ctac
+         apply (ctac add: copyMRs_ccorres)
+           apply (ctac add: transferCaps_ccorres)
+             apply csymbr
+             apply (ctac(c_lines 2, no_vcg) add: setMessageInfo_ccorres)
+               apply ctac
+              apply wp
+             apply (clarsimp simp: Kernel_C.badgeRegister_def ARM_HYP_H.badgeRegister_def
+                                ARM_HYP.badgeRegister_def Kernel_C.R0_def)
             apply wp
-           apply (clarsimp simp: Kernel_C.badgeRegister_def ARM_HYP_H.badgeRegister_def
-                              ARM_HYP.badgeRegister_def Kernel_C.R0_def)
-          apply wp
-         apply simp
-         apply (wp hoare_case_option_wp getMessageInfo_le3
-                   getMessageInfo_msgLength lookupExtraCaps_excaps_in_mem
-                   lookupExtraCaps_length
-                    | simp)+
+           apply (simp add: seL4_MessageInfo_lift_def message_info_to_H_def msgLengthBits_def)
+           apply (vcg exspec=transferCaps_modifies)
+          apply (wpsimp wp: hoare_case_option_wp)
+         apply clarsimp
+         apply (vcg exspec=copyMRs_modifies)
+        apply (wpsimp wp: lookupExtraCaps_length)
        apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
        apply (clarsimp simp: seL4_MessageInfo_lift_def message_info_to_H_def mask_def
                              msgLengthBits_def word_bw_assocs)
       apply (wp getMessageInfo_le3 getMessageInfo_msgLength[unfolded K_def] static_imp_wp
                   | simp)+
      apply (simp add: Collect_const_mem)
-    apply (auto simp: excaps_in_mem_def valid_ipc_buffer_ptr'_def
-                      option_to_0_def option_to_ptr_def
-                      seL4_MessageInfo_lift_def mi_from_H_def message_info_to_H_def
-               split: option.split)
+     apply (auto simp: excaps_in_mem_def valid_ipc_buffer_ptr'_def
+                       option_to_0_def option_to_ptr_def
+                       seL4_MessageInfo_lift_def mi_from_H_def message_info_to_H_def
+                split: option.split)
     done
 qed
 

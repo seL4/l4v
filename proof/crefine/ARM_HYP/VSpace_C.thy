@@ -1983,7 +1983,7 @@ lemma vcpuUpdate_vTimer_pcount_ccorres:
                             cmachine_state_relation_def update_vcpu_map_to_vcpu
                             typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
       apply (erule (1) cmap_relation_updI
-             ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def                              cvcpu_vppi_masked_relation_def
+             ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def cvcpu_vppi_masked_relation_def
              ; (rule refl)?)
   apply (simp add: objBits_simps archObjSize_def machine_bits_defs)+
   done

@@ -6820,10 +6820,9 @@ shows  "ccorres dc xfdc
             (length destSlots * 2 ^ APIType_capBits newType userSize) s)}
            \<inter> {s. t_' s = object_type_from_H newType}
            \<inter> {s. parent_' s = cte_Ptr srcSlot}
-           \<inter> {s. slots_' s = slot_range_C (cte_Ptr cnodeptr) start num
-                     \<and> unat num \<noteq> 0
-                     \<and> (\<forall>n. n < length destSlots \<longrightarrow> destSlots ! n = cnodeptr + ((start + of_nat n) * 0x10))
-                     }
+           \<inter> {s. destCNode_' s = cte_Ptr cnodeptr}
+           \<inter> {s. destOffset_' s = start \<and> (\<forall>n. n < length destSlots \<longrightarrow> destSlots ! n = cnodeptr + ((start + of_nat n) * 0x10))}
+           \<inter> {s. destLength_' s = num \<and> unat num \<noteq> 0}
            \<inter> {s. regionBase_' s = Ptr ptr }
            \<inter> {s. unat_eq (userSize_' s) userSize}
            \<inter> {s. to_bool (deviceMemory_' s) = isdev}
@@ -6838,7 +6837,7 @@ shows  "ccorres dc xfdc
    apply (subst unat_of_nat32)
     apply (rule less_le_trans [OF getObjectSize_max_size], auto simp: word_bits_def untypedBits_defs)[1]
    apply simp
-  apply (cinit lift: t_' parent_' slots_' regionBase_' userSize_' deviceMemory_')
+  apply (cinit lift: t_' parent_' destCNode_' destOffset_' destLength_' regionBase_' userSize_' deviceMemory_')
    apply (rule ccorres_rhs_assoc2)+
    apply (rule ccorres_rhs_assoc)
    apply (rule_tac Q' = "Q'
