@@ -88,7 +88,7 @@ lemma Normal_resultE:
   done
 
 lemma Abrupt_result:
-  "\<Gamma> \<turnstile> \<langle>c, s\<rangle> \<Rightarrow> Abrupt t' \<Longrightarrow> \<exists>t. s = Normal t \<or> s = Abrupt t"
+  "\<Gamma> \<turnstile> \<langle>c, s\<rangle> \<Rightarrow> Abrupt t' \<Longrightarrow> (\<exists>t. s = Normal t) \<or> s = Abrupt t'"
 proof (induct c arbitrary: s)
   case While
   thus ?case
@@ -97,11 +97,11 @@ qed (fastforce elim: exec_elim_cases)+
 
 lemma Abrupt_resultE [consumes 1, case_names normal abrupt]:
   "\<lbrakk>\<Gamma> \<turnstile> \<langle>c, s\<rangle> \<Rightarrow> Abrupt t';
-  \<And>t. \<lbrakk>\<Gamma> \<turnstile> \<langle>c, Normal t\<rangle> \<Rightarrow> Abrupt t'; s = Normal t \<rbrakk> \<Longrightarrow> P;
-  \<And>t. \<lbrakk>\<Gamma> \<turnstile> \<langle>c, Abrupt t\<rangle> \<Rightarrow> Abrupt t'; s = Abrupt t \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+    \<And>t. \<lbrakk>\<Gamma> \<turnstile> \<langle>c, Normal t\<rangle> \<Rightarrow> Abrupt t'; s = Normal t\<rbrakk> \<Longrightarrow> P;
+    \<And>t. \<lbrakk>\<Gamma> \<turnstile> \<langle>c, Abrupt t\<rangle> \<Rightarrow> Abrupt t'; s = Abrupt t\<rbrakk> \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
   apply (frule Abrupt_result)
-  apply auto
-  done
+  by auto
 
 lemma Fault_result:
   assumes ex: "\<Gamma> \<turnstile> \<langle>a, s\<rangle> \<Rightarrow> t"
