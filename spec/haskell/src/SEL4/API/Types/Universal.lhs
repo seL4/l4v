@@ -41,8 +41,8 @@ The following is the definition of the seven object types that are always availa
 > replySizeBits :: Int
 > replySizeBits = 4
 
-> scheduleContextBits :: Int
-> scheduleContextBits = 8
+> minSchedContextBits :: Int
+> minSchedContextBits = 8
 
 > apiGetObjectSize :: APIObjectType -> Int -> Int
 > apiGetObjectSize Untyped size = size

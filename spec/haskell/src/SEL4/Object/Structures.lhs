@@ -160,7 +160,7 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 > objBitsKO (KOUserDataDevice) = pageBits
 > objBitsKO (KOKernelData) = pageBits
 > objBitsKO (KOArch a) = archObjSize a
-> objBitsKO (KOSchedContext sc) = scheduleContextBits
+> objBitsKO (KOSchedContext sc) = minSchedContextBits
 > objBitsKO (KOReply _) = replySizeBits
 
 \subsubsection{Synchronous Endpoint}
