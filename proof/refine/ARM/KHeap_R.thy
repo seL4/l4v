@@ -2539,7 +2539,7 @@ crunch pde_mappings'[wp]: doMachineOp "valid_pde_mappings'"
 
 
 lemmas bit_simps' = pteBits_def asidHighBits_def asid_low_bits_def
-                    asid_high_bits_def scheduleContextBits_def
+                    asid_high_bits_def minSchedContextBits_def
                     replySizeBits_def pageBits_def pdeBits_def ptBits_def pdBits_def
 
 lemma pspace_aligned_cross:
@@ -2563,7 +2563,7 @@ lemma pspace_aligned_cross:
     apply (rule is_aligned_mult_triv2, simp)
 
   \<comment>\<open>SchedContext, Reply\<close>
-     apply ((clarsimp simp: scheduleContextBits_def min_sched_context_bits_def replySizeBits_def
+     apply ((clarsimp simp: minSchedContextBits_def min_sched_context_bits_def replySizeBits_def
                      elim!: is_aligned_weaken)+)[2]
   \<comment>\<open>PageTable\<close>
    apply (clarsimp simp: archObjSize_def pteBits_def)
@@ -2610,7 +2610,7 @@ lemma obj_relation_cuts_range_limit:
      apply (clarsimp simp: cte_map_def[simplified word_shift_by_n])
      apply (rule_tac x=cte_level_bits in exI)
      apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits)
-       apply (rule_tac x=scheduleContextBits in exI)
+       apply (rule_tac x=minSchedContextBits in exI)
        apply (simp add: bit_simps' min_sched_context_bits_def)
       apply (rule_tac x=replySizeBits in exI)
       apply (simp add: replySizeBits_def)

@@ -3211,7 +3211,7 @@ lemma createNewCaps_cte_wp_at2:
                                     Let_def objBits_if_dev
                          split del: if_split
                    | simp add: objBits_simps pteBits_def pdeBits_def)+
-  sorry  (* range_cover mismatch; should not be scheduleContextBits *)
+  sorry  (* range_cover mismatch; should not be minSchedContextBits *)
 
 lemma createObjects_orig_obj_at':
   "\<lbrace>\<lambda>s. n \<noteq> 0

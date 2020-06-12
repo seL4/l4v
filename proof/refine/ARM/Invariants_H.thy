@@ -412,7 +412,7 @@ primrec capBits :: "capability \<Rightarrow> nat" where
 
 lemmas objBits_defs =
   tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def replySizeBits_def
-  scheduleContextBits_def
+  minSchedContextBits_def
 
 definition capAligned :: "capability \<Rightarrow> bool" where
   "capAligned c \<equiv> is_aligned (capUntypedPtr c) (capBits c) \<and> capBits c < word_bits"
@@ -3310,7 +3310,7 @@ lemma objBitsT_simps:
   "objBitsT NotificationT = ntfnSizeBits"
   "objBitsT CTET = cteSizeBits"
   "objBitsT TCBT = tcbBlockSizeBits"
-  "objBitsT SchedContextT = scheduleContextBits"
+  "objBitsT SchedContextT = minSchedContextBits"
   "objBitsT ReplyT = replySizeBits"
   "objBitsT UserDataT = pageBits"
   "objBitsT UserDataDeviceT = pageBits"
