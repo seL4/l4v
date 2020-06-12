@@ -211,7 +211,6 @@ next
     done
 qed simp_all
 
-
 lemmas ccorres_lift_rhs_no_guard = ccorres_lift_rhs_call [where P = "\<lambda>_ _. True", simplified]
 lemmas ccorres_lift_rhss = ccorres_lift_rhs_no_guard ccorres_lift_rhs_call
 
@@ -222,7 +221,7 @@ lemma ccorres_lift_rhs_Basic_stateful:
   assumes cc: "\<And>v. ccorres_underlying rf_sr \<Gamma> r xf arrel axf G (G' v) hs a (d' v)"
   and  xfxfu: "\<And>v s. xf' (xfu' (\<lambda>_. v) s) = v"
   and   ceqv: "\<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' d (d' rv')"
-  and     gg: "\<And>x f s. globals (xfu' f s) = globals s"
+  and     gg: "\<And>f s. globals (xfu' f s) = globals s"
   shows   "ccorres_underlying rf_sr \<Gamma> r xf arrel axf G {s. xfu' (\<lambda>_. g s) s \<in> G' (g s)}  hs a (Basic (\<lambda>s. xfu' (\<lambda>_. g s) s) ;; d)"
   (is "ccorres_underlying rf_sr \<Gamma> r xf arrel axf G ?G' hs a (?c ;; d)")
 proof (subst return_bind [where x = "()" and f = "\<lambda>_. a", symmetric],
@@ -577,10 +576,8 @@ end
 lemmas ccorres_boilerplace_simp_dels =
   Collect_const \<comment> \<open>Avoid getting an implication due to if_split.  Should probably just remove if_split\<close>
 
-lemma ccorres_introduce_UNIV_Int_when_needed:
-  "ccorres_underlying sr Gamm r xf ar axf P (UNIV \<inter> {x. Q x}) hs a c
-     \<Longrightarrow> ccorres_underlying sr Gamm r xf ar axf P {x. Q x} hs a c"
-  by simp
+lemmas ccorres_introduce_UNIV_Int_when_needed
+  = ccorres_add_UNIV_Int[where G'="{x. Q x}" for Q]
 
 lemma Normal_Abrupt_resultE [consumes 2, case_names normal abrupt]:
   assumes ex: "\<Gamma> \<turnstile> \<langle>c, s\<rangle> \<Rightarrow> t"
@@ -590,17 +587,11 @@ lemma Normal_Abrupt_resultE [consumes 2, case_names normal abrupt]:
   shows   R
   using ex t
   apply -
-  apply (erule disjE)
-   apply simp
+  apply (erule disjE; simp)
    apply (erule Normal_resultE)
-   apply (rule r1)
-    apply simp
-   apply simp
-  apply simp
+   apply (rule r1; simp)
   apply (erule Abrupt_resultE)
-   apply (rule r1)
-    apply simp
-   apply simp
+   apply (rule r1; simp)
   apply (rule r2)
    apply simp
   apply simp
@@ -638,7 +629,7 @@ lemma Basic_ceqv:
 lemma Seq_ceqv:
   assumes ra: "\<And>t'. ceqv \<Gamma> xf v t t' a a'"
   and     rb: "\<And>t. ceqv \<Gamma> xf v t t' b b'"
-  and     xp: "xpres xf v \<Gamma> a" (* Check that a does preserve xf first *)
+  and     xp: "xpres_strong \<Gamma> xf v a True pres_abr abnormal" (* Check that a does preserve xf first *)
   shows   "ceqv \<Gamma> xf v t t' (a ;; b) (a' ;; b')"
   using xp
   apply -
@@ -652,7 +643,7 @@ lemma Seq_ceqv:
       apply (erule ceqvD1)
        prefer 2
        apply (rule assms)
-      apply (rule xpresD [where xf = xf], assumption+)
+      apply (erule (2) xpres_execs[OF _ TrueI])
      apply (fastforce dest: Abrupt_end Fault_end Stuck_end)+
   (* clag *)
    apply (erule exec_Normal_elim_cases)
@@ -663,7 +654,7 @@ lemma Seq_ceqv:
       apply (erule ceqvD2)
        prefer 2
        apply (rule assms)
-      apply (rule xpresD [where xf = xf], assumption+)
+      apply (rule xpres_execs[OF _ TrueI], assumption)
       apply (erule (1) ceqvD2 [OF _ _ ra])
      apply (fastforce dest: Abrupt_end Fault_end Stuck_end)+
      done
@@ -684,21 +675,20 @@ lemma Seq_weak_ceqv: (* A weaker form where xpres doesn't hold for a *)
    done
 
 lemma xpres_ceqv:
-  assumes xp: "xpres xf v \<Gamma> a"
+  assumes xp: "xpres_strong \<Gamma> xf v a pres_norm pres_abr abnormal"
   and    ceq: "\<And>t t'. ceqv \<Gamma> xf v t t' a a'"
-  shows  "xpres xf v \<Gamma> a'"
-  apply (rule xpresI)
-  apply (drule (1) ceqvD2 [OF _ _ ceq])
-  apply (erule (2) xpres_exec0 [OF xp])
-  done
+  shows  "xpres_strong \<Gamma> xf v a' pres_norm pres_abr False"
+  apply (rule xpres_strongI)
+  apply (drule (1) ceqvD2[OF _ _ ceq], erule (2) xpres_execs[OF xp])+
+  by auto
 
 lemma While_ceqv_na0:
   assumes ra: "\<And>t t'. ceqv \<Gamma> xf v t t' a a'"
-  and     xp: "xpres xf v \<Gamma> a"
+  and     xp: "xpres_strong \<Gamma> xf v a True pabr abnormal"
   and     ex: "\<Gamma>\<turnstile> \<langle>d,s\<rangle> \<Rightarrow> t'"
   and    beq0: "\<And>t. xf t = v \<longrightarrow> (t \<in> b) = (t \<in> b')"
   and     d: "d = While b a"
-  and     s: "s \<in> Normal ` {s. xf s = v} \<union> Abrupt ` {s. xf s = v}"
+  and     s: "s \<in> Normal ` {s. xf s = v} \<union> Abrupt ` {s. pabr \<longrightarrow> xf s = v}"
   and     d': "d' = While b' a'"
   and     t: "\<not> isFault t'" "t' \<noteq> Stuck"
   shows   "\<Gamma>\<turnstile> \<langle>d',s\<rangle> \<Rightarrow> t'"
@@ -718,7 +708,6 @@ proof (induct)
 
     show ae: "\<Gamma>\<turnstile> \<langle>a',Normal s'\<rangle> \<Rightarrow> t" using WhileTrue ceqvD1[OF _ _ ra]
       by auto
-
     show "\<Gamma>\<turnstile> \<langle>While b' a',t\<rangle> \<Rightarrow> u"
     proof (subst d' [symmetric], rule WhileTrue.hyps(5))
       obtain z where "u = Normal z \<or> u = Abrupt z"
@@ -727,8 +716,8 @@ proof (induct)
         using WhileTrue.prems WhileTrue.hyps(2) WhileTrue.hyps(4)
         by (auto elim: Normal_resultE Abrupt_resultE)
 
-      thus "t \<in> Normal ` {s. xf s = v} \<union> Abrupt ` {s. xf s = v}" using xp ae xfs
-        by (auto dest: xpres_exec0)
+      thus "t \<in> Normal ` {s. xf s = v} \<union> Abrupt ` {s. pabr \<longrightarrow> xf s = v}" using xp ae xfs
+        by (auto dest: xpres_execs)
     qed fact+
   qed
   thus ?case using WhileTrue.prems by simp
@@ -749,7 +738,7 @@ lemmas While_ceqv_na = While_ceqv_na0 [OF _ _ _ _ refl _ refl]
 
 lemma While_ceqv_fs0:
   assumes ra: "\<And>t t'. ceqv \<Gamma> xf v t t' a a'"
-  and     xp: "xpres xf v \<Gamma> a"
+  and     xp: "xpres_strong \<Gamma> xf v a True pabr abnormal"
   and     ex: "\<Gamma>\<turnstile> \<langle>d,x\<rangle> \<Rightarrow> t'"
   and     d: "d = While b a"
   and     d': "d' = While b' a'"
@@ -785,11 +774,8 @@ proof (induct)
       have "\<Gamma>\<turnstile> \<langle>d',t\<rangle> \<Rightarrow> u"
       proof (rule WhileTrue.hyps(5))
         show "isFault u \<or> u = Stuck" using uv by simp
-        have "xf z = v" using xfs ae
-          apply -
-          apply (erule xpresD [OF _ xp])
-          apply (simp add: tv)
-          done
+        have "xf z = v" using ae unfolding tv
+          by (rule xpres_exec_Normal[OF xp TrueI _ xfs])
 
         thus "t \<in> Normal ` {s. xf s = v}" by (simp add: tv)
       qed fact+
@@ -806,11 +792,8 @@ proof (induct)
       have "\<Gamma>\<turnstile> \<langle>d',t\<rangle> \<Rightarrow> u"
       proof (rule WhileTrue.hyps(5))
         show "isFault u \<or> u = Stuck" using uv by simp
-        have "xf z = v" using xfs ae
-          apply -
-          apply (erule xpresD [OF _ xp])
-          apply (simp add: tv)
-          done
+        have "xf z = v" using ae unfolding tv
+          by (rule xpres_exec_Normal[OF xp TrueI _ xfs])
 
         thus "t \<in> Normal ` {s. xf s = v}" by (simp add: tv)
       qed fact+
@@ -827,7 +810,7 @@ lemmas While_ceqv_fs = While_ceqv_fs0 [OF _ _ _ refl refl]
 lemma While_ceqv:
   assumes beq: "\<And>t. xf t = v \<longrightarrow> (t \<in> b) = (t \<in> b')"
   and      ra: "\<And>t t'. ceqv \<Gamma> xf v t t' a a'"
-  and      xp: "xpres xf v \<Gamma> a"   (* So we fail as early as possible *)
+  and      xp: "xpres_strong \<Gamma> xf v a True pabr abnormal"   (* So we fail as early as possible *)
   shows   "ceqv \<Gamma> xf v t t' (While b a) (While b' a')" (* b is a set, doesn't rewrite nicely *)
   using xp
   apply -
@@ -935,7 +918,7 @@ lemmas Skip_ceqv = ceqv_refl [where c = Skip]
 lemma Catch_ceqv:
   assumes ca: "\<And>t t'. ceqv \<Gamma> xf v t t' a a'"
   and     cb: "\<And>t t'. ceqv \<Gamma> xf v t t' b b'"
-  and     xp: "xpres xf v \<Gamma> a"
+  and     xp: "xpres_strong \<Gamma> xf v a pnorm True abnormal"
   shows   "ceqv \<Gamma> xf v t t' (Catch a b) (Catch a' b')"
   apply (rule ceqvI)
   apply rule
@@ -943,22 +926,37 @@ lemma Catch_ceqv:
     apply (drule (1) ceqvD1 [OF _ _ ca])
     apply (rule exec.CatchMatch, assumption)
     apply (erule ceqvD1 [OF _ _ cb])
-    apply (erule (1) xpres_abruptD [OF _ xpres_ceqv [OF xp ca]])
+    apply (erule (1) xpres_exec_Abrupt[OF xpres_ceqv[OF xp ca] TrueI])
    apply (rule exec.CatchMiss)
     apply (erule (1) ceqvD1 [OF _ _ ca])
    apply assumption
-  (* clag *)
    apply (erule exec_Normal_elim_cases)
     apply (drule (1) ceqvD2 [OF _ _ ca])
     apply (rule exec.CatchMatch, assumption)
     apply (erule ceqvD2 [OF _ _ cb])
-   apply (erule xpres_abruptD [where xf = xf])
-   apply (rule xp)
-   apply assumption
+   apply (rule xpres_exec_Abrupt[OF xpres_ceqv[OF xp ca] TrueI, rotated], assumption)
+   apply (erule (1) ceqvD1 [OF _ _ ca])
    apply (rule exec.CatchMiss)
     apply (erule (1) ceqvD2 [OF _ _ ca])
    apply assumption
    done
+
+lemma Catch_ceqv_weak_imp:
+  assumes "\<And>s t. ceqv \<Gamma> xf v s t c c'"
+  assumes "xf s = v"
+  assumes "\<Gamma> \<turnstile> \<langle>Catch c d, Normal s\<rangle> \<Rightarrow> t"
+  shows "\<Gamma> \<turnstile> \<langle>Catch c' d, Normal s\<rangle> \<Rightarrow> t"
+  using assms
+  apply (clarsimp simp: ceqv_def)
+  apply (erule exec_Normal_elim_cases; simp; erule (1) exec.intros)
+  done
+
+lemma Catch_ceqv_weak:
+  assumes c: "\<And>s t. ceqv \<Gamma> xf v s t c c'"
+  notes s = ceqv_sym[OF c]
+  notes cs = c s
+  shows "ceqv \<Gamma> xf v t t' (Catch c d) (Catch c' d)"
+  by (intro ceqvI iffI; erule (1) cs[THEN Catch_ceqv_weak_imp])+
 
 lemma Cond_ceqv:
   assumes be: "\<And>t. xf t = v \<longrightarrow> (t \<in> x) = (t \<in> x')"
@@ -1106,15 +1104,42 @@ lemmas ceqv_rules = ceqv_refl [where xf' = xfdc] \<comment> \<open>Any ceqv with
   ceqv_refl [where c = catchbrk_C]
 
 definition
-  ceqv_xpres :: "('p \<rightharpoonup> ('s, 'p, 'x) com) \<Rightarrow> ('s \<Rightarrow> 'a) \<Rightarrow> 'a
-                    \<Rightarrow> bool \<Rightarrow> ('s, 'p, 'x) com \<Rightarrow> bool \<Rightarrow> ('s, 'p, 'x) com \<Rightarrow> bool"
+  ceqv_xpres :: "(('s,'p,'f) body) \<Rightarrow> ('s \<Rightarrow> 'v) \<Rightarrow> 'v \<Rightarrow> bool \<Rightarrow> ('s,'p,'f) com
+                 \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> ('s,'p,'f) com \<Rightarrow> bool"
 where
- "ceqv_xpres \<Gamma> xf v pres c pres' c'
-    \<equiv> \<forall>s s' s''. (pres \<longrightarrow> xf s = v)
-        \<longrightarrow> (\<Gamma> \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> s' = \<Gamma> \<turnstile> \<langle>c', Normal s\<rangle> \<Rightarrow> s')
-         \<and> (\<Gamma> \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> s' \<and> (s' = Normal s'' \<or> s' = Abrupt s'') \<and> pres'
-                 \<longrightarrow> xf s'' = v)
-         \<and> (\<not> pres \<longrightarrow> \<not> pres' \<and> c = c')"
+  "ceqv_xpres \<Gamma> xf v pres_cont c pres_norm pres_abr abnormal c'
+   \<equiv> (\<not> pres_cont \<longrightarrow> (pres_norm \<longleftrightarrow> abnormal) \<and> \<not> pres_abr \<and> c' = c)
+     \<and> (\<forall>s t. ceqv \<Gamma> xf v s t c c')
+     \<and> xpres_strong \<Gamma> xf v c pres_norm pres_abr abnormal"
+
+lemmas ceqv_xpres_defs = ceqv_xpres_def ceqv_def xpres_strong_def
+
+lemma ceqv_xpresI:
+  assumes "\<And>s t. ceqv \<Gamma> xf v s t c c'"
+  assumes "xpres_strong \<Gamma> xf v c pres_norm pres_abr abnormal"
+  shows "ceqv_xpres \<Gamma> xf v True c pres_norm pres_abr abnormal c'"
+  using assms by (simp add: ceqv_xpres_def)
+
+lemma ceqv_xpres_ceqvD:
+  assumes "ceqv_xpres \<Gamma> xf v True c pres_norm pres_abr abnormal c'"
+  shows "ceqv \<Gamma> xf v s t c c'"
+  using assms by (simp add: ceqv_xpres_def)
+
+lemma ceqv_xpres_xpresD:
+  assumes "ceqv_xpres \<Gamma> xf v True c pres_norm pres_abr abnormal c'"
+  shows "xpres_strong \<Gamma> xf v c pres_norm pres_abr abnormal"
+  using assms by (simp add: ceqv_xpres_def)
+
+lemma ceqv_xpres_abnormalD:
+  assumes "ceqv_xpres \<Gamma> xf v pres_cont c pres_norm pres_abr abnormal c'"
+  shows "xpres_abnormal \<Gamma> c abnormal"
+  using assms by (auto simp: ceqv_xpres_def xpres_strong_def xpres_abnormal_def)
+
+lemma ceqv_xpres_abnormal_iff:
+  "ceqv_xpres \<Gamma> xf v False c abnormal False abnormal c \<longleftrightarrow> xpres_abnormal \<Gamma> c abnormal"
+  by (auto simp: ceqv_xpres_def xpres_strong_def xpres_abnormal_def ceqv_refl)
+
+lemmas ceqv_xpres_abnormalI = ceqv_xpres_abnormal_iff[THEN iffD2]
 
 definition
   ceqv_xpres_rewrite_set :: "('s \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 's set \<Rightarrow> 's set \<Rightarrow> bool" where
@@ -1126,189 +1151,226 @@ definition
  "ceqv_xpres_rewrite_basic xf v f f'
     \<equiv> \<forall>s. xf s = v \<longrightarrow> f s = f' s"
 
+(* The trace argument can be any term. It will be included in a message emitted by the tactic
+   which solves ceqv_xpres_basic_preserves subgoals, in cases where the tactic fails to prove
+   that xf was preserved by the Basic block. *)
 definition ceqv_xpres_basic_preserves ::
-  "('s \<Rightarrow> 'v) \<Rightarrow> 'v \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> bool \<Rightarrow> bool"
+  "'trace \<Rightarrow> ('s \<Rightarrow> 'v) \<Rightarrow> 'v \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> bool \<Rightarrow> bool"
   where
-  "ceqv_xpres_basic_preserves xf v P f b \<equiv> b \<longrightarrow> (\<forall>s. xf s = v \<longrightarrow> P s \<longrightarrow> xf (f s) = v)"
-
-definition
-  ceqv_xpres_eq_If :: "bool \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
- "ceqv_xpres_eq_If b x y z \<equiv> z = (if b then x else y)"
+  "ceqv_xpres_basic_preserves trace xf v P f b \<equiv> b \<longrightarrow> (\<forall>s. xf s = v \<longrightarrow> P s \<longrightarrow> xf (f s) = v)"
 
 definition
   ceqv_xpres_call_restore_args :: "'a \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> bool"
 where
  "ceqv_xpres_call_restore_args x f g = (f = g)"
 
-lemma ceqv_xpres_eq_both:
-  "ceqv_xpres \<Gamma> xf v True c True c'
-       = ((\<forall>t t'. ceqv \<Gamma> xf v t t' c c') \<and> xpres xf v \<Gamma> c')"
-  apply (simp add: ceqv_xpres_def ceqv_def xpres_def)
-  apply blast
-  done
-
-lemma ceqv_xpres_eq_ceqv:
-  "ceqv_xpres \<Gamma> xf v True c False c'
-      = (\<forall> t t'. ceqv \<Gamma> xf v t t' c c')"
-  by (simp add: ceqv_xpres_def ceqv_def)
-
-lemma ceqv_xpres_eq_imp:
-  "ceqv_xpres \<Gamma> xf v True c pres c'
-      = ((\<forall>t t'. ceqv \<Gamma> xf v t t' c c') \<and> (pres \<longrightarrow> xpres xf v \<Gamma> c'))"
-  by (cases pres, simp_all add: ceqv_xpres_eq_ceqv ceqv_xpres_eq_both)
-
-lemma ceqv_xpres_False:
-  "ceqv_xpres \<Gamma> xf v False c pres c' = (\<not> pres \<and> c = c')"
-  by (auto simp add: ceqv_xpres_def)
-
-lemma ceqv_xpres_eq_If_False:
-  "ceqv_xpres_eq_If P Q False R = (R = (P \<and> Q))"
-  by (simp add: ceqv_xpres_eq_If_def)
-
-lemma ceqv_xpres_False_pres:
-  "ceqv_xpres \<Gamma> xf v False c False c"
-  by (simp add: ceqv_xpres_def)
-
 lemma ceqv_xpres_xfdc:
-  "ceqv_xpres \<Gamma> xfdc v pres c pres c"
-  by (simp add: ceqv_xpres_def xfdc_def)
+  "ceqv_xpres \<Gamma> xfdc v pres c pres pres False c"
+  by (auto simp: ceqv_xpres_defs)
 
 lemma ceqv_xpres_call_restore_argsI:
   "\<forall> s. f s = g s \<Longrightarrow> ceqv_xpres_call_restore_args i f g"
   by (simp add: ceqv_xpres_call_restore_args_def fun_eq_iff)
 
 lemma ceqv_xpres_whileAnno:
-  "\<lbrakk> ceqv_xpres \<Gamma> xf v True c pres c'; ceqv_xpres_rewrite_set xf v S S';
-        ceqv_xpres_eq_If pres c' c c''; ceqv_xpres_eq_If pres S' S S'' \<rbrakk>
-     \<Longrightarrow> ceqv_xpres \<Gamma> xf v True (whileAnno S I V c) pres (whileAnno S'' I V c'')"
-  apply (cases pres)
-   apply (clarsimp simp add: ceqv_xpres_eq_both ceqv_xpres_eq_If_def
-                             whileAnno_def)
+  "\<lbrakk> ceqv_xpres \<Gamma> xf v True c pres_norm pres_abr abnormal c'; ceqv_xpres_rewrite_set xf v S S';
+         xpres_eq_If pres_norm c' c c''; xpres_eq_If pres_norm S' S S'';
+         xpres_eq_If pres_norm pres_abr False pres_abr' \<rbrakk>
+     \<Longrightarrow> ceqv_xpres \<Gamma> xf v True (whileAnno S I V c) pres_norm pres_abr' False (whileAnno S'' I V c'')"
+  unfolding whileAnno_def
+  apply (cases pres_norm)
+   apply (clarsimp simp add: ceqv_xpres_def xpres_eq_If_def)
    apply (intro conjI allI)
     apply (rule While_ceqv)
       apply (simp add: ceqv_xpres_rewrite_set_def)
      apply simp
     apply (erule xpres_ceqv)
-    apply (rule ceqv_sym, simp)
-   apply (erule xpres_while)
-  apply (simp add: ceqv_xpres_def ceqv_xpres_eq_If_def)
+    apply (rule ceqv_refl)
+   apply (erule xpres_strong_while, rule xpres_eq_If_rules)
+  apply (clarsimp simp: ceqv_xpres_def ceqv_def xpres_strong_def xpres_eq_If_def)
   done
 
 lemmas ceqv_xpres_While = ceqv_xpres_whileAnno[unfolded whileAnno_def]
 
 lemma ceqv_xpres_Cond:
-  "\<lbrakk> ceqv_xpres_rewrite_set xf v S S'; ceqv_xpres \<Gamma> xf v True c cpres c';
-     ceqv_xpres \<Gamma> xf v True d dpres d'; ceqv_xpres_eq_If dpres cpres False pres \<rbrakk>
-    \<Longrightarrow> ceqv_xpres \<Gamma> xf v True (Cond S c d) pres (Cond S' c' d')"
-  apply (clarsimp simp add: ceqv_xpres_eq_imp ceqv_xpres_eq_If_False)
-  apply (intro allI conjI impI)
-   apply (rule Cond_ceqv)
-     apply (simp add: ceqv_xpres_rewrite_set_def)
-    apply simp
-   apply simp
-  apply simp
-  apply (erule(1) xpres_cond)
-  done
+  assumes rws: "ceqv_xpres_rewrite_set xf v S S'"
+  assumes cxs: "ceqv_xpres \<Gamma> xf v True c c_pres_norm c_pres_abr c_abnormal c'"
+               "ceqv_xpres \<Gamma> xf v True d d_pres_norm d_pres_abr d_abnormal d'"
+  \<comment> \<open>pres_norm \<longleftrightarrow> abnormal \<or> c_pres_norm \<and> d_pres_norm \<or> c_abnormal \<and> d_pres_norm \<or> c_pres_norm \<and> d_abnormal\<close>
+  \<comment> \<open>pres_abr \<longleftrightarrow> c_pres_abr \<and> d_pres_abr\<close>
+  \<comment> \<open>abnormal \<longleftrightarrow> c_abnormal \<and> d_abnormal\<close>
+  assumes ifs: "xpres_eq_If c_abnormal d_abnormal False abnormal"
+               "xpres_eq_If c_pres_norm d_pres_norm False cd_pres_norm"
+               "xpres_eq_If c_abnormal d_pres_norm False ca_pres_norm"
+               "xpres_eq_If c_pres_norm d_abnormal False da_pres_norm"
+               "xpres_eq_If ca_pres_norm True da_pres_norm cda_pres_norm"
+               "xpres_eq_If cd_pres_norm True cda_pres_norm pres_norm'"
+               "xpres_eq_If abnormal True pres_norm' pres_norm"
+               "xpres_eq_If c_pres_abr d_pres_abr False pres_abr"
+  shows "ceqv_xpres \<Gamma> xf v True (Cond S c d) pres_norm pres_abr abnormal (Cond S' c' d')"
+  apply (rule ceqv_xpresI[OF Cond_ceqv[OF _ cxs[THEN ceqv_xpres_ceqvD]]
+                                  xpres_strong_cond[OF cxs[THEN ceqv_xpres_xpresD] ifs]])
+  using rws by (simp add: ceqv_xpres_rewrite_set_def)
 
 lemma ceqv_xpres_Guard:
-  "\<lbrakk> ceqv_xpres_rewrite_set xf v S S'; ceqv_xpres \<Gamma> xf v True c pres c' \<rbrakk>
-     \<Longrightarrow> ceqv_xpres \<Gamma> xf v True (Guard g S c) pres (Guard g S' c')"
-  apply (clarsimp simp: ceqv_xpres_eq_imp xpres_guard)
+  assumes "ceqv_xpres_rewrite_set xf v S S'"
+  assumes "ceqv_xpres \<Gamma> xf v True c pres_norm pres_abr abnormal c'"
+  shows "ceqv_xpres \<Gamma> xf v True (Guard g S c) pres_norm pres_abr abnormal (Guard g S' c')"
+  using assms
+  apply (clarsimp simp: ceqv_xpres_def xpres_strong_guard)
   apply (rule Guard_ceqv)
    apply (simp add: ceqv_xpres_rewrite_set_def)
   apply simp
   done
 
 lemma ceqv_xpres_Seq:
-  "\<lbrakk> ceqv_xpres \<Gamma> xf v True c cpres c'; ceqv_xpres \<Gamma> xf v cpres d pres d' \<rbrakk>
-     \<Longrightarrow> ceqv_xpres \<Gamma> xf v True (c ;; d) pres (c' ;; d')"
-  apply (cases cpres)
-   apply (clarsimp simp add: ceqv_xpres_eq_imp xpres_seq)
-   apply (rule Seq_ceqv, simp+)
-   apply (erule xpres_ceqv)
-   apply (rule ceqv_sym, simp)
-  apply (clarsimp simp add: ceqv_xpres_eq_imp ceqv_xpres_False)
-  apply (rule Seq_weak_ceqv, simp)
+  assumes cxc: "ceqv_xpres \<Gamma> xf v True c c_pres_norm c_pres_abr c_abnormal c'"
+  assumes cxd: "ceqv_xpres \<Gamma> xf v c_pres_norm d d_pres_norm d_pres_abr d_abnormal d'"
+  notes cxs = cxc cxd
+  \<comment> \<open>abnormal \<longleftrightarrow> c_abnormal \<or> d_abnormal\<close>
+  \<comment> \<open>pres_norm \<longleftrightarrow> c_pres_norm \<and> d_pres_norm \<or> abnormal\<close>
+  \<comment> \<open>pres_abr \<longleftrightarrow> c_pres_abr \<and> c_pres_norm \<and> d_pres_abr \<or> c_abnormal \<and> c_pres_abr\<close>
+  assumes ifs: "xpres_eq_If c_abnormal True d_abnormal abnormal"
+               "xpres_eq_If c_pres_norm d_pres_norm False cd_pres_norm"
+               "xpres_eq_If cd_pres_norm True abnormal pres_norm"
+               "xpres_eq_If c_pres_norm d_pres_abr False c_norm_d_pres_abr"
+               "xpres_eq_If c_pres_abr c_norm_d_pres_abr False cd_pres_abr"
+               "xpres_eq_If c_abnormal c_pres_abr False c_abnormal_pres_abr"
+               "xpres_eq_If cd_pres_abr True c_abnormal_pres_abr pres_abr"
+  shows "ceqv_xpres \<Gamma> xf v True (c ;; d) pres_norm pres_abr abnormal (c' ;; d')"
+proof (cases c_pres_norm)
+  case True
+  note cxs' = cxs[simplified True]
+  note ceqvs = cxs'[THEN ceqv_xpres_ceqvD]
+  note xpres = cxs'[THEN ceqv_xpres_xpresD]
+  note ifs' = ifs[simplified True]
+  show ?thesis
+  apply (rule ceqv_xpresI[OF Seq_ceqv[OF ceqvs xpres(1)]])
+  apply (rule xpres_strong_seq[OF xpres ifs'])
   done
+next
+  case False
+  have 1: "d_pres_norm = d_abnormal \<and> \<not> d_pres_abr \<and> d' = d"
+    using cxd by (simp add: False ceqv_xpres_def)
+  have 2: "\<not> c_abnormal"
+    using cxc by (simp add: False ceqv_xpres_def xpres_strong_def)
+  have 3: "abnormal = d_abnormal \<and> pres_norm = d_abnormal \<and> \<not> pres_abr"
+    using 1 2 ifs by (auto simp add: xpres_eq_If_def if_bool_simps)
+  show ?thesis
+  apply (simp add: 1 3)
+  apply (rule ceqv_xpresI[OF Seq_weak_ceqv[OF ceqv_xpres_ceqvD, OF cxc]])
+  apply (clarsimp simp: xpres_strong_def cong: conj_cong elim!: exec_Normal_elim_cases)
+  apply (erule Normal_resultE, erule (1) xpres_abnormalD[OF cxd[THEN ceqv_xpres_abnormalD]])
+  done
+qed
 
 lemma ceqv_xpres_Basic:
-  "\<lbrakk> ceqv_xpres_rewrite_basic xf v f f';
-          ceqv_xpres_basic_preserves xf v \<top> f' pres \<rbrakk>
-    \<Longrightarrow> ceqv_xpres \<Gamma> xf v True (Basic f) pres (Basic f')"
-  apply (simp add: ceqv_xpres_eq_imp)
+  assumes "ceqv_xpres_rewrite_basic xf v f f'"
+  assumes "ceqv_xpres_basic_preserves (Basic f) xf v \<top> f' pres"
+  shows "ceqv_xpres \<Gamma> xf v True (Basic f) pres pres_abr False (Basic f')"
+  using assms
+  apply (simp add: ceqv_xpres_def ceqv_xpres_rewrite_basic_def ceqv_xpres_basic_preserves_def)
   apply (intro allI impI conjI)
    apply (rule Basic_ceqv)
-   apply (simp add: rewrite_xf_def ceqv_xpres_rewrite_basic_def)
-  apply (rule xpres_basic)
-  apply (simp add: ceqv_xpres_basic_preserves_def)
+   apply (simp add: rewrite_xf_def)
+  apply (rule xpres_strong_basic', simp)
   done
 
+(* `call` needs special handling for `ceqv_xpres`, so it has its own predicate.
+   If `xf` is a global variable, then the tactic needs to find the `modifies` lemma
+   for the function `f`. Although the Simpl framework allows the fourth parameter
+   of a `call` node to be an arbitrary command, the C parser only produces `call`
+   nodes in which the fourth parameter is a `Basic` node. We only support that form. *)
 definition ceqv_xpres_call where
-  "ceqv_xpres_call \<Gamma> xf v f r i c pres i' c'
-   \<equiv> ceqv_xpres \<Gamma> xf v True (call i f r c) pres (call i' f r c')"
+  "ceqv_xpres_call \<Gamma> xf v f glob i ret pres_norm pres_abr abnormal i' ret'
+   \<equiv> ceqv_xpres \<Gamma> xf v True (call i f glob ret) pres_norm pres_abr abnormal (call i' f glob ret')"
 
 lemma ceqv_xpres_call_ceqv_xpres:
-  assumes "ceqv_xpres_call \<Gamma> xf v f r i c pres i' c'"
-  shows "ceqv_xpres \<Gamma> xf v True (call i f r c) pres (call i' f r c')"
+  assumes "ceqv_xpres_call \<Gamma> xf v f glob i ret pres_norm pres_abr abnormal i' ret'"
+  shows "ceqv_xpres \<Gamma> xf v True (call i f glob ret) pres_norm pres_abr abnormal (call i' f glob ret')"
   using assms by (simp add: ceqv_xpres_call_def)
 
 lemma ceqv_xpres_call_hoarep_gen:
   assumes mod: "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/F s\<^esub> (P s) Call f (Q s),(A s)"
   assumes args: "ceqv_xpres_call_restore_args f i i''"
   assumes init: "ceqv_xpres_rewrite_basic xf v i'' i'"
-  assumes glob: "\<And>t. ceqv_xpres_basic_preserves xf v
-                       (\<lambda>s. i' s \<in> P (x s) \<longrightarrow> t \<in> Q (x s) \<or> t \<in> A (x s))
-                       (\<lambda>s. r s t) pres'"
-  assumes ret: "\<And>s t. ceqv_xpres \<Gamma> xf v pres' (c s t) pres (c' s t)"
-  shows "ceqv_xpres_call \<Gamma> xf v f r i c pres i' c'"
-  using init glob ret
-  apply (simp add: ceqv_xpres_call_def ceqv_xpres_eq_imp
-                   args[unfolded ceqv_xpres_call_restore_args_def, symmetric])
-  apply (intro allI conjI impI)
-   defer
-   apply (cases pres')
-    apply (rule xpres_call_hoarep_gen[OF mod])
-     apply (fastforce simp: ceqv_xpres_basic_preserves_def)
-    apply (simp add: ceqv_xpres_eq_imp)
-   apply (simp add: ceqv_xpres_False)
-  apply (cases pres')
-   apply (clarsimp simp: ceqv_xpres_eq_imp)
-   apply (rule call_ceqv_hoarep_gen[OF mod])
-     apply (simp add: rewrite_xf_def ceqv_xpres_rewrite_basic_def)
-    apply simp
-   apply (fastforce simp: ceqv_xpres_rewrite_basic_def ceqv_xpres_basic_preserves_def)
-  apply (simp add: ceqv_xpres_False)
-  apply (clarsimp simp: ceqv_def ceqv_xpres_rewrite_basic_def)
+  assumes reset: "\<And>t. ceqv_xpres_basic_preserves (call i f reset ret) xf v
+                        (\<lambda>s. i' s \<in> P (x s) \<longrightarrow> t \<in> Q (x s) \<or> t \<in> A (x s))
+                        (\<lambda>s. reset s t) pres_reset"
+  assumes xpr: "\<And>s t. ceqv_xpres \<Gamma> xf v pres_reset (ret s t) pres_norm pres_abr abnormal (ret' s t)"
+  shows "ceqv_xpres_call \<Gamma> xf v f reset i ret pres_norm pres_abr abnormal i' ret'"
+proof (cases pres_reset)
+  case True
+  note xpr' = xpr[simplified True]
+  show ?thesis
+  unfolding ceqv_xpres_call_def args[unfolded ceqv_xpres_call_restore_args_def]
+  apply (rule ceqv_xpresI)
+   apply (rule call_ceqv_hoarep_gen[OF mod _ xpr'[THEN ceqv_xpres_ceqvD]])
+    apply (simp add: rewrite_xf_def init[unfolded ceqv_xpres_rewrite_basic_def])
+   using reset apply (fastforce simp: True ceqv_xpres_basic_preserves_def)
+  apply (rule xpres_strong_call_hoarep_gen[OF mod _ ceqv_xpres_xpresD[OF xpr']])
+  using reset by (fastforce simp: True ceqv_xpres_basic_preserves_def
+                                  init[unfolded ceqv_xpres_rewrite_basic_def])
+next
+  case False
+  have 1: "pres_norm = abnormal \<and> \<not> pres_abr \<and> ret' = ret"
+    using xpr by (auto simp: False ceqv_xpres_def)
+  then show ?thesis
+  unfolding ceqv_xpres_call_def args[unfolded ceqv_xpres_call_restore_args_def]
+  using init xpr[simplified False, THEN ceqv_xpres_abnormalD]
+  apply (clarsimp simp add: 1 ceqv_xpres_def ceqv_def ceqv_xpres_rewrite_basic_def
+                            xpres_strong_abnormal_iff xpres_abnormal_call)
   by (auto elim!: exec_call_Normal_elim exec_call
                   exec_callAbrupt exec_callFault exec_callStuck exec_callUndefined)
+qed
 
-lemmas ceqv_xpres_call = ceqv_xpres_call_hoarep_gen[OF hoarep_false_pre_gen, simplified]
+lemmas ceqv_xpres_call
+  = ceqv_xpres_call_hoarep_gen[OF hoarep_false_pre_gen, simplified]
 lemmas ceq_xpres_call_hoarep
   = ceqv_xpres_call_hoarep_gen[where P="\<lambda>s. {s}" and x=i' and i'=i' for i', simplified]
 
 lemma ceqv_xpres_Skip:
-  "ceqv_xpres \<Gamma> xf v True Skip True Skip"
-  by (simp add: ceqv_xpres_eq_imp Skip_ceqv xpres_skip)
+  "ceqv_xpres \<Gamma> xf v True Skip True True False Skip"
+  by (simp add: ceqv_xpres_def Skip_ceqv xpres_skip)
 
 lemma ceqv_xpres_Catch:
-  "\<lbrakk> ceqv_xpres \<Gamma> xf v True c pres c'; ceqv_xpres \<Gamma> xf v pres h pres' h' \<rbrakk>
-        \<Longrightarrow> ceqv_xpres \<Gamma> xf v True (Catch c h) pres' (Catch c' h')"
-  apply (cases pres)
-   apply (clarsimp simp add: ceqv_xpres_eq_imp xpres_catch)
-   apply (rule Catch_ceqv)
-     apply simp
-    apply simp
-   apply (erule xpres_ceqv)
-   apply (rule ceqv_sym, simp)
-  apply (clarsimp simp add: ceqv_xpres_False ceqv_xpres_eq_imp)
-  apply (clarsimp simp: ceqv_def)
-  apply (auto elim!: exec_Normal_elim_cases
-              intro: exec.intros)
+  assumes cxc: "ceqv_xpres \<Gamma> xf v True c c_pres_norm c_pres_abr c_abnormal c'"
+  assumes cxd: "ceqv_xpres \<Gamma> xf v c_pres_abr d d_pres_norm d_pres_abr d_abnormal d'"
+  notes cxs = cxc cxd
+  \<comment> \<open>abnormal \<longleftrightarrow> c_abnormal \<and> d_abnormal\<close>
+  \<comment> \<open>pres_norm \<longleftrightarrow> abnormal \<or> c_pres_norm \<and> c_pres_abr \<and> d_pres_norm\<close>
+  \<comment> \<open>pres_abr \<longleftrightarrow> c_pres_abr \<and> c_pres_abr\<close>
+  assumes rew: "xpres_eq_If c_abnormal d_abnormal False abnormal"
+               "xpres_eq_If c_pres_norm c_pres_abr False c_pres_norm_abr"
+               "xpres_eq_If c_pres_norm_abr d_pres_norm False cd_pres_norm"
+               "xpres_eq_If abnormal True cd_pres_norm pres_norm"
+               "xpres_eq_If c_pres_abr d_pres_abr False pres_abr"
+  shows "ceqv_xpres \<Gamma> xf v True (Catch c d) pres_norm pres_abr abnormal (Catch c' d')"
+proof (cases c_pres_abr)
+  case True
+  note cxs' = cxs[simplified True]
+  note ceqvs = cxs'[THEN ceqv_xpres_ceqvD]
+  note xpres = cxs'[THEN ceqv_xpres_xpresD]
+  note rew' = rew[simplified True]
+  show ?thesis
+  apply (rule ceqv_xpresI[OF Catch_ceqv[OF ceqvs xpres(1)]])
+  apply (rule xpres_strong_catch[OF xpres rew'])
   done
-
-lemma ceqv_xpres_Throw:
-  "ceqv_xpres \<Gamma> xf v True Throw True Throw"
-  by (simp add: ceqv_xpres_eq_imp Throw_ceqv xpres_throw)
+next
+  case False
+  have 1: "d_pres_norm = d_abnormal \<and> \<not> d_pres_abr \<and> d' = d"
+    using cxd by (simp add: False ceqv_xpres_def)
+  have 3: "abnormal = (d_abnormal \<and> c_abnormal) \<and> pres_norm = abnormal \<and> \<not> pres_abr"
+    using 1 rew by (auto simp add: False xpres_eq_If_def if_bool_simps)
+  show ?thesis
+  apply (simp add: 1 3)
+  apply (rule ceqv_xpresI[OF Catch_ceqv_weak[OF cxc[THEN ceqv_xpres_ceqvD]]])
+  apply (clarsimp simp: xpres_strong_def cong: conj_cong)
+  apply (erule exec_Normal_elim_cases
+         ; erule Normal_resultE
+         ; erule (1) cxs[THEN ceqv_xpres_abnormalD, THEN xpres_abnormalD])+
+  done
+qed
 
 lemma exec_Basic_Seq:
   "\<Gamma> \<turnstile> \<langle>Basic f ;; c, Normal s\<rangle> \<Rightarrow> s'
@@ -1319,28 +1381,41 @@ lemma exec_Basic_Seq_Basic:
   "\<Gamma>\<turnstile> \<langle>Basic f;; Basic g, x\<rangle> \<Rightarrow> y = \<Gamma>\<turnstile> \<langle>Basic (g \<circ> f), x\<rangle> \<Rightarrow> y"
   by (auto simp: o_def elim: exec_elim_cases intro: exec.Basic exec.Seq)
 
-lemma ceqv_xpres_return_C:
-  "\<lbrakk> ceqv_xpres_rewrite_basic xf v qf qf';
-          \<And>f. ceqv_xpres_basic_preserves xf v \<top> (xfu f) pres';
-          \<And>f. ceqv_xpres_basic_preserves xf v \<top> (global_exn_var_'_update f) pres'';
-          ceqv_xpres_eq_If pres' pres'' False pres \<rbrakk>
-     \<Longrightarrow> ceqv_xpres \<Gamma> xf v True (return_C xfu qf) pres (return_C xfu qf')"
-  apply (simp add: ceqv_xpres_def ceqv_xpres_rewrite_basic_def
+lemma ceqv_xpres_creturn:
+  assumes "abnormal \<longrightarrow> pres_norm"
+  assumes "ceqv_xpres_rewrite_basic xf v qf qf'"
+  assumes "\<And>f. ceqv_xpres_basic_preserves (creturn exu xfu qf, 1) xf v \<top> (xfu f) pres'"
+  assumes "\<And>f. ceqv_xpres_basic_preserves (creturn exu xfu qf, 2) xf v \<top> (exu f) pres''"
+  assumes "xpres_eq_If pres' pres'' False pres"
+  shows "ceqv_xpres \<Gamma> xf v True (creturn exu xfu qf) pres_norm pres abnormal (creturn exu xfu qf')"
+  using assms
+  apply (simp add: ceqv_xpres_defs ceqv_xpres_rewrite_basic_def
                    ceqv_xpres_basic_preserves_def creturn_def
-                   ceqv_xpres_eq_If_False)
+                   xpres_eq_If_def if_bool_simps)
   apply (auto elim!: exec_elim_cases simp: exec_Basic_Seq)
   done
 
-lemma ceqv_xpres_C_bits:
-  "\<lbrakk> \<And>f. ceqv_xpres_basic_preserves xf v \<top> (global_exn_var_'_update f) pres \<rbrakk>
-     \<Longrightarrow> ceqv_xpres \<Gamma> xf v True return_void_C pres return_void_C"
-  "\<lbrakk> \<And>f. ceqv_xpres_basic_preserves xf v \<top> (global_exn_var_'_update f) pres \<rbrakk>
-     \<Longrightarrow> ceqv_xpres \<Gamma> xf v True break_C pres break_C"
-  "ceqv_xpres \<Gamma> xf v True catchbrk_C True catchbrk_C"
-  by (auto simp: ceqv_xpres_def
-                 return_void_C_def cbreak_def
-                 catchbrk_C_def
-                 ceqv_xpres_basic_preserves_def
+lemma ceqv_xpres_Throw:
+  "ceqv_xpres \<Gamma> xf v True Throw True True abnormal Throw"
+  by (simp add: ceqv_xpres_def Throw_ceqv xpres_strong_throw')
+
+lemma ceqv_xpres_creturn_void:
+  assumes "abnormal \<longrightarrow> pres_norm"
+  assumes "\<And>f. ceqv_xpres_basic_preserves (creturn_void exu) xf v \<top> (exu f) pres"
+  shows "ceqv_xpres \<Gamma> xf v True (creturn_void exu) pres_norm pres abnormal (creturn_void exu)"
+  using assms by (auto simp: ceqv_xpres_defs creturn_void_def ceqv_xpres_basic_preserves_def
+                      elim!: exec_elim_cases)
+
+lemma ceqv_xpres_cbreak:
+  assumes "abnormal \<longrightarrow> pres_norm"
+  assumes "\<And>f. ceqv_xpres_basic_preserves (cbreak exu) xf v \<top> (exu f) pres"
+  shows "ceqv_xpres \<Gamma> xf v True (cbreak exu) pres_norm pres abnormal (cbreak exu)"
+  using assms by (auto simp: ceqv_xpres_defs cbreak_def ceqv_xpres_basic_preserves_def
+                      elim!: exec_elim_cases)
+
+lemma ceqv_xpres_ccatchbrk:
+  "ceqv_xpres \<Gamma> xf v True (ccatchbrk exv) True True False (ccatchbrk exv)"
+  by (auto simp: ceqv_xpres_defs ccatchbrk_def ceqv_xpres_basic_preserves_def
           elim!: exec_elim_cases)
 
 definition
@@ -1348,26 +1423,53 @@ definition
 
 lemma ceqv_xpres_lvar_nondet_init:
   "ceqv_xpres_lvar_nondet_init xf v_upd pres \<Longrightarrow>
-   ceqv_xpres \<Gamma> xf v True (lvar_nondet_init v_acc v_upd) pres (lvar_nondet_init v_acc v_upd)"
-  apply (clarsimp simp: ceqv_xpres_def lvar_nondet_init_def)
-  apply (erule exec.cases, simp_all)
-  apply (clarsimp simp: ceqv_xpres_lvar_nondet_init_def)
+   ceqv_xpres \<Gamma> xf v True (lvar_nondet_init v_acc v_upd) pres pres_abr False (lvar_nondet_init v_acc v_upd)"
+  apply (clarsimp simp: ceqv_xpres_defs lvar_nondet_init_def ceqv_xpres_lvar_nondet_init_def)
+  apply (intro conjI impI; erule exec.cases; clarsimp)
   done
 
-lemmas ceqv_xpres_rules =
-  ceqv_xpres_False_pres ceqv_xpres_xfdc ceqv_xpres_whileAnno
-  ceqv_xpres_While ceqv_xpres_Cond ceqv_xpres_Guard ceqv_xpres_Seq
-  ceqv_xpres_lvar_nondet_init ceqv_xpres_Basic ceqv_xpres_call_ceqv_xpres
-  ceqv_xpres_Skip ceqv_xpres_Catch ceqv_xpres_Throw ceqv_xpres_return_C
-  ceqv_xpres_C_bits
+\<comment> \<open>
+Some ceqv_xpres rules as stated above are too general for the automation.
+Here, we build two instantiations of the rules for use in the tactics.
+
+ceqv_xpres_rules_legacy:
+  - Rules that matches the behaviour of an older version of the
+    ceqv_xpres framework, for compatibility with older proofs.
+  - Currently used in all methods except `cinit` and `cinit'`.
+
+ceqv_xpres_rules_new:
+  - A rule set that better understands exceptional control flow.
+  - Currently used in `cinit` and `cinit'`
+\<close>
+
+lemmas ceqv_xpres_returns
+  = ceqv_xpres_creturn ceqv_xpres_creturn_void ceqv_xpres_cbreak
+
+lemmas ceqv_xpres_basics
+  = ceqv_xpres_Basic ceqv_xpres_lvar_nondet_init
+
+lemmas ceqv_xpres_special_legacy =
+  ceqv_xpres_abnormalI[OF xpres_abnormal_trivial]
+  ceqv_xpres_Throw[where abnormal=False]
+  ceqv_xpres_returns[where pres_norm=pres and pres=pres and abnormal=False for pres, simplified]
+  ceqv_xpres_basics[where pres_abr=pres and pres=pres for pres]
+
+lemmas ceqv_xpres_special_new =
+  ceqv_xpres_abnormalI
+  ceqv_xpres_Throw[where abnormal=True]
+  ceqv_xpres_returns[where pres_norm=True and abnormal=True, simplified]
+  ceqv_xpres_basics[where pres_abr=True]
+
+lemmas ceqv_xpres_rules_common =
+  ceqv_xpres_xfdc ceqv_xpres_whileAnno ceqv_xpres_While ceqv_xpres_Cond ceqv_xpres_Guard
+  ceqv_xpres_Seq ceqv_xpres_call_ceqv_xpres ceqv_xpres_Skip ceqv_xpres_Catch ceqv_xpres_ccatchbrk
+
+lemmas ceqv_xpres_rules_legacy = ceqv_xpres_rules_common ceqv_xpres_special_legacy
+lemmas ceqv_xpres_rules_new = ceqv_xpres_rules_common ceqv_xpres_special_new
 
 lemma ceqv_xpres_FalseI:
-  "ceqv_xpres \<Gamma> xf v pres c False c"
-  by (simp add: ceqv_xpres_def)
-
-lemma ceqv_xpres_ceqvI:
-  "ceqv_xpres \<Gamma> xf v True c pres c' \<Longrightarrow> ceqv \<Gamma> xf v t t' c c'"
-  by (simp add: ceqv_xpres_eq_imp)
+  "ceqv_xpres \<Gamma> xf v pres c False False False c"
+  by (simp add: ceqv_xpres_defs)
 
 lemma ceqv_xpres_rewrite_basic_left_cong:
   "\<lbrakk> \<And>s. xf s = v \<Longrightarrow> f s = f'' s \<rbrakk>
@@ -1380,11 +1482,11 @@ lemma ceqv_xpres_rewrite_basic_refl:
   by (simp add: ceqv_xpres_rewrite_basic_def)
 
 lemma ceqv_xpres_basic_preserves_TrueI:
-  "\<lbrakk> \<And>s. xf s = v \<longrightarrow> P s \<longrightarrow> xf (f s) = v \<rbrakk> \<Longrightarrow> ceqv_xpres_basic_preserves xf v P f True"
+  "\<lbrakk> \<And>s. xf s = v \<longrightarrow> P s \<longrightarrow> xf (f s) = v \<rbrakk> \<Longrightarrow> ceqv_xpres_basic_preserves trace xf v P f True"
   by (simp add: ceqv_xpres_basic_preserves_def)
 
 lemma ceqv_xpres_basic_preserves_FalseI:
-  "ceqv_xpres_basic_preserves xf v P f False"
+  "ceqv_xpres_basic_preserves trace xf v P f False"
   by (simp add: ceqv_xpres_basic_preserves_def)
 
 lemma ceqv_xpres_lvar_nondet_init_TrueI:
@@ -1404,11 +1506,6 @@ lemma ceqv_xpres_rewrite_set_rules:
      \<Longrightarrow> ceqv_xpres_rewrite_set xf v (if G then S else S') (if G then S'' else S''')"
   by (simp_all add: ceqv_xpres_rewrite_set_def ceqv_xpres_rewrite_basic_def
              split: if_split)
-
-lemma ceqv_xpres_eq_If_rules:
-  "ceqv_xpres_eq_If False x y y"
-  "ceqv_xpres_eq_If True x y x"
-  by (simp add: ceqv_xpres_eq_If_def)+
 
 definition
   "simpl_sequence f xs
@@ -1459,20 +1556,28 @@ lemma simpl_final_basic_exec:
   apply (simp add: simpl_final_basic_def split: option.split_asm)
   done
 
+lemma xpres_strong_False_trivial:
+  "xpres_strong \<Gamma> xf v c False False False"
+  by (simp add: xpres_strong_def)
+
+lemma ceqv_xpres_eq_ceqv:
+  "ceqv_xpres \<Gamma> xf v True c False False False c' = (\<forall>s t. ceqv \<Gamma> xf v s t c c')"
+  by (simp add: ceqv_xpres_def xpres_strong_False_trivial)
+
 lemma ceqv_xpres_to_simpl_sequence:
   fixes v :: "'a :: ring_1"
-  assumes c: "\<And>v. ceqv_xpres \<Gamma> xf' v True c pres (c' v)"
+  assumes c: "\<And>v. ceqv_xpres \<Gamma> xf' v True c pres_norm pres_abr abnormal (c' v)"
       and v: "\<And>v s. xf' (simpl_final_basic (c' v) s) - v = offs"
   shows "\<not> CP (v + of_nat n * offs)
-    \<Longrightarrow> ceqv_xpres \<Gamma> xf' v True (While {s. CP (xf' s)} c) False
+    \<Longrightarrow> ceqv_xpres \<Gamma> xf' v True (While {s. CP (xf' s)} c) False False False
         (simpl_sequence c' (takeWhile CP (map (\<lambda>x. v + of_nat x * offs) [0 ..< n])))"
-  (is "_ \<Longrightarrow> ceqv_xpres _ _ _ _ (While ?S _) _ _")
+  (is "_ \<Longrightarrow> ceqv_xpres _ _ _ _ (While ?S _) _ _ _ _")
 proof (induct n arbitrary: v)
   case 0
   show ?case using c[where v=v] 0
     apply (simp add: simpl_sequence_def)
-    apply (simp add: ceqv_xpres_eq_imp ceqv_def)
-    apply (auto elim!: exec_Normal_elim_cases intro: exec.intros)[1]
+    apply (simp add: ceqv_xpres_def ceqv_def xpres_strong_False_trivial)
+    apply (auto elim!: exec_Normal_elim_cases intro: exec.Skip exec.WhileFalse)
     done
 next
   case (Suc n)
@@ -1485,7 +1590,7 @@ next
     apply (simp only: map_Suc_upt[symmetric] list.simps)
     apply (cases "CP v")
      apply (simp add: o_def field_simps simpl_sequence_Cons
-                      ceqv_xpres_eq_imp)
+                      ceqv_xpres_def xpres_strong_False_trivial)
      apply (clarsimp, rule ceqv_trans[where c'="c ;; While ?S c"])
       apply (simp add: ceqv_def)
       apply (auto elim!: exec_Normal_elim_cases intro: exec.Seq exec.WhileTrue)[1]
@@ -1496,23 +1601,22 @@ next
      apply (intro impI exec_Seq_cong refl)
      apply (simp add: foo)
     apply (simp add: simpl_sequence_def field_simps)
-    apply (simp add: ceqv_xpres_eq_imp ceqv_def)
+    apply (simp add: ceqv_xpres_def xpres_strong_False_trivial ceqv_def)
     apply (auto intro: exec.WhileFalse exec.Skip elim!: exec_Normal_elim_cases)[1]
     done
 qed
 
 lemma ceqv_xpres_While_simpl_sequence:
   fixes v :: "'a :: ring_1"
-  assumes c: "\<And>v. ceqv_xpres \<Gamma> xf' v True c pres (c' v)"
-  shows "ceqv_xpres \<Gamma> xf' v True (While {s. CP (xf' s)} c) False
+  assumes c: "\<And>v. ceqv_xpres \<Gamma> xf' v True c pres_norm pres_abr abnormal (c' v)"
+  shows "ceqv_xpres \<Gamma> xf' v True (While {s. CP (xf' s)} c) False False False
         (if \<exists>n offs. (\<forall>s v. (xf' (simpl_final_basic (c' v) s) - v = offs)) \<and> \<not> CP (v + of_nat n * offs)
           then simpl_sequence c' (map (\<lambda>x. v + of_nat x
                   * (THE offs. \<forall>s v. (xf' (simpl_final_basic (c' v) s) - v = offs)))
               [0 ..< (LEAST n. \<not> CP (v + of_nat n
                   * (THE offs. \<forall>s v. (xf' (simpl_final_basic (c' v) s) - v = offs))))])
           else While {s. CP (xf' s)} c)"
-  apply (split if_split, simp add: ceqv_xpres_def[where c=c and c'=c for c])
-  apply (clarsimp simp: ceqv_xpres_eq_ceqv)
+  apply (split if_split, clarsimp simp: ceqv_xpres_def xpres_strong_def ceqv_refl)
   apply (rule ceqv_trans)
    apply (rule_tac n="LEAST n. \<not> CP (v + of_nat n * offs)"
      in ceqv_xpres_to_simpl_sequence[simplified ceqv_xpres_eq_ceqv, rule_format])
@@ -1628,30 +1732,17 @@ lemma mapME_x_simpl_sequence_fun_related:
 lemmas mapME_x_simpl_sequence_same
     = mapME_x_simpl_sequence_fun_related[where yf=id, simplified]
 
-lemma call_ignore_cong:
-  "call i f g r = call i f g r" by (rule refl)
+lemmas call_ignore_cong = refl[of "call i f g r" for i f g r]
 
 (* These could be done with ML patterns, but this fits in better with tactics *)
-lemma match_valid:
-  "NonDetMonad.valid P a P' \<Longrightarrow> NonDetMonad.valid P a P'" .
-
-lemma match_validE:
-  "NonDetMonad.validE P a P' P'' \<Longrightarrow> NonDetMonad.validE P a P' P''" .
-
-lemma match_hoare:
-  "HoarePartialDef.hoarep G T F P C P' A \<Longrightarrow> HoarePartialDef.hoarep G T F P C P' A" .
-
-lemma match_all_hoare:
-  "\<forall>x. HoarePartialDef.hoarep G T F (P x) C (P' x) (A x) \<Longrightarrow>
-  \<forall>x. HoarePartialDef.hoarep G T F (P x) C (P' x) (A x)" .
+lemmas match_valid = trivial[of "NonDetMonad.valid P a P'" for P a P']
+lemmas match_validE = trivial[of "NonDetMonad.validE P a P' P''" for P a P' P'']
+lemmas match_hoare = trivial[of "HoarePartialDef.hoarep G T F P C P' A" for G T F P C P' A]
+lemmas match_all_hoare = trivial[of "\<forall>x. HoarePartialDef.hoarep G T F (P x) C (P' x) (A x)" for G T F P C P' A]
+lemmas match_xpres = trivial[of "xpres xf v \<Gamma> c" for xf v \<Gamma> c]
+lemmas match_ceqv = trivial[of "ceqv \<Gamma> xf v t t' c c'" for \<Gamma> xf v t t' c c']
 
 lemmas ctac_skips = match_valid match_validE match_all_hoare match_hoare
-
-lemma match_xpres:
-  "xpres xf v \<Gamma> c \<Longrightarrow> xpres xf v \<Gamma> c" .
-
-lemma match_ceqv:
-  "ceqv \<Gamma> xf v t t' c c' \<Longrightarrow> ceqv \<Gamma> xf v t t' c c'" .
 
 ML_file "ctac-method.ML"
 
@@ -1666,7 +1757,10 @@ method_setup clift = \<open>CtacImpl.corres_abstract_args\<close>
 method_setup cinitlift = \<open>CtacImpl.corres_abstract_init_args\<close>
   "Abstract a list of local variables into HOL variable without touching the remaining guards"
 
-method_setup csymbr = \<open>CtacImpl.corres_symb_rhs\<close>
+method_setup csymbr_new = \<open>CtacImpl.corres_symb_rhs_new\<close>
+  "Symbolically execute the call on the right hand side of corres (see ccorres_lift_rhss). Arguments simp (add|del|only)."
+
+method_setup csymbr = \<open>CtacImpl.corres_symb_rhs_legacy\<close>
   "Symbolically execute the call on the right hand side of corres (see ccorres_lift_rhss). Arguments simp (add|del|only)."
 
 method_setup ceqv = \<open>CtacImpl.corres_ceqv\<close>
@@ -1796,8 +1890,8 @@ lemma ceqv_remove_eqv_skip:
   "\<lbrakk> \<And>s. ceqv \<Gamma> xf () s s' b Skip \<rbrakk> \<Longrightarrow>
      ceqv \<Gamma> xf () s s' (a ;; b) a"
   apply (rule ceqv_trans)
-   apply (erule Seq_ceqv [OF ceqv_refl])
-   apply (simp add: xpres_def)
+   apply (erule Seq_ceqv[where abnormal=False, OF ceqv_refl])
+   apply (simp add: xpres_strong_def)
   apply (clarsimp simp add: ceqv_def)
   apply (rule iffI)
    apply (auto elim!: exec_elim_cases)[1]
@@ -1807,7 +1901,7 @@ lemma ceqv_remove_eqv_skip:
   done
 
 lemma ceqv_remove_eqv_skip':
-  "\<lbrakk> \<And>s. ceqv \<Gamma> xf v s s' b Skip; \<And>s'. ceqv \<Gamma> xf v s s' a a'; xpres xf v \<Gamma> a \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> \<And>s. ceqv \<Gamma> xf v s s' b Skip; \<And>s'. ceqv \<Gamma> xf v s s' a a'; xpres \<Gamma> xf v a \<rbrakk> \<Longrightarrow>
      ceqv \<Gamma> xf v s s' (a ;; b) a'"
   apply (rule ceqv_trans)
    apply (erule Seq_ceqv [OF ceqv_refl])
@@ -1822,7 +1916,7 @@ lemma ceqv_remove_eqv_skip':
   done
 
 lemma xpres_triv:
-  "xpres xf () G c"
+  "xpres G xf () c"
   by (simp add: xpres_def)
 
 
@@ -1836,7 +1930,7 @@ lemma ceqv_guard_into_seq:
   by (auto simp: ceqv_def elim!: exec_elim_cases intro: exec.intros)
 
 lemma ceqv_Seq_Skip_cases:
-  "\<lbrakk> \<And>s'. ceqv \<Gamma> xf v s s' a a'; \<And>s. ceqv \<Gamma> xf v s s' b c; xpres xf v \<Gamma> a;
+  "\<lbrakk> \<And>s'. ceqv \<Gamma> xf v s s' a a'; \<And>s. ceqv \<Gamma> xf v s s' b c; xpres \<Gamma> xf v a;
         (c = Skip \<and> c' = a' \<or> c' = (a' ;; c)) \<rbrakk> \<Longrightarrow>
      ceqv \<Gamma> xf v s s' (a ;; b) c'"
   by (metis Seq_ceqv ceqv_remove_eqv_skip')
