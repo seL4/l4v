@@ -614,11 +614,7 @@ lemma slotcap_in_mem_PageDirectory:
   apply (simp add: cap_get_tag_isCap_ArchObject2)
   done
 
-declare if_split [split del]
-
 lemma decodeARMPageTableInvocation_ccorres:
-  notes if_cong[cong] tl_drop_1[simp]
-  shows
   "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps;
           isPageTableCap cp \<rbrakk>
      \<Longrightarrow>
@@ -632,14 +628,15 @@ lemma decodeARMPageTableInvocation_ccorres:
        (UNIV \<inter> {s. invLabel_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMPageTableInvocation_'proc)"
+  supply if_cong[cong]
   apply (clarsimp simp only: isCap_simps)
-  apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' excaps_' cap_' buffer_'
+  apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeARMMMUInvocation_def invocation_eq_use_types)
    apply (simp add: Let_def isCap_simps if_to_top_of_bind
                del: Collect_const cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -2584,7 +2581,7 @@ lemma decodeARMFrameInvocation_ccorres:
        (UNIV \<inter> {s. invLabel_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
@@ -2592,7 +2589,7 @@ lemma decodeARMFrameInvocation_ccorres:
        (Call decodeARMFrameInvocation_'proc)"
   supply if_cong[cong] option.case_cong[cong]
   apply (clarsimp simp only: isCap_simps)
-  apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' excaps_' cap_' buffer_'
+  apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeARMMMUInvocation_def decodeARMPageFlush_def)
 
    apply (simp add: Let_def isCap_simps invocation_eq_use_types split_def
@@ -3244,14 +3241,14 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
        (UNIV \<inter> {s. invLabel_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMPageDirectoryInvocation_'proc)"
   apply (clarsimp simp only: isCap_simps)
-  apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' excaps_' cap_' buffer_'
+  apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeARMMMUInvocation_def invocation_eq_use_types)
    apply (simp add: Let_def isCap_simps if_to_top_of_bind
                del: Collect_const cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -3559,8 +3556,6 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
      | rule word_of_nat_less,simp add: pbfs_less)+
 
 lemma decodeARMMMUInvocation_ccorres:
-  notes if_cong[cong] tl_drop_1[simp]
-  shows
   "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps ; \<not> isVCPUCap cp \<rbrakk>
    \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -3572,14 +3567,15 @@ lemma decodeARMMMUInvocation_ccorres:
        (UNIV \<inter> {s. invLabel_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMMMUInvocation_'proc)"
+  supply if_cong[cong]
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_'
-                      excaps_' cap_' buffer_')
+                      current_extra_caps_' cap_' buffer_')
    apply csymbr
    apply (simp add: cap_get_tag_isCap_ArchObject
                     ARM_HYP_H.decodeInvocation_def
@@ -4929,14 +4925,13 @@ lemma decodeVCPUSetTCB_ccorres:
               and (excaps_in_mem extraCaps \<circ> ctes_of)
               and K (isVCPUCap cp \<and> interpret_excaps extraCaps' = excaps_map extraCaps))
        (UNIV \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
-             \<comment> \<open>FIXME ARMHYP this is a really inconvienient name\<close>
-             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              ) hs
        (decodeVCPUSetTCB cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeVCPUSetTCB_'proc)"
   apply (rule ccorres_grab_asm)
-  apply (cinit' lift: cap_' extraCaps___struct_extra_caps_C_'
+  apply (cinit' lift: cap_' current_extra_caps_'
                 simp: decodeVCPUSetTCB_def Let_def)
    apply (simp cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule ccorres_Cond_rhs_Seq ; clarsimp)
@@ -5166,18 +5161,18 @@ lemma decodeARMVCPUInvocation_ccorres:
               and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
               and sysargs_rel args buffer and valid_objs'
               and (valid_cap' (ArchObjectCap cp)))
-       \<comment> \<open>whoever wrote the C code decided to name these arbitrarily differently from other functions\<close>
-       (UNIV \<inter> {s. label___unsigned_long_' s = label}
+       (UNIV \<comment> \<open>whoever wrote the C code decided to name this arbitrarily differently from other functions\<close>
+             \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length_' s) = length args}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}
              \<inter> \<lbrace>\<acute>call = from_bool isCall \<rbrace>) []
        (decodeARMVCPUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMVCPUInvocation_'proc)"
-  apply (cinit' lift: label___unsigned_long_' length_' slot_' extraCaps___struct_extra_caps_C_'
+  apply (cinit' lift: label___unsigned_long_' length_' slot_' current_extra_caps_'
                        cap_' buffer_' call_')
    apply (clarsimp simp: decodeARMVCPUInvocation_def)
 
@@ -5234,7 +5229,7 @@ lemma Arch_decodeInvocation_ccorres:
        (UNIV \<inter> {s. invLabel_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}
              \<inter> \<lbrace>\<acute>call = from_bool isCall \<rbrace>) []
@@ -5249,7 +5244,7 @@ proof -
     by (clarsimp simp: isVCPUCap_def split: arch_capability.splits)
 
   from assms show ?thesis
-    apply (cinit' lift: invLabel_'  length___unsigned_long_'  slot_'  excaps_'  cap_'
+    apply (cinit' lift: invLabel_'  length___unsigned_long_'  slot_'  current_extra_caps_'  cap_'
                         buffer_' call_')
      apply csymbr
      apply (simp only: cap_get_tag_isCap_ArchObject ARM_HYP_H.decodeInvocation_def)

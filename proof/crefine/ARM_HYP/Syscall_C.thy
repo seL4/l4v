@@ -128,21 +128,21 @@ lemma decodeInvocation_ccorres:
               and (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))
               and sysargs_rel args buffer)
        (UNIV \<inter> {s. call_' s = from_bool isCall}
-                   \<inter> {s. block_' s = from_bool isBlocking}
-                   \<inter> {s. call_' s = from_bool isCall}
-                   \<inter> {s. block_' s = from_bool isBlocking}
-                   \<inter> {s. invLabel_' s = label}
-                   \<inter> {s. unat (length___unsigned_long_' s) = length args}
-                   \<inter> {s. capIndex_' s = cptr}
-                   \<inter> {s. slot_' s = cte_Ptr slot}
-                   \<inter> {s. excaps_' s = extraCaps'}
-                   \<inter> {s. ccap_relation cp (cap_' s)}
-                   \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+             \<inter> {s. block_' s = from_bool isBlocking}
+             \<inter> {s. call_' s = from_bool isCall}
+             \<inter> {s. block_' s = from_bool isBlocking}
+             \<inter> {s. invLabel_' s = label}
+             \<inter> {s. unat (length___unsigned_long_' s) = length args}
+             \<inter> {s. capIndex_' s = cptr}
+             \<inter> {s. slot_' s = cte_Ptr slot}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
+             \<inter> {s. ccap_relation cp (cap_' s)}
+             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall id)
        (Call decodeInvocation_'proc)"
   apply (cinit' lift: call_' block_' invLabel_' length___unsigned_long_'
-                      capIndex_' slot_' excaps_' cap_' buffer_')
+                      capIndex_' slot_' current_extra_caps_' cap_' buffer_')
    apply csymbr
    apply (simp add: cap_get_tag_isCap decodeInvocation_def
               cong: if_cong StateSpace.state.fold_congs

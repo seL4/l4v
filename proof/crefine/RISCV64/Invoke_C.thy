@@ -109,7 +109,7 @@ lemma decodeDomainInvocation_ccorres:
               and sysargs_rel args buffer)
        (UNIV
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. invLabel_' s = lab}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
@@ -117,7 +117,7 @@ lemma decodeDomainInvocation_ccorres:
            >>= invocationCatch thread isBlocking isCall (uncurry InvokeDomain))
   (Call decodeDomainInvocation_'proc)"
   supply gen_invocation_type_eq[simp]
-  apply (cinit' lift: length___unsigned_long_' excaps_' call_' invLabel_' buffer_'
+  apply (cinit' lift: length___unsigned_long_' current_extra_caps_' call_' invLabel_' buffer_'
                 simp: decodeDomainInvocation_def list_case_If2 whenE_def)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
@@ -571,7 +571,7 @@ lemma decodeCNodeInvocation_ccorres:
        (UNIV
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation cp (cap_' s)}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. invLabel_' s = lab}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
@@ -583,7 +583,7 @@ lemma decodeCNodeInvocation_ccorres:
    apply (simp add: decodeCNodeInvocation_def
               cong: conj_cong)
    apply (rule ccorres_fail')
-  apply (cinit' (no_subst_asm) lift: length___unsigned_long_' cap_' excaps_'
+  apply (cinit' (no_subst_asm) lift: length___unsigned_long_' cap_' current_extra_caps_'
                                      call_' invLabel_' buffer_')
    apply (clarsimp simp: word_less_nat_alt decodeCNodeInvocation_def
                          list_case_If2 invocation_eq_use_types
@@ -2222,11 +2222,9 @@ lemma invokeUntyped_Retype_ccorres:
            \<inter>  {s. newType_' s = object_type_from_H newType }
            \<inter>  {s. unat (userSize_' s) = us }
            \<inter>  {s. deviceMemory_' s = from_bool isdev}
-           \<inter>  \<lbrace>\<acute>destSlots = slot_range_C (cte_Ptr cnodeptr) start
-                                          (of_nat (length destSlots)) \<and>
-                (\<forall>n<length destSlots.
-                    destSlots ! n = cnodeptr + (start + of_nat n) * 2^cteSizeBits)\<rbrace>
-            )
+           \<inter>  {s. destCNode_' s = cte_Ptr cnodeptr}
+           \<inter>  {s. destOffset_' s = start \<and> (\<forall>n < length destSlots. destSlots ! n = cnodeptr + (start + of_nat n) * 2^cteSizeBits)}
+           \<inter>  {s. destLength_' s = of_nat (length destSlots)})
      []
      (invokeUntyped (Retype cref reset ptr_base ptr newType us destSlots isdev))
      (Call invokeUntyped_Retype_'proc)"
@@ -2339,8 +2337,8 @@ lemma invokeUntyped_Retype_ccorres:
          [] (invokeUntyped (Retype cref reset ptr_base ptr newType us destSlots isdev))
             (Call invokeUntyped_Retype_'proc)"
       apply (cinit lift: retypeBase_' srcSlot_' reset_' newType_'
-                          userSize_' deviceMemory_' destSlots_'
-                    simp: when_def)
+                         userSize_' deviceMemory_' destCNode_' destOffset_' destLength_'
+                   simp: when_def)
        apply (rule ccorres_move_c_guard_cte)
        apply csymbr
        apply (rule ccorres_abstract_cleanup)
@@ -2816,7 +2814,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation cp (cap_' s)}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. buffer_' s = option_to_ptr buffer})
        []
@@ -2826,7 +2824,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
   (Call decodeUntypedInvocation_'proc)"
   supply if_cong[cong] option.case_cong[cong]
   apply (rule ccorres_name_pre)
-  apply (cinit' lift: invLabel_' length___unsigned_long_' cap_' slot_' excaps_' call_' buffer_'
+  apply (cinit' lift: invLabel_' length___unsigned_long_' cap_' slot_' current_extra_caps_' call_' buffer_'
                 simp: decodeUntypedInvocation_def list_case_If2
                       invocation_eq_use_types)
    apply (rule ccorres_Cond_rhs_Seq)
@@ -3062,14 +3060,12 @@ lemma decodeUntypedInvocation_ccorres_helper:
                  apply csymbr
                  apply csymbr
                  apply csymbr
-                 apply csymbr
                  apply (simp add: mapM_locate_eq liftE_bindE
                                   injection_handler_sequenceE mapME_x_sequenceE
                                   whileAnno_def injection_bindE[OF refl refl]
                                   bindE_assoc injection_handler_returnOk)
                  (* gsCNodes assertion *)
                  apply (rule ccorres_stateAssert)
-                 apply csymbr
                  apply (simp add: liftE_bindE[symmetric])
                  apply (rule_tac P="capAligned rv" in ccorres_gen_asm)
                  apply (subgoal_tac "args ! 5 \<le> args ! 4 + args ! 5")
@@ -3228,8 +3224,6 @@ lemma decodeUntypedInvocation_ccorres_helper:
                               apply (frule iffD2[OF olen_add_eqv])
                               apply (frule(1) isUntypedCap_ccap_relation_helper)
                               apply (clarsimp simp: unat_plus_simple[THEN iffD1])
-                              apply (case_tac slots,simp)
-                              apply clarsimp
                               apply (subst upto_enum_word)
                               apply (subst nth_map_upt)
                                apply (clarsimp simp: field_simps Suc_unat_diff_1 unat_plus_simple[THEN iffD1])
@@ -3436,7 +3430,7 @@ shows
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation cp (cap_' s)}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. buffer_' s = option_to_ptr buffer})
        []

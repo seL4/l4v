@@ -1006,7 +1006,7 @@ lemma decodeX64PageTableInvocation_ccorres:
        (UNIV \<inter> {s. invLabel_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer})
        hs
@@ -1016,7 +1016,7 @@ lemma decodeX64PageTableInvocation_ccorres:
    (is "_ \<Longrightarrow> _ \<Longrightarrow> ccorres _ _ ?pre _ _ _ _")
   supply Collect_const[simp del] if_cong[cong]
   apply (clarsimp simp only: isCap_simps)
-  apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' excaps_' cap_' buffer_'
+  apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeX64MMUInvocation_def invocation_eq_use_types decodeX64PageTableInvocation_def)
    apply (simp add: Let_def isCap_simps if_to_top_of_bind
                cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -2311,14 +2311,14 @@ lemma decodeX64FrameInvocation_ccorres:
        (UNIV \<inter> {s. invLabel_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeX64MMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeX86FrameInvocation_'proc)"
   apply (clarsimp simp only: isCap_simps)
-  apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' excaps_' cap_' buffer_'
+  apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeX64MMUInvocation_def )
    apply (simp add: Let_def isCap_simps invocation_eq_use_types split_def decodeX64FrameInvocation_def
                del: Collect_const
@@ -2935,7 +2935,7 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
        (UNIV \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer})
        hs
@@ -2945,7 +2945,7 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
    (is "_ \<Longrightarrow> _ \<Longrightarrow> ccorres _ _ ?pre _ _ _ _")
   supply Collect_const[simp del] if_cong[cong]
   apply (clarsimp simp only: isCap_simps)
-  apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_' extraCaps___struct_extra_caps_C_' cap_' buffer_'
+  apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeX64MMUInvocation_def invocation_eq_use_types decodeX64PageDirectoryInvocation_def)
    apply (simp add: Let_def isCap_simps if_to_top_of_bind
                cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -3411,7 +3411,7 @@ lemma decodeX64PDPTInvocation_ccorres:
        (UNIV \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer})
        hs
@@ -3422,7 +3422,7 @@ lemma decodeX64PDPTInvocation_ccorres:
   supply Collect_const[simp del] if_cong[cong] dc_simp[simp del]
          from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp] ccorres_IF_True[simp]
   apply (clarsimp simp only: isCap_simps)
-  apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_' extraCaps___struct_extra_caps_C_' cap_' buffer_'
+  apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeX64MMUInvocation_def invocation_eq_use_types decodeX64PDPointerTableInvocation_def)
    apply (simp add: Let_def isCap_simps if_to_top_of_bind
                cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -3718,7 +3718,7 @@ lemma decodeX64ModeMMUInvocation_ccorres:
        (UNIV \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer})
        hs
@@ -3727,7 +3727,7 @@ lemma decodeX64ModeMMUInvocation_ccorres:
        (Call decodeX86ModeMMUInvocation_'proc)"
   supply Collect_const[simp del] if_cong[cong]
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_'
-                      extraCaps___struct_extra_caps_C_' cap_' buffer_')
+                      current_extra_caps_' cap_' buffer_')
    apply csymbr
    apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                    cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -3763,14 +3763,14 @@ lemma decodeX64MMUInvocation_ccorres:
        (UNIV \<inter> {s. invLabel_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeX64MMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeX86MMUInvocation_'proc)"
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_'
-                      excaps_' cap_' buffer_')
+                      current_extra_caps_' cap_' buffer_')
    apply csymbr
    apply (simp add: cap_get_tag_isCap_ArchObject
                     X64_H.decodeInvocation_def
@@ -5134,7 +5134,7 @@ lemma decodeIOPortControlInvocation_ccorres:
        (UNIV \<inter> {s. invLabel_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeX64PortInvocation label args slot cp (map fst extraCaps)
@@ -5144,7 +5144,7 @@ lemma decodeIOPortControlInvocation_ccorres:
 proof -
   from assms show ?thesis
     apply (clarsimp simp: isCap_simps decodeX64PortInvocation_def Let_def)
-    apply (cinit' lift: invLabel_' length___unsigned_long_' slot_' excaps_' cap_' buffer_')
+    apply (cinit' lift: invLabel_' length___unsigned_long_' slot_' current_extra_caps_' cap_' buffer_')
      apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
      apply (rule ccorres_Cond_rhs_Seq, clarsimp simp: invocation_eq_use_types, ccorres_rewrite)
       apply (rule ccorres_equals_throwError)
@@ -5306,7 +5306,7 @@ lemma decodeIOPortInvocation_ccorres:
        (UNIV \<inter> {s. invLabel_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}
              \<inter> {s. call_' s = from_bool isCall}) []
@@ -5317,7 +5317,7 @@ proof -
   from assms show ?thesis
   supply Collect_const[simp del]
   apply (clarsimp simp: isCap_simps decodeX64PortInvocation_def Let_def)
-  apply (cinit' lift: invLabel_' length___unsigned_long_' slot_' excaps_' cap_' buffer_' call_')
+  apply (cinit' lift: invLabel_' length___unsigned_long_' slot_' current_extra_caps_' cap_' buffer_' call_')
    apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule ccorres_Cond_rhs) (* IN invocations *)
     apply (erule ccorres_disj_division)
@@ -5631,7 +5631,7 @@ lemma Mode_decodeInvocation_ccorres:
        (UNIV \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeX64MMUInvocation label args cptr slot cp extraCaps
@@ -5639,7 +5639,7 @@ lemma Mode_decodeInvocation_ccorres:
        (Call Mode_decodeInvocation_'proc)"
   using assms
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' slot_'
-                      extraCaps___struct_extra_caps_C_' cap_' buffer_')
+                      current_extra_caps_' cap_' buffer_')
    apply csymbr
    apply (simp only: cap_get_tag_isCap_ArchObject X64_H.decodeInvocation_def)
    apply (rule ccorres_cond_true)
@@ -5660,7 +5660,7 @@ lemma Arch_decodeInvocation_ccorres:
        (UNIV \<inter> {s. invLabel_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}
              \<inter> {s. call_' s = from_bool isCall }) []
@@ -5671,7 +5671,7 @@ lemma Arch_decodeInvocation_ccorres:
 proof -
   note trim_call = ccorres_trim_returnE[rotated 2, OF ccorres_call]
   from assms show ?thesis
-    apply (cinit' lift: invLabel_' length___unsigned_long_' slot_' excaps_' cap_' buffer_' call_')
+    apply (cinit' lift: invLabel_' length___unsigned_long_' slot_' current_extra_caps_' cap_' buffer_' call_')
      apply csymbr
      apply (simp only: cap_get_tag_isCap_ArchObject X64_H.decodeInvocation_def)
      apply (rule ccorres_Cond_rhs)

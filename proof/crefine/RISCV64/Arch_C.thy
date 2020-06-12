@@ -755,7 +755,7 @@ lemma decodeRISCVPageTableInvocation_ccorres:
        (UNIV \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer})
        hs
@@ -766,7 +766,7 @@ lemma decodeRISCVPageTableInvocation_ccorres:
   supply Collect_const[simp del] if_cong[cong] option.case_cong[cong]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_'
-                      extraCaps___struct_extra_caps_C_' cap_' buffer_'
+                      current_extra_caps_' cap_' buffer_'
                 simp: decodeRISCVMMUInvocation_def invocation_eq_use_types
                       decodeRISCVPageTableInvocation_def)
    apply (simp add: Let_def isCap_simps if_to_top_of_bind
@@ -1567,7 +1567,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
        (UNIV \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeRISCVMMUInvocation label args cptr slot cp extraCaps
@@ -1575,7 +1575,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
        (Call decodeRISCVFrameInvocation_'proc)"
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_'
-                      extraCaps___struct_extra_caps_C_' cap_' buffer_'
+                      current_extra_caps_' cap_' buffer_'
                 simp: decodeRISCVMMUInvocation_def)
    apply (simp add: Let_def isCap_simps invocation_eq_use_types split_def decodeRISCVFrameInvocation_def
                del: Collect_const
@@ -2235,7 +2235,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
        (UNIV \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeRISCVMMUInvocation label args cptr slot cp extraCaps
@@ -2243,7 +2243,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
        (Call decodeRISCVMMUInvocation_'proc)"
   supply ccorres_prog_only_cong[cong]
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_'
-                      extraCaps___struct_extra_caps_C_' cap_' buffer_')
+                      current_extra_caps_' cap_' buffer_')
    apply csymbr
    apply (simp add: cap_get_tag_isCap_ArchObject
                     RISCV64_H.decodeInvocation_def
@@ -2934,7 +2934,7 @@ lemma Arch_decodeInvocation_ccorres:
        (UNIV \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}
              \<inter> {s. call_' s = from_bool isCall }) []
@@ -2946,7 +2946,7 @@ proof -
   note trim_call = ccorres_trim_returnE[rotated 2, OF ccorres_call]
   from assms show ?thesis
     apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' slot_'
-                        extraCaps___struct_extra_caps_C_' cap_' buffer_' call_')
+                        current_extra_caps_' cap_' buffer_' call_')
      apply (simp only: cap_get_tag_isCap_ArchObject RISCV64_H.decodeInvocation_def)
        apply (rule trim_call[OF decodeRISCVMMUInvocation_ccorres], simp+)[1]
     apply (clarsimp simp: o_def excaps_in_mem_def slotcap_in_mem_def)
