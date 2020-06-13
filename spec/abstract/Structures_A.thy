@@ -485,8 +485,12 @@ definition "MIN_SC_BUDGET_US = 2 * MIN_BUDGET_US"
 lemma MIN_BUDGET_pos: "0 < MIN_BUDGET" using MIN_BUDGET_def ARM.kernelWCET_ticks_pos2 by clarsimp
 
 definition "min_sched_context_bits = 8"
-consts sizeof_sched_context_t :: "'a :: numeral" (* RT : size of sched_context struct in C, excluding refills*)
-consts refill_size_bytes :: "'a :: numeral"
+
+(* RT : size of sched_context struct in C, excluding refills
+   numbers are from MCS C: (9 * sizeof(word_t)) + (3 * sizeof(ticks_t)) for aarch32 *)
+definition "sizeof_sched_context_t = (9 * 4) + (3 * 8)"
+(* (2 * sizeof(ticks_t)) *)
+definition "refill_size_bytes = 16"
 
 definition max_num_refills :: "nat \<Rightarrow> nat" where (* max for extra_refills + MIN_REFILLS; refill_abosolute_max in C *)
   "max_num_refills sz = ((2 ^ sz) - sizeof_sched_context_t) div refill_size_bytes"
