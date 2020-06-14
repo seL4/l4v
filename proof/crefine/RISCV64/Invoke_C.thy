@@ -1776,6 +1776,20 @@ lemma ucast_64_32[simp]:
   "UCAST(64 \<rightarrow> 32) (of_nat x) = of_nat x"
   by (simp add: ucast_of_nat is_down_def source_size_def target_size_def word_size)
 
+text \<open>
+@{term resetUntypedCap_'proc} retypes the @{term Untyped} region as bytes, and then enters
+a loop which progressively zeros the memory, ultimately establishing @{term zero_ranges_are_zero}
+for the full @{term Untyped} range. Since @{term zero_ranges_are_zero} also requires
+@{term region_actually_is_bytes}, the loop must remember that we retyped the whole range before
+entering the loop. It is sufficient to know that @{term hrs_htd} is preserved, and for most
+contents of the loop, this is straightforward. On RISCV64, @{term preemptionPoint_'proc} contains
+inline assembly, so we must appeal to the axiomatisation of inline assembly to show that
+@{term hrs_htd} is preserved.
+\<close>
+lemma preemptionPoint_hrs_htd:
+  "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call preemptionPoint_'proc \<lbrace>hrs_htd \<acute>t_hrs = hrs_htd \<^bsup>\<sigma>\<^esup>t_hrs\<rbrace>"
+  by (rule allI, rule conseqPre, vcg, clarsimp simp: asm_spec_enabled elim!: asm_specE)
+
 lemma resetUntypedCap_ccorres:
   notes upt.simps[simp del] Collect_const[simp del] replicate_numeral[simp del]
   shows
@@ -2028,7 +2042,7 @@ lemma resetUntypedCap_ccorres:
              apply (cut_tac is_aligned_mult_triv2[of _ 8, simplified])
              apply (erule is_aligned_weaken, simp)
             apply clarsimp
-            apply (rule conseqPre, vcg exspec=preemptionPoint_modifies)
+            apply (rule conseqPre, vcg exspec=preemptionPoint_hrs_htd)
             apply (clarsimp simp: in_set_conv_nth isCap_simps
                                   length_upto_enum_step upto_enum_step_nth
                                   less_Suc_eq_le getFreeRef_def
