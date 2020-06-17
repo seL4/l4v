@@ -1480,14 +1480,12 @@ lemma period_window_single:
    \<Longrightarrow> window refills period = (unat (r_amount a) \<le> unat period)"
   unfolding window_def by fastforce
 
-\<comment> \<open> FIXME: it would be nice to phrase the fourth conjunct as
-            \<forall>refill \<in> set (sc_refills sc). MIN_BUDGET <= r_amount refill\<close>
 definition cfg_valid_refills :: "sc_refill_cfg \<Rightarrow> bool" where
   "cfg_valid_refills cfg \<equiv>
       (refills_sum (scrc_refills cfg) = scrc_budget cfg
       \<and> ordered_disjoint (scrc_refills cfg)
       \<and> no_overflow (scrc_refills cfg)
-      \<and> (\<forall>n < length (scrc_refills cfg). MIN_BUDGET \<le> r_amount ((scrc_refills cfg) ! n))
+      \<and> (\<forall>refill \<in> set (scrc_refills cfg). MIN_BUDGET <= r_amount refill)
       \<and> window (scrc_refills cfg) (scrc_period cfg)
       \<and> 0 < length (scrc_refills cfg)
       \<and> length (scrc_refills cfg) \<le> scrc_refill_max cfg

@@ -512,7 +512,7 @@ lemma reset_untyped_cap_cur_sc[wp]:
 lemma delete_objects_not_bound_sc_tcb_at[wp]:
   "delete_objects d f \<lbrace>\<lambda>s. \<not> bound_sc_tcb_at P t s\<rbrace>"
   unfolding delete_objects_def
-  by (wpsimp wp: )
+  by wpsimp
 
 lemma reset_untyped_not_bound_sc_tcb_at[wp]:
   "reset_untyped_cap slot \<lbrace>\<lambda>s. \<not> bound_sc_tcb_at P t s\<rbrace>"

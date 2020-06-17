@@ -5230,7 +5230,7 @@ lemma tcb_release_enqueue_weak_valid_sched_action:
   apply wpsimp
    apply (rule_tac Q="\<lambda>rv s. weak_valid_sched_action_2 {} (cur_time s) (scheduler_action s) (tcb_ptr # qs) (tcb_sts_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)
            \<and> length qs = length rv" in hoare_strengthen_post)
-    apply (wpsimp wp: mapM_wp_inv_length cong: )
+    apply (wpsimp wp: mapM_wp_inv_length)
    apply (clarsimp simp: weak_valid_sched_action_def)
    apply (subgoal_tac "set qs = (fst ` {x \<in> set (zip qs r). case x of (uu_, t') \<Rightarrow> t' \<le> time} \<union>
                                  fst ` {x \<in> set (zip qs r). case x of (uu_, t') \<Rightarrow> \<not> t' \<le> time}) ")
@@ -6161,7 +6161,7 @@ lemma fast_finalise_cur_sc_chargeable:
                    split: thread_state.splits if_splits)
    apply (erule reply_tcb_not_idle_thread_helper, simp add: obj_at_def, clarsimp)
    done
-  apply (wpsimp simp: )
+  apply wpsimp
   done
 
 lemma cap_delete_one_cur_sc_chargeable[wp]:
@@ -6940,7 +6940,7 @@ lemma sc_valid_refills_refills_sum:
 
 lemma valid_refills_consumed_time_update[iff]:
   "valid_refills p (consumed_time_update f s) = valid_refills p s"
-  by (simp add: )
+  by simp
 
 lemma sc_valid_refills_unat_sum_list_at_most_unat_max_word:
   "\<lbrakk>sc_valid_refills sc;
@@ -6966,15 +6966,15 @@ lemma valid_refills_refills_unat_sum_equals_budget:
 
 lemma valid_refills_scheduler_action_update[iff]:
   "valid_refills p (scheduler_action_update f s) = valid_refills p s"
-  by (simp add: )
+  by simp
 
 lemma valid_refills_ready_queues_update[iff]:
   "valid_refills p (ready_queues_update f s) = valid_refills p s"
-  by (simp add: )
+  by simp
 
 lemma valid_refills_release_queue_update[iff]:
   "valid_refills p (release_queue_update f s) = valid_refills p s"
-  by (simp add: )
+  by simp
 
 lemma valid_refills_kheap_tcb_update[iff]:
   "tcb_at t s \<Longrightarrow> valid_refills p (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = valid_refills p s"
@@ -7137,10 +7137,6 @@ lemma refill_update_valid_refills[wp]:
       apply (meson MIN_BUDGET_le_MIN_SC_BUDGET le_trans word_le_nat_alt)
 
      \<comment> \<open>MIN_BUDGET\<close>
-     apply clarsimp
-     apply (rename_tac sc n na)
-     apply (case_tac "na=0")
-      apply clarsimp
       apply (simp add: word_le_nat_alt)
       apply (subgoal_tac "MIN_BUDGET \<le> new_budget")
        apply (simp add: unat_sub)
@@ -7149,7 +7145,6 @@ lemma refill_update_valid_refills[wp]:
        using unat_MIN_BUDGET_MIN_SC_BUDGET apply linarith
       using MIN_BUDGET_le_MIN_SC_BUDGET unat_MIN_BUDGET_MIN_SC_BUDGET word_le_nat_alt
       apply fastforce
-     apply clarsimp
 
     \<comment> \<open>period_window\<close>
     apply (simp add: window_def)
@@ -7207,11 +7202,6 @@ lemma refill_update_valid_refills[wp]:
                  and head_time="r_time (refill_hd sc)"
                  and smaller="r_amount (refill_hd sc)" for sc])
     apply (clarsimp simp: unat_sub word_le_nat_alt)
-
-   \<comment> \<open>MIN_BUDGET\<close>
-   apply clarsimp
-   apply (rename_tac sc n na)
-   apply (case_tac "na=0"; clarsimp simp: hd_conv_nth)
 
   \<comment> \<open>period_window\<close>
   apply (simp add: window_def)
@@ -7454,10 +7444,7 @@ lemma refill_budget_check_valid_refills[wp]:
                        in schedule_used_ordered_disjoint)
             apply (metis ordered_disjoint_tail hd_Cons_tl)
            apply clarsimp
-           apply (drule_tac x="Suc m" in spec)
-           apply (elim impE)
-            apply linarith
-           apply (metis list.exhaust_sel nth_Cons_Suc)
+           apply (drule_tac x="refill" in bspec; fastforce dest: list.set_sel)
           apply (clarsimp simp: Let_def split: if_splits)
           apply (simp add: window_def)
           apply (subgoal_tac "unat (r_time (refill_hd sc) + sc_period sc)
@@ -7474,10 +7461,7 @@ lemma refill_budget_check_valid_refills[wp]:
            apply (clarsimp simp: refill_ready_def)
           apply (subst unat_add_lem', overflow_hammer, simp, simp)
             apply clarsimp
-          apply (drule_tac x="Suc m" in spec)
-          apply (elim impE)
-           apply linarith
-          apply (metis list.exhaust_sel nth_Cons_Suc)
+           apply (drule_tac x="refill" in bspec; fastforce dest: list.set_sel)
          apply (clarsimp simp: Let_def split: if_splits)
          apply (simp add: window_def)
          apply (subgoal_tac "unat (r_time (refill_hd sc) + sc_period sc)
@@ -7497,10 +7481,7 @@ lemma refill_budget_check_valid_refills[wp]:
            apply (clarsimp simp: word_le_nat_alt)
           apply (clarsimp simp: word_le_nat_alt)
          apply clarsimp
-         apply (drule_tac x="Suc na" in spec)
-         apply (elim impE)
-          apply linarith
-         apply (metis list.exhaust_sel nth_Cons_Suc)
+           apply (drule_tac x="refill" in bspec; fastforce dest: list.set_sel)
         apply (frule unat_sum_list_equals_budget; assumption?)
           apply (metis MIN_BUDGET_nonzero unat_eq_1(1) word_le_0_iff)
          apply (simp add: refills_sum_def)
@@ -7514,64 +7495,72 @@ lemma refill_budget_check_valid_refills[wp]:
          apply (case_tac "sc_refills sc", fast, case_tac list, fastforce, fastforce)
         using unat_arith_simps(1) apply blast
        apply (clarsimp simp: Let_def window_def schedule_used.simps split: if_splits)
-       apply (intro conjI impI)
 
-          \<comment> \<open>first of five word proofs\<close>
-          apply (rule_tac y="unat (sc_budget sc)" in order_trans)
-           apply (fastforce simp: hd_conv_nth)
-          apply (fastforce simp: unat_arith_simps(1))
+               apply (rename_tac sc s n a list)
+               apply (intro conjI impI)
 
-         \<comment> \<open>second of the five word proofs\<close>
-         apply (subgoal_tac "unat (r_time (refill_hd sc) + sc_period sc)
-                             = unat (r_time (refill_hd sc)) + unat (sc_period sc)")
-          apply clarsimp
-          apply (simp add: ordered_disjoint_def)
-          apply (drule_tac x=0 in spec)
-          apply (elim impE)
-            apply (force simp: tail_nonempty_length)
-           apply (case_tac "sc_refills sc", simp, fastforce)
-          apply (rule unat_add_lem', simp add: max_word_def)
+                   \<comment> \<open>first of five word proofs\<close>
+                   apply (subgoal_tac "unat (r_time (refill_hd sc) + sc_period sc)
+                                       = unat (r_time (refill_hd sc)) + unat (sc_period sc)")
+                    apply clarsimp
+                    apply (simp add: ordered_disjoint_def)
+                    apply (drule_tac x=0 in spec)
+                    apply (elim impE)
+                     apply (force simp: tail_nonempty_length)
+                    apply (case_tac "sc_refills sc", simp, fastforce)
+                   apply (rule unat_add_lem', simp add: max_word_def)
 
-         \<comment> \<open>third of the five word proofs\<close>
-         apply (subgoal_tac "unat (r_time (refill_hd sc) + sc_period sc - (MIN_BUDGET - r_amount (refill_hd sc)))
-                             = unat (r_time (refill_hd sc)) + unat (sc_period sc)
-                               - unat MIN_BUDGET + unat (r_amount (refill_hd sc))")
-          apply clarsimp
-          apply (subgoal_tac "unat MIN_BUDGET \<le> unat (sc_period sc)")
-           apply (clarsimp simp: ordered_disjoint_def)
-           apply (drule_tac x=0 in spec)
-           apply (elim impE)
-            using hd_conv_nth apply fastforce
-           using hd_conv_nth apply fastforce
-          using MIN_BUDGET_le_MIN_SC_BUDGET word_le_nat_alt apply fastforce
-         apply (subgoal_tac "unat (r_time (refill_hd sc) + sc_period sc - (MIN_BUDGET - r_amount (refill_hd sc)))
-                             = unat (r_time (refill_hd sc) + sc_period sc)
-                               - unat (MIN_BUDGET - r_amount (refill_hd sc))")
-          apply (subgoal_tac "unat (r_time (refill_hd sc) + sc_period sc)
-                              = unat (r_time (refill_hd sc)) + unat (sc_period sc)")
-           apply clarsimp
-           apply (simp add: unat_sub)
-           apply (subgoal_tac "MIN_BUDGET \<le> sc_period sc")
-            apply (simp add: hd_conv_nth word_le_not_less)
-           using MIN_BUDGET_le_MIN_SC_BUDGET word_le_nat_alt apply fastforce
-          apply (rule unat_add_lem', simp add: max_word_def)
-         apply (metis Nat.add_0_right add_Suc_shift list.exhaust_sel list.size(4) nth_Cons_0
-                      word_le_not_less zero_less_Suc)
+                  \<comment> \<open>second of the five word proofs\<close>
+                  apply (clarsimp simp: MIN_SC_BUDGET_def)
+                  apply (rule_tac y="unat (sc_budget sc)" in order_trans)
+                   apply (fastforce simp: unat_arith_simps(1))
+                  apply (fastforce simp: unat_arith_simps(1))
 
-       \<comment> \<open>fourth of the word proofs\<close>
-         apply (metis Nat.add_0_right add_Suc_shift list.exhaust_sel list.size(4) nth_Cons_0
-                      word_le_not_less zero_less_Suc)
+                 \<comment> \<open>third of the five word proofs\<close>
+                 apply (subgoal_tac "unat (r_time (refill_hd sc) + sc_period sc - (MIN_BUDGET - r_amount (refill_hd sc)))
+                                     = unat (r_time (refill_hd sc)) + unat (sc_period sc)
+                                       - unat MIN_BUDGET + unat (r_amount (refill_hd sc))")
+                  apply clarsimp
+                  apply (subgoal_tac "unat MIN_BUDGET \<le> unat (sc_period sc)")
+                   apply (clarsimp simp: ordered_disjoint_def)
+                   apply (drule_tac x=0 in spec)
+                   apply (elim impE)
+                    apply (case_tac "sc_refills sc"; simp)
+                   apply (case_tac "sc_refills sc"; simp)
+                  using MIN_BUDGET_le_MIN_SC_BUDGET word_le_nat_alt apply fastforce
+                 apply (subgoal_tac "unat (r_time (refill_hd sc) + sc_period sc - (MIN_BUDGET - r_amount (refill_hd sc)))
+                                     = unat (r_time (refill_hd sc) + sc_period sc)
+                                       - unat (MIN_BUDGET - r_amount (refill_hd sc))")
+                  apply (subgoal_tac "unat (r_time (refill_hd sc) + sc_period sc)
+                                      = unat (r_time (refill_hd sc)) + unat (sc_period sc)")
+                   apply clarsimp
+                   apply (simp add: unat_sub)
+                   apply (subgoal_tac "MIN_BUDGET \<le> sc_period sc")
+                    apply (simp add: hd_conv_nth word_le_not_less)
+                   using MIN_BUDGET_le_MIN_SC_BUDGET word_le_nat_alt
+                   apply fastforce
+                  apply (rule unat_add_lem', simp add: max_word_def)
+                 using hd_in_set word_le_not_less apply blast
 
-       \<comment> \<open>last of the word proofs - similar to the second of the word proofs above\<close>
-       apply (subgoal_tac "unat (r_time (refill_hd sc) + sc_period sc)
-                          = unat (r_time (refill_hd sc)) + unat (sc_period sc)")
-        apply clarsimp
-        apply (simp add: ordered_disjoint_def)
-        apply (drule_tac x=0 in spec)
-        apply (elim impE)
-         apply (simp add: tail_nonempty_length)
-        apply (metis hd_Cons_tl nth_Cons_0 nth_Cons_Suc)
-       apply (rule unat_add_lem', simp add: max_word_def)
+                \<comment> \<open>fourth of the five word proofs\<close>
+                apply (subgoal_tac "unat (r_time (refill_hd sc) + sc_period sc)
+                                   = unat (r_time (refill_hd sc)) + unat (sc_period sc)")
+                 apply (simp add: ordered_disjoint_def)
+                 apply (drule_tac x=0 in spec)
+                 apply (elim impE)
+                  apply (simp add: tail_nonempty_length)
+                 using hd_in_set word_not_le apply blast
+                apply (rule unat_add_lem', simp add: max_word_def)
+
+               \<comment> \<open>last of the word proofs - similar to the fourth of the word proofs above\<close>
+               apply (subgoal_tac "unat (r_time (refill_hd sc) + sc_period sc)
+                                  = unat (r_time (refill_hd sc)) + unat (sc_period sc)")
+                apply (simp add: ordered_disjoint_def)
+                apply (drule_tac x=0 in spec)
+                apply (elim impE)
+                 apply (simp add: tail_nonempty_length)
+                apply (metis hd_Cons_tl nth_Cons_0 nth_Cons_Suc)
+               apply (rule unat_add_lem', simp add: max_word_def)
 
       \<comment> \<open>length\<close>
       using schedule_used_non_nil neq_Nil_lengthI apply blast
@@ -7654,15 +7643,11 @@ lemma refill_budget_check_valid_refills[wp]:
                        \<le> r_amount (hd (tl (sc_refills sc))) + (r_amount (refill_hd sc) - usage)")
     prefer 2
     apply (simp add: word_le_nat_alt)
-    apply (frule_tac x=0 in spec)
-    apply (elim impE, fastforce)
-    apply (frule_tac x=1 in spec)
-    apply (elim impE)
-     apply (force simp: tail_nonempty_length)
+    apply (frule_tac x="refill_hd sc" in bspec)
+    apply (case_tac "sc_refills sc"; simp)
+    apply (frule_tac x="hd (tl (sc_refills sc))" in bspec)
+    apply (case_tac "sc_refills sc"; simp)
     apply (simp add: hd_conv_nth)
-    apply (subgoal_tac "r_amount (sc_refills sc ! Suc 0) = r_amount (tl (sc_refills sc) ! 0)")
-     apply force
-    apply (metis length_greater_0_conv nth_tl)
    \<comment> \<open>end of the proofs of the useful facts\<close>
 
    apply (intro conjI)
@@ -7686,18 +7671,12 @@ lemma refill_budget_check_valid_refills[wp]:
            apply (drule_tac x=1 in spec)
            apply (elim impE)
             using tail_nonempty_length apply force
-           apply (drule_tac x=1 in spec)
-           apply (elim impE)
-            using tail_nonempty_length apply force
+           apply (drule_tac x="hd (tl (sc_refills sc))" in bspec)
+           apply (case_tac "sc_refills sc"; simp)
            apply (case_tac "sc_refills sc", fast, case_tac list, force, simp add: hd_conv_nth)
          apply simp
          apply clarsimp
-         apply (case_tac "m=0")
-          apply clarsimp
-         apply (drule_tac x="m + Suc 0" in spec)
-         apply (elim impE)
-          apply linarith
-         apply (case_tac "sc_refills sc", force, case_tac list, force, force)
+           apply (case_tac "sc_refills sc", fast, case_tac list, force, simp add: hd_conv_nth)
         apply (intro conjI impI)
         apply (clarsimp split: if_splits)
         apply (intro conjI impI)
@@ -7725,12 +7704,7 @@ lemma refill_budget_check_valid_refills[wp]:
           apply force
          apply (simp add: no_overflow_def)
         apply (clarsimp split: if_split)
-        apply (case_tac "m=0")
-         apply clarsimp
-        apply (drule_tac x="m + Suc 0" in spec)
-        apply (elim impE)
-         apply linarith
-        apply (case_tac "sc_refills sc", force, case_tac list, force, force)
+           apply (case_tac "sc_refills sc", fast, case_tac list, force, simp add: hd_conv_nth)
        apply (intro conjI impI)
        apply (clarsimp split: if_splits)
        apply (intro conjI impI)
@@ -7757,12 +7731,7 @@ lemma refill_budget_check_valid_refills[wp]:
         apply fastforce
        apply (simp add: word_le_nat_alt[symmetric])
       apply clarsimp
-      apply (case_tac "na=0")
-       apply clarsimp
-      apply (drule_tac x="na + Suc 0" in spec)
-      apply (elim impE)
-       apply linarith
-      apply (case_tac "sc_refills sc", force, case_tac list, force, force)
+           apply (case_tac "sc_refills sc", fast, case_tac list, force, simp add: hd_conv_nth)
 
     \<comment> \<open>period_window\<close>
      apply (simp add: schedule_used.simps)
@@ -7983,11 +7952,10 @@ lemma refill_budget_check_valid_refills[wp]:
           apply (meson length_greater_0_conv nth_tl)
          apply force
         apply clarsimp
-        apply (case_tac "m=0")
-         apply clarsimp
+        apply (intro conjI)
          apply force
         apply clarsimp
-        apply (drule_tac x=m in spec)
+           apply (case_tac "sc_refills sc", fast, case_tac list, force, simp add: hd_conv_nth)
         apply clarsimp
         apply (case_tac "sc_refills sc", fast, case_tac list, simp, force)
        apply (clarsimp split: if_splits)
@@ -8007,23 +7975,15 @@ lemma refill_budget_check_valid_refills[wp]:
                      and right="tl (sc_refills sc)"
                       in no_overflow_append)
            apply (simp add: no_overflow_def word_le_nat_alt)
-          apply (drule_tac x=0 in spec)
           apply (metis hd_Cons_tl no_overflow_tail)
          apply fastforce
         apply (simp add: no_overflow_def)
        apply clarsimp
-       apply (case_tac "m=0")
+        apply (intro conjI)
         apply simp
        apply clarsimp
-       apply (drule_tac x=m in spec)
-       apply (elim impE)
+           apply (case_tac "sc_refills sc", fast, case_tac list, force, simp add: hd_conv_nth)
         apply blast
-       apply (subgoal_tac "tl (sc_refills sc) ! (m - Suc 0) = sc_refills sc ! m")
-        prefer 2
-        apply (metis Nitpick.size_list_simp(2) length_ineq_not_Nil(1) less_handy_casesE
-                     less_le_nonzero_helper minus_eq nat_Suc_less_le_imp nat_simps(2) nth_tl
-                     semiring_norm(164))
-       apply argo
       apply (clarsimp split: if_splits)
        apply (simp add: word_le_nat_alt)
       apply (simp add: window_def)
@@ -8047,11 +8007,10 @@ lemma refill_budget_check_valid_refills[wp]:
       apply clarsimp
       using word_le_nat_alt apply fast
      apply clarsimp
-     apply (case_tac "na=0")
+        apply (intro conjI)
       apply force
-     apply (drule_tac x=na in spec)
+           apply (case_tac "sc_refills sc", fast, case_tac list, force, simp add: hd_conv_nth)
      apply clarsimp
-     apply (case_tac "sc_refills sc", fast, case_tac list, simp, force)
 
     \<comment> \<open>period window\<close>
     \<comment> \<open>first branch of schedule_used\<close>
@@ -8254,7 +8213,6 @@ lemma refill_budget_check_round_robin_valid_refills[wp]:
         apply (subst unat_add_lem'; overflow_hammer)
        apply (subst unat_add_lem'; overflow_hammer)
      \<comment> \<open>bounded below\<close>
-      apply (case_tac n; simp)
       apply (rule word_l_diffs(4); simp)
       apply (metis MIN_BUDGET_le_MIN_SC_BUDGET MIN_SC_BUDGET_def)
         \<comment> \<open>window\<close>
@@ -8304,10 +8262,10 @@ lemma refill_budget_check_round_robin_valid_refills[wp]:
       apply simp
       apply (subst unat_add_lem'; overflow_hammer)
      \<comment> \<open>bounded below\<close>
-     apply (case_tac n; simp)
      apply (erule le_minus', overflow_hammer)
      apply (erule add_left_mono_trans)
      apply (subst word_le_nat_alt[symmetric], fastforce)
+     apply fastforce
     \<comment> \<open>window\<close>
     apply (clarsimp simp: window_def)
     apply (subst unat_sub, overflow_hammer)
@@ -8380,7 +8338,6 @@ lemma refill_budget_check_round_robin_valid_refills[wp]:
      apply (rule_tac y="unat (sc_budget sc)" in order_trans)
       apply (rule iffD1[OF word_le_nat_alt], simp)
      apply overflow_hammer
-    apply (case_tac na; simp)
      apply (erule le_minus', overflow_hammer)
      apply (erule add_left_mono_trans, overflow_hammer)
     apply (rule_tac y="r_amount t" in  order_trans)
@@ -8599,11 +8556,12 @@ lemma refills_merge_prefix_no_overflow:
   by force
 
 lemma refills_merge_prefix_MIN_BUDGET:
-  "\<lbrakk>\<forall>m < length (a # ls). MIN_BUDGET \<le> r_amount ((a # ls) ! m);
+  "\<lbrakk>\<forall>refill \<in> set (a # ls). MIN_BUDGET \<le> r_amount refill;
     unat new_time + sum_list (map unat (map r_amount (a # ls))) \<le> unat max_time\<rbrakk>
-   \<Longrightarrow> \<forall>m < length (refills_merge_prefix (a\<lparr>r_time := new_time\<rparr> # ls)).
-              MIN_BUDGET \<le> r_amount ((refills_merge_prefix (a\<lparr>r_time := new_time\<rparr> # ls)) ! m)"
+   \<Longrightarrow> \<forall>refill \<in> set (refills_merge_prefix (a\<lparr>r_time := new_time\<rparr> # ls)).
+              MIN_BUDGET \<le> r_amount refill"
   supply map_map[simp del]
+  apply (simp add: all_set_conv_all_nth)
   apply (induction ls arbitrary: a rule: length_induct)
   apply (case_tac xs)
    apply fastforce
@@ -8615,20 +8573,25 @@ lemma refills_merge_prefix_MIN_BUDGET:
    apply (drule_tac x="\<lparr>r_time = new_time, r_amount = r_amount aa + r_amount a\<rparr>" in spec)
    apply clarsimp
    apply (elim impE)
-     apply clarsimp
-     apply (case_tac "ma=0")
+     apply (intro conjI) defer
       apply clarsimp
-      apply (simp add: word_le_nat_alt)
-      apply (subgoal_tac "unat (r_amount aa + r_amount a) = unat (r_amount aa) + unat (r_amount a)")
-       apply force
-      apply (rule unat_add_lem', simp add: max_word_def)
-     apply force
-    apply (subgoal_tac "unat (r_amount aa + r_amount a) = unat (r_amount aa) + unat (r_amount a)")
-     apply linarith
-    apply (rule unat_add_lem', simp add: max_word_def)
-   apply blast
-  apply (clarsimp simp: can_merge_refill_def merge_refill_def)
-  apply (case_tac "m=0"; fastforce)
+      apply (case_tac "i=0")
+       apply clarsimp
+       apply (simp add: word_le_nat_alt)
+       apply (subgoal_tac "unat (r_amount aa + r_amount a) = unat (r_amount aa) + unat (r_amount a)")
+        apply force
+       apply (rule unat_add_lem', simp add: max_word_def)
+      apply force
+     apply (subgoal_tac "unat (r_amount aa + r_amount a) = unat (r_amount aa) + unat (r_amount a)")
+      apply linarith
+     apply (rule unat_add_lem', simp add: max_word_def)
+    apply blast
+   apply (clarsimp simp: can_merge_refill_def merge_refill_def)
+   apply (case_tac "i=0"; fastforce)
+  apply (simp add: word_le_nat_alt)
+  apply (subgoal_tac "unat (r_amount aa + r_amount a) = unat (r_amount aa) + unat (r_amount a)")
+   apply force
+  apply (rule unat_add_lem', simp add: max_word_def)
   done
 
 lemma refills_merge_prefix_window:
@@ -8716,7 +8679,6 @@ lemma refill_unblock_check_valid_refills[wp]:
         apply (case_tac "sc_refills sc", fastforce, simp)
        apply (simp add: ordered_disjoint_def)
       apply (simp add: no_overflow_def)
-      apply (case_tac "sc_refills sc", blast, force)
     apply (simp add: window_def)
     apply (case_tac "sc_refills sc", argo, force)
    apply simp
@@ -8740,12 +8702,7 @@ lemma refill_unblock_check_valid_refills[wp]:
      apply (case_tac "na=0")
       apply clarsimp
      apply (case_tac "sc_refills sc", fastforce, case_tac list, simp, simp add: word_le_nat_alt)
-    apply clarsimp
-    apply (case_tac "na=0")
-     apply (simp add: hd_conv_nth)
-    apply clarsimp
-    apply (metis Nitpick.size_list_simp(2) double_not_eq_Suc_double hd_conv_nth
-                 length_greater_0_conv less_2_cases mult_2 nth_tl numeral_2_eq_2 numeral_Bit0)
+     apply (case_tac "sc_refills sc", fastforce, case_tac list, simp, simp add: word_le_nat_alt)
    apply (simp add: window_def)
    apply (case_tac "sc_refills sc", blast, case_tac list, simp, simp)
 
@@ -8768,7 +8725,7 @@ lemma refill_unblock_check_valid_refills[wp]:
       apply (rule refills_merge_prefix_no_overflow)
        apply clarsimp
       apply (metis no_overflow_tail list.exhaust_sel)
-     apply (rule refills_merge_prefix_MIN_BUDGET; fastforce)
+     apply (rule refills_merge_prefix_MIN_BUDGET; fastforce?)
     apply (erule_tac new_time="cur_time s + kernelWCET_ticks" in refills_merge_prefix_window
            ; fastforce simp: word_le_nat_alt)
    apply (metis refills_merge_valid list.sel(3) list.simps(3) list.size(3) non_empty_tail_length
@@ -8889,7 +8846,7 @@ lemma send_ipc_valid_refills[wp]:
    \<lbrace>\<lambda>_. valid_refills scptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   supply if_weak_cong[cong del]
   apply (clarsimp simp: send_ipc_def)
-  apply (wpsimp wp: )
+  apply wpsimp
                apply (rule_tac Q="\<lambda>_. valid_refills scptr and current_time_bounded 1"
                       in hoare_strengthen_post[rotated])
                 apply (clarsimp cong: conj_cong simp: current_time_bounded_def valid_refills_def2)
@@ -8929,11 +8886,8 @@ lemma set_takeWhileD_contrap:
 
 lemma valid_refills_refill_sufficient:
   "valid_refills scp s \<Longrightarrow> is_refill_sufficient 0 scp s"
-  apply (clarsimp simp: valid_refills_def vs_all_heap_simps obj_at_def
+  by (clarsimp simp: valid_refills_def vs_all_heap_simps obj_at_def
                         refill_sufficient_defs)
-  apply (rename_tac sc n)
-  apply (case_tac "sc_refills sc"; simp)
-  by fastforce
 
 context DetSchedSchedule_AI begin
 
@@ -9257,7 +9211,6 @@ lemma refill_budget_check_valid_ready_qs_offset_ready_and_sufficient:
     apply (wpsimp wp: refill_budget_check_valid_refills)
    apply (clarsimp simp: valid_refills_def vs_all_heap_simps refill_sufficient_def
                          refill_capacity_def)
-   apply (fastforce simp: hd_conv_nth)
   apply (fastforce simp: active_sc_valid_refills_def pred_tcb_at_def obj_at_def vs_all_heap_simps)
   done
 
@@ -9299,7 +9252,6 @@ lemma refill_budget_check_round_robin_valid_ready_qs_offset_ready_and_sufficient
     apply (wpsimp wp: refill_budget_check_round_robin_valid_refills)
    apply (clarsimp simp: valid_refills_def vs_all_heap_simps refill_sufficient_def
                          refill_capacity_def)
-   apply (fastforce simp: hd_conv_nth)
   apply (clarsimp simp: active_sc_valid_refills_def pred_tcb_at_def obj_at_def vs_all_heap_simps)
   apply (fastforce simp: current_time_bounded_strengthen)
   done
