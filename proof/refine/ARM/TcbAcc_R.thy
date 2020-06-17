@@ -271,10 +271,6 @@ lemma preemptionPoint_irq [wp]:
 
 lemmas doMachineOp_obj_at = doMachineOp_obj_at'
 
-lemma updateObject_tcb_inv:
-  "\<lbrace>P\<rbrace> updateObject (obj::tcb) ko p q n \<lbrace>\<lambda>rv. P\<rbrace>"
-  by simp (rule updateObject_default_inv)
-
 lemma tcb_update_corres':
   assumes tcbs: "tcb_relation tcb tcb' \<Longrightarrow> tcb_relation tcbu tcbu'"
   assumes tables: "\<forall>(getF, v) \<in> ran tcb_cap_cases. getF tcbu = getF tcb"
@@ -469,20 +465,21 @@ lemmas threadSet_corres_noop_split =
 
 lemma threadSet_tcb' [wp]:
   "\<lbrace>tcb_at' t\<rbrace> threadSet f t' \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
-  by (simp add: threadSet_def) wp
+  by (wpsimp simp: threadSet_def set_tcb'.updateObject_objBitsKO_eq)
 
 (* The function "thread_set f p" updates a TCB at p using function f.
    It should not be used to change capabilities, though. *)
 lemma setObject_tcb_valid_objs:
   "\<lbrace>valid_objs' and (tcb_at' t and valid_obj' (injectKO v))\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (rule setObject_valid_objs')
+  apply (erule set_tcb'.updateObject_objBitsKO_eq)
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
 
 lemma setObject_tcb_at':
   "\<lbrace>\<lambda>s. P (tcb_at' t' s)\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv s. P (tcb_at' t' s)\<rbrace>"
   apply (subst typ_at_tcb'[symmetric])+
-  apply (rule setObject_typ_at')
+  apply (rule setObject_typ_at', erule set_tcb'.updateObject_objBitsKO_eq)
   done
 
 lemma setObject_queues_unchanged:
@@ -663,7 +660,7 @@ lemma threadSet_valid_pspace'T_P:
    \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   apply (simp add: valid_pspace'_def threadSet_def)
   apply (rule hoare_pre,
-         wp setObject_tcb_valid_objs getObject_tcb_wp)
+         wpsimp wp: setObject_tcb_valid_objs getObject_tcb_wp simp: set_tcb'.updateObject_objBitsKO_eq)
   apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
   apply (erule(1) valid_objsE')
   apply (clarsimp simp add: valid_obj'_def valid_tcb'_def
@@ -936,19 +933,19 @@ lemma threadSet_valid_bitmapQ[wp]:
   "\<lbrace> valid_bitmapQ \<rbrace> threadSet f t \<lbrace> \<lambda>rv. valid_bitmapQ \<rbrace>"
   unfolding bitmapQ_defs threadSet_def
   by (clarsimp simp: setObject_def split_def)
-     (wp | simp add: updateObject_default_def)+
+     (wp | simp add: updateObject_default_def objBits_simps)+
 
 lemma threadSet_valid_bitmapQ_no_L1_orphans[wp]:
   "\<lbrace> bitmapQ_no_L1_orphans \<rbrace> threadSet f t \<lbrace> \<lambda>rv. bitmapQ_no_L1_orphans \<rbrace>"
   unfolding bitmapQ_defs threadSet_def
   by (clarsimp simp: setObject_def split_def)
-     (wp | simp add: updateObject_default_def)+
+     (wp | simp add: updateObject_default_def objBits_simps)+
 
 lemma threadSet_valid_bitmapQ_no_L2_orphans[wp]:
   "\<lbrace> bitmapQ_no_L2_orphans \<rbrace> threadSet f t \<lbrace> \<lambda>rv. bitmapQ_no_L2_orphans \<rbrace>"
   unfolding bitmapQ_defs threadSet_def
   by (clarsimp simp: setObject_def split_def)
-     (wp | simp add: updateObject_default_def)+
+     (wp | simp add: updateObject_default_def objBits_simps)+
 
 lemma threadSet_valid_queues:
   "\<lbrace>Invariants_H.valid_queues and
@@ -1070,17 +1067,17 @@ crunches setThreadState, setBoundNotification
 
 lemma threadSet_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> threadSet t F \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  by (simp add: threadSet_def, wp setObject_typ_at')
+  by (wpsimp simp: threadSet_def set_tcb'.updateObject_objBitsKO_eq wp: setObject_typ_at')
 
 lemma setObject_tcb_pde_mappings'[wp]:
   "\<lbrace>valid_pde_mappings'\<rbrace> setObject p (tcb :: tcb) \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
-  apply (wp valid_pde_mappings_lift' setObject_typ_at')
-  done
+  by (wpsimp wp: valid_pde_mappings_lift' setObject_typ_at' simp: set_tcb'.updateObject_objBitsKO_eq)
 
 crunches threadSet
   for irq_states' [wp]: valid_irq_states'
   and pde_mappings' [wp]: valid_pde_mappings'
   and pspace_domain_valid [wp]: pspace_domain_valid
+  (simp: set_tcb'.updateObject_objBitsKO_eq)
 
 lemma threadSet_obj_at'_really_strongest:
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> obj_at' (\<lambda>obj. if t = t' then P (f obj) else P obj)
@@ -1266,7 +1263,7 @@ lemma threadSet_not_inQ:
   apply (simp add: threadSet_def ct_not_inQ_def)
   apply (wp)
     apply (rule hoare_convert_imp [OF setObject_nosch])
-     apply (rule updateObject_tcb_inv)
+     apply (wpsimp wp: updateObject_default_inv)
     apply (wps setObject_ct_inv)
     apply (wp setObject_tcb_strongest getObject_tcb_wp)+
   apply (case_tac "t = ksCurThread s")
@@ -1514,7 +1511,7 @@ lemma asUser_nosch[wp]:
 crunches asUser
   for aligned'[wp]: pspace_aligned'
   and distinct'[wp]: pspace_distinct'
-  (simp: crunch_simps wp: crunch_wps)
+  (simp: crunch_simps set_tcb'.updateObject_objBitsKO_eq wp: crunch_wps)
 
 lemma asUser_valid_objs [wp]:
   "\<lbrace>valid_objs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
@@ -2505,7 +2502,7 @@ lemma sts'_valid_pspace'_inv[wp]:
   setThreadState st t
   \<lbrace> \<lambda>rv. valid_pspace' \<rbrace>"
   apply (simp add: valid_pspace'_def)
-  by (wpsimp wp: sts_valid_objs' getObject_obj_at_tcb
+  by (wpsimp wp: sts_valid_objs' getObject_obj_at_tcb set_tcb'.updateObject_objBitsKO_eq
            simp: setThreadState_def threadSet_def valid_mdb'_def tcb_cte_cases_def)
 
 crunch ct[wp]: setQueue "\<lambda>s. P (ksCurThread s)"
@@ -2530,7 +2527,7 @@ lemma sbn'_valid_pspace'_inv[wp]:
   apply (rule hoare_pre)
    apply (wp sbn_valid_objs')
    apply (simp add: setBoundNotification_def threadSet_def bind_assoc valid_mdb'_def)
-   apply (wp getObject_obj_at_tcb | simp)+
+   apply (wp getObject_obj_at_tcb | simp add: set_tcb'.updateObject_objBitsKO_eq)+
   apply (clarsimp simp: valid_mdb'_def)
   apply (drule obj_at_ko_at')
   apply clarsimp
@@ -3552,9 +3549,6 @@ lemma setBoundNotification_valid_release_queues[wp]:
   apply (fastforce simp: inQ_def obj_at'_def pred_tcb_at'_def)
   done
 
-crunches scheduleTCB
-  for valid_objs'[wp]: valid_objs'
-
 lemma setThreadState_valid_objs'[wp]:
   "\<lbrace> valid_tcb_state' st and valid_objs' \<rbrace> setThreadState st t \<lbrace> \<lambda>_. valid_objs' \<rbrace>"
   apply (simp add: setThreadState_def pred_conj_def)
@@ -4294,9 +4288,6 @@ lemma sbn_st_tcb':
 crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification, scheduleTCB
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
-
-crunches scheduleTCB
-  for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
 
 lemma setThreadState_ctes_of[wp]:
   "setThreadState st t \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"

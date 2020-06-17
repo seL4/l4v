@@ -780,5 +780,115 @@ lemma ghost_relation_typ_at:
    apply (intro conjI impI iffI allI; force)
    done
 
+(* proofs related to sc_relation and scheduling context size numbers *)
+
+lemma sc_const_eq:
+  "refillSizeBytes = (refill_size_bytes::nat)"
+  "schedContextStructSize = sizeof_sched_context_t"
+  "minSchedContextBits = min_sched_context_bits"
+  by (auto simp: refillSizeBytes_def refill_size_bytes_def minSchedContextBits_def
+                 sizeof_sched_context_t_def min_sched_context_bits_def schedContextStructSize_def)
+
+lemma sc_relation_refills:
+  "sc_relation sc n sc' \<Longrightarrow>
+     length (sc_refills sc) \<le> max_num_refills (min_sched_context_bits + n) \<and>
+     sc_refills sc @ empty_refills n (size (sc_refills sc)) = map refill_map (scRefills sc')"
+  by (clarsimp simp: sc_relation_def)
+
+lemma scBits_bound:
+  notes sc_const_eq[simp]
+  assumes "sc_relation sc n sc'"
+  shows "scBitsFromRefillLength sc' \<le> minSchedContextBits + n"
+  unfolding max_num_refills_def scBitsFromRefillLength_def MIN_REFILLS_def
+  apply (clarsimp simp del: of_nat_add of_nat_mult simp: assms(1) max_num_refills_def)
+  proof -
+
+    have sc1: "length (sc_refills sc) \<le> max_num_refills (min_sched_context_bits + n)"
+      using assms sc_relation_refills by simp
+
+    have sc2: "sc_refills sc @ empty_refills n (size (sc_refills sc)) = map refill_map (scRefills sc')"
+      using assms sc_relation_refills by simp
+
+    have scRefills_length:
+      "length (scRefills sc') = max_num_refills (min_sched_context_bits + n)"
+      using sc1 arg_cong[where f=length, OF sc2] empty_refills_def
+      by simp
+
+    have min_pos: "(0::real) < (2::nat) ^ (min_sched_context_bits + n)"
+      by (simp add: min_sched_context_bits_def)
+
+    have strsz: "sizeof_sched_context_t \<le> (2::nat) ^ min_sched_context_bits"
+      unfolding sc_const_eq(2)[symmetric] schedContextStructSize_def min_sched_context_bits_def
+      by simp
+
+    show "log (2::real) (size (scRefills sc') * refill_size_bytes + sizeof_sched_context_t)
+              \<le> min_sched_context_bits + n"
+      apply (simp only: scRefills_length)
+    proof -
+
+      have P2: "(0::real) < max_num_refills (min_sched_context_bits + n) * refill_size_bytes
+                                        + sizeof_sched_context_t"
+        using sc_const_eq(2) schedContextStructSize_def by linarith
+
+      have P3: "max_num_refills (min_sched_context_bits + n) * refill_size_bytes
+                                 + sizeof_sched_context_t
+                    \<le> (2::nat) ^ (min_sched_context_bits + n)" (is "?LH \<le> ?RH")
+      proof -
+        have h1: "?LH \<le> ((2::nat) ^ (min_sched_context_bits + n)
+                             - sizeof_sched_context_t) + sizeof_sched_context_t"
+          by (simp add: max_num_refills_def)
+        have "(2::nat) ^ min_sched_context_bits \<le> (2::nat) ^ (min_sched_context_bits + n)" by simp
+        thus "?LH \<le> ?RH" using strsz h1 by linarith
+      qed
+
+      then have P4:
+         "log 2 (max_num_refills (min_sched_context_bits + n) * refill_size_bytes
+                                                + sizeof_sched_context_t)
+           \<le> log 2 ((2::nat) ^ (min_sched_context_bits + n))"
+        by (simp only: log_le_cancel_iff[where a="2::real", OF _ P2 min_pos, THEN iffD2])
+
+      have P5: "log (2::real) ((2::nat) ^ (min_sched_context_bits + n)) \<le> min_sched_context_bits + n"
+        using log_nat_power by (metis less_eq_real_def log2_of_power_eq)
+
+      from P4 P5
+      show "log (2::real)
+               (max_num_refills (min_sched_context_bits + n) * refill_size_bytes
+                      + sizeof_sched_context_t)
+             \<le> min_sched_context_bits + n" by simp
+    qed
+  qed
+
+(* FIXME RT: we need to assume something to prove this.
+   Fundamentally, this should follow from the decode condition on the userSize. *)
+lemma scBits_max:
+  "scBitsFromRefillLength sc' < LENGTH(machine_word_len)"
+  unfolding scBitsFromRefillLength_def
+  sorry
+
+lemma scBits_pos':
+  "0 < scBitsFromRefillLength sc'"
+proof -
+  note sc_const_eq[simp]
+  have "log 2 (of_nat sizeof_sched_context_t)
+           \<le> log 2 (of_nat (size (scRefills sc') * refill_size_bytes + sizeof_sched_context_t))"
+    apply (simp only: sc_const_eq(2)[symmetric, simplified schedContextStructSize_def, simplified])
+    by (simp only: log_le_cancel_iff[where a="2::real", THEN iffD2])
+  moreover have "0 < log 2 (of_nat sizeof_sched_context_t)"
+    by (simp add: sc_const_eq(2)[symmetric, simplified schedContextStructSize_def, simplified])
+  ultimately show ?thesis
+    by (clarsimp simp: scBitsFromRefillLength_def max_num_refills_def)
+qed
+
+lemma scBits_pos[simp]:
+  "(0::machine_word) < of_nat (scBitsFromRefillLength sc')"
+  using scBits_pos' scBits_max
+  by (metis less_or_eq_imp_le pow_mono_leq_imp_lt unat_0 unat_ucast_less_no_overflow_simp)
+
+lemma scBits_pos3[simp]:
+  shows "(1::machine_word) < (2::machine_word) ^ scBitsFromRefillLength sc'"
+  using one_less_power rel_simps(49) semiring_norm(76) scBits_pos' scBits_max
+  by (metis Num.of_nat_simps(2) unat_2tp_if word_of_nat_less)
+
+
 end
 end

@@ -1630,18 +1630,6 @@ lemma setCTE_cteCaps_of[wp]:
   apply (clarsimp elim!: rsubst[where P=P] intro!: ext)
   done
 
-lemma insertNewCap_wps[wp]:
-  "\<lbrace>pspace_aligned'\<rbrace> insertNewCap parent slot cap \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
-  "\<lbrace>pspace_distinct'\<rbrace> insertNewCap parent slot cap \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
-  "\<lbrace>\<lambda>s. P ((cteCaps_of s)(slot \<mapsto> cap))\<rbrace>
-      insertNewCap parent slot cap
-   \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
-  apply (simp_all add: insertNewCap_def)
-   apply (wp hoare_drop_imps
-            | simp add: o_def)+
-  apply (clarsimp elim!: rsubst[where P=P] intro!: ext)
-  done
-
 definition apitype_of :: "cap \<Rightarrow> apiobject_type option"
 where
   "apitype_of c \<equiv> case c of
@@ -3273,6 +3261,9 @@ lemma retype_region_caps_overlap_reserved_ret:
    apply (clarsimp)+
   done
 
+crunches updateCap, updateFreeIndex
+  for sc_at'_n[wp]: "sc_at'_n n p"
+
 lemma updateFreeIndex_pspace_no_overlap':
   "\<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and>
         valid_pspace' s \<and> cte_wp_at' (isUntypedCap o cteCap) src s\<rbrace>
@@ -3280,7 +3271,7 @@ lemma updateFreeIndex_pspace_no_overlap':
    \<lbrace>\<lambda>r s. pspace_no_overlap' ptr sz s\<rbrace>"
   apply (simp add: updateFreeIndex_def getSlotCap_def updateTrackedFreeIndex_def)
   apply (rule hoare_pre)
-   apply (wp getCTE_wp' | wp (once) pspace_no_overlap'_lift
+   apply (wp getCTE_wp' | wp (once) pspace_no_overlap'_lift2
      | simp)+
   apply (clarsimp simp:valid_pspace'_def pspace_no_overlap'_def)
   done
@@ -4263,7 +4254,7 @@ lemma reset_untyped_cap_corres:
                        updateFreeIndex_descendants_of2
                        doMachineOp_psp_no_overlap
                        updateFreeIndex_cte_wp_at
-                       pspace_no_overlap'_lift
+                       pspace_no_overlap'_lift2
                        preemptionPoint_inv
                        hoare_vcg_ex_lift
                        | simp)+
@@ -4473,7 +4464,7 @@ lemma resetUntypedCap_invs_etc:
               hoare_vcg_const_Ball_lift
               updateFreeIndex_descendants_of2
               sch_act_simple_lift
-              pspace_no_overlap'_lift
+              pspace_no_overlap'_lift2
               doMachineOp_psp_no_overlap
               updateFreeIndex_ctes_of
               updateFreeIndex_cte_wp_at
@@ -4490,17 +4481,17 @@ lemma resetUntypedCap_invs_etc:
       in mapME_x_validE_nth)
      apply (rule hoare_pre)
       apply simp
-      apply (wp preemptionPoint_invs
-                updateFreeIndex_clear_invs'
-                hoare_vcg_ex_lift
-                updateFreeIndex_descendants_of2
-                updateFreeIndex_ctes_of
-                updateFreeIndex_cte_wp_at
-                doMachineOp_psp_no_overlap
-                hoare_vcg_ex_lift hoare_vcg_const_Ball_lift
-                pspace_no_overlap'_lift[OF preemptionPoint_inv]
-                pspace_no_overlap'_lift
-                updateFreeIndex_ct_in_state[unfolded ct_in_state'_def]
+      apply (wpsimp wp: preemptionPoint_invs
+                        updateFreeIndex_clear_invs'
+                        hoare_vcg_ex_lift
+                        updateFreeIndex_descendants_of2
+                        updateFreeIndex_ctes_of
+                        updateFreeIndex_cte_wp_at
+                        doMachineOp_psp_no_overlap
+                        hoare_vcg_ex_lift hoare_vcg_const_Ball_lift
+                        pspace_no_overlap'_lift[OF preemptionPoint_inv]
+                        pspace_no_overlap'_lift preemptionPoint_inv
+                        updateFreeIndex_ct_in_state[unfolded ct_in_state'_def]
               | strengthen invs_pspace_aligned' invs_pspace_distinct'
               | simp add: ct_in_state'_def
                           sch_act_simple_def

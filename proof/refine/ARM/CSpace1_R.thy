@@ -772,13 +772,11 @@ lemma setObject_cte_obj_at_tcb':
 
 lemma setCTE_typ_at':
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setCTE c cte \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  by (clarsimp simp add: setCTE_def) (wp setObject_typ_at')
-
-lemmas setObject_typ_at [wp] = setObject_typ_at' [where P=id, simplified]
+  by (wpsimp simp: setCTE_def updateObject_cte_objBitsKO_eq wp: setObject_typ_at')
 
 lemma setCTE_typ_at [wp]:
   "\<lbrace>typ_at' T p\<rbrace> setCTE c cte \<lbrace>\<lambda>_. typ_at' T p\<rbrace>"
-  by (clarsimp simp add: setCTE_def) wp
+  by (wpsimp simp: setCTE_def updateObject_cte_objBitsKO_eq wp: setObject_typ_at')
 
 lemmas setCTE_typ_ats [wp] = typ_at_lifts [OF setCTE_typ_at']
 
@@ -884,6 +882,11 @@ lemma cap_insert_objs' [wp]:
       apply simp
       apply wp+
       apply (clarsimp simp: updateCap_def)
+        apply (clarsimp simp: valid_def setObject_def setCTE_def in_monad split_def
+                              ko_wp_at'_def ps_clear_upd' lookupAround2_char1)
+        apply (case_tac ko; clarsimp simp: updateObject_cte in_fail typeError_def)
+       apply (wpsimp simp: updateObject_cte in_monad typeError_def
+                    split: kernel_object.split_asm)
       apply (wp|simp)+
     apply (rule hoare_drop_imp)+
     apply wp+
@@ -907,6 +910,9 @@ done
 lemma setCTE_valid_cap:
   "\<lbrace>valid_cap' c\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r. valid_cap' c\<rbrace>"
   by (rule typ_at_lifts, rule setCTE_typ_at')
+     (clarsimp simp: valid_def setObject_def setCTE_def in_monad split_def
+                              ko_wp_at'_def ps_clear_upd' lookupAround2_char1,
+      case_tac ko; clarsimp simp: updateObject_cte in_fail typeError_def)
 
 lemma set_is_modify:
   "m p = Some cte \<Longrightarrow>
@@ -1864,8 +1870,16 @@ lemma updateCap_stuff:
   apply (frule setCTE_pspace_only)
   apply (clarsimp simp: setCTE_def)
   apply (intro conjI impI)
-     apply (erule(1) use_valid [OF _ setObject_aligned])
-    apply (erule(1) use_valid [OF _ setObject_distinct])
+     apply (erule use_valid [OF _ setObject_aligned])
+      apply (clarsimp simp: updateObject_cte in_monad typeError_def
+                            in_magnitude_check objBits_simps
+                     split: kernel_object.split_asm if_split_asm)
+     apply simp
+    apply (erule use_valid [OF _ setObject_distinct])
+     apply (clarsimp simp: updateObject_cte in_monad typeError_def
+                           in_magnitude_check objBits_simps
+                    split: kernel_object.split_asm if_split_asm)
+    apply simp
    apply (erule setObject_cte_replies_of'_use_valid_ksPSpace; simp)
   apply (erule setObject_cte_scs_of'_use_valid_ksPSpace; simp)
   done
@@ -2442,6 +2456,7 @@ crunches updateMDB
   and scs_of'[wp]: "\<lambda>s. P (scs_of' s)"
   and aligned[wp]: pspace_aligned'
   and pdistinct[wp]: pspace_distinct'
+  (simp: updateObject_cte_objBitsKO_eq)
 
 lemma updateMDB_the_lot:
   assumes "(x, s'') \<in> fst (updateMDB p f s')"
@@ -4808,7 +4823,12 @@ lemma setUntypedCapAsFull_valid_cap:
   apply (intro conjI impI)
     apply (clarsimp simp:updateCap_def)
   apply (wp|clarsimp)+
-done
+     apply (clarsimp simp: valid_def setObject_def setCTE_def in_monad split_def
+                           ko_wp_at'_def ps_clear_upd' lookupAround2_char1
+                    split: if_splits)
+     apply (case_tac ko; clarsimp simp: updateObject_cte in_fail typeError_def)
+    apply (wp|clarsimp)+
+  done
 
 lemma cteCap_update_simps:
   "cteCap_update f srcCTE = CTE (f (cteCap srcCTE)) (cteMDBNode srcCTE)"

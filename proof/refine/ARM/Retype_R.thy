@@ -58,6 +58,7 @@ lemma createObjects_ret:
 
 lemma objBitsKO_bounded2[simp]:
   "objBitsKO ko < word_bits"
+  using scBits_max
   by (simp add: objBits_simps' word_bits_def pageBits_def archObjSize_def pdeBits_def pteBits_def
            split: Structures_H.kernel_object.split arch_kernel_object.split)
 
@@ -841,13 +842,31 @@ lemma objBits_le_obj_bits_api:
   "ty = Inr (APIObjectType SchedContextObject) \<longrightarrow> min_sched_context_bits \<le> us \<Longrightarrow>
    makeObjectKO dev ty = Some ko \<Longrightarrow>
    objBitsKO ko \<le> obj_bits_api (APIType_map2 ty) us"
+  supply sc_const_eq[simp]
   apply (case_tac ty)
     apply (auto simp: default_arch_object_def pageBits_def archObjSize_def pteBits_def pdeBits_def
                       makeObjectKO_def objBits_simps' APIType_map2_def obj_bits_api_def slot_bits_def
-                      min_sched_context_bits_def
+                      makeObject_sc
                split: Structures_H.kernel_object.splits arch_kernel_object.splits object_type.splits
-                      Structures_H.kernel_object.splits arch_kernel_object.splits apiobject_type.splits)
-  done
+                      Structures_H.kernel_object.splits arch_kernel_object.splits apiobject_type.splits
+                      if_split_asm)
+  apply (unfold scBitsFromRefillLength_def)
+  apply (simp add: sc_const_eq[symmetric, simplified])
+  apply (rule order_trans[rotated, where y=min_sched_context_bits])
+  apply (simp add: min_sched_context_bits_def)
+proof -
+  note [simp] = min_sched_context_bits_def refill_size_bytes_def sizeof_sched_context_t_def
+  have eq: "min_sched_context_bits = log 2 (2^(min_sched_context_bits::nat))"
+    by (clarsimp simp: log_nat_power[where b=2 and x=2 and n=8, simplified])
+  have P1: "((2 * of_nat refill_size_bytes +
+          of_nat sizeof_sched_context_t)::nat) \<le> 2^(min_sched_context_bits::nat)" by simp
+  then have "log 2 ((2 * of_nat refill_size_bytes +
+          of_nat sizeof_sched_context_t)::nat) \<le> log 2 (2^(min_sched_context_bits::nat))" 
+    using log_le_cancel_iff[where a="2::real"] by simp
+  then show "log 2 (2 * of_nat refill_size_bytes +
+          of_nat sizeof_sched_context_t) \<le> min_sched_context_bits"
+    by (simp add: eq[symmetric] del: min_sched_context_bits_def)
+qed
 
 lemma obj_relation_retype_other_obj:
   "\<lbrakk> is_other_obj_relation_type (a_type ko); other_obj_relation ko ko' \<rbrakk>
@@ -1370,11 +1389,10 @@ lemma new_cap_addrs_fold':
   "1 \<le> n \<Longrightarrow> map (\<lambda>n. ptr + (n << objBitsKO ko)) [0.e.n - 1] = new_cap_addrs (unat n) ptr ko"
   by (clarsimp simp: new_cap_addrs_def ptr_add_def upto_enum_red' shiftl_t2n power_add field_simps)
 
-lemma objBitsKO_gt_0: "0 < objBitsKO ko"
+lemma objBitsKO_gt_0: "(0::32 word) < of_nat (objBitsKO ko)"
   apply (case_tac ko; simp add: objBits_simps' pageBits_def)
   apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object; simp add: archObjSize_def pageBits_def pteBits_def pdeBits_def)
-  done
+  by (case_tac arch_kernel_object; simp add: archObjSize_def pageBits_def pteBits_def pdeBits_def)
 
 lemma getObject_tcb_gets:
   "getObject addr >>= (\<lambda>x::tcb. gets proj >>= (\<lambda>y. G x y))
@@ -1909,6 +1927,13 @@ show ?thesis
 qed
 lemmas capFreeIndex_update_valid_untyped' =
   capFreeIndex_update_valid_cap'[unfolded valid_cap'_def,simplified,THEN conjunct2,THEN conjunct1]
+
+crunches copyGlobalMappings
+  for sc_at'_n[wp]: "sc_at'_n n p"
+  (simp: crunch_simps wp: crunch_wps)
+
+crunches threadSet
+  for sc_at'_n[wp]: "sc_at'_n n p"
 
 lemma createNewCaps_valid_cap:
   fixes ptr :: word32

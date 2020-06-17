@@ -412,7 +412,6 @@ primrec capBits :: "capability \<Rightarrow> nat" where
 
 lemmas objBits_defs =
   tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def replySizeBits_def
-  minSchedContextBits_def
 
 definition capAligned :: "capability \<Rightarrow> bool" where
   "capAligned c \<equiv> is_aligned (capUntypedPtr c) (capBits c) \<and> capBits c < word_bits"
@@ -2533,14 +2532,18 @@ lemma ko_wp_typ_at':
   by (clarsimp simp: typ_at'_def ko_wp_at'_def)
 
 lemma koType_obj_range':
-  "koTypeOf k = koTypeOf k' \<Longrightarrow> obj_range' p k = obj_range' p k'"
+  "koTypeOf k = koTypeOf k' \<Longrightarrow> koTypeOf k = SchedContextT \<longrightarrow> objBitsKO k = objBitsKO k' \<Longrightarrow> obj_range' p k = obj_range' p k'"
   apply (rule ccontr)
   apply (simp add: obj_range'_def objBitsKO_def archObjSize_def
             split: kernel_object.splits arch_kernel_object.splits)
   done
+                                                                                 
+abbreviation
+  "sc_at'_n n \<equiv> ko_wp_at' (\<lambda>ko. koTypeOf ko = SchedContextT \<and> objBitsKO ko = n)"
 
 lemma typ_at_lift_valid_untyped':
   assumes P: "\<And>T p. \<lbrace>\<lambda>s. \<not>typ_at' T p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not>typ_at' T p s\<rbrace>"
+  assumes sz: "\<And>p n. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_untyped' d p n idx s\<rbrace> f \<lbrace>\<lambda>rv s. valid_untyped' d p n idx s\<rbrace>"
   apply (clarsimp simp: valid_untyped'_def split del:if_split)
   apply (rule hoare_vcg_all_lift)
@@ -2557,16 +2560,17 @@ lemma typ_at_lift_valid_untyped':
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def simp del:atLeastAtMost_iff)
   apply (elim disjE)
     apply (clarsimp simp:psubset_eq simp del:atLeastAtMost_iff)
-    apply (drule_tac p=ptr' in koType_obj_range')
-    apply (erule impE)
-    apply simp
+   apply (frule_tac p=ptr' in koType_obj_range', clarsimp)
+    apply (fastforce simp: ko_wp_at'_def dest!: use_valid [OF _ sz])
    apply simp
-  apply (drule_tac p = ptr' in koType_obj_range')
-  apply (clarsimp split:if_splits)
+  apply (frule_tac p = ptr' in koType_obj_range', clarsimp)
+   apply (fastforce simp: ko_wp_at'_def dest!: use_valid [OF _ sz])
+  apply simp
   done
 
 lemma typ_at_lift_valid_cap':
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
+  assumes sz: "\<And>p n. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_cap' cap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap' cap s\<rbrace>"
   including no_pre
   apply (simp add: valid_cap'_def)
@@ -2584,7 +2588,7 @@ lemma typ_at_lift_valid_cap':
            simp_all add: P [where P=id, simplified] page_table_at'_def
                          hoare_vcg_prop page_directory_at'_def All_less_Ball
               split del: if_split)
-       apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped'
+       apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped' sz
                  hoare_vcg_all_lift typ_at_lift_cte')+
   done
 
@@ -2866,6 +2870,10 @@ lemma pspace_aligned_update [iff]:
 lemma pspace_distinct_update [iff]:
   "pspace_distinct' (f s) = pspace_distinct' s"
   by (simp add: pspace pspace_distinct'_def ps_clear_def)
+
+lemma pspace_no_overlap'_update [iff]:
+  "pspace_no_overlap' p sz (f s) = pspace_no_overlap' p sz s"
+  by (simp add: pspace pspace_no_overlap'_def ps_clear_def)
 
 lemma pred_tcb_at_update [iff]:
   "pred_tcb_at' proj P p (f s) = pred_tcb_at' proj P p s"
@@ -3310,7 +3318,6 @@ lemma objBitsT_simps:
   "objBitsT NotificationT = ntfnSizeBits"
   "objBitsT CTET = cteSizeBits"
   "objBitsT TCBT = tcbBlockSizeBits"
-  "objBitsT SchedContextT = minSchedContextBits"
   "objBitsT ReplyT = replySizeBits"
   "objBitsT UserDataT = pageBits"
   "objBitsT UserDataDeviceT = pageBits"
@@ -3320,14 +3327,6 @@ lemma objBitsT_simps:
   "objBitsT (ArchT ASIDPoolT) = pageBits"
   unfolding objBitsT_def makeObjectT_def
   by (simp_all add: makeObject_simps objBits_simps archObjSize_def pteBits_def pdeBits_def)
-
-lemma objBitsT_koTypeOf :
-  "(objBitsT (koTypeOf ko)) = objBitsKO ko"
-  apply (cases ko; simp add: objBits_simps objBitsT_simps)
-  apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps
-                                                pteBits_def pdeBits_def)
-  done
 
 lemma valid_queues_obj_at'D:
    "\<lbrakk> t \<in> set (ksReadyQueues s (d, p)); valid_queues s \<rbrakk>

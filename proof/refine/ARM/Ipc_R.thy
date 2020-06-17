@@ -378,6 +378,9 @@ lemma cte_refs'_maskedAsFull[simp]:
    apply (clarsimp simp:maskedAsFull_def isCap_simps)+
  done
 
+crunches setExtraBadge, cteInsert
+  for sc_at'_n[wp]: "sc_at'_n n p"
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma tc_loop_corres:
   "\<lbrakk> list_all2 (\<lambda>(cap, slot) (cap', slot'). cap_relation cap cap'
@@ -1710,7 +1713,8 @@ lemma lec_valid_cap' [wp]:
 declare asUser_irq_handlers'[wp]
 
 crunches doIPCTransfer
-  for objs'[wp]: "valid_objs'"
+  for sc_at'_n[wp]: "sc_at'_n n p"
+  and objs'[wp]: "valid_objs'"
   and global_refs'[wp]: "valid_global_refs'"
   and irq_handlers'[wp]: "valid_irq_handlers'"
   and irq_states'[wp]: "valid_irq_states'"

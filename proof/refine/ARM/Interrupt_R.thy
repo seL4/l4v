@@ -419,6 +419,10 @@ lemma ct_in_current_domain_ksMachineState:
   apply (simp add:tcb_in_cur_domain'_def)
   done
 
+crunches cteDeleteOne
+  for sc_at'_n[wp]: "sc_at'_n n p"
+  (simp: crunch_simps wp: crunch_wps)
+
 lemma invoke_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace>
     invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"

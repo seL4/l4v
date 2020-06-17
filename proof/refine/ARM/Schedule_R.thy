@@ -63,9 +63,6 @@ qed
 
 lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_order.order.refl]
 
-(* Levity: added (20090721 10:56:29) *)
-declare objBitsT_koTypeOf [simp]
-
 lemma arch_switch_thread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
               and valid_vspace_objs and pspace_aligned and pspace_distinct

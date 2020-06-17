@@ -8672,6 +8672,10 @@ lemmas make_zombie_or_noop_or_arch_invs
    hoare_vcg_disj_lift [OF make_zombie_invs' arch_update_updateCap_invs],
    simplified]
 
+crunches cteMove
+  for sc_at'_n[wp]: "sc_at'_n n p"
+  (simp: crunch_simps wp: crunch_wps)
+
 lemma invokeCNode_invs' [wp]:
   "\<lbrace>invs' and sch_act_simple and valid_cnode_inv' cinv\<rbrace>
     invokeCNode cinv \<lbrace>\<lambda>y. invs'\<rbrace>"

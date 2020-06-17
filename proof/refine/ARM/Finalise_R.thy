@@ -124,6 +124,10 @@ lemma updateFreeIndex_valid_objs' [wp]:
   apply (wp getCTE_wp' | wpc | simp add: updateTrackedFreeIndex_def)+
   done
 
+crunches clearUntypedFreeIndex, updateMDB
+  for sc_at'_n[wp]: "sc_at'_n n p"
+  (simp: crunch_simps wp: crunch_wps)
+
 crunch valid_objs'[wp]: emptySlot "valid_objs'"
 
 crunch state_refs_of'[wp]: setInterruptState "\<lambda>s. P (state_refs_of' s)"

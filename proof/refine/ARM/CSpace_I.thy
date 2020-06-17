@@ -1902,10 +1902,9 @@ lemma setCTE_state_refs_of'[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> setCTE p cte \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   unfolding setCTE_def
   apply (rule setObject_state_refs_of_eq)
-  apply (clarsimp simp: updateObject_cte in_monad typeError_def
-                        in_magnitude_check objBits_simps
-                 split: kernel_object.split_asm if_split_asm)
-  done
+   by (clarsimp simp: updateObject_cte in_monad typeError_def
+                         in_magnitude_check objBits_simps
+                  split: kernel_object.split_asm if_split_asm)+
 
 lemma setCTE_valid_mdb:
   fixes cap
@@ -1930,12 +1929,11 @@ lemma setCTE_valid_objs'[wp]:
   unfolding setCTE_def
   apply (rule setObject_valid_objs')
    apply (clarsimp simp: prod_eq_iff lookupAround2_char1 updateObject_cte objBits_simps)
-   apply (clarsimp simp: prod_eq_iff lookupAround2_char1
+   by (clarsimp simp: prod_eq_iff lookupAround2_char1
                          updateObject_cte in_monad typeError_def
                          valid_obj'_def valid_tcb'_def valid_cte'_def
                          tcb_cte_cases_def
-                  split: kernel_object.split_asm if_split_asm)
-  done
+                  split: kernel_object.split_asm if_split_asm)+
 
 lemma getCTE_cte_wp_at:
   "\<lbrace>\<top>\<rbrace> getCTE p \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>c. c = rv) p\<rbrace>"

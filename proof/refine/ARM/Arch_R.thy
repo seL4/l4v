@@ -1248,7 +1248,7 @@ lemma setObject_tcb_pre:
    apply (simp add: obj_at'_def projectKOs objBits_simps')
   apply (simp add: split_paired_Ball)
   apply (drule spec, erule mp)
-  apply (clarsimp simp: in_monad projectKOs in_magnitude_check)
+  apply (clarsimp simp: in_monad projectKOs in_magnitude_check objBits_simps')
   done
 
 (* FIXME RT: move to KHeap, including instances below, replace single setObject lemmas *)
@@ -1284,24 +1284,6 @@ lemma setObject_pspace_no_overlap':
   apply (clarsimp simp: objBits_def updateObject_default_def in_monad projectKOs in_magnitude_check)
   apply (fastforce simp: pspace_no_overlap'_def project_inject)
   done
-
-end
-
-context simple_ko'
-begin
-
-lemma obj_at_pre:
-  assumes pre: "\<lbrace>P and obj_at' (\<lambda>_::'a. True) p\<rbrace> f p v \<lbrace>Q\<rbrace>"
-  shows "\<lbrace>P\<rbrace> f p v \<lbrace>Q\<rbrace>"
-  unfolding f_def using assms[unfolded f_def]
-  apply (rule setObject_at_pre, simp add: default)
-  using objBits by simp
-
-lemma pspace_no_overlap'[wp]:
-  "f p v \<lbrace> pspace_no_overlap' w s \<rbrace>"
-  unfolding f_def
-  apply (rule setObject_pspace_no_overlap', simp add: default)
-  using objBits by simp
 
 end
 
@@ -1384,6 +1366,10 @@ lemma tcbSchedEnqueue_vs_entry_align[wp]:
 crunch vs_entry_align[wp]:
   setThreadState  "ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p"
   (wp: crunch_wps)
+
+crunches setThreadState
+  for sc_at'_n[wp]: "sc_at'_n n p"
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma sts_valid_arch_inv':
   "\<lbrace>valid_arch_inv' ai\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_arch_inv' ai\<rbrace>"

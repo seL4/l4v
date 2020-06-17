@@ -695,8 +695,7 @@ lemma updateCap_dynamic_duo:
        \<Longrightarrow> pspace_aligned' s' \<and> pspace_distinct' s'"
   unfolding updateCap_def
   apply (rule conjI)
-   apply (erule use_valid | wp | assumption)+
-  done
+   by (erule use_valid | wpsimp simp: updateObject_cte_objBitsKO_eq)+
 
 declare const_apply[simp]
 
@@ -1147,7 +1146,6 @@ crunches cteInsert
   and norqL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   and norlq[wp]: "\<lambda>s. P (ksReleaseQueue s)"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  and no_ksReleaseQueue[wp]: "\<lambda>s. P (ksReleaseQueue s)"
   (wp: updateObject_cte_inv crunch_wps ignore_del: setObject)
 
 lemmas updateMDB_typ_ats [wp] = typ_at_lifts [OF updateMDB_typ_at']
@@ -2497,10 +2495,10 @@ crunch state_refs_of'[wp]: cteInsert "\<lambda>s. P (state_refs_of' s)"
   (wp: crunch_wps)
 
 crunch aligned'[wp]: cteInsert pspace_aligned'
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: updateObject_cte_objBitsKO_eq)
 
 crunch distinct'[wp]: cteInsert pspace_distinct'
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: updateObject_cte_objBitsKO_eq)
 
 crunch no_0_obj' [wp]: cteInsert no_0_obj'
   (wp: crunch_wps)
@@ -3046,7 +3044,7 @@ lemma cteInsert_vms'[wp]:
   done
 
 crunch pspace_domain_valid[wp]: cteInsert "pspace_domain_valid"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: updateObject_cte_objBitsKO_eq)
 
 lemma setCTE_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace> setCTE ptr cte \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
@@ -4072,7 +4070,7 @@ lemma arch_update_setCTE_invs:
              valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers'
              valid_queues_lift' setCTE_pred_tcb_at' irqs_masked_lift
              setCTE_norq hoare_vcg_disj_lift untyped_ranges_zero_lift
-           | simp add: pred_tcb_at'_def)+
+           | simp add: pred_tcb_at'_def updateObject_cte_objBitsKO_eq)+
   apply (subst fold_list_refs_of_replies')
   apply (clarsimp simp: valid_global_refs'_def is_arch_update'_def fun_upd_def[symmetric]
                         cte_wp_at_ctes_of isCap_simps untyped_ranges_zero_fun_upd)

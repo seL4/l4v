@@ -1819,8 +1819,10 @@ definition pspace_no_overlap_cell' where
 
 lemma pspace_no_overlap'_lift:
   assumes typ_at:"\<And>slot P Q. \<lbrace>\<lambda>s. P (typ_at' Q slot s)\<rbrace> f \<lbrace>\<lambda>r s. P (typ_at' Q slot s) \<rbrace>"
-  assumes ps :"\<lbrace>Q\<rbrace> f \<lbrace>\<lambda>r s. pspace_aligned' s \<and> pspace_distinct' s \<rbrace>"
-  shows "\<lbrace>Q and pspace_no_overlap' ptr sz \<rbrace> f \<lbrace>\<lambda>r. pspace_no_overlap' ptr sz\<rbrace>"
+  assumes sz: "\<And>p n. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
+  assumes ps :"\<lbrace>Q and pspace_aligned' and pspace_distinct'\<rbrace> f \<lbrace>\<lambda>r s. pspace_aligned' s \<and> pspace_distinct' s \<rbrace>"
+  shows "\<lbrace>Q and pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz\<rbrace>
+                f \<lbrace>\<lambda>r. pspace_no_overlap' ptr sz\<rbrace>"
 proof -
   note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
@@ -1828,26 +1830,33 @@ proof -
     apply (clarsimp simp:valid_def pspace_no_overlap'_def)
     apply (drule_tac x = x in spec)
     apply (subgoal_tac "\<exists>ko'. ksPSpace s x = Some ko' \<and> koTypeOf ko = koTypeOf ko'")
-     apply (clarsimp dest!:objBits_type)
+     apply (clarsimp, frule koType_objBitsKO; clarsimp)
+     apply (frule_tac p1=x and n1="objBitsKO ko'" in use_valid[OF _ sz])
+      apply (fastforce simp: ko_wp_at'_def dest: pspace_alignedD' pspace_distinctD')
+     apply (clarsimp simp: ko_wp_at'_def)
     apply (rule ccontr)
     apply clarsimp
     apply (frule_tac slot1 = x and Q1 = "koTypeOf ko" and P1 = "\<lambda>a. \<not> a" in use_valid[OF _ typ_at])
-    apply (clarsimp simp:typ_at'_def ko_wp_at'_def)+
-    apply (frule(1) use_valid[OF _ ps])
-    apply (clarsimp simp:valid_pspace'_def)
+     apply (clarsimp simp:typ_at'_def ko_wp_at'_def)+
+    apply (frule use_valid[OF _ ps])
+     apply (clarsimp simp:valid_pspace'_def)+
     apply (frule(1) pspace_alignedD')
     apply (drule(1) pspace_distinctD')
     apply simp
-  done
+    done
 qed
+
+lemmas pspace_no_overlap'_lift2 = pspace_no_overlap'_lift[where Q=\<top>, simplified]
+
+crunches setCTE, insertNewCap
+  for sc_at'_n[wp]: "sc_at'_n n p"
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma setCTE_pspace_no_overlap':
   "\<lbrace>pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz\<rbrace>
    setCTE cte src
    \<lbrace>\<lambda>r. pspace_no_overlap' ptr sz\<rbrace>"
-   apply (rule pspace_no_overlap'_lift; wp setCTE_typ_at')
-   apply auto
-   done
+   by (rule pspace_no_overlap'_lift2; wpsimp wp: setCTE_typ_at' simp: updateObject_cte_objBitsKO_eq)
 
 lemma getCTE_commute:
   assumes cte_at_modify:
@@ -2557,15 +2566,17 @@ lemma doMachineOp_upd_heap_commute:
   apply fastforce
   done
 
+lemma objBitsKO_gt_0_power: "(1::32 word) < 2 ^ objBitsKO ko"
+  apply (case_tac ko; simp add: objBits_simps' pageBits_def)
+   apply (rename_tac arch_kernel_object)
+   by (case_tac arch_kernel_object; simp add: archObjSize_def pageBits_def pteBits_def pdeBits_def)
+
 lemma magnitudeCheck_det:
   "\<lbrakk>ksPSpace s ptr = Some ko; is_aligned ptr (objBitsKO ko);
     ps_clear ptr (objBitsKO ko) s\<rbrakk>
    \<Longrightarrow> magnitudeCheck ptr (snd (lookupAround2 ptr (ksPSpace s))) (objBitsKO ko) s =
        ({((), s)},False)"
-  apply (frule in_magnitude_check'[THEN iffD2]; simp?)
-   apply (case_tac ko; simp add: objBits_simps' pageBits_def)
-   apply (rename_tac arch_kernel_object)
-   apply (case_tac arch_kernel_object; simp add:archObjSize_def pageBits_def pteBits_def pdeBits_def)
+  apply (frule in_magnitude_check'[THEN iffD2]; simp add: objBitsKO_gt_0_power)
   apply (subgoal_tac "\<not> snd (magnitudeCheck ptr (snd (lookupAround2 ptr (ksPSpace s))) (objBitsKO ko) s)")
    apply (drule singleton_in_magnitude_check)
    apply (drule_tac x = s in spec)
@@ -3682,7 +3693,7 @@ lemma new_cap_object_comm_helper:
         apply (rule createObject_updateNewFreeIndex_commute)
        apply (wp getCTE_wp hoare_vcg_imp_lift hoare_vcg_disj_lift valid_arch_state'_updateMDB
          updateMDB_pspace_no_overlap' setCTE_pspace_no_overlap'
-         | clarsimp simp:conj_comms)+
+         | clarsimp simp: conj_comms updateObject_cte_objBitsKO_eq)+
   apply (clarsimp simp:cte_wp_at_ctes_of)
   apply (frule_tac slot = slot in pspace_no_overlapD2')
    apply simp+
@@ -3736,9 +3747,10 @@ lemma new_cap_object_commute:
     apply (simp add:split_def)
     apply (rule new_cap_object_comm_helper)
    apply (clarsimp simp:insertNewCap_def split_def)
-   apply (wp updateMDB_weak_cte_wp_at updateMDB_pspace_no_overlap'
-             getCTE_wp valid_arch_state'_updateMDB
-             setCTE_weak_cte_wp_at setCTE_pspace_no_overlap')
+   apply (wpsimp wp: updateMDB_weak_cte_wp_at updateMDB_pspace_no_overlap'
+                     getCTE_wp valid_arch_state'_updateMDB
+                     setCTE_weak_cte_wp_at setCTE_pspace_no_overlap'
+               simp: updateObject_cte_objBitsKO_eq)
    apply (clarsimp simp:cte_wp_at_ctes_of simp del:fun_upd_apply)
    apply (case_tac "parent \<noteq> aa")
     prefer 2
@@ -3869,7 +3881,7 @@ lemma doMachineOp_psp_no_overlap:
   "\<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and> pspace_aligned' s \<and> pspace_distinct' s \<rbrace>
    doMachineOp f
    \<lbrace>\<lambda>y s. pspace_no_overlap' ptr sz s\<rbrace>"
-  by (wp pspace_no_overlap'_lift,simp)
+  by (wpsimp wp: pspace_no_overlap'_lift2)
 
 lemma createObjects'_psp_distinct:
   "\<lbrace>pspace_aligned' and pspace_distinct' and
@@ -3926,7 +3938,7 @@ lemma copyGlobalMappings_pspace_no_overlap':
    \<lbrace>\<lambda>ya. pspace_no_overlap' ptr sz\<rbrace>"
   apply (rule hoare_pre)
    apply (clarsimp simp:copyGlobalMappings_def)
-   apply (wp mapM_x_wp_inv pspace_no_overlap'_lift)
+   apply (wpsimp wp: mapM_x_wp_inv pspace_no_overlap'_lift2)
   apply clarsimp
   done
 
@@ -4254,7 +4266,7 @@ lemma placeNewObject_copyGlobalMapping_commute:
       apply (rule monad_commute_split[OF _ getPDE_placeNewObject_commute])
        apply (rule storePDE_placeNewObject_commute)
       apply wp
-      apply (wp pspace_no_overlap'_lift | clarsimp)+
+      apply (wp pspace_no_overlap'_lift2 | clarsimp)+
     apply (rule placeNewObject_gets_globalPD_commute)
    apply wp
   apply clarsimp
@@ -5535,8 +5547,7 @@ lemma insertNewCap_wps[wp]:
       insertNewCap parent slot cap
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
   apply (simp_all add: insertNewCap_def)
-   apply (wp hoare_drop_imps
-            | simp add: o_def)+
+   apply (wpsimp wp: hoare_drop_imps simp: updateObject_cte_objBitsKO_eq)+
   apply (fastforce elim!: rsubst[where P=P])
   done
 
@@ -5568,7 +5579,7 @@ lemma createNewObjects_pspace_no_overlap':
      apply (subst createNewObjects_Cons)
       apply (drule range_cover.weak)
       apply (simp add: word_bits_def)
-     apply (wp pspace_no_overlap'_lift)
+     apply (wpsimp wp: pspace_no_overlap'_lift2)
       apply (simp add: conj_comms)
       apply (rule hoare_vcg_conj_lift)
        apply (rule hoare_post_imp[OF _ createObject_pspace_aligned_distinct'])

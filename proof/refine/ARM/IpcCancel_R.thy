@@ -1072,7 +1072,7 @@ lemma set_ntfn_valid_inQ_queues[wp]:
     done
 
 crunch valid_inQ_queues[wp]: cancelSignal valid_inQ_queues
-  (simp: updateObject_tcb_inv crunch_simps wp: crunch_wps)
+  (simp: updateObject_default_inv crunch_simps wp: crunch_wps)
 
 lemma (in delete_one_conc_pre) cancelIPC_valid_inQ_queues[wp]:
   "\<lbrace>valid_inQ_queues\<rbrace> cancelIPC t \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
@@ -2123,20 +2123,6 @@ lemma cancelAll_unlive_helper:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-(* FIXME RT: move to KHeap_R *)
-lemma setObject_ko_wp_at':
-  fixes v :: "'a :: pspace_storable"
-  assumes x: "\<And>v :: 'a. updateObject v = updateObject_default v"
-  assumes n: "\<And>v :: 'a. objBits v = n"
-  assumes v: "(1 :: word32) < 2 ^ n"
-  shows
-  "\<lbrace>\<lambda>s. P (injectKO v)\<rbrace> setObject p v \<lbrace>\<lambda>rv. ko_wp_at' P p\<rbrace>"
-  by (clarsimp simp: setObject_def valid_def in_monad
-                     ko_wp_at'_def x split_def n
-                     updateObject_default_def
-                     objBits_def[symmetric] ps_clear_upd'
-                     in_magnitude_check v projectKOs)
-
 lemma rescheduleRequired_unlive:
   "\<lbrace>\<lambda>s. ko_wp_at' (Not \<circ> live') p s \<and> ksSchedulerAction s \<noteq> SwitchToThread p\<rbrace>
       rescheduleRequired
@@ -2153,16 +2139,13 @@ lemma rescheduleRequired_unlive:
   apply clarsimp
   done *)
 
-lemmas setEndpoint_ko_wp_at'
-    = setObject_ko_wp_at'[where 'a=endpoint, folded setEndpoint_def, simplified]
-
 lemma cancelAllIPC_unlive:
   "\<lbrace>valid_objs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)\<rbrace>
       cancelAllIPC ep \<lbrace>\<lambda>rv. ko_wp_at' (Not \<circ> live') ep\<rbrace>"
   apply (simp add: cancelAllIPC_def ep'_Idle_case_helper)
   apply (rule hoare_seq_ext [OF _ get_ep_sp'])
   apply (rule hoare_pre)
-   apply (wp cancelAll_unlive_helper setEndpoint_ko_wp_at'
+   apply (wp cancelAll_unlive_helper setObject_ko_wp_at
              hoare_vcg_const_Ball_lift rescheduleRequired_unlive
              mapM_x_wp'
         | simp add: objBits_simps')+
@@ -2193,7 +2176,7 @@ lemma cancelAllSignals_unlive:
                     elim: ko_wp_at'_weakenE)
   apply (wp rescheduleRequired_unlive)
    apply (wp cancelAll_unlive_helper)
-   apply ((wp mapM_x_wp' setObject_ko_wp_at' hoare_vcg_const_Ball_lift)+,
+   apply ((wp mapM_x_wp' setObject_ko_wp_at hoare_vcg_const_Ball_lift)+,
           simp_all add: objBits_simps', simp_all)
    apply (fold setNotification_def, wp)
   apply (intro conjI[rotated])
