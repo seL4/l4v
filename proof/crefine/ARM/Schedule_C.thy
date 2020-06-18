@@ -661,7 +661,7 @@ lemma threadSet_timeSlice_ccorres [corres]:
 
 lemma timerTick_ccorres:
   "ccorres dc xfdc invs' UNIV [] timerTick (Call timerTick_'proc)"
-  supply subst_all [simp del] subst_all' [simp del]
+  supply subst_all [simp del]
   apply (cinit)
    apply (rule ccorres_pre_getCurThread)
    apply (ctac add: get_tsType_ccorres2 [where f="\<lambda>s. ksCurThread_' (globals s)"])

@@ -2590,7 +2590,7 @@ lemma slotCapLongRunningDelete_ccorres:
   "ccorres ((=) \<circ> from_bool) ret__unsigned_long_' invs'
            (UNIV \<inter> {s. slot_' s = cte_Ptr slot}) []
      (slotCapLongRunningDelete slot) (Call slotCapLongRunningDelete_'proc)"
-  supply subst_all [simp del] subst_all' [simp del]
+  supply subst_all [simp del]
   apply (cinit lift: slot_')
    apply (simp add: case_Null_If del: Collect_const)
    apply (rule ccorres_pre_getCTE)

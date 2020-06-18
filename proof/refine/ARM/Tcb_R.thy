@@ -27,7 +27,7 @@ lemma activateIdleThread_corres:
 lemma activateThread_corres:
  "corres dc (invs and ct_in_state activatable) (invs' and ct_in_state' activatable')
             activate_thread activateThread"
-  supply subst_all [simp del] subst_all' [simp del]
+  supply subst_all [simp del]
   apply (simp add: activate_thread_def activateThread_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ getCurThread_corres])
