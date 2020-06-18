@@ -763,7 +763,7 @@ lemma cteMove_corres:
               cte_wp_at' (\<lambda>c. cteCap c = NullCap) (cte_map ptr'))
           (cap_move cap ptr ptr') (cteMove cap' (cte_map ptr) (cte_map ptr'))"
   (is "corres _ ?P ?P' _ _")
-  supply subst_all [simp del] subst_all' [simp del]
+  supply subst_all [simp del]
   apply (simp add: cap_move_def cteMove_def const_def)
   apply (rule corres_symb_exec_r)
      defer
@@ -4694,7 +4694,7 @@ lemma cteInsert_simple_corres:
   (is "corres _ (?P and (\<lambda>s. cte_wp_at _ _ s)) (?P' and cte_wp_at' _ _ and _) _ _")
   using assms
   unfolding cap_insert_def cteInsert_def
-  supply subst_all [simp del] subst_all' [simp del]
+  supply subst_all [simp del]
   apply simp
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated [OF _ get_cap_corres])

@@ -369,7 +369,7 @@ lemma next_not_child_linearI:
      \<forall>q. p \<in> descendants_of q m \<longrightarrow> m q = m' q
      \<and> next_sib q t m = next_sib q t' m'; finite_depth m; finite_depth m'\<rbrakk>
     \<Longrightarrow> next_not_child p t' m' = next_not_child p t m"
-  supply subst_all [simp del] subst_all' [simp del]
+  supply subst_all [simp del]
   apply(induct rule: next_not_child_pinduct[where t=t and m=m])
    apply(simp)
    apply(case_tac "m slot")
