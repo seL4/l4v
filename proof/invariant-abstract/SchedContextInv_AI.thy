@@ -619,16 +619,12 @@ definition
   no_overflow :: "refill list \<Rightarrow> bool"
 where
   "no_overflow refills \<equiv>
-      \<forall>n < length refills. unat (r_time (refills ! n)) + unat (r_amount (refills ! n))
+      \<forall>refill \<in> set refills. unat (r_time refill) + unat (r_amount refill)
                             \<le> unat (max_word :: time)"
 
 lemma no_overflow_sublist:
   "\<lbrakk>no_overflow list; sublist new_list list\<rbrakk> \<Longrightarrow> no_overflow new_list"
-  apply (simp add: sublist_def no_overflow_def)
-  apply clarsimp
-  apply (subgoal_tac "new_list ! n = (ps @ new_list @ ss) ! (n + length ps)")
-   apply force
-  by (simp add: nth_append)
+  by (clarsimp simp: sublist_def no_overflow_def)
 
 lemma no_overflow_tail:
   "no_overflow (a # list) \<Longrightarrow> no_overflow list"
@@ -1271,13 +1267,7 @@ lemma ordered_disjoint_append:
 lemma no_overflow_append:
   "\<lbrakk>no_overflow left; no_overflow right; left @ right = result\<rbrakk>
    \<Longrightarrow> no_overflow result"
-  apply (clarsimp simp: no_overflow_def)
-  apply (subst nth_append not_less)+
-  apply (drule_tac x="n - length left"
-               and P="\<lambda>n. n < length right
-                           \<longrightarrow> unat (r_time (right ! n)) + unat (r_amount (right ! n)) \<le> unat max_word"
-                in spec)
-  by simp
+  by (fastforce simp: no_overflow_def)
 
 (* FIXME: maybe move? *)
 lemma last_butlast_list:
@@ -1479,8 +1469,7 @@ lemma schedule_used_no_overflow:
 
     apply (simp add: no_overflow_def)
     apply (clarsimp simp: Let_def)
-    apply (case_tac "n=0")
-     apply clarsimp
+    apply (intro conjI)
      apply (subgoal_tac "unat (r_amount a - (MIN_BUDGET - r_amount new))
                          = unat (r_amount a) - unat (MIN_BUDGET - r_amount new)")
       apply linarith
@@ -1506,8 +1495,7 @@ lemma schedule_used_no_overflow:
       apply (metis butlast.simps(2) sublist_butlast)
     apply (simp add: no_overflow_def)
     apply clarsimp
-    apply (case_tac "n=0")
-     apply clarsimp
+    apply (intro conjI)
      apply (subgoal_tac "unat (r_amount (last lista) - (MIN_BUDGET - r_amount new))
                          = unat (r_amount (last lista)) - unat (MIN_BUDGET - r_amount new)")
       apply linarith
@@ -1534,38 +1522,11 @@ lemma schedule_used_no_overflow:
   \<comment> \<open>list of length greater than two\<close>
     apply (clarsimp simp: Let_def split: if_splits)
    apply (simp add: no_overflow_def)
-   apply clarsimp
-   apply (case_tac "n=0")
-    apply clarsimp
-    apply (drule_tac x=0 in spec)
-    apply (clarsimp simp: Let_def)
    apply (clarsimp simp: Let_def)
-   apply (case_tac "n < length (a # butlast (lista))")
-    apply clarsimp
-    apply (drule_tac x=n in spec)
-    apply (subgoal_tac "(butlast lista @ [\<lparr>r_time = r_time new - r_amount (last lista),
-                                           r_amount = r_amount (last lista) + r_amount new\<rparr>])
-                         ! (n - Suc 0)
-                         = (butlast lista) ! (n - Suc 0)")
-     apply simp
-     apply (subgoal_tac "butlast lista ! (n - Suc 0) = lista ! (n - Suc 0)")
-      apply presburger
-     apply (simp add: nth_butlast)
-    apply (simp add: nth_append diff_less_mono)
-   apply clarsimp
-   apply (subgoal_tac "n = length (a # butlast (lista))")
+   apply (intro conjI)
     prefer 2
-    apply force
-   apply clarsimp
-   apply (subgoal_tac "(butlast lista @ [\<lparr>r_time = r_time new - r_amount (last lista),
-                                          r_amount = r_amount (last lista) + r_amount new\<rparr>])
-                        ! (length lista - Suc 0)
-                        = \<lparr>r_time = r_time new - r_amount (last lista),
-                           r_amount = r_amount (last lista) + r_amount new\<rparr>")
-    prefer 2
-    apply (metis (no_types, hide_lams) Groups.add_ac(2) append_len2 length_Cons list.size(3)
-                                       nth_append_length snoc_eq_iff_butlast)
-   apply clarsimp
+    apply (clarsimp simp: Let_def)
+    apply (meson in_set_butlastD)
    apply (subgoal_tac "unat (r_amount (last lista) + r_amount new)
                        = unat (r_amount (last lista)) + unat (r_amount new)")
     apply clarsimp
@@ -1576,10 +1537,8 @@ lemma schedule_used_no_overflow:
 
   \<comment> \<open>\<not> (r_amount new < MIN_BUDGET \<or> b)\<close>
   apply (simp add: no_overflow_def)
-  apply clarsimp
-  apply (case_tac "n=0")
-   apply (drule_tac x=0 in spec)
-  by (fastforce simp: nth_append)+
+
+  done
 
 (* FIXME remove *)
 abbreviation "sc_at_period \<equiv> sc_period_sc_at"
