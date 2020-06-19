@@ -64,6 +64,20 @@ definition
 where
   "typ_at' T \<equiv> ko_wp_at' (\<lambda>ko. koTypeOf ko = T)"
 
+definition scBitsFromRefillLength' :: "nat => nat"
+where
+  "scBitsFromRefillLength' len \<equiv>
+       nat (ceiling (log 2 (len * refillSizeBytes + schedContextStructSize)))"
+
+lemma scBits_def2:
+  "scBitsFromRefillLength sc = scBitsFromRefillLength' (length (scRefills sc))"
+  unfolding scBitsFromRefillLength_def scBitsFromRefillLength'_def by simp
+
+definition valid_sched_context_size' :: "sched_context \<Rightarrow> bool" where
+  "valid_sched_context_size' sc \<equiv>
+        minSchedContextBits \<le> scBitsFromRefillLength' (length (scRefills sc))
+        \<and> scBitsFromRefillLength' (length (scRefills sc)) \<le> maxUntypedSizeBits"
+
 abbreviation
   "ep_at' \<equiv> obj_at' (\<lambda>_ :: endpoint. True)"
 abbreviation
@@ -454,6 +468,9 @@ primrec
 where
   "zombieCTEs ZombieTCB = 5"
 | "zombieCTEs (ZombieCNode n) = (2 ^ n)"
+
+abbreviation
+  "sc_at'_n n \<equiv> ko_wp_at' (\<lambda>ko. koTypeOf ko = SchedContextT \<and> objBitsKO ko = n)"
 
 definition
   valid_cap' :: "capability \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -1909,6 +1926,10 @@ lemma obj_at'_pspaceI:
   "obj_at' t ref s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow>  obj_at' t ref s'"
   by (auto intro!: projectKO_stateI simp: obj_at'_def ps_clear_def)
 
+lemma sc_at'_n_pspaceI:
+  "sc_at'_n n ref s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow>  sc_at'_n n ref s'"
+  by (auto intro!: projectKO_stateI simp: ko_wp_at'_def ps_clear_def)
+
 lemma cte_wp_at'_pspaceI:
   "\<lbrakk>cte_wp_at' P p s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> cte_wp_at' P p s'"
   apply (clarsimp simp add: cte_wp_at'_def getObject_def)
@@ -1944,7 +1965,7 @@ lemma valid_cap'_pspaceI:
   by (cases cap)
      (force intro: obj_at'_pspaceI[rotated]
                   cte_wp_at'_pspaceI valid_untyped'_pspaceI
-                  typ_at'_pspaceI[rotated]
+                  typ_at'_pspaceI[rotated] sc_at'_n_pspaceI[rotated]
             simp: page_table_at'_def page_directory_at'_def
            split: arch_capability.split zombie_type.split option.splits)+
 
@@ -2537,9 +2558,6 @@ lemma koType_obj_range':
   apply (simp add: obj_range'_def objBitsKO_def archObjSize_def
             split: kernel_object.splits arch_kernel_object.splits)
   done
-                                                                                 
-abbreviation
-  "sc_at'_n n \<equiv> ko_wp_at' (\<lambda>ko. koTypeOf ko = SchedContextT \<and> objBitsKO ko = n)"
 
 lemma typ_at_lift_valid_untyped':
   assumes P: "\<And>T p. \<lbrace>\<lambda>s. \<not>typ_at' T p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not>typ_at' T p s\<rbrace>"

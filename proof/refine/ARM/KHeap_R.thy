@@ -182,7 +182,7 @@ lemmas ps_clear_updE'[elim] = iffD2[OF ps_clear_upd', rotated]
 
 lemma setObject_sc_at'_n[wp]:
   "\<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> setObject ptr val \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
- by (fastforce simp : valid_def setObject_def ko_wp_at'_def in_monad split_def updateObject_size
+  by (fastforce simp : valid_def setObject_def ko_wp_at'_def in_monad split_def updateObject_size
                        ps_clear_upd' lookupAround2_char1 updateObject_type)
 
 
@@ -476,14 +476,14 @@ lemma setObject_reply_pre:
 lemma setObject_sched_context_pre:
   assumes "\<lbrace>P and sc_at' p\<rbrace> setObject p (t::sched_context) \<lbrace>Q\<rbrace>"
   shows "\<lbrace>P\<rbrace> setObject p (t::sched_context) \<lbrace>Q\<rbrace>" using assms
-  apply (clarsimp simp: valid_def setObject_def in_monad
+  apply (clarsimp simp: valid_def setObject_def in_monad sc_objBits_pos_power2
                         split_def updateObject_default_def
-                        projectKOs in_magnitude_check objBits_simps')
+                        projectKOs in_magnitude_check)
   apply (drule spec, drule mp, erule conjI)
-   apply (simp add: obj_at'_def projectKOs objBits_simps')
+   apply (simp add: obj_at'_def projectKOs objBits_def)
   apply (simp add: split_paired_Ball)
   apply (drule spec, erule mp)
-  apply (clarsimp simp: in_monad projectKOs in_magnitude_check)
+  apply (clarsimp simp: in_monad projectKOs in_magnitude_check sc_objBits_pos_power2)
   done
 
 lemma obj_at_setObject3:
@@ -720,10 +720,12 @@ lemma get_sc_sp':
   "\<lbrace>P\<rbrace> getSchedContext p \<lbrace>\<lambda>t. P and ko_at' t p\<rbrace>"
   by (clarsimp simp: getSchedContext_def getObject_def loadObject_default_def
                      projectKOs in_monad valid_def obj_at'_def objBits_simps'
-                     in_magnitude_check split_def)
+                     in_magnitude_check split_def scBits_pos_power2)
 
 lemma getSchedContext_wp[wp]:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko p s \<longrightarrow> P ko s\<rbrace> getSchedContext p \<lbrace>P\<rbrace>"
+  "\<lbrace>(\<lambda>s. \<forall>ko. ko_at' ko p s \<longrightarrow> P ko s)\<rbrace>
+    getSchedContext p
+   \<lbrace>P\<rbrace>"
   by (rule hoare_strengthen_post, rule get_sc_sp') simp
 
 lemma get_reply_sp':
@@ -741,7 +743,7 @@ begin
 
 private method getObject_valid_obj =
   rule hoare_chain,
-  rule getObject_valid_obj; clarsimp simp: objBits_simps' valid_obj'_def
+  rule getObject_valid_obj; clarsimp simp: objBits_simps' valid_obj'_def scBits_pos_power2
 
 lemma get_ep'_valid_ep[wp]:
   "\<lbrace> invs' and ep_at' ep \<rbrace> getEndpoint ep \<lbrace> valid_ep' \<rbrace>"
@@ -774,7 +776,7 @@ lemma get_ntfn_ko':
 lemma get_sc_ko':
   "\<lbrace>\<top>\<rbrace> getSchedContext sc_ptr \<lbrace>\<lambda>sc. ko_at' sc sc_ptr\<rbrace>"
   unfolding getSchedContext_def
-  by (rule getObject_ko_at; simp add: objBits_simps')
+  by (rule getObject_ko_at; simp add: objBits_simps' scBits_pos_power2)
 
 lemma get_reply_ko':
   "\<lbrace>\<top>\<rbrace> getReply reply_ptr \<lbrace>\<lambda>reply. ko_at' reply reply_ptr\<rbrace>"
@@ -1293,7 +1295,7 @@ lemma set_reply_corres: (* for reply update that doesn't touch the reply stack *
   have e: "\<And>ko. (\<lambda>_ :: reply. True) ko \<Longrightarrow> exst_same' (injectKO ko) (injectKO ae')"
     by (clarsimp simp: obj_at_simps)
   have P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
-    by (clarsimp simp: obj_at_simps objBits_defs pteBits_def pdeBits_def
+    by (clarsimp simp: obj_at_simps objBits_defs pteBits_def pdeBits_def scBits_pos_power2
                  split: kernel_object.splits arch_kernel_object.splits)
   assume r: "reply_relation ae ae'"
   show ?thesis
@@ -1368,7 +1370,7 @@ lemma update_sc_no_reply_stack_update_corres:
   have e: "\<And>ko. (\<lambda>_ :: sched_context. True) ko \<Longrightarrow> exst_same' (injectKO ko) (injectKO ae')"
     by (clarsimp simp: obj_at_simps)
   have P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
-    by (clarsimp simp: obj_at_simps objBits_defs pteBits_def pdeBits_def
+    by (clarsimp simp: obj_at_simps objBits_defs pteBits_def pdeBits_def scBits_pos_power2
                  split: kernel_object.splits arch_kernel_object.splits)
   assume R : "\<forall>ae. sc_replies (f ae) = sc_replies ae"
   show ?thesis
@@ -1518,7 +1520,7 @@ lemma get_sc_corres:
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_sc_obj_def
                  split: Structures_A.kernel_object.splits)
   apply (clarsimp simp: loadObject_default_def in_monad projectKOs
-                        in_magnitude_check objBits_simps')
+                        in_magnitude_check objBits_simps' scBits_pos_power2)
   apply (clarsimp simp add: state_relation_def pspace_relation_def)
   apply (drule bspec)
    apply blast
@@ -2242,7 +2244,7 @@ interpretation set_reply': simple_non_tcb_non_sc_ko' setReply
   by unfold_locales (simp_all add: setReply_def projectKO_opts_defs objBits_simps')
 
 interpretation set_sc': simple_non_tcb_ko' setSchedContext
-  by unfold_locales (simp_all add: setSchedContext_def projectKO_opts_defs objBits_simps')
+  by unfold_locales (simp_all add: setSchedContext_def projectKO_opts_defs objBits_simps' scBits_pos_power2)
 
 interpretation set_tcb': simple_non_sc_ko' "\<lambda>p v. setObject p (v::tcb)"
   by unfold_locales (simp_all add: setSchedContext_def projectKO_opts_defs objBits_simps')
@@ -2315,7 +2317,7 @@ lemma setSchedContext_iflive'[wp]:
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   unfolding setSchedContext_def
   by (wpsimp wp: setObject_iflive'[where P="\<top>"]
-           simp: updateObject_default_def in_monad
+           simp: updateObject_default_def in_monad scBits_pos_power2
                  projectKOs objBits_simps' bind_def
      |simp)+
 
@@ -2546,7 +2548,7 @@ lemma pspace_aligned_cross:
 
   \<comment>\<open>SchedContext, Reply\<close>
      apply ((clarsimp simp: minSchedContextBits_def min_sched_context_bits_def replySizeBits_def
-                            scBits_bound[simplified minSchedContextBits_def]
+                            scBits_inverse_sc_relation[simplified minSchedContextBits_def]
                      elim!: is_aligned_weaken)+)[2]
 
   \<comment>\<open>PageTable\<close>
@@ -2630,7 +2632,7 @@ lemma obj_relation_cuts_obj_bits:
           clarsimp simp: objBits_simps objBits_defs cte_level_bits_def min_sched_context_bits_def
                          pbfs_atleast_pageBits[simplified bit_simps] archObjSize_def pteBits_def
                          pdeBits_def)
-  apply (clarsimp simp: scBits_bound[simplified minSchedContextBits_def])
+  apply (clarsimp simp: scBits_inverse_sc_relation[simplified minSchedContextBits_def])
   apply (cases ko; simp add: other_obj_relation_def objBits_defs
                       split: kernel_object.splits)
   apply (rename_tac ako, case_tac ako; clarsimp)
@@ -2648,7 +2650,7 @@ lemma pspace_distinct_cross:
   apply (frule (1) pspace_alignedD')
   apply (frule (1) pspace_alignedD)
   apply (rule ps_clearI, assumption)
-   apply (case_tac ko'; simp add: objBits_simps objBits_defs bit_simps')
+   apply (case_tac ko'; simp add: objBits_simps objBits_defs bit_simps' scBits_pos_power2)
    apply (clarsimp split: arch_kernel_object.splits simp: bit_simps' archObjSize_def)
   apply (rule ccontr, clarsimp)
   apply (rename_tac x' ko_x')

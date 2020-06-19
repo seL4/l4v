@@ -861,7 +861,7 @@ proof -
   have P1: "((2 * of_nat refill_size_bytes +
           of_nat sizeof_sched_context_t)::nat) \<le> 2^(min_sched_context_bits::nat)" by simp
   then have "log 2 ((2 * of_nat refill_size_bytes +
-          of_nat sizeof_sched_context_t)::nat) \<le> log 2 (2^(min_sched_context_bits::nat))" 
+          of_nat sizeof_sched_context_t)::nat) \<le> log 2 (2^(min_sched_context_bits::nat))"
     using log_le_cancel_iff[where a="2::real"] by simp
   then show "log 2 (2 * of_nat refill_size_bytes +
           of_nat sizeof_sched_context_t) \<le> min_sched_context_bits"
@@ -1390,7 +1390,7 @@ lemma new_cap_addrs_fold':
   by (clarsimp simp: new_cap_addrs_def ptr_add_def upto_enum_red' shiftl_t2n power_add field_simps)
 
 lemma objBitsKO_gt_0: "(0::32 word) < of_nat (objBitsKO ko)"
-  apply (case_tac ko; simp add: objBits_simps' pageBits_def)
+  apply (case_tac ko; simp add: objBits_simps' pageBits_def scBits_pos)
   apply (rename_tac arch_kernel_object)
   by (case_tac arch_kernel_object; simp add: archObjSize_def pageBits_def pteBits_def pdeBits_def)
 

@@ -2567,7 +2567,7 @@ lemma doMachineOp_upd_heap_commute:
   done
 
 lemma objBitsKO_gt_0_power: "(1::32 word) < 2 ^ objBitsKO ko"
-  apply (case_tac ko; simp add: objBits_simps' pageBits_def)
+  apply (case_tac ko; simp add: objBits_simps' pageBits_def scBits_pos_power2)
    apply (rename_tac arch_kernel_object)
    by (case_tac arch_kernel_object; simp add: archObjSize_def pageBits_def pteBits_def pdeBits_def)
 
