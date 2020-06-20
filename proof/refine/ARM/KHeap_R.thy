@@ -141,13 +141,6 @@ lemma koType_objBitsKO:
           split: Structures_H.kernel_object.splits
                  ARM_H.arch_kernel_object.splits)
 
-lemma updateObject_objBitsKO:
-  assumes H: "(ko', t') \<in> fst (updateObject v ko p q n t)"
-  assumes sc: "koTypeOf ko = SchedContextT \<longrightarrow> objBitsKO ko' = objBitsKO ko"
-  shows "objBitsKO ko' = objBitsKO ko"
-  using H
-  by (fastforce elim!: koType_objBitsKO[OF updateObject_type sc])
-
 lemmas tcbSlot_defs = tcbCTableSlot_def tcbVTableSlot_def tcbIPCBufferSlot_def
                       tcbFaultHandlerSlot_def tcbTimeoutHandlerSlot_def
 
@@ -164,7 +157,7 @@ lemma updateObject_cte_is_tcb_or_cte:
         \<and> p = q \<and> is_aligned p cte_level_bits \<and> ps_clear p cte_level_bits s)"
   apply (clarsimp simp: updateObject_cte typeError_def alignError_def
                tcbVTableSlot_def tcbCTableSlot_def to_bl_1 rev_take objBits_simps'
-               in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check field_simps
+               in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check
                lookupAround2_char1
          split: kernel_object.splits)
   apply (subst(asm) in_magnitude_check3, simp+)
@@ -173,13 +166,6 @@ lemma updateObject_cte_is_tcb_or_cte:
   apply (simp add: in_monad tcbSlot_defs
             split: if_split_asm)
   done
-
-lemma updateObject_cte_objBitsKO_eq:
-  "(ko', s') \<in> fst (updateObject (v::cte) ko x q n s)
-    \<Longrightarrow> objBitsKO ko' = objBitsKO ko"
-  apply (frule updateObject_type)
-  apply (clarsimp simp: updateObject_cte typeError_def in_fail elim!: koType_objBitsKO)
-  by (clarsimp simp: typeError_def in_fail split: kernel_object.splits)
 
 declare plus_1_less[simp]
 
@@ -194,10 +180,11 @@ lemma ps_clear_upd':
 
 lemmas ps_clear_updE'[elim] = iffD2[OF ps_clear_upd', rotated]
 
-lemma updateObject_cte_sc_at'_n[wp]:
-  "\<lbrace>sc_at'_n n p'\<rbrace> setObject c (cte::cte) \<lbrace>\<lambda>_. sc_at'_n n p'\<rbrace>"
-  by (clarsimp simp: valid_def setObject_def in_monad split_def ko_wp_at'_def ps_clear_upd'
-                     updateObject_cte_objBitsKO_eq lookupAround2_char1 updateObject_type)
+lemma setObject_sc_at'_n[wp]:
+  "\<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> setObject ptr val \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
+ by (fastforce simp : valid_def setObject_def ko_wp_at'_def in_monad split_def updateObject_size
+                       ps_clear_upd' lookupAround2_char1 updateObject_type)
+
 
 lemma updateObject_default_result:
   "(x, s'') \<in> fst (updateObject_default e ko p q n s) \<Longrightarrow> x = injectKO e"
@@ -206,7 +193,6 @@ lemma updateObject_default_result:
 lemma obj_at_setObject1:
   assumes R: "\<And>(v::'a::pspace_storable) p q n ko s x s''.
                 (x, s'') \<in> fst (updateObject v ko p q n s) \<Longrightarrow> x = injectKO v"
-  assumes Q: "\<And>(v::'a::pspace_storable) (v'::'a). objBits v = objBits v'"
   shows
   "\<lbrace> obj_at' (\<lambda>x::'a::pspace_storable. True) t \<rbrace>
    setObject p (v::'a::pspace_storable)
@@ -215,13 +201,10 @@ lemma obj_at_setObject1:
   apply (rule hoare_seq_ext [OF _ hoare_gets_post])
   apply (clarsimp simp: valid_def in_monad obj_at'_def
                         projectKOs lookupAround2_char1
-                        project_inject
-                 dest!: R)
-  apply (subgoal_tac "objBitsKO (injectKO v) = objBitsKO (injectKO obj)")
+                        project_inject)
+  apply (frule updateObject_size, drule R)
    apply (intro conjI impI, simp_all)
       apply fastforce+
-  apply (fold objBits_def)
-  apply (rule Q)
   done
 
 lemma obj_at_setObject2:
@@ -377,37 +360,23 @@ lemmas setObject_distinct_types_preserves_obj_at'[wp] =
     distinct_updateObject_types[THEN setObject_distinct_types_preserves_obj_at'_pre]
 
 lemma setObject_typ_at_inv:
-  assumes sz: "\<And>q n ko s x s''.
-                (x, s'') \<in> fst (updateObject v ko p q n s) \<Longrightarrow> objBitsKO x = objBitsKO ko"
-  shows "\<lbrace>typ_at' T p'\<rbrace> setObject p v \<lbrace>\<lambda>r. typ_at' T p'\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def)
-  apply (clarsimp simp: valid_def typ_at'_def ko_wp_at'_def in_monad
-                        lookupAround2_char1 ps_clear_upd')
-  apply (frule updateObject_type)
-  apply (rename_tac ko s' obj')
-  apply (frule koType_objBitsKO)
-   apply (clarsimp simp: sz setObject_def split_def)
-  by (simp add: ps_clear_upd')
+  "\<lbrace>typ_at' T p'\<rbrace> setObject p v \<lbrace>\<lambda>r. typ_at' T p'\<rbrace>"
+  by (clarsimp simp: setObject_def split_def valid_def typ_at'_def ko_wp_at'_def in_monad
+                        lookupAround2_char1 ps_clear_upd' updateObject_size updateObject_type)
 
 lemma setObject_typ_at_not:
-  assumes sz: "\<And>q n ko s x s''.
-                (x, s'') \<in> fst (updateObject v ko p q n s) \<Longrightarrow> objBitsKO x = objBitsKO ko"
-  shows  "\<lbrace>\<lambda>s. \<not> (typ_at' T p' s)\<rbrace> setObject p v \<lbrace>\<lambda>r s. \<not> (typ_at' T p' s)\<rbrace>"
+  "\<lbrace>\<lambda>s. \<not> (typ_at' T p' s)\<rbrace> setObject p v \<lbrace>\<lambda>r s. \<not> (typ_at' T p' s)\<rbrace>"
   apply (clarsimp simp: setObject_def valid_def in_monad split_def)
   apply (erule notE)
-  apply (clarsimp simp: typ_at'_def ko_wp_at'_def lookupAround2_char1
-                 split: if_split_asm)
-  apply (frule updateObject_type)
-  apply (rename_tac ko s' obj')
-  apply (frule koType_objBitsKO)
-   apply (clarsimp simp: sz setObject_def split_def)
-  by (clarsimp elim!: ps_clear_domE, fastforce)+
+  by (clarsimp simp: typ_at'_def ko_wp_at'_def lookupAround2_char1
+                     updateObject_size updateObject_type
+              split: if_split_asm
+              elim!: ps_clear_domE)
+      fastforce+
 
 lemma setObject_typ_at'[wp]:
-  assumes sz: "\<And>q n ko s x s''.
-                (x, s'') \<in> fst (updateObject v ko p q n s) \<Longrightarrow> objBitsKO x = objBitsKO ko"
-  shows "\<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace> setObject p v \<lbrace>\<lambda>r s. P (typ_at' T p' s)\<rbrace>"
-  by (blast intro: P_bool_lift setObject_typ_at_inv setObject_typ_at_not sz)
+  "\<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace> setObject p v \<lbrace>\<lambda>r s. P (typ_at' T p' s)\<rbrace>"
+  by (blast intro: P_bool_lift setObject_typ_at_inv setObject_typ_at_not)
 
 lemmas setObject_typ_ats [wp] = typ_at_lifts [OF setObject_typ_at']
 
@@ -815,24 +784,19 @@ lemma get_reply_ko':
 context
 begin
 
-private method unfold_setObject_inmonad uses dest =
-  (clarsimp simp: setObject_def split_def valid_def in_monad projectKOs
+private method unfold_setObject_inmonad =
+  (clarsimp simp: setObject_def split_def valid_def in_monad projectKOs updateObject_size
                   objBits_def[symmetric] lookupAround2_char1 ps_clear_upd'
-            split: if_split_asm,
-            (frule updateObject_objBitsKO; clarsimp dest!: dest),
-    (fastforce dest: bspec[OF _ domI])+)
+            split: if_split_asm),
+    (fastforce dest: bspec[OF _ domI])+
 
 lemma setObject_distinct[wp]:
-  assumes sz: "\<And>q n ko s x s''.
-                (x, s'') \<in> fst (updateObject val ko p q n s) \<Longrightarrow> objBitsKO x = objBitsKO ko"
-  shows "setObject p val \<lbrace>pspace_distinct'\<rbrace>"
-  unfolding pspace_distinct'_def by (unfold_setObject_inmonad dest: sz)
+  "setObject p val \<lbrace>pspace_distinct'\<rbrace>"
+  unfolding pspace_distinct'_def by (unfold_setObject_inmonad)
 
 lemma setObject_aligned[wp]:
-  assumes sz: "\<And>q n ko s x s''.
-                (x, s'') \<in> fst (updateObject val ko p q n s) \<Longrightarrow> objBitsKO x = objBitsKO ko"
-  shows "setObject p val \<lbrace>pspace_aligned'\<rbrace>"
-  unfolding pspace_aligned'_def by (unfold_setObject_inmonad dest: sz)
+  "setObject p val \<lbrace>pspace_aligned'\<rbrace>"
+  unfolding pspace_aligned'_def by (unfold_setObject_inmonad)
 
 end
 
@@ -1111,6 +1075,7 @@ lemma no_fail_magnitudeCheck[wp]:
   apply simp
   done
 
+(* FIXME RT: can we drop the obj_at' size equality condition? *)
 lemma no_fail_setObject_other [wp]:
   fixes ob :: "'a :: pspace_storable"
   assumes x: "updateObject ob = updateObject_default ob"
@@ -1132,7 +1097,6 @@ lemma no_fail_setObject_other [wp]:
    apply simp
   apply fastforce
   done
-
 
 lemma obj_relation_cut_same_type:
   "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; P ko z;
@@ -1601,32 +1565,19 @@ lemma typ_at'_valid_obj'_lift:
       apply (rename_tac tcb)
       apply (case_tac "tcbState tcb";
              simp add: valid_tcb'_def valid_tcb_state'_def split_def valid_bound_ntfn'_def
-                split: option.splits, wpsimp wp: sz)
+                split: option.splits; wpsimp wp: sz)
      apply (wpsimp simp: valid_cte'_def sz)
     apply (rename_tac arch_kernel_object)
-    apply (case_tac arch_kernel_object; wpsimp)
+    apply (case_tac arch_kernel_object; wpsimp wp: sz)
    apply (wpsimp simp: valid_sched_context'_def,
           clarsimp simp: valid_bound_ntfn'_def split: option.splits,
            wpsimp)
   apply (wpsimp simp: valid_reply'_def)
   done
 
-lemma sz_assm_conv:
-  assumes sz: "\<And>q n ko s x s''.
-                (x, s'') \<in> fst (updateObject val ko ptr q n s) \<Longrightarrow> objBitsKO x = objBitsKO ko"
-  shows "\<And>n p. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> setObject ptr val \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
- by (fastforce simp : valid_def setObject_def ko_wp_at'_def in_monad split_def
-                       ps_clear_upd' lookupAround2_char1 dest: updateObject_type sz)
-
-lemma setObject_valid_obj:
-  assumes sz: "\<And>q n ko s x s''.
-                (x, s'') \<in> fst (updateObject val ko ptr q n s) \<Longrightarrow> objBitsKO x = objBitsKO ko"
-  shows "\<lbrace>valid_obj' obj\<rbrace> setObject ptr val \<lbrace>\<lambda>rv. valid_obj' obj\<rbrace>"
-  by (fastforce intro: typ_at'_valid_obj'_lift sz_assm_conv setObject_typ_at' sz)
+lemmas setObject_valid_obj = typ_at'_valid_obj'_lift [OF setObject_typ_at' setObject_sc_at'_n]
 
 lemma setObject_valid_objs':
-  assumes sz: "\<And>q n ko s x s''.
-                (x, s'') \<in> fst (updateObject val ko ptr q n s) \<Longrightarrow> objBitsKO x = objBitsKO ko"
   assumes x: "\<And>x n ko s ko' s'.
        \<lbrakk> (ko', s') \<in> fst (updateObject val ko ptr x n s); P s;
           valid_obj' ko s; lookupAround2 ptr (ksPSpace s) = (Some (x, ko), n) \<rbrakk>
@@ -1636,7 +1587,7 @@ lemma setObject_valid_objs':
   apply (subgoal_tac "\<forall>ko. valid_obj' ko s \<longrightarrow> valid_obj' ko b")
    defer
    apply clarsimp
-   apply (erule (2) use_valid [OF _ setObject_valid_obj[OF sz]])
+   apply (erule (1) use_valid [OF _ setObject_valid_obj])
   apply (clarsimp simp: setObject_def split_def in_monad
                         lookupAround2_char1)
   apply (simp add: valid_objs'_def)
@@ -1911,8 +1862,6 @@ lemma setObject_state_refs_of':
   done
 
 lemma setObject_state_refs_of_eq:
-  assumes sz: "\<And>q n ko s x s''.
-                (x, s'') \<in> fst (updateObject val ko ptr q n s) \<Longrightarrow> objBitsKO x = objBitsKO ko"
   assumes x: "\<And>s s' obj obj' ptr' ptr''.
                   (obj', s') \<in> fst (updateObject val obj ptr ptr' ptr'' s)
                     \<Longrightarrow> refs_of' obj' = refs_of' obj"
@@ -1924,8 +1873,8 @@ lemma setObject_state_refs_of_eq:
                         lookupAround2_char1
                  elim!: rsubst[where P=P] intro!: ext
              split del: if_split cong: option.case_cong if_cong)
-  apply (frule x, frule updateObject_objBitsKO)
-  apply (simp add: state_refs_of'_def ps_clear_upd' sz
+  apply (frule x)
+  apply (simp add: state_refs_of'_def ps_clear_upd' updateObject_size
              cong: option.case_cong if_cong)+
   done
 
@@ -1999,13 +1948,10 @@ lemma irqs_masked_lift:
   done
 
 lemma setObject_pspace_domain_valid[wp]:
-  assumes sz: "\<And>q n ko s x s''.
-                (x, s'') \<in> fst (updateObject val ko ptr q n s) \<Longrightarrow> objBitsKO x = objBitsKO ko"
-  shows "setObject ptr val \<lbrace>pspace_domain_valid\<rbrace>"
+  "setObject ptr val \<lbrace>pspace_domain_valid\<rbrace>"
   by (clarsimp simp: setObject_def split_def pspace_domain_valid_def valid_def
-                      in_monad lookupAround2_char1
+                      in_monad lookupAround2_char1 updateObject_size
               split: if_split_asm)
-     (frule updateObject_objBitsKO; clarsimp elim!: sz)
 
 lemma ct_not_inQ_lift:
   assumes sch_act: "\<And>P. \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
@@ -2073,30 +2019,23 @@ lemma updateObject_cte[simp]:
 lemma pspace_aligned'[wp]: "f p v \<lbrace>pspace_aligned'\<rbrace>"
   and pspace_distinct'[wp]: "f p v \<lbrace>pspace_distinct'\<rbrace>"
   and no_0_obj'[wp]: "f p v \<lbrace>no_0_obj'\<rbrace>"
-  unfolding f_def by (all \<open>wpsimp simp: default updateObject_default_def in_monad objBits_simps\<close>)
+  unfolding f_def by (all \<open>wpsimp simp: default updateObject_default_def in_monad\<close>)
 
 lemma valid_objs':
   "\<lbrace>valid_objs' and valid_obj' (injectKO v) \<rbrace> f p v \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   unfolding f_def
   by (rule setObject_valid_objs')
-     (clarsimp simp: default updateObject_default_def in_monad projectKOs objBits_simps)+
+     (clarsimp simp: default updateObject_default_def in_monad projectKOs)+
 
 lemma typ_at'[wp]:
   "f p v \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
   unfolding f_def
   by (rule setObject_typ_at')
-     (clarsimp simp: default updateObject_default_def in_monad projectKOs objBits_simps)
-
-lemma updateObject_objBitsKO_eq:
-  "(ko', s') \<in> fst (updateObject (v::'a::pspace_storable) ko x q n s)
-    \<Longrightarrow> objBitsKO ko' = objBitsKO ko"
-  apply (frule updateObject_type)
-  by (clarsimp simp: default updateObject_default_def in_monad objBits_def)
 
 lemma sc_at'_n[wp]: "\<lbrace>sc_at'_n n p'\<rbrace> f p v \<lbrace>\<lambda>_. sc_at'_n n p'\<rbrace>"
   unfolding f_def
   by (clarsimp simp: valid_def setObject_def in_monad split_def ko_wp_at'_def ps_clear_upd'
-                     updateObject_objBitsKO_eq lookupAround2_char1 updateObject_type)
+                     updateObject_size lookupAround2_char1 updateObject_type)
 
 sublocale typ_at_props' "f p v" for p v by typ_at_props'
 
@@ -2141,7 +2080,7 @@ lemma valid_machine_state'[wp]:
 
 lemma pspace_domain_valid[wp]:
   "f ptr val \<lbrace>pspace_domain_valid\<rbrace>"
-  unfolding f_def by (wpsimp simp: default updateObject_default_def in_monad projectKOs objBits_simps)
+  unfolding f_def by (wpsimp simp: default updateObject_default_def in_monad projectKOs)
 
 lemmas x = ct_not_inQ_lift[OF ksSchedulerAction]
 
@@ -2286,7 +2225,7 @@ lemma idle'[wp]:
   "f p v \<lbrace>valid_idle'\<rbrace>"
   unfolding f_def
   using objBits
-  apply (wp setObject_idle'; simp add: default objBits_simps' updateObject_default_inv)
+  apply (wp setObject_idle'; simp add: default updateObject_default_inv)
   apply (clarsimp simp: projectKOs)
   done
 
@@ -2780,7 +2719,7 @@ lemma st_tcb_at_coerce_abstract:
   shows "st_tcb_at (\<lambda>st. \<exists>st'. thread_state_relation st st' \<and> P st') t a"
   using assms
   apply (clarsimp simp: state_relation_def pred_tcb_at'_def obj_at'_def
-                        projectKOs objBits_simps)
+                        projectKOs)
   apply (erule (1) pspace_dom_relatedE)
   apply (erule (1) obj_relation_cutsE, simp_all)
   apply (clarsimp simp: st_tcb_at_def obj_at_def other_obj_relation_def

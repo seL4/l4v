@@ -1856,7 +1856,7 @@ lemma setCTE_pspace_no_overlap':
   "\<lbrace>pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz\<rbrace>
    setCTE cte src
    \<lbrace>\<lambda>r. pspace_no_overlap' ptr sz\<rbrace>"
-   by (rule pspace_no_overlap'_lift2; wpsimp wp: setCTE_typ_at' simp: updateObject_cte_objBitsKO_eq)
+   by (rule pspace_no_overlap'_lift2; wpsimp wp: setCTE_typ_at')
 
 lemma getCTE_commute:
   assumes cte_at_modify:
@@ -3693,7 +3693,7 @@ lemma new_cap_object_comm_helper:
         apply (rule createObject_updateNewFreeIndex_commute)
        apply (wp getCTE_wp hoare_vcg_imp_lift hoare_vcg_disj_lift valid_arch_state'_updateMDB
          updateMDB_pspace_no_overlap' setCTE_pspace_no_overlap'
-         | clarsimp simp: conj_comms updateObject_cte_objBitsKO_eq)+
+         | clarsimp simp: conj_comms)+
   apply (clarsimp simp:cte_wp_at_ctes_of)
   apply (frule_tac slot = slot in pspace_no_overlapD2')
    apply simp+
@@ -3749,8 +3749,7 @@ lemma new_cap_object_commute:
    apply (clarsimp simp:insertNewCap_def split_def)
    apply (wpsimp wp: updateMDB_weak_cte_wp_at updateMDB_pspace_no_overlap'
                      getCTE_wp valid_arch_state'_updateMDB
-                     setCTE_weak_cte_wp_at setCTE_pspace_no_overlap'
-               simp: updateObject_cte_objBitsKO_eq)
+                     setCTE_weak_cte_wp_at setCTE_pspace_no_overlap')
    apply (clarsimp simp:cte_wp_at_ctes_of simp del:fun_upd_apply)
    apply (case_tac "parent \<noteq> aa")
     prefer 2
@@ -5547,7 +5546,7 @@ lemma insertNewCap_wps[wp]:
       insertNewCap parent slot cap
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
   apply (simp_all add: insertNewCap_def)
-   apply (wpsimp wp: hoare_drop_imps simp: updateObject_cte_objBitsKO_eq)+
+   apply (wpsimp wp: hoare_drop_imps)+
   apply (fastforce elim!: rsubst[where P=P])
   done
 

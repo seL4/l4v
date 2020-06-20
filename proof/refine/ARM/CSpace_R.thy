@@ -695,7 +695,7 @@ lemma updateCap_dynamic_duo:
        \<Longrightarrow> pspace_aligned' s' \<and> pspace_distinct' s'"
   unfolding updateCap_def
   apply (rule conjI)
-   by (erule use_valid | wpsimp simp: updateObject_cte_objBitsKO_eq)+
+   by (erule use_valid | wpsimp)+
 
 declare const_apply[simp]
 
@@ -2491,17 +2491,12 @@ proof -
     done
 qed
 
-crunch state_refs_of'[wp]: cteInsert "\<lambda>s. P (state_refs_of' s)"
-  (wp: crunch_wps)
-
-crunch aligned'[wp]: cteInsert pspace_aligned'
-  (wp: crunch_wps simp: updateObject_cte_objBitsKO_eq)
-
-crunch distinct'[wp]: cteInsert pspace_distinct'
-  (wp: crunch_wps simp: updateObject_cte_objBitsKO_eq)
-
-crunch no_0_obj' [wp]: cteInsert no_0_obj'
-  (wp: crunch_wps)
+crunches cteInsert
+  for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
+  and aligned'[wp]: pspace_aligned'
+  and distinct'[wp]: pspace_distinct'
+  and no_0_obj' [wp]: no_0_obj'
+    (wp: crunch_wps)
 
 lemma cteInsert_valid_pspace:
   "\<lbrace>valid_pspace' and valid_cap' cap and (\<lambda>s. src \<noteq> dest) and valid_objs' and
@@ -3044,7 +3039,7 @@ lemma cteInsert_vms'[wp]:
   done
 
 crunch pspace_domain_valid[wp]: cteInsert "pspace_domain_valid"
-  (wp: crunch_wps simp: updateObject_cte_objBitsKO_eq)
+  (wp: crunch_wps)
 
 lemma setCTE_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace> setCTE ptr cte \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
@@ -4070,7 +4065,7 @@ lemma arch_update_setCTE_invs:
              valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers'
              valid_queues_lift' setCTE_pred_tcb_at' irqs_masked_lift
              setCTE_norq hoare_vcg_disj_lift untyped_ranges_zero_lift
-           | simp add: pred_tcb_at'_def updateObject_cte_objBitsKO_eq)+
+           | simp add: pred_tcb_at'_def)+
   apply (subst fold_list_refs_of_replies')
   apply (clarsimp simp: valid_global_refs'_def is_arch_update'_def fun_upd_def[symmetric]
                         cte_wp_at_ctes_of isCap_simps untyped_ranges_zero_fun_upd)

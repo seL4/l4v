@@ -2813,7 +2813,6 @@ lemma setASIDPool_valid_objs [wp]:
   "\<lbrace>valid_objs' and valid_asid_pool' ap\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (rule hoare_pre)
    apply (rule setObject_valid_objs')
-    apply (erule setObject_asidpool.updateObject_objBitsKO_eq)
    prefer 2
    apply assumption
   apply (clarsimp simp: updateObject_default_def in_monad)

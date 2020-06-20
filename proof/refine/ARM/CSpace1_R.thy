@@ -772,11 +772,11 @@ lemma setObject_cte_obj_at_tcb':
 
 lemma setCTE_typ_at':
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setCTE c cte \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  by (wpsimp simp: setCTE_def updateObject_cte_objBitsKO_eq wp: setObject_typ_at')
+  by (wpsimp simp: setCTE_def wp: setObject_typ_at')
 
 lemma setCTE_typ_at [wp]:
   "\<lbrace>typ_at' T p\<rbrace> setCTE c cte \<lbrace>\<lambda>_. typ_at' T p\<rbrace>"
-  by (wpsimp simp: setCTE_def updateObject_cte_objBitsKO_eq wp: setObject_typ_at')
+  by (wpsimp simp: setCTE_def wp: setObject_typ_at')
 
 lemmas setCTE_typ_ats [wp] = typ_at_lifts [OF setCTE_typ_at']
 
@@ -1874,12 +1874,10 @@ lemma updateCap_stuff:
       apply (clarsimp simp: updateObject_cte in_monad typeError_def
                             in_magnitude_check objBits_simps
                      split: kernel_object.split_asm if_split_asm)
-     apply simp
     apply (erule use_valid [OF _ setObject_distinct])
      apply (clarsimp simp: updateObject_cte in_monad typeError_def
                            in_magnitude_check objBits_simps
                     split: kernel_object.split_asm if_split_asm)
-    apply simp
    apply (erule setObject_cte_replies_of'_use_valid_ksPSpace; simp)
   apply (erule setObject_cte_scs_of'_use_valid_ksPSpace; simp)
   done
@@ -2456,7 +2454,6 @@ crunches updateMDB
   and scs_of'[wp]: "\<lambda>s. P (scs_of' s)"
   and aligned[wp]: pspace_aligned'
   and pdistinct[wp]: pspace_distinct'
-  (simp: updateObject_cte_objBitsKO_eq)
 
 lemma updateMDB_the_lot:
   assumes "(x, s'') \<in> fst (updateMDB p f s')"

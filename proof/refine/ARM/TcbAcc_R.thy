@@ -465,21 +465,20 @@ lemmas threadSet_corres_noop_split =
 
 lemma threadSet_tcb' [wp]:
   "\<lbrace>tcb_at' t\<rbrace> threadSet f t' \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
-  by (wpsimp simp: threadSet_def set_tcb'.updateObject_objBitsKO_eq)
+  by (wpsimp simp: threadSet_def)
 
 (* The function "thread_set f p" updates a TCB at p using function f.
    It should not be used to change capabilities, though. *)
 lemma setObject_tcb_valid_objs:
   "\<lbrace>valid_objs' and (tcb_at' t and valid_obj' (injectKO v))\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (rule setObject_valid_objs')
-  apply (erule set_tcb'.updateObject_objBitsKO_eq)
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
 
 lemma setObject_tcb_at':
   "\<lbrace>\<lambda>s. P (tcb_at' t' s)\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv s. P (tcb_at' t' s)\<rbrace>"
   apply (subst typ_at_tcb'[symmetric])+
-  apply (rule setObject_typ_at', erule set_tcb'.updateObject_objBitsKO_eq)
+  apply (rule setObject_typ_at')
   done
 
 lemma setObject_queues_unchanged:
@@ -660,7 +659,7 @@ lemma threadSet_valid_pspace'T_P:
    \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   apply (simp add: valid_pspace'_def threadSet_def)
   apply (rule hoare_pre,
-         wpsimp wp: setObject_tcb_valid_objs getObject_tcb_wp simp: set_tcb'.updateObject_objBitsKO_eq)
+         wpsimp wp: setObject_tcb_valid_objs getObject_tcb_wp)
   apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
   apply (erule(1) valid_objsE')
   apply (clarsimp simp add: valid_obj'_def valid_tcb'_def
@@ -1067,17 +1066,16 @@ crunches setThreadState, setBoundNotification
 
 lemma threadSet_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> threadSet t F \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  by (wpsimp simp: threadSet_def set_tcb'.updateObject_objBitsKO_eq wp: setObject_typ_at')
+  by (wpsimp simp: threadSet_def wp: setObject_typ_at')
 
 lemma setObject_tcb_pde_mappings'[wp]:
   "\<lbrace>valid_pde_mappings'\<rbrace> setObject p (tcb :: tcb) \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
-  by (wpsimp wp: valid_pde_mappings_lift' setObject_typ_at' simp: set_tcb'.updateObject_objBitsKO_eq)
+  by (wpsimp wp: valid_pde_mappings_lift' setObject_typ_at')
 
 crunches threadSet
   for irq_states' [wp]: valid_irq_states'
   and pde_mappings' [wp]: valid_pde_mappings'
   and pspace_domain_valid [wp]: pspace_domain_valid
-  (simp: set_tcb'.updateObject_objBitsKO_eq)
 
 lemma threadSet_obj_at'_really_strongest:
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> obj_at' (\<lambda>obj. if t = t' then P (f obj) else P obj)
@@ -1511,7 +1509,7 @@ lemma asUser_nosch[wp]:
 crunches asUser
   for aligned'[wp]: pspace_aligned'
   and distinct'[wp]: pspace_distinct'
-  (simp: crunch_simps set_tcb'.updateObject_objBitsKO_eq wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma asUser_valid_objs [wp]:
   "\<lbrace>valid_objs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
@@ -2502,7 +2500,7 @@ lemma sts'_valid_pspace'_inv[wp]:
   setThreadState st t
   \<lbrace> \<lambda>rv. valid_pspace' \<rbrace>"
   apply (simp add: valid_pspace'_def)
-  by (wpsimp wp: sts_valid_objs' getObject_obj_at_tcb set_tcb'.updateObject_objBitsKO_eq
+  by (wpsimp wp: sts_valid_objs' getObject_obj_at_tcb
            simp: setThreadState_def threadSet_def valid_mdb'_def tcb_cte_cases_def)
 
 crunch ct[wp]: setQueue "\<lambda>s. P (ksCurThread s)"
@@ -2527,7 +2525,7 @@ lemma sbn'_valid_pspace'_inv[wp]:
   apply (rule hoare_pre)
    apply (wp sbn_valid_objs')
    apply (simp add: setBoundNotification_def threadSet_def bind_assoc valid_mdb'_def)
-   apply (wp getObject_obj_at_tcb | simp add: set_tcb'.updateObject_objBitsKO_eq)+
+   apply (wp getObject_obj_at_tcb)
   apply (clarsimp simp: valid_mdb'_def)
   apply (drule obj_at_ko_at')
   apply clarsimp
