@@ -313,7 +313,7 @@ begin
 
 instance
   apply (intro_classes)
-  apply (case_tac ko, auto simp: projectKO_opt_cte updateObject_cte
+  apply (case_tac ko, auto simp: projectKO_opt_cte updateObject_cte objBitsKO_def
                                  in_monad projectKO_eq2 typeError_def alignError_def
                            split: kernel_object.splits if_split_asm)
   done

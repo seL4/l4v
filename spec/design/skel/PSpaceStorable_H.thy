@@ -244,5 +244,7 @@ class pspace_storable = pre_storable +
   \<close>
   assumes updateObject_type:
   "(ko', s') \<in> fst (updateObject v ko p p' p'' s) \<Longrightarrow> koTypeOf ko' = koTypeOf ko"
+  assumes updateObject_size:
+  "(ko', s') \<in> fst (updateObject v ko p p' p'' s) \<Longrightarrow> objBitsKO ko' = objBitsKO ko"
 
 end
