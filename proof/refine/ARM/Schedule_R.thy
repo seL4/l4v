@@ -934,14 +934,15 @@ proof -
     apply (simp add: setCurThread_def)
     apply wp
     apply (clarsimp simp add: vms'_ct ct_not_inQ_ct idle'_activatable' idle'_not_tcbQueued'[simplified o_def]
-                              invs'_def cur_tcb'_def valid_state'_def valid_idle'_def
+                              invs'_def cur_tcb'_def valid_state'_def
                               sch_act_wf ct_in_state'_def state_refs_of'_def
                               ps_clear_def valid_irq_node'_def
                               ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
                               valid_queues_def bitmapQ_defs valid_queues_no_bitmap_def valid_queues'_def
                               valid_release_queue_def valid_release_queue'_def
                               all_invs_but_ct_idle_or_in_cur_domain'_def pred_tcb_at'_def
-                        cong: option.case_cong)
+                        cong: option.case_cong
+                       dest!: valid_idle'_tcb_at')
     apply (clarsimp simp: obj_at'_def projectKOs)
     done
 qed

@@ -1129,7 +1129,12 @@ definition
 where
   "valid_idle' \<equiv>
      \<lambda>s. fixme_idle_tcb_at' (ksIdleThread s) s
-         \<and> idle_sc_at' idle_sc_ptr s"
+         \<and> idle_sc_at' idle_sc_ptr s
+         \<and> idle_thread_ptr = ksIdleThread s"
+
+lemma valid_idle'_tcb_at':
+  "valid_idle' s \<Longrightarrow> fixme_idle_tcb_at' (ksIdleThread s) s \<and> idle_sc_at' idle_sc_ptr s"
+  by (clarsimp simp: valid_idle'_def)
 
 definition
   valid_irq_node' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -1156,7 +1161,7 @@ definition
   global_refs' :: "kernel_state \<Rightarrow> obj_ref set"
 where
   "global_refs' \<equiv> \<lambda>s.
-  {ksIdleThread s} \<union>
+  {ksIdleThread s, idle_sc_ptr} \<union>
    page_directory_refs' (armKSGlobalPD (ksArchState s)) \<union>
    (\<Union>pt \<in> set (armKSGlobalPTs (ksArchState s)). page_table_refs' pt) \<union>
    range (\<lambda>irq :: irq. irq_node' s + 16 * ucast irq)"

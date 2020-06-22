@@ -2807,8 +2807,8 @@ lemma updateMDB_idle'[wp]:
  "\<lbrace>valid_idle'\<rbrace> updateMDB p m \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (clarsimp simp add: updateMDB_def)
   apply (rule hoare_pre)
-  apply (wp | simp add: valid_idle'_def)+
-  done
+   apply (wp | simp add: valid_idle'_def)+
+  by fastforce
 
 lemma updateCap_idle':
  "\<lbrace>valid_idle'\<rbrace> updateCap p c \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"

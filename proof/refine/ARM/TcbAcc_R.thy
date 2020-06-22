@@ -1358,6 +1358,14 @@ lemma global'_no_ex_cap:
   apply (clarsimp simp: cte_wp_at'_def dest!: zobj_refs'_capRange, blast)
   done
 
+lemma global'_sc_no_ex_cap:
+  "\<lbrakk>valid_global_refs' s; valid_pspace' s\<rbrakk> \<Longrightarrow> \<not> ex_nonz_cap_to' idle_sc_ptr s"
+  apply (clarsimp simp: ex_nonz_cap_to'_def valid_global_refs'_def valid_refs'_def2 valid_pspace'_def)
+  apply (drule cte_wp_at_norm', clarsimp)
+  apply (frule(1) cte_wp_at_valid_objs_valid_cap', clarsimp)
+  apply (clarsimp simp: cte_wp_at'_def dest!: zobj_refs'_capRange, blast)
+  done
+
 lemma getObject_tcb_sp:
   "\<lbrace>P\<rbrace> getObject r \<lbrace>\<lambda>t::tcb. P and ko_at' t r\<rbrace>"
   by (wp getObject_obj_at'; simp)

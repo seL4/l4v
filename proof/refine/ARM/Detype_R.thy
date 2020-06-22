@@ -766,6 +766,7 @@ context delete_locale
 begin
 interpretation Arch . (*FIXME: arch_split*)
 lemma valid_objs: "valid_objs' s"
+  and    pspace: "valid_pspace' s"
   and        pa: "pspace_aligned' s"
   and        pd: "pspace_distinct' s"
   and        vq: "valid_queues s"
@@ -773,6 +774,7 @@ lemma valid_objs: "valid_objs' s"
   and      vrlq: "valid_release_queue s"
   and     vrlq': "valid_release_queue' s"
   and  sym_refs: "sym_refs (state_refs_of' s)"
+  and list_refs: "sym_refs (list_refs_of_replies' s)"
   and    iflive: "if_live_then_nonz_cap' s"
   and  ifunsafe: "if_unsafe_then_cap' s"
   and     dlist: "valid_dlist (ctes_of s)"
@@ -969,61 +971,195 @@ lemma live_notRange:
   apply (erule ex_nonz_cap_notRange)
   done
 
-lemma refs_notRange:
-  "(x, tp) \<in> state_refs_of' s y \<Longrightarrow> y \<notin> base_bits"
-  apply (drule state_refs_of'_elemD)
-  apply (erule live_notRange)
-  apply (rule refs_of_live')
+lemma live_idle_untyped_range':
+  "\<lbrakk> ko_wp_at' P p s \<or> p = idle_thread_ptr \<or> p = idle_sc_ptr; \<And>ko. P ko \<Longrightarrow> live' ko \<rbrakk>
+   \<Longrightarrow> p \<notin> base_bits"
+  apply (case_tac "ko_wp_at' P p s")
+   apply (drule if_live_then_nonz_capE'[OF iflive ko_wp_at'_weakenE])
+    apply simp
+   apply (erule ex_nonz_cap_notRange)
   apply clarsimp
-  sorry (* FIXME: needs statement update *)
+  apply (insert invs_valid_global'[OF invs] cap invs_valid_idle'[OF invs]
+                idle_is_global[where s = s])
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (drule (1) valid_global_refsD')
+  apply (clarsimp simp: valid_idle'_def)
+  using atLeastAtMost_iff apply (simp add: p_assoc_help)
+  by fastforce
+
+lemma untyped_range_live_idle':
+  "p \<in> base_bits \<Longrightarrow> \<not> (ko_wp_at' live' p s \<or> p = idle_thread_ptr \<or> p = idle_sc_ptr)"
+  using live_idle_untyped_range' by blast
+
+lemma refs_of':
+  "\<And>ko p. ko_wp_at' ((=) (injectKOS ko)) p s
+   \<Longrightarrow> refs_of' (injectKOS ko) \<subseteq> (UNIV - base_bits \<times> UNIV)"
+  apply (case_tac "p = idle_sc_ptr \<or> p = idle_thread_ptr")
+   apply (insert invs_valid_idle'[OF invs])
+   apply (clarsimp simp: valid_idle'_def)
+   apply (clarsimp simp: obj_at'_def ko_wp_at'_def pred_tcb_at'_def projectKOs refs_of'_def
+                  split: Structures_H.kernel_object.splits
+          ; fastforce?)
+    apply (elim disjE; fastforce?)
+    using live_idle_untyped_range' apply simp
+   apply (elim disjE; fastforce?)
+   using live_idle_untyped_range' apply simp
+  apply (prop_tac "ko_at' ko p s")
+   apply (fastforce simp: ko_wp_at'_def obj_at'_def projectKOs project_inject)
+  apply (frule sym_refs_ko_atD')
+   apply (clarsimp simp: sym_refs)
+   apply (fastforce intro: refs_of_live' dest!: live_notRange)+
+  done
+
+lemma list_refs_of_replies_live':
+  "\<lbrakk> (x, tp) \<in> list_refs_of_replies' s p; pspace_aligned' s; pspace_distinct' s \<rbrakk>
+   \<Longrightarrow> ko_wp_at' live' p s"
+  apply (clarsimp simp: ko_wp_at'_def list_refs_of_replies'_def list_refs_of_reply'_def
+                        pspace_aligned'_def pspace_distinct'_def get_refs_def projectKOs
+                 split: option.splits)
+    by (metis live_reply'_def not_in_domIff option.discI option.sel)+
+
+lemma replyPrev_list_refs_of_replies:
+  "\<lbrakk>ko_at' reply p s; replyPrev reply = Some reply_ptr\<rbrakk>
+   \<Longrightarrow> (reply_ptr, ReplyPrev) \<in> list_refs_of_replies' s p"
+  by (clarsimp simp: list_refs_of_replies'_def list_refs_of_reply'_def opt_map_def projectKOs
+                     obj_at'_def
+              split: option.splits)
+
+lemma replyNext_list_refs_of_replies:
+  "\<lbrakk>ko_at' reply p s; replyNext reply = Some reply_ptr\<rbrakk>
+   \<Longrightarrow> (reply_ptr, ReplyNext) \<in> list_refs_of_replies' s p"
+  by (clarsimp simp: list_refs_of_replies'_def list_refs_of_reply'_def opt_map_def projectKOs
+                     obj_at'_def
+              split: option.splits)
 
 lemma valid_obj':
-  "\<lbrakk> valid_obj' obj s; ko_wp_at' ((=) obj) p s \<rbrakk> \<Longrightarrow> valid_obj' obj state'"
+  "\<lbrakk> valid_obj' obj s; ko_wp_at' ((=) obj) p s;
+     sym_refs (list_refs_of_replies' s); pspace_aligned' s; pspace_distinct' s\<rbrakk>
+   \<Longrightarrow> valid_obj' obj state'"
   apply (case_tac obj, simp_all add: valid_obj'_def)
-      apply (rename_tac endpoint)
-      apply (case_tac endpoint, simp_all add: valid_ep'_def)[1]
-       apply (clarsimp dest!: sym_refs_ko_wp_atD [OF _ sym_refs])
-       apply (drule(1) bspec)+
-       apply (clarsimp dest!: refs_notRange)
-      apply (clarsimp dest!: sym_refs_ko_wp_atD [OF _ sym_refs])
-      apply (drule(1) bspec)+
-      apply (clarsimp dest!: refs_notRange)
-     apply (rename_tac notification)
-     apply (case_tac notification, simp_all add: valid_ntfn'_def valid_bound_tcb'_def)[1]
-     apply (rename_tac ntfn bound)
-     apply (case_tac ntfn, simp_all split:option.splits)[1]
-        apply ((clarsimp dest!: sym_refs_ko_wp_atD [OF _ sym_refs] refs_notRange)+)[4]
-  sorry (*
-      apply (drule(1) bspec)+
-      apply (clarsimp dest!: refs_notRange)
-     apply (clarsimp dest!: sym_refs_ko_wp_atD [OF _ sym_refs] refs_notRange)
-    apply (frule sym_refs_ko_wp_atD [OF _ sym_refs])
-    apply (clarsimp simp: valid_tcb'_def ko_wp_at'_def
-                          objBits_simps)
-    apply (rule conjI)
-     apply (erule ballEI, clarsimp elim!: ranE)
-     apply (rule_tac p="p + x" in valid_cap2)
-     apply (erule(2) cte_wp_at_tcbI')
-      apply fastforce
+        apply (clarsimp dest!: refs_of' simp flip: injectKO_ep)
+        apply (fastforce simp: valid_ep'_def split: endpoint.splits)
+       apply (clarsimp dest!: refs_of' simp flip: injectKO_ntfn)
+       apply (fastforce simp: valid_ntfn'_def valid_bound_obj'_def split: option.splits ntfn.splits)
+      apply (clarsimp simp flip: injectKO_tcb)
+      apply (frule refs_of')
+      apply (frule sym_refs_ko_wp_atD [OF _ sym_refs])
+      apply (clarsimp simp: valid_tcb'_def ko_wp_at'_def objBits_simps)
+      apply (rule conjI)
+       apply (erule ballEI, clarsimp elim!: ranE)
+       apply (rule_tac p="p + x" in valid_cap2)
+       apply (erule (2) cte_wp_at_tcbI')
+        apply fastforce
+       apply simp
+      apply (clarsimp simp: valid_tcb_state'_def valid_bound_reply'_def
+                     split: option.splits thread_state.splits)
+     apply (clarsimp simp: valid_cte'_def)
+     apply (rule_tac p=p in valid_cap2)
+     apply (clarsimp simp: ko_wp_at'_def objBits_simps' cte_level_bits_def[symmetric])
+     apply (erule(2) cte_wp_at_cteI')
      apply simp
-    apply (rename_tac tcb)
-    apply (case_tac "tcbState tcb";
-           clarsimp simp: valid_tcb_state'_def valid_bound_ntfn'_def
-                   dest!: refs_notRange split: option.splits)
-   apply (clarsimp simp: valid_cte'_def)
-   apply (rule_tac p=p in valid_cap2)
-   apply (clarsimp simp: ko_wp_at'_def objBits_simps' cte_level_bits_def[symmetric])
-   apply (erule(2) cte_wp_at_cteI')
-   apply simp
-  apply (rename_tac arch_kernel_object)
-  apply (case_tac "arch_kernel_object", simp_all)
-    apply (rename_tac asidpool)
-    apply (case_tac asidpool, clarsimp simp: page_directory_at'_def)
-   apply (rename_tac pte)
-   apply (case_tac pte, simp_all add: valid_mapping'_def)
-  apply(rename_tac pde)
-  apply (case_tac pde, simp_all add: valid_mapping'_def)
-  done *)
+    apply (rename_tac arch_kernel_object)
+    apply (case_tac "arch_kernel_object", simp_all)
+      apply (rename_tac asidpool)
+      apply (case_tac asidpool, clarsimp simp: page_directory_at'_def)
+     apply (rename_tac pte)
+     apply (case_tac pte, simp_all add: valid_mapping'_def)
+    apply (rename_tac pde)
+    apply (case_tac pde, simp_all add: valid_mapping'_def)
+   apply (clarsimp dest!: refs_of' simp flip: injectKO_sc)
+   apply (clarsimp simp: valid_sched_context'_def valid_bound_obj'_def split: option.splits)
+  apply (rename_tac reply)
+  apply (clarsimp simp flip: injectKO_reply)
+  apply (frule refs_of')
+  apply (clarsimp simp: ko_wp_at'_def valid_reply'_def valid_bound_tcb'_def)
+  apply (rule conjI; (solves \<open>clarsimp split: option.splits\<close>)?)+
+   apply (case_tac "replyPrev reply = None"; clarsimp?)
+   apply (frule replyPrev_list_refs_of_replies[rotated])
+    apply (simp add: obj_at'_def projectKOs)
+   using sym_refs_def live_notRange list_refs_of_replies_live' apply fastforce
+  apply (case_tac "replyNext reply = None"; clarsimp?)
+  apply (frule replyNext_list_refs_of_replies[rotated])
+   apply (simp add: obj_at'_def projectKOs)
+  using sym_refs_def live_notRange list_refs_of_replies_live' apply fastforce
+  done
+
+lemma state_refs_for_state':
+  "\<lbrakk> pspace_aligned' s; pspace_distinct' s; pspace_distinct' state' \<rbrakk>
+   \<Longrightarrow> state_refs_of' state' = (\<lambda>x. if x \<in> base_bits then {} else state_refs_of' s x)"
+  apply (rule ext)
+  by (auto simp: state_refs_of'_def intro!: pspace_distinctD' split: option.splits)
+
+lemma sc_tcb_not_idle_thread'_helper:
+  "\<lbrakk> pspace_aligned' s; pspace_distinct' s; scTCB sc = Some tp;
+     ksPSpace s scp = Some (KOSchedContext sc); sym_refs (state_refs_of' s) \<rbrakk>
+   \<Longrightarrow> (scp, TCBSchedContext) \<in> state_refs_of' s tp"
+  apply (clarsimp simp: state_refs_of'_def pspace_aligned'_def pspace_distinct'_def
+                 elim!: sym_refsE)
+  by (simp add: pspace_alignedD' pspace_distinctD' pspace_aligned'_def pspace_distinct'_def)
+
+lemma sc_tcb_not_idle_thread':
+  "\<lbrakk> pspace_aligned' s; pspace_distinct' s; ksPSpace s scp = Some (KOSchedContext sc);
+     scp \<noteq> idle_sc_ptr; sym_refs (state_refs_of' s); valid_global_refs' s; valid_pspace' s;
+     if_live_then_nonz_cap' s\<rbrakk>
+   \<Longrightarrow> scTCB sc \<noteq> Some (ksIdleThread s)"
+  apply (frule (1) global'_no_ex_cap)
+  apply (rule valid_objsE'; fastforce?)
+  apply (clarsimp simp: valid_obj_def valid_sched_context_def is_tcb obj_at_def)
+  apply (frule sc_tcb_not_idle_thread'_helper; blast?)
+  apply (insert idle)
+  apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKOs state_refs_of'_def
+                        live'_def
+                 dest!: sc_tcb_not_idle_thread'_helper if_live_then_nonz_capD')
+  done
+
+lemma thread_not_idle_implies_sc_not_idle'_helper:
+  "\<lbrakk> pspace_aligned' s; pspace_distinct' s; tcbSchedContext tcb = Some scp;
+     ksPSpace s tp = Some (KOTCB tcb); sym_refs (state_refs_of' s) \<rbrakk>
+   \<Longrightarrow> (tp, SCTcb) \<in> state_refs_of' s scp"
+  apply (clarsimp simp: state_refs_of'_def pspace_aligned'_def pspace_distinct'_def
+                 elim!: sym_refsE)
+  by (simp add: pspace_alignedD' pspace_distinctD' pspace_aligned'_def pspace_distinct'_def)
+
+lemma thread_not_idle_implies_sc_not_idle':
+  "\<lbrakk> pspace_aligned' s; pspace_distinct' s; ksPSpace s tp = Some (KOTCB tcb); tp \<noteq> idle_thread_ptr;
+    sym_refs (state_refs_of' s); valid_global_refs' s; valid_objs' s; valid_idle' s;
+    if_live_then_nonz_cap' s \<rbrakk>
+   \<Longrightarrow> tcbSchedContext tcb \<noteq> Some idle_sc_ptr"
+  apply (frule global'_sc_no_ex_cap)
+   apply (blast intro: pspace)
+  apply (rule valid_objsE'; simp?)
+  apply (clarsimp simp: valid_obj'_def valid_tcb'_def is_sc_obj_def obj_at'_def)
+  apply (rename_tac ko obj)
+  apply (case_tac ko; clarsimp simp: projectKOs)
+   apply (drule (4) thread_not_idle_implies_sc_not_idle'_helper)
+   apply (drule if_live_then_nonz_capE'[where p=idle_sc_ptr])
+    apply (fastforce simp: ko_wp_at'_def  live_sc'_def state_refs_of'_def
+                    dest!: thread_not_idle_implies_sc_not_idle_helper)
+   apply fastforce
+  done
+
+lemma state_refs:
+  "\<lbrakk>pspace_aligned' s ; pspace_distinct' s; pspace_distinct' state'\<rbrakk>
+  \<Longrightarrow> (state_refs_of' state') = (state_refs_of' s)"
+  apply (rule ext)
+  apply (clarsimp simp: state_refs_for_state')
+  apply (rename_tac x)
+  apply (prop_tac "x \<in> base_bits", simp)
+  apply (frule untyped_range_live_idle')
+  apply (clarsimp simp: state_refs_of'_def split: option.splits)
+  apply (rename_tac ko)
+  apply (case_tac ko; simp)
+      apply (fastforce simp: ep_q_refs_of'_def ko_wp_at'_def)
+     apply (fastforce simp: ntfn_q_refs_of'_def ko_wp_at'_def live_ntfn'_def
+                     split: ntfn.splits)
+    apply (insert sym_refs refs valid_objs idle iflive pspace)
+    apply (frule (8) thread_not_idle_implies_sc_not_idle')
+    apply (fastforce simp: ko_wp_at'_def)
+   apply (frule (7) sc_tcb_not_idle_thread')
+   apply (clarsimp simp: ko_wp_at'_def live_sc'_def  valid_idle'_def)
+  apply (clarsimp simp: ko_wp_at'_def live_reply'_def)
+  done
 
 lemma st_tcb:
     "\<And>P p. \<lbrakk> st_tcb_at' P p s; \<not> P Inactive; \<not> P IdleThreadState \<rbrakk> \<Longrightarrow> st_tcb_at' P p state'"
@@ -1233,26 +1369,22 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def (* FIXME: do not s
   show "pspace_aligned' ?s" using pa
     by (simp add: pspace_aligned'_def dom_def)
 
-  show "pspace_distinct' ?s" using pd
+  show pspace_distinct'_state': "pspace_distinct' ?s" using pd
     by (clarsimp simp add: pspace_distinct'_def ps_clear_def
                            dom_if_None Diff_Int_distrib)
 
   show "valid_objs' ?s" using valid_objs
     apply (clarsimp simp: valid_objs'_def ran_def)
-    apply (rule_tac p=a in valid_obj')
-     apply fastforce
+    apply (insert list_refs pa pd)
+    apply (rule_tac p=a in valid_obj'; fastforce?)
     apply (frule pspace_alignedD'[OF _ pa])
     apply (frule pspace_distinctD'[OF _ pd])
     apply (clarsimp simp: ko_wp_at'_def)
     done
 
-  from sym_refs show "sym_refs (state_refs_of' ?s)"
-    apply (clarsimp simp: state_refs_ko_wp_at_eq
-                   elim!: rsubst[where P=sym_refs])
-    apply (rule ext)
-    apply safe
-    apply (simp add: refs_notRange[simplified] state_refs_ko_wp_at_eq)
-    done
+  show "sym_refs (state_refs_of' ?s)"
+    apply (insert pa pd pspace_distinct'_state' sym_refs)
+    by (subst state_refs; blast?)
 
   show "sym_refs (map_set (replies' ||> list_refs_of_reply'))"
     sorry

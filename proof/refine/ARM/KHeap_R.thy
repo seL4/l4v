@@ -2456,6 +2456,10 @@ lemma idle_is_global [intro!]:
   "ksIdleThread s \<in> global_refs' s"
   by (simp add: global_refs'_def)
 
+lemma idle_sc_is_global [intro!]:
+  "idle_sc_ptr \<in> global_refs' s"
+  by (simp add: global_refs'_def)
+
 lemma valid_globals_cte_wpD':
   "\<lbrakk> valid_global_refs' s; cte_wp_at' P p s \<rbrakk>
        \<Longrightarrow> \<exists>cte. P cte \<and> ksIdleThread s \<notin> capRange (cteCap cte)"
