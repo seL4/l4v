@@ -493,7 +493,8 @@ where valid_cap'_def:
   | Structures_H.IRQControlCap \<Rightarrow> True
   | Structures_H.IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
   | Structures_H.SchedControlCap \<Rightarrow> True
-  | Structures_H.SchedContextCap sc n \<Rightarrow> sc_at' sc s
+  | Structures_H.SchedContextCap sc n \<Rightarrow> sc_at'_n n sc s
+             \<and> minSchedContextBits \<le> n \<and> n \<le> maxUntypedSizeBits
   | Structures_H.Zombie r b n \<Rightarrow> n \<le> zombieCTEs b \<and> zBits b < word_bits
             \<and> (case b of ZombieTCB \<Rightarrow> tcb_at' r s | ZombieCNode n \<Rightarrow> n \<noteq> 0
                     \<and> (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask n)) s))

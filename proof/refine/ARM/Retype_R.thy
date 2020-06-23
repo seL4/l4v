@@ -2721,6 +2721,40 @@ lemma caps_no_overlapD'':
   apply blast
 done
 
+lemma retype_obj_at'_not:
+  assumes ad: "pspace_aligned' s" "pspace_distinct' s"
+  and     pn: "pspace_no_overlap' ptr sz s"
+  and  cover: "range_cover ptr sz (objBitsKO val + gbits) n"
+  shows "\<And>P x. x \<in> set (new_cap_addrs (2 ^ gbits * n) ptr val) \<Longrightarrow> \<not> obj_at' P x s"
+proof -
+  note cover' = range_cover_rel[where sbit' = "objBitsKO val",OF cover _ refl,simplified]
+  show "\<And>P x. x \<in> set (new_cap_addrs (2 ^ gbits * n) ptr val) \<Longrightarrow> \<not> obj_at' P x s"
+    apply (clarsimp simp: obj_at'_def)
+    apply (drule subsetD [OF new_cap_addrs_subset [OF cover' ]])
+    apply (insert pspace_no_overlap_disjoint' [OF ad(1) pn])
+    apply (drule domI[where m = "ksPSpace s"])
+    apply (drule(1) orthD2)
+    apply (clarsimp simp:ptr_add_def p_assoc_help)
+    done
+qed
+
+lemma retype_ko_wp_at'_not:
+  assumes ad: "pspace_aligned' s" "pspace_distinct' s"
+  and     pn: "pspace_no_overlap' ptr sz s"
+  and  cover: "range_cover ptr sz (objBitsKO val + gbits) n"
+  shows "\<And>P x. x \<in> set (new_cap_addrs (2 ^ gbits * n) ptr val) \<Longrightarrow> \<not> ko_wp_at' P x s"
+proof -
+  note cover' = range_cover_rel[where sbit' = "objBitsKO val",OF cover _ refl,simplified]
+  show "\<And>P x. x \<in> set (new_cap_addrs (2 ^ gbits * n) ptr val) \<Longrightarrow> \<not> ko_wp_at' P x s"
+    apply (clarsimp simp: ko_wp_at'_def)
+    apply (drule subsetD [OF new_cap_addrs_subset [OF cover' ]])
+    apply (insert pspace_no_overlap_disjoint' [OF ad(1) pn])
+    apply (drule domI[where m = "ksPSpace s"])
+    apply (drule(1) orthD2)
+    apply (clarsimp simp:ptr_add_def p_assoc_help)
+    done
+qed
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma valid_untyped'_helper:
   assumes valid : "valid_cap' c s"
@@ -2729,55 +2763,60 @@ lemma valid_untyped'_helper:
   and  range  : "caps_no_overlap'' ptr sz s"
   and  pres   : "isUntypedCap c \<longrightarrow> usableUntypedRange c \<inter>  {ptr..ptr + of_nat n * 2 ^ objBitsKO val - 1} = {}"
   shows "\<lbrakk>pspace_aligned' s; pspace_distinct' s; pspace_no_overlap' ptr sz s\<rbrakk>
- \<Longrightarrow> valid_cap' c (s\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr val) (new_cap_addrs n ptr val) (ksPSpace s)\<rparr>)"
-  proof -
+          \<Longrightarrow> valid_cap' c (s\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr val)
+                                                      (new_cap_addrs n ptr val) (ksPSpace s)\<rparr>)"
+proof -
   note blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-        Int_atLeastAtMost atLeastatMost_empty_iff
+    Int_atLeastAtMost atLeastatMost_empty_iff
+  note cover' = range_cover_rel[where sbit' = "objBitsKO val",OF cover _ refl,simplified]
   assume pn : "pspace_aligned' s" "pspace_distinct' s"
-  and   no_overlap: "pspace_no_overlap' ptr sz s"
+  and no_overlap: "pspace_no_overlap' ptr sz s"
   show ?thesis
     using pn pres no_overlap valid cover cte_wp_at_ctes_of[THEN iffD1,OF cte_at]
       caps_no_overlapD''[OF cte_at range]
     apply (clarsimp simp:valid_cap'_def retype_ko_wp_at')
     apply (case_tac "cteCap cte"; simp add: valid_cap'_def cte_wp_at_obj_cases'
-                                  valid_pspace'_def retype_obj_at_disj'
+                                  valid_pspace'_def retype_obj_at_disj' retype_ko_wp_at'
                            split: zombie_type.split_asm)
-     apply (rename_tac arch_capability)
-     apply (case_tac arch_capability;
-            simp add: retype_obj_at_disj' typ_at_to_obj_at_arches
-                      page_table_at'_def page_directory_at'_def split del: if_split)
-     apply (fastforce simp: typ_at_to_obj_at_arches retype_obj_at_disj')
-    unfolding valid_untyped'_def
-    apply (intro allI)
-    apply (rule ccontr)
-    apply clarify
-    using cover[unfolded range_cover_def]
-    apply (clarsimp simp:isCap_simps retype_ko_wp_at' split:if_split_asm)
+      apply (rename_tac arch_capability)
+      apply (case_tac arch_capability;
+             simp add: retype_obj_at_disj' typ_at_to_obj_at_arches
+                       page_table_at'_def page_directory_at'_def split del: if_split)
+      apply (fastforce simp: typ_at_to_obj_at_arches retype_obj_at_disj')
+     unfolding valid_untyped'_def
+     apply (intro allI)
+     apply (rule ccontr)
+     apply clarify
+     using cover[unfolded range_cover_def]
+     apply (clarsimp simp:isCap_simps retype_ko_wp_at' split:if_split_asm)
+      apply (thin_tac "\<forall>x. Q x" for Q)
+      apply (frule aligned_untypedRange_non_empty)
+       apply (simp add:isCap_simps)
+      apply (elim disjE)
+       apply (frule(1) obj_range'_subset)
+       apply (erule impE)
+        apply (drule(1) psubset_subset_trans)
+        apply (drule Int_absorb1[OF psubset_imp_subset])
+        apply (drule aligned_untypedRange_non_empty)
+         apply (simp add:isCap_simps)
+        apply (simp add:Int_ac)
+       apply (drule(1) subset_trans)
+       apply blast
+      apply (frule(1) obj_range'_subset_strong)
+      apply (drule(1) non_disjoing_subset)
+      apply blast
      apply (thin_tac "\<forall>x. Q x" for Q)
      apply (frule aligned_untypedRange_non_empty)
       apply (simp add:isCap_simps)
-     apply (elim disjE)
-      apply (frule(1) obj_range'_subset)
-      apply (erule impE)
-       apply (drule(1) psubset_subset_trans)
-       apply (drule Int_absorb1[OF psubset_imp_subset])
-       apply (drule aligned_untypedRange_non_empty)
-        apply (simp add:isCap_simps)
-       apply (simp add:Int_ac)
-      apply (drule(1) subset_trans)
+     apply (frule(1) obj_range'_subset)
+     apply (drule(1) subset_trans)
+     apply (erule impE)
+      apply clarsimp
       apply blast
-     apply (frule(1) obj_range'_subset_strong)
-     apply (drule(1) non_disjoing_subset)
      apply blast
-    apply (thin_tac "\<forall>x. Q x" for Q)
-    apply (frule aligned_untypedRange_non_empty)
-     apply (simp add:isCap_simps)
-    apply (frule(1) obj_range'_subset)
-    apply (drule(1) subset_trans)
-    apply (erule impE)
-     apply clarsimp
-     apply blast
-    apply blast
+    apply clarsimp
+    apply (drule (3) retype_ko_wp_at'_not[where gbits=0, simplified, OF _ _ _ cover])
+    apply (erule notE, simp)
     done
 qed
 
@@ -2894,50 +2933,55 @@ proof (intro conjI impI)
     apply (drule bspec, erule ranI)
     apply (subst mult.commute)
     apply (case_tac obj; simp add: valid_obj'_def)
-        apply (rename_tac endpoint)
-        apply (case_tac endpoint; simp add: valid_ep'_def obj_at_disj')
-       apply (rename_tac notification)
-       apply (case_tac notification; simp add: valid_ntfn'_def valid_bound_tcb'_def obj_at_disj')
-       apply (rename_tac ntfn xa)
-       apply (case_tac ntfn, simp_all, (clarsimp simp: obj_at_disj' split:option.splits)+)
-  sorry (*
-      apply (rename_tac tcb)
-      apply (case_tac tcb, clarsimp simp add: valid_tcb'_def)
-      apply (frule pspace_alignedD' [OF _ ad(1)])
-      apply (frule pspace_distinctD' [OF _ ad(2)])
-      apply (simp add: objBits_simps)
-      apply (subst mult.commute)
-      apply (intro conjI ballI)
-       apply (clarsimp elim!: ranE)
-       apply (rule valid_cap[unfolded foldr_upd_app_if[folded data_map_insert_def]])
-        apply (fastforce)
-       apply (rule_tac ptr="x + xa" in cte_wp_at_tcbI', assumption+)
-        apply fastforce
+          apply (rename_tac endpoint)
+          apply (case_tac endpoint; simp add: valid_ep'_def obj_at_disj')
+         apply (rename_tac notification)
+         apply (case_tac notification; simp add: valid_ntfn'_def valid_bound_tcb'_def obj_at_disj')
+         apply (rename_tac ntfn xa xb)
+         apply (case_tac ntfn, simp_all, (clarsimp simp: obj_at_disj' split:option.splits)+)
+        apply (rename_tac tcb)
+        apply (case_tac tcb, clarsimp simp add: valid_tcb'_def)
+        apply (frule pspace_alignedD' [OF _ ad(1)])
+        apply (frule pspace_distinctD' [OF _ ad(2)])
+        apply (simp add: objBits_simps)
+        apply (subst mult.commute)
+        apply (intro conjI ballI)
+            apply (clarsimp elim!: ranE)
+            apply (rule valid_cap[unfolded foldr_upd_app_if[folded data_map_insert_def]])
+             apply (fastforce)
+            apply (rule_tac ptr="x + xa" in cte_wp_at_tcbI', assumption+)
+             apply fastforce
+            apply simp
+           apply (rename_tac thread_state mcp priority inQ inRQ option vptr bound tcbsc tcbyt user_context)
+           apply (case_tac thread_state, simp_all add: valid_tcb_state'_def
+                                                       valid_bound_ntfn'_def obj_at_disj'
+                                                split: option.splits)[4]
+       apply (simp add: valid_cte'_def)
+       apply (frule pspace_alignedD' [OF _ ad(1)])
+       apply (frule pspace_distinctD' [OF _ ad(2)])
+       apply (simp add: objBits_simps')
+       apply (subst mult.commute)
+       apply (erule valid_cap[unfolded foldr_upd_app_if[folded data_map_insert_def]])
+       apply (erule(2) cte_wp_at_cteI'[unfolded cte_level_bits_def])
        apply simp
-      apply (rename_tac thread_state mcp priority bool option nat cptr vptr bound user_context)
-      apply (case_tac thread_state, simp_all add: valid_tcb_state'_def
-                                                  valid_bound_ntfn'_def obj_at_disj'
-                                           split: option.splits)[2]
-     apply (simp add: valid_cte'_def)
-     apply (frule pspace_alignedD' [OF _ ad(1)])
-     apply (frule pspace_distinctD' [OF _ ad(2)])
-     apply (simp add: objBits_simps')
-     apply (subst mult.commute)
-     apply (erule valid_cap[unfolded foldr_upd_app_if[folded data_map_insert_def]])
-     apply (erule(2) cte_wp_at_cteI'[unfolded cte_level_bits_def])
-     apply simp
-    apply (rename_tac arch_kernel_object)
-    apply (case_tac arch_kernel_object; simp)
-      apply (rename_tac asidpool)
-      apply (case_tac asidpool, clarsimp simp: page_directory_at'_def
-                                               typ_at_to_obj_at_arches
-                                               obj_at_disj')
-     apply (rename_tac pte)
-     apply (case_tac pte; simp add: valid_mapping'_def)
-    apply (rename_tac pde)
-    apply (case_tac pde; simp add: valid_mapping'_def page_table_at'_def
-                                   typ_at_to_obj_at_arches obj_at_disj')
-    done *)
+      apply (rename_tac arch_kernel_object)
+      apply (case_tac arch_kernel_object; simp)
+        apply (rename_tac asidpool)
+        apply (case_tac asidpool, clarsimp simp: page_directory_at'_def
+                                                 typ_at_to_obj_at_arches
+                                                 obj_at_disj')
+       apply (rename_tac pte)
+       apply (case_tac pte; simp add: valid_mapping'_def)
+      apply (rename_tac pde)
+      apply (case_tac pde; simp add: valid_mapping'_def page_table_at'_def
+                                     typ_at_to_obj_at_arches obj_at_disj')
+     apply (rename_tac sc)
+     apply (case_tac sc; simp add: valid_sched_context'_def valid_bound_tcb'_def obj_at_disj'
+                            split: option.splits)
+    apply (rename_tac reply)
+    apply (case_tac reply; simp add: valid_reply'_def valid_bound_tcb'_def obj_at_disj'
+                    split: option.splits)
+    done
   have not_0: "0 \<notin> set (new_cap_addrs (2 ^ gbits * n) ptr val)"
     using p_0
     apply clarsimp
@@ -3377,6 +3421,9 @@ lemma valid_cap'_range_no_overlap:
   apply (simp add: Int_absorb ptr_add_def p_assoc_help
               del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
                    Int_atLeastAtMost atLeastatMost_empty_iff)
+  apply (clarsimp simp: retype_ko_wp_at')
+    apply (drule (4) retype_ko_wp_at'_not[where gbits=0, simplified])
+  apply (erule notE, simp)
   done
 
 lemma createObjects_cte_wp_at':
