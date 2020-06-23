@@ -234,14 +234,16 @@ lemma obj_at_setObject2:
   `obj_at'` for the updated state is the same as showing the predicate for
   the new value; we get to "reuse" the existing PSpace properties.
 \<close>
-lemma same_size_obj_at'_set_obj':
-  assumes "P (obj :: 'a :: pspace_storable)"
-      and "obj_at' (\<lambda>old_obj :: 'a. objBits old_obj = objBits obj) ptr s"
-  shows "obj_at' P ptr (set_obj' ptr obj s)"
+lemma same_size_obj_at'_set_obj'_iff:
+  fixes obj :: "'a :: pspace_storable"
+  assumes "obj_at' (\<lambda>old_obj :: 'a. objBits old_obj = objBits obj) ptr s"
+  shows "obj_at' P ptr (set_obj' ptr obj s) = P obj"
+  apply (rule iffI)
+   apply (prop_tac "ko_at' obj ptr (set_obj' ptr obj s)")
+    apply (clarsimp simp: obj_at'_def projectKO_eq project_inject)
+   apply (clarsimp simp: obj_at'_def)
   using assms
-  apply (clarsimp simp: obj_at'_def projectKO_eq project_inject objBits_def)
-  apply (rule_tac x=obj in exI)
-  apply (clarsimp simp: ps_clear_upd')
+  apply (fastforce simp: obj_at'_def inj_def projectKO_eq project_inject objBits_def)
   done
 
 lemma tcb_at'_obj_at'_set_obj'[unfolded injectKO_tcb]:
@@ -249,10 +251,8 @@ lemma tcb_at'_obj_at'_set_obj'[unfolded injectKO_tcb]:
       and "tcb_at' ptr s"
   shows "obj_at' P ptr (set_obj' ptr tcb s)"
   using assms
-  apply -
-  apply (erule same_size_obj_at'_set_obj')
-  apply (erule obj_at'_weaken)
-  apply (clarsimp simp: objBits_def objBitsKO_def)
+  apply (clarsimp simp: objBits_def objBitsKO_def inj_def
+                        same_size_obj_at'_set_obj'_iff[where 'a=tcb, simplified])
   done
 
 \<comment>\<open>
