@@ -3499,7 +3499,7 @@ lemma setThreadState_valid_release_queue[wp]:
   apply (simp add: setThreadState_def scheduleTCB_def)
   apply (rule hoare_seq_ext_skip)
    apply (wp threadSet_valid_release_queue)
-   using tcbInReleaseQueue_def valid_release_queue_def apply simp
+   using valid_release_queue_def apply simp
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (clarsimp simp: getSchedulerAction_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
@@ -3515,7 +3515,7 @@ lemma setThreadState_valid_release_queue'[wp]:
   apply (simp add: setThreadState_def scheduleTCB_def)
   apply (rule hoare_seq_ext_skip)
    apply (wp threadSet_valid_release_queue')
-   using tcbInReleaseQueue_def valid_release_queue_def apply simp
+   using valid_release_queue_def apply simp
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (clarsimp simp: getSchedulerAction_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
