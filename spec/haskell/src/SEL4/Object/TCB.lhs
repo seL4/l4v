@@ -280,7 +280,6 @@ The "SetSchedParams" call sets both the priority and the MCP in a single call.
 >             return Nothing
 >         _ -> throw $ InvalidCapability 2
 >     when (not $ isValidFaultHandler fhCap) $ throw $ InvalidCapability 3
->     withoutFailure $ getCurThread >>= setThreadState Restart
 >     return $ ThreadControlSched {
 >         tcSchedTarget = tcbPtr,
 >         tcSchedSlot = slot,
