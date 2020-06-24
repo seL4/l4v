@@ -577,6 +577,18 @@ lemma ifM_wp[wp]:
   shows "\<lbrace>A and B\<rbrace> ifM P f g \<lbrace>S\<rbrace>"
   unfolding ifM_def by wpsimp
 
+lemma andM_wp[wp]:
+  assumes [wp]: "\<lbrace>Q'\<rbrace> B \<lbrace>Q\<rbrace>"
+  assumes [wp]: "\<lbrace>P\<rbrace> A \<lbrace>\<lambda>c s. c \<longrightarrow> Q' s\<rbrace>" "\<lbrace>P'\<rbrace> A \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> Q False s\<rbrace>"
+  shows "\<lbrace>P and P'\<rbrace> andM A B \<lbrace>Q\<rbrace>"
+  unfolding andM_def by wp
+
+lemma orM_wp[wp]:
+  assumes [wp]: "\<lbrace>Q'\<rbrace> B \<lbrace>Q\<rbrace>"
+  assumes [wp]: "\<lbrace>P\<rbrace> A \<lbrace>\<lambda>c s. c \<longrightarrow> Q True s\<rbrace>" "\<lbrace>P'\<rbrace> A \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> Q' s\<rbrace>"
+  shows "\<lbrace>P and P'\<rbrace> orM A B \<lbrace>Q\<rbrace>"
+  unfolding orM_def by wp
+
 lemma whenM_wp[wp]:
   assumes [wp]: "\<lbrace>Q\<rbrace> f \<lbrace>S\<rbrace>"
   assumes [wp]: "\<lbrace>A\<rbrace> P \<lbrace>\<lambda>c s. c \<longrightarrow> Q s\<rbrace>" "\<lbrace>B\<rbrace> P \<lbrace>\<lambda>c s. \<not>c \<longrightarrow> S () s\<rbrace>"
