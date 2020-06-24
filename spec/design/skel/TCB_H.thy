@@ -45,6 +45,8 @@ fun tcbEPFindIndex where
 #INCLUDE_HASKELL SEL4/Object/TCB.lhs BODY tcbEPFindIndex
   tptr queue curIndex"
 
+declare tcbEPFindIndex.simps[simp del]
+
 #INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= bodies_only NOT liftFnMaybe assertDerived archThreadGet archThreadSet asUser sanitiseRegister getSanitiseRegisterInfo takeWhileM sort_key tcbEPFindIndex
 
 defs asUser_def:
