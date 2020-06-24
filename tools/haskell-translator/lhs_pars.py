@@ -764,10 +764,20 @@ def named_newtype_transform(line, header, d):
                 print(line, header, oname)
                 assert False
 
-            if len(type.split()) == 1 and '(' not in type:
-                l = l + ' ' + type
+            if name is None:
+                opt_name = ""
+                opt_close = ""
             else:
-                l = l + ' "' + type + '"'
+                opt_name = " (" + name + " :"
+                opt_close = ")"
+
+            if len(type.split()) == 1 and '(' not in type:
+                the_type = type
+            else:
+                the_type = '"' + type + '"'
+
+            l = l + opt_name + ' ' + the_type + opt_close
+
             for bit in type.split():
                 d.typedeps.add(bit)
         lines.append(l)
@@ -779,11 +789,6 @@ def named_newtype_transform(line, header, d):
             names.setdefault(name, {})
             names[name][cons] = i
             types[name] = type
-
-    for name, map in six.iteritems(names):
-        lines.append('')
-        lines.extend(named_extractor_definitions(name, map, types[name],
-                                                 header, dict(constructors)))
 
     for name, map in six.iteritems(names):
         lines.append('')
