@@ -1052,7 +1052,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
       apply (simp add:ARMSuperSectionBits_def word_0_sle_from_less
          ARMSectionBits_def)
       apply (ccorres_remove_UNIV_guard)
-      apply csymbr
+      apply csymbr_legacy
       apply (rule ccorres_rhs_assoc2,rule ccorres_splitE)
           apply (simp only:whileAnno_def)
           apply (ccorres_remove_UNIV_guard)
