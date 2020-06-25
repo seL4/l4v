@@ -64,15 +64,6 @@ definition
 where
   "typ_at' T \<equiv> ko_wp_at' (\<lambda>ko. koTypeOf ko = T)"
 
-definition scBitsFromRefillLength' :: "nat => nat"
-where
-  "scBitsFromRefillLength' len \<equiv>
-       nat (ceiling (log 2 (len * refillSizeBytes + schedContextStructSize)))"
-
-lemma scBits_def2:
-  "scBitsFromRefillLength sc = scBitsFromRefillLength' (length (scRefills sc))"
-  unfolding scBitsFromRefillLength_def scBitsFromRefillLength'_def by simp
-
 definition valid_sched_context_size' :: "sched_context \<Rightarrow> bool" where
   "valid_sched_context_size' sc \<equiv>
         minSchedContextBits \<le> scBitsFromRefillLength' (length (scRefills sc))

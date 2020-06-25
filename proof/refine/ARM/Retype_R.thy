@@ -133,10 +133,20 @@ lemma valid_obj_makeObject_reply [simp]:
   unfolding valid_obj'_def valid_reply'_def
   by (clarsimp simp: makeObject_reply)
 
+lemma valid_sc_size'_makeObject_sc':
+  "valid_sched_context_size' makeObject"
+  by (clarsimp simp: makeObject_sc valid_sched_context_size'_def scBits_inverse_us
+                     minRefillLength_def maxUntypedSizeBits_def minSchedContextBits_def
+                     schedContextStructSize_def refillSizeBytes_def)
+
+lemmas valid_sc_size'_makeObject_sc
+         = valid_sc_size'_makeObject_sc'
+           valid_sc_size'_makeObject_sc'[simplified makeObject_sc minRefillLength_ARM, simplified]
+
 lemma valid_obj_makeObject_sched_context [simp]:
   "valid_obj' (KOSchedContext makeObject) s"
   unfolding valid_obj'_def valid_sched_context'_def
-  by (clarsimp simp: makeObject_sc)
+  by (clarsimp simp: makeObject_sc valid_sc_size'_makeObject_sc minRefillLength_ARM)
 
 lemma valid_obj_makeObject_user_data [simp]:
   "valid_obj' (KOUserData) s"
@@ -850,7 +860,7 @@ lemma objBits_le_obj_bits_api:
                split: Structures_H.kernel_object.splits arch_kernel_object.splits object_type.splits
                       Structures_H.kernel_object.splits arch_kernel_object.splits apiobject_type.splits
                       if_split_asm)
-  apply (unfold scBitsFromRefillLength_def)
+  apply (unfold scBitsFromRefillLength'_def)
   apply (simp add: sc_const_eq[symmetric, simplified])
   apply (rule order_trans[rotated, where y=min_sched_context_bits])
   apply (simp add: min_sched_context_bits_def)
@@ -858,14 +868,12 @@ proof -
   note [simp] = min_sched_context_bits_def refill_size_bytes_def sizeof_sched_context_t_def
   have eq: "min_sched_context_bits = log 2 (2^(min_sched_context_bits::nat))"
     by (clarsimp simp: log_nat_power[where b=2 and x=2 and n=8, simplified])
-  have P1: "((2 * of_nat refill_size_bytes +
-          of_nat sizeof_sched_context_t)::nat) \<le> 2^(min_sched_context_bits::nat)" by simp
-  then have "log 2 ((2 * of_nat refill_size_bytes +
-          of_nat sizeof_sched_context_t)::nat) \<le> log 2 (2^(min_sched_context_bits::nat))"
-    using log_le_cancel_iff[where a="2::real"] by simp
-  then show "log 2 (2 * of_nat refill_size_bytes +
-          of_nat sizeof_sched_context_t) \<le> min_sched_context_bits"
-    by (simp add: eq[symmetric] del: min_sched_context_bits_def)
+  have "log 2 ((of_nat minRefillLength * of_nat refill_size_bytes +
+            of_nat sizeof_sched_context_t)::nat) \<le> log 2 (2^(min_sched_context_bits::nat))"
+    using log_le_cancel_iff[where a="2::real"] by (simp add: minRefillLength_ARM)
+  then show "log 2 (of_nat minRefillLength * of_nat refill_size_bytes +
+                of_nat sizeof_sched_context_t) \<le> min_sched_context_bits"
+    by (metis Num.of_nat_simps(4) Num.of_nat_simps(5) eq of_nat_id)
 qed
 
 lemma obj_relation_retype_other_obj:

@@ -3559,7 +3559,7 @@ lemma createObject_setCTE_commute:
            apply (rule monad_commute_guard_imp[OF commute_commute],
                   rule monad_commute_split[OF commute_commute[OF return_commute]],
                   rule setCTE_placeNewObject_commute,
-                  (wpsimp simp: objBits_simps' scBits_def2 scBits_inverse_us)+)+
+                  (wpsimp simp: objBits_simps' refillAbsoluteMax_def scBits_inverse_us)+)+
        \<comment> \<open>Arch Objects\<close>
        apply ((rule monad_commute_guard_imp[OF commute_commute],
                rule monad_commute_split[OF commute_commute[OF return_commute]],

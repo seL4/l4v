@@ -1296,7 +1296,7 @@ lemma set_reply_corres: (* for reply update that doesn't touch the reply stack *
     by (clarsimp simp: obj_at_simps)
   have P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
     by (clarsimp simp: obj_at_simps objBits_defs pteBits_def pdeBits_def scBits_pos_power2
-                 split: kernel_object.splits arch_kernel_object.splits)
+                split: kernel_object.splits arch_kernel_object.splits)
   assume r: "reply_relation ae ae'"
   show ?thesis
     apply (simp add: set_simple_ko_def setReply_def is_reply_def[symmetric])
@@ -1371,7 +1371,7 @@ lemma update_sc_no_reply_stack_update_corres:
     by (clarsimp simp: obj_at_simps)
   have P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
     by (clarsimp simp: obj_at_simps objBits_defs pteBits_def pdeBits_def scBits_pos_power2
-                 split: kernel_object.splits arch_kernel_object.splits)
+                split: kernel_object.splits arch_kernel_object.splits)
   assume R : "\<forall>ae. sc_replies (f ae) = sc_replies ae"
   show ?thesis
     apply (insert R)
@@ -2552,7 +2552,7 @@ lemma pspace_aligned_cross:
 
   \<comment>\<open>SchedContext, Reply\<close>
      apply ((clarsimp simp: minSchedContextBits_def min_sched_context_bits_def replySizeBits_def
-                            scBits_inverse_sc_relation[simplified minSchedContextBits_def]
+                            scBits_inverse_sc_relation[simplified]
                      elim!: is_aligned_weaken)+)[2]
 
   \<comment>\<open>PageTable\<close>
@@ -2633,10 +2633,10 @@ lemma obj_relation_cuts_range_mask_range:
 lemma obj_relation_cuts_obj_bits:
   "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk> \<Longrightarrow> objBitsKO ko' \<le> obj_bits ko"
   apply (erule (1) obj_relation_cutsE;
-          clarsimp simp: objBits_simps objBits_defs cte_level_bits_def min_sched_context_bits_def
+          clarsimp simp: objBits_simps objBits_defs cte_level_bits_def sc_const_eq[symmetric]
                          pbfs_atleast_pageBits[simplified bit_simps] archObjSize_def pteBits_def
                          pdeBits_def)
-  apply (clarsimp simp: scBits_inverse_sc_relation[simplified minSchedContextBits_def])
+  apply (clarsimp simp: scBits_inverse_sc_relation[simplified])
   apply (cases ko; simp add: other_obj_relation_def objBits_defs
                       split: kernel_object.splits)
   apply (rename_tac ako, case_tac ako; clarsimp)
