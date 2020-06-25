@@ -1780,10 +1780,10 @@ method_setup clift = \<open>CtacImpl.corres_abstract_args\<close>
 method_setup cinitlift = \<open>CtacImpl.corres_abstract_init_args\<close>
   "Abstract a list of local variables into HOL variable without touching the remaining guards"
 
-method_setup csymbr_new = \<open>CtacImpl.corres_symb_rhs_new\<close>
+method_setup csymbr = \<open>CtacImpl.corres_symb_rhs_new\<close>
   "Symbolically execute the call on the right hand side of corres (see ccorres_lift_rhss). Arguments simp (add|del|only)."
 
-method_setup csymbr = \<open>CtacImpl.corres_symb_rhs_legacy\<close>
+method_setup csymbr_legacy = \<open>CtacImpl.corres_symb_rhs_legacy\<close>
   "Symbolically execute the call on the right hand side of corres (see ccorres_lift_rhss). Arguments simp (add|del|only)."
 
 method_setup ceqv = \<open>CtacImpl.corres_ceqv\<close>

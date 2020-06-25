@@ -214,7 +214,7 @@ next
      apply (rule_tac P = "capptr = cptr' \<and> ccap_relation cap' nodeCap" in ccorres_gen_asm2)
      apply (erule conjE)
      apply (erule_tac t = capptr in ssubst)
-     apply csymbr+
+     apply csymbr_legacy+
      apply (simp add: cap_get_tag_isCap split del: if_split)
      apply (thin_tac "ret__unsigned = X" for X)
      apply (rule ccorres_split_throws [where P = "?P"])
