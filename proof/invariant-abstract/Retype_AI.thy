@@ -152,9 +152,29 @@ lemma (in pspace_update_eq) pspace_no_overlap_update [simp]:
 lemmas machine_word_plus_mono_right_split = word_plus_mono_right_split[where 'a=machine_word_len, folded word_bits_def]
 
 
-(* range_cover locale:
-   proves properties when a small range is inside in a large range
- *)
+\<comment>\<open>
+  Sets up assumptions for working with an aligned subregion of an aligned region.
+
+  Treats `ptr` as an `sbit`-aligned pointer into an `sz`-aligned, `2 ^ sz`-long region.
+  Then, `n` is the index of a `2 ^ sbit`-sized region between `ptr` and the end of the
+  larger region.
+
+  Here is a graphical example where `sz - sbit = 2`:
+
+  sz-aligned
+  v
+  |<----------------------------2 ^ sz--------------------------->|
+  |
+  |                              ptr
+  |<---2 ^ sbit-->|               v
+  |---------------|---------------|---------------|---------------|
+                                n = 0           n = 1           n = 2
+                            sbit-aligned
+
+  Together, `ptr` and `n` specify a "subslice" of the larger region. Notice that `n`
+  indexes the *end* of the subslice/subregion; equivalently, `n` is the *length* of
+  the subregion.
+\<close>
 locale range_cover =
   fixes ptr :: "'a :: len word"
   and   sz sbit n
