@@ -221,8 +221,24 @@ list of pointers to waiting threads;
 > refillSizeBytes :: Int
 > refillSizeBytes = 16
 
+> scBitsFromRefillLength' :: Int -> Int
+> scBitsFromRefillLength' us = ceiling $ logBase 2 ((fromIntegral :: Int -> Float) (us * refillSizeBytes + schedContextStructSize))
+
 > scBitsFromRefillLength :: SchedContext -> Int
-> scBitsFromRefillLength sc = ceiling $ logBase 2 ((fromIntegral :: Int -> Float) ((length $ scRefills sc) * refillSizeBytes + schedContextStructSize))
+> scBitsFromRefillLength sc = scBitsFromRefillLength' (length $ scRefills sc)
+
+> refillAbsoluteMax' :: Int -> Int
+> refillAbsoluteMax' bits = (1 `shiftL` bits - schedContextStructSize) `div` refillSizeBytes
+
+> refillAbsoluteMax :: Capability -> Int
+> refillAbsoluteMax (SchedContextCap _ bits) = refillAbsoluteMax' bits
+> refillAbsoluteMax _ = 0
+
+> emptyRefill :: Refill
+> emptyRefill = Refill { rTime = 0, rAmount = 0}
+
+> minRefills :: Int
+> minRefills = 2
 
 \subsubsection{Reply Objects}
 
@@ -231,9 +247,6 @@ list of pointers to waiting threads;
 >     replyPrev :: Maybe (PPtr Reply),
 >     replyNext :: Maybe (PPtr Reply),
 >     replySc :: Maybe (PPtr SchedContext) }
-
-> minRefills :: Int
-> minRefills = 2
 
 \subsubsection{Notification Objects}
 

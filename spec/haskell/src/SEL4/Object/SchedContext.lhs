@@ -68,9 +68,6 @@ This module uses the C preprocessor to select a target architecture.
 > setSchedContext :: PPtr SchedContext -> SchedContext -> Kernel ()
 > setSchedContext = setObject
 
-> emptyRefill :: Refill
-> emptyRefill = Refill { rTime = 0, rAmount = 0}
-
 > refillHd :: SchedContext -> Refill
 > refillHd sc = scRefills sc !! scRefillHead sc
 
@@ -609,10 +606,6 @@ This module uses the C preprocessor to select a target architecture.
 >             if (fromJust $ scTCB sc) == ctPtr
 >                 then rescheduleRequired
 >                 else when runnable $ possibleSwitchTo $ fromJust $ scTCB sc
-
-> refillAbsoluteMax :: Capability -> Int
-> refillAbsoluteMax (SchedContextCap _ bits) = (1 `shiftL` bits - schedContextStructSize) `div` refillSizeBytes
-> refillAbsoluteMax _ = 0
 
 > isRoundRobin :: PPtr SchedContext -> Kernel Bool
 > isRoundRobin scPtr = do
