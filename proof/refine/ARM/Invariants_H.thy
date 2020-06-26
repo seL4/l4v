@@ -64,11 +64,6 @@ definition
 where
   "typ_at' T \<equiv> ko_wp_at' (\<lambda>ko. koTypeOf ko = T)"
 
-definition valid_sched_context_size' :: "sched_context \<Rightarrow> bool" where
-  "valid_sched_context_size' sc \<equiv>
-        minSchedContextBits \<le> scBitsFromRefillLength' (length (scRefills sc))
-        \<and> scBitsFromRefillLength' (length (scRefills sc)) \<le> maxUntypedSizeBits"
-
 abbreviation
   "ep_at' \<equiv> obj_at' (\<lambda>_ :: endpoint. True)"
 abbreviation
@@ -637,11 +632,19 @@ where
 | "valid_arch_obj' (KOPDE pde) = valid_pde' pde"
 | "valid_arch_obj' (KOPTE pte) = valid_pte' pte"
 
+definition sc_size_bounds :: "nat \<Rightarrow> bool" where
+  "sc_size_bounds us \<equiv>
+        minSchedContextBits \<le> us \<and> us \<le> maxUntypedSizeBits"
+
+definition valid_sched_context_size' :: "sched_context \<Rightarrow> bool" where
+  "valid_sched_context_size' sc \<equiv> sc_size_bounds (objBits sc)"
+
+
 definition valid_obj' :: "kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_obj' ko s \<equiv> case ko of
     KOEndpoint endpoint \<Rightarrow> valid_ep' endpoint s
   | KONotification notification \<Rightarrow> valid_ntfn' notification s
-  | KOSchedContext sc \<Rightarrow> valid_sched_context' sc s
+  | KOSchedContext sc \<Rightarrow> valid_sched_context' sc s \<and> valid_sched_context_size' sc
   | KOReply reply \<Rightarrow> valid_reply' reply s
   | KOKernelData \<Rightarrow> False
   | KOUserData \<Rightarrow> True
@@ -666,6 +669,21 @@ definition
   valid_objs' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_objs' s \<equiv> \<forall>obj \<in> ran (ksPSpace s). valid_obj' obj s"
+
+definition valid_obj_size' :: "kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "valid_obj_size' ko s \<equiv> case ko of
+    KOSchedContext sc \<Rightarrow> valid_sched_context_size' sc
+  | _ \<Rightarrow> True"
+
+definition
+  valid_objs_size' :: "kernel_state \<Rightarrow> bool"
+where
+  "valid_objs_size' s \<equiv> \<forall>obj \<in> ran (ksPSpace s). valid_obj_size' obj s"
+
+lemma valid_objs'_valid_objs_size':
+  "valid_objs' s \<Longrightarrow> valid_objs_size' s"
+  by (clarsimp simp: valid_objs'_def valid_objs_size'_def valid_obj'_def valid_obj_size'_def)
+     (fastforce split: kernel_object.splits)
 
 type_synonym cte_heap = "word32 \<Rightarrow> cte option"
 
@@ -1835,6 +1853,10 @@ lemma valid_objsE' [elim]:
   "\<lbrakk> valid_objs' s; ksPSpace s x = Some obj; valid_obj' obj s \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_objs'_def by auto
 
+lemma valid_objs_sizeE' [elim]:
+  "\<lbrakk> valid_objs_size' s; ksPSpace s x = Some obj; valid_obj_size' obj s \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+  unfolding valid_objs_size'_def by auto
+
 lemma pspace_distinctD':
   "\<lbrakk> ksPSpace s x = Some v; pspace_distinct' s \<rbrakk> \<Longrightarrow> ps_clear x (objBitsKO v) s"
   apply (simp add: pspace_distinct'_def)
@@ -1990,6 +2012,11 @@ lemma valid_obj'_pspaceI:
            split: Structures_H.endpoint.splits Structures_H.notification.splits
                   Structures_H.thread_state.splits ntfn.splits option.splits
            intro: obj_at'_pspaceI valid_cap'_pspaceI)
+
+lemma valid_obj_size'_pspaceI:
+  "valid_obj_size' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj_size' obj s'"
+  unfolding valid_obj_size'_def
+  by (cases obj; simp)
 
 lemma pred_tcb_at'_pspaceI:
   "pred_tcb_at' proj P t s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> pred_tcb_at' proj P t s'"
@@ -2878,6 +2905,12 @@ lemma valid_objs_update [iff]:
   apply (fastforce intro: valid_obj'_pspaceI simp: pspace)
   done
 
+lemma valid_objs_size_update [iff]:
+  "valid_objs_size' (f s) = valid_objs_size' s"
+  apply (simp add: valid_objs_size'_def pspace)
+  apply (fastforce intro: valid_obj_size'_pspaceI simp: pspace)
+  done
+
 lemma pspace_aligned_update [iff]:
   "pspace_aligned' (f s) = pspace_aligned' s"
   by (simp add: pspace pspace_aligned'_def)
@@ -3306,6 +3339,10 @@ lemma valid_pspace_valid_objs'[elim!]:
   "valid_pspace' s \<Longrightarrow> valid_objs' s"
   by (simp add: valid_pspace'_def)
 
+lemma valid_pspace_valid_objs_size'[elim!]:
+  "valid_pspace' s \<Longrightarrow> valid_objs_size' s"
+  by (simp add: valid_pspace'_def valid_objs'_valid_objs_size')
+
 declare badgeBits_def [simp]
 
 lemma simple_sane_strg:
@@ -3437,6 +3474,10 @@ lemma tcb_at_invs' [elim!]:
 lemma invs_valid_objs' [elim!]:
   "invs' s \<Longrightarrow> valid_objs' s"
   by (simp add: invs'_def valid_state'_def valid_pspace'_def)
+
+lemma invs_valid_objs_size' [elim!]:
+  "invs' s \<Longrightarrow> valid_objs_size' s"
+  by (fastforce simp: invs'_def valid_state'_def)
 
 lemma invs_pspace_aligned' [elim!]:
   "invs' s \<Longrightarrow> pspace_aligned' s"

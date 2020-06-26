@@ -136,6 +136,7 @@ lemma valid_obj_makeObject_reply [simp]:
 lemma valid_sc_size'_makeObject_sc':
   "valid_sched_context_size' makeObject"
   by (clarsimp simp: makeObject_sc valid_sched_context_size'_def scBits_inverse_us
+                     objBits_def objBitsKO_def sc_size_bounds_def
                      minRefillLength_def maxUntypedSizeBits_def minSchedContextBits_def
                      schedContextStructSize_def refillSizeBytes_def)
 
