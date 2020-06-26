@@ -264,11 +264,13 @@ begin
 
 (* sched_context extra instance defs *)
 
+definition
+  "minRefillLength \<equiv> refillAbsoluteMax' minSchedContextBits"
 
 definition
   makeObject_sc:
   "(makeObject :: sched_context) \<equiv>
-     SchedContext 0 0 0 Nothing Nothing Nothing 0 Nothing 0 0 0  [Refill 0 0, Refill 0 0]"
+     SchedContext 0 0 0 Nothing Nothing Nothing 0 Nothing 0 0 0 (replicate minRefillLength emptyRefill)"
 
 definition
   loadObject_sc[simp]:
