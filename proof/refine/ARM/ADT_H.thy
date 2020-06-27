@@ -212,7 +212,7 @@ lemma
     using pspace_aligned'
     apply (simp add: pspace_aligned'_def dom_def)
     apply (erule_tac x=y in allE)
-    apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq pteBits_def
+    apply (simp add: objBitsKO_def archObjSize_def pteBits_def
                      and_not_mask[symmetric] AND_NOT_mask_plus_AND_mask_eq)
    using fst_pde
    apply (erule_tac x=y in allE)
@@ -225,7 +225,7 @@ lemma
    using pspace_aligned'
    apply (simp add: pspace_aligned'_def dom_def)
    apply (erule_tac x=y in allE)
-   apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq pdeBits_def
+   apply (simp add: objBitsKO_def archObjSize_def pdeBits_def
                     and_not_mask[symmetric] AND_NOT_mask_plus_AND_mask_eq)
   apply (simp split: option.splits Structures_H.kernel_object.splits)
   apply (intro allI)
@@ -279,12 +279,13 @@ definition
                    | Structures_H.RecvEP q \<Rightarrow> Structures_A.RecvEP q"
 
 definition
-  "AEndpointMap ntfn \<equiv>
+  "NtfnMap ntfn \<equiv>
       \<lparr> ntfn_obj = case ntfnObj ntfn of
                        Structures_H.IdleNtfn \<Rightarrow> Structures_A.IdleNtfn
                      | Structures_H.WaitingNtfn q \<Rightarrow> Structures_A.WaitingNtfn q
                      | Structures_H.ActiveNtfn b \<Rightarrow> Structures_A.ActiveNtfn b
-      , ntfn_bound_tcb = ntfnBoundTCB ntfn \<rparr>"
+      , ntfn_bound_tcb = ntfnBoundTCB ntfn
+      , ntfn_sc = ntfnSc ntfn \<rparr>"
 
 fun
   CapabilityMap :: "capability \<Rightarrow> cap"
@@ -300,8 +301,10 @@ fun
    cap.CNodeCap ref n (bin_to_bl l (uint L))"
 | "CapabilityMap (capability.ThreadCap ref) = cap.ThreadCap ref"
 | "CapabilityMap capability.DomainCap = cap.DomainCap"
-| "CapabilityMap (capability.ReplyCap ref master gr) =
-   cap.ReplyCap ref master {x. gr \<and> x = AllowGrant \<or> x = AllowWrite}"
+| "CapabilityMap (capability.ReplyCap ref gr) =
+   cap.ReplyCap ref {x. gr \<and> x = AllowGrant \<or> x = AllowWrite}"
+| "CapabilityMap (SchedContextCap sc n) = cap.SchedContextCap sc (n - min_sched_context_bits)"
+| "CapabilityMap SchedControlCap = cap.SchedControlCap"
 | "CapabilityMap capability.IRQControlCap = cap.IRQControlCap"
 | "CapabilityMap (capability.IRQHandlerCap irq) = cap.IRQHandlerCap irq"
 | "CapabilityMap (capability.Zombie p b n) =
@@ -349,10 +352,10 @@ where
               Structures_A.thread_state.Inactive"
 | "ThStateMap Structures_H.thread_state.IdleThreadState =
               Structures_A.thread_state.IdleThreadState"
-| "ThStateMap Structures_H.thread_state.BlockedOnReply =
-              Structures_A.thread_state.BlockedOnReply"
-| "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref grant) =
-              Structures_A.thread_state.BlockedOnReceive oref \<lparr> receiver_can_grant = grant \<rparr>"
+| "ThStateMap (Structures_H.thread_state.BlockedOnReply r) =
+              Structures_A.thread_state.BlockedOnReply r"
+| "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref grant r) =
+              Structures_A.thread_state.BlockedOnReceive oref r \<lparr> receiver_can_grant = grant \<rparr>"
 | "ThStateMap (Structures_H.thread_state.BlockedOnSend oref badge grant grant_reply call) =
               Structures_A.thread_state.BlockedOnSend oref
                 \<lparr> sender_badge = badge,
@@ -396,6 +399,8 @@ primrec
 where
   "FaultMap (Fault_H.fault.CapFault ref b failure) =
      ExceptionTypes_A.fault.CapFault ref b (LookupFailureMap failure)"
+| "FaultMap (Fault_H.fault.Timeout b) =
+     ExceptionTypes_A.fault.Timeout b"
 | "FaultMap (Fault_H.fault.ArchFault fault) =
      ExceptionTypes_A.fault.ArchFault (ArchFaultMap fault)"
 | "FaultMap (Fault_H.fault.UnknownSyscallException n) =
@@ -408,7 +413,7 @@ lemma ArchFaultMap_arch_fault_map: "ArchFaultMap (arch_fault_map f) = f"
 
 lemma FaultMap_fault_map[simp]:
   "valid_fault ft \<Longrightarrow> FaultMap (fault_map ft) = ft"
-  apply (case_tac ft, simp_all)
+  apply (case_tac ft; simp)
    apply (simp add: valid_fault_def LookupFailureMap_lookup_failure_map word_bits_def)
   apply (rule ArchFaultMap_arch_fault_map)
   done
@@ -425,15 +430,18 @@ definition
   "TcbMap tcb \<equiv>
      \<lparr>tcb_ctable = CapabilityMap (cteCap (tcbCTable tcb)),
       tcb_vtable = CapabilityMap (cteCap (tcbVTable tcb)),
-      tcb_reply = CapabilityMap (cteCap (tcbReply tcb)),
-      tcb_caller = CapabilityMap (cteCap (tcbCaller tcb)),
       tcb_ipcframe = CapabilityMap (cteCap (tcbIPCBufferFrame tcb)),
+      tcb_fault_handler = CapabilityMap (cteCap (tcbFaultHandler tcb)),
+      tcb_timeout_handler = CapabilityMap (cteCap (tcbTimeoutHandler tcb)),
       tcb_state = ThStateMap (tcbState tcb),
-      tcb_fault_handler = to_bl (tcbFaultHandler tcb),
       tcb_ipc_buffer = tcbIPCBuffer tcb,
       tcb_fault = map_option FaultMap (tcbFault tcb),
       tcb_bound_notification = tcbBoundNotification tcb,
       tcb_mcpriority = tcbMCP tcb,
+      tcb_sched_context = tcbSchedContext tcb,
+      tcb_yield_to = tcbYieldTo tcb,
+      tcb_priority = tcbPriority tcb,
+      tcb_domain = tcbDomain tcb,
       tcb_arch = ArchTcbMap (tcbArch tcb)\<rparr>"
 
 definition
@@ -450,7 +458,7 @@ definition
   "absHeap ups cns h \<equiv> \<lambda>x.
      case h x of
        Some (KOEndpoint ep) \<Rightarrow> Some (Endpoint (EndpointMap ep))
-     | Some (KONotification ntfn) \<Rightarrow> Some (Notification (AEndpointMap ntfn))
+     | Some (KONotification ntfn) \<Rightarrow> Some (Notification (NtfnMap ntfn))
      | Some KOKernelData \<Rightarrow> undefined \<comment> \<open>forbidden by pspace_relation\<close>
      | Some KOUserData \<Rightarrow> map_option (ArchObj \<circ> DataPage False) (ups x)
      | Some KOUserDataDevice \<Rightarrow> map_option (ArchObj \<circ> DataPage True) (ups x)
@@ -628,6 +636,7 @@ proof -
                      split: Structures_A.endpoint.splits)
            apply (clarsimp simp add: EndpointMap_def
                     split: Structures_A.endpoint.splits)
+  sorry (* FIXME RT: need map for SchedContexts
            apply (rename_tac arch_kernel_obj)
            apply (case_tac arch_kernel_obj,
                   simp_all add: other_obj_relation_def)
@@ -638,9 +647,9 @@ proof -
           apply (erule pspace_dom_relatedE[OF _ pspace_relation])
           apply (case_tac ko, simp_all add: other_obj_relation_def)
             apply (clarsimp simp add: cte_relation_def split: if_split_asm)
-           apply (clarsimp simp add: ntfn_relation_def AEndpointMap_def
+           apply (clarsimp simp add: ntfn_relation_def NtfnMap_def
                     split: Structures_A.ntfn.splits)
-          apply (clarsimp simp add: AEndpointMap_def
+          apply (clarsimp simp add: NtfnMap_def
                    split: Structures_A.ntfn.splits)
           apply (rename_tac arch_kernel_obj)
           apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
@@ -907,57 +916,9 @@ proof -
      apply (rule set_eqI, clarsimp)
      apply (case_tac x, simp_all)[1]
     apply (clarsimp simp add: pde_relation_def split: if_split_asm)
-    done
+    done *)
 qed
 
-definition
-  "EtcbMap tcb \<equiv>
-     \<lparr>tcb_priority = tcbPriority tcb,
-      time_slice = tcbTimeSlice tcb,
-      tcb_domain = tcbDomain tcb\<rparr>"
-
-definition
-  absEkheap :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow> etcb option"
-  where
-  "absEkheap h \<equiv> \<lambda>x.
-     case h x of
-       Some (KOTCB tcb) \<Rightarrow> Some (EtcbMap tcb)
-     | _ \<Rightarrow> None"
-
-lemma absEkheap_correct:
-assumes pspace_relation: "pspace_relation (kheap s) (ksPSpace s')"
-assumes ekheap_relation: "ekheap_relation (ekheap s) (ksPSpace s')"
-assumes vetcbs: "valid_etcbs s"
-shows
-  "absEkheap (ksPSpace s') = ekheap s"
-  apply (rule ext)
-  apply (clarsimp simp: absEkheap_def split: option.splits Structures_H.kernel_object.splits)
-  apply (subgoal_tac "\<forall>x. (\<exists>tcb. kheap s x = Some (TCB tcb)) =
-                          (\<exists>tcb'. ksPSpace s' x = Some (KOTCB tcb'))")
-   using vetcbs ekheap_relation
-   apply (clarsimp simp: valid_etcbs_def is_etcb_at_def dom_def ekheap_relation_def st_tcb_at_def obj_at_def)
-   apply (erule_tac x=x in allE)+
-   apply (rule conjI, force)
-   apply clarsimp
-   apply (rule conjI, clarsimp simp: EtcbMap_def etcb_relation_def)+
-   apply clarsimp
-  using pspace_relation
-  apply (clarsimp simp add: pspace_relation_def pspace_dom_def UNION_eq
-                              dom_def Collect_eq)
-  apply (rule iffI)
-   apply (erule_tac x=x in allE)+
-   apply (case_tac "ksPSpace s' x", clarsimp)
-    apply (erule_tac x=x in allE, clarsimp)
-   apply clarsimp
-   apply (case_tac a, simp_all add: other_obj_relation_def)
-  apply (insert pspace_relation)
-  apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (erule(1) pspace_dom_relatedE)
-  apply (erule(1) obj_relation_cutsE)
-  apply (clarsimp simp: other_obj_relation_def
-                 split: Structures_A.kernel_object.split_asm  if_split_asm
-                        ARM_A.arch_kernel_obj.split_asm)+
-  done
 
 text \<open>The following function can be used to reverse cte_map.\<close>
 definition
@@ -1088,7 +1049,7 @@ proof -
    apply (frule_tac b=b and c=cte_level_bits in bin_to_bl_of_bl_eq)
      apply (fastforce simp: cte_level_bits_def objBits_defs)+
   apply (case_tac "b = [False, False, False]")
-   apply (simp add: is_aligned_neg_mask_eq)
+   apply (simp)
   apply (frule_tac b=b and c=cte_level_bits in bin_to_bl_of_bl_eq)
     apply (fastforce simp: tcb_cap_cases_length cte_level_bits_def objBits_defs)+
   apply (subgoal_tac "ksPSpace s' (cte_map (a, b)) = None")
@@ -1798,13 +1759,6 @@ lemma absSchedulerAction_correct:
 definition
   "absExst s \<equiv>
      \<lparr>work_units_completed_internal = ksWorkUnitsCompleted s,
-      scheduler_action_internal = absSchedulerAction (ksSchedulerAction s),
-      ekheap_internal = absEkheap (ksPSpace s),
-      domain_list_internal = ksDomSchedule s,
-      domain_index_internal = ksDomScheduleIdx s,
-      cur_domain_internal = ksCurDomain s,
-      domain_time_internal = ksDomainTime s,
-      ready_queues_internal = curry (ksReadyQueues s),
       cdt_list_internal = absCDTList (cteMap (gsCNodes s)) (ctes_of s)\<rparr>"
 
 lemma absExst_correct:
@@ -1813,11 +1767,10 @@ lemma absExst_correct:
   shows "absExst s' = exst s"
   apply (rule det_ext.equality)
       using rel invs invs'
-      apply (simp_all add: absExst_def absSchedulerAction_correct absEkheap_correct
+      apply (simp_all add: absExst_def absSchedulerAction_correct
                            absCDTList_correct[THEN fun_cong] state_relation_def invs_def valid_state_def
                            ready_queues_relation_def invs'_def valid_state'_def
                            valid_pspace_def valid_sched_def valid_pspace'_def curry_def fun_eq_iff)
-      apply (fastforce simp: absEkheap_correct)
   done
 
 
@@ -1827,6 +1780,17 @@ definition
     cdt = absCDT (cteMap (gsCNodes s)) (ctes_of s),
     is_original_cap = absIsOriginalCap (cteMap (gsCNodes s)) (ksPSpace s),
     cur_thread = ksCurThread s, idle_thread = ksIdleThread s,
+    consumed_time = ksConsumedTime s,
+    cur_time = ksCurTime s,
+    cur_sc = ksCurSc s,
+    reprogram_timer = ksReprogramTimer s,
+    scheduler_action = absSchedulerAction (ksSchedulerAction s),
+    domain_list = ksDomSchedule s,
+    domain_index = ksDomScheduleIdx s,
+    cur_domain = ksCurDomain s,
+    domain_time = ksDomainTime s,
+    ready_queues = curry (ksReadyQueues s),
+    release_queue = ksReleaseQueue s,
     machine_state = observable_memory (ksMachineState s) (user_mem' s),
     interrupt_irq_node = absInterruptIRQNode (ksInterruptState s),
     interrupt_states = absInterruptStates (ksInterruptState s),

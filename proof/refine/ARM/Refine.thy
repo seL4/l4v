@@ -10,20 +10,11 @@
 
 theory Refine
 imports
-(* FIXME RT: until sorrying complete: *)
-  Arch_R
-  Interrupt_R
-  Tcb_R
-
-(* FIXME RT: until sorrying complete:
   KernelInit_R
   DomainTime_R
   InitLemmas
   PageTableDuplicates
-*)
 begin
-
-(* FIXME RT:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -95,6 +86,7 @@ lemma typ_at_UserDataI:
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)
+  sorry (* schedContext
   apply (rename_tac vmpage_size n)
   apply (rule_tac x = vmpage_size in exI)
   apply (subst conjunct2 [OF is_aligned_add_helper])
@@ -103,7 +95,7 @@ lemma typ_at_UserDataI:
    apply (erule word_less_power_trans2 [OF _ pbfs_atleast_pageBits])
    apply (case_tac vmpage_size, simp_all add: word_bits_conv)[1]
   apply (simp add: obj_at_def  a_type_def)
-  done
+  done *)
 
 lemma typ_at_DeviceDataI:
   "\<lbrakk> typ_at' UserDataDeviceT (p && ~~ mask pageBits) s';
@@ -126,6 +118,7 @@ lemma typ_at_DeviceDataI:
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)
+  sorry (* schedContext
   apply (rename_tac vmpage_size n)
   apply (rule_tac x = vmpage_size in exI)
   apply (subst conjunct2 [OF is_aligned_add_helper])
@@ -134,7 +127,7 @@ lemma typ_at_DeviceDataI:
    apply (erule word_less_power_trans2 [OF _ pbfs_atleast_pageBits])
    apply (case_tac vmpage_size, simp_all add: word_bits_conv)[1]
   apply (simp add: obj_at_def  a_type_def)
-  done
+  done *)
 
 lemma pointerInUserData_relation:
   "\<lbrakk> (s,s') \<in> state_relation; valid_state' s'; valid_state s\<rbrakk>
@@ -205,9 +198,9 @@ lemma device_mem_relation:
   done
 
 lemma absKState_correct:
-assumes invs: "einvs (s :: det_ext state)" and invs': "invs' s'"
-assumes rel: "(s,s') \<in> state_relation"
-shows "absKState s' = abs_state s"
+  assumes invs: "einvs (s :: det_ext state)" and invs': "invs' s'"
+  assumes rel: "(s,s') \<in> state_relation"
+  shows "absKState s' = abs_state s"
   using assms
   apply (intro state.equality, simp_all add: absKState_def abs_state_def)
            apply (rule absHeap_correct, clarsimp+)
@@ -218,80 +211,63 @@ shows "absKState s' = abs_state s"
        apply (simp add: state_relation_def)
       apply (clarsimp simp:  user_mem_relation invs_def invs'_def)
       apply (simp add: state_relation_def)
+  sorry (*
      apply (rule absInterruptIRQNode_correct, simp add: state_relation_def)
     apply (rule absInterruptStates_correct, simp add: state_relation_def)
    apply (rule absArchState_correct, simp)
   apply (rule absExst_correct, simp+)
-  done
+  done *)
 
 text \<open>The top-level invariance\<close>
 
-lemma set_thread_state_sched_act:
-  "\<lbrace>(\<lambda>s. runnable state) and (\<lambda>s. P (scheduler_action s))\<rbrace>
-  set_thread_state thread state
-  \<lbrace>\<lambda>rs s. P (scheduler_action (s::det_state))\<rbrace>"
-  apply (simp add: set_thread_state_def)
-  apply wp
-    apply (simp add: set_thread_state_ext_def)
-    apply wp
-       apply (rule hoare_pre_cont)
-      apply (rule_tac Q="\<lambda>rv. (\<lambda>s. runnable ts) and (\<lambda>s. P (scheduler_action s))"
-              in hoare_strengthen_post)
-       apply wp
-      apply force
-     apply (wp gts_st_tcb_at)+
-     apply (rule_tac Q="\<lambda>rv. st_tcb_at ((=) state) thread and (\<lambda>s. runnable state) and (\<lambda>s. P (scheduler_action s))" in hoare_strengthen_post)
-     apply (simp add: st_tcb_at_def)
-     apply (wp obj_set_prop_at)+
-    apply (force simp: st_tcb_at_def obj_at_def)
-  apply wp
-  apply clarsimp
-  done
-
 lemma activate_thread_sched_act:
-  "\<lbrace>ct_in_state activatable and (\<lambda>s. P (scheduler_action s))\<rbrace>
-  activate_thread
-  \<lbrace>\<lambda>rs s. P (scheduler_action (s::det_state))\<rbrace>"
+  "\<lbrace>ct_in_state activatable and
+    (\<lambda>s. is_schedulable_bool (cur_thread s) s \<and> P (scheduler_action s))\<rbrace>
+   activate_thread
+   \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+  unfolding activate_thread_def
+  sorry (*
   by (simp add: activate_thread_def set_thread_state_def arch_activate_idle_thread_def
-      | (wp set_thread_state_sched_act gts_wp)+ | wpc)+
+      | (wp set_thread_state_sched_act gts_wp)+ | wpc)+ *)
 
 lemma schedule_sched_act_rct[wp]:
-  "\<lbrace>\<top>\<rbrace> Schedule_A.schedule
-  \<lbrace>\<lambda>rs (s::det_state). scheduler_action s = resume_cur_thread\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> Schedule_A.schedule \<lbrace>\<lambda>_ s. scheduler_action s = resume_cur_thread\<rbrace>"
   unfolding Schedule_A.schedule_def
-  by (wpsimp)
+  sorry
 
 lemma call_kernel_sched_act_rct[wp]:
-  "\<lbrace>einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)
-     and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
-  call_kernel e
-  \<lbrace>\<lambda>rs (s::det_state). scheduler_action s = resume_cur_thread\<rbrace>"
+  "\<lbrace> einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and
+     (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+   call_kernel e
+   \<lbrace>\<lambda>_ s. scheduler_action s = resume_cur_thread\<rbrace>"
   apply (simp add: call_kernel_def)
   apply (wp activate_thread_sched_act | simp)+
+  sorry (*
   apply (clarsimp simp: active_from_running)
-  done
+  done *)
 
 lemma kernel_entry_invs:
   "\<lbrace>einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)
     and (\<lambda>s. 0 < domain_time s) and valid_domain_list and (ct_running or ct_idle)
     and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
-  kernel_entry e us
-  \<lbrace>\<lambda>rv. einvs and (\<lambda>s. ct_running s \<or> ct_idle s)
-    and (\<lambda>s. 0 < domain_time s) and valid_domain_list
-    and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>"
+   kernel_entry e us
+   \<lbrace>\<lambda>_. einvs and (\<lambda>s. ct_running s \<or> ct_idle s)
+        and (\<lambda>s. 0 < domain_time s) and valid_domain_list
+        and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>"
   apply (rule_tac Q="\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s) and valid_sched and
                            (\<lambda>s. 0 < domain_time s) and valid_domain_list and
                            valid_list and (\<lambda>s. scheduler_action s = resume_cur_thread)"
             in hoare_post_imp)
    apply clarsimp
   apply (simp add: kernel_entry_def)
+  sorry (* FIXME RT: some of these are commented out and still to prove in AInvs: (call_kernel_domain_time)
   apply (wp akernel_invs_det_ext call_kernel_valid_sched thread_set_invs_trivial
             thread_set_ct_running thread_set_not_state_valid_sched
             hoare_vcg_disj_lift ct_in_state_thread_state_lift thread_set_no_change_tcb_state
             call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext
             static_imp_wp
       | clarsimp simp add: tcb_cap_cases_def active_from_running)+
-  done
+  done *)
 
 definition
   "full_invs \<equiv> {((tc, s :: det_ext state), m, e). einvs s \<and>
@@ -354,12 +330,12 @@ lemmas valid_list_inits[simp] = valid_list_init[simplified]
 lemma valid_sched_init[simp]:
   "valid_sched init_A_st"
   apply (simp add: valid_sched_def init_A_st_def ext_init_def)
-  apply (clarsimp simp: valid_etcbs_def init_kheap_def st_tcb_at_kh_def obj_at_kh_def
-                    obj_at_def is_etcb_at_def idle_thread_ptr_def init_globals_frame_def
-                    init_global_pd_def valid_queues_2_def ct_not_in_q_def not_queued_def
+  apply (clarsimp simp:  init_kheap_def
+                    obj_at_def  idle_thread_ptr_def init_globals_frame_def
+                    init_global_pd_def  ct_not_in_q_def not_queued_def
                     valid_sched_action_def is_activatable_def
-                    ct_in_cur_domain_2_def valid_blocked_2_def valid_idle_etcb_def etcb_at'_def default_etcb_def)
-  done
+                    ct_in_cur_domain_2_def  valid_idle_etcb_def etcb_at'_def)
+  sorry
 
 lemma valid_domain_list_init[simp]:
   "valid_domain_list init_A_st"
@@ -408,10 +384,10 @@ lemma ckernel_invs:
     and (invs' and (ct_running' or ct_idle'))\<rbrace>"
   apply (simp add: callKernel_def)
   apply (rule hoare_pre)
-   apply (wp activate_invs' activate_sch_act schedule_sch
+   apply (wp activate_invs'  schedule_sch
              schedule_sch_act_simple he_invs' schedule_invs'
           | simp add: no_irq_getActiveIRQ)+
-  done
+  sorry
 
 lemma doMachineOp_ct_running':
   "\<lbrace>ct_running'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. ct_running'\<rbrace>"
@@ -456,11 +432,12 @@ lemma absKState_correct':
        apply (simp add: state_relation_def)
       apply (clarsimp simp: user_mem_relation invs_def invs'_def)
       apply (simp add: state_relation_def)
+  sorry (*
      apply (rule absInterruptIRQNode_correct, simp add: state_relation_def)
     apply (rule absInterruptStates_correct, simp add: state_relation_def)
    apply (erule absArchState_correct)
   apply (rule absExst_correct, simp, assumption+)
-  done
+  done *)
 
 lemma ptable_lift_abs_state[simp]:
   "ptable_lift t (abs_state s) = ptable_lift t s"
@@ -552,6 +529,7 @@ lemma kernel_corres:
             apply (simp add: when_def)
            apply (rule corres_when, simp)
            apply simp
+  sorry (*
            apply (rule handle_interrupt_corres)
           apply simp
           apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
@@ -575,7 +553,7 @@ lemma kernel_corres:
        apply (wp handle_event_valid_sched |simp)+
    apply (clarsimp simp: active_from_running)
   apply (clarsimp simp: active_from_running')
-  done
+  done *)
 
 lemma user_mem_corres:
   "corres (=) invs invs' (gets (\<lambda>x. g (user_mem x))) (gets (\<lambda>x. g (user_mem' x)))"
@@ -593,7 +571,7 @@ lemma entry_corres:
   "corres (=) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
                   (\<lambda>s. 0 < domain_time s) and valid_domain_list and (ct_running or ct_idle) and
                   (\<lambda>s. scheduler_action s = resume_cur_thread))
-                 (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
+              (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
                   (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' and (ct_running' or ct_idle') and
                   (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
                   (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
@@ -616,17 +594,18 @@ lemma entry_corres:
             apply (simp add: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)
            apply wp+
-         apply (rule hoare_strengthen_post, rule akernel_invs_det_ext, simp add: invs_def cur_tcb_def)
+         apply (rule hoare_strengthen_post, rule akernel_invs, simp add: invs_def cur_tcb_def)
         apply (rule hoare_strengthen_post, rule ckernel_invs, simp add: invs'_def cur_tcb'_def)
-       apply (wp thread_set_invs_trivial thread_set_ct_running
+       apply (wp thread_set_invs_trivial
                  threadSet_invs_trivial threadSet_ct_running'
                  select_wp thread_set_not_state_valid_sched static_imp_wp
                  hoare_vcg_disj_lift ct_in_state_thread_state_lift
               | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state
               | (wps, wp threadSet_st_tcb_at2) )+
    apply (clarsimp simp: invs_def cur_tcb_def)
+  sorry (*
   apply (clarsimp simp: ct_in_state'_def)
-  done
+  done *)
 
 lemma corres_gets_machine_state:
   "corres (=) \<top> \<top> (gets (f \<circ> machine_state)) (gets (f \<circ> ksMachineState))"
@@ -985,6 +964,5 @@ theorem refinement:
   done
 
 end
-*)
 
 end

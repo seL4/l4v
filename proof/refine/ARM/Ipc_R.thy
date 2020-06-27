@@ -1990,10 +1990,10 @@ lemma valid_tcb'_tcbFault_update[simp]: "\<And>tcb s. valid_tcb' tcb s \<Longrig
 
 lemma do_reply_transfer_corres:
   "corres dc
-     (einvs and tcb_at receiver and tcb_at sender)
-     (invs' and tcb_at' sender and tcb_at' receiver)
-     (do_reply_transfer sender receiver grant)
-     (doReplyTransfer sender receiver grant)"
+     (einvs and reply_at reply and tcb_at sender)
+     (invs')
+     (do_reply_transfer sender reply grant)
+     (doReplyTransfer sender reply grant)"
   apply (simp add: do_reply_transfer_def doReplyTransfer_def cong: option.case_cong)
   sorry (*
   apply (rule corres_split' [OF _ _ gts_sp gts_sp'])
@@ -3200,8 +3200,6 @@ lemma gets_the_noop_corres:
                         return_def gets_def bind_def get_def)
   apply (clarsimp simp: assert_opt_def return_def dest!: P)
   done
-
-declare tcbEPFindIndex.simps[simp del]
 
 lemma tcbEPFindIndex_inv[wp]:
   "tcbEPFindIndex t q i \<lbrace>P\<rbrace>"

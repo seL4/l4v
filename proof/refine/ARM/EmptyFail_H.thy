@@ -9,9 +9,30 @@ imports Refine
 begin
 
 crunch_ignore (empty_fail)
-  (add: handleE' getCTE getObject updateObject
+  (add: handleE' getCTE getObject updateObject ifM andM orM whileM ifM
         CSpaceDecls_H.resolveAddressBits
         doMachineOp suspend restart schedule)
+
+(* FIXME RT: move up to Lib *)
+lemma ifM_empty_fail[intro!, wp, simp]:
+  "\<lbrakk> empty_fail P; empty_fail a; empty_fail b \<rbrakk> \<Longrightarrow> empty_fail (ifM P a b)"
+  by (simp add: ifM_def)
+
+lemma whenM_empty_fail[intro!, wp, simp]:
+  "\<lbrakk> empty_fail P; empty_fail f \<rbrakk> \<Longrightarrow> empty_fail (whenM P f)"
+  by (simp add: whenM_def)
+
+lemma andM_empty_fail[intro!, wp, simp]:
+  "\<lbrakk> empty_fail A; empty_fail B \<rbrakk> \<Longrightarrow> empty_fail (andM A B)"
+  by (simp add: andM_def)
+
+lemma opM_empty_fail[intro!, wp, simp]:
+  "\<lbrakk> empty_fail A; empty_fail B \<rbrakk> \<Longrightarrow> empty_fail (orM A B)"
+  by (simp add: orM_def)
+
+lemma whileM_empty_fail[intro!, wp, simp]:
+  "\<lbrakk> empty_fail C; empty_fail B \<rbrakk> \<Longrightarrow> empty_fail (whileM C B)"
+  unfolding whileM_def by (wpsimp wp: empty_fail_whileLoop)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -21,15 +42,15 @@ lemmas forME_x_empty_fail[intro!, wp, simp] = mapME_x_empty_fail[simplified forM
 
 lemma withoutPreemption_empty_fail[intro!, wp, simp]:
   "empty_fail m \<Longrightarrow> empty_fail (withoutPreemption m)"
-  by (simp add: withoutPreemption_def)
+  by simp
 
 lemma withoutFailure_empty_fail[intro!, wp, simp]:
   "empty_fail m \<Longrightarrow> empty_fail (withoutFailure m)"
-  by (simp add: withoutFailure_def)
+  by simp
 
 lemma catchFailure_empty_fail[intro!, wp, simp]:
   "\<lbrakk> empty_fail f; \<And>x. empty_fail (g x) \<rbrakk> \<Longrightarrow> empty_fail (catchFailure f g)"
-  by (simp add: catchFailure_def empty_fail_catch)
+  by (simp add: empty_fail_catch)
 
 lemma emptyOnFailure_empty_fail[intro!, wp, simp]:
   "empty_fail m \<Longrightarrow> empty_fail (emptyOnFailure m)"
@@ -86,13 +107,18 @@ proof (induct arbitrary: s rule: resolveAddressBits.induct)
 lemmas resolveAddressBits_empty_fail[intro!, wp, simp] =
        resolveAddressBits_spec_empty_fail[THEN use_spec_empty_fail]
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: lookupIPCBuffer
-(simp:Let_def)
-
 declare ef_dmo'[intro!, wp, simp]
 
 lemma empty_fail_getObject_ep [intro!, wp, simp]:
   "empty_fail (getObject p :: endpoint kernel)"
+  by (simp add: empty_fail_getObject)
+
+lemma empty_fail_getObject_reply [intro!, wp, simp]:
+  "empty_fail (getObject p :: reply kernel)"
+  by (simp add: empty_fail_getObject)
+
+lemma empty_fail_getObject_sc [intro!, wp, simp]:
+  "empty_fail (getObject p :: sched_context kernel)"
   by (simp add: empty_fail_getObject)
 
 lemma getEndpoint_empty_fail [intro!, wp, simp]:
@@ -140,8 +166,8 @@ lemma decodeCNodeInvocation_empty_fail[intro!, wp, simp]:
          apply (simp_all add: decodeCNodeInvocation_def
                          split_def cnode_invok_case_cleanup unlessE_whenE
                    cong: if_cong bool.case_cong list.case_cong)
-         apply (simp | wp | wpc | safe)+
-  done
+         by (simp | wp | wpc | safe)+
+
 
 lemma empty_fail_getObject_ap [intro!, wp, simp]:
   "empty_fail (getObject p :: asidpool kernel)"
@@ -162,15 +188,19 @@ lemma ignoreFailure_empty_fail[intro!, wp, simp]:
   "empty_fail x \<Longrightarrow> empty_fail (ignoreFailure x)"
   by (simp add: ignoreFailure_def empty_fail_catch)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped, possibleSwitchTo, tcbSchedAppend
-(simp: Let_def)
+crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "SchedContextDecls_H.postpone"
+
+crunch (empty_fail) empty_fail[intro!, wp, simp]:
+  cancelIPC, setThreadState, tcbSchedDequeue, isStopped, possibleSwitchTo, tcbSchedAppend,
+  refillUnblockCheck, schedContextResume
+  (simp: Let_def)
 
 crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
   (ignore_del: ThreadDecls_H.suspend)
 
 lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   "empty_fail (ThreadDecls_H.restart target)"
-  by (simp add:restart_def)
+  unfolding restart_def getCurSc_def by wpsimp
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]: finaliseCap, preemptionPoint, capSwapForDelete
   (wp: empty_fail_catch simp: Let_def)
@@ -252,14 +282,21 @@ lemma catchError_empty_fail[intro!, wp, simp]:
   by (simp add: catchError_def handle_empty_fail)
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]:
-  chooseThread, getDomainTime, nextDomain, isHighestPrio
-  (wp: empty_fail_catch)
+  chooseThread, getDomainTime, nextDomain, isHighestPrio, switchSchedContext, setNextInterrupt
+  (wp: empty_fail_catch empty_fail_setDeadline)
+
+crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "TCBDecls_H.awaken"
+  (ignore_del: ThreadDecls_H.suspend)
 
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   "empty_fail schedule"
   apply (simp add: schedule_def)
   apply (clarsimp simp: scheduleChooseNewThread_def split: if_split | wp | wpc)+
   done
+
+lemma tcbEPFindIndex_empty_fail[intro!, wp, simp]:
+  "empty_fail (tcbEPFindIndex t qs ci)"
+  by (induct ci; subst tcbEPFindIndex.simps; simp)
 
 crunch (empty_fail) empty_fail: callKernel
   (wp: empty_fail_catch)
