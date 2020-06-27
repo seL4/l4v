@@ -705,19 +705,18 @@ lemmas ceqvhD2 = ceqvhD1 [OF _ _ ceqv_sym]
 lemma ccorres_tmp_lift2:
   assumes rl: "\<And>t t'. ceqv \<Gamma> xf' rv' t t' c c'"
   and c: "ccorres_underlying srel \<Gamma> rrel xf arrel axf G (G'' rv') hs m c'"
-  and geq: "G'' rv' \<inter> {s. rv' = xf' s} = G' \<inter> {s. rv' = xf' s}"
+  and geq: "G' \<inter> {s. rv' = xf' s} \<subseteq> G'' rv'"
   shows "ccorres_underlying srel \<Gamma> rrel xf arrel axf G (G' \<inter> {s. xf' s = rv'}) hs m c"
   using c
   apply -
   apply (rule ccorresI')
-   apply (erule (2) ccorresE)
+  apply (erule (2) ccorresE)
      apply (subst (asm) Int_eq_symmetric)
-     apply (subst (asm) geq [symmetric])
-     apply fastforce
+     apply (drule set_mp[OF geq], clarsimp)
     apply assumption
    apply simp
    apply (erule conjE)+
-   apply (erule (1) ceqvhD1 [OF _ _ rl])
+   apply (erule (1) ceqvhD1[OF _ _ rl])
    apply simp
   apply fastforce
   done

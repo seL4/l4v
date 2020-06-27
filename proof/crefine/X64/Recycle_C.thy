@@ -990,7 +990,7 @@ lemma cancelBadgedSends_ccorres:
           apply (induct_tac list)
            apply (rule allI)
            apply (rule iffD1 [OF ccorres_expand_while_iff_Seq])
-           apply (rule ccorres_tmp_lift2 [OF _ _ refl])
+           apply (rule ccorres_tmp_lift2 [OF _ _ Int_lower1])
             apply ceqv
            apply (simp add: ccorres_cond_iffs)
            apply (rule ccorres_rhs_assoc2)
