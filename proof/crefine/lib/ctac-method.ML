@@ -329,6 +329,16 @@ val ceqv_xpres_lvar_nondet_init_FalseI = @{thm ceqv_xpres_lvar_nondet_init_False
 val ceqv_xpres_rewrite_set_rules = @{thms ceqv_xpres_rewrite_set_rules};
 val xpres_eq_If_rules = @{thms xpres_eq_If_rules};
 
+val cinit_lift_thms = (@{thm ccorres_save_pre_UNIV_Int}
+                       , @{thm ccorres_save_pre_lift1}
+                       , @{thm ccorres_save_pre_lift1_save_global}
+                       , @{thm ccorres_save_pre_init_lift2})
+
+val clift_thms = (@{thm ccorres_introduce_UNIV_Int_when_needed}
+                  , @{thm ccorres_tmp_lift1}
+                  , @{thm ccorres_tmp_lift1_global}
+                  , @{thm ccorres_tmp_lift2})
+
 val apply_ceqv_xpres_rules_trace = ref @{term True};
 
 fun apply_ceqv_xpres_rules1 ctxt rules _ n = DETERM
@@ -477,16 +487,16 @@ in
     rename_tac [#1 (Name.variant nm frees)] i thm
 end;
 
-fun corres_pre_lift_tac lift_thm trace depth ctxt xf =
+fun corres_pre_lift_tac lift_thms trace depth ctxt xf =
   prim_trace_tac' (#trace_this trace) depth ("PRE_LIFT_TAC " ^ xf) ctxt
-  let val base_xf = Long_Name.base_name xf;
+  let val (univ_thm, lift1_local_thm, lift1_global_thm, lift2_thm) = lift_thms
+      val base_xf = Long_Name.base_name xf;
       val var_name = (unsuffix "_'" base_xf handle Fail _ => "rv");
-      fun res_inst xf = Rule_Insts.res_inst_tac ctxt [((("xf'", 0), Position.none), xf)] []
-                                                (my_thm ctxt "ccorres_tmp_lift1");
-  in EVERY' [TRY o resolve_tac ctxt [my_thm ctxt "ccorres_introduce_UNIV_Int_when_needed"],
-             res_inst xf ORELSE' res_inst ("\<lambda>s. " ^ xf ^ " (globals s)"),
+      fun inst lift xf = Rule_Insts.res_inst_tac ctxt [((("xf'", 0), Position.none), xf)] [] lift;
+  in EVERY' [TRY o resolve_tac ctxt [univ_thm],
+             inst lift1_local_thm xf ORELSE' inst lift1_global_thm xf,
              rename_fresh_tac var_name,
-             resolve_tac ctxt [my_thm ctxt lift_thm],
+             resolve_tac ctxt [lift2_thm],
              corres_solve_ceqv ceqv_xpres_rules_new trace depth ctxt]
   end;
 
@@ -925,6 +935,14 @@ end;
 fun MY_REPEAT_ALL_NEW tac =
   tac THEN_ALL_NEW (fn i => MY_REPEAT_ALL_NEW tac i);
 
+fun corres_pre_lift_tacs ctxt lift_thms pre_tac post_tac trace depth xfs =
+    EVERY' (pre_tac :: rev (post_tac :: map (corres_pre_lift_tac lift_thms trace depth ctxt) xfs))
+
+fun corres_pre_lift_tac_cinit ctxt =
+    corres_pre_lift_tacs ctxt cinit_lift_thms
+                         (resolve_tac ctxt [@{thm ccorres_save_pre_start}])
+                         (REPEAT_ALL_NEW (resolve_tac ctxt @{thms ccorres_save_pre_finish}))
+
 fun corres_boilerplate_tac opts unfold_haskell_p xfs ctxt = let
     val ctxt = Context_Position.set_visible false ctxt
     val trace = #trace opts
@@ -988,7 +1006,7 @@ fun corres_boilerplate_tac opts unfold_haskell_p xfs ctxt = let
                          (* Simplify, using ccorres_rewrite *)
                          TRY' (fn _ => if #ccorres_rewrite opts then ccorres_rewrite_tac else all_tac),
                          (* Lift any variables *)
-                         EVERY' (map (corres_pre_lift_tac "ccorres_init_tmp_lift2" trace depth' ctxt) (rev xfs)),
+                         corres_pre_lift_tac_cinit ctxt trace depth' xfs,
                          (* Substitute any lifted variable equalities.  The option is the predicate to use on assumptions *)
                          substutite_asm_eqs ctxt (#subst_asms opts),
                          (* Remove local variable initialisers *)
@@ -1106,18 +1124,21 @@ in
       >> tac) |> shorten_names
 end;
 
+fun corres_pre_lift_tac_clift ctxt =
+    corres_pre_lift_tacs ctxt clift_thms (fn _ => all_tac) (fn _ => all_tac)
+
 fun corres_pre_abstract_args lift_fn =
     let
         fun tac (xfs : string list) (ctxt : Proof.context)
-          = Method.SIMPLE_METHOD' (EVERY' (map (lift_fn ctxt) (rev xfs)))
+          = Method.SIMPLE_METHOD' (lift_fn ctxt default_trace_opts 0 xfs)
     in
         (Args.context |-- Scan.lift (Scan.repeat1 Args.name) >> tac)
         |> shorten_names
     end;
 
 (* These differ only in the behaviour wrt the concrete guards --- the first abstracts the new variable, the second just drops it *)
-val corres_abstract_args = corres_pre_abstract_args (corres_pre_lift_tac "ccorres_tmp_lift2" default_trace_opts 0);
-val corres_abstract_init_args = corres_pre_abstract_args (corres_pre_lift_tac "ccorres_init_tmp_lift2" default_trace_opts 0);
+val corres_abstract_args = corres_pre_abstract_args corres_pre_lift_tac_clift;
+val corres_abstract_init_args = corres_pre_abstract_args corres_pre_lift_tac_cinit;
 
 fun corres_symb_rhs ceqv_xpres_rules = let
     fun tac upds ctxt = Method.SIMPLE_METHOD' (corres_symb_rhs_tac ceqv_xpres_rules (apply upds default_csymbr_opts) ctxt);

@@ -1530,6 +1530,84 @@ lemma ceqv_xpres_rewrite_set_rules:
   by (simp_all add: ceqv_xpres_rewrite_set_def ceqv_xpres_rewrite_basic_def
              split: if_split)
 
+\<comment> \<open>\<close>
+
+definition ccorres_save_pre where
+  "ccorres_save_pre srel \<Gamma> rrel xf arrel axf G S G' hs a c
+   \<equiv> ccorres_underlying srel \<Gamma> rrel xf arrel axf G (G' \<inter> S) hs a c"
+
+lemma ccorres_save_pre_iff:
+  assumes "G'' \<inter> S' = G' \<inter> S"
+  shows "ccorres_save_pre srel \<Gamma> rrel xf arrel axf G S G' hs a c
+         \<longleftrightarrow> ccorres_save_pre srel \<Gamma> rrel xf arrel axf G S' G'' hs a c"
+  by (simp add: ccorres_save_pre_def assms)
+
+lemma ccorres_save_pre_move:
+  "ccorres_save_pre srel \<Gamma> rrel xf arrel axf G (S \<inter> E) G' hs a c
+   \<longleftrightarrow> ccorres_save_pre srel \<Gamma> rrel xf arrel axf G S (G' \<inter> E) hs a c"
+  by (rule ccorres_save_pre_iff; blast)
+
+lemmas ccorres_save_pre_push = ccorres_save_pre_move[THEN iffD1]
+lemmas ccorres_save_pre_pop = ccorres_save_pre_move[THEN iffD2]
+
+lemma ccorres_save_pre_trivial:
+  "ccorres_save_pre srel \<Gamma> rrel xf arrel axf G UNIV G' hs a c
+   \<longleftrightarrow> ccorres_underlying srel \<Gamma> rrel xf arrel axf G G' hs a c"
+  unfolding ccorres_save_pre_def by simp
+
+lemmas ccorres_save_pre_start = ccorres_save_pre_trivial[THEN iffD1]
+
+lemmas ccorres_save_pre_finish
+  = ccorres_save_pre_trivial[THEN iffD2]
+    ccorres_save_pre_pop
+
+lemma ccorres_save_pre_dup_iff:
+  "ccorres_save_pre srel \<Gamma> rrel xf arrel axf G (S \<inter> E) (G' \<inter> E) hs a c
+   \<longleftrightarrow> ccorres_save_pre srel \<Gamma> rrel xf arrel axf G S (G' \<inter> E) hs a c"
+  by (rule ccorres_save_pre_iff; blast)
+
+lemma ccorres_save_pre_Int_def:
+  "ccorres_save_pre srel \<Gamma> rrel xf arrel axf G S (G' \<inter> E) hs m c
+   \<longleftrightarrow> ccorres_underlying srel \<Gamma> rrel xf arrel axf G (G' \<inter> S \<inter> E) hs m c"
+  by (prop_tac "G' \<inter> E \<inter> S = G' \<inter> S \<inter> E", blast, simp add: ccorres_save_pre_def)
+
+\<comment> \<open>If we use this rule for the first lift in `cinit`, then the precondition will be consumed
+    in the second lift, by `ccorres_save_pre_init_lift2`. This reflects the older behaviour
+    of `cinit`, which always dropped preconditions used for lifting. It is still used for all
+    local variable lifting.\<close>
+lemma ccorres_save_pre_lift1:
+  assumes "\<And>rv'. P rv' \<Longrightarrow> ccorres_save_pre srel \<Gamma> rrel xf arrel axf G S (G' \<inter> {s. xf' s = rv'}) hs m c"
+  shows "ccorres_save_pre srel \<Gamma> rrel xf arrel axf G S (G' \<inter> {s. P (xf' s)}) hs m c"
+  using assms by (clarsimp simp: ccorres_save_pre_Int_def ccorres_tmp_lift1)
+
+\<comment> \<open>On the other hand, if we use this rule for the first lift in `cinit`, the precondition is
+    copied. One copy will be consumed by `ccorres_save_pre_init_lift2`, but the second copy will be
+    used to restore the precondition at the end of `cinit`. The end result is that `cinit` performs
+    lifting without dropping the precondition. Ideally, we would use this for all variable lifting,
+    but using this for local variables breaks some existing proofs. Currently, we use it for
+    lifting global variables only; see `ccorres_save_pre_lift1_save_global` below.\<close>
+lemmas ccorres_save_pre_lift1_save
+  = ccorres_save_pre_lift1[OF ccorres_save_pre_dup_iff[THEN iffD1]]
+
+lemmas ccorres_save_pre_lift1_save_global
+  = ccorres_save_pre_lift1_save[where xf'="xf' \<circ> globals" for xf', simplified]
+
+lemma ccorres_save_pre_init_lift2:
+  assumes ceqv: "\<And>t t'. ceqv \<Gamma> xf' rv' t t' c c'"
+  assumes ccorres: "ccorres_save_pre srel \<Gamma> rrel xf arrel axf G S G' hs m c'"
+  shows "ccorres_save_pre srel \<Gamma> rrel xf arrel axf G S (G' \<inter> {s. xf' s = rv'}) hs m c"
+  using  ccorres_init_tmp_lift2[OF ceqv ccorres[unfolded ccorres_save_pre_def]]
+  by (clarsimp simp: ccorres_save_pre_Int_def)
+
+lemma ccorres_save_pre_UNIV_Int:
+  assumes "ccorres_save_pre rf_sr \<Gamma> r xf arrel axf G S (UNIV \<inter> {x. P x}) hs a c"
+  shows "ccorres_save_pre rf_sr \<Gamma> r xf arrel axf G S {x. P x} hs a c"
+  using assms by simp
+
+lemmas ccorres_tmp_lift1_global = ccorres_tmp_lift1[where xf'="xf' \<circ> globals" for xf', simplified]
+
+\<comment> \<open>\<close>
+
 definition
   "simpl_sequence f xs
     = foldr (Seq) (map f xs) Skip"
