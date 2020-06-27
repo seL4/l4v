@@ -677,7 +677,6 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >             scPtrOpt <- withoutFailure $ liftM ntfnSc $ getNotification ntfnPtr
 >             when (scPtrOpt /= Nothing) $ throw IllegalOperation
 >         _ -> throw (InvalidCapability 1)
->     withoutFailure $ getCurThread >>= setThreadState Restart
 >     return $ InvokeSchedContextBind scPtr cap
 
 > decodeSchedContext_UnbindObject :: PPtr SchedContext -> [Capability] ->
