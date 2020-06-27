@@ -34,15 +34,15 @@ session Refine = BaseRefine +
     AInvs
   theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
     "refine/$L4V_ARCH/Refine"
-    (* FIXME RT: "refine/$L4V_ARCH/RAB_FN" *)
+    "refine/$L4V_ARCH/RAB_FN"
     (* FIXME RT: "refine/$L4V_ARCH/EmptyFail_H" *)
   theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
     "refine/$L4V_ARCH/Refine"
-    (* FIXME RT: "refine/$L4V_ARCH/RAB_FN" *)
+    "refine/$L4V_ARCH/RAB_FN"
     (* FIXME RT: "refine/$L4V_ARCH/EmptyFail_H" *)
   theories
     "refine/$L4V_ARCH/Refine"
-    (* FIXME RT: "refine/$L4V_ARCH/RAB_FN" *)
+    "refine/$L4V_ARCH/RAB_FN"
     (* FIXME RT: "refine/$L4V_ARCH/EmptyFail_H" *)
 
 (*
