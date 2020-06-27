@@ -2418,7 +2418,7 @@ lemma obj_at_ko_at'_eq:
   by blast
 
 lemma obj_at_aligned':
-  fixes P :: "('a :: pspace_storable) \<Rightarrow> bool"
+  fixes P :: "'a :: pspace_storable \<Rightarrow> bool"
   assumes oat: "obj_at' P p s"
   and    oab: "\<And>(v :: 'a) (v' :: 'a). objBits v = objBits v'"
   shows "is_aligned p (objBits (obj :: 'a))"
