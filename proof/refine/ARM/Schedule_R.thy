@@ -5,7 +5,7 @@
  *)
 
 theory Schedule_R
-imports VSpace_R
+imports SchedContext_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

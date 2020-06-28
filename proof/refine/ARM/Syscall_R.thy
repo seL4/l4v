@@ -9,7 +9,7 @@
 *)
 
 theory Syscall_R
-imports Tcb_R Arch_R Interrupt_R
+imports Tcb_R Arch_R Interrupt_R SchedContextInv_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
