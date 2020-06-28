@@ -95,9 +95,9 @@ where
 | "inv_relation (Invocations_A.InvokeDomain tptr domain) x =
      (x = InvokeDomain tptr domain)"
 | "inv_relation (Invocations_A.InvokeSchedContext sc_inv) x =
-     (x = undefined)" (* FIXME RT: create Sched_R.thy *)
+     (\<exists>sc_inv'. sc_inv_rel sc_inv sc_inv' \<and> x = InvokeSchedContext sc_inv')"
 | "inv_relation (Invocations_A.InvokeSchedControl sc_control_inv) x =
-     (x = undefined)" (* FIXME RT: put into Sched_R.thy *)
+     (\<exists>sc_inv'. sc_ctrl_inv_rel sc_control_inv sc_inv' \<and> x = InvokeSchedControl sc_inv')"
 | "inv_relation (Invocations_A.InvokeIRQControl i) x =
      (\<exists>i'. irq_control_inv_relation i i' \<and> x = InvokeIRQControl i')"
 | "inv_relation (Invocations_A.InvokeIRQHandler i) x =
@@ -122,8 +122,8 @@ where
 | "valid_invocation' (InvokeNotification w w2) = (ntfn_at' w and ex_nonz_cap_to' w)"
 | "valid_invocation' (InvokeTCB i) = tcb_inv_wf' i"
 | "valid_invocation' (InvokeDomain thread domain) = (tcb_at' thread  and K (domain \<le> maxDomain))"
-| "valid_invocation' (InvokeSchedContext i) = \<top>" (* FIXME RT: make valid_sc_inv i *)
-| "valid_invocation' (InvokeSchedControl i) = \<top>" (* FIXME RT: make valid_sc_control_inv i *)
+| "valid_invocation' (InvokeSchedContext i) = valid_sc_inv' i"
+| "valid_invocation' (InvokeSchedControl i) = valid_sc_ctrl_inv' i"
 | "valid_invocation' (InvokeReply reply grant) = reply_at' reply"
 | "valid_invocation' (InvokeIRQControl i) = irq_control_inv_valid' i"
 | "valid_invocation' (InvokeIRQHandler i) = irq_handler_inv_valid' i"
@@ -596,9 +596,11 @@ lemma decode_inv_wf'[wp]:
             split del: if_split
                  cong: if_cong)
              apply ((rule hoare_pre,
-                     ((wpsimp wp: decodeTCBInv_wf simp: o_def)+)[1],
+                     ((wpsimp wp: decodeTCBInv_wf decodeSchedControlInvocation_wf
+                                  decodeSchedContextInvocation_wf
+                              simp: o_def)+)[1],
                      clarsimp simp: valid_cap'_def cte_wp_at_ctes_of)
-                    | intro exI conjI | simp)+
+                    | intro exI conjI | simp | drule sym)+
   done
 
 lemma ct_active_imp_simple'[elim!]:
