@@ -63,6 +63,7 @@ proof -
      apply (simp add: irqInvalid_def Kernel_C.irqInvalid_def)
      apply (rule ccorres_symb_exec_r)
        apply (ctac (no_vcg) add: schedule_ccorres)
+        apply (rule ccorres_stateAssert_after)
         apply (rule ccorres_add_return2)
         apply (ctac (no_vcg) add: activateThread_ccorres)
          apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
@@ -77,6 +78,7 @@ proof -
     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
      apply (rule ccorres_add_return, ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres)
       apply (ctac (no_vcg) add: schedule_ccorres)
+       apply (rule ccorres_stateAssert_after)
        apply (rule ccorres_add_return2)
        apply (ctac (no_vcg) add: activateThread_ccorres)
         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
@@ -104,6 +106,7 @@ lemma handleUnknownSyscall_ccorres:
      apply (rule ccorres_pre_getCurThread)
      apply (ctac (no_vcg) add: handleFault_ccorres)
       apply (ctac (no_vcg) add: schedule_ccorres)
+       apply (rule ccorres_stateAssert_after)
        apply (rule ccorres_add_return2)
        apply (ctac (no_vcg) add: activateThread_ccorres)
         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
@@ -159,6 +162,7 @@ lemma handleVMFaultEvent_ccorres:
       apply ceqv
      apply clarsimp
      apply (ctac (no_vcg) add: schedule_ccorres)
+      apply (rule ccorres_stateAssert_after)
       apply (rule ccorres_add_return2)
       apply (ctac (no_vcg) add: activateThread_ccorres)
        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
@@ -189,6 +193,7 @@ lemma handleUserLevelFault_ccorres:
      apply (rule ccorres_pre_getCurThread)
      apply (ctac (no_vcg) add: handleFault_ccorres)
       apply (ctac (no_vcg) add: schedule_ccorres)
+       apply (rule ccorres_stateAssert_after)
        apply (rule ccorres_add_return2)
        apply (ctac (no_vcg) add: activateThread_ccorres)
         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
@@ -406,6 +411,7 @@ lemma handleSyscall_ccorres:
       \<comment> \<open>rest of body\<close>
       apply ceqv
      apply (ctac (no_vcg) add: schedule_ccorres)
+      apply (rule ccorres_stateAssert_after)
       apply (rule ccorres_add_return2)
       apply (ctac (no_vcg) add: activateThread_ccorres)
        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
@@ -486,7 +492,7 @@ definition
   "all_invs' e \<equiv> \<lambda>s'. \<exists>s :: det_state.
     (s,s') \<in> state_relation \<and>
     (einvs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and> (ct_running s \<or> ct_idle s) \<and>
-      scheduler_action s = resume_cur_thread \<and> domain_time s \<noteq> 0) \<and>
+      scheduler_action s = resume_cur_thread \<and> domain_time s \<noteq> 0 \<and> valid_domain_list s) \<and>
     (invs' s' \<and>
       (e \<noteq> Interrupt \<longrightarrow> ct_running' s') \<and> (ct_running' s' \<or> ct_idle' s') \<and>
       ksSchedulerAction s' = ResumeCurrentThread  \<and> ksDomainTime s' \<noteq> 0)"
@@ -497,7 +503,7 @@ lemma no_fail_callKernel:
   apply (rule corres_nofail)
    apply (rule corres_guard_imp)
      apply (rule kernel_corres)
-    apply force
+    apply (force simp: word_neq_0_conv)
    apply (simp add: sch_act_simple_def)
   apply metis
   done
@@ -513,7 +519,11 @@ lemma handleHypervisorEvent_ccorres:
     apply (rule ccorres_symb_exec_l)
        apply (cases t; simp add: handleHypervisorFault_def)
        apply (ctac (no_vcg) add: schedule_ccorres)
-        apply (ctac (no_vcg) add: activateThread_ccorres)
+        apply (rule ccorres_stateAssert_after)
+        apply (rule ccorres_guard_imp[where A="A and P" and Q=A for A P])
+          apply (ctac (no_vcg) add: activateThread_ccorres)
+         apply simp
+        apply assumption
        apply (wp schedule_sch_act_wf schedule_invs'
               | strengthen invs_queues_imp invs_valid_objs_strengthen)+
     apply clarsimp+

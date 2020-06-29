@@ -10,13 +10,15 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-definition
-  kernelEntry_if
-where
+definition kernelEntry_if where
   "kernelEntry_if e tc \<equiv> do
     t \<leftarrow> getCurThread;
     threadSet (tcbArch_update (atcbContextSet tc)) t;
     r \<leftarrow> handleEvent e;
+    stateAssert (\<lambda>s. valid_domain_list' s \<and>
+                     (e \<noteq> Interrupt \<longrightarrow> 0 < ksDomainTime s) \<and>
+                     (e = Interrupt \<longrightarrow> ksDomainTime s = 0 \<longrightarrow>
+                       ksSchedulerAction s = ChooseNewThread)) [];
     return (r,tc)
   od"
 
@@ -26,7 +28,8 @@ definition prod_lift where "prod_lift R r r' \<equiv> R (fst r) (fst r') \<and> 
 
 lemma kernel_entry_if_corres:
   "corres (prod_lift (intr \<oplus> dc)) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
-                       (\<lambda>s. scheduler_action s = resume_cur_thread))
+                       (\<lambda>s. scheduler_action s = resume_cur_thread) and
+                       (\<lambda>s. 0 < domain_time s) and valid_domain_list)
                       (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
                        (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
                        (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
@@ -46,10 +49,18 @@ lemma kernel_entry_if_corres:
           apply (clarsimp simp: tcb_cte_cases_def)
          apply (simp add: exst_same_def)
         apply (rule corres_split [OF _ he_corres])
-          apply (clarsimp simp: prod_lift_def)
-         apply (wp  hoare_TrueI threadSet_invs_trivial thread_set_invs_trivial
-                   thread_set_not_state_valid_sched thread_set_ct_running threadSet_ct_running' static_imp_wp
-               | simp add: tcb_cap_cases_def)+
+          apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
+                        P="\<lambda>s. valid_domain_list s \<and>
+                               (event \<noteq> Interrupt \<longrightarrow> 0 < domain_time s) \<and>
+                               (event = Interrupt \<longrightarrow> domain_time s = 0 \<longrightarrow>
+                                 scheduler_action s = choose_new_thread)"])
+           apply (clarsimp simp: prod_lift_def)
+          apply (clarsimp simp: state_relation_def)
+         apply (wp hoare_TrueI threadSet_invs_trivial thread_set_invs_trivial
+                   thread_set_not_state_valid_sched thread_set_ct_running threadSet_ct_running'
+                   hoare_vcg_const_imp_lift handle_event_domain_time_inv
+                   handle_interrupt_valid_domain_time
+               | simp add: tcb_cap_cases_def | wpc | wp (once) hoare_drop_imps)+
    apply (force simp: invs_def cur_tcb_def)
   apply force
   done
@@ -61,6 +72,7 @@ lemma kernelEntry_invs'[wp]:
     kernelEntry_if e tc \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: kernelEntry_if_def)
   apply (wp threadSet_invs_trivial threadSet_ct_running' static_imp_wp
+         | wp (once) hoare_drop_imps
          | clarsimp)+
   done
 
@@ -72,6 +84,7 @@ lemma kernelEntry_valid_duplicates[wp]:
   apply (simp add: kernelEntry_if_def)
   apply (wp handleEvent_valid_duplicates'
             threadSet_invs_trivial threadSet_ct_running' static_imp_wp
+         | wp (once) hoare_drop_imps
          | clarsimp)+
   done
 
@@ -113,7 +126,9 @@ lemmas schedaction_related = sched_act_rct_related
 lemma kernelEntry_ex_abs[wp]:
   "\<lbrace>invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle')
       and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))
-      and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ex_abs (einvs)\<rbrace>
+      and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
+      and (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'
+      and ex_abs (einvs)\<rbrace>
    kernelEntry_if e tc
    \<lbrace>\<lambda>_. ex_abs (einvs)\<rbrace>"
   apply (rule hoare_pre)
@@ -121,9 +136,9 @@ lemma kernelEntry_ex_abs[wp]:
    apply (wp kernel_entry_if_invs kernel_entry_if_valid_sched)
   apply (clarsimp simp: ex_abs_def)
   apply (rule_tac x=sa in exI)
-  apply (fastforce simp: ct_running_related ct_idle_related schedaction_related
-                         active_from_running' active_from_running)
-  done
+  apply (clarsimp simp: domain_time_rel_eq domain_list_rel_eq)
+  by (fastforce simp: ct_running_related ct_idle_related schedaction_related
+                      active_from_running' active_from_running)
 
 definition
   kernelCall_H_if
@@ -374,7 +389,7 @@ lemma doUserOp_if_invs'[wp]:
   apply (wp device_update_invs' dmo_setExMonitor_wp' dmo_invs' | simp)+
          apply (clarsimp simp add: no_irq_modify user_memory_update_def)
          apply wpsimp
-        apply (wp doMachineOp_ct_running' select_wp)+
+        apply (wp select_wp)+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def
                   split: option.splits)
@@ -627,25 +642,32 @@ definition
   "handlePreemption_if tc \<equiv> do
      irq \<leftarrow> doMachineOp (getActiveIRQ False);
      when (irq \<noteq> None) $ handleInterrupt (the irq);
+     stateAssert (\<lambda>s. (ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread) \<and>
+                       valid_domain_list' s) [];
      return tc
    od"
 
 crunch (empty_fail) empty_fail: handlePreemption_if
 
 lemma handle_preemption_if_corres:
- "corres (=) (einvs)
-   (invs')
-   (handle_preemption_if tc) (handlePreemption_if tc)"
+ "corres (=)
+         (einvs and valid_domain_list and (\<lambda>s. 0 < domain_time s))
+         (invs')
+         (handle_preemption_if tc) (handlePreemption_if tc)"
   apply (simp add: handlePreemption_if_def handle_preemption_if_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[where r'="(=)"])
        apply (rule corres_split[where r'="dc"])
-          apply simp
+          apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
+                        P="\<lambda>s. valid_domain_list s \<and>
+                               (domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread)"])
+           apply simp
+          apply (clarsimp simp: state_relation_def)
          apply (rule corres_when)
           apply simp
          apply simp
          apply (rule handle_interrupt_corres)
-        apply (rule hoare_post_taut[where P=\<top>])+
+        apply (wp handle_interrupt_valid_domain_time)+
       apply (rule dmo_getActiveIRQ_corres)
      apply (rule dmo_getActiveIRQ_wp)
     apply (rule dmo'_getActiveIRQ_wp)
@@ -657,7 +679,7 @@ lemma handle_preemption_if_corres:
 lemma handlePreemption_invs'[wp]:
   "\<lbrace>invs'\<rbrace> handlePreemption_if tc \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: handlePreemption_if_def)
-  apply (wp dmo'_getActiveIRQ_wp)
+  apply (wp dmo'_getActiveIRQ_wp hoare_drop_imps)
   apply clarsimp
   done
 
@@ -665,17 +687,19 @@ lemma handlePreemption_if_valid_duplicates[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace> handlePreemption_if tc
   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: handlePreemption_if_def)
-  apply (wp dmo'_getActiveIRQ_wp)
+  apply (wp dmo'_getActiveIRQ_wp hoare_drop_imps)
   apply clarsimp
   done
 
 lemma handlePreemption_ex_abs[wp]:
-  "\<lbrace>invs' and ex_abs (einvs)\<rbrace> handlePreemption_if tc \<lbrace>\<lambda>_. ex_abs (einvs)\<rbrace>"
+  "\<lbrace>invs' and ex_abs (einvs) and valid_domain_list' and (\<lambda>s. 0 < ksDomainTime s)\<rbrace>
+   handlePreemption_if tc
+   \<lbrace>\<lambda>_. ex_abs (einvs)\<rbrace>"
   apply (rule hoare_pre)
    apply (rule corres_ex_abs_lift[OF handle_preemption_if_corres])
    apply (wp handle_preemption_if_invs)
-  apply (auto simp: ex_abs_def non_kernel_IRQs_def)
-   done
+  apply (auto simp: ex_abs_def non_kernel_IRQs_def domain_list_rel_eq domain_time_rel_eq)
+  done
 
 lemma handle_preemption_if_valid_domain_time:
   "\<lbrace>\<lambda>s. 0 < domain_time s \<rbrace>
@@ -699,6 +723,7 @@ definition
   "schedule'_if tc \<equiv> do
      schedule;
      activateThread;
+     stateAssert (\<lambda>s. 0 < ksDomainTime s \<and> valid_domain_list' s) [];
      return tc
    od"
 
@@ -706,25 +731,30 @@ crunch (empty_fail) empty_fail: schedule'_if
 
 
 lemma schedule_if_corres:
- "corres (=) (invs and valid_sched and valid_list)
-   (invs')
-   (schedule_if tc) (schedule'_if tc)"
+ "corres (=)
+         (invs and valid_sched and valid_list and valid_domain_list and
+          (\<lambda>s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread))
+         (invs')
+         (schedule_if tc) (schedule'_if tc)"
   apply (simp add: schedule_if_def schedule'_if_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[where r'="dc"])
        apply (rule corres_split[where r'="dc"])
-          apply simp
+          apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
+                        P="\<lambda>s. valid_domain_list s \<and> 0 < domain_time s"])
+           apply simp
+          apply (clarsimp simp: state_relation_def)
          apply (rule activate_corres)
-        apply (rule hoare_post_taut[where P=\<top>])+
+        apply wp+
       apply (rule schedule_corres)
-     apply (wp schedule_invs')+
+     apply (wp schedule_invs' schedule_domain_time_left)+
    apply clarsimp+
   done
 
 lemma schedule_if'_invs'_post:
   "\<lbrace>invs'\<rbrace> schedule'_if tc \<lbrace>\<lambda>_. invs' and (ct_running' or ct_idle')\<rbrace>"
   apply (simp add: schedule'_if_def)
-  apply (wp activate_invs' schedule_invs' schedule_sch_act_simple | simp)+
+  apply (wp activate_invs' schedule_invs' schedule_sch_act_simple hoare_drop_imps | simp)+
   done
 
 lemma schedule_if'_invs'[wp]:
@@ -743,7 +773,7 @@ lemma schedule_if'_ct_running_or_idle[wp]:
 lemma schedule_if'_rct[wp]:
   "\<lbrace>invs'\<rbrace> schedule'_if tc \<lbrace>\<lambda>r s. ksSchedulerAction s = ResumeCurrentThread\<rbrace>"
   apply (simp add: schedule'_if_def)
-  apply (wp activate_sch_act schedule_sch)
+  apply (wp activate_sch_act schedule_sch hoare_drop_imps)
   done
 
 
@@ -751,7 +781,7 @@ lemma scheduler_if'_valid_duplicates[wp]:
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace> schedule'_if tc
   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: schedule'_if_def)
-  apply (wp | simp)+
+  apply (wp hoare_drop_imps | simp)+
   done
 
 lemma schedule_if_domain_time_left:
@@ -768,12 +798,22 @@ lemma schedule_if_domain_time_left:
   apply (auto split: if_split)
   done
 
+lemma sched_act_relation_ChooseNewThread[simp]:
+  "sched_act_relation sca ChooseNewThread = (sca = choose_new_thread)"
+  by (cases sca; simp)
+
 lemma scheduler'_if_ex_abs[wp]:
-  "\<lbrace>invs' and ex_abs (einvs)\<rbrace> schedule'_if tc \<lbrace>\<lambda>_. ex_abs (einvs)\<rbrace>"
+  "\<lbrace>invs' and ex_abs (einvs) and valid_domain_list' and
+    (\<lambda>s. ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread)\<rbrace>
+   schedule'_if tc
+   \<lbrace>\<lambda>_. ex_abs (einvs)\<rbrace>"
   apply (rule hoare_pre)
    apply (rule corres_ex_abs_lift[OF schedule_if_corres])
    apply wp
-  apply (auto simp: ex_abs_def)
+  apply (clarsimp simp: ex_abs_def)
+  apply (rule exI, rule conjI, assumption)
+  apply (frule state_relation_schact)
+  apply (auto simp: domain_list_rel_eq domain_time_rel_eq)
   done
 
 definition
@@ -824,7 +864,8 @@ definition
 
 definition full_invs_if' where
   "full_invs_if' \<equiv>
-  {s. invs' (internal_state_if s) \<and> ex_abs (einvs) (internal_state_if s)
+  {s. invs' (internal_state_if s)
+      \<and> ex_abs (einvs) (internal_state_if s)
       \<and> vs_valid_duplicates' (ksPSpace (internal_state_if s))
       \<and> (snd s \<noteq> KernelSchedule True \<longrightarrow> ksDomainTime (internal_state_if s) > 0)
       \<and> (ksDomainTime (internal_state_if s) = 0
@@ -966,6 +1007,7 @@ lemma step_corresE:
     apply (rule d)
     apply simp+
     done
+
 end
 
 locale global_automaton_invs =
@@ -1008,8 +1050,8 @@ locale global_automaton_invs =
      apply (rule init_invs)
     apply (clarsimp simp: step_adt global_automaton_if_def)
     apply (elim disjE exE conjE,simp_all)
-apply (rule preservesE[OF kernel_call_invs])
-             apply (rule preservesE[OF kernel_call_invs],assumption+)
+             apply (rule preservesE[OF kernel_call_invs])
+                apply (rule preservesE[OF kernel_call_invs],assumption+)
             apply (rule preservesE[OF kernel_call_invs_sched],assumption+)
            apply (rule preservesE[OF handle_preemption_invs],assumption+)
           apply (rule preservesE[OF schedule_invs],assumption+)
@@ -1089,12 +1131,11 @@ lemmas preserves_lifts = preserves_lift_ret preserves_lift preserves_lift'
                          preserves_lift'' preserves_lift''' preserves'_lift
 
 
-
-
 defs step_restrict_def:
   "step_restrict \<equiv> \<lambda>s. s \<in> has_srel_state (lift_fst_rel (lift_snd_rel state_relation)) full_invs_if'"
 
 context begin interpretation Arch .
+
 lemma abstract_invs:
   "global_automaton_invs check_active_irq_A_if (do_user_op_A_if uop)
                          kernel_call_A_if kernel_handle_preemption_if
@@ -1156,6 +1197,7 @@ lemma abstract_invs:
     subgoal by (clarsimp cong: conj_cong | wp)+
    apply (fastforce simp: full_invs_if_def ADT_A_if_def step_restrict_def)+
   done
+
 end
 
 definition ADT_H_if where
@@ -1166,58 +1208,30 @@ definition ADT_H_if where
                               kernelCall_H_if handlePreemption_H_if
                               schedule'_H_if kernelExit_H_if)\<rparr>"
 
-crunch ksDomainTime_inv[wp]: doUserOp_if "(\<lambda>s. P (ksDomainTime s))"
+crunches doUserOp_if, checkActiveIRQ_if
+  for ksDomainTime_inv[wp]: "\<lambda>s. P (ksDomainTime s)"
+  and ksDomSchedule_inv[wp]: "\<lambda>s. P (ksDomSchedule s)"
   (wp: select_wp)
-
-crunch ksDomSchedule_inv[wp]: doUserOp_if "(\<lambda>s. P (ksDomSchedule s))"
-  (wp: select_wp)
-
-crunch ksDomainTime_inv[wp]: checkActiveIRQ_if "\<lambda>s. P (ksDomainTime s)"
-
-crunch ksDomSchedule_inv[wp]:
-  kernelEntry_if, handlePreemption_if, checkActiveIRQ_if, schedule'_if
-  "\<lambda>s. P (ksDomSchedule s)"
-
-lemma kernelEntry_if_ksDomainTime_inv:
-  "\<lbrace> K (e \<noteq> Interrupt) and (\<lambda>s. P (ksDomainTime s)) \<rbrace>
-   kernelEntry_if e tc
-   \<lbrace>\<lambda>_ s. P (ksDomainTime s) \<rbrace>"
-   unfolding kernelEntry_if_def
-   by (wp handleEvent_ksDomainTime_inv) simp
 
 lemma kernelEntry_if_valid_domain_time:
-  "\<lbrace>\<lambda>s. 0 < ksDomainTime s \<rbrace>
+  "e \<noteq> Interrupt \<Longrightarrow>
+   \<lbrace>\<top>\<rbrace> kernelEntry_if e tc \<lbrace>\<lambda>_ s. 0 < ksDomainTime s \<and> valid_domain_list' s\<rbrace>"
+
+  "\<lbrace>\<top>\<rbrace>
    kernelEntry_if Interrupt tc
-   \<lbrace>\<lambda>_ s. ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread \<rbrace>"
-   unfolding kernelEntry_if_def
-  apply (clarsimp simp: handleEvent_def)
-  apply (rule hoare_pre)
-   apply (wp handleInterrupt_valid_domain_time | wpc | clarsimp)+
-       apply (rule hoare_false_imp) \<comment> \<open>debugPrint\<close>
-       apply (wp handleInterrupt_valid_domain_time hoare_vcg_all_lift hoare_drop_imps | simp)+
-  done
+   \<lbrace>\<lambda>_ s. (ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread) \<and> valid_domain_list' s\<rbrace>"
+  unfolding kernelEntry_if_def by wpsimp+
 
 lemma handlePreemption_if_valid_domain_time:
-  "\<lbrace>\<lambda>s. 0 < ksDomainTime s \<rbrace>
+  "\<lbrace>\<top>\<rbrace>
    handlePreemption_if tc
-   \<lbrace>\<lambda>r s. ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread \<rbrace>"
-   unfolding handlePreemption_if_def
-   apply (rule hoare_pre)
-   apply (wp handleInterrupt_valid_domain_time)
-   apply (rule_tac Q="\<lambda>_ s. 0 < ksDomainTime s" in hoare_post_imp, fastforce)
-   apply (wp, simp)
-   done
+   \<lbrace>\<lambda>_ s. (ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread) \<and> valid_domain_list' s\<rbrace>"
+  unfolding handlePreemption_if_def by wpsimp
 
-lemma schedule'_if_domain_time_left:
-  "\<lbrace>\<lambda>s. valid_domain_list' s \<and> (ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread) \<rbrace>
-   schedule'_if tc
-   \<lbrace>\<lambda>rv s. 0 < ksDomainTime s \<rbrace>"
-   unfolding schedule'_if_def
-   apply (rule hoare_pre)
-   apply wp
-   apply (rule hoare_post_imp[OF _ schedule_domain_time_left'])
-   apply clarsimp+
-   done
+lemma schedule'_if_valid_domain_time:
+  "\<lbrace>\<top>\<rbrace> schedule'_if tc \<lbrace>\<lambda>_ s. 0 < ksDomainTime s\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> schedule'_if tc \<lbrace>\<lambda>_. valid_domain_list'\<rbrace>"
+  unfolding schedule'_if_def by wpsimp+
 
 lemma kernelEntry_if_no_preempt:
   "\<lbrace> \<top> \<rbrace> kernelEntry_if Interrupt ctx \<lbrace>\<lambda>(interrupt,_) _. interrupt = Inr () \<rbrace>"
@@ -1240,28 +1254,22 @@ lemma haskell_invs:
          apply simp
         apply (rule preserves_lifts)
         apply (simp add: full_invs_if'_def)
-        apply (wp kernelEntry_if_ksDomainTime_inv ; simp)
+        apply (wp kernelEntry_if_valid_domain_time; simp)
 
      subgoal for e
        apply (rule preserves_lifts, simp add: full_invs_if'_def)
        apply wp
-          apply (case_tac "e = Interrupt")
-           apply clarsimp
-           apply (wp kernelEntry_if_valid_domain_time ; simp)
-          apply clarsimp
-         apply (wp kernelEntry_if_ksDomainTime_inv ; simp)
+          apply (case_tac "e = Interrupt"; wpsimp wp: kernelEntry_if_valid_domain_time)
         apply fastforce+
        done
       subgoal
         apply (rule preserves_lifts, simp add: full_invs_if'_def)
-        apply (rule hoare_pre)
-        apply (wp handlePreemption_if_valid_domain_time ; simp)
+        apply (wp handlePreemption_if_valid_domain_time)
         apply fastforce
         done
      subgoal
        apply (rule preserves_lifts, simp add: full_invs_if'_def)
-       apply (rule hoare_pre)
-       apply (wp schedule'_if_domain_time_left)
+       apply (wp schedule'_if_valid_domain_time)
        apply fastforce
        done
     subgoal by (rule preserves_lifts, simp add: full_invs_if'_def)

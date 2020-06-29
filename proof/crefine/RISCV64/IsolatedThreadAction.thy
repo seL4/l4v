@@ -465,6 +465,17 @@ lemma modify_isolatable:
   apply (simp add: ksPSpace_update_partial_id o_def)
   done
 
+lemma kernelExitAssertions_isolatable:
+  "thread_actions_isolatable idx (stateAssert kernelExitAssertions [])"
+  unfolding stateAssert_def kernelExitAssertions_def
+  apply (clarsimp simp: thread_actions_isolatable_def get_def assert_def bind_def)
+  apply (simp add: isolate_thread_actions_def select_f_returns liftM_def bind_assoc)
+  apply (clarsimp simp: monadic_rewrite_def exec_gets getSchedulerAction_def exec_modify
+                  split: if_split)
+  apply (simp add: simpler_gets_def return_def fail_def modify_def get_def put_def
+                   ksPSpace_update_partial_id o_def bind_def select_f_def)
+  done
+
 lemma isolate_thread_actions_wrap_bind:
   "inj idx \<Longrightarrow>
    do x \<leftarrow> isolate_thread_actions idx a b c;

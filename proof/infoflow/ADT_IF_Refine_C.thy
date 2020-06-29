@@ -116,6 +116,11 @@ definition
     exec_C \<Gamma> (callKernel_C_body_if e);
     ex \<leftarrow> gets ret__unsigned_long_';
     r \<leftarrow> return (if (ex = scast EXCEPTION_NONE) then Inr () else Inl ex);
+  \<^cancel>\<open>
+    stateAssert (\<lambda>s. (e \<noteq> Interrupt \<longrightarrow> 0 < ksDomainTime_' (globals s)) \<and>
+                     (e = Interrupt \<longrightarrow> ksDomainTime_' (globals s) = 0 \<longrightarrow>
+                         ksSchedulerAction_' (globals s) = Ptr 1) \<and>
+                     valid_domain_listC) [];\<close>
     return (r,tc)
   od"
 
@@ -303,10 +308,18 @@ lemma handleEvent_ccorres:
   done
 
 lemma kernelEntry_corres_C:
-  "corres_underlying rf_sr nf nf (prod_lift (\<lambda>r r'. (r = Inr ()) = (r' = Inr ()))) (
-               all_invs' e) \<top>
+  "corres_underlying rf_sr False False (prod_lift (\<lambda>r r'. (r = Inr ()) = (r' = Inr ()))) (
+                     all_invs' e) \<top>
                      (kernelEntry_if e tc) (kernelEntry_C_if fp e tc)"
+  using corres_nofail[OF kernel_entry_if_corres[of e tc], simplified]
   apply (simp add: kernelEntry_if_def kernelEntry_C_if_def)
+  apply (simp only: bind_assoc[symmetric])
+  apply (rule corres_stateAssert_no_fail)
+   apply (erule no_fail_pre)
+   apply (clarsimp simp: all_invs'_def)
+   apply (rule exI, rule conjI, assumption)
+   apply clarsimp
+  apply (simp only: bind_assoc)
   apply (simp add: getCurThread_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
@@ -329,6 +342,7 @@ lemma kernelEntry_corres_C:
            apply simp
           apply (rule_tac P="\<top>" and P'="\<top>" in corres_inst)
           apply (clarsimp simp: prod_lift_def split: if_split)
+         apply simp
          apply wp+
        apply (rule hoare_strengthen_post)
         apply (subst archTcbUpdate_aux2[symmetric])
@@ -584,7 +598,7 @@ definition
   "check_active_irq_C_if \<equiv> {((tc, s), irq, (tc', s')). ((irq, tc'), s') \<in> fst (checkActiveIRQ_C_if tc s)}"
 
 lemma check_active_irq_corres_C:
-  "corres_underlying rf_sr False nf (=) \<top> \<top>
+  "corres_underlying rf_sr False False (=) \<top> \<top>
                      (checkActiveIRQ_if tc) (checkActiveIRQ_C_if tc)"
   apply (simp add: checkActiveIRQ_if_def checkActiveIRQ_C_if_def)
   apply (simp add: getActiveIRQ_C_def)
@@ -611,10 +625,13 @@ definition
   "handlePreemption_C_if tc \<equiv>
        do (exec_C \<Gamma> handleInterruptEntry_C_body_if); return tc od"
 
-lemma handlePreemption_if_def2: "handlePreemption_if tc = do
-                                   r \<leftarrow> handleEvent Interrupt;
-                                   return tc
-                                od"
+lemma handlePreemption_if_def2:
+  "handlePreemption_if tc = do
+     r \<leftarrow> handleEvent Interrupt;
+          stateAssert (\<lambda>s. (ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread) \<and>
+                            valid_domain_list' s) [];
+          return tc
+   od"
   apply (clarsimp simp add: handlePreemption_if_def handleEvent_def liftE_def
                    bind_assoc)
   apply (rule bind_eqI)
@@ -651,9 +668,19 @@ lemma handleEvent_Interrupt_no_fail: "no_fail (invs' and ex_abs einvs) (handleEv
   done
 
 lemma handle_preemption_corres_C:
-  "corres_underlying rf_sr False nf (=) (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and ex_abs einvs) \<top>
+  "corres_underlying rf_sr False False (=)
+                     (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
+                      valid_domain_list' and (\<lambda>s. 0 < ksDomainTime s) and
+                      ex_abs einvs) \<top>
                      (handlePreemption_if tc) (handlePreemption_C_if tc)"
   apply (simp add: handlePreemption_if_def2 handlePreemption_C_if_def)
+  apply (rule corres_stateAssert_no_fail)
+   using corres_nofail[OF handle_preemption_if_corres[of tc], simplified]
+   apply (simp add: handlePreemption_if_def2)
+   apply (erule no_fail_pre)
+   apply (clarsimp simp: ex_abs_underlying_def)
+   apply (rule exI, rule conjI, assumption)
+   apply (clarsimp simp: domain_time_rel_eq domain_list_rel_eq)
   apply (rule corres_guard_imp)
     apply (rule_tac r'="dc" in corres_split)
        apply simp
@@ -698,9 +725,20 @@ lemma ccorres_corres_u':
 
 
 lemma schedule_if_corres_C:
-  "corres_underlying rf_sr False nf (=) (invs' and ex_abs einvs) \<top>
+  "corres_underlying rf_sr False False (=)
+                     (invs' and ex_abs einvs and valid_domain_list' and
+                      (\<lambda>s. ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread)) \<top>
                      (schedule'_if tc) (schedule_C_if' tc)"
   apply (simp add: schedule'_if_def schedule_C_if'_def)
+  apply (subst bind_assoc[symmetric], rule corres_stateAssert_no_fail)
+   using corres_nofail[OF schedule_if_corres[of tc], simplified]
+   apply (simp add: schedule'_if_def bind_assoc)
+   apply (erule no_fail_pre)
+   apply (clarsimp simp: ex_abs_def)
+   apply (rule exI, rule conjI, assumption)
+   apply (clarsimp simp: domain_time_rel_eq domain_list_rel_eq)
+   apply (clarsimp simp: state_relation_def)
+  apply (simp only: bind_assoc)
   apply (rule corres_guard_imp)
     apply (rule_tac r'="dc" in corres_split)
        apply simp
@@ -855,7 +893,9 @@ lemma cstate_relation_observable_memory:
                      cmachine_state_relation_def observable_memory_def)
 
 
-lemma c_to_haskell: "uop_nonempty uop \<Longrightarrow> global_automata_refine checkActiveIRQ_H_if (doUserOp_H_if uop) kernelCall_H_if
+lemma c_to_haskell:
+  "uop_nonempty uop \<Longrightarrow>
+   global_automata_refine checkActiveIRQ_H_if (doUserOp_H_if uop) kernelCall_H_if
      handlePreemption_H_if schedule'_H_if kernelExit_H_if full_invs_if' (ADT_H_if uop) UNIV
      check_active_irq_C_if (do_user_op_C_if uop) (kernel_call_C_if fp) handle_preemption_C_if schedule_C_if
      kernel_exit_C_if UNIV (ADT_C_if fp uop) (lift_snd_rel rf_sr) False"
