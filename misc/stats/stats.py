@@ -80,6 +80,7 @@ def print_stats(deadline, delta, end, path):
     balance = sorries_added-sorries_removed
 
     removed_per_day = sorries_removed / delta.days
+    balance_per_day = balance / delta.days
 
     if removed_per_day != 0:
         projected_days = current / removed_per_day
@@ -111,8 +112,8 @@ def print_stats(deadline, delta, end, path):
     print()
     print("Sorries current: {:6d}".format(current))
     print()
-    print("Rate removed:    {:6.1f} sorries per week".format((7 * sorries_removed) / delta.days))
-    print("Rate balance:    {:6.1f} sorries per week".format(removed_per_day * 7))
+    print("Rate removed:    {:6.1f} sorries per week".format(removed_per_day * 7))
+    print("Rate balance:    {:+6.1f} sorries per week".format(balance_per_day * 7))
     print("Rate needed:     {:6.1f} sorries per week ({:+.1f} s/w)".format(
         needed_rate * 7, (needed_rate-removed_per_day)*7))
     print()
