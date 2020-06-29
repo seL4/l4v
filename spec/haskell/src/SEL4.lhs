@@ -22,7 +22,7 @@ This is the top-level module; it defines the interface between the kernel and th
 > import SEL4.API.Types
 > import SEL4.Kernel.CSpace(lookupCap)
 > import SEL4.Kernel.Thread(schedule, activateThread)
-> import SEL4.Model.StateData(KernelState, Kernel, getCurThread, doMachineOp)
+> import SEL4.Model.StateData(KernelState, Kernel, getCurThread, doMachineOp, stateAssert)
 > import SEL4.Model.Preemption(withoutPreemption)
 > import SEL4.Object.Structures
 > import SEL4.Object.TCB(asUser)
@@ -45,4 +45,9 @@ faults, and system calls; the set of possible events is defined in
 >                       when (isJust irq) $ handleInterrupt (fromJust irq))
 >     schedule
 >     activateThread
+>     stateAssert kernelExitAssertions "Kernel exit conditions must hold"
 
+This will be replaced by actual assertions in the proofs:
+
+> kernelExitAssertions :: KernelState -> Bool
+> kernelExitAssertions _ = True

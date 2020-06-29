@@ -2371,7 +2371,7 @@ theorem callKernel_no_orphans [wp]:
    callKernel e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding callKernel_def
-  by (wpsimp wp: weak_if_wp schedule_invs')
+  by (wpsimp wp: weak_if_wp schedule_invs' hoare_drop_imps)
 
 end
 

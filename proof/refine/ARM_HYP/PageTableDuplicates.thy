@@ -2198,6 +2198,7 @@ lemma callKernel_valid_duplicates':
   apply (simp add: callKernel_def)
   apply (rule hoare_pre)
    apply (wp activate_invs' activate_sch_act schedule_sch
+             hoare_drop_imp[where R="\<lambda>_. kernelExitAssertions"]
              schedule_sch_act_simple he_invs' hoare_vcg_if_lift3
           | simp add: no_irq_getActiveIRQ
           | strengthen non_kernel_IRQs_strg, simp cong: conj_cong)+

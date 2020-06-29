@@ -2267,7 +2267,8 @@ lemma callKernel_valid_duplicates':
   apply (rule hoare_pre)
    apply (wp activate_invs' activate_sch_act schedule_sch
              schedule_sch_act_simple he_invs'
-          | simp add: no_irq_getActiveIRQ)+
+          | simp add: no_irq_getActiveIRQ
+          | wp (once) hoare_drop_imps )+
    apply (rule hoare_post_impErr)
      apply (rule valid_validE)
      prefer 2
