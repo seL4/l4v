@@ -3504,7 +3504,9 @@ lemma createObject_setCTE_commute:
         pspace_no_overlap' ptr (Types_H.getObjectSize ty us) and
         valid_arch_state' and K (ptr \<noteq> src) and
         K (is_aligned ptr (Types_H.getObjectSize ty us)) and
-        K (Types_H.getObjectSize ty us < word_bits))
+        K (Types_H.getObjectSize ty us < word_bits) and
+        K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow>
+             minSchedContextBits \<le> us))
      (RetypeDecls_H.createObject ty ptr us d)
      (setCTE src cte)"
   apply (rule commute_grab_asm)+
@@ -3522,55 +3524,64 @@ lemma createObject_setCTE_commute:
                        cteSizeBits_def)
             \<comment> \<open>Untyped\<close>
             apply (simp add: monad_commute_guard_imp[OF return_commute])
-           \<comment> \<open>TCB, EP, NTFN\<close>
-           apply (rule monad_commute_guard_imp[OF commute_commute])
-            apply (rule monad_commute_split[OF monad_commute_split])
-                apply (rule monad_commute_split[OF commute_commute[OF return_commute]])
-                 apply (rule setCTE_modify_tcbDomain_commute)
-                apply wp
-               apply (rule curDomain_commute)
-               apply wp+
-             apply (rule setCTE_placeNewObject_commute)
-            apply (wp  placeNewObject_tcb_at' placeNewObject_cte_wp_at'
-              placeNewObject_pspace_distinct'
-              placeNewObject_pspace_aligned'
-              | clarsimp simp: objBits_simps')+
-           apply (rule monad_commute_guard_imp[OF commute_commute]
-            ,rule monad_commute_split[OF commute_commute[OF return_commute]]
-            ,rule setCTE_placeNewObject_commute
-            ,(wp|clarsimp simp: objBits_simps')+)+
-        \<comment> \<open>CNode\<close>
-        apply (rule monad_commute_guard_imp[OF commute_commute])
-         apply (rule monad_commute_split)+
-             apply (rule return_commute[THEN commute_commute])
-            apply (rule setCTE_modify_gsCNode_commute[of \<top>])
-           apply (rule hoare_triv[of \<top>])
-           apply wp
-          apply (rule setCTE_placeNewObject_commute)
-         apply (wp|clarsimp simp: objBits_simps')+
-  sorry (* SchedContext and Reply
+             \<comment> \<open>TCB, EP, NTFN\<close>
+             apply (rule monad_commute_guard_imp[OF commute_commute])
+              apply (rule monad_commute_split[OF monad_commute_split])
+                  apply (rule monad_commute_split[OF commute_commute[OF return_commute]])
+                   apply (rule setCTE_modify_tcbDomain_commute)
+                  apply wp
+                 apply (rule curDomain_commute)
+                 apply wp+
+               apply (rule setCTE_placeNewObject_commute)
+              apply (wp placeNewObject_tcb_at' placeNewObject_cte_wp_at'
+                        placeNewObject_pspace_distinct' placeNewObject_pspace_aligned'
+                     | clarsimp simp: objBits_simps')+
+            apply (rule monad_commute_guard_imp[OF commute_commute])
+             apply (rule monad_commute_split[OF commute_commute[OF return_commute]])
+              apply (rule setCTE_placeNewObject_commute)
+             apply wp
+            apply (clarsimp simp: objBits_simps')
+           apply (wpsimp simp: objBits_simps')
+           apply (rule monad_commute_guard_imp[OF commute_commute],
+                  rule monad_commute_split[OF commute_commute[OF return_commute]],
+                  rule setCTE_placeNewObject_commute,
+                  (wpsimp simp: objBits_simps')+)
+          \<comment> \<open>CNode\<close>
+          apply (rule monad_commute_guard_imp[OF commute_commute])
+           apply (rule monad_commute_split)+
+               apply (rule return_commute[THEN commute_commute])
+              apply (rule setCTE_modify_gsCNode_commute[of \<top>])
+             apply (rule hoare_triv[of \<top>])
+             apply wp
+            apply (rule setCTE_placeNewObject_commute)
+         apply (wpsimp simp: objBits_simps')+
+           \<comment> \<open>SchedContext, Reply\<close>
+           apply (rule monad_commute_guard_imp[OF commute_commute],
+                  rule monad_commute_split[OF commute_commute[OF return_commute]],
+                  rule setCTE_placeNewObject_commute,
+                  (wpsimp simp: objBits_simps' scBits_def2 scBits_inverse_us)+)+
        \<comment> \<open>Arch Objects\<close>
-       apply ((rule monad_commute_guard_imp[OF commute_commute]
-              , rule monad_commute_split[OF commute_commute[OF return_commute]]
-              , clarsimp simp: ARM_H.createObject_def
-                               placeNewDataObject_def bind_assoc split
-                          del: if_splits
-              ,(rule monad_commute_split return_commute[THEN commute_commute]
+       apply ((rule monad_commute_guard_imp[OF commute_commute],
+               rule monad_commute_split[OF commute_commute[OF return_commute]],
+               clarsimp simp: ARM_H.createObject_def
+                              placeNewDataObject_def bind_assoc split
+                         del: if_splits,
+               (rule monad_commute_split return_commute[THEN commute_commute]
                      setCTE_modify_gsUserPages_commute[of \<top>]
                      modify_wp[of "%_. \<top>"]
                      setCTE_doMachineOp_commute
                      setCTE_placeNewObject_commute
                      monad_commute_if_weak_r
                      copyGlobalMappings_setCTE_commute[THEN commute_commute]
-                 | wp placeNewObject_pspace_distinct'
-                      placeNewObject_pspace_aligned'
-                      placeNewObject_cte_wp_at'
-                      placeNewObject_valid_arch_state placeNewObject_pd_at'
-                 | erule is_aligned_weaken
-                 | simp add: objBits_simps pageBits_def ptBits_def pdBits_def
-                             pdeBits_def pdBits_def pteBits_def
-                             archObjSize_def split del: if_splits)+)+)
-  done *)
+                | wp placeNewObject_pspace_distinct'
+                     placeNewObject_pspace_aligned'
+                     placeNewObject_cte_wp_at'
+                     placeNewObject_valid_arch_state placeNewObject_pd_at'
+                | erule is_aligned_weaken
+                | simp add: objBits_simps pageBits_def ptBits_def pdBits_def
+                            pdeBits_def pdBits_def pteBits_def
+                            archObjSize_def split del: if_splits)+)+)
+  done
 
 
 lemma createObject_updateMDB_commute:
@@ -3580,7 +3591,9 @@ lemma createObject_updateMDB_commute:
       pspace_aligned' and pspace_distinct' and valid_arch_state' and
       K (ptr \<noteq> src) and
       K (is_aligned ptr (Types_H.getObjectSize ty us)) and
-      K ((Types_H.getObjectSize ty us)< word_bits))
+      K ((Types_H.getObjectSize ty us) < word_bits) and
+      K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow>
+           minSchedContextBits \<le> us))
      (updateMDB src f) (RetypeDecls_H.createObject ty ptr us d)"
   apply (clarsimp simp:updateMDB_def split:if_split_asm)
   apply (intro conjI impI)
@@ -3813,7 +3826,9 @@ lemma new_cap_object_comm_helper:
       valid_arch_state' and
       K (Types_H.getObjectSize ty us<word_bits) and
       K (cap \<noteq> capability.NullCap) and
-      K (is_aligned ptr (Types_H.getObjectSize ty us) \<and> ptr \<noteq> 0 \<and> parent \<noteq> 0))
+      K (is_aligned ptr (Types_H.getObjectSize ty us) \<and> ptr \<noteq> 0 \<and> parent \<noteq> 0) and
+      K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow>
+           minSchedContextBits \<le> us))
      (RetypeDecls_H.createObject ty ptr us d) (insertNewCap parent slot cap)"
   apply (clarsimp simp:insertNewCap_def bind_assoc liftM_def)
   apply (rule monad_commute_guard_imp)
@@ -3870,7 +3885,9 @@ lemma new_cap_object_commute:
       K (distinct (map fst (zip list caps))) and
       K (\<forall>cap \<in> set caps. cap \<noteq> capability.NullCap) and
       K (Types_H.getObjectSize ty us <word_bits) and
-      K (is_aligned ptr (Types_H.getObjectSize ty us) \<and> ptr \<noteq> 0))
+      K (is_aligned ptr (Types_H.getObjectSize ty us) \<and> ptr \<noteq> 0) and
+      K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow>
+           minSchedContextBits \<le> us))
      (RetypeDecls_H.createObject ty ptr us d)
      (zipWithM_x (insertNewCap parent) list caps)"
   apply (clarsimp simp:zipWithM_x_mapM_x)
@@ -5308,7 +5325,8 @@ lemma createNewObjects_def2:
     valid_arch_state' s;
     range_cover ptr sz (Types_H.getObjectSize ty us) (length dslots);
     ptr \<noteq> 0;
-    ksCurDomain s \<le> maxDomain\<rbrakk>
+    ksCurDomain s \<le> maxDomain;
+    ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow> minSchedContextBits \<le> us\<rbrakk>
    \<Longrightarrow> createNewObjects ty parent dslots ptr us d s =
        insertNewCaps ty parent dslots ptr us d s"
   apply (clarsimp simp:insertNewCaps_def createNewObjects_def neq_Nil_conv)
@@ -5330,6 +5348,8 @@ lemma createNewObjects_def2:
     {ptr..ptr +  (1 + of_nat (length ys)) * 2 ^ (Types_H.getObjectSize ty us) - 1} s"
   assume range_cover: "range_cover ptr sz (Types_H.getObjectSize ty us) (Suc (length ys))"
   assume unt_at: "cte_wp_at' (\<lambda>c. isUntypedCap (cteCap c)) parent s"
+  assume min_sched_bits: "ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow>
+                            minSchedContextBits \<le> us"
   show "zipWithM_x
         (\<lambda>num slot.
             RetypeDecls_H.createObject ty ((num << Types_H.getObjectSize ty us) + ptr) us d >>=
@@ -5406,8 +5426,9 @@ lemma createNewObjects_def2:
          apply (rule is_aligned_shiftl_self)
          apply (simp add:range_cover_def)
            apply (simp add:range_cover_def)
-          apply (clarsimp simp:field_simps shiftl_t2n)
-         apply (clarsimp simp:createNewCaps_def)
+          apply (clarsimp simp: field_simps shiftl_t2n)
+         apply (clarsimp simp: min_sched_bits)
+        apply (clarsimp simp: createNewCaps_def)
         apply (wp createNewCaps_not_nc createNewCaps_pspace_no_overlap'[where sz = sz]
                   createNewCaps_cte_wp_at'[where sz = sz] hoare_vcg_ball_lift
                   createNewCaps_valid_pspace[where sz = sz]
@@ -5436,7 +5457,8 @@ assumes check: "distinct dslots"
   \<and> caps_no_overlap'' ptr sz s
   \<and> caps_overlap_reserved'
    {ptr..ptr + of_nat (length dslots) * 2^ (Types_H.getObjectSize ty us) - 1} s
-  \<and> valid_pspace' s \<and> valid_arch_state' s \<and> ksCurDomain s \<le> maxDomain)"
+  \<and> valid_pspace' s \<and> valid_arch_state' s \<and> ksCurDomain s \<le> maxDomain
+  \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow> minSchedContextBits \<le> us))"
 shows "corres r P P' f (createNewObjects ty parent dslots ptr us d)"
   using check cover not_0
   apply (clarsimp simp:corres_underlying_def)
@@ -5462,7 +5484,10 @@ lemma createNewObjects_wp_helper:
   and valid_pspace'
   and valid_arch_state'
   and caps_overlap_reserved'
-   {ptr..ptr + of_nat (length dslots) * 2^ (Types_H.getObjectSize ty us) - 1} and (\<lambda>s. ksCurDomain s \<le> maxDomain))
+   {ptr..ptr + of_nat (length dslots) * 2^ (Types_H.getObjectSize ty us) - 1}
+  and (\<lambda>s. ksCurDomain s \<le> maxDomain)
+  and K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow>
+           minSchedContextBits \<le> us))
   \<rbrace> (createNewObjects ty parent dslots ptr us d) \<lbrace>Q\<rbrace>"
   using assms
   apply (clarsimp simp:valid_def)
