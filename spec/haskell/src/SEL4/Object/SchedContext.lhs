@@ -218,7 +218,8 @@ This module uses the C preprocessor to select a target architecture.
 >                    scRefillCount = 1 }
 >     setSchedContext scPtr sc'
 >     assert (minBudget < budget) "budget must be greater than the minimum"
->     setRefillHd scPtr (Refill { rTime = curTime,
+>     let headTime = (if period == budget then 0 else curTime)
+>     setRefillHd scPtr (Refill { rTime = headTime,
 >                                 rAmount = budget })
 
 > refillReady :: PPtr SchedContext -> Kernel Bool
@@ -238,15 +239,20 @@ This module uses the C preprocessor to select a target architecture.
 >                  scRefillMax = newMaxRefills,
 >                  scRefillHead = 0,
 >                  scRefillCount = 1 }
->     whenM (refillReady scPtr) $ do
->       curTime <- getCurTime
->       updateRefillHd scPtr $ \r -> r { rTime = curTime }
+>     if (newPeriod == 0)
+>       then
+>         updateRefillHd scPtr $ \r -> r { rTime = 0 }
+>       else
+>         whenM (refillReady scPtr) $ do
+>           curTime <- getCurTime
+>           updateRefillHd scPtr $ \r -> r { rTime = curTime }
 >     head <- mapScPtr scPtr refillHd
 >     if (rAmount head >= newBudget)
 >       then updateRefillHd scPtr $ \r -> r { rAmount = newBudget }
 >       else do
 >         let unused = newBudget - rAmount head
->         let new = Refill { rTime = rTime head + newPeriod - unused,
+>         let truePeriod = (if newPeriod == 0 then newBudget else newPeriod)
+>         let new = Refill { rTime = rTime head + truePeriod - unused,
 >                            rAmount = unused }
 >         scheduleUsed scPtr new
 
@@ -339,13 +345,15 @@ This module uses the C preprocessor to select a target architecture.
 >             let new = Refill { rTime = rTime head + rAmount head,
 >                                rAmount = usage' }
 >             refillAddTail scPtr new
->           else updateRefillTl scPtr $ \r -> r { rTime = rTime head + rAmount head,
->                                                 rAmount = rAmount r + usage' }
+>           else do
+>             assert (refillCount == 2) "refillCount should be 2 here"
+>             updateRefillTl scPtr $ \r -> r { rTime = rTime r - usage',
+>                                              rAmount = rAmount r + usage' }
 >       else do
 >         updateScPtr scPtr $ \sc -> sc { scRefillCount = 1 }
 >         budget <- mapScPtr scPtr scBudget
 >         curTime <- getCurTime
->         setRefillHd scPtr $ Refill { rTime = curTime,
+>         setRefillHd scPtr $ Refill { rTime = 0,
 >                                      rAmount = budget }
 
 > refillUnblockCheckMergable :: PPtr SchedContext -> Kernel Bool
@@ -362,15 +370,9 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillUnblockCheck :: PPtr SchedContext -> Kernel ()
 > refillUnblockCheck scPtr = do
->     ifM (isRoundRobin scPtr)
->       (do
->         curTime <- getCurTime
->         updateRefillHd scPtr $ \head -> head { rTime = curTime + kernelWCETTicks }
->         refillCount <- mapScPtr scPtr scRefillCount
->         when (refillCount > 1) $ do
->           head <- mapScPtr scPtr refillHd
->           updateRefillTl scPtr $ \tail -> tail { rTime = rTime head + rAmount head })
->       (whenM (refillReady scPtr) $ do
+>       roundRobin <- isRoundRobin scPtr
+>       ready <- refillReady scPtr
+>       when (roundRobin && ready) $ do
 >         setReprogramTimer True
 >         curTime <- getCurTime
 >         updateRefillHd scPtr $ \head -> head { rTime = curTime + kernelWCETTicks }
@@ -379,7 +381,7 @@ This module uses the C preprocessor to select a target architecture.
 >           refillPopHead scPtr
 >           curTime <- getCurTime
 >           updateRefillHd scPtr $ \head -> head { rTime = curTime + kernelWCETTicks,
->                                                  rAmount = rAmount head + amount })
+>                                                  rAmount = rAmount head + amount }
 
 > schedContextUpdateConsumed :: PPtr SchedContext -> Kernel Time
 > schedContextUpdateConsumed scPtr = do
@@ -598,6 +600,9 @@ This module uses the C preprocessor to select a target architecture.
 >         if scRefillMax sc > 0 && scTCB sc /= Nothing && runnable
 >             then refillUpdate scPtr period budget mRefills
 >             else refillNew scPtr mRefills budget period
+
+>		  period <- return (if period == budget then 0 else period)
+>		  mRefills <- return (if period == budget then 2 else mRefills)
 
 >         sc <- getSchedContext scPtr
 >         when (scTCB sc /= Nothing && scRefillMax sc > 0) $ do
