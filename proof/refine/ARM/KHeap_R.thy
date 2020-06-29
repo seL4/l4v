@@ -255,6 +255,64 @@ lemma tcb_at'_obj_at'_set_obj'[unfolded injectKO_tcb]:
                         same_size_obj_at'_set_obj'_iff[where 'a=tcb, simplified])
   done
 
+lemma same_size_ko_wp_at'_set_ko'_iff:
+  assumes "ko_wp_at' (\<lambda>old_ko. objBitsKO old_ko = objBitsKO ko) ptr s"
+  shows "ko_wp_at' P ptr (set_ko' ptr ko s) = P ko"
+  apply (rule iffI)
+   apply (clarsimp simp: ko_wp_at'_def)
+  using assms
+  apply (clarsimp simp: ko_wp_at'_def)
+  apply (erule ps_clear_domE)
+  apply clarsimp
+  apply blast
+  done
+
+\<comment>\<open>
+  Moves the @{term ksPSpace_update} to the top.
+\<close>
+lemma unfold_set_ko':
+  "set_ko' ptr ko s = ksPSpace_update (\<lambda>ps. ps(ptr := Some ko)) s"
+  by clarsimp
+
+lemma ko_wp_at'_set_ko'_distinct:
+  assumes "ptr \<noteq> ptr'"
+          "ko_wp_at' \<top> ptr' s"
+  shows "ko_wp_at' P ptr (set_ko' ptr' ko s) = ko_wp_at' P ptr s"
+  using assms
+  apply (clarsimp simp: ko_wp_at'_def)
+  apply (rule iffI; clarsimp)
+   apply (erule ps_clear_domE)
+   apply clarsimp
+   apply blast
+  apply (erule ps_clear_domE)
+  apply clarsimp
+  apply blast
+  done
+
+lemma non_sc_same_typ_at'_objBits_always_the_same:
+  assumes "typ_at' t ptr s"
+          "koTypeOf ko = t"
+          "t \<noteq> SchedContextT"
+  shows "ko_wp_at' (\<lambda>old_ko. objBitsKO old_ko = objBitsKO ko) ptr s"
+  using assms
+  apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
+  apply (rule koType_objBitsKO)
+  apply simp+
+  done
+
+lemmas non_sc_same_typ_at'_ko_wp_at'_set_ko'_iff =
+  same_size_ko_wp_at'_set_ko'_iff[OF non_sc_same_typ_at'_objBits_always_the_same]
+
+(* Worth adding other typ_at's? *)
+lemma typ_at'_ksPSpace_exI:
+  "pde_at' ptr s \<Longrightarrow> \<exists>pde. ksPSpace s ptr = Some (KOArch (KOPDE pde))"
+  "pte_at' ptr s \<Longrightarrow> \<exists>pte. ksPSpace s ptr = Some (KOArch (KOPTE pte))"
+  apply -
+  apply (clarsimp simp: typ_at'_def ko_wp_at'_def,
+         (case_tac ko; clarsimp),
+         (rename_tac arch, case_tac arch; clarsimp)?)+
+  done
+
 \<comment>\<open>
   Used to show a stronger variant of @{thm obj_at_setObject2}
   for many concrete types.

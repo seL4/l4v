@@ -3219,27 +3219,31 @@ lemma storePDE_setCTE_commute:
    apply (rule monad_commute_split)
      apply (subst modify_specify)
      apply (rule modify_obj_commute')
+    apply (subst modify_specify)
     apply (rule commute_commute[OF locateCTE_commute])
-         apply (wp locateCTE_cte_no_fail non_fail_modify
-                   modify_pde_pspace_distinct'
-                   modify_pde_pspace_aligned'| subst modify_specify)+
-     apply (clarsimp simp:simpler_modify_def valid_def typ_at'_def)
-     apply (clarsimp simp:ko_wp_at'_def dest!: koTypeOf_pde)
-     apply (intro conjI impI)
-        apply (clarsimp simp:objBits_simps archObjSize_def)+
-      apply (simp add:ps_clear_def in_dom_eq)
-     apply (simp add:ps_clear_def in_dom_eq)
-    apply (clarsimp simp:simpler_modify_def valid_def)
-    apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-    apply (case_tac ko,simp_all add:koTypeOf_def )[1]
-    apply (rename_tac arch_kernel_object)
-    apply (case_tac arch_kernel_object,simp_all add:archTypeOf_def)[1]
-    apply (erule(2) cte_wp_at_modify_pde)
+         apply (rule non_fail_modify)
+        apply (rule locateCTE_cte_no_fail)
+       apply (rule modify_pde_pspace_distinct')
+      apply (rule modify_pde_pspace_aligned')
+     apply (wpsimp wp: modify_wp)
+     apply (case_tac "dest = ptr"; clarsimp?)
+      apply (subst non_sc_same_typ_at'_ko_wp_at'_set_ko'_iff[unfolded unfold_set_ko',
+                                                             unfolded fun_upd_def];
+             force?)
+      apply (clarsimp simp: ko_wp_at'_def typ_at'_def)
+      apply (erule_tac P=Q in rsubst)
+      apply (rule koType_objBitsKO; simp)
+     apply (subst ko_wp_at'_set_ko'_distinct[simplified unfold_set_ko',
+                                                   unfolded fun_upd_def];
+            clarsimp simp: ko_wp_at'_def typ_at'_def)
+    apply (clarsimp simp: simpler_modify_def valid_def)
+    apply (frule typ_at'_ksPSpace_exI, clarsimp)
+    apply (rule cte_wp_at_modify_pde[unfolded unfold_set_ko']; simp)
    apply wp
    apply (thin_tac "cte_wp_at' P src s" for P s)+
    apply (clarsimp simp: typ_at'_def cte_wp_at_obj_cases_mask obj_at'_real_def)
    apply (wp locateCTE_ret_neq locateCTE_ko_wp_at')
-  apply (clarsimp simp:ko_wp_at'_def objBits_simps archObjSize_def typ_at'_def)
+  apply (clarsimp simp: ko_wp_at'_def objBits_simps archObjSize_def typ_at'_def)
   apply fastforce
   done
 
