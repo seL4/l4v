@@ -186,7 +186,14 @@ val debug_step_tac = ProveSimplToGraphGoals.debug_step_tac
 
 schematic_goal "PROP ?P"
   apply (tactic \<open>resolve_tac @{context} [init_thm] 1\<close>)
+  (* FIXME: this is debbuging code only, but the following execption still points at a problem
+            in the tactic code, not just to a broken proof.
+
+  exception THEORY raised (line 971 of "thm.ML"):
+  solve_constraints: bad theories for theorem
+
   apply (all \<open>(solves \<open>tactic \<open>HEADGOAL (debug_tac @{context})\<close>\<close>)?\<close>)
+  *)
   oops
 
 end
