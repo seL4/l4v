@@ -1289,7 +1289,7 @@ lemma rfk_ksQ[wp]:
   done
 
 lemma hinv_invs'[wp]:
-  "\<lbrace>invs' and ct_active' and
+  "\<lbrace>invs' and ct_isSchedulable and
           (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
           (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
      handleInvocation calling blocking can_donate first_phase cptr
@@ -1340,7 +1340,7 @@ lemma hs_corres:
   by (simp add: handle_send_def handleSend_def hinv_corres) *)
 
 lemma hs_invs'[wp]:
-  "\<lbrace>invs' and ct_active' and
+  "\<lbrace>invs' and ct_isSchedulable and
     (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
     (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
    handleSend blocking \<lbrace>\<lambda>r. invs'\<rbrace>"
@@ -1608,7 +1608,7 @@ lemma hc_corres:
 lemma hc_invs'[wp]:
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
       (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
-      ct_active'\<rbrace>
+      ct_isSchedulable\<rbrace>
    handleCall
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding handleCall_def getCapReg_def by wpsimp

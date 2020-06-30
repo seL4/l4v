@@ -2652,6 +2652,11 @@ definition
 where
   "isScActive scPtr s' \<equiv> pred_map (\<lambda>sc. 0 < scRefillMax sc) (scs_of' s') scPtr"
 
+abbreviation
+  "ct_isSchedulable \<equiv> ct_active'
+                       and (\<lambda>s. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s) (ksCurThread s))
+                       and (\<lambda>s. pred_map (\<lambda>scPtr. isScActive scPtr s) (tcb_scs_of' s) (ksCurThread s))"
+
 definition
   isSchedulable_bool :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
@@ -2677,8 +2682,20 @@ lemma isSchedulable_sp:
   "\<lbrace>P\<rbrace> isSchedulable tcbPtr \<lbrace>\<lambda>rv. (\<lambda>s. rv = isSchedulable_bool tcbPtr s) and P\<rbrace>"
   by (wpsimp wp: isSchedulable_wp)
 
-lemma threadSet_isSchedulable_bool:
+lemma threadSet_isSchedulable_bool_nochange:
   "\<lbrace>\<lambda>s. runnable' st \<and> isSchedulable_bool t s\<rbrace>
+   threadSet (tcbState_update (\<lambda>_. st)) t
+   \<lbrace>\<lambda>_. isSchedulable_bool t\<rbrace>"
+  unfolding isSchedulable_bool_def threadSet_def
+  apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
+  apply (wpsimp wp: setObject_tcb_wp simp: pred_map_def obj_at'_def opt_map_def projectKOs)
+  apply (fastforce simp: pred_map_def tcb_of'_def projectKOs isScActive_def)
+  done
+
+lemma threadSet_isSchedulable_bool:
+  "\<lbrace>\<lambda>s. runnable' st
+      \<and> pred_map (\<lambda>tcb. \<not>(tcbInReleaseQueue tcb)) (tcbs_of' s) t
+      \<and> pred_map (\<lambda>scPtr. isScActive scPtr s) (tcb_scs_of' s) t\<rbrace>
    threadSet (tcbState_update (\<lambda>_. st)) t
    \<lbrace>\<lambda>_. isSchedulable_bool t\<rbrace>"
   unfolding isSchedulable_bool_def threadSet_def
@@ -3630,12 +3647,12 @@ lemma sts_ksQ':
    \<lbrace>\<lambda>_ s. P (ksReadyQueues s p)\<rbrace>"
   apply (simp add: setThreadState_def scheduleTCB_def getCurThread_def getSchedulerAction_def)
   apply (rule hoare_pre_disj')
-   apply (rule hoare_seq_ext_skip, wpsimp wp: threadSet_isSchedulable_bool)
+   apply (rule hoare_seq_ext_skip, wpsimp wp: threadSet_isSchedulable_bool_nochange)
    apply (intro hoare_seq_ext[OF _ gets_sp]
                 hoare_seq_ext[OF _ isSchedulable_sp])
    apply (rule hoare_when_cases; (solves \<open>wpsimp\<close>)?)
    apply (fastforce simp: pred_conj_def valid_def)
-  apply (rule hoare_seq_ext_skip, wpsimp wp: threadSet_isSchedulable_bool)
+  apply (rule hoare_seq_ext_skip, wpsimp wp: threadSet_isSchedulable_bool_nochange)
   apply (intro hoare_seq_ext[OF _ gets_sp]
                hoare_seq_ext[OF _ isSchedulable_sp])
   apply (rule hoare_when_cases; (solves \<open>wpsimp\<close>)?)
