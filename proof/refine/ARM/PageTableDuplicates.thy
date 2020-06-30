@@ -1206,11 +1206,13 @@ crunch arch_inv[wp]: createNewObjects "\<lambda>s. P (armKSGlobalPD (ksArchState
 
 
 lemma createNewObjects_valid_duplicates'[wp]:
- "\<lbrace> (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_no_overlap' ptr sz
-  and pspace_aligned' and pspace_distinct' and (\<lambda>s. is_aligned (armKSGlobalPD (ksArchState s)) pdBits)
-  and K (range_cover ptr sz (Types_H.getObjectSize ty us) (length dest) \<and>
-      ptr \<noteq> 0 \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> us < 28) ) \<rbrace>
-       createNewObjects ty src dest ptr us d
+ "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_no_overlap' ptr sz and pspace_aligned'
+    and pspace_distinct' and (\<lambda>s. is_aligned (armKSGlobalPD (ksArchState s)) pdBits)
+    and K (range_cover ptr sz (Types_H.getObjectSize ty us) (length dest))
+    and K (ptr \<noteq> 0)
+    and K (ty = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> us < 28)
+    and K (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow> sc_size_bounds us)\<rbrace>
+  createNewObjects ty src dest ptr us d
   \<lbrace>\<lambda>reply s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   proof (induct rule:rev_induct )
     case Nil
@@ -1219,7 +1221,7 @@ lemma createNewObjects_valid_duplicates'[wp]:
    next
    case (snoc dest dests)
    show ?case
-     apply (rule hoare_gen_asm)
+     apply (rule hoare_gen_asm)+
      apply clarsimp
      apply (frule range_cover.weak)
      apply (subst createNewObjects_Cons)
