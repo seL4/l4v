@@ -753,10 +753,10 @@ where
 
 text \<open> The Scheduling Control invocation configures the budget of a scheduling context. \<close>
 definition
-  invoke_sched_control_configure :: "sched_control_invocation \<Rightarrow> (unit, 'z::state_ext) se_monad"
+  invoke_sched_control_configure :: "sched_control_invocation \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "invoke_sched_control_configure iv \<equiv>
-  case iv of InvokeSchedControlConfigure sc_ptr budget period mrefills badge \<Rightarrow> liftE $ do
+  case iv of InvokeSchedControlConfigure sc_ptr budget period mrefills badge \<Rightarrow> do
     sc \<leftarrow> get_sched_context sc_ptr;
     set_sc_obj_ref sc_badge_update sc_ptr badge;
 
