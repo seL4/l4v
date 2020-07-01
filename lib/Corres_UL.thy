@@ -1174,6 +1174,42 @@ lemma corres_gets_trivial:
   unfolding corres_underlying_def gets_def get_def return_def bind_def
   by clarsimp
 
+(* When we are ignoring failure on the concrete side, fail does refine fail *)
+lemma corres_underlying_fail_fail:
+  "corres_underlying rf_sr nf False r \<top> \<top> fail fail"
+  by (simp add: corres_underlying_def fail_def)
+
+(* assert refinement when concrete failure is ignored *)
+lemma corres_underlying_assert_assert:
+  "Q' = Q \<Longrightarrow> corres_underlying rf_sr nf False dc \<top> \<top> (assert Q) (assert Q')"
+  by (simp add: assert_def corres_underlying_fail_fail)
+
+(* stateAssert refinement when concrete failure is ignored *)
+lemma corres_underlying_stateAssert_stateAssert:
+  assumes "\<And>s s'. \<lbrakk> (s,s') \<in> rf_sr; P s; P' s' \<rbrakk> \<Longrightarrow> Q' s' = Q s"
+  shows "corres_underlying rf_sr nf False dc P P' (stateAssert Q []) (stateAssert Q' [])"
+  by (auto simp: stateAssert_def get_def NonDetMonad.bind_def corres_underlying_def
+                 assert_def return_def fail_def assms)
+
+(* We can ignore a stateAssert in the middle of a computation even if we don't ignore abstract
+   failure if we have separately proved no_fail for the entire computation *)
+lemma corres_stateAssert_no_fail:
+  "\<lbrakk> no_fail P (do v \<leftarrow> g; _ \<leftarrow> stateAssert X []; h v od);
+     corres_underlying S False nf' r P Q (do v \<leftarrow> g; h v od) f \<rbrakk> \<Longrightarrow>
+   corres_underlying S False nf' r P Q (do v \<leftarrow> g; _ \<leftarrow> stateAssert X []; h v od) f"
+  apply (simp add: corres_underlying_def stateAssert_def get_def assert_def return_def no_fail_def fail_def cong: if_cong)
+  apply (clarsimp simp: split_def NonDetMonad.bind_def split: if_splits)
+  apply (erule allE, erule (1) impE)
+  apply (drule (1) bspec, clarsimp)+
+  done
+
+(* We can switch to the corres framework that is allowed to assume non-failure of the abstract
+   side when we have already proved that the abstract side doesn't fail *)
+lemma corres_no_fail_nf:
+  "\<lbrakk> no_fail P f; corres_underlying S True nf' r P Q f g \<rbrakk> \<Longrightarrow>
+   corres_underlying S False nf' r P Q f g"
+  by (simp add: corres_underlying_def no_fail_def)
+
 text \<open>Some setup of specialised methods.\<close>
 
 lemma (in strengthen_implementation) wpfix_strengthen_corres_guard_imp:
