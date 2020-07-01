@@ -109,28 +109,88 @@ lemma corres_no_failI:
   shows "corres_underlying S False nf' R P P' f f'"
   using assms by (simp add: corres_underlying_def no_fail_def)
 
-text \<open>A congruence rule for the correspondence functions.\<close>
+text \<open>Congruence rules for the correspondence functions.\<close>
 
+(* Rewrite everywhere, with full context. Use when there are no schematic variables. *)
 lemma corres_cong:
-  assumes P: "\<And>s. P s = P' s"
-  assumes Q: "\<And>s. Q s = Q' s"
-  assumes f: "\<And>s. P' s \<Longrightarrow> f s = f' s"
-  assumes g: "\<And>s. Q' s \<Longrightarrow> g s = g' s"
-  assumes r: "\<And>x y s t s' t'. \<lbrakk> P' s; Q' t; (x, s') \<in> fst (f' s); (y, t') \<in> fst (g' t) \<rbrakk> \<Longrightarrow> r x y = r' x y"
-  shows      "corres_underlying sr nf nf' r P Q f g = corres_underlying sr nf nf' r' P' Q' f' g'"
-  apply (simp add: corres_underlying_def)
-  apply (rule ball_cong [OF refl])
-  apply (clarsimp simp: P Q)
-  apply (rule imp_cong [OF refl])
-  apply (clarsimp simp: f g)
-  apply (rule imp_cong [OF refl])
-  apply (rule conj_cong)
-   apply (rule ball_cong [OF refl])
-   apply clarsimp
-   apply (rule bex_cong [OF refl])
-   apply (clarsimp simp: r)
-  apply simp
-  done
+  assumes "\<And>s. P s = P' s"
+  assumes "\<And>s s'. \<lbrakk> (s,s') \<in> sr; P' s \<rbrakk> \<Longrightarrow> Q s' = Q' s'"
+  assumes "\<And>s s'. \<lbrakk> (s,s') \<in> sr; P' s; Q' s' \<rbrakk> \<Longrightarrow> f s = f' s"
+  assumes "\<And>s s'. \<lbrakk> (s,s') \<in> sr; P' s; Q' s' \<rbrakk>  \<Longrightarrow> g s' = g' s'"
+  assumes "\<And>x y s t s' t'. \<lbrakk> P' s; Q' t; (s', t') \<in> sr;
+                             (x, s') \<in> fst (f' s); (y, t') \<in> fst (g' t) \<rbrakk> \<Longrightarrow> r x y = r' x y"
+  shows   "corres_underlying sr nf nf' r P Q f g = corres_underlying sr nf nf' r' P' Q' f' g'"
+  by (force simp: corres_underlying_def assms split_def)
+
+(* Do not rewrite return relation or guards, but do rewrite monads under guard context.
+   This should be the default, because it protects potential schematics in return relation
+   and guards. *)
+lemmas corres_weak_cong = corres_cong[OF refl refl _ _ refl]
+
+(* Even more restrictive: only rewrite monads, no additional context. Occasionally useful *)
+lemma corres_weaker_cong:
+  assumes "f = f'"
+  assumes "g = g'"
+  shows   "corres_underlying sr nf nf' r P Q f g = corres_underlying sr nf nf' r P Q f' g'"
+  by (simp add: assms cong: corres_cong)
+
+(* Rewrite only the return relation, with context. Occasionally useful: *)
+lemmas corres_rel_cong = corres_cong[OF refl refl refl refl]
+
+(* Rewrite only the guards, with the state relation as context. Use when guards are not schematic. *)
+lemmas corres_guard_cong = corres_cong[OF _ _ refl refl refl]
+
+bundle corres_default_cong = corres_weak_cong[cong]
+bundle corres_cong = corres_cong[cong]
+bundle corres_no_cong = corres_cong[cong del]
+
+(* How to use these: *)
+experiment
+begin
+
+lemma
+  assumes cross_rule: "\<And>s s'. \<lbrakk> (s,s') \<in> sr; Q s \<rbrakk> \<Longrightarrow> Q' s'"
+  shows "corres_underlying sr nf nf' r (K P and Q) (Q' and K P) (assert P) (do get; assert P od)"
+  including corres_no_cong (* current default *)
+  apply simp (* simplifies K, but nothing else *)
+  including corres_cong
+  apply simp (* turns asserts into returns, simplifies pred_and, removes P from rhs guard *)
+  apply (simp add: cross_rule) (* turns concrete guard into True *)
+  oops
+
+schematic_goal
+  "\<And>x y z. \<lbrakk> x = Suc z; y = 0 \<rbrakk> \<Longrightarrow>
+   corres_underlying sr nf nf' (?r x y) (\<lambda>s. P z) (?Q x y) (assert (P z)) g"
+  including corres_default_cong
+  apply simp (* Turns assert into return, but does not touch schematics *)
+  including corres_no_cong
+  apply simp (* substitutes into schematic params, messy *)
+  oops
+
+(* Mixing schematic guards with non-schematic guards only works if the non-schematic guard
+   is in the right form already. It explicitly does not get rewritten by the cong rule: *)
+schematic_goal
+  "\<And>x y z. \<lbrakk> x = Suc z; y = 0 \<rbrakk> \<Longrightarrow>
+   corres_underlying sr nf nf' (?r x y) (K P) (?Q x y) (assert P) (do assert P; g od)"
+  including corres_default_cong
+  apply simp (* Only rewrite K_bind, because (K P) does not get rewritten
+                before it can be applied to (assert P) *)
+  (* You can make specific variants on the fly. Replace all bits that should not be rewritten
+     with refl like this: *)
+  apply (simp cong: corres_cong[OF _ refl _ _ refl]) (* Does not touch concrete guard and
+                                                        return relation, rewrites the rest *)
+  (* Note that the last refl (for return relation) is important -- without it the rule does
+     nothing, probably because it would instantiate something *)
+  oops
+
+(* Mixing schematics within one guard will ignore that guard for rewriting: *)
+schematic_goal
+  "corres_underlying sr nf nf' (?r x y) (\<lambda>s. P \<and> ?P') (?Q x y) (assert P) g"
+  including corres_default_cong
+  apply simp (* Does nothing visible, because ?P' might get instantiated if used as a rewrite rule *)
+  oops
+
+end
 
 text \<open>The guard weakening rule\<close>
 
@@ -1008,11 +1068,6 @@ lemma corres_move_asm:
   by (fastforce simp: corres_underlying_def)
 
 lemmas corres_cross_over_guard = corres_move_asm[rotated]
-
-lemma corres_weak_cong:
-  "\<lbrakk>\<And>s. P s \<Longrightarrow> f s = f' s; \<And>s. Q s \<Longrightarrow> g s = g' s\<rbrakk>
-  \<Longrightarrow> corres_underlying sr nf nf' r P Q f g = corres_underlying sr nf nf' r P Q f' g'"
-  by (simp cong: corres_cong)
 
 lemma corres_either_alternate:
   "\<lbrakk> corres_underlying sr nf nf' r P Pa' a c; corres_underlying sr nf nf' r P Pb' b c \<rbrakk>
