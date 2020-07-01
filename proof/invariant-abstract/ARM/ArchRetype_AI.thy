@@ -38,6 +38,8 @@ lemma no_gs_types_simps [simp, Retype_AI_assms]:
   "TCBObject \<in> no_gs_types"
   "EndpointObject \<in> no_gs_types"
   "NotificationObject \<in> no_gs_types"
+  "ReplyObject \<in> no_gs_types"
+  "SchedContextObject \<in> no_gs_types"
   "ArchObject PageTableObj \<in> no_gs_types"
   "ArchObject PageDirectoryObj \<in> no_gs_types"
   "ArchObject ASIDPoolObj \<in> no_gs_types"
