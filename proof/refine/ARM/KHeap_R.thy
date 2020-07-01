@@ -1146,16 +1146,6 @@ lemma setObject_tcb_obj_at'_strongest:
                         ps_clear_upd')
   done
 
-definition exst_same :: "Structures_H.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"  (* FIXME RT: probably needs updating *)
-where
-  "exst_same tcb tcb' \<equiv> tcbPriority tcb = tcbPriority tcb'
-                      \<and> tcbDomain tcb = tcbDomain tcb'"
-
-fun exst_same' :: "Structures_H.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
-where
-  "exst_same' (KOTCB tcb) (KOTCB tcb') = exst_same tcb tcb'" |
-  "exst_same' _ _ = True"
-
 lemma replyNexts_of_non_reply_update:
   "\<And>s'. \<lbrakk>typ_at' (koTypeOf ko) ptr s';
    koTypeOf ko \<noteq> ReplyT \<rbrakk>
@@ -1185,7 +1175,6 @@ lemma set_other_obj_corres:
                \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO ob')) = map_to_ctes (ksPSpace s)"
   assumes t: "is_other_obj_relation_type (a_type ob)"
   assumes b: "\<And>ko. P ko \<Longrightarrow> objBits ko = objBits ob'"
-  assumes e: "\<And>ko. P ko \<Longrightarrow> exst_same' (injectKO ko) (injectKO ob')"
   assumes P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
   shows      "other_obj_relation ob (injectKO (ob' :: 'a :: pspace_storable)) \<Longrightarrow>
   corres dc (obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr)
@@ -1292,8 +1281,6 @@ lemma set_reply_corres: (* for reply update that doesn't touch the reply stack *
     by (clarsimp simp: obj_at_simps)
   have b: "\<And>ko. (\<lambda>_ :: reply. True) ko \<Longrightarrow> objBits ko = objBits ae'"
     by (clarsimp simp: obj_at_simps)
-  have e: "\<And>ko. (\<lambda>_ :: reply. True) ko \<Longrightarrow> exst_same' (injectKO ko) (injectKO ae')"
-    by (clarsimp simp: obj_at_simps)
   have P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
     by (clarsimp simp: obj_at_simps objBits_defs pteBits_def pdeBits_def scBits_pos_power2
                 split: kernel_object.splits arch_kernel_object.splits)
@@ -1366,8 +1353,6 @@ lemma update_sc_no_reply_stack_update_corres:
   have x: "updateObject ae' = updateObject_default ae'" by clarsimp
   have z: "\<And>s. sc_at' ptr s
                \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO ae')) = map_to_ctes (ksPSpace s)"
-    by (clarsimp simp: obj_at_simps)
-  have e: "\<And>ko. (\<lambda>_ :: sched_context. True) ko \<Longrightarrow> exst_same' (injectKO ko) (injectKO ae')"
     by (clarsimp simp: obj_at_simps)
   have P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
     by (clarsimp simp: obj_at_simps objBits_defs pteBits_def pdeBits_def scBits_pos_power2

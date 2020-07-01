@@ -650,8 +650,7 @@ lemma smcp_corres: "corres dc (tcb_at t) (tcb_at' t)
   apply (rule corres_guard_imp)
     apply (clarsimp simp: setMCPriority_def set_mcpriority_def)
     apply (rule threadset_corresT)
-       by (clarsimp simp: tcb_relation_def tcb_cap_cases_tcb_mcpriority
-                          tcb_cte_cases_def exst_same_def)+
+       by (clarsimp simp: tcb_relation_def tcb_cap_cases_tcb_mcpriority tcb_cte_cases_def)+
 
 definition
  "out_rel fn fn' v v' \<equiv>
@@ -663,7 +662,6 @@ definition
 lemma out_corresT:
   assumes x: "\<And>tcb v. \<forall>(getF, setF)\<in>ran tcb_cap_cases. getF (fn v tcb) = getF tcb"
   assumes y: "\<And>v. \<forall>tcb. \<forall>(getF, setF)\<in>ran tcb_cte_cases. getF (fn' v tcb) = getF tcb"
-  assumes e: "\<And>tcb v. exst_same tcb (fn' v tcb)"
   shows
   "out_rel fn fn' v v' \<Longrightarrow>
      corres dc (tcb_at t)
@@ -672,8 +670,7 @@ lemma out_corresT:
        (case_option (return ()) (\<lambda>x. threadSet (fn' x) t) v')"
   apply (case_tac v, simp_all add: out_rel_def
                        option_update_thread_def)
-  apply clarsimp
-  apply (clarsimp simp add: threadset_corresT [OF _ x y e])
+  apply (clarsimp simp add: threadset_corresT [OF _ x y])
   done
 
 lemmas out_corres = out_corresT [OF _ all_tcbI, OF ball_tcb_cap_casesI ball_tcb_cte_casesI]

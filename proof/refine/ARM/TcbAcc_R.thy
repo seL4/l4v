@@ -276,14 +276,13 @@ lemma tcb_update_corres':
   assumes tables: "\<forall>(getF, v) \<in> ran tcb_cap_cases. getF tcbu = getF tcb"
   assumes tables': "\<forall>(getF, v) \<in> ran tcb_cte_cases. getF tcbu' = getF tcb'"
   assumes r: "r () ()"
-  assumes exst: "exst_same tcb' tcbu'"
   shows "corres r (ko_at (TCB tcb) add)
                   (ko_at' tcb' add)
                   (set_object add (TCB tcbu)) (setObject add tcbu')"
-  apply (rule_tac F="tcb_relation tcb tcb' \<and> exst_same tcb' tcbu'" in corres_req)
+  apply (rule_tac F="tcb_relation tcb tcb'" in corres_req)
    apply (clarsimp simp: state_relation_def obj_at_def obj_at'_def)
    apply (frule(1) pspace_relation_absD)
-   apply (clarsimp simp: projectKOs other_obj_relation_def exst)
+   apply (clarsimp simp: projectKOs other_obj_relation_def)
   apply (rule corres_guard_imp)
     apply (rule corres_rel_imp)
      apply (rule set_other_obj_corres[where P="(=) tcb'"])
@@ -307,13 +306,12 @@ lemma tcb_update_corres:
   "\<lbrakk> tcb_relation tcb tcb' \<Longrightarrow> tcb_relation tcbu tcbu';
      \<forall>(getF, v) \<in> ran tcb_cap_cases. getF tcbu = getF tcb;
      \<forall>(getF, v) \<in> ran tcb_cte_cases. getF tcbu' = getF tcb';
-     r () (); exst_same tcb' tcbu'\<rbrakk>
+     r () ()\<rbrakk>
    \<Longrightarrow> corres r (\<lambda>s. get_tcb add s = Some tcb)
                (\<lambda>s'. (tcb', s') \<in> fst (getObject add s'))
                (set_object add (TCB tcbu)) (setObject add tcbu')"
   apply (rule corres_guard_imp)
     apply (erule (3) tcb_update_corres', force)
-   apply fastforce
   apply (clarsimp simp: getObject_def in_monad split_def obj_at'_def
                         loadObject_default_def projectKOs objBits_simps'
                         in_magnitude_check)
@@ -362,7 +360,6 @@ lemma threadset_corresT:
   assumes y: "\<And>tcb. \<forall>(getF, setF) \<in> ran tcb_cap_cases. getF (f tcb) = getF tcb"
   assumes z: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases.
                  getF (f' tcb) = getF tcb"
-  assumes e: "\<And>tcb'. exst_same tcb' (f' tcb')"
   shows      "corres dc (tcb_at t)
                         (tcb_at' t)
                     (thread_set f t) (threadSet f' t)"
@@ -370,12 +367,11 @@ lemma threadset_corresT:
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ assert_get_tcb_corres])
       apply (rule tcb_update_corres')
-          apply (erule x)
-         apply (rule y)
-        apply (clarsimp simp: bspec_split [OF spec [OF z]])
-        apply fastforce
-       apply simp
-      apply (rule e)
+         apply (erule x)
+        apply (rule y)
+       apply (clarsimp simp: bspec_split [OF spec [OF z]])
+       apply fastforce
+      apply simp
      apply wp+
    apply (clarsimp simp add: tcb_at_def obj_at_def)
    apply (drule get_tcb_SomeD)
@@ -403,7 +399,6 @@ lemma threadSet_corres_noopT:
                          tcb_relation tcb (fn tcb')"
   assumes y: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases.
                  getF (fn tcb) = getF tcb"
-  assumes e: "\<And>tcb'. exst_same tcb' (fn tcb')"
   shows      "corres dc \<top> (tcb_at' t)
                            (return v) (threadSet fn t)"
 proof -
@@ -422,12 +417,11 @@ proof -
        defer
        apply (subst bind_return [symmetric],
               rule corres_split' [OF threadset_corresT])
-             apply (simp add: x)
-            apply simp
-           apply (rule y)
-          apply (rule e)
-         apply (rule corres_noop [where P=\<top> and P'=\<top>])
-          apply wpsimp+
+            apply (simp add: x)
+           apply simp
+          apply (rule y)
+        apply (rule corres_noop [where P=\<top> and P'=\<top>])
+         apply wpsimp+
       apply (erule pspace_relation_tcb_at[rotated])
       apply clarsimp
      apply simp
@@ -445,16 +439,14 @@ lemma threadSet_corres_noop_splitT:
                  getF (fn tcb) = getF tcb"
   assumes z: "corres r P Q' m m'"
   assumes w: "\<lbrace>P'\<rbrace> threadSet fn t \<lbrace>\<lambda>x. Q'\<rbrace>"
-  assumes e: "\<And>tcb'. exst_same tcb' (fn tcb')"
   shows      "corres r P (tcb_at' t and P')
                            m (threadSet fn t >>= (\<lambda>rv. m'))"
   apply (rule corres_guard_imp)
     apply (subst return_bind[symmetric])
     apply (rule corres_split_nor [OF _ threadSet_corres_noopT])
-         apply (rule z)
-        apply (simp add: x)
-       apply (rule y)
-      apply (rule e)
+        apply (rule z)
+       apply (simp add: x)
+      apply (rule y)
      apply (wp w)+
    apply simp
   apply simp
@@ -1419,7 +1411,7 @@ lemma corres_as_user':
                      (set_object add (TCB (tcb \<lparr> tcb_arch := arch_tcb_context_set con (tcb_arch tcb) \<rparr>)))
                      (setObject add (tcb' \<lparr> tcbArch := atcbContextSet con' (tcbArch tcb') \<rparr>))"
     by (rule tcb_update_corres [OF L2],
-        (simp add: tcb_cte_cases_def tcb_cap_cases_def exst_same_def)+)
+        (simp add: tcb_cte_cases_def tcb_cap_cases_def)+)
   have L4: "\<And>con con'. con = con' \<Longrightarrow>
             corres (\<lambda>(irv, nc) (irv', nc'). r irv irv' \<and> nc = nc')
                    \<top> \<top> (select_f (f con)) (select_f (g con'))"
@@ -1883,7 +1875,7 @@ proof -
             apply (rule corres_split[where r'="(=)"])
                apply (rule corres_split_noop_rhs2)
                    apply (rule corres_split_noop_rhs2)
-                     apply (fastforce intro: threadSet_corres_noop simp: tcb_relation_def exst_same_def)
+                     apply (fastforce intro: threadSet_corres_noop simp: tcb_relation_def)
                     apply (fastforce intro: addToBitmap_corres_noop)
                    apply wp+
                  apply (simp add: tcb_sched_enqueue_def split del: if_split)
@@ -2324,7 +2316,7 @@ lemma tcbSchedDequeue_corres:
           apply (rule corres_split[where r'="(=)"])
              apply (rule corres_split_noop_rhs2)
                 apply (rule corres_split_noop_rhs)
-                  apply (rule threadSet_corres_noop; simp_all add: tcb_relation_def exst_same_def)
+                  apply (rule threadSet_corres_noop; simp_all add: tcb_relation_def)
                  apply (clarsimp, rule removeFromBitmap_corres_noop)
                 apply (rule setQueue_corres | rule getQueue_corres |
                         wp | simp add: tcb_sched_dequeue_def tcb_relation_def)+
@@ -2354,11 +2346,10 @@ lemma setObject_tcbState_update_corres:
           (set_object t (TCB (tcb\<lparr>tcb_state := ts\<rparr>)))
           (setObject t (tcbState_update (\<lambda>_. ts') tcb'))"
   apply (rule tcb_update_corres')
-      apply (simp add: tcb_relation_def)
-     apply (rule ball_tcb_cap_casesI; clarsimp)
-    apply (rule ball_tcb_cte_casesI; clarsimp)
-   apply simp
-  apply (simp add: exst_same_def)
+     apply (simp add: tcb_relation_def)
+    apply (rule ball_tcb_cap_casesI; clarsimp)
+   apply (rule ball_tcb_cte_casesI; clarsimp)
+  apply simp
   done
 
 \<comment>\<open>
@@ -2452,7 +2443,7 @@ lemma sbn_corres:
           (set_tcb_obj_ref tcb_bound_notification_update t ntfn) (setBoundNotification ntfn t)"
   apply (simp add: set_tcb_obj_ref_def setBoundNotification_def)
   apply (subst thread_set_def[simplified, symmetric])
-  apply (rule threadset_corres, simp_all add:tcb_relation_def exst_same_def)
+  apply (rule threadset_corres, simp_all add: tcb_relation_def)
   done
 
 crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
