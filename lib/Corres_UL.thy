@@ -959,7 +959,7 @@ lemma corres_cases':
   by (cases R; simp)
 
 lemma corres_alternate1:
-  "corres_underlying sr nf nf' r P P' a c \<Longrightarrow> corres_underlying sr nf nf' r P P' (a OR b) c"
+  "corres_underlying sr nf nf' r P P' a c \<Longrightarrow> corres_underlying sr nf nf' r P P' (a \<sqinter> b) c"
   apply (simp add: corres_underlying_def alternative_def)
   apply clarsimp
   apply (drule (1) bspec, clarsimp)+
@@ -970,7 +970,7 @@ lemma corres_alternate1:
   done
 
 lemma corres_alternate2:
-  "corres_underlying sr nf nf' r P P' b c \<Longrightarrow> corres_underlying sr nf nf' r P P' (a OR b) c"
+  "corres_underlying sr nf nf' r P P' b c \<Longrightarrow> corres_underlying sr nf nf' r P P' (a \<sqinter> b) c"
   apply (simp add: corres_underlying_def alternative_def)
   apply clarsimp
   apply (drule (1) bspec, clarsimp)+
