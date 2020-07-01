@@ -220,8 +220,12 @@ lemma decode_invocation_corres:
         apply (rule corres_guard_imp)
           apply (rule dec_domain_inv_corres)
            apply (simp+)[4]
-       subgoal (* SchedContextCap *) sorry
-      subgoal (* SchedControlCap *) sorry
+       \<comment> \<open>SchedContextCap\<close>
+       apply (simp add: isCap_defs o_def)
+       apply (rule corres_guard_imp, erule decode_sc_inv_corres; clarsimp simp: valid_cap_def)
+      \<comment> \<open>SchedControlCap\<close>
+      apply (clarsimp simp: isCap_defs o_def)
+      apply (rule corres_guard_imp, rule decode_sc_ctrl_inv_corres; clarsimp)
      \<comment> \<open>IRQControl\<close>
      apply (simp add: isCap_defs o_def)
      apply (rule corres_guard_imp, rule decode_irq_control_corres, simp+)[1]
@@ -443,15 +447,30 @@ lemma pinv_corres:
          apply (rule corres_guard_imp)
            apply (erule tcbinv_corres)
           apply (simp)+
-         \<comment> \<open>domain cap\<close>
+        \<comment> \<open>domain cap\<close>
         apply (clarsimp simp: invoke_domain_def)
         apply (rule corres_guard_imp)
           apply (rule corres_split [OF _ set_domain_setDomain_corres])
             apply (rule corres_trivial, simp)
            apply (wp)+
-         apply (clarsimp+)[2]
-       subgoal (* InvokeSchedContext *) sorry
-      subgoal (* InvokeSchedControl *) sorry
+         apply (clarsimp+)[3]
+       \<comment> \<open>SchedContext\<close>
+       apply (rule corres_guard_imp)
+         apply (rule corres_splitEE)
+            prefer 2
+            apply (simp)
+            apply (erule invoke_sched_context_corres)
+           apply (rule corres_trivial, simp add: returnOk_def)
+          apply (wpsimp+)[4]
+      \<comment> \<open>SchedControl\<close>
+      apply clarsimp
+      apply (rule corres_guard_imp)
+        apply (rule corres_splitEE)
+           prefer 2
+           apply (simp)
+           apply (erule invoke_sched_control_configure_corres)
+          apply (rule corres_trivial, simp add: returnOk_def)
+         apply (wpsimp+)[4]
      \<comment> \<open>CNodes\<close>
      apply clarsimp
      apply (rule corres_guard_imp)
@@ -1837,15 +1856,6 @@ lemma inv_arch_IRQInactive:
   apply (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def)
   apply wp
   done
-
-(* FIXME RT: move to Sched_R *)
-lemma invokeSchedContext_no_ex[wp]:
-  "\<lbrace>\<top>\<rbrace> invokeSchedContext i \<lbrace>\<lambda>_. \<top>\<rbrace>, \<lbrace>P\<rbrace>"
-  unfolding invokeSchedContext_def by wp
-
-lemma invokeSchedControlConfigure_no_ex[wp]:
-  "\<lbrace>\<top>\<rbrace> invokeSchedControlConfigure i \<lbrace>\<lambda>_. \<top>\<rbrace>, \<lbrace>P\<rbrace>"
-  unfolding invokeSchedControlConfigure_def by wp
 
 lemma retype_pi_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> RetypeDecls_H.performInvocation blocking call canDonate v

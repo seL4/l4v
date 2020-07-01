@@ -70,7 +70,7 @@ primrec sc_ctrl_inv_rel ::
   "sc_ctrl_inv_rel (Invocations_A.InvokeSchedControlConfigure sc budget period refills badge) sci' =
     (sci' = InvokeSchedControlConfigure sc budget period refills badge)"
 
-
+(* FIXME RT: preconditions can be reduced, this is what is available at the call site: *)
 lemma decodeSchedContextInvocation_wf:
   "\<lbrace> valid_cap' (SchedContextCap sc n) and invs' and sch_act_simple and ex_nonz_cap_to' sc and
      (\<lambda>s. \<forall>cap\<in>set excaps. \<forall>r\<in>zobj_refs' cap. ex_nonz_cap_to' r s) and
@@ -79,6 +79,7 @@ lemma decodeSchedContextInvocation_wf:
    \<lbrace>valid_sc_inv'\<rbrace>, -"
   sorry
 
+(* FIXME RT: preconditions can be reduced, this is what is available at the call site: *)
 lemma decodeSchedControlInvocation_wf:
   "\<lbrace> invs' and sch_act_simple and
      (\<lambda>s. \<forall>cap\<in>set excaps. \<forall>r\<in>zobj_refs' cap. ex_nonz_cap_to' r s) and
@@ -87,6 +88,49 @@ lemma decodeSchedControlInvocation_wf:
    \<lbrace>valid_sc_ctrl_inv'\<rbrace>, -"
   sorry
 
+lemma decode_sc_inv_corres:
+  "list_all2 cap_relation excaps excaps' \<Longrightarrow>
+   corres (ser \<oplus> sc_inv_rel)
+          (invs and valid_sched and sc_at sc and (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x))
+          (invs' and (\<lambda>s. \<forall>x\<in>set excaps'. valid_cap' x s))
+          (decode_sched_context_invocation (mi_label mi) sc excaps args')
+          (decodeSchedContextInvocation (mi_label mi) sc excaps' args')"
+  sorry
+
+lemma decode_sc_ctrl_inv_corres:
+  "list_all2 cap_relation excaps excaps' \<Longrightarrow>
+   corres (ser \<oplus> sc_ctrl_inv_rel)
+           (invs and valid_sched  and (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x ))
+           (invs' and (\<lambda>s. \<forall>x\<in>set excaps'. valid_cap' x s))
+           (decode_sched_control_invocation (mi_label mi) args' excaps)
+           (decodeSchedControlInvocation (mi_label mi) args' excaps')"
+  sorry
+
+(* FIXME RT: preconditions can be reduced, this is what is available at the call site: *)
+lemma invoke_sched_context_corres:
+  "sc_inv_rel sc_inv sc_inv' \<Longrightarrow>
+   corres (=)
+          (einvs and valid_sched_context_inv sc_inv and simple_sched_action and ct_active)
+          (invs' and sch_act_simple and valid_sc_inv' sc_inv' and ct_active')
+          (invoke_sched_context sc_inv)
+          (invokeSchedContext sc_inv')"
+  apply (simp add: invoke_sched_context_def invokeSchedContext_def)
+  (* most of the next layer down should go into SchedContext_R, because some of these are
+     reused in Finalise and IpcCancel *)
+  sorry
+
+
+(* FIXME RT: preconditions can be reduced, this is what is available at the call site: *)
+lemma invoke_sched_control_configure_corres:
+  "sc_ctrl_inv_rel sc_inv sc_inv' \<Longrightarrow>
+   corres (=)
+          (einvs and valid_sched_control_inv sc_inv and simple_sched_action and ct_active)
+          (invs' and sch_act_simple and valid_sc_ctrl_inv' sc_inv' and ct_active')
+          (invoke_sched_control_configure sc_inv)
+          (invokeSchedControlConfigure sc_inv')"
+  apply (cases sc_inv)
+  apply (simp add: invoke_sched_control_configure_def invokeSchedControlConfigure_def)
+  sorry
 
 end
 
