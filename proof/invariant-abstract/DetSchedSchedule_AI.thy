@@ -15844,8 +15844,6 @@ lemma invoke_sched_control_configure_valid_sched:
   apply (simp add: invoke_sched_control_configure_def)
   apply (cases iv; simp)
   apply (rename_tac sc_ptr budget period mrefills badge)
-  apply (rule validE_valid)
-  apply (rule liftE_wp)
 
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (clarsimp simp: obj_at_def)
@@ -17174,7 +17172,8 @@ lemma invoke_sched_context_ct_not_in_release_q[wp]:
       apply (wpsimp wp: sched_context_bind_tcb_not_in_release_q_other | wps)+
       apply (clarsimp dest!: invs_cur_sc_tcb_symref simp: pred_tcb_at_def obj_at_def)
      apply (find_goal \<open>match premises in \<open>_ = InvokeSchedContextYieldTo _ _\<close> \<Rightarrow> \<open>-\<close>\<close>)
-     apply (wpsimp wp: sched_context_yield_to_not_in_release_q_other | wps)+
+     apply wp_pre
+      apply (wpsimp wp: sched_context_yield_to_not_in_release_q_other | wps)+
      apply (clarsimp simp: sc_at_ppred_def obj_at_def)
     apply (wpsimp | wps)+
   done
@@ -20367,8 +20366,6 @@ lemma invoke_sched_control_configure_cur_sc_in_release_q_imp_zero_consumed[wp]:
   apply (cases iv, simp)
   apply (rename_tac sc_ptr budget period mrefills badge)
   apply (simp add: invoke_sched_control_configure_def)
-  apply (rule validE_valid)
-  apply (rule liftE_wp)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (rule_tac B="\<lambda>_ s. invs s
                            \<and> cur_sc_in_release_q_imp_zero_consumed s
