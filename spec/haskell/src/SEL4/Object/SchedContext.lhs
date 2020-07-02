@@ -529,8 +529,8 @@ This module uses the C preprocessor to select a target architecture.
 >     return_now <- contextYieldToUpdateQueues scPtr
 >     when return_now $ setConsumed scPtr (PPtr (head buffer))
 
-> invokeSchedContext :: SchedContextInvocation -> KernelP ()
-> invokeSchedContext iv = withoutPreemption $ case iv of
+> invokeSchedContext :: SchedContextInvocation -> Kernel ()
+> invokeSchedContext iv = case iv of
 >     InvokeSchedContextConsumed scPtr buffer -> setConsumed scPtr (PPtr (head buffer))
 >     InvokeSchedContextBind scPtr cap -> case cap of
 >         ThreadCap tcbPtr -> schedContextBindTCB scPtr tcbPtr
@@ -580,8 +580,8 @@ This module uses the C preprocessor to select a target architecture.
 >     setSchedContext scPtr (sc { scTCB = Just tcbPtr })
 >     threadSet (\tcb -> tcb { tcbSchedContext = Just scPtr }) tcbPtr
 
-> invokeSchedControlConfigure :: SchedControlInvocation -> KernelP ()
-> invokeSchedControlConfigure iv = withoutPreemption $ case iv of
+> invokeSchedControlConfigure :: SchedControlInvocation -> Kernel ()
+> invokeSchedControlConfigure iv = case iv of
 >     InvokeSchedControlConfigure scPtr budget period mRefills badge -> do
 >         sc <- getSchedContext scPtr
 >         setSchedContext scPtr $ sc { scBadge = badge }
