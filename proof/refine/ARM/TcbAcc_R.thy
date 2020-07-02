@@ -527,14 +527,13 @@ lemma setObject_tcb_iflive':
   done
 
 lemma setObject_tcb_idle':
-  "\<lbrace>\<lambda>s. valid_idle' s \<and>
-     (t = ksIdleThread s \<longrightarrow> idle_tcb' v)\<rbrace>
+  "\<lbrace>\<lambda>s. valid_idle' s \<and> (t = ksIdleThread s \<longrightarrow> idle_tcb' v)\<rbrace>
      setObject t (v :: tcb) \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (rule hoare_pre)
   apply (rule setObject_idle')
       apply (simp add: objBits_simps')+
    apply (simp add: updateObject_default_inv)
-  apply (simp add: projectKOs)
+  apply (simp add: projectKOs idle_tcb_ps_def idle_sc_ps_def)
   done
 
 lemma setObject_tcb_ifunsafe':
@@ -838,8 +837,7 @@ lemma threadSet_idle'T:
   (* assumes x: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb" *)
   shows
   "\<lbrace>\<lambda>s. valid_idle' s
-      \<and> (t = ksIdleThread s \<longrightarrow>
-            (\<forall>tcb. ko_at' tcb t s \<and> idle_tcb' tcb \<longrightarrow> idle_tcb' (F tcb)))\<rbrace>
+        \<and> (t = ksIdleThread s \<longrightarrow> (\<forall>tcb. ko_at' tcb t s \<and> idle_tcb' tcb \<longrightarrow> idle_tcb' (F tcb)))\<rbrace>
    threadSet F t
    \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (simp add: threadSet_def)
@@ -4205,7 +4203,7 @@ lemma sts_valid_idle'[wp]:
    setThreadState ts t
    \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (simp add: setThreadState_def)
-  by (wpsimp wp: threadSet_idle')
+  by (wpsimp wp: threadSet_idle' simp: idle_tcb'_def)
 
 lemma sbn_valid_idle'[wp]:
   "\<lbrace>valid_idle' and valid_pspace' and
@@ -4213,7 +4211,7 @@ lemma sbn_valid_idle'[wp]:
    setBoundNotification ntfn t
    \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (simp add: setBoundNotification_def)
-  apply (wp threadSet_idle', simp+)+
+  apply (wpsimp wp: threadSet_idle' simp: idle_tcb'_def)
   done
 
 lemma gts_sp':

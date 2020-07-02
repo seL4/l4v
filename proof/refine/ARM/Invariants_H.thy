@@ -1093,32 +1093,18 @@ where
 abbreviation
   "sch_act_not t \<equiv> \<lambda>s. ksSchedulerAction s \<noteq> SwitchToThread t"
 
-abbreviation idle_itcb' :: "itcb' \<Rightarrow> bool" where
-  "idle_itcb' itcb \<equiv>
-      idle' (itcbState itcb)
-      \<and> itcbBoundNotification itcb = None
-      \<and> itcbSchedContext itcb = Some idle_sc_ptr
-      \<and> itcbYieldTo itcb = None"
-
-abbreviation idle_tcb' :: "tcb \<Rightarrow> bool" where
-  "idle_tcb' \<equiv> idle_itcb' o tcb_to_itcb'"
+definition
+  idle_tcb'_2 :: "Structures_H.thread_state \<times> 32 word option \<times> 32 word option \<times> 32 word option
+                  \<Rightarrow> bool"
+where
+  "idle_tcb'_2 \<equiv> \<lambda>(st, ntfn_opt, sc_opt, yt_opt).
+                    (idle' st \<and> ntfn_opt = None \<and> sc_opt = Some idle_sc_ptr \<and> yt_opt = None)"
 
 abbreviation
-  "idle_tcb_at' \<equiv>
-     pred_tcb_at' (\<lambda>t. (itcbState t, itcbBoundNotification t, itcbSchedContext t, itcbYieldTo t))"
+  "idle_tcb' tcb \<equiv>
+      idle_tcb'_2 (tcbState tcb, tcbBoundNotification tcb, tcbSchedContext tcb, tcbYieldTo tcb)"
 
-\<comment>\<open>
-  Why the truly godforsaken name? Because `idle_tcb_at'` is already
-  taken, and currently refers to a partial projection of the `itcb'`.
-
-  `idle_tcb_at'` should be renamed to something else, and the below
-  abbreviation should be renamed to `idle_tcb_at'`, but this requires
-  coordinated updates with AInvs and so we will do it When We Have Time (TM).
-
-  VER-1242
-\<close>
-abbreviation
-  "fixme_idle_tcb_at' \<equiv> pred_tcb_at' id idle_itcb'"
+lemmas idle_tcb'_def = idle_tcb'_2_def
 
 abbreviation idle_sc' :: "sched_context \<Rightarrow> bool" where
   "idle_sc' sc \<equiv>
@@ -1137,12 +1123,12 @@ definition
   valid_idle' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_idle' \<equiv>
-     \<lambda>s. fixme_idle_tcb_at' (ksIdleThread s) s
+     \<lambda>s. obj_at' idle_tcb' (ksIdleThread s) s
          \<and> idle_sc_at' idle_sc_ptr s
          \<and> idle_thread_ptr = ksIdleThread s"
 
 lemma valid_idle'_tcb_at':
-  "valid_idle' s \<Longrightarrow> fixme_idle_tcb_at' (ksIdleThread s) s \<and> idle_sc_at' idle_sc_ptr s"
+  "valid_idle' s \<Longrightarrow> obj_at' idle_tcb' (ksIdleThread s) s \<and> idle_sc_at' idle_sc_ptr s"
   by (clarsimp simp: valid_idle'_def)
 
 definition
@@ -1909,7 +1895,7 @@ lemma valid_pspaceE' [elim]:
 lemma idle'_only_sc_refs:
   "valid_idle' s \<Longrightarrow> state_refs_of' s (ksIdleThread s) = {(idle_sc_ptr, TCBSchedContext)}"
   by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def tcb_ntfn_is_bound'_def
-                     projectKO_eq project_inject state_refs_of'_def)
+                     projectKO_eq project_inject state_refs_of'_def idle_tcb'_def tcb_of'_def)
 
 lemma idle'_not_queued':
   "\<lbrakk>valid_idle' s; sym_refs (state_refs_of' s);
@@ -2043,7 +2029,7 @@ lemma valid_idle'_pspace_itI[elim]:
       \<Longrightarrow> valid_idle' s'"
   apply (clarsimp simp: valid_idle'_def ex_nonz_cap_to'_def)
   apply (rule conjI)
-   apply (erule pred_tcb_at'_pspaceI, assumption)
+   apply (erule obj_at'_pspaceI, assumption)
   using obj_at'_pspaceI by blast
 
 lemma obj_at'_weaken:
@@ -3430,11 +3416,6 @@ lemma not_obj_at'_strengthen:
 lemma not_pred_tcb_at'_strengthen:
   "pred_tcb_at' f (Not \<circ> P) p s \<Longrightarrow> \<not> pred_tcb_at' f P p s"
   by (clarsimp simp: pred_tcb_at'_def obj_at'_def)
-
-lemma idle_tcb_at'_split:
-  "idle_tcb_at' (\<lambda>(st, ntfn, sc, yt). P st \<and> Q ntfn \<and> R sc \<and> S yt) t s
-     \<Longrightarrow> st_tcb_at' P t s \<and> bound_tcb_at' Q t s \<and> bound_sc_tcb_at' R t s \<and> bound_yt_tcb_at' S t s"
-  by (clarsimp simp: pred_tcb_at'_def dest!: obj_at'_conj_distrib)
 
 lemma valid_queues_no_bitmap_def':
   "valid_queues_no_bitmap =

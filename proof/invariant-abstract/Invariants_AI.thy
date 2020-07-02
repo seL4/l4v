@@ -1163,8 +1163,8 @@ definition
                    valid_arch_mdb (is_original_cap s) (caps_of_state s)"
 
 abbreviation
-  "idle_tcb_at \<equiv> pred_tcb_at (\<lambda>t. (itcb_state t, itcb_bound_notification t,
-                                    itcb_sched_context t, itcb_yield_to t, itcb_arch t))"
+  "idle_tcb_at_proj \<equiv> pred_tcb_at (\<lambda>t. (itcb_state t, itcb_bound_notification t,
+                                         itcb_sched_context t, itcb_yield_to t, itcb_arch t))"
 
 abbreviation (* could consider introducing projection like pred_tcb_at? maybe? *)
   "idle_sc_at \<equiv> obj_at (\<lambda>ko. \<exists>sc. ko = SchedContext sc 0
@@ -1176,11 +1176,15 @@ abbreviation (* could consider introducing projection like pred_tcb_at? maybe? *
                                   \<and> sc_yield_from sc = None
                                   \<and> sc_replies sc = [])"
 
+(* FIXME RT: consider adding a predicate idle_tcb, similar to idle_tcb' in Refine *)
 definition
-  "valid_idle \<equiv> \<lambda>s. idle_tcb_at (\<lambda>(st, ntfn, sc, yt, arch).
-       (idle st) \<and> (ntfn  = None) \<and> (sc = Some idle_sc_ptr) \<and> (yt = None) \<and> valid_arch_idle arch) (idle_thread s) s
-         \<and> idle_thread s = idle_thread_ptr
-         \<and> idle_sc_at idle_sc_ptr s"
+  "valid_idle \<equiv> \<lambda>s. idle_tcb_at_proj (\<lambda>(st, ntfn, sc, yt, arch). idle st
+                                                                 \<and> ntfn  = None
+                                                                 \<and> sc = Some idle_sc_ptr
+                                                                 \<and> yt = None
+                                                                 \<and> valid_arch_idle arch) (idle_thread s) s
+                    \<and> idle_thread s = idle_thread_ptr
+                    \<and> idle_sc_at idle_sc_ptr s"
 
 definition
   "only_idle \<equiv> \<lambda>s. \<forall>t. st_tcb_at idle t s \<longrightarrow> t = idle_thread s"
@@ -3570,7 +3574,7 @@ lemma valid_bound_tcb_typ_at:
   done
 
 lemma valid_idle_lift:
-  assumes "\<And>P t. \<lbrace>idle_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. idle_tcb_at P t\<rbrace>"
+  assumes "\<And>P t. \<lbrace>idle_tcb_at_proj P t\<rbrace> f \<lbrace>\<lambda>_. idle_tcb_at_proj P t\<rbrace>"
   assumes "\<And>t. \<lbrace>idle_sc_at t\<rbrace> f \<lbrace>\<lambda>_. idle_sc_at t\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
   shows "\<lbrace>valid_idle\<rbrace> f \<lbrace>\<lambda>_. valid_idle\<rbrace>"

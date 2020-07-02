@@ -2802,11 +2802,17 @@ lemma setCTE_it'[wp]:
   apply (wp|wpc|simp del: hoare_fail_any)+
   done
 
+crunches setCTE
+  for idle_sc_at'[wp]: "\<lambda>s. idle_sc_at' p s"
+
 lemma setCTE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> setCTE p cte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (simp add: valid_idle'_def)
   apply (rule hoare_lift_Pf [where f="ksIdleThread"])
-   apply (wpsimp wp: setCTE_pred_tcb_at' simp: setCTE_def)+
+   apply (intro hoare_vcg_conj_lift; (solves \<open>wpsimp\<close>)?)
+   apply (clarsimp simp: setCTE_def)
+   apply (rule setObject_cte_obj_at_tcb'[where P="idle_tcb'", simplified])
+  apply wpsimp
   done
 
 crunch it[wp]: getCTE "\<lambda>s. P (ksIdleThread s)"

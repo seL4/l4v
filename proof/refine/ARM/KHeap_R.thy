@@ -1717,21 +1717,15 @@ lemma setObject_it[wp]:
   `idle_tcb_ps val` asserts that `val` is a pspace_storable value
   which corresponds to an idle TCB.
 \<close>
-abbreviation idle_tcb_ps :: "('a :: pspace_storable) \<Rightarrow> bool" where
-  "idle_tcb_ps val \<equiv>
-      (\<exists>tcb.
-        projectKO_opt (injectKO val) = Some tcb
-        \<and> idle_tcb' tcb)"
+definition idle_tcb_ps :: "('a :: pspace_storable) \<Rightarrow> bool" where
+  "idle_tcb_ps val \<equiv> (\<exists>tcb. projectKO_opt (injectKO val) = Some tcb \<and> idle_tcb' tcb)"
 
 \<comment>\<open>
   `idle_sc_ps val` asserts that `val` is a pspace_storable value
   which corresponds to an idle SchedContext.
 \<close>
-abbreviation idle_sc_ps :: "('a :: pspace_storable) \<Rightarrow> bool" where
-  "idle_sc_ps val \<equiv>
-      (\<exists>sc.
-        sc_of' (injectKO val) = Some sc
-        \<and> idle_sc' sc)"
+definition idle_sc_ps :: "('a :: pspace_storable) \<Rightarrow> bool" where
+  "idle_sc_ps val \<equiv> (\<exists>sc. sc_of' (injectKO val) = Some sc \<and> idle_sc' sc)"
 
 lemma setObject_idle':
   fixes v :: "'a :: pspace_storable"
@@ -1758,10 +1752,12 @@ lemma setObject_idle':
     apply (wpsimp wp: setObject_ko_wp_at[OF R n])
    apply (wp z)
   apply (rule conjI)
-   apply (clarsimp simp add: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def)
+   apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def idle_tcb_ps_def
+                         idle_sc_ps_def)
    apply (rename_tac tcb sc obj)
    apply (drule_tac x=obj and y=tcb in spec2, clarsimp simp: project_inject)
-  apply (clarsimp simp add: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def)
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def idle_tcb_ps_def
+                        idle_sc_ps_def)
   apply (rename_tac tcb sc obj)
   apply (drule_tac x=obj and y=sc in spec2, clarsimp simp: project_inject)
   done
@@ -2270,7 +2266,8 @@ lemma idle'[wp]:
   "f p v \<lbrace>valid_idle'\<rbrace>"
   unfolding f_def
   using objBits
-  apply (wp setObject_idle'; simp add: default updateObject_default_inv)
+  apply (wp setObject_idle'
+         ; simp add: default updateObject_default_inv idle_tcb_ps_def idle_sc_ps_def)
   apply (clarsimp simp: projectKOs)
   done
 

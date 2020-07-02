@@ -1016,12 +1016,10 @@ lemma refs_of':
   apply (case_tac "p = idle_sc_ptr \<or> p = idle_thread_ptr")
    apply (insert invs_valid_idle'[OF invs])
    apply (clarsimp simp: valid_idle'_def)
-   apply (clarsimp simp: obj_at'_def ko_wp_at'_def pred_tcb_at'_def projectKOs refs_of'_def
-                  split: Structures_H.kernel_object.splits
-          ; fastforce?)
-    apply (elim disjE; fastforce?)
+   apply (elim disjE)
+    apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
     using live_idle_untyped_range' apply simp
-   apply (elim disjE; fastforce?)
+   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs idle_tcb'_def)
    using live_idle_untyped_range' apply simp
   apply (prop_tac "ko_at' ko p s'")
    apply (fastforce simp: ko_wp_at'_def obj_at'_def projectKOs project_inject)
@@ -1128,7 +1126,7 @@ lemma sc_tcb_not_idle_thread':
   apply (frule sc_tcb_not_idle_thread'_helper; blast?)
   apply (insert idle)
   apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKOs state_refs_of'_def
-                        live'_def
+                        live'_def idle_tcb'_def
                  dest!: sc_tcb_not_idle_thread'_helper if_live_then_nonz_capD')
   done
 

@@ -3259,7 +3259,7 @@ crunches setExtraBadge, doIPCTransfer
 lemma st_tcb_idle':
   "\<lbrakk>valid_idle' s; st_tcb_at' P t s\<rbrakk> \<Longrightarrow>
    (t = ksIdleThread s) \<longrightarrow> P IdleThreadState"
-  by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def)
+  by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def idle_tcb'_def)
 
 
 crunches setExtraBadge, receiveIPC

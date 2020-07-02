@@ -790,7 +790,7 @@ lemma arch_switch_idle_thread_corres:
   apply (simp add: arch_switch_to_idle_thread_def
                 ARM_H.switchToIdleThread_def)
   apply (corressimp corres: git_corres set_vm_root_corres[@lift_corres_args])
-  apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb)
+  apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb obj_at'_def)
   done
 
 lemma switch_idle_thread_corres:
@@ -928,7 +928,7 @@ lemma idle'_not_tcbQueued':
  shows "obj_at' (Not \<circ> tcbQueued) (ksIdleThread s) s"
  proof -
    from idle have stidle: "st_tcb_at' (Not \<circ> runnable') (ksIdleThread s) s"
-     by (clarsimp simp add: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKOs)
+     by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKOs idle_tcb'_def)
 
    with vq vq' show ?thesis
      by (rule valid_queues_not_runnable_not_queued)
@@ -959,7 +959,7 @@ proof -
                               all_invs_but_ct_idle_or_in_cur_domain'_def pred_tcb_at'_def
                         cong: option.case_cong
                        dest!: valid_idle'_tcb_at')
-    apply (clarsimp simp: obj_at'_def projectKOs)
+    apply (clarsimp simp: obj_at'_def projectKOs idle_tcb'_def)
     done
 qed
 
@@ -2135,7 +2135,7 @@ lemma switchToIdleThread_activatable_2[wp]:
                    ARM_H.switchToIdleThread_def)
   apply (wp setCurThread_ct_in_state)
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_idle'_def
-                        pred_tcb_at'_def obj_at'_def)
+                        pred_tcb_at'_def obj_at'_def idle_tcb'_def)
   done
 
 lemma switchToThread_tcb_in_cur_domain':
