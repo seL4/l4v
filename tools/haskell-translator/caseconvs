@@ -2214,7 +2214,7 @@ case \x of (ArchInvocationLabel ArchLabels.RISCVIRQIssueIRQHandler, irqW:trigger
     | (ArchInvocationLabel RISCVIRQIssueIRQHandler, _, _) => ->2
     | _ => ->3
 
-case \x of (cap@(EndpointCap {capEPCanSend=True}), _) -> (cap@(NotificationCap {capNtfnCanSend=True}), _) -> (cap@(ReplyCap {}), _) -> (cap@(ThreadCap {}), False) -> (DomainCap, _) -> ((SchedContextCap {capSchedContextPtr=sc}), _) -> (SchedControlCap, _) -> (cap@(CNodeCap {}), False) -> (cap@(UntypedCap {}), _) -> (IRQControlCap, _) -> ((IRQHandlerCap { capIRQ = irq }), _) -> ((ArchObjectCap cap), _) -> (_, _) ->  --->
+case \x of (cap@(EndpointCap {capEPCanSend=True}), _) -> (cap@(NotificationCap {capNtfnCanSend=True}), _) -> (cap@(ReplyCap {}), _) -> (cap@(ThreadCap {}), False) -> (DomainCap, _) -> ((SchedContextCap {capSchedContextPtr=sc}), _) -> (SchedControlCap, False) -> (cap@(CNodeCap {}), False) -> (cap@(UntypedCap {}), _) -> (IRQControlCap, _) -> ((IRQHandlerCap { capIRQ = irq }), _) -> ((ArchObjectCap cap), _) -> (_, _) ->  --->
     let (cap, firstPhase) = \x in
     if isEndpointCap cap \<and> capEPCanSend cap
     then ->1
@@ -2229,7 +2229,7 @@ case \x of (cap@(EndpointCap {capEPCanSend=True}), _) -> (cap@(NotificationCap {
     else if isSchedContextCap cap
     then let sc = capSchedContextPtr cap
          in ->6
-    else if isSchedControlCap cap
+    else if isSchedControlCap cap \<and> \<not> firstPhase
     then ->7
     else if isCNodeCap cap \<and> \<not> firstPhase
     then ->8
