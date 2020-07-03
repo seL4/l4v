@@ -595,14 +595,13 @@ This module uses the C preprocessor to select a target architecture.
 >                 budgetEnough <- checkBudget
 >                 when budgetEnough $ commitTime
 
+>         period <- return (if period == budget then 0 else period)
+>	  mRefills <- return (if period == budget then 2 else mRefills)
 >         sc <- getSchedContext scPtr
 >         runnable <- isRunnable $ fromJust $ scTCB sc
 >         if scRefillMax sc > 0 && scTCB sc /= Nothing && runnable
 >             then refillUpdate scPtr period budget mRefills
 >             else refillNew scPtr mRefills budget period
-
->		  period <- return (if period == budget then 0 else period)
->		  mRefills <- return (if period == budget then 2 else mRefills)
 
 >         sc <- getSchedContext scPtr
 >         when (scTCB sc /= Nothing && scRefillMax sc > 0) $ do
