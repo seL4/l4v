@@ -26,9 +26,6 @@ The following is the definition of the seven object types that are always availa
 >         | ReplyObject
 >         deriving (Enum, Bounded, Eq, Show)
 
-> tcbBlockSizeBits :: Int
-> tcbBlockSizeBits = wordSizeCase 9 11
-
 > epSizeBits :: Int
 > epSizeBits = 4
 
@@ -43,15 +40,3 @@ The following is the definition of the seven object types that are always availa
 
 > minSchedContextBits :: Int
 > minSchedContextBits = 8
-
-> apiGetObjectSize :: APIObjectType -> Int -> Int
-> apiGetObjectSize Untyped size = size
-> apiGetObjectSize TCBObject _ = tcbBlockSizeBits
-> apiGetObjectSize EndpointObject _ = epSizeBits
-> apiGetObjectSize NotificationObject _ = ntfnSizeBits
-> apiGetObjectSize CapTableObject size = cteSizeBits + size
-> apiGetObjectSize SchedContextObject size = size
-> apiGetObjectSize ReplyObject _ = replySizeBits
-
-
-

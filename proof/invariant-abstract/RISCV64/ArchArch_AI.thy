@@ -1072,6 +1072,10 @@ lemma vmpage_size_of_level_pt_bits_left:
    vmpage_size_of_level level = vmpage_size"
   by (cases vmpage_size; simp add: vmpage_size_of_level_def pt_bits_left_def bit_simps) auto
 
+lemma is_PagePTE_make_user[simp]:
+  "is_PagePTE (make_user_pte p attr R) \<or> make_user_pte p attr R = InvalidPTE"
+  by (auto simp: is_PagePTE_def make_user_pte_def)
+
 lemma decode_fr_inv_map_wf[wp]:
   "arch_cap = FrameCap p rights vmpage_size dev option \<Longrightarrow>
    \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
@@ -1095,6 +1099,35 @@ lemma decode_fr_inv_map_wf[wp]:
   apply (frule is_aligned_pageBitsForSize_table_size)
   apply (frule (3) vs_lookup_slot_table_base)
   apply (clarsimp simp: same_ref_def make_user_pte_def ptrFromPAddr_addr_from_ppn)
+  (* FIXME RISCV: remove duplication due to PagePTE/InvalidPTE cases: *)
+  apply (rule conjI; clarsimp)
+   apply (rule strengthen_imp_same_first_conj[OF conjI])
+    apply (rule_tac x=level in exI)
+    apply (rule_tac x="args!0" in exI)
+    apply (fastforce simp: vmsz_aligned_vref_for_level)
+   apply (rule strengthen_imp_same_first_conj[OF conjI])
+    apply (clarsimp simp: valid_slots_def make_user_pte_def wellformed_pte_def
+                          ptrFromPAddr_addr_from_ppn)
+    apply (rename_tac level' asid' vref')
+    apply (frule (3) vs_lookup_slot_table_base)
+    apply (prop_tac "level' \<le> max_pt_level")
+     apply (drule_tac level=level in valid_vspace_objs_strongD[rotated]; clarsimp)
+     apply (rule ccontr, clarsimp simp: not_le)
+     apply (drule vs_lookup_asid_pool; clarsimp)
+     apply (clarsimp simp: in_omonad)
+    apply (drule (1) vs_lookup_table_unique_level; clarsimp)
+    apply (simp add: vs_lookup_slot_pte_at data_at_def vmpage_size_of_level_pt_bits_left
+              split: if_split_asm)
+   apply (rule strengthen_imp_same_first_conj[OF conjI])
+    apply (clarsimp simp: wellformed_mapdata_def vspace_for_asid_def)
+   apply (clarsimp simp: parent_for_refs_def)
+   apply (frule (3) vs_lookup_slot_table_base)
+   apply (frule (2) valid_vspace_objs_strongD[rotated]; clarsimp)
+   apply (drule (1) vs_lookup_table_target)
+   apply (drule valid_vs_lookupD; clarsimp simp: vmsz_aligned_vref_for_level)
+   apply (subgoal_tac "is_pt_cap cap")
+    apply (force simp: is_cap_simps)
+   apply (fastforce dest: cap_to_pt_is_pt_cap intro: valid_objs_caps)
   apply (rule strengthen_imp_same_first_conj[OF conjI])
    apply (rule_tac x=level in exI)
    apply (rule_tac x="args!0" in exI)

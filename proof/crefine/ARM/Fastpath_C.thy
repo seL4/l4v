@@ -75,7 +75,9 @@ definition
 
       asUser dest $ zipWithM_x setRegister
                [ARM_H.badgeRegister, ARM_H.msgInfoRegister]
-               [capEPBadge epCap, wordFromMessageInfo (mi\<lparr> msgCapsUnwrapped := 0 \<rparr>)]
+               [capEPBadge epCap, wordFromMessageInfo (mi\<lparr> msgCapsUnwrapped := 0 \<rparr>)];
+
+      stateAssert kernelExitAssertions []
     od
 
   odE <catch> (\<lambda>_. callKernel (SyscallEvent sysc))
@@ -149,7 +151,9 @@ definition
 
       asUser caller $ zipWithM_x setRegister
                [ARM_H.badgeRegister, ARM_H.msgInfoRegister]
-               [0, wordFromMessageInfo (mi\<lparr> msgCapsUnwrapped := 0 \<rparr>)]
+               [0, wordFromMessageInfo (mi\<lparr> msgCapsUnwrapped := 0 \<rparr>)];
+
+      stateAssert kernelExitAssertions []
     od
 
   odE <catch> (\<lambda>_. callKernel (SyscallEvent sysc))
@@ -2334,24 +2338,26 @@ proof -
                                                        cvariable_relation_upd_const ko_at_projectKO_opt)
                                      apply ceqv
                                     apply (simp only: bind_assoc[symmetric])
-                                    apply (rule ccorres_split_nothrow_novcg_dc)
+                                    apply (rule ccorres_stateAssert_after)
+                                     apply (rule ccorres_split_nothrow_novcg_dc)
+                                        apply simp
+                                        apply (rule ccorres_call,
+                                               rule_tac v=shw_asid and pd="capUntypedPtr (cteCap pd_cap)"
+                                                     in switchToThread_fp_ccorres,
+                                               simp+)[1]
+                                       apply (rule_tac P="\<lambda>s. ksCurThread s = hd (epQueue send_ep)"
+                                                    in ccorres_cross_over_guard)
+                                       apply csymbr
+                                       apply csymbr
+                                       apply (rule ccorres_call_hSkip)
+                                         apply (fold dc_def)[1]
+                                         apply (rule fastpath_restore_ccorres)
+                                        apply simp
                                        apply simp
-                                       apply (rule ccorres_call,
-                                              rule_tac v=shw_asid and pd="capUntypedPtr (cteCap pd_cap)"
-                                                    in switchToThread_fp_ccorres,
-                                              simp+)[1]
-                                      apply (rule_tac P="\<lambda>s. ksCurThread s = hd (epQueue send_ep)"
-                                                   in ccorres_cross_over_guard)
-                                      apply csymbr
-                                      apply csymbr
-                                      apply (rule ccorres_call_hSkip)
-                                        apply (fold dc_def)[1]
-                                        apply (rule fastpath_restore_ccorres)
-                                       apply simp
-                                      apply simp
-                                     apply (simp add: setCurThread_def)
-                                     apply wp
-                                     apply (rule_tac P=\<top> in hoare_triv, simp)
+                                      apply (simp add: setCurThread_def)
+                                      apply wp
+                                      apply (rule_tac P=\<top> in hoare_triv, simp)
+                                     apply simp
                                     apply (simp add: imp_conjL rf_sr_ksCurThread del: all_imp_to_ex)
                                     apply (clarsimp simp: ccap_relation_ep_helpers guard_is_UNIV_def
                                                           mi_from_H_def)
@@ -3097,23 +3103,25 @@ lemma fastpath_reply_recv_ccorres:
                                                      cvariable_relation_upd_const ko_at_projectKO_opt)
                                    apply ceqv
                                   apply (simp only: bind_assoc[symmetric])
-                                  apply (rule ccorres_split_nothrow_novcg_dc)
-                                     apply (rule ccorres_call,
-                                            rule_tac v=shw_asid and pd="capUntypedPtr (cteCap pd_cap)"
-                                                  in switchToThread_fp_ccorres,
-                                            simp+)[1]
-                                    apply (rule_tac P="\<lambda>s. ksCurThread s = capTCBPtr (cteCap caller_cap)"
-                                                 in ccorres_cross_over_guard)
-                                    apply csymbr
-                                    apply csymbr
-                                    apply (rule ccorres_call_hSkip)
-                                      apply (fold dc_def)[1]
-                                      apply (rule fastpath_restore_ccorres)
+                                  apply (rule ccorres_stateAssert_after)
+                                   apply (rule ccorres_split_nothrow_novcg_dc)
+                                      apply (rule ccorres_call,
+                                             rule_tac v=shw_asid and pd="capUntypedPtr (cteCap pd_cap)"
+                                                   in switchToThread_fp_ccorres,
+                                             simp+)[1]
+                                     apply (rule_tac P="\<lambda>s. ksCurThread s = capTCBPtr (cteCap caller_cap)"
+                                                  in ccorres_cross_over_guard)
+                                     apply csymbr
+                                     apply csymbr
+                                     apply (rule ccorres_call_hSkip)
+                                       apply (fold dc_def)[1]
+                                       apply (rule fastpath_restore_ccorres)
+                                      apply simp
                                      apply simp
-                                    apply simp
-                                   apply (simp add: setCurThread_def)
-                                   apply wp
-                                   apply (rule_tac P=\<top> in hoare_triv, simp)
+                                    apply (simp add: setCurThread_def)
+                                    apply wp
+                                    apply (rule_tac P=\<top> in hoare_triv, simp)
+                                   apply simp
                                   apply (simp add: imp_conjL rf_sr_ksCurThread del: all_imp_to_ex)
                                   apply (clarsimp simp: ccap_relation_ep_helpers guard_is_UNIV_def
                                                         mi_from_H_def)
@@ -3650,7 +3658,10 @@ lemma fastpath_callKernel_SysCall_corres:
                           apply (rule monadic_rewrite_bind_tail)
                            apply (rule monadic_rewrite_bind)
                              apply (rule switchToThread_rewrite)
-                            apply (rule activateThread_simple_rewrite)
+                            apply (rule monadic_rewrite_bind)
+                              apply (rule activateThread_simple_rewrite)
+                             apply (rule monadic_rewrite_refl)
+                            apply wp
                            apply (wp setCurThread_ct_in_state)
                           apply (simp only: st_tcb_at'_def[symmetric])
                           apply (wp, clarsimp simp: cur_tcb'_def ct_in_state'_def)
@@ -3720,6 +3731,8 @@ lemma fastpath_callKernel_SysCall_corres:
                                   bool.simps setRegister_simple
                                   setVMRoot_isolatable[THEN thread_actions_isolatableD] setVMRoot_isolatable
                                   doMachineOp_isolatable[THEN thread_actions_isolatableD] doMachineOp_isolatable
+                                  kernelExitAssertions_isolatable[THEN thread_actions_isolatableD]
+                                  kernelExitAssertions_isolatable
                                   zipWithM_setRegister_simple
                                   thread_actions_isolatable_bind
                               | assumption
@@ -4640,7 +4653,10 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                       and t'=thread
                                        in schedule_known_rewrite)
                          apply (rule monadic_rewrite_weaken[where E=True and F=True], simp)
-                         apply (rule activateThread_simple_rewrite)
+                         apply (rule monadic_rewrite_bind)
+                           apply (rule activateThread_simple_rewrite)
+                          apply (rule monadic_rewrite_refl)
+                         apply wp
                         apply wp
                          apply (simp add: ct_in_state'_def, simp add: ct_in_state'_def[symmetric])
                          apply ((wp setCurThread_ct_in_state[folded st_tcb_at'_def]
@@ -4733,6 +4749,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                   setCTE_isolatable
                                   setVMRoot_isolatable[THEN thread_actions_isolatableD] setVMRoot_isolatable
                                   doMachineOp_isolatable[THEN thread_actions_isolatableD] doMachineOp_isolatable
+                                  kernelExitAssertions_isolatable[THEN thread_actions_isolatableD]
+                                  kernelExitAssertions_isolatable
                            | assumption
                            | wp assert_inv)+
                     apply (simp only: )

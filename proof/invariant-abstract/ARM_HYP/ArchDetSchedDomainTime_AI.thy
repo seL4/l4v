@@ -25,9 +25,10 @@ crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<l
 
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
-  handle_arch_fault_reply, init_arch_objects, 
+  handle_arch_fault_reply, init_arch_objects,
   arch_invoke_irq_control, handle_vm_fault, arch_get_sanitise_register_info,
-  prepare_thread_delete, arch_post_modify_registers, arch_post_cap_deletion
+  prepare_thread_delete, arch_post_modify_registers, arch_post_cap_deletion,
+  arch_invoke_irq_handler
   "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps)
 declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
@@ -37,9 +38,10 @@ crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap, arc
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
-  handle_arch_fault_reply, init_arch_objects, 
+  handle_arch_fault_reply, init_arch_objects,
   arch_invoke_irq_control, handle_vm_fault,
-  prepare_thread_delete, arch_post_modify_registers, arch_post_cap_deletion
+  prepare_thread_delete, arch_post_modify_registers, arch_post_cap_deletion,
+  arch_invoke_irq_handler
   "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps)
 
@@ -62,13 +64,15 @@ context Arch begin global_naming ARM_HYP
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: handle_hypervisor_fault "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
 
-crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: handle_reserved_irq "\<lambda>s. P (domain_list s)"
+crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
+  handle_reserved_irq, arch_mask_irq_signal "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: handle_hypervisor_fault "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
 
-crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: handle_reserved_irq "\<lambda>s. P (domain_time s)"
+crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
+  handle_reserved_irq, arch_mask_irq_signal "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
 
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
@@ -108,7 +112,7 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
    apply (case_tac "maxIRQ < i"; simp)
     subgoal by (wp hoare_false_imp, simp)
    apply (rule hoare_pre)
-    apply (wp do_machine_op_exst | simp | wpc)+
+    apply (wp do_machine_op_exst | simp add: arch_mask_irq_signal_def | wpc)+
        apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
        apply wp
       apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)

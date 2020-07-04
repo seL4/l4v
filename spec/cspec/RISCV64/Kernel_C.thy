@@ -74,7 +74,7 @@ end
 definition
   ctcb_size_bits :: nat
 where
-  "ctcb_size_bits \<equiv> 10" (* FIXME RISCV *)
+  "ctcb_size_bits \<equiv> 9"
 
 definition
   ctcb_offset :: "64 word"

@@ -840,26 +840,6 @@ lemma ccorres_pre_getObject_asidpool:
   apply simp
   done
 
-(* FIXME: move *)
-lemma ccorres_from_vcg_throws_nofail:
-  "\<forall>\<sigma>. \<Gamma>\<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel} c {},
-  {s. \<not>snd (a \<sigma>) \<longrightarrow> (\<exists>(rv, \<sigma>')\<in>fst (a \<sigma>). (\<sigma>', s) \<in> srel \<and> arrel rv (axf s))} \<Longrightarrow>
-  ccorres_underlying srel \<Gamma> r xf arrel axf P P' (SKIP # hs) a c"
-  apply (rule ccorresI')
-  apply (drule_tac x = s in spec)
-  apply (drule hoare_sound)
-  apply (simp add: HoarePartialDef.valid_def cvalid_def)
-  apply (erule exec_handlers.cases)
-    apply clarsimp
-    apply (drule spec, drule spec, drule (1) mp)
-    apply (clarsimp dest!: exec_handlers_SkipD
-                     simp: split_def unif_rrel_simps elim!: bexI [rotated])
-   apply clarsimp
-   apply (drule spec, drule spec, drule (1) mp)
-   apply clarsimp
-  apply simp
-  done
-
 lemma findPDForASID_ccorres:
   "ccorres (lookup_failure_rel \<currency> (\<lambda>pdeptrc pdeptr. pdeptr = pde_Ptr pdeptrc)) findPDForASID_xf
        (valid_arch_state' and no_0_obj' and (\<lambda>_. asid \<le> mask asid_bits))
@@ -1692,7 +1672,7 @@ lemma performPageFlush_ccorres:
 
 (* FIXME: move *)
 lemma register_from_H_bound[simp]:
-  "unat (register_from_H v) < 19"
+  "unat (register_from_H v) < 20"
   by (cases v, simp_all add: "StrictC'_register_defs")
 
 (* FIXME: move *)

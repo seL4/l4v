@@ -4197,6 +4197,8 @@ crunch valid_list[wp]: invoke_irq_handler valid_list
 crunch valid_list[wp]: maybe_donate_sc valid_list (wp: maybeM_inv)
 
 locale Deterministic_AI_2 = Deterministic_AI_1 +
+  assumes arch_invoke_irq_handler_valid_list[wp]:
+    "\<And>i. arch_invoke_irq_handler i \<lbrace>valid_list\<rbrace>"
   assumes handle_interrupt_valid_list[wp]:
     "\<And>irq. \<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"
   assumes handle_call_valid_list[wp]:
@@ -4217,6 +4219,8 @@ locale Deterministic_AI_2 = Deterministic_AI_1 +
 
 
 context Deterministic_AI_2 begin
+
+crunch valid_list[wp]: invoke_irq_handler valid_list
 
 lemma handle_event_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> handle_event e \<lbrace>\<lambda>_.valid_list\<rbrace>"

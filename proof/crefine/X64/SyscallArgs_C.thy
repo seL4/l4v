@@ -808,7 +808,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
                              Kernel_C.VMReadWrite_def
                       split: if_split)
            apply (frule cap_get_tag_isCap_unfolded_H_cap(18),simp)
-           apply (frule capFVMRights_range) thm pageBitsForSize_spec
+           apply (frule capFVMRights_range)
            apply (simp add: cap_frame_cap_lift)
            apply (clarsimp simp: cap_to_H_def vmrights_to_H_def to_bool_def
                                  word_le_make_less

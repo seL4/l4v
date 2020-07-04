@@ -523,10 +523,10 @@ crunch typ_at'[wp]: "performIRQControl" "\<lambda>s. P (typ_at' T p s)"
 lemmas invokeIRQControl_typ_ats[wp] =
   typ_at_lifts [OF performIRQControl_typ_at']
 
-crunch typ_at'[wp]: invokeIRQHandler "\<lambda>s. P (typ_at' T p s)"
+crunch typ_at'[wp]: InterruptDecls_H.invokeIRQHandler "\<lambda>s. P (typ_at' T p s)"
 
 lemmas invokeIRQHandler_typ_ats[wp] =
-  typ_at_lifts [OF invokeIRQHandler_typ_at']
+  typ_at_lifts [OF InterruptDecls_H_invokeIRQHandler_typ_at']
 
 crunch tcb_at'[wp]: setDomain "tcb_at' tptr"
   (simp: crunch_simps)

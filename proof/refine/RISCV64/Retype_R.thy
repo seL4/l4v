@@ -12,6 +12,10 @@ theory Retype_R
 imports VSpace_R
 begin
 
+(* FIXME RISCV: move way up somewhere *)
+text \<open>To ensure that the proof state is in a certain case of a case distinction:\<close>
+method in_case for x::'a = match premises in "t = x" for t \<Rightarrow> succeed
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
@@ -2191,28 +2195,29 @@ proof -
       using cover
       apply (clarsimp simp: RISCV64_H.toAPIType_def APIType_capBits_def
                       split: RISCV64_H.object_type.splits)
-            \<comment> \<open>SmallPageObject\<close>
+         apply (in_case "HugePageObject")
          apply wp
           apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
           apply (wp createObjects_aligned2 createObjects_nonzero'
-                    cwo_ret'[where bs=0, simplified]
+                    cwo_ret'[where bs="ptTranslationBits + ptTranslationBits", simplified]
                  | simp add: objBits_if_dev pageBits_def ptr range_cover_n_wb)+
          apply (simp add:pageBits_def ptr word_bits_def)
-        \<comment> \<open>LargePageObject\<close>
+        apply (in_case "SmallPageObject")
         apply wp
          apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
          apply (wp createObjects_aligned2 createObjects_nonzero'
-                   cwo_ret'[where bs=ptTranslationBits, simplified]
+                   cwo_ret'[where bs=0, simplified]
                 | simp add: objBits_if_dev pageBits_def ptr range_cover_n_wb)+
         apply (simp add:pageBits_def ptr word_bits_def)
-       \<comment> \<open>HugePageObject\<close>
+       apply (in_case \<open>LargePageObject\<close>)
+
        apply wp
         apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
         apply (wp createObjects_aligned2 createObjects_nonzero'
-                  cwo_ret'[where bs="ptTranslationBits + ptTranslationBits", simplified]
+                  cwo_ret'[where bs=ptTranslationBits, simplified]
                | simp add: objBits_if_dev pageBits_def ptr range_cover_n_wb)+
        apply (simp add:pageBits_def ptr word_bits_def)
-      \<comment> \<open>PageTableObject\<close>
+      apply (in_case \<open>PageTableObject\<close>)
       apply wp
        apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
        apply (rule hoare_chain)
@@ -2231,7 +2236,7 @@ proof -
         apply (rule ucast_less[where 'b="pt_index_len" and 'a="machine_word_len", simplified])
        apply simp
       apply clarsimp
-   done
+      done
   next
     case (Some a) thus ?thesis
     proof(cases a)
@@ -5181,7 +5186,7 @@ lemma corres_retype_region_createNewCaps:
       apply (clarsimp simp: list_all2_same list_all2_map1 list_all2_map2 objBits_simps
                             allRights_def APIType_map2_def
                       split del: if_split)
-     \<comment> \<open>SmallPageObject\<close>
+     apply (in_case \<open>HugePageObject\<close>)
      apply (subst retype_region2_extra_ext_trivial)
       apply (simp add: APIType_map2_def)
      apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
@@ -5191,13 +5196,13 @@ lemma corres_retype_region_createNewCaps:
         apply (rule corres_retype_update_gsI;
                clarsimp simp: obj_bits_api_def3 APIType_map2_def objBits_simps ext
                               default_object_def default_arch_object_def makeObjectKO_def
-                              data_page_relation_retype
+                              data_page_relation_retype bit_simps
                        elim!: range_cover.aligned;
                assumption)
        apply fastforce+
-     apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
-                      list_all2_map1 list_all2_map2 list_all2_same)
-    \<comment> \<open>LargePageObject\<close>
+   apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
+                    list_all2_map1 list_all2_map2 list_all2_same)
+    apply (in_case \<open>SmallPageObject\<close>)
     apply (subst retype_region2_extra_ext_trivial)
      apply (simp add: APIType_map2_def)
     apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
@@ -5211,9 +5216,9 @@ lemma corres_retype_region_createNewCaps:
                       elim!: range_cover.aligned;
               assumption)
       apply fastforce+
-    apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
-                     list_all2_map1 list_all2_map2 list_all2_same)
-   \<comment> \<open>HugePageObject\<close>
+     apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
+                      list_all2_map1 list_all2_map2 list_all2_same)
+   apply (in_case \<open>LargePageObject\<close>)
    apply (subst retype_region2_extra_ext_trivial)
     apply (simp add: APIType_map2_def)
    apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
@@ -5223,13 +5228,13 @@ lemma corres_retype_region_createNewCaps:
       apply (rule corres_retype_update_gsI;
              clarsimp simp: obj_bits_api_def3 APIType_map2_def objBits_simps ext
                             default_object_def default_arch_object_def makeObjectKO_def
-                            data_page_relation_retype bit_simps
+                            data_page_relation_retype
                      elim!: range_cover.aligned;
              assumption)
      apply fastforce+
-   apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
-                    list_all2_map1 list_all2_map2 list_all2_same)
-  \<comment> \<open>PageTable\<close>
+    apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
+                     list_all2_map1 list_all2_map2 list_all2_same)
+  apply (in_case \<open>PageTableObject\<close>)
   apply (subst retype_region2_extra_ext_trivial)
    apply (simp add: APIType_map2_def)
   apply (simp_all add: corres_liftM2_simp[unfolded liftM_def])
@@ -5244,7 +5249,7 @@ lemma corres_retype_region_createNewCaps:
     apply (clarsimp simp: list_all2_map1 list_all2_map2 list_all2_same
                           APIType_map2_def arch_default_cap_def)
    apply fastforce+
- done
+  done
 
 end
 end

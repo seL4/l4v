@@ -117,4 +117,7 @@ lemmas scast_specific_plus32_signed =
   scast_of_nat_unsigned_to_signed_add[where 'a=32 and x="word_ctz x" and y="0x20" for x,
                                       simplified]
 
+lemma neq_0_unat: "x \<noteq> 0 \<Longrightarrow> 0 < unat x" for x::machine_word
+  by (simp add: unat_gt_0)
+
 end

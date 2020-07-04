@@ -4625,6 +4625,16 @@ lemma (in range_cover) funky_aligned:
   apply simp
   done
 
+(* FIXME RISCV: move to Corres_UL *)
+lemma corres_assert_gen_asm_cross:
+  "\<lbrakk> \<And>s s'. \<lbrakk>(s, s') \<in> sr; P' s; Q' s'\<rbrakk> \<Longrightarrow> A;
+     A \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g ()) \<rbrakk>
+  \<Longrightarrow> corres_underlying sr nf nf' r (P and P') (Q and Q') f (assert A >>= g)"
+  by (metis corres_assert_assume corres_cases corres_name_pre)
+
+defs canonicalAddressAssert_def:
+  "canonicalAddressAssert p \<equiv> RISCV64.canonical_address p"
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma inv_untyped_corres':
@@ -4863,6 +4873,11 @@ lemma inv_untyped_corres':
     have sz_limit[simp]: "sz \<le> maxUntypedSizeBits"
       using vc' unfolding valid_cap'_def by clarsimp
 
+    have canonical_ptr[simp]: "canonical_address ptr"
+      using ptr_cn sz_limit
+      unfolding canonical_address_range maxUntypedSizeBits_def canonical_bit_def
+      by word_bitwise (simp add: word_size)
+
     note set_cap_free_index_invs_spec = set_free_index_invs[where cap = "cap.UntypedCap
         dev (ptr && ~~ mask sz) sz (if reset then 0 else idx)"
       ,unfolded free_index_update_def free_index_of_def,simplified]
@@ -4887,6 +4902,7 @@ lemma inv_untyped_corres':
                 sz (if reset then 0 else idx)" in corres_gen_asm)
           apply (rule corres_add_noop_lhs)
           apply (rule corres_split_nor[OF _ cNodeNoOverlap return_wp stateAssert_wp])
+          apply (clarsimp simp: canonicalAddressAssert_def)
           apply (rule corres_split[OF _ updateFreeIndex_corres,rotated])
               apply (simp add:isCap_simps)+
              apply (clarsimp simp:getFreeIndex_def bits_of_def shiftL_nat shiftl_t2n

@@ -47,7 +47,7 @@ gpRegisters :: [Register]
 gpRegisters = [A0 .. A7] ++ [T0 .. T6] ++ [TP]
 
 exceptionMessage :: [Register]
-exceptionMessage = [FaultIP, SP, A7]
+exceptionMessage = [FaultIP, SP]
 
 syscallMessage :: [Register]
 syscallMessage = FaultIP : SP : LR : [A0 .. A6]

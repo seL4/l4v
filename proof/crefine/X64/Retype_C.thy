@@ -4437,7 +4437,7 @@ next
     apply (rule arg_cong[where f=modify])
     apply (rule arg_cong[where f=underlying_memory_update])
     apply (simp add: fold_def del: fun_upd_apply)
-    done thm ext
+    done
 qed
 
 lemma mapM_x_storeWord_step:
@@ -8351,7 +8351,7 @@ lemma createNewCaps_valid_cap_hd:
   apply (cases "n = 0")
    apply simp
   apply (rule hoare_chain)
-    apply (rule hoare_vcg_conj_lift) thm createNewCaps_def
+    apply (rule hoare_vcg_conj_lift)
      apply (rule createNewCaps_ret_len)
     apply (rule createNewCaps_valid_cap'[where sz=sz])
    apply (clarsimp simp: range_cover_n_wb canonical_address_neq_mask)

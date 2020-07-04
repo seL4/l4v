@@ -130,7 +130,7 @@ definition cte_level_bits :: nat
 
 definition tcb_bits :: nat
   where
-  "tcb_bits \<equiv> 11"
+  "tcb_bits \<equiv> 10"
 
 definition endpoint_bits :: nat
   where

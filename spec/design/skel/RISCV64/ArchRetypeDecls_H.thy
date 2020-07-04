@@ -27,4 +27,7 @@ context Arch begin global_naming RISCV64_H
 
 end (*context RISCV64*)
 
+(* Defined differently and/or delayed on different architectures *)
+consts canonicalAddressAssert :: "machine_word => bool"
+
 end

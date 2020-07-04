@@ -23,6 +23,7 @@ requalify_facts
   data_to_cptr_def
   arch_post_cap_deletion_cur_thread
   arch_post_cap_deletion_state_refs_of
+  arch_invoke_irq_handler_typ_at
 end
 
 lemmas [wp] =

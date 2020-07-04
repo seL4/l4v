@@ -200,6 +200,14 @@ The objects in the Haskell model are removed at this time. This operation is spe
 >                         (getFreeIndex (capPtr cap) addr)
 >                     preemptionPoint
 
+\begin{impdetails}
+Will be set to something stricter in Isabelle when required.
+
+> canonicalAddressAssert :: PPtr () -> Bool
+> canonicalAddressAssert p = True
+
+\end{impdetails}
+
 > invokeUntyped :: UntypedInvocation -> KernelP ()
 > invokeUntyped (Retype srcSlot reset base retypeBase newType userSize destSlots isDev) = do
 
@@ -213,6 +221,7 @@ For verification purposes a check is made that the region the objects are create
 >                 (\x -> fromPPtr retypeBase <= x
 >                     && x <= fromPPtr retypeBase + fromIntegral totalObjectSize - 1)))
 >             "CNodes present in region to be retyped."
+>         assert (canonicalAddressAssert retypeBase) "Canonical ptr required on some architectures"
 >         let freeRef = retypeBase + PPtr (fromIntegral totalObjectSize)
 >         updateFreeIndex srcSlot (getFreeIndex base freeRef)
 

@@ -1659,8 +1659,8 @@ lemma handleInterrupt_no_orphans [wp]:
   unfolding handleInterrupt_def
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps hoare_vcg_all_lift getIRQState_inv
-         | wpc | clarsimp simp: invs'_def valid_state'_def
-                                handleReservedIRQ_def)+
+          | wpc | clarsimp simp: invs'_def valid_state'_def maskIrqSignal_def
+                                 handleReservedIRQ_def)+
   done
 
 lemma updateRestartPC_no_orphans[wp]:
@@ -2252,6 +2252,8 @@ lemma setDomain_no_orphans [wp]:
                dest: pred_tcb_at')
   done
 
+crunch no_orphans[wp]: InterruptDecls_H.invokeIRQHandler no_orphans
+
 lemma performInvocation_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> valid_invocation' i s \<and> ct_active' s \<and> sch_act_simple s \<rbrace>
    performInvocation block call i
@@ -2417,7 +2419,7 @@ theorem callKernel_no_orphans [wp]:
    callKernel e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding callKernel_def
-  by (wpsimp wp: weak_if_wp schedule_invs')
+  by (wpsimp wp: weak_if_wp schedule_invs' hoare_drop_imps)
 
 end
 

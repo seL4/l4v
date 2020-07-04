@@ -14,7 +14,7 @@ named_theorems EmptyFail_AI_assms
 
 crunch_ignore (empty_fail)
   (add: setVSpaceRoot_impl sfence_impl hwASIDFlush_impl read_sbadaddr resetTimer_impl sbadaddr_val
-        pt_lookup_from_level setIRQTrigger_impl)
+        pt_lookup_from_level setIRQTrigger_impl plic_complete_claim_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
   loadWord, load_word_offs, storeWord, getRestartPC, get_mrs
@@ -169,7 +169,12 @@ context Arch begin global_naming RISCV64
 crunch (empty_fail) empty_fail[wp]: read_sbadaddr
   (ignore_del: read_sbadaddr)
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: possible_switch_to, handle_event, activate_thread
+lemma plic_complete_claim_empty_fail[wp, EmptyFail_AI_assms]:
+  "empty_fail (plic_complete_claim irq)"
+  by (clarsimp simp: plic_complete_claim_def ef_machine_op_lift)
+
+crunches possible_switch_to, handle_event, activate_thread
+  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pte.splits
          bool.splits apiobject_type.splits aobject_type.splits notification.splits

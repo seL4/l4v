@@ -307,7 +307,7 @@ lemma cap_case_TCBCap2:
 lemma length_of_msgRegisters:
   "length X64_H.msgRegisters = 4"
   by (auto simp: msgRegisters_unfold)
-thm setMRs_def X64.msgRegisters_def
+
 lemma setMRs_single:
   "setMRs thread buffer [val] = do y \<leftarrow> asUser thread (setRegister register.R10 val);
        return 1

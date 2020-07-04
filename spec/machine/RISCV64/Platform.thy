@@ -124,6 +124,10 @@ definition pptrUserTop :: word64
 lemma "pptrUserTop = 0x0000003ffffff000" (* Sanity check with C *)
   by (simp add: pptrUserTop_def canonical_bit_def mask_def)
 
+schematic_goal pptrUserTop_def': (* direct constant definition *)
+  "RISCV64.pptrUserTop = numeral ?x"
+  by (simp add: RISCV64.pptrUserTop_def canonical_bit_def mask_def del: word_eq_numeral_iff_iszero)
+
 definition pAddr_base :: word64
   where
   "pAddr_base \<equiv> 0"

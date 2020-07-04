@@ -13,6 +13,8 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 declare arch_post_cap_deletion_def[simp]
 lemmas post_cap_deletion_simps[simp] = post_cap_deletion_def[simplified arch_post_cap_deletion_def]
 
+declare arch_mask_irq_signal_def[simp]
+
 lemma nat_bl_to_bin_surj:
   "\<exists>bl. n = nat (bl_to_bin bl)"
   using n_less_equal_power_2[where n=n, folded of_nat_less_iff, simplified]

@@ -149,7 +149,9 @@ lookupPTSlotFromLevel 0 ptPtr vPtr =
 lookupPTSlotFromLevel level ptPtr vPtr = do
     pte <- pteAtIndex level ptPtr vPtr
     if isPageTablePTE pte
-        then lookupPTSlotFromLevel (level-1) (getPPtrFromHWPTE pte) vPtr
+        then do
+            checkPTAt (getPPtrFromHWPTE pte)
+            lookupPTSlotFromLevel (level-1) (getPPtrFromHWPTE pte) vPtr
         else return (ptBitsLeft level, ptSlotIndex level ptPtr vPtr)
 
 -- lookupPTSlot walks the page table and returns a pointer to the slot that maps
@@ -223,6 +225,7 @@ deleteASID asid pt = do
 -- Returns only slots with pageTablePTEs
 lookupPTFromLevel :: Int -> PPtr PTE -> VPtr -> PPtr PTE -> KernelF LookupFailure (PPtr PTE)
 lookupPTFromLevel level ptPtr vPtr targetPtPtr = do
+    assert (ptPtr /= targetPtPtr) "never called at top-level"
     unless (0 < level) $ throw InvalidRoot
     let slot = ptSlotIndex level ptPtr vPtr
     pte <- withoutFailure $ getObject slot
@@ -230,7 +233,9 @@ lookupPTFromLevel level ptPtr vPtr targetPtPtr = do
     let ptr = getPPtrFromHWPTE pte
     if ptr == targetPtPtr
         then return slot
-        else lookupPTFromLevel (level-1) ptr vPtr targetPtPtr
+        else do
+            withoutFailure $ checkPTAt ptr
+            lookupPTFromLevel (level-1) ptr vPtr targetPtPtr
 
 unmapPageTable :: ASID -> VPtr -> PPtr PTE -> Kernel ()
 unmapPageTable asid vaddr pt = ignoreFailure $ do
@@ -266,6 +271,9 @@ setVMRoot :: PPtr TCB -> Kernel ()
 setVMRoot tcb = do
     threadRootSlot <- getThreadVSpaceRoot tcb
     threadRoot <- getSlotCap threadRootSlot
+    {- We use this in C to remove the check for isMapped: -}
+    assert (isValidVTableRoot threadRoot || threadRoot == NullCap)
+           "threadRoot must be valid or Null"
     catchFailure
         (case threadRoot of
             ArchObjectCap (PageTableCap {
@@ -309,12 +317,14 @@ attribsFromWord w = VMAttributes { riscvExecuteNever = w `testBit` 0 }
 
 makeUserPTE :: PAddr -> Bool -> VMRights -> PTE
 makeUserPTE baseAddr executable rights =
-    PagePTE {
-        ptePPN = baseAddr `shiftR` pageBits,
-        pteGlobal = False,
-        pteUser = rights /= VMKernelOnly,
-        pteExecute = executable,
-        pteRights = rights }
+    if rights == VMKernelOnly && not executable
+    then InvalidPTE
+    else PagePTE {
+             ptePPN = baseAddr `shiftR` pageBits,
+             pteGlobal = False,
+             pteUser = True,
+             pteExecute = executable,
+             pteRights = rights }
 
 checkVPAlignment :: VMPageSize -> VPtr -> KernelF SyscallError ()
 checkVPAlignment sz w =

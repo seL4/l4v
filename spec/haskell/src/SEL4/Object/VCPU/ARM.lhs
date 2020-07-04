@@ -365,7 +365,6 @@ For initialisation, see makeVCPUObject.
 > vcpuEnable :: PPtr VCPU -> Kernel ()
 > vcpuEnable vcpuPtr = do
 >     vcpuRestoreReg vcpuPtr VCPURegSCTLR
->     vcpuRestoreReg vcpuPtr VCPURegTPIDRURO
 >     vcpu <- getObject vcpuPtr
 >     doMachineOp $ do
 >         setHCR hcrVCPU
@@ -379,8 +378,6 @@ For initialisation, see makeVCPUObject.
 >
 >     case vcpuPtrOpt of
 >         Just vcpuPtr -> do
->            vcpuSaveReg vcpuPtr VCPURegTPIDRURO
->            doMachineOp $ writeVCPUHardwareReg VCPURegTPIDRURO 0
 >            hcr <- doMachineOp get_gic_vcpu_ctrl_hcr
 >            vgicUpdate vcpuPtr (\vgic -> vgic { vgicHCR = hcr })
 >            vcpuSaveReg vcpuPtr VCPURegSCTLR

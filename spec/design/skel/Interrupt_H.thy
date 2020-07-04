@@ -20,8 +20,10 @@ requalify_consts
   checkIRQ
   decodeIRQControlInvocation
   performIRQControl
+  invokeIRQHandler
   initInterruptController
   handleReservedIRQ
+  maskIrqSignal
 
 context begin global_naming global
 requalify_consts

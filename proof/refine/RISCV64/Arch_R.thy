@@ -485,11 +485,15 @@ lemma machine_word_len_pageBits_shift[simp]:
   apply (simp add: word_size)
   done
 
+lemma vmrights_map_empty[simp]:
+  "vmrights_map {} = VMKernelOnly"
+  by (simp add: vmrights_map_def)
+
 lemma pte_relation_make_user[simp]:
   "pte_relation'
      (make_user_pte p (attribs_from_word a) (mask_vm_rights R (data_to_rights r)))
      (makeUserPTE p (\<not>attribsFromWord a) (maskVMRights (vmrights_map R) (rightsFromWord r)))"
-  by (auto simp: make_user_pte_def makeUserPTE_def attribs_from_word_def user_attr_def
+  by (auto simp: make_user_pte_def makeUserPTE_def attribs_from_word_def
                  attribsFromWord_def mask_vmrights_corres vmrights_map_VMKernelOnly)
 
 lemma below_user_vtop_in_user_region:

@@ -513,7 +513,6 @@ lemmas sendIPC_typ_ats[wp] = typ_at_lifts [OF sendIPC_typ_at']
 lemmas invokeSchedContext_typ_ats[wp] = typ_at_lifts [OF invokeSchedContext_typ_at']
 lemmas invokeSchedControlConfigure_typ_ats[wp] = typ_at_lifts [OF invokeSchedControlConfigure_typ_at']
 
-
 lemma pinv_tcb'[wp]:
   "\<lbrace>invs' and st_tcb_at' active' tptr
           and valid_invocation' i and ct_active'\<rbrace>

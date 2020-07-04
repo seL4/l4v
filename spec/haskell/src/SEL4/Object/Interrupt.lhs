@@ -112,7 +112,7 @@ An IRQ handler capability allows a thread possessing it to set an endpoint which
 
 > invokeIRQHandler :: IRQHandlerInvocation -> Kernel ()
 > invokeIRQHandler (AckIRQ irq) =
->     doMachineOp $ maskInterrupt False irq
+>     Arch.invokeIRQHandler (AckIRQ irq)
 > invokeIRQHandler (SetIRQHandler irq cap slot) = do
 >     irqSlot <- getIRQSlot irq
 >     cteDeleteOne irqSlot
@@ -189,7 +189,7 @@ is set to an incorrect value.
 >                             sendSignal (capNtfnPtr cap) (capNtfnBadge cap)
 >                         _ -> doMachineOp $ debugPrint $
 >                             "Undelivered interrupt: " ++ show irq
->                     doMachineOp $ maskInterrupt True irq
+>                     Arch.maskIrqSignal irq
 >                 IRQTimer -> do
 >                     doMachineOp ackDeadlineIRQ
 >                     setReprogramTimer True

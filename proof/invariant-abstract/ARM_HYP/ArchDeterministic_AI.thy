@@ -37,6 +37,8 @@ global_interpretation Deterministic_AI_1?: Deterministic_AI_1
 
 context Arch begin global_naming ARM_HYP
 
+declare arch_invoke_irq_handler_valid_list[Deterministic_AI_assms]
+
 crunch valid_list[wp]: invalidate_tlb_by_asid valid_list
   (wp: crunch_wps preemption_point_inv' simp: crunch_simps filterM_mapM unless_def
    ignore: without_preemption filterM )
@@ -84,14 +86,13 @@ crunches vgic_maintenance, vppi_event
 lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
   "\<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"
   unfolding handle_interrupt_def ackInterrupt_def handle_reserved_irq_def
-  by (wpsimp wp: hoare_drop_imps)
+  by (wpsimp wp: hoare_drop_imps simp: arch_mask_irq_signal_def)
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_send,handle_reply valid_list
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_hypervisor_fault valid_list
 
 end
-
 global_interpretation Deterministic_AI_2?: Deterministic_AI_2
   proof goal_cases
   interpret Arch .

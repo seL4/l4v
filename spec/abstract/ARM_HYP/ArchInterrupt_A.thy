@@ -87,7 +87,15 @@ where
      else if irq_vppi_event_index irq \<noteq> None then vppi_event irq
      else return ()"
 
-end
+fun arch_invoke_irq_handler :: "irq_handler_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
+  where
+  "arch_invoke_irq_handler (ACKIrq irq) = (do_machine_op $ maskInterrupt False irq)"
+| "arch_invoke_irq_handler _ = return ()"
 
+definition arch_mask_irq_signal :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad"
+  where
+  "arch_mask_irq_signal irq \<equiv> do_machine_op $ maskInterrupt True irq"
+
+end
 
 end

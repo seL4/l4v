@@ -11,7 +11,7 @@
 theory Refine
 imports
   KernelInit_R
-  DomainTime_R
+  ADT_H
   InitLemmas
   PageTableDuplicates
 begin
@@ -397,8 +397,22 @@ lemma ckernel_invs:
   apply (rule hoare_pre)
    apply (wp activate_invs' activate_sch_act schedule_sch
              schedule_sch_act_simple he_invs' schedule_invs'
+             hoare_drop_imps
           | simp add: no_irq_getActiveIRQ)+
   done
+
+(* abstract and haskell have identical domain list fields *)
+abbreviation valid_domain_list' :: "'a kernel_state_scheme \<Rightarrow> bool" where
+  "valid_domain_list' \<equiv> \<lambda>s. valid_domain_list_2 (ksDomSchedule s)"
+
+lemmas valid_domain_list'_def = valid_domain_list_2_def
+
+defs kernelExitAssertions_def:
+  "kernelExitAssertions s \<equiv> 0 < ksDomainTime s \<and> valid_domain_list' s"
+
+lemma callKernel_domain_time_left:
+  "\<lbrace> \<top> \<rbrace> callKernel e \<lbrace>\<lambda>_ s. 0 < ksDomainTime s \<and> valid_domain_list' s \<rbrace>"
+  unfolding callKernel_def kernelExitAssertions_def by wpsimp
 
 lemma doMachineOp_sch_act_simple:
   "doMachineOp f \<lbrace>sch_act_simple\<rbrace>"
@@ -482,6 +496,9 @@ lemma device_update_invs':
                     gets_def get_def bind_def valid_def return_def)
    by (clarsimp simp: invs'_def valid_state'_def valid_irq_states'_def valid_machine_state'_def)
 
+crunches doMachineOp
+  for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
+
 lemma doUserOp_invs':
   "\<lbrace>invs' and ex_abs einvs and
     (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and
@@ -503,12 +520,22 @@ lemma doUserOp_invs':
 
 text \<open>The top-level correspondence\<close>
 
-lemma kernel_corres:
+lemma kernel_corres':
   "corres dc (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle)
                and (\<lambda>s. scheduler_action s = resume_cur_thread))
              (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
               (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-             (call_kernel event) (callKernel event)"
+             (call_kernel event)
+             (do _ \<leftarrow> runExceptT $
+                      handleEvent event `~catchError~`
+                        (\<lambda>_. withoutPreemption $ do
+                               irq <- doMachineOp (getActiveIRQ True);
+                               when (isJust irq) $ handleInterrupt (fromJust irq)
+                             od);
+                 _ \<leftarrow> ThreadDecls_H.schedule;
+                 activateThread
+              od)"
+  unfolding call_kernel_def callKernel_def
   apply (simp add: call_kernel_def callKernel_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split)
@@ -525,9 +552,9 @@ lemma kernel_corres:
             apply (simp add: when_def)
            apply (rule corres_when, simp)
            apply simp
-           apply (rule handle_interrupt_corres, simp)
+           apply (rule handle_interrupt_corres)
           apply simp
-          apply (wp hoare_drop_imps)[1]
+          apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
          apply simp
          apply (rule_tac Q="\<lambda>irq s. invs' s \<and>
                               (\<forall>irq'. irq = Some irq' \<longrightarrow>
@@ -541,13 +568,39 @@ lemma kernel_corres:
        apply (simp add: invs'_def valid_state'_def)
       apply (rule corres_split [OF _ schedule_corres])
         apply (rule activate_corres)
-       apply (wp schedule_invs' hoare_vcg_if_lift2 hoare_drop_imps
-                 handle_interrupt_valid_sched[unfolded non_kernel_IRQs_def, simplified] |simp)+
-     apply (rule_tac Q="\<lambda>_. valid_sched and invs and valid_list" and E="\<lambda>_. valid_sched and invs and valid_list"
+       apply (wp handle_interrupt_valid_sched[unfolded non_kernel_IRQs_def, simplified]
+                 schedule_invs' hoare_vcg_if_lift2 hoare_drop_imps |simp)+
+     apply (rule_tac Q="\<lambda>_. valid_sched and invs and valid_list" and
+                     E="\<lambda>_. valid_sched and invs and valid_list"
             in hoare_post_impErr)
-       apply (wp handle_event_valid_sched |simp)+
+       apply (wp handle_event_valid_sched hoare_vcg_imp_lift' |simp)+
    apply (clarsimp simp: active_from_running)
   apply (clarsimp simp: active_from_running')
+  done
+
+lemma kernel_corres:
+  "corres dc (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
+              (\<lambda>s. scheduler_action s = resume_cur_thread) and
+              (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s))
+             (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
+              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+             (call_kernel event) (callKernel event)"
+  unfolding callKernel_def K_bind_def
+  apply (rule corres_guard_imp)
+    apply (rule corres_add_noop_lhs2)
+    apply (simp only: bind_assoc[symmetric])
+    apply (rule corres_split[where r'=dc and
+                                   R="\<lambda>_ s. 0 < domain_time s \<and> valid_domain_list s" and
+                                   R'="\<lambda>_. \<top>"])
+       apply (rule corres_bind_return2, rule corres_stateAssert_assume_stronger)
+        apply simp
+       apply (simp add: kernelExitAssertions_def state_relation_def)
+      apply (simp only: bind_assoc)
+      apply (rule kernel_corres')
+     apply (wp call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext)
+    apply wp
+   apply clarsimp
+  apply clarsimp
   done
 
 lemma user_mem_corres:

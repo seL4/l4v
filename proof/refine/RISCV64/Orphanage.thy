@@ -564,6 +564,7 @@ lemma tcbSchedDequeue_no_orphans [wp]:
 
 crunches setVMRoot
   for ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  (wp: crunch_wps)
 
 lemma switchToIdleThread_no_orphans' [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and>
@@ -1693,7 +1694,7 @@ lemma handleInterrupt_no_orphans [wp]:
   unfolding handleInterrupt_def
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps hoare_vcg_all_lift getIRQState_inv
-         | wpc | clarsimp simp: invs'_def valid_state'_def
+         | wpc | clarsimp simp: invs'_def valid_state'_def maskIrqSignal_def
                                 handleReservedIRQ_def)+
   done
 
@@ -2074,9 +2075,9 @@ lemma invokeIRQControl_no_orphans [wp]:
 
 lemma invokeIRQHandler_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
-   invokeIRQHandler i
+   InterruptDecls_H.invokeIRQHandler i
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
-  apply (cases i, simp_all add: invokeIRQHandler_def)
+  apply (cases i, simp_all add: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
     apply (wp | clarsimp | fastforce)+
   done
 
@@ -2370,7 +2371,7 @@ theorem callKernel_no_orphans [wp]:
    callKernel e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding callKernel_def
-  by (wpsimp wp: weak_if_wp schedule_invs')
+  by (wpsimp wp: weak_if_wp schedule_invs' hoare_drop_imps)
 
 end
 

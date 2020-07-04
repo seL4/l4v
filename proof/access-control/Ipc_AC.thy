@@ -3116,8 +3116,6 @@ lemma integrity_tcb_in_fault_reply_refl:
      apply fastforce+
   done
 
-thm cte_wp_at_emptyableD[simplified cte_wp_at_caps_of_state]
-
 lemma emptyable_not_master:
   "\<lbrakk> valid_objs s; caps_of_state s slot = Some cap; \<not> is_master_reply_cap cap\<rbrakk>
    \<Longrightarrow> emptyable slot s"

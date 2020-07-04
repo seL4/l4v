@@ -1827,13 +1827,7 @@ lemma invokeIRQControl_valid_duplicates'[wp]:
    \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   unfolding performIRQControl_def by (wpsimp simp: ARM_H.performIRQControl_def)
 
-lemma invokeIRQHandler_valid_duplicates'[wp]:
-  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<rbrace> invokeIRQHandler a
-  \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add:invokeIRQHandler_def)
-  apply (rule hoare_pre)
-  apply (wp|wpc | simp add:ARM_H.performIRQControl_def)+
-  done
+crunch valid_duplicates'[wp]: InterruptDecls_H.invokeIRQHandler "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
 lemma invokeCNode_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s \<and> vs_valid_duplicates' (ksPSpace s)
@@ -2185,7 +2179,7 @@ lemma performInvocation_valid_duplicates'[wp]:
     \<and> valid_invocation' i s \<and> ct_active' s\<rbrace>
   RetypeDecls_H.performInvocation isBlocking isCall canDonate i
   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (clarsimp simp:performInvocation_def)
+  apply (clarsimp simp: performInvocation_def)
   apply (simp add:ct_in_state'_def)
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
@@ -2226,7 +2220,7 @@ lemma handleInterrupt_valid_duplicates'[wp]:
   apply (rule conjI; rule impI)
    apply (wp hoare_vcg_all_lift hoare_drop_imps
              threadSet_pred_tcb_no_state getIRQState_inv haskell_fail_wp
-          |wpc|simp add: handleReservedIRQ_def)+
+          |wpc|simp add: handleReservedIRQ_def maskIrqSignal_def)+
   done
 
 crunch valid_duplicates' [wp]:
@@ -2308,7 +2302,8 @@ lemma callKernel_valid_duplicates':
   apply (rule hoare_pre)
    apply (wp activate_invs'  schedule_sch
              schedule_sch_act_simple he_invs'
-          | simp add: no_irq_getActiveIRQ)+
+          | simp add: no_irq_getActiveIRQ
+          | wp (once) hoare_drop_imps )+
   sorry (* mcsIRQ
    apply (rule hoare_post_impErr)
      apply (rule valid_validE)

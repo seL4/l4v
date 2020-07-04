@@ -1142,13 +1142,13 @@ lemma getMRs_length:
   done
 
 lemma index_msgRegisters_less':
-  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x13"
+  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x14"
   by (simp add: msgRegistersC_def fupdate_def Arrays.update_def
                 fcp_beta "StrictC'_register_defs")
 
 lemma index_msgRegisters_less:
-  "n < 4 \<Longrightarrow> index msgRegistersC n <s 0x13"
-  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x13"
+  "n < 4 \<Longrightarrow> index msgRegistersC n <s 0x14"
+  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x14"
   using index_msgRegisters_less'
   by (simp_all add: word_sless_msb_less)
 

@@ -24,4 +24,11 @@ context Arch begin global_naming ARM_H
 #INCLUDE_HASKELL SEL4/Object/ObjectType/ARM.lhs CONTEXT ARM_H Arch.Types=ArchTypes_H ArchInv= decls_only
 
 end
+
+(* Defined differently and/or delayed on different architectures *)
+definition
+  canonicalAddressAssert :: "machine_word => bool" where
+  canonicalAddressAssert_def[simp]:
+  "canonicalAddressAssert p = True"
+
 end

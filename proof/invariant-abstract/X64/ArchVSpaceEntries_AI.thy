@@ -41,7 +41,6 @@ where
   | "pte_range (SmallPagePTE ptr x y) p = {p}"
 
 abbreviation "valid_pt_entries \<equiv> \<lambda>pt. valid_entries pte_range pt"
-thm valid_entries_def
 abbreviation "valid_pd_entries \<equiv> \<lambda>pd. valid_entries pde_range pd"
 
 abbreviation "valid_pdpt_entries \<equiv> \<lambda>pdpt. valid_entries pdpte_range pdpt"

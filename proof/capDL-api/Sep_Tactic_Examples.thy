@@ -27,8 +27,6 @@ lemma frame_rule:
   "\<And>R. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace> \<Longrightarrow> \<lbrace>P \<and>* R\<rbrace> f \<lbrace>\<lambda>_. Q \<and>* R\<rbrace>"
   oops
 
-thm swap_cap_wp[no_vars]
-
 lemma
  "\<lbrace><dest \<mapsto>c - \<and>* src \<mapsto>c cap \<and>* R>\<rbrace>
     move_cap cap' src dest
@@ -172,8 +170,6 @@ lemma "P s \<Longrightarrow> (Q \<longrightarrow>* (P \<and>* Q)) s"
   apply (erule sep_curry[rotated])
   apply (assumption)
   done
-
-thm sep_mp[no_vars] sep_curry[rotated, no_vars]
 
 
 (* wp tactic testing *)

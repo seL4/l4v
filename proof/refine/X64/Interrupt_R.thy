@@ -364,8 +364,8 @@ lemma invoke_irq_handler_corres:
    corres dc (einvs and irq_handler_inv_valid i)
              (invs' and irq_handler_inv_valid' i')
      (invoke_irq_handler i)
-     (invokeIRQHandler i')"
-  apply (cases i, simp_all add: invokeIRQHandler_def)
+     (InterruptDecls_H.invokeIRQHandler i')"
+  apply (cases i, simp_all add: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
     apply (rule corres_guard_imp, rule corres_machine_op)
       apply (rule corres_Id, simp_all)
     apply (rule no_fail_maskInterrupt)
@@ -438,8 +438,8 @@ lemma ct_in_current_domain_ksMachineState:
 
 lemma invoke_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace>
-    invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (cases i, simp_all add: invokeIRQHandler_def)
+    InterruptDecls_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (cases i, simp_all add: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
     apply (wp dmo_maskInterrupt)
     apply (clarsimp simp add: invs'_def valid_state'_def valid_irq_masks'_def
       valid_machine_state'_def ct_not_inQ_def
@@ -834,7 +834,8 @@ apply (rule corres_split)
             apply (case_tac xb, simp_all add: doMachineOp_return)[1]
              apply (clarsimp simp add: when_def doMachineOp_return)
              apply (rule corres_guard_imp, rule send_signal_corres)
-              apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind)+
+              apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind
+                                    arch_mask_irq_signal_def maskIrqSignal_def)+
               apply ( rule corres_split)
               apply (rule corres_machine_op, rule corres_eq_trivial ; (simp add:  no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
             apply ((wp |simp)+)
@@ -967,7 +968,7 @@ lemma hint_invs[wp]:
   apply (rule conjI; rule impI)
 
    apply (wp dmo_maskInterrupt_True getCTE_wp'
-    | wpc | simp add: doMachineOp_bind )+
+          | wpc | simp add: doMachineOp_bind maskIrqSignal_def)+
     apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
      apply (clarsimp simp: cte_wp_at_ctes_of ex_nonz_cap_to'_def)
      apply fastforce

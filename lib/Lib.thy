@@ -2389,6 +2389,10 @@ lemma not_psubset_eq:
   "\<lbrakk> \<not> A \<subset> B; A \<subseteq> B \<rbrakk> \<Longrightarrow> A = B"
   by blast
 
+lemma set_as_imp:
+  "(A \<inter> P \<union> B \<inter> -P) = {s. (s \<in> P \<longrightarrow> s \<in> A) \<and> (s \<notin> P \<longrightarrow> s \<in> B)}"
+  by auto
+
 
 lemma in_image_op_plus:
   "(x + y \<in> (+) x ` S) = ((y :: 'a :: ring) \<in> S)"
@@ -2709,5 +2713,19 @@ lemma distinct_map_enum:
 lemma equify:
   "(\<And>x. P x x) \<Longrightarrow> x = x' \<Longrightarrow> P x x'"
   by simp
+
+lemma if_option_None_eq:
+  "((if P then None else Some x) = None) = P"
+  by (auto split: if_splits)
+
+lemma not_in_ran_None_upd:
+  "x \<notin> ran m \<Longrightarrow> x \<notin> ran (m(y := None))"
+  by (auto simp: ran_def split: if_split)
+
+text \<open>Prevent clarsimp and others from creating Some from not None by folding this and unfolding
+  again when safe.\<close>
+
+definition
+  "not_None x = (x \<noteq> None)"
 
 end

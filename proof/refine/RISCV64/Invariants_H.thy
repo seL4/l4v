@@ -356,7 +356,7 @@ where valid_cap'_def:
   | ThreadCap r \<Rightarrow> tcb_at' r s
   | ReplyCap r m x \<Rightarrow> tcb_at' r s
   | IRQControlCap \<Rightarrow> True
-  | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
+  | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ \<and> irq \<noteq> irqInvalid
   | Zombie r b n \<Rightarrow> n \<le> zombieCTEs b \<and> zBits b < word_bits
                     \<and> (case b of ZombieTCB \<Rightarrow> tcb_at' r s | ZombieCNode n \<Rightarrow> n \<noteq> 0
                     \<and> (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask n)) s))
@@ -903,7 +903,8 @@ definition valid_irq_handlers' :: "kernel_state \<Rightarrow> bool" where
                                  cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s"
 
 definition
-  "irqs_masked' \<equiv> \<lambda>s. \<forall>irq > maxIRQ. intStateIRQTable (ksInterruptState s) irq = IRQInactive"
+  "irqs_masked' \<equiv> \<lambda>s. intStateIRQTable (ksInterruptState s) irqInvalid = IRQInactive \<and>
+                      (\<forall>irq > maxIRQ. intStateIRQTable (ksInterruptState s) irq = IRQInactive)"
 
 definition
   "valid_irq_masks' table masked \<equiv> \<forall>irq. table irq = IRQInactive \<longrightarrow> masked irq"
@@ -1938,7 +1939,7 @@ lemma cte_wp_at_cases':
    apply (erule is_aligned_no_wrap')
     apply (simp add: word_bits_conv)
    apply (simp add: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
-  apply (subgoal_tac "(p - n) + n \<le> (p - n) + 0x7FF")
+  apply (subgoal_tac "(p - n) + n \<le> (p - n) + 0x3FF")
    apply (simp add: field_simps)
   apply (rule word_plus_mono_right)
    apply (simp add: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)

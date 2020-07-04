@@ -85,6 +85,14 @@ lemma maskInterrupt_invs_ARCH[Interrupt_AI_asms]:
                          cur_tcb_def valid_irq_states_def valid_irq_masks_def)
   done
 
+crunch device_state_inv[wp]: plic_complete_claim "\<lambda>ms. P (device_state ms)"
+
+lemma dmo_plic_complete_claim[wp]:
+  "do_machine_op (plic_complete_claim irq) \<lbrace>invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply (auto simp: plic_complete_claim_def machine_op_lift_def machine_rest_lift_def in_monad select_f_def)
+  done
+
 lemma no_cap_to_obj_with_diff_IRQHandler_ARCH[Interrupt_AI_asms]:
   "no_cap_to_obj_with_diff_ref (IRQHandlerCap irq) S = \<top>"
   by (rule ext, simp add: no_cap_to_obj_with_diff_ref_def
@@ -132,7 +140,7 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
    done
   show ?thesis
   apply (cases i, simp_all)
-    apply (wp maskInterrupt_invs_ARCH)
+    apply (wp dmo_plic_complete_claim)
     apply simp+
    apply (rename_tac irq cap prod)
    apply (rule hoare_pre)
@@ -230,7 +238,8 @@ lemma (* handle_interrupt_invs *) [Interrupt_AI_asms]:
   apply (simp add: handle_interrupt_def)
   apply (rule conjI; rule impI)
   apply (simp add: do_machine_op_bind empty_fail_ackInterrupt_ARCH empty_fail_maskInterrupt_ARCH)
-     apply (wp dmo_maskInterrupt_invs maskInterrupt_invs_ARCH dmo_ackInterrupt send_signal_interrupt_states | wpc | simp)+
+     apply (wpsimp wp: dmo_maskInterrupt_invs maskInterrupt_invs_ARCH dmo_ackInterrupt
+                      send_signal_interrupt_states simp: arch_mask_irq_signal_def)+
      apply (wp get_cap_wp send_signal_interrupt_states )
     apply (rule_tac Q="\<lambda>rv. invs and (\<lambda>s. st = interrupt_states s irq)" in hoare_post_imp)
      apply (clarsimp simp: ex_nonz_cap_to_def invs_valid_objs)
@@ -249,6 +258,8 @@ lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_asms]:
   apply (cases i, simp)
   apply (wpsimp wp: ex_cte_cap_to_pres simp: cap_table_at_typ)
   done
+
+crunch typ_at[wp]: arch_invoke_irq_handler "\<lambda>s. P (typ_at T p s)"
 
 end
 

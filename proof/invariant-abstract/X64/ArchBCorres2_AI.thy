@@ -143,7 +143,8 @@ lemma handle_hypervisor_fault_bcorres[wp]: "bcorres (handle_hypervisor_fault a b
 lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"
   apply (cases e)
   apply (simp add: handle_send_def handle_call_def handle_recv_def handle_reply_def handle_yield_def
-                   handle_interrupt_def Let_def handle_reserved_irq_def | intro impI conjI allI | wp | wpc)+
+                   handle_interrupt_def Let_def handle_reserved_irq_def arch_mask_irq_signal_def
+         | intro impI conjI allI | wp | wpc)+
   done
 
 crunch (bcorres)bcorres[wp]: guarded_switch_to,switch_to_idle_thread truncate_state (ignore: storeWord)

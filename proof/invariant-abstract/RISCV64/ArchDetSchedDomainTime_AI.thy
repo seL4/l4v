@@ -20,7 +20,8 @@ crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   handle_arch_fault_reply,
   arch_invoke_irq_control, arch_get_sanitise_register_info,
   prepare_thread_delete, handle_hypervisor_fault, make_arch_fault_msg,
-  arch_post_modify_registers, arch_post_cap_deletion, handle_vm_fault
+  arch_post_modify_registers, arch_post_cap_deletion, handle_vm_fault,
+  arch_invoke_irq_handler
   "\<lambda>s. P (domain_list s)"
   (simp: crunch_simps)
 
@@ -32,7 +33,8 @@ crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
   handle_arch_fault_reply, init_arch_objects,
   arch_invoke_irq_control, arch_get_sanitise_register_info,
   prepare_thread_delete, handle_hypervisor_fault, handle_vm_fault,
-  arch_post_modify_registers, arch_post_cap_deletion, make_arch_fault_msg
+  arch_post_modify_registers, arch_post_cap_deletion, make_arch_fault_msg,
+  arch_invoke_irq_handler
   "\<lambda>s. P (domain_time s)"
   (simp: crunch_simps)
 
@@ -64,7 +66,7 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
    apply (case_tac "maxIRQ < i"; simp)
     subgoal by (wp hoare_false_imp, simp)
    apply (rule hoare_pre)
-    apply (wp do_machine_op_exst | simp | wpc)+
+    apply (wp do_machine_op_exst | simp add: arch_mask_irq_signal_def | wpc)+
        apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
        apply wp
       apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
@@ -77,10 +79,9 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
     apply clarsimp
    done
 
-crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: handle_reserved_irq "\<lambda>s. P (domain_time s)"
-  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
-
-crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: handle_reserved_irq "\<lambda>s. P (domain_list s)"
+crunches handle_reserved_irq, arch_mask_irq_signal
+  for domain_time_inv [wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
+  and domain_list_inv [wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
 
 end

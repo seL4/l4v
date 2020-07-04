@@ -43,7 +43,7 @@ abbreviation
 abbreviation
   pd_Ptr :: "32 word \<Rightarrow> (pde_C[2048]) ptr" where "pd_Ptr == Ptr"
 abbreviation
-  regs_C_Ptr :: "addr \<Rightarrow> (machine_word_len word[43]) ptr" where "regs_C_Ptr \<equiv> Ptr"
+  regs_C_Ptr :: "addr \<Rightarrow> (machine_word_len word[42]) ptr" where "regs_C_Ptr \<equiv> Ptr"
 abbreviation
   vgic_lr_C_Ptr :: "addr \<Rightarrow> (virq_C[64]) ptr" where "vgic_lr_C_Ptr \<equiv> Ptr"
 abbreviation

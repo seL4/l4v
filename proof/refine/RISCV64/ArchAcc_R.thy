@@ -515,7 +515,7 @@ lemma lookupPTSlotFromLevel_inv:
    apply (subst lookupPTSlotFromLevel.simps)
    apply (wpsimp simp: pteAtIndex_def wp: getPTE_wp)
   apply (subst lookupPTSlotFromLevel.simps)
-  apply (wpsimp simp: pteAtIndex_def wp: getPTE_wp|assumption)+
+  apply (wpsimp simp: pteAtIndex_def checkPTAt_def wp: getPTE_wp|assumption)+
   done
 
 declare lookupPTSlotFromLevel_inv[wp]
@@ -524,11 +524,11 @@ lemma lookupPTFromLevel_inv[wp]:
   "lookupPTFromLevel level pt vptr target_pt \<lbrace>P\<rbrace>"
 proof (induct level arbitrary: pt)
   case 0 show ?case
-    by (subst lookupPTFromLevel.simps, simp, wp)
+    by (subst lookupPTFromLevel.simps, simp add: checkPTAt_def, wpsimp)
 next
   case (Suc level)
   show ?case
-    by (subst lookupPTFromLevel.simps, simp)
+    by (subst lookupPTFromLevel.simps, simp add: checkPTAt_def)
        (wpsimp wp: Suc getPTE_wp simp: pteAtIndex_def)
 qed
 
@@ -630,14 +630,22 @@ next
   show ?case
     apply (subst pt_lookup_slot_from_level_rec)
     apply (simp add: lookupPTSlotFromLevel.simps Let_def obind_comp_dist if_comp_dist
-                     gets_the_if_distrib)
+                     gets_the_if_distrib checkPTAt_def)
     apply (rule corres_guard_imp, rule corres_split[where r'=pte_relation'])
          apply (rule corres_if3)
            apply (rename_tac pte pte', case_tac pte; (simp add: isPageTablePTE_def))
-          apply (rule minus(1))
-           apply (simp add: nlevel)
-          apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
-                                addr_from_ppn_def)
+          apply (rule corres_stateAssert_implied)
+           apply (rule minus(1))
+            apply (simp add: nlevel)
+           apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
+                                 addr_from_ppn_def)
+          apply clarsimp
+          apply (rule page_table_at_cross; assumption?)
+           apply (drule (2) valid_vspace_objs_strongD; assumption?)
+            apply simp
+           apply (clarsimp simp: pt_at_eq in_omonad is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
+                                      addr_from_ppn_def)
+          apply (simp add: state_relation_def)
          apply (rule corres_inst[where P=\<top> and P'=\<top>])
          apply (clarsimp simp: ptSlotIndex_def pt_slot_offset_def pt_index_def pt_bits_left_def
                                ptIndex_def ptBitsLeft_def)
@@ -682,7 +690,7 @@ lemma pt_lookup_from_level_corres:
    corres (lfr \<oplus> (=))
           (pspace_aligned and pspace_distinct and valid_vspace_objs
              and valid_asid_table and \<exists>\<rhd>(level,pt)
-             and K (vptr \<in> user_region \<and> level \<le> max_pt_level))
+             and K (vptr \<in> user_region \<and> level \<le> max_pt_level \<and> pt \<noteq> target))
           \<top>
           (pt_lookup_from_level level pt vptr target)
           (lookupPTFromLevel level' pt' vptr target)"
@@ -690,7 +698,9 @@ proof (induct level arbitrary: level' pt pt')
   case 0
   then show ?case
     apply (subst lookupPTFromLevel.simps, subst pt_lookup_from_level_simps)
-    apply (clarsimp simp: lookup_failure_map_def)
+    apply simp
+    apply (rule corres_gen_asm)
+    apply (simp add: lookup_failure_map_def)
     done
 next
   case (minus level)
@@ -746,6 +756,7 @@ next
   show ?case
     apply (subst lookupPTFromLevel.simps, subst pt_lookup_from_level_simps)
     apply (simp add: unlessE_whenE not_less)
+    apply (rule corres_gen_asm, simp)
     apply (rule corres_initial_splitE[where r'=dc])
        apply (corressimp simp: lookup_failure_map_def)
       apply (rule corres_splitEE[where r'=pte_relation'])
@@ -756,10 +767,18 @@ next
            apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
                                  addr_from_ppn_def)
           apply (rule corres_returnOk[where P=\<top> and P'=\<top>], rule refl)
-         apply (rule minus.hyps)
-          apply (simp add: minus.hyps(2))
-         apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
-                               addr_from_ppn_def)
+         apply (clarsimp simp: checkPTAt_def)
+         apply (subst liftE_bindE, rule corres_stateAssert_implied)
+          apply (rule minus.hyps)
+           apply (simp add: minus.hyps(2))
+          apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
+                                addr_from_ppn_def)
+         apply clarsimp
+         apply (rule page_table_at_cross; assumption?)
+          apply (drule vs_lookup_table_pt_at; simp?)
+          apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
+                                    addr_from_ppn_def)
+         apply (simp add: state_relation_def)
         apply (simp, rule get_pte_corres)
        apply wpsimp+
      apply (simp add: bit0.neq_0_conv)

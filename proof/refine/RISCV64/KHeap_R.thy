@@ -645,8 +645,8 @@ lemma cte_wp_at_ctes_of:
    apply (simp add: field_simps)
   apply (clarsimp split: if_split_asm del: disjCI)
    apply (simp add: ps_clear_def3 field_simps)
-  apply (rule disjI2, rule exI[where x="(p - (p && ~~ mask 11))"])
-  apply (clarsimp simp: ps_clear_def3[where na=11] is_aligned_mask add_ac
+  apply (rule disjI2, rule exI[where x="(p - (p && ~~ mask 10))"])
+  apply (clarsimp simp: ps_clear_def3[where na=10] is_aligned_mask add_ac
                         word_bw_assocs)
   done
 

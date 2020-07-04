@@ -247,6 +247,7 @@ fun
   | "register_from_H ARM_HYP.NextIP = scast Kernel_C.NextIP"
   | "register_from_H ARM_HYP.CPSR = scast Kernel_C.CPSR"
   | "register_from_H ARM_HYP.TPIDRURW = scast Kernel_C.TPIDRURW"
+  | "register_from_H ARM_HYP.TPIDRURO = scast Kernel_C.TPIDRURO"
   | "register_from_H ARM_HYP.FaultIP = scast Kernel_C.FaultIP"
 
 definition

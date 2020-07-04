@@ -765,8 +765,6 @@ lemma lookup_cap_cap_fault:
   apply assumption
   done
 
-term "equiv_valid_inv (reads_equiv_f aag) (affects_equiv aag l) P f"
-
 lemma cap_fault_on_failure_ev':
   "equiv_valid_inv (reads_equiv_f aag) A P f \<Longrightarrow>
        equiv_valid_inv (reads_equiv_f aag) A P (cap_fault_on_failure cptr rp f)"

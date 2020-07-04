@@ -13,8 +13,8 @@ context kernel_m begin
 lemma invokeIRQHandler_AckIRQ_ccorres:
   "ccorres dc xfdc
        invs' (UNIV \<inter> {s. irq_' s = ucast irq}) []
-     (invokeIRQHandler (AckIRQ irq)) (Call invokeIRQHandler_AckIRQ_'proc)"
-  apply (cinit lift: irq_')
+     (InterruptDecls_H.invokeIRQHandler (AckIRQ irq)) (Call invokeIRQHandler_AckIRQ_'proc)"
+  apply (cinit lift: irq_' simp: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
    apply (ctac add: maskInterrupt_ccorres)
   apply (simp add: from_bool_def false_def)
   done
@@ -60,13 +60,13 @@ lemma invokeIRQHandler_SetIRQHandler_ccorres:
             and irq_handler_inv_valid' (SetIRQHandler irq cp slot))
           (UNIV \<inter> {s. irq_' s = ucast irq} \<inter> {s. slot_' s = Ptr slot}
                 \<inter> {s. ccap_relation cp (cap_' s)}) []
-      (invokeIRQHandler (SetIRQHandler irq cp slot))
+      (InterruptDecls_H.invokeIRQHandler (SetIRQHandler irq cp slot))
       (Call invokeIRQHandler_SetIRQHandler_'proc)"
 proof -
   have valid_objs_invs'_strg: "\<And>s. invs' s \<longrightarrow> valid_objs' s"
     by (clarsimp)
   show ?thesis
-  apply (cinit lift: irq_' slot_' cap_')
+  apply (cinit lift: irq_' slot_' cap_' simp: Interrupt_H.invokeIRQHandler_def)
    apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
    apply (rule ccorres_move_array_assertion_irq)
    apply (simp add: ucast_up_ucast is_up of_int_uint_ucast[symmetric])
@@ -103,9 +103,9 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
   "ccorres dc xfdc
           (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and K(irq \<le> 0xFF))
           (UNIV \<inter> {s. irq_' s = ucast irq}) []
-      (invokeIRQHandler (ClearIRQHandler irq))
+      (InterruptDecls_H.invokeIRQHandler (ClearIRQHandler irq))
       (Call invokeIRQHandler_ClearIRQHandler_'proc)"
-  apply (cinit lift: irq_')
+  apply (cinit lift: irq_' simp: Interrupt_H.invokeIRQHandler_def)
    apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
    apply (rule ccorres_move_array_assertion_irq)
    apply (simp add: ucast_up_ucast is_up of_int_uint_ucast[symmetric])

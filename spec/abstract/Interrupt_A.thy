@@ -18,7 +18,9 @@ context begin interpretation Arch .
 
 requalify_consts
   arch_invoke_irq_control
+  arch_invoke_irq_handler
   handle_reserved_irq
+  arch_mask_irq_signal
 end
 
 
@@ -42,7 +44,7 @@ slot. The IRQHandler operations load or clear those capabilities.\<close>
 fun
   invoke_irq_handler :: "irq_handler_invocation \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "invoke_irq_handler (ACKIrq irq) = (do_machine_op $ maskInterrupt False irq)"
+  "invoke_irq_handler (ACKIrq irq) = arch_invoke_irq_handler (ACKIrq irq)"
 | "invoke_irq_handler (SetIRQHandler irq cap slot) = (do
      irq_slot \<leftarrow> get_irq_slot irq;
      cap_delete_one irq_slot;
@@ -73,7 +75,7 @@ definition
        cap \<leftarrow> get_cap slot;
        when (is_ntfn_cap cap \<and> AllowSend \<in> cap_rights cap)
          $ send_signal (obj_ref_of cap) (cap_ep_badge cap);
-       do_machine_op $ maskInterrupt True irq
+       arch_mask_irq_signal irq
      od
    | IRQTimer \<Rightarrow> do
        do_machine_op ackDeadlineIRQ;

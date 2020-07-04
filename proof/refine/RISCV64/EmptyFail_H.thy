@@ -150,7 +150,7 @@ proof (induct level arbitrary: pt)
 next
   case (Suc level)
   then show ?case
-    by (subst lookupPTSlotFromLevel.simps) (wpsimp simp: pteAtIndex_def)
+    by (subst lookupPTSlotFromLevel.simps) (wpsimp simp: checkPTAt_def pteAtIndex_def)
 qed
 
 lemma empty_fail_arch_cap_exhausted:
@@ -278,7 +278,8 @@ crunch (empty_fail) empty_fail: callKernel
 
 theorem call_kernel_serial:
   "\<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
-              (\<lambda>s. scheduler_action s = resume_cur_thread)) s;
+              (\<lambda>s. scheduler_action s = resume_cur_thread) and
+              (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s)) s;
        \<exists>s'. (s, s') \<in> state_relation \<and>
             (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
               (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)) s' \<rbrakk>

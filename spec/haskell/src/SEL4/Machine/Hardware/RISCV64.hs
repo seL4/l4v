@@ -200,9 +200,9 @@ data VMRights
     deriving (Show, Eq)
 
 vmRightsToBits :: VMRights -> Word
-vmRightsToBits VMKernelOnly = 0x00
-vmRightsToBits VMReadOnly = 0x01
-vmRightsToBits VMReadWrite = 0x11
+vmRightsToBits VMKernelOnly = 1
+vmRightsToBits VMReadOnly = 2
+vmRightsToBits VMReadWrite = 3
 
 allowWrite :: VMRights -> Bool
 allowWrite VMKernelOnly = False
@@ -308,3 +308,6 @@ debugPrint str = liftIO $ putStrLn str
 
 read_sbadaddr :: MachineMonad Word
 read_sbadaddr = error "Unimplemented - machine op"
+
+plic_complete_claim :: IRQ -> MachineMonad ()
+plic_complete_claim = error "Unimplemented - machine op"

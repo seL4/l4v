@@ -1277,7 +1277,7 @@ lemma emptySlot_ifunsafe'[wp]:
   apply (clarsimp simp: cte_wp_at_ctes_of cteCaps_of_def)
   done
 
-lemmas ctes_of_valid'[elim] = ctes_of_valid_cap''
+lemmas ctes_of_valid'[elim] = ctes_of_valid_cap''[where r=cte for cte]
 
 crunch valid_idle'[wp]: setInterruptState "valid_idle'"
   (simp: valid_idle'_def)

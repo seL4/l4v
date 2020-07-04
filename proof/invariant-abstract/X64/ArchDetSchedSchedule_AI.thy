@@ -299,7 +299,8 @@ lemma arch_perform_invocation_valid_sched [wp, DetSchedSchedule_AI_assms]:
   done
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
-  handle_arch_fault_reply, handle_vm_fault valid_sched
+  handle_arch_fault_reply, handle_vm_fault, arch_mask_irq_signal, arch_invoke_irq_handler
+  valid_sched
   (ignore: )
 
 crunch not_queued [wp, DetSchedSchedule_AI_assms]:
