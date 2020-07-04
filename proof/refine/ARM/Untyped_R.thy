@@ -2940,7 +2940,8 @@ declare map_snd_zip_prefix[simp]
 declare word_unat_power [symmetric, simp del]
 
 lemma createNewCaps_range_helper:
-  "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits tp us) n \<and> 0 < n\<rbrace>
+  "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits tp us) n \<and> 0 < n
+         \<and> (tp = APIObjectType SchedContextObject \<longrightarrow> sc_size_bounds us)\<rbrace>
      createNewCaps tp ptr n us d
    \<lbrace>\<lambda>rv s. \<exists>capfn.
         rv = map capfn (map (\<lambda>p. ptr_add ptr (p * 2 ^ (APIType_capBits tp us)))
@@ -2956,41 +2957,37 @@ lemma createNewCaps_range_helper:
   apply (cases tp, simp_all split del: if_split)
           apply (rename_tac apiobject_type)
           apply (case_tac apiobject_type, simp_all split del: if_split)
+              \<comment>\<open>Untyped\<close>
               apply (rule hoare_pre, wp)
               apply (frule range_cover_not_zero[rotated -1],simp)
               apply (clarsimp simp: APIType_capBits_def
-                objBits_simps archObjSize_def ptr_add_def o_def)
+                                    objBits_simps archObjSize_def ptr_add_def o_def)
               apply (subst upto_enum_red')
                apply unat_arith
               apply (clarsimp simp: o_def fromIntegral_def toInteger_nat fromInteger_nat)
               apply fastforce
-             apply (rule hoare_pre,wp createObjects_ret2)
+             \<comment>\<open>TCB\<close>
+             apply (rule hoare_pre, wp createObjects_ret2)
+              apply (wpsimp simp: curDomain_def)
              apply (clarsimp simp: APIType_capBits_def word_bits_def
-                objBits_simps archObjSize_def ptr_add_def o_def)
+                                   objBits_simps archObjSize_def ptr_add_def o_def)
              apply (fastforce simp: objBitsKO_def objBits_def)
-            apply (rule hoare_pre,wp createObjects_ret2)
-            apply (clarsimp simp: APIType_capBits_def word_bits_def
-                                  objBits_simps archObjSize_def ptr_add_def o_def)
-            apply (fastforce simp: objBitsKO_def  objBits_def)
-           apply (rule hoare_pre,wp createObjects_ret2)
-           apply (clarsimp simp:  APIType_capBits_def word_bits_def
-              objBits_simps archObjSize_def ptr_add_def o_def)
-           apply (fastforce simp: objBitsKO_def  objBits_def)
-          apply (rule hoare_pre,wp createObjects_ret2)
-          apply (clarsimp simp: APIType_capBits_def word_bits_def
-             objBits_simps archObjSize_def ptr_add_def o_def)
-          apply (fastforce simp: objBitsKO_def  objBits_def)
-        apply (wp createObjects_ret2
-          | clarsimp simp: APIType_capBits_def objBits_if_dev archObjSize_def
-                        word_bits_def pdBits_def pageBits_def ptBits_def
-                        pteBits_def pdeBits_def
-                        split del: if_split
-          | simp add: objBits_simps
-          | (rule exI, fastforce))+
-  sorry
+             \<comment>\<open>other APIObjectType\<close>
+            apply ((rule hoare_pre, wp createObjects_ret2,
+                    clarsimp simp: APIType_capBits_def word_bits_def
+                                   objBits_simps archObjSize_def ptr_add_def o_def,
+                    fastforce simp: objBitsKO_def objBits_def scBits_simps)+)[5]
+       \<comment>\<open>Arch objects\<close>
+       by (wp createObjects_ret2
+         | clarsimp simp: APIType_capBits_def objBits_if_dev archObjSize_def word_bits_def
+                          pdBits_def pageBits_def ptBits_def pteBits_def pdeBits_def
+                    split del: if_split
+         | simp add: objBits_simps
+         | (rule exI, fastforce))+
 
 lemma createNewCaps_range_helper2:
-  "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits tp us) n \<and> 0 < n\<rbrace>
+  "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits tp us) n \<and> 0 < n
+         \<and> (tp = APIObjectType SchedContextObject \<longrightarrow> sc_size_bounds us)\<rbrace>
      createNewCaps tp ptr n us d
    \<lbrace>\<lambda>rv s. \<forall>cp \<in> set rv. capRange cp \<noteq> {} \<and> capRange cp \<subseteq> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}\<rbrace>"
   apply (rule hoare_assume_pre)
@@ -3012,6 +3009,7 @@ lemma createNewCaps_range_helper2:
    apply (erule of_nat_mono_maybe[rotated])
    apply (drule (1) range_cover.range_cover_n_less )
   apply (clarsimp)
+  apply (thin_tac "tp = _ \<longrightarrow> _")
   apply (erule impE)
    apply (simp add:range_cover_def)
    apply (rule is_aligned_no_overflow)
@@ -3022,7 +3020,8 @@ lemma createNewCaps_range_helper2:
 
 lemma createNewCaps_children:
   "\<lbrace>\<lambda>s. cap = UntypedCap d (ptr && ~~ mask sz) sz idx
-     \<and> range_cover ptr sz (APIType_capBits tp us) n \<and> 0 < n\<rbrace>
+     \<and> range_cover ptr sz (APIType_capBits tp us) n \<and> 0 < n
+         \<and> (tp = APIObjectType SchedContextObject \<longrightarrow> sc_size_bounds us)\<rbrace>
      createNewCaps tp ptr n us d
    \<lbrace>\<lambda>rv s. \<forall>y \<in> set rv. (sameRegionAs cap y)\<rbrace>"
   apply (rule hoare_assume_pre)
@@ -3187,7 +3186,8 @@ lemma dmo_ctes_of[wp]:
   by (simp add: doMachineOp_def split_def | wp select_wp)+
 
 lemma createNewCaps_ranges:
-  "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits ty us) n \<and> 0<n \<rbrace>
+  "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits ty us) n \<and> 0<n
+         \<and> (ty = APIObjectType SchedContextObject \<longrightarrow> sc_size_bounds us)\<rbrace>
   createNewCaps ty ptr n us d
   \<lbrace>\<lambda>rv s. distinct_sets (map capRange rv)\<rbrace>"
   apply (rule hoare_assume_pre)
@@ -3213,7 +3213,8 @@ lemma createNewCaps_ranges:
   done
 
 lemma createNewCaps_ranges':
-  "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n\<rbrace>
+  "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n
+         \<and> (ty = APIObjectType SchedContextObject \<longrightarrow> sc_size_bounds us)\<rbrace>
   createNewCaps ty ptr n us d
   \<lbrace>\<lambda>rv s. distinct_sets (map capRange (map snd (zip xs rv)))\<rbrace>"
   apply (rule hoare_strengthen_post)
@@ -5352,7 +5353,8 @@ lemma createNewCaps_idlethread[wp]:
 
 lemma createNewCaps_idlethread_ranges[wp]:
   "\<lbrace>\<lambda>s. 0 < n \<and> range_cover ptr sz (APIType_capBits tp us) n
-           \<and> ksIdleThread s \<notin> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}\<rbrace>
+           \<and> ksIdleThread s \<notin> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}
+         \<and> (tp = APIObjectType SchedContextObject \<longrightarrow> sc_size_bounds us)\<rbrace>
      createNewCaps tp ptr n us d
    \<lbrace>\<lambda>rv s. \<forall>cap\<in>set rv. ksIdleThread s \<notin> capRange cap\<rbrace>"
   apply (rule hoare_as_subst [OF createNewCaps_idlethread])

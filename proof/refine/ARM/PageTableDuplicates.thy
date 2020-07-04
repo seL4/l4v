@@ -1086,7 +1086,7 @@ lemma createObject_valid_duplicates'[wp]:
     apply ((wp hoare_unless_wp[where P="d"] hoare_unless_wp[where Q=\<top>] | wpc
             | simp add: alignError_def placeNewObject_def
                         placeNewObject'_def split_def split del: if_split)+)[2]
-  apply (intro conjI impI)
+(*  apply (intro conjI impI)
              apply clarsimp+
             apply (erule(2) valid_duplicates'_update)
              apply (clarsimp simp: vs_entry_align_def)+
@@ -1197,7 +1197,7 @@ lemma createObject_valid_duplicates'[wp]:
                  ARM_H.toAPIType_def
                  word_bits_conv archObjSize_def is_aligned_mask
           split: ARM_H.object_type.splits)+)[1]
-  apply (clarsimp simp: word_bits_def)
+  apply (clarsimp simp: word_bits_def)*)
  sorry
 
 

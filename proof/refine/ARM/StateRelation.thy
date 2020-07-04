@@ -675,6 +675,10 @@ lemma curthread_relation:
   "(a, b) \<in> state_relation \<Longrightarrow> ksCurThread b = cur_thread a"
   by (simp add: state_relation_def)
 
+lemma curdomain_relation:
+  "(s, s') \<in> state_relation \<Longrightarrow> cur_domain s = ksCurDomain s'"
+  by (clarsimp simp: state_relation_def)
+
 lemma state_relation_pspace_relation[elim!]:
   "(s,s') \<in> state_relation \<Longrightarrow> pspace_relation (kheap s) (ksPSpace s')"
   by (simp add: state_relation_def)
@@ -809,6 +813,17 @@ lemma sc_const_eq:
   "minSchedContextBits = min_sched_context_bits"
   by (auto simp: refillSizeBytes_def refill_size_bytes_def minSchedContextBits_def
                  sizeof_sched_context_t_def min_sched_context_bits_def schedContextStructSize_def)
+
+lemma max_num_refills_eq_refillAbsoluteMax':
+  "max_num_refills = refillAbsoluteMax'"
+  by (rule ext)
+     (simp add: max_num_refills_def refillAbsoluteMax'_def shiftL_nat sc_const_eq)
+
+lemma maxUntyped_eq:
+  "untyped_max_bits = maxUntypedSizeBits"
+  by (simp add: untyped_max_bits_def maxUntypedSizeBits_def)
+
+lemmas sc_const_conc = sc_const_eq[symmetric] max_num_refills_eq_refillAbsoluteMax' maxUntyped_eq
 
 lemma sc_relation_refills:
   "sc_relation sc n sc' \<Longrightarrow>
@@ -982,6 +997,29 @@ lemma minRefillLength_ARM: "minRefillLength = 12"
 lemma minRefillLength_minSchedContextBits[simp]:
   "scBitsFromRefillLength' minRefillLength = minSchedContextBits"
   by (clarsimp simp: minRefillLength_def scBits_inverse_us)
+
+lemma refillAbsoluteMax'_mono:
+  fixes x y
+  assumes "minSchedContextBits \<le> x"
+    and "x \<le> y"
+  shows "refillAbsoluteMax' x \<le> refillAbsoluteMax' y"
+proof -
+  show ?thesis
+    unfolding refillAbsoluteMax'_def
+    using assms
+    by (simp add: diff_le_mono div_le_mono shiftL_nat)
+qed
+
+lemma refillAbsoluteMax'_lb:
+  "minSchedContextBits \<le> us \<Longrightarrow> minRefillLength \<le> refillAbsoluteMax' us"
+  apply (simp add: minRefillLength_def)
+  using refillAbsoluteMax'_mono by blast
+
+lemma MIN_REFILLS_le_minRefillLength:
+  "MIN_REFILLS \<le> minRefillLength"
+  by (clarsimp simp: MIN_REFILLS_def minRefillLength_ARM)
+
+lemmas scBits_simps = scBits_inverse_us refillAbsoluteMax_def sc_size_bounds_def sc_const_conc
 
 (* leaving this sorried for now, still tweaking what to assume and how *)
 lemma scBits_max:
