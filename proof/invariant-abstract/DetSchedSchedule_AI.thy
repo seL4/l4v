@@ -2273,6 +2273,10 @@ locale DetSchedSchedule_AI =
     "\<And>t P. prepare_thread_delete t \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_post_cap_deletion_valid_sched_pred[wp] :
     "\<And>c P. arch_post_cap_deletion c \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  assumes arch_invoke_irq_handler_valid_sched_pred[wp] :
+    "\<And>c P. arch_invoke_irq_handler c \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  assumes arch_mask_irq_signal_valid_sched_pred[wp] :
+    "\<And>c P. arch_mask_irq_signal c \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes prepare_thread_delete_ct_in_state[wp]:
     "\<And>t P. prepare_thread_delete t \<lbrace>ct_in_state P ::det_state \<Rightarrow> _\<rbrace>"
   assumes update_time_stamp_valid_machine_time[wp]:
@@ -2281,6 +2285,12 @@ locale DetSchedSchedule_AI =
     "\<lbrace>valid_machine_time :: 'state_ext state \<Rightarrow> _\<rbrace>
      do_machine_op getCurrentTime
      \<lbrace>\<lambda>rv s. (cur_time s \<le> rv) \<and> (rv \<le> - kernelWCET_ticks - 1)\<rbrace>"
+  assumes arch_invoke_irq_handler_ct_active[wp]:
+    "\<And>i. arch_invoke_irq_handler i \<lbrace>ct_active::'state_ext state \<Rightarrow> _\<rbrace>"
+  assumes handle_reserved_irq_ct_active[wp]:
+    "\<And>i. handle_reserved_irq i \<lbrace>ct_active::'state_ext state \<Rightarrow> _\<rbrace>"
+  assumes arch_mask_irq_signal_ct_active[wp]:
+    "\<And>i. arch_mask_irq_signal i \<lbrace>ct_active::'state_ext state \<Rightarrow> _\<rbrace>"
 
 locale DetSchedSchedule_AI_det_ext = DetSchedSchedule_AI "TYPE(det_ext)" +
   assumes arch_activate_idle_thread_valid_list'[wp]:
@@ -2306,6 +2316,28 @@ sublocale handle_vm_fault: valid_sched_pred_locale state_ext_t "handle_vm_fault 
 sublocale prepare_thread_delete: valid_sched_pred_locale state_ext_t "prepare_thread_delete t" by unfold_locales wp
 sublocale arch_get_sanitise_register_info: valid_sched_pred_locale state_ext_t "arch_get_sanitise_register_info ft" by unfold_locales wp
 sublocale arch_post_cap_deletion: valid_sched_pred_locale state_ext_t "arch_post_cap_deletion c" by unfold_locales wp
+
+context begin
+interpretation Arch .
+
+(* we assume this crunch works for all architectures *)
+crunches arch_invoke_irq_handler, handle_reserved_irq, arch_mask_irq_signal
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  and cur_time[wp]: "\<lambda>s. P (cur_time s)"
+  and consumed_time[wp]: "\<lambda>s. P (consumed_time s)"
+  and consumed_time_bounded[wp]: "consumed_time_bounded"
+  and release_queue[wp]: "\<lambda>s. P (release_queue s)"
+  and valid_release_q[wp]: "\<lambda>s. valid_release_q s"
+  and cur_thread[wp]: "\<lambda>s::det_state. P (cur_thread s)"
+  (wp: crunch_wps)
+
+crunches arch_mask_irq_signal
+  for cur_sc_in_release_q_imp_zero_consumed[wp]: "cur_sc_in_release_q_imp_zero_consumed"
+
+crunches handle_reserved_irq
+  for valid_sched_pred_strong[wp]: "valid_sched_pred_strong P"
+
+end
 
 lemma switch_to_idle_thread_valid_sched_pred[valid_sched_wp]:
   "\<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (ep_send_qs_of s) (ep_recv_qs_of s) (sc_tcbs_of s) (last_machine_time_of s) (time_state_of s)
@@ -13522,6 +13554,7 @@ crunches reply_from_kernel
 end
 
 context DetSchedSchedule_AI begin
+
 crunches invoke_irq_control
   for valid_sched_pred_strong[wp]: "valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _"
 
@@ -17509,13 +17542,6 @@ lemma ct_not_blocked_cur_sc_not_blocked_trivial:
   "cur_sc_tcb_only_sym_bound s \<and> ct_not_blocked s \<Longrightarrow> cur_sc_not_blocked s"
   by (rule ct_not_blocked_cur_sc_not_blocked[OF strengthen_cur_sc_chargeable]; clarsimp)
 
-end
-
-context DetSchedSchedule_AI_det_ext begin
-
-end
-
-context DetSchedSchedule_AI begin
 
 lemma refill_bounded_helper:
   "valid_refills (cur_sc s) s
@@ -19695,7 +19721,7 @@ lemma handle_interrupt_cur_sc_in_release_q_imp_zero_consumed:
   unfolding handle_interrupt_def get_irq_state_def get_irq_slot_def
   apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
   apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (case_tac st; (clarsimp simp: bind_assoc handle_reserved_irq_def)?, (solves \<open>wpsimp\<close>)?)
+  apply (case_tac st; (clarsimp simp: bind_assoc)?, (solves \<open>wpsimp\<close>)?)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (wpsimp wp: send_signal_cur_sc_in_release_q_imp_zero_consumed get_cap_wp)
   apply (clarsimp simp: cte_wp_at_def ex_nonz_cap_to_def)
@@ -22570,3 +22596,4 @@ lemma call_kernel_valid_sched:
 end
 
 end
+

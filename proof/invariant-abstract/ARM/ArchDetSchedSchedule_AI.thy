@@ -388,6 +388,17 @@ lemma arch_perform_invocation_cur_sc_in_release_q_imp_zero_consumed [wp, DetSche
   unfolding arch_perform_invocation_def
   by (cases iv; wpsimp wp: hoare_drop_imps)
 
+crunches arch_invoke_irq_handler, arch_mask_irq_signal, handle_reserved_irq
+  for ct_active[wp]: ct_active
+
+lemma arch_invoke_irq_handler_valid_sched_pred_strong[wp]:
+  "arch_invoke_irq_handler i \<lbrace> valid_sched_pred_strong P \<rbrace>"
+  by (cases i; wpsimp)
+
+lemma arch_mask_irq_signal_valid_sched_pred_strong[wp]:
+  "arch_mask_irq_signal i \<lbrace> valid_sched_pred_strong P \<rbrace>"
+  unfolding arch_mask_irq_signal_def by wpsimp
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI

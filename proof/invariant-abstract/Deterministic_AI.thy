@@ -4193,7 +4193,6 @@ lemma delete_objects_valid_list[wp]: "\<lbrace>valid_list\<rbrace> delete_object
 
 lemmas mapM_x_def_bak = mapM_x_def[symmetric]
 
-crunch valid_list[wp]: invoke_irq_handler valid_list
 crunch valid_list[wp]: maybe_donate_sc valid_list (wp: maybeM_inv)
 
 locale Deterministic_AI_2 = Deterministic_AI_1 +

@@ -105,9 +105,9 @@ locale DetSchedDomainTime_AI =
   assumes arch_post_cap_deletion_domain_list_inv'[wp]:
     "\<And>P ft. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> arch_post_cap_deletion ft \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes arch_invoke_irq_handler_domain_list_inv'[wp]:
-    "\<And>P i. arch_invoke_irq_handler i \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
+    "\<And>P i. arch_invoke_irq_handler i \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
   assumes arch_invoke_irq_handler_domain_time_inv'[wp]:
-    "\<And>P i. arch_invoke_irq_handler i \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
+    "\<And>P i. arch_invoke_irq_handler i \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace>"
 
 crunches update_restart_pc
   for domain_list[wp]: "\<lambda>s. P (domain_list s)"
@@ -133,9 +133,9 @@ locale DetSchedDomainTime_AI_2 = DetSchedDomainTime_AI +
   assumes handle_reserved_irq_domain_list_inv'[wp]:
     "\<And>P irq. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes arch_mask_irq_signal_domain_list_inv'[wp]:
-    "\<And>P irq. arch_mask_irq_signal irq \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
+    "\<And>P irq. arch_mask_irq_signal irq \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
   assumes arch_mask_irq_signal_domain_time_inv'[wp]:
-    "\<And>P irq. arch_mask_irq_signal irq \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
+    "\<And>P irq. arch_mask_irq_signal irq \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace>"
 
 crunch (empty_fail) empty_fail[wp]: commit_domain_time
 
@@ -276,11 +276,6 @@ crunch domain_list_inv[wp]: invoke_untyped "\<lambda>s::det_state. P (domain_lis
 crunch domain_list_inv[wp]: invoke_tcb "\<lambda>s::det_state. P (domain_list s)"
  (wp: hoare_drop_imp check_cap_inv mapM_x_wp')
 
-crunch domain_list_inv[wp]:
-  invoke_domain, invoke_irq_control, invoke_irq_handler
-  "\<lambda>s::det_state. P (domain_list s)"
-  (wp: crunch_wps check_cap_inv maybeM_inv)
-
 lemma invoke_sched_control_configure_domain_list[wp]:
  "\<lbrace>(\<lambda>s :: det_state. P (domain_list s))\<rbrace> invoke_sched_control_configure iv \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
   by (wpsimp wp: hoare_drop_imps simp: invoke_sched_control_configure_def)
@@ -288,6 +283,11 @@ lemma invoke_sched_control_configure_domain_list[wp]:
 lemma invoke_sched_context_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> invoke_sched_context i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   by (wpsimp simp: invoke_sched_context_def)
+
+crunch domain_list_inv[wp]:
+  invoke_domain, invoke_irq_control, invoke_irq_handler
+  "\<lambda>s::det_state. P (domain_list s)"
+  (wp: crunch_wps check_cap_inv maybeM_inv)
 
 end
 
