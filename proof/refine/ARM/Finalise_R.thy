@@ -1542,26 +1542,11 @@ lemma empty_slot_corres:
   apply (elim conjE)
   apply (drule (4) updateMDB_the_lot, elim conjE)
   apply clarsimp
-  apply (drule_tac s'=s''a and c=cap.NullCap in set_cap_not_quite_corres)
-                     subgoal by simp
-                    subgoal by simp
-                   subgoal by simp
-                  subgoal by fastforce
-                 subgoal by fastforce
-                subgoal by fastforce
-               subgoal by fastforce
-              subgoal by fastforce
-             apply fastforce
-            subgoal by fastforce
-           subgoal by fastforce
-          subgoal by fastforce
-         apply (erule cte_wp_at_weakenE, rule TrueI)
-        apply assumption
-       subgoal by simp
-      subgoal by simp
-     subgoal by simp
-    subgoal by simp
-   apply (rule refl)
+  apply (drule_tac s'=s''a and c=cap.NullCap in set_cap_not_quite_corres; (simp (no_asm_simp))?)
+      subgoal by fastforce
+     subgoal by fastforce
+    subgoal by fastforce
+   apply (erule cte_wp_at_weakenE, rule TrueI)
   apply clarsimp
   apply (drule updateCap_stuff, elim conjE, erule (1) impE)
   apply clarsimp

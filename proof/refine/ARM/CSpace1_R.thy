@@ -1753,6 +1753,10 @@ lemma set_cap_not_quite_corres:
   "domain_list s = ksDomSchedule s'"
   "cur_domain s = ksCurDomain s'"
   "domain_time s = ksDomainTime s'"
+  "consumed_time s = ksConsumedTime s'"
+  "cur_time s = ksCurTime s'"
+  "cur_sc s = ksCurSc s'"
+  "reprogram_timer s = ksReprogramTimer s'"
   "(x,t') \<in> fst (updateCap p' c' s')"
   "valid_objs s" "pspace_aligned s" "pspace_distinct s" "cte_at p s"
   "pspace_aligned' s'" "pspace_distinct' s'"
@@ -1779,6 +1783,10 @@ lemma set_cap_not_quite_corres:
              domain_list t = ksDomSchedule t' \<and>
              cur_domain t = ksCurDomain t' \<and>
              domain_time t = ksDomainTime t' \<and>
+             consumed_time t = ksConsumedTime t' \<and>
+             cur_time t = ksCurTime t' \<and>
+             cur_sc t = ksCurSc t' \<and>
+             reprogram_timer t = ksReprogramTimer t' \<and>
              sc_replies_of t = sc_replies_of s"
   using cr
   apply (clarsimp simp: updateCap_def in_monad)
@@ -1861,7 +1869,11 @@ lemma updateCap_stuff:
          (pspace_aligned' s' \<longrightarrow> pspace_aligned' s'') \<and>
          (pspace_distinct' s' \<longrightarrow> pspace_distinct' s'') \<and>
          replyNexts_of s'' = replyNexts_of s' \<and>
-         scReplies_of s'' = scReplies_of s'" using assms
+         scReplies_of s'' = scReplies_of s' \<and>
+         ksConsumedTime s'' = ksConsumedTime s' \<and>
+         ksCurTime s'' = ksCurTime s' \<and>
+         ksCurSc s'' = ksCurSc s' \<and>
+         ksReprogramTimer s'' = ksReprogramTimer s'" using assms
   apply (clarsimp simp: updateCap_def in_monad)
   apply (drule use_valid [where P="\<lambda>s. s2 = s" for s2, OF _ getCTE_sp refl])
   apply (rule conjI)
@@ -2448,12 +2460,16 @@ lemma updateMDB_ctes_of:
   apply simp
   done
 
-(* FIXME RT: where should this go? *)
 crunches updateMDB
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   and scs_of'[wp]: "\<lambda>s. P (scs_of' s)"
+  and ksConsumedTime[wp]: "\<lambda>s. P (ksConsumedTime s)"
+  and ksCurTime[wp]: "\<lambda>s. P (ksCurTime s)"
+  and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
+  and ksReprogramTimer[wp]: "\<lambda>s. P (ksReprogramTimer s)"
   and aligned[wp]: pspace_aligned'
   and pdistinct[wp]: pspace_distinct'
+  (wp: crunch_wps simp: crunch_simps setObject_def updateObject_cte)
 
 lemma updateMDB_the_lot:
   assumes "(x, s'') \<in> fst (updateMDB p f s')"
@@ -2478,18 +2494,17 @@ lemma updateMDB_the_lot:
          ksDomSchedule s''    = ksDomSchedule s' \<and>
          ksCurDomain s''      = ksCurDomain s' \<and>
          ksDomainTime s''     = ksDomainTime s' \<and>
+         ksConsumedTime s''   = ksConsumedTime s' \<and>
+         ksCurTime s''        = ksCurTime s' \<and>
+         ksCurSc s''          = ksCurSc s' \<and>
+         ksReprogramTimer s'' = ksReprogramTimer s' \<and>
          replyNexts_of s'' = replyNexts_of s' \<and>
          scReplies_of s'' = scReplies_of s'"
   using assms
   apply (simp add: updateMDB_eqs updateMDB_pspace_relation split del: if_split)
   apply (frule (1) updateMDB_ctes_of)
   apply clarsimp
-  apply (rule conjI)
-   apply (erule use_valid)
-    apply wp
-   apply simp
-  apply (erule use_valid)
-   apply wp
+  apply (erule use_valid, wp)
   apply simp
   done
 
@@ -4929,6 +4944,10 @@ lemma updateMDB_the_lot':
          ksDomSchedule s''    = ksDomSchedule s' \<and>
          ksCurDomain s''      = ksCurDomain s' \<and>
          ksDomainTime s''     = ksDomainTime s' \<and>
+         ksConsumedTime s''   = ksConsumedTime s' \<and>
+         ksCurTime s''        = ksCurTime s' \<and>
+         ksCurSc s''          = ksCurSc s' \<and>
+         ksReprogramTimer s'' = ksReprogramTimer s' \<and>
          replyNexts_of s'' = replyNexts_of s' \<and>
          scReplies_of s'' = scReplies_of s'"
   by (rule updateMDB_the_lot; fastforce intro: assms)
@@ -4992,7 +5011,7 @@ lemma cins_corres:
                 apply (simp+)[3]
              apply (clarsimp simp: corres_underlying_def state_relation_def
                                    in_monad valid_mdb'_def valid_mdb_ctes_def)
-             apply (drule (18) set_cap_not_quite_corres)
+             apply (drule (22) set_cap_not_quite_corres)
               apply (rule refl)
              apply (elim conjE exE)
              apply (rule bind_execI, assumption)
@@ -6462,7 +6481,7 @@ lemma cap_swap_corres:
   apply (clarsimp simp: corres_underlying_def in_monad
                         state_relation_def)
   apply (clarsimp simp: valid_mdb'_def)
-  apply (drule (12) set_cap_not_quite_corres)
+  apply (drule (16) set_cap_not_quite_corres)
       apply (erule cte_wp_at_weakenE, rule TrueI)
      apply assumption+
    apply (rule refl)
@@ -6482,7 +6501,7 @@ lemma cap_swap_corres:
                          use_valid [OF _ set_cap_distinct]
                          cte_wp_at_weakenE)
   apply (elim conjE)
-  apply (drule (14) set_cap_not_quite_corres)
+  apply (drule (18) set_cap_not_quite_corres)
        apply simp
       apply assumption+
    apply (rule refl)
@@ -6496,13 +6515,19 @@ lemma cap_swap_corres:
         | rule refl | clarsimp simp: put_def simp del: fun_upd_apply )+
   apply (simp cong: option.case_cong)
   apply (drule updateCap_stuff, elim conjE, erule(1) impE)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
+  apply (drule (2) updateMDB_the_lot', solves \<open>simp (no_asm_simp)\<close>,
+         erule valid_mdb_ctesE, solves \<open>simp (no_asm_simp)\<close>, clarsimp)
+  apply (drule (2) updateMDB_the_lot', solves \<open>simp (no_asm_simp)\<close>,
+         erule valid_mdb_ctesE, solves \<open>simp (no_asm_simp)\<close>, clarsimp)
   apply (drule in_getCTE, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
+  apply (drule (2) updateMDB_the_lot', solves \<open>simp (no_asm_simp)\<close>,
+         erule valid_mdb_ctesE, solves \<open>simp (no_asm_simp)\<close>, clarsimp)
+  apply (drule (2) updateMDB_the_lot', solves \<open>simp (no_asm_simp)\<close>,
+         erule valid_mdb_ctesE, solves \<open>simp (no_asm_simp)\<close>, clarsimp)
+  apply (drule (2) updateMDB_the_lot', solves \<open>simp (no_asm_simp)\<close>,
+         erule valid_mdb_ctesE, solves \<open>simp (no_asm_simp)\<close>, clarsimp)
+  apply (drule (2) updateMDB_the_lot', solves \<open>simp (no_asm_simp)\<close>,
+         erule valid_mdb_ctesE, solves \<open>simp (no_asm_simp)\<close>, clarsimp)
   apply (thin_tac "ksMachineState t = p" for t p)+
   apply (thin_tac "ksCurThread t = p" for t p)+
   apply (thin_tac "ksReadyQueues t = p" for t p)+
@@ -6677,54 +6702,35 @@ lemma cap_swap_corres:
     apply(fastforce split: option.split)
    apply(simp)
   apply(frule finite_depth)
-  apply(frule mdb_swap.n_next)
-   apply(simp)
+  apply(frule mdb_swap.n_next; (simp (no_asm_simp))?)
   apply(case_tac "(aa, bb)=src")
    apply(case_tac "next_slot dest (cdt_list (a)) (cdt a) = Some src")
     apply(simp)
     apply(erule_tac x="fst dest" in allE, erule_tac x="snd dest" in allE)
     apply(simp)
    apply(simp)
-   apply(case_tac "next_slot dest (cdt_list (a)) (cdt a)")
-    apply(simp)
-   apply(simp)
+   apply(case_tac "next_slot dest (cdt_list (a)) (cdt a)"; (simp (no_asm_simp))?)
    apply(erule_tac x="fst dest" in allE, erule_tac x="snd dest" in allE)
    apply(simp)
    apply(subgoal_tac "mdbNext dest_node \<noteq> cte_map src")
     apply(simp)
    apply(simp)
-   apply(rule_tac s=a in cte_map_inj)
-        apply(simp)
-       apply(rule cte_at_next_slot')
-          apply(simp)
-         apply(simp)
-        apply(simp)
-       apply(simp)
-      apply(erule cte_wp_at_weakenE, rule TrueI)
-     apply(simp_all)[3]
+   apply(rule_tac s=a in cte_map_inj; (simp (no_asm_simp))?)
+    apply(rule cte_at_next_slot'; (simp (no_asm_simp))?)
+   apply(erule cte_wp_at_weakenE, rule TrueI)
   apply(case_tac "(aa, bb)=dest")
    apply(case_tac "next_slot src (cdt_list (a)) (cdt a) = Some dest")
     apply(simp)
     apply(erule_tac x="fst src" in allE, erule_tac x="snd src" in allE)
     apply(simp)
    apply(simp)
-   apply(case_tac "next_slot src (cdt_list (a)) (cdt a)")
-    apply(simp)
-   apply(simp)
+   apply(case_tac "next_slot src (cdt_list (a)) (cdt a)"; (simp (no_asm_simp))?)
    apply(erule_tac x="fst src" in allE, erule_tac x="snd src" in allE)
    apply(simp)
-   apply(subgoal_tac "mdbNext src_node \<noteq> cte_map dest")
-    apply(simp)
-   apply(simp)
-   apply(rule_tac s=a in cte_map_inj)
-        apply(simp)
-       apply(rule cte_at_next_slot')
-          apply(simp)
-         apply(simp)
-        apply(simp)
-       apply(simp)
-      apply(erule cte_wp_at_weakenE, rule TrueI)
-     apply(simp_all)[3]
+   apply(subgoal_tac "mdbNext src_node \<noteq> cte_map dest"; (simp (no_asm_simp))?)
+   apply(rule_tac s=a in cte_map_inj; (simp (no_asm_simp))?)
+    apply(rule cte_at_next_slot'; (simp (no_asm_simp))?)
+   apply(erule cte_wp_at_weakenE, rule TrueI)
   apply(case_tac "next_slot (aa, bb) (cdt_list (a)) (cdt a) = Some src")
    apply(simp)
    apply(erule_tac x=aa in allE, erule_tac x=bb in allE)
@@ -6735,24 +6741,20 @@ lemma cap_swap_corres:
                         cte_map (aa, bb) = mdbPrev src_node")
      apply(clarsimp)
     apply(rule conjI)
-     apply(rule cte_map_inj)
-          apply(simp_all)[6]
+     apply(rule cte_map_inj; (simp (no_asm_simp))?)
      apply(erule cte_wp_at_weakenE, simp)
     apply(rule conjI)
-     apply(rule cte_map_inj)
-          apply(simp_all)[6]
-     apply(erule cte_wp_at_weakenE, simp)
-    apply(frule mdb_swap.m_exists)
-     apply(simp)
+     apply(rule cte_map_inj; (simp (no_asm_simp))?)
+     apply(erule cte_wp_at_weakenE, simp (no_asm_simp))
+    apply(frule mdb_swap.m_exists, simp (no_asm_simp))
     apply(clarsimp)
     apply(frule_tac cte="CTE cap' node'" in valid_mdbD1')
       apply(clarsimp)
-     apply(simp add: valid_mdb'_def)
+     apply(simp (no_asm_simp) add: valid_mdb'_def)
     apply(clarsimp)
-   apply(rule cte_at_next_slot)
-      apply(simp_all)[4]
+   apply(rule cte_at_next_slot; simp (no_asm_simp))
   apply(case_tac "next_slot (aa, bb) (cdt_list (a)) (cdt a) = Some dest")
-   apply(simp)
+   apply(simp (no_asm_simp))
    apply(erule_tac x=aa in allE, erule_tac x=bb in allE)
    apply(simp)
    apply(subgoal_tac "cte_at (aa, bb) a")
@@ -6763,25 +6765,22 @@ lemma cap_swap_corres:
       apply(clarsimp)
      apply(clarsimp simp: mdb_swap.prev_dest_src)
     apply(rule conjI)
-     apply(rule cte_map_inj)
-          apply(simp_all)[6]
-     apply(erule cte_wp_at_weakenE, simp)
+     apply(rule cte_map_inj; (simp (no_asm_simp))?)
+     apply(erule cte_wp_at_weakenE, simp (no_asm_simp))
     apply(rule conjI)
-     apply(rule cte_map_inj)
-          apply(simp_all)[6]
-     apply(erule cte_wp_at_weakenE, simp)
+     apply(rule cte_map_inj; (simp (no_asm_simp))?)
+     apply(erule cte_wp_at_weakenE, simp (no_asm_simp))
     apply(frule mdb_swap.m_exists)
-     apply(simp)
+     apply(simp (no_asm_simp))
     apply(clarsimp)
     apply(frule_tac cte="CTE cap' node'" in valid_mdbD1')
       apply(clarsimp)
-     apply(simp add: valid_mdb'_def)
+     apply(simp (no_asm_simp) add: valid_mdb'_def)
     apply(clarsimp)
-   apply(rule cte_at_next_slot)
-      apply(simp_all)[4]
-  apply(simp)
+   apply(rule cte_at_next_slot; (simp (no_asm_simp))?)
+  apply(simp (no_asm_simp))
   apply(case_tac "next_slot (aa, bb) (cdt_list (a)) (cdt a)")
-   apply(simp)
+   apply(simp (no_asm_simp))
   apply(clarsimp)
   apply(erule_tac x=aa in allE, erule_tac x=bb in allE)
   apply(simp)
@@ -6792,39 +6791,37 @@ lemma cap_swap_corres:
                       cte_map (aa, bb) \<noteq> mdbPrev dest_node")
     apply(clarsimp)
    apply(rule conjI)
-    apply(rule cte_map_inj)
-         apply(simp_all)[6]
-    apply(erule cte_wp_at_weakenE, simp)
+    apply(rule cte_map_inj; (simp (no_asm_simp))?)
+    apply(erule cte_wp_at_weakenE, simp (no_asm_simp))
    apply(rule conjI)
-    apply(rule cte_map_inj)
-         apply simp_all[6]
-    apply(erule cte_wp_at_weakenE, simp)
+    apply(rule cte_map_inj; (simp (no_asm_simp))?)
+    apply(erule cte_wp_at_weakenE, simp (no_asm_simp))
    apply(rule conjI)
     apply(frule mdb_swap.m_exists)
-     apply(simp)
+     apply(simp (no_asm_simp))
     apply(clarsimp)
      apply(frule_tac cte="CTE src_cap src_node" in valid_mdbD2')
-      subgoal by (clarsimp)
-     apply(simp add: valid_mdb'_def)
+     subgoal by (clarsimp)
+     apply(simp (no_asm_simp) add: valid_mdb'_def)
     apply(clarsimp)
-    apply(drule cte_map_inj_eq)
-         apply(rule cte_at_next_slot')
-            apply(simp_all)[9]
-    apply(erule cte_wp_at_weakenE, simp)
+    apply(drule cte_map_inj_eq; (simp (no_asm_simp))?)
+      apply(rule cte_at_next_slot'; simp (no_asm_simp))
+     apply(erule cte_wp_at_weakenE, simp (no_asm_simp))
+    apply simp
    apply(frule mdb_swap.m_exists)
-    apply(simp)
+    apply(simp (no_asm_simp))
    apply(clarsimp)
    apply(frule_tac cte="CTE dest_cap dest_node" in valid_mdbD2')
      apply(clarsimp)
-    apply(simp add: valid_mdb'_def)
+    apply(simp (no_asm_simp) add: valid_mdb'_def)
    apply(clarsimp)
-   apply(drule cte_map_inj_eq)
-         apply(rule cte_at_next_slot')
-           apply(simp_all)[9]
-    apply(erule cte_wp_at_weakenE, simp)
-  apply(rule cte_at_next_slot)
-     apply(simp_all)
-     done
+   apply(drule cte_map_inj_eq; (simp (no_asm_simp))?)
+     apply(rule cte_at_next_slot'; simp (no_asm_simp))
+    apply(erule cte_wp_at_weakenE)
+    apply (simp (no_asm_simp))
+   apply simp
+  apply(rule cte_at_next_slot; simp (no_asm_simp))
+  done
 
 
 lemma cap_swap_for_delete_corres:

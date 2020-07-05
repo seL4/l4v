@@ -717,6 +717,10 @@ lemma set_cap_not_quite_corres':
   "domain_list s   = ksDomSchedule s'"
   "cur_domain s    = ksCurDomain s'"
   "domain_time s   = ksDomainTime s'"
+  "consumed_time s = ksConsumedTime s'"
+  "cur_time s = ksCurTime s'"
+  "cur_sc s = ksCurSc s'"
+  "reprogram_timer s = ksReprogramTimer s'"
   "(x,t') \<in> fst (updateCap p' c' s')"
   "valid_objs s" "pspace_aligned s" "pspace_distinct s" "cte_at p s"
   "pspace_aligned' s'" "pspace_distinct' s'"
@@ -743,6 +747,10 @@ lemma set_cap_not_quite_corres':
              domain_list t   = ksDomSchedule t' \<and>
              cur_domain t    = ksCurDomain t' \<and>
              domain_time t   = ksDomainTime t' \<and>
+             consumed_time t = ksConsumedTime t' \<and>
+             cur_time t = ksCurTime t' \<and>
+             cur_sc t = ksCurSc t' \<and>
+             reprogram_timer t = ksReprogramTimer t' \<and>
              sc_replies_of t = sc_replies_of s"
   using cr
   by (rule set_cap_not_quite_corres; fastforce simp: c p)
@@ -891,7 +899,7 @@ lemma cap_move_corres:
   apply (thin_tac "ksSchedulerAction t = p" for t p)+
   apply (subgoal_tac "\<forall>p. cte_at p ta = cte_at p a")
    prefer 2
-   apply (simp add: set_cap_cte_eq)
+   apply (simp (no_asm_simp) add: set_cap_cte_eq)
   apply (clarsimp simp add: swp_def cte_wp_at_ctes_of simp del: split_paired_All)
   apply (subgoal_tac "cte_at ptr' a")
    prefer 2
@@ -949,8 +957,8 @@ lemma cap_move_corres:
     apply (erule mdb_ptr_axioms.intro)
    apply (rule mdb_move_axioms.intro)
         apply assumption
-       apply (simp add: nullPointer_def)
-      apply (simp add: nullPointer_def)
+       apply (simp (no_asm_simp) add: nullPointer_def)
+      apply (simp (no_asm_simp) add: nullPointer_def)
      apply (erule weak_derived_sym')
     apply clarsimp
    apply assumption
@@ -962,8 +970,8 @@ lemma cap_move_corres:
     apply (rule mdb_move_abs.intro)
        apply fastforce
       apply (fastforce elim!: cte_wp_at_weakenE)
-     apply simp
-    apply simp
+     apply (simp (no_asm_simp))
+    apply (simp (no_asm_simp))
    apply (case_tac "(aa,bb) = ptr", simp)
    apply (prop_tac "cte_map (aa,bb) \<noteq> cte_map ptr")
     apply (erule (2) cte_map_inj, fastforce, fastforce, fastforce)
@@ -3594,10 +3602,18 @@ lemma corres_caps_decomposition:
              "\<And>P. \<lbrace>\<lambda>s. P (new_dl s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cd s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_dt s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_time s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_cot s)\<rbrace> f \<lbrace>\<lambda>rv s. P (consumed_time s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_cut s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_time s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_csc s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_sc s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_rpt s)\<rbrace> f \<lbrace>\<lambda>rv s. P (reprogram_timer s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_dsi' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomScheduleIdx s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_ds' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cd' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_dt' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomainTime s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_cot' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksConsumedTime s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_cut' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksCurTime s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_csc' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksCurSc s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_rpt' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksReprogramTimer s)\<rbrace>"
   assumes updated_relations:
     "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
               \<Longrightarrow> cdt_relation ((\<noteq>) None \<circ> new_caps s) (new_mdb s) (new_ctes s')
@@ -3617,6 +3633,10 @@ lemma corres_caps_decomposition:
                   \<and> new_dl s = new_ds' s'
                   \<and> new_cd s = new_cd' s'
                   \<and> new_dt s = new_dt' s'
+                  \<and> new_cot s = new_cot' s'
+                  \<and> new_cut s = new_cut' s'
+                  \<and> new_csc s = new_csc' s'
+                  \<and> new_rpt s = new_rpt' s'
                   \<and> new_wuc s = new_wuc' s'
                   \<and> new_ups s = new_ups' s'
                   \<and> new_cns s = new_cns' s'"
@@ -4355,7 +4375,7 @@ lemma cins_corres_simple:
                 apply (simp+)[3]
              apply (clarsimp simp: corres_underlying_def state_relation_def
                                    in_monad valid_mdb'_def valid_mdb_ctes_def)
-             apply (drule (18) set_cap_not_quite_corres)
+             apply (drule (22) set_cap_not_quite_corres)
               apply (rule refl)
              apply (elim conjE exE)
              apply (rule bind_execI, assumption)
@@ -4378,9 +4398,9 @@ lemma cins_corres_simple:
         apply (clarsimp simp: put_def state_relation_def simp del: fun_upd_apply)
         apply (drule updateCap_stuff)
         apply clarsimp
-        apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
-        apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
-        apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
+        apply (drule (3) updateMDB_the_lot', simp (no_asm_simp), simp, elim conjE)
+        apply (drule (3) updateMDB_the_lot', simp (no_asm_simp), simp, elim conjE)
+        apply (drule (3) updateMDB_the_lot', simp (no_asm_simp), simp, elim conjE)
         apply (clarsimp)
         apply (rule conjI)
          apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)

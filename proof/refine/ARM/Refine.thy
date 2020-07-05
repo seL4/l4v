@@ -203,20 +203,30 @@ lemma absKState_correct:
   shows "absKState s' = abs_state s"
   using assms
   apply (intro state.equality, simp_all add: absKState_def abs_state_def)
-           apply (rule absHeap_correct, clarsimp+)
-           apply (clarsimp elim!: state_relationE)
-          apply (rule absCDT_correct, clarsimp+)
-         apply (rule absIsOriginalCap_correct, clarsimp+)
-        apply (simp add: state_relation_def)
-       apply (simp add: state_relation_def)
+                      apply (rule absHeap_correct, clarsimp+)
+                      apply (clarsimp elim!: state_relationE)
+                     apply (rule absCDT_correct, clarsimp+)
+                    apply (rule absIsOriginalCap_correct, clarsimp+)
+                   apply (simp add: state_relation_def)
+                  apply (simp add: state_relation_def)
+                 apply (clarsimp simp: state_relation_def)
+                apply (simp add: state_relation_def)
+               apply (simp add: state_relation_def)
+              apply (simp add: state_relation_def)
+             apply (rule absSchedulerAction_correct, simp add: state_relation_def)
+            apply (simp add: state_relation_def)
+           apply (simp add: state_relation_def)
+          apply (simp add: state_relation_def)
+         apply (simp add: state_relation_def)
+        apply (fastforce simp: curry_def state_relation_def ready_queues_relation_def)
+       apply (simp add: state_relation_def release_queue_relation_def)
       apply (clarsimp simp:  user_mem_relation invs_def invs'_def)
       apply (simp add: state_relation_def)
-  sorry (*
      apply (rule absInterruptIRQNode_correct, simp add: state_relation_def)
     apply (rule absInterruptStates_correct, simp add: state_relation_def)
    apply (rule absArchState_correct, simp)
   apply (rule absExst_correct, simp+)
-  done *)
+  done
 
 text \<open>The top-level invariance\<close>
 
@@ -426,24 +436,7 @@ lemma kernelEntry_invs':
 lemma absKState_correct':
   "\<lbrakk>einvs s; invs' s'; (s,s') \<in> state_relation\<rbrakk>
    \<Longrightarrow> absKState s' = abs_state s"
-  apply (intro state.equality, simp_all add: absKState_def abs_state_def)
-           apply (rule absHeap_correct)
-               apply (clarsimp simp: valid_state_def valid_pspace_def)+
-           apply (clarsimp dest!: state_relationD)
-          apply (rule absCDT_correct)
-                apply (clarsimp simp: valid_state_def valid_pspace_def
-                                      valid_state'_def valid_pspace'_def)+
-         apply (rule absIsOriginalCap_correct, clarsimp+)
-        apply (simp add: state_relation_def)
-       apply (simp add: state_relation_def)
-      apply (clarsimp simp: user_mem_relation invs_def invs'_def)
-      apply (simp add: state_relation_def)
-  sorry (*
-     apply (rule absInterruptIRQNode_correct, simp add: state_relation_def)
-    apply (rule absInterruptStates_correct, simp add: state_relation_def)
-   apply (erule absArchState_correct)
-  apply (rule absExst_correct, simp, assumption+)
-  done *)
+  by (rule absKState_correct)
 
 lemma ptable_lift_abs_state[simp]:
   "ptable_lift t (abs_state s) = ptable_lift t s"

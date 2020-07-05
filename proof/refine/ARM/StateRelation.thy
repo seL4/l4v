@@ -662,7 +662,12 @@ where
        \<and> (domain_index s = ksDomScheduleIdx s')
        \<and> (domain_list s = ksDomSchedule s')
        \<and> (cur_domain s = ksCurDomain s')
-       \<and> (domain_time s = ksDomainTime s')}"
+       \<and> (domain_time s = ksDomainTime s')
+       \<and> (consumed_time s = ksConsumedTime s')
+       \<and> (cur_time s = ksCurTime s')
+       \<and> (cur_sc s = ksCurSc s')
+       \<and> (reprogram_timer s = ksReprogramTimer s')}"
+
 
 text \<open>Rules for using states in the relation.\<close>
 
@@ -700,7 +705,11 @@ lemma state_relationD:
   domain_index s = ksDomScheduleIdx s' \<and>
   domain_list s = ksDomSchedule s' \<and>
   cur_domain s = ksCurDomain s' \<and>
-  domain_time s = ksDomainTime s'"
+  domain_time s = ksDomainTime s' \<and>
+  consumed_time s = ksConsumedTime s' \<and>
+  cur_time s = ksCurTime s' \<and>
+  cur_sc s = ksCurSc s' \<and>
+  reprogram_timer s = ksReprogramTimer s'"
   using sr unfolding state_relation_def by simp
 
 lemma state_relationE [elim?]:
@@ -721,7 +730,11 @@ lemma state_relationE [elim?]:
   domain_index s = ksDomScheduleIdx s';
   domain_list s = ksDomSchedule s';
   cur_domain s = ksCurDomain s';
-  domain_time s = ksDomainTime s' \<rbrakk> \<Longrightarrow> R"
+  domain_time s = ksDomainTime s';
+  consumed_time s = ksConsumedTime s';
+  cur_time s = ksCurTime s';
+  cur_sc s = ksCurSc s';
+  reprogram_timer s = ksReprogramTimer s' \<rbrakk> \<Longrightarrow> R"
   shows "R"
   using sr by (blast intro!: rl dest: state_relationD)
 
