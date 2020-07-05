@@ -102,7 +102,7 @@ lemma tcbSchedAppend_corres:
    apply (simp add: unless_def when_def)
    apply (rule corres_no_failI)
     apply wp+
-  sorry (*
+  sorry (* tcbSchedAppend_corres *) (*
    apply (clarsimp simp: in_monad gets_the_def bind_assoc
                          assert_opt_def exec_gets is_etcb_at_def get_etcb_def get_tcb_queue_def
                          set_tcb_queue_def simpler_modify_def)
@@ -561,7 +561,7 @@ lemma tcbSchedAppend_valid_release_queue[wp]:
 lemma tcbSchedAppend_valid_release_queue'[wp]:
   "tcbSchedAppend t \<lbrace>valid_release_queue'\<rbrace>"
   unfolding tcbSchedAppend_def
-  sorry
+  sorry (* annoying *)
 
 lemma tcbSchedAppend_invs'[wp]:
   "\<lbrace>invs'
@@ -771,14 +771,13 @@ proof -
   show ?thesis
     apply -
     apply (simp add: switch_to_thread_def Thread_H.switchToThread_def)
-  sorry (*
     apply (rule corres_symb_exec_l [where Q = "\<lambda> s rv. (?PA and (=) rv) s",
                                     OF corres_symb_exec_l [OF mainpart]])
     apply (auto intro: no_fail_pre [OF no_fail_assert]
                       no_fail_pre [OF no_fail_get]
                 dest: st_tcb_at_tcb_at [THEN get_tcb_at] |
            simp add: assert_def | wp)+
-    done *)
+    done
 qed
 
 lemma arch_switch_idle_thread_corres:
@@ -1506,7 +1505,7 @@ lemma guarded_switch_to_corres:
              (guarded_switch_to t) (switchToThread t)"
   apply (simp add: guarded_switch_to_def)
   apply (rule corres_guard_imp)
-  sorry (*
+  sorry (* asserts in switch_to_thread? *) (*
     apply (rule corres_symb_exec_l'[OF _ gts_exs_valid])
       apply (rule corres_assert_assume_l)
       apply (rule switch_thread_corres)
@@ -1539,14 +1538,14 @@ lemma guarded_switch_to_chooseThread_fragment_corres:
     (P and st_tcb_at runnable t and invs and valid_sched)
     (P' and st_tcb_at' runnable' t and invs_no_cicd')
           (guarded_switch_to t)
-          (do runnable \<leftarrow> isRunnable t;
-              y \<leftarrow> assert runnable;
+          (do schedulable \<leftarrow> isSchedulable t;
+              y \<leftarrow> assert schedulable;
               ThreadDecls_H.switchToThread t
            od)"
   unfolding guarded_switch_to_def isRunnable_def
   apply simp
   apply (rule corres_guard_imp)
-  sorry (*
+  sorry (* asserts in guarded_switch_to? *) (*
     apply (rule corres_split[OF _ gts_corres])
       apply (rule corres_assert_assume_l)
       apply (rule corres_assert_assume_r)
@@ -1616,23 +1615,26 @@ proof -
                        F="hd queue = hd (max_non_empty_queue queues)" in corres_req)
                apply (fastforce dest!: invs_no_cicd'_queues simp: bitmap_lookup_queue_is_max_non_empty)
               apply clarsimp
-              apply (rule corres_guard_imp) sorry (*
+              apply (rule corres_guard_imp)
                 apply (rule_tac P=\<top> and P'=\<top> in guarded_switch_to_chooseThread_fragment_corres)
                apply (wp | clarsimp simp: getQueue_def getReadyQueuesL2Bitmap_def)+
       apply (clarsimp simp: if_apply_def2)
       apply (wp hoare_vcg_conj_lift hoare_vcg_imp_lift ksReadyQueuesL1Bitmap_return_wp)
      apply (simp add: curDomain_def, wp)+
-   apply (clarsimp simp: valid_sched_def DetSchedInvs_AI.valid_queues_def max_non_empty_queue_def)
+   apply (clarsimp simp: valid_sched_def DetSchedInvs_AI.valid_ready_qs_def max_non_empty_queue_def)
    apply (erule_tac x="cur_domain sa" in allE)
    apply (erule_tac x="Max {prio. ready_queues sa (cur_domain sa) prio \<noteq> []}" in allE)
    apply (case_tac "ready_queues sa (cur_domain sa) (Max {prio. ready_queues sa (cur_domain sa) prio \<noteq> []})")
     apply (clarsimp)
     apply (subgoal_tac
              "ready_queues sa (cur_domain sa) (Max {prio. ready_queues sa (cur_domain sa) prio \<noteq> []}) \<noteq> []")
-     apply (fastforce elim!: setcomp_Max_has_prop)+
+     apply (fastforce elim!: setcomp_Max_has_prop)
+    apply (fastforce elim!: setcomp_Max_has_prop)
+   apply (clarsimp simp: tcb_at_kh_simps)
   apply (clarsimp dest!: invs_no_cicd'_queues)
   apply (fastforce intro: ksReadyQueuesL1Bitmap_st_tcb_at')
-  done *)
+  done
+
 qed
 
 lemma thread_get_comm: "do x \<leftarrow> thread_get f p; y \<leftarrow> gets g; k x y od =
@@ -1910,7 +1912,7 @@ lemma schedule_corres:
   supply if_split[split del]
 
   apply (clarsimp simp: Schedule_A.schedule_def Thread_H.schedule_def)
-  sorry (*
+  sorry (* schedule_corres *) (*
   apply (subst thread_get_test)
   apply (subst thread_get_comm)
   apply (subst schact_bind_inside)
@@ -2228,12 +2230,11 @@ proof -
        apply (simp, wp (once) switchToIdleThread_invs_no_cicd', simp)
       (* we have a thread to switch to *)
       apply (clarsimp simp: bitmap_fun_defs)
-      apply (wp assert_inv)
-  sorry (*
+      apply (wp assert_inv isSchedulable_wp)
       apply (clarsimp dest!: invs_no_cicd'_queues simp: valid_queues_def)
       apply (fastforce elim: bitmapQ_from_bitmap_lookup simp: lookupBitmapPriority_def)
      apply (wp | simp add: bitmap_fun_defs curDomain_def)+
-    done *)
+    done
 qed
 
 lemma chooseThread_in_cur_domain':
@@ -2258,7 +2259,7 @@ lemma schedule_invs':
   supply ssa_wp[wp del]
   apply (simp add: schedule_def)
   apply (rule_tac hoare_seq_ext, rename_tac t)
-  sorry (*
+  sorry (* schedule_invs' *) (*
    apply (wp, wpc)
       \<comment> \<open>action = ResumeCurrentThread\<close>
       apply (wp)[1]
@@ -2354,26 +2355,68 @@ lemma scheduleChooseNewThread_ct_activatable'[wp]:
          | (rule hoare_lift_Pf[where f=ksCurThread], solves wp)
          | strengthen invs'_invs_no_cicd)+
 
-lemma schedule_ct_activatable'[wp]:
+\<comment>\<open>FIXME: maybe move this block\<close>
+
+crunches getReprogramTimer, getCurTime, getRefills, getReleaseQueue, refillSufficient
+         , refillReady, isRoundRobin, releaseQNonEmptyAndReady
+  for inv[wp]: P
+
+lemma ksReprogramTimer_update_misc[simp]:
+  "valid_machine_state' (s\<lparr>ksReprogramTimer := b\<rparr>) = valid_machine_state' s"
+  "ct_not_inQ (s\<lparr>ksReprogramTimer := b\<rparr>) = ct_not_inQ s"
+  "ct_idle_or_in_cur_domain' (s\<lparr>ksReprogramTimer := b\<rparr>) = ct_idle_or_in_cur_domain' s"
+  "cur_tcb' (s\<lparr>ksReprogramTimer := b\<rparr>) = cur_tcb' s"
+  apply (clarsimp simp: valid_machine_state'_def ct_not_inQ_def ct_idle_or_in_cur_domain'_def
+                        tcb_in_cur_domain'_def cur_tcb'_def)+
+  done
+
+lemma ksReprogramTimer_update_invs'[simp]:
+  "invs' (s\<lparr>ksReprogramTimer := b\<rparr>) = invs' s"
+  unfolding invs'_def
+  by (clarsimp simp: valid_state'_def)
+
+lemma setReprogramTimer_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> setReprogramTimer b \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding setReprogramTimer_def
+  by wpsimp
+
+lemma rescheduleRequired_ksSchedulerAction[wp]:
+  "\<lbrace>K (P ChooseNewThread)\<rbrace> rescheduleRequired \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
+  unfolding rescheduleRequired_def
+  by (wpsimp wp: isSchedulable_wp)
+
+\<comment>\<open>end: maybe move this block\<close>
+
+lemma st_tcb_at_activatable_coerce_concrete:
+  assumes t: "st_tcb_at activatable t s"
+  assumes sr: "(s, s') \<in> state_relation"
+  assumes tcb: "tcb_at' t s'"
+  shows "st_tcb_at' activatable' t s'"
+  using t
+  apply -
+  apply (rule ccontr)
+  apply (drule pred_tcb_at'_Not[THEN iffD2, OF conjI, OF tcb])
+  apply (drule st_tcb_at_coerce_abstract[OF _ sr])
+  apply (clarsimp simp: st_tcb_def2)
+  apply (case_tac "tcb_state tcb"; simp)
+  done
+
+lemma ct_in_state'_activatable_coerce_concrete:
+  "\<lbrakk>ct_in_state activatable s; (s, s') \<in> state_relation; cur_tcb' s'\<rbrakk>
+    \<Longrightarrow> ct_in_state' activatable' s'"
+   unfolding ct_in_state'_def cur_tcb'_def ct_in_state_def
+   apply (rule st_tcb_at_activatable_coerce_concrete[rotated], simp, simp)
+   apply (frule curthread_relation, simp)
+   done
+
+lemma schedule_ct_activatable':
   "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
   supply ssa_wp[wp del]
   apply (simp add: schedule_def)
-  apply (rule_tac hoare_seq_ext, rename_tac t)
-  sorry (*
-   apply (wp, wpc)
-      \<comment> \<open>action = ResumeCurrentThread\<close>
-      apply (wp)[1]
-     \<comment> \<open>action = ChooseNewThread\<close>
      apply wpsimp
-    \<comment> \<open>action = SwitchToThread\<close>
-    apply (wpsimp wp: ssa_invs' setSchedulerAction_direct ssa_ct
-           | wp hoare_drop_imp[where f="isHighestPrio d p" for d p]
-           | simp only: obj_at'_activatable_st_tcb_at'[simplified comp_def]
-           | strengthen invs'_invs_no_cicd
-           | wp hoare_vcg_imp_lift)+
-  apply (fastforce dest: invs_sch_act_wf' elim: pred_tcb'_weakenE
-                   simp: sch_act_wf obj_at'_activatable_st_tcb_at')
-  done *)
+  sorry (* I believe that the coerce lemma above can be used to avoid the need for this lemma
+           (ct_in_state'_activatable_coerce_concrete).
+           This should be confirmed at some point. *)
 
 lemma threadSet_sch_act_sane[wp]:
   "\<lbrace>sch_act_sane\<rbrace> threadSet f t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
