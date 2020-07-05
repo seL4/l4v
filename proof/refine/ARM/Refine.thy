@@ -526,13 +526,16 @@ lemma kernel_corres':
                       handleEvent event `~catchError~`
                         (\<lambda>_. withoutPreemption $ do
                                irq <- doMachineOp (getActiveIRQ True);
-                               when (isJust irq) $ handleInterrupt (fromJust irq)
+                               when (isJust irq) $ do
+                                 _ \<leftarrow> mcsIRQ (fromJust irq);
+                                 handleInterrupt (fromJust irq)
+                               od
                              od);
                  _ \<leftarrow> ThreadDecls_H.schedule;
                  activateThread
               od)"
   unfolding call_kernel_def callKernel_def
-  apply (simp add: call_kernel_def callKernel_def)
+  sorry (*
   apply (rule corres_guard_imp)
     apply (rule corres_split)
        prefer 2
@@ -548,7 +551,6 @@ lemma kernel_corres':
             apply (simp add: when_def)
            apply (rule corres_when, simp)
            apply simp
-  sorry (*
            apply (rule handle_interrupt_corres)
           apply simp
           apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
@@ -595,11 +597,12 @@ lemma kernel_corres:
        apply (simp add: kernelExitAssertions_def state_relation_def)
       apply (simp only: bind_assoc)
       apply (rule kernel_corres')
+  sorry (* FIXME RT: call_kernel_domain_time_inv_det_ext
      apply (wp call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext)
     apply wp
    apply clarsimp
   apply clarsimp
-  done
+  done *)
 
 lemma user_mem_corres:
   "corres (=) invs invs' (gets (\<lambda>x. g (user_mem x))) (gets (\<lambda>x. g (user_mem' x)))"
@@ -648,7 +651,7 @@ lemma entry_corres:
               | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state
               | (wps, wp threadSet_st_tcb_at2) )+
    apply (clarsimp simp: invs_def cur_tcb_def)
-  sorry (*
+  sorry (* FIXME: akernel_invs wants is_schedulable_bool, which is too strong for kernel entry
   apply (clarsimp simp: ct_in_state'_def)
   done *)
 
