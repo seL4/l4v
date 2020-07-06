@@ -220,11 +220,7 @@ definition
      ct_schedulable \<leftarrow> is_schedulable ct;
      action \<leftarrow> gets scheduler_action;
      (case action
-       of resume_cur_thread \<Rightarrow> do
-            id \<leftarrow> gets idle_thread;
-            assert (ct_schedulable \<or> ct = id);
-            return ()
-         od
+       of resume_cur_thread \<Rightarrow> return ()
        | choose_new_thread \<Rightarrow> do
            when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct); \<comment> \<open>schedulable\<close>
            schedule_choose_new_thread
