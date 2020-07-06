@@ -9960,7 +9960,7 @@ lemma refill_unblock_check_cur_sc_more_than_ready[wp]:
   done
 
 lemma switch_sched_context_valid_sched:
-  "\<lbrace>valid_sched and simple_sched_action and ct_not_in_release_q
+  "\<lbrace>valid_sched and simple_sched_action
      and valid_state
      and cur_sc_in_release_q_imp_zero_consumed
      and cur_sc_more_than_ready
@@ -9978,7 +9978,7 @@ lemma switch_sched_context_valid_sched:
   done
 
 lemma sc_and_timer_valid_sched:
-  "\<lbrace>valid_sched and simple_sched_action and ct_not_in_release_q
+  "\<lbrace>valid_sched and simple_sched_action
      and valid_state and cur_tcb
      and cur_sc_in_release_q_imp_zero_consumed
      and cur_sc_more_than_ready
@@ -10248,10 +10248,7 @@ lemma schedule_valid_sched_helper:
    do ct <- gets cur_thread;
       ct_schedulable <- is_schedulable ct;
       action <- gets scheduler_action;
-      case action of resume_cur_thread \<Rightarrow> do id <- gets idle_thread;
-                                             assert (ct_schedulable \<or> ct = id);
-                                             return ()
-                                          od
+      case action of resume_cur_thread \<Rightarrow> return ()
       | switch_thread candidate \<Rightarrow>
           do when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct);
              it <- gets idle_thread;
@@ -10288,9 +10285,7 @@ lemma schedule_valid_sched_helper:
     apply (fold schact_is_rct_def)
     apply (wpsimp wp: sc_and_timer_valid_sched)
     apply (clarsimp simp: is_schedulable_bool_def2)
-    apply (subst eq_commute)
     apply (intro conjI impI allI; (solves \<open>clarsimp\<close>)?)
-    apply (rule it_not_in_release_qI; clarsimp simp: valid_sched_def)
   done
 
   (* switch_thread candidate *)

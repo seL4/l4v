@@ -154,8 +154,20 @@ lemma guarded_switch_to_ct_in_state_activatable[wp]:
 
 declare sc_and_timer_activatable[wp]
 
-lemma schedule_ct_activateable[wp]:
-  "\<lbrace>invs\<rbrace> Schedule_A.schedule \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
+lemma awaken_schact_not_rct[wp]:
+  "awaken \<lbrace>\<lambda>s. scheduler_action s \<noteq> resume_cur_thread\<rbrace>"
+  unfolding awaken_def possible_switch_to_def
+  by (wpsimp wp: mapM_x_wp_inv hoare_drop_imp simp: set_scheduler_action_def)
+
+crunches awaken
+  for ct_in_state[wp]: "ct_in_state P"
+  (wp: crunch_wps)
+
+lemma schedule_ct_activateable:
+  "\<lbrace>invs
+    and (\<lambda>s. scheduler_action s = resume_cur_thread \<longrightarrow> ct_in_state activatable s)\<rbrace>
+   schedule
+   \<lbrace>\<lambda>_. ct_in_state activatable\<rbrace>"
   supply if_split [split del]
   apply (simp add: Schedule_A.schedule_def)
   apply wp
@@ -170,13 +182,16 @@ lemma schedule_ct_activateable[wp]:
                             set_tcb_queue_def get_tcb_queue_def
                         wp: thread_get_wp')
        apply (wp add: is_schedulable_wp)+
-   apply (rule hoare_strengthen_post[where Q="\<lambda>_. invs"], wp)
+   apply (rule hoare_strengthen_post[where
+            Q="\<lambda>_. invs and (\<lambda>s. scheduler_action s = resume_cur_thread
+                                 \<longrightarrow> ct_in_state activatable s)"])
+    apply (wp hoare_vcg_imp_lift')
    apply clarsimp
    apply (frule invs_valid_idle)
    apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def valid_idle_def
                          is_schedulable_bool_def get_tcb_ko_at
                   split: option.splits if_split)
-  apply assumption
+  apply simp
   done
 
 lemma syscall_valid:
