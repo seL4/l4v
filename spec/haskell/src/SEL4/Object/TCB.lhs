@@ -1059,9 +1059,8 @@ On some architectures, the thread context may include registers that may be modi
 >     when (csc /= scPtr && scRefillMax sc /= 0) $ do
 >         setReprogramTimer True
 >     reprogram <- getReprogramTimer
->     if reprogram
->         then commitTime
->         else rollbackTime
+>     when reprogram $ do
+>         commitTime
 >     setCurSc csc
 
 > releaseQNonEmptyAndReady :: Kernel Bool
