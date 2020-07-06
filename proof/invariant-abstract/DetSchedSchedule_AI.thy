@@ -2434,7 +2434,7 @@ lemma activate_thread_valid_sched[wp]:
 
 \<comment> \<open>We can't write a wp-style rule, because we don't know how some arch functions update arch state.\<close>
 lemma switch_to_thread_valid_sched_pred[valid_sched_wp]:
-  "\<lbrace>\<lambda>s. \<forall>d p. etcb_eq p d t s \<and> t \<notin> set (release_queue s) \<and> budget_ready t s \<and> budget_sufficient t s
+  "\<lbrace>\<lambda>s. \<forall>d p. etcb_eq p d t s
                \<longrightarrow> P (consumed_time s) (cur_sc s) (ep_send_qs_of s) (ep_recv_qs_of s) (sc_tcbs_of s) (last_machine_time_of s) (time_state_of s)
                      (cur_time s) (cur_domain s) t (idle_thread s)
                      (tcb_sched_ready_q_update d p (tcb_sched_dequeue t) (ready_queues s))
@@ -2443,12 +2443,11 @@ lemma switch_to_thread_valid_sched_pred[valid_sched_wp]:
                      (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    switch_to_thread t
    \<lbrace>\<lambda>rv. valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  apply (wpsimp simp: switch_to_thread_def
-                  wp: get_tcb_obj_ref_wp valid_sched_wp)
-  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps not_in_release_q_def)
+  by (wpsimp simp: switch_to_thread_def
+               wp: get_tcb_obj_ref_wp valid_sched_wp)
 
 lemma guarded_switch_to_valid_sched_pred[valid_sched_wp]:
-  "\<lbrace>\<lambda>s. \<forall>d p. etcb_eq p d t s \<and> t \<notin> set (release_queue s) \<and> released_sc_tcb_at t s
+  "\<lbrace>\<lambda>s. \<forall>d p. etcb_eq p d t s
                \<longrightarrow> P (consumed_time s) (cur_sc s) (ep_send_qs_of s) (ep_recv_qs_of s) (sc_tcbs_of s) (last_machine_time_of s) (time_state_of s)
                      (cur_time s) (cur_domain s) t (idle_thread s)
                      (tcb_sched_ready_q_update d p (tcb_sched_dequeue t) (ready_queues s))
@@ -2532,7 +2531,7 @@ lemma switch_to_thread_ct_not_in_q[wp]:
   by (simp add: hoare_post_imp[OF _ switch_to_thread_ct_not_queued])
 
 lemma switch_to_thread_ct_not_in_release_q[wp]:
-  "\<lbrace>\<top>\<rbrace> switch_to_thread t \<lbrace>\<lambda>rv s::'state_ext state. ct_not_in_release_q s\<rbrace>"
+  "\<lbrace>not_in_release_q t\<rbrace> switch_to_thread t \<lbrace>\<lambda>rv s::'state_ext state. ct_not_in_release_q s\<rbrace>"
   by (wpsimp wp: valid_sched_wp simp: in_release_q_def)
 
 end
@@ -2571,8 +2570,7 @@ lemma switch_to_thread_valid_blocked[wp]:
 lemma switch_to_thread_ready_or_release[wp]:
   "switch_to_thread t \<lbrace>ready_or_release :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding switch_to_thread_def
-  apply (wpsimp simp: get_tcb_obj_ref_def wp: thread_get_wp)
-  by (clarsimp simp: is_tcb dest!: get_tcb_SomeD)
+  by (wpsimp simp: get_tcb_obj_ref_def wp: thread_get_wp)
 
 lemma switch_to_thread_valid_sched:
   "\<lbrace>is_activatable t and in_cur_domain t and valid_sched_action and valid_ready_qs
@@ -2772,9 +2770,7 @@ definition choose_thread_spec_2 where
     else let t = hd (max_non_empty_queue (qs cdom)) in
          \<exists>d' p'. etcb_eq' p' d' etcbs t
                  \<and> ct' = t
-                 \<and> qs' = tcb_sched_ready_q_update d' p' (tcb_sched_dequeue t) qs
-                 \<and> t \<notin> set rlq
-                 \<and> released_sc_tcb_at_pred ctime tcb_scps sc_rcs t"
+                 \<and> qs' = tcb_sched_ready_q_update d' p' (tcb_sched_dequeue t) qs"
 
 lemma set_refills_budget_ready_wp:
   "\<lbrace>(\<lambda>s. if bound_sc_tcb_at ((=) (Some sc_ptr)) t s
@@ -2825,9 +2821,29 @@ lemma choose_thread_ct_not_queued:
   "\<lbrace> valid_ready_qs and valid_idle \<rbrace> choose_thread \<lbrace>\<lambda>_. ct_not_queued :: 'state_ext state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: choose_thread_def wp: guarded_switch_to_lift)
 
+lemma max_non_empty_queue_non_empty:
+  "ready_queues s domd prio \<noteq> [] \<Longrightarrow> max_non_empty_queue (ready_queues s domd) \<noteq> []"
+   unfolding max_non_empty_queue_def
+   apply (rule Max_prop)
+  apply clarsimp
+  by fastforce
+
+lemma hd_max_non_empty_queue_in_ready_queues:
+  "ready_queues s domd prio \<noteq> [] \<Longrightarrow>
+   (\<exists>prio. (hd (max_non_empty_queue (ready_queues s domd))) \<in> set (ready_queues s domd prio))"
+   apply (drule max_non_empty_queue_non_empty)
+   apply (frule hd_in_set)
+   unfolding max_non_empty_queue_def
+   by fastforce
+
 lemma choose_thread_ct_not_in_release_q:
-  "\<lbrace> valid_release_q and valid_idle \<rbrace> choose_thread \<lbrace>\<lambda>_. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  by (wpsimp simp: choose_thread_def wp: switch_to_thread_ct_not_in_release_q guarded_switch_to_lift)
+  "\<lbrace>valid_release_q and valid_idle and ready_or_release\<rbrace>
+   choose_thread
+   \<lbrace>\<lambda>_. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (wpsimp simp: choose_thread_def wp: switch_to_thread_ct_not_in_release_q guarded_switch_to_lift)
+  apply (frule hd_max_non_empty_queue_in_ready_queues)
+  apply (fastforce simp: ready_or_release_def in_release_q_def in_ready_q_def)
+  done
 
 lemma choose_thread_spec_idle_or_was_queued_in_cur_domain:
   "choose_thread_spec_2 cdom ctime it qs rlq etcbs tcb_scps sc_rcs ct' qs'
@@ -3030,7 +3046,6 @@ lemma schedule_choose_new_thread_valid_sched:
                         in_queues_2_def in_release_q_def
                  split: if_splits
          ; blast?)
-  apply (prop_tac "t \<noteq> hd (max_non_empty_queue (ready_queues s cdom'))", fastforce)
   apply (prop_tac "t \<in> set (ready_queues s d' p')")
    using tcb_sched_act_set_simps(3) apply blast
   by blast
@@ -3042,7 +3057,7 @@ lemma schedule_choose_new_thread_ct_not_queued:
   by (wpsimp simp: schedule_choose_new_thread_def wp: choose_thread_ct_not_queued)
 
 lemma schedule_choose_new_thread_ct_not_in_release_q:
-  "\<lbrace>valid_release_q and valid_idle\<rbrace>
+  "\<lbrace>valid_release_q and valid_idle and ready_or_release\<rbrace>
    schedule_choose_new_thread
    \<lbrace>\<lambda>_. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: schedule_choose_new_thread_def wp: choose_thread_ct_not_in_release_q)
