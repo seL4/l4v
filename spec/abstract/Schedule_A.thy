@@ -27,16 +27,6 @@ definition
   "switch_to_thread t \<equiv> do
      state \<leftarrow> get;
      assert (get_tcb t state \<noteq> None);
-
-     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
-     scp \<leftarrow> assert_opt sc_opt; \<comment> \<open>must have an sc\<close>
-     inq \<leftarrow> gets $ in_release_queue t;
-     assert (\<not> inq);  \<comment> \<open>not in release q\<close>
-     sc \<leftarrow> get_sched_context scp;
-     curtime \<leftarrow> gets cur_time;
-     assert $ sc_refill_sufficient 0 sc;
-     assert $ sc_refill_ready curtime sc;   \<comment> \<open>asserting @{text \<open>ready & sufficient\<close>}\<close>
-
      arch_switch_to_thread t;
      tcb_sched_action (tcb_sched_dequeue) t;
      modify (\<lambda>s. s \<lparr> cur_thread := t \<rparr>)
