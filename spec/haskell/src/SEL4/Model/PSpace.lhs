@@ -156,10 +156,6 @@ requested type.
 >         (before, middle, after) = lookupAround ptr mp
 >         after' = maybe Nothing (Just . fst) after
 
-> maybeToMonad :: Monad m => Maybe a -> m a
-> maybeToMonad (Just x) = return x
-> maybeToMonad Nothing  = fail "maybeToMonad: got Nothing"
-
 \subsubsection{Creating Objects}
 
 Create a new object, and place it in memory. Some objects (such as page

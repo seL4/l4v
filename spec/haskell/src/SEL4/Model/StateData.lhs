@@ -332,6 +332,12 @@ The functions "orM" and "andM" allow composing conditions that run in a monad. T
 > andM :: Monad m => m Bool -> m Bool -> m Bool
 > andM a b = ifM a b (return False)
 
+The function "maybeToMonad" extracts the value out of a "Maybe", failing if there's no such value.
+
+> maybeToMonad :: Monad m => Maybe a -> m a
+> maybeToMonad (Just x) = return x
+> maybeToMonad Nothing  = fail "maybeToMonad: got Nothing"
+
 \subsubsection{Assertions and Undefined Behaviour}
 
 The function "assert" is used to state that a predicate must be true at a given point. If it is not, the behaviour of the kernel is undefined. The Haskell model will not terminate in this case.
