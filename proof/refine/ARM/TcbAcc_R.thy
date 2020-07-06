@@ -1329,7 +1329,10 @@ proof -
    apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
    apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def valid_release_queue_def
                          valid_release_queue'_def o_def)
-   apply (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a1 a2 a3)
+   \<comment>\<open> You might be tempted to turn this into a one-line `fastforce`, but this is much faster. \<close>
+   apply (intro conjI allI impI;
+          clarsimp simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a1 a2 a3;
+          blast)
   done
 qed
 
@@ -2296,10 +2299,13 @@ lemma tcbSchedDequeue_corres:
                          get_tcb_def
                   split: Structures_A.kernel_object.split option.splits)
    apply (rename_tac tcb s')
-   apply (subgoal_tac "t \<notin> set (ready_queues a (tcb_domain tcb) (tcb_priority tcb))")
-    prefer 2
-    subgoal by (force simp: tcb_sched_dequeue_def Invariants_H.valid_queues_def valid_queues_no_bitmap_def
-                            ready_queues_relation_def obj_at'_def inQ_def projectKO_eq project_inject)
+   apply (prop_tac "t \<notin> set (ready_queues a (tcb_domain tcb) (tcb_priority tcb))")
+    apply (clarsimp simp: tcb_sched_dequeue_def Invariants_H.valid_queues_def
+                          valid_queues_no_bitmap_def ready_queues_relation_def obj_at'_def inQ_def
+                          projectKO_eq project_inject)
+    apply (drule spec, clarsimp)+
+    apply (drule(1) bspec)
+    subgoal by force
    apply (subst gets_the_exec)
     apply (simp add: get_tcb_def)
    apply (subst gets_the_exec)
