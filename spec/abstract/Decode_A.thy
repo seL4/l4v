@@ -657,7 +657,11 @@ definition
       returnOk $ NotificationObject
     else if n = 4 then
       returnOk $ CapTableObject
-    else (case arch_data_to_obj_type (n - 5)
+    else if n = 5 then
+      returnOk $ SchedContextObject
+    else if n = 6 then
+      returnOk $ ReplyObject
+    else (case arch_data_to_obj_type (n - 7)
        of Some tp \<Rightarrow> returnOk (ArchObject tp)
         | None \<Rightarrow> throwError (InvalidArgument 0))
   odE"
