@@ -394,7 +394,7 @@ lemma corres_split_strengthen_ftE:
 
 lemma check_mapping_corres:
   "pte_relation' pte pte' \<Longrightarrow> corres (dc \<oplus> dc) \<top> \<top>
-      (whenE (is_PagePTE pte \<longrightarrow> pptr_from_pte pte \<noteq> pptr) (throwError ExceptionTypes_A.InvalidRoot))
+      (whenE (RISCV64_A.is_PagePTE pte \<longrightarrow> pptr_from_pte pte \<noteq> pptr) (throwError ExceptionTypes_A.InvalidRoot))
       (checkMappingPPtr pptr pte')"
   apply (simp add: liftE_bindE checkMappingPPtr_def)
   apply (cases pte; simp add: pptr_from_pte_def addr_from_ppn_def)
@@ -548,8 +548,8 @@ lemma perform_page_corres:
      apply (clarsimp simp: valid_page_inv'_def cte_wp_at_ctes_of)
    apply (clarsimp simp: perform_pg_inv_unmap_def liftM_def)
    apply (rename_tac cap a b cap')
-   apply (rule_tac F="is_FrameCap cap" in corres_req; clarsimp)
-   apply (clarsimp simp: is_FrameCap_def)
+   apply (rule_tac F="RISCV64_A.is_FrameCap cap" in corres_req; clarsimp)
+   apply (clarsimp simp: RISCV64_A.is_FrameCap_def)
    apply (rule corres_guard_imp)
      apply (rule corres_split[where r'=dc])
         apply (rule corres_split[OF _ getSlotCap_corres[OF refl]])
@@ -669,9 +669,9 @@ lemma perform_page_table_corres:
    apply (clarsimp simp: cte_wp_at_ctes_of valid_pti'_def)
   apply (clarsimp simp: perform_pt_inv_unmap_def)
   apply (rename_tac acap a b acap')
-  apply (rule_tac F="is_PageTableCap acap" in corres_req; clarsimp)
+  apply (rule_tac F="RISCV64_A.is_PageTableCap acap" in corres_req; clarsimp)
    apply (clarsimp simp: valid_pti_def)
-  apply (clarsimp simp: is_PageTableCap_def split_def cong: option.case_cong)
+  apply (clarsimp simp: RISCV64_A.is_PageTableCap_def split_def cong: option.case_cong)
   apply (simp add: case_option_If2 split del: if_split)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)

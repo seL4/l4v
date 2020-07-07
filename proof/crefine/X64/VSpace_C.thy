@@ -1763,7 +1763,6 @@ lemma modeUnmapPage_ccorres:
               apply (auto simp: pdpte_pdpte_1g_lift_def pdpte_lift_def cpdpte_relation_def
                                 isHugePagePDPTE_def pdpteFrame_def
                          split: if_split_asm pdpte.split_asm pdpte.split)[5]
-          apply (case_tac pdpte; fastforce)
          apply ceqv
         apply csymbr
         apply (rule ccorres_add_returnOk)

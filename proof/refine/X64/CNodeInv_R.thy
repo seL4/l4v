@@ -2091,7 +2091,7 @@ proof -
 
       hence d2n: "dest2_node = dest_node"
         unfolding dest2_node_def using dsneq
-        by (simp, cases dest_node, simp)
+        by simp
 
       from trancl obtain d where dnext: "m \<turnstile> d \<leadsto> src" and ncd: "m \<turnstile> c \<leadsto>\<^sup>* d"
         by (clarsimp dest!: tranclD2)
@@ -2702,7 +2702,6 @@ lemma (in mdb_swap) n_dest:
    apply (simp add: modify_map_same modify_map_other)
    apply (cases src_node, simp)
   apply (simp add: modify_map_same modify_map_other)
-  apply (cases src_node, simp)
   done
 
 lemma (in mdb_swap) n_dest_prev:
