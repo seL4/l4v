@@ -196,16 +196,15 @@ next
                      fromEnum_def whenE_def)
     apply (simp add: returnOk_def APIType_map2_def toEnum_def
                      enum_apiobject_type enum_object_type)
-  sorry (* more object types
     apply (intro conjI impI)
-     apply (subgoal_tac "unat v - 5 > 5")
+     apply (subgoal_tac "unat v - 7 > 5")
       apply (simp add: arch_data_to_obj_type_def)
      apply simp
-    apply (subgoal_tac "\<exists>n. unat v = n + 5")
+    apply (subgoal_tac "\<exists>n. unat v = n + 7")
      apply (clarsimp simp: arch_data_to_obj_type_def returnOk_def)
-    apply (rule_tac x="unat v - 5" in exI)
+    apply (rule_tac x="unat v - 7" in exI)
     apply arith
-    done *)
+    done
   have S: "\<And>x (y :: ('g :: len) word) (z :: 'g word) bits. \<lbrakk> bits < len_of TYPE('g); x < 2 ^ bits \<rbrakk> \<Longrightarrow> toEnum x = (of_nat x :: 'g word)"
     apply (rule toEnum_of_nat)
     apply (erule order_less_trans)
@@ -297,7 +296,8 @@ next
          apply (clarsimp simp: fromAPIType_def)
         apply (rule whenE_throwError_corres, simp)
          apply (clarsimp simp: fromAPIType_def)
-  sorry (*
+        apply (rule whenE_throwError_corres, simp)
+         apply (clarsimp simp: fromAPIType_def minSchedContextBits_def)
         apply (rule_tac r' = "\<lambda>cap cap'. cap_relation cap cap'" in corres_splitEE[OF _ corres_if])
              apply (rule_tac corres_split_norE)
                 prefer 2
@@ -424,7 +424,7 @@ next
                          cte_level_bits_def word_bits_conv)
   apply (clarsimp simp: invs_valid_objs' invs_pspace_aligned' invs_pspace_distinct'
                         cte_wp_at_caps_of_state cte_wp_at_ctes_of )
-  done *)
+  done
 qed
 
 lemma decodeUntyped_inv[wp]:
@@ -1356,6 +1356,7 @@ crunches insertNewCap
   for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
   and nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and norlq[wp]: "\<lambda>s. P (ksReleaseQueue s)"
   and ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
