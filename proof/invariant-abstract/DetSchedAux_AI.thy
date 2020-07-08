@@ -1402,4 +1402,9 @@ lemmas unat_plus_gt_trans = order_trans[OF unat_plus_gt]
 (* FIXME RT: move to WordLib *)
 lemmas unat_split_plus = iffD1[OF unat_plus_simple]
 
+lemma pred_map_imp:
+  "pred_map P s d \<Longrightarrow> (\<And>x. P x \<Longrightarrow> Q x) \<Longrightarrow> pred_map Q s d"
+  unfolding pred_map_def
+  by clarsimp
+
 end

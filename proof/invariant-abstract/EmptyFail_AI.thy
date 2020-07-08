@@ -421,8 +421,8 @@ locale EmptyFail_AI_schedule = EmptyFail_AI_cap_revoke state_ext_t
     "empty_fail (switch_to_idle_thread :: (unit, 'state_ext) s_monad)"
   assumes get_thread_state_empty_fail[wp]:
     "empty_fail (get_thread_state ref :: (thread_state, 'state_ext) s_monad)"
-  assumes guarded_switch_to_empty_fail[wp]:
-    "empty_fail (guarded_switch_to thread :: (unit, 'state_ext) s_monad)"
+  assumes switch_to_thread_empty_fail[wp]:
+    "empty_fail (switch_to_thread thread :: (unit, 'state_ext) s_monad)"
   assumes choose_thread_empty_fail[wp]:
     "empty_fail (choose_thread :: (unit, 'state_ext) s_monad)"
 

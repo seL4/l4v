@@ -20,8 +20,8 @@ locale Schedule_AI =
     assumes arch_stt_tcb [wp]:
       "\<And>t'. \<lbrace>tcb_at t'\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. (tcb_at t' :: 'a state \<Rightarrow> bool)\<rbrace>"
     assumes arch_stt_runnable:
-      "\<And>t. \<lbrace>st_tcb_at runnable t\<rbrace> arch_switch_to_thread t
-            \<lbrace>\<lambda>r . (st_tcb_at runnable t :: 'a state \<Rightarrow> bool)\<rbrace>"
+      "\<And>t. \<lbrace>st_tcb_at Q t\<rbrace> arch_switch_to_thread t
+            \<lbrace>\<lambda>r . (st_tcb_at Q t :: 'a state \<Rightarrow> bool)\<rbrace>"
     assumes arch_stt_scheduler_action:
       "\<And>t'. \<lbrace>\<lambda>s::'a state. P (scheduler_action s)\<rbrace>
              arch_switch_to_thread t' \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
@@ -126,11 +126,10 @@ lemma (in Schedule_AI) stt_tcb [wp]:
    done
 
 lemma (in Schedule_AI) stt_activatable:
-  "\<lbrace>st_tcb_at runnable t\<rbrace> switch_to_thread t \<lbrace>\<lambda>rv . (ct_in_state activatable :: 'a state \<Rightarrow> bool) \<rbrace>"
+  "\<lbrace>st_tcb_at activatable t\<rbrace> switch_to_thread t \<lbrace>\<lambda>rv . (ct_in_state activatable :: 'a state \<Rightarrow> bool) \<rbrace>"
   apply (simp add: switch_to_thread_def)
   apply (wp | simp add: ct_in_state_def)+
-     apply (rule hoare_post_imp [OF _ arch_stt_runnable])
-     apply (clarsimp elim!: pred_tcb_weakenE)
+     apply (rule hoare_post_imp [OF _ arch_stt_runnable], assumption)
     apply (rule assert_inv)
    apply (wpsimp wp: hoare_drop_imp)+
   done

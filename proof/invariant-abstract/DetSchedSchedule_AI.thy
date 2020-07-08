@@ -10272,7 +10272,7 @@ lemma schedule_valid_sched_helper:
                    set_scheduler_action choose_new_thread;
                    schedule_choose_new_thread
                                                                   od
-                  else do guarded_switch_to candidate;
+                  else do switch_to_thread candidate;
                           set_scheduler_action resume_cur_thread
                        od
           od
@@ -10417,7 +10417,6 @@ lemma schedule_valid_sched_helper:
                                       (\<lambda>s. in_cur_domain (cur_thread s) s \<or> cur_thread s = idle_thread s) b"
                    in hoare_strengthen_post[rotated], simp add: ct_in_state_def)
              apply fastforce
-            apply (wpsimp wp: guarded_switch_to_lift )
             apply (wpsimp wp: switch_to_thread_invs switch_to_thread_valid_sched
                               switch_to_thread_sched_act_is_cur
                               stt_activatable switch_to_thread_special)
@@ -10433,6 +10432,7 @@ lemma schedule_valid_sched_helper:
           apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_def released_sc_tcb_at_def
                                 switch_in_cur_domain_def tcb_at_kh_simps not_in_release_q_def)
           apply (intro conjI impI allI; clarsimp simp: ct_in_state_kh_simp runnable_eq_active ct_in_q_def pred_tcb_at_kh_simps)
+          apply (erule pred_map_imp, clarsimp)
          apply wpsimp
         apply wpsimp
        apply wpsimp
@@ -22464,6 +22464,37 @@ lemma call_kernel_valid_sched:
   apply (frule nextnext_time_bounded_next_time_bounded[rotated], simp)
   apply (frule ct_in_state_weaken[where P=activatable and Q=runnable, simplified], simp)
   apply (fastforce simp: ct_in_state_def2[symmetric] runnable_eq_active)
+  done
+
+lemma schedule_ct_activateable:
+  "\<lbrace>invs and valid_sched\<rbrace>
+   schedule
+   \<lbrace>\<lambda>_. ct_in_state activatable\<rbrace>"
+  supply if_split [split del]
+  apply (simp add: Schedule_A.schedule_def)
+  apply wp
+       apply wpc
+         (* resume current thread *)
+         apply wp
+        prefer 2
+        (* choose new thread *)
+        apply wp
+       (* switch to thread *)
+       apply (wpsimp simp: schedule_switch_thread_fastfail_def tcb_sched_action_def
+                           set_tcb_queue_def get_tcb_queue_def
+                       wp: thread_get_wp' stt_activatable)
+      apply (wp add: is_schedulable_wp)+
+   apply (rule hoare_strengthen_post[where
+            Q="\<lambda>_. invs and valid_sched"])
+    apply (wp hoare_vcg_imp_lift' awaken_valid_sched)
+   apply (subgoal_tac "\<forall>x. scheduler_action s = switch_thread x \<longrightarrow> st_tcb_at activatable x s")
+    apply (subgoal_tac "scheduler_action s = resume_cur_thread \<longrightarrow> ct_in_state activatable s")
+     apply (clarsimp split: if_split option.splits
+                      simp: is_schedulable_bool_def)
+    apply (clarsimp simp: valid_sched_def valid_sched_action_def is_activatable_def ct_in_state_kh_simp)
+   apply (fastforce simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def tcb_at_kh_simps
+                    elim: pred_map_imp)
+  apply clarsimp
   done
 
 end

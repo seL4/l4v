@@ -52,7 +52,7 @@ lemma arch_stt_tcb [wp,Schedule_AI_asms]:
   done
 
 lemma arch_stt_runnable[Schedule_AI_asms]:
-  "\<lbrace>st_tcb_at runnable t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>r . st_tcb_at runnable t\<rbrace>"
+  "\<lbrace>st_tcb_at Q t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>r . st_tcb_at Q t\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
   apply wp
   done
