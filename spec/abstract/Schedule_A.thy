@@ -35,14 +35,10 @@ definition
 text \<open>Asserts that a thread is schedulable, ready and sufficient before switching to it.\<close>
 definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "guarded_switch_to thread \<equiv> do
-     sched \<leftarrow> is_schedulable thread;
      sc_opt \<leftarrow> thread_get tcb_sched_context thread;
      scp \<leftarrow> assert_opt sc_opt;
+     sched \<leftarrow> is_schedulable thread;
      assert sched;
-     sc \<leftarrow> get_sched_context scp;
-     curtime \<leftarrow> gets cur_time;
-     assert $ sc_refill_sufficient 0 sc;
-     assert $ sc_refill_ready curtime sc;   \<comment> \<open>asserting @{text \<open>ready & sufficient\<close>}\<close>
      switch_to_thread thread
    od"
 
@@ -257,7 +253,7 @@ definition
                schedule_choose_new_thread
              od
            else do
-             guarded_switch_to candidate;
+             switch_to_thread candidate;
              \<comment> \<open>Duplication assists in wp proof under different scheduler actions\<close>
              set_scheduler_action resume_cur_thread
            od
