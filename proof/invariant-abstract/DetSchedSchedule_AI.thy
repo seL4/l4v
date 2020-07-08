@@ -23,7 +23,7 @@ lemmas [wp] =
   handle_arch_fault_reply_typ_at
   machine_ops_last_machine_time
 
-(* FIXME: move *)
+(* FIXME RT: move and rename *)
 lemma hoare_drop_assertion:
   assumes "\<lbrace>\<lambda>s. P s \<longrightarrow> Q s\<rbrace> f \<lbrace>R\<rbrace>"
   shows "\<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>"
@@ -4135,10 +4135,6 @@ crunches reply_remove_tcb
   for not_queued[wp]: "not_queued t"
   and not_in_release_q[wp]:  "not_in_release_q t"
   (wp: crunch_wps hoare_drop_imps hoare_vcg_if_lift2 tcb_release_remove_not_in_release_q')
-
-crunches tcb_release_remove
-  for obj_at[wp]: "obj_at P p"
-  (wp: crunch_wps ignore: set_object )
 
 lemma set_tcb_queue_get_tcb[wp]:
   "set_tcb_queue d prio queue \<lbrace>\<lambda>s. P (get_tcb t s)\<rbrace> "
@@ -8812,7 +8808,6 @@ lemma refill_unblock_check_valid_refills[wp]:
       apply (clarsimp simp: refills_sum_def)
      apply (subst valid_refills_unat_sum_list[symmetric, simplified  map_map[symmetric]], simp, simp)
      apply (clarsimp simp: refills_sum_def word_le_nat_alt)
-    apply (rule neq_Nil_lengthI)
     apply (rule refills_merge_valid[simplified], clarsimp)
     apply (case_tac "sc_refills sc"; simp)
    apply (rule order_trans[OF refills_merge_prefix_length], clarsimp)
@@ -16693,12 +16688,7 @@ lemma sched_context_donate_schact_is_rct:
   unfolding sched_context_donate_def when_def
   apply (rule hoare_seq_ext[OF _ gsct_sp])
   apply (clarsimp simp: bind_assoc)
-  apply (intro conjI impI; (solves \<open>wpsimp\<close>)?)
-  apply (rule hoare_seq_ext[OF _ assert_opt_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip, wpsimp simp: sc_at_pred_n_def)
-  apply (rule hoare_seq_ext_skip, wpsimp simp: set_tcb_obj_ref_def wp: set_object_wp)
-  apply wpsimp
+  apply (rule conjI; wpsimp)
   apply (clarsimp simp: sc_at_pred_n_def obj_at_def vs_all_heap_simps)
   done
 

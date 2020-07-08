@@ -65,10 +65,11 @@ lemmas sc_refill_max_update_valid_objs[wp]
                                          simplified valid_sched_context_def, simplified]
 
 lemma update_sched_context_valid_objs_update:
-  "\<lbrace>\<lambda>s. valid_objs s
-     \<and> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n
-                \<and> valid_sched_context (f sc) s) ref s\<rbrace>
-     update_sched_context ref f \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  "\<lbrace>\<lambda>s. valid_objs s \<and>
+        (\<forall>sc n. ko_at (SchedContext sc n) ref s \<longrightarrow>
+                  valid_sched_context sc s \<longrightarrow> valid_sched_context (f sc) s)\<rbrace>
+   update_sched_context ref f
+   \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (wpsimp simp: update_sched_context_def get_object_def wp: set_object_valid_objs)
   apply (auto simp: valid_obj_def valid_sched_context_def a_type_def obj_at_def)
   done

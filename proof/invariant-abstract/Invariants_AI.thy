@@ -706,8 +706,7 @@ where
      \<and> valid_bound_tcb (sc_yield_from sc) s
      \<and> list_all (\<lambda>r. reply_at r s) (sc_replies sc)
      \<and> distinct (sc_replies sc)
-     \<and> length (sc_refills sc) \<ge> 1
-     \<comment> \<open>\<and> length (sc_replies sc) \<le> sc_refill_max sc \<close>"
+     \<and> (sc_refill_max sc \<noteq> 0 \<longrightarrow> sc_refills sc \<noteq> [])"
 
 definition
   valid_reply :: "reply \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"

@@ -1392,6 +1392,7 @@ lemma reply_push_invs_helper:
    apply (subgoal_tac "reply_ptr \<in>  set (sc_replies sc)")
     apply (drule_tac x=sc_ptr in spec, fastforce)
    apply fastforce
+  apply (thin_tac "0 < sc_refill_max sc \<longrightarrow> P" for P)
   apply (rule conjI, rule replies_with_sc_upd_replies_valid_replies_add_one, clarsimp)
      apply (clarsimp simp:replies_blocked_def image_def, fastforce)
     apply simp

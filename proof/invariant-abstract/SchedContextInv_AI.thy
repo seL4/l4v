@@ -1888,7 +1888,7 @@ lemma end_timeslice_invs:
   done
 
 lemma invs_non_empty_refills:
-  "\<lbrakk> invs s; ko_at (SchedContext sc n) scptr s\<rbrakk> \<Longrightarrow> Suc 0 \<le> length (sc_refills sc)"
+  "\<lbrakk> invs s; ko_at (SchedContext sc n) scptr s; 0 < sc_refill_max sc\<rbrakk> \<Longrightarrow> sc_refills sc \<noteq> []"
   by (clarsimp dest!: invs_valid_objs elim!: obj_at_valid_objsE simp: valid_obj_def valid_sched_context_def)
 
 (* move to SchedContext_AI *)
@@ -1921,7 +1921,7 @@ lemma sched_context_refill_update_invs:
   done
 
 lemma update_sched_context_sc_refills_update_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> (\<forall>ls. 1 \<le> length ls \<longrightarrow> 1 \<le> length (f ls))\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> (\<forall>ls. ls \<noteq> [] \<longrightarrow> f ls \<noteq> [])\<rbrace>
    update_sched_context scp (sc_refills_update f)
    \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_context_def
@@ -1940,12 +1940,19 @@ lemma sc_consumed_add_invs:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp simp: sc_consumed_update_eq[symmetric])
 
+abbreviation active_sc_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "active_sc_at \<equiv> obj_at (\<lambda>ko. \<exists>sc. (\<exists>n. ko = SchedContext sc n) \<and> sc_active sc)"
+
+lemmas active_sc_at_def = obj_at_def
+
 lemma refill_update_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> sc_ptr \<noteq> idle_sc_ptr\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> sc_ptr \<noteq> idle_sc_ptr \<and> active_sc_at sc_ptr s\<rbrace>
    refill_update sc_ptr new_period new_budget new_max_refills
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding refill_update_def
-  by (wpsimp wp: set_sc_obj_ref_invs_no_change)
+  by (wpsimp wp: set_sc_obj_ref_invs_no_change hoare_vcg_all_lift hoare_vcg_imp_lift'
+                 hoare_vcg_disj_lift)
+     (clarsimp simp: obj_at_def active_sc_def)
 
 lemma set_refills_bound_sc:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
@@ -2017,19 +2024,36 @@ lemma update_sc_badge_invs':
             simp_del: fun_upd_apply)
   done
 
+lemma set_sc_obj_ref_active:
+  "(\<And>sc. \<lbrakk> p=p'; sc_active sc \<rbrakk> \<Longrightarrow> sc_active (f (\<lambda>_. x) sc)) \<Longrightarrow>
+   set_sc_obj_ref f p x \<lbrace>active_sc_at p'\<rbrace>"
+  unfolding update_sched_context_def
+  by (wpsimp wp: set_object_wp get_object_wp simp: obj_at_def)
+
+crunches commit_time
+  for sc_active: "active_sc_at sc_ptr"
+  (wp: set_sc_obj_ref_active crunch_wps simp: crunch_simps)
+
+lemma sc_badge_update_active[wp]:
+  "set_sc_obj_ref sc_badge_update sc_ptr x \<lbrace>active_sc_at p'\<rbrace>"
+  by (rule set_sc_obj_ref_active) simp
+
 lemma invoke_sched_control_configure_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> valid_sched_control_inv i s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
    invoke_sched_control_configure i
    \<lbrace>\<lambda>rv. invs\<rbrace>"
+  supply if_split[split del]
   apply (cases i)
   apply (rename_tac sc_ptr budget period mrefills badge)
-  apply (clarsimp simp: invoke_sched_control_configure_def split_def
-             split del: if_split)
-  apply (wpsimp simp: get_sched_context_def get_object_def obj_at_def
-                  wp: refill_update_invs hoare_drop_imp commit_time_invs check_budget_invs
+  apply (clarsimp simp: invoke_sched_control_configure_def split_def)
+  apply (wpsimp simp: get_sched_context_def
+                  wp: refill_update_invs commit_time_invs check_budget_invs
                       hoare_vcg_if_lift2 tcb_sched_action_bound_sc tcb_release_remove_bound_sc
-                      update_sc_badge_invs')
-  apply (auto simp: invs_def valid_state_def valid_pspace_def idle_sc_no_ex_cap)
+                      update_sc_badge_invs' get_object_wp commit_time_sc_active
+                      tcb_sched_action_obj_at tcb_release_remove_obj_at
+                      gts_wp hoare_vcg_const_imp_lift hoare_vcg_all_lift |
+         wp (once) hoare_drop_imp)+
+  apply (auto simp: invs_def valid_state_def valid_pspace_def idle_sc_no_ex_cap obj_at_def active_sc_def)
   done
 
 text \<open>set_thread_state and schedcontext/schedcontrol invocations\<close>

@@ -608,8 +608,6 @@ lemma reply_unlink_sc_None:
   apply (clarsimp simp: obj_at_def)
   done
 
-crunch obj_at[wp]: tcb_release_remove "\<lambda>s. P (obj_at Q p s)"
-
 lemma sc_with_reply_None_no_reply_sc:
   "\<lbrakk>kheap s rp' = Some (Reply reply); invs s; sc_with_reply rp' s = None\<rbrakk>
        \<Longrightarrow> reply_sc reply = None"

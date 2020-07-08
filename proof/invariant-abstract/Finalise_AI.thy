@@ -893,10 +893,8 @@ lemma sc_refill_max_update_cur_sc_tcb[wp]:
   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
   done
 
-(* FIXME RT: This and many above may be generalised so that sc_refill_max_update is f
-             satisfying some conditions. *)
-lemma set_sc_refill_max_invs[wp]:
-  "\<lbrace>invs and K (b \<noteq> idle_sc_ptr)\<rbrace> set_sc_obj_ref sc_refill_max_update b c \<lbrace>\<lambda>_. invs\<rbrace>"
+lemma reset_sc_refill_max_invs[wp]:
+  "\<lbrace>invs and K (p \<noteq> idle_sc_ptr)\<rbrace> set_sc_obj_ref sc_refill_max_update p 0 \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp wp: set_sc_obj_ref_invs_no_change)
 
 lemma (in Finalise_AI_1) fast_finalise_invs:
@@ -1575,9 +1573,9 @@ lemma unbind_notification_sym_refs[wp]:
           elim!: obj_at_valid_objsE
          intro!: ntfn_q_refs_no_NTFNBound)
 
-crunches test_reschedule
+crunches test_reschedule, tcb_release_remove
   for kheap[wp]: "\<lambda>s. P (kheap s)"
-  and ob_at[wp]: "\<lambda>s. P (obj_at Q p s)"
+  and obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
   (wp: crunch_wps)
 
 end
