@@ -559,9 +559,6 @@ lemma ep_redux_simps3:
 lemma setEndpoint_pde_mappings'[wp]:
   "\<lbrace>valid_pde_mappings'\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
   apply (wp valid_pde_mappings_lift')
-   apply (simp add: setEndpoint_def)
-   apply (rule obj_at_setObject2)
-   apply (clarsimp dest!: updateObject_default_result)+
   done
 
 end

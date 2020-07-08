@@ -184,6 +184,39 @@ lemma ko_at_valid_objs':
   by (clarsimp simp: valid_objs'_def obj_at'_def projectKOs
                      project_inject ranI)
 
+lemmas ko_at_valid_objs'_pre =
+  ko_at_valid_objs'[simplified project_inject, atomized, simplified, rule_format]
+
+lemmas ep_ko_at_valid_objs_valid_ep' =
+  ko_at_valid_objs'_pre[where 'a=endpoint, simplified injectKO_defs valid_obj'_def, simplified]
+
+lemmas ntfn_ko_at_valid_objs_valid_ntfn' =
+  ko_at_valid_objs'_pre[where 'a=notification, simplified injectKO_defs valid_obj'_def,
+                        simplified]
+
+lemmas tcb_ko_at_valid_objs_valid_tcb' =
+  ko_at_valid_objs'_pre[where 'a=tcb, simplified injectKO_defs valid_obj'_def, simplified]
+
+lemmas cte_ko_at_valid_objs_valid_cte' =
+  ko_at_valid_objs'_pre[where 'a=cte, simplified injectKO_defs valid_obj'_def, simplified]
+
+lemmas sc_ko_at_valid_objs_valid_sc' =
+  ko_at_valid_objs'_pre[where 'a=sched_context, simplified injectKO_defs valid_obj'_def,
+                        simplified]
+
+lemmas reply_ko_at_valid_objs_valid_reply' =
+  ko_at_valid_objs'_pre[where 'a=reply, simplified injectKO_defs valid_obj'_def, simplified]
+
+(* FIXME: arch split *)
+lemmas pde_ko_at_valid_objs_valid_pde' =
+  ko_at_valid_objs'_pre[where 'a=pde, simplified injectKO_pde valid_obj'_def, simplified]
+
+lemmas pte_ko_at_valid_objs_valid_pte' =
+  ko_at_valid_objs'_pre[where 'a=pte, simplified injectKO_pde valid_obj'_def, simplified]
+
+lemmas asidpool_ko_at_valid_objs_valid_asid_pool' =
+  ko_at_valid_objs'_pre[where 'a=asidpool, simplified injectKO_pde valid_obj'_def, simplified]
+
 lemma obj_at_valid_objs':
   "\<lbrakk> obj_at' P p s; valid_objs' s \<rbrakk> \<Longrightarrow>
   \<exists>k. P k \<and>

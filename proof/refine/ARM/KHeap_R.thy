@@ -364,6 +364,7 @@ local
     @{typ cte},
     @{typ sched_context},
     @{typ reply},
+    @{typ endpoint},
 
     (*FIXME: arch_split*)
     @{typ asidpool},
@@ -416,6 +417,24 @@ ML_goal distinct_updateObject_types: \<open>
 
 lemmas setObject_distinct_types_preserves_obj_at'[wp] =
     distinct_updateObject_types[THEN setObject_distinct_types_preserves_obj_at'_pre]
+
+(* FIXME RT: these overlap substantially with `setObject_distinct_types_preserves_obj_at'`,
+   but fixing that requires having names for the relevant subset of lemmas. We can't do that with
+   attributes, but we might be able to do it with a new command (`lemmas_matching`?) once `match`
+   is factored.
+
+   This doesn't really matter in this case because you're never going to refer to these lemmas by
+   name. *)
+lemmas set_distinct_types_preserves_obj_at'[wp] =
+  setObject_distinct_types_preserves_obj_at'[folded setReply_def setNotification_def setCTE_def
+                                                    setSchedContext_def setEndpoint_def]
+
+lemmas set_distinct_types_preserves_pred_tcb_at'[wp] =
+  set_distinct_types_preserves_obj_at'[TRY[where P="test o proj o tcb_to_itcb'" for test proj,
+                                           simplified o_def, folded pred_tcb_at'_def, rule_format]]
+  setObject_distinct_types_preserves_obj_at'[TRY[where P="test o proj o tcb_to_itcb'" for test proj,
+                                             simplified o_def, folded pred_tcb_at'_def,
+                                             rule_format]]
 
 lemma setObject_typ_at_inv:
   "\<lbrace>typ_at' T p'\<rbrace> setObject p v \<lbrace>\<lambda>r. typ_at' T p'\<rbrace>"

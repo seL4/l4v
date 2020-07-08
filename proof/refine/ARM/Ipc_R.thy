@@ -2567,6 +2567,7 @@ lemma sts_irqs_masked'[wp]:
 
 crunches replyUnlink, cleanReply
   for irqs_masked'[wp]: "irqs_masked'"
+  (wp: hoare_drop_imp)
 
 lemma replyRemoveTCB_irqs_masked'[wp]:
   "replyRemoveTCB t \<lbrace> irqs_masked' \<rbrace>"

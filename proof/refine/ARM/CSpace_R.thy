@@ -2924,11 +2924,6 @@ done
 lemma setCTE_valid_mappings'[wp]:
   "\<lbrace>valid_pde_mappings'\<rbrace> setCTE x y \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
   apply (wp valid_pde_mappings_lift' setCTE_typ_at')
-   apply (simp add: setCTE_def)
-   apply (rule obj_at_setObject2)
-   apply (clarsimp simp: updateObject_cte typeError_def in_monad
-                  split: Structures_H.kernel_object.split_asm if_split_asm)
-  apply assumption
   done
 
 crunch pde_mappings' [wp]: cteInsert valid_pde_mappings'
