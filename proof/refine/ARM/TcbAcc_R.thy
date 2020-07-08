@@ -2356,6 +2356,14 @@ lemma setObject_tcbState_update_corres:
   apply simp
   done
 
+lemma threadSet_wp:
+  "\<lbrace>\<lambda>s. \<forall>tcb :: tcb. ko_at' tcb t s \<longrightarrow> P (set_obj' t (f tcb) s)\<rbrace>
+   threadSet f t
+   \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding threadSet_def
+  apply (wpsimp wp: setObject_tcb_wp set_tcb'.getObject_wp)
+  done
+
 \<comment>\<open>
   If we don't change the @{term tcbInReleaseQueue} flag of a TCB,
   then the release queues stay valid.

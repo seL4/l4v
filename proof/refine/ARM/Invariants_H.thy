@@ -2231,32 +2231,64 @@ lemma ps_clear_lookupAround2:
   apply (drule word_le_minus_one_leq, fastforce)
   done
 
-lemma in_magnitude_check:
-  "\<lbrakk> is_aligned x n; (1 :: word32) < 2 ^ n; ksPSpace s x = Some y \<rbrakk> \<Longrightarrow>
-   ((v, s') \<in> fst (magnitudeCheck x (snd (lookupAround2 x (ksPSpace s))) n s))
-     = (s' = s \<and> ps_clear x n s)"
-  apply (rule iffI)
-   apply (clarsimp simp: magnitudeCheck_def in_monad lookupAround2_None2
-                         lookupAround2_char2
-                  split: option.split_asm)
-    apply (erule(1) ps_clearI)
-    apply simp
-   apply (erule(1) ps_clearI)
-   apply (simp add: linorder_not_less)
-   apply (drule word_leq_le_minus_one[where x="2 ^ n"])
-    apply (clarsimp simp: power_overflow)
-   apply (drule word_l_diffs)
-    apply simp
-   apply (simp add: field_simps)
+lemma magnitudeCheck_wp:
+  "\<lbrace>\<lambda>s. (case next of
+                  Some next' \<Rightarrow> next' - ptr \<ge> 1 << bits
+                | None \<Rightarrow> True)
+        \<longrightarrow> P s\<rbrace>
+   magnitudeCheck ptr next bits
+   \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding magnitudeCheck_def
+  apply wpsimp
+  done
+
+
+lemma alignCheck_wp:
+  "\<lbrace>\<lambda>s. is_aligned ptr bits \<longrightarrow> P s\<rbrace>
+   alignCheck ptr bits
+   \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding alignCheck_def
+  apply (wpsimp simp: alignError_def is_aligned_mask)
+  done
+
+lemma lookupAround2_no_after_ps_clear:
+  "snd (lookupAround2 p (ksPSpace s)) = None \<Longrightarrow> ps_clear p bits s"
+  apply (fastforce simp: ps_clear_def lookupAround2_None2 dom_def set_eq_iff word_le_less_eq)
+  done
+
+lemma lookupAround2_after_ps_clear:
+  "\<lbrakk>snd (lookupAround2 p (ksPSpace s)) = Some after;
+    2 ^ bits \<le> after - p;
+    1 < (2 :: machine_word) ^ bits;
+    is_aligned p bits\<rbrakk> \<Longrightarrow>
+   ps_clear p bits s"
+  apply (rule ps_clearI; clarsimp simp: lookupAround2_char2)
+  apply (rename_tac x obj_after)
+  apply (drule_tac x=x in spec)
+  apply (frule word_l_diffs, simp)
+  apply (prop_tac "x < after")
+   apply (frule word_leq_minus_one_le[rotated])
+    apply (metis add.commute arith_simps(49) plus_minus_not_NULL_ab word_le_less_eq
+                 word_not_simps(1))
+   apply (frule_tac a=x in order.strict_trans2; fastforce simp: add.commute)
   apply clarsimp
-  apply (erule is_aligned_get_word_bits)
-   apply (erule(1) ps_clear_lookupAround2)
-     apply simp
-    apply (simp add: is_aligned_no_overflow)
-   apply (clarsimp simp add: magnitudeCheck_def in_monad
-                      split: option.split_asm)
-   apply simp
-  apply (simp add: power_overflow)
+  done
+
+lemma in_magnitude_check:
+  assumes "is_aligned ptr bits"
+          "(1 :: machine_word) < 2 ^ bits"
+          "ksPSpace s ptr = Some y"
+  shows "((v, s') \<in> fst (magnitudeCheck ptr (snd (lookupAround2 ptr (ksPSpace s))) bits s))
+          = (s' = s \<and> ps_clear ptr bits s)"
+  using assms
+  apply (clarsimp simp: magnitudeCheck_def in_monad)
+  apply (rule iffI;
+         clarsimp simp: in_monad lookupAround2_no_after_ps_clear lookupAround2_after_ps_clear
+                 split: option.split_asm)
+  apply (erule(1) ps_clear_lookupAround2, simp)
+   apply (erule is_aligned_no_overflow)
+  apply (fastforce simp: in_monad
+                  split: option.split option.split_asm)
   done
 
 lemma in_magnitude_check3:

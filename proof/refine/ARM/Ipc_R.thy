@@ -2567,7 +2567,7 @@ lemma sts_irqs_masked'[wp]:
 
 crunches replyUnlink, cleanReply
   for irqs_masked'[wp]: "irqs_masked'"
-  (wp: hoare_drop_imp)
+  (wp: crunch_wps)
 
 lemma replyRemoveTCB_irqs_masked'[wp]:
   "replyRemoveTCB t \<lbrace> irqs_masked' \<rbrace>"
@@ -2914,6 +2914,7 @@ lemma complete_signal_corres:
          apply (clarsimp simp: ntfn_relation_def)
         apply (wp set_simple_ko_valid_objs get_simple_ko_wp getNotification_wp | clarsimp simp: valid_ntfn'_def)+
   apply (clarsimp simp: valid_pspace'_def)
+  apply (rename_tac ntfn)
   apply (frule_tac P="(\<lambda>k. k = ntfn)" in obj_at_valid_objs', assumption)
   apply (clarsimp simp: projectKOs valid_obj'_def valid_ntfn'_def obj_at'_def)
   done

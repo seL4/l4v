@@ -45,23 +45,23 @@ lemmas valid_vspace_obj_elims [rule_format, elim!] =
 
 lemmas Arch_objBits_simps' = pteBits_def pdeBits_def pageBits_def objBits_simps
 
-sublocale setObject_pte: simple_non_tcb_non_sc_ko' "setObject :: _ \<Rightarrow> pte \<Rightarrow> _"
+sublocale setObject_pte: simple_non_tcb_non_sc_ko' "setObject :: _ \<Rightarrow> pte \<Rightarrow> _" getObject
   by (unfold_locales,
       simp add: projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 
-sublocale setObject_pde: simple_non_tcb_non_sc_ko' "setObject :: _ \<Rightarrow> pde \<Rightarrow> _"
+sublocale setObject_pde: simple_non_tcb_non_sc_ko' "setObject :: _ \<Rightarrow> pde \<Rightarrow> _" getObject
   by (unfold_locales,
       simp add: projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 
-sublocale setObject_asidpool: simple_non_tcb_non_sc_ko' "setObject :: _ \<Rightarrow> asidpool \<Rightarrow> _"
+sublocale setObject_asidpool: simple_non_tcb_non_sc_ko' "setObject :: _ \<Rightarrow> asidpool \<Rightarrow> _" getObject
   by (unfold_locales,
       simp add: projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 
-sublocale storePDE: simple_non_tcb_non_sc_ko' "storePDE"
+sublocale storePDE: simple_non_tcb_non_sc_ko' "storePDE" getObject
   by (unfold_locales,
       simp add: storePDE_def projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 
-sublocale storePTE: simple_non_tcb_non_sc_ko' "storePTE"
+sublocale storePTE: simple_non_tcb_non_sc_ko' "storePTE" getObject
   by (unfold_locales,
       simp add: storePTE_def projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 
@@ -79,6 +79,21 @@ end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+(* aliases for compatibility with master *)
+
+lemmas getPTE_wp = setObject_pte.get_wp
+lemmas getPDE_wp = setObject_pde.get_wp
+lemmas getASID_wp = setObject_asidpool.getObject_wp
+
+lemmas getObject_pte_inv[wp] = setObject_pte.getObject_inv
+lemmas getObject_pde_inv[wp] = setObject_pde.getObject_inv
+lemmas getObject_asidpool_inv = setObject_asidpool.getObject_inv
+
+lemmas get_pte_sp' = setObject_pte.getObject_sp'
+lemmas get_pde_sp' = setObject_pde.getObject_sp'
+lemmas get_asidpool_sp' = setObject_asidpool.getObject_sp'
+
+(* FIXME RT: move to StateRelation.thy *)
 lemma pspace_relation_None:
   "\<lbrakk>pspace_relation p p'; p' ptr = None \<rbrakk> \<Longrightarrow> p ptr = None"
   apply (rule not_Some_eq[THEN iffD1, OF allI, OF notI])
@@ -1158,18 +1173,6 @@ lemma page_directory_at_state_relation:
   apply (simp add: pdeBits_def)
   done
 
-lemma getPDE_wp:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' (ko::pde) p s \<longrightarrow> Q ko s\<rbrace> getObject p \<lbrace>Q\<rbrace>"
-  by (clarsimp simp: getObject_def split_def loadObject_default_def
-                     archObjSize_def in_magnitude_check pdeBits_def
-                     projectKOs in_monad valid_def obj_at'_def objBits_simps)
-
-lemma getPTE_wp:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' (ko::pte) p s \<longrightarrow> Q ko s\<rbrace> getObject p \<lbrace>Q\<rbrace>"
-  by (clarsimp simp: getObject_def split_def loadObject_default_def
-                     archObjSize_def in_magnitude_check pteBits_def
-                     projectKOs in_monad valid_def obj_at'_def objBits_simps)
-
 lemmas get_pde_wp_valid = hoare_add_post'[OF get_pde_valid get_pde_wp]
 
 lemma page_table_at_lift:
@@ -1197,14 +1200,6 @@ lemma lookup_pt_slot_corres [@lift_corres_args, corres]:
   by (auto simp: lookup_failure_map_def obj_at_def)
 
 declare in_set_zip_refl[simp]
-
-lemma getObject_pte_inv[wp]:
-  "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>rv :: pte. P\<rbrace>"
-  by (simp add: getObject_inv loadObject_default_inv)
-
-lemma getObject_pde_inv[wp]:
-  "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>rv :: pde. P\<rbrace>"
-  by (simp add: getObject_inv loadObject_default_inv)
 
 crunch typ_at'[wp]: copyGlobalMappings "\<lambda>s. P (typ_at' T p s)"
   (wp: mapM_x_wp')
@@ -1332,12 +1327,6 @@ lemma page_directory_at_lift:
 
 lemmas checkPDAt_corres =
   corres_stateAssert_implied_frame[OF page_directory_at_lift, folded checkPDAt_def]
-
-lemma getASID_wp:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' (ko::asidpool) p s \<longrightarrow> Q ko s\<rbrace> getObject p \<lbrace>Q\<rbrace>"
-  by (clarsimp simp: getObject_def split_def loadObject_default_def
-                     archObjSize_def in_magnitude_check pageBits_def
-                     projectKOs in_monad valid_def obj_at'_def objBits_simps)
 
 lemma find_pd_for_asid_corres [corres]:
   "asid = asid' \<Longrightarrow> corres (lfr \<oplus> (=)) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s)

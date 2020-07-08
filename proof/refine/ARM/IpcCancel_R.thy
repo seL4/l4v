@@ -47,6 +47,7 @@ definition valid_inQ_queues :: "KernelStateData_H.kernel_state \<Rightarrow> boo
 defs capHasProperty_def:
   "capHasProperty ptr P \<equiv> cte_wp_at' (\<lambda>c. P (cteCap c)) ptr"
 end
+
 (* Assume various facts about cteDeleteOne, proved in Finalise_R *)
 locale delete_one_conc_pre =
   assumes delete_one_st_tcb_at:
@@ -558,8 +559,7 @@ lemma ep_redux_simps3:
 
 lemma setEndpoint_pde_mappings'[wp]:
   "\<lbrace>valid_pde_mappings'\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
-  apply (wp valid_pde_mappings_lift')
-  done
+  by (wp valid_pde_mappings_lift')
 
 end
 
