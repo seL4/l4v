@@ -505,7 +505,7 @@ definition
     sc_consumed     = 0,
     sc_tcb        = None,
     sc_ntfn       = None,
-    sc_refills    = [\<lparr>r_time=0, r_amount=0\<rparr>, \<lparr>r_time=0, r_amount=0\<rparr>],
+    sc_refills    = [],
     sc_refill_max = 0,
     sc_badge      = 0,
     sc_yield_from = None,
