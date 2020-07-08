@@ -255,6 +255,23 @@ lemma tcb_at'_obj_at'_set_obj'[unfolded injectKO_tcb]:
                         same_size_obj_at'_set_obj'_iff[where 'a=tcb, simplified])
   done
 
+\<comment>\<open>
+  Keeps a generic @{term obj_at'} (rather than a specific @{term "obj_at' (\<lambda>_. True)"}) to match
+  in more simp contexts.
+\<close>
+lemma tcb_obj_at'_set_obj'_iff:
+  fixes tcb :: tcb
+    and P Q :: "tcb \<Rightarrow> bool"
+  shows "obj_at' P p s \<Longrightarrow> obj_at' Q p (set_obj' p tcb s) = Q tcb"
+  apply (rule same_size_obj_at'_set_obj'_iff)
+  apply (clarsimp simp: objBits_simps obj_at'_def)
+  done
+
+lemmas tcb_obj_at'_pred_tcb'_set_obj'_iff =
+  tcb_obj_at'_set_obj'_iff[where Q="test o proj o tcb_to_itcb'" for test proj,
+                                 simplified objBits_simps o_def, simplified,
+                                 folded pred_tcb_at'_def]
+
 lemma same_size_ko_wp_at'_set_ko'_iff:
   assumes "ko_wp_at' (\<lambda>old_ko. objBitsKO old_ko = objBitsKO ko) ptr s"
   shows "ko_wp_at' P ptr (set_ko' ptr ko s) = P ko"

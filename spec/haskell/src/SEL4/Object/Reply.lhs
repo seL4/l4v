@@ -160,11 +160,11 @@ This module specifies the behavior of reply objects.
 > replyUnlink :: PPtr Reply -> Kernel ()
 > replyUnlink replyPtr = do
 >     tptrOpt <- getReplyTCB replyPtr
->     let tptr = fromJust tptrOpt
+>     tptr <- maybeToMonad tptrOpt
 >     state <- getThreadState tptr
 >     setThreadState (state { replyObject = Nothing }) tptr
 >     setReplyTCB Nothing replyPtr
->     setThreadState Inactive $ fromJust tptrOpt
+>     setThreadState Inactive tptr
 
 > cleanReply :: PPtr Reply -> Kernel ()
 > cleanReply replyPtr = do

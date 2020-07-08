@@ -7,6 +7,7 @@
 theory IpcCancel_R
 imports
   Schedule_R
+  Reply_R
   "Lib.SimpStrategy"
 begin
 
@@ -48,6 +49,15 @@ defs capHasProperty_def:
   "capHasProperty ptr P \<equiv> cte_wp_at' (\<lambda>c. P (cteCap c)) ptr"
 end
 
+lemma cancelIPC_simple[wp]:
+  "\<lbrace>\<top>\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
+  unfolding cancelIPC_def
+  apply (wpsimp wp: setThreadState_st_tcb replyRemoveTCB_simple' cancelSignal_simple
+                    replyUnlink_st_tcb_at'_wp set_reply'.set_wp gts_wp' threadSet_wp
+              simp: Let_def tcb_obj_at'_pred_tcb'_set_obj'_iff)
+  apply (clarsimp simp: st_tcb_at'_def o_def obj_at'_def isBlockedOnReply_def)
+  done
+
 (* Assume various facts about cteDeleteOne, proved in Finalise_R *)
 locale delete_one_conc_pre =
   assumes delete_one_st_tcb_at:
@@ -78,25 +88,6 @@ locale delete_one_conc_pre =
     "\<And>P. \<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
   assumes delete_one_tcbDomain_obj_at':
     "\<And>P. \<lbrace>obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace> cteDeleteOne slot \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace>"
-
-lemma (in delete_one_conc_pre) cancelIPC_simple[wp]:
-  "\<lbrace>\<top>\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
-  apply (simp add: cancelIPC_def Let_def
-             cong: Structures_H.thread_state.case_cong list.case_cong)
-  sorry (*
-  apply (rule hoare_seq_ext [OF _ gts_sp'])
-  apply (rule hoare_pre)
-   apply (wpc
-           | wp sts_st_tcb_at'_cases hoare_vcg_conj_lift
-                hoare_vcg_const_imp_lift delete_one_st_tcb_at
-                threadSet_pred_tcb_no_state
-                hoare_strengthen_post [OF cancelSignal_simple]
-           | simp add: o_def if_fun_split
-           | rule hoare_drop_imps
-           | clarsimp elim!: pred_tcb'_weakenE)+
-  apply (auto simp: pred_tcb_at'
-             elim!: pred_tcb'_weakenE)
-  done *)
 
 lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at':
   "\<lbrace>st_tcb_at' P t' and K (t \<noteq> t')\<rbrace>
