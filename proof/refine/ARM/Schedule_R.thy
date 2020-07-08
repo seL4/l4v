@@ -561,7 +561,7 @@ lemma tcbSchedAppend_valid_release_queue[wp]:
 lemma tcbSchedAppend_valid_release_queue'[wp]:
   "tcbSchedAppend t \<lbrace>valid_release_queue'\<rbrace>"
   unfolding tcbSchedAppend_def
-  sorry (* annoying *)
+  sorry (* tcbSchedAppend_valid_release_queue' *)
 
 lemma tcbSchedAppend_invs'[wp]:
   "\<lbrace>invs'
@@ -1450,23 +1450,6 @@ lemma corres_split_sched_act:
     apply (rule corres_guard_imp, force+)+
     done
 
-lemma corres_assert_ret:
-  "corres dc (\<lambda>s. P) \<top> (assert P) (return ())"
-  apply (rule corres_no_failI)
-   apply simp
-  apply (simp add: assert_def return_def fail_def)
-  done
-
-lemma corres_assert_assume_l:
-  "corres dc P Q (f ()) g
-  \<Longrightarrow> corres dc (P and (\<lambda>s. P')) Q (assert P' >>= f) g"
-  by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
-
-lemma corres_assert_assume_r:
-  "corres dc P Q f (g ())
-  \<Longrightarrow> corres dc P (Q and (\<lambda>s. Q')) f (assert Q' >>= g)"
-  by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
-
 lemma cur_tcb'_ksReadyQueuesL1Bitmap_upd[simp]:
   "cur_tcb' (s\<lparr>ksReadyQueuesL1Bitmap := x\<rparr>) = cur_tcb' s"
   unfolding cur_tcb'_def by simp
@@ -1486,6 +1469,14 @@ lemma thread_get_exs_valid[wp]:
   apply (erule get_tcb_at)
   done
 
+lemma is_schedulable_exs_valid[wp]:
+  "active_sc_tcb_at t s \<Longrightarrow> \<lbrace>(=) s\<rbrace> is_schedulable t \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
+  apply (clarsimp simp: is_schedulable_def exs_valid_def Bex_def pred_map_def vs_all_heap_simps
+                 split: option.splits)
+  apply (clarsimp simp: in_monad get_tcb_ko_at obj_at_def get_sched_context_def Option.is_none_def
+                        get_object_def)
+  done
+
 lemma gts_exs_valid[wp]:
   "tcb_at t s \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_thread_state t \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
   apply (clarsimp simp: get_thread_state_def  assert_opt_def fail_def
@@ -1499,20 +1490,24 @@ lemma guarded_switch_to_corres:
                 and valid_vspace_objs and pspace_aligned and pspace_distinct
                 and valid_vs_lookup and valid_global_objs
                 and unique_table_refs o caps_of_state
-                and st_tcb_at runnable t)
+                and is_schedulable_bool t)
              (valid_arch_state' and valid_pspace' and Invariants_H.valid_queues
                 and st_tcb_at' runnable' t and cur_tcb')
              (guarded_switch_to t) (switchToThread t)"
   apply (simp add: guarded_switch_to_def)
   apply (rule corres_guard_imp)
-  sorry (* asserts in switch_to_thread? *) (*
-    apply (rule corres_symb_exec_l'[OF _ gts_exs_valid])
-      apply (rule corres_assert_assume_l)
-      apply (rule switch_thread_corres)
-     apply (force simp: st_tcb_at_tcb_at)
-    apply (wp gts_st_tcb_at)
-    apply (force simp: st_tcb_at_tcb_at)+
-    done *)
+    apply (rule corres_symb_exec_l'[OF _ thread_get_exs_valid])
+      apply (rule corres_assert_opt_assume_l)
+      apply (rule corres_symb_exec_l'[OF _ is_schedulable_exs_valid])
+        apply (rule corres_assert_assume_l)
+        apply (rule switch_thread_corres)
+       apply assumption
+      apply (wpsimp wp: is_schedulable_wp)
+     apply assumption
+    apply (wpsimp wp: thread_get_wp')
+   apply (clarsimp simp: is_schedulable_bool_def2 tcb_at_kh_simps pred_map_def vs_all_heap_simps obj_at_def is_tcb)
+  apply simp
+  done
 
 abbreviation "enumPrio \<equiv> [0.e.maxPriority]"
 
@@ -1533,29 +1528,150 @@ lemma corres_gets_queues_getReadyQueuesL1Bitmap:
   unfolding state_relation_def valid_queues_def getReadyQueuesL1Bitmap_def
   by (clarsimp simp: bitmapL1_zero_ksReadyQueues ready_queues_relation_def)
 
+lemma tcb_at'_cross_rel:
+  "cross_rel (pspace_aligned and pspace_distinct and tcb_at t) (tcb_at' t)"
+  unfolding cross_rel_def state_relation_def
+  apply clarsimp
+  by (erule (3) tcb_at_cross)
+
+lemma sc_at_cross:
+  assumes p: "pspace_relation (kheap s) (ksPSpace s')"
+  assumes aligned: "pspace_aligned s"
+  assumes distinct: "pspace_distinct s"
+  assumes t: "sc_at t s"
+  shows "sc_at' t s'" using assms
+  apply (clarsimp simp: obj_at_def is_sc_obj)
+  apply (drule (1) pspace_relation_absD, clarsimp simp: other_obj_relation_def)
+  apply (case_tac z; simp)
+  by (fastforce dest!: aligned_distinct_obj_at'I[where 'a=sched_context] elim: obj_at'_weakenE)
+
+lemma sc_at'_cross_rel:
+  "cross_rel (pspace_aligned and pspace_distinct and sc_at t) (sc_at' t)"
+  unfolding cross_rel_def state_relation_def
+  apply clarsimp
+  by (erule (3) sc_at_cross)
+
+lemma runnable_cross_rel:
+  "cross_rel (pspace_aligned and pspace_distinct and st_tcb_at runnable t)
+             (\<lambda>s'. pred_map (\<lambda>tcb. runnable' (tcbState tcb)) (tcbs_of' s') t)"
+  apply (rule cross_rel_aug[OF tcb_at'_cross_rel[where t=t]])
+  apply (clarsimp simp: cross_rel_def)
+  apply (subgoal_tac "pspace_relation (kheap s) (ksPSpace s')")
+  apply (clarsimp simp: tcb_at_kh_simps pred_map_def cross_rel_def obj_at'_def)
+  apply (clarsimp simp: vs_all_heap_simps pspace_relation_def)
+  apply (drule_tac x=t in bspec; clarsimp)
+  apply (clarsimp simp: other_obj_relation_def split: option.splits)
+  apply (case_tac "ko"; simp)
+  apply (rule_tac x="x6" in exI)
+  apply (clarsimp simp: tcb_of'_def opt_map_def)
+  apply (clarsimp simp: tcb_relation_def thread_state_relation_def)
+  apply (case_tac "tcb_state b"; simp add: runnable_def)
+  apply (clarsimp)
+  apply (clarsimp)
+  done
+
+lemma tcbInReleaseQueue_cross_rel:
+  "cross_rel (pspace_aligned and pspace_distinct and tcb_at t and not_in_release_q t)
+             (\<lambda>s'. valid_release_queue' s' \<longrightarrow> pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s') t)"
+  apply (rule cross_rel_aug[OF tcb_at'_cross_rel[where t=t]])
+  apply (clarsimp simp: cross_rel_def)
+  apply (subgoal_tac "pspace_relation (kheap s) (ksPSpace s')")
+  apply (clarsimp simp: pred_map_def cross_rel_def obj_at'_def obj_at_def is_tcb)
+  apply (clarsimp simp: vs_all_heap_simps pspace_relation_def)
+  apply (drule_tac x=t in bspec; clarsimp)
+  apply (clarsimp simp: other_obj_relation_def split: option.splits)
+  apply (case_tac "koa"; simp)
+  apply (rule_tac x="x6" in exI)
+  apply (clarsimp simp: tcb_of'_def opt_map_def)
+  apply (subgoal_tac "obj_at' tcbInReleaseQueue t s'")
+  apply (subgoal_tac "release_queue_relation (release_queue s) (ksReleaseQueue s')")
+  apply (clarsimp simp: release_queue_relation_def not_in_release_q_def valid_release_queue'_def)
+  apply (clarsimp simp: state_relation_def)
+  apply (clarsimp simp: obj_at'_def projectKO_eq Bits_R.projectKO_tcb)
+  apply (clarsimp)
+  apply (clarsimp)
+  done
+
+lemma isScActive_cross_rel:
+  "cross_rel (pspace_aligned and pspace_distinct and valid_objs and active_sc_tcb_at t)
+             (\<lambda>s'. pred_map ((\<lambda>scPtr. isScActive scPtr s')) (tcb_scs_of' s') t)"
+  apply (rule cross_rel_aug[OF tcb_at'_cross_rel[where t=t]])
+   apply (clarsimp simp: cross_rel_def)
+   apply (subgoal_tac "pspace_relation (kheap s) (ksPSpace s')")
+    apply (clarsimp simp: pred_map_def obj_at'_real_def ko_wp_at'_def vs_all_heap_simps)
+    apply (subgoal_tac "sc_at' ref' s'")
+     apply (clarsimp simp: vs_all_heap_simps pspace_relation_def)
+     apply (drule_tac x=t in bspec, clarsimp)
+     apply (clarsimp simp: other_obj_relation_def split: option.splits)
+     apply (rename_tac s s' scp ko' tcb sc n x)
+     apply (case_tac "ko'"; simp)
+     apply (subgoal_tac "pspace_relation (kheap s) (ksPSpace s')")
+      apply (clarsimp simp: vs_all_heap_simps pspace_relation_def)
+      apply (drule_tac x=scp in bspec, clarsimp)
+      apply (subgoal_tac "valid_sched_context_size n")
+       apply (clarsimp simp: other_obj_relation_def split: option.splits)
+       apply (clarsimp simp: obj_at'_def projectKO_eq Bits_R.projectKO_sc)
+       apply (clarsimp simp: tcb_of'_def opt_map_def tcb_relation_def)
+       apply (rule_tac x=scp in exI, simp)
+       apply (clarsimp simp: isScActive_def active_sc_def)
+       apply (clarsimp simp: obj_at'_def projectKO_eq Bits_R.projectKO_sc pred_map_def opt_map_def)
+       apply (clarsimp simp: sc_relation_def)
+      apply (rule_tac sc=sc in  valid_objs_valid_sched_context_size, assumption)
+      apply (fastforce)
+     apply clarsimp
+    apply (erule (2) sc_at_cross)
+    apply (clarsimp simp: obj_at_def is_sc_obj_def)
+    apply (rule_tac sc=ya in  valid_objs_valid_sched_context_size, assumption)
+    apply (fastforce)
+   apply clarsimp
+  apply (clarsimp simp: obj_at_kh_kheap_simps pred_map_def vs_all_heap_simps is_tcb)
+  done
+
+lemma isSchedulable_bool_cross_rel:
+  "cross_rel (pspace_aligned and pspace_distinct and valid_objs and is_schedulable_bool t) (\<lambda>s'. valid_release_queue' s' \<longrightarrow> isSchedulable_bool t s')"
+  apply (rule cross_rel_aug[OF isScActive_cross_rel[where t=t]])
+   apply (rule cross_rel_aug[OF tcbInReleaseQueue_cross_rel[where t=t]])
+    apply (rule cross_rel_aug[OF runnable_cross_rel[where t=t]])
+     apply (clarsimp simp: isSchedulable_bool_def pred_map_conj)
+    apply (clarsimp simp: is_schedulable_bool_def2)+
+  done
+
+lemmas tcb_at'_example = corres_cross[where Q' = "tcb_at' t" for t, OF tcb_at'_cross_rel]
+
 lemma guarded_switch_to_chooseThread_fragment_corres:
   "corres dc
-    (P and st_tcb_at runnable t and invs and valid_sched)
-    (P' and st_tcb_at' runnable' t and invs_no_cicd')
+    (P and is_schedulable_bool t and invs and valid_sched)
+    (P' and invs_no_cicd' and tcb_at' t)
           (guarded_switch_to t)
           (do schedulable \<leftarrow> isSchedulable t;
               y \<leftarrow> assert schedulable;
               ThreadDecls_H.switchToThread t
            od)"
-  unfolding guarded_switch_to_def isRunnable_def
+  apply (rule corres_cross'[OF isSchedulable_bool_cross_rel[where t=t], rotated])
+  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
+  apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
+  unfolding guarded_switch_to_def
   apply simp
   apply (rule corres_guard_imp)
-  sorry (* asserts in guarded_switch_to? *) (*
-    apply (rule corres_split[OF _ gts_corres])
+    apply (rule corres_symb_exec_l_Ex)
+    apply (rule corres_symb_exec_l_Ex)
+    apply (rule corres_split[OF _ isSchedulable_corres])
       apply (rule corres_assert_assume_l)
       apply (rule corres_assert_assume_r)
       apply (rule switch_thread_corres)
-     apply (wp gts_st_tcb_at)+
+    apply (wpsimp wp: is_schedulable_wp)
+    apply (wpsimp wp: isSchedulable_wp)
+   apply (prop_tac "st_tcb_at runnable t s \<and> bound_sc_tcb_at bound t s")
+    apply (clarsimp simp: is_schedulable_bool_def2 tcb_at_kh_simps pred_map_def vs_all_heap_simps)
    apply (clarsimp simp: st_tcb_at_tcb_at invs_def valid_state_def valid_pspace_def valid_sched_def
-                          invs_valid_vs_lookup invs_unique_refs)
-  apply (auto elim!: pred_tcb'_weakenE split: thread_state.splits
-              simp: pred_tcb_at' runnable'_def all_invs_but_ct_idle_or_in_cur_domain'_def)
-  done *)
+                         invs_valid_vs_lookup invs_unique_refs)
+   apply (clarsimp simp: thread_get_def in_monad pred_tcb_at_def obj_at_def get_tcb_ko_at)
+  apply (prop_tac "st_tcb_at' runnable' t s")
+   apply (clarsimp simp: pred_tcb_at'_def isSchedulable_bool_def pred_map_def obj_at'_def tcb_of'_def
+                         projectKO_eq Bits_R.projectKO_tcb
+                  split: kernel_object.splits)
+  by (auto elim!: pred_tcb'_weakenE split: thread_state.splits
+            simp: pred_tcb_at' runnable'_def all_invs_but_ct_idle_or_in_cur_domain'_def)
 
 lemma bitmap_lookup_queue_is_max_non_empty:
   "\<lbrakk> valid_queues s'; (s, s') \<in> state_relation; invs s;
@@ -1606,8 +1722,8 @@ proof -
            apply (rule corres_symb_exec_r)
               apply (rule_tac
                        P="\<lambda>s. ?PREI s \<and> queues = ready_queues s (cur_domain s) \<and>
-                              st_tcb_at runnable (hd (max_non_empty_queue queues)) s" and
-                       P'="\<lambda>s. (?PREH s \<and> st_tcb_at' runnable' (hd queue) s) \<and>
+                              is_schedulable_bool (hd (max_non_empty_queue queues)) s" and
+                       P'="\<lambda>s. (?PREH s ) \<and> st_tcb_at' runnable' (hd queue) s \<and>
                                l1 = ksReadyQueuesL1Bitmap s (ksCurDomain s) \<and>
                                l1 \<noteq> 0 \<and>
                                queue = ksReadyQueues s (ksCurDomain s,
@@ -1630,7 +1746,13 @@ proof -
              "ready_queues sa (cur_domain sa) (Max {prio. ready_queues sa (cur_domain sa) prio \<noteq> []}) \<noteq> []")
      apply (fastforce elim!: setcomp_Max_has_prop)
     apply (fastforce elim!: setcomp_Max_has_prop)
-   apply (clarsimp simp: tcb_at_kh_simps)
+
+   apply (clarsimp simp: tcb_at_kh_simps is_schedulable_bool_def2 released_sc_tcb_at_def)
+   apply (subgoal_tac "in_ready_q a sa", fastforce simp: ready_or_release_def)
+   apply (clarsimp simp: in_ready_q_def)
+    apply (rule_tac x="cur_domain sa" in exI)
+    apply (rule_tac x="Max {prio. ready_queues sa (cur_domain sa) prio \<noteq> []}" in exI)
+    apply clarsimp
   apply (clarsimp dest!: invs_no_cicd'_queues)
   apply (fastforce intro: ksReadyQueuesL1Bitmap_st_tcb_at')
   done
@@ -2357,8 +2479,8 @@ lemma scheduleChooseNewThread_ct_activatable'[wp]:
 
 \<comment>\<open>FIXME: maybe move this block\<close>
 
-crunches getReprogramTimer, getCurTime, getRefills, getReleaseQueue, refillSufficient
-         , refillReady, isRoundRobin, releaseQNonEmptyAndReady
+crunches getReprogramTimer, getCurTime, getRefills, getReleaseQueue, refillSufficient,
+         refillReady, isRoundRobin, releaseQNonEmptyAndReady
   for inv[wp]: P
 
 lemma ksReprogramTimer_update_misc[simp]:
@@ -2414,9 +2536,8 @@ lemma schedule_ct_activatable':
   supply ssa_wp[wp del]
   apply (simp add: schedule_def)
      apply wpsimp
-  sorry (* I believe that the coerce lemma above can be used to avoid the need for this lemma
-           (ct_in_state'_activatable_coerce_concrete).
-           This should be confirmed at some point. *)
+  sorry (* I believe that the coerce lemma above (ct_in_state'_activatable_coerce_concrete) can
+           be used to avoid the need for this lemma. This should be confirmed at some point. *)
 
 lemma threadSet_sch_act_sane[wp]:
   "\<lbrace>sch_act_sane\<rbrace> threadSet f t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
