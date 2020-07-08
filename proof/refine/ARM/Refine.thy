@@ -192,10 +192,8 @@ lemma user_mem_relation:
 lemma device_mem_relation:
   "\<lbrakk>(s,s') \<in> state_relation; valid_state' s'; valid_state s\<rbrakk>
    \<Longrightarrow> device_mem' s' = device_mem s"
-  apply (rule ext)
-  apply (clarsimp simp: device_mem_def device_mem'_def pointerInUserData_relation
-     pointerInDeviceData_relation)
-  done
+  unfolding device_mem_def device_mem'_def
+  by (rule ext) (clarsimp simp: pointerInUserData_relation pointerInDeviceData_relation)
 
 lemma absKState_correct:
   assumes invs: "einvs (s :: det_ext state)" and invs': "invs' s'"
@@ -203,10 +201,10 @@ lemma absKState_correct:
   shows "absKState s' = abs_state s"
   using assms
   apply (intro state.equality, simp_all add: absKState_def abs_state_def)
-                      apply (rule absHeap_correct, clarsimp+)
+                      apply (rule absHeap_correct; clarsimp simp: state_relation_sc_replies_relation)
                       apply (clarsimp elim!: state_relationE)
-                     apply (rule absCDT_correct, clarsimp+)
-                    apply (rule absIsOriginalCap_correct, clarsimp+)
+                     apply (rule absCDT_correct; clarsimp)
+                    apply (rule absIsOriginalCap_correct; clarsimp)
                    apply (simp add: state_relation_def)
                   apply (simp add: state_relation_def)
                  apply (clarsimp simp: state_relation_def)
@@ -225,7 +223,7 @@ lemma absKState_correct:
      apply (rule absInterruptIRQNode_correct, simp add: state_relation_def)
     apply (rule absInterruptStates_correct, simp add: state_relation_def)
    apply (rule absArchState_correct, simp)
-  apply (rule absExst_correct, simp+)
+  apply (rule absExst_correct; simp)
   done
 
 text \<open>The top-level invariance\<close>

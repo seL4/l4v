@@ -101,6 +101,10 @@ lemma projectKO_sc:
   "(projectKO_opt ko = Some t) = (ko = KOSchedContext t)"
   by (cases ko) (auto simp: projectKO_opts_defs)
 
+lemma sc_of'_Sched[simp]:
+  "sc_of' (KOSchedContext sc) = Some sc"
+  by (simp add: projectKO_sc)
+
 lemma projectKO_ASID:
   "(projectKO_opt ko = Some t) = (ko = KOArch (KOASIDPool t))"
   by (cases ko)

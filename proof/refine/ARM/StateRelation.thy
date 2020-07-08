@@ -204,12 +204,26 @@ where
 definition refill_map :: "Structures_H.refill \<Rightarrow> Structures_A.refill" where
   "refill_map refill \<equiv> \<lparr> r_time = rTime refill, r_amount = rAmount refill\<rparr>"
 
-definition empty_refill :: Structures_A.refill where
-  "empty_refill \<equiv> \<lparr> r_time = 0, r_amount = 0 \<rparr>"
 
-definition empty_refills :: "nat \<Rightarrow> nat \<Rightarrow> Structures_A.refill list" where
-  "empty_refills n len =  replicate (max_num_refills (min_sched_context_bits + n) - len) empty_refill"
+(* Assumes count \<le> mx; start \<le> mx; mx \<le> length xs
+   Produces count elements from start, wrapping around to the beginning of the list at mx *)
+definition wrap_slice :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a list \<Rightarrow> 'a list" where
+  "wrap_slice start count mx xs \<equiv> if start + count \<le> mx
+                                   then take count (drop start xs)
+                                   else take (mx - start) (drop start xs) @ take (start + count - mx) xs"
 
+(* Sanity check: *)
+lemma "wrap_slice 1 3 4 [1::nat,2,3,4,5,6] = [2,3,4]" by eval
+lemma "wrap_slice 3 3 4 [1::nat,2,3,4,5,6] = [4,1,2]" by eval
+
+definition refills_map :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> refill list \<Rightarrow>  Structures_A.refill list" where
+  "refills_map start count mx \<equiv> map refill_map \<circ> wrap_slice (min start mx) (min count mx) mx"
+
+(* This leaves those Haskell refills unconstrained that are not in the abstract sc_refills list.
+   This is intentional: for instance, refillPopHead will leave "garbage" behind in memory which
+   is not captured on the abstract side, and we can't demand that the Haskell side has empty
+   refills there. This should be fine, from concrete to abstract we still have a function.
+ *)
 definition sc_relation ::
   "Structures_A.sched_context \<Rightarrow> nat \<Rightarrow> Structures_H.sched_context \<Rightarrow> bool" where
   "sc_relation \<equiv> \<lambda>sc n sc'.
@@ -218,9 +232,10 @@ definition sc_relation ::
      sc_consumed sc = scConsumed sc' \<and>
      sc_tcb sc = scTCB sc' \<and>
      sc_ntfn sc = scNtfn sc' \<and>
-     \<comment> \<open>The le condition is needed for empty_refills to return a meaningful value, on the abstract side\<close>
-     (length (sc_refills sc) \<le> max_num_refills (min_sched_context_bits + n) \<and>
-     sc_refills sc @ empty_refills n (size (sc_refills sc)) = map refill_map (scRefills sc')) \<and>
+     sc_refills sc = refills_map (scRefillHead sc') (scRefillCount sc')
+                                 (scRefillMax sc') (scRefills sc') \<and>
+     \<comment> \<open>Relates the abstract @{term n} with the concrete refill list length\<close>
+     length (scRefills sc') = max_num_refills (min_sched_context_bits + n) \<and>
      sc_refill_max sc = scRefillMax sc' \<and>
      sc_badge sc = scBadge sc' \<and>
      sc_yield_from sc = scYieldFrom sc'"
@@ -437,16 +452,11 @@ where
   (\<forall>x \<in> dom ab. \<forall>(y, P) \<in> obj_relation_cuts (the (ab x)) x.
        P (the (ab x)) (the (con y)))"
 
-primrec
-  reply_stack_relation :: "obj_ref list \<Rightarrow> obj_ref option \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
-  "reply_stack_relation [] start next = (start = None)"
-| "reply_stack_relation (x#xs) start next = (start = Some x \<and> reply_stack_relation xs (next x) next)"
-
 definition
   sc_replies_relation_2 ::
   "(obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
   "sc_replies_relation_2 sc_repls scRepl replNexts \<equiv>
-     \<forall>p replies. sc_repls p = Some replies \<longrightarrow> reply_stack_relation replies (scRepl p) replNexts"
+     \<forall>p replies. sc_repls p = Some replies \<longrightarrow> heap_list replNexts (scRepl p) replies"
 
 abbreviation sc_replies_relation :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "sc_replies_relation s s' \<equiv>
@@ -454,11 +464,12 @@ abbreviation sc_replies_relation :: "det_state \<Rightarrow> kernel_state \<Righ
 
 lemmas sc_replies_relation_def = sc_replies_relation_2_def
 
-abbreviation sc_replies_relation_obj :: "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
-  "sc_replies_relation_obj obj obj' next \<equiv>
-  (case (obj, obj') of
-        (Structures_A.SchedContext sc n, KOSchedContext sc') \<Rightarrow>
-               reply_stack_relation (sc_replies sc) (scReply sc') next)"
+abbreviation sc_replies_relation_obj ::
+  "Structures_A.kernel_object \<Rightarrow> kernel_object \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
+  "sc_replies_relation_obj obj obj' nexts \<equiv>
+   case (obj, obj') of
+     (Structures_A.SchedContext sc _, KOSchedContext sc') \<Rightarrow>
+       heap_list nexts (scReply sc') (sc_replies sc)"
 
 primrec
   sched_act_relation :: "Structures_A.scheduler_action \<Rightarrow> Structures_H.scheduler_action \<Rightarrow> bool"
@@ -544,6 +555,14 @@ where
  "rights_mask_map \<equiv> \<lambda>rs. CapRights (AllowWrite \<in> rs) (AllowRead \<in> rs) (AllowGrant \<in> rs)
                                    (AllowGrantReply \<in> rs)"
 
+
+lemma length_wrap_slice[simp]:
+  "\<lbrakk> count \<le> mx; start \<le> mx; mx \<le> length xs \<rbrakk> \<Longrightarrow> length (wrap_slice start count mx xs) = count"
+  by (simp add: wrap_slice_def)
+
+lemma wrap_slice_empty[simp]:
+  "start \<le> mx \<Longrightarrow> wrap_slice start 0 mx xs = []"
+  by (clarsimp simp: wrap_slice_def)
 
 lemma obj_relation_cutsE:
   "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; P ko ko';
@@ -825,23 +844,9 @@ lemma maxUntyped_eq:
 
 lemmas sc_const_conc = sc_const_eq[symmetric] max_num_refills_eq_refillAbsoluteMax' maxUntyped_eq
 
-lemma sc_relation_refills:
-  "sc_relation sc n sc' \<Longrightarrow>
-     length (sc_refills sc) \<le> max_num_refills (min_sched_context_bits + n) \<and>
-     sc_refills sc @ empty_refills n (size (sc_refills sc)) = map refill_map (scRefills sc')"
-  by (clarsimp simp: sc_relation_def)
-
 lemma scRefills_length:
-  assumes "sc_relation sc n sc'"
-  shows "length (scRefills sc') = max_num_refills (min_sched_context_bits + n)"
-proof -
-  have sc1: "length (sc_refills sc) \<le> max_num_refills (min_sched_context_bits + n)"
-    using assms sc_relation_refills by simp
-  have sc2: "sc_refills sc @ empty_refills n (size (sc_refills sc)) = map refill_map (scRefills sc')"
-    using assms sc_relation_refills by simp
-  show ?thesis using sc1 arg_cong[where f=length, OF sc2] empty_refills_def
-    by simp
-qed
+  "sc_relation sc n sc' \<Longrightarrow> length (scRefills sc') = max_num_refills (min_sched_context_bits + n)"
+  by (simp add: sc_relation_def)
 
 lemma scBits_core_ub:
   assumes cond: "sizeof_sched_context_t + refill_size_bytes < (2::nat) ^ (min_size - 1)"

@@ -627,7 +627,10 @@ definition valid_sched_context' :: "sched_context \<Rightarrow> kernel_state \<R
      \<and> valid_bound_tcb' (scTCB sc) s
      \<and> valid_bound_tcb' (scYieldFrom sc) s
      \<and> valid_bound_sc' (scReply sc) s
-     \<and> length (scRefills sc) \<ge> 1"
+     \<and> MIN_REFILLS \<le> length (scRefills sc)
+     \<and> scRefillMax sc \<le> length (scRefills sc)
+     \<and> (0 < scRefillMax sc \<longrightarrow>
+          scRefillHead sc \<le> scRefillMax sc \<and> scRefillCount sc \<le> scRefillMax sc)"
 
 definition valid_reply' :: "reply \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_reply' reply s \<equiv>

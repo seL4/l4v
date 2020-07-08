@@ -148,6 +148,10 @@ lemma valid_sc_size'_makeObject_sc':
   by (clarsimp simp: makeObject_sc valid_sched_context_size'_def scBits_simps
                      objBits_def objBitsKO_def)
 
+lemma MIN_REFILLS_refillAbsoluteMax'[simp]:
+  "minSchedContextBits \<le> us \<Longrightarrow> MIN_REFILLS \<le> refillAbsoluteMax' us"
+  using MIN_REFILLS_le_minRefillLength order.trans refillAbsoluteMax'_lb by auto
+
 lemma valid_obj_makeObject_sched_context [simp]:
   "sc_size_bounds us \<Longrightarrow>
      valid_obj' (KOSchedContext (scRefills_update
@@ -2468,37 +2472,19 @@ lemma reply_relation_retype:
                 makeObject_reply obj_relation_retype_def
                 objBits_simps word_bits_def replySizeBits_def)
 
+lemma refillAbsoluteMax'_gt1:
+  "minSchedContextBits \<le> n \<Longrightarrow> min (Suc 0) (refillAbsoluteMax' n) = Suc 0"
+  by (drule refillAbsoluteMax'_lb) (simp add: minRefillLength_ARM)
+
 lemma sc_relation_retype:
   "\<lbrakk>sc_size_bounds n\<rbrakk> \<Longrightarrow>
    obj_relation_retype (default_object Structures_A.SchedContextObject dev n d)
                          (KOSchedContext (scRefills_update
                             (\<lambda>_. replicate (refillAbsoluteMax' n) emptyRefill) makeObject))"
-  apply (clarsimp simp: default_object_def sc_relation_def default_sched_context_def
-                        makeObject_sc obj_relation_retype_def valid_sched_context_size_def
-                        objBits_simps word_bits_def empty_refills_def scBits_simps
-                        empty_refill_def refill_map_def emptyRefill_def)
-  apply (intro conjI impI)
-proof -
-  assume H: "minSchedContextBits \<le> n"
-  show le: "Suc (Suc 0) \<le> refillAbsoluteMax' n"
-    using refillAbsoluteMax'_lb MIN_REFILLS_le_minRefillLength H
-    by (simp add: MIN_REFILLS_def le_trans numerals(2))
-  have "\<lparr>r_time = 0, r_amount = 0\<rparr> #
-        \<lparr>r_time = 0, r_amount = 0\<rparr> #
-        replicate (refillAbsoluteMax' n - Suc (Suc 0))
-         \<lparr>r_time = 0, r_amount = 0\<rparr> =
-        replicate (Suc (Suc 0))
-         \<lparr>r_time = 0, r_amount = 0\<rparr>
-         @ replicate (refillAbsoluteMax' n - Suc (Suc 0))
-         \<lparr>r_time = 0, r_amount = 0\<rparr>" (is "?LH = _")
-    by (clarsimp simp: replicate_def)
-  also have "... = replicate (Suc (Suc 0) + (refillAbsoluteMax' n - Suc (Suc 0)))
-         \<lparr>r_time = 0, r_amount = 0\<rparr>"
-    by (clarsimp simp: replicate_add)
-  also have "... = replicate (refillAbsoluteMax' n) \<lparr>r_time = 0, r_amount = 0\<rparr>" (is "_ = ?RH")
-    using le by (metis SucSucMinus add_2_eq_Suc numerals(2))
-  finally show "?LH = ?RH" .
-qed
+  by (clarsimp simp: default_object_def sc_relation_def default_sched_context_def
+                     makeObject_sc obj_relation_retype_def valid_sched_context_size_def
+                     objBits_simps word_bits_def scBits_simps refills_map_def refill_map_def
+                     emptyRefill_def refillAbsoluteMax'_gt1)
 
 lemma pagetable_relation_retype:
   "obj_relation_retype (default_object (ArchObject PageTableObj) dev n d)
