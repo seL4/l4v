@@ -400,7 +400,7 @@ lemma pinv_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
    corres (intr \<oplus> (=))
      (einvs and valid_invocation i
-            and simple_sched_action
+            and (\<lambda>s. schact_is_rct s)
             and ct_active
             and (\<lambda>s. (\<exists>w w2 b c. i = Invocations_A.InvokeEndpoint w w2 b c) \<longrightarrow> st_tcb_at simple (cur_thread s) s))
      (invs' and sch_act_simple and valid_invocation' i' and ct_active' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
@@ -414,8 +414,7 @@ lemma pinv_corres:
                  apply (rule corres_rel_imp, rule inv_untyped_corres)
                   apply simp
                  apply (case_tac x, simp_all)[1]
-                apply wp+
-              apply simp+
+             apply wpsimp+
             apply (rule corres_guard_imp)
               apply (rule corres_split [OF _ gct_corres])
                 apply simp
@@ -433,9 +432,7 @@ lemma pinv_corres:
              apply (rule corres_split [OF _ send_signal_corres])
                apply (rule corres_trivial)
                apply (simp add: returnOk_def)
-              apply wp+
-            apply (simp+)[2]
-          apply simp
+              apply wpsimp+
           apply (rule corres_guard_imp)
             apply (rule corres_split_eqr [OF _ gct_corres])
               apply (rule corres_split_nor [OF _ do_reply_transfer_corres])
@@ -446,7 +443,7 @@ lemma pinv_corres:
          apply (clarsimp simp: liftME_def)
          apply (rule corres_guard_imp)
            apply (erule tcbinv_corres)
-          apply (simp)+
+          apply fastforce+
         \<comment> \<open>domain cap\<close>
         apply (clarsimp simp: invoke_domain_def)
         apply (rule corres_guard_imp)
@@ -480,9 +477,9 @@ lemma pinv_corres:
         apply wp+
       apply (clarsimp+)[2]
     apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
-    apply (rule corres_guard_imp, rule invoke_irq_control_corres, simp+)
+    apply (rule corres_guard_imp, rule invoke_irq_control_corres; fastforce)
    apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
-   apply (rule corres_guard_imp, rule invoke_irq_handler_corres, simp+)
+   apply (rule corres_guard_imp, rule invoke_irq_handler_corres; fastforce)
   apply clarsimp
   apply (rule corres_guard_imp)
     apply (rule inv_arch_corres, assumption)

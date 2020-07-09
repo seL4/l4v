@@ -4626,7 +4626,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma inv_untyped_corres':
   "\<lbrakk> untypinv_relation ui ui' \<rbrakk> \<Longrightarrow>
    corres (intr \<oplus> (=))
-     (einvs and valid_untyped_inv ui and ct_active)
+     (einvs and valid_untyped_inv ui and ct_active and (\<lambda>s. schact_is_rct s))
      (invs' and valid_untyped_inv' ui' and ct_active')
      (invoke_untyped ui) (invokeUntyped ui')"
   apply (cases ui)
@@ -4645,6 +4645,7 @@ lemma inv_untyped_corres':
                   (cte_map cref) reset ptr_base ptr ao' us (map cte_map slots) dev"
 
     assume invs: "invs (s :: det_state)" "ct_active s" "valid_list s" "valid_sched s"
+                 "schact_is_rct s"
     and   invs': "invs' s'" "ct_active' s'"
     and      sr: "(s, s') \<in> state_relation"
     and     vui: "valid_untyped_inv_wcap ?ui (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx)) s"
@@ -4880,7 +4881,7 @@ lemma inv_untyped_corres':
                 apply simp+
              apply (simp add: insertNewCaps_def)
              apply (rule corres_split_retype_createNewCaps[where sz = sz,OF corres_rel_imp])
-  sorry (*
+                apply (clarsimp simp: mapM_x_def)
                 apply (rule inv_untyped_corres_helper1)
                 apply simp
                apply simp
@@ -4943,10 +4944,11 @@ lemma inv_untyped_corres':
                 invs_valid_pspace invs_arch_state invs_psp_aligned
                 invs_distinct)
          apply (clarsimp simp:conj_comms ball_conj_distrib ex_in_conv)
-         apply (rule validE_R_validE, rule_tac Q'="\<lambda>_ s. valid_etcbs s \<and> valid_list s \<and> invs s \<and> ct_active s
+         apply (rule validE_R_validE, rule_tac Q'="\<lambda>_ s. valid_list s \<and> invs s \<and> ct_active s
           \<and> valid_untyped_inv_wcap ui
             (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1} s)
+          \<and> scheduler_action s = resume_cur_thread
           " in hoare_post_imp_R)
           apply (simp add: whenE_def, wp)
            apply (rule validE_validE_R, rule hoare_post_impErr, rule reset_untyped_cap_invs_etc, auto)[1]
@@ -4976,7 +4978,7 @@ lemma inv_untyped_corres':
                           atLeastatMost_subset_iff[where b=x and d=x for x]
                           word_and_le2)
          apply (intro conjI impI)
-
+             apply (clarsimp simp: scBits_simps)
             (* offs *)
             apply (drule(1) invoke_untyped_proofs.idx_le_new_offs)
             apply simp
@@ -5031,10 +5033,10 @@ lemma inv_untyped_corres':
       apply (clarsimp simp only: pred_conj_def invs ui if_apply_def2)
       apply (strengthen vui)
       apply (cut_tac vui invs invs')
-      apply (clarsimp simp: cte_wp_at_caps_of_state valid_sched_etcbs)
+      apply (clarsimp simp: cte_wp_at_caps_of_state schact_is_rct_def)
      apply (cut_tac vui' invs')
      apply (clarsimp simp: ui cte_wp_at_ctes_of if_apply_def2 ui')
-     done *)
+     done
 qed
 
 lemmas inv_untyped_corres = inv_untyped_corres'
