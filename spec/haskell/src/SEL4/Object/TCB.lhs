@@ -1058,6 +1058,7 @@ On some architectures, the thread context may include registers that may be modi
 >     csc <- return $ fromJust scOpt
 >     when (csc /= scPtr && scRefillMax sc /= 0) $ do
 >         setReprogramTimer True
+>         refillUnblockCheck csc
 >     reprogram <- getReprogramTimer
 >     when reprogram $ do
 >         commitTime

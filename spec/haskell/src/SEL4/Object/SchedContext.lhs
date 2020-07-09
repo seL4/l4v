@@ -503,6 +503,7 @@ This module uses the C preprocessor to select a target architecture.
 >     schedulable <- isSchedulable tptr
 >     if schedulable
 >         then do
+>             refillUnblockCheck scPtr
 >             ctPtr <- getCurThread
 >             curprio <- threadGet tcbPriority ctPtr
 >             prio <- threadGet tcbPriority tptr
