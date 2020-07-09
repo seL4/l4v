@@ -35,15 +35,6 @@ definition
     when (\<not> runnable state \<and> \<not> idle state) $ do
       cancel_ipc thread;
       set_thread_state thread Restart;
-
-      swp maybeM sc_opt (\<lambda>scp. do
-        csc \<leftarrow> gets cur_sc;
-        assert (scp \<noteq> csc);
-        refill_unblock_check scp
-      od);
-
-      \<comment>\<open>FIXME RT: Remove this maybeM. The maybeM performs a check for null pointer that is not
-                present in the source\<close>
       maybeM sched_context_resume sc_opt;
       test_possible_switch_to thread
     od
