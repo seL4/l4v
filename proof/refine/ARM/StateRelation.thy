@@ -139,7 +139,7 @@ where
       Structures_A.IdleNtfn       \<Rightarrow> ntfnObj ntfn' = Structures_H.IdleNtfn
     | Structures_A.WaitingNtfn q  \<Rightarrow> ntfnObj ntfn' = Structures_H.WaitingNtfn q
     | Structures_A.ActiveNtfn b \<Rightarrow> ntfnObj ntfn' = Structures_H.ActiveNtfn b)
-  \<and> ntfn_bound_tcb ntfn = ntfnBoundTCB ntfn'"
+  \<and> ntfn_bound_tcb ntfn = ntfnBoundTCB ntfn' \<and> ntfn_sc ntfn = ntfnSc ntfn'"
 
 definition
   ep_relation :: "Structures_A.endpoint \<Rightarrow> Structures_H.endpoint \<Rightarrow> bool"
