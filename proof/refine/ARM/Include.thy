@@ -13,4 +13,8 @@ begin
 
 no_notation bind_drop (infixl ">>" 60)
 
+declare
+  ntfn.sel[TRY [datatype_schematic]]
+  notification.sel[TRY [datatype_schematic]]
+
 end

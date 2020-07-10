@@ -315,16 +315,18 @@ text \<open>Notifications are sets of binary semaphores (stored in the
 \emph{badge word}). Unlike endpoints, threads may choose to block waiting to
 receive, but not to send.\<close>
 
-datatype ntfn
-           = IdleNtfn
-           | WaitingNtfn "obj_ref list"
-           | ActiveNtfn badge
+datatype ntfn =
+    IdleNtfn
+  | WaitingNtfn (ntfn_queue : "obj_ref list")
+  | ActiveNtfn (ntfn_badge : badge)
+  where
+    "ntfn_queue IdleNtfn = []"
+  | "ntfn_queue (ActiveNtfn _) = []"
 
 record notification =
   ntfn_obj :: ntfn
   ntfn_bound_tcb :: "obj_ref option"
   ntfn_sc        :: "obj_ref option"
-
 
 definition
   default_ep :: endpoint where

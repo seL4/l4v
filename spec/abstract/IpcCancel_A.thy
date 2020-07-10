@@ -341,9 +341,9 @@ where
 
 text \<open>Extract list of TCBs waiting on this notification\<close>
 definition
-  ntfn_queue :: "notification \<Rightarrow> obj_ref list option"
+  get_ntfn_queue :: "notification \<Rightarrow> obj_ref list option"
 where
-  "ntfn_queue ntfn \<equiv> case ntfn_obj ntfn of
+  "get_ntfn_queue ntfn \<equiv> case ntfn_obj ntfn of
      WaitingNtfn qs \<Rightarrow> Some qs
    | _ \<Rightarrow> None"
 
@@ -353,7 +353,7 @@ definition
 where
   "reorder_ntfn ntfn_ptr = do
     ntfn \<leftarrow> get_notification ntfn_ptr;
-    qs \<leftarrow> assert_opt $ ntfn_queue ntfn;
+    qs \<leftarrow> assert_opt $ get_ntfn_queue ntfn;
     qs' \<leftarrow> sort_queue qs;
     set_notification ntfn_ptr (ntfn \<lparr> ntfn_obj := WaitingNtfn qs' \<rparr>)
   od"

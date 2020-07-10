@@ -36,4 +36,8 @@ crunch_ignore (add:
 crunch_ignore (add:
   cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext)
 
+declare
+  notification.select_convs[TRY [datatype_schematic]]
+  ntfn.sel[TRY [datatype_schematic]]
+
 end

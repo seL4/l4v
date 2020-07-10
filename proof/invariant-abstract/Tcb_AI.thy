@@ -1677,7 +1677,7 @@ lemma reorder_ntfn_invs[wp]:
   "\<lbrace>invs\<rbrace> reorder_ntfn ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: reorder_ntfn_def live_def live_ntfn_def
                   wp: set_ntfn_minor_invs sort_queue_valid_ntfn_rv get_simple_ko_wp)
-  apply (clarsimp simp: ntfn_queue_def split: ntfn.splits)
+  apply (clarsimp simp: get_ntfn_queue_def split: ntfn.splits)
   apply (rule conjI, clarsimp simp: obj_at_def)
   apply (rule obj_at_valid_objsE, assumption, fastforce)
   apply (frule if_live_then_nonz_capD[OF invs_iflive], assumption)

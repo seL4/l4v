@@ -2960,14 +2960,8 @@ abbreviation valid_blocked_thread_of ::
 abbreviation valid_blocked_tcb_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_blocked_tcb_at \<equiv> valid_blocked_thread_of id id {}"
 
-definition ntfn_queue :: "notification \<Rightarrow> obj_ref list" where
-  "ntfn_queue n \<equiv> case (ntfn_obj n) of
-                    IdleNtfn \<Rightarrow> []
-                  | WaitingNtfn list \<Rightarrow> list
-                  | ActiveNtfn _ \<Rightarrow> []"
-
 definition in_ntfn_q where
-  "in_ntfn_q t s \<equiv> \<exists>ptr. ntfn_at_pred (\<lambda>n. t \<in> set (ntfn_queue n)) ptr s"
+  "in_ntfn_q t s \<equiv> \<exists>ptr. ntfn_at_pred (\<lambda>n. t \<in> set (ntfn_queue (ntfn_obj n))) ptr s"
 
 (*** valid_blocked ***)
 
