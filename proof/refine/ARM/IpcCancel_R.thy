@@ -285,7 +285,7 @@ lemma blocked_cancel_ipc_corres:
   apply (fastforce simp: ko_wp_at'_def obj_at'_def projectKOs dest: sym_refs_st_tcb_atD')
   done *)
 
-lemma ac_corres:
+lemma cancel_signal_corres:
   "corres dc
           (invs and st_tcb_at ((=) (Structures_A.BlockedOnNotification ntfn)) t)
           (invs' and st_tcb_at' ((=) (BlockedOnNotification ntfn)) t)
@@ -295,32 +295,34 @@ lemma ac_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_ntfn_corres])
       apply (rule_tac F="isWaitingNtfn (ntfnObj ntfnaa)" in corres_gen_asm2)
-      apply (case_tac "ntfn_obj ntfna")
-        apply (simp add: ntfn_relation_def isWaitingNtfn_def)
-       apply (simp add: isWaitingNtfn_def ntfn_relation_def split del: if_split)
-       apply (rename_tac list)
-       apply (rule_tac R="remove1 t list = []" in corres_cases)
-        apply (simp del: dc_simp)
-        apply (rule corres_split [OF _ set_ntfn_corres])
-           apply (rule sts_corres)
-           apply simp
-          apply (simp add: ntfn_relation_def)
-  sorry (*
-         apply (wp)+
-       apply (simp add: list_case_If del: dc_simp)
+      apply (case_tac "ntfn_obj ntfna"; simp add: ntfn_relation_def isWaitingNtfn_def)
+      apply (case_tac "ntfna", case_tac "ntfnaa")
+      apply clarsimp
+      apply wpfix
+      apply (rename_tac list bound_tcb sc)
+      apply (rule_tac R="remove1 t list = []" in corres_cases')
+       apply (simp del: dc_simp)
        apply (rule corres_split [OF _ set_ntfn_corres])
           apply (rule sts_corres)
           apply simp
-         apply (clarsimp simp add: ntfn_relation_def neq_Nil_conv)
-        apply (wp)+
-      apply (simp add: isWaitingNtfn_def ntfn_relation_def)
-     apply (wp getNotification_wp)+
+         apply (simp add: ntfn_relation_def)
+        apply (wp abs_typ_at_lifts)+
+      apply (simp add: list_case_If del: dc_simp)
+      apply (rule corres_split [OF _ set_ntfn_corres])
+         apply (rule sts_corres)
+         apply simp
+        apply (clarsimp simp add: ntfn_relation_def neq_Nil_conv)
+       apply (wp abs_typ_at_lifts)+
+     apply (wp get_simple_ko_wp getNotification_wp)+
    apply (clarsimp simp: conj_comms st_tcb_at_tcb_at)
    apply (clarsimp simp: st_tcb_at_def obj_at_def)
-   apply (erule pspace_valid_objsE)
-    apply fastforce
+   apply (erule pspace_valid_objsE, fastforce)
    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_tcb_state_def)
    apply (drule sym, simp add: obj_at_def)
+   apply clarsimp
+   apply (erule pspace_valid_objsE[where p=ntfn], fastforce)
+   apply (fastforce simp: valid_obj_def valid_ntfn_def
+                   split: option.splits Structures_A.ntfn.splits)
   apply (clarsimp simp: conj_comms pred_tcb_at' cong: conj_cong)
   apply (rule conjI)
    apply (simp add: pred_tcb_at'_def)
@@ -331,12 +333,17 @@ lemma ac_corres:
     apply (simp add: projectKOs)
    apply (clarsimp simp: valid_obj'_def valid_tcb'_def valid_tcb_state'_def)
    apply (drule sym, simp)
-  apply (clarsimp simp: invs_weak_sch_act_wf)
-  apply (drule sym_refs_st_tcb_atD', fastforce)
-  apply (fastforce simp: isWaitingNtfn_def ko_wp_at'_def obj_at'_def projectKOs
-                         ntfn_bound_refs'_def
-                  split: Structures_H.notification.splits ntfn.splits option.splits)
-  done *)
+  apply clarsimp
+  apply (rule context_conjI)
+   apply (drule sym_refs_st_tcb_atD', fastforce)
+   apply (fastforce simp: isWaitingNtfn_def ko_wp_at'_def obj_at'_def projectKOs
+                        ntfn_bound_refs'_def get_refs_def
+                 split: Structures_H.notification.splits ntfn.splits option.splits)
+  apply (frule ko_at_valid_objs', fastforce)
+   apply (clarsimp simp: projectKO_opt_ntfn split: kernel_object.splits)
+  apply (fastforce simp: valid_obj'_def valid_ntfn'_def isWaitingNtfn_def
+                  split: option.splits ntfn.splits)
+  done
 
 lemma cte_map_tcb_2:
   "cte_map (t, tcb_cnode_index 2) = t + 2*2^cte_level_bits"
@@ -407,7 +414,7 @@ lemma (in delete_one) cancel_ipc_corres:
          apply (rule reply_cancel_ipc_corres)
         apply (clarsimp elim!: st_tcb_weakenE)
        apply (clarsimp elim!: pred_tcb'_weakenE)
-      apply (rule corres_guard_imp [OF ac_corres], simp+)
+      apply (rule corres_guard_imp [OF cancel_signal_corres], simp+)
      apply (wp gts_sp[where P="\<top>",simplified])+
     apply (rule hoare_strengthen_post)
      apply (rule gts_sp'[where P="\<top>"])
