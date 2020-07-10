@@ -2329,11 +2329,6 @@ lemma set_thread_state_not_BOReply_valid_replies:
   apply fastforce
   done
 
-lemma refill_unblock_check_pred_tcb_at[wp]:
-  "refill_unblock_check scp \<lbrace>pred_tcb_at p P t\<rbrace>"
-  unfolding refill_unblock_check_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_drop_imp)
-
 lemma update_waiting_invs:
   "\<lbrace>\<lambda>s. invs s \<and> (\<exists>ntfn. ko_at (Notification ntfn) ntfnptr s
         \<and> ntfn_obj ntfn = WaitingNtfn q \<and> ntfn_bound_tcb ntfn = bound_tcb \<and> ntfn_sc ntfn = sc)
@@ -2344,10 +2339,8 @@ lemma update_waiting_invs:
   apply (simp add: update_waiting_ntfn_def)
   apply (rule hoare_seq_ext[OF _ assert_sp])
   apply wpsimp
-      apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                      wp: sts_valid_replies sts_only_idle sts_fault_tcbs_valid_states maybeM_inv)
-     apply (wpsimp wp:  maybeM_inv valid_ioports_lift)
-    apply wpsimp
+    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
+                    wp: sts_valid_replies sts_only_idle sts_fault_tcbs_valid_states)
    apply (wpsimp wp: valid_ioports_lift)
   apply (simp add: invs_def valid_state_def valid_pspace_def obj_at_def)
   apply (clarsimp simp: not_idle_tcb_in_waitingntfn ex_nonz_cap_to_tcb_in_waitingntfn cong: conj_cong)
