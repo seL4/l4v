@@ -19,6 +19,7 @@ imports
   ML_Goal
   Eval_Bool
   NICTATools
+  Heap_List
   "HOL-Library.Prefix_Order"
   "HOL-Word.Word"
 begin
