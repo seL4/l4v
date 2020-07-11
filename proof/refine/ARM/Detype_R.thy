@@ -849,17 +849,18 @@ lemma freeMemory_deletionIsSafe[wp]:
 
 lemma detype_ReplyNexts_of:
   "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; \<forall>p. p \<in> S \<longrightarrow> \<not> ko_wp_at' live' p s'\<rbrakk>
-   \<Longrightarrow> ((\<lambda>x. if x \<in> S then None else ksPSpace s' x) |> reply_of' |> replyNext)
+   \<Longrightarrow> ((\<lambda>x. if x \<in> S then None else ksPSpace s' x) |> reply_of' |> replyNext_of)
        = replyNexts_of s'"
   apply (prop_tac "\<And>p reply_ptr. (replyNexts_of s' p = Some reply_ptr) \<Longrightarrow> p \<notin> S")
    apply (clarsimp simp: opt_map_def split: option.splits)
    apply (drule_tac x=p in spec)
    apply (clarsimp simp: ko_wp_at'_def pred_neg_def live'_def projectKOs live_reply'_def
                   split: Structures_H.kernel_object.splits)
-  using pspace_alignedD' pspace_distinctD' apply blast
-  apply (fastforce simp: vs_all_heap_simps opt_map_def in_opt_map_eq
+  using pspace_alignedD' pspace_distinctD' apply clarsimp
+  apply (rule ext)
+  apply (clarsimp simp: vs_all_heap_simps opt_map_def in_opt_map_eq
                   split: option.splits)
-  done
+  by force
 
 lemma detype_sc_replies_relation:
   "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; \<forall>p. p \<in> {lower..upper} \<longrightarrow> \<not> ko_wp_at' live' p s';
@@ -868,7 +869,7 @@ lemma detype_sc_replies_relation:
                          ((\<lambda>x. if lower \<le> x \<and> x \<le> upper
                                then None else ksPSpace s' x) |> sc_of' |> scReply)
                          ((\<lambda>x. if lower \<le> x \<and> x \<le> upper
-                               then None else ksPSpace s' x) |> reply_of' |> replyNext)"
+                               then None else ksPSpace s' x) |> reply_of' |> replyNext_of)"
   apply (clarsimp simp: sc_replies_relation_def detype_def)
   apply (frule detype_ReplyNexts_of[where S="{lower..upper}"]; simp)
   apply (clarsimp simp: vs_all_heap_simps opt_map_def in_opt_map_eq
@@ -1044,7 +1045,7 @@ lemma replyPrev_list_refs_of_replies:
               split: option.splits)
 
 lemma replyNext_list_refs_of_replies:
-  "\<lbrakk>ko_at' reply p s'; replyNext reply = Some reply_ptr\<rbrakk>
+  "\<lbrakk>ko_at' reply p s'; replyNext reply = Some next_ptr; next_ptr = Next reply_ptr\<rbrakk>
    \<Longrightarrow> (reply_ptr, ReplyNext) \<in> list_refs_of_replies' s' p"
   by (clarsimp simp: list_refs_of_replies'_def list_refs_of_reply'_def opt_map_def projectKOs
                      obj_at'_def
@@ -1094,9 +1095,11 @@ lemma valid_obj':
    apply (case_tac "replyPrev reply = None"; clarsimp?)
    apply (frule replyPrev_list_refs_of_replies[rotated])
     apply (simp add: obj_at'_def projectKOs)
-   using sym_refs_def live_notRange list_refs_of_replies_live' apply fastforce
+  using sym_refs_def live_notRange list_refs_of_replies_live' apply fastforce
   apply (case_tac "replyNext reply = None"; clarsimp?)
-  apply (frule replyNext_list_refs_of_replies[rotated])
+  apply (rename_tac reply_next)
+  apply (case_tac reply_next; clarsimp)
+  apply (frule replyNext_list_refs_of_replies[rotated], simp)
    apply (simp add: obj_at'_def projectKOs)
   using sym_refs_def live_notRange list_refs_of_replies_live' apply fastforce
   done
@@ -1189,7 +1192,7 @@ lemma list_refs_of_reply'_state':
   apply (prop_tac "x \<in> base_bits", simp)
   apply (frule untyped_range_live_idle')
   apply (clarsimp simp: live'_def ko_wp_at'_def live_reply'_def projectKOs)
-  using pspace_alignedD' pspace_distinctD' apply blast
+  using pspace_alignedD' pspace_distinctD' apply clarsimp
   done
 
 lemma st_tcb:

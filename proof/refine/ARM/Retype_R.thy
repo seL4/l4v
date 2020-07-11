@@ -1561,7 +1561,7 @@ lemma retype_state_relation:
 
   thus
     "sc_replies_relation_2 (sc_replies_of_kh ?ps) (?ps' |> sc_of' |> scReply)
-                                                     (?ps' |> reply_of' |> replyNext)"
+                                                     (?ps' |> reply_of' |> replyNext_of)"
     using retype_sc_replies_relation [OF _ pspr vs vs' pn pn' ko tysc cover orr num_r]
     by clarsimp
 qed
@@ -3235,7 +3235,7 @@ proof (intro conjI impI)
      apply (case_tac sc; simp add: valid_sched_context'_def valid_bound_tcb'_def obj_at_disj'
                             split: option.splits)
     apply (rename_tac reply)
-    apply (case_tac reply; simp add: valid_reply'_def valid_bound_tcb'_def obj_at_disj'
+    apply (case_tac reply; fastforce simp: valid_reply'_def valid_bound_tcb'_def obj_at_disj'
                     split: option.splits)
     done
   have not_0: "0 \<notin> set (new_cap_addrs (2 ^ gbits * n) ptr val)"
@@ -3818,7 +3818,7 @@ lemma createObjects_list_refs_of_replies'':
   "\<lbrace>\<lambda>s. n \<noteq> 0
         \<and> range_cover ptr sz (objBitsKO val + gbits) n
         \<and> P (list_refs_of_replies' s)
-        \<and> (case val of KOReply r \<Rightarrow> replyNext r = None \<and> replyPrev r = None
+        \<and> (case val of KOReply r \<Rightarrow> replyNext_of r = None \<and> replyPrev r = None
                      | _ \<Rightarrow> True)
         \<and> pspace_aligned' s \<and> pspace_distinct' s
         \<and> pspace_no_overlap' ptr sz s\<rbrace>
@@ -5329,7 +5329,7 @@ lemma createObjects_no_cte_invs:
         \<and> caps_overlap_reserved' {ptr..ptr + of_nat (n * 2 ^ gbits * 2 ^ objBitsKO val) - 1} s
         \<and> caps_no_overlap'' ptr sz s \<and>
        refs_of' val = {} \<and> \<not> live' val
-        \<and> (case val of KOReply r \<Rightarrow> replyNext r = None \<and> replyPrev r = None
+        \<and> (case val of KOReply r \<Rightarrow> replyNext_of r = None \<and> replyPrev r = None
                      | _ \<Rightarrow> True)
             \<and> (\<forall>pde. projectKO_opt val = Some pde \<longrightarrow> pde = InvalidPDE)\<rbrace>
   createObjects ptr n val gbits
@@ -5642,6 +5642,7 @@ lemma corres_retype_region_createNewCaps:
      apply (rule pagetable_relation_retype)
     apply (wp | simp)+
     apply (clarsimp simp: list_all2_map1 list_all2_map2 list_all2_same
+
                           APIType_map2_def arch_default_cap_def)
    apply simp+
   \<comment> \<open>PageDirectory\<close>

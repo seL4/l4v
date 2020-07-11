@@ -163,6 +163,45 @@ definition
 abbreviation
   "cte_at' \<equiv> cte_wp_at' \<top>"
 
+text \<open>replyNext aliases\<close>
+
+abbreviation
+  "replySc \<equiv> \<lambda>r. getHeadScPtr (replyNext r)"
+
+abbreviation
+  "replyNext_of \<equiv> \<lambda>r. getReplyNextPtr (replyNext r)"
+
+lemma getReplyNextPtr_None[simp]:
+  "getReplyNextPtr None = None" by (simp add: getReplyNextPtr_def)
+
+lemma getHeadScPtr_None[simp]:
+  "getHeadScPtr None = None" by (simp add: getHeadScPtr_def)
+
+lemma getReplyNextPtr_Some_Next[simp]:
+  "getReplyNextPtr (Some (Next rn)) = Some rn" by (simp add: getReplyNextPtr_def)
+
+lemma getHeadScPtr_Some_Head[simp]:
+  "getHeadScPtr (Some (Head sc)) = Some sc" by (simp add: getHeadScPtr_def)
+
+lemma theReplyNextPtr_Some_Next[simp]:
+  "theReplyNextPtr (Some (Next rn)) = rn" by (simp add: theReplyNextPtr_def)
+
+lemma theHeadScPtr_Some_Head[simp]:
+  "theHeadScPtr (Some (Head sc)) = sc" by (simp add: theHeadScPtr_def)
+
+lemma getReplyNextPtr_Some_iff[iff]:
+  "(getReplyNextPtr x) = (Some rn) \<longleftrightarrow> x = Some (Next rn)"
+  by (cases x; clarsimp simp: getReplyNextPtr_def split: reply_next.split)
+
+lemma getHeadScPtr_Some_iff[iff]:
+  "(getHeadScPtr x) = (Some rn) \<longleftrightarrow> x = Some (Head rn)"
+  by (cases x; clarsimp simp: getHeadScPtr_def split: reply_next.split)
+
+lemma getReplyNextPtr_Head_None[simp]:
+  "getReplyNextPtr (Some (Head rn)) = None" by (simp add: getReplyNextPtr_def)
+
+lemma getHeadScPtr_Next_None[simp]:
+  "getHeadScPtr (Some (Next sc)) = None" by (simp add: getHeadScPtr_def)
 
 text \<open>Heap projections:\<close>
 abbreviation reply_of' :: "kernel_object \<Rightarrow> reply option" where
@@ -172,7 +211,7 @@ abbreviation replies_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> re
   "replies_of' s \<equiv> ksPSpace s |> reply_of'"
 
 abbreviation replyNexts_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
-  "replyNexts_of s \<equiv> replies_of' s |> replyNext"
+  "replyNexts_of s \<equiv> replies_of' s |> replyNext_of"
 
 abbreviation sc_of' :: "kernel_object \<Rightarrow> sched_context option" where
   "sc_of' \<equiv> projectKO_opt"
@@ -263,7 +302,7 @@ definition refs_of_reply' :: "reply \<Rightarrow> ref_set" where
                           \<union> get_refs ReplyTCB (replyTCB r)"
 
 definition list_refs_of_reply' :: "reply \<Rightarrow> ref_set" where
-  "list_refs_of_reply' r = get_refs ReplyNext (replyNext r) \<union> get_refs ReplyPrev (replyPrev r)"
+  "list_refs_of_reply' r = get_refs ReplyNext (replyNext_of r) \<union> get_refs ReplyPrev (replyPrev r)"
 
 abbreviation list_refs_of_replies_opt' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> ref_set option" where
   "list_refs_of_replies_opt' s \<equiv> replies_of' s ||> list_refs_of_reply'"
@@ -595,7 +634,7 @@ definition valid_reply' :: "reply \<Rightarrow> kernel_state \<Rightarrow> bool"
      valid_bound_tcb' (replyTCB reply) s
      \<and> valid_bound_sc' (replySc reply) s
      \<and> valid_bound_reply' (replyPrev reply) s
-     \<and> valid_bound_reply' (replyNext reply) s"
+     \<and> valid_bound_reply' (replyNext_of reply) s"
 
 definition
   valid_mapping' :: "word32 \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool"
