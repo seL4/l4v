@@ -550,7 +550,7 @@ This module uses the C preprocessor to select a target architecture.
 >         when (replyPtrOpt /= Nothing) $ do
 >             let replyPtr = fromJust replyPtrOpt
 >             reply <- getReply replyPtr
->             setReply replyPtr (reply { replySc = Nothing })
+>             setReply replyPtr (reply { replyNext = Nothing })
 >             setSchedContext scPtr $ sc { scReply = Nothing }
 >     InvokeSchedContextYieldTo scPtr buffer -> do
 >         schedContextYieldTo scPtr buffer

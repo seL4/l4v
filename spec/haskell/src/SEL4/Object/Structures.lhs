@@ -37,6 +37,7 @@ This module uses the C preprocessor to select a target architecture.
 > import Data.Bits
 > import Data.WordLib
 
+> import Data.Maybe(fromJust)
 > import Data.Word(Word64)
 
 \end{impdetails}
@@ -243,11 +244,35 @@ list of pointers to waiting threads;
 
 \subsubsection{Reply Objects}
 
+> data ReplyNext = Head (PPtr SchedContext) | Next (PPtr Reply)
+>   deriving Eq
+
 > data Reply = Reply {
 >     replyTCB :: Maybe (PPtr TCB),
 >     replyPrev :: Maybe (PPtr Reply),
->     replyNext :: Maybe (PPtr Reply),
->     replySc :: Maybe (PPtr SchedContext) }
+>     replyNext :: Maybe ReplyNext }
+
+> isHead :: Maybe ReplyNext -> Bool
+> isHead (Just (Head _)) = True
+> isHead _ = False
+
+> isNext :: Maybe ReplyNext -> Bool
+> isNext (Just (Next _)) = True
+> isNext _ = False
+
+> getHeadScPtr :: Maybe ReplyNext -> Maybe (PPtr SchedContext)
+> getHeadScPtr (Just (Head ptr)) = Just ptr
+> getHeadScPtr _ = Nothing
+
+> theHeadScPtr :: Maybe ReplyNext -> PPtr SchedContext
+> theHeadScPtr ptr = fromJust (getHeadScPtr ptr)
+
+> getReplyNextPtr :: Maybe ReplyNext -> Maybe (PPtr Reply)
+> getReplyNextPtr (Just (Next ptr)) = Just ptr
+> getReplyNextPtr _ = Nothing
+
+> theReplyNextPtr :: Maybe ReplyNext -> PPtr Reply
+> theReplyNextPtr ptr = fromJust (getReplyNextPtr ptr)
 
 \subsubsection{Notification Objects}
 

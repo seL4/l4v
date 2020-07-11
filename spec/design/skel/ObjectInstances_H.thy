@@ -236,7 +236,7 @@ begin
 
 
 definition
-  makeObject_reply: "(makeObject :: reply)  \<equiv> Reply Nothing Nothing Nothing Nothing"
+  makeObject_reply: "(makeObject :: reply)  \<equiv> Reply Nothing Nothing Nothing"
 
 definition
   loadObject_reply[simp]:

@@ -174,7 +174,7 @@ Threads are treated as special capability nodes; they also become zombies when t
 >     when (replyPtrOpt /= Nothing) $ do
 >         replyPtr <- return $ fromJust replyPtrOpt
 >         reply <- getReply replyPtr
->         setReply replyPtr (reply { replySc = Nothing })
+>         setReply replyPtr (reply { replyNext = Nothing })
 >         setSchedContext scPtr (sc { scReply = Nothing })
 
 >     sc <- getSchedContext scPtr

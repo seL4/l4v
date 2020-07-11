@@ -59,16 +59,15 @@ This module specifies the behavior of reply objects.
 >         when (oldReplyPtrOpt /= Nothing) $ do
 >             oldReplyPtr <- return $ fromJust oldReplyPtrOpt
 >             oldReply <- getReply oldReplyPtr
->             assert (replySc oldReply == scPtrOptDonated)
+>             assert (replyNext oldReply == Just (Head $ fromJust scPtrOptDonated))
 >                 "replyPush: scheduling context and reply must have reference to each other"
 
 >         reply' <- getReply replyPtr
->         setReply replyPtr (reply' { replyPrev = oldReplyPtrOpt, replyNext = Nothing,
->                                     replySc = scPtrOptDonated })
+>         setReply replyPtr (reply' { replyPrev = oldReplyPtrOpt, replyNext = Just (Head $ fromJust scPtrOptDonated) })
 >         when (oldReplyPtrOpt /= Nothing) $ do
 >             oldReplyPtr <- return $ fromJust oldReplyPtrOpt
 >             oldReply <- getReply oldReplyPtr
->             setReply oldReplyPtr (oldReply { replyNext = Just replyPtr, replySc = Nothing })
+>             setReply oldReplyPtr (oldReply { replyNext = Just (Next replyPtr) })
 >         scDonated <- getSchedContext (fromJust scPtrOptDonated)
 >         setSchedContext (fromJust scPtrOptDonated) (scDonated { scReply = Just replyPtr })
 
@@ -87,9 +86,10 @@ This module specifies the behavior of reply objects.
 >     replyUnlink replyPtr
 
 >     prevReplyPtrOpt <- return $ replyPrev reply
->     scPtrOpt <- return $ replySc reply
->     when (scPtrOpt /= Nothing) $ do
->         scPtr <- return $ fromJust scPtrOpt
+>     nextReplyPtrOpt <- return $ replyNext reply
+>     when (nextReplyPtrOpt /= Nothing) $ do
+>         assert (isHead nextReplyPtrOpt) "the reply must be at the head"
+>         scPtr <- return $ theHeadScPtr nextReplyPtrOpt
 >         tcbScPtrOpt <- threadGet tcbSchedContext tcbPtr
 >         when (tcbScPtrOpt == Nothing) $ schedContextDonate scPtr tcbPtr
 >         sc <- getSchedContext scPtr
@@ -109,16 +109,16 @@ This module specifies the behavior of reply objects.
 
 >     nextReplyPtrOpt <- return $ replyNext reply
 >     prevReplyPtrOpt <- return $ replyPrev reply
->     scPtrOpt <- return $ replySc reply
->     if scPtrOpt /= Nothing
->         then replyPop replyPtr
->         else if nextReplyPtrOpt /= Nothing
->             then do
->                 nextReplyPtr <- return $ fromJust nextReplyPtrOpt
->                 nextReply <- getReply nextReplyPtr
->                 setReply nextReplyPtr (nextReply { replyPrev = Nothing })
->                 replyUnlink replyPtr
->             else when (tcbPtrOpt /= Nothing) $ replyUnlink replyPtr
+>     if nextReplyPtrOpt /= Nothing
+>        then
+>            if isHead nextReplyPtrOpt
+>               then replyPop replyPtr
+>               else do
+>                   nextReplyPtr <- return $ theReplyNextPtr nextReplyPtrOpt
+>                   nextReply <- getReply nextReplyPtr
+>                   setReply nextReplyPtr (nextReply { replyPrev = Nothing })
+>                   replyUnlink replyPtr
+>         else when (tcbPtrOpt /= Nothing) $ replyUnlink replyPtr
 
 >     when (prevReplyPtrOpt /= Nothing) $ do
 >         prevReplyPtr <- return $ fromJust prevReplyPtrOpt
@@ -137,17 +137,17 @@ This module specifies the behavior of reply objects.
 >     reply <- getReply rptr
 >     nextReplyPtrOpt <- return $ replyNext reply
 >     prevReplyPtrOpt <- return $ replyPrev reply
->     scPtrOpt <- return $ replySc reply
 
->     if scPtrOpt /= Nothing
->         then do
->             scPtr <- return $ fromJust scPtrOpt
->             sc <- getSchedContext scPtr
->             setSchedContext scPtr (sc { scReply = Nothing })
->         else when (nextReplyPtrOpt /= Nothing) $ do
->             nextReplyPtr <- return $ fromJust nextReplyPtrOpt
->             nextReply <- getReply nextReplyPtr
->             setReply nextReplyPtr (nextReply { replyPrev = Nothing })
+>     when (nextReplyPtrOpt /= Nothing) $ do
+>        if isHead nextReplyPtrOpt
+>            then do
+>               scPtr <- return $ theHeadScPtr nextReplyPtrOpt
+>               sc <- getSchedContext scPtr
+>               setSchedContext scPtr (sc { scReply = Nothing })
+>            else do
+>               nextReplyPtr <- return $ theReplyNextPtr nextReplyPtrOpt
+>               nextReply <- getReply nextReplyPtr
+>               setReply nextReplyPtr (nextReply { replyPrev = Nothing })
 
 >     when (prevReplyPtrOpt /= Nothing) $ do
 >         prevReplyPtr <- return $ fromJust prevReplyPtrOpt
@@ -169,7 +169,7 @@ This module specifies the behavior of reply objects.
 > cleanReply :: PPtr Reply -> Kernel ()
 > cleanReply replyPtr = do
 >     reply <- getReply replyPtr
->     setReply replyPtr (reply { replyPrev = Nothing, replyNext = Nothing, replySc = Nothing })
+>     setReply replyPtr (reply { replyPrev = Nothing, replyNext = Nothing })
 
 > getReply :: PPtr Reply -> Kernel Reply
 > getReply rptr = getObject rptr
