@@ -1824,7 +1824,7 @@ lemma flush_table_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ set_vm_root_for_flush_corres])
       apply (rule corres_split [OF _ load_hw_asid_corres2[where pd=pd]])
-        apply (clarsimp)
+        apply (clarsimp cong: corres_weak_cong)
         apply (rule corres_when, rule refl)
         apply (rule corres_split[where r' = dc, OF corres_when corres_machine_op])
             apply simp
@@ -1859,7 +1859,7 @@ lemma flush_page_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ set_vm_root_for_flush_corres])
       apply (rule corres_split [OF _ load_hw_asid_corres2[where pd=pd]])
-        apply clarsimp
+        apply (clarsimp cong: corres_weak_cong)
         apply (rule corres_when, rule refl)
         apply (rule corres_split [OF _ corres_machine_op [where r=dc]])
            apply (rule corres_when, rule refl)

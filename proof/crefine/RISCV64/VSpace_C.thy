@@ -1391,12 +1391,6 @@ lemma cap_to_H_Frame_unfold:
   apply (rename_tac fcap, case_tac fcap, simp)
   done
 
-declare capFBasePtr.simps[datatype_schematic]
-declare capFVMRights.simps[datatype_schematic]
-declare capFSize.simps[datatype_schematic]
-declare capFIsDevice.simps[datatype_schematic]
-declare capFMappedAddress.simps[datatype_schematic]
-
 lemma performPageInvocationUnmap_ccorres:
   notes Collect_const[simp del]
   shows

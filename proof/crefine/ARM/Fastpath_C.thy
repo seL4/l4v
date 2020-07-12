@@ -3260,7 +3260,7 @@ lemma fastpath_reply_recv_ccorres:
      apply (safe del: notI disjE)[1]
        apply (simp add: isSendEP_def valid_ep'_def tcb_at_invs'
                  split: Structures_H.endpoint.split_asm)
-       apply (rule subst[OF epQueue.simps(1)],
+       apply (rule subst[OF endpoint.sel(1)],
               erule st_tcb_at_not_in_ep_queue[where P="(=) Running", rotated],
               clarsimp+)
        apply (simp add: obj_at_tcbs_of st_tcb_at_tcbs_of)

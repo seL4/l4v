@@ -6174,7 +6174,7 @@ lemma usableUntypedRange_mono2:
     \<Longrightarrow> capPtr cap' = capPtr cap
     \<Longrightarrow> capBlockSize cap' = capBlockSize cap
     \<Longrightarrow> usableUntypedRange cap \<le> usableUntypedRange cap'"
-  apply (clarsimp simp only: isCap_simps capPtr.simps capBlockSize.simps del: subsetI)
+  apply (clarsimp simp only: isCap_simps capability.sel del: subsetI)
   apply (rule usableUntypedRange_mono1, auto simp: capAligned_def)
   done
 

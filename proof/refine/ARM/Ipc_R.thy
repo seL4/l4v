@@ -2860,13 +2860,13 @@ lemma sai_invs'[wp]:
    by (wp set_ntfn_minor_invs'
         | rule conjI
         | clarsimp elim!: st_tcb_ex_cap''
+        | fastforce simp: receiveBlocked_def projectKOs pred_tcb_at'_def obj_at'_def
+                   dest!: invs_rct_ct_activatable'
+                   split: thread_state.splits
         | fastforce simp: invs'_def valid_state'_def receiveBlocked_def projectKOs
                           valid_obj'_def valid_ntfn'_def
                    split: thread_state.splits
-                   dest!: global'_no_ex_cap st_tcb_ex_cap'' ko_at_valid_objs'
-        | fastforce simp: receiveBlocked_def projectKOs pred_tcb_at'_def obj_at'_def
-                   dest!: invs_rct_ct_activatable'
-                   split: thread_state.splits)+
+                   dest!: global'_no_ex_cap st_tcb_ex_cap'' ko_at_valid_objs')+
   *)
 
 lemma rfk_corres:

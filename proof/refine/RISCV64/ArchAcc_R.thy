@@ -637,14 +637,14 @@ next
           apply (rule corres_stateAssert_implied)
            apply (rule minus(1))
             apply (simp add: nlevel)
-           apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
+           apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
                                  addr_from_ppn_def)
           apply clarsimp
           apply (rule page_table_at_cross; assumption?)
            apply (drule (2) valid_vspace_objs_strongD; assumption?)
             apply simp
-           apply (clarsimp simp: pt_at_eq in_omonad is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
-                                      addr_from_ppn_def)
+           apply (clarsimp simp: pt_at_eq in_omonad RISCV64_A.is_PageTablePTE_def pptr_from_pte_def
+                                 getPPtrFromHWPTE_def addr_from_ppn_def)
           apply (simp add: state_relation_def)
          apply (rule corres_inst[where P=\<top> and P'=\<top>])
          apply (clarsimp simp: ptSlotIndex_def pt_slot_offset_def pt_index_def pt_bits_left_def
@@ -764,20 +764,20 @@ next
            apply (simp add: lookup_failure_map_def)
           apply (rename_tac pte pte', case_tac pte; simp add: isPageTablePTE_def)
          apply (rule corres_if)
-           apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
+           apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
                                  addr_from_ppn_def)
           apply (rule corres_returnOk[where P=\<top> and P'=\<top>], rule refl)
          apply (clarsimp simp: checkPTAt_def)
          apply (subst liftE_bindE, rule corres_stateAssert_implied)
           apply (rule minus.hyps)
            apply (simp add: minus.hyps(2))
-          apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
+          apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
                                 addr_from_ppn_def)
          apply clarsimp
          apply (rule page_table_at_cross; assumption?)
           apply (drule vs_lookup_table_pt_at; simp?)
-          apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
-                                    addr_from_ppn_def)
+          apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
+                                addr_from_ppn_def)
          apply (simp add: state_relation_def)
         apply (simp, rule get_pte_corres)
        apply wpsimp+

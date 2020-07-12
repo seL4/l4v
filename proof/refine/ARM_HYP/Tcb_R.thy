@@ -2500,7 +2500,7 @@ lemma decodeSetSpace_tc_target[wp]:
               split del: if_split cong: list.case_cong)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps
-           | simp only: tcThread.simps
+           | simp only: tcbinvocation.sel
            | wpcw)+
   apply simp
   done
@@ -2511,7 +2511,7 @@ lemma decodeSetSpace_tc_slot[wp]:
                    getThreadVSpaceRoot getThreadCSpaceRoot
              cong: list.case_cong)
   apply (rule hoare_pre)
-   apply (wp hoare_drop_imps | wpcw | simp only: tcThreadCapSlot.simps)+
+   apply (wp hoare_drop_imps | wpcw | simp only: tcbinvocation.sel)+
   apply simp
   done
 
@@ -2553,7 +2553,7 @@ lemma decodeSetSpaceSome[wp]:
              cong: list.case_cong if_cong del: not_None_eq)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps | wpcw
-             | simp only: tcNewCRoot.simps option.simps)+
+             | simp only: tcbinvocation.sel option.simps)+
   apply simp
   done
 
