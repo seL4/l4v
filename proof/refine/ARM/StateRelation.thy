@@ -166,7 +166,7 @@ where
 | "thread_state_relation (Structures_A.IdleThreadState) ts'
      = (ts' = Structures_H.IdleThreadState)"
 | "thread_state_relation (Structures_A.BlockedOnReply r) ts'
-     = (ts' = Structures_H.BlockedOnReply r)"
+     = (ts' = Structures_H.BlockedOnReply (Some r))"
 | "thread_state_relation (Structures_A.BlockedOnReceive oref reply sp) ts'
      = (ts' = Structures_H.BlockedOnReceive oref (receiver_can_grant sp) reply)"
 | "thread_state_relation (Structures_A.BlockedOnSend oref sp) ts'

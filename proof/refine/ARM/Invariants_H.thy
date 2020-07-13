@@ -252,7 +252,7 @@ definition tcb_st_refs_of' :: "thread_state \<Rightarrow> ref_set" where
     Running                    => {}
   | Inactive                   => {}
   | Restart                    => {}
-  | (BlockedOnReply x)         => {(x, TCBReply)}
+  | (BlockedOnReply r)         => if bound r then {(the r, TCBReply)} else {}
   | IdleThreadState            => {}
   | (BlockedOnReceive x _ r)   => if bound r then {(x, TCBBlockedRecv), (the r, TCBReply)}
                                   else {(x, TCBBlockedRecv)}
@@ -571,7 +571,7 @@ definition valid_tcb_state' :: "thread_state \<Rightarrow> kernel_state \<Righta
     BlockedOnReceive ref _ rep \<Rightarrow> ep_at' ref s \<and> valid_bound_reply' rep s
   | BlockedOnSend ref _ _ _ _  \<Rightarrow> ep_at' ref s
   | BlockedOnNotification ref  \<Rightarrow> ntfn_at' ref s
-  | BlockedOnReply r \<Rightarrow> reply_at' r s
+  | BlockedOnReply r \<Rightarrow>  valid_bound_reply' r s
   | _ \<Rightarrow> True"
 
 

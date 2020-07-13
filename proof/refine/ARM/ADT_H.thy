@@ -358,7 +358,7 @@ where
 | "ThStateMap Structures_H.thread_state.IdleThreadState =
               Structures_A.thread_state.IdleThreadState"
 | "ThStateMap (Structures_H.thread_state.BlockedOnReply r) =
-              Structures_A.thread_state.BlockedOnReply r"
+              Structures_A.thread_state.BlockedOnReply (the r)"
 | "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref grant r) =
               Structures_A.thread_state.BlockedOnReceive oref r \<lparr> receiver_can_grant = grant \<rparr>"
 | "ThStateMap (Structures_H.thread_state.BlockedOnSend oref badge grant grant_reply call) =
