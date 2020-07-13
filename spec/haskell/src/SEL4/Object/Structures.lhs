@@ -455,7 +455,7 @@ A user thread may be in the following states:
 \item blocked waiting for a reply to a previously sent message;
 
 >     | BlockedOnReply {
->         blockedReplyObject :: PPtr Reply }
+>         replyObject :: Maybe (PPtr Reply) }
 
 \item blocked on an notification;
 
