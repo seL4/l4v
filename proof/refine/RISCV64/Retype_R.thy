@@ -12,10 +12,6 @@ theory Retype_R
 imports VSpace_R
 begin
 
-(* FIXME RISCV: move way up somewhere *)
-text \<open>To ensure that the proof state is in a certain case of a case distinction:\<close>
-method in_case for x::'a = match premises in "t = x" for t \<Rightarrow> succeed
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition

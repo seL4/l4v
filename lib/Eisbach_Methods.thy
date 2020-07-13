@@ -354,8 +354,6 @@ section \<open>Utility methods\<close>
 
 subsection \<open>Finding a goal based on successful application of a method\<close>
 
-context begin
-
 method_setup find_goal =
  \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
    let
@@ -367,7 +365,11 @@ method_setup find_goal =
 
    in SIMPLE_METHOD (FIRSTGOAL prefer_first) facts end)\<close>
 
-end
+text \<open>Ensure that the proof state is in a certain case of a case distinction:\<close>
+method in_case for x = match premises in "t = x" for t \<Rightarrow> succeed
+
+text \<open>Focus on a case in a case distinction:\<close>
+method find_case for x = find_goal \<open>in_case x\<close>
 
 notepad begin
 
@@ -387,6 +389,17 @@ notepad begin
   have  "B" "A" "A \<and> A"
     apply (find_goal \<open>succeeds \<open>simp\<close>\<close>) \<comment> \<open>find the first goal which can be simplified (without doing so)\<close>
     apply (rule conjI)
+    by (rule A B)+
+
+  fix x::'a and S :: "nat \<Rightarrow> 'a" and T R
+  have
+    "x = T \<Longrightarrow> A"
+    "x = S 10 \<Longrightarrow> B"
+    "x = R \<Longrightarrow> B"
+  apply -
+    apply (find_case "S ?n")
+    apply (fails \<open>in_case R\<close>)
+    apply (in_case "S ?n")
     by (rule A B)+
 
 end
