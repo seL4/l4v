@@ -470,7 +470,6 @@ lemma cancelSignal_invs':
                 hoare_vcg_all_lift set_ntfn'.ksReadyQueues
               | simp add: valid_tcb_state'_def list_case_If split del: if_split)+
        prefer 2
-  sorry (*
        apply assumption
       apply (rule hoare_strengthen_post)
        apply (rule get_ntfn_sp')
@@ -483,24 +482,36 @@ lemma cancelSignal_invs':
        apply (frule ko_at_valid_objs')
          apply (simp add: valid_pspace_valid_objs')
         apply (clarsimp simp: projectKO_opt_ntfn split: kernel_object.splits)
-        apply (simp add: valid_obj'_def valid_ntfn'_def)
+       apply (simp add: valid_obj'_def valid_ntfn'_def)
        apply (frule st_tcb_at_state_refs_ofD')
        apply (frule ko_at_state_refs_ofD')
        apply (rule conjI, erule delta_sym_refs)
-         apply (clarsimp simp: ntfn_bound_refs'_def split: if_split_asm)
+         apply (fastforce simp: ntfn_bound_refs'_def get_refs_def2
+                         split: if_split_asm)
         apply (clarsimp split: if_split_asm)
           subgoal
-          by (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
-                               tcb_bound_refs'_def ntfn_q_refs_of'_def obj_at'_def projectKOs
-                        split: ntfn.splits option.splits)
+          by (auto simp: symreftype_inverse' ntfn_bound_refs'_def tcb_bound_refs'_def
+                         ntfn_q_refs_of'_def obj_at'_def projectKOs
+                  split: ntfn.splits option.splits)
          subgoal
-         by (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
-                                tcb_bound_refs'_def)
+         by (auto simp: symreftype_inverse' ntfn_bound_refs'_def tcb_bound_refs'_def
+                        get_refs_def2
+                 split: option.splits)
         subgoal
         by (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
-                               tcb_bound_refs'_def ntfn_q_refs_of'_def remove1_empty
-                        split: ntfn.splits)
-       apply (rule conjI, clarsimp elim!: if_live_state_refsE)
+                            tcb_bound_refs'_def ntfn_q_refs_of'_def remove1_empty
+                     split: ntfn.splits)
+       apply (rule conjI, erule_tac rfs'="list_refs_of_replies' s" in delta_sym_refs)
+         subgoal
+         by (auto simp: symreftype_inverse' list_refs_of_replies'_def
+                        get_refs_def2 opt_map_def
+                 split: option.splits)
+        subgoal
+        by (auto simp: symreftype_inverse' list_refs_of_replies'_def
+                       get_refs_def2 opt_map_def
+                split: option.splits)
+       apply (rule conjI)
+        apply (fastforce simp: get_refs_def elim!: if_live_state_refsE split: option.splits)
        apply (fastforce simp: sym_refs_def dest!: idle'_only_sc_refs)
       apply (case_tac "ntfnObj r", simp_all)
       apply (frule obj_at_valid_objs', clarsimp)
@@ -508,21 +519,34 @@ lemma cancelSignal_invs':
       apply (rule conjI, clarsimp split: option.splits)
       apply (frule st_tcb_at_state_refs_ofD')
       apply (frule ko_at_state_refs_ofD')
-      apply (rule conjI)
-       apply (erule delta_sym_refs)
-        apply (fastforce simp: ntfn_bound_refs'_def split: if_split_asm)
+      apply (rule conjI, erule delta_sym_refs)
+        apply (fastforce simp: ntfn_bound_refs'_def get_refs_def2
+                        split: if_split_asm option.splits)
        apply (clarsimp split: if_split_asm)
-        apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def tcb_bound_refs'_def
-                               set_eq_subset)
-       apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def tcb_bound_refs'_def
-                              set_eq_subset)
-      apply (rule conjI, clarsimp elim!: if_live_state_refsE)
+        subgoal
+        by (auto simp: symreftype_inverse' ntfn_bound_refs'_def tcb_bound_refs'_def
+                       get_refs_def2 set_eq_subset
+                split: option.splits)
+       subgoal
+       by (auto simp: symreftype_inverse' ntfn_bound_refs'_def tcb_bound_refs'_def
+                      get_refs_def2 set_eq_subset
+               split: option.splits)
+      apply (rule conjI, erule_tac rfs'="list_refs_of_replies' s" in delta_sym_refs)
+        subgoal
+        by (auto simp: symreftype_inverse' list_refs_of_replies'_def
+                       get_refs_def2 opt_map_def
+                split: option.splits)
+       subgoal
+       by (auto simp: symreftype_inverse' list_refs_of_replies'_def
+                      get_refs_def2 opt_map_def
+               split: option.splits)
+      apply (rule conjI)
+       apply (fastforce simp: get_refs_def elim!: if_live_state_refsE split: option.splits)
       apply (rule conjI)
        apply (case_tac "ntfnBoundTCB r")
         apply (clarsimp elim!: if_live_state_refsE)+
-            apply (rule conjI, clarsimp split: option.splits)
       apply (clarsimp dest!: idle'_only_sc_refs)
-      done *)
+      done
   qed
 
 lemma ep_redux_simps3:
@@ -800,10 +824,10 @@ lemma setBoundNotification_tcb_in_cur_domain'[wp]:
 
 lemma cancelSignal_tcb_obj_at':
   "(\<And>tcb st qd. P (tcb\<lparr>tcbState := st, tcbQueued := qd\<rparr>) \<longleftrightarrow> P tcb)
-     \<Longrightarrow> \<lbrace>obj_at' P t'\<rbrace> cancelSignal t word \<lbrace>\<lambda>_. obj_at' P t'\<rbrace>"
-apply (simp add: cancelSignal_def setNotification_def) (* FIXME RT: do not unfold setNotification
-apply (wp setThreadState_not_st getNotification_wp | wpc | simp)+ *)
-sorry
+     \<Longrightarrow> cancelSignal t word \<lbrace>obj_at' P t'\<rbrace>"
+  apply (simp add: cancelSignal_def)
+  apply (wpsimp wp: setThreadState_not_st getNotification_wp)
+  done
 
 lemma (in delete_one_conc_pre) cancelIPC_tcbDomain_obj_at':
   "\<lbrace>obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace> cancelIPC t \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace>"
@@ -1497,19 +1521,11 @@ declare valid_queues_not_runnable'_not_ksQ[OF ByAssum, simp]
 
 lemma cancelSignal_queues[wp]:
   "\<lbrace>Invariants_H.valid_queues and st_tcb_at' (Not \<circ> runnable') t\<rbrace>
-   cancelSignal t ae \<lbrace>\<lambda>_. Invariants_H.valid_queues \<rbrace>"
+   cancelSignal t ae
+   \<lbrace>\<lambda>_. Invariants_H.valid_queues \<rbrace>"
   apply (simp add: cancelSignal_def)
-  apply (wp sts_valid_queues)
-  sorry (*
-      apply (rule_tac Q="\<lambda>_ s. \<forall>p. t \<notin> set (ksReadyQueues s p)" in hoare_post_imp, simp)
-      apply (wp hoare_vcg_all_lift)
-     apply (wpc)
-      apply (wp)+
-   apply (rule_tac Q="\<lambda>_ s. Invariants_H.valid_queues s \<and> (\<forall>p. t \<notin> set (ksReadyQueues s p))" in hoare_post_imp)
-    apply (clarsimp)
-   apply (wp)
-  apply (clarsimp)
-  done *)
+  apply (wpsimp wp: sts_valid_queues getNotification_wp)
+  done
 
 lemma (in delete_one_conc_pre) cancelIPC_queues[wp]:
   "\<lbrace>Invariants_H.valid_queues and valid_objs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)\<rbrace>
