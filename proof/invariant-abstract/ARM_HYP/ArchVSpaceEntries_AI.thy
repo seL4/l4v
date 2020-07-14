@@ -1407,7 +1407,9 @@ lemma create_mapping_entries_safe[wp]:
      \<longrightarrow> is_aligned (ptrFromPAddr x + ((vptr >> 12) && 0x1FF << 3)) 7")
    apply (clarsimp simp: vspace_bits_defs)
    apply (rule_tac x="ptrFromPAddr x + ((vptr >> 12) && 0x1FF << 3)" in exI)
-   apply (subst map_upt_append[where x=15 and y=16]; simp add: mask_def)
+   apply (subst map_upt_append[where x=15 and y=16]; simp add: mask_def del: upt_rec_numeral)
+   apply (subst upt_rec_numeral)
+   apply (simp add: mask_def del: upt_rec_numeral)
   apply clarsimp
   apply (rule aligned_add_aligned)
     apply (erule(1) pt_aligned)
@@ -1450,8 +1452,8 @@ lemma decode_mmu_invocation_valid_pdpt[wp]:
        \<comment> \<open>PageTableMap\<close>
        apply (wpsimp simp: Let_def get_master_pde_def
                        wp: get_pde_wp hoare_drop_imps hoare_vcg_if_lift_ER)
-       apply (clarsimp simp: invocation_duplicates_valid_def pti_duplicates_valid_def
-                             mask_lower_twice bitwise obj_at_def vspace_bits_defs if_apply_def2
+       apply (fastforce simp: invocation_duplicates_valid_def pti_duplicates_valid_def
+                              mask_lower_twice bitwise obj_at_def vspace_bits_defs if_apply_def2
                       split: if_splits)
       apply wp
      \<comment> \<open>PageMap\<close>

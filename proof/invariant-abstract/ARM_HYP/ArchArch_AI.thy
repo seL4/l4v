@@ -253,8 +253,6 @@ lemma ucast_asid_high_btis_of_le [simp]:
   apply (simp add: asid_high_bits_def)
   done
 
-crunch tcb_at[wp]: perform_vcpu_invocation "tcb_at p"
-
 lemma invoke_arch_tcb:
   "\<lbrace>invs and valid_arch_inv ai and st_tcb_at active tptr\<rbrace>
   arch_perform_invocation ai
@@ -716,7 +714,7 @@ lemma set_cap_idx_up_aligned_area:
   apply (rule_tac x = slot in exI)
   apply clarsimp
   apply (frule(1) cte_wp_valid_cap)
-  apply (clarsimp simp: cte_wp_at_caps_of_state is_aligned_neg_mask_eq
+  apply (clarsimp simp: cte_wp_at_caps_of_state
                         p_assoc_help valid_cap_def valid_untyped_def cap_aligned_def)
   done
 
@@ -799,12 +797,11 @@ lemma aci_invs':
     apply (subst delete_objects_rewrite)
        apply (simp add:page_bits_def pageBits_def word_size_bits_def)
       apply (simp add:page_bits_def pageBits_def word_bits_def)
-     apply (simp add:is_aligned_neg_mask_eq)
+     apply (simp)
     apply wp
   apply (clarsimp simp: cte_wp_at_caps_of_state if_option_Some
                         Misc_Arithmetic.if_bool_simps
              split del: if_split)
-  apply (strengthen refl)
   apply (frule_tac cap = "(cap.UntypedCap False word1 pageBits idx)"
     in detype_invariants[rotated 3],clarsimp+)
     apply (simp add:cte_wp_at_caps_of_state)+
@@ -821,18 +818,20 @@ lemma aci_invs':
    default_arch_object_def conj_comms)
   apply (rule conjI)
    apply (clarsimp simp:valid_cap_simps cap_aligned_def page_bits_def not_le)
+  apply (rule conjI)
+   apply (clarsimp simp:valid_cap_simps cap_aligned_def page_bits_def not_le)
   apply clarsimp
   apply (simp add:empty_descendants_range_in)
   apply (frule valid_cap_aligned)
-  apply (clarsimp simp: cap_aligned_def is_aligned_neg_mask_eq)
+  apply (clarsimp simp: cap_aligned_def)
   apply (subst caps_no_overlap_detype[OF descendants_range_caps_no_overlapI],
-    assumption, simp add: is_aligned_neg_mask_eq,
+    assumption, simp,
     simp add: empty_descendants_range_in)
   apply (frule pspace_no_overlap_detype, clarify+)
   apply (frule intvl_range_conv[where bits = pageBits])
    apply (simp add:pageBits_def word_bits_def)
-  apply (simp add:is_aligned_neg_mask_eq)
-  apply (clarsimp simp:is_aligned_neg_mask_eq page_bits_def)
+  apply (simp)
+  apply (clarsimp simp: page_bits_def)
   apply (frule(1) ex_cte_cap_protects)
       apply (simp add:empty_descendants_range_in)
      apply fastforce
@@ -843,6 +842,7 @@ lemma aci_invs':
      simp_all add:free_index_of_def valid_cap_simps valid_untyped_def
      empty_descendants_range_in range_cover_full clear_um_def max_free_index_def,
      (clarsimp simp:valid_untyped_def valid_cap_simps)+)[1]
+     apply (simp add: cte_wp_at_caps_of_state)
 
     apply (erule(1) cap_to_protected)
     apply (simp add:empty_descendants_range_in descendants_range_def2)+
@@ -1541,8 +1541,9 @@ lemma arch_decode_inv_wf[wp]:
                              aligned_sum_less_kernel_base[symmetric] asid_bits_def mask_def
                              is_arch_update_def cap_master_cap_simps is_arch_cap_def data_at_def
                              vmsz_aligned_def is_aligned_addrFromPPtr_n vs_cap_ref_def
-                      split: if_splits vmpage_size.split
-              | fastforce)+)
+                             cte_wp_at_caps_of_state is_cap_simps
+                      split: if_splits vmpage_size.split);
+              fastforce)
      apply (cases "invocation_type label = ArchInvocationLabel ARMPageUnmap")
       apply simp
       apply (rule hoare_pre, wp)
@@ -1634,7 +1635,7 @@ lemma arch_decode_inv_wf[wp]:
      apply fastforce
     apply (clarsimp simp: cte_wp_at_def is_cap_simps
                           valid_arch_inv_def valid_pti_def)
-   apply (simp add: arch_decode_invocation_def Let_def decode_mmu_invocation_def)
+   apply (simp add: arch_decode_invocation_def Let_def decode_mmu_invocation_def cong: if_cong)
    apply (cases "isPDFlushLabel (invocation_type label)")
     apply simp
     apply (rule hoare_pre)
