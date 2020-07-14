@@ -492,7 +492,7 @@ lemma pinv_corres:
 crunches sendSignal, setDomain
   for tcb_at'[wp]: "tcb_at' t"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T t s)"
-  (simp: crunch_simps wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps whileM_inv)
 
 lemmas checkCap_inv_typ_at'
   = checkCap_inv[where P="\<lambda>s. P (typ_at' T p s)" for P T p]

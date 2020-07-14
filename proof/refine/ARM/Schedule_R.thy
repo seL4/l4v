@@ -2317,7 +2317,7 @@ lemma chooseThread_nosch:
 
 crunches switchSchedContext, setNextInterrupt
   for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps whileM_inv)
 
 lemma schedule_sch:
   "\<lbrace>\<top>\<rbrace> schedule \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread\<rbrace>"

@@ -1820,7 +1820,7 @@ crunch valid_cap'[wp]:
 
 crunch valid_duplicates'[wp]:
   sendSignal "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps whileM_inv simp: crunch_simps)
 
 lemma invokeIRQControl_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<rbrace> performIRQControl a
