@@ -225,8 +225,8 @@ definition
   set_untyped_cap_as_full_local :: "cap \<Rightarrow> cap \<Rightarrow> word32 \<times> bool list\<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_untyped_cap_as_full_local src_cap new_cap src_slot \<equiv>
-   if (is_untyped_cap src_cap \<and> is_untyped_cap new_cap
-       \<and> obj_ref_of src_cap = obj_ref_of new_cap \<and> cap_bits_untyped src_cap = cap_bits_untyped new_cap)
+   if is_untyped_cap src_cap \<and> is_untyped_cap new_cap
+       \<and> obj_ref_of src_cap = obj_ref_of new_cap \<and> cap_bits_untyped src_cap = cap_bits_untyped new_cap
        then set_cap_local (max_free_index_update src_cap) src_slot else return ()"
 
 definition
@@ -783,8 +783,8 @@ definition
      (swp mapME) dev_regs (\<lambda>(start,end). doE
        (* use 1M frames if possible, else 4K frames *)
        frame_size \<leftarrow>
-         returnOk $ if (is_aligned start (pageBitsForSize ARMSection)
-                        \<and> is_aligned end (pageBitsForSize ARMSection))
+         returnOk $ if is_aligned start (pageBitsForSize ARMSection)
+                        \<and> is_aligned end (pageBitsForSize ARMSection)
                     then ARMSection
                     else ARMSmallPage;
 

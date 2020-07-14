@@ -96,9 +96,11 @@ definition
   set_untyped_cap_as_full :: "cap \<Rightarrow> cap \<Rightarrow> obj_ref \<times> bool list \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_untyped_cap_as_full src_cap new_cap src_slot \<equiv>
-   if (is_untyped_cap src_cap \<and> is_untyped_cap new_cap
-       \<and> obj_ref_of src_cap = obj_ref_of new_cap \<and> cap_bits_untyped src_cap = cap_bits_untyped new_cap)
-       then set_cap (max_free_index_update src_cap) src_slot else return ()"
+   if is_untyped_cap src_cap \<and> is_untyped_cap new_cap \<and>
+      obj_ref_of src_cap = obj_ref_of new_cap \<and>
+      cap_bits_untyped src_cap = cap_bits_untyped new_cap
+   then set_cap (max_free_index_update src_cap) src_slot
+   else return ()"
 
 text \<open>Derive a cap into a form in which it can be copied. For internal reasons
 not all capability types can be copied at all times and not all capability types
@@ -592,14 +594,14 @@ where
   "rec_del (FinaliseSlotCall slot exposed) s =
  (doE
     cap \<leftarrow> without_preemption $ get_cap slot;
-    if (cap = NullCap)
+    if cap = NullCap
     then returnOk (True, NullCap)
     else (doE
       is_final \<leftarrow> without_preemption $ is_final_cap cap;
       (remainder, cleanup_info) \<leftarrow> without_preemption $ finalise_cap cap is_final;
-      if (cap_removeable remainder slot)
+      if cap_removeable remainder slot
       then returnOk (True, cleanup_info)
-      else if (cap_cyclic_zombie remainder slot \<and> \<not> exposed)
+      else if cap_cyclic_zombie remainder slot \<and> \<not> exposed
       then doE
         without_preemption $ set_cap remainder slot;
         returnOk (False, NullCap)
@@ -626,7 +628,7 @@ where
     end_slot \<leftarrow> returnOk (ptr, nat_to_cref (zombie_cte_bits bits) n);
     rec_del (CTEDeleteCall end_slot False);
     new_cap \<leftarrow> without_preemption $ get_cap slot;
-    if (new_cap = Zombie ptr bits (Suc n))
+    if new_cap = Zombie ptr bits (Suc n)
     then without_preemption $ set_cap (Zombie ptr bits n) slot
     else assertE (new_cap = NullCap \<or>
                   is_zombie new_cap \<and> first_cslot_of new_cap = slot
@@ -747,11 +749,11 @@ text \<open>Check whether two capabilities are to the same object.\<close>
 definition
   same_object_as :: "cap \<Rightarrow> cap \<Rightarrow> bool" where
  "same_object_as cp cp' \<equiv>
-   (case (cp, cp') of
+    case (cp, cp') of
       (UntypedCap dev r bits free, _) \<Rightarrow> False
     | (IRQControlCap, IRQHandlerCap n) \<Rightarrow> False
     | (ArchObjectCap ac, ArchObjectCap ac') \<Rightarrow> same_aobject_as ac ac'
-    | _ \<Rightarrow> same_region_as cp cp')"
+    | _ \<Rightarrow> same_region_as cp cp'"
 
 
 

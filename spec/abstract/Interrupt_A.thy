@@ -63,7 +63,7 @@ delivered.\<close>
 definition
   handle_interrupt :: "irq \<Rightarrow> (unit, 'z::state_ext) s_monad" where
  "handle_interrupt irq \<equiv>
-   if (irq > maxIRQ) then do_machine_op $ do
+   if irq > maxIRQ then do_machine_op $ do
     maskInterrupt True irq;
     ackInterrupt irq
   od

@@ -62,11 +62,11 @@ text \<open>Check whether two arch capabilities are to the same object.\<close>
 definition
   same_aobject_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool" where
  "same_aobject_as cp cp' \<equiv>
-   (case (cp, cp') of
+    case (cp, cp') of
       (PageCap dev ref _ pgsz _,PageCap dev' ref' _ pgsz' _)
           \<Rightarrow> (dev, ref, pgsz) = (dev', ref', pgsz')
               \<and> ref \<le> ref + 2 ^ pageBitsForSize pgsz - 1
-    | _ \<Rightarrow> arch_same_region_as cp cp')"
+    | _ \<Rightarrow> arch_same_region_as cp cp'"
 
 (* Proofs don't want to see this definition *)
 declare same_aobject_as_def[simp]

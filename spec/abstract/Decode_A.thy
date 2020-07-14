@@ -477,7 +477,7 @@ where
        odE
        | _ \<Rightarrow> throwError TruncatedMessage);
      whenE (length excs = 0) $ throwError TruncatedMessage;
-     case (fst (hd excs)) of ThreadCap ptr \<Rightarrow> returnOk $ (ptr, domain)
+     case fst (hd excs) of ThreadCap ptr \<Rightarrow> returnOk $ (ptr, domain)
        | _ \<Rightarrow> throwError $ InvalidArgument 1
    odE"
 
@@ -539,7 +539,7 @@ where
       returnOk $ InvokeSchedContextUnbind sc_ptr cap odE
   | SchedContextYieldTo \<Rightarrow> doE
       sc \<leftarrow> liftE $ get_sched_context sc_ptr;
-      case (sc_tcb sc) of
+      case sc_tcb sc of
         None \<Rightarrow> throwError IllegalOperation
       | Some tcb_ptr \<Rightarrow> doE
           ct_ptr \<leftarrow> liftE $ gets cur_thread;

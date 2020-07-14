@@ -1296,7 +1296,8 @@ lemma tcb_release_remove_valid_release_q_except:
   "\<lbrace>valid_release_q_except thread\<rbrace>
       tcb_release_remove thread
    \<lbrace>\<lambda>rv. valid_release_q\<rbrace>"
-  by (wpsimp wp: valid_sched_wp simp: valid_release_q_def tcb_sched_dequeue_def sorted_release_q_def)
+  by (wpsimp wp: valid_sched_wp simp: valid_release_q_def tcb_sched_dequeue_def sorted_release_q_def
+      | rule conjI)+
 
 lemma set_thread_state_Inactive_simple_sched_action_not_runnable:
   "\<lbrace>\<lambda>s. valid_sched_except_blocked s \<and> valid_blocked_except thread s
@@ -5451,12 +5452,12 @@ lemma suspend_valid_sched:
   apply (intro conjI)
          apply (clarsimp simp: tcb_sched_dequeue_def valid_ready_queued_thread_2_def vs_all_heap_simps
                         split: if_splits elim!: valid_ready_qsE)
-        apply (clarsimp simp: valid_release_q_def tcb_sched_dequeue_def tcb_sts.pred_map_upds
-                              sorted_release_q_2_def)
+        apply (fastforce simp: valid_release_q_def tcb_sched_dequeue_def tcb_sts.pred_map_upds
+                               sorted_release_q_2_def)
        apply (clarsimp simp: tcb_sched_dequeue_def ready_or_release_2_def in_queues_2_def
                              in_queue_2_def)
        apply (rename_tac t' d p)
-       apply (prop_tac "t' \<in> set ((ready_queues s) d p)")
+       apply (prop_tac "t' \<in> set (ready_queues s d p)")
         apply (case_tac "dom = d \<and> prio = p"; clarsimp?)
         apply presburger
        apply blast
@@ -10074,10 +10075,6 @@ lemma not_schedulable_in_release_q_case:
     ct_active s; active_sc_tcb_at (cur_thread s) s\<rbrakk>
        \<Longrightarrow> in_release_q (cur_thread s) s"
   by (clarsimp simp: is_schedulable_bool_def2 ct_in_state_def tcb_at_kh_simps runnable_eq_active)
-
-crunches awaken
-  for ct_in_state[wp]: "ct_in_state P"
-    (wp: crunch_wps hoare_vcg_disj_lift simp: crunch_simps pred_disj_def)
 
 lemma awaken_valid_sched_misc[wp]:
   "awaken \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)

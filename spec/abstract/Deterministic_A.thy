@@ -13,6 +13,8 @@ imports
 
 begin
 
+(* FIXME: this needs style cleanup *)
+
 text \<open>
 \label{c:ext-spec}
 
@@ -253,9 +255,9 @@ text \<open>The CDT in the implementation is stored in prefix traversal order.
   The following functions traverse its abstract representation here to
   yield corresponding information.
 \<close>
+(* FIXME: use Lib.hd_opt instead *)
 definition next_child :: "cslot_ptr \<Rightarrow> cdt_list \<Rightarrow> cslot_ptr option" where
-  "next_child slot t \<equiv> case (t slot) of [] \<Rightarrow> None |
-                                        x # xs \<Rightarrow> Some x"
+  "next_child slot t \<equiv> case t slot of [] \<Rightarrow> None | x # xs \<Rightarrow> Some x"
 
 definition next_sib :: "cslot_ptr \<Rightarrow> cdt_list \<Rightarrow> cdt \<Rightarrow> cslot_ptr option" where
   "next_sib slot t m \<equiv> case m slot of None \<Rightarrow> None |
@@ -264,10 +266,10 @@ definition next_sib :: "cslot_ptr \<Rightarrow> cdt_list \<Rightarrow> cdt \<Rig
 
 function (domintros) next_not_child :: "cslot_ptr \<Rightarrow> cdt_list \<Rightarrow> cdt \<Rightarrow> cslot_ptr option" where
   "next_not_child slot t m = (if next_sib slot t m = None
-                             then (case m slot of
-                               None \<Rightarrow> None |
-                               Some p \<Rightarrow> next_not_child p t m)
-                             else next_sib slot t m)"
+                              then case m slot of
+                                      None \<Rightarrow> None
+                                    | Some p \<Rightarrow> next_not_child p t m
+                              else next_sib slot t m)"
   by auto
 
 (* next_slot traverses the cdt, replicating mdb_next in the Haskell spec.
@@ -310,44 +312,44 @@ definition cap_move_ext where
 "cap_move_ext \<equiv> (\<lambda> src_slot dest_slot src_p dest_p.
  do
 
-    update_cdt_list (\<lambda>list. case (dest_p) of
+    update_cdt_list (\<lambda>list. case dest_p of
       None \<Rightarrow> list |
       Some p \<Rightarrow> list (p := list_remove (list p) dest_slot));
 
-   if (src_slot = dest_slot) then return () else
+   if src_slot = dest_slot then return () else
 
     (do
-    update_cdt_list (\<lambda>list. case (src_p) of
+    update_cdt_list (\<lambda>list. case src_p of
       None \<Rightarrow> list |
       Some p \<Rightarrow> list (p := list_replace (list p) src_slot dest_slot));
 
-    update_cdt_list (\<lambda>list. list (src_slot := [], dest_slot := (list src_slot) @ (list dest_slot)))
+    update_cdt_list (\<lambda>list. list (src_slot := [], dest_slot := list src_slot @ list dest_slot))
     od)
 
   od)"
 
 
 definition cap_insert_ext where
-"cap_insert_ext \<equiv> (\<lambda> src_parent src_slot dest_slot src_p dest_p.
- do
-
- update_cdt_list (\<lambda>list. case (dest_p) of
-      None \<Rightarrow> list |
-      Some p \<Rightarrow> (list (p := list_remove (list p) dest_slot)));
-
-    update_cdt_list (\<lambda>list. case (src_p) of
-      None \<Rightarrow> list (
-        src_slot := if src_parent then [dest_slot] @ (list src_slot) else list src_slot) |
-      Some p \<Rightarrow> list (
-        src_slot := if src_parent then [dest_slot] @ (list src_slot) else list src_slot,
-        p := if (src_parent \<and> p \<noteq> src_slot) then (list p) else if (src_slot \<noteq> dest_slot) then (list_insert_after (list p) src_slot dest_slot) else (dest_slot # (list p))))
- od)"
+  "cap_insert_ext \<equiv> \<lambda>src_parent src_slot dest_slot src_p dest_p. do
+     update_cdt_list (\<lambda>list. case dest_p of
+       None \<Rightarrow> list
+     | Some p \<Rightarrow> list (p := list_remove (list p) dest_slot));
+     update_cdt_list (\<lambda>list. case src_p of
+       None \<Rightarrow> list (src_slot := if src_parent then [dest_slot] @ list src_slot else list src_slot)
+     | Some p \<Rightarrow> list (src_slot := if src_parent then [dest_slot] @ list src_slot else list src_slot,
+                       p := if src_parent \<and> p \<noteq> src_slot
+                            then list p
+                            else if src_slot \<noteq> dest_slot
+                                 then list_insert_after (list p) src_slot dest_slot
+                                 else dest_slot # list p))
+   od"
 
 definition empty_slot_ext where
-"empty_slot_ext \<equiv> (\<lambda> slot slot_p.
-
+"empty_slot_ext \<equiv> \<lambda> slot slot_p.
     update_cdt_list (\<lambda>list. case slot_p of None \<Rightarrow> list (slot := []) |
-      Some p \<Rightarrow> if (p = slot) then list(p := list_remove (list p) slot) else list (p := list_replace_list (list p) slot (list slot), slot := [])))"
+      Some p \<Rightarrow> if p = slot
+                then list(p := list_remove (list p) slot)
+                else list (p := list_replace_list (list p) slot (list slot), slot := []))"
 
 definition create_cap_ext where
 "create_cap_ext \<equiv> (\<lambda> untyped dest dest_p. do
@@ -426,14 +428,16 @@ text \<open>
   Use the extended state to choose a value from a bounding set @{term S} when
   @{term select_switch} is true. Otherwise just select from @{term S}.
 \<close>
-definition select_ext :: "(det_ext state \<Rightarrow> 'd) \<Rightarrow> ('d set) \<Rightarrow> ('a::state_ext state,'d) nondet_monad" where
+definition select_ext ::
+  "(det_ext state \<Rightarrow> 'd) \<Rightarrow> 'd set \<Rightarrow> ('a::state_ext state,'d) nondet_monad" where
   "select_ext a S \<equiv> do
-                      s \<leftarrow> get;
-                      x \<leftarrow> if (select_switch (exst s)) then (return (a (unwrap_ext s)))
-                          else (select S);
-                      assert (x \<in> S);
-                      return x
-                    od"
+     s \<leftarrow> get;
+     x \<leftarrow> if select_switch (exst s)
+          then return (a (unwrap_ext s))
+          else select S;
+     assert (x \<in> S);
+     return x
+   od"
 
 (*Defined here because it's asserted before empty_slot*)
 definition valid_list_2 :: "cdt_list \<Rightarrow> cdt \<Rightarrow> bool" where

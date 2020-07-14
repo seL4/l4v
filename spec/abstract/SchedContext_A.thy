@@ -123,11 +123,11 @@ fun
 where
   "schedule_used full [] new = [new]"
 | "schedule_used full (x#rs) new = (
-      if (r_amount new < MIN_BUDGET \<and> \<not>full \<and> 2 * MIN_BUDGET \<le> r_amount (last (x#rs)) + r_amount new)
+      if r_amount new < MIN_BUDGET \<and> \<not>full \<and> 2 * MIN_BUDGET \<le> r_amount (last (x#rs)) + r_amount new
       then let remainder = (MIN_BUDGET - r_amount new) in
             butlast (x#rs) @ [last(x#rs)\<lparr>r_amount := r_amount (last (x#rs)) - remainder\<rparr>]
                            @ [\<lparr>r_time = r_time new - remainder, r_amount = r_amount new + remainder\<rparr>]
-      else if (r_amount new < MIN_BUDGET \<or> full)
+      else if r_amount new < MIN_BUDGET \<or> full
            then let tl = last (x#rs);
                 new_tl = \<lparr> r_time = r_time new - r_amount tl,
                            r_amount = r_amount tl + r_amount new \<rparr> in
@@ -181,12 +181,12 @@ where
 
     assert robin;
 
-    usage2 \<leftarrow> return $ if (usage < MIN_BUDGET \<and> length refills = 1) then MIN_BUDGET else usage;
+    usage2 \<leftarrow> return $ if usage < MIN_BUDGET \<and> length refills = 1 then MIN_BUDGET else usage;
 
-    if (usage2 + MIN_BUDGET \<le> r_amount (hd refills))
+    if usage2 + MIN_BUDGET \<le> r_amount (hd refills)
     then do
          new_hd \<leftarrow> return $ \<lparr>r_time = r_time (hd refills), r_amount = r_amount (hd refills) - usage2\<rparr>;
-         if (length refills = 1)
+         if length refills = 1
          then do new_tl \<leftarrow> return $ \<lparr>r_time = r_amount new_hd, r_amount = usage2\<rparr>;
                  set_refills sc_ptr (new_hd # [new_tl])
               od
@@ -257,7 +257,7 @@ where
              set_sc_obj_ref sc_budget_update sc_ptr new_budget
           od
      else do unused <- return $ new_budget - r_amount refill_hd;
-             true_period <- return $ if (new_period=0) then new_budget else new_period;
+             true_period <- return $ if new_period=0 then new_budget else new_period;
              new <- return $ \<lparr>r_time = r_time refill_hd + true_period - unused, r_amount = unused\<rparr>;
              new_refills <- return $ schedule_used False [refill_hd] new;
              set_sc_obj_ref sc_period_update sc_ptr new_period;

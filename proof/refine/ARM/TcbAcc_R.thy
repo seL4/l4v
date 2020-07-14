@@ -2323,7 +2323,8 @@ lemma tcbSchedDequeue_corres:
                   apply (rule threadSet_corres_noop; simp_all add: tcb_relation_def)
                  apply (clarsimp, rule removeFromBitmap_corres_noop)
                 apply (rule setQueue_corres | rule getQueue_corres |
-                        wp | simp add: tcb_sched_dequeue_def tcb_relation_def)+
+                        wp | simp add: tcb_sched_dequeue_def tcb_relation_def
+                                       [[@\<open>prove_prop \<open>(\<lambda>x. x \<noteq> t) = (\<noteq>) t\<close>\<close>]])+
   done
 
 lemma thread_get_test: "do cur_ts \<leftarrow> get_thread_state cur; g (test cur_ts) od =

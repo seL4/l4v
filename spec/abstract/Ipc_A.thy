@@ -99,7 +99,7 @@ where
                        (mi_label mi)) (doE
     transfer_rest \<leftarrow> returnOk $ transfer_caps_loop ep
          rcv_buffer (n + 1) morecaps;
-    if (is_ep_cap cap \<and> ep = Some (obj_ref_of cap))
+    if is_ep_cap cap \<and> ep = Some (obj_ref_of cap)
     then doE
        liftE $ set_extra_badge rcv_buffer (cap_ep_badge cap) n;
        liftE $ transfer_rest slots (MI (mi_length mi) (mi_extra_caps mi)
@@ -297,8 +297,8 @@ where
                 sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
 
                 fault \<leftarrow> thread_get tcb_fault thread;
-                if (call \<or> fault \<noteq> None) then
-                  if ((can_grant \<or> reply_can_grant) \<and> reply \<noteq> None) then
+                if call \<or> fault \<noteq> None then
+                  if (can_grant \<or> reply_can_grant) \<and> reply \<noteq> None then
                     reply_push thread dest (the reply) can_donate
                   else
                     set_thread_state thread Inactive
@@ -373,7 +373,7 @@ where
      ep \<leftarrow> get_endpoint epptr;
      ntfnptr \<leftarrow> get_tcb_obj_ref tcb_bound_notification thread;
      ntfn \<leftarrow> case_option (return default_notification) get_notification ntfnptr;
-     if (ntfnptr \<noteq> None \<and> isActive ntfn)
+     if ntfnptr \<noteq> None \<and> isActive ntfn
      then
        complete_signal (the ntfnptr) thread
      else
@@ -469,7 +469,7 @@ where
     case (ntfn_obj ntfn, ntfn_bound_tcb ntfn) of
           (IdleNtfn, Some tcb) \<Rightarrow> do
                   st \<leftarrow> get_thread_state tcb;
-                  if (receive_blocked st)
+                  if receive_blocked st
                   then do
                       cancel_ipc tcb;
                       set_thread_state tcb Running;
@@ -749,7 +749,7 @@ where
 
     (period, mrefills) \<leftarrow> return (if period = budget then (0, MIN_REFILLS) else (period, mrefills));
 
-    if (0 < sc_refill_max sc \<and> (\<exists>y. sc_tcb sc = Some y))
+    if 0 < sc_refill_max sc \<and> sc_tcb sc \<noteq> None
     then do tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
             st \<leftarrow> get_thread_state tcb_ptr;
             if runnable st
@@ -763,7 +763,7 @@ where
       st \<leftarrow> get_thread_state tcb_ptr;
       sched_context_resume sc_ptr;
       ct \<leftarrow> gets cur_thread;
-      if (tcb_ptr = ct) then reschedule_required
+      if tcb_ptr = ct then reschedule_required
       else when (runnable st) $ possible_switch_to tcb_ptr
     od
   od"

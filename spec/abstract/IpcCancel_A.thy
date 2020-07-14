@@ -145,12 +145,13 @@ where
      sc_replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
      reply \<leftarrow> get_reply reply_ptr;
 
-     if (hd sc_replies = reply_ptr)
+     if hd sc_replies = reply_ptr
      then do  \<comment> \<open>if it is the head\<close>
        assert (reply_sc reply = Some sc_ptr); \<comment> \<open>only the head of the list should point to the sc\<close>
        set_reply reply_ptr (reply_sc_update (K None) reply); \<comment> \<open>set @{text reply_sc} to None\<close>
-       (case (tl sc_replies) of [] \<Rightarrow> return ()
-         | r'#_ \<Rightarrow> set_reply_obj_ref reply_sc_update r' (Some sc_ptr)); \<comment> \<open>fix up the refs\<close>
+       case tl sc_replies of
+           [] \<Rightarrow> return ()
+         | r'#_ \<Rightarrow> set_reply_obj_ref reply_sc_update r' (Some sc_ptr); \<comment> \<open>fix up the refs\<close>
        set_sc_obj_ref sc_replies_update sc_ptr (tl sc_replies) \<comment> \<open>pop the head\<close>
      od
      else do
@@ -363,16 +364,16 @@ definition
   set_priority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "set_priority tptr prio \<equiv> do
      ts \<leftarrow> get_thread_state tptr;
-     if (runnable ts) then do
+     if runnable ts then do
        d \<leftarrow> thread_get tcb_domain tptr;
        prio \<leftarrow> thread_get tcb_priority tptr;
        queue \<leftarrow> get_tcb_queue d prio;
        cur \<leftarrow> gets cur_thread;
-       if (tptr \<in> set queue \<or> tptr = cur) then do
-         tcb_sched_action tcb_sched_dequeue tptr;
-         thread_set_priority tptr prio;
-         tcb_sched_action tcb_sched_enqueue tptr;
-         reschedule_required
+       if tptr \<in> set queue \<or> tptr = cur then do
+           tcb_sched_action tcb_sched_dequeue tptr;
+           thread_set_priority tptr prio;
+           tcb_sched_action tcb_sched_enqueue tptr;
+           reschedule_required
          od
        else
          thread_set_priority tptr prio
@@ -390,20 +391,18 @@ definition
      sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context target;
      inq \<leftarrow> gets $ in_release_queue target;
      when (sc_opt \<noteq> None \<and> \<not>inq) $ do
-     cur_dom \<leftarrow> gets cur_domain;
-     target_dom \<leftarrow> thread_get tcb_domain target;
-     action \<leftarrow> gets scheduler_action;
-     \<comment> \<open>not in @{text \<open>release queue & active_sc\<close>}\<close>
-     if target_dom \<noteq> cur_dom then
-       tcb_sched_action tcb_sched_enqueue target \<comment> \<open>not @{text \<open>in cur_domain\<close>}\<close>
-     else if (action \<noteq> resume_cur_thread) then
-       do
-         reschedule_required;
-         tcb_sched_action tcb_sched_enqueue target
-       od
-     else
-       set_scheduler_action $ switch_thread target
-   od
+       cur_dom \<leftarrow> gets cur_domain;
+       target_dom \<leftarrow> thread_get tcb_domain target;
+       action \<leftarrow> gets scheduler_action;
+       \<comment> \<open>not in @{text \<open>release queue & active_sc\<close>}\<close>
+       if target_dom \<noteq> cur_dom then
+         tcb_sched_action tcb_sched_enqueue target \<comment> \<open>not @{text \<open>in cur_domain\<close>}\<close>
+       else if action \<noteq> resume_cur_thread then do
+           reschedule_required;
+           tcb_sched_action tcb_sched_enqueue target
+         od
+       else set_scheduler_action $ switch_thread target
+     od
    od"
 
 definition

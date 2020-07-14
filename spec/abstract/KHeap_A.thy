@@ -430,18 +430,15 @@ where
 
 definition
   tcb_sched_enqueue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
-  "tcb_sched_enqueue thread queue\<equiv>
-      if (thread \<notin> set queue) then thread # queue else queue"
-  (* the C code does not require the ready condition; why? *)
+  "tcb_sched_enqueue thread queue \<equiv> if thread \<notin> set queue then thread # queue else queue"
 
 definition
   tcb_sched_append :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
-  "tcb_sched_append thread queue\<equiv>
-      if (thread \<notin> set queue) then queue @ [thread] else queue"
+  "tcb_sched_append thread queue \<equiv> if thread \<notin> set queue then queue @ [thread] else queue"
 
 definition
   tcb_sched_dequeue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
-  "tcb_sched_dequeue thread queue \<equiv> filter (\<lambda>x. x \<noteq> thread) queue"
+  "tcb_sched_dequeue thread queue \<equiv> filter ((\<noteq>) thread) queue"
 
 definition
   tcb_release_dequeue :: "(unit, 'z::state_ext) s_monad"

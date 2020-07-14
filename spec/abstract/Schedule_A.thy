@@ -178,13 +178,13 @@ definition max_non_empty_queue :: "(priority \<Rightarrow> ready_queue) \<Righta
   "max_non_empty_queue queues \<equiv> queues (Max {prio. queues prio \<noteq> []})"
 
 definition choose_thread :: "(unit, 'z::state_ext) s_monad" where
-"choose_thread \<equiv>
-      do
-        d \<leftarrow> gets cur_domain;
-        queues \<leftarrow> gets (\<lambda>s. ready_queues s d);
-        if (\<forall>prio. queues prio = []) then (switch_to_idle_thread)
-        else (guarded_switch_to (hd (max_non_empty_queue queues)))
-      od"
+  "choose_thread \<equiv> do
+     d \<leftarrow> gets cur_domain;
+     queues \<leftarrow> gets (\<lambda>s. ready_queues s d);
+     if \<forall>prio. queues prio = []
+     then switch_to_idle_thread
+     else guarded_switch_to (hd (max_non_empty_queue queues))
+   od"
 
 text \<open>
   Determine whether given priority is highest among queued ready threads in given domain.
@@ -198,9 +198,7 @@ where
 
 definition
   "schedule_switch_thread_fastfail ct it ct_prio target_prio \<equiv>
-     if ct \<noteq> it
-     then return (target_prio < ct_prio)
-     else return True"
+     return $ ct \<noteq> it \<longrightarrow> target_prio < ct_prio"
 
 definition
   "schedule_choose_new_thread \<equiv> do
@@ -236,14 +234,14 @@ definition
 
            cur_dom \<leftarrow> gets cur_domain;
            highest \<leftarrow> gets (is_highest_prio cur_dom target_prio);
-           if (fastfail \<and> \<not>highest)
+           if fastfail \<and> \<not>highest
            then do
                \<comment> \<open>Candidate is not best candidate, choose a new thread\<close>
                tcb_sched_action tcb_sched_enqueue candidate;
                set_scheduler_action choose_new_thread;
                schedule_choose_new_thread
              od
-           else if (ct_schedulable \<and> ct_prio = target_prio)
+           else if ct_schedulable \<and> ct_prio = target_prio
            then do
                \<comment> \<open>Current thread was runnable and candidate is not strictly better
                   want current thread to run next, so append the candidate to end of queue
@@ -297,7 +295,7 @@ where
       ct_prios \<leftarrow> thread_get tcb_priority ct_ptr;
       cur_dom \<leftarrow> gets cur_domain;
       tcb_ptr_dom \<leftarrow> thread_get tcb_domain tcb_ptr;
-      if (cur_dom \<noteq> tcb_ptr_dom \<or> prios < ct_prios)
+      if cur_dom \<noteq> tcb_ptr_dom \<or> prios < ct_prios
       then do
         tcb_sched_action tcb_sched_dequeue tcb_ptr;
         tcb_sched_action tcb_sched_enqueue tcb_ptr; \<comment> \<open>@{text \<open>schedulable & dequeued & sufficient & ready\<close>}\<close>
