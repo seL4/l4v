@@ -206,8 +206,8 @@ If a thread is waiting for an IPC operation, it may be necessary to move the thr
 
 > cancelIPC :: PPtr TCB -> Kernel ()
 > cancelIPC tptr = do
->         threadSet (\tcb -> tcb {tcbFault = Nothing}) tptr
 >         state <- getThreadState tptr
+>         threadSet (\tcb -> tcb {tcbFault = Nothing}) tptr
 >         case state of
 
 Threads blocked waiting for endpoints will simply be removed from the endpoint queue.
