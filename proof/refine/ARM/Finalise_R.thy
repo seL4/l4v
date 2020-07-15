@@ -1351,7 +1351,8 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma setObject_cte_irq_masked'[wp]:
   "setObject p (v::cte) \<lbrace>irqs_masked'\<rbrace>"
-  sorry
+  unfolding setObject_def
+  by (wpsimp simp: irqs_masked'_def Ball_def wp: hoare_vcg_all_lift hoare_vcg_imp_lift' updateObject_cte_inv)
 
 crunch irqs_masked'[wp]: emptySlot "irqs_masked'"
 
@@ -1578,7 +1579,7 @@ lemma empty_slot_corres:
    apply (rule mdb_ptr_axioms.intro)
    subgoal by simp
   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
-  sorry (* sc_replies_relation
+
   apply (rule conjI)
    apply (clarsimp simp: data_at_def ghost_relation_typ_at set_cap_a_type_inv)
   apply (rule conjI)
@@ -1709,7 +1710,7 @@ lemma empty_slot_corres:
     apply fastforce
    apply fastforce
   apply simp
-  done *)
+  done
 
 
 
@@ -2288,7 +2289,7 @@ lemma finaliseCap_True_invs[wp]:
   "\<lbrace>invs'\<rbrace> finaliseCap cap final True \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: finaliseCap_def Let_def)
   apply safe
-    apply (wp irqs_masked_lift| simp | wpc)+
+    apply (wp irqs_masked_lift | simp | wpc)+
   sorry
 
 crunch invs'[wp]: flushSpace "invs'" (ignore: doMachineOp)
@@ -2457,9 +2458,12 @@ lemmas setQueue_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setQueue_ctes_of]
 lemmas sts_cteCaps_of[wp] = ctes_of_cteCaps_of_lift[OF sts_ctes_of]
 lemmas threadSet_cteCaps_of = ctes_of_cteCaps_of_lift [OF threadSet_ctes_of]
 
+(* FIXME RT: I don't understand why this is not crunchable *)
 lemma replyRemoveTCB_ctes_of[wp]:
   "replyRemoveTCB t \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
-  sorry
+  supply if_split [split del]
+  unfolding replyRemoveTCB_def
+  by (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2 hoare_vcg_all_lift)
 
 lemmas replyRemoveTCB_cteCaps_of[wp] = ctes_of_cteCaps_of_lift[OF replyRemoveTCB_ctes_of]
 
@@ -2544,23 +2548,23 @@ lemma unbindNotification_valid_objs'_helper':
 (* FIXME RT: move up, together with locale instance below *)
 lemma typ_at'_valid_tcb'_lift:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
+  assumes Q: "\<And>P n p. \<lbrace>\<lambda>s. P (sc_at'_n n p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (sc_at'_n n p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_tcb' tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_tcb' tcb s\<rbrace>"
   including no_pre
   apply (simp add: valid_tcb'_def)
   apply (case_tac "tcbState tcb"; simp add: valid_tcb_state'_def split_def valid_bound_ntfn'_def)
-  sorry (*
-         apply (wp hoare_vcg_const_Ball_lift typ_at_lifts[OF P]
-               | case_tac "tcbBoundNotification tcb", simp_all)+
-  done *)
+         apply (wp hoare_vcg_const_Ball_lift typ_at_lifts[OF P] Q valid_case_option_post_wp)+
+  done
 
 end
 
-context typ_at_props'
+locale typ_at_sc_at'_n_props' = typ_at_props' +
+  assumes scs: "f \<lbrace>\<lambda>s. Q (sc_at'_n n p s)\<rbrace>"
 begin
 
 lemma valid_tcb'[wp]:
   "f \<lbrace>valid_tcb' tcb\<rbrace>"
-  by (rule typ_at'_valid_tcb'_lift, rule typ')
+  by (rule typ_at'_valid_tcb'_lift, rule typ', rule scs)
 
 end
 
@@ -2632,14 +2636,21 @@ crunches cancelSignal, cancelAllIPC
   (wp: sts_bound_tcb_at' threadSet_cteCaps_of crunch_wps getObject_inv
        loadObject_default_inv)
 
+(* FIXME RT: bound_tcb_at' is an outdated name? *)
+lemma threadSet_sc_bound_tcb_at'[wp]:
+  "threadSet (tcbSchedContext_update f) t' \<lbrace>bound_tcb_at' P t\<rbrace>"
+  by (wpsimp wp: threadSet_pred_tcb_no_state)
+
+crunches replyClear
+  for bound_tcb_at'[wp]: "bound_tcb_at' P t"
+  (wp: crunch_wps simp: crunch_simps ignore: threadSet)
+
 lemma finaliseCapTrue_standin_bound_tcb_at':
   "\<lbrace>\<lambda>s. bound_tcb_at' P t s \<and> (\<exists>tt r. cap = ReplyCap tt r) \<rbrace>
      finaliseCapTrue_standin cap final
    \<lbrace>\<lambda>_. bound_tcb_at' P t\<rbrace>"
-  apply (case_tac cap, simp_all add:finaliseCapTrue_standin_def)
-  apply (clarsimp simp: isCap_simps)
-  apply (wp, clarsimp)
-  sorry
+  apply (case_tac cap; simp add: finaliseCapTrue_standin_def isCap_simps)
+  by wpsimp
 
 lemma capDeleteOne_bound_tcb_at':
   "\<lbrace>bound_tcb_at' P tptr and cte_wp_at' (isReplyCap \<circ> cteCap) callerCap\<rbrace>
@@ -2671,10 +2682,10 @@ lemma cancelIPC_bound_tcb_at'[wp]:
    apply (wp threadSet_pred_tcb_no_state | simp)+
   done *)
 
-
 lemma schedContextCancelYieldTo_bound_tcb_at[wp]:
   "schedContextCancelYieldTo t \<lbrace> bound_tcb_at' P tptr \<rbrace>"
-  sorry
+  unfolding schedContextCancelYieldTo_def
+  by (wpsimp wp: threadSet_pred_tcb_no_state hoare_vcg_if_lift2 hoare_drop_imp)
 
 crunches suspend, prepareThreadDelete
   for bound_tcb_at'[wp]: "bound_tcb_at' P t"
@@ -2814,17 +2825,18 @@ lemma cancelIPC_cte_wp_at':
 
 crunch cte_wp_at'[wp]: tcbSchedDequeue "cte_wp_at' P p"
 
+crunches schedContextCancelYieldTo, tcbReleaseRemove
+  for cte_wp_at'[wp]: "cte_wp_at' P p"
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma suspend_cte_wp_at':
   assumes x: "\<And>cap final. P cap \<Longrightarrow> finaliseCap cap final True = fail"
   shows "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>
            suspend t
          \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
-  apply (simp add: suspend_def)
-  unfolding updateRestartPC_def
-  apply (rule hoare_pre)
-   apply (wp threadSet_cte_wp_at' cancelIPC_cte_wp_at'
-            | simp add: x)+
-  sorry
+  unfolding updateRestartPC_def suspend_def
+  by (wpsimp simp: x wp: threadSet_cte_wp_at' cancelIPC_cte_wp_at')
+
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -2891,9 +2903,15 @@ lemma setThreadState_st_tcb_at_simplish':
 lemmas setThreadState_st_tcb_at_simplish
     = setThreadState_st_tcb_at_simplish'[unfolded pred_disj_def]
 
+crunches setReplyTCB
+  for st_tcb_at'[wp]: "st_tcb_at' P t"
+
 lemma replyUnlink_st_tcb_at_simplish:
   "replyUnlink r \<lbrace>st_tcb_at' (\<lambda>st. P st \<or> simple' st) t\<rbrace>"
-  sorry
+  supply if_split [split del]
+  unfolding replyUnlink_def
+  apply (wpsimp wp: sts_st_tcb' hoare_vcg_if_lift2 hoare_vcg_imp_lift' simp: getReplyTCB_def)
+  by (clarsimp simp: obj_at'_def)
 
 crunch st_tcb_at_simplish: cteDeleteOne
             "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
@@ -2991,10 +3009,7 @@ lemma rescheduleRequired_oa_queued':
     rescheduleRequired
    \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. Q (tcbDomain tcb) (tcbPriority tcb)) t'\<rbrace>"
   apply (simp add: rescheduleRequired_def)
-  apply (wp tcbSchedEnqueue_not_st
-       | wpc
-       | simp)+
-  sorry
+  by (wpsimp wp: tcbSchedEnqueue_not_st isSchedulable_wp)
 
 lemma sts_tcbDomain_obj_at'[wp]:
   "setThreadState t st \<lbrace> obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>"
