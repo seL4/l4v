@@ -1037,6 +1037,12 @@ lemma threadSet_valid_release_queue':
   apply (fastforce simp: projectKOs split: if_split_asm)
   done
 
+lemma threadSet_valid_release_queue'_indep:
+  "\<lbrace>\<lambda>s. valid_release_queue' s \<and> (\<forall>obj. tcbInReleaseQueue (F obj) = tcbInReleaseQueue obj)\<rbrace>
+   threadSet F t
+   \<lbrace>\<lambda>rv. valid_release_queue'\<rbrace>"
+  by (wpsimp wp: threadSet_valid_release_queue')
+
 lemma threadSet_cur:
   "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. cur_tcb' s\<rbrace>"
   apply (wpsimp simp: threadSet_def cur_tcb'_def
@@ -1726,7 +1732,7 @@ lemma isRunnable_wp[wp]:
   done
 
 lemma setQueue_obj_at[wp]:
-  "\<lbrace>obj_at' P t\<rbrace> setQueue d p q \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
+  "setQueue d p q \<lbrace>\<lambda>s. Q (obj_at' P t s)\<rbrace>"
   apply (simp add: setQueue_def)
   apply wp
   apply (fastforce intro: obj_at'_pspaceI)
@@ -2233,21 +2239,10 @@ lemmas removeFromBitmap_weak_sch_act_wf[wp]
 lemmas addToBitmap_weak_sch_act_wf[wp]
   = weak_sch_act_wf_lift[OF addToBitmap_nosch]
 
-crunch st_tcb_at'[wp]: removeFromBitmap "st_tcb_at' P t"
-crunch pred_tcb_at'[wp]: removeFromBitmap "pred_tcb_at' proj P t"
-
-crunch not_st_tcb_at'[wp]: removeFromBitmap "\<lambda>s. \<not> (st_tcb_at' P' t) s"
-crunch not_pred_tcb_at'[wp]: removeFromBitmap "\<lambda>s. \<not> (pred_tcb_at' proj P' t) s"
-
-crunch st_tcb_at'[wp]: addToBitmap "st_tcb_at' P' t"
-crunch pred_tcb_at'[wp]: addToBitmap "pred_tcb_at' proj P' t"
-
-crunch not_st_tcb_at'[wp]: addToBitmap "\<lambda>s. \<not> (st_tcb_at' P' t) s"
-crunch not_pred_tcb_at'[wp]: addToBitmap "\<lambda>s. \<not> (pred_tcb_at' proj P' t) s"
-
-crunch obj_at'[wp]: removeFromBitmap "obj_at' P t"
-
-crunch obj_at'[wp]: addToBitmap "obj_at' P t"
+crunch obj_at'[wp]: removeFromBitmap "\<lambda>s. Q (obj_at' P t s)"
+crunch obj_at'[wp]: addToBitmap "\<lambda>s. Q (obj_at' P t s)"
+crunch pred_tcb_at'[wp]: removeFromBitmap "\<lambda>s. Q (pred_tcb_at' proj P t s)"
+crunch pred_tcb_at'[wp]: addToBitmap "\<lambda>s. Q (pred_tcb_at' proj P' t s)"
 
 lemma removeFromBitmap_tcb_in_cur_domain'[wp]:
   "\<lbrace>tcb_in_cur_domain' t\<rbrace> removeFromBitmap tdom prio \<lbrace>\<lambda>ya. tcb_in_cur_domain' t\<rbrace>"

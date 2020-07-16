@@ -86,11 +86,28 @@ lemma schedule_choose_new_thread_sched_act_rct[wp]:
   unfolding schedule_choose_new_thread_def
   by wp
 
+lemma obj_at'_tcbQueued_cross:
+  "(s,s') \<in> state_relation \<Longrightarrow> obj_at' tcbQueued t s' \<Longrightarrow> valid_queues' s' \<Longrightarrow>
+    obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_priority tcb = p \<and> tcb_domain tcb = d) t s \<Longrightarrow>
+    t \<in> set (ready_queues s d p)"
+  apply (clarsimp simp: state_relation_def ready_queues_relation_def valid_queues'_def)
+  apply (subgoal_tac "obj_at' (inQ d p) t s'", simp)
+  apply (clarsimp simp: obj_at'_def inQ_def obj_at_def projectKO_eq projectKO_tcb)
+  apply (frule (2) pspace_relation_tcb_domain_priority)
+  apply clarsimp
+  done
+
+(* FIXME RT: It might be better to have tcb_at on the abstract side and lift it
+             across the state relation *)
 lemma tcbSchedAppend_corres:
   notes trans_state_update'[symmetric, simp del]
   shows
-  "corres dc \<top> (tcb_at' t and Invariants_H.valid_queues and valid_queues')
+  "corres dc \<top> (tcb_at' t and valid_queues and valid_queues')
           (tcb_sched_action (tcb_sched_append) t) (tcbSchedAppend t)"
+  apply (rule corres_cross_back[where P="tcb_at t" and P'="tcb_at' t"])
+    apply (clarsimp simp: state_relation_def)
+    apply (erule (1) pspace_relation_tcb_at)
+   apply simp
   apply (simp only: tcbSchedAppend_def tcb_sched_action_def)
   apply (rule corres_symb_exec_r [OF _ _ threadGet_inv,
                                   where Q'="\<lambda>rv. tcb_at' t and Invariants_H.valid_queues and
@@ -101,29 +118,25 @@ lemma tcbSchedAppend_corres:
   apply (case_tac queued)
    apply (simp add: unless_def when_def)
    apply (rule corres_no_failI)
-    apply wp+
-  sorry (* tcbSchedAppend_corres *) (*
-   apply (clarsimp simp: in_monad gets_the_def bind_assoc
-                         assert_opt_def exec_gets is_etcb_at_def get_etcb_def get_tcb_queue_def
+    apply wp
+   apply (clarsimp simp: in_monad gets_the_def bind_assoc thread_get_def tcb_at_def
+                         assert_opt_def exec_gets get_tcb_queue_def
                          set_tcb_queue_def simpler_modify_def)
-
-   apply (subgoal_tac "tcb_sched_append t (ready_queues a (tcb_domain y) (tcb_priority y))
-                       = (ready_queues a (tcb_domain y) (tcb_priority y))")
-    apply (simp add: state_relation_def ready_queues_relation_def)
-   apply (clarsimp simp: tcb_sched_append_def state_relation_def
-                         valid_queues'_def ready_queues_relation_def
-                         ekheap_relation_def etcb_relation_def
-                         obj_at'_def inQ_def projectKO_eq project_inject)
-   apply (drule_tac x=t in bspec,clarsimp)
-   apply clarsimp
+   apply (subgoal_tac "t \<in> set (ready_queues a (tcb_domain tcb) (tcb_priority tcb))")
+    apply (subgoal_tac "tcb_sched_ready_q_update (tcb_domain tcb) (tcb_priority tcb)
+                  (tcb_sched_append t) (ready_queues a) = ready_queues a", simp)
+    apply (intro ext)
+    apply (clarsimp simp: tcb_sched_append_def)
+   apply (erule (2) obj_at'_tcbQueued_cross)
+   apply (clarsimp simp: obj_at_def get_tcb_ko_at)
   apply (clarsimp simp: unless_def when_def cong: if_cong)
   apply (rule stronger_corres_guard_imp)
-    apply (rule corres_split[where r'="(=)", OF _ ethreadget_corres])
-       apply (rule corres_split[where r'="(=)", OF _ ethreadget_corres])
+    apply (rule corres_split[where r'="(=)", OF _ threadget_corres])
+       apply (rule corres_split[where r'="(=)", OF _ threadget_corres])
           apply (rule corres_split[where r'="(=)"])
              apply (rule corres_split_noop_rhs2)
                 apply (rule corres_split_noop_rhs2)
-                   apply (rule threadSet_corres_noop, simp_all add: tcb_relation_def exst_same_def)[1]
+                   apply (rule threadSet_corres_noop, simp_all add: tcb_relation_def )[1]
                   apply (rule addToBitmap_if_null_corres_noop)
                  apply wp+
                apply (simp add: tcb_sched_append_def)
@@ -132,11 +145,10 @@ lemma tcbSchedAppend_corres:
                   apply (rule setQueue_corres)
                  prefer 3
                  apply (rule_tac P=\<top> and Q="K (t \<notin> set queuea)" in corres_assume_pre)
-                 apply (wp getQueue_corres getObject_tcb_wp  | simp add: etcb_relation_def threadGet_def)+
+                 apply (wp getQueue_corres getObject_tcb_wp  | simp add: tcb_relation_def threadGet_def)+
   apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def inQ_def
                          projectKO_eq project_inject)
-  done *)
-
+  done
 
 crunches tcbSchedEnqueue, tcbSchedAppend, tcbSchedDequeue
   for valid_pspace'[wp]: valid_pspace'
@@ -558,10 +570,18 @@ lemma tcbSchedAppend_valid_release_queue[wp]:
                   wp: hoare_vcg_all_lift hoare_vcg_imp_lift' threadGet_wp)
   by (auto simp: obj_at'_def)
 
+crunches addToBitmap
+  for ksReleaseQueue[wp]: "\<lambda>s. P (ksReleaseQueue s)"
+
 lemma tcbSchedAppend_valid_release_queue'[wp]:
   "tcbSchedAppend t \<lbrace>valid_release_queue'\<rbrace>"
-  unfolding tcbSchedAppend_def
-  sorry (* tcbSchedAppend_valid_release_queue' *)
+  unfolding tcbSchedAppend_def threadGet_def
+  apply (wpsimp wp: threadSet_valid_release_queue'_indep)
+        apply (wpsimp simp: valid_release_queue'_def wp: hoare_vcg_all_lift hoare_vcg_imp_lift')+
+   apply (rule_tac Q="\<lambda>_ s. valid_release_queue' s" in hoare_strengthen_post)
+    apply (wpsimp simp: valid_release_queue'_def wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+   apply (clarsimp simp: valid_release_queue'_def)+
+  done
 
 lemma tcbSchedAppend_invs'[wp]:
   "\<lbrace>invs'

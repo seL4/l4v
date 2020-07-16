@@ -2940,6 +2940,15 @@ lemma corres_cross':
   "cross_rel Q (\<lambda>s'. R' s' \<longrightarrow> Q' s') \<Longrightarrow> corres a P (P' and Q') f g \<Longrightarrow> (\<And>x. P x \<Longrightarrow> Q x) \<Longrightarrow> (\<And>x. P' x \<Longrightarrow> R' x) \<Longrightarrow> corres a P P' f g"
   by (fastforce simp: corres_underlying_def cross_rel_def)
 
+(* FIXME RT: move *)
+lemma corres_cross_back:
+  "(\<And>s s'. (s,s') \<in> state_relation \<Longrightarrow> P' s' \<Longrightarrow> P s)
+   \<Longrightarrow> (\<And>x. Q' x \<Longrightarrow> P' x)
+   \<Longrightarrow> corres x (Q and P) Q' f g
+   \<Longrightarrow> corres x Q Q' f g"
+  unfolding corres_underlying_def
+  by fastforce
+
 (* FIXME RT: Corres_UL *)
 lemma corres_assert_ret:
   "corres dc (\<lambda>s. P) \<top> (assert P) (return ())"
