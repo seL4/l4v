@@ -4406,6 +4406,11 @@ lemma setBoundNotification_state_refs_of'[wp]:
    apply fastforce
   by (metis id_def Un_ac(1) Un_ac(4))
 
+lemma setBoundNotification_list_refs_of_replies'[wp]:
+  "setBoundNotification ntfn t \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
+  unfolding setBoundNotification_def
+  by wpsimp
+
 lemma sts_cur_tcb'[wp]:
   "\<lbrace>cur_tcb'\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
   by (wp cur_tcb_lift)
