@@ -920,7 +920,7 @@ lemma threadSet_all_invs_but_sch_extra:
           | simp add: tcb_cte_cases_def cteCaps_of_def o_def
           | intro allI)+
    apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift threadSet_pred_tcb_no_state | simp)+
-  by (fastforce simp: sch_act_simple_def o_def cteCaps_of_def)
+  by (fastforce simp: sch_act_simple_def o_def cteCaps_of_def valid_release_queue'_def obj_at'_def)
 
 lemma threadSet_not_curthread_ct_domain:
   "\<lbrace>\<lambda>s. ptr \<noteq> ksCurThread s \<and> ct_idle_or_in_cur_domain' s\<rbrace> threadSet f ptr \<lbrace>\<lambda>rv. ct_idle_or_in_cur_domain'\<rbrace>"

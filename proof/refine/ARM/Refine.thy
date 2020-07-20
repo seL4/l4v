@@ -428,7 +428,9 @@ lemma kernelEntry_invs':
             TcbAcc_R.dmo_invs' static_imp_wp
             callKernel_domain_time_left
          | clarsimp simp: user_memory_update_def no_irq_def tcb_at_invs'
-                          valid_domain_list'_def)+
+                          valid_domain_list'_def valid_release_queue'_def
+                    dest!: invs_valid_release_queue'
+         | fastforce simp: obj_at'_def)+
   done
 
 lemma absKState_correct':

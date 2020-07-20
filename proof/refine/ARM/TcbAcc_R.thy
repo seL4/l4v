@@ -536,6 +536,19 @@ lemma setObject_tcb_idle':
   apply (simp add: projectKOs idle_tcb_ps_def idle_sc_ps_def)
   done
 
+lemma setObject_sc_idle':
+  "\<lbrace>\<lambda>s. valid_idle' s  \<and> (t = idle_sc_ptr \<longrightarrow> idle_sc' v)\<rbrace>
+   setSchedContext t v
+   \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
+  apply (clarsimp simp: setSchedContext_def)
+  apply (rule hoare_pre)
+  apply (rule setObject_idle')
+     apply (simp add: objBits_simps')
+    apply (simp add: objBits_simps' scBits_pos_power2)
+   apply (simp add: updateObject_default_inv)
+  apply (simp add: projectKOs idle_tcb_ps_def idle_sc_ps_def)
+  done
+
 lemma setObject_tcb_ifunsafe':
   "\<lbrace>if_unsafe_then_cap' and obj_at' (\<lambda>t. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF t = getF v) t\<rbrace>
      setObject t (v :: tcb) \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
@@ -1019,29 +1032,17 @@ lemmas threadSet_valid_queues'
                                 id_apply addToQs_subset simp_thms]
 
 lemma threadSet_valid_release_queue':
-  "\<lbrace>\<lambda>s. (\<forall>ko. ko_at' ko t s \<and> tcbInReleaseQueue (F ko) \<and> \<not> tcbInReleaseQueue ko
-         \<longrightarrow> t \<in> set (ksReleaseQueue s))
-        \<and> valid_release_queue' s\<rbrace>
+  "\<lbrace>\<lambda>s. (\<forall>ko. ko_at' ko t s \<and> tcbInReleaseQueue (F ko) \<longrightarrow> t \<in> set (ksReleaseQueue s))
+        \<and> (\<forall>t'. t' \<noteq> t \<longrightarrow> obj_at' (tcbInReleaseQueue) t' s \<longrightarrow> t' \<in> set (ksReleaseQueue s))\<rbrace>
    threadSet F t
-   \<lbrace>\<lambda>rv. valid_release_queue'\<rbrace>"
-  apply (simp add: valid_release_queue'_def threadSet_def obj_at'_real_def
-                split del: if_split)
-  apply (simp only: imp_conv_disj)
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
-     apply (wp setObject_ko_wp_at | simp add: objBits_simps')+
-    apply (wp getObject_tcb_wp updateObject_default_inv
-               | simp split del: if_split)+
-  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs
-                        objBits_simps addToQs_set_def
-             split del: if_split cong: if_cong)
-  apply (fastforce simp: projectKOs split: if_split_asm)
+   \<lbrace>\<lambda>_. valid_release_queue'\<rbrace>"
+  apply (clarsimp simp: valid_release_queue'_def threadSet_def obj_at'_real_def)
+  apply (wpsimp wp: hoare_vcg_all_lift setObject_tcb_wp getObject_tcb_wp)
+  apply (rename_tac t')
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
+  apply (case_tac "t'=t"; clarsimp?)
+  apply (clarsimp simp: ps_clear_def objBits_simps')
   done
-
-lemma threadSet_valid_release_queue'_indep:
-  "\<lbrace>\<lambda>s. valid_release_queue' s \<and> (\<forall>obj. tcbInReleaseQueue (F obj) = tcbInReleaseQueue obj)\<rbrace>
-   threadSet F t
-   \<lbrace>\<lambda>rv. valid_release_queue'\<rbrace>"
-  by (wpsimp wp: threadSet_valid_release_queue')
 
 lemma threadSet_cur:
   "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. cur_tcb' s\<rbrace>"
@@ -1066,6 +1067,10 @@ lemma threadSet_typ_at'[wp]:
 
 lemma setObject_tcb_pde_mappings'[wp]:
   "\<lbrace>valid_pde_mappings'\<rbrace> setObject p (tcb :: tcb) \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
+  by (wpsimp wp: valid_pde_mappings_lift' setObject_typ_at')
+
+lemma setObject_sc_pde_mappings'[wp]:
+  "\<lbrace>valid_pde_mappings'\<rbrace> setObject p (sc :: sched_context) \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
   by (wpsimp wp: valid_pde_mappings_lift' setObject_typ_at')
 
 crunches threadSet
@@ -1298,7 +1303,7 @@ lemma threadSet_invs_trivialT:
        (\<forall>d p. (\<exists>tcb. inQ d p tcb \<and> \<not> inQ d p (F tcb)) \<longrightarrow> t \<notin> set (ksReadyQueues s (d, p))) \<and>
        (\<forall>ko d p. ko_at' ko t s \<and> inQ d p (F ko) \<and> \<not> inQ d p ko \<longrightarrow> t \<in> set (ksReadyQueues s (d, p))) \<and>
        ((\<exists>tcb. tcbInReleaseQueue tcb \<and> \<not> tcbInReleaseQueue (F tcb)) \<longrightarrow> t \<notin> set (ksReleaseQueue s)) \<and>
-       (\<forall>ko. ko_at' ko t s \<and> tcbInReleaseQueue (F ko) \<and> \<not> tcbInReleaseQueue ko \<longrightarrow> t \<in> set (ksReleaseQueue s)) \<and>
+       (\<forall>ko. ko_at' ko t s \<and> tcbInReleaseQueue (F ko) \<longrightarrow> t \<in> set (ksReleaseQueue s)) \<and>
        ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)) \<longrightarrow> ex_nonz_cap_to' t s \<and> t \<noteq> ksCurThread s) \<and>
        (\<forall>tcb. tcbQueued (F tcb) \<and> ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> tcbQueued tcb \<or> t \<noteq> ksCurThread s)\<rbrace>
    threadSet F t
@@ -1331,14 +1336,13 @@ proof -
               threadSet_valid_queues'
               threadSet_cur
               untyped_ranges_zero_lift
-           |clarsimp simp: y z a1 a2 a3 domains cteCaps_of_def |rule refl)+
-   apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
+           | clarsimp simp: y z a1 a2 a3 domains cteCaps_of_def | rule refl)+
    apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def valid_release_queue_def
                          valid_release_queue'_def o_def)
-   \<comment>\<open> You might be tempted to turn this into a one-line `fastforce`, but this is much faster. \<close>
-   apply (intro conjI allI impI;
-          clarsimp simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a1 a2 a3;
-          blast)
+  apply (intro conjI impI allI
+         ; clarsimp simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a1 a2 a3
+                          valid_queues_def valid_queues_no_bitmap_def obj_at'_def
+         ; blast)
   done
 qed
 
@@ -1499,12 +1503,27 @@ lemma inQ_context[simp]:
   "inQ d p (tcbArch_update f tcb) = inQ d p tcb"
   by (cases tcb, simp add: inQ_def)
 
+lemma threadGet_wp:
+  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (\<exists>tcb. ko_at' tcb t s \<and> P (f tcb) s)\<rbrace>
+   threadGet f t
+   \<lbrace>P\<rbrace>"
+  apply (simp add: threadGet_def)
+  apply (wp getObject_tcb_wp)
+  apply clarsimp
+  done
+
+lemma threadGet_sp:
+  "\<lbrace>P\<rbrace> threadGet f ptr \<lbrace>\<lambda>rv s. \<exists>tcb :: tcb. ko_at' tcb ptr s \<and> f tcb = rv \<and> P s\<rbrace>"
+  apply (wpsimp wp: threadGet_wp)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
 lemma asUser_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: asUser_def split_def)
-  apply (wp hoare_drop_imps | simp)+
-
-  apply (wp threadSet_invs_trivial hoare_drop_imps | simp)+
+  apply (wpsimp wp: threadSet_invs_trivial threadGet_wp)
+  apply (fastforce dest!: invs_valid_release_queue'
+                    simp: obj_at'_def valid_release_queue'_def)
   done
 
 lemma asUser_nosch[wp]:
@@ -1934,15 +1953,6 @@ lemmas tcb_inv_use_valid =
 \<close>
 lemmas tcb_inv_state_eq =
   tcb_inv_use_valid[where s=s and P="(=) s" for s, OF _ refl]
-
-lemma threadGet_wp:
-  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (\<exists>tcb. ko_at' tcb t s \<and> P (f tcb) s)\<rbrace>
-   threadGet f t
-   \<lbrace>P\<rbrace>"
-  apply (simp add: threadGet_def)
-  apply (wp getObject_tcb_wp)
-  apply clarsimp
-  done
 
 \<comment>\<open>
   For when you want an obj_at' goal instead of the ko_at' that @{thm threadGet_wp}
@@ -3253,6 +3263,7 @@ lemma tcbSchedEnqueue_valid_release_queue'[wp]:
                simp: valid_release_queue'_def setQueue_def)
   apply (rule hoare_seq_ext_skip, wpsimp simp: bitmap_fun_defs valid_release_queue'_def)
   apply (wpsimp wp: threadSet_valid_release_queue')
+  apply (clarsimp simp: valid_release_queue'_def obj_at'_def)
   done
 
 lemma tcbSchedAppend_valid_queues[wp]:
@@ -3539,7 +3550,7 @@ lemma setThreadState_valid_release_queue'[wp]:
   apply (simp add: setThreadState_def scheduleTCB_def)
   apply (rule hoare_seq_ext_skip)
    apply (wp threadSet_valid_release_queue')
-   using valid_release_queue_def apply simp
+   apply (fastforce simp: obj_at'_def valid_release_queue'_def)
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (clarsimp simp: getSchedulerAction_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
@@ -3568,7 +3579,7 @@ lemma setBoundNotification_valid_release_queues[wp]:
   "setBoundNotification ntfn t \<lbrace>valid_release_queue'\<rbrace>"
   apply (simp add: setBoundNotification_def)
   apply (wp threadSet_valid_release_queue')
-  apply (fastforce simp: inQ_def obj_at'_def pred_tcb_at'_def)
+  apply (fastforce simp: inQ_def obj_at'_def pred_tcb_at'_def valid_release_queue'_def)
   done
 
 lemma setThreadState_valid_objs'[wp]:

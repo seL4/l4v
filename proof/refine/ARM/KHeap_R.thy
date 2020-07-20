@@ -2323,6 +2323,7 @@ lemmas get_reply_sp' = set_reply'.getObject_sp'
 lemmas get_sc_sp' = set_sc'.getObject_sp'
 
 lemmas setObject_tcb_wp = set_tcb'.setObject_wp
+lemmas setObject_sc_wp = set_sc'.setObject_wp
 lemmas setObject_tcb_obj_at'_strongest = set_tcb'.setObject_obj_at'_strongest
 
 lemmas set_ep_valid_objs'[wp] =

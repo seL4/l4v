@@ -1086,7 +1086,9 @@ lemma setMCPriority_invs':
   unfolding setMCPriority_def
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
-  by (wp threadSet_invs_trivial, (clarsimp simp: inQ_def)+)
+  apply (wp threadSet_invs_trivial, (clarsimp simp: inQ_def)+)
+  apply (clarsimp dest!: invs_valid_release_queue' simp: valid_release_queue'_def obj_at'_def)
+  done
 
 lemma valid_tcb'_tcbMCP_update:
   "\<lbrakk>valid_tcb' tcb s \<and> f (tcbMCP tcb) \<le> maxPriority\<rbrakk> \<Longrightarrow> valid_tcb' (tcbMCP_update f tcb) s"
@@ -1151,7 +1153,7 @@ lemma threadcontrol_corres_helper2:
            \<lbrace>\<lambda>x s. Invariants_H.valid_queues s \<and> valid_queues' s \<and> weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   by (wp threadSet_invs_trivial
       | strengthen  invs_valid_queues' invs_queues invs_weak_sch_act_wf
-      | clarsimp simp: inQ_def )+
+      | clarsimp dest!: invs_valid_release_queue' simp: inQ_def valid_release_queue'_def obj_at'_def)+
 
 lemma threadcontrol_corres_helper3:
   "\<lbrace> einvs and simple_sched_action\<rbrace>

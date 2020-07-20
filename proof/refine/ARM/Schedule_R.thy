@@ -576,11 +576,10 @@ crunches addToBitmap
 lemma tcbSchedAppend_valid_release_queue'[wp]:
   "tcbSchedAppend t \<lbrace>valid_release_queue'\<rbrace>"
   unfolding tcbSchedAppend_def threadGet_def
-  apply (wpsimp wp: threadSet_valid_release_queue'_indep)
-        apply (wpsimp simp: valid_release_queue'_def wp: hoare_vcg_all_lift hoare_vcg_imp_lift')+
-   apply (rule_tac Q="\<lambda>_ s. valid_release_queue' s" in hoare_strengthen_post)
-    apply (wpsimp simp: valid_release_queue'_def wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-   apply (clarsimp simp: valid_release_queue'_def)+
+  apply (wpsimp simp: valid_release_queue'_def
+                  wp: threadSet_valid_release_queue' hoare_vcg_all_lift hoare_vcg_imp_lift'
+                      getObject_tcb_wp)
+  apply (clarsimp simp: obj_at'_def)
   done
 
 lemma tcbSchedAppend_invs'[wp]:
