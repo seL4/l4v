@@ -729,7 +729,11 @@ lemma cancelSignal_tcb_at_runnable':
 lemma cancelAllIPC_tcb_at_runnable':
   "\<lbrace>st_tcb_at' runnable' t\<rbrace> cancelAllIPC epptr \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
   unfolding cancelAllIPC_def
-  sorry (*
+  apply (wpsimp wp: mapM_x_wp' hoare_vcg_if_lift setThreadState_st_tcb_at'_test_unaffected
+                    threadGet_wp
+              simp: o_def
+         split_del: if_split)
+  oops (*
   by (wpsimp wp: mapM_x_wp' sts_st_tcb' hoare_drop_imp) *)
 
 lemma cancelAllSignals_tcb_at_runnable':
@@ -745,7 +749,7 @@ crunches unbindNotification, bindNotification, unbindMaybeNotification
 lemma (in delete_one_conc_pre) finaliseCap_tcb_at_runnable':
   "\<lbrace>st_tcb_at' runnable' t\<rbrace> finaliseCap cap final True \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
   apply (clarsimp simp add: finaliseCap_def Let_def)
-  sorry (*
+  oops (*
   apply (rule conjI | clarsimp | wp cancelAllIPC_tcb_at_runnable' getObject_ntfn_inv
                                     cancelAllSignals_tcb_at_runnable'
        | wpc)+
@@ -757,14 +761,16 @@ crunch pred_tcb_at'[wp]: isFinalCapability "pred_tcb_at' proj st t"
 lemma (in delete_one_conc_pre) cteDeleteOne_tcb_at_runnable':
   "\<lbrace>st_tcb_at' runnable' t\<rbrace> cteDeleteOne callerCap \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_def)
+  oops (*
   apply (wp finaliseCap_tcb_at_runnable' | clarsimp | wp (once) hoare_drop_imps)+
   done
+*)
 
 lemma (in delete_one_conc_pre) cancelIPC_tcb_at_runnable':
   "\<lbrace>st_tcb_at' runnable' t'\<rbrace> cancelIPC t \<lbrace>\<lambda>_. st_tcb_at' runnable' t'\<rbrace>"
   (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (clarsimp simp: cancelIPC_def Let_def)
-  sorry (*
+  oops (*
   apply (case_tac "t'=t")
    apply (rule_tac B="\<lambda>st. st_tcb_at' runnable' t and K (runnable' st)"
             in hoare_seq_ext)
@@ -851,7 +857,7 @@ lemma (in delete_one_conc_pre) cancelIPC_weak_sch_act_wf:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
       cancelIPC t
    \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  sorry (*
+  oops (*
   apply (rule weak_sch_act_wf_lift_linear)
   apply (wp cancelIPC_sch_act_not cancelIPC_tcb_in_cur_domain' cancelIPC_tcb_at_runnable')+
   done *)
