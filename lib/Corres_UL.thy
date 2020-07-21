@@ -109,7 +109,88 @@ lemma corres_no_failI:
   shows "corres_underlying S False nf' R P P' f f'"
   using assms by (simp add: corres_underlying_def no_fail_def)
 
-text \<open>Congruence rules for the correspondence functions.\<close>
+
+section \<open>Manipulating guards under state relation\<close>
+
+definition cross_rel_ul ::  "('a \<times> 'b) set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> bool" where
+  "cross_rel_ul sr P Q \<equiv> \<forall>s s'. P s \<longrightarrow> (s, s') \<in> sr \<longrightarrow> Q s'"
+
+lemma cross_relI:
+  "(\<And>s s'. \<lbrakk> P s; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> Q s') \<Longrightarrow> cross_rel_ul sr P Q"
+  by (simp add: cross_rel_ul_def)
+
+lemma cross_relE:
+  "\<lbrakk> cross_rel_ul sr P Q; \<forall>s s'. P s \<longrightarrow> (s, s') \<in> sr \<longrightarrow> Q s' \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+  by (simp add: cross_rel_ul_def)
+
+lemma cross_rel_True_right[simp,intro!]:
+  "cross_rel_ul sr P \<top>"
+  by (blast intro: cross_relI)
+
+lemma cross_rel_False_left[simp,intro!]:
+  "cross_rel_ul sr \<bottom> P"
+  by (blast intro: cross_relI)
+
+lemma cross_rel_imp_right:
+  "\<lbrakk> cross_rel_ul sr P Q'; \<And>x. Q' x \<Longrightarrow> Q x \<rbrakk> \<Longrightarrow> cross_rel_ul sr P Q"
+  by (clarsimp simp: cross_rel_ul_def)
+
+lemma cross_rel_imp_left:
+  "\<lbrakk> cross_rel_ul sr P' Q; \<And>x. P x \<Longrightarrow> P' x \<rbrakk> \<Longrightarrow> cross_rel_ul sr P Q"
+  by (fastforce simp: cross_rel_ul_def)
+
+lemma cross_rel_imp:
+  "\<lbrakk> cross_rel_ul sr P' Q'; cross_rel_ul sr P (\<lambda>x. Q' x \<longrightarrow> Q x); \<And>x. P x \<Longrightarrow> P' x \<rbrakk>
+   \<Longrightarrow> cross_rel_ul sr P Q"
+  by (fastforce simp: cross_rel_ul_def)
+
+lemma cross_rel_ul_drop_imp:
+  "cross_rel_ul sr P Q \<Longrightarrow> cross_rel_ul sr P (\<lambda>s'. Q' s' \<longrightarrow> Q s')"
+  by (erule cross_rel_imp_right) simp
+
+lemma cross_rel_conj_right_eq:
+  "cross_rel_ul sr P (Q and Q') = (cross_rel_ul sr P Q \<and> cross_rel_ul sr P Q')"
+  by (fastforce simp: cross_rel_ul_def)
+
+lemma cross_rel_conjI_left:
+  "\<lbrakk> cross_rel_ul sr P Q; cross_rel_ul sr P Q' \<rbrakk> \<Longrightarrow> cross_rel_ul sr P (Q and Q')"
+  by (simp add: cross_rel_conj_right_eq)
+
+lemma cross_rel_conjE_left:
+  "\<lbrakk> cross_rel_ul sr P (Q and Q'); \<lbrakk> cross_rel_ul sr P Q; cross_rel_ul sr P Q' \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+  by (simp add: cross_rel_conj_right_eq)
+
+lemma cross_rel_conjI_right1:
+  "cross_rel_ul sr P Q \<Longrightarrow> cross_rel_ul sr (P and P') Q"
+  by (fastforce simp: cross_rel_ul_def)
+
+lemma cross_rel_conjI_right2:
+  "cross_rel_ul sr P' Q \<Longrightarrow> cross_rel_ul sr (P and P') Q"
+  by (fastforce simp: cross_rel_ul_def)
+
+lemma corres_cross_imp_right:
+  "\<lbrakk> cross_rel_ul sr P (\<lambda>s'. Q s' \<longrightarrow> Q' s'); corres_underlying sr nf nf' r P Q' f g \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P Q f g"
+  by (auto simp: corres_underlying_def cross_rel_ul_def)
+
+lemma corres_cross_eq:
+  "\<lbrakk> cross_rel_ul sr Q Q'; \<And>x. P x \<Longrightarrow> Q x \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P (P' and Q') f g = corres_underlying sr nf nf' r P P' f g"
+  by (fastforce simp: corres_underlying_def cross_rel_ul_def)
+
+lemma corres_cross:
+  "\<lbrakk> cross_rel_ul sr Q Q'; \<And>x. P x \<Longrightarrow> Q x; corres_underlying sr nf nf' r P (P' and Q') f g \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by (fastforce simp: corres_underlying_def cross_rel_ul_def)
+
+lemma corres_cross':
+  "\<lbrakk> cross_rel_ul sr Q (\<lambda>s'. R' s' \<longrightarrow> Q' s'); \<And>x. P x \<Longrightarrow> Q x; \<And>x. P' x \<Longrightarrow> R' x;
+     corres_underlying sr nf nf' r P (P' and Q') f g \<rbrakk>
+  \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by (fastforce simp: corres_underlying_def cross_rel_ul_def)
+
+
+section \<open>Congruence rules for the correspondence functions.\<close>
 
 (* Rewrite everywhere, with full context. Use when there are no schematic variables. *)
 lemma corres_cong:
@@ -1075,9 +1156,15 @@ lemma corres_move_asm:
   "\<lbrakk> corres_underlying sr nf nf' r P  Q f g;
       \<And>s s'. \<lbrakk>(s,s') \<in> sr; P s; P' s'\<rbrakk> \<Longrightarrow> Q s'\<rbrakk>
     \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
-  by (fastforce simp: corres_underlying_def)
+  by (rule stronger_corres_guard_imp)
 
 lemmas corres_cross_over_guard = corres_move_asm[rotated]
+
+lemma corres_cross_back:
+  "\<lbrakk> \<And>s s'. \<lbrakk> (s,s') \<in> sr; P' s' \<rbrakk> \<Longrightarrow> P s; \<And>s. Q' s \<Longrightarrow> P' s;
+     corres_underlying sr nf nf' r (Q and P) Q' f g \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r Q Q' f g"
+  unfolding corres_underlying_def by fastforce
 
 lemma corres_either_alternate:
   "\<lbrakk> corres_underlying sr nf nf' r P Pa' a c; corres_underlying sr nf nf' r P Pb' b c \<rbrakk>
@@ -1347,5 +1434,24 @@ next
        apply (wp y | simp)+
     done
 qed
+
+lemma corres_assert_ret:
+  "corres_underlying sr False nf' dc (\<lambda>s. P) \<top> (assert P) (return ())"
+  by (rule corres_no_failI; clarsimp simp: assert_def return_def fail_def no_fail_def)
+
+lemma corres_assert_assume_l:
+  "corres_underlying sr nf nf' dc P Q (f ()) g
+  \<Longrightarrow> corres_underlying sr nf nf' dc (P and (\<lambda>s. P')) Q (assert P' >>= f) g"
+  by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
+
+lemma corres_assert_assume_r:
+  "corres_underlying sr nf nf' dc P Q f (g ())
+  \<Longrightarrow> corres_underlying sr nf nf' dc P (Q and (\<lambda>s. Q')) f (assert Q' >>= g)"
+  by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
+
+lemma corres_assert_opt_assume_l:
+  "corres_underlying sr nf nf' dc P Q (f (the X)) g
+  \<Longrightarrow> corres_underlying sr nf nf' dc (P and K (X \<noteq> None)) Q (assert_opt X >>= f) g"
+  by (force simp: corres_underlying_def assert_opt_def return_def bind_def fail_def)
 
 end
