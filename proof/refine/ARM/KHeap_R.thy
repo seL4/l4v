@@ -1869,7 +1869,7 @@ lemma ct_not_inQ_lift:
   by (rule hoare_convert_imp [OF sch_act not_inQ])
 
 lemma obj_at'_ignoring_obj:
-  "obj_at' (\<lambda>_ :: 'a :: pspace_storable. P s) p s = (obj_at' (\<lambda>_ :: 'a. True) p s \<and> P s)"
+  "obj_at' (\<lambda>_ :: 'a :: pspace_storable. P) p s = (obj_at' (\<lambda>_ :: 'a. True) p s \<and> P)"
   by (rule iffI; clarsimp simp: obj_at'_def)
 
 end
@@ -2059,7 +2059,7 @@ lemma setObject_obj_at'_strongest:
   apply (erule rsubst[where P=Q])
   apply (case_tac "ptr = ptr' (set_obj' ptr obj s)"; simp)
    apply (clarsimp simp: same_size_obj_at'_set_obj'_iff
-                         obj_at'_ignoring_obj[where P="\<lambda>s. P (f s) obj" for f])
+                         obj_at'_ignoring_obj[where P="P f obj" for f])
   apply (clarsimp simp: obj_at'_def projectKO_eq project_inject ps_clear_upd')
   done
 
@@ -2103,6 +2103,32 @@ lemma getObject_sp:
   by (clarsimp simp: objBits_def)
 
 lemmas getObject_sp' = getObject_sp[folded g_def]
+
+lemma setObject_preserves_some_obj_at':
+  "\<lbrace>\<lambda>s. obj_at' (\<lambda>_ :: 'a. True) p s \<longrightarrow> P (obj_at' (\<lambda>_ :: 'a. True) p' s)\<rbrace>
+   setObject p (ko :: 'a)
+   \<lbrace>\<lambda>_ s. P (obj_at' (\<lambda>_ :: 'a. True) p' s)\<rbrace>"
+  apply (wpsimp wp: setObject_obj_at'_strongest)
+  done
+
+lemmas set_preserves_some_obj_at' = setObject_preserves_some_obj_at'[folded f_def]
+
+lemma getObject_wp_rv_only:
+  "\<lbrace>\<lambda>s. obj_at' (\<lambda>_:: 'a. True) p s \<longrightarrow> obj_at' (\<lambda>ko :: 'a. P ko) p s\<rbrace> getObject p \<lbrace>\<lambda>rv _. P rv\<rbrace>"
+  apply (wpsimp wp: getObject_wp)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemmas get_wp_rv_only = getObject_wp_rv_only[folded g_def]
+
+\<comment>\<open> Stronger than getObject_inv. \<close>
+lemma getObject_wp_state_only:
+  "\<lbrace>\<lambda>s. obj_at' (\<lambda>_ :: 'a. True) p s \<longrightarrow> P s\<rbrace> getObject p \<lbrace>\<lambda>_ :: 'a. P\<rbrace>"
+  apply (wpsimp wp: getObject_wp)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemmas get_wp_state_only = getObject_wp_state_only[folded g_def]
 
 end
 

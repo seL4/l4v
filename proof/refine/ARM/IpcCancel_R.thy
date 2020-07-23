@@ -37,6 +37,16 @@ lemma cancelSignal_pred_tcb_at':
   apply (wp sts_pred_tcb_neq' getNotification_wp | wpc | clarsimp)+
   done
 
+lemma cancelSignal_tcb_at':
+  "cancelSignal tptr ntfnptr \<lbrace>\<lambda>s. P (tcb_at' tptr' s)\<rbrace>"
+  unfolding cancelSignal_def Let_def
+  apply (wpsimp wp: hoare_drop_imp)
+  done
+
+crunches cancelIPC
+  for tcb_at'_better[wp]: "\<lambda>s. P (tcb_at' p s)"
+  (wp: crunch_wps cancelSignal_tcb_at' simp: crunch_simps pred_tcb_at'_def)
+
 crunch pred_tcb_at'[wp]: emptySlot "pred_tcb_at' proj P t"
   (wp: setCTE_pred_tcb_at')
 
@@ -52,7 +62,7 @@ end
 lemma cancelIPC_simple[wp]:
   "\<lbrace>\<top>\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
   unfolding cancelIPC_def
-  apply (wpsimp wp: setThreadState_st_tcb replyRemoveTCB_simple' cancelSignal_simple
+  apply (wpsimp wp: setThreadState_st_tcb replyRemoveTCB_st_tcb_at'_Inactive cancelSignal_simple
                     replyUnlink_st_tcb_at'_wp set_reply'.set_wp gts_wp' threadSet_wp
               simp: Let_def tcb_obj_at'_pred_tcb'_set_obj'_iff)
   apply (clarsimp simp: st_tcb_at'_def o_def obj_at'_def isBlockedOnReply_def)
@@ -674,7 +684,7 @@ lemma (in delete_one_conc_pre) cancelIPC_sch_act_simple[wp]:
   done *)
 
 lemma cancelSignal_st_tcb_at:
-  assumes x[simp]: "P Inactive" shows
+  assumes [simp]: "P Inactive" shows
   "\<lbrace>st_tcb_at' P t\<rbrace>
      cancelSignal t' ntfn
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
@@ -684,8 +694,8 @@ lemma cancelSignal_st_tcb_at:
    apply clarsimp+
   done
 
-lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at:
-  assumes x[simp]: "\<And>st. simple' st \<longrightarrow> P st" shows
+lemma cancelIPC_st_tcb_at:
+  assumes [simp]: "\<And>st. simple' st \<longrightarrow> P st" shows
   "\<lbrace>st_tcb_at' P t\<rbrace>
      cancelIPC t'
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
@@ -712,9 +722,9 @@ lemma weak_sch_act_wf_lift_linear:
 
 lemma sts_sch_act_not[wp]:
   "\<lbrace>sch_act_not t\<rbrace> setThreadState st t' \<lbrace>\<lambda>rv. sch_act_not t\<rbrace>"
-  apply (simp add: setThreadState_def rescheduleRequired_def)
-  apply (wp hoare_drop_imps | simp | wpcw)+
-  sorry
+  unfolding setThreadState_def rescheduleRequired_def scheduleTCB_def
+  apply (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp isSchedulable_inv)
+  done
 
 crunches cancelSignal, setBoundNotification
   for sch_act_not[wp]: "sch_act_not t"
@@ -725,6 +735,13 @@ lemma cancelSignal_tcb_at_runnable':
   \<lbrace>st_tcb_at' runnable' t'\<rbrace> cancelSignal t ntfnptr \<lbrace>\<lambda>_. st_tcb_at' runnable' t'\<rbrace>"
   unfolding cancelSignal_def
   by (wpsimp wp: sts_pred_tcb_neq' hoare_drop_imp)
+
+lemma setThreadState_st_tcb_at'_test_unaffected:
+  "\<lbrace>\<lambda>s. st_tcb_at' test t s \<and> test st\<rbrace>
+   setThreadState st t'
+   \<lbrace>\<lambda>_. st_tcb_at' test t\<rbrace>"
+  apply (wpsimp wp: sts_st_tcb')
+  done
 
 lemma cancelAllIPC_tcb_at_runnable':
   "\<lbrace>st_tcb_at' runnable' t\<rbrace> cancelAllIPC epptr \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
@@ -875,16 +892,14 @@ lemma sts_weak_sch_act_wf[wp]:
         \<and> (ksSchedulerAction s = SwitchToThread t \<longrightarrow> runnable' st)\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  including no_pre
-  apply (simp add: setThreadState_def)
-  apply (wp rescheduleRequired_weak_sch_act_wf)
-  apply (rule_tac Q="\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s" in hoare_post_imp, simp)
-  apply (simp add: weak_sch_act_wf_def)
-  apply (wp hoare_vcg_all_lift)
-  sorry (* FIXME RT: now scheduleTCB instead of setThreadState
-   apply (wps)
-   apply (wp hoare_vcg_const_imp_lift threadSet_pred_tcb_at_state threadSet_tcbDomain_triv | simp)+
-  done *)
+  unfolding setThreadState_def scheduleTCB_def
+  apply (wpsimp wp: rescheduleRequired_weak_sch_act_wf hoare_vcg_if_lift2 hoare_vcg_imp_lift
+                    hoare_vcg_all_lift threadSet_pred_tcb_at_state threadSet_tcbDomain_triv
+                    isSchedulable_inv
+                    hoare_pre_cont[where a="isSchedulable x" and P="\<lambda>rv _. rv" for x]
+                    hoare_pre_cont[where a="isSchedulable x" and P="\<lambda>rv _. \<not>rv" for x]
+              simp: weak_sch_act_wf_def)
+  done
 
 lemma sbn_nosch[wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
@@ -1215,25 +1230,10 @@ lemma rescheduleRequired_oa_queued:
      apply (wp | clarsimp)+
   done
 
-lemma setThreadState_oa_queued:
-  "\<lbrace>\<lambda>s. P' (obj_at' (\<lambda>tcb. P (tcbQueued tcb) (tcbDomain tcb) (tcbPriority tcb)) t' s) \<rbrace>
-    setThreadState st t
-   \<lbrace>\<lambda>_ s. P' (obj_at' (\<lambda>tcb. P (tcbQueued tcb) (tcbDomain tcb) (tcbPriority tcb)) t' s) \<rbrace>"
-  (is "\<lbrace>\<lambda>s. P' (?Q P s)\<rbrace> _ \<lbrace>\<lambda>_ s. P' (?Q P s)\<rbrace>")
-  proof (rule P_bool_lift [where P=P'])
-    show pos:
-      "\<And>R. \<lbrace> ?Q R \<rbrace> setThreadState st t \<lbrace>\<lambda>_. ?Q R \<rbrace>"
-      apply (simp add: setThreadState_def)
-      apply (wp rescheduleRequired_oa_queued)
-      apply (simp add: sch_act_simple_def)
-      apply (rule_tac Q="\<lambda>_. ?Q R" in hoare_post_imp, clarsimp)
-  sorry (*
-      apply (wp threadSet_obj_at'_strongish)
-      apply (clarsimp)
-      done *)
-    show "\<lbrace>\<lambda>s. \<not> ?Q P s\<rbrace> setThreadState st t \<lbrace>\<lambda>_ s. \<not> ?Q P s\<rbrace>"
-      by (simp add: not_obj_at' comp_def, wp hoare_convert_imp pos)
-  qed
+
+(* FIXME: rename uses of setThreadState_oa_queued; the "_queued" suffix doesn't make sense
+   any more. *)
+lemmas setThreadState_oa_queued = setThreadState_oa
 
 lemma setBoundNotification_oa_queued:
   "\<lbrace>\<lambda>s. P' (obj_at' (\<lambda>tcb. P (tcbQueued tcb) (tcbDomain tcb) (tcbPriority tcb)) t' s) \<rbrace>
@@ -1898,19 +1898,12 @@ lemma (in delete_one_conc) suspend_invs'[wp]:
   apply (fastforce simp: tcb_st_refs_of'_def st_tcb_at'_def obj_at'_def projectKOs)
   done
 
-lemma (in delete_one_conc_pre) suspend_tcb'[wp]:
-  "\<lbrace>tcb_at' t'\<rbrace> ThreadDecls_H.suspend t \<lbrace>\<lambda>rv. tcb_at' t'\<rbrace>"
-  apply (simp add: suspend_def unless_def)
-  apply (wpsimp simp: updateRestartPC_def)
-  done
-
-lemma (in delete_one_conc_pre) suspend_sch_act_simple[wp]:
-  "\<lbrace>sch_act_simple\<rbrace>
-  ThreadDecls_H.suspend t \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
-  apply (simp add: suspend_def when_def updateRestartPC_def)
-  apply (wpsimp wp: cancelIPC_sch_act_simple simp: unless_def updateRestartPC_def
-         | rule sch_act_simple_lift)+
-  done
+crunches ThreadDecls_H.suspend
+  for tcb_at'_better[wp]: "\<lambda>s. P (tcb_at' t s)"
+  and sch_act_simple[wp]: "sch_act_simple"
+  (rule: sch_act_simple_lift
+     wp: crunch_wps
+   simp: crunch_simps if_fun_split st_tcb_at'_def)
 
 lemma (in delete_one_conc) suspend_objs':
   "\<lbrace>invs' and sch_act_simple and tcb_at' t and (\<lambda>s. t \<noteq> ksIdleThread s)\<rbrace>
@@ -2060,7 +2053,8 @@ lemma (in delete_one_conc_pre) suspend_nonq:
   apply (rule hoare_gen_asm)
   apply (simp add: suspend_def unless_def)
   unfolding updateRestartPC_def
-  apply (wpsimp wp: hoare_allI tcbSchedDequeue_t_notksQ sts_ksQ_oaQ)
+  apply (wpsimp wp: hoare_allI tcbSchedDequeue_t_notksQ sts_ksQ_oaQ hoare_vcg_imp_lift
+                    hoare_disjI2[where Q="\<lambda>_. valid_queues"])
   done
 
 lemma suspend_makes_inactive:
@@ -2540,21 +2534,33 @@ lemma cancelAllSignals_valid_objs'[wp]:
   done *)
 
 lemma cancelAllIPC_st_tcb_at:
-  assumes x[simp]: "P Restart" shows
-  "\<lbrace>st_tcb_at' P t\<rbrace> cancelAllIPC epptr \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
+  "\<lbrace>st_tcb_at' P t and K (P Inactive \<and> P Restart)\<rbrace>
+   cancelAllIPC epptr
+   \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
   unfolding cancelAllIPC_def
-  sorry (*
-  by (wp ep'_cases_weak_wp mapM_x_wp' sts_st_tcb_at'_cases | clarsimp)+ *)
+  apply (rule hoare_gen_asm)
+  apply (wpsimp wp: mapM_x_wp' sts_st_tcb_at'_cases hoare_vcg_imp_lift threadGet_obj_at'_field
+                    hoare_vcg_disj_lift replyUnlink_st_tcb_at'_wp hoare_vcg_all_lift
+                    getEndpoint_wp replyUnlink_tcb_obj_at'_no_change
+              simp: obj_at'_ignoring_obj[where P="tcb_at' a b" for a b]
+                    obj_at'_ignoring_obj[where P="st_tcb_at' a b c" for a b c]
+                    obj_at'_ignoring_obj[where P="a \<noteq> b" for a b]
+           (* This gnarly obj_at'-unfolding clarsimp should only be applied to non-wp goals. *)
+         | match conclusion in "\<lbrace>_\<rbrace>_\<lbrace>_\<rbrace>" \<Rightarrow> \<open>-\<close>
+             \<bar> "_" \<Rightarrow> \<open>clarsimp simp: pred_tcb_at'_def obj_at'_def\<close>)+
+  done
 
 lemmas cancelAllIPC_makes_simple[wp] =
        cancelAllIPC_st_tcb_at [where P=simple', simplified]
 
 lemma cancelAllSignals_st_tcb_at:
-  assumes x[simp]: "P Restart" shows
-  "\<lbrace>st_tcb_at' P t\<rbrace> cancelAllSignals epptr \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
+  "\<lbrace>st_tcb_at' P t and K (P Restart)\<rbrace>
+   cancelAllSignals epptr
+   \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
   unfolding cancelAllSignals_def
-  sorry (*
-  by (wp ntfn'_cases_weak_wp mapM_x_wp' sts_st_tcb_at'_cases | clarsimp)+ *)
+  apply (rule hoare_gen_asm)
+  apply (wpsimp wp: mapM_x_wp' sts_st_tcb_at'_cases getNotification_wp)
+  done
 
 lemmas cancelAllSignals_makes_simple[wp] =
        cancelAllSignals_st_tcb_at [where P=simple', simplified]
@@ -2570,15 +2576,10 @@ lemma threadSet_not_tcb[wp]:
                      ps_clear_upd' projectKO_opt_tcb)
 
 lemma setThreadState_not_tcb[wp]:
-  "\<lbrace>ko_wp_at' (\<lambda>x. P x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>
-     setThreadState st t
-   \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>x. P x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>"
-  apply (simp add: setThreadState_def setQueue_def
-                   rescheduleRequired_def tcbSchedEnqueue_def
-                   unless_def bitmap_fun_defs
-             cong: scheduler_action.case_cong  cong del: if_cong
-            | wp | wpcw)+
-  sorry
+  "setThreadState st t \<lbrace>ko_wp_at' (\<lambda>x. P x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>"
+  unfolding setThreadState_def scheduleTCB_def rescheduleRequired_def tcbSchedEnqueue_def
+  apply (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp isSchedulable_inv)
+  done
 
 lemma tcbSchedEnqueue_unlive:
   "\<lbrace>ko_wp_at' (\<lambda>x. \<not> live' x \<and> (projectKO_opt x = (None :: tcb option))) p
@@ -2849,7 +2850,7 @@ lemma suspend_unqueued:
       apply (rule hoare_strengthen_post, rule hoare_post_taut)
       apply (fastforce simp: obj_at'_def projectKOs)
      apply (rule hoare_post_taut)
-    apply wp+
+    apply wpsimp+
   done
 
 crunch unqueued: prepareThreadDelete "obj_at' (Not \<circ> tcbQueued) t"

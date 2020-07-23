@@ -2701,7 +2701,7 @@ lemma schedContextCancelYieldTo_bound_tcb_at[wp]:
 
 crunches suspend, prepareThreadDelete
   for bound_tcb_at'[wp]: "bound_tcb_at' P t"
-  (wp: sts_bound_tcb_at' cancelIPC_bound_tcb_at')
+  (wp: sts_bound_tcb_at' cancelIPC_bound_tcb_at' crunch_wps)
 
 lemma unbindNotification_bound_tcb_at':
   "\<lbrace>\<lambda>_. True\<rbrace> unbindNotification t \<lbrace>\<lambda>rv. bound_tcb_at' ((=) None) t\<rbrace>"
@@ -2835,13 +2835,12 @@ crunches schedContextCancelYieldTo, tcbReleaseRemove
   (wp: crunch_wps simp: crunch_simps)
 
 lemma suspend_cte_wp_at':
-  assumes x: "\<And>cap final. P cap \<Longrightarrow> finaliseCap cap final True = fail"
-  shows "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>
-           suspend t
-         \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
+  assumes [simp]: "\<And>cap final. P cap \<Longrightarrow> finaliseCap cap final True = fail"
+  shows "suspend t \<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
   unfolding updateRestartPC_def suspend_def
-  by (wpsimp simp: x wp: threadSet_cte_wp_at' cancelIPC_cte_wp_at')
-
+  apply (wpsimp wp: threadSet_cte_wp_at' cancelIPC_cte_wp_at' hoare_vcg_imp_lift
+                    cancelIPC_st_tcb_at hoare_disjI2[where Q="\<lambda>_. cte_wp_at' a b" for a b])
+  done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -3609,16 +3608,6 @@ lemmas invalidateTLBByASID_typ_ats[wp] = typ_at_lifts [OF invalidateTLBByASID_ty
 crunch cteCaps_of: invalidateTLBByASID "\<lambda>s. P (cteCaps_of s)"
 
 lemmas final_matters'_simps = final_matters'_def [split_simps capability.split arch_capability.split]
-
-end
-
-context simple_ko'
-begin
-
-(* FIXME RT: move to KHeap *)
-lemma sch_act_not_ct[wp]:
-  "f p v \<lbrace>\<lambda>s. sch_act_not (ksCurThread s) s\<rbrace>"
-  by (wp|wps)+
 
 end
 

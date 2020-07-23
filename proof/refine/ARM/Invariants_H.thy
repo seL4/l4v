@@ -3491,6 +3491,20 @@ lemma not_pred_tcb_at'_strengthen:
   "pred_tcb_at' f (Not \<circ> P) p s \<Longrightarrow> \<not> pred_tcb_at' f P p s"
   by (clarsimp simp: pred_tcb_at'_def obj_at'_def)
 
+lemma obj_at'_imp:
+  fixes P Q :: "'a :: pspace_storable \<Rightarrow> bool"
+  shows
+  "(obj_at' (\<lambda>rv. P rv \<longrightarrow> Q rv) p s) =
+    (obj_at' (\<lambda>_ :: 'a. True) p s \<and> (obj_at' P p s \<longrightarrow> obj_at' Q p s))"
+  apply (rule iffI; clarsimp simp: obj_at'_def)
+  done
+
+lemma pred_tcb_at'_imp:
+  "pred_tcb_at' field (\<lambda>rv. P rv \<longrightarrow> Q rv) p s =
+    (tcb_at' p s \<and> (pred_tcb_at' field P p s \<longrightarrow> pred_tcb_at' field Q p s))"
+  apply (rule iffI; clarsimp simp: obj_at'_def pred_tcb_at'_def)
+  done
+
 lemma valid_queues_no_bitmap_def':
   "valid_queues_no_bitmap =
      (\<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)).

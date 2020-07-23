@@ -103,7 +103,9 @@ lemma valid_queues_no_bitmap_exceptI[intro]:
 
 crunches setThreadState, threadSet
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
-  (wp: crunch_wps)
+  and reply_at'[wp]: "\<lambda>s. P (reply_at' p s)"
+  and tcb_at'[wp]: "\<lambda>s. P (tcb_at' p s)"
+  (wp: crunch_wps set_tcb'.set_preserves_some_obj_at')
 
 crunches tcbSchedDequeue, tcbSchedEnqueue
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
@@ -1180,10 +1182,9 @@ proof -
      apply (clarsimp)
      apply (frule_tac P=P' and Q="\<lambda>tcb. \<not> P' tcb" in pred_tcb_at_conj')
      apply (clarsimp)+
-    apply (wp hoare_convert_imp)
-      apply (simp add: typ_at_tcb' [symmetric])
-      apply (wp pos)+
-    apply (clarsimp simp: pred_tcb_at'_def not_obj_at' elim!: obj_at'_weakenE)
+    apply (wp hoare_convert_imp pos)
+    apply (clarsimp simp: typ_at_tcb' [symmetric] pred_tcb_at'_def not_obj_at'
+                   elim!: obj_at'_weakenE)
     done
 qed
 
@@ -1959,7 +1960,7 @@ lemmas tcb_inv_state_eq =
   gives you.
 \<close>
 lemma threadGet_obj_at'_field:
-  "\<lbrace>\<lambda>s. obj_at' (\<lambda>tcb. P (field tcb) s) ptr s\<rbrace>
+  "\<lbrace>\<lambda>s. tcb_at' ptr s \<longrightarrow> obj_at' (\<lambda>tcb. P (field tcb) s) ptr s\<rbrace>
    threadGet field ptr
    \<lbrace>P\<rbrace>"
   by (wpsimp wp: threadGet_wp
@@ -4157,7 +4158,7 @@ lemma lipcb_corres:
 
 crunch inv[wp]: lookupIPCBuffer P
 
-crunches scheduleTCB
+crunches scheduleTCB, possibleSwitchTo
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
   (wp: crunch_wps)
 
@@ -5094,6 +5095,88 @@ lemma asUser_irq_handlers':
 
 lemma archTcbUpdate_aux2: "(\<lambda>tcb. tcb\<lparr> tcbArch := f (tcbArch tcb)\<rparr>) = tcbArch_update f"
   by (rule ext, case_tac tcb, simp)
+
+lemma threadSet_obj_at'_simple_strongest:
+  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow>
+          (t = t' \<longrightarrow> P (obj_at' (\<lambda>tcb. Q (f tcb)) t s)) \<and>
+          (t \<noteq> t' \<longrightarrow> P (obj_at' Q t' s))\<rbrace>
+   threadSet f t
+   \<lbrace>\<lambda>_ s. P (obj_at' (Q :: tcb \<Rightarrow> bool) t' s)\<rbrace>"
+  unfolding threadSet_def
+  apply (wpsimp wp: set_tcb'.setObject_obj_at'_strongest set_tcb'.getObject_wp)
+  apply (case_tac "t = t'"; clarsimp simp: obj_at'_def)
+  done
+
+(* FIXME RT: move to ...? *)
+crunches addToBitmap, setQueue
+  for ko_wp_at'[wp]: "\<lambda>s. P (ko_wp_at' Q p s)"
+
+lemma tcbSchedEnqueue_tcb_obj_at'_no_change:
+  assumes [simp]: "\<And>tcb. Q (tcbQueued_update (\<lambda>_. True) tcb) = Q tcb"
+  shows "tcbSchedEnqueue t \<lbrace>\<lambda>s. P (obj_at' Q t' s)\<rbrace>"
+  unfolding tcbSchedEnqueue_def
+  apply (wpsimp wp: threadSet_obj_at'_simple_strongest hoare_vcg_imp_lift threadGet_wp)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemma setThreadState_tcb_obj_at'_no_change:
+  assumes [simp]: "\<And>tcb. Q (tcbState_update (\<lambda>_. st) tcb) = Q tcb"
+                  "\<And>tcb. Q (tcbQueued_update (\<lambda>_. True) tcb) = Q tcb"
+  shows "setThreadState st t \<lbrace>\<lambda>s. P (obj_at' Q t' s)\<rbrace>"
+  unfolding setThreadState_def scheduleTCB_def rescheduleRequired_def
+  apply (wpsimp wp: tcbSchedEnqueue_tcb_obj_at'_no_change hoare_vcg_if_lift2 isSchedulable_inv
+                    hoare_vcg_imp_lift threadSet_obj_at'_simple_strongest
+                    hoare_pre_cont[where a="isSchedulable x" and P="\<lambda>rv _. rv" for x]
+                    hoare_pre_cont[where a="isSchedulable x" and P="\<lambda>rv _. \<not>rv" for x])
+  done
+
+lemma setThreadState_oa:
+  "setThreadState st t
+   \<lbrace>\<lambda>s. P (obj_at' (\<lambda>tcb. Q (tcbCTable tcb) (tcbVTable tcb) (tcbIPCBufferFrame tcb)
+                            (tcbFaultHandler tcb) (tcbTimeoutHandler tcb) (tcbDomain tcb)
+                            (tcbMCP tcb) (tcbPriority tcb) (tcbQueued tcb) (tcbInReleaseQueue tcb)
+                            (tcbFault tcb))
+                   t' s) \<rbrace>"
+  unfolding setThreadState_def scheduleTCB_def rescheduleRequired_def tcbSchedEnqueue_def
+  apply (wpsimp wp: threadSet_obj_at'_simple_strongest hoare_vcg_imp_lift hoare_vcg_if_lift2
+                    threadGet_obj_at'_field isSchedulable_inv
+                    hoare_pre_cont[where a="isSchedulable x" and P="\<lambda>rv _. rv" for x]
+                    hoare_pre_cont[where a="isSchedulable x" and P="\<lambda>rv _. \<not>rv" for x])
+  done
+
+lemma getThreadState_only_rv_wp[wp]:
+  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> st_tcb_at' P t s\<rbrace>
+   getThreadState t
+   \<lbrace>\<lambda>rv _. P rv\<rbrace>"
+  apply (wpsimp wp: gts_wp')
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+  done
+
+lemma getThreadState_only_state_wp[wp]:
+  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> P s\<rbrace>
+   getThreadState t
+   \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (wpsimp wp: gts_wp')
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+  done
+
+(* FIXME: replace tcbSchedEnqueue_not_st *)
+lemma tcbSchedEnqueue_obj_at':
+  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow>
+          (t = t' \<longrightarrow> P (obj_at' (\<lambda>tcb. Q (tcb\<lparr>tcbQueued := True\<rparr>)) t' s)) \<and>
+          (t \<noteq> t' \<longrightarrow> P (obj_at' Q t' s))\<rbrace>
+   tcbSchedEnqueue t
+   \<lbrace>\<lambda>_ s. P (obj_at' Q t' s)\<rbrace>"
+  unfolding tcbSchedEnqueue_def
+  apply (wpsimp wp: threadSet_obj_at'_simple_strongest hoare_vcg_imp_lift hoare_vcg_if_lift2
+                    threadGet_obj_at'_field)
+  apply (case_tac "t = t'"; clarsimp)
+  apply normalise_obj_at'
+  apply (case_tac "tcbQueued ko"; clarsimp)
+  apply (prop_tac "tcbQueued_update (\<lambda>_. True) ko = ko")
+   apply (case_tac ko; clarsimp)
+  apply simp
+  done
 
 end
 end
