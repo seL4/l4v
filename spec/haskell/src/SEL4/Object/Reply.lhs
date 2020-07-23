@@ -162,7 +162,6 @@ This module specifies the behavior of reply objects.
 >     tptrOpt <- getReplyTCB replyPtr
 >     tptr <- maybeToMonad tptrOpt
 >     state <- getThreadState tptr
->     setThreadState (state { replyObject = Nothing }) tptr
 >     setReplyTCB Nothing replyPtr
 >     setThreadState Inactive tptr
 
