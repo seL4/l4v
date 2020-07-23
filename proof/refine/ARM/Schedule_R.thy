@@ -2387,30 +2387,687 @@ lemma scheduleChooseNewThread_invs':
   apply (clarsimp simp: invs'_to_invs_no_cicd'_def)
   done
 
+lemma getCurThread_sp:
+  "\<lbrace>P\<rbrace> getCurThread \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksCurThread s)\<rbrace>"
+  by (wpsimp simp: getCurThread_def)
+
+lemma getSchedulerAction_sp:
+  "\<lbrace>P\<rbrace> getSchedulerAction \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksSchedulerAction s)\<rbrace>"
+  by (wpsimp simp: getSchedulerAction_def)
+
+lemma getReprogramTimer_sp:
+  "\<lbrace>P\<rbrace> getReprogramTimer \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksReprogramTimer s)\<rbrace>"
+  by (wpsimp simp: getReprogramTimer_def)
+
+lemma getReprogramTimer_wp[wp]:
+  "\<lbrace>\<lambda>s. P (ksReprogramTimer s) s\<rbrace> getReprogramTimer \<lbrace>P\<rbrace>"
+  by (wpsimp simp: getReprogramTimer_def)
+
+lemma getConsumedTime_wp[wp]:
+  "\<lbrace>\<lambda>s. P (ksConsumedTime s) s\<rbrace> getConsumedTime \<lbrace>P\<rbrace>"
+  by (wpsimp simp: getConsumedTime_def)
+
+lemma isRoundRobin_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko sc s \<longrightarrow> P (scPeriod ko = 0) s\<rbrace> isRoundRobin sc \<lbrace>P\<rbrace>"
+  by (wpsimp simp: isRoundRobin_def)
+
+lemma mapScPtr_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (f ko) s\<rbrace> mapScPtr scp f \<lbrace>P\<rbrace>"
+  unfolding mapScPtr_def
+  by wpsimp
+
+lemma getCurSc_wp[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurSc s) s\<rbrace> getCurSc \<lbrace>P\<rbrace>"
+  unfolding getCurSc_def
+  by wpsimp
+
+lemma getCurTime_wp[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurTime s) s\<rbrace> getCurTime \<lbrace>P\<rbrace>"
+  unfolding getCurTime_def
+  by wpsimp
+
+lemma curDomain_wp[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurDomain s) s\<rbrace> curDomain \<lbrace>P\<rbrace>"
+  unfolding curDomain_def
+  by wpsimp
+
+lemma getReleaseQueue_wp[wp]:
+  "\<lbrace>\<lambda>s. P (ksReleaseQueue s) s\<rbrace> getReleaseQueue \<lbrace>P\<rbrace>"
+  unfolding getReleaseQueue_def
+  by wpsimp
+
+lemma refillNext_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (if x = scRefillMax ko - Suc 0 then 0 else x+1) s\<rbrace> refillNext scp x \<lbrace>P\<rbrace>"
+  unfolding refillNext_def
+  by wpsimp
+
+lemma refillSize_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (scRefillCount ko) s\<rbrace> refillSize scp \<lbrace>P\<rbrace>"
+  unfolding refillSize_def
+  by (wpsimp wp: mapScPtr_wp)
+
+lemma refillEmpty_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (scRefillCount ko = 0) s\<rbrace> refillEmpty scp \<lbrace>P\<rbrace>"
+  unfolding refillEmpty_def
+  by (wpsimp wp:)
+
+lemma refillFull_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (scRefillCount ko = scRefillMax ko) s\<rbrace> refillFull scp \<lbrace>P\<rbrace>"
+  unfolding refillFull_def
+  by (wpsimp wp:)
+
+lemma refillReady_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (rTime (refillHd ko) \<le> ksCurTime s + kernelWCETTicks) s\<rbrace> refillReady scp \<lbrace>P\<rbrace>"
+  unfolding refillReady_def
+  by wpsimp
+
+lemma setReprogramTimer_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> setReprogramTimer v \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  unfolding setReprogramTimer_def
+  apply wpsimp
+  by (clarsimp simp: invs'_def valid_state'_def valid_machine_state'_def cur_tcb'_def
+                     ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def ct_not_inQ_def)
+
+lemma machine_op_lift_underlying_memory_invar:
+  "(x, b) \<in> fst (machine_op_lift a m) \<Longrightarrow> underlying_memory b = underlying_memory m"
+  by (clarsimp simp: in_monad machine_op_lift_def machine_rest_lift_def select_f_def)
+
+lemma setNextInterrupt_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> setNextInterrupt \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  unfolding setNextInterrupt_def
+  apply (wpsimp wp: dmo_invs' ARM.setDeadline_irq_masks threadGet_wp getReleaseQueue_wp)
+  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
+  apply (auto simp: in_monad setDeadline_def machine_op_lift_underlying_memory_invar)
+  done
+
+lemma setCurSc_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> setCurSc v \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  unfolding setCurSc_def
+  apply wpsimp
+  apply (clarsimp simp: invs'_def valid_state'_def valid_machine_state'_def cur_tcb'_def
+                        ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def ct_not_inQ_def
+                        valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def bitmapQ_def
+                        bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def valid_irq_node'_def
+                        valid_queues'_def valid_release_queue_def valid_release_queue'_def)
+  done
+
+lemma setConsumedTime_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> setConsumedTime v \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  unfolding setConsumedTime_def
+  apply wpsimp
+  apply (clarsimp simp: invs'_def valid_state'_def valid_machine_state'_def cur_tcb'_def
+                        ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def ct_not_inQ_def
+                        valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def bitmapQ_def
+                        bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def valid_irq_node'_def
+                        valid_queues'_def valid_release_queue_def valid_release_queue'_def)
+  done
+
+lemma setDomainTime_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> setDomainTime v \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  unfolding setDomainTime_def
+  apply wpsimp
+  apply (clarsimp simp: invs'_def valid_state'_def valid_machine_state'_def cur_tcb'_def
+                        ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def ct_not_inQ_def
+                        valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def bitmapQ_def
+                        bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def valid_irq_node'_def
+                        valid_queues'_def valid_release_queue_def valid_release_queue'_def)
+  done
+
+lemma setSchedContext_valid_idle'[wp]:
+  "\<lbrace>valid_idle' and K (scPtr = idle_sc_ptr \<longrightarrow> idle_sc' v)\<rbrace>
+   setSchedContext scPtr v
+   \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
+  apply (rule hoare_weaken_pre)
+  apply (simp add: valid_idle'_def)
+  apply (wpsimp simp: setSchedContext_def wp: setObject_ko_wp_at)
+  apply (rule hoare_lift_Pf3[where f=ksIdleThread])
+  apply (wpsimp wp: hoare_vcg_conj_lift)
+   apply (wpsimp simp: obj_at'_real_def sc_objBits_pos_power2 wp: setObject_ko_wp_at)
+  apply wpsimp
+  apply (wpsimp wp: updateObject_default_inv)
+  by (auto simp: valid_idle'_def obj_at'_real_def ko_wp_at'_def)[1]
+
+lemma setSchedContext_invs':
+  "\<lbrace>invs' and K (scPtr = idle_sc_ptr \<longrightarrow> idle_sc' sc)
+    and (\<lambda>s. live_sc' sc \<longrightarrow> ex_nonz_cap_to' scPtr s)
+    and valid_sched_context' sc
+    and (\<lambda>_. valid_sched_context_size' sc)
+    and (\<lambda>s. sym_refs
+             (\<lambda>a. if a = scPtr
+                   then get_refs SCNtfn (scNtfn sc) \<union>
+                        get_refs SCTcb (scTCB sc) \<union>
+                        get_refs SCYieldFrom (scYieldFrom sc) \<union>
+                        get_refs SCReply (scReply sc)
+                   else state_refs_of' s a)) \<rbrace>
+    setSchedContext scPtr sc
+    \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add:  invs'_def valid_state'_def)
+  apply (wpsimp wp: valid_pde_mappings_lift' untyped_ranges_zero_lift simp: cteCaps_of_def o_def)
+  done
+
+lemma updateScPtr_invs':
+  "\<lbrace>invs'
+    and (\<lambda>s. scPtr = idle_sc_ptr \<longrightarrow> (\<forall>ko. ko_at' ko scPtr s \<longrightarrow> idle_sc' (f ko)))
+    and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> live_sc' (f ko) \<longrightarrow> ex_nonz_cap_to' scPtr s)
+    and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> valid_sched_context' (f ko) s \<and> valid_sched_context_size' (f ko))
+    and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> sym_refs
+             (\<lambda>a. if a = scPtr
+                   then get_refs SCNtfn (scNtfn (f ko)) \<union>
+                        get_refs SCTcb (scTCB (f ko)) \<union>
+                        get_refs SCYieldFrom (scYieldFrom (f ko)) \<union>
+                        get_refs SCReply (scReply (f ko))
+                   else state_refs_of' s a)) \<rbrace>
+    updateScPtr scPtr f
+    \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: updateScPtr_def)
+  by (wpsimp wp: setSchedContext_invs')
+
+lemma sym_refs_sc_trivial_update:
+  "ko_at' ko scPtr s
+   \<Longrightarrow> sym_refs (\<lambda>a. if a = scPtr
+                   then get_refs SCNtfn (scNtfn ko) \<union>
+                        get_refs SCTcb (scTCB ko) \<union>
+                        get_refs SCYieldFrom (scYieldFrom ko) \<union>
+                        get_refs SCReply (scReply ko)
+                   else state_refs_of' s a)
+       = sym_refs (state_refs_of' s)"
+  apply (rule arg_cong[where f=sym_refs])
+  apply (rule ext)
+  apply (clarsimp simp: state_refs_of'_def obj_at'_real_def ko_wp_at'_def projectKO_opt_sc )
+  apply (case_tac koa; simp)
+  done
+
+lemma live_sc'_ko_ex_nonz_cap_to':
+  "\<lbrakk>invs' s; ko_at' ko scPtr s\<rbrakk> \<Longrightarrow> live_sc' ko \<Longrightarrow> ex_nonz_cap_to' scPtr s"
+  apply (drule invs_iflive')
+  apply (erule if_live_then_nonz_capE')
+  by (clarsimp simp: ko_wp_at'_def obj_at'_real_def projectKO_sc)
+
+lemma updateScPtr_refills_invs':
+  "\<lbrace>invs'
+    and (\<lambda>s. scPtr = idle_sc_ptr \<longrightarrow> (\<forall>ko. ko_at' ko scPtr s \<longrightarrow> idle_sc' (f ko)))
+    and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> valid_sched_context' (f ko) s \<and> valid_sched_context_size' (f ko))
+    and (\<lambda>_. \<forall>ko. scNtfn (f ko) = scNtfn ko)
+    and (\<lambda>_. \<forall>ko. scTCB (f ko) = scTCB ko)
+    and (\<lambda>_. \<forall>ko. scYieldFrom (f ko) = scYieldFrom ko)
+    and (\<lambda>_. \<forall>ko. scReply (f ko) = scReply ko)\<rbrace>
+    updateScPtr scPtr f
+    \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: updateScPtr_def)
+  apply (wpsimp wp: setSchedContext_invs')
+  apply (intro conjI)
+    apply fastforce
+   apply clarsimp
+   apply (erule (1) live_sc'_ko_ex_nonz_cap_to')
+   apply (clarsimp simp: live_sc'_def)
+  apply (clarsimp cong: if_cong)
+  apply (frule sym_refs_sc_trivial_update, simp)
+  apply (erule invs_sym')
+  done
+
+lemma invs'_ko_at_valid_sched_context':
+  "\<lbrakk>invs' s; ko_at' ko scPtr s\<rbrakk> \<Longrightarrow> valid_sched_context' ko s \<and> valid_sched_context_size' ko"
+  apply (drule invs_valid_objs')
+  apply (drule (1) sc_ko_at_valid_objs_valid_sc', simp)
+  done
+
+lemma updateScPtr_invs'_indep:
+  "\<lbrace>invs' and (\<lambda>s. scPtr = idle_sc_ptr \<longrightarrow> (\<forall>ko. ko_at' ko scPtr s \<longrightarrow> idle_sc' (f ko)))
+    and (\<lambda>s. \<forall>ko. valid_sched_context' ko s \<longrightarrow> valid_sched_context' (f ko) s)
+    and (\<lambda>_. \<forall>ko. valid_sched_context_size' ko \<longrightarrow> valid_sched_context_size' (f ko))
+    and (\<lambda>s. \<forall>ko. scNtfn (f ko) = scNtfn ko
+                  \<and> scTCB (f ko) = scTCB ko
+                  \<and> scYieldFrom (f ko) = scYieldFrom ko
+                  \<and> scReply (f ko) = scReply ko )\<rbrace>
+    updateScPtr scPtr f
+    \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (wpsimp wp: updateScPtr_invs')
+  apply (intro conjI; intro allI impI; (drule_tac x=ko in spec)+)
+     apply (clarsimp simp: invs'_def valid_state'_def valid_objs'_def obj_at'_def)
+     apply (erule if_live_then_nonz_capE')
+     apply (clarsimp simp: ko_wp_at'_def projectKO_eq projectKO_sc live_sc'_def)
+    apply (frule (1) invs'_ko_at_valid_sched_context', simp)
+   apply (frule (1) invs'_ko_at_valid_sched_context', simp)
+  apply (frule invs_sym')
+  apply (erule back_subst[where P=sym_refs])
+  apply (rule ext)
+  apply (clarsimp simp: state_refs_of'_def obj_at'_real_def ko_wp_at'_def projectKO_opt_sc)
+  apply (case_tac koa; simp)
+  done
+
+lemma invs'_ko_at_idle_sc_is_idle':
+  "\<lbrakk>invs' s; ko_at' ko scPtr s\<rbrakk> \<Longrightarrow> (scPtr = idle_sc_ptr \<longrightarrow> idle_sc' ko)"
+  apply (drule invs_valid_idle')
+  apply (clarsimp simp: valid_idle'_def obj_at'_real_def ko_wp_at'_def)
+  done
+
+lemma live_sc'_scRefills_update[simp]:
+  "live_sc' (scRefills_update f koc) = live_sc' koc"
+  by (clarsimp simp: live_sc'_def)
+
+lemma live_sc'_scRefillCount_update[simp]:
+  "live_sc' (scRefillCount_update f koc) = live_sc' koc"
+  by (clarsimp simp: live_sc'_def)
+
+lemma valid_sched_context'_scRefills_update:
+  "valid_sched_context' koc s \<Longrightarrow> (MIN_REFILLS \<le> length (f (scRefills koc)) \<and>
+         scRefillMax koc \<le> length (f (scRefills koc))) \<Longrightarrow> valid_sched_context' (scRefills_update f koc) s"
+  by (clarsimp simp: valid_sched_context'_def)
+
+lemma length_replaceAt:
+  "i < length lst  \<Longrightarrow> length (replaceAt i lst val) = length lst"
+  apply (clarsimp simp: replaceAt_def)
+  by (case_tac lst; simp)
+
+lemma refillTailIndex_bounded:
+  "valid_sched_context' ko s \<Longrightarrow> 0 < scRefillMax ko \<longrightarrow> refillTailIndex ko < scRefillMax ko"
+  apply (clarsimp simp: valid_sched_context'_def refillTailIndex_def Let_def split: if_split)
+  by linarith
+
+lemma refillAddTail_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> refillAddTail scPtr t \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply ssa_wp[wp del]
+  apply (simp add: refillAddTail_def)
+  apply (wpsimp wp: setSchedContext_invs' refillNext_wp refillSize_wp)
+  apply (frule (1) invs'_ko_at_idle_sc_is_idle')
+  apply (intro conjI; intro allI impI)
+   apply clarsimp
+   apply (intro conjI)
+      apply (fastforce dest: live_sc'_ko_ex_nonz_cap_to')
+     apply (subgoal_tac "valid_sched_context' ko s")
+      apply (clarsimp simp: valid_sched_context'_def)
+      apply (case_tac "scRefills ko"; simp)
+      apply (subst length_replaceAt, clarsimp)
+      apply (subst length_replaceAt, clarsimp)
+      apply clarsimp
+     apply (fastforce dest: invs'_ko_at_valid_sched_context')
+    apply (subgoal_tac "valid_sched_context_size' ko \<and> valid_sched_context' ko s")
+     apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def valid_sched_context'_def)
+     apply (case_tac "scRefills ko"; simp)
+     apply (subst length_replaceAt, clarsimp)
+     apply (clarsimp)
+    apply (fastforce dest: invs'_ko_at_valid_sched_context')
+   apply (clarsimp cong: if_cong simp: sym_refs_sc_trivial_update)
+  apply clarsimp
+  apply (intro conjI)
+     apply (fastforce dest: live_sc'_ko_ex_nonz_cap_to')
+    apply (subgoal_tac "koa = ko \<and> kob = ko", clarsimp)
+     apply (subgoal_tac "valid_sched_context' ko s")
+      apply (frule refillTailIndex_bounded)
+      apply (clarsimp simp: valid_sched_context'_def)
+      apply (subst length_replaceAt, linarith)
+      apply (subst length_replaceAt, linarith)
+      apply clarsimp
+     apply (fastforce dest: invs'_ko_at_valid_sched_context')
+    apply (fastforce simp: obj_at'_def)
+   apply (subgoal_tac "koa = ko \<and> kob = ko", clarsimp)
+    apply (subgoal_tac "valid_sched_context_size' ko \<and> valid_sched_context' ko s", clarsimp)
+     apply (frule refillTailIndex_bounded)
+     apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def valid_sched_context'_def)
+     apply (subst length_replaceAt, linarith)
+     apply (clarsimp)
+    apply (fastforce dest: invs'_ko_at_valid_sched_context')
+   apply (fastforce simp: obj_at'_def)
+  apply (clarsimp cong: if_cong simp: sym_refs_sc_trivial_update)
+  done
+
+lemma updateRefillTl_def2:
+  "updateRefillTl scp f
+   = updateScPtr scp (\<lambda>sc. scRefills_update (\<lambda>_. replaceAt (refillTailIndex sc) (scRefills sc)
+       (f (refillTl sc))) sc)"
+  by (clarsimp simp: updateRefillTl_def updateScPtr_def)
+
+lemma updateRefillHd_def2:
+  "updateRefillHd scp f
+   = updateScPtr scp (\<lambda>sc. scRefills_update (\<lambda>_. replaceAt (scRefillHead sc) (scRefills sc)
+       (f (refillHd sc))) sc)"
+  by (clarsimp simp: updateRefillHd_def updateScPtr_def)
+
+definition
+  active_sc_at' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+  "active_sc_at' \<equiv> obj_at' (\<lambda>ko :: sched_context. 0 < scRefillMax ko)"
+
+lemma refillBudgetCheckRoundRobin_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> refillBudgetCheckRoundRobin consumed \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply if_split [split del]
+  apply (simp add: refillBudgetCheckRoundRobin_def)
+  apply (wpsimp simp: updateRefillTl_def2 updateRefillHd_def2 wp: updateScPtr_refills_invs')
+        apply (rule_tac Q="K invs'" in hoare_strengthen_post[rotated])
+       apply (prop_tac "active_sc_at' scPtr s")
+subgoal sorry (* active_sc_at' *)
+         apply (clarsimp)
+         apply (intro conjI)
+          apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
+         apply (intro allI impI)
+         apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+         apply (frule refillTailIndex_bounded)
+         apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
+         apply (subst length_replaceAt, linarith)
+         apply (subst length_replaceAt, linarith)
+         apply clarsimp
+         apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+         apply (subst length_replaceAt, linarith)
+         apply clarsimp
+        apply (wpsimp wp: updateScPtr_refills_invs' getCurTime_wp)
+       apply (wpsimp wp: updateScPtr_refills_invs' getCurTime_wp)
+      apply (wpsimp simp: setRefillHd_def updateRefillHd_def2
+                      wp: updateScPtr_refills_invs' mapScPtr_wp)
+      apply (rule_tac Q="K (invs')" in hoare_strengthen_post[rotated])
+       apply (prop_tac "active_sc_at' scPtr s")
+subgoal sorry (* active_sc_at' *)
+       apply (clarsimp)
+       apply (intro conjI)
+        apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
+       apply (intro allI impI)
+       apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+       apply (frule refillTailIndex_bounded)
+       apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
+       apply (subst length_replaceAt, linarith)
+       apply (subst length_replaceAt, linarith)
+       apply clarsimp
+       apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+       apply (subst length_replaceAt, linarith)
+       apply clarsimp
+      apply (wpsimp wp: updateScPtr_refills_invs' getCurTime_wp)
+     apply (wpsimp wp: mapScPtr_wp)
+    apply (wpsimp wp: mapScPtr_wp)
+   apply wpsimp
+  apply (subgoal_tac "(\<forall>ko. ko_at' ko idle_sc_ptr s \<longrightarrow> idle_sc' ko)", clarsimp)
+       apply (prop_tac "active_sc_at' (ksCurSc s) s")
+subgoal sorry (* active_sc_at' *)
+   apply (intro conjI)
+    apply (intro allI impI)
+    apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+    apply (frule refillTailIndex_bounded)
+    apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
+    apply (subst length_replaceAt, linarith)
+    apply (subst length_replaceAt, linarith)
+    apply clarsimp
+    apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+    apply (subst length_replaceAt, linarith)
+    apply clarsimp
+   apply (intro allI impI)
+   apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
+   apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+  apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
+  done
+
+lemma scheduleUsed_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> scheduleUsed scPtr xa \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply ssa_wp[wp del]
+  apply (simp add: scheduleUsed_def)
+  apply wpsimp
+  apply (wpsimp wp: refillEmpty_wp)
+  apply (rule hoare_vcg_all_lift)
+  apply (rule hoare_drop_imp)+
+  apply (wpsimp simp: setRefillTl_def updateRefillTl_def2 wp: updateScPtr_refills_invs' refillFull_wp refillEmpty_wp)+
+apply (subgoal_tac "(\<forall>ko. ko_at' ko idle_sc_ptr s \<longrightarrow> idle_sc' ko)")
+  apply (prop_tac "active_sc_at' scPtr s")
+subgoal sorry (* active_sc_at' *)
+     apply (clarsimp)
+ apply (intro conjI; intro allI impI)
+apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+    apply (frule refillTailIndex_bounded)
+    apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
+    apply (subst length_replaceAt, linarith)
+    apply (subst length_replaceAt, linarith)
+    apply clarsimp
+    apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+    apply (subst length_replaceAt, linarith)
+    apply clarsimp
+ apply (intro conjI; intro allI impI)
+apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+    apply (frule refillTailIndex_bounded)
+    apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
+    apply (subst length_replaceAt, linarith)
+    apply (subst length_replaceAt, linarith)
+    apply clarsimp
+    apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+    apply (subst length_replaceAt, linarith)
+    apply clarsimp
+apply (frule (1) invs'_ko_at_valid_sched_context', clarsimp)
+    apply (frule refillTailIndex_bounded)
+    apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
+    apply (subst length_replaceAt, linarith)
+    apply (subst length_replaceAt, linarith)
+    apply clarsimp
+    apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+    apply (subst length_replaceAt, linarith)
+    apply clarsimp
+  apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
+  done
+
+lemma refillPopHead_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> refillPopHead scPtr \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: refillPopHead_def)
+  apply (wpsimp wp: updateScPtr_invs' refillNext_wp mapScPtr_wp)
+  apply (subgoal_tac "(\<forall>ko. ko_at' ko idle_sc_ptr s \<longrightarrow> idle_sc' ko)")
+   apply (clarsimp)
+   apply (intro conjI; intro impI)
+    apply auto[1]
+       apply (rule if_live_then_nonz_capE')
+        apply (erule invs_iflive')
+       apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKO_eq projectKO_sc live_sc'_def)
+      apply (subgoal_tac "valid_sched_context' koc s")
+       apply (fastforce simp: valid_sched_context'_def)
+      apply (fastforce dest: invs'_ko_at_valid_sched_context')
+     apply (subgoal_tac "valid_sched_context_size' koc")
+      apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+     apply (fastforce dest: invs'_ko_at_valid_sched_context')
+    apply (clarsimp cong: if_cong simp: sym_refs_sc_trivial_update)
+   apply auto[1]
+      apply (rule if_live_then_nonz_capE')
+       apply (erule invs_iflive')
+      apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKO_eq projectKO_sc live_sc'_def)
+     apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+     apply (subgoal_tac "valid_sched_context' koc s \<and> koa = koc \<and> kob = koc")
+      apply (clarsimp simp: valid_sched_context'_def)
+      apply linarith
+     apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
+    apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+    apply (subgoal_tac "valid_sched_context_size' koc")
+     apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
+   apply (clarsimp cong: if_cong simp: sym_refs_sc_trivial_update)
+  apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
+  done
+
+lemma fjshf:
+  "valid_sched_context' ko s \<Longrightarrow>
+   f (scRefillCount ko) \<le> scRefillMax ko \<Longrightarrow>
+   valid_sched_context' (scRefillCount_update f ko) s"
+  unfolding valid_sched_context'_def
+  by clarsimp
+
+lemma fjs3hf:
+  "valid_sched_context_size' ko \<Longrightarrow>
+   valid_sched_context_size' (scRefillCount_update f ko)"
+  unfolding valid_sched_context_size'_def
+  by (clarsimp simp: objBits_def objBitsKO_def)
+
+lemma refillBudgetCheck_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> refillBudgetCheck consumed  \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply ssa_wp[wp del]
+  apply (simp add: refillBudgetCheck_def)
+  apply_trace (wpsimp wp: setSchedContext_invs' updateScPtr_refills_invs' mapScPtr_wp refillEmpty_wp
+              simp: setRefillHd_def updateRefillHd_def2)
+       apply (rule_tac Q="K (invs')" in hoare_strengthen_post[rotated])
+apply (prop_tac "active_sc_at' scPtr s")
+subgoal sorry (* active_sc_at' *)
+        apply clarsimp
+        apply (intro conjI; intro allI impI)
+         apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
+        apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+        apply (frule refillTailIndex_bounded)
+        apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
+        apply (subst length_replaceAt, linarith)
+        apply (subst length_replaceAt, linarith)
+        apply clarsimp
+        apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+        apply (subst length_replaceAt, linarith)
+        apply clarsimp
+       apply (wpsimp wp: refillReady_wp)+
+  apply (intro conjI; intro allI impI)
+   apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+   apply (frule refillTailIndex_bounded)
+   apply (intro conjI)
+       apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
+      apply (fastforce dest: live_sc'_ko_ex_nonz_cap_to')
+     apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
+    apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+   apply (fastforce simp: sym_refs_sc_trivial_update cong: if_cong)
+  apply (intro conjI; intro allI impI)
+   apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
+  apply (subgoal_tac "active_sc_at' (ksCurSc s) s")
+   apply (subgoal_tac "koa = ko \<and> kob = ko", simp)
+    apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+    apply (frule refillTailIndex_bounded)
+    apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
+    apply (subst length_replaceAt, linarith)
+    apply (subst length_replaceAt, linarith)
+    apply clarsimp
+    apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+    apply (subst length_replaceAt, linarith)
+    apply clarsimp
+   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
+  subgoal sorry (* active_sc_at' *)
+ done
+
+lemma commitTime_invs':
+  "\<lbrace>invs'\<rbrace> commitTime \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply ssa_wp[wp del]
+  apply (simp add: commitTime_def)
+  apply wpsimp
+  apply (wpsimp wp: updateScPtr_invs'_indep)
+  apply (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def objBits_def sc_size_bounds_def objBitsKO_def live_sc'_def)
+  apply (rule_tac Q="\<lambda>_. invs'" in hoare_strengthen_post)
+  apply (wpsimp wp: isRoundRobin_wp)
+  apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
+  apply (wpsimp wp: getConsumedTime_wp mapScPtr_wp getCurSc_wp)+
+  done
+
+lemma updateRefillHd_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> updateRefillHd scPtr f \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding updateRefillHd_def
+  apply (wpsimp wp: setSchedContext_invs')
+apply (prop_tac "active_sc_at' scPtr s")
+subgoal sorry (* active_sc_at' *)
+  apply (intro conjI; (intro allI impI)?)
+  apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
+  apply (erule live_sc'_ko_ex_nonz_cap_to'; simp)
+  apply (frule (1) invs'_ko_at_valid_sched_context', clarsimp)
+  apply (frule refillTailIndex_bounded)
+  apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
+  apply (subst length_replaceAt, linarith)
+  apply (subst length_replaceAt, linarith)
+  apply clarsimp
+  apply (frule (1) invs'_ko_at_valid_sched_context', clarsimp)
+  apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+  apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
+  apply (subst length_replaceAt, linarith)
+  apply (clarsimp)
+  apply (subst scNtfn_scRefills_update)
+  apply (subst scTCB_scRefills_update)
+  apply (subst scYieldFrom_scRefills_update)
+  apply (subst scReply_scRefills_update)
+  apply (frule invs_sym')
+  apply (erule back_subst[where P=sym_refs])
+  apply (rule ext)
+  apply (clarsimp simp: state_refs_of'_def obj_at'_real_def ko_wp_at'_def projectKO_opt_sc)
+  apply (case_tac koa; simp)
+  done
+
+lemma refillUnblockCheckMergable_inv[wp]:
+  "refillUnblockCheckMergable scPtr \<lbrace>P\<rbrace>"
+  unfolding refillUnblockCheckMergable_def
+  by (wpsimp wp: setSchedContext_invs' refillSize_wp mapScPtr_wp refillNext_wp)
+
+lemma refillUnblockCheck_invs':
+  "refillUnblockCheck scPtr \<lbrace>invs'\<rbrace>"
+  unfolding refillUnblockCheck_def
+  by (wpsimp wp: whileM_inv mapScPtr_wp refillReady_wp isRoundRobin_wp)
+
+lemma switchSchedContext_invs':
+  "\<lbrace>invs'\<rbrace> switchSchedContext \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: switchSchedContext_def)
+  apply (wpsimp wp: commitTime_invs' getReprogramTimer_wp refillUnblockCheck_invs' threadGet_wp simp: getCurSc_def)
+  apply (fastforce simp: obj_at'_def projectKO_eq projectKO_opt_tcb)
+  done
+
+(* FIXME RT: move, and shouldn't we have all of these? *)
+lemma setSchedulerAction_ksSchedulerAction[wp]:
+  "\<lbrace>\<lambda>_. P (schact)\<rbrace>
+    setSchedulerAction schact
+   \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
+  by (wpsimp simp: setSchedulerAction_def)
+
+(* FIXME: rename *)
+lemma isSchedulable_bool_def2:
+  "isSchedulable_bool t s
+   \<Longrightarrow> tcb_at' t s \<Longrightarrow> st_tcb_at' runnable' t s"
+  unfolding isSchedulable_bool_def
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def pred_map_def projectKO_eq projectKO_opt_tcb)
+  apply (case_tac ko; simp add: tcb_of'_def)
+  done
+
+lemma awaken_invs':
+  "\<lbrace>invs'\<rbrace>
+   awaken
+   \<lbrace>\<lambda>t. invs'\<rbrace>"
+  sorry (* awaken_invs' *)
+
 lemma schedule_invs':
   "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\<lambda>rv. invs'\<rbrace>"
   supply ssa_wp[wp del]
+  supply if_split [split del]
   apply (simp add: schedule_def)
   apply (rule_tac hoare_seq_ext, rename_tac t)
-  sorry (* schedule_invs' *) (*
-   apply (wp, wpc)
-      \<comment> \<open>action = ResumeCurrentThread\<close>
-      apply (wp)[1]
-     \<comment> \<open>action = ChooseNewThread\<close>
-     apply (wp scheduleChooseNewThread_invs')
-    \<comment> \<open>action = SwitchToThread candidate\<close>
-    apply (wpsimp wp: scheduleChooseNewThread_invs' ssa_invs'
-                      chooseThread_invs_no_cicd' setSchedulerAction_invs' setSchedulerAction_direct
-                      switchToThread_tcb_in_cur_domain' switchToThread_ct_not_queued_2
-           | wp hoare_disjI2[where Q="\<lambda>_ s. tcb_in_cur_domain' (ksCurThread s) s"]
-           | wp hoare_drop_imp[where f="isHighestPrio d p" for d p]
-           | simp only: obj_at'_activatable_st_tcb_at'[simplified comp_def]
-           | strengthen invs'_invs_no_cicd
-           | wp hoare_vcg_imp_lift)+
-  apply (frule invs_sch_act_wf')
-  apply (auto simp: invs_sch_act_wf' obj_at'_activatable_st_tcb_at'
-                     st_tcb_at'_runnable_is_activatable)
-  done *)
+   apply (rule_tac Q="invs'" in hoare_weaken_pre)
+    apply (rule_tac hoare_seq_ext[OF _ getCurThread_sp])
+    apply (rule_tac hoare_seq_ext[OF _ getSchedulerAction_sp])
+    apply (wpsimp)
+      apply (wpsimp wp: switchSchedContext_invs')
+     apply (wpsimp wp: scheduleChooseNewThread_invs' isSchedulable_wp setSchedulerAction_invs')
+              apply (wpsimp wp: ssa_invs')
+             apply (clarsimp)
+             apply (wpsimp wp: switchToThread_invs hoare_vcg_disj_lift switchToThread_tcb_in_cur_domain')
+               apply (rule hoare_pre_cont)
+              apply (wpsimp wp: switchToThread_invs hoare_vcg_disj_lift switchToThread_tcb_in_cur_domain')
+             apply (rule_tac hoare_strengthen_post, rule switchToThread_ct_not_queued_2)
+             apply (clarsimp simp: pred_neg_def o_def)
+            apply (clarsimp)
+            apply (wpsimp simp: isHighestPrio_def')
+           apply (wpsimp wp: curDomain_wp)
+          apply (wpsimp simp: scheduleSwitchThreadFastfail_def)
+         apply (rule_tac Q="\<lambda>_. invs' and st_tcb_at' runnable' x3 and (\<lambda>s. action = ksSchedulerAction s)
+                                and tcb_in_cur_domain' x3" in hoare_strengthen_post[rotated])
+          apply (prop_tac "st_tcb_at' runnable' x3 s \<Longrightarrow> obj_at' (\<lambda>a. activatable' (tcbState a)) x3 s")
+           apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+          apply (prop_tac "all_invs_but_ct_idle_or_in_cur_domain' s")
+           apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def invs'_def valid_state'_def)
+          apply (auto)[1]
+         apply (wpsimp wp: threadGet_wp hoare_drop_imp hoare_vcg_ex_lift)
+        apply (rule_tac Q="\<lambda>_. invs'
+                               and st_tcb_at' runnable' x3 and (\<lambda>s. action = ksSchedulerAction s)
+                               and tcb_in_cur_domain' x3" in hoare_strengthen_post[rotated])
+         apply (subst obj_at_ko_at'_eq[symmetric], simp)
+        apply (wpsimp wp: threadGet_wp hoare_drop_imp hoare_vcg_ex_lift)
+       apply (rule_tac Q="\<lambda>_. invs'
+                              and st_tcb_at' runnable' x3 and (\<lambda>s. action = ksSchedulerAction s)
+                              and tcb_in_cur_domain' x3" in hoare_strengthen_post[rotated])
+        apply (subst obj_at_ko_at'_eq[symmetric], simp)
+       apply wpsimp
+      apply (wpsimp wp: tcbSchedEnqueue_invs'_not_ResumeCurrentThread isSchedulable_wp)
+     apply (wpsimp wp: tcbSchedEnqueue_invs'_not_ResumeCurrentThread isSchedulable_wp)
+    apply clarsimp
+    apply (subgoal_tac "sch_act_wf (ksSchedulerAction s) s")
+     apply (auto split: if_split simp: isSchedulable_bool_def2 dest: isSchedulable_bool_def2)[1]
+    apply (clarsimp simp: )
+   apply assumption
+  apply (wpsimp wp: awaken_invs')
+  done
 
 lemma setCurThread_nosch:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
@@ -2502,16 +3159,6 @@ lemma ksReprogramTimer_update_misc[simp]:
   apply (clarsimp simp: valid_machine_state'_def ct_not_inQ_def ct_idle_or_in_cur_domain'_def
                         tcb_in_cur_domain'_def cur_tcb'_def)+
   done
-
-lemma ksReprogramTimer_update_invs'[simp]:
-  "invs' (s\<lparr>ksReprogramTimer := b\<rparr>) = invs' s"
-  unfolding invs'_def
-  by (clarsimp simp: valid_state'_def)
-
-lemma setReprogramTimer_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> setReprogramTimer b \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding setReprogramTimer_def
-  by wpsimp
 
 lemma rescheduleRequired_ksSchedulerAction[wp]:
   "\<lbrace>K (P ChooseNewThread)\<rbrace> rescheduleRequired \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"

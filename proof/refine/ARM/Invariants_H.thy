@@ -630,7 +630,7 @@ definition valid_sched_context' :: "sched_context \<Rightarrow> kernel_state \<R
      \<and> MIN_REFILLS \<le> length (scRefills sc)
      \<and> scRefillMax sc \<le> length (scRefills sc)
      \<and> (0 < scRefillMax sc \<longrightarrow>
-          scRefillHead sc \<le> scRefillMax sc \<and> scRefillCount sc \<le> scRefillMax sc)"
+          scRefillHead sc < scRefillMax sc \<and> scRefillCount sc \<le> scRefillMax sc)"
 
 definition valid_reply' :: "reply \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_reply' reply s \<equiv>

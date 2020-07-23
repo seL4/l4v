@@ -2435,7 +2435,7 @@ lemma setReply_state_refs_of'[wp]:
   by (wp set_reply'.state_refs_of') (simp flip: fun_upd_def)
 
 lemma setSchedContext_iflive'[wp]:
-  "\<lbrace>if_live_then_nonz_cap' and ex_nonz_cap_to' p\<rbrace>
+  "\<lbrace>if_live_then_nonz_cap' and (\<lambda>s. live_sc' sc \<longrightarrow> ex_nonz_cap_to' p s)\<rbrace>
    setSchedContext p sc
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   unfolding setSchedContext_def
