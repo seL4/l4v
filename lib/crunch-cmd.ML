@@ -669,7 +669,7 @@ fun warn_helper_thms wp ctxt t =
       val ctxt' = ctxt addsimps simp_thms
       val wp_thms = maybe_thms ctxt "crunch_wps"
       val simp_or_wp = CHANGED_GOAL (clarsimp_tac ctxt') ORELSE' CHANGED_GOAL (wp wp_thms)
-      val can_simp_or_wp = (is_some o SINGLE (FIRSTGOAL simp_or_wp)) t
+      val can_simp_or_wp = (is_some o SINGLE (HEADGOAL simp_or_wp)) t
   in if can_simp_or_wp
      then warning "Using crunch_simps or crunch_wps makes more progress"
      else () end;
