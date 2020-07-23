@@ -850,7 +850,6 @@ lemma aci_invs':
     apply wp
   apply (clarsimp simp: cte_wp_at_caps_of_state if_option_Some
              split del: if_split)
-  apply (strengthen refl)
   apply (frule_tac cap = "(cap.UntypedCap False word1 pageBits idx)"
     in detype_invariants[rotated 3],clarsimp+)
     apply (simp add:cte_wp_at_caps_of_state)+
@@ -883,21 +882,19 @@ lemma aci_invs':
     apply (rule subset_refl)
    apply fastforce
   apply (clarsimp simp: field_simps)
-  apply (intro conjI impI,
-     simp_all add:free_index_of_def valid_cap_simps valid_untyped_def
-     empty_descendants_range_in range_cover_full clear_um_def max_free_index_def,
-     (clarsimp simp:valid_untyped_def valid_cap_simps)+)[1]
+  apply (intro conjI impI;
+         simp add: free_index_of_def valid_cap_simps valid_untyped_def
+                   empty_descendants_range_in range_cover_full clear_um_def max_free_index_def;
+         clarsimp simp:valid_untyped_def valid_cap_simps)
 
+     apply (clarsimp simp: cte_wp_at_caps_of_state)
     apply (erule(1) cap_to_protected)
     apply (simp add:empty_descendants_range_in descendants_range_def2)+
-
-   apply clarsimp
    apply (drule invs_arch_state)+
    apply (clarsimp simp: valid_arch_state_def valid_asid_table_def)
    apply (drule (1) subsetD)+
    apply (clarsimp simp: in_opt_map_eq)
    apply (erule notE, erule is_aligned_no_overflow)
-
   apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def)
   apply (thin_tac "cte_wp_at ((=) cap.NullCap) p s" for p s)
   apply (subst(asm) eq_commute,
