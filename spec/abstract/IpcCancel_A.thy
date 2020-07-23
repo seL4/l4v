@@ -545,11 +545,7 @@ definition blocked_cancel_ipc ::
      set_endpoint epptr ep';
      case reply_opt of
          None \<Rightarrow> return ()
-       | Some r \<Rightarrow> do
-             reply \<leftarrow> get_reply r;
-             assert (reply_sc reply = None);
-             reply_unlink_tcb tptr r
-         od;
+       | Some r \<Rightarrow> reply_unlink_tcb tptr r;
      set_thread_state tptr Inactive
    od"
 
