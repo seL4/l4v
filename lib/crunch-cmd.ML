@@ -668,11 +668,14 @@ fun warn_helper_thms wp ctxt t =
   let val simp_thms = maybe_thms ctxt "crunch_simps"
       val ctxt' = ctxt addsimps simp_thms
       val wp_thms = maybe_thms ctxt "crunch_wps"
-      val simp_or_wp = CHANGED_GOAL (clarsimp_tac ctxt') ORELSE' CHANGED_GOAL (wp wp_thms)
-      val can_simp_or_wp = (is_some o SINGLE (HEADGOAL simp_or_wp)) t
-  in if can_simp_or_wp
-     then warning "Using crunch_simps or crunch_wps makes more progress"
-     else () end;
+      fun can_tac tac = (is_some o SINGLE (HEADGOAL (CHANGED_GOAL tac))) t
+  in if can_tac (clarsimp_tac ctxt')
+     then warning "Using crunch_simps makes more progress"
+     else ();
+     if can_tac (wp wp_thms)
+     then warning "Using crunch_wps makes more progress"
+     else ()
+  end;
 
 fun warn_const_ignored const cfg ctxt =
   if member (op =) (crunch_ignores cfg ctxt) const
