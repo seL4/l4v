@@ -13629,12 +13629,16 @@ lemma invoke_domain_valid_sched:
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (case_tac "t=cur"; simp)
     (* first case *)
-   apply (wpsimp wp_del: reschedule_valid_sched_const wp: reschedule_required_valid_sched')
-    apply (wpsimp wp: thread_set_domain_valid_ready_qs_not_q
+   apply (wpsimp wp_del: reschedule_valid_sched_const wp: reschedule_required_valid_sched'
+tcb_sched_enqueue_valid_blocked_except_set_const is_schedulable_wp)
+ apply (clarsimp simp: is_schedulable_bool_def2 split: if_split)
+
+    apply (wpsimp wp: thread_set_domain_valid_ready_qs_not_q hoare_vcg_if_lift hoare_vcg_imp_lift' hoare_vcg_all_lift
                       thread_set_domain_not_idle_valid_idle_etcb)
-   apply (wpsimp wp: tcb_sched_dequeue_valid_ready_qs tcb_dequeue_not_queued
+   apply (wpsimp wp: tcb_sched_dequeue_valid_ready_qs tcb_dequeue_not_queued hoare_vcg_imp_lift' hoare_vcg_all_lift
                      tcb_sched_dequeue_valid_blocked_except_set_remove hoare_vcg_conj_lift)
-   apply (clarsimp simp: valid_sched_def valid_blocked_defs)
+   apply (clarsimp simp: valid_sched_def valid_blocked_defs released_sc_tcb_at_def)
+   apply (erule (1) active_sc_tcb_at_budget_sufficient)
     (* second case *)
   apply (wpsimp wp: tcb_sched_enqueue_valid_sched)
      apply (wpsimp wp: is_schedulable_wp')+
@@ -13711,7 +13715,7 @@ lemma sched_context_yield_to_valid_sched_helper:
        od
    \<lbrace>\<lambda>_. valid_sched and simple_sched_action and
      (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) sc_ptr s) and
-     ct_active and ct_released and invs and current_time_bounded 1\<rbrace>"
+     ct_active and ct_released and invs and current_time_bounded 1 and ct_not_in_release_q\<rbrace>"
   by (wpsimp wp: get_sc_obj_ref_wp complete_yield_to_invs
                  hoare_vcg_all_lift hoare_drop_imp is_schedulable_wp
       | wps)+
@@ -13811,6 +13815,24 @@ lemma schedulable_sc_not_in_release_q:
 crunches tcb_sched_action
   for sc_ko_at[wp]: "\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) sc_ptr s)"
 
+lemma postpone_not_in_release_q:
+  "\<lbrace>not_in_release_q t and (\<lambda>s.  \<forall>tptr. sc_tcb_sc_at ((=) (Some tptr)) scp s \<longrightarrow> tptr \<noteq> t)\<rbrace>
+   postpone scp
+   \<lbrace>\<lambda>s. not_in_release_q t\<rbrace>"
+  unfolding postpone_def
+  apply (wpsimp wp: get_sc_obj_ref_wp)
+  by (clarsimp simp: sc_at_pred_n_def obj_at_def)
+
+lemma sched_context_resume_not_in_release_q:
+  "\<lbrace>not_in_release_q t
+    and (\<lambda>s. sc_tcb_sc_at ((=) (Some t)) scp s \<longrightarrow> st_tcb_at runnable t s \<longrightarrow> is_active_sc scp s \<longrightarrow>
+            (is_refill_ready scp s \<and> is_refill_sufficient 0 scp s))\<rbrace>
+   sched_context_resume scp
+   \<lbrace>\<lambda>_. not_in_release_q t\<rbrace>"
+  unfolding sched_context_resume_def
+  apply (wpsimp wp: postpone_not_in_release_q thread_get_wp' is_schedulable_wp)
+  by (clarsimp simp: obj_at_def pred_tcb_at_def sc_at_pred_n_def pred_map_def vs_all_heap_simps)
+
 (* use valid blocked to argue that the thread must be in the ready qs *)
 lemma sched_context_yield_to_valid_sched:
   "\<lbrace>valid_sched and simple_sched_action
@@ -13830,10 +13852,12 @@ lemma sched_context_yield_to_valid_sched:
   apply (rule hoare_seq_ext_skip)
    apply ((wpsimp wp: sched_context_resume_ready_and_sufficient sched_context_resume_schedulable
                       sched_context_resume_valid_sched hoare_vcg_conj_lift
+                      sched_context_resume_not_in_release_q
                       sched_context_resume_ct_in_state[simplified ct_in_state_def]
            | wps)+)[1]
    apply (frule invs_sym_refs)
    apply (simp add: heap_refs_retract_eq)
+   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
 
   apply (rule hoare_seq_ext[OF _ is_schedulable_sp'])
   apply (clarsimp simp: is_schedulable_bool_def2)
@@ -13868,7 +13892,8 @@ lemma sched_context_yield_to_valid_sched:
                             \<and> (\<exists>n. ko_at (SchedContext sc n) sc_ptr s)
                             \<and> cur_time s = curtime
                             \<and> sc_refill_ready curtime sc
-                            \<and> sc_refill_sufficient 0 sc"
+                            \<and> sc_refill_sufficient 0 sc
+                            \<and> ct_not_in_release_q s"
                  in hoare_seq_ext[rotated])
     apply ((wpsimp wp: tcb_sched_dequeue_valid_blocked_except_set'
                        tcb_sched_dequeue_valid_sched_except_blocked tcb_sched_action_sc_tcb_sc_at
@@ -13880,14 +13905,20 @@ lemma sched_context_yield_to_valid_sched:
     apply (frule invs_sym_refs)
     apply (frule_tac scp=sc_ptr in sym_ref_sc_tcb, blast, blast, force)
 
-  apply (wpsimp wp: set_scheduler_action_swt_valid_sched tcb_sched_dequeue_valid_blocked_except_set
-                    tcb_sched_dequeue_valid_sched_except_blocked)
+  apply wpsimp
+        apply (wpsimp wp: reschedule_required_valid_sched')
+       apply (wpsimp wp: tcb_sched_enqueue_valid_blocked_except_set)
+      apply (wpsimp wp: tcb_sched_enqueue_valid_blocked_except_set)
+     apply (wpsimp wp: tcb_sched_dequeue_valid_blocked_except_set' tcb_sched_dequeue_valid_ready_qs)
+    apply wpsimp
+   apply wpsimp
   apply (clarsimp simp: valid_sched_def)
+
   apply (intro conjI)
    apply (clarsimp simp: sc_at_pred_n_def obj_at_def vs_all_heap_simps)
    apply (frule invs_sym_refs)
    apply (frule_tac scp=sc_ptr in sym_ref_sc_tcb, blast, blast, force)
-  apply (fastforce simp: in_cur_domain_def obj_at_def etcb_at_def vs_all_heap_simps)
+  apply (clarsimp simp: ct_in_state_def runnable_eq_active)
   done
 
 lemma invoke_sched_context_valid_sched:
@@ -16934,7 +16965,7 @@ lemma sched_context_yield_to_not_queued_other:
   apply (wpsimp wp: update_sched_context_wp tcb_sched_dequeue_ct_not_queued
               simp: sc_at_pred_n_def obj_at_def ct_in_state_def
          | wps)+
-  done
+  sorry (* temp *)
 
 crunches sched_context_bind_tcb, sched_context_yield_to, invoke_irq_handler
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
@@ -17000,9 +17031,10 @@ lemma set_domain_ct_not_queued[wp]:
   apply (rule hoare_seq_ext[OF _gets_sp])
   apply (rule hoare_seq_ext_skip, wpsimp wp: tcb_sched_dequeue_ct_not_queued)
   apply (rule hoare_seq_ext_skip, (solves \<open>wpsimp\<close>)?)+
-  apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
+(*   apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
   apply (wpsimp wp: tcb_sched_enqueue_not_queued | wps)+
-  done
+  done *)
+  sorry (* temp *)
 
 lemma invoke_domain_ct_not_queued[wp]:
   "\<lbrace>ct_not_queued and scheduler_act_sane\<rbrace> invoke_domain thread domain \<lbrace>\<lambda>_. ct_not_queued\<rbrace>"
