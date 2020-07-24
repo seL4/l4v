@@ -780,9 +780,13 @@ where
       then throwError $ InvalidCapability 0
       else liftME InvokeTCB $ decode_tcb_invocation label args cap slot excaps
   | DomainCap \<Rightarrow>
-      liftME (case_prod InvokeDomain) $ decode_domain_invocation label args excaps
+      if first_phase
+      then throwError $ InvalidCapability 0
+      else liftME (case_prod InvokeDomain) $ decode_domain_invocation label args excaps
   | SchedContextCap sc sz \<Rightarrow>
-      liftME InvokeSchedContext $ decode_sched_context_invocation label sc (map fst excaps) args
+      if first_phase
+      then throwError $ InvalidCapability 0
+      else liftME InvokeSchedContext $ decode_sched_context_invocation label sc (map fst excaps) args
   | SchedControlCap \<Rightarrow>
       if first_phase
       then throwError $ InvalidCapability 0

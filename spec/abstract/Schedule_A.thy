@@ -293,7 +293,7 @@ where
       ct_ptr \<leftarrow> gets cur_thread;
       prios \<leftarrow> thread_get tcb_priority tcb_ptr;
       ct_prios \<leftarrow> thread_get tcb_priority ct_ptr;
-      if (prios < ct_prios)
+      if prios < ct_prios
       then do
         tcb_sched_action tcb_sched_dequeue tcb_ptr;
         tcb_sched_action tcb_sched_enqueue tcb_ptr; \<comment> \<open>@{text \<open>schedulable & dequeued & sufficient & ready\<close>}\<close>
