@@ -1564,6 +1564,8 @@ where
   "safe_invocation (InvokeCNode cnode_inv)     = False"
 | "safe_invocation (InvokeTCB tcb_inv)         = False"
 | "safe_invocation (InvokeSchedControl sc_inv) = False"
+| "safe_invocation (InvokeSchedContext _) = False"
+| "safe_invocation (InvokeDomain _ _) = False"
 | "safe_invocation _ = True"
 
 lemma perform_invocation_not_blocking_not_calling_ct_active[wp]:

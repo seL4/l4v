@@ -13629,10 +13629,10 @@ lemma invoke_domain_valid_sched:
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (case_tac "t=cur"; simp)
     (* first case *)
-   apply (wpsimp wp_del: reschedule_valid_sched_const wp: reschedule_required_valid_sched'
-tcb_sched_enqueue_valid_blocked_except_set_const is_schedulable_wp)
- apply (clarsimp simp: is_schedulable_bool_def2 split: if_split)
-
+   apply (wpsimp wp_del: reschedule_valid_sched_const
+                     wp: reschedule_required_valid_sched'
+                         tcb_sched_enqueue_valid_blocked_except_set_const is_schedulable_wp)
+    apply (clarsimp simp: is_schedulable_bool_def2 split: if_split)
     apply (wpsimp wp: thread_set_domain_valid_ready_qs_not_q hoare_vcg_if_lift hoare_vcg_imp_lift' hoare_vcg_all_lift
                       thread_set_domain_not_idle_valid_idle_etcb)
    apply (wpsimp wp: tcb_sched_dequeue_valid_ready_qs tcb_dequeue_not_queued hoare_vcg_imp_lift' hoare_vcg_all_lift
@@ -13816,12 +13816,12 @@ crunches tcb_sched_action
   for sc_ko_at[wp]: "\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) sc_ptr s)"
 
 lemma postpone_not_in_release_q:
-  "\<lbrace>not_in_release_q t and (\<lambda>s.  \<forall>tptr. sc_tcb_sc_at ((=) (Some tptr)) scp s \<longrightarrow> tptr \<noteq> t)\<rbrace>
+  "\<lbrace>not_in_release_q t and (\<lambda>s. \<forall>tptr. pred_map_eq (Some tptr) (sc_tcbs_of s) scp \<longrightarrow> tptr \<noteq> t)\<rbrace>
    postpone scp
-   \<lbrace>\<lambda>s. not_in_release_q t\<rbrace>"
+   \<lbrace>\<lambda>_. not_in_release_q t\<rbrace>"
   unfolding postpone_def
   apply (wpsimp wp: get_sc_obj_ref_wp)
-  by (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  by (clarsimp simp: obj_at_def pred_map_def vs_all_heap_simps)
 
 lemma sched_context_resume_not_in_release_q:
   "\<lbrace>not_in_release_q t
@@ -13905,15 +13905,9 @@ lemma sched_context_yield_to_valid_sched:
     apply (frule invs_sym_refs)
     apply (frule_tac scp=sc_ptr in sym_ref_sc_tcb, blast, blast, force)
 
-  apply wpsimp
-        apply (wpsimp wp: reschedule_required_valid_sched')
-       apply (wpsimp wp: tcb_sched_enqueue_valid_blocked_except_set)
-      apply (wpsimp wp: tcb_sched_enqueue_valid_blocked_except_set)
-     apply (wpsimp wp: tcb_sched_dequeue_valid_blocked_except_set' tcb_sched_dequeue_valid_ready_qs)
-    apply wpsimp
-   apply wpsimp
+  apply (wpsimp wp: reschedule_required_valid_sched' tcb_sched_enqueue_valid_blocked_except_set
+                    tcb_sched_dequeue_valid_blocked_except_set' tcb_sched_dequeue_valid_ready_qs)
   apply (clarsimp simp: valid_sched_def)
-
   apply (intro conjI)
    apply (clarsimp simp: sc_at_pred_n_def obj_at_def vs_all_heap_simps)
    apply (frule invs_sym_refs)
@@ -16926,47 +16920,6 @@ crunches sched_context_resume
   for sched_context_at[wp]: "\<lambda>s. \<exists>n. ko_at (SchedContext sc n) sc_ptr s"
   (wp: mapM_wp' get_simple_ko_wp hoare_drop_imps)
 
-lemma sched_context_yield_to_not_queued_other:
-  "\<lbrace>\<lambda>s. ct_not_queued s
-        \<and> sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) sc_ptr s
-        \<and> scheduler_act_not (cur_thread s) s\<rbrace>
-   sched_context_yield_to sc_ptr args
-   \<lbrace>\<lambda>_. ct_not_queued\<rbrace>"
-  apply (simp add: sched_context_yield_to_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip)
-   apply ((wpsimp wp: update_sched_context_wp hoare_drop_imps
-                simp: when_def maybeM_def bind_assoc set_tcb_obj_ref_def get_tcb_obj_ref_def
-           | wps)+)[1]
-
-  apply (clarsimp simp: get_sc_obj_ref_def)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (rule hoare_seq_ext[OF _ assert_opt_sp])
-
-  apply (rule hoare_seq_ext_skip)
-   apply ((wpsimp wp: sched_context_resume_not_queued | wps)+)[1]
-   apply (clarsimp simp: sc_at_pred_n_def obj_at_def vs_all_heap_simps)
-
-  apply (rule_tac Q="\<lambda>s. sc_tcb_sc_at ((=) (Some tcb_ptr)) sc_ptr s
-                         \<and> ct_not_queued s
-                         \<and> sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) sc_ptr s
-                         \<and> scheduler_act_sane s"
-               in hoare_weaken_pre[rotated])
-   apply (clarsimp simp: sc_at_pred_n_def obj_at_def ct_in_state_def)
-
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
-  apply (rule hoare_seq_ext_skip, ((wpsimp | wps)+)[1])
-  apply (rule hoare_seq_ext_skip, (solves \<open>wpsimp\<close>)?)+
-  apply (rule hoare_if)
-   apply ((wpsimp wp: tcb_sched_enqueue_not_queued tcb_sched_dequeue_ct_not_queued
-                simp: sc_at_pred_n_def obj_at_def ct_in_state_def
-           | wps)+)[1]
-  apply (wpsimp wp: update_sched_context_wp tcb_sched_dequeue_ct_not_queued
-              simp: sc_at_pred_n_def obj_at_def ct_in_state_def
-         | wps)+
-  sorry (* temp *)
-
 crunches sched_context_bind_tcb, sched_context_yield_to, invoke_irq_handler
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps)
@@ -16990,19 +16943,6 @@ lemma invoke_sched_context_ct_not_in_release_q[wp]:
     apply (wpsimp | wps)+
   done
 
-lemma invoke_sched_context_ct_not_queued[wp]:
-  "\<lbrace>ct_not_queued and valid_sched_context_inv i and schact_is_rct and invs\<rbrace>
-   invoke_sched_context i
-   \<lbrace>\<lambda>_. ct_not_queued\<rbrace>"
-  apply (simp add: invoke_sched_context_def)
-  apply (cases i; simp)
-      apply (find_goal \<open>match premises in \<open>_ = InvokeSchedContextBind _ _\<close> \<Rightarrow> \<open>-\<close>\<close>)
-      apply (wpsimp wp: sched_context_bind_tcb_not_queued_other | wps)+
-       apply (fastforce dest!: invs_cur_sc_tcb_symref simp: pred_tcb_at_def obj_at_def)
-     apply (find_goal \<open>match premises in \<open>_ = InvokeSchedContextYieldTo _ _\<close> \<Rightarrow> \<open>-\<close>\<close>)
-     apply (wpsimp wp: sched_context_yield_to_not_queued_other | wps)+
-  done
-
 crunches invoke_irq_handler
   for not_in_release_queue[wp]: "not_in_release_q t :: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps)
@@ -17024,21 +16964,6 @@ lemma invoke_irq_handler_not_queued[wp]:
 
 crunches set_domain
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
-
-lemma set_domain_ct_not_queued[wp]:
-  "\<lbrace>ct_not_queued and scheduler_act_sane\<rbrace> set_domain thread domain \<lbrace>\<lambda>_. ct_not_queued\<rbrace>"
-  apply (clarsimp simp: set_domain_def)
-  apply (rule hoare_seq_ext[OF _gets_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp wp: tcb_sched_dequeue_ct_not_queued)
-  apply (rule hoare_seq_ext_skip, (solves \<open>wpsimp\<close>)?)+
-(*   apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
-  apply (wpsimp wp: tcb_sched_enqueue_not_queued | wps)+
-  done *)
-  sorry (* temp *)
-
-lemma invoke_domain_ct_not_queued[wp]:
-  "\<lbrace>ct_not_queued and scheduler_act_sane\<rbrace> invoke_domain thread domain \<lbrace>\<lambda>_. ct_not_queued\<rbrace>"
-  unfolding invoke_domain_def by wpsimp
 
 lemma perform_invocation_first_phase_ct_not_in_release_q:
   "\<lbrace>ct_not_in_release_q and invs and ct_active and valid_invocation i
@@ -21920,13 +21845,15 @@ lemma perform_unsafe_invocation_ct_ready_if_schedulable:
    perform_invocation block call can_donate i
    \<lbrace>\<lambda>_ s :: det_state. ct_ready_if_schedulable s\<rbrace>"
   apply (cases i; simp)
-    apply wpsimp
+      apply wpsimp
+     apply wpsimp
+    apply (strengthen ct_ready_if_schedulable_streng)
+    apply (wp_pre, rule hoare_lift_Pf2[where f=cur_thread, rotated])
+      apply (wpsimp, wpsimp, clarsimp simp: ct_in_state_def)
    apply wpsimp
   apply (strengthen ct_ready_if_schedulable_streng)
   apply (wp_pre, rule hoare_lift_Pf2[where f=cur_thread, rotated])
-    apply wpsimp
-   apply wpsimp
-  apply (clarsimp simp: ct_in_state_def)
+    apply (wpsimp, wpsimp, clarsimp simp: ct_in_state_def)
   done
 
 (*FIXME RT: move*)
