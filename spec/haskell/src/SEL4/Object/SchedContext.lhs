@@ -287,7 +287,7 @@ This module uses the C preprocessor to select a target architecture.
 >           else do
 >             refillAddTail scPtr new
 >     empty' <- refillEmpty scPtr
->     assert (not empty) "We just inserted something to the refills, it better not be empty!"
+>     assert (not empty') "We just inserted something to the refills, it better not be empty!"
 
 > refillBudgetCheck :: Ticks -> Kernel ()
 > refillBudgetCheck usage = do
