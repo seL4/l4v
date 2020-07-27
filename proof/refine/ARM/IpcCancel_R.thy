@@ -2280,77 +2280,10 @@ proof -
     sorry
 qed
 
-lemma ntfn_cancel_corres:
-  "corres dc (invs and valid_sched and ntfn_at ntfn) (invs' and ntfn_at' ntfn)
-             (cancel_all_signals ntfn) (cancelAllSignals ntfn)"
-  apply (simp add: cancel_all_signals_def cancelAllSignals_def)
-  apply (rule corres_split' [OF _ _ get_simple_ko_sp get_ntfn_sp'])
-   apply (rule corres_guard_imp [OF get_ntfn_corres])
-    apply simp+
-  apply (case_tac "ntfn_obj ntfna", simp_all add: ntfn_relation_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ set_ntfn_corres])
-       apply (rule corres_split [OF rescheduleRequired_corres])
-  sorry (*
-         apply (rule ep_cancel_corres_helper)
-        apply (wp mapM_x_wp'[where 'b="det_ext state"]
-                  weak_sch_act_wf_lift_linear setThreadState_not_st
-                  set_thread_state_runnable_weak_valid_sched_action
-             | simp)+
-       apply (rename_tac list)
-       apply (rule_tac R="\<lambda>_ s. (\<forall>x\<in>set list. tcb_at' x s) \<and> valid_objs' s"
-                    in hoare_post_add)
-       apply (rule mapM_x_wp')
-       apply (rule hoare_name_pre_state)
-       apply (wp hoare_vcg_const_Ball_lift
-                 sts_st_tcb' sts_valid_queues setThreadState_not_st
-                 tcbSchedEnqueue_not_st
-            | (clarsimp simp: valid_tcb_state'_def)
-            | fastforce elim: obj_at'_weakenE)+
-      apply (simp add: ntfn_relation_def)
-     apply (wp hoare_vcg_const_Ball_lift set_ntfn_aligned' set_ntfn_valid_objs'
-               weak_sch_act_wf_lift_linear
-          | simp)+
-   apply (clarsimp simp: invs'_def valid_state'_def invs_valid_pspace valid_obj_def valid_ntfn_def invs_weak_sch_act_wf valid_ntfn'_def valid_pspace'_def
-              valid_sched_def valid_sched_action_def valid_obj'_def projectKOs | erule obj_at_valid_objsE | drule ko_at_valid_objs')+
-  done *)
-
-lemma ep'_Idle_case_helper:
-  "(case ep of IdleEP \<Rightarrow> a | _ \<Rightarrow> b) = (if (ep = IdleEP) then a else b)"
-  by (cases ep, simp_all)
-
-lemma rescheduleRequired_notresume:
-  "\<lbrace>\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread\<rbrace>
-    rescheduleRequired \<lbrace>\<lambda>_ s. ksSchedulerAction s = ChooseNewThread\<rbrace>"
-  proof -
-    have ssa: "\<lbrace>\<top>\<rbrace> setSchedulerAction ChooseNewThread
-               \<lbrace>\<lambda>_ s. ksSchedulerAction s = ChooseNewThread\<rbrace>"
-      by (simp add: setSchedulerAction_def | wp)+
-    show ?thesis
-      by (simp add: rescheduleRequired_def, wp ssa)
-  qed
-
-lemma setThreadState_ResumeCurrentThread_imp_notct[wp]:
-  "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
-   setThreadState st t
-   \<lbrace>\<lambda>_ s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
-  (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
-proof -
-  have nrct:
-    "\<lbrace>\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread\<rbrace>
-     rescheduleRequired
-     \<lbrace>\<lambda>_ s. ksSchedulerAction s \<noteq> ResumeCurrentThread\<rbrace>"
-    by (rule hoare_strengthen_post [OF rescheduleRequired_notresume], simp)
-  show ?thesis
-  apply (simp add: setThreadState_def)
-  apply (wpsimp wp: hoare_vcg_imp_lift [OF nrct])
-   apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_post_imp)
-    apply (clarsimp)
-  sorry (*
-   apply (rule hoare_convert_imp [OF threadSet.ksSchedulerAction threadSet.ct])
-  apply assumption
-  done *)
-qed
+crunches inReleaseQueue
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (sa s) s"
+  and tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' t"
+  and cur_tcb'[wp]: cur_tcb'
 
 crunches possibleSwitchTo
   for valid_pspace'[wp]: valid_pspace'
@@ -2379,7 +2312,8 @@ crunches possibleSwitchTo
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and tcb'[wp]: "tcb_at' addr"
-  (wp: crunch_wps cur_tcb_lift simp: crunch_simps inReleaseQueue_def)
+  and valid_objs'[wp]: valid_objs'
+  (wp: crunch_wps cur_tcb_lift simp: crunch_simps)
 
 lemma possibleSwitchTo_sch_act[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
@@ -2420,6 +2354,150 @@ lemma possibleSwitchTo_all_invs_but_ct_not_inQ':
                      cteCaps_of_ctes_of_lift irqs_masked_lift)
   apply clarsimp
   by (metis fold_list_refs_of_replies')
+
+lemma possibleSwitchTo_weak_sch_act[wp]:
+  "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
+   possibleSwitchTo t
+   \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  unfolding possibleSwitchTo_def curDomain_def inReleaseQueue_def
+  apply (wpsimp wp: threadGet_wp rescheduleRequired_weak_sch_act_wf
+                    hoare_vcg_if_lift_strong)
+  by (auto simp: obj_at'_def weak_sch_act_wf_def tcb_in_cur_domain'_def
+                 projectKO_eq ps_clear_domE)
+
+lemma ntfn_cancel_corres_helper:
+  "corres dc ((\<lambda>s. \<forall>t \<in> set list. tcb_at t s \<and> t \<noteq> idle_thread s
+                                      \<and> blocked_on_recv_ntfn_tcb_at t s)
+              and valid_sched
+              and valid_objs
+              and pspace_aligned
+              and pspace_distinct
+              and cur_tcb
+              and K (distinct list))
+             ((\<lambda>s. \<forall>t \<in> set list. tcb_at' t s)
+              and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+              and Invariants_H.valid_queues
+              and valid_queues'
+              and valid_objs'
+              and valid_release_queue_iff)
+          (mapM_x (\<lambda>t. do
+                        y \<leftarrow> set_thread_state t Structures_A.Restart;
+                        possible_switch_to t
+                     od) list)
+          (mapM_x (\<lambda>t. do
+                        y \<leftarrow> setThreadState Structures_H.thread_state.Restart t;
+                        possibleSwitchTo t
+                     od) list)"
+  (is "corres _ _ ?conc_guard _ _")
+  apply (rule corres_gen_asm')
+  apply (rule corres_cross_over_guard[where Q="?conc_guard and cur_tcb'"])
+   apply (fastforce simp: cur_tcb_cross)
+  apply (subst pred_conj_assoc[symmetric])+
+  apply (rule_tac S="{t. (fst t = snd t) \<and> fst t \<in> set list}" in corres_mapM_x_scheme
+         ; ((subst pred_conj_assoc)+)?)
+        apply clarsimp
+        apply (rule corres_guard_imp)
+          apply (rule corres_split[OF possibleSwitchTo_corres])
+            apply (rule sts_corres)
+            apply simp
+           apply (wp sts_valid_queues set_thread_state_weak_valid_sched_action
+                     setThreadState_st_tcb)+
+         apply force
+        apply (clarsimp simp: valid_tcb_state'_def)
+       apply (wpsimp wp: set_thread_state_pred_map_tcb_sts_of)
+      apply (wpsimp wp: typ_at_lifts)
+     apply (clarsimp simp: pred_conj_def)
+     apply (wpsimp wp: set_thread_state_possible_switch_to_valid_sched
+                       hoare_vcg_const_Ball_lift set_thread_state_pred_map_tcb_sts_of)
+     apply (frule valid_sched_released_ipc_queues)
+     apply (fastforce simp: released_ipc_queues_defs)
+    apply (wpsimp wp: hoare_vcg_const_Ball_lift typ_at_lifts sts_st_tcb'
+                      sts_valid_queues)
+    apply (auto simp: valid_tcb_state'_def)
+  done
+
+lemma ntfn_cancel_corres:
+  "corres dc (invs and valid_sched and ntfn_at ntfn) (invs' and ntfn_at' ntfn)
+             (cancel_all_signals ntfn) (cancelAllSignals ntfn)"
+  apply (simp add: cancel_all_signals_def cancelAllSignals_def)
+  apply (rule corres_split' [OF _ _ get_simple_ko_sp get_ntfn_sp'])
+   apply (rule corres_guard_imp [OF get_ntfn_corres])
+    apply simp+
+  apply (case_tac "ntfn_obj ntfna", simp_all add: ntfn_relation_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split [OF _ set_ntfn_corres])
+       apply (rule corres_split [OF rescheduleRequired_corres])
+         apply (rule ntfn_cancel_corres_helper)
+        apply (clarsimp simp: dc_def)
+        apply (rename_tac list)
+        apply (rule_tac R="\<lambda>_ s. (\<forall>x\<in>set list. released_if_bound_sc_tcb_at x s)"
+               in hoare_post_add)
+        apply (rule mapM_x_wp')
+        apply (wpsimp wp: weak_sch_act_wf_lift_linear
+                          set_thread_state_weak_valid_sched_action
+                          hoare_vcg_imp_lift set_thread_state_pred_map_tcb_sts_of)
+        apply (fastforce simp: vs_all_heap_simps)
+       apply (rename_tac list)
+        apply (rule_tac R="\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s"
+               in hoare_post_add)
+       apply (rule mapM_x_wp')
+       apply (rule hoare_name_pre_state)
+       apply (wpsimp wp: hoare_vcg_const_Ball_lift
+                         sts_st_tcb' sts_valid_queues setThreadState_not_st
+                   simp: valid_tcb_state'_def)
+      apply (simp add: ntfn_relation_def)
+     apply (wpsimp wp: hoare_vcg_const_Ball_lift)+
+   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
+   apply (erule (1) obj_at_valid_objsE)
+   apply (clarsimp simp: valid_obj_def valid_ntfn_def not_idle_tcb_in_waitingntfn
+                         valid_sched_weak_valid_sched_action)
+   apply (clarsimp simp: ball_conj_distrib[symmetric])
+   apply (rename_tac q s t)
+   apply (rule context_conjI)
+    apply (drule_tac x=ntfn and y=t and tp=TCBSignal in sym_refsE
+           ; clarsimp simp: in_state_refs_of_iff refs_of_rev vs_all_heap_simps)
+   apply (clarsimp simp: valid_sched_released_ipc_queues released_ipc_queues_blocked_on_recv_ntfn_E1)
+  apply (clarsimp simp: invs'_def valid_state'_def invs_weak_sch_act_wf valid_ntfn'_def
+                        valid_obj'_def projectKOs
+         | drule ko_at_valid_objs')+
+  done
+
+lemma ep'_Idle_case_helper:
+  "(case ep of IdleEP \<Rightarrow> a | _ \<Rightarrow> b) = (if (ep = IdleEP) then a else b)"
+  by (cases ep, simp_all)
+
+lemma rescheduleRequired_notresume:
+  "\<lbrace>\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread\<rbrace>
+    rescheduleRequired \<lbrace>\<lambda>_ s. ksSchedulerAction s = ChooseNewThread\<rbrace>"
+  proof -
+    have ssa: "\<lbrace>\<top>\<rbrace> setSchedulerAction ChooseNewThread
+               \<lbrace>\<lambda>_ s. ksSchedulerAction s = ChooseNewThread\<rbrace>"
+      by (simp add: setSchedulerAction_def | wp)+
+    show ?thesis
+      by (simp add: rescheduleRequired_def, wp ssa)
+  qed
+
+lemma setThreadState_ResumeCurrentThread_imp_notct[wp]:
+  "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
+   setThreadState st t
+   \<lbrace>\<lambda>_ s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
+  (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
+proof -
+  have nrct:
+    "\<lbrace>\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread\<rbrace>
+     rescheduleRequired
+     \<lbrace>\<lambda>_ s. ksSchedulerAction s \<noteq> ResumeCurrentThread\<rbrace>"
+    by (rule hoare_strengthen_post [OF rescheduleRequired_notresume], simp)
+  show ?thesis
+  apply (simp add: setThreadState_def)
+  apply (wpsimp wp: hoare_vcg_imp_lift [OF nrct])
+   apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_post_imp)
+    apply (clarsimp)
+  sorry (*
+   apply (rule hoare_convert_imp [OF threadSet.ksSchedulerAction threadSet.ct])
+  apply assumption
+  done *)
+qed
 
 lemma cancel_all_invs'_helper:
   "\<lbrace>all_invs_but_sym_refs_ct_not_inQ' and (\<lambda>s. \<forall>x \<in> set q. tcb_at' x s)
