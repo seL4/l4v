@@ -5691,10 +5691,6 @@ lemma rec_del_valid_sched:
       apply (wpsimp wp: preemption_point_inv')+
   done
 
-lemma rec_del_simple_sched_action[wp]:
-  "\<lbrace>simple_sched_action\<rbrace> rec_del call \<lbrace>\<lambda>rv. simple_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-   by (wpsimp wp: rec_del_preservation preemption_point_inv')
-
 end
 
 lemma possible_switch_to_scheduler_act_sane:
@@ -14466,7 +14462,7 @@ end
 
 context DetSchedSchedule_AI_det_ext begin
 
-crunches cap_swap_ext, cap_delete
+crunches cap_swap_ext
   for ct_not_blocked[wp]: "ct_not_blocked :: det_state \<Rightarrow> _"
   (wp: crunch_wps dxo_wp_weak ignore_del: cap_swap_ext)
 

@@ -399,6 +399,9 @@ lemma arch_mask_irq_signal_valid_sched_pred_strong[wp]:
   "arch_mask_irq_signal i \<lbrace> valid_sched_pred_strong P \<rbrace>"
   unfolding arch_mask_irq_signal_def by wpsimp
 
+crunches arch_switch_to_thread, arch_switch_to_idle_thread
+for cdt_cdt_list_exst [wp]:  "\<lambda>s. P (cdt s) (cdt_list_internal (exst s))"
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
@@ -406,6 +409,12 @@ global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?; wpsimp)
   qed
+
+global_interpretation DetSchedSchedule_AI_det_ext?: DetSchedSchedule_AI_det_ext
+  proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?; wpsimp)
+qed
 
 context Arch begin global_naming ARM
 
@@ -427,6 +436,12 @@ lemma handle_vm_fault_not_timeout_fault[wp]:
 end
 
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault?: DetSchedSchedule_AI_handle_hypervisor_fault
+  proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (unfold_locales; wpsimp)
+  qed
+
+global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault_det_ext?: DetSchedSchedule_AI_handle_hypervisor_fault_det_ext
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; wpsimp)
