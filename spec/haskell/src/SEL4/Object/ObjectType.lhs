@@ -448,10 +448,10 @@ The "decodeInvocation" function parses the message, determines the operation tha
 >         label args _ slot cap@(ThreadCap {}) extraCaps False =
 >     liftM InvokeTCB $ decodeTCBInvocation label args cap slot extraCaps
 >
-> decodeInvocation label args _ _ DomainCap extraCaps _ =
+> decodeInvocation label args _ _ DomainCap extraCaps False =
 >     liftM (uncurry InvokeDomain) $ decodeDomainInvocation label args extraCaps
 >
-> decodeInvocation label args _ _ (SchedContextCap {capSchedContextPtr=sc}) extraCaps _ =
+> decodeInvocation label args _ _ (SchedContextCap {capSchedContextPtr=sc}) extraCaps False =
 >     liftM InvokeSchedContext $ decodeSchedContextInvocation label sc (map fst extraCaps) args
 >
 > decodeInvocation label args _ _ SchedControlCap extraCaps False =
