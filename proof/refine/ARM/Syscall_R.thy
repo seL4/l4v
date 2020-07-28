@@ -216,12 +216,12 @@ lemma decode_invocation_corres:
           apply (simp add: list_all2_map2 list_all2_map1)
          apply assumption
         \<comment> \<open>DomainCap\<close>
-        apply (simp add: isCap_defs)
+        apply (clarsimp simp: isCap_defs)
         apply (rule corres_guard_imp)
           apply (rule dec_domain_inv_corres)
            apply (simp+)[4]
        \<comment> \<open>SchedContextCap\<close>
-       apply (simp add: isCap_defs o_def)
+       apply (clarsimp simp: isCap_defs o_def)
        apply (rule corres_guard_imp, erule decode_sc_inv_corres; clarsimp simp: valid_cap_def)
       \<comment> \<open>SchedControlCap\<close>
       apply (clarsimp simp: isCap_defs o_def)
