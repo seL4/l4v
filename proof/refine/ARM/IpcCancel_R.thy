@@ -43,7 +43,7 @@ lemma cancelSignal_tcb_at':
   apply (wpsimp wp: hoare_drop_imp)
   done
 
-crunches cancelIPC
+crunches cancelIPC, cancelSignal
   for tcb_at'_better[wp]: "\<lambda>s. P (tcb_at' p s)"
   (wp: crunch_wps cancelSignal_tcb_at' simp: crunch_simps pred_tcb_at'_def)
 
@@ -99,24 +99,61 @@ locale delete_one_conc_pre =
   assumes delete_one_tcbDomain_obj_at':
     "\<And>P. \<lbrace>obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace> cteDeleteOne slot \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace>"
 
+lemma cancelSignal_st_tcb_at':
+  "\<lbrace>K (P Inactive)\<rbrace>
+   cancelSignal t ntfn
+   \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
+  unfolding cancelSignal_def Let_def
+  apply (rule hoare_gen_asm_single)
+  supply getNotification_inv[wp del] set_ntfn'.get_inv[wp del]
+  apply (wpsimp wp: setThreadState_st_tcb_at'_cases
+                    hoare_drop_imp[where R="\<lambda>rv _. delete t (f rv) = []" for f]
+                    hoare_drop_imp[where R="\<lambda>rv _. \<exists>a b. delete t (f rv) = a # b" for f])
+  done
+
+(* FIXME RT: move to... Bits_R? Proved by MikiT in #874 *)
+lemma sym_ref_Receive_or_Reply_replyTCB:
+  "\<lbrakk> sym_refs (state_refs_of' s); ko_at' tcb tp s;
+     tcbState tcb = BlockedOnReceive ep pl (Some rp)
+     \<or> tcbState tcb = BlockedOnReply (Some rp) \<rbrakk> \<Longrightarrow>
+    \<exists>reply. ksPSpace s rp = Some (KOReply reply) \<and> replyTCB reply = Some tp"
+  apply (drule (1) sym_refs_obj_atD'[rotated, where p=tp])
+  apply (clarsimp simp: state_refs_of'_def projectKOs obj_at'_def)
+  apply (clarsimp simp: ko_wp_at'_def)
+  apply (erule disjE; clarsimp)
+  apply (rename_tac koa; case_tac koa;
+         simp add: get_refs_def2 ep_q_refs_of'_def ntfn_q_refs_of'_def
+                   tcb_st_refs_of'_def tcb_bound_refs'_def
+            split: endpoint.split_asm ntfn.split_asm thread_state.split_asm if_split_asm)+
+  done
+
+lemma cancelIPC_simple'_not_awaiting_reply:
+  "\<lbrace>\<lambda>s. sym_refs (state_refs_of' s)\<rbrace>
+   cancelIPC t
+   \<lbrace>\<lambda>_. st_tcb_at' ((=) Running or (=) Inactive or (=) Restart or (=) IdleThreadState) t\<rbrace>"
+  unfolding cancelIPC_def Let_def getBlockingObject_def
+  apply (wpsimp wp: sts_st_tcb_at'_cases hoare_vcg_all_lift hoare_vcg_imp_lift
+                    hoare_pre_cont[where a="getEndpoint x" and P="\<lambda>rv _. P rv" for x P]
+                    hoare_disjI2[where f="getEndpoint x" and Q="\<lambda>_. tcb_at' y" for x y]
+                    replyUnlink_st_tcb_at'_sym_ref replyRemoveTCB_st_tcb_at'_sym_ref
+                    cancelSignal_st_tcb_at' threadSet_pred_tcb_at_state[where p=t] gts_wp')
+  apply (rule conjI; clarsimp)
+   apply normalise_obj_at'
+   apply (rename_tac rptr tcb reply)
+   apply (erule notE)
+   apply (frule(1) sym_ref_Receive_or_Reply_replyTCB, fast)
+   apply (clarsimp simp: obj_at'_def projectKO_eq project_inject)
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+  done
+
 context begin interpretation Arch .
 crunch typ_at'[wp]: emptySlot "\<lambda>s. P (typ_at' T p s)"
 end
-
-crunch tcb_at'[wp]: cancelSignal "tcb_at' t"
-  (wp: crunch_wps simp: crunch_simps)
 
 context delete_one_conc_pre
 begin
 
 lemmas delete_one_typ_ats[wp] = typ_at_lifts [OF delete_one_typ_at]
-
-lemma cancelIPC_tcb_at'[wp]:
-  "\<lbrace>tcb_at' t\<rbrace> cancelIPC t' \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
-  apply (simp add: cancelIPC_def Let_def)
-  apply (wp delete_one_typ_ats hoare_drop_imps
-       | simp add: o_def if_apply_def2 | wpc | assumption)+
-  sorry
 
 end
 

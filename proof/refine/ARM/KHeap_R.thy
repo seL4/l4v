@@ -306,6 +306,22 @@ lemma ko_wp_at'_set_ko'_distinct:
   apply blast
   done
 
+lemma obj_at'_set_obj'_distinct:
+  assumes "p \<noteq> p'"
+          "obj_at' Q p' s"
+  shows "obj_at' P p (set_ko' p' ko s) = obj_at' P p s"
+  using assms apply -
+  apply (rule iffI; fastforce simp: obj_at'_def projectKO_eq project_inject ps_clear_upd')
+  done
+
+lemmas pred_tcb_at'_set_obj'_distinct =
+  obj_at'_set_obj'_distinct[where P="test o proj o tcb_to_itcb'" for test proj,
+                            simplified o_def, folded pred_tcb_at'_def]
+
+lemmas pred_tcb_at'_set_obj'_iff =
+  tcb_obj_at'_set_obj'_iff[where Q="test o proj o tcb_to_itcb'" for test proj,
+                           simplified o_def injectKO_tcb, folded pred_tcb_at'_def]
+
 lemma non_sc_same_typ_at'_objBits_always_the_same:
   assumes "typ_at' t ptr s"
           "koTypeOf ko = t"
@@ -2129,6 +2145,22 @@ lemma getObject_wp_state_only:
   done
 
 lemmas get_wp_state_only = getObject_wp_state_only[folded g_def]
+
+lemma setObject_no_update:
+  assumes [simp]: "\<And>ko :: 'a. Q (upd ko) = Q ko"
+  shows
+  "\<lbrace>\<lambda>s. P (obj_at' Q p' s) \<and> ko_at' ko p s\<rbrace>
+   setObject p (upd ko)
+   \<lbrace>\<lambda>_ s. P (obj_at' Q p' s)\<rbrace>"
+  apply (wpsimp wp: setObject_obj_at'_strongest)
+  apply (case_tac "p = p'"; clarsimp simp: obj_at'_def)
+  done
+
+lemmas set_no_update = setObject_no_update[folded f_def]
+
+lemmas getObject_ko_at' = getObject_ko_at[OF default_load objBits[rule_format]]
+
+lemmas get_ko_at' = getObject_ko_at'[folded g_def]
 
 end
 

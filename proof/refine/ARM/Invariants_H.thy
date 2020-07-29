@@ -3209,6 +3209,11 @@ lemma ko_wp_at_norm:
   "ko_wp_at' P p s \<Longrightarrow> \<exists>ko. P ko \<and> ko_wp_at' ((=) ko) p s"
   by (auto simp add: ko_wp_at'_def)
 
+lemma ko_at_ko_wp_atD':
+  "\<lbrakk>ko_at' ko p s; ko_wp_at' P p s\<rbrakk> \<Longrightarrow> P (injectKO ko)"
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKO_eq project_inject)
+  done
+
 lemma valid_mdb_machine_state [iff]:
   "valid_mdb' (ksMachineState_update f s) = valid_mdb' s"
   by (simp add: valid_mdb'_def)

@@ -105,6 +105,8 @@ crunches setThreadState, threadSet
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   and reply_at'[wp]: "\<lambda>s. P (reply_at' p s)"
   and tcb_at'[wp]: "\<lambda>s. P (tcb_at' p s)"
+  and obj_at'_reply[wp]: "\<lambda>s. P (obj_at' (Q :: reply \<Rightarrow> bool) p s)"
+  and obj_at'_ep[wp]: "\<lambda>s. P (obj_at' (Q :: endpoint \<Rightarrow> bool) p s)"
   (wp: crunch_wps set_tcb'.set_preserves_some_obj_at')
 
 crunches tcbSchedDequeue, tcbSchedEnqueue
@@ -2625,15 +2627,18 @@ lemma threadSet_runnable_sch_act:
   done
 
 lemma threadSet_pred_tcb_at_state:
-  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (if p = t
-        then obj_at' (\<lambda>tcb. P (proj (tcb_to_itcb' (f tcb)))) t s
-        else pred_tcb_at' proj P p s)\<rbrace>
-  threadSet f t \<lbrace>\<lambda>_. pred_tcb_at' proj P p\<rbrace>"
-  apply (rule hoare_chain)
-    apply (rule threadSet_obj_at'_really_strongest)
-   prefer 2
-   apply (simp add: pred_tcb_at'_def)
-  apply (clarsimp split: if_splits simp: pred_tcb_at'_def o_def)
+  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow>
+         (p = t \<longrightarrow> obj_at' (\<lambda>tcb. P (Q (proj (tcb_to_itcb' (f tcb))))) t s) \<and>
+         (p \<noteq> t \<longrightarrow>  P (pred_tcb_at' proj Q p s))\<rbrace>
+   threadSet f t
+   \<lbrace>\<lambda>_ s. P (pred_tcb_at' proj Q p s)\<rbrace>"
+  unfolding threadSet_def
+  apply (wpsimp wp: set_tcb'.setObject_wp set_tcb'.getObject_wp)
+  apply (case_tac "p = t"; clarsimp)
+   apply (subst pred_tcb_at'_set_obj'_iff, assumption)
+   apply (clarsimp simp: obj_at'_def)
+  apply (subst pred_tcb_at'_set_obj'_distinct, assumption, assumption)
+  apply (clarsimp simp: obj_at'_def)
   done
 
 lemma threadSet_tcbDomain_triv':
@@ -4975,6 +4980,17 @@ lemmas isTS_defs =
   isBlockedOnNotification_def isBlockedOnReply_def
   isRestart_def isInactive_def
   isIdleThreadState_def
+
+(* FIXME: replace `sts_st_tcb_at'_cases`, which is missing the `tcb_at'` precondition. *)
+lemma setThreadState_st_tcb_at'_cases:
+  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow>
+          (t = t' \<longrightarrow> P st) \<and>
+          (t \<noteq> t' \<longrightarrow> st_tcb_at' P t' s)\<rbrace>
+   setThreadState st t
+   \<lbrace>\<lambda>_. st_tcb_at' P t'\<rbrace>"
+  unfolding setThreadState_def
+  apply (wpsimp wp: scheduleTCB_pred_tcb_at' threadSet_pred_tcb_at_state)
+  done
 
 lemma sts_st_tcb_at'_cases:
   "\<lbrace>\<lambda>s. ((t = t') \<longrightarrow> (P ts \<and> tcb_at' t' s)) \<and> ((t \<noteq> t') \<longrightarrow> st_tcb_at' P t' s)\<rbrace>

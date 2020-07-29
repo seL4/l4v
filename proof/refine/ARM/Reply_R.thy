@@ -73,4 +73,33 @@ lemma replyUnlink_tcb_obj_at'_no_change:
               simp: o_def)
   done
 
+lemma replyRemoveTCB_st_tcb_at'_sym_ref:
+  "\<lbrace>(\<lambda>s. tcb_at' tptr s \<longrightarrow>
+          (\<forall>rptr. st_tcb_at' (\<lambda>st. replyObject st = Some rptr) tptr s \<and> reply_at' rptr s \<longrightarrow>
+                    obj_at' (\<lambda>reply. replyTCB reply = Some tptr) rptr s))
+      and (K (test Inactive))\<rbrace>
+   replyRemoveTCB tptr
+   \<lbrace>\<lambda>_. st_tcb_at' test tptr\<rbrace>"
+  unfolding replyRemoveTCB_def cleanReply_def
+  apply (rule hoare_gen_asm)
+  supply set_reply'.get_wp[wp del] set_reply'.get_wp_state_only[wp] set_reply'.get_wp_rv_only[wp]
+  apply (wpsimp wp: hoare_vcg_if_lift hoare_vcg_all_lift replyUnlink_st_tcb_at'_sym_ref
+                    set_reply'.set_no_update[where upd="\<lambda>r. (replyNext_update Map.empty
+                                                              (replyPrev_update Map.empty r))"]
+                    set_reply'.set_no_update[where upd="\<lambda>r. (replyNext_update Map.empty r)"]
+                    set_reply'.set_no_update[where upd="\<lambda>r. (replyPrev_update Map.empty r)"]
+                    hoare_vcg_imp_lift set_reply'.get_ko_at'
+              simp: disj_imp)
+       apply (rule_tac Q="\<lambda>_. obj_at' (\<lambda>r. replyTCB r = Some tptr) rptr" in hoare_post_imp,
+              clarsimp)
+       apply wp
+      apply (rule_tac Q="\<lambda>_. obj_at' (\<lambda>r. replyTCB r = Some tptr) rptr" in hoare_post_imp,
+             clarsimp)
+      apply wpsimp
+     apply wpsimp
+    apply (wpsimp wp: haskell_assert_wp)
+   apply (wpsimp wp: gts_wp')
+  apply (clarsimp simp: obj_at'_def pred_tcb_at'_def)
+  done
+
 end
