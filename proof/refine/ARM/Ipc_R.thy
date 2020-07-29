@@ -3880,15 +3880,6 @@ lemma si_blk_makes_runnable':
 crunches possibleSwitchTo, completeSignal
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
 
-lemma sendSignal_st_tcb'_Running:
-  "\<lbrace>st_tcb_at' (\<lambda>st. st = Running \<or> P st) t\<rbrace>
-     sendSignal ntfnptr bdg
-   \<lbrace>\<lambda>_. st_tcb_at' (\<lambda>st. st = Running \<or> P st) t\<rbrace>"
-  apply (simp add: sendSignal_def)
-  apply (wp sts_st_tcb_at'_cases cancelIPC_st_tcb_at' gts_wp' getNotification_wp static_imp_wp
-       | wpc | clarsimp simp: pred_tcb_at')+
-  sorry
-
 end
 
 end

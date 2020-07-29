@@ -99,23 +99,6 @@ locale delete_one_conc_pre =
   assumes delete_one_tcbDomain_obj_at':
     "\<And>P. \<lbrace>obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace> cteDeleteOne slot \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace>"
 
-lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at':
-  "\<lbrace>st_tcb_at' P t' and K (t \<noteq> t')\<rbrace>
-     cancelIPC t
-   \<lbrace>\<lambda>rv. st_tcb_at' P t'\<rbrace>"
-  apply (simp add: cancelIPC_def Let_def locateSlot_conv
-                   capHasProperty_def isCap_simps)
-  apply (wp sts_pred_tcb_neq' hoare_drop_imps delete_one_reply_st_tcb_at
-       | wpc | clarsimp)+
-  sorry (*
-          apply (wp getCTE_wp | clarsimp)+
-         apply (wp hoare_vcg_ex_lift threadSet_cte_wp_at' hoare_vcg_imp_lift
-                   cancelSignal_pred_tcb_at' sts_pred_tcb_neq' getEndpoint_wp gts_wp'
-                   threadSet_pred_tcb_no_state
-              | wpc | clarsimp)+
-  apply (auto simp: cte_wp_at_ctes_of isCap_simps)
-  done *)
-
 context begin interpretation Arch .
 crunch typ_at'[wp]: emptySlot "\<lambda>s. P (typ_at' T p s)"
 end
