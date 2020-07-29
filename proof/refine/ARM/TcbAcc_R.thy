@@ -3511,28 +3511,33 @@ lemma rescheduleRequired_valid_queues'_sch_act_simple:
   apply (fastforce simp: valid_def sch_act_simple_def)
   done
 
-lemma rescheduleRequired_valid_release_queue_sch_act_simple:
-  "\<lbrace>valid_release_queue and sch_act_simple\<rbrace>
+lemma tcbSchedEnqueue_sch_act_sane[wp]:
+  "tcbSchedEnqueue t \<lbrace>sch_act_sane\<rbrace>"
+  apply (clarsimp simp: tcbSchedEnqueue_def sch_act_sane_def)
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+
+lemma rescheduleRequired_valid_release_queue_sch_act_sane:
+  "\<lbrace>valid_release_queue and sch_act_sane\<rbrace>
     rescheduleRequired
    \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
   apply (simp add: rescheduleRequired_def getSchedulerAction_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule_tac B="\<lambda>_. valid_release_queue and sch_act_simple" in hoare_seq_ext[rotated]
+  apply (rule_tac B="\<lambda>_. valid_release_queue and sch_act_sane" in hoare_seq_ext[rotated]
          ; (solves \<open>wpsimp simp: valid_release_queue_def\<close>)?)
-   apply (case_tac action; clarsimp?, (solves \<open>wpsimp\<close>)?)
-   apply (fastforce simp: valid_def sch_act_simple_def)
+  apply (case_tac action; clarsimp?, (solves \<open>wpsimp\<close>)?)
+  apply (wpsimp wp: isSchedulable_wp hoare_vcg_if_lift2)
   done
 
-lemma rescheduleRequired_valid_release_queue'_sch_act_simple:
-  "\<lbrace>valid_release_queue' and sch_act_simple\<rbrace>
+lemma rescheduleRequired_valid_release_queue'_sch_act_sane:
+  "\<lbrace>valid_release_queue' and sch_act_sane\<rbrace>
     rescheduleRequired
    \<lbrace>\<lambda>_. valid_release_queue'\<rbrace>"
   apply (simp add: rescheduleRequired_def getSchedulerAction_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule_tac B="\<lambda>_. valid_release_queue' and sch_act_simple" in hoare_seq_ext[rotated]
+  apply (rule_tac B="\<lambda>_. valid_release_queue' and sch_act_sane" in hoare_seq_ext[rotated]
          ; (solves \<open>wpsimp simp: valid_release_queue'_def\<close>)?)
    apply (case_tac action; clarsimp?, (solves \<open>wpsimp\<close>)?)
-   apply (fastforce simp: valid_def sch_act_simple_def)
+  apply (wpsimp wp: isSchedulable_wp hoare_vcg_if_lift2)
   done
 
 lemma setThreadState_valid_queues'[wp]:
@@ -3560,8 +3565,8 @@ lemma setThreadState_valid_release_queue[wp]:
   apply (rule hoare_seq_ext_skip, wpsimp wp: isSchedulable_inv)
   apply (rule hoare_when_cases)
    apply clarsimp
-  apply (wpsimp wp: rescheduleRequired_valid_release_queue_sch_act_simple)
-  apply (clarsimp simp: sch_act_simple_def)
+  apply (wpsimp wp: rescheduleRequired_valid_release_queue_sch_act_sane)
+  apply (clarsimp simp: sch_act_sane_def)
   done
 
 lemma setThreadState_valid_release_queue'[wp]:
@@ -3576,8 +3581,8 @@ lemma setThreadState_valid_release_queue'[wp]:
   apply (rule hoare_seq_ext_skip, wpsimp wp: isSchedulable_inv)
   apply (rule hoare_when_cases)
    apply clarsimp
-  apply (wpsimp wp: rescheduleRequired_valid_release_queue'_sch_act_simple)
-  apply (clarsimp simp: sch_act_simple_def)
+  apply (wpsimp wp: rescheduleRequired_valid_release_queue'_sch_act_sane)
+  apply (clarsimp simp: sch_act_sane_def)
   done
 
 lemma setBoundNotification_valid_queues'[wp]:
@@ -4352,6 +4357,8 @@ lemma sbn_st_tcb':
 crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification, scheduleTCB
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
+
+lemmas rescheduleRequired_typ_ats[wp] = typ_at_lifts[OF rescheduleRequired_typ_at']
 
 lemma setThreadState_ctes_of[wp]:
   "setThreadState st t \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"

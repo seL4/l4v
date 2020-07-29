@@ -2757,7 +2757,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wp prepares_delete_helper'' [OF cancelAllIPC_unlive]
-             prepares_delete_helper'' [OF cancelAllSignals_unlive[folded o_def]]
+             prepares_delete_helper'' [OF cancelAllSignals_unlive]
              suspend_isFinal prepareThreadDelete_unqueued prepareThreadDelete_nonq
              prepareThreadDelete_inactive prepareThreadDelete_isFinal
              suspend_makes_inactive suspend_nonq
