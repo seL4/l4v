@@ -4165,7 +4165,7 @@ crunch inv[wp]: lookupIPCBuffer P
 
 crunches scheduleTCB, possibleSwitchTo
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma setThreadState_st_tcb':
   "\<lbrace>\<top>\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. st_tcb_at' (\<lambda>s. s = st) t\<rbrace>"

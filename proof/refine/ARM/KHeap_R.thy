@@ -3031,5 +3031,84 @@ lemma corres_assert_opt_assume_l:
   \<Longrightarrow> corres dc (P and K (X \<noteq> None)) Q (assert_opt X >>= f) g"
   by (force simp: corres_underlying_def assert_opt_def return_def bind_def fail_def)
 
+lemma getCurThread_sp:
+  "\<lbrace>P\<rbrace> getCurThread \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksCurThread s)\<rbrace>"
+  by (wpsimp simp: getCurThread_def)
+
+lemma getSchedulerAction_sp:
+  "\<lbrace>P\<rbrace> getSchedulerAction \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksSchedulerAction s)\<rbrace>"
+  by (wpsimp simp: getSchedulerAction_def)
+
+lemma getReprogramTimer_sp:
+  "\<lbrace>P\<rbrace> getReprogramTimer \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksReprogramTimer s)\<rbrace>"
+  by (wpsimp simp: getReprogramTimer_def)
+
+lemma getReprogramTimer_wp[wp]:
+  "\<lbrace>\<lambda>s. P (ksReprogramTimer s) s\<rbrace> getReprogramTimer \<lbrace>P\<rbrace>"
+  by (wpsimp simp: getReprogramTimer_def)
+
+lemma getConsumedTime_wp[wp]:
+  "\<lbrace>\<lambda>s. P (ksConsumedTime s) s\<rbrace> getConsumedTime \<lbrace>P\<rbrace>"
+  by (wpsimp simp: getConsumedTime_def)
+
+lemma isRoundRobin_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko sc s \<longrightarrow> P (scPeriod ko = 0) s\<rbrace> isRoundRobin sc \<lbrace>P\<rbrace>"
+  by (wpsimp simp: isRoundRobin_def)
+
+lemma mapScPtr_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (f ko) s\<rbrace> mapScPtr scp f \<lbrace>P\<rbrace>"
+  unfolding mapScPtr_def
+  by wpsimp
+
+lemma getCurSc_wp[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurSc s) s\<rbrace> getCurSc \<lbrace>P\<rbrace>"
+  unfolding getCurSc_def
+  by wpsimp
+
+lemma getCurTime_wp[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurTime s) s\<rbrace> getCurTime \<lbrace>P\<rbrace>"
+  unfolding getCurTime_def
+  by wpsimp
+
+lemma curDomain_wp[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurDomain s) s\<rbrace> curDomain \<lbrace>P\<rbrace>"
+  unfolding curDomain_def
+  by wpsimp
+
+lemma getReleaseQueue_wp[wp]:
+  "\<lbrace>\<lambda>s. P (ksReleaseQueue s) s\<rbrace> getReleaseQueue \<lbrace>P\<rbrace>"
+  unfolding getReleaseQueue_def
+  by wpsimp
+
+lemma refillNext_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (if x = scRefillMax ko - Suc 0 then 0 else x+1) s\<rbrace> refillNext scp x \<lbrace>P\<rbrace>"
+  unfolding refillNext_def
+  by wpsimp
+
+lemma refillSize_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (scRefillCount ko) s\<rbrace> refillSize scp \<lbrace>P\<rbrace>"
+  unfolding refillSize_def
+  by (wpsimp wp: mapScPtr_wp)
+
+lemma refillEmpty_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (scRefillCount ko = 0) s\<rbrace> refillEmpty scp \<lbrace>P\<rbrace>"
+  unfolding refillEmpty_def
+  by (wpsimp wp:)
+
+lemma refillFull_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (scRefillCount ko = scRefillMax ko) s\<rbrace> refillFull scp \<lbrace>P\<rbrace>"
+  unfolding refillFull_def
+  by (wpsimp wp:)
+
+lemma refillReady_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (rTime (refillHd ko) \<le> ksCurTime s + kernelWCETTicks) s\<rbrace> refillReady scp \<lbrace>P\<rbrace>"
+  unfolding refillReady_def
+  by wpsimp
+
+lemma scActive_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (0 < scRefillMax ko) s\<rbrace> scActive scp \<lbrace>P\<rbrace>"
+  unfolding scActive_def
+  by wpsimp
+
 end
 end

@@ -1631,7 +1631,6 @@ lemma schedContextCancelYieldTo_if_live_then_nonz_cap'[wp]:
    apply (wpsimp wp: setSchedContext_iflive')
    apply (erule if_live_then_nonz_capE')
    apply (clarsimp simp: live'_def ko_wp_at'_def obj_at'_def projectKOs live_sc'_def)
-   apply (fastforce simp: sym_refs_def state_refs_of'_def get_refs_def split: option.splits)
   apply (wpsimp wp: threadSet_iflive' setSchedContext_iflive' threadGet_wp)
   apply (fastforce simp: obj_at'_def projectKOs)
   done

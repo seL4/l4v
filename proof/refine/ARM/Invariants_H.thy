@@ -155,6 +155,10 @@ lemma st_tcb_at'_def:
   "st_tcb_at' test \<equiv> obj_at' (test \<circ> tcbState)"
   by (simp add: pred_tcb_at'_def o_def)
 
+definition
+  active_sc_at' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+  "active_sc_at' \<equiv> obj_at' (\<lambda>ko :: sched_context. 0 < scRefillMax ko)"
 
 text \<open>cte with property at\<close>
 definition
