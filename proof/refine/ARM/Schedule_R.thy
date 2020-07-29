@@ -3334,7 +3334,7 @@ lemma rescheduleRequired_sch_act_sane[wp]:
                    setSchedulerAction_def)
   by (wp isSchedulable_wp | wpc | clarsimp)+
 
-crunch sch_act_sane: setThreadState, setBoundNotification "sch_act_sane"
+crunch sch_act_sane[wp]: setThreadState, setBoundNotification "sch_act_sane"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma possibleSwitchTo_corres:
