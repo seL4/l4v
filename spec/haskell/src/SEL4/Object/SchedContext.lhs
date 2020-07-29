@@ -259,6 +259,7 @@ This module uses the C preprocessor to select a target architecture.
 > scheduleUsed :: PPtr SchedContext -> Refill -> Kernel ()
 > scheduleUsed scPtr new = do
 >     sc <- getSchedContext scPtr
+>     assert (scRefillMax sc > 0) "scPtr should be active"
 >     empty <- refillEmpty scPtr
 >     if empty
 >       then do
@@ -293,6 +294,7 @@ This module uses the C preprocessor to select a target architecture.
 > refillBudgetCheck usage = do
 >     scPtr <- getCurSc
 >     sc <- getSchedContext scPtr
+>     assert (scRefillMax sc > 0) "CurSc should be active"
 >     let last_entry = rTime (refillHd sc)
 >     let used = Refill { rTime = last_entry + scPeriod sc,
 >                         rAmount = usage }
@@ -330,6 +332,8 @@ This module uses the C preprocessor to select a target architecture.
 > refillBudgetCheckRoundRobin :: Ticks -> Kernel ()
 > refillBudgetCheckRoundRobin usage = do
 >     scPtr <- getCurSc
+>     scactive <- scActive scPtr
+>     assert scactive "scPtr should be active"
 >     refillCount <- mapScPtr scPtr scRefillCount
 >     let usage' = if usage < minBudget && refillCount == 1
 >                     then minBudget
@@ -370,6 +374,8 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillUnblockCheck :: PPtr SchedContext -> Kernel ()
 > refillUnblockCheck scPtr = do
+>       scactive <- scActive scPtr
+>       assert scactive "scPtr should be active"
 >       roundRobin <- isRoundRobin scPtr
 >       ready <- refillReady scPtr
 >       when (roundRobin && ready) $ do
