@@ -133,7 +133,7 @@ This module specifies the behavior of reply objects.
 >     state <- getThreadState tptr
 >     assert (isReply state) "replyRemoveTCB: thread state must be BlockedOnReply"
 
->     rptr <- return $ fromJust $ replyObject state
+>     rptr <- maybeToMonad $ replyObject state
 >     reply <- getReply rptr
 >     nextReplyPtrOpt <- return $ replyNext reply
 >     prevReplyPtrOpt <- return $ replyPrev reply
