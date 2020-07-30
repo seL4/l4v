@@ -5112,6 +5112,7 @@ lemma asUser_irq_handlers':
 lemma archTcbUpdate_aux2: "(\<lambda>tcb. tcb\<lparr> tcbArch := f (tcbArch tcb)\<rparr>) = tcbArch_update f"
   by (rule ext, case_tac tcb, simp)
 
+(* FIXME: rename. VER-1331 *)
 lemma threadSet_obj_at'_simple_strongest:
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow>
           (t = t' \<longrightarrow> P (obj_at' (\<lambda>tcb. Q (f tcb)) t s)) \<and>
@@ -5176,7 +5177,7 @@ lemma getThreadState_only_state_wp[wp]:
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   done
 
-(* FIXME: replace tcbSchedEnqueue_not_st *)
+(* FIXME: replace tcbSchedEnqueue_not_st. VER-1333 *)
 lemma tcbSchedEnqueue_obj_at':
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow>
           (t = t' \<longrightarrow> P (obj_at' (\<lambda>tcb. Q (tcb\<lparr>tcbQueued := True\<rparr>)) t' s)) \<and>

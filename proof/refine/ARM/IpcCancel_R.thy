@@ -44,6 +44,7 @@ lemma cancelSignal_tcb_at':
   done
 
 crunches cancelIPC, cancelSignal
+  (* FIXME RT: VER-1016 *)
   for tcb_at'_better[wp]: "\<lambda>s. P (tcb_at' p s)"
   (wp: crunch_wps cancelSignal_tcb_at' simp: crunch_simps pred_tcb_at'_def)
 
@@ -1252,7 +1253,7 @@ lemma rescheduleRequired_oa_queued:
 
 
 (* FIXME: rename uses of setThreadState_oa_queued; the "_queued" suffix doesn't make sense
-   any more. *)
+   any more. VER-1332 *)
 lemmas setThreadState_oa_queued = setThreadState_oa
 
 lemma setBoundNotification_oa_queued:
@@ -1919,6 +1920,7 @@ lemma (in delete_one_conc) suspend_invs'[wp]:
   done
 
 crunches ThreadDecls_H.suspend
+  (* FIXME RT: VER-1016 *)
   for tcb_at'_better[wp]: "\<lambda>s. P (tcb_at' t s)"
   and sch_act_simple[wp]: "sch_act_simple"
   (rule: sch_act_simple_lift
