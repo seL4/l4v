@@ -2081,6 +2081,11 @@ lemma get_sched_context_exs_valid:
                      gets_def get_def return_def exs_valid_def
               split: Structures_A.kernel_object.splits)
 
+lemma get_reply_exs_valid:
+  "reply_at rp s \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_reply rp \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
+  by (clarsimp simp: get_simple_ko_def get_object_def gets_def return_def get_def
+                     partial_inv_def exs_valid_def bind_def obj_at_def is_reply)
+
 lemma isRunnable_sp:
   "\<lbrace>P\<rbrace>
    isRunnable tcb_ptr

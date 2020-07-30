@@ -2656,57 +2656,6 @@ lemmas bit_simps' = pteBits_def asidHighBits_def asid_low_bits_def
                     asid_high_bits_def minSchedContextBits_def
                     replySizeBits_def pageBits_def pdeBits_def ptBits_def pdBits_def
 
-lemma pspace_aligned_cross:
-  "\<lbrakk> pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> pspace_aligned' s'"
-  apply (clarsimp simp: pspace_aligned'_def pspace_aligned_def pspace_relation_def)
-  apply (rename_tac p' ko')
-  apply (prop_tac "p' \<in> pspace_dom (kheap s)", fastforce)
-  apply (thin_tac "pspace_dom k = p" for k p)
-  apply (clarsimp simp: pspace_dom_def)
-  apply (drule bspec, fastforce)+
-  apply clarsimp
-  apply (rename_tac ko' a a' P ko)
-  apply (erule (1) obj_relation_cutsE; clarsimp simp: objBits_simps)
-
-  \<comment>\<open>CNode\<close>
-     apply (clarsimp simp: cte_map_def)
-     apply (simp only: cteSizeBits_def cte_level_bits_def)
-     apply (rule is_aligned_add)
-      apply (erule is_aligned_weaken, simp)
-     apply (rule is_aligned_weaken)
-    apply (rule is_aligned_mult_triv2, simp)
-
-  \<comment>\<open>SchedContext, Reply\<close>
-     apply ((clarsimp simp: minSchedContextBits_def min_sched_context_bits_def replySizeBits_def
-                            scBits_inverse_sc_relation[simplified]
-                     elim!: is_aligned_weaken)+)[2]
-
-  \<comment>\<open>PageTable\<close>
-   apply (clarsimp simp: archObjSize_def pteBits_def)
-    apply (rule is_aligned_add)
-     apply (erule is_aligned_weaken)
-     apply (simp add: )
-    apply (rule is_aligned_shift)
-
-  \<comment>\<open>PageDirectory\<close>
-   apply (clarsimp simp: archObjSize_def pdeBits_def)
-    apply (rule is_aligned_add)
-     apply (erule is_aligned_weaken, simp)
-    apply (rule is_aligned_shift)
-
-  \<comment>\<open>DataPage\<close>
-   apply (rule is_aligned_add)
-    apply (erule is_aligned_weaken)
-    apply (clarsimp simp: pageBits_def pageBitsForSize_def)
-    apply (case_tac sz; simp)
-  apply (rule is_aligned_mult_triv2)
-
-  \<comment>\<open>other_obj_relation\<close>
-  apply (simp add: other_obj_relation_def)
-  by (clarsimp simp: bit_simps' tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
-              split: kernel_object.splits Structures_A.kernel_object.splits)
-     (fastforce simp: archObjSize_def split: arch_kernel_object.splits arch_kernel_obj.splits)
-
 lemmas is_aligned_add_step_le' = is_aligned_add_step_le[simplified mask_2pm1 add_diff_eq]
 
 lemma objBitsKO_Data:
@@ -2768,6 +2717,235 @@ lemma obj_relation_cuts_obj_bits:
   apply (rename_tac ako, case_tac ako; clarsimp)
   apply (rename_tac ako', case_tac ako'; clarsimp simp: archObjSize_def)
   done
+
+lemma typ_at'_same_type:
+  assumes "typ_at' T p s" "koTypeOf k = koTypeOf ko" "objBitsKO k = objBitsKO ko" "ksPSpace s p' = Some ko"
+  shows "typ_at' T p (s\<lparr>ksPSpace :=ksPSpace s(p' \<mapsto> k)\<rparr>)"
+  using assms
+  by (clarsimp simp: typ_at'_def ko_wp_at'_def ps_clear_upd')
+
+lemma cte_at'_same_type:
+  "\<lbrakk>cte_wp_at' \<top> t s; koTypeOf k = koTypeOf ko;objBitsKO k = objBitsKO ko;
+    ksPSpace s p = Some ko\<rbrakk>
+      \<Longrightarrow> cte_wp_at' \<top> t (s\<lparr>ksPSpace := ksPSpace s(p \<mapsto> k)\<rparr>)"
+  apply (simp add: cte_at_typ' typ_at'_same_type)
+  apply (elim exE disjE)
+   apply (rule disjI1, clarsimp simp: typ_at'_same_type)
+  apply (rule disjI2, rule_tac x=n in exI, clarsimp simp: typ_at'_same_type)
+  done
+
+lemma valid_ep'_ep_update:
+  "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s; ksPSpace s x = Some (KOEndpoint obj)\<rbrakk>
+       \<Longrightarrow> valid_ep' obj (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
+  apply (erule (1) valid_objsE')
+  apply (fastforce simp: valid_objs'_def valid_obj'_def obj_at'_def projectKOs valid_ep'_def
+                  split: endpoint.splits)
+  done
+
+lemma valid_cap'_ep_update:
+  "\<lbrakk> valid_cap' cap s; valid_objs' s; valid_ep' ep s; ep_at' epPtr s\<rbrakk>
+      \<Longrightarrow> valid_cap' cap (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
+  supply ps_clear_upd'[simp]
+  apply (clarsimp simp: typ_at'_same_type ko_wp_at'_def cte_at'_same_type
+                        valid_cap'_def obj_at'_def projectKOs objBits_simps
+                 split: endpoint.splits capability.splits)
+         apply fastforce+
+       apply (clarsimp split: zombie_type.splits simp: projectKOs obj_at'_def typ_at'_same_type)
+       apply (intro conjI impI; clarsimp)
+        apply (drule_tac x=addr in spec, clarsimp)
+       apply (drule_tac x=addr in spec, clarsimp)
+      apply (clarsimp simp: ko_wp_at'_def valid_cap'_def obj_at'_def projectKOs objBits_simps
+                            page_directory_at'_def page_table_at'_def
+                            ARM_H.arch_capability.distinct ARM_H.arch_capability.inject
+                     split: ARM_H.arch_capability.splits option.splits if_split_asm
+           | rule_tac ko="KOEndpoint obj" in typ_at'_same_type[where p'=epPtr]
+           | simp)+
+     apply fastforce
+    apply (clarsimp simp: valid_untyped'_def ko_wp_at'_def obj_range'_def split: if_split_asm)
+     apply (drule_tac x=epPtr in spec, fastforce simp: objBits_simps)+
+   apply (drule_tac x=addr in spec, fastforce)
+  apply fastforce
+  done
+
+lemma valid_tcb_state'_ep_update:
+  "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s;  ksPSpace s x = Some (KOTCB obj)\<rbrakk>
+       \<Longrightarrow> valid_tcb_state' (tcbState obj) (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
+  apply (rule valid_objsE', simp, simp)
+  by (fastforce simp: typ_at'_same_type ps_clear_upd' objBits_simps valid_obj'_def projectKOs
+                      valid_tcb_state'_def valid_bound_obj'_def valid_tcb'_def obj_at'_def
+               split: option.splits thread_state.splits)
+
+lemma valid_tcb'_ep_update:
+  "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s; ksPSpace s x = Some (KOTCB obj)\<rbrakk>
+       \<Longrightarrow> valid_tcb' obj (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
+  apply (rule valid_objsE', simp, simp)
+  by (fastforce simp: typ_at'_same_type ps_clear_upd' objBits_simps valid_obj'_def projectKOs
+                      valid_bound_obj'_def valid_tcb'_def obj_at'_def valid_tcb_state'_ep_update
+                      valid_cap'_ep_update
+              split: option.splits thread_state.splits)
+
+context begin interpretation Arch .
+
+lemma valid_arch_obj'_ep_update:
+  "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s; ksPSpace s x = Some (KOArch obj)\<rbrakk>
+       \<Longrightarrow> valid_arch_obj' obj (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
+  apply (rule valid_objsE', simp, simp)
+  apply (cases obj; clarsimp simp: valid_obj'_def obj_at'_def projectKOs
+                                   valid_arch_obj'_def  ps_clear_upd'
+                            split: arch_kernel_object.splits)
+    apply (rename_tac asid ep', case_tac asid, simp)
+   apply (rename_tac pte ep', case_tac pte; simp add: valid_mapping'_def)
+  apply (rename_tac pde ep', case_tac pde; simp add: valid_mapping'_def)
+  done
+
+end
+
+lemma valid_obj'_ep_update:
+  "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s; ksPSpace s x = Some obj\<rbrakk>
+       \<Longrightarrow> valid_obj' obj (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
+  apply (rule valid_objsE', simp, simp)
+  apply (clarsimp simp: valid_obj'_def obj_at'_def projectKOs)
+  by (cases obj;
+      clarsimp simp: typ_at'_same_type valid_obj'_def obj_at'_def ps_clear_upd'
+                     valid_ntfn'_def  valid_bound_obj'_def valid_reply'_def valid_cte'_def
+                     valid_sched_context'_def objBits_simps projectKOs valid_cap'_ep_update
+                     valid_arch_obj'_ep_update valid_ep'_ep_update valid_tcb'_ep_update
+              split: endpoint.splits ntfn.splits option.splits)
+      fastforce+
+
+lemma valid_objs'_ep_update:
+  "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s \<rbrakk>
+   \<Longrightarrow> valid_objs' (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
+  apply (clarsimp simp: valid_objs'_def obj_at'_def projectKOs)
+  apply (rename_tac obj ep')
+  apply (erule ranE)
+  apply (clarsimp simp: ps_clear_upd' split: if_split_asm)
+   apply (fastforce simp: valid_obj'_def valid_ep'_def obj_at'_def ps_clear_upd'
+                          objBits_simps projectKOs
+                   split: endpoint.splits)
+  apply (fastforce intro!: valid_obj'_ep_update simp: valid_objs'_def obj_at'_def projectKOs)
+  done
+
+lemma valid_release_queue_ksPSpace_update:
+  "\<lbrakk>valid_release_queue s;
+    ko_wp_at' (\<lambda>ko'. koTypeOf ko' = koTypeOf ko \<and> objBitsKO ko' = objBitsKO ko) ptr s;
+    koTypeOf ko \<noteq> TCBT\<rbrakk> \<Longrightarrow>
+    valid_release_queue (s\<lparr>ksPSpace := ksPSpace s(ptr \<mapsto> ko)\<rparr>)"
+  by (fastforce simp: valid_release_queue_def ko_wp_at'_def obj_at'_def projectKOs ps_clear_upd')
+
+lemma valid_release_queue'_ksPSpace_update:
+  "\<lbrakk>valid_release_queue' s;
+    ko_wp_at' (\<lambda>ko'. koTypeOf ko' = koTypeOf ko \<and> objBitsKO ko' = objBitsKO ko) ptr s;
+    koTypeOf ko \<noteq> TCBT\<rbrakk> \<Longrightarrow>
+    valid_release_queue' (s\<lparr>ksPSpace := ksPSpace s(ptr \<mapsto> ko)\<rparr>)"
+  by (fastforce simp: valid_release_queue'_def ko_wp_at'_def obj_at'_def projectKOs ps_clear_upd')
+
+lemma sym_ref_Receive_or_Reply_replyTCB':
+  "\<lbrakk> sym_refs (state_refs_of' s); ko_at' tcb tp s;
+     tcbState tcb = BlockedOnReceive ep pl (Some rp)
+     \<or> tcbState tcb = BlockedOnReply (Some rp) \<rbrakk> \<Longrightarrow>
+    \<exists>reply. ksPSpace s rp = Some (KOReply reply) \<and> replyTCB reply = Some tp"
+  apply (drule (1) sym_refs_obj_atD'[rotated, where p=tp])
+  apply (clarsimp simp: state_refs_of'_def projectKOs obj_at'_def)
+  apply (clarsimp simp: ko_wp_at'_def)
+  apply (erule disjE; clarsimp)
+  apply (rename_tac koa; case_tac koa;
+         simp add: get_refs_def2 ep_q_refs_of'_def ntfn_q_refs_of'_def
+                   tcb_st_refs_of'_def tcb_bound_refs'_def
+            split: endpoint.split_asm ntfn.split_asm thread_state.split_asm if_split_asm)+
+  done
+
+lemma sym_ref_BlockedOnSend_SendEP':
+  "\<lbrakk> sym_refs (state_refs_of' s); st_tcb_at' ((=) (BlockedOnSend eptr p1 p2 p3 p4)) tp s\<rbrakk>
+      \<Longrightarrow> \<exists>list. ko_wp_at' ((=) (KOEndpoint (SendEP list))) eptr s"
+  apply (simp add: pred_tcb_at'_def)
+  apply (drule (1) sym_refs_obj_atD'[rotated, where p=tp])
+  apply (clarsimp simp: state_refs_of'_def projectKOs obj_at'_def)
+  apply (drule sym[where s="BlockedOnSend _ _ _ _ _"])
+  apply (clarsimp simp: ko_wp_at'_def)
+  apply (rename_tac ko; case_tac ko;
+         simp add: get_refs_def2 ep_q_refs_of'_def ntfn_q_refs_of'_def
+                   tcb_st_refs_of'_def tcb_bound_refs'_def
+            split: endpoint.split_asm ntfn.split_asm thread_state.split_asm if_split_asm)+
+  done
+
+lemma sym_ref_BlockedOnReceive_RecvEP':
+  "\<lbrakk> sym_refs (state_refs_of' s); st_tcb_at' ((=) (BlockedOnReceive eptr pl ropt)) tp s\<rbrakk>
+     \<Longrightarrow> \<exists>list. ko_wp_at' ((=) (KOEndpoint (RecvEP list))) eptr s"
+  apply (simp add: pred_tcb_at'_def)
+  apply (drule (1) sym_refs_obj_atD'[rotated, where p=tp])
+  apply (clarsimp simp: state_refs_of'_def projectKOs obj_at'_def)
+  apply (drule sym[where s="BlockedOnReceive _ _ _"])
+  apply (clarsimp simp: ko_wp_at'_def split: if_split_asm)
+   apply (rename_tac ko koa; case_tac ko;
+          simp add: get_refs_def2 ep_q_refs_of'_def ntfn_q_refs_of'_def
+                    tcb_st_refs_of'_def tcb_bound_refs'_def
+             split: endpoint.split_asm ntfn.split_asm thread_state.split_asm if_split_asm)
+  apply (rename_tac ko; case_tac ko;
+         simp add: get_refs_def2 ep_q_refs_of'_def ntfn_q_refs_of'_def
+                   tcb_st_refs_of'_def tcb_bound_refs'_def
+            split: endpoint.split_asm ntfn.split_asm thread_state.split_asm if_split_asm)
+  done
+
+lemma Receive_or_Send_ep_at':
+  "\<lbrakk> st = BlockedOnReceive epPtr pl rp \<or> st = BlockedOnSend epPtr p1 p2 p3 p4;
+     valid_objs' s; st_tcb_at' ((=) st) t s\<rbrakk>
+       \<Longrightarrow> ep_at' epPtr s"
+  apply (drule (1) tcb_in_valid_state')
+  by (fastforce simp: obj_at'_def valid_tcb_state'_def)
+
+(* cross lemmas *)
+
+lemma pspace_aligned_cross:
+  "\<lbrakk> pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> pspace_aligned' s'"
+  apply (clarsimp simp: pspace_aligned'_def pspace_aligned_def pspace_relation_def)
+  apply (rename_tac p' ko')
+  apply (prop_tac "p' \<in> pspace_dom (kheap s)", fastforce)
+  apply (thin_tac "pspace_dom k = p" for k p)
+  apply (clarsimp simp: pspace_dom_def)
+  apply (drule bspec, fastforce)+
+  apply clarsimp
+  apply (rename_tac ko' a a' P ko)
+  apply (erule (1) obj_relation_cutsE; clarsimp simp: objBits_simps)
+
+  \<comment>\<open>CNode\<close>
+     apply (clarsimp simp: cte_map_def)
+     apply (simp only: cteSizeBits_def cte_level_bits_def)
+     apply (rule is_aligned_add)
+      apply (erule is_aligned_weaken, simp)
+     apply (rule is_aligned_weaken)
+    apply (rule is_aligned_mult_triv2, simp)
+
+  \<comment>\<open>SchedContext, Reply\<close>
+     apply ((clarsimp simp: minSchedContextBits_def min_sched_context_bits_def replySizeBits_def
+                            scBits_inverse_sc_relation[simplified]
+                     elim!: is_aligned_weaken)+)[2]
+
+  \<comment>\<open>PageTable\<close>
+   apply (clarsimp simp: archObjSize_def pteBits_def)
+    apply (rule is_aligned_add)
+     apply (erule is_aligned_weaken)
+     apply simp
+    apply (rule is_aligned_shift)
+
+  \<comment>\<open>PageDirectory\<close>
+   apply (clarsimp simp: archObjSize_def pdeBits_def)
+    apply (rule is_aligned_add)
+     apply (erule is_aligned_weaken, simp)
+    apply (rule is_aligned_shift)
+
+  \<comment>\<open>DataPage\<close>
+   apply (rule is_aligned_add)
+    apply (erule is_aligned_weaken)
+    apply (clarsimp simp: pageBits_def pageBitsForSize_def)
+    apply (case_tac sz; simp)
+  apply (rule is_aligned_mult_triv2)
+
+  \<comment>\<open>other_obj_relation\<close>
+  apply (simp add: other_obj_relation_def)
+  by (clarsimp simp: bit_simps' tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
+              split: kernel_object.splits Structures_A.kernel_object.splits)
+     (fastforce simp: archObjSize_def split: arch_kernel_object.splits arch_kernel_obj.splits)
 
 lemma pspace_distinct_cross:
   "\<lbrakk> pspace_distinct s; pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow>
