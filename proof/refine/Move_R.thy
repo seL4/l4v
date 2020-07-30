@@ -250,4 +250,105 @@ lemma check_active_irq_invs_just_idle:
         and (\<lambda>s. 0 < domain_time s) and valid_domain_list \<rbrace>"
   by (wpsimp simp: check_active_irq_def ct_in_state_def)
 
+(* FIXME RT: Move? is this usable? *)
+lemma corres_symb_exec_r_step:
+  assumes z: "corres_underlying sr nf nf' r P P' x y"
+  assumes inv: "\<And>P. m \<lbrace>\<lambda>s. P (y s)\<rbrace>"
+  assumes nf: "nf' \<Longrightarrow> no_fail P' m"
+  shows      "corres_underlying sr nf nf' r P P' x (m >>= (\<lambda>_. y))"
+  using z nf
+  apply (clarsimp simp: corres_underlying_def)
+  apply (rename_tac s s')
+  apply (rule conjI; clarsimp simp: in_monad)
+   apply (drule_tac x="(s, s')" in bspec, simp)
+   apply clarsimp
+   apply (rename_tac a b s'' rv)
+   apply (drule_tac P1="\<lambda>x. x = y s'" in use_valid[OF _ inv], simp)
+   apply clarsimp
+   apply (drule_tac x="(a, b)" in bspec, simp)
+   apply simp
+  apply (drule_tac x="(s, s')" in bspec, simp)
+  apply (clarsimp simp: in_monad bind_def split_def)
+  apply (erule disjE)
+   apply clarsimp
+   apply (drule_tac P1="\<lambda>x. x = y s'" in use_valid[OF _ inv], simp)
+   apply clarsimp
+  by (simp add: no_failD)
+
+(* FIXME RT: Move? is this usable? *)
+lemma corres_symb_exec_r_step':
+  assumes z: "corres_underlying sr nf nf' r P P' x y"
+  assumes inv: "\<And>P. \<lbrace>\<lambda>s. P' s \<and> P (y s) \<rbrace> m \<lbrace>\<lambda>_ s. P (y s)\<rbrace>"
+  assumes nf: "nf' \<Longrightarrow> no_fail P' m"
+  shows      "corres_underlying sr nf nf' r P P' x (m >>= (\<lambda>_. y))"
+  using z nf
+  apply (clarsimp simp: corres_underlying_def)
+  apply (rename_tac s s')
+  apply (rule conjI; clarsimp simp: in_monad)
+   apply (drule_tac x="(s, s')" in bspec, simp)
+   apply clarsimp
+   apply (rename_tac a b s'' rv)
+   apply (drule_tac P1="\<lambda>x. x = y s'" in use_valid[OF _ inv], simp)
+   apply clarsimp
+   apply (drule_tac x="(a, b)" in bspec, simp)
+   apply simp
+  apply (drule_tac x="(s, s')" in bspec, simp)
+  apply (clarsimp simp: in_monad bind_def split_def)
+  apply (erule disjE)
+   apply clarsimp
+   apply (drule_tac P1="\<lambda>x. x = y s'" in use_valid[OF _ inv], simp)
+   apply clarsimp
+  by (simp add: no_failD)
+
+lemma sym_ref_BlockedOnReceive_RecvEP:
+  "\<lbrakk> sym_refs (state_refs_of s); kheap s tp = Some (TCB tcb);
+   tcb_state tcb = Structures_A.BlockedOnReceive eptr ropt pl \<rbrakk> \<Longrightarrow>
+     \<exists>list. kheap s eptr = Some (Structures_A.Endpoint (Structures_A.RecvEP list))"
+  apply (drule sym_refs_obj_atD[rotated, where p=tp])
+   apply (clarsimp simp: obj_at_def, simp)
+  apply (clarsimp simp: state_refs_of_def)
+  apply (drule_tac x="(eptr, TCBBlockedRecv)" in bspec)
+   apply (fastforce split: if_split_asm)
+  apply (clarsimp simp: obj_at_def)
+  apply (rename_tac koa; case_tac koa;
+         clarsimp simp: ep_q_refs_of_def get_refs_def2)
+  apply (rename_tac ep; case_tac ep; simp)
+  done
+
+lemma sym_ref_BlockedOnSend_SendEP:
+  "\<lbrakk> sym_refs (state_refs_of s); kheap s tp = Some (TCB tcb);
+   tcb_state tcb = Structures_A.BlockedOnSend eptr pl \<rbrakk> \<Longrightarrow>
+     \<exists>list. kheap s eptr = Some (Structures_A.Endpoint (Structures_A.SendEP list))"
+  apply (drule sym_refs_obj_atD[rotated, where p=tp])
+   apply (clarsimp simp: obj_at_def, simp)
+  apply (clarsimp simp: state_refs_of_def)
+  apply (drule_tac x="(eptr, TCBBlockedSend)" in bspec)
+   apply (fastforce split: if_split_asm)
+  apply (clarsimp simp: obj_at_def)
+  apply (rename_tac koa; case_tac koa;
+         clarsimp simp: ep_q_refs_of_def get_refs_def2)
+  apply (rename_tac ep; case_tac ep; simp)
+  done
+
+lemma Receive_or_Send_ep_at:
+  "\<lbrakk> st = Structures_A.thread_state.BlockedOnReceive epPtr rp p' \<or>
+     st = Structures_A.thread_state.BlockedOnSend epPtr p;
+     valid_objs s; st_tcb_at ((=) st) t s\<rbrakk>
+        \<Longrightarrow> ep_at epPtr s"
+  apply (drule (1) st_tcb_at_valid_st2)
+  by (fastforce simp: obj_at_def valid_tcb_state_def)
+
+lemma Reply_or_Receive_reply_at:
+  "\<lbrakk> st = Structures_A.thread_state.BlockedOnReply rp
+     \<or> st = Structures_A.thread_state.BlockedOnReceive epPtr (Some rp) p'; valid_objs s;
+        st_tcb_at ((=) st) t s\<rbrakk> \<Longrightarrow> reply_at rp s"
+  apply (drule (1) st_tcb_at_valid_st2)
+  by (fastforce simp: obj_at_def valid_tcb_state_def)
+
+lemma corres_cross_add_guard:
+  "\<lbrakk> \<And>s s'. \<lbrakk>(s,s') \<in> sr; P s; P' s'\<rbrakk> \<Longrightarrow> Q s';
+     corres_underlying sr nf nf' r P  (P' and Q) f g\<rbrakk>
+    \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by (fastforce simp: corres_underlying_def)
+
 end

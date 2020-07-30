@@ -112,22 +112,6 @@ lemma cancelSignal_st_tcb_at':
                     hoare_drop_imp[where R="\<lambda>rv _. \<exists>a b. delete t (f rv) = a # b" for f])
   done
 
-(* FIXME RT: move to... Bits_R? Proved by MikiT in #874 *)
-lemma sym_ref_Receive_or_Reply_replyTCB:
-  "\<lbrakk> sym_refs (state_refs_of' s); ko_at' tcb tp s;
-     tcbState tcb = BlockedOnReceive ep pl (Some rp)
-     \<or> tcbState tcb = BlockedOnReply (Some rp) \<rbrakk> \<Longrightarrow>
-    \<exists>reply. ksPSpace s rp = Some (KOReply reply) \<and> replyTCB reply = Some tp"
-  apply (drule (1) sym_refs_obj_atD'[rotated, where p=tp])
-  apply (clarsimp simp: state_refs_of'_def projectKOs obj_at'_def)
-  apply (clarsimp simp: ko_wp_at'_def)
-  apply (erule disjE; clarsimp)
-  apply (rename_tac koa; case_tac koa;
-         simp add: get_refs_def2 ep_q_refs_of'_def ntfn_q_refs_of'_def
-                   tcb_st_refs_of'_def tcb_bound_refs'_def
-            split: endpoint.split_asm ntfn.split_asm thread_state.split_asm if_split_asm)+
-  done
-
 lemma cancelIPC_simple'_not_awaiting_reply:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of' s)\<rbrace>
    cancelIPC t
@@ -142,7 +126,7 @@ lemma cancelIPC_simple'_not_awaiting_reply:
    apply normalise_obj_at'
    apply (rename_tac rptr tcb reply)
    apply (erule notE)
-   apply (frule(1) sym_ref_Receive_or_Reply_replyTCB, fast)
+   apply (frule(1) sym_ref_Receive_or_Reply_replyTCB', fast)
    apply (clarsimp simp: obj_at'_def projectKO_eq project_inject)
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   done
@@ -248,10 +232,19 @@ lemma reply_unlink_tcb_corres:
   apply (clarsimp simp: valid_obj'_def valid_reply'_def)
   done
 
+crunches replyUnlink
+  for valid_release_queue[wp]: valid_release_queue
+  and valid_release_queue'[wp]: valid_release_queue'
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma blocked_cancel_ipc_corres:
-  "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr p' pl \<or>
-     st = Structures_A.BlockedOnSend epPtr p; thread_state_relation st st' \<rbrakk> \<Longrightarrow>
-   corres dc (invs and st_tcb_at ((=) st) t) (invs' and st_tcb_at' ((=) st') t)
+  "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr reply_opt p' \<or>
+     st = Structures_A.BlockedOnSend epPtr p; thread_state_relation st st';
+     st = Structures_A.BlockedOnSend epPtr p \<longrightarrow> reply_opt = None \<rbrakk> \<Longrightarrow>
+   corres dc (valid_objs and pspace_aligned and pspace_distinct
+              and st_tcb_at ((=) st) t and (\<lambda>s. sym_refs (state_refs_of s)))
+             (valid_objs' and valid_release_queue_iff
+              and st_tcb_at' ((=) st') t and (\<lambda>s. sym_refs (state_refs_of' s)))
            (blocked_cancel_ipc st t reply_opt)
            (do ep \<leftarrow> getEndpoint epPtr;
                y \<leftarrow> assert (\<not> (case ep of IdleEP \<Rightarrow> True | _ \<Rightarrow> False));
@@ -260,133 +253,148 @@ lemma blocked_cancel_ipc_corres:
                else
                  return $ epQueue_update (%_. (remove1 t (epQueue ep))) ep;
                y \<leftarrow> setEndpoint epPtr ep';
+               case reply_opt of None \<Rightarrow> return () | Some reply \<Rightarrow> replyUnlink reply;
                setThreadState Structures_H.thread_state.Inactive t
-            od)"
-  sorry (* FIXME RT: needs statement update
+            od)" (is "\<lbrakk> _ ; _ ; _ \<rbrakk> \<Longrightarrow> corres _ (?abs_guard and _) (?conc_guard and _) _ _")
   apply (simp add: blocked_cancel_ipc_def gbep_ret)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_ep_corres])
       apply (rule_tac F="ep \<noteq> IdleEP" in corres_gen_asm2)
       apply (rule corres_assert_assume[rotated])
        apply (clarsimp split: endpoint.splits)
-      apply (rule_tac P="invs and st_tcb_at ((=) st) t" and
-                      P'="invs' and st_tcb_at' ((=) st') t" in corres_inst)
-      apply (case_tac rv)
-        apply (simp add: ep_relation_def)
-       apply (simp add: get_ep_queue_def ep_relation_def split del: if_split)
+       \<comment>\<open>drop sym_refs assumtions; add reply_tcb link\<close>
+      apply (rule_tac P="?abs_guard and (\<lambda>s. bound reply_opt \<longrightarrow> reply_tcb_reply_at ((=) (Some t)) (the reply_opt) s)
+                         and valid_ep rv
+                         and (\<lambda>_. (st = Structures_A.BlockedOnSend epPtr p
+                                      \<longrightarrow> (\<exists>list. rv = Structures_A.SendEP list))
+                                \<and> (st = Structures_A.thread_state.BlockedOnReceive epPtr reply_opt p'
+                                     \<longrightarrow> (\<exists>list. rv = Structures_A.RecvEP list)))" and
+                      P'="?conc_guard and valid_ep' ep" in corres_inst)
+      \<comment>\<open>cross over replyTCB\<close>
+      apply (rule_tac Q="\<lambda>s. bound reply_opt \<longrightarrow> obj_at' (\<lambda>r. replyTCB r = Some t) (the reply_opt) s" in corres_cross_add_guard)
+       apply clarsimp
+       apply (drule state_relationD)
+       apply (frule_tac s'=s' in pspace_aligned_cross, simp)
+       apply (frule_tac s'=s' in pspace_distinct_cross, simp, simp)
+       apply (clarsimp simp: obj_at_def sk_obj_at_pred_def)
+       apply (rename_tac rp list reply)
+       apply (drule_tac x=rp in pspace_relation_absD, simp)
+       apply (clarsimp simp: obj_relation_cuts_def2 obj_at'_def reply_relation_def projectKOs)
+       apply (rename_tac ko)
+       apply (case_tac ko; simp)
+       apply (rename_tac reply')
+       apply (frule_tac x=rp in pspace_alignedD', simp)
+       apply (drule_tac x=rp in pspace_distinctD', simp)
+       apply (clarsimp simp: reply_relation_def)
+       \<comment>\<open>main corres proof\<close>
+      apply (rule corres_gen_asm)
+      apply (erule disjE; clarsimp simp: ep_relation_def get_ep_queue_def split del: if_split)
+       \<comment>\<open>BlockedOnReceive\<close>
        apply (rename_tac list)
-       apply (case_tac "remove1 t list")
-        apply simp
+       apply (cases reply_opt;
+              simp split del: if_split add: if_return_closure bind_assoc cong: if_cong)
+         \<comment>\<open>reply_opt = None\<close>
         apply (rule corres_guard_imp)
           apply (rule corres_split [OF _ set_ep_corres])
              apply (rule sts_corres)
              apply simp
-            apply (simp add: ep_relation_def)
-           apply (simp add: valid_tcb_state_def pred_conj_def)
-           apply (wp weak_sch_act_wf_lift)+
-         apply (clarsimp simp: st_tcb_at_tcb_at)
-         apply (clarsimp simp: st_tcb_at_def obj_at_def)
-         apply (erule pspace_valid_objsE)
-          apply fastforce
-         apply (auto simp: valid_tcb_state_def valid_tcb_def
-                           valid_obj_def obj_at_def)[1]
-        apply (clarsimp simp: pred_tcb_at')
-        apply (clarsimp simp: pred_tcb_at'_def)
-        apply (drule obj_at_ko_at')
-        apply clarify
-        apply (drule ko_at_valid_objs')
-          apply fastforce
-         apply (simp add: projectKOs)
-        apply (auto simp add: valid_obj'_def valid_tcb'_def
-                              valid_tcb_state'_def)[1]
-       apply clarsimp
+            apply (simp add: ep_relation_def split: list.split)
+           apply wpsimp+
+         apply (frule (1) Receive_or_Send_ep_at[rotated], fastforce)
+         apply (intro conjI;
+                clarsimp simp: st_tcb_at_def obj_at_def is_ep is_tcb
+                       intro!: valid_ep_remove1_RecvEP)
+        apply clarsimp
+        apply (frule Receive_or_Send_ep_at'[rotated], simp)
+         apply (simp add: thread_state_relation_def)
+        apply (fastforce simp: valid_ep'_def)
+         \<comment>\<open>reply_opt bound\<close>
        apply (rule corres_guard_imp)
-         apply (rule corres_split [OF _ set_ep_corres])
-            apply (rule sts_corres)
-            apply simp
-           apply (simp add: ep_relation_def)
-          apply (wp)+
+         apply (rule_tac R="\<lambda>_. ep_at epPtr and reply_tcb_reply_at ((=) (Some t)) a  and ?abs_guard"
+                     and R'="\<lambda>_. ep_at' epPtr and obj_at' (\<lambda>r. replyTCB r = Some t) a and ?conc_guard" in corres_split [OF _ set_ep_corres])
+            apply (rule corres_guard_imp)
+              apply (rule corres_split [OF _ reply_unlink_tcb_corres])
+                 apply (rule sts_corres)
+                 apply simp
+                apply fastforce
+               apply wpsimp
+              apply (wpsimp wp: replyUnlink_valid_objs')
+             apply (fastforce simp: pred_tcb_at_def obj_at_def is_tcb)
+            apply (fastforce simp: obj_at'_def pred_tcb_at'_def)
+           apply (simp add: ep_relation_def split: list.split)
+          apply (wpsimp wp: set_simple_ko_wp)
+         apply (wpsimp wp: set_ep'.set_wp)
+        apply clarsimp
+        apply (frule (1) Reply_or_Receive_reply_at[rotated], fastforce)
+        apply (frule (1) Receive_or_Send_ep_at[rotated], fastforce)
         apply (clarsimp simp: st_tcb_at_tcb_at)
-        apply (clarsimp simp: st_tcb_at_def obj_at_def)
-        apply (erule pspace_valid_objsE)
-         apply fastforce
-        apply (auto simp: valid_tcb_state_def valid_tcb_def
-                          valid_obj_def obj_at_def)[1]
-       apply (clarsimp simp: pred_tcb_at')
-       apply (clarsimp simp: pred_tcb_at'_def)
-       apply (drule obj_at_ko_at')
-       apply clarify
-       apply (drule ko_at_valid_objs')
-         apply fastforce
-        apply (simp add: projectKOs)
-       apply (auto simp add: valid_obj'_def valid_tcb'_def
-                             valid_tcb_state'_def)[1]
-      apply (simp add: get_ep_queue_def ep_relation_def split del: if_split)
+        apply (rule conjI, clarsimp simp: obj_at_def is_ep)
+        apply (rule conjI, clarsimp simp: sk_obj_at_pred_def obj_at_def)
+        apply (intro conjI)
+           apply (fastforce elim!: valid_objs_ep_update intro!: valid_ep_remove1_RecvEP)
+          apply (clarsimp elim!: pspace_aligned_obj_update dest!: invs_psp_aligned
+                           simp: a_type_def is_ep)
+         apply (clarsimp elim!: pspace_distinct_same_type dest!: invs_distinct
+                          simp: a_type_def is_ep obj_at_def)
+        apply (clarsimp simp: pred_tcb_at_def obj_at_def is_ep)
+       apply (clarsimp split del: if_split)
+       apply (frule (1) Receive_or_Send_ep_at'[rotated], blast)
+       apply (clarsimp split del: if_split)
+       apply (rule conjI, clarsimp simp: obj_at'_def projectKOs ps_clear_upd' objBits_simps)
+       apply (rule conjI; clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs ps_clear_upd')
+       apply (intro conjI impI; clarsimp?)
+            apply (erule valid_objs'_ep_update)
+             apply ((clarsimp simp: obj_at'_def projectKOs valid_ep'_def)+)[2]
+           apply (erule valid_release_queue_ksPSpace_update)
+            apply ((clarsimp simp: ko_wp_at'_def objBitsKO_def koTypeOf_def)+)[2]
+          apply (erule valid_release_queue'_ksPSpace_update)
+           apply ((clarsimp simp: ko_wp_at'_def objBitsKO_def koTypeOf_def)+)[2]
+            apply (erule valid_objs'_ep_update)
+             apply ((clarsimp simp: obj_at'_def projectKOs valid_ep'_def)+)[2]
+        apply (erule valid_release_queue_ksPSpace_update)
+         apply ((clarsimp simp: ko_wp_at'_def objBitsKO_def koTypeOf_def)+)[2]
+       apply (erule valid_release_queue'_ksPSpace_update)
+        apply ((clarsimp simp: ko_wp_at'_def objBitsKO_def koTypeOf_def)+)[2]
+      \<comment>\<open>BlockedOnSend\<close>
       apply (rename_tac list)
-      apply (case_tac "remove1 t list")
-       apply simp
-       apply (rule corres_guard_imp)
-         apply (rule corres_split [OF _ set_ep_corres])
-            apply (rule sts_corres)
-            apply simp
-           apply (simp add: ep_relation_def)
-          apply (simp add: valid_tcb_state_def pred_conj_def)
-          apply (wp weak_sch_act_wf_lift)+
-        apply (clarsimp simp: st_tcb_at_tcb_at)
-        apply (clarsimp simp: st_tcb_at_def obj_at_def)
-        apply (erule pspace_valid_objsE)
-         apply fastforce
-        apply (auto simp: valid_tcb_state_def valid_tcb_def
-                          valid_obj_def obj_at_def)[1]
-       apply (clarsimp simp: pred_tcb_at')
-       apply (clarsimp simp: pred_tcb_at'_def)
-       apply (drule obj_at_ko_at')
-       apply clarify
-       apply (drule ko_at_valid_objs')
-         apply fastforce
-        apply (simp add: projectKOs)
-       apply (auto simp add: valid_obj'_def valid_tcb'_def
-                             valid_tcb_state'_def)[1]
-      apply clarsimp
+      apply (simp split del: if_split add: if_return_closure bind_assoc cong: if_cong)
       apply (rule corres_guard_imp)
         apply (rule corres_split [OF _ set_ep_corres])
            apply (rule sts_corres)
            apply simp
-          apply (simp add: ep_relation_def)
-         apply (wp)+
-       apply (clarsimp simp: st_tcb_at_tcb_at)
-       apply (clarsimp simp: st_tcb_at_def obj_at_def)
-       apply (erule pspace_valid_objsE)
-        apply fastforce
-       apply (auto simp: valid_tcb_state_def valid_tcb_def
-                         valid_obj_def obj_at_def)[1]
-      apply (clarsimp simp: pred_tcb_at')
-      apply (clarsimp simp: pred_tcb_at'_def)
-      apply (drule obj_at_ko_at')
-      apply clarify
-      apply (drule ko_at_valid_objs')
-        apply fastforce
-       apply (simp add: projectKOs)
-      apply (auto simp add: valid_obj'_def valid_tcb'_def
-                            valid_tcb_state'_def)[1]
-     apply (wp getEndpoint_wp)+
-   apply (clarsimp simp: st_tcb_at_def obj_at_def)
-   apply (erule pspace_valid_objsE)
-    apply fastforce
-   apply (auto simp: valid_tcb_state_def valid_tcb_def
-                     valid_obj_def obj_at_def)[1]
+          apply (simp add: ep_relation_def split: list.split)
+         apply (simp add: valid_tcb_state_def pred_conj_def)
+         apply wpsimp+
+       apply (frule (1) Receive_or_Send_ep_at[rotated], fastforce)
+       apply (intro conjI;
+              clarsimp simp: st_tcb_at_def obj_at_def is_ep is_tcb
+                     intro!: valid_ep_remove1_SendEP)
+      apply (clarsimp split del: if_split)
+      apply (frule (1) Receive_or_Send_ep_at'[rotated], blast)
+      apply (fastforce simp: valid_ep'_def)
+     apply (wpsimp wp: getEndpoint_wp hoare_vcg_conj_lift get_simple_ko_wp)+
+   apply (frule (2) Receive_or_Send_ep_at)
+   apply (clarsimp simp: obj_at_def is_ep pred_tcb_at_def)
+   apply (rule conjI, clarsimp)
+    apply (drule (1) BlockedOnReceive_reply_tcb_reply_at[rotated])
+     apply (fastforce simp: pred_tcb_at_def obj_at_def)
+    apply (clarsimp simp: sk_obj_at_pred_def obj_at_def)
+   apply (rule conjI)
+    apply (erule (1) valid_objsE[where x=epPtr], clarsimp simp: valid_obj_def)
+   apply (erule disjE)
+    apply (fastforce dest!: sym_ref_BlockedOnReceive_RecvEP)
+   apply (fastforce dest!: sym_ref_BlockedOnSend_SendEP)
   apply clarsimp
+  apply (rule context_conjI)
+   apply (erule (1) Receive_or_Send_ep_at'[rotated])
+   apply (fastforce simp: thread_state_relation_def)
+  apply (clarsimp simp: obj_at'_def projectKOs )
   apply (rule conjI)
-   apply (clarsimp simp: pred_tcb_at'_def)
-   apply (drule obj_at_ko_at')
-   apply clarify
-   apply (drule ko_at_valid_objs')
-     apply fastforce
-    apply (simp add: projectKOs)
-   apply (auto simp add: valid_obj'_def valid_tcb'_def
-                         valid_tcb_state'_def)[1]
-  apply (fastforce simp: ko_wp_at'_def obj_at'_def projectKOs dest: sym_refs_st_tcb_atD')
-  done *)
+   apply (erule (1) valid_objsE', clarsimp simp: valid_obj'_def)
+  apply (erule disjE)
+   apply (fastforce dest!: sym_ref_BlockedOnReceive_RecvEP' simp: ko_wp_at'_def)
+  apply (fastforce dest!: sym_ref_BlockedOnSend_SendEP' simp: ko_wp_at'_def)
+  done
 
 lemma cancel_signal_corres:
   "corres dc
