@@ -1480,14 +1480,6 @@ lemma cur_tcb'_ksReadyQueuesL2Bitmap_upd[simp]:
 crunch cur[wp]: tcbSchedEnqueue cur_tcb'
   (simp: unless_def)
 
-lemma thread_get_exs_valid[wp]:
-  "tcb_at t s \<Longrightarrow> \<lbrace>(=) s\<rbrace> thread_get f t \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
-  apply (clarsimp simp: get_thread_state_def  assert_opt_def fail_def
-             thread_get_def gets_the_def exs_valid_def gets_def
-             get_def bind_def return_def split: option.splits)
-  apply (erule get_tcb_at)
-  done
-
 lemma is_schedulable_exs_valid[wp]:
   "active_sc_tcb_at t s \<Longrightarrow> \<lbrace>(=) s\<rbrace> is_schedulable t \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
   apply (clarsimp simp: is_schedulable_def exs_valid_def Bex_def pred_map_def vs_all_heap_simps

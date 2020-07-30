@@ -168,6 +168,149 @@ lemma invs_weak_sch_act_wf[elim!]:
   apply (clarsimp simp: weak_sch_act_wf_def)
   done
 
+(* FIXME RT: move to TcbAcc_R and replace gts_wf' with this *)
+lemma gts_wf''[wp]: "\<lbrace>valid_objs'\<rbrace> getThreadState t \<lbrace>valid_tcb_state'\<rbrace>"
+  apply (simp add: getThreadState_def threadGet_def liftM_def)
+  apply (wp getObject_tcb_wp)
+  apply clarsimp
+  apply (drule obj_at_ko_at', clarsimp)
+  apply (frule ko_at_valid_objs', fastforce, simp add: projectKOs)
+  apply (fastforce simp: valid_obj'_def valid_tcb'_def)
+  done
+
+lemma replyUnlink_valid_objs':
+  "\<lbrace>valid_objs' and reply_at' rptr\<rbrace>
+    replyUnlink rptr
+   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  apply (clarsimp simp: replyUnlink_def setReplyTCB_def getReplyTCB_def liftM_def)
+  apply (wpsimp wp: set_reply_valid_objs' hoare_vcg_all_lift
+              simp: valid_tcb_state'_def)
+  apply (frule (1) ko_at_valid_objs'[where 'a=reply, simplified])
+   apply (clarsimp simp: projectKO_opt_reply split: kernel_object.splits)
+  apply (clarsimp simp: valid_obj'_def valid_reply'_def obj_at'_def)
+  done
+
+lemma setReplyTCB_corres:
+  "corres dc (reply_at rp) (reply_at' rp)
+            (set_reply_obj_ref reply_tcb_update rp new)
+            (setReplyTCB new rp)"
+  apply (simp add: update_sk_obj_ref_def setReplyTCB_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF _ get_reply_corres])
+      apply (rule set_reply_corres)
+      apply (simp add: reply_relation_def)
+  by (wpsimp simp: obj_at'_def replyNext_same_def)+
+
+(* FIXME RT: Move? is this usable? *)
+lemma corres_symb_exec_r_step:
+  assumes z: "corres_underlying sr nf nf' r P P' x y"
+  assumes inv: "\<And>P. m \<lbrace>\<lambda>s. P (y s)\<rbrace>"
+  assumes nf: "nf' \<Longrightarrow> no_fail P' m"
+  shows      "corres_underlying sr nf nf' r P P' x (m >>= (\<lambda>_. y))"
+  using z nf
+  apply (clarsimp simp: corres_underlying_def)
+  apply (rename_tac s s')
+  apply (rule conjI; clarsimp simp: in_monad)
+   apply(drule_tac x="(s, s')" in bspec, simp)
+   apply clarsimp
+   apply (rename_tac a b s'' rv)
+   apply (drule_tac P1="\<lambda>x. x = y s'" in use_valid[OF _ inv], simp)
+   apply clarsimp
+   apply(drule_tac x="(a, b)" in bspec, simp)
+   apply simp
+  apply(drule_tac x="(s, s')" in bspec, simp)
+  apply (clarsimp simp: in_monad bind_def split_def)
+  apply (erule disjE)
+   apply clarsimp
+   apply (drule_tac P1="\<lambda>x. x = y s'" in use_valid[OF _ inv], simp)
+   apply clarsimp
+  by (simp add: no_failD)
+
+(* FIXME RT: Move? is this usable? *)
+lemma corres_symb_exec_r_step':
+  assumes z: "corres_underlying sr nf nf' r P P' x y"
+  assumes inv: "\<And>P. \<lbrace>\<lambda>s. P' s \<and> P (y s) \<rbrace> m \<lbrace>\<lambda>_ s. P (y s)\<rbrace>"
+  assumes nf: "nf' \<Longrightarrow> no_fail P' m"
+  shows      "corres_underlying sr nf nf' r P P' x (m >>= (\<lambda>_. y))"
+  using z nf
+  apply (clarsimp simp: corres_underlying_def)
+  apply (rename_tac s s')
+  apply (rule conjI; clarsimp simp: in_monad)
+   apply(drule_tac x="(s, s')" in bspec, simp)
+   apply clarsimp
+   apply (rename_tac a b s'' rv)
+   apply (drule_tac P1="\<lambda>x. x = y s'" in use_valid[OF _ inv], simp)
+   apply clarsimp
+   apply(drule_tac x="(a, b)" in bspec, simp)
+   apply simp
+  apply(drule_tac x="(s, s')" in bspec, simp)
+  apply (clarsimp simp: in_monad bind_def split_def)
+  apply (erule disjE)
+   apply clarsimp
+   apply (drule_tac P1="\<lambda>x. x = y s'" in use_valid[OF _ inv], simp)
+   apply clarsimp
+  by (simp add: no_failD)
+
+(* FIXME RT: move to KHeap_R, next to st_tcb_at_coerce_abstract,
+             then probably remove st_tcb_at_runnable_coerce_concrete *)
+lemma st_tcb_at_coerce_concrete:
+  assumes t: "st_tcb_at P t s"
+  assumes sr: "(s, s') \<in> state_relation" "pspace_aligned s" "pspace_distinct s"
+  shows "st_tcb_at' (\<lambda>st'. \<exists>st. thread_state_relation st st' \<and> P st) t s'"
+  using assms
+  apply (clarsimp simp: state_relation_def pred_tcb_at_def obj_at_def projectKOs)
+  apply (frule (1) pspace_distinct_cross, fastforce simp: state_relation_def)
+  apply (frule pspace_aligned_cross, fastforce simp: state_relation_def)
+  apply (prop_tac "tcb_at t s", clarsimp simp: st_tcb_at_def obj_at_def is_tcb)
+  apply (drule (2) tcb_at_cross[rotated], fastforce simp: state_relation_def)
+  apply (clarsimp simp: state_relation_def pred_tcb_at'_def obj_at'_def projectKOs)
+  apply (erule (1) pspace_dom_relatedE)
+  apply (erule (1) obj_relation_cutsE, simp_all)
+   apply (clarsimp simp: st_tcb_at'_def obj_at'_def other_obj_relation_def tcb_relation_def
+                  split: Structures_A.kernel_object.split_asm if_split_asm)+
+  apply fastforce
+  done
+
+lemma reply_unlink_tcb_corres:
+  "\<lbrakk>st = Structures_A.BlockedOnReceive ep (Some rp) pl
+    \<or> st = Structures_A.BlockedOnReply rp\<rbrakk> \<Longrightarrow>
+   corres dc
+     (valid_objs and pspace_aligned and pspace_distinct
+       and st_tcb_at ((=) st) t and reply_tcb_reply_at ((=) (Some t)) rp)
+          (valid_objs' and valid_release_queue_iff)
+        (reply_unlink_tcb t rp) (replyUnlink rp)" (is "_ \<Longrightarrow> corres _ _ ?conc_guard _ _")
+  apply (rule_tac Q="?conc_guard
+              and st_tcb_at' (\<lambda>st. st = BlockedOnReceive ep (receiver_can_grant pl) (Some rp)
+                                 \<or> st = BlockedOnReply (Some rp)) t" in corres_cross_over_guard)
+   apply clarsimp
+   apply (drule (1) st_tcb_at_coerce_concrete; clarsimp simp: state_relation_def)
+   apply (fastforce simp: pred_tcb_at'_def obj_at'_def)
+  apply (simp add: reply_unlink_tcb_def replyUnlink_def getReplyTCB_def liftM_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF _ get_reply_corres])
+      apply (rule corres_assert_gen_asm_l)
+      apply (prop_tac "replyTCB x = Some t")
+       apply (clarsimp simp: reply_relation_def)
+      apply simp
+      apply (rule corres_split[OF _ gts_corres])
+        apply (rule corres_assert_assume_l)
+        apply (rule corres_split [OF _ setReplyTCB_corres])
+          apply (rule sts_corres)
+          apply (clarsimp simp: thread_state_relation_def)
+         apply wpsimp
+        apply (wpsimp simp: setReplyTCB_def)
+       apply (wpsimp wp: hoare_vcg_disj_lift gts_wp get_simple_ko_wp)+
+   apply (clarsimp simp: sk_obj_at_pred_def obj_at_def is_reply pred_tcb_at_def is_tcb)
+  apply (prop_tac "reply_at' rp s")
+   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+   apply (rename_tac tcb)
+   apply (erule (1) valid_objsE')
+   apply (fastforce simp: valid_obj'_def projectKOs valid_tcb'_def valid_tcb_state'_def obj_at'_def)
+  apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def invs'_def valid_state'_def valid_pspace'_def)
+  apply (erule (1) valid_objsE'[where x=rp])
+  apply (clarsimp simp: valid_obj'_def valid_reply'_def)
+  done
+
 lemma blocked_cancel_ipc_corres:
   "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr p' pl \<or>
      st = Structures_A.BlockedOnSend epPtr p; thread_state_relation st st' \<rbrakk> \<Longrightarrow>

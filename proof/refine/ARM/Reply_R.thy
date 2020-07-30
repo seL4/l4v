@@ -20,11 +20,11 @@ lemma replyUnlink_st_tcb_at'_wp:
    replyUnlink rptr
    \<lbrace>\<lambda>_. st_tcb_at' test tptr\<rbrace>"
   unfolding replyUnlink_def
-  apply (wpsimp wp: sts_st_tcb' hoare_vcg_if_lift2 hoare_vcg_imp_lift hoare_vcg_disj_lift
-              simp: getReplyTCB_def
-         split_del: if_split)
-  apply (fastforce simp: obj_at'_def)
-  done
+  supply if_split[split del]
+  apply (wpsimp wp: sts_st_tcb' hoare_vcg_if_lift2 hoare_vcg_imp_lift
+                    hoare_vcg_disj_lift threadSet_pred_tcb_at_state gts_wp'
+              simp: getReplyTCB_def cong: conj_cong disj_cong)
+  by (fastforce simp: obj_at'_def)
 
 lemma replyUnlink_st_tcb_at'_Inactive:
   "\<lbrace>\<lambda>s. st_tcb_at' test tptr s \<and> test Inactive\<rbrace>

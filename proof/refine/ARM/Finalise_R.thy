@@ -2648,8 +2648,7 @@ crunches unbindNotification, unbindMaybeNotification
 
 crunches cancelSignal, cancelAllIPC
   for bound_tcb_at'[wp]: "bound_tcb_at' P t"
-  (wp: sts_bound_tcb_at' threadSet_cteCaps_of crunch_wps getObject_inv
-       loadObject_default_inv)
+  (wp: sts_bound_tcb_at' crunch_wps getObject_inv loadObject_default_inv)
 
 (* FIXME RT: bound_tcb_at' is an outdated name? *)
 lemma threadSet_sc_bound_tcb_at'[wp]:
@@ -2907,15 +2906,11 @@ lemma setThreadState_st_tcb_at_simplish':
 lemmas setThreadState_st_tcb_at_simplish
     = setThreadState_st_tcb_at_simplish'[unfolded pred_disj_def]
 
-crunches setReplyTCB
-  for st_tcb_at'[wp]: "st_tcb_at' P t"
-
 lemma replyUnlink_st_tcb_at_simplish:
   "replyUnlink r \<lbrace>st_tcb_at' (\<lambda>st. P st \<or> simple' st) t\<rbrace>"
   supply if_split [split del]
   unfolding replyUnlink_def
-  apply (wpsimp wp: sts_st_tcb' hoare_vcg_if_lift2 hoare_vcg_imp_lift' simp: getReplyTCB_def)
-  by (clarsimp simp: obj_at'_def)
+  by (wpsimp wp: sts_st_tcb' hoare_vcg_if_lift2 hoare_vcg_imp_lift' simp: getReplyTCB_def)
 
 crunch st_tcb_at_simplish: cteDeleteOne
             "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
