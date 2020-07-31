@@ -4303,12 +4303,9 @@ lemma ksReleaseQueue_runnable_thread_state:
   apply (clarsimp simp: valid_release_q_def obj_at'_def release_queue_relation_def)
   apply (drule_tac x=p in bspec, blast)
   apply (clarsimp simp: vs_all_heap_simps)
-  apply (frule_tac t=p in st_tcb_at_runnable_coerce_concrete[rotated])
-    apply (prop_tac "tcb_at p s")
-     apply (clarsimp simp: obj_at_def is_tcb_def)
-    apply (rule tcb_at_cross; (simp add: state_relation_def)?)
+  apply (frule_tac t=p in st_tcb_at_coerce_concrete[rotated, where P=runnable], simp, simp)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def sts_rel_runnable)
   done
 
 lemma sts_st_tcb':

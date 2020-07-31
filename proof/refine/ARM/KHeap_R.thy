@@ -2858,29 +2858,29 @@ lemma st_tcb_at_coerce_abstract:
   apply fastforce
   done
 
-lemma st_tcb_at_runnable_coerce_concrete:
-  assumes t: "st_tcb_at runnable t s"
-  assumes sr: "(s, s') \<in> state_relation"
-  assumes tcb: "tcb_at' t s'"
-  shows "st_tcb_at' runnable' t s'"
-  using t
-  apply -
-  apply (rule ccontr)
-  apply (drule pred_tcb_at'_Not[THEN iffD2, OF conjI, OF tcb])
-  apply (drule st_tcb_at_coerce_abstract[OF _ sr])
-  apply (clarsimp simp: st_tcb_def2)
-  apply (case_tac "tcb_state tcb"; simp)
-  done
-
-lemma st_tcb_at_runnable_cross:
-  "\<lbrakk> st_tcb_at runnable t s; pspace_aligned s; pspace_distinct s; (s, s') \<in> state_relation \<rbrakk>
-  \<Longrightarrow> st_tcb_at' runnable' t s'"
+lemma st_tcb_at_coerce_concrete:
+  assumes t: "st_tcb_at P t s"
+  assumes sr: "(s, s') \<in> state_relation" "pspace_aligned s" "pspace_distinct s"
+  shows "st_tcb_at' (\<lambda>st'. \<exists>st. thread_state_relation st st' \<and> P st) t s'"
+  using assms
+  apply (clarsimp simp: state_relation_def pred_tcb_at_def obj_at_def projectKOs)
   apply (frule (1) pspace_distinct_cross, fastforce simp: state_relation_def)
   apply (frule pspace_aligned_cross, fastforce simp: state_relation_def)
   apply (prop_tac "tcb_at t s", clarsimp simp: st_tcb_at_def obj_at_def is_tcb)
   apply (drule (2) tcb_at_cross[rotated], fastforce simp: state_relation_def)
-  apply (erule (2) st_tcb_at_runnable_coerce_concrete)
+  apply (clarsimp simp: state_relation_def pred_tcb_at'_def obj_at'_def projectKOs)
+  apply (erule (1) pspace_dom_relatedE)
+  apply (erule (1) obj_relation_cutsE, simp_all)
+   apply (clarsimp simp: st_tcb_at'_def obj_at'_def other_obj_relation_def tcb_relation_def
+                  split: Structures_A.kernel_object.split_asm if_split_asm)+
+  apply fastforce
   done
+
+lemma st_tcb_at_runnable_cross:
+  "\<lbrakk> st_tcb_at runnable t s; pspace_aligned s; pspace_distinct s; (s, s') \<in> state_relation \<rbrakk>
+       \<Longrightarrow> st_tcb_at' runnable' t s'"
+  apply (drule (3) st_tcb_at_coerce_concrete)
+  by (clarsimp simp: pred_tcb_at'_def obj_at'_def sts_rel_runnable)
 
 lemma cur_tcb_cross:
   "\<lbrakk> cur_tcb s; pspace_aligned s; pspace_distinct s; (s,s') \<in> state_relation \<rbrakk> \<Longrightarrow> cur_tcb' s'"
