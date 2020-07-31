@@ -5408,6 +5408,42 @@ lemma threadSet_obj_at'_simple_strongest:
   apply (case_tac "t = t'"; clarsimp simp: obj_at'_def)
   done
 
+(* Used as the "side condition template" for the `*_obj_at'_only_st_qd_ft` family of
+   `crunch`-able lemmas. Needs to keep the assumption about `f` separate from the hoare
+   triple so as to not pollute the side conditions that `crunch` will add to the final
+   lemma. *)
+lemma threadSet_obj_at'_only_st_qd_ft:
+  assumes "(\<forall>upd tcb. Q (tcbState_update upd tcb) = Q tcb) \<and>
+           (\<forall>upd tcb. Q (tcbQueued_update upd tcb) = Q tcb) \<and>
+           (\<forall>upd tcb. Q (tcbFault_update upd tcb) = Q tcb) \<longrightarrow>
+             (\<forall>tcb. Q (f tcb) = Q tcb)"
+  shows
+  "\<lbrace>\<lambda>s. P (obj_at' Q t' s) \<and>
+        (\<forall>upd tcb. Q (tcbState_update upd tcb) = Q tcb) \<and>
+        (\<forall>upd tcb. Q (tcbQueued_update upd tcb) = Q tcb) \<and>
+        (\<forall>upd tcb. Q (tcbFault_update upd tcb) = Q tcb)\<rbrace>
+   threadSet f t
+   \<lbrace>\<lambda>_ s. P (obj_at' Q t' s)\<rbrace>"
+  apply (wpsimp wp: threadSet_obj_at'_simple_strongest simp: assms)
+  done
+
+crunches scheduleTCB
+  for obj_at'_only_st_qd_ft: "\<lambda>s. P (obj_at' (Q :: tcb \<Rightarrow> bool) t s)"
+  (simp: crunch_simps wp: crunch_wps)
+
+(* FIXME: Proved outside of `crunch` because without the `[where P=P]` constraint, the
+   postcondition unifies with the precondition in a wonderfully exponential way. VER-1337 *)
+lemma setThreadState_obj_at'_only_st_qd_ft:
+  "\<lbrace>\<lambda>s. P (obj_at' Q t' s) \<and>
+        (\<forall>upd tcb. Q (tcbState_update upd tcb) = Q tcb) \<and>
+        (\<forall>upd tcb. Q (tcbQueued_update upd tcb) = Q tcb) \<and>
+        (\<forall>upd tcb. Q (tcbFault_update upd tcb) = Q tcb)\<rbrace>
+   setThreadState st t
+   \<lbrace>\<lambda>_ s. P (obj_at' Q t' s)\<rbrace>"
+  unfolding setThreadState_def
+  apply (wpsimp wp: scheduleTCB_obj_at'_only_st_qd_ft threadSet_obj_at'_only_st_qd_ft[where P=P])
+  done
+
 (* FIXME RT: move to ...? *)
 crunches addToBitmap, setQueue
   for ko_wp_at'[wp]: "\<lambda>s. P (ko_wp_at' Q p s)"
