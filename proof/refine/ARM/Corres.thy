@@ -13,6 +13,11 @@ abbreviation
  "corres \<equiv> corres_underlying state_relation False True"
 
 abbreviation
+ "cross_rel \<equiv> cross_rel_ul state_relation"
+
+lemmas cross_rel_def = cross_rel_ul_def
+
+abbreviation
  "corresK \<equiv> corres_underlyingK state_relation False True"
 
 abbreviation

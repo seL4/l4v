@@ -1565,7 +1565,7 @@ lemma sc_at'_cross_rel:
 lemma runnable_cross_rel:
   "cross_rel (pspace_aligned and pspace_distinct and st_tcb_at runnable t)
              (\<lambda>s'. pred_map (\<lambda>tcb. runnable' (tcbState tcb)) (tcbs_of' s') t)"
-  apply (rule cross_rel_aug[OF tcb_at'_cross_rel[where t=t]])
+  apply (rule cross_rel_imp[OF tcb_at'_cross_rel[where t=t]])
   apply (clarsimp simp: cross_rel_def)
   apply (subgoal_tac "pspace_relation (kheap s) (ksPSpace s')")
   apply (clarsimp simp: tcb_at_kh_simps pred_map_def cross_rel_def obj_at'_def)
@@ -1584,7 +1584,7 @@ lemma runnable_cross_rel:
 lemma tcbInReleaseQueue_cross_rel:
   "cross_rel (pspace_aligned and pspace_distinct and tcb_at t and not_in_release_q t)
              (\<lambda>s'. valid_release_queue' s' \<longrightarrow> pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s') t)"
-  apply (rule cross_rel_aug[OF tcb_at'_cross_rel[where t=t]])
+  apply (rule cross_rel_imp[OF tcb_at'_cross_rel[where t=t]])
   apply (clarsimp simp: cross_rel_def)
   apply (subgoal_tac "pspace_relation (kheap s) (ksPSpace s')")
   apply (clarsimp simp: pred_map_def cross_rel_def obj_at'_def obj_at_def is_tcb)
@@ -1606,7 +1606,7 @@ lemma tcbInReleaseQueue_cross_rel:
 lemma isScActive_cross_rel:
   "cross_rel (pspace_aligned and pspace_distinct and valid_objs and active_sc_tcb_at t)
              (\<lambda>s'. pred_map ((\<lambda>scPtr. isScActive scPtr s')) (tcb_scs_of' s') t)"
-  apply (rule cross_rel_aug[OF tcb_at'_cross_rel[where t=t]])
+  apply (rule cross_rel_imp[OF tcb_at'_cross_rel[where t=t]])
    apply (clarsimp simp: cross_rel_def)
    apply (subgoal_tac "pspace_relation (kheap s) (ksPSpace s')")
     apply (clarsimp simp: pred_map_def obj_at'_real_def ko_wp_at'_def vs_all_heap_simps)
@@ -1640,9 +1640,9 @@ lemma isScActive_cross_rel:
 
 lemma isSchedulable_bool_cross_rel:
   "cross_rel (pspace_aligned and pspace_distinct and valid_objs and is_schedulable_bool t) (\<lambda>s'. valid_release_queue' s' \<longrightarrow> isSchedulable_bool t s')"
-  apply (rule cross_rel_aug[OF isScActive_cross_rel[where t=t]])
-   apply (rule cross_rel_aug[OF tcbInReleaseQueue_cross_rel[where t=t]])
-    apply (rule cross_rel_aug[OF runnable_cross_rel[where t=t]])
+  apply (rule cross_rel_imp[OF isScActive_cross_rel[where t=t]])
+   apply (rule cross_rel_imp[OF tcbInReleaseQueue_cross_rel[where t=t]])
+    apply (rule cross_rel_imp[OF runnable_cross_rel[where t=t]])
      apply (clarsimp simp: isSchedulable_bool_def pred_map_conj)
     apply (clarsimp simp: is_schedulable_bool_def2)+
   done
