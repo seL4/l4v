@@ -168,6 +168,21 @@ lemma valid_obj_same_type:
   apply (simp add: valid_obj_def arch_valid_obj_same_type)
   done
 
+lemma valid_objs_same_type:
+  "\<lbrakk>valid_objs s; obj_at (\<lambda>ko'. a_type ko' = a_type ko) ptr s; valid_obj ptr ko s\<rbrakk>
+      \<Longrightarrow> valid_objs (s\<lparr>kheap := kheap s(ptr \<mapsto> ko)\<rparr>)"
+  apply (clarsimp simp: valid_objs_def dom_def elim!: obj_atE)
+  apply (intro conjI impI)
+   apply (rule valid_obj_same_type)
+      apply ((simp add: valid_obj_def)+)[4]
+  apply clarsimp
+  apply (rule valid_obj_same_type)
+     apply (drule_tac x=ptra in spec, simp)
+    apply (simp add: valid_obj_def)
+   apply assumption
+  apply (clarsimp simp add: a_type_def is_tcb)
+  done
+
 lemma set_object_valid_objs[wp]:
   "\<lbrace>valid_objs and valid_obj p k\<rbrace>
   set_object p k
@@ -2588,5 +2603,36 @@ lemma set_aobject_cur_tcb [wp]:
 lemma set_aobject_valid_idle[wp]:
   "set_object ptr (ArchObj obj) \<lbrace>\<lambda>s. valid_idle s\<rbrace>"
   by (wpsimp wp: valid_idle_lift set_object_wp_strong simp: obj_at_def a_type_simps split: if_split_asm)
+
+lemma state_refs_of_tcb_fault_update:
+  "ko_at (TCB tcb) thread s \<Longrightarrow>
+      state_refs_of
+              (s\<lparr>kheap := kheap s(thread \<mapsto>
+                   TCB (tcb_fault_update Map.empty tcb))\<rparr>) = state_refs_of s"
+  by (clarsimp simp: state_refs_of_def get_refs_def2 refs_of_def obj_at_def is_tcb
+              split: option.split intro!: ext)
+
+lemma replies_with_sc_tcb_fault_update:
+  "ko_at (TCB tcb) thread s \<Longrightarrow>
+      replies_with_sc
+              (s\<lparr>kheap := kheap s(thread \<mapsto>
+                   TCB (tcb_fault_update Map.empty tcb))\<rparr>) = replies_with_sc s"
+  by (auto simp: replies_with_sc_def get_refs_def2 refs_of_def obj_at_def sc_replies_sc_at_def)
+
+lemma replies_blocked_tcb_fault_update:
+  "ko_at (TCB tcb) thread s \<Longrightarrow>
+      replies_blocked
+              (s\<lparr>kheap := kheap s(thread \<mapsto>
+                   TCB (tcb_fault_update Map.empty tcb))\<rparr>) = replies_blocked s"
+  by (auto simp: replies_blocked_def get_refs_def2 refs_of_def obj_at_def st_tcb_at_def)
+
+lemma valid_replies_tcb_fault_update:
+  "ko_at (TCB tcb) thread s \<Longrightarrow>
+      valid_replies
+              (s\<lparr>kheap := kheap s(thread \<mapsto>
+                   TCB (tcb_fault_update Map.empty tcb))\<rparr>) = valid_replies s"
+  by (auto simp: get_refs_def2 refs_of_def obj_at_def sc_replies_sc_at_def
+                 replies_with_sc_tcb_fault_update
+                 replies_blocked_tcb_fault_update)
 
 end

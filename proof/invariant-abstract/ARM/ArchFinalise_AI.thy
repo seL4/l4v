@@ -648,20 +648,23 @@ lemma st_tcb_recv_reply_state_refs:
   done
 
 lemma blocked_cancel_ipc_unlive:
-  "\<lbrace>st_tcb_at ((=) st) thread and
-       K (rep = Some reply \<and> (\<exists>ep pl. st = BlockedOnReceive ep rep pl))\<rbrace>
+  "\<lbrace>st_tcb_at ((=) st) thread and (\<lambda>s. sym_refs (state_refs_of s)) and valid_replies and valid_objs
+    and K (rep = Some reply \<and> (\<exists>ep pl. st = BlockedOnReceive ep rep pl))\<rbrace>
     blocked_cancel_ipc st thread rep
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) reply\<rbrace>"
   apply (rule hoare_gen_asm, clarsimp)
   apply (rule_tac Q="\<lambda>rv. obj_at (\<lambda>ko. \<not>live ko \<and> is_reply ko) reply" in hoare_strengthen_post[rotated]
          , fastforce simp: obj_at_def)
   apply (simp add: blocked_cancel_ipc_def)
+  apply (rule hoare_seq_ext[OF _ gbi_ep_sp])
   by (wpsimp wp: sts_obj_at_impossible reply_unlink_tcb_not_live
                  get_simple_ko_wp hoare_vcg_all_lift
            simp: is_reply reply_sc_reply_at_def obj_at_def)
+     (fastforce dest!: valid_replies_ReceiveD[simplified reply_sc_reply_at_def obj_at_def])
 
 lemma cancel_ipc_unlive_reply_receive:
-  "\<lbrace>st_tcb_at (\<lambda>st. (\<exists>x pl. st = (BlockedOnReceive x (Some reply) pl))) thread\<rbrace>
+  "\<lbrace> (\<lambda>s. sym_refs (state_refs_of s)) and valid_replies and valid_objs
+     and st_tcb_at (\<lambda>st. (\<exists>x pl. st = (BlockedOnReceive x (Some reply) pl))) thread\<rbrace>
      cancel_ipc thread
    \<lbrace>\<lambda> rv. obj_at (Not \<circ> live) reply\<rbrace>"
   apply (clarsimp simp: cancel_ipc_def)
@@ -671,7 +674,13 @@ lemma cancel_ipc_unlive_reply_receive:
        apply (rule hoare_pre_cont)
       apply (rule hoare_pre_cont)
      apply (wpsimp wp: thread_set_wp gts_wp)+
-  by (auto simp: get_tcb_ko_at pred_tcb_at_def obj_at_def)
+  apply (clarsimp simp: get_tcb_ko_at pred_tcb_at_def obj_at_def
+                        state_refs_of_tcb_fault_update
+                        valid_replies_tcb_fault_update)
+  apply (rule valid_objs_same_type, simp)
+   apply (clarsimp simp: a_type_def obj_at_def)
+  apply (erule (1) valid_objsE)
+  by (clarsimp simp: valid_obj_def valid_tcb_def valid_objs_def ran_tcb_cap_cases)
 
 lemma reply_unlink_sc_not_live':
  "\<lbrace>obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> reply_tcb r = None) reply and invs\<rbrace>

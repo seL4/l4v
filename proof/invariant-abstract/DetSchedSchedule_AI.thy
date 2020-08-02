@@ -4816,7 +4816,6 @@ global_interpretation blocked_cancel_ipc:
     apply (rule hoare_seq_ext_skip, solves wpsimp, simp?)+
     apply (cases r; simp add: bind_assoc; thin_tac _)
      apply (wpsimp wp: set_thread_state_valid_sched_pred_strong simp: fun_upd_def)
-    apply (rule hoare_seq_ext_skip, solves wpsimp, simp?)+
     apply (wpsimp wp: set_thread_state_valid_sched_pred_strong
                       reply_unlink_tcb_valid_sched_pred_lift[THEN hoare_drop_assertion])
     apply (clarsimp simp: fun_upd_def split: if_splits)

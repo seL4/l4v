@@ -277,15 +277,6 @@ lemma gbep_ret:
   get_blocking_object st = return epPtr"
   by (auto simp add: get_blocking_object_def ep_blocked_def assert_opt_def)
 
-lemma st_tcb_at_valid_st2:
-  "\<lbrakk> st_tcb_at ((=) st) t s; valid_objs s \<rbrakk> \<Longrightarrow> valid_tcb_state st s"
-  apply (clarsimp simp add: valid_objs_def get_tcb_def pred_tcb_at_def
-                  obj_at_def)
-  apply (drule_tac x=t in bspec)
-   apply (erule domI)
-  apply (simp add: valid_obj_def valid_tcb_def)
-  done
-
 locale delete_one_abs =
   fixes state_ext_type :: "('a :: state_ext) itself"
   assumes delete_one_invs:
@@ -586,10 +577,6 @@ lemma blocked_cancel_ipc_invs:
    apply (wpsimp wp: sts_invs_minor)
    apply (fastforce simp: pred_tcb_at_def obj_at_def valid_idle_def dest!: invs_valid_idle)
   apply (rename_tac r_ptr rcv_data)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (rule hoare_seq_ext[OF _ assert_inv], simp)
-  apply (rule_tac S="r_ptr \<notin> {t, epptr}" in hoare_gen_asm''
-         , fastforce simp: pred_tcb_at_def obj_at_def)
   apply (rule hoare_vcg_conj_lift[where P=P and P'=P for P, simplified])
    apply (wpsimp wp: reply_unlink_tcb_st_tcb_at)
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
