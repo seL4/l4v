@@ -724,6 +724,7 @@ lemma lookupPTSlot_bitsLeft_less_64:
 (* FIXME move *)
 lemma addrFromPPtr_in_user_region:
   "p \<in> kernel_mappings \<Longrightarrow> addrFromPPtr p \<in> user_region"
+  supply if_cong[cong]
   apply (simp add: kernel_mappings_def addrFromPPtr_def baseOffset_def pAddr_base_def
                    user_region_def pptr_base_def RISCV64.pptrBase_def canonical_user_def)
   apply (clarsimp simp: canonical_bit_def mask_def)
@@ -762,7 +763,7 @@ lemma decodeRISCVPageTableInvocation_ccorres:
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeRISCVPageTableInvocation_'proc)"
    (is "_ \<Longrightarrow> _ \<Longrightarrow> ccorres _ _ ?pre ?pre' _ _ _")
-  supply Collect_const[simp del] if_cong[cong]
+  supply Collect_const[simp del] if_cong[cong] option.case_cong[cong]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_'
                       extraCaps___struct_extra_caps_C_' cap_' buffer_'

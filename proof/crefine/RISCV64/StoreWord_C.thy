@@ -1113,8 +1113,8 @@ lemma storeWord_ccorres':
      (doMachineOp $ storeWord ptr val)
      (Basic (\<lambda>s. globals_update (t_hrs_'_update
            (hrs_mem_update (heap_update (ptr' s) (val' s)))) s))"
-  apply (clarsimp simp: storeWordUser_def simp del: Collect_const
-             split del: if_split)
+  supply if_cong[cong]
+  apply (clarsimp simp: storeWordUser_def simp del: Collect_const)
   apply (rule ccorres_from_vcg_nofail)
   apply (rule allI)
   apply (rule conseqPre, vcg)
