@@ -39,7 +39,6 @@ requalify_consts
   gpRegisters
   frameRegisters
   replyRegister
-  syscallNoRegister
   nbsendRecvDest
   ackInterrupt
   ackDeadlineIRQ

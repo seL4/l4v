@@ -60,7 +60,7 @@ then
 fi
 
 # which architectures to process
-ARCHES=("ARM")
+ARCHES=("ARM" "RISCV64")
 
 # Match the CPP configuration used by SEL4.cabal and Setup.hs for Haskell build
 # Note: these should be in sync with both the Haskell .cabal and Setup.hs,
