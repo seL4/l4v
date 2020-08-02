@@ -91,8 +91,6 @@ lemma ntfn_ptr_get_queue_spec:
   apply clarsimp
   done
 
-declare td_names_word8[simp]
-
 abbreviation
         "cslift_all_but_tcb_C s t \<equiv> (cslift s :: cte_C typ_heap) = cslift t
                 \<and> (cslift s :: endpoint_C typ_heap) = cslift t
@@ -2300,7 +2298,7 @@ lemma possibleSwitchTo_ccorres:
           \<inter> UNIV) []
      (possibleSwitchTo t )
      (Call possibleSwitchTo_'proc)"
-  supply if_split [split del]
+  supply if_split [split del] if_cong[cong]
   supply Collect_const [simp del]
   supply dc_simp [simp del]
   supply prio_and_dom_limit_helpers[simp]

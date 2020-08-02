@@ -853,6 +853,7 @@ lemma update_freeIndex':
     have i'_bound_word: "(of_nat i' :: machine_word) \<le> 2 ^ maxUntypedSizeBits"
       using order_trans[OF i'_bound power_increasing[OF sz_bound], simplified]
       by (simp add: word_of_nat_le untypedBits_defs)
+    note option.case_cong[cong] if_cong[cong]
     show ?thesis
       apply (cinit lift: cap_ptr_' v32_')
        apply (rule ccorres_pre_getCTE)
@@ -2319,7 +2320,7 @@ lemma heap_list_zero_Ball_intvl:
 lemma untypedZeroRange_not_device:
   "untypedZeroRange cap = Some r
     \<Longrightarrow> \<not> capIsDevice cap"
-  by (clarsimp simp: untypedZeroRange_def)
+  by (clarsimp simp: untypedZeroRange_def cong: if_cong)
 
 lemma updateTrackedFreeIndex_noop_ccorres:
   "ccorres dc xfdc (cte_wp_at' ((\<lambda>cap. isUntypedCap cap
@@ -2478,6 +2479,7 @@ lemma emptySlot_ccorres:
           []
           (emptySlot slot info)
           (Call emptySlot_'proc)"
+  supply if_cong[cong]
   apply (cinit lift: slot_' cleanupInfo_' simp: case_Null_If)
 
   \<comment> \<open>--- handle the clearUntypedFreeIndex\<close>
@@ -2740,6 +2742,7 @@ lemma Arch_sameRegionAs_spec:
                  ccap_relation (ArchObjectCap capb) \<acute>cap_b  \<rbrace>
   Call Arch_sameRegionAs_'proc
   \<lbrace>  \<acute>ret__unsigned_long = from_bool (Arch.sameRegionAs capa capb) \<rbrace>"
+  supply if_cong[cong]
   apply vcg
   apply clarsimp
 
@@ -3731,7 +3734,7 @@ lemma sameRegionAs_NotificationCap:
   done
 
 lemma isMDBParentOf_spec:
-  notes option.case_cong_weak [cong]
+  notes option.case_cong_weak [cong] if_cong[cong]
   shows "\<forall>ctea cte_a cteb cte_b.
    \<Gamma> \<turnstile> {s. cslift s (cte_a_' s) = Some cte_a \<and>
             ccte_relation ctea cte_a \<and>
@@ -3829,6 +3832,7 @@ lemma updateCapData_spec:
   "\<forall>cap. \<Gamma> \<turnstile> \<lbrace> ccap_relation cap \<acute>cap \<and> preserve = to_bool (\<acute>preserve) \<and> newData = \<acute>newData\<rbrace>
   Call updateCapData_'proc
   \<lbrace>  ccap_relation (updateCapData preserve newData cap) \<acute>ret__struct_cap_C \<rbrace>"
+  supply if_cong[cong]
   apply (rule allI, rule conseqPre)
   apply vcg
   apply (clarsimp simp: if_1_0_0)

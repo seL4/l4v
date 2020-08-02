@@ -791,6 +791,7 @@ lemma unbindNotification_ccorres:
   "ccorres dc xfdc
     (invs') (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr tcb}) []
     (unbindNotification tcb) (Call unbindNotification_'proc)"
+  supply option.case_cong[cong]
   apply (cinit lift: tcb_')
    apply (rule_tac xf'=ntfnPtr_'
                     and r'="\<lambda>rv rv'. rv' = option_to_ptr rv \<and> rv \<noteq> Some 0"
@@ -824,6 +825,7 @@ lemma unbindNotification_ccorres:
 lemma unbindMaybeNotification_ccorres:
   "ccorres dc xfdc (invs') (UNIV \<inter> {s. ntfnPtr_' s = ntfn_Ptr ntfnptr}) []
         (unbindMaybeNotification ntfnptr) (Call unbindMaybeNotification_'proc)"
+  supply option.case_cong[cong]
   apply (cinit lift: ntfnPtr_')
    apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
     apply (rule ccorres_rhs_assoc2)
@@ -1132,7 +1134,7 @@ lemma deleteASIDPool_ccorres:
             apply (erule is_aligned_add_less_t2n)
               apply (subst(asm) Suc_unat_diff_1)
                apply (simp add: asid_low_bits_def)
-              apply (simp add: unat_power_lower asid_low_bits_word_bits)
+              apply (simp add: asid_low_bits_word_bits)
               apply (erule of_nat_less_pow_32 [OF _ asid_low_bits_word_bits])
              apply (simp add: asid_low_bits_def asid_bits_def)
             apply (simp add: asid_bits_def)
@@ -2279,6 +2281,7 @@ lemma Arch_finaliseCap_ccorres:
    (UNIV \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
                         \<inter> {s. final_' s = from_bool is_final}) []
    (Arch.finaliseCap cp is_final) (Call Arch_finaliseCap_'proc)"
+  supply if_cong[cong]
   apply (cinit lift: cap_' final_' cong: call_ignore_cong)
    apply csymbr
    apply (simp add: ARM_HYP_H.finaliseCap_def cap_get_tag_isCap_ArchObject)
@@ -2322,7 +2325,7 @@ lemma Arch_finaliseCap_ccorres:
          apply (frule small_frame_cap_is_mapped_alt)
          apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                                case_option_over_if
-                         elim!: ccap_relationE simp del: Collect_const)
+                         elim!: ccap_relationE)
         apply (simp add: split_def)
         apply (rule ccorres_rhs_assoc)+
         apply csymbr
@@ -2338,7 +2341,7 @@ lemma Arch_finaliseCap_ccorres:
         apply (frule small_frame_cap_is_mapped_alt)
         apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                               case_option_over_if
-                        elim!: ccap_relationE simp del: Collect_const)
+                        elim!: ccap_relationE)
        apply (simp add: split_def)
        apply return_NullCap_pair_ccorres
       apply (clarsimp simp: isCap_simps)
@@ -2356,7 +2359,7 @@ lemma Arch_finaliseCap_ccorres:
          apply (frule frame_cap_is_mapped_alt)
          apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
                                case_option_over_if
-                         elim!: ccap_relationE simp del: Collect_const)
+                         elim!: ccap_relationE)
         apply simp
         apply (rule ccorres_rhs_assoc)+
         apply csymbr
@@ -2373,7 +2376,7 @@ lemma Arch_finaliseCap_ccorres:
         apply (frule frame_cap_is_mapped_alt)
         apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
                               case_option_over_if
-                    elim!: ccap_relationE simp del: Collect_const)
+                        elim!: ccap_relationE)
        apply clarsimp
        apply return_NullCap_pair_ccorres
       apply (clarsimp simp: isCap_simps)

@@ -609,7 +609,7 @@ lemma sendFaultIPC_ccorres:
             \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr tptr})
       [] (sendFaultIPC tptr fault)
          (Call sendFaultIPC_'proc)"
-  supply Collect_const[simp del]
+  supply Collect_const[simp del] if_cong[cong]
   apply (cinit lift: tptr_' cong: call_ignore_cong)
    apply (simp add: liftE_bindE del:Collect_const cong:call_ignore_cong)
    apply (rule ccorres_symb_exec_r)
@@ -803,7 +803,7 @@ lemma getMRs_length:
     apply simp
     apply (wp mapM_length)
    apply (simp add: min_def length_msgRegisters)
-  apply (clarsimp simp: n_msgRegisters_def)
+  apply (clarsimp simp: n_msgRegisters_def cong: if_cong)
   apply (simp add: getMRs_def)
   apply (rule hoare_pre, wp)
     apply simp
@@ -1254,7 +1254,7 @@ lemma not_obj_at'_ntfn:
   done
 
 lemma handleRecv_ccorres:
-  notes rf_sr_upd_safe[simp del]
+  notes rf_sr_upd_safe[simp del] if_cong[cong]
   shows
   "ccorres dc xfdc
        (\<lambda>s. invs' s \<and> st_tcb_at' simple' (ksCurThread s) s
@@ -1853,6 +1853,7 @@ proof -
     using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
 
   show ?thesis
+    supply if_cong[cong]
     apply (cinit)
      apply (rule ccorres_pre_getCurVCPU, rename_tac vcpuPtr_opt)
      apply wpc

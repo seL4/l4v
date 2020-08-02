@@ -871,6 +871,7 @@ lemma clift_ptr_retyps_gen_memset_same:
          = (\<lambda>y. if y \<in> (CTypesDefs.ptr_add (Ptr p :: 'a :: mem_type ptr) o of_nat) ` {k. k < n}
                 then Some (from_bytes (replicate (size_of TYPE('a  :: mem_type)) 0)) else clift hrs y)"
   using sz
+  supply if_cong[cong]
   apply (simp add: nb liftt_if[folded hrs_mem_def hrs_htd_def]
                    hrs_htd_update hrs_mem_update
                    h_t_valid_ptr_retyps_gen_same[OF guard cleared not_byte]
@@ -915,9 +916,9 @@ lemma clift_ptr_retyps_gen_other:
          = clift hrs"
   using sz cleared
   apply (cases p)
-  apply (simp add: liftt_if[folded hrs_mem_def hrs_htd_def]
-                   h_t_valid_def hrs_htd_update
-                   ptr_retyps_gen_valid_footprint[simplified addr_card_wb, OF _ other not_byte sz])
+  apply (simp add: liftt_if[folded hrs_mem_def hrs_htd_def] h_t_valid_def hrs_htd_update
+                   ptr_retyps_gen_valid_footprint[simplified addr_card_wb, OF _ other not_byte sz]
+              cong: if_cong)
   done
 
 lemma clift_heap_list_update_no_heap_other:
@@ -2724,6 +2725,7 @@ lemma insertNewCap_ccorres1:
        \<inter> {s. slot_' s = Ptr slot}) []
      (insertNewCap parent slot cap)
      (Call insertNewCap_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit (no_ignore_call) lift: cap_' parent_' slot_')
   apply (rule ccorres_liftM_getCTE_cte_at)
    apply (rule ccorres_move_c_guard_cte)
@@ -3846,7 +3848,7 @@ lemma zero_ranges_are_zero_update_zero[simp]:
     \<Longrightarrow> zero_ranges_are_zero rs (hrs_mem_update (heap_update_list ptr (replicate n 0)) hrs)"
   apply (clarsimp simp: zero_ranges_are_zero_def hrs_mem_update)
   apply (drule(1) bspec)
-  apply (clarsimp simp: heap_list_eq_replicate_eq_eq heap_update_list_replicate_eq)
+  apply (clarsimp simp: heap_list_eq_replicate_eq_eq heap_update_list_replicate_eq cong: if_cong)
   done
 
 lemma rf_sr_rep0:
@@ -4957,8 +4959,7 @@ proof (intro impI allI)
 
   hence "cpspace_relation ?ks (underlying_memory (ksMachineState \<sigma>)) ?ks'"
     unfolding cpspace_relation_def
-    using empty rc' szo
-    apply -
+    using empty rc' szo if_cong[cong]
     apply (clarsimp simp: rl' tag_disj_via_td_name cte_C_size ht_rl
                           clift_ptr_retyps_gen_other
                           foldr_upd_app_if [folded data_map_insert_def])
@@ -4975,10 +4976,9 @@ proof (intro impI allI)
   thus  ?thesis using rf empty kdr rzo
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name )
     apply (simp add: carch_state_relation_def cmachine_state_relation_def)
-    apply (simp add: tag_disj_via_td_name rl' tcb_C_size h_t_valid_clift_Some_iff)
+    apply (simp add: tag_disj_via_td_name rl' h_t_valid_clift_Some_iff)
     apply (clarsimp simp: hrs_htd_update szo'[symmetric] cvariable_array_ptr_retyps[OF szo] rb')
-    apply (subst zero_ranges_ptr_retyps, simp_all only: szo'[symmetric] power_add,
-      simp)
+    apply (subst zero_ranges_ptr_retyps, simp_all only: szo'[symmetric] power_add, simp)
     apply (simp add:szo  p2dist objBits_simps ko_def ptr_retyps_htd_safe_neg
                     kernel_data_refs_domain_eq_rotate
                     rl foldr_upd_app_if [folded data_map_insert_def]
@@ -8221,6 +8221,7 @@ shows  "ccorres dc xfdc
      ) []
      (createNewObjects newType srcSlot destSlots ptr userSize isdev)
      (Call createNewObjects_'proc)"
+  supply if_cong[cong]
   apply (rule ccorres_gen_asm_state)
   apply clarsimp
   apply (subgoal_tac "unat (of_nat (getObjectSize newType userSize)) = getObjectSize newType userSize")

@@ -138,6 +138,7 @@ lemma capRemovable_spec:
   "\<forall>cap s.  \<Gamma>\<turnstile> \<lbrace>s. ccap_relation cap \<acute>cap \<and> (isZombie cap \<or> cap = NullCap) \<and> capAligned cap\<rbrace>
      Call capRemovable_'proc
       {s'. ret__unsigned_long_' s' = from_bool (capRemovable cap (ptr_val (slot_' s)))}"
+  supply if_cong[cong]
   apply vcg
   apply (clarsimp simp: cap_get_tag_isCap(1-8)[THEN trans[OF eq_commute]])
   apply (simp add: capRemovable_def from_bool_def[where b=True] true_def)
@@ -157,6 +158,7 @@ lemma capCyclicZombie_spec:
   "\<forall>cap s.  \<Gamma>\<turnstile> \<lbrace>s. ccap_relation cap \<acute>cap \<and> isZombie cap \<and> capAligned cap\<rbrace>
      Call capCyclicZombie_'proc
       {s'. ret__unsigned_long_' s' = from_bool (capCyclicZombie cap (ptr_val (slot_' s)))}"
+  supply if_cong[cong]
   apply vcg
   apply (clarsimp simp: from_bool_0)
   apply (frule(1) cap_get_tag_isCap [THEN iffD2], simp)
@@ -393,8 +395,7 @@ lemma ccorres_cutMon_locateSlotCap_Zombie:
   apply (drule(1) rf_sr_gsCNodes_array_assertion)
   apply (erule notE, erule array_assertion_shrink_right)
   apply (frule valid_Zombie_number_word_bits, simp+)
-  by (simp add: unat_arith_simps unat_of_nat word_bits_def
-                   valid_cap_simps')
+  by (simp add: unat_arith_simps unat_of_nat word_bits_def valid_cap_simps')
 
 lemma reduceZombie_ccorres1:
   assumes fs_cc:

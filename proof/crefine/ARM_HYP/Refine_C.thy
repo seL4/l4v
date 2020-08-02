@@ -839,6 +839,7 @@ lemma user_memory_update_corres_C:
      (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> dom um \<subseteq> dom (user_mem' s))
      \<top>
      (doMachineOp (user_memory_update um)) (setUserMem_C um)"
+  supply option.case_cong[cong]
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
    prefer 2
