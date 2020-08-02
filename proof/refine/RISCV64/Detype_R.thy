@@ -2910,11 +2910,10 @@ lemma placeNewObject_tcb_at':
                         lookupAround2_char1 field_simps projectKO_opt_tcb return_def ps_clear_def
                   simp flip: is_aligned_mask)
   apply (drule (1) pspace_no_overlap_disjoint')
-  apply (rule conjI;
-           clarsimp intro!: set_eqI;
-           drule_tac m = "ksPSpace s" in domI,
-           erule in_emptyE,
-           fastforce elim!: in_emptyE simp:objBits_simps mask_def add_diff_eq)
+  apply (clarsimp intro!: set_eqI;
+         drule_tac m = "ksPSpace s" in domI,
+         erule in_emptyE,
+         fastforce elim!: in_emptyE simp:objBits_simps mask_def add_diff_eq)
   done
 
 lemma monad_commute_if_weak_r:
@@ -3767,6 +3766,7 @@ lemma createObjects_Cons:
            createObjects' (((1 + of_nat n) << (objBitsKO val + us)) + ptr)
                           (Suc 0) val us
         od) s"
+  supply option.case_cong[cong]
   apply (clarsimp simp:createObjects'_def split_def bind_assoc)
   apply (subgoal_tac "is_aligned (((1::machine_word) + of_nat n << objBitsKO val + us) + ptr) (objBitsKO val + us)")
    prefer 2
@@ -3921,23 +3921,14 @@ lemma dmo'_gets_ksPSpace_comm:
   "doMachineOp f >>= (\<lambda>_. gets ksPSpace >>= m) =
    gets ksPSpace >>= (\<lambda>x. doMachineOp f >>= (\<lambda>_. m x))"
   apply (rule ext)
-  apply (auto simp add: doMachineOp_def simpler_modify_def simpler_gets_def
-                        return_def select_f_def bind_def split_def image_def
-                  cong: SUP_cong_simp)
-     apply (rule_tac x=aa in exI; drule prod_injects; clarsimp)
-     apply (rule_tac x="snd (m (ksPSpace x) (x\<lparr>ksMachineState := bb\<rparr>))" in exI, clarsimp)
-     apply (rule_tac x="{(ab, x\<lparr>ksMachineState := bb\<rparr>)}" in exI, simp)
-     apply (rule bexI[rotated], assumption, simp)
-    apply (rule_tac x="fst (m (ksPSpace x) (x\<lparr>ksMachineState := bb\<rparr>))" in exI, clarsimp)
-    apply (rule_tac x="snd (m (ksPSpace x) (x\<lparr>ksMachineState := bb\<rparr>))" in exI, clarsimp)
-    apply (rule_tac x="{(ab, x\<lparr>ksMachineState := bb\<rparr>)}" in exI, simp)
-    apply (rule bexI[rotated], assumption, simp)
-   apply (rule_tac x=a in exI, clarsimp)
-   apply (rule_tac x="{(aa, x\<lparr>ksMachineState := b\<rparr>)}" in exI, simp)
-   apply (rule bexI[rotated], assumption, simp)
-  apply (rule_tac x=a in exI, clarsimp)
-  apply (rule_tac x="{(aa, x\<lparr>ksMachineState := b\<rparr>)}" in exI, simp)
-  apply (rule bexI[rotated], assumption, simp)
+  apply (clarsimp simp: doMachineOp_def simpler_modify_def simpler_gets_def
+                        return_def select_f_def bind_def split_def image_def)
+  apply (rule conjI)
+   apply (rule set_eqI, clarsimp)
+   apply (rule iffI; clarsimp)
+    apply (metis eq_singleton_redux prod_injects(2))
+   apply (intro exI conjI bexI[rotated], simp+)[1]
+  apply (rule iffI; clarsimp; intro exI conjI bexI[rotated], simp+)[1]
   done
 
 lemma dmo'_ksPSpace_update_comm':

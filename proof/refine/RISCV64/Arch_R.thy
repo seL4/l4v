@@ -657,6 +657,7 @@ lemma decode_page_table_inv_corres:
              (\<lambda>s. \<forall>x\<in>set excaps'. valid_cap' (fst x) s \<and> cte_wp_at' (\<lambda>_. True) (snd x) s))
             (decode_page_table_invocation l args slot cap excaps)
             (decodeRISCVPageTableInvocation l args (cte_map slot) cap' excaps')"
+  supply option.case_cong[cong]
   apply (simp add: decode_page_table_invocation_def decodeRISCVPageTableInvocation_def Let_def
                    isCap_simps
               split del: if_split)

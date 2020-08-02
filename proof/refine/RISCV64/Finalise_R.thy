@@ -3506,6 +3506,7 @@ lemma unbind_maybe_notification_corres:
       apply (rule corres_option_split)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
        apply (rule corres_return_trivial)
+      apply simp
       apply (rule corres_split[OF _ set_ntfn_corres])
          apply (rule sbn_corres)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)

@@ -4216,12 +4216,12 @@ lemma reset_untyped_cap_corres:
      (reset_untyped_cap slot)
      (resetUntypedCap (cte_map slot))"
   apply (rule corres_gen_asm, clarsimp)
-  apply (simp add: reset_untyped_cap_def resetUntypedCap_def liftE_bindE)
+  apply (simp add: reset_untyped_cap_def resetUntypedCap_def liftE_bindE cong: if_cong)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ getSlotCap_corres])
        apply (rule_tac F="cap = cap.UntypedCap dev ptr sz idx \<and> (\<exists>s. s \<turnstile> cap)" in corres_gen_asm)
        apply (clarsimp simp: bits_of_def free_index_of_def unlessE_def
-                       split del: if_split)
+                       split del: if_split cong: if_cong)
        apply (rule corres_if[OF refl])
         apply (rule corres_returnOk[where P=\<top> and P'=\<top>], simp)
        apply (rule corres_split[OF _ detype_corres])

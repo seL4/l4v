@@ -363,7 +363,7 @@ where valid_cap'_def:
   | ArchObjectCap ac \<Rightarrow> valid_arch_cap' ac s)"
 
 abbreviation (input) valid_cap'_syn ::
-  "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>' _" [60, 60] 61) where
+  "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>'' _" [60, 60] 61) where
   "s \<turnstile>' c \<equiv> valid_cap' c s"
 
 definition valid_cte' :: "cte \<Rightarrow> kernel_state \<Rightarrow> bool" where
@@ -1545,7 +1545,7 @@ lemma cte_wp_at'_pspaceI:
                         alignCheck_def bind_def when_def
                         objBits_cte_conv tcbCTableSlot_def tcbVTableSlot_def
                         tcbReplySlot_def objBits_defs
-                 split: if_split_asm
+                 split: if_split_asm cong: image_cong
                  dest!: singleton_in_magnitude_check)
   done
 
@@ -1594,7 +1594,7 @@ lemma valid_mdb'_pspaceI:
 
 lemma state_refs_of'_pspaceI:
   "P (state_refs_of' s) \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> P (state_refs_of' s')"
-  unfolding state_refs_of'_def ps_clear_def by simp
+  unfolding state_refs_of'_def ps_clear_def by (simp cong: option.case_cong)
 
 lemma valid_pspace':
   "valid_pspace' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_pspace' s'"
@@ -2027,7 +2027,7 @@ lemma locateSlot_conv:
                                 isCNodeCap_def capUntypedPtr_def stateAssert_def
                                 bind_assoc exec_get locateSlotTCB_def
                                 objBits_simps
-                         split: zombie_type.split)
+                         split: zombie_type.split cong: option.case_cong)
   done
 
 lemma typ_at_tcb':
