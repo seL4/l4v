@@ -158,7 +158,7 @@ lemma setCTE_asidpool':
    apply (simp add: updateObject_cte)
    apply (clarsimp simp: updateObject_cte typeError_def magnitudeCheck_def in_monad
                   split: kernel_object.splits if_splits option.splits)
-  apply (clarsimp simp: ps_clear_upd' lookupAround2_char1)
+  apply (clarsimp simp: ps_clear_upd lookupAround2_char1)
   done
 
 lemma udpateCap_asidpool':

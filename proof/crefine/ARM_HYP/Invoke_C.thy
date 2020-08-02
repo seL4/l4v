@@ -587,6 +587,7 @@ lemma decodeCNodeInvocation_ccorres:
        (decodeCNodeInvocation lab args cp (map fst extraCaps)
            >>= invocationCatch thread isBlocking isCall InvokeCNode)
   (Call decodeCNodeInvocation_'proc)"
+  supply if_cong[cong]
   apply (cases "\<not>isCNodeCap cp")
    apply (simp add: decodeCNodeInvocation_def
               cong: conj_cong)
@@ -635,9 +636,8 @@ lemma decodeCNodeInvocation_ccorres:
                        del: Collect_const cong: call_ignore_cong)
            apply (rule ccorres_split_throws)
             apply (rule ccorres_rhs_assoc | csymbr)+
-            apply (simp add: invocationCatch_use_injection_handler
-                                  [symmetric, unfolded o_def]
-                             if_1_0_0 dc_def[symmetric]
+            apply (simp add: invocationCatch_use_injection_handler[symmetric, unfolded o_def]
+                             dc_def[symmetric]
                         del: Collect_const cong: call_ignore_cong)
             apply (rule ccorres_Cond_rhs_Seq)
              apply (simp add:if_P del: Collect_const)
@@ -647,8 +647,7 @@ lemma decodeCNodeInvocation_ccorres:
              apply (simp add: syscall_error_to_H_cases)
             apply (simp add: linorder_not_less del: Collect_const cong: call_ignore_cong)
             apply csymbr
-            apply (simp add: if_1_0_0 interpret_excaps_test_null
-                             excaps_map_def
+            apply (simp add: if_1_0_0 interpret_excaps_test_null excaps_map_def
                         del: Collect_const)
             apply (rule ccorres_Cond_rhs_Seq)
              apply (simp add: throwError_bind invocationCatch_def)
@@ -1837,7 +1836,7 @@ lemma byte_regions_unmodified_actually_heap_list:
 
 lemma resetUntypedCap_ccorres:
   notes upt.simps[simp del] Collect_const[simp del] replicate_numeral[simp del]
-        untypedBits_defs[simp]
+        untypedBits_defs[simp] if_cong[cong] option.case_cong[cong]
   shows
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
      (invs' and sch_act_simple and ct_active' and cte_wp_at' (isUntypedCap o cteCap) slot
@@ -2698,6 +2697,7 @@ lemma checkFreeIndex_ccorres:
         ;; \<acute>reset :== scast false)
     (\<acute>freeIndex :== 0
         ;; \<acute>reset :== scast true)))"
+  supply if_cong[cong]
   apply (simp add: constOnFailure_def catch_def liftE_def bindE_bind_linearise bind_assoc case_sum_distrib)
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_split_nothrow_case_sum)
@@ -2849,6 +2849,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
            liftE (stateAssert (valid_untyped_inv' uinv) []); returnOk uinv odE)
            >>= invocationCatch thread isBlocking isCall InvokeUntyped)
   (Call decodeUntypedInvocation_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (rule ccorres_name_pre)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cap_' slot_' excaps_' call_' buffer_'
                 simp: decodeUntypedInvocation_def list_case_If2

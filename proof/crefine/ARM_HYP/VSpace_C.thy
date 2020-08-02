@@ -621,8 +621,8 @@ lemma generic_frame_cap_get_capFIsMapped_spec:
        Call generic_frame_cap_get_capFIsMapped_'proc
        \<lbrace>\<acute>ret__unsigned_long = (if generic_frame_cap_get_capFMappedASID_CL (cap_lift \<^bsup>s\<^esup>cap) \<noteq> 0 then 1 else 0)\<rbrace>"
   apply vcg
-  apply (clarsimp simp: generic_frame_cap_get_capFMappedASID_CL_def if_distrib [where f=scast])
-done
+  apply (clarsimp simp: generic_frame_cap_get_capFMappedASID_CL_def if_distrib [where f=scast] cong: if_cong)
+  done
 
 
 
@@ -2032,6 +2032,7 @@ lemma vcpu_disable_ccorres:
        and (case v of None \<Rightarrow> \<top> | Some new \<Rightarrow> vcpu_at' new))
      (UNIV \<inter>  {s. vcpu_' s = option_to_ptr v}) hs
      (vcpuDisable v) (Call vcpu_disable_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: vcpu_')
    apply (ctac (no_vcg) add: dsb_ccorres)
     apply (rule ccorres_split_nothrow_novcg)
@@ -2274,6 +2275,7 @@ lemma vcpu_save_ccorres:
       (UNIV \<inter> {s. vcpu_' s = case_option NULL (vcpu_Ptr \<circ> fst) v}
             \<inter> {s. active_' s = case_option 0 (from_bool \<circ> snd) v}) hs
     (vcpuSave v) (Call vcpu_save_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: vcpu_' active_' simp: whileAnno_def)
    apply wpc
     (* v = None *)
@@ -2377,6 +2379,7 @@ lemma vcpu_switch_ccorres_Some:
                      and valid_arch_state' and vcpu_at' v)
     (UNIV \<inter> {s. new_' s = vcpu_Ptr v}) hs
         (vcpuSwitch (Some v)) (Call vcpu_switch_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: new_')
     (* v \<noteq> None *)
    apply simp
@@ -3198,6 +3201,7 @@ lemma ccorres_return_void_C':
 lemma is_aligned_cache_preconds:
   "\<lbrakk>is_aligned rva n; n \<ge> 7\<rbrakk> \<Longrightarrow> rva \<le> rva + 0x7F \<and>
           addrFromPPtr rva \<le> addrFromPPtr rva + 0x7F \<and> rva && mask 6 = addrFromPPtr rva && mask 6"
+  supply if_cong[cong]
   apply (drule is_aligned_weaken, simp)
   apply (rule conjI)
    apply (drule is_aligned_no_overflow, simp, unat_arith)[1]
@@ -3948,37 +3952,38 @@ lemma makeUserPDE_spec:
        HAP_CL = hap_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
        MemAttr_CL = memattr_from_cacheable (to_bool \<^bsup>s\<^esup>cacheable)
     \<rparr>) \<rbrace>"
+  supply if_cong[cong]
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: hap_from_vm_rights_mask split: if_splits)
   apply (intro conjI impI allI | clarsimp )+
     apply (simp only: pde_pde_section_lift pde_pde_section_lift_def)
     apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def hap_from_vm_rights_mask)
     apply (clarsimp simp: Kernel_C.ARMSection_def Kernel_C.ARMSmallPage_def
-       Kernel_C.ARMLargePage_def)
+                          Kernel_C.ARMLargePage_def)
     apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
-      split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
+                     split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
    apply (simp only: pde_pde_section_lift pde_pde_section_lift_def)
    apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def hap_from_vm_rights_mask)
    apply (clarsimp simp: Kernel_C.ARMSection_def Kernel_C.ARMSmallPage_def
-       Kernel_C.ARMLargePage_def is_aligned_neg_mask_eq)
-    apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
-      split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
+                         Kernel_C.ARMLargePage_def)
+   apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
+                    split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
   apply (clarsimp)
   apply (intro conjI impI allI)
    apply (simp add:pde_pde_section_lift pde_pde_section_lift_def)
    apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def hap_from_vm_rights_mask)
    apply (drule is_aligned_weaken[where y = 21])
     apply (clarsimp simp: Kernel_C.ARMSuperSection_def Kernel_C.ARMSmallPage_def
-       Kernel_C.ARMLargePage_def is_aligned_neg_mask_eq)+
+                          Kernel_C.ARMLargePage_def)+
    apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
      split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
   apply (simp add:pde_pde_section_lift pde_pde_section_lift_def)
   apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def hap_from_vm_rights_mask)
   apply (drule is_aligned_weaken[where y = 21])
    apply (clarsimp simp: Kernel_C.ARMSuperSection_def Kernel_C.ARMSmallPage_def
-       Kernel_C.ARMLargePage_def is_aligned_neg_mask_eq)+
-   apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
-     split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
+                         Kernel_C.ARMLargePage_def)+
+  apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
+                   split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
   done
 
 lemma makeUserPTE_spec:

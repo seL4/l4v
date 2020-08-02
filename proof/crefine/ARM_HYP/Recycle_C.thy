@@ -1344,4 +1344,5 @@ lemma ccap_relation_isDeviceCap2:
   apply (frule cap_get_tag_UntypedCap)
   apply (simp add:cap_get_tag_isCap to_bool_def)
   done
+
 end

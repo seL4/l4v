@@ -393,8 +393,8 @@ lemma isHighestPrio_ccorres:
   supply prio_and_dom_limit_helpers[simp]
   supply Collect_const_mem [simp]
   (* FIXME: these should likely be in simpset for CRefine, or even in general *)
-  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp] if_1_0_0[simp]
-          ccorres_IF_True[simp]
+  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp]
+          ccorres_IF_True[simp] if_cong[cong]
   apply (cinit lift: dom_' prio_')
    apply clarsimp
    apply (rule ccorres_move_const_guard)
