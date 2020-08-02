@@ -239,6 +239,7 @@ lemma handleSyscall_ccorres:
                (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
            (UNIV \<inter> {s. syscall_' s = syscall_from_H sysc }) []
            (callKernel (SyscallEvent sysc)) (Call handleSyscall_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit' lift: syscall_')
    apply (simp add: callKernel_def handleEvent_def minus_one_norm)
    apply (simp add: handleE_def handleE'_def)
@@ -809,6 +810,7 @@ lemma user_memory_update_corres_C:
      (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> dom um \<subseteq> dom (user_mem' s))
      \<top>
      (doMachineOp (user_memory_update um)) (setUserMem_C um)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
    prefer 2

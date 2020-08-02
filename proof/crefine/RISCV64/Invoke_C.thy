@@ -578,6 +578,7 @@ lemma decodeCNodeInvocation_ccorres:
        (decodeCNodeInvocation lab args cp (map fst extraCaps)
            >>= invocationCatch thread isBlocking isCall InvokeCNode)
   (Call decodeCNodeInvocation_'proc)"
+  supply if_cong[cong]
   apply (cases "\<not>isCNodeCap cp")
    apply (simp add: decodeCNodeInvocation_def
               cong: conj_cong)
@@ -1566,41 +1567,6 @@ shows
    apply (clarsimp simp: proj_d_def)
    done
 
-lemma cte_size_inter_empty:
-notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-  Int_atLeastAtMost atLeastatMost_empty_iff
-shows "\<lbrakk>invs' s;ctes_of s p = Some cte;isUntypedCap (cteCap cte);p\<notin> capRange (cteCap cte) \<rbrakk>
-  \<Longrightarrow> {p .. p + mask cteSizeBits} \<inter> capRange (cteCap cte) = {}"
-  apply (frule ctes_of_valid')
-   apply fastforce
-  apply (clarsimp simp:isCap_simps valid_cap'_def valid_untyped'_def)
-  apply (frule ctes_of_ko_at_strong)
-   apply (erule is_aligned_weaken[OF ctes_of_is_aligned])
-   apply (simp add:objBits_simps)
-  apply clarsimp
-  apply (drule_tac x = ptr in spec)
-  apply (clarsimp simp:ko_wp_at'_def)
-  apply (erule impE)
-   apply (erule pspace_alignedD',fastforce)
-  apply (frule pspace_distinctD')
-   apply fastforce
-  apply (clarsimp simp:capAligned_def)
-  apply (drule_tac p = v0 and p' = ptr in aligned_ranges_subset_or_disjoint)
-   apply (erule pspace_alignedD',fastforce)
-  apply (subst (asm) intvl_range_conv[where bits = cteSizeBits])
-    apply (erule is_aligned_weaken[OF ctes_of_is_aligned])
-    apply (simp add: objBits_simps)
-   apply (simp add: word_bits_def objBits_defs)
-  apply (erule disjE)
-   apply (simp add: obj_range'_def field_simps objBits_defs mask_def)
-   apply blast
-  apply (subgoal_tac "p \<in> {p .. p + mask cteSizeBits}")
-   prefer 2
-   apply (clarsimp simp:blah)
-   apply (rule is_aligned_no_wrap'[where sz=cteSizeBits])
-    apply (erule is_aligned_weaken[OF ctes_of_is_aligned])
-    by (auto simp: obj_range'_def field_simps objBits_simps' mask_def)
-
 lemma region_is_typelessI:
   "\<lbrakk>hrs_htd (t_hrs_' (globals t)) = hrs_htd (hrs_htd_update (typ_clear_region ptr sz) h) \<rbrakk>
          \<Longrightarrow> region_is_typeless ptr (2^sz) t"
@@ -1821,6 +1787,7 @@ lemma resetUntypedCap_ccorres:
      (resetUntypedCap slot)
      (Call resetUntypedCap_'proc)"
   using [[ceqv_simpl_sequence = true]]
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: srcSlot_')
    apply (simp add: liftE_bindE getSlotCap_def
                     Collect_True extra_sle_sless_unfolds)
@@ -2714,9 +2681,10 @@ lemma checkFreeIndex_ccorres:
      apply (rule context_conjI)
       apply (clarsimp simp:cap_get_tag_isCap)
       apply assumption
-     apply (clarsimp simp:ccap_relation_def isCap_simps cap_untyped_cap_lift_def
-            cap_lift_def cap_to_H_def
-            split:if_splits)
+     apply (clarsimp simp: ccap_relation_def isCap_simps cap_untyped_cap_lift_def cap_lift_def
+                           cap_to_H_def
+                     split: if_splits
+                     cong: if_cong)
     apply (rule ensureNoChildren_wp[where P = dc])
    apply clarsimp
    apply (vcg exspec=ensureNoChildren_modifies)
@@ -2860,6 +2828,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
            liftE (stateAssert (valid_untyped_inv' uinv) []); returnOk uinv odE)
            >>= invocationCatch thread isBlocking isCall InvokeUntyped)
   (Call decodeUntypedInvocation_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (rule ccorres_name_pre)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cap_' slot_' excaps_' call_' buffer_'
                 simp: decodeUntypedInvocation_def list_case_If2

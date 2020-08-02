@@ -1271,7 +1271,7 @@ lemma checkMappingPPtr_def2:
     then returnOk()
     else throw InvalidRoot)"
   unfolding checkMappingPPtr_def
-  by (cases pte; simp add: isPagePTE_def unlessE_def)
+  by (cases pte; simp add: isPagePTE_def unlessE_def cong: if_cong)
 
 lemma pte_pte_invalid_new_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. True\<rbrace>
@@ -1386,6 +1386,7 @@ lemma cap_to_H_Frame_unfold:
    d = to_bool device_C \<and>
    R = vmrights_to_H vmrights_C \<and>
    m = (if asid_C = 0 then None else Some (asid_C, mappedAddr_C))"
+  supply if_cong[cong]
   apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits)
    apply (simp split: if_split_asm)
   apply (rename_tac fcap, case_tac fcap, simp)
@@ -1480,6 +1481,7 @@ lemma performPageInvocationUnmap_ccorres:
 lemma RISCVGetWriteFromVMRights_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0\<rbrace> Call RISCVGetWriteFromVMRights_'proc
   \<lbrace> \<acute>ret__unsigned_long = writable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) \<rbrace>"
+  supply if_cong[cong]
   apply vcg
   apply (simp add: vmrights_to_H_def writable_from_vm_rights_def Kernel_C.VMKernelOnly_def
                    Kernel_C.VMReadOnly_def Kernel_C.VMReadWrite_def)
@@ -1489,6 +1491,7 @@ lemma RISCVGetWriteFromVMRights_spec:
 lemma RISCVGetReadFromVMRights_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0\<rbrace> Call RISCVGetReadFromVMRights_'proc
   \<lbrace> \<acute>ret__unsigned_long = readable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) \<rbrace>"
+  supply if_cong[cong]
   apply vcg
   apply (simp add: vmrights_to_H_def readable_from_vm_rights_def Kernel_C.VMKernelOnly_def
                    Kernel_C.VMReadOnly_def Kernel_C.VMReadWrite_def)
@@ -1536,6 +1539,7 @@ lemma makeUserPTE_spec:
         pte_CL.write_CL = writable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
         pte_CL.read_CL = readable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
         pte_CL.valid_CL = 1\<rparr> \<rbrace>"
+  supply if_cong[cong]
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: mask_def user_from_vm_rights_mask writable_from_vm_rights_mask
                         readable_from_vm_rights_mask)
