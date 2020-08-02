@@ -48,11 +48,16 @@ requalify_consts
   tcb_bits
   endpoint_bits
   ntfn_bits
+  reply_bits
   aa_type
   untyped_min_bits
   untyped_max_bits
   msg_label_bits
   MAX_SC_PERIOD
+
+requalify_facts
+  kernelWCET_ticks_pos2
+
 end
 
 text \<open>
@@ -482,7 +487,7 @@ definition "MIN_REFILLS = 2"
 definition "MIN_BUDGET = 2 * kernelWCET_ticks"
 definition "MIN_BUDGET_US = 2 * kernelWCET_us"
 
-lemma MIN_BUDGET_pos: "0 < MIN_BUDGET" using MIN_BUDGET_def ARM.kernelWCET_ticks_pos2 by clarsimp
+lemma MIN_BUDGET_pos: "0 < MIN_BUDGET" using MIN_BUDGET_def kernelWCET_ticks_pos2 by clarsimp
 
 definition "min_sched_context_bits = 8"
 
@@ -558,9 +563,9 @@ where
   "obj_bits (CNode sz cs) = cte_level_bits + sz"
 | "obj_bits (TCB t) = tcb_bits"
 | "obj_bits (Endpoint ep) = endpoint_bits"
-| "obj_bits (Notification ntfn) = ntfn_bits" (* RT ARM: 5*)
+| "obj_bits (Notification ntfn) = ntfn_bits"
 | "obj_bits (SchedContext sc n) = min_sched_context_bits + n"
-| "obj_bits (Reply r) = 4"
+| "obj_bits (Reply r) = reply_bits"
 | "obj_bits (ArchObj ao) = arch_kobj_size ao"
 
 primrec (nonexhaustive)
