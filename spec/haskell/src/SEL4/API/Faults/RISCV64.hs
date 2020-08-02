@@ -16,7 +16,7 @@ import SEL4.API.Failures.RISCV64
 makeArchFaultMessage :: ArchFault -> PPtr TCB -> Kernel (Word, [Word])
 makeArchFaultMessage (VMFault vptr archData) thread = do
     pc <- asUser thread getRestartPC
-    return (5, pc:fromVPtr vptr:archData)
+    return (6, pc:fromVPtr vptr:archData)
 
 handleArchFaultReply :: ArchFault -> PPtr TCB -> Word -> [Word] -> Kernel Bool
 handleArchFaultReply (VMFault {}) _ _ _ = return True

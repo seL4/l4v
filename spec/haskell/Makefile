@@ -28,7 +28,7 @@ CABAL_INSTALL=$(CABAL) v1-install
 # warnings that are useless during large Haskell updates
 GHC_DEV_OPTS=--ghc-options=""
 
-all: build-arm
+all: build-arm build-riscv
 
 sandbox: .stack-work
 	$(CABAL_SANDBOX) init
