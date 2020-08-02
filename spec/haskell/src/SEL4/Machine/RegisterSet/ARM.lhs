@@ -40,7 +40,6 @@ This module defines the ARM register set.
 > frameRegisters = FaultIP : SP : CPSR : [R0, R1] ++ [R8 .. IP]
 > gpRegisters = [R2, R3, R4, R5, R6, R7, LR, TPIDRURW, TPIDRURO]
 > replyRegister = R6
-> syscallNoRegister = R7
 > nbsendRecvDest = R8
 > exceptionMessage = [FaultIP, SP, CPSR]
 > syscallMessage = [R0 .. R7] ++ [FaultIP, SP, LR, CPSR]
