@@ -79,6 +79,83 @@ definition configureTimer :: "irq machine_monad"
      gets configureTimer_val
    od"
 
+consts' maxTimer_us :: "64 word"
+consts' timerPrecision :: "64 word"
+consts' max_ticks_to_us :: "64 word"
+(*
+consts' us_to_ticks :: "64 word \<Rightarrow> 64 word"
+*)
+end
+
+qualify RISCV64 (in Arch)
+
+axiomatization
+  kernelWCET_us :: "64 word"
+where
+  kernelWCET_us_pos: "0 < kernelWCET_us"
+and
+  kernelWCET_us_pos2: "0 < 2 * kernelWCET_us"
+
+axiomatization
+  us_to_ticks :: "64 word \<Rightarrow> 64 word"
+where
+  us_to_ticks_mono[intro!]: "mono us_to_ticks"
+and
+  us_to_ticks_zero[iff]: "us_to_ticks 0 = 0"
+and
+  us_to_ticks_nonzero: "y \<noteq> 0 \<Longrightarrow> us_to_ticks y \<noteq> 0"
+and
+  kernelWCET_ticks_no_overflow: "4 * unat (us_to_ticks (kernelWCET_us)) \<le> unat (max_word :: 64 word)"
+
+axiomatization
+  ticks_to_us :: "64 word \<Rightarrow> 64 word"
+
+end_qualify
+
+context Arch begin global_naming RISCV64
+
+definition
+  "kernelWCET_ticks = us_to_ticks (kernelWCET_us)"
+
+lemma replicate_no_overflow:
+  "n * unat (a :: 64 word) \<le> unat (upper_bound :: 64 word)
+   \<Longrightarrow> unat (word_of_int n * a) = n * unat a"
+  by (metis (mono_tags, hide_lams) le_unat_uoi of_nat_mult word_of_nat word_unat.Rep_inverse)
+
+lemma kernelWCET_ticks_pos2: "0 < 2 * kernelWCET_ticks"
+  apply (simp add: kernelWCET_ticks_def word_less_nat_alt)
+  apply (subgoal_tac "unat (2 * us_to_ticks kernelWCET_us) = 2 * unat (us_to_ticks kernelWCET_us)")
+   using RISCV64.kernelWCET_us_pos2 RISCV64.us_to_ticks_nonzero unat_gt_0 apply force
+  apply (subgoal_tac "2 * unat (us_to_ticks kernelWCET_us) \<le> unat (max_word :: 64 word)")
+   using replicate_no_overflow apply fastforce
+  using kernelWCET_ticks_no_overflow by force
+
+text \<open>
+This encodes the following assumptions:
+  a) time increases monotonically,
+  b) global 64-bit time does not overflow during the lifetime of the system.
+\<close>
+definition
+  getCurrentTime :: "64 word machine_monad"
+where
+  "getCurrentTime = do
+    modify (\<lambda>s. s \<lparr> time_state := time_state s + 1 \<rparr>);
+    passed \<leftarrow> gets $ time_oracle o time_state;
+    last' \<leftarrow> gets last_machine_time;
+    last \<leftarrow> return (unat last');
+    current \<leftarrow> return  (min (2^64 -(unat kernelWCET_ticks + 1)) (last + passed));
+    modify (\<lambda>s. s\<lparr>last_machine_time := of_nat current\<rparr>);
+    return (of_nat current)
+  od"
+
+consts'
+  setDeadline_impl :: "64 word \<Rightarrow> unit machine_rest_monad"
+
+definition
+  setDeadline :: "64 word \<Rightarrow> unit machine_monad"
+where
+  "setDeadline d \<equiv> machine_op_lift (setDeadline_impl d)"
+
 consts' initTimer_impl :: "unit machine_rest_monad"
 definition initTimer :: "unit machine_monad"
   where
@@ -88,7 +165,6 @@ consts' resetTimer_impl :: "unit machine_rest_monad"
 definition resetTimer :: "unit machine_monad"
   where
   "resetTimer \<equiv> machine_op_lift resetTimer_impl"
-
 
 subsection "Debug"
 
@@ -147,6 +223,11 @@ definition maskInterrupt :: "bool \<Rightarrow> irq \<Rightarrow> unit machine_m
 definition ackInterrupt :: "irq \<Rightarrow> unit machine_monad"
   where
   "ackInterrupt \<equiv> \<lambda>irq. return ()"
+
+consts' deadlineIRQ :: irq
+
+definition
+  "ackDeadlineIRQ \<equiv> ackInterrupt deadlineIRQ"
 
 definition setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad"
   where

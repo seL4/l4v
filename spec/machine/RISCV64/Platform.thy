@@ -161,6 +161,9 @@ definition irqInvalid :: "irq"
   where
   "irqInvalid \<equiv> 0"
 
+definition timerIRQ :: "irq" where
+  "timerIRQ \<equiv> maxIRQ"
+
 definition pageColourBits :: nat
   where
   "pageColourBits \<equiv> undefined" \<comment> \<open>not implemented on this platform\<close>
