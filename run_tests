@@ -86,12 +86,27 @@ EXCLUDE["X64"]=[
 
 EXCLUDE["RISCV64"]=[
     "Access",
-    "AutoCorresSEL4",
-    "DSpec",
-    "DBaseRefine",
+    "AutoCorres",
     "CamkesDarpaReport",
-    "CamkesGlueProofs",
-    "AsmRefine"
+    "CamkesGlueSpec",
+    "SimpleSystem",
+    "RelyGuarantee",
+    "Concurrency",
+    "DBaseRefine",
+    "DSpec",
+    "RefineOrphanage",
+    "SepTacticsExamples",
+    "SimplExportAndRefine",
+    "AsmRefine",
+    "CKernel",
+    "c-kernel",
+    "CParser",
+    "ASepSpec",
+    "Bisim",
+    "SepTactics",
+    "TakeGrant",
+    "Sep_Algebra",
+    "Refine"
 ]
 
 # Check EXCLUDE is exhaustive over the available architectures
