@@ -12,7 +12,7 @@ import Prelude hiding (Word)
 import SEL4.Machine.RegisterSet
 import Foreign.Ptr
 import Data.Bits
-import Data.Word(Word8, Word16, Word32)
+import Data.Word(Word8, Word16, Word32, Word64)
 import Data.Ix
 
 data CallbackData
@@ -52,6 +52,9 @@ pageColourBits = error "unused on this architecture"
 
 irqInvalid :: IRQ
 irqInvalid = IRQ 0
+
+timerIRQ :: IRQ
+timerIRQ = maxBound
 
 {- stubs -}
 
@@ -93,3 +96,12 @@ configureTimer env = error "unimplemented"
 
 resetTimer :: Ptr CallbackData -> IO ()
 resetTimer env = error "unimplemented"
+
+setDeadline :: Ptr CallbackData -> Word64 -> IO ()
+setDeadline _ = error "unimplemented"
+
+ackDeadlineIRQ :: Ptr CallbackData -> IO ()
+ackDeadlineIRQ = error "unimplemented"
+
+getCurrentTime :: Ptr CallbackData -> IO Word64
+getCurrentTime = error "unimplemented"

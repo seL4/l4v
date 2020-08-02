@@ -46,6 +46,12 @@ frameRegisters = FaultIP : LR : SP : GP : [S0 .. S11]
 gpRegisters :: [Register]
 gpRegisters = [A0 .. A7] ++ [T0 .. T6] ++ [TP]
 
+replyRegister :: Register
+replyRegister = A6
+
+nbsendRecvDest :: Register
+nbsendRecvDest = T0
+
 exceptionMessage :: [Register]
 exceptionMessage = [FaultIP, SP]
 
@@ -54,6 +60,9 @@ syscallMessage = FaultIP : SP : LR : [A0 .. A6]
 
 tlsBaseRegister :: Register
 tlsBaseRegister = TP
+
+timeoutMessage :: [Register]
+timeoutMessage = [FaultIP, LR, SP, GP] ++ [S0 .. TP]
 
 sstatusSPIE :: Word
 sstatusSPIE = 0x20

@@ -119,6 +119,16 @@ configureTimer = do
     cbptr <- ask
     liftIO $ Platform.configureTimer cbptr
 
+setDeadline :: Word64 -> MachineMonad ()
+setDeadline d = do
+    cbptr <- ask
+    liftIO $ Platform.setDeadline cbptr d
+
+ackDeadlineIRQ :: MachineMonad ()
+ackDeadlineIRQ = do
+    cbptr <- ask
+    liftIO $ Platform.ackDeadlineIRQ cbptr
+
 resetTimer :: MachineMonad ()
 resetTimer = do
     cbptr <- ask
@@ -126,6 +136,9 @@ resetTimer = do
 
 initIRQController :: MachineMonad ()
 initIRQController = error "Unimplemented - boot code"
+
+timerIRQ :: IRQ
+timerIRQ = Platform.timerIRQ
 
 setIRQTrigger :: IRQ -> Bool -> MachineMonad ()
 setIRQTrigger irq trigger = error "Unimplemented - machine op"
@@ -302,6 +315,26 @@ maskInterrupt :: Bool -> IRQ -> MachineMonad ()
 maskInterrupt maskI irq = do
     cbptr <- ask
     liftIO $ Platform.maskInterrupt cbptr maskI irq
+
+getCurrentTime :: MachineMonad Word64
+getCurrentTime = do
+    cbptr <- ask
+    liftIO $ Platform.getCurrentTime cbptr
+
+timerPrecision :: Word64
+timerPrecision = usToTicks 2
+
+usToTicks :: Word64 -> Word64
+usToTicks _ = undefined
+
+ticksToUs :: Word64 -> Word64
+ticksToUs _ = undefined
+
+maxUsToTicks :: Word64
+maxUsToTicks = undefined
+
+maxTicksToUs :: Word64
+maxTicksToUs = undefined
 
 debugPrint :: String -> MachineMonad ()
 debugPrint str = liftIO $ putStrLn str
