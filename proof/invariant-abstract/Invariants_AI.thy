@@ -4470,6 +4470,42 @@ lemma not_BlockedOnReply_not_in_replies_blocked:
   "st_tcb_at (\<lambda>st. st \<noteq> BlockedOnReply r) tptr s \<Longrightarrow> (r, tptr) \<notin> replies_blocked s"
   by (clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def)
 
+lemma st_tcb_at_valid_st2:
+  "\<lbrakk> st_tcb_at ((=) st) t s; valid_objs s \<rbrakk> \<Longrightarrow> valid_tcb_state st s"
+  apply (clarsimp simp add: valid_objs_def get_tcb_def pred_tcb_at_def obj_at_def)
+  apply (drule_tac x=t in bspec)
+   apply (erule domI)
+  apply (simp add: valid_obj_def valid_tcb_def)
+  done
+
+lemma valid_replies_ReceiveD:
+  assumes vr: "valid_replies s"
+  assumes sr: "sym_refs (state_refs_of s)"
+  assumes vo: "valid_objs s"
+  assumes st: "st_tcb_at ((=) (BlockedOnReceive ep (Some rp) pl)) t s"
+  shows "reply_sc_reply_at ((=) None) rp s"
+proof -
+  have h1: "reply_at rp s" using st vo st_tcb_at_valid_st2[OF st vo]
+    by (clarsimp simp: valid_tcb_state_def)
+  have "\<forall>scp. (rp, scp) \<notin> replies_with_sc s" using vr st sr
+    apply (clarsimp simp: valid_replies'_def)
+    apply (drule_tac c=rp in contra_subsetD)
+     apply (rule ccontr)
+     apply (clarsimp simp: replies_blocked_def)
+     apply (frule (1) sym_refs_st_tcb_atD[where t=t])
+     apply (frule_tac t=b in sym_refs_st_tcb_atD, simp)
+     apply (clarsimp simp: tcb_st_refs_of_def obj_at_def)
+     apply (rename_tac ko'; case_tac ko'; simp add: get_refs_def2)
+     apply (clarsimp simp: st_tcb_at_def obj_at_def)
+    by (clarsimp simp: image_iff replies_with_sc_def obj_at_def)
+  thus ?thesis using h1 assms
+    apply (clarsimp simp: obj_at_def reply_sc_reply_at_def is_reply)
+    apply (rule ccontr)
+    apply (case_tac "reply_sc reply"; clarsimp)
+    apply (drule (3) reply_sc_refs[rotated])
+    by (fastforce simp: image_iff replies_with_sc_def obj_at_def sc_replies_sc_at_def)
+qed
+
 lemma runnable_eq:
   "runnable st = (st = Running \<or> st = Restart)"
   by (cases st) auto
