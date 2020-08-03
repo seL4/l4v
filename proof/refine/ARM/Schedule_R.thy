@@ -1906,6 +1906,14 @@ lemma valid_release_queue_ksDomScheduleIdx[simp]:
   "Invariants_H.valid_release_queue (ksDomScheduleIdx_update f s) = Invariants_H.valid_release_queue s"
   by (simp add: Invariants_H.valid_release_queue_def)
 
+lemma valid_release_queue_ksSchedulerAction[simp]:
+  "Invariants_H.valid_release_queue (ksSchedulerAction_update f s) = Invariants_H.valid_release_queue s"
+  by (simp add: Invariants_H.valid_release_queue_def)
+
+lemma valid_release_queue'_ksSchedulerAction[simp]:
+  "Invariants_H.valid_release_queue' (ksSchedulerAction_update f s) = Invariants_H.valid_release_queue' s"
+  by (simp add: Invariants_H.valid_release_queue'_def)
+
 lemma valid_release_queue'_ksWorkUnitsCompleted[simp]:
   "Invariants_H.valid_release_queue' (ksWorkUnitsCompleted_update f s) = Invariants_H.valid_release_queue' s"
   by (simp add: Invariants_H.valid_release_queue'_def)
