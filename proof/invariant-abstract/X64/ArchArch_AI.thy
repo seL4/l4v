@@ -800,12 +800,11 @@ lemma aci_invs':
     apply (subst delete_objects_rewrite)
        apply (simp add:page_bits_def pageBits_def word_size_bits_def)
       apply (simp add:page_bits_def pageBits_def word_bits_def)
-     apply (simp add:is_aligned_neg_mask_eq)
+     apply (simp)
     apply wp
   apply (clarsimp simp: cte_wp_at_caps_of_state if_option_Some
                         Misc_Arithmetic.if_bool_simps
              split del: if_split)
-  apply (strengthen refl)
   apply (frule_tac cap = "(cap.UntypedCap False word1 pageBits idx)"
     in detype_invariants[rotated 3],clarsimp+)
     apply (simp add:cte_wp_at_caps_of_state)+
@@ -820,20 +819,19 @@ lemma aci_invs':
    apply fastforce
   apply (clarsimp simp: detype_clear_um_independent obj_bits_api_def arch_kobj_size_def
    default_arch_object_def conj_comms)
-  apply (rule conjI)
-   apply (clarsimp simp:valid_cap_simps cap_aligned_def page_bits_def not_le)
+  apply (rule conjI, clarsimp simp:valid_cap_simps cap_aligned_def page_bits_def not_le)+
   apply clarsimp
   apply (simp add:empty_descendants_range_in)
   apply (frule valid_cap_aligned)
-  apply (clarsimp simp: cap_aligned_def is_aligned_neg_mask_eq)
+  apply (clarsimp simp: cap_aligned_def)
   apply (subst caps_no_overlap_detype[OF descendants_range_caps_no_overlapI],
-    assumption, simp add: is_aligned_neg_mask_eq,
+    assumption, simp,
     simp add: empty_descendants_range_in)
   apply (frule pspace_no_overlap_detype, clarify+)
   apply (frule intvl_range_conv[where bits = pageBits])
    apply (simp add:pageBits_def word_bits_def)
-  apply (simp add:is_aligned_neg_mask_eq)
-  apply (clarsimp simp:is_aligned_neg_mask_eq page_bits_def)
+  apply (simp)
+  apply (clarsimp simp: page_bits_def)
   apply (frule(1) ex_cte_cap_protects)
       apply (simp add:empty_descendants_range_in)
      apply fastforce
@@ -844,6 +842,8 @@ lemma aci_invs':
      simp_all add:free_index_of_def valid_cap_simps valid_untyped_def
      empty_descendants_range_in range_cover_full clear_um_def max_free_index_def,
      (clarsimp simp:valid_untyped_def valid_cap_simps)+)[1]
+
+     apply (simp add: cte_wp_at_def)
 
     apply (erule(1) cap_to_protected)
     apply (simp add:empty_descendants_range_in descendants_range_def2)+
@@ -1012,7 +1012,6 @@ crunch inv [wp]: arch_decode_invocation "P"
 lemma create_mappings_empty [wp]:
   "\<lbrace>\<top>\<rbrace> create_mapping_entries base vptr vmsz R A pd \<lbrace>\<lambda>m s. empty_refs m\<rbrace>, -"
   by (cases vmsz; wpsimp simp: pdpte_ref_def empty_refs_def)
-
 
 lemma empty_pde_atI:
   "\<lbrakk> ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s;
@@ -1409,6 +1408,7 @@ lemma decode_page_table_invocation_wf[wp]:
     (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s)\<rbrace>
     decode_page_table_invocation label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
+  supply if_cong[cong]
   apply (simp add: arch_decode_invocation_def decode_page_table_invocation_def
                    Let_def split_def is_final_cap_def
              cong: if_cong split del: if_split)
@@ -1447,6 +1447,7 @@ lemma decode_page_directory_invocation_wf[wp]:
     (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s)\<rbrace>
     decode_page_directory_invocation label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
+  supply if_cong[cong]
   apply (simp add: arch_decode_invocation_def decode_page_directory_invocation_def
                    Let_def split_def is_final_cap_def
              cong: if_cong split del: if_split)
@@ -1484,6 +1485,7 @@ lemma decode_pdpt_invocation_wf[wp]:
     (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s)\<rbrace>
     decode_pdpt_invocation label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
+  supply if_cong[cong]
   apply (simp add: arch_decode_invocation_def decode_pdpt_invocation_def
                    Let_def split_def is_final_cap_def lookup_pml4_slot_def
               cong: if_cong split del: if_split)
