@@ -2847,8 +2847,18 @@ lemma setReprogramTimer_active_sc_at'[wp]:
   unfolding active_sc_at'_def
   by wpsimp
 
+(* FIXME RT: move these whileM lemmas, prove `whileM_*_inv` using `whileM_wp_gen`. *)
 lemmas whileM_post_inv
   = hoare_strengthen_post[where R="\<lambda>_. Q" for Q, OF whileM_inv[where P=C for C], rotated -1]
+
+lemma whileM_wp_gen:
+  assumes termin:"\<And>s. I False s \<Longrightarrow> Q s"
+  assumes [wp]: "\<lbrace>I'\<rbrace> C \<lbrace>I\<rbrace>"
+  assumes [wp]: "\<lbrace>I True\<rbrace> f \<lbrace>\<lambda>_. I'\<rbrace>"
+  shows "\<lbrace>I'\<rbrace> whileM C f \<lbrace>\<lambda>_. Q\<rbrace>"
+  unfolding whileM_def
+  using termin
+  by (wpsimp wp: whileLoop_wp[where I=I])
 
 lemma refillUnblockCheck_invs':
   "refillUnblockCheck scPtr \<lbrace>invs'\<rbrace>"
@@ -2906,21 +2916,250 @@ lemma setSchedulerAction_ksSchedulerAction[wp]:
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
   by (wpsimp simp: setSchedulerAction_def)
 
-lemma tcb_of'_Some:
-  "(tcb_of' ko = Some y) = (ko = KOTCB y)"
-  by (case_tac ko; simp add: tcb_of'_def)
-
 lemma isSchedulable_bool_runnableE:
   "isSchedulable_bool t s \<Longrightarrow> tcb_at' t s \<Longrightarrow> st_tcb_at' runnable' t s"
   unfolding isSchedulable_bool_def
   by (clarsimp simp: pred_tcb_at'_def obj_at'_def pred_map_def projectKO_eq projectKO_opt_tcb tcb_of'_Some)
 
-lemma awaken_invs':
-  "awaken \<lbrace>invs'\<rbrace>"
-  sorry (* awaken_invs' *)
+lemma rescheduleRequired_invs'[wp]:
+  "rescheduleRequired \<lbrace>invs'\<rbrace>"
+  unfolding rescheduleRequired_def
+  apply (wpsimp wp: ssa_invs' isSchedulable_wp)
+  by (clarsimp simp: invs'_def valid_state'_def)
 
+lemma rescheduleRequired_ksSchedulerAction[wp]:
+  "\<lbrace>\<lambda>_. P ChooseNewThread\<rbrace> rescheduleRequired \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
+  unfolding rescheduleRequired_def by wpsimp
+
+lemma inReleaseQueue_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko tcb_ptr s \<longrightarrow> P (tcbInReleaseQueue ko) s\<rbrace>
+   inReleaseQueue tcb_ptr
+   \<lbrace>P\<rbrace>"
+  unfolding inReleaseQueue_def threadGet_def
+  apply (wpsimp wp: getObject_tcb_wp)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemma possibleSwitchTo_invs':
+  "\<lbrace>invs'
+    and st_tcb_at' runnable' tptr
+    and (\<lambda>s. tptr \<noteq> ksCurThread s)\<rbrace>
+   possibleSwitchTo tptr
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  supply ssa_wp [wp del]
+  unfolding possibleSwitchTo_def
+  apply (wpsimp wp: hoare_vcg_imp_lift threadGet_wp inReleaseQueue_wp ssa_invs')
+  apply (clarsimp simp: obj_at'_def tcb_in_cur_domain'_def)
+  done
+
+lemma setReleaseQueue_tcb_at'[wp]:
+ "setReleaseQueue qs \<lbrace>typ_at' T tcbPtr\<rbrace>"
+  unfolding setReleaseQueue_def
+  by wpsimp
+
+lemma setReleaseQueue_ksReleaseQueue[wp]:
+  "\<lbrace>\<lambda>_. P qs\<rbrace> setReleaseQueue qs \<lbrace>\<lambda>_ s. P (ksReleaseQueue s)\<rbrace>"
+  by (wpsimp simp: setReleaseQueue_def)
+
+lemma setReleaseQueue_pred_tcb_at'[wp]:
+ "setReleaseQueue qs \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
+  by (wpsimp simp: setReleaseQueue_def)
+
+lemma ksReprogramTimer_update_misc[simp]:
+  "valid_machine_state' (s\<lparr>ksReprogramTimer := b\<rparr>) = valid_machine_state' s"
+  "ct_not_inQ (s\<lparr>ksReprogramTimer := b\<rparr>) = ct_not_inQ s"
+  "ct_idle_or_in_cur_domain' (s\<lparr>ksReprogramTimer := b\<rparr>) = ct_idle_or_in_cur_domain' s"
+  "cur_tcb' (s\<lparr>ksReprogramTimer := b\<rparr>) = cur_tcb' s"
+  apply (clarsimp simp: valid_machine_state'_def ct_not_inQ_def ct_idle_or_in_cur_domain'_def
+                        tcb_in_cur_domain'_def cur_tcb'_def)+
+  done
+
+lemma valid_machine_state'_ksReleaseQueue[simp]:
+  "valid_machine_state' (s\<lparr>ksReleaseQueue := param_a\<rparr>) = valid_machine_state' s"
+  unfolding valid_machine_state'_def
+  by simp
+
+lemma ct_idle_or_in_cur_domain'_ksReleaseQueue[simp]:
+  "ct_idle_or_in_cur_domain' (s\<lparr>ksReleaseQueue := param_a\<rparr>) = ct_idle_or_in_cur_domain' s"
+  unfolding ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
+  by simp
+
+crunches tcbReleaseDequeue
+  for valid_pspace'[wp]: valid_pspace'
+  and state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
+  and list_refs_of_replies'[wp]: "\<lambda>s. P (list_refs_of_replies' s)"
+  and valid_global_refs'[wp]: valid_global_refs'
+  and valid_arch_state'[wp]: valid_arch_state'
+  and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
+  and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and valid_irq_states'[wp]: valid_irq_states'
+  and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
+  and pspace_domain_valid[wp]: pspace_domain_valid
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
+  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
+  and valid_machine_state'[wp]: valid_machine_state'
+  (simp: crunch_simps wp: crunch_wps)
+
+crunches tcbReleaseDequeue
+  for cur_tcb'[wp]: cur_tcb'
+  (simp: crunch_simps cur_tcb'_def wp: crunch_wps threadSet_cur ignore: threadSet)
+
+lemma tcbInReleaseQueue_update_tcb_cte_cases:
+  "(a, b) \<in> ran tcb_cte_cases \<Longrightarrow> a (tcbInReleaseQueue_update f tcb) = a tcb"
+  unfolding tcb_cte_cases_def
+  by (case_tac tcb; fastforce simp: tcbInReleaseQueue_update_def)
+
+lemma tcbInReleaseQueue_update_ctes_of[wp]:
+  "threadSet (tcbInReleaseQueue_update f) x \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
+  by (wpsimp wp: threadSet_ctes_ofT simp: tcbInReleaseQueue_update_tcb_cte_cases)
+
+crunches tcbReleaseDequeue
+  for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
+  and valid_idle'[wp]: valid_idle'
+  and valid_irq_handlers'[wp]: valid_irq_handlers'
+  and valid_pde_mappings'[wp]: valid_pde_mappings'
+  and ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
+  and if_unsafe_then_cap'[wp]: if_unsafe_then_cap'
+  (ignore: threadSet
+     simp: crunch_simps tcbInReleaseQueue_update_tcb_cte_cases
+       wp: crunch_wps threadSet_idle' threadSet_irq_handlers' threadSet_ct_idle_or_in_cur_domain'
+           threadSet_ifunsafe'T)
+
+lemma tcbReleaseDequeue_valid_objs'[wp]:
+  "tcbReleaseDequeue \<lbrace>valid_objs'\<rbrace>"
+  unfolding tcbReleaseDequeue_def
+  apply (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_valid_objs')
+  apply (fastforce simp: valid_tcb'_def tcbInReleaseQueue_update_tcb_cte_cases)
+  done
+
+lemma tcbReleaseDequeue_sch_act_wf[wp]:
+  "tcbReleaseDequeue \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  unfolding tcbReleaseDequeue_def
+  by (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_sch_act)
+
+lemma tcbReleaseDequeue_if_live_then_nonz_cap'[wp]:
+  "tcbReleaseDequeue \<lbrace>if_live_then_nonz_cap'\<rbrace>"
+  unfolding tcbReleaseDequeue_def
+  apply (wpsimp simp: setReprogramTimer_def setReleaseQueue_def tcbInReleaseQueue_update_tcb_cte_cases wp: threadSet_iflive'T)
+  by auto
+
+lemma tcbReleaseDequeue_ct_not_inQ[wp]:
+  "tcbReleaseDequeue \<lbrace>ct_not_inQ\<rbrace>"
+  unfolding tcbReleaseDequeue_def
+  apply (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_not_inQ)
+  by (clarsimp simp: ct_not_inQ_def)
+
+lemma tcbReleaseDequeue_valid_queues[wp]:
+  "tcbReleaseDequeue \<lbrace>valid_queues\<rbrace>"
+  unfolding tcbReleaseDequeue_def
+  apply (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_valid_queues)
+  by (auto simp: valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def bitmapQ_def
+                 bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def inQ_def)
+
+lemma tcbReleaseDequeue_valid_queues'[wp]:
+  "tcbReleaseDequeue \<lbrace>valid_queues'\<rbrace>"
+  unfolding tcbReleaseDequeue_def
+  apply (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_valid_queues')
+  by (auto simp: valid_queues'_def valid_queues_no_bitmap_def valid_bitmapQ_def bitmapQ_def
+                 bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def inQ_def)
+
+lemma tcbReleaseDequeue_valid_release_queue[wp]:
+  "\<lbrace>valid_release_queue and (\<lambda>s. distinct (ksReleaseQueue s))\<rbrace>
+   tcbReleaseDequeue
+   \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
+  unfolding tcbReleaseDequeue_def
+  apply (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_valid_release_queue)
+  apply (clarsimp simp: valid_release_queue_def)
+  by (case_tac "ksReleaseQueue s"; simp)
+
+lemma tcbReleaseDequeue_valid_release_queue'[wp]:
+  "\<lbrace>valid_release_queue' and (\<lambda>s. ksReleaseQueue s \<noteq> [])\<rbrace>
+   tcbReleaseDequeue
+   \<lbrace>\<lambda>_. valid_release_queue'\<rbrace>"
+  unfolding tcbReleaseDequeue_def
+  apply (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_valid_release_queue')
+  apply (clarsimp simp: valid_release_queue'_def split: list.splits)
+  by (metis list.exhaust_sel set_ConsD)
+
+lemma tcbReleaseDequeue_invs'[wp]:
+  "\<lbrace>invs'
+    and (\<lambda>s. ksReleaseQueue s \<noteq> [])
+    and distinct_release_queue\<rbrace>
+   tcbReleaseDequeue
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  by (wpsimp simp: invs'_def valid_state'_def
+               wp: valid_irq_node_lift irqs_masked_lift untyped_ranges_zero_lift
+                   cteCaps_of_ctes_of_lift)
+
+lemma tcbReleaseDequeue_ksCurThread[wp]:
+  "\<lbrace>\<lambda>s. P (hd (ksReleaseQueue s)) (ksCurThread s)\<rbrace>
+   tcbReleaseDequeue
+   \<lbrace>\<lambda>r s. P r (ksCurThread s)\<rbrace>"
+  unfolding tcbReleaseDequeue_def
+  by (wpsimp simp: setReprogramTimer_def setReleaseQueue_def)
+
+lemma tcbReleaseDequeue_runnable'[wp]:
+  "\<lbrace>\<lambda>s. st_tcb_at' runnable' (hd (ksReleaseQueue s)) s\<rbrace>
+   tcbReleaseDequeue
+   \<lbrace>\<lambda>r s. st_tcb_at' runnable' r s\<rbrace>"
+  unfolding tcbReleaseDequeue_def
+  by (wpsimp simp: setReprogramTimer_def wp: threadSet_pred_tcb_no_state)
+
+crunches releaseQNonEmptyAndReady
+  for inv[wp]: P
+
+lemma releaseQNonEmptyAndReady_post_non_empty[wp]:
+  "\<lbrace>\<top>\<rbrace> releaseQNonEmptyAndReady \<lbrace>\<lambda>r s. r \<longrightarrow> ksReleaseQueue s \<noteq> []\<rbrace>"
+  unfolding releaseQNonEmptyAndReady_def
+  apply (wpsimp wp: refillReady_wp threadGet_wp)
+  by (clarsimp simp: obj_at'_def)
+
+crunches setReprogramTimer, possibleSwitchTo
+  for ksReleaseQueue[wp]: "\<lambda>s. P (ksReleaseQueue s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma tcbReleaseDequeue_distinct_release_queue[wp]:
+  "tcbReleaseDequeue \<lbrace>distinct_release_queue\<rbrace>"
+  unfolding tcbReleaseDequeue_def
+  by (wpsimp simp: distinct_tl)
+
+lemma getReleaseQueue_sp:
+  "\<lbrace>Q\<rbrace> getReleaseQueue \<lbrace>\<lambda>r. (\<lambda>s. r = ksReleaseQueue s) and Q\<rbrace>"
+  unfolding getReleaseQueue_def
+  by wpsimp
+
+lemma awaken_invs':
+  "\<lbrace>invs'\<rbrace>
+   awaken
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding awaken_def
+  apply simp
+  apply (rule hoare_seq_ext[OF _ getReleaseQueue_sp])
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule hoare_weaken_pre)
+   apply (rule whileM_wp_gen[where I="\<lambda>r. invs' and distinct_release_queue and (\<lambda>s. r \<longrightarrow> ksReleaseQueue s \<noteq> [])"])
+     apply clarsimp
+    apply wpsimp
+   apply (wpsimp wp: possibleSwitchTo_invs' refillSufficient_wp isRoundRobin_wp
+                     threadGet_wp haskell_assert_wp)
+    apply (rule_tac Q="\<lambda>_. invs' and distinct_release_queue" in hoare_strengthen_post[rotated])
+     apply (clarsimp simp: obj_at'_def)
+    apply wpsimp
+   apply clarsimp+
+  done
+
+(* I believe that it is relatively safe to leave distinctness in here because this lemma should
+   only be used at the top-level corres proof in this theory.
+
+   If one wishes to remove the distinctness condition, one needs to otherwise provide it
+   in awaken_invs'. The obvious way to do this is to add it to invs'.
+*)
 lemma schedule_invs':
-  "ThreadDecls_H.schedule \<lbrace>invs'\<rbrace>"
+  "\<lbrace>invs'\<rbrace>
+   ThreadDecls_H.schedule
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
   supply ssa_wp[wp del]
   supply if_split [split del]
   apply (simp add: schedule_def)
@@ -3051,19 +3290,7 @@ crunches getReprogramTimer, getCurTime, getRefills, getReleaseQueue, refillSuffi
          refillReady, isRoundRobin, releaseQNonEmptyAndReady
   for inv[wp]: P
 
-lemma ksReprogramTimer_update_misc[simp]:
-  "valid_machine_state' (s\<lparr>ksReprogramTimer := b\<rparr>) = valid_machine_state' s"
-  "ct_not_inQ (s\<lparr>ksReprogramTimer := b\<rparr>) = ct_not_inQ s"
-  "ct_idle_or_in_cur_domain' (s\<lparr>ksReprogramTimer := b\<rparr>) = ct_idle_or_in_cur_domain' s"
-  "cur_tcb' (s\<lparr>ksReprogramTimer := b\<rparr>) = cur_tcb' s"
-  apply (clarsimp simp: valid_machine_state'_def ct_not_inQ_def ct_idle_or_in_cur_domain'_def
-                        tcb_in_cur_domain'_def cur_tcb'_def)+
-  done
 
-lemma rescheduleRequired_ksSchedulerAction[wp]:
-  "\<lbrace>K (P ChooseNewThread)\<rbrace> rescheduleRequired \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
-  unfolding rescheduleRequired_def
-  by (wpsimp wp: isSchedulable_wp)
 
 \<comment>\<open>end: maybe move this block\<close>
 

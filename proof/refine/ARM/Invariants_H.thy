@@ -1735,6 +1735,9 @@ lemma ko_at_state_refs_ofD':
   "ko_at' ko p s \<Longrightarrow> state_refs_of' s p = refs_of' (injectKO ko)"
   by (clarsimp dest!: obj_at_state_refs_ofD')
 
+abbreviation distinct_release_queue :: "kernel_state \<Rightarrow> bool" where
+  "distinct_release_queue \<equiv> \<lambda>s. distinct (ksReleaseQueue s)"
+
 definition
   tcb_ntfn_is_bound' :: "word32 option \<Rightarrow> tcb \<Rightarrow> bool"
 where
