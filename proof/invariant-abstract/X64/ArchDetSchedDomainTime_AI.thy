@@ -58,6 +58,10 @@ context Arch begin global_naming X64
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
 
+crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_mask_irq_signal "\<lambda>s. P (domain_time s)"
+
+crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_mask_irq_signal "\<lambda>s. P (domain_list s)"
+
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_perform_invocation "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps check_cap_inv)
 

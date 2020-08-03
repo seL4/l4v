@@ -194,6 +194,8 @@ lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
 
 crunch valid_global_refs[Interrupt_AI_asms]: set_irq_state "valid_global_refs"
 
+crunch typ_at[wp]: arch_invoke_irq_handler "\<lambda>s. P (typ_at T p s)"
+
 lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
   assumes dmo_ex_inv[wp]: "\<And>f. \<lbrace>invs and ex_inv\<rbrace> do_machine_op f \<lbrace>\<lambda>rv::unit. ex_inv\<rbrace>"
   assumes cap_insert_ex_inv[wp]: "\<And>cap src dest.
