@@ -266,7 +266,7 @@ definition
      tcb_sched_action tcb_sched_dequeue tptr;
      thread_set_domain tptr new_dom;
      sched \<leftarrow> is_schedulable tptr;
-     when sched $ tcb_sched_action tcb_sched_enqueue tptr; \<comment> \<open>schedulable & dequeued\<close>
+     when sched $ tcb_sched_action tcb_sched_enqueue tptr; \<comment> \<open>schedulable and dequeued\<close>
      when (tptr = cur) $ reschedule_required
    od"
 
