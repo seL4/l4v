@@ -1079,6 +1079,8 @@ On some architectures, the thread context may include registers that may be modi
 >         awakened <- tcbReleaseDequeue
 >         ctPtr <- getCurThread
 >         assert (awakened /= ctPtr) "the currently running thread cannot have just woken up"
+>         runnable <- isRunnable awakened
+>         assert runnable "the awakened thread must be runnable"
 >         scPtrOpt <- threadGet tcbSchedContext awakened
 >         scPtr <- return $ fromJust scPtrOpt
 >         roundRobin <- isRoundRobin scPtr
