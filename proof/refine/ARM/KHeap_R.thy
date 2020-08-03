@@ -2961,6 +2961,10 @@ lemma valid_tcb_state_cross:
                 simp: valid_bound_obj'_def valid_tcb_state_def valid_tcb_state'_def
                split: Structures_A.thread_state.split_asm option.split_asm)
 
+lemma tcb_of'_Some:
+  "(tcb_of' ko = Some y) = (ko = KOTCB y)"
+  by (case_tac ko; simp add: tcb_of'_def)
+
 lemma getCurThread_sp:
   "\<lbrace>P\<rbrace> getCurThread \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksCurThread s)\<rbrace>"
   by (wpsimp simp: getCurThread_def)
@@ -3039,6 +3043,19 @@ lemma scActive_wp:
   "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (0 < scRefillMax ko) s\<rbrace> scActive scp \<lbrace>P\<rbrace>"
   unfolding scActive_def
   by wpsimp
+
+lemma getRefills_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (scRefills ko) s\<rbrace>
+   getRefills scp
+   \<lbrace>P\<rbrace>"
+  unfolding getRefills_def
+  by wpsimp
+
+lemma refillSufficient_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (minBudget \<le> refillsCapacity k (scRefills ko) (scRefillHead ko)) s\<rbrace> refillSufficient scp k \<lbrace>P\<rbrace>"
+  unfolding refillSufficient_def
+  apply (wpsimp wp: getRefills_wp)
+  by (clarsimp simp: sufficientRefills_def obj_at'_def)
 
 end
 end
