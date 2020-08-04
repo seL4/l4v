@@ -460,7 +460,7 @@ lemmas threadSet_corres_noop_split =
     threadSet_corres_noop_splitT [OF _ all_tcbI, OF _ ball_tcb_cte_casesI]
 
 lemma threadSet_tcb' [wp]:
-  "\<lbrace>tcb_at' t\<rbrace> threadSet f t' \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
+  "threadSet f t' \<lbrace>\<lambda>s. P (tcb_at' t s)\<rbrace>"
   by (wpsimp simp: threadSet_def)
 
 (* The function "thread_set f p" updates a TCB at p using function f.
@@ -1185,7 +1185,7 @@ proof -
      apply (frule_tac P=P' and Q="\<lambda>tcb. \<not> P' tcb" in pred_tcb_at_conj')
      apply (clarsimp)+
     apply (wp hoare_convert_imp pos)
-    apply (clarsimp simp: typ_at_tcb' [symmetric] pred_tcb_at'_def not_obj_at'
+    apply (clarsimp simp: tcb_at_typ_at' pred_tcb_at'_def not_obj_at'
                    elim!: obj_at'_weakenE)
     done
 qed
