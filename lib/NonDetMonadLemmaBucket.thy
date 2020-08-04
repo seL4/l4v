@@ -1532,17 +1532,11 @@ lemma valid_case_option_post_wp:
   by (cases ep, simp_all add: hoare_vcg_prop)
 
 lemma P_bool_lift:
-  assumes t: "\<lbrace>Q\<rbrace> f \<lbrace>\<lambda>r. Q\<rbrace>"
-  assumes f: "\<lbrace>\<lambda>s. \<not>Q s\<rbrace> f \<lbrace>\<lambda>r s. \<not>Q s\<rbrace>"
+  assumes t: "P = id \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>\<lambda>r. Q\<rbrace>"
+  assumes f: "P = Not \<Longrightarrow> \<lbrace>\<lambda>s. \<not>Q s\<rbrace> f \<lbrace>\<lambda>r s. \<not>Q s\<rbrace>"
   shows "\<lbrace>\<lambda>s. P (Q s)\<rbrace> f \<lbrace>\<lambda>r s. P (Q s)\<rbrace>"
-  apply (clarsimp simp: valid_def)
-  apply (subgoal_tac "Q b = Q s")
-   apply simp
-  apply (rule iffI)
-   apply (rule classical)
-   apply (drule (1) use_valid [OF _ f])
-   apply simp
-  apply (erule (1) use_valid [OF _ t])
+  apply (cases P rule: bool_to_bool_cases)
+     apply (wpsimp wp: t f simp: id_def)+
   done
 
 lemma fail_inv :
