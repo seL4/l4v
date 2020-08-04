@@ -718,8 +718,9 @@ lemma cur_thread_update_corres:
   apply (simp add: state_relation_def swp_def)
   done
 
-lemma arch_switch_thread_tcb_at' [wp]: "\<lbrace>tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
-  by (unfold ARM_H.switchToThread_def, wp typ_at_lift_tcb')
+lemma arch_switch_thread_tcb_at' [wp]:
+  "Arch.switchToThread t \<lbrace>\<lambda>s. P (tcb_at' t s)\<rbrace>"
+  by (unfold ARM_H.switchToThread_def, wp typ_at_lifts)
 
 crunch typ_at'[wp]: "switchToThread" "\<lambda>s. P (typ_at' T p s)"
   (ignore: clearExMonitor)

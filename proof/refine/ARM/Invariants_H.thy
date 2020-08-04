@@ -2596,48 +2596,66 @@ proof -
                         ko_wp_at'_def objBits_simps' P Q conj_comms cte_level_bits_def)
 qed
 
-lemma typ_at_lift_tcb':
-  "\<lbrace>typ_at' TCBT p\<rbrace> f \<lbrace>\<lambda>_. typ_at' TCBT p\<rbrace> \<Longrightarrow> \<lbrace>tcb_at' p\<rbrace> f \<lbrace>\<lambda>_. tcb_at' p\<rbrace>"
+lemma typ_at_lift_tcb'_strong:
+  "f \<lbrace>\<lambda>s. P (typ_at' TCBT p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (tcb_at' p s)\<rbrace>"
   by (simp add: typ_at_tcb')
 
-lemma typ_at_lift_ep':
-  "\<lbrace>typ_at' EndpointT p\<rbrace> f \<lbrace>\<lambda>_. typ_at' EndpointT p\<rbrace> \<Longrightarrow> \<lbrace>ep_at' p\<rbrace> f \<lbrace>\<lambda>_. ep_at' p\<rbrace>"
+lemma typ_at_lift_ep'_strong:
+  "f \<lbrace>\<lambda>s. P (typ_at' EndpointT p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (ep_at' p s)\<rbrace>"
   by (simp add: typ_at_ep)
 
-lemma typ_at_lift_ntfn':
-  "\<lbrace>typ_at' NotificationT p\<rbrace> f \<lbrace>\<lambda>_. typ_at' NotificationT p\<rbrace> \<Longrightarrow> \<lbrace>ntfn_at' p\<rbrace> f \<lbrace>\<lambda>_. ntfn_at' p\<rbrace>"
+lemma typ_at_lift_ntfn'_strong:
+  "f \<lbrace>\<lambda>s. P (typ_at' NotificationT p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (ntfn_at' p s)\<rbrace>"
   by (simp add: typ_at_ntfn)
 
-lemma typ_at_lift_cte':
-  "\<lbrace>typ_at' CTET p\<rbrace> f \<lbrace>\<lambda>_. typ_at' CTET p\<rbrace> \<Longrightarrow> \<lbrace>real_cte_at' p\<rbrace> f \<lbrace>\<lambda>_. real_cte_at' p\<rbrace>"
+lemma typ_at_lift_cte'_strong:
+  "f \<lbrace>\<lambda>s. P (typ_at' CTET p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (real_cte_at' p s)\<rbrace>"
   by (simp add: typ_at_cte)
 
-lemma typ_at_lift_sc':
-  "f \<lbrace>typ_at' SchedContextT p\<rbrace> \<Longrightarrow> f \<lbrace>sc_at' p\<rbrace>"
+lemma typ_at_lift_sc'_strong:
+  "f \<lbrace>\<lambda>s. P (typ_at' SchedContextT p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (sc_at' p s)\<rbrace>"
   by (simp add: typ_ats')
 
-lemma typ_at_lift_reply':
-  "f \<lbrace>typ_at' ReplyT p\<rbrace> \<Longrightarrow> f \<lbrace>reply_at' p\<rbrace>"
+lemma typ_at_lift_reply'_strong:
+  "f \<lbrace>\<lambda>s. P (typ_at' ReplyT p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (reply_at' p s)\<rbrace>"
   by (simp add: typ_ats')
 
 lemma typ_at_lift_cte_at':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows      "\<lbrace>cte_at' c\<rbrace> f \<lbrace>\<lambda>rv. cte_at' c\<rbrace>"
+  assumes x: "\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
+  shows      "f \<lbrace>\<lambda>s. P (cte_at' c s)\<rbrace>"
   apply (simp only: cte_at_typ')
-  apply (wp hoare_vcg_disj_lift hoare_vcg_ex_lift x)
+  apply (rule P_bool_lift[where P=P])
+   apply (wpsimp wp: hoare_vcg_disj_lift hoare_vcg_ex_lift hoare_vcg_all_lift x)+
   done
 
-lemma typ_at_lift_page_directory_at':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows      "\<lbrace>page_directory_at' p\<rbrace> f \<lbrace>\<lambda>rv. page_directory_at' p\<rbrace>"
+lemma typ_at_lift_page_directory_at'_strong:
+  assumes x: "\<And>p. f \<lbrace>\<lambda>s. P (typ_at' (ArchT PDET) p s)\<rbrace>"
+  shows      "f \<lbrace>\<lambda>s. P (page_directory_at' p s)\<rbrace>"
   unfolding page_directory_at'_def All_less_Ball
-  by (wp hoare_vcg_const_Ball_lift x)
+  using x
+  apply -
+  apply (rule P_bool_lift[where P=P])
+  apply (wpsimp wp: hoare_vcg_const_Ball_lift hoare_vcg_bex_lift hoare_vcg_imp_lift
+         | fastforce)+
+  done
 
-lemma typ_at_lift_page_table_at':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows      "\<lbrace>page_table_at' p\<rbrace> f \<lbrace>\<lambda>rv. page_table_at' p\<rbrace>"
+lemma typ_at_lift_page_table_at'_strong:
+  assumes x: "\<And>p. f \<lbrace>\<lambda>s. P (typ_at' (ArchT PTET) p s)\<rbrace>"
+  shows      "f \<lbrace>\<lambda>s. P (page_table_at' p s)\<rbrace>"
   unfolding page_table_at'_def All_less_Ball
-  by (wp hoare_vcg_const_Ball_lift x)
+  using x
+  apply -
+  apply (rule P_bool_lift[where P=P])
+  apply (wpsimp wp: hoare_vcg_const_Ball_lift hoare_vcg_bex_lift hoare_vcg_imp_lift
+         | fastforce)+
+  done
+
+lemmas typ_at_lifts_strong =
+  typ_at_lift_tcb'_strong typ_at_lift_ep'_strong
+  typ_at_lift_ntfn'_strong typ_at_lift_cte'_strong
+  typ_at_lift_reply'_strong typ_at_lift_sc'_strong
+  typ_at_lift_page_directory_at'_strong
+  typ_at_lift_page_table_at'_strong
 
 lemma ko_wp_typ_at':
   "ko_wp_at' P p s \<Longrightarrow> \<exists>T. typ_at' T p s"
@@ -2685,44 +2703,44 @@ lemma typ_at_lift_valid_cap':
   apply (simp add: valid_cap'_def)
   apply wp
   apply (case_tac cap;
-         simp add: valid_cap'_def P [where P=id, simplified] typ_at_lift_tcb'
-                   hoare_vcg_prop typ_at_lift_ep' typ_at_lift_reply'
-                   typ_at_lift_ntfn' typ_at_lift_cte_at' typ_at_lift_sc'
-                   hoare_vcg_conj_lift [OF typ_at_lift_cte_at']
-                   hoare_vcg_conj_lift)
+         wpsimp wp: valid_cap'_def P typ_at_lifts_strong
+                    hoare_vcg_prop  typ_at_lift_cte_at'
+                    hoare_vcg_conj_lift [OF typ_at_lift_cte_at']
+                    hoare_vcg_conj_lift)
      apply (rename_tac zombie_type nat)
      apply (case_tac zombie_type; simp)
-      apply (wp typ_at_lift_tcb' P hoare_vcg_all_lift typ_at_lift_cte')+
+      apply (wp typ_at_lifts_strong[where P=id, simplified] P
+                hoare_vcg_all_lift)+
     apply (rename_tac arch_capability)
     apply (case_tac arch_capability,
            simp_all add: P [where P=id, simplified] page_table_at'_def
                          hoare_vcg_prop page_directory_at'_def All_less_Ball
               split del: if_split)
        apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped' sz
-                 hoare_vcg_all_lift typ_at_lift_cte')+
+                 hoare_vcg_all_lift typ_at_lifts_strong)+
   done
 
 lemma typ_at_lift_valid_irq_node':
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   shows      "\<lbrace>valid_irq_node' p\<rbrace> f \<lbrace>\<lambda>_. valid_irq_node' p\<rbrace>"
   apply (simp add: valid_irq_node'_def)
-  apply (wp hoare_vcg_all_lift P typ_at_lift_cte')
+  apply (wp hoare_vcg_all_lift P typ_at_lifts_strong)
   done
 
 lemma valid_pde_lift':
   assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_pde' pde s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pde' pde s\<rbrace>"
-  by (cases pde) (simp add: valid_mapping'_def|wp x typ_at_lift_page_table_at')+
+  by (cases pde) (simp add: valid_mapping'_def|wp x typ_at_lifts_strong[where P=id])+
 
 lemma valid_pte_lift':
   assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_pte' pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte' pte s\<rbrace>"
-  by (cases pte) (simp add: valid_mapping'_def|wp x typ_at_lift_page_directory_at')+
+  by (cases pte) (simp add: valid_mapping'_def|wp x typ_at_lifts_strong[where P=id])+
 
 lemma valid_asid_pool_lift':
   assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_asid_pool' ap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_asid_pool' ap s\<rbrace>"
-  by (cases ap) (simp|wp x typ_at_lift_page_directory_at' hoare_vcg_const_Ball_lift)+
+  by (cases ap) (simp|wp x typ_at_lifts_strong[where P=id] hoare_vcg_const_Ball_lift)+
 
 lemma valid_bound_tcb_lift:
   "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow>
@@ -2739,12 +2757,44 @@ lemma valid_bound_reply_lift:
   \<lbrace>valid_bound_reply' tcb\<rbrace> f \<lbrace>\<lambda>_. valid_bound_reply' tcb\<rbrace>"
   by (auto simp: valid_bound_tcb'_def valid_def typ_ats'[symmetric] split: option.splits)
 
-lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
-                      typ_at_lift_ntfn' typ_at_lift_cte'
-                      typ_at_lift_reply' typ_at_lift_sc'
+context begin
+\<comment>\<open>
+  We're using @{command ML_goal} here because there are two useful formulations
+  of typ_at lifting lemmas and we do not want to write all of the possibilities
+  out by hand. If we use typ_at_lift_tcb' as an example, then the first is
+  @{term "\<lbrace>\<lambda>s. P (typ_at' TCBT p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at' TCBT p s)\<rbrace>
+          \<Longrightarrow> \<lbrace>\<lambda>s. P (tcb_at' p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (tcb_at' p s)\<rbrace>"} and the second is
+  @{term "(\<And>P. \<lbrace>\<lambda>s. P (typ_at' TCBT p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at' TCBT p s)\<rbrace>)
+          \<Longrightarrow> \<lbrace>\<lambda>s. P (tcb_at' p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (tcb_at' p s)\<rbrace>"}.
+  The first form is stronger, and therefore preferred for backward reasoning
+  using rule. However, since the P in the premise is free in the first form,
+  forward unification using the OF attribute produces flex-flex pairs which
+  causes problems. The second form avoids the unification issue by demanding
+  that there is a P that is free in the lemma supplied to the OF attribute.
+  However, it can only be applied if @{term f} preserves both
+  @{term "typ_at' TCBT p s"} and @{term "\<not> typ_at' TCBT p s"}.
+  The following @{command ML_goal} generates lemmas of the second form based on
+  the previously proven stronger lemmas of the first form.
+\<close>
+ML \<open>
+local
+  val strong_thms = @{thms typ_at_lifts_strong[no_vars]};
+  fun abstract_P term = Logic.all (Free ("P", @{typ "bool \<Rightarrow> bool"})) term
+  fun abstract thm =
+    @{const Pure.imp} $
+      abstract_P (hd (Thm.prems_of thm)) $
+      Thm.concl_of thm
+in
+  val typ_at_lifts_internal_goals = List.map abstract strong_thms
+end
+\<close>
+
+private ML_goal typ_at_lifts_internal:
+  \<open>typ_at_lifts_internal_goals\<close>
+  by (auto simp: typ_at_lifts_strong)
+
+lemmas typ_at_lifts = typ_at_lifts_internal
                       typ_at_lift_cte_at'
-                      typ_at_lift_page_table_at'
-                      typ_at_lift_page_directory_at'
                       typ_at_lift_valid_untyped'
                       typ_at_lift_valid_cap'
                       valid_pde_lift'
@@ -2753,6 +2803,7 @@ lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       valid_bound_tcb_lift
                       valid_bound_reply_lift
                       valid_bound_sc_lift
+end
 
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"
