@@ -301,15 +301,8 @@ lemmas set_vm_root_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_typ_at]
 lemma valid_pte_lift3:
   assumes x: "(\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>)"
   shows "\<lbrace>\<lambda>s. P (valid_pte level pte s)\<rbrace> f \<lbrace>\<lambda>rv s. P (valid_pte level pte s)\<rbrace>"
-  apply (insert bool_function_four_cases[where f=P])
-  apply (erule disjE)
-   apply (cases pte)
-     apply (simp add: data_at_def | wp hoare_vcg_const_imp_lift hoare_vcg_disj_lift x)+
-  apply (erule disjE)
-   apply (cases pte)
-     apply (simp add: data_at_def | wp hoare_vcg_disj_lift hoare_vcg_const_imp_lift x)+
-  apply (erule disjE)
-   apply (simp | wp)+
+  apply (cases P rule: bool_to_bool_cases; wpsimp; cases pte)
+       apply (wpsimp simp:data_at_def wp: hoare_vcg_disj_lift hoare_vcg_const_imp_lift x)+
   done
 
 

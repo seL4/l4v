@@ -64,10 +64,6 @@ lemma invs_valid_irq_states[elim!]:
   "invs s \<Longrightarrow> valid_irq_states s"
   by(auto simp: invs_def valid_state_def)
 
-lemma bool_function_four_cases:
-  "f = Not \<or> f = id \<or> f = (\<lambda>_. True) \<or> f = (\<lambda>_. False)"
-  by (auto simp add: fun_eq_iff all_bool_eq)
-
 lemma uint_ucast:
   "(x :: ('a :: len) word) < 2 ^ len_of TYPE ('b)
     \<Longrightarrow> uint (ucast x :: ('b :: len) word) = uint x"
