@@ -162,8 +162,16 @@ This module specifies the behavior of reply objects.
 >     tptrOpt <- getReplyTCB replyPtr
 >     tptr <- maybeToMonad tptrOpt
 >     state <- getThreadState tptr
+>     stateAssert (replyUnlink_assertion replyPtr state)
+>             "Relation between the thread state of the replyTCB and replyPtr"
 >     setReplyTCB Nothing replyPtr
 >     setThreadState Inactive tptr
+
+In "replyUnlink" above, as in the abstract specification,  we make an assertion
+on the thread state of the replyTCB of the replyPtr
+
+> replyUnlink_assertion :: PPtr Reply -> ThreadState -> KernelState -> Bool
+> replyUnlink_assertion _ _ _ = True
 
 > cleanReply :: PPtr Reply -> Kernel ()
 > cleanReply replyPtr = do

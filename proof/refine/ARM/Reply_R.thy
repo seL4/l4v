@@ -64,10 +64,9 @@ lemma replyUnlink_tcb_obj_at'_no_change:
   unfolding replyUnlink_def scheduleTCB_def rescheduleRequired_def
             setReplyTCB_def getReplyTCB_def
   apply (rule hoare_gen_asm)
-  supply set_reply'.get_wp[wp del]
   apply (wpsimp wp: hoare_vcg_if_lift2 tcbSchedEnqueue_tcb_obj_at'_no_change set_reply'.get_inv
                     isSchedulable_inv hoare_vcg_imp_lift setThreadState_tcb_obj_at'_no_change
-                    set_reply'.get_wp_rv_only threadSet_obj_at'_simple_strongest
+                    set_reply'.get_wp_rv_only threadSet_obj_at'_simple_strongest gts_wp'
                     hoare_pre_cont[where a="isSchedulable x" and P="\<lambda>rv _. rv" for x]
                     hoare_pre_cont[where a="getReply rptr" and P="\<lambda>rv s. \<not>tcb_at' (P rv) s" for P]
               simp: o_def)

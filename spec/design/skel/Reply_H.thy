@@ -15,6 +15,6 @@ imports
   ReplyDecls_H
 begin
 
-#INCLUDE_HASKELL SEL4/Object/Reply.lhs bodies_only
+#INCLUDE_HASKELL SEL4/Object/Reply.lhs bodies_only NOT replyUnlink_assertion
 
 end

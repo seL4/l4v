@@ -181,10 +181,10 @@ lemma gts_wf''[wp]:
 
 lemma replyUnlink_valid_objs':
   "\<lbrace>valid_objs' and reply_at' rptr\<rbrace>
-    replyUnlink rptr
+   replyUnlink rptr
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (clarsimp simp: replyUnlink_def setReplyTCB_def getReplyTCB_def liftM_def)
-  apply (wpsimp wp: set_reply_valid_objs' hoare_vcg_all_lift
+  apply (wpsimp wp: set_reply_valid_objs' hoare_vcg_all_lift gts_wp'
               simp: valid_tcb_state'_def)
   apply (frule (1) ko_at_valid_objs'[where 'a=reply, simplified])
    apply (clarsimp simp: projectKO_opt_reply split: kernel_object.splits)
@@ -201,6 +201,11 @@ lemma setReplyTCB_corres:
       apply (rule set_reply_corres)
       apply (simp add: reply_relation_def)
   by (wpsimp simp: obj_at'_def replyNext_same_def)+
+
+defs replyUnlink_assertion_def:
+  "replyUnlink_assertion
+    \<equiv> \<lambda>replyPtr state s. state = BlockedOnReply (Some replyPtr)
+                          \<or> (\<exists>ep d. state = BlockedOnReceive ep d (Some replyPtr))"
 
 lemma reply_unlink_tcb_corres:
   "\<lbrakk>st = Structures_A.BlockedOnReceive ep (Some rp) pl
@@ -224,12 +229,14 @@ lemma reply_unlink_tcb_corres:
        apply (clarsimp simp: reply_relation_def)
       apply simp
       apply (rule corres_split[OF _ gts_corres])
-        apply (rule corres_assert_assume_l)
-        apply (rule corres_split [OF _ setReplyTCB_corres])
-          apply (rule sts_corres)
-          apply (clarsimp simp: thread_state_relation_def)
-         apply wpsimp
-        apply (wpsimp simp: setReplyTCB_def)
+        apply (rule corres_assert_gen_asm_l)
+        apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
+         apply (rule corres_split[OF _ setReplyTCB_corres])
+           apply (rule sts_corres)
+           apply (clarsimp simp: thread_state_relation_def)
+          apply wpsimp
+         apply (wpsimp simp: setReplyTCB_def)
+        apply (fastforce simp: replyUnlink_assertion_def thread_state_relation_def)
        apply (wpsimp wp: hoare_vcg_disj_lift gts_wp get_simple_ko_wp)+
    apply (clarsimp simp: sk_obj_at_pred_def obj_at_def is_reply pred_tcb_at_def is_tcb)
   apply (prop_tac "reply_at' rp s")
