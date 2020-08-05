@@ -289,7 +289,6 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 >                                 setThreadState Restart t
 >                                 possibleSwitchTo t
 >                             else setThreadState Inactive t
->                         tcbSchedEnqueue t
 >                         return False
 >                     else return True
 >             ep' <- case queue' of
