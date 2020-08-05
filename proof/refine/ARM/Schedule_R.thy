@@ -3338,16 +3338,68 @@ lemma rescheduleRequired_sch_act_sane[wp]:
 crunch sch_act_sane[wp]: setThreadState, setBoundNotification "sch_act_sane"
   (simp: crunch_simps wp: crunch_wps)
 
-lemma possibleSwitchTo_corres:
+lemma tcbSchedEnqueue_valid_queues[wp]:
+  "\<lbrace>Invariants_H.valid_queues
+    and st_tcb_at' runnable' t
+    and valid_tcbs' \<rbrace>
+   tcbSchedEnqueue t
+   \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
+   unfolding tcbSchedEnqueue_def
+   by (fastforce intro:  tcbSchedEnqueueOrAppend_valid_queues)
+
+lemma rescheduleRequired_valid_queues[wp]:
+  "\<lbrace>\<lambda>s. Invariants_H.valid_queues s \<and> valid_tcbs' s \<and>
+        weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
+   rescheduleRequired
+   \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
+  apply (simp add: rescheduleRequired_def)
+  apply (wpsimp wp: isSchedulable_inv hoare_vcg_if_lift2 hoare_drop_imps)
+  apply (fastforce simp: weak_sch_act_wf_def elim: valid_objs'_maxDomain valid_objs'_maxPriority)
+  done
+
+lemma weak_sch_act_wf_at_cross:
+  assumes sr: "(s,s') \<in> state_relation"
+  assumes aligned: "pspace_aligned s"
+  assumes distinct: "pspace_distinct s"
+  assumes t: "valid_sched_action s"
+  shows "weak_sch_act_wf (ksSchedulerAction s') s'"
+  using assms
+  apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_def weak_sch_act_wf_def)
+  apply (frule state_relation_sched_act_relation)
+  apply (rename_tac t)
+  apply (drule_tac x=t in spec)
+  apply (prop_tac "scheduler_action s = switch_thread t")
+   apply (metis sched_act_relation.simps Structures_A.scheduler_action.exhaust
+                scheduler_action.simps)
+  apply (intro conjI impI)
+   apply (rule st_tcb_at_runnable_cross; fastforce?)
+   apply (clarsimp simp: vs_all_heap_simps pred_tcb_at_def obj_at_def)
+  apply (clarsimp simp: switch_in_cur_domain_def in_cur_domain_def etcb_at_def vs_all_heap_simps)
+  apply (prop_tac "tcb_at t s")
+   apply (clarsimp simp: obj_at_def is_tcb_def)
+  apply (frule state_relation_pspace_relation)
+  apply (frule (3) tcb_at_cross)
+  apply (clarsimp simp: tcb_in_cur_domain'_def obj_at'_def projectKOs)
+  apply (frule curdomain_relation)
+  apply (frule (2) pspace_relation_tcb_domain_priority)
+  apply simp
+  done
+
+lemma possible_switch_to_corres:
   "corres dc
-    (weak_valid_sched_action and cur_tcb and st_tcb_at runnable t
-     and pspace_aligned and pspace_distinct and valid_objs)
-    (Invariants_H.valid_queues and valid_queues' and valid_release_queue
-     and valid_release_queue' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and cur_tcb'
-     and tcb_at' t and st_tcb_at' runnable' t and valid_objs')
+    (valid_sched_action and tcb_at t and pspace_aligned and pspace_distinct and valid_tcbs)
+    (valid_queues and valid_queues' and valid_release_queue_iff and valid_tcbs')
       (possible_switch_to t)
       (possibleSwitchTo t)"
+    (is "corres _ _ ?conc_guard _ _")
   supply dc_simp [simp del]
+  apply (rule corres_cross_over_guard
+                [where Q="?conc_guard and tcb_at' t
+                          and (\<lambda>s'. weak_sch_act_wf (ksSchedulerAction s') s') "])
+   apply clarsimp
+   apply (intro conjI)
+    apply (fastforce intro: tcb_at_cross)
+   apply (erule (3) weak_sch_act_wf_at_cross)
   apply (simp add: possible_switch_to_def possibleSwitchTo_def cong: if_cong)
   apply (rule corres_guard_imp)
     apply (simp add: get_tcb_obj_ref_def)
@@ -3365,7 +3417,7 @@ lemma possibleSwitchTo_corres:
                    apply (wp rescheduleRequired_valid_queues'_weak)+
                  apply (rule set_sa_corres, simp)
                 apply (case_tac rvb; simp)
-               apply (wpsimp simp: tcb_relation_def if_apply_def2
+               apply (wpsimp simp: tcb_relation_def if_apply_def2 valid_sched_action_def
                                wp: hoare_drop_imp inReleaseQueue_inv)+
   done
 

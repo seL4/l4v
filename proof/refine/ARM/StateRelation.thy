@@ -710,6 +710,10 @@ lemma state_relation_sc_replies_relation:
   "(s,s') \<in> state_relation \<Longrightarrow> sc_replies_relation s s'"
   using state_relation_def by blast
 
+lemma state_relation_sched_act_relation[elim!]:
+  "(s,s') \<in> state_relation \<Longrightarrow> sched_act_relation (scheduler_action s) (ksSchedulerAction s')"
+  by (clarsimp simp: state_relation_def)
+
 lemma state_relationD:
   assumes sr:  "(s, s') \<in> state_relation"
   shows "pspace_relation (kheap s) (ksPSpace s') \<and>

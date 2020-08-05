@@ -123,17 +123,197 @@ lemma valid_objs_valid_tcbE':
   apply (fastforce simp: projectKO_def projectKO_opt_tcb return_def valid_tcb'_def)
   done
 
-lemma valid_objs'_maxDomain:
-  "\<And>s t. \<lbrakk> valid_objs' s; tcb_at' t s \<rbrakk> \<Longrightarrow> obj_at' (\<lambda>tcb. tcbDomain tcb \<le> maxDomain) t s"
-  apply (erule (1) valid_objs_valid_tcbE')
-  apply (clarsimp simp: valid_tcb'_def)
+(* Consider further unbundling of valid_objs and valid_objs'; see JIRA issue VER-1343 *)
+
+definition valid_tcbs :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_tcbs s \<equiv> \<forall>ptr. \<forall>tcb. ko_at (TCB tcb) ptr s \<longrightarrow> valid_tcb ptr tcb s"
+
+(* FIXME RT: move? All lemmas for valid_tcbs (and associated lemmas for valid_tcb) are
+             collected here so that they may be more easily moved *)
+
+lemma valid_objs_valid_tcbs[elim!]:
+  "valid_objs s \<Longrightarrow> valid_tcbs s"
+  by (force simp: valid_objs_def valid_tcbs_def obj_at_def valid_obj_def)
+
+lemma invs_valid_tcbs[elim!]:
+  "invs s \<Longrightarrow> valid_tcbs s"
+  by (fastforce intro: valid_objs_valid_tcbs)
+
+lemma valid_tcbs_valid_tcb:
+  "\<lbrakk>valid_tcbs s; get_tcb thread s = Some tcb\<rbrakk> \<Longrightarrow> valid_tcb thread tcb s"
+  by (fastforce simp: valid_tcbs_def get_tcb_def obj_at_def
+               split: Structures_A.kernel_object.splits option.splits)
+
+lemma valid_tcb_valid_obj:
+  "valid_tcb ptr tcb s = valid_obj ptr (TCB tcb) s"
+  by (clarsimp simp: valid_obj_def)
+
+lemma set_object_valid_tcbs[wp]:
+  "\<lbrace>valid_tcbs and valid_tcb ptr tcb\<rbrace>
+   set_object ptr (TCB tcb)
+   \<lbrace>\<lambda>_. valid_tcbs\<rbrace>"
+  apply (wpsimp wp: set_object_wp_strong)
+  apply (fastforce intro: valid_obj_same_type
+                    simp: obj_at_def valid_tcb_valid_obj valid_tcbs_def dom_def)
   done
 
-lemma valid_objs'_maxPriority:
-  "\<And>s t. \<lbrakk> valid_objs' s; tcb_at' t s \<rbrakk> \<Longrightarrow> obj_at' (\<lambda>tcb. tcbPriority tcb \<le> maxPriority) t s"
-  apply (erule (1) valid_objs_valid_tcbE')
-  apply (clarsimp simp: valid_tcb'_def)
+lemma set_reply_obj_ref_valid_tcb[wp]:
+  "set_reply_obj_ref reply_tcb_update rp opt \<lbrace>valid_tcb ptr tcb\<rbrace>"
+  apply (clarsimp simp: update_sk_obj_ref_def set_simple_ko_def)
+  apply (wpsimp wp: set_object_typ_ats get_object_wp)
   done
+
+lemma set_simple_ko_not_tcb_at[wp]:
+  "set_reply ptr new \<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s\<rbrace>"
+  "set_endpoint ptr new' \<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s\<rbrace>"
+  "set_notification ptr new'' \<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s\<rbrace>"
+  apply (wpsimp simp: set_simple_ko_def set_object_def obj_at_def pred_neg_def
+                  wp: get_object_wp)+
+  done
+
+lemma set_reply_obj_ref_not_tcb_at[wp]:
+  "set_reply_obj_ref reply_tcb_update rp opt \<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s\<rbrace>"
+  apply (clarsimp simp: update_sk_obj_ref_def)
+  apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp)
+  apply (clarsimp simp: obj_at_def sk_obj_at_pred_def pred_neg_def split: if_splits)
+  done
+
+lemma set_reply_obj_ref_valid_tcbs[wp]:
+  "set_reply_obj_ref reply_tcb_update rp opt \<lbrace>valid_tcbs\<rbrace>"
+  unfolding valid_tcbs_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' simp: pred_neg_def)
+  done
+
+lemma set_endpoint_valid_tcb[wp]:
+  "set_endpoint ep endpoint \<lbrace>valid_tcb ptr tcb\<rbrace>"
+  apply (clarsimp simp: set_simple_ko_def)
+  apply (wpsimp wp: set_object_typ_ats get_object_wp)+
+  done
+
+lemma set_endpoint_valid_tcbs[wp]:
+  "set_endpoint ep endpoint \<lbrace>valid_tcbs\<rbrace>"
+  unfolding valid_tcbs_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+  done
+
+lemma set_notification_valid_tcb[wp]:
+  "set_notification ntfnptr val \<lbrace>valid_tcb ptr tcb\<rbrace>"
+  apply (clarsimp simp: set_simple_ko_def)
+  apply (wpsimp wp: get_object_wp)
+  done
+
+lemma set_notification_valid_tcbs[wp]:
+  "set_notification ntfnptr val \<lbrace>valid_tcbs\<rbrace>"
+  unfolding valid_tcbs_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+  done
+
+context begin interpretation Arch .
+lemma update_valid_tcb:
+  "valid_tcb ptr tcb s \<Longrightarrow> valid_tcb ptr tcb (s\<lparr>ready_queues := a\<rparr>)"
+  "valid_tcb ptr tcb s \<Longrightarrow> valid_tcb ptr tcb (s\<lparr>scheduler_action := b\<rparr>)"
+  by (auto simp: valid_tcb_def valid_tcb_state_def obj_at_def is_reply_def valid_bound_obj_def
+                 valid_arch_tcb_def
+          split: Structures_A.thread_state.splits option.splits)
+end
+
+lemma update_valid_tcbs:
+  "valid_tcbs s \<Longrightarrow> valid_tcbs (s\<lparr>ready_queues := a\<rparr>)"
+  "valid_tcbs s \<Longrightarrow> valid_tcbs (s\<lparr>scheduler_action := b\<rparr>)"
+  apply (simp_all add: valid_tcbs_def)
+  apply (auto intro: update_valid_tcb)
+  done
+
+crunches tcb_sched_action
+  for valid_tcb[wp]: "\<lambda>s. valid_tcb ptr tcb s"
+  (simp: Let_def wp: update_valid_tcb
+   ignore: set_tcb_obj_ref get_tcb_obj_ref)
+
+lemma tcb_sched_action_valid_tcbs[wp]:
+  "tcb_sched_action action thread \<lbrace>valid_tcbs\<rbrace>"
+  unfolding valid_tcbs_def
+  apply (wpsimp wp: hoare_vcg_ball_lift2 hoare_vcg_all_lift hoare_vcg_imp_lift')
+  done
+
+lemma set_thread_state_valid_tcb[wp]:
+  "\<lbrace>valid_tcb ptr tcb and valid_tcb_state st\<rbrace> set_thread_state thread st \<lbrace>\<lambda>_. valid_tcb ptr tcb\<rbrace>"
+  apply (clarsimp simp: set_thread_state_def set_thread_state_act_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule_tac B="\<lambda>_. valid_tcb ptr tcb" in hoare_seq_ext[rotated])
+   apply (wpsimp wp: set_object_valid_tcbs)
+  apply (wpsimp wp: set_object_valid_tcbs update_valid_tcb is_schedulable_inv hoare_vcg_if_lift2
+                    hoare_vcg_conj_lift hoare_drop_imps
+              simp: set_scheduler_action_def )
+  done
+
+lemma set_thread_state_valid_tcbs[wp]:
+  "\<lbrace>valid_tcbs and valid_tcb_state st\<rbrace> set_thread_state thread st \<lbrace>\<lambda>_. valid_tcbs\<rbrace>"
+  apply (clarsimp simp: set_thread_state_def set_thread_state_act_def)
+  apply (rule hoare_seq_ext[OF _ gets_the_get_tcb_sp])
+  apply (rule_tac B="\<lambda>_. valid_tcbs" in hoare_seq_ext[rotated])
+   apply (wpsimp wp: set_object_valid_tcbs)
+   apply (fastforce simp: valid_tcbs_def obj_at_def
+                   intro: valid_tcb_state_update)
+  apply (clarsimp simp: valid_tcbs_def)
+  apply (wpsimp wp: is_schedulable_inv hoare_vcg_if_lift2 hoare_vcg_conj_lift hoare_drop_imps
+              simp: set_scheduler_action_def)
+  apply (fastforce simp: valid_tcbs_def obj_at_def intro!: update_valid_tcb)
+  done
+
+lemma reply_unlink_tcb_valid_tcbs[wp]:
+  "reply_unlink_tcb tptr reply_ptr \<lbrace>valid_tcbs\<rbrace>"
+  apply (clarsimp simp: reply_unlink_tcb_def get_simple_ko_def)
+  apply (wpsimp wp: gts_wp get_object_wp)
+  done
+
+lemma reschedule_required_valid_tcbs[wp]:
+  "reschedule_required \<lbrace>valid_tcbs\<rbrace>"
+  apply (clarsimp simp: reschedule_required_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (case_tac action; clarsimp?)
+    apply (wpsimp wp: update_valid_tcbs simp: set_scheduler_action_def)
+   apply (clarsimp simp: bind_assoc)
+   apply (rule hoare_seq_ext_skip, wpsimp wp: is_schedulable_inv)
+   apply (rule hoare_seq_ext_skip)
+    apply (clarsimp simp: when_def)
+    apply (rule hoare_seq_ext_skip, wpsimp)+
+    apply (wpsimp wp: update_valid_tcbs simp: set_scheduler_action_def)+
+  done
+
+lemma possible_switch_to_valid_tcbs[wp]:
+  "possible_switch_to thread \<lbrace>valid_tcbs\<rbrace>"
+  apply (clarsimp simp: possible_switch_to_def)
+  apply (wpsimp wp: update_valid_tcbs thread_get_inv hoare_vcg_conj_lift hoare_drop_imps
+              simp: set_scheduler_action_def get_tcb_obj_ref_def)+
+  done
+
+crunches restart_thread_if_no_fault
+  for valid_tcbs[wp]: valid_tcbs
+
+definition valid_tcbs' :: "kernel_state \<Rightarrow> bool" where
+  "valid_tcbs' s' \<equiv> \<forall>ptr tcb. ksPSpace s' ptr = Some (KOTCB tcb) \<longrightarrow> valid_tcb' tcb s'"
+
+lemma valid_objs'_valid_tcbs'[elim!]:
+  "valid_objs' s \<Longrightarrow> valid_tcbs' s"
+  by (auto simp: valid_objs'_def valid_tcbs'_def valid_obj'_def split: kernel_object.splits)
+
+lemma invs'_valid_tcbs'[elim!]:
+  "invs' s \<Longrightarrow> valid_tcbs' s"
+  by (fastforce intro: valid_objs'_valid_tcbs')
+
+lemma valid_tcbs'_maxDomain:
+  "\<And>s t. \<lbrakk> valid_tcbs' s; tcb_at' t s \<rbrakk> \<Longrightarrow> obj_at' (\<lambda>tcb. tcbDomain tcb \<le> maxDomain) t s"
+  apply (clarsimp simp: valid_tcbs'_def obj_at'_def projectKOs valid_tcb'_def)
+  done
+
+lemmas valid_objs'_maxDomain = valid_tcbs'_maxDomain[OF valid_objs'_valid_tcbs']
+
+lemma valid_tcbs'_maxPriority:
+  "\<And>s t. \<lbrakk> valid_tcbs' s; tcb_at' t s \<rbrakk> \<Longrightarrow> obj_at' (\<lambda>tcb. tcbPriority tcb \<le> maxPriority) t s"
+  apply (clarsimp simp: valid_tcbs'_def obj_at'_def projectKOs valid_tcb'_def)
+  done
+
+lemmas valid_objs'_maxPriority = valid_tcbs'_maxPriority[OF valid_objs'_valid_tcbs']
 
 lemma invs'_machine:
   assumes mask: "irq_masks (f (ksMachineState s)) =
@@ -1395,6 +1575,63 @@ lemma threadSet_valid_objs':
   apply (clarsimp elim!: obj_at'_weakenE)
   done
 
+lemmas typ_at'_valid_tcb'_lift =
+  typ_at'_valid_obj'_lift[where obj="KOTCB tcb" for tcb, unfolded valid_obj'_def, simplified]
+
+lemmas setObject_valid_tcb' = typ_at'_valid_tcb'_lift[OF setObject_typ_at' setObject_sc_at'_n]
+
+lemma setObject_valid_tcbs':
+  assumes preserve_valid_tcb': "\<And>s s' ko ko' x n tcb tcb'.
+            \<lbrakk> (ko', s') \<in> fst (updateObject val ko ptr x n s); P s;
+              lookupAround2 ptr (ksPSpace s) = (Some (x, ko), n);
+              projectKO_opt ko = Some tcb; projectKO_opt ko' = Some tcb';
+              valid_tcb' tcb s \<rbrakk> \<Longrightarrow> valid_tcb' tcb' s"
+  shows "\<lbrace>valid_tcbs' and P\<rbrace> setObject ptr val \<lbrace>\<lambda>rv. valid_tcbs'\<rbrace>"
+  unfolding valid_tcbs'_def
+  apply (clarsimp simp: valid_def)
+  apply (rename_tac s s' ptr' tcb)
+  apply (prop_tac "\<forall>tcb'. valid_tcb' tcb s \<longrightarrow> valid_tcb' tcb s'")
+   apply clarsimp
+   apply (erule (1) use_valid[OF _ setObject_valid_tcb'])
+  apply (drule spec, erule mp)
+  apply (clarsimp simp: setObject_def in_monad split_def lookupAround2_char1 ARM_H.fromPPtr_def)
+  apply (rename_tac s ptr' new_tcb' ptr'' old_tcb_ko' s' f)
+  apply (case_tac "ptr'' = ptr'"; clarsimp)
+  apply (prop_tac "\<exists>old_tcb' :: tcb. projectKO_opt old_tcb_ko' = Some old_tcb'")
+   apply (frule updateObject_type)
+   apply (case_tac old_tcb_ko'; clarsimp simp: project_inject)
+  apply (erule exE)
+  apply (rule preserve_valid_tcb', assumption+)
+     apply (simp add: prod_eqI lookupAround2_char1)
+    apply force
+   apply (clarsimp simp: project_inject)
+  apply (clarsimp simp: project_inject)
+  done
+
+lemma setObject_tcb_valid_tcbs':
+  "\<lbrace>valid_tcbs' and (tcb_at' t and valid_tcb' v)\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv. valid_tcbs'\<rbrace>"
+  apply (rule setObject_valid_tcbs')
+  apply (clarsimp simp: updateObject_default_def in_monad projectKOs project_inject)
+  done
+
+lemma threadSet_valid_tcb':
+  "\<lbrace>valid_tcb' tcb and (\<lambda>s. \<forall>tcb. valid_tcb' tcb s \<longrightarrow> valid_tcb' (f tcb) s)\<rbrace>
+   threadSet f t
+   \<lbrace>\<lambda>rv. valid_tcb' tcb\<rbrace>"
+  apply (simp add: threadSet_def)
+  apply (wpsimp wp: setObject_valid_tcb')
+  done
+
+lemma threadSet_valid_tcbs':
+  "\<lbrace>valid_tcbs' and (\<lambda>s. \<forall>tcb. valid_tcb' tcb s \<longrightarrow> valid_tcb' (f tcb) s)\<rbrace>
+   threadSet f t
+   \<lbrace>\<lambda>rv. valid_tcbs'\<rbrace>"
+  apply (simp add: threadSet_def)
+  apply (rule hoare_seq_ext[OF _ get_tcb_sp'])
+  apply (wpsimp wp: setObject_tcb_valid_tcbs')
+  apply (clarsimp simp: obj_at'_def projectKOs valid_tcbs'_def)
+  done
+
 lemma corres_as_user':
   assumes y: "corres_underlying Id False True r \<top> \<top> f g"
   shows      "corres r (tcb_at t)
@@ -2026,10 +2263,11 @@ lemma isRunnable_corres:
   apply (clarsimp simp: obj_at'_weaken)
   done
 
+
 lemma isSchedulable_corres:
   "corres (=)
-          (valid_objs and pspace_aligned and pspace_distinct and tcb_at t)
-          (valid_objs' and valid_release_queue_iff)
+          (valid_tcbs and pspace_aligned and pspace_distinct and tcb_at t)
+          (valid_tcbs' and valid_release_queue_iff)
           (is_schedulable t)
           (isSchedulable t)"
     (is "corres _ _ ?conc_guard _ _")
@@ -2059,14 +2297,9 @@ lemma isSchedulable_corres:
     apply (wpsimp simp: pred_conj_def
                     wp: hoare_vcg_if_lift2 getObject_tcb_wp)
    apply (clarsimp simp: pred_conj_def)
-   apply (rename_tac tcb)
-   apply (frule valid_tcb_objs, assumption)
-   apply (clarsimp simp: valid_tcb_def valid_bound_obj_def)
-   apply (case_tac "tcb_sched_context tcb"; fastforce)
-  apply (clarsimp simp: obj_at_ko_at'_eq)
-  apply (erule valid_objs_valid_tcbE', assumption)
-  apply (rename_tac tcb)
-  apply (case_tac "tcbSchedContext tcb"; clarsimp simp: valid_tcb'_def)
+   apply (frule (1) valid_tcbs_valid_tcb)
+   apply (fastforce simp: valid_tcb_def valid_bound_obj_def obj_at_def split: option.splits)
+  apply (fastforce simp: valid_tcbs'_def valid_tcb'_def obj_at'_def projectKOs)
   done
 
 lemma thread_get_exs_valid:
@@ -2144,8 +2377,8 @@ lemma get_sched_context_no_fail:
               split: Structures_A.kernel_object.splits)
 
 lemma rescheduleRequired_corres:
-  "corres dc (weak_valid_sched_action and valid_objs and pspace_aligned and pspace_distinct)
-             (Invariants_H.valid_queues and valid_queues' and valid_release_queue_iff and valid_objs')
+  "corres dc (valid_tcbs and weak_valid_sched_action and pspace_aligned and pspace_distinct)
+             (valid_tcbs' and Invariants_H.valid_queues and valid_queues' and valid_release_queue_iff)
           (reschedule_required) rescheduleRequired"
   apply (simp add: rescheduleRequired_def reschedule_required_def)
   apply (rule corres_split'[OF _ _ gets_sp, rotated 2])
@@ -2165,8 +2398,7 @@ lemma rescheduleRequired_corres:
    apply (wpsimp simp: thread_get_def get_tcb_def weak_valid_sched_action_def vs_all_heap_simps)
 
   apply (rule corres_symb_exec_l[OF _ _ assert_opt_sp, rotated])
-    apply (clarsimp simp: exs_valid_def obj_at_def return_def is_schedulable_opt_def
-                          get_tcb_def
+    apply (clarsimp simp: exs_valid_def obj_at_def return_def is_schedulable_opt_def get_tcb_def
                    split: option.splits)
    apply (clarsimp simp: no_fail_def obj_at_def return_def is_schedulable_opt_def get_tcb_def
                   split: Structures_A.kernel_object.splits option.splits)
@@ -2177,19 +2409,17 @@ lemma rescheduleRequired_corres:
                       is_sc_active_def
                split: Structures_A.kernel_object.splits option.splits)
    apply (wpsimp wp: get_sched_context_no_fail simp: get_sc_refill_sufficient_def)
-   apply (fastforce intro: sc_at_pred_n_sc_at
-                     simp: sc_at_pred_n_def obj_at_def is_schedulable_opt_def get_tcb_def
-                           is_sc_active_def is_sc_obj_def
-                    split: option.splits Structures_A.kernel_object.splits)
+   apply (fastforce simp: valid_tcbs_def valid_tcb_def obj_at_def is_schedulable_opt_def get_tcb_def
+                          is_sc_active_def is_sc_obj_def
+                   split: option.splits Structures_A.kernel_object.splits)
 
   apply (rule corres_symb_exec_l[OF _ _ get_sc_refill_ready_sp, rotated])
     apply (wpsimp wp: get_sched_context_exs_valid
                 simp: get_sc_refill_ready_def obj_at_def)
    apply (wpsimp wp: get_sched_context_no_fail simp: get_sc_refill_ready_def)
-   apply (fastforce intro!: sc_at_pred_n_sc_at
-                      simp: sc_at_pred_n_def obj_at_def is_schedulable_opt_def get_tcb_def
-                            is_sc_active_def
-                     split: option.splits Structures_A.kernel_object.splits)
+   apply (fastforce simp: valid_tcbs_def valid_tcb_def obj_at_def is_schedulable_opt_def get_tcb_def
+                          is_sc_active_def is_sc_obj_def
+                   split: option.splits Structures_A.kernel_object.splits)
 
   apply (rule corres_symb_exec_l[OF _ _ assert_sp, rotated])
     apply (clarsimp simp: exs_valid_def assert_def return_def obj_at_def weak_valid_sched_action_def
@@ -2425,8 +2655,8 @@ lemma valid_tcb'_tcbState_update:
 lemma sts_corres:
   assumes "thread_state_relation ts ts'"
   shows "corres dc
-          (valid_objs and pspace_aligned and pspace_distinct and tcb_at t and valid_tcb_state ts)
-          (valid_objs' and valid_release_queue_iff)
+          (valid_tcbs and pspace_aligned and pspace_distinct and tcb_at t and valid_tcb_state ts)
+          (valid_tcbs' and valid_release_queue_iff)
           (set_thread_state t ts) (setThreadState ts' t)"
     (is "corres _ _ ?conc_guard _ _")
   using assms
@@ -2458,16 +2688,14 @@ lemma sts_corres:
         apply assumption
        apply wpsimp
       apply (wpsimp simp: pred_conj_def sch_act_simple_def obj_at_ko_at'_eq
-                      wp: setObject_tcb_valid_objs setObject_tcb_obj_at'_strongest
+                      wp: setObject_tcb_valid_tcbs' setObject_tcb_obj_at'_strongest
                           setObject_valid_release_queue setObject_valid_release_queue')
      apply wp
     apply (wpsimp wp: getObject_tcb_wp)
-   apply (fastforce simp: valid_obj_def pred_conj_def
-                   intro: get_tcb_ko_atI valid_tcb_objs valid_tcb_state_update)
-  apply (clarsimp simp: pred_conj_def obj_at_ko_at'_eq)
-  apply (rule valid_objs_valid_tcbE', assumption+)
-  apply (fastforce intro: ko_at_obj_at' valid_tcb'_tcbState_update
-                    simp: tcb_at'_obj_at'_set_obj'[unfolded fun_upd_def] valid_obj'_def)
+    apply (fastforce intro: valid_tcb_state_update valid_tcbs_valid_tcb
+                      simp: obj_at_def is_tcb_def)
+   apply (fastforce intro: valid_tcb'_tcbState_update
+                     simp: projectKOs valid_tcbs'_def obj_at'_def)+
   done
 
 lemma sbn_corres:
@@ -3170,7 +3398,7 @@ lemma tcbSchedEnqueueOrAppend_valid_queues:
   assumes f_set_insert[simp]: "\<And>ts. set (f ts) = insert t (set ts)"
   assumes f_not_empty[simp]: "\<And>ts. f ts \<noteq> []"
   assumes f_distinct: "\<And>ts. \<lbrakk> distinct ts ; t \<notin> set ts \<rbrakk> \<Longrightarrow> distinct (f ts)"
-  shows "\<lbrace>Invariants_H.valid_queues and st_tcb_at' runnable' t and valid_objs' \<rbrace>
+  shows "\<lbrace>Invariants_H.valid_queues and st_tcb_at' runnable' t and valid_tcbs' \<rbrace>
     do queued \<leftarrow> threadGet tcbQueued t;
        unless queued $
        do tdom \<leftarrow> threadGet tcbDomain t;
@@ -3240,8 +3468,8 @@ proof -
       apply (wp threadGet_const_tcb_at_imp_lift | simp add: if_apply_def2)+
   apply clarsimp
   apply (frule pred_tcb_at')
-  apply (frule (1) valid_objs'_maxDomain)
-  apply (frule (1) valid_objs'_maxPriority)
+  apply (frule (1) valid_tcbs'_maxDomain)
+  apply (frule (1) valid_tcbs'_maxPriority)
   apply (clarsimp simp: valid_queues_def st_tcb_at'_def obj_at'_def valid_queues_no_bitmap_exceptI)
   apply (fastforce dest!: valid_queues_no_bitmap_objD simp: obj_at'_def inQ_def could_run_def)
   done
@@ -3250,7 +3478,7 @@ qed
 lemma tcbSchedEnqueue_valid_queues[wp]:
   "\<lbrace>Invariants_H.valid_queues
     and st_tcb_at' runnable' t
-    and valid_objs' \<rbrace>
+    and valid_tcbs' \<rbrace>
      tcbSchedEnqueue t
    \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
    unfolding tcbSchedEnqueue_def
@@ -3288,7 +3516,7 @@ lemma tcbSchedEnqueue_valid_release_queue'[wp]:
 lemma tcbSchedAppend_valid_queues[wp]:
   "\<lbrace>Invariants_H.valid_queues
     and st_tcb_at' runnable' t
-    and valid_objs' \<rbrace>
+    and valid_tcbs' \<rbrace>
      tcbSchedAppend t
    \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
    unfolding tcbSchedAppend_def
@@ -3300,7 +3528,7 @@ lemma valid_queues_ksSchedulerAction_update[simp]:
  by simp
 
 lemma rescheduleRequired_valid_queues[wp]:
-  "\<lbrace>\<lambda>s. Invariants_H.valid_queues s \<and> valid_objs' s \<and>
+  "\<lbrace>\<lambda>s. Invariants_H.valid_queues s \<and> valid_tcbs' s \<and>
         weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
     rescheduleRequired
    \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
@@ -3604,6 +3832,88 @@ lemma setThreadState_valid_objs'[wp]:
   "\<lbrace> valid_tcb_state' st and valid_objs' \<rbrace> setThreadState st t \<lbrace> \<lambda>_. valid_objs' \<rbrace>"
   apply (simp add: setThreadState_def pred_conj_def)
   apply (wpsimp wp: threadSet_valid_objs')
+  apply (clarsimp simp: valid_tcb'_tcbState_update)
+  done
+
+lemma update_valid_tcb':
+  "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReadyQueuesL1Bitmap := a\<rparr>)"
+  "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReadyQueuesL2Bitmap := b\<rparr>)"
+  "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReadyQueues := c\<rparr>)"
+  "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReleaseQueue := d\<rparr>)"
+  "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksSchedulerAction := e\<rparr>)"
+  apply (auto simp: valid_tcb'_def valid_tcb_state'_def valid_bound_obj'_def obj_at'_def projectKOs
+                    ps_clear_def
+             split: option.splits thread_state.splits)
+  done
+
+crunches addToBitmap
+  for ksPSpace[wp]: "\<lambda>s. P (ksPSpace s ptr = opt)"
+
+lemma addToBitmap_valid_tcb'[wp]:
+  "addToBitmap tdom prio \<lbrace>valid_tcb' tcb\<rbrace>"
+  by (wpsimp simp: addToBitmap_def getReadyQueuesL2Bitmap_def getReadyQueuesL1Bitmap_def
+                   modifyReadyQueuesL2Bitmap_def modifyReadyQueuesL1Bitmap_def
+                   update_valid_tcb')
+
+lemma addToBitmap_valid_tcbs'[wp]:
+  "addToBitmap tdom prio \<lbrace>valid_tcbs'\<rbrace>"
+  unfolding valid_tcbs'_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+  done
+
+crunches setQueue
+  for valid_tcb'[wp]: "\<lambda>s. valid_tcb' tcb s"
+  and ksPSpace[wp]: "\<lambda>s. P (ksPSpace s ptr = opt)"
+  (wp: update_valid_tcb')
+
+lemma tcbSchedEnqueue_valid_tcb'[wp]:
+  "tcbSchedEnqueue thread \<lbrace>valid_tcb' tcb\<rbrace>"
+  apply (clarsimp simp: tcbSchedEnqueue_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (clarsimp simp: unless_def when_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)+
+  apply (wpsimp wp: threadSet_valid_tcb')
+  apply (simp add: valid_tcb_tcbQueued)
+  done
+
+lemma tcbSchedEnqueue_valid_tcbs'[wp]:
+  "tcbSchedEnqueue thread \<lbrace>valid_tcbs'\<rbrace>"
+  apply (clarsimp simp: tcbSchedEnqueue_def setQueue_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (clarsimp simp: unless_def when_def)
+  apply (rule hoare_seq_ext_skip, wpsimp simp: valid_tcbs'_def wp: update_valid_tcb')+
+  apply (wpsimp wp: threadSet_valid_tcbs')
+  apply (simp add: valid_tcb_tcbQueued)
+  done
+
+lemma setSchedulerAction_valid_tcbs'[wp]:
+  "setSchedulerAction sa \<lbrace>valid_tcbs'\<rbrace>"
+  unfolding valid_tcbs'_def
+  apply (wpsimp wp: hoare_vcg_all_lift update_valid_tcb')
+  done
+
+lemma rescheduleRequired_valid_tcb'[wp]:
+  "rescheduleRequired \<lbrace>valid_tcb' tcb\<rbrace>"
+  apply (clarsimp simp: rescheduleRequired_def)
+  apply (rule hoare_seq_ext_skip, wpsimp wp: update_valid_tcb' isSchedulable_wp)+
+  apply (wpsimp wp: update_valid_tcb')
+  done
+
+lemma rescheduleRequired_valid_tcbs'[wp]:
+  "rescheduleRequired \<lbrace>valid_tcbs'\<rbrace>"
+  apply (clarsimp simp: rescheduleRequired_def)
+  apply (rule hoare_seq_ext_skip, wpsimp wp: update_valid_tcb' isSchedulable_wp)+
+  apply (wpsimp wp: update_valid_tcb')
+  done
+
+crunches scheduleTCB
+  for valid_tcbs'[wp]: valid_tcbs'
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma setThreadState_valid_tcbs'[wp]:
+  "\<lbrace> valid_tcb_state' st and valid_tcbs' \<rbrace> setThreadState st t \<lbrace> \<lambda>_. valid_tcbs' \<rbrace>"
+  apply (simp add: setThreadState_def pred_conj_def)
+  apply (wpsimp wp: threadSet_valid_tcbs')
   apply (clarsimp simp: valid_tcb'_tcbState_update)
   done
 
