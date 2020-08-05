@@ -2162,6 +2162,9 @@ lemmas getObject_ko_at' = getObject_ko_at[OF default_load objBits[rule_format]]
 
 lemmas get_ko_at' = getObject_ko_at'[folded g_def]
 
+lemmas ko_wp_at = setObject_ko_wp_at[where 'a='a, folded f_def,
+                                     simplified default_update objBits, simplified]
+
 end
 
 locale simple_non_tcb_ko' = simple_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel"

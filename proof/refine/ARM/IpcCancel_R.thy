@@ -2291,6 +2291,7 @@ crunches inReleaseQueue
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (sa s) s"
   and tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' t"
   and cur_tcb'[wp]: cur_tcb'
+  and if_live_then_nonz_cap'[wp]: if_live_then_nonz_cap'
 
 crunches possibleSwitchTo
   for valid_pspace'[wp]: valid_pspace'
@@ -2318,7 +2319,7 @@ crunches possibleSwitchTo
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
-  and tcb'[wp]: "tcb_at' addr"
+  and tcb'[wp]: "\<lambda>s. P (tcb_at' p s)"
   and valid_objs'[wp]: valid_objs'
   (wp: crunch_wps cur_tcb_lift simp: crunch_simps)
 
@@ -2326,8 +2327,17 @@ lemma possibleSwitchTo_sch_act[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
    possibleSwitchTo t
    \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (wpsimp simp: possibleSwitchTo_def curDomain_def inReleaseQueue_def wp: threadGet_wp)
+  apply (wpsimp simp: possibleSwitchTo_def wp: inReleaseQueue_wp threadGet_wp)
   by (fastforce simp: obj_at'_def tcb_in_cur_domain'_def)
+
+lemma possibleSwitchTo_weak_sch_act[wp]:
+  "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
+   possibleSwitchTo t
+   \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  unfolding possibleSwitchTo_def
+  apply (wpsimp wp: inReleaseQueue_wp threadGet_wp rescheduleRequired_weak_sch_act_wf)
+  by (auto simp: obj_at'_def weak_sch_act_wf_def tcb_in_cur_domain'_def
+                 projectKO_eq ps_clear_domE)
 
 lemma possibleSwitchTo_iflive'[wp]:
   "\<lbrace>if_live_then_nonz_cap' and ex_nonz_cap_to' t
@@ -2335,14 +2345,14 @@ lemma possibleSwitchTo_iflive'[wp]:
                    \<longrightarrow> st_tcb_at' runnable' t s)\<rbrace>
    possibleSwitchTo t
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp simp: possibleSwitchTo_def inReleaseQueue_def wp: hoare_vcg_if_lift2 hoare_drop_imps)
+  by (wpsimp simp: possibleSwitchTo_def inReleaseQueue_def
+               wp: hoare_vcg_if_lift2 hoare_drop_imps)
 
 lemma possibleSwitchTo_ct_idle_or_in_cur_domain'[wp]:
   "possibleSwitchTo t \<lbrace>ct_idle_or_in_cur_domain'\<rbrace>"
-  apply (wpsimp simp: possibleSwitchTo_def curDomain_def inReleaseQueue_def
-                  wp: threadGet_wp rescheduleRequired_valid_release_queue'_sch_act_simple)
-  apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_tcb)
-  apply (fastforce simp: ct_idle_or_in_cur_domain'_def)
+  apply (wpsimp simp: possibleSwitchTo_def
+                  wp: threadGet_wp inReleaseQueue_wp)
+  apply (fastforce simp: obj_at'_def ct_idle_or_in_cur_domain'_def)
   done
 
 lemma possibleSwitchTo_utr[wp]:
@@ -2361,16 +2371,6 @@ lemma possibleSwitchTo_all_invs_but_ct_not_inQ':
                      cteCaps_of_ctes_of_lift irqs_masked_lift)
   apply clarsimp
   by (metis fold_list_refs_of_replies')
-
-lemma possibleSwitchTo_weak_sch_act[wp]:
-  "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
-   possibleSwitchTo t
-   \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  unfolding possibleSwitchTo_def curDomain_def inReleaseQueue_def
-  apply (wpsimp wp: threadGet_wp rescheduleRequired_weak_sch_act_wf
-                    hoare_vcg_if_lift_strong)
-  by (auto simp: obj_at'_def weak_sch_act_wf_def tcb_in_cur_domain'_def
-                 projectKO_eq ps_clear_domE)
 
 lemma ntfn_cancel_corres_helper:
   "corres dc ((\<lambda>s. \<forall>t \<in> set list. tcb_at t s \<and> t \<noteq> idle_thread s
@@ -2772,19 +2772,14 @@ lemma cancelAllSignals_valid_objs'[wp]:
   apply (rename_tac list)
   apply (rule_tac Q="\<lambda>rv s. valid_objs' s \<and> (\<forall>x\<in>set list. tcb_at' x s)"
                   in hoare_post_imp)
-   apply (simp add: valid_ntfn'_def)
-  apply (simp add: Ball_def)
-  apply (wp setSchedulerAction_valid_objs' mapM_x_wp'
-            sts_valid_objs' hoare_vcg_all_lift hoare_vcg_const_imp_lift
-       | simp)+
-  sorry (*
+   apply simp
+  apply (wpsimp wp: setSchedulerAction_valid_objs' mapM_x_wp' sts_valid_objs'
+                    hoare_vcg_ball_lift typ_at_lifts)
    apply (simp add: valid_tcb_state'_def)
-  apply (wp set_ntfn_valid_objs' hoare_vcg_all_lift hoare_vcg_const_imp_lift)
-  apply clarsimp
-  apply (frule(1) ko_at_valid_objs')
-   apply (simp add: projectKOs)
-  apply (clarsimp simp: valid_obj'_def valid_ntfn'_def)
-  done *)
+  apply (wp hoare_vcg_ball_lift)
+  apply (auto simp: projectKOs valid_obj'_def valid_ntfn'_def
+              dest: ko_at_valid_objs')
+  done
 
 lemma cancelAllIPC_st_tcb_at:
   "\<lbrace>st_tcb_at' P t and K (P Inactive \<and> P Restart)\<rbrace>
@@ -2818,29 +2813,52 @@ lemma cancelAllSignals_st_tcb_at:
 lemmas cancelAllSignals_makes_simple[wp] =
        cancelAllSignals_st_tcb_at [where P=simple', simplified]
 
-lemma threadSet_not_tcb[wp]:
-  "\<lbrace>ko_wp_at' (\<lambda>x. P x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>
-     threadSet f t
-   \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>x. P x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>"
+lemma threadSet_unlive_other:
+  "\<lbrace>ko_wp_at' (\<lambda>ko. \<not> live' ko) p and K (p \<noteq> t)\<rbrace>
+   threadSet f t
+   \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>ko. \<not> live' ko) p\<rbrace>"
   by (clarsimp simp: threadSet_def valid_def getObject_def
                      setObject_def in_monad loadObject_default_def
                      ko_wp_at'_def projectKOs split_def in_magnitude_check
                      objBits_simps' updateObject_default_def
-                     ps_clear_upd' projectKO_opt_tcb)
+                     ps_clear_upd' ARM_H.fromPPtr_def)
 
-lemma setThreadState_not_tcb[wp]:
-  "setThreadState st t \<lbrace>ko_wp_at' (\<lambda>x. P x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>"
-  unfolding setThreadState_def scheduleTCB_def rescheduleRequired_def tcbSchedEnqueue_def
-  apply (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp isSchedulable_inv)
+lemma rescheduleRequired_unlive[wp]:
+  "\<lbrace>\<lambda>s. ko_wp_at' (\<lambda>ko. \<not> live' ko) p s \<and> sch_act_not p s\<rbrace>
+   rescheduleRequired
+   \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>ko. \<not> live' ko) p\<rbrace>"
+  apply (simp add: rescheduleRequired_def)
+  apply (wp | simp | wpc)+
+   apply (simp add: tcbSchedEnqueue_def unless_def
+                    threadSet_def setQueue_def threadGet_def)
+   apply (wp setObject_ko_wp_at getObject_tcb_wp
+            | simp add: objBits_simps' bitmap_fun_defs split del: if_split)+
+  sorry (*
+  apply (clarsimp simp: o_def)
+  apply (drule obj_at_ko_at')
+  apply clarsimp
+  done *)
+
+lemma tcbSchedEnqueue_unlive_other:
+  "\<lbrace>ko_wp_at' (\<lambda>ko. \<not> live' ko) p and K (p \<noteq> t)\<rbrace>
+   tcbSchedEnqueue t
+   \<lbrace>\<lambda>_. ko_wp_at' (\<lambda>ko. \<not> live' ko) p\<rbrace>"
+  apply (simp add: tcbSchedEnqueue_def)
+  apply (wpsimp wp: threadGet_wp threadSet_unlive_other)
+  apply (auto simp: obj_at'_def)
   done
 
-lemma tcbSchedEnqueue_unlive:
-  "\<lbrace>ko_wp_at' (\<lambda>x. \<not> live' x \<and> (projectKO_opt x = (None :: tcb option))) p
-    and tcb_at' t\<rbrace>
-    tcbSchedEnqueue t
-   \<lbrace>\<lambda>_. ko_wp_at' (\<lambda>x. \<not> live' x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>"
-  apply (simp add: tcbSchedEnqueue_def unless_def)
-  apply (wp | simp add: setQueue_def bitmap_fun_defs)+
+crunches scheduleTCB
+  for unlive[wp]: "ko_wp_at' (\<lambda>ko. \<not> live' ko) p"
+  (wp: rescheduleRequired_unlive crunch_wps isSchedulable_wp simp: crunch_simps)
+
+lemma setThreadState_unlive_other:
+  "\<lbrace>ko_wp_at' (\<lambda>ko. \<not> live' ko) p and sch_act_not p and K (p \<noteq> t)\<rbrace>
+   setThreadState st t
+   \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>ko. \<not> live' ko) p\<rbrace>"
+  unfolding setThreadState_def
+  apply (wpsimp wp: threadSet_wp)
+  apply (fastforce simp: ko_wp_at'_def obj_at'_def)
   done
 
 lemma cancelAll_unlive_helper:
@@ -2854,28 +2872,21 @@ lemma cancelAll_unlive_helper:
   apply (rule hoare_strengthen_post)
    apply (rule mapM_x_wp')
    apply (rule hoare_pre)
-    apply (wp tcbSchedEnqueue_unlive hoare_vcg_const_Ball_lift)
+    apply (wp tcbSchedEnqueue_unlive_other hoare_vcg_const_Ball_lift)
    apply clarsimp
-  apply (clarsimp elim!: ko_wp_at'_weakenE)
-  done
+  (*apply (clarsimp elim!: ko_wp_at'_weakenE)*)
+  sorry
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma rescheduleRequired_unlive:
-  "\<lbrace>\<lambda>s. ko_wp_at' (Not \<circ> live') p s \<and> ksSchedulerAction s \<noteq> SwitchToThread p\<rbrace>
-      rescheduleRequired
-   \<lbrace>\<lambda>rv. ko_wp_at' (Not \<circ> live') p\<rbrace>"
-  apply (simp add: rescheduleRequired_def)
-  apply (wp | simp | wpc)+
-   apply (simp add: tcbSchedEnqueue_def unless_def
-                    threadSet_def setQueue_def threadGet_def)
-   apply (wp setObject_ko_wp_at getObject_tcb_wp
-            | simp add: objBits_simps' bitmap_fun_defs split del: if_split)+
-  sorry (*
-  apply (clarsimp simp: o_def)
-  apply (drule obj_at_ko_at')
-  apply clarsimp
-  done *)
+lemma possibleSwitchTo_unlive_other:
+  "\<lbrace>ko_wp_at' (\<lambda>ko. \<not> live' ko) p and sch_act_not p and K (p \<noteq> t)\<rbrace>
+   possibleSwitchTo t
+   \<lbrace>\<lambda>_. ko_wp_at' (\<lambda>ko. \<not> live' ko) p\<rbrace>"
+  apply (simp add: possibleSwitchTo_def inReleaseQueue_def)
+  apply (wpsimp wp: hoare_drop_imps tcbSchedEnqueue_unlive_other threadGet_wp)+
+  apply (auto simp: obj_at'_def)
+  done
 
 lemma cancelAllIPC_unlive:
   "\<lbrace>valid_objs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)\<rbrace>
@@ -2896,36 +2907,58 @@ lemma cancelAllIPC_unlive:
                  split: endpoint.split_asm)+
   done *)
 
+lemma possibleSwitchTo_sch_act_not_other:
+  "\<lbrace>\<lambda>s. sch_act_not p s \<and> p \<noteq> t\<rbrace>
+   possibleSwitchTo t
+   \<lbrace>\<lambda>rv. sch_act_not p\<rbrace>"
+  unfolding possibleSwitchTo_def
+  apply (wpsimp wp: inReleaseQueue_wp threadGet_wp)
+  apply (auto simp: obj_at'_def)
+  done
+
+lemma cancelAllSignals_unlive_helper:
+  "\<lbrace>\<lambda>s. (\<forall>x\<in>set xs. tcb_at' x s) \<and> ko_wp_at' (\<lambda>ko. \<not> live' ko) p s
+         \<and> sch_act_not p s \<and> p \<notin> set xs\<rbrace>
+   mapM_x (\<lambda>t. do
+                 y \<leftarrow> setThreadState Structures_H.thread_state.Restart t;
+                 possibleSwitchTo t
+               od) xs
+   \<lbrace>\<lambda>rv s. (\<forall>x\<in>set xs. tcb_at' x s) \<and> ko_wp_at' (\<lambda>ko. \<not> live' ko) p s
+           \<and>sch_act_not p s\<rbrace>"
+  apply (rule hoare_strengthen_post)
+   apply (rule mapM_x_wp')
+   apply (rule hoare_pre)
+    apply (wpsimp wp: hoare_vcg_const_Ball_lift setThreadState_unlive_other
+                      possibleSwitchTo_unlive_other possibleSwitchTo_sch_act_not_other)
+   apply clarsimp
+  apply clarsimp
+  done
+
 lemma cancelAllSignals_unlive:
   "\<lbrace>\<lambda>s. valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s
-      \<and> obj_at' (\<lambda>ko. ntfnBoundTCB ko = None) ntfnptr s\<rbrace>
-      cancelAllSignals ntfnptr \<lbrace>\<lambda>rv. ko_wp_at' (Not \<circ> live') ntfnptr\<rbrace>"
+      \<and> obj_at' (\<lambda>ko. ntfnBoundTCB ko = None) ntfnptr s
+      \<and> obj_at' (\<lambda>ko. ntfnSc ko = None) ntfnptr s\<rbrace>
+   cancelAllSignals ntfnptr
+   \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>ko. \<not> live' ko) ntfnptr\<rbrace>"
   apply (simp add: cancelAllSignals_def)
   apply (rule hoare_seq_ext [OF _ get_ntfn_sp'])
-  apply (case_tac "ntfnObj ntfn", simp_all add: setNotification_def)
+  apply (case_tac "ntfnObj ntfn"; simp)
     apply wp
-  sorry (*
-    apply (fastforce simp: obj_at'_real_def projectKOs
-                     dest: obj_at_conj'
-                     elim: ko_wp_at'_weakenE)
+    apply (fastforce simp: obj_at'_real_def projectKOs live_ntfn'_def ko_wp_at'_def)
    apply wp
-   apply (fastforce simp: obj_at'_real_def projectKOs
-                    dest: obj_at_conj'
-                    elim: ko_wp_at'_weakenE)
+   apply (fastforce simp: obj_at'_real_def projectKOs live_ntfn'_def ko_wp_at'_def)
   apply (wp rescheduleRequired_unlive)
-   apply (wp cancelAll_unlive_helper)
-   apply ((wp mapM_x_wp' setObject_ko_wp_at hoare_vcg_const_Ball_lift)+,
-          simp_all add: objBits_simps', simp_all)
-   apply (fold setNotification_def, wp)
-  apply (intro conjI[rotated])
-     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
-    apply (clarsimp simp: projectKOs projectKO_opt_tcb)
-   apply (fastforce simp: ko_wp_at'_def valid_obj'_def valid_ntfn'_def
-                         obj_at'_def projectKOs)+
-  done *)
-
-crunch ep_at'[wp]: tcbSchedEnqueue "ep_at' epptr"
-  (simp: unless_def)
+    apply (rule cancelAllSignals_unlive_helper[THEN hoare_strengthen_post])
+    apply fastforce
+   apply (wpsimp wp: hoare_vcg_const_Ball_lift set_ntfn'.ko_wp_at
+               simp: objBits_simps')
+  apply (clarsimp, frule (1) ko_at_valid_objs'_pre,
+         clarsimp simp: valid_obj'_def valid_ntfn'_def)
+  apply (intro conjI[rotated]; clarsimp)
+    apply (fastforce simp: obj_at'_def projectKOs)
+   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
+  apply (clarsimp simp: live_ntfn'_def ko_wp_at'_def obj_at'_def)
+  done
 
 declare if_cong[cong]
 

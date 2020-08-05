@@ -1521,6 +1521,14 @@ lemma threadGet_sp:
   apply (clarsimp simp: obj_at'_def)
   done
 
+lemma inReleaseQueue_wp:
+  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (\<exists>tcb. ko_at' tcb t s \<and> P (tcbInReleaseQueue tcb) s)\<rbrace>
+   inReleaseQueue t
+   \<lbrace>P\<rbrace>"
+  apply (simp add: inReleaseQueue_def)
+  apply (wp threadGet_wp)
+  done
+
 lemma asUser_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: asUser_def split_def)
@@ -2468,7 +2476,7 @@ lemma sbn_corres:
   done
 
 crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
-  for tcb'[wp]: "tcb_at' addr"
+  for tcb'[wp]: "\<lambda>s. P (tcb_at' addr s)"
   (wp: crunch_wps)
 
 lemma valid_tcb_tcbQueued:
