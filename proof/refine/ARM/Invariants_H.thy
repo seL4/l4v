@@ -3669,6 +3669,10 @@ lemma invs_queues [elim!]:
   "invs' s \<Longrightarrow> valid_queues s"
   by (simp add: invs'_def valid_state'_def)
 
+lemma invs_queues'[elim!]:
+  "invs' s \<Longrightarrow> valid_queues' s"
+  by (simp add: invs'_def valid_state'_def)
+
 lemma invs_valid_release_queue [elim!]:
   "invs' s \<Longrightarrow> valid_release_queue s"
   by (simp add: invs'_def valid_state'_def)
@@ -3765,6 +3769,7 @@ lemmas invs'_implies =
   invs_valid_stateI'
   invs_valid_pspace'
   invs_queues
+  invs_queues'
   invs_valid_release_queue
   invs_valid_release_queue'
   invs_sym'
