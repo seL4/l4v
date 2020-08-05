@@ -740,6 +740,12 @@ lemma corres_gen_asm:
     apply simp+
   done
 
+lemma corres_gen_asm':
+  assumes x: "F \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  shows "corres_underlying sr nf nf' r (P and K F) P' f g"
+  unfolding K_def
+  by (rule corres_gen_asm) (rule x)
+
 (* Insert assumption to be proved later, on the right-hand (concrete) side *)
 lemma corres_gen_asm2:
   assumes x: "F \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
@@ -749,6 +755,12 @@ lemma corres_gen_asm2:
   apply (rule corres_guard_imp [OF x])
     apply simp+
   done
+
+lemma corres_gen_asm2':
+  assumes x: "F \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  shows "corres_underlying sr nf nf' r P (P' and K F) f g"
+  unfolding K_def
+  by (rule corres_gen_asm2) (rule x)
 
 lemma corres_trivial:
  "corres_underlying sr nf nf' r \<top> \<top> f g \<Longrightarrow> corres_underlying sr nf nf' r \<top> \<top> f g"

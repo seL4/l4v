@@ -84,6 +84,54 @@ lemma corres_mapM_x:
           apply (simp | wp)+
   done
 
+lemma corres_mapM_scheme:
+  assumes x: "r [] []"
+  assumes z: "\<And>x y. (x, y) \<in> S
+                \<Longrightarrow> corres_underlying R nf nf' r' (Q x and P) (Q' y and P') (f x) (f' y)"
+  assumes y: "\<And>x xs y ys. \<lbrakk> r xs ys; r' x y \<rbrakk> \<Longrightarrow> r (x # xs) (y # ys)"
+  assumes w: "\<And>x y x'. (x, y) \<in> S \<Longrightarrow> \<lbrace>Q x' and K (x' \<noteq> x)\<rbrace> f x \<lbrace>\<lambda>_. Q x'\<rbrace>"
+             "\<And>x y y'. (x, y) \<in> S \<Longrightarrow> \<lbrace>Q' y' and K (y' \<noteq> y)\<rbrace> f' y \<lbrace>\<lambda>_. Q' y'\<rbrace>"
+  assumes w': "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>Q x and P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
+              "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>Q' y and P'\<rbrace> f' y \<lbrace>\<lambda>rv. P'\<rbrace>"
+  shows      "\<lbrakk> length xs = length ys; set (zip xs ys) \<subseteq> S; distinct xs; distinct ys \<rbrakk>
+              \<Longrightarrow> corres_underlying R nf nf' r
+                                    ((\<lambda>s. \<forall>t\<in>set xs. Q t s) and P) ((\<lambda>s. \<forall>t\<in>set ys. Q' t s) and P')
+                                    (mapM f xs) (mapM f' ys)"
+  apply (rule corres_guard_imp)
+    apply (rule corres_mapM_list_all2[where Q="\<lambda>xs s. P s \<and> list_all (\<lambda>x. Q x s) xs \<and> distinct xs"
+                                        and Q'="\<lambda>xs s. P' s \<and> list_all (\<lambda>x. Q' x s) xs \<and> distinct xs"
+                                        and S="\<lambda>x y. (x,y) \<in> S"])
+         apply (rule x)
+        apply (erule (1) y)
+       apply (rule corres_guard_imp[OF z]; fastforce simp: list_all2_iff)
+      apply (wpsimp wp: w w' hoare_vcg_ball_lift simp: list_all_iff)
+     apply (wpsimp wp: w w' hoare_vcg_ball_lift simp: list_all_iff)
+    apply (fastforce simp: list_all2_iff)
+   apply (cases xs; fastforce simp: list_all_iff)
+  apply (cases ys; fastforce simp: list_all_iff)
+  done
+
+lemma corres_mapM_x_scheme:
+  assumes x: "\<And>x y. (x, y) \<in> S
+                \<Longrightarrow> corres_underlying sr nf nf' dc (Q x and P) (Q' y and P') (f x) (f' y)"
+  assumes y: "\<And>x y x'. (x, y) \<in> S \<Longrightarrow> \<lbrace>Q x' and K (x' \<noteq> x)\<rbrace> f x \<lbrace>\<lambda>_. Q x'\<rbrace>"
+             "\<And>x y y'. (x, y) \<in> S \<Longrightarrow> \<lbrace>Q' y' and K (y' \<noteq> y)\<rbrace> f' y \<lbrace>\<lambda>_. Q' y'\<rbrace>"
+  assumes y': "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>Q x and P\<rbrace> f x \<lbrace>\<lambda>_. P\<rbrace>"
+              "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>Q' y and P'\<rbrace> f' y \<lbrace>\<lambda>_. P'\<rbrace>"
+  assumes z: "length xs = length ys"
+  assumes w: "set (zip xs ys) \<subseteq> S"
+  assumes v: "distinct xs"
+             "distinct ys"
+  shows "corres_underlying sr nf nf' dc
+                           ((\<lambda>s. \<forall>t\<in>set xs. Q t s) and P) ((\<lambda>s. \<forall>t\<in>set ys. Q' t s) and P')
+                           (mapM_x f xs) (mapM_x f' ys)"
+  apply (subst mapM_x_mapM)+
+    apply (rule corres_guard_imp)
+    apply (rule corres_split[OF _ corres_mapM_scheme[OF _ x, where S=S]])
+                 apply (rule corres_return_trivial)
+                apply (wpsimp wp: y y' simp: z w v)+
+  done
+
 lemma corres_mapME:
   assumes x: "r [] []"
   assumes y: "\<And>x xs y ys. \<lbrakk> r xs ys; r' x y \<rbrakk> \<Longrightarrow> r (x # xs) (y # ys)"
