@@ -376,7 +376,8 @@ where
      if ntfnptr \<noteq> None \<and> isActive ntfn
      then
        complete_signal (the ntfnptr) thread
-     else
+     else do
+       when (ntfnptr \<noteq> None \<and> is_blocking) $ maybe_return_sc (the ntfnptr) thread;
        case ep
          of IdleEP \<Rightarrow> (case is_blocking of
               True \<Rightarrow> do
@@ -425,6 +426,7 @@ where
               \<^cancel>\<open>FIXME RT: the C code has a test here for (refiil_sufficient sender'sc \<or> sender's sc is None)\<close>
               od
             od
+     od
    od"
 
 section \<open>Asynchronous Message Transfers\<close>

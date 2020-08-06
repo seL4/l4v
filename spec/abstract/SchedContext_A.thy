@@ -423,7 +423,9 @@ where
     when (nsc_opt = tsc_opt \<and> nsc_opt \<noteq> None) $ do
       sc_ptr \<leftarrow> assert_opt nsc_opt;
       set_tcb_obj_ref tcb_sched_context_update tcb_ptr None;
-      set_sc_obj_ref sc_tcb_update sc_ptr None
+      set_sc_obj_ref sc_tcb_update sc_ptr None;
+      ct \<leftarrow> gets cur_thread;
+      when (tcb_ptr = ct) reschedule_required
     od
   od"
 
