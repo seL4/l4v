@@ -4625,13 +4625,6 @@ lemma (in range_cover) funky_aligned:
   apply simp
   done
 
-(* FIXME RISCV: move to Corres_UL *)
-lemma corres_assert_gen_asm_cross:
-  "\<lbrakk> \<And>s s'. \<lbrakk>(s, s') \<in> sr; P' s; Q' s'\<rbrakk> \<Longrightarrow> A;
-     A \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g ()) \<rbrakk>
-  \<Longrightarrow> corres_underlying sr nf nf' r (P and P') (Q and Q') f (assert A >>= g)"
-  by (metis corres_assert_assume corres_cases corres_name_pre)
-
 defs canonicalAddressAssert_def:
   "canonicalAddressAssert p \<equiv> RISCV64.canonical_address p"
 
