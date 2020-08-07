@@ -642,7 +642,7 @@ lemma handle_invocation_domain_time_inv[wp]:
      (clarsimp simp: word_gt_0)
 
 crunch domain_time_inv[wp]: receive_ipc,lookup_reply "\<lambda>s::det_state. P (domain_time s)"
-  (wp: hoare_drop_imp)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch domain_time_inv[wp]: receive_signal "\<lambda>s::det_state. P (domain_time s)"
   (wp: hoare_drop_imp hoare_vcg_if_lift2)

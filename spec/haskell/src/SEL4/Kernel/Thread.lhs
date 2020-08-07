@@ -356,7 +356,7 @@ We check here that the candidate has the highest priority in the system.
 >
 >             idleThread <- getIdleThread
 >             targetPrio <- threadGet tcbPriority candidate
->             curPrio <- threadGet tcbPriority curThread
+>             curPrio <- if (idleThread == curThread) then (return 0) else (threadGet tcbPriority curThread)
 >             fastfail <- scheduleSwitchThreadFastfail curThread idleThread curPrio targetPrio
 >
 >             curDom <- curDomain
