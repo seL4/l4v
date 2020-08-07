@@ -42,7 +42,10 @@ HEAPS += SepTactics SepTacticsExamples
 # Additional dependencies
 
 BaseRefine Refine DBaseRefine DRefine: design-spec
-CBaseRefine CRefine CKernel CSpec SimplExportAndRefine: c-kernel design-spec
+
+# CKernel uses the `machinety=machine_state` option for `install_C_file`,
+# and therefore depends on `design-spec`.
+CKernel CSpec CBaseRefine CRefine SimplExportAndRefine: c-kernel design-spec
 
 # Preprocess the kernel's source code and bitfield theory files.
 c-kernel: .FORCE
