@@ -27,10 +27,11 @@ HEAPS += ASpec ASpecDoc ExecSpec DSpec CKernel CSpec TakeGrant ASepSpec
 
 # Additional dependencies
 
+# CKernel uses the `machinety=machine_state` option for `install_C_file`,
+# and therefore depends on `design-spec`.
 CKernel CSpec: c-kernel design-spec
 
 # NOTE: The abstract spec imports Events from Haskell hence the dependency
-
 ASpec ExecSpec DSpec : design-spec
 
 ASPEC_DOC_GITREV_FILE=abstract/document/gitrev.tex
