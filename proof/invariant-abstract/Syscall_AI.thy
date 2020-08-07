@@ -1241,6 +1241,9 @@ lemma lookup_reply_ex_cap[wp]:
   apply (wpsimp wp: hoare_drop_imps)
   done
 
+crunches lookup_reply
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+
 lemma hw_invs[wp]:
   "\<lbrace>invs and ct_active\<rbrace>
      handle_recv is_blocking can_reply

@@ -1086,6 +1086,185 @@ lemma reply_push_sender_sc_Some_invs:
                    elim: if_live_then_nonz_capD2)
   done
 
+crunches maybe_return_sc
+  for only_idle[wp]: only_idle
+  and if_unsafe_then_cap[wp]: if_unsafe_then_cap
+  and valid_global_refs[wp]: valid_global_refs
+  and valid_arch_state[wp]: valid_arch_state
+  and valid_irq_node[wp]: valid_irq_node
+  and valid_irq_handlers[wp]: valid_irq_handlers
+  and valid_irq_states[wp]: valid_irq_states
+  and valid_machine_state[wp]: valid_machine_state
+  and valid_vspace_objs[wp]: valid_vspace_objs
+  and valid_arch_caps[wp]: valid_arch_caps
+  and valid_global_objs[wp]: valid_global_objs
+  and valid_kernel_mappings[wp]: valid_kernel_mappings
+  and equal_kernel_mappings[wp]: equal_kernel_mappings
+  and valid_asid_map[wp]: valid_asid_map
+  and valid_global_vspace_mappings[wp]: valid_global_vspace_mappings
+  and pspace_in_kernel_window[wp]: pspace_in_kernel_window
+  and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
+  and pspace_respects_device_region[wp]: pspace_respects_device_region
+  and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
+  and cur_tcb[wp]: cur_tcb
+  and pspace_aligned[wp]: pspace_aligned
+  and pspace_distinct[wp]: pspace_distinct
+  and arch_state[wp]: "\<lambda>s. P (arch_state s)"
+  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
+  and zombies_final[wp]: zombies_final
+  and valid_mdb[wp]: valid_mdb
+  and valid_ioc[wp]: valid_ioc
+  and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+  (simp: crunch_simps wp: crunch_wps ignore: set_tcb_obj_ref)
+
+lemma maybe_return_sc_valid_objs[wp]:
+  "\<lbrace>valid_objs\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  by (wpsimp simp: maybe_return_sc_def get_sk_obj_ref_def wp: weak_if_wp hoare_drop_imp)
+
+lemma maybe_return_sc_if_live_then_nonz_cap[wp]:
+  "\<lbrace>if_live_then_nonz_cap\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  by (wpsimp simp: maybe_return_sc_def get_sk_obj_ref_def get_simple_ko_def get_object_def
+               wp: weak_if_wp)
+
+lemma maybe_return_sc_sym_refs_state_refs_of[wp]:
+  "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr
+   \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
+  apply (simp add: maybe_return_sc_def)
+  apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply wpsimp
+  apply safe
+   apply (fastforce simp: pred_tcb_at_def valid_obj_def valid_tcb_def valid_bound_obj_def
+                          is_sc_obj_def obj_at_def
+                  split: option.splits)
+  apply (rule delta_sym_refs, assumption)
+   apply (clarsimp split: if_splits)
+  apply (clarsimp split: if_splits)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+   apply (rotate_tac -2)
+   apply (frule (1) sym_refs_ko_atD[unfolded obj_at_def, simplified])
+   apply (fastforce simp: sc_at_typ2 obj_at_def state_refs_of_def get_refs_def2 valid_obj_def
+                          valid_ntfn_def valid_bound_obj_def
+                   split: option.splits)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def get_refs_def2)
+  done
+
+lemma maybe_return_sc_valid_idle[wp]:
+  "\<lbrace>\<lambda>s. valid_idle s \<and> sym_refs (state_refs_of s) \<and> tcb_ptr \<noteq> idle_thread s\<rbrace>
+   maybe_return_sc ntfn_ptr tcb_ptr
+   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  apply (wpsimp simp: maybe_return_sc_def get_tcb_obj_ref_def thread_get_def get_sk_obj_ref_def
+                      get_simple_ko_def get_object_def
+                  wp: update_sched_context_valid_idle)
+  apply (intro conjI)
+    apply clarsimp
+   apply (clarsimp simp: sym_refs_def)
+   apply (erule_tac x = tcb_ptr in allE)
+   apply (auto simp: valid_idle_def obj_at_def state_refs_of_def get_refs_def2
+              dest!: get_tcb_SomeD)
+  done
+
+global_interpretation maybe_return_sc: non_reply_op "maybe_return_sc ntfn_ptr tcb_ptr"
+  by unfold_locales (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imps get_sk_obj_ref_wp
+                          simp: maybe_return_sc_def)
+
+lemma maybe_return_sc_valid_replies[wp]:
+  "maybe_return_sc ntfn_ptr tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: maybe_return_sc_def wp: hoare_vcg_if_lift2 hoare_drop_imps get_sk_obj_ref_wp)
+
+lemma maybe_return_sc_pred_tcb_at:
+  "\<lbrace>(\<lambda>s. Q (pred_tcb_at proj P tcb_ptr' s))
+    and K (tcb_ptr = tcb_ptr' \<longrightarrow>
+           (\<forall>tcb x. proj (tcb_to_itcb (tcb_sched_context_update x tcb)) = proj (tcb_to_itcb tcb)))\<rbrace>
+   maybe_return_sc ntfn_ptr tcb_ptr
+   \<lbrace>\<lambda>rv s. Q (pred_tcb_at proj P tcb_ptr' s)\<rbrace>"
+  apply (wpsimp simp: maybe_return_sc_def set_tcb_obj_ref_def set_object_def
+                      get_tcb_obj_ref_def thread_get_def get_sk_obj_ref_def get_simple_ko_def
+                      get_object_def)
+  apply (auto simp: pred_tcb_at_def obj_at_def get_tcb_SomeD)
+  done
+
+lemma maybe_return_sc_st_tcb_at[wp]:
+  "maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>st_tcb_at P t\<rbrace>"
+  by (wpsimp wp: maybe_return_sc_pred_tcb_at)
+
+(* FIXME RT: move *)
+lemma receive_ipc_preamble_rv_lift:
+  "(\<And>a P. f \<lbrace>reply_tcb_reply_at P a \<rbrace>)
+   \<Longrightarrow> (\<And>a P. f \<lbrace>reply_sc_reply_at P a \<rbrace>)
+   \<Longrightarrow> f \<lbrace>receive_ipc_preamble_rv reply reply_opt\<rbrace>"
+  by (case_tac reply_opt; wpsimp wp: hoare_vcg_conj_lift; assumption)
+
+lemma maybe_return_sc_fault_tcbs_valid_states[wp]:
+  "maybe_return_sc ntfn_ptr thread \<lbrace>fault_tcbs_valid_states\<rbrace>"
+  unfolding fault_tcbs_valid_states_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' maybe_return_sc_pred_tcb_at)
+
+crunches maybe_return_sc
+  for misc_proj[wp]: "\<lambda>s. P (cur_thread s) (cur_sc s) (release_queue s)
+                                 (cur_domain s) (domain_time s) (idle_thread s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunches reschedule_required
+  for sc_at_ppred[wp]: "sc_at_ppred proj P scp"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma maybe_return_sc_sc_at_ppred:
+  "\<lbrace>sc_at_ppred proj P scp and bound_sc_tcb_at (\<lambda>x. x \<noteq> Some scp) tcb_ptr\<rbrace>
+   maybe_return_sc ntfn_ptr tcb_ptr
+   \<lbrace>\<lambda>rv. sc_at_ppred proj P scp\<rbrace>"
+  apply (wpsimp simp: maybe_return_sc_def update_sched_context_def
+                      set_tcb_obj_ref_def set_object_def
+                      get_tcb_obj_ref_def thread_get_def get_sk_obj_ref_def get_simple_ko_def
+                      get_object_def)
+  by (auto simp: sc_at_pred_n_def obj_at_def pred_tcb_at_def get_tcb_SomeD)
+
+lemma reschedule_required_cur_sc_tcb':
+  "\<lbrace>\<lambda>s. sc_tcb_sc_at \<top> (cur_sc s) s\<rbrace> reschedule_required \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
+  supply set_scheduler_action_cur_sc_tcb [wp del]
+  unfolding reschedule_required_def
+  by (wpsimp simp: reschedule_required_def set_scheduler_action_def tcb_sched_action_def
+                   set_tcb_queue_def get_tcb_queue_def thread_get_def is_schedulable_def
+                   cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
+
+lemma maybe_return_sc_cur_sc_tcb[wp]:
+  "\<lbrace>cur_sc_tcb and (\<lambda>s. sym_refs (state_refs_of s)) and valid_objs\<rbrace>
+    maybe_return_sc ntfn_ptr thread
+   \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
+  supply reschedule_required_cur_sc_tcb' [wp]
+  supply reschedule_required_cur_sc_tcb [wp del]
+  apply (wpsimp simp: maybe_return_sc_def update_sched_context_def
+                      set_tcb_obj_ref_def set_object_def
+                      get_tcb_obj_ref_def thread_get_def get_sk_obj_ref_def get_simple_ko_def
+                      get_object_def)
+  apply (case_tac "thread = cur_thread s"; simp)
+   apply (fastforce split: if_split simp: sc_at_pred_n_def obj_at_def cur_sc_tcb_def)
+  apply (clarsimp split: if_split simp: sc_at_pred_n_def obj_at_def cur_sc_tcb_def)
+  apply (intro conjI allI impI; clarsimp?)
+  apply (frule get_tcb_SomeD, clarsimp)
+  apply (subgoal_tac "sc_tcb xa = Some thread", simp)
+  apply (fastforce elim: bound_sc_tcb_bound_sc_at simp: pred_tcb_at_def obj_at_def)
+  done
+
+lemma maybe_return_sc_invs[wp]:
+  "\<lbrace>invs and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
+    maybe_return_sc ntfn_ptr thread
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (wpsimp wp: hoare_vcg_conj_lift valid_ioports_lift
+           simp: invs_def valid_state_def valid_pspace_def)
+
+lemma maybe_return_sc_ko_at_Endpoint[wp]:
+  "maybe_return_sc ntfn_ptr thread \<lbrace>\<lambda>s. ko_at (Endpoint ep) ep_ptr s\<rbrace>"
+  apply (wpsimp simp: maybe_return_sc_def update_sched_context_def
+                      set_tcb_obj_ref_def set_object_def
+                      get_tcb_obj_ref_def thread_get_def get_sk_obj_ref_def get_simple_ko_def
+                      get_object_def)
+  by (auto simp: obj_at_def)
+
+crunches receive_ipc_preamble
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma ri_invs[wp]:
   fixes thread ep_cap is_blocking reply
   notes if_split[split del]
@@ -1119,6 +1298,15 @@ lemma ri_invs[wp]:
     apply (wp complete_signal_invs)
    prefer 2 apply (clarsimp simp: st_tcb_at_tcb_at)
   apply (thin_tac "\<not> (_ \<and> _)", clarsimp)
+  apply (rule_tac B="\<lambda>r s. st_tcb_at active thread s \<and>
+             ex_nonz_cap_to thread s \<and>
+             ex_nonz_cap_to ep_ptr s \<and>
+             (\<forall>r\<in>zobj_refs reply. ex_nonz_cap_to r s) \<and>
+             receive_ipc_preamble_rv reply reply_opt s \<and>
+             ko_at (Endpoint ep) ep_ptr s \<and> invs s"
+           in hoare_seq_ext[rotated])
+   apply (wpsimp wp: hoare_vcg_ball_lift split: if_split)
+    apply (fastforce dest: st_tcb_at_idle_thread split: if_split)
     (* IdleEP, RecvEP *)
   apply (case_tac ep; clarsimp simp: receive_ipc_blocked_invs[where reply=reply])
     (* SendEP *)
@@ -2232,166 +2420,6 @@ lemma hf_invs':
 
 lemmas hf_invs[wp] = hf_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI TrueI,simplified]
 
-crunches maybe_return_sc
-  for pspace_aligned[wp]: pspace_aligned
-  and pspace_distinct[wp]: pspace_distinct
-  and arch_state[wp]: "\<lambda>s. P (arch_state s)"
-  (simp: get_sk_obj_ref_def get_simple_ko_def get_object_def wp: weak_if_wp)
-
-lemma maybe_return_sc_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def get_sk_obj_ref_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_caps_of_state[wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def get_sk_obj_ref_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_if_live_then_nonz_cap[wp]:
-  "\<lbrace>if_live_then_nonz_cap\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def get_sk_obj_ref_def get_simple_ko_def get_object_def
-               wp: weak_if_wp)
-
-lemma maybe_return_sc_zombies_final[wp]:
-  "\<lbrace>zombies_final\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def get_sk_obj_ref_def get_simple_ko_def get_object_def
-               wp: weak_if_wp)
-
-lemma maybe_return_sc_sym_refs_state_refs_of[wp]:
-  "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr
-   \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
-  apply (simp add: maybe_return_sc_def)
-  apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply wpsimp
-  apply safe
-   apply (fastforce simp: pred_tcb_at_def valid_obj_def valid_tcb_def valid_bound_obj_def
-                          is_sc_obj_def obj_at_def
-                  split: option.splits)
-  apply (rule delta_sym_refs, assumption)
-   apply (clarsimp split: if_splits)
-  apply (clarsimp split: if_splits)
-   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-   apply (rotate_tac -2)
-   apply (frule (1) sym_refs_ko_atD[unfolded obj_at_def, simplified])
-   apply (fastforce simp: sc_at_typ2 obj_at_def state_refs_of_def get_refs_def2 valid_obj_def
-                          valid_ntfn_def valid_bound_obj_def
-                   split: option.splits)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def get_refs_def2)
-  done
-
-lemma maybe_return_sc_sym_refs_state_hyp_refs_of[wp]:
-  "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr
-   \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_mdb[wp]:
-  "\<lbrace>valid_mdb\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_mdb\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_ioc[wp]:
-  "\<lbrace>valid_ioc\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_ioc\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_idle[wp]:
-  "\<lbrace>\<lambda>s. valid_idle s \<and> sym_refs (state_refs_of s) \<and> tcb_ptr \<noteq> idle_thread s\<rbrace>
-   maybe_return_sc ntfn_ptr tcb_ptr
-   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  apply (wpsimp simp: maybe_return_sc_def get_tcb_obj_ref_def thread_get_def get_sk_obj_ref_def
-                      get_simple_ko_def get_object_def
-                  wp: update_sched_context_valid_idle)
-  apply (intro conjI)
-    apply clarsimp
-   apply (clarsimp simp: sym_refs_def)
-   apply (erule_tac x = tcb_ptr in allE)
-   apply (auto simp: valid_idle_def obj_at_def state_refs_of_def get_refs_def2
-              dest!: get_tcb_SomeD)
-  done
-
-lemma maybe_return_sc_only_idle[wp]:
-  "\<lbrace>only_idle\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. only_idle\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_if_unsafe_then_cap[wp]:
-  "\<lbrace>if_unsafe_then_cap\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_global_refs[wp]:
-  "\<lbrace>valid_global_refs\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_global_refs\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_arch_state[wp]:
-  "\<lbrace>valid_arch_state\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_irq_node[wp]:
-  "\<lbrace>valid_irq_node\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_irq_node\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_irq_handlers[wp]:
-  "\<lbrace>valid_irq_handlers\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_irq_handlers\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_irq_states[wp]:
-  "\<lbrace>valid_irq_states\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_irq_states\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_machine_state[wp]:
-  "\<lbrace>valid_machine_state\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_vspace_objs[wp]:
-  "\<lbrace>valid_vspace_objs\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_arch_caps[wp]:
-  "\<lbrace>valid_arch_caps\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_global_objs[wp]:
-  "\<lbrace>valid_global_objs\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_kernel_mappings[wp]:
-  "\<lbrace>valid_kernel_mappings\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_kernel_mappings\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_equal_kernel_mappings[wp]:
-  "\<lbrace>equal_kernel_mappings\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_asid_map[wp]:
-  "\<lbrace>valid_asid_map\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_valid_global_vspace_mappings[wp]:
-  "\<lbrace>valid_global_vspace_mappings\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr
-   \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_pspace_in_kernel_window[wp]:
-  "\<lbrace>pspace_in_kernel_window\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr
-   \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_cap_refs_in_kernel_window[wp]:
-  "\<lbrace>cap_refs_in_kernel_window\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr
-   \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_pspace_respects_device_region[wp]:
-  "\<lbrace>pspace_respects_device_region\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr
-   \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_cap_refs_respects_device_region[wp]:
-  "\<lbrace>cap_refs_respects_device_region\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr
-   \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
-lemma maybe_return_sc_cur_tcb[wp]:
-  "\<lbrace>cur_tcb\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: weak_if_wp hoare_drop_imp)
-
 lemma valid_bound_sc_typ_at:
   "\<forall>p. \<lbrace>\<lambda>s. sc_at p s\<rbrace> f \<lbrace>\<lambda>_ s. sc_at p s\<rbrace>
     \<Longrightarrow> \<lbrace>\<lambda>s. valid_bound_sc sc s\<rbrace> f \<lbrace>\<lambda>_ s. valid_bound_sc sc s\<rbrace>"
@@ -2448,14 +2476,6 @@ lemma as_user_bound_sc[wp]:
   apply (clarsimp simp: is_sc_obj_def obj_at_def get_tcb_SomeD)
   done
 
-global_interpretation maybe_return_sc: non_reply_op "maybe_return_sc ntfn_ptr tcb_ptr"
-  by unfold_locales (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imps get_sk_obj_ref_wp
-                          simp: maybe_return_sc_def)
-
-lemma maybe_return_sc_valid_replies[wp]:
-  "maybe_return_sc ntfn_ptr tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: maybe_return_sc_def wp: hoare_vcg_if_lift2 hoare_drop_imps get_sk_obj_ref_wp)
-
 lemma schedule_tcb_invs':
   "\<lbrace>\<lambda>s. (valid_state s \<and> cur_tcb s \<and>
          tcb_ptr = cur_thread s \<and> scheduler_action s = resume_cur_thread \<and>
@@ -2503,87 +2523,18 @@ lemma set_tcb_sc_cur_thread [wp]:
    \<lbrace>\<lambda>rv s. bound_sc_tcb_at ((=) sc_ptr) (cur_thread s) s\<rbrace>"
   by (wpsimp simp: set_tcb_obj_ref_def pred_tcb_at_def obj_at_def wp: set_object_wp)
 
-lemma maybe_return_sc_schedule_tcb_helper1:
-  "\<lbrace>bound_sc_tcb_at ((=) (Some sc_ptr)) tcb_ptr and
-    (\<lambda>s. \<exists>ntfn. kheap s ntfn_ptr = Some (Notification ntfn) \<and> ntfn_sc ntfn = Some sc_ptr \<and> invs s
-                \<and> tcb_ptr = cur_thread s \<and> scheduler_action s = resume_cur_thread)\<rbrace>
-   do ya <- set_tcb_obj_ref tcb_sched_context_update tcb_ptr None;
-      set_sc_obj_ref sc_tcb_update sc_ptr None
-   od
-   \<lbrace>\<lambda>_ s. valid_state s \<and>
-          cur_tcb s \<and>
-          tcb_ptr = cur_thread s \<and>
-          scheduler_action s = resume_cur_thread \<and>
-          bound_sc_tcb_at ((=) None) (cur_thread s) s \<and>
-          sc_tcb_sc_at ((=) None) (cur_sc s) s\<rbrace>"
-  apply (wpsimp simp: valid_state_def valid_pspace_def
-                  wp: update_sched_context_valid_idle)
-  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
-  apply (rule conjI)
-   apply (rule delta_sym_refs, simp)
-    apply (clarsimp split: if_splits)
-   apply (clarsimp split: if_splits)
-     apply (subgoal_tac "sc_at (cur_sc s) s")
-      apply (fastforce simp: cur_sc_tcb_def pred_tcb_at_def obj_at_def is_sc_obj_def
-                             sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[symmetric])
-     apply (fastforce simp: obj_at_def cur_sc_tcb_def sc_tcb_sc_at_def valid_obj_def is_sc_obj_def)
-    apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at, force+)
-    apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def state_refs_of_def get_refs_def2)
-   apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def get_refs_def2)
-  apply (subgoal_tac "sc_ptr \<noteq> idle_sc_ptr", simp)
-   apply (clarsimp simp: valid_idle_def cur_sc_tcb_def obj_at_def
-                         sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[symmetric] pred_tcb_at_def)
-  apply (clarsimp simp: sym_refs_def)
-  apply (erule_tac x = ntfn_ptr in allE)
-  apply (auto simp: valid_idle_def obj_at_def state_refs_of_def)
-  done
-
-lemma maybe_return_sc_schedule_tcb_helper2:
-  "\<lbrace>bound_sc_tcb_at ((=) (Some sc_ptr)) tcb_ptr and
-    (\<lambda>s. \<exists>ntfn. kheap s ntfn_ptr = Some (Notification ntfn) \<and> ntfn_sc ntfn = Some sc_ptr \<and> invs s
-                \<and> (tcb_ptr \<noteq> cur_thread s \<or> scheduler_action s \<noteq> resume_cur_thread))\<rbrace>
-   do _ <- set_tcb_obj_ref tcb_sched_context_update tcb_ptr None;
-      set_sc_obj_ref sc_tcb_update sc_ptr None
-   od
-  \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-            simp_del: disj_not1
-                  wp: update_sched_context_valid_idle sc_tcb_update_cur_sc_tcb hoare_vcg_disj_lift)
-  apply (rule conjI)
-   apply (rule delta_sym_refs, simp)
-    apply (clarsimp split: if_splits)
-   apply (clarsimp split: if_splits)
-     apply (fastforce simp: pred_tcb_at_def valid_obj_def valid_tcb_def valid_bound_obj_def
-                            obj_at_def is_sc_obj_def
-                     split: option.splits)
-    apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at, (force+)[3])
-    apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def state_refs_of_def get_refs_def2)
-   apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def get_refs_def2)
-  apply (subgoal_tac "sc_ptr \<noteq> idle_sc_ptr", simp)
-   apply (intro conjI)
-    apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
-   apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at, force+)
-   apply (clarsimp simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
-  apply (clarsimp simp: sym_refs_def)
-  apply (erule_tac x = ntfn_ptr in allE)
-  apply (clarsimp simp: valid_idle_def obj_at_def state_refs_of_def)
-  done
-
 lemma maybe_return_sc_schedule_tcb:
-  "\<lbrace>invs\<rbrace>
+  "\<lbrace>invs and (\<lambda>s. tcb_ptr \<noteq> idle_thread s)\<rbrace>
    do
      _ <- maybe_return_sc ntfn_ptr tcb_ptr;
      schedule_tcb tcb_ptr
    od
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (rule hoare_seq_ext[OF schedule_tcb_invs'])
-  apply (simp add: maybe_return_sc_def)
-  apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (wpsimp wp: hoare_vcg_disj_lift maybe_return_sc_schedule_tcb_helper1
-                    maybe_return_sc_schedule_tcb_helper2)
-  apply auto
-  done
+  apply (wpsimp wp: hoare_vcg_disj_lift)
+  apply (rule hoare_pre_cont)
+  apply (wpsimp wp: hoare_vcg_disj_lift)
+  by auto
 
 lemma rai_invs':
   assumes set_notification_Q[wp]: "\<And>a b.\<lbrace> Q\<rbrace> set_notification a b \<lbrace>\<lambda>_.Q\<rbrace>"
