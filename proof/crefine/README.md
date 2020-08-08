@@ -51,7 +51,7 @@ produced directly by the C parser from the kernel's C code, and another
 produced by the C spec's [`Substitute`](../../spec/cspec/Substitute.thy)
 theory. These proofs largely operate on the latter, proving that it
 corresponds to the design spec. Refinement between the two C-level specs
-is proved in the [`CToCRefine`](../../lib/clib/CToCRefine.thy) theory.
+is proved in the [`CToCRefine`](lib/CToCRefine.thy) theory.
 The top-level [`Refine_C`](ARM/Refine_C.thy) theory quotes both refinement
 properties.
 

@@ -25,7 +25,7 @@ correct material in here!
  * in general, the [Isabelle naming conventions][1] apply
  * names should be descriptive of the content. Do not use `foo_5`.
 
-[1]: https://kappelmann.github.io/isabelle_conventions/naming.html
+[1]: https://isabelle.systems/conventions/naming.html
 
 
 ## Directories
