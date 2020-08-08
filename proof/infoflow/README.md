@@ -39,7 +39,7 @@ theory where noninterference is (generically) defined is
 [`Noninterference_Base`](Noninterference_Base.thy). The bottom-level
 theory where confidentiality is formalised over the seL4 abstract
 specification is [`InfoFlow`](InfoFlow.thy). Confidentiality is
-a relational property and the theory [`EquivValid`](../lib/EquivValid.thy)
+a relational property and the theory [`EquivValid`](../../lib/EquivValid.thy)
 defines these generically for the nondeterministic state monad of the
 abstract specification.
 
