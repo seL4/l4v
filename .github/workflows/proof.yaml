@@ -1,0 +1,27 @@
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+name: Proofs
+
+on:
+  push:
+    branches:
+      - rt
+  pull_request:
+    branches:
+      - rt
+
+jobs:
+  ainvs:
+    name: AInvs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ARM]
+    steps:
+    - uses: seL4/ci-actions/run-proofs@master
+      with:
+        L4V_ARCH: ${{ matrix.arch }}
+        session: ExecSpec
