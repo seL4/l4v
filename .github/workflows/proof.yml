@@ -7,10 +7,9 @@ name: Proofs
 on:
   push:
     branches:
+      - master
       - rt
   pull_request:
-    branches:
-      - rt
 
 jobs:
   ainvs:
