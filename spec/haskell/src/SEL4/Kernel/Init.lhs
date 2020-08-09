@@ -397,10 +397,6 @@ Various functions in this module use "rangesBy" to split a sorted list into cont
 >         ln = if l <= ll then l else ll;
 >         hn = if h <= hh then hh else h
 
-> distinct :: Eq a => [a] -> Bool
-> distinct [] = True
-> distinct (x:xs) = (notElem x xs && distinct xs)
-
 Following foldME is for l4v haskell translator
 
 > foldME = foldM
