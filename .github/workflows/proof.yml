@@ -21,7 +21,14 @@ jobs:
       matrix:
         arch: [ARM]
     steps:
-    - uses: seL4/ci-actions/run-proofs@master
+    - name: Cache Isabelle Images
+      uses: actions/cache@v2
+      with:
+        path: cache/
+        key: ${{ runner.os }}-${{ matrix.arch }}-images-${{ github.sha }}
+        restore-keys: ${{ runner.os }}-${{ matrix.arch }}-images
+    - name: Run Proofs
+      uses: seL4/ci-actions/run-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
         session: ExecSpec
