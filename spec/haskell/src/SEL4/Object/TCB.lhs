@@ -56,7 +56,7 @@ This module uses the C preprocessor to select a target architecture.
 > import {-# SOURCE #-} SEL4.Kernel.VSpace
 
 > import Data.Bits
-> import Data.Helpers (mapMaybe)
+> import Data.Helpers (mapMaybe, distinct)
 > import Data.List(findIndex, genericTake, genericLength)
 > import Data.Maybe(fromJust)
 > import Data.WordLib
@@ -1075,6 +1075,8 @@ On some architectures, the thread context may include registers that may be modi
 
 > awaken :: Kernel ()
 > awaken = do
+>     rq <- getReleaseQueue
+>     assert (distinct rq) "The release queue is always distinct"
 >     whileM releaseQNonEmptyAndReady $ do
 >         awakened <- tcbReleaseDequeue
 >         ctPtr <- getCurThread

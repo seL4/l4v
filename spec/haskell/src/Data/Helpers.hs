@@ -19,3 +19,6 @@ mapMaybe :: (a -> b) -> Maybe a -> Maybe b
 mapMaybe f opt = case opt of Nothing -> Nothing
                              (Just x) -> Just $ f x
 
+distinct :: Eq a => [a] -> Bool
+distinct [] = True
+distinct (x:xs) = (notElem x xs && distinct xs)
