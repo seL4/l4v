@@ -701,6 +701,12 @@ lemma corres_assert_assume:
   by (auto simp: bind_def assert_def fail_def return_def
                  corres_underlying_def)
 
+lemma corres_assert_gen_asm_cross:
+  "\<lbrakk> \<And>s s'. \<lbrakk>(s, s') \<in> sr; P' s; Q' s'\<rbrakk> \<Longrightarrow> A;
+     A \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g ()) \<rbrakk>
+  \<Longrightarrow> corres_underlying sr nf nf' r (P and P') (Q and Q') f (assert A >>= g)"
+  by (metis corres_assert_assume corres_assume_pre corres_guard_imp pred_andE)
+
 lemma corres_state_assert:
   "corres_underlying sr nf nf' rr P Q f (g ()) \<Longrightarrow>
    (\<And>s. Q s \<Longrightarrow> R s) \<Longrightarrow>
