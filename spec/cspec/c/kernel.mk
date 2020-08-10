@@ -114,4 +114,4 @@ ${KERNEL_BUILD_ROOT}/.cmake_done: ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE}
 	touch ${KERNEL_BUILD_ROOT}/.cmake_done
 
 ${UMM_TYPES}: ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
-	python ${CSPEC_DIR}/mk_umm_types.py --root $(L4V_REPO_PATH) ${KERNEL_BUILD_ROOT}/kernel_all.c_pp $@
+	${CSPEC_DIR}/mk_umm_types.py --root $(L4V_REPO_PATH) ${KERNEL_BUILD_ROOT}/kernel_all.c_pp $@
