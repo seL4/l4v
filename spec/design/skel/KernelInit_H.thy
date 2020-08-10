@@ -44,7 +44,7 @@ where "coverOf x0 = (case x0 of
 definition syncBIFrame :: "unit kernel_init"
 where "syncBIFrame \<equiv> returnOk ()"
 
-#INCLUDE_HASKELL SEL4/Kernel/Init.lhs bodies_only NOT isAligned funArray newKernelState distinct rangesBy InitData doKernelOp runInit noInitFailure coverOf foldME
+#INCLUDE_HASKELL SEL4/Kernel/Init.lhs bodies_only NOT isAligned funArray newKernelState rangesBy InitData doKernelOp runInit noInitFailure coverOf foldME
 
 consts
   newKSDomSchedule :: "(domain \<times> time) list"

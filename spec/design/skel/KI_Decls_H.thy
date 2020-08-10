@@ -12,6 +12,6 @@ imports
   KernelInitMonad_H
 begin
 
-#INCLUDE_HASKELL SEL4/Kernel/Init.lhs decls_only NOT isAligned funArray newKernelState distinct rangesBy doKernelOp runInit
+#INCLUDE_HASKELL SEL4/Kernel/Init.lhs decls_only NOT isAligned funArray newKernelState rangesBy doKernelOp runInit
 
 end
