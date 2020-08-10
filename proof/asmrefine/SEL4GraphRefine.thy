@@ -65,7 +65,7 @@ lemma snd_snd_gs_new_frames_new_cnodes[simp]:
 
 ML \<open>
 \<comment>\<open> VER-1166 \<close>
-val blacklist = ["Kernel_C.reserve_region", "Kernel_C.merge_regions"]
+val blacklist = ["Kernel_C.reserve_region", "Kernel_C.merge_regions", "Kernel_C.arch_init_freemem"]
 
 val dbg = ProveSimplToGraphGoals.new_debug blacklist [];
 \<close>

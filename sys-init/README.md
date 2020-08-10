@@ -11,8 +11,8 @@ This contains a formalised algorithm and the proof of correctness of
 a user-level system initialiser that uses [capDL](../spec/capDL/) to
 specify the state of the resultant system.
 
-It builds on the [CapDL API Proofs](../spec/capDL-api/), and uses
-a [separation logic defined for capDL](../spec/sep-capDL/).
+It builds on the [CapDL API Proofs](../proof/capDL-api/), and uses
+a [separation logic defined for capDL](../proof/sep-capDL/).
 
 The system initialiser and the proof are described in the
 [ICFEM '13 paper][Boyton_13] and Andrew Boyton's PhD thesis.

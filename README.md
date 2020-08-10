@@ -131,7 +131,7 @@ The repository is organised as follows.
       * [`design`](spec/design/): the design-level specification of seL4,
         generated from the Haskell model.
       * [`c`](spec/cspec/c/): the C code of the seL4 kernel, preprocessed into a form that
-        can be read into Isabelle. This is generated from the [seL4 repository](../seL4).
+        can be read into Isabelle. This is generated from the [seL4 repository](https://github.com/seL4/seL4).
 
  * [`proof`](proof/): the seL4 proofs
     * [`invariant-abstract`](proof/invariant-abstract/): invariants of the seL4 abstract specification

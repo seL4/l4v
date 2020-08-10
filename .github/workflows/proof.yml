@@ -1,0 +1,54 @@
+# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+name: Proofs
+
+on:
+  push:
+    branches:
+      - master
+      - rt
+  pull_request:
+
+jobs:
+  ainvs:
+    name: AInvs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ARM]
+    steps:
+    - name: Cache Isabelle Images
+      uses: actions/cache@v2
+      with:
+        path: cache/
+        key: ${{ runner.os }}-${{ matrix.arch }}-images-${{ github.sha }}
+        restore-keys: ${{ runner.os }}-${{ matrix.arch }}-images
+    - name: Run Proofs
+      uses: seL4/ci-actions/run-proofs@master
+      with:
+        L4V_ARCH: ${{ matrix.arch }}
+        session: ExecSpec AInvs
+
+  refine:
+    name: Refine
+    needs: ainvs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ARM]
+    steps:
+    - name: Cache Isabelle Images
+      uses: actions/cache@v2
+      with:
+        path: cache/
+        key: ${{ runner.os }}-${{ matrix.arch }}-images-${{ github.sha }}
+        restore-keys: ${{ runner.os }}-${{ matrix.arch }}-images
+    - name: Run Proofs
+      uses: seL4/ci-actions/run-proofs@master
+      with:
+        L4V_ARCH: ${{ matrix.arch }}
+        session: Refine

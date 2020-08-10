@@ -125,7 +125,7 @@ def print_stats(deadline, delta, end, path):
 
 
 if __name__ == '__main__':
-        # Setup the command line parser.
+    # Setup the command line parser.
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('-w', "--weeks", help="Number of weeks to look back",
                         type=int, default=4)
