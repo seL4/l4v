@@ -2658,7 +2658,7 @@ proof -
 qed
 
 lemma cancel_all_invs'_helper:
-  "\<lbrace>all_invs_but_sym_refs_ct_not_inQ' and sch_act_sane
+  "\<lbrace>all_invs_but_sym_refs_ct_not_inQ'
     and (\<lambda>s. \<forall>x \<in> set q. tcb_at' x s)
     and (\<lambda>s. sym_refs (\<lambda>x. if x \<in> set q then {r \<in> state_refs_of' s x. snd r = TCBBound}
                               else state_refs_of' s x)
@@ -2671,7 +2671,7 @@ lemma cancel_all_invs'_helper:
                                        od
                   else setThreadState Structures_H.thread_state.Inactive t
                od) q
-   \<lbrace>\<lambda>rv. all_invs_but_ct_not_inQ' and sch_act_sane\<rbrace>"
+   \<lbrace>\<lambda>rv. all_invs_but_ct_not_inQ'\<rbrace>"
   apply (rule mapM_x_inv_wp2)
    apply clarsimp
   apply (rule hoare_pre)
@@ -2818,12 +2818,10 @@ lemma sch_act_wf_weak[elim!]:
   by (case_tac sa, (simp add: weak_sch_act_wf_def)+)
 
 lemma rescheduleRequired_all_invs_but_ct_not_inQ:
-  "\<lbrace>all_invs_but_ct_not_inQ' and sch_act_sane\<rbrace> rescheduleRequired \<lbrace>\<lambda>_. invs'\<rbrace>"
+  "\<lbrace>all_invs_but_ct_not_inQ'\<rbrace> rescheduleRequired \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: invs'_def valid_state'_def)
   apply (wpsimp wp: rescheduleRequired_ct_not_inQ valid_irq_node_lift valid_irq_handlers_lift''
                     irqs_masked_lift cur_tcb_lift untyped_ranges_zero_lift
-                    rescheduleRequired_valid_release_queue_sch_act_sane
-                    rescheduleRequired_valid_release_queue'_sch_act_sane
               simp: cteCaps_of_def o_def)
   apply fastforce
   done
@@ -2835,7 +2833,7 @@ lemma setEndpoint_sch_act_sane[wp]:
   done
 
 lemma cancelAllIPC_invs'[wp]:
-  "\<lbrace>invs' and sch_act_sane\<rbrace> cancelAllIPC ep_ptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "\<lbrace>invs'\<rbrace> cancelAllIPC ep_ptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: cancelAllIPC_def ep'_Idle_case_helper cong del: if_cong)
   apply (wpsimp wp: rescheduleRequired_all_invs_but_ct_not_inQ
                     cancel_all_invs'_helper hoare_vcg_const_Ball_lift
@@ -3207,6 +3205,15 @@ lemma insert_eqD:
   "A = insert a B \<Longrightarrow> a \<in> A"
   by blast
 
+crunches setSchedulerAction
+  for tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' p"
+  (simp: tcb_in_cur_domain'_def wp_del: ssa_wp)
+
+crunches possibleSwitchTo
+  for tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' p"
+  and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  (wp: crunch_wps)
+
 lemma cancelBadgedSends_filterM_helper':
   notes if_cong[cong del]
   shows
@@ -3215,12 +3222,18 @@ lemma cancelBadgedSends_filterM_helper':
            \<and> ex_nonz_cap_to' epptr s \<and> ep_at' epptr s
            \<and> sym_refs ((state_refs_of' s) (epptr := set (xs @ ys) \<times> {EPSend}))
            \<and> (\<forall>y \<in> set (xs @ ys). state_refs_of' s y = {(epptr, TCBBlockedSend)}
-                                       \<union> {r \<in> state_refs_of' s y. snd r = TCBBound})
+                                                        \<union> tcb_non_st_state_refs_of' s y)
            \<and> distinct (xs @ ys)\<rbrace>
       filterM (\<lambda>t. do st \<leftarrow> getThreadState t;
-                      if blockingIPCBadge st = badge then
-                        do y \<leftarrow> setThreadState Structures_H.thread_state.Restart t;
-                           y \<leftarrow> tcbSchedEnqueue t;
+                      if blockingIPCBadge st = badge
+                      then
+                        do fault \<leftarrow> threadGet tcbFault t;
+                           y \<leftarrow> if fault = None
+                                then
+                                  do y \<leftarrow> setThreadState Structures_H.thread_state.Restart t;
+                                     possibleSwitchTo t
+                                  od
+                                else setThreadState Structures_H.thread_state.Inactive t;
                            return False
                         od
                       else return True
@@ -3229,7 +3242,7 @@ lemma cancelBadgedSends_filterM_helper':
            \<and> ex_nonz_cap_to' epptr s \<and> ep_at' epptr s
            \<and> sym_refs ((state_refs_of' s) (epptr := (set rv \<union> set ys) \<times> {EPSend}))
            \<and> (\<forall>y \<in> set ys. state_refs_of' s y = {(epptr, TCBBlockedSend)}
-                                   \<union> {r \<in> state_refs_of' s y. snd r = TCBBound})
+                                                 \<union> tcb_non_st_state_refs_of' s y)
            \<and> distinct rv \<and> distinct (xs @ ys) \<and> set rv \<subseteq> set xs \<and> (\<forall>x \<in> set xs. tcb_at' x s)\<rbrace>"
   apply (rule_tac xs=xs in rev_induct)
    apply clarsimp
@@ -3239,28 +3252,29 @@ lemma cancelBadgedSends_filterM_helper':
   apply (drule spec, erule hoare_seq_ext[rotated])
   apply (rule hoare_seq_ext [OF _ gts_inv'])
   apply (rule hoare_pre)
-   apply (wp valid_irq_node_lift hoare_vcg_const_Ball_lift sts_sch_act'
-             sch_act_wf_lift valid_irq_handlers_lift'' cur_tcb_lift irqs_masked_lift
-             sts_st_tcb' sts_valid_queues setThreadState_not_st
-             tcbSchedEnqueue_not_st
-             untyped_ranges_zero_lift
-        | clarsimp simp: cteCaps_of_def o_def)+
+   apply (wpsimp wp: valid_irq_node_lift hoare_vcg_const_Ball_lift
+                     valid_irq_handlers_lift'' irqs_masked_lift sts_st_tcb'
+                     sts_valid_queues hoare_vcg_all_lift sts_sch_act'
+                     threadGet_inv[THEN hoare_drop_imp] hoare_vcg_imp_lift'
+               simp: cteCaps_of_def o_def)
+  apply clarsimp
   apply (frule insert_eqD, frule state_refs_of'_elemD)
   apply (clarsimp simp: valid_tcb_state'_def st_tcb_at_refs_of_rev')
   apply (frule pred_tcb_at')
   apply (rule conjI[rotated], blast)
-  apply clarsimp
+  apply (clarsimp cong: conj_cong)
+  apply (thin_tac "sym_refs _") \<comment> \<open>this removes the list_refs_of_reply' sym_refs premise\<close>
   apply (intro conjI)
-      apply (clarsimp simp: valid_pspace'_def valid_tcb'_def elim!: valid_objs_valid_tcbE' dest!: st_tcb_ex_cap'')
-     apply (fastforce dest!: st_tcb_ex_cap'')
-    apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def)
-  sorry (*
-   apply (erule delta_sym_refs)
-    apply (fastforce elim!: obj_atE'
-                      simp: state_refs_of'_def projectKOs tcb_bound_refs'_def
-                            subsetD symreftype_inverse'
-                     split: if_split_asm)+
-  done *)
+          apply (find_goal \<open>match conclusion in "sym_refs _" \<Rightarrow> \<open>-\<close>\<close>)
+          apply (erule delta_sym_refs)
+           apply (fastforce split: if_split_asm)
+          subgoal (* this takes approximately 15s *)
+          by (auto simp: state_refs_of'_def symreftype_inverse' projectKOs
+                         tcb_bound_refs'_def obj_at'_def get_refs_def2 tcb_st_refs_of'_def
+                  split: option.splits if_splits thread_state.splits)
+         by (fastforce simp: valid_pspace'_def valid_tcb'_def valid_idle'_def
+                             pred_tcb_at'_def obj_at'_def idle_tcb'_def subsetD
+                      elim!: valid_objs_valid_tcbE' st_tcb_ex_cap'')+
 
 lemmas cancelBadgedSends_filterM_helper
     = spec [where x=Nil, OF cancelBadgedSends_filterM_helper', simplified]
@@ -3279,11 +3293,9 @@ lemma cancelBadgedSends_invs[wp]:
                 [OF rescheduleRequired_all_invs_but_ct_not_inQ])
   apply (simp add: list_case_return cong: list.case_cong)
   apply (rule hoare_pre, wp valid_irq_node_lift irqs_masked_lift)
-  sorry (*
-    apply simp
     apply (rule hoare_strengthen_post,
            rule cancelBadgedSends_filterM_helper[where epptr=epptr])
-    apply (clarsimp simp: ep_redux_simps3 fun_upd_def[symmetric])
+    apply (clarsimp simp: ep_redux_simps3 fun_upd_def[symmetric] o_def)
     apply (clarsimp simp add: valid_ep'_def split: list.split)
     apply blast
    apply (wp valid_irq_node_lift irqs_masked_lift | wp (once) sch_act_sane_lift)+
@@ -3295,11 +3307,11 @@ lemma cancelBadgedSends_invs[wp]:
   apply (frule if_live_then_nonz_capD', simp add: obj_at'_real_def)
    apply (clarsimp simp: projectKOs)
   apply (frule(1) sym_refs_ko_atD')
-  apply (clarsimp simp add: fun_upd_idem
-                            st_tcb_at_refs_of_rev')
+  apply (clarsimp simp add: fun_upd_idem st_tcb_at_refs_of_rev' o_def)
   apply (drule (1) bspec, drule st_tcb_at_state_refs_ofD', clarsimp)
-  apply (fastforce simp: set_eq_subset tcb_bound_refs'_def)
-  done *)
+  apply (auto simp: tcb_bound_refs'_def get_refs_def
+             split: option.splits)
+  done
 
 lemma cancel_badged_sends_corres:
   "corres dc (invs and valid_sched and ep_at epptr) (invs' and ep_at' epptr)

@@ -3516,25 +3516,21 @@ lemma tcbSchedEnqueue_sch_act_sane[wp]:
   apply (clarsimp simp: tcbSchedEnqueue_def sch_act_sane_def)
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
 
-lemma rescheduleRequired_valid_release_queue_sch_act_sane:
-  "\<lbrace>valid_release_queue and sch_act_sane\<rbrace>
-    rescheduleRequired
-   \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
+lemma rescheduleRequired_valid_release_queue[wp]:
+  "rescheduleRequired \<lbrace>valid_release_queue\<rbrace>"
   apply (simp add: rescheduleRequired_def getSchedulerAction_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule_tac B="\<lambda>_. valid_release_queue and sch_act_sane" in hoare_seq_ext[rotated]
+  apply (rule_tac B="\<lambda>_. valid_release_queue" in hoare_seq_ext[rotated]
          ; (solves \<open>wpsimp simp: valid_release_queue_def\<close>)?)
   apply (case_tac action; clarsimp?, (solves \<open>wpsimp\<close>)?)
   apply (wpsimp wp: isSchedulable_wp hoare_vcg_if_lift2)
   done
 
-lemma rescheduleRequired_valid_release_queue'_sch_act_sane:
-  "\<lbrace>valid_release_queue' and sch_act_sane\<rbrace>
-    rescheduleRequired
-   \<lbrace>\<lambda>_. valid_release_queue'\<rbrace>"
+lemma rescheduleRequired_valid_release_queue'[wp]:
+  "rescheduleRequired \<lbrace>valid_release_queue'\<rbrace>"
   apply (simp add: rescheduleRequired_def getSchedulerAction_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule_tac B="\<lambda>_. valid_release_queue' and sch_act_sane" in hoare_seq_ext[rotated]
+  apply (rule_tac B="\<lambda>_. valid_release_queue'" in hoare_seq_ext[rotated]
          ; (solves \<open>wpsimp simp: valid_release_queue'_def\<close>)?)
    apply (case_tac action; clarsimp?, (solves \<open>wpsimp\<close>)?)
   apply (wpsimp wp: isSchedulable_wp hoare_vcg_if_lift2)
@@ -3565,8 +3561,7 @@ lemma setThreadState_valid_release_queue[wp]:
   apply (rule hoare_seq_ext_skip, wpsimp wp: isSchedulable_inv)
   apply (rule hoare_when_cases)
    apply clarsimp
-  apply (wpsimp wp: rescheduleRequired_valid_release_queue_sch_act_sane)
-  apply (clarsimp simp: sch_act_sane_def)
+  apply wpsimp
   done
 
 lemma setThreadState_valid_release_queue'[wp]:
@@ -3581,8 +3576,7 @@ lemma setThreadState_valid_release_queue'[wp]:
   apply (rule hoare_seq_ext_skip, wpsimp wp: isSchedulable_inv)
   apply (rule hoare_when_cases)
    apply clarsimp
-  apply (wpsimp wp: rescheduleRequired_valid_release_queue'_sch_act_sane)
-  apply (clarsimp simp: sch_act_sane_def)
+  apply wpsimp
   done
 
 lemma setBoundNotification_valid_queues'[wp]:
@@ -4400,8 +4394,14 @@ crunch refs_of'[wp]: rescheduleRequired "\<lambda>s. P (state_refs_of' s)"
 crunches scheduleTCB
   for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
 
+abbreviation tcb_non_st_state_refs_of' ::
+  "kernel_state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set"
+  where
+  "tcb_non_st_state_refs_of' s t \<equiv>
+    {r \<in> state_refs_of' s t. snd r = TCBBound \<or> snd r = TCBSchedContext \<or> snd r = TCBYieldTo}"
+
 lemma state_refs_of'_helper2[simp]:
-  "{r \<in> state_refs_of' s t. snd r = TCBBound \<or> snd r = TCBSchedContext \<or> snd r = TCBYieldTo}
+  "tcb_non_st_state_refs_of' s t
    = {r \<in> state_refs_of' s t. snd r = TCBBound}
      \<union> {r \<in> state_refs_of' s t. snd r = TCBSchedContext}
      \<union> {r \<in> state_refs_of' s t. snd r = TCBYieldTo}"
@@ -4409,9 +4409,7 @@ lemma state_refs_of'_helper2[simp]:
 
 lemma setThreadState_state_refs_of'[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_st_refs_of' st
-                                    \<union> {r \<in> state_refs_of' s t. snd r = TCBBound
-                                                               \<or> snd r = TCBSchedContext
-                                                               \<or> snd r = TCBYieldTo}))\<rbrace>
+                                    \<union> tcb_non_st_state_refs_of' s t))\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: setThreadState_def)
