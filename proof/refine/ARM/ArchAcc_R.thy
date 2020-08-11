@@ -93,34 +93,6 @@ lemmas get_pte_sp' = setObject_pte.getObject_sp'
 lemmas get_pde_sp' = setObject_pde.getObject_sp'
 lemmas get_asidpool_sp' = setObject_asidpool.getObject_sp'
 
-(* FIXME RT: move to StateRelation.thy *)
-lemma pspace_relation_None:
-  "\<lbrakk>pspace_relation p p'; p' ptr = None \<rbrakk> \<Longrightarrow> p ptr = None"
-  apply (rule not_Some_eq[THEN iffD1, OF allI, OF notI])
-  apply (drule(1) pspace_relation_absD)
-   apply (case_tac y; clarsimp simp: cte_map_def of_bl_def well_formed_cnode_n_def split: if_splits)
-   subgoal for n
-    apply (drule spec[of _ ptr])
-    apply (drule spec)
-    apply clarsimp
-    apply (drule spec[of _ "replicate n False"])
-    apply (drule mp[OF _ refl])
-     apply (drule mp)
-    subgoal premises by (induct n; simp)
-    apply clarsimp
-    done
-  subgoal for x
-     apply (cases x; clarsimp)
-   apply ((drule spec[of _ 0], fastforce)+)[2]
-   apply (drule spec[of _ ptr])
-   apply (drule spec)
-   apply clarsimp
-   apply (drule mp[OF _ refl])
-   apply (drule spec[of _ 0])
-   subgoal for _ sz by (cases sz; simp add: pageBits_def)
-   done
-  done
-
 lemma no_0_obj'_abstract:
   "(s, s') \<in> state_relation \<Longrightarrow> no_0_obj' s' \<Longrightarrow> kheap s 0 = None"
   by (auto intro: pspace_relation_None simp add: no_0_obj'_def)
