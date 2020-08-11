@@ -801,6 +801,33 @@ lemma pspace_relation_absD:
   apply (simp add: image_def rev_bexI)
   done
 
+lemma pspace_relation_None:
+  "\<lbrakk>pspace_relation p p'; p' ptr = None \<rbrakk> \<Longrightarrow> p ptr = None"
+  apply (rule not_Some_eq[THEN iffD1, OF allI, OF notI])
+  apply (drule(1) pspace_relation_absD)
+   apply (case_tac y; clarsimp simp: cte_map_def of_bl_def well_formed_cnode_n_def split: if_splits)
+   subgoal for n
+    apply (drule spec[of _ ptr])
+    apply (drule spec)
+    apply clarsimp
+    apply (drule spec[of _ "replicate n False"])
+    apply (drule mp[OF _ refl])
+     apply (drule mp)
+    subgoal premises by (induct n; simp)
+    apply clarsimp
+    done
+  subgoal for x
+     apply (cases x; clarsimp)
+   apply ((drule spec[of _ 0], fastforce)+)[2]
+   apply (drule spec[of _ ptr])
+   apply (drule spec)
+   apply clarsimp
+   apply (drule mp[OF _ refl])
+   apply (drule spec[of _ 0])
+   subgoal for _ sz by (cases sz; simp add: pageBits_def)
+   done
+  done
+
 lemma in_related_pspace_dom:
   "\<lbrakk> s' x = Some y; pspace_relation s s' \<rbrakk> \<Longrightarrow> x \<in> pspace_dom s"
   by (clarsimp simp add: pspace_relation_def)
@@ -817,6 +844,17 @@ lemma pspace_dom_relatedE:
          assumption+)
   apply (frule(1) pspace_relation_absD)
   apply fastforce
+  done
+
+lemma sc_replies_relation_scReply:
+  "\<lbrakk>sc_replies_relation s s';
+    kheap s x = Some (kernel_object.SchedContext sc n);
+    ksPSpace s' x = Some (KOSchedContext sc')\<rbrakk>
+           \<Longrightarrow> hd_opt (sc_replies sc) = scReply sc'"
+  apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
+  apply (drule_tac x=x and y="sc_replies sc" in spec2)
+  apply (clarsimp simp: sc_of_def opt_map_def)
+  apply (case_tac "sc_replies sc"; clarsimp simp: projectKO_opt_sc)
   done
 
 lemma ghost_relation_typ_at:

@@ -3696,6 +3696,25 @@ lemma invs'_ksDomScheduleIdx:
   "invs' s \<Longrightarrow> KernelStateData_H.ksDomScheduleIdx s < length (KernelStateData_H.ksDomSchedule (newKernelState undefined))"
 unfolding invs'_def valid_state'_def by clarsimp
 
+lemmas invs'_implies =
+  invs_cur' invs_iflive'
+  invs_unsafe_then_cap'
+  invs_no_0_obj'
+  invs_pspace_aligned'
+  invs_pspace_distinct'
+  invs_arch_state'
+  invs_valid_global'
+  invs_valid_idle'
+  invs_mdb'
+  invs_valid_objs'
+  invs_valid_objs_size'
+  invs_valid_stateI'
+  invs_valid_pspace'
+  invs_queues
+  invs_valid_release_queue
+  invs_valid_release_queue'
+  invs_sym'
+
 lemma valid_bitmap_valid_bitmapQ_exceptE:
   "\<lbrakk> valid_bitmapQ_except d p s ; (bitmapQ d p s \<longleftrightarrow> ksReadyQueues s (d,p) \<noteq> []) ;
      bitmapQ_no_L2_orphans s \<rbrakk>

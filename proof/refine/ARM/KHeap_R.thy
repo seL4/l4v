@@ -3139,6 +3139,62 @@ lemma valid_tcb_state_cross:
                 simp: valid_bound_obj'_def valid_tcb_state_def valid_tcb_state'_def
                split: Structures_A.thread_state.split_asm option.split_asm)
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
+lemma state_refs_of_cross_eq:
+  "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s\<rbrakk>
+       \<Longrightarrow> state_refs_of' s' = state_refs_of s"
+  apply (rule sym)
+  apply (rule ext, rename_tac p)
+  apply (frule state_relation_pspace_relation)
+  apply (frule (2) pspace_distinct_cross)
+  apply (frule (1) pspace_aligned_cross)
+  apply (clarsimp simp: state_refs_of_def state_refs_of'_def
+                 split: option.split)
+  apply (rule conjI; clarsimp)
+   apply (rename_tac ko')
+   apply (erule (1) pspace_dom_relatedE)
+   apply (rename_tac ko P; case_tac ko; clarsimp split: if_split_asm simp: cte_relation_def)
+   apply (rename_tac ako; case_tac ako; clarsimp simp: pte_relation_def pde_relation_def)
+  apply (rule conjI; clarsimp)
+   apply (drule (1) pspace_relation_None; clarsimp)
+  apply (rule conjI[rotated]; clarsimp)
+   apply (frule pspace_alignedD'; clarsimp dest!: pspace_distinctD')
+  apply (rename_tac ko ko')
+  apply (frule (1) pspace_relation_absD)
+  apply (case_tac ko; clarsimp split: if_split_asm)
+        apply (rename_tac n sz, drule_tac x=p and y="cte_relation (replicate n False)" in spec2)
+        apply (fastforce simp: cte_relation_def cte_map_def well_formed_cnode_n_def)
+       apply (find_goal \<open>match premises in "_ = Some (ArchObj _)" \<Rightarrow> -\<close>)
+       apply (rename_tac ako; case_tac ako; simp)
+          apply (case_tac ko'; clarsimp simp: other_obj_relation_def)
+         apply ((drule_tac x=0 in spec, clarsimp simp:  pte_relation_def pde_relation_def)+)[2]
+       apply (drule_tac x=p in spec, clarsimp)
+       apply (rename_tac b sz)
+       apply (drule_tac x="\<lambda>_ obj. obj = (if b then KOUserDataDevice else KOUserData)" in spec, clarsimp)
+       apply (simp only: imp_ex)
+       apply (drule_tac x=0 in spec, clarsimp simp: pageBitsForSize_def pageBits_def split: vmpage_size.split_asm)
+      apply (all \<open>case_tac ko'; clarsimp simp: other_obj_relation_def\<close>)
+      apply (rename_tac tcb tcb';
+             clarsimp simp: tcb_relation_def arch_tcb_relation_def fault_rel_optionation_def
+                            thread_state_relation_def tcb_st_refs_of_def tcb_st_refs_of'_def;
+             rename_tac tcb'; case_tac "tcb_state tcb"; case_tac "tcbState tcb'";
+             clarsimp simp: tcb_bound_refs'_def get_refs_def2 split: option.splits)
+     apply (clarsimp simp: ep_q_refs_of_def ep_relation_def split: Structures_A.endpoint.splits)
+    apply (clarsimp simp: ntfn_q_refs_of_def ntfn_relation_def split: Structures_A.ntfn.splits)
+   apply (clarsimp simp: sc_relation_def get_refs_def2)
+   apply (drule state_relation_sc_replies_relation)
+   apply (clarsimp simp: sc_replies_relation_scReply)
+  apply (clarsimp simp: reply_relation_def split: Structures_A.ntfn.splits)
+  done
+
+end
+
+lemma state_refs_of_cross:
+  "\<lbrakk>P (state_refs_of s); (s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s\<rbrakk>
+      \<Longrightarrow> P (state_refs_of' s')"
+  by (clarsimp simp: state_refs_of_cross_eq elim!: rsubst[where P=P])
+
 lemma tcb_of'_Some:
   "(tcb_of' ko = Some y) = (ko = KOTCB y)"
   by (case_tac ko; simp add: tcb_of'_def)

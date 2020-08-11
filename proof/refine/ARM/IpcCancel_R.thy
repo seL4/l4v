@@ -498,41 +498,102 @@ locale delete_one = delete_one_conc + delete_one_abs +
                (invs' and cte_at' (cte_map ptr))
           (cap_delete_one ptr) (cteDeleteOne (cte_map ptr))"
 
+lemma gbep_ret':
+  "\<lbrakk> st = BlockedOnReceive epPtr r d \<or> st = BlockedOnSend epPtr p1 p2 p3 p4 \<rbrakk>
+      \<Longrightarrow> getBlockingObject st = return epPtr"
+  by (auto simp add: getBlockingObject_def epBlocked_def assert_opt_def)
+
+lemma cleanReply_valid_objs'[wp]:
+  "cleanReply r \<lbrace>valid_objs'\<rbrace>"
+  unfolding cleanReply_def
+  apply wpsimp
+  by (clarsimp dest!: obj_at_valid_objs' simp: project_inject valid_obj'_def valid_reply'_def)
+
+crunches cleanReply
+ for valid_release_queue[wp]: valid_release_queue
+ and valid_release_queue'[wp]: valid_release_queue'
+
+lemma reply_remove_tcb_corres:
+  "\<lbrakk> st = Structures_A.thread_state.BlockedOnReply rp;
+     thread_state_relation st st' \<rbrakk> \<Longrightarrow>
+   corres dc (valid_objs and pspace_aligned and pspace_distinct
+              and st_tcb_at ((=) st) t and (\<lambda>s. sym_refs (state_refs_of s)))
+             (valid_objs' and valid_release_queue_iff)
+                (reply_remove_tcb t rp) (replyRemoveTCB t)"
+  apply (rule_tac Q="st_tcb_at' ((=) st') t and (\<lambda>s. sym_refs (state_refs_of' s))" in corres_cross_add_guard)
+   apply (fastforce dest!: st_tcb_at_coerce_concrete elim!: state_refs_of_cross pred_tcb'_weakenE)
+  apply (clarsimp simp: reply_remove_tcb_def replyRemoveTCB_def isReply_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF _ gts_corres])
+      apply (rule corres_assert_gen_asm_l)
+      apply (rule corres_assert_gen_asm2)
+      apply (rule corres_assert_opt_assume)
+       apply (rule corres_underlying_gets_pre_lhs)
+       apply (rule corres_symb_exec_r)
+          apply (case_tac sc_ptr_opt; simp split del: if_split)
+           apply (case_tac "replyNext rv"; simp split del: if_split)
+            apply (rule corres_symb_exec_r)
+               apply (rule corres_symb_exec_r)
+                  apply (fold dc_def)
+                  apply (rule corres_guard_imp)
+                    apply (rule reply_unlink_tcb_corres)
+                    apply (rule disjI2)
+                    apply fastforce
+                   apply simp+
+  sorry
+
 lemma (in delete_one) cancel_ipc_corres:
-  "corres dc (einvs and tcb_at t) (invs' and tcb_at' t)
+  "corres dc (invs and tcb_at t) invs'
       (cancel_ipc t) (cancelIPC t)"
+  apply (rule_tac Q="tcb_at' t" in corres_cross_add_guard)
+   apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (simp add: cancel_ipc_def cancelIPC_def Let_def)
   apply (rule corres_guard_imp)
-  sorry (*
     apply (rule corres_split [OF _ gts_corres])
-      apply (rule_tac P="einvs and st_tcb_at ((=) state) t" and
-                      P'="invs' and st_tcb_at' ((=) statea) t" in corres_inst)
-      apply (case_tac state, simp_all add: isTS_defs list_case_If)[1]
-         apply (rule corres_guard_imp)
-           apply (rule blocked_cancel_ipc_corres)
-            apply fastforce
-           apply fastforce
-          apply simp
-         apply simp
-        apply (clarsimp simp add: isTS_defs list_case_If)
-        apply (rule corres_guard_imp)
-          apply (rule blocked_cancel_ipc_corres)
-           apply fastforce
-          apply fastforce
-         apply simp
-        apply simp
-       apply (rule corres_guard_imp)
-         apply (rule reply_cancel_ipc_corres)
-        apply (clarsimp elim!: st_tcb_weakenE)
-       apply (clarsimp elim!: pred_tcb'_weakenE)
-      apply (rule corres_guard_imp [OF cancel_signal_corres], simp+)
+      apply (rule corres_split[OF _ threadset_corres])
+                   apply (rule_tac P="invs and st_tcb_at ((=) state) t" and
+                                   P'="invs' and st_tcb_at' ((=) statea) t" in corres_inst)
+                   apply (case_tac state, simp_all add: isTS_defs list_case_If gbep_ret')[1]
+                      apply (rule corres_guard_imp)
+                      apply (rename_tac epPtr reply pl)
+                      apply (rule_tac st = "Structures_A.thread_state.BlockedOnReceive epPtr reply pl"
+                                in blocked_cancel_ipc_corres[simplified])
+                      apply simp
+                      apply (clarsimp simp: thread_state_relation_def)
+                      apply simp+
+                      apply (clarsimp simp: invs_implies)
+                      apply (clarsimp simp: invs'_implies)
+                     apply (rule corres_guard_imp)
+                      apply (rename_tac epPtr data)
+                      apply (rule_tac st = "Structures_A.thread_state.BlockedOnSend epPtr data"
+                                in blocked_cancel_ipc_corres[where reply_opt=None, simplified])
+                      apply simp
+                      apply (clarsimp simp: thread_state_relation_def)
+                      apply simp+
+                      apply (clarsimp simp: invs_implies)
+                     apply (clarsimp simp: invs'_implies)
+                    apply (rule corres_guard_imp)
+                      apply (rule reply_remove_tcb_corres)
+                      apply simp
+                      apply (clarsimp simp: thread_state_relation_def)
+                      apply simp+
+                     apply (clarsimp simp: invs_implies)
+                    apply (clarsimp simp: invs'_implies)
+                   apply (rule corres_guard_imp)
+                     apply (rule cancel_signal_corres)
+                    apply simp+
+                  apply (clarsimp simp: tcb_relation_def fault_rel_optionation_def)
+                 apply simp+
+       apply (wpsimp wp: thread_set_invs_fault_None thread_set_no_change_tcb_state)
+      apply (wpsimp wp: threadSet_pred_tcb_no_state threadSet_invs_trivial)
      apply (wp gts_sp[where P="\<top>",simplified])+
     apply (rule hoare_strengthen_post)
      apply (rule gts_sp'[where P="\<top>"])
     apply (clarsimp elim!: pred_tcb'_weakenE)
    apply simp
-  apply simp
-  done *)
+  apply (clarsimp simp: inQ_def obj_at'_def projectKOs valid_release_queue'_def
+                 dest!: invs_valid_release_queue')
+  done
 
 lemma setNotification_utr[wp]:
   "\<lbrace>untyped_ranges_zero'\<rbrace> setNotification ntfn nobj \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
