@@ -686,6 +686,8 @@ This module uses the C preprocessor to select a target architecture.
 >         scPtr <- return $ fromJust nscOpt
 >         sc <- getSchedContext scPtr
 >         setSchedContext scPtr (sc { scTCB = Nothing })
+>         cur <- getCurThread
+>         when (tcbPtr == cur) rescheduleRequired
 
 > tcbReleaseEnqueue :: PPtr TCB -> Kernel ()
 > tcbReleaseEnqueue tcbPtr = do

@@ -137,50 +137,53 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >         ntfn <- maybe (return $ NTFN IdleNtfn Nothing Nothing) getNotification ntfnPtr
 >         if (isJust ntfnPtr && isActive ntfn)
 >           then completeSignal (fromJust ntfnPtr) thread
->           else case ep of
->             IdleEP -> case isBlocking of
->               True -> do
->                   setThreadState (BlockedOnReceive {
->                       blockingObject = epptr,
->                       blockingIPCCanGrant = recvCanGrant,
->                       replyObject = replyOpt }) thread
->                   when (replyOpt /= Nothing) $
->                       setReplyTCB (Just thread) $ fromJust replyOpt
->                   setEndpoint epptr $ RecvEP [thread]
->               False -> doNBRecvFailedTransfer thread
->             RecvEP queue -> case isBlocking of
->               True -> do
->                   setThreadState (BlockedOnReceive {
->                       blockingObject = epptr,
->                       blockingIPCCanGrant = recvCanGrant,
->                       replyObject = replyOpt}) thread
->                   when (replyOpt /= Nothing) $
->                       setReplyTCB (Just thread) $ fromJust replyOpt
->                   qs' <- tcbEPAppend thread queue
->                   setEndpoint epptr $ RecvEP $ qs'
->               False -> doNBRecvFailedTransfer thread
->             SendEP (sender:queue) -> do
->                 setEndpoint epptr $ case queue of
->                     [] -> IdleEP
->                     _ -> SendEP queue
->                 senderState <- getThreadState sender
->                 assert (isSend senderState)
->                        "TCB in send endpoint queue must be blocked on send"
->                 let badge = blockingIPCBadge senderState
->                 let canGrant = blockingIPCCanGrant senderState
->                 let canGrantReply = blockingIPCCanGrantReply senderState
->                 doIPCTransfer sender (Just epptr) badge canGrant thread
->                 let call = blockingIPCIsCall senderState
->                 fault <- threadGet tcbFault sender
->                 case (call, fault, canGrant || canGrantReply, replyOpt) of
->                     (False, Nothing, _, _) -> do
->                         setThreadState Running sender
->                         possibleSwitchTo sender
->                     (_, _, True, Just reply) -> do
->                         senderSc <- threadGet tcbSchedContext sender
->                         replyPush sender thread reply (senderSc /= Nothing)
->                     _ -> setThreadState Inactive sender
->             SendEP [] -> fail "Send endpoint queue must not be empty"
+>           else do
+>             when (ntfnPtr /= Nothing && isBlocking) $
+>               maybeReturnSc (fromJust ntfnPtr) thread
+>             case ep of
+>               IdleEP -> case isBlocking of
+>                 True -> do
+>                     setThreadState (BlockedOnReceive {
+>                         blockingObject = epptr,
+>                         blockingIPCCanGrant = recvCanGrant,
+>                         replyObject = replyOpt }) thread
+>                     when (replyOpt /= Nothing) $
+>                         setReplyTCB (Just thread) $ fromJust replyOpt
+>                     setEndpoint epptr $ RecvEP [thread]
+>                 False -> doNBRecvFailedTransfer thread
+>               RecvEP queue -> case isBlocking of
+>                 True -> do
+>                     setThreadState (BlockedOnReceive {
+>                         blockingObject = epptr,
+>                         blockingIPCCanGrant = recvCanGrant,
+>                         replyObject = replyOpt}) thread
+>                     when (replyOpt /= Nothing) $
+>                         setReplyTCB (Just thread) $ fromJust replyOpt
+>                     qs' <- tcbEPAppend thread queue
+>                     setEndpoint epptr $ RecvEP $ qs'
+>                 False -> doNBRecvFailedTransfer thread
+>               SendEP (sender:queue) -> do
+>                   setEndpoint epptr $ case queue of
+>                       [] -> IdleEP
+>                       _ -> SendEP queue
+>                   senderState <- getThreadState sender
+>                   assert (isSend senderState)
+>                          "TCB in send endpoint queue must be blocked on send"
+>                   let badge = blockingIPCBadge senderState
+>                   let canGrant = blockingIPCCanGrant senderState
+>                   let canGrantReply = blockingIPCCanGrantReply senderState
+>                   doIPCTransfer sender (Just epptr) badge canGrant thread
+>                   let call = blockingIPCIsCall senderState
+>                   fault <- threadGet tcbFault sender
+>                   case (call, fault, canGrant || canGrantReply, replyOpt) of
+>                       (False, Nothing, _, _) -> do
+>                           setThreadState Running sender
+>                           possibleSwitchTo sender
+>                       (_, _, True, Just reply) -> do
+>                           senderSc <- threadGet tcbSchedContext sender
+>                           replyPush sender thread reply (senderSc /= Nothing)
+>                       _ -> setThreadState Inactive sender
+>               SendEP [] -> fail "Send endpoint queue must not be empty"
 
 > receiveIPC _ _ _ _ = fail "receiveIPC: invalid cap"
 
