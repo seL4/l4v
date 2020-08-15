@@ -1236,7 +1236,7 @@ proof -
     done
 qed
 
-lemma retype_replyNexts_of:
+lemma retype_replyPrevs_of:
   assumes  pr: "pspace_relation (kheap s) (ksPSpace s')"
       and  vs: "valid_pspace s" "valid_mdb s"
       and vs': "pspace_aligned' s'" "pspace_distinct' s'"
@@ -1248,9 +1248,9 @@ lemma retype_replyNexts_of:
       and orr: "obj_relation_retype (default_object (APIType_map2 ty) dev us d) ko"
       and num_r: "m = 2 ^ (obj_bits_api (APIType_map2 ty) us - objBitsKO ko) * n"
   shows
-  "replyNexts_of
+  "replyPrevs_of
      (s'\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr ko) (new_cap_addrs m ptr ko) (ksPSpace s')\<rparr>)
-    = replyNexts_of s'" (is "replyNexts_of ?ps' = replyNexts_of s'")
+    = replyPrevs_of s'" (is "replyPrevs_of ?ps' = replyPrevs_of s'")
 proof -
   note dom_same' = retype_ksPSpace_dom_same[OF vs' pn' ko tysc cover num_r]
   show ?thesis
@@ -1312,7 +1312,7 @@ proof -
      apply (simp add: obj_relation_retype_addrs_eq[OF not_unt tysc num_r orr cover,symmetric])
     apply (clarsimp simp: scs_of_kh_def opt_map_Some sc_of_def sc_replies_of_scs_def map_project_Some)
     apply (fold foldr_upd_app_if[folded data_map_insert_def])
-    apply (simp only: retype_replyNexts_of[OF pr vs vs' pn pn' ko tysc cover orr num_r, simplified])
+    apply (simp only: retype_replyPrevs_of[OF pr vs vs' pn pn' ko tysc cover orr num_r, simplified])
     apply (clarsimp simp: pspace_relation_def)
     apply (drule_tac x=p in bspec, fastforce)
     apply (prop_tac "p \<in> dom (ksPSpace s')")
@@ -1565,7 +1565,7 @@ lemma retype_state_relation:
 
   thus
     "sc_replies_relation_2 (sc_replies_of_kh ?ps) (?ps' |> sc_of' |> scReply)
-                                                     (?ps' |> reply_of' |> replyNext_of)"
+                                                     (?ps' |> reply_of' |> replyPrev)"
     using retype_sc_replies_relation [OF _ pspr vs vs' pn pn' ko tysc cover orr num_r]
     by clarsimp
 qed

@@ -1099,7 +1099,6 @@ definition replyNext_same :: "'a :: pspace_storable \<Rightarrow> 'a \<Rightarro
        (KOReply r1, KOReply r2) \<Rightarrow> replyNext r1 = replyNext r2
       | _ \<Rightarrow> True)"
 
-
 lemma replyNexts_of_replyNext_same_update:
   "\<And>s'. \<lbrakk>typ_at' ReplyT ptr s'; ksPSpace s' ptr = Some ko;
    koTypeOf (injectKO (ob':: 'a :: pspace_storable)) = ReplyT;
@@ -1107,6 +1106,27 @@ lemma replyNexts_of_replyNext_same_update:
      \<Longrightarrow> replyNexts_of (s'\<lparr>ksPSpace := ksPSpace s'(ptr \<mapsto> injectKO ob')\<rparr>) = replyNexts_of s'"
   apply (cases "injectKO ob'"; clarsimp simp: typ_at'_def ko_wp_at'_def)
   by (cases ko; fastforce simp add: replyNext_same_def project_inject projectKO_opts_defs opt_map_def)
+
+lemma replyPrevs_of_non_reply_update:
+  "\<And>s'. \<lbrakk>typ_at' (koTypeOf ko) ptr s';
+   koTypeOf ko \<noteq> ReplyT \<rbrakk>
+     \<Longrightarrow> replyPrevs_of (s'\<lparr>ksPSpace := ksPSpace s'(ptr \<mapsto> ko)\<rparr>) = replyPrevs_of s'"
+  by (fastforce simp: typ_at'_def ko_wp_at'_def opt_map_def projectKO_opts_defs
+               split: kernel_object.splits)
+
+definition replyPrev_same :: "'a :: pspace_storable \<Rightarrow> 'a \<Rightarrow> bool" where
+  "replyPrev_same obj1 obj2 \<equiv>
+    (case (injectKO obj1, injectKO obj2) of
+       (KOReply r1, KOReply r2) \<Rightarrow> replyPrev r1 = replyPrev r2
+      | _ \<Rightarrow> True)"
+
+lemma replyPrevs_of_replyPrev_same_update:
+  "\<And>s'. \<lbrakk>typ_at' ReplyT ptr s'; ksPSpace s' ptr = Some ko;
+   koTypeOf (injectKO (ob':: 'a :: pspace_storable)) = ReplyT;
+   projectKO_opt ko = Some ab; replyPrev_same (ob':: 'a) ab\<rbrakk>
+     \<Longrightarrow> replyPrevs_of (s'\<lparr>ksPSpace := ksPSpace s'(ptr \<mapsto> injectKO ob')\<rparr>) = replyPrevs_of s'"
+  apply (cases "injectKO ob'"; clarsimp simp: typ_at'_def ko_wp_at'_def)
+  by (cases ko; fastforce simp add: replyPrev_same_def project_inject projectKO_opts_defs opt_map_def)
 
 lemma set_other_obj_corres:
   fixes ob' :: "'a :: pspace_storable"
@@ -1169,7 +1189,7 @@ lemma set_other_obj_corres:
                          is_other_obj_relation_type_def a_type_def other_obj_relation_def
                   split: Structures_A.kernel_object.split_asm if_split_asm
                          arch_kernel_obj.split_asm kernel_object.split_asm arch_kernel_object.split_asm)
-  apply (drule replyNexts_of_non_reply_update[simplified])
+  apply (drule replyPrevs_of_non_reply_update[simplified])
    apply (clarsimp simp: other_obj_relation_def; cases ob; cases "injectKO ob'";
           simp split: arch_kernel_obj.split_asm)
   apply (clarsimp simp add: opt_map_def sc_of_def)
@@ -1212,7 +1232,7 @@ lemma reply_at'_cross:
 lemma set_reply_corres: (* for reply update that doesn't touch the reply stack *)
   "reply_relation ae ae' \<Longrightarrow>
   corres dc \<top>
-            (obj_at' (\<lambda>ko. replyNext_same ae' ko) ptr)
+            (obj_at' (\<lambda>ko. replyPrev_same ae' ko) ptr)
             (set_reply ptr ae) (setReply ptr ae')"
   proof -
   have x: "updateObject ae' = updateObject_default ae'" by clarsimp
@@ -1278,7 +1298,7 @@ lemma set_reply_corres: (* for reply update that doesn't touch the reply stack *
     apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def)
     apply (drule_tac x=p in spec)
     apply (rule conjI; clarsimp simp: sc_of_def split: Structures_A.kernel_object.split_asm if_split_asm)
-    by (subst replyNexts_of_replyNext_same_update[simplified, where ob'=ae', simplified];
+    by (subst replyPrevs_of_replyPrev_same_update[simplified, where ob'=ae', simplified];
         simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def sc_of_def)
   qed
 

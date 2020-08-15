@@ -458,7 +458,7 @@ definition absCNode :: "nat \<Rightarrow> (obj_ref \<rightharpoonup> kernel_obje
                                      else None)"
 
 definition scMap :: "(obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> sched_context \<Rightarrow> Structures_A.sched_context" where
-  "scMap replyNexts sc = \<lparr>
+  "scMap replyPrevs sc = \<lparr>
      sc_period     = scPeriod sc,
      sc_budget     = scBudget sc,
      sc_consumed   = scConsumed sc,
@@ -468,7 +468,7 @@ definition scMap :: "(obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> sched_con
      sc_refill_max = scRefillMax sc,
      sc_badge      = scBadge sc,
      sc_yield_from = scYieldFrom sc,
-     sc_replies    = heap_walk replyNexts (scReply sc) []
+     sc_replies    = heap_walk replyPrevs (scReply sc) []
    \<rparr>"
 
 definition
@@ -492,7 +492,7 @@ definition
      | Some (KOCTE cte) \<Rightarrow> map_option (%sz. absCNode sz h x) (cns x)
      | Some (KOReply reply) \<Rightarrow> Some (Structures_A.Reply (replyMap reply))
      | Some (KOSchedContext sc) \<Rightarrow> Some (Structures_A.SchedContext
-                                           (scMap (h |> reply_of' |> replyNext_of) sc) (mapScSize sc))
+                                           (scMap (h |> reply_of' |> replyPrev) sc) (mapScSize sc))
      | Some (KOArch ako) \<Rightarrow> map_option ArchObj (absHeapArch h x ako)
      | None \<Rightarrow> None"
 
@@ -593,19 +593,6 @@ lemma pspace_aligned_distinct_None':
      apply (rule pspace_aligned[simplified pspace_aligned_def])
     apply (rule pspace_distinct[simplified pspace_distinct_def])
    apply assumption+
-  done
-
-lemma sc_replies_nexts_walk:
-  "\<lbrakk> sc_replies_relation s s';
-     ksPSpace s' p = Some (KOSchedContext sc'); kheap s p = Some (kernel_object.SchedContext sc n) \<rbrakk>
-   \<Longrightarrow> heap_walk (replyNexts_of s') (scReply sc') [] = sc_replies sc"
-  unfolding sc_replies_relation_def
-  apply (erule_tac x=p in allE)
-  apply (erule_tac x="sc_replies sc" in allE)
-  apply (clarsimp simp: sc_replies.all_simps)
-  apply (rule heap_list_is_walk)
-  apply (subgoal_tac "scReplies_of s' p = scReply sc'", simp)
-  apply (clarsimp simp: opt_map_def)
   done
 
 context
@@ -892,7 +879,7 @@ proof -
 
      apply (rule relatedE, assumption, ko, ako)
      apply (frule scBits_inverse_sc_relation)
-     apply (clarsimp simp: sc_relation_def scMap_def mapScSize_def sc_replies_nexts_walk[OF replies])
+     apply (clarsimp simp: sc_relation_def scMap_def mapScSize_def sc_replies_prevs_walk[OF replies])
 
     apply (erule relatedE, ko, ako)
     apply (clarsimp simp: reply_relation_def replyMap_def)

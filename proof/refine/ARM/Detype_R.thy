@@ -847,11 +847,11 @@ lemma freeMemory_deletionIsSafe[wp]:
   apply (clarsimp simp: deletionIsSafe_def)
   done
 
-lemma detype_ReplyNexts_of:
+lemma detype_ReplyPrevs_of:
   "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; \<forall>p. p \<in> S \<longrightarrow> \<not> ko_wp_at' live' p s'\<rbrakk>
-   \<Longrightarrow> ((\<lambda>x. if x \<in> S then None else ksPSpace s' x) |> reply_of' |> replyNext_of)
-       = replyNexts_of s'"
-  apply (prop_tac "\<And>p reply_ptr. (replyNexts_of s' p = Some reply_ptr) \<Longrightarrow> p \<notin> S")
+   \<Longrightarrow> ((\<lambda>x. if x \<in> S then None else ksPSpace s' x) |> reply_of' |> replyPrev)
+       = replyPrevs_of s'"
+  apply (prop_tac "\<And>p reply_ptr. (replyPrevs_of s' p = Some reply_ptr) \<Longrightarrow> p \<notin> S")
    apply (clarsimp simp: opt_map_def split: option.splits)
    apply (drule_tac x=p in spec)
    apply (clarsimp simp: ko_wp_at'_def pred_neg_def live'_def projectKOs live_reply'_def
@@ -869,9 +869,9 @@ lemma detype_sc_replies_relation:
                          ((\<lambda>x. if lower \<le> x \<and> x \<le> upper
                                then None else ksPSpace s' x) |> sc_of' |> scReply)
                          ((\<lambda>x. if lower \<le> x \<and> x \<le> upper
-                               then None else ksPSpace s' x) |> reply_of' |> replyNext_of)"
+                               then None else ksPSpace s' x) |> reply_of' |> replyPrev)"
   apply (clarsimp simp: sc_replies_relation_def detype_def)
-  apply (frule detype_ReplyNexts_of[where S="{lower..upper}"]; simp)
+  apply (frule detype_ReplyPrevs_of[where S="{lower..upper}"]; simp)
   apply (clarsimp simp: vs_all_heap_simps opt_map_def in_opt_map_eq
                  split: if_splits Structures_A.kernel_object.splits)
   done

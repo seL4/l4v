@@ -3620,7 +3620,7 @@ lemma corres_caps_decomposition:
               \<Longrightarrow> cdt_relation ((\<noteq>) None \<circ> new_caps s) (new_mdb s) (new_ctes s')
                   \<and> cdt_list_relation (new_list s) (new_mdb s) (new_ctes s')
                   \<and> sc_replies_relation_2 (new_sc_replies_of s) (new_scs_of' s' |> scReply)
-                      (new_replies_of' s' |> replyNext_of)
+                      (new_replies_of' s' |> replyPrev)
                   \<and> release_queue_relation (new_release_queue s) (new_ksReleaseQueue s')
                   \<and> sched_act_relation (new_action s) (new_sa' s')
                   \<and> ready_queues_relation (new_queues s) (new_rqs' s')

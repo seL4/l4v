@@ -217,6 +217,9 @@ abbreviation replies_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> re
 abbreviation replyNexts_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
   "replyNexts_of s \<equiv> replies_of' s |> replyNext_of"
 
+abbreviation replyPrevs_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
+  "replyPrevs_of s \<equiv> replies_of' s |> replyPrev"
+
 abbreviation sc_of' :: "kernel_object \<Rightarrow> sched_context option" where
   "sc_of' \<equiv> projectKO_opt"
 
