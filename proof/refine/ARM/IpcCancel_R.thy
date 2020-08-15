@@ -184,7 +184,7 @@ lemma setReplyTCB_corres:
     apply (rule corres_split[OF _ get_reply_corres])
       apply (rule set_reply_corres)
       apply (simp add: reply_relation_def)
-  by (wpsimp simp: obj_at'_def replyNext_same_def)+
+  by (wpsimp simp: obj_at'_def replyPrev_same_def)+
 
 defs replyUnlink_assertion_def:
   "replyUnlink_assertion

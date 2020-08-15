@@ -455,12 +455,12 @@ where
 definition
   sc_replies_relation_2 ::
   "(obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
-  "sc_replies_relation_2 sc_repls scRepl replNexts \<equiv>
-     \<forall>p replies. sc_repls p = Some replies \<longrightarrow> heap_list replNexts (scRepl p) replies"
+  "sc_replies_relation_2 sc_repls scRepl replPrevs \<equiv>
+     \<forall>p replies. sc_repls p = Some replies \<longrightarrow> heap_list replPrevs (scRepl p) replies"
 
 abbreviation sc_replies_relation :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "sc_replies_relation s s' \<equiv>
-    sc_replies_relation_2 (sc_replies_of s) (scReplies_of s') (replyNexts_of s')"
+    sc_replies_relation_2 (sc_replies_of s) (scReplies_of s') (replyPrevs_of s')"
 
 lemmas sc_replies_relation_def = sc_replies_relation_2_def
 
@@ -847,15 +847,57 @@ lemma pspace_dom_relatedE:
   done
 
 lemma sc_replies_relation_scReply:
-  "\<lbrakk>sc_replies_relation s s';
-    kheap s x = Some (kernel_object.SchedContext sc n);
-    ksPSpace s' x = Some (KOSchedContext sc')\<rbrakk>
-           \<Longrightarrow> hd_opt (sc_replies sc) = scReply sc'"
+  "\<lbrakk> sc_replies_relation s s';
+     kheap s x = Some (kernel_object.SchedContext sc n);
+     ksPSpace s' x = Some (KOSchedContext sc')\<rbrakk>
+    \<Longrightarrow> hd_opt (sc_replies sc) = scReply sc'"
   apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
   apply (drule_tac x=x and y="sc_replies sc" in spec2)
   apply (clarsimp simp: sc_of_def opt_map_def)
   apply (case_tac "sc_replies sc"; clarsimp simp: projectKO_opt_sc)
   done
+
+lemma sc_replies_prevs_walk:
+  "\<lbrakk> sc_replies_relation s s';
+     ksPSpace s' p = Some (KOSchedContext sc'); kheap s p = Some (kernel_object.SchedContext sc n) \<rbrakk>
+   \<Longrightarrow> heap_walk (replyPrevs_of s') (scReply sc') [] = sc_replies sc"
+  unfolding sc_replies_relation_def
+  apply (erule_tac x=p in allE)
+  apply (erule_tac x="sc_replies sc" in allE)
+  apply (clarsimp simp: sc_replies.all_simps)
+  apply (rule heap_list_is_walk)
+  apply (subgoal_tac "scReplies_of s' p = scReply sc'", simp)
+  apply (clarsimp simp: opt_map_def projectKO_opt_sc)
+  done
+
+lemma sc_replies_relation_prev_list:
+  "\<lbrakk> sc_replies_relation s s';
+     kheap s x = Some (kernel_object.SchedContext sc n);
+     ksPSpace s' x = Some (KOSchedContext sc')\<rbrakk>
+    \<Longrightarrow> heap_list (replyPrevs_of s') (scReply sc') (sc_replies sc)"
+  apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
+  apply (drule_tac x=x and y="sc_replies sc" in spec2)
+  apply (clarsimp simp: sc_of_def opt_map_def projectKO_opt_sc split: option.splits)
+  done
+
+(* FIXME: can generalise in terms of "sym heaps", maybe later *)
+lemma sym_refs_prev_eq_next_sc_replies:
+  "\<lbrakk> sym_refs (list_refs_of_replies' s');
+     heap_list (replyPrevs_of s') (scReply sc') replies\<rbrakk>
+    \<Longrightarrow> heap_list (replyNexts_of s') (scReply sc') (rev replies)"
+  oops
+
+lemma sc_replies_relation_next_list:
+  "\<lbrakk> sc_replies_relation s s'; sym_refs (list_refs_of_replies' s');
+     kheap s x = Some (kernel_object.SchedContext sc n);
+     ksPSpace s' x = Some (KOSchedContext sc')\<rbrakk>
+    \<Longrightarrow> heap_list (replyNexts_of s') (scReply sc') (rev (sc_replies sc))"
+  apply (frule (2) sc_replies_relation_prev_list)
+  apply (case_tac "sc_replies sc"; simp)
+  apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
+  apply (drule_tac x=x and y="sc_replies sc" in spec2)
+  apply (clarsimp simp: sc_of_def opt_map_def projectKO_opt_sc)
+  oops
 
 lemma ghost_relation_typ_at:
   "ghost_relation (kheap s) ups cns \<equiv>

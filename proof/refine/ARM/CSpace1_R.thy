@@ -1868,7 +1868,7 @@ lemma updateCap_stuff:
          (ksArchState s'' = ksArchState s') \<and>
          (pspace_aligned' s' \<longrightarrow> pspace_aligned' s'') \<and>
          (pspace_distinct' s' \<longrightarrow> pspace_distinct' s'') \<and>
-         replyNexts_of s'' = replyNexts_of s' \<and>
+         replyPrevs_of s'' = replyPrevs_of s' \<and>
          scReplies_of s'' = scReplies_of s' \<and>
          ksConsumedTime s'' = ksConsumedTime s' \<and>
          ksCurTime s'' = ksCurTime s' \<and>
@@ -2498,7 +2498,7 @@ lemma updateMDB_the_lot:
          ksCurTime s''        = ksCurTime s' \<and>
          ksCurSc s''          = ksCurSc s' \<and>
          ksReprogramTimer s'' = ksReprogramTimer s' \<and>
-         replyNexts_of s'' = replyNexts_of s' \<and>
+         replyPrevs_of s'' = replyPrevs_of s' \<and>
          scReplies_of s'' = scReplies_of s'"
   using assms
   apply (simp add: updateMDB_eqs updateMDB_pspace_relation split del: if_split)
@@ -4948,7 +4948,7 @@ lemma updateMDB_the_lot':
          ksCurTime s''        = ksCurTime s' \<and>
          ksCurSc s''          = ksCurSc s' \<and>
          ksReprogramTimer s'' = ksReprogramTimer s' \<and>
-         replyNexts_of s'' = replyNexts_of s' \<and>
+         replyPrevs_of s'' = replyPrevs_of s' \<and>
          scReplies_of s'' = scReplies_of s'"
   by (rule updateMDB_the_lot; fastforce intro: assms)
 
