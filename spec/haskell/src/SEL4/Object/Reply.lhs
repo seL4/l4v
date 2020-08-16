@@ -73,17 +73,16 @@ This module specifies the behavior of reply objects.
 
 >         schedContextDonate (fromJust scPtrOptDonated) calleePtr
 
-> replyPop :: PPtr Reply -> Kernel ()
-> replyPop replyPtr = do
+> replyPop :: PPtr Reply -> PPtr TCB -> Kernel ()
+> replyPop replyPtr tcbPtr = do
 >     reply <- getReply replyPtr
->     tcbPtrOpt <- return $ replyTCB reply
->     assert (tcbPtrOpt /= Nothing) "replyPop: replyTCB must not be Nothing"
-
->     tcbPtr <- return $ fromJust tcbPtrOpt
+>     tptr <- maybeToMonad $ replyTCB reply
+>     assert (tptr == tcbPtr) "replyPop: replyTCB must be equal to tcbPtr"
 >     state <- getThreadState tcbPtr
 >     assert (isReply state) "replyPop: thread state must be BlockedOnReply"
+>     assert (replyObject state == Just replyPtr) "replyPop: thread state must have replyPtr as its reply"
 
->     replyUnlink replyPtr
+>     replyUnlink replyPtr tcbPtr
 
 >     prevReplyPtrOpt <- return $ replyPrev reply
 >     nextReplyPtrOpt <- return $ replyNext reply
@@ -100,25 +99,27 @@ This module specifies the behavior of reply objects.
 >             setReply prevReplyPtr (prevReply { replyNext = replyNext reply })
 >         cleanReply replyPtr
 
-> replyRemove :: PPtr Reply -> Kernel ()
-> replyRemove replyPtr = do
+> replyRemove :: PPtr Reply -> PPtr TCB -> Kernel ()
+> replyRemove replyPtr tcbPtr = do
 >     reply <- getReply replyPtr
->     tcbPtrOpt <- return $ replyTCB reply
->     state <- getThreadState $ fromJust tcbPtrOpt
+>     tptr <- maybeToMonad  $ replyTCB reply
+>     assert (tptr == tcbPtr) "replyRemove: replyTCB must be equal to tcbPtr"
+>     state <- getThreadState tcbPtr
 >     assert (isReply state) "replyRemove: thread state must be BlockedOnReply"
+>     assert (replyObject state == Just replyPtr) "replyRemove: thread state must have replyPtr as its reply"
 
 >     nextReplyPtrOpt <- return $ replyNext reply
 >     prevReplyPtrOpt <- return $ replyPrev reply
 >     if nextReplyPtrOpt /= Nothing
 >        then
 >            if isHead nextReplyPtrOpt
->               then replyPop replyPtr
+>               then replyPop replyPtr tcbPtr
 >               else do
 >                   nextReplyPtr <- return $ theReplyNextPtr nextReplyPtrOpt
 >                   nextReply <- getReply nextReplyPtr
 >                   setReply nextReplyPtr (nextReply { replyPrev = Nothing })
->                   replyUnlink replyPtr
->         else when (tcbPtrOpt /= Nothing) $ replyUnlink replyPtr
+>                   replyUnlink replyPtr tcbPtr
+>         else replyUnlink replyPtr tcbPtr
 
 >     when (prevReplyPtrOpt /= Nothing) $ do
 >         prevReplyPtr <- return $ fromJust prevReplyPtrOpt
@@ -155,17 +156,18 @@ This module specifies the behavior of reply objects.
 >         setReply prevReplyPtr (prevReply { replyNext = Nothing })
 
 >     cleanReply rptr
->     replyUnlink rptr
+>     replyUnlink rptr tptr
 
-> replyUnlink :: PPtr Reply -> Kernel ()
-> replyUnlink replyPtr = do
+> replyUnlink :: PPtr Reply -> PPtr TCB -> Kernel ()
+> replyUnlink replyPtr tcbPtr = do
 >     tptrOpt <- getReplyTCB replyPtr
 >     tptr <- maybeToMonad tptrOpt
->     state <- getThreadState tptr
+>     assert (tptr == tcbPtr) "replyTCB must be equal to tcbPtr"
+>     state <- getThreadState tcbPtr
 >     stateAssert (replyUnlink_assertion replyPtr state)
 >             "Relation between the thread state of the replyTCB and replyPtr"
 >     setReplyTCB Nothing replyPtr
->     setThreadState Inactive tptr
+>     setThreadState Inactive tcbPtr
 
 In "replyUnlink" above, as in the abstract specification,  we make an assertion
 on the thread state of the replyTCB of the replyPtr
@@ -192,12 +194,10 @@ on the thread state of the replyTCB of the replyPtr
 >     r <- getReply rptr
 >     setReply rptr (r { replyTCB = tptrOpt})
 
-> replyClear :: PPtr Reply -> Kernel ()
-> replyClear rptr = do
->     tptrOpt <- getReplyTCB rptr
->     assert (tptrOpt /= Nothing) "replyClear: TCB pointer should not be nothing."
->     state <- getThreadState $ fromJust tptrOpt
+> replyClear :: PPtr Reply -> PPtr TCB -> Kernel ()
+> replyClear rptr tptr = do
+>     state <- getThreadState $ tptr
 >     case state of
->         BlockedOnReply _ -> replyRemove rptr
->         BlockedOnReceive {} -> replyUnlink rptr
+>         BlockedOnReply _ -> replyRemove rptr tptr
+>         BlockedOnReceive {} -> replyUnlink rptr tptr
 >         _ -> fail "replyClear: invalid state of replyTCB"

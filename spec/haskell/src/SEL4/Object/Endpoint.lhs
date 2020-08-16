@@ -92,7 +92,7 @@ If the endpoint is receiving, then a thread is removed from its queue, and an IP
 >                 fault <- threadGet tcbFault thread
 >                 let replyOpt = replyObject recvState
 >                 case replyOpt of
->                     Just reply -> replyUnlink reply
+>                     Just reply -> replyUnlink reply dest
 >                     _ -> return ()
 >                 case (call, fault, canGrant || canGrantReply, replyOpt) of
 >                     (False, Nothing, _, _) -> do
@@ -236,7 +236,7 @@ If the thread is blocking on an endpoint, then the endpoint is fetched and the t
 >                 setEndpoint epptr ep'
 >                 case replyOpt of
 >                     Nothing -> return ()
->                     Just reply -> replyUnlink reply
+>                     Just reply -> replyUnlink reply tptr
 
 Finally, replace the IPC block with a fault block (which will retry the operation if the thread is resumed).
 
@@ -260,7 +260,7 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 >                     let replyOpt = if isReceive st then replyObject st else Nothing
 >                     case replyOpt of
 >                         Nothing -> return ()
->                         Just reply -> replyUnlink reply
+>                         Just reply -> replyUnlink reply t
 >                     fault <- threadGet tcbFault t
 >                     if isNothing fault
 >                         then do
