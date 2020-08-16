@@ -2907,7 +2907,7 @@ lemmas setThreadState_st_tcb_at_simplish
     = setThreadState_st_tcb_at_simplish'[unfolded pred_disj_def]
 
 lemma replyUnlink_st_tcb_at_simplish:
-  "replyUnlink r \<lbrace>st_tcb_at' (\<lambda>st. P st \<or> simple' st) t\<rbrace>"
+  "replyUnlink r t' \<lbrace>st_tcb_at' (\<lambda>st. P st \<or> simple' st) t\<rbrace>"
   supply if_split [split del]
   unfolding replyUnlink_def
   apply (wpsimp wp: sts_st_tcb' hoare_vcg_if_lift2 hoare_vcg_imp_lift' gts_wp'

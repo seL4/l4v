@@ -63,8 +63,7 @@ end
 lemma cancelIPC_simple[wp]:
   "\<lbrace>\<top>\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
   unfolding cancelIPC_def
-  apply (wpsimp wp: setThreadState_st_tcb replyRemoveTCB_st_tcb_at'_Inactive cancelSignal_simple
-                    replyUnlink_st_tcb_at'_wp set_reply'.set_wp gts_wp' threadSet_wp
+  apply (wpsimp wp: setThreadState_st_tcb gts_wp' threadSet_wp
               simp: Let_def tcb_obj_at'_pred_tcb'_set_obj'_iff)
   apply (clarsimp simp: st_tcb_at'_def o_def obj_at'_def isBlockedOnReply_def)
   done
@@ -112,6 +111,7 @@ lemma cancelSignal_st_tcb_at':
                     hoare_drop_imp[where R="\<lambda>rv _. \<exists>a b. delete t (f rv) = a # b" for f])
   done
 
+(* FIXME RT: Michael to fix and use in his next PR
 lemma cancelIPC_simple'_not_awaiting_reply:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of' s)\<rbrace>
    cancelIPC t
@@ -129,7 +129,7 @@ lemma cancelIPC_simple'_not_awaiting_reply:
    apply (frule(1) sym_ref_Receive_or_Reply_replyTCB', fast)
    apply (clarsimp simp: obj_at'_def projectKO_eq project_inject)
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
-  done
+  done*)
 
 context begin interpretation Arch .
 crunch typ_at'[wp]: emptySlot "\<lambda>s. P (typ_at' T p s)"
@@ -165,7 +165,7 @@ lemma gts_wf''[wp]:
 
 lemma replyUnlink_valid_objs':
   "\<lbrace>valid_objs'\<rbrace>
-   replyUnlink rptr
+   replyUnlink rptr tptr
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (clarsimp simp: replyUnlink_def setReplyTCB_def getReplyTCB_def liftM_def)
   apply (wpsimp wp: set_reply_valid_objs' hoare_vcg_all_lift gts_wp'
@@ -198,7 +198,7 @@ lemma reply_unlink_tcb_corres:
      (valid_objs and pspace_aligned and pspace_distinct
        and st_tcb_at ((=) st) t and reply_tcb_reply_at ((=) (Some t)) rp)
           (valid_objs' and valid_release_queue_iff)
-        (reply_unlink_tcb t rp) (replyUnlink rp)" (is "_ \<Longrightarrow> corres _ _ ?conc_guard _ _")
+        (reply_unlink_tcb t rp) (replyUnlink rp t)" (is "_ \<Longrightarrow> corres _ _ ?conc_guard _ _")
   apply (rule_tac Q="?conc_guard
               and st_tcb_at' (\<lambda>st. st = BlockedOnReceive ep (receiver_can_grant pl) (Some rp)
                                  \<or> st = BlockedOnReply (Some rp)) t" in corres_cross_over_guard)
@@ -253,7 +253,7 @@ lemma blocked_cancel_ipc_corres:
                else
                  return $ epQueue_update (%_. (remove1 t (epQueue ep))) ep;
                y \<leftarrow> setEndpoint epPtr ep';
-               case reply_opt of None \<Rightarrow> return () | Some reply \<Rightarrow> replyUnlink reply;
+               case reply_opt of None \<Rightarrow> return () | Some reply \<Rightarrow> replyUnlink reply t;
                setThreadState Structures_H.thread_state.Inactive t
             od)" (is "\<lbrakk> _ ; _ ; _ \<rbrakk> \<Longrightarrow> corres _ (?abs_guard and _) (?conc_guard and _) _ _")
   apply (simp add: blocked_cancel_ipc_def gbep_ret)
@@ -845,7 +845,7 @@ crunches setReply, setSchedContext
   (simp: crunch_simps sch_act_simple_def wp: crunch_wps)
 
 lemma replyUnlink_sch_act_simple[wp]:
-  "replyUnlink t' \<lbrace>sch_act_simple\<rbrace>"
+  "replyUnlink r t' \<lbrace>sch_act_simple\<rbrace>"
   apply (simp add: replyUnlink_def setReplyTCB_def getReplyTCB_def)
   by (wpsimp wp: hoare_drop_imps)
 
@@ -1313,7 +1313,7 @@ lemma setThreadState_inQ[wp]:
   done
 
 lemma replyUnlink_valid_inQ_queues[wp]:
-  "replyUnlink replyPtr \<lbrace>valid_inQ_queues\<rbrace>"
+  "replyUnlink replyPtr tcbPtr \<lbrace>valid_inQ_queues\<rbrace>"
   apply (clarsimp simp: replyUnlink_def setReplyTCB_def getReplyTCB_def)
   apply (wpsimp wp: set_reply'.set_wp gts_wp')
   apply (fastforce simp: valid_inQ_queues_def obj_at'_def projectKOs)
@@ -2191,7 +2191,7 @@ lemma cancelSignal_queues[wp]:
   done
 
 lemma replyUnlink_valid_queues[wp]:
-  "replyUnlink replyPtr \<lbrace>valid_queues\<rbrace>"
+  "replyUnlink replyPtr tcbPtr \<lbrace>valid_queues\<rbrace>"
   apply (clarsimp simp: replyUnlink_def setReplyTCB_def getReplyTCB_def)
   apply (wpsimp wp: sts_valid_queues gts_wp')
   apply (fastforce simp: replyUnlink_assertion_def valid_queues_def valid_queues_no_bitmap_def
@@ -2231,7 +2231,7 @@ lemma cancelIPC_queues[wp]:
    apply (fastforce simp: st_tcb_at'_def obj_at'_def projectKOs objBitsKO_def
                    intro: tcbFault_update_valid_queues)
   apply (wpsimp wp: setThreadState_not_runnable'_valid_queues hoare_vcg_all_lift hoare_drop_imps
-                    replyUnlink_st_tcb_at'_Inactive)
+                    replyUnlink_st_tcb_at')
   apply (fastforce simp: st_tcb_at'_def obj_at'_def)
   done
 
@@ -2664,7 +2664,7 @@ lemma cancel_all_invs'_helper:
                               else state_refs_of' s x)
               \<and>  (\<forall>x \<in> set q. ex_nonz_cap_to' x s))\<rbrace>
    mapM_x (\<lambda>t. do st <- getThreadState t;
-                  y <- case if isReceive st then replyObject st else None of None \<Rightarrow> return () | Some x \<Rightarrow> replyUnlink x;
+                  y <- case if isReceive st then replyObject st else None of None \<Rightarrow> return () | Some x \<Rightarrow> replyUnlink x t;
                   fault <- threadGet tcbFault t;
                   if fault = None then do y <- setThreadState Structures_H.thread_state.Restart t;
                                           possibleSwitchTo t
@@ -2939,7 +2939,7 @@ lemma setThreadState_valid_ep'[wp]:
   done
 
 lemma replyUnlink_valid_ep'[wp]:
-  "replyUnlink replyPtr \<lbrace>valid_ep' ep\<rbrace>"
+  "replyUnlink replyPtr tcbPtr \<lbrace>valid_ep' ep\<rbrace>"
   apply (clarsimp simp: replyUnlink_def setReplyTCB_def getReplyTCB_def)
   apply (wpsimp wp: set_reply'.set_wp gts_wp')
   apply (fastforce simp: valid_ep'_def obj_at'_def projectKOs objBitsKO_def split: endpoint.splits)
@@ -2993,7 +2993,7 @@ lemma cancelAllIPC_st_tcb_at:
   unfolding cancelAllIPC_def
   apply (rule hoare_gen_asm)
   apply (wpsimp wp: mapM_x_wp' sts_st_tcb_at'_cases hoare_vcg_imp_lift threadGet_obj_at'_field
-                    hoare_vcg_disj_lift replyUnlink_st_tcb_at'_wp hoare_vcg_all_lift
+                    hoare_vcg_disj_lift replyUnlink_st_tcb_at' hoare_vcg_all_lift
                     getEndpoint_wp replyUnlink_tcb_obj_at'_no_change
               simp: obj_at'_ignoring_obj[where P="tcb_at' a b" for a b]
                     obj_at'_ignoring_obj[where P="st_tcb_at' a b c" for a b c]
@@ -3087,7 +3087,7 @@ lemma setThreadState_Inactive_unlive:
 
 lemma replyUnlink_unlive:
   "\<lbrace>ko_wp_at' (Not \<circ> live') p and sch_act_not p\<rbrace>
-   replyUnlink replyPtr
+   replyUnlink replyPtr tcbPtr
    \<lbrace>\<lambda>_. ko_wp_at' (Not o live') p\<rbrace>"
   apply (clarsimp simp: replyUnlink_def setReplyTCB_def getReplyTCB_def)
   apply (wpsimp wp: setThreadState_Inactive_unlive set_reply'.set_wp gts_wp')
