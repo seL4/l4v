@@ -197,7 +197,7 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 >             if not $ isReply state
 >                 then return ()
 >                 else do
->                     replyRemove reply
+>                     replyRemove reply receiver
 >                     faultOpt <- threadGet tcbFault receiver
 >                     case faultOpt of
 >                         Nothing -> do
