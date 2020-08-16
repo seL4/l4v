@@ -1825,7 +1825,7 @@ lemma handleFaultReply_cur' [wp]:
   done
 
 lemma replyClear_valid_objs'[wp]:
-  "replyClear r \<lbrace>valid_objs'\<rbrace>"
+  "replyClear r t \<lbrace>valid_objs'\<rbrace>"
   sorry
 
 lemma schedContextUnbindNtfn_valid_objs'[wp]:
@@ -1875,7 +1875,7 @@ crunches replyUnlink
   (simp: crunch_simps wp: crunch_wps)
 
 lemma replyUnlink_weak_sch_act_wf[wp]:
-  "replyUnlink r \<lbrace> \<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<rbrace>"
+  "replyUnlink r t \<lbrace> \<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<rbrace>"
   sorry
 
 crunches finaliseCapTrue_standin
@@ -1939,7 +1939,7 @@ lemma possibleSwitchTo_weak_sch_act_wf[wp]:
   sorry
 
 lemma replyUnlink_sch_act_no[wp]:
-  "replyUnlink r \<lbrace> sch_act_not t \<rbrace>"
+  "replyUnlink r t' \<lbrace> sch_act_not t \<rbrace>"
   by wpsimp
 
 lemma schedContextDonate_valid_queues':

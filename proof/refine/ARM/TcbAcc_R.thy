@@ -2789,7 +2789,7 @@ lemma threadSet_queued_sch_act_wf[wp]:
   done
 
 lemma tcbSchedEnqueue_pred_tcb_at'[wp]:
-  "\<lbrace>\<lambda>s. pred_tcb_at' proj P' t' s \<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_ s. pred_tcb_at' proj P' t' s\<rbrace>"
+  "\<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s) \<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_ s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
   apply (simp add: tcbSchedEnqueue_def when_def unless_def)
   apply (wp threadSet_pred_tcb_no_state crunch_wps | clarsimp simp: tcb_to_itcb'_def)+
   done
@@ -4182,7 +4182,7 @@ lemma lipcb_corres:
 crunch inv[wp]: lookupIPCBuffer P
 
 crunches scheduleTCB, possibleSwitchTo
-  for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
+  for pred_tcb_at'[wp]: "\<lambda>s. P' (pred_tcb_at' proj P t s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma setThreadState_st_tcb':
@@ -5016,6 +5016,13 @@ lemma sts_st_tcb_at'_cases:
   apply (wp sts_st_tcb')
   apply fastforce
   done
+
+lemma sts_st_tcb_at'_cases_strong:
+  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (t = t' \<longrightarrow> P (P' ts)) \<and> (t \<noteq> t' \<longrightarrow> P (st_tcb_at' P' t' s))\<rbrace>
+   setThreadState ts t
+   \<lbrace>\<lambda>rv s. P (st_tcb_at' P' t' s) \<rbrace>"
+  unfolding setThreadState_def
+  by (wpsimp wp: scheduleTCB_pred_tcb_at' threadSet_pred_tcb_at_state)
 
 lemma threadSet_ct_running':
   "(\<And>tcb. tcbState (f tcb) = tcbState tcb) \<Longrightarrow>
