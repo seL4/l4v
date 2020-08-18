@@ -727,7 +727,7 @@ lemma refill_unblock_check_bound_sc_tcb_at [wp]:
   by (wpsimp simp: refill_unblock_check_def get_refills_def is_round_robin_def)
 
 lemma set_next_interrupt_invs[wp]: "\<lbrace>invs\<rbrace> set_next_interrupt \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp wp: hoare_drop_imp get_sched_context_wp set_next_timer_interrupt_invs
+  by (wpsimp wp: hoare_drop_imp get_sched_context_wp dmo_setDeadline
            simp: set_next_interrupt_def)
 
 lemma valid_state_consumed_time_update[iff]:
