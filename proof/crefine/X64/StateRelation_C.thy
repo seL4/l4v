@@ -949,7 +949,7 @@ where
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard x64KSSKIMPML4_Ptr \<and>
        ptr_span x64KSSKIMPML4_Ptr \<subseteq> kernel_data_refs \<and>
        htd_safe domain (hrs_htd (t_hrs_' cstate)) \<and>
-       kernel_data_refs = (- domain) \<and>
+       -domain \<subseteq> kernel_data_refs \<and>
        globals_list_distinct (- kernel_data_refs) symbol_table globals_list \<and>
        cdom_schedule_relation (ksDomSchedule astate)
                               Kernel_C.kernel_all_global_addresses.ksDomSchedule \<and>

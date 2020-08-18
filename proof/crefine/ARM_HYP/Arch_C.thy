@@ -360,7 +360,7 @@ proof -
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
                          size_of_def pageBits_def
-                  elim!: ptr_retyp_htd_safe_neg)
+                         ptr_retyp_htd_safe_neg)
   apply clarsimp
   apply (cut_tac helper [rule_format])
    prefer 2

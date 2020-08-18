@@ -1613,11 +1613,6 @@ lemma rf_sr_cpspace_relation:
   "(s,s') \<in> rf_sr \<Longrightarrow> cpspace_relation (ksPSpace s) (underlying_memory (ksMachineState s)) (t_hrs_' (globals s'))"
   by (clarsimp simp:rf_sr_def cstate_relation_def Let_def)
 
-lemma rf_sr_htd_safe_kernel_data_refs:
-  "(s, s') \<in> rf_sr \<Longrightarrow> htd_safe (- kernel_data_refs) (hrs_htd (t_hrs_' (globals s')))"
-  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                     kernel_data_refs_domain_eq_rotate)
-
 lemma cNodeNoOverlap_retype_have_size:
   "\<not> cNodeOverlap cns (\<lambda>x. ptr \<le> x \<and> x \<le> ptr + of_nat num * 2 ^ bits - 1)
     \<Longrightarrow> cnodes_retype_have_size {ptr .. ptr + of_nat num * 2 ^ bits - 1} anysz cns"
