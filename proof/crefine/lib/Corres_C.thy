@@ -1300,6 +1300,78 @@ lemma ccorres_split_nothrow_case_sum:
   apply (clarsimp simp: ccHoarePost_def split: sum.split)
   done
 
+text \<open>
+As currently defined, the C state relation @{term rf_sr} is empty, and consequently,
+@{term ccorres} is trivially true for any pair of functions. This is proved below.
+This means that, in a very technical sense, our C refinement proofs are meaningless.
+
+The state relation is empty because four of the conjuncts in @{term cstate_relation}
+form a contradiction:
+- @{term \<open>hrs_htd (t_hrs_' cstate) \<Turnstile>\<^sub>t intStateIRQNode_array_Ptr\<close>} together with
+  @{term \<open>ptr_span intStateIRQNode_array_Ptr \<subseteq> kernel_data_refs\<close>} imply that there
+  is a heap object within the set of addresses @{term kernel_data_refs}.
+- @{term \<open>htd_safe domain (hrs_htd (t_hrs_' cstate))\<close>} implies that all heap objects
+  are within the set of addresses @{term domain}.
+- @{term \<open>kernel_data_refs = -domain\<close>} forms the contradiction.
+
+Fortunately, we never made any essential use of this contradiction, and so the issue
+can be fixed fairly easily. The issue seems to have arisen out of a conflation of two
+different concepts:
+- @{term kernel_data_refs} is introduced in the intermediate specification, and is
+  intended to be the set of addresses containing global heap objects that are not
+  covered by capabilities.
+- @{term domain} was introduced for binary verification, and was intended to be the
+  set of all addresses that may be used for heap objects.
+
+The easiest fix seems to be to expand the meaning of @{term kernel_data_refs} to
+include all addresses that are not covered by capabilities. If we assert that
+@{term \<open>kernel_data_refs = -domain\<close>}, then this does not allow for heap objects that
+are not covered by capabilities. If instead, we make a weaker assertion that
+@{term \<open>-domain \<subseteq> kernel_data_refs\<close>}, we can have heap objects that are not covered
+by capabilities, such as @{term intStateIRQNode_array_Ptr}.
+\<close>
+
+lemma subset_cross:
+  "S \<subseteq> A \<times> B \<Longrightarrow> fst ` S \<subseteq> A"
+  by auto
+
+lemma Int_subset_empty:
+  assumes "S \<subseteq> A"
+  assumes "S \<subseteq> B"
+  assumes "A \<inter> B = {}"
+  shows "S = {}"
+  using assms by auto
+
+lemma htd_safe_valid_domain_ptr_span:
+  fixes ptr :: "'a::mem_type ptr"
+  assumes "h_t_valid htd c_guard ptr"
+  assumes "htd_safe my_domain htd"
+  shows "ptr_span ptr \<subseteq> my_domain"
+  using assms
+  apply (simp add: htd_safe_def)
+  apply (drule h_t_valid_ptr_safe)
+  apply (simp add: ptr_safe_def)
+  apply (drule (1) subset_trans)
+  apply (thin_tac "dom_s _ \<subseteq> _")
+  apply (drule subset_cross)
+  apply (erule subset_trans[rotated])
+  by (auto simp: s_footprint image_def intvl_def)
+
+lemma cstate_relation_False:
+  "\<not> cstate_relation astate cstate"
+  apply (clarsimp simp: cstate_relation_def Let_def)
+  apply (frule (1) htd_safe_valid_domain_ptr_span, clarsimp)
+  apply (drule (1) Int_subset_empty; fastforce simp: intvl_def)
+  done
+
+lemma rf_sr_empty:
+  "rf_sr = {}"
+  by (clarsimp simp: rf_sr_def cstate_relation_False)
+
+lemma ccorres_trivial:
+  "ccorres rrel xf G G' hs a c"
+  by (clarsimp simp: ccorres_underlying_def rf_sr_empty)
+
 end
 
 text \<open>@{method ccorres_rewrite} support for discarding everything after @{term creturn}.\<close>
