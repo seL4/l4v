@@ -71,16 +71,6 @@ definition
   "dec_domain_time = modify (\<lambda>s. s\<lparr>domain_time := domain_time s - 1\<rparr>)"
 
 definition
-  set_next_timer_interrupt :: "time \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "set_next_timer_interrupt thread_time = do
-     cur_tm \<leftarrow> gets cur_time;
-     domain_tm \<leftarrow> gets domain_time;
-     new_domain_tm \<leftarrow> return $ cur_tm + domain_tm;
-     do_machine_op $ setDeadline (min thread_time new_domain_tm - timerPrecision)
-  od"
-
-definition
   set_next_interrupt :: "(unit, 'z::state_ext) s_monad"
 where
   "set_next_interrupt = do
@@ -89,15 +79,21 @@ where
      sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context cur_th;
      sc_ptr \<leftarrow> assert_opt sc_opt;
      sc \<leftarrow> get_sched_context sc_ptr;
-     new_thread_time \<leftarrow> return $ cur_tm + r_amount (refill_hd sc);
+     next_interrupt \<leftarrow> return $ cur_tm + r_amount (refill_hd sc);
+     next_interrupt \<leftarrow>
+     if num_domains > 1 then do
+       domain_tm \<leftarrow> gets domain_time;
+       return $ min next_interrupt (cur_tm + domain_tm) od
+     else
+       return next_interrupt;
      rq \<leftarrow> gets release_queue;
-     new_thread_time \<leftarrow> if rq = [] then return new_thread_time else do
+     next_interrupt \<leftarrow> if rq = [] then return next_interrupt else do
        rqsc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context (hd rq);
        rqsc_ptr \<leftarrow> assert_opt rqsc_opt;
        rqsc \<leftarrow> get_sched_context rqsc_ptr;
-       return $ min (r_time (refill_hd rqsc)) new_thread_time
+       return $ min (r_time (refill_hd rqsc)) next_interrupt
      od;
-     set_next_timer_interrupt new_thread_time
+     do_machine_op $ setDeadline (next_interrupt - timerPrecision)
   od"
 
 definition
