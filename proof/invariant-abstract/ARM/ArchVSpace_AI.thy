@@ -1685,10 +1685,6 @@ lemma dmo_setDeadline[wp]: "\<lbrace>invs\<rbrace> do_machine_op (setDeadline t)
   apply(erule (1) use_valid[OF _ setDeadline_irq_masks])
   done
 
-lemma set_next_timer_interrupt_invs [wp]:
-  "\<lbrace>invs\<rbrace> set_next_timer_interrupt t' \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (wpsimp simp: set_next_timer_interrupt_def)
-
 lemma svr_invs [wp]:
   "\<lbrace>invs\<rbrace> set_vm_root t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: set_vm_root_def)
