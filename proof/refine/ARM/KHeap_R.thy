@@ -2933,6 +2933,17 @@ lemma Receive_or_Send_ep_at':
   apply (drule (1) tcb_in_valid_state')
   by (fastforce simp: obj_at'_def valid_tcb_state'_def)
 
+lemma ep_queued_st_tcb_at':
+  "\<And>P. \<lbrakk>ko_at' ep ptr s; \<exists>rt. (t, rt) \<in> ep_q_refs_of' ep;
+         valid_objs' s; sym_refs (state_refs_of' s);
+         \<And>bo bbadge bgrant breply bcall r. P (Structures_H.BlockedOnSend bo bbadge bgrant breply bcall) \<and>
+                         P (Structures_H.BlockedOnReceive bo bgrant r) \<rbrakk>
+    \<Longrightarrow> st_tcb_at' P t s"
+  apply (case_tac ep, simp_all)
+  apply (frule(1) sym_refs_ko_atD', clarsimp, erule (1) my_BallE,
+         clarsimp simp: pred_tcb_at'_def refs_of_rev' obj_at'_def ko_wp_at'_def projectKOs)+
+  done
+
 (* cross lemmas *)
 
 lemma pspace_aligned_cross:
