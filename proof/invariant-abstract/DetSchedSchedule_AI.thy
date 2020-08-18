@@ -3235,10 +3235,6 @@ crunches commit_domain_time
   for obj_at[wp]: "\<lambda>s. N (obj_at P t s)"
   and kheap[wp]: "\<lambda>s. P (kheap s)"
 
-lemma set_next_timer_interrupt_valid_sched[wp]:
-  "set_next_timer_interrupt thread_time \<lbrace>valid_sched_pred_strong P\<rbrace>"
-  by (wpsimp simp: set_next_timer_interrupt_def)
-
 lemma set_next_interrupt_valid_sched[wp]:
   "set_next_interrupt \<lbrace>valid_sched_pred_strong P\<rbrace>"
   by (wpsimp simp: set_next_interrupt_def wp: hoare_drop_imp)
