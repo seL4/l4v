@@ -1311,11 +1311,11 @@ lemma ptr_retyps_htd_safe:
   done
 
 lemma ptr_retyps_htd_safe_neg:
-  "\<lbrakk> htd_safe (- D) htd;
-    {ptr_val ptr ..+ n * size_of TYPE('a :: mem_type)}
-        \<inter> D = {} \<rbrakk>
-   \<Longrightarrow> htd_safe (- D) (ptr_retyps_gen n (ptr :: 'a ptr) arr htd)"
+  "\<lbrakk> htd_safe D htd; {ptr_val ptr ..+ n * size_of TYPE('a :: mem_type)} \<inter> D' = {}; -D \<subseteq> D' \<rbrakk>
+   \<Longrightarrow> htd_safe D (ptr_retyps_gen n (ptr :: 'a ptr) arr htd)"
   using ptr_retyps_htd_safe by blast
+
+lemmas ptr_retyps_htd_safe_neg' = ptr_retyps_htd_safe_neg[OF _ _ subset_refl]
 
 lemma region_is_bytes_subset:
   "region_is_bytes' ptr sz htd
@@ -2969,8 +2969,9 @@ lemma region_is_typeless_weaken:
   by (clarsimp simp: region_is_typeless_def subsetD[OF intvl_both_le])
 
 lemmas ptr_retyp_htd_safe_neg
-    = ptr_retyps_htd_safe_neg[where n="Suc 0" and arr=False,
-    unfolded ptr_retyps_gen_def, simplified]
+  = ptr_retyps_htd_safe_neg[where n="Suc 0" and arr=False, unfolded ptr_retyps_gen_def, simplified]
+
+lemmas ptr_retyp_htd_safe_neg' = ptr_retyp_htd_safe_neg[OF _ _ subset_refl]
 
 abbreviation
   tcbContext_of_tcb_Ptr :: "tcb_C ptr \<Rightarrow> user_context_C ptr"
@@ -3492,12 +3493,16 @@ proof -
     "\<And>P S R. \<lbrakk> \<forall>x \<in> S. P x; R \<subseteq> S \<rbrakk> \<Longrightarrow> \<forall>x \<in> R. P x"
     by blast
 
+  have domain_kdr:
+    "-domain \<subseteq> kernel_data_refs"
+    using rfsr unfolding rf_sr_def cstate_relation_def Let_def by simp
+
   have htd_safe:
-    "htd_safe (- kernel_data_refs) (hrs_htd (t_hrs_' (globals x)))
-        \<Longrightarrow> htd_safe (- kernel_data_refs) (hrs_htd (t_hrs_' ?gs))"
+    "htd_safe domain (hrs_htd (t_hrs_' (globals x)))
+        \<Longrightarrow> htd_safe domain (hrs_htd (t_hrs_' ?gs))"
     using kdr
     apply (simp add: hrs_htd_update heap_updates_def)
-    apply (intro ptr_retyp_htd_safe_neg ptr_retyps_htd_safe_neg, simp_all)
+    apply (intro ptr_retyps_htd_safe_neg[OF _ _ domain_kdr], simp_all)
      apply (erule disjoint_subset[rotated])
      apply (simp add: ctcb_ptr_to_tcb_ptr_def size_of_def)
      apply (rule intvl_sub_offset[where k="ptr_val p - ctcb_offset" and x="ctcb_offset", simplified])
@@ -4423,8 +4428,7 @@ lemma ccorres_placeNewObject_endpoint:
   apply (intro conjI allI impI)
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
-                         objBits_simps'
-                  elim!: ptr_retyp_htd_safe_neg)
+                         objBits_simps' ptr_retyp_htd_safe_neg)
   apply (rule bexI [OF _ placeNewObject_eq])
      apply (clarsimp simp: split_def)
      apply (clarsimp simp: new_cap_addrs_def)
@@ -4462,7 +4466,7 @@ lemma ccorres_placeNewObject_notification:
   apply (intro conjI allI impI)
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate objBits_simps'
-                  elim!: ptr_retyp_htd_safe_neg)
+                         ptr_retyp_htd_safe_neg)
   apply (rule bexI [OF _ placeNewObject_eq])
      apply (clarsimp simp: split_def)
      apply (clarsimp simp: new_cap_addrs_def)
@@ -4495,13 +4499,13 @@ lemma htd_update_list_dom_better [rule_format]:
   done
 
 lemma ptr_array_retyps_htd_safe_neg:
-  "\<lbrakk> htd_safe (- D) htd;
-    {ptr_val ptr ..+ n * size_of TYPE('a :: mem_type)}
-        \<inter> D = {} \<rbrakk>
-   \<Longrightarrow> htd_safe (- D) (ptr_arr_retyps n (ptr :: 'a ptr) htd)"
+  "\<lbrakk> htd_safe D htd; {ptr_val ptr ..+ n * size_of TYPE('a :: mem_type)} \<inter> D' = {}; -D \<subseteq> D' \<rbrakk>
+   \<Longrightarrow> htd_safe D (ptr_arr_retyps n (ptr :: 'a ptr) htd)"
   apply (simp add: htd_safe_def ptr_arr_retyps_def htd_update_list_dom_better)
   apply (auto simp: dom_tll_def intvl_def)
   done
+
+lemmas ptr_array_retyps_htd_safe_neg' = ptr_array_retyps_htd_safe_neg[OF _ _ subset_refl]
 
 lemma ccorres_placeNewObject_captable:
   "ccorresG rf_sr \<Gamma> dc xfdc
@@ -4522,8 +4526,7 @@ lemma ccorres_placeNewObject_captable:
   apply (intro conjI allI impI)
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
-                  elim!: ptr_array_retyps_htd_safe_neg)
-   apply (simp add: size_of_def power_add)
+                         ptr_array_retyps_htd_safe_neg size_of_def power_add)
   apply (frule range_cover_rel[where sbit' = 5])
     apply simp
    apply simp
@@ -4548,11 +4551,6 @@ lemma rf_sr_helper:
   "\<And>a b P X. ((a, globals_update P (b\<lparr>tcb_' := X\<rparr>)) \<in> rf_sr) = ((a, globals_update P b) \<in> rf_sr)"
   apply (clarsimp simp: rf_sr_def)
   done
-
-lemma rf_sr_domain_eq:
-  "(\<sigma>, s) \<in> rf_sr \<Longrightarrow> htd_safe domain = htd_safe (- kernel_data_refs)"
-  by (simp add: rf_sr_def cstate_relation_def Let_def
-                kernel_data_refs_domain_eq_rotate)
 
 declare replicate_numeral [simp del]
 
@@ -4650,7 +4648,6 @@ proof -
    apply (rule tcb_ptr_orth_cte_ptrs')
   apply (simp add: o_def)
   apply (intro conjI allI impI)
-     apply (simp only: rf_sr_domain_eq)
      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                            kernel_data_refs_domain_eq_rotate)
      apply (intro ptr_retyps_htd_safe_neg ptr_retyp_htd_safe_neg, simp_all add: size_of_def)[1]
@@ -4695,7 +4692,7 @@ lemma placeNewObject_pte:
   apply (intro conjI allI impI)
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
-                  elim!: ptr_retyp_htd_safe_neg)
+                         ptr_retyp_htd_safe_neg pageBits_def)
   apply (frule range_cover_rel[where sbit' = 3])
     apply ((simp add: pageBits_def)+)[3]
   apply (frule range_cover.unat_of_nat_shift[where gbits = 3 ])
@@ -4873,9 +4870,8 @@ proof (intro impI allI)
                     rl foldr_upd_app_if [folded data_map_insert_def]
                     projectKOs cvariable_array_ptr_retyps)
     apply (subst cvariable_array_ptr_retyps[OF szo])
-    apply (simp add: rb'  ptr_retyps_htd_safe_neg)+
-    apply (erule ptr_retyps_htd_safe_neg)
-    apply (simp add:pageBits_def field_simps)
+    apply (simp add: rb' ptr_retyps_htd_safe_neg)+
+    apply (erule ptr_retyps_htd_safe_neg; simp add: pageBits_def field_simps)
     done
 qed
 
@@ -4901,9 +4897,8 @@ lemma placeNewObject_user_data:
   apply (intro conjI allI impI)
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
-                  elim!: ptr_retyps_htd_safe_neg[where arr=False,
-                        unfolded ptr_retyps_gen_def, simplified])
-   apply (simp add: size_of_def pageBits_def power_add mult.commute mult.left_commute)
+                         ptr_retyps_htd_safe_neg[where arr=False, unfolded ptr_retyps_gen_def, simplified]
+                         size_of_def pageBits_def power_add mult.commute mult.left_commute)
   apply (frule range_cover.unat_of_nat_shift[where gbits = "pageBits + us"])
     apply simp
    apply (clarsimp simp:size_of_def power_add pageBits_def
@@ -5039,9 +5034,8 @@ lemma placeNewObject_user_data_device:
   apply (intro conjI allI impI)
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
-                  elim!: ptr_retyps_htd_safe_neg[where arr=False,
-                        unfolded ptr_retyps_gen_def, simplified])
-   apply (simp add: size_of_def pageBits_def power_add mult.commute mult.left_commute)
+                         ptr_retyps_htd_safe_neg[where arr=False, unfolded ptr_retyps_gen_def, simplified]
+                         size_of_def pageBits_def power_add mult.commute mult.left_commute)
   apply (frule range_cover.unat_of_nat_shift[where gbits = "pageBits + us"])
     apply simp
    apply (clarsimp simp:size_of_def power_add pageBits_def
