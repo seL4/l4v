@@ -1052,10 +1052,10 @@ On some architectures, the thread context may include registers that may be modi
 > switchSchedContext :: Kernel ()
 > switchSchedContext = do
 >     scPtr <- getCurSc
->     sc <- getSchedContext scPtr
 >     ct <- getCurThread
 >     scOpt <- threadGet tcbSchedContext ct
 >     csc <- return $ fromJust scOpt
+>     sc <- getSchedContext scPtr
 >     when (csc /= scPtr && scRefillMax sc /= 0) $ do
 >         setReprogramTimer True
 >         refillUnblockCheck csc
