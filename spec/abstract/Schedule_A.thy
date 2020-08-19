@@ -115,15 +115,11 @@ where
     cur_th \<leftarrow> gets cur_thread;
     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context cur_th;
     scp \<leftarrow> assert_opt sc_opt;
-    sc' \<leftarrow> get_sched_context scp;
+    sc' \<leftarrow> get_sched_context cur_sc;
 
     when (scp \<noteq> cur_sc \<and> 0 < sc_refill_max sc') $ do
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
-      refill_unblock_check scp;
-      sc \<leftarrow> get_sched_context scp;
-      curtime \<leftarrow> gets cur_time;
-      assert $ sc_refill_sufficient 0 sc;
-      assert $ sc_refill_ready curtime sc   \<comment> \<open>asserting @{text \<open>ready & sufficient\<close>}\<close>
+      refill_unblock_check scp
      od;
 
     reprogram \<leftarrow> gets reprogram_timer;
