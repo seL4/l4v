@@ -846,6 +846,17 @@ lemma pspace_dom_relatedE:
   apply fastforce
   done
 
+lemma ghost_relation_typ_at:
+  "ghost_relation (kheap s) ups cns \<equiv>
+   (\<forall>a sz. data_at sz a s = (ups a = Some sz)) \<and>
+   (\<forall>a n. typ_at (ACapTable n) a s = (cns a = Some n))"
+   apply (rule eq_reflection)
+   apply (clarsimp simp: ghost_relation_def typ_at_eq_kheap_obj data_at_def)
+   apply (intro conjI impI iffI allI; force)
+   done
+
+(* more replyNext/replyPrev related lemmas *)
+
 lemma sc_replies_relation_scReply:
   "\<lbrakk> sc_replies_relation s s';
      kheap s x = Some (kernel_object.SchedContext sc n);
@@ -870,7 +881,7 @@ lemma sc_replies_prevs_walk:
   apply (clarsimp simp: opt_map_def projectKO_opt_sc)
   done
 
-lemma sc_replies_relation_prev_list:
+lemma sc_replies_relation_prevs_list:
   "\<lbrakk> sc_replies_relation s s';
      kheap s x = Some (kernel_object.SchedContext sc n);
      ksPSpace s' x = Some (KOSchedContext sc')\<rbrakk>
@@ -880,33 +891,38 @@ lemma sc_replies_relation_prev_list:
   apply (clarsimp simp: sc_of_def opt_map_def projectKO_opt_sc split: option.splits)
   done
 
-(* FIXME: can generalise in terms of "sym heaps", maybe later *)
-lemma sym_refs_prev_eq_next_sc_replies:
-  "\<lbrakk> sym_refs (list_refs_of_replies' s');
-     heap_list (replyPrevs_of s') (scReply sc') replies\<rbrakk>
-    \<Longrightarrow> heap_list (replyNexts_of s') (scReply sc') (rev replies)"
-  oops
+lemma list_refs_of_replies'_reftype[simp]:
+  "(p, reftype) \<in> list_refs_of_replies' s' p' \<Longrightarrow> reftype \<in> {ReplyPrev, ReplyNext}"
+  by (clarsimp simp: list_refs_of_replies'_def list_refs_of_reply'_def get_refs_def2
+              split: option.split_asm)
 
-lemma sc_replies_relation_next_list:
-  "\<lbrakk> sc_replies_relation s s'; sym_refs (list_refs_of_replies' s');
-     kheap s x = Some (kernel_object.SchedContext sc n);
-     ksPSpace s' x = Some (KOSchedContext sc')\<rbrakk>
-    \<Longrightarrow> heap_list (replyNexts_of s') (scReply sc') (rev (sc_replies sc))"
-  apply (frule (2) sc_replies_relation_prev_list)
-  apply (case_tac "sc_replies sc"; simp)
-  apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
-  apply (drule_tac x=x and y="sc_replies sc" in spec2)
-  apply (clarsimp simp: sc_of_def opt_map_def projectKO_opt_sc)
-  oops
+lemma replyNext_replyNexts_of_opt_map:
+  "\<lbrakk>ksPSpace s' p = Some (KOReply reply); replyNext reply = Some (Next p')\<rbrakk>
+    \<Longrightarrow> (replyNexts_of s' |> f s') p = f s' p'"
+  by (clarsimp simp: opt_map_left_Some projectKO_opt_reply split: option.split)
 
-lemma ghost_relation_typ_at:
-  "ghost_relation (kheap s) ups cns \<equiv>
-   (\<forall>a sz. data_at sz a s = (ups a = Some sz)) \<and>
-   (\<forall>a n. typ_at (ACapTable n) a s = (cns a = Some n))"
-   apply (rule eq_reflection)
-   apply (clarsimp simp: ghost_relation_def typ_at_eq_kheap_obj data_at_def)
-   apply (intro conjI impI iffI allI; force)
-   done
+lemma replyPrevs_of_refs:
+  "replyPrevs_of s' p = Some p' \<longleftrightarrow> (p', ReplyPrev) \<in> list_refs_of_replies' s' p"
+  by (fastforce simp: map_set_def list_refs_of_reply'_def opt_map_def get_refs_def
+               split: option.splits)
+
+lemma replyNexts_of_refs:
+  "replyNexts_of s' p = Some p' \<longleftrightarrow> (p', ReplyNext) \<in> list_refs_of_replies' s' p"
+  by (fastforce simp: map_set_def list_refs_of_reply'_def opt_map_def get_refs_def
+               split: option.splits)
+
+lemma sym_replies_prev_then_next_id_p:
+  "\<lbrakk>sym_refs (list_refs_of_replies' s'); replyPrevs_of s' p = Some p'\<rbrakk>
+   \<Longrightarrow> (replyPrevs_of s' |> replyNexts_of s') p = Some p"
+  apply (clarsimp simp: replyPrevs_of_refs replyNexts_of_refs opt_map_left_Some)
+  by (drule (1) sym_refsD[rotated], simp)
+
+lemma sym_replies_next_then_prev_id_p:
+  "\<lbrakk>sym_refs (list_refs_of_replies' s'); replyNexts_of s' p = Some p'\<rbrakk>
+   \<Longrightarrow> (replyNexts_of s' |> replyPrevs_of s') p = Some p"
+  supply opt_map_left_Some[simp]
+  apply (clarsimp simp: replyPrevs_of_refs replyNexts_of_refs)
+  by (drule (1) sym_refsD[rotated], simp)
 
 (* proofs on scBitsFromRefillLength properties *)
 
