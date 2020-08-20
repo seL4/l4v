@@ -8,6 +8,11 @@ theory Reply_R
 imports TcbAcc_R
 begin
 
+defs replyUnlink_assertion_def:
+  "replyUnlink_assertion
+    \<equiv> \<lambda>replyPtr state s. state = BlockedOnReply (Some replyPtr)
+                          \<or> (\<exists>ep d. state = BlockedOnReceive ep d (Some replyPtr))"
+
 crunches setReplyTCB
   for pred_tcb_at'[wp]: "\<lambda>s. P (pred_tcb_at' proj test t s)"
   and tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"
@@ -93,6 +98,16 @@ lemma replyRemoveTCB_st_tcb_at'_sym_ref:
     apply (wpsimp wp: haskell_assert_wp)
    apply (wpsimp wp: gts_wp')
   apply (clarsimp simp: obj_at'_def pred_tcb_at'_def)
+  done
+
+lemma replyUnlink_valid_objs':
+  "replyUnlink rptr tptr \<lbrace>valid_objs'\<rbrace>"
+  apply (clarsimp simp: replyUnlink_def setReplyTCB_def getReplyTCB_def liftM_def updateReply_def)
+  apply (wpsimp wp: set_reply_valid_objs' hoare_vcg_all_lift gts_wp'
+              simp: valid_tcb_state'_def)
+  apply (frule (1) ko_at_valid_objs'[where 'a=reply, simplified])
+   apply (clarsimp simp: projectKO_opt_reply split: kernel_object.splits)
+  apply (clarsimp simp: valid_obj'_def valid_reply'_def obj_at'_def)
   done
 
 end
