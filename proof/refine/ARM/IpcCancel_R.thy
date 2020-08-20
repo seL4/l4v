@@ -156,18 +156,6 @@ lemma gts_wf''[wp]:
   apply (fastforce simp: valid_obj'_def valid_tcb'_def)
   done
 
-lemma replyUnlink_valid_objs':
-  "\<lbrace>valid_objs'\<rbrace>
-   replyUnlink rptr tptr
-   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (clarsimp simp: replyUnlink_def setReplyTCB_def getReplyTCB_def liftM_def)
-  apply (wpsimp wp: set_reply_valid_objs' hoare_vcg_all_lift gts_wp'
-              simp: valid_tcb_state'_def)
-  apply (frule (1) ko_at_valid_objs'[where 'a=reply, simplified])
-   apply (clarsimp simp: projectKO_opt_reply split: kernel_object.splits)
-  apply (clarsimp simp: valid_obj'_def valid_reply'_def obj_at'_def)
-  done
-
 lemma setReplyTCB_corres:
   "corres dc (reply_at rp) (reply_at' rp)
             (set_reply_obj_ref reply_tcb_update rp new)
@@ -178,11 +166,6 @@ lemma setReplyTCB_corres:
       apply (rule set_reply_corres)
       apply (simp add: reply_relation_def)
   by (wpsimp simp: obj_at'_def replyPrev_same_def)+
-
-defs replyUnlink_assertion_def:
-  "replyUnlink_assertion
-    \<equiv> \<lambda>replyPtr state s. state = BlockedOnReply (Some replyPtr)
-                          \<or> (\<exists>ep d. state = BlockedOnReceive ep d (Some replyPtr))"
 
 lemma setReply_valid_tcb'[wp]:
   "setReply rp new  \<lbrace>valid_tcb' tcb\<rbrace>"
