@@ -2465,14 +2465,7 @@ lemma setSchedContext_invs':
   "\<lbrace>invs' and K (scPtr = idle_sc_ptr \<longrightarrow> idle_sc' sc)
     and (\<lambda>s. live_sc' sc \<longrightarrow> ex_nonz_cap_to' scPtr s)
     and valid_sched_context' sc
-    and (\<lambda>_. valid_sched_context_size' sc)
-    and (\<lambda>s. sym_refs
-             (\<lambda>a. if a = scPtr
-                   then get_refs SCNtfn (scNtfn sc) \<union>
-                        get_refs SCTcb (scTCB sc) \<union>
-                        get_refs SCYieldFrom (scYieldFrom sc) \<union>
-                        get_refs SCReply (scReply sc)
-                   else state_refs_of' s a)) \<rbrace>
+    and (\<lambda>_. valid_sched_context_size' sc)\<rbrace>
     setSchedContext scPtr sc
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add:  invs'_def valid_state'_def)
@@ -2492,14 +2485,8 @@ lemma updateScPtr_invs':
   "\<lbrace>invs'
     and (\<lambda>s. scPtr = idle_sc_ptr \<longrightarrow> (\<forall>ko. ko_at' ko scPtr s \<longrightarrow> idle_sc' (f ko)))
     and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> live_sc' (f ko) \<longrightarrow> ex_nonz_cap_to' scPtr s)
-    and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> valid_sched_context' (f ko) s \<and> valid_sched_context_size' (f ko))
-    and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> sym_refs
-             (\<lambda>a. if a = scPtr
-                   then get_refs SCNtfn (scNtfn (f ko)) \<union>
-                        get_refs SCTcb (scTCB (f ko)) \<union>
-                        get_refs SCYieldFrom (scYieldFrom (f ko)) \<union>
-                        get_refs SCReply (scReply (f ko))
-                   else state_refs_of' s a)) \<rbrace>
+    and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> valid_sched_context' (f ko) s
+                                        \<and> valid_sched_context_size' (f ko))\<rbrace>
     updateScPtr scPtr f
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: updateScPtr_def)
@@ -2537,13 +2524,10 @@ lemma updateScPtr_refills_invs':
   apply (simp add: updateScPtr_def)
   apply (wpsimp wp: setSchedContext_invs')
   apply (intro conjI)
-    apply fastforce
-   apply clarsimp
-   apply (erule (1) live_sc'_ko_ex_nonz_cap_to')
-   apply (clarsimp simp: live_sc'_def)
-  apply (clarsimp cong: if_cong)
-  apply (frule sym_refs_sc_trivial_update, simp)
-  apply (erule invs_sym')
+   apply fastforce
+  apply clarsimp
+  apply (erule (1) live_sc'_ko_ex_nonz_cap_to')
+  apply (clarsimp simp: live_sc'_def)
   done
 
 lemma updateScPtr_active_sc_at':
@@ -2574,15 +2558,10 @@ lemma updateScPtr_invs'_indep:
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (wpsimp wp: updateScPtr_invs')
   apply (intro conjI; intro allI impI; (drule_tac x=ko in spec)+)
-     apply (clarsimp simp: invs'_def valid_state'_def valid_objs'_def obj_at'_def)
-     apply (erule if_live_then_nonz_capE')
-     apply (clarsimp simp: ko_wp_at'_def projectKO_eq projectKO_sc live_sc'_def)
-    apply (frule (1) invs'_ko_at_valid_sched_context', simp)
-   apply (frule (1) invs'_ko_at_valid_sched_context', simp)
-  apply (frule invs_sym')
-  apply (erule back_subst[where P=sym_refs])
-  apply (rule ext)
-  apply (clarsimp simp: state_refs_of'_def obj_at'_real_def ko_wp_at'_def projectKO_sc)
+   apply (clarsimp simp: invs'_def valid_state'_def valid_objs'_def obj_at'_def)
+   apply (erule if_live_then_nonz_capE')
+   apply (clarsimp simp: ko_wp_at'_def projectKO_eq projectKO_sc live_sc'_def)
+  apply (frule (1) invs'_ko_at_valid_sched_context', simp)
   done
 
 lemma invs'_ko_at_idle_sc_is_idle':
@@ -2643,24 +2622,22 @@ lemma refillAddTail_invs'[wp]:
   apply (frule scRefills_length_replaceAt_0, clarsimp)
   apply (intro conjI; intro allI impI)
    apply (intro conjI)
-      apply (fastforce dest: live_sc'_ko_ex_nonz_cap_to')
-      apply (clarsimp simp: valid_sched_context'_def)
-     apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def valid_sched_context'_def)
-   apply (clarsimp cong: if_cong simp: sym_refs_sc_trivial_update)
-  apply (intro conjI)
      apply (fastforce dest: live_sc'_ko_ex_nonz_cap_to')
-    apply (drule ko_at'_inj, assumption, clarsimp)+
-    apply (frule refillTailIndex_bounded)
     apply (clarsimp simp: valid_sched_context'_def)
-    apply (subst length_replaceAt, linarith)
-    apply (subst length_replaceAt, linarith)
-    apply clarsimp
+   apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def valid_sched_context'_def)
+  apply (intro conjI)
+    apply (fastforce dest: live_sc'_ko_ex_nonz_cap_to')
    apply (drule ko_at'_inj, assumption, clarsimp)+
    apply (frule refillTailIndex_bounded)
-   apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def valid_sched_context'_def)
+   apply (clarsimp simp: valid_sched_context'_def)
+   apply (subst length_replaceAt, linarith)
    apply (subst length_replaceAt, linarith)
    apply clarsimp
-  apply (clarsimp cong: if_cong simp: sym_refs_sc_trivial_update)
+  apply (drule ko_at'_inj, assumption, clarsimp)+
+  apply (frule refillTailIndex_bounded)
+  apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def valid_sched_context'_def)
+  apply (subst length_replaceAt, linarith)
+  apply clarsimp
   done
 
 lemma updateRefillTl_def2:
@@ -2752,34 +2729,33 @@ lemma refillPopHead_invs'[wp]:
    apply clarsimp
    apply (intro conjI; intro impI)
     apply (intro conjI; intro allI impI)
-      apply (rule if_live_then_nonz_capE')
-       apply (erule invs_iflive')
-      apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKO_eq projectKO_sc live_sc'_def)
-     apply (drule ko_at'_inj, assumption, clarsimp)+
-     apply (intro conjI)
-      apply (subgoal_tac "valid_sched_context' ko s")
-       apply (fastforce simp: valid_sched_context'_def)
-      apply (fastforce dest: invs'_ko_at_valid_sched_context')
-     apply (subgoal_tac "valid_sched_context_size' ko")
-      apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
-     apply (fastforce dest: invs'_ko_at_valid_sched_context')
-    apply (clarsimp cong: if_cong simp: sym_refs_sc_trivial_update)
-   apply (intro conjI; intro allI impI)
      apply (rule if_live_then_nonz_capE')
-      apply (erule invs_iflive')
+     apply (erule invs_iflive')
      apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKO_eq projectKO_sc live_sc'_def)
     apply (drule ko_at'_inj, assumption, clarsimp)+
     apply (intro conjI)
-     apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
      apply (subgoal_tac "valid_sched_context' ko s")
-      apply (clarsimp simp: valid_sched_context'_def)
-      apply linarith
-     apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
-    apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+      apply (fastforce simp: valid_sched_context'_def)
+     apply (fastforce dest: invs'_ko_at_valid_sched_context')
     apply (subgoal_tac "valid_sched_context_size' ko")
      apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+    apply (fastforce dest: invs'_ko_at_valid_sched_context')
+   apply (intro conjI; intro allI impI)
+    apply (rule if_live_then_nonz_capE')
+     apply (erule invs_iflive')
+    apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKO_eq projectKO_sc live_sc'_def)
+   apply (drule ko_at'_inj, assumption, clarsimp)+
+   apply (intro conjI)
+    apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+    apply (subgoal_tac "valid_sched_context' ko s")
+     apply (clarsimp simp: valid_sched_context'_def)
+     apply linarith
     apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
-   apply (clarsimp cong: if_cong simp: sym_refs_sc_trivial_update)
+   apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+   apply (subgoal_tac "valid_sched_context_size' ko")
+    apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
+   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
+  apply (clarsimp cong: if_cong simp: sym_refs_sc_trivial_update)
   apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
   done
 
@@ -2807,11 +2783,10 @@ lemma refillBudgetCheck_invs'[wp]:
    apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
    apply (frule refillTailIndex_bounded)
    apply (intro conjI)
-       apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
-      apply (fastforce dest: live_sc'_ko_ex_nonz_cap_to')
-     apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
-    apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
-   apply (fastforce simp: sym_refs_sc_trivial_update cong: if_cong)
+      apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
+     apply (fastforce dest: live_sc'_ko_ex_nonz_cap_to')
+    apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
+   apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
   apply (intro conjI; intro allI impI)
    apply (intro conjI; intro allI impI)
     apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')

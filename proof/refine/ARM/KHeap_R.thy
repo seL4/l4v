@@ -8,6 +8,7 @@ theory KHeap_R
 imports
   "AInvs.ArchDetSchedSchedule_AI"
   Machine_R
+  "../Move_R"
 begin
 
 lemma lookupAround2_known1:
@@ -2575,9 +2576,6 @@ lemma set_ntfn_minor_invs':
   apply (clarsimp simp add: invs'_def valid_state'_def cteCaps_of_def)
   apply (wpsimp wp: irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift
               simp: o_def)
-  apply (clarsimp elim!: rsubst[where P=sym_refs]
-                 intro!: ext
-                  dest!: obj_at_state_refs_ofD')
   done
 
 lemma ep_redux_simps':
@@ -3209,6 +3207,11 @@ lemma state_refs_of_cross_eq:
   done
 
 end
+
+method add_sym_refs =
+  rule_tac Q="(\<lambda>s. sym_refs (state_refs_of' s))" in corres_cross_add_guard
+  , (frule invs_sym_refs)?, (frule invs_psp_aligned)?, (frule invs_distinct)?
+  , fastforce dest: state_refs_of_cross_eq
 
 lemma state_refs_of_cross:
   "\<lbrakk>P (state_refs_of s); (s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s\<rbrakk>

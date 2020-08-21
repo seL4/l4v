@@ -113,6 +113,7 @@ defs cNodePartialOverlap_def:
 lemma deleteObjects_def2:
   "is_aligned ptr bits \<Longrightarrow>
    deleteObjects ptr bits = do
+     stateAssert sym_refs_asrt [];
      stateAssert (deletionIsSafe ptr bits) [];
      doMachineOp (freeMemory ptr bits);
      stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> {ptr .. ptr + 2 ^ bits - 1})) [];
@@ -125,6 +126,7 @@ lemma deleteObjects_def2:
      stateAssert ksASIDMapSafe []
    od"
   apply (simp add: deleteObjects_def is_aligned_mask[symmetric] unless_def)
+  apply (rule bind_eqI, rule ext)
   apply (rule bind_eqI, rule ext)
   apply (rule bind_eqI, rule ext)
   apply (simp add: bind_assoc[symmetric])
@@ -145,6 +147,7 @@ lemma deleteObjects_def2:
 lemma deleteObjects_def3:
   "deleteObjects ptr bits =
    do
+     stateAssert sym_refs_asrt [];
      assert (is_aligned ptr bits);
      stateAssert (deletionIsSafe ptr bits) [];
      doMachineOp (freeMemory ptr bits);
@@ -484,13 +487,14 @@ end
 
 locale delete_locale =
   fixes s' and base and bits and ptr and idx and d
-  assumes cap: "cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d base bits idx) ptr s'"
-  and  nodesc: "descendants_range' (UntypedCap d base bits idx) ptr (ctes_of s')"
-  and    invs: "invs' s'"
-  and  ct_act: "ct_active' s'"
-  and sa_simp: "sch_act_simple s'"
-  and      al: "is_aligned base bits"
-  and  rlqrun: "\<forall>p. p \<in> set (ksReleaseQueue s') \<longrightarrow> obj_at' (runnable' \<circ> tcbState) p s'"
+  assumes  cap: "cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d base bits idx) ptr s'"
+  and   nodesc: "descendants_range' (UntypedCap d base bits idx) ptr (ctes_of s')"
+  and     invs: "invs' s'"
+  and sym_refs: "sym_refs (state_refs_of' s')"
+  and   ct_act: "ct_active' s'"
+  and  sa_simp: "sch_act_simple s'"
+  and       al: "is_aligned base bits"
+  and   rlqrun: "\<forall>p. p \<in> set (ksReleaseQueue s') \<longrightarrow> obj_at' (runnable' \<circ> tcbState) p s'"
 
 context delete_locale
 begin
@@ -503,7 +507,6 @@ lemma  valid_objs: "valid_objs' s'"
   and         vq': "valid_queues' s'"
   and        vrlq: "valid_release_queue s'"
   and       vrlq': "valid_release_queue' s'"
-  and    sym_refs: "sym_refs (state_refs_of' s')"
   and   list_refs: "sym_refs (list_refs_of_replies' s')"
   and      iflive: "if_live_then_nonz_cap' s'"
   and    ifunsafe: "if_unsafe_then_cap' s'"
@@ -899,7 +902,9 @@ lemma detype_corres:
                                          \<longrightarrow> obj_at' (runnable' \<circ> tcbState) p s')"])
    apply (simp add: pred_conj_def)
    apply (erule ksReleaseQueue_runnable_thread_state; fastforce?)
+  apply add_sym_refs
   apply (simp add: deleteObjects_def2)
+  apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified])
   apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified])
    prefer 2
    apply clarsimp
@@ -919,6 +924,7 @@ lemma detype_corres:
    apply (rule conjI
           ; clarsimp simp: pspace_distinct'_def ps_clear_def dom_if_None Diff_Int_distrib
                            valid_pspace'_def pspace_aligned'_def)
+   apply (clarsimp simp: sym_refs_asrt_def)
   apply (simp add: delete_objects_def)
   apply (rule_tac Q="\<lambda>_ s. valid_objs s \<and> valid_list s \<and>
                            (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
@@ -1012,7 +1018,7 @@ lemma untyped_range_live_idle':
   using live_idle_untyped_range' by blast
 
 lemma refs_of':
-  "\<And>ko p. ko_wp_at' ((=) (injectKOS ko)) p s'
+  "\<And>ko p. ko_wp_at' ((=) (injectKOS ko)) p s' \<Longrightarrow> sym_refs (state_refs_of' s')
    \<Longrightarrow> refs_of' (injectKOS ko) \<subseteq> (UNIV - base_bits \<times> UNIV)"
   apply (case_tac "p = idle_sc_ptr \<or> p = idle_thread_ptr")
    apply (insert invs_valid_idle'[OF invs])
@@ -1025,7 +1031,6 @@ lemma refs_of':
   apply (prop_tac "ko_at' ko p s'")
    apply (fastforce simp: ko_wp_at'_def obj_at'_def projectKOs project_inject)
   apply (frule sym_refs_ko_atD')
-   apply (clarsimp simp: sym_refs)
    apply (fastforce intro: refs_of_live' dest!: live_notRange)+
   done
 
@@ -1052,7 +1057,7 @@ lemma replyNext_list_refs_of_replies:
               split: option.splits)
 
 lemma valid_obj':
-  "\<lbrakk> valid_obj' obj s'; ko_wp_at' ((=) obj) p s';
+  "\<lbrakk> valid_obj' obj s'; ko_wp_at' ((=) obj) p s'; sym_refs (state_refs_of' s');
      sym_refs (list_refs_of_replies' s'); pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
    \<Longrightarrow> valid_obj' obj state'"
   apply (case_tac obj, simp_all add: valid_obj'_def)
@@ -1062,7 +1067,7 @@ lemma valid_obj':
        apply (fastforce simp: valid_ntfn'_def valid_bound_obj'_def split: option.splits ntfn.splits)
       apply (clarsimp simp flip: injectKO_tcb)
       apply (frule refs_of')
-      apply (frule sym_refs_ko_wp_atD [OF _ sym_refs])
+      apply (frule (2) sym_refs_ko_wp_atD)
       apply (clarsimp simp: valid_tcb'_def ko_wp_at'_def objBits_simps)
       apply (rule conjI)
        apply (erule ballEI, clarsimp elim!: ranE)
@@ -1089,7 +1094,7 @@ lemma valid_obj':
    apply (clarsimp simp: valid_sched_context'_def valid_bound_obj'_def split: option.splits)
   apply (rename_tac reply)
   apply (clarsimp simp flip: injectKO_reply)
-  apply (frule refs_of')
+  apply (frule (1) refs_of')
   apply (clarsimp simp: ko_wp_at'_def valid_reply'_def valid_bound_tcb'_def)
   apply (rule conjI; (solves \<open>clarsimp split: option.splits\<close>)?)+
    apply (case_tac "replyPrev reply = None"; clarsimp?)
@@ -1120,8 +1125,8 @@ lemma sc_tcb_not_idle_thread'_helper:
 
 lemma sc_tcb_not_idle_thread':
   "\<lbrakk> pspace_aligned' s'; pspace_distinct' s'; ksPSpace s' scp = Some (KOSchedContext sc);
-     scp \<noteq> idle_sc_ptr; sym_refs (state_refs_of' s'); valid_global_refs' s'; valid_pspace' s';
-     if_live_then_nonz_cap' s'\<rbrakk>
+     scp \<noteq> idle_sc_ptr; valid_global_refs' s'; valid_pspace' s';
+     if_live_then_nonz_cap' s'; sym_refs (state_refs_of' s')\<rbrakk>
    \<Longrightarrow> scTCB sc \<noteq> Some (ksIdleThread s')"
   apply (frule (1) global'_no_ex_cap)
   apply (rule valid_objsE'; fastforce?)
@@ -1143,8 +1148,8 @@ lemma thread_not_idle_implies_sc_not_idle'_helper:
 
 lemma thread_not_idle_implies_sc_not_idle':
   "\<lbrakk> pspace_aligned' s'; pspace_distinct' s'; ksPSpace s' tp = Some (KOTCB tcb);
-     tp \<noteq> idle_thread_ptr; sym_refs (state_refs_of' s'); valid_global_refs' s'; valid_objs' s';
-     valid_idle' s'; if_live_then_nonz_cap' s' \<rbrakk>
+     tp \<noteq> idle_thread_ptr; valid_global_refs' s'; valid_objs' s';
+     valid_idle' s'; if_live_then_nonz_cap' s'; sym_refs (state_refs_of' s') \<rbrakk>
    \<Longrightarrow> tcbSchedContext tcb \<noteq> Some idle_sc_ptr"
   apply (frule global'_sc_no_ex_cap)
    apply (blast intro: pspace)
@@ -1160,7 +1165,7 @@ lemma thread_not_idle_implies_sc_not_idle':
   done
 
 lemma state_refs:
-  "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; pspace_distinct' state'\<rbrakk>
+  "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; pspace_distinct' state'; sym_refs (state_refs_of' s')\<rbrakk>
   \<Longrightarrow> (state_refs_of' state') = (state_refs_of' s')"
   apply (rule ext)
   apply (clarsimp simp: state_refs_for_state')
@@ -1171,12 +1176,14 @@ lemma state_refs:
   apply (rename_tac ko)
   apply (case_tac ko; simp)
       apply (fastforce simp: ep_q_refs_of'_def ko_wp_at'_def)
-     apply (fastforce simp: ntfn_q_refs_of'_def ko_wp_at'_def live_ntfn'_def
+     apply (fastforce simp: ntfn_q_refs_of'_def ko_wp_at'_def live_ntfn'_def state_refs_of'_def
                      split: ntfn.splits)
-    apply (insert sym_refs refs valid_objs idle iflive pspace)
-    apply (frule (8) thread_not_idle_implies_sc_not_idle')
+    apply (insert refs valid_objs idle iflive pspace)
+    apply (frule (7) thread_not_idle_implies_sc_not_idle')
+     apply (fastforce simp: state_refs_of'_def)
     apply (fastforce simp: ko_wp_at'_def)
-   apply (frule (7) sc_tcb_not_idle_thread')
+   apply (frule (6) sc_tcb_not_idle_thread')
+    apply (fastforce simp: state_refs_of'_def)
    apply (clarsimp simp: ko_wp_at'_def live_sc'_def  valid_idle'_def)
   apply (clarsimp simp: ko_wp_at'_def live_reply'_def)
   done
@@ -1389,6 +1396,7 @@ lemma exists_disj:
 
 lemma (in delete_locale) delete_invs':
   assumes "\<forall>t. t \<in> set (ksReleaseQueue s) \<longrightarrow> obj_at' (runnable' \<circ> tcbState) t s"
+  and "sym_refs (state_refs_of' s')"
   shows "invs' (ksMachineState_update
              (\<lambda>ms. underlying_memory_update
                 (\<lambda>m x. if base \<le> x \<and> x \<le> base + (2 ^ bits - 1) then 0 else m x) ms)
@@ -1408,7 +1416,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def (* FIXME: do not s
     by (clarsimp simp add: pspace_distinct'_def ps_clear_def
                            dom_if_None Diff_Int_distrib)
 
-  show "valid_objs' ?s" using valid_objs
+  show "valid_objs' ?s" using valid_objs assms
     apply (clarsimp simp: valid_objs'_def ran_def)
     apply (insert list_refs pa pd)
     apply (rule_tac p=a in valid_obj'; fastforce?)
@@ -1416,10 +1424,6 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def (* FIXME: do not s
     apply (frule pspace_distinctD'[OF _ pd])
     apply (clarsimp simp: ko_wp_at'_def)
     done
-
-  show "sym_refs (state_refs_of' ?s)"
-    apply (insert pa pd pspace_distinct'_state' sym_refs)
-    by (subst state_refs; blast?)
 
   show "sym_refs (map_set (replies' ||> list_refs_of_reply'))"
     apply (insert pa pd pspace_distinct'_state' list_refs)
@@ -1760,7 +1764,7 @@ lemma deleteObjects_null_filter:
    apply (subgoal_tac "ksPSpace (s\<lparr>ksMachineState := snd ((), b)\<rparr>) =
                        ksPSpace s", simp only:, simp)
   apply (unfold_locales, simp_all)
-  apply (clarsimp simp: deletionIsSafe_def)
+   apply (clarsimp simp: deletionIsSafe_def sym_refs_asrt_def)+
   done
 
 lemma deleteObjects_descendants:
@@ -1804,9 +1808,10 @@ proof -
   apply (simp cong: if_cong)
   apply (subgoal_tac "is_aligned ptr bits \<and> 2 \<le> bits \<and> bits < word_bits",simp)
    apply clarsimp
-   apply (frule delete_locale.intro; simp add: deletionIsSafe_def)
+   apply (frule delete_locale.intro; simp add: deletionIsSafe_def sym_refs_asrt_def)
    apply (rule subst[rotated, where P=invs'], erule delete_locale.delete_invs')
-    apply (clarsimp simp: deletionIsSafe_def)
+     apply (clarsimp simp: deletionIsSafe_def)
+     apply blast
     apply blast
    apply (simp add: field_simps)
   apply clarsimp
@@ -1842,7 +1847,7 @@ lemma deleteObjects_st_tcb_at':
                   field_simps ko_wp_at'_def ps_clear_def
                   cong:if_cong
                   split: option.splits)
-  apply (simp add: delete_locale_def deletionIsSafe_def)
+  apply (simp add: delete_locale_def deletionIsSafe_def sym_refs_asrt_def)
   done
 
 lemma ex_cte_cap_wp_to'_gsCNodes_update[simp]:
@@ -1875,7 +1880,7 @@ lemma deleteObjects_cap_to':
                          else ksPSpace s x\<rparr>)",erule ssubst)
     apply (simp add: field_simps ex_cte_cap_wp_to'_def cong:if_cong)
    apply simp
-  apply (simp add: delete_locale_def deletionIsSafe_def)
+  apply (simp add: delete_locale_def deletionIsSafe_def sym_refs_asrt_def)
   done
 
 lemma valid_untyped_no_overlap:

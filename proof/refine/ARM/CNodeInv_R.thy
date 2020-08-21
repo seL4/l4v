@@ -8680,8 +8680,8 @@ lemma invokeCNode_invs' [wp]:
   unfolding invokeCNode_def
   apply (wpsimp wp: cteRevoke_invs' cteInsert_invs cteMove_ex cteMove_cte_wp_at
                     getCTE_wp cteDelete_invs'
-                simp: unless_def getSlotCap_def locateSlot_conv
-                split_del: if_split)
+              simp: unless_def getSlotCap_def locateSlot_conv
+         split_del: if_split)
   apply (cases cinv; clarsimp)
     apply (clarsimp simp: cte_wp_at_ctes_of is_derived'_def isCap_simps badge_derived'_def)
     apply (erule(1) valid_irq_handlers_ctes_ofD)

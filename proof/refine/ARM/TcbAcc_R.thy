@@ -5279,10 +5279,6 @@ lemma sts_invs_minor':
   apply (intro conjI)
      apply clarsimp
     defer
-    apply (clarsimp dest!: st_tcb_at_state_refs_ofD'
-                    elim!: rsubst[where P=sym_refs]
-                   intro!: ext)
-    using tcb_bound_refs'_helper apply presburger
    apply (clarsimp elim!: st_tcb_ex_cap'')
   apply (frule tcb_in_valid_state', clarsimp+)
   apply (erule (1) valid_tcb_state'_same_tcb_st_refs_of')

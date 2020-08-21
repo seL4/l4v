@@ -2226,31 +2226,22 @@ lemma unbindNotification_invs[wp]:
   apply clarsimp
   apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
   apply (rule hoare_pre)
-  apply (wp sbn'_valid_pspace'_inv sbn_sch_act' sbn_valid_queues valid_irq_node_lift
-            irqs_masked_lift setBoundNotification_ct_not_inQ
-            untyped_ranges_zero_lift | clarsimp simp: cteCaps_of_def o_def)+
+   apply (wp sbn'_valid_pspace'_inv sbn_sch_act' sbn_valid_queues valid_irq_node_lift
+             irqs_masked_lift setBoundNotification_ct_not_inQ
+             untyped_ranges_zero_lift | clarsimp simp: cteCaps_of_def o_def)+
   apply (rule conjI)
-   apply (clarsimp elim!: obj_atE'
-                    simp: projectKOs
-                   dest!: pred_tcb_at')
-  apply (clarsimp simp: pred_tcb_at' conj_comms)
-  apply (intro conjI)
-    apply (frule obj_at_valid_objs', clarsimp+)
-    apply (simp add: valid_ntfn'_def valid_obj'_def projectKOs
-              split: ntfn.splits)
-   apply clarsimp
+   apply (frule obj_at_valid_objs', clarsimp+)
+   apply (simp add: valid_ntfn'_def valid_obj'_def projectKOs
+             split: ntfn.splits)
+  apply (rule conjI)
+   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+  apply (rule conjI)
+   apply (clarsimp simp: pred_tcb_at' conj_comms)
    apply (erule if_live_then_nonz_capE')
    apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs live_ntfn'_def)
-  apply (frule(1) sym_refs_bound_tcb_atD')
-  apply (frule(1) sym_refs_obj_atD')
-  apply (clarsimp simp: refs_of_rev')
-  apply normalise_obj_at'
-  apply (subst delta_sym_refs, assumption)
-    apply (auto split: if_split_asm)[1]
-   apply (auto simp: tcb_st_not_Bound ntfn_q_refs_of'_mult tcb_bound_refs'_not_Bound
-                     get_refs_NTFNSchedContext_not_Bound
-              split: if_split_asm)[1]
-  apply clarsimp
+  apply (frule obj_at_valid_objs', clarsimp+)
+  apply (simp add: valid_ntfn'_def valid_obj'_def projectKOs
+            split: ntfn.splits)
   done
 
 lemma ntfn_bound_tcb_at':
@@ -2808,6 +2799,7 @@ lemma cancelIPC_cteCaps_of:
      cancelIPC t
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: cancelIPC_def Let_def capHasProperty_def locateSlot_conv)
+  apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_pre)
    apply (wp cteDeleteOne_cteCaps_of getCTE_wp' | wpcw
         | simp add: cte_wp_at_ctes_of

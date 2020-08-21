@@ -343,6 +343,9 @@ definition state_refs_of' :: "kernel_state \<Rightarrow> word32 \<Rightarrow> re
                               then refs_of' ko
                               else {}"
 
+defs sym_refs_asrt_def:
+  "sym_refs_asrt \<equiv> \<lambda>s. sym_refs (state_refs_of' s)"
+
 definition live_sc' :: "sched_context \<Rightarrow> bool" where
   "live_sc' sc \<equiv> bound (scTCB sc) \<and> scTCB sc \<noteq> Some idle_thread_ptr
                   \<or> bound (scYieldFrom sc) \<or> bound (scNtfn sc) \<or> scReply sc \<noteq> None"
@@ -1339,7 +1342,7 @@ definition
   valid_state' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_state' \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-                      \<and> valid_queues s \<and> sym_refs (state_refs_of' s)
+                      \<and> valid_queues s
                       \<and> sym_refs (list_refs_of_replies' s)
                       \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
                       \<and> valid_idle' s
@@ -1418,24 +1421,9 @@ abbreviation
   "ct_running' \<equiv> ct_in_state' (\<lambda>st. st = Structures_H.Running)"
 
 abbreviation(input)
- "all_invs_but_sym_refs_ct_not_inQ'
-    \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-           \<and> valid_queues s \<and> sym_refs (list_refs_of_replies' s)
-           \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
-           \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
-           \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
-           \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
-           \<and> cur_tcb' s \<and> valid_queues' s \<and> valid_release_queue s \<and> valid_release_queue' s
-           \<and> ct_idle_or_in_cur_domain' s
-           \<and> valid_pde_mappings' s
-           \<and> pspace_domain_valid s
-           \<and> ksCurDomain s \<le> maxDomain
-           \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
-
-abbreviation(input)
  "all_invs_but_ct_not_inQ'
     \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-           \<and> valid_queues s \<and> sym_refs (state_refs_of' s)
+           \<and> valid_queues s
            \<and> sym_refs (list_refs_of_replies' s)
            \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
@@ -1448,10 +1436,6 @@ abbreviation(input)
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
-lemma all_invs_but_sym_refs_not_ct_inQ_check':
-  "(all_invs_but_sym_refs_ct_not_inQ' and sym_refs \<circ> state_refs_of' and ct_not_inQ) = invs'"
-  by (simp add: pred_conj_def conj_commute conj_left_commute invs'_def valid_state'_def)
-
 lemma all_invs_but_not_ct_inQ_check':
   "(all_invs_but_ct_not_inQ' and ct_not_inQ) = invs'"
   by (simp add: pred_conj_def conj_commute conj_left_commute invs'_def valid_state'_def)
@@ -1459,7 +1443,7 @@ lemma all_invs_but_not_ct_inQ_check':
 definition
   "all_invs_but_ct_idle_or_in_cur_domain'
     \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-           \<and> valid_queues s \<and> sym_refs (state_refs_of' s)
+           \<and> valid_queues s
            \<and> sym_refs (list_refs_of_replies' s)
            \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
@@ -3657,10 +3641,6 @@ lemma invs_unsafe_then_cap' [elim!]:
   "invs' s \<Longrightarrow> if_unsafe_then_cap' s"
   by (simp add: invs'_def valid_state'_def)
 
-lemma invs_sym' [elim!]:
-  "invs' s \<Longrightarrow> sym_refs (state_refs_of' s)"
-  by (simp add: invs'_def valid_state'_def)
-
 lemma invs_sch_act_wf' [elim!]:
   "invs' s \<Longrightarrow> sch_act_wf (ksSchedulerAction s) s"
   by (simp add: invs'_def valid_state'_def)
@@ -3772,7 +3752,6 @@ lemmas invs'_implies =
   invs_queues'
   invs_valid_release_queue
   invs_valid_release_queue'
-  invs_sym'
 
 lemma valid_bitmap_valid_bitmapQ_exceptE:
   "\<lbrakk> valid_bitmapQ_except d p s ; (bitmapQ d p s \<longleftrightarrow> ksReadyQueues s (d,p) \<noteq> []) ;

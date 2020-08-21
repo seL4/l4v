@@ -406,15 +406,22 @@ lemma pinv_corres:
      (invs' and sch_act_simple and valid_invocation' i' and ct_active' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
      (perform_invocation block call can_donate i) (performInvocation block call can_donate i')"
   apply (simp add: performInvocation_def)
+  apply add_sym_refs
   apply (case_tac i)
+
              apply (clarsimp simp: o_def liftE_bindE)
+             apply (rule corres_stateAssertE_add_assertion[where P'=\<top>, simplified])
              apply (rule corres_guard_imp)
+
                apply (rule corres_split_norE[OF corres_returnOkTT])
                   apply simp
                  apply (rule corres_rel_imp, rule inv_untyped_corres)
                   apply simp
                  apply (case_tac x, simp_all)[1]
              apply wpsimp+
+             apply (clarsimp simp: sym_refs_asrt_def)
+
+            apply (clarsimp simp: liftE_bindE)
             apply (rule corres_guard_imp)
               apply (rule corres_split [OF _ gct_corres])
                 apply simp
@@ -470,12 +477,14 @@ lemma pinv_corres:
          apply (wpsimp+)[4]
      \<comment> \<open>CNodes\<close>
      apply clarsimp
+     apply (rule corres_stateAssertE_add_assertion[where P'=\<top>, simplified])
      apply (rule corres_guard_imp)
        apply (rule corres_splitEE [OF _ inv_cnode_corres])
           apply (rule corres_trivial, simp add: returnOk_def)
          apply assumption
         apply wp+
       apply (clarsimp+)[2]
+     apply (clarsimp simp: sym_refs_asrt_def)
     apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
     apply (rule corres_guard_imp, rule invoke_irq_control_corres; fastforce)
    apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
@@ -520,7 +529,7 @@ lemma pinv_tcb'[wp]:
      RetypeDecls_H.performInvocation block call can_donate i
    \<lbrace>\<lambda>rv. tcb_at' tptr\<rbrace>"
   unfolding performInvocation_def
-  by (cases i; simp; wpsimp wp: invokeArch_tcb_at' simp: pred_tcb_at')
+  by (cases i; simp; wpsimp wp: invokeArch_tcb_at' stateAssertE_inv simp: pred_tcb_at')
 
 crunches setThreadState
   for obj_at_ntfn[wp]: "obj_at' (\<lambda>ntfn. P (ntfnBoundTCB ntfn) (ntfnObj ntfn)) ntfnptr"
@@ -1862,10 +1871,10 @@ lemma retype_pi_IRQInactive:
    -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: Retype_H.performInvocation_def)
   apply (rule hoare_pre)
-   apply (wpc |
-          wp inv_tcb_IRQInactive inv_cnode_IRQInactive inv_irq_IRQInactive
-             inv_untyped_IRQInactive inv_arch_IRQInactive |
-          simp)+
+   apply (wpc
+          | wpsimp wp: inv_tcb_IRQInactive inv_cnode_IRQInactive inv_irq_IRQInactive
+                       inv_untyped_IRQInactive inv_arch_IRQInactive
+                 simp: stateAssertE_def stateAssert_def)+
   done
 
 end
