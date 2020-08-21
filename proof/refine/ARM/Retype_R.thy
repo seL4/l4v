@@ -5348,8 +5348,6 @@ proof -
       apply (rule hoare_vcg_conj_lift)
        apply (simp add: createObjects_def)
        apply (wp createObjects_state_refs_of'')
-      apply (rule hoare_vcg_conj_lift)
-       apply (simp add: createObjects_def)
        apply (wpsimp wp: createObjects_list_refs_of_replies'')
       apply (rule hoare_vcg_conj_lift)
        apply (simp add: createObjects_def)

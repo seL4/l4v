@@ -1346,7 +1346,8 @@ lemma deleteObjects_valid_duplicates'[wp]:
    \<rbrace> deleteObjects ptr sz
    \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (clarsimp simp:deleteObjects_def2)
+  apply (clarsimp simp: deleteObjects_def2)
+  apply (rule hoare_seq_ext_skip, wpsimp)
   apply (wp hoare_drop_imps|simp)+
   apply clarsimp
   apply (simp add:deletionIsSafe_def)
@@ -2180,16 +2181,18 @@ lemma performInvocation_valid_duplicates'[wp]:
   RetypeDecls_H.performInvocation isBlocking isCall canDonate i
   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (clarsimp simp: performInvocation_def)
-  apply (simp add:ct_in_state'_def)
+  apply (simp add: ct_in_state'_def)
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
-  apply wpc
-   apply (wp performArchInvocation_valid_duplicates' |simp)+
+   apply wpc
+              apply (wpsimp wp: performArchInvocation_valid_duplicates'
+                          simp: stateAssertE_def stateAssert_def)+
   apply (cases i)
-  apply (clarsimp simp: simple_sane_strg sch_act_simple_def
-                    ct_in_state'_def ct_active_runnable'[unfolded ct_in_state'_def]
-                  | wp tcbinv_invs' arch_performInvocation_invs'
-                  | rule conjI | erule active_ex_cap')+
+             apply (clarsimp simp: simple_sane_strg sch_act_simple_def ct_in_state'_def
+                        ct_active_runnable'[unfolded ct_in_state'_def]
+                    | wp tcbinv_invs' arch_performInvocation_invs'
+                    | rule conjI
+                    | erule active_ex_cap')+
   apply simp
   done
 
