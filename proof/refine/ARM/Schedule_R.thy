@@ -1559,17 +1559,6 @@ lemma tcb_at'_cross_rel:
   apply clarsimp
   by (erule (3) tcb_at_cross)
 
-lemma sc_at_cross:
-  assumes p: "pspace_relation (kheap s) (ksPSpace s')"
-  assumes aligned: "pspace_aligned s"
-  assumes distinct: "pspace_distinct s"
-  assumes t: "sc_at t s"
-  shows "sc_at' t s'" using assms
-  apply (clarsimp simp: obj_at_def is_sc_obj)
-  apply (drule (1) pspace_relation_absD, clarsimp simp: other_obj_relation_def)
-  apply (case_tac z; simp)
-  by (fastforce dest!: aligned_distinct_obj_at'I[where 'a=sched_context] elim: obj_at'_weakenE)
-
 lemma sc_at'_cross_rel:
   "cross_rel (pspace_aligned and pspace_distinct and sc_at t) (sc_at' t)"
   unfolding cross_rel_def state_relation_def
