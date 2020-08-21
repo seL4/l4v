@@ -40,6 +40,18 @@ lemma opt_mapE:
   "\<lbrakk> (f |> g) s = Some v; \<And>v'. \<lbrakk>f s = Some v'; g v' = Some v \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (auto simp: in_opt_map_eq)
 
+lemma opt_map_left_Some:
+  "f x = Some y \<Longrightarrow> (f |> g) x = g y"
+  by (clarsimp simp: opt_map_def)
+
+lemma opt_map_left_None:
+  "f x = None \<Longrightarrow> (f |> g) x = None"
+  by (clarsimp simp: opt_map_def)
+
+lemma opt_map_assoc:
+  "f |> (g |> h) = f |> g |> h"
+  by (fastforce simp: opt_map_def split: option.splits)
+
 lemma opt_map_upd_None:
   "f(x := None) |> g = (f |> g)(x := None)"
   by (auto simp: opt_map_def)
@@ -49,6 +61,11 @@ lemma opt_map_upd_Some:
   by (auto simp: opt_map_def)
 
 lemmas opt_map_upd[simp] = opt_map_upd_None opt_map_upd_Some
+
+lemma case_opt_map_distrib:
+  "((\<lambda>s. case_option None g (f s)) |> h)
+   = ((\<lambda>s. case_option None (g |> h) (f s)))"
+  by (fastforce simp: opt_map_def split: option.splits)
 
 declare None_upd_eq[simp]
 
