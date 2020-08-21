@@ -206,6 +206,8 @@ If a thread is waiting for an IPC operation, it may be necessary to move the thr
 
 > cancelIPC :: PPtr TCB -> Kernel ()
 > cancelIPC tptr = do
+>         stateAssert sym_refs_asrt
+>             "Assert that `sym_refs (state_refs_of' s)` holds"
 >         state <- getThreadState tptr
 >         threadSet (\tcb -> tcb {tcbFault = Nothing}) tptr
 >         case state of
@@ -249,6 +251,8 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 
 > cancelAllIPC :: PPtr Endpoint -> Kernel ()
 > cancelAllIPC epptr = do
+>         stateAssert sym_refs_asrt
+>             "Assert that `sym_refs (state_refs_of' s)` holds"
 >         ep <- getEndpoint epptr
 >         case ep of
 >             IdleEP ->
@@ -273,6 +277,8 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 
 > cancelBadgedSends :: PPtr Endpoint -> Word -> Kernel ()
 > cancelBadgedSends epptr badge = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     ep <- getEndpoint epptr
 >     case ep of
 >         IdleEP -> return ()

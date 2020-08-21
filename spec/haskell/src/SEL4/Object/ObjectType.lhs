@@ -489,6 +489,8 @@ This function just dispatches invocations to the type-specific invocation functi
 > performInvocation :: Bool -> Bool -> Bool -> Invocation -> KernelP [Word]
 >
 > performInvocation _ _ _ (InvokeUntyped invok) = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     invokeUntyped invok
 >     return $ []
 >
@@ -515,6 +517,8 @@ This function just dispatches invocations to the type-specific invocation functi
 >     return $ []
 >
 > performInvocation _ _ _ (InvokeCNode invok) = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     invokeCNode invok
 >     return $ []
 >

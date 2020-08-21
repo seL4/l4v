@@ -127,6 +127,18 @@ lemma haskell_assert_wp:
   "\<lbrace>\<lambda>s. Q \<longrightarrow> P s\<rbrace> haskell_assert Q xs \<lbrace>\<lambda>_. P\<rbrace>"
   by simp wp
 
+lemma stateAssertE_sp:
+  "\<lbrace>P\<rbrace> stateAssertE Q l \<lbrace>\<lambda>_. P and Q\<rbrace>, \<lbrace>\<lambda>_. R\<rbrace>"
+  by (clarsimp simp: valid_def validE_def stateAssertE_def stateAssert_def in_monad)
+
+lemma stateAssertE_wp:
+  "\<lbrace>\<lambda>s. Q () \<longrightarrow> P s\<rbrace> stateAssertE Q l \<lbrace>\<lambda>_. P\<rbrace>"
+  by (wpsimp simp: stateAssertE_def stateAssert_def)
+
+lemma stateAssertE_inv:
+  "\<lbrace>P\<rbrace> stateAssertE Q l \<lbrace>\<lambda>_. P\<rbrace>"
+  by (clarsimp simp: valid_def stateAssertE_def stateAssert_def in_monad)
+
 lemma init_append_last:
   "xs \<noteq> [] \<Longrightarrow> init xs @ [last xs] = xs"
   apply (induct xs rule: rev_induct)

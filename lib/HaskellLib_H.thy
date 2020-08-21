@@ -57,6 +57,10 @@ definition
  "stateAssert P L \<equiv> get >>= (\<lambda>s. assert (P s))"
 
 definition
+  stateAssertE :: "('a \<Rightarrow> bool) \<Rightarrow> unit list \<Rightarrow> ('a, 'e + unit) nondet_monad" where
+ "stateAssertE P L \<equiv> liftE (stateAssert P L)"
+
+definition
   haskell_fail :: "unit list \<Rightarrow> ('a, 'b) nondet_monad" where
   haskell_fail_def[simp]:
  "haskell_fail L \<equiv> fail"
