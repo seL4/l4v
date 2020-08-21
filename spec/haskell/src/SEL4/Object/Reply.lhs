@@ -95,6 +95,7 @@ This module specifies the behavior of reply objects.
 >         setSchedContext scPtr (sc { scReply = prevReplyPtrOpt })
 >         when (prevReplyPtrOpt /= Nothing) $ do
 >             prevReplyPtr <- return $ fromJust prevReplyPtrOpt
+>             assert (replyPtr /= prevReplyPtr) "replyPop: reply lists must be distinct"
 >             prevReply <- getReply prevReplyPtr
 >             setReply prevReplyPtr (prevReply { replyNext = replyNext reply })
 >         cleanReply replyPtr
@@ -145,11 +146,13 @@ This module specifies the behavior of reply objects.
 >               setSchedContext scPtr (sc { scReply = Nothing })
 >            else do
 >               nextReplyPtr <- return $ theReplyNextPtr nextReplyPtrOpt
+>               assert (rptr /= nextReplyPtr) "replyRemoveTCB: reply lists must be distinct"
 >               nextReply <- getReply nextReplyPtr
 >               setReply nextReplyPtr (nextReply { replyPrev = Nothing })
 
 >     when (prevReplyPtrOpt /= Nothing) $ do
 >         prevReplyPtr <- return $ fromJust prevReplyPtrOpt
+>         assert (rptr /= prevReplyPtr) "replyRemoveTCB: reply lists must be distinct"
 >         prevReply <- getReply prevReplyPtr
 >         setReply prevReplyPtr (prevReply { replyNext = Nothing })
 
