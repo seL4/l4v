@@ -93,7 +93,7 @@ where
     return r
   od"
 
-#INCLUDE_HASKELL SEL4/Model/StateData.lhs NOT doMachineOp KernelState ReadyQueue Kernel assert stateAssert findM funArray newKernelState capHasProperty ifM whenM whileM andM orM maybeToMonad
-#INCLUDE_HASKELL SEL4/Model/StateData.lhs decls_only ONLY capHasProperty
+#INCLUDE_HASKELL SEL4/Model/StateData.lhs NOT doMachineOp KernelState ReadyQueue Kernel assert stateAssert findM funArray newKernelState capHasProperty ifM whenM whileM andM orM maybeToMonad sym_refs_asrt
+#INCLUDE_HASKELL SEL4/Model/StateData.lhs decls_only ONLY capHasProperty sym_refs_asrt
 
 end

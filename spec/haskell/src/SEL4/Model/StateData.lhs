@@ -365,4 +365,11 @@ The function "findM" searches a list, returning the first item for which the giv
 >     r <- f x
 >     if r then return $ Just x else findM f xs
 
+In many places, we would like to be able to use the fact that `sym_refs (state_refs_of' s)`
+holds. We add an assertion that it does hold. We may prove this assertion is true
+using the rule `state_refs_of_cross_eq`.
+
+> sym_refs_asrt :: KernelState -> Bool
+> sym_refs_asrt _ = True
+
 

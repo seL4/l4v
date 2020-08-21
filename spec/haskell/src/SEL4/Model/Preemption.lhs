@@ -52,5 +52,3 @@ In preemptible code, the kernel may explicitly mark a preemption point with the 
 >       case preempt of
 >           Just irq -> throwError irq
 >           Nothing -> return ()
-
-

@@ -1277,6 +1277,12 @@ lemma corres_stateAssert_add_assertion:
    apply (wp | rule no_fail_pre)+
   done
 
+lemma corres_stateAssertE_add_assertion:
+  "\<lbrakk> corres_underlying sr nf nf' (i \<oplus> r) P (Q and Q') f (g ());
+     \<And>s s'. \<lbrakk> (s, s') \<in> sr; P s; P' s; Q s' \<rbrakk> \<Longrightarrow> Q' s' \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' (i \<oplus> r) (P and P') Q f (stateAssertE Q' [] >>=E g)"
+  by (clarsimp simp: stateAssertE_def liftE_bindE corres_stateAssert_add_assertion)
+
 lemma corres_add_noop_lhs:
   "corres_underlying sr nf nf' r P P' (return () >>= (\<lambda>_. f)) g
       \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
