@@ -20,6 +20,12 @@ jobs:
       matrix:
         arch: [ARM]
     steps:
+    - name: Cache ~/.stack
+      uses: actions/cache@v2
+      with:
+        path: ~/.stack
+        key: ${{ runner.os }}-stack-${{ github.sha }}
+        restore-keys: ${{ runner.os }}-stack-
     - name: compile Haskell
       uses: seL4/ci-actions/run-proofs@master
       with:
