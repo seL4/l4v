@@ -468,7 +468,7 @@ def type_sig_transform(tree_element):
     return (line, [])
 
 
-ignore_classes = {'Error': 1}
+ignore_classes = {'Error': 1, 'MonadState': 1}
 hand_classes = {'Bits': ['HS_bit'],
                 'Num': ['minus', 'one', 'zero', 'plus', 'numeral'],
                 'FiniteBits': ['finiteBit']}
@@ -489,7 +489,9 @@ def type_transform(string):
             instances = [lhs]
         var_annotes = {}
         for instance in instances:
-            (name, var) = instance.split()
+            # multi-var type classes must be in the ignore list; discard
+            # all vars after first:
+            (name, var) = instance.split()[0:2]
             if name in ignore_classes:
                 continue
             if name in hand_classes:
