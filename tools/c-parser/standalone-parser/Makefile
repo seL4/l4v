@@ -42,7 +42,15 @@ standalone-tokenizer stp_all: $(TOKENIZERS)
 
 include $(STP_PFX)/../Makefile
 
-STP_CLEAN_TARGETS := $(STPARSERS) $(TOKENIZERS) $(STP_PFX)/c-parser.o $(STP_PFX)/table.ML
+# This is only used for ARM_HYP and ARM since the former is a copy of the latter
+UMM_HEAP_ARM_HYP=$(realpath $(STP_PFX)/../umm_heap)/ARM_HYP
+UMM_HEAP_ARM=$(realpath $(STP_PFX)/../umm_heap/ARM)
+
+$(UMM_HEAP_ARM_HYP)/% : $(UMM_HEAP_ARM)/%
+	mkdir -p $(UMM_HEAP_ARM_HYP)
+	cp -p $< $@
+
+STP_CLEAN_TARGETS := $(STPARSERS) $(TOKENIZERS) $(STP_PFX)/table.ML
 
 $(STP_PFX)/table.ML: $(ISABELLE_HOME)/src/Pure/General/table.ML
 	sed -e '/ML.pretty-printing/,/final.declarations/d' < $< > $@
@@ -100,28 +108,19 @@ else ifeq ($(SML_COMPILER),poly)
 # compilation with polyml may be bit-rotted
 #
 
-PARSER0_DEPS := $(shell perl -e 'use Cwd "abs_path"; while (<>) { if (/ml$$|sig$$/i && !/^ *mlton/) { tr/ //d; print abs_path("$(STP_PFX)/$$_"); }}' < $(STP_PFX)/c-parser.mlb)
-PARSER_DEPS := $(PARSER0_DEPS) $(realpath $(STP_PFX)/c-parser.mlb) $(STP_PFX)/table.ML
+PARSER_DEPS := $(shell perl -e 'use Cwd "abs_path"; while (<>) { if (/ml$$|sig$$/i && !/^ *mlton/ && !/L4V_ARCH/) { tr/ //d; print abs_path("$(STP_PFX)/$$_"); }}' < $(STP_PFX)/c-parser.mlb) $(STP_PFX)/table.ML $(realpath $(STP_PFX)/c-parser.mlb)
+TOKENIZER_DEPS := $(shell perl -e 'use Cwd "abs_path"; while (<>) { if (/ml$$|sig$$/i && !/^ *mlton/ && !/L4V_ARCH/) { tr/ //d; print abs_path("$(STP_PFX)/$$_"); }}' < $(STP_PFX)/tokenizer.mlb) $(STP_PFX)/table.ML $(realpath $(STP_PFX)/tokenizer.mlb)
 
-TOKENIZER0_DEPS := $(shell perl -e 'use Cwd "abs_path"; while (<>) { if (/ml$$|sig$$/i && !/^ *mlton/) { tr/ //d; print abs_path("$(STP_PFX)/$$_"); }}' < $(STP_PFX)/tokenizer.mlb)
-TOKENIZER_DEPS := $(TOKENIZER0_DEPS) $(realpath $(STP_PFX)/tokenzier.mlb) $(STP_PFX)/table.ML
+.PHONY: stp_pdeps
+stp_pdeps:
+	@echo "PARSER_DEPS_ARM = $(PARSER_DEPS_ARM)"
 
-$(STPARSER): $(STP_PFX)/c-parser.o $(LIBPOLYML)
-	$(POLYCC) -o $@ $<
+$(STP_PFX)/%/c-parser: $(STP_PFX)/poly-cparser.ML $(PARSER_DEPS) $(STP_PFX)/../umm_heap/%/TargetNumbers.ML | $(STP_PFX)/%
+	STP_PFX=$(STP_PFX) STP_ARCH=$(lastword $(filter-out c-parser,$(subst /, ,$@))) $(POLYC) -o $@ $<
 
-$(STP_PFX)/c-parser.o: $(STP_PFX)/poly-cparser.ML $(PARSER_DEPS)
-	STP_PFX=$(STP_PFX) $(POLY) < $<
+$(STP_PFX)/%/tokenizer: $(STP_PFX)/poly-tokenizer.ML $(TOKENIZER_DEPS) $(STP_PFX)/../umm_heap/%/TargetNumbers.ML | $(STP_PFX)/%
+	STP_PFX=$(STP_PFX) STP_ARCH=$(lastword $(filter-out tokenizer,$(subst /, ,$@))) $(POLYC) -o $@ $<
 
-$(STP_PFX)/tokenizer: $(STP_PFX)/tokenizer.o $(LIBPOLYML)
-	$(POLYCC) -o $@ $<
-
-$(STP_PFX)/tokenizer.o: $(STP_PFX)/poly-tokenizer.ML $(TOKENIZER_DEPS)
-	STP_PFX=$(STP_PFX) $(POLY) < $<
-
-
-.PHONY: stp_deps
-stp_deps:
-	@echo $(PARSER_DEPS)
 
 else
 $(error Can only cope with SML_COMPILER as "poly" or "mlton"; got $(SML_COMPILER))

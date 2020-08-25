@@ -64,13 +64,12 @@ all_tests_$(L4V_ARCH).thy: testfiles testfiles/*.c ../../misc/scripts/gen_isabel
 tools_all: $(CPARSER_PFX)/tools/mllex/mllex $(CPARSER_PFX)/tools/mlyacc/mlyacc
 
 MLYACC=$(MLYACC_PFX)/mlyacc
-RUN_MLYACC=$(TOOLRUN_PFX)$(MLYACC)
 
 %.lex.sml: %.lex $(MLLEX)
-	$(RUN_MLLEX) $<
+	$(MLLEX) $<
 
 %.grm.sml %.grm.sig: %.grm $(MLYACC)
-	$(RUN_MLYACC) $<
+	$(MLYACC) $<
 
 GRAMMAR_PRODUCTS = StrictC.lex.sml StrictC.grm.sig StrictC.grm.sml
 

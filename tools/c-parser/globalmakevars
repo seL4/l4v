@@ -15,7 +15,7 @@ GLOB_PFX := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 -include $(GLOB_PFX)/globalmakevars.local
 CC ?= gcc
 
-SML_COMPILER ?= mlton
+SML_COMPILER ?= poly
 #ifndef SML_COMPILER
 #SML_COMPILER := $(if $(shell which mlton),mlton,poly)
 #endif
@@ -36,9 +36,7 @@ MACOSP := $(findstring Darwin,$(OS))
 DYLIB := $(if $(MACOSP),DYLD_LIBRARY_PATH,LD_LIBRARY_PATH)
 DYLIB_SFX := $(if $(MACOSP),dylib,so)
 
-POLY_MACHINE_LDFLAGS := $(if $(MACOSP),-segprot POLY rwx rwx,)
-
-POLYCC := $(CC) $(POLY_CC_FLAGS) -L$(LIBPOLY_DIR) -lgmp -lpolymain -lpolyml -lstdc++ -lpthread -ldl $(POLY_MACHINE_LDFLAGS)
+POLYC := $(ML_HOME)/polyc
 
 
 ifndef LIBPOLYML
@@ -47,7 +45,6 @@ endif
 
 DYLIB_VAL := $($(DYLIB))
 SETDYLIB := $(DYLIB)=$(LIBPOLY_DIR)$(if $(DYLIB_VAL),:$(DYLIB_VAL),)
-TOOLRUN_PFX := $(if $(findstring poly,$(SML_COMPILER)),$(SETDYLIB) ,)
 POLY := $(SETDYLIB) $(ML_HOME)/poly
 
 GLOBAL_MAKES_INCLUDED=true

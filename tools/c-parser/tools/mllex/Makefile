@@ -14,10 +14,6 @@ all: $(MLLEX)
 
 include $(MLLEX_PFX)/../../globalmakevars
 
-RUN_MLLEX=$(TOOLRUN_PFX)$(MLLEX)
-
-
-
 ifeq ($(SML_COMPILER),mlton)
 #
 # Compilation if the compiler is mlton
@@ -34,19 +30,9 @@ else ifeq ($(SML_COMPILER),poly)
 #
 # set POLY_CC_FLAGS to -m32 if you are using 32bit poly on a 64bit architecture
 
-$(MLLEX): $(MLLEX)0
-	/bin/echo "#! /bin/sh" > $@
-	/bin/echo >> $@
-	/bin/echo "$(TOOLRUN_PFX)$< \"\$$@\"" >> $@
-	chmod +x $@
+$(MLLEX): $(MLLEX_PFX)/poly-mllex.ML $(MLLEX_PFX)/mllex.ML
+	MLLEX_PFX=$(MLLEX_PFX) $(POLYC) -o $@ $<
 
-
-$(MLLEX)0: $(MLLEX_PFX)/mllex.o
-	$(POLYCC) -o $@ $<
-
-
-$(MLLEX_PFX)/mllex.o: $(MLLEX_PFX)/poly-mllex.ML $(MLLEX_PFX)/mllex.ML
-	MLLEX_PFX=$(MLLEX_PFX) $(POLY) < $<
 
 else
 $(error Can only cope with SML_COMPILER as "poly" or "mlton")
