@@ -74,6 +74,7 @@ build-riscv: sandbox $(BOOT_FILES)
 # cabal package database is missing, the build will fail.
 
 .stack-work:
+	mkdir ~/.stack
 	stack --install-ghc build cabal-install
 
 $(CUSTOM_BOOT_FILES):
