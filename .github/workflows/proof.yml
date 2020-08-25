@@ -12,6 +12,20 @@ on:
   pull_request:
 
 jobs:
+  haskell:
+    name: Haskell
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ARM]
+    steps:
+    - name: compile Haskell
+      uses: seL4/ci-actions/run-proofs@master
+      with:
+        L4V_ARCH: ${{ matrix.arch }}
+        session: HaskellKernel tests-xml-correct
+
   ainvs:
     name: AInvs
     runs-on: ubuntu-latest
@@ -30,7 +44,7 @@ jobs:
       uses: seL4/ci-actions/run-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
-        session: ExecSpec AInvs
+        session: ExecSpec ASpecDoc AInvs
 
   refine:
     name: Refine
