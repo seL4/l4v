@@ -347,7 +347,7 @@ The function "assert" is used to state that a predicate must be true at a given 
 
 The function "stateAssert" is similar to "assert", except that it reads the current state. This is typically used for more complex assertions that cannot be easily expressed in Haskell; in this case, the asserted function is "const True" in Haskell but is replaced with something stronger in the Isabelle translation.
 
-> stateAssert :: (KernelState -> Bool) -> String -> Kernel ()
+> stateAssert :: MonadState s m => (s -> Bool) -> String -> m ()
 > stateAssert f e = get >>= \s -> assert (f s) e
 
 The "capHasProperty" function is used with "stateAssert". As explained above, it is "const True" here, but is strengthened to actually check the capability in the translation to Isabelle.
