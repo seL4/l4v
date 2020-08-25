@@ -45,8 +45,3 @@ val _ = u "link";
 val _ = use (dir ^ "/src/poly-main.ML");
 
 fun main () = main.main (CommandLine.arguments ());
-
-val _ = PolyML.shareCommonData main;
-val _ = PolyML.export (dir ^ "/mlyacc", main);
-
-

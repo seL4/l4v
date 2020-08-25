@@ -15,7 +15,7 @@ include $(MLYACC_PFX)/../../globalmakevars
 include $(MLYACC_PFX)/../mllex/Makefile
 
 $(MLYACC_PFX)/src/yacc.lex.sml: $(MLYACC_PFX)/src/yacc.lex $(MLLEX)
-	$(RUN_MLLEX) $<
+	$(MLLEX) $<
 
 ifeq ($(SML_COMPILER),mlton)
 #
@@ -35,15 +35,6 @@ else ifeq ($(SML_COMPILER),poly)
 # set POLY_CC_FLAGS to -m32 if you are using 32bit poly on a 64bit architecture
 
 
-$(MLYACC_PFX)/mlyacc: $(MLYACC_PFX)/mlyacc0
-	/bin/echo "#! /bin/sh" > $@
-	/bin/echo >> $@
-	/bin/echo "$(TOOLRUN_PFX)$< \"\$$@\"" >> $@
-	chmod +x $@
-
-$(MLYACC_PFX)/mlyacc0: $(MLYACC_PFX)/mlyacc.o
-	$(POLYCC) -o $@ $<
-
 MLY_SRCDEPS0 = absyn-sig absyn core coreutils grammar graph hdr lalr link look \
            mklrtable mkprstruct parse poly-main shrink sigs utils verbose \
 	   yacc
@@ -52,11 +43,12 @@ MLY_SRCDEPS = $(patsubst %,src/%,$(MLY_SRCDEPS1))
 
 MLY_LIBDEPS0 = base-sig join lrtable parser2 stream
 MLY_LIBDEPS = $(patsubst %,mlyacclib/MLY_%.ML,$(LIBDEPS0))
-
 MLY_DEPS = $(patsubst %,$(MLYACC_PFX)/%,$(MLY_LIBDEPS) $(MLY_SRCDEPS))
 
-$(MLYACC_PFX)/mlyacc.o: $(MLYACC_PFX)/poly-mlyacc.ML $(MLY_DEPS)
-	MLYACC_PFX=$(MLYACC_PFX) $(SETDYLIB) $(POLY) < $<
+$(MLYACC_PFX)/mlyacc: $(MLYACC_PFX)/poly-mlyacc.ML $(MLY_DEPS)
+	MLYACC_PFX=$(MLYACC_PFX) $(POLYC) -o $@ $<
+
+
 
 else
 $(error Can only cope with SML_COMPILER as "poly" or "mlton")
@@ -73,6 +65,6 @@ clean: mlyacc_clean
 cparser_clean: mlyacc_clean
 
 mlyacc_clean:
-	-/bin/rm -f $(MLYACC_PFX)/mlyacc.o $(MLYACC_PFX)/mlyacc $(MLYACC_PFX)/src/yacc.lex.sml
+	-/bin/rm -f $(MLYACC_PFX)/mlyacc $(MLYACC_PFX)/src/yacc.lex.sml
 
 endif

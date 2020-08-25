@@ -13,7 +13,6 @@ open OS.Process
 fun die s = (print s; print "\n"; exit failure)
 fun warn s = (TextIO.output(TextIO.stdErr, s^"\n");
               TextIO.flushOut TextIO.stdErr)
-val execname = CommandLine.name
 
 
 val _ = Feedback.errorThreshold := NONE;
@@ -507,9 +506,9 @@ fun docpp (SOME p) {includes, filename} =
   end
   | docpp NONE {filename, ...} = (filename, false)
 
-val usage_msg = GetOpt.usageInfo {
+fun usage_msg () = GetOpt.usageInfo {
     header =
-    "Usage: \n  "^execname()^" [options] filename\n\n\
+    "Usage: \n  "^CommandLine.name()^" [options] filename\n\n\
     \Use -l to adjust error lookahead. (The higher the number, the more the parser\n\
     \will try to make sense of stuff with parse errors.)\n\n\
     \For no analyses at all (not even typechecking), use --rawsyntaxonly.\n\n\
@@ -525,12 +524,12 @@ fun doit args =
         GetOpt.getOpt {argOrder = GetOpt.RequireOrder, options = options,
                        errFn = die} args
     val _ = if !show_help then
-              (print usage_msg ; OS.Process.exit OS.Process.success)
-            else if !bad_option then die usage_msg
+              (print (usage_msg()) ; OS.Process.exit OS.Process.success)
+            else if !bad_option then die (usage_msg())
             else ()
   in
     case realargs of
-      [] => die usage_msg
+      [] => die (usage_msg())
     | [fname] =>
       let
         val (ast,n) = StrictCParser.parse (docpp (!cpp)) (!error_lookahead)
@@ -559,7 +558,7 @@ fun doit args =
             do_analyses (List.rev (!analyses))
           end
       end
-    | _ => die usage_msg
+    | _ => die (usage_msg())
   end
 
 end;
