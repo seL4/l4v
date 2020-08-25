@@ -7,9 +7,24 @@ val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
 val dir = valOf (OS.Process.getEnv "STP_PFX")
+val l4v_arch = valOf (OS.Process.getEnv "STP_ARCH")
 
 infix |>
 fun x |> f = f x
+
+fun replace tgt replacement s =
+    let
+      val ss = Substring.full s
+      val (pfx_s,sfx_s) = Substring.position tgt ss
+    in
+      if Substring.size sfx_s = 0 then s
+      else
+        Substring.concat [
+          pfx_s,
+          Substring.full replacement,
+          Substring.triml (String.size tgt) sfx_s
+        ]
+    end
 
 fun readmlb fname = let
   val istr = TextIO.openIn fname
@@ -18,6 +33,7 @@ fun readmlb fname = let
         NONE => ()
       | SOME s => let
           open Substring
+          val s = replace "$(L4V_ARCH)" l4v_arch s
           val s = s |> full |> dropr Char.isSpace |> dropl Char.isSpace |> string
           val lower_s = CharVector.map Char.toLower s
         in

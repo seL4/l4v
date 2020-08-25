@@ -20,7 +20,3 @@ in
            OS.Process.exit OS.Process.failure)
   | args => List.app LexGen.lexGen args
 end;
-
-val _ = PolyML.shareCommonData main;
-val _ = PolyML.export(dir ^ "/mllex", main);
-
