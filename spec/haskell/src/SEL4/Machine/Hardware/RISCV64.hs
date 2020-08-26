@@ -306,8 +306,8 @@ maskInterrupt maskI irq = do
 debugPrint :: String -> MachineMonad ()
 debugPrint str = liftIO $ putStrLn str
 
-read_sbadaddr :: MachineMonad Word
-read_sbadaddr = error "Unimplemented - machine op"
+read_stval :: MachineMonad Word
+read_stval = error "Unimplemented - machine op"
 
 plic_complete_claim :: IRQ -> MachineMonad ()
 plic_complete_claim = error "Unimplemented - machine op"

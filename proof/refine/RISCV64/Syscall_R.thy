@@ -1637,10 +1637,10 @@ lemma hy_invs':
   apply (simp add:ct_active_runnable'[unfolded ct_in_state'_def])
   done
 
-lemma dmo_read_sbadaddr[wp]:
-  "doMachineOp read_sbadaddr \<lbrace>invs'\<rbrace>"
+lemma dmo_read_stval[wp]:
+  "doMachineOp read_stval \<lbrace>invs'\<rbrace>"
   apply (wp dmo_invs')
-  apply (clarsimp simp: in_monad read_sbadaddr_def)
+  apply (clarsimp simp: in_monad read_stval_def)
   done
 
 lemma hv_invs'[wp]: "\<lbrace>invs' and tcb_at' t'\<rbrace> handleVMFault t' vptr \<lbrace>\<lambda>r. invs'\<rbrace>"

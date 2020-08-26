@@ -52,9 +52,9 @@ lemma asidBits_asid_bits[simp]:
   "asidBits = asid_bits"
   by (simp add: bit_simps' asid_bits_def asidBits_def)
 
-lemma no_fail_read_sbadaddr[intro!,simp]:
-  "no_fail \<top> read_sbadaddr"
-  by (simp add: read_sbadaddr_def)
+lemma no_fail_read_stval[intro!,simp]:
+  "no_fail \<top> read_stval"
+  by (simp add: read_stval_def)
 
 lemma hv_corres:
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
@@ -66,7 +66,7 @@ lemma hv_corres:
       apply simp
       apply (rule corres_machine_op[where r="(=)"])
       apply (rule corres_Id, rule refl, simp)
-      apply (rule no_fail_read_sbadaddr)
+      apply (rule no_fail_read_stval)
      apply wpsimp+
   done
 

@@ -27,10 +27,10 @@ assumes hwASIDFlush_ccorres:
            (doMachineOp (RISCV64.hwASIDFlush asid))
            (Call hwASIDFlush_'proc)"
 
-assumes read_sbadaddr_ccorres:
+assumes read_stval_ccorres:
   "ccorres (=) ret__unsigned_long_' \<top> UNIV []
-           (doMachineOp RISCV64.read_sbadaddr)
-           (Call read_sbadaddr_'proc)"
+           (doMachineOp RISCV64.read_stval)
+           (Call read_stval_'proc)"
 
 assumes sfence_ccorres:
   "ccorres dc xfdc \<top> UNIV []
