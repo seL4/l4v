@@ -584,7 +584,7 @@ lemma commit_time_domain_time_left[wp]:
   "\<lbrace> valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace>
    commit_time
    \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
-  by (wpsimp simp: commit_time_def
+  by (wpsimp simp: commit_time_def num_domains_def
                wp: commit_domain_time_domain_time_left hoare_drop_imp)
 
 lemma invoke_sched_control_configure_domain_time_inv[wp]:

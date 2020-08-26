@@ -627,11 +627,7 @@ lemma commit_times_invs_helper:
   " \<lbrace>\<lambda>s. invs s \<and>
          consumed_time s = consumed \<and>
          cur_sc s = csc\<rbrace>
-       do x <- get_sched_context csc;
-          xa <- gets cur_time;
-          xb <- assert (sc_refill_sufficient 0 x);
-          x <- assert (sc_refill_ready xa x);
-          y <- update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed sc + consumed\<rparr>);
+       do y <- update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed sc + consumed\<rparr>);
           y <- commit_domain_time;
           modify (consumed_time_update (\<lambda>_. 0))
        od
@@ -645,15 +641,16 @@ lemma commit_times_invs_helper:
 lemma commit_time_invs:
   "commit_time \<lbrace>invs\<rbrace>"
   supply fun_upd_apply[simp del]
-  apply (clarsimp simp: commit_time_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (clarsimp simp: commit_time_def num_domains_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (case_tac "sc_active sc"; clarsimp split del: if_split simp: bind_assoc)
+   apply (rule hoare_seq_ext[OF _ gets_sp])
+   apply (rename_tac csc sc consumed)
    apply (case_tac "0 < consumed"; simp split del: if_split add: bind_assoc)
     apply (wpsimp wp: commit_times_invs_helper hoare_vcg_ex_lift
                 simp: refill_budget_check_round_robin_def is_round_robin_def)
-    apply (clarsimp simp: obj_at_def is_sc_obj_def)
+   apply (clarsimp simp: obj_at_def is_sc_obj_def)
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                        consumed_time_update_arch.state_refs_update
                        commit_domain_time_def sc_consumed_update_eq[symmetric])
