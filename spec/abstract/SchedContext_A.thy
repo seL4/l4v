@@ -436,8 +436,8 @@ definition
   commit_domain_time :: "(unit, 'z::state_ext) s_monad"
 where
   "commit_domain_time = do
-    domain_time \<leftarrow> gets domain_time;
     consumed \<leftarrow> gets consumed_time;
+    domain_time \<leftarrow> gets domain_time;
     time' \<leftarrow> return (if domain_time < consumed then 0 else domain_time - consumed);
     modify (\<lambda>s. s\<lparr>domain_time := time'\<rparr>)
   od"
@@ -447,26 +447,20 @@ definition
   commit_time :: "(unit, 'z::state_ext) s_monad"
 where
   "commit_time = do
-    consumed \<leftarrow> gets consumed_time;
     csc \<leftarrow> gets cur_sc;
     sc \<leftarrow> get_sched_context csc;
     when (sc_active sc) $ do
+      consumed \<leftarrow> gets consumed_time;
       when (0 < consumed) $ do
-        curtime \<leftarrow> gets cur_time;
-        assert $ sc_refill_sufficient consumed sc;
-        assert $ sc_refill_ready curtime sc;   \<comment> \<open>asserting @{text \<open>ready & sufficient\<close>}\<close>
         robin \<leftarrow> is_round_robin csc;
         if robin
         then refill_budget_check_round_robin consumed
-        else refill_budget_check consumed;
-        sc2 \<leftarrow> get_sched_context csc;
-        curtime2 \<leftarrow> gets cur_time;
-        assert $ sc_refill_sufficient 0 sc2;
-        assert $ sc_refill_ready curtime2 sc2  \<comment> \<open>asserting @{text \<open>ready & sufficient\<close>} again\<close>
+        else refill_budget_check consumed
       od;
       update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>)
     od;
-    commit_domain_time;
+    when (num_domains > 1) $
+      commit_domain_time;
     modify (\<lambda>s. s\<lparr>consumed_time := 0\<rparr> )
   od"
 
