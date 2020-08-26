@@ -10,6 +10,7 @@ theory ADT_H
 imports
   "AInvs.ADT_AI"
   Syscall_R
+  Init_R
 begin
 
 (* FIXME: many of the naming conventions in this file are wrong. Definitions should start with
