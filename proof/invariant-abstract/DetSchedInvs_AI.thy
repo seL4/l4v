@@ -34,6 +34,9 @@ lemmas hoare_seq_ext_skip
 lemmas hoare_seq_ext_skipE
   = hoare_vcg_seqE[where B="\<lambda>_. A" and A=A for A, rotated]
 
+lemmas hoare_seq_ext_skip'
+  = hoare_seq_ext[where B=C and C=C for C]
+
 \<comment> \<open>Various lifting rules\<close>
 
 lemma hoare_liftP_ext_pre_conj:
