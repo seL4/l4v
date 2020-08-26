@@ -165,7 +165,7 @@ lookupPTSlot = lookupPTSlotFromLevel maxPTLevel
 
 handleVMFault :: PPtr TCB -> VMFaultType -> KernelF Fault ()
 handleVMFault thread f = do
-    w <- withoutFailure $ doMachineOp read_sbadaddr
+    w <- withoutFailure $ doMachineOp read_stval
     let addr = VPtr w
     case f of
         RISCVLoadPageFault -> throw $ loadf addr

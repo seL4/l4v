@@ -63,7 +63,7 @@ text \<open>
 definition handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit,'z::state_ext) f_monad"
   where
   "handle_vm_fault thread fault_type = doE
-    addr \<leftarrow> liftE $ do_machine_op read_sbadaddr;
+    addr \<leftarrow> liftE $ do_machine_op read_stval;
     let
       loadf = (\<lambda>a. throwError $ ArchFault $ VMFault a [0, vmFaultTypeFSR RISCVLoadAccessFault]);
       storef = (\<lambda>a. throwError $ ArchFault $ VMFault a [0, vmFaultTypeFSR RISCVStoreAccessFault]);

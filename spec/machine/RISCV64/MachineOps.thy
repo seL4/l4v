@@ -237,10 +237,10 @@ lemmas cache_machine_op_defs = sfence_def hwASIDFlush_def
 
 subsection "Faults"
 
-consts' sbadaddr_val :: "machine_state \<Rightarrow> machine_word"
-definition read_sbadaddr :: "machine_word machine_monad"
+consts' stval_val :: "machine_state \<Rightarrow> machine_word"
+definition read_stval :: "machine_word machine_monad"
   where
-  "read_sbadaddr = gets sbadaddr_val"
+  "read_stval = gets stval_val"
 
 
 subsection "Virtual Memory"
