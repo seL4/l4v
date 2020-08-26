@@ -9163,6 +9163,27 @@ lemma refill_budget_check_refill_ready_offset_ready_and_sufficient:
   apply (simp add: word_le_nat_alt, blast intro: order_trans unat_plus_gt)
   done
 
+(* FIXME RT: move and rename *)
+lemma MIN_BUDGET_subtraction_helper[elim!]:
+  "2 * MIN_BUDGET \<le> b \<Longrightarrow> MIN_BUDGET \<le> b - MIN_BUDGET"
+  apply (rule word_sub_move)
+  apply (metis mult_2)
+  using MIN_BUDGET_le_MIN_SC_BUDGET
+  by (clarsimp simp: MIN_SC_BUDGET_def)
+
+lemma refill_budget_check_is_refill_sufficient:
+  "\<lbrace>\<lambda>s. if sc_ptr = cur_sc s
+        then valid_refills (cur_sc s) s \<and> current_time_bounded 0 s
+             \<and> cur_sc_offset_ready usage s \<and> cur_sc_offset_sufficient usage s
+         else is_refill_sufficient 0 sc_ptr s\<rbrace>
+   refill_budget_check usage
+   \<lbrace>\<lambda>_ s. is_refill_sufficient 0 sc_ptr s\<rbrace>"
+  unfolding refill_budget_check_def get_sc_refill_ready_def
+  apply (wpsimp wp: set_refills_wp is_round_robin_wp)
+  by (auto simp: pred_map_def obj_at_def vs_all_heap_simps refill_sufficient_def refill_capacity_def
+                 valid_refills_def Let_def
+          split: if_splits)
+
 crunches refill_budget_check
   for etcb_eq[wp]: "etcb_eq p d t"
   (wp: crunch_wps simp: crunch_simps)
@@ -9179,6 +9200,19 @@ lemma refill_budget_check_round_robin_refill_ready_offset_ready_and_sufficient:
   apply (intro conjI impI allI; (clarsimp simp: vs_all_heap_simps refill_ready_no_overflow_def refill_ready_def obj_at_def)?)
      using cur_time_no_overflow word_le_nat_alt unat_plus_simple apply force+
   done
+
+lemma refill_budget_check_round_robin_is_refill_sufficient:
+  "\<lbrace>\<lambda>s. if sc_ptr = cur_sc s
+        then valid_refills (cur_sc s) s \<and> current_time_bounded 0 s
+             \<and> cur_sc_offset_ready usage s \<and> cur_sc_offset_sufficient usage s
+         else is_refill_sufficient 0 sc_ptr s\<rbrace>
+   refill_budget_check_round_robin usage
+   \<lbrace>\<lambda>_ s. is_refill_sufficient 0 sc_ptr s\<rbrace>"
+  unfolding refill_budget_check_round_robin_def get_sc_refill_ready_def is_round_robin_def
+  apply (wpsimp wp: set_refills_wp)
+  by (auto simp: pred_map_def obj_at_def vs_all_heap_simps refill_sufficient_def refill_capacity_def
+                 refill_ready_no_overflow_def valid_refills_def rr_valid_refills_def
+          split: if_splits)
 
 lemma refill_budget_check_round_robin_valid_ready_qs_not_queued:
   "\<lbrace>valid_ready_qs and (\<lambda>s. sc_not_in_ready_q (cur_sc s) s)\<rbrace>
@@ -9349,8 +9383,10 @@ lemma commit_time_valid_release_q:
    \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
   unfolding commit_time_def
   apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (case_tac "sc_active sc"; simp add: bind_assoc)
+   apply (rule hoare_seq_ext[OF _ gets_sp])
+   apply (rename_tac csc sc consumed)
   apply (rule_tac P="\<lambda>s. \<exists>tp. bound_sc_tcb_at ((=) (Some (cur_sc s))) tp s" in precondition_cases)
    apply (rule_tac P="\<lambda>s. sc_with_tcb_prop (cur_sc s) (\<lambda>s. in_release_q s) s" in precondition_cases)
     apply (rule_tac Q="valid_release_q and (\<lambda>s. consumed_time s = consumed)
@@ -9437,33 +9473,41 @@ lemma refill_budget_check_round_robin_sc_refills_update_unspecified:
   done
 
 lemma commit_time_released_ipc_queues[wp]:
-  "\<lbrace>released_ipc_queues\<rbrace>
+  "\<lbrace>released_ipc_queues
+    and cur_sc_more_than_ready
+    and active_sc_valid_refills
+    and current_time_bounded 0\<rbrace>
    commit_time
    \<lbrace>\<lambda>_. released_ipc_queues\<rbrace>"
   supply if_split[split del]
   apply (simp add: commit_time_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (rule hoare_seq_ext[where B="\<lambda>_. released_ipc_queues"], wpsimp)
   apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rename_tac csc sc consumed)
   apply (rule hoare_seq_ext[where B="\<lambda>_. released_ipc_queues"], wpsimp)
   apply (rule hoare_when_cases, simp)
   apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)+
-  apply (rule_tac B="\<lambda>_ s. is_active_sc csc s
-                           \<and> (\<forall>t. pred_map_eq (Some csc) (tcb_scps_of s) t
-                                  \<or> released_ipc_queued_thread t s)"
-           in hoare_seq_ext)
-   apply wpsimp
-   apply (simp add: released_ipc_queues_defs)
-   apply (erule allEI, fastforce simp: obj_at_def vs_all_heap_simps)
-  apply (wpsimp wp: refill_budget_check_sc_refills_update_unspecified
-                    refill_budget_check_round_robin_sc_refills_update_unspecified)
-  apply (rule conjI)
-   apply (clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps)
-  apply (simp add: released_ipc_queues_defs)
-  apply (erule allEI)
-  by (fastforce simp: heap_upd_def vs_all_heap_simps)
+  apply (rule hoare_weaken_pre)
+   apply (rule_tac R="cur_sc_more_than_ready and current_time_bounded 0
+                      and (\<lambda>s. consumed = consumed_time s) and cur_sc_active
+                      and (\<lambda>s. valid_refills (cur_sc s) s)"
+          in released_ipc_queues_lift_pre_conj)
+          apply (wpsimp+)[6]
+    apply (wpsimp simp: budget_ready_def2
+                    wp: hoare_vcg_ex_lift
+                        refill_budget_check_round_robin_refill_ready_offset_ready_and_sufficient
+                        refill_budget_check_refill_ready_offset_ready_and_sufficient)
+    apply (fastforce simp: cur_sc_more_than_ready_def split: if_split)
+   apply (wpsimp simp: budget_sufficient_def2
+                     wp: hoare_vcg_ex_lift
+                         refill_budget_check_round_robin_is_refill_sufficient
+                         refill_budget_check_is_refill_sufficient)
+   apply (fastforce simp: cur_sc_more_than_ready_def split: if_split)
+  by (fastforce simp: is_active_sc_def obj_at_def pred_map_def vs_all_heap_simps
+                         active_sc_valid_refills_def)
 
 lemma commit_time_valid_sched_action:
   "\<lbrace>valid_sched_action and simple_sched_action\<rbrace>
@@ -9719,11 +9763,11 @@ lemma commit_time_active_sc_valid_refills:
    \<lbrace>\<lambda>_. active_sc_valid_refills\<rbrace>"
   unfolding commit_time_def
   apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (rule hoare_seq_ext[where B="\<lambda>_. active_sc_valid_refills"], wpsimp)
   apply clarsimp
   apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[where B="\<lambda>_. active_sc_valid_refills"], wpsimp)
   apply (rule hoare_when_cases, simp)
   apply (wpsimp wp: assert_inv
@@ -9766,8 +9810,9 @@ lemma commit_time_valid_sched:
    commit_time
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
    unfolding valid_sched_def
-   by (wpsimp wp: commit_time_valid_release_q commit_time_active_sc_valid_refills
-                  commit_time_valid_ready_qs commit_time_valid_sched_action)
+   apply (wpsimp wp: commit_time_valid_release_q commit_time_active_sc_valid_refills
+                     commit_time_valid_ready_qs commit_time_valid_sched_action)
+   by (erule current_time_bounded_strengthen, simp)
 
 (* end commit_time *)
 
@@ -15477,26 +15522,9 @@ lemma refill_budget_check_round_robin_sc_refill_max_sc_at:
                     obj_at_def refill_full_def refill_ready_def
       | intro conjI impI)+
 
-lemma commit_time_sc_refill_max_sc_at:
-  "commit_time \<lbrace>\<lambda>s. sc_refill_max_sc_at P sc_ptr s\<rbrace>"
-  unfolding commit_time_def commit_domain_time_def
-  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp?\<close>)+
-  apply (clarsimp simp: when_def)
-  apply (intro conjI impI allI; (clarsimp simp: bind_assoc)?)
-
-     \<comment> \<open>0 < consumed \<and> 0 < sc_refill_max sc\<close>
-     apply (rule hoare_seq_ext_skip, solves \<open>wpsimp?\<close>)+
-     apply clarsimp
-     apply (intro conjI impI)
-      apply (rule hoare_seq_ext_skip
-             , wpsimp wp: refill_budget_check_round_robin_sc_refill_max_sc_at)
-      apply (wpsimp wp: update_sched_context_wp simp: sc_at_pred_n_def obj_at_def)
-     apply (rule hoare_seq_ext_skip, wpsimp wp: refill_budget_check_sc_refill_max_sc_at)
-     apply (wpsimp wp: update_sched_context_wp simp: sc_at_pred_n_def obj_at_def)
-
-     \<comment> \<open>remaining cases\<close>
-    apply (wpsimp wp: update_sched_context_wp simp: sc_at_pred_n_def obj_at_def)+
-  done
+crunches commit_time
+  for sc_refill_max_sc_at[wp]: "sc_refill_max_sc_at P sc_ptr"
+  (wp: crunch_wps update_sched_context_sc_at_pred_n_no_change ignore: update_sched_context)
 
 crunches tcb_release_remove, tcb_sched_action
   for sc_refill_max_sc_at[wp]: "sc_refill_max_sc_at P sc_ptr"
