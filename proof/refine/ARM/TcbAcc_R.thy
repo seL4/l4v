@@ -2307,13 +2307,6 @@ lemma thread_get_exs_valid:
   by (clarsimp simp: thread_get_def get_tcb_def gets_the_def gets_def return_def get_def
                      exs_valid_def tcb_at_def bind_def)
 
-lemma get_sched_context_exs_valid:
-  "\<exists>sc n. kheap s scp = Some (Structures_A.SchedContext sc n)
-   \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_sched_context scp \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
-  by (clarsimp simp: get_sched_context_def get_object_def obj_at_def bind_def is_sc_obj_def
-                     gets_def get_def return_def exs_valid_def
-              split: Structures_A.kernel_object.splits)
-
 lemma get_reply_exs_valid:
   "reply_at rp s \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_reply rp \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
   by (clarsimp simp: get_simple_ko_def get_object_def gets_def return_def get_def
@@ -2369,12 +2362,6 @@ lemma get_sc_refill_ready_sp:
                    \<and> (rv = sc_refill_ready (cur_time s) sc))
            \<and> P s\<rbrace>"
   by (wpsimp simp: obj_at_def)
-
-lemma get_sched_context_no_fail:
-  "no_fail (\<lambda>s. sc_at ptr s) (get_sched_context ptr)"
-  by (clarsimp simp: get_sched_context_def no_fail_def bind_def get_object_def return_def get_def
-                     gets_def obj_at_def is_sc_obj_def
-              split: Structures_A.kernel_object.splits)
 
 lemma rescheduleRequired_corres:
   "corres dc (valid_tcbs and weak_valid_sched_action and pspace_aligned and pspace_distinct)
