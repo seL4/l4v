@@ -643,7 +643,8 @@ This module uses the C preprocessor to select a target architecture.
 >     when (numDomains > 1) $ do
 >       consumed <- getConsumedTime
 >       domainTime <- getDomainTime
->       setDomainTime (domainTime - consumed)
+>       time' <- return $ if (domainTime < consumed) then 0 else (domainTime - consumed)
+>       setDomainTime time'
 >     setConsumedTime 0
 
 > rollbackTime :: Kernel ()
