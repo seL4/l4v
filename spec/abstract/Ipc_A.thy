@@ -666,13 +666,23 @@ where
   od"
 
 definition
+  refill_reset_rr :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "refill_reset_rr csc_ptr = do
+     csc \<leftarrow> get_sched_context csc_ptr;
+     refills \<leftarrow> return (sc_refills csc);
+     set_refills csc_ptr [\<lparr>r_time = r_time (hd refills), r_amount = r_amount (hd refills) + r_amount (hd (tl refills))\<rparr>,
+                          \<lparr>r_time = r_time (hd (tl refills)), r_amount = 0\<rparr>]
+   od"
+
+definition
   charge_budget :: "ticks \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "charge_budget consumed canTimeout = do
     csc_ptr \<leftarrow> gets cur_sc;
-    csc \<leftarrow> get_sched_context csc_ptr;
     robin \<leftarrow> is_round_robin csc_ptr;
-    if robin then refill_budget_check_round_robin consumed
+    if robin
+    then refill_reset_rr csc_ptr
     else refill_budget_check consumed;
     update_sched_context csc_ptr (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);
     modify $ consumed_time_update (K 0);

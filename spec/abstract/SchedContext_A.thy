@@ -107,17 +107,30 @@ where
   "set_refills sc_ptr refills = set_sc_obj_ref sc_refills_update sc_ptr refills"
 
 definition
+  maybe_add_empty_tail :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "maybe_add_empty_tail sc_ptr = do
+     robin <- is_round_robin sc_ptr;
+     when robin $ do
+       sc <- get_sched_context sc_ptr;
+       refills <- return (sc_refills sc);
+       empty_refill <- return \<lparr>r_time = r_time (hd refills), r_amount = 0\<rparr>;
+       set_sc_obj_ref sc_refills_update sc_ptr (refills @ [empty_refill])
+     od
+   od"
+
+definition
   refill_new :: "obj_ref \<Rightarrow> nat \<Rightarrow> ticks \<Rightarrow> ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "refill_new sc_ptr max_refills budget period = do
      assert (MIN_BUDGET < budget);
      cur_time \<leftarrow> gets cur_time;
-     head_time <- return (if period = 0 then 0 else cur_time);
-     refill \<leftarrow> return \<lparr> r_time = head_time, r_amount = budget \<rparr>;
+     refill \<leftarrow> return \<lparr> r_time = cur_time, r_amount = budget \<rparr>;
      set_sc_obj_ref sc_period_update sc_ptr period;
      set_sc_obj_ref sc_refills_update sc_ptr [refill];
      set_sc_obj_ref sc_refill_max_update sc_ptr max_refills;
-     set_sc_obj_ref sc_budget_update sc_ptr budget
+     set_sc_obj_ref sc_budget_update sc_ptr budget;
+     maybe_add_empty_tail sc_ptr
    od"
 
 fun
@@ -172,33 +185,14 @@ where
   od"
 
 definition
-  refill_budget_check_round_robin :: "ticks \<Rightarrow> (unit, 'z:: state_ext) s_monad"
+  refill_budget_check_round_robin :: "ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "refill_budget_check_round_robin usage = do
     sc_ptr \<leftarrow> gets cur_sc;
     sc \<leftarrow> get_sched_context sc_ptr;
     refills \<leftarrow> return (sc_refills sc);
-    robin \<leftarrow> is_round_robin sc_ptr;
-    cur_time \<leftarrow> gets cur_time;
-
-    assert robin;
-
-    usage2 \<leftarrow> return $ if usage < MIN_BUDGET \<and> length refills = 1 then MIN_BUDGET else usage;
-
-    if usage2 + MIN_BUDGET \<le> r_amount (hd refills)
-    then do
-         new_hd \<leftarrow> return $ \<lparr>r_time = r_time (hd refills), r_amount = r_amount (hd refills) - usage2\<rparr>;
-         if length refills = 1
-         then do new_tl \<leftarrow> return $ \<lparr>r_time = r_amount new_hd, r_amount = usage2\<rparr>;
-                 set_refills sc_ptr (new_hd # [new_tl])
-              od
-         else do assert (length refills = 2);
-                 new_tl \<leftarrow> return $ \<lparr>r_time = r_time (hd (tl refills)) - usage2,
-                                     r_amount = r_amount (hd (tl refills)) + usage2\<rparr>;
-                 set_refills sc_ptr (new_hd # [new_tl])
-              od
-         od
-    else set_refills sc_ptr [\<lparr>r_time = 0, r_amount = sc_budget sc\<rparr>]
+    set_refills sc_ptr [\<lparr>r_time = r_time (hd refills), r_amount = r_amount (hd refills) - usage\<rparr>,
+                        \<lparr>r_time = r_time (hd (tl refills)), r_amount = r_amount (hd (tl refills)) + usage\<rparr>]
    od"
 
 definition
@@ -250,17 +244,17 @@ where
      refill_hd \<leftarrow> return $ refill_hd sc;
      cur_time \<leftarrow> gets cur_time;
      ready \<leftarrow> get_sc_refill_ready sc_ptr;
-     new_time \<leftarrow> return $ if new_period = 0 then 0 else if ready then cur_time else (r_time refill_hd);
+     new_time \<leftarrow> return $ if ready then cur_time else (r_time refill_hd);
      refill_hd \<leftarrow> return $ \<lparr>r_time = new_time, r_amount = r_amount refill_hd\<rparr>;
      if new_budget \<le> r_amount refill_hd
      then do set_sc_obj_ref sc_period_update sc_ptr new_period;
              set_sc_obj_ref sc_refill_max_update sc_ptr new_max_refills;
              set_sc_obj_ref sc_refills_update sc_ptr [\<lparr>r_time = new_time, r_amount = new_budget\<rparr>];
-             set_sc_obj_ref sc_budget_update sc_ptr new_budget
+             set_sc_obj_ref sc_budget_update sc_ptr new_budget;
+             maybe_add_empty_tail sc_ptr
           od
      else do unused <- return $ new_budget - r_amount refill_hd;
-             true_period <- return $ if new_period=0 then new_budget else new_period;
-             new <- return $ \<lparr>r_time = r_time refill_hd + true_period - unused, r_amount = unused\<rparr>;
+             new <- return $ \<lparr>r_time = r_time refill_hd + new_period - unused, r_amount = unused\<rparr>;
              new_refills <- return $ schedule_used False [refill_hd] new;
              set_sc_obj_ref sc_period_update sc_ptr new_period;
              set_sc_obj_ref sc_refill_max_update sc_ptr new_max_refills;
