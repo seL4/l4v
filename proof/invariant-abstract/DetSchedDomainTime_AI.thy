@@ -178,7 +178,7 @@ crunch domain_list_inv[wp]: commit_time "\<lambda>s. P (domain_list s)"
   (simp: Let_def wp: get_sched_context_wp get_refills_wp wp: crunch_wps)
 
 crunch domain_list_inv[wp]: refill_new "\<lambda>s. P (domain_list s)"
-  (simp: Let_def wp: get_sched_context_wp get_refills_wp wp: crunch_wps)
+  (simp: Let_def crunch_simps wp: get_sched_context_wp get_refills_wp wp: crunch_wps)
 
 crunch domain_list_inv[wp]: refill_update "\<lambda>s. P (domain_list s)"
   (simp: Let_def wp: get_sched_context_wp get_refills_wp wp: crunch_wps)
