@@ -461,7 +461,8 @@ lemma suspend_caps_of_state:
            \<and> P (caps_of_state s)\<rbrace>
      suspend t
    \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  by (wpsimp wp: cancel_ipc_caps_of_state hoare_drop_imps simp: suspend_def fun_upd_def[symmetric])+
+  by (wpsimp wp: cancel_ipc_caps_of_state hoare_drop_imps
+           simp: suspend_def sched_context_cancel_yield_to_def fun_upd_def[symmetric])+
 
 lemma suspend_final_cap:
   "\<lbrace>\<lambda>s. is_final_cap' cap s \<and> \<not> can_fast_finalise cap

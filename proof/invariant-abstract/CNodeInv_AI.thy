@@ -2023,13 +2023,22 @@ lemma tcb_valid_nonspecial_cap:
   apply (clarsimp simp: eq_commute)
   done
 
+lemma sched_context_cancel_yield_to_halted:
+  "sched_context_cancel_yield_to thread \<lbrace>st_tcb_at halted thread\<rbrace>"
+  apply (clarsimp simp: sched_context_cancel_yield_to_def get_tcb_obj_ref_def)
+  apply (wpsimp wp: thread_get_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb_def)
+  done
 
 lemma suspend_makes_halted[wp]:
   "\<lbrace>valid_objs\<rbrace> SchedContext_A.suspend thread \<lbrace>\<lambda>_. st_tcb_at halted thread\<rbrace>"
   unfolding SchedContext_A.suspend_def
-  by (wp hoare_strengthen_post [OF sts_st_tcb_at]
-    | clarsimp elim!: pred_tcb_weakenE)+
-
+  apply (simp flip: bind_assoc)
+  apply (rule hoare_seq_ext[OF sched_context_cancel_yield_to_halted])
+  apply (simp add: bind_assoc)
+  apply (wp hoare_strengthen_post [OF sts_st_tcb_at] gbn_wp
+         | clarsimp elim!: pred_tcb_weakenE)+
+  done
 
 lemmas tcb_at_cte_at_2 = tcb_at_cte_at [where ref="tcb_cnode_index 2",
                                         simplified dom_tcb_cap_cases]
