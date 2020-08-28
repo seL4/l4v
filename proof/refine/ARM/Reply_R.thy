@@ -22,16 +22,15 @@ lemma replyUnlink_st_tcb_at':
                 cong: conj_cong split: if_split_asm)
   done
 
-(* FIXME RT: Michael to fix and use in his next PR
 lemma replyUnlink_st_tcb_at'_sym_ref:
   "\<lbrace>\<lambda>s. reply_at' rptr s \<longrightarrow>
           obj_at' (\<lambda>reply. replyTCB reply = Some tptr) rptr s \<and> test Inactive\<rbrace>
-   replyUnlink rptr
+   replyUnlink rptr tptr
    \<lbrace>\<lambda>_. st_tcb_at' test tptr\<rbrace>"
-  apply (wpsimp wp: replyUnlink_st_tcb_at'_wp)
-  apply (clarsimp simp: obj_at'_def)
+  apply (wpsimp simp: replyUnlink_def getReplyTCB_def
+                  wp: sts_st_tcb_at'_cases gts_wp')
+  apply (fastforce simp: obj_at'_def projectKOs)
   done
-*)
 
 lemma replyRemoveTCB_st_tcb_at'_Inactive':
   "\<lbrace>\<top>\<rbrace>
@@ -67,7 +66,7 @@ lemma replyUnlink_tcb_obj_at'_no_change:
               simp: o_def)
   done
 
-(* FIXME RT: Michael to fix and use in his next PR
+
 lemma replyRemoveTCB_st_tcb_at'_sym_ref:
   "\<lbrace>(\<lambda>s. tcb_at' tptr s \<longrightarrow>
           (\<forall>rptr. st_tcb_at' (\<lambda>st. replyObject st = Some rptr) tptr s \<and> reply_at' rptr s \<longrightarrow>
@@ -95,6 +94,6 @@ lemma replyRemoveTCB_st_tcb_at'_sym_ref:
     apply (wpsimp wp: haskell_assert_wp)
    apply (wpsimp wp: gts_wp')
   apply (clarsimp simp: obj_at'_def pred_tcb_at'_def)
-  done*)
+  done
 
 end

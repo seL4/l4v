@@ -3034,6 +3034,7 @@ lemma cancelAllSignals_valid_queues[wp]:
    cancelAllSignals ntfn
    \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
   apply (simp add: cancelAllSignals_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_seq_ext [OF _ get_ntfn_sp'])
   apply (case_tac "ntfnObj ntfna", simp_all)
     apply (wp, simp)+

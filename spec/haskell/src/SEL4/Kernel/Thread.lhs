@@ -132,6 +132,8 @@ When a thread is suspended, either explicitly by a TCB invocation or implicitly 
 
 > suspend :: PPtr TCB -> Kernel ()
 > suspend target = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     cancelIPC target
 >     state <- getThreadState target
 >     if state == Running then updateRestartPC target else return ()

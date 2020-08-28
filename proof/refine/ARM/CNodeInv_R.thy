@@ -607,7 +607,7 @@ lemma suspend_not_recursive_ctes:
   unfolding updateRestartPC_def
   apply (wp threadSet_ctes_of | simp add: unless_def del: o_apply)+
          apply (fold cteCaps_of_def)
-         apply (wp cancelIPC_cteCaps_of gts_wp' hoare_vcg_all_lift hoare_drop_imps)+
+         apply (wp cancelIPC_cteCaps_of gts_wp' stateAssert_wp hoare_vcg_all_lift hoare_drop_imps)+
   apply (clarsimp elim!: rsubst[where P=P] intro!: set_eqI)
   apply (clarsimp simp: cte_wp_at_ctes_of cteCaps_of_def)
   apply (auto simp: isCap_simps finaliseCap_def Let_def)

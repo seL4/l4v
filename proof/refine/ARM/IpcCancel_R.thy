@@ -111,7 +111,6 @@ lemma cancelSignal_st_tcb_at':
                     hoare_drop_imp[where R="\<lambda>rv _. \<exists>a b. delete t (f rv) = a # b" for f])
   done
 
-(* FIXME RT: Michael to fix and use in his next PR
 lemma cancelIPC_simple'_not_awaiting_reply:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of' s)\<rbrace>
    cancelIPC t
@@ -129,7 +128,7 @@ lemma cancelIPC_simple'_not_awaiting_reply:
    apply (frule(1) sym_ref_Receive_or_Reply_replyTCB', fast)
    apply (clarsimp simp: obj_at'_def projectKO_eq project_inject)
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
-  done*)
+  done
 
 context begin interpretation Arch .
 crunch typ_at'[wp]: emptySlot "\<lambda>s. P (typ_at' T p s)"
@@ -1389,9 +1388,10 @@ lemma (in delete_one) suspend_corres:
   "corres dc (einvs and tcb_at t) (invs' and tcb_at' t)
         (SchedContext_A.suspend t) (ThreadDecls_H.suspend t)"
   apply (simp add: SchedContext_A.suspend_def Thread_H.suspend_def)
+  apply add_sym_refs
   apply (rule corres_guard_imp)
-    apply (rule corres_split_nor [OF _ cancel_ipc_corres])
   sorry (*
+    apply (rule corres_split_nor [OF _ cancel_ipc_corres])
       apply (rule corres_split [OF _ gts_corres])
         apply (rule corres_split_nor)
            apply (rule corres_split_nor [OF _ sts_corres])
@@ -2051,11 +2051,6 @@ lemma tcbReleaseRemove_invs':
               simp: cteCaps_of_def o_def)
   done
 
-lemma cancelIPC_simple_except_awaiting_reply:
-  "\<lbrace>\<lambda>s. invs' s \<and> tcb_at' t s\<rbrace> cancelIPC t
-   \<lbrace>\<lambda>rv. st_tcb_at' ((=) Running or (=) Inactive or (=) Restart or (=) IdleThreadState) t\<rbrace>"
-sorry
-
 crunches tcbReleaseRemove, tcbSchedDequeue
   for sch_act_simple[wp]: sch_act_simple
   and ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
@@ -2066,6 +2061,7 @@ lemma (in delete_one_conc) suspend_invs'[wp]:
    ThreadDecls_H.suspend t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: suspend_def updateRestartPC_def getThreadState_def)
+  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule_tac B="\<lambda>_ s. invs' s
                            \<and> sch_act_simple s
                            \<and> tcb_at' t s
@@ -2073,7 +2069,8 @@ lemma (in delete_one_conc) suspend_invs'[wp]:
                            \<and> st_tcb_at' ((=) Running or (=) Inactive or (=) Restart
                                           or (=) IdleThreadState) t s"
                in hoare_seq_ext[rotated])
-   apply (wpsimp wp: cancelIPC_simple_except_awaiting_reply)
+   apply (wpsimp wp: cancelIPC_simple'_not_awaiting_reply)
+   apply (clarsimp simp: sym_refs_asrt_def)
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_seq_ext_skip)
   apply clarsimp
@@ -2579,6 +2576,8 @@ lemma ntfn_cancel_corres:
   "corres dc (invs and valid_sched and ntfn_at ntfn) (invs' and ntfn_at' ntfn)
              (cancel_all_signals ntfn) (cancelAllSignals ntfn)"
   apply (simp add: cancel_all_signals_def cancelAllSignals_def)
+  apply add_sym_refs
+  apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified])
   apply (rule corres_split' [OF _ _ get_simple_ko_sp get_ntfn_sp'])
    apply (rule corres_guard_imp [OF get_ntfn_corres])
     apply simp+
@@ -2620,7 +2619,7 @@ lemma ntfn_cancel_corres:
   apply clarsimp
   apply (frule invs'_valid_tcbs')
   apply (clarsimp simp: invs'_def valid_state'_def invs_weak_sch_act_wf valid_ntfn'_def
-                        valid_obj'_def projectKOs
+                        valid_obj'_def projectKOs sym_refs_asrt_def
          | drule ko_at_valid_objs')+
   done
 
@@ -2857,39 +2856,59 @@ lemma cancelAllIPC_invs'[wp]:
            | drule(1) bspec | drule st_tcb_at_state_refs_ofD')+
   done
 
-lemma cancelAllSignals_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> cancelAllSignals ntfn \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: cancelAllSignals_def)
-  apply (rule hoare_seq_ext [OF _ get_ntfn_sp'])
-  apply (case_tac "ntfnObj ntfna", simp_all)
-    apply (wp, simp)
-   apply (wp, simp)
-  apply (rule hoare_pre)
-   apply (wp rescheduleRequired_all_invs_but_ct_not_inQ
-             cancel_all_invs'_helper hoare_vcg_const_Ball_lift
-             valid_irq_node_lift ssa_invs' irqs_masked_lift
-          | simp only: sch_act_wf.simps)+
-  apply (clarsimp simp: invs'_def valid_state'_def valid_ntfn'_def)
-  sorry (*
-  apply (frule obj_at_valid_objs', clarsimp)
-  apply (clarsimp simp: projectKOs valid_obj'_def valid_ntfn'_def)
-  apply (drule(1) sym_refs_ko_atD')
-  apply (rule conjI, clarsimp elim!: if_live_state_refsE)
-  apply (rule conjI[rotated])
-   apply (clarsimp elim!: if_live_state_refsE)
-   apply (drule_tac x="(x, NTFNSignal)" in bspec)
-    apply (clarsimp simp: st_tcb_at_refs_of_rev')+
-   apply (drule st_tcb_at_state_refs_ofD')
+lemma ex_nonz_cap_to'_tcb_in_WaitingNtfn'_q:
+  "\<lbrakk>ko_at' ntfn ntfnPtr s; ntfnObj ntfn = Structures_H.ntfn.WaitingNtfn q; valid_objs' s;
+    sym_refs (state_refs_of' s); if_live_then_nonz_cap' s\<rbrakk>
+   \<Longrightarrow> \<forall>t\<in>set q. ex_nonz_cap_to' t s"
+  apply (clarsimp simp: valid_obj'_def valid_ntfn'_def)
+  apply (clarsimp simp: sym_refs_def)
+  apply (erule_tac x = ntfnPtr in allE)
+  apply (drule_tac x = "(t, NTFNSignal)" in bspec)
+   apply (clarsimp simp: state_refs_of'_def obj_at'_def refs_of'_def projectKOs)
+  apply (fastforce intro: if_live_state_refsE)
+  done
+
+lemma cancelAllSignals_invs'_helper:
+  "\<lbrace>all_invs_but_ct_not_inQ'
+    and (\<lambda>s. \<forall>x \<in> set q. tcb_at' x s)
+    and (\<lambda>s. (\<forall>x \<in> set q. ex_nonz_cap_to' x s))\<rbrace>
+    mapM_x (\<lambda>t. do y <- setThreadState Structures_H.thread_state.Restart t;
+                        possibleSwitchTo t
+                od) q
+   \<lbrace>\<lambda>rv. all_invs_but_ct_not_inQ'\<rbrace>"
+  apply (rule mapM_x_inv_wp2)
    apply clarsimp
-  apply (erule delta_sym_refs)
-   apply (clarsimp split: if_split_asm)
-  apply (clarsimp split: if_split_asm)
-   apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def)
-  apply (drule_tac x="(x, NTFNSignal)" in bspec)
-   apply (clarsimp simp: st_tcb_at_refs_of_rev')+
-  apply (drule st_tcb_at_state_refs_ofD')
-  apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def tcb_bound_refs'_def)
-  done *)
+  apply (wpsimp wp: sts_st_tcb_at'_cases sts_valid_queues
+                    valid_irq_node_lift irqs_masked_lift
+                    hoare_vcg_const_Ball_lift hoare_vcg_all_lift hoare_vcg_imp_lift'
+              simp: cteCaps_of_def o_def)
+  apply (intro conjI)
+           apply (clarsimp simp: valid_tcb_state'_def global'_no_ex_cap
+                          dest!: set_mono_suffix
+                  | (drule (1) bspec, clarsimp simp: valid_pspace'_def))+
+  done
+
+lemma cancelAllSignals_invs'[wp]:
+  "cancelAllSignals ntfnPtr \<lbrace>invs'\<rbrace>"
+  apply (simp add: cancelAllSignals_def)
+  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
+  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (case_tac "ntfnObj ntfn"; simp)
+    apply wpsimp
+   apply wpsimp
+  apply (wpsimp wp: rescheduleRequired_all_invs_but_ct_not_inQ sts_st_tcb_at'_cases
+                    cancelAllSignals_invs'_helper hoare_vcg_const_Ball_lift
+                    sts_valid_queues hoare_drop_imps hoare_vcg_all_lift)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def valid_ntfn'_def)
+  apply (prop_tac "valid_ntfn' ntfn s")
+   apply (frule (2) ntfn_ko_at_valid_objs_valid_ntfn')
+  apply (clarsimp simp: valid_ntfn'_def)
+  apply (intro conjI impI)
+    apply (clarsimp simp: list_refs_of_replies'_def opt_map_def o_def split: option.splits)
+   apply (fastforce intro: if_live_then_nonz_capE'
+                     simp: ko_wp_at'_def live'_def obj_at'_def projectKOs live_ntfn'_def)
+  apply (fastforce dest: ex_nonz_cap_to'_tcb_in_WaitingNtfn'_q simp: sym_refs_asrt_def)
+  done
 
 lemma setQueue_valid_ep'[wp]:
   "setQueue domain prio q \<lbrace>valid_ep' ep\<rbrace>"
@@ -2970,6 +2989,7 @@ lemma cancelAllIPC_valid_objs'[wp]:
 lemma cancelAllSignals_valid_objs'[wp]:
   "\<lbrace>valid_objs'\<rbrace> cancelAllSignals ntfn \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (simp add: cancelAllSignals_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_seq_ext [OF _ get_ntfn_sp'])
   apply (case_tac "ntfnObj ntfna", simp_all)
     apply (wp, simp)
@@ -3181,6 +3201,7 @@ lemma cancelAllSignals_unlive:
    cancelAllSignals ntfnptr
    \<lbrace>\<lambda>rv. ko_wp_at' (Not \<circ> live') ntfnptr\<rbrace>"
   apply (simp add: cancelAllSignals_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_seq_ext [OF _ get_ntfn_sp'])
   apply (case_tac "ntfnObj ntfn"; simp)
     apply wp
