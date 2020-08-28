@@ -4107,7 +4107,7 @@ lemma end_timeslice_valid_list[wp]:
 lemma charge_budget_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> charge_budget consumed canTimeout \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: charge_budget_def Let_def set_refills_def is_round_robin_def
-                   refill_budget_check_round_robin_def
+                   refill_budget_check_round_robin_def refill_reset_rr_def
                wp: assert_inv
       | intro conjI)+
 

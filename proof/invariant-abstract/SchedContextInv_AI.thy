@@ -1968,6 +1968,10 @@ lemma refill_budget_check_bound_sc:
   by (wpsimp simp: refill_budget_check_def is_round_robin_def
                wp: set_refills_bound_sc)
 
+lemma refill_reset_rr_invs[wp]:
+  "refill_reset_rr csc_ptr \<lbrace>invs\<rbrace>"
+  unfolding refill_reset_rr_def by wpsimp
+
 lemma charge_budget_invs:
   "\<lbrace>invs\<rbrace>
    charge_budget consumed canTimeout

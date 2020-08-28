@@ -843,16 +843,8 @@ lemma sc_and_timer_activatable:
            wp: hoare_drop_imp modify_wp hoare_vcg_if_lift2 set_next_interrupt_activatable)
   done
 
-lemma refill_new_typ_at[wp]:
-  "refill_new sc_ptr new_period new_budget new_max_refills
-   \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: refill_new_def wp: get_sched_context_wp)
-
-lemma refill_update_typ_at[wp]: (* check the definition *)
-  "refill_update sc_ptr new_period new_budget new_max_refills
-   \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
-  supply if_split [split del]
-  by (wpsimp simp: refill_update_def wp: get_sched_context_wp)
+crunches refill_new, refill_update
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
 lemma sched_context_resume_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> sched_context_resume sc_ptr
@@ -1414,13 +1406,23 @@ lemma set_sc_obj_ref_not_ko_at_wp[wp]:
   apply (clarsimp simp: obj_at_def)
   done
 
+lemma maybe_add_empty_tail_invs[wp]:
+  "\<lbrace>invs and K (sc_ptr \<noteq> idle_sc_ptr)\<rbrace>
+   maybe_add_empty_tail sc_ptr
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (wpsimp simp: maybe_add_empty_tail_def is_round_robin_def
+        split_del: if_split
+               wp: set_sc_obj_ref_invs_no_change hoare_vcg_all_lift hoare_vcg_imp_lift'
+                   hoare_vcg_disj_lift )
+     (clarsimp)
+
 lemma refill_new_invs[wp]:
   "\<lbrace>invs and K (sc_ptr \<noteq> idle_sc_ptr)\<rbrace>
    refill_new sc_ptr max_refills budget period
    \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp simp: refill_new_def split_del: if_split
-             wp: set_sc_obj_ref_invs_no_change hoare_vcg_all_lift hoare_vcg_imp_lift'
-                 hoare_vcg_disj_lift )
+               wp: set_sc_obj_ref_invs_no_change hoare_vcg_all_lift hoare_vcg_imp_lift'
+                   hoare_vcg_disj_lift )
 
 
 lemma set_consumed_invs[wp]:
