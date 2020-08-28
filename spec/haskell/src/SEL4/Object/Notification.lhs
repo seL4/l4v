@@ -147,6 +147,8 @@ If a notification object is deleted, then pending receive operations must be can
 
 > cancelAllSignals :: PPtr Notification -> Kernel ()
 > cancelAllSignals ntfnPtr = do
+>         stateAssert sym_refs_asrt
+>             "Assert that `sym_refs (state_refs_of' s)` holds"
 >         ntfn <- getNotification ntfnPtr
 >         case ntfnObj ntfn of
 >             WaitingNtfn queue -> do
