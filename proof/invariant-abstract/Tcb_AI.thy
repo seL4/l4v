@@ -146,8 +146,8 @@ lemma suspend_nonz_cap_to_tcb[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to t s \<and> tcb_at t s \<and> valid_objs s\<rbrace>
      suspend t'
    \<lbrace>\<lambda>rv s. ex_nonz_cap_to t s\<rbrace>"
-  unfolding suspend_def
-  by (wpsimp wp: cancel_ipc_ex_nonz_cap_to_tcb wp: hoare_drop_imps)
+  unfolding suspend_def sched_context_cancel_yield_to_def
+  by (wpsimp wp: cancel_ipc_ex_nonz_cap_to_tcb hoare_drop_imps)
 
 lemmas suspend_tcb_at[wp] = tcb_at_typ_at [OF suspend_typ_at]
 

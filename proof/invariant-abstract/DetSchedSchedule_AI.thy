@@ -5446,7 +5446,21 @@ crunches cancel_ipc
 lemma suspend_ready_or_release[wp]:
   "suspend t \<lbrace>ready_or_release\<rbrace>"
   unfolding suspend_def
-  by (wpsimp wp: hoare_drop_imps simp: update_restart_pc_def)
+  by (wpsimp wp: hoare_drop_imps simp: update_restart_pc_def sched_context_cancel_yield_to_def)
+
+crunches sched_context_cancel_yield_to
+  for ready_or_release[wp]: ready_or_release
+  and ct_not_in_q[wp]: ct_not_in_q
+  and valid_ready_qs[wp]: valid_ready_qs
+  and valid_release_q[wp]: valid_release_q
+  and valid_sched_action[wp]: valid_sched_action
+  and ct_in_cur_domain[wp]: ct_in_cur_domain
+  and valid_blocked[wp]: valid_blocked
+  and valid_idle_etcb[wp]: valid_idle_etcb
+  and released_ipc_queues[wp]: released_ipc_queues
+  and active_reply_scs[wp]: active_reply_scs
+  and active_sc_valid_refills[wp]: active_sc_valid_refills
+  (wp: get_tcb_obj_ref_wp ignore: set_tcb_obj_ref update_sched_context)
 
 lemma suspend_valid_sched:
   "\<lbrace>valid_sched and scheduler_act_not t\<rbrace>
@@ -5454,6 +5468,9 @@ lemma suspend_valid_sched:
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   unfolding suspend_def update_restart_pc_def
   supply if_split[split del]
+  apply (simp flip: bind_assoc)
+  apply (rule hoare_seq_ext, wpsimp simp: valid_sched_def)
+  apply (simp add: bind_assoc)
   apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)+
   apply (wpsimp wp: valid_sched_wp)
   apply (clarsimp simp: valid_sched_def)
@@ -6221,9 +6238,9 @@ lemma suspend_cur_sc_chargeable:
   "\<lbrace>cur_sc_chargeable and ct_not_blocked\<rbrace>
    suspend x
    \<lbrace>\<lambda>_. cur_sc_chargeable :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding suspend_def update_restart_pc_def
+  unfolding suspend_def update_restart_pc_def sched_context_cancel_yield_to_def
   by (wpsimp wp: set_tcb_obj_ref_cur_sc_chargeable_const hoare_drop_imp
-                    cancel_ipc_cur_sc_chargeable2)
+                 cancel_ipc_cur_sc_chargeable2)
 
 (* FIXME: set_tcb_obj_ref does more than set tcb object references *)
 
@@ -10628,7 +10645,7 @@ lemma bind_notification_valid_sched[wp]:
 
 lemma suspend_it_det_ext[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> suspend param_a \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
-  by (wpsimp simp: suspend_def wp: hoare_drop_imps)
+  by (wpsimp simp: suspend_def sched_context_cancel_yield_to_def wp: hoare_drop_imps)
 
 crunches suspend
   for cur_time[wp]: "\<lambda>s. P (cur_time s)"
@@ -12776,7 +12793,7 @@ lemma suspend_valid_sched_misc[wp]:
   "suspend t
    \<lbrace>\<lambda>s. P (cur_domain s) (cur_thread s) (idle_thread s) (etcbs_of s) (tcb_scps_of s)
           (sc_refill_cfgs_of s) (cur_time s) (cur_sc s) (consumed_time s) (cur_sc s)\<rbrace>"
-  apply (clarsimp simp: suspend_def)
+  apply (clarsimp simp: suspend_def sched_context_cancel_yield_to_def)
   apply (rule hoare_seq_ext_skip, wpsimp simp: update_restart_pc_def)+
   by wpsimp
 
@@ -14645,6 +14662,13 @@ lemma if_cond_then_disj_strg:
   "if A then C else B \<Longrightarrow> A \<or> B"
   by (simp split: if_split_asm)
 
+lemma sched_context_cancel_yield_to_ct_in_state[wp]:
+  "sched_context_cancel_yield_to thread \<lbrace>ct_in_state P:: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (clarsimp simp: sched_context_cancel_yield_to_def set_tcb_obj_ref_def)
+  apply (wpsimp wp: get_tcb_obj_ref_wp update_sched_context_wp set_object_wp)
+  apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def get_tcb_def)
+  done
+
 lemma suspend_ct_in_state:
   "\<lbrace>\<lambda>s. if x = cur_thread s then P Inactive else ct_in_state P s \<and> ct_not_blocked s\<rbrace>
    suspend x
@@ -14653,8 +14677,8 @@ lemma suspend_ct_in_state:
   apply (rule hoare_seq_ext[rotated, where A=A and B="\<lambda>_. A" for A])
    apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift' cancel_ipc_ct_in_state)
   apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift set_thread_state_ct_st
-                    set_tcb_obj_ref_ct_in_state get_tcb_obj_ref_wp |
-        strengthen if_cond_then_disj_strg)+
+                    set_tcb_obj_ref_ct_in_state get_tcb_obj_ref_wp hoare_vcg_all_lift
+         | strengthen if_cond_then_disj_strg)
   done
 
 lemma install_tcb_frame_cap_cur_sc_chargeable:
@@ -20409,7 +20433,7 @@ lemma restart_cur_sc_in_release_q_imp_zero_consumed[wp]:
 
 lemma suspend_cur_sc_not_in_release_q[wp]:
   "suspend thread \<lbrace>\<lambda>s. sc_not_in_release_q (cur_sc s) s\<rbrace>"
-  unfolding suspend_def maybeM_def
+  unfolding suspend_def sched_context_cancel_yield_to_def maybeM_def
   apply (wpsimp wp: tcb_release_remove_wp simp: update_restart_pc_def)
   apply (clarsimp simp: in_release_q_def not_in_release_q_def in_queue_2_def split: if_splits)
   using tcb_sched_act_set_simps(3) by blast
@@ -20664,16 +20688,23 @@ lemma cap_delete_one_cur_sc_in_release_q_imp_zero_consumed[wp]:
   unfolding cap_delete_one_def
   by (wpsimp wp: get_cap_wp)
 
+lemma sched_context_cancel_yield_to_release_q_not_blocked_on_reply[wp]:
+  "sched_context_cancel_yield_to thread
+   \<lbrace>\<lambda>s. \<forall>t\<in>set (release_queue s). pred_map (not is_blocked_on_reply) (tcb_sts_of s) t\<rbrace>"
+  apply (clarsimp simp: sched_context_cancel_yield_to_def)
+  apply (wpsimp wp: hoare_vcg_ball_lift2 get_tcb_obj_ref_wp)
+  done
+
 lemma suspend_release_q_not_blocked_on_reply[wp]:
   "suspend thread
    \<lbrace>\<lambda>s. \<forall>t\<in>set (release_queue s). pred_map (not is_blocked_on_reply) (tcb_sts_of s) t\<rbrace>"
   apply (clarsimp simp: suspend_def)
   apply (rule hoare_seq_ext_skip, solves \<open>wpsimp simp: update_restart_pc_def\<close>)+
-  apply (wpsimp wp: tcb_release_remove_wp hoare_vcg_ball_lift2)
-    using tcb_sched_act_set_simps(3) apply blast
-   apply (wpsimp wp: set_object_wp
-               simp: set_thread_state_def)
-   apply (clarsimp simp: vs_all_heap_simps pred_neg_def is_blocked_on_reply_def split: if_splits)+
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp wp: hoare_vcg_ball_lift2 set_thread_state_pred_map_tcb_sts_of
+               simp: vs_all_heap_simps pred_neg_def is_blocked_on_reply_def)
+  apply (wpsimp wp: tcb_release_remove_wp)
+  using tcb_sched_act_set_simps(3) apply blast
   done
 
 lemma unbind_from_sc_release_q_not_blocked_on_reply[wp]:
@@ -20695,21 +20726,18 @@ lemma unbind_from_sc_release_q_bound_to_sc[wp]:
 
 lemma suspend_heap_refs_inv_sc_tcbs[wp]:
   "suspend thread \<lbrace>\<lambda>s. heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s)\<rbrace>"
-  apply (clarsimp simp: suspend_def)
+  apply (clarsimp simp: suspend_def sched_context_cancel_yield_to_def)
   apply (rule hoare_seq_ext_skip, wpsimp simp: update_restart_pc_def)+
   by wpsimp
 
 lemma suspend_release_q_bound_to_sc[wp]:
   "suspend thread
    \<lbrace>\<lambda>s. \<forall>t\<in>set (release_queue s). pred_map (\<lambda>a. \<exists>y. a = Some y) (tcb_scps_of s) t\<rbrace>"
-  apply (clarsimp simp: suspend_def maybeM_def)
+  apply (clarsimp simp: suspend_def maybeM_def sched_context_cancel_yield_to_def)
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (case_tac yt_opt; clarsimp?)
    apply (wpsimp wp: tcb_release_remove_wp  simp: update_restart_pc_def)
    using tcb_sched_act_set_simps(3) apply blast
-  apply (wpsimp wp: tcb_release_remove_wp  simp: update_restart_pc_def)
-  using tcb_sched_act_set_simps(3) apply blast
   done
 
 lemma finalise_cap_cur_sc_in_release_q_imp_zero_consumed[wp]:
@@ -21425,6 +21453,11 @@ lemma restart_ct_ready_if_schedulable:
   apply (clarsimp simp: ct_ready_if_schedulable_def)
   done
 
+lemma sched_context_cancel_yield_to_ct_ready_if_schedulable[wp]:
+  "sched_context_cancel_yield_to thread \<lbrace>ct_ready_if_schedulable\<rbrace>"
+  apply (clarsimp simp: sched_context_cancel_yield_to_def)
+  by (wpsimp wp: get_tcb_obj_ref_wp)
+
 lemma suspend_ct_ready_if_schedulable[wp]:
   "\<lbrace>\<lambda>s. thread \<noteq> cur_thread s \<longrightarrow> ct_ready_if_schedulable s\<rbrace>
    suspend thread
@@ -21438,8 +21471,6 @@ lemma suspend_ct_ready_if_schedulable[wp]:
        apply clarsimp
        apply (wpsimp wp: hoare_vcg_imp_lift')
       apply wpsimp
-     apply wpsimp
-    apply (wpsimp wp: get_tcb_obj_ref_wp)
    apply (rule_tac Q="\<lambda>_ s. thread \<noteq> cur_thread s \<longrightarrow> ct_ready_if_schedulable s"
           in hoare_post_imp, simp)
    apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
@@ -21485,7 +21516,7 @@ lemma suspend_st_tcb_at_other:
   "\<lbrace>st_tcb_at P t and K (t \<noteq> thread)\<rbrace>
    suspend thread
    \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
-  unfolding suspend_def
+  unfolding suspend_def sched_context_cancel_yield_to_def
   by (wpsimp wp: sts_st_tcb_at_other get_tcb_obj_ref_wp hoare_vcg_all_lift
                  hoare_drop_imps cancel_ipc_st_tcb_at_different_thread)
 

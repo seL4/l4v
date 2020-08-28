@@ -521,14 +521,25 @@ lemma cancel_ipc_bound_sc_tcb_at_None:
 
 crunch obj_at_not_live[wp]: tcb_release_remove "obj_at (Not \<circ> live) t"
 
+lemma sched_context_cancel_yield_to_unlive:
+  "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t and st_tcb_at ((=) Inactive) t\<rbrace>
+   sched_context_cancel_yield_to t
+   \<lbrace>\<lambda>_. obj_at (Not \<circ> live) t\<rbrace>"
+  apply (clarsimp simp: sched_context_cancel_yield_to_def)
+  apply (rule hoare_seq_ext[OF _ gyt_sp])
+  apply (wpsimp simp: set_tcb_obj_ref_def set_object_def update_sched_context_def
+                      get_object_def pred_tcb_at_def obj_at_def get_tcb_def live_def hyp_live_def)
+  done
+
 lemma suspend_unlive':
   "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t\<rbrace>
-      suspend t
+   suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
   unfolding suspend_def
-  apply (wpsimp wp: get_object_wp suspend_unlive_helper set_thread_state_not_live gbyt_bound_tcb
-                    cancel_ipc_bound_sc_tcb_at_None tcb_release_remove_obj_at_not_live0
-                    hoare_vcg_if_lift2)
+  apply (simp flip: bind_assoc)
+  apply (rule hoare_seq_ext[OF sched_context_cancel_yield_to_unlive])
+  apply (simp add: bind_assoc)
+  apply (wpsimp wp: get_object_wp cancel_ipc_bound_sc_tcb_at_None)
   done
 
 lemma unbind_maybe_notification_not_live_helper:
