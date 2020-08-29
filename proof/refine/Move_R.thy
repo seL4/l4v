@@ -345,10 +345,4 @@ lemma Reply_or_Receive_reply_at:
   apply (drule (1) st_tcb_at_valid_st2)
   by (fastforce simp: obj_at_def valid_tcb_state_def)
 
-lemma corres_cross_add_guard:
-  "\<lbrakk> \<And>s s'. \<lbrakk>(s,s') \<in> sr; P s; P' s'\<rbrakk> \<Longrightarrow> Q s';
-     corres_underlying sr nf nf' r P  (P' and Q) f g\<rbrakk>
-    \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
-  by (fastforce simp: corres_underlying_def)
-
 end
