@@ -1483,7 +1483,7 @@ lemma get_sc_corres_size:
    apply wp
   apply (simp add: get_sched_context_def getSchedContext_def get_object_def
                    getObject_def bind_assoc)
-  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
+  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def)
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def
                  split: Structures_A.kernel_object.splits)
   apply (clarsimp simp: loadObject_default_def in_monad projectKOs
