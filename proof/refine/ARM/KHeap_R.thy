@@ -8,7 +8,6 @@ theory KHeap_R
 imports
   "AInvs.ArchDetSchedSchedule_AI"
   Machine_R
-  "../Move_R"
 begin
 
 lemma lookupAround2_known1:
@@ -3390,13 +3389,6 @@ lemma ko_at'_cross:
                      scBits_simps sc_relation_def objBits_simps
               split: Structures_A.kernel_object.split_asm if_split_asm
                      ARM_A.arch_kernel_obj.split_asm)
-
-(* FIXME RT: move *)
-lemma corres_cross_add_abs_guard:
-  "\<lbrakk> \<And>s s'. \<lbrakk>(s,s') \<in> sr; P s; P' s'\<rbrakk> \<Longrightarrow> Q s;
-     corres_underlying sr nf nf' r (P and Q)  P' f g\<rbrakk>
-    \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
-  by (fastforce simp: corres_underlying_def)
 
 lemma update_sc_no_reply_stack_update_corres:
   "\<lbrakk>\<forall>sc n sc'. sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc');

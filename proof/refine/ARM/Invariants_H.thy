@@ -9,6 +9,7 @@ imports
   LevityCatch
   "AInvs.ArchDetSchedSchedule_AI"
   "Lib.AddUpdSimps"
+  ArchMove_R
 begin
 
 (* FIXME: this should go somewhere in spec *)
