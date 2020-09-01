@@ -449,7 +449,12 @@ where
 definition
   tcb_release_remove :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "tcb_release_remove tcb_ptr = modify (release_queue_update (\<lambda>q. tcb_sched_dequeue tcb_ptr q))"
+  "tcb_release_remove tcb_ptr \<equiv> do
+     qs \<leftarrow> gets release_queue;
+     when (qs \<noteq> [] \<and> hd qs = tcb_ptr) $
+         modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
+     modify (\<lambda>s. s\<lparr>release_queue := tcb_sched_dequeue tcb_ptr qs\<rparr>)
+  od"
 
 definition
   set_scheduler_action :: "scheduler_action \<Rightarrow> (unit, 'z::state_ext) s_monad" where
