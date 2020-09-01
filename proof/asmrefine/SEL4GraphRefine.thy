@@ -60,16 +60,18 @@ lemma snd_snd_gs_new_frames_new_cnodes[simp]:
   "snd (snd ((if P then f else g) gs)) = (if P then snd (snd (f gs)) else snd (snd (g gs)))"
   by (simp_all add: gs_new_frames_def gs_new_cnodes_def gs_clear_region_def)
 
-(* If this fails, it can be debugged with the assistance of the
-   script in TestGraphRefine.thy *)
-
 ML \<open>
-\<comment>\<open> VER-1166 \<close>
-val blacklist = ["Kernel_C.reserve_region", "Kernel_C.merge_regions", "Kernel_C.arch_init_freemem"]
-
-val dbg = ProveSimplToGraphGoals.new_debug blacklist [];
+val dbg = ProveSimplToGraphGoals.new_debug
+  {
+    \<comment>\<open> VER-1166 \<close>
+    skips = ["Kernel_C.reserve_region", "Kernel_C.merge_regions", "Kernel_C.arch_init_freemem"],
+    only = [],
+    timeout = NONE
+  };
 \<close>
 
+(* If this fails, it can be debugged with the assistance of the
+   script in TestGraphRefine.thy *)
 ML \<open>
 ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
     funs (csenv ()) @{context} dbg;
@@ -77,6 +79,10 @@ ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
 
 ML \<open>
 val _ = ProveSimplToGraphGoals.print dbg "failures:" #failures;
+\<close>
+
+ML \<open>
+val _ = ProveSimplToGraphGoals.print dbg "timeouts:" #timeouts;
 \<close>
 
 ML \<open>
