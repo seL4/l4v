@@ -138,7 +138,7 @@ lemma reply_unlink_sc_st_tcb_at [wp]:
 
 crunches test_reschedule, tcb_release_remove
   for reply_tcb_reply_at[wp]: "\<lambda>s. P (reply_at_pred P' p s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 global_interpretation sched_context_donate: non_reply_op "sched_context_donate scp tp"
   by unfold_locales (wpsimp simp: sched_context_donate_def
@@ -1465,6 +1465,7 @@ lemma sym_refs_bound_yt_tcb_at:
 
 crunches tcb_release_remove
   for valid_ioports[wp]: valid_ioports
+  (simp: crunch_simps)
 
 lemma as_user_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> as_user r f \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
@@ -1750,6 +1751,7 @@ lemma obj_at_pred_tcb_at_peel:
   by (auto simp: obj_at_def pred_tcb_at_def)
 
 crunch obj_at_not_live0[wp]: tcb_release_remove "obj_at (Not \<circ> live0) t"
+  (simp: crunch_simps)
 
 context IpcCancel_AI begin
 lemma suspend_unlive:
@@ -2635,7 +2637,7 @@ crunches
   test_reschedule, tcb_release_enqueue, sort_queue, sched_context_unbind_reply,
   sched_context_unbind_ntfn
   for ct_in_state[wp]: "ct_in_state P"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunches cancel_all_signals, is_final_cap, reply_remove, reply_remove_tcb
   for ct_active[wp]: "ct_active"

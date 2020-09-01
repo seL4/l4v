@@ -449,7 +449,11 @@ lemma valid_irq_states_release_queue_update[simp]:
   "valid_irq_states (release_queue_update f s) = valid_irq_states s"
   by (simp add: valid_irq_states_def)
 
-(* FIXME: move to Invariants_AI *)
+lemma valid_irq_states_reprogram_timer_update[simp]:
+  "valid_irq_states (reprogram_timer_update f s) = valid_irq_states s"
+  by (simp add: valid_irq_states_def)
+
+(* FIXME RT: move to Invariants_AI *)
 lemma cur_tcb_ready_queues_update[simp]:
   "cur_tcb (ready_queues_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
@@ -461,6 +465,11 @@ lemma cur_sc_tcb_ready_queues_update[simp]:
 (* FIXME: move to Invariants_AI *)
 lemma cur_tcb_release_queue_update[simp]:
   "cur_tcb (release_queue_update f s) = cur_tcb s"
+  by (simp add: cur_tcb_def)
+
+(* FIXME RT: move to Invariants_AI *)
+lemma cur_tcb_reprogram_timer_update[simp]:
+  "cur_tcb (reprogram_timer_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
 
 (* FIXME: move to Invariants_AI *)
@@ -500,6 +509,11 @@ lemma valid_machine_state_ready_queues_update[simp]:
 (* FIXME: move to Invariants_AI *)
 lemma valid_machine_state_release_queue_update[simp]:
   "valid_machine_state (release_queue_update f s) = valid_machine_state s"
+  by (simp add: valid_machine_state_def)
+
+(* FIXME RT: move to Invariants_AI *)
+lemma valid_machine_state_reprogram_timer_update[simp]:
+  "valid_machine_state (reprogram_timer_update f s) = valid_machine_state s"
   by (simp add: valid_machine_state_def)
 
 crunches tcb_sched_action,reschedule_required,possible_switch_to,tcb_release_enqueue,tcb_release_remove
@@ -553,7 +567,8 @@ crunches tcb_sched_action,reschedule_required,possible_switch_to,tcb_release_enq
  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
-  (simp: Let_def wp: hoare_drop_imps hoare_vcg_if_lift2 mapM_wp
+  (simp: Let_def reprogram_timer_update_arch.state_refs_update Let_def
+   wp: hoare_drop_imps hoare_vcg_if_lift2 mapM_wp
    ignore: set_tcb_obj_ref get_tcb_obj_ref)
 
 

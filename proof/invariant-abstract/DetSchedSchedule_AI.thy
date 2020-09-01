@@ -413,10 +413,13 @@ lemma tcb_sched_enqueue_not_queued:
 \<comment> \<open>tcb_release_remove\<close>
 
 lemma tcb_release_remove_wp[valid_sched_wp]:
-  "\<lbrace>\<lambda>s. P (release_queue_update (tcb_sched_dequeue thread) s)\<rbrace>
+  "\<lbrace>\<lambda>s. if release_queue s \<noteq> [] \<and> hd (release_queue s) = thread
+        then P (s\<lparr>reprogram_timer := True,
+                  release_queue := tcb_sched_dequeue thread (release_queue s)\<rparr>)
+        else P (s\<lparr>release_queue := tcb_sched_dequeue thread (release_queue s)\<rparr>)\<rbrace>
    tcb_release_remove thread
    \<lbrace>\<lambda>_. P\<rbrace>"
-  by (wpsimp simp: tcb_release_remove_def obj_at_def)
+  by (wpsimp simp: tcb_release_remove_def obj_at_def | intro conjI)+
 
 lemma tcb_release_remove_valid_sched_misc[wp]:
   "tcb_release_remove t \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
@@ -3149,15 +3152,21 @@ lemma map_fst_filter_zip_map_reduce:
   by (induct xs) auto
 
 lemma tcb_release_enqueue_wp':
-  "\<lbrace>\<lambda>s. tcb_sc_refill_cfgs_of s t \<noteq> None
-         \<longrightarrow> P (release_queue_update (tcb_release_enqueue_upd (tcb_ready_times_of s) t) s)\<rbrace>
+  "\<lbrace>\<lambda>s. tcb_sc_refill_cfgs_of s t \<noteq> None \<longrightarrow>
+          (\<forall>rt. tcb_ready_times_of s t = Some rt \<longrightarrow>
+            (if filter (\<lambda>(_, t'). t' \<le> rt) (zip (release_queue s) (map (the \<circ> tcb_ready_times_of s) (release_queue s))) = []
+             then P (reprogram_timer_update \<top> (release_queue_update (tcb_release_enqueue_upd (tcb_ready_times_of s) t) s))
+             else P (release_queue_update (tcb_release_enqueue_upd (tcb_ready_times_of s) t) s)))\<rbrace>
    tcb_release_enqueue t
    \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (wpsimp simp: tcb_release_enqueue_def wp: mapM_get_sc_time_wp get_sc_time_wp)
   apply (drule mp, fastforce simp: sc_ready_times_2_def map_project_simps)
-  by (auto simp: tcb_release_enqueue_upd_def insort_filter_def map_fst_filter_zip_map_reduce img_ord_def
-          elim!: rsubst[of P]
-          dest!: map_Some_implies_map_the)
+  apply (erule_tac x=rt in allE)
+  apply (intro conjI; clarsimp dest!: map_Some_implies_map_the)
+   apply (auto simp: map_is_Nil_conv[symmetric, where f=fst] tcb_release_enqueue_upd_def
+                     insort_filter_def map_fst_filter_zip_map_reduce img_ord_def
+              elim!: rsubst[of P])
+  done
 
 lemmas tcb_release_enqueue_wp[valid_sched_wp] = tcb_release_enqueue_wp'[THEN hoare_drop_assertion]
 
@@ -4143,7 +4152,7 @@ lemma set_tcb_queue_get_tcb[wp]:
 
 crunches test_reschedule,tcb_release_remove
   for get_tcb[wp]: "\<lambda>s. P (get_tcb t s)"
-  (wp: hoare_drop_imp)
+  (wp: hoare_drop_imp simp: get_tcb_def)
 
 lemma sched_context_donate_active_sc_tcb_at_neq:
   "\<lbrace>active_sc_tcb_at t and K (t \<noteq> tcb_ptr) and sc_tcb_sc_at (\<lambda>tp. tp \<noteq> Some t) sc_ptr\<rbrace>
@@ -6538,14 +6547,14 @@ lemma sched_context_bind_tcb_valid_sched:
                     in hoare_strengthen_post[rotated])
      apply (clarsimp simp: sc_at_pred_n_eq_commute)
      apply (clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps heap_refs_retract_at_def)
-    apply (wpsimp wp: set_tcb_sched_context_valid_ready_qs_not_queued
-                      set_tcb_sched_context_valid_release_q_not_queued
-                      set_tcb_sched_context_simple_valid_sched_action
-                      set_tcb_sched_context_Some_valid_blocked_except
-                      set_tcb_sched_context_released_ipc_queues
-                      ssc_bound_sc_tcb_at
-           simp: valid_sched_def)
-   apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_disj_lift sc_tcb_update_sc_tcb_sc_at simp: pred_neg_def)
+    apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_disj_lift sc_tcb_update_sc_tcb_sc_at simp: pred_neg_def)
+   apply (wpsimp wp: set_tcb_sched_context_valid_ready_qs_not_queued
+                     set_tcb_sched_context_valid_release_q_not_queued
+                     set_tcb_sched_context_simple_valid_sched_action
+                     set_tcb_sched_context_Some_valid_blocked_except
+                     set_tcb_sched_context_released_ipc_queues
+                     ssc_bound_sc_tcb_at
+          simp: valid_sched_def)
   apply (clarsimp simp: valid_sched_def cong: conj_cong)
   apply (intro conjI)
    apply (simp add: valid_ready_qs_def not_queued_def released_sc_tcb_at_def pred_tcb_at_def
@@ -20183,22 +20192,23 @@ lemma sched_context_bind_tcb_helper_cur_sc_in_release_q_imp_zero_consumed:
         \<and> (\<forall>t\<in> set (release_queue s). pred_map bound (tcb_scps_of s) t)
         \<and> pred_map_eq None (tcb_scps_of s) tcb_ptr
         \<and> cur_sc_in_release_q_imp_zero_consumed s\<rbrace>
-   do y \<leftarrow> set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
-      set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr)
+   do y \<leftarrow> set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr);
+      set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr)
    od
    \<lbrace>\<lambda>_ s. cur_sc_in_release_q_imp_zero_consumed s\<rbrace>"
   apply (wpsimp wp: set_object_wp update_sched_context_wp simp: set_tcb_obj_ref_def obj_at_def)
   apply (prop_tac "not_in_release_q tcb_ptr s")
    apply (fastforce simp: in_release_q_def vs_all_heap_simps)
-  apply (clarsimp simp: not_in_release_q_def in_release_q_def vs_all_heap_simps
-                        heap_refs_retract_def cur_sc_in_release_q_imp_zero_consumed_def)
+  apply (fastforce simp: not_in_release_q_def in_release_q_def tcb_scps.p.p.simps vs_all_heap_simps
+                         heap_refs_retract_def cur_sc_in_release_q_imp_zero_consumed_def
+                         pred_map_eq_def pred_map_def)
   done
 
 lemma sched_context_bind_tcb_helper_heap_refs_retract_sc_tcbs:
   "\<lbrace>\<lambda>s. heap_refs_retract (sc_tcbs_of s) (tcb_scps_of s)
         \<and> pred_map_eq None (tcb_scps_of s) tcb_ptr \<and>  pred_map_eq None (sc_tcbs_of s) sc_ptr\<rbrace>
-   do y \<leftarrow> set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
-      set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr)
+   do y \<leftarrow> set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr);
+      set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr)
    od
    \<lbrace>\<lambda>_ s. heap_refs_retract (sc_tcbs_of s) (tcb_scps_of s)\<rbrace>"
   apply (wpsimp wp: set_object_wp update_sched_context_wp simp: set_tcb_obj_ref_def obj_at_def)
@@ -20208,8 +20218,8 @@ lemma sched_context_bind_tcb_helper_heap_refs_retract_sc_tcbs:
 lemma sched_context_bind_tcb_helper_heap_refs_retract_tcb_scps:
   "\<lbrace>\<lambda>s. heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s)
         \<and> pred_map_eq None (tcb_scps_of s) tcb_ptr \<and> pred_map_eq None (sc_tcbs_of s) sc_ptr\<rbrace>
-   do y \<leftarrow> set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
-      set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr)
+   do y \<leftarrow> set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr);
+      set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr)
    od
    \<lbrace>\<lambda>_ s. heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s)\<rbrace>"
   apply (wpsimp wp: set_object_wp update_sched_context_wp simp: set_tcb_obj_ref_def obj_at_def)
@@ -20225,8 +20235,8 @@ lemma sched_context_bind_tcb_cur_sc_in_release_q_imp_zero_consumed_helper:
         \<and> (if sc_ptr = cur_sc s
            then cur_sc_more_than_ready s
            else heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s))\<rbrace>
-   do y \<leftarrow> set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
-      set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr)
+   do y \<leftarrow> set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr);
+      set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr)
    od
    \<lbrace>\<lambda>_ s. cur_sc_in_release_q_imp_zero_consumed s
           \<and> current_time_bounded 0 s
@@ -21593,10 +21603,10 @@ lemma sched_context_bind_tcb_released_if_bound[wp]:
      apply (rule_tac Q="\<lambda>_. released_if_bound_sc_tcb_at t" in hoare_post_imp)
       apply fastforce
      apply wpsimp
-    apply (wpsimp wp: set_tcb_obj_ref_wp)
-   apply (wpsimp wp: update_sched_context_wp)
-  apply (clarsimp simp:  obj_at_def vs_all_heap_simps)
-  apply (drule_tac x=ref' in spec, simp)
+    apply (wp update_sched_context_wp)
+   apply (wp set_tcb_obj_ref_wp)
+  apply (auto simp: obj_at_def vs_all_heap_simps pred_map_eq_def pred_map_def map_join_def opt_map_def
+             split: if_splits option.splits)
   done
 
 lemma maybe_sched_context_bind_tcb_released_if_bound[wp]:
