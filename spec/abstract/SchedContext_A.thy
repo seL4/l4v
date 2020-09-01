@@ -54,6 +54,8 @@ where
      times \<leftarrow> mapM get_sc_time qs;
      qst \<leftarrow> return $ zip qs times;
      qst' \<leftarrow> return $ filter (\<lambda>(_,t'). t' \<le> time) qst @ [(tcb_ptr,time)] @ filter (\<lambda>(_,t'). \<not>t' \<le> time) qst;
+     when (filter (\<lambda>(_,t'). t' \<le> time) qst = []) $
+         modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
      modify (\<lambda>s. s\<lparr>release_queue := map fst qst'\<rparr>)
   od"
 
@@ -366,8 +368,8 @@ definition
   sched_context_bind_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_bind_tcb sc_ptr tcb_ptr = do
-    set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
     set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr);
+    set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
     sched_context_resume sc_ptr;
     sched <- is_schedulable tcb_ptr;
     when sched $ do
