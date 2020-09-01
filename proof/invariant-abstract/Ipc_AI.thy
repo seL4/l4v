@@ -2874,6 +2874,7 @@ lemma maybe_donate_sc_pred_tcb_at:
     apply (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def set_object_def tcb_release_remove_def
                         update_sched_context_def get_object_def get_tcb_def
                         pred_tcb_at_def obj_at_def get_sc_obj_ref_def get_sched_context_def
+                        tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
                     wp: hoare_vcg_imp_lift hoare_vcg_all_lift)
     apply (fastforce simp: sc_tcb_sc_at_def obj_at_def)
    apply wpsimp

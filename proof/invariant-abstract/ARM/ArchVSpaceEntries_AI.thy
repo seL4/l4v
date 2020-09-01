@@ -419,7 +419,7 @@ crunch valid_pdpt_objs[wp]: tcb_release_remove "valid_pdpt_objs"
   (wp: maybeM_inv)
 
 crunch valid_pdpt_objs[wp]: tcb_release_enqueue "valid_pdpt_objs"
-  (wp: maybeM_inv hoare_drop_imp mapM_wp')
+  (wp: maybeM_inv hoare_drop_imp mapM_wp' simp: crunch_simps)
 
 crunch valid_pdpt_objs[wp]: set_extra_badge, transfer_caps_loop "valid_pdpt_objs"
   (wp: transfer_caps_loop_pres)

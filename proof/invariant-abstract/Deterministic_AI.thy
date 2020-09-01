@@ -3824,7 +3824,7 @@ lemmas transfer_caps_loop_ext_valid[wp] =
   transfer_caps_loop_pres[OF cap_insert_valid_list set_extra_badge_valid_list]
 
 crunch valid_list[wp]: tcb_sched_action,reschedule_required,tcb_release_remove "valid_list"
-  (simp: unless_def thread_get_def wp: hoare_drop_imp)
+  (simp: unless_def thread_get_def crunch_simps wp: hoare_drop_imp)
 
 crunch valid_list[wp]: schedule_tcb "valid_list"
   (simp: unless_def)
@@ -4077,7 +4077,7 @@ end
 crunch (empty_fail) empty_fail[wp]: tcb_release_enqueue
 
 crunch valid_list[wp]: tcb_release_enqueue "valid_list"
-  (simp: thread_get_def wp: get_object_wp mapM_wp hoare_drop_imp ignore: )
+  (simp: thread_get_def crunch_simps wp: get_object_wp mapM_wp hoare_drop_imp ignore: )
 
 lemma postpone_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> postpone r \<lbrace>\<lambda>_.valid_list\<rbrace>"

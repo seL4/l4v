@@ -1074,7 +1074,7 @@ lemma test_possible_switch_to_valid_replies[wp]:
 
 lemma tcb_release_enqueue_valid_replies[wp]:
   "tcb_release_enqueue tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: tcb_release_enqueue_def wp: mapM_wp')
+  by (wpsimp simp: tcb_release_enqueue_def wp: mapM_wp' cong: if_cong)
 
 lemma postpone_valid_replies[wp]:
   "postpone sc_ptr \<lbrace> valid_replies_pred P \<rbrace>"
@@ -1104,7 +1104,7 @@ lemma tcb_release_enqueue_cur_sc_tcb[wp]:
   "\<lbrace>cur_sc_tcb\<rbrace> tcb_release_enqueue tcb_ptr \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
   by (wpsimp simp: tcb_release_enqueue_def get_sc_time_def get_tcb_sc_def get_tcb_obj_ref_def
                    thread_get_def
-               wp: mapM_wp_inv)
+             cong: if_cong wp: mapM_wp_inv)
 
 lemma postpone_cur_sc_tcb[wp]:
   "\<lbrace>cur_sc_tcb\<rbrace> postpone sc \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
@@ -1135,25 +1135,17 @@ lemma sched_context_bind_tcb_invs[wp]:
     and sc_tcb_sc_at ((=) None) sc and ex_nonz_cap_to sc\<rbrace>
    sched_context_bind_tcb sc tcb
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wpsimp simp: sched_context_bind_tcb_def invs_def valid_state_def valid_pspace_def
-                  wp: valid_irq_node_typ obj_set_prop_at get_sched_context_wp ssc_refs_of_Some
-                      update_sched_context_valid_objs_same valid_ioports_lift
-                      update_sched_context_iflive_update update_sched_context_refs_of_update
-                      update_sched_context_cur_sc_tcb_None update_sched_context_valid_idle)
-  apply (clarsimp simp: obj_at_def is_sc_obj_def pred_tcb_at_def get_refs_def2)
-  apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
-  apply safe
-      apply (erule (1) valid_objsE)
-      apply (clarsimp simp: valid_obj_def valid_sched_context_def obj_at_def is_tcb)
-     apply (frule valid_objs_valid_sched_context_size, fastforce)
-     apply assumption
-    apply (erule delta_sym_refs)
-     apply (clarsimp simp: state_refs_of_def obj_at_def split: if_splits)
-    apply (clarsimp simp: state_refs_of_def get_refs_def2 image_iff
-                          tcb_st_refs_of_def sc_tcb_sc_at_def obj_at_def
-                   dest!: symreftype_inverse' split: if_splits)
-    apply (clarsimp split: thread_state.split_asm if_split_asm)
-   apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def)
+  apply (clarsimp simp: sched_context_bind_tcb_def invs_def valid_state_def valid_pspace_def)
+  apply (wpsimp wp: valid_irq_node_typ obj_set_prop_at get_sched_context_wp ssc_refs_of_Some
+                    update_sched_context_valid_objs_same valid_ioports_lift
+                    update_sched_context_iflive_update update_sched_context_refs_of_update
+                    update_sched_context_cur_sc_tcb_None update_sched_context_valid_idle
+                    hoare_vcg_all_lift hoare_vcg_conj_lift | wp set_tcb_obj_ref_wp)+
+  apply (fastforce simp: obj_at_def tcb_cap_cases_def tcb_st_refs_of_def is_sc_obj_def
+                         pred_tcb_at_def sc_tcb_sc_at_def valid_sched_context_def
+                         is_tcb valid_idle_def state_refs_of_def get_refs_def2
+                   elim: ex_cap_to_after_update' delta_sym_refs valid_objs_valid_sched_context_size
+                  dest!: symreftype_inverse' split: if_splits)
   done
 
 lemma maybe_sched_context_bind_tcb_invs[wp]:
@@ -1176,6 +1168,7 @@ crunches tcb_release_remove, tcb_sched_action, set_tcb_obj_ref
   and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+  (simp: crunch_simps)
 
 lemma reschedule_required_cur_sc [wp]:
   "\<lbrace>\<lambda>s. P (cur_sc s)\<rbrace> reschedule_required \<lbrace>\<lambda>rv s. P (cur_sc s)\<rbrace>"
@@ -1392,7 +1385,7 @@ text \<open>more invs rules\<close>
 
 crunches postpone
   for valid_irq_node[wp]: valid_irq_node
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma postpone_invs[wp]:
   "postpone t \<lbrace>invs\<rbrace>"
