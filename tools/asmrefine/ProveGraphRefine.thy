@@ -918,44 +918,76 @@ fun test_graph_refine_proof funs csenv ctxt nm = case
         ^ ": " ^ s, ts)
 
 \<comment>\<open>
-  Utility for configuring SimplToGraphProof with debugging failures.
+  Utility for configuring SimplToGraphProof with debugging features.
 \<close>
-type debug = {
+type debug_config = {
   \<comment>\<open> Functions with these names won't be tested. \<close>
   skips: string list,
   \<comment>\<open> If non-empty, *only* functions with these names will be tested. \<close>
   only: string list,
 
   \<comment>\<open>
-    Logs the names of functions when they pass or fail tests, or are
-    skipped because they don't have a definition.
+    Timeout for proofs. Any individual proof that takes longer
+    than this will be aborted and logged.
   \<close>
-  new_skips: (string list) Unsynchronized.ref,
-  successes: (string list) Unsynchronized.ref,
-  failures: (string list) Unsynchronized.ref
-}
+  timeout: Time.time option
+};
 
-fun new_debug skips only: debug = {
-  skips = skips,
-  only = only,
+type debug = {
+  config: debug_config,
+
+  \<comment>\<open>
+    Logs the names of functions when they pass or fail tests, or timeout,
+    or are skipped because they don't have a definition.
+  \<close>
+  successes: (string list) Unsynchronized.ref,
+  failures: (string list) Unsynchronized.ref,
+  timeouts: (string list) Unsynchronized.ref,
+  new_skips: (string list) Unsynchronized.ref
+};
+
+fun new_debug (config: debug_config): debug = {
+  config = config,
   new_skips = Unsynchronized.ref [],
   successes = Unsynchronized.ref [],
-  failures = Unsynchronized.ref []
+  failures = Unsynchronized.ref [],
+  timeouts = Unsynchronized.ref []
 }
 
 fun insert (dbg: debug) field x = change (field dbg) (curry (op ::) x)
 
 fun filter_fns (dbg: debug) =
-    (if null (#only dbg) then I else filter (member (op =) (#only dbg))) #>
-    (if null (#skips dbg) then I else filter_out (member (op =) (#skips dbg)))
+    (if null (#only (#config dbg)) then I else filter (member (op =) (#only (#config dbg)))) #>
+    (if null (#skips (#config dbg)) then I else filter_out (member (op =) (#skips (#config dbg))))
 
-fun has_failures (dbg: debug) = not (null (! (#failures dbg)))
+fun has (dbg: debug) field = not (null (! (field dbg)))
+
+fun interleave _ [] = []
+  | interleave _ [a] = [a]
+  | interleave x (a :: b :: xs) = a :: x :: interleave x (b :: xs);
+
+\<comment>\<open>
+  Produces a string that should be valid SML; useful for copy-pasting lists of functions
+  to modify debug lists.
+\<close>
+fun render_ML_string_list xs =
+  if null xs
+  then "(none)"
+  else
+    let
+      val lines = map (fn x => "\"" ^ x ^ "\"") xs |> interleave ",\n" |> List.foldr (op ^) ""
+    in "[\n" ^ lines ^ "\n]" end;
 
 fun print (dbg: debug) msg field =
   let
     val data = !(field dbg);
     val _ = writeln msg;
-  in if null (data) then writeln "(None)" else app writeln data end
+  in render_ML_string_list data |> writeln end
+
+fun timeout (dbg: debug) f =
+  case #timeout (#config dbg) of
+      SOME time => Timeout.apply time f
+    | NONE => f;
 
 fun test_graph_refine_proof_with_def funs csenv ctxt dbg nm =
   case Symtab.lookup funs nm of
@@ -963,13 +995,16 @@ fun test_graph_refine_proof_with_def funs csenv ctxt dbg nm =
     | _ =>
       let
         val ctxt = define_graph_fun_short funs nm ctxt
+        fun do_proof nm = (simpl_to_graph_thm funs csenv ctxt nm; insert dbg #successes nm)
         fun try_proof nm =
-            (simpl_to_graph_thm funs csenv ctxt nm; insert dbg #successes nm)
+            ((timeout dbg do_proof) nm)
             handle
               TERM (message, data) =>
                 (insert dbg #failures nm; raise TERM ("failure for " ^ nm ^ ": " ^ message, data))
             | THM (message, idx, data) =>
-                (insert dbg #failures nm; raise THM ("failure for " ^ nm ^ ": " ^ message, idx, data));
+                (insert dbg #failures nm; raise THM ("failure for " ^ nm ^ ": " ^ message, idx, data))
+            | Timeout.TIMEOUT t =>
+                (insert dbg #timeouts nm; raise Timeout.TIMEOUT t);
         val (time, _) = Timing.timing try_proof nm
       in "success on " ^ nm ^ "  [" ^ Timing.message time ^ "]" end
 
@@ -990,13 +1025,25 @@ fun test_all_graph_refine_proofs_parallel funs csenv ctxt dbg = let
         handle
           TERM (msg, _) => warning msg
         | THM (msg, _, _) => warning msg
+        | Timeout.TIMEOUT _ => warning ("Timeout for " ^ nm)
     val (time, _) = Timing.timing (Par_List.map test_and_log) ss
-    val time_msg = " [" ^ Timing.message time ^ "]"
+    val time_msg = "[" ^ Timing.message time ^ "]"
+    val failure_msg =
+        if has dbg #failures
+        then SOME "Failures! Check the `#failures` field of the debug parameter.\n"
+        else NONE;
+    val timeout_msg =
+        if has dbg #timeouts
+        then SOME "Timeouts! Check the `#timeouts` field of the debug parameter.\n"
+        else NONE;
+    val msg =
+        if isSome failure_msg orelse isSome timeout_msg
+        then SOME (Option.getOpt (failure_msg, "") ^ Option.getOpt (timeout_msg, ""))
+        else NONE
   in
-    if has_failures dbg
-    then
-      error ("Failures! Check the `#failures` field of the debug parameter." ^ time_msg)
-    else "success!" ^ time_msg
+    case msg of
+      SOME msg => error (msg ^ time_msg)
+    | NONE => "success! " ^ time_msg
   end
 
 end
