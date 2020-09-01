@@ -500,7 +500,7 @@ This module uses the C preprocessor to select a target architecture.
 >     when schedulable $ do
 >         ready <- refillReady scPtr
 >         sufficient <- refillSufficient scPtr 0
->         when (not ready && sufficient) $ postpone scPtr
+>         when (not (ready && sufficient)) $ postpone scPtr
 
 > contextYieldToUpdateQueues :: PPtr SchedContext -> Kernel Bool
 > contextYieldToUpdateQueues scPtr = do
@@ -696,6 +696,8 @@ This module uses the C preprocessor to select a target architecture.
 >     times <- mapM getScTime qs
 >     qst <- return $ zip qs times
 >     qst' <- return $ filter (\(_,t') -> t' <= time) qst ++ [(tcbPtr, time)] ++ filter (\(_,t') -> not (t' <= time)) qst
+>     when (filter (\(_,t') -> t' <= time) qst == []) $
+>         setReprogramTimer True
 >     setReleaseQueue (map fst qst')
 >     threadSet (\t -> t { tcbInReleaseQueue = True }) tcbPtr
 
