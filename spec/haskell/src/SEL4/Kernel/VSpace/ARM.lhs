@@ -58,7 +58,7 @@ The ARM-specific invocations are imported with the "ArchInv" prefix. This is nec
 
 \subsection{Constants}
 
-All virtual addresses above "kernelBase" cannot be mapped by user-level tasks. With the exception of one page, at "globalsBase", they cannot be read; the globals page is mapped read-only.
+All virtual addresses above "pptrBase" cannot be mapped by user-level tasks. With the exception of one page, at "globalsBase", they cannot be read; the globals page is mapped read-only.
 
 > globalsBase :: VPtr
 > globalsBase = VPtr 0xffffc000
@@ -163,7 +163,7 @@ An abstract version looks like:
 
 However we assume that the result of getMemoryRegions is actually [0,1<<24] and do the following
 
->     let baseoffset = kernelBase `shiftR` pageBitsForSize (ARMSection)
+>     let baseoffset = pptrBase `shiftR` pageBitsForSize (ARMSection)
 
 >     let ptSize = ptBits - pteBits
 >     let pdSize = pdBits - pdeBits
@@ -501,7 +501,7 @@ With hypervisor extensions, kernel and user MMUs are completely independent. How
 > copyGlobalMappings newPD = do
 >     globalPD <- gets (armKSGlobalPD . ksArchState)
 >     let pdSize = 1 `shiftL` (pdBits - pdeBits)
->     forM_ [fromVPtr kernelBase `shiftR` 20 .. pdSize - 1] $ \index -> do
+>     forM_ [fromVPtr pptrBase `shiftR` 20 .. pdSize - 1] $ \index -> do
 >         let offset = PPtr index `shiftL` pdeBits
 >         pde <- getObject (globalPD + offset)
 >         storePDE (newPD + offset) pde
@@ -1237,7 +1237,7 @@ Capabilities for page directories --- the top level of the hardware-defined page
 >         (True, start:end:_) -> do
 >             when (end <= start) $
 >                 throw $ InvalidArgument 1
->             when (VPtr start >= kernelBase || VPtr end > kernelBase) $
+>             when (VPtr start >= pptrBase || VPtr end > pptrBase) $
 >                 throw IllegalOperation
 >             (pd,asid) <- case cap of
 >                 PageDirectoryCap {
@@ -1286,7 +1286,7 @@ Note that these capabilities cannot be copied until they have been mapped, so an
 >                          capPDBasePtr = pd })
 >                     -> return (pd,asid)
 >                 _ -> throw $ InvalidCapability 1
->             when (VPtr vaddr >= kernelBase) $
+>             when (VPtr vaddr >= pptrBase) $
 >                 throw $ InvalidArgument 0
 >             pdCheck <- lookupErrorOnFailure False $ findPDForASID asid
 >             when (pdCheck /= pd) $ throw $ InvalidCapability 1
@@ -1340,7 +1340,7 @@ FIXME ARMHYP capVPMappedAddress is not what we want for ARM\_HYP? C code has cap
 >                     when (vaddr' /= (VPtr vaddr)) $ throw $ InvalidArgument 0
 >                 Nothing ->  do
 >                     let vtop = vaddr + bit (pageBitsForSize $ capVPSize cap) - 1
->                     when (VPtr vtop >= kernelBase) $ throw $ InvalidArgument 0
+>                     when (VPtr vtop >= pptrBase) $ throw $ InvalidArgument 0
 >             pdCheck <- lookupErrorOnFailure False $ findPDForASID asid
 >             when (pdCheck /= pd) $ throw $ InvalidCapability 1
 >             let vmRights = maskVMRights (capVPRights cap) $
@@ -1457,7 +1457,7 @@ ASID pool capabilities are used to allocate unique address space identifiers for
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >         let start' = start + fromPPtr vaddr'
 >         let end' = end + fromPPtr vaddr'
->         when (pstart < physBase || ((end' - start') + fromPAddr pstart > fromPAddr paddrTop)) $
+>         when (pstart < paddrBase || ((end' - start') + fromPAddr pstart > fromPAddr paddrTop)) $
 >             throw IllegalOperation
 #else
 >         let start' = start + fromVPtr vaddr
