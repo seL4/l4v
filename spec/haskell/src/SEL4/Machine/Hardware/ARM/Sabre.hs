@@ -33,24 +33,17 @@ gicDistributor = (gicDistributorBase, PPtr 0xfff05000)
 gicInterfaceBase = gicControllerBase + 0x100
 mptBase = gicControllerBase + 0x600
 
+physBase :: PAddr
+physBase = PAddr 0x10000000
 
-kernelBase :: VPtr
-kernelBase = VPtr 0xe0000000
-
-physBase = 0x10000000
-physMappingOffset = 0xe0000000 - physBase
-
-ptrFromPAddr :: PAddr -> PPtr a
-ptrFromPAddr (PAddr addr) = PPtr $ addr + physMappingOffset
-
-addrFromPPtr :: PPtr a -> PAddr
-addrFromPPtr (PPtr ptr) = PAddr $ ptr - physMappingOffset
+pptrBase :: VPtr
+pptrBase = VPtr 0xe0000000
 
 pageColourBits :: Int
 pageColourBits = 0 -- qemu has no cache
 
 getMemoryRegions :: Ptr CallbackData -> IO [(PAddr, PAddr)]
-getMemoryRegions _ = return [(PAddr physBase, (PAddr physBase) + (0x8 `shiftL` 24))]
+getMemoryRegions _ = return [(physBase, physBase + (0x8 `shiftL` 24))]
 
 
 userTimer = 0x020D4000
