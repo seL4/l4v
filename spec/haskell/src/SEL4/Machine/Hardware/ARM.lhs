@@ -81,14 +81,39 @@ The ARM MMU does not allow access to physical addresses while translation is ena
 
 > type PAddr = Platform.PAddr
 
-> ptrFromPAddr :: PAddr -> PPtr a
-> ptrFromPAddr = Platform.ptrFromPAddr
-
-> addrFromPPtr :: PPtr a -> PAddr
-> addrFromPPtr = Platform.addrFromPPtr
-
 > fromPAddr :: PAddr -> Word
 > fromPAddr = Platform.fromPAddr
+
+> paddrBase :: PAddr
+> paddrBase = Platform.physBase
+
+> pptrBase :: VPtr
+> pptrBase = Platform.pptrBase
+
+> pptrTop :: VPtr
+> pptrTop = VPtr 0xfff00000
+
+> paddrTop :: PAddr
+> paddrTop = toPAddr $ (fromVPtr pptrTop - pptrBaseOffset)
+
+> kernelELFPAddrBase :: PAddr
+> kernelELFPAddrBase = paddrBase
+
+> kernelELFBase :: VPtr
+> kernelELFBase = VPtr $ fromVPtr pptrBase + (fromPAddr kernelELFPAddrBase .&. (mask 22))
+
+> pptrBaseOffset = (fromVPtr pptrBase) - (fromPAddr paddrBase)
+
+> ptrFromPAddr :: PAddr -> PPtr a
+> ptrFromPAddr (Platform.PAddr addr) = PPtr $ addr + pptrBaseOffset
+
+> addrFromPPtr :: PPtr a -> PAddr
+> addrFromPPtr (PPtr addr) = toPAddr $ addr - pptrBaseOffset
+
+> kernelELFBaseOffset = (fromVPtr kernelELFBase) - (fromPAddr kernelELFPAddrBase)
+
+> addrFromKPPtr :: PPtr a -> PAddr
+> addrFromKPPtr (PPtr addr) = toPAddr $ addr - kernelELFBaseOffset
 
 > addPAddr :: PAddr -> Word -> PAddr
 > addPAddr p w = toPAddr (fromPAddr p + w)
@@ -848,16 +873,7 @@ FIXME ARMHYP consider moving to platform code?
 
 \subsection{Constants}
 
-> physBase :: PAddr
-> physBase = toPAddr Platform.physBase
-
-> kernelBase :: VPtr
-> kernelBase = Platform.kernelBase
-
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-
-> paddrTop :: PAddr
-> paddrTop = toPAddr Platform.paddrTop
 
 > hcrVCPU =  (0x87039 :: Word) -- HCR_VCPU
 > hcrNative = (0xfe8703b :: Word) -- HCR_NATIVE

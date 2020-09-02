@@ -27,36 +27,14 @@ instance Bounded IRQ where
 newtype PAddr = PAddr { fromPAddr :: Word }
     deriving (Integral, Real, Show, Eq, Num, Bits, FiniteBits, Ord, Enum, Bounded)
 
-kernelELFBase :: VPtr
-kernelELFBase = VPtr 0xFFFFFFFF84000000
-
-physBase = 0x0 -- called PADDR_BASE in C
-physMappingOffset = fromVPtr pptrBase - physBase -- called BASE_OFFSET in C
-paddrLoad = 0xC0000000
-kernelBaseOffset = fromVPtr kernelELFBase - paddrLoad
-
-ptrFromPAddr :: PAddr -> PPtr a
-ptrFromPAddr (PAddr addr) = PPtr $ addr + physMappingOffset
-
-addrFromPPtr :: PPtr a -> PAddr
-addrFromPPtr (PPtr ptr) = PAddr $ ptr - physMappingOffset
-
-addrFromKPPtr :: PPtr a -> PAddr
-addrFromKPPtr (PPtr ptr) = PAddr $ ptr - kernelBaseOffset
+physBase :: PAddr
+physBase = PAddr 0x80000000
 
 pageColourBits :: Int
 pageColourBits = error "unused on this architecture"
 
 irqInvalid :: IRQ
 irqInvalid = IRQ 0
-
-{- stubs -}
-
-pptrBase :: VPtr
-pptrBase = VPtr 0xFFFFFFC000000000
-
-pptrUserTop :: VPtr
-pptrUserTop = pptrBase
 
 {- simulator callback stubs - we do not plan to support the simulator on this
    platform -}

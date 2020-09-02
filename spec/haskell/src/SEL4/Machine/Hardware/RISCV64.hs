@@ -80,17 +80,39 @@ data HypFaultType
 
 type PAddr = Platform.PAddr
 
-ptrFromPAddr :: PAddr -> PPtr a
-ptrFromPAddr = Platform.ptrFromPAddr
-
-addrFromPPtr :: PPtr a -> PAddr
-addrFromPPtr = Platform.addrFromPPtr
-
 fromPAddr :: PAddr -> Word
 fromPAddr = Platform.fromPAddr
 
+paddrBase :: PAddr
+paddrBase = Platform.PAddr 0x0
+
+pptrBase :: VPtr
+pptrBase = VPtr 0xFFFFFFC000000000
+
+pptrTop :: VPtr
+pptrTop = VPtr 0xFFFFFFFF80000000
+
+kernelELFPAddrBase :: PAddr
+kernelELFPAddrBase = toPAddr $ (fromPAddr Platform.physBase) + 0x4000000
+
+kernelELFBase :: VPtr
+kernelELFBase = VPtr $ fromVPtr pptrTop + (fromPAddr kernelELFPAddrBase .&. (mask 30))
+
+pptrUserTop :: VPtr
+pptrUserTop = pptrBase
+
+pptrBaseOffset = (fromVPtr pptrBase) - (fromPAddr paddrBase)
+
+ptrFromPAddr :: PAddr -> PPtr a
+ptrFromPAddr (Platform.PAddr addr) = PPtr $ addr + pptrBaseOffset
+
+addrFromPPtr :: PPtr a -> PAddr
+addrFromPPtr (PPtr addr) = toPAddr $ addr - pptrBaseOffset
+
+kernelELFBaseOffset = (fromVPtr kernelELFBase) - (fromPAddr kernelELFPAddrBase)
+
 addrFromKPPtr :: PPtr a -> PAddr
-addrFromKPPtr = Platform.addrFromKPPtr
+addrFromKPPtr (PPtr addr) = toPAddr $ addr - kernelELFBaseOffset
 
 {- Hardware Access -}
 
@@ -244,16 +266,6 @@ data PTE
         pteGlobal :: Bool,
         pteUser :: Bool }
     deriving (Show, Eq)
-
-pptrBase :: VPtr
-pptrBase = Platform.pptrBase
-
-pptrUserTop :: VPtr
-pptrUserTop = Platform.pptrUserTop
-
-physBase :: PAddr
-physBase = toPAddr Platform.physBase
-
 
 {- Simulator callbacks -}
 
