@@ -123,6 +123,12 @@ lemma t_hrs_'_update_hmu_triv[simp]:
     \<Longrightarrow> t_hrs_'_update (hrs_mem_update f) gs = gs"
   by (cases gs, auto simp add: hrs_mem_update_def hrs_mem_def)
 
+(* This is needed during graph_refine_proof_tacs, but t_hrs_' isn't accessible in that context. *)
+lemma t_hrs_'_heap_update_id[simp]:
+  fixes p :: "'a::packed_type ptr"
+  shows "t_hrs_'_update (hrs_mem_update (heap_update p ((h_val (hrs_mem (t_hrs_' s)) p)))) s = s"
+  by (simp add: heap_update_id)
+
 end
 
 end
