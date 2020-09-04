@@ -954,6 +954,8 @@ fun new_debug (config: debug_config): debug = {
   timeouts = Unsynchronized.ref []
 }
 
+fun no_debug (): debug = new_debug { skips = [], only = [], timeout = NONE };
+
 fun insert (dbg: debug) field x = change (field dbg) (curry (op ::) x)
 
 fun filter_fns (dbg: debug) =

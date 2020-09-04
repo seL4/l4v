@@ -134,7 +134,7 @@ abbreviation(input) "ghost_assns_from_globals
 
 text \<open>Test everything.\<close>
 ML \<open>
-val dbg = ProveSimplToGraphGoals.new_debug [] [];
+val dbg = ProveSimplToGraphGoals.no_debug ();
 
 ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
   funs
