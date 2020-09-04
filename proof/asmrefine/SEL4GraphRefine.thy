@@ -61,10 +61,13 @@ lemma snd_snd_gs_new_frames_new_cnodes[simp]:
   by (simp_all add: gs_new_frames_def gs_new_cnodes_def gs_clear_region_def)
 
 ML \<open>
+val broken = ["Kernel_C.reserve_region", "Kernel_C.merge_regions", "Kernel_C.arch_init_freemem"];
+val slow = ["Kernel_C.init_freemem"];
+
 val dbg = ProveSimplToGraphGoals.new_debug
   {
     \<comment>\<open> VER-1166 \<close>
-    skips = ["Kernel_C.reserve_region", "Kernel_C.merge_regions", "Kernel_C.arch_init_freemem"],
+    skips = broken @ slow,
     only = [],
     timeout = NONE
   };
