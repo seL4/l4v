@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ARM]
+        arch: [ARM, ARM_HYP, RISCV64, X64]
     steps:
     - name: Cache ~/.stack
       uses: actions/cache@v2
@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ARM]
+        arch: [ARM, ARM_HYP, RISCV64, X64]
     steps:
     - name: Cache Isabelle Images
       uses: actions/cache@v2
@@ -59,7 +59,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ARM]
+        arch: [ARM, ARM_HYP, RISCV64, X64]
     steps:
     - name: Cache Isabelle Images
       uses: actions/cache@v2
@@ -72,3 +72,127 @@ jobs:
       with:
         L4V_ARCH: ${{ matrix.arch }}
         session: Refine
+
+  cspec:
+    name: CSpec
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ARM, ARM_HYP, RISCV64, X64]
+    steps:
+    - name: Cache Isabelle Images
+      uses: actions/cache@v2
+      with:
+        path: cache/
+        key: ${{ runner.os }}-${{ matrix.arch }}-images-${{ github.sha }}
+        restore-keys: ${{ runner.os }}-${{ matrix.arch }}-images
+    - name: Run Proofs
+      uses: seL4/ci-actions/run-proofs@master
+      with:
+        L4V_ARCH: ${{ matrix.arch }}
+        session: CSpec
+
+  drefine:
+    name: DRefine
+    needs: ainvs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ARM]
+    steps:
+    - name: Cache Isabelle Images
+      uses: actions/cache@v2
+      with:
+        path: cache/
+        key: ${{ runner.os }}-${{ matrix.arch }}-images-${{ github.sha }}
+        restore-keys: ${{ runner.os }}-${{ matrix.arch }}-images
+    - name: Run Proofs
+      uses: seL4/ci-actions/run-proofs@master
+      with:
+        L4V_ARCH: ${{ matrix.arch }}
+        session: DRefine
+
+  security:
+    name: Security
+    needs: ainvs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ARM]
+    steps:
+    - name: Cache Isabelle Images
+      uses: actions/cache@v2
+      with:
+        path: cache/
+        key: ${{ runner.os }}-${{ matrix.arch }}-images-${{ github.sha }}
+        restore-keys: ${{ runner.os }}-${{ matrix.arch }}-images
+    - name: Run Proofs
+      uses: seL4/ci-actions/run-proofs@master
+      with:
+        L4V_ARCH: ${{ matrix.arch }}
+        session: Access InfoFlow Bisim
+
+  simplexp:
+    name: SimplExport
+    needs: cspec
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ARM, RISCV64]
+    steps:
+    - name: Cache Isabelle Images
+      uses: actions/cache@v2
+      with:
+        path: cache/
+        key: ${{ runner.os }}-${{ matrix.arch }}-images-${{ github.sha }}
+        restore-keys: ${{ runner.os }}-${{ matrix.arch }}-images
+    - name: Run Proofs
+      uses: seL4/ci-actions/run-proofs@master
+      with:
+        L4V_ARCH: ${{ matrix.arch }}
+        session: SimplExportAndRefine
+
+  autocorres:
+    name: AutoCorres
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ARM, ARM_HYP, RISCV64, X64]
+    steps:
+    - name: Cache Isabelle Images
+      uses: actions/cache@v2
+      with:
+        path: cache/
+        key: ${{ runner.os }}-${{ matrix.arch }}-images-${{ github.sha }}
+        restore-keys: ${{ runner.os }}-${{ matrix.arch }}-images
+    - name: Run Proofs
+      uses: seL4/ci-actions/run-proofs@master
+      with:
+        L4V_ARCH: ${{ matrix.arch }}
+        session: CParserTest CParserTools AutoCorresDoc AutoCorresTest
+
+  asmrefine:
+    name: AsmRefine
+    needs: cspec
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ARM, ARM_HYP]
+    steps:
+    - name: Cache Isabelle Images
+      uses: actions/cache@v2
+      with:
+        path: cache/
+        key: ${{ runner.os }}-${{ matrix.arch }}-images-${{ github.sha }}
+        restore-keys: ${{ runner.os }}-${{ matrix.arch }}-images
+    - name: Run Proofs
+      uses: seL4/ci-actions/run-proofs@master
+      with:
+        L4V_ARCH: ${{ matrix.arch }}
+        session: AsmRefine
