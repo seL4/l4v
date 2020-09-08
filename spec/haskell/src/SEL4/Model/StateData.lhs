@@ -165,7 +165,15 @@ replaces the previous one.
 > getCurThread = gets ksCurThread
 
 > setCurThread :: PPtr TCB -> Kernel ()
-> setCurThread tptr = modify (\ks -> ks { ksCurThread = tptr })
+> setCurThread tptr = do
+>   stateAssert ready_qs_runnable "Threads in the ready queues are runnable'"
+>   modify (\ks -> ks { ksCurThread = tptr })
+
+In many places, we would like to be able to use the fact that threads in the
+ready queues have runnable' thread state. We add an assertion that it does hold.
+
+> ready_qs_runnable :: KernelState -> Bool
+> ready_qs_runnable _ = True
 
 Similarly, these functions access the idle thread pointer, the ready queue for a given priority level (adjusted to account for the active security domain), the requested action of the scheduler, and the interrupt handler state.
 

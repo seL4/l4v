@@ -211,6 +211,8 @@ If a thread is waiting for an IPC operation, it may be necessary to move the thr
 > cancelIPC tptr = do
 >         stateAssert sym_refs_asrt
 >             "Assert that `sym_refs (state_refs_of' s)` holds"
+>         stateAssert ready_qs_runnable
+>             "Threads in the ready queues are runnable'"
 >         state <- getThreadState tptr
 >         threadSet (\tcb -> tcb {tcbFault = Nothing}) tptr
 >         case state of

@@ -435,6 +435,7 @@ Note also that the level 2 bitmap array is stored in reverse in order to get bet
 
 > chooseThread :: Kernel ()
 > chooseThread = do
+>     stateAssert ready_qs_runnable "Threads in the ready queues are runnable'"
 >     curdom <- if numDomains > 1 then curDomain else return 0
 >     l1 <- getReadyQueuesL1Bitmap curdom
 >     if l1 /= 0
@@ -461,6 +462,8 @@ To switch to a new thread, we call the architecture-specific thread switch funct
 
 > switchToThread :: PPtr TCB -> Kernel ()
 > switchToThread thread = do
+>         stateAssert ready_qs_runnable
+>            "Threads in the ready queues are runnable'"
 >         Arch.switchToThread thread
 >         tcbSchedDequeue thread
 >         setCurThread thread
@@ -469,6 +472,8 @@ Switching to the idle thread is similar, except that we call a different archite
 
 > switchToIdleThread :: Kernel ()
 > switchToIdleThread = do
+>         stateAssert ready_qs_runnable
+>             "Threads in the ready queues are runnable'"
 >         thread <- getIdleThread
 >         Arch.switchToIdleThread
 >         setCurThread thread
