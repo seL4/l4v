@@ -1082,27 +1082,13 @@ lemma bitmapQ_no_L2_orphans_lift:
 
 lemma valid_queues_lift_asm:
   assumes tat1: "\<And>d p tcb. \<lbrace>obj_at' (inQ d p) tcb and Q \<rbrace> f \<lbrace>\<lambda>_. obj_at' (inQ d p) tcb\<rbrace>"
-  and     tat2: "\<And>tcb. \<lbrace>st_tcb_at' runnable' tcb and Q \<rbrace> f \<lbrace>\<lambda>_. st_tcb_at' runnable' tcb\<rbrace>"
   and     prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueues s) \<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
   and     prqL1: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
   and     prqL2: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
-  shows   "\<lbrace>Invariants_H.valid_queues and Q\<rbrace> f \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  proof -
-    have tat:  "\<And>d p tcb. \<lbrace>obj_at' (inQ d p) tcb and st_tcb_at' runnable' tcb and Q\<rbrace> f
-                         \<lbrace>\<lambda>_. obj_at' (inQ d p) tcb and st_tcb_at' runnable' tcb\<rbrace>"
-      apply (rule hoare_chain [OF hoare_vcg_conj_lift [OF tat1 tat2]])
-       apply (fastforce)+
-       done
-    have tat_combined: "\<And>d p tcb. \<lbrace>obj_at' (inQ d p and runnable' \<circ> tcbState) tcb and Q\<rbrace> f
-                         \<lbrace>\<lambda>_. obj_at' (inQ d p and runnable' \<circ> tcbState) tcb\<rbrace>"
-      apply (rule hoare_chain [OF tat])
-       apply (fastforce simp add: obj_at'_and pred_tcb_at'_def o_def)+
-      done
-    show ?thesis unfolding valid_queues_def valid_queues_no_bitmap_def
-      by (wp tat_combined prq prqL1 prqL2 valid_bitmapQ_lift bitmapQ_no_L2_orphans_lift
-             bitmapQ_no_L1_orphans_lift hoare_vcg_all_lift hoare_vcg_conj_lift hoare_Ball_helper)
-         simp_all
-  qed
+  shows   "\<lbrace>valid_queues and Q\<rbrace> f \<lbrace>\<lambda>_. valid_queues\<rbrace>"
+  unfolding valid_queues_def valid_queues_no_bitmap_def
+  by (wpsimp wp: tat1 prq prqL1 prqL2 valid_bitmapQ_lift bitmapQ_no_L2_orphans_lift
+                 bitmapQ_no_L1_orphans_lift hoare_vcg_all_lift hoare_Ball_helper)
 
 lemmas valid_queues_lift = valid_queues_lift_asm[where Q="\<lambda>_. True", simplified]
 

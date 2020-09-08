@@ -1035,9 +1035,12 @@ definition
   valid_queues_no_bitmap :: "kernel_state \<Rightarrow> bool"
 where
  "valid_queues_no_bitmap \<equiv> \<lambda>s.
-   (\<forall>d p. (\<forall>t \<in> set (ksReadyQueues s (d, p)). obj_at' (inQ d p and runnable' \<circ> tcbState) t s)
-    \<and>  distinct (ksReadyQueues s (d, p))
-    \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> ksReadyQueues s (d,p) = []))"
+   (\<forall>d p. (\<forall>t \<in> set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s)
+          \<and> distinct (ksReadyQueues s (d, p))
+          \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> ksReadyQueues s (d,p) = []))"
+
+defs ready_qs_runnable_def:
+  "ready_qs_runnable \<equiv> \<lambda>s. \<forall>d p. \<forall>t \<in> set (ksReadyQueues s (d, p)). st_tcb_at' runnable' t s"
 
 definition
   (* A priority is used as a two-part key into the bitmap structure. If an L2 bitmap entry
@@ -3495,15 +3498,7 @@ lemma objBitsT_simps:
 lemma valid_queues_obj_at'D:
    "\<lbrakk> t \<in> set (ksReadyQueues s (d, p)); valid_queues s \<rbrakk>
         \<Longrightarrow> obj_at' (inQ d p) t s"
-  apply (unfold valid_queues_def valid_queues_no_bitmap_def)
-  apply (elim conjE)
-  apply (drule_tac x=d in spec)
-  apply (drule_tac x=p in spec)
-  apply (clarsimp)
-  apply (drule(1) bspec)
-  apply (erule obj_at'_weakenE)
-  apply (clarsimp)
-  done
+  by (fastforce simp: valid_queues_def valid_queues_no_bitmap_def)
 
 lemma obj_at'_and:
   "obj_at' (P and P') t s = (obj_at' P t s \<and> obj_at' P' t s)"
@@ -3558,9 +3553,9 @@ lemma pred_tcb_at'_imp:
 
 lemma valid_queues_no_bitmap_def':
   "valid_queues_no_bitmap =
-     (\<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)).
-                  obj_at' (inQ d p) t s \<and> st_tcb_at' runnable' t s) \<and>
-                  distinct (ksReadyQueues s (d, p)) \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> ksReadyQueues s (d,p) = []))"
+     (\<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s) \<and>
+                distinct (ksReadyQueues s (d, p)) \<and>
+                (d > maxDomain \<or> p > maxPriority \<longrightarrow> ksReadyQueues s (d,p) = []))"
   apply (rule ext, rule iffI)
   apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_and pred_tcb_at'_def o_def
                   elim!: obj_at'_weakenE)+

@@ -2252,7 +2252,6 @@ lemma valid_queues[wp]:
   "f p v \<lbrace> valid_queues \<rbrace>"
   unfolding valid_queues_def valid_queues_no_bitmap_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift |wps)+
-     (simp add: o_def pred_conj_def)
 
 lemma set_non_tcb_valid_queues'[wp]:
   "f p v \<lbrace>valid_queues'\<rbrace>"
@@ -3262,6 +3261,26 @@ lemma state_refs_of_cross:
   "\<lbrakk>P (state_refs_of s); (s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s\<rbrakk>
       \<Longrightarrow> P (state_refs_of' s')"
   by (clarsimp simp: state_refs_of_cross_eq elim!: rsubst[where P=P])
+
+lemma ready_qs_runnable_cross:
+  "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s; valid_ready_qs s\<rbrakk>
+   \<Longrightarrow> \<forall>d p. \<forall>t\<in>set (ksReadyQueues s' (d, p)). st_tcb_at' runnable' t s'"
+  apply (clarsimp simp: valid_ready_qs_def)
+  apply (frule state_relation_ready_queues_relation)
+  apply (clarsimp simp: ready_queues_relation_def)
+  apply (prop_tac "st_tcb_at runnable t s")
+   apply (fastforce simp: vs_all_heap_simps pred_tcb_at_def obj_at_def)
+  apply (fastforce intro: sts_rel_runnable
+                   dest!: st_tcb_at_coerce_concrete
+                    simp: st_tcb_at'_def obj_at'_def)
+  done
+
+method add_ready_qs_runnable =
+  rule_tac Q="(\<lambda>s. \<forall>d p. \<forall>t\<in>set (ksReadyQueues s (d, p)). st_tcb_at' runnable' t s)"
+        in corres_cross_add_guard
+  , (clarsimp simp: pred_conj_def)?
+  , (frule valid_sched_valid_ready_qs)?, (frule invs_psp_aligned)?, (frule invs_distinct)?
+  , fastforce dest: ready_qs_runnable_cross
 
 lemma tcb_of'_Some:
   "(tcb_of' ko = Some y) = (ko = KOTCB y)"
