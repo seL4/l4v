@@ -163,6 +163,8 @@ The following function will remove the given thread from the queue of the notifi
 
 > cancelSignal :: PPtr TCB -> PPtr Notification -> Kernel ()
 > cancelSignal threadPtr ntfnPtr = do
+>         stateAssert ready_qs_runnable
+>             "Threads in the ready queues are runnable'"
 >         ntfn <- getNotification ntfnPtr
 >         assert (isWaiting (ntfnObj ntfn))
 >             "cancelSignal: notification object must be waiting"
