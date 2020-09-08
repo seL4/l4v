@@ -5044,8 +5044,6 @@ lemma createObjects_queues:
   \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
   apply (wp valid_queues_lift_asm [unfolded pred_conj_def, OF createObjects_orig_obj_at3]
             createObjects_pred_tcb_at' [unfolded pred_conj_def])
-      apply fastforce
-     apply wp+
   apply fastforce
   done
 

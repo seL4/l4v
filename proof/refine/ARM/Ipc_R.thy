@@ -1958,7 +1958,7 @@ crunches cteDeleteOne
   for valid_queues'[wp]: valid_queues'
   (simp: crunch_simps inQ_def
      wp: crunch_wps sts_st_tcb' getObject_inv loadObject_default_inv
-         threadSet_valid_queues' rescheduleRequired_valid_queues'_weak)
+         threadSet_valid_queues')
 
 lemma cancelSignal_valid_queues'[wp]:
   "\<lbrace>valid_queues'\<rbrace> cancelSignal t ntfn \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
@@ -2580,10 +2580,6 @@ crunches sendSignal
   and irqs_masked'[wp]: "irqs_masked'"
   (wp: crunch_wps whileM_inv simp: crunch_simps o_def)
 
-lemma sts_running_valid_queues:
-  "runnable' st \<Longrightarrow> \<lbrace> Invariants_H.valid_queues \<rbrace> setThreadState st t \<lbrace>\<lambda>_. Invariants_H.valid_queues \<rbrace>"
-  by (wp sts_valid_queues, clarsimp)
-
 lemma ct_in_state_activatable_imp_simple'[simp]:
   "ct_in_state' activatable' s \<Longrightarrow> ct_in_state' simple' s"
   apply (simp add: ct_in_state'_def)
@@ -2596,9 +2592,7 @@ lemma setThreadState_nonqueued_state_update:
                \<and> st \<in> {Inactive, Running, Restart, IdleThreadState}
                \<and> (st \<noteq> Inactive \<longrightarrow> ex_nonz_cap_to' t s)
                \<and> (t = ksIdleThread s \<longrightarrow> idle' st)
-
-               \<and> (\<not> runnable' st \<longrightarrow> sch_act_simple s)
-               \<and> (\<not> runnable' st \<longrightarrow> (\<forall>p. t \<notin> set (ksReadyQueues s p)))\<rbrace>
+               \<and> (\<not> runnable' st \<longrightarrow> sch_act_simple s)\<rbrace>
   setThreadState st t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre, wp valid_irq_node_lift
@@ -2728,7 +2722,7 @@ proof -
     cancelSignal t ntfn
     \<lbrace>\<lambda>_ s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
     apply (simp add: cancelSignal_def)
-    apply (wp)[1]
+    apply wp[1]
         apply (wp hoare_convert_imp)+
         apply (rule_tac P="\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread"
                  in hoare_weaken_pre)
@@ -2736,8 +2730,7 @@ proof -
            apply (wp | simp)+
        apply (wpc, wp+)
      apply (rule_tac Q="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
-     apply (wp)
-    apply simp
+     apply (wpsimp wp: stateAssert_wp)+
     done
   have cdo: "\<And>t t' slot.
     \<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
@@ -3772,40 +3765,6 @@ lemma hf_corres:
    apply (clarsimp simp: st_tcb_at_tcb_at st_tcb_def2 invs_def
                          valid_state_def valid_idle_def)
   apply auto
-  done *)
-
-lemma sts_invs_minor'':
-  "\<lbrace>st_tcb_at' (\<lambda>st'. tcb_st_refs_of' st' = tcb_st_refs_of' st
-                   \<and> (st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow>
-                      st' \<noteq> Inactive \<and> \<not> idle' st')) t
-      and (\<lambda>s. t = ksIdleThread s \<longrightarrow> idle' st)
-      and (\<lambda>s. (\<exists>p. t \<in> set (ksReadyQueues s p)) \<longrightarrow> runnable' st)
-      and (\<lambda>s. runnable' st \<and> obj_at' tcbQueued t s
-                                      \<longrightarrow> st_tcb_at' runnable' t s)
-      and (\<lambda>s. \<not> runnable' st \<longrightarrow> sch_act_not t s)
-      and invs'\<rbrace>
-     setThreadState st t
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
-  apply (rule hoare_pre)
-   apply (wp valid_irq_node_lift sts_sch_act' sts_valid_queues
-             setThreadState_ct_not_inQ)
-  apply clarsimp
-  apply (rule conjI)
-   apply fastforce
-  apply (rule conjI)
-   apply (clarsimp simp: pred_tcb_at'_def)
-   apply (drule obj_at_valid_objs')
-    apply (clarsimp simp: valid_pspace'_def)
-   apply (clarsimp simp: valid_obj'_def valid_tcb'_def projectKOs)
-  sorry (*
-   subgoal by (cases st, auto simp: valid_tcb_state'_def
-                        split: Structures_H.thread_state.splits)[1]
-  apply (rule conjI)
-   apply (clarsimp dest!: st_tcb_at_state_refs_ofD'
-                   elim!: rsubst[where P=sym_refs]
-                  intro!: ext)
-  apply (clarsimp elim!: st_tcb_ex_cap'')
   done *)
 
 lemma hf_invs' [wp]:

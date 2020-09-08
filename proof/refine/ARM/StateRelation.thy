@@ -702,6 +702,10 @@ lemma state_relation_pspace_relation[elim!]:
   "(s,s') \<in> state_relation \<Longrightarrow> pspace_relation (kheap s) (ksPSpace s')"
   by (simp add: state_relation_def)
 
+lemma state_relation_ready_queues_relation[elim!]:
+  "(s, s') \<in> state_relation \<Longrightarrow> ready_queues_relation (ready_queues s) (ksReadyQueues s')"
+  by (simp add: state_relation_def)
+
 lemma state_relation_release_queue_relation:
   "(s,s') \<in> state_relation \<Longrightarrow> release_queue_relation (release_queue s) (ksReleaseQueue s')"
   by (clarsimp simp: state_relation_def)

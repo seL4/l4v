@@ -78,7 +78,6 @@ crunch obj_at'[wp]: postCapDeletion "\<lambda>s. Q (obj_at' P p s)"
 
 lemmas postCapDeletion_valid_queues[wp] =
     valid_queues_lift [OF postCapDeletion_obj_at'
-                          postCapDeletion_pred_tcb_at'
                           postCapDeletion_ksRQ]
 
 crunch inQ[wp]: clearUntypedFreeIndex "\<lambda>s. P (obj_at' (inQ d p) t s)"
@@ -2800,10 +2799,11 @@ lemma cancelIPC_cteCaps_of:
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: cancelIPC_def Let_def capHasProperty_def locateSlot_conv)
   apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_pre)
    apply (wp cteDeleteOne_cteCaps_of getCTE_wp' | wpcw
-        | simp add: cte_wp_at_ctes_of
-        | wp (once) hoare_drop_imps ctes_of_cteCaps_of_lift)+
+          | simp add: cte_wp_at_ctes_of
+          | wp (once) hoare_drop_imps ctes_of_cteCaps_of_lift)+
           apply (wp hoare_convert_imp hoare_vcg_all_lift
                     threadSet_ctes_of threadSet_cteCaps_of
                | clarsimp)+
