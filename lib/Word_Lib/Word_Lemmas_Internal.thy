@@ -400,4 +400,16 @@ lemma le_smaller_mask:
   "\<lbrakk> x \<le> mask n; n \<le> m \<rbrakk> \<Longrightarrow> x \<le> mask m"
   by (erule (1) order.trans[OF _ mask_mono])
 
+(* The strange phrasing and ordering of assumptions is to support using this as a
+   conditional simp rule when y is a concrete value. For example, as a simp rule,
+   it will solve a goal of the form:
+     UCAST(8 \<rightarrow> 32) x < 0x20 \<Longrightarrow> unat x < 32
+   This is used in an obscure corner of SimplExportAndRefine. *)
+lemma upcast_less_unat_less:
+  assumes less: "UCAST('a \<rightarrow> 'b) x < UCAST('a \<rightarrow> 'b) (of_nat y)"
+  assumes len: "LENGTH('a::len) \<le> LENGTH('b::len)"
+  assumes bound: "y < 2 ^ LENGTH('a)"
+  shows "unat x < y"
+  by (rule unat_mono[OF less, simplified unat_ucast_up_simp[OF len] unat_of_nat_eq[OF bound]])
+
 end
