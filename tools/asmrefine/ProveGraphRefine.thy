@@ -484,7 +484,7 @@ fun prove_ptr_safe reason ctxt = DETERM o
                    ptr_safe_Array_element unat_less_helper unat_def[symmetric]
                    ptr_safe_Array_element_0
                    h_t_valid_Array_element' h_t_valid_field
-                   nat_uint_less_helper})
+                   nat_uint_less_helper upcast_less_unat_less})
         THEN_ALL_NEW except_tac ctxt
             ("prove_ptr_safe: failed for " ^ reason)
     )
