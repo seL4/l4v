@@ -2099,15 +2099,6 @@ lemma ksReadyQueuesL2Bitmap_nonzeroI:
    apply clarsimp
    done
 
-lemma clzl_spec:
-  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call clzl_'proc
-       \<lbrace>\<acute>ret__long = of_nat (word_clz (x_' s)) \<rbrace>"
-  apply (rule allI, rule conseqPre, vcg)
-  apply clarsimp
-  apply (rule_tac x="ret__long_'_update f x" for f in exI)
-  apply (simp add: mex_def meq_def)
-  done
-
 lemma l1index_to_prio_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call l1index_to_prio_'proc
        \<lbrace>\<acute>ret__unsigned_long = l1index_' s << wordRadix \<rbrace>"
