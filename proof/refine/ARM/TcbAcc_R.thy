@@ -3918,11 +3918,11 @@ lemma rescheduleRequired_ksQ:
   done
 
 lemma scheduleTCB_ksQ:
-  "\<lbrace>\<lambda>s. sch_act_simple s \<and> P (ksReadyQueues s p)\<rbrace>
+  "\<lbrace>\<lambda>s. P (ksReadyQueues s p)\<rbrace>
    scheduleTCB tcbPtr
    \<lbrace>\<lambda>_ s. P (ksReadyQueues s p)\<rbrace>"
-  by (wpsimp simp: scheduleTCB_def
-               wp: isSchedulable_inv rescheduleRequired_ksQ hoare_vcg_if_lift2 hoare_drop_imps)
+   by (wpsimp simp: scheduleTCB_def sch_act_simple_def
+                wp: isSchedulable_inv rescheduleRequired_ksQ hoare_vcg_if_lift2 isSchedulable_wp)
 
 lemma setSchedulerAction_ksQ[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> setSchedulerAction act \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
@@ -3937,7 +3937,7 @@ lemma sbn_ksQ:
   by (simp add: setBoundNotification_def, wp)
 
 lemma sts_ksQ:
-  "\<lbrace>\<lambda>s. sch_act_simple s \<and> P (ksReadyQueues s p)\<rbrace>
+  "\<lbrace>\<lambda>s. P (ksReadyQueues s p)\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>_ s. P (ksReadyQueues s p)\<rbrace>"
   apply (simp add: setThreadState_def)
