@@ -992,7 +992,7 @@ On some architectures, the thread context may include registers that may be modi
 > chargeBudget consumed canTimeoutFault isCurCPU = do
 >     scPtr <- getCurSc
 >     ifM (isRoundRobin scPtr)
->       (refillBudgetCheckRoundRobin consumed)
+>       (refillResetRR scPtr)
 >       (refillBudgetCheck consumed)
 >     updateScPtr scPtr $ \sc -> sc { scConsumed = scConsumed sc + consumed }
 >     setConsumedTime 0
