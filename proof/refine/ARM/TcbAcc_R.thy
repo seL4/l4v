@@ -4614,6 +4614,7 @@ crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotificati
   (wp: crunch_wps)
 
 lemmas rescheduleRequired_typ_ats[wp] = typ_at_lifts[OF rescheduleRequired_typ_at']
+lemmas tcbSchedDequeue_typ_ats[wp] = typ_at_lifts[OF tcbSchedDequeue_typ_at']
 
 lemma setThreadState_ctes_of[wp]:
   "setThreadState st t \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"

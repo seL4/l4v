@@ -2253,6 +2253,11 @@ lemma valid_queues[wp]:
   unfolding valid_queues_def valid_queues_no_bitmap_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift |wps)+
 
+lemma valid_inQ_queues[wp]:
+  "f p v \<lbrace> valid_inQ_queues \<rbrace>"
+  unfolding valid_inQ_queues_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift | wps)+
+
 lemma set_non_tcb_valid_queues'[wp]:
   "f p v \<lbrace>valid_queues'\<rbrace>"
   unfolding valid_queues'_def

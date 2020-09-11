@@ -1086,6 +1086,19 @@ where
 lemmas bitmapQ_defs = valid_bitmapQ_def valid_bitmapQ_except_def bitmapQ_def
                        bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def
 
+(* valid_queues is too strong sometimes *)
+definition valid_inQ_queues :: "KernelStateData_H.kernel_state \<Rightarrow> bool" where
+  "valid_inQ_queues \<equiv>
+     \<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s) \<and> distinct (ksReadyQueues s (d, p))"
+
+definition
+  (* when in the middle of updates, a particular queue might not be entirely valid *)
+  valid_inQ_queues_except :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+ "valid_inQ_queues_except t'
+   \<equiv> \<lambda>s. (\<forall>d p. (\<forall>t \<in> set (ksReadyQueues s (d, p)). t \<noteq> t' \<longrightarrow> obj_at' (inQ d p) t s)
+          \<and> distinct (ksReadyQueues s (d, p)))"
+
 definition
   valid_queues' :: "kernel_state \<Rightarrow> bool"
 where
