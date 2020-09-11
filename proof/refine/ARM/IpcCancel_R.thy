@@ -51,11 +51,6 @@ crunches cancelIPC, cancelSignal
 crunch pred_tcb_at'[wp]: emptySlot "pred_tcb_at' proj P t"
   (wp: setCTE_pred_tcb_at')
 
-(* valid_queues is too strong *)
-definition valid_inQ_queues :: "KernelStateData_H.kernel_state \<Rightarrow> bool" where
-  "valid_inQ_queues \<equiv>
-     \<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s) \<and> distinct (ksReadyQueues s (d, p))"
-
 defs capHasProperty_def:
   "capHasProperty ptr P \<equiv> cte_wp_at' (\<lambda>c. P (cteCap c)) ptr"
 end
@@ -85,15 +80,11 @@ locale delete_one_conc_pre =
     "\<lbrace>Invariants_H.valid_queues and valid_objs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)\<rbrace>
      cteDeleteOne sl \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
   assumes delete_one_inQ_queues:
-    "\<lbrace>valid_inQ_queues\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>rv. valid_inQ_queues\<rbrace>"
+    "\<lbrace>valid_inQ_queues and valid_objs'\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>rv. valid_inQ_queues\<rbrace>"
   (* FIXME RT: not true any more: assumes delete_one_sch_act_simple:
     "\<lbrace>sch_act_simple\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"  *)
   (* FIXME RT: not true any more: assumes delete_one_sch_act_not:
     "\<And>t. \<lbrace>sch_act_not t\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>rv. sch_act_not t\<rbrace>" *)
-  assumes delete_one_reply_st_tcb_at: (* FIXME RT: pre can probably be weakened *)
-    "\<And>P t. \<lbrace>\<lambda>s. st_tcb_at' P t s \<and> (\<exists>t' r. cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t' r) slot s)\<rbrace>
-      cteDeleteOne slot
-     \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
   assumes delete_one_ksCurDomain:
     "\<And>P. \<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
   assumes delete_one_tcbDomain_obj_at':
@@ -1363,8 +1354,7 @@ lemma replyRemoveTCB_valid_inQ_queues[wp]:
   "replyRemoveTCB tptr \<lbrace>valid_inQ_queues\<rbrace>"
   apply (clarsimp simp: replyRemoveTCB_def)
   apply (rule hoare_seq_ext_skip, (solves \<open>wpsimp\<close>)?)+
-   apply (wpsimp wp: set_reply'.set_wp set_sc'.set_wp gts_wp'
-          , fastforce simp: ps_clear_def objBitsKO_def projectKOs valid_inQ_queues_def obj_at'_def)+
+  apply wpsimp
   done
 
 lemma (in delete_one_conc_pre) cancelIPC_valid_inQ_queues[wp]:
@@ -2064,7 +2054,7 @@ lemmas (in delete_one_conc_pre) suspend_makes_simple' =
        suspend_st_tcb_at' [where P=simple', simplified]
 
 crunches cancelSignal, replyUnlink, cleanReply
-  for valid_queus[wp]: valid_queues
+  for valid_queues[wp]: valid_queues
   (simp: setReplyTCB_def getReplyTCB_def crunch_simps wp: crunch_wps)
 
 lemma replyRemoveTCB_valid_queues[wp]:
