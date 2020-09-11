@@ -343,6 +343,7 @@ has the highest runnable priority in the system on kernel entry (unless idle).
 > schedule = do
 >     awaken
 >     curThread <- getCurThread
+>     isSchedulable <- isSchedulable curThread
 >     action <- getSchedulerAction
 >     case action of
 
@@ -354,12 +355,11 @@ An IPC operation may request that the scheduler switch to a specific thread.
 We check here that the candidate has the highest priority in the system.
 
 >         SwitchToThread candidate -> do
->             isSchedulable <- isSchedulable curThread
 >             when isSchedulable (tcbSchedEnqueue curThread)
 >
 >             idleThread <- getIdleThread
 >             targetPrio <- threadGet tcbPriority candidate
->             curPrio <- if idleThread == curThread then return 0 else threadGet tcbPriority curThread
+>             curPrio <- if (curThread /= idleThread) then (threadGet tcbPriority curThread) else (return 0)
 >             fastfail <- scheduleSwitchThreadFastfail curThread idleThread curPrio targetPrio
 >
 >             curDom <- curDomain
@@ -382,7 +382,6 @@ We check here that the candidate has the highest priority in the system.
 If the current thread is no longer runnable, has used its entire timeslice, an IPC cancellation has potentially woken multiple higher priority threads, or the domain timeslice is exhausted, then we scan the scheduler queues to choose a new thread. In the last case, we switch to the next domain beforehand.
 
 >         ChooseNewThread -> do
->             isSchedulable <- isSchedulable curThread
 >             when isSchedulable $ tcbSchedEnqueue curThread
 >             scheduleChooseNewThread
 >
