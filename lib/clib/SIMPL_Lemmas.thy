@@ -167,8 +167,8 @@ lemma ceqv_sym [sym]:
 lemma exec_eq_is_valid_eq0:
   fixes P :: "'a set"
   assumes eq: "\<And>t t'. (\<Gamma> \<turnstile> \<langle>a, Normal t\<rangle> \<Rightarrow> t') = (\<Gamma> \<turnstile> \<langle>a', Normal t\<rangle> \<Rightarrow> t')"
-  and     vl: "\<Gamma> \<turnstile> P a Q"
-  shows   "\<Gamma> \<turnstile> P a' Q"
+  and     vl: "\<Gamma>\<turnstile>\<^bsub>/F\<^esub> P a Q,A"
+  shows   "\<Gamma>\<turnstile>\<^bsub>/F\<^esub> P a' Q,A"
   using vl
   apply -
   apply (drule hoare_sound)
@@ -184,7 +184,7 @@ lemma exec_eq_is_valid_eq0:
 lemma exec_eq_is_valid_eq:
   fixes P :: "'a set"
   assumes eq: "\<And>t t'. (\<Gamma> \<turnstile> \<langle>a, Normal t\<rangle> \<Rightarrow> t') = (\<Gamma> \<turnstile> \<langle>a', Normal t\<rangle> \<Rightarrow> t')"
-  shows     vl: "(\<Gamma> \<turnstile> P a Q) = (\<Gamma> \<turnstile> P a' Q)"
+  shows     vl: "hoarep \<Gamma> {} F P a Q A = hoarep \<Gamma> {} F P a' Q A"
   apply rule
    apply (erule exec_eq_is_valid_eq0 [OF eq])
   apply (erule exec_eq_is_valid_eq0 [OF eq [symmetric]])
