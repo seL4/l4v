@@ -637,7 +637,7 @@ definition valid_sched_context' :: "sched_context \<Rightarrow> kernel_state \<R
      valid_bound_ntfn' (scNtfn sc) s
      \<and> valid_bound_tcb' (scTCB sc) s
      \<and> valid_bound_tcb' (scYieldFrom sc) s
-     \<and> valid_bound_sc' (scReply sc) s
+     \<and> valid_bound_reply' (scReply sc) s
      \<and> MIN_REFILLS \<le> length (scRefills sc)
      \<and> scRefillMax sc \<le> length (scRefills sc)
      \<and> (0 < scRefillMax sc \<longrightarrow>
