@@ -2666,45 +2666,31 @@ lemma updateRefillHd_def2:
   by (clarsimp simp: updateRefillHd_def updateScPtr_def)
 
 lemma refillBudgetCheckRoundRobin_invs'[wp]:
-  "refillBudgetCheckRoundRobin consumed \<lbrace>invs'\<rbrace>"
+  "\<lbrace>invs' and (\<lambda>s. active_sc_at' (ksCurSc s) s)\<rbrace>
+   refillBudgetCheckRoundRobin consumed
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
   supply if_split [split del]
   apply (simp add: refillBudgetCheckRoundRobin_def)
   apply (wpsimp simp: updateRefillTl_def2 updateRefillHd_def2 wp: updateScPtr_refills_invs')
-          apply (rule_tac Q="\<lambda>_. invs' and active_sc_at' scPtr" in hoare_strengthen_post[rotated])
-           apply clarsimp
-           apply (intro conjI)
-            apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
-           apply (intro allI impI)
-           apply (frule (1) invs'_ko_at_valid_sched_context', clarsimp)
-           apply (frule scRefills_length_replaceAt_Tail)
-           apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def
-                                 ko_wp_at'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
-          apply (wpsimp wp: updateScPtr_refills_invs' getCurTime_wp updateScPtr_active_sc_at')
-         apply (wpsimp wp: getCurTime_wp)
-        apply (wpsimp simp: setRefillHd_def updateRefillHd_def2
-                        wp: updateScPtr_refills_invs' mapScPtr_wp)
-        apply (rule_tac Q="\<lambda>_. invs' and active_sc_at' scPtr" in hoare_strengthen_post[rotated])
-         apply clarsimp
-         apply (intro conjI)
-          apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
-         apply (intro allI impI)
-         apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
-           apply (frule scRefills_length_replaceAt_Hd)
-         apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
-                               valid_sched_context_size'_def objBits_def objBitsKO_def)
-        apply (wpsimp wp: updateScPtr_refills_invs' updateScPtr_active_sc_at' mapScPtr_wp scActive_wp)+
-  apply (subgoal_tac "(\<forall>ko. ko_at' ko idle_sc_ptr s \<longrightarrow> idle_sc' ko)", clarsimp)
-   apply (intro conjI)
-    apply (intro allI impI)
-    apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
-    apply (frule scRefills_length_replaceAt_Hd)
-    apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
-                          valid_sched_context_size'_def objBits_def objBitsKO_def)
-   apply (intro allI impI)
-   apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
-   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
-                         valid_sched_context_size'_def objBits_def objBitsKO_def)
-  apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
+    apply (rule_tac Q="\<lambda>_. invs' and active_sc_at' scPtr" in hoare_strengthen_post[rotated])
+     apply clarsimp
+     apply (intro conjI)
+      apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
+     apply (intro allI impI)
+     apply (frule (1) invs'_ko_at_valid_sched_context', clarsimp)
+     apply (frule scRefills_length_replaceAt_Tail)
+     apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def
+                           ko_wp_at'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+    apply (wpsimp wp: updateScPtr_refills_invs' getCurTime_wp updateScPtr_active_sc_at')
+   apply (wpsimp wp: )
+  apply clarsimp
+  apply (intro conjI)
+   apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
+  apply (intro allI impI)
+  apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+  apply (frule scRefills_length_replaceAt_Hd)
+  apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
+                        valid_sched_context_size'_def objBits_def objBitsKO_def)
   done
 
 lemma scheduleUsed_invs'[wp]:
@@ -2821,7 +2807,7 @@ lemma commitTime_invs':
        apply (wpsimp wp: isRoundRobin_wp)
       apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
      apply (wpsimp wp: getConsumedTime_wp mapScPtr_wp getCurSc_wp)+
-  done
+  by (clarsimp simp: active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
 
 crunches refillUnblockCheckMergable
   for inv[wp]: P
