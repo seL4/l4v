@@ -1653,31 +1653,49 @@ lemma dit_corres:
     apply (wp|simp add: obj_at_def is_tcb valid_pspace'_def)+
   done
 
-lemma setSchedContext_idle':
-  "\<lbrace>\<lambda>s. p \<noteq> ksIdleThread s \<and> valid_idle' s\<rbrace> setSchedContext p sc \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
-  sorry
-
 lemma setSchedContext_pde_mappings':
   "setSchedContext p sc \<lbrace>valid_pde_mappings'\<rbrace>"
-  sorry
+  by (wp valid_pde_mappings_lift')
 
-lemma makeFaultMessage_iflive:
-  "makeFaultMessage f t \<lbrace>if_live_then_nonz_cap'\<rbrace>"
-  sorry
+lemma live_sc'_scConsumed_update[simp]:
+  "live_sc' (scConsumed_update f koc) = live_sc' koc"
+  by (clarsimp simp: live_sc'_def)
 
-lemma makeFaultMessage_idle':
-  "makeFaultMessage f t \<lbrace>valid_idle'\<rbrace>"
-  sorry
+lemma schedContextUpdateConsumed_iflive[wp]:
+  "schedContextUpdateConsumed scp \<lbrace>if_live_then_nonz_cap'\<rbrace>"
+  apply (wpsimp simp: schedContextUpdateConsumed_def)
+  apply (clarsimp elim!: if_live_then_nonz_capE' simp: obj_at'_def projectKOs ko_wp_at'_def)
+  done
+
+lemma schedContextUpdateConsumed_valid_idle'[wp]:
+  "schedContextUpdateConsumed scp \<lbrace>valid_idle'\<rbrace>"
+  apply (wpsimp simp: schedContextUpdateConsumed_def)
+  apply (clarsimp simp: valid_idle'_def obj_at'_def)
+  done
+
+crunches makeFaultMessage
+  for iflive[wp]: if_live_then_nonz_cap'
+  and idle'[wp]: valid_idle'
 
 lemma schedContextUpdateConsumed_state_refs_of:
   "schedContextUpdateConsumed sc \<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>"
   unfolding schedContextUpdateConsumed_def
-  sorry
+  apply wpsimp
+  apply (clarsimp dest!: ko_at_state_refs_ofD' elim!: rsubst[where P=P])
+  apply (rule ext; clarsimp)
+  done
+
+lemma valid_sched_context_size'_scConsumed_update[simp]:
+  "valid_sched_context_size' (scConsumed_update f koc) = valid_sched_context_size' koc"
+  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
 
 lemma schedContextUpdateConsumed_objs':
   "schedContextUpdateConsumed sc \<lbrace>valid_objs'\<rbrace>"
-  sorry
-
+  unfolding schedContextUpdateConsumed_def
+  apply wpsimp
+  apply (drule (1) ko_at_valid_objs'_pre)
+  apply (clarsimp simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def)
+  done
 
 crunches doIPCTransfer
   for ifunsafe[wp]: "if_unsafe_then_cap'"
@@ -1790,7 +1808,7 @@ lemma possibleSwitchTo_invs'[wp]:
        apply (rule hoare_post_imp[OF _ rescheduleRequired_sa_cnt])
       apply (wpsimp wp: ssa_invs' threadGet_wp)+
   apply (clarsimp dest!: obj_at_ko_at' simp: tcb_in_cur_domain'_def obj_at'_def)
-  sorry
+  by fastforce
 
 crunches isFinalCapability
   for cur' [wp]: "\<lambda>s. P (cur_tcb' s)"
@@ -1864,19 +1882,29 @@ lemma cancelAllSignals_weak_sch_act_wf[wp]:
 
 lemma setSchedContext_weak_sch_act_wf:
   "setSchedContext p sc \<lbrace> \<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<rbrace>"
-  sorry
+  apply (wp weak_sch_act_wf_lift)
+  done
 
 lemma setReply_weak_sch_act_wf:
   "setReply p r \<lbrace> \<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<rbrace>"
-  sorry
+  apply (wp weak_sch_act_wf_lift)
+  done
 
 crunches replyUnlink
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps wp: crunch_wps)
 
-lemma replyUnlink_weak_sch_act_wf[wp]:
-  "replyUnlink r t \<lbrace> \<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<rbrace>"
+(* FIXME RT: below is wrong; need to use replyUnlink_weak_sch_act_wf in IpcCancel_R instead *)
+lemma replyUnlink_weak_sch_act_wf:
+  "replyUnlink p r \<lbrace> \<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<rbrace>"
+  unfolding replyUnlink_def
+  apply wpsimp
+  apply (wp weak_sch_act_wf_lift)
   sorry
+
+crunches unbindMaybeNotification, schedContextMaybeUnbindNtfn, isFinalCapability
+  for sch_act_not[wp]: "sch_act_not t"
+  (wp: crunch_wps simp: crunch_simps)
 
 crunches finaliseCapTrue_standin
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
@@ -1906,37 +1934,30 @@ lemma possibleSwitchTo_valid_queues[wp]:
     (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and st_tcb_at' runnable' t\<rbrace>
    possibleSwitchTo t
    \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs)
-  apply (wp hoare_drop_imps | wpc | simp)+
-  apply (auto simp: valid_tcb'_def weak_sch_act_wf_def
-              dest: pred_tcb_at'
-             elim!: valid_objs_valid_tcbE)
-  sorry
-
+  by (wpsimp wp: hoare_drop_imps hoare_vcg_if_lift2
+           simp: inReleaseQueue_def possibleSwitchTo_def curDomain_def bitmap_fun_defs)
 
 lemma possibleSwitchTo_valid_queues'[wp]:
   "\<lbrace>valid_queues' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
                   and st_tcb_at' runnable' t\<rbrace>
    possibleSwitchTo t
    \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs)
+  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs inReleaseQueue_def)
   apply (wp static_imp_wp threadGet_wp | wpc | simp)+
   apply (auto simp: obj_at'_def)
-  sorry
-
+  done
 
 lemma possibleSwitchTo_weak_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
    possibleSwitchTo t
    \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp add: possibleSwitchTo_def setSchedulerAction_def threadGet_def curDomain_def
-                   bitmap_fun_defs)
+                   inReleaseQueue_def bitmap_fun_defs)
   apply (wp rescheduleRequired_weak_sch_act_wf
             weak_sch_act_wf_lift_linear[where f="tcbSchedEnqueue t"]
             getObject_tcb_wp static_imp_wp
            | wpc)+
-  apply (clarsimp simp: obj_at'_def projectKOs weak_sch_act_wf_def ps_clear_def tcb_in_cur_domain'_def)
-  sorry
+  by (fastforce simp: obj_at'_def projectKOs weak_sch_act_wf_def ps_clear_def tcb_in_cur_domain'_def)
 
 lemma replyUnlink_sch_act_no[wp]:
   "replyUnlink r t' \<lbrace> sch_act_not t \<rbrace>"
@@ -2175,11 +2196,6 @@ crunches doIPCTransfer, possibleSwitchTo
 
 crunch tcbDomain_obj_at'[wp]: doIPCTransfer "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
   (wp: crunch_wps constOnFailure_wp simp: crunch_simps)
-
-crunches possibleSwitchTo
-  for tcb_at'[wp]: "tcb_at' t"
-  and valid_pspace'[wp]: valid_pspace'
-  (wp: crunch_wps)
 
 lemma send_ipc_corres:
 (* call is only true if called in handleSyscall SysCall, which
@@ -2507,11 +2523,11 @@ lemma possibleSwitchTo_sch_act[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
      possibleSwitchTo t
    \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs)
+  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs inReleaseQueue_def)
   apply (wp static_imp_wp threadSet_sch_act setQueue_sch_act threadGet_wp
        | simp add: unless_def | wpc)+
   apply (auto simp: obj_at'_def projectKOs tcb_in_cur_domain'_def)
-  sorry
+  done
 
 lemma possibleSwitchTo_ksQ':
   "\<lbrace>(\<lambda>s. t' \<notin> set (ksReadyQueues s p) \<and> sch_act_not t' s) and K(t' \<noteq> t)\<rbrace>
@@ -2539,12 +2555,11 @@ lemma possibleSwitchTo_iflive[wp]:
            and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)\<rbrace>
      possibleSwitchTo t
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def)
-  apply (wp | wpc | simp)+
+  apply (simp add: possibleSwitchTo_def curDomain_def inReleaseQueue_def)
+  apply wpsimp
       apply (simp only: imp_conv_disj, wp hoare_vcg_all_lift hoare_vcg_disj_lift)
     apply (wp threadGet_wp)+
-  apply (auto simp: obj_at'_def projectKOs)
-  sorry
+  by (fastforce simp: obj_at'_def projectKOs )
 
 crunches possibleSwitchTo
   for ifunsafe[wp]: if_unsafe_then_cap'
@@ -2560,10 +2575,6 @@ lemma replyRemoveTCB_ct'[wp]:
   "replyRemoveTCB t \<lbrace> \<lambda>s. P (ksCurThread s) \<rbrace>"
   unfolding replyRemoveTCB_def
   by (wpsimp wp: hoare_drop_imps gts_wp'|rule conjI)+
-
-lemma sts_irqs_masked'[wp]:
-  "setThreadState st t \<lbrace> irqs_masked' \<rbrace>"
-  sorry
 
 crunches replyUnlink, cleanReply
   for irqs_masked'[wp]: "irqs_masked'"
@@ -2661,17 +2672,9 @@ crunches doIPCTransfer, possibleSwitchTo
   (wp: crunch_wps simp: zipWithM_x_mapM)
 
 lemma setThreadState_not_rct[wp]:
-  "\<lbrace>\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread \<rbrace>
-   setThreadState st t
-   \<lbrace>\<lambda>_ s. ksSchedulerAction s \<noteq> ResumeCurrentThread \<rbrace>"
-  apply (simp add: setThreadState_def)
-  sorry (*
-  apply (wp)
-       apply (rule hoare_post_imp [OF _ rescheduleRequired_notresume], simp)
-      apply (simp)
-      apply (wp)+
-  apply simp
-  done *)
+  "setThreadState st t
+   \<lbrace>\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread \<rbrace>"
+  by (wpsimp wp: setThreadState_def)
 
 lemma cancelAllIPC_not_rct[wp]:
   "\<lbrace>\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread \<rbrace>
@@ -3198,7 +3201,8 @@ lemma gets_the_noop_corres:
 
 lemma tcbEPFindIndex_inv[wp]:
   "tcbEPFindIndex t q i \<lbrace>P\<rbrace>"
-  sorry
+  apply (induct i; subst tcbEPFindIndex.simps; wpsimp)
+  by simp+ wpsimp+
 
 crunches sendFaultIPC, receiveIPC, receiveSignal
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
@@ -3320,7 +3324,10 @@ lemmas threadSet_urz = untyped_ranges_zero_lift[where f="cteCaps_of", OF _ threa
 
 lemma setSchedContext_urz[wp]:
   "setSchedContext p sc \<lbrace> untyped_ranges_zero' \<rbrace>"
-  sorry
+  apply (simp add: cteCaps_of_def)
+  apply (rule hoare_pre, wp untyped_ranges_zero_lift)
+  apply (simp add: o_def)
+  done
 
 crunches doIPCTransfer
   for urz[wp]: "untyped_ranges_zero'"
