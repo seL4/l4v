@@ -108,7 +108,7 @@ lemma set_cap_device_and_range_aligned:
 lemma pac_corres:
   "asid_ci_map i = i' \<Longrightarrow>
   corres dc
-         (einvs and ct_active and valid_aci i)
+         (einvs and ct_active and valid_aci i and schact_is_rct)
          (invs' and ct_active' and valid_aci' i')
          (perform_asid_control_invocation i)
          (performASIDControlInvocation i')"
@@ -246,7 +246,7 @@ lemma pac_corres:
     apply (wp deleteObjects_descendants[where p="makePoolParent i'"]
               deleteObjects_cte_wp_at'
               deleteObjects_null_filter[where p="makePoolParent i'"])
-   apply (clarsimp simp:invs_mdb max_free_index_def invs_untyped_children)
+   apply (clarsimp simp:invs_mdb max_free_index_def invs_untyped_children schact_is_rct)
    apply (subgoal_tac "detype_locale x y sa" for x y)
     prefer 2
     apply (simp add:detype_locale_def)
@@ -259,7 +259,6 @@ lemma pac_corres:
                 descendants_range_def2 empty_descendants_range_in)
        apply (fold_subgoals (prefix))[2]
        subgoal premises prems using prems by (clarsimp simp:invs_def valid_state_def)+
-  sorry (*
      apply (clarsimp simp:cte_wp_at_caps_of_state)
     apply (drule detype_locale.non_null_present)
      apply (fastforce simp:cte_wp_at_caps_of_state)
@@ -267,6 +266,7 @@ lemma pac_corres:
    apply (frule_tac ptr = "(aa,ba)" in detype_invariants [rotated 3])
         apply fastforce
        apply simp
+       apply (clarsimp simp: schact_is_rct)
       apply (simp add: cte_wp_at_caps_of_state)
      apply (simp add: is_cap_simps)
     apply (simp add:empty_descendants_range_in descendants_range_def2)
@@ -298,8 +298,6 @@ lemma pac_corres:
    apply (rule conjI, rule pspace_no_overlap_subset,
          rule pspace_no_overlap_detype[OF caps_of_state_valid])
         apply (simp add:invs_psp_aligned invs_valid_objs is_aligned_neg_mask_eq)+
-   apply (clarsimp simp: detype_def clear_um_def detype_ext_def valid_sched_def valid_etcbs_def
-            st_tcb_at_kh_def obj_at_kh_def st_tcb_at_def obj_at_def is_etcb_at_def)
   apply (simp add: detype_def clear_um_def)
   apply (drule_tac x = "cte_map (aa,ba)" in pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
     apply (simp add:invs_valid_objs)+
@@ -333,9 +331,8 @@ lemma pac_corres:
        apply (fastforce simp add: cte_wp_at_ctes_of)
       apply assumption+
     apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
-   apply fastforce
-  apply simp
-  done *)
+   apply fastforce+
+  done
 
 definition
   archinv_relation :: "arch_invocation \<Rightarrow> Arch.invocation \<Rightarrow> bool"
@@ -510,7 +507,7 @@ lemma resolve_vaddr_corres:
   done
 
 lemma dec_arch_inv_page_flush_corres:
-  "ARM_H.isPageFlushLabel (invocation_type (mi_label mi)) \<Longrightarrow>
+  "\<lbrakk>invocation_type (mi_label mi) = l; ARM_H.isPageFlushLabel l\<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> archinv_relation)
            (invs and
             valid_cap (cap.ArchObjectCap (arch_cap.PageCap d word seta vmpage_size option)) and
@@ -539,7 +536,7 @@ lemma dec_arch_inv_page_flush_corres:
                         returnOk $
                         arch_invocation.InvokePage $
                         ARM_A.page_invocation.PageFlush
-                         (label_to_flush_type (invocation_type (mi_label mi))) (start + vaddr)
+                         (label_to_flush_type l) (start + vaddr)
                          (end + vaddr - 1) (addrFromPPtr word + start) pd asid
                     odE
             else throwError ExceptionTypes_A.syscall_error.TruncatedMessage)
@@ -996,8 +993,7 @@ shows
     apply (cases "ARM_H.isPageFlushLabel (invocation_type (mi_label mi))")
      apply (clarsimp simp: ARM_H.isPageFlushLabel_def split del: if_split)
      apply (clarsimp split: invocation_label.splits arch_invocation_label.splits split del: if_split)
-  sorry (*
-        apply (rule dec_arch_inv_page_flush_corres,
+        apply (rule dec_arch_inv_page_flush_corres[simplified];
                 clarsimp simp: ARM_H.isPageFlushLabel_def)+
     apply (clarsimp simp: ARM_H.isPageFlushLabel_def split del: if_split)
     apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageGetAddress")
@@ -1128,12 +1124,12 @@ shows
    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                   split: option.splits)
   apply clarsimp
-  done *)
+  done
 
 lemma inv_arch_corres:
   "archinv_relation ai ai' \<Longrightarrow>
    corres (intr \<oplus> (=))
-     (einvs and ct_active and valid_arch_inv ai)
+     (einvs and ct_active and valid_arch_inv ai and schact_is_rct)
      (invs' and ct_active' and valid_arch_inv' ai' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
      (arch_perform_invocation ai) (Arch.performInvocation ai')"
   apply (clarsimp simp: arch_perform_invocation_def
@@ -1746,9 +1742,14 @@ lemma arch_decodeInvocation_wf[wp]:
       apply (wpsimp simp: valid_arch_inv'_def valid_page_inv'_def)
             apply (rule hoare_vcg_conj_lift_R,(wp ensureSafeMapping_inv)[1])+
             apply (wpsimp wp: whenE_throwError_wp checkVP_wpR hoare_vcg_const_imp_lift_R
-                              hoare_drop_impE_R ensureSafeMapping_valid_slots_duplicated'
+                              ensureSafeMapping_valid_slots_duplicated'
                               createMappingEntries_valid_pde_slots' findPDForASID_page_directory_at'
                         simp: valid_arch_inv'_def valid_page_inv'_def)+
+        apply (rule hoare_drop_impE_R)
+        apply (wpsimp wp: whenE_throwError_wp checkVP_wpR hoare_vcg_const_imp_lift_R
+                          ensureSafeMapping_valid_slots_duplicated'
+                          createMappingEntries_valid_pde_slots' findPDForASID_page_directory_at'
+                    simp: valid_arch_inv'_def valid_page_inv'_def)+
      apply (clarsimp simp: neq_Nil_conv invs_valid_objs' linorder_not_le
                            cte_wp_at_ctes_of)
      apply (drule ctes_of_valid', fastforce)+
@@ -1758,8 +1759,6 @@ lemma arch_decodeInvocation_wf[wp]:
                       cong: conj_cong)
       apply (rule conjI)
        apply (erule is_aligned_addrFromPPtr_n, case_tac vmpage_size; simp)
-  sorry (*
-      apply (simp add: vmsz_aligned_def)
       apply (rule conjI)
        apply (erule order_le_less_trans[rotated])
        apply (erule is_aligned_no_overflow'[simplified field_simps])
@@ -1839,7 +1838,7 @@ lemma arch_decodeInvocation_wf[wp]:
   apply (cases "ARM_H.isPDFlushLabel (invocation_type label)"; simp)
    apply (cases args; wpsimp simp: valid_arch_inv'_def)
   apply wp
-  done *)
+  done
 
 crunch nosch[wp]: setMRs "\<lambda>s. P (ksSchedulerAction s)"
     (ignore: getRestartPC setRegister transferCapsToSlots
