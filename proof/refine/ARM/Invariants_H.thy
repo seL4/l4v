@@ -2762,6 +2762,17 @@ lemma valid_bound_reply_lift:
   \<lbrace>valid_bound_reply' tcb\<rbrace> f \<lbrace>\<lambda>_. valid_bound_reply' tcb\<rbrace>"
   by (auto simp: valid_bound_tcb'_def valid_def typ_ats'[symmetric] split: option.splits)
 
+lemma valid_ntfn_lift':
+  "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_ntfn' ntfn\<rbrace>"
+  unfolding valid_ntfn'_def
+  apply (cases "ntfnObj ntfn"; clarsimp)
+    apply (wpsimp wp: valid_bound_tcb_lift valid_bound_sc_lift)
+   apply (wpsimp wp: valid_bound_tcb_lift valid_bound_sc_lift)
+  apply (wpsimp wp: hoare_vcg_ball_lift typ_at_lift_tcb'_strong[where P=id, simplified])
+   apply (wpsimp wp: valid_bound_tcb_lift valid_bound_sc_lift)
+  apply simp
+  done
+
 context begin
 \<comment>\<open>
   We're using @{command ML_goal} here because there are two useful formulations
@@ -2808,6 +2819,7 @@ lemmas typ_at_lifts = typ_at_lifts_internal
                       valid_bound_tcb_lift
                       valid_bound_reply_lift
                       valid_bound_sc_lift
+                      valid_ntfn_lift'
 end
 
 lemma mdb_next_unfold:

@@ -574,7 +574,7 @@ lemma sts_valid_inv'[wp]:
       sts_cap_to' sts_cte_cap_to'
       setThreadState_typ_ats
       split: option.splits)[1]
-    apply (wp sts_bound_tcb_at' hoare_vcg_all_lift hoare_vcg_const_imp_lift)+
+    apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift)+
   done *)
 
 crunches decodeDomainInvocation, decodeSchedContextInvocation, decodeSchedControlInvocation

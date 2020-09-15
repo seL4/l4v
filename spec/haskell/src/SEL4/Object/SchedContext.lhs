@@ -426,6 +426,8 @@ This module uses the C preprocessor to select a target architecture.
 
 > schedContextUnbindNtfn :: PPtr SchedContext -> Kernel ()
 > schedContextUnbindNtfn scPtr = do
+>     stateAssert sym_refs_asrt
+>             "Assert that `sym_refs (state_refs_of' s)` holds"
 >     sc <- getSchedContext scPtr
 >     case scNtfn sc of
 >         Nothing -> return ()

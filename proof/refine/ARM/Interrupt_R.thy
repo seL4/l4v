@@ -440,8 +440,9 @@ lemma invoke_arch_irq_handler_invs'[wp]:
   done
 
 lemma invoke_irq_handler_invs'[wp]:
-  "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace>
-    InterruptDecls_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "\<lbrace>invs' and sch_act_simple and irq_handler_inv_valid' i\<rbrace>
+   InterruptDecls_H.invokeIRQHandler i
+   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (cases i; simp add: Interrupt_H.invokeIRQHandler_def)
     apply wpsimp
    apply (wp cteInsert_invs)+
