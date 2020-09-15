@@ -6465,10 +6465,9 @@ crunches "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete,
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
 
-crunches schedContextDonate, replyUnlink, schedContextUnbindTCB, schedContextCompleteYieldTo,
-         schedContextUnbindAllTCBs
+crunches schedContextDonate, replyUnlink, schedContextUnbindAllTCBs, unbindFromSC
   for st_tcb_at'[wp]: "st_tcb_at' P t"
-  (simp: crunch_simps wp: threadSet_pred_tcb_no_state)
+  (simp: crunch_simps wp: threadSet_pred_tcb_no_state crunch_wps)
 
 lemma replyPop_st_tcb_at':
   assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
@@ -6496,8 +6495,7 @@ lemma finaliseCap2_st_tcb_at':
   apply (simp add: finaliseCap_def Let_def
                    getThreadCSpaceRoot deletingIRQHandler_def
              cong: if_cong split del: if_split)
-  by (wpsimp wp: cancelAllIPC_st_tcb_at cancelAllSignals_st_tcb_at
-                 prepareThreadDelete_st_tcb_at' replyClear_st_tcb_at'
+  by (wpsimp wp: cancelAllIPC_st_tcb_at cancelAllSignals_st_tcb_at replyClear_st_tcb_at'
                  suspend_st_tcb_at' cteDeleteOne_st_tcb_at getCTE_wp'
                  hoare_drop_imp hoare_vcg_if_lift2 hoare_vcg_all_lift)
 
