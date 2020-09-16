@@ -193,12 +193,14 @@ where
 function
   MIN_BUDGET_merge :: "refill list \<Rightarrow> refill list"
 where
-  "MIN_BUDGET_merge refills
-    = (if r_amount (hd refills) < MIN_BUDGET
-       then let new_hd = \<lparr>r_time = r_time (hd (tl refills)) - r_amount (hd refills),
-                          r_amount = r_amount (hd refills) + r_amount (hd (tl refills))\<rparr>
-            in MIN_BUDGET_merge (new_hd # (tl (tl refills)))
-       else refills)"
+  "MIN_BUDGET_merge [] = []"
+| "MIN_BUDGET_merge [r] = [r]"
+| "MIN_BUDGET_merge (r0 # r1 # rs)
+    = (if r_amount r0 < MIN_BUDGET
+       then let new_hd = \<lparr>r_time = r_time r1 - r_amount r0,
+                          r_amount = r_amount r0 + r_amount r1\<rparr>
+            in MIN_BUDGET_merge (new_hd # rs)
+       else r0 # r1 # rs)"
 by pat_completeness auto
 
 definition
