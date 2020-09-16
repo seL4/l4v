@@ -3867,11 +3867,15 @@ private lemma ko_at_defn_ko_wp_at':
   by (clarsimp simp: ko_at'_defn_def obj_at'_real_def
                      ko_wp_at'_def project_inject)
 
-method normalise_obj_at' =
+(* VER-1364: normalise_obj_at' sometimes doesn't normalise ob_at' unless you use it twice. *)
+private method normalise_obj_at'_step =
   (clarsimp?, elim obj_at_ko_at'[folded ko_at'_defn_def, elim_format],
    clarsimp simp: ko_at_defn_rewr ko_at_defn_pred_tcb_at' ko_at_defn_ko_wp_at',
    ((drule(1) ko_at_defn_uniqueD)+)?,
    clarsimp simp: ko_at'_defn_def)
+
+method normalise_obj_at' =
+  normalise_obj_at'_step, normalise_obj_at'_step?
 
 end
 
