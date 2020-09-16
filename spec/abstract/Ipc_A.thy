@@ -759,16 +759,16 @@ where
                know that @{text check_budget} would return True if called here.\<close>
     od;
 
-    (period, mrefills) \<leftarrow> return (if period = budget then (0, MIN_REFILLS) else (period, mrefills));
-
-    if 0 < sc_refill_max sc \<and> sc_tcb sc \<noteq> None
-    then do tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
-            st \<leftarrow> get_thread_state tcb_ptr;
-            if runnable st
-            then refill_update sc_ptr period budget mrefills
-            else refill_new sc_ptr mrefills budget period
-         od
-    else refill_new sc_ptr mrefills budget period;
+    if period = budget
+    then refill_new sc_ptr MIN_REFILLS budget 0
+    else if 0 < sc_refill_max sc \<and> sc_tcb sc \<noteq> None
+         then do tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
+                 st \<leftarrow> get_thread_state tcb_ptr;
+                 if runnable st
+                 then refill_update sc_ptr period budget mrefills
+                 else refill_new sc_ptr mrefills budget period
+              od
+         else refill_new sc_ptr mrefills budget period;
 
     when (sc_tcb sc \<noteq> None) $ do
       tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
