@@ -356,8 +356,7 @@ definition live_ntfn' :: "notification \<Rightarrow> bool" where
                       \<or> (\<exists>ts. ntfnObj ntfn = WaitingNtfn ts)"
 
 definition live_reply' :: "reply \<Rightarrow> bool" where
-  "live_reply' reply \<equiv> bound (replyTCB reply) \<or> bound (replySc reply) \<or> bound (replyNext reply)
-                        \<or> bound (replyPrev reply)"
+  "live_reply' reply \<equiv> bound (replyTCB reply) \<or> bound (replyNext reply) \<or> bound (replyPrev reply)"
 
 primrec live' :: "Structures_H.kernel_object \<Rightarrow> bool" where
   "live' (KOTCB tcb) =
