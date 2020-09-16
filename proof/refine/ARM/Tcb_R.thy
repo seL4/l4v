@@ -64,16 +64,14 @@ lemma bind_notification_corres:
   "corres dc
          (invs and tcb_at t and ntfn_at a) (invs' and tcb_at' t and ntfn_at' a)
          (bind_notification t a) (bindNotification t a)"
-  apply (simp add: bind_notification_def bindNotification_def)
+  apply (simp add: bind_notification_def bindNotification_def update_sk_obj_ref_def bind_assoc)
   apply (rule corres_guard_imp)
-  sorry (*
     apply (rule corres_split[OF _ get_ntfn_corres])
       apply (rule corres_split[OF _ set_ntfn_corres])
          apply (rule sbn_corres)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
-       apply (wp)+
-   apply auto
-  done *)
+       apply wp+
+  by auto
 
 
 abbreviation
@@ -187,12 +185,15 @@ lemma setCTE_weak_sch_act_wf[wp]:
 lemma restart_corres:
   "corres dc (einvs  and tcb_at t) (invs' and tcb_at' t)
           (Tcb_A.restart t) (ThreadDecls_H.restart t)"
-  apply (simp add: Tcb_A.restart_def Thread_H.restart_def)
+  apply (simp add: Tcb_A.restart_def Thread_H.restart_def test_possible_switch_to_def
+                   get_tcb_obj_ref_def)
   apply (simp add: isStopped_def2 liftM_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gts_corres])
+     apply (rule corres_split [OF _ threadget_corres])
+    prefer 2 apply assumption
       apply (clarsimp simp add: runnable_tsr idle_tsr when_def)
-  sorry (*
+(*
       apply (rule corres_split_nor [OF _ cancel_ipc_corres])
         apply (rule corres_split_nor [OF _ setup_reply_master_corres])
           apply (rule corres_split_nor [OF _ sts_corres])
@@ -208,7 +209,7 @@ lemma restart_corres:
    apply (simp add: valid_sched_def invs_def tcb_at_is_etcb_at)
   apply (clarsimp simp add: invs'_def valid_state'_def sch_act_wf_weak)
   done *)
-
+  sorry (* restart_corres -- spec change required? *)
 
 lemma restart_invs':
   "\<lbrace>invs' and ex_nonz_cap_to' t and (\<lambda>s. t \<noteq> ksIdleThread s)\<rbrace>
@@ -279,12 +280,11 @@ lemma readreg_corres:
         apply wp+
       apply (rule corres_when [OF refl])
       apply (rule suspend_corres)
-     apply wp+
-   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
+     apply (wp suspend_invs)+
+   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_idle_def
                   dest!: idle_no_ex_cap)
-  sorry (*
   apply (clarsimp simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
-  done *)
+  done
 
 lemma invs_valid_queues':
   "invs' s \<longrightarrow> valid_queues' s"
@@ -354,12 +354,23 @@ lemma updateRestartPC_ResumeCurrentThread_imp_notct[wp]:
   apply (wp hoare_convert_imp)
   done
 
+lemma schedContextCancelYieldTo_ResumeCurrentThread_imp_notct[wp]:
+  "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
+   schedContextCancelYieldTo t
+   \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
+  by (wp hoare_convert_imp)
+
+lemma tcbReleaseRemove_ResumeCurrentThread_imp_notct[wp]:
+  "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
+   tcbReleaseRemove t
+   \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
+  by (wp hoare_convert_imp)
+
 lemma suspend_ResumeCurrentThread_imp_notct[wp]:
   "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
    suspend t
    \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
-  sorry (*
-  by (wpsimp simp: suspend_def) *)
+  by (wpsimp simp: suspend_def wp_del: getThreadState_only_state_wp)
 
 lemma copyreg_corres:
   "corres (intr \<oplus> (=))
@@ -1135,21 +1146,8 @@ definition valid_tcb_invocation :: "tcbinvocation \<Rightarrow> bool" where
       | _                           \<Rightarrow> True"
 
 lemma threadcontrol_corres_helper1:
-  "\<lbrace> einvs and simple_sched_action\<rbrace>
-   thread_set (tcb_ipc_buffer_update f) a
-   \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
-  apply (rule hoare_pre)
-   apply (simp add: thread_set_def set_object_def get_object_def)
-   apply wp
-  apply (simp | intro impI | elim exE conjE)+
-  apply (frule get_tcb_SomeD)
-  apply (erule ssubst)
-  sorry (*
-  apply (clarsimp simp add: weak_valid_sched_action_def
-              get_tcb_def obj_at_def valid_sched_def valid_sched_action_def)
-  apply (erule_tac x=a in allE)+
-  apply (clarsimp simp: is_tcb_def)
-  done *)
+  "thread_set (tcb_ipc_buffer_update f) tptr \<lbrace>weak_valid_sched_action\<rbrace>"
+  by (wpsimp wp: thread_set_weak_valid_sched_action)
 
 lemma threadcontrol_corres_helper2:
   "is_aligned a msg_align_bits \<Longrightarrow> \<lbrace>invs' and tcb_at' t\<rbrace>
@@ -3053,9 +3051,8 @@ notes if_cong[cong] shows
       apply (rule corres_trivial)
       apply (auto simp: returnOk_def whenE_def)[1]
      apply (simp add: whenE_def split del: if_split | wp)+
-  sorry (*
-   apply (fastforce simp: valid_cap_def valid_cap'_def dest: hd_in_set)+
-  done *)
+   apply (fastforce simp: valid_cap_def valid_cap'_def obj_at_def is_tcb dest: hd_in_set)+
+  done
 
 lemma decode_unbind_notification_corres:
   "corres (ser \<oplus> tcbinv_relation)
