@@ -2039,8 +2039,9 @@ lemma cancelIPC_weak_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> sch_act_not tptr s\<rbrace>
    cancelIPC tptr
    \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  unfolding cancelIPC_def Let_def
-  by (wpsimp wp: gts_wp' threadSet_weak_sch_act_wf | wp (once) hoare_drop_imp)+
+  unfolding cancelIPC_def blockedCancelIPC_def Let_def getBlockingObject_def
+  apply (wpsimp wp: gts_wp' threadSet_weak_sch_act_wf | wp (once) hoare_drop_imp)+
+  done
 
 lemma replyClear_weak_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
@@ -2783,7 +2784,7 @@ lemma replyUnlink_ResumeCurrentThread_imp_notct[wp]:
   "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
    replyUnlink a b
    \<lbrace>\<lambda>_ s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
-  apply (clarsimp simp: replyUnlink_def setReplyTCB_def getReplyTCB_def)
+  apply (clarsimp simp: replyUnlink_def setReplyTCB_def getReplyTCB_def updateReply_def)
   apply (wpsimp wp: set_reply'.set_wp gts_wp')
   done
 
@@ -2811,36 +2812,30 @@ lemma cteDeleteOne_ResumeCurrentThread_imp_notct:
      apply (wpsimp wp: hoare_convert_imp isFinalCapability_inv)+
   done
 
-lemma cancelIPC_ResumeCurrentThread_imp_notct[wp]:
-  "cancelIPC t \<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
+lemma cancelSignal_ResumeCurrentThread_imp_notct[wp]:
+  "cancelSignal t ntfn \<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
   (is "\<lbrace>?PRE t'\<rbrace> _ \<lbrace>_\<rbrace>")
-proof -
-  have aipc:
-    "\<And>t t' ntfn. cancelSignal t ntfn \<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
-    apply (simp add: cancelSignal_def)
-    apply wp[1]
-        apply (wp hoare_convert_imp)+
-        apply (rule_tac P="\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread"
-                 in hoare_weaken_pre)
-          apply (wpc)
-           apply (wp | simp)+
-       apply (wpc, wp+)
-     apply (rule_tac Q="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
-     apply (wpsimp wp: stateAssert_wp)+
-    done
-  show ?thesis
-  apply (simp add: cancelIPC_def Let_def)
-  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: getEndpoint_wp\<close>)+
-  apply (rule hoare_seq_ext_skip, wpsimp wp: hoare_vcg_imp_lift')
-  apply (case_tac state; clarsimp?)
-     apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: getEndpoint_wp hoare_vcg_imp_lift'\<close>)+
-     apply wpsimp
-    apply (wpsimp wp: getEndpoint_wp hoare_vcg_all_lift)
-   apply (wpsimp wp: aipc)
-  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: getEndpoint_wp set_ep'.set_wp\<close>)+
-  apply (wpsimp wp: hoare_vcg_imp_lift')
+  apply (simp add: cancelSignal_def)
+  apply wp[1]
+       apply (wp hoare_convert_imp)+
+       apply (rule_tac P="\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread"
+                       in hoare_weaken_pre)
+        apply (wpc)
+         apply (wp | simp)+
+      apply (wpc, wp+)
+    apply (rule_tac Q="\<lambda>_. ?PRE t'" in hoare_post_imp, clarsimp)
+    apply (wpsimp wp: stateAssert_wp)+
   done
-qed
+
+lemma blockedCancelIPC_ResumeCurrentThread_imp_notct[wp]:
+  "blockedCancelIPC a b c \<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
+  unfolding blockedCancelIPC_def getBlockingObject_def
+  apply (wpsimp wp: hoare_vcg_imp_lift' getEndpoint_wp)
+  done
+
+crunches cancelIPC
+  for ResumeCurrentThread_imp_notct[wp]: "\<lambda>s. ksSchedulerAction s = ResumeCurrentThread
+                                          \<longrightarrow> ksCurThread s \<noteq> t"
 
 lemma sai_invs'[wp]:
   "\<lbrace>invs' and ex_nonz_cap_to' ntfnptr\<rbrace>
