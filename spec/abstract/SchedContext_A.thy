@@ -190,15 +190,16 @@ where
                         \<lparr>r_time = r_time (hd (tl refills)), r_amount = r_amount (hd (tl refills)) + usage\<rparr>]
    od"
 
-fun
+function
   MIN_BUDGET_merge :: "refill list \<Rightarrow> refill list"
 where
   "MIN_BUDGET_merge refills
     = (if r_amount (hd refills) < MIN_BUDGET
        then let new_hd = \<lparr>r_time = r_time (hd (tl refills)) - r_amount (hd refills),
                           r_amount = r_amount (hd refills) + r_amount (hd (tl refills))\<rparr>
-            in new_hd # (tl (tl refills))
+            in MIN_BUDGET_merge (new_hd # (tl (tl refills)))
        else refills)"
+by pat_completeness auto
 
 definition
   refill_budget_check :: "ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
