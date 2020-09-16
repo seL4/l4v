@@ -576,10 +576,10 @@ where
     target_cap \<leftarrow> returnOk $ hd excaps;
     whenE (\<not>is_sched_context_cap target_cap) $ throwError (InvalidCapability 1);
     sc_ptr \<leftarrow> returnOk $ obj_ref_of target_cap;
-    whenE ((us_to_ticks budget_\<mu>s) > MAX_SC_PERIOD \<or> (us_to_ticks budget_\<mu>s) < MIN_SC_BUDGET) $
-      throwError (RangeError (ucast MIN_SC_BUDGET_US) (ucast MAX_SC_PERIOD));
-    whenE ((us_to_ticks period_\<mu>s) > MAX_SC_PERIOD \<or> (us_to_ticks period_\<mu>s) < MIN_SC_BUDGET) $
-      throwError (RangeError (ucast MIN_SC_BUDGET_US) (ucast MAX_SC_PERIOD));
+    whenE ((us_to_ticks budget_\<mu>s) > MAX_SC_PERIOD \<or> (us_to_ticks budget_\<mu>s) < MIN_BUDGET) $
+      throwError (RangeError (ucast MIN_BUDGET_US) (ucast MAX_SC_PERIOD));
+    whenE ((us_to_ticks period_\<mu>s) > MAX_SC_PERIOD \<or> (us_to_ticks period_\<mu>s) < MIN_BUDGET) $
+      throwError (RangeError (ucast MIN_BUDGET_US) (ucast MAX_SC_PERIOD));
     whenE (period_\<mu>s < budget_\<mu>s) $
       throwError (RangeError (ucast MIN_BUDGET_US) (ucast period_\<mu>s));
     whenE (unat extra_refills + MIN_REFILLS > max_refills_cap target_cap) $

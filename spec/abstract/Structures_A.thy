@@ -480,9 +480,7 @@ record sched_context =
 
 definition "MIN_REFILLS = 2"
 definition "MIN_BUDGET = 2 * kernelWCET_ticks"
-definition "MIN_SC_BUDGET = 2 * MIN_BUDGET"
 definition "MIN_BUDGET_US = 2 * kernelWCET_us"
-definition "MIN_SC_BUDGET_US = 2 * MIN_BUDGET_US"
 
 lemma MIN_BUDGET_pos: "0 < MIN_BUDGET" using MIN_BUDGET_def ARM.kernelWCET_ticks_pos2 by clarsimp
 
