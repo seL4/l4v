@@ -219,38 +219,40 @@ If a thread is waiting for an IPC operation, it may be necessary to move the thr
 
 Threads blocked waiting for endpoints will simply be removed from the endpoint queue.
 
->             BlockedOnSend {} -> blockedIPCCancel state Nothing
->             BlockedOnReceive _ _ replyOpt -> blockedIPCCancel state replyOpt
+>             BlockedOnSend {} -> blockedCancelIPC state tptr Nothing
+>             BlockedOnReceive _ _ replyOpt -> blockedCancelIPC state tptr replyOpt
 >             BlockedOnNotification {} -> cancelSignal tptr (waitingOnNotification state)
 
 Threads that are waiting for an ipc reply or a fault response must have their reply capability revoked.
 
 >             BlockedOnReply {} -> replyRemoveTCB tptr
 >             _ -> return ()
->         where
 
-If the thread is blocking on an endpoint, then the endpoint is fetched and the thread removed from its queue.
+If a thread is blocking on an endpoint, then the endpoint is fetched and the thread removed from its queue.
 
->             blockedIPCCancel state replyOpt = do
->                 epptr <- getBlockingObject state
->                 ep <- getEndpoint epptr
->                 assert (not $ isIdle ep)
->                     "blockedIPCCancel: endpoint must not be idle"
->                 let queue' = delete tptr $ epQueue ep
->                 ep' <- case queue' of
->                     [] -> return IdleEP
->                     _ -> return $ ep { epQueue = queue' }
->                 setEndpoint epptr ep'
->                 case replyOpt of
->                     Nothing -> return ()
->                     Just reply -> replyUnlink reply tptr
+> blockedCancelIPC :: ThreadState -> PPtr TCB -> Maybe (PPtr Reply) -> Kernel ()
+> blockedCancelIPC state tptr replyOpt = do
+>     epptr <- getBlockingObject state
+>     ep <- getEndpoint epptr
+>     assert (not $ isIdle ep)
+>         "blockedCancelIPC: endpoint must not be idle"
+>     let queue' = delete tptr $ epQueue ep
+>     ep' <- return $ case queue' of
+>         [] -> IdleEP
+>         _ -> ep { epQueue = queue' }
+>     setEndpoint epptr ep'
+>     case replyOpt of
+>         Nothing -> return ()
+>         Just reply -> replyUnlink reply tptr
 
 Finally, replace the IPC block with a fault block (which will retry the operation if the thread is resumed).
 
->                 setThreadState Inactive tptr
->             isIdle ep = case ep of
->                 IdleEP -> True
->                 _      -> False
+>     setThreadState Inactive tptr
+>
+>     where
+>         isIdle ep = case ep of
+>             IdleEP -> True
+>             _      -> False
 
 If an endpoint is deleted, then every pending IPC operation using it must be cancelled.
 

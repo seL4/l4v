@@ -97,6 +97,11 @@ lemma projectKO_reply:
   "(projectKO_opt ko = Some t) = (ko = KOReply t)"
   by (cases ko) (auto simp: projectKO_opts_defs)
 
+lemma reply_of'_KOReply[simp]:
+  "reply_of' (KOReply reply) = Some reply"
+  apply (clarsimp simp: projectKO_reply)
+  done
+
 lemma projectKO_sc:
   "(projectKO_opt ko = Some t) = (ko = KOSchedContext t)"
   by (cases ko) (auto simp: projectKO_opts_defs)

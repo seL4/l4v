@@ -6483,9 +6483,10 @@ lemma finaliseCap2_st_tcb_at':
   apply (simp add: finaliseCap_def Let_def
                    getThreadCSpaceRoot deletingIRQHandler_def
              cong: if_cong split del: if_split)
-  by (wpsimp wp: cancelAllIPC_st_tcb_at cancelAllSignals_st_tcb_at replyClear_st_tcb_at'
-                 suspend_st_tcb_at' cteDeleteOne_st_tcb_at getCTE_wp'
-                 hoare_drop_imp hoare_vcg_if_lift2 hoare_vcg_all_lift)
+  apply (wpsimp wp: cancelAllIPC_st_tcb_at cancelAllSignals_st_tcb_at getReplyTCB_inv
+                    replyClear_st_tcb_at' suspend_st_tcb_at' cteDeleteOne_st_tcb_at getCTE_wp'
+                    hoare_drop_imp hoare_vcg_if_lift2 hoare_vcg_all_lift)
+  done
 
 crunch st_tcb_at'[wp]: capSwapForDelete "st_tcb_at' P t"
 

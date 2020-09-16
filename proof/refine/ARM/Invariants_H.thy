@@ -2506,6 +2506,11 @@ lemma obj_at_ko_at'_eq:
   unfolding obj_at'_def
   by blast
 
+lemma ko_at'_replies_of':
+  "ko_at' reply ptr s \<Longrightarrow> replies_of' s ptr = Some reply"
+  apply (clarsimp simp: obj_at'_def projectKO_eq opt_map_def)
+  done
+
 lemma obj_at_aligned':
   fixes P :: "'a :: pspace_storable \<Rightarrow> bool"
   assumes oat: "obj_at' P p s"
@@ -2654,11 +2659,25 @@ lemma typ_at_lift_page_table_at'_strong:
          | fastforce)+
   done
 
+lemma typ_at_lift_valid_tcb_state'_strong:
+  assumes ep: "\<And>p. f \<lbrace>\<lambda>s. P (typ_at' EndpointT p s)\<rbrace>"
+      and reply: "\<And>p. f \<lbrace>\<lambda>s. P (typ_at' ReplyT p s)\<rbrace>"
+      and ntfn: "\<And>p. f \<lbrace>\<lambda>s. P (typ_at' NotificationT p s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (valid_tcb_state' st s)\<rbrace>"
+  unfolding valid_tcb_state'_def valid_bound_reply'_def
+  apply (case_tac st
+         ; clarsimp split: option.splits
+         , wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift hoare_vcg_conj_lift_N[where N=P]
+                           typ_at_lift_ep'_strong[OF ep] typ_at_lift_reply'_strong[OF reply]
+                           typ_at_lift_ntfn'_strong[OF ntfn])
+  done
+
 lemmas typ_at_lifts_strong =
   typ_at_lift_tcb'_strong typ_at_lift_ep'_strong
   typ_at_lift_ntfn'_strong typ_at_lift_cte'_strong
   typ_at_lift_reply'_strong typ_at_lift_sc'_strong
   typ_at_lift_page_directory_at'_strong
+  typ_at_lift_valid_tcb_state'_strong
   typ_at_lift_page_table_at'_strong
 
 lemma ko_wp_typ_at':
@@ -2796,9 +2815,13 @@ local
   val strong_thms = @{thms typ_at_lifts_strong[no_vars]};
   fun abstract_P term = Logic.all (Free ("P", @{typ "bool \<Rightarrow> bool"})) term
   fun abstract thm =
-    @{const Pure.imp} $
-      abstract_P (hd (Thm.prems_of thm)) $
-      Thm.concl_of thm
+    let
+      val prems = List.map abstract_P (Thm.prems_of thm);
+      fun imp [] = Thm.concl_of thm
+        | imp (p :: pms) = @{const Pure.imp} $ p $ imp pms
+    in
+      imp prems
+    end
 in
   val typ_at_lifts_internal_goals = List.map abstract strong_thms
 end
@@ -3867,7 +3890,8 @@ private lemma ko_at_defn_ko_wp_at':
   by (clarsimp simp: ko_at'_defn_def obj_at'_real_def
                      ko_wp_at'_def project_inject)
 
-(* VER-1364: normalise_obj_at' sometimes doesn't normalise ob_at' unless you use it twice. *)
+(* FIXME: normalise_obj_at' sometimes doesn't normalise obj_at' unless you use it twice.
+          See VER-1364 for more details. *)
 private method normalise_obj_at'_step =
   (clarsimp?, elim obj_at_ko_at'[folded ko_at'_defn_def, elim_format],
    clarsimp simp: ko_at_defn_rewr ko_at_defn_pred_tcb_at' ko_at_defn_ko_wp_at',
