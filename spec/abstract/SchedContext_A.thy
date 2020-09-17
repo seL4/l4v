@@ -201,7 +201,7 @@ where
                           r_amount = r_amount r0 + r_amount r1\<rparr>
             in MIN_BUDGET_merge (new_hd # rs)
        else r0 # r1 # rs)"
-by pat_completeness auto
+        by pat_completeness auto
 
 definition
   refill_budget_check :: "ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -222,8 +222,7 @@ where
     then do used \<leftarrow> return \<lparr>r_time = r_time (hd refills) + period, r_amount = usage'\<rparr>;
             full \<leftarrow> refill_full sc_ptr;
             refills' \<leftarrow> return $ schedule_used full refills used;
-            usage'' \<leftarrow> return $ min usage' (r_amount (hd refills'));
-            adjusted_hd \<leftarrow> return $ (hd refills')\<lparr>r_amount := r_amount (hd refills') - usage''\<rparr>;
+            adjusted_hd \<leftarrow> return $ (hd refills')\<lparr>r_amount := r_amount (hd refills') - usage'\<rparr>;
             set_sc_obj_ref sc_refills_update sc_ptr (MIN_BUDGET_merge (adjusted_hd # (tl refills')))
          od
     else set_sc_obj_ref sc_refills_update sc_ptr (MIN_BUDGET_merge refills)
@@ -326,7 +325,7 @@ where
     od"
 
 text \<open>yield\_to related functions\<close>
-term maybeM
+
 definition
   complete_yield_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
