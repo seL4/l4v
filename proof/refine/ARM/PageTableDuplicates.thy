@@ -2238,13 +2238,8 @@ lemma activate_sch_valid_duplicates'[wp]:
   apply (simp add: activateThread_def getCurThread_def
              cong: if_cong Structures_H.thread_state.case_cong)
   apply (rule hoare_seq_ext [OF _ gets_sp])
-  apply (rule hoare_seq_ext[where B="\<lambda>st s. (runnable' or idle') st \<and>
-                                            vs_valid_duplicates' (ksPSpace s)"])
-   apply (wpsimp wp: threadGet_wp hoare_drop_imps)
-   apply (clarsimp simp: obj_at'_def)
-  apply (wp gts_wp')
-  apply (clarsimp simp: pred_tcb_at'_def ct_in_state'_def obj_at'_def)
-  done
+  apply (wpsimp wp: threadGet_wp hoare_drop_imps)
+  by (fastforce simp: obj_at'_def)
 
 crunches receiveSignal, receiveIPC, handleYield, "VSpace_H.handleVMFault", handleHypervisorFault,
          lookupReply, checkBudgetRestart

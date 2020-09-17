@@ -4759,7 +4759,7 @@ lemma createObjects_setDomain_commute:
   apply (clarsimp split:Structures_H.kernel_object.splits)
   done
 
-
+(* FIXME RT: unused? *)
 lemma createObjects_setDomains_commute:
   "monad_commute
       (\<lambda>s. \<forall>x\<in> set xs. tcb_at' (f x) s \<and>
