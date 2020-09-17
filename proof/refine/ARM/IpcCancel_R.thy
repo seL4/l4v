@@ -1645,24 +1645,6 @@ lemma tcbSchedDequeue_t_notksQ:
 
 crunch ct_idle_or_in_cur_domain'[wp]: tcbSchedDequeue ct_idle_or_in_cur_domain'
 
-lemma tcbSchedDequeue_invs':
-  "\<lbrace>\<lambda>s. invs' s \<and> tcb_at' t s\<rbrace>
-   tcbSchedDequeue t
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
-  apply (wp tcbSchedDequeue_valid_queues_weak valid_irq_handlers_lift
-            valid_irq_node_lift valid_irq_handlers_lift'
-            tcbSchedDequeue_irq_states irqs_masked_lift cur_tcb_lift
-            untyped_ranges_zero_lift
-         | clarsimp simp add: cteCaps_of_def valid_queues_def o_def)+
-  apply (rule conjI)
-   apply (fastforce simp: obj_at'_def inQ_def st_tcb_at'_def valid_queues_no_bitmap_except_def)
-  apply (rule conjI)
-   using valid_queues_obj_at'D inQ_def valid_queues_def apply blast
-  apply (fastforce simp: valid_pspace'_def intro: obj_at'_conjI
-                   elim: valid_objs'_maxDomain valid_objs'_maxPriority)
-  done
-
 lemma asUser_sch_act_simple[wp]:
   "\<lbrace>sch_act_simple\<rbrace> asUser s t \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
   unfolding sch_act_simple_def

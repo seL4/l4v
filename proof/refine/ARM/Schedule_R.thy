@@ -232,7 +232,7 @@ lemma tcbSchedDequeue_valid_queues_weak:
   "\<lbrace> valid_queues_no_bitmap_except t and valid_bitmapQ and
      bitmapQ_no_L2_orphans and bitmapQ_no_L1_orphans and
      correct_queue t and
-     obj_at' (\<lambda>tcb. tcbDomain tcb \<le> maxDomain \<and> tcbPriority tcb \<le> maxPriority) t \<rbrace>
+     (\<lambda>s. \<forall>tcb. ko_at' tcb t s \<longrightarrow> tcbDomain tcb \<le> maxDomain \<and> tcbPriority tcb \<le> maxPriority) \<rbrace>
    tcbSchedDequeue t
    \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
 proof -
@@ -243,19 +243,18 @@ proof -
                  simp add: valid_queues_def)
          apply (wp hoare_vcg_if_lift hoare_vcg_conj_lift hoare_vcg_imp_lift)+
              apply (wp hoare_vcg_imp_lift setQueue_valid_queues_no_bitmap_except_dequeue_wp
-                       setQueue_valid_bitmapQ threadGet_const_tcb_at)+
+                       setQueue_valid_bitmapQ threadGet_wp)+
   (* wp done *)
-  apply (normalise_obj_at')
   apply (clarsimp simp: correct_queue_def)
   apply (normalise_obj_at')
-  apply (fastforce simp add: valid_queues_no_bitmap_except_def valid_queues_no_bitmap_def elim: obj_at'_weaken)+
+  apply (rule_tac x=ko in exI)
+  apply (fastforce simp add: valid_queues_no_bitmap_except_def valid_queues_no_bitmap_def )+
   done
 qed
 
 lemma tcbSchedDequeue_valid_queues:
-  "\<lbrace>Invariants_H.valid_queues
-    and obj_at' (\<lambda>tcb. tcbDomain tcb \<le> maxDomain) t
-    and obj_at' (\<lambda>tcb. tcbPriority tcb \<le> maxPriority) t\<rbrace>
+  "\<lbrace>Invariants_H.valid_queues and
+    (\<lambda>s. \<forall>tcb. ko_at' tcb t s \<longrightarrow> tcbDomain tcb \<le> maxDomain \<and> tcbPriority tcb \<le> maxPriority)\<rbrace>
      tcbSchedDequeue t
    \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
   apply (rule hoare_pre, rule tcbSchedDequeue_valid_queues_weak)
@@ -264,7 +263,7 @@ lemma tcbSchedDequeue_valid_queues:
 
 lemma tcbSchedAppend_valid_queues'[wp]:
   (* most of this is identical to tcbSchedEnqueue_valid_queues' in TcbAcc_R *)
-  "\<lbrace>valid_queues' and tcb_at' t\<rbrace> tcbSchedAppend t \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
+  "\<lbrace>valid_queues'\<rbrace> tcbSchedAppend t \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
   apply (simp add: tcbSchedAppend_def)
   apply (rule hoare_pre)
    apply (rule_tac B="\<lambda>rv. valid_queues' and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"
@@ -319,13 +318,13 @@ lemma setQueue_ksReadyQueues_lift:
   by (wp, clarsimp simp: fun_upd_def snd_def)
 
 lemma tcbSchedDequeue_valid_queues'[wp]:
-  "\<lbrace>valid_queues' and tcb_at' t\<rbrace>
+  "\<lbrace>valid_queues'\<rbrace>
     tcbSchedDequeue t \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
   unfolding tcbSchedDequeue_def
   apply (rule_tac B="\<lambda>rv. valid_queues' and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"
                 in hoare_seq_ext)
    prefer 2
-   apply (wp threadGet_const_tcb_at)
+   apply (wp threadGet_wp)
    apply (fastforce simp: obj_at'_def)
   apply clarsimp
   apply (rename_tac queued)
@@ -343,13 +342,13 @@ lemma tcbSchedDequeue_valid_queues'[wp]:
   done
 
 lemma tcbSchedDequeue_valid_release_queue[wp]:
-  "\<lbrace>valid_release_queue and tcb_at' t\<rbrace>
+  "\<lbrace>valid_release_queue\<rbrace>
     tcbSchedDequeue t \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
   unfolding tcbSchedDequeue_def
   apply (rule_tac B="\<lambda>rv. valid_release_queue and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"
                 in hoare_seq_ext)
    prefer 2
-   apply (wp threadGet_const_tcb_at)
+   apply (wp threadGet_wp)
    apply (fastforce simp: obj_at'_def)
   apply clarsimp
   apply (rename_tac queued)
@@ -367,14 +366,14 @@ lemma tcbSchedDequeue_valid_release_queue[wp]:
   done
 
 lemma tcbSchedDequeue_valid_release_queue'[wp]:
-  "\<lbrace>valid_release_queue' and tcb_at' t\<rbrace>
+  "\<lbrace>valid_release_queue'\<rbrace>
     tcbSchedDequeue t
    \<lbrace>\<lambda>_. valid_release_queue'\<rbrace>"
   unfolding tcbSchedDequeue_def
   apply (rule_tac B="\<lambda>rv. valid_release_queue' and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"
                 in hoare_seq_ext)
    prefer 2
-   apply (wp threadGet_const_tcb_at)
+   apply (wp threadGet_wp)
    apply (fastforce simp: obj_at'_def)
   apply clarsimp
   apply (rename_tac queued)
@@ -698,7 +697,7 @@ lemma tcbSchedDequeue_tcbPriority[wp]:
   done
 
 lemma tcbSchedDequeue_invs'[wp]:
-  "\<lbrace>invs' and tcb_at' t\<rbrace>
+  "\<lbrace>invs'\<rbrace>
      tcbSchedDequeue t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def
@@ -708,7 +707,8 @@ lemma tcbSchedDequeue_invs'[wp]:
              tcbSchedDequeue_valid_queues
              untyped_ranges_zero_lift
         | simp add: cteCaps_of_def o_def)+
-  apply (fastforce elim: valid_objs'_maxDomain valid_objs'_maxPriority simp: valid_pspace'_def)+
+  apply (auto simp: valid_pspace'_def obj_at'_def
+              dest: valid_objs'_maxDomain[where t=t] valid_objs'_maxPriority[where t=t])
   done
 
 lemma cur_thread_update_corres:
@@ -1008,7 +1008,7 @@ lemma clearExMonitor_invs'[wp]:
   done
 
 lemma Arch_switchToThread_invs[wp]:
-  "\<lbrace>invs' and tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "\<lbrace>invs'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: ARM_H.switchToThread_def)
   apply (wp; auto)
   done
@@ -1104,7 +1104,7 @@ lemma Arch_switchToThread_invs_no_cicd':
 
 
 lemma tcbSchedDequeue_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd' and tcb_at' t\<rbrace>
+  "\<lbrace>invs_no_cicd'\<rbrace>
      tcbSchedDequeue t
    \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
   unfolding all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def
@@ -1113,9 +1113,8 @@ lemma tcbSchedDequeue_invs_no_cicd'[wp]:
             tcbSchedDequeue_valid_queues_weak
             untyped_ranges_zero_lift
         | simp add: cteCaps_of_def o_def)+
-  apply clarsimp
-  apply (fastforce simp: valid_pspace'_def valid_queues_def
-                   elim: valid_objs'_maxDomain valid_objs'_maxPriority intro: obj_at'_conjI)
+  apply (auto simp: valid_pspace'_def valid_queues_def obj_at'_def
+              dest: valid_objs'_maxDomain[where t=t] valid_objs'_maxPriority[where t=t])
   done
 
 lemma switchToThread_invs'_helper:

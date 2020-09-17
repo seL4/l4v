@@ -3025,9 +3025,10 @@ lemma schedContextDonate_valid_queues:
    apply (rule hoare_when_cases, clarsimp)
    apply (rule_tac B="\<lambda>_. ?pre" in hoare_seq_ext[rotated])
     apply (wpsimp wp: tcbSchedDequeue_valid_queues)
-    apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc'
-                     intro: valid_objs'_maxDomain valid_objs'_maxPriority
-                      simp: valid_sched_context'_def)
+    apply (drule sc_ko_at_valid_objs_valid_sc'; clarsimp simp: valid_sched_context'_def)
+    apply (frule (1) valid_objs'_maxDomain)
+    apply (frule (1) valid_objs'_maxPriority)
+    apply (clarsimp simp: obj_at'_def)
    apply (rule hoare_seq_ext_skip)
     apply (wpsimp wp: threadSet_valid_queues_new threadSet_valid_objs')
     apply (clarsimp simp: obj_at'_def inQ_def valid_tcb'_def tcb_cte_cases_def)
