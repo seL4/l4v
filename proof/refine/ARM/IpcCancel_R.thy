@@ -1701,7 +1701,7 @@ crunches schedContextCancelYieldTo
   (wp: crunch_wps simp: crunch_simps tcb_cte_cases_def)
 
 lemma schedContextCancelYieldTo_invs':
-  "\<lbrace>invs' and sch_act_simple and tcb_at' t and (\<lambda>s. t \<noteq> ksIdleThread s)\<rbrace>
+  "\<lbrace>invs' and sch_act_simple and tcb_at' t\<rbrace>
    schedContextCancelYieldTo t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def setSchedContext_def)

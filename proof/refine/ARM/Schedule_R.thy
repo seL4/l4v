@@ -20,11 +20,6 @@ lemma invs_no_cicd'_queues:
   unfolding invs_no_cicd'_def
   by simp
 
-lemma corres_if2:
- "\<lbrakk> G = G'; G \<Longrightarrow> corres r P P' a c; \<not> G' \<Longrightarrow> corres r Q Q' b d \<rbrakk>
-    \<Longrightarrow> corres r (if G then P else Q) (if G' then P' else Q') (if G then a else b) (if G' then c else d)"
-  by simp
-
 lemma findM_awesome':
   assumes x: "\<And>x xs. suffix (x # xs) xs' \<Longrightarrow>
                   corres (\<lambda>a b. if b then (\<exists>a'. a = Some a' \<and> r a' (Some x)) else a = None)
@@ -49,7 +44,7 @@ proof -
     apply (subst P)
     apply (rule corres_guard_imp)
       apply (rule corres_split [OF _ x])
-         apply (rule corres_if2)
+         apply (rule corres_if3)
            apply (case_tac ra, clarsimp+)[1]
           apply (rule corres_trivial, clarsimp)
           apply (case_tac ra, simp_all)[1]
@@ -1751,7 +1746,6 @@ lemma chooseThread_corres:
               apply (rule corres_guard_imp)
                 apply (rule_tac P=\<top> and P'=\<top> in guarded_switch_to_chooseThread_fragment_corres)
                apply (wp | clarsimp simp: getQueue_def getReadyQueuesL2Bitmap_def)+
-      apply (clarsimp simp: if_apply_def2)
       apply (wp hoare_vcg_conj_lift hoare_vcg_imp_lift ksReadyQueuesL1Bitmap_return_wp)
      apply (simp add: curDomain_def, wp)+
    apply (clarsimp simp: valid_sched_def DetSchedInvs_AI.valid_ready_qs_def max_non_empty_queue_def)
