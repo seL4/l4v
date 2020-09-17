@@ -81,11 +81,10 @@ The "activateThread" function is used to prepare a thread to run. If the thread 
 > activateThread :: Kernel ()
 > activateThread = do
 >         thread <- getCurThread
->         state <- getThreadState thread
 >         scPtrOpt <- threadGet tcbYieldTo thread
 >         when (scPtrOpt /= Nothing) $ do
 >             schedContextCompleteYieldTo thread
->             assert (state == Running) "activateThread: thread state must be Running when tcbYieldTo is not Nothing"
+>         state <- getThreadState thread
 >         case state of
 >             Running -> return ()
 >             Restart -> do
