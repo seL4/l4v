@@ -583,16 +583,36 @@ lemma suspend_ctes_of_thread:
   apply (case_tac cte, simp)
   done
 
+lemma schedContextUnbindTCB_ctes_of[wp]:
+  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>
+     schedContextUnbindTCB t
+   \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
+  apply (wpsimp simp: schedContextUnbindTCB_def wp: threadSet_ctes_ofT)
+     apply (clarsimp simp: ran_def tcb_cte_cases_def split: if_splits)
+  by wpsimp+
+
+crunches setConsumed, schedContextCompleteYieldTo, unbindNotification
+  for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
+  (simp: crunch_simps wp: crunch_wps)
+
+lemma schedContextUnbindTCB_ctes_of_thread:
+  "schedContextUnbindTCB t' \<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
+  by wp
+
+lemma schedContextCompleteYieldTo_ctes_of_thread:
+  "schedContextCompleteYieldTo t' \<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
+  by wp
+
+lemma getSchedContext_ctes_of_thread:
+  "getSchedContext t' \<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
+  by wpsimp
+
 lemma unbindNotification_ctes_of_thread:
-  "\<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>
-     unbindNotification t
-   \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
+  "unbindNotification t' \<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
   by wp
 
 lemma prepareThreadDelete_ctes_of_thread:
-  "\<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>
-     prepareThreadDelete t
-   \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
+  "prepareThreadDelete t' \<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
   by (wpsimp simp: prepareThreadDelete_def)
 
 crunches schedContextCancelYieldTo, tcbReleaseRemove, tcbSchedDequeue
@@ -613,21 +633,9 @@ lemma suspend_not_recursive_ctes:
   apply (auto simp: isCap_simps finaliseCap_def Let_def)
   done
 
-lemma unbindNotification_not_recursive_ctes:
-  "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
-     unbindNotification t
-   \<lbrace>\<lambda>rv s. P (not_recursive_ctes s)\<rbrace>"
-  apply (simp only: not_recursive_ctes_def cteCaps_of_def)
-  apply wp
-  done
-
-lemma prepareThreadDelete_not_recursive_ctes:
-  "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
-     prepareThreadDelete t
-   \<lbrace>\<lambda>rv s. P (not_recursive_ctes s)\<rbrace>"
-  apply (simp only: prepareThreadDelete_def cteCaps_of_def)
-  apply wp
-  done
+crunches schedContextUnbindTCB, schedContextCompleteYieldTo, unbindNotification, prepareThreadDelete
+  for not_recursive_ctes[wp]: "\<lambda>s. P (not_recursive_ctes s)"
+  (simp: not_recursive_ctes_def cteCaps_of_def wp: threadSet_ctes_of)
 
 definition
   finaliseSlot_recset :: "((word32 \<times> bool \<times> kernel_state) \<times> (word32 \<times> bool \<times> kernel_state)) set"
@@ -722,15 +730,32 @@ termination finaliseSlot'
       apply simp
      apply (clarsimp simp: finaliseCap_def Let_def isCap_simps in_monad
                            getThreadCSpaceRoot_def locateSlot_conv)
+     apply (frule tcb_inv_state_eq, simp)
+
+     apply (intro conjI)
+      apply (erule use_valid [OF _ prepareThreadDelete_not_recursive_ctes])
+      apply (erule use_valid [OF _ suspend_not_recursive_ctes])
+      apply (case_tac "tcbSchedContext tcb"; simp)
+       apply (erule use_valid [OF _ unbindNotification_not_recursive_ctes], simp)
+      apply clarsimp
+      apply (erule use_valid [OF _ schedContextUnbindTCB_not_recursive_ctes])
+      apply (erule use_valid [OF _ schedContextCompleteYieldTo_not_recursive_ctes])
+      apply (erule use_valid [OF _ get_sc_inv'])
+      apply (erule use_valid [OF _ unbindNotification_not_recursive_ctes], simp)
+
      apply (frule(1) use_valid [OF _ unbindNotification_ctes_of_thread, OF _ exI])
-  sorry (*
+     apply (case_tac "tcbSchedContext tcb"; simp)
+      apply (frule(1) use_valid [OF _ suspend_ctes_of_thread])
+      apply (frule(1) use_valid [OF _ prepareThreadDelete_ctes_of_thread])
+      apply clarsimp
+     apply clarsimp
+     apply (frule(1) use_valid [OF _ getSchedContext_ctes_of_thread, OF _ exI])
+     apply (frule(1) use_valid [OF _ schedContextCompleteYieldTo_ctes_of_thread])
+     apply (frule(1) use_valid [OF _ schedContextUnbindTCB_ctes_of_thread])
      apply (frule(1) use_valid [OF _ suspend_ctes_of_thread])
      apply (frule(1) use_valid [OF _ prepareThreadDelete_ctes_of_thread])
      apply clarsimp
-     apply (erule use_valid [OF _ prepareThreadDelete_not_recursive_ctes])
-     apply (erule use_valid [OF _ suspend_not_recursive_ctes])
-     apply (erule use_valid [OF _ unbindNotification_not_recursive_ctes])
-     apply simp
+
     apply (clarsimp simp: finaliseCap_def Let_def isCap_simps in_monad)
    apply (clarsimp simp: finaliseCap_def Let_def isCap_simps in_monad)
   apply (clarsimp simp: in_monad Let_def locateSlot_conv
@@ -757,7 +782,7 @@ termination finaliseSlot'
   apply (case_tac rv, case_tac ourCTE)
   apply (clarsimp simp: isCap_simps cte_wp_at_ctes_of)
   apply (elim disjE conjE exE, simp_all)[1]
-  done *)
+  done
 
 lemmas finaliseSlot'_simps_ext =
     finaliseSlot'.simps [THEN ext [where f="finaliseSlot' slot exp" for slot exp]]
@@ -6895,11 +6920,10 @@ proof (induct rule: rec_del.induct,
         apply (rule corres_when, simp)
         apply simp
         apply (rule empty_slot_corres)
-       apply (wp rec_del_invs rec_del_valid_list rec_del_cte_at finaliseSlot_invs hoare_drop_imps
+       apply (wpsimp wp: rec_del_invs rec_del_valid_list DetSchedSchedule_AI_det_ext.rec_del_valid_sched rec_del_cte_at finaliseSlot_invs hoare_drop_imps
                  preemption_point_inv'
             | simp)+
-    sorry (* valid_sched
-    done *)
+    done
 next
   case (2 slot exposed)
   have prove_imp:
@@ -7629,13 +7653,11 @@ proof (induct rule: cap_revoke.induct)
                      | assumption | rule conjI refl)+)[1]
          apply (wp cap_delete_cte_at cteDelete_invs' cteDelete_sch_act_simple
                    preemptionPoint_invR preemption_point_inv' | clarsimp)+
-  sorry (* valid_sched
      apply (clarsimp simp: cte_wp_at_cte_at)
-     apply(drule next_childD, simp)
-     apply(clarsimp, drule child_descendant)
-     apply (fastforce dest: reply_slot_not_descendant)
+     apply (drule next_childD, simp)
+     apply (clarsimp, drule child_descendant)
     apply (clarsimp elim!: cte_wp_at_weakenE')
-    done *)
+    done
 qed
 
 lemmas cap_revoke_corres = use_spec_corres [OF cap_revoke_corres']
