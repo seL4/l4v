@@ -2634,9 +2634,10 @@ lemma cteDeleteOne_reply_cap_to'[wp]:
    apply (wp hoare_vcg_ex_lift emptySlot_cte_wp_cap_other isFinalCapability_inv
         | clarsimp simp: finaliseCap_def isCap_simps | simp
         | wp (once) hoare_drop_imps)+
-   apply (fastforce simp: cte_wp_at_ctes_of)
+(*   apply (fastforce simp: cte_wp_at_ctes_of)
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
-  done
+  done*)
+oops (* RT fixme: I think this is no longer true, and it currently isn't used anywhere*)
 
 crunches possibleSwitchTo, asUser, doIPCTransfer
   for vms'[wp]: "valid_machine_state'"

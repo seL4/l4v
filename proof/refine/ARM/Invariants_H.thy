@@ -381,6 +381,7 @@ fun zobj_refs' :: "capability \<Rightarrow> word32 set" where
 | "zobj_refs' (NotificationCap r _ _ _)  = {r}"
 | "zobj_refs' (ThreadCap r)              = {r}"
 | "zobj_refs' (SchedContextCap r _)      = {r}"
+| "zobj_refs' (ReplyCap r _)             = {r}"
 | "zobj_refs'                 _          = {}"
 
 definition ex_nonz_cap_to' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool" where
