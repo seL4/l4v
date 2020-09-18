@@ -1362,22 +1362,6 @@ lemma tcb_at_cte_at_map:
   apply (auto elim: cte_wp_at_tcbI')
   done
 
-lemma cteDeleteOne_reply_cap_to''[wp]:
-  "\<lbrace>ex_nonz_cap_to' p and
-    cte_wp_at' (\<lambda>c. isReplyCap (cteCap c) \<or> isNullCap (cteCap c)) slot\<rbrace>
-   cteDeleteOne slot
-   \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
-  apply (simp add: cteDeleteOne_def ex_nonz_cap_to'_def unless_def)
-  apply (rule hoare_seq_ext [OF _ getCTE_sp])
-  apply (rule hoare_assume_pre)
-  apply (subgoal_tac "isReplyCap (cteCap cte) \<or> isNullCap (cteCap cte)")
-   apply (wp hoare_vcg_ex_lift emptySlot_cte_wp_cap_other isFinalCapability_inv
-        | clarsimp simp: finaliseCap_def isCap_simps | simp
-        | wp (once) hoare_drop_imps)+
-   apply (fastforce simp: cte_wp_at_ctes_of)
-  apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
-  done
-
 crunches tcbSchedEnqueue
   for sch_act_sane[wp]: sch_act_sane
   (rule: sch_act_sane_lift)
