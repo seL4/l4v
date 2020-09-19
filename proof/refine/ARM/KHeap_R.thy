@@ -1295,12 +1295,18 @@ lemma set_reply_corres: (* for reply update that doesn't touch the reply stack *
      apply clarsimp
       (* sc_replies_relation *)
     apply (simp add: sc_replies_relation_def)
-    apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def)
-    apply (drule_tac x=p in spec)
-    apply (rule conjI; clarsimp simp: sc_of_def split: Structures_A.kernel_object.split_asm if_split_asm)
-    by (subst replyPrevs_of_replyPrev_same_update[simplified, where ob'=ae', simplified];
-        simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def sc_of_def)
-  qed
+    apply (rename_tac reply' reply)
+    apply (clarsimp simp: vs_heap_simps)
+    apply (rename_tac scp sc n)
+    apply (drule_tac x=scp and y="sc_replies sc" in spec2, clarsimp)
+    apply (rule conjI)
+     apply (subst replyPrevs_of_replyPrev_same_update[simplified, where ob'=ae', simplified];
+            simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def sc_of_def)
+    apply clarsimp
+    apply (drule_tac x=p' in spec)
+    by (fastforce simp: opt_map_left_Some projectKO_opt_sc projectKO_opt_reply replyPrev_same_def
+                 split: if_split_asm)
+qed
 
 lemma setSchedContext_no_stack_update_corres:
   "\<lbrakk> \<forall>sc n sc'. sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc');
@@ -1369,9 +1375,10 @@ lemma setSchedContext_no_stack_update_corres:
         apply simp+
      apply (clarsimp simp: a_type_def split: Structures_A.kernel_object.split_asm if_split_asm)
       (* sc_replies_relation *)
-    apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def map_project_def scs_of_kh_def)
-    apply (drule_tac x=p in spec)
-    by (fastforce simp: typ_at'_def ko_wp_at'_def opt_map_def sc_of_def projectKO_opts_defs)
+    apply (clarsimp simp: sc_replies_relation_def projectKO_opt_reply opt_map_left_Some)
+    apply (clarsimp simp: vs_heap_simps split: if_splits)
+    apply (drule_tac x=ptr and y="sc_replies sc" in spec2, clarsimp)
+    by (auto simp: opt_map_left_Some)
 qed
 
 lemma no_fail_getNotification [wp]:

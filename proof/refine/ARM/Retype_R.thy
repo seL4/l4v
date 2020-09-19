@@ -1319,8 +1319,15 @@ proof -
      apply (clarsimp simp: pspace_dom_def split: if_split_asm, fastforce)
     apply (clarsimp split: if_split_asm kernel_object.splits)
     apply (frule dom_same')
-    apply (clarsimp simp: opt_map_def)
-    done
+    apply (clarsimp simp: opt_map_left_Some)
+    apply (clarsimp simp:foldr_upd_app_if[folded data_map_insert_def] projectKO_opt_reply
+                   split: if_split_asm kernel_object.split_asm)
+    using ko
+    by (cases ty;
+        simp add: makeObjectKO_def makeObject_reply
+           split: kernel_object.split_asm arch_kernel_object.split_asm object_type.split_asm
+                  apiobject_type.split_asm if_split_asm)
+       fastforce
 qed
 
 lemma retype_state_relation:

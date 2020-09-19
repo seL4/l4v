@@ -456,7 +456,9 @@ definition
   sc_replies_relation_2 ::
   "(obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
   "sc_replies_relation_2 sc_repls scRepl replPrevs \<equiv>
-     \<forall>p replies. sc_repls p = Some replies \<longrightarrow> heap_list replPrevs (scRepl p) replies"
+     \<forall>p replies. sc_repls p = Some replies
+                   \<longrightarrow> heap_list replPrevs (scRepl p) replies
+                       \<and> (\<forall>p'. bound (replPrevs p') \<longrightarrow> replPrevs p' \<noteq> scRepl p)"
 
 abbreviation sc_replies_relation :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "sc_replies_relation s s' \<equiv>
