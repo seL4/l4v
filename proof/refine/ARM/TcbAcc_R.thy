@@ -2292,15 +2292,22 @@ lemma isSchedulable_corres:
   apply (fastforce simp: valid_tcbs'_def valid_tcb'_def obj_at'_def projectKOs)
   done
 
+lemma get_simple_ko_exs_valid:
+  "\<lbrakk>inj C; ko_at (C ko) p s; is_simple_type (C ko)\<rbrakk> \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_simple_ko C p \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
+  by (auto simp: get_simple_ko_def get_object_def gets_def return_def get_def
+                     partial_inv_def exs_valid_def bind_def obj_at_def is_reply fail_def inj_def split: prod.splits)
+
+lemmas get_notification_exs_valid[wp] =
+  get_simple_ko_exs_valid[where C=kernel_object.Notification, simplified]
+lemmas get_reply_exs_valid[wp] =
+  get_simple_ko_exs_valid[where C=kernel_object.Reply, simplified]
+lemmas get_endpoint_exs_valid[wp] =
+  get_simple_ko_exs_valid[where C=kernel_object.Endpoint, simplified]
+
 lemma thread_get_exs_valid:
   "tcb_at tcb_ptr s \<Longrightarrow> \<lbrace>(=) s\<rbrace> thread_get f tcb_ptr \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
   by (clarsimp simp: thread_get_def get_tcb_def gets_the_def gets_def return_def get_def
                      exs_valid_def tcb_at_def bind_def)
-
-lemma get_reply_exs_valid:
-  "reply_at rp s \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_reply rp \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
-  by (clarsimp simp: get_simple_ko_def get_object_def gets_def return_def get_def
-                     partial_inv_def exs_valid_def bind_def obj_at_def is_reply)
 
 lemma isRunnable_sp:
   "\<lbrace>P\<rbrace>

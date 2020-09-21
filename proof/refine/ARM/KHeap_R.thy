@@ -3406,6 +3406,18 @@ lemma get_sched_context_exs_valid:
                      gets_def get_def return_def exs_valid_def
               split: Structures_A.kernel_object.splits)
 
+lemma no_fail_simple_ko_at:
+  "\<lbrakk>inj C; is_simple_type (C ko)\<rbrakk> \<Longrightarrow> no_fail (ko_at (C ko) p) (get_simple_ko C p)"
+  apply (wpsimp simp: get_simple_ko_def obj_at_def wp: get_object_wp)
+  by (auto simp: partial_inv_def inj_def split: if_splits)
+
+lemmas no_fail_get_notification[wp] =
+  no_fail_simple_ko_at[where C=kernel_object.Notification, simplified]
+lemmas no_fail_get_reply[wp] =
+  no_fail_simple_ko_at[where C=kernel_object.Reply, simplified]
+lemmas no_fail_get_endpoint[wp] =
+  no_fail_simple_ko_at[where C=kernel_object.Endpoint, simplified]
+
 lemma get_sched_context_no_fail:
   "no_fail (\<lambda>s. sc_at ptr s) (get_sched_context ptr)"
   by (clarsimp simp: get_sched_context_def no_fail_def bind_def get_object_def return_def get_def
