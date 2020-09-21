@@ -137,6 +137,18 @@ lemma word_ctz_max:
   "word_ctz w \<le> size w"
   sorry
 
+(* FIXME move *)
+lemma scast_of_nat_small:
+  "x < 2 ^ (LENGTH('a) - 1) \<Longrightarrow> scast (of_nat x :: 'a :: len word) = (of_nat x :: 'b :: len word)"
+  apply (rule sym, subst word_unat.inverse_norm)
+  apply (simp add: scast_def word_of_int[symmetric]
+                   of_nat_nat[symmetric] unat_def[symmetric])
+  apply (simp add: int_eq_sint unat_of_nat)
+  done
+
+(* FIXME move *)
+lemmas casts_of_nat_small = ucast_of_nat_small scast_of_nat_small
+
 (* FIXME: move *)
 lemma hoarep_Seq_nothrow:
   assumes c: "hoarep \<Gamma> \<Theta> F P c Q {}"
@@ -146,8 +158,8 @@ lemma hoarep_Seq_nothrow:
 
 definition clz32_step where
   "clz32_step i \<equiv> \<acute>mask___unsigned :== \<acute>mask___unsigned >> unat ((1::32 sword) << unat i);;
-                 \<acute>bits :== SCAST(32 signed \<rightarrow> 32) (if \<acute>mask___unsigned < \<acute>x then 1 else 0) << unat i;;
-                 Guard ShiftError \<lbrace>\<acute>bits < SCAST(32 signed \<rightarrow> 32) 0x20\<rbrace> (\<acute>x :== \<acute>x >> unat \<acute>bits);;
+                 \<acute>bits :== SCAST(32 signed \<rightarrow> 32) (if \<acute>mask___unsigned < \<acute>x___unsigned then 1 else 0) << unat i;;
+                 Guard ShiftError \<lbrace>\<acute>bits < SCAST(32 signed \<rightarrow> 32) 0x20\<rbrace> (\<acute>x___unsigned :== \<acute>x___unsigned >> unat \<acute>bits);;
                  \<acute>count :== \<acute>count - \<acute>bits"
 
 (* FIXME: figure out what this should be *)
@@ -200,8 +212,8 @@ lemma clz64_spec:
 
 definition ctz32_step where
   "ctz32_step i \<equiv> \<acute>mask___unsigned :== \<acute>mask___unsigned >> unat ((1::32 sword) << unat i);;
-                   \<acute>bits :== SCAST(32 signed \<rightarrow> 32) (if \<acute>x && \<acute>mask___unsigned = SCAST(32 signed \<rightarrow> 32) 0 then 1 else 0) << unat i;;
-                   Guard ShiftError \<lbrace>\<acute>bits < SCAST(32 signed \<rightarrow> 32) 0x20\<rbrace> (\<acute>x :== \<acute>x >> unat \<acute>bits);;
+                   \<acute>bits :== SCAST(32 signed \<rightarrow> 32) (if \<acute>x___unsigned && \<acute>mask___unsigned = SCAST(32 signed \<rightarrow> 32) 0 then 1 else 0) << unat i;;
+                   Guard ShiftError \<lbrace>\<acute>bits < SCAST(32 signed \<rightarrow> 32) 0x20\<rbrace> (\<acute>x___unsigned :== \<acute>x___unsigned >> unat \<acute>bits);;
                    \<acute>count :== \<acute>count + \<acute>bits"
 
 (* FIXME: figure out what this should be *)
@@ -259,28 +271,14 @@ lemma clzl_spec:
    Call clzl_'proc
    \<lbrace>\<acute>ret__long = of_nat (word_clz (x___unsigned_long_' s))\<rbrace>"
   apply (rule allI, rule conseqPre, vcg)
-  by (clarsimp simp: word_clz_max[THEN le_less_trans, THEN ucast_of_nat_small] word_size)
-
-lemma clzll_spec:
-  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x___unsigned_longlong_' s \<noteq> 0}
-   Call clzll_'proc
-   \<lbrace>\<acute>ret__longlong = of_nat (word_clz (x___unsigned_longlong_' s))\<rbrace>"
-  apply (rule allI, rule conseqPre, vcg)
-  by (clarsimp simp: word_clz_max[THEN le_less_trans, THEN ucast_of_nat_small] word_size)
+  by (clarsimp simp: casts_of_nat_small[OF word_clz_max[THEN le_less_trans]] word_size)
 
 lemma ctzl_spec:
   "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x___unsigned_long_' s \<noteq> 0}
    Call ctzl_'proc
    \<lbrace>\<acute>ret__long = of_nat (word_ctz (x___unsigned_long_' s))\<rbrace>"
   apply (rule allI, rule conseqPre, vcg)
-  by (clarsimp simp: word_ctz_max[THEN le_less_trans, THEN ucast_of_nat_small] word_size)
-
-lemma ctzll_spec:
-  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x___unsigned_longlong_' s \<noteq> 0}
-   Call ctzll_'proc
-   \<lbrace>\<acute>ret__longlong = of_nat (word_ctz (x___unsigned_longlong_' s))\<rbrace>"
-  apply (rule allI, rule conseqPre, vcg)
-  by (clarsimp simp: word_ctz_max[THEN le_less_trans, THEN ucast_of_nat_small] word_size)
+  by (clarsimp simp: casts_of_nat_small[OF word_ctz_max[THEN le_less_trans]] word_size)
 
 end
 end
