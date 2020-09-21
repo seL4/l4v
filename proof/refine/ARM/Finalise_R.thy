@@ -2742,7 +2742,9 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
             \<and> (\<forall>p \<in> threadCapRefs cap. st_tcb_at' ((=) Inactive) p s
                      \<and> obj_at' (Not \<circ> tcbQueued) p s
                      \<and> bound_tcb_at' ((=) None) p s
-                     \<and> (\<forall>pr. p \<notin> set (ksReadyQueues s pr))))\<rbrace>"
+                     \<and> (\<forall>pr. p \<notin> set (ksReadyQueues s pr))
+                     \<and> bound_sc_tcb_at' ((=) None or (=) (Some idle_sc_ptr)) p s
+                     \<and> bound_yt_tcb_at' ((=) None) p s))\<rbrace>"
   apply (simp add: finaliseCap_def Let_def getThreadCSpaceRoot
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
@@ -3025,9 +3027,10 @@ lemma schedContextDonate_valid_queues:
    apply (rule hoare_when_cases, clarsimp)
    apply (rule_tac B="\<lambda>_. ?pre" in hoare_seq_ext[rotated])
     apply (wpsimp wp: tcbSchedDequeue_valid_queues)
-    apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc'
-                     intro: valid_objs'_maxDomain valid_objs'_maxPriority
-                      simp: valid_sched_context'_def)
+    apply (drule sc_ko_at_valid_objs_valid_sc'; clarsimp simp: valid_sched_context'_def)
+    apply (frule (1) valid_objs'_maxDomain)
+    apply (frule (1) valid_objs'_maxPriority)
+    apply (clarsimp simp: obj_at'_def)
    apply (rule hoare_seq_ext_skip)
     apply (wpsimp wp: threadSet_valid_queues_new threadSet_valid_objs')
     apply (clarsimp simp: obj_at'_def inQ_def valid_tcb'_def tcb_cte_cases_def)
@@ -3431,27 +3434,26 @@ lemma cteDeleteOne_invs[wp]:
   apply (simp add: cteDeleteOne_def unless_def
                    split_def finaliseCapTrue_standin_simple_def)
   apply wp
-    apply (rule hoare_strengthen_post)
-     apply (rule hoare_vcg_conj_lift)
-      apply (rule finaliseCap_True_invs)
-     apply (rule hoare_vcg_conj_lift)
-      apply (rule finaliseCap_replaceable[where slot=ptr])
-     apply (rule hoare_vcg_conj_lift)
-      apply (rule finaliseCap_cte_refs)
-     apply (rule finaliseCap_equal_cap[where sl=ptr])
-    apply (clarsimp simp: cte_wp_at_ctes_of)
-    apply (erule disjE)
-     apply simp
-    apply (clarsimp dest!: isCapDs simp: capRemovable_def)
-    apply (clarsimp simp: removeable'_def fun_eq_iff[where f="cte_refs' cap" for cap]
-                     del: disjCI)
-    apply (rule disjI2)
-    apply (rule conjI)
-     subgoal by auto
-    subgoal sorry (* by (auto dest!: isCapDs simp: pred_tcb_at'_def obj_at'_def projectKOs
-                                     ko_wp_at'_def) *)
-   apply (wp isFinalCapability_inv getCTE_wp' static_imp_wp
-        | wp (once) isFinal[where x=ptr])+
+     apply (rule hoare_strengthen_post)
+      apply (rule hoare_vcg_conj_lift)
+       apply (rule finaliseCap_True_invs)
+      apply (rule hoare_vcg_conj_lift)
+       apply (rule finaliseCap_replaceable[where slot=ptr])
+      apply (rule hoare_vcg_conj_lift)
+       apply (rule finaliseCap_cte_refs)
+      apply (rule finaliseCap_equal_cap[where sl=ptr])
+     apply (clarsimp simp: cte_wp_at_ctes_of)
+     apply (erule disjE)
+      apply simp
+     apply (clarsimp dest!: isCapDs simp: capRemovable_def)
+     apply (clarsimp simp: removeable'_def fun_eq_iff[where f="cte_refs' cap" for cap]
+                      del: disjCI)
+     apply (rule disjI2)
+     apply (rule conjI)
+      apply fastforce
+     apply (fastforce dest!: isCapDs simp: pred_tcb_at'_def obj_at'_def projectKOs ko_wp_at'_def)
+    apply (wp isFinalCapability_inv getCTE_wp' static_imp_wp
+           | wp (once) isFinal[where x=ptr])+
   apply (fastforce simp: cte_wp_at_ctes_of)
   done
 
@@ -3650,54 +3652,56 @@ lemma unbind_notification_corres:
   apply (simp add: unbind_notification_def unbindNotification_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ gbn_corres])
-  sorry (* unbind_notification_corres*) (*
+      apply (simp add: maybeM_def)
       apply (rule corres_option_split)
         apply simp
        apply (rule corres_return_trivial)
+      apply (simp add: update_sk_obj_ref_def bind_assoc)
       apply (rule corres_split[OF _ get_ntfn_corres])
-        apply clarsimp
         apply (rule corres_split[OF _ set_ntfn_corres])
            apply (rule sbn_corres)
-          apply (clarsimp simp: ntfn_relation_def split:Structures_A.ntfn.splits)
-         apply (wp gbn_wp' gbn_wp)+
-   apply (clarsimp elim!: obj_at_valid_objsE
-                   dest!: bound_tcb_at_state_refs_ofD invs_valid_objs
-                    simp: valid_obj_def is_tcb tcb_ntfn_is_bound_def
-                          valid_tcb_def valid_bound_ntfn_def
-                   split: option.splits)
+          apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
+         apply (wpsimp wp: gbn_wp' gbn_wp get_ntfn_ko' simp: obj_at_def split: option.split)+
+   apply (frule invs_valid_objs)
+   apply (clarsimp simp: is_tcb)
+   apply (frule_tac thread=t and y=tcb in valid_tcb_objs)
+    apply (simp add: get_tcb_rev)
+   apply (clarsimp simp: valid_tcb_def)
+   apply (metis obj_at_simps(1) valid_bound_obj_Some)
   apply (clarsimp dest!: obj_at_valid_objs' bound_tcb_at_state_refs_ofD' invs_valid_objs'
                    simp: projectKOs valid_obj'_def valid_tcb'_def valid_bound_ntfn'_def
-                         tcb_ntfn_is_bound'_def
                   split: option.splits)
-  done *)
+  done
 
 lemma unbind_maybe_notification_corres:
   "corres dc
-      (invs and ntfn_at ntfnptr) (invs' and ntfn_at' ntfnptr)
+      (valid_objs and ntfn_at ntfnptr) (valid_objs' and ntfn_at' ntfnptr)
       (unbind_maybe_notification ntfnptr)
       (unbindMaybeNotification ntfnptr)"
   apply (simp add: unbind_maybe_notification_def unbindMaybeNotification_def)
   apply (rule corres_guard_imp)
-  sorry (* unbind_maybe_notification_corres *) (*
+    apply (clarsimp simp: maybeM_def get_sk_obj_ref_def)
     apply (rule corres_split[OF _ get_ntfn_corres])
+      apply (rename_tac ntfnA ntfnH)
       apply (rule corres_option_split)
-        apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
+        apply (simp add: ntfn_relation_def)
        apply (rule corres_return_trivial)
-      apply simp
-      apply (rule corres_split[OF _ set_ntfn_corres])
-         apply (rule sbn_corres)
-        apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
-       apply (wp get_simple_ko_wp getNotification_wp)+
-   apply (clarsimp elim!: obj_at_valid_objsE
-                   dest!: bound_tcb_at_state_refs_ofD invs_valid_objs
-                    simp: valid_obj_def is_tcb tcb_ntfn_is_bound_def
-                          valid_tcb_def valid_bound_ntfn_def valid_ntfn_def
-                   split: option.splits)
-  apply (clarsimp dest!: obj_at_valid_objs' bound_tcb_at_state_refs_ofD' invs_valid_objs'
-                   simp: projectKOs valid_obj'_def valid_tcb'_def valid_bound_ntfn'_def
-                         tcb_ntfn_is_bound'_def valid_ntfn'_def
-                  split: option.splits)
-  done *)
+      apply (rename_tac tcbPtr)
+      apply (simp add: bind_assoc)
+      apply (rule corres_split[OF sbn_corres])
+        apply (simp add: update_sk_obj_ref_def)
+        apply (rule_tac P="ko_at (Notification ntfnA) ntfnptr" in corres_symb_exec_l)
+           apply (rename_tac ntfnA')
+           apply (rule_tac F="ntfnA = ntfnA'" in corres_gen_asm)
+           apply (rule set_ntfn_corres)
+           apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
+          apply (wpsimp simp: obj_at_def is_ntfn wp: get_simple_ko_wp getNotification_wp)+
+   apply (erule (1) pspace_valid_objsE)
+   apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def split: option.splits)
+  apply clarsimp
+  apply (frule (1) ko_at_valid_objs'_pre)
+  apply (clarsimp simp: valid_obj'_def valid_ntfn'_def split: option.splits)
+  done
 
 lemma fast_finalise_corres:
   "\<lbrakk> final_matters' cap' \<longrightarrow> final = final'; cap_relation cap cap';
